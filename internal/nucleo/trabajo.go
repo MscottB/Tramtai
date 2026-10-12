@@ -24,6 +24,8 @@ type Trabajo struct {
 	Huella       string             `json:"-"`
 	Salida       string             `json:"salida,omitempty"`
 	IntentoDe    string             `json:"intento_de,omitempty"`
+	// PuntoAcceso es el punto de acceso que creó el trabajo (uso por aplicación, sección 5.4).
+	PuntoAcceso string `json:"punto_acceso,omitempty"`
 	// ModeloEnviado es el identificador pasado al CLI tras resolver el perfil; vacío = predeterminado del CLI.
 	ModeloEnviado string `json:"modelo_enviado,omitempty"`
 	// ModeloEfectivo es el que informó el agente; vacío = no verificable (sección 9.2).

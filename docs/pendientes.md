@@ -10,7 +10,8 @@
 | M2 | ✅ | Supervisión de procesos (Job Objects y grupos Unix), adaptadores Claude y Codex, streaming, timeout, cancelación y perfiles de modelo |
 | M3 | ✅ | Cargas por hash, conversión con markitdown 0.1.8, ZIP seguro con límites, salidas con JSON Schema (nativo en Claude y Codex) |
 | M4 | ✅ | Servicio HTTP: API nativa `/api/v1` con SSE reanudable, cargas, capacidades y modelos; fachadas OpenAI (chat, responses, models) y Anthropic (messages) con política de parámetros |
-| M5–M6 | ⬜ | Servicio único, puntos de acceso, TUI, Web UI y app de escritorio Wails + Quasar |
+| M5 | ✅ | Servicio único con instancias global y por proyecto por token, descriptor y segundo plano, puntos de acceso con recarga en caliente, terminal interactiva |
+| M6 | ⬜ | Web UI embebida y aplicación de escritorio Wails + Quasar (la TUI ya está en M5) |
 | M7 | ⬜ | Cierre ordenado con plazo para trabajos en curso |
 
 ## Tareas
@@ -25,6 +26,8 @@
 - [ ] Probar las fachadas con los SDK oficiales de Python y Node (hoy probadas con curl y pruebas Go).
 - [ ] 410 por resultado expirado y error explícito de cursor SSE fuera de ventana (llegan con la retención, M7).
 - [ ] Sustituir el sondeo de eventos (100 ms) por notificación en memoria si pesa con muchos clientes.
+- [ ] Límite de concurrencia propio por punto de acceso (hoy usa el de su instancia).
+- [ ] Modo consciente del proyecto (raíces permitidas, reglas del repositorio para proyectos confiables).
 - [ ] Purga de cargas vencidas y protección mientras un trabajo las usa (retención, M7).
 - [ ] Perfiles de salida en configuración (`salida.esquema` por archivo, sección 22.3) y `conservar_salida_invalida`.
 - [ ] Adaptadores Antigravity (`agy` con `modelProvider: gemini`) y Gemini API directa.

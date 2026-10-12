@@ -81,11 +81,21 @@ o solo para una terminal: `$env:TRAMTAI_ADAPTADORES__CLAUDE__AUTENTICACION = 'su
 
 - Si un perfil no tiene modelo para el agente, el trabajo se rechaza con `modelo_no_configurado`. Nunca se cambia el modelo en silencio.
 
+## Uso diario: la terminal interactiva
+
+```powershell
+./bin/tramtai.exe          # o: tramtai terminal
+```
+
+Desde el menú se elige el ámbito (proyecto actual, global, todas las instancias o servicio) y se ejecuta, se ven los trabajos y se gestionan los puntos de acceso sin escribir comandos. Si el servicio no está en marcha, la terminal lo inicia en segundo plano. Detalle en [operacion.md](operacion.md).
+
 ## Servicio HTTP
 
 ```powershell
-./bin/tramtai.exe servicio iniciar     # primer plano; Ctrl+C lo detiene
-./bin/tramtai.exe servicio token       # token para los clientes
+./bin/tramtai.exe servicio iniciar -d  # segundo plano (sin -d: primer plano, Ctrl+C lo detiene)
+./bin/tramtai.exe global token         # token de la instancia global para los clientes
+./bin/tramtai.exe iniciar              # en un repositorio: crea .tramtai/config.yaml
+./bin/tramtai.exe proyecto iniciar     # instancia del proyecto, con su propio token
 ```
 
 Configura tus aplicaciones con `base_url` `http://127.0.0.1:17373/openai/v1` (OpenAI) o `http://127.0.0.1:17373/anthropic` (Anthropic), con el token como API key y `model` del tipo `claude/sonnet` o `perfil/rapido`. Contrato completo en [api.md](api.md).

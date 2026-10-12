@@ -1,0 +1,37 @@
+package main
+
+import (
+	"os"
+
+	"github.com/spf13/cobra"
+
+	"tramtai/internal/cliente"
+	"tramtai/internal/nucleo"
+	"tramtai/internal/servicio"
+	"tramtai/internal/tui"
+)
+
+func comandoTerminal() *cobra.Command {
+	return &cobra.Command{Use: "terminal", Short: "Abre la terminal interactiva (también: tramtai sin argumentos)",
+		RunE: func(*cobra.Command, []string) error { return abrirTerminal() }}
+}
+
+func abrirTerminal() error {
+	datos, err := dirDatos()
+	if err != nil {
+		return err
+	}
+	o := tui.Opciones{Datos: datos, Iniciar: func() (*cliente.Cliente, error) {
+		ejecutable, err := os.Executable()
+		if err != nil {
+			return nil, err
+		}
+		return cliente.IniciarEnSegundoPlano(ejecutable, datos)
+	}}
+	if raiz := raizProyecto(); raiz != "" {
+		if cfg, err := nucleo.CargarConfiguracion(raiz); err == nil {
+			o.Proyecto, o.IDProyecto = raiz, servicio.IDProyecto(raiz, cfg)
+		}
+	}
+	return tui.Ejecutar(o)
+}

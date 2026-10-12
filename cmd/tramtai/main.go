@@ -1,11 +1,11 @@
-// Comando tramtai: CLI del núcleo (versión, configuración, diagnóstico de agentes y ejecución directa).
+// Comando tramtai: CLI y terminal interactiva de Tramtai. Sin argumentos abre la terminal interactiva.
 package main
 
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
+	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/nucleo"
@@ -13,16 +13,30 @@ import (
 )
 
 func main() {
-	raiz := &cobra.Command{Use: "tramtai", Short: "Pasarela local para ejecutar agentes CLI", SilenceUsage: true, Version: version.Texto()}
+	raiz := &cobra.Command{Use: "tramtai", Short: "Pasarela local para ejecutar agentes CLI",
+		Long:         "Tramtai expone Claude Code y Codex como API local.\nSin argumentos abre la terminal interactiva (tramtai terminal).",
+		SilenceUsage: true, Version: version.Texto(),
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			if !term.IsTerminal(os.Stdin.Fd()) || !term.IsTerminal(os.Stdout.Fd()) {
+				return cmd.Help()
+			}
+			return abrirTerminal()
+		}}
 	raiz.AddCommand(
 		&cobra.Command{Use: "version", Short: "Muestra la versión", Run: func(cmd *cobra.Command, _ []string) {
 			fmt.Fprintln(cmd.OutOrStdout(), "tramtai", version.Texto())
 		}},
-		comandoConfiguracion(),
-		comandoAgentes(),
+		comandoTerminal(),
+		comandoIniciar(),
+		comandoServicio(),
+		comandoInstancia("global"),
+		comandoInstancia("proyecto"),
+		comandoAcceso(),
+		comandoTrabajos(),
 		comandoEjecutar(),
 		comandoConvertir(),
-		comandoServicio(),
+		comandoAgentes(),
+		comandoConfiguracion(),
 	)
 	if err := raiz.Execute(); err != nil {
 		os.Exit(1)
@@ -70,31 +84,17 @@ func comandoConfiguracion() *cobra.Command {
 	return configuracion
 }
 
-// cargarConfiguracion resuelve las capas de la sección 12.2 para el directorio actual.
+// raizProyecto es la raíz del proyecto que contiene el directorio actual, o "" fuera de un proyecto.
+func raizProyecto() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	raiz, _ := nucleo.BuscarProyecto(dir)
+	return raiz
+}
+
+// cargarConfiguracion resuelve las capas de la sección 12.2 para el proyecto actual (o solo la global).
 func cargarConfiguracion() (*nucleo.Configuracion, error) {
-	dirUsuario, err := os.UserConfigDir()
-	if err != nil {
-		return nil, err
-	}
-	fuentes := []struct {
-		ruta   string
-		origen nucleo.Origen
-	}{
-		{filepath.Join(dirUsuario, "tramtai", "config.yaml"), nucleo.OrigenGlobal},
-		{filepath.Join(".tramtai", "config.yaml"), nucleo.OrigenProyecto},
-		{filepath.Join(".tramtai", "local.yaml"), nucleo.OrigenLocal},
-	}
-	var capas []nucleo.Capa
-	for _, f := range fuentes {
-		capa, err := nucleo.CargarCapa(f.ruta, f.origen)
-		if err != nil {
-			return nil, err
-		}
-		capas = append(capas, capa)
-	}
-	entorno, err := nucleo.CapaEntorno(os.Environ())
-	if err != nil {
-		return nil, err
-	}
-	return nucleo.Resolver(append(capas, entorno)...), nil
+	return nucleo.CargarConfiguracion(raizProyecto())
 }

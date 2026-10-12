@@ -95,6 +95,10 @@ func avisarUso(w http.ResponseWriter, t nucleo.Trabajo) {
 // solicitudFachada traduce el campo model: agente/modelo, perfil/nombre, el nombre de un agente o un
 // identificador sin prefijo que solo exista en el catálogo de un agente (sección 9.5).
 func (s *Servidor) solicitudFachada(model string) (nucleo.SolicitudEjecucion, error) {
+	if s.Punto != nil && s.Punto.ForzarModelo {
+		return nucleo.SolicitudEjecucion{}, nil // el punto fija el modelo e ignora el de la solicitud
+	}
+	model = s.traducirModelo(model)
 	if model == "" {
 		return nucleo.SolicitudEjecucion{}, nil
 	}
@@ -185,10 +189,17 @@ func enVivo(sol nucleo.SolicitudEjecucion) bool {
 	return sol.Salida.Formato != "json" && len(sol.Salida.Esquema) == 0
 }
 
-// aceptarFachada completa la solicitud con los predeterminados de la instancia y la acepta.
-func (s *Servidor) aceptarFachada(r *http.Request, sol nucleo.SolicitudEjecucion) (nucleo.SolicitudEjecucion, nucleo.Trabajo, error) {
-	sol = s.Config.AplicarPredeterminados(sol)
-	t, _, err := s.Planificador.Enviar(r.Context(), sol, r.Header.Get("Idempotency-Key"))
+// aceptarFachada completa la solicitud con los valores del punto de acceso y de la instancia y la acepta; si el
+// punto fuerza el modelo, lo informa en la cabecera Tramtai-Modelo-Forzado.
+func (s *Servidor) aceptarFachada(w http.ResponseWriter, r *http.Request, sol nucleo.SolicitudEjecucion) (nucleo.SolicitudEjecucion, nucleo.Trabajo, error) {
+	sol, err := s.ajustar(sol)
+	if err != nil {
+		return sol, nucleo.Trabajo{}, err
+	}
+	if s.Punto != nil && s.Punto.ForzarModelo {
+		w.Header().Set("Tramtai-Modelo-Forzado", descripcionModelo(sol))
+	}
+	t, _, err := s.aceptar(r.Context(), sol, r.Header.Get("Idempotency-Key"))
 	return sol, t, err
 }
 

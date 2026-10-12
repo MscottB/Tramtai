@@ -14,8 +14,11 @@ El diseño completo está en el documento maestro (v12, en `documentos/`). Resum
 | `internal/documentos` | Cargas identificadas por SHA-256 (`carga_<hash>`) con vencimiento. Conversión a Markdown con markitdown 0.1.8 en un proceso supervisado con plazo y límite de salida. Los archivos de texto (txt, md, json, xml, csv, yaml…) pasan tal cual, validando que sean UTF-8. ZIP seguro con límites de archivos, tamaño descomprimido medido y profundidad, rechazando rutas con `..`, absolutas, con unidad o enlaces. |
 | `internal/salidas` | Validación de la salida contra el JSON Schema del consumidor (`santhosh-tekuri/jsonschema`), con los `$ref` externos deshabilitados. |
 | `internal/api` | Servicio HTTP (sección 7 y 8): valida Host, Origin y token; API nativa con SSE reanudable por `Last-Event-ID`; fachadas OpenAI y Anthropic con política de parámetros y su formato de errores. Detalle en [api.md](api.md). |
+| `internal/servicio` | Servicio único (sección 5): instancias global y por proyecto con token, base de datos, cola y cargas propios; enrutado por token; administración con token de servicio; puntos de acceso con puerto o ruta `/p/<nombre>`, recarga sin reinicio y edición del YAML conservando comentarios; descriptor `servicio.json`. |
+| `internal/cliente` | Cliente del servicio para la CLI y la terminal: descubre el servicio por su descriptor, lo inicia en segundo plano y sigue los eventos SSE. |
+| `internal/tui` | Terminal interactiva con Bubble Tea v2 (sección 13.2). |
 | `internal/version` | Versión del ejecutable (inyectada al compilar) y commit de git. |
-| `cmd/tramtai` | CLI con Cobra: `version`, `configuracion`, `agentes`, `ejecutar`, `convertir` y `servicio iniciar/token`. |
+| `cmd/tramtai` | CLI con Cobra. Sin argumentos abre la terminal interactiva. Comandos: `servicio`, `global`, `proyecto`, `iniciar`, `acceso`, `trabajos`, `ejecutar`, `convertir`, `agentes`, `configuracion`. Detalle en [operacion.md](operacion.md). |
 
 ## Adaptadores (M2)
 

@@ -115,11 +115,16 @@ func (p *Planificador) Iniciar(ctx context.Context) error {
 // Enviar valida y acepta una solicitud ya completada con los predeterminados (AplicarPredeterminados).
 // Devuelve reutilizado = true si la clave de idempotencia ya apuntaba a un trabajo con la misma huella.
 func (p *Planificador) Enviar(ctx context.Context, solicitud nucleo.SolicitudEjecucion, clave string) (nucleo.Trabajo, bool, error) {
-	return p.aceptar(ctx, solicitud, clave, "")
+	return p.aceptar(ctx, solicitud, clave, "", "")
+}
+
+// EnviarPorPunto acepta una solicitud recibida por un punto de acceso y la vincula a él (sección 5.4).
+func (p *Planificador) EnviarPorPunto(ctx context.Context, solicitud nucleo.SolicitudEjecucion, clave, punto string) (nucleo.Trabajo, bool, error) {
+	return p.aceptar(ctx, solicitud, clave, "", punto)
 }
 
 // aceptar registra el trabajo; intentoDe vincula un reintento explícito con el trabajo anterior.
-func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEjecucion, clave, intentoDe string) (nucleo.Trabajo, bool, error) {
+func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEjecucion, clave, intentoDe, punto string) (nucleo.Trabajo, bool, error) {
 	if p.ctx == nil || p.ctx.Err() != nil {
 		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoServicioDetenido, "el planificador no está en marcha")
 	}
@@ -135,7 +140,7 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 	if err != nil {
 		return nucleo.Trabajo{}, false, err
 	}
-	t := nucleo.Trabajo{ID: nucleo.NuevoID(), Instancia: p.opc.Instancia, Solicitud: solicitud, Huella: solicitud.Huella(), ModeloEnviado: modelo, IntentoDe: intentoDe}
+	t := nucleo.Trabajo{ID: nucleo.NuevoID(), Instancia: p.opc.Instancia, Solicitud: solicitud, Huella: solicitud.Huella(), ModeloEnviado: modelo, IntentoDe: intentoDe, PuntoAcceso: punto}
 	t, reutilizado, err := p.almacen.Aceptar(ctx, t, clave, p.opc.MaximoCola)
 	if err != nil || reutilizado {
 		return t, reutilizado, err
@@ -219,7 +224,7 @@ func (p *Planificador) Reintentar(ctx context.Context, id string) (nucleo.Trabaj
 	if !anterior.Estado.Terminal() {
 		return anterior, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, "solo se reintenta un trabajo terminado")
 	}
-	t, _, err := p.aceptar(ctx, anterior.Solicitud, "", anterior.ID)
+	t, _, err := p.aceptar(ctx, anterior.Solicitud, "", anterior.ID, anterior.PuntoAcceso)
 	return t, err
 }
 
@@ -229,6 +234,16 @@ func (p *Planificador) Eliminar(ctx context.Context, id string) error {
 		return err
 	}
 	return p.almacen.Eliminar(ctx, id)
+}
+
+// Listar devuelve los trabajos más recientes de la instancia; con punto, solo los de ese punto de acceso.
+func (p *Planificador) Listar(ctx context.Context, limite int, punto string) ([]nucleo.Trabajo, error) {
+	return p.almacen.Listar(ctx, p.opc.Instancia, punto, limite)
+}
+
+// Contar devuelve cuántos trabajos de la instancia hay en cada estado.
+func (p *Planificador) Contar(ctx context.Context) (map[nucleo.Estado]int, error) {
+	return p.almacen.Contar(ctx, p.opc.Instancia)
 }
 
 // Detener deja de aceptar trabajos, detiene los ejecutores y espera a que terminen (sección 17.3).

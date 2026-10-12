@@ -61,10 +61,12 @@ ALTER TABLE trabajos ADD COLUMN modelo_efectivo TEXT NOT NULL DEFAULT '';
 ALTER TABLE trabajos ADD COLUMN tokens_entrada INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE trabajos ADD COLUMN tokens_salida INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE trabajos ADD COLUMN costo_usd REAL NOT NULL DEFAULT 0;`,
+	// v3 (M5): punto de acceso que creó el trabajo.
+	`ALTER TABLE trabajos ADD COLUMN punto_acceso TEXT NOT NULL DEFAULT '';`,
 }
 
 const columnas = `id, instancia, estado, codigo_error, mensaje_error, solicitud, huella, salida, intento_de, creado_en, actualizado_en, terminado_en,
-	modelo_enviado, modelo_efectivo, tokens_entrada, tokens_salida, costo_usd`
+	modelo_enviado, modelo_efectivo, tokens_entrada, tokens_salida, costo_usd, punto_acceso`
 
 // Almacen es la base SQLite de una instancia.
 type Almacen struct {
@@ -183,8 +185,8 @@ func (a *Almacen) Aceptar(ctx context.Context, t nucleo.Trabajo, clave string, m
 		return t, false, err
 	}
 	t.Estado, t.CreadoEn, t.ActualizadoEn = nucleo.EnCola, ahora, ahora
-	if _, err := tx.ExecContext(ctx, `INSERT INTO trabajos (id, instancia, estado, solicitud, huella, intento_de, modelo_enviado, creado_en, actualizado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		t.ID, t.Instancia, string(t.Estado), string(solicitud), t.Huella, t.IntentoDe, t.ModeloEnviado, fecha(ahora), fecha(ahora)); err != nil {
+	if _, err := tx.ExecContext(ctx, `INSERT INTO trabajos (id, instancia, estado, solicitud, huella, intento_de, modelo_enviado, punto_acceso, creado_en, actualizado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		t.ID, t.Instancia, string(t.Estado), string(solicitud), t.Huella, t.IntentoDe, t.ModeloEnviado, t.PuntoAcceso, fecha(ahora), fecha(ahora)); err != nil {
 		return t, false, err
 	}
 	if err := agregarEvento(ctx, tx, t.ID, "estado", string(nucleo.EnCola), ahora); err != nil {
@@ -332,6 +334,53 @@ func (a *Almacen) ListarPorEstado(ctx context.Context, instancia string, estados
 	return ids, filas.Err()
 }
 
+// Listar devuelve los trabajos más recientes de la instancia; con punto, solo los de ese punto de acceso.
+func (a *Almacen) Listar(ctx context.Context, instancia, punto string, limite int) ([]nucleo.Trabajo, error) {
+	filas, err := a.db.QueryContext(ctx, `SELECT id FROM trabajos WHERE instancia = ? AND (? = '' OR punto_acceso = ?)
+		ORDER BY creado_en DESC LIMIT ?`, instancia, punto, punto, limite)
+	if err != nil {
+		return nil, err
+	}
+	var ids []string
+	for filas.Next() {
+		var id string
+		if err := filas.Scan(&id); err != nil {
+			filas.Close()
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	filas.Close()
+	trabajos := make([]nucleo.Trabajo, 0, len(ids))
+	for _, id := range ids {
+		t, err := a.Obtener(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		trabajos = append(trabajos, t)
+	}
+	return trabajos, nil
+}
+
+// Contar devuelve cuántos trabajos de la instancia hay en cada estado.
+func (a *Almacen) Contar(ctx context.Context, instancia string) (map[nucleo.Estado]int, error) {
+	filas, err := a.db.QueryContext(ctx, `SELECT estado, COUNT(*) FROM trabajos WHERE instancia = ? GROUP BY estado`, instancia)
+	if err != nil {
+		return nil, err
+	}
+	defer filas.Close()
+	conteo := map[nucleo.Estado]int{}
+	for filas.Next() {
+		var estado string
+		var n int
+		if err := filas.Scan(&estado, &n); err != nil {
+			return nil, err
+		}
+		conteo[nucleo.Estado(estado)] = n
+	}
+	return conteo, filas.Err()
+}
+
 // Recuperar aplica la sección 4.3 al arrancar: lo que pudo llegar al agente pasa a interrumpido
 // (nunca se relanza) y lo que nunca lo lanzó vuelve a en_cola.
 // shortcut: en M1 las entradas viajan dentro de la solicitud y siempre están disponibles; con cargas (M3)
@@ -367,7 +416,7 @@ func obtener(ctx context.Context, c consultor, id string) (nucleo.Trabajo, error
 	var terminado sql.NullString
 	err := c.QueryRowContext(ctx, `SELECT `+columnas+` FROM trabajos WHERE id = ?`, id).Scan(&t.ID, &t.Instancia, &estado,
 		&codigo, &t.MensajeError, &solicitud, &t.Huella, &t.Salida, &t.IntentoDe, &creado, &actualizado, &terminado,
-		&t.ModeloEnviado, &t.ModeloEfectivo, &t.Uso.TokensEntrada, &t.Uso.TokensSalida, &t.Uso.CostoUSD)
+		&t.ModeloEnviado, &t.ModeloEfectivo, &t.Uso.TokensEntrada, &t.Uso.TokensSalida, &t.Uso.CostoUSD, &t.PuntoAcceso)
 	if errors.Is(err, sql.ErrNoRows) {
 		return t, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "trabajo no encontrado: "+id)
 	}

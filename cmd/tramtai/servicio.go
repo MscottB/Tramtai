@@ -1,16 +1,17 @@
 package main
 
 import (
+	"bufio"
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -18,44 +19,12 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/adaptadores"
-	"tramtai/internal/api"
-	"tramtai/internal/documentos"
+	"tramtai/internal/cliente"
 	"tramtai/internal/nucleo"
-	"tramtai/internal/persistencia"
 	"tramtai/internal/planificador"
+	"tramtai/internal/servicio"
 	"tramtai/internal/version"
 )
-
-func comandoServicio() *cobra.Command {
-	servicio := &cobra.Command{Use: "servicio", Short: "Servicio HTTP local: API nativa y fachadas OpenAI y Anthropic"}
-	iniciar := &cobra.Command{Use: "iniciar", Short: "Inicia el servicio en primer plano (Ctrl+C lo detiene)",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			c, err := cargarConfiguracion()
-			if err != nil {
-				return err
-			}
-			return iniciarServicio(cmd, c)
-		}}
-	token := &cobra.Command{Use: "token", Short: "Muestra el token de la instancia global para configurar clientes",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			c, err := cargarConfiguracion()
-			if err != nil {
-				return err
-			}
-			datos, err := dirDatos()
-			if err != nil {
-				return err
-			}
-			valor, _, err := tokenGlobal(c, datos)
-			if err != nil {
-				return err
-			}
-			fmt.Fprintln(cmd.OutOrStdout(), valor)
-			return nil
-		}}
-	servicio.AddCommand(iniciar, token)
-	return servicio
-}
 
 // dirDatos es el directorio de datos locales del usuario (sección 12.1).
 func dirDatos() (string, error) {
@@ -67,44 +36,186 @@ func dirDatos() (string, error) {
 	return datos, os.MkdirAll(datos, 0o700)
 }
 
-// tokenGlobal toma el token de la variable configurada o, si no existe, del archivo token-global del directorio
-// de datos, que se crea con un valor aleatorio la primera vez (sección 14.1).
-func tokenGlobal(c *nucleo.Configuracion, datos string) (valor, origen string, err error) {
-	variable := c.Texto("instancia_global.token_variable_entorno")
-	if v := os.Getenv(variable); variable != "" && v != "" {
-		return v, "variable " + variable, nil
-	}
-	ruta := filepath.Join(datos, "token-global")
-	if contenido, err := os.ReadFile(ruta); err == nil && len(strings.TrimSpace(string(contenido))) >= 32 {
-		return strings.TrimSpace(string(contenido)), ruta, nil
-	}
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return "", "", err
-	}
-	valor = "tt_" + hex.EncodeToString(b)
-	return valor, ruta, os.WriteFile(ruta, []byte(valor+"\n"), 0o600)
+func contexto() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), 60*time.Second)
 }
 
-func esLoopback(host string) bool {
-	if host == "localhost" {
-		return true
+func conectar() (*cliente.Cliente, error) {
+	datos, err := dirDatos()
+	if err != nil {
+		return nil, err
 	}
-	ip := net.ParseIP(host)
-	return ip != nil && ip.IsLoopback()
+	return cliente.Conectar(datos)
 }
 
-// iniciarServicio arranca la instancia global y el servidor HTTP en primer plano.
-// shortcut: sin descriptor ni segundo plano; el ciclo de vida completo (sección 14.2) llega en M5.
-func iniciarServicio(cmd *cobra.Command, c *nucleo.Configuracion) error {
+// asegurarServicio conecta con el servicio o lo inicia en segundo plano (sección 5.1).
+func asegurarServicio(cmd *cobra.Command) (*cliente.Cliente, error) {
+	datos, err := dirDatos()
+	if err != nil {
+		return nil, err
+	}
+	if c, err := cliente.Conectar(datos); err == nil {
+		return c, nil
+	}
+	ejecutable, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+	fmt.Fprintln(cmd.ErrOrStderr(), "iniciando el servicio en segundo plano…")
+	return cliente.IniciarEnSegundoPlano(ejecutable, datos)
+}
+
+// confirmar pregunta en la terminal; cualquier respuesta que no empiece por s o y es un no.
+func confirmar(cmd *cobra.Command, pregunta string) bool {
+	fmt.Fprint(cmd.ErrOrStderr(), pregunta+" [s/N] ")
+	linea, _ := bufio.NewReader(cmd.InOrStdin()).ReadString('\n')
+	linea = strings.ToLower(strings.TrimSpace(linea))
+	return strings.HasPrefix(linea, "s") || strings.HasPrefix(linea, "y")
+}
+
+func comandoServicio() *cobra.Command {
+	grupo := &cobra.Command{Use: "servicio", Short: "Servicio único: todas las instancias y puntos de acceso en un puerto"}
+	var segundoPlano, si bool
+	iniciar := &cobra.Command{Use: "iniciar", Short: "Inicia el servicio en primer plano (Ctrl+C lo detiene) o con -d en segundo plano",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			if !segundoPlano {
+				return iniciarServicio(cmd)
+			}
+			c, err := asegurarServicio(cmd)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "servicio en marcha en %s\n", c.Base)
+			return nil
+		}}
+	iniciar.Flags().BoolVarP(&segundoPlano, "segundo-plano", "d", false, "inicia el servicio desacoplado de esta terminal")
+	detener := &cobra.Command{Use: "detener", Short: "Detiene el servicio y todas sus instancias",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			c, err := conectar()
+			if err != nil {
+				return err
+			}
+			if !si && !confirmar(cmd, "¿Detener el servicio y todas sus instancias?") {
+				return nil
+			}
+			ctx, cancelar := contexto()
+			defer cancelar()
+			if err := c.Detener(ctx); err != nil {
+				return err
+			}
+			for range 50 {
+				if _, err := conectar(); err != nil {
+					fmt.Fprintln(cmd.OutOrStdout(), "servicio detenido")
+					return nil
+				}
+				time.Sleep(200 * time.Millisecond)
+			}
+			return errors.New("el servicio no confirmó la detención")
+		}}
+	detener.Flags().BoolVarP(&si, "si", "s", false, "no pedir confirmación")
+	estado := &cobra.Command{Use: "estado", Short: "Muestra el servicio, sus instancias y sus puntos de acceso",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			c, err := conectar()
+			if errors.Is(err, cliente.ErrServicioInactivo) {
+				fmt.Fprintln(cmd.OutOrStdout(), "servicio: inactivo (tramtai servicio iniciar -d)")
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			ctx, cancelar := contexto()
+			defer cancelar()
+			e, err := c.Estado(ctx)
+			if err != nil {
+				return err
+			}
+			imprimirEstado(cmd.OutOrStdout(), e)
+			return nil
+		}}
+	recargar := &cobra.Command{Use: "recargar", Short: "Aplica los cambios de puntos de acceso sin reiniciar",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			c, err := conectar()
+			if err != nil {
+				return err
+			}
+			ctx, cancelar := contexto()
+			defer cancelar()
+			puntos, err := c.Recargar(ctx)
+			if err != nil {
+				return err
+			}
+			imprimirPuntos(cmd.OutOrStdout(), puntos)
+			return nil
+		}}
+	token := &cobra.Command{Use: "token", Short: "Muestra el token de la instancia global (igual que tramtai global token)",
+		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, "global") }}
+	grupo.AddCommand(iniciar, detener, estado, recargar, token)
+	return grupo
+}
+
+func imprimirEstado(out io.Writer, e servicio.Estado) {
+	fmt.Fprintf(out, "servicio activo en %s · %s · pid %d · desde %s\n", e.Base, e.Version, e.PID, e.IniciadoEn.Format("02-01-2006 15:04"))
+	fmt.Fprintln(out, "\ninstancias:")
+	if len(e.Instancias) == 0 {
+		fmt.Fprintln(out, "  ninguna (tramtai global iniciar, o tramtai proyecto iniciar en un proyecto)")
+	}
+	for _, i := range e.Instancias {
+		fmt.Fprintf(out, "  %-28s %-9s %s\n", i.ID, i.Ambito, resumenTrabajos(i.Trabajos))
+		if i.Raiz != "" {
+			fmt.Fprintf(out, "  %-28s raíz: %s\n", "", i.Raiz)
+		}
+		fmt.Fprintf(out, "  %-28s token: %s\n", "", i.ArchivoToken)
+	}
+	fmt.Fprintln(out, "\npuntos de acceso:")
+	imprimirPuntos(out, e.Puntos)
+	for _, err := range e.Errores {
+		fmt.Fprintln(out, "configuración: "+err)
+	}
+}
+
+func imprimirPuntos(out io.Writer, puntos []servicio.EstadoPunto) {
+	if len(puntos) == 0 {
+		fmt.Fprintln(out, "  ninguno (tramtai acceso crear <nombre>)")
+	}
+	for _, p := range puntos {
+		estado := "activo"
+		if p.Error != "" {
+			estado = p.Error
+		}
+		fmt.Fprintf(out, "  %-18s %-40s %-24s %s\n", p.Nombre, valorO(p.URL, "—"), "["+strings.Join(p.Contratos, ",")+"]", estado)
+	}
+}
+
+func resumenTrabajos(conteo map[string]int) string {
+	if len(conteo) == 0 {
+		return "sin trabajos"
+	}
+	estados := make([]string, 0, len(conteo))
+	for estado, n := range conteo {
+		estados = append(estados, estado+" "+strconv.Itoa(n))
+	}
+	sort.Strings(estados)
+	return strings.Join(estados, " · ")
+}
+
+func valorO(texto, alternativa string) string {
+	if texto == "" {
+		return alternativa
+	}
+	return texto
+}
+
+// iniciarServicio arranca el servicio en primer plano con las instancias que estaban activas.
+func iniciarServicio(cmd *cobra.Command) error {
+	c, err := nucleo.CargarConfiguracion("")
+	if err != nil {
+		return err
+	}
 	host, puerto := c.Texto("servicio.host"), c.Entero("servicio.puerto")
 	remoto := !esLoopback(host)
 	if remoto {
 		if !c.Booleano("servicio.permitir_remoto") {
 			return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "servicio.host "+host+" no es loopback: activa servicio.permitir_remoto (mejor, usa un túnel SSH)")
-		}
-		if !c.Booleano("servicio.requerir_token") {
-			return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "el acceso remoto exige servicio.requerir_token")
 		}
 		for _, agente := range []string{"claude", "codex"} {
 			if c.Texto("adaptadores."+agente+".autenticacion") == adaptadores.AutenticacionSuscripcion {
@@ -116,56 +227,37 @@ func iniciarServicio(cmd *cobra.Command, c *nucleo.Configuracion) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(datos, "instancias"), 0o700); err != nil {
-		return err
-	}
-	alm, err := persistencia.Abrir(filepath.Join(datos, "instancias", "global.db"))
-	if err != nil {
-		return err
-	}
-	defer alm.Cerrar()
-	cargas, err := documentos.AbrirCargas(filepath.Join(datos, "cargas", "global"),
-		time.Duration(c.Entero("retencion.horas_carga_huerfana"))*time.Hour, int64(c.Entero("conversion.maximo_carga_mb"))<<20)
-	if err != nil {
-		return err
-	}
-	registro, limites := adaptadores.Registro(c)
-	opc := planificador.OpcionesDesde(c, "global")
-	opc.Preparador = documentos.Preparador{Cargas: cargas, Conversor: documentos.Desde(c)}
-	p := planificador.Nuevo(alm, registro, planificador.NuevosSemaforos(limites), opc)
-
-	var token, origenToken string
-	if c.Booleano("servicio.requerir_token") {
-		if token, origenToken, err = tokenGlobal(c, datos); err != nil {
-			return err
-		}
+	if activo, err := cliente.Conectar(datos); err == nil {
+		return fmt.Errorf("el servicio ya está en marcha en %s", activo.Base)
 	}
 	hosts := []string{"127.0.0.1", "localhost", "::1"}
 	if remoto {
 		hosts = append(hosts, strings.ToLower(host))
+	}
+	salida := cmd.ErrOrStderr()
+	registro, limites := adaptadores.Registro(c)
+	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites),
+		Host: host, Puerto: puerto, Hosts: hosts, Registros: salida})
+	if err != nil {
+		return err
 	}
 	direccion := net.JoinHostPort(host, strconv.Itoa(puerto))
 	oyente, err := net.Listen("tcp", direccion)
 	if err != nil {
 		return fmt.Errorf("no se pudo escuchar en %s (¿el puerto está en uso?): %w", direccion, err)
 	}
-	if err := p.Iniciar(cmd.Context()); err != nil {
+	for _, err := range sv.Restaurar() {
+		fmt.Fprintln(salida, "no se pudo restaurar una instancia:", nucleo.MensajeDe(err))
+	}
+	srv := &http.Server{Handler: sv, ReadHeaderTimeout: 10 * time.Second}
+	if err := sv.EscribirDescriptor(); err != nil {
 		oyente.Close()
+		sv.Cerrar()
 		return err
 	}
-	s := &api.Servidor{Planificador: p, Cargas: cargas, Registro: registro, Config: c, Token: token, Hosts: hosts}
-	srv := &http.Server{Handler: s.Handler(), ReadHeaderTimeout: 10 * time.Second}
-
-	base := "http://" + direccion
-	salida := cmd.ErrOrStderr()
-	fmt.Fprintf(salida, "tramtai %s escuchando en %s\n", version.Texto(), base)
-	fmt.Fprintf(salida, "  API nativa:         %s/api/v1\n  OpenAI base_url:    %s/openai/v1\n  Anthropic base_url: %s/anthropic\n", base, base, base)
-	if token != "" {
-		fmt.Fprintf(salida, "  token:              %s (tramtai servicio token)\n", origenToken)
-	} else {
-		fmt.Fprintln(salida, "  token:              no requerido (servicio.requerir_token: false)")
-	}
-	fmt.Fprintln(salida, "Ctrl+C para detener.")
+	fmt.Fprintf(salida, "tramtai %s escuchando en %s\n", version.Texto(), sv.Base())
+	imprimirEstado(salida, sv.Estado())
+	fmt.Fprintln(salida, "\nCtrl+C para detener.")
 
 	ctx, parar := signal.NotifyContext(cmd.Context(), os.Interrupt)
 	defer parar()
@@ -174,16 +266,178 @@ func iniciarServicio(cmd *cobra.Command, c *nucleo.Configuracion) error {
 	select {
 	case err = <-fallo:
 	case <-ctx.Done():
-		fmt.Fprintln(salida, "deteniendo…")
+	case <-sv.Detenido():
 	}
+	fmt.Fprintln(salida, "deteniendo…")
 	cierre, cancelar := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelar()
 	if srv.Shutdown(cierre) != nil {
 		srv.Close() // los flujos SSE abiertos no terminan solos
 	}
-	p.Detener()
+	sv.Cerrar()
+	sv.BorrarDescriptor()
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil
 	}
 	return err
+}
+
+func esLoopback(host string) bool {
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
+// identificar devuelve la raíz, el identificador y la configuración de la instancia del ámbito.
+func identificar(ambito string) (raiz, id string, c *nucleo.Configuracion, err error) {
+	if ambito == "global" {
+		c, err = nucleo.CargarConfiguracion("")
+		return "", "global", c, err
+	}
+	if raiz = raizProyecto(); raiz == "" {
+		return "", "", nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida,
+			"no hay .tramtai/config.yaml en este directorio ni en los superiores: ejecuta tramtai iniciar")
+	}
+	if c, err = nucleo.CargarConfiguracion(raiz); err != nil {
+		return "", "", nil, err
+	}
+	return raiz, servicio.IDProyecto(raiz, c), c, nil
+}
+
+func mostrarTokenInstancia(cmd *cobra.Command, ambito string) error {
+	_, id, c, err := identificar(ambito)
+	if err != nil {
+		return err
+	}
+	datos, err := dirDatos()
+	if err != nil {
+		return err
+	}
+	valor, _, err := servicio.TokenInstancia(datos, id, c)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(cmd.OutOrStdout(), valor)
+	return nil
+}
+
+// comandoInstancia crea los comandos de la instancia global o de la del proyecto actual (secciones 5.1 y 5.2).
+func comandoInstancia(ambito string) *cobra.Command {
+	corto := map[string]string{"global": "Instancia global: texto y archivos sin repositorio",
+		"proyecto": "Instancia del proyecto actual (.tramtai/config.yaml)"}[ambito]
+	grupo := &cobra.Command{Use: ambito, Short: corto}
+	iniciar := &cobra.Command{Use: "iniciar", Short: "Activa la instancia (inicia el servicio si hace falta)",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			raiz, _, _, err := identificar(ambito)
+			if err != nil {
+				return err
+			}
+			c, err := asegurarServicio(cmd)
+			if err != nil {
+				return err
+			}
+			ctx, cancelar := contexto()
+			defer cancelar()
+			a, err := c.Activar(ctx, ambito, raiz)
+			if err != nil {
+				return err
+			}
+			out := cmd.OutOrStdout()
+			fmt.Fprintf(out, "instancia %s activa en %s\n", a.Instancia.ID, c.Base)
+			fmt.Fprintf(out, "  token:              %s (tramtai %s token)\n", a.Instancia.ArchivoToken, ambito)
+			fmt.Fprintf(out, "  OpenAI base_url:    %s/openai/v1\n  Anthropic base_url: %s/anthropic\n", c.Base, c.Base)
+			return nil
+		}}
+	detener := &cobra.Command{Use: "detener", Short: "Desactiva la instancia: vacía su cola sin afectar a las demás",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, id, _, err := identificar(ambito)
+			if err != nil {
+				return err
+			}
+			c, err := conectar()
+			if err != nil {
+				return err
+			}
+			ctx, cancelar := contexto()
+			defer cancelar()
+			if err := c.Desactivar(ctx, id); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "instancia %s desactivada\n", id)
+			return nil
+		}}
+	estado := &cobra.Command{Use: "estado", Short: "Muestra si la instancia está activa y sus trabajos",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			raiz, id, _, err := identificar(ambito)
+			if err != nil {
+				return err
+			}
+			out := cmd.OutOrStdout()
+			c, err := conectar()
+			if err != nil {
+				fmt.Fprintf(out, "instancia %s: inactiva (servicio detenido)\n", id)
+				return nil
+			}
+			ctx, cancelar := contexto()
+			defer cancelar()
+			e, err := c.Estado(ctx)
+			if err != nil {
+				return err
+			}
+			for _, i := range e.Instancias {
+				if i.ID == id {
+					fmt.Fprintf(out, "instancia %s: activa en %s\n  %s\n  token: %s\n", id, e.Base, resumenTrabajos(i.Trabajos), i.ArchivoToken)
+					return nil
+				}
+			}
+			fmt.Fprintf(out, "instancia %s: inactiva%s (tramtai %s iniciar)\n", id, map[bool]string{true: " · " + raiz}[raiz != ""], ambito)
+			return nil
+		}}
+	token := &cobra.Command{Use: "token", Short: "Muestra el token de la instancia para configurar clientes",
+		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, ambito) }}
+	grupo.AddCommand(iniciar, detener, estado, token)
+	return grupo
+}
+
+const plantillaProyecto = `# Configuración de Tramtai para este proyecto (versionada). Las claves de seguridad, los puertos y los
+# puntos de acceso van en .tramtai/local.yaml (no versionado) o en la configuración global.
+version: 1
+proyecto:
+  nombre: %q
+predeterminados:
+  agente: claude
+  perfil_modelo: equilibrado
+  modo_contexto: aislado
+  formato_salida: markdown
+`
+
+func comandoIniciar() *cobra.Command {
+	return &cobra.Command{Use: "iniciar", Short: "Prepara el directorio actual como proyecto de Tramtai (.tramtai/)",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			dir, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			ruta := filepath.Join(dir, ".tramtai", "config.yaml")
+			if _, err := os.Stat(ruta); err == nil {
+				return fmt.Errorf("%s ya existe", ruta)
+			}
+			if err := os.MkdirAll(filepath.Dir(ruta), 0o755); err != nil {
+				return err
+			}
+			if err := os.WriteFile(ruta, []byte(fmt.Sprintf(plantillaProyecto, filepath.Base(dir))), 0o644); err != nil {
+				return err
+			}
+			ignorar := filepath.Join(dir, ".tramtai", ".gitignore")
+			if err := os.WriteFile(ignorar, []byte("# configuración propia de cada máquina\nlocal.yaml\n"), 0o644); err != nil {
+				return err
+			}
+			if _, err := nucleo.CargarCapa(ruta, nucleo.OrigenProyecto); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "creado %s\nsiguiente: tramtai proyecto iniciar\n", ruta)
+			return nil
+		}}
 }

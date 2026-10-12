@@ -81,13 +81,19 @@ cliente = anthropic.Anthropic(base_url="http://127.0.0.1:17373/anthropic", api_k
 m = cliente.messages.create(model="claude/sonnet", max_tokens=1024, messages=[{"role": "user", "content": "Hola"}])
 ```
 
+## Puntos de acceso y administración
+
+Un punto de acceso expone la misma API bajo su propia URL y token: `http://127.0.0.1:17373/p/<nombre>/openai/v1`, o su propio puerto. Solo expone los contratos que tiene habilitados, aplica sus alias, modelos permitidos y modelo forzado (cabecera `Tramtai-Modelo-Forzado`) y solo ve sus trabajos. La administración (`/api/v1/servicio`) y la API de cada instancia con `Tramtai-Instancia` se describen en [operacion.md](operacion.md).
+
+`GET /api/v1/trabajos?limite=20` lista los trabajos recientes de la instancia, o los del punto de acceso si se llama desde uno.
+
 ## Errores
 
 API nativa: `{"error": {"codigo": "…", "mensaje": "…"}}`. Las fachadas usan el formato de error de OpenAI o de Anthropic, con el código de Tramtai en `code` (OpenAI).
 
 | HTTP | Códigos |
 |---|---|
-| 400 | `solicitud_invalida`, `parametro_no_soportado`, `modelo_ambiguo`, `modelo_no_disponible`, `modelo_no_configurado`, `carga_invalida` |
+| 400 | `solicitud_invalida`, `parametro_no_soportado`, `modelo_ambiguo`, `modelo_no_permitido`, `modelo_no_disponible`, `modelo_no_configurado`, `carga_invalida` |
 | 401 / 403 | `no_autorizado` / `origen_no_permitido` |
 | 404 | `no_encontrado` |
 | 409 | `conflicto_idempotencia`, `trabajo_no_terminado`, `trabajo_sin_salida` |

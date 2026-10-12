@@ -90,7 +90,7 @@ func (s *Servidor) chatCompletions(w http.ResponseWriter, r *http.Request) {
 	var p peticionChat
 	avisos, err := s.leerFachada(w, r, politicaChat, &p)
 	if err != nil {
-		escribirError(w, r, err)
+		EscribirError(w, r, err)
 		return
 	}
 	sol, err := s.solicitudFachada(p.Model)
@@ -105,12 +105,12 @@ func (s *Servidor) chatCompletions(w http.ResponseWriter, r *http.Request) {
 		err = formatoSalida(&sol, p.ResponseFormat.Type, esquema)
 	}
 	if err != nil {
-		escribirError(w, r, err)
+		EscribirError(w, r, err)
 		return
 	}
-	sol, t, err := s.aceptarFachada(r, sol)
+	sol, t, err := s.aceptarFachada(w, r, sol)
 	if err != nil {
-		escribirError(w, r, err)
+		EscribirError(w, r, err)
 		return
 	}
 	avisar(w, avisos)
@@ -122,11 +122,11 @@ func (s *Servidor) chatCompletions(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if final.Estado != nucleo.Completado {
-			escribirError(w, r, errorDeTrabajo(final))
+			EscribirError(w, r, errorDeTrabajo(final))
 			return
 		}
 		avisarUso(w, final)
-		escribirJSON(w, http.StatusOK, map[string]any{"id": id, "object": "chat.completion", "created": creado, "model": p.Model,
+		EscribirJSON(w, http.StatusOK, map[string]any{"id": id, "object": "chat.completion", "created": creado, "model": p.Model,
 			"choices": []any{map[string]any{"index": 0, "message": map[string]any{"role": "assistant", "content": final.Salida},
 				"finish_reason": "stop", "logprobs": nil}},
 			"usage": usoOpenAI(final)})
@@ -206,7 +206,7 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 	var p peticionRespuesta
 	avisos, err := s.leerFachada(w, r, politicaRespuestas, &p)
 	if err != nil {
-		escribirError(w, r, err)
+		EscribirError(w, r, err)
 		return
 	}
 	sol, err := s.solicitudFachada(p.Model)
@@ -228,12 +228,12 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 		err = formatoSalida(&sol, p.Text.Format.Type, p.Text.Format.Schema)
 	}
 	if err != nil {
-		escribirError(w, r, err)
+		EscribirError(w, r, err)
 		return
 	}
-	sol, t, err := s.aceptarFachada(r, sol)
+	sol, t, err := s.aceptarFachada(w, r, sol)
 	if err != nil {
-		escribirError(w, r, err)
+		EscribirError(w, r, err)
 		return
 	}
 	avisar(w, avisos)
@@ -244,13 +244,13 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if final.Estado != nucleo.Completado {
-			escribirError(w, r, errorDeTrabajo(final))
+			EscribirError(w, r, errorDeTrabajo(final))
 			return
 		}
 		avisarUso(w, final)
 		respuesta := objetoRespuesta(final, p.Model, "completed", final.Salida)
 		respuesta["output_text"] = final.Salida
-		escribirJSON(w, http.StatusOK, respuesta)
+		EscribirJSON(w, http.StatusOK, respuesta)
 		return
 	}
 
@@ -302,5 +302,5 @@ func (s *Servidor) modelosOpenAI(w http.ResponseWriter, _ *http.Request) {
 	for _, m := range s.catalogo() {
 		datos = append(datos, map[string]any{"id": m.ID, "object": "model", "created": 0, "owned_by": "tramtai"})
 	}
-	escribirJSON(w, http.StatusOK, map[string]any{"object": "list", "data": datos})
+	EscribirJSON(w, http.StatusOK, map[string]any{"object": "list", "data": datos})
 }

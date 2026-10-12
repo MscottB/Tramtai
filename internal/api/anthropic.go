@@ -40,12 +40,12 @@ func (s *Servidor) mensajesAnthropic(w http.ResponseWriter, r *http.Request) {
 		sol.Mensajes, err = mensajes(p.Messages)
 	}
 	if err != nil {
-		escribirError(w, r, err)
+		EscribirError(w, r, err)
 		return
 	}
-	sol, t, err := s.aceptarFachada(r, sol)
+	sol, t, err := s.aceptarFachada(w, r, sol)
 	if err != nil {
-		escribirError(w, r, err)
+		EscribirError(w, r, err)
 		return
 	}
 	avisar(w, avisos)
@@ -61,11 +61,11 @@ func (s *Servidor) mensajesAnthropic(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if final.Estado != nucleo.Completado {
-			escribirError(w, r, errorDeTrabajo(final))
+			EscribirError(w, r, errorDeTrabajo(final))
 			return
 		}
 		avisarUso(w, final)
-		escribirJSON(w, http.StatusOK, mensaje(final, []any{map[string]any{"type": "text", "text": final.Salida}}, "end_turn"))
+		EscribirJSON(w, http.StatusOK, mensaje(final, []any{map[string]any{"type": "text", "text": final.Salida}}, "end_turn"))
 		return
 	}
 

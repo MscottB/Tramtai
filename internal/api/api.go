@@ -25,14 +25,15 @@ import (
 
 const maximoCuerpo = 16 << 20
 
-// Servidor atiende una instancia.
-// shortcut: una sola instancia (global); las instancias por proyecto y los puntos de acceso llegan en M5.
+// Servidor atiende una instancia, o un punto de acceso de una instancia si Punto no es nil.
 type Servidor struct {
 	Planificador *planificador.Planificador
 	Cargas       *documentos.Cargas
 	Registro     map[string]adaptadores.Adaptador
 	Config       *nucleo.Configuracion
-	// Token es el token de la instancia; vacío solo si servicio.requerir_token es false.
+	// Punto es la política del punto de acceso que atiende este servidor (sección 5.4).
+	Punto *Punto
+	// Token es el token de la instancia para Handler; vacío solo si servicio.requerir_token es false.
 	Token string
 	// Hosts son los nombres aceptados en la cabecera Host (protección frente a DNS rebinding).
 	Hosts []string
@@ -40,78 +41,109 @@ type Servidor struct {
 	Sondeo time.Duration
 }
 
-// Handler devuelve el enrutador con las protecciones aplicadas.
+// Handler devuelve las rutas con las protecciones aplicadas y el token propio del servidor.
 func (s *Servidor) Handler() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", s.salud)
-	mux.HandleFunc("POST /api/v1/trabajos", s.crearTrabajo)
-	mux.HandleFunc("GET /api/v1/trabajos/{id}", s.obtenerTrabajo)
-	mux.HandleFunc("DELETE /api/v1/trabajos/{id}", s.eliminarTrabajo)
-	mux.HandleFunc("GET /api/v1/trabajos/{id}/salida", s.salidaTrabajo)
-	mux.HandleFunc("GET /api/v1/trabajos/{id}/eventos", s.eventosTrabajo)
-	mux.HandleFunc("POST /api/v1/trabajos/{id}/cancelar", s.cancelarTrabajo)
-	mux.HandleFunc("POST /api/v1/trabajos/{id}/reintentar", s.reintentarTrabajo)
-	mux.HandleFunc("POST /api/v1/ejecutar", s.ejecutarTrabajo)
-	mux.HandleFunc("POST /api/v1/cargas", s.crearCarga)
-	mux.HandleFunc("GET /api/v1/capacidades", s.capacidades)
-	mux.HandleFunc("GET /api/v1/modelos", s.modelosNativos)
-	mux.HandleFunc("POST /openai/v1/chat/completions", s.chatCompletions)
-	mux.HandleFunc("POST /openai/v1/responses", s.respuestas)
-	mux.HandleFunc("GET /openai/v1/models", s.modelosOpenAI)
-	mux.HandleFunc("POST /anthropic/v1/messages", s.mensajesAnthropic)
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		escribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "ruta no encontrada: "+r.Method+" "+r.URL.Path))
-	})
-	return s.proteger(mux)
+	var autorizar func(*http.Request) bool
+	if s.Token != "" {
+		autorizar = func(r *http.Request) bool { return TokenValido(r, s.Token) }
+	}
+	return Proteger(s.Hosts, autorizar, s.Rutas())
 }
 
-// proteger valida Host (antes de autenticar), Origin (sin CORS: solo el mismo origen) y el token.
-func (s *Servidor) proteger(siguiente http.Handler) http.Handler {
+// Rutas devuelve el enrutador sin protecciones, para montarlo detrás de Proteger o del servicio, que elige la
+// instancia por token. En un punto de acceso solo se registran sus contratos habilitados y nunca la administración.
+func (s *Servidor) Rutas() http.Handler {
+	mux := http.NewServeMux()
+	contrato := func(nombre string) bool { return s.Punto == nil || s.Punto.Contratos[nombre] }
+	mux.HandleFunc("GET /healthz", s.salud)
+	if contrato("nativa") {
+		mux.HandleFunc("POST /api/v1/trabajos", s.crearTrabajo)
+		mux.HandleFunc("GET /api/v1/trabajos", s.listarTrabajos)
+		mux.HandleFunc("GET /api/v1/trabajos/{id}", s.obtenerTrabajo)
+		mux.HandleFunc("DELETE /api/v1/trabajos/{id}", s.eliminarTrabajo)
+		mux.HandleFunc("GET /api/v1/trabajos/{id}/salida", s.salidaTrabajo)
+		mux.HandleFunc("GET /api/v1/trabajos/{id}/eventos", s.eventosTrabajo)
+		mux.HandleFunc("POST /api/v1/trabajos/{id}/cancelar", s.cancelarTrabajo)
+		mux.HandleFunc("POST /api/v1/trabajos/{id}/reintentar", s.reintentarTrabajo)
+		mux.HandleFunc("POST /api/v1/ejecutar", s.ejecutarTrabajo)
+		mux.HandleFunc("POST /api/v1/cargas", s.crearCarga)
+		mux.HandleFunc("GET /api/v1/capacidades", s.capacidades)
+		mux.HandleFunc("GET /api/v1/modelos", s.modelosNativos)
+	}
+	if contrato("openai") {
+		mux.HandleFunc("POST /openai/v1/chat/completions", s.chatCompletions)
+		mux.HandleFunc("POST /openai/v1/responses", s.respuestas)
+		mux.HandleFunc("GET /openai/v1/models", s.modelosOpenAI)
+	}
+	if contrato("anthropic") {
+		mux.HandleFunc("POST /anthropic/v1/messages", s.mensajesAnthropic)
+	}
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "ruta no encontrada: "+r.Method+" "+r.URL.Path))
+	})
+	return mux
+}
+
+// Proteger valida Host (antes de autenticar), Origin (sin CORS: solo el mismo origen) y, si autorizar no es
+// nil, el token. /healthz no exige token.
+func Proteger(hosts []string, autorizar func(*http.Request) bool, siguiente http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !s.hostPermitido(r.Host) {
-			escribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, "cabecera Host no permitida"))
+		if !hostPermitido(hosts, r.Host) {
+			EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, "cabecera Host no permitida"))
 			return
 		}
 		if origen := r.Header.Get("Origin"); origen != "" {
 			if u, err := url.Parse(origen); err != nil || u.Host != r.Host {
-				escribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, "origen no permitido"))
+				EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, "origen no permitido"))
 				return
 			}
 		}
-		if r.URL.Path != "/healthz" && s.Token != "" && !s.autorizado(r) {
-			w.Header().Set("WWW-Authenticate", "Bearer")
-			escribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado, "falta el token o no es válido"))
+		if autorizar != nil && r.URL.Path != "/healthz" && !autorizar(r) {
+			NoAutorizado(w, r)
 			return
 		}
 		siguiente.ServeHTTP(w, r)
 	})
 }
 
-func (s *Servidor) hostPermitido(host string) bool {
+// NoAutorizado responde 401 con el formato del contrato de la ruta.
+func NoAutorizado(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("WWW-Authenticate", "Bearer")
+	EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado, "falta el token o no es válido"))
+}
+
+func hostPermitido(hosts []string, host string) bool {
 	if nombre, _, err := net.SplitHostPort(host); err == nil {
 		host = nombre
 	}
-	return slices.Contains(s.Hosts, strings.ToLower(strings.Trim(host, "[]")))
+	return slices.Contains(hosts, strings.ToLower(strings.Trim(host, "[]")))
 }
 
-// autorizado acepta "Authorization: Bearer" (API nativa y SDK de OpenAI) y "x-api-key" (SDK de Anthropic).
-func (s *Servidor) autorizado(r *http.Request) bool {
-	token := r.Header.Get("x-api-key")
+// TokenDe extrae el token de "Authorization: Bearer" (API nativa y SDK de OpenAI) o de "x-api-key" (SDK de Anthropic).
+func TokenDe(r *http.Request) string {
 	if valor, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); ok {
-		token = valor
+		return valor
 	}
-	return subtle.ConstantTimeCompare([]byte(token), []byte(s.Token)) == 1
+	return r.Header.Get("x-api-key")
+}
+
+// TokenValido compara en tiempo constante el token de la petición con el esperado.
+func TokenValido(r *http.Request, esperado string) bool {
+	token := TokenDe(r)
+	return token != "" && subtle.ConstantTimeCompare([]byte(token), []byte(esperado)) == 1
 }
 
 func (s *Servidor) salud(w http.ResponseWriter, _ *http.Request) {
-	escribirJSON(w, http.StatusOK, map[string]any{"estado": "ok", "version": version.Version})
+	EscribirJSON(w, http.StatusOK, map[string]any{"estado": "ok", "version": version.Version})
 }
 
 var estadosHTTP = map[nucleo.CodigoError]int{
 	nucleo.CodigoSolicitudInvalida:      http.StatusBadRequest,
+	nucleo.CodigoConfiguracionInvalida:  http.StatusBadRequest,
 	nucleo.CodigoModeloNoConfigurado:    http.StatusBadRequest,
 	nucleo.CodigoModeloAmbiguo:          http.StatusBadRequest,
 	nucleo.CodigoModeloNoDisponible:     http.StatusBadRequest,
+	nucleo.CodigoModeloNoPermitido:      http.StatusBadRequest,
 	nucleo.CodigoParametroNoSoportado:   http.StatusBadRequest,
 	nucleo.CodigoCargaInvalida:          http.StatusBadRequest,
 	nucleo.CodigoNoAutorizado:           http.StatusUnauthorized,
@@ -135,8 +167,8 @@ var estadosHTTP = map[nucleo.CodigoError]int{
 	nucleo.CodigoTiempoEjecucionAgotado: http.StatusGatewayTimeout,
 }
 
-// escribirError responde con el formato de error del contrato de la ruta: nativo, OpenAI o Anthropic.
-func escribirError(w http.ResponseWriter, r *http.Request, err error) {
+// EscribirError responde con el formato de error del contrato de la ruta: nativo, OpenAI o Anthropic.
+func EscribirError(w http.ResponseWriter, r *http.Request, err error) {
 	codigo, mensaje := nucleo.CodigoDe(err), nucleo.MensajeDe(err)
 	if codigo == "" {
 		log.Printf("error interno en %s %s: %v", r.Method, r.URL.Path, err)
@@ -151,11 +183,11 @@ func escribirError(w http.ResponseWriter, r *http.Request, err error) {
 	}
 	switch {
 	case strings.HasPrefix(r.URL.Path, "/openai/"):
-		escribirJSON(w, estado, map[string]any{"error": errorOpenAI(estado, codigo, mensaje)})
+		EscribirJSON(w, estado, map[string]any{"error": errorOpenAI(estado, codigo, mensaje)})
 	case strings.HasPrefix(r.URL.Path, "/anthropic/"):
-		escribirJSON(w, estado, map[string]any{"type": "error", "error": map[string]any{"type": tipoAnthropic(estado), "message": mensaje}})
+		EscribirJSON(w, estado, map[string]any{"type": "error", "error": map[string]any{"type": tipoAnthropic(estado), "message": mensaje}})
 	default:
-		escribirJSON(w, estado, map[string]any{"error": map[string]any{"codigo": codigo, "mensaje": mensaje}})
+		EscribirJSON(w, estado, map[string]any{"error": map[string]any{"codigo": codigo, "mensaje": mensaje}})
 	}
 }
 
@@ -184,20 +216,25 @@ func errorDeTrabajo(t nucleo.Trabajo) error {
 	return nucleo.NuevoError(nucleo.CodigoTrabajoSinSalida, "el trabajo terminó como "+string(t.Estado))
 }
 
-func escribirJSON(w http.ResponseWriter, estado int, v any) {
+// EscribirJSON responde con un cuerpo JSON.
+func EscribirJSON(w http.ResponseWriter, estado int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(estado)
 	_ = json.NewEncoder(w).Encode(v)
 }
 
-// leerJSON decodifica el cuerpo; en la API nativa los campos desconocidos son un error.
-func leerJSON(w http.ResponseWriter, r *http.Request, destino any) error {
+// LeerJSON decodifica el cuerpo con límite de tamaño; los campos desconocidos son un error.
+func LeerJSON(w http.ResponseWriter, r *http.Request, destino any) error {
 	d := json.NewDecoder(http.MaxBytesReader(w, r.Body, maximoCuerpo))
 	d.DisallowUnknownFields()
 	if err := d.Decode(destino); err != nil {
 		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "cuerpo JSON no válido: "+err.Error())
 	}
 	return nil
+}
+
+func leerJSON(w http.ResponseWriter, r *http.Request, destino any) error {
+	return LeerJSON(w, r, destino)
 }
 
 // seguir entrega los eventos del trabajo posteriores a "desde" hasta que termina y devuelve el trabajo final.

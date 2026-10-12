@@ -24,7 +24,11 @@ func (s *Servidor) enviar(r *http.Request, sol nucleo.SolicitudEjecucion) (nucle
 	if len(clave) > 255 {
 		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "Idempotency-Key supera 255 caracteres")
 	}
-	return s.Planificador.Enviar(r.Context(), s.Config.AplicarPredeterminados(sol), clave)
+	sol, err := s.ajustar(sol)
+	if err != nil {
+		return nucleo.Trabajo{}, false, err
+	}
+	return s.aceptar(r.Context(), sol, clave)
 }
 
 func ubicacion(id string) string { return "/api/v1/trabajos/" + id }
@@ -33,12 +37,12 @@ func ubicacion(id string) string { return "/api/v1/trabajos/" + id }
 func (s *Servidor) crearTrabajo(w http.ResponseWriter, r *http.Request) {
 	var sol nucleo.SolicitudEjecucion
 	if err := leerJSON(w, r, &sol); err != nil {
-		escribirError(w, r, err)
+		EscribirError(w, r, err)
 		return
 	}
 	t, reutilizado, err := s.enviar(r, sol)
 	if err != nil {
-		escribirError(w, r, err)
+		EscribirError(w, r, err)
 		return
 	}
 	w.Header().Set("Location", ubicacion(t.ID))
@@ -46,21 +50,25 @@ func (s *Servidor) crearTrabajo(w http.ResponseWriter, r *http.Request) {
 	if reutilizado {
 		estado = http.StatusOK
 	}
-	escribirJSON(w, estado, t)
+	EscribirJSON(w, estado, t)
 }
 
 func (s *Servidor) obtenerTrabajo(w http.ResponseWriter, r *http.Request) {
-	t, err := s.Planificador.Obtener(r.Context(), r.PathValue("id"))
+	t, err := s.trabajo(r, r.PathValue("id"))
 	if err != nil {
-		escribirError(w, r, err)
+		EscribirError(w, r, err)
 		return
 	}
-	escribirJSON(w, http.StatusOK, t)
+	EscribirJSON(w, http.StatusOK, t)
 }
 
 func (s *Servidor) eliminarTrabajo(w http.ResponseWriter, r *http.Request) {
+	if _, err := s.trabajo(r, r.PathValue("id")); err != nil {
+		EscribirError(w, r, err)
+		return
+	}
 	if err := s.Planificador.Eliminar(r.Context(), r.PathValue("id")); err != nil {
-		escribirError(w, r, err)
+		EscribirError(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -69,14 +77,14 @@ func (s *Servidor) eliminarTrabajo(w http.ResponseWriter, r *http.Request) {
 // salidaTrabajo entrega la salida con el tipo de su formato.
 // shortcut: sin purga de resultados todavía no existe el 410 por expiración; llega con la retención (M7).
 func (s *Servidor) salidaTrabajo(w http.ResponseWriter, r *http.Request) {
-	t, err := s.Planificador.Obtener(r.Context(), r.PathValue("id"))
+	t, err := s.trabajo(r, r.PathValue("id"))
 	switch {
 	case err != nil:
-		escribirError(w, r, err)
+		EscribirError(w, r, err)
 	case !t.Estado.Terminal():
-		escribirError(w, r, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, "el trabajo está en "+string(t.Estado)))
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, "el trabajo está en "+string(t.Estado)))
 	case t.Estado != nucleo.Completado:
-		escribirError(w, r, errorDeTrabajo(t))
+		EscribirError(w, r, errorDeTrabajo(t))
 	default:
 		tipo := map[string]string{"json": "application/json", "texto": "text/plain; charset=utf-8"}[t.Solicitud.Salida.Formato]
 		if tipo == "" {
@@ -99,13 +107,13 @@ func (s *Servidor) eventosTrabajo(w http.ResponseWriter, r *http.Request) {
 	if cursor != "" {
 		n, err := strconv.Atoi(cursor)
 		if err != nil || n < 0 {
-			escribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "Last-Event-ID no válido"))
+			EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "Last-Event-ID no válido"))
 			return
 		}
 		desde = n
 	}
-	if _, err := s.Planificador.Obtener(r.Context(), id); err != nil {
-		escribirError(w, r, err)
+	if _, err := s.trabajo(r, id); err != nil {
+		EscribirError(w, r, err)
 		return
 	}
 	f := abrirFlujo(w)
@@ -119,22 +127,30 @@ func (s *Servidor) eventosTrabajo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Servidor) cancelarTrabajo(w http.ResponseWriter, r *http.Request) {
-	t, err := s.Planificador.Cancelar(r.Context(), r.PathValue("id"))
-	if err != nil {
-		escribirError(w, r, err)
+	if _, err := s.trabajo(r, r.PathValue("id")); err != nil {
+		EscribirError(w, r, err)
 		return
 	}
-	escribirJSON(w, http.StatusAccepted, t)
+	t, err := s.Planificador.Cancelar(r.Context(), r.PathValue("id"))
+	if err != nil {
+		EscribirError(w, r, err)
+		return
+	}
+	EscribirJSON(w, http.StatusAccepted, t)
 }
 
 func (s *Servidor) reintentarTrabajo(w http.ResponseWriter, r *http.Request) {
+	if _, err := s.trabajo(r, r.PathValue("id")); err != nil {
+		EscribirError(w, r, err)
+		return
+	}
 	t, err := s.Planificador.Reintentar(r.Context(), r.PathValue("id"))
 	if err != nil {
-		escribirError(w, r, err)
+		EscribirError(w, r, err)
 		return
 	}
 	w.Header().Set("Location", ubicacion(t.ID))
-	escribirJSON(w, http.StatusAccepted, t)
+	EscribirJSON(w, http.StatusAccepted, t)
 }
 
 // ejecutarTrabajo crea el trabajo, envía Location de inmediato y espera el resultado. Un corte HTTP no lo
@@ -142,12 +158,12 @@ func (s *Servidor) reintentarTrabajo(w http.ResponseWriter, r *http.Request) {
 func (s *Servidor) ejecutarTrabajo(w http.ResponseWriter, r *http.Request) {
 	var sol nucleo.SolicitudEjecucion
 	if err := leerJSON(w, r, &sol); err != nil {
-		escribirError(w, r, err)
+		EscribirError(w, r, err)
 		return
 	}
 	t, _, err := s.enviar(r, sol)
 	if err != nil {
-		escribirError(w, r, err)
+		EscribirError(w, r, err)
 		return
 	}
 	w.Header().Set("Location", ubicacion(t.ID))
@@ -170,7 +186,7 @@ func (s *Servidor) ejecutarTrabajo(w http.ResponseWriter, r *http.Request) {
 // crearCarga acepta multipart (campo "archivo") o el binario en el cuerpo con ?nombre= (sección 7.1).
 func (s *Servidor) crearCarga(w http.ResponseWriter, r *http.Request) {
 	if s.Cargas == nil {
-		escribirError(w, r, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, "esta instancia no admite cargas"))
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, "esta instancia no admite cargas"))
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, int64(s.Config.Entero("conversion.maximo_carga_mb"))<<20+1<<20)
@@ -188,10 +204,10 @@ func (s *Servidor) crearCarga(w http.ResponseWriter, r *http.Request) {
 		err = nucleo.NuevoError(nucleo.CodigoCargaInvalida, "el archivo supera conversion.maximo_carga_mb")
 	}
 	if err != nil {
-		escribirError(w, r, err)
+		EscribirError(w, r, err)
 		return
 	}
-	escribirJSON(w, http.StatusCreated, carga)
+	EscribirJSON(w, http.StatusCreated, carga)
 }
 
 func (s *Servidor) cargaMultipart(r *http.Request) (documentos.Carga, error) {
@@ -251,7 +267,7 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 		}
 		lista = append(lista, entrada)
 	}
-	escribirJSON(w, http.StatusOK, map[string]any{
+	EscribirJSON(w, http.StatusOK, map[string]any{
 		"version":               version.Version,
 		"formato_serializacion": adaptadores.FormatoSerializacion,
 		"entradas":              []string{"texto", "markdown", "json", "xml", "csv", "html", "pdf", "docx", "pptx", "xlsx", "zip"},
@@ -286,9 +302,9 @@ func (s *Servidor) catalogo() []modelo {
 		}
 	}
 	sort.Slice(lista, func(i, j int) bool { return lista[i].ID < lista[j].ID })
-	return lista
+	return s.filtrarCatalogo(lista)
 }
 
 func (s *Servidor) modelosNativos(w http.ResponseWriter, _ *http.Request) {
-	escribirJSON(w, http.StatusOK, map[string]any{"modelos": s.catalogo()})
+	EscribirJSON(w, http.StatusOK, map[string]any{"modelos": s.catalogo()})
 }
