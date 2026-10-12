@@ -8,6 +8,16 @@ type Preparador struct {
 	Conversor *Conversor
 }
 
+// Verificar comprueba que las cargas de una solicitud nueva existan y no hayan vencido.
+func (p Preparador) Verificar(cargas []string) error {
+	for _, id := range cargas {
+		if err := p.Cargas.Vigente(id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Preparar devuelve el texto ensamblado de las cargas, o entrada_no_disponible si alguna venció.
 func (p Preparador) Preparar(ctx context.Context, ids []string) (string, error) {
 	entradas := make([]Entrada, 0, len(ids))

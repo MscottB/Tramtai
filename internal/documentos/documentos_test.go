@@ -159,7 +159,31 @@ func TestCargas(t *testing.T) {
 	}
 	vencidas, _ := AbrirCargas(t.TempDir(), -time.Second, 10)
 	v, _ := vencidas.Guardar("a.txt", strings.NewReader("x"))
-	if _, _, err := vencidas.Obtener(v.ID); nucleo.CodigoDe(err) != nucleo.CodigoEntradaNoDisponible {
-		t.Fatalf("una carga vencida no está disponible: %v", err)
+	if err := vencidas.Vigente(v.ID); nucleo.CodigoDe(err) != nucleo.CodigoEntradaNoDisponible {
+		t.Fatalf("una carga vencida no se acepta en un trabajo nuevo: %v", err)
+	}
+	if _, _, err := vencidas.Obtener(v.ID); err != nil {
+		t.Fatalf("hasta la purga, un trabajo aceptado puede usarla: %v", err)
+	}
+}
+
+func TestPurgarCargas(t *testing.T) {
+	c, err := AbrirCargas(t.TempDir(), time.Hour, 1<<20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	usada, _ := c.Guardar("a.txt", strings.NewReader("a"))
+	huerfana, _ := c.Guardar("b.txt", strings.NewReader("b"))
+	if n, err := c.Purgar(nil, time.Now()); err != nil || n != 0 {
+		t.Fatalf("sin vencer no se borra nada: %d %v", n, err)
+	}
+	if n, err := c.Purgar(map[string]bool{usada.ID: true}, time.Now().Add(2*time.Hour)); err != nil || n != 1 {
+		t.Fatalf("se borra solo la huérfana vencida: %d %v", n, err)
+	}
+	if _, _, err := c.Obtener(usada.ID); err != nil {
+		t.Fatalf("la carga en uso sigue disponible aunque venció: %v", err)
+	}
+	if _, _, err := c.Obtener(huerfana.ID); nucleo.CodigoDe(err) != nucleo.CodigoEntradaNoDisponible {
+		t.Fatalf("la huérfana ya no existe: %v", err)
 	}
 }

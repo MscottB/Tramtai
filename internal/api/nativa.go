@@ -74,8 +74,7 @@ func (s *Servidor) eliminarTrabajo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// salidaTrabajo entrega la salida con el tipo de su formato.
-// shortcut: sin purga de resultados todavía no existe el 410 por expiración; llega con la retención (M7).
+// salidaTrabajo entrega la salida con el tipo de su formato; 410 si la retención ya la borró (sección 16.2).
 func (s *Servidor) salidaTrabajo(w http.ResponseWriter, r *http.Request) {
 	t, err := s.trabajo(r, r.PathValue("id"))
 	switch {
@@ -83,6 +82,8 @@ func (s *Servidor) salidaTrabajo(w http.ResponseWriter, r *http.Request) {
 		EscribirError(w, r, err)
 	case !t.Estado.Terminal():
 		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, "el trabajo está en "+string(t.Estado)))
+	case t.Disponibilidad == nucleo.SalidaExpirada:
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoResultadoExpirado, "el resultado expiró por la retención (retencion.horas_resultado); vuelve a ejecutar la solicitud"))
 	case t.Estado != nucleo.Completado:
 		EscribirError(w, r, errorDeTrabajo(t))
 	default:
@@ -112,11 +113,16 @@ func (s *Servidor) eventosTrabajo(w http.ResponseWriter, r *http.Request) {
 		}
 		desde = n
 	}
-	if _, err := s.trabajo(r, id); err != nil {
+	t, err := s.trabajo(r, id)
+	if err != nil {
 		EscribirError(w, r, err)
 		return
 	}
 	f := abrirFlujo(w)
+	if t.Disponibilidad == nucleo.SalidaExpirada {
+		// Solo quedan los eventos de estado: se avisa en lugar de dar a entender que no hubo contenido.
+		_ = f.json("aviso", map[string]any{"codigo": nucleo.CodigoResultadoExpirado, "mensaje": "los eventos con contenido expiraron con el resultado"})
+	}
 	final, err := s.seguir(r.Context(), id, desde, func(e persistencia.Evento) error {
 		return f.enviar(strconv.Itoa(e.Numero), e.Tipo, e.Datos)
 	}, f.latido)

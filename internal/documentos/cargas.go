@@ -27,7 +27,7 @@ type Carga struct {
 }
 
 // Cargas guarda las cargas de una instancia en un directorio privado: el contenido en <id> y los metadatos en <id>.json.
-// shortcut: el vencimiento se comprueba al usarla; la purga periódica y la protección mientras un trabajo la usa llegan con la retención (M7).
+// Una carga vence a las horas_carga_huerfana salvo que un trabajo la necesite todavía (Purgar).
 type Cargas struct {
 	dir         string
 	vigencia    time.Duration
@@ -70,7 +70,8 @@ func (c *Cargas) Guardar(nombre string, r io.Reader) (Carga, error) {
 	return carga, os.WriteFile(filepath.Join(c.dir, carga.ID+".json"), metadatos, 0o600)
 }
 
-// Obtener devuelve la carga y la ruta de su contenido, o entrada_no_disponible si no existe o venció.
+// Obtener devuelve la carga y la ruta de su contenido, o entrada_no_disponible si no existe. No mira VenceEn:
+// un trabajo ya aceptado protege sus cargas hasta que vence su resultado (Purgar); Vigente lo comprueba al aceptar.
 func (c *Cargas) Obtener(id string) (Carga, string, error) {
 	noDisponible := nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, "la carga "+id+" no existe o venció; vuelve a enviarla")
 	if !nucleo.ReCarga.MatchString(id) {
@@ -81,7 +82,7 @@ func (c *Cargas) Obtener(id string) (Carga, string, error) {
 		return Carga{}, "", noDisponible
 	}
 	var carga Carga
-	if json.Unmarshal(datos, &carga) != nil || time.Now().After(carga.VenceEn) {
+	if json.Unmarshal(datos, &carga) != nil {
 		return Carga{}, "", noDisponible
 	}
 	ruta := filepath.Join(c.dir, id)
@@ -89,6 +90,55 @@ func (c *Cargas) Obtener(id string) (Carga, string, error) {
 		return Carga{}, "", noDisponible
 	}
 	return carga, ruta, nil
+}
+
+// Vigente comprueba que la carga exista y no haya vencido; se usa al aceptar un trabajo nuevo.
+func (c *Cargas) Vigente(id string) error {
+	carga, _, err := c.Obtener(id)
+	if err == nil && time.Now().After(carga.VenceEn) {
+		err = nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, "la carga "+id+" venció; vuelve a enviarla")
+	}
+	return err
+}
+
+// Purgar borra las cargas vencidas que ningún trabajo necesita (enUso) y las subidas a medias de más de una hora.
+// Devuelve cuántas cargas borró.
+func (c *Cargas) Purgar(enUso map[string]bool, ahora time.Time) (int, error) {
+	entradas, err := os.ReadDir(c.dir)
+	if err != nil {
+		return 0, err
+	}
+	borradas := 0
+	for _, e := range entradas {
+		nombre := e.Name()
+		ruta := filepath.Join(c.dir, nombre)
+		switch {
+		case strings.HasPrefix(nombre, "subida-"):
+			if info, err := e.Info(); err == nil && ahora.Sub(info.ModTime()) > time.Hour {
+				_ = os.Remove(ruta)
+			}
+		case strings.HasSuffix(nombre, ".json"):
+			id := strings.TrimSuffix(nombre, ".json")
+			var carga Carga
+			datos, err := os.ReadFile(ruta)
+			if err == nil && json.Unmarshal(datos, &carga) == nil && (ahora.Before(carga.VenceEn) || enUso[id]) {
+				continue
+			}
+			// Primero el contenido: si falla, los metadatos siguen y la próxima purga lo reintenta.
+			if err := os.Remove(filepath.Join(c.dir, id)); err != nil && !os.IsNotExist(err) {
+				return borradas, err
+			}
+			if err := os.Remove(ruta); err != nil {
+				return borradas, err
+			}
+			borradas++
+		default:
+			if _, err := os.Stat(ruta + ".json"); os.IsNotExist(err) {
+				_ = os.Remove(ruta) // contenido sin metadatos: una subida que no terminó de registrarse
+			}
+		}
+	}
+	return borradas, nil
 }
 
 // nombreSeguro conserva solo el nombre base, sin caracteres de control y con longitud acotada.

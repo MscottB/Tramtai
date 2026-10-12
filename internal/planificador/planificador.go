@@ -78,9 +78,13 @@ type Planificador struct {
 	mu            sync.Mutex
 	cancelaciones map[string]context.CancelFunc
 	cola          chan string
-	ctx           context.Context
-	parar         context.CancelFunc
-	grupo         sync.WaitGroup
+	// ctx gobierna la admisión y la toma de trabajos de la cola; ejec, las ejecuciones en curso. Separarlos
+	// permite el drenaje: se deja de aceptar sin cortar lo que ya se ejecuta (sección 17.3).
+	ctx    context.Context
+	parar  context.CancelFunc
+	ejec   context.Context
+	cortar context.CancelFunc
+	grupo  sync.WaitGroup
 }
 
 // Nuevo crea un planificador; hay que llamar a Iniciar antes de enviar trabajos.
@@ -105,6 +109,7 @@ func (p *Planificador) Iniciar(ctx context.Context) error {
 		p.cola <- id
 	}
 	p.ctx, p.parar = context.WithCancel(context.Background())
+	p.ejec, p.cortar = context.WithCancel(context.Background())
 	for range p.opc.MaximoTrabajos {
 		p.grupo.Add(1)
 		go p.ejecutor()
@@ -133,6 +138,12 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 	}
 	if len(solicitud.Salida.Esquema) > 0 {
 		if _, err := salidas.Compilar(solicitud.Salida.Esquema); err != nil {
+			return nucleo.Trabajo{}, false, err
+		}
+	}
+	// Una solicitud nueva no puede citar cargas vencidas; un reintento usa las que su trabajo protegía.
+	if v, ok := p.opc.Preparador.(interface{ Verificar([]string) error }); ok && intentoDe == "" && len(solicitud.Cargas) > 0 {
+		if err := v.Verificar(solicitud.Cargas); err != nil {
 			return nucleo.Trabajo{}, false, err
 		}
 	}
@@ -224,6 +235,9 @@ func (p *Planificador) Reintentar(ctx context.Context, id string) (nucleo.Trabaj
 	if !anterior.Estado.Terminal() {
 		return anterior, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, "solo se reintenta un trabajo terminado")
 	}
+	if anterior.EntradasEliminadas {
+		return anterior, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, "las entradas del trabajo ya vencieron o se eliminaron al terminar; vuelve a enviarlas")
+	}
 	t, _, err := p.aceptar(ctx, anterior.Solicitud, "", anterior.ID, anterior.PuntoAcceso)
 	return t, err
 }
@@ -246,13 +260,37 @@ func (p *Planificador) Contar(ctx context.Context) (map[nucleo.Estado]int, error
 	return p.almacen.Contar(ctx, p.opc.Instancia)
 }
 
-// Detener deja de aceptar trabajos, detiene los ejecutores y espera a que terminen (sección 17.3).
-// shortcut: sin plazo de drenaje; lo que está ejecutándose queda interrumpido. El drenaje configurable llega en M7.
-func (p *Planificador) Detener() {
-	if p.parar != nil {
-		p.parar()
+// Detener deja de aceptar trabajos e interrumpe lo que se está ejecutando (Drenar sin plazo).
+func (p *Planificador) Detener() { p.Drenar(0) }
+
+// Drenar deja de aceptar trabajos y de tomarlos de la cola, espera hasta plazo a que terminen los que se
+// están ejecutando y después interrumpe los que queden. Lo que seguía en cola se reanuda al reiniciar (sección 17.3).
+func (p *Planificador) Drenar(plazo time.Duration) {
+	if p.parar == nil {
+		return
 	}
-	p.grupo.Wait()
+	p.parar()
+	fin := make(chan struct{})
+	go func() {
+		p.grupo.Wait()
+		close(fin)
+	}()
+	if plazo > 0 {
+		select {
+		case <-fin:
+			return
+		case <-time.After(plazo):
+		}
+	}
+	p.cortar()
+	<-fin
+}
+
+// EnCurso devuelve cuántos trabajos se están procesando ahora (los que esperaría un drenaje).
+func (p *Planificador) EnCurso() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return len(p.cancelaciones)
 }
 
 func (p *Planificador) ejecutor() {
@@ -288,7 +326,7 @@ func (p *Planificador) procesar(id string) {
 		return
 	}
 
-	ctxTrabajo, cancelar := context.WithCancel(p.ctx)
+	ctxTrabajo, cancelar := context.WithCancel(p.ejec)
 	defer cancelar()
 	p.mu.Lock()
 	p.cancelaciones[id] = cancelar
@@ -319,6 +357,10 @@ func (p *Planificador) procesar(id string) {
 			return
 		}
 		solicitud = conDocumentos(solicitud, documentos)
+		if p.ctx.Err() != nil { // la conversión terminó durante un drenaje: no se lanza un agente nuevo
+			p.cerrarDetenido(id, desde)
+			return
+		}
 	}
 	if !p.cambiar(id, desde, nucleo.EsperandoAgente, persistencia.Cambio{}) {
 		return
@@ -328,6 +370,9 @@ func (p *Planificador) procesar(id string) {
 		case semaforo <- struct{}{}:
 			defer func() { <-semaforo }()
 		case <-ctxTrabajo.Done():
+			p.cerrarDetenido(id, nucleo.EsperandoAgente)
+			return
+		case <-p.ctx.Done(): // en drenaje: nunca lanzó el agente, se reencola
 			p.cerrarDetenido(id, nucleo.EsperandoAgente)
 			return
 		}
@@ -382,9 +427,9 @@ func (p *Planificador) cerrarDetenido(id string, desde nucleo.Estado) {
 	case t.Estado == nucleo.CancelacionSolicitada:
 		p.cambiar(id, nucleo.CancelacionSolicitada, nucleo.Cancelado, persistencia.Cambio{})
 	case desde == nucleo.EsperandoAgente || desde == nucleo.PreparandoEntrada:
-		p.cambiar(id, nucleo.EsperandoAgente, nucleo.EnCola, persistencia.Cambio{}) // nunca lanzó el agente: se reencola al reiniciar
+		p.cambiar(id, desde, nucleo.EnCola, persistencia.Cambio{}) // nunca lanzó el agente: se reencola al reiniciar
 	default:
-		p.cambiar(id, desde, nucleo.Interrumpido, persistencia.Cambio{Mensaje: "el servicio se detuvo durante la ejecución"})
+		p.cambiar(id, desde, nucleo.Interrumpido, persistencia.Cambio{Mensaje: "el servicio se detuvo durante la ejecución (sin plazo de drenaje o agotado)"})
 	}
 }
 

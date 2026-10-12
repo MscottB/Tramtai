@@ -233,3 +233,76 @@ func TestUsoYModeloSeGuardan(t *testing.T) {
 		t.Fatalf("modelo o uso no guardados: %+v", final)
 	}
 }
+
+func TestPurgaPorRetencion(t *testing.T) {
+	a := abrir(t)
+	r := Retencion{Resultado: 24 * time.Hour, Metadatos: 168 * time.Hour}
+	terminado := trabajo("global", "secreto")
+	terminado.Solicitud.Cargas = []string{"carga_a"}
+	terminado = aceptar(t, a, terminado, "clave")
+	avanzar(t, a, terminado.ID, nucleo.EsperandoAgente, nucleo.Ejecutando, nucleo.ValidandoSalida)
+	salida := "respuesta"
+	if err := a.CambiarEstado(ctx, terminado.ID, nucleo.ValidandoSalida, nucleo.Completado, Cambio{Salida: &salida}); err != nil {
+		t.Fatal(err)
+	}
+	a.AgregarEvento(ctx, terminado.ID, "texto", "respuesta")
+	activo := trabajo("global", "otro")
+	activo.Solicitud.Cargas = []string{"carga_b"}
+	activo = aceptar(t, a, activo, "")
+
+	if enUso, _ := a.CargasEnUso(ctx, "global"); !enUso["carga_a"] || !enUso["carga_b"] {
+		t.Fatalf("antes de vencer, las dos cargas están en uso: %v", enUso)
+	}
+	if v, e, err := a.Purgar(ctx, "global", r); err != nil || v != 0 || e != 0 {
+		t.Fatalf("dentro de la ventana no se purga nada: %d %d %v", v, e, err)
+	}
+	if tr, _ := a.Obtener(ctx, terminado.ID); tr.Disponibilidad != nucleo.SalidaDisponible {
+		t.Fatalf("disponibilidad %q", tr.Disponibilidad)
+	}
+
+	ahora := time.Now()
+	a.reloj = func() time.Time { return ahora.Add(25 * time.Hour) }
+	if v, e, err := a.Purgar(ctx, "global", r); err != nil || v != 1 || e != 0 {
+		t.Fatalf("vence el resultado: %d %d %v", v, e, err)
+	}
+	tr, _ := a.Obtener(ctx, terminado.ID)
+	if tr.Disponibilidad != nucleo.SalidaExpirada || tr.Salida != "" || !tr.EntradasEliminadas || len(tr.Solicitud.Mensajes) != 0 || tr.Estado != nucleo.Completado {
+		t.Fatalf("tras vencer: %+v", tr)
+	}
+	eventos, _ := a.Eventos(ctx, terminado.ID, 0)
+	for _, e := range eventos {
+		if e.Tipo != "estado" {
+			t.Fatalf("quedó un evento con contenido: %+v", e)
+		}
+	}
+	if enUso, _ := a.CargasEnUso(ctx, "global"); enUso["carga_a"] || !enUso["carga_b"] {
+		t.Fatalf("solo el trabajo activo protege su carga: %v", enUso)
+	}
+	if _, reutilizado, _ := a.Aceptar(ctx, trabajo("global", "secreto"), "clave", 0); reutilizado {
+		t.Fatal("la clave de idempotencia debía vencer con el resultado")
+	}
+
+	a.reloj = func() time.Time { return ahora.Add(170 * time.Hour) }
+	if _, e, err := a.Purgar(ctx, "global", r); err != nil || e != 1 {
+		t.Fatalf("se eliminan los metadatos: %d %v", e, err)
+	}
+	if _, err := a.Obtener(ctx, terminado.ID); nucleo.CodigoDe(err) != nucleo.CodigoNoEncontrado {
+		t.Fatalf("tras los metadatos el trabajo no existe: %v", err)
+	}
+	if tr, err := a.Obtener(ctx, activo.ID); err != nil || tr.Estado != nucleo.EnCola {
+		t.Fatalf("un trabajo activo nunca se purga: %+v %v", tr, err)
+	}
+}
+
+func TestEliminarEntradasAlTerminar(t *testing.T) {
+	a := abrir(t)
+	tr := aceptar(t, a, trabajo("global", "secreto"), "")
+	avanzar(t, a, tr.ID, nucleo.Fallido)
+	if _, _, err := a.Purgar(ctx, "global", Retencion{Resultado: time.Hour, Metadatos: time.Hour, EliminarEntradas: true}); err != nil {
+		t.Fatal(err)
+	}
+	tr, _ = a.Obtener(ctx, tr.ID)
+	if !tr.EntradasEliminadas || len(tr.Solicitud.Mensajes) != 0 || tr.Disponibilidad == nucleo.SalidaExpirada {
+		t.Fatalf("entradas borradas sin vencer el resultado: %+v", tr)
+	}
+}

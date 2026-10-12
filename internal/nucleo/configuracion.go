@@ -57,6 +57,7 @@ var esquema = map[string]tipoValor{
 	"instancia.ambito":                            tipoTexto,
 	"servicio.host":                               tipoTexto,
 	"servicio.puerto":                             tipoEntero,
+	"servicio.plazo_drenaje_segundos":             tipoEntero,
 	"servicio.requerir_token":                     tipoBooleano,
 	"servicio.permitir_remoto":                    tipoBooleano,
 	"instancia_global.token_variable_entorno":     tipoTexto,
@@ -155,6 +156,7 @@ func Internos() Capa {
 	return Capa{Origen: OrigenInterno, Fuente: "interno", Valores: map[string]any{
 		"servicio.host":                               "127.0.0.1",
 		"servicio.puerto":                             17373,
+		"servicio.plazo_drenaje_segundos":             30,
 		"servicio.requerir_token":                     true,
 		"servicio.permitir_remoto":                    false,
 		"instancia_global.token_variable_entorno":     "TRAMTAI_TOKEN_GLOBAL",

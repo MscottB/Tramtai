@@ -78,6 +78,28 @@ ejecutando al reiniciar el servicio → interrumpido   (no se relanza)
 en_cola al reiniciar → se reencola
 ```
 
+## Retención, cierre y recuperación (M7)
+
+La retención (sección 16.2) se aplica a cada instancia al abrirla y después cada 5 minutos. Los plazos cuentan desde que el trabajo termina, y los trabajos activos nunca se purgan:
+
+| Clave | Por defecto | Qué borra al vencer |
+|---|---|---|
+| `retencion.horas_resultado` | 24 | La salida, los mensajes, las instrucciones, las cargas citadas y los eventos con contenido. El trabajo sigue `completado`, con `disponibilidad: expirada`, y la salida responde 410. |
+| `retencion.horas_metadatos` | 168 | El trabajo entero y sus eventos de estado. Desde entonces responde 404. |
+| `retencion.horas_idempotencia` | 24 | La clave `Idempotency-Key`; después la misma clave crea otro trabajo. |
+| `retencion.horas_carga_huerfana` | 24 | Las cargas que ningún trabajo necesita. Las de un trabajo que aún se puede reintentar se conservan aunque hayan vencido. |
+| `retencion.eliminar_entradas_al_terminar` | false | Con `true`, las entradas se borran al terminar y el reintento exige reenviarlas. |
+
+**Cierre (sección 17.3):** al detener el servicio se dejan de aceptar trabajos (503 `servicio_detenido`). Lo que se está ejecutando tiene hasta `servicio.plazo_drenaje_segundos` (30) para terminar, mientras la API sigue respondiendo para recoger resultados. Al agotarse el plazo, lo que quede pasa a `interrumpido`. Lo que estaba en cola se conserva y se reanuda al reiniciar. Desactivar una instancia no espera: interrumpe lo que tenga en curso.
+
+**Caída del servicio (sección 4.3):**
+
+- En Windows, el sistema cierra el Job Object de cada agente y termina su árbol de procesos. Se verificó matando el servicio con 6 procesos de Codex en marcha.
+- Al reiniciar, lo que estaba ejecutándose pasa a `interrumpido` y nunca se relanza.
+- En Unix el grupo de procesos sobrevive a una caída. Terminarlo al arrancar queda pendiente para M8.
+
+**Límite:** el vencimiento borra los datos de forma lógica (SQLite y archivos). No garantiza un borrado físico seguro en SSD, copias de seguridad ni páginas libres de SQLite.
+
 ## Precedencia de configuración
 
 De menor a mayor: interno → global → proyecto → local → entorno → punto de acceso → solicitud. Las claves de seguridad (`servicio`, `comandos_agentes`, `adaptadores`, `concurrencia_servicio`…) se rechazan en la capa de proyecto, que es la que va en el repositorio.

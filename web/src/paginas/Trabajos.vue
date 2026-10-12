@@ -29,6 +29,9 @@
         <div class="text-caption text-grey-7 q-mb-xs">Mensaje</div>
         <pre class="salida">{{ detalle.solicitud.mensajes?.at(-1)?.contenido }}</pre>
       </q-card-section>
+      <q-card-section v-if="detalle.disponibilidad === 'expirada'" class="text-grey-7">
+        Resultado expirado por la retención (retencion.horas_resultado). Los datos del trabajo se conservan para consultarlo.
+      </q-card-section>
       <q-card-section v-if="detalle.salida">
         <div class="text-caption text-grey-7 q-mb-xs">Salida</div>
         <pre class="salida">{{ detalle.salida }}</pre>

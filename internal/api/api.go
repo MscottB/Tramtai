@@ -154,6 +154,7 @@ var estadosHTTP = map[nucleo.CodigoError]int{
 	nucleo.CodigoTrabajoSinSalida:       http.StatusConflict,
 	nucleo.CodigoTransicionInvalida:     http.StatusConflict,
 	nucleo.CodigoEntradaNoDisponible:    http.StatusGone,
+	nucleo.CodigoResultadoExpirado:      http.StatusGone,
 	nucleo.CodigoSalidaNoCumpleEsquema:  http.StatusUnprocessableEntity,
 	nucleo.CodigoConversionFallida:      http.StatusUnprocessableEntity,
 	nucleo.CodigoColaLlena:              http.StatusTooManyRequests,

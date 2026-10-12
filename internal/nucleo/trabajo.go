@@ -29,12 +29,22 @@ type Trabajo struct {
 	// ModeloEnviado es el identificador pasado al CLI tras resolver el perfil; vacío = predeterminado del CLI.
 	ModeloEnviado string `json:"modelo_enviado,omitempty"`
 	// ModeloEfectivo es el que informó el agente; vacío = no verificable (sección 9.2).
-	ModeloEfectivo string     `json:"modelo_efectivo,omitempty"`
-	Uso            Uso        `json:"uso"`
-	CreadoEn       time.Time  `json:"creado_en"`
-	ActualizadoEn  time.Time  `json:"actualizado_en"`
-	TerminadoEn    *time.Time `json:"terminado_en,omitempty"`
+	ModeloEfectivo string `json:"modelo_efectivo,omitempty"`
+	Uso            Uso    `json:"uso"`
+	// Disponibilidad de la salida, aparte del estado (sección 4.2): disponible o expirada; vacía si no hubo salida.
+	Disponibilidad string `json:"disponibilidad,omitempty"`
+	// EntradasEliminadas indica que la retención ya borró las entradas: el reintento exige reenviarlas.
+	EntradasEliminadas bool       `json:"entradas_eliminadas,omitempty"`
+	CreadoEn           time.Time  `json:"creado_en"`
+	ActualizadoEn      time.Time  `json:"actualizado_en"`
+	TerminadoEn        *time.Time `json:"terminado_en,omitempty"`
 }
+
+// Disponibilidad de la salida de un trabajo terminado.
+const (
+	SalidaDisponible = "disponible"
+	SalidaExpirada   = "expirada"
+)
 
 // NuevoID genera un identificador de trabajo aleatorio.
 func NuevoID() string {

@@ -133,6 +133,9 @@ func imprimirTrabajo(out io.Writer, t nucleo.Trabajo) {
 	if t.CodigoError != "" {
 		fmt.Fprintf(out, "error: %s: %s\n", t.CodigoError, t.MensajeError)
 	}
+	if t.Disponibilidad == nucleo.SalidaExpirada {
+		fmt.Fprintln(out, "resultado expirado por la retención (retencion.horas_resultado)")
+	}
 	if t.Salida != "" {
 		fmt.Fprintln(out, "\n"+t.Salida)
 	}

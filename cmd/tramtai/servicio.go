@@ -105,10 +105,20 @@ func comandoServicio() *cobra.Command {
 			if err := c.Detener(ctx); err != nil {
 				return err
 			}
-			for range 50 {
+			// El servicio espera a los trabajos en curso hasta servicio.plazo_drenaje_segundos (sección 17.3).
+			plazo := 30 * time.Second
+			if cfg, err := nucleo.CargarConfiguracion(""); err == nil {
+				plazo = time.Duration(cfg.Entero("servicio.plazo_drenaje_segundos")) * time.Second
+			}
+			inicio, avisado := time.Now(), false
+			for time.Since(inicio) < plazo+15*time.Second {
 				if _, err := conectar(); err != nil {
 					fmt.Fprintln(cmd.OutOrStdout(), "servicio detenido")
 					return nil
+				}
+				if !avisado && time.Since(inicio) > 2*time.Second {
+					fmt.Fprintf(cmd.OutOrStdout(), "esperando a que terminen los trabajos en curso (hasta %s)…\n", plazo)
+					avisado = true
 				}
 				time.Sleep(200 * time.Millisecond)
 			}
@@ -239,7 +249,8 @@ func iniciarServicio(cmd *cobra.Command) error {
 	salida := cmd.ErrOrStderr()
 	registro, limites := adaptadores.Registro(c)
 	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites),
-		Host: host, Puerto: puerto, Hosts: hosts, Registros: salida, Web: recursos.Web()})
+		Host: host, Puerto: puerto, Hosts: hosts, Registros: salida, Web: recursos.Web(),
+		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second})
 	if err != nil {
 		return err
 	}
@@ -271,6 +282,8 @@ func iniciarServicio(cmd *cobra.Command) error {
 	case <-sv.Detenido():
 	}
 	fmt.Fprintln(salida, "deteniendo…")
+	parar()     // un segundo Ctrl+C durante el drenaje termina el proceso: Job Objects y la recuperación cubren el resto
+	sv.Drenar() // la API sigue respondiendo para que los clientes recojan resultados; los trabajos nuevos se rechazan
 	cierre, cancelar := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelar()
 	if srv.Shutdown(cierre) != nil {

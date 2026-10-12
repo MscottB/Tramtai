@@ -46,7 +46,7 @@ La aplicación de escritorio inicia el servicio si no está en marcha y muestra 
 tramtai servicio iniciar -d        # segundo plano (sin -d: primer plano, Ctrl+C lo detiene)
 tramtai servicio estado            # instancias, puntos de acceso y errores
 tramtai servicio recargar          # aplica cambios de puntos de acceso sin reiniciar
-tramtai servicio detener           # pide confirmación (-s para no pedirla)
+tramtai servicio detener           # pide confirmación (-s para no pedirla); espera a lo que está en curso
 
 tramtai global iniciar|detener|estado|token
 tramtai iniciar                    # crea .tramtai/config.yaml en el repositorio actual
@@ -58,6 +58,11 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <instancia> 
 - `proyecto iniciar` inicia el servicio si no está en marcha.
 - Las instancias activas se recuerdan: al reiniciar el servicio vuelven a abrirse y recuperan sus trabajos (sección 4.3).
 - Detener una instancia cancela lo que tenía en cola; lo que se estaba ejecutando queda `interrumpido`. Las demás instancias no se ven afectadas.
+- **Detener el servicio:**
+  - Deja de aceptar trabajos y espera hasta `servicio.plazo_drenaje_segundos` (30 por defecto) a que terminen los que están en marcha. Después interrumpe los que queden.
+  - Lo que estaba en cola se reanuda al volver a iniciarlo.
+  - En primer plano, un segundo Ctrl+C corta la espera.
+- **Resultados:** se conservan 24 horas (`retencion.horas_resultado`); después la salida responde 410 y se borra lo que escribió el usuario. El registro del trabajo dura 7 días (`retencion.horas_metadatos`). Ver [arquitectura](arquitectura.md#retención-cierre-y-recuperación-m7).
 
 ## Instancias
 

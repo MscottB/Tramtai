@@ -63,10 +63,13 @@ ALTER TABLE trabajos ADD COLUMN tokens_salida INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE trabajos ADD COLUMN costo_usd REAL NOT NULL DEFAULT 0;`,
 	// v3 (M5): punto de acceso que creó el trabajo.
 	`ALTER TABLE trabajos ADD COLUMN punto_acceso TEXT NOT NULL DEFAULT '';`,
+	// v4 (M7): retención. vencido = pasó la ventana del resultado; entradas_eliminadas = ya no se puede reintentar.
+	`ALTER TABLE trabajos ADD COLUMN vencido INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE trabajos ADD COLUMN entradas_eliminadas INTEGER NOT NULL DEFAULT 0;`,
 }
 
 const columnas = `id, instancia, estado, codigo_error, mensaje_error, solicitud, huella, salida, intento_de, creado_en, actualizado_en, terminado_en,
-	modelo_enviado, modelo_efectivo, tokens_entrada, tokens_salida, costo_usd, punto_acceso`
+	modelo_enviado, modelo_efectivo, tokens_entrada, tokens_salida, costo_usd, punto_acceso, vencido, entradas_eliminadas`
 
 // Almacen es la base SQLite de una instancia.
 type Almacen struct {
@@ -410,13 +413,86 @@ func (a *Almacen) Recuperar(ctx context.Context, instancia string) (interrumpido
 	return interrumpidos, reencolados, nil
 }
 
+// Retencion son los plazos de la sección 16.2, contados desde la terminación del trabajo.
+type Retencion struct {
+	Resultado        time.Duration // salida, entradas y eventos con contenido
+	Metadatos        time.Duration // el trabajo entero; hasta entonces se responde 410 en lugar de 404
+	EliminarEntradas bool          // borra las entradas al terminar: el reintento exige reenviarlas
+}
+
+// sinEntradas quita de la solicitud guardada todo lo que trae contenido del usuario.
+const sinEntradas = `json_remove(solicitud, '$.mensajes', '$.instrucciones', '$.cargas')`
+
+// Purgar aplica la retención a los trabajos terminados de la instancia; los activos nunca se purgan.
+// Devuelve cuántos resultados vencieron y cuántos trabajos se eliminaron.
+func (a *Almacen) Purgar(ctx context.Context, instancia string, r Retencion) (vencidos, eliminados int, err error) {
+	tx, err := a.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer tx.Rollback()
+	ahora := a.reloj().UTC()
+	if r.EliminarEntradas {
+		if _, err := tx.ExecContext(ctx, `UPDATE trabajos SET solicitud = `+sinEntradas+`, entradas_eliminadas = 1
+			WHERE instancia = ? AND terminado_en IS NOT NULL AND entradas_eliminadas = 0`, instancia); err != nil {
+			return 0, 0, err
+		}
+	}
+	res, err := tx.ExecContext(ctx, `UPDATE trabajos SET salida = '', solicitud = `+sinEntradas+`, vencido = 1, entradas_eliminadas = 1
+		WHERE instancia = ? AND terminado_en < ? AND vencido = 0`, instancia, fecha(ahora.Add(-r.Resultado)))
+	if err != nil {
+		return 0, 0, err
+	}
+	n, _ := res.RowsAffected()
+	vencidos = int(n)
+	limiteMetadatos := fecha(ahora.Add(-r.Metadatos))
+	pasos := []struct {
+		consulta string
+		args     []any
+	}{
+		// Los eventos de estado se conservan con los metadatos; los demás llevan contenido.
+		{`DELETE FROM eventos WHERE tipo <> 'estado' AND trabajo_id IN (SELECT id FROM trabajos WHERE instancia = ? AND vencido = 1)`, []any{instancia}},
+		{`DELETE FROM eventos WHERE trabajo_id IN (SELECT id FROM trabajos WHERE instancia = ? AND terminado_en < ?)`, []any{instancia, limiteMetadatos}},
+		{`DELETE FROM idempotencia WHERE instancia = ? AND vence_en < ?`, []any{instancia, fecha(ahora)}},
+		{`DELETE FROM trabajos WHERE instancia = ? AND terminado_en < ?`, []any{instancia, limiteMetadatos}},
+	}
+	for _, p := range pasos {
+		if res, err = tx.ExecContext(ctx, p.consulta, p.args...); err != nil {
+			return 0, 0, err
+		}
+	}
+	n, _ = res.RowsAffected() // el último paso: trabajos eliminados
+	return vencidos, int(n), tx.Commit()
+}
+
+// CargasEnUso devuelve las cargas que algún trabajo puede necesitar todavía: activos o terminados que aún
+// admiten reintento. La purga de cargas no las toca aunque hayan vencido (sección 16.2).
+func (a *Almacen) CargasEnUso(ctx context.Context, instancia string) (map[string]bool, error) {
+	filas, err := a.db.QueryContext(ctx, `SELECT DISTINCT j.value FROM trabajos t, json_each(t.solicitud, '$.cargas') j
+		WHERE t.instancia = ? AND t.entradas_eliminadas = 0`, instancia)
+	if err != nil {
+		return nil, err
+	}
+	defer filas.Close()
+	enUso := map[string]bool{}
+	for filas.Next() {
+		var id string
+		if err := filas.Scan(&id); err != nil {
+			return nil, err
+		}
+		enUso[id] = true
+	}
+	return enUso, filas.Err()
+}
+
 func obtener(ctx context.Context, c consultor, id string) (nucleo.Trabajo, error) {
 	var t nucleo.Trabajo
 	var estado, codigo, solicitud, creado, actualizado string
 	var terminado sql.NullString
+	var vencido bool
 	err := c.QueryRowContext(ctx, `SELECT `+columnas+` FROM trabajos WHERE id = ?`, id).Scan(&t.ID, &t.Instancia, &estado,
 		&codigo, &t.MensajeError, &solicitud, &t.Huella, &t.Salida, &t.IntentoDe, &creado, &actualizado, &terminado,
-		&t.ModeloEnviado, &t.ModeloEfectivo, &t.Uso.TokensEntrada, &t.Uso.TokensSalida, &t.Uso.CostoUSD, &t.PuntoAcceso)
+		&t.ModeloEnviado, &t.ModeloEfectivo, &t.Uso.TokensEntrada, &t.Uso.TokensSalida, &t.Uso.CostoUSD, &t.PuntoAcceso, &vencido, &t.EntradasEliminadas)
 	if errors.Is(err, sql.ErrNoRows) {
 		return t, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "trabajo no encontrado: "+id)
 	}
@@ -432,6 +508,12 @@ func obtener(ctx context.Context, c consultor, id string) (nucleo.Trabajo, error
 	if terminado.Valid {
 		fin, _ := time.Parse(formatoFecha, terminado.String)
 		t.TerminadoEn = &fin
+	}
+	switch {
+	case vencido:
+		t.Disponibilidad = nucleo.SalidaExpirada
+	case t.Estado == nucleo.Completado:
+		t.Disponibilidad = nucleo.SalidaDisponible
 	}
 	return t, nil
 }

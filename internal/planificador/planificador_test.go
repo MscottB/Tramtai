@@ -361,3 +361,54 @@ func TestEsquemaDeSalida(t *testing.T) {
 		t.Fatalf("un esquema inválido se rechaza al aceptar: %v", err)
 	}
 }
+
+func TestDrenajeEsperaYLuegoInterrumpe(t *testing.T) {
+	alm := abrir(t)
+	opc := opciones()
+	opc.MaximoTrabajos = 1
+	p := Nuevo(alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Demora: 300 * time.Millisecond}},
+		NuevosSemaforos(map[string]int{"simulado": 1}), opc)
+	if err := p.Iniciar(ctx); err != nil {
+		t.Fatal(err)
+	}
+	corto := enviar(t, p, solicitud("corto"))
+	enCola := enviar(t, p, solicitud("en cola"))
+	esperar(t, alm, corto, nucleo.Ejecutando)
+	p.Drenar(5 * time.Second)
+	if tr, _ := alm.Obtener(ctx, corto); tr.Estado != nucleo.Completado {
+		t.Fatalf("el drenaje deja terminar lo que se ejecuta: %s", tr.Estado)
+	}
+	if tr, _ := alm.Obtener(ctx, enCola); tr.Estado != nucleo.EnCola {
+		t.Fatalf("lo que estaba en cola se conserva para el reinicio: %s", tr.Estado)
+	}
+	if _, _, err := p.Enviar(ctx, solicitud("tarde"), ""); nucleo.CodigoDe(err) != nucleo.CodigoServicioDetenido {
+		t.Fatalf("en drenaje no se aceptan trabajos: %v", err)
+	}
+
+	alm2 := abrir(t)
+	p2 := Nuevo(alm2, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Demora: time.Minute}},
+		NuevosSemaforos(map[string]int{"simulado": 1}), opc)
+	if err := p2.Iniciar(ctx); err != nil {
+		t.Fatal(err)
+	}
+	largo := enviar(t, p2, solicitud("largo"))
+	esperar(t, alm2, largo, nucleo.Ejecutando)
+	inicio := time.Now()
+	p2.Drenar(200 * time.Millisecond)
+	if tr, _ := alm2.Obtener(ctx, largo); tr.Estado != nucleo.Interrumpido || time.Since(inicio) > 5*time.Second {
+		t.Fatalf("agotado el plazo se interrumpe: %s tras %s", tr.Estado, time.Since(inicio))
+	}
+}
+
+func TestReintentarSinEntradas(t *testing.T) {
+	alm := abrir(t)
+	p := iniciar(t, alm, adaptadores.Simulado{}, 1, opciones())
+	id := enviar(t, p, solicitud("hola"))
+	esperar(t, alm, id, nucleo.Completado)
+	if _, _, err := alm.Purgar(ctx, "global", persistencia.Retencion{Resultado: time.Hour, Metadatos: time.Hour, EliminarEntradas: true}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.Reintentar(ctx, id); nucleo.CodigoDe(err) != nucleo.CodigoEntradaNoDisponible {
+		t.Fatalf("sin entradas el reintento pide reenviarlas: %v", err)
+	}
+}

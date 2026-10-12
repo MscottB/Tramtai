@@ -234,3 +234,47 @@ func TestEditarPuntosConservaComentarios(t *testing.T) {
 		t.Fatal("un cambio inválido debe dejar el archivo como estaba")
 	}
 }
+
+func TestResultadoExpiradoResponde410(t *testing.T) {
+	s, ts, _ := entorno(t, "retencion:\n  horas_resultado: 0\n", "", adaptadores.Simulado{})
+	global, _ := s.ActivarGlobal()
+	r, _ := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", global.token, hola)
+	id := r.Header.Get("Location")
+	if err := global.Purgar(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if r, cuerpo := pedir(t, ts.URL, "GET", id+"/salida", global.token, ""); r.StatusCode != 410 || !strings.Contains(cuerpo, "resultado_expirado") {
+		t.Fatalf("salida expirada: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, cuerpo := pedir(t, ts.URL, "GET", id, global.token, ""); r.StatusCode != 200 || !strings.Contains(cuerpo, `"disponibilidad":"expirada"`) || strings.Contains(cuerpo, "hola") {
+		t.Fatalf("los metadatos siguen, sin contenido: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, cuerpo := pedir(t, ts.URL, "POST", id+"/reintentar", global.token, ""); r.StatusCode != 410 || !strings.Contains(cuerpo, "entrada_no_disponible") {
+		t.Fatalf("reintento sin entradas: %d %s", r.StatusCode, cuerpo)
+	}
+	if _, cuerpo := pedir(t, ts.URL, "GET", id+"/eventos", global.token, ""); !strings.Contains(cuerpo, "event: aviso") || !strings.Contains(cuerpo, "event: fin") {
+		t.Fatalf("SSE avisa de la expiración: %s", cuerpo)
+	}
+}
+
+func TestDrenarAlCerrar(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{Demora: 300 * time.Millisecond})
+	s.opc.PlazoDrenaje = 5 * time.Second
+	global, _ := s.ActivarGlobal()
+	r, cuerpo := pedir(t, ts.URL, "POST", "/api/v1/trabajos", global.token, hola)
+	if r.StatusCode != 202 {
+		t.Fatalf("%d %s", r.StatusCode, cuerpo)
+	}
+	id := r.Header.Get("Location")
+	for i := 0; i < 100 && !strings.Contains(cuerpo, `"ejecutando"`); i++ {
+		time.Sleep(10 * time.Millisecond)
+		_, cuerpo = pedir(t, ts.URL, "GET", id, global.token, "")
+	}
+	s.Drenar()
+	if r, _ := pedir(t, ts.URL, "POST", "/api/v1/trabajos", global.token, hola); r.StatusCode != 503 {
+		t.Fatalf("tras drenar se rechazan trabajos nuevos: %d", r.StatusCode)
+	}
+	if _, cuerpo := pedir(t, ts.URL, "GET", id, global.token, ""); !strings.Contains(cuerpo, `"completado"`) {
+		t.Fatalf("el trabajo en curso terminó y su resultado se puede recoger: %s", cuerpo)
+	}
+}

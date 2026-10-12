@@ -9,6 +9,8 @@ import (
 )
 
 // preparar lanza el proceso como líder de un grupo nuevo para poder señalar a todo el árbol.
+// shortcut: si el servicio muere de golpe, el grupo sigue vivo (en Windows el Job Object lo cierra el sistema);
+// hace falta guardar pgid y firma de inicio y terminarlos al arrancar (sección 4.3) antes de soportar Unix en M8.
 func preparar(cmd *exec.Cmd) { cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} }
 
 type grupo struct{ pgid int }

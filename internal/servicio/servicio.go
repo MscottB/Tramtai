@@ -9,6 +9,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/fs"
 	"net"
@@ -41,7 +42,12 @@ type Opciones struct {
 	Hosts     []string
 	Registros io.Writer // mensajes de operación; nil los descarta
 	Web       fs.FS     // Web UI compilada (internal/recursos); nil la desactiva
+	// PlazoDrenaje es lo que Drenar espera a los trabajos en curso antes de interrumpirlos (sección 17.3).
+	PlazoDrenaje time.Duration
 }
+
+// intervaloPurga es cada cuánto se aplica la retención (sección 16.2) a cada instancia activa.
+const intervaloPurga = 5 * time.Minute
 
 // Instancia es un ámbito lógico con configuración, token, cola, base de datos y cargas propios (sección 5).
 type Instancia struct {
@@ -55,6 +61,8 @@ type Instancia struct {
 	token        string
 	almacen      *persistencia.Almacen
 	rutas        http.Handler
+	pararPurga   context.CancelFunc
+	purgaParada  chan struct{}
 }
 
 // Servicio atiende todas las instancias en un único puerto; el token de cada petición elige la instancia.
@@ -301,8 +309,48 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuraci
 		return nil, err
 	}
 	srv := &api.Servidor{Planificador: p, Cargas: cargas, Registro: s.opc.Registro, Config: c}
-	return &Instancia{ID: id, Ambito: ambito, Raiz: raiz, Config: c, Planificador: p, Cargas: cargas,
-		ArchivoToken: archivo, token: token, almacen: alm, rutas: srv.Rutas()}, nil
+	inst := &Instancia{ID: id, Ambito: ambito, Raiz: raiz, Config: c, Planificador: p, Cargas: cargas,
+		ArchivoToken: archivo, token: token, almacen: alm, rutas: srv.Rutas()}
+	inst.iniciarPurga(s.opc.Registros)
+	return inst, nil
+}
+
+// iniciarPurga aplica la retención al abrir la instancia y después cada intervaloPurga.
+func (i *Instancia) iniciarPurga(registros io.Writer) {
+	ctx, parar := context.WithCancel(context.Background())
+	i.pararPurga, i.purgaParada = parar, make(chan struct{})
+	go func() {
+		defer close(i.purgaParada)
+		reloj := time.NewTicker(intervaloPurga)
+		defer reloj.Stop()
+		for {
+			if err := i.Purgar(ctx); err != nil && ctx.Err() == nil {
+				fmt.Fprintf(registros, "purga de %s: %s\n", i.ID, nucleo.MensajeDe(err))
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-reloj.C:
+			}
+		}
+	}()
+}
+
+// Purgar aplica la retención de la instancia: vence resultados y entradas, borra metadatos antiguos y las
+// cargas vencidas que ningún trabajo necesita (sección 16.2).
+func (i *Instancia) Purgar(ctx context.Context) error {
+	horas := func(clave string) time.Duration { return time.Duration(i.Config.Entero(clave)) * time.Hour }
+	r := persistencia.Retencion{Resultado: horas("retencion.horas_resultado"), Metadatos: horas("retencion.horas_metadatos"),
+		EliminarEntradas: i.Config.Booleano("retencion.eliminar_entradas_al_terminar")}
+	if _, _, err := i.almacen.Purgar(ctx, i.ID, r); err != nil {
+		return err
+	}
+	enUso, err := i.almacen.CargasEnUso(ctx, i.ID)
+	if err != nil {
+		return err
+	}
+	_, err = i.Cargas.Purgar(enUso, time.Now())
+	return err
 }
 
 // Desactivar detiene una instancia sin afectar a las demás: vacía su cola (cancela lo que no empezó), lo que
@@ -320,7 +368,10 @@ func (s *Servicio) Desactivar(id string) error {
 	return nil
 }
 
+// cerrar detiene la purga y el planificador (interrumpe lo que aún se ejecuta) y cierra la base.
 func (i *Instancia) cerrar(vaciarCola bool) {
+	i.pararPurga()
+	<-i.purgaParada
 	if vaciarCola {
 		ctx := context.Background()
 		if ids, err := i.almacen.ListarPorEstado(ctx, i.ID, nucleo.EnCola); err == nil {
@@ -331,6 +382,28 @@ func (i *Instancia) cerrar(vaciarCola bool) {
 	}
 	i.Planificador.Detener()
 	i.almacen.Cerrar()
+}
+
+// Drenar deja de aceptar trabajos en todas las instancias y espera hasta PlazoDrenaje a que terminen los que
+// están en ejecución; los que sigan después se interrumpen. Las instancias siguen abiertas, así que los clientes
+// pueden recoger los resultados hasta que se llame a Cerrar (sección 17.3).
+func (s *Servicio) Drenar() {
+	s.mu.RLock()
+	instancias := make([]*Instancia, 0, len(s.instancias))
+	enCurso := 0
+	for _, inst := range s.instancias {
+		instancias = append(instancias, inst)
+		enCurso += inst.Planificador.EnCurso()
+	}
+	s.mu.RUnlock()
+	if enCurso > 0 {
+		fmt.Fprintf(s.opc.Registros, "esperando hasta %s a %d trabajo(s) en curso…\n", s.opc.PlazoDrenaje, enCurso)
+	}
+	var grupo sync.WaitGroup
+	for _, inst := range instancias {
+		grupo.Go(func() { inst.Planificador.Drenar(s.opc.PlazoDrenaje) })
+	}
+	grupo.Wait()
 }
 
 // Cerrar detiene todos los puntos de acceso y todas las instancias. Lo que estaba en cola se reanuda al volver

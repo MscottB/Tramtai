@@ -34,6 +34,8 @@ export interface Trabajo {
   mensaje_error?: string
   solicitud: Solicitud
   salida?: string
+  disponibilidad?: string
+  entradas_eliminadas?: boolean
   intento_de?: string
   punto_acceso?: string
   modelo_enviado?: string

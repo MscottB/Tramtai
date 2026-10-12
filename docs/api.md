@@ -21,14 +21,14 @@
 | Método y ruta | Función |
 |---|---|
 | `POST /trabajos` | Crea un trabajo (`SolicitudEjecucion`). Responde 202 con el trabajo y `Location`; si la `Idempotency-Key` ya apuntaba a la misma solicitud, responde 200. |
-| `GET /trabajos/{id}` | Estado, error, modelo enviado y efectivo, uso y salida. |
-| `GET /trabajos/{id}/salida` | La salida con su tipo (`text/markdown`, `text/plain` o `application/json`). Si no ha terminado, 409 `trabajo_no_terminado`. |
-| `GET /trabajos/{id}/eventos` | SSE con `id` monotónico. `Last-Event-ID` (o `?desde=`) reanuda tras ese evento. Envía latidos cada 15 s y termina con un evento `fin`. |
+| `GET /trabajos/{id}` | Estado, error, modelo enviado y efectivo, uso, salida y `disponibilidad` (`disponible` o `expirada`). Tras la retención de metadatos (7 días) responde 404. |
+| `GET /trabajos/{id}/salida` | La salida con su tipo (`text/markdown`, `text/plain` o `application/json`). Si no ha terminado, 409 `trabajo_no_terminado`; si la retención ya la borró, 410 `resultado_expirado`. |
+| `GET /trabajos/{id}/eventos` | SSE con `id` monotónico. `Last-Event-ID` (o `?desde=`) reanuda tras ese evento. Envía latidos cada 15 s y termina con un evento `fin`. Si el resultado expiró, empieza con un evento `aviso`: solo quedan los eventos de estado. |
 | `POST /trabajos/{id}/cancelar` | Cancelación idempotente; responde 202 sin afirmar que ya terminó. |
-| `POST /trabajos/{id}/reintentar` | Crea un intento nuevo (`intento_de`) a partir de un trabajo terminado. |
+| `POST /trabajos/{id}/reintentar` | Crea un intento nuevo (`intento_de`) a partir de un trabajo terminado. Si sus entradas ya vencieron, 410 `entrada_no_disponible`. |
 | `DELETE /trabajos/{id}` | Borra un trabajo terminado: 204, o 409 si sigue activo. |
 | `POST /ejecutar` | Igual que `POST /trabajos`, pero espera el resultado. Envía `Location` antes de esperar; si se corta la conexión, el trabajo no se cancela. |
-| `POST /cargas` | Multipart con el campo `archivo`, o el binario en el cuerpo con `?nombre=`. Devuelve `identificador_carga`, `sha256`, `tamano_bytes` y `vence_en`. |
+| `POST /cargas` | Multipart con el campo `archivo`, o el binario en el cuerpo con `?nombre=`. Devuelve `identificador_carga`, `sha256`, `tamano_bytes` y `vence_en`. Un trabajo nuevo que cite una carga vencida se rechaza con 410; las cargas de un trabajo aceptado se conservan mientras se pueda reintentar. |
 | `GET /capacidades` | Por agente: streaming (`tokens` o `final`), salida estructurada, modelo efectivo, versión detectada, autenticación y términos. Incluye el formato de serialización. |
 | `GET /modelos` | Catálogo: agentes, `agente/modelo` configurados y perfiles. |
 
@@ -97,7 +97,7 @@ API nativa: `{"error": {"codigo": "…", "mensaje": "…"}}`. Las fachadas usan 
 | 401 / 403 | `no_autorizado` / `origen_no_permitido` |
 | 404 | `no_encontrado` |
 | 409 | `conflicto_idempotencia`, `trabajo_no_terminado`, `trabajo_sin_salida` |
-| 410 | `entrada_no_disponible` |
+| 410 | `entrada_no_disponible`, `resultado_expirado` |
 | 422 | `salida_no_cumple_esquema`, `conversion_fallida` |
 | 429 | `cola_llena` (con `Retry-After`), `limite_uso_proveedor` |
 | 502 / 503 / 504 | `error_agente`, `autenticacion_agente` / `agente_no_disponible` / `tiempo_ejecucion_agotado` |

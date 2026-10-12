@@ -12,7 +12,8 @@
 | M4 | ✅ | Servicio HTTP: API nativa `/api/v1` con SSE reanudable, cargas, capacidades y modelos; fachadas OpenAI (chat, responses, models) y Anthropic (messages) con política de parámetros |
 | M5 | ✅ | Servicio único con instancias global y por proyecto por token, descriptor y segundo plano, puntos de acceso con recarga en caliente, terminal interactiva |
 | M6 | ✅ | Web UI embebida (Vue 3 + Quasar) con sesión por cookie y CSRF, aplicación de escritorio Wails v3 con bandeja, y recorrido compartido: CLI, terminal, Web y escritorio sobre los mismos trabajos |
-| M7 | ⬜ | Cierre ordenado con plazo para trabajos en curso |
+| M7 | ✅ | Retención con purga periódica (resultado, entradas, eventos, metadatos, idempotencia y cargas), 410 `resultado_expirado`, cierre con plazo de drenaje y recuperación verificada tras matar el servicio |
+| M8 | ⬜ | Distribución, documentación y matriz multiplataforma |
 
 ## Tareas
 
@@ -24,14 +25,14 @@
 - [ ] Probar con `-race` (necesita CGO y gcc) o en el CI de Linux.
 - [ ] Registrar el avance de M1, M2, M3 y M0b en el documento maestro (v13).
 - [ ] Probar las fachadas con los SDK oficiales de Python y Node (hoy probadas con curl y pruebas Go).
-- [ ] 410 por resultado expirado y error explícito de cursor SSE fuera de ventana (llegan con la retención, M7).
 - [ ] Sustituir el sondeo de eventos (100 ms) por notificación en memoria si pesa con muchos clientes.
 - [ ] Límite de concurrencia propio por punto de acceso (hoy usa el de su instancia).
 - [ ] Modo consciente del proyecto (raíces permitidas, reglas del repositorio para proyectos confiables).
 - [ ] Compilar y probar la aplicación de escritorio en macOS y Linux (necesita CGO y WebKit; hoy solo Windows).
 - [ ] Revisar Wails en cada beta (fijado en v3.0.0-beta.28) y migrar a la versión estable cuando salga.
 - [ ] Icono propio de Tramtai para la bandeja y el ejecutable (hoy el predeterminado de Wails).
-- [ ] Purga de cargas vencidas y protección mientras un trabajo las usa (retención, M7).
+- [ ] Unix: guardar pgid y firma de inicio de cada agente y terminar los grupos huérfanos al arrancar; hoy una caída del servicio los deja vivos (en Windows los cierra el Job Object).
+- [ ] `retencion.guardar_historial` y `cifrado_aplicacion` se aceptan en la configuración, pero no tienen efecto: no hay historial permanente ni cifrado propio (sección 16.2).
 - [ ] Perfiles de salida en configuración (`salida.esquema` por archivo, sección 22.3) y `conservar_salida_invalida`.
 - [ ] Adaptadores Antigravity (`agy` con `modelProvider: gemini`) y Gemini API directa.
 - [ ] Guardar las claves de API en el Administrador de credenciales de Windows en lugar de variables de entorno.

@@ -1160,6 +1160,9 @@ func (m *modelo) vistaDetalle(b *strings.Builder) string {
 	}
 	fmt.Fprintf(b, "%s\n", resumenTrabajo(t))
 	fmt.Fprintf(b, "Creado: %s\n", t.CreadoEn.Local().Format("02-01-2006 15:04:05"))
+	if t.Disponibilidad == nucleo.SalidaExpirada {
+		b.WriteString(estilo(tenue, "Resultado expirado por la retención (retencion.horas_resultado)") + "\n")
+	}
 	b.WriteString(estilo(tenue, strings.Repeat("─", min(m.ancho, 100))) + "\n")
 	for _, l := range ventana(strings.Split(t.Salida, "\n"), m.scroll, m.alto-12) {
 		b.WriteString(l + "\n")
