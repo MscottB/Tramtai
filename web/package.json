@@ -1,0 +1,23 @@
+{
+  "name": "tramtai-web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Web UI de Tramtai (Vue 3 + Quasar); se compila en internal/recursos/web y se incorpora al ejecutable.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@quasar/extras": "1.17.0",
+    "quasar": "2.35.1",
+    "vue": "3.5.13"
+  },
+  "devDependencies": {
+    "@quasar/vite-plugin": "2.0.2",
+    "@vitejs/plugin-vue": "6.0.10",
+    "sass-embedded": "1.105.1",
+    "typescript": "5.8.3",
+    "vite": "8.0.5"
+  }
+}

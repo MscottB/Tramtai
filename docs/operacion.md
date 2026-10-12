@@ -21,6 +21,25 @@ tramtai            # sin argumentos abre la terminal interactiva (o: tramtai ter
 
 Se navega con ↑↓ o el número de la opción, Enter, Esc para volver y Ctrl+C para salir. Las acciones que afectan a otros (desactivar una instancia, detener el servicio, eliminar) piden confirmación.
 
+## Web UI y aplicación de escritorio
+
+```powershell
+tramtai global abrir               # abre la Web UI de la instancia global, ya autenticada
+tramtai proyecto abrir             # la de la instancia del proyecto actual
+tramtai-escritorio                 # aplicación de escritorio (o -proyecto <ruta>)
+```
+
+La Web UI tiene un panel (instancia, endpoints para conectar aplicaciones y trabajos recientes) y estas páginas:
+
+- **Ejecutar:** modelo del catálogo, archivos, mensaje y JSON Schema opcional; muestra la respuesta en vivo y permite cancelar.
+- **Trabajos:** detalle, seguir en vivo, cancelar, reintentar y eliminar.
+- **Puntos de acceso:** crear con alias, modelos permitidos y forzado; activar, desactivar, ver el token y eliminar.
+- **Configuración efectiva** y **Agentes**.
+
+También se puede abrir `http://127.0.0.1:17373` y entrar con el token de la instancia.
+
+La aplicación de escritorio inicia el servicio si no está en marcha y muestra la misma Web UI en su ventana. Al cerrarla queda en la bandeja del sistema, que permite abrirla, abrirla en el navegador, detener el servicio (con confirmación) o salir. **Salir no detiene el servicio.**
+
 ## Comandos equivalentes
 
 ```powershell

@@ -89,6 +89,15 @@ o solo para una terminal: `$env:TRAMTAI_ADAPTADORES__CLAUDE__AUTENTICACION = 'su
 
 Desde el menú se elige el ámbito (proyecto actual, global, todas las instancias o servicio) y se ejecuta, se ven los trabajos y se gestionan los puntos de acceso sin escribir comandos. Si el servicio no está en marcha, la terminal lo inicia en segundo plano. Detalle en [operacion.md](operacion.md).
 
+## Web UI y escritorio
+
+```powershell
+./bin/tramtai.exe global abrir          # Web UI en el navegador, sin escribir el token
+./bin/tramtai-escritorio.exe            # aplicación de escritorio
+```
+
+Para cambiar la Web UI: `cd web; npm install; npm run dev`. Esto abre un servidor de desarrollo que llama al servicio en marcha. Después, `npm run build` y `./scripts/compilar.ps1` la incorporan al ejecutable.
+
 ## Servicio HTTP
 
 ```powershell

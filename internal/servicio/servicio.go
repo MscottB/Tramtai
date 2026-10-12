@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"io/fs"
 	"net"
 	"net/http"
 	"os"
@@ -39,6 +40,7 @@ type Opciones struct {
 	Puerto    int
 	Hosts     []string
 	Registros io.Writer // mensajes de operación; nil los descarta
+	Web       fs.FS     // Web UI compilada (internal/recursos); nil la desactiva
 }
 
 // Instancia es un ámbito lógico con configuración, token, cola, base de datos y cargas propios (sección 5).
@@ -70,6 +72,10 @@ type Servicio struct {
 	erroresPuntos []string
 	descriptor    bool
 
+	muSesiones sync.Mutex
+	sesiones   map[string]*sesion
+	codigos    map[string]codigoEntrada
+
 	detener    chan struct{}
 	detenerUna sync.Once
 }
@@ -84,7 +90,8 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 		return nil, err
 	}
 	s := &Servicio{opc: opc, ID: "servicio_" + aleatorio(8), IniciadoEn: time.Now(), tokenAdmin: token,
-		instancias: map[string]*Instancia{}, puntos: map[string]*puntoActivo{}, detener: make(chan struct{})}
+		instancias: map[string]*Instancia{}, puntos: map[string]*puntoActivo{}, detener: make(chan struct{}),
+		sesiones: map[string]*sesion{}, codigos: map[string]codigoEntrada{}}
 	s.admin = s.rutasAdmin()
 	s.handler = api.Proteger(opc.Hosts, nil, http.HandlerFunc(s.enrutar))
 	return s, nil
@@ -101,27 +108,26 @@ func (s *Servicio) Base() string {
 // Detenido se cierra cuando la administración pide detener el servicio.
 func (s *Servicio) Detenido() <-chan struct{} { return s.detener }
 
-// enrutar atiende la salud, los puntos con ruta /p/<nombre>, la administración (token de servicio) y las
-// instancias (su token, o el de servicio con la cabecera Tramtai-Instancia).
+// enrutar atiende la salud, la Web UI y su sesión, los puntos con ruta /p/<nombre>, la administración (token de
+// servicio) y las instancias: su token, una sesión de la Web UI o el token de servicio con Tramtai-Instancia.
 func (s *Servicio) enrutar(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/healthz" {
+	ruta := r.URL.Path
+	switch {
+	case ruta == "/healthz":
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"estado": "ok", "servicio": s.ID, "version": version.Version})
 		return
-	}
-	if resto, ok := strings.CutPrefix(r.URL.Path, "/p/"); ok {
-		nombre, _, _ := strings.Cut(resto, "/")
-		s.mu.RLock()
-		p := s.puntos[nombre]
-		s.mu.RUnlock()
-		if p == nil || p.handler == nil || p.cfg.Puerto != 0 {
-			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "punto de acceso no disponible: "+nombre))
-			return
-		}
-		http.StripPrefix("/p/"+nombre, p.handler).ServeHTTP(w, r)
+	case strings.HasPrefix(ruta, "/p/"):
+		s.enrutarPunto(w, r)
+		return
+	case strings.HasPrefix(ruta, "/ui/"):
+		s.rutasUI(w, r)
+		return
+	case s.esSitio(r):
+		s.sitio(w, r)
 		return
 	}
 	admin := api.TokenValido(r, s.tokenAdmin)
-	if strings.HasPrefix(r.URL.Path, "/api/v1/servicio") {
+	if strings.HasPrefix(ruta, "/api/v1/servicio") {
 		if !admin {
 			api.NoAutorizado(w, r)
 			return
@@ -129,27 +135,70 @@ func (s *Servicio) enrutar(w http.ResponseWriter, r *http.Request) {
 		s.admin.ServeHTTP(w, r)
 		return
 	}
-	inst := s.instanciaPara(r, admin)
-	if inst == nil {
-		if admin {
-			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "indica una instancia activa en la cabecera Tramtai-Instancia"))
-			return
-		}
+	inst, porSesion, err := s.instanciaPara(r, admin)
+	switch {
+	case err != nil:
+		api.EscribirError(w, r, err)
+		return
+	case inst == nil && admin:
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "indica una instancia activa en la cabecera Tramtai-Instancia"))
+		return
+	case inst == nil:
 		api.NoAutorizado(w, r)
+		return
+	}
+	if s.rutaInstancia(w, r, inst, admin || porSesion) {
 		return
 	}
 	inst.rutas.ServeHTTP(w, r)
 }
 
-func (s *Servicio) instanciaPara(r *http.Request, admin bool) *Instancia {
+func (s *Servicio) enrutarPunto(w http.ResponseWriter, r *http.Request) {
+	nombre, _, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, "/p/"), "/")
+	s.mu.RLock()
+	p := s.puntos[nombre]
+	s.mu.RUnlock()
+	if p == nil || p.handler == nil || p.cfg.Puerto != 0 {
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "punto de acceso no disponible: "+nombre))
+		return
+	}
+	http.StripPrefix("/p/"+nombre, p.handler).ServeHTTP(w, r)
+}
+
+// instanciaPara elige la instancia: con el token de servicio, la de Tramtai-Instancia; con otro token, la suya;
+// sin token, la de la sesión de la Web UI, que exige X-CSRF-Token en las peticiones que modifican. porSesion
+// indica una sesión de la Web UI.
+func (s *Servicio) instanciaPara(r *http.Request, admin bool) (inst *Instancia, porSesion bool, err error) {
+	if admin {
+		s.mu.RLock()
+		defer s.mu.RUnlock()
+		return s.instancias[r.Header.Get("Tramtai-Instancia")], false, nil
+	}
+	if token := api.TokenDe(r); token != "" {
+		return s.instanciaPorToken(token), false, nil
+	}
+	_, ses := s.sesionDe(r)
+	if ses == nil {
+		return nil, false, nil
+	}
+	if r.Method != http.MethodGet && r.Method != http.MethodHead && !csrfValido(r, ses) {
+		return nil, false, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, "falta la cabecera X-CSRF-Token de la sesión")
+	}
+	s.mu.RLock()
+	inst = s.instancias[ses.instancia]
+	s.mu.RUnlock()
+	if inst == nil {
+		return nil, false, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "la instancia de la sesión ("+ses.instancia+") no está activa")
+	}
+	return inst, true, nil
+}
+
+// instanciaPorToken compara el token con el de todas las instancias, sin revelar por tiempos cuál existe.
+func (s *Servicio) instanciaPorToken(token string) *Instancia {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if admin {
-		return s.instancias[r.Header.Get("Tramtai-Instancia")]
-	}
-	token := api.TokenDe(r)
 	var elegida *Instancia
-	for _, inst := range s.instancias { // se comparan todas para no filtrar por tiempos cuál existe
+	for _, inst := range s.instancias {
 		if token != "" && subtle.ConstantTimeCompare([]byte(token), []byte(inst.token)) == 1 {
 			elegida = inst
 		}

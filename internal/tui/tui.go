@@ -13,6 +13,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"tramtai/internal/cliente"
+	"tramtai/internal/navegador"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/servicio"
 	"tramtai/internal/version"
@@ -464,6 +465,7 @@ func (m *modelo) opcionesInstancia() []opcion {
 		{"Puntos de acceso", func() tea.Cmd { m.ir(pAccesos); return m.cargarEstado() }},
 		{"Configuración efectiva", func() tea.Cmd { m.ir(pLineas); m.titulo = "Configuración efectiva"; return m.cargarConfiguracion() }},
 		{"Agentes y capacidades", func() tea.Cmd { m.ir(pLineas); m.titulo = "Agentes y capacidades"; return m.cargarAgentes() }},
+		{"Abrir Web UI en el navegador", m.abrirWeb},
 		{"Desactivar instancia", func() tea.Cmd {
 			return m.confirmar("¿Desactivar "+m.inst+"? Se cancela lo que esté en cola.", m.desactivar(m.inst))
 		}},
@@ -490,6 +492,20 @@ func (m *modelo) activar() tea.Cmd {
 		defer cancelar()
 		_, err = cli.Activar(ctx, ambito, raiz)
 		return msgAviso{texto: "instancia activa", err: err}
+	}
+}
+
+// abrirWeb abre la Web UI de la instancia con un código de un solo uso, sin mostrar el token.
+func (m *modelo) abrirWeb() tea.Cmd {
+	cli, inst := m.cli, m.inst
+	return func() tea.Msg {
+		ctx, cancelar := conPlazo(10 * time.Second)
+		defer cancelar()
+		url, err := cli.URLWeb(ctx, inst)
+		if err == nil {
+			err = navegador.Abrir(url)
+		}
+		return msgAviso{texto: "Web UI abierta en el navegador", err: err}
 	}
 }
 

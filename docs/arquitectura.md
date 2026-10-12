@@ -17,6 +17,10 @@ El diseño completo está en el documento maestro (v12, en `documentos/`). Resum
 | `internal/servicio` | Servicio único (sección 5): instancias global y por proyecto con token, base de datos, cola y cargas propios; enrutado por token; administración con token de servicio; puntos de acceso con puerto o ruta `/p/<nombre>`, recarga sin reinicio y edición del YAML conservando comentarios; descriptor `servicio.json`. |
 | `internal/cliente` | Cliente del servicio para la CLI y la terminal: descubre el servicio por su descriptor, lo inicia en segundo plano y sigue los eventos SSE. |
 | `internal/tui` | Terminal interactiva con Bubble Tea v2 (sección 13.2). |
+| `internal/recursos` | Web UI compilada incorporada con `go:embed`. Se versiona para que `go build` no necesite Node. |
+| `internal/navegador` | Abre URLs en el navegador del sistema. |
+| `web/` | Web UI con Vue 3 y Quasar 2.35 (Vite). La compila `npm run build` en `internal/recursos/web`. |
+| `escritorio/` | Aplicación de escritorio con Wails v3 en un módulo Go aparte, para que el núcleo siga sin CGO. Es un cliente del servicio: lo inicia si hace falta y muestra la misma Web UI en su ventana. |
 | `internal/version` | Versión del ejecutable (inyectada al compilar) y commit de git. |
 | `cmd/tramtai` | CLI con Cobra. Sin argumentos abre la terminal interactiva. Comandos: `servicio`, `global`, `proyecto`, `iniciar`, `acceso`, `trabajos`, `ejecutar`, `convertir`, `agentes`, `configuracion`. Detalle en [operacion.md](operacion.md). |
 
@@ -46,6 +50,23 @@ Con cargas, el trabajo pasa por `preparando_entrada`, que tiene su propio límit
 Si una carga venció, el trabajo falla con `entrada_no_disponible`. Una conversión vacía o fallida falla con `conversion_fallida`; nunca se presenta como éxito. Un ZIP que supera los límites falla con `carga_invalida`.
 
 Con un esquema, se usa primero la salida estructurada nativa del agente (`--json-schema` y `structured_output` en Claude; `--output-schema` en Codex) y después Tramtai valida el resultado. Si no cumple, el trabajo falla con `salida_no_cumple_esquema` y no se conserva la salida. Un esquema inválido se rechaza al aceptar el trabajo.
+
+## Interfaces (M6)
+
+Las cuatro interfaces trabajan sobre el mismo servicio, así que un trabajo creado en una se ve y se controla en las demás:
+
+- **CLI:** `tramtai ejecutar` usa el servicio si está en marcha (`--directo` para no usarlo).
+- **Terminal interactiva:** `tramtai` sin argumentos.
+- **Web UI:** servida por el propio servicio en `http://127.0.0.1:17373`.
+- **Aplicación de escritorio:** `tramtai-escritorio`.
+
+La Web UI se enlaza a una instancia con una sesión (sección 7.4):
+
+- **Entrada:** se entra con el token de la instancia, o con un código de un solo uso que dura un minuto y piden la CLI, la terminal o la app de escritorio con el token de servicio.
+- **Cookie:** `HttpOnly` y `SameSite=Strict`; las peticiones que modifican exigen además `X-CSRF-Token`.
+- **Navegador:** se valida `Origin`, no hay CORS y se aplica una CSP estricta.
+- **El token nunca viaja en la URL** y no se guarda en el navegador.
+- **Configuración y puntos de acceso:** solo se gestionan con una sesión de la Web UI o el token de servicio, no con el token que usan las aplicaciones.
 
 ## Estados del trabajo
 

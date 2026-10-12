@@ -17,6 +17,7 @@ func (s *Servicio) rutasAdmin() http.Handler {
 	mux.HandleFunc("POST /api/v1/servicio/instancias", s.adminActivar)
 	mux.HandleFunc("DELETE /api/v1/servicio/instancias/{id}", s.adminDesactivar)
 	mux.HandleFunc("GET /api/v1/servicio/instancias/{id}/configuracion", s.adminConfiguracion)
+	mux.HandleFunc("POST /api/v1/servicio/sesiones", s.adminSesion)
 	mux.HandleFunc("POST /api/v1/servicio/recargar", func(w http.ResponseWriter, _ *http.Request) {
 		puntos := s.Recargar()
 		_ = s.actualizarDescriptor()
@@ -96,4 +97,21 @@ func (s *Servicio) adminConfiguracion(w http.ResponseWriter, r *http.Request) {
 		entradas = append(entradas, EntradaConfiguracion{Clave: e.Clave, Valor: e.Valor, Origen: e.Origen.String()})
 	}
 	api.EscribirJSON(w, http.StatusOK, map[string]any{"configuracion": entradas})
+}
+
+// adminSesion devuelve una URL de un solo uso que abre la Web UI de una instancia (tramtai global abrir).
+func (s *Servicio) adminSesion(w http.ResponseWriter, r *http.Request) {
+	var peticion struct {
+		Instancia string `json:"instancia"`
+	}
+	if err := api.LeerJSON(w, r, &peticion); err != nil {
+		api.EscribirError(w, r, err)
+		return
+	}
+	codigo, err := s.CodigoSesion(peticion.Instancia)
+	if err != nil {
+		api.EscribirError(w, r, err)
+		return
+	}
+	api.EscribirJSON(w, http.StatusOK, map[string]any{"url": s.Base() + "/ui/entrar?codigo=" + codigo})
 }

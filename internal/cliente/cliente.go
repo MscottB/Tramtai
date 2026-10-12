@@ -293,3 +293,12 @@ func (c *Cliente) Eventos(ctx context.Context, instancia, id string, desde int, 
 	}
 	return lector.Err()
 }
+
+// URLWeb devuelve una URL de un solo uso (válida un minuto) que abre la Web UI de la instancia sin escribir su token.
+func (c *Cliente) URLWeb(ctx context.Context, instancia string) (string, error) {
+	var r struct {
+		URL string `json:"url"`
+	}
+	err := c.pedir(ctx, "POST", "/api/v1/servicio/sesiones", "", cuerpoJSON(map[string]string{"instancia": instancia}), "application/json", &r)
+	return r.URL, err
+}

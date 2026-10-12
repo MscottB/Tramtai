@@ -2,13 +2,15 @@
 
 Pasarela local en Go que expone Claude Code, Codex CLI y Antigravity (y la Gemini API) como una API HTTP propia, con cola de trabajos, idempotencia, configuración por capas y selección de modelo por solicitud.
 
-> Estado: **M5 completo**: servicio único con instancias global y por proyecto separadas por token, puntos de acceso (puerto o ruta propios, alias, modelos permitidos o forzados), terminal interactiva, API nativa y fachadas OpenAI/Anthropic, adaptadores Claude y Codex, archivos y salidas con JSON Schema. La Web UI y la aplicación de escritorio llegan en M6.
+> Estado: **M6 completo**: cuatro interfaces sobre el mismo servicio y los mismos trabajos: CLI, terminal interactiva, Web UI (Vue + Quasar, incorporada al ejecutable) y aplicación de escritorio (Wails). Servicio único con instancias global y por proyecto, puntos de acceso, API nativa y fachadas OpenAI/Anthropic, adaptadores Claude y Codex, archivos y salidas con JSON Schema.
 
 ## Inicio rápido
 
 ```powershell
 ./scripts/compilar.ps1                       # genera bin/tramtai.exe
 ./bin/tramtai.exe                            # terminal interactiva: todo desde un menú
+./bin/tramtai.exe global abrir               # Web UI en el navegador, ya autenticada
+./bin/tramtai-escritorio.exe                 # aplicación de escritorio (ventana + bandeja)
 ./bin/tramtai.exe --version
 ./bin/tramtai.exe agentes                    # diagnóstico de Claude y Codex
 ./bin/tramtai.exe ejecutar -p rapido "Hola"   # trabajo real con respuesta en vivo
@@ -48,6 +50,9 @@ internal/api          HTTP: API nativa, SSE y fachadas OpenAI/Anthropic
 internal/servicio     servicio único: instancias, puntos de acceso, administración
 internal/cliente      cliente del servicio (CLI y terminal)
 internal/tui          terminal interactiva (Bubble Tea)
+internal/recursos     Web UI compilada (go:embed)
+web/                  Web UI: Vue 3 + Quasar (npm run build)
+escritorio/           aplicación de escritorio Wails v3 (módulo Go aparte)
 internal/version      versión y commit del ejecutable
 pruebas/m0b/          pruebas con claves reales (build tag m0b)
 scripts/              compilar y versionar

@@ -20,8 +20,10 @@ import (
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/cliente"
+	"tramtai/internal/navegador"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/planificador"
+	"tramtai/internal/recursos"
 	"tramtai/internal/servicio"
 	"tramtai/internal/version"
 )
@@ -237,7 +239,7 @@ func iniciarServicio(cmd *cobra.Command) error {
 	salida := cmd.ErrOrStderr()
 	registro, limites := adaptadores.Registro(c)
 	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites),
-		Host: host, Puerto: puerto, Hosts: hosts, Registros: salida})
+		Host: host, Puerto: puerto, Hosts: hosts, Registros: salida, Web: recursos.Web()})
 	if err != nil {
 		return err
 	}
@@ -397,7 +399,30 @@ func comandoInstancia(ambito string) *cobra.Command {
 		}}
 	token := &cobra.Command{Use: "token", Short: "Muestra el token de la instancia para configurar clientes",
 		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, ambito) }}
-	grupo.AddCommand(iniciar, detener, estado, token)
+	abrirWeb := &cobra.Command{Use: "abrir", Short: "Abre la Web UI de la instancia en el navegador (sin escribir el token)",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			raiz, _, _, err := identificar(ambito)
+			if err != nil {
+				return err
+			}
+			c, err := asegurarServicio(cmd)
+			if err != nil {
+				return err
+			}
+			ctx, cancelar := contexto()
+			defer cancelar()
+			a, err := c.Activar(ctx, ambito, raiz)
+			if err != nil {
+				return err
+			}
+			url, err := c.URLWeb(ctx, a.Instancia.ID)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "abriendo la Web UI de %s en %s\n", a.Instancia.ID, c.Base)
+			return navegador.Abrir(url)
+		}}
+	grupo.AddCommand(iniciar, detener, estado, token, abrirWeb)
 	return grupo
 }
 

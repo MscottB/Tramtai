@@ -11,7 +11,7 @@
 | M3 | ✅ | Cargas por hash, conversión con markitdown 0.1.8, ZIP seguro con límites, salidas con JSON Schema (nativo en Claude y Codex) |
 | M4 | ✅ | Servicio HTTP: API nativa `/api/v1` con SSE reanudable, cargas, capacidades y modelos; fachadas OpenAI (chat, responses, models) y Anthropic (messages) con política de parámetros |
 | M5 | ✅ | Servicio único con instancias global y por proyecto por token, descriptor y segundo plano, puntos de acceso con recarga en caliente, terminal interactiva |
-| M6 | ⬜ | Web UI embebida y aplicación de escritorio Wails + Quasar (la TUI ya está en M5) |
+| M6 | ✅ | Web UI embebida (Vue 3 + Quasar) con sesión por cookie y CSRF, aplicación de escritorio Wails v3 con bandeja, y recorrido compartido: CLI, terminal, Web y escritorio sobre los mismos trabajos |
 | M7 | ⬜ | Cierre ordenado con plazo para trabajos en curso |
 
 ## Tareas
@@ -28,6 +28,9 @@
 - [ ] Sustituir el sondeo de eventos (100 ms) por notificación en memoria si pesa con muchos clientes.
 - [ ] Límite de concurrencia propio por punto de acceso (hoy usa el de su instancia).
 - [ ] Modo consciente del proyecto (raíces permitidas, reglas del repositorio para proyectos confiables).
+- [ ] Compilar y probar la aplicación de escritorio en macOS y Linux (necesita CGO y WebKit; hoy solo Windows).
+- [ ] Revisar Wails en cada beta (fijado en v3.0.0-beta.28) y migrar a la versión estable cuando salga.
+- [ ] Icono propio de Tramtai para la bandeja y el ejecutable (hoy el predeterminado de Wails).
 - [ ] Purga de cargas vencidas y protección mientras un trabajo las usa (retención, M7).
 - [ ] Perfiles de salida en configuración (`salida.esquema` por archivo, sección 22.3) y `conservar_salida_invalida`.
 - [ ] Adaptadores Antigravity (`agy` con `modelProvider: gemini`) y Gemini API directa.
