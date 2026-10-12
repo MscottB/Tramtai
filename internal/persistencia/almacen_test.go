@@ -185,3 +185,51 @@ func TestVersionDeBaseNoSoportada(t *testing.T) {
 		t.Fatal("una base de una versión futura debe rechazarse")
 	}
 }
+
+func TestMigracionV1AV2ConservaTrabajos(t *testing.T) {
+	ruta := filepath.Join(t.TempDir(), "instancia.db")
+	a, err := Abrir(ruta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Recrea una base v1: solo el esquema inicial con un trabajo.
+	a.db.Exec("DROP TABLE trabajos")
+	a.db.Exec("DROP TABLE eventos")
+	a.db.Exec("DROP TABLE idempotencia")
+	if _, err := a.db.Exec(migraciones[0]); err != nil {
+		t.Fatal(err)
+	}
+	a.db.Exec("PRAGMA user_version = 1")
+	if _, err := a.db.Exec(`INSERT INTO trabajos (id, instancia, estado, solicitud, huella, creado_en, actualizado_en)
+		VALUES ('trabajo_v1', 'global', 'completado', '{}', 'h', '2026-10-12T00:00:00.000000000Z', '2026-10-12T00:00:00.000000000Z')`); err != nil {
+		t.Fatal(err)
+	}
+	a.Cerrar()
+
+	b, err := Abrir(ruta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cerrar()
+	if tr, err := b.Obtener(ctx, "trabajo_v1"); err != nil || tr.Estado != nucleo.Completado || tr.ModeloEnviado != "" {
+		t.Fatalf("el trabajo v1 debe leerse tras migrar: %+v %v", tr, err)
+	}
+}
+
+func TestUsoYModeloSeGuardan(t *testing.T) {
+	a := abrir(t)
+	tr := trabajo("global", "x")
+	tr.ModeloEnviado = "haiku"
+	tr = aceptar(t, a, tr, "")
+	avanzar(t, a, tr.ID, nucleo.EsperandoAgente, nucleo.Ejecutando, nucleo.ValidandoSalida)
+	salida := "ok"
+	uso := nucleo.Uso{TokensEntrada: 650, TokensSalida: 12, CostoUSD: 0.0014}
+	if err := a.CambiarEstado(ctx, tr.ID, nucleo.ValidandoSalida, nucleo.Completado,
+		Cambio{Salida: &salida, Uso: &uso, ModeloEfectivo: "claude-haiku-4-5"}); err != nil {
+		t.Fatal(err)
+	}
+	final, _ := a.Obtener(ctx, tr.ID)
+	if final.ModeloEnviado != "haiku" || final.ModeloEfectivo != "claude-haiku-4-5" || final.Uso != uso {
+		t.Fatalf("modelo o uso no guardados: %+v", final)
+	}
+}

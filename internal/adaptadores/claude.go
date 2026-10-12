@@ -1,0 +1,159 @@
+package adaptadores
+
+import (
+	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"sort"
+
+	"tramtai/internal/nucleo"
+	"tramtai/internal/procesos"
+)
+
+// Claude ejecuta Claude Code con "claude -p" en streaming (stream-json), aislado de la configuración del usuario.
+type Claude struct {
+	Programa      string // nombre o ruta del ejecutable (comandos_agentes.claude)
+	Autenticacion string // clave_api (predeterminada) o suscripcion
+}
+
+// Detectar implementa Detectable.
+func (c Claude) Detectar(ctx context.Context) Estado {
+	e := Estado{Agente: "claude", Autenticacion: c.Autenticacion}
+	if c.Autenticacion == AutenticacionSuscripcion {
+		e.Terminos = "términos de consumidor de Anthropic: solo uso personal y local"
+	} else {
+		e.Terminos = "términos comerciales de Anthropic (clave de API de Console)"
+		if claveEntorno("ANTHROPIC_API_KEY") == "" {
+			e.Problema = "falta ANTHROPIC_API_KEY"
+		}
+	}
+	ruta, err := resolverPrograma(c.Programa)
+	if err != nil {
+		e.Problema = err.Error()
+		return e
+	}
+	e.Ruta, e.Version = ruta, version(ctx, ruta)
+	return e
+}
+
+// Ejecutar implementa Adaptador.
+func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(Evento) error) (Resultado, error) {
+	ruta, err := resolverPrograma(c.Programa)
+	if err != nil {
+		return Resultado{}, err
+	}
+	var clave string
+	var extra []string
+	args := []string{"-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages",
+		"--setting-sources", "", "--strict-mcp-config", "--tools", "", "--no-session-persistence", "--disable-slash-commands"}
+	switch c.Autenticacion {
+	case AutenticacionSuscripcion:
+	case AutenticacionClaveAPI, "":
+		if clave = claveEntorno("ANTHROPIC_API_KEY"); clave == "" {
+			return Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente,
+				"falta ANTHROPIC_API_KEY; o configura adaptadores.claude.autenticacion: suscripcion para uso personal local")
+		}
+		extra = append(extra, "ANTHROPIC_API_KEY="+clave)
+		args = append(args, "--bare") // solo admite la clave de API: nunca recurre a la sesión de suscripción
+	default:
+		return Resultado{}, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "autenticación desconocida: "+c.Autenticacion)
+	}
+	raiz, espacio, err := espacioTemporal()
+	if err != nil {
+		return Resultado{}, err
+	}
+	defer os.RemoveAll(raiz)
+
+	// El sistema propio sustituye al de Claude Code (vacío si no hay): passthrough y ~650 tokens fijos en vez de ~24 000.
+	sistema, prompt := separar(s)
+	archivoSistema := filepath.Join(raiz, "sistema.txt")
+	if err := os.WriteFile(archivoSistema, []byte(sistema), 0o600); err != nil {
+		return Resultado{}, err
+	}
+	args = append(args, "--system-prompt-file", archivoSistema)
+	if s.Modelo != "" {
+		args = append(args, "--model", s.Modelo)
+	}
+
+	var final *resultadoClaude
+	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: espacio,
+		Entorno: entornoLimpio(extra...), Entrada: prompt}, func(linea string) error {
+		var e eventoClaude
+		if json.Unmarshal([]byte(linea), &e) != nil {
+			return nil // línea informativa no JSON
+		}
+		switch e.Type {
+		case "stream_event":
+			if e.Event.Type == "content_block_delta" && e.Event.Delta.Type == "text_delta" && e.Event.Delta.Text != "" {
+				return emitir(Evento{Tipo: "texto", Datos: e.Event.Delta.Text})
+			}
+		case "result":
+			final = &e.resultadoClaude
+		}
+		return nil // los demás tipos son informativos (sección 9.4)
+	})
+	if err != nil {
+		return Resultado{}, err
+	}
+	if final == nil {
+		texto := redactar(r.Errores, clave)
+		if texto == "" {
+			return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, "claude terminó sin evento result")
+		}
+		return Resultado{}, nucleo.NuevoError(clasificar(texto, 0), texto)
+	}
+	if final.IsError {
+		texto := redactar(final.Result, clave)
+		return Resultado{}, nucleo.NuevoError(clasificar(texto, final.APIErrorStatus), texto)
+	}
+	return Resultado{Salida: final.Result, ModeloEfectivo: final.modeloEfectivo(), Uso: nucleo.Uso{
+		TokensEntrada: final.Usage.InputTokens + final.Usage.CacheCreation + final.Usage.CacheRead,
+		TokensSalida:  final.Usage.OutputTokens,
+		CostoUSD:      final.TotalCostUSD,
+	}}, nil
+}
+
+type eventoClaude struct {
+	Type  string `json:"type"`
+	Event struct {
+		Type  string `json:"type"`
+		Delta struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		} `json:"delta"`
+	} `json:"event"`
+	resultadoClaude
+}
+
+type resultadoClaude struct {
+	Result         string  `json:"result"`
+	IsError        bool    `json:"is_error"`
+	APIErrorStatus int     `json:"api_error_status"`
+	TotalCostUSD   float64 `json:"total_cost_usd"`
+	Usage          struct {
+		InputTokens   int `json:"input_tokens"`
+		OutputTokens  int `json:"output_tokens"`
+		CacheCreation int `json:"cache_creation_input_tokens"`
+		CacheRead     int `json:"cache_read_input_tokens"`
+	} `json:"usage"`
+	ModelUsage map[string]struct {
+		OutputTokens int `json:"outputTokens"`
+	} `json:"modelUsage"`
+}
+
+// modeloEfectivo es el modelo que más salida produjo; Claude Code puede usar uno auxiliar en paralelo.
+func (r resultadoClaude) modeloEfectivo() string {
+	modelos := make([]string, 0, len(r.ModelUsage))
+	for m := range r.ModelUsage {
+		modelos = append(modelos, m)
+	}
+	sort.Slice(modelos, func(i, j int) bool {
+		a, b := r.ModelUsage[modelos[i]].OutputTokens, r.ModelUsage[modelos[j]].OutputTokens
+		return a > b || (a == b && modelos[i] < modelos[j])
+	})
+	if len(modelos) == 0 {
+		return ""
+	}
+	return modelos[0]
+}

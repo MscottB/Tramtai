@@ -16,15 +16,14 @@ import (
 	"tramtai/internal/nucleo"
 )
 
-const versionEsquema = 1
-
 // formatoFecha tiene ancho fijo para que las fechas se comparen y ordenen como texto.
 const formatoFecha = "2006-01-02T15:04:05.000000000Z"
 
 // sinVencimiento marca la clave de idempotencia de un trabajo activo: no se purga mientras no termine.
 const sinVencimiento = "9999-12-31T00:00:00.000000000Z"
 
-const esquemaSQL = `
+// migraciones[i] lleva la base de la versión i a la i+1; user_version guarda la versión aplicada.
+var migraciones = []string{`
 CREATE TABLE IF NOT EXISTS trabajos (
 	id TEXT PRIMARY KEY,
 	instancia TEXT NOT NULL,
@@ -55,9 +54,17 @@ CREATE TABLE IF NOT EXISTS idempotencia (
 	trabajo_id TEXT NOT NULL,
 	vence_en TEXT NOT NULL,
 	PRIMARY KEY (instancia, clave)
-);`
+);`,
+	// v2 (M2): modelo resuelto, modelo efectivo y uso informado por el agente.
+	`ALTER TABLE trabajos ADD COLUMN modelo_enviado TEXT NOT NULL DEFAULT '';
+ALTER TABLE trabajos ADD COLUMN modelo_efectivo TEXT NOT NULL DEFAULT '';
+ALTER TABLE trabajos ADD COLUMN tokens_entrada INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE trabajos ADD COLUMN tokens_salida INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE trabajos ADD COLUMN costo_usd REAL NOT NULL DEFAULT 0;`,
+}
 
-const columnas = `id, instancia, estado, codigo_error, mensaje_error, solicitud, huella, salida, intento_de, creado_en, actualizado_en, terminado_en`
+const columnas = `id, instancia, estado, codigo_error, mensaje_error, solicitud, huella, salida, intento_de, creado_en, actualizado_en, terminado_en,
+	modelo_enviado, modelo_efectivo, tokens_entrada, tokens_salida, costo_usd`
 
 // Almacen es la base SQLite de una instancia.
 type Almacen struct {
@@ -72,6 +79,9 @@ type Cambio struct {
 	Codigo  nucleo.CodigoError
 	Mensaje string
 	Salida  *string
+	// Uso y ModeloEfectivo se guardan cuando Uso no es nil (al terminar una ejecución).
+	Uso            *nucleo.Uso
+	ModeloEfectivo string
 }
 
 // Evento es un registro numerado de un trabajo (sección 7.3).
@@ -110,17 +120,27 @@ func migrar(db *sql.DB) error {
 	if err := db.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
 		return err
 	}
-	if version > versionEsquema {
+	if version > len(migraciones) {
 		return fmt.Errorf("versión de base de datos %d no soportada por este ejecutable", version)
 	}
-	if version == versionEsquema {
-		return nil
+	for ; version < len(migraciones); version++ {
+		tx, err := db.Begin()
+		if err != nil {
+			return err
+		}
+		if _, err := tx.Exec(migraciones[version]); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("migración %d: %w", version+1, err)
+		}
+		if _, err := tx.Exec(fmt.Sprintf("PRAGMA user_version = %d", version+1)); err != nil {
+			tx.Rollback()
+			return err
+		}
+		if err := tx.Commit(); err != nil {
+			return err
+		}
 	}
-	if _, err := db.Exec(esquemaSQL); err != nil {
-		return err
-	}
-	_, err := db.Exec(fmt.Sprintf("PRAGMA user_version = %d", versionEsquema))
-	return err
+	return nil
 }
 
 // Cerrar cierra la base.
@@ -163,8 +183,8 @@ func (a *Almacen) Aceptar(ctx context.Context, t nucleo.Trabajo, clave string, m
 		return t, false, err
 	}
 	t.Estado, t.CreadoEn, t.ActualizadoEn = nucleo.EnCola, ahora, ahora
-	if _, err := tx.ExecContext(ctx, `INSERT INTO trabajos (id, instancia, estado, solicitud, huella, intento_de, creado_en, actualizado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		t.ID, t.Instancia, string(t.Estado), string(solicitud), t.Huella, t.IntentoDe, fecha(ahora), fecha(ahora)); err != nil {
+	if _, err := tx.ExecContext(ctx, `INSERT INTO trabajos (id, instancia, estado, solicitud, huella, intento_de, modelo_enviado, creado_en, actualizado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		t.ID, t.Instancia, string(t.Estado), string(solicitud), t.Huella, t.IntentoDe, t.ModeloEnviado, fecha(ahora), fecha(ahora)); err != nil {
 		return t, false, err
 	}
 	if err := agregarEvento(ctx, tx, t.ID, "estado", string(nucleo.EnCola), ahora); err != nil {
@@ -199,10 +219,19 @@ func (a *Almacen) CambiarEstado(ctx context.Context, id string, de, hacia nucleo
 	if conSalida {
 		salida = *cambio.Salida
 	}
+	uso, conUso := nucleo.Uso{}, cambio.Uso != nil
+	if conUso {
+		uso = *cambio.Uso
+	}
 	resultado, err := tx.ExecContext(ctx, `UPDATE trabajos SET estado = ?, codigo_error = ?, mensaje_error = ?,
-		salida = CASE WHEN ? THEN ? ELSE salida END, actualizado_en = ?, terminado_en = COALESCE(?, terminado_en)
+		salida = CASE WHEN ? THEN ? ELSE salida END, actualizado_en = ?, terminado_en = COALESCE(?, terminado_en),
+		modelo_efectivo = CASE WHEN ? THEN ? ELSE modelo_efectivo END,
+		tokens_entrada = CASE WHEN ? THEN ? ELSE tokens_entrada END,
+		tokens_salida = CASE WHEN ? THEN ? ELSE tokens_salida END,
+		costo_usd = CASE WHEN ? THEN ? ELSE costo_usd END
 		WHERE id = ? AND estado = ?`,
-		string(hacia), string(cambio.Codigo), cambio.Mensaje, conSalida, salida, fecha(ahora), terminado, id, string(de))
+		string(hacia), string(cambio.Codigo), cambio.Mensaje, conSalida, salida, fecha(ahora), terminado,
+		conUso, cambio.ModeloEfectivo, conUso, uso.TokensEntrada, conUso, uso.TokensSalida, conUso, uso.CostoUSD, id, string(de))
 	if err != nil {
 		return err
 	}
@@ -311,7 +340,8 @@ func obtener(ctx context.Context, c consultor, id string) (nucleo.Trabajo, error
 	var estado, codigo, solicitud, creado, actualizado string
 	var terminado sql.NullString
 	err := c.QueryRowContext(ctx, `SELECT `+columnas+` FROM trabajos WHERE id = ?`, id).Scan(&t.ID, &t.Instancia, &estado,
-		&codigo, &t.MensajeError, &solicitud, &t.Huella, &t.Salida, &t.IntentoDe, &creado, &actualizado, &terminado)
+		&codigo, &t.MensajeError, &solicitud, &t.Huella, &t.Salida, &t.IntentoDe, &creado, &actualizado, &terminado,
+		&t.ModeloEnviado, &t.ModeloEfectivo, &t.Uso.TokensEntrada, &t.Uso.TokensSalida, &t.Uso.CostoUSD)
 	if errors.Is(err, sql.ErrNoRows) {
 		return t, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "trabajo no encontrado: "+id)
 	}

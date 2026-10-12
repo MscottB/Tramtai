@@ -2,14 +2,15 @@
 
 Pasarela local en Go que expone Claude Code, Codex CLI y Antigravity (y la Gemini API) como una API HTTP propia, con cola de trabajos, idempotencia, configuración por capas y selección de modelo por solicitud.
 
-> Estado: **M1 completo** (núcleo, configuración, SQLite, planificador). El servidor HTTP y los adaptadores reales llegan en M2–M3. Hoy se puede compilar, ejecutar la CLI y correr las pruebas.
+> Estado: **M2 completo**: núcleo, SQLite, planificador, supervisión de procesos y adaptadores Claude y Codex. Ya se pueden ejecutar trabajos reales desde la CLI. El servidor HTTP llega en M4 y la interfaz en M6.
 
 ## Inicio rápido
 
 ```powershell
 ./scripts/compilar.ps1                       # genera bin/tramtai.exe
-./bin/tramtai.exe version
-./bin/tramtai.exe configuracion mostrar --efectiva
+./bin/tramtai.exe --version
+./bin/tramtai.exe agentes                    # diagnóstico de Claude y Codex
+./bin/tramtai.exe ejecutar -p rapido "Hola"   # trabajo real con respuesta en vivo
 go test ./...
 ```
 
@@ -21,7 +22,7 @@ Guía completa en [docs/inicio.md](docs/inicio.md).
 |---|---|
 | [docs/inicio.md](docs/inicio.md) | Requisitos, compilar, ejecutar y probar |
 | [docs/arquitectura.md](docs/arquitectura.md) | Paquetes, estados del trabajo y precedencia de configuración |
-| [docs/versionado.md](docs/versionado.md) | Esquema `vX.Y.Z+DDMMAAAA` y cómo crear etiquetas |
+| [docs/versionado.md](docs/versionado.md) | Versión `vX.Y.Z+DDMMAAAA` calculada desde los commits y etiquetas |
 | [docs/pendientes.md](docs/pendientes.md) | Hitos y lista de tareas (incluye CI/CD) |
 | [docs/M0B.md](docs/M0B.md) | Validación de los modos con clave de API |
 
@@ -34,7 +35,9 @@ cmd/tramtai/          CLI (Cobra)
 internal/nucleo/      estados, solicitud, errores, configuración
 internal/persistencia SQLite (trabajos, eventos, idempotencia)
 internal/planificador cola, concurrencia, cancelación, recuperación
-internal/adaptadores  contrato de adaptador + agente simulado
+internal/procesos     supervisión de procesos (Job Objects / grupos Unix)
+internal/adaptadores  Claude, Codex y agente simulado
+internal/version      versión y commit del ejecutable
 pruebas/m0b/          pruebas con claves reales (build tag m0b)
 scripts/              compilar y versionar
 docs/                 documentación

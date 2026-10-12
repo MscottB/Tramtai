@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -24,6 +25,8 @@ type Opciones struct {
 	TiempoMaximoCola time.Duration
 	// TiempoLimitePredeterminado se aplica si la solicitud no fija tiempo_limite_segundos.
 	TiempoLimitePredeterminado time.Duration
+	// Perfiles traduce perfil_modelo a un identificador por agente (perfil -> agente -> modelo).
+	Perfiles map[string]map[string]string
 }
 
 // OpcionesDesde toma los límites de la configuración efectiva.
@@ -34,6 +37,7 @@ func OpcionesDesde(c *nucleo.Configuracion, instancia string) Opciones {
 		MaximoTrabajos:             c.Entero("concurrencia.maximo_trabajos_instancia"),
 		TiempoMaximoCola:           time.Duration(c.Entero("concurrencia.tiempo_maximo_en_cola_segundos")) * time.Second,
 		TiempoLimitePredeterminado: 300 * time.Second,
+		Perfiles:                   c.Perfiles(),
 	}
 }
 
@@ -102,13 +106,30 @@ func (p *Planificador) Enviar(ctx context.Context, solicitud nucleo.SolicitudEje
 	if err := solicitud.Validar(); err != nil {
 		return nucleo.Trabajo{}, false, err
 	}
-	t := nucleo.Trabajo{ID: nucleo.NuevoID(), Instancia: p.opc.Instancia, Solicitud: solicitud, Huella: solicitud.Huella()}
+	modelo, err := p.resolverModelo(solicitud)
+	if err != nil {
+		return nucleo.Trabajo{}, false, err
+	}
+	t := nucleo.Trabajo{ID: nucleo.NuevoID(), Instancia: p.opc.Instancia, Solicitud: solicitud, Huella: solicitud.Huella(), ModeloEnviado: modelo}
 	t, reutilizado, err := p.almacen.Aceptar(ctx, t, clave, p.opc.MaximoCola)
 	if err != nil || reutilizado {
 		return t, reutilizado, err
 	}
 	p.encolar(t.ID)
 	return t, false, nil
+}
+
+// resolverModelo fija al aceptar el identificador que recibirá el CLI (fotografía del trabajo, sección 12.3).
+// Un perfil sin modelo para el agente se rechaza: nunca se sustituye el modelo en silencio (sección 9.2).
+func (p *Planificador) resolverModelo(s nucleo.SolicitudEjecucion) (string, error) {
+	if s.PerfilModelo == "" {
+		return s.Modelo, nil
+	}
+	if modelo := p.opc.Perfiles[s.PerfilModelo][s.Agente]; modelo != "" {
+		return modelo, nil
+	}
+	return "", nucleo.NuevoError(nucleo.CodigoModeloNoConfigurado,
+		fmt.Sprintf("el perfil %q no define modelo para el agente %q (modelos.perfiles.%s.%s)", s.PerfilModelo, s.Agente, s.PerfilModelo, s.Agente))
 }
 
 // encolar entrega el trabajo a los ejecutores sin bloquear al cliente. Un trabajo cancelado en cola sigue
@@ -221,7 +242,9 @@ func (p *Planificador) procesar(id string) {
 	}
 	ctxEjecucion, cancelarEjecucion := context.WithTimeout(ctxTrabajo, limite)
 	defer cancelarEjecucion()
-	resultado, err := adaptador.Ejecutar(ctxEjecucion, t.Solicitud, func(e adaptadores.Evento) error {
+	solicitud := t.Solicitud
+	solicitud.Modelo, solicitud.PerfilModelo = t.ModeloEnviado, ""
+	resultado, err := adaptador.Ejecutar(ctxEjecucion, solicitud, func(e adaptadores.Evento) error {
 		return p.almacen.AgregarEvento(fondo, id, e.Tipo, e.Datos)
 	})
 	switch {
@@ -244,10 +267,12 @@ func (p *Planificador) procesar(id string) {
 		return
 	}
 	if err := validarSalida(t.Solicitud.Salida, resultado.Salida); err != nil {
-		p.cambiar(id, nucleo.ValidandoSalida, nucleo.Fallido, persistencia.Cambio{Codigo: nucleo.CodigoSalidaNoCumpleEsquema, Mensaje: err.Error()})
+		p.cambiar(id, nucleo.ValidandoSalida, nucleo.Fallido, persistencia.Cambio{Codigo: nucleo.CodigoSalidaNoCumpleEsquema,
+			Mensaje: err.Error(), Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo})
 		return
 	}
-	p.cambiar(id, nucleo.ValidandoSalida, nucleo.Completado, persistencia.Cambio{Salida: &resultado.Salida})
+	p.cambiar(id, nucleo.ValidandoSalida, nucleo.Completado, persistencia.Cambio{Salida: &resultado.Salida,
+		Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo})
 }
 
 // cerrarDetenido finaliza un trabajo cuyo contexto se canceló, por petición del usuario o por cierre del servicio.

@@ -14,20 +14,15 @@ type Evento struct {
 	Datos string
 }
 
-// Uso es el consumo informado por el agente, cuando lo informa.
-type Uso struct {
-	TokensEntrada int
-	TokensSalida  int
-}
-
-// Resultado es la salida final de una ejecución.
+// Resultado es la salida final de una ejecución, con el uso y el modelo efectivo cuando el agente los informa.
 type Resultado struct {
-	Salida string
-	Uso    Uso
+	Salida         string
+	Uso            nucleo.Uso
+	ModeloEfectivo string
 }
 
 // Adaptador ejecuta una solicitud contra un agente. Debe respetar ctx: al cancelarse, termina y devuelve ctx.Err().
-// La detección, las capacidades y la resolución de modelo se añaden con los adaptadores reales (M2).
+// Recibe el modelo ya resuelto en solicitud.Modelo (el planificador traduce los perfiles).
 type Adaptador interface {
 	Ejecutar(ctx context.Context, solicitud nucleo.SolicitudEjecucion, emitir func(Evento) error) (Resultado, error)
 }

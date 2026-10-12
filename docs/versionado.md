@@ -1,25 +1,41 @@
 # Versionado
 
-Formato: **`vX.Y.Z+DDMMAAAA`**, por ejemplo `v0.1.0+12102026`.
+Formato: **`vX.Y.Z+DDMMAAAA`**, por ejemplo `v0.1.0+12102026`. La versión **se calcula a partir de git**: no hay que editar ningún archivo.
 
-- `X.Y.Z` es SemVer y se edita a mano en el archivo [`VERSION`](../VERSION):
-  - `Z` (parche): correcciones.
-  - `Y` (menor): funcionalidad nueva compatible, por ejemplo cerrar un hito.
-  - `X` (mayor): cambios incompatibles de API o configuración.
-- `+DDMMAAAA` es la fecha de la compilación o de la etiqueta. En SemVer es metadato de compilación: no cambia la precedencia, solo informa del día.
+## Cómo se calcula
+
+`scripts/version.ps1` parte de la última etiqueta `v*` (o de `0.0.0` si no hay) y la sube según los mensajes de los commits posteriores ([Conventional Commits](https://www.conventionalcommits.org/es/)). Se aplica el mayor salto encontrado:
+
+| Commit | Salto | Ejemplo |
+|---|---|---|
+| `tipo!: …` o `BREAKING CHANGE:` en el cuerpo | mayor | `v1.4.2` → `v2.0.0` |
+| `feat: …` / `feat(api): …` | menor | `v1.4.2` → `v1.5.0` |
+| cualquier otro (`fix`, `docs`, `chore`, `refactor`, `test`…) | parche | `v1.4.2` → `v1.4.3` |
+
+- `+DDMMAAAA` es el día de la compilación. En SemVer es metadato: no cambia la precedencia.
+- Sin commits nuevos desde la etiqueta, la versión es la etiqueta tal cual (también su fecha).
+- Los cambios sin confirmar no cambian el número. El ejecutable los indica: `tramtai version` muestra `v0.1.0+12102026 (7deffc4, con cambios sin confirmar)`.
+
+## Dónde se ve la versión
+
+- `tramtai version` y `tramtai --version`, con el commit compilado.
+- Cabecera de `tramtai agentes` y de `tramtai ejecutar`.
+- El paquete [`internal/version`](../internal/version/version.go) es la única fuente. El servicio HTTP (M4) y la aplicación de escritorio (M6) la mostrarán desde ahí.
 
 ## Comandos
 
 ```powershell
-./scripts/version.ps1              # muestra la versión de hoy
-./scripts/compilar.ps1             # compila con esa versión incrustada
-./scripts/version.ps1 -Etiquetar   # crea la etiqueta git anotada (exige árbol limpio)
-git push origin v0.1.0+12102026    # sube la etiqueta
+./scripts/version.ps1 -Explicar    # lista cada commit con su salto y la versión resultante
+./scripts/compilar.ps1             # compila bin/tramtai.exe con esa versión incrustada
+./scripts/version.ps1 -Etiquetar   # crea la etiqueta git anotada (exige árbol limpio y commits nuevos)
+git push origin --tags             # sube las etiquetas
 ```
 
-## Reglas
+## Flujo para publicar
 
-- Una etiqueta por número `X.Y.Z`: el script se niega a crear `v0.1.0+13102026` si ya existe `v0.1.0+12102026`. Para publicar otra, sube el número en `VERSION`.
-- Flujo: editar `VERSION` → commit → `version.ps1 -Etiquetar` → push del commit y de la etiqueta.
-- Los releases de GitHub se crearán a partir de estas etiquetas cuando exista el CI/CD (ver [pendientes.md](pendientes.md)).
-- Nota: Go no admite `+metadatos` como versión de módulo. No afecta, porque Tramtai es una aplicación y no una biblioteca importable.
+1. Commits con prefijo: `feat: …`, `fix: …`, `docs: …`.
+2. `./scripts/version.ps1 -Explicar` para revisar la versión que saldrá.
+3. `./scripts/version.ps1 -Etiquetar` y `git push origin <etiqueta>`.
+4. El release de GitHub se creará desde la etiqueta cuando exista el CI/CD (ver [pendientes.md](pendientes.md)).
+
+Nota: Go no admite `+metadatos` como versión de módulo. No afecta, porque Tramtai es una aplicación y no una biblioteca importable.

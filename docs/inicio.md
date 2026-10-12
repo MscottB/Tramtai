@@ -10,7 +10,7 @@
 
   y abre una terminal nueva. `scripts/compilar.ps1` lo añade por su cuenta solo para esa ejecución.
 - Git.
-- Para M0b y los adaptadores reales: `claude`, `codex` y/o `agy` instalados y las claves de API (ver [M0B.md](M0B.md)).
+- Los agentes que vayas a usar: `claude` (Claude Code) y/o `codex` (Codex CLI), instalados como `.exe`.
 
 ## Compilar
 
@@ -18,34 +18,76 @@
 ./scripts/compilar.ps1
 ```
 
-Genera `bin/tramtai.exe` con la versión `vX.Y.Z+DDMMAAAA` incrustada. Sin el script (`go build ./cmd/tramtai`) la versión aparece como `dev`.
+Genera `bin/tramtai.exe` con la versión calculada desde git (ver [versionado.md](versionado.md)).
 
 ## Ejecutar
 
 ```powershell
-./bin/tramtai.exe version
-./bin/tramtai.exe configuracion validar
-./bin/tramtai.exe configuracion mostrar --efectiva     # valor y capa de origen de cada clave
-./bin/tramtai.exe configuracion explicar concurrencia.maximo_tamano_cola
+./bin/tramtai.exe --version
+./bin/tramtai.exe agentes                                     # versión, autenticación y términos de cada agente
+./bin/tramtai.exe ejecutar "Resume en una frase qué es Go"    # agente y modelo predeterminados
+./bin/tramtai.exe ejecutar -a claude -p rapido "Hola"         # perfil de modelo (rapido = haiku)
+./bin/tramtai.exe ejecutar -a claude -m sonnet -s "Responde en inglés" "Hola"
+./bin/tramtai.exe ejecutar -a codex "Hola"
+Get-Content prompt.txt | ./bin/tramtai.exe ejecutar -a claude  # prompt desde stdin
 ```
 
-O sin compilar: `go run ./cmd/tramtai configuracion mostrar --efectiva`.
+`ejecutar` muestra la respuesta en vivo (Claude por tokens; Codex al final) y un resumen con el modelo efectivo, los tokens y el coste. Ctrl+C cancela el trabajo y termina el árbol de procesos del agente. Los trabajos se guardan en `%APPDATA%\tramtai\datos\cli.db`.
 
-La configuración se lee de (menor a mayor prioridad): valores internos, `%APPDATA%\tramtai\config.yaml`, `.tramtai/config.yaml`, `.tramtai/local.yaml` y variables `TRAMTAI_SECCION__CLAVE`. Ejemplo:
+### Autenticación de los agentes
+
+Por defecto cada agente usa **clave de API** (sección 2.4 del documento maestro):
+
+| Agente | Variable |
+|---|---|
+| claude | `ANTHROPIC_API_KEY` |
+| codex | `CODEX_API_KEY` u `OPENAI_API_KEY` |
+
+Para uso **personal y local** con tu suscripción (Claude Pro/Max, cuenta ChatGPT), actívalo explícitamente en la configuración global `%APPDATA%\tramtai\config.yaml`:
+
+```yaml
+adaptadores:
+  claude:
+    autenticacion: suscripcion
+  codex:
+    autenticacion: suscripcion
+```
+
+o solo para una terminal: `$env:TRAMTAI_ADAPTADORES__CLAUDE__AUTENTICACION = 'suscripcion'`. La configuración del proyecto (`.tramtai/config.yaml`) no puede activarlo. Tramtai nunca lee ni copia las credenciales de los CLIs.
+
+### Modelos
+
+- `-m` pasa un identificador o alias literal (`haiku`, `claude-sonnet-5-5`, el modelo de Codex…). No es una lista cerrada: el CLI decide si existe.
+- `-p` usa un perfil de `modelos.perfiles`. Por defecto: `rapido`/`equilibrado`/`profundo` → `haiku`/`sonnet`/`opus` para Claude. Para Codex hay que definirlos:
+
+  ```yaml
+  modelos:
+    perfiles:
+      rapido:
+        codex: <identificador>
+  ```
+
+- Si un perfil no tiene modelo para el agente, el trabajo se rechaza con `modelo_no_configurado`. Nunca se cambia el modelo en silencio.
+
+## Configuración
+
+Se lee de (menor a mayor prioridad): valores internos, `%APPDATA%\tramtai\config.yaml`, `.tramtai/config.yaml`, `.tramtai/local.yaml` y variables `TRAMTAI_SECCION__CLAVE`.
 
 ```powershell
-$env:TRAMTAI_CONCURRENCIA__MAXIMO_TAMANO_COLA = 50
-./bin/tramtai.exe configuracion explicar concurrencia.maximo_tamano_cola   # origen: entorno
+./bin/tramtai.exe configuracion mostrar --efectiva     # cada valor con su capa de origen
+./bin/tramtai.exe configuracion explicar adaptadores.claude.autenticacion
 ```
 
 ## Probar
 
 ```powershell
 go vet ./...
-go test ./...                                   # núcleo, persistencia y planificador (agente simulado)
-go test -tags m0b -v -count=1 ./pruebas/m0b     # requiere claves reales, ver M0B.md
+go test ./...                                   # sin agentes reales: simulado, procesos, persistencia
+$env:TRAMTAI_PRUEBA_AUTENTICACION = 'suscripcion'
+go test -tags agentes -v ./internal/adaptadores # CLIs reales: respuesta, uso y cancelación (consume cuota)
+go test -tags m0b -v -count=1 ./pruebas/m0b     # modos con clave de API, ver M0B.md
 ```
 
-## Qué se puede "ver" hoy
+## Qué falta para "verlo" como servicio
 
-Aún no hay servidor HTTP ni interfaz: llegan en M2 (`tramtai servicio iniciar`, API `/api/v1`) y en el hito de la app de escritorio (Wails + Quasar). Hasta entonces el comportamiento visible es la CLI de configuración y las pruebas (`go test -v ./internal/planificador` muestra el ciclo completo de los trabajos).
+El servidor HTTP (`/api/v1`, SSE) llega en M4 y la interfaz (Web UI y aplicación de escritorio Wails + Quasar) en M6. Hasta entonces se usa `tramtai ejecutar`.

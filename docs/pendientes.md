@@ -7,9 +7,10 @@
 | M0 | ✅ | Validación de CLIs, entorno y términos de uso (doc v11–v12) |
 | M0b | 🟡 | Negativa OK; falta la parte positiva con claves reales ([M0B.md](M0B.md)) |
 | M1 | ✅ | Núcleo, configuración por capas, SQLite, idempotencia, planificador |
-| M2 | ⬜ | Adaptadores reales, supervisión de procesos (Job Objects), servicio HTTP `/api/v1` |
-| M3 | ⬜ | Salida estructurada y validación con JSON Schema, fachadas `/openai/v1` y `/anthropic/v1` |
-| M4+ | ⬜ | Puntos de acceso, conversión de cargas, TUI, app de escritorio Wails + Quasar, instalador NSIS |
+| M2 | ✅ | Supervisión de procesos (Job Objects y grupos Unix), adaptadores Claude y Codex, streaming, timeout, cancelación y perfiles de modelo |
+| M3 | ⬜ | Archivos y conversor markitdown, ZIP seguro, salidas con JSON Schema |
+| M4 | ⬜ | API nativa `/api/v1`, SSE y fachadas `/openai/v1` y `/anthropic/v1` |
+| M5–M6 | ⬜ | Servicio único, puntos de acceso, TUI, Web UI y app de escritorio Wails + Quasar |
 | M7 | ⬜ | Cierre ordenado con plazo para trabajos en curso |
 
 ## Tareas
@@ -20,4 +21,7 @@
 - [ ] Ejecutar M0b con claves reales y registrar el resultado en el documento maestro.
 - [ ] Añadir Go y `%USERPROFILE%\go\bin` al PATH del usuario.
 - [ ] Probar con `-race` (necesita CGO y gcc) o en el CI de Linux.
-- [ ] Registrar el avance de M1 y M0b en el documento maestro (v13).
+- [ ] Registrar el avance de M1, M2 y M0b en el documento maestro (v13).
+- [ ] Adaptadores Antigravity (`agy` con `modelProvider: gemini`) y Gemini API directa.
+- [ ] Guardar las claves de API en el Administrador de credenciales de Windows en lugar de variables de entorno.
+- [ ] Recurso de versión del `.exe` (Propiedades → Detalles en Windows) con la versión calculada.

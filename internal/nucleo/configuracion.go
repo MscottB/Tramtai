@@ -63,6 +63,7 @@ var esquema = map[string]tipoValor{
 	"instancia_global.raices_permitidas":          tipoLista,
 	"proyectos_confiables":                        tipoLista,
 	"comandos_agentes.*":                          tipoTexto,
+	"adaptadores.*.autenticacion":                 tipoTexto,
 	"concurrencia_servicio.adaptadores.*":         tipoEntero,
 	"puntos_acceso":                               tipoLista,
 	"predeterminados.agente":                      tipoTexto,
@@ -90,7 +91,7 @@ var esquema = map[string]tipoValor{
 }
 
 // prefijosAdministrados son límites de seguridad: nunca pueden venir de la configuración versionada del repositorio.
-var prefijosAdministrados = []string{"servicio", "instancia_global", "proyectos_confiables", "comandos_agentes", "concurrencia_servicio", "puntos_acceso"}
+var prefijosAdministrados = []string{"servicio", "instancia_global", "proyectos_confiables", "comandos_agentes", "concurrencia_servicio", "puntos_acceso", "adaptadores"}
 
 // Capa es un origen de configuración aplanado a claves con puntos.
 type Capa struct {
@@ -147,6 +148,16 @@ func Internos() Capa {
 		"servicio.puerto":                             17373,
 		"servicio.requerir_token":                     true,
 		"servicio.permitir_remoto":                    false,
+		"comandos_agentes.claude":                     "claude",
+		"comandos_agentes.codex":                      "codex",
+		"adaptadores.claude.autenticacion":            "clave_api",
+		"adaptadores.codex.autenticacion":             "clave_api",
+		"concurrencia_servicio.adaptadores.claude":    1,
+		"concurrencia_servicio.adaptadores.codex":     1,
+		"predeterminados.agente":                      "claude",
+		"modelos.perfiles.rapido.claude":              "haiku",
+		"modelos.perfiles.equilibrado.claude":         "sonnet",
+		"modelos.perfiles.profundo.claude":            "opus",
 		"predeterminados.modo_contexto":               "aislado",
 		"predeterminados.formato_salida":              "markdown",
 		"concurrencia.maximo_trabajos_instancia":      2,
@@ -204,6 +215,24 @@ func (c *Configuracion) Entero(clave string) int {
 func (c *Configuracion) Booleano(clave string) bool {
 	v, _ := c.valores[clave].(bool)
 	return v
+}
+
+// Perfiles devuelve modelos.perfiles como perfil -> agente -> identificador de modelo (sección 9.2).
+func (c *Configuracion) Perfiles() map[string]map[string]string {
+	perfiles := map[string]map[string]string{}
+	for clave, valor := range c.valores {
+		resto, esPerfil := strings.CutPrefix(clave, "modelos.perfiles.")
+		perfil, agente, completo := strings.Cut(resto, ".")
+		modelo, esTexto := valor.(string)
+		if !esPerfil || !completo || !esTexto {
+			continue
+		}
+		if perfiles[perfil] == nil {
+			perfiles[perfil] = map[string]string{}
+		}
+		perfiles[perfil][agente] = modelo
+	}
+	return perfiles
 }
 
 // Origen devuelve la capa que aportó el valor efectivo, o 0 si la clave no tiene valor.

@@ -1,4 +1,4 @@
-// Comando tramtai: CLI del núcleo. En M1 ofrece versión y configuración; el resto de comandos llega con sus hitos.
+// Comando tramtai: CLI del núcleo (versión, configuración, diagnóstico de agentes y ejecución directa).
 package main
 
 import (
@@ -9,17 +9,18 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/nucleo"
+	"tramtai/internal/version"
 )
 
-var version = "dev" // se inyecta con -ldflags desde scripts/compilar.ps1
-
 func main() {
-	raiz := &cobra.Command{Use: "tramtai", Short: "Pasarela local para ejecutar agentes CLI", SilenceUsage: true}
+	raiz := &cobra.Command{Use: "tramtai", Short: "Pasarela local para ejecutar agentes CLI", SilenceUsage: true, Version: version.Texto()}
 	raiz.AddCommand(
 		&cobra.Command{Use: "version", Short: "Muestra la versión", Run: func(cmd *cobra.Command, _ []string) {
-			fmt.Fprintln(cmd.OutOrStdout(), "tramtai", version)
+			fmt.Fprintln(cmd.OutOrStdout(), "tramtai", version.Texto())
 		}},
 		comandoConfiguracion(),
+		comandoAgentes(),
+		comandoEjecutar(),
 	)
 	if err := raiz.Execute(); err != nil {
 		os.Exit(1)

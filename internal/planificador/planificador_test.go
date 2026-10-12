@@ -259,3 +259,37 @@ func TestReinicioNoRelanzaYReencola(t *testing.T) {
 		t.Fatalf("un trabajo interrumpido no se relanza: %s", tr.Estado)
 	}
 }
+
+// registrador guarda el modelo recibido y devuelve uso y modelo efectivo.
+type registrador struct{ modelo chan string }
+
+func (r registrador) Ejecutar(_ context.Context, s nucleo.SolicitudEjecucion, _ func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	r.modelo <- s.Modelo
+	return adaptadores.Resultado{Salida: "ok", ModeloEfectivo: "efectivo-1", Uso: nucleo.Uso{TokensEntrada: 10, TokensSalida: 2}}, nil
+}
+
+func TestPerfilSeResuelveAlAceptar(t *testing.T) {
+	alm := abrir(t)
+	opc := opciones()
+	opc.Perfiles = map[string]map[string]string{"rapido": {"simulado": "modelo-rapido"}}
+	r := registrador{modelo: make(chan string, 1)}
+	p := iniciar(t, alm, r, 1, opc)
+	s := solicitud("x")
+	s.PerfilModelo = "rapido"
+	tr, _, err := p.Enviar(ctx, s, "")
+	if err != nil || tr.ModeloEnviado != "modelo-rapido" {
+		t.Fatalf("perfil no resuelto: %+v %v", tr, err)
+	}
+	if recibido := <-r.modelo; recibido != "modelo-rapido" {
+		t.Fatalf("el adaptador recibió %q", recibido)
+	}
+	final := esperar(t, alm, tr.ID, nucleo.Completado)
+	if final.ModeloEfectivo != "efectivo-1" || final.Uso.TokensEntrada != 10 {
+		t.Fatalf("uso o modelo efectivo no guardados: %+v", final)
+	}
+
+	s.PerfilModelo = "profundo"
+	if _, _, err := p.Enviar(ctx, s, ""); nucleo.CodigoDe(err) != nucleo.CodigoModeloNoConfigurado {
+		t.Fatalf("un perfil sin modelo para el agente se rechaza: %v", err)
+	}
+}

@@ -6,7 +6,7 @@ $raiz = Join-Path $PSScriptRoot '..'
 $version = & (Join-Path $PSScriptRoot 'version.ps1')
 Push-Location $raiz
 try {
-    go build -trimpath -ldflags "-s -w -X main.version=$version" -o bin/tramtai.exe ./cmd/tramtai
+    go build -trimpath -ldflags "-s -w -X tramtai/internal/version.Version=$version" -o bin/tramtai.exe ./cmd/tramtai
     if ($LASTEXITCODE) { throw 'go build falló' }
     Write-Host "bin/tramtai.exe $version"
 } finally { Pop-Location }

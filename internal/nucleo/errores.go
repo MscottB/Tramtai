@@ -22,6 +22,10 @@ const (
 	CodigoAgenteNoDisponible      CodigoError = "agente_no_disponible"
 	CodigoErrorAgente             CodigoError = "error_agente"
 	CodigoLimiteUsoProveedor      CodigoError = "limite_uso_proveedor"
+	CodigoAutenticacionAgente     CodigoError = "autenticacion_agente"
+	CodigoModeloNoDisponible      CodigoError = "modelo_no_disponible"
+	CodigoModeloNoConfigurado     CodigoError = "modelo_no_configurado"
+	CodigoErrorProtocoloAgente    CodigoError = "error_protocolo_agente"
 )
 
 // Error es el error propio de Tramtai: un código estable y un mensaje legible sin secretos.
