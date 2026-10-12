@@ -9,7 +9,7 @@
 | M1 | ✅ | Núcleo, configuración por capas, SQLite, idempotencia, planificador |
 | M2 | ✅ | Supervisión de procesos (Job Objects y grupos Unix), adaptadores Claude y Codex, streaming, timeout, cancelación y perfiles de modelo |
 | M3 | ✅ | Cargas por hash, conversión con markitdown 0.1.8, ZIP seguro con límites, salidas con JSON Schema (nativo en Claude y Codex) |
-| M4 | ⬜ | API nativa `/api/v1`, SSE y fachadas `/openai/v1` y `/anthropic/v1` |
+| M4 | ✅ | Servicio HTTP: API nativa `/api/v1` con SSE reanudable, cargas, capacidades y modelos; fachadas OpenAI (chat, responses, models) y Anthropic (messages) con política de parámetros |
 | M5–M6 | ⬜ | Servicio único, puntos de acceso, TUI, Web UI y app de escritorio Wails + Quasar |
 | M7 | ⬜ | Cierre ordenado con plazo para trabajos en curso |
 
@@ -22,6 +22,9 @@
 - [ ] Añadir Go y `%USERPROFILE%\go\bin` al PATH del usuario.
 - [ ] Probar con `-race` (necesita CGO y gcc) o en el CI de Linux.
 - [ ] Registrar el avance de M1, M2, M3 y M0b en el documento maestro (v13).
+- [ ] Probar las fachadas con los SDK oficiales de Python y Node (hoy probadas con curl y pruebas Go).
+- [ ] 410 por resultado expirado y error explícito de cursor SSE fuera de ventana (llegan con la retención, M7).
+- [ ] Sustituir el sondeo de eventos (100 ms) por notificación en memoria si pesa con muchos clientes.
 - [ ] Purga de cargas vencidas y protección mientras un trabajo las usa (retención, M7).
 - [ ] Perfiles de salida en configuración (`salida.esquema` por archivo, sección 22.3) y `conservar_salida_invalida`.
 - [ ] Adaptadores Antigravity (`agy` con `modelProvider: gemini`) y Gemini API directa.

@@ -93,6 +93,8 @@ var esquema = map[string]tipoValor{
 	"conversion.maximo_archivos_zip":              tipoEntero,
 	"conversion.maximo_descomprimido_mb":          tipoEntero,
 	"conversion.profundidad_maxima_zip":           tipoEntero,
+	"compatibilidad.modo_tolerante":               tipoBooleano,
+	"compatibilidad.cancelar_al_desconectar":      tipoBooleano,
 	"modelos.perfiles.*.*":                        tipoTexto,
 	"modelos.fallback.habilitado":                 tipoBooleano,
 }
@@ -155,6 +157,9 @@ func Internos() Capa {
 		"servicio.puerto":                             17373,
 		"servicio.requerir_token":                     true,
 		"servicio.permitir_remoto":                    false,
+		"instancia_global.token_variable_entorno":     "TRAMTAI_TOKEN_GLOBAL",
+		"compatibilidad.modo_tolerante":               false,
+		"compatibilidad.cancelar_al_desconectar":      true,
 		"comandos_agentes.claude":                     "claude",
 		"comandos_agentes.codex":                      "codex",
 		"adaptadores.claude.autenticacion":            "clave_api",

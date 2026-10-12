@@ -18,7 +18,7 @@ import (
 
 // Carga es un archivo recibido, identificado por su contenido (sección 7.1).
 type Carga struct {
-	ID       string    `json:"id"`
+	ID       string    `json:"identificador_carga"`
 	Nombre   string    `json:"nombre"`
 	SHA256   string    `json:"sha256"`
 	Bytes    int64     `json:"tamano_bytes"`

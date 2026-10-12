@@ -28,6 +28,13 @@ const (
 	CodigoErrorProtocoloAgente    CodigoError = "error_protocolo_agente"
 	CodigoCargaInvalida           CodigoError = "carga_invalida"
 	CodigoConversionFallida       CodigoError = "conversion_fallida"
+	CodigoNoAutorizado            CodigoError = "no_autorizado"
+	CodigoOrigenNoPermitido       CodigoError = "origen_no_permitido"
+	CodigoModeloAmbiguo           CodigoError = "modelo_ambiguo"
+	CodigoParametroNoSoportado    CodigoError = "parametro_no_soportado"
+	CodigoTrabajoNoTerminado      CodigoError = "trabajo_no_terminado"
+	CodigoTrabajoSinSalida        CodigoError = "trabajo_sin_salida"
+	CodigoErrorInterno            CodigoError = "error_interno"
 )
 
 // Error es el error propio de Tramtai: un código estable y un mensaje legible sin secretos.

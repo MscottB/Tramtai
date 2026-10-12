@@ -119,12 +119,8 @@ func comandoConvertir() *cobra.Command {
 }
 
 func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEjecucion, archivos []string) error {
-	dirConfig, err := os.UserConfigDir()
+	datos, err := dirDatos()
 	if err != nil {
-		return err
-	}
-	datos := filepath.Join(dirConfig, "tramtai", "datos")
-	if err := os.MkdirAll(datos, 0o700); err != nil {
 		return err
 	}
 	alm, err := persistencia.Abrir(filepath.Join(datos, "cli.db"))

@@ -81,6 +81,15 @@ o solo para una terminal: `$env:TRAMTAI_ADAPTADORES__CLAUDE__AUTENTICACION = 'su
 
 - Si un perfil no tiene modelo para el agente, el trabajo se rechaza con `modelo_no_configurado`. Nunca se cambia el modelo en silencio.
 
+## Servicio HTTP
+
+```powershell
+./bin/tramtai.exe servicio iniciar     # primer plano; Ctrl+C lo detiene
+./bin/tramtai.exe servicio token       # token para los clientes
+```
+
+Configura tus aplicaciones con `base_url` `http://127.0.0.1:17373/openai/v1` (OpenAI) o `http://127.0.0.1:17373/anthropic` (Anthropic), con el token como API key y `model` del tipo `claude/sonnet` o `perfil/rapido`. Contrato completo en [api.md](api.md).
+
 ## Configuración
 
 Se lee de (menor a mayor prioridad): valores internos, `%APPDATA%\tramtai\config.yaml`, `.tramtai/config.yaml`, `.tramtai/local.yaml` y variables `TRAMTAI_SECCION__CLAVE`.

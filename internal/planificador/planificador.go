@@ -115,6 +115,11 @@ func (p *Planificador) Iniciar(ctx context.Context) error {
 // Enviar valida y acepta una solicitud ya completada con los predeterminados (AplicarPredeterminados).
 // Devuelve reutilizado = true si la clave de idempotencia ya apuntaba a un trabajo con la misma huella.
 func (p *Planificador) Enviar(ctx context.Context, solicitud nucleo.SolicitudEjecucion, clave string) (nucleo.Trabajo, bool, error) {
+	return p.aceptar(ctx, solicitud, clave, "")
+}
+
+// aceptar registra el trabajo; intentoDe vincula un reintento explícito con el trabajo anterior.
+func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEjecucion, clave, intentoDe string) (nucleo.Trabajo, bool, error) {
 	if p.ctx == nil || p.ctx.Err() != nil {
 		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoServicioDetenido, "el planificador no está en marcha")
 	}
@@ -130,7 +135,7 @@ func (p *Planificador) Enviar(ctx context.Context, solicitud nucleo.SolicitudEje
 	if err != nil {
 		return nucleo.Trabajo{}, false, err
 	}
-	t := nucleo.Trabajo{ID: nucleo.NuevoID(), Instancia: p.opc.Instancia, Solicitud: solicitud, Huella: solicitud.Huella(), ModeloEnviado: modelo}
+	t := nucleo.Trabajo{ID: nucleo.NuevoID(), Instancia: p.opc.Instancia, Solicitud: solicitud, Huella: solicitud.Huella(), ModeloEnviado: modelo, IntentoDe: intentoDe}
 	t, reutilizado, err := p.almacen.Aceptar(ctx, t, clave, p.opc.MaximoCola)
 	if err != nil || reutilizado {
 		return t, reutilizado, err
@@ -172,7 +177,7 @@ func (p *Planificador) encolar(id string) {
 func (p *Planificador) Cancelar(ctx context.Context, id string) (nucleo.Trabajo, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	t, err := p.almacen.Obtener(ctx, id)
+	t, err := p.Obtener(ctx, id)
 	if err != nil || t.Estado.Terminal() || t.Estado == nucleo.CancelacionSolicitada {
 		return t, err
 	}
@@ -185,6 +190,45 @@ func (p *Planificador) Cancelar(ctx context.Context, id string) (nucleo.Trabajo,
 		return t, err
 	}
 	return p.almacen.Obtener(ctx, id)
+}
+
+// Obtener devuelve un trabajo de esta instancia; los de otras instancias no existen para ella (sección 16.1).
+func (p *Planificador) Obtener(ctx context.Context, id string) (nucleo.Trabajo, error) {
+	t, err := p.almacen.Obtener(ctx, id)
+	if err == nil && t.Instancia != p.opc.Instancia {
+		return nucleo.Trabajo{}, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "trabajo no encontrado: "+id)
+	}
+	return t, err
+}
+
+// Eventos devuelve los eventos de un trabajo de esta instancia posteriores al número desde.
+func (p *Planificador) Eventos(ctx context.Context, id string, desde int) ([]persistencia.Evento, error) {
+	if _, err := p.Obtener(ctx, id); err != nil {
+		return nil, err
+	}
+	return p.almacen.Eventos(ctx, id, desde)
+}
+
+// Reintentar crea un intento nuevo vinculado al anterior, que debe haber terminado; reutiliza sus entradas
+// y puede consumir cuota otra vez (sección 17.1).
+func (p *Planificador) Reintentar(ctx context.Context, id string) (nucleo.Trabajo, error) {
+	anterior, err := p.Obtener(ctx, id)
+	if err != nil {
+		return anterior, err
+	}
+	if !anterior.Estado.Terminal() {
+		return anterior, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, "solo se reintenta un trabajo terminado")
+	}
+	t, _, err := p.aceptar(ctx, anterior.Solicitud, "", anterior.ID)
+	return t, err
+}
+
+// Eliminar borra un trabajo terminado de esta instancia.
+func (p *Planificador) Eliminar(ctx context.Context, id string) error {
+	if _, err := p.Obtener(ctx, id); err != nil {
+		return err
+	}
+	return p.almacen.Eliminar(ctx, id)
 }
 
 // Detener deja de aceptar trabajos, detiene los ejecutores y espera a que terminen (sección 17.3).

@@ -253,6 +253,32 @@ func (a *Almacen) CambiarEstado(ctx context.Context, id string, de, hacia nucleo
 	return tx.Commit()
 }
 
+// Eliminar borra un trabajo terminado con sus eventos y su clave de idempotencia.
+func (a *Almacen) Eliminar(ctx context.Context, id string) error {
+	tx, err := a.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	resultado, err := tx.ExecContext(ctx, `DELETE FROM trabajos WHERE id = ? AND estado IN (?, ?, ?, ?)`, id,
+		string(nucleo.Completado), string(nucleo.Fallido), string(nucleo.Cancelado), string(nucleo.Interrumpido))
+	if err != nil {
+		return err
+	}
+	if filas, _ := resultado.RowsAffected(); filas == 0 {
+		if _, err := obtener(ctx, tx, id); err != nil {
+			return err
+		}
+		return nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, "solo se elimina un trabajo terminado; cancélalo antes")
+	}
+	for _, consulta := range []string{`DELETE FROM eventos WHERE trabajo_id = ?`, `DELETE FROM idempotencia WHERE trabajo_id = ?`} {
+		if _, err := tx.ExecContext(ctx, consulta, id); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 // AgregarEvento añade un evento con el siguiente número del trabajo.
 func (a *Almacen) AgregarEvento(ctx context.Context, id, tipo, datos string) error {
 	return agregarEvento(ctx, a.db, id, tipo, datos, a.reloj().UTC())
