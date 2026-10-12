@@ -1,0 +1,165 @@
+package documentos
+
+import (
+	"archive/zip"
+	"bytes"
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"tramtai/internal/nucleo"
+)
+
+// TestMain hace de markitdown falso: imprime un encabezado con la extensión y un texto con tildes.
+func TestMain(m *testing.M) {
+	switch os.Getenv("MARKITDOWN_FALSO") {
+	case "convertir":
+		fmt.Printf("# %s\nÑandú convertido\n", filepath.Ext(os.Args[len(os.Args)-1]))
+		os.Exit(0)
+	case "vacio":
+		os.Exit(0)
+	case "fallar":
+		fmt.Fprintln(os.Stderr, "MissingDependencyException: falta el extra pdf")
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
+}
+
+func conversor(t *testing.T, modo string) *Conversor {
+	t.Helper()
+	t.Setenv("MARKITDOWN_FALSO", modo)
+	return &Conversor{Comando: os.Args[0], TiempoLimite: 30 * time.Second, MaximoSalida: 1 << 20,
+		Limites: Limites{MaximoArchivos: 5, MaximoBytes: 1 << 20, ProfundidadMaxima: 2}}
+}
+
+func escribir(t *testing.T, nombre string, datos []byte) Entrada {
+	t.Helper()
+	ruta := filepath.Join(t.TempDir(), nombre)
+	if err := os.WriteFile(ruta, datos, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return Entrada{Ruta: ruta, Nombre: nombre}
+}
+
+func crearZip(t *testing.T, archivos map[string][]byte) []byte {
+	t.Helper()
+	var b bytes.Buffer
+	w := zip.NewWriter(&b)
+	for nombre, datos := range archivos {
+		f, err := w.Create(nombre)
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.Write(datos)
+	}
+	w.Close()
+	return b.Bytes()
+}
+
+func TestTextoSeConservaTalCual(t *testing.T) {
+	texto := "línea 1\n  línea 2 con espacios  \n"
+	salida, err := conversor(t, "fallar").Convertir(context.Background(), []Entrada{escribir(t, "notas.txt", []byte("\xef\xbb\xbf"+texto))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if salida != "<<<archivo nombre=\"notas.txt\">>>\nlínea 1\n  línea 2 con espacios  \n<<<fin archivo>>>\n" {
+		t.Fatalf("salida %q", salida)
+	}
+}
+
+func TestTextoNoUTF8SeRechaza(t *testing.T) {
+	_, err := conversor(t, "convertir").Convertir(context.Background(), []Entrada{escribir(t, "latin1.csv", []byte("a\xf1o"))})
+	if nucleo.CodigoDe(err) != nucleo.CodigoCargaInvalida {
+		t.Fatalf("se esperaba carga_invalida: %v", err)
+	}
+}
+
+func TestDocumentoSeConvierte(t *testing.T) {
+	e := escribir(t, "informe.PDF", []byte("%PDF"))
+	e.SHA256 = "abc"
+	salida, err := conversor(t, "convertir").Convertir(context.Background(), []Entrada{e})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if salida != "<<<archivo nombre=\"informe.PDF\" sha256=\"abc\">>>\n# .pdf\nÑandú convertido\n<<<fin archivo>>>\n" {
+		t.Fatalf("salida %q", salida)
+	}
+}
+
+func TestConversionVaciaOFallidaSeInforma(t *testing.T) {
+	for _, modo := range []string{"vacio", "fallar"} {
+		_, err := conversor(t, modo).Convertir(context.Background(), []Entrada{escribir(t, "a.docx", []byte("x"))})
+		if nucleo.CodigoDe(err) != nucleo.CodigoConversionFallida {
+			t.Errorf("%s: se esperaba conversion_fallida: %v", modo, err)
+		}
+		if modo == "fallar" && !strings.Contains(err.Error(), "MissingDependencyException") {
+			t.Errorf("el error debe incluir el diagnóstico de markitdown: %v", err)
+		}
+	}
+}
+
+func TestZipSeExtraeYConviertePorSeparado(t *testing.T) {
+	datos := crearZip(t, map[string][]byte{"a.txt": []byte("hola"), "sub/b.docx": []byte("x"), "sub/": nil})
+	salida, err := conversor(t, "convertir").Convertir(context.Background(), []Entrada{escribir(t, "paquete.zip", datos)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(salida, "nombre=\"paquete.zip/a.txt\"") || !strings.Contains(salida, "hola") ||
+		!strings.Contains(salida, "nombre=\"paquete.zip/sub/b.docx\"") || !strings.Contains(salida, "# .docx") {
+		t.Fatalf("salida %q", salida)
+	}
+}
+
+func TestZipInseguroOExcesivo(t *testing.T) {
+	interno := crearZip(t, map[string][]byte{"x.txt": []byte("x")})
+	medio := crearZip(t, map[string][]byte{"interno.zip": interno})
+	casos := map[string][]byte{
+		"ruta con ..":      crearZip(t, map[string][]byte{"../fuera.txt": []byte("x")}),
+		"ruta absoluta":    crearZip(t, map[string][]byte{"/etc/x.txt": []byte("x")}),
+		"unidad":           crearZip(t, map[string][]byte{"C:/x.txt": []byte("x")}),
+		"demasiados":       crearZip(t, map[string][]byte{"1.txt": {'1'}, "2.txt": {'2'}, "3.txt": {'3'}, "4.txt": {'4'}, "5.txt": {'5'}, "6.txt": {'6'}}),
+		"demasiado grande": crearZip(t, map[string][]byte{"grande.txt": bytes.Repeat([]byte("a"), 2<<20)}),
+		"profundidad":      crearZip(t, map[string][]byte{"medio.zip": medio}),
+	}
+	for caso, datos := range casos {
+		_, err := conversor(t, "convertir").Convertir(context.Background(), []Entrada{escribir(t, "c.zip", datos)})
+		if nucleo.CodigoDe(err) != nucleo.CodigoCargaInvalida {
+			t.Errorf("%s: se esperaba carga_invalida: %v", caso, err)
+		}
+	}
+}
+
+func TestCargas(t *testing.T) {
+	c, err := AbrirCargas(t.TempDir(), time.Hour, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, err := c.Guardar(`C:\ruta\informe.pdf`, strings.NewReader("contenido"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := c.Guardar("otro.pdf", strings.NewReader("contenido"))
+	if a.ID != b.ID || a.Nombre != "informe.pdf" || a.Bytes != 9 || !nucleo.ReCarga.MatchString(a.ID) {
+		t.Fatalf("cargas %+v %+v", a, b)
+	}
+	if _, ruta, err := c.Obtener(a.ID); err != nil || filepath.Base(ruta) != a.ID {
+		t.Fatalf("obtener: %s %v", ruta, err)
+	}
+	if _, err := c.Guardar("grande.bin", strings.NewReader("12345678901")); nucleo.CodigoDe(err) != nucleo.CodigoCargaInvalida {
+		t.Fatalf("una carga sobre el límite se rechaza: %v", err)
+	}
+	for _, id := range []string{"carga_../../secreto", "carga_00000000000000000000000000000000"} {
+		if _, _, err := c.Obtener(id); nucleo.CodigoDe(err) != nucleo.CodigoEntradaNoDisponible {
+			t.Errorf("%s: se esperaba entrada_no_disponible: %v", id, err)
+		}
+	}
+	vencidas, _ := AbrirCargas(t.TempDir(), -time.Second, 10)
+	v, _ := vencidas.Guardar("a.txt", strings.NewReader("x"))
+	if _, _, err := vencidas.Obtener(v.ID); nucleo.CodigoDe(err) != nucleo.CodigoEntradaNoDisponible {
+		t.Fatalf("una carga vencida no está disponible: %v", err)
+	}
+}

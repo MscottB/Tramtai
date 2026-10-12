@@ -86,12 +86,19 @@ var esquema = map[string]tipoValor{
 	"conversion.motor":                            tipoTexto,
 	"conversion.habilitar_plugins":                tipoBooleano,
 	"conversion.transformacion_semantica":         tipoBooleano,
+	"conversion.comando":                          tipoTexto,
+	"conversion.tiempo_limite_segundos":           tipoEntero,
+	"conversion.maximo_carga_mb":                  tipoEntero,
+	"conversion.maximo_salida_mb":                 tipoEntero,
+	"conversion.maximo_archivos_zip":              tipoEntero,
+	"conversion.maximo_descomprimido_mb":          tipoEntero,
+	"conversion.profundidad_maxima_zip":           tipoEntero,
 	"modelos.perfiles.*.*":                        tipoTexto,
 	"modelos.fallback.habilitado":                 tipoBooleano,
 }
 
 // prefijosAdministrados son límites de seguridad: nunca pueden venir de la configuración versionada del repositorio.
-var prefijosAdministrados = []string{"servicio", "instancia_global", "proyectos_confiables", "comandos_agentes", "concurrencia_servicio", "puntos_acceso", "adaptadores"}
+var prefijosAdministrados = []string{"servicio", "instancia_global", "proyectos_confiables", "comandos_agentes", "concurrencia_servicio", "puntos_acceso", "adaptadores", "conversion.comando"}
 
 // Capa es un origen de configuración aplanado a claves con puntos.
 type Capa struct {
@@ -176,6 +183,13 @@ func Internos() Capa {
 		"conversion.motor":                            "markitdown",
 		"conversion.habilitar_plugins":                false,
 		"conversion.transformacion_semantica":         false,
+		"conversion.comando":                          "markitdown",
+		"conversion.tiempo_limite_segundos":           120,
+		"conversion.maximo_carga_mb":                  50,
+		"conversion.maximo_salida_mb":                 20,
+		"conversion.maximo_archivos_zip":              50,
+		"conversion.maximo_descomprimido_mb":          200,
+		"conversion.profundidad_maxima_zip":           3,
 	}}
 }
 
@@ -265,6 +279,9 @@ func (c *Configuracion) AplicarPredeterminados(s SolicitudEjecucion) SolicitudEj
 	}
 	if s.ModoContexto == "" {
 		s.ModoContexto = c.Texto("predeterminados.modo_contexto")
+	}
+	if s.Salida.Formato == "" && len(s.Salida.Esquema) > 0 {
+		s.Salida.Formato = "json"
 	}
 	if s.Salida.Formato == "" {
 		s.Salida.Formato = c.Texto("predeterminados.formato_salida")

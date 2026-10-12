@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/documentos"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
 	"tramtai/internal/planificador"
@@ -54,7 +55,8 @@ func comandoAgentes() *cobra.Command {
 }
 
 func comandoEjecutar() *cobra.Command {
-	var agente, modelo, perfil, sistema string
+	var agente, modelo, perfil, sistema, esquema, formato string
+	var archivos []string
 	var tiempo int
 	cmd := &cobra.Command{Use: "ejecutar [texto]", Short: "Ejecuta un trabajo con un agente y muestra la respuesta en vivo",
 		Long: "Ejecuta un trabajo directamente, sin servicio. Si no se pasa texto, se lee de la entrada estándar.\nCtrl+C cancela el trabajo y termina el proceso del agente.",
@@ -75,7 +77,13 @@ func comandoEjecutar() *cobra.Command {
 			s := nucleo.SolicitudEjecucion{Agente: agente, Modelo: modelo, PerfilModelo: perfil, Instrucciones: sistema,
 				Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: texto}}}
 			s.Ejecucion.TiempoLimiteSegundos = tiempo
-			return ejecutar(cmd, c, c.AplicarPredeterminados(s))
+			s.Salida.Formato = formato
+			if esquema != "" {
+				if s.Salida.Esquema, err = os.ReadFile(esquema); err != nil {
+					return err
+				}
+			}
+			return ejecutar(cmd, c, c.AplicarPredeterminados(s), archivos)
 		}}
 	f := cmd.Flags()
 	f.StringVarP(&agente, "agente", "a", "", "agente: claude o codex (predeterminados.agente)")
@@ -83,10 +91,34 @@ func comandoEjecutar() *cobra.Command {
 	f.StringVarP(&perfil, "perfil", "p", "", "perfil de modelo: rapido, equilibrado, profundo (modelos.perfiles)")
 	f.StringVarP(&sistema, "sistema", "s", "", "instrucciones de sistema")
 	f.IntVarP(&tiempo, "tiempo", "t", 0, "tiempo límite en segundos (300 por defecto)")
+	f.StringArrayVarP(&archivos, "archivo", "f", nil, "archivo de entrada, repetible: PDF, DOCX, PPTX, XLSX, HTML, texto o ZIP")
+	f.StringVarP(&esquema, "esquema", "e", "", "archivo JSON Schema que debe cumplir la salida (implica formato json)")
+	f.StringVar(&formato, "formato", "", "formato de salida: texto, markdown o json")
 	return cmd
 }
 
-func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEjecucion) error {
+func comandoConvertir() *cobra.Command {
+	return &cobra.Command{Use: "convertir <archivo>...", Short: "Muestra el texto que recibiría el agente para esos archivos (sin ejecutar ningún agente)",
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := cargarConfiguracion()
+			if err != nil {
+				return err
+			}
+			entradas := make([]documentos.Entrada, len(args))
+			for i, ruta := range args {
+				entradas[i] = documentos.Entrada{Ruta: ruta, Nombre: filepath.Base(ruta)}
+			}
+			texto, err := documentos.Desde(c).Convertir(cmd.Context(), entradas)
+			if err != nil {
+				return err
+			}
+			fmt.Fprint(cmd.OutOrStdout(), texto)
+			return nil
+		}}
+}
+
+func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEjecucion, archivos []string) error {
 	dirConfig, err := os.UserConfigDir()
 	if err != nil {
 		return err
@@ -101,10 +133,29 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 	}
 	defer alm.Cerrar()
 
+	cargas, err := documentos.AbrirCargas(filepath.Join(datos, "cargas", "cli"),
+		time.Duration(c.Entero("retencion.horas_carga_huerfana"))*time.Hour, int64(c.Entero("conversion.maximo_carga_mb"))<<20)
+	if err != nil {
+		return err
+	}
+	for _, ruta := range archivos {
+		archivo, err := os.Open(ruta)
+		if err != nil {
+			return err
+		}
+		carga, err := cargas.Guardar(filepath.Base(ruta), archivo)
+		archivo.Close()
+		if err != nil {
+			return err
+		}
+		s.Cargas = append(s.Cargas, carga.ID)
+	}
+
 	registro, limites := adaptadores.Registro(c)
 	// shortcut: cada ejecución directa usa su propia instancia para no relanzar trabajos de otra ejecución
 	// interrumpida; el servicio (M4) tendrá instancias persistentes con su recuperación.
 	opc := planificador.OpcionesDesde(c, "cli-"+nucleo.NuevoID()[len("trabajo_"):])
+	opc.Preparador = documentos.Preparador{Cargas: cargas, Conversor: documentos.Desde(c)}
 	p := planificador.Nuevo(alm, registro, planificador.NuevosSemaforos(limites), opc)
 	if err := p.Iniciar(cmd.Context()); err != nil {
 		return err
@@ -121,6 +172,7 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 	interrupcion, parar := signal.NotifyContext(cmd.Context(), os.Interrupt)
 	defer parar()
 	inicio, ultimo, cancelado := time.Now(), 0, false
+	var impreso strings.Builder
 	for {
 		if interrupcion.Err() != nil && !cancelado {
 			cancelado = true
@@ -139,6 +191,9 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 			switch {
 			case e.Tipo == "texto":
 				fmt.Fprint(out, e.Datos)
+				impreso.WriteString(e.Datos)
+			case e.Tipo == "estado" && e.Datos == string(nucleo.PreparandoEntrada):
+				fmt.Fprintln(errOut, "convirtiendo archivos…")
 			case e.Tipo == "estado" && nucleo.Estado(e.Datos).Terminal():
 				terminado = true
 			}
@@ -152,6 +207,13 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 	final, err := alm.Obtener(context.Background(), t.ID)
 	if err != nil {
 		return err
+	}
+	// Con salida estructurada el resultado final no siempre coincide con el texto emitido en vivo.
+	if final.Estado == nucleo.Completado && final.Salida != impreso.String() {
+		if impreso.Len() > 0 {
+			fmt.Fprint(errOut, "\n\nsalida final:\n")
+		}
+		fmt.Fprint(out, final.Salida)
 	}
 	efectivo := final.ModeloEfectivo
 	if efectivo == "" {

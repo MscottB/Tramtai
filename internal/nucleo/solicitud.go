@@ -18,6 +18,8 @@ type Mensaje struct {
 type ConfigSalida struct {
 	Formato            string `json:"formato,omitempty"`
 	ValidacionEstricta bool   `json:"validacion_estricta,omitempty"`
+	// Esquema es el JSON Schema que debe cumplir la salida (sección 11); exige formato json.
+	Esquema json.RawMessage `json:"esquema,omitempty"`
 }
 
 // ConfigEjecucion agrupa los límites de ejecución pedidos.
@@ -39,7 +41,13 @@ type SolicitudEjecucion struct {
 	Ejecucion     ConfigEjecucion `json:"ejecucion"`
 }
 
-const maximoTiempoLimiteSegundos = 24 * 60 * 60
+const (
+	maximoTiempoLimiteSegundos = 24 * 60 * 60
+	maximoCargas               = 20
+)
+
+// ReCarga es el formato de un identificador de carga: impide rutas u otros valores en su lugar.
+var ReCarga = regexp.MustCompile(`^carga_[0-9a-f]{32}$`)
 
 var (
 	rolesValidos    = map[string]bool{"sistema": true, "usuario": true, "asistente": true}
@@ -62,9 +70,6 @@ func (s SolicitudEjecucion) Validar() error {
 			return invalida("%s con formato no válido", campo)
 		}
 	}
-	if len(s.Mensajes) == 0 && s.Instrucciones == "" {
-		return invalida("la solicitud no tiene mensajes ni instrucciones")
-	}
 	for i, m := range s.Mensajes {
 		if !rolesValidos[m.Rol] {
 			return invalida("mensaje %d con rol desconocido %q", i, m.Rol)
@@ -78,6 +83,25 @@ func (s SolicitudEjecucion) Validar() error {
 	}
 	if s.Salida.Formato != "" && !formatosValidos[s.Salida.Formato] {
 		return invalida("formato de salida desconocido %q", s.Salida.Formato)
+	}
+	if len(s.Salida.Esquema) > 0 {
+		if s.Salida.Formato != "json" {
+			return invalida("un esquema de salida exige formato json")
+		}
+		if !json.Valid(s.Salida.Esquema) {
+			return invalida("el esquema de salida no es JSON válido")
+		}
+	}
+	if len(s.Cargas) > maximoCargas {
+		return invalida("demasiadas cargas (máximo %d)", maximoCargas)
+	}
+	for i, c := range s.Cargas {
+		if !ReCarga.MatchString(c) {
+			return invalida("carga %d con identificador no válido", i)
+		}
+	}
+	if len(s.Mensajes) == 0 && s.Instrucciones == "" && len(s.Cargas) == 0 {
+		return invalida("la solicitud no tiene mensajes, instrucciones ni cargas")
 	}
 	if t := s.Ejecucion.TiempoLimiteSegundos; t < 0 || t > maximoTiempoLimiteSegundos {
 		return invalida("tiempo_limite_segundos fuera de rango")

@@ -2,7 +2,7 @@
 
 Pasarela local en Go que expone Claude Code, Codex CLI y Antigravity (y la Gemini API) como una API HTTP propia, con cola de trabajos, idempotencia, configuración por capas y selección de modelo por solicitud.
 
-> Estado: **M2 completo**: núcleo, SQLite, planificador, supervisión de procesos y adaptadores Claude y Codex. Ya se pueden ejecutar trabajos reales desde la CLI. El servidor HTTP llega en M4 y la interfaz en M6.
+> Estado: **M3 completo**: núcleo, SQLite, planificador, supervisión de procesos, adaptadores Claude y Codex, archivos de entrada (PDF, DOCX, PPTX, XLSX, HTML, texto, ZIP) y salidas validadas con JSON Schema. Se usa desde la CLI. El servidor HTTP llega en M4 y la interfaz en M6.
 
 ## Inicio rápido
 
@@ -11,6 +11,7 @@ Pasarela local en Go que expone Claude Code, Codex CLI y Antigravity (y la Gemin
 ./bin/tramtai.exe --version
 ./bin/tramtai.exe agentes                    # diagnóstico de Claude y Codex
 ./bin/tramtai.exe ejecutar -p rapido "Hola"   # trabajo real con respuesta en vivo
+./bin/tramtai.exe ejecutar -f acta.pdf -e compromisos.schema.json "Extrae los compromisos"
 go test ./...
 ```
 
@@ -37,6 +38,8 @@ internal/persistencia SQLite (trabajos, eventos, idempotencia)
 internal/planificador cola, concurrencia, cancelación, recuperación
 internal/procesos     supervisión de procesos (Job Objects / grupos Unix)
 internal/adaptadores  Claude, Codex y agente simulado
+internal/documentos   cargas, conversión con markitdown y ZIP seguro
+internal/salidas      validación JSON Schema
 internal/version      versión y commit del ejecutable
 pruebas/m0b/          pruebas con claves reales (build tag m0b)
 scripts/              compilar y versionar

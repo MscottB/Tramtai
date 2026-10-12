@@ -79,6 +79,13 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 	if s.Modelo != "" {
 		args = append(args, "-m", s.Modelo)
 	}
+	if len(s.Salida.Esquema) > 0 {
+		archivo := filepath.Join(raiz, "esquema.json")
+		if err := os.WriteFile(archivo, s.Salida.Esquema, 0o600); err != nil {
+			return Resultado{}, err
+		}
+		args = append(args, "--output-schema", archivo)
+	}
 	args = append(args, "-") // el prompt llega por stdin
 	sistema, prompt := separar(s)
 

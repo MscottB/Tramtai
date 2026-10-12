@@ -26,6 +26,8 @@ const (
 	CodigoModeloNoDisponible      CodigoError = "modelo_no_disponible"
 	CodigoModeloNoConfigurado     CodigoError = "modelo_no_configurado"
 	CodigoErrorProtocoloAgente    CodigoError = "error_protocolo_agente"
+	CodigoCargaInvalida           CodigoError = "carga_invalida"
+	CodigoConversionFallida       CodigoError = "conversion_fallida"
 )
 
 // Error es el error propio de Tramtai: un código estable y un mensaje legible sin secretos.
@@ -48,4 +50,13 @@ func CodigoDe(err error) CodigoError {
 		return e.Codigo
 	}
 	return ""
+}
+
+// MensajeDe devuelve el mensaje sin el prefijo del código para los errores de Tramtai.
+func MensajeDe(err error) string {
+	var e *Error
+	if errors.As(err, &e) {
+		return e.Mensaje
+	}
+	return err.Error()
 }

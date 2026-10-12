@@ -11,6 +11,8 @@ El diseño completo está en el documento maestro (v12, en `documentos/`). Resum
 | `internal/planificador` | Cola acotada, concurrencia por instancia, semáforo por adaptador, tiempos máximos, cancelación idempotente y resolución del perfil de modelo al aceptar. |
 | `internal/procesos` | Supervisión de procesos. En Windows crea el proceso suspendido, lo asigna a un Job Object con `KILL_ON_JOB_CLOSE` y lo reanuda; en Unix usa un grupo de procesos con SIGTERM y luego SIGKILL. Cancelar o agotar el tiempo termina el árbol completo; si no se confirma, devuelve `cancelacion_no_confirmada`. |
 | `internal/adaptadores` | Contrato `Adaptador`, agente `Simulado` y los adaptadores reales `Claude` y `Codex` (M2). Antigravity y la Gemini API llegan después. |
+| `internal/documentos` | Cargas identificadas por SHA-256 (`carga_<hash>`) con vencimiento. Conversión a Markdown con markitdown 0.1.8 en un proceso supervisado con plazo y límite de salida. Los archivos de texto (txt, md, json, xml, csv, yaml…) pasan tal cual, validando que sean UTF-8. ZIP seguro con límites de archivos, tamaño descomprimido medido y profundidad, rechazando rutas con `..`, absolutas, con unidad o enlaces. |
+| `internal/salidas` | Validación de la salida contra el JSON Schema del consumidor (`santhosh-tekuri/jsonschema`), con los `$ref` externos deshabilitados. |
 | `internal/version` | Versión del ejecutable (inyectada al compilar) y commit de git. |
 | `cmd/tramtai` | CLI con Cobra: `version`, `configuracion`, `agentes` y `ejecutar`. |
 
@@ -26,6 +28,20 @@ El diseño completo está en el documento maestro (v12, en `documentos/`). Resum
 | Uso | tokens y coste en USD | tokens |
 
 Las conversaciones de varios turnos se enmarcan con el formato `tramtai-turnos-v1`: un bloque `<<<turno rol=…>>>` por turno, con el contenido intacto. Los errores del proveedor se traducen a `limite_uso_proveedor`, `autenticacion_agente`, `modelo_no_disponible` o `error_agente`. Ningún secreto llega a los mensajes: se redactan antes.
+
+## Entradas y salidas (M3)
+
+Con cargas, el trabajo pasa por `preparando_entrada`, que tiene su propio límite de conversiones simultáneas (`concurrencia.maximo_conversiones_instancia`). Cada archivo se convierte por separado y se antepone al último mensaje del usuario en un bloque delimitado:
+
+```
+<<<archivo nombre="paquete.zip/acta.docx" sha256="…">>>
+…Markdown…
+<<<fin archivo>>>
+```
+
+Si una carga venció, el trabajo falla con `entrada_no_disponible`. Una conversión vacía o fallida falla con `conversion_fallida`; nunca se presenta como éxito. Un ZIP que supera los límites falla con `carga_invalida`.
+
+Con un esquema, se usa primero la salida estructurada nativa del agente (`--json-schema` y `structured_output` en Claude; `--output-schema` en Codex) y después Tramtai valida el resultado. Si no cumple, el trabajo falla con `salida_no_cumple_esquema` y no se conserva la salida. Un esquema inválido se rechaza al aceptar el trabajo.
 
 ## Estados del trabajo
 

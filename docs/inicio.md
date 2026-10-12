@@ -32,6 +32,18 @@ Genera `bin/tramtai.exe` con la versión calculada desde git (ver [versionado.md
 Get-Content prompt.txt | ./bin/tramtai.exe ejecutar -a claude  # prompt desde stdin
 ```
 
+### Archivos y salida estructurada
+
+```powershell
+./bin/tramtai.exe convertir informe.pdf datos.zip              # solo muestra el texto que recibiría el agente
+./bin/tramtai.exe ejecutar -f informe.pdf -f anexo.xlsx "Resume ambos documentos"
+./bin/tramtai.exe ejecutar -f acta.docx -e compromisos.schema.json "Extrae compromisos; null si no hay fecha"
+```
+
+- `-f` es repetible y admite PDF, DOCX, PPTX, XLSX, HTML, texto (txt, md, json, xml, csv…) y ZIP. Los archivos de texto se entregan tal cual. El resto se convierte con markitdown, que debe estar instalado: `uv tool install "markitdown[pdf,docx,pptx,xlsx]==0.1.8"`. Si no lo está, Tramtai usa `uvx`, más lento.
+- `-e` recibe un JSON Schema; la salida es JSON validado contra él.
+- Límites configurables en `conversion.*`: `maximo_carga_mb` (50), `maximo_archivos_zip` (50), `maximo_descomprimido_mb` (200), `profundidad_maxima_zip` (3), `tiempo_limite_segundos` (120) y `maximo_salida_mb` (20).
+
 `ejecutar` muestra la respuesta en vivo (Claude por tokens; Codex al final) y un resumen con el modelo efectivo, los tokens y el coste. Ctrl+C cancela el trabajo y termina el árbol de procesos del agente. Los trabajos se guardan en `%APPDATA%\tramtai\datos\cli.db`.
 
 ### Autenticación de los agentes

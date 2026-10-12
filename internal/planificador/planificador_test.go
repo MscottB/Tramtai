@@ -293,3 +293,71 @@ func TestPerfilSeResuelveAlAceptar(t *testing.T) {
 		t.Fatalf("un perfil sin modelo para el agente se rechaza: %v", err)
 	}
 }
+
+// preparadorFalso devuelve un bloque fijo o un error.
+type preparadorFalso struct{ err error }
+
+func (p preparadorFalso) Preparar(_ context.Context, cargas []string) (string, error) {
+	return "<<<archivo nombre=\"a.txt\">>>\ncontenido\n<<<fin archivo>>>", p.err
+}
+
+// eco devuelve el último mensaje recibido, para ver qué llegó al agente.
+type eco struct{}
+
+func (eco) Ejecutar(_ context.Context, s nucleo.SolicitudEjecucion, _ func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	return adaptadores.Resultado{Salida: s.Mensajes[len(s.Mensajes)-1].Contenido}, nil
+}
+
+const cargaPrueba = "carga_0123456789abcdef0123456789abcdef"
+
+func TestCargasSePreparanAntesDelAgente(t *testing.T) {
+	alm := abrir(t)
+	opc := opciones()
+	opc.Preparador = preparadorFalso{}
+	p := iniciar(t, alm, eco{}, 1, opc)
+	s := solicitud("resume")
+	s.Cargas = []string{cargaPrueba}
+	final := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if final.Salida != "<<<archivo nombre=\"a.txt\">>>\ncontenido\n<<<fin archivo>>>\nresume" {
+		t.Fatalf("el agente recibió %q", final.Salida)
+	}
+	eventos, _ := alm.Eventos(ctx, final.ID, 0)
+	if eventos[1].Datos != string(nucleo.PreparandoEntrada) {
+		t.Fatalf("el segundo estado debe ser preparando_entrada: %+v", eventos)
+	}
+}
+
+func TestCargaNoDisponibleFalla(t *testing.T) {
+	alm := abrir(t)
+	opc := opciones()
+	opc.Preparador = preparadorFalso{err: nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, "venció")}
+	p := iniciar(t, alm, eco{}, 1, opc)
+	s := solicitud("x")
+	s.Cargas = []string{cargaPrueba}
+	if tr := esperar(t, alm, enviar(t, p, s), nucleo.Fallido); tr.CodigoError != nucleo.CodigoEntradaNoDisponible || tr.MensajeError != "venció" {
+		t.Fatalf("se esperaba entrada_no_disponible: %+v", tr)
+	}
+}
+
+func TestEsquemaDeSalida(t *testing.T) {
+	alm := abrir(t)
+	esquema := []byte(`{"type":"object","required":["ok"],"properties":{"ok":{"type":"boolean"}}}`)
+	cumple := iniciar(t, alm, adaptadores.Simulado{Respuesta: `{"ok":true}`}, 1, opciones())
+	s := solicitud("x")
+	s.Salida.Formato, s.Salida.Esquema = "json", esquema
+	esperar(t, alm, enviar(t, cumple, s), nucleo.Completado)
+
+	noCumple := iniciar(t, abrir(t), adaptadores.Simulado{Respuesta: `{"ok":"sí"}`}, 1, opciones())
+	tr, _, err := noCumple.Enviar(ctx, s, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if final := esperar(t, noCumple.almacen, tr.ID, nucleo.Fallido); final.CodigoError != nucleo.CodigoSalidaNoCumpleEsquema || final.Salida != "" {
+		t.Fatalf("se esperaba salida_no_cumple_esquema sin conservar la salida: %+v", final)
+	}
+
+	s.Salida.Esquema = []byte(`{"type":"objeto"}`)
+	if _, _, err := cumple.Enviar(ctx, s, ""); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
+		t.Fatalf("un esquema inválido se rechaza al aceptar: %v", err)
+	}
+}

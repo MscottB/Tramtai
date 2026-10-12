@@ -1,6 +1,7 @@
 package adaptadores
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"os"
@@ -75,6 +76,14 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 	if s.Modelo != "" {
 		args = append(args, "--model", s.Modelo)
 	}
+	if len(s.Salida.Esquema) > 0 {
+		// Salida estructurada nativa: el resultado llega en structured_output (validado en M0).
+		var compacto bytes.Buffer
+		if err := json.Compact(&compacto, s.Salida.Esquema); err != nil {
+			return Resultado{}, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "esquema no válido")
+		}
+		args = append(args, "--json-schema", compacto.String())
+	}
 
 	var final *resultadoClaude
 	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: espacio,
@@ -107,7 +116,11 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 		texto := redactar(final.Result, clave)
 		return Resultado{}, nucleo.NuevoError(clasificar(texto, final.APIErrorStatus), texto)
 	}
-	return Resultado{Salida: final.Result, ModeloEfectivo: final.modeloEfectivo(), Uso: nucleo.Uso{
+	salida := final.Result
+	if len(final.StructuredOutput) > 0 && string(final.StructuredOutput) != "null" {
+		salida = string(final.StructuredOutput) // el campo estructurado prevalece sobre el texto libre (sección 11)
+	}
+	return Resultado{Salida: salida, ModeloEfectivo: final.modeloEfectivo(), Uso: nucleo.Uso{
 		TokensEntrada: final.Usage.InputTokens + final.Usage.CacheCreation + final.Usage.CacheRead,
 		TokensSalida:  final.Usage.OutputTokens,
 		CostoUSD:      final.TotalCostUSD,
@@ -127,11 +140,12 @@ type eventoClaude struct {
 }
 
 type resultadoClaude struct {
-	Result         string  `json:"result"`
-	IsError        bool    `json:"is_error"`
-	APIErrorStatus int     `json:"api_error_status"`
-	TotalCostUSD   float64 `json:"total_cost_usd"`
-	Usage          struct {
+	Result           string          `json:"result"`
+	StructuredOutput json.RawMessage `json:"structured_output"`
+	IsError          bool            `json:"is_error"`
+	APIErrorStatus   int             `json:"api_error_status"`
+	TotalCostUSD     float64         `json:"total_cost_usd"`
+	Usage            struct {
 		InputTokens   int `json:"input_tokens"`
 		OutputTokens  int `json:"output_tokens"`
 		CacheCreation int `json:"cache_creation_input_tokens"`

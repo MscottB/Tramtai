@@ -6,13 +6,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
+	"tramtai/internal/salidas"
 )
+
+// Preparador convierte las cargas de un trabajo en texto para el agente (documentos.Preparador).
+type Preparador interface {
+	Preparar(ctx context.Context, cargas []string) (string, error)
+}
 
 // Opciones son los límites de una instancia.
 type Opciones struct {
@@ -27,6 +34,10 @@ type Opciones struct {
 	TiempoLimitePredeterminado time.Duration
 	// Perfiles traduce perfil_modelo a un identificador por agente (perfil -> agente -> modelo).
 	Perfiles map[string]map[string]string
+	// MaximoConversiones limita las conversiones simultáneas, aparte de las ejecuciones (sección 17).
+	MaximoConversiones int
+	// Preparador convierte las cargas; sin él, un trabajo con cargas falla con entrada_no_disponible.
+	Preparador Preparador
 }
 
 // OpcionesDesde toma los límites de la configuración efectiva.
@@ -38,6 +49,7 @@ func OpcionesDesde(c *nucleo.Configuracion, instancia string) Opciones {
 		TiempoMaximoCola:           time.Duration(c.Entero("concurrencia.tiempo_maximo_en_cola_segundos")) * time.Second,
 		TiempoLimitePredeterminado: 300 * time.Second,
 		Perfiles:                   c.Perfiles(),
+		MaximoConversiones:         c.Entero("concurrencia.maximo_conversiones_instancia"),
 	}
 }
 
@@ -60,6 +72,8 @@ type Planificador struct {
 	almacen     *persistencia.Almacen
 	adaptadores map[string]adaptadores.Adaptador
 	semaforos   Semaforos
+	// conversiones es el semáforo de conversiones de la instancia.
+	conversiones chan struct{}
 
 	mu            sync.Mutex
 	cancelaciones map[string]context.CancelFunc
@@ -72,7 +86,8 @@ type Planificador struct {
 // Nuevo crea un planificador; hay que llamar a Iniciar antes de enviar trabajos.
 func Nuevo(almacen *persistencia.Almacen, registro map[string]adaptadores.Adaptador, semaforos Semaforos, opc Opciones) *Planificador {
 	opc.MaximoCola, opc.MaximoTrabajos = max(opc.MaximoCola, 1), max(opc.MaximoTrabajos, 1)
-	return &Planificador{opc: opc, almacen: almacen, adaptadores: registro, semaforos: semaforos, cancelaciones: map[string]context.CancelFunc{}}
+	return &Planificador{opc: opc, almacen: almacen, adaptadores: registro, semaforos: semaforos,
+		conversiones: make(chan struct{}, max(opc.MaximoConversiones, 1)), cancelaciones: map[string]context.CancelFunc{}}
 }
 
 // Iniciar recupera el estado tras un reinicio (sección 4.3), reencola lo pendiente y arranca los ejecutores.
@@ -105,6 +120,11 @@ func (p *Planificador) Enviar(ctx context.Context, solicitud nucleo.SolicitudEje
 	}
 	if err := solicitud.Validar(); err != nil {
 		return nucleo.Trabajo{}, false, err
+	}
+	if len(solicitud.Salida.Esquema) > 0 {
+		if _, err := salidas.Compilar(solicitud.Salida.Esquema); err != nil {
+			return nucleo.Trabajo{}, false, err
+		}
 	}
 	modelo, err := p.resolverModelo(solicitud)
 	if err != nil {
@@ -220,7 +240,28 @@ func (p *Planificador) procesar(id string) {
 		p.mu.Unlock()
 	}()
 
-	if !p.cambiar(id, nucleo.EnCola, nucleo.EsperandoAgente, persistencia.Cambio{}) {
+	solicitud, desde := t.Solicitud, nucleo.EnCola
+	if len(solicitud.Cargas) > 0 {
+		if !p.cambiar(id, nucleo.EnCola, nucleo.PreparandoEntrada, persistencia.Cambio{}) {
+			return
+		}
+		desde = nucleo.PreparandoEntrada
+		documentos, err := p.preparar(ctxTrabajo, solicitud.Cargas)
+		if ctxTrabajo.Err() != nil {
+			p.cerrarDetenido(id, desde)
+			return
+		}
+		if err != nil {
+			codigo := nucleo.CodigoDe(err)
+			if codigo == "" {
+				codigo = nucleo.CodigoConversionFallida
+			}
+			p.cambiar(id, desde, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err)})
+			return
+		}
+		solicitud = conDocumentos(solicitud, documentos)
+	}
+	if !p.cambiar(id, desde, nucleo.EsperandoAgente, persistencia.Cambio{}) {
 		return
 	}
 	if semaforo := p.semaforos[t.Solicitud.Agente]; semaforo != nil {
@@ -242,7 +283,6 @@ func (p *Planificador) procesar(id string) {
 	}
 	ctxEjecucion, cancelarEjecucion := context.WithTimeout(ctxTrabajo, limite)
 	defer cancelarEjecucion()
-	solicitud := t.Solicitud
 	solicitud.Modelo, solicitud.PerfilModelo = t.ModeloEnviado, ""
 	resultado, err := adaptador.Ejecutar(ctxEjecucion, solicitud, func(e adaptadores.Evento) error {
 		return p.almacen.AgregarEvento(fondo, id, e.Tipo, e.Datos)
@@ -259,7 +299,7 @@ func (p *Planificador) procesar(id string) {
 		if codigo == "" {
 			codigo = nucleo.CodigoErrorAgente
 		}
-		p.cambiar(id, nucleo.Ejecutando, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: err.Error()})
+		p.cambiar(id, nucleo.Ejecutando, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err)})
 		return
 	}
 
@@ -268,7 +308,7 @@ func (p *Planificador) procesar(id string) {
 	}
 	if err := validarSalida(t.Solicitud.Salida, resultado.Salida); err != nil {
 		p.cambiar(id, nucleo.ValidandoSalida, nucleo.Fallido, persistencia.Cambio{Codigo: nucleo.CodigoSalidaNoCumpleEsquema,
-			Mensaje: err.Error(), Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo})
+			Mensaje: nucleo.MensajeDe(err), Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo})
 		return
 	}
 	p.cambiar(id, nucleo.ValidandoSalida, nucleo.Completado, persistencia.Cambio{Salida: &resultado.Salida,
@@ -282,7 +322,7 @@ func (p *Planificador) cerrarDetenido(id string, desde nucleo.Estado) {
 	case err != nil:
 	case t.Estado == nucleo.CancelacionSolicitada:
 		p.cambiar(id, nucleo.CancelacionSolicitada, nucleo.Cancelado, persistencia.Cambio{})
-	case desde == nucleo.EsperandoAgente:
+	case desde == nucleo.EsperandoAgente || desde == nucleo.PreparandoEntrada:
 		p.cambiar(id, nucleo.EsperandoAgente, nucleo.EnCola, persistencia.Cambio{}) // nunca lanzó el agente: se reencola al reiniciar
 	default:
 		p.cambiar(id, desde, nucleo.Interrumpido, persistencia.Cambio{Mensaje: "el servicio se detuvo durante la ejecución"})
@@ -301,9 +341,40 @@ func (p *Planificador) cambiar(id string, de, hacia nucleo.Estado, cambio persis
 	return false
 }
 
-// validarSalida comprueba el formato pedido.
-// shortcut: solo valida JSON bien formado; la validación contra JSON Schema llega con las salidas estructuradas (M3).
+// preparar convierte las cargas respetando el límite de conversiones de la instancia.
+func (p *Planificador) preparar(ctx context.Context, cargas []string) (string, error) {
+	if p.opc.Preparador == nil {
+		return "", nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, "esta instancia no admite cargas")
+	}
+	select {
+	case p.conversiones <- struct{}{}:
+		defer func() { <-p.conversiones }()
+	case <-ctx.Done():
+		return "", ctx.Err()
+	}
+	return p.opc.Preparador.Preparar(ctx, cargas)
+}
+
+// conDocumentos antepone las entradas preparadas al último mensaje del usuario sin alterar su texto;
+// cada archivo va en su bloque delimitado con metadatos (sección 10).
+func conDocumentos(s nucleo.SolicitudEjecucion, documentos string) nucleo.SolicitudEjecucion {
+	mensajes := slices.Clone(s.Mensajes)
+	for i := len(mensajes) - 1; i >= 0; i-- {
+		if mensajes[i].Rol == "usuario" {
+			mensajes[i].Contenido = documentos + "\n" + mensajes[i].Contenido
+			s.Mensajes = mensajes
+			return s
+		}
+	}
+	s.Mensajes = append(mensajes, nucleo.Mensaje{Rol: "usuario", Contenido: documentos})
+	return s
+}
+
+// validarSalida comprueba el formato pedido y, si hay esquema, que la salida lo cumpla (sección 11).
 func validarSalida(config nucleo.ConfigSalida, salida string) error {
+	if len(config.Esquema) > 0 {
+		return salidas.Validar(config.Esquema, salida)
+	}
 	if config.Formato == "json" && !json.Valid([]byte(salida)) {
 		return errors.New("la salida no es JSON válido")
 	}
