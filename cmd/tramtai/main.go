@@ -11,7 +11,7 @@ import (
 	"tramtai/internal/nucleo"
 )
 
-var version = "0.1.0-m1"
+var version = "dev" // se inyecta con -ldflags desde scripts/compilar.ps1
 
 func main() {
 	raiz := &cobra.Command{Use: "tramtai", Short: "Pasarela local para ejecutar agentes CLI", SilenceUsage: true}

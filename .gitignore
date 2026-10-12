@@ -1,6 +1,16 @@
+# Binarios y bases locales
 /bin/
+/dist/
 *.db
 *.db-wal
 *.db-shm
-~$*.docx
+
+# Documentos de trabajo (Word/PDF): se guardan en documentos/ y no se versionan
+/documentos/
+*.docx
+*.pdf
+~$*
+
+# Herramientas locales
+graphify-out/
 node_modules/
