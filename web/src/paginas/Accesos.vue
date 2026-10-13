@@ -6,8 +6,7 @@
     </div>
 
     <q-card>
-      <q-card-section class="row items-center no-wrap">
-        <div class="icono-suave icono-suave--primary q-mr-md"><q-icon name="o_link" size="22px" /></div>
+      <q-card-section class="seccion">
         <div>
           <div class="titulo-seccion">{{ t('conectar.directa') }}</div>
           <div class="texto-suave text-body2">{{ t('conectar.directaTexto') }}</div>
@@ -47,8 +46,7 @@
 
     <q-card>
       <q-card-section class="row items-center q-col-gutter-md">
-        <div class="col-12 col-sm row items-center no-wrap">
-          <div class="icono-suave icono-suave--primary q-mr-md"><q-icon name="o_hub" size="22px" /></div>
+        <div class="col-12 col-sm">
           <div>
             <div class="titulo-seccion">{{ t('puntos.titulo') }}</div>
             <div class="texto-suave text-body2">{{ t('puntos.texto') }}</div>
@@ -74,7 +72,7 @@
           <q-list separator>
             <q-item v-for="p in g.puntos" :key="p.nombre" class="q-py-md">
               <q-item-section avatar top>
-                <div class="icono-suave icono-suave--chico" :class="activo(p) ? 'icono-suave--primary' : 'icono-suave--neutro'"><q-icon name="o_hub" size="20px" /></div>
+                <span class="barra-agente" :class="'linea--' + (p.agente ?? 'otro')" :style="{ opacity: activo(p) ? 1 : 0.35 }" />
               </q-item-section>
               <q-item-section>
                 <q-item-label class="row items-center q-gutter-x-sm">

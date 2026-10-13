@@ -35,6 +35,11 @@
             <span :class="estadoInfo(props.value).clase"><q-icon :name="estadoInfo(props.value).icono" size="14px" />{{ estadoInfo(props.value).etiqueta }}</span>
           </q-td>
         </template>
+        <template #body-cell-modelo="props">
+          <q-td :props="props" style="max-width: 280px">
+            <Linea :agente="props.row.solicitud.agente" :modelo="props.row.modelo_efectivo || props.row.modelo_enviado" />
+          </q-td>
+        </template>
         <template #body-cell-solicitud="props">
           <q-td :props="props" style="max-width: 420px; white-space: normal">
             <div class="recortar-2">{{ props.value }}</div>
@@ -47,12 +52,16 @@
     </q-card>
 
     <q-dialog v-model="dialogo" position="right" full-height>
-      <q-card v-if="detalle" class="column no-wrap" style="width: 600px; max-width: 100vw; border-radius: 0">
+      <q-card v-if="detalle" class="column no-wrap hoja-detalle" style="width: 600px; max-width: 100vw">
         <q-card-section class="row items-center no-wrap q-gutter-x-sm">
           <span :class="estadoInfo(detalle.estado).clase"><q-icon :name="estadoInfo(detalle.estado).icono" size="14px" />{{ estadoInfo(detalle.estado).etiqueta }}</span>
           <div class="texto-suave text-caption">{{ fecha(detalle.creado_en) }}</div>
           <q-space />
           <q-btn v-close-popup flat round icon="close" :aria-label="t('comun.cerrar')" />
+        </q-card-section>
+        <q-separator />
+        <q-card-section class="q-py-md">
+          <Ruta :estado="detalle.estado" />
         </q-card-section>
         <q-separator />
         <q-card-section class="col scroll q-gutter-y-lg">
@@ -105,6 +114,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useQuasar, type QTableColumn } from 'quasar'
+import Linea from '../componentes/Linea.vue'
+import Ruta from '../componentes/Ruta.vue'
 import { api, avisar, avisarError, copiar, duracion, esJSON, estadoInfo, fecha, filtroHistorial, haceCuanto, origenHistorial, trabajoAbrir, modeloDe, nombreEsfuerzo, terminales, textoDe, trabajoSeguido, type Trabajo } from '../api'
 import { t } from '../i18n'
 

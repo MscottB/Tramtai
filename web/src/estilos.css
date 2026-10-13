@@ -1,83 +1,194 @@
-/* Tokens de la interfaz. Claro: fondo gris muy suave, superficies blancas con borde fino y una sombra mínima.
-   Oscuro: grises verdosos profundos, solo bordes. El verde azulado de la marca es el acento en los dos. */
+/* Tramtai: señalética de una red de tranvía. Andén gris frío con superficies blancas y tinta profunda; de noche,
+   red azul tinta. Cada agente es una línea con su color; las peticiones son trayectos con estaciones. */
 :root {
-  --fondo: #f3f5f6;
-  --lateral: #fafbfb;
+  --fondo: #eef2f1;
+  --lateral: #f7f9f8;
   --superficie: #ffffff;
-  --superficie-suave: #f7f9f9;
-  --borde: #e2e7e8;
-  --borde-fuerte: #cdd5d7;
-  --texto: #142023;
-  --texto-suave: #5d6b6f;
-  --acento-suave: rgba(15, 118, 110, 0.09);
-  --codigo-fondo: rgba(15, 118, 110, 0.05);
-  --sombra: 0 1px 2px rgba(16, 32, 36, 0.04), 0 1px 3px rgba(16, 32, 36, 0.05);
-  --sombra-alta: 0 8px 24px rgba(16, 32, 36, 0.1);
+  --superficie-suave: #f4f7f6;
+  --borde: #dce3e2;
+  --borde-fuerte: #c2cccb;
+  --texto: #0f1b1e;
+  --texto-suave: #55666a;
+  --acento: #0b6e64;
+  --acento-texto: #ffffff;
+  --acento-suave: rgba(11, 110, 100, 0.09);
+  --codigo-fondo: rgba(11, 110, 100, 0.05);
+  --ok: #15803d;
+  --ok-suave: rgba(21, 128, 61, 0.1);
+  --error: #c42b2b;
+  --error-suave: rgba(196, 43, 43, 0.09);
+  --aviso: #a16207;
+  --aviso-suave: rgba(202, 138, 4, 0.13);
+  --neutro-suave: rgba(85, 102, 106, 0.1);
+  --linea-claude: #e2672b;
+  --linea-codex: #2563eb;
+  --linea-gemini: #7c3aed;
+  --linea-antigravity: #db2777;
+  --linea-otro: #64748b;
+  --sombra: 0 1px 2px rgba(15, 27, 30, 0.05), 0 2px 6px rgba(15, 27, 30, 0.04);
+  --sombra-alta: 0 12px 32px rgba(15, 27, 30, 0.14), 0 2px 6px rgba(15, 27, 30, 0.06);
+  --radio: 12px;
+  --radio-control: 8px;
+  --fuente: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', sans-serif;
+  --fuente-titulo: 'Overpass Variable', 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'Cascadia Code', 'Cascadia Mono', ui-monospace, Consolas, 'SF Mono', monospace;
 }
 body.body--dark {
-  --fondo: #0b1112;
-  --lateral: #0e1517;
-  --superficie: #131b1d;
-  --superficie-suave: #172124;
-  --borde: #233033;
-  --borde-fuerte: #31403f;
-  --texto: #e4eced;
-  --texto-suave: #93a3a6;
-  --acento-suave: rgba(45, 212, 191, 0.1);
+  --fondo: #0a1116;
+  --lateral: #0c151b;
+  --superficie: #111c23;
+  --superficie-suave: #15222a;
+  --borde: #1f2f38;
+  --borde-fuerte: #2d404b;
+  --texto: #e5edf0;
+  --texto-suave: #93a5ac;
+  --acento: #2dd4bf;
+  --acento-texto: #042f2b;
+  --acento-suave: rgba(45, 212, 191, 0.11);
   --codigo-fondo: rgba(45, 212, 191, 0.06);
+  --ok: #4ade80;
+  --ok-suave: rgba(74, 222, 128, 0.12);
+  --error: #f87171;
+  --error-suave: rgba(248, 113, 113, 0.12);
+  --aviso: #fbbf24;
+  --aviso-suave: rgba(251, 191, 36, 0.12);
+  --neutro-suave: rgba(147, 165, 172, 0.13);
+  --linea-claude: #f28a4f;
+  --linea-codex: #5b8def;
+  --linea-gemini: #a78bfa;
+  --linea-antigravity: #f472b6;
+  --linea-otro: #8a9aa8;
   --sombra: none;
-  --sombra-alta: 0 12px 32px rgba(0, 0, 0, 0.45);
-  /* En oscuro el acento es más claro para que se lea; los fondos de acento llevan texto oscuro. */
-  --q-primary: #2dd4bf !important; /* Quasar fija --q-primary en línea en body */
+  --sombra-alta: 0 16px 40px rgba(0, 0, 0, 0.5);
+  background: var(--fondo);
+  /* Quasar fija --q-primary en línea en body: el acento de noche se impone con !important. */
+  --q-primary: #2dd4bf !important;
 }
 body.body--dark .bg-primary.text-white {
-  color: #042f2b !important;
+  color: var(--acento-texto) !important;
 }
 
+/* ---------- Base y superficies del navegador ---------- */
 body {
   background: var(--fondo);
   color: var(--texto);
-  font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', sans-serif;
+  font-family: var(--fuente);
+  font-size: 0.9375rem;
   -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'ss01';
+  caret-color: var(--acento);
+}
+::selection {
+  background: color-mix(in srgb, var(--acento) 24%, transparent);
+  color: inherit;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--borde-fuerte) transparent;
+}
+:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+a {
+  text-underline-offset: 3px;
 }
 .q-dark {
   background: var(--superficie);
 }
+.q-table td,
+.q-table th,
+.cifra,
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
 
+/* ---------- Componentes de Quasar con el lenguaje de la red ---------- */
 .q-card {
   background: var(--superficie);
   border: 1px solid var(--borde);
-  border-radius: 14px;
+  border-radius: var(--radio);
   box-shadow: var(--sombra);
 }
 .q-dialog .q-card {
   box-shadow: var(--sombra-alta);
 }
-/* La opción secundaria de los diálogos (Cancelar, Más tarde) en gris, para que destaque la principal. */
-.q-dialog-plugin .q-card__actions .q-btn--flat {
-  color: var(--texto-suave) !important;
-}
 .q-menu {
+  background: var(--superficie);
   border: 1px solid var(--borde);
-  border-radius: 12px;
+  border-radius: var(--radio);
   box-shadow: var(--sombra-alta);
 }
 .q-btn {
-  border-radius: 10px;
+  border-radius: var(--radio-control);
   font-weight: 600;
   letter-spacing: 0;
+  text-transform: none;
 }
 .q-btn--round {
   border-radius: 50%;
 }
+.q-btn--unelevated.bg-primary {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 1px 2px rgba(15, 27, 30, 0.12);
+}
 .q-field--outlined .q-field__control {
-  border-radius: 10px;
+  border-radius: var(--radio-control);
 }
 .q-field--outlined .q-field__control:before {
   border-color: var(--borde-fuerte);
 }
+.q-field--outlined.q-field--highlighted .q-field__control:after {
+  border-width: 1.5px;
+}
 .q-separator {
   background: var(--borde);
+}
+.q-item {
+  border-radius: var(--radio-control);
+}
+.q-table__card {
+  box-shadow: none;
+  background: transparent;
+}
+.q-table thead th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+  letter-spacing: 0.02em;
+}
+.q-table tbody td {
+  height: 52px;
+}
+.q-table tbody tr:hover td {
+  background: var(--superficie-suave);
+}
+.q-table--horizontal-separator tbody tr:not(:last-child) > td,
+.q-table thead tr:last-child th {
+  border-color: var(--borde);
+}
+.q-tooltip {
+  background: var(--texto);
+  color: var(--superficie);
+  font-size: 0.78rem;
+  border-radius: 6px;
+}
+.q-notification {
+  border-radius: var(--radio);
+}
+/* La opción secundaria de los diálogos de confirmación (Cancelar, Más tarde) en gris: destaca la principal. */
+.q-dialog-plugin .q-card__actions .q-btn--flat {
+  color: var(--texto-suave) !important;
+}
+
+/* Panel lateral de detalle: ocupa el alto completo, pegado al borde. */
+.q-dialog__inner--right:has(> .hoja-detalle) {
+  padding: 0;
+}
+.q-dialog__inner--right > .hoja-detalle {
+  height: 100vh;
+  max-height: 100vh;
+  border-radius: 0;
+  border-width: 0 0 0 1px;
 }
 
 /* Sin las flechas de subir y bajar en los campos numéricos. */
@@ -91,32 +202,32 @@ input[type='number'] {
   appearance: textfield;
 }
 
+/* ---------- Estructura: cabecera y menú lateral como una línea con estaciones ---------- */
 .cabecera-app {
-  background: color-mix(in srgb, var(--fondo) 88%, transparent);
-  backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--fondo) 86%, transparent);
+  backdrop-filter: saturate(1.4) blur(12px);
   color: var(--texto);
   border-bottom: 1px solid var(--borde);
 }
 .marca {
-  font-family: 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--fuente-titulo);
   font-weight: 700;
-  font-size: 1.05rem;
-  letter-spacing: -0.01em;
+  font-size: 1.0625rem;
+  letter-spacing: -0.015em;
 }
 .version {
   font-size: 0.72rem;
   color: var(--texto-suave);
-  border: 1px solid var(--borde);
-  border-radius: 999px;
-  padding: 1px 8px;
+  font-variant-numeric: tabular-nums;
 }
-/* Estado del servicio en la cabecera: un punto de color y el texto, sin bloque de color. */
+/* Estado del servicio: como un indicador de andén, punto con pulso suave y texto. */
 .pastilla {
   border: 1px solid var(--borde);
   border-radius: 999px;
-  padding: 0 6px 0 10px;
+  padding: 0 6px 0 11px;
   min-height: 32px;
   font-weight: 500;
+  background: var(--superficie);
 }
 .punto {
   width: 8px;
@@ -125,12 +236,24 @@ input[type='number'] {
   flex: none;
 }
 .punto--ok {
-  background: #22c55e;
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+  background: var(--ok);
+  box-shadow: 0 0 0 3px var(--ok-suave);
+  animation: latido 2.4s ease-out infinite;
 }
 .punto--error {
-  background: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18);
+  background: var(--error);
+  box-shadow: 0 0 0 3px var(--error-suave);
+}
+@keyframes latido {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 45%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
 }
 
 .cajon-app {
@@ -139,22 +262,103 @@ input[type='number'] {
 .q-drawer--bordered.q-drawer--left {
   border-right: 1px solid var(--borde);
 }
+/* La línea: un trazo vertical continuo que pasa por cada estación del menú. */
+.nav-red {
+  position: relative;
+  padding: 12px 10px;
+  margin: 0;
+  list-style: none;
+}
+.nav-red::before {
+  content: '';
+  position: absolute;
+  left: 29px;
+  top: 34px;
+  bottom: 34px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--borde-fuerte);
+}
+.estacion {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 52px;
+  padding: 6px 12px 6px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.estacion:hover {
+  background: var(--neutro-suave);
+}
+.estacion__punto {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: var(--lateral);
+  border: 3px solid var(--borde-fuerte);
+  transition: border-color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+}
+.estacion:hover .estacion__punto {
+  border-color: var(--texto-suave);
+}
+.estacion__nombre {
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+.estacion__detalle {
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--texto-suave);
+}
+.estacion--activa {
+  background: var(--acento-suave);
+}
+.estacion--activa .estacion__punto {
+  border-color: var(--acento);
+  background: var(--acento);
+  box-shadow: 0 0 0 4px var(--lateral), 0 0 0 6px color-mix(in srgb, var(--acento) 35%, transparent);
+  transform: scale(1.05);
+}
+.estacion--activa .estacion__nombre {
+  color: var(--acento);
+}
+.nav-red--aparte::before {
+  display: none;
+}
 
+/* ---------- Páginas ---------- */
 .pagina {
-  max-width: 1180px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 .titulo-pagina {
-  font-family: 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
-  font-size: 1.65rem;
+  font-family: var(--fuente-titulo);
+  font-size: 1.75rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
+  letter-spacing: -0.022em;
+  line-height: 1.2;
+  text-wrap: balance;
 }
 .titulo-seccion {
-  font-size: 1.02rem;
-  font-weight: 600;
-  letter-spacing: -0.005em;
+  font-family: var(--fuente-titulo);
+  line-height: 1.3;
+  font-size: 1.0625rem;
+  font-weight: 650;
+  letter-spacing: -0.008em;
 }
 .texto-suave {
   color: var(--texto-suave);
@@ -162,9 +366,21 @@ input[type='number'] {
 .q-item__label--caption {
   color: var(--texto-suave);
 }
+.apilado {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+/* Cabecera de una sección dentro de una tarjeta: título y una línea de explicación. */
+.seccion {
+  padding: 18px 20px 14px;
+}
+.seccion + .q-separator {
+  margin: 0;
+}
 
 .codigo {
-  font-family: 'Cascadia Code', ui-monospace, Consolas, 'SF Mono', monospace;
+  font-family: var(--mono);
   font-size: 0.86em;
 }
 .bloque-codigo {
@@ -175,7 +391,7 @@ input[type='number'] {
   padding: 12px 44px 12px 14px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-family: 'Cascadia Code', ui-monospace, Consolas, 'SF Mono', monospace;
+  font-family: var(--mono);
   font-size: 0.84rem;
   line-height: 1.55;
 }
@@ -184,7 +400,11 @@ input[type='number'] {
   top: 6px;
   right: 6px;
 }
-
+.bloque-codigo.sin-ajuste {
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
 .salida {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -192,15 +412,15 @@ input[type='number'] {
   font-size: 0.95rem;
   line-height: 1.65;
   margin: 0;
+  max-width: 75ch;
 }
 .salida.json,
 .bloque-texto.json {
-  font-family: 'Cascadia Code', ui-monospace, Consolas, 'SF Mono', monospace;
+  font-family: var(--mono);
   font-size: 0.84rem;
 }
-/* Texto largo (solicitudes y respuestas): fuente normal y ajuste de línea. */
 .bloque-texto {
-  background: var(--codigo-fondo);
+  background: var(--superficie-suave);
   border: 1px solid var(--borde);
   border-radius: 10px;
   padding: 12px 14px;
@@ -210,15 +430,15 @@ input[type='number'] {
   font-size: 0.92rem;
 }
 .aviso {
-  background: rgba(217, 119, 6, 0.1);
-  border: 1px solid rgba(217, 119, 6, 0.35);
+  background: var(--aviso-suave);
+  border: 1px solid color-mix(in srgb, var(--aviso) 40%, transparent);
   border-radius: 10px;
   padding: 12px 14px;
 }
 .error-caja {
-  background: rgba(220, 38, 38, 0.08);
-  border: 1px solid rgba(220, 38, 38, 0.35);
-  color: var(--q-negative);
+  background: var(--error-suave);
+  border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
+  color: var(--error);
 }
 .romper {
   overflow-wrap: anywhere;
@@ -227,16 +447,14 @@ input[type='number'] {
   max-height: 62vh;
   overflow: auto;
 }
-
 .vacio {
   text-align: center;
-  padding: 40px 16px;
+  padding: 44px 16px;
   color: var(--texto-suave);
 }
 .vacio .q-icon {
-  opacity: 0.5;
+  opacity: 0.45;
 }
-
 .fila-clicable {
   cursor: pointer;
 }
@@ -247,25 +465,10 @@ input[type='number'] {
   overflow: hidden;
   white-space: normal;
 }
-.apilado {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* Ejemplos de código: sin ajuste de línea, con desplazamiento horizontal. */
-.bloque-codigo.sin-ajuste {
-  white-space: pre;
-  overflow-wrap: normal;
-  overflow-x: auto;
-}
-/* Las columnas flex no deben ensancharse por un contenido largo (bloques de código, rutas). */
 .row > [class*='col'],
 .q-card.column > * {
   min-width: 0;
 }
-
-/* Cabecera de cada grupo de puntos de acceso. */
 .cabecera-grupo {
   border-top: 1px solid var(--borde);
   gap: 4px;
@@ -273,144 +476,340 @@ input[type='number'] {
 div:first-child > .cabecera-grupo {
   border-top: none;
 }
-
-/* Menú lateral: cada opción con su línea de explicación; la activa, resaltada con el color de la marca. */
-.item-menu {
-  border-radius: 10px;
-  margin-bottom: 2px;
-  min-height: 48px;
-}
-.item-menu .q-item__label--caption {
-  font-size: 0.74rem;
-  line-height: 1.3;
-}
-.item-menu .q-icon {
-  color: var(--texto-suave);
-}
-.item-activo {
-  background: var(--acento-suave);
-  color: var(--q-primary);
-}
-.item-activo .q-icon,
-.item-activo .q-item__label--caption {
-  color: var(--q-primary);
-}
-
-/* Cada forma de conectar un agente (suscripción o clave), como una tarjeta dentro de la tarjeta. */
 .opcion {
   border: 1px solid var(--borde);
   border-radius: 10px;
   padding: 12px;
 }
-
-/* Tarjetas que llevan a otra página (contadores de Inicio). */
 .tarjeta-clicable {
-  transition: border-color 0.15s;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 .tarjeta-clicable:hover {
-  border-color: var(--q-primary);
+  border-color: var(--borde-fuerte);
 }
-
-/* Enlaces dentro del texto (por ejemplo, el uso de una API que lleva a sus peticiones). */
 .enlace {
-  color: var(--q-primary);
+  color: var(--acento);
   text-decoration: none;
 }
 .enlace:hover {
   text-decoration: underline;
 }
-
-/* Icono sobre un fondo suave del mismo color (contadores y estados). */
-.icono-suave {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-}
-.icono-suave--positive {
-  background: rgba(34, 197, 94, 0.13);
-  color: #16a34a;
-}
-.icono-suave--primary {
-  background: var(--acento-suave);
-  color: var(--q-primary);
-}
-.icono-suave--negative {
-  background: rgba(239, 68, 68, 0.12);
-  color: #dc2626;
-}
-body.body--dark .icono-suave--positive {
-  color: #4ade80;
-}
-body.body--dark .icono-suave--negative {
-  color: #f87171;
-}
 .cifra {
-  font-family: 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--fuente-titulo);
   font-size: 1.75rem;
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.02em;
 }
 
-/* Etiquetas de estado suaves (agentes): texto del color sobre su fondo tenue. */
+/* ---------- Líneas de agente: color propio, barra y nombre ---------- */
+.linea {
+  --c: var(--linea-otro);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.linea__barra {
+  flex: none;
+  width: 16px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--c);
+}
+.linea__nombre {
+  font-weight: 600;
+}
+.linea__modelo {
+  color: var(--texto-suave);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.linea--claude {
+  --c: var(--linea-claude);
+}
+.linea--codex {
+  --c: var(--linea-codex);
+}
+.linea--gemini {
+  --c: var(--linea-gemini);
+}
+.linea--antigravity {
+  --c: var(--linea-antigravity);
+}
+
+/* Barra vertical del color de la línea, junto al nombre de un agente o de una API. */
+.barra-agente {
+  display: inline-block;
+  flex: none;
+  width: 5px;
+  height: 36px;
+  border-radius: 3px;
+  background: var(--c, var(--linea-otro));
+}
+/* Paso numerado como una estación: aro del color de la marca con su número. */
+.numero-estacion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2.5px solid var(--acento);
+  color: var(--acento);
+  font-weight: 700;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Estados: punto de color y texto ---------- */
 .etiqueta {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   border-radius: 999px;
-  padding: 2px 10px;
+  padding: 2px 10px 2px 8px;
   font-size: 0.78rem;
   font-weight: 600;
+  white-space: nowrap;
+  background: var(--neutro-suave);
+  color: var(--texto-suave);
+}
+.etiqueta::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.etiqueta .q-icon {
+  display: none;
 }
 .etiqueta--ok {
-  background: rgba(34, 197, 94, 0.13);
-  color: #15803d;
+  background: var(--ok-suave);
+  color: var(--ok);
 }
 .etiqueta--aviso {
-  background: rgba(245, 158, 11, 0.15);
-  color: #b45309;
+  background: var(--aviso-suave);
+  color: var(--aviso);
 }
 .etiqueta--error {
-  background: rgba(239, 68, 68, 0.12);
-  color: #b91c1c;
+  background: var(--error-suave);
+  color: var(--error);
 }
 .etiqueta--info {
   background: var(--acento-suave);
-  color: var(--q-primary);
+  color: var(--acento);
 }
-.etiqueta--neutro {
-  background: rgba(100, 116, 139, 0.13);
-  color: var(--texto-suave);
+.etiqueta--info::before {
+  animation: latido-info 1.6s ease-out infinite;
 }
-body.body--dark .etiqueta--ok {
-  color: #4ade80;
-}
-body.body--dark .etiqueta--aviso {
-  color: #fbbf24;
-}
-body.body--dark .etiqueta--error {
-  color: #f87171;
-}
-.icono-suave--neutro {
-  background: rgba(100, 116, 139, 0.13);
-  color: var(--texto-suave);
-}
-.icono-suave--chico {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+@keyframes latido-info {
+  50% {
+    opacity: 0.35;
+  }
 }
 
-/* Datos de un elemento (petición, agente): etiqueta a la izquierda y valor a la derecha, en filas finas. */
+/* ---------- Trayecto de una petición: estaciones unidas por la línea ---------- */
+.ruta {
+  --c: var(--acento);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  align-items: start;
+}
+.ruta__parada {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: var(--texto-suave);
+  text-align: center;
+}
+.ruta__parada::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: -50%;
+  width: 100%;
+  height: 3px;
+  background: var(--borde-fuerte);
+  transition: background-color 0.3s ease;
+}
+.ruta__parada:first-child::before {
+  display: none;
+}
+.ruta__punto {
+  position: relative;
+  z-index: 1;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 3px solid var(--borde-fuerte);
+  background: var(--superficie);
+  transition: border-color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
+}
+.ruta__parada--pasada::before,
+.ruta__parada--actual::before,
+.ruta__parada--fin::before {
+  background: var(--c);
+}
+.ruta__parada--pasada .ruta__punto {
+  border-color: var(--c);
+  background: var(--c);
+}
+.ruta__parada--actual .ruta__punto {
+  border-color: var(--c);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 22%, transparent);
+  animation: en-ruta 1.4s ease-in-out infinite;
+}
+.ruta__parada--actual,
+.ruta__parada--fin {
+  color: var(--texto);
+  font-weight: 600;
+}
+.ruta__parada--fin .ruta__punto {
+  border-color: var(--c);
+  background: var(--c);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 22%, transparent);
+}
+.ruta--ok {
+  --c: var(--ok);
+}
+.ruta--error {
+  --c: var(--error);
+}
+.ruta--cancelada {
+  --c: var(--texto-suave);
+}
+@keyframes en-ruta {
+  50% {
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--c) 8%, transparent);
+  }
+}
+
+/* ---------- Tablero de salidas: una banda de tinta con una fila por estado, como un panel de andén ---------- */
+.tablero {
+  --tablero-fondo: #0f1b1e;
+  --tablero-texto: #eef3f2;
+  --tablero-suave: #9fb3b8;
+  --tablero-cifra: #ffcf5c;
+  --tablero-linea: rgba(255, 255, 255, 0.08);
+  background: var(--tablero-fondo);
+  color: var(--tablero-texto);
+  border-radius: var(--radio);
+  overflow: hidden;
+  box-shadow: var(--sombra);
+}
+body.body--dark .tablero {
+  --tablero-fondo: #060b0e;
+  border: 1px solid var(--borde);
+}
+.tablero__cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 12px 20px 10px;
+  border-bottom: 1px solid var(--tablero-linea);
+  font-family: var(--fuente-titulo);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tablero-suave);
+}
+.tablero__fila {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 11rem) minmax(0, 1fr) auto 20px;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 20px;
+  border: 0;
+  border-top: 1px solid var(--tablero-linea);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.tablero__cabecera + .tablero__fila {
+  border-top: 0;
+}
+.tablero__fila:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.tablero__punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.tablero__punto--ok {
+  background: #4ade80;
+}
+.tablero__punto--curso {
+  background: #2dd4bf;
+}
+.tablero__punto--error {
+  background: #f87171;
+}
+.tablero__nombre {
+  font-weight: 650;
+}
+.tablero__detalle {
+  font-size: 0.82rem;
+  color: var(--tablero-suave);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tablero__cifra {
+  font-family: var(--fuente-titulo);
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--tablero-cifra);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  min-width: 3ch;
+}
+.tablero__fila .q-icon {
+  color: var(--tablero-suave);
+}
+@media (max-width: 599px) {
+  .tablero__fila {
+    grid-template-columns: 12px minmax(0, 1fr) auto 20px;
+  }
+  .tablero__detalle {
+    display: none;
+  }
+}
+
+/* ---------- Mapa de la red (Inicio) ---------- */
+.mapa-red {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+.mapa-red text {
+  font-family: var(--fuente-titulo);
+  fill: var(--texto);
+}
+.mapa-red .suave {
+  fill: var(--texto-suave);
+}
+
+/* ---------- Detalles de un elemento: filas finas de etiqueta y valor ---------- */
 .ficha {
   display: grid;
   grid-template-columns: minmax(120px, auto) 1fr;
   border: 1px solid var(--borde);
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
 }
 .ficha > div {
@@ -429,63 +828,132 @@ body.body--dark .etiqueta--error {
   overflow-wrap: anywhere;
 }
 
-/* Selector de pestañas o filtros como un control segmentado. */
+/* Selector de filtros o pestañas como un control segmentado. */
 .segmentado {
   border: 1px solid var(--borde);
   border-radius: 10px;
-  padding: 2px;
+  padding: 3px;
   background: var(--superficie-suave);
 }
 .segmentado .q-btn {
-  border-radius: 8px;
+  border-radius: 7px;
   font-weight: 500;
   padding: 4px 12px;
+  color: var(--texto-suave);
 }
 .segmentado .q-btn[aria-pressed='true'] {
   background: var(--superficie);
+  color: var(--texto);
   box-shadow: var(--sombra), 0 0 0 1px var(--borde);
 }
 
-/* Datos breves en una línea (modelo, tokens, duración) con icono. */
+/* Datos breves en una línea (modelo, tokens, duración). */
 .metadatos {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 6px 14px;
+  font-size: 0.8rem;
+  color: var(--texto-suave);
 }
 .metadatos > span {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  border: 1px solid var(--borde);
-  border-radius: 999px;
-  padding: 2px 10px;
-  font-size: 0.78rem;
-  color: var(--texto-suave);
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Guía de inicio: pasos como tarjetas pequeñas; los hechos, atenuados. */
+/* Guía de inicio: los pasos son estaciones de una línea; hecha, la estación se rellena. */
+.ruta--pasos {
+  --c: var(--ok);
+}
+.ruta--pasos .ruta__parada:not(.ruta__parada--pasada) .ruta__punto {
+  border-color: var(--acento);
+}
+.paso-estacion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0 10px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+.paso-estacion:hover .paso-estacion__titulo {
+  color: var(--acento);
+}
+.paso-estacion__titulo {
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: color 0.15s ease;
+}
+.ruta__parada--pasada .paso-estacion__titulo {
+  color: var(--texto-suave);
+}
+@media (max-width: 599px) {
+  .ruta--pasos {
+    grid-auto-flow: row;
+    gap: 14px;
+  }
+  .ruta--pasos .ruta__parada::before {
+    display: none;
+  }
+  .paso-estacion {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    text-align: left;
+    column-gap: 12px;
+  }
+  .paso-estacion .text-caption {
+    flex-basis: 100%;
+    padding-left: 27px;
+  }
+}
+
+/* Ideas para probar: cada una como una tarjeta que se puede pulsar. */
 .paso {
   height: 100%;
   border: 1px solid var(--borde);
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 12px 14px;
-  background: var(--superficie-suave);
+  background: var(--superficie);
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 .paso:hover,
 .paso:focus-visible {
-  border-color: var(--q-primary);
-  outline: none;
+  border-color: var(--acento);
 }
 .paso--hecho {
-  opacity: 0.65;
+  background: var(--superficie-suave);
+}
+.paso--hecho .text-weight-medium {
+  color: var(--texto-suave);
+  text-decoration: line-through;
+  text-decoration-color: var(--borde-fuerte);
 }
 
 /* Dirección del servicio, copiable. */
 .direccion {
-  background: var(--codigo-fondo);
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  background: var(--superficie);
   border: 1px solid var(--borde);
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 2px 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }

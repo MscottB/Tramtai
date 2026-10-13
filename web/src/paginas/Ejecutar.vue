@@ -9,7 +9,6 @@
       <div class="col-12 col-md-5">
         <q-card>
           <q-card-section class="row items-center no-wrap q-pb-sm">
-            <div class="icono-suave icono-suave--primary icono-suave--chico q-mr-md"><q-icon name="o_edit_note" size="20px" /></div>
             <div class="titulo-seccion">{{ t('ejecutar.tuMensaje') }}</div>
           </q-card-section>
           <q-card-section class="q-gutter-y-md q-pt-sm">
@@ -65,7 +64,6 @@
       <div class="col-12 col-md-7">
         <q-card class="full-height column">
           <q-card-section class="row items-center no-wrap q-gutter-x-sm">
-            <div class="icono-suave icono-suave--primary icono-suave--chico q-mr-sm"><q-icon name="o_forum" size="20px" /></div>
             <div class="titulo-seccion">{{ t('ejecutar.respuesta') }}</div>
             <q-space />
             <span v-if="trabajo" :class="estadoInfo(estado).clase"><q-icon :name="estadoInfo(estado).icono" size="14px" />{{ estadoInfo(estado).etiqueta }}</span>
@@ -73,6 +71,9 @@
               <q-tooltip>{{ t('comun.copiar') }}</q-tooltip>
             </q-btn>
             <q-btn v-if="final" flat dense no-caps color="primary" icon="o_add" :label="t('ejecutar.nueva')" @click="nuevaPrueba" />
+          </q-card-section>
+          <q-card-section v-if="trabajo" class="q-pt-none q-pb-md">
+            <Ruta :estado="estado" />
           </q-card-section>
           <q-separator />
           <q-card-section class="salida-caja col" style="min-height: 300px">
@@ -101,7 +102,7 @@
           <template v-if="final">
             <q-separator />
             <q-card-section class="metadatos">
-              <span><q-icon name="o_smart_toy" />{{ modeloDe(final) }}</span>
+              <Linea :agente="final.solicitud.agente" :modelo="final.modelo_efectivo || final.modelo_enviado" />
               <span v-if="final.solicitud.esfuerzo"><q-icon name="o_psychology" />{{ nombreEsfuerzo(final.solicitud.esfuerzo) }}</span>
               <span><q-icon name="o_data_usage" />{{ final.uso.tokens_entrada }} → {{ final.uso.tokens_salida }} tokens</span>
               <span v-if="final.uso.costo_usd"><q-icon name="o_payments" />US$ {{ final.uso.costo_usd.toFixed(4) }}</span>
@@ -116,8 +117,10 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import Linea from '../componentes/Linea.vue'
+import Ruta from '../componentes/Ruta.vue'
 import SelectorEsfuerzo from '../componentes/SelectorEsfuerzo.vue'
-import { api, aplicarModelo, avisarError, copiar, descripcionPredeterminado, duracion, esfuerzosDe, esJSON, estadoInfo, modeloDe, modeloInicial, nombreEsfuerzo, opcionModelo, terminales, trabajoSeguido, type Modelo, type Solicitud, type Trabajo } from '../api'
+import { api, aplicarModelo, avisarError, copiar, descripcionPredeterminado, duracion, esfuerzosDe, esJSON, estadoInfo, modeloInicial, nombreEsfuerzo, opcionModelo, terminales, trabajoSeguido, type Modelo, type Solicitud, type Trabajo } from '../api'
 import { t } from '../i18n'
 
 const catalogo = ref<Modelo[]>([])

@@ -14,7 +14,7 @@
       <div v-for="a in adaptadores" :key="a.agente" class="col-12 col-lg-6">
         <q-card class="full-height column">
           <q-card-section class="row items-center no-wrap">
-            <div class="icono-suave q-mr-md" :class="a.problema ? 'icono-suave--neutro' : 'icono-suave--primary'"><q-icon name="o_smart_toy" size="22px" /></div>
+            <span class="barra-agente q-mr-md" :class="'linea--' + a.agente" :style="{ opacity: a.problema ? 0.35 : 1 }" />
             <div class="col">
               <div class="titulo-seccion">{{ nombreAgente(a.agente) }}</div>
               <div class="text-caption texto-suave">{{ a.version_detectada || t('agentes.sinVersion') }}</div>

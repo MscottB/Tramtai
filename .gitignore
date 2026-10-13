@@ -16,3 +16,6 @@ graphify-out/
 node_modules/
 # recursos de Windows generados por scripts/compilar.ps1 en cada compilación
 *.syso
+
+# Capturas de revisión de diseño (locales)
+.impeccable/review/

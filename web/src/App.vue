@@ -11,11 +11,11 @@
           <q-tooltip>{{ t('app.volverA', { pagina: tituloDe(pila[pila.length - 1]) }) }}</q-tooltip>
         </q-btn>
         <img src="/logo.png" alt="" width="28" height="28" style="border-radius: 8px" />
-        <div class="q-ml-sm marca">Tramtai</div>
+        <div class="q-ml-sm marca gt-xs">Tramtai</div>
         <span class="version q-ml-sm gt-xs">{{ sesion.version }}</span>
         <q-space />
         <q-btn-dropdown v-if="sesion.local && sesion.instancias?.length" flat no-caps :icon="iconoInstancia(sesion.ambito)"
-          :label="sesion.nombre || t('app.elegirInstancia')" :aria-label="t('app.cambiarInstancia')">
+          :label="$q.screen.gt.xs ? sesion.nombre || t('app.elegirInstancia') : undefined" :aria-label="t('app.cambiarInstancia')">
           <q-list style="min-width: 300px; max-width: 360px">
             <q-item-label header class="q-pb-xs">{{ t('app.instanciasActivas') }}</q-item-label>
             <div class="q-px-md q-pb-sm text-caption texto-suave">{{ t('app.espacioAyuda') }}</div>
@@ -95,27 +95,32 @@
     </q-header>
 
     <q-drawer v-model="menu" show-if-above bordered :width="256" :breakpoint="1023" class="cajon-app">
-      <div class="column full-height no-wrap">
-        <q-list class="q-pt-md q-px-sm">
-          <q-item v-for="p in principales" :key="p.id" v-ripple clickable :active="pagina === p.id" active-class="item-activo" class="item-menu" @click="ir(p.id)">
-            <q-item-section avatar><q-icon :name="p.icono" /></q-item-section>
-            <q-item-section>
-              <q-item-label class="text-weight-medium">{{ t(p.titulo) }}</q-item-label>
-              <q-item-label caption>{{ t(p.detalle) }}</q-item-label>
-            </q-item-section>
-          </q-item>
-        </q-list>
+      <nav class="column full-height no-wrap" :aria-label="t('app.navegacion')">
+        <!-- El menú es una línea de tranvía: cada sección es una estación y la actual se ilumina. -->
+        <ul class="nav-red">
+          <li v-for="p in principales" :key="p.id">
+            <button type="button" class="estacion" :class="{ 'estacion--activa': pagina === p.id }" :aria-current="pagina === p.id ? 'page' : undefined" @click="ir(p.id)">
+              <span class="estacion__punto" aria-hidden="true" />
+              <span class="column">
+                <span class="estacion__nombre">{{ t(p.titulo) }}</span>
+                <span class="estacion__detalle">{{ t(p.detalle) }}</span>
+              </span>
+            </button>
+          </li>
+        </ul>
         <q-space />
-        <q-list class="q-pb-md q-px-sm">
-          <q-item v-ripple clickable :active="pagina === ayuda.id" active-class="item-activo" class="item-menu" @click="ir(ayuda.id)">
-            <q-item-section avatar><q-icon :name="ayuda.icono" /></q-item-section>
-            <q-item-section>
-              <q-item-label class="text-weight-medium">{{ t(ayuda.titulo) }}</q-item-label>
-              <q-item-label caption>{{ t(ayuda.detalle) }}</q-item-label>
-            </q-item-section>
-          </q-item>
-        </q-list>
-      </div>
+        <ul class="nav-red nav-red--aparte q-pb-md">
+          <li>
+            <button type="button" class="estacion" :class="{ 'estacion--activa': pagina === ayuda.id }" :aria-current="pagina === ayuda.id ? 'page' : undefined" @click="ir(ayuda.id)">
+              <q-icon :name="ayuda.icono" size="19px" class="texto-suave" style="margin-left: -1px" />
+              <span class="column">
+                <span class="estacion__nombre">{{ t(ayuda.titulo) }}</span>
+                <span class="estacion__detalle">{{ t(ayuda.detalle) }}</span>
+              </span>
+            </button>
+          </li>
+        </ul>
+      </nav>
     </q-drawer>
 
     <q-page-container>

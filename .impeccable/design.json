@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-13T00:00:00Z",
+  "title": "Design System: Tramtai",
+  "extensions": {
+    "colorMeta": {
+      "acento": { "role": "primary", "displayName": "Verde azulado Tramtai", "canonical": "#0b6e64", "tonalRamp": ["oklch(15% 0.04 183)", "oklch(25% 0.06 183)", "oklch(35% 0.07 183)", "oklch(47% 0.08 183)", "oklch(58% 0.09 183)", "oklch(70% 0.09 183)", "oklch(82% 0.07 183)", "oklch(95% 0.03 183)"] },
+      "acento-noche": { "role": "primary", "displayName": "Turquesa nocturno", "canonical": "#2dd4bf", "tonalRamp": ["oklch(15% 0.04 180)", "oklch(28% 0.07 180)", "oklch(42% 0.1 180)", "oklch(56% 0.12 180)", "oklch(68% 0.13 180)", "oklch(78% 0.13 180)", "oklch(87% 0.09 180)", "oklch(95% 0.04 180)"] },
+      "fondo": { "role": "neutral", "displayName": "Andén", "canonical": "#eef2f1" },
+      "fondo-noche": { "role": "neutral", "displayName": "Red nocturna", "canonical": "#0a1116" },
+      "superficie": { "role": "neutral", "displayName": "Superficie", "canonical": "#ffffff" },
+      "texto": { "role": "neutral", "displayName": "Tinta profunda", "canonical": "#0f1b1e", "tonalRamp": ["oklch(15% 0.02 220)", "oklch(25% 0.02 220)", "oklch(35% 0.02 220)", "oklch(48% 0.02 220)", "oklch(60% 0.02 200)", "oklch(72% 0.015 200)", "oklch(85% 0.01 190)", "oklch(95% 0.005 180)"] },
+      "texto-suave": { "role": "neutral", "displayName": "Tinta suave", "canonical": "#55666a" },
+      "borde-fuerte": { "role": "neutral", "displayName": "Vía sin servicio", "canonical": "#c2cccb" },
+      "linea-claude": { "role": "secondary", "displayName": "Línea Claude (naranja)", "canonical": "#e2672b" },
+      "linea-codex": { "role": "secondary", "displayName": "Línea Codex (azul)", "canonical": "#2563eb" },
+      "linea-gemini": { "role": "secondary", "displayName": "Línea Gemini (violeta)", "canonical": "#7c3aed" },
+      "linea-antigravity": { "role": "secondary", "displayName": "Línea Antigravity (magenta)", "canonical": "#db2777" },
+      "linea-otro": { "role": "secondary", "displayName": "Línea genérica (pizarra)", "canonical": "#64748b" },
+      "tablero-cifra": { "role": "tertiary", "displayName": "Ámbar de tablero", "canonical": "#ffcf5c" },
+      "ok": { "role": "neutral", "displayName": "En servicio", "canonical": "#15803d" },
+      "error": { "role": "neutral", "displayName": "Avería", "canonical": "#c42b2b" },
+      "aviso": { "role": "neutral", "displayName": "Aviso", "canonical": "#a16207" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Título de página", "purpose": "Un título por pantalla, Overpass 700." },
+      "cifra": { "displayName": "Cifra", "purpose": "Cifras destacadas y del tablero, tabulares." },
+      "title": { "displayName": "Título de sección", "purpose": "Cabecera de sección dentro de una tarjeta." },
+      "body": { "displayName": "Cuerpo", "purpose": "Texto general con la fuente del sistema." },
+      "estacion": { "displayName": "Estación", "purpose": "Nombres del menú lateral y de los pasos." },
+      "label": { "displayName": "Etiqueta", "purpose": "Etiquetas de estado." },
+      "tablero-cabecera": { "displayName": "Cabecera de tablero", "purpose": "Solo la franja superior del tablero de salidas, en mayúsculas." },
+      "mono": { "displayName": "Código", "purpose": "Código, JSON, direcciones e identificadores." }
+    },
+    "shadows": [
+      { "name": "sombra", "value": "0 1px 2px rgba(15, 27, 30, 0.05), 0 2px 6px rgba(15, 27, 30, 0.04)", "purpose": "Reposo de tarjetas y tablero; none de noche." },
+      { "name": "sombra-alta", "value": "0 12px 32px rgba(15, 27, 30, 0.14), 0 2px 6px rgba(15, 27, 30, 0.06)", "purpose": "Menús y diálogos; de noche 0 16px 40px rgba(0, 0, 0, 0.5)." },
+      { "name": "halo-estacion", "value": "0 0 0 4px var(--lateral), 0 0 0 6px color-mix(in srgb, var(--acento) 35%, transparent)", "purpose": "Estación activa del menú lateral." },
+      { "name": "halo-trayecto", "value": "0 0 0 4px color-mix(in srgb, var(--c) 22%, transparent)", "purpose": "Estación actual o final de un trayecto." }
+    ],
+    "motion": [
+      { "name": "hover", "value": "0.15s ease", "purpose": "Fondo y borde de estaciones, filas del tablero y tarjetas pulsables." },
+      { "name": "estacion", "value": "0.2s ease", "purpose": "Aro, relleno y escala del punto de estación." },
+      { "name": "trayecto", "value": "0.3s ease", "purpose": "La vía y las estaciones del trayecto al avanzar." },
+      { "name": "latido", "value": "2.4s ease-out infinite", "purpose": "Pulso del punto del servicio en marcha." },
+      { "name": "en-ruta", "value": "1.4s ease-in-out infinite", "purpose": "Halo de la estación actual de un trayecto." },
+      { "name": "latido-info", "value": "1.6s ease-out infinite", "purpose": "Punto de la etiqueta en proceso." },
+      { "name": "reduced-motion", "value": "animation: none; transition: none", "purpose": "Con prefers-reduced-motion se anula todo movimiento." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "600px" },
+      { "name": "cajon", "value": "1024px" },
+      { "name": "pagina-max", "value": "1200px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acción principal de una página o diálogo.",
+      "html": "<button class=\"ds-btn-primary\">Probar</button>",
+      "css": ".ds-btn-primary { background: var(--acento, #0b6e64); color: var(--acento-texto, #fff); border: 0; border-radius: 8px; padding: 8px 16px; font-weight: 600; font-size: 0.9375rem; box-shadow: 0 1px 0 rgba(255,255,255,0.12) inset, 0 1px 2px rgba(15,27,30,0.12); cursor: pointer; transition: filter 0.15s ease; } .ds-btn-primary:hover { filter: brightness(1.08); } .ds-btn-primary:focus-visible { outline: 2px solid var(--acento, #0b6e64); outline-offset: 2px; }"
+    },
+    {
+      "name": "Botón con contorno",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Acción secundaria junto a la principal.",
+      "html": "<button class=\"ds-btn-outline\">Mis APIs</button>",
+      "css": ".ds-btn-outline { background: transparent; color: var(--acento, #0b6e64); border: 1px solid currentColor; border-radius: 8px; padding: 7px 15px; font-weight: 600; font-size: 0.9375rem; cursor: pointer; transition: background-color 0.15s ease; } .ds-btn-outline:hover { background: rgba(11,110,100,0.09); } .ds-btn-outline:focus-visible { outline: 2px solid var(--acento, #0b6e64); outline-offset: 2px; }"
+    },
+    {
+      "name": "Campo",
+      "kind": "input",
+      "refersTo": "input-outlined",
+      "description": "Campo con contorno; el trazo pasa al acento al enfocar.",
+      "html": "<input class=\"ds-input\" placeholder=\"Escribe un mensaje\" />",
+      "css": ".ds-input { font: inherit; color: #0f1b1e; background: transparent; border: 1px solid #c2cccb; border-radius: 8px; padding: 9px 12px; min-width: 260px; } .ds-input:focus-visible { outline: none; border-color: #0b6e64; box-shadow: 0 0 0 0.5px #0b6e64; }"
+    },
+    {
+      "name": "Menú lateral de estaciones",
+      "kind": "nav",
+      "refersTo": "estacion",
+      "description": "La navegación como una línea vertical con estaciones; la actual se rellena del acento.",
+      "html": "<ul class=\"ds-nav\"><li><button class=\"ds-est ds-est--activa\"><span class=\"ds-est__punto\"></span><span class=\"ds-est__txt\"><span class=\"ds-est__nombre\">Inicio</span><span class=\"ds-est__det\">Resumen y primeros pasos</span></span></button></li><li><button class=\"ds-est\"><span class=\"ds-est__punto\"></span><span class=\"ds-est__txt\"><span class=\"ds-est__nombre\">Agentes</span><span class=\"ds-est__det\">Claude, Codex, Gemini</span></span></button></li><li><button class=\"ds-est\"><span class=\"ds-est__punto\"></span><span class=\"ds-est__txt\"><span class=\"ds-est__nombre\">Historial</span><span class=\"ds-est__det\">Todo lo que se ha ejecutado</span></span></button></li></ul>",
+      "css": ".ds-nav { position: relative; list-style: none; margin: 0; padding: 12px 10px; width: 256px; background: #f7f9f8; } .ds-nav::before { content: ''; position: absolute; left: 29px; top: 34px; bottom: 34px; width: 3px; border-radius: 2px; background: #c2cccb; } .ds-est { position: relative; display: flex; align-items: center; gap: 14px; width: 100%; min-height: 52px; padding: 6px 12px; border: 0; border-radius: 10px; background: transparent; color: #0f1b1e; font: inherit; text-align: left; cursor: pointer; transition: background-color 0.15s ease; } .ds-est:hover { background: rgba(85,102,106,0.1); } .ds-est:focus-visible { outline: 2px solid #0b6e64; outline-offset: 2px; } .ds-est__punto { position: relative; z-index: 1; flex: none; width: 15px; height: 15px; margin-left: 2px; border-radius: 50%; background: #f7f9f8; border: 3px solid #c2cccb; box-sizing: border-box; transition: border-color 0.2s ease, transform 0.2s ease; } .ds-est:hover .ds-est__punto { border-color: #55666a; } .ds-est__txt { display: flex; flex-direction: column; } .ds-est__nombre { font-weight: 600; font-size: 0.9rem; line-height: 1.25; } .ds-est__det { font-size: 0.75rem; line-height: 1.3; color: #55666a; } .ds-est--activa { background: rgba(11,110,100,0.09); } .ds-est--activa .ds-est__nombre { color: #0b6e64; } .ds-est--activa .ds-est__punto { border-color: #0b6e64; background: #0b6e64; box-shadow: 0 0 0 4px #f7f9f8, 0 0 0 6px rgba(11,110,100,0.35); transform: scale(1.05); }"
+    },
+    {
+      "name": "Etiqueta de estado",
+      "kind": "chip",
+      "refersTo": "etiqueta",
+      "description": "Estado como punto de color y palabra.",
+      "html": "<span class=\"ds-etq ds-etq--ok\">Completado</span> <span class=\"ds-etq ds-etq--info\">En proceso</span> <span class=\"ds-etq ds-etq--error\">Con error</span> <span class=\"ds-etq\">Cancelado</span>",
+      "css": ".ds-etq { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 2px 10px 2px 8px; font-size: 0.78rem; font-weight: 600; white-space: nowrap; background: rgba(85,102,106,0.1); color: #55666a; } .ds-etq::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; } .ds-etq--ok { background: rgba(21,128,61,0.1); color: #15803d; } .ds-etq--error { background: rgba(196,43,43,0.09); color: #c42b2b; } .ds-etq--info { background: rgba(11,110,100,0.09); color: #0b6e64; } .ds-etq--info::before { animation: ds-latido 1.6s ease-out infinite; } @keyframes ds-latido { 50% { opacity: 0.35; } } @media (prefers-reduced-motion: reduce) { .ds-etq--info::before { animation: none; } }"
+    },
+    {
+      "name": "Tarjeta con sección",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Contenedor con borde fino; cabecera de sección con título y línea de explicación.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card__sec\"><div class=\"ds-card__titulo\">Tu red</div><div class=\"ds-card__sub\">Tus aplicaciones llegan a Tramtai, y cada petición viaja por la línea de un agente.</div></div><div class=\"ds-card__cuerpo\">Contenido</div></div>",
+      "css": ".ds-card { background: #fff; border: 1px solid #dce3e2; border-radius: 12px; box-shadow: 0 1px 2px rgba(15,27,30,0.05), 0 2px 6px rgba(15,27,30,0.04); max-width: 560px; color: #0f1b1e; } .ds-card__sec { padding: 18px 20px 14px; border-bottom: 1px solid #dce3e2; } .ds-card__titulo { font-family: 'Overpass Variable', 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif; font-size: 1.0625rem; font-weight: 650; line-height: 1.3; letter-spacing: -0.008em; } .ds-card__sub { color: #55666a; font-size: 0.875rem; margin-top: 4px; } .ds-card__cuerpo { padding: 16px 20px; }"
+    },
+    {
+      "name": "Trayecto",
+      "kind": "custom",
+      "refersTo": "ruta",
+      "description": "Una petición como cinco estaciones; la actual late y la vía toma el color del resultado.",
+      "html": "<ol class=\"ds-ruta\"><li class=\"ds-par ds-par--pasada\"><span class=\"ds-par__punto\"></span>En cola</li><li class=\"ds-par ds-par--pasada\"><span class=\"ds-par__punto\"></span>Preparación</li><li class=\"ds-par ds-par--actual\"><span class=\"ds-par__punto\"></span>Ejecución</li><li class=\"ds-par\"><span class=\"ds-par__punto\"></span>Validación</li><li class=\"ds-par\"><span class=\"ds-par__punto\"></span>Llegada</li></ol>",
+      "css": ".ds-ruta { --c: #0b6e64; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; list-style: none; margin: 0; padding: 0; min-width: 480px; } .ds-par { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 0.72rem; color: #55666a; text-align: center; } .ds-par::before { content: ''; position: absolute; top: 6px; left: -50%; width: 100%; height: 3px; background: #c2cccb; } .ds-par:first-child::before { display: none; } .ds-par__punto { position: relative; z-index: 1; width: 15px; height: 15px; box-sizing: border-box; border-radius: 50%; border: 3px solid #c2cccb; background: #fff; } .ds-par--pasada::before, .ds-par--actual::before { background: var(--c); } .ds-par--pasada .ds-par__punto { border-color: var(--c); background: var(--c); } .ds-par--actual { color: #0f1b1e; font-weight: 600; } .ds-par--actual .ds-par__punto { border-color: var(--c); box-shadow: 0 0 0 4px rgba(11,110,100,0.22); animation: ds-en-ruta 1.4s ease-in-out infinite; } @keyframes ds-en-ruta { 50% { box-shadow: 0 0 0 7px rgba(11,110,100,0.08); } } @media (prefers-reduced-motion: reduce) { .ds-par--actual .ds-par__punto { animation: none; } }"
+    },
+    {
+      "name": "Tablero de salidas",
+      "kind": "custom",
+      "refersTo": "tablero",
+      "description": "Banda de tinta con una fila por estado y cifras ámbar tabulares.",
+      "html": "<div class=\"ds-tab\"><div class=\"ds-tab__cab\"><span>Salidas</span><span>Últimos 7 días</span></div><button class=\"ds-tab__fila\"><span class=\"ds-tab__punto\" style=\"background:#4ade80\"></span><span class=\"ds-tab__nombre\">Completadas</span><span class=\"ds-tab__det\">respondidas correctamente</span><span class=\"ds-tab__cifra\">25</span></button><button class=\"ds-tab__fila\"><span class=\"ds-tab__punto\" style=\"background:#f87171\"></span><span class=\"ds-tab__nombre\">Con error</span><span class=\"ds-tab__det\">fallaron o se interrumpieron</span><span class=\"ds-tab__cifra\">2</span></button></div>",
+      "css": ".ds-tab { background: #0f1b1e; color: #eef3f2; border-radius: 12px; overflow: hidden; max-width: 640px; } .ds-tab__cab { display: flex; justify-content: space-between; padding: 12px 20px 10px; border-bottom: 1px solid rgba(255,255,255,0.08); font-family: 'Overpass Variable', 'Segoe UI', system-ui, sans-serif; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; color: #9fb3b8; } .ds-tab__fila { display: grid; grid-template-columns: 12px minmax(0, 11rem) minmax(0, 1fr) auto; align-items: center; gap: 14px; width: 100%; padding: 12px 20px; border: 0; border-top: 1px solid rgba(255,255,255,0.08); background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background-color 0.15s ease; } .ds-tab__cab + .ds-tab__fila { border-top: 0; } .ds-tab__fila:hover { background: rgba(255,255,255,0.05); } .ds-tab__fila:focus-visible { outline: 2px solid #2dd4bf; outline-offset: -2px; } .ds-tab__punto { width: 10px; height: 10px; border-radius: 50%; } .ds-tab__nombre { font-weight: 650; } .ds-tab__det { font-size: 0.82rem; color: #9fb3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-tab__cifra { font-family: 'Overpass Variable', 'Segoe UI', system-ui, sans-serif; font-size: 1.6rem; font-weight: 700; line-height: 1; color: #ffcf5c; font-variant-numeric: tabular-nums; text-align: right; min-width: 3ch; }"
+    },
+    {
+      "name": "Línea de agente",
+      "kind": "chip",
+      "refersTo": "linea",
+      "description": "Barra del color del agente, nombre y modelo.",
+      "html": "<span class=\"ds-linea\" style=\"--c:#e2672b\"><span class=\"ds-linea__barra\"></span><span class=\"ds-linea__nombre\">Claude</span><span class=\"ds-linea__modelo\">claude-opus-5-5</span></span><br><span class=\"ds-linea\" style=\"--c:#2563eb\"><span class=\"ds-linea__barra\"></span><span class=\"ds-linea__nombre\">Codex</span></span>",
+      "css": ".ds-linea { display: inline-flex; align-items: center; gap: 8px; color: #0f1b1e; } .ds-linea__barra { flex: none; width: 16px; height: 4px; border-radius: 2px; background: var(--c, #64748b); } .ds-linea__nombre { font-weight: 600; } .ds-linea__modelo { color: #55666a; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "La red de tranvía",
+    "overview": "La Web UI de Tramtai se dibuja como la señalética de una red de transporte. Los agentes son líneas con su propio color, tus apps son paradas de origen, Tramtai es la estación central y cada petición es un trayecto que avanza por estaciones (cola, preparación, ejecución, validación, llegada). El vocabulario visual sale de ese mundo: trazos de 3 a 4 px, estaciones como círculos con aro, giros de 45°, números tabulares y un tablero de salidas en tinta con cifras ámbar.\n\nDe día es un andén gris frío con superficies blancas y tinta profunda; de noche, una red azul tinta donde el acento verde azulado se enciende. Los dos modos tienen la misma calidad y comparten cada regla; solo cambian los valores. La densidad es equilibrada: herramienta de operador, no panel de marketing. Las tarjetas son contenedores con borde fino y sombra casi imperceptible; la jerarquía la dan el trazo de las líneas, el color del estado y la tipografía Overpass en títulos y cifras.\n\nEl sistema rechaza el panel SaaS de tarjetas iguales con un icono dentro de un recuadro tintado: cuando algo necesita marca visual, lleva la barra o el punto de su línea, no un icono decorativo.",
+    "keyCharacteristics": [
+      "Navegación lateral como una línea vertical continua con estaciones; la actual se rellena del acento.",
+      "Un color de línea por agente, reservado para identificar a ese agente.",
+      "Estados escritos siempre como punto de color más texto, nunca solo color.",
+      "Tablero de salidas oscuro con cifras ámbar tabulares como único bloque de tinta en modo claro.",
+      "Overpass para títulos, cifras y el mapa; la fuente del sistema para el cuerpo; Cascadia Code para código y direcciones."
+    ],
+    "rules": [
+      { "name": "The Una Línea, Un Color Rule", "body": "Los colores de línea identifican agentes y nada más. No se usan para estados, decoración ni categorías ajenas a un agente.", "section": "colors" },
+      { "name": "The Punto y Texto Rule", "body": "Un estado siempre es un punto de color seguido de su palabra (En marcha, Completado, Sin conectar). El color nunca va solo.", "section": "colors" },
+      { "name": "The Vía Muerta Rule", "body": "Lo que no tiene servicio se dibuja con borde-fuerte y trazo punteado; no se oculta ni se pinta en rojo.", "section": "colors" },
+      { "name": "The Cifras Tabulares Rule", "body": "Toda cifra (tablas, metadatos, versiones, números de paso, tablero) usa `font-variant-numeric: tabular-nums`.", "section": "typography" },
+      { "name": "The Mayúsculas Solo en el Tablero Rule", "body": "Las mayúsculas espaciadas pertenecen a la cabecera del tablero de salidas. Ningún otro título, etiqueta o sección las usa.", "section": "typography" },
+      { "name": "The Borde Antes que Sombra Rule", "body": "Un contenedor se separa con un borde de 1 px; la sombra de reposo solo acompaña, y de noche desaparece.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do identificar cada agente con su color de línea (barra de 16×4 px, barra vertical de 5×36 px o trazo de 4 px).",
+      "Do escribir cada estado como punto más palabra, con el velo del estado de fondo.",
+      "Do dibujar progresos y secuencias como estaciones unidas por una vía de 3 px.",
+      "Do usar Overpass para títulos de página, títulos de sección, cifras y textos del mapa, y cifras tabulares en todo número.",
+      "Do definir cada color nuevo como variable con su par de noche en `body.body--dark`.",
+      "Do respetar `prefers-reduced-motion`: todas las animaciones y transiciones se anulan."
+    ],
+    "donts": [
+      "Don't construir paneles de tarjetas iguales con un icono dentro de un recuadro tintado.",
+      "Don't usar los colores de línea para estados, categorías o decoración.",
+      "Don't comunicar un estado solo con color.",
+      "Don't usar mayúsculas espaciadas fuera de la cabecera del tablero de salidas.",
+      "Don't poner texto blanco sobre el acento de noche; va el texto oscuro del acento."
+    ]
+  }
+}

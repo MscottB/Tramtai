@@ -9,7 +9,6 @@
       <q-card-section class="row items-center q-col-gutter-md">
         <div class="col-12 col-md">
           <div class="row items-start no-wrap">
-            <div class="icono-suave icono-suave--primary q-mr-md"><q-icon name="o_smart_toy" size="22px" /></div>
             <div>
               <div class="titulo-seccion">{{ t('predeterminado.titulo') }}</div>
               <div class="texto-suave text-body2 q-mt-xs">{{ t('predeterminado.texto') }}</div>
@@ -38,7 +37,6 @@
       <q-card-section class="row items-start q-col-gutter-md">
         <div class="col-12 col-md">
           <div class="row items-start no-wrap">
-            <div class="icono-suave icono-suave--primary q-mr-md"><q-icon name="o_lan" size="22px" /></div>
             <div>
               <div class="titulo-seccion">{{ t('puerto.titulo') }}</div>
               <div class="texto-suave text-body2 q-mt-xs">{{ t('puerto.texto') }}</div>
@@ -68,7 +66,6 @@
       <div v-if="sesion?.autoarranque !== undefined" class="col-12 col-md-6">
         <q-card class="full-height">
           <q-card-section class="row items-start no-wrap">
-            <div class="icono-suave icono-suave--primary q-mr-md"><q-icon name="o_rocket_launch" size="22px" /></div>
             <div class="col">
               <div class="titulo-seccion">{{ t('arranque.titulo') }}</div>
               <div class="texto-suave text-body2 q-mt-xs">{{ t('arranque.texto') }}</div>
@@ -80,7 +77,6 @@
       <div class="col-12" :class="{ 'col-md-6': sesion?.autoarranque !== undefined }">
         <q-card class="full-height">
           <q-card-section class="row items-start no-wrap q-pb-sm">
-            <div class="icono-suave icono-suave--negative q-mr-md"><q-icon name="o_delete_sweep" size="22px" /></div>
             <div class="col">
               <div class="titulo-seccion">{{ t('datos.titulo') }}</div>
               <div class="texto-suave text-body2 q-mt-xs">{{ t('datos.texto') }}</div>
