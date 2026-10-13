@@ -16,6 +16,7 @@ import (
 type opcionesPunto struct {
 	puerto                            int
 	instancia, agente, modelo, perfil string
+	grupo                             string
 	contratos, permitidos, alias      []string
 	forzar                            bool
 	modoContexto, formato             string
@@ -25,6 +26,7 @@ type opcionesPunto struct {
 func (o *opcionesPunto) registrar(cmd *cobra.Command) {
 	f := cmd.Flags()
 	f.IntVar(&o.puerto, "puerto", 0, "puerto propio (0 = ruta /p/<nombre> en el puerto del servicio)")
+	f.StringVar(&o.grupo, "grupo", "", "grupo para ordenar los puntos y activarlos o desactivarlos juntos")
 	f.StringVar(&o.instancia, "instancia", "", "instancia a la que pertenece (global, o la del proyecto con --local)")
 	f.StringVar(&o.agente, "agente", "", "agente predeterminado del punto")
 	f.StringVar(&o.modelo, "modelo", "", "modelo predeterminado del punto")
@@ -46,6 +48,9 @@ func (o *opcionesPunto) aplicar(cmd *cobra.Command, p *servicio.ConfigPunto) err
 	}
 	if cambio("instancia") {
 		p.Instancia = o.instancia
+	}
+	if cambio("grupo") {
+		p.Grupo = o.grupo
 	}
 	if cambio("agente") {
 		p.Agente = o.agente
@@ -190,17 +195,38 @@ func comandoAcceso() *cobra.Command {
 		}}
 	editarOpc.registrar(editarCmd)
 	activo := func(uso string, valor bool) *cobra.Command {
-		return &cobra.Command{Use: uso + " <nombre>", Short: map[bool]string{true: "Activa", false: "Desactiva"}[valor] + " un punto de acceso sin reiniciar el servicio",
-			Args: cobra.ExactArgs(1),
+		var grupoPuntos string
+		c := &cobra.Command{Use: uso + " <nombre>... | --grupo <grupo>",
+			Short: map[bool]string{true: "Activa", false: "Desactiva"}[valor] + " uno o varios puntos de acceso sin reiniciar el servicio",
 			RunE: func(cmd *cobra.Command, args []string) error {
+				if (len(args) == 0) == (grupoPuntos == "") {
+					return fmt.Errorf("indica los nombres o --grupo, no ambos")
+				}
 				return editar(cmd, func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
-					i, err := buscar(lista, args[0])
-					if err == nil {
+					if grupoPuntos != "" {
+						n := 0
+						for i := range lista {
+							if lista[i].Grupo == grupoPuntos {
+								lista[i].Activo, n = &valor, n+1
+							}
+						}
+						if n == 0 {
+							return nil, fmt.Errorf("ningún punto de acceso del grupo %s en este archivo", grupoPuntos)
+						}
+						return lista, nil
+					}
+					for _, nombre := range args {
+						i, err := buscar(lista, nombre)
+						if err != nil {
+							return nil, err
+						}
 						lista[i].Activo = &valor
 					}
-					return lista, err
+					return lista, nil
 				})
 			}}
+		c.Flags().StringVar(&grupoPuntos, "grupo", "", "todos los puntos de ese grupo")
+		return c
 	}
 	eliminar := &cobra.Command{Use: "eliminar <nombre>", Short: "Elimina un punto de acceso", Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

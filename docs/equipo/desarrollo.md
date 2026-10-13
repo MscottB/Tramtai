@@ -30,6 +30,8 @@ npm run build    # compila en internal/recursos/web, que se incorpora al ejecuta
 
 La compilación de la Web UI se versiona para que `go build` no necesite Node.
 
+**Idiomas.** Los textos están en `web/src/idiomas/`: `es.ts` es el principal y define las claves; `en.ts` tiene el tipo `Textos`, así que `npx tsc --noEmit -p .` falla si le falta alguna. Para añadir un idioma, crea `idiomas/<código>.ts` con el mismo tipo y añádelo a `idiomas` en `web/src/i18n.ts` junto al paquete de Quasar (`quasar/lang/<código>`). La preferencia se recuerda en el navegador; sin ella se usa la del navegador y, si no está disponible, español. La CLI, la terminal y los mensajes de error del servicio siguen solo en español.
+
 ## Probar
 
 ```powershell

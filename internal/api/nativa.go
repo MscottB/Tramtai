@@ -74,6 +74,28 @@ func (s *Servidor) eliminarTrabajo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// eliminarTrabajos vacía el historial: borra los trabajos terminados y las cargas que ya no necesita ninguno.
+func (s *Servidor) eliminarTrabajos(w http.ResponseWriter, r *http.Request) {
+	n, err := s.Planificador.EliminarTerminados(r.Context())
+	if err != nil {
+		EscribirError(w, r, err)
+		return
+	}
+	if s.Cargas != nil {
+		enUso, err := s.Planificador.CargasEnUso(r.Context())
+		if err != nil {
+			EscribirError(w, r, err)
+			return
+		}
+		// Con un "ahora" lejano toda carga cuenta como vencida: se borran todas las que no están en uso.
+		if _, err := s.Cargas.Purgar(enUso, time.Now().AddDate(100, 0, 0)); err != nil {
+			EscribirError(w, r, err)
+			return
+		}
+	}
+	EscribirJSON(w, http.StatusOK, map[string]any{"eliminados": n})
+}
+
 // salidaTrabajo entrega la salida con el tipo de su formato; 410 si la retención ya la borró (sección 16.2).
 func (s *Servidor) salidaTrabajo(w http.ResponseWriter, r *http.Request) {
 	t, err := s.trabajo(r, r.PathValue("id"))

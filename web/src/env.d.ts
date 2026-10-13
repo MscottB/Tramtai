@@ -4,3 +4,4 @@ declare module '*.vue' {
   export default componente
 }
 declare module 'quasar/lang/es'
+declare module 'quasar/lang/en-US'

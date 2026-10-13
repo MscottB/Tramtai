@@ -2,6 +2,8 @@
 // las peticiones que modifican. Las claves nunca se guardan en el navegador.
 import { ref } from 'vue'
 import { Notify } from 'quasar'
+import { idioma, t } from './i18n'
+import type { Clave } from './idiomas/es'
 
 export interface InstanciaResumida {
   id: string
@@ -19,6 +21,8 @@ export interface Sesion {
   // local: entró sin clave por ser el mismo usuario del equipo; puede cambiar de instancia.
   local: boolean
   instancias?: InstanciaResumida[]
+  // autoarranque: si Tramtai arranca al iniciar sesión; solo en sesiones locales de sistemas que lo admiten.
+  autoarranque?: boolean
 }
 export interface Uso {
   tokens_entrada: number
@@ -69,6 +73,7 @@ export interface EstadoInstancia {
 }
 export interface EstadoPunto {
   nombre: string
+  grupo?: string
   instancia: string
   url?: string
   contratos: string[]
@@ -80,6 +85,7 @@ export interface EstadoPunto {
 }
 export interface ConfigPunto {
   nombre: string
+  grupo?: string
   puerto?: number
   contratos?: string[]
   agente?: string
@@ -134,8 +140,12 @@ async function pedir<T>(metodo: string, ruta: string, cuerpo?: unknown): Promise
   return datos as T
 }
 
+// sesion es la sesión actual, compartida por todas las páginas.
+export const sesion = ref<Sesion | null>(null)
+
 function recordar(s: Sesion): Sesion {
   csrf = s.csrf
+  sesion.value = s
   return s
 }
 
@@ -144,7 +154,8 @@ export const api = {
   entrar: (token: string) => pedir<Sesion>('POST', '/ui/sesion', { token }).then(recordar),
   cambiarInstancia: (instancia: string) => pedir<Sesion>('POST', '/ui/sesion', { instancia }).then(recordar),
   activarGlobal: () => pedir<Sesion>('POST', '/ui/instancias', { ambito: 'global' }).then(recordar),
-  salir: () => pedir<void>('DELETE', '/ui/sesion'),
+  autoarranque: (activo: boolean) => pedir<Sesion>('POST', '/ui/autoarranque', { activo }).then(recordar),
+  salir: () => pedir<void>('DELETE', '/ui/sesion').then(() => (sesion.value = null)),
   instancia: () => pedir<EstadoInstancia>('GET', '/api/v1/instancia'),
   claveInstancia: () => pedir<{ token: string; archivo: string }>('GET', '/api/v1/instancia/token'),
   configuracion: () =>
@@ -157,6 +168,7 @@ export const api = {
   accion: (id: string, accion: 'cancelar' | 'reintentar') =>
     pedir<Trabajo>('POST', `/api/v1/trabajos/${encodeURIComponent(id)}/${accion}`),
   eliminar: (id: string) => pedir<void>('DELETE', `/api/v1/trabajos/${encodeURIComponent(id)}`),
+  vaciarHistorial: () => pedir<{ eliminados: number }>('DELETE', '/api/v1/trabajos').then((r) => r.eliminados),
   subir: (archivo: File) => {
     const datos = new FormData()
     datos.append('archivo', archivo)
@@ -174,29 +186,28 @@ export const trabajoSeguido = ref('')
 
 export const terminales = ['completado', 'fallido', 'cancelado', 'interrumpido']
 
-// estados traduce cada estado a un nombre, un color y un icono para las personas.
-const estados: Record<string, { etiqueta: string; color: string; icono: string }> = {
-  en_cola: { etiqueta: 'En cola', color: 'grey-7', icono: 'schedule' },
-  preparando_entrada: { etiqueta: 'Preparando archivos', color: 'info', icono: 'description' },
-  esperando_agente: { etiqueta: 'Esperando agente', color: 'info', icono: 'hourglass_top' },
-  ejecutando: { etiqueta: 'Ejecutando', color: 'primary', icono: 'autorenew' },
-  validando_salida: { etiqueta: 'Validando', color: 'primary', icono: 'rule' },
-  cancelacion_solicitada: { etiqueta: 'Cancelando', color: 'warning', icono: 'pending' },
-  completado: { etiqueta: 'Completado', color: 'positive', icono: 'check_circle' },
-  fallido: { etiqueta: 'Falló', color: 'negative', icono: 'error' },
-  cancelado: { etiqueta: 'Cancelado', color: 'grey-7', icono: 'block' },
-  interrumpido: { etiqueta: 'Interrumpido', color: 'warning', icono: 'report' },
+// estados da a cada estado un color y un icono; el nombre sale de las traducciones (estado.<estado>).
+const estados: Record<string, { color: string; icono: string }> = {
+  en_cola: { color: 'grey-7', icono: 'schedule' },
+  preparando_entrada: { color: 'info', icono: 'description' },
+  esperando_agente: { color: 'info', icono: 'hourglass_top' },
+  ejecutando: { color: 'primary', icono: 'autorenew' },
+  validando_salida: { color: 'primary', icono: 'rule' },
+  cancelacion_solicitada: { color: 'warning', icono: 'pending' },
+  completado: { color: 'positive', icono: 'check_circle' },
+  fallido: { color: 'negative', icono: 'error' },
+  cancelado: { color: 'grey-7', icono: 'block' },
+  interrumpido: { color: 'warning', icono: 'report' },
 }
 
 export function estadoInfo(estado: string) {
-  return estados[estado] ?? { etiqueta: estado, color: 'grey-7', icono: 'help' }
+  const e = estados[estado]
+  return e ? { ...e, etiqueta: t(`estado.${estado}` as Clave) } : { etiqueta: estado, color: 'grey-7', icono: 'help' }
 }
 
 export function fecha(texto?: string): string {
-  return texto ? new Date(texto).toLocaleString() : '—'
+  return texto ? new Date(texto).toLocaleString(idioma.value) : '—'
 }
-
-const relativo = new Intl.RelativeTimeFormat('es', { numeric: 'auto' })
 
 // haceCuanto da la fecha relativa ("hace 3 minutos"); más de una semana, la fecha corta.
 export function haceCuanto(texto?: string): string {
@@ -205,10 +216,11 @@ export function haceCuanto(texto?: string): string {
   const unidades: [Intl.RelativeTimeFormatUnit, number][] = [['second', 60], ['minute', 3600], ['hour', 86400], ['day', 604800]]
   let anterior = 1
   for (const [unidad, limite] of unidades) {
-    if (Math.abs(segundos) < limite) return relativo.format(Math.round(segundos / anterior), unidad)
+    if (Math.abs(segundos) < limite)
+      return new Intl.RelativeTimeFormat(idioma.value, { numeric: 'auto' }).format(Math.round(segundos / anterior), unidad)
     anterior = limite
   }
-  return new Date(texto).toLocaleDateString()
+  return new Date(texto).toLocaleDateString(idioma.value)
 }
 
 export function duracion(desde?: string, hasta?: string): string {
@@ -218,7 +230,7 @@ export function duracion(desde?: string, hasta?: string): string {
 }
 
 const agentes: Record<string, string> = { claude: 'Claude', codex: 'Codex', gemini: 'Gemini', antigravity: 'Antigravity' }
-const perfiles: Record<string, string> = { rapido: 'rápido', equilibrado: 'equilibrado', profundo: 'profundo' }
+const perfiles = ['rapido', 'equilibrado', 'profundo']
 
 export function nombreAgente(agente?: string): string {
   return agente ? (agentes[agente] ?? agente) : '—'
@@ -228,10 +240,11 @@ export function nombreAgente(agente?: string): string {
 export function opcionModelo(id: string): { label: string; caption: string; value: string } {
   if (id.startsWith('perfil/')) {
     const p = id.slice(7)
-    return { label: `Perfil ${perfiles[p] ?? p}`, caption: 'el modelo de ese perfil en el agente predeterminado', value: id }
+    const nombre = perfiles.includes(p) ? t(`perfil.${p}` as Clave) : p
+    return { label: t('modelo.perfil', { nombre }), caption: t('modelo.perfilDetalle'), value: id }
   }
   const [agente, ...resto] = id.split('/')
-  if (!resto.length) return { label: nombreAgente(agente), caption: 'el modelo predeterminado de su CLI', value: id }
+  if (!resto.length) return { label: nombreAgente(agente), caption: t('modelo.predeterminadoCli'), value: id }
   return { label: `${nombreAgente(agente)} · ${resto.join('/')}`, caption: id, value: id }
 }
 
@@ -243,13 +256,13 @@ export function aplicarModelo(s: Solicitud, seleccion: string): Solicitud {
   return { ...s, agente, modelo: resto.join('/') || undefined }
 }
 
-export function modeloDe(t: Trabajo): string {
-  const modelo = t.modelo_efectivo || t.modelo_enviado
-  return [nombreAgente(t.solicitud.agente), modelo].filter((x) => x && x !== '—').join(' · ') || '—'
+export function modeloDe(trabajo: Trabajo): string {
+  const modelo = trabajo.modelo_efectivo || trabajo.modelo_enviado
+  return [nombreAgente(trabajo.solicitud.agente), modelo].filter((x) => x && x !== '—').join(' · ') || '—'
 }
 
-export function textoDe(t: Trabajo): string {
-  return t.solicitud.mensajes?.at(-1)?.contenido ?? (t.entradas_eliminadas ? '(entrada eliminada por la retención)' : '')
+export function textoDe(trabajo: Trabajo): string {
+  return trabajo.solicitud.mensajes?.at(-1)?.contenido ?? (trabajo.entradas_eliminadas ? t('trabajo.entradaEliminada') : '')
 }
 
 // esJSON distingue una respuesta JSON (se muestra en monoespaciada) del texto normal.
@@ -265,11 +278,15 @@ export function avisarError(e: unknown) {
   Notify.create({ type: 'negative', message: mensajeError(e), position: 'top' })
 }
 
-export async function copiar(texto: string, que = 'Copiado') {
+export function avisar(mensaje: string) {
+  Notify.create({ type: 'positive', message: mensaje, position: 'top', timeout: 2000 })
+}
+
+export async function copiar(texto: string, que = t('comun.copiado')) {
   try {
     await navigator.clipboard.writeText(texto)
     Notify.create({ message: que, icon: 'content_copy', timeout: 1200, position: 'top' })
   } catch {
-    Notify.create({ type: 'warning', message: 'No se pudo copiar; selecciona el texto y cópialo a mano', position: 'top' })
+    Notify.create({ type: 'warning', message: t('comun.noCopiado'), position: 'top' })
   }
 }

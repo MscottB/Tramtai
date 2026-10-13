@@ -1,15 +1,15 @@
 <template>
   <div class="pagina apilado">
     <div>
-      <div class="titulo-pagina">Ejecutar</div>
-      <div class="texto-suave">Prueba un agente con un mensaje y, si quieres, archivos. La respuesta llega en vivo.</div>
+      <div class="titulo-pagina">{{ t('menu.ejecutar') }}</div>
+      <div class="texto-suave">{{ t('ejecutar.subtitulo') }}</div>
     </div>
 
     <div class="row q-col-gutter-lg">
       <div class="col-12 col-md-5">
         <q-card>
           <q-card-section class="q-gutter-y-md">
-            <q-select v-model="modelo" :options="opciones" emit-value map-options outlined dense options-dense label="Agente y modelo">
+            <q-select v-model="modelo" :options="opciones" emit-value map-options outlined dense options-dense :label="t('ejecutar.agenteModelo')">
               <template #prepend><q-icon name="o_smart_toy" /></template>
               <template #option="scope">
                 <q-item v-bind="scope.itemProps">
@@ -21,37 +21,37 @@
               </template>
             </q-select>
 
-            <q-input v-model="mensaje" type="textarea" outlined label="Mensaje" placeholder="¿Qué necesitas?"
+            <q-input v-model="mensaje" type="textarea" outlined :label="t('ejecutar.mensaje')" :placeholder="t('ejecutar.placeholder')"
               :input-style="{ minHeight: '170px' }" autogrow @keydown.ctrl.enter="ejecutar" @keydown.meta.enter="ejecutar" />
 
-            <q-file v-model="archivos" multiple append use-chips clearable outlined dense label="Adjuntar archivos"
-              hint="PDF, Word, PowerPoint, Excel, HTML, texto o ZIP">
+            <q-file v-model="archivos" multiple append use-chips clearable outlined dense :label="t('ejecutar.adjuntar')"
+              :hint="t('ejecutar.adjuntarHint')">
               <template #prepend><q-icon name="o_attach_file" /></template>
             </q-file>
 
-            <q-expansion-item dense icon="o_tune" label="Opciones avanzadas" header-class="q-px-none text-body2" class="q-mt-sm">
+            <q-expansion-item dense icon="o_tune" :label="t('comun.opcionesAvanzadas')" header-class="q-px-none text-body2" class="q-mt-sm">
               <div class="q-gutter-y-md q-pt-sm">
                 <div class="row q-col-gutter-sm">
                   <div class="col-7">
-                    <q-input v-model="perfil" outlined dense label="Perfil de trabajo" hint="profiles/<nombre>.yaml (opcional)" />
+                    <q-input v-model="perfil" outlined dense :label="t('ejecutar.perfilTrabajo')" :hint="t('ejecutar.perfilHint')" />
                   </div>
                   <div class="col-5">
-                    <q-input v-model="tiempo" outlined dense inputmode="numeric" label="Tiempo límite" suffix="s" hint="300 por defecto"
-                      :rules="[(v: string) => !v || /^\d+$/.test(v) || 'Solo números']" />
+                    <q-input v-model="tiempo" outlined dense inputmode="numeric" :label="t('ejecutar.tiempo')" suffix="s" :hint="t('ejecutar.tiempoHint')"
+                      :rules="[(v: string) => !v || /^\d+$/.test(v) || t('ejecutar.soloNumeros')]" />
                   </div>
                 </div>
-                <q-input v-model="esquema" type="textarea" autogrow outlined dense label="JSON Schema de la respuesta (opcional)"
+                <q-input v-model="esquema" type="textarea" autogrow outlined dense :label="t('ejecutar.esquema')"
                   input-class="codigo" placeholder='{"type":"object","properties":{"resumen":{"type":"string"}},"required":["resumen"]}'
-                  hint="Si lo indicas, la respuesta será un JSON que cumpla el esquema" />
+                  :hint="t('ejecutar.esquemaHint')" />
               </div>
             </q-expansion-item>
           </q-card-section>
           <q-separator />
           <q-card-actions class="q-pa-md">
-            <span class="text-caption texto-suave gt-xs">Ctrl + Enter para ejecutar</span>
+            <span class="text-caption texto-suave gt-xs">{{ t('ejecutar.atajo') }}</span>
             <q-space />
-            <q-btn v-if="activo" flat color="negative" icon="o_stop_circle" label="Cancelar" no-caps @click="cancelar" />
-            <q-btn unelevated color="primary" icon="o_send" label="Ejecutar" no-caps :loading="enviando" :disable="activo || !mensaje.trim()" @click="ejecutar" />
+            <q-btn v-if="activo" flat color="negative" icon="o_stop_circle" :label="t('comun.cancelar')" no-caps @click="cancelar" />
+            <q-btn unelevated color="primary" icon="o_send" :label="t('menu.ejecutar')" no-caps :loading="enviando" :disable="activo || !mensaje.trim()" @click="ejecutar" />
           </q-card-actions>
         </q-card>
       </div>
@@ -59,20 +59,20 @@
       <div class="col-12 col-md-7">
         <q-card class="full-height">
           <q-card-section class="row items-center no-wrap q-gutter-x-sm">
-            <div class="titulo-seccion">Respuesta</div>
+            <div class="titulo-seccion">{{ t('ejecutar.respuesta') }}</div>
             <q-space />
             <q-chip v-if="trabajo" dense :color="estadoInfo(estado).color" text-color="white" :icon="estadoInfo(estado).icono">
               {{ estadoInfo(estado).etiqueta }}
             </q-chip>
-            <q-btn v-if="salida" flat dense round icon="o_content_copy" aria-label="Copiar la respuesta" @click="copiar(salida)">
-              <q-tooltip>Copiar</q-tooltip>
+            <q-btn v-if="salida" flat dense round icon="o_content_copy" :aria-label="t('ejecutar.copiarRespuesta')" @click="copiar(salida)">
+              <q-tooltip>{{ t('comun.copiar') }}</q-tooltip>
             </q-btn>
           </q-card-section>
           <q-separator />
           <q-card-section class="salida-caja" style="min-height: 280px">
             <div v-if="!trabajo" class="vacio">
               <q-icon name="o_forum" size="48px" />
-              <div class="q-mt-sm">Escribe un mensaje y pulsa <b>Ejecutar</b>. La respuesta aparecerá aquí.</div>
+              <div class="q-mt-sm">{{ t('ejecutar.vacio') }}</div>
             </div>
             <template v-else>
               <q-banner v-if="final?.codigo_error" rounded dense class="error-caja q-mb-md">
@@ -103,12 +103,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { api, aplicarModelo, avisarError, copiar, duracion, esJSON, estadoInfo, modeloDe, opcionModelo, terminales, trabajoSeguido, type Solicitud, type Trabajo } from '../api'
+import { t } from '../i18n'
 
 const ids = ref<string[]>([])
 const opciones = computed(() => {
   const perfiles = ids.value.filter((id) => id.startsWith('perfil/'))
   const resto = ids.value.filter((id) => !id.startsWith('perfil/'))
-  return [{ label: 'Predeterminado', caption: 'el agente y el modelo configurados en la instancia', value: '' },
+  return [{ label: t('ejecutar.predeterminado'), caption: t('ejecutar.predeterminadoDetalle'), value: '' },
     ...perfiles.map(opcionModelo), ...resto.map(opcionModelo)]
 })
 const modelo = ref('')
@@ -128,9 +129,9 @@ let fuente: EventSource | undefined
 onMounted(async () => {
   ids.value = await api.modelos().catch((e) => (avisarError(e), []))
   if (trabajoSeguido.value) {
-    const t = await api.trabajo(trabajoSeguido.value)
+    const seguido = await api.trabajo(trabajoSeguido.value)
     trabajoSeguido.value = ''
-    seguir(t)
+    seguir(seguido)
   }
 })
 onUnmounted(() => fuente?.close()) // el trabajo sigue en el servicio aunque se cierre la página
@@ -142,7 +143,7 @@ async function ejecutar() {
     try {
       esquemaJSON = JSON.parse(esquema.value)
     } catch {
-      avisarError(new Error('El JSON Schema no es JSON válido'))
+      avisarError(new Error(t('ejecutar.esquemaInvalido')))
       return
     }
   }
@@ -165,29 +166,29 @@ async function ejecutar() {
 }
 
 // seguir muestra los eventos en vivo; EventSource se reconecta solo y reanuda con Last-Event-ID.
-function seguir(t: Trabajo) {
+function seguir(nuevo: Trabajo) {
   fuente?.close()
-  trabajo.value = t
+  trabajo.value = nuevo
   final.value = undefined
-  estado.value = t.estado
+  estado.value = nuevo.estado
   salida.value = ''
-  activo.value = !terminales.includes(t.estado)
-  fuente = new EventSource(`/api/v1/trabajos/${encodeURIComponent(t.id)}/eventos`)
+  activo.value = !terminales.includes(nuevo.estado)
+  fuente = new EventSource(`/api/v1/trabajos/${encodeURIComponent(nuevo.id)}/eventos`)
   fuente.addEventListener('texto', (e) => (salida.value += (e as MessageEvent).data))
   fuente.addEventListener('estado', (e) => (estado.value = (e as MessageEvent).data))
   fuente.addEventListener('fin', () => {
     fuente?.close()
-    terminar(t.id)
+    terminar(nuevo.id)
   })
 }
 
 async function terminar(id: string) {
-  const t = await api.trabajo(id)
+  const terminado = await api.trabajo(id)
   activo.value = false
-  estado.value = t.estado
+  estado.value = terminado.estado
   // Con salida estructurada el texto en vivo puede diferir del resultado validado: se muestra el resultado.
-  if (t.estado === 'completado' && t.salida !== undefined && t.salida !== salida.value) salida.value = t.salida
-  final.value = t
+  if (terminado.estado === 'completado' && terminado.salida !== undefined && terminado.salida !== salida.value) salida.value = terminado.salida
+  final.value = terminado
 }
 
 async function cancelar() {

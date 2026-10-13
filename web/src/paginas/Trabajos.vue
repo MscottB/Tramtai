@@ -2,11 +2,12 @@
   <div class="pagina apilado">
     <div class="row items-end q-col-gutter-md">
       <div class="col-12 col-sm">
-        <div class="titulo-pagina">Historial</div>
-        <div class="texto-suave">Los trabajos de esta instancia, lanzados desde aquí, la terminal o cualquier aplicación conectada.</div>
+        <div class="titulo-pagina">{{ t('menu.historial') }}</div>
+        <div class="texto-suave">{{ t('historial.subtitulo') }}</div>
       </div>
-      <div class="col-12 col-sm-auto">
-        <q-btn flat no-caps color="primary" icon="o_refresh" label="Actualizar" :loading="cargando" @click="cargar" />
+      <div class="col-12 col-sm-auto row no-wrap q-gutter-x-sm">
+        <q-btn flat no-caps color="negative" icon="o_delete_sweep" :label="t('historial.vaciar')" :disable="!trabajos.some((x) => terminales.includes(x.estado))" @click="vaciar" />
+        <q-btn flat no-caps color="primary" icon="o_refresh" :label="t('comun.actualizar')" :loading="cargando" @click="cargar" />
       </div>
     </div>
 
@@ -14,17 +15,17 @@
       <q-card-section class="row items-center q-col-gutter-sm">
         <div class="col-12 col-md">
           <q-btn-toggle v-model="filtro" no-caps flat toggle-color="primary"
-            :options="[{ label: 'Todos', value: 'todos' }, { label: 'En curso', value: 'curso' }, { label: 'Completados', value: 'ok' }, { label: 'Con error', value: 'error' }]" />
+            :options="[{ label: t('historial.todos'), value: 'todos' }, { label: t('inicio.enCurso'), value: 'curso' }, { label: t('inicio.completados'), value: 'ok' }, { label: t('inicio.conError'), value: 'error' }]" />
         </div>
         <div class="col-12 col-md-4">
-          <q-input v-model="busqueda" dense outlined clearable placeholder="Buscar en las solicitudes" debounce="150">
+          <q-input v-model="busqueda" dense outlined clearable :placeholder="t('historial.buscar')" debounce="150">
             <template #prepend><q-icon name="search" /></template>
           </q-input>
         </div>
       </q-card-section>
       <q-separator />
       <q-table :rows="filas" :columns="columnas" row-key="id" flat :loading="cargando && !trabajos.length"
-        :pagination="{ rowsPerPage: 25 }" :rows-per-page-options="[25, 50, 100]" no-data-label="No hay trabajos con este filtro"
+        :pagination="{ rowsPerPage: 25 }" :rows-per-page-options="[25, 50, 100]" :no-data-label="t('historial.sinFiltro')"
         table-class="fila-clicable" @row-click="(_e: Event, fila: Trabajo) => abrir(fila)">
         <template #body-cell-estado="props">
           <q-td :props="props">
@@ -52,7 +53,7 @@
           </q-chip>
           <div class="texto-suave text-caption">{{ fecha(detalle.creado_en) }}</div>
           <q-space />
-          <q-btn flat round icon="close" aria-label="Cerrar" v-close-popup />
+          <q-btn v-close-popup flat round icon="close" :aria-label="t('comun.cerrar')" />
         </q-card-section>
         <q-separator />
         <q-card-section class="col scroll q-gutter-y-lg">
@@ -62,41 +63,41 @@
           </q-banner>
           <div>
             <div class="row items-center q-mb-xs">
-              <div class="text-weight-medium col">Solicitud</div>
-              <q-btn v-if="textoDe(detalle)" flat dense round size="sm" icon="o_content_copy" aria-label="Copiar la solicitud" @click="copiar(textoDe(detalle))" />
+              <div class="text-weight-medium col">{{ t('historial.solicitud') }}</div>
+              <q-btn v-if="textoDe(detalle)" flat dense round size="sm" icon="o_content_copy" :aria-label="t('historial.copiarSolicitud')" @click="copiar(textoDe(detalle))" />
             </div>
             <div class="bloque-texto">{{ textoDe(detalle) || '—' }}</div>
           </div>
           <div>
             <div class="row items-center q-mb-xs">
-              <div class="text-weight-medium col">Respuesta</div>
-              <q-btn v-if="detalle.salida" flat dense round size="sm" icon="o_content_copy" aria-label="Copiar la respuesta" @click="copiar(detalle.salida)" />
+              <div class="text-weight-medium col">{{ t('ejecutar.respuesta') }}</div>
+              <q-btn v-if="detalle.salida" flat dense round size="sm" icon="o_content_copy" :aria-label="t('ejecutar.copiarRespuesta')" @click="copiar(detalle.salida)" />
             </div>
-            <div v-if="detalle.disponibilidad === 'expirada'" class="texto-suave">La respuesta ya no se conserva: los resultados se guardan 24 horas.</div>
+            <div v-if="detalle.disponibilidad === 'expirada'" class="texto-suave">{{ t('historial.expirada') }}</div>
             <div v-else-if="detalle.salida" class="bloque-texto" :class="{ json: esJSON(detalle.salida) }">{{ detalle.salida }}</div>
-            <div v-else class="texto-suave">{{ terminales.includes(detalle.estado) ? 'Sin respuesta.' : 'Todavía en curso…' }}</div>
+            <div v-else class="texto-suave">{{ terminales.includes(detalle.estado) ? t('historial.sinRespuesta') : t('historial.todaviaEnCurso') }}</div>
           </div>
           <q-list dense bordered separator class="rounded-borders">
-            <q-item><q-item-section class="texto-suave">Agente y modelo</q-item-section><q-item-section side>{{ modeloDe(detalle) }}</q-item-section></q-item>
-            <q-item v-if="detalle.punto_acceso"><q-item-section class="texto-suave">Punto de acceso</q-item-section><q-item-section side>{{ detalle.punto_acceso }}</q-item-section></q-item>
-            <q-item><q-item-section class="texto-suave">Tokens</q-item-section><q-item-section side>{{ detalle.uso.tokens_entrada }} → {{ detalle.uso.tokens_salida }}</q-item-section></q-item>
-            <q-item v-if="detalle.uso.costo_usd"><q-item-section class="texto-suave">Coste</q-item-section><q-item-section side>US$ {{ detalle.uso.costo_usd.toFixed(4) }}</q-item-section></q-item>
-            <q-item v-if="detalle.terminado_en"><q-item-section class="texto-suave">Duración</q-item-section><q-item-section side>{{ duracion(detalle.creado_en, detalle.terminado_en) }}</q-item-section></q-item>
+            <q-item><q-item-section class="texto-suave">{{ t('historial.agenteModelo') }}</q-item-section><q-item-section side>{{ modeloDe(detalle) }}</q-item-section></q-item>
+            <q-item v-if="detalle.punto_acceso"><q-item-section class="texto-suave">{{ t('historial.punto') }}</q-item-section><q-item-section side>{{ detalle.punto_acceso }}</q-item-section></q-item>
+            <q-item><q-item-section class="texto-suave">{{ t('historial.tokens') }}</q-item-section><q-item-section side>{{ detalle.uso.tokens_entrada }} → {{ detalle.uso.tokens_salida }}</q-item-section></q-item>
+            <q-item v-if="detalle.uso.costo_usd"><q-item-section class="texto-suave">{{ t('historial.coste') }}</q-item-section><q-item-section side>US$ {{ detalle.uso.costo_usd.toFixed(4) }}</q-item-section></q-item>
+            <q-item v-if="detalle.terminado_en"><q-item-section class="texto-suave">{{ t('historial.duracion') }}</q-item-section><q-item-section side>{{ duracion(detalle.creado_en, detalle.terminado_en) }}</q-item-section></q-item>
             <q-item>
-              <q-item-section class="texto-suave">Identificador</q-item-section>
+              <q-item-section class="texto-suave">{{ t('historial.identificador') }}</q-item-section>
               <q-item-section side class="codigo cursor-pointer" @click="copiar(detalle.id)">{{ detalle.id }}</q-item-section>
             </q-item>
           </q-list>
         </q-card-section>
         <q-separator />
         <q-card-actions class="q-pa-md">
-          <q-btn v-if="terminales.includes(detalle.estado)" flat color="negative" icon="o_delete" label="Eliminar" no-caps @click="eliminar" />
+          <q-btn v-if="terminales.includes(detalle.estado)" flat color="negative" icon="o_delete" :label="t('comun.eliminar')" no-caps @click="eliminar" />
           <q-space />
           <template v-if="!terminales.includes(detalle.estado)">
-            <q-btn flat color="negative" icon="o_stop_circle" label="Cancelar" no-caps @click="accion('cancelar')" />
-            <q-btn unelevated color="primary" icon="o_visibility" label="Ver en vivo" no-caps @click="seguirEnVivo" />
+            <q-btn flat color="negative" icon="o_stop_circle" :label="t('comun.cancelar')" no-caps @click="accion('cancelar')" />
+            <q-btn unelevated color="primary" icon="o_visibility" :label="t('historial.verEnVivo')" no-caps @click="seguirEnVivo" />
           </template>
-          <q-btn v-else unelevated color="primary" icon="o_replay" label="Reintentar" no-caps @click="accion('reintentar')" />
+          <q-btn v-else unelevated color="primary" icon="o_replay" :label="t('historial.reintentar')" no-caps @click="accion('reintentar')" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -106,7 +107,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useQuasar, type QTableColumn } from 'quasar'
-import { api, avisarError, copiar, duracion, esJSON, estadoInfo, fecha, haceCuanto, modeloDe, terminales, textoDe, trabajoSeguido, type Trabajo } from '../api'
+import { api, avisar, avisarError, copiar, duracion, esJSON, estadoInfo, fecha, haceCuanto, modeloDe, terminales, textoDe, trabajoSeguido, type Trabajo } from '../api'
+import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()
 const $q = useQuasar()
@@ -117,20 +119,20 @@ const detalle = ref<Trabajo>()
 const filtro = ref('todos')
 const busqueda = ref<string | null>('')
 
-const columnas: QTableColumn<Trabajo>[] = [
-  { name: 'estado', label: 'Estado', field: 'estado', align: 'left' },
-  { name: 'solicitud', label: 'Solicitud', field: (t) => textoDe(t), align: 'left' },
-  { name: 'modelo', label: 'Agente y modelo', field: (t) => modeloDe(t), align: 'left', classes: 'gt-sm', headerClasses: 'gt-sm' },
-  { name: 'tokens', label: 'Tokens', field: (t) => t.uso.tokens_entrada + t.uso.tokens_salida, align: 'right', classes: 'gt-xs', headerClasses: 'gt-xs' },
-  { name: 'cuando', label: 'Cuándo', field: 'creado_en', align: 'right' },
-]
+const columnas = computed<QTableColumn<Trabajo>[]>(() => [
+  { name: 'estado', label: t('historial.estado'), field: 'estado', align: 'left' },
+  { name: 'solicitud', label: t('historial.solicitud'), field: (x) => textoDe(x), align: 'left' },
+  { name: 'modelo', label: t('historial.agenteModelo'), field: (x) => modeloDe(x), align: 'left', classes: 'gt-sm', headerClasses: 'gt-sm' },
+  { name: 'tokens', label: t('historial.tokens'), field: (x) => x.uso.tokens_entrada + x.uso.tokens_salida, align: 'right', classes: 'gt-xs', headerClasses: 'gt-xs' },
+  { name: 'cuando', label: t('historial.cuando'), field: 'creado_en', align: 'right' },
+])
 
 const filas = computed(() => {
   const texto = (busqueda.value ?? '').toLowerCase().trim()
-  return trabajos.value.filter((t) => {
-    const terminado = terminales.includes(t.estado)
-    const pasa = { todos: true, curso: !terminado, ok: t.estado === 'completado', error: ['fallido', 'interrumpido'].includes(t.estado) }[filtro.value]
-    return pasa && (!texto || textoDe(t).toLowerCase().includes(texto) || t.id.includes(texto))
+  return trabajos.value.filter((x) => {
+    const terminado = terminales.includes(x.estado)
+    const pasa = { todos: true, curso: !terminado, ok: x.estado === 'completado', error: ['fallido', 'interrumpido'].includes(x.estado) }[filtro.value]
+    return pasa && (!texto || textoDe(x).toLowerCase().includes(texto) || x.id.includes(texto))
   })
 })
 
@@ -145,9 +147,9 @@ async function cargar() {
   }
 }
 
-async function abrir(t: Trabajo) {
+async function abrir(elegido: Trabajo) {
   try {
-    detalle.value = await api.trabajo(t.id)
+    detalle.value = await api.trabajo(elegido.id)
     dialogo.value = true
   } catch (e) {
     avisarError(e)
@@ -157,9 +159,9 @@ async function abrir(t: Trabajo) {
 async function accion(nombre: 'cancelar' | 'reintentar') {
   if (!detalle.value) return
   try {
-    const t = await api.accion(detalle.value.id, nombre)
+    const nuevo = await api.accion(detalle.value.id, nombre)
     if (nombre === 'reintentar') {
-      trabajoSeguido.value = t.id
+      trabajoSeguido.value = nuevo.id
       dialogo.value = false
       emit('ir', 'ejecutar')
       return
@@ -171,20 +173,33 @@ async function accion(nombre: 'cancelar' | 'reintentar') {
   }
 }
 
-function eliminar() {
-  const id = detalle.value?.id
-  if (!id) return
-  $q.dialog({ title: 'Eliminar trabajo', message: 'Se borran la solicitud, la respuesta y su historial. No se puede deshacer.',
-    cancel: { flat: true, label: 'Cancelar', noCaps: true }, ok: { color: 'negative', label: 'Eliminar', unelevated: true, noCaps: true } })
+function confirmar(titulo: string, mensaje: string, hacer: () => Promise<void>) {
+  $q.dialog({ title: titulo, message: mensaje,
+    cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'negative', label: t('comun.eliminar'), unelevated: true, noCaps: true } })
     .onOk(async () => {
       try {
-        await api.eliminar(id)
-        dialogo.value = false
-        cargar()
+        await hacer()
       } catch (e) {
         avisarError(e)
       }
     })
+}
+
+function eliminar() {
+  const id = detalle.value?.id
+  if (!id) return
+  confirmar(t('historial.eliminarTitulo'), t('historial.eliminarTexto'), async () => {
+    await api.eliminar(id)
+    dialogo.value = false
+    cargar()
+  })
+}
+
+function vaciar() {
+  confirmar(t('historial.vaciarTitulo'), t('historial.vaciarTexto'), async () => {
+    avisar(t('historial.vaciado', { n: await api.vaciarHistorial() }))
+    cargar()
+  })
 }
 
 function seguirEnVivo() {

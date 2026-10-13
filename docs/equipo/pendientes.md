@@ -28,3 +28,5 @@
 - [ ] Probar con una clave real los adaptadores `gemini` y `antigravity` (hoy con servidor y CLI simulados). En `agy`, comprobar si acepta el prompt por stdin (`--input-format stream-json`) para quitar el límite de 28 000 caracteres por línea de órdenes, y validar `permissions.deny` y `toolPermission: strict` en su `settings.json` (junto a M0b).
 - [ ] Almacén de credenciales en macOS (Llavero) y Linux (Secret Service); hoy `tramtai claves` solo funciona en Windows.
 - [ ] Entrada sin clave de la Web UI en macOS (identificar al dueño de la conexión con libproc); hoy pide la clave o `tramtai abrir`.
+- [ ] Arranque con el sistema en Linux (unidad de usuario de systemd o `~/.config/autostart`) y macOS (LaunchAgent); hoy solo Windows.
+- [ ] Traducir la CLI, la terminal interactiva y los mensajes de error del servicio (hoy solo en español; la Web UI ya está en español e inglés). Los códigos de error son estables y la Web UI podría traducirlos por código.

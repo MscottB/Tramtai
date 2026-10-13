@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"tramtai/internal/api"
+	"tramtai/internal/autoarranque"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/version"
 )
@@ -92,7 +93,8 @@ func (s *Servicio) CodigoSesion(instancia string) (string, error) {
 
 // rutasUI gestiona la sesión: GET la consulta (y, si la petición es local, entra sin token), POST entra con el
 // token de una instancia o, en una sesión local, cambia de instancia, DELETE sale y /ui/entrar canjea un código de
-// un solo uso. /ui/instancias activa la instancia global desde una sesión local.
+// un solo uso. /ui/instancias activa la instancia global y /ui/autoarranque cambia el arranque con el sistema,
+// ambos desde una sesión local.
 func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/ui/sesion" && r.Method == http.MethodGet:
@@ -148,6 +150,31 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.responderSesion(w, r, s.crearSesion(w, inst.ID, true))
+	case r.URL.Path == "/ui/autoarranque" && r.Method == http.MethodPost:
+		_, ses := s.sesionDe(r)
+		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+			api.NoAutorizado(w, r)
+			return
+		}
+		var peticion struct {
+			Activo bool `json:"activo"`
+		}
+		if err := api.LeerJSON(w, r, &peticion); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		err := autoarranque.Desactivar()
+		if peticion.Activo {
+			var escritorio string
+			if escritorio, err = autoarranque.Escritorio(); err == nil {
+				err = autoarranque.Activar(escritorio)
+			}
+		}
+		if err != nil {
+			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, err.Error()))
+			return
+		}
+		s.responderSesion(w, r, ses)
 	case r.URL.Path == "/ui/sesion" && r.Method == http.MethodDelete:
 		if id, _ := s.sesionDe(r); id != "" {
 			s.muSesiones.Lock()
@@ -231,6 +258,9 @@ func (s *Servicio) responderSesion(w http.ResponseWriter, r *http.Request, ses *
 			return strings.Compare(a.Nombre, b.Nombre)
 		})
 		respuesta["instancias"] = lista
+		if autoarranque.Disponible {
+			respuesta["autoarranque"], _ = autoarranque.Activo()
+		}
 	}
 	inst := s.instancia(ses.instancia)
 	if inst == nil && !ses.local {

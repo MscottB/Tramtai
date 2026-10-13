@@ -28,6 +28,7 @@
 | `POST /trabajos/{id}/cancelar` | Cancelación idempotente; responde 202 sin afirmar que ya terminó. |
 | `POST /trabajos/{id}/reintentar` | Crea un intento nuevo (`intento_de`) a partir de un trabajo terminado. Si sus entradas ya vencieron, 410 `entrada_no_disponible`. |
 | `DELETE /trabajos/{id}` | Borra un trabajo terminado: 204, o 409 si sigue activo. |
+| `DELETE /trabajos` | Vacía el historial: borra los trabajos terminados de la instancia y las cargas que ya no usa ninguno; conserva los activos. Responde `{"eliminados": n}`. No existe en los puntos de acceso. |
 | `POST /ejecutar` | Igual que `POST /trabajos`, pero espera el resultado. Envía `Location` antes de esperar; si se corta la conexión, el trabajo no se cancela. |
 | `POST /cargas` | Multipart con el campo `archivo`, o el binario en el cuerpo con `?nombre=`. Devuelve `identificador_carga`, `sha256`, `tamano_bytes` y `vence_en`. Un trabajo nuevo que cite una carga vencida se rechaza con 410; las cargas de un trabajo aceptado se conservan mientras se pueda reintentar. |
 | `GET /capacidades` | Por agente: streaming (`tokens` o `final`), salida estructurada, modelo efectivo, versión detectada, autenticación y términos. Incluye el formato de serialización. |

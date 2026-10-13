@@ -91,8 +91,8 @@ func TestWebUI(t *testing.T) {
 	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/puntos", global.token, ""); r.StatusCode != 401 {
 		t.Fatalf("el token de aplicaciones no gestiona puntos: %d", r.StatusCode)
 	}
-	r, cuerpo = n.pedir("POST", "/api/v1/puntos", `{"nombre":"desde_ui","contratos":["openai"],"agente":"simulado"}`, "X-CSRF-Token", n.csrf, "Content-Type", "application/json")
-	if r.StatusCode != 201 || !strings.Contains(cuerpo, `"token":"tt_`) || !strings.Contains(cuerpo, "/p/desde_ui") {
+	r, cuerpo = n.pedir("POST", "/api/v1/puntos", `{"nombre":"desde_ui","grupo":"pruebas","contratos":["openai"],"agente":"simulado"}`, "X-CSRF-Token", n.csrf, "Content-Type", "application/json")
+	if r.StatusCode != 201 || !strings.Contains(cuerpo, `"token":"tt_`) || !strings.Contains(cuerpo, "/p/desde_ui") || !strings.Contains(cuerpo, `"grupo":"pruebas"`) {
 		t.Fatalf("crear punto: %d %s", r.StatusCode, cuerpo)
 	}
 	rutaGlobal, _ := nucleo.RutaGlobal()

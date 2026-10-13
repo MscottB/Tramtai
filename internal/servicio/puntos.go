@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"time"
+	"unicode/utf8"
 
 	"go.yaml.in/yaml/v3"
 
@@ -23,6 +24,7 @@ import (
 // ConfigPunto es un punto de acceso tal como se escribe en la configuración global o local (sección 5.4).
 type ConfigPunto struct {
 	Nombre            string            `json:"nombre" yaml:"nombre"`
+	Grupo             string            `json:"grupo,omitempty" yaml:"grupo,omitempty"`
 	Puerto            int               `json:"puerto,omitempty" yaml:"puerto,omitempty"`
 	RutaBase          string            `json:"ruta_base,omitempty" yaml:"ruta_base,omitempty"`
 	Instancia         string            `json:"instancia,omitempty" yaml:"instancia,omitempty"`
@@ -82,6 +84,9 @@ func (p ConfigPunto) Normalizar(instancia string, puertoServicio int) (ConfigPun
 	}
 	if p.Instancia == "" {
 		p.Instancia = instancia
+	}
+	if utf8.RuneCountInString(p.Grupo) > 40 {
+		return invalido("grupo de más de 40 caracteres")
 	}
 	switch {
 	case p.Puerto != 0 && p.RutaBase != "":
@@ -151,6 +156,7 @@ func (p *puntoActivo) cerrar() {
 // EstadoPunto resume un punto de acceso.
 type EstadoPunto struct {
 	Nombre    string   `json:"nombre"`
+	Grupo     string   `json:"grupo,omitempty"`
 	Instancia string   `json:"instancia"`
 	URL       string   `json:"url,omitempty"`
 	Contratos []string `json:"contratos"`
@@ -311,7 +317,7 @@ func (s *Servicio) abrirPunto(c candidato, token, firma string) *puntoActivo {
 func (s *Servicio) estadoPuntos() []EstadoPunto {
 	lista := []EstadoPunto{}
 	for _, p := range s.puntos {
-		lista = append(lista, EstadoPunto{Nombre: p.cfg.Nombre, Instancia: p.cfg.Instancia, URL: p.url, Contratos: p.cfg.Contratos,
+		lista = append(lista, EstadoPunto{Nombre: p.cfg.Nombre, Grupo: p.cfg.Grupo, Instancia: p.cfg.Instancia, URL: p.url, Contratos: p.cfg.Contratos,
 			Agente: p.cfg.Agente, Modelo: p.cfg.Modelo, Activo: p.err == "", Error: p.err, Origen: p.origen})
 	}
 	sort.Slice(lista, func(i, j int) bool { return lista[i].Nombre < lista[j].Nombre })

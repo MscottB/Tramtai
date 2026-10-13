@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+// SinVentana no hace nada fuera de Windows: allí ningún proceso abre una ventana de consola propia.
+func SinVentana(*exec.Cmd) {}
+
 // preparar lanza el proceso como líder de un grupo nuevo para poder señalar a todo el árbol.
 // Si el servicio muere de golpe el grupo sigue vivo: la recuperación lo termina con TerminarHuerfano.
 func preparar(cmd *exec.Cmd) { cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} }

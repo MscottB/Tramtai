@@ -9,6 +9,7 @@ import (
 
 	"tramtai/internal/credenciales"
 	"tramtai/internal/nucleo"
+	"tramtai/internal/procesos"
 )
 
 // Autenticación admitida por los adaptadores CLI (sección 2.4).
@@ -173,7 +174,9 @@ func clasificar(texto string, estadoHTTP int) nucleo.CodigoError {
 
 // version ejecuta "<programa> --version" sin consumir cuota.
 func version(ctx context.Context, ruta string) string {
-	salida, err := exec.CommandContext(ctx, ruta, "--version").Output()
+	cmd := exec.CommandContext(ctx, ruta, "--version")
+	procesos.SinVentana(cmd)
+	salida, err := cmd.Output()
 	if err != nil {
 		return ""
 	}

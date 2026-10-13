@@ -178,3 +178,12 @@ input[type='number'] {
 .q-card.column > * {
   min-width: 0;
 }
+
+/* Cabecera de cada grupo de puntos de acceso. */
+.cabecera-grupo {
+  border-top: 1px solid var(--borde);
+  gap: 4px;
+}
+div:first-child > .cabecera-grupo {
+  border-top: none;
+}

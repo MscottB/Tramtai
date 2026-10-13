@@ -279,6 +279,16 @@ func (p *Planificador) Eliminar(ctx context.Context, id string) error {
 	return p.almacen.Eliminar(ctx, id)
 }
 
+// EliminarTerminados borra todos los trabajos terminados de esta instancia y devuelve cuántos borró.
+func (p *Planificador) EliminarTerminados(ctx context.Context) (int, error) {
+	return p.almacen.EliminarTerminados(ctx, p.opc.Instancia)
+}
+
+// CargasEnUso devuelve las cargas que algún trabajo de esta instancia puede necesitar todavía.
+func (p *Planificador) CargasEnUso(ctx context.Context) (map[string]bool, error) {
+	return p.almacen.CargasEnUso(ctx, p.opc.Instancia)
+}
+
 // Listar devuelve los trabajos más recientes de la instancia; con punto, solo los de ese punto de acceso.
 func (p *Planificador) Listar(ctx context.Context, limite int, punto string) ([]nucleo.Trabajo, error) {
 	return p.almacen.Listar(ctx, p.opc.Instancia, punto, limite)

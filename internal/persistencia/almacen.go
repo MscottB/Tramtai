@@ -321,6 +321,30 @@ func (a *Almacen) Eliminar(ctx context.Context, id string) error {
 	return a.confirmar(tx)
 }
 
+// EliminarTerminados borra todos los trabajos terminados de la instancia con sus eventos y claves de
+// idempotencia; los que están en cola o en ejecución se conservan. Devuelve cuántos borró.
+func (a *Almacen) EliminarTerminados(ctx context.Context, instancia string) (int, error) {
+	tx, err := a.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	terminados := `SELECT id FROM trabajos WHERE instancia = ? AND estado IN (?, ?, ?, ?)`
+	args := []any{instancia, string(nucleo.Completado), string(nucleo.Fallido), string(nucleo.Cancelado), string(nucleo.Interrumpido)}
+	for _, consulta := range []string{`DELETE FROM eventos WHERE trabajo_id IN (` + terminados + `)`,
+		`DELETE FROM idempotencia WHERE trabajo_id IN (` + terminados + `)`} {
+		if _, err := tx.ExecContext(ctx, consulta, args...); err != nil {
+			return 0, err
+		}
+	}
+	res, err := tx.ExecContext(ctx, `DELETE FROM trabajos WHERE id IN (`+terminados+`)`, args...)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	return int(n), a.confirmar(tx)
+}
+
 // RegistrarProceso guarda el PID y la firma de inicio del proceso del agente de un trabajo.
 func (a *Almacen) RegistrarProceso(ctx context.Context, id string, pid int, firma string) error {
 	_, err := a.db.ExecContext(ctx, `UPDATE trabajos SET pid = ?, firma_proceso = ? WHERE id = ?`, pid, firma, id)

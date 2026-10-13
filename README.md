@@ -7,9 +7,10 @@
 - **Compatible con lo que ya usas:** SDK de OpenAI y Anthropic (Python, Node, curl…), con respuesta en vivo.
 - **Elige agente y modelo en cada petición:** `claude/sonnet`, `codex`, `gemini/gemini-flash-latest` o un perfil como `perfil/rapido`.
 - **Archivos y respuestas estructuradas:** PDF, Word, Excel, PowerPoint o ZIP como entrada; JSON validado con un esquema como salida.
-- **Una URL y una clave por aplicación,** con modelos permitidos o fijos, para no compartir la misma clave en todas partes.
-- **Cuatro formas de usarlo** sobre los mismos trabajos: Web UI, aplicación de escritorio, terminal interactiva y línea de órdenes.
-- **Local y privado:** escucha solo en `127.0.0.1`; los resultados se guardan 24 horas y las claves de API van al Administrador de credenciales de Windows.
+- **Una URL y una clave por aplicación,** con modelos permitidos o fijos, agrupadas para activarlas o detenerlas juntas.
+- **Cuatro formas de usarlo** sobre los mismos trabajos: Web UI (en español e inglés, con ayuda integrada), aplicación de escritorio, terminal interactiva y línea de órdenes.
+- **Arranca solo con Windows,** oculto en la bandeja: sin abrir ninguna terminal.
+- **Local y privado:** escucha solo en `127.0.0.1`; los resultados se guardan 24 horas y se pueden borrar cuando quieras, y las claves de API van al Administrador de credenciales de Windows. Las consultas no quedan como chats en el historial de Claude Code ni de Codex.
 
 ## Empezar en tres pasos
 

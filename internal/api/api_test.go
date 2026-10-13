@@ -222,6 +222,12 @@ func TestEjecutarCancelarReintentarEliminar(t *testing.T) {
 	if r, _ := pedir(t, ts, "GET", "/api/v1/trabajos/"+id, ""); r.StatusCode != 404 {
 		t.Fatalf("eliminado: %d", r.StatusCode)
 	}
+	if r, cuerpo := pedir(t, ts, "DELETE", "/api/v1/trabajos", ""); r.StatusCode != 200 || !strings.Contains(cuerpo, `"eliminados":1`) {
+		t.Fatalf("vaciar el historial: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, _ := pedir(t, ts, "GET", "/api/v1/trabajos/"+nuevo["id"].(string), ""); r.StatusCode != 404 {
+		t.Fatalf("el historial vaciado conserva el reintento: %d", r.StatusCode)
+	}
 
 	lento := servidor(t, simulado(adaptadores.Simulado{Demora: time.Minute}), nil)
 	_, c := pedir(t, lento, "POST", "/api/v1/trabajos", solicitudHola)
@@ -229,6 +235,9 @@ func TestEjecutarCancelarReintentarEliminar(t *testing.T) {
 	esperarEstado(t, lento, idLento, nucleo.Ejecutando)
 	if r, _ := pedir(t, lento, "DELETE", "/api/v1/trabajos/"+idLento, ""); r.StatusCode != 409 {
 		t.Fatalf("no se elimina un trabajo activo: %d", r.StatusCode)
+	}
+	if r, cuerpo := pedir(t, lento, "DELETE", "/api/v1/trabajos", ""); r.StatusCode != 200 || !strings.Contains(cuerpo, `"eliminados":0`) {
+		t.Fatalf("vaciar el historial no toca los activos: %d %s", r.StatusCode, cuerpo)
 	}
 	if r, _ := pedir(t, lento, "POST", "/api/v1/trabajos/"+idLento+"/cancelar", ""); r.StatusCode != 202 {
 		t.Fatalf("cancelar: %d", r.StatusCode)

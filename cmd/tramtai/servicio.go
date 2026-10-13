@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/autoarranque"
 	"tramtai/internal/cliente"
 	"tramtai/internal/navegador"
 	"tramtai/internal/nucleo"
@@ -161,7 +162,34 @@ func comandoServicio() *cobra.Command {
 		}}
 	token := &cobra.Command{Use: "token", Short: "Muestra el token de la instancia global (igual que tramtai global token)",
 		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, "global") }}
-	grupo.AddCommand(iniciar, detener, estado, recargar, token)
+	autoarranqueCmd := &cobra.Command{Use: "autoarranque [activar|desactivar]",
+		Short: "Arranca Tramtai (la app de escritorio, oculta en la bandeja) al iniciar sesión en Windows",
+		Args:  cobra.MaximumNArgs(1), ValidArgs: []string{"activar", "desactivar"},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var err error
+			switch {
+			case len(args) == 0:
+			case args[0] == "activar":
+				var escritorio string
+				if escritorio, err = autoarranque.Escritorio(); err == nil {
+					err = autoarranque.Activar(escritorio)
+				}
+			case args[0] == "desactivar":
+				err = autoarranque.Desactivar()
+			default:
+				err = fmt.Errorf("usa activar o desactivar")
+			}
+			if err != nil {
+				return err
+			}
+			activo, err := autoarranque.Activo()
+			if err != nil {
+				return err
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), "arranque automático: "+map[bool]string{true: "activado", false: "desactivado"}[activo])
+			return nil
+		}}
+	grupo.AddCommand(iniciar, detener, estado, recargar, token, autoarranqueCmd)
 	return grupo
 }
 
@@ -194,7 +222,11 @@ func imprimirPuntos(out io.Writer, puntos []servicio.EstadoPunto) {
 		if p.Error != "" {
 			estado = p.Error
 		}
-		fmt.Fprintf(out, "  %-18s %-40s %-24s %s\n", p.Nombre, valorO(p.URL, "—"), "["+strings.Join(p.Contratos, ",")+"]", estado)
+		nombre := p.Nombre
+		if p.Grupo != "" {
+			nombre += " (" + p.Grupo + ")"
+		}
+		fmt.Fprintf(out, "  %-18s %-40s %-24s %s\n", nombre, valorO(p.URL, "—"), "["+strings.Join(p.Contratos, ",")+"]", estado)
 	}
 }
 

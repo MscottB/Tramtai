@@ -31,6 +31,7 @@ var icono []byte
 
 func main() {
 	proyecto := flag.String("proyecto", "", "raíz de un proyecto con .tramtai/config.yaml (por defecto, la instancia global)")
+	oculto := flag.Bool("oculto", false, "arranca solo en la bandeja, sin mostrar la ventana (arranque automático)")
 	flag.Parse()
 
 	var ventana *application.WebviewWindow
@@ -50,7 +51,7 @@ func main() {
 	})
 
 	sesion, err := prepararSesion(*proyecto)
-	opciones := application.WebviewWindowOptions{Title: "Tramtai " + version.Version, Width: 1280, Height: 820, MinWidth: 720, MinHeight: 480}
+	opciones := application.WebviewWindowOptions{Title: "Tramtai " + version.Version, Width: 1280, Height: 820, MinWidth: 720, MinHeight: 480, Hidden: *oculto}
 	if err != nil {
 		opciones.HTML = paginaError(err)
 	} else {

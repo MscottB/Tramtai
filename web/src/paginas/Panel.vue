@@ -2,11 +2,11 @@
   <div class="pagina apilado">
     <div class="row items-end q-col-gutter-md">
       <div class="col-12 col-sm">
-        <div class="titulo-pagina">Inicio</div>
-        <div class="texto-suave">Tus agentes de IA como una API en este equipo: {{ instancia?.base ?? '…' }}</div>
+        <div class="titulo-pagina">{{ t('menu.inicio') }}</div>
+        <div class="texto-suave">{{ t('inicio.subtitulo', { url: instancia?.base ?? '…' }) }}</div>
       </div>
       <div class="col-12 col-sm-auto">
-        <q-btn unelevated color="primary" icon="o_play_arrow" label="Ejecutar" no-caps @click="$emit('ir', 'ejecutar')" />
+        <q-btn unelevated color="primary" icon="o_play_arrow" :label="t('menu.ejecutar')" no-caps @click="$emit('ir', 'ejecutar')" />
       </div>
     </div>
 
@@ -29,9 +29,9 @@
     <div class="row q-col-gutter-md">
       <div class="col-12 col-md-7">
         <q-card class="full-height">
-          <q-card-section class="titulo-seccion">Primeros pasos</q-card-section>
+          <q-card-section class="titulo-seccion">{{ t('inicio.primerosPasos') }}</q-card-section>
           <q-list>
-            <q-item v-for="(p, i) in pasos" :key="p.titulo" class="q-py-md">
+            <q-item v-for="(p, i) in pasos" :key="p.pagina + i" class="q-py-md">
               <q-item-section avatar>
                 <q-avatar size="32px" :color="p.hecho ? 'positive' : 'grey-3'" :text-color="p.hecho ? 'white' : 'grey-8'"
                   :icon="p.hecho ? 'check' : undefined">{{ p.hecho ? '' : i + 1 }}</q-avatar>
@@ -50,15 +50,15 @@
       <div class="col-12 col-md-5">
         <q-card class="full-height">
           <q-card-section class="row items-center">
-            <div class="titulo-seccion col">Agentes</div>
-            <q-btn flat dense no-caps color="primary" label="Detalles" @click="$emit('ir', 'agentes')" />
+            <div class="titulo-seccion col">{{ t('menu.agentes') }}</div>
+            <q-btn flat dense no-caps color="primary" :label="t('inicio.detalles')" @click="$emit('ir', 'agentes')" />
           </q-card-section>
           <q-list v-if="adaptadores">
             <q-item v-for="a in adaptadores" :key="a.agente">
               <q-item-section avatar><q-icon name="o_smart_toy" color="grey-7" /></q-item-section>
               <q-item-section>{{ nombreAgente(a.agente) }}</q-item-section>
               <q-item-section side>
-                <q-chip dense :color="listo(a) ? 'positive' : 'warning'" text-color="white" :icon="listo(a) ? 'check' : 'priority_high'">
+                <q-chip dense :color="a.problema ? 'warning' : 'positive'" text-color="white" :icon="a.problema ? 'priority_high' : 'check'">
                   {{ estadoAgente(a) }}
                 </q-chip>
               </q-item-section>
@@ -71,24 +71,24 @@
 
     <q-card>
       <q-card-section class="row items-center">
-        <div class="titulo-seccion col">Trabajos recientes</div>
-        <q-btn flat dense no-caps color="primary" label="Ver historial" @click="$emit('ir', 'historial')" />
+        <div class="titulo-seccion col">{{ t('inicio.recientes') }}</div>
+        <q-btn flat dense no-caps color="primary" :label="t('inicio.verHistorial')" @click="$emit('ir', 'historial')" />
       </q-card-section>
       <q-list v-if="recientes.length" separator>
-        <q-item v-for="t in recientes" :key="t.id" clickable @click="$emit('ir', 'historial')">
+        <q-item v-for="trabajo in recientes" :key="trabajo.id" clickable @click="$emit('ir', 'historial')">
           <q-item-section avatar>
-            <q-icon :name="estadoInfo(t.estado).icono" :color="estadoInfo(t.estado).color" />
+            <q-icon :name="estadoInfo(trabajo.estado).icono" :color="estadoInfo(trabajo.estado).color" />
           </q-item-section>
           <q-item-section>
-            <q-item-label class="ellipsis">{{ textoDe(t) }}</q-item-label>
-            <q-item-label caption>{{ estadoInfo(t.estado).etiqueta }} · {{ modeloDe(t) }}</q-item-label>
+            <q-item-label class="ellipsis">{{ textoDe(trabajo) }}</q-item-label>
+            <q-item-label caption>{{ estadoInfo(trabajo.estado).etiqueta }} · {{ modeloDe(trabajo) }}</q-item-label>
           </q-item-section>
-          <q-item-section side class="text-caption">{{ haceCuanto(t.creado_en) }}</q-item-section>
+          <q-item-section side class="text-caption">{{ haceCuanto(trabajo.creado_en) }}</q-item-section>
         </q-item>
       </q-list>
       <div v-else class="vacio">
         <q-icon name="o_inbox" size="40px" />
-        <div class="q-mt-sm">Todavía no hay trabajos. Prueba un agente desde <b>Ejecutar</b>.</div>
+        <div class="q-mt-sm">{{ t('inicio.sinTrabajos') }}</div>
       </div>
     </q-card>
   </div>
@@ -96,7 +96,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { api, estadoInfo, haceCuanto, mensajeError, modeloDe, nombreAgente, terminales, textoDe, type Adaptador, type EstadoInstancia, type Trabajo } from '../api'
+import { api, estadoInfo, haceCuanto, mensajeError, modeloDe, nombreAgente, sesion, terminales, textoDe, type Adaptador, type EstadoInstancia, type Trabajo } from '../api'
+import { t } from '../i18n'
 
 defineEmits<{ ir: [pagina: string] }>()
 const instancia = ref<EstadoInstancia>()
@@ -107,28 +108,32 @@ const error = ref('')
 
 const total = (estados: string[]) => estados.reduce((n, e) => n + (instancia.value?.trabajos[e] ?? 0), 0)
 const contadores = computed(() => [
-  { titulo: 'Completados', valor: total(['completado']), icono: 'o_check_circle', color: 'positive' },
-  { titulo: 'En curso', valor: total(Object.keys(instancia.value?.trabajos ?? {}).filter((e) => !terminales.includes(e))), icono: 'o_autorenew', color: 'primary' },
-  { titulo: 'Con error', valor: total(['fallido', 'interrumpido']), icono: 'o_error', color: 'negative' },
+  { titulo: t('inicio.completados'), valor: total(['completado']), icono: 'o_check_circle', color: 'positive' },
+  { titulo: t('inicio.enCurso'), valor: total(Object.keys(instancia.value?.trabajos ?? {}).filter((e) => !terminales.includes(e))), icono: 'o_autorenew', color: 'primary' },
+  { titulo: t('inicio.conError'), valor: total(['fallido', 'interrumpido']), icono: 'o_error', color: 'negative' },
 ])
 
-const listo = (a: Adaptador) => !a.problema
+// estadoAgente resume el problema que informa el servicio (en español) en una etiqueta traducida.
 function estadoAgente(a: Adaptador) {
-  if (!a.problema) return 'Listo'
-  if (/no se encontró|envoltorio/.test(a.problema)) return 'No instalado'
-  if (/falta/i.test(a.problema)) return 'Falta la clave'
-  return 'Revisar'
+  if (!a.problema) return t('agente.listo')
+  if (/no se encontró|envoltorio/.test(a.problema)) return t('agente.noInstalado')
+  if (/falta/i.test(a.problema)) return t('agente.faltaClave')
+  return t('agente.revisar')
 }
 
 const pasos = computed(() => {
-  const listos = adaptadores.value?.filter(listo).length ?? 0
-  return [
-    { titulo: 'Deja listo al menos un agente', detalle: adaptadores.value ? `${listos} de ${adaptadores.value.length} agentes listos` : 'Comprobando…',
-      hecho: listos > 0, accion: 'Agentes', pagina: 'agentes' },
-    { titulo: 'Prueba un agente', detalle: 'Escribe un mensaje y mira la respuesta en vivo', hecho: total(['completado']) > 0, accion: 'Ejecutar', pagina: 'ejecutar' },
-    { titulo: 'Conecta tu aplicación', detalle: 'Cualquier app compatible con OpenAI o Anthropic, con la URL y la clave de aquí',
-      hecho: puntos.value > 0, accion: 'Conectar', pagina: 'conectar' },
+  const listos = adaptadores.value?.filter((a) => !a.problema).length ?? 0
+  const lista = [
+    { titulo: t('inicio.paso1'), detalle: adaptadores.value ? t('inicio.paso1Detalle', { listos, total: adaptadores.value.length }) : t('inicio.comprobando'),
+      hecho: listos > 0, accion: t('menu.agentes'), pagina: 'agentes' },
+    { titulo: t('inicio.paso2'), detalle: t('inicio.paso2Detalle'), hecho: total(['completado']) > 0, accion: t('menu.ejecutar'), pagina: 'ejecutar' },
+    { titulo: t('inicio.paso3'), detalle: t('inicio.paso3Detalle'), hecho: puntos.value > 0, accion: t('inicio.paso3Accion'), pagina: 'conectar' },
   ]
+  if (sesion.value?.autoarranque !== undefined) {
+    lista.push({ titulo: t('inicio.paso4'), detalle: t('inicio.paso4Detalle'), hecho: sesion.value.autoarranque,
+      accion: t('inicio.paso4Accion'), pagina: 'configuracion' })
+  }
+  return lista
 })
 
 async function cargar() {

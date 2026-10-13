@@ -16,6 +16,12 @@ func preparar(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: windows.CREATE_SUSPENDED | windows.CREATE_NO_WINDOW}
 }
 
+// SinVentana evita que un programa de consola abra una ventana cuando quien lo lanza no tiene consola (el
+// servicio en segundo plano o la app de escritorio).
+func SinVentana(cmd *exec.Cmd) {
+	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: windows.CREATE_NO_WINDOW, HideWindow: true}
+}
+
 type grupo struct{ job windows.Handle }
 
 // agrupar crea un Job Object con KILL_ON_JOB_CLOSE, le asigna el proceso y lo reanuda.
