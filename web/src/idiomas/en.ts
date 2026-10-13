@@ -462,7 +462,7 @@ const en: Textos = {
   'proyecto.titulo': 'Open a project',
   'proyecto.texto': 'Choose the project folder. If it is not one yet, Tramtai creates .tramtai/ inside it with its settings; if it already is, it just opens it. Each project has its own history, APIs and settings.',
   'proyecto.ruta': 'Project folder',
-  'proyecto.rutaHint': 'Full path, for example C:\\Projects\\my-app',
+  'proyecto.rutaHint': 'Full path, for example {ejemplo}',
   'proyecto.rutaRegla': 'Enter the folder',
   'proyecto.examinar': 'Browse…',
   'proyecto.abrirBoton': 'Open',

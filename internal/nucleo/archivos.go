@@ -25,6 +25,9 @@ func BuscarProyecto(dir string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
+	if real, err := filepath.EvalSymlinks(dir); err == nil {
+		dir = real // ruta real: sin enlaces ni nombres cortos de Windows
+	}
 	for {
 		if info, err := os.Stat(filepath.Join(dir, ".tramtai", "config.yaml")); err == nil && !info.IsDir() {
 			return dir, true

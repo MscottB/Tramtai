@@ -461,7 +461,7 @@ const es = {
   'proyecto.titulo': 'Abrir un proyecto',
   'proyecto.texto': 'Elige la carpeta del proyecto. Si todavía no lo es, Tramtai crea dentro .tramtai/ con su configuración; si ya lo es, solo lo abre. Cada proyecto tiene su propio historial, sus APIs y sus ajustes.',
   'proyecto.ruta': 'Carpeta del proyecto',
-  'proyecto.rutaHint': 'Ruta completa, por ejemplo C:\\Proyectos\\mi-app',
+  'proyecto.rutaHint': 'Ruta completa, por ejemplo {ejemplo}',
   'proyecto.rutaRegla': 'Indica la carpeta',
   'proyecto.examinar': 'Examinar…',
   'proyecto.abrirBoton': 'Abrir',

@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -244,7 +245,11 @@ func IDProyecto(raiz string, c *nucleo.Configuracion) string {
 	if slug == "" {
 		slug = "proyecto"
 	}
-	suma := sha256.Sum256([]byte(strings.ToLower(filepath.Clean(raiz))))
+	clave := filepath.Clean(raiz)
+	if runtime.GOOS != "linux" { // Windows y macOS no distinguen mayúsculas en las rutas; Linux sí
+		clave = strings.ToLower(clave)
+	}
+	suma := sha256.Sum256([]byte(clave))
 	return slug + "_" + hex.EncodeToString(suma[:4])
 }
 

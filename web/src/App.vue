@@ -157,7 +157,7 @@
         <q-form @submit="abrirProyecto">
           <q-card-section class="q-pt-none">
             <div class="row no-wrap items-start q-gutter-x-sm">
-              <q-input v-model="rutaProyecto" class="col" outlined dense autofocus :label="t('proyecto.ruta')" :hint="t('proyecto.rutaHint')"
+              <q-input v-model="rutaProyecto" class="col" outlined dense autofocus :label="t('proyecto.ruta')" :hint="t('proyecto.rutaHint', { ejemplo: ejemploRuta })"
                 input-class="codigo" :rules="[(v: string) => !!v.trim() || t('proyecto.rutaRegla')]" />
               <q-btn v-if="escritorio" outline no-caps color="primary" icon="o_folder_open" :label="t('proyecto.examinar')" style="height: 40px" @click="examinar" />
             </div>
@@ -319,6 +319,8 @@ async function cambiar(instancia: string) {
 const dialogoProyecto = ref(false)
 const rutaProyecto = ref('')
 const abriendoProyecto = ref(false)
+// En macOS y Linux también vale ~/ para la carpeta personal.
+const ejemploRuta = /Windows/i.test(navigator.userAgent) ? 'C:\\Proyectos\\mi-app' : '~/proyectos/mi-app'
 
 async function abrirProyecto() {
   if (!rutaProyecto.value.trim()) return
