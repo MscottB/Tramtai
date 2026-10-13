@@ -10,9 +10,9 @@
         <q-btn v-if="pila.length" flat round dense icon="arrow_back" :aria-label="t('app.volver')" class="q-mr-xs" @click="volver">
           <q-tooltip>{{ t('app.volverA', { pagina: tituloDe(pila[pila.length - 1]) }) }}</q-tooltip>
         </q-btn>
-        <img src="/logo.png" alt="" width="30" height="30" style="border-radius: 8px" />
-        <div class="q-ml-sm text-weight-bold text-subtitle1">Tramtai</div>
-        <q-badge outline color="grey-7" class="q-ml-sm gt-xs">{{ sesion.version }}</q-badge>
+        <img src="/logo.png" alt="" width="28" height="28" style="border-radius: 8px" />
+        <div class="q-ml-sm marca">Tramtai</div>
+        <span class="version q-ml-sm gt-xs">{{ sesion.version }}</span>
         <q-space />
         <q-btn-dropdown v-if="sesion.local && sesion.instancias?.length" flat no-caps :icon="iconoInstancia(sesion.ambito)"
           :label="sesion.nombre || t('app.elegirInstancia')" :aria-label="t('app.cambiarInstancia')">
@@ -36,9 +36,10 @@
           </q-list>
         </q-btn-dropdown>
         <q-chip v-else-if="sesion.instancia" outline :icon="iconoInstancia(sesion.ambito)">{{ sesion.nombre || sesion.instancia }}</q-chip>
-        <q-chip dense clickable :color="conectado ? 'positive' : 'negative'" text-color="white" :icon="conectado ? 'o_check_circle' : 'o_cloud_off'"
-          icon-right="arrow_drop_down" class="q-ml-sm" :aria-label="t('app.servicio')">
-          <span class="gt-xs">{{ conectado ? t('app.enMarcha') : t('app.sinConexion') }}</span>
+        <q-btn flat dense no-caps class="pastilla q-ml-sm" :aria-label="t('app.servicio')">
+          <span class="punto" :class="conectado ? 'punto--ok' : 'punto--error'" />
+          <span class="gt-xs q-ml-sm">{{ conectado ? t('app.enMarcha') : t('app.sinConexion') }}</span>
+          <q-icon name="arrow_drop_down" size="20px" class="texto-suave" />
           <q-menu anchor="bottom right" self="top right">
             <q-list style="min-width: 280px; max-width: 340px">
               <q-item>
@@ -63,7 +64,19 @@
               </q-item>
             </q-list>
           </q-menu>
-        </q-chip>
+        </q-btn>
+        <q-btn flat round dense :icon="iconoTema" :aria-label="t('app.tema')" class="q-ml-sm">
+          <q-tooltip>{{ t('app.tema') }}</q-tooltip>
+          <q-menu anchor="bottom right" self="top right">
+            <q-list style="min-width: 200px">
+              <q-item v-for="op in temas" :key="op.valor" v-close-popup clickable :active="op.valor === tema" @click="cambiarTema(op.valor)">
+                <q-item-section avatar><q-icon :name="op.icono" /></q-item-section>
+                <q-item-section>{{ t(op.etiqueta) }}</q-item-section>
+                <q-item-section v-if="op.valor === tema" side><q-icon name="check" color="primary" /></q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
         <q-btn flat round dense icon="o_translate" :aria-label="t('app.idioma')" class="q-ml-xs">
           <q-tooltip>{{ t('app.idioma') }}</q-tooltip>
           <q-menu anchor="bottom right" self="top right">
@@ -135,6 +148,7 @@ import { computed, markRaw, onMounted, onUnmounted, ref, watchEffect } from 'vue
 import { useQuasar } from 'quasar'
 import { api, avisarError, reiniciarYSeguir, sesion } from './api'
 import { cambiarIdioma, idioma, idiomas, t } from './i18n'
+import { cambiarTema, tema, type Tema } from './tema'
 import EntrarPagina from './paginas/Entrar.vue'
 import InicioPagina from './paginas/Panel.vue'
 import EjecutarPagina from './paginas/Ejecutar.vue'
@@ -202,7 +216,19 @@ function salirEscritorio() {
     cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'negative', label: t('escritorio.salirBoton'), unelevated: true, noCaps: true } })
     .onOk((marcas: string[]) => escritorio?.postMessage('tramtai:salir:' + (marcas.includes('no') ? '1' : '0')))
 }
-if (escritorio) Object.assign(window, { tramtaiEscritorio: { detener, salir: salirEscritorio } })
+if (escritorio) {
+  Object.assign(window, { tramtaiEscritorio: { detener, salir: salirEscritorio } })
+  // La ventana retiene lo que la bandeja le pide ejecutar hasta recibir este aviso de Wails, que solo envía su
+  // propio runtime (esta página no lo carga): sin él, los avisos de Salir y Detener no se abrirían.
+  escritorio.postMessage('wails:runtime:ready')
+}
+
+const temas: { valor: Tema; etiqueta: 'app.temaSistema' | 'app.temaClaro' | 'app.temaOscuro'; icono: string }[] = [
+  { valor: 'sistema', etiqueta: 'app.temaSistema', icono: 'o_brightness_auto' },
+  { valor: 'claro', etiqueta: 'app.temaClaro', icono: 'o_light_mode' },
+  { valor: 'oscuro', etiqueta: 'app.temaOscuro', icono: 'o_dark_mode' },
+]
+const iconoTema = computed(() => temas.find((op) => op.valor === tema.value)?.icono ?? 'o_brightness_auto')
 onUnmounted(() => clearInterval(sondeo))
 const avisoEntrada = ref(new URLSearchParams(location.search).get('error') === 'codigo' ? t('app.codigoCaducado') : '')
 

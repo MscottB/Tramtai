@@ -1,16 +1,45 @@
 <template>
   <div class="pagina apilado">
-    <div class="row items-end q-col-gutter-md">
-      <div class="col-12 col-sm">
+    <div class="row items-center q-col-gutter-md">
+      <div class="col-12 col-md">
         <div class="titulo-pagina">{{ t('menu.inicio') }}</div>
-        <div class="texto-suave">{{ t('inicio.subtitulo', { url: instancia?.base ?? '…' }) }}</div>
+        <div class="row items-center q-gutter-x-sm q-mt-xs texto-suave">
+          <span>{{ t('inicio.direccion') }}</span>
+          <span class="codigo direccion">{{ instancia?.base ?? '…' }}</span>
+          <q-btn v-if="instancia?.base" flat round dense size="sm" icon="o_content_copy" :aria-label="t('inicio.copiarDireccion')" @click="copiar(instancia.base)">
+            <q-tooltip>{{ t('inicio.copiarDireccion') }}</q-tooltip>
+          </q-btn>
+        </div>
       </div>
-      <div class="col-12 col-sm-auto">
+      <div class="col-12 col-md-auto row q-gutter-sm">
+        <q-btn outline color="primary" icon="o_hub" :label="t('menu.conectar')" no-caps @click="$emit('ir', 'conectar')" />
         <q-btn unelevated color="primary" icon="o_play_arrow" :label="t('menu.ejecutar')" no-caps @click="$emit('ir', 'ejecutar')" />
       </div>
     </div>
 
     <q-banner v-if="error" rounded class="error-caja">{{ error }}</q-banner>
+
+    <q-card v-if="!guiaOculta && !pasos.every((p) => p.hecho)">
+      <q-card-section class="row items-center no-wrap q-pb-sm">
+        <div class="icono-suave icono-suave--primary q-mr-md"><q-icon name="o_flag" size="22px" /></div>
+        <div class="col">
+          <div class="titulo-seccion">{{ t('inicio.primerosPasos') }}</div>
+          <div class="text-caption texto-suave">{{ t('inicio.guiaProgreso', { hechos: pasos.filter((p) => p.hecho).length, total: pasos.length }) }}</div>
+        </div>
+        <q-btn flat dense no-caps icon="o_visibility_off" :label="t('inicio.ocultarGuia')" class="texto-suave" @click="ocultar" />
+      </q-card-section>
+      <div class="row q-col-gutter-sm q-px-md q-pb-md">
+        <div v-for="p in pasos" :key="p.pagina + p.titulo" class="col-12 col-sm-6" :class="pasos.length > 3 ? 'col-lg-3' : 'col-lg-4'">
+          <div class="paso" :class="{ 'paso--hecho': p.hecho }" role="button" tabindex="0" @click="$emit('ir', p.pagina)" @keyup.enter="$emit('ir', p.pagina)">
+            <div class="row items-center no-wrap q-mb-xs">
+              <q-icon :name="p.hecho ? 'check_circle' : 'radio_button_unchecked'" :color="p.hecho ? 'positive' : 'grey-6'" size="20px" class="q-mr-sm" />
+              <span class="text-weight-medium">{{ p.titulo }}</span>
+            </div>
+            <div class="text-caption texto-suave">{{ p.detalle }}</div>
+          </div>
+        </div>
+      </div>
+    </q-card>
 
     <div>
       <div class="titulo-seccion">{{ t('inicio.peticiones') }}</div>
@@ -19,15 +48,12 @@
         <div v-for="c in contadores" :key="c.titulo" class="col-12 col-sm-4">
           <q-card v-ripple class="q-pa-md full-height cursor-pointer tarjeta-clicable" @click="verHistorial(c.filtro)">
             <div class="row items-center no-wrap">
-              <q-avatar :color="c.color" text-color="white" :icon="c.icono" size="40px" class="q-mr-md" />
+              <div class="icono-suave q-mr-md" :class="'icono-suave--' + c.color"><q-icon :name="c.icono" size="22px" /></div>
               <div class="col">
-                <div class="row items-baseline q-gutter-x-sm">
-                  <span class="text-h5 text-weight-bold">{{ c.valor }}</span>
-                  <span class="text-weight-medium">{{ c.titulo }}</span>
-                </div>
+                <div class="text-weight-medium">{{ c.titulo }}</div>
                 <div class="texto-suave text-caption">{{ c.detalle }}</div>
               </div>
-              <q-icon name="chevron_right" class="texto-suave" />
+              <div class="cifra q-ml-sm">{{ c.valor }}</div>
             </div>
           </q-card>
         </div>
@@ -37,29 +63,26 @@
     <div class="row q-col-gutter-md">
       <div class="col-12 col-md-7">
         <q-card class="full-height">
-          <q-card-section v-if="pasos.every((p) => p.hecho)" class="row items-center no-wrap q-gutter-x-md full-height">
-            <q-avatar color="positive" text-color="white" icon="check" size="44px" />
-            <div>
-              <div class="titulo-seccion">{{ t('inicio.todoListo') }}</div>
-              <div class="texto-suave text-body2">{{ t('inicio.todoListoTexto') }}</div>
-            </div>
+          <q-card-section class="row items-center">
+            <div class="titulo-seccion col">{{ t('inicio.recientes') }}</div>
+            <q-btn flat dense no-caps color="primary" :label="t('inicio.verHistorial')" @click="$emit('ir', 'historial')" />
           </q-card-section>
-          <q-card-section v-else class="titulo-seccion">{{ t('inicio.primerosPasos') }}</q-card-section>
-          <q-list v-if="!pasos.every((p) => p.hecho)">
-            <q-item v-for="(p, i) in pasos" :key="p.pagina + i" class="q-py-md">
+          <q-list v-if="recientes.length">
+            <q-item v-for="trabajo in recientes" :key="trabajo.id" clickable @click="verPeticion(trabajo.id)">
               <q-item-section avatar>
-                <q-avatar size="32px" :color="p.hecho ? 'positive' : 'grey-3'" :text-color="p.hecho ? 'white' : 'grey-8'"
-                  :icon="p.hecho ? 'check' : undefined">{{ p.hecho ? '' : i + 1 }}</q-avatar>
+                <q-icon :name="estadoInfo(trabajo.estado).icono" :color="estadoInfo(trabajo.estado).color" />
               </q-item-section>
               <q-item-section>
-                <q-item-label class="text-weight-medium">{{ p.titulo }}</q-item-label>
-                <q-item-label caption>{{ p.detalle }}</q-item-label>
+                <q-item-label class="ellipsis">{{ textoDe(trabajo) }}</q-item-label>
+                <q-item-label caption>{{ estadoInfo(trabajo.estado).etiqueta }} · {{ modeloDe(trabajo) }}</q-item-label>
               </q-item-section>
-              <q-item-section side>
-                <q-btn outline color="primary" no-caps :label="p.accion" @click="$emit('ir', p.pagina)" />
-              </q-item-section>
+              <q-item-section side class="text-caption">{{ haceCuanto(trabajo.creado_en) }}</q-item-section>
             </q-item>
           </q-list>
+          <div v-else class="vacio">
+            <q-icon name="o_inbox" size="40px" />
+            <div class="q-mt-sm">{{ t('inicio.sinTrabajos') }}</div>
+          </div>
         </q-card>
       </div>
       <div class="col-12 col-md-5">
@@ -70,12 +93,12 @@
           </q-card-section>
           <q-list v-if="adaptadores">
             <q-item v-for="a in adaptadores" :key="a.agente">
-              <q-item-section avatar><q-icon name="o_smart_toy" color="grey-7" /></q-item-section>
+              <q-item-section avatar><q-icon name="o_smart_toy" class="texto-suave" /></q-item-section>
               <q-item-section>{{ nombreAgente(a.agente) }}</q-item-section>
               <q-item-section side>
-                <q-chip dense :color="a.problema ? 'warning' : 'positive'" text-color="white" :icon="a.problema ? 'priority_high' : 'check'">
-                  {{ estadoAgente(a) }}
-                </q-chip>
+                <span class="etiqueta" :class="a.problema ? 'etiqueta--aviso' : 'etiqueta--ok'">
+                  <q-icon :name="a.problema ? 'priority_high' : 'check'" size="14px" />{{ estadoAgente(a) }}
+                </span>
               </q-item-section>
             </q-item>
           </q-list>
@@ -83,38 +106,20 @@
         </q-card>
       </div>
     </div>
-
-    <q-card>
-      <q-card-section class="row items-center">
-        <div class="titulo-seccion col">{{ t('inicio.recientes') }}</div>
-        <q-btn flat dense no-caps color="primary" :label="t('inicio.verHistorial')" @click="$emit('ir', 'historial')" />
-      </q-card-section>
-      <q-list v-if="recientes.length" separator>
-        <q-item v-for="trabajo in recientes" :key="trabajo.id" clickable @click="verPeticion(trabajo.id)">
-          <q-item-section avatar>
-            <q-icon :name="estadoInfo(trabajo.estado).icono" :color="estadoInfo(trabajo.estado).color" />
-          </q-item-section>
-          <q-item-section>
-            <q-item-label class="ellipsis">{{ textoDe(trabajo) }}</q-item-label>
-            <q-item-label caption>{{ estadoInfo(trabajo.estado).etiqueta }} · {{ modeloDe(trabajo) }}</q-item-label>
-          </q-item-section>
-          <q-item-section side class="text-caption">{{ haceCuanto(trabajo.creado_en) }}</q-item-section>
-        </q-item>
-      </q-list>
-      <div v-else class="vacio">
-        <q-icon name="o_inbox" size="40px" />
-        <div class="q-mt-sm">{{ t('inicio.sinTrabajos') }}</div>
-      </div>
-    </q-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { api, estadoInfo, filtroHistorial, trabajoAbrir, haceCuanto, mensajeError, modeloDe, nombreAgente, sesion, terminales, textoDe, type Adaptador, type EstadoInstancia, type Trabajo } from '../api'
+import { api, avisar, copiar, estadoInfo, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, haceCuanto, mensajeError, modeloDe, nombreAgente, sesion, terminales, textoDe, type Adaptador, type EstadoInstancia, type Trabajo } from '../api'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()
+
+function ocultar() {
+  ocultarGuia(true)
+  avisar(t('inicio.guiaOculta'))
+}
 
 function verPeticion(id: string) {
   trabajoAbrir.value = id

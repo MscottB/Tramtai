@@ -6,7 +6,10 @@
     </div>
 
     <q-card>
-      <q-card-section class="titulo-seccion">{{ t('ayuda.empezar') }}</q-card-section>
+      <q-card-section class="row items-center">
+        <div class="titulo-seccion col">{{ t('ayuda.empezar') }}</div>
+        <q-btn v-if="guiaOculta" flat dense no-caps color="primary" icon="o_visibility" :label="t('ayuda.mostrarGuia')" @click="ocultarGuia(false); $emit('ir', 'inicio')" />
+      </q-card-section>
       <q-list>
         <q-item v-for="(p, i) in pasos" :key="p.titulo" class="q-py-md">
           <q-item-section avatar top>
@@ -47,6 +50,7 @@
 </template>
 
 <script setup lang="ts">
+import { guiaOculta, ocultarGuia } from '../api'
 import { t } from '../i18n'
 
 defineEmits<{ ir: [pagina: string] }>()

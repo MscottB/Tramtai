@@ -5,6 +5,7 @@ import '@quasar/extras/material-icons-outlined/material-icons-outlined.css'
 import 'quasar/dist/quasar.css'
 import './estilos.css'
 import { quasarInicial } from './i18n'
+import { modoQuasar } from './tema'
 import App from './App.vue'
 
 // Colores del icono de Tramtai: verde azulado del fondo y blanco del tranvía.
@@ -19,5 +20,5 @@ const marca = {
 }
 
 createApp(App)
-  .use(Quasar, { plugins: { Notify, Dialog }, lang: quasarInicial(), config: { dark: 'auto', brand: marca } })
+  .use(Quasar, { plugins: { Notify, Dialog }, lang: quasarInicial(), config: { dark: modoQuasar(), brand: marca } })
   .mount('#app')

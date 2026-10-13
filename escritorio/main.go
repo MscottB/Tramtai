@@ -7,7 +7,7 @@ package main
 import (
 	"bytes"
 	"context"
-	_ "embed"
+	"embed"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -44,10 +44,16 @@ var icono []byte
 // intervaloVigilancia es cada cuánto se repasa el estado del servicio y de las APIs.
 const intervaloVigilancia = 3 * time.Second
 
-// Círculos del menú de la bandeja: en marcha o activa (verde), detenido o desactivada (rojo).
+// iconosMenu son los iconos de las acciones de la bandeja: máscaras de 48 px del icono «outlined» de Material
+// que usa la Web UI, que se tiñen y reducen al tamaño del menú.
+//
+//go:embed icono/menu/*.png
+var iconosMenu embed.FS
+
+// Colores de los círculos del menú: en marcha o activa (verde), detenido o desactivada (rojo).
 var (
-	verde = circulo(color.RGBA{0x21, 0xba, 0x45, 0xff})
-	rojo  = circulo(color.RGBA{0xd3, 0x2f, 0x2f, 0xff})
+	colorVerde = color.RGBA{0x22, 0xc5, 0x5e, 0xff}
+	colorRojo  = color.RGBA{0xef, 0x44, 0x44, 0xff}
 )
 
 const textoDetener = "Se detienen todas las instancias y las aplicaciones conectadas dejarán de funcionar. Tramtai sigue en la bandeja para volver a iniciarlo. ¿Continuar?"
@@ -169,6 +175,9 @@ func main() {
 	var repasar func()
 
 	construir := func(cli *cliente.Cliente, puntos []servicio.EstadoPunto, proyectos map[string]string, conWindows, sinPreguntar bool) *application.Menu {
+		lado, oscuro := ladoIconoMenu(), menuOscuro()
+		verde, rojo := circulo(colorVerde, lado), circulo(colorRojo, lado)
+		icono := func(nombre string) []byte { return iconoMenu(nombre, lado, oscuro) }
 		menu := app.NewMenu()
 		if cli == nil {
 			menu.Add("Servicio detenido").SetBitmap(rojo).OnClick(func(*application.Context) { mostrar() })
@@ -176,7 +185,7 @@ func main() {
 			menu.Add("Servicio en marcha · " + strings.TrimPrefix(cli.Base, "http://")).SetBitmap(verde).OnClick(func(*application.Context) { mostrar() })
 		}
 		menu.AddSeparator()
-		menu.Add("Abrir Tramtai").OnClick(func(*application.Context) { mostrar() })
+		menu.Add("Abrir Tramtai").SetBitmap(icono("abrir")).OnClick(func(*application.Context) { mostrar() })
 		if cli != nil {
 			activas := 0
 			for _, p := range puntos {
@@ -210,15 +219,15 @@ func main() {
 			}
 			if len(puntos) > 0 {
 				apis.AddSeparator()
-				apis.Add("Gestionar en Mis APIs").OnClick(func(*application.Context) { irA("conectar") })
+				apis.Add("Gestionar en Mis APIs").SetBitmap(icono("apis")).OnClick(func(*application.Context) { irA("conectar") })
 			} else {
-				apis.Add("Crear una API…").OnClick(func(*application.Context) { irA("conectar") })
+				apis.Add("Crear una API…").SetBitmap(icono("apis")).OnClick(func(*application.Context) { irA("conectar") })
 			}
-			menu.Add("Copiar la dirección para tus apps").OnClick(func(*application.Context) { app.Clipboard.SetText(cli.Base) })
+			menu.Add("Copiar la dirección para tus apps").SetBitmap(icono("copiar")).OnClick(func(*application.Context) { app.Clipboard.SetText(cli.Base) })
 		}
 		menu.AddSeparator()
 		if cli == nil {
-			menu.Add("Iniciar el servicio").OnClick(func(*application.Context) {
+			menu.Add("Iniciar el servicio").SetBitmap(icono("iniciar")).OnClick(func(*application.Context) {
 				// Si ya está en marcha solo vuelve a entrar; si no, lo inicia en segundo plano.
 				if nueva, err := prepararSesion(*proyecto); err != nil {
 					ventana.SetHTML(paginaError(err))
@@ -229,7 +238,7 @@ func main() {
 				repasar()
 			})
 		} else {
-			menu.Add("Reiniciar el servicio").OnClick(func(*application.Context) {
+			menu.Add("Reiniciar el servicio").SetBitmap(icono("reiniciar")).OnClick(func(*application.Context) {
 				ejecutable, err := buscarTramtai()
 				datos, errDatos := dirDatos()
 				if err != nil || errDatos != nil {
@@ -241,7 +250,7 @@ func main() {
 					detener(cli)
 				}
 			})
-			menu.Add("Detener el servicio…").OnClick(func(*application.Context) { avisar("detener") })
+			menu.Add("Detener el servicio…").SetBitmap(icono("detener")).OnClick(func(*application.Context) { avisar("detener") })
 		}
 		// El arranque con Windows también se cambia en Ajustes; el repaso mantiene la marca al día.
 		if runtime.GOOS == "windows" {
@@ -259,11 +268,11 @@ func main() {
 		menu.AddSeparator()
 		switch {
 		case cli == nil:
-			menu.Add("Salir").OnClick(func(*application.Context) { app.Quit() })
+			menu.Add("Salir").SetBitmap(icono("salir")).OnClick(func(*application.Context) { app.Quit() })
 		case sinPreguntar:
-			menu.Add("Salir y detener el servicio").OnClick(func(*application.Context) { detenerYSalir(cli) })
+			menu.Add("Salir y detener el servicio").SetBitmap(icono("salir")).OnClick(func(*application.Context) { detenerYSalir(cli) })
 		default:
-			menu.Add("Salir y detener el servicio…").OnClick(func(*application.Context) { avisar("salir") })
+			menu.Add("Salir y detener el servicio…").SetBitmap(icono("salir")).OnClick(func(*application.Context) { avisar("salir") })
 		}
 		return menu
 	}
@@ -310,7 +319,8 @@ func main() {
 		vivo = cli
 		mu.Unlock()
 
-		nueva := fmt.Sprint(conWindows, sinPreguntar, puntos)
+		// También el tema y el DPI del sistema, porque cambian el color y el tamaño de los iconos.
+		nueva := fmt.Sprint(conWindows, sinPreguntar, puntos, menuOscuro(), ladoIconoMenu())
 		if cli != nil {
 			nueva += cli.Base
 		}
@@ -378,16 +388,56 @@ func guardarPreferencias(p preferencias) error {
 	return os.WriteFile(ruta, datos, 0o600)
 }
 
-// circulo dibuja un punto de color de 16 px, con el borde suavizado, para el menú de la bandeja.
-func circulo(c color.RGBA) []byte {
-	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
-	for y := range 16 {
-		for x := range 16 {
-			a := math.Min(1, math.Max(0, 5.5-math.Hypot(float64(x)-7.5, float64(y)-7.5)))
+// circulo dibuja un punto de color de lado px, con el borde suavizado, para el menú de la bandeja.
+func circulo(c color.RGBA, lado int) []byte {
+	img := image.NewRGBA(image.Rect(0, 0, lado, lado))
+	centro, radio := float64(lado)/2-0.5, float64(lado)*0.3
+	for y := range lado {
+		for x := range lado {
+			a := math.Min(1, math.Max(0, radio+0.5-math.Hypot(float64(x)-centro, float64(y)-centro)))
 			// image.RGBA guarda el color premultiplicado por el alfa.
 			img.SetRGBA(x, y, color.RGBA{uint8(float64(c.R) * a), uint8(float64(c.G) * a), uint8(float64(c.B) * a), uint8(255 * a)})
 		}
 	}
+	return codificar(img)
+}
+
+// iconoMenu reduce la máscara del icono a lado px (promediando 4×4 muestras por píxel) y la tiñe del color del
+// texto del menú: claro en modo oscuro, oscuro en modo claro. Devuelve nil si el icono no existe.
+func iconoMenu(nombre string, lado int, oscuro bool) []byte {
+	datos, err := iconosMenu.ReadFile("icono/menu/" + nombre + ".png")
+	if err != nil {
+		return nil
+	}
+	origen, err := png.Decode(bytes.NewReader(datos))
+	if err != nil {
+		return nil
+	}
+	tono := uint32(0x4a)
+	if oscuro {
+		tono = 0xdc
+	}
+	const muestras = 4
+	b := origen.Bounds()
+	img := image.NewRGBA(image.Rect(0, 0, lado, lado))
+	for y := range lado {
+		for x := range lado {
+			var suma uint32
+			for j := range muestras {
+				for i := range muestras {
+					_, _, _, a := origen.At(b.Min.X+(x*muestras+i)*b.Dx()/(lado*muestras), b.Min.Y+(y*muestras+j)*b.Dy()/(lado*muestras)).RGBA()
+					suma += a >> 8
+				}
+			}
+			a := suma / (muestras * muestras)
+			v := uint8(tono * a / 255)
+			img.SetRGBA(x, y, color.RGBA{v, v, v, uint8(a)})
+		}
+	}
+	return codificar(img)
+}
+
+func codificar(img image.Image) []byte {
 	var b bytes.Buffer
 	_ = png.Encode(&b, img)
 	return b.Bytes()

@@ -16,7 +16,7 @@
 
 - **Sin clave:** en tu propio equipo entras directamente; Tramtai comprueba que el navegador es de tu mismo usuario de Windows. Desde otro equipo o en macOS, la página explica cómo entrar.
 - **Que arranque solo:** en **Ajustes → Arranque con Windows** (o `tramtai servicio autoarranque activar`), Tramtai se inicia oculto en la bandeja al entrar en Windows y la Web UI está siempre disponible, sin abrir ninguna terminal.
-- **Ayuda e idioma:** la página **Ayuda** resume estos pasos y responde las dudas comunes; el botón de idioma de la cabecera cambia entre español e inglés.
+- **Ayuda, idioma y apariencia:** la página **Ayuda** resume estos pasos y responde las dudas comunes. En la cabecera, un botón cambia entre español e inglés y otro elige la apariencia: clara, oscura o como el sistema. La guía de **Inicio** es opcional: «Ocultar guía» la quita y **Ayuda** la vuelve a mostrar.
 - **Aplicación de escritorio:** `bin/tramtai-escritorio.exe` hace lo mismo en su propia ventana. Cerrar la ventana la deja en la bandeja con el servicio en marcha; el menú del clic derecho muestra el estado y tus APIs, y «Salir y detener el servicio…» la cierra del todo (con un aviso).
 - **En un proyecto:** dentro de su carpeta, `tramtai abrir` abre su propia instancia, con trabajos y configuración separados de la global.
 

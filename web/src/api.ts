@@ -231,6 +231,25 @@ export const origenHistorial = ref('')
 // trabajoAbrir abre el Historial con el detalle de una petición (desde Inicio).
 export const trabajoAbrir = ref('')
 
+// guiaOculta: la guía de inicio es opcional; ocultarla se recuerda en este navegador y se deshace desde Ayuda.
+const claveGuia = 'tramtai.guiaOculta'
+export const guiaOculta = ref(((): boolean => {
+  try {
+    return localStorage.getItem(claveGuia) === '1'
+  } catch {
+    return false
+  }
+})())
+export function ocultarGuia(oculta: boolean) {
+  guiaOculta.value = oculta
+  try {
+    if (oculta) localStorage.setItem(claveGuia, '1')
+    else localStorage.removeItem(claveGuia)
+  } catch {
+    // no se recuerda, pero se aplica
+  }
+}
+
 export const terminales = ['completado', 'fallido', 'cancelado', 'interrumpido']
 
 // estados da a cada estado un color y un icono; el nombre sale de las traducciones (estado.<estado>).
