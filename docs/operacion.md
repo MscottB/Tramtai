@@ -40,12 +40,16 @@ La Web UI está en español y en inglés (el botón de idioma de la cabecera) y 
 
 También se puede abrir `http://127.0.0.1:17373` directamente: en este equipo entra sin clave.
 
-La aplicación de escritorio inicia el servicio si no está en marcha y muestra la misma Web UI en su ventana. Al cerrarla queda en la bandeja del sistema vigilando el servicio: el icono (al pasar el ratón) y la primera línea del menú dicen si está en marcha y en qué dirección. Clic en el icono abre la ventana; **clic derecho** abre las acciones rápidas, sin abrir la app:
+La aplicación de escritorio inicia el servicio si no está en marcha y muestra la misma Web UI en su ventana. Al cerrar la ventana queda en la bandeja del sistema vigilando el servicio. Clic en el icono abre la ventana; **clic derecho** abre el menú, sin abrir la app:
 
-- **Ir a** una sección (Inicio, Agentes, Probar, Mis APIs, Historial, Ajustes, Ayuda), **Abrir en el navegador** y **Copiar la dirección para tus apps**.
-- **Iniciar**, **Reiniciar** y **Detener el servicio…** (con confirmación); solo se habilitan las que corresponden. Tras detenerlo, la app sigue en la bandeja para volver a iniciarlo.
+- **Estado**: círculo verde «Servicio en marcha · 127.0.0.1:17373» o rojo «Servicio detenido» (también al pasar el ratón por el icono).
+- **Mis APIs**: las APIs de todos los espacios en marcha (global y proyectos), con un círculo verde si está activa y rojo si está desactivada o con error. Un clic la desactiva o la vuelve a activar; se guarda y se aplica sin reiniciar. Al final, «Gestionar en Mis APIs» abre esa sección.
+- **Copiar la dirección para tus apps**.
+- **Iniciar el servicio** (si está detenido), o **Reiniciar** y **Detener el servicio…** (si está en marcha). Tras detenerlo, la app sigue en la bandeja para volver a iniciarlo.
 - **Iniciar con Windows**, el mismo ajuste que en Ajustes.
-- **Salir**, que cierra la app pero **no detiene el servicio**: tus aplicaciones siguen funcionando. Para pararlo todo, primero «Detener el servicio…» y luego «Salir».
+- **Salir y detener el servicio…**: cierra la app y detiene el servicio, así que tus aplicaciones dejan de funcionar hasta que vuelvas a abrirla. Pide confirmación con un aviso que se puede marcar como «No volver a mostrar». Para recuperar el aviso, borra `%APPDATA%\tramtai\escritorio.json`.
+
+Los avisos de Detener y Salir se muestran dentro de la ventana, con el estilo de la app.
 
 ### Arranque con Windows
 

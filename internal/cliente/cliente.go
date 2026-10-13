@@ -173,6 +173,11 @@ func (c *Cliente) Recargar(ctx context.Context) ([]servicio.EstadoPunto, error) 
 	return r.Puntos, err
 }
 
+// ActivarPunto activa o desactiva un punto de acceso; se guarda en su configuración y se aplica sin reiniciar.
+func (c *Cliente) ActivarPunto(ctx context.Context, instancia, nombre string, activo bool) error {
+	return c.pedir(ctx, "PATCH", "/api/v1/puntos/"+url.PathEscape(nombre), instancia, cuerpoJSON(map[string]bool{"activo": activo}), "application/json", nil)
+}
+
 // Detener pide al servicio que se detenga con todas sus instancias.
 func (c *Cliente) Detener(ctx context.Context) error {
 	return c.pedir(ctx, "POST", "/api/v1/servicio/detener", "", nil, "", nil)

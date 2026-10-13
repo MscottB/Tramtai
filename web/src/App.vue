@@ -193,6 +193,16 @@ function detener() {
       }
     })
 }
+// En la app de escritorio (WebView2) la bandeja abre aquí sus avisos, con el estilo de la app, y la respuesta le
+// vuelve con postMessage.
+const escritorio = (window as { chrome?: { webview?: { postMessage(mensaje: string): void } } }).chrome?.webview
+function salirEscritorio() {
+  $q.dialog({ title: t('escritorio.salirTitulo'), message: t('escritorio.salirTexto'),
+    options: { type: 'checkbox', model: [], items: [{ label: t('escritorio.noMostrar'), value: 'no' }] },
+    cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'negative', label: t('escritorio.salirBoton'), unelevated: true, noCaps: true } })
+    .onOk((marcas: string[]) => escritorio?.postMessage('tramtai:salir:' + (marcas.includes('no') ? '1' : '0')))
+}
+if (escritorio) Object.assign(window, { tramtaiEscritorio: { detener, salir: salirEscritorio } })
 onUnmounted(() => clearInterval(sondeo))
 const avisoEntrada = ref(new URLSearchParams(location.search).get('error') === 'codigo' ? t('app.codigoCaducado') : '')
 
