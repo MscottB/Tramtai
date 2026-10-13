@@ -315,6 +315,11 @@ func (p *Planificador) EliminarTerminados(ctx context.Context) (int, error) {
 	return p.almacen.EliminarTerminados(ctx, p.opc.Instancia)
 }
 
+// UsoPorPunto resume las peticiones de cada punto de acceso de esta instancia.
+func (p *Planificador) UsoPorPunto(ctx context.Context) (map[string]persistencia.UsoPunto, error) {
+	return p.almacen.UsoPorPunto(ctx, p.opc.Instancia)
+}
+
 // ModelosEfectivos devuelve el último modelo efectivo por "agente/modelo enviado".
 func (p *Planificador) ModelosEfectivos(ctx context.Context) (map[string]string, error) {
 	return p.almacen.ModelosEfectivos(ctx)

@@ -361,7 +361,7 @@ const en: Textos = {
   'ejecutar.ejemplo1': 'Summarize in three points what an API is.',
   'ejecutar.ejemplo2': 'Translate into Spanish: “Thanks for your message, I will reply tomorrow”.',
   'ejecutar.ejemplo3': 'Write a short, friendly email asking for a meeting.',
-  'puntos.uso': '{n} recent requests',
+  'puntos.uso': '{n} requests in 7 days',
   'agentes.probar': 'Try it',
   'ayuda.p8': 'What do Completed, In progress and With errors mean?',
   'ayuda.r8': 'They are your requests: each message sent to an agent from Try, the terminal or an app. Completed got an answer; In progress are queued or running; With errors failed (for example, a missing key) or were interrupted. History shows the detail of each one.',
@@ -369,6 +369,13 @@ const en: Textos = {
   'ayuda.r9': 'At the top right you will see “Running” or “Offline”. Tramtai keeps running in the background even if you close the window or the terminal, so your apps can keep using it. “tramtai servicio estado” shows its status and “tramtai servicio detener” stops it.',
   'ayuda.p10': 'How do I see what it processes while developing?',
   'ayuda.r10': '“tramtai servicio registro -f” shows one line per request live (agent, model, duration, tokens and the source API). To have everything in one terminal, stop the service and run “tramtai servicio iniciar --abrir”: it runs in the foreground with the log in view, opens the app, and Ctrl+C stops it.',
+  'app.volver': 'Back',
+  'app.volverA': 'Back to {pagina}',
+  'historial.todosOrigenes': 'All sources',
+  'puntos.usoErrores': '{n} with errors',
+  'puntos.usoUltima': 'last {cuando}',
+  'puntos.sinUso': 'No requests yet',
+  'puntos.usoUno': '1 request in 7 days',
 }
 
 export default en

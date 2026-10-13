@@ -90,7 +90,7 @@
         <q-btn flat dense no-caps color="primary" :label="t('inicio.verHistorial')" @click="$emit('ir', 'historial')" />
       </q-card-section>
       <q-list v-if="recientes.length" separator>
-        <q-item v-for="trabajo in recientes" :key="trabajo.id" clickable @click="$emit('ir', 'historial')">
+        <q-item v-for="trabajo in recientes" :key="trabajo.id" clickable @click="verPeticion(trabajo.id)">
           <q-item-section avatar>
             <q-icon :name="estadoInfo(trabajo.estado).icono" :color="estadoInfo(trabajo.estado).color" />
           </q-item-section>
@@ -111,10 +111,15 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { api, estadoInfo, filtroHistorial, haceCuanto, mensajeError, modeloDe, nombreAgente, sesion, terminales, textoDe, type Adaptador, type EstadoInstancia, type Trabajo } from '../api'
+import { api, estadoInfo, filtroHistorial, trabajoAbrir, haceCuanto, mensajeError, modeloDe, nombreAgente, sesion, terminales, textoDe, type Adaptador, type EstadoInstancia, type Trabajo } from '../api'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()
+
+function verPeticion(id: string) {
+  trabajoAbrir.value = id
+  emit('ir', 'historial')
+}
 
 function verHistorial(filtro: string) {
   filtroHistorial.value = filtro

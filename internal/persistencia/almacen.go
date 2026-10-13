@@ -536,6 +536,37 @@ func (a *Almacen) Purgar(ctx context.Context, instancia string, r Retencion) (ve
 	return vencidos, int(n), a.confirmar(tx)
 }
 
+// UsoPunto resume las peticiones de un punto de acceso que conserva la retención.
+type UsoPunto struct {
+	Peticiones int        `json:"peticiones"`
+	Errores    int        `json:"errores"`
+	Ultima     *time.Time `json:"ultima,omitempty"`
+}
+
+// UsoPorPunto cuenta las peticiones, las fallidas o interrumpidas y la última, por punto de acceso.
+func (a *Almacen) UsoPorPunto(ctx context.Context, instancia string) (map[string]UsoPunto, error) {
+	filas, err := a.db.QueryContext(ctx, `SELECT punto_acceso, COUNT(*), SUM(CASE WHEN estado IN (?, ?) THEN 1 ELSE 0 END), MAX(creado_en)
+		FROM trabajos WHERE instancia = ? AND punto_acceso <> '' GROUP BY punto_acceso`,
+		string(nucleo.Fallido), string(nucleo.Interrumpido), instancia)
+	if err != nil {
+		return nil, err
+	}
+	defer filas.Close()
+	uso := map[string]UsoPunto{}
+	for filas.Next() {
+		var punto, ultima string
+		var u UsoPunto
+		if err := filas.Scan(&punto, &u.Peticiones, &u.Errores, &ultima); err != nil {
+			return nil, err
+		}
+		if t, err := time.Parse(formatoFecha, ultima); err == nil {
+			u.Ultima = &t
+		}
+		uso[punto] = u
+	}
+	return uso, filas.Err()
+}
+
 // ModelosEfectivos devuelve, por "agente/modelo enviado" (modelo vacío: el predeterminado del CLI), el último
 // modelo efectivo que informó el agente; así la Web UI muestra la versión real detrás de un alias como "sonnet".
 func (a *Almacen) ModelosEfectivos(ctx context.Context) (map[string]string, error) {

@@ -17,7 +17,10 @@
           <q-btn-toggle v-model="filtro" no-caps flat toggle-color="primary"
             :options="[{ label: t('historial.todos'), value: 'todos' }, { label: t('inicio.enCurso'), value: 'curso' }, { label: t('inicio.completados'), value: 'ok' }, { label: t('inicio.conError'), value: 'error' }]" />
         </div>
-        <div class="col-12 col-md-4">
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-select v-model="origen" :options="origenes" emit-value map-options dense outlined :label="t('historial.origen')" />
+        </div>
+        <div class="col-12 col-sm-6 col-md-3">
           <q-input v-model="busqueda" dense outlined clearable :placeholder="t('historial.buscar')" debounce="150">
             <template #prepend><q-icon name="search" /></template>
           </q-input>
@@ -105,9 +108,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useQuasar, type QTableColumn } from 'quasar'
-import { api, avisar, avisarError, copiar, duracion, esJSON, estadoInfo, fecha, filtroHistorial, haceCuanto, modeloDe, terminales, textoDe, trabajoSeguido, type Trabajo } from '../api'
+import { api, avisar, avisarError, copiar, duracion, esJSON, estadoInfo, fecha, filtroHistorial, haceCuanto, origenHistorial, trabajoAbrir, modeloDe, terminales, textoDe, trabajoSeguido, type Trabajo } from '../api'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()
@@ -119,6 +122,16 @@ const detalle = ref<Trabajo>()
 const filtro = ref(filtroHistorial.value || 'todos')
 filtroHistorial.value = ''
 const busqueda = ref<string | null>('')
+// origen: '' todas, '-' la API principal, o el nombre de una API (se filtra en el servicio).
+const origen = ref(origenHistorial.value)
+origenHistorial.value = ''
+const nombresApis = ref<string[]>([])
+const origenes = computed(() => [
+  { label: t('historial.todosOrigenes'), value: '' },
+  { label: t('historial.origenPrincipal'), value: '-' },
+  ...nombresApis.value.map((n) => ({ label: 'API ' + n, value: n })),
+])
+watch(origen, () => cargar())
 
 const columnas = computed<QTableColumn<Trabajo>[]>(() => [
   { name: 'estado', label: t('historial.estado'), field: 'estado', align: 'left' },
@@ -134,14 +147,14 @@ const filas = computed(() => {
   return trabajos.value.filter((x) => {
     const terminado = terminales.includes(x.estado)
     const pasa = { todos: true, curso: !terminado, ok: x.estado === 'completado', error: ['fallido', 'interrumpido'].includes(x.estado) }[filtro.value]
-    return pasa && (!texto || textoDe(x).toLowerCase().includes(texto) || x.id.includes(texto))
+    return pasa && (origen.value !== '-' || !x.punto_acceso) && (!texto || textoDe(x).toLowerCase().includes(texto) || x.id.includes(texto))
   })
 })
 
 async function cargar() {
   cargando.value = true
   try {
-    trabajos.value = await api.trabajos(200)
+    trabajos.value = await api.trabajos(200, origen.value === '-' ? '' : origen.value)
   } catch (e) {
     avisarError(e)
   } finally {
@@ -214,6 +227,11 @@ function seguirEnVivo() {
 let intervalo: number
 onMounted(() => {
   cargar()
+  api.puntos().then((l) => (nombresApis.value = l.map((x) => x.nombre))).catch(() => {})
+  if (trabajoAbrir.value) {
+    abrir({ id: trabajoAbrir.value } as Trabajo)
+    trabajoAbrir.value = ''
+  }
   intervalo = window.setInterval(() => !dialogo.value && cargar(), 5000)
 })
 onUnmounted(() => clearInterval(intervalo))

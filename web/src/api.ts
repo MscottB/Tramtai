@@ -84,6 +84,12 @@ export interface EstadoPunto {
   error?: string
   origen: string
 }
+// UsoPunto son las peticiones de una API que conserva la retención (7 días): total, con error y la última.
+export interface UsoPunto {
+  peticiones: number
+  errores: number
+  ultima?: string
+}
 export interface ConfigPunto {
   nombre: string
   grupo?: string
@@ -177,7 +183,8 @@ export const api = {
   catalogo: () => pedir<{ modelos: Modelo[] }>('GET', '/api/v1/modelos').then((r) => r.modelos),
   fijarPredeterminado: (modelo: string) => pedir<void>('POST', '/api/v1/instancia/predeterminado', { modelo }),
   capacidades: () => pedir<{ adaptadores: Adaptador[]; entradas?: string[] }>('GET', '/api/v1/capacidades'),
-  trabajos: (limite = 50) => pedir<{ trabajos: Trabajo[] }>('GET', `/api/v1/trabajos?limite=${limite}`).then((r) => r.trabajos),
+  trabajos: (limite = 50, punto = '') =>
+    pedir<{ trabajos: Trabajo[] }>('GET', `/api/v1/trabajos?limite=${limite}${punto ? '&punto=' + encodeURIComponent(punto) : ''}`).then((r) => r.trabajos),
   trabajo: (id: string) => pedir<Trabajo>('GET', `/api/v1/trabajos/${encodeURIComponent(id)}`),
   crear: (s: Solicitud) => pedir<Trabajo>('POST', '/api/v1/trabajos', s),
   accion: (id: string, accion: 'cancelar' | 'reintentar') =>
@@ -190,6 +197,7 @@ export const api = {
     return pedir<{ identificador_carga: string }>('POST', '/api/v1/cargas', datos)
   },
   puntos: () => pedir<{ puntos_acceso: EstadoPunto[] }>('GET', '/api/v1/puntos').then((r) => r.puntos_acceso),
+  puntosConUso: () => pedir<{ puntos_acceso: EstadoPunto[]; uso?: Record<string, UsoPunto> }>('GET', '/api/v1/puntos'),
   crearPunto: (p: ConfigPunto) => pedir<{ punto_acceso?: EstadoPunto; token: string }>('POST', '/api/v1/puntos', p),
   activarPunto: (nombre: string, activo: boolean) => pedir<unknown>('PATCH', `/api/v1/puntos/${nombre}`, { activo }),
   instruccionesPunto: (nombre: string, instrucciones: string) => pedir<unknown>('PATCH', `/api/v1/puntos/${nombre}`, { instrucciones }),
@@ -203,6 +211,10 @@ export const trabajoSeguido = ref('')
 export const filtroHistorial = ref('')
 // modeloInicial abre Probar con un agente o modelo ya elegido (desde Agentes).
 export const modeloInicial = ref('')
+// origenHistorial abre el Historial con las peticiones de una API (desde Mis APIs).
+export const origenHistorial = ref('')
+// trabajoAbrir abre el Historial con el detalle de una petición (desde Inicio).
+export const trabajoAbrir = ref('')
 
 export const terminales = ['completado', 'fallido', 'cancelado', 'interrumpido']
 

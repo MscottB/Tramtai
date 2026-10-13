@@ -26,6 +26,7 @@ import (
 	"tramtai/internal/nucleo"
 	"tramtai/internal/planificador"
 	"tramtai/internal/recursos"
+	"tramtai/internal/registro"
 	"tramtai/internal/servicio"
 	"tramtai/internal/version"
 )
@@ -134,6 +135,16 @@ func seguirRegistro(cmd *cobra.Command, n int, seguir bool) error {
 		if _, err := io.Copy(out, f); err != nil {
 			return err
 		}
+		// Tras una rotación el archivo es otro (o se vació): se sigue desde el principio del nuevo.
+		pos, _ := f.Seek(0, io.SeekCurrent)
+		if actual, err := os.Stat(ruta); err == nil {
+			if abierto, err := f.Stat(); err == nil && (!os.SameFile(actual, abierto) || actual.Size() < pos) {
+				if nuevo, err := os.Open(ruta); err == nil {
+					f.Close()
+					f = nuevo
+				}
+			}
+		}
 		select {
 		case <-ctx.Done():
 			return nil
@@ -145,6 +156,7 @@ func seguirRegistro(cmd *cobra.Command, n int, seguir bool) error {
 func comandoServicio() *cobra.Command {
 	grupo := &cobra.Command{Use: "servicio", Short: "Servicio único: todas las instancias y puntos de acceso en un puerto"}
 	var abrirAlIniciar, navegadorAlIniciar bool
+	var archivoRegistro string
 	var segundoPlano, si bool
 	iniciar := &cobra.Command{Use: "iniciar", Short: "Inicia el servicio en primer plano (Ctrl+C lo detiene) o con -d en segundo plano",
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -152,7 +164,7 @@ func comandoServicio() *cobra.Command {
 				if abrirAlIniciar {
 					go abrirCuandoResponda(cmd, navegadorAlIniciar)
 				}
-				return iniciarServicio(cmd)
+				return iniciarServicio(cmd, archivoRegistro)
 			}
 			c, err := asegurarServicio(cmd)
 			if err != nil {
@@ -164,6 +176,8 @@ func comandoServicio() *cobra.Command {
 	iniciar.Flags().BoolVarP(&segundoPlano, "segundo-plano", "d", false, "inicia el servicio desacoplado de esta terminal")
 	iniciar.Flags().BoolVar(&abrirAlIniciar, "abrir", false, "en primer plano, abre la interfaz cuando el servicio responda (modo desarrollo)")
 	iniciar.Flags().BoolVar(&navegadorAlIniciar, "navegador", false, "con --abrir, usa el navegador en lugar de la app de escritorio")
+	iniciar.Flags().StringVar(&archivoRegistro, "registro", "", "escribe el registro en este archivo, con servicio.registro_mb y servicio.registro_copias")
+	_ = iniciar.Flags().MarkHidden("registro") // lo usa el arranque en segundo plano
 	detener := &cobra.Command{Use: "detener", Short: "Detiene el servicio y todas sus instancias",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := conectar()
@@ -329,11 +343,21 @@ func valorO(texto, alternativa string) string {
 	return texto
 }
 
-// iniciarServicio arranca el servicio en primer plano con las instancias que estaban activas.
-func iniciarServicio(cmd *cobra.Command) error {
+// iniciarServicio arranca el servicio en primer plano con las instancias que estaban activas. Con archivo, el
+// registro va a ese archivo con rotación (segundo plano); sin él, a la terminal.
+func iniciarServicio(cmd *cobra.Command, archivo string) error {
 	c, err := nucleo.CargarConfiguracion("")
 	if err != nil {
 		return err
+	}
+	salida := cmd.ErrOrStderr()
+	if archivo != "" {
+		rotativo, err := registro.Abrir(archivo, int64(c.Entero("servicio.registro_mb"))<<20, c.Entero("servicio.registro_copias"))
+		if err != nil {
+			return err
+		}
+		defer rotativo.Close()
+		salida = rotativo
 	}
 	host, puerto := c.Texto("servicio.host"), c.Entero("servicio.puerto")
 	remoto := !esLoopback(host)
@@ -358,9 +382,8 @@ func iniciarServicio(cmd *cobra.Command) error {
 	if remoto {
 		hosts = append(hosts, strings.ToLower(host))
 	}
-	salida := cmd.ErrOrStderr()
-	registro, limites := adaptadores.Registro(c)
-	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites),
+	agentes, limites := adaptadores.Registro(c)
+	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: agentes, Semaforos: planificador.NuevosSemaforos(limites),
 		Host: host, Puerto: puerto, Hosts: hosts, Registros: salida, Web: recursos.Web(),
 		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,
 		EntradaLocal: c.Booleano("servicio.entrada_local")})
@@ -383,7 +406,11 @@ func iniciarServicio(cmd *cobra.Command) error {
 	}
 	fmt.Fprintf(salida, "tramtai %s escuchando en %s\nWeb UI: %s (o tramtai abrir)\n", version.Texto(), sv.Base(), sv.Base())
 	imprimirEstado(salida, sv.Estado())
-	fmt.Fprintln(salida, "\nAquí verás una línea por cada petición (al recibirla y al terminar). Ctrl+C para detener.")
+	if archivo == "" {
+		fmt.Fprintln(salida, "\nAquí verás una línea por cada petición (al recibirla y al terminar). Ctrl+C para detener.")
+	} else {
+		fmt.Fprintln(salida, "en segundo plano: una línea por petición; se detiene con «tramtai servicio detener»")
+	}
 
 	ctx, parar := signal.NotifyContext(cmd.Context(), os.Interrupt)
 	defer parar()

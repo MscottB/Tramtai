@@ -360,7 +360,7 @@ const es = {
   'ejecutar.ejemplo1': 'Resume en tres puntos qué es una API.',
   'ejecutar.ejemplo2': 'Traduce al inglés: «Gracias por tu mensaje, te respondo mañana».',
   'ejecutar.ejemplo3': 'Escribe un correo breve y amable para pedir una reunión.',
-  'puntos.uso': '{n} peticiones recientes',
+  'puntos.uso': '{n} peticiones en 7 días',
   'agentes.probar': 'Probar',
   'ayuda.p8': '¿Qué significan Completadas, En proceso y Con error?',
   'ayuda.r8': 'Son tus peticiones: cada mensaje enviado a un agente desde Probar, la terminal o una aplicación. Completadas recibieron respuesta; En proceso están en cola o ejecutándose; Con error fallaron (por ejemplo, falta la clave) o se interrumpieron. En Historial ves el detalle de cada una.',
@@ -368,6 +368,13 @@ const es = {
   'ayuda.r9': 'Arriba a la derecha verás «En marcha» o «Sin conexión». Tramtai sigue funcionando en segundo plano aunque cierres la ventana o la terminal, para que tus aplicaciones lo sigan usando. «tramtai servicio estado» muestra su estado y «tramtai servicio detener» lo detiene.',
   'ayuda.p10': '¿Cómo veo lo que procesa mientras desarrollo?',
   'ayuda.r10': '«tramtai servicio registro -f» muestra en vivo una línea por petición (agente, modelo, duración, tokens y la API de origen). Para tenerlo todo en una terminal, detén el servicio y ejecuta «tramtai servicio iniciar --abrir»: corre en primer plano con el registro a la vista, abre la aplicación y Ctrl+C lo detiene.',
+  'app.volver': 'Volver',
+  'app.volverA': 'Volver a {pagina}',
+  'historial.todosOrigenes': 'Todos los orígenes',
+  'puntos.usoErrores': '{n} con error',
+  'puntos.usoUltima': 'última {cuando}',
+  'puntos.sinUso': 'Sin peticiones todavía',
+  'puntos.usoUno': '1 petición en 7 días',
 }
 
 export type Clave = keyof typeof es

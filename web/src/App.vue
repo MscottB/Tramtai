@@ -7,6 +7,9 @@
     <q-header class="cabecera-app">
       <q-toolbar class="q-px-md" style="min-height: 60px">
         <q-btn flat dense round icon="menu" :aria-label="t('app.abrirMenu')" class="lt-md q-mr-sm" @click="menu = !menu" />
+        <q-btn v-if="pila.length" flat round dense icon="arrow_back" :aria-label="t('app.volver')" class="q-mr-xs" @click="volver">
+          <q-tooltip>{{ t('app.volverA', { pagina: tituloDe(pila[pila.length - 1]) }) }}</q-tooltip>
+        </q-btn>
         <img src="/logo.png" alt="" width="30" height="30" style="border-radius: 8px" />
         <div class="q-ml-sm text-weight-bold text-subtitle1">Tramtai</div>
         <q-badge outline color="grey-7" class="q-ml-sm gt-xs">{{ sesion.version }}</q-badge>
@@ -102,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, onMounted, onUnmounted, ref } from 'vue'
+import { computed, markRaw, onMounted, onUnmounted, ref, watchEffect } from 'vue'
 import { api, avisarError, sesion } from './api'
 import { cambiarIdioma, idioma, idiomas, t } from './i18n'
 import EntrarPagina from './paginas/Entrar.vue'
@@ -147,11 +150,27 @@ async function comprobar() {
 onUnmounted(() => clearInterval(sondeo))
 const avisoEntrada = ref(new URLSearchParams(location.search).get('error') === 'codigo' ? t('app.codigoCaducado') : '')
 
+// pila son las páginas anteriores, para el botón Volver; también funcionan el atrás del navegador y Alt+←.
+const pila = ref<string[]>([])
+
 function ir(id: string) {
+  if (id === pagina.value) return
+  pila.value.push(pagina.value)
   pagina.value = id
-  history.replaceState(null, '', '#' + id)
+  history.pushState(null, '', '#' + id)
   window.scrollTo({ top: 0 })
 }
+
+function volver() {
+  history.back()
+}
+
+function tituloDe(id?: string) {
+  const p = paginas.find((x) => x.id === id)
+  return p ? t(p.titulo) : ''
+}
+
+watchEffect(() => (document.title = `${tituloDe(pagina.value)} · Tramtai`))
 
 function iconoInstancia(ambito?: string) {
   return ambito === 'proyecto' ? 'o_folder' : 'o_public'
@@ -159,7 +178,13 @@ function iconoInstancia(ambito?: string) {
 
 onMounted(async () => {
   if (location.search) history.replaceState(null, '', location.pathname + location.hash)
-  window.addEventListener('hashchange', () => (pagina.value = desdeHash()))
+  // Atrás o adelante en el navegador: la pila sigue el mismo recorrido.
+  window.addEventListener('popstate', () => {
+    const nueva = desdeHash()
+    if (pila.value[pila.value.length - 1] === nueva) pila.value.pop()
+    else pila.value.push(pagina.value)
+    pagina.value = nueva
+  })
   sondeo = window.setInterval(comprobar, 10000)
   try {
     await api.sesion()

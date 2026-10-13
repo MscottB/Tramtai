@@ -75,7 +75,10 @@
                   {{ p.contratos.map(nombreContrato).join(' · ') }}
                   <template v-if="p.agente || p.modelo"> · {{ [nombreAgente(p.agente), p.modelo].filter(Boolean).join(' · ') }}</template>
                 </q-item-label>
-                <q-item-label caption>{{ t('puntos.uso', { n: uso[p.nombre] ?? 0 }) }}</q-item-label>
+                <q-item-label caption>
+                  <a v-if="uso[p.nombre]" href="#historial" class="enlace" @click.prevent="verPeticiones(p.nombre)">{{ textoUso(p.nombre) }}</a>
+                  <span v-else>{{ t('puntos.sinUso') }}</span>
+                </q-item-label>
                 <q-item-label v-if="p.instrucciones" caption class="row no-wrap items-start">
                   <q-icon name="o_notes" class="q-mr-xs q-mt-xs" /><span class="recortar-2">{{ p.instrucciones }}</span>
                 </q-item-label>
@@ -193,7 +196,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { api, aplicarModelo, avisar, avisarError, copiar, nombreAgente, opcionModelo, type ConfigPunto, type EstadoPunto, type Modelo } from '../api'
+import { api, aplicarModelo, avisar, avisarError, copiar, haceCuanto, nombreAgente, opcionModelo, origenHistorial, type ConfigPunto, type EstadoPunto, type Modelo, type UsoPunto } from '../api'
 import { t } from '../i18n'
 
 const $q = useQuasar()
@@ -296,17 +299,26 @@ const camposPunto = computed(() => {
   ]
 })
 
-// uso cuenta las peticiones recientes (las últimas 200 del espacio) de cada API.
-const uso = ref<Record<string, number>>({})
+// uso son las peticiones de cada API que conserva la retención, contadas por el servicio.
+const uso = ref<Record<string, UsoPunto>>({})
+const emit = defineEmits<{ ir: [pagina: string] }>()
+
+function textoUso(nombre: string) {
+  const u = uso.value[nombre]
+  return [u.peticiones === 1 ? t('puntos.usoUno') : t('puntos.uso', { n: u.peticiones }), u.errores ? t('puntos.usoErrores', { n: u.errores }) : '',
+    u.ultima ? t('puntos.usoUltima', { cuando: haceCuanto(u.ultima) }) : ''].filter(Boolean).join(' · ')
+}
+
+function verPeticiones(nombre: string) {
+  origenHistorial.value = nombre
+  emit('ir', 'historial')
+}
 
 async function cargarPuntos() {
-  api.trabajos(200).then((lista) => {
-    const cuenta: Record<string, number> = {}
-    for (const x of lista) if (x.punto_acceso) cuenta[x.punto_acceso] = (cuenta[x.punto_acceso] ?? 0) + 1
-    uso.value = cuenta
-  }).catch(() => {})
   try {
-    puntos.value = await api.puntos()
+    const r = await api.puntosConUso()
+    puntos.value = r.puntos_acceso
+    uso.value = r.uso ?? {}
   } catch (e) {
     avisarError(e)
   }

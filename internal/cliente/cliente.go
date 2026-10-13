@@ -59,18 +59,19 @@ func Conectar(datos string) (*Cliente, error) {
 	return c, nil
 }
 
-// IniciarEnSegundoPlano lanza "<ejecutable> servicio iniciar" desacoplado de la terminal, con la salida en
-// servicio.log, y espera a que responda.
+// IniciarEnSegundoPlano lanza "<ejecutable> servicio iniciar" desacoplado de la terminal y espera a que responda.
+// El servicio escribe su registro en servicio.log (con tamaño máximo y copias); la salida del proceso va a
+// servicio-salida.log, que se vacía en cada arranque y solo recoge un fallo grave.
 func IniciarEnSegundoPlano(ejecutable, datos string) (*Cliente, error) {
 	if err := os.MkdirAll(datos, 0o700); err != nil {
 		return nil, err
 	}
 	rutaRegistro := filepath.Join(datos, "servicio.log")
-	registro, err := os.OpenFile(rutaRegistro, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	registro, err := os.OpenFile(filepath.Join(datos, "servicio-salida.log"), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command(ejecutable, "servicio", "iniciar")
+	cmd := exec.Command(ejecutable, "servicio", "iniciar", "--registro", rutaRegistro)
 	cmd.Dir, cmd.Stdout, cmd.Stderr = datos, registro, registro
 	desacoplar(cmd)
 	err = cmd.Start()

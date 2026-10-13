@@ -72,7 +72,7 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <instancia> 
 
 - `proyecto iniciar` inicia el servicio si no está en marcha.
 - **¿Sigue en marcha?** `tramtai abrir` y la app de escritorio dejan el servicio en segundo plano: sigue atendiendo a tus aplicaciones aunque cierres la terminal o la ventana. La cabecera de la Web UI muestra «En marcha» o «Sin conexión», y `tramtai servicio estado` lo confirma.
-- **Registro:** cada petición deja una línea al recibirla y otra al terminar (agente, modelo efectivo, API de origen, duración, tokens o el error). En segundo plano va a `%APPDATA%\tramtai\datos\servicio.log` (`tramtai servicio registro -f`); en primer plano, a la propia terminal.
+- **Registro:** cada petición deja una línea al recibirla y otra al terminar (agente, modelo efectivo, API de origen, duración, tokens o el error). Se limita con `servicio.registro_mb` (5 MB por archivo) y `servicio.registro_copias` (2 copias: `servicio.log.1` y `.2`); con 0 copias el archivo se vacía al llenarse. En segundo plano va a `%APPDATA%\tramtai\datos\servicio.log` (`tramtai servicio registro -f`); en primer plano, a la propia terminal.
 - Las instancias activas se recuerdan: al reiniciar el servicio vuelven a abrirse y recuperan sus trabajos (sección 4.3).
 - Detener una instancia cancela lo que tenía en cola; lo que se estaba ejecutando queda `interrumpido`. Las demás instancias no se ven afectadas.
 - **Detener el servicio:**
@@ -114,6 +114,7 @@ tramtai acceso token app_contable [--rotar]
 ```
 
 - **Instrucciones:** `--instrucciones` (o el campo del mismo nombre en Mis APIs, editable después) se antepone a las instrucciones de cada petición que llega por ese punto, venga de la aplicación que venga. Sirve, por ejemplo, para que una app que no lo permite configurar responda siempre en español.
+- **Uso:** Mis APIs muestra de cada API cuántas peticiones tuvo en los 7 días que conserva la retención, cuántas con error y la última; al pulsarlo se abre el Historial filtrado por esa API (`GET /api/v1/trabajos?punto=<nombre>`).
 - **Grupos:** `--grupo` es una etiqueta libre (hasta 40 caracteres) para ordenar los puntos y activarlos o desactivarlos juntos, desde la CLI o desde Mis APIs. La separación por proyecto ya la dan las instancias: un punto creado con `--local` pertenece a la del proyecto.
 
 - **Dirección:** sin `--puerto`, el punto queda en `http://127.0.0.1:17373/p/<nombre>`. Con `--puerto`, escucha en su propio puerto; si ese puerto está ocupado, el punto no se activa (no se elige otro) y el estado lo indica.

@@ -215,3 +215,15 @@ body.body--dark .item-activo {
 .tarjeta-clicable:hover {
   border-color: var(--q-primary);
 }
+
+/* Enlaces dentro del texto (por ejemplo, el uso de una API que lleva a sus peticiones). */
+.enlace {
+  color: var(--q-primary);
+  text-decoration: none;
+}
+.enlace:hover {
+  text-decoration: underline;
+}
+body.body--dark .enlace {
+  color: var(--q-secondary);
+}

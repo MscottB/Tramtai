@@ -125,9 +125,9 @@ func (s *Servidor) listarTrabajos(w http.ResponseWriter, r *http.Request) {
 		}
 		limite = n
 	}
-	punto := ""
+	punto := r.URL.Query().Get("punto") // ?punto=nombre: solo las peticiones de ese punto de acceso
 	if s.Punto != nil {
-		punto = s.Punto.Nombre
+		punto = s.Punto.Nombre // un punto de acceso solo ve las suyas
 	}
 	lista, err := s.Planificador.Listar(r.Context(), limite, punto)
 	if err != nil {

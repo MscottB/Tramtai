@@ -325,3 +325,19 @@ func TestAvisosAlEscribir(t *testing.T) {
 		t.Fatal("un evento nuevo debía avisar")
 	}
 }
+
+func TestUsoPorPunto(t *testing.T) {
+	a := abrir(t)
+	for i, punto := range []string{"soporte", "soporte", "facturas", ""} {
+		tr := trabajo("global", "hola")
+		tr.PuntoAcceso = punto
+		tr = aceptar(t, a, tr, "")
+		if i == 1 {
+			avanzar(t, a, tr.ID, nucleo.Fallido)
+		}
+	}
+	uso, err := a.UsoPorPunto(ctx, "global")
+	if err != nil || len(uso) != 2 || uso["soporte"].Peticiones != 2 || uso["soporte"].Errores != 1 || uso["facturas"].Peticiones != 1 || uso["soporte"].Ultima == nil {
+		t.Fatalf("%v %+v", err, uso)
+	}
+}

@@ -376,7 +376,8 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 		}
 		w.WriteHeader(http.StatusNoContent)
 	case ruta == "/api/v1/puntos" && r.Method == http.MethodGet:
-		api.EscribirJSON(w, http.StatusOK, map[string]any{"puntos_acceso": s.puntosDe(inst.ID)})
+		uso, _ := inst.Planificador.UsoPorPunto(r.Context()) // sin uso, la lista se muestra igual
+		api.EscribirJSON(w, http.StatusOK, map[string]any{"puntos_acceso": s.puntosDe(inst.ID), "uso": uso})
 	case ruta == "/api/v1/puntos" && r.Method == http.MethodPost:
 		s.crearPuntoUI(w, r, inst)
 	case strings.HasPrefix(ruta, "/api/v1/puntos/"):
