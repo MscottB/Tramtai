@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -28,6 +29,9 @@ import (
 //
 //go:embed icono/tramtai.png
 var icono []byte
+
+// intervaloVigilancia es cada cuánto se comprueba si el servicio volvió en otra dirección.
+const intervaloVigilancia = 3 * time.Second
 
 func main() {
 	proyecto := flag.String("proyecto", "", "raíz de un proyecto con .tramtai/config.yaml (por defecto, la instancia global)")
@@ -51,6 +55,20 @@ func main() {
 	})
 
 	sesion, err := prepararSesion(*proyecto)
+	// La sesión la cambian la bandeja y el vigilante del servicio, cada uno en su goroutine.
+	var mu sync.Mutex
+	actual := func() *sesionEscritorio {
+		mu.Lock()
+		defer mu.Unlock()
+		return sesion
+	}
+	cargar := func(nueva *sesionEscritorio) {
+		mu.Lock()
+		sesion = nueva
+		mu.Unlock()
+		ventana.SetURL(nueva.url)
+	}
+
 	opciones := application.WebviewWindowOptions{Title: "Tramtai " + version.Version, Width: 1280, Height: 820, MinWidth: 720, MinHeight: 480, Hidden: *oculto}
 	if err != nil {
 		opciones.HTML = paginaError(err)
@@ -63,6 +81,25 @@ func main() {
 		ventana.Hide()
 		e.Cancel()
 	})
+
+	// El servicio puede volver en otra dirección: otro puerto tras un reinicio, o uno libre si el suyo estaba
+	// ocupado. El descriptor dice cuál; si cambió, la ventana vuelve a entrar allí. Si el servicio está detenido,
+	// no se inicia: eso solo lo hace la bandeja (Iniciar el servicio).
+	go func() {
+		for range time.Tick(intervaloVigilancia) {
+			datos, err := dirDatos()
+			if err != nil {
+				return
+			}
+			cli, err := cliente.Conectar(datos)
+			if s := actual(); err != nil || (s != nil && s.cli.Base == cli.Base) {
+				continue
+			}
+			if nueva, err := prepararSesion(*proyecto); err == nil {
+				cargar(nueva)
+			}
+		}
+	}()
 
 	bandeja := app.SystemTray.New()
 	bandeja.SetTooltip("Tramtai")
@@ -77,30 +114,30 @@ func main() {
 		ventana.Focus()
 	})
 	menu.Add("Abrir en el navegador").OnClick(func(*application.Context) {
-		if sesion == nil {
+		s := actual()
+		if s == nil {
 			return
 		}
 		ctx, cancelar := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancelar()
-		if url, err := sesion.cli.URLWeb(ctx, sesion.instancia); err == nil {
+		if url, err := s.cli.URLWeb(ctx, s.instancia); err == nil {
 			_ = navegador.Abrir(url)
 		}
 	})
 	menu.AddSeparator()
 	menu.Add("Iniciar el servicio").OnClick(func(*application.Context) {
 		// Si ya está en marcha solo vuelve a entrar; si no, lo inicia en segundo plano.
-		nueva, err := prepararSesion(*proyecto)
-		if err != nil {
+		if nueva, err := prepararSesion(*proyecto); err != nil {
 			ventana.SetHTML(paginaError(err))
 		} else {
-			sesion = nueva
-			ventana.SetURL(nueva.url)
+			cargar(nueva)
 		}
 		ventana.Show()
 		ventana.Focus()
 	})
 	menu.Add("Detener el servicio…").OnClick(func(*application.Context) {
-		if sesion == nil {
+		s := actual()
+		if s == nil {
 			return
 		}
 		pregunta := app.Dialog.Question().SetTitle("Detener el servicio").
@@ -108,7 +145,7 @@ func main() {
 		pregunta.AddButton("Detener").OnClick(func() {
 			ctx, cancelar := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancelar()
-			_ = sesion.cli.Detener(ctx)
+			_ = s.cli.Detener(ctx)
 			app.Quit()
 		})
 		pregunta.AddButton("Cancelar").SetAsDefault()
@@ -128,14 +165,22 @@ type sesionEscritorio struct {
 	url       string
 }
 
+// dirDatos es el directorio de datos de Tramtai, donde está el descriptor del servicio.
+func dirDatos() (string, error) {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "tramtai", "datos"), nil
+}
+
 // prepararSesion conecta con el servicio (o lo inicia), activa la instancia y obtiene una URL de entrada de un
 // solo uso: el token de la instancia nunca pasa por la ventana.
 func prepararSesion(proyecto string) (*sesionEscritorio, error) {
-	dir, err := os.UserConfigDir()
+	datos, err := dirDatos()
 	if err != nil {
 		return nil, err
 	}
-	datos := filepath.Join(dir, "tramtai", "datos")
 	cli, err := cliente.Conectar(datos)
 	if errors.Is(err, cliente.ErrServicioInactivo) {
 		ejecutable, errBuscar := buscarTramtai()
