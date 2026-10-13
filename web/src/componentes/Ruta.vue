@@ -1,5 +1,6 @@
 <template>
   <ol class="ruta q-ma-none q-pa-none" :class="claseRuta" :aria-label="t('ruta.titulo')">
+    <span v-if="!terminado" class="ruta__tranvia" :style="{ left: ((actual + 0.5) / 5) * 100 + '%' }" aria-hidden="true" />
     <li v-for="(p, i) in paradas" :key="p" class="ruta__parada" :class="claseParada(i)"
       :aria-current="i === actual ? 'step' : undefined">
       <span class="ruta__punto" aria-hidden="true" />
@@ -9,8 +10,8 @@
 </template>
 
 <script setup lang="ts">
-// Ruta dibuja una petición como un trayecto: cola, preparación, ejecución, validación y llegada. La estación
-// actual late mientras avanza; al terminar, la llegada toma el color del resultado.
+// Ruta dibuja una petición como un trayecto: cola, preparación, ejecución, validación y llegada. Mientras avanza,
+// un tranvía se desliza hasta la estación actual; al terminar, la llegada toma el color del resultado.
 import { computed } from 'vue'
 import { estadoInfo } from '../api'
 import { t } from '../i18n'

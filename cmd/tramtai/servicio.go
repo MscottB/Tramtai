@@ -703,18 +703,6 @@ func abrirInterfaz(cmd *cobra.Command, c *cliente.Cliente, ambito, raiz string, 
 	return navegador.Abrir(url)
 }
 
-const plantillaProyecto = `# Configuración de Tramtai para este proyecto (versionada). Las claves de seguridad, los puertos y los
-# puntos de acceso van en .tramtai/local.yaml (no versionado) o en la configuración global.
-version: 1
-proyecto:
-  nombre: %q
-predeterminados:
-  agente: claude
-  perfil_modelo: equilibrado
-  modo_contexto: aislado
-  formato_salida: markdown
-`
-
 func comandoIniciar() *cobra.Command {
 	return &cobra.Command{Use: "iniciar", Short: "Prepara el directorio actual como proyecto de Tramtai (.tramtai/ con un perfil de ejemplo)",
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -726,55 +714,10 @@ func comandoIniciar() *cobra.Command {
 			if _, err := os.Stat(ruta); err == nil {
 				return fmt.Errorf("%s ya existe", ruta)
 			}
-			if err := os.MkdirAll(filepath.Dir(ruta), 0o755); err != nil {
-				return err
-			}
-			if err := os.WriteFile(ruta, []byte(fmt.Sprintf(plantillaProyecto, filepath.Base(dir))), 0o644); err != nil {
-				return err
-			}
-			ignorar := filepath.Join(dir, ".tramtai", ".gitignore")
-			if err := os.WriteFile(ignorar, []byte("# configuración propia de cada máquina\nlocal.yaml\n"), 0o644); err != nil {
-				return err
-			}
-			// Un perfil de ejemplo con su esquema (sección 22.3): tramtai ejecutar --perfil-trabajo resumen "…"
-			for nombre, contenido := range map[string]string{
-				filepath.Join("profiles", "resumen.yaml"):       perfilEjemplo,
-				filepath.Join("schemas", "resumen.schema.json"): esquemaEjemplo,
-			} {
-				destino := filepath.Join(dir, ".tramtai", nombre)
-				if err := os.MkdirAll(filepath.Dir(destino), 0o755); err != nil {
-					return err
-				}
-				if err := os.WriteFile(destino, []byte(contenido), 0o644); err != nil {
-					return err
-				}
-			}
-			if _, err := nucleo.CargarCapa(ruta, nucleo.OrigenProyecto); err != nil {
+			if err := servicio.PrepararProyecto(dir); err != nil {
 				return err
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "creado %s\nsiguiente: tramtai proyecto iniciar\n", ruta)
 			return nil
 		}}
 }
-
-const perfilEjemplo = `nombre: resumen
-modo: perfil
-instrucciones: |
-  Resume el contenido en tres puntos y lista los pendientes. No inventes información.
-salida:
-  formato: json
-  validacion_estricta: true
-  esquema: ../schemas/resumen.schema.json
-  conservar_salida_invalida: false
-`
-
-const esquemaEjemplo = `{
-  "type": "object",
-  "required": ["puntos", "pendientes"],
-  "properties": {
-    "puntos": {"type": "array", "items": {"type": "string"}, "maxItems": 3},
-    "pendientes": {"type": "array", "items": {"type": "string"}}
-  },
-  "additionalProperties": false
-}
-`

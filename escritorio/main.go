@@ -165,6 +165,13 @@ func main() {
 			preguntar("Salir de Tramtai", textoSalir, "Salir y detener", func() { detenerYSalir(cli) })
 		case "tramtai:detener:preguntar":
 			preguntar("Detener el servicio", textoDetener, "Detener", func() { detener(cli) })
+		case "tramtai:carpeta":
+			// «Examinar…» al abrir un proyecto: la carpeta elegida vuelve a la Web UI.
+			ruta, err := app.Dialog.OpenFile().CanChooseDirectories(true).CanChooseFiles(false).SetTitle("Carpeta del proyecto").PromptForSingleSelection()
+			if err == nil && ruta != "" {
+				texto, _ := json.Marshal(ruta)
+				ventana.ExecJS("window.tramtaiCarpeta && window.tramtaiCarpeta(" + string(texto) + ")")
+			}
 		}
 	}
 

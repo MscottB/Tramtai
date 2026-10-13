@@ -20,7 +20,7 @@
   --aviso: #a16207;
   --aviso-suave: rgba(202, 138, 4, 0.13);
   --neutro-suave: rgba(85, 102, 106, 0.1);
-  --linea-claude: #e2672b;
+  --linea-claude: #c4561d;
   --linea-codex: #2563eb;
   --linea-gemini: #7c3aed;
   --linea-antigravity: #db2777;
@@ -238,22 +238,10 @@ input[type='number'] {
 .punto--ok {
   background: var(--ok);
   box-shadow: 0 0 0 3px var(--ok-suave);
-  animation: latido 2.4s ease-out infinite;
 }
 .punto--error {
   background: var(--error);
   box-shadow: 0 0 0 3px var(--error-suave);
-}
-@keyframes latido {
-  0% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 45%, transparent);
-  }
-  70% {
-    box-shadow: 0 0 0 7px transparent;
-  }
-  100% {
-    box-shadow: 0 0 0 0 transparent;
-  }
 }
 
 .cajon-app {
@@ -510,12 +498,37 @@ div:first-child > .cabecera-grupo {
   gap: 8px;
   min-width: 0;
 }
-.linea__barra {
+/* Distintivo de línea, como el número de un tranvía: fondo del color de la línea y código en negrita. */
+.linea__chapa {
   flex: none;
-  width: 16px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--c);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: var(--c, var(--linea-otro));
+  color: #ffffff;
+  font-family: var(--fuente-titulo);
+  font-weight: 800;
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+body.body--dark .linea__chapa {
+  color: #0a1116;
+}
+.linea__chapa--grande {
+  min-width: 38px;
+  height: 28px;
+  border-radius: 7px;
+  font-size: 0.82rem;
+}
+.linea__chapa--apagada {
+  background: var(--neutro-suave);
+  color: var(--texto-suave) !important;
+  box-shadow: inset 0 0 0 1.5px var(--borde-fuerte);
 }
 .linea__nombre {
   font-weight: 600;
@@ -539,15 +552,6 @@ div:first-child > .cabecera-grupo {
   --c: var(--linea-antigravity);
 }
 
-/* Barra vertical del color de la línea, junto al nombre de un agente o de una API. */
-.barra-agente {
-  display: inline-block;
-  flex: none;
-  width: 5px;
-  height: 36px;
-  border-radius: 3px;
-  background: var(--c, var(--linea-otro));
-}
 /* Paso numerado como una estación: aro del color de la marca con su número. */
 .numero-estacion {
   display: inline-flex;
@@ -602,18 +606,11 @@ div:first-child > .cabecera-grupo {
   background: var(--acento-suave);
   color: var(--acento);
 }
-.etiqueta--info::before {
-  animation: latido-info 1.6s ease-out infinite;
-}
-@keyframes latido-info {
-  50% {
-    opacity: 0.35;
-  }
-}
 
 /* ---------- Trayecto de una petición: estaciones unidas por la línea ---------- */
 .ruta {
   --c: var(--acento);
+  position: relative;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
@@ -664,7 +661,6 @@ div:first-child > .cabecera-grupo {
 .ruta__parada--actual .ruta__punto {
   border-color: var(--c);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 22%, transparent);
-  animation: en-ruta 1.4s ease-in-out infinite;
 }
 .ruta__parada--actual,
 .ruta__parada--fin {
@@ -676,6 +672,26 @@ div:first-child > .cabecera-grupo {
   background: var(--c);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 22%, transparent);
 }
+/* El tranvía: avanza de estación en estación mientras la petición recorre su trayecto (el único movimiento). */
+.ruta__tranvia {
+  position: absolute;
+  z-index: 2;
+  top: 1px;
+  width: 22px;
+  height: 13px;
+  margin-left: -11px;
+  border-radius: 4px;
+  background: var(--c);
+  box-shadow: 0 0 0 2.5px var(--superficie), 0 2px 6px rgba(15, 27, 30, 0.25);
+  transition: left 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ruta__tranvia::after {
+  content: '';
+  position: absolute;
+  inset: 3px 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--superficie) 70%, transparent);
+}
 .ruta--ok {
   --c: var(--ok);
 }
@@ -684,11 +700,6 @@ div:first-child > .cabecera-grupo {
 }
 .ruta--cancelada {
   --c: var(--texto-suave);
-}
-@keyframes en-ruta {
-  50% {
-    box-shadow: 0 0 0 7px color-mix(in srgb, var(--c) 8%, transparent);
-  }
 }
 
 /* ---------- Tablero de salidas: una banda de tinta con una fila por estado, como un panel de andén ---------- */

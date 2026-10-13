@@ -98,8 +98,8 @@ func (s *Servicio) CodigoSesion(instancia string) (string, error) {
 
 // rutasUI gestiona la sesión: GET la consulta (y, si la petición es local, entra sin token), POST entra con el
 // token de una instancia o, en una sesión local, cambia de instancia, DELETE sale y /ui/entrar canjea un código de
-// un solo uso. /ui/instancias activa la instancia global y /ui/autoarranque cambia el arranque con el sistema,
-// ambos desde una sesión local.
+// un solo uso. /ui/instancias activa la instancia global, /ui/proyectos abre la de un proyecto (y lo prepara si
+// hace falta) y /ui/autoarranque cambia el arranque con el sistema, todos desde una sesión local.
 func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/ui/sesion" && r.Method == http.MethodGet:
@@ -147,6 +147,28 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		inst, err := s.ActivarGlobal()
+		if err == nil {
+			err = s.guardarActivas()
+		}
+		if err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		s.responderSesion(w, r, s.crearSesion(w, inst.ID, true))
+	case r.URL.Path == "/ui/proyectos" && r.Method == http.MethodPost:
+		_, ses := s.sesionDe(r)
+		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+			api.NoAutorizado(w, r)
+			return
+		}
+		var peticion struct {
+			Raiz string `json:"raiz"`
+		}
+		if err := api.LeerJSON(w, r, &peticion); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		inst, err := s.AbrirProyecto(peticion.Raiz)
 		if err == nil {
 			err = s.guardarActivas()
 		}

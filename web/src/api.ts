@@ -190,6 +190,8 @@ export const api = {
   entrar: (token: string) => pedir<Sesion>('POST', '/ui/sesion', { token }).then(recordar),
   cambiarInstancia: (instancia: string) => pedir<Sesion>('POST', '/ui/sesion', { instancia }).then(recordar),
   activarGlobal: () => pedir<Sesion>('POST', '/ui/instancias', { ambito: 'global' }).then(recordar),
+  // abrirProyecto activa el espacio de una carpeta; si aún no es un proyecto, el servicio crea su .tramtai/.
+  abrirProyecto: (raiz: string) => pedir<Sesion>('POST', '/ui/proyectos', { raiz }).then(recordar),
   autoarranque: (activo: boolean) => pedir<Sesion>('POST', '/ui/autoarranque', { activo }).then(recordar),
   cambiarAutenticacion: (agente: string, modo: 'suscripcion' | 'clave_api') => pedir<void>('POST', '/ui/autenticacion', { agente, modo }),
   salir: () => pedir<void>('DELETE', '/ui/sesion').then(() => (sesion.value = null)),
@@ -305,6 +307,11 @@ export function duracion(desde?: string, hasta?: string): string {
 
 const agentes: Record<string, string> = { claude: 'Claude', codex: 'Codex', gemini: 'Gemini', antigravity: 'Antigravity' }
 const perfiles = ['rapido', 'equilibrado', 'profundo']
+
+// codigoLinea es el distintivo de la línea de un agente, como el número de una línea de tranvía.
+export function codigoLinea(agente?: string): string {
+  return ({ claude: 'CL', codex: 'CX', gemini: 'GM', antigravity: 'AG' } as Record<string, string>)[agente ?? ''] ?? (agente ?? 'API').slice(0, 2).toUpperCase()
+}
 
 export function nombreAgente(agente?: string): string {
   return agente ? (agentes[agente] ?? agente) : '—'

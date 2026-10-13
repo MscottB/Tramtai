@@ -457,6 +457,16 @@ const en: Textos = {
   'ruta.llegada': 'Arrived',
   'inicio.tablero': 'Departures',
   'inicio.tableroPeriodo': 'Last 7 days',
+  'proyecto.abrir': 'Open a project…',
+  'proyecto.abrirDetalle': 'Its own history, APIs and settings',
+  'proyecto.titulo': 'Open a project',
+  'proyecto.texto': 'Choose the project folder. If it is not one yet, Tramtai creates .tramtai/ inside it with its settings; if it already is, it just opens it. Each project has its own history, APIs and settings.',
+  'proyecto.ruta': 'Project folder',
+  'proyecto.rutaHint': 'Full path, for example C:\\Projects\\my-app',
+  'proyecto.rutaRegla': 'Enter the folder',
+  'proyecto.examinar': 'Browse…',
+  'proyecto.abrirBoton': 'Open',
+  'proyecto.abierto': 'Project {nombre} opened',
 }
 
 export default en

@@ -9,7 +9,9 @@ import (
 	"net/netip"
 	"net/url"
 	"os"
+	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -206,6 +208,25 @@ func TestEntradaLocalSinToken(t *testing.T) {
 	if r, _ := n.pedir("POST", "/ui/autenticacion", `{"agente":"gemini","modo":"suscripcion"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 {
 		t.Fatalf("gemini no admite suscripción: %d", r.StatusCode)
 	}
+
+	// Abrir un proyecto desde la Web UI: exige el CSRF y una ruta completa; una carpeta nueva se prepara y se activa.
+	nueva := t.TempDir()
+	cuerpoProyecto := `{"raiz":` + strconv.Quote(nueva) + `}`
+	if r, _ := n.pedir("POST", "/ui/proyectos", cuerpoProyecto); r.StatusCode != 401 {
+		t.Fatalf("abrir un proyecto exige el CSRF: %d", r.StatusCode)
+	}
+	if r, _ := n.pedir("POST", "/ui/proyectos", `{"raiz":"relativa"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 {
+		t.Fatalf("una ruta relativa se rechaza: %d", r.StatusCode)
+	}
+	if r, cuerpo := n.pedir("POST", "/ui/proyectos", cuerpoProyecto, "X-CSRF-Token", n.csrf); r.StatusCode != 200 || !strings.Contains(cuerpo, `"ambito":"proyecto"`) {
+		t.Fatalf("abrir un proyecto nuevo: %d %s", r.StatusCode, cuerpo)
+	}
+	if _, err := os.Stat(filepath.Join(nueva, ".tramtai", "config.yaml")); err != nil {
+		t.Fatalf("la carpeta nueva debía quedar preparada: %v", err)
+	}
+	_, cuerpo = n.pedir("GET", "/ui/sesion", "") // abrir el proyecto creó otra sesión con otro CSRF
+	n.csrf = cuerpo[strings.Index(cuerpo, `"csrf":"`)+8:]
+	n.csrf = n.csrf[:strings.Index(n.csrf, `"`)]
 
 	// Con el código de un solo uso de tramtai abrir, desde este mismo equipo, la sesión también es local.
 	codigo, _ := s.CodigoSesion("global")

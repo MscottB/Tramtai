@@ -7,9 +7,9 @@
       <text :x="V_EJE + 18" :y="vOrigen(i) + 5" font-size="14" :font-weight="o.principal ? 600 : 500" :class="{ suave: !o.activo }">{{ o.nombre }}</text>
     </g>
     <g class="cursor-pointer" role="link" tabindex="0" @click="emit('ir', 'ejecutar')" @keyup.enter="emit('ir', 'ejecutar')">
-      <rect x="4" :y="vHub" :width="V_ANCHO - 8" height="58" rx="14" :style="{ fill: 'var(--acento)' }" />
-      <text :x="V_ANCHO / 2" :y="vHub + 26" text-anchor="middle" font-size="16" font-weight="700" :style="{ fill: 'var(--acento-texto)' }">Tramtai</text>
-      <text :x="V_ANCHO / 2" :y="vHub + 44" text-anchor="middle" font-size="12" :style="{ fill: 'var(--acento-texto)', opacity: 0.8 }">{{ direccion }}</text>
+      <rect x="4" :y="vHub" :width="V_ANCHO - 8" height="58" rx="29" stroke-width="4" :style="{ fill: 'var(--superficie)', stroke: 'var(--texto)' }" />
+      <text :x="V_ANCHO / 2" :y="vHub + 26" text-anchor="middle" font-size="16" font-weight="800">Tramtai</text>
+      <text :x="V_ANCHO / 2" :y="vHub + 44" text-anchor="middle" font-size="12" class="suave">{{ direccion }}</text>
     </g>
     <g v-for="(a, i) in lineas" :key="'va' + a.agente" class="cursor-pointer" role="link" tabindex="0" @click="emit('ir', 'agentes')" @keyup.enter="emit('ir', 'agentes')">
       <line :x1="V_EJE" :y1="vAgente(i)" :x2="V_EJE + 26" :y2="vAgente(i)" stroke-width="4" stroke-linecap="round"
@@ -34,10 +34,17 @@
           :class="{ suave: !o.activo }">{{ o.nombre }}</text>
       </g>
 
+      <!-- Marcas de estación: una parada intermedia en cada línea, como en un plano de tranvía. -->
+      <line v-for="o in origenes" :key="'mo' + o.id" :x1="marcaOrigen(o)" :x2="marcaOrigen(o)" :y1="o.y" :y2="o.y - 9" stroke-width="3"
+        :style="{ stroke: o.activo ? 'color-mix(in srgb, var(--acento) 55%, transparent)' : 'var(--borde-fuerte)' }" />
+      <line v-for="a in lineas" :key="'ma' + a.agente" :x1="marcaAgente(a)" :x2="marcaAgente(a)" :y1="a.y" :y2="a.y - 10" stroke-width="3.5"
+        :style="{ stroke: a.listo ? a.color : 'var(--borde-fuerte)' }" />
+
+      <!-- Tramtai es el intercambiador: la cápsula blanca de borde grueso de los transbordos. -->
       <g class="cursor-pointer" role="link" tabindex="0" @click="emit('ir', 'ejecutar')" @keyup.enter="emit('ir', 'ejecutar')">
-        <rect :x="X_HUB" :y="centro - 36" :width="HUB_ANCHO" height="72" rx="16" :style="{ fill: 'var(--acento)' }" />
-        <text :x="X_HUB + HUB_ANCHO / 2" :y="centro - 4" text-anchor="middle" font-size="17" font-weight="700" :style="{ fill: 'var(--acento-texto)' }">Tramtai</text>
-        <text :x="X_HUB + HUB_ANCHO / 2" :y="centro + 17" text-anchor="middle" font-size="12" :style="{ fill: 'var(--acento-texto)', opacity: 0.8 }">{{ direccion }}</text>
+        <rect :x="X_HUB" :y="centro - 36" :width="HUB_ANCHO" height="72" rx="36" stroke-width="5" :style="{ fill: 'var(--superficie)', stroke: 'var(--texto)' }" />
+        <text :x="X_HUB + HUB_ANCHO / 2" :y="centro - 3" text-anchor="middle" font-size="18" font-weight="800">Tramtai</text>
+        <text :x="X_HUB + HUB_ANCHO / 2" :y="centro + 17" text-anchor="middle" font-size="12" class="suave">{{ direccion }}</text>
       </g>
 
       <g v-for="a in lineas" :key="'a' + a.agente" class="cursor-pointer" role="link" tabindex="0" @click="emit('ir', 'agentes')" @keyup.enter="emit('ir', 'agentes')">
@@ -60,10 +67,10 @@ const props = defineProps<{ adaptadores: Adaptador[]; apis: EstadoPunto[]; base:
 const emit = defineEmits<{ ir: [pagina: string] }>()
 
 const ANCHO = 980
-const X_ORIGEN = 250
-const X_HUB = 410
+const X_ORIGEN = 230
+const X_HUB = 370
 const HUB_ANCHO = 170
-const X_AGENTE = 740
+const X_AGENTE = 770
 const PASO = 58
 const MAX_APIS = 3
 
@@ -107,6 +114,18 @@ const vAlto = computed(() => vAgente(Math.max(lineas.value.length - 1, 0)) + 20)
 
 // paralela separa unos píxeles cada línea en el borde de Tramtai, para que salgan juntas pero sin cruzarse.
 const paralela = (i: number, n: number) => (i - (n - 1) / 2) * 7
+
+// Las marcas de estación van en el tramo recto más largo: el de llegada al agente y el de salida de cada app.
+function marcaAgente(a: { i: number; y: number }) {
+  const y1 = centro.value + paralela(a.i, lineas.value.length)
+  const fin = (X_HUB + HUB_ANCHO + X_AGENTE) / 2 + Math.abs(a.y - y1) / 2
+  return (fin + X_AGENTE) / 2
+}
+function marcaOrigen(o: { i: number; y: number }) {
+  const y2 = centro.value + paralela(o.i, origenes.value.length)
+  const inicio = (X_ORIGEN + X_HUB) / 2 - Math.abs(y2 - o.y) / 2
+  return (X_ORIGEN + inicio) / 2
+}
 
 // tramo une dos estaciones como en un mapa de líneas: recto, un giro de 45° y recto otra vez.
 function tramo(x1: number, y1: number, x2: number, y2: number) {

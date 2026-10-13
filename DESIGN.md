@@ -15,7 +15,7 @@ colors:
   ok: "#15803d"
   error: "#c42b2b"
   aviso: "#a16207"
-  linea-claude: "#e2672b"
+  linea-claude: "#c4561d"
   linea-codex: "#2563eb"
   linea-gemini: "#7c3aed"
   linea-antigravity: "#db2777"

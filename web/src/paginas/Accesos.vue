@@ -72,7 +72,7 @@
           <q-list separator>
             <q-item v-for="p in g.puntos" :key="p.nombre" class="q-py-md">
               <q-item-section avatar top>
-                <span class="barra-agente" :class="'linea--' + (p.agente ?? 'otro')" :style="{ opacity: activo(p) ? 1 : 0.35 }" />
+                <span class="linea__chapa linea__chapa--grande" :class="['linea--' + (p.agente ?? 'otro'), { 'linea__chapa--apagada': !activo(p) }]" aria-hidden="true">{{ p.agente ? codigoLinea(p.agente) : 'API' }}</span>
               </q-item-section>
               <q-item-section>
                 <q-item-label class="row items-center q-gutter-x-sm">
@@ -208,7 +208,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import SelectorEsfuerzo from '../componentes/SelectorEsfuerzo.vue'
-import { api, aplicarModelo, avisar, avisarError, copiar, esfuerzosDe, haceCuanto, nombreAgente, nombreEsfuerzo, opcionModelo, origenHistorial, type ConfigPunto, type EstadoPunto, type Modelo, type UsoPunto } from '../api'
+import { api, aplicarModelo, avisar, avisarError, codigoLinea, copiar, esfuerzosDe, haceCuanto, nombreAgente, nombreEsfuerzo, opcionModelo, origenHistorial, type ConfigPunto, type EstadoPunto, type Modelo, type UsoPunto } from '../api'
 import { t } from '../i18n'
 
 const $q = useQuasar()

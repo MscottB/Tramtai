@@ -28,9 +28,11 @@
               <q-item-section v-if="i.id === sesion.instancia" side><q-icon name="check" color="primary" /></q-item-section>
             </q-item>
             <q-separator />
-            <q-item>
-              <q-item-section class="text-caption texto-suave">
-                <span>{{ t('app.proyectoAntes') }} <span class="codigo">tramtai proyecto iniciar</span> {{ t('app.proyectoDespues') }}</span>
+            <q-item v-close-popup clickable @click="dialogoProyecto = true">
+              <q-item-section avatar><q-icon name="o_create_new_folder" color="primary" /></q-item-section>
+              <q-item-section>
+                <q-item-label class="text-weight-medium">{{ t('proyecto.abrir') }}</q-item-label>
+                <q-item-label caption>{{ t('proyecto.abrirDetalle') }}</q-item-label>
               </q-item-section>
             </q-item>
           </q-list>
@@ -137,21 +139,43 @@
             <div class="titulo-seccion q-mt-md">{{ t('app.sinInstancia') }}</div>
             <p class="texto-suave q-mt-sm">{{ t('app.sinInstanciaTexto') }}</p>
             <q-btn unelevated color="primary" icon="play_arrow" :label="t('app.activarGlobal')" no-caps :loading="activando" @click="activarGlobal" />
-            <div class="text-caption texto-suave q-mt-md">
-              {{ t('app.proyectoAntes') }} <span class="codigo">tramtai proyecto iniciar</span> {{ t('app.proyectoDespues') }}
+            <div class="q-mt-sm">
+              <q-btn flat no-caps color="primary" icon="o_create_new_folder" :label="t('proyecto.abrir')" @click="dialogoProyecto = true" />
             </div>
           </q-card>
         </div>
         <component :is="actual.componente" v-else :key="sesion.instancia" @ir="ir" />
       </q-page>
     </q-page-container>
+
+    <q-dialog v-model="dialogoProyecto">
+      <q-card style="width: 560px; max-width: 95vw">
+        <q-card-section>
+          <div class="titulo-seccion">{{ t('proyecto.titulo') }}</div>
+          <div class="texto-suave text-body2 q-mt-xs">{{ t('proyecto.texto') }}</div>
+        </q-card-section>
+        <q-form @submit="abrirProyecto">
+          <q-card-section class="q-pt-none">
+            <div class="row no-wrap items-start q-gutter-x-sm">
+              <q-input v-model="rutaProyecto" class="col" outlined dense autofocus :label="t('proyecto.ruta')" :hint="t('proyecto.rutaHint')"
+                input-class="codigo" :rules="[(v: string) => !!v.trim() || t('proyecto.rutaRegla')]" />
+              <q-btn v-if="escritorio" outline no-caps color="primary" icon="o_folder_open" :label="t('proyecto.examinar')" style="height: 40px" @click="examinar" />
+            </div>
+          </q-card-section>
+          <q-card-actions align="right" class="q-pa-md">
+            <q-btn v-close-popup flat no-caps :label="t('comun.cancelar')" />
+            <q-btn unelevated color="primary" no-caps type="submit" :label="t('proyecto.abrirBoton')" :loading="abriendoProyecto" />
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
   </q-layout>
 </template>
 
 <script setup lang="ts">
 import { computed, markRaw, onMounted, onUnmounted, ref, watchEffect } from 'vue'
 import { useQuasar } from 'quasar'
-import { api, avisarError, reiniciarYSeguir, sesion } from './api'
+import { api, avisar, avisarError, reiniciarYSeguir, sesion } from './api'
 import { cambiarIdioma, idioma, idiomas, t } from './i18n'
 import { cambiarTema, tema, type Tema } from './tema'
 import EntrarPagina from './paginas/Entrar.vue'
@@ -289,6 +313,31 @@ async function cambiar(instancia: string) {
   } catch (e) {
     avisarError(e)
   }
+}
+
+// Abrir un proyecto: la carpeta se escribe o, en la app de escritorio, se elige con el selector de Windows.
+const dialogoProyecto = ref(false)
+const rutaProyecto = ref('')
+const abriendoProyecto = ref(false)
+
+async function abrirProyecto() {
+  if (!rutaProyecto.value.trim()) return
+  abriendoProyecto.value = true
+  try {
+    const nueva = await api.abrirProyecto(rutaProyecto.value.trim())
+    dialogoProyecto.value = false
+    rutaProyecto.value = ''
+    avisar(t('proyecto.abierto', { nombre: nueva.nombre || nueva.instancia }))
+  } catch (e) {
+    avisarError(e)
+  } finally {
+    abriendoProyecto.value = false
+  }
+}
+
+function examinar() {
+  Object.assign(window, { tramtaiCarpeta: (ruta: string) => (rutaProyecto.value = ruta) })
+  escritorio?.postMessage('tramtai:carpeta')
 }
 
 async function activarGlobal() {

@@ -12,7 +12,7 @@
       "texto": { "role": "neutral", "displayName": "Tinta profunda", "canonical": "#0f1b1e", "tonalRamp": ["oklch(15% 0.02 220)", "oklch(25% 0.02 220)", "oklch(35% 0.02 220)", "oklch(48% 0.02 220)", "oklch(60% 0.02 200)", "oklch(72% 0.015 200)", "oklch(85% 0.01 190)", "oklch(95% 0.005 180)"] },
       "texto-suave": { "role": "neutral", "displayName": "Tinta suave", "canonical": "#55666a" },
       "borde-fuerte": { "role": "neutral", "displayName": "Vía sin servicio", "canonical": "#c2cccb" },
-      "linea-claude": { "role": "secondary", "displayName": "Línea Claude (naranja)", "canonical": "#e2672b" },
+      "linea-claude": { "role": "secondary", "displayName": "Línea Claude (naranja)", "canonical": "#c4561d" },
       "linea-codex": { "role": "secondary", "displayName": "Línea Codex (azul)", "canonical": "#2563eb" },
       "linea-gemini": { "role": "secondary", "displayName": "Línea Gemini (violeta)", "canonical": "#7c3aed" },
       "linea-antigravity": { "role": "secondary", "displayName": "Línea Antigravity (magenta)", "canonical": "#db2777" },
@@ -123,7 +123,7 @@
       "kind": "chip",
       "refersTo": "linea",
       "description": "Barra del color del agente, nombre y modelo.",
-      "html": "<span class=\"ds-linea\" style=\"--c:#e2672b\"><span class=\"ds-linea__barra\"></span><span class=\"ds-linea__nombre\">Claude</span><span class=\"ds-linea__modelo\">claude-opus-5-5</span></span><br><span class=\"ds-linea\" style=\"--c:#2563eb\"><span class=\"ds-linea__barra\"></span><span class=\"ds-linea__nombre\">Codex</span></span>",
+      "html": "<span class=\"ds-linea\" style=\"--c:#c4561d\"><span class=\"ds-linea__barra\"></span><span class=\"ds-linea__nombre\">Claude</span><span class=\"ds-linea__modelo\">claude-opus-5-5</span></span><br><span class=\"ds-linea\" style=\"--c:#2563eb\"><span class=\"ds-linea__barra\"></span><span class=\"ds-linea__nombre\">Codex</span></span>",
       "css": ".ds-linea { display: inline-flex; align-items: center; gap: 8px; color: #0f1b1e; } .ds-linea__barra { flex: none; width: 16px; height: 4px; border-radius: 2px; background: var(--c, #64748b); } .ds-linea__nombre { font-weight: 600; } .ds-linea__modelo { color: #55666a; }"
     }
   ],

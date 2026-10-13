@@ -14,7 +14,7 @@
       <div v-for="a in adaptadores" :key="a.agente" class="col-12 col-lg-6">
         <q-card class="full-height column">
           <q-card-section class="row items-center no-wrap">
-            <span class="barra-agente q-mr-md" :class="'linea--' + a.agente" :style="{ opacity: a.problema ? 0.35 : 1 }" />
+            <span class="linea__chapa linea__chapa--grande q-mr-md" :class="['linea--' + a.agente, { 'linea__chapa--apagada': a.problema }]" aria-hidden="true">{{ codigoLinea(a.agente) }}</span>
             <div class="col">
               <div class="titulo-seccion">{{ nombreAgente(a.agente) }}</div>
               <div class="text-caption texto-suave">{{ a.version_detectada || t('agentes.sinVersion') }}</div>
@@ -98,7 +98,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { api, avisar, avisarError, copiar, modeloInicial, nombreAgente, nombreEsfuerzo, sesion, type Adaptador } from '../api'
+import { api, avisar, avisarError, codigoLinea, copiar, modeloInicial, nombreAgente, nombreEsfuerzo, sesion, type Adaptador } from '../api'
 import { t } from '../i18n'
 
 const $q = useQuasar()
