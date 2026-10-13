@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/nucleo"
@@ -210,6 +211,19 @@ func TestEntradaLocalSinToken(t *testing.T) {
 	otro.pedir("GET", "/ui/entrar?codigo="+url.QueryEscape(codigo), "")
 	if _, cuerpo := otro.pedir("GET", "/ui/sesion", ""); !strings.Contains(cuerpo, `"local":true`) {
 		t.Fatalf("la entrada con código desde este equipo debe ser local: %s", cuerpo)
+	}
+
+	// Detener el servicio desde la Web UI: solo con sesión local y CSRF.
+	if r, _ := n.pedir("POST", "/ui/servicio/detener", ""); r.StatusCode != 401 {
+		t.Fatalf("detener exige el CSRF: %d", r.StatusCode)
+	}
+	if r, _ := n.pedir("POST", "/ui/servicio/detener", "", "X-CSRF-Token", n.csrf); r.StatusCode != 202 {
+		t.Fatalf("detener: %d", r.StatusCode)
+	}
+	select {
+	case <-s.Detenido():
+	case <-time.After(2 * time.Second):
+		t.Fatal("el servicio no recibió la orden de detenerse")
 	}
 }
 

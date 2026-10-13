@@ -196,6 +196,15 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
+	case r.URL.Path == "/ui/servicio/detener" && r.Method == http.MethodPost:
+		// Solo desde este equipo: detener corta también a las aplicaciones conectadas.
+		_, ses := s.sesionDe(r)
+		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+			api.NoAutorizado(w, r)
+			return
+		}
+		api.EscribirJSON(w, http.StatusAccepted, map[string]any{"estado": "deteniendo"})
+		s.detenerUna.Do(func() { close(s.detener) })
 	case r.URL.Path == "/ui/sesion" && r.Method == http.MethodDelete:
 		if id, _ := s.sesionDe(r); id != "" {
 			s.muSesiones.Lock()

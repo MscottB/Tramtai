@@ -176,6 +176,7 @@ export const api = {
   autoarranque: (activo: boolean) => pedir<Sesion>('POST', '/ui/autoarranque', { activo }).then(recordar),
   cambiarAutenticacion: (agente: string, modo: 'suscripcion' | 'clave_api') => pedir<void>('POST', '/ui/autenticacion', { agente, modo }),
   salir: () => pedir<void>('DELETE', '/ui/sesion').then(() => (sesion.value = null)),
+  detenerServicio: () => pedir<unknown>('POST', '/ui/servicio/detener'),
   instancia: () => pedir<EstadoInstancia>('GET', '/api/v1/instancia'),
   claveInstancia: () => pedir<{ token: string; archivo: string }>('GET', '/api/v1/instancia/token'),
   configuracion: () =>

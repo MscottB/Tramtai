@@ -355,7 +355,7 @@ const en: Textos = {
   'app.enMarcha': 'Running',
   'app.enMarchaDetalle': 'The Tramtai service is running on this computer.',
   'app.sinConexion': 'Offline',
-  'app.sinConexionTexto': 'There is no connection with the Tramtai service. If you stopped it, start it again with “tramtai abrir”; this page reconnects by itself.',
+  'app.sinConexionTexto': 'There is no connection with the Tramtai service.',
   'ejecutar.nueva': 'New test',
   'ejecutar.ejemplos': 'Ideas to try:',
   'ejecutar.ejemplo1': 'Summarize in three points what an API is.',
@@ -376,6 +376,17 @@ const en: Textos = {
   'puntos.usoUltima': 'last {cuando}',
   'puntos.sinUso': 'No requests yet',
   'puntos.usoUno': '1 request in 7 days',
+  'app.servicio': 'Service status',
+  'app.servicioDetalle': 'Tramtai {version} at {url}',
+  'app.comoIniciar': 'To start it, run “tramtai abrir” in a terminal or, in the desktop app, use the tray icon → Iniciar el servicio. This page reconnects by itself.',
+  'app.reintentar': 'Retry',
+  'app.detener': 'Stop the service…',
+  'app.detenerTitulo': 'Stop the service',
+  'app.detenerTexto': 'Tramtai stops: this page, the desktop app and connected apps will stop working until you start it again. Requests in progress have up to 30 seconds to finish.',
+  'app.detenerBoton': 'Stop',
+  'datos.historialDetalleUno': '1 request; kept if it is in progress',
+  'datos.puntosDetalleUno': '1 API; apps that use it will stop working',
+  'historial.vaciadoUno': '1 request deleted',
 }
 
 export default en

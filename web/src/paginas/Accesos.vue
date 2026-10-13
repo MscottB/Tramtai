@@ -305,7 +305,7 @@ const emit = defineEmits<{ ir: [pagina: string] }>()
 
 function textoUso(nombre: string) {
   const u = uso.value[nombre]
-  return [u.peticiones === 1 ? t('puntos.usoUno') : t('puntos.uso', { n: u.peticiones }), u.errores ? t('puntos.usoErrores', { n: u.errores }) : '',
+  return [t('puntos.uso', { n: u.peticiones }), u.errores ? t('puntos.usoErrores', { n: u.errores }) : '',
     u.ultima ? t('puntos.usoUltima', { cuando: haceCuanto(u.ultima) }) : ''].filter(Boolean).join(' · ')
 }
 

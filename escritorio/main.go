@@ -87,6 +87,18 @@ func main() {
 		}
 	})
 	menu.AddSeparator()
+	menu.Add("Iniciar el servicio").OnClick(func(*application.Context) {
+		// Si ya está en marcha solo vuelve a entrar; si no, lo inicia en segundo plano.
+		nueva, err := prepararSesion(*proyecto)
+		if err != nil {
+			ventana.SetHTML(paginaError(err))
+		} else {
+			sesion = nueva
+			ventana.SetURL(nueva.url)
+		}
+		ventana.Show()
+		ventana.Focus()
+	})
 	menu.Add("Detener el servicio…").OnClick(func(*application.Context) {
 		if sesion == nil {
 			return

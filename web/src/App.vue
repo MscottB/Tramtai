@@ -36,9 +36,29 @@
           </q-list>
         </q-btn-dropdown>
         <q-chip v-else-if="sesion.instancia" outline :icon="iconoInstancia(sesion.ambito)">{{ sesion.nombre || sesion.instancia }}</q-chip>
-        <q-chip dense :color="conectado ? 'positive' : 'negative'" text-color="white" :icon="conectado ? 'o_check_circle' : 'o_cloud_off'" class="q-ml-sm">
+        <q-chip dense clickable :color="conectado ? 'positive' : 'negative'" text-color="white" :icon="conectado ? 'o_check_circle' : 'o_cloud_off'"
+          icon-right="arrow_drop_down" class="q-ml-sm" :aria-label="t('app.servicio')">
           <span class="gt-xs">{{ conectado ? t('app.enMarcha') : t('app.sinConexion') }}</span>
-          <q-tooltip>{{ conectado ? t('app.enMarchaDetalle') : t('app.sinConexionTexto') }}</q-tooltip>
+          <q-menu anchor="bottom right" self="top right">
+            <q-list style="min-width: 280px; max-width: 340px">
+              <q-item>
+                <q-item-section avatar><q-icon :name="conectado ? 'o_check_circle' : 'o_cloud_off'" :color="conectado ? 'positive' : 'negative'" /></q-item-section>
+                <q-item-section>
+                  <q-item-label class="text-weight-medium">{{ conectado ? t('app.enMarcha') : t('app.sinConexion') }}</q-item-label>
+                  <q-item-label caption>{{ conectado ? t('app.servicioDetalle', { version: sesion.version, url: origen }) : t('app.comoIniciar') }}</q-item-label>
+                </q-item-section>
+              </q-item>
+              <q-separator />
+              <q-item v-if="conectado && sesion.local" v-close-popup clickable @click="detener">
+                <q-item-section avatar><q-icon name="o_power_settings_new" color="negative" /></q-item-section>
+                <q-item-section class="text-negative">{{ t('app.detener') }}</q-item-section>
+              </q-item>
+              <q-item v-else-if="!conectado" v-close-popup clickable @click="comprobar">
+                <q-item-section avatar><q-icon name="o_refresh" /></q-item-section>
+                <q-item-section>{{ t('app.reintentar') }}</q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
         </q-chip>
         <q-btn flat round dense icon="o_translate" :aria-label="t('app.idioma')" class="q-ml-xs">
           <q-tooltip>{{ t('app.idioma') }}</q-tooltip>
@@ -85,7 +105,9 @@
       <q-page class="q-pa-md q-pa-lg-lg">
         <q-banner v-if="!conectado" rounded class="error-caja q-mb-md pagina">
           <template #avatar><q-icon name="o_cloud_off" /></template>
-          {{ t('app.sinConexionTexto') }}
+          <div class="text-weight-medium">{{ t('app.sinConexionTexto') }}</div>
+          <div class="text-body2 q-mt-xs">{{ t('app.comoIniciar') }}</div>
+          <template #action><q-btn flat no-caps icon="o_refresh" :label="t('app.reintentar')" @click="comprobar" /></template>
         </q-banner>
         <div v-if="!sesion.instancia" class="pagina">
           <q-card class="q-pa-lg text-center" style="max-width: 560px; margin: 48px auto">
@@ -106,6 +128,7 @@
 
 <script setup lang="ts">
 import { computed, markRaw, onMounted, onUnmounted, ref, watchEffect } from 'vue'
+import { useQuasar } from 'quasar'
 import { api, avisarError, sesion } from './api'
 import { cambiarIdioma, idioma, idiomas, t } from './i18n'
 import EntrarPagina from './paginas/Entrar.vue'
@@ -118,6 +141,8 @@ import AgentesPagina from './paginas/Agentes.vue'
 import AyudaPagina from './paginas/Ayuda.vue'
 
 // Orden del menú según el recorrido: conectar un agente, probarlo, conectar las apps y revisar lo ejecutado.
+const $q = useQuasar()
+
 const principales = [
   { id: 'inicio', titulo: 'menu.inicio', detalle: 'menuDetalle.inicio', icono: 'o_home', componente: markRaw(InicioPagina) },
   { id: 'agentes', titulo: 'menu.agentes', detalle: 'menuDetalle.agentes', icono: 'o_smart_toy', componente: markRaw(AgentesPagina) },
@@ -142,10 +167,27 @@ const menu = ref(false)
 const cargando = ref(true)
 const activando = ref(false)
 const conectado = ref(true)
+const origen = location.origin
 let sondeo: number
-// comprobar consulta /healthz (sin clave): si el servicio se detiene, la cabecera lo muestra y la página se reconecta sola.
+// comprobar consulta /healthz (sin clave): si el servicio se detiene, la cabecera lo muestra; cuando vuelve, la
+// página se recarga para abrir una sesión nueva (las sesiones no sobreviven a un reinicio del servicio).
 async function comprobar() {
+  const antes = conectado.value
   conectado.value = await fetch('/healthz', { cache: 'no-store' }).then((r) => r.ok).catch(() => false)
+  if (!antes && conectado.value) location.reload()
+}
+
+function detener() {
+  $q.dialog({ title: t('app.detenerTitulo'), message: t('app.detenerTexto'),
+    cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'negative', label: t('app.detenerBoton'), unelevated: true, noCaps: true } })
+    .onOk(async () => {
+      try {
+        await api.detenerServicio()
+        setTimeout(comprobar, 1500)
+      } catch (e) {
+        avisarError(e)
+      }
+    })
 }
 onUnmounted(() => clearInterval(sondeo))
 const avisoEntrada = ref(new URLSearchParams(location.search).get('error') === 'codigo' ? t('app.codigoCaducado') : '')

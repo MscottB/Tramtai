@@ -40,9 +40,11 @@ export function cambiarIdioma(nuevo: Idioma) {
   }
 }
 
-// t traduce una clave; {nombre} en el texto se sustituye por parametros.nombre.
+// t traduce una clave; {nombre} en el texto se sustituye por parametros.nombre. Con n igual a 1 se usa la
+// variante en singular «<clave>Uno» si existe (por ejemplo, «1 petición» en lugar de «1 peticiones»).
 export function t(clave: Clave, parametros?: Record<string, string | number>): string {
-  const texto: string = idiomas[idioma.value].textos[clave]
+  const textos: Record<string, string> = idiomas[idioma.value].textos
+  const texto = (parametros?.n === 1 && textos[clave + 'Uno']) || textos[clave]
   return parametros ? texto.replace(/\{(\w+)\}/g, (_, p) => String(parametros[p] ?? `{${p}}`)) : texto
 }
 

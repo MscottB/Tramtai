@@ -72,6 +72,7 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <instancia> 
 
 - `proyecto iniciar` inicia el servicio si no está en marcha.
 - **¿Sigue en marcha?** `tramtai abrir` y la app de escritorio dejan el servicio en segundo plano: sigue atendiendo a tus aplicaciones aunque cierres la terminal o la ventana. La cabecera de la Web UI muestra «En marcha» o «Sin conexión», y `tramtai servicio estado` lo confirma.
+- **Iniciar y detener:** desde la Web UI, el indicador «En marcha» tiene «Detener el servicio…» (solo en este equipo y con confirmación). Iniciarlo no puede hacerse desde la página, porque es el propio servicio el que la sirve: se inicia con `tramtai abrir`, con `tramtai servicio iniciar -d` o desde la bandeja de la app de escritorio (Iniciar el servicio). La página se reconecta sola cuando vuelve.
 - **Registro:** cada petición deja una línea al recibirla y otra al terminar (agente, modelo efectivo, API de origen, duración, tokens o el error). Se limita con `servicio.registro_mb` (5 MB por archivo) y `servicio.registro_copias` (2 copias: `servicio.log.1` y `.2`); con 0 copias el archivo se vacía al llenarse. En segundo plano va a `%APPDATA%\tramtai\datos\servicio.log` (`tramtai servicio registro -f`); en primer plano, a la propia terminal.
 - Las instancias activas se recuerdan: al reiniciar el servicio vuelven a abrirse y recuperan sus trabajos (sección 4.3).
 - Detener una instancia cancela lo que tenía en cola; lo que se estaba ejecutando queda `interrumpido`. Las demás instancias no se ven afectadas.

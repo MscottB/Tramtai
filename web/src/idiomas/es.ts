@@ -354,7 +354,7 @@ const es = {
   'app.enMarcha': 'En marcha',
   'app.enMarchaDetalle': 'El servicio de Tramtai está funcionando en este equipo.',
   'app.sinConexion': 'Sin conexión',
-  'app.sinConexionTexto': 'No hay conexión con el servicio de Tramtai. Si lo detuviste, vuelve a iniciarlo con «tramtai abrir»; esta página se reconecta sola.',
+  'app.sinConexionTexto': 'No hay conexión con el servicio de Tramtai.',
   'ejecutar.nueva': 'Nueva prueba',
   'ejecutar.ejemplos': 'Ideas para probar:',
   'ejecutar.ejemplo1': 'Resume en tres puntos qué es una API.',
@@ -375,6 +375,17 @@ const es = {
   'puntos.usoUltima': 'última {cuando}',
   'puntos.sinUso': 'Sin peticiones todavía',
   'puntos.usoUno': '1 petición en 7 días',
+  'app.servicio': 'Estado del servicio',
+  'app.servicioDetalle': 'Tramtai {version} en {url}',
+  'app.comoIniciar': 'Para iniciarlo, ejecuta «tramtai abrir» en una terminal o, en la app de escritorio, usa el icono de la bandeja → Iniciar el servicio. Esta página se reconecta sola.',
+  'app.reintentar': 'Reintentar',
+  'app.detener': 'Detener el servicio…',
+  'app.detenerTitulo': 'Detener el servicio',
+  'app.detenerTexto': 'Se detiene Tramtai: esta página, la app de escritorio y las aplicaciones conectadas dejarán de funcionar hasta que lo vuelvas a iniciar. Las peticiones en curso tienen hasta 30 segundos para terminar.',
+  'app.detenerBoton': 'Detener',
+  'datos.historialDetalleUno': '1 petición; si está en proceso se conserva',
+  'datos.puntosDetalleUno': '1 API; las aplicaciones que la usan dejarán de funcionar',
+  'historial.vaciadoUno': '1 petición eliminada',
 }
 
 export type Clave = keyof typeof es
