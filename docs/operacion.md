@@ -40,7 +40,12 @@ La Web UI está en español y en inglés (el botón de idioma de la cabecera) y 
 
 También se puede abrir `http://127.0.0.1:17373` directamente: en este equipo entra sin clave.
 
-La aplicación de escritorio inicia el servicio si no está en marcha y muestra la misma Web UI en su ventana. Al cerrarla queda en la bandeja del sistema, que permite abrirla, abrirla en el navegador, detener el servicio (con confirmación) o salir. **Salir no detiene el servicio.**
+La aplicación de escritorio inicia el servicio si no está en marcha y muestra la misma Web UI en su ventana. Al cerrarla queda en la bandeja del sistema vigilando el servicio: el icono (al pasar el ratón) y la primera línea del menú dicen si está en marcha y en qué dirección. Clic en el icono abre la ventana; **clic derecho** abre las acciones rápidas, sin abrir la app:
+
+- **Ir a** una sección (Inicio, Agentes, Probar, Mis APIs, Historial, Ajustes, Ayuda), **Abrir en el navegador** y **Copiar la dirección para tus apps**.
+- **Iniciar**, **Reiniciar** y **Detener el servicio…** (con confirmación); solo se habilitan las que corresponden. Tras detenerlo, la app sigue en la bandeja para volver a iniciarlo.
+- **Iniciar con Windows**, el mismo ajuste que en Ajustes.
+- **Salir**, que cierra la app pero **no detiene el servicio**: tus aplicaciones siguen funcionando. Para pararlo todo, primero «Detener el servicio…» y luego «Salir».
 
 ### Arranque con Windows
 

@@ -1,5 +1,6 @@
 // Comando tramtai-escritorio: aplicación de escritorio de Tramtai (sección 13.3). Es un cliente del servicio: lo
-// detecta o lo inicia, abre la Web UI ya autenticada en una ventana propia y queda en la bandeja del sistema.
+// detecta o lo inicia, abre la Web UI ya autenticada en una ventana propia y queda en la bandeja del sistema,
+// donde muestra si el servicio está en marcha y ofrece las acciones rápidas en el menú del clic derecho.
 // Cerrar la ventana o salir no detiene el servicio: las aplicaciones conectadas siguen funcionando.
 package main
 
@@ -13,12 +14,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 
+	"tramtai/internal/autoarranque"
 	"tramtai/internal/cliente"
 	"tramtai/internal/navegador"
 	"tramtai/internal/nucleo"
@@ -30,7 +34,7 @@ import (
 //go:embed icono/tramtai.png
 var icono []byte
 
-// intervaloVigilancia es cada cuánto se comprueba si el servicio volvió en otra dirección.
+// intervaloVigilancia es cada cuánto se comprueba el estado del servicio.
 const intervaloVigilancia = 3 * time.Second
 
 func main() {
@@ -81,38 +85,27 @@ func main() {
 		ventana.Hide()
 		e.Cancel()
 	})
+	mostrar := func() {
+		ventana.Show()
+		ventana.Focus()
+	}
 
-	// El servicio puede volver en otra dirección: otro puerto tras un reinicio, o uno libre si el suyo estaba
-	// ocupado. El descriptor dice cuál; si cambió, la ventana vuelve a entrar allí. Si el servicio está detenido,
-	// no se inicia: eso solo lo hace la bandeja (Iniciar el servicio).
-	go func() {
-		for range time.Tick(intervaloVigilancia) {
-			datos, err := dirDatos()
-			if err != nil {
-				return
-			}
-			cli, err := cliente.Conectar(datos)
-			if s := actual(); err != nil || (s != nil && s.cli.Base == cli.Base) {
-				continue
-			}
-			if nueva, err := prepararSesion(*proyecto); err == nil {
-				cargar(nueva)
-			}
-		}
-	}()
-
+	// Clic en el icono abre la ventana; clic derecho, el menú con las acciones rápidas.
 	bandeja := app.SystemTray.New()
-	bandeja.SetTooltip("Tramtai")
 	bandeja.SetIcon(icono)
-	bandeja.OnClick(func() {
-		ventana.Show()
-		ventana.Focus()
-	})
+	bandeja.OnClick(mostrar)
 	menu := app.NewMenu()
-	menu.Add("Abrir Tramtai").OnClick(func(*application.Context) {
-		ventana.Show()
-		ventana.Focus()
-	})
+	estado := menu.Add("").SetEnabled(false)
+	menu.AddSeparator()
+	menu.Add("Abrir Tramtai").OnClick(func(*application.Context) { mostrar() })
+	ir := menu.AddSubmenu("Ir a")
+	for _, p := range [][2]string{{"inicio", "Inicio"}, {"agentes", "Agentes"}, {"ejecutar", "Probar"}, {"conectar", "Mis APIs"},
+		{"historial", "Historial"}, {"configuracion", "Ajustes"}, {"ayuda", "Ayuda"}} {
+		ir.Add(p[1]).OnClick(func(*application.Context) {
+			ventana.ExecJS("location.hash = '" + p[0] + "'")
+			mostrar()
+		})
+	}
 	menu.Add("Abrir en el navegador").OnClick(func(*application.Context) {
 		s := actual()
 		if s == nil {
@@ -124,35 +117,125 @@ func main() {
 			_ = navegador.Abrir(url)
 		}
 	})
+	copiar := menu.Add("Copiar la dirección para tus apps").OnClick(func(*application.Context) {
+		if s := actual(); s != nil {
+			app.Clipboard.SetText(s.cli.Base)
+		}
+	})
 	menu.AddSeparator()
-	menu.Add("Iniciar el servicio").OnClick(func(*application.Context) {
+	iniciar := menu.Add("Iniciar el servicio").OnClick(func(*application.Context) {
 		// Si ya está en marcha solo vuelve a entrar; si no, lo inicia en segundo plano.
 		if nueva, err := prepararSesion(*proyecto); err != nil {
 			ventana.SetHTML(paginaError(err))
 		} else {
 			cargar(nueva)
 		}
-		ventana.Show()
-		ventana.Focus()
+		mostrar()
 	})
-	menu.Add("Detener el servicio…").OnClick(func(*application.Context) {
+	reiniciar := menu.Add("Reiniciar el servicio").OnClick(func(*application.Context) {
+		s := actual()
+		ejecutable, err := buscarTramtai()
+		datos, errDatos := dirDatos()
+		if s == nil || err != nil || errDatos != nil {
+			return
+		}
+		// Igual que desde la Web UI: el nuevo proceso espera a que este termine sus trabajos y usa el puerto
+		// configurado; el vigilante vuelve a entrar cuando responde.
+		if cliente.Lanzar(ejecutable, datos, "servicio", "iniciar", "--esperar-cierre", "--registro", filepath.Join(datos, "servicio.log")) != nil {
+			return
+		}
+		ctx, cancelar := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancelar()
+		_ = s.cli.Detener(ctx)
+	})
+	detener := menu.Add("Detener el servicio…").OnClick(func(*application.Context) {
 		s := actual()
 		if s == nil {
 			return
 		}
 		pregunta := app.Dialog.Question().SetTitle("Detener el servicio").
-			SetMessage("Se detienen todas las instancias y las aplicaciones conectadas dejarán de funcionar. ¿Continuar?")
+			SetMessage("Se detienen todas las instancias y las aplicaciones conectadas dejarán de funcionar. Tramtai sigue en la bandeja para volver a iniciarlo. ¿Continuar?")
 		pregunta.AddButton("Detener").OnClick(func() {
 			ctx, cancelar := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancelar()
 			_ = s.cli.Detener(ctx)
-			app.Quit()
 		})
 		pregunta.AddButton("Cancelar").SetAsDefault()
 		pregunta.Show()
 	})
+	// El arranque con Windows también se cambia en Ajustes; el vigilante mantiene la marca al día.
+	var conWindows *application.MenuItem
+	if runtime.GOOS == "windows" {
+		menu.AddSeparator()
+		activo, _ := autoarranque.Activo()
+		conWindows = menu.AddCheckbox("Iniciar con Windows", activo)
+		conWindows.OnClick(func(*application.Context) {
+			// Wails ya cambió la marca; si no se puede aplicar, se deshace.
+			propio, err := os.Executable()
+			if err == nil {
+				if conWindows.Checked() {
+					err = autoarranque.Activar(propio)
+				} else {
+					err = autoarranque.Desactivar()
+				}
+			}
+			if err != nil {
+				conWindows.SetChecked(!conWindows.Checked())
+			}
+		})
+	}
+	menu.AddSeparator()
 	menu.Add("Salir (el servicio sigue en marcha)").OnClick(func(*application.Context) { app.Quit() })
 	bandeja.SetMenu(menu)
+
+	// refrescar muestra en la bandeja si el servicio está en marcha y habilita las acciones que tienen sentido.
+	refrescar := func(cli *cliente.Cliente) {
+		texto := "Servicio detenido"
+		if cli != nil {
+			texto = "Servicio en marcha en " + strings.TrimPrefix(cli.Base, "http://")
+		}
+		if estado.Label() != texto {
+			estado.SetLabel(texto)
+			bandeja.SetTooltip("Tramtai · " + texto)
+			iniciar.SetEnabled(cli == nil)
+			for _, item := range []*application.MenuItem{reiniciar, detener, copiar} {
+				item.SetEnabled(cli != nil)
+			}
+		}
+		if conWindows != nil {
+			if activo, err := autoarranque.Activo(); err == nil && activo != conWindows.Checked() {
+				conWindows.SetChecked(activo)
+			}
+		}
+	}
+	if s := actual(); s != nil {
+		refrescar(s.cli)
+	} else {
+		refrescar(nil)
+	}
+
+	// El servicio puede volver distinto: reiniciado (sesiones nuevas), en otro puerto, o uno libre si el suyo
+	// estaba ocupado. El descriptor lo dice; si cambió, la ventana vuelve a entrar con un enlace nuevo. Si el
+	// servicio está detenido no se inicia: eso solo lo hace «Iniciar el servicio».
+	go func() {
+		for range time.Tick(intervaloVigilancia) {
+			datos, err := dirDatos()
+			if err != nil {
+				return
+			}
+			cli, err := cliente.Conectar(datos)
+			if err != nil {
+				cli = nil
+			}
+			refrescar(cli)
+			if s := actual(); cli == nil || (s != nil && s.cli.Descriptor.Identificador == cli.Descriptor.Identificador) {
+				continue
+			}
+			if nueva, err := prepararSesion(*proyecto); err == nil {
+				cargar(nueva)
+			}
+		}
+	}()
 
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
