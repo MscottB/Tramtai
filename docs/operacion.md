@@ -24,8 +24,9 @@ Se navega con ↑↓ o el número de la opción, Enter, Esc para volver y Ctrl+C
 ## Web UI y aplicación de escritorio
 
 ```powershell
-tramtai global abrir               # abre la Web UI de la instancia global, ya autenticada
-tramtai proyecto abrir             # la de la instancia del proyecto actual
+tramtai abrir                      # abre la Web UI (la del proyecto si estás en uno; si no, la global)
+tramtai global abrir               # la de la instancia global
+tramtai proyecto abrir             # la del proyecto actual
 tramtai-escritorio                 # aplicación de escritorio (o -proyecto <ruta>)
 ```
 
@@ -36,7 +37,7 @@ La Web UI tiene un panel (instancia, endpoints para conectar aplicaciones y trab
 - **Puntos de acceso:** crear con alias, modelos permitidos y forzado; activar, desactivar, ver el token y eliminar.
 - **Configuración efectiva** y **Agentes**.
 
-También se puede abrir `http://127.0.0.1:17373` y entrar con el token de la instancia.
+También se puede abrir `http://127.0.0.1:17373` directamente: en este equipo entra sin clave.
 
 La aplicación de escritorio inicia el servicio si no está en marcha y muestra la misma Web UI en su ventana. Al cerrarla queda en la bandeja del sistema, que permite abrirla, abrirla en el navegador, detener el servicio (con confirmación) o salir. **Salir no detiene el servicio.**
 
@@ -62,11 +63,11 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <instancia> 
   - Deja de aceptar trabajos y espera hasta `servicio.plazo_drenaje_segundos` (30 por defecto) a que terminen los que están en marcha. Después interrumpe los que queden.
   - Lo que estaba en cola se reanuda al volver a iniciarlo.
   - En primer plano, un segundo Ctrl+C corta la espera.
-- **Resultados:** se conservan 24 horas (`retencion.horas_resultado`); después la salida responde 410 y se borra lo que escribió el usuario. El registro del trabajo dura 7 días (`retencion.horas_metadatos`). Ver [arquitectura](arquitectura.md#retención-cierre-y-recuperación-m7).
+- **Resultados:** se conservan 24 horas (`retencion.horas_resultado`); después la salida responde 410 y se borra lo que escribió el usuario. El registro del trabajo dura 7 días (`retencion.horas_metadatos`). Ver [arquitectura](arquitectura.md#retención-cierre-y-recuperación).
 
 ## Claves de API
 
-`tramtai claves guardar|listar|borrar NOMBRE` las guarda en el Administrador de credenciales de Windows, como credenciales genéricas `tramtai/<NOMBRE>`. Los adaptadores las usan si no hay una variable de entorno con ese nombre, y nunca se muestran. Ver [inicio.md](inicio.md#autenticación-de-los-agentes).
+`tramtai claves guardar|listar|borrar NOMBRE` las guarda en el Administrador de credenciales de Windows, como credenciales genéricas `tramtai/<NOMBRE>`. Los adaptadores las usan si no hay una variable de entorno con ese nombre, y nunca se muestran. Ver [primeros pasos](inicio.md#2-dejar-listos-los-agentes).
 
 ## Instancias
 

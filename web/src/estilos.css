@@ -1,12 +1,180 @@
-.salida {
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
-  font-size: 0.9rem;
-  max-height: 60vh;
-  overflow: auto;
+/* Tokens de la interfaz: superficies claras con bordes finos en lugar de sombras; el modo oscuro los redefine. */
+:root {
+  --fondo: #f5f7f7;
+  --superficie: #ffffff;
+  --borde: rgba(15, 40, 40, 0.1);
+  --texto-suave: #5b6868;
+  --codigo-fondo: rgba(15, 118, 110, 0.06);
+}
+body.body--dark {
+  --fondo: #0d1314;
+  --superficie: #151c1d;
+  --borde: rgba(255, 255, 255, 0.1);
+  --texto-suave: #98a6a6;
+  --codigo-fondo: rgba(20, 184, 166, 0.08);
+}
+
+body {
+  background: var(--fondo);
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.q-card {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  box-shadow: none;
+}
+.q-dialog .q-card {
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+/* Sin las flechas de subir y bajar en los campos numéricos. */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
   margin: 0;
 }
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.cabecera-app {
+  background: var(--superficie);
+  color: inherit;
+  border-bottom: 1px solid var(--borde);
+}
+.cajon-app {
+  background: var(--superficie);
+}
+.cajon-app .q-item {
+  border-radius: 10px;
+  margin: 2px 10px;
+  min-height: 42px;
+}
+.cajon-app .q-item--active {
+  background: var(--codigo-fondo);
+  font-weight: 600;
+}
+
+.pagina {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+.titulo-pagina {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+.titulo-seccion {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.texto-suave {
+  color: var(--texto-suave);
+}
+
 .codigo {
-  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-family: 'Cascadia Code', ui-monospace, Consolas, 'SF Mono', monospace;
+  font-size: 0.86em;
+}
+.bloque-codigo {
+  position: relative;
+  background: var(--codigo-fondo);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 12px 44px 12px 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: 'Cascadia Code', ui-monospace, Consolas, 'SF Mono', monospace;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+.bloque-codigo .boton-copiar {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.salida {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  margin: 0;
+}
+.salida.json,
+.bloque-texto.json {
+  font-family: 'Cascadia Code', ui-monospace, Consolas, 'SF Mono', monospace;
+  font-size: 0.84rem;
+}
+/* Texto largo (solicitudes y respuestas): fuente normal y ajuste de línea. */
+.bloque-texto {
+  background: var(--codigo-fondo);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 12px 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+  font-size: 0.92rem;
+}
+.aviso {
+  background: rgba(217, 119, 6, 0.1);
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.error-caja {
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  color: var(--q-negative);
+}
+.romper {
+  overflow-wrap: anywhere;
+}
+.salida-caja {
+  max-height: 62vh;
+  overflow: auto;
+}
+
+.vacio {
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--texto-suave);
+}
+.vacio .q-icon {
+  opacity: 0.5;
+}
+
+.fila-clicable {
+  cursor: pointer;
+}
+.recortar-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+}
+.apilado {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Ejemplos de código: sin ajuste de línea, con desplazamiento horizontal. */
+.bloque-codigo.sin-ajuste {
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+/* Las columnas flex no deben ensancharse por un contenido largo (bloques de código, rutas). */
+.row > [class*='col'],
+.q-card.column > * {
+  min-width: 0;
 }

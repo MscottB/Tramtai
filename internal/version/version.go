@@ -23,8 +23,11 @@ func Commit() (revision string, modificado bool) {
 	return revision, modificado
 }
 
-// Texto es la versión legible, por ejemplo "v0.1.0+12102026 (7deffc4)".
-func Texto() string {
+// Texto es la versión que ven las personas, por ejemplo "v0.7.1+12102026".
+func Texto() string { return Version }
+
+// Detalle añade el commit compilado, por ejemplo "v0.1.0+12102026 (7deffc4)"; solo para tramtai version --detalle.
+func Detalle() string {
 	revision, modificado := Commit()
 	if revision == "" {
 		return Version

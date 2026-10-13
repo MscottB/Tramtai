@@ -4,8 +4,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/cookiejar"
+	"net/netip"
 	"net/url"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -133,5 +135,62 @@ func TestCodigoDeUnSoloUso(t *testing.T) {
 	}
 	if r, cuerpo := pedir(t, ts.URL, "POST", "/api/v1/servicio/sesiones", s.tokenAdmin, `{"instancia":"global"}`); r.StatusCode != 200 || !strings.Contains(cuerpo, "/ui/entrar?codigo=") {
 		t.Fatalf("la administración pide códigos: %d %s", r.StatusCode, cuerpo)
+	}
+}
+
+func TestEntradaLocalSinToken(t *testing.T) {
+	if !mismoUsuario(netip.MustParseAddrPort("127.0.0.1:1"), netip.MustParseAddrPort("127.0.0.1:2")) && runtime.GOOS != "windows" && runtime.GOOS != "linux" {
+		t.Skip("sin identificación del dueño de la conexión en este sistema")
+	}
+	s, ts, proyecto := entorno(t, "", "", adaptadores.Simulado{})
+	s.opc.Web = fstest.MapFS{"index.html": {Data: []byte("ui")}}
+	n := nuevoNavegador(t, ts.URL)
+	if r, _ := n.pedir("GET", "/ui/sesion", ""); r.StatusCode != 401 {
+		t.Fatalf("con entrada_local desactivada se pide token: %d", r.StatusCode)
+	}
+	s.opc.EntradaLocal = true
+	r, cuerpo := n.pedir("GET", "/ui/sesion", "")
+	if r.StatusCode != 200 || !strings.Contains(cuerpo, `"local":true`) || !strings.Contains(cuerpo, `"instancias":[]`) {
+		t.Fatalf("el mismo usuario entra sin token aunque no haya instancias: %d %s", r.StatusCode, cuerpo)
+	}
+	n.csrf = cuerpo[strings.Index(cuerpo, `"csrf":"`)+8:]
+	n.csrf = n.csrf[:strings.Index(n.csrf, `"`)]
+	if r, cuerpo := n.pedir("POST", "/ui/instancias", `{"ambito":"global"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 200 || !strings.Contains(cuerpo, `"instancia":"global"`) {
+		t.Fatalf("activar la global desde la Web UI: %d %s", r.StatusCode, cuerpo)
+	}
+	pry, _ := s.ActivarProyecto(proyecto)
+	r, cuerpo = n.pedir("GET", "/ui/sesion", "")
+	n.csrf = cuerpo[strings.Index(cuerpo, `"csrf":"`)+8:]
+	n.csrf = n.csrf[:strings.Index(n.csrf, `"`)]
+	if !strings.Contains(cuerpo, pry.ID) || !strings.Contains(cuerpo, `"nombre":"Mi Proyecto"`) {
+		t.Fatalf("la sesión local lista las instancias: %s", cuerpo)
+	}
+	if r, _ := n.pedir("POST", "/ui/sesion", `{"instancia":"`+pry.ID+`"}`); r.StatusCode != 401 {
+		t.Fatalf("cambiar de instancia exige el CSRF: %d", r.StatusCode)
+	}
+	if r, cuerpo := n.pedir("POST", "/ui/sesion", `{"instancia":"`+pry.ID+`"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 200 || !strings.Contains(cuerpo, `"instancia":"`+pry.ID+`"`) {
+		t.Fatalf("cambiar de instancia: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, cuerpo := n.pedir("GET", "/api/v1/instancia/token", ""); r.StatusCode != 200 || !strings.Contains(cuerpo, pry.token) {
+		t.Fatalf("la sesión ve la clave para conectar aplicaciones: %d", r.StatusCode)
+	}
+	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/instancia/token", pry.token, ""); r.StatusCode != 401 {
+		t.Fatalf("el token de aplicaciones no lee claves: %d", r.StatusCode)
+	}
+}
+
+func TestDireccionesDeProc(t *testing.T) {
+	tabla := `  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
+   0: 0100007F:4377 00000000:0000 0A 00000000:00000000 00:00000000 00000000  1000        0 1 1 0000000000000000 100 0 0 10 0
+   1: 0100007F:C3A2 0100007F:4377 01 00000000:00000000 00:00000000 00000000  1001        0 2 1 0000000000000000 20 4 30 10 -1`
+	uid, ok := uidDeConexion(tabla, netip.MustParseAddrPort("127.0.0.1:50082"), netip.MustParseAddrPort("127.0.0.1:17271"))
+	if !ok || uid != 1001 {
+		t.Fatalf("uid %d %v", uid, ok)
+	}
+	if _, ok := uidDeConexion(tabla, netip.MustParseAddrPort("127.0.0.1:1"), netip.MustParseAddrPort("127.0.0.1:17271")); ok {
+		t.Fatal("una conexión ajena no coincide")
+	}
+	if d, ok := direccionProc("00000000000000000000000001000000:1F90"); !ok || d != netip.MustParseAddrPort("[::1]:8080") {
+		t.Fatalf("IPv6: %v", d)
 	}
 }

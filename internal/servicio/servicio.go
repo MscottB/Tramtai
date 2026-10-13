@@ -44,6 +44,8 @@ type Opciones struct {
 	Web       fs.FS     // Web UI compilada (internal/recursos); nil la desactiva
 	// PlazoDrenaje es lo que Drenar espera a los trabajos en curso antes de interrumpirlos (sección 17.3).
 	PlazoDrenaje time.Duration
+	// EntradaLocal deja entrar en la Web UI sin token al mismo usuario del sistema (servicio.entrada_local).
+	EntradaLocal bool
 }
 
 // intervaloPurga es cada cuánto se aplica la retención (sección 16.2) a cada instancia activa.

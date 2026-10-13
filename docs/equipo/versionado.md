@@ -20,7 +20,7 @@ Formato: **`vX.Y.Z+DDMMAAAA`**, por ejemplo `v0.1.0+12102026`. La versión **se 
 
 - `tramtai version` y `tramtai --version`, con el commit compilado.
 - Cabecera de `tramtai agentes` y de `tramtai ejecutar`.
-- El paquete [`internal/version`](../internal/version/version.go) es la única fuente. El servicio HTTP (M4) y la aplicación de escritorio (M6) la mostrarán desde ahí.
+- El paquete [`internal/version`](../../internal/version/version.go) es la única fuente. La CLI, la Web UI y la aplicación de escritorio muestran solo la versión; `tramtai version --detalle` añade el commit.
 
 ## Etiquetas y notas de versión
 

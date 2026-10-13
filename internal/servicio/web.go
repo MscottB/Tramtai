@@ -21,6 +21,8 @@ type sesion struct {
 	instancia string
 	csrf      string
 	vence     time.Time
+	// local: entró sin token por ser del mismo usuario del sistema (esLocal); puede cambiar de instancia.
+	local bool
 }
 
 type codigoEntrada struct {
@@ -50,9 +52,9 @@ func (s *Servicio) sesionDe(r *http.Request) (string, *sesion) {
 	return cookie.Value, ses
 }
 
-func (s *Servicio) crearSesion(w http.ResponseWriter, instancia string) *sesion {
+func (s *Servicio) crearSesion(w http.ResponseWriter, instancia string, local bool) *sesion {
 	id := aleatorio(32)
-	ses := &sesion{instancia: instancia, csrf: aleatorio(16), vence: time.Now().Add(duracionSesion)}
+	ses := &sesion{instancia: instancia, csrf: aleatorio(16), vence: time.Now().Add(duracionSesion), local: local}
 	s.muSesiones.Lock()
 	for clave, otra := range s.sesiones {
 		if time.Now().After(otra.vence) {
@@ -88,12 +90,16 @@ func (s *Servicio) CodigoSesion(instancia string) (string, error) {
 	return codigo, nil
 }
 
-// rutasUI gestiona la sesión: GET la consulta, POST entra con el token de una instancia, DELETE sale y
-// /ui/entrar canjea un código de un solo uso.
+// rutasUI gestiona la sesión: GET la consulta (y, si la petición es local, entra sin token), POST entra con el
+// token de una instancia o, en una sesión local, cambia de instancia, DELETE sale y /ui/entrar canjea un código de
+// un solo uso. /ui/instancias activa la instancia global desde una sesión local.
 func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/ui/sesion" && r.Method == http.MethodGet:
 		_, ses := s.sesionDe(r)
+		if ses == nil && s.esLocal(r) {
+			ses = s.crearSesion(w, s.instanciaPredeterminada(), true)
+		}
 		if ses == nil {
 			api.NoAutorizado(w, r)
 			return
@@ -101,10 +107,24 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		s.responderSesion(w, r, ses)
 	case r.URL.Path == "/ui/sesion" && r.Method == http.MethodPost:
 		var peticion struct {
-			Token string `json:"token"`
+			Token     string `json:"token"`
+			Instancia string `json:"instancia"`
 		}
 		if err := api.LeerJSON(w, r, &peticion); err != nil {
 			api.EscribirError(w, r, err)
+			return
+		}
+		if peticion.Instancia != "" { // cambio de instancia: solo en una sesión local y con su CSRF
+			_, ses := s.sesionDe(r)
+			if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+				api.NoAutorizado(w, r)
+				return
+			}
+			if s.instancia(peticion.Instancia) == nil {
+				api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "la instancia "+peticion.Instancia+" no está activa"))
+				return
+			}
+			s.responderSesion(w, r, s.crearSesion(w, peticion.Instancia, true))
 			return
 		}
 		inst := s.instanciaPorToken(strings.TrimSpace(peticion.Token))
@@ -112,7 +132,22 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			api.NoAutorizado(w, r)
 			return
 		}
-		s.responderSesion(w, r, s.crearSesion(w, inst.ID))
+		s.responderSesion(w, r, s.crearSesion(w, inst.ID, false))
+	case r.URL.Path == "/ui/instancias" && r.Method == http.MethodPost:
+		_, ses := s.sesionDe(r)
+		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+			api.NoAutorizado(w, r)
+			return
+		}
+		inst, err := s.ActivarGlobal()
+		if err == nil {
+			err = s.guardarActivas()
+		}
+		if err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		s.responderSesion(w, r, s.crearSesion(w, inst.ID, true))
 	case r.URL.Path == "/ui/sesion" && r.Method == http.MethodDelete:
 		if id, _ := s.sesionDe(r); id != "" {
 			s.muSesiones.Lock()
@@ -131,23 +166,82 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/?error=codigo", http.StatusSeeOther)
 			return
 		}
-		s.crearSesion(w, entrada.instancia)
+		s.crearSesion(w, entrada.instancia, false)
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	default:
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "ruta no encontrada: "+r.Method+" "+r.URL.Path))
 	}
 }
 
-func (s *Servicio) responderSesion(w http.ResponseWriter, r *http.Request, ses *sesion) {
+// instanciaResumida es lo que el selector de instancias de la Web UI necesita.
+type instanciaResumida struct {
+	ID     string `json:"id"`
+	Ambito string `json:"ambito"`
+	Raiz   string `json:"raiz,omitempty"`
+	Nombre string `json:"nombre"`
+}
+
+func resumir(inst *Instancia) instanciaResumida {
+	nombre := "Global"
+	if inst.Ambito == "proyecto" {
+		nombre = filepath.Base(inst.Raiz)
+	}
+	return instanciaResumida{ID: inst.ID, Ambito: inst.Ambito, Raiz: inst.Raiz, Nombre: nombre}
+}
+
+func (s *Servicio) instancia(id string) *Instancia {
 	s.mu.RLock()
-	inst := s.instancias[ses.instancia]
-	s.mu.RUnlock()
-	if inst == nil {
+	defer s.mu.RUnlock()
+	return s.instancias[id]
+}
+
+// instanciaPredeterminada es la global si está activa; si no, la primera por nombre ("" si no hay ninguna).
+func (s *Servicio) instanciaPredeterminada() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.instancias["global"] != nil {
+		return "global"
+	}
+	ids := make([]string, 0, len(s.instancias))
+	for id := range s.instancias {
+		ids = append(ids, id)
+	}
+	slices.Sort(ids)
+	if len(ids) == 0 {
+		return ""
+	}
+	return ids[0]
+}
+
+// responderSesion devuelve la sesión. Una sesión local ve además todas las instancias activas para cambiar entre
+// ellas; si no hay ninguna, la Web UI ofrece activar la global.
+func (s *Servicio) responderSesion(w http.ResponseWriter, r *http.Request, ses *sesion) {
+	respuesta := map[string]any{"csrf": ses.csrf, "version": version.Version, "local": ses.local, "instancia": ""}
+	if ses.local {
+		s.mu.RLock()
+		lista := []instanciaResumida{}
+		for _, inst := range s.instancias {
+			lista = append(lista, resumir(inst))
+		}
+		s.mu.RUnlock()
+		slices.SortFunc(lista, func(a, b instanciaResumida) int {
+			if a.Ambito != b.Ambito {
+				return strings.Compare(a.Ambito, b.Ambito) // global antes que proyecto
+			}
+			return strings.Compare(a.Nombre, b.Nombre)
+		})
+		respuesta["instancias"] = lista
+	}
+	inst := s.instancia(ses.instancia)
+	if inst == nil && !ses.local {
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "la instancia de la sesión ("+ses.instancia+") no está activa"))
 		return
 	}
-	api.EscribirJSON(w, http.StatusOK, map[string]any{"instancia": inst.ID, "ambito": inst.Ambito, "raiz": inst.Raiz,
-		"csrf": ses.csrf, "version": version.Texto()})
+	if inst != nil {
+		datos := resumir(inst)
+		respuesta["instancia"], respuesta["ambito"], respuesta["raiz"], respuesta["nombre"] = datos.ID, datos.Ambito, datos.Raiz, datos.Nombre
+	}
+	api.EscribirJSON(w, http.StatusOK, respuesta)
 }
 
 // esSitio indica una petición de navegación o de archivos de la Web UI, que no exige token.
@@ -208,6 +302,9 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 		return true
 	}
 	switch {
+	case ruta == "/api/v1/instancia/token" && r.Method == http.MethodGet:
+		// Para mostrar en «Conectar» la clave que usan las aplicaciones; solo con sesión o token de servicio.
+		api.EscribirJSON(w, http.StatusOK, map[string]any{"token": inst.token, "archivo": inst.ArchivoToken})
 	case ruta == "/api/v1/instancia/configuracion" && r.Method == http.MethodGet:
 		entradas := []EntradaConfiguracion{}
 		for _, e := range inst.Config.Efectiva() {

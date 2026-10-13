@@ -1,39 +1,102 @@
 <template>
-  <div v-if="capacidades" class="row q-col-gutter-md">
-    <div v-for="a in capacidades.adaptadores" :key="a.agente" class="col-12 col-md-6">
-      <q-card class="full-height">
-        <q-card-section>
-          <div class="text-h6">{{ a.agente }}</div>
-          <div class="text-caption text-grey-7">{{ a.version_detectada || 'versión no detectada' }} · {{ a.autenticacion }}</div>
-        </q-card-section>
-        <q-list dense>
-          <q-item><q-item-section>Streaming</q-item-section><q-item-section side>{{ a.capacidades.streaming }}</q-item-section></q-item>
-          <q-item><q-item-section>Salida estructurada</q-item-section><q-item-section side>{{ a.capacidades.salida_estructurada ? 'sí' : 'no' }}</q-item-section></q-item>
-          <q-item><q-item-section>Informa el modelo efectivo</q-item-section><q-item-section side>{{ a.capacidades.modelo_efectivo_informado ? 'sí' : 'no' }}</q-item-section></q-item>
-          <q-item><q-item-section>Uso de tokens</q-item-section><q-item-section side>{{ a.capacidades.uso_tokens }}</q-item-section></q-item>
-        </q-list>
-        <q-card-section class="text-caption">Términos: {{ a.terminos }}</q-card-section>
-        <q-banner v-if="a.problema" class="bg-warning text-dark q-ma-sm" rounded>{{ a.problema }}</q-banner>
-      </q-card>
+  <div class="pagina apilado">
+    <div class="row items-end q-col-gutter-md">
+      <div class="col-12 col-sm">
+        <div class="titulo-pagina">Agentes</div>
+        <div class="texto-suave">Los asistentes que Tramtai puede usar en este equipo y qué hace falta para dejarlos listos.</div>
+      </div>
+      <div class="col-12 col-sm-auto">
+        <q-btn flat no-caps color="primary" icon="o_refresh" label="Volver a comprobar" :loading="cargando" @click="cargar" />
+      </div>
     </div>
-    <div class="col-12 text-caption text-grey-7">Formato de conversación: {{ capacidades.formato_serializacion }} · entradas: {{ capacidades.entradas?.join(', ') }}</div>
+
+    <div v-if="adaptadores" class="row q-col-gutter-md">
+      <div v-for="a in adaptadores" :key="a.agente" class="col-12 col-md-6">
+        <q-card class="full-height column">
+          <q-card-section class="row items-center no-wrap">
+            <q-avatar color="primary" text-color="white" icon="o_smart_toy" size="40px" class="q-mr-md" />
+            <div class="col">
+              <div class="titulo-seccion">{{ nombreAgente(a.agente) }}</div>
+              <div class="text-caption texto-suave">{{ a.version_detectada || 'versión no detectada' }}</div>
+            </div>
+            <q-chip :color="a.problema ? 'warning' : 'positive'" text-color="white" :icon="a.problema ? 'priority_high' : 'check'">
+              {{ a.problema ? estado(a) : 'Listo' }}
+            </q-chip>
+          </q-card-section>
+
+          <q-card-section v-if="a.problema" class="q-pt-none">
+            <div class="aviso">
+              <div>{{ claveQueFalta(a) ? 'Falta la clave ' + claveQueFalta(a) + '.' : a.problema }}</div>
+              <template v-if="claveQueFalta(a)">
+                <div class="q-mt-sm text-weight-medium">Guarda la clave (se pide sin mostrarla):</div>
+                <div class="bloque-codigo q-mt-xs">tramtai claves guardar {{ claveQueFalta(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" aria-label="Copiar el comando" @click="copiar('tramtai claves guardar ' + claveQueFalta(a))" /></div>
+                <div v-if="admiteSuscripcion(a)" class="text-caption q-mt-sm">
+                  Para uso personal también puedes usar tu suscripción: <span class="codigo">adaptadores.{{ a.agente }}.autenticacion: suscripcion</span>
+                  en la configuración global.
+                </div>
+              </template>
+              <div v-else-if="estado(a) === 'No instalado'" class="text-caption q-mt-sm">
+                Instala su CLI y pulsa «Volver a comprobar». Si está en otra ruta, indícala en <span class="codigo">comandos_agentes.{{ a.agente }}</span>.
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-list dense class="q-pb-sm">
+            <q-item>
+              <q-item-section class="texto-suave">Autenticación</q-item-section>
+              <q-item-section side>{{ a.autenticacion === 'suscripcion' ? 'Suscripción (uso personal)' : 'Clave de API' }}</q-item-section>
+            </q-item>
+            <q-item>
+              <q-item-section class="texto-suave">Respuesta en vivo</q-item-section>
+              <q-item-section side>{{ a.capacidades.streaming === 'tokens' ? 'Por fragmentos' : 'Al terminar' }}</q-item-section>
+            </q-item>
+            <q-item>
+              <q-item-section class="texto-suave">Respuesta JSON con esquema</q-item-section>
+              <q-item-section side>{{ a.capacidades.salida_estructurada ? 'Sí' : 'No' }}</q-item-section>
+            </q-item>
+            <q-item>
+              <q-item-section class="texto-suave">Informa el modelo usado</q-item-section>
+              <q-item-section side>{{ a.capacidades.modelo_efectivo_informado ? 'Sí' : 'No' }}</q-item-section>
+            </q-item>
+          </q-list>
+          <q-space />
+          <q-card-section v-if="a.terminos" class="text-caption texto-suave q-pt-none">{{ a.terminos }}</q-card-section>
+        </q-card>
+      </div>
+    </div>
+    <div v-else class="row q-col-gutter-md">
+      <div v-for="n in 4" :key="n" class="col-12 col-md-6">
+        <q-card class="q-pa-md"><q-skeleton type="text" width="40%" /><q-skeleton v-for="m in 4" :key="m" type="text" /></q-card>
+      </div>
+    </div>
   </div>
-  <div v-else class="flex flex-center q-pa-xl"><q-spinner size="40px" color="primary" /></div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useQuasar } from 'quasar'
-import { api, mensajeError } from '../api'
+import { api, avisarError, copiar, nombreAgente, type Adaptador } from '../api'
 
-const $q = useQuasar()
-const capacidades = ref<Record<string, any>>()
+const adaptadores = ref<Adaptador[]>()
+const cargando = ref(false)
 
-onMounted(async () => {
+function estado(a: Adaptador) {
+  if (/no se encontró|envoltorio/.test(a.problema ?? '')) return 'No instalado'
+  if (/falta/i.test(a.problema ?? '')) return 'Falta la clave'
+  return 'Revisar'
+}
+const claveQueFalta = (a: Adaptador) => a.problema?.match(/falta ([A-Z_]+_API_KEY)/)?.[1] ?? ''
+const admiteSuscripcion = (a: Adaptador) => a.agente === 'claude' || a.agente === 'codex'
+
+async function cargar() {
+  cargando.value = true
   try {
-    capacidades.value = await api.capacidades()
+    adaptadores.value = (await api.capacidades()).adaptadores
   } catch (e) {
-    $q.notify({ type: 'negative', message: mensajeError(e) })
+    avisarError(e)
+  } finally {
+    cargando.value = false
   }
-})
+}
+
+onMounted(cargar)
 </script>

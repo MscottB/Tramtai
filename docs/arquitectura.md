@@ -10,7 +10,7 @@ El diseño completo está en el documento maestro (v12, en `documentos/`). Resum
 | `internal/persistencia` | SQLite en modo WAL sin CGO (`modernc.org/sqlite`) con migraciones numeradas (`PRAGMA user_version`). Aceptación atómica, idempotencia, eventos numerados y recuperación tras reinicio. |
 | `internal/planificador` | Cola acotada, concurrencia por instancia, semáforo por adaptador, tiempos máximos, cancelación idempotente y resolución del perfil de modelo al aceptar. |
 | `internal/procesos` | Supervisión de procesos. En Windows crea el proceso suspendido, lo asigna a un Job Object con `KILL_ON_JOB_CLOSE` y lo reanuda; en Unix usa un grupo de procesos con SIGTERM y luego SIGKILL. Cancelar o agotar el tiempo termina el árbol completo; si no se confirma, devuelve `cancelacion_no_confirmada`. |
-| `internal/adaptadores` | Contrato `Adaptador`, agente `Simulado` y los adaptadores reales `Claude` y `Codex` (M2). Antigravity y la Gemini API llegan después. |
+| `internal/adaptadores` | Contrato `Adaptador`, agente `Simulado` y los adaptadores reales: Claude, Codex, Gemini API y Antigravity. |
 | `internal/documentos` | Cargas identificadas por SHA-256 (`carga_<hash>`) con vencimiento. Conversión a Markdown con markitdown 0.1.8 en un proceso supervisado con plazo y límite de salida. Los archivos de texto (txt, md, json, xml, csv, yaml…) pasan tal cual, validando que sean UTF-8. ZIP seguro con límites de archivos, tamaño descomprimido medido y profundidad, rechazando rutas con `..`, absolutas, con unidad o enlaces. |
 | `internal/salidas` | Validación de la salida contra el JSON Schema del consumidor (`santhosh-tekuri/jsonschema`), con los `$ref` externos deshabilitados. |
 | `internal/api` | Servicio HTTP (sección 7 y 8): valida Host, Origin y token; API nativa con SSE reanudable por `Last-Event-ID`; fachadas OpenAI y Anthropic con política de parámetros y su formato de errores. Detalle en [api.md](api.md). |
@@ -24,7 +24,7 @@ El diseño completo está en el documento maestro (v12, en `documentos/`). Resum
 | `internal/version` | Versión del ejecutable (inyectada al compilar) y commit de git. |
 | `cmd/tramtai` | CLI con Cobra. Sin argumentos abre la terminal interactiva. Comandos: `servicio`, `global`, `proyecto`, `iniciar`, `acceso`, `trabajos`, `ejecutar`, `convertir`, `agentes`, `configuracion`. Detalle en [operacion.md](operacion.md). |
 
-## Adaptadores (M2)
+## Agentes
 
 | | Claude Code | Codex CLI |
 |---|---|---|
@@ -35,7 +35,7 @@ El diseño completo está en el documento maestro (v12, en `documentos/`). Resum
 | Modelo efectivo | sí (`modelUsage`) | no: queda como no verificable |
 | Uso | tokens y coste en USD | tokens |
 
-Además hay dos adaptadores de Google, probados con un servidor y un CLI simulados (falta la prueba con clave real, junto a M0b):
+Además hay dos adaptadores de Google, probados con un servidor y un CLI simulados:
 
 - **`gemini`:** Gemini API directa por HTTP con `GEMINI_API_KEY`, que viaja en cabecera, nunca en la URL.
   - Streaming por fragmentos (`streamGenerateContent`) y sistema en `systemInstruction`.
@@ -48,7 +48,7 @@ Además hay dos adaptadores de Google, probados con un servidor y un CLI simulad
 
 Las conversaciones de varios turnos se enmarcan con el formato `tramtai-turnos-v1`: un bloque `<<<turno rol=…>>>` por turno, con el contenido intacto. Los errores del proveedor se traducen a `limite_uso_proveedor`, `autenticacion_agente`, `modelo_no_disponible` o `error_agente`. Ningún secreto llega a los mensajes: se redactan antes.
 
-## Entradas y salidas (M3)
+## Entradas y salidas
 
 Con cargas, el trabajo pasa por `preparando_entrada`, que tiene su propio límite de conversiones simultáneas (`concurrencia.maximo_conversiones_instancia`). Cada archivo se convierte por separado y se antepone al último mensaje del usuario en un bloque delimitado:
 
@@ -62,7 +62,7 @@ Si una carga venció, el trabajo falla con `entrada_no_disponible`. Una conversi
 
 Con un esquema, se usa primero la salida estructurada nativa del agente (`--json-schema` y `structured_output` en Claude; `--output-schema` en Codex) y después Tramtai valida el resultado. Si no cumple, el trabajo falla con `salida_no_cumple_esquema` y la salida solo se conserva con `conservar_salida_invalida`. Un esquema inválido se rechaza al aceptar el trabajo.
 
-## Interfaces (M6)
+## Interfaces
 
 Las cuatro interfaces trabajan sobre el mismo servicio, así que un trabajo creado en una se ve y se controla en las demás:
 
@@ -73,7 +73,9 @@ Las cuatro interfaces trabajan sobre el mismo servicio, así que un trabajo crea
 
 La Web UI se enlaza a una instancia con una sesión (sección 7.4):
 
-- **Entrada:** se entra con el token de la instancia, o con un código de un solo uso que dura un minuto y piden la CLI, la terminal o la app de escritorio con el token de servicio.
+- **Entrada sin clave en el propio equipo:** si la conexión llega por loopback desde un programa del mismo usuario del sistema (el navegador o la app de escritorio), la Web UI entra sola y puede cambiar entre instancias. En Windows se identifica al dueño de la conexión con la tabla TCP del sistema y el SID de su proceso; en Linux, con el uid de `/proc/net/tcp`. Se desactiva con `servicio.entrada_local: false`.
+- **Otras formas de entrar:** con la clave de la instancia, o con un código de un solo uso (un minuto) que piden `tramtai abrir`, la terminal o la app de escritorio. Es lo que se usa en macOS o desde otro equipo.
+- **Por qué es seguro:** la clave protege frente a otros usuarios del equipo, y eso es justo lo que se comprueba. Una página web ajena no puede aprovecharla: Host, Origin, la cookie `SameSite=Strict` y el CSRF la bloquean, y las aplicaciones siguen necesitando su clave para la API.
 - **Cookie:** `HttpOnly` y `SameSite=Strict`; las peticiones que modifican exigen además `X-CSRF-Token`.
 - **Navegador:** se valida `Origin`, no hay CORS y se aplica una CSP estricta.
 - **El token nunca viaja en la URL** y no se guarda en el navegador.
@@ -89,7 +91,7 @@ ejecutando al reiniciar el servicio → interrumpido   (no se relanza)
 en_cola al reiniciar → se reencola
 ```
 
-## Retención, cierre y recuperación (M7)
+## Retención, cierre y recuperación
 
 La retención (sección 16.2) se aplica a cada instancia al abrirla y después cada 5 minutos. Los plazos cuentan desde que el trabajo termina, y los trabajos activos nunca se purgan:
 
@@ -107,7 +109,7 @@ La retención (sección 16.2) se aplica a cada instancia al abrirla y después c
 
 - En Windows, el sistema cierra el Job Object de cada agente y termina su árbol de procesos. Se verificó matando el servicio con 6 procesos de Codex en marcha.
 - Al reiniciar, lo que estaba ejecutándose pasa a `interrumpido` y nunca se relanza.
-- En Unix el grupo de procesos sobrevive a una caída. Terminarlo al arrancar queda pendiente para M8.
+- En Unix el grupo de procesos sobrevive a la caída; al arrancar, el servicio lo termina si su firma de inicio coincide.
 
 **Límite:** el vencimiento borra los datos de forma lógica (SQLite y archivos). No garantiza un borrado físico seguro en SSD, copias de seguridad ni páginas libres de SQLite.
 
@@ -143,4 +145,4 @@ De menor a mayor: interno → global → proyecto → local → entorno → punt
 
 ## Cumplimiento de proveedores
 
-Por defecto cada adaptador usa clave de API. El modo suscripción es opcional, solo local y sin acceso remoto. Google se usará vía Gemini API directa; `agy` solo con `modelProvider: gemini` + `GEMINI_API_KEY`. Detalle en §2.4 del documento maestro y en [M0B.md](M0B.md).
+Por defecto cada adaptador usa clave de API. El modo suscripción es opcional, solo local y sin acceso remoto. Google se usará vía Gemini API directa; `agy` solo con `modelProvider: gemini` + `GEMINI_API_KEY`. Detalle en §2.4 del documento maestro.

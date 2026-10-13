@@ -10,7 +10,8 @@
 
 ## Seguridad
 
-- **Token:** `Authorization: Bearer <token>` o `x-api-key: <token>`. El token sale de la variable `TRAMTAI_TOKEN_GLOBAL` o del archivo `%APPDATA%\tramtai\datos\token-global`, que se crea la primera vez. Para verlo: `tramtai servicio token`.
+- **Clave (token):** `Authorization: Bearer <clave>` o `x-api-key: <clave>`. La forma más fácil de verla es la página **Conectar apps** de la Web UI; también `tramtai global token` (o `tramtai proyecto token`). Se crea la primera vez en `%APPDATA%\tramtai\datos\token-global`, o sale de la variable `TRAMTAI_TOKEN_GLOBAL`.
+- **Web UI:** en el propio equipo entra sin clave (mismo usuario del sistema); ver [arquitectura](arquitectura.md#interfaces).
 - **Host:** solo `127.0.0.1`, `localhost` y `::1`. Cualquier otro nombre en la cabecera `Host` se rechaza con 403 antes de autenticar (protección frente a DNS rebinding).
 - **Navegadores:** no hay CORS. Una petición con `Origin` de otro sitio se rechaza con 403.
 - **Acceso remoto:** está desactivado. Solo se permite con `servicio.permitir_remoto: true`, token obligatorio y ningún agente en modo suscripción. Lo recomendado es un túnel SSH.

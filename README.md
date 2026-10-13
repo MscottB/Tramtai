@@ -1,60 +1,56 @@
 # Tramtai
 
-Pasarela local en Go que expone Claude Code, Codex CLI y Antigravity (y la Gemini API) como una API HTTP propia, con cola de trabajos, idempotencia, configuración por capas y selección de modelo por solicitud.
+<img src="escritorio/icono/tramtai.png" alt="" width="72" align="right" />
 
-> Estado: **M7 completo, más los pendientes resueltos tras él**: adaptadores Gemini API y Antigravity, claves en el Administrador de credenciales, perfiles de ejecución, modo consciente del proyecto e icono propio. **M7:** retención con purga automática (410 al expirar el resultado), cierre ordenado con plazo de drenaje y recuperación verificada tras una caída del servicio. Cuatro interfaces sobre el mismo servicio y los mismos trabajos: CLI, terminal interactiva, Web UI (Vue + Quasar, incorporada al ejecutable) y aplicación de escritorio (Wails). Servicio único con instancias global y por proyecto, puntos de acceso, API nativa y fachadas OpenAI/Anthropic, adaptadores Claude y Codex, archivos y salidas con JSON Schema.
+**Tus agentes de IA como una API en tu propio equipo.** Tramtai convierte Claude Code, Codex CLI y Gemini en un servicio local compatible con OpenAI y Anthropic, así que cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
 
-## Inicio rápido
+- **Compatible con lo que ya usas:** SDK de OpenAI y Anthropic (Python, Node, curl…), con respuesta en vivo.
+- **Elige agente y modelo en cada petición:** `claude/sonnet`, `codex`, `gemini/gemini-flash-latest` o un perfil como `perfil/rapido`.
+- **Archivos y respuestas estructuradas:** PDF, Word, Excel, PowerPoint o ZIP como entrada; JSON validado con un esquema como salida.
+- **Una URL y una clave por aplicación,** con modelos permitidos o fijos, para no compartir la misma clave en todas partes.
+- **Cuatro formas de usarlo** sobre los mismos trabajos: Web UI, aplicación de escritorio, terminal interactiva y línea de órdenes.
+- **Local y privado:** escucha solo en `127.0.0.1`; los resultados se guardan 24 horas y las claves de API van al Administrador de credenciales de Windows.
+
+## Empezar en tres pasos
 
 ```powershell
-./scripts/compilar.ps1                       # genera bin/tramtai.exe
-./bin/tramtai.exe                            # terminal interactiva: todo desde un menú
-./bin/tramtai.exe global abrir               # Web UI en el navegador, ya autenticada
-./bin/tramtai-escritorio.exe                 # aplicación de escritorio (ventana + bandeja)
-./bin/tramtai.exe --version
-./bin/tramtai.exe agentes                    # diagnóstico de Claude y Codex
-./bin/tramtai.exe ejecutar -p rapido "Hola"   # trabajo real con respuesta en vivo
-./bin/tramtai.exe ejecutar -f acta.pdf -e compromisos.schema.json "Extrae los compromisos"
-./bin/tramtai.exe servicio iniciar -d          # servicio en segundo plano en http://127.0.0.1:17373
-go test ./...
+./scripts/compilar.ps1          # 1. compila bin/tramtai.exe (requiere Go 1.27)
+./bin/tramtai.exe abrir         # 2. inicia el servicio y abre la Web UI
 ```
 
-Guía completa en [docs/inicio.md](docs/inicio.md).
+3. En la Web UI, **Agentes** te dice qué falta para cada agente (instalar su CLI o guardar su clave) y **Conectar apps** te da la URL, la clave y ejemplos listos para copiar.
+
+En este equipo entras sin escribir ninguna clave: Tramtai reconoce que el navegador es tuyo.
+
+## Conectar una aplicación
+
+```python
+from openai import OpenAI
+
+cliente = OpenAI(base_url="http://127.0.0.1:17373/openai/v1", api_key="<clave de Conectar apps>")
+r = cliente.chat.completions.create(model="claude/sonnet", messages=[{"role": "user", "content": "Hola"}])
+print(r.choices[0].message.content)
+```
+
+Con el SDK de Anthropic, la URL base es `http://127.0.0.1:17373/anthropic`.
+
+## Otras formas de usarlo
+
+```powershell
+tramtai                                        # terminal interactiva: todo desde un menú
+tramtai ejecutar "Resume en una frase qué es Go"
+tramtai ejecutar -f acta.pdf -e compromisos.schema.json "Extrae los compromisos"
+tramtai claves guardar ANTHROPIC_API_KEY       # guarda una clave sin mostrarla
+bin/tramtai-escritorio.exe                     # aplicación de escritorio con icono en la bandeja
+```
 
 ## Documentación
 
-| Documento | Contenido |
+| Guía | Contenido |
 |---|---|
-| [docs/inicio.md](docs/inicio.md) | Requisitos, compilar, ejecutar y probar |
-| [docs/operacion.md](docs/operacion.md) | Terminal interactiva, servicio, instancias global y por proyecto, puntos de acceso |
-| [docs/api.md](docs/api.md) | API HTTP: rutas, seguridad, fachadas OpenAI y Anthropic, errores |
-| [docs/arquitectura.md](docs/arquitectura.md) | Paquetes, estados del trabajo y precedencia de configuración |
-| [docs/versionado.md](docs/versionado.md) | Versión `vX.Y.Z+DDMMAAAA` calculada desde los commits y etiquetas |
-| [docs/pendientes.md](docs/pendientes.md) | Hitos y lista de tareas (incluye CI/CD) |
-| [docs/M0B.md](docs/M0B.md) | Validación de los modos con clave de API |
+| [Primeros pasos](docs/inicio.md) | Instalar, dejar listos los agentes, ejecutar, archivos, modelos y configuración |
+| [Operación](docs/operacion.md) | Servicio, instancias global y por proyecto, puntos de acceso, retención |
+| [API](docs/api.md) | Rutas, fachadas OpenAI y Anthropic, perfiles, errores |
+| [Arquitectura](docs/arquitectura.md) | Cómo funciona por dentro: agentes, aislamiento, seguridad y recuperación |
 
-El documento maestro (Word) vive en `documentos/` y no se versiona.
-
-## Estructura
-
-```
-cmd/tramtai/          CLI (Cobra)
-internal/nucleo/      estados, solicitud, errores, configuración
-internal/persistencia SQLite (trabajos, eventos, idempotencia)
-internal/planificador cola, concurrencia, cancelación, recuperación
-internal/procesos     supervisión de procesos (Job Objects / grupos Unix)
-internal/adaptadores  Claude, Codex y agente simulado
-internal/documentos   cargas, conversión con markitdown y ZIP seguro
-internal/salidas      validación JSON Schema
-internal/api          HTTP: API nativa, SSE y fachadas OpenAI/Anthropic
-internal/servicio     servicio único: instancias, puntos de acceso, administración
-internal/cliente      cliente del servicio (CLI y terminal)
-internal/tui          terminal interactiva (Bubble Tea)
-internal/recursos     Web UI compilada (go:embed)
-web/                  Web UI: Vue 3 + Quasar (npm run build)
-escritorio/           aplicación de escritorio Wails v3 (módulo Go aparte)
-internal/version      versión y commit del ejecutable
-pruebas/m0b/          pruebas con claves reales (build tag m0b)
-scripts/              compilar y versionar
-docs/                 documentación
-```
+¿Desarrollas Tramtai? La guía del equipo está en [docs/equipo](docs/equipo/desarrollo.md).

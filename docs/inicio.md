@@ -1,73 +1,39 @@
-# Inicio
+# Primeros pasos
 
-## Requisitos
+## Qué necesitas
 
-- Go 1.27 (instalado en `C:\Program Files\Go\bin`). Si `go` no se reconoce, añádelo al PATH del usuario:
+- **Windows 11** (Linux y macOS: el núcleo funciona; la aplicación de escritorio, de momento, solo en Windows).
+- **Go 1.27** para compilar. Si `go` no se reconoce, añade `C:\Program Files\Go\bin` al PATH de tu usuario y abre una terminal nueva.
+- **Al menos un agente:** [Claude Code](https://docs.anthropic.com/claude-code) (`claude`), [Codex CLI](https://developers.openai.com/codex/cli) (`codex`) o una clave de la Gemini API. Antigravity (`agy`) es experimental.
+- **Opcional, para archivos de Office y PDF:** `uv tool install "markitdown[pdf,docx,pptx,xlsx]==0.1.8"`.
 
-  ```powershell
-  [Environment]::SetEnvironmentVariable('Path', "$([Environment]::GetEnvironmentVariable('Path','User'));C:\Program Files\Go\bin;$env:USERPROFILE\go\bin", 'User')
-  ```
-
-  y abre una terminal nueva. `scripts/compilar.ps1` lo añade por su cuenta solo para esa ejecución.
-- Git.
-- Los agentes que vayas a usar: `claude` (Claude Code) y/o `codex` (Codex CLI), instalados como `.exe`.
-
-## Compilar
+## 1. Compilar y abrir
 
 ```powershell
-./scripts/compilar.ps1
+./scripts/compilar.ps1     # genera bin/tramtai.exe y bin/tramtai-escritorio.exe
+./bin/tramtai.exe abrir    # inicia el servicio en segundo plano y abre la Web UI
 ```
 
-Genera `bin/tramtai.exe` con la versión calculada desde git (ver [versionado.md](versionado.md)).
+- **Sin clave:** en tu propio equipo entras directamente; Tramtai comprueba que el navegador es de tu mismo usuario de Windows. Desde otro equipo o en macOS, la página explica cómo entrar.
+- **Aplicación de escritorio:** `bin/tramtai-escritorio.exe` hace lo mismo en su propia ventana y queda en la bandeja. Cerrarla no detiene el servicio.
+- **En un proyecto:** dentro de su carpeta, `tramtai abrir` abre su propia instancia, con trabajos y configuración separados de la global.
 
-## Ejecutar
+## 2. Dejar listos los agentes
 
-```powershell
-./bin/tramtai.exe --version
-./bin/tramtai.exe agentes                                     # versión, autenticación y términos de cada agente
-./bin/tramtai.exe ejecutar "Resume en una frase qué es Go"    # agente y modelo predeterminados
-./bin/tramtai.exe ejecutar -a claude -p rapido "Hola"         # perfil de modelo (rapido = haiku)
-./bin/tramtai.exe ejecutar -a claude -m sonnet -s "Responde en inglés" "Hola"
-./bin/tramtai.exe ejecutar -a codex "Hola"
-Get-Content prompt.txt | ./bin/tramtai.exe ejecutar -a claude  # prompt desde stdin
-```
+La página **Agentes** dice qué falta en cada uno. Hay dos formas de autenticarlos:
 
-### Archivos y salida estructurada
+**Clave de API** (la predeterminada). Guárdala en el Administrador de credenciales de Windows, sin dejarla en variables de entorno:
 
 ```powershell
-./bin/tramtai.exe convertir informe.pdf datos.zip              # solo muestra el texto que recibiría el agente
-./bin/tramtai.exe ejecutar -f informe.pdf -f anexo.xlsx "Resume ambos documentos"
-./bin/tramtai.exe ejecutar -f acta.docx -e compromisos.schema.json "Extrae compromisos; null si no hay fecha"
-```
-
-- `-f` es repetible y admite PDF, DOCX, PPTX, XLSX, HTML, texto (txt, md, json, xml, csv…) y ZIP. Los archivos de texto se entregan tal cual. El resto se convierte con markitdown, que debe estar instalado: `uv tool install "markitdown[pdf,docx,pptx,xlsx]==0.1.8"`. Si no lo está, Tramtai usa `uvx`, más lento.
-- `-e` recibe un JSON Schema; la salida es JSON validado contra él.
-- Límites configurables en `conversion.*`: `maximo_carga_mb` (50), `maximo_archivos_zip` (50), `maximo_descomprimido_mb` (200), `profundidad_maxima_zip` (3), `tiempo_limite_segundos` (120) y `maximo_salida_mb` (20).
-
-`ejecutar` muestra la respuesta en vivo (Claude por tokens; Codex al final) y un resumen con el modelo efectivo, los tokens y el coste. Ctrl+C cancela el trabajo y termina el árbol de procesos del agente. Los trabajos se guardan en `%APPDATA%\tramtai\datos\cli.db`.
-
-### Autenticación de los agentes
-
-Por defecto cada agente usa **clave de API** (sección 2.4 del documento maestro):
-
-| Agente | Variable |
-|---|---|
-| claude | `ANTHROPIC_API_KEY` |
-| codex | `CODEX_API_KEY` u `OPENAI_API_KEY` |
-| gemini (Gemini API directa) | `GEMINI_API_KEY` |
-| antigravity (`agy`, experimental) | `GEMINI_API_KEY`; nunca la sesión personal |
-
-En Windows, guarda las claves en el Administrador de credenciales en lugar de dejarlas en variables de entorno:
-
-```powershell
-tramtai claves guardar ANTHROPIC_API_KEY   # la pide sin mostrarla
+tramtai claves guardar ANTHROPIC_API_KEY   # Claude; la pide sin mostrarla
+tramtai claves guardar OPENAI_API_KEY      # Codex
+tramtai claves guardar GEMINI_API_KEY      # Gemini y Antigravity
 tramtai claves listar                      # de dónde sale cada una, sin mostrarla
-tramtai claves borrar ANTHROPIC_API_KEY
 ```
 
-Una variable de entorno con el mismo nombre tiene prioridad. Reinicia el servicio después de cambiar una clave.
+Reinicia el servicio después de guardar una clave: `tramtai servicio detener` y otra vez `tramtai abrir`.
 
-Para uso **personal y local** con tu suscripción (Claude Pro/Max, cuenta ChatGPT), actívalo explícitamente en la configuración global `%APPDATA%\tramtai\config.yaml`:
+**Tu suscripción** (Claude Pro/Max o cuenta de ChatGPT), solo para uso **personal y local**. Actívala en la configuración global `%APPDATA%\tramtai\config.yaml`:
 
 ```yaml
 adaptadores:
@@ -77,69 +43,72 @@ adaptadores:
     autenticacion: suscripcion
 ```
 
-o solo para una terminal: `$env:TRAMTAI_ADAPTADORES__CLAUDE__AUTENTICACION = 'suscripcion'`. La configuración del proyecto (`.tramtai/config.yaml`) no puede activarlo. Tramtai nunca lee ni copia las credenciales de los CLIs.
+Tramtai nunca lee ni copia las credenciales de los CLIs. Antigravity solo funciona con clave de la Gemini API: sus términos no permiten usar una cuenta personal desde otra herramienta.
+
+## 3. Usarlo
+
+- **Web UI → Ejecutar:** escribe un mensaje, adjunta archivos si quieres y mira la respuesta en vivo.
+- **Web UI → Conectar apps:** la URL, la clave y ejemplos en Python, Node y curl para tus aplicaciones.
+- **Terminal interactiva:** `tramtai` sin argumentos abre un menú con todo lo anterior.
+- **Línea de órdenes:**
+
+```powershell
+tramtai ejecutar "Resume en una frase qué es Go"               # agente y modelo predeterminados
+tramtai ejecutar -a claude -p rapido "Hola"                    # perfil de modelo
+tramtai ejecutar -a claude -m sonnet -s "Responde en inglés" "Hola"
+Get-Content prompt.txt | tramtai ejecutar -a codex             # mensaje desde un archivo
+tramtai trabajos listar                                        # historial (también en la Web UI)
+```
+
+### Archivos y respuestas en JSON
+
+```powershell
+tramtai ejecutar -f informe.pdf -f anexo.xlsx "Resume ambos documentos"
+tramtai ejecutar -f acta.docx -e compromisos.schema.json "Extrae los compromisos; null si no hay fecha"
+tramtai convertir informe.pdf     # muestra el texto que recibiría el agente, sin ejecutarlo
+```
+
+- `-f` admite PDF, Word, PowerPoint, Excel, HTML, texto (txt, md, json, csv…) y ZIP, y se puede repetir.
+- `-e` recibe un JSON Schema: la respuesta será un JSON que lo cumpla, o el trabajo fallará con `salida_no_cumple_esquema`.
 
 ### Modelos
 
-- `-m` pasa un identificador o alias literal (`haiku`, `claude-sonnet-5-5`, el modelo de Codex…). No es una lista cerrada: el CLI decide si existe.
-- `-p` usa un perfil de `modelos.perfiles`. Por defecto: `rapido`/`equilibrado`/`profundo` → `haiku`/`sonnet`/`opus` para Claude. Para Codex hay que definirlos:
+- `-m` (o `model` en la API) acepta el nombre que entienda el CLI: `haiku`, `sonnet`, `claude-sonnet-5-5`, `gemini-flash-latest`…
+- `-p` usa un perfil: `rapido`, `equilibrado` o `profundo`. Para Claude equivalen a `haiku`, `sonnet` y `opus`, y para Gemini a los modelos *flash-lite*, *flash* y *pro*. Para Codex defínelos tú:
 
   ```yaml
   modelos:
     perfiles:
       rapido:
-        codex: <identificador>
+        codex: <modelo>
   ```
 
-- Si un perfil no tiene modelo para el agente, el trabajo se rechaza con `modelo_no_configurado`. Nunca se cambia el modelo en silencio.
+- Si un perfil no tiene modelo para el agente, el trabajo se rechaza: Tramtai nunca cambia el modelo en silencio.
 
-## Uso diario: la terminal interactiva
-
-```powershell
-./bin/tramtai.exe          # o: tramtai terminal
-```
-
-Desde el menú se elige el ámbito (proyecto actual, global, todas las instancias o servicio) y se ejecuta, se ven los trabajos y se gestionan los puntos de acceso sin escribir comandos. Si el servicio no está en marcha, la terminal lo inicia en segundo plano. Detalle en [operacion.md](operacion.md).
-
-## Web UI y escritorio
+## Proyectos
 
 ```powershell
-./bin/tramtai.exe global abrir          # Web UI en el navegador, sin escribir el token
-./bin/tramtai-escritorio.exe            # aplicación de escritorio
+tramtai iniciar     # en la carpeta de un repositorio: crea .tramtai/ con su configuración y un perfil de ejemplo
+tramtai abrir       # abre la instancia de ese proyecto
 ```
 
-Para cambiar la Web UI: `cd web; npm install; npm run dev`. Esto abre un servidor de desarrollo que llama al servicio en marcha. Después, `npm run build` y `./scripts/compilar.ps1` la incorporan al ejecutable.
+- **Perfiles de trabajo:** `.tramtai/profiles/<nombre>.yaml` guarda instrucciones, formato y esquema reutilizables. Se usan con `--perfil-trabajo <nombre>`, o con `perfil` en la API.
+- **Modo consciente del proyecto:** el agente trabaja en la carpeta del proyecto y lee sus reglas (`CLAUDE.md`, `AGENTS.md`). Solo se permite en proyectos que declares confiables en `.tramtai/local.yaml`:
 
-## Servicio HTTP
+  ```yaml
+  proyectos_confiables:
+    - C:\ruta\al\proyecto
+  ```
 
-```powershell
-./bin/tramtai.exe servicio iniciar -d  # segundo plano (sin -d: primer plano, Ctrl+C lo detiene)
-./bin/tramtai.exe global token         # token de la instancia global para los clientes
-./bin/tramtai.exe iniciar              # en un repositorio: crea .tramtai/config.yaml
-./bin/tramtai.exe proyecto iniciar     # instancia del proyecto, con su propio token
-```
-
-Configura tus aplicaciones con `base_url` `http://127.0.0.1:17373/openai/v1` (OpenAI) o `http://127.0.0.1:17373/anthropic` (Anthropic), con el token como API key y `model` del tipo `claude/sonnet` o `perfil/rapido`. Contrato completo en [api.md](api.md).
+  Se pide con `tramtai ejecutar --contexto consciente_proyecto "…"`.
 
 ## Configuración
 
-Se lee de (menor a mayor prioridad): valores internos, `%APPDATA%\tramtai\config.yaml`, `.tramtai/config.yaml`, `.tramtai/local.yaml` y variables `TRAMTAI_SECCION__CLAVE`.
+Se lee de menor a mayor prioridad: valores internos, `%APPDATA%\tramtai\config.yaml` (global), `.tramtai/config.yaml` (proyecto, se versiona), `.tramtai/local.yaml` (solo este equipo) y variables de entorno `TRAMTAI_SECCION__CLAVE`.
 
 ```powershell
-./bin/tramtai.exe configuracion mostrar --efectiva     # cada valor con su capa de origen
-./bin/tramtai.exe configuracion explicar adaptadores.claude.autenticacion
+tramtai configuracion mostrar --efectiva     # cada valor y de dónde sale (también en la Web UI)
+tramtai configuracion explicar adaptadores.claude.autenticacion
 ```
 
-## Probar
-
-```powershell
-go vet ./...
-go test ./...                                   # sin agentes reales: simulado, procesos, persistencia
-$env:TRAMTAI_PRUEBA_AUTENTICACION = 'suscripcion'
-go test -tags agentes -v ./internal/adaptadores # CLIs reales: respuesta, uso y cancelación (consume cuota)
-go test -tags m0b -v -count=1 ./pruebas/m0b     # modos con clave de API, ver M0B.md
-```
-
-## Qué falta para "verlo" como servicio
-
-El servidor HTTP (`/api/v1`, SSE) llega en M4 y la interfaz (Web UI y aplicación de escritorio Wails + Quasar) en M6. Hasta entonces se usa `tramtai ejecutar`.
+Más detalle en [operación](operacion.md) y en la [API](api.md).

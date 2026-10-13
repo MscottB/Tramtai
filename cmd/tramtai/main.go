@@ -14,7 +14,9 @@ import (
 
 func main() {
 	raiz := &cobra.Command{Use: "tramtai", Short: "Pasarela local para ejecutar agentes CLI",
-		Long:         "Tramtai expone Claude Code y Codex como API local.\nSin argumentos abre la terminal interactiva (tramtai terminal).",
+		Long: "Tramtai expone Claude Code, Codex y Gemini como una API local.\n\n" +
+			"  tramtai          terminal interactiva\n" +
+			"  tramtai abrir    Web UI en el navegador (inicia el servicio si hace falta)",
 		SilenceUsage: true, Version: version.Texto(),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if !term.IsTerminal(os.Stdin.Fd()) || !term.IsTerminal(os.Stdout.Fd()) {
@@ -23,9 +25,8 @@ func main() {
 			return abrirTerminal()
 		}}
 	raiz.AddCommand(
-		&cobra.Command{Use: "version", Short: "Muestra la versión", Run: func(cmd *cobra.Command, _ []string) {
-			fmt.Fprintln(cmd.OutOrStdout(), "tramtai", version.Texto())
-		}},
+		comandoVersion(),
+		comandoAbrir(),
 		comandoTerminal(),
 		comandoIniciar(),
 		comandoServicio(),
@@ -86,6 +87,32 @@ func comandoConfiguracion() *cobra.Command {
 }
 
 // raizProyecto es la raíz del proyecto que contiene el directorio actual, o "" fuera de un proyecto.
+func comandoVersion() *cobra.Command {
+	var detalle bool
+	cmd := &cobra.Command{Use: "version", Short: "Muestra la versión", Args: cobra.NoArgs, Run: func(cmd *cobra.Command, _ []string) {
+		texto := version.Texto()
+		if detalle {
+			texto = version.Detalle()
+		}
+		fmt.Fprintln(cmd.OutOrStdout(), "tramtai", texto)
+	}}
+	cmd.Flags().BoolVar(&detalle, "detalle", false, "incluye el commit compilado")
+	return cmd
+}
+
+// comandoAbrir es el atajo para usar la Web UI: elige la instancia del proyecto actual (o la global), inicia el
+// servicio si hace falta y abre el navegador ya dentro.
+func comandoAbrir() *cobra.Command {
+	return &cobra.Command{Use: "abrir", Short: "Abre la Web UI en el navegador (inicia el servicio si hace falta)", Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			ambito := "global"
+			if raizProyecto() != "" {
+				ambito = "proyecto"
+			}
+			return abrirWebUI(cmd, ambito)
+		}}
+}
+
 func raizProyecto() string {
 	dir, err := os.Getwd()
 	if err != nil {

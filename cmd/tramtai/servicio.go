@@ -87,7 +87,7 @@ func comandoServicio() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "servicio en marcha en %s\n", c.Base)
+			fmt.Fprintf(cmd.OutOrStdout(), "servicio en marcha en %s\nWeb UI: %s (o tramtai abrir)\n", c.Base, c.Base)
 			return nil
 		}}
 	iniciar.Flags().BoolVarP(&segundoPlano, "segundo-plano", "d", false, "inicia el servicio desacoplado de esta terminal")
@@ -250,7 +250,8 @@ func iniciarServicio(cmd *cobra.Command) error {
 	registro, limites := adaptadores.Registro(c)
 	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites),
 		Host: host, Puerto: puerto, Hosts: hosts, Registros: salida, Web: recursos.Web(),
-		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second})
+		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,
+		EntradaLocal: c.Booleano("servicio.entrada_local")})
 	if err != nil {
 		return err
 	}
@@ -268,7 +269,7 @@ func iniciarServicio(cmd *cobra.Command) error {
 		sv.Cerrar()
 		return err
 	}
-	fmt.Fprintf(salida, "tramtai %s escuchando en %s\n", version.Texto(), sv.Base())
+	fmt.Fprintf(salida, "tramtai %s escuchando en %s\nWeb UI: %s (o tramtai abrir)\n", version.Texto(), sv.Base(), sv.Base())
 	imprimirEstado(salida, sv.Estado())
 	fmt.Fprintln(salida, "\nCtrl+C para detener.")
 
@@ -413,30 +414,34 @@ func comandoInstancia(ambito string) *cobra.Command {
 	token := &cobra.Command{Use: "token", Short: "Muestra el token de la instancia para configurar clientes",
 		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, ambito) }}
 	abrirWeb := &cobra.Command{Use: "abrir", Short: "Abre la Web UI de la instancia en el navegador (sin escribir el token)",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			raiz, _, _, err := identificar(ambito)
-			if err != nil {
-				return err
-			}
-			c, err := asegurarServicio(cmd)
-			if err != nil {
-				return err
-			}
-			ctx, cancelar := contexto()
-			defer cancelar()
-			a, err := c.Activar(ctx, ambito, raiz)
-			if err != nil {
-				return err
-			}
-			url, err := c.URLWeb(ctx, a.Instancia.ID)
-			if err != nil {
-				return err
-			}
-			fmt.Fprintf(cmd.OutOrStdout(), "abriendo la Web UI de %s en %s\n", a.Instancia.ID, c.Base)
-			return navegador.Abrir(url)
-		}}
+		RunE: func(cmd *cobra.Command, _ []string) error { return abrirWebUI(cmd, ambito) }}
 	grupo.AddCommand(iniciar, detener, estado, token, abrirWeb)
 	return grupo
+}
+
+// abrirWebUI activa la instancia, inicia el servicio si hace falta y abre la Web UI con un enlace de un solo uso
+// (en Windows y Linux el mismo usuario entra igualmente sin él).
+func abrirWebUI(cmd *cobra.Command, ambito string) error {
+	raiz, _, _, err := identificar(ambito)
+	if err != nil {
+		return err
+	}
+	c, err := asegurarServicio(cmd)
+	if err != nil {
+		return err
+	}
+	ctx, cancelar := contexto()
+	defer cancelar()
+	a, err := c.Activar(ctx, ambito, raiz)
+	if err != nil {
+		return err
+	}
+	url, err := c.URLWeb(ctx, a.Instancia.ID)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "Web UI de %s: %s\n", a.Instancia.ID, c.Base)
+	return navegador.Abrir(url)
 }
 
 const plantillaProyecto = `# Configuración de Tramtai para este proyecto (versionada). Las claves de seguridad, los puertos y los

@@ -1,63 +1,132 @@
 <template>
-  <div class="q-gutter-md">
-    <q-card>
-      <q-card-section class="q-gutter-md">
-        <q-select v-model="modelo" :options="opcionesModelo" label="Modelo" emit-value map-options outlined />
-        <q-file v-model="archivos" multiple use-chips clearable outlined label="Archivos (PDF, DOCX, PPTX, XLSX, HTML, texto o ZIP)">
-          <template #prepend><q-icon name="attach_file" /></template>
-        </q-file>
-        <q-input v-model="mensaje" type="textarea" autogrow outlined label="Mensaje" hint="Ctrl+Enter para ejecutar" @keydown.ctrl.enter="ejecutar" />
-        <q-expansion-item dense icon="data_object" label="Salida estructurada (JSON Schema)">
-          <q-input v-model="esquema" type="textarea" autogrow outlined class="q-mt-sm codigo"
-            placeholder='{"type":"object","properties":{"resumen":{"type":"string"}},"required":["resumen"]}' />
-        </q-expansion-item>
-        <div class="row q-gutter-sm">
-          <q-btn color="primary" icon="play_arrow" label="Ejecutar" :loading="enviando" :disable="activo || !mensaje.trim()" @click="ejecutar" />
-          <q-btn v-if="activo" color="negative" outline icon="stop" label="Cancelar" @click="cancelar" />
-        </div>
-      </q-card-section>
-    </q-card>
-    <q-card v-if="trabajo">
-      <q-card-section class="row items-center q-gutter-sm">
-        <q-badge :color="colorEstado(estado)" class="text-body2">{{ estado }}</q-badge>
-        <span class="codigo text-caption">{{ trabajo.id }}</span>
-        <q-spinner-dots v-if="activo" color="primary" />
-      </q-card-section>
-      <q-separator />
-      <q-card-section>
-        <pre class="salida">{{ salida || (activo ? '…' : '') }}</pre>
-      </q-card-section>
-      <q-card-section v-if="resumen" class="text-caption text-grey-7">{{ resumen }}</q-card-section>
-    </q-card>
+  <div class="pagina apilado">
+    <div>
+      <div class="titulo-pagina">Ejecutar</div>
+      <div class="texto-suave">Prueba un agente con un mensaje y, si quieres, archivos. La respuesta llega en vivo.</div>
+    </div>
+
+    <div class="row q-col-gutter-lg">
+      <div class="col-12 col-md-5">
+        <q-card>
+          <q-card-section class="q-gutter-y-md">
+            <q-select v-model="modelo" :options="opciones" emit-value map-options outlined dense options-dense label="Agente y modelo">
+              <template #prepend><q-icon name="o_smart_toy" /></template>
+              <template #option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section>
+                    <q-item-label>{{ scope.opt.label }}</q-item-label>
+                    <q-item-label caption>{{ scope.opt.caption }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+
+            <q-input v-model="mensaje" type="textarea" outlined label="Mensaje" placeholder="¿Qué necesitas?"
+              :input-style="{ minHeight: '170px' }" autogrow @keydown.ctrl.enter="ejecutar" @keydown.meta.enter="ejecutar" />
+
+            <q-file v-model="archivos" multiple append use-chips clearable outlined dense label="Adjuntar archivos"
+              hint="PDF, Word, PowerPoint, Excel, HTML, texto o ZIP">
+              <template #prepend><q-icon name="o_attach_file" /></template>
+            </q-file>
+
+            <q-expansion-item dense icon="o_tune" label="Opciones avanzadas" header-class="q-px-none text-body2" class="q-mt-sm">
+              <div class="q-gutter-y-md q-pt-sm">
+                <div class="row q-col-gutter-sm">
+                  <div class="col-7">
+                    <q-input v-model="perfil" outlined dense label="Perfil de trabajo" hint="profiles/<nombre>.yaml (opcional)" />
+                  </div>
+                  <div class="col-5">
+                    <q-input v-model="tiempo" outlined dense inputmode="numeric" label="Tiempo límite" suffix="s" hint="300 por defecto"
+                      :rules="[(v: string) => !v || /^\d+$/.test(v) || 'Solo números']" />
+                  </div>
+                </div>
+                <q-input v-model="esquema" type="textarea" autogrow outlined dense label="JSON Schema de la respuesta (opcional)"
+                  input-class="codigo" placeholder='{"type":"object","properties":{"resumen":{"type":"string"}},"required":["resumen"]}'
+                  hint="Si lo indicas, la respuesta será un JSON que cumpla el esquema" />
+              </div>
+            </q-expansion-item>
+          </q-card-section>
+          <q-separator />
+          <q-card-actions class="q-pa-md">
+            <span class="text-caption texto-suave gt-xs">Ctrl + Enter para ejecutar</span>
+            <q-space />
+            <q-btn v-if="activo" flat color="negative" icon="o_stop_circle" label="Cancelar" no-caps @click="cancelar" />
+            <q-btn unelevated color="primary" icon="o_send" label="Ejecutar" no-caps :loading="enviando" :disable="activo || !mensaje.trim()" @click="ejecutar" />
+          </q-card-actions>
+        </q-card>
+      </div>
+
+      <div class="col-12 col-md-7">
+        <q-card class="full-height">
+          <q-card-section class="row items-center no-wrap q-gutter-x-sm">
+            <div class="titulo-seccion">Respuesta</div>
+            <q-space />
+            <q-chip v-if="trabajo" dense :color="estadoInfo(estado).color" text-color="white" :icon="estadoInfo(estado).icono">
+              {{ estadoInfo(estado).etiqueta }}
+            </q-chip>
+            <q-btn v-if="salida" flat dense round icon="o_content_copy" aria-label="Copiar la respuesta" @click="copiar(salida)">
+              <q-tooltip>Copiar</q-tooltip>
+            </q-btn>
+          </q-card-section>
+          <q-separator />
+          <q-card-section class="salida-caja" style="min-height: 280px">
+            <div v-if="!trabajo" class="vacio">
+              <q-icon name="o_forum" size="48px" />
+              <div class="q-mt-sm">Escribe un mensaje y pulsa <b>Ejecutar</b>. La respuesta aparecerá aquí.</div>
+            </div>
+            <template v-else>
+              <q-banner v-if="final?.codigo_error" rounded dense class="error-caja q-mb-md">
+                <template #avatar><q-icon name="o_error" /></template>
+                {{ final.mensaje_error || final.codigo_error }}
+              </q-banner>
+              <pre class="salida" :class="{ json: esJSON(salida) }">{{ salida }}</pre>
+              <div v-if="activo && !salida" class="row items-center texto-suave q-gutter-x-sm">
+                <q-spinner-dots color="primary" size="24px" /><span>{{ estadoInfo(estado).etiqueta }}…</span>
+              </div>
+            </template>
+          </q-card-section>
+          <template v-if="final">
+            <q-separator />
+            <q-card-section class="row q-gutter-x-lg q-gutter-y-xs text-caption texto-suave">
+              <span><q-icon name="o_smart_toy" /> {{ modeloDe(final) }}</span>
+              <span><q-icon name="o_data_usage" /> {{ final.uso.tokens_entrada }} → {{ final.uso.tokens_salida }} tokens</span>
+              <span v-if="final.uso.costo_usd"><q-icon name="o_payments" /> US$ {{ final.uso.costo_usd.toFixed(4) }}</span>
+              <span v-if="final.terminado_en"><q-icon name="o_timer" /> {{ duracion(final.creado_en, final.terminado_en) }}</span>
+            </q-card-section>
+          </template>
+        </q-card>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
-import { useQuasar } from 'quasar'
-import { api, aplicarModelo, colorEstado, mensajeError, terminales, trabajoSeguido, type Solicitud, type Trabajo } from '../api'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { api, aplicarModelo, avisarError, copiar, duracion, esJSON, estadoInfo, modeloDe, opcionModelo, terminales, trabajoSeguido, type Solicitud, type Trabajo } from '../api'
 
-const $q = useQuasar()
-const opcionesModelo = ref<{ label: string; value: string }[]>([{ label: 'Predeterminado de la instancia', value: '' }])
+const ids = ref<string[]>([])
+const opciones = computed(() => {
+  const perfiles = ids.value.filter((id) => id.startsWith('perfil/'))
+  const resto = ids.value.filter((id) => !id.startsWith('perfil/'))
+  return [{ label: 'Predeterminado', caption: 'el agente y el modelo configurados en la instancia', value: '' },
+    ...perfiles.map(opcionModelo), ...resto.map(opcionModelo)]
+})
 const modelo = ref('')
 const archivos = ref<File[] | null>(null)
 const mensaje = ref('')
 const esquema = ref('')
+const perfil = ref('')
+const tiempo = ref('')
 const enviando = ref(false)
 const trabajo = ref<Trabajo>()
+const final = ref<Trabajo>()
 const estado = ref('')
 const salida = ref('')
-const resumen = ref('')
 const activo = ref(false)
 let fuente: EventSource | undefined
 
 onMounted(async () => {
-  try {
-    const ids = await api.modelos()
-    opcionesModelo.value.push(...ids.map((id) => ({ label: id, value: id })))
-  } catch (e) {
-    $q.notify({ type: 'negative', message: mensajeError(e) })
-  }
+  ids.value = await api.modelos().catch((e) => (avisarError(e), []))
   if (trabajoSeguido.value) {
     const t = await api.trabajo(trabajoSeguido.value)
     trabajoSeguido.value = ''
@@ -67,26 +136,29 @@ onMounted(async () => {
 onUnmounted(() => fuente?.close()) // el trabajo sigue en el servicio aunque se cierre la página
 
 async function ejecutar() {
-  if (activo.value || !mensaje.value.trim()) return
+  if (activo.value || enviando.value || !mensaje.value.trim()) return
   let esquemaJSON: unknown
   if (esquema.value.trim()) {
     try {
       esquemaJSON = JSON.parse(esquema.value)
     } catch {
-      $q.notify({ type: 'negative', message: 'El esquema no es JSON válido' })
+      avisarError(new Error('El JSON Schema no es JSON válido'))
       return
     }
   }
+  if (tiempo.value && !/^\d+$/.test(tiempo.value)) return
   enviando.value = true
   try {
     const cargas: string[] = []
     for (const archivo of archivos.value ?? []) cargas.push((await api.subir(archivo)).identificador_carga)
     let s: Solicitud = { mensajes: [{ rol: 'usuario', contenido: mensaje.value }], cargas: cargas.length ? cargas : undefined }
     if (esquemaJSON) s.salida = { formato: 'json', esquema: esquemaJSON }
+    if (perfil.value.trim()) s.perfil = perfil.value.trim()
+    if (tiempo.value) s.ejecucion = { tiempo_limite_segundos: Number(tiempo.value) }
     s = aplicarModelo(s, modelo.value)
     seguir(await api.crear(s))
   } catch (e) {
-    $q.notify({ type: 'negative', message: mensajeError(e) })
+    avisarError(e)
   } finally {
     enviando.value = false
   }
@@ -96,9 +168,9 @@ async function ejecutar() {
 function seguir(t: Trabajo) {
   fuente?.close()
   trabajo.value = t
+  final.value = undefined
   estado.value = t.estado
   salida.value = ''
-  resumen.value = ''
   activo.value = !terminales.includes(t.estado)
   fuente = new EventSource(`/api/v1/trabajos/${encodeURIComponent(t.id)}/eventos`)
   fuente.addEventListener('texto', (e) => (salida.value += (e as MessageEvent).data))
@@ -110,16 +182,12 @@ function seguir(t: Trabajo) {
 }
 
 async function terminar(id: string) {
-  const final = await api.trabajo(id)
+  const t = await api.trabajo(id)
   activo.value = false
-  estado.value = final.estado
-  if (final.estado === 'completado' && final.salida !== salida.value) {
-    salida.value = salida.value ? salida.value + '\n\n— salida final —\n' + final.salida : (final.salida ?? '')
-  }
-  const partes = [`modelo ${final.modelo_efectivo || 'no verificable'}`, `tokens ${final.uso.tokens_entrada}/${final.uso.tokens_salida}`]
-  if (final.uso.costo_usd) partes.push(`US$ ${final.uso.costo_usd.toFixed(4)}`)
-  if (final.codigo_error) partes.push(`${final.codigo_error}: ${final.mensaje_error}`)
-  resumen.value = partes.join(' · ')
+  estado.value = t.estado
+  // Con salida estructurada el texto en vivo puede diferir del resultado validado: se muestra el resultado.
+  if (t.estado === 'completado' && t.salida !== undefined && t.salida !== salida.value) salida.value = t.salida
+  final.value = t
 }
 
 async function cancelar() {
@@ -127,7 +195,7 @@ async function cancelar() {
   try {
     await api.accion(trabajo.value.id, 'cancelar')
   } catch (e) {
-    $q.notify({ type: 'negative', message: mensajeError(e) })
+    avisarError(e)
   }
 }
 </script>
