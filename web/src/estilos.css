@@ -207,3 +207,11 @@ body.body--dark .item-activo {
   border-radius: 10px;
   padding: 12px;
 }
+
+/* Tarjetas que llevan a otra página (contadores de Inicio). */
+.tarjeta-clicable {
+  transition: border-color 0.15s;
+}
+.tarjeta-clicable:hover {
+  border-color: var(--q-primary);
+}

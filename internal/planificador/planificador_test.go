@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -495,5 +496,41 @@ func TestModoConscienteSoloEnProyectoConfiable(t *testing.T) {
 	}
 	if !avisado {
 		t.Fatal("se declara el contexto cargado antes de ejecutar")
+	}
+}
+
+// lineas es un io.Writer seguro entre goroutines para leer el registro del planificador.
+type lineas struct {
+	mu    sync.Mutex
+	texto strings.Builder
+}
+
+func (l *lineas) Write(b []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.texto.Write(b)
+}
+
+func (l *lineas) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.texto.String()
+}
+
+func TestRegistroDeTrabajos(t *testing.T) {
+	alm := abrir(t)
+	registro := &lineas{}
+	opc := opciones()
+	opc.Registros = registro
+	p := iniciar(t, alm, adaptadores.Simulado{}, 2, opc)
+	id := enviar(t, p, solicitud("hola"))
+	esperar(t, alm, id, nucleo.Completado)
+	limite := time.Now().Add(5 * time.Second)
+	for !strings.Contains(registro.String(), "completado") && time.Now().Before(limite) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	texto := registro.String()
+	if !strings.Contains(texto, "global recibido    "+id+" simulado") || !strings.Contains(texto, "global completado  "+id+" simulado") {
+		t.Fatalf("registro:\n%s", texto)
 	}
 }

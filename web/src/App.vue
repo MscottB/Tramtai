@@ -33,6 +33,10 @@
           </q-list>
         </q-btn-dropdown>
         <q-chip v-else-if="sesion.instancia" outline :icon="iconoInstancia(sesion.ambito)">{{ sesion.nombre || sesion.instancia }}</q-chip>
+        <q-chip dense :color="conectado ? 'positive' : 'negative'" text-color="white" :icon="conectado ? 'o_check_circle' : 'o_cloud_off'" class="q-ml-sm">
+          <span class="gt-xs">{{ conectado ? t('app.enMarcha') : t('app.sinConexion') }}</span>
+          <q-tooltip>{{ conectado ? t('app.enMarchaDetalle') : t('app.sinConexionTexto') }}</q-tooltip>
+        </q-chip>
         <q-btn flat round dense icon="o_translate" :aria-label="t('app.idioma')" class="q-ml-xs">
           <q-tooltip>{{ t('app.idioma') }}</q-tooltip>
           <q-menu anchor="bottom right" self="top right">
@@ -76,6 +80,10 @@
 
     <q-page-container>
       <q-page class="q-pa-md q-pa-lg-lg">
+        <q-banner v-if="!conectado" rounded class="error-caja q-mb-md pagina">
+          <template #avatar><q-icon name="o_cloud_off" /></template>
+          {{ t('app.sinConexionTexto') }}
+        </q-banner>
         <div v-if="!sesion.instancia" class="pagina">
           <q-card class="q-pa-lg text-center" style="max-width: 560px; margin: 48px auto">
             <q-icon name="power_settings_new" size="48px" color="primary" />
@@ -94,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, onMounted, ref } from 'vue'
+import { computed, markRaw, onMounted, onUnmounted, ref } from 'vue'
 import { api, avisarError, sesion } from './api'
 import { cambiarIdioma, idioma, idiomas, t } from './i18n'
 import EntrarPagina from './paginas/Entrar.vue'
@@ -130,6 +138,13 @@ const actual = computed(() => paginas.find((p) => p.id === pagina.value) ?? pagi
 const menu = ref(false)
 const cargando = ref(true)
 const activando = ref(false)
+const conectado = ref(true)
+let sondeo: number
+// comprobar consulta /healthz (sin clave): si el servicio se detiene, la cabecera lo muestra y la página se reconecta sola.
+async function comprobar() {
+  conectado.value = await fetch('/healthz', { cache: 'no-store' }).then((r) => r.ok).catch(() => false)
+}
+onUnmounted(() => clearInterval(sondeo))
 const avisoEntrada = ref(new URLSearchParams(location.search).get('error') === 'codigo' ? t('app.codigoCaducado') : '')
 
 function ir(id: string) {
@@ -145,6 +160,7 @@ function iconoInstancia(ambito?: string) {
 onMounted(async () => {
   if (location.search) history.replaceState(null, '', location.pathname + location.hash)
   window.addEventListener('hashchange', () => (pagina.value = desdeHash()))
+  sondeo = window.setInterval(comprobar, 10000)
   try {
     await api.sesion()
   } catch {

@@ -304,6 +304,7 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuraci
 		return nil, err
 	}
 	opc := planificador.OpcionesDesde(c, id)
+	opc.Registros = s.opc.Registros
 	if c.ProyectoConfiable(raiz) {
 		opc.RaizConfiable = raiz
 	}

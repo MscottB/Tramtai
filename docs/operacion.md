@@ -24,7 +24,7 @@ Se navega con ↑↓ o el número de la opción, Enter, Esc para volver y Ctrl+C
 ## Web UI y aplicación de escritorio
 
 ```powershell
-tramtai abrir                      # abre la Web UI (la del proyecto si estás en uno; si no, la global)
+tramtai abrir                      # abre la app de escritorio (--navegador: la Web UI en el navegador); la del proyecto si estás en uno
 tramtai global abrir               # la de la instancia global
 tramtai proyecto abrir             # la del proyecto actual
 tramtai-escritorio                 # aplicación de escritorio (o -proyecto <ruta>)
@@ -60,6 +60,8 @@ tramtai servicio estado            # instancias, puntos de acceso y errores
 tramtai servicio recargar          # aplica cambios de puntos de acceso sin reiniciar
 tramtai servicio detener           # pide confirmación (-s para no pedirla); espera a lo que está en curso
 tramtai servicio autoarranque [activar|desactivar]   # arrancar con Windows, oculto en la bandeja
+tramtai servicio registro [-f] [-n 30]               # lo que procesa el servicio en segundo plano; -f lo sigue en vivo
+tramtai servicio iniciar --abrir   # modo desarrollo: primer plano con el registro a la vista y la interfaz abierta
 
 tramtai global iniciar|detener|estado|token
 tramtai iniciar                    # crea .tramtai/config.yaml en el repositorio actual
@@ -69,6 +71,8 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <instancia> 
 ```
 
 - `proyecto iniciar` inicia el servicio si no está en marcha.
+- **¿Sigue en marcha?** `tramtai abrir` y la app de escritorio dejan el servicio en segundo plano: sigue atendiendo a tus aplicaciones aunque cierres la terminal o la ventana. La cabecera de la Web UI muestra «En marcha» o «Sin conexión», y `tramtai servicio estado` lo confirma.
+- **Registro:** cada petición deja una línea al recibirla y otra al terminar (agente, modelo efectivo, API de origen, duración, tokens o el error). En segundo plano va a `%APPDATA%\tramtai\datos\servicio.log` (`tramtai servicio registro -f`); en primer plano, a la propia terminal.
 - Las instancias activas se recuerdan: al reiniciar el servicio vuelven a abrirse y recuperan sus trabajos (sección 4.3).
 - Detener una instancia cancela lo que tenía en cola; lo que se estaba ejecutando queda `interrumpido`. Las demás instancias no se ven afectadas.
 - **Detener el servicio:**

@@ -75,6 +75,7 @@
                   {{ p.contratos.map(nombreContrato).join(' · ') }}
                   <template v-if="p.agente || p.modelo"> · {{ [nombreAgente(p.agente), p.modelo].filter(Boolean).join(' · ') }}</template>
                 </q-item-label>
+                <q-item-label caption>{{ t('puntos.uso', { n: uso[p.nombre] ?? 0 }) }}</q-item-label>
                 <q-item-label v-if="p.instrucciones" caption class="row no-wrap items-start">
                   <q-icon name="o_notes" class="q-mr-xs q-mt-xs" /><span class="recortar-2">{{ p.instrucciones }}</span>
                 </q-item-label>
@@ -295,7 +296,15 @@ const camposPunto = computed(() => {
   ]
 })
 
+// uso cuenta las peticiones recientes (las últimas 200 del espacio) de cada API.
+const uso = ref<Record<string, number>>({})
+
 async function cargarPuntos() {
+  api.trabajos(200).then((lista) => {
+    const cuenta: Record<string, number> = {}
+    for (const x of lista) if (x.punto_acceso) cuenta[x.punto_acceso] = (cuenta[x.punto_acceso] ?? 0) + 1
+    uso.value = cuenta
+  }).catch(() => {})
   try {
     puntos.value = await api.puntos()
   } catch (e) {

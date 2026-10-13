@@ -28,6 +28,7 @@
                 <q-icon :name="suscripcion(a) ? 'o_person' : 'o_key'" color="positive" />
                 <span>{{ suscripcion(a) ? t('agentes.listoSuscripcion') : t('agentes.listoClave') }}</span>
               </div>
+              <q-btn unelevated dense no-caps size="sm" color="primary" icon="o_chat" class="q-mt-sm q-mr-sm q-px-sm" :label="t('agentes.probar')" @click="probar(a)" />
               <q-btn v-if="puedeCambiar(a)" flat dense no-caps size="sm" color="primary" class="q-mt-sm q-px-none" :loading="cambiando === a.agente"
                 :label="suscripcion(a) ? t('agentes.cambiarAClave') : t('agentes.cambiarASuscripcion')"
                 @click="suscripcion(a) ? cambiar(a, 'clave_api') : confirmarSuscripcion(a)" />
@@ -91,10 +92,16 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { api, avisar, avisarError, copiar, nombreAgente, sesion, type Adaptador } from '../api'
+import { api, avisar, avisarError, copiar, modeloInicial, nombreAgente, sesion, type Adaptador } from '../api'
 import { t } from '../i18n'
 
 const $q = useQuasar()
+const emit = defineEmits<{ ir: [pagina: string] }>()
+
+function probar(a: Adaptador) {
+  modeloInicial.value = a.agente
+  emit('ir', 'ejecutar')
+}
 const adaptadores = ref<Adaptador[]>()
 const cargando = ref(false)
 const cambiando = ref('')

@@ -2,10 +2,12 @@
 package planificador
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"sync"
 	"time"
@@ -41,6 +43,9 @@ type Opciones struct {
 	Preparador Preparador
 	// RaizConfiable es la raíz del proyecto si figura en proyectos_confiables; vacía = solo modo aislado.
 	RaizConfiable string
+	// Registros recibe una línea al aceptar y al terminar cada trabajo: la terminal del servicio en primer
+	// plano o servicio.log en segundo plano. nil = sin registro.
+	Registros io.Writer
 }
 
 // OpcionesDesde toma los límites de la configuración efectiva.
@@ -183,7 +188,33 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 		return t, reutilizado, err
 	}
 	p.encolar(t.ID)
+	p.registrar(t, "recibido")
 	return t, false, nil
+}
+
+// registrar escribe una línea legible por trabajo, por ejemplo:
+// 10:01:22 global completado trabajo_dc76… claude/claude-haiku-4-5 · API soporte · 5.2s · 577→40 tokens
+func (p *Planificador) registrar(t nucleo.Trabajo, evento string) {
+	if p.opc.Registros == nil {
+		return
+	}
+	linea := fmt.Sprintf("%s %s %-11s %s %s", time.Now().Format("15:04:05"), p.opc.Instancia, evento, t.ID, t.Solicitud.Agente)
+	if modelo := cmp.Or(t.ModeloEfectivo, t.ModeloEnviado); modelo != "" {
+		linea += "/" + modelo
+	}
+	if t.PuntoAcceso != "" {
+		linea += " · API " + t.PuntoAcceso
+	}
+	if t.TerminadoEn != nil {
+		linea += fmt.Sprintf(" · %.1fs", t.TerminadoEn.Sub(t.CreadoEn).Seconds())
+	}
+	if t.Uso.TokensEntrada+t.Uso.TokensSalida > 0 {
+		linea += fmt.Sprintf(" · %d→%d tokens", t.Uso.TokensEntrada, t.Uso.TokensSalida)
+	}
+	if t.CodigoError != "" {
+		linea += " · " + string(t.CodigoError) + ": " + t.MensajeError
+	}
+	fmt.Fprintln(p.opc.Registros, linea)
 }
 
 // resolverModelo fija al aceptar el identificador que recibirá el CLI (fotografía del trabajo, sección 12.3).
@@ -381,6 +412,11 @@ func (p *Planificador) ejecutor() {
 // para que el estado quede consistente aunque el servicio se esté deteniendo.
 func (p *Planificador) procesar(id string) {
 	fondo := context.Background()
+	defer func() { // una línea en el registro si el trabajo terminó (no si quedó en cola por un cierre)
+		if t, err := p.almacen.Obtener(fondo, id); err == nil && t.Estado.Terminal() {
+			p.registrar(t, string(t.Estado))
+		}
+	}()
 	if p.ctx.Err() != nil {
 		return // en cierre: el trabajo sigue en_cola y se reencola al reiniciar
 	}

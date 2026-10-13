@@ -107,7 +107,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useQuasar, type QTableColumn } from 'quasar'
-import { api, avisar, avisarError, copiar, duracion, esJSON, estadoInfo, fecha, haceCuanto, modeloDe, terminales, textoDe, trabajoSeguido, type Trabajo } from '../api'
+import { api, avisar, avisarError, copiar, duracion, esJSON, estadoInfo, fecha, filtroHistorial, haceCuanto, modeloDe, terminales, textoDe, trabajoSeguido, type Trabajo } from '../api'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()
@@ -116,13 +116,15 @@ const trabajos = ref<Trabajo[]>([])
 const cargando = ref(false)
 const dialogo = ref(false)
 const detalle = ref<Trabajo>()
-const filtro = ref('todos')
+const filtro = ref(filtroHistorial.value || 'todos')
+filtroHistorial.value = ''
 const busqueda = ref<string | null>('')
 
 const columnas = computed<QTableColumn<Trabajo>[]>(() => [
   { name: 'estado', label: t('historial.estado'), field: 'estado', align: 'left' },
   { name: 'solicitud', label: t('historial.solicitud'), field: (x) => textoDe(x), align: 'left' },
   { name: 'modelo', label: t('historial.agenteModelo'), field: (x) => modeloDe(x), align: 'left', classes: 'gt-sm', headerClasses: 'gt-sm' },
+  { name: 'origen', label: t('historial.origen'), field: (x) => (x.punto_acceso ? 'API ' + x.punto_acceso : t('historial.origenPrincipal')), align: 'left', classes: 'gt-sm', headerClasses: 'gt-sm' },
   { name: 'tokens', label: t('historial.tokens'), field: (x) => x.uso.tokens_entrada + x.uso.tokens_salida, align: 'right', classes: 'gt-xs', headerClasses: 'gt-xs' },
   { name: 'cuando', label: t('historial.cuando'), field: 'creado_en', align: 'right' },
 ])

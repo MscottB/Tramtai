@@ -43,6 +43,8 @@ go test -tags agentes -v ./internal/adaptadores  # CLIs reales: respuesta, uso y
 go test -tags m0b -v -count=1 ./pruebas/m0b      # modos con clave de API, ver M0B.md
 ```
 
+**Modo desarrollo:** `tramtai servicio iniciar --abrir` corre el servicio en primer plano con una línea por petición en la terminal y abre la app de escritorio (`--navegador` para el navegador); Ctrl+C lo detiene. Si ya está en segundo plano, `tramtai servicio registro -f` sigue el mismo registro.
+
 Para probar el servicio con la suscripción sin tocar la configuración global, arráncalo con `TRAMTAI_ADAPTADORES__CLAUDE__AUTENTICACION=suscripcion` (y la de Codex) en el entorno.
 
 ## Estructura

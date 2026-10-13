@@ -68,12 +68,17 @@
             <q-btn v-if="salida" flat dense round icon="o_content_copy" :aria-label="t('ejecutar.copiarRespuesta')" @click="copiar(salida)">
               <q-tooltip>{{ t('comun.copiar') }}</q-tooltip>
             </q-btn>
+            <q-btn v-if="final" flat dense no-caps color="primary" icon="o_add" :label="t('ejecutar.nueva')" @click="nuevaPrueba" />
           </q-card-section>
           <q-separator />
           <q-card-section class="salida-caja" style="min-height: 280px">
             <div v-if="!trabajo" class="vacio">
               <q-icon name="o_forum" size="48px" />
               <div class="q-mt-sm">{{ t('ejecutar.vacio') }}</div>
+              <div class="q-mt-lg text-caption">{{ t('ejecutar.ejemplos') }}</div>
+              <div class="column items-center q-gutter-xs q-mt-xs">
+                <q-chip v-for="e in ejemplos" :key="e" clickable outline color="primary" icon="o_lightbulb" @click="mensaje = e">{{ e }}</q-chip>
+              </div>
             </div>
             <template v-else>
               <q-banner v-if="final?.codigo_error" rounded dense class="error-caja q-mb-md">
@@ -103,7 +108,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { api, aplicarModelo, avisarError, copiar, descripcionPredeterminado, duracion, esJSON, estadoInfo, modeloDe, opcionModelo, terminales, trabajoSeguido, type Modelo, type Solicitud, type Trabajo } from '../api'
+import { api, aplicarModelo, avisarError, copiar, descripcionPredeterminado, duracion, esJSON, estadoInfo, modeloDe, modeloInicial, opcionModelo, terminales, trabajoSeguido, type Modelo, type Solicitud, type Trabajo } from '../api'
 import { t } from '../i18n'
 
 const catalogo = ref<Modelo[]>([])
@@ -113,7 +118,17 @@ const opciones = computed(() => {
   return [{ label: t('ejecutar.predeterminado'), caption: descripcionPredeterminado(catalogo.value) || t('ejecutar.predeterminadoDetalle'), value: '', predeterminado: false },
     ...perfiles.map(opcionModelo), ...resto.map(opcionModelo)]
 })
-const modelo = ref('')
+const modelo = ref(modeloInicial.value)
+modeloInicial.value = ''
+const ejemplos = computed(() => [t('ejecutar.ejemplo1'), t('ejecutar.ejemplo2'), t('ejecutar.ejemplo3')])
+
+// nuevaPrueba deja la página lista para otro mensaje; el trabajo anterior queda en el Historial.
+function nuevaPrueba() {
+  fuente?.close()
+  trabajo.value = final.value = undefined
+  salida.value = mensaje.value = ''
+  archivos.value = null
+}
 const archivos = ref<File[] | null>(null)
 const mensaje = ref('')
 const esquema = ref('')

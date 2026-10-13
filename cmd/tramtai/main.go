@@ -103,14 +103,17 @@ func comandoVersion() *cobra.Command {
 // comandoAbrir es el atajo para usar la Web UI: elige la instancia del proyecto actual (o la global), inicia el
 // servicio si hace falta y abre el navegador ya dentro.
 func comandoAbrir() *cobra.Command {
-	return &cobra.Command{Use: "abrir", Short: "Abre la Web UI en el navegador (inicia el servicio si hace falta)", Args: cobra.NoArgs,
+	var enNavegador bool
+	abrir := &cobra.Command{Use: "abrir", Short: "Abre Tramtai en la app de escritorio o en el navegador (inicia el servicio si hace falta)", Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ambito := "global"
 			if raizProyecto() != "" {
 				ambito = "proyecto"
 			}
-			return abrirWebUI(cmd, ambito)
+			return abrirWebUI(cmd, ambito, enNavegador)
 		}}
+	abrir.Flags().BoolVar(&enNavegador, "navegador", false, "abre la Web UI en el navegador en lugar de la app de escritorio")
+	return abrir
 }
 
 func raizProyecto() string {

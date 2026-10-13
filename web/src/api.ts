@@ -199,6 +199,10 @@ export const api = {
 
 // trabajoSeguido es el trabajo que la página Ejecutar debe seguir en vivo al abrirse desde el historial.
 export const trabajoSeguido = ref('')
+// filtroHistorial abre el Historial con un filtro (curso, ok, error) desde los contadores de Inicio.
+export const filtroHistorial = ref('')
+// modeloInicial abre Probar con un agente o modelo ya elegido (desde Agentes).
+export const modeloInicial = ref('')
 
 export const terminales = ['completado', 'fallido', 'cancelado', 'interrumpido']
 

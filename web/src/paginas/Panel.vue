@@ -12,25 +12,40 @@
 
     <q-banner v-if="error" rounded class="error-caja">{{ error }}</q-banner>
 
-    <div class="row q-col-gutter-md">
-      <div v-for="c in contadores" :key="c.titulo" class="col-12 col-sm-4">
-        <q-card class="q-pa-md full-height">
-          <div class="row items-center no-wrap">
-            <q-avatar :color="c.color" text-color="white" :icon="c.icono" size="40px" class="q-mr-md" />
-            <div>
-              <div class="text-h5 text-weight-bold">{{ c.valor }}</div>
-              <div class="texto-suave text-body2">{{ c.titulo }}</div>
+    <div>
+      <div class="titulo-seccion">{{ t('inicio.peticiones') }}</div>
+      <div class="texto-suave text-body2 q-mb-sm">{{ t('inicio.peticionesTexto') }}</div>
+      <div class="row q-col-gutter-md">
+        <div v-for="c in contadores" :key="c.titulo" class="col-12 col-sm-4">
+          <q-card v-ripple class="q-pa-md full-height cursor-pointer tarjeta-clicable" @click="verHistorial(c.filtro)">
+            <div class="row items-center no-wrap">
+              <q-avatar :color="c.color" text-color="white" :icon="c.icono" size="40px" class="q-mr-md" />
+              <div class="col">
+                <div class="row items-baseline q-gutter-x-sm">
+                  <span class="text-h5 text-weight-bold">{{ c.valor }}</span>
+                  <span class="text-weight-medium">{{ c.titulo }}</span>
+                </div>
+                <div class="texto-suave text-caption">{{ c.detalle }}</div>
+              </div>
+              <q-icon name="chevron_right" class="texto-suave" />
             </div>
-          </div>
-        </q-card>
+          </q-card>
+        </div>
       </div>
     </div>
 
     <div class="row q-col-gutter-md">
       <div class="col-12 col-md-7">
         <q-card class="full-height">
-          <q-card-section class="titulo-seccion">{{ t('inicio.primerosPasos') }}</q-card-section>
-          <q-list>
+          <q-card-section v-if="pasos.every((p) => p.hecho)" class="row items-center no-wrap q-gutter-x-md full-height">
+            <q-avatar color="positive" text-color="white" icon="check" size="44px" />
+            <div>
+              <div class="titulo-seccion">{{ t('inicio.todoListo') }}</div>
+              <div class="texto-suave text-body2">{{ t('inicio.todoListoTexto') }}</div>
+            </div>
+          </q-card-section>
+          <q-card-section v-else class="titulo-seccion">{{ t('inicio.primerosPasos') }}</q-card-section>
+          <q-list v-if="!pasos.every((p) => p.hecho)">
             <q-item v-for="(p, i) in pasos" :key="p.pagina + i" class="q-py-md">
               <q-item-section avatar>
                 <q-avatar size="32px" :color="p.hecho ? 'positive' : 'grey-3'" :text-color="p.hecho ? 'white' : 'grey-8'"
@@ -96,10 +111,15 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { api, estadoInfo, haceCuanto, mensajeError, modeloDe, nombreAgente, sesion, terminales, textoDe, type Adaptador, type EstadoInstancia, type Trabajo } from '../api'
+import { api, estadoInfo, filtroHistorial, haceCuanto, mensajeError, modeloDe, nombreAgente, sesion, terminales, textoDe, type Adaptador, type EstadoInstancia, type Trabajo } from '../api'
 import { t } from '../i18n'
 
-defineEmits<{ ir: [pagina: string] }>()
+const emit = defineEmits<{ ir: [pagina: string] }>()
+
+function verHistorial(filtro: string) {
+  filtroHistorial.value = filtro
+  emit('ir', 'historial')
+}
 const instancia = ref<EstadoInstancia>()
 const recientes = ref<Trabajo[]>([])
 const adaptadores = ref<Adaptador[]>()
@@ -108,9 +128,10 @@ const error = ref('')
 
 const total = (estados: string[]) => estados.reduce((n, e) => n + (instancia.value?.trabajos[e] ?? 0), 0)
 const contadores = computed(() => [
-  { titulo: t('inicio.completados'), valor: total(['completado']), icono: 'o_check_circle', color: 'positive' },
-  { titulo: t('inicio.enCurso'), valor: total(Object.keys(instancia.value?.trabajos ?? {}).filter((e) => !terminales.includes(e))), icono: 'o_autorenew', color: 'primary' },
-  { titulo: t('inicio.conError'), valor: total(['fallido', 'interrumpido']), icono: 'o_error', color: 'negative' },
+  { titulo: t('inicio.completados'), detalle: t('inicio.completadosDetalle'), filtro: 'ok', valor: total(['completado']), icono: 'o_check_circle', color: 'positive' },
+  { titulo: t('inicio.enCurso'), detalle: t('inicio.enCursoDetalle'), filtro: 'curso',
+    valor: total(Object.keys(instancia.value?.trabajos ?? {}).filter((e) => !terminales.includes(e))), icono: 'o_autorenew', color: 'primary' },
+  { titulo: t('inicio.conError'), detalle: t('inicio.conErrorDetalle'), filtro: 'error', valor: total(['fallido', 'interrumpido']), icono: 'o_error', color: 'negative' },
 ])
 
 // estadoAgente resume el problema que informa el servicio (en español) en una etiqueta traducida.

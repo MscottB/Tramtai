@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"sort"
@@ -76,12 +77,81 @@ func confirmar(cmd *cobra.Command, pregunta string) bool {
 	return strings.HasPrefix(linea, "s") || strings.HasPrefix(linea, "y")
 }
 
+// abrirCuandoResponda espera a que el servicio en primer plano acepte conexiones y abre la interfaz global.
+func abrirCuandoResponda(cmd *cobra.Command, enNavegador bool) {
+	datos, err := dirDatos()
+	if err != nil {
+		return
+	}
+	for range 100 {
+		if c, err := cliente.Conectar(datos); err == nil {
+			if err := abrirInterfaz(cmd, c, "global", "", enNavegador); err != nil {
+				fmt.Fprintln(cmd.ErrOrStderr(), "no se pudo abrir la interfaz:", err)
+			}
+			return
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
+// seguirRegistro muestra las últimas n líneas de servicio.log y, con seguir, lo que se añada hasta Ctrl+C.
+func seguirRegistro(cmd *cobra.Command, n int, seguir bool) error {
+	datos, err := dirDatos()
+	if err != nil {
+		return err
+	}
+	ruta := filepath.Join(datos, "servicio.log")
+	f, err := os.Open(ruta)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("todavía no hay registro en %s: se crea cuando el servicio arranca en segundo plano (en primer plano se ve en su terminal)", ruta)
+	}
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	// Solo el final del archivo: basta para n líneas y evita leer un registro largo entero.
+	if _, err := f.Seek(max(0, info.Size()-256<<10), io.SeekStart); err != nil {
+		return err
+	}
+	final, err := io.ReadAll(f)
+	if err != nil {
+		return err
+	}
+	lineas := strings.Split(strings.TrimRight(string(final), "\r\n"), "\n")
+	out := cmd.OutOrStdout()
+	fmt.Fprintln(out, strings.Join(lineas[max(0, len(lineas)-n):], "\n"))
+	if !seguir {
+		return nil
+	}
+	fmt.Fprintln(cmd.ErrOrStderr(), "-- siguiendo "+ruta+" (Ctrl+C para salir) --")
+	ctx, parar := signal.NotifyContext(cmd.Context(), os.Interrupt)
+	defer parar()
+	for {
+		if _, err := io.Copy(out, f); err != nil {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
+}
+
 func comandoServicio() *cobra.Command {
 	grupo := &cobra.Command{Use: "servicio", Short: "Servicio único: todas las instancias y puntos de acceso en un puerto"}
+	var abrirAlIniciar, navegadorAlIniciar bool
 	var segundoPlano, si bool
 	iniciar := &cobra.Command{Use: "iniciar", Short: "Inicia el servicio en primer plano (Ctrl+C lo detiene) o con -d en segundo plano",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if !segundoPlano {
+				if abrirAlIniciar {
+					go abrirCuandoResponda(cmd, navegadorAlIniciar)
+				}
 				return iniciarServicio(cmd)
 			}
 			c, err := asegurarServicio(cmd)
@@ -92,6 +162,8 @@ func comandoServicio() *cobra.Command {
 			return nil
 		}}
 	iniciar.Flags().BoolVarP(&segundoPlano, "segundo-plano", "d", false, "inicia el servicio desacoplado de esta terminal")
+	iniciar.Flags().BoolVar(&abrirAlIniciar, "abrir", false, "en primer plano, abre la interfaz cuando el servicio responda (modo desarrollo)")
+	iniciar.Flags().BoolVar(&navegadorAlIniciar, "navegador", false, "con --abrir, usa el navegador en lugar de la app de escritorio")
 	detener := &cobra.Command{Use: "detener", Short: "Detiene el servicio y todas sus instancias",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := conectar()
@@ -189,7 +261,15 @@ func comandoServicio() *cobra.Command {
 			fmt.Fprintln(cmd.OutOrStdout(), "arranque automático: "+map[bool]string{true: "activado", false: "desactivado"}[activo])
 			return nil
 		}}
-	grupo.AddCommand(iniciar, detener, estado, recargar, token, autoarranqueCmd)
+	var lineasRegistro int
+	var seguirRegistroVivo bool
+	registroCmd := &cobra.Command{Use: "registro", Short: "Muestra lo que procesa el servicio en segundo plano (servicio.log); -f lo sigue en vivo",
+		Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+			return seguirRegistro(cmd, lineasRegistro, seguirRegistroVivo)
+		}}
+	registroCmd.Flags().IntVarP(&lineasRegistro, "lineas", "n", 30, "líneas finales que se muestran")
+	registroCmd.Flags().BoolVarP(&seguirRegistroVivo, "seguir", "f", false, "sigue mostrando las líneas nuevas hasta Ctrl+C")
+	grupo.AddCommand(iniciar, detener, estado, recargar, token, autoarranqueCmd, registroCmd)
 	return grupo
 }
 
@@ -303,7 +383,7 @@ func iniciarServicio(cmd *cobra.Command) error {
 	}
 	fmt.Fprintf(salida, "tramtai %s escuchando en %s\nWeb UI: %s (o tramtai abrir)\n", version.Texto(), sv.Base(), sv.Base())
 	imprimirEstado(salida, sv.Estado())
-	fmt.Fprintln(salida, "\nCtrl+C para detener.")
+	fmt.Fprintln(salida, "\nAquí verás una línea por cada petición (al recibirla y al terminar). Ctrl+C para detener.")
 
 	ctx, parar := signal.NotifyContext(cmd.Context(), os.Interrupt)
 	defer parar()
@@ -445,22 +525,64 @@ func comandoInstancia(ambito string) *cobra.Command {
 		}}
 	token := &cobra.Command{Use: "token", Short: "Muestra el token de la instancia para configurar clientes",
 		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, ambito) }}
-	abrirWeb := &cobra.Command{Use: "abrir", Short: "Abre la Web UI de la instancia en el navegador (sin escribir el token)",
-		RunE: func(cmd *cobra.Command, _ []string) error { return abrirWebUI(cmd, ambito) }}
+	var enNavegador bool
+	abrirWeb := &cobra.Command{Use: "abrir", Short: "Abre la instancia en la app de escritorio o, con --navegador, en el navegador",
+		RunE: func(cmd *cobra.Command, _ []string) error { return abrirWebUI(cmd, ambito, enNavegador) }}
+	abrirWeb.Flags().BoolVar(&enNavegador, "navegador", false, "abre la Web UI en el navegador en lugar de la app de escritorio")
 	grupo.AddCommand(iniciar, detener, estado, token, abrirWeb)
 	return grupo
 }
 
-// abrirWebUI activa la instancia, inicia el servicio si hace falta y abre la Web UI con un enlace de un solo uso
+// abrirWebUI inicia el servicio si hace falta, deja claro que sigue en marcha en segundo plano y abre la
+// interfaz: la app de escritorio si está junto a tramtai, o la Web UI en el navegador con un enlace de un solo uso.
 // (en Windows y Linux el mismo usuario entra igualmente sin él).
-func abrirWebUI(cmd *cobra.Command, ambito string) error {
+func abrirWebUI(cmd *cobra.Command, ambito string, enNavegador bool) error {
 	raiz, _, _, err := identificar(ambito)
 	if err != nil {
 		return err
 	}
+	datos, err := dirDatos()
+	if err != nil {
+		return err
+	}
+	_, errPrevio := cliente.Conectar(datos)
 	c, err := asegurarServicio(cmd)
 	if err != nil {
 		return err
+	}
+	out := cmd.OutOrStdout()
+	if errPrevio == nil {
+		fmt.Fprintf(out, "Tramtai ya estaba en marcha en %s.\n", c.Base)
+	} else {
+		fmt.Fprintf(out, "Tramtai se inició en segundo plano en %s.\n", c.Base)
+	}
+	fmt.Fprintln(out, "Sigue funcionando aunque cierres esta terminal o la ventana.")
+	if err := abrirInterfaz(cmd, c, ambito, raiz, enNavegador); err != nil {
+		return err
+	}
+	fmt.Fprint(out, `
+  Ver lo que procesa:  tramtai servicio registro -f
+  Ver su estado:       tramtai servicio estado
+  Detenerlo:           tramtai servicio detener
+`)
+	return nil
+}
+
+// abrirInterfaz abre la app de escritorio (si está junto a tramtai y no se pidió el navegador) o la Web UI en el
+// navegador, ya dentro y en la instancia del ámbito.
+func abrirInterfaz(cmd *cobra.Command, c *cliente.Cliente, ambito, raiz string, enNavegador bool) error {
+	out := cmd.OutOrStdout()
+	if escritorio, err := autoarranque.Escritorio(); err == nil && !enNavegador {
+		args := []string{}
+		if ambito == "proyecto" {
+			args = append(args, "-proyecto", raiz)
+		}
+		app := exec.Command(escritorio, args...)
+		if err := app.Start(); err == nil {
+			_ = app.Process.Release()
+			fmt.Fprintln(out, "Abriendo la aplicación de escritorio… (con --navegador se abre en el navegador)")
+			return nil
+		}
 	}
 	ctx, cancelar := contexto()
 	defer cancelar()
@@ -472,7 +594,7 @@ func abrirWebUI(cmd *cobra.Command, ambito string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(cmd.OutOrStdout(), "Web UI de %s: %s\n", a.Instancia.ID, c.Base)
+	fmt.Fprintln(out, "Abriendo la Web UI en el navegador…")
 	return navegador.Abrir(url)
 }
 

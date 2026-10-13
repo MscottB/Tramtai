@@ -60,6 +60,8 @@ const pasos = [
 ] as const
 
 const preguntas = [
+  { pregunta: 'ayuda.p8', respuesta: 'ayuda.r8' },
+  { pregunta: 'ayuda.p9', respuesta: 'ayuda.r9' },
   { pregunta: 'ayuda.p1', respuesta: 'ayuda.r1' },
   { pregunta: 'ayuda.p2', respuesta: 'ayuda.r2' },
   { pregunta: 'ayuda.p3', respuesta: 'ayuda.r3' },
@@ -67,5 +69,6 @@ const preguntas = [
   { pregunta: 'ayuda.p5', respuesta: 'ayuda.r5' },
   { pregunta: 'ayuda.p6', respuesta: 'ayuda.r6' },
   { pregunta: 'ayuda.p7', respuesta: 'ayuda.r7' },
+  { pregunta: 'ayuda.p10', respuesta: 'ayuda.r10' },
 ] as const
 </script>
