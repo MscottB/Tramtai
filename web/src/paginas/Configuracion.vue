@@ -5,6 +5,35 @@
       <div class="texto-suave">{{ t('config.subtitulo') }}</div>
     </div>
 
+    <q-card>
+      <q-card-section class="row items-center q-col-gutter-md">
+        <div class="col-12 col-md">
+          <div class="row items-start no-wrap">
+            <q-icon name="o_smart_toy" size="28px" color="primary" class="q-mr-md q-mt-xs" />
+            <div>
+              <div class="titulo-seccion">{{ t('predeterminado.titulo') }}</div>
+              <div class="texto-suave text-body2 q-mt-xs">{{ t('predeterminado.texto') }}</div>
+              <div v-if="sesion?.ambito === 'proyecto'" class="text-caption texto-suave q-mt-xs">{{ t('predeterminado.proyecto') }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-md-5">
+          <q-select :model-value="actualPredeterminado" :options="opcionesModelo" emit-value map-options outlined :loading="guardandoModelo"
+            :label="t('predeterminado.titulo')" :hint="opcionesModelo.find((o) => o.value === actualPredeterminado)?.caption"
+            @update:model-value="cambiarPredeterminado">
+            <template #option="scope">
+              <q-item v-bind="scope.itemProps">
+                <q-item-section>
+                  <q-item-label>{{ scope.opt.label }}</q-item-label>
+                  <q-item-label caption>{{ scope.opt.caption }}</q-item-label>
+                </q-item-section>
+              </q-item>
+            </template>
+          </q-select>
+        </div>
+      </q-card-section>
+    </q-card>
+
     <div class="row q-col-gutter-md">
       <div v-if="sesion?.autoarranque !== undefined" class="col-12 col-md-6">
         <q-card class="full-height">
@@ -93,7 +122,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { api, avisar, avisarError, sesion, terminales, type EntradaConfiguracion, type EstadoPunto } from '../api'
+import { api, avisar, avisarError, opcionModelo, sesion, terminales, type EntradaConfiguracion, type EstadoPunto, type Modelo } from '../api'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 
@@ -107,6 +136,24 @@ const puntos = ref<EstadoPunto[]>([])
 const borrarHistorial = ref(true)
 const borrarPuntos = ref(false)
 const borrando = ref(false)
+const catalogo = ref<Modelo[]>([])
+const guardandoModelo = ref(false)
+const opcionesModelo = computed(() => catalogo.value.map(opcionModelo))
+const actualPredeterminado = computed(() => catalogo.value.find((m) => m.predeterminado)?.id ?? null)
+
+async function cambiarPredeterminado(id: string) {
+  guardandoModelo.value = true
+  try {
+    await api.fijarPredeterminado(id)
+    catalogo.value = await api.catalogo()
+    const o = opcionesModelo.value.find((x) => x.value === id)
+    avisar(t('predeterminado.guardado', { modelo: o?.label ?? id }))
+  } catch (e) {
+    avisarError(e)
+  } finally {
+    guardandoModelo.value = false
+  }
+}
 
 const origenes = computed(() => [
   { id: 'interno', nombre: t('origen.interno'), color: 'grey-6', detalle: t('origen.internoDetalle') },
@@ -178,6 +225,7 @@ function borrar() {
 
 onMounted(async () => {
   contar().catch(avisarError)
+  api.catalogo().then((m) => (catalogo.value = m)).catch(avisarError)
   try {
     entradas.value = await api.configuracion()
   } catch (e) {

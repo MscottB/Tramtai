@@ -97,6 +97,17 @@ export interface ConfigPunto {
   forzar_modelo?: boolean
   alias_modelos?: Record<string, string>
 }
+// Modelo es una entrada del catálogo: agente, agente/modelo o perfil/nombre, con la versión real que informó el
+// agente la última vez y si es el predeterminado del espacio.
+export interface Modelo {
+  id: string
+  agente?: string
+  modelo?: string
+  perfil?: string
+  resuelto?: string
+  version?: string
+  predeterminado?: boolean
+}
 export interface EntradaConfiguracion {
   clave: string
   valor: unknown
@@ -163,7 +174,8 @@ export const api = {
   claveInstancia: () => pedir<{ token: string; archivo: string }>('GET', '/api/v1/instancia/token'),
   configuracion: () =>
     pedir<{ configuracion: EntradaConfiguracion[] }>('GET', '/api/v1/instancia/configuracion').then((r) => r.configuracion),
-  modelos: () => pedir<{ modelos: { id: string }[] }>('GET', '/api/v1/modelos').then((r) => r.modelos.map((m) => m.id)),
+  catalogo: () => pedir<{ modelos: Modelo[] }>('GET', '/api/v1/modelos').then((r) => r.modelos),
+  fijarPredeterminado: (modelo: string) => pedir<void>('POST', '/api/v1/instancia/predeterminado', { modelo }),
   capacidades: () => pedir<{ adaptadores: Adaptador[]; entradas?: string[] }>('GET', '/api/v1/capacidades'),
   trabajos: (limite = 50) => pedir<{ trabajos: Trabajo[] }>('GET', `/api/v1/trabajos?limite=${limite}`).then((r) => r.trabajos),
   trabajo: (id: string) => pedir<Trabajo>('GET', `/api/v1/trabajos/${encodeURIComponent(id)}`),
@@ -240,16 +252,38 @@ export function nombreAgente(agente?: string): string {
   return agente ? (agentes[agente] ?? agente) : '—'
 }
 
-// opcionModelo convierte un identificador del catálogo (agente, agente/modelo o perfil/nombre) en una opción legible.
-export function opcionModelo(id: string): { label: string; caption: string; value: string } {
-  if (id.startsWith('perfil/')) {
-    const p = id.slice(7)
-    const nombre = perfiles.includes(p) ? t(`perfil.${p}` as Clave) : p
-    return { label: t('modelo.perfil', { nombre }), caption: t('modelo.perfilDetalle'), value: id }
-  }
+// etiquetaModelo da el nombre legible de agente o agente/modelo: "Claude · sonnet".
+function etiquetaModelo(id: string): string {
   const [agente, ...resto] = id.split('/')
-  if (!resto.length) return { label: nombreAgente(agente), caption: t('modelo.predeterminadoCli'), value: id }
-  return { label: `${nombreAgente(agente)} · ${resto.join('/')}`, caption: id, value: id }
+  return resto.length ? `${nombreAgente(agente)} · ${resto.join('/')}` : nombreAgente(agente)
+}
+
+export interface OpcionModelo {
+  label: string
+  caption: string
+  value: string
+  predeterminado: boolean
+}
+
+// opcionModelo convierte una entrada del catálogo en una opción legible, con la versión real si se conoce.
+export function opcionModelo(m: Modelo): OpcionModelo {
+  let label = etiquetaModelo(m.id)
+  let caption = m.version || t('modelo.sinVersion')
+  if (m.perfil) {
+    label = t('modelo.perfil', { nombre: perfiles.includes(m.perfil) ? t(`perfil.${m.perfil}` as Clave) : m.perfil })
+    caption = [m.resuelto ? etiquetaModelo(m.resuelto) : t('modelo.perfilDetalle'), m.version].filter(Boolean).join(' · ')
+  } else if (!m.modelo) {
+    caption = [m.version, t('modelo.predeterminadoCli')].filter(Boolean).join(' · ')
+  }
+  return { label, caption, value: m.id, predeterminado: !!m.predeterminado }
+}
+
+// descripcionPredeterminado resume el modelo predeterminado del catálogo: "Claude · sonnet · claude-sonnet-5-5".
+export function descripcionPredeterminado(catalogo: Modelo[]): string {
+  const m = catalogo.find((x) => x.predeterminado)
+  if (!m) return ''
+  const o = opcionModelo(m)
+  return `${o.label} · ${o.caption}`
 }
 
 // aplicarModelo traduce la selección del catálogo a la solicitud.

@@ -536,6 +536,28 @@ func (a *Almacen) Purgar(ctx context.Context, instancia string, r Retencion) (ve
 	return vencidos, int(n), a.confirmar(tx)
 }
 
+// ModelosEfectivos devuelve, por "agente/modelo enviado" (modelo vacío: el predeterminado del CLI), el último
+// modelo efectivo que informó el agente; así la Web UI muestra la versión real detrás de un alias como "sonnet".
+func (a *Almacen) ModelosEfectivos(ctx context.Context) (map[string]string, error) {
+	filas, err := a.db.QueryContext(ctx, `SELECT COALESCE(json_extract(solicitud, '$.agente'), ''), modelo_enviado, modelo_efectivo
+		FROM trabajos WHERE modelo_efectivo <> '' ORDER BY creado_en DESC LIMIT 500`)
+	if err != nil {
+		return nil, err
+	}
+	defer filas.Close()
+	modelos := map[string]string{}
+	for filas.Next() {
+		var agente, enviado, efectivo string
+		if err := filas.Scan(&agente, &enviado, &efectivo); err != nil {
+			return nil, err
+		}
+		if _, visto := modelos[agente+"/"+enviado]; !visto {
+			modelos[agente+"/"+enviado] = efectivo
+		}
+	}
+	return modelos, filas.Err()
+}
+
 // CargasEnUso devuelve las cargas que algún trabajo puede necesitar todavía: activos o terminados que aún
 // admiten reintento. La purga de cargas no las toca aunque hayan vencido (sección 16.2).
 func (a *Almacen) CargasEnUso(ctx context.Context, instancia string) (map[string]bool, error) {

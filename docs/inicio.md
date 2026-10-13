@@ -86,6 +86,8 @@ tramtai convertir informe.pdf     # muestra el texto que recibiría el agente, s
   ```
 
 - Si un perfil no tiene modelo para el agente, el trabajo se rechaza: Tramtai nunca cambia el modelo en silencio.
+- **Modelo predeterminado:** el que se usa cuando una aplicación no elige agente ni modelo. Se cambia en **Ajustes → Modelo predeterminado** (al momento, sin reiniciar) o con `predeterminados.agente` y `predeterminados.modelo` (o `predeterminados.perfil_modelo`) en la configuración. En un proyecto se guarda en su `.tramtai/local.yaml`.
+- **Versión real:** los selectores muestran bajo cada alias (`sonnet`, `haiku`…) la versión que informó el agente la última vez que se usó, por ejemplo `claude-haiku-4-5-20251001`. Codex no informa el modelo efectivo.
 
 ## Proyectos
 

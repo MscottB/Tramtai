@@ -17,6 +17,7 @@
                     <q-item-label>{{ scope.opt.label }}</q-item-label>
                     <q-item-label caption>{{ scope.opt.caption }}</q-item-label>
                   </q-item-section>
+                  <q-item-section v-if="scope.opt.predeterminado" side><q-badge outline color="primary" :label="t('modelo.esPredeterminado')" /></q-item-section>
                 </q-item>
               </template>
             </q-select>
@@ -102,14 +103,14 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { api, aplicarModelo, avisarError, copiar, duracion, esJSON, estadoInfo, modeloDe, opcionModelo, terminales, trabajoSeguido, type Solicitud, type Trabajo } from '../api'
+import { api, aplicarModelo, avisarError, copiar, descripcionPredeterminado, duracion, esJSON, estadoInfo, modeloDe, opcionModelo, terminales, trabajoSeguido, type Modelo, type Solicitud, type Trabajo } from '../api'
 import { t } from '../i18n'
 
-const ids = ref<string[]>([])
+const catalogo = ref<Modelo[]>([])
 const opciones = computed(() => {
-  const perfiles = ids.value.filter((id) => id.startsWith('perfil/'))
-  const resto = ids.value.filter((id) => !id.startsWith('perfil/'))
-  return [{ label: t('ejecutar.predeterminado'), caption: t('ejecutar.predeterminadoDetalle'), value: '' },
+  const perfiles = catalogo.value.filter((m) => m.perfil)
+  const resto = catalogo.value.filter((m) => !m.perfil)
+  return [{ label: t('ejecutar.predeterminado'), caption: descripcionPredeterminado(catalogo.value) || t('ejecutar.predeterminadoDetalle'), value: '', predeterminado: false },
     ...perfiles.map(opcionModelo), ...resto.map(opcionModelo)]
 })
 const modelo = ref('')
@@ -127,7 +128,7 @@ const activo = ref(false)
 let fuente: EventSource | undefined
 
 onMounted(async () => {
-  ids.value = await api.modelos().catch((e) => (avisarError(e), []))
+  catalogo.value = await api.catalogo().catch((e) => (avisarError(e), []))
   if (trabajoSeguido.value) {
     const seguido = await api.trabajo(trabajoSeguido.value)
     trabajoSeguido.value = ''

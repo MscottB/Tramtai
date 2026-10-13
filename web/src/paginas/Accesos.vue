@@ -192,14 +192,15 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { api, aplicarModelo, avisar, avisarError, copiar, nombreAgente, opcionModelo, type ConfigPunto, type EstadoPunto } from '../api'
+import { api, aplicarModelo, avisar, avisarError, copiar, nombreAgente, opcionModelo, type ConfigPunto, type EstadoPunto, type Modelo } from '../api'
 import { t } from '../i18n'
 
 const $q = useQuasar()
 const base = ref(location.origin)
 const clave = ref('')
 const verClave = ref(false)
-const ids = ref<string[]>([])
+const catalogo = ref<Modelo[]>([])
+const ids = computed(() => catalogo.value.map((m) => m.id))
 const puntos = ref<EstadoPunto[]>([])
 const nuevo = ref(false)
 const guardando = ref(false)
@@ -279,7 +280,7 @@ ANTHROPIC_API_KEY=${k}` },
 ]
 const ejemplo = computed(() => ejemplos.find((e) => e.id === lenguaje.value) ?? ejemplos[0])
 
-const opciones = computed(() => ids.value.map(opcionModelo))
+const opciones = computed(() => catalogo.value.map(opcionModelo))
 const vacio = () => ({ nombre: '', instrucciones: '', grupo: '', direccion: 'ruta', puerto: '', contratos: [...contratos], modelo: null as string | null,
   permitidos: [] as string[], alias: '', forzar: false })
 const formulario = reactive(vacio())
@@ -418,7 +419,7 @@ async function mostrarClave(p: EstadoPunto) {
 
 onMounted(async () => {
   cargarPuntos()
-  api.modelos().then((m) => (ids.value = m)).catch(avisarError)
+  api.catalogo().then((m) => (catalogo.value = m)).catch(avisarError)
   api.instancia().then((i) => (base.value = i.base)).catch(() => {})
   api.claveInstancia().then((r) => (clave.value = r.token)).catch(avisarError)
 })

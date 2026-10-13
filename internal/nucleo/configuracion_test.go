@@ -46,7 +46,7 @@ func TestPrecedenciaUnica(t *testing.T) {
 		{"servicio.puerto", 17373, OrigenInterno},
 	}
 	for _, caso := range casos {
-		if got := c.valores[caso.clave]; got != caso.valor || c.Origen(caso.clave) != caso.origen {
+		if got := c.e().valores[caso.clave]; got != caso.valor || c.Origen(caso.clave) != caso.origen {
 			t.Errorf("%s = %v (%s); se esperaba %v (%s)", caso.clave, got, c.Origen(caso.clave), caso.valor, caso.origen)
 		}
 	}
@@ -136,5 +136,23 @@ func TestProyectoConfiable(t *testing.T) {
 	}
 	if _, err := CargarCapa(escribir(t, "proyectos_confiables: [.]\n"), OrigenProyecto); err == nil {
 		t.Fatal("la configuración versionada no puede declararse confiable")
+	}
+}
+
+func TestFijarYModeloPredeterminado(t *testing.T) {
+	c := Resolver(Capa{Origen: OrigenEntorno, Valores: map[string]any{"predeterminados.formato_salida": "texto"}})
+	c.Fijar(OrigenGlobal, map[string]any{"predeterminados.agente": "codex", "predeterminados.modelo": "gpt-x", "predeterminados.formato_salida": "json"})
+	if c.Texto("predeterminados.agente") != "codex" || c.Origen("predeterminados.modelo") != OrigenGlobal {
+		t.Fatalf("Fijar no aplicó: %s %v", c.Texto("predeterminados.agente"), c.Origen("predeterminados.modelo"))
+	}
+	if c.Texto("predeterminados.formato_salida") != "texto" {
+		t.Fatal("una variable de entorno tiene más prioridad que la configuración global")
+	}
+	s := c.AplicarPredeterminados(SolicitudEjecucion{})
+	if s.Agente != "codex" || s.Modelo != "gpt-x" {
+		t.Fatalf("sin agente ni modelo se usan los predeterminados: %s/%s", s.Agente, s.Modelo)
+	}
+	if s := c.AplicarPredeterminados(SolicitudEjecucion{Agente: "claude"}); s.Modelo != "" {
+		t.Fatalf("con otro agente, el modelo predeterminado no se aplica: %s", s.Modelo)
 	}
 }

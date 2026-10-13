@@ -2,10 +2,12 @@ package nucleo
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -70,6 +72,7 @@ var esquema = map[string]tipoValor{
 	"puntos_acceso":                               tipoLista,
 	"predeterminados.agente":                      tipoTexto,
 	"predeterminados.perfil_modelo":               tipoTexto,
+	"predeterminados.modelo":                      tipoTexto,
 	"predeterminados.modo_contexto":               tipoTexto,
 	"predeterminados.formato_salida":              tipoTexto,
 	"concurrencia.maximo_trabajos_instancia":      tipoEntero,
@@ -211,10 +214,30 @@ func Internos() Capa {
 
 // Configuracion es la vista efectiva, con el origen de cada valor.
 type Configuracion struct {
-	valores  map[string]any
-	origenes map[string]Origen
+	// estado se reemplaza entero al cambiar un valor en marcha (Fijar): los lectores nunca ven uno a medias.
+	estado atomic.Pointer[estadoConfiguracion]
 	// perfiles son las carpetas de perfiles de ejecución, de mayor a menor prioridad (AplicarPerfil).
 	perfiles []carpetaPerfiles
+}
+
+type estadoConfiguracion struct {
+	valores  map[string]any
+	origenes map[string]Origen
+}
+
+func (c *Configuracion) e() *estadoConfiguracion { return c.estado.Load() }
+
+// Fijar cambia valores con el servicio en marcha, como si la capa origen los tuviera. Un valor de una capa con
+// más prioridad (por ejemplo, una variable de entorno) se respeta, igual que al cargar los archivos.
+func (c *Configuracion) Fijar(origen Origen, valores map[string]any) {
+	actual := c.e()
+	nuevo := &estadoConfiguracion{valores: maps.Clone(actual.valores), origenes: maps.Clone(actual.origenes)}
+	for clave, valor := range valores {
+		if nuevo.origenes[clave] <= origen {
+			nuevo.valores[clave], nuevo.origenes[clave] = valor, origen
+		}
+	}
+	c.estado.Store(nuevo)
 }
 
 // Resolver aplica la precedencia única de la sección 12.2: gana la capa de mayor prioridad,
@@ -222,37 +245,39 @@ type Configuracion struct {
 func Resolver(capas ...Capa) *Configuracion {
 	ordenadas := append([]Capa{Internos()}, capas...)
 	sort.SliceStable(ordenadas, func(i, j int) bool { return ordenadas[i].Origen < ordenadas[j].Origen })
-	c := &Configuracion{valores: map[string]any{}, origenes: map[string]Origen{}}
+	e := &estadoConfiguracion{valores: map[string]any{}, origenes: map[string]Origen{}}
 	for _, capa := range ordenadas {
 		for clave, valor := range capa.Valores {
-			c.valores[clave], c.origenes[clave] = valor, capa.Origen
+			e.valores[clave], e.origenes[clave] = valor, capa.Origen
 		}
 	}
+	c := &Configuracion{}
+	c.estado.Store(e)
 	return c
 }
 
 // Texto devuelve un valor de texto, o "" si no existe.
 func (c *Configuracion) Texto(clave string) string {
-	v, _ := c.valores[clave].(string)
+	v, _ := c.e().valores[clave].(string)
 	return v
 }
 
 // Entero devuelve un valor entero, o 0 si no existe.
 func (c *Configuracion) Entero(clave string) int {
-	v, _ := c.valores[clave].(int)
+	v, _ := c.e().valores[clave].(int)
 	return v
 }
 
 // Booleano devuelve un valor booleano, o false si no existe.
 func (c *Configuracion) Booleano(clave string) bool {
-	v, _ := c.valores[clave].(bool)
+	v, _ := c.e().valores[clave].(bool)
 	return v
 }
 
 // Perfiles devuelve modelos.perfiles como perfil -> agente -> identificador de modelo (sección 9.2).
 func (c *Configuracion) Perfiles() map[string]map[string]string {
 	perfiles := map[string]map[string]string{}
-	for clave, valor := range c.valores {
+	for clave, valor := range c.e().valores {
 		resto, esPerfil := strings.CutPrefix(clave, "modelos.perfiles.")
 		perfil, agente, completo := strings.Cut(resto, ".")
 		modelo, esTexto := valor.(string)
@@ -268,7 +293,7 @@ func (c *Configuracion) Perfiles() map[string]map[string]string {
 }
 
 // Origen devuelve la capa que aportó el valor efectivo, o 0 si la clave no tiene valor.
-func (c *Configuracion) Origen(clave string) Origen { return c.origenes[clave] }
+func (c *Configuracion) Origen(clave string) Origen { return c.e().origenes[clave] }
 
 // EntradaEfectiva es una fila de "tramtai configuracion mostrar --efectiva".
 type EntradaEfectiva struct {
@@ -279,9 +304,10 @@ type EntradaEfectiva struct {
 
 // Efectiva devuelve todos los valores ordenados por clave, con su origen.
 func (c *Configuracion) Efectiva() []EntradaEfectiva {
-	entradas := make([]EntradaEfectiva, 0, len(c.valores))
-	for clave, valor := range c.valores {
-		entradas = append(entradas, EntradaEfectiva{Clave: clave, Valor: valor, Origen: c.origenes[clave]})
+	e := c.e()
+	entradas := make([]EntradaEfectiva, 0, len(e.valores))
+	for clave, valor := range e.valores {
+		entradas = append(entradas, EntradaEfectiva{Clave: clave, Valor: valor, Origen: e.origenes[clave]})
 	}
 	sort.Slice(entradas, func(i, j int) bool { return entradas[i].Clave < entradas[j].Clave })
 	return entradas
@@ -291,6 +317,10 @@ func (c *Configuracion) Efectiva() []EntradaEfectiva {
 func (c *Configuracion) AplicarPredeterminados(s SolicitudEjecucion) SolicitudEjecucion {
 	if s.Agente == "" {
 		s.Agente = c.Texto("predeterminados.agente")
+		// El modelo predeterminado va con su agente: si la solicitud eligió otro agente, usa el modelo de ese CLI.
+		if s.Modelo == "" && s.PerfilModelo == "" {
+			s.Modelo = c.Texto("predeterminados.modelo")
+		}
 	}
 	if s.Modelo == "" && s.PerfilModelo == "" {
 		s.PerfilModelo = c.Texto("predeterminados.perfil_modelo")

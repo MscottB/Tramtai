@@ -284,6 +284,11 @@ func (p *Planificador) EliminarTerminados(ctx context.Context) (int, error) {
 	return p.almacen.EliminarTerminados(ctx, p.opc.Instancia)
 }
 
+// ModelosEfectivos devuelve el último modelo efectivo por "agente/modelo enviado".
+func (p *Planificador) ModelosEfectivos(ctx context.Context) (map[string]string, error) {
+	return p.almacen.ModelosEfectivos(ctx)
+}
+
 // CargasEnUso devuelve las cargas que algún trabajo de esta instancia puede necesitar todavía.
 func (p *Planificador) CargasEnUso(ctx context.Context) (map[string]bool, error) {
 	return p.almacen.CargasEnUso(ctx, p.opc.Instancia)

@@ -32,7 +32,7 @@
 | `POST /ejecutar` | Igual que `POST /trabajos`, pero espera el resultado. Envía `Location` antes de esperar; si se corta la conexión, el trabajo no se cancela. |
 | `POST /cargas` | Multipart con el campo `archivo`, o el binario en el cuerpo con `?nombre=`. Devuelve `identificador_carga`, `sha256`, `tamano_bytes` y `vence_en`. Un trabajo nuevo que cite una carga vencida se rechaza con 410; las cargas de un trabajo aceptado se conservan mientras se pueda reintentar. |
 | `GET /capacidades` | Por agente: streaming (`tokens` o `final`), salida estructurada, modelo efectivo, versión detectada, autenticación y términos. Incluye el formato de serialización. |
-| `GET /modelos` | Catálogo: agentes, `agente/modelo` configurados y perfiles. |
+| `GET /modelos` | Catálogo: agentes, `agente/modelo` configurados y perfiles. Cada entrada indica `predeterminado: true` si es el modelo predeterminado, `version` con el último modelo efectivo informado por el agente y, en los perfiles, `resuelto` con el agente/modelo al que llevan. |
 
 Ejemplo:
 

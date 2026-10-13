@@ -373,3 +373,26 @@ func TestInstruccionesDelPunto(t *testing.T) {
 		t.Fatalf("sin instrucciones propias: %q", sol.Instrucciones)
 	}
 }
+
+// conModelo informa un modelo efectivo, como Claude con su versión real detrás del alias.
+type conModelo struct{}
+
+func (conModelo) Ejecutar(context.Context, nucleo.SolicitudEjecucion, func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	return adaptadores.Resultado{Salida: "ok", ModeloEfectivo: "m1-2026"}, nil
+}
+
+func TestCatalogoConVersionesYPredeterminado(t *testing.T) {
+	ts := servidor(t, map[string]adaptadores.Adaptador{"simulado": conModelo{}}, map[string]any{"predeterminados.perfil_modelo": "rapido"})
+	if r, cuerpo := pedir(t, ts, "POST", "/api/v1/ejecutar", `{"agente":"simulado","modelo":"m1","mensajes":[{"rol":"usuario","contenido":"hola"}]}`); r.StatusCode != 200 {
+		t.Fatalf("ejecutar: %d %s", r.StatusCode, cuerpo)
+	}
+	_, cuerpo := pedir(t, ts, "GET", "/api/v1/modelos", "")
+	for _, esperado := range []string{
+		`"id":"simulado/m1","agente":"simulado","modelo":"m1","origen":"configurado","version":"m1-2026"`,
+		`"id":"perfil/rapido","perfil":"rapido","origen":"configurado","resuelto":"simulado/m1","version":"m1-2026","predeterminado":true`,
+	} {
+		if !strings.Contains(cuerpo, esperado) {
+			t.Fatalf("falta %s en %s", esperado, cuerpo)
+		}
+	}
+}

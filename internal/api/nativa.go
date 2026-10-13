@@ -313,6 +313,23 @@ type modelo struct {
 	Modelo string `json:"modelo,omitempty"`
 	Perfil string `json:"perfil,omitempty"`
 	Origen string `json:"origen"`
+	// Solo en /api/v1/modelos: el agente/modelo al que lleva un perfil, la versión real que informó el agente la
+	// última vez (por ejemplo claude-sonnet-5-5 para "sonnet") y si es el modelo predeterminado de la instancia.
+	Resuelto       string `json:"resuelto,omitempty"`
+	Version        string `json:"version,omitempty"`
+	Predeterminado bool   `json:"predeterminado,omitempty"`
+}
+
+// predeterminado es el identificador del catálogo que se usa cuando la solicitud no indica agente ni modelo.
+func (s *Servidor) predeterminado() string {
+	agente, modelo, perfil := s.Config.Texto("predeterminados.agente"), s.Config.Texto("predeterminados.modelo"), s.Config.Texto("predeterminados.perfil_modelo")
+	switch {
+	case modelo != "":
+		return agente + "/" + modelo
+	case perfil != "":
+		return "perfil/" + perfil
+	}
+	return agente
 }
 
 // catalogo lista cada agente (con el modelo predeterminado de su CLI), los modelos configurados en los perfiles
@@ -332,10 +349,29 @@ func (s *Servidor) catalogo() []modelo {
 			}
 		}
 	}
+	if agente, m, _ := strings.Cut(s.predeterminado(), "/"); m != "" && agente != "perfil" && !vistos[agente+"/"+m] {
+		lista = append(lista, modelo{ID: agente + "/" + m, Agente: agente, Modelo: m, Origen: "configurado"})
+	}
 	sort.Slice(lista, func(i, j int) bool { return lista[i].ID < lista[j].ID })
 	return s.filtrarCatalogo(lista)
 }
 
-func (s *Servidor) modelosNativos(w http.ResponseWriter, _ *http.Request) {
-	EscribirJSON(w, http.StatusOK, map[string]any{"modelos": s.catalogo()})
+func (s *Servidor) modelosNativos(w http.ResponseWriter, r *http.Request) {
+	lista := s.catalogo()
+	efectivos, _ := s.Planificador.ModelosEfectivos(r.Context()) // sin historial, el catálogo va sin versiones
+	pred, agentePred, perfiles := s.predeterminado(), s.Config.Texto("predeterminados.agente"), s.Config.Perfiles()
+	for i := range lista {
+		m := &lista[i]
+		m.Predeterminado = m.ID == pred
+		agente, modelo := m.Agente, m.Modelo
+		if m.Perfil != "" {
+			if agente, modelo = agentePred, perfiles[m.Perfil][agentePred]; modelo != "" {
+				m.Resuelto = agente + "/" + modelo
+			}
+		}
+		if agente != "" {
+			m.Version = efectivos[agente+"/"+modelo]
+		}
+	}
+	EscribirJSON(w, http.StatusOK, map[string]any{"modelos": lista})
 }

@@ -362,6 +362,19 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 			entradas = append(entradas, EntradaConfiguracion{Clave: e.Clave, Valor: e.Valor, Origen: e.Origen.String()})
 		}
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"configuracion": entradas})
+	case ruta == "/api/v1/instancia/predeterminado" && r.Method == http.MethodPost:
+		var peticion struct {
+			Modelo string `json:"modelo"`
+		}
+		if err := api.LeerJSON(w, r, &peticion); err != nil {
+			api.EscribirError(w, r, err)
+			return true
+		}
+		if err := s.fijarPredeterminado(inst, peticion.Modelo); err != nil {
+			api.EscribirError(w, r, err)
+			return true
+		}
+		w.WriteHeader(http.StatusNoContent)
 	case ruta == "/api/v1/puntos" && r.Method == http.MethodGet:
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"puntos_acceso": s.puntosDe(inst.ID)})
 	case ruta == "/api/v1/puntos" && r.Method == http.MethodPost:
@@ -541,4 +554,42 @@ func (s *Servicio) cambiarAutenticacion(agente, modo string) error {
 		return err
 	}
 	return adaptadores.CambiarAutenticacion(s.opc.Registro, agente, modo)
+}
+
+// fijarPredeterminado guarda el modelo que se usa cuando la solicitud no indica agente ni modelo (un identificador
+// del catálogo: agente, agente/modelo o perfil/nombre) y lo aplica en marcha. En la instancia global va a la
+// configuración global y alcanza también a los proyectos que no tengan el suyo; en un proyecto, a su local.yaml.
+func (s *Servicio) fijarPredeterminado(inst *Instancia, id string) error {
+	valores := map[string]any{"predeterminados.modelo": "", "predeterminados.perfil_modelo": ""}
+	agente, modelo, _ := strings.Cut(id, "/")
+	switch {
+	case agente == "perfil":
+		if _, existe := inst.Config.Perfiles()[modelo]; !existe {
+			return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "perfil de modelo desconocido: "+modelo)
+		}
+		valores["predeterminados.perfil_modelo"] = modelo
+	case s.opc.Registro[agente] == nil:
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "agente desconocido: "+agente)
+	default:
+		valores["predeterminados.agente"], valores["predeterminados.modelo"] = agente, modelo
+	}
+	ruta, origen, err := archivoPuntos(inst)
+	if err != nil {
+		return err
+	}
+	for clave, valor := range valores {
+		if err := FijarValor(ruta, origen, clave, valor.(string)); err != nil {
+			return err
+		}
+	}
+	if inst.Ambito != "global" {
+		inst.Config.Fijar(origen, valores)
+		return nil
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, otra := range s.instancias {
+		otra.Config.Fijar(origen, valores)
+	}
+	return nil
 }

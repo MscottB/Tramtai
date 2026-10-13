@@ -106,6 +106,23 @@ func TestWebUI(t *testing.T) {
 		t.Fatalf("eliminar: %d", r.StatusCode)
 	}
 
+	// Modelo predeterminado: se guarda, se aplica en marcha y el catálogo lo marca.
+	if r, _ := n.pedir("POST", "/api/v1/instancia/predeterminado", `{"modelo":"simulado/m2"}`); r.StatusCode != 403 {
+		t.Fatalf("fijar el predeterminado exige el CSRF: %d", r.StatusCode)
+	}
+	if r, cuerpo := n.pedir("POST", "/api/v1/instancia/predeterminado", `{"modelo":"perfil/inexistente"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 {
+		t.Fatalf("un perfil desconocido se rechaza: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, cuerpo := n.pedir("POST", "/api/v1/instancia/predeterminado", `{"modelo":"simulado/m2"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 204 {
+		t.Fatalf("fijar el predeterminado: %d %s", r.StatusCode, cuerpo)
+	}
+	if _, cuerpo := n.pedir("GET", "/api/v1/modelos", ""); !strings.Contains(cuerpo, `"id":"simulado/m2","agente":"simulado","modelo":"m2","origen":"configurado","predeterminado":true`) {
+		t.Fatalf("el catálogo marca el predeterminado: %s", cuerpo)
+	}
+	if datos, _ := os.ReadFile(rutaGlobal); !strings.Contains(string(datos), "modelo: m2") {
+		t.Fatalf("el predeterminado debía guardarse en la configuración global:\n%s", datos)
+	}
+
 	if r, _ := n.pedir("DELETE", "/ui/sesion", ""); r.StatusCode != 204 {
 		t.Fatalf("salir: %d", r.StatusCode)
 	}

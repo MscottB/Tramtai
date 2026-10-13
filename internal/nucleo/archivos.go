@@ -73,7 +73,7 @@ func CargarConfiguracion(raiz string) (*Configuracion, error) {
 
 // Lista devuelve un valor de tipo lista, o nil si no existe.
 func (c *Configuracion) Lista(clave string) []any {
-	v, _ := c.valores[clave].([]any)
+	v, _ := c.e().valores[clave].([]any)
 	return v
 }
 
