@@ -300,3 +300,23 @@ func TestDrenarAlCerrar(t *testing.T) {
 		t.Fatalf("el trabajo en curso terminó y su resultado se puede recoger: %s", cuerpo)
 	}
 }
+
+func TestEscucharConPuertoOcupado(t *testing.T) {
+	ocupado, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ocupado.Close()
+	puerto := ocupado.Addr().(*net.TCPAddr).Port
+	if PuertoLibre("127.0.0.1", puerto) {
+		t.Fatal("el puerto en uso debe verse ocupado")
+	}
+	if _, _, err := Escuchar("127.0.0.1", puerto, false); err == nil || !strings.Contains(err.Error(), "ocupado") {
+		t.Fatalf("sin automático, el puerto ocupado es un error que lo explica: %v", err)
+	}
+	oyente, usado, err := Escuchar("127.0.0.1", puerto, true)
+	if err != nil || usado == puerto {
+		t.Fatalf("con automático se usa otro puerto: %d %v", usado, err)
+	}
+	oyente.Close()
+}

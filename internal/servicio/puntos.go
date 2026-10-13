@@ -369,7 +369,7 @@ func EditarPuntos(ruta string, origen nucleo.Origen, editar func([]ConfigPunto) 
 
 // FijarValor escribe una clave con puntos (adaptadores.claude.autenticacion) en un archivo YAML, creando los
 // mapas que falten y conservando el resto del archivo y sus comentarios.
-func FijarValor(ruta string, origen nucleo.Origen, clave, valor string) error {
+func FijarValor(ruta string, origen nucleo.Origen, clave string, valor any) error {
 	return editarYAML(ruta, origen, func(nodo *yaml.Node) error {
 		partes := strings.Split(clave, ".")
 		for i, parte := range partes {
@@ -388,7 +388,11 @@ func FijarValor(ruta string, origen nucleo.Origen, clave, valor string) error {
 				nodo.Content = append(nodo.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: parte}, hijo)
 			}
 			if i == len(partes)-1 {
-				*hijo = yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: valor}
+				var nuevo yaml.Node
+				if err := nuevo.Encode(valor); err != nil {
+					return err
+				}
+				*hijo = nuevo
 			}
 			nodo = hijo
 		}

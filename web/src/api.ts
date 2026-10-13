@@ -23,6 +23,8 @@ export interface Sesion {
   instancias?: InstanciaResumida[]
   // autoarranque: si Tramtai arranca al iniciar sesión; solo en sesiones locales de sistemas que lo admiten.
   autoarranque?: boolean
+  // servicio: el puerto en uso, el configurado y si se puede reiniciar desde aquí (solo sesiones locales).
+  servicio?: { puerto: number; puerto_configurado: number; puerto_automatico: boolean; reiniciable: boolean }
 }
 export interface Uso {
   tokens_entrada: number
@@ -140,7 +142,7 @@ export class ErrorApi extends Error {
 
 let csrf = ''
 
-async function pedir<T>(metodo: string, ruta: string, cuerpo?: unknown): Promise<T> {
+async function pedir<T>(metodo: string, ruta: string, cuerpo?: unknown, reintento = false): Promise<T> {
   const cabeceras: Record<string, string> = {}
   let body: BodyInit | undefined
   if (cuerpo instanceof FormData) {
@@ -154,6 +156,16 @@ async function pedir<T>(metodo: string, ruta: string, cuerpo?: unknown): Promise
   if (respuesta.status === 204) return undefined as T
   const datos = await respuesta.json().catch(() => ({}))
   if (!respuesta.ok) {
+    // La sesión dejó de valer porque el servicio se reinició: se abre otra y se repite la petición una vez.
+    if (respuesta.status === 401 && !reintento && ruta !== '/ui/sesion' && sesion.value) {
+      try {
+        await api.sesion()
+      } catch {
+        sesion.value = null
+        throw new ErrorApi('sesion_caducada', t('app.sesionCaducada'), 401)
+      }
+      return pedir<T>(metodo, ruta, cuerpo, true)
+    }
     throw new ErrorApi(datos?.error?.codigo ?? 'error', datos?.error?.mensaje ?? respuesta.statusText, respuesta.status)
   }
   return datos as T
@@ -177,6 +189,8 @@ export const api = {
   cambiarAutenticacion: (agente: string, modo: 'suscripcion' | 'clave_api') => pedir<void>('POST', '/ui/autenticacion', { agente, modo }),
   salir: () => pedir<void>('DELETE', '/ui/sesion').then(() => (sesion.value = null)),
   detenerServicio: () => pedir<unknown>('POST', '/ui/servicio/detener'),
+  fijarPuerto: (puerto: number, automatico: boolean) => pedir<Sesion>('POST', '/ui/servicio/puerto', { puerto, automatico }).then(recordar),
+  reiniciarServicio: () => pedir<{ url: string }>('POST', '/ui/servicio/reiniciar'),
   instancia: () => pedir<EstadoInstancia>('GET', '/api/v1/instancia'),
   claveInstancia: () => pedir<{ token: string; archivo: string }>('GET', '/api/v1/instancia/token'),
   configuracion: () =>
@@ -344,4 +358,25 @@ export async function copiar(texto: string, que = t('comun.copiado')) {
   } catch {
     Notify.create({ type: 'warning', message: t('comun.noCopiado'), position: 'top' })
   }
+}
+
+const esperar = (ms: number) => new Promise((listo) => setTimeout(listo, ms))
+// responde indica si hay un servicio en url; con no-cors basta para otro puerto, que es otro origen.
+const responde = (url: string) => fetch(url + '/healthz', { mode: 'no-cors', cache: 'no-store' }).then(() => true).catch(() => false)
+
+// reiniciarYSeguir reinicia el servicio y abre la página en su nueva dirección cuando responde (el puerto puede
+// cambiar). Primero espera a que el actual termine, porque mientras drena los trabajos sigue respondiendo.
+export async function reiniciarYSeguir() {
+  const { url } = await api.reiniciarServicio()
+  const aviso = Notify.create({ type: 'ongoing', message: t('app.reiniciando'), position: 'top' })
+  for (let i = 0; i < 120 && (await responde(location.origin)); i++) await esperar(500)
+  for (let i = 0; i < 120; i++) {
+    if (await responde(url)) {
+      location.href = url + '/' + location.hash
+      return
+    }
+    await esperar(500)
+  }
+  aviso()
+  Notify.create({ type: 'negative', message: t('app.reinicioFallido', { url }), position: 'top', timeout: 0, actions: [{ label: 'OK', color: 'white' }] })
 }

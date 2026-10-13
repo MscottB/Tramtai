@@ -1,7 +1,9 @@
 package servicio
 
 import (
+	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"net/netip"
@@ -211,6 +213,20 @@ func TestEntradaLocalSinToken(t *testing.T) {
 	otro.pedir("GET", "/ui/entrar?codigo="+url.QueryEscape(codigo), "")
 	if _, cuerpo := otro.pedir("GET", "/ui/sesion", ""); !strings.Contains(cuerpo, `"local":true`) {
 		t.Fatalf("la entrada con código desde este equipo debe ser local: %s", cuerpo)
+	}
+
+	// Puerto: uno ocupado se rechaza y uno libre se guarda en la configuración global.
+	ocupado, _ := net.Listen("tcp", "127.0.0.1:0")
+	defer ocupado.Close()
+	enUso := ocupado.Addr().(*net.TCPAddr).Port
+	if r, cuerpo := n.pedir("POST", "/ui/servicio/puerto", fmt.Sprintf(`{"puerto":%d,"automatico":false}`, enUso), "X-CSRF-Token", n.csrf); r.StatusCode != 400 || !strings.Contains(cuerpo, "ocupado") {
+		t.Fatalf("un puerto ocupado se rechaza: %d %s", r.StatusCode, cuerpo)
+	}
+	libre, _ := net.Listen("tcp", "127.0.0.1:0")
+	puertoLibre := libre.Addr().(*net.TCPAddr).Port
+	libre.Close()
+	if r, cuerpo := n.pedir("POST", "/ui/servicio/puerto", fmt.Sprintf(`{"puerto":%d,"automatico":false}`, puertoLibre), "X-CSRF-Token", n.csrf); r.StatusCode != 200 || !strings.Contains(cuerpo, fmt.Sprintf(`"puerto_configurado":%d`, puertoLibre)) {
+		t.Fatalf("un puerto libre se guarda: %d %s", r.StatusCode, cuerpo)
 	}
 
 	// Detener el servicio desde la Web UI: solo con sesión local y CSRF.

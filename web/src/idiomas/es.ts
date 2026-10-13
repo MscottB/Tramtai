@@ -386,6 +386,22 @@ const es = {
   'datos.historialDetalleUno': '1 petición; si está en proceso se conserva',
   'datos.puntosDetalleUno': '1 API; las aplicaciones que la usan dejarán de funcionar',
   'historial.vaciadoUno': '1 petición eliminada',
+  'app.reiniciar': 'Reiniciar el servicio',
+  'app.reiniciando': 'Reiniciando el servicio…',
+  'app.reinicioFallido': 'El servicio no volvió a responder en {url}. Revisa «tramtai servicio estado» o inícialo con «tramtai abrir».',
+  'app.sesionCaducada': 'La sesión ya no es válida (el servicio se reinició). Vuelve a entrar.',
+  'puerto.titulo': 'Puerto del servicio',
+  'puerto.texto': 'Dónde atiende Tramtai a la Web UI y a tus aplicaciones. Al guardarlo se comprueba que esté libre; se aplica al reiniciar el servicio.',
+  'puerto.actual': 'En uso ahora: {url}',
+  'puerto.distinto': 'El puerto {configurado} estaba ocupado al iniciar y Tramtai usa el {actual}. Tus aplicaciones deben usar esta dirección, o elige otro puerto.',
+  'puerto.campo': 'Puerto',
+  'puerto.regla': 'Entre 1024 y 65535',
+  'puerto.automatico': 'Si está ocupado al iniciar, usar otro libre automáticamente',
+  'puerto.guardado': 'Puerto guardado',
+  'puerto.reiniciarTitulo': 'Aplicar el puerto',
+  'puerto.reiniciarTexto': 'El puerto {puerto} se aplica al reiniciar el servicio. Tus aplicaciones deberán usar http://127.0.0.1:{puerto}. ¿Reiniciar ahora?',
+  'puerto.reiniciarAhora': 'Reiniciar ahora',
+  'puerto.despues': 'Más tarde',
 }
 
 export type Clave = keyof typeof es

@@ -1,13 +1,16 @@
 package servicio
 
 import (
+	"cmp"
 	"crypto/subtle"
+	"fmt"
 	"io/fs"
 	"net"
 	"net/http"
 	"path"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -196,6 +199,45 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
+	case r.URL.Path == "/ui/servicio/puerto" && r.Method == http.MethodPost:
+		_, ses := s.sesionDe(r)
+		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+			api.NoAutorizado(w, r)
+			return
+		}
+		var peticion struct {
+			Puerto     int  `json:"puerto"`
+			Automatico bool `json:"automatico"`
+		}
+		if err := api.LeerJSON(w, r, &peticion); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		if err := s.fijarPuerto(peticion.Puerto, peticion.Automatico); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		s.responderSesion(w, r, ses)
+	case r.URL.Path == "/ui/servicio/reiniciar" && r.Method == http.MethodPost:
+		_, ses := s.sesionDe(r)
+		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+			api.NoAutorizado(w, r)
+			return
+		}
+		if s.opc.Reiniciar == nil {
+			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "este servicio no se puede reiniciar desde la Web UI"))
+			return
+		}
+		if err := s.opc.Reiniciar(); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		s.mu.RLock()
+		puerto := cmp.Or(s.opc.PuertoConfigurado, s.opc.Puerto)
+		s.mu.RUnlock()
+		// El servicio nuevo espera a que este termine y escucha en el puerto configurado (o en otro libre).
+		api.EscribirJSON(w, http.StatusAccepted, map[string]any{"url": "http://" + net.JoinHostPort(s.opc.Host, strconv.Itoa(puerto))})
+		s.detenerUna.Do(func() { close(s.detener) })
 	case r.URL.Path == "/ui/servicio/detener" && r.Method == http.MethodPost:
 		// Solo desde este equipo: detener corta también a las aplicaciones conectadas.
 		_, ses := s.sesionDe(r)
@@ -288,6 +330,10 @@ func (s *Servicio) responderSesion(w http.ResponseWriter, r *http.Request, ses *
 			return strings.Compare(a.Nombre, b.Nombre)
 		})
 		respuesta["instancias"] = lista
+		s.mu.RLock()
+		respuesta["servicio"] = map[string]any{"puerto": s.opc.Puerto, "puerto_configurado": cmp.Or(s.opc.PuertoConfigurado, s.opc.Puerto),
+			"puerto_automatico": s.opc.PuertoAutomatico, "reiniciable": s.opc.Reiniciar != nil}
+		s.mu.RUnlock()
 		if autoarranque.Disponible {
 			respuesta["autoarranque"], _ = autoarranque.Activo()
 		}
@@ -330,7 +376,9 @@ func (s *Servicio) sitio(w http.ResponseWriter, r *http.Request) {
 	h.Set("X-Content-Type-Options", "nosniff")
 	h.Set("X-Frame-Options", "DENY")
 	h.Set("Referrer-Policy", "no-referrer")
-	h.Set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'")
+	// connect-src admite otros puertos de este equipo para seguir al servicio si un reinicio le cambia el puerto.
+	h.Set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; "+
+		"connect-src 'self' http://127.0.0.1:* http://localhost:* http://[::1]:*; frame-ancestors 'none'")
 	if strings.HasPrefix(ruta, "assets/") {
 		h.Set("Cache-Control", "public, max-age=31536000, immutable")
 	} else {
@@ -588,7 +636,7 @@ func (s *Servicio) fijarPredeterminado(inst *Instancia, id string) error {
 		return err
 	}
 	for clave, valor := range valores {
-		if err := FijarValor(ruta, origen, clave, valor.(string)); err != nil {
+		if err := FijarValor(ruta, origen, clave, valor); err != nil {
 			return err
 		}
 	}
@@ -601,5 +649,30 @@ func (s *Servicio) fijarPredeterminado(inst *Instancia, id string) error {
 	for _, otra := range s.instancias {
 		otra.Config.Fijar(origen, valores)
 	}
+	return nil
+}
+
+// fijarPuerto guarda servicio.puerto y servicio.puerto_automatico en la configuración global si el puerto está
+// libre (o es el que ya usa este servicio). Se aplica al reiniciar.
+func (s *Servicio) fijarPuerto(puerto int, automatico bool) error {
+	if puerto < 1024 || puerto > 65535 {
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "el puerto debe estar entre 1024 y 65535")
+	}
+	if puerto != s.opc.Puerto && !PuertoLibre(s.opc.Host, puerto) {
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, fmt.Sprintf("el puerto %d está ocupado por otro programa: elige otro", puerto))
+	}
+	ruta, err := nucleo.RutaGlobal()
+	if err != nil {
+		return err
+	}
+	if err := FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto", puerto); err != nil {
+		return err
+	}
+	if err := FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto_automatico", automatico); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	s.opc.PuertoConfigurado, s.opc.PuertoAutomatico = puerto, automatico
+	s.mu.Unlock()
 	return nil
 }

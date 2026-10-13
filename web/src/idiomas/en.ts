@@ -387,6 +387,22 @@ const en: Textos = {
   'datos.historialDetalleUno': '1 request; kept if it is in progress',
   'datos.puntosDetalleUno': '1 API; apps that use it will stop working',
   'historial.vaciadoUno': '1 request deleted',
+  'app.reiniciar': 'Restart the service',
+  'app.reiniciando': 'Restarting the service…',
+  'app.reinicioFallido': 'The service did not answer again at {url}. Check “tramtai servicio estado” or start it with “tramtai abrir”.',
+  'app.sesionCaducada': 'The session is no longer valid (the service restarted). Sign in again.',
+  'puerto.titulo': 'Service port',
+  'puerto.texto': 'Where Tramtai serves the Web UI and your apps. When you save it, it is checked to be free; it applies when the service restarts.',
+  'puerto.actual': 'In use now: {url}',
+  'puerto.distinto': 'Port {configurado} was busy at startup and Tramtai uses {actual}. Your apps must use this address, or choose another port.',
+  'puerto.campo': 'Port',
+  'puerto.regla': 'Between 1024 and 65535',
+  'puerto.automatico': 'If it is busy at startup, use another free one automatically',
+  'puerto.guardado': 'Port saved',
+  'puerto.reiniciarTitulo': 'Apply the port',
+  'puerto.reiniciarTexto': 'Port {puerto} applies when the service restarts. Your apps will need to use http://127.0.0.1:{puerto}. Restart now?',
+  'puerto.reiniciarAhora': 'Restart now',
+  'puerto.despues': 'Later',
 }
 
 export default en

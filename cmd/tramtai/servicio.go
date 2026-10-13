@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -76,6 +77,20 @@ func confirmar(cmd *cobra.Command, pregunta string) bool {
 	linea, _ := bufio.NewReader(cmd.InOrStdin()).ReadString('\n')
 	linea = strings.ToLower(strings.TrimSpace(linea))
 	return strings.HasPrefix(linea, "s") || strings.HasPrefix(linea, "y")
+}
+
+// esperarCierreServicio espera, como mucho dos minutos, a que el servicio en marcha termine (drena sus trabajos).
+func esperarCierreServicio() {
+	datos, err := dirDatos()
+	if err != nil {
+		return
+	}
+	for range 600 {
+		if _, err := cliente.Conectar(datos); err != nil {
+			return
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
 }
 
 // abrirCuandoResponda espera a que el servicio en primer plano acepte conexiones y abre la interfaz global.
@@ -157,10 +172,14 @@ func comandoServicio() *cobra.Command {
 	grupo := &cobra.Command{Use: "servicio", Short: "Servicio único: todas las instancias y puntos de acceso en un puerto"}
 	var abrirAlIniciar, navegadorAlIniciar bool
 	var archivoRegistro string
+	var esperarCierre bool
 	var segundoPlano, si bool
 	iniciar := &cobra.Command{Use: "iniciar", Short: "Inicia el servicio en primer plano (Ctrl+C lo detiene) o con -d en segundo plano",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if !segundoPlano {
+				if esperarCierre {
+					esperarCierreServicio()
+				}
 				if abrirAlIniciar {
 					go abrirCuandoResponda(cmd, navegadorAlIniciar)
 				}
@@ -178,6 +197,8 @@ func comandoServicio() *cobra.Command {
 	iniciar.Flags().BoolVar(&navegadorAlIniciar, "navegador", false, "con --abrir, usa el navegador en lugar de la app de escritorio")
 	iniciar.Flags().StringVar(&archivoRegistro, "registro", "", "escribe el registro en este archivo, con servicio.registro_mb y servicio.registro_copias")
 	_ = iniciar.Flags().MarkHidden("registro") // lo usa el arranque en segundo plano
+	iniciar.Flags().BoolVar(&esperarCierre, "esperar-cierre", false, "espera a que termine el servicio en marcha (reinicio)")
+	_ = iniciar.Flags().MarkHidden("esperar-cierre")
 	detener := &cobra.Command{Use: "detener", Short: "Detiene el servicio y todas sus instancias",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := conectar()
@@ -275,6 +296,49 @@ func comandoServicio() *cobra.Command {
 			fmt.Fprintln(cmd.OutOrStdout(), "arranque automático: "+map[bool]string{true: "activado", false: "desactivado"}[activo])
 			return nil
 		}}
+	var automaticoPuerto bool
+	puertoCmd := &cobra.Command{Use: "puerto [número]", Short: "Muestra o cambia el puerto del servicio; comprueba que esté libre y se aplica al reiniciar",
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := nucleo.CargarConfiguracion("")
+			if err != nil {
+				return err
+			}
+			out := cmd.OutOrStdout()
+			activo, errActivo := conectar()
+			if len(args) == 0 && !cmd.Flags().Changed("automatico") {
+				fmt.Fprintf(out, "puerto configurado: %d · si está ocupado, usar otro libre: %v\n", c.Entero("servicio.puerto"), c.Booleano("servicio.puerto_automatico"))
+				if errActivo == nil {
+					fmt.Fprintln(out, "servicio en marcha en "+activo.Base)
+				}
+				return nil
+			}
+			ruta, err := nucleo.RutaGlobal()
+			if err != nil {
+				return err
+			}
+			if len(args) == 1 {
+				puerto, err := strconv.Atoi(args[0])
+				if err != nil || puerto < 1024 || puerto > 65535 {
+					return fmt.Errorf("el puerto debe ser un número entre 1024 y 65535")
+				}
+				propio := errActivo == nil && strings.HasSuffix(activo.Base, ":"+args[0]) // el que ya usa Tramtai cuenta como libre
+				if !propio && !servicio.PuertoLibre(c.Texto("servicio.host"), puerto) {
+					return fmt.Errorf("el puerto %d está ocupado por otro programa: elige otro", puerto)
+				}
+				if err := servicio.FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto", puerto); err != nil {
+					return err
+				}
+			}
+			if cmd.Flags().Changed("automatico") {
+				if err := servicio.FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto_automatico", automaticoPuerto); err != nil {
+					return err
+				}
+			}
+			fmt.Fprintln(out, "guardado en "+ruta+"; se aplica al reiniciar el servicio (tramtai servicio detener y tramtai abrir, o Reiniciar en la Web UI)")
+			return nil
+		}}
+	puertoCmd.Flags().BoolVar(&automaticoPuerto, "automatico", true, "si el puerto está ocupado al iniciar, usar otro libre")
 	var lineasRegistro int
 	var seguirRegistroVivo bool
 	registroCmd := &cobra.Command{Use: "registro", Short: "Muestra lo que procesa el servicio en segundo plano (servicio.log); -f lo sigue en vivo",
@@ -283,7 +347,7 @@ func comandoServicio() *cobra.Command {
 		}}
 	registroCmd.Flags().IntVarP(&lineasRegistro, "lineas", "n", 30, "líneas finales que se muestran")
 	registroCmd.Flags().BoolVarP(&seguirRegistroVivo, "seguir", "f", false, "sigue mostrando las líneas nuevas hasta Ctrl+C")
-	grupo.AddCommand(iniciar, detener, estado, recargar, token, autoarranqueCmd, registroCmd)
+	grupo.AddCommand(iniciar, detener, estado, recargar, token, autoarranqueCmd, registroCmd, puertoCmd)
 	return grupo
 }
 
@@ -382,18 +446,32 @@ func iniciarServicio(cmd *cobra.Command, archivo string) error {
 	if remoto {
 		hosts = append(hosts, strings.ToLower(host))
 	}
-	agentes, limites := adaptadores.Registro(c)
-	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: agentes, Semaforos: planificador.NuevosSemaforos(limites),
-		Host: host, Puerto: puerto, Hosts: hosts, Registros: salida, Web: recursos.Web(),
-		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,
-		EntradaLocal: c.Booleano("servicio.entrada_local")})
+	automatico := c.Booleano("servicio.puerto_automatico")
+	oyente, puertoUsado, err := servicio.Escuchar(host, puerto, automatico)
 	if err != nil {
 		return err
 	}
-	direccion := net.JoinHostPort(host, strconv.Itoa(puerto))
-	oyente, err := net.Listen("tcp", direccion)
+	if puertoUsado != puerto {
+		fmt.Fprintf(salida, "el puerto %d está ocupado: Tramtai usa el %d (para fijar otro: Ajustes o «tramtai servicio puerto <número>»)\n", puerto, puertoUsado)
+	}
+	// El reinicio lanza otro servicio en segundo plano que espera a que este termine.
+	registroReinicio := cmp.Or(archivo, filepath.Join(datos, "servicio.log"))
+	reiniciar := func() error {
+		ejecutable, err := os.Executable()
+		if err != nil {
+			return err
+		}
+		return cliente.Lanzar(ejecutable, datos, "servicio", "iniciar", "--esperar-cierre", "--registro", registroReinicio)
+	}
+	agentes, limites := adaptadores.Registro(c)
+	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: agentes, Semaforos: planificador.NuevosSemaforos(limites),
+		Host: host, Puerto: puertoUsado, PuertoConfigurado: puerto, PuertoAutomatico: automatico, Reiniciar: reiniciar,
+		Hosts: hosts, Registros: salida, Web: recursos.Web(),
+		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,
+		EntradaLocal: c.Booleano("servicio.entrada_local")})
 	if err != nil {
-		return fmt.Errorf("no se pudo escuchar en %s (¿el puerto está en uso?): %w", direccion, err)
+		oyente.Close()
+		return err
 	}
 	for _, err := range sv.Restaurar() {
 		fmt.Fprintln(salida, "no se pudo restaurar una instancia:", nucleo.MensajeDe(err))

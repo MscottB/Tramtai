@@ -112,7 +112,7 @@ func Proteger(hosts []string, autorizar func(*http.Request) bool, siguiente http
 // NoAutorizado responde 401 con el formato del contrato de la ruta.
 func NoAutorizado(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("WWW-Authenticate", "Bearer")
-	EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado, "falta el token o no es válido"))
+	EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado, "falta la clave (token) o no es válida: envíala como «Authorization: Bearer <clave>»; la clave está en Mis APIs de la Web UI"))
 }
 
 func hostPermitido(hosts []string, host string) bool {

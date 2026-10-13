@@ -34,6 +34,36 @@
       </q-card-section>
     </q-card>
 
+    <q-card v-if="sesion?.servicio">
+      <q-card-section class="row items-start q-col-gutter-md">
+        <div class="col-12 col-md">
+          <div class="row items-start no-wrap">
+            <q-icon name="o_lan" size="28px" color="primary" class="q-mr-md q-mt-xs" />
+            <div>
+              <div class="titulo-seccion">{{ t('puerto.titulo') }}</div>
+              <div class="texto-suave text-body2 q-mt-xs">{{ t('puerto.texto') }}</div>
+              <div class="text-caption q-mt-xs">{{ t('puerto.actual', { url: direccionActual }) }}</div>
+              <div v-if="sesion.servicio.puerto !== sesion.servicio.puerto_configurado" class="aviso text-body2 q-mt-sm">
+                {{ t('puerto.distinto', { configurado: sesion.servicio.puerto_configurado, actual: sesion.servicio.puerto }) }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-md-5">
+          <div class="row q-col-gutter-sm items-start">
+            <div class="col">
+              <q-input v-model="puerto" outlined dense inputmode="numeric" :label="t('puerto.campo')"
+                :rules="[(v: string) => (/^\d+$/.test(v) && +v >= 1024 && +v <= 65535) || t('puerto.regla')]" />
+            </div>
+            <div class="col-auto">
+              <q-btn unelevated color="primary" no-caps :label="t('comun.guardar')" :loading="guardandoPuerto" :disable="!cambioPuerto" @click="guardarPuerto" />
+            </div>
+          </div>
+          <q-toggle v-model="automatico" :label="t('puerto.automatico')" />
+        </div>
+      </q-card-section>
+    </q-card>
+
     <div class="row q-col-gutter-md">
       <div v-if="sesion?.autoarranque !== undefined" class="col-12 col-md-6">
         <q-card class="full-height">
@@ -122,7 +152,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { api, avisar, avisarError, opcionModelo, sesion, terminales, type EntradaConfiguracion, type EstadoPunto, type Modelo } from '../api'
+import { api, avisar, avisarError, opcionModelo, reiniciarYSeguir, sesion, terminales, type EntradaConfiguracion, type EstadoPunto, type Modelo } from '../api'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 
@@ -136,6 +166,30 @@ const puntos = ref<EstadoPunto[]>([])
 const borrarHistorial = ref(true)
 const borrarPuntos = ref(false)
 const borrando = ref(false)
+const direccionActual = location.origin
+const puerto = ref(String(sesion.value?.servicio?.puerto_configurado ?? ''))
+const automatico = ref(sesion.value?.servicio?.puerto_automatico ?? true)
+const guardandoPuerto = ref(false)
+const cambioPuerto = computed(() => puerto.value !== String(sesion.value?.servicio?.puerto_configurado) || automatico.value !== sesion.value?.servicio?.puerto_automatico)
+
+// guardarPuerto lo guarda si está libre (lo comprueba el servicio) y ofrece reiniciar para aplicarlo.
+async function guardarPuerto() {
+  if (!/^\d+$/.test(puerto.value) || +puerto.value < 1024 || +puerto.value > 65535) return
+  guardandoPuerto.value = true
+  try {
+    const nueva = await api.fijarPuerto(+puerto.value, automatico.value)
+    avisar(t('puerto.guardado'))
+    if (nueva.servicio && nueva.servicio.puerto_configurado !== nueva.servicio.puerto && nueva.servicio.reiniciable) {
+      $q.dialog({ title: t('puerto.reiniciarTitulo'), message: t('puerto.reiniciarTexto', { puerto: puerto.value }),
+        cancel: { flat: true, label: t('puerto.despues'), noCaps: true }, ok: { color: 'primary', label: t('puerto.reiniciarAhora'), unelevated: true, noCaps: true } })
+        .onOk(() => reiniciarYSeguir().catch(avisarError))
+    }
+  } catch (e) {
+    avisarError(e)
+  } finally {
+    guardandoPuerto.value = false
+  }
+}
 const catalogo = ref<Modelo[]>([])
 const guardandoModelo = ref(false)
 const opcionesModelo = computed(() => catalogo.value.map(opcionModelo))

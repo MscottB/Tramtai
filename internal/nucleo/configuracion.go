@@ -59,6 +59,7 @@ var esquema = map[string]tipoValor{
 	"instancia.ambito":                            tipoTexto,
 	"servicio.host":                               tipoTexto,
 	"servicio.puerto":                             tipoEntero,
+	"servicio.puerto_automatico":                  tipoBooleano,
 	"servicio.plazo_drenaje_segundos":             tipoEntero,
 	"servicio.entrada_local":                      tipoBooleano,
 	"servicio.requerir_token":                     tipoBooleano,
@@ -162,6 +163,7 @@ func Internos() Capa {
 	return Capa{Origen: OrigenInterno, Fuente: "interno", Valores: map[string]any{
 		"servicio.host":                                 "127.0.0.1",
 		"servicio.puerto":                               17373,
+		"servicio.puerto_automatico":                    true,
 		"servicio.plazo_drenaje_segundos":               30,
 		"servicio.entrada_local":                        true,
 		"servicio.requerir_token":                       true,

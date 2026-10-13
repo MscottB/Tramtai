@@ -49,6 +49,10 @@
                 </q-item-section>
               </q-item>
               <q-separator />
+              <q-item v-if="conectado && sesion.local && sesion.servicio?.reiniciable" v-close-popup clickable @click="reiniciarYSeguir().catch(avisarError)">
+                <q-item-section avatar><q-icon name="o_restart_alt" /></q-item-section>
+                <q-item-section>{{ t('app.reiniciar') }}</q-item-section>
+              </q-item>
               <q-item v-if="conectado && sesion.local" v-close-popup clickable @click="detener">
                 <q-item-section avatar><q-icon name="o_power_settings_new" color="negative" /></q-item-section>
                 <q-item-section class="text-negative">{{ t('app.detener') }}</q-item-section>
@@ -129,7 +133,7 @@
 <script setup lang="ts">
 import { computed, markRaw, onMounted, onUnmounted, ref, watchEffect } from 'vue'
 import { useQuasar } from 'quasar'
-import { api, avisarError, sesion } from './api'
+import { api, avisarError, reiniciarYSeguir, sesion } from './api'
 import { cambiarIdioma, idioma, idiomas, t } from './i18n'
 import EntrarPagina from './paginas/Entrar.vue'
 import InicioPagina from './paginas/Panel.vue'

@@ -46,6 +46,12 @@ type Opciones struct {
 	PlazoDrenaje time.Duration
 	// EntradaLocal deja entrar en la Web UI sin token al mismo usuario del sistema (servicio.entrada_local).
 	EntradaLocal bool
+	// PuertoConfigurado y PuertoAutomatico son servicio.puerto y servicio.puerto_automatico; Puerto es el que se
+	// usa, que puede ser otro si el configurado estaba ocupado. Se cambian desde la Web UI (con s.mu).
+	PuertoConfigurado int
+	PuertoAutomatico  bool
+	// Reiniciar lanza un servicio nuevo que espera a que este termine; nil = sin reinicio desde la Web UI.
+	Reiniciar func() error
 }
 
 // intervaloPurga es cada cuánto se aplica la retención (sección 16.2) a cada instancia activa.

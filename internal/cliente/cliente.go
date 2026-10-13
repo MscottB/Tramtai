@@ -59,27 +59,34 @@ func Conectar(datos string) (*Cliente, error) {
 	return c, nil
 }
 
-// IniciarEnSegundoPlano lanza "<ejecutable> servicio iniciar" desacoplado de la terminal y espera a que responda.
-// El servicio escribe su registro en servicio.log (con tamaño máximo y copias); la salida del proceso va a
+// Lanzar inicia "<ejecutable> <args>" desacoplado de la terminal, sin esperar. Su salida va a
 // servicio-salida.log, que se vacía en cada arranque y solo recoge un fallo grave.
-func IniciarEnSegundoPlano(ejecutable, datos string) (*Cliente, error) {
+func Lanzar(ejecutable, datos string, args ...string) error {
 	if err := os.MkdirAll(datos, 0o700); err != nil {
-		return nil, err
+		return err
 	}
-	rutaRegistro := filepath.Join(datos, "servicio.log")
 	registro, err := os.OpenFile(filepath.Join(datos, "servicio-salida.log"), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	cmd := exec.Command(ejecutable, "servicio", "iniciar", "--registro", rutaRegistro)
+	cmd := exec.Command(ejecutable, args...)
 	cmd.Dir, cmd.Stdout, cmd.Stderr = datos, registro, registro
 	desacoplar(cmd)
 	err = cmd.Start()
 	registro.Close()
 	if err != nil {
+		return err
+	}
+	return cmd.Process.Release()
+}
+
+// IniciarEnSegundoPlano lanza "<ejecutable> servicio iniciar" desacoplado de la terminal y espera a que responda.
+// El servicio escribe su registro en servicio.log, con tamaño máximo y copias.
+func IniciarEnSegundoPlano(ejecutable, datos string) (*Cliente, error) {
+	rutaRegistro := filepath.Join(datos, "servicio.log")
+	if err := Lanzar(ejecutable, datos, "servicio", "iniciar", "--registro", rutaRegistro); err != nil {
 		return nil, err
 	}
-	_ = cmd.Process.Release()
 	limite := time.Now().Add(20 * time.Second)
 	for time.Now().Before(limite) {
 		if c, err := Conectar(datos); err == nil {
