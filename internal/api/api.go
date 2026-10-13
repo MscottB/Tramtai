@@ -37,7 +37,7 @@ type Servidor struct {
 	Token string
 	// Hosts son los nombres aceptados en la cabecera Host (protección frente a DNS rebinding).
 	Hosts []string
-	// Sondeo es el intervalo con que se leen los eventos nuevos de un trabajo.
+	// Sondeo es la espera máxima entre lecturas si no llega ningún aviso del almacén (respaldo).
 	Sondeo time.Duration
 }
 
@@ -144,6 +144,7 @@ var estadosHTTP = map[nucleo.CodigoError]int{
 	nucleo.CodigoModeloAmbiguo:          http.StatusBadRequest,
 	nucleo.CodigoModeloNoDisponible:     http.StatusBadRequest,
 	nucleo.CodigoModeloNoPermitido:      http.StatusBadRequest,
+	nucleo.CodigoContextoNoPermitido:    http.StatusForbidden,
 	nucleo.CodigoParametroNoSoportado:   http.StatusBadRequest,
 	nucleo.CodigoCargaInvalida:          http.StatusBadRequest,
 	nucleo.CodigoNoAutorizado:           http.StatusUnauthorized,
@@ -239,7 +240,7 @@ func leerJSON(w http.ResponseWriter, r *http.Request, destino any) error {
 }
 
 // seguir entrega los eventos del trabajo posteriores a "desde" hasta que termina y devuelve el trabajo final.
-// shortcut: sondea SQLite cada Sondeo; una notificación en memoria lo sustituirá si el sondeo pesa.
+// Espera los avisos del almacén en lugar de sondear; Sondeo solo es un respaldo.
 func (s *Servidor) seguir(ctx context.Context, id string, desde int, alEvento func(persistencia.Evento) error, latido func() error) (nucleo.Trabajo, error) {
 	ultimoLatido := time.Now()
 	entregar := func() (bool, error) {
@@ -260,6 +261,7 @@ func (s *Servidor) seguir(ctx context.Context, id string, desde int, alEvento fu
 		return terminado, nil
 	}
 	for {
+		aviso := s.Planificador.Avisos() // antes de leer: un cambio entre la lectura y la espera no se pierde
 		terminado, err := entregar()
 		if err != nil {
 			return nucleo.Trabajo{}, err
@@ -285,6 +287,7 @@ func (s *Servidor) seguir(ctx context.Context, id string, desde int, alEvento fu
 		select {
 		case <-ctx.Done():
 			return t, ctx.Err()
+		case <-aviso:
 		case <-time.After(s.sondeo()):
 		}
 	}
@@ -294,7 +297,7 @@ func (s *Servidor) sondeo() time.Duration {
 	if s.Sondeo > 0 {
 		return s.Sondeo
 	}
-	return 100 * time.Millisecond
+	return 5 * time.Second
 }
 
 // flujo escribe eventos SSE.

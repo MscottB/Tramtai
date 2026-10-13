@@ -244,6 +244,9 @@ type capacidad struct {
 var capacidadesConocidas = map[string]capacidad{
 	"claude": {Streaming: "tokens", ModeloEfectivoInformado: true},
 	"codex":  {Streaming: "final"},
+	"gemini": {Streaming: "tokens", ModeloEfectivoInformado: true},
+	// antigravity: final y sin modelo efectivo (M0); experimental.
+	"antigravity": {Streaming: "final"},
 }
 
 func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"tramtai/internal/credenciales"
 	"tramtai/internal/nucleo"
 )
 
@@ -92,11 +93,16 @@ func entornoLimpio(extra ...string) []string {
 	return append(entorno, extra...)
 }
 
-// claveEntorno devuelve la primera variable definida.
-// shortcut: la clave se lee del entorno; el almacén de credenciales del sistema (sección 2.4) llega con M7.
+// claveEntorno devuelve la primera clave definida: la variable de entorno tiene prioridad y, si falta, se busca en el
+// almacén de credenciales del sistema (tramtai claves guardar, sección 16.1).
 func claveEntorno(nombres ...string) string {
 	for _, nombre := range nombres {
 		if valor := os.Getenv(nombre); valor != "" {
+			return valor
+		}
+	}
+	for _, nombre := range nombres {
+		if valor, err := credenciales.Leer(nombre); err == nil && valor != "" {
 			return valor
 		}
 	}
@@ -114,6 +120,19 @@ func resolverPrograma(nombre string) (string, error) {
 		return "", nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, ruta+" es un envoltorio "+extension+"; configura comandos_agentes con la ruta al .exe real")
 	}
 	return ruta, nil
+}
+
+// directorioTrabajo es donde se ejecuta el agente: el espacio vacío (aislado) o la raíz del proyecto confiable.
+func directorioTrabajo(s nucleo.SolicitudEjecucion, espacio string) string {
+	if consciente(s) {
+		return s.RaizProyecto
+	}
+	return espacio
+}
+
+// consciente indica el modo consciente_proyecto ya autorizado por el planificador.
+func consciente(s nucleo.SolicitudEjecucion) bool {
+	return s.ModoContexto == "consciente_proyecto" && s.RaizProyecto != ""
 }
 
 // espacioTemporal crea el directorio privado de una ejecución con un espacio de trabajo vacío (modo aislado).

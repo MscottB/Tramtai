@@ -59,6 +59,7 @@ func comandoEjecutar() *cobra.Command {
 	var archivos []string
 	var tiempo int
 	var directo bool
+	var perfilTrabajo, contexto string
 	cmd := &cobra.Command{Use: "ejecutar [texto]", Short: "Ejecuta un trabajo con un agente y muestra la respuesta en vivo",
 		Long: "Ejecuta un trabajo y muestra la respuesta en vivo. Si el servicio está en marcha, el trabajo va a la instancia del\nproyecto actual (o a la global) y se ve también en la terminal interactiva y en la Web UI; si no, se ejecuta\ndirectamente. Sin texto, se lee de la entrada estándar. Ctrl+C cancela el trabajo.",
 		Args: cobra.MaximumNArgs(1),
@@ -75,7 +76,7 @@ func comandoEjecutar() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			s := nucleo.SolicitudEjecucion{Agente: agente, Modelo: modelo, PerfilModelo: perfil, Instrucciones: sistema,
+			s := nucleo.SolicitudEjecucion{Agente: agente, Modelo: modelo, PerfilModelo: perfil, Perfil: perfilTrabajo, ModoContexto: contexto, Instrucciones: sistema,
 				Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: texto}}}
 			s.Ejecucion.TiempoLimiteSegundos = tiempo
 			s.Salida.Formato = formato
@@ -89,13 +90,18 @@ func comandoEjecutar() *cobra.Command {
 					return ejecutarEnServicio(cmd, cli, s, archivos)
 				}
 			}
+			if s, err = c.AplicarPerfil(s); err != nil {
+				return err
+			}
 			return ejecutar(cmd, c, c.AplicarPredeterminados(s), archivos)
 		}}
 	f := cmd.Flags()
-	f.StringVarP(&agente, "agente", "a", "", "agente: claude o codex (predeterminados.agente)")
+	f.StringVarP(&agente, "agente", "a", "", "agente: claude, codex, gemini o antigravity (predeterminados.agente)")
 	f.StringVarP(&modelo, "modelo", "m", "", "identificador o alias del modelo, por ejemplo haiku")
 	f.StringVarP(&perfil, "perfil", "p", "", "perfil de modelo: rapido, equilibrado, profundo (modelos.perfiles)")
 	f.StringVarP(&sistema, "sistema", "s", "", "instrucciones de sistema")
+	f.StringVar(&contexto, "contexto", "", "aislado (predeterminado) o consciente_proyecto: solo en proyectos de proyectos_confiables")
+	f.StringVar(&perfilTrabajo, "perfil-trabajo", "", "perfil de ejecución: profiles/<nombre>.yaml del proyecto o global (instrucciones, formato y esquema)")
 	f.IntVarP(&tiempo, "tiempo", "t", 0, "tiempo límite en segundos (300 por defecto)")
 	f.StringArrayVarP(&archivos, "archivo", "f", nil, "archivo de entrada, repetible: PDF, DOCX, PPTX, XLSX, HTML, texto o ZIP")
 	f.StringVarP(&esquema, "esquema", "e", "", "archivo JSON Schema que debe cumplir la salida (implica formato json)")
@@ -159,6 +165,11 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 	// interrumpida; el servicio (M4) tendrá instancias persistentes con su recuperación.
 	opc := planificador.OpcionesDesde(c, "cli-"+nucleo.NuevoID()[len("trabajo_"):])
 	opc.Preparador = documentos.Preparador{Cargas: cargas, Conversor: documentos.Desde(c)}
+	if dir, err := os.Getwd(); err == nil {
+		if raiz, ok := nucleo.BuscarProyecto(dir); ok && c.ProyectoConfiable(raiz) {
+			opc.RaizConfiable = raiz
+		}
+	}
 	p := planificador.Nuevo(alm, registro, planificador.NuevosSemaforos(limites), opc)
 	if err := p.Iniciar(cmd.Context()); err != nil {
 		return err

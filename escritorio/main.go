@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"flag"
 	"html"
@@ -23,6 +24,11 @@ import (
 	"tramtai/internal/version"
 )
 
+// icono es el de la ventana y la bandeja (go run ./scripts/icono lo regenera).
+//
+//go:embed icono/tramtai.png
+var icono []byte
+
 func main() {
 	proyecto := flag.String("proyecto", "", "raíz de un proyecto con .tramtai/config.yaml (por defecto, la instancia global)")
 	flag.Parse()
@@ -31,6 +37,7 @@ func main() {
 	app := application.New(application.Options{
 		Name:        "Tramtai",
 		Description: "Pasarela local de agentes",
+		Icon:        icono,
 		SingleInstance: &application.SingleInstanceOptions{
 			UniqueID: "cl.tramtai.escritorio",
 			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
@@ -58,6 +65,7 @@ func main() {
 
 	bandeja := app.SystemTray.New()
 	bandeja.SetTooltip("Tramtai")
+	bandeja.SetIcon(icono)
 	bandeja.OnClick(func() {
 		ventana.Show()
 		ventana.Focus()

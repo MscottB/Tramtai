@@ -33,6 +33,10 @@ type Trabajo struct {
 	Uso            Uso    `json:"uso"`
 	// Disponibilidad de la salida, aparte del estado (sección 4.2): disponible o expirada; vacía si no hubo salida.
 	Disponibilidad string `json:"disponibilidad,omitempty"`
+	// PID es el proceso del agente; se conserva para diagnosticar una cancelación no confirmada (sección 17.2).
+	PID int `json:"pid,omitempty"`
+	// FirmaProceso distingue ese proceso de otro que reutilice el PID.
+	FirmaProceso string `json:"-"`
 	// EntradasEliminadas indica que la retención ya borró las entradas: el reintento exige reenviarlas.
 	EntradasEliminadas bool       `json:"entradas_eliminadas,omitempty"`
 	CreadoEn           time.Time  `json:"creado_en"`

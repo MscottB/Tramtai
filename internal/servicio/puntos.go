@@ -42,6 +42,8 @@ type EjecucionPunto struct {
 	ModoContexto         string `json:"modo_contexto,omitempty" yaml:"modo_contexto,omitempty"`
 	FormatoSalida        string `json:"formato_salida,omitempty" yaml:"formato_salida,omitempty"`
 	TiempoLimiteSegundos int    `json:"tiempo_limite_segundos,omitempty" yaml:"tiempo_limite_segundos,omitempty"`
+	// MaximoTrabajos limita las ejecuciones simultáneas del punto; no amplía las de su instancia.
+	MaximoTrabajos int `json:"maximo_trabajos,omitempty" yaml:"maximo_trabajos,omitempty"`
 }
 
 // EstaActivo indica si el punto está habilitado (lo está salvo activo: false).
@@ -104,6 +106,9 @@ func (p ConfigPunto) Normalizar(instancia string, puertoServicio int) (ConfigPun
 	}
 	if p.ForzarModelo && p.Agente == "" && p.Modelo == "" && p.PerfilModelo == "" {
 		return invalido("forzar_modelo exige agente, modelo o perfil_modelo")
+	}
+	if p.Ejecucion != nil && p.Ejecucion.MaximoTrabajos < 0 {
+		return invalido("ejecucion.maximo_trabajos no puede ser negativo")
 	}
 	return p, nil
 }
@@ -244,6 +249,18 @@ func (s *Servicio) Recargar() []EstadoPunto {
 		}
 	}
 	s.puntos, s.erroresPuntos = nuevos, errores
+	limites := map[string]map[string]int{}
+	for _, c := range deseados {
+		if c.cfg.Ejecucion != nil && c.cfg.Ejecucion.MaximoTrabajos > 0 {
+			if limites[c.cfg.Instancia] == nil {
+				limites[c.cfg.Instancia] = map[string]int{}
+			}
+			limites[c.cfg.Instancia][c.cfg.Nombre] = c.cfg.Ejecucion.MaximoTrabajos
+		}
+	}
+	for id, inst := range s.instancias {
+		inst.Planificador.LimitarPuntos(limites[id])
+	}
 	estado := s.estadoPuntos()
 	s.mu.Unlock()
 	for _, p := range estado {

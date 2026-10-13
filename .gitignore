@@ -14,3 +14,5 @@
 # Herramientas locales
 graphify-out/
 node_modules/
+# recursos de Windows generados por scripts/compilar.ps1 en cada compilación
+*.syso

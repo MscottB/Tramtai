@@ -3,6 +3,7 @@ package planificador
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -410,5 +411,89 @@ func TestReintentarSinEntradas(t *testing.T) {
 	}
 	if _, err := p.Reintentar(ctx, id); nucleo.CodigoDe(err) != nucleo.CodigoEntradaNoDisponible {
 		t.Fatalf("sin entradas el reintento pide reenviarlas: %v", err)
+	}
+}
+
+func TestLimitePorPuntoDeAcceso(t *testing.T) {
+	alm := abrir(t)
+	opc := opciones()
+	opc.MaximoTrabajos = 3
+	p := Nuevo(alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Demora: 300 * time.Millisecond}},
+		NuevosSemaforos(map[string]int{"simulado": 3}), opc)
+	if err := p.Iniciar(ctx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Detener)
+	p.LimitarPuntos(map[string]int{"app": 1})
+	var ids []string
+	for range 2 {
+		tr, _, err := p.EnviarPorPunto(ctx, solicitud("x"), "", "app")
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, tr.ID)
+	}
+	libre := enviar(t, p, solicitud("sin punto"))
+	esperar(t, alm, libre, nucleo.Ejecutando)
+	time.Sleep(100 * time.Millisecond)
+	ejecutando := 0
+	for _, id := range ids {
+		if tr, _ := alm.Obtener(ctx, id); tr.Estado == nucleo.Ejecutando {
+			ejecutando++
+		}
+	}
+	if ejecutando != 1 {
+		t.Fatalf("el punto con límite 1 ejecuta %d a la vez", ejecutando)
+	}
+	for _, id := range ids {
+		esperar(t, alm, id, nucleo.Completado)
+	}
+}
+
+func TestConservarSalidaInvalida(t *testing.T) {
+	alm := abrir(t)
+	p := iniciar(t, alm, adaptadores.Simulado{Respuesta: "no es json"}, 1, opciones())
+	s := solicitud("x")
+	s.Salida = nucleo.ConfigSalida{Formato: "json", ConservarSalidaInvalida: true}
+	tr := esperar(t, alm, enviar(t, p, s), nucleo.Fallido)
+	if tr.CodigoError != nucleo.CodigoSalidaNoCumpleEsquema || tr.Salida != "no es json" {
+		t.Fatalf("salida bruta conservada: %+v", tr)
+	}
+}
+
+// registraSolicitud guarda la solicitud que recibe el agente.
+type registraSolicitud struct {
+	recibida chan nucleo.SolicitudEjecucion
+}
+
+func (r registraSolicitud) Ejecutar(_ context.Context, s nucleo.SolicitudEjecucion, _ func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	r.recibida <- s
+	return adaptadores.Resultado{Salida: "ok"}, nil
+}
+
+func TestModoConscienteSoloEnProyectoConfiable(t *testing.T) {
+	s := solicitud("x")
+	s.ModoContexto = "consciente_proyecto"
+	p := iniciar(t, abrir(t), adaptadores.Simulado{}, 1, opciones())
+	if _, _, err := p.Enviar(ctx, s, ""); nucleo.CodigoDe(err) != nucleo.CodigoContextoNoPermitido {
+		t.Fatalf("sin proyecto confiable se rechaza: %v", err)
+	}
+	opc := opciones()
+	opc.RaizConfiable = t.TempDir()
+	alm := abrir(t)
+	agente := registraSolicitud{recibida: make(chan nucleo.SolicitudEjecucion, 1)}
+	p = iniciar(t, alm, agente, 1, opc)
+	id := enviar(t, p, s)
+	if recibida := <-agente.recibida; recibida.RaizProyecto != opc.RaizConfiable {
+		t.Fatalf("el agente recibe la raíz: %q", recibida.RaizProyecto)
+	}
+	esperar(t, alm, id, nucleo.Completado)
+	eventos, _ := alm.Eventos(ctx, id, 0)
+	avisado := false
+	for _, e := range eventos {
+		avisado = avisado || (e.Tipo == "aviso" && strings.Contains(e.Datos, opc.RaizConfiable))
+	}
+	if !avisado {
+		t.Fatal("se declara el contexto cargado antes de ejecutar")
 	}
 }

@@ -4,6 +4,7 @@ package procesos
 
 import (
 	"os/exec"
+	"strconv"
 	"syscall"
 	"unsafe"
 
@@ -79,3 +80,27 @@ func (g *grupo) terminar() { _ = windows.TerminateJobObject(g.job, 1) }
 
 // cerrar libera el job; KILL_ON_JOB_CLOSE elimina los descendientes que sigan vivos.
 func (g *grupo) cerrar() { _ = windows.CloseHandle(g.job) }
+
+// firmaInicio es la hora de creación del proceso (FILETIME); vacía si no existe o no se puede abrir.
+func firmaInicio(pid int) string {
+	h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
+	if err != nil {
+		return ""
+	}
+	defer windows.CloseHandle(h)
+	var creacion, salida, nucleo, usuario windows.Filetime
+	if windows.GetProcessTimes(h, &creacion, &salida, &nucleo, &usuario) != nil {
+		return ""
+	}
+	return strconv.FormatInt(creacion.Nanoseconds(), 10)
+}
+
+// terminarArbol termina el proceso. Sus descendientes ya los cerró el sistema con el Job Object al caer el servicio.
+func terminarArbol(pid int) error {
+	h, err := windows.OpenProcess(windows.PROCESS_TERMINATE, false, uint32(pid))
+	if err != nil {
+		return err
+	}
+	defer windows.CloseHandle(h)
+	return windows.TerminateProcess(h, 1)
+}

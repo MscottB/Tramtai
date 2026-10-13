@@ -35,6 +35,17 @@ El diseño completo está en el documento maestro (v12, en `documentos/`). Resum
 | Modelo efectivo | sí (`modelUsage`) | no: queda como no verificable |
 | Uso | tokens y coste en USD | tokens |
 
+Además hay dos adaptadores de Google, probados con un servidor y un CLI simulados (falta la prueba con clave real, junto a M0b):
+
+- **`gemini`:** Gemini API directa por HTTP con `GEMINI_API_KEY`, que viaja en cabecera, nunca en la URL.
+  - Streaming por fragmentos (`streamGenerateContent`) y sistema en `systemInstruction`.
+  - Salida estructurada nativa (`responseJsonSchema`), modelo efectivo (`modelVersion`) y uso.
+  - Perfiles: `gemini-flash-lite-latest`, `gemini-flash-latest` y `gemini-pro-latest`.
+- **`antigravity`:** `agy -p --output-format json`, experimental.
+  - Funciona solo con `modelProvider: gemini` y la clave del usuario, en un `HOME` privado y temporal; rechaza la suscripción por los términos de Antigravity.
+  - Usa `structured_output` si hay esquema; no hay streaming ni modelo efectivo.
+  - Recibe el prompt como argumento (hasta 28 000 caracteres).
+
 Las conversaciones de varios turnos se enmarcan con el formato `tramtai-turnos-v1`: un bloque `<<<turno rol=…>>>` por turno, con el contenido intacto. Los errores del proveedor se traducen a `limite_uso_proveedor`, `autenticacion_agente`, `modelo_no_disponible` o `error_agente`. Ningún secreto llega a los mensajes: se redactan antes.
 
 ## Entradas y salidas (M3)
@@ -49,7 +60,7 @@ Con cargas, el trabajo pasa por `preparando_entrada`, que tiene su propio límit
 
 Si una carga venció, el trabajo falla con `entrada_no_disponible`. Una conversión vacía o fallida falla con `conversion_fallida`; nunca se presenta como éxito. Un ZIP que supera los límites falla con `carga_invalida`.
 
-Con un esquema, se usa primero la salida estructurada nativa del agente (`--json-schema` y `structured_output` en Claude; `--output-schema` en Codex) y después Tramtai valida el resultado. Si no cumple, el trabajo falla con `salida_no_cumple_esquema` y no se conserva la salida. Un esquema inválido se rechaza al aceptar el trabajo.
+Con un esquema, se usa primero la salida estructurada nativa del agente (`--json-schema` y `structured_output` en Claude; `--output-schema` en Codex) y después Tramtai valida el resultado. Si no cumple, el trabajo falla con `salida_no_cumple_esquema` y la salida solo se conserva con `conservar_salida_invalida`. Un esquema inválido se rechaza al aceptar el trabajo.
 
 ## Interfaces (M6)
 
@@ -99,6 +110,32 @@ La retención (sección 16.2) se aplica a cada instancia al abrirla y después c
 - En Unix el grupo de procesos sobrevive a una caída. Terminarlo al arrancar queda pendiente para M8.
 
 **Límite:** el vencimiento borra los datos de forma lógica (SQLite y archivos). No garantiza un borrado físico seguro en SSD, copias de seguridad ni páginas libres de SQLite.
+
+## Modo consciente del proyecto (sección 6.3)
+
+Por defecto, cada agente se ejecuta aislado en una carpeta temporal vacía. Con `modo_contexto: consciente_proyecto`, en un proyecto declarado en `proyectos_confiables` (global o `local.yaml`, nunca en la configuración versionada):
+
+| Agente | Qué cambia |
+|---|---|
+| claude | Trabaja en la raíz del proyecto con `--setting-sources project`. |
+| codex | Trabaja en la raíz del proyecto (`-C`) sin `--ignore-rules`, así que carga su `AGENTS.md`. |
+| antigravity | Trabaja en la raíz del proyecto y carga `AGENTS.md` y `GEMINI.md`. |
+| gemini | No lo admite, porque no tiene proyecto. |
+
+**Límites comprobados (Claude):**
+- Carga también los `CLAUDE.md` de las carpetas superiores.
+- Con suscripción, carga además el `CLAUDE.md` del usuario.
+- Con clave de API usa un `CLAUDE_CONFIG_DIR` privado, así que las reglas del usuario no se cargan.
+
+**En todos los agentes:** siguen desactivados las herramientas, MCP y la sesión persistente, y antes de ejecutar se registra un `aviso` con el contexto que se carga.
+
+## Supervisión y recuperación
+
+- **Firma de inicio:** cada agente registra su PID y su firma de inicio (migración v5).
+- **Al arrancar:** el servicio termina los procesos huérfanos de una caída, solo si su firma coincide; un PID reutilizado nunca se toca.
+  - Windows: el Job Object ya los cerró.
+  - Unix: se mata su grupo de procesos.
+- **Seguir un trabajo:** el SSE espera avisos en memoria del almacén en lugar de sondear la base; el sondeo queda como respaldo cada 5 s.
 
 ## Precedencia de configuración
 

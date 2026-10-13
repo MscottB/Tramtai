@@ -452,7 +452,7 @@ predeterminados:
 `
 
 func comandoIniciar() *cobra.Command {
-	return &cobra.Command{Use: "iniciar", Short: "Prepara el directorio actual como proyecto de Tramtai (.tramtai/)",
+	return &cobra.Command{Use: "iniciar", Short: "Prepara el directorio actual como proyecto de Tramtai (.tramtai/ con un perfil de ejemplo)",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			dir, err := os.Getwd()
 			if err != nil {
@@ -472,6 +472,19 @@ func comandoIniciar() *cobra.Command {
 			if err := os.WriteFile(ignorar, []byte("# configuración propia de cada máquina\nlocal.yaml\n"), 0o644); err != nil {
 				return err
 			}
+			// Un perfil de ejemplo con su esquema (sección 22.3): tramtai ejecutar --perfil-trabajo resumen "…"
+			for nombre, contenido := range map[string]string{
+				filepath.Join("profiles", "resumen.yaml"):       perfilEjemplo,
+				filepath.Join("schemas", "resumen.schema.json"): esquemaEjemplo,
+			} {
+				destino := filepath.Join(dir, ".tramtai", nombre)
+				if err := os.MkdirAll(filepath.Dir(destino), 0o755); err != nil {
+					return err
+				}
+				if err := os.WriteFile(destino, []byte(contenido), 0o644); err != nil {
+					return err
+				}
+			}
 			if _, err := nucleo.CargarCapa(ruta, nucleo.OrigenProyecto); err != nil {
 				return err
 			}
@@ -479,3 +492,25 @@ func comandoIniciar() *cobra.Command {
 			return nil
 		}}
 }
+
+const perfilEjemplo = `nombre: resumen
+modo: perfil
+instrucciones: |
+  Resume el contenido en tres puntos y lista los pendientes. No inventes información.
+salida:
+  formato: json
+  validacion_estricta: true
+  esquema: ../schemas/resumen.schema.json
+  conservar_salida_invalida: false
+`
+
+const esquemaEjemplo = `{
+  "type": "object",
+  "required": ["puntos", "pendientes"],
+  "properties": {
+    "puntos": {"type": "array", "items": {"type": "string"}, "maxItems": 3},
+    "pendientes": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}
+`

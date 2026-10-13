@@ -306,3 +306,22 @@ func TestEliminarEntradasAlTerminar(t *testing.T) {
 		t.Fatalf("entradas borradas sin vencer el resultado: %+v", tr)
 	}
 }
+
+func TestAvisosAlEscribir(t *testing.T) {
+	a := abrir(t)
+	tr := aceptar(t, a, trabajo("global", "x"), "")
+	aviso := a.Avisos()
+	select {
+	case <-aviso:
+		t.Fatal("sin escrituras no hay aviso")
+	default:
+	}
+	if err := a.AgregarEvento(ctx, tr.ID, "texto", "hola"); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-aviso:
+	case <-time.After(time.Second):
+		t.Fatal("un evento nuevo debía avisar")
+	}
+}

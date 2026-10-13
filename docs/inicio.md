@@ -54,6 +54,18 @@ Por defecto cada agente usa **clave de API** (sección 2.4 del documento maestro
 |---|---|
 | claude | `ANTHROPIC_API_KEY` |
 | codex | `CODEX_API_KEY` u `OPENAI_API_KEY` |
+| gemini (Gemini API directa) | `GEMINI_API_KEY` |
+| antigravity (`agy`, experimental) | `GEMINI_API_KEY`; nunca la sesión personal |
+
+En Windows, guarda las claves en el Administrador de credenciales en lugar de dejarlas en variables de entorno:
+
+```powershell
+tramtai claves guardar ANTHROPIC_API_KEY   # la pide sin mostrarla
+tramtai claves listar                      # de dónde sale cada una, sin mostrarla
+tramtai claves borrar ANTHROPIC_API_KEY
+```
+
+Una variable de entorno con el mismo nombre tiene prioridad. Reinicia el servicio después de cambiar una clave.
 
 Para uso **personal y local** con tu suscripción (Claude Pro/Max, cuenta ChatGPT), actívalo explícitamente en la configuración global `%APPDATA%\tramtai\config.yaml`:
 

@@ -65,6 +65,8 @@ func TestClavesRechazadas(t *testing.T) {
 		{"seguridad en versionada", "servicio:\n  permitir_remoto: true\n", OrigenProyecto, "clave de seguridad"},
 		{"puntos de acceso en versionada", "puntos_acceso: []\n", OrigenProyecto, "clave de seguridad"},
 		{"version no soportada", "version: 2\n", OrigenGlobal, "versión de formato"},
+		{"historial sin soporte", "retencion:\n  guardar_historial: true\n", OrigenLocal, "no soportado"},
+		{"modo de retención sin soporte", "retencion:\n  modo: permanente\n", OrigenGlobal, "solo se admite temporal"},
 		{"tipo incorrecto", "concurrencia:\n  maximo_tamano_cola: muchos\n", OrigenGlobal, "tipo incorrecto"},
 		{"yaml roto", "concurrencia: [\n", OrigenGlobal, "YAML no válido"},
 	}
@@ -95,5 +97,44 @@ func TestAplicarPredeterminados(t *testing.T) {
 	vacia := c.AplicarPredeterminados(SolicitudEjecucion{})
 	if vacia.Agente != "claude" || vacia.PerfilModelo != "equilibrado" {
 		t.Errorf("los vacíos deben tomar los predeterminados: %+v", vacia)
+	}
+}
+
+func TestPerfilDeEjecucion(t *testing.T) {
+	raiz := t.TempDir()
+	tramtai := filepath.Join(raiz, ".tramtai")
+	os.MkdirAll(filepath.Join(tramtai, "profiles"), 0o700)
+	os.MkdirAll(filepath.Join(tramtai, "schemas"), 0o700)
+	os.WriteFile(filepath.Join(tramtai, "config.yaml"), []byte("version: 1\n"), 0o600)
+	os.WriteFile(filepath.Join(tramtai, "schemas", "r.json"), []byte(`{"type":"object"}`), 0o600)
+	os.WriteFile(filepath.Join(tramtai, "profiles", "resumen.yaml"), []byte("instrucciones: Resume.\nsalida:\n  formato: json\n  esquema: ../schemas/r.json\n  conservar_salida_invalida: true\n"), 0o600)
+	os.WriteFile(filepath.Join(tramtai, "profiles", "escapa.yaml"), []byte("salida:\n  esquema: ../../fuera.json\n"), 0o600)
+	os.WriteFile(filepath.Join(raiz, "fuera.json"), []byte(`{}`), 0o600)
+	os.WriteFile(filepath.Join(tramtai, "profiles", "raro.yaml"), []byte("desconocido: 1\n"), 0o600)
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", filepath.Join(t.TempDir(), "config.yaml"))
+	c, err := CargarConfiguracion(raiz)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := c.AplicarPerfil(SolicitudEjecucion{Perfil: "resumen", Instrucciones: "Mías."})
+	if err != nil || s.Instrucciones != "Mías." || s.Salida.Formato != "json" || string(s.Salida.Esquema) != `{"type":"object"}` || !s.Salida.ConservarSalidaInvalida {
+		t.Fatalf("perfil aplicado, con prioridad de la solicitud: %+v %v", s, err)
+	}
+	for nombre, codigo := range map[string]CodigoError{"escapa": CodigoConfiguracionInvalida, "raro": CodigoConfiguracionInvalida,
+		"no_existe": CodigoSolicitudInvalida, "../config": CodigoSolicitudInvalida} {
+		if _, err := c.AplicarPerfil(SolicitudEjecucion{Perfil: nombre}); CodigoDe(err) != codigo {
+			t.Errorf("%s: se esperaba %s: %v", nombre, codigo, err)
+		}
+	}
+}
+
+func TestProyectoConfiable(t *testing.T) {
+	raiz := t.TempDir()
+	c := Resolver(Capa{Origen: OrigenGlobal, Valores: map[string]any{"proyectos_confiables": []any{strings.ToUpper(raiz) + string(filepath.Separator)}}})
+	if !c.ProyectoConfiable(raiz) || c.ProyectoConfiable(filepath.Join(raiz, "otro")) || c.ProyectoConfiable("") {
+		t.Fatal("solo la raíz declarada es confiable")
+	}
+	if _, err := CargarCapa(escribir(t, "proyectos_confiables: [.]\n"), OrigenProyecto); err == nil {
+		t.Fatal("la configuración versionada no puede declararse confiable")
 	}
 }

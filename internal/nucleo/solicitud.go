@@ -20,6 +20,8 @@ type ConfigSalida struct {
 	ValidacionEstricta bool   `json:"validacion_estricta,omitempty"`
 	// Esquema es el JSON Schema que debe cumplir la salida (sección 11); exige formato json.
 	Esquema json.RawMessage `json:"esquema,omitempty"`
+	// ConservarSalidaInvalida guarda la salida que no cumple el esquema, para revisarla, con la misma retención.
+	ConservarSalidaInvalida bool `json:"conservar_salida_invalida,omitempty"`
 }
 
 // ConfigEjecucion agrupa los límites de ejecución pedidos.
@@ -30,10 +32,14 @@ type ConfigEjecucion struct {
 
 // SolicitudEjecucion es el contrato interno único (sección 4.4).
 type SolicitudEjecucion struct {
-	Agente        string          `json:"agente,omitempty"`
-	Modelo        string          `json:"modelo,omitempty"`
-	PerfilModelo  string          `json:"perfil_modelo,omitempty"`
-	ModoContexto  string          `json:"modo_contexto,omitempty"`
+	Agente       string `json:"agente,omitempty"`
+	Modelo       string `json:"modelo,omitempty"`
+	PerfilModelo string `json:"perfil_modelo,omitempty"`
+	// Perfil es un perfil de ejecución explícito (profiles/<nombre>.yaml); se aplica al aceptar y queda en la fotografía.
+	Perfil       string `json:"perfil,omitempty"`
+	ModoContexto string `json:"modo_contexto,omitempty"`
+	// RaizProyecto la fija el planificador en modo consciente_proyecto; no viene del cliente (sección 6.3).
+	RaizProyecto  string          `json:"-"`
 	Instrucciones string          `json:"instrucciones,omitempty"`
 	Mensajes      []Mensaje       `json:"mensajes,omitempty"`
 	Cargas        []string        `json:"cargas,omitempty"`

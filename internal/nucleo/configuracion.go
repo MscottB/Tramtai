@@ -154,49 +154,56 @@ func CapaEntorno(entorno []string) (Capa, error) {
 // Internos son los valores predeterminados de diseño (prioridad 1).
 func Internos() Capa {
 	return Capa{Origen: OrigenInterno, Fuente: "interno", Valores: map[string]any{
-		"servicio.host":                               "127.0.0.1",
-		"servicio.puerto":                             17373,
-		"servicio.plazo_drenaje_segundos":             30,
-		"servicio.requerir_token":                     true,
-		"servicio.permitir_remoto":                    false,
-		"instancia_global.token_variable_entorno":     "TRAMTAI_TOKEN_GLOBAL",
-		"compatibilidad.modo_tolerante":               false,
-		"compatibilidad.cancelar_al_desconectar":      true,
-		"comandos_agentes.claude":                     "claude",
-		"comandos_agentes.codex":                      "codex",
-		"adaptadores.claude.autenticacion":            "clave_api",
-		"adaptadores.codex.autenticacion":             "clave_api",
-		"concurrencia_servicio.adaptadores.claude":    1,
-		"concurrencia_servicio.adaptadores.codex":     1,
-		"predeterminados.agente":                      "claude",
-		"modelos.perfiles.rapido.claude":              "haiku",
-		"modelos.perfiles.equilibrado.claude":         "sonnet",
-		"modelos.perfiles.profundo.claude":            "opus",
-		"predeterminados.modo_contexto":               "aislado",
-		"predeterminados.formato_salida":              "markdown",
-		"concurrencia.maximo_trabajos_instancia":      2,
-		"concurrencia.maximo_conversiones_instancia":  1,
-		"concurrencia.maximo_tamano_cola":             20,
-		"concurrencia.tiempo_maximo_en_cola_segundos": 1800,
-		"retencion.modo":                              "temporal",
-		"retencion.guardar_historial":                 false,
-		"retencion.horas_resultado":                   24,
-		"retencion.horas_metadatos":                   168,
-		"retencion.horas_idempotencia":                24,
-		"retencion.horas_carga_huerfana":              24,
-		"retencion.cache_conversion_habilitada":       false,
-		"retencion.eliminar_entradas_al_terminar":     false,
-		"retencion.cifrado_aplicacion":                false,
-		"conversion.motor":                            "markitdown",
-		"conversion.habilitar_plugins":                false,
-		"conversion.transformacion_semantica":         false,
-		"conversion.comando":                          "markitdown",
-		"conversion.tiempo_limite_segundos":           120,
-		"conversion.maximo_carga_mb":                  50,
-		"conversion.maximo_salida_mb":                 20,
-		"conversion.maximo_archivos_zip":              50,
-		"conversion.maximo_descomprimido_mb":          200,
-		"conversion.profundidad_maxima_zip":           3,
+		"servicio.host":                                 "127.0.0.1",
+		"servicio.puerto":                               17373,
+		"servicio.plazo_drenaje_segundos":               30,
+		"servicio.requerir_token":                       true,
+		"servicio.permitir_remoto":                      false,
+		"instancia_global.token_variable_entorno":       "TRAMTAI_TOKEN_GLOBAL",
+		"compatibilidad.modo_tolerante":                 false,
+		"compatibilidad.cancelar_al_desconectar":        true,
+		"comandos_agentes.claude":                       "claude",
+		"comandos_agentes.codex":                        "codex",
+		"comandos_agentes.antigravity":                  "agy",
+		"adaptadores.antigravity.autenticacion":         "clave_api",
+		"concurrencia_servicio.adaptadores.gemini":      2,
+		"concurrencia_servicio.adaptadores.antigravity": 1,
+		"modelos.perfiles.rapido.gemini":                "gemini-flash-lite-latest",
+		"modelos.perfiles.equilibrado.gemini":           "gemini-flash-latest",
+		"modelos.perfiles.profundo.gemini":              "gemini-pro-latest",
+		"adaptadores.claude.autenticacion":              "clave_api",
+		"adaptadores.codex.autenticacion":               "clave_api",
+		"concurrencia_servicio.adaptadores.claude":      1,
+		"concurrencia_servicio.adaptadores.codex":       1,
+		"predeterminados.agente":                        "claude",
+		"modelos.perfiles.rapido.claude":                "haiku",
+		"modelos.perfiles.equilibrado.claude":           "sonnet",
+		"modelos.perfiles.profundo.claude":              "opus",
+		"predeterminados.modo_contexto":                 "aislado",
+		"predeterminados.formato_salida":                "markdown",
+		"concurrencia.maximo_trabajos_instancia":        2,
+		"concurrencia.maximo_conversiones_instancia":    1,
+		"concurrencia.maximo_tamano_cola":               20,
+		"concurrencia.tiempo_maximo_en_cola_segundos":   1800,
+		"retencion.modo":                                "temporal",
+		"retencion.guardar_historial":                   false,
+		"retencion.horas_resultado":                     24,
+		"retencion.horas_metadatos":                     168,
+		"retencion.horas_idempotencia":                  24,
+		"retencion.horas_carga_huerfana":                24,
+		"retencion.cache_conversion_habilitada":         false,
+		"retencion.eliminar_entradas_al_terminar":       false,
+		"retencion.cifrado_aplicacion":                  false,
+		"conversion.motor":                              "markitdown",
+		"conversion.habilitar_plugins":                  false,
+		"conversion.transformacion_semantica":           false,
+		"conversion.comando":                            "markitdown",
+		"conversion.tiempo_limite_segundos":             120,
+		"conversion.maximo_carga_mb":                    50,
+		"conversion.maximo_salida_mb":                   20,
+		"conversion.maximo_archivos_zip":                50,
+		"conversion.maximo_descomprimido_mb":            200,
+		"conversion.profundidad_maxima_zip":             3,
 	}}
 }
 
@@ -204,6 +211,8 @@ func Internos() Capa {
 type Configuracion struct {
 	valores  map[string]any
 	origenes map[string]Origen
+	// perfiles son las carpetas de perfiles de ejecución, de mayor a menor prioridad (AplicarPerfil).
+	perfiles []carpetaPerfiles
 }
 
 // Resolver aplica la precedencia única de la sección 12.2: gana la capa de mayor prioridad,
@@ -313,6 +322,15 @@ func (c Capa) validar() error {
 		if !tipoCorrecto(tipo, c.Valores[clave]) {
 			return errorConfiguracion(c.Fuente, clave, "tipo incorrecto")
 		}
+	}
+	// Promesas que Tramtai aún no cumple: se rechazan en vez de aceptarlas sin efecto (sección 16.2).
+	for _, clave := range []string{"retencion.guardar_historial", "retencion.cifrado_aplicacion", "retencion.cache_conversion_habilitada"} {
+		if c.Valores[clave] == true {
+			return errorConfiguracion(c.Fuente, clave, "no soportado todavía: no hay historial permanente, cifrado propio ni cache documental")
+		}
+	}
+	if modo, existe := c.Valores["retencion.modo"]; existe && modo != "temporal" {
+		return errorConfiguracion(c.Fuente, "retencion.modo", "solo se admite temporal")
 	}
 	if version, existe := c.Valores["version"]; existe && version != 1 {
 		return errorConfiguracion(c.Fuente, "version", "versión de formato no soportada")

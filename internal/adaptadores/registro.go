@@ -8,6 +8,9 @@ func Registro(c *nucleo.Configuracion) (map[string]Adaptador, map[string]int) {
 	registro := map[string]Adaptador{
 		"claude": Claude{Programa: c.Texto("comandos_agentes.claude"), Autenticacion: c.Texto("adaptadores.claude.autenticacion")},
 		"codex":  Codex{Programa: c.Texto("comandos_agentes.codex"), Autenticacion: c.Texto("adaptadores.codex.autenticacion")},
+		"gemini": Gemini{},
+		"antigravity": Antigravity{Programa: c.Texto("comandos_agentes.antigravity"),
+			Autenticacion: c.Texto("adaptadores.antigravity.autenticacion")},
 	}
 	limites := map[string]int{}
 	for nombre := range registro {

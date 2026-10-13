@@ -74,8 +74,12 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 		return Resultado{}, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "autenticación desconocida: "+c.Autenticacion)
 	}
 
-	args := []string{"exec", "--json", "--ephemeral", "--skip-git-repo-check", "--ignore-rules", "-C", espacio, "-s", "read-only",
+	trabajo := directorioTrabajo(s, espacio)
+	args := []string{"exec", "--json", "--ephemeral", "--skip-git-repo-check", "-C", trabajo, "-s", "read-only",
 		"-c", `approval_policy="never"`, "-c", "features.shell_tool=false", "-c", `web_search="disabled"`, "-c", `history.persistence="none"`}
+	if !consciente(s) {
+		args = append(args, "--ignore-rules") // en modo consciente carga el AGENTS.md del proyecto
+	}
 	if s.Modelo != "" {
 		args = append(args, "-m", s.Modelo)
 	}
@@ -93,7 +97,7 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 	var uso nucleo.Uso
 	var errorAgente string
 	terminado := false
-	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: espacio,
+	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: trabajo,
 		Entorno: entornoLimpio(extra...), Entrada: enmarcarSistema(sistema, prompt)}, func(linea string) error {
 		var e eventoCodex
 		if json.Unmarshal([]byte(linea), &e) != nil {

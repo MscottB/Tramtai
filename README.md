@@ -2,7 +2,7 @@
 
 Pasarela local en Go que expone Claude Code, Codex CLI y Antigravity (y la Gemini API) como una API HTTP propia, con cola de trabajos, idempotencia, configuración por capas y selección de modelo por solicitud.
 
-> Estado: **M7 completo**: retención con purga automática (410 al expirar el resultado), cierre ordenado con plazo de drenaje y recuperación verificada tras una caída del servicio. Cuatro interfaces sobre el mismo servicio y los mismos trabajos: CLI, terminal interactiva, Web UI (Vue + Quasar, incorporada al ejecutable) y aplicación de escritorio (Wails). Servicio único con instancias global y por proyecto, puntos de acceso, API nativa y fachadas OpenAI/Anthropic, adaptadores Claude y Codex, archivos y salidas con JSON Schema.
+> Estado: **M7 completo, más los pendientes resueltos tras él**: adaptadores Gemini API y Antigravity, claves en el Administrador de credenciales, perfiles de ejecución, modo consciente del proyecto e icono propio. **M7:** retención con purga automática (410 al expirar el resultado), cierre ordenado con plazo de drenaje y recuperación verificada tras una caída del servicio. Cuatro interfaces sobre el mismo servicio y los mismos trabajos: CLI, terminal interactiva, Web UI (Vue + Quasar, incorporada al ejecutable) y aplicación de escritorio (Wails). Servicio único con instancias global y por proyecto, puntos de acceso, API nativa y fachadas OpenAI/Anthropic, adaptadores Claude y Codex, archivos y salidas con JSON Schema.
 
 ## Inicio rápido
 

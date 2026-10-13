@@ -4,13 +4,14 @@ package procesos
 
 import (
 	"os/exec"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 )
 
 // preparar lanza el proceso como líder de un grupo nuevo para poder señalar a todo el árbol.
-// shortcut: si el servicio muere de golpe, el grupo sigue vivo (en Windows el Job Object lo cierra el sistema);
-// hace falta guardar pgid y firma de inicio y terminarlos al arrancar (sección 4.3) antes de soportar Unix en M8.
+// Si el servicio muere de golpe el grupo sigue vivo: la recuperación lo termina con TerminarHuerfano.
 func preparar(cmd *exec.Cmd) { cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} }
 
 type grupo struct{ pgid int }
@@ -24,3 +25,15 @@ func (g *grupo) terminar() {
 }
 
 func (g *grupo) cerrar() { _ = syscall.Kill(-g.pgid, syscall.SIGKILL) }
+
+// firmaInicio es la hora de inicio del proceso según ps (Linux y macOS); vacía si no existe.
+func firmaInicio(pid int) string {
+	salida, err := exec.Command("ps", "-o", "lstart=", "-p", strconv.Itoa(pid)).Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(salida))
+}
+
+// terminarArbol mata el grupo del que el proceso es líder (Setpgid en preparar).
+func terminarArbol(pid int) error { return syscall.Kill(-pid, syscall.SIGKILL) }

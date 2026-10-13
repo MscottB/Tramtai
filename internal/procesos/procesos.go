@@ -36,6 +36,23 @@ type Resultado struct {
 	Errores      string
 }
 
+type claveAlIniciar struct{}
+
+// ConAlIniciar devuelve un contexto con el que Ejecutar llamará a f con el PID y la firma de inicio del proceso
+// en cuanto esté supervisado; así se puede terminar si el servicio cae (sección 4.3).
+func ConAlIniciar(ctx context.Context, f func(pid int, firma string)) context.Context {
+	return context.WithValue(ctx, claveAlIniciar{}, f)
+}
+
+// TerminarHuerfano termina el árbol de un proceso que quedó vivo tras una caída del servicio, solo si su firma de
+// inicio coincide: un PID reutilizado por otro programa nunca se toca. Devuelve true si lo terminó.
+func TerminarHuerfano(pid int, firma string) bool {
+	if pid <= 0 || firma == "" || firmaInicio(pid) != firma {
+		return false
+	}
+	return terminarArbol(pid) == nil
+}
+
 // Ejecutar lanza la orden y llama a linea por cada línea de stdout según llega. Si ctx se cancela, termina el
 // árbol y devuelve ctx.Err() solo cuando confirma la terminación; si no puede confirmarla, devuelve
 // cancelacion_no_confirmada con el PID para el diagnóstico.
@@ -58,6 +75,9 @@ func Ejecutar(ctx context.Context, o Orden, linea func(string) error) (Resultado
 		return Resultado{}, fmt.Errorf("no se pudo supervisar el proceso: %w", err)
 	}
 	defer g.cerrar() // elimina cualquier descendiente que siga vivo
+	if alIniciar, ok := ctx.Value(claveAlIniciar{}).(func(int, string)); ok {
+		alIniciar(cmd.Process.Pid, firmaInicio(cmd.Process.Pid))
+	}
 
 	fin := make(chan error, 1)
 	go func() { fin <- cmd.Wait() }()

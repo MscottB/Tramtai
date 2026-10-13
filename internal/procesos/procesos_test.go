@@ -98,3 +98,38 @@ func TestCancelarTerminaElArbol(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}
 }
+
+func TestTerminarHuerfanoSoloConSuFirma(t *testing.T) {
+	type inicio struct {
+		pid   int
+		firma string
+	}
+	iniciado := make(chan inicio, 1)
+	ctx, cancelar := context.WithCancel(ConAlIniciar(context.Background(), func(p int, f string) { iniciado <- inicio{p, f} }))
+	listo := make(chan struct{})
+	go func() {
+		defer close(listo)
+		_, _ = Ejecutar(ctx, orden("dormir", ""), func(string) error { return nil })
+	}()
+	defer func() { cancelar(); <-listo }()
+	var i inicio
+	select {
+	case i = <-iniciado:
+	case <-time.After(5 * time.Second):
+	}
+	pid, firma := i.pid, i.firma
+	if pid == 0 || firma == "" {
+		t.Fatalf("no se informó el proceso: %d %q", pid, firma)
+	}
+	if TerminarHuerfano(pid, firma+"x") {
+		t.Fatal("con otra firma (PID reutilizado) no debía terminarlo")
+	}
+	if !TerminarHuerfano(pid, firma) {
+		t.Fatal("con su firma debía terminarlo")
+	}
+	select {
+	case <-listo:
+	case <-time.After(5 * time.Second):
+		t.Fatal("el proceso siguió vivo")
+	}
+}

@@ -302,6 +302,9 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuraci
 		return nil, err
 	}
 	opc := planificador.OpcionesDesde(c, id)
+	if c.ProyectoConfiable(raiz) {
+		opc.RaizConfiable = raiz
+	}
 	opc.Preparador = documentos.Preparador{Cargas: cargas, Conversor: documentos.Desde(c)}
 	p := planificador.Nuevo(alm, s.opc.Registro, s.opc.Semaforos, opc)
 	if err := p.Iniciar(context.Background()); err != nil {

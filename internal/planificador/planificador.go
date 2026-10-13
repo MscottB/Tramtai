@@ -13,6 +13,7 @@ import (
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
+	"tramtai/internal/procesos"
 	"tramtai/internal/salidas"
 )
 
@@ -38,6 +39,8 @@ type Opciones struct {
 	MaximoConversiones int
 	// Preparador convierte las cargas; sin él, un trabajo con cargas falla con entrada_no_disponible.
 	Preparador Preparador
+	// RaizConfiable es la raíz del proyecto si figura en proyectos_confiables; vacía = solo modo aislado.
+	RaizConfiable string
 }
 
 // OpcionesDesde toma los límites de la configuración efectiva.
@@ -77,7 +80,9 @@ type Planificador struct {
 
 	mu            sync.Mutex
 	cancelaciones map[string]context.CancelFunc
-	cola          chan string
+	// semPuntos limita las ejecuciones simultáneas de cada punto de acceso, dentro de las de la instancia.
+	semPuntos map[string]chan struct{}
+	cola      chan string
 	// ctx gobierna la admisión y la toma de trabajos de la cola; ejec, las ejecuciones en curso. Separarlos
 	// permite el drenaje: se deja de aceptar sin cortar lo que ya se ejecuta (sección 17.3).
 	ctx    context.Context
@@ -96,6 +101,9 @@ func Nuevo(almacen *persistencia.Almacen, registro map[string]adaptadores.Adapta
 
 // Iniciar recupera el estado tras un reinicio (sección 4.3), reencola lo pendiente y arranca los ejecutores.
 func (p *Planificador) Iniciar(ctx context.Context) error {
+	if err := p.terminarHuerfanos(ctx); err != nil {
+		return err
+	}
 	if _, _, err := p.almacen.Recuperar(ctx, p.opc.Instancia); err != nil {
 		return err
 	}
@@ -113,6 +121,20 @@ func (p *Planificador) Iniciar(ctx context.Context) error {
 	for range p.opc.MaximoTrabajos {
 		p.grupo.Add(1)
 		go p.ejecutor()
+	}
+	return nil
+}
+
+// terminarHuerfanos mata los agentes que siguieran vivos de una ejecución anterior del servicio (sección 4.3).
+func (p *Planificador) terminarHuerfanos(ctx context.Context) error {
+	ids, err := p.almacen.ListarPorEstado(ctx, p.opc.Instancia, nucleo.Ejecutando, nucleo.ValidandoSalida, nucleo.CancelacionSolicitada)
+	if err != nil {
+		return err
+	}
+	for _, id := range ids {
+		if t, err := p.almacen.Obtener(ctx, id); err == nil {
+			procesos.TerminarHuerfano(t.PID, t.FirmaProceso)
+		}
 	}
 	return nil
 }
@@ -135,6 +157,10 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 	}
 	if err := solicitud.Validar(); err != nil {
 		return nucleo.Trabajo{}, false, err
+	}
+	if solicitud.ModoContexto == "consciente_proyecto" && p.opc.RaizConfiable == "" {
+		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoContextoNoPermitido,
+			"consciente_proyecto solo se admite en la instancia de un proyecto incluido en proyectos_confiables (configuración global o local.yaml)")
 	}
 	if len(solicitud.Salida.Esquema) > 0 {
 		if _, err := salidas.Compilar(solicitud.Salida.Esquema); err != nil {
@@ -217,6 +243,9 @@ func (p *Planificador) Obtener(ctx context.Context, id string) (nucleo.Trabajo, 
 	return t, err
 }
 
+// Avisos devuelve un canal que se cierra en el próximo cambio de cualquier trabajo de la instancia.
+func (p *Planificador) Avisos() <-chan struct{} { return p.almacen.Avisos() }
+
 // Eventos devuelve los eventos de un trabajo de esta instancia posteriores al número desde.
 func (p *Planificador) Eventos(ctx context.Context, id string, desde int) ([]persistencia.Evento, error) {
 	if _, err := p.Obtener(ctx, id); err != nil {
@@ -284,6 +313,34 @@ func (p *Planificador) Drenar(plazo time.Duration) {
 	}
 	p.cortar()
 	<-fin
+}
+
+// LimitarPuntos fija cuántos trabajos de cada punto de acceso se ejecutan a la vez; sin límite (0), solo
+// cuentan los de la instancia. Un límite que no cambia conserva su semáforo, así que recargar no libera plazas.
+func (p *Planificador) LimitarPuntos(limites map[string]int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	nuevos := map[string]chan struct{}{}
+	for nombre, limite := range limites {
+		if limite <= 0 {
+			continue
+		}
+		if actual := p.semPuntos[nombre]; actual != nil && cap(actual) == limite {
+			nuevos[nombre] = actual
+		} else {
+			nuevos[nombre] = make(chan struct{}, limite)
+		}
+	}
+	p.semPuntos = nuevos
+}
+
+func (p *Planificador) semaforoPunto(nombre string) chan struct{} {
+	if nombre == "" {
+		return nil
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.semPuntos[nombre]
 }
 
 // EnCurso devuelve cuántos trabajos se están procesando ahora (los que esperaría un drenaje).
@@ -365,7 +422,11 @@ func (p *Planificador) procesar(id string) {
 	if !p.cambiar(id, desde, nucleo.EsperandoAgente, persistencia.Cambio{}) {
 		return
 	}
-	if semaforo := p.semaforos[t.Solicitud.Agente]; semaforo != nil {
+	// Primero el punto de acceso y después el adaptador, para no ocupar el CLI compartido mientras se espera.
+	for _, semaforo := range []chan struct{}{p.semaforoPunto(t.PuntoAcceso), p.semaforos[t.Solicitud.Agente]} {
+		if semaforo == nil {
+			continue
+		}
 		select {
 		case semaforo <- struct{}{}:
 			defer func() { <-semaforo }()
@@ -385,9 +446,18 @@ func (p *Planificador) procesar(id string) {
 	if limite == 0 {
 		limite = p.opc.TiempoLimitePredeterminado
 	}
-	ctxEjecucion, cancelarEjecucion := context.WithTimeout(ctxTrabajo, limite)
+	ctxEjecucion, cancelarEjecucion := context.WithTimeout(procesos.ConAlIniciar(ctxTrabajo, func(pid int, firma string) {
+		_ = p.almacen.RegistrarProceso(fondo, id, pid, firma)
+	}), limite)
 	defer cancelarEjecucion()
 	solicitud.Modelo, solicitud.PerfilModelo = t.ModeloEnviado, ""
+	if solicitud.ModoContexto == "consciente_proyecto" {
+		solicitud.RaizProyecto = p.opc.RaizConfiable
+		// Se declara de forma visible qué contexto se carga antes de ejecutar (sección 6.3).
+		_ = p.almacen.AgregarEvento(fondo, id, "aviso", "modo consciente_proyecto: el agente trabaja en "+p.opc.RaizConfiable+
+			" y carga las reglas del proyecto y de sus carpetas superiores (CLAUDE.md, AGENTS.md, GEMINI.md), sin MCP, herramientas"+
+			" ni sesión persistente; con autenticación por suscripción el CLI carga también las reglas del usuario")
+	}
 	resultado, err := adaptador.Ejecutar(ctxEjecucion, solicitud, func(e adaptadores.Evento) error {
 		return p.almacen.AgregarEvento(fondo, id, e.Tipo, e.Datos)
 	})
@@ -411,8 +481,12 @@ func (p *Planificador) procesar(id string) {
 		return
 	}
 	if err := validarSalida(t.Solicitud.Salida, resultado.Salida); err != nil {
-		p.cambiar(id, nucleo.ValidandoSalida, nucleo.Fallido, persistencia.Cambio{Codigo: nucleo.CodigoSalidaNoCumpleEsquema,
-			Mensaje: nucleo.MensajeDe(err), Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo})
+		cambio := persistencia.Cambio{Codigo: nucleo.CodigoSalidaNoCumpleEsquema,
+			Mensaje: nucleo.MensajeDe(err), Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo}
+		if t.Solicitud.Salida.ConservarSalidaInvalida {
+			cambio.Salida = &resultado.Salida // salida bruta conservada (sección 11), con la retención del resultado
+		}
+		p.cambiar(id, nucleo.ValidandoSalida, nucleo.Fallido, cambio)
 		return
 	}
 	p.cambiar(id, nucleo.ValidandoSalida, nucleo.Completado, persistencia.Cambio{Salida: &resultado.Salida,

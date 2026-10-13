@@ -36,6 +36,10 @@ func (s *Servidor) aceptar(ctx context.Context, sol nucleo.SolicitudEjecucion, c
 // ajustar aplica los predeterminados del punto (o su modelo forzado), luego los de la instancia, y comprueba
 // que el modelo resultante está permitido en el punto.
 func (s *Servidor) ajustar(sol nucleo.SolicitudEjecucion) (nucleo.SolicitudEjecucion, error) {
+	sol, err := s.Config.AplicarPerfil(sol)
+	if err != nil {
+		return sol, err
+	}
 	p := s.Punto
 	if p == nil {
 		return s.Config.AplicarPredeterminados(sol), nil

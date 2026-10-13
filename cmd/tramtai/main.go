@@ -37,6 +37,7 @@ func main() {
 		comandoConvertir(),
 		comandoAgentes(),
 		comandoConfiguracion(),
+		comandoClaves(),
 	)
 	if err := raiz.Execute(); err != nil {
 		os.Exit(1)

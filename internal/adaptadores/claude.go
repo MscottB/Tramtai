@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 
 	"tramtai/internal/nucleo"
@@ -56,7 +57,9 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 				"falta ANTHROPIC_API_KEY; o configura adaptadores.claude.autenticacion: suscripcion para uso personal local")
 		}
 		extra = append(extra, "ANTHROPIC_API_KEY="+clave)
-		args = append(args, "--bare") // solo admite la clave de API: nunca recurre a la sesión de suscripción
+		if !consciente(s) {
+			args = append(args, "--bare") // solo admite la clave de API: nunca recurre a la sesión de suscripción
+		}
 	default:
 		return Resultado{}, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "autenticación desconocida: "+c.Autenticacion)
 	}
@@ -65,6 +68,15 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 		return Resultado{}, err
 	}
 	defer os.RemoveAll(raiz)
+	if consciente(s) && clave != "" {
+		// --bare omitiría el CLAUDE.md del proyecto; un directorio de configuración privado y vacío evita las reglas
+		// del usuario y cualquier sesión guardada, así que solo vale la clave de API (sección 6.3).
+		configuracion := filepath.Join(raiz, "claude-config")
+		if err := os.Mkdir(configuracion, 0o700); err != nil {
+			return Resultado{}, err
+		}
+		extra = append(extra, "CLAUDE_CONFIG_DIR="+configuracion)
+	}
 
 	// El sistema propio sustituye al de Claude Code (vacío si no hay): passthrough y ~650 tokens fijos en vez de ~24 000.
 	sistema, prompt := separar(s)
@@ -73,6 +85,9 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 		return Resultado{}, err
 	}
 	args = append(args, "--system-prompt-file", archivoSistema)
+	if consciente(s) {
+		args[slices.Index(args, "--setting-sources")+1] = "project" // reglas del proyecto, nunca las del usuario
+	}
 	if s.Modelo != "" {
 		args = append(args, "--model", s.Modelo)
 	}
@@ -86,7 +101,7 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 	}
 
 	var final *resultadoClaude
-	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: espacio,
+	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: directorioTrabajo(s, espacio),
 		Entorno: entornoLimpio(extra...), Entrada: prompt}, func(linea string) error {
 		var e eventoClaude
 		if json.Unmarshal([]byte(linea), &e) != nil {

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	_ "modernc.org/sqlite" // driver Go puro: sin CGO
@@ -66,10 +67,13 @@ ALTER TABLE trabajos ADD COLUMN costo_usd REAL NOT NULL DEFAULT 0;`,
 	// v4 (M7): retención. vencido = pasó la ventana del resultado; entradas_eliminadas = ya no se puede reintentar.
 	`ALTER TABLE trabajos ADD COLUMN vencido INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE trabajos ADD COLUMN entradas_eliminadas INTEGER NOT NULL DEFAULT 0;`,
+	// v5: proceso del agente, para terminarlo si el servicio cae y para diagnosticar cancelacion_no_confirmada.
+	`ALTER TABLE trabajos ADD COLUMN pid INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE trabajos ADD COLUMN firma_proceso TEXT NOT NULL DEFAULT '';`,
 }
 
 const columnas = `id, instancia, estado, codigo_error, mensaje_error, solicitud, huella, salida, intento_de, creado_en, actualizado_en, terminado_en,
-	modelo_enviado, modelo_efectivo, tokens_entrada, tokens_salida, costo_usd, punto_acceso, vencido, entradas_eliminadas`
+	modelo_enviado, modelo_efectivo, tokens_entrada, tokens_salida, costo_usd, punto_acceso, vencido, entradas_eliminadas, pid, firma_proceso`
 
 // Almacen es la base SQLite de una instancia.
 type Almacen struct {
@@ -77,6 +81,39 @@ type Almacen struct {
 	// VentanaIdempotencia es el tiempo que una clave sigue vinculada a su trabajo tras terminar.
 	VentanaIdempotencia time.Duration
 	reloj               func() time.Time
+
+	muAviso sync.Mutex
+	aviso   chan struct{}
+}
+
+// Avisos devuelve un canal que se cierra en la próxima escritura confirmada (trabajo, estado o evento).
+// Quien sigue un trabajo lo pide antes de leer y espera en él en lugar de sondear la base.
+func (a *Almacen) Avisos() <-chan struct{} {
+	a.muAviso.Lock()
+	defer a.muAviso.Unlock()
+	if a.aviso == nil {
+		a.aviso = make(chan struct{})
+	}
+	return a.aviso
+}
+
+// avisar despierta a quienes esperan en Avisos.
+func (a *Almacen) avisar() {
+	a.muAviso.Lock()
+	defer a.muAviso.Unlock()
+	if a.aviso != nil {
+		close(a.aviso)
+		a.aviso = nil
+	}
+}
+
+// confirmar confirma la transacción y avisa a quienes siguen los trabajos.
+func (a *Almacen) confirmar(tx *sql.Tx) error {
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	a.avisar()
+	return nil
 }
 
 // Cambio son los datos opcionales que acompañan una transición.
@@ -201,7 +238,7 @@ func (a *Almacen) Aceptar(ctx context.Context, t nucleo.Trabajo, clave string, m
 			return t, false, err
 		}
 	}
-	return t, false, tx.Commit()
+	return t, false, a.confirmar(tx)
 }
 
 // CambiarEstado aplica una transición validada y registra su evento. Si el trabajo ya no está en "de"
@@ -255,7 +292,7 @@ func (a *Almacen) CambiarEstado(ctx context.Context, id string, de, hacia nucleo
 			return err
 		}
 	}
-	return tx.Commit()
+	return a.confirmar(tx)
 }
 
 // Eliminar borra un trabajo terminado con sus eventos y su clave de idempotencia.
@@ -281,12 +318,22 @@ func (a *Almacen) Eliminar(ctx context.Context, id string) error {
 			return err
 		}
 	}
-	return tx.Commit()
+	return a.confirmar(tx)
+}
+
+// RegistrarProceso guarda el PID y la firma de inicio del proceso del agente de un trabajo.
+func (a *Almacen) RegistrarProceso(ctx context.Context, id string, pid int, firma string) error {
+	_, err := a.db.ExecContext(ctx, `UPDATE trabajos SET pid = ?, firma_proceso = ? WHERE id = ?`, pid, firma, id)
+	return err
 }
 
 // AgregarEvento añade un evento con el siguiente número del trabajo.
 func (a *Almacen) AgregarEvento(ctx context.Context, id, tipo, datos string) error {
-	return agregarEvento(ctx, a.db, id, tipo, datos, a.reloj().UTC())
+	if err := agregarEvento(ctx, a.db, id, tipo, datos, a.reloj().UTC()); err != nil {
+		return err
+	}
+	a.avisar()
+	return nil
 }
 
 // Obtener devuelve un trabajo o no_encontrado.
@@ -462,7 +509,7 @@ func (a *Almacen) Purgar(ctx context.Context, instancia string, r Retencion) (ve
 		}
 	}
 	n, _ = res.RowsAffected() // el último paso: trabajos eliminados
-	return vencidos, int(n), tx.Commit()
+	return vencidos, int(n), a.confirmar(tx)
 }
 
 // CargasEnUso devuelve las cargas que algún trabajo puede necesitar todavía: activos o terminados que aún
@@ -492,7 +539,7 @@ func obtener(ctx context.Context, c consultor, id string) (nucleo.Trabajo, error
 	var vencido bool
 	err := c.QueryRowContext(ctx, `SELECT `+columnas+` FROM trabajos WHERE id = ?`, id).Scan(&t.ID, &t.Instancia, &estado,
 		&codigo, &t.MensajeError, &solicitud, &t.Huella, &t.Salida, &t.IntentoDe, &creado, &actualizado, &terminado,
-		&t.ModeloEnviado, &t.ModeloEfectivo, &t.Uso.TokensEntrada, &t.Uso.TokensSalida, &t.Uso.CostoUSD, &t.PuntoAcceso, &vencido, &t.EntradasEliminadas)
+		&t.ModeloEnviado, &t.ModeloEfectivo, &t.Uso.TokensEntrada, &t.Uso.TokensSalida, &t.Uso.CostoUSD, &t.PuntoAcceso, &vencido, &t.EntradasEliminadas, &t.PID, &t.FirmaProceso)
 	if errors.Is(err, sql.ErrNoRows) {
 		return t, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "trabajo no encontrado: "+id)
 	}

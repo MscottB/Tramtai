@@ -21,19 +21,10 @@
   - Revisar en *Settings → Billing → Usage* qué ocupa el espacio; normalmente son artefactos y cachés de otros repositorios, que se liberan al borrarlos y no al cambiar de ciclo.
   - Usar `retention-days: 1–5` en `upload-artifact` y adjuntar los binarios al release en lugar de dejarlos como artefactos.
 - [ ] Ejecutar M0b con claves reales y registrar el resultado en el documento maestro.
-- [ ] Añadir Go y `%USERPROFILE%\go\bin` al PATH del usuario.
-- [ ] Probar con `-race` (necesita CGO y gcc) o en el CI de Linux.
 - [ ] Registrar el avance de M1, M2, M3 y M0b en el documento maestro (v13).
-- [ ] Probar las fachadas con los SDK oficiales de Python y Node (hoy probadas con curl y pruebas Go).
-- [ ] Sustituir el sondeo de eventos (100 ms) por notificación en memoria si pesa con muchos clientes.
-- [ ] Límite de concurrencia propio por punto de acceso (hoy usa el de su instancia).
-- [ ] Modo consciente del proyecto (raíces permitidas, reglas del repositorio para proyectos confiables).
+- [ ] `instancia_global.raices_permitidas`: limitar las rutas locales que la CLI puede enviar como archivos (hoy cualquier ruta legible por el usuario).
 - [ ] Compilar y probar la aplicación de escritorio en macOS y Linux (necesita CGO y WebKit; hoy solo Windows).
 - [ ] Revisar Wails en cada beta (fijado en v3.0.0-beta.28) y migrar a la versión estable cuando salga.
-- [ ] Icono propio de Tramtai para la bandeja y el ejecutable (hoy el predeterminado de Wails).
-- [ ] Unix: guardar pgid y firma de inicio de cada agente y terminar los grupos huérfanos al arrancar; hoy una caída del servicio los deja vivos (en Windows los cierra el Job Object).
-- [ ] `retencion.guardar_historial` y `cifrado_aplicacion` se aceptan en la configuración, pero no tienen efecto: no hay historial permanente ni cifrado propio (sección 16.2).
-- [ ] Perfiles de salida en configuración (`salida.esquema` por archivo, sección 22.3) y `conservar_salida_invalida`.
-- [ ] Adaptadores Antigravity (`agy` con `modelProvider: gemini`) y Gemini API directa.
-- [ ] Guardar las claves de API en el Administrador de credenciales de Windows en lugar de variables de entorno.
-- [ ] Recurso de versión del `.exe` (Propiedades → Detalles en Windows) con la versión calculada.
+- [ ] Historial permanente, cifrado propio y cache documental (`retencion.guardar_historial`, `cifrado_aplicacion`, `cache_conversion_habilitada`): hoy la configuración los rechaza con «no soportado todavía».
+- [ ] Probar con una clave real los adaptadores `gemini` y `antigravity` (hoy con servidor y CLI simulados). En `agy`, comprobar si acepta el prompt por stdin (`--input-format stream-json`) para quitar el límite de 28 000 caracteres por línea de órdenes, y validar `permissions.deny` y `toolPermission: strict` en su `settings.json` (junto a M0b).
+- [ ] Almacén de credenciales en macOS (Llavero) y Linux (Secret Service); hoy `tramtai claves` solo funciona en Windows.

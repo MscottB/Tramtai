@@ -64,6 +64,10 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <instancia> 
   - En primer plano, un segundo Ctrl+C corta la espera.
 - **Resultados:** se conservan 24 horas (`retencion.horas_resultado`); después la salida responde 410 y se borra lo que escribió el usuario. El registro del trabajo dura 7 días (`retencion.horas_metadatos`). Ver [arquitectura](arquitectura.md#retención-cierre-y-recuperación-m7).
 
+## Claves de API
+
+`tramtai claves guardar|listar|borrar NOMBRE` las guarda en el Administrador de credenciales de Windows, como credenciales genéricas `tramtai/<NOMBRE>`. Los adaptadores las usan si no hay una variable de entorno con ese nombre, y nunca se muestran. Ver [inicio.md](inicio.md#autenticación-de-los-agentes).
+
 ## Instancias
 
 | | Global | Proyecto |
