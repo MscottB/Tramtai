@@ -6,9 +6,12 @@
     </div>
 
     <q-card>
-      <q-card-section>
-        <div class="titulo-seccion">{{ t('conectar.directa') }}</div>
-        <div class="texto-suave text-body2">{{ t('conectar.directaTexto') }}</div>
+      <q-card-section class="row items-center no-wrap">
+        <div class="icono-suave icono-suave--primary q-mr-md"><q-icon name="o_link" size="22px" /></div>
+        <div>
+          <div class="titulo-seccion">{{ t('conectar.directa') }}</div>
+          <div class="texto-suave text-body2">{{ t('conectar.directaTexto') }}</div>
+        </div>
       </q-card-section>
       <q-card-section class="row q-col-gutter-md q-pt-none">
         <div v-for="c in campos" :key="c.titulo" class="col-12 col-md-6">
@@ -33,10 +36,10 @@
       </q-card-section>
       <q-separator />
       <div class="q-px-md q-pt-md text-weight-medium">{{ t('conectar.ejemplos') }}</div>
-      <q-tabs v-model="lenguaje" dense no-caps align="left" active-color="primary" indicator-color="primary" class="q-px-sm">
-        <q-tab v-for="e in ejemplos" :key="e.id" :name="e.id" :label="e.titulo()" />
-      </q-tabs>
-      <q-separator />
+      <div class="q-px-md q-pt-sm">
+        <q-btn-toggle v-model="lenguaje" no-caps flat dense toggle-color="primary" class="segmentado inline-flex"
+          :options="ejemplos.map((e) => ({ label: e.titulo(), value: e.id }))" />
+      </div>
       <q-card-section>
         <div class="bloque-codigo sin-ajuste">{{ ejemplo.codigo(verClave ? clave : ocultar(clave)) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('conectar.copiarEjemplo')" @click="copiar(ejemplo.codigo(clave), t('conectar.ejemploCopiado'))" /></div>
       </q-card-section>
@@ -44,9 +47,12 @@
 
     <q-card>
       <q-card-section class="row items-center q-col-gutter-md">
-        <div class="col-12 col-sm">
-          <div class="titulo-seccion">{{ t('puntos.titulo') }}</div>
-          <div class="texto-suave text-body2">{{ t('puntos.texto') }}</div>
+        <div class="col-12 col-sm row items-center no-wrap">
+          <div class="icono-suave icono-suave--primary q-mr-md"><q-icon name="o_hub" size="22px" /></div>
+          <div>
+            <div class="titulo-seccion">{{ t('puntos.titulo') }}</div>
+            <div class="texto-suave text-body2">{{ t('puntos.texto') }}</div>
+          </div>
         </div>
         <div class="col-12 col-sm-auto">
           <q-btn unelevated color="primary" icon="add" :label="t('puntos.nuevo')" no-caps @click="abrirNuevo" />
@@ -67,13 +73,19 @@
           </div>
           <q-list separator>
             <q-item v-for="p in g.puntos" :key="p.nombre" class="q-py-md">
-              <q-item-section avatar><q-icon name="o_hub" :color="activo(p) ? 'primary' : 'grey-5'" /></q-item-section>
+              <q-item-section avatar top>
+                <div class="icono-suave icono-suave--chico" :class="activo(p) ? 'icono-suave--primary' : 'icono-suave--neutro'"><q-icon name="o_hub" size="20px" /></div>
+              </q-item-section>
               <q-item-section>
-                <q-item-label class="text-weight-medium">{{ p.nombre }}</q-item-label>
+                <q-item-label class="row items-center q-gutter-x-sm">
+                  <span class="text-weight-medium">{{ p.nombre }}</span>
+                  <span class="etiqueta" :class="!activo(p) ? 'etiqueta--neutro' : p.error ? 'etiqueta--error' : 'etiqueta--ok'">{{ activo(p) ? t('puntos.activo') : t('puntos.desactivado') }}</span>
+                </q-item-label>
                 <q-item-label caption class="codigo">{{ p.url || t('puntos.sinDireccion') }}</q-item-label>
                 <q-item-label caption>
                   {{ p.contratos.map(nombreContrato).join(' · ') }}
                   <template v-if="p.agente || p.modelo"> · {{ [nombreAgente(p.agente), p.modelo].filter(Boolean).join(' · ') }}</template>
+                  <template v-if="p.esfuerzo"> · {{ t('esfuerzo.titulo') }} {{ nombreEsfuerzo(p.esfuerzo).toLowerCase() }}</template>
                 </q-item-label>
                 <q-item-label caption>
                   <a v-if="uso[p.nombre]" href="#historial" class="enlace" @click.prevent="verPeticiones(p.nombre)">{{ textoUso(p.nombre) }}</a>
@@ -91,7 +103,7 @@
                   </q-toggle>
                   <q-btn v-if="p.url" flat dense round icon="content_copy" :aria-label="t('puntos.copiarUrl')" @click="copiar(p.url)"><q-tooltip>{{ t('puntos.copiarUrl') }}</q-tooltip></q-btn>
                   <q-btn flat dense round icon="o_key" :aria-label="t('puntos.verClave')" @click="mostrarClave(p)"><q-tooltip>{{ t('puntos.verClave') }}</q-tooltip></q-btn>
-                  <q-btn flat dense round icon="o_edit_note" :aria-label="t('puntos.editarInstrucciones')" @click="abrirInstrucciones(p)"><q-tooltip>{{ t('puntos.editarInstrucciones') }}</q-tooltip></q-btn>
+                  <q-btn flat dense round icon="o_tune" :aria-label="t('puntos.ajustes')" @click="abrirAjustes(p)"><q-tooltip>{{ t('puntos.ajustes') }}</q-tooltip></q-btn>
                   <q-btn flat dense round icon="o_delete" color="negative" :aria-label="t('comun.eliminar')" @click="eliminar(p.nombre)"><q-tooltip>{{ t('comun.eliminar') }}</q-tooltip></q-btn>
                 </div>
               </q-item-section>
@@ -128,6 +140,7 @@
               </template>
             </q-select>
             <q-toggle v-model="formulario.forzar" :disable="!formulario.modelo" :label="t('puntos.forzar')" />
+            <SelectorEsfuerzo v-model="formulario.esfuerzo" :niveles="nivelesFormulario" :hint="t('esfuerzo.api')" />
             <q-expansion-item dense icon="o_tune" :label="t('comun.opcionesAvanzadas')" header-class="q-px-none text-body2">
               <div class="q-gutter-y-md q-pt-sm">
                 <div>
@@ -161,16 +174,16 @@
     <q-dialog v-model="dialogoInstrucciones">
       <q-card style="width: 560px; max-width: 95vw">
         <q-card-section>
-          <div class="titulo-seccion">{{ t('puntos.instruccionesDe', { nombre: editando }) }}</div>
-          <div class="texto-suave text-body2">{{ t('puntos.instruccionesHint') }}</div>
+          <div class="titulo-seccion">{{ t('puntos.ajustesDe', { nombre: editando }) }}</div>
         </q-card-section>
-        <q-card-section class="q-pt-none">
-          <q-input v-model="textoInstrucciones" type="textarea" autogrow autofocus outlined :placeholder="t('puntos.instruccionesEjemplo')"
-            :input-style="{ minHeight: '120px' }" />
+        <q-card-section class="q-pt-none q-gutter-y-md">
+          <q-input v-model="textoInstrucciones" type="textarea" autogrow autofocus outlined :label="t('puntos.instrucciones')"
+            :placeholder="t('puntos.instruccionesEjemplo')" :hint="t('puntos.instruccionesHint')" :input-style="{ minHeight: '110px' }" />
+          <SelectorEsfuerzo v-model="esfuerzoEditando" :niveles="nivelesEditando" :hint="t('esfuerzo.api')" />
         </q-card-section>
         <q-card-actions align="right" class="q-pa-md">
           <q-btn v-close-popup flat no-caps :label="t('comun.cancelar')" />
-          <q-btn unelevated color="primary" no-caps :label="t('comun.guardar')" :loading="guardando" @click="guardarInstrucciones" />
+          <q-btn unelevated color="primary" no-caps :label="t('comun.guardar')" :loading="guardando" @click="guardarAjustes" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -196,7 +209,8 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { api, aplicarModelo, avisar, avisarError, copiar, haceCuanto, nombreAgente, opcionModelo, origenHistorial, type ConfigPunto, type EstadoPunto, type Modelo, type UsoPunto } from '../api'
+import SelectorEsfuerzo from '../componentes/SelectorEsfuerzo.vue'
+import { api, aplicarModelo, avisar, avisarError, copiar, esfuerzosDe, haceCuanto, nombreAgente, nombreEsfuerzo, opcionModelo, origenHistorial, type ConfigPunto, type EstadoPunto, type Modelo, type UsoPunto } from '../api'
 import { t } from '../i18n'
 
 const $q = useQuasar()
@@ -286,8 +300,14 @@ const ejemplo = computed(() => ejemplos.find((e) => e.id === lenguaje.value) ?? 
 
 const opciones = computed(() => catalogo.value.map(opcionModelo))
 const vacio = () => ({ nombre: '', instrucciones: '', grupo: '', direccion: 'ruta', puerto: '', contratos: [...contratos], modelo: null as string | null,
-  permitidos: [] as string[], alias: '', forzar: false })
+  permitidos: [] as string[], alias: '', forzar: false, esfuerzo: '' })
 const formulario = reactive(vacio())
+
+// Niveles de esfuerzo de una API: los de su modelo, o todos si la aplicación puede elegir el modelo (cada CLI usa
+// el nivel más cercano que admita y los agentes sin esfuerzo lo ignoran).
+const todosLosNiveles = computed(() => catalogo.value.reduce<string[]>((a, m) => ((m.esfuerzos?.length ?? 0) > a.length ? m.esfuerzos! : a), []))
+const nivelesDe = (modelo: string | null) => (modelo ? esfuerzosDe(catalogo.value, modelo) : todosLosNiveles.value)
+const nivelesFormulario = computed(() => nivelesDe(formulario.modelo))
 
 const camposPunto = computed(() => {
   const p = elegido.value
@@ -352,6 +372,7 @@ async function crear() {
     modelos_permitidos: formulario.permitidos.length ? formulario.permitidos : undefined,
     alias_modelos: Object.keys(alias).length ? alias : undefined,
     forzar_modelo: (formulario.forzar && !!formulario.modelo) || undefined,
+    esfuerzo: formulario.esfuerzo || undefined,
   }
   guardando.value = true
   try {
@@ -407,19 +428,23 @@ function eliminar(nombre: string) {
 const dialogoInstrucciones = ref(false)
 const editando = ref('')
 const textoInstrucciones = ref('')
+const esfuerzoEditando = ref('')
+const nivelesEditando = ref<string[]>([])
 
-function abrirInstrucciones(p: EstadoPunto) {
+function abrirAjustes(p: EstadoPunto) {
   editando.value = p.nombre
   textoInstrucciones.value = p.instrucciones ?? ''
+  esfuerzoEditando.value = p.esfuerzo ?? ''
+  nivelesEditando.value = nivelesDe(p.agente ? [p.agente, p.modelo].filter(Boolean).join('/') : null)
   dialogoInstrucciones.value = true
 }
 
-async function guardarInstrucciones() {
+async function guardarAjustes() {
   guardando.value = true
   try {
-    await api.instruccionesPunto(editando.value, textoInstrucciones.value)
+    await api.ajustesPunto(editando.value, { instrucciones: textoInstrucciones.value, esfuerzo: esfuerzoEditando.value })
     dialogoInstrucciones.value = false
-    avisar(t('puntos.instruccionesGuardadas'))
+    avisar(t('puntos.ajustesGuardados'))
     await cargarPuntos()
   } catch (e) {
     avisarError(e)

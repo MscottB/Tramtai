@@ -14,22 +14,25 @@
       <div v-for="a in adaptadores" :key="a.agente" class="col-12 col-lg-6">
         <q-card class="full-height column">
           <q-card-section class="row items-center no-wrap">
-            <q-avatar :color="a.problema ? 'grey-5' : 'primary'" text-color="white" icon="o_smart_toy" size="40px" class="q-mr-md" />
-            <div class="col titulo-seccion">{{ nombreAgente(a.agente) }}</div>
-            <q-chip :color="a.problema ? 'warning' : 'positive'" text-color="white" :icon="a.problema ? 'priority_high' : 'check'">
-              {{ a.problema ? t(tipo(a)) : t('agente.listo') }}
-            </q-chip>
+            <div class="icono-suave q-mr-md" :class="a.problema ? 'icono-suave--neutro' : 'icono-suave--primary'"><q-icon name="o_smart_toy" size="22px" /></div>
+            <div class="col">
+              <div class="titulo-seccion">{{ nombreAgente(a.agente) }}</div>
+              <div class="text-caption texto-suave">{{ a.version_detectada || t('agentes.sinVersion') }}</div>
+            </div>
+            <span class="etiqueta" :class="a.problema ? 'etiqueta--aviso' : 'etiqueta--ok'">
+              <q-icon :name="a.problema ? 'priority_high' : 'check'" size="14px" />{{ a.problema ? t(tipo(a)) : t('agente.listo') }}
+            </span>
           </q-card-section>
 
           <q-card-section class="q-pt-none col">
             <!-- Listo: cómo está conectado y, en Claude y Codex, la otra forma -->
             <template v-if="!a.problema">
-              <div class="row items-center q-gutter-x-sm">
-                <q-icon :name="suscripcion(a) ? 'o_person' : 'o_key'" color="positive" />
-                <span>{{ suscripcion(a) ? t('agentes.listoSuscripcion') : t('agentes.listoClave') }}</span>
+              <div class="metadatos">
+                <span><q-icon :name="suscripcion(a) ? 'o_person' : 'o_key'" />{{ suscripcion(a) ? t('agentes.listoSuscripcion') : t('agentes.listoClave') }}</span>
+                <span v-if="esfuerzos[a.agente]?.length"><q-icon name="o_psychology" />{{ t('agentes.esfuerzo') }}: {{ esfuerzos[a.agente].map(nombreEsfuerzo).join(' · ') }}</span>
               </div>
-              <q-btn unelevated dense no-caps size="sm" color="primary" icon="o_chat" class="q-mt-sm q-mr-sm q-px-sm" :label="t('agentes.probar')" @click="probar(a)" />
-              <q-btn v-if="puedeCambiar(a)" flat dense no-caps size="sm" color="primary" class="q-mt-sm q-px-none" :loading="cambiando === a.agente"
+              <q-btn unelevated dense no-caps color="primary" icon="o_chat" class="q-mt-md q-mr-sm q-px-md" :label="t('agentes.probar')" @click="probar(a)" />
+              <q-btn v-if="puedeCambiar(a)" flat dense no-caps color="primary" class="q-mt-md q-px-sm" :loading="cambiando === a.agente"
                 :label="suscripcion(a) ? t('agentes.cambiarAClave') : t('agentes.cambiarASuscripcion')"
                 @click="suscripcion(a) ? cambiar(a, 'clave_api') : confirmarSuscripcion(a)" />
             </template>
@@ -69,14 +72,17 @@
           </q-card-section>
 
           <q-expansion-item dense dense-toggle :label="t('agentes.detalles')" header-class="text-caption texto-suave q-px-md">
-            <q-list dense class="q-pb-sm">
-              <q-item><q-item-section class="texto-suave">{{ t('agentes.version') }}</q-item-section><q-item-section side>{{ a.version_detectada || t('agentes.sinVersion') }}</q-item-section></q-item>
-              <q-item><q-item-section class="texto-suave">{{ t('agentes.autenticacion') }}</q-item-section><q-item-section side>{{ suscripcion(a) ? t('agentes.suscripcion') : t('agentes.claveApi') }}</q-item-section></q-item>
-              <q-item><q-item-section class="texto-suave">{{ t('agentes.enVivo') }}</q-item-section><q-item-section side>{{ a.capacidades.streaming === 'tokens' ? t('agentes.fragmentos') : t('agentes.alTerminar') }}</q-item-section></q-item>
-              <q-item><q-item-section class="texto-suave">{{ t('agentes.json') }}</q-item-section><q-item-section side>{{ a.capacidades.salida_estructurada ? t('comun.si') : t('comun.no') }}</q-item-section></q-item>
-              <q-item><q-item-section class="texto-suave">{{ t('agentes.informaModelo') }}</q-item-section><q-item-section side>{{ a.capacidades.modelo_efectivo_informado ? t('comun.si') : t('comun.no') }}</q-item-section></q-item>
-              <q-item v-if="a.terminos"><q-item-section class="text-caption texto-suave">{{ a.terminos }}</q-item-section></q-item>
-            </q-list>
+            <div class="q-px-md q-pb-md">
+              <div class="ficha text-caption">
+                <div>{{ t('agentes.version') }}</div><div>{{ a.version_detectada || t('agentes.sinVersion') }}</div>
+                <div>{{ t('agentes.autenticacion') }}</div><div>{{ suscripcion(a) ? t('agentes.suscripcion') : t('agentes.claveApi') }}</div>
+                <div>{{ t('agentes.enVivo') }}</div><div>{{ a.capacidades.streaming === 'tokens' ? t('agentes.fragmentos') : t('agentes.alTerminar') }}</div>
+                <div>{{ t('agentes.json') }}</div><div>{{ a.capacidades.salida_estructurada ? t('comun.si') : t('comun.no') }}</div>
+                <div>{{ t('agentes.informaModelo') }}</div><div>{{ a.capacidades.modelo_efectivo_informado ? t('comun.si') : t('comun.no') }}</div>
+                <div>{{ t('agentes.esfuerzo') }}</div><div>{{ esfuerzos[a.agente]?.length ? esfuerzos[a.agente].map(nombreEsfuerzo).join(' · ') : t('comun.no') }}</div>
+              </div>
+              <div v-if="a.terminos" class="text-caption texto-suave q-mt-sm">{{ a.terminos }}</div>
+            </div>
           </q-expansion-item>
         </q-card>
       </div>
@@ -92,7 +98,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { api, avisar, avisarError, copiar, modeloInicial, nombreAgente, sesion, type Adaptador } from '../api'
+import { api, avisar, avisarError, copiar, modeloInicial, nombreAgente, nombreEsfuerzo, sesion, type Adaptador } from '../api'
 import { t } from '../i18n'
 
 const $q = useQuasar()
@@ -103,6 +109,8 @@ function probar(a: Adaptador) {
   emit('ir', 'ejecutar')
 }
 const adaptadores = ref<Adaptador[]>()
+// esfuerzos: los niveles que admite cada agente, según el catálogo de modelos.
+const esfuerzos = ref<Record<string, string[]>>({})
 const cargando = ref(false)
 const cambiando = ref('')
 
@@ -149,5 +157,10 @@ async function cambiar(a: Adaptador, modo: 'suscripcion' | 'clave_api') {
   }
 }
 
-onMounted(cargar)
+onMounted(() => {
+  cargar()
+  api.catalogo().then((lista) => {
+    for (const m of lista) if (m.agente && !m.modelo && !m.perfil) esfuerzos.value[m.agente] = m.esfuerzos ?? []
+  }).catch(() => {})
+})
 </script>

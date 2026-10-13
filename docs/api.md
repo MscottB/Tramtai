@@ -85,6 +85,19 @@ m = cliente.messages.create(model="claude/sonnet", max_tokens=1024, messages=[{"
 
 Probados con los SDK oficiales `openai` y `anthropic` de Python y Node (chat, streaming, Responses y Messages con y sin streaming). Con el SDK de Anthropic, `base_url` termina en `/anthropic`: el SDK añade `/v1`.
 
+### Esfuerzo de razonamiento
+
+Cuánto razona el modelo antes de responder. Es opcional: sin él, cada CLI usa su propia configuración.
+
+- **API nativa:** `"esfuerzo": "bajo" | "medio" | "alto" | "muy_alto" | "maximo"`. Un valor desconocido devuelve 400.
+- **OpenAI:** `reasoning_effort` (chat) o `reasoning.effort` (Responses). `minimal` y `low` equivalen a bajo; `medium` a medio; `high` a alto; `xhigh` a muy alto; `none` deja el del agente.
+- **Por API:** el campo `esfuerzo` de un punto de acceso, que se edita en Mis APIs, se usa cuando la aplicación no pide uno.
+- **Qué agentes lo admiten:**
+  - Claude Code (`--effort`), hasta máximo.
+  - Codex (`model_reasoning_effort`), hasta muy alto; si se pide máximo, usa muy alto.
+  - Gemini y Antigravity lo ignoran.
+- **Dónde se ve:** `GET /api/v1/modelos` indica en `esfuerzos` los niveles de cada modelo, y el trabajo guarda el esfuerzo pedido en `solicitud.esfuerzo`.
+
 ### Perfiles de ejecución y modo de contexto
 
 - **`perfil`** (API nativa) o `--perfil-trabajo` (CLI): aplica `profiles/<nombre>.yaml` del proyecto (`.tramtai/profiles/`) o de la configuración global. Aporta instrucciones, formato, esquema y `conservar_salida_invalida`; los campos explícitos de la solicitud prevalecen. `tramtai iniciar` crea el perfil de ejemplo `resumen`.

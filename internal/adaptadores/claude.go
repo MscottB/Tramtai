@@ -91,6 +91,9 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 	if s.Modelo != "" {
 		args = append(args, "--model", s.Modelo)
 	}
+	if v := valorEsfuerzo("claude", s.Esfuerzo); v != "" {
+		args = append(args, "--effort", v)
+	}
 	if len(s.Salida.Esquema) > 0 {
 		// Salida estructurada nativa: el resultado llega en structured_output (validado en M0).
 		var compacto bytes.Buffer

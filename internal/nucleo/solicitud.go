@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 )
 
 // Mensaje es un turno de la conversación con su rol original.
@@ -35,6 +36,9 @@ type SolicitudEjecucion struct {
 	Agente       string `json:"agente,omitempty"`
 	Modelo       string `json:"modelo,omitempty"`
 	PerfilModelo string `json:"perfil_modelo,omitempty"`
+	// Esfuerzo es cuánto razona el agente (bajo, medio, alto, muy_alto, maximo); vacío deja el de su CLI. Los
+	// agentes que no lo admiten lo ignoran.
+	Esfuerzo string `json:"esfuerzo,omitempty"`
 	// Perfil es un perfil de ejecución explícito (profiles/<nombre>.yaml); se aplica al aceptar y queda en la fotografía.
 	Perfil       string `json:"perfil,omitempty"`
 	ModoContexto string `json:"modo_contexto,omitempty"`
@@ -59,6 +63,8 @@ var (
 	rolesValidos    = map[string]bool{"sistema": true, "usuario": true, "asistente": true}
 	formatosValidos = map[string]bool{"texto": true, "markdown": true, "json": true}
 	modosContexto   = map[string]bool{"aislado": true, "consciente_proyecto": true}
+	// NivelesEsfuerzo, de menor a mayor.
+	NivelesEsfuerzo = []string{"bajo", "medio", "alto", "muy_alto", "maximo"}
 	// El modelo es una cadena validada por tamaño y formato técnico, no un enum cerrado (sección 9.2).
 	reIdentificador = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,127}$`)
 )
@@ -83,6 +89,9 @@ func (s SolicitudEjecucion) Validar() error {
 		if m.Contenido == "" {
 			return invalida("mensaje %d sin contenido", i)
 		}
+	}
+	if s.Esfuerzo != "" && !slices.Contains(NivelesEsfuerzo, s.Esfuerzo) {
+		return invalida("esfuerzo desconocido %q (bajo, medio, alto, muy_alto, maximo)", s.Esfuerzo)
 	}
 	if s.ModoContexto != "" && !modosContexto[s.ModoContexto] {
 		return invalida("modo_contexto desconocido %q", s.ModoContexto)

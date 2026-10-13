@@ -18,6 +18,7 @@ type Punto struct {
 	Agente            string
 	Modelo            string
 	PerfilModelo      string
+	Esfuerzo          string // si la solicitud no indica uno
 	Instrucciones     string // se anteponen a las de la solicitud
 	ModelosPermitidos []string
 	ForzarModelo      bool
@@ -49,6 +50,9 @@ func (s *Servidor) ajustar(sol nucleo.SolicitudEjecucion) (nucleo.SolicitudEjecu
 	sinModelo := sol.Agente == "" && sol.Modelo == "" && sol.PerfilModelo == ""
 	if (p.ForzarModelo || sinModelo) && (p.Agente != "" || p.Modelo != "" || p.PerfilModelo != "") {
 		sol.Agente, sol.Modelo, sol.PerfilModelo = p.Agente, p.Modelo, p.PerfilModelo
+	}
+	if sol.Esfuerzo == "" {
+		sol.Esfuerzo = p.Esfuerzo
 	}
 	if p.Instrucciones != "" {
 		sol.Instrucciones = strings.TrimSpace(p.Instrucciones + "\n\n" + sol.Instrucciones)

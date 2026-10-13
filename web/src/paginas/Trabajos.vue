@@ -14,7 +14,7 @@
     <q-card>
       <q-card-section class="row items-center q-col-gutter-sm">
         <div class="col-12 col-md">
-          <q-btn-toggle v-model="filtro" no-caps flat toggle-color="primary"
+          <q-btn-toggle v-model="filtro" no-caps flat dense toggle-color="primary" class="segmentado inline-flex"
             :options="[{ label: t('historial.todos'), value: 'todos' }, { label: t('inicio.enCurso'), value: 'curso' }, { label: t('inicio.completados'), value: 'ok' }, { label: t('inicio.conError'), value: 'error' }]" />
         </div>
         <div class="col-12 col-sm-6 col-md-3">
@@ -32,9 +32,7 @@
         table-class="fila-clicable" @row-click="(_e: Event, fila: Trabajo) => abrir(fila)">
         <template #body-cell-estado="props">
           <q-td :props="props">
-            <q-chip dense square :color="estadoInfo(props.value).color" text-color="white" :icon="estadoInfo(props.value).icono" class="q-ma-none">
-              {{ estadoInfo(props.value).etiqueta }}
-            </q-chip>
+            <span :class="estadoInfo(props.value).clase"><q-icon :name="estadoInfo(props.value).icono" size="14px" />{{ estadoInfo(props.value).etiqueta }}</span>
           </q-td>
         </template>
         <template #body-cell-solicitud="props">
@@ -51,9 +49,7 @@
     <q-dialog v-model="dialogo" position="right" full-height>
       <q-card v-if="detalle" class="column no-wrap" style="width: 600px; max-width: 100vw; border-radius: 0">
         <q-card-section class="row items-center no-wrap q-gutter-x-sm">
-          <q-chip square :color="estadoInfo(detalle.estado).color" text-color="white" :icon="estadoInfo(detalle.estado).icono">
-            {{ estadoInfo(detalle.estado).etiqueta }}
-          </q-chip>
+          <span :class="estadoInfo(detalle.estado).clase"><q-icon :name="estadoInfo(detalle.estado).icono" size="14px" />{{ estadoInfo(detalle.estado).etiqueta }}</span>
           <div class="texto-suave text-caption">{{ fecha(detalle.creado_en) }}</div>
           <q-space />
           <q-btn v-close-popup flat round icon="close" :aria-label="t('comun.cerrar')" />
@@ -80,17 +76,16 @@
             <div v-else-if="detalle.salida" class="bloque-texto" :class="{ json: esJSON(detalle.salida) }">{{ detalle.salida }}</div>
             <div v-else class="texto-suave">{{ terminales.includes(detalle.estado) ? t('historial.sinRespuesta') : t('historial.todaviaEnCurso') }}</div>
           </div>
-          <q-list dense bordered separator class="rounded-borders">
-            <q-item><q-item-section class="texto-suave">{{ t('historial.agenteModelo') }}</q-item-section><q-item-section side>{{ modeloDe(detalle) }}</q-item-section></q-item>
-            <q-item v-if="detalle.punto_acceso"><q-item-section class="texto-suave">{{ t('historial.punto') }}</q-item-section><q-item-section side>{{ detalle.punto_acceso }}</q-item-section></q-item>
-            <q-item><q-item-section class="texto-suave">{{ t('historial.tokens') }}</q-item-section><q-item-section side>{{ detalle.uso.tokens_entrada }} → {{ detalle.uso.tokens_salida }}</q-item-section></q-item>
-            <q-item v-if="detalle.uso.costo_usd"><q-item-section class="texto-suave">{{ t('historial.coste') }}</q-item-section><q-item-section side>US$ {{ detalle.uso.costo_usd.toFixed(4) }}</q-item-section></q-item>
-            <q-item v-if="detalle.terminado_en"><q-item-section class="texto-suave">{{ t('historial.duracion') }}</q-item-section><q-item-section side>{{ duracion(detalle.creado_en, detalle.terminado_en) }}</q-item-section></q-item>
-            <q-item>
-              <q-item-section class="texto-suave">{{ t('historial.identificador') }}</q-item-section>
-              <q-item-section side class="codigo cursor-pointer" @click="copiar(detalle.id)">{{ detalle.id }}</q-item-section>
-            </q-item>
-          </q-list>
+          <div class="ficha text-body2">
+            <div>{{ t('historial.agenteModelo') }}</div><div>{{ modeloDe(detalle) }}</div>
+            <div>{{ t('historial.esfuerzo') }}</div><div>{{ nombreEsfuerzo(detalle.solicitud.esfuerzo) }}</div>
+            <template v-if="detalle.punto_acceso"><div>{{ t('historial.punto') }}</div><div>{{ detalle.punto_acceso }}</div></template>
+            <div>{{ t('historial.tokens') }}</div><div>{{ detalle.uso.tokens_entrada }} → {{ detalle.uso.tokens_salida }}</div>
+            <template v-if="detalle.uso.costo_usd"><div>{{ t('historial.coste') }}</div><div>US$ {{ detalle.uso.costo_usd.toFixed(4) }}</div></template>
+            <template v-if="detalle.terminado_en"><div>{{ t('historial.duracion') }}</div><div>{{ duracion(detalle.creado_en, detalle.terminado_en) }}</div></template>
+            <div>{{ t('historial.identificador') }}</div>
+            <div class="codigo cursor-pointer" @click="copiar(detalle.id)">{{ detalle.id }}<q-tooltip>{{ t('comun.copiar') }}</q-tooltip></div>
+          </div>
         </q-card-section>
         <q-separator />
         <q-card-actions class="q-pa-md">
@@ -110,7 +105,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useQuasar, type QTableColumn } from 'quasar'
-import { api, avisar, avisarError, copiar, duracion, esJSON, estadoInfo, fecha, filtroHistorial, haceCuanto, origenHistorial, trabajoAbrir, modeloDe, terminales, textoDe, trabajoSeguido, type Trabajo } from '../api'
+import { api, avisar, avisarError, copiar, duracion, esJSON, estadoInfo, fecha, filtroHistorial, haceCuanto, origenHistorial, trabajoAbrir, modeloDe, nombreEsfuerzo, terminales, textoDe, trabajoSeguido, type Trabajo } from '../api'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()

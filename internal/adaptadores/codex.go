@@ -83,6 +83,9 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 	if s.Modelo != "" {
 		args = append(args, "-m", s.Modelo)
 	}
+	if v := valorEsfuerzo("codex", s.Esfuerzo); v != "" {
+		args = append(args, "-c", `model_reasoning_effort="`+v+`"`)
+	}
 	if len(s.Salida.Esquema) > 0 {
 		archivo := filepath.Join(raiz, "esquema.json")
 		if err := os.WriteFile(archivo, s.Salida.Esquema, 0o600); err != nil {

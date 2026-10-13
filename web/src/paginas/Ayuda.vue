@@ -13,7 +13,7 @@
       <q-list>
         <q-item v-for="(p, i) in pasos" :key="p.titulo" class="q-py-md">
           <q-item-section avatar top>
-            <q-avatar size="36px" color="primary" text-color="white" :icon="p.icono" />
+            <div class="icono-suave icono-suave--primary icono-suave--chico"><q-icon :name="p.icono" size="20px" /></div>
           </q-item-section>
           <q-item-section>
             <q-item-label class="text-weight-medium">{{ i + 1 }}. {{ t(p.titulo) }}</q-item-label>
@@ -38,7 +38,7 @@
 
     <q-card>
       <q-item clickable tag="a" href="https://github.com/MscottB/Tramtai/blob/main/docs/inicio.md" target="_blank" rel="noopener" class="q-py-md">
-        <q-item-section avatar><q-icon name="o_menu_book" color="primary" size="28px" /></q-item-section>
+        <q-item-section avatar><div class="icono-suave icono-suave--primary"><q-icon name="o_menu_book" size="22px" /></div></q-item-section>
         <q-item-section>
           <q-item-label class="text-weight-medium">{{ t('ayuda.documentacion') }}</q-item-label>
           <q-item-label caption>{{ t('ayuda.documentacionTexto') }}</q-item-label>

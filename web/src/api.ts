@@ -40,6 +40,7 @@ export interface Solicitud {
   modelo?: string
   perfil_modelo?: string
   perfil?: string
+  esfuerzo?: string
   mensajes: Mensaje[]
   cargas?: string[]
   salida?: { formato?: string; esquema?: unknown }
@@ -82,6 +83,7 @@ export interface EstadoPunto {
   contratos: string[]
   agente?: string
   modelo?: string
+  esfuerzo?: string
   activo: boolean
   error?: string
   origen: string
@@ -101,6 +103,7 @@ export interface ConfigPunto {
   agente?: string
   modelo?: string
   perfil_modelo?: string
+  esfuerzo?: string
   modelos_permitidos?: string[]
   forzar_modelo?: boolean
   alias_modelos?: Record<string, string>
@@ -115,6 +118,8 @@ export interface Modelo {
   resuelto?: string
   version?: string
   predeterminado?: boolean
+  // esfuerzos: niveles de esfuerzo que admite su agente (vacío si no se puede elegir).
+  esfuerzos?: string[]
 }
 export interface EntradaConfiguracion {
   clave: string
@@ -215,7 +220,7 @@ export const api = {
   puntosConUso: () => pedir<{ puntos_acceso: EstadoPunto[]; uso?: Record<string, UsoPunto> }>('GET', '/api/v1/puntos'),
   crearPunto: (p: ConfigPunto) => pedir<{ punto_acceso?: EstadoPunto; token: string }>('POST', '/api/v1/puntos', p),
   activarPunto: (nombre: string, activo: boolean) => pedir<unknown>('PATCH', `/api/v1/puntos/${nombre}`, { activo }),
-  instruccionesPunto: (nombre: string, instrucciones: string) => pedir<unknown>('PATCH', `/api/v1/puntos/${nombre}`, { instrucciones }),
+  ajustesPunto: (nombre: string, ajustes: { instrucciones?: string; esfuerzo?: string }) => pedir<unknown>('PATCH', `/api/v1/puntos/${nombre}`, ajustes),
   eliminarPunto: (nombre: string) => pedir<void>('DELETE', `/api/v1/puntos/${nombre}`),
   tokenPunto: (nombre: string) => pedir<{ token: string }>('GET', `/api/v1/puntos/${nombre}/token`).then((r) => r.token),
 }
@@ -266,9 +271,12 @@ const estados: Record<string, { color: string; icono: string }> = {
   interrumpido: { color: 'warning', icono: 'report' },
 }
 
+const clases: Record<string, string> = { positive: 'ok', negative: 'error', warning: 'aviso', info: 'info', primary: 'info' }
+
 export function estadoInfo(estado: string) {
-  const e = estados[estado]
-  return e ? { ...e, etiqueta: t(`estado.${estado}` as Clave) } : { etiqueta: estado, color: 'grey-7', icono: 'help' }
+  const e = estados[estado] ?? { color: 'grey-7', icono: 'help' }
+  const etiqueta = estados[estado] ? t(`estado.${estado}` as Clave) : estado
+  return { ...e, etiqueta, clase: 'etiqueta etiqueta--' + (clases[e.color] ?? 'neutro') }
 }
 
 export function fecha(texto?: string): string {
@@ -313,6 +321,7 @@ export interface OpcionModelo {
   caption: string
   value: string
   predeterminado: boolean
+  esfuerzos: string[]
 }
 
 // opcionModelo convierte una entrada del catálogo en una opción legible, con la versión real si se conoce.
@@ -325,7 +334,18 @@ export function opcionModelo(m: Modelo): OpcionModelo {
   } else if (!m.modelo) {
     caption = [m.version, t('modelo.predeterminadoCli')].filter(Boolean).join(' · ')
   }
-  return { label, caption, value: m.id, predeterminado: !!m.predeterminado }
+  if (m.esfuerzos?.length) caption += ' · ' + t('esfuerzo.elegible')
+  return { label, caption, value: m.id, predeterminado: !!m.predeterminado, esfuerzos: m.esfuerzos ?? [] }
+}
+
+// esfuerzosDe son los niveles de esfuerzo del modelo elegido ('' es el predeterminado del espacio).
+export function esfuerzosDe(catalogo: Modelo[], seleccion: string | null): string[] {
+  const m = seleccion ? catalogo.find((x) => x.id === seleccion) : catalogo.find((x) => x.predeterminado)
+  return m?.esfuerzos ?? []
+}
+
+export function nombreEsfuerzo(nivel?: string): string {
+  return nivel ? t(`esfuerzo.${nivel}` as Clave) : t('esfuerzo.agente')
 }
 
 // descripcionPredeterminado resume el modelo predeterminado del catálogo: "Claude · sonnet · claude-sonnet-5-5".

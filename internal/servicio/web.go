@@ -555,9 +555,14 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 		var cambio struct { // solo cambia lo que viene en el cuerpo
 			Activo        *bool   `json:"activo"`
 			Instrucciones *string `json:"instrucciones"`
+			Esfuerzo      *string `json:"esfuerzo"` // "" vuelve al del agente
 		}
 		if err := api.LeerJSON(w, r, &cambio); err != nil {
 			api.EscribirError(w, r, err)
+			return
+		}
+		if cambio.Esfuerzo != nil && *cambio.Esfuerzo != "" && !slices.Contains(nucleo.NivelesEsfuerzo, *cambio.Esfuerzo) {
+			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "esfuerzo desconocido: "+*cambio.Esfuerzo))
 			return
 		}
 		if editar(func(lista []ConfigPunto) ([]ConfigPunto, error) {
@@ -570,6 +575,9 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 				}
 				if cambio.Instrucciones != nil {
 					lista[i].Instrucciones = strings.TrimSpace(*cambio.Instrucciones)
+				}
+				if cambio.Esfuerzo != nil {
+					lista[i].Esfuerzo = *cambio.Esfuerzo
 				}
 			}
 			return lista, nil

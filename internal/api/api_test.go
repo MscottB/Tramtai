@@ -374,6 +374,50 @@ func TestInstruccionesDelPunto(t *testing.T) {
 	}
 }
 
+// conEsfuerzo guarda el esfuerzo con el que se ejecutó la última solicitud.
+type conEsfuerzo struct{ visto *string }
+
+func (c conEsfuerzo) Ejecutar(_ context.Context, s nucleo.SolicitudEjecucion, _ func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	*c.visto = s.Esfuerzo
+	return adaptadores.Resultado{Salida: "ok"}, nil
+}
+
+func TestEsfuerzo(t *testing.T) {
+	var visto string
+	ts := servidor(t, simulado(conEsfuerzo{&visto}), nil)
+	for peticion, esperado := range map[string]string{
+		`{"model":"simulado","messages":[{"role":"user","content":"x"}],"reasoning_effort":"high"}`:    "alto",
+		`{"model":"simulado","messages":[{"role":"user","content":"x"}],"reasoning_effort":"minimal"}`: "bajo",
+		`{"model":"simulado","messages":[{"role":"user","content":"x"}]}`:                              "",
+	} {
+		if r, cuerpo := pedir(t, ts, "POST", "/openai/v1/chat/completions", peticion); r.StatusCode != 200 || visto != esperado {
+			t.Fatalf("%s: %d %s, esfuerzo %q", peticion, r.StatusCode, cuerpo, visto)
+		}
+	}
+	if r, cuerpo := pedir(t, ts, "POST", "/openai/v1/responses", `{"model":"simulado","input":"x","reasoning":{"effort":"xhigh"}}`); r.StatusCode != 200 || visto != "muy_alto" {
+		t.Fatalf("responses: %d %s, esfuerzo %q", r.StatusCode, cuerpo, visto)
+	}
+	if r, cuerpo := pedir(t, ts, "POST", "/api/v1/ejecutar", `{"agente":"simulado","esfuerzo":"maximo","mensajes":[{"rol":"usuario","contenido":"x"}]}`); r.StatusCode != 200 || visto != "maximo" {
+		t.Fatalf("nativa: %d %s, esfuerzo %q", r.StatusCode, cuerpo, visto)
+	}
+	if r, _ := pedir(t, ts, "POST", "/api/v1/ejecutar", `{"agente":"simulado","esfuerzo":"enorme","mensajes":[{"rol":"usuario","contenido":"x"}]}`); r.StatusCode != 400 {
+		t.Fatalf("un esfuerzo desconocido se rechaza: %d", r.StatusCode)
+	}
+	if r, _ := pedir(t, ts, "POST", "/openai/v1/chat/completions", `{"model":"simulado","messages":[{"role":"user","content":"x"}],"reasoning_effort":"enorme"}`); r.StatusCode != 400 {
+		t.Fatalf("un reasoning_effort desconocido se rechaza: %d", r.StatusCode)
+	}
+	// El punto de acceso pone su esfuerzo si la solicitud no trae uno.
+	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
+	s := &Servidor{Config: c, Punto: &Punto{Nombre: "p", Esfuerzo: "alto"}}
+	mensajes := []nucleo.Mensaje{{Rol: "usuario", Contenido: "x"}}
+	if sol, _ := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: mensajes}); sol.Esfuerzo != "alto" {
+		t.Fatalf("esfuerzo del punto: %q", sol.Esfuerzo)
+	}
+	if sol, _ := s.ajustar(nucleo.SolicitudEjecucion{Esfuerzo: "bajo", Mensajes: mensajes}); sol.Esfuerzo != "bajo" {
+		t.Fatalf("el de la solicitud manda: %q", sol.Esfuerzo)
+	}
+}
+
 // conModelo informa un modelo efectivo, como Claude con su versión real detrás del alias.
 type conModelo struct{}
 

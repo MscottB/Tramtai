@@ -8,17 +8,17 @@ import (
 )
 
 var politicaChat = politica{
-	soportados: conjunto("model", "messages", "stream", "response_format"),
+	soportados: conjunto("model", "messages", "stream", "response_format", "reasoning_effort"),
 	ignorables: conjunto("temperature", "top_p", "max_tokens", "max_completion_tokens", "user", "metadata", "stream_options",
-		"seed", "presence_penalty", "frequency_penalty", "reasoning_effort", "store", "service_tier", "parallel_tool_calls"),
+		"seed", "presence_penalty", "frequency_penalty", "store", "service_tier", "parallel_tool_calls"),
 	noSoportados: conjunto("tools", "tool_choice", "functions", "function_call", "n", "logprobs", "top_logprobs", "stop",
 		"logit_bias", "audio", "modalities", "prediction", "web_search_options"),
 }
 
 var politicaRespuestas = politica{
-	soportados: conjunto("model", "input", "instructions", "stream", "text"),
+	soportados: conjunto("model", "input", "instructions", "stream", "text", "reasoning"),
 	ignorables: conjunto("temperature", "top_p", "max_output_tokens", "metadata", "user", "store", "parallel_tool_calls",
-		"truncation", "service_tier", "reasoning", "include", "stream_options"),
+		"truncation", "service_tier", "include", "stream_options"),
 	noSoportados: conjunto("tools", "tool_choice", "previous_response_id", "background", "prompt", "conversation"),
 }
 
@@ -29,10 +29,11 @@ type mensajeEntrada struct {
 }
 
 type peticionChat struct {
-	Model         string           `json:"model"`
-	Messages      []mensajeEntrada `json:"messages"`
-	Stream        bool             `json:"stream"`
-	StreamOptions *struct {
+	Model           string           `json:"model"`
+	Messages        []mensajeEntrada `json:"messages"`
+	Stream          bool             `json:"stream"`
+	ReasoningEffort string           `json:"reasoning_effort"`
+	StreamOptions   *struct {
 		IncludeUsage bool `json:"include_usage"`
 	} `json:"stream_options"`
 	ResponseFormat *struct {
@@ -61,6 +62,23 @@ func mensajes(entrada []mensajeEntrada) ([]nucleo.Mensaje, error) {
 		salida = append(salida, nucleo.Mensaje{Rol: rol, Contenido: texto})
 	}
 	return salida, nil
+}
+
+// esfuerzoOpenAI traduce reasoning_effort de OpenAI (none, minimal, low, medium, high, xhigh) al nivel interno.
+func esfuerzoOpenAI(valor string) (string, error) {
+	switch valor {
+	case "", "none":
+		return "", nil
+	case "minimal", "low":
+		return "bajo", nil
+	case "medium":
+		return "medio", nil
+	case "high":
+		return "alto", nil
+	case "xhigh":
+		return "muy_alto", nil
+	}
+	return "", nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "reasoning_effort desconocido: "+valor)
 }
 
 // formatoSalida aplica response_format (chat) o text.format (responses).
@@ -96,6 +114,9 @@ func (s *Servidor) chatCompletions(w http.ResponseWriter, r *http.Request) {
 	sol, err := s.solicitudFachada(p.Model)
 	if err == nil {
 		sol.Mensajes, err = mensajes(p.Messages)
+	}
+	if err == nil {
+		sol.Esfuerzo, err = esfuerzoOpenAI(p.ReasoningEffort)
 	}
 	if err == nil && p.ResponseFormat != nil {
 		var esquema json.RawMessage
@@ -173,7 +194,10 @@ type peticionRespuesta struct {
 	Input        json.RawMessage `json:"input"`
 	Instructions string          `json:"instructions"`
 	Stream       bool            `json:"stream"`
-	Text         *struct {
+	Reasoning    *struct {
+		Effort string `json:"effort"`
+	} `json:"reasoning"`
+	Text *struct {
 		Format *struct {
 			Type   string          `json:"type"`
 			Schema json.RawMessage `json:"schema"`
@@ -223,6 +247,9 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 				sol.Mensajes, err = mensajes(entrada)
 			}
 		}
+	}
+	if err == nil && p.Reasoning != nil {
+		sol.Esfuerzo, err = esfuerzoOpenAI(p.Reasoning.Effort)
 	}
 	if err == nil && p.Text != nil && p.Text.Format != nil {
 		err = formatoSalida(&sol, p.Text.Format.Type, p.Text.Format.Schema)

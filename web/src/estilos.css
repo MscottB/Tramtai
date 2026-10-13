@@ -54,7 +54,7 @@ body {
   box-shadow: var(--sombra-alta);
 }
 /* La opción secundaria de los diálogos (Cancelar, Más tarde) en gris, para que destaque la principal. */
-.q-dialog .q-card__actions .q-btn--flat {
+.q-dialog-plugin .q-card__actions .q-btn--flat {
   color: var(--texto-suave) !important;
 }
 .q-menu {
@@ -374,11 +374,93 @@ body.body--dark .icono-suave--negative {
   background: rgba(245, 158, 11, 0.15);
   color: #b45309;
 }
+.etiqueta--error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+.etiqueta--info {
+  background: var(--acento-suave);
+  color: var(--q-primary);
+}
+.etiqueta--neutro {
+  background: rgba(100, 116, 139, 0.13);
+  color: var(--texto-suave);
+}
 body.body--dark .etiqueta--ok {
   color: #4ade80;
 }
 body.body--dark .etiqueta--aviso {
   color: #fbbf24;
+}
+body.body--dark .etiqueta--error {
+  color: #f87171;
+}
+.icono-suave--neutro {
+  background: rgba(100, 116, 139, 0.13);
+  color: var(--texto-suave);
+}
+.icono-suave--chico {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+
+/* Datos de un elemento (petición, agente): etiqueta a la izquierda y valor a la derecha, en filas finas. */
+.ficha {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.ficha > div {
+  padding: 9px 14px;
+  border-top: 1px solid var(--borde);
+}
+.ficha > div:nth-child(-n + 2) {
+  border-top: none;
+}
+.ficha > div:nth-child(odd) {
+  color: var(--texto-suave);
+  background: var(--superficie-suave);
+}
+.ficha > div:nth-child(even) {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* Selector de pestañas o filtros como un control segmentado. */
+.segmentado {
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 2px;
+  background: var(--superficie-suave);
+}
+.segmentado .q-btn {
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 4px 12px;
+}
+.segmentado .q-btn[aria-pressed='true'] {
+  background: var(--superficie);
+  box-shadow: var(--sombra), 0 0 0 1px var(--borde);
+}
+
+/* Datos breves en una línea (modelo, tokens, duración) con icono. */
+.metadatos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.metadatos > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.78rem;
+  color: var(--texto-suave);
 }
 
 /* Guía de inicio: pasos como tarjetas pequeñas; los hechos, atenuados. */

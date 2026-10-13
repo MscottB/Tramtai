@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -35,6 +36,7 @@ type ConfigPunto struct {
 	Agente            string            `json:"agente,omitempty" yaml:"agente,omitempty"`
 	Modelo            string            `json:"modelo,omitempty" yaml:"modelo,omitempty"`
 	PerfilModelo      string            `json:"perfil_modelo,omitempty" yaml:"perfil_modelo,omitempty"`
+	Esfuerzo          string            `json:"esfuerzo,omitempty" yaml:"esfuerzo,omitempty"`
 	ModelosPermitidos []string          `json:"modelos_permitidos,omitempty" yaml:"modelos_permitidos,omitempty"`
 	ForzarModelo      bool              `json:"forzar_modelo,omitempty" yaml:"forzar_modelo,omitempty"`
 	AliasModelos      map[string]string `json:"alias_modelos,omitempty" yaml:"alias_modelos,omitempty"`
@@ -112,6 +114,9 @@ func (p ConfigPunto) Normalizar(instancia string, puertoServicio int) (ConfigPun
 	if p.Modelo != "" && p.PerfilModelo != "" {
 		return invalido("modelo y perfil_modelo son excluyentes")
 	}
+	if p.Esfuerzo != "" && !slices.Contains(nucleo.NivelesEsfuerzo, p.Esfuerzo) {
+		return invalido("esfuerzo desconocido " + p.Esfuerzo + " (bajo, medio, alto, muy_alto, maximo)")
+	}
 	if p.ForzarModelo && p.Agente == "" && p.Modelo == "" && p.PerfilModelo == "" {
 		return invalido("forzar_modelo exige agente, modelo o perfil_modelo")
 	}
@@ -123,7 +128,7 @@ func (p ConfigPunto) Normalizar(instancia string, puertoServicio int) (ConfigPun
 
 func (p ConfigPunto) politica() *api.Punto {
 	pol := &api.Punto{Nombre: p.Nombre, Contratos: map[string]bool{}, Agente: p.Agente, Modelo: p.Modelo,
-		PerfilModelo: p.PerfilModelo, Instrucciones: strings.TrimSpace(p.Instrucciones), ModelosPermitidos: p.ModelosPermitidos, ForzarModelo: p.ForzarModelo, Alias: p.AliasModelos}
+		PerfilModelo: p.PerfilModelo, Esfuerzo: p.Esfuerzo, Instrucciones: strings.TrimSpace(p.Instrucciones), ModelosPermitidos: p.ModelosPermitidos, ForzarModelo: p.ForzarModelo, Alias: p.AliasModelos}
 	for _, c := range p.Contratos {
 		pol.Contratos[c] = true
 	}
@@ -167,6 +172,7 @@ type EstadoPunto struct {
 	Contratos     []string `json:"contratos"`
 	Agente        string   `json:"agente,omitempty"`
 	Modelo        string   `json:"modelo,omitempty"`
+	Esfuerzo      string   `json:"esfuerzo,omitempty"`
 	Activo        bool     `json:"activo"`
 	Error         string   `json:"error,omitempty"`
 	Origen        string   `json:"origen"`
@@ -323,7 +329,7 @@ func (s *Servicio) estadoPuntos() []EstadoPunto {
 	lista := []EstadoPunto{}
 	for _, p := range s.puntos {
 		lista = append(lista, EstadoPunto{Nombre: p.cfg.Nombre, Grupo: p.cfg.Grupo, Instrucciones: p.cfg.Instrucciones, Instancia: p.cfg.Instancia, URL: p.url, Contratos: p.cfg.Contratos,
-			Agente: p.cfg.Agente, Modelo: p.cfg.Modelo, Activo: p.err == "", Error: p.err, Origen: p.origen})
+			Agente: p.cfg.Agente, Modelo: p.cfg.Modelo, Esfuerzo: p.cfg.Esfuerzo, Activo: p.err == "", Error: p.err, Origen: p.origen})
 	}
 	sort.Slice(lista, func(i, j int) bool { return lista[i].Nombre < lista[j].Nombre })
 	return lista

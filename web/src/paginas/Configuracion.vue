@@ -9,7 +9,7 @@
       <q-card-section class="row items-center q-col-gutter-md">
         <div class="col-12 col-md">
           <div class="row items-start no-wrap">
-            <q-icon name="o_smart_toy" size="28px" color="primary" class="q-mr-md q-mt-xs" />
+            <div class="icono-suave icono-suave--primary q-mr-md"><q-icon name="o_smart_toy" size="22px" /></div>
             <div>
               <div class="titulo-seccion">{{ t('predeterminado.titulo') }}</div>
               <div class="texto-suave text-body2 q-mt-xs">{{ t('predeterminado.texto') }}</div>
@@ -38,7 +38,7 @@
       <q-card-section class="row items-start q-col-gutter-md">
         <div class="col-12 col-md">
           <div class="row items-start no-wrap">
-            <q-icon name="o_lan" size="28px" color="primary" class="q-mr-md q-mt-xs" />
+            <div class="icono-suave icono-suave--primary q-mr-md"><q-icon name="o_lan" size="22px" /></div>
             <div>
               <div class="titulo-seccion">{{ t('puerto.titulo') }}</div>
               <div class="texto-suave text-body2 q-mt-xs">{{ t('puerto.texto') }}</div>
@@ -68,7 +68,7 @@
       <div v-if="sesion?.autoarranque !== undefined" class="col-12 col-md-6">
         <q-card class="full-height">
           <q-card-section class="row items-start no-wrap">
-            <q-icon name="o_rocket_launch" size="28px" color="primary" class="q-mr-md q-mt-xs" />
+            <div class="icono-suave icono-suave--primary q-mr-md"><q-icon name="o_rocket_launch" size="22px" /></div>
             <div class="col">
               <div class="titulo-seccion">{{ t('arranque.titulo') }}</div>
               <div class="texto-suave text-body2 q-mt-xs">{{ t('arranque.texto') }}</div>
@@ -80,7 +80,7 @@
       <div class="col-12" :class="{ 'col-md-6': sesion?.autoarranque !== undefined }">
         <q-card class="full-height">
           <q-card-section class="row items-start no-wrap q-pb-sm">
-            <q-icon name="o_delete_sweep" size="28px" color="negative" class="q-mr-md q-mt-xs" />
+            <div class="icono-suave icono-suave--negative q-mr-md"><q-icon name="o_delete_sweep" size="22px" /></div>
             <div class="col">
               <div class="titulo-seccion">{{ t('datos.titulo') }}</div>
               <div class="texto-suave text-body2 q-mt-xs">{{ t('datos.texto') }}</div>
@@ -116,7 +116,7 @@
         <q-card-section class="row items-center q-col-gutter-md">
           <div class="col-12 col-md">
             <div class="row q-gutter-xs">
-              <q-chip v-for="o in origenes" :key="o.id" dense square :color="o.color" text-color="white">
+              <q-chip v-for="o in origenes" :key="o.id" dense outline :color="o.color">
                 {{ o.nombre }}<q-tooltip>{{ o.detalle }}</q-tooltip>
               </q-chip>
             </div>
@@ -138,7 +138,7 @@
                 <q-item-label class="codigo" style="word-break: break-all">{{ valor(e.valor) }}</q-item-label>
               </q-item-section>
               <q-item-section side style="min-width: 90px">
-                <q-chip dense square :color="origen(e.origen).color" text-color="white">{{ origen(e.origen).nombre }}</q-chip>
+                <q-chip dense outline :color="origen(e.origen).color">{{ origen(e.origen).nombre }}</q-chip>
               </q-item-section>
             </q-item>
           </q-list>
