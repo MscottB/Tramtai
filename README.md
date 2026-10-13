@@ -7,7 +7,8 @@
 - **Compatible con lo que ya usas:** SDK de OpenAI y Anthropic (Python, Node, curl…), con respuesta en vivo.
 - **Elige agente y modelo en cada petición:** `claude/sonnet`, `codex`, `gemini/gemini-flash-latest` o un perfil como `perfil/rapido`.
 - **Archivos y respuestas estructuradas:** PDF, Word, Excel, PowerPoint o ZIP como entrada; JSON validado con un esquema como salida.
-- **Una URL y una clave por aplicación,** con modelos permitidos o fijos, agrupadas para activarlas o detenerlas juntas.
+- **Una URL y una clave por aplicación,** con modelos permitidos o fijos e instrucciones propias (por ejemplo, «responde siempre en español»), agrupadas para activarlas o detenerlas juntas.
+- **Tu suscripción o tu clave de API:** Claude y Codex se conectan con un clic a la sesión que ya tienes (uso personal) o con una clave.
 - **Cuatro formas de usarlo** sobre los mismos trabajos: Web UI (en español e inglés, con ayuda integrada), aplicación de escritorio, terminal interactiva y línea de órdenes.
 - **Arranca solo con Windows,** oculto en la bandeja: sin abrir ninguna terminal.
 - **Local y privado:** escucha solo en `127.0.0.1`; los resultados se guardan 24 horas y se pueden borrar cuando quieras, y las claves de API van al Administrador de credenciales de Windows. Las consultas no quedan como chats en el historial de Claude Code ni de Codex.
@@ -19,7 +20,7 @@
 ./bin/tramtai.exe abrir         # 2. inicia el servicio y abre la Web UI
 ```
 
-3. En la Web UI, **Agentes** te dice qué falta para cada agente (instalar su CLI o guardar su clave) y **Conectar apps** te da la URL, la clave y ejemplos listos para copiar.
+3. En la Web UI, **Agentes** te dice qué falta para cada agente (conectarlo con tu suscripción o con una clave) y **Mis APIs** te da la URL, la clave y ejemplos listos para copiar.
 
 En este equipo entras sin escribir ninguna clave: Tramtai reconoce que el navegador es tuyo.
 
@@ -28,7 +29,7 @@ En este equipo entras sin escribir ninguna clave: Tramtai reconoce que el navega
 ```python
 from openai import OpenAI
 
-cliente = OpenAI(base_url="http://127.0.0.1:17373/openai/v1", api_key="<clave de Conectar apps>")
+cliente = OpenAI(base_url="http://127.0.0.1:17373/openai/v1", api_key="<clave de Mis APIs>")
 r = cliente.chat.completions.create(model="claude/sonnet", messages=[{"role": "user", "content": "Hola"}])
 print(r.choices[0].message.content)
 ```

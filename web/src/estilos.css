@@ -187,3 +187,23 @@ input[type='number'] {
 div:first-child > .cabecera-grupo {
   border-top: none;
 }
+
+/* Menú lateral: cada opción con su línea de explicación; la activa, resaltada con el color de la marca. */
+.item-menu {
+  border-radius: 10px;
+  margin-bottom: 2px;
+}
+.item-activo {
+  background: var(--codigo-fondo);
+  color: var(--q-primary);
+}
+body.body--dark .item-activo {
+  color: var(--q-secondary);
+}
+
+/* Cada forma de conectar un agente (suscripción o clave), como una tarjeta dentro de la tarjeta. */
+.opcion {
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 12px;
+}

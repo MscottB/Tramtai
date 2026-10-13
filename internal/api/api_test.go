@@ -361,3 +361,15 @@ func TestMensajesAnthropic(t *testing.T) {
 		ultimo = i
 	}
 }
+
+func TestInstruccionesDelPunto(t *testing.T) {
+	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
+	s := &Servidor{Config: c, Punto: &Punto{Nombre: "es", Instrucciones: "Responde siempre en español."}}
+	sol, err := s.ajustar(nucleo.SolicitudEjecucion{Instrucciones: "Sé breve.", Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}})
+	if err != nil || sol.Instrucciones != "Responde siempre en español.\n\nSé breve." {
+		t.Fatalf("%v %q", err, sol.Instrucciones)
+	}
+	if sol, _ := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}}); sol.Instrucciones != "Responde siempre en español." {
+		t.Fatalf("sin instrucciones propias: %q", sol.Instrucciones)
+	}
+}

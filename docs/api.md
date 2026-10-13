@@ -10,7 +10,7 @@
 
 ## Seguridad
 
-- **Clave (token):** `Authorization: Bearer <clave>` o `x-api-key: <clave>`. La forma más fácil de verla es la página **Conectar apps** de la Web UI; también `tramtai global token` (o `tramtai proyecto token`). Se crea la primera vez en `%APPDATA%\tramtai\datos\token-global`, o sale de la variable `TRAMTAI_TOKEN_GLOBAL`.
+- **Clave (token):** `Authorization: Bearer <clave>` o `x-api-key: <clave>`. La forma más fácil de verla es la página **Mis APIs** de la Web UI; también `tramtai global token` (o `tramtai proyecto token`). Se crea la primera vez en `%APPDATA%\tramtai\datos\token-global`, o sale de la variable `TRAMTAI_TOKEN_GLOBAL`.
 - **Web UI:** en el propio equipo entra sin clave (mismo usuario del sistema); ver [arquitectura](arquitectura.md#interfaces).
 - **Host:** solo `127.0.0.1`, `localhost` y `::1`. Cualquier otro nombre en la cabecera `Host` se rechaza con 403 antes de autenticar (protección frente a DNS rebinding).
 - **Navegadores:** no hay CORS. Una petición con `Origin` de otro sitio se rechaza con 403.
@@ -93,7 +93,7 @@ Probados con los SDK oficiales `openai` y `anthropic` de Python y Node (chat, st
 
 ## Puntos de acceso y administración
 
-Un punto de acceso expone la misma API bajo su propia URL y token: `http://127.0.0.1:17373/p/<nombre>/openai/v1`, o su propio puerto. Solo expone los contratos que tiene habilitados, aplica sus alias, modelos permitidos y modelo forzado (cabecera `Tramtai-Modelo-Forzado`) y solo ve sus trabajos. Con `ejecucion.maximo_trabajos` limita sus ejecuciones simultáneas, siempre dentro del límite de su instancia. La administración (`/api/v1/servicio`) y la API de cada instancia con `Tramtai-Instancia` se describen en [operacion.md](operacion.md).
+Un punto de acceso expone la misma API bajo su propia URL y token: `http://127.0.0.1:17373/p/<nombre>/openai/v1`, o su propio puerto. Solo expone los contratos que tiene habilitados, antepone sus `instrucciones` (si tiene) a las de cada solicitud, aplica sus alias, modelos permitidos y modelo forzado (cabecera `Tramtai-Modelo-Forzado`) y solo ve sus trabajos. Con `ejecucion.maximo_trabajos` limita sus ejecuciones simultáneas, siempre dentro del límite de su instancia. La administración (`/api/v1/servicio`) y la API de cada instancia con `Tramtai-Instancia` se describen en [operacion.md](operacion.md).
 
 `GET /api/v1/trabajos?limite=20` lista los trabajos recientes de la instancia, o los del punto de acceso si se llama desde uno.
 

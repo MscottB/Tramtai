@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 
 	"tramtai/internal/nucleo"
 )
@@ -17,6 +18,7 @@ type Punto struct {
 	Agente            string
 	Modelo            string
 	PerfilModelo      string
+	Instrucciones     string // se anteponen a las de la solicitud
 	ModelosPermitidos []string
 	ForzarModelo      bool
 	Alias             map[string]string
@@ -47,6 +49,9 @@ func (s *Servidor) ajustar(sol nucleo.SolicitudEjecucion) (nucleo.SolicitudEjecu
 	sinModelo := sol.Agente == "" && sol.Modelo == "" && sol.PerfilModelo == ""
 	if (p.ForzarModelo || sinModelo) && (p.Agente != "" || p.Modelo != "" || p.PerfilModelo != "") {
 		sol.Agente, sol.Modelo, sol.PerfilModelo = p.Agente, p.Modelo, p.PerfilModelo
+	}
+	if p.Instrucciones != "" {
+		sol.Instrucciones = strings.TrimSpace(p.Instrucciones + "\n\n" + sol.Instrucciones)
 	}
 	if sol.ModoContexto == "" {
 		sol.ModoContexto = p.ModoContexto

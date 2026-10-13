@@ -235,6 +235,28 @@ func TestEditarPuntosConservaComentarios(t *testing.T) {
 	}
 }
 
+func TestFijarValor(t *testing.T) {
+	ruta := filepath.Join(t.TempDir(), "config.yaml")
+	os.WriteFile(ruta, []byte("# mi configuración\nadaptadores:\n  codex:\n    autenticacion: clave_api # comentario\n"), 0o600)
+	for _, agente := range []string{"claude", "codex"} {
+		if err := FijarValor(ruta, nucleo.OrigenGlobal, "adaptadores."+agente+".autenticacion", "suscripcion"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	capa, err := nucleo.CargarCapa(ruta, nucleo.OrigenGlobal)
+	datos, _ := os.ReadFile(ruta)
+	if err != nil || capa.Valores["adaptadores.claude.autenticacion"] != "suscripcion" || capa.Valores["adaptadores.codex.autenticacion"] != "suscripcion" ||
+		!strings.Contains(string(datos), "# mi configuración") {
+		t.Fatalf("%v %v\n%s", err, capa.Valores, datos)
+	}
+	if err := FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto", "abc"); err == nil {
+		t.Fatal("un valor no válido debe rechazarse")
+	}
+	if datos2, _ := os.ReadFile(ruta); string(datos2) != string(datos) {
+		t.Fatal("un cambio inválido debe dejar el archivo como estaba")
+	}
+}
+
 func TestResultadoExpiradoResponde410(t *testing.T) {
 	s, ts, _ := entorno(t, "retencion:\n  horas_resultado: 0\n", "", adaptadores.Simulado{})
 	global, _ := s.ActivarGlobal()

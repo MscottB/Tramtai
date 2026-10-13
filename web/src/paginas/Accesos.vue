@@ -32,6 +32,7 @@
         </div>
       </q-card-section>
       <q-separator />
+      <div class="q-px-md q-pt-md text-weight-medium">{{ t('conectar.ejemplos') }}</div>
       <q-tabs v-model="lenguaje" dense no-caps align="left" active-color="primary" indicator-color="primary" class="q-px-sm">
         <q-tab v-for="e in ejemplos" :key="e.id" :name="e.id" :label="e.titulo()" />
       </q-tabs>
@@ -74,6 +75,9 @@
                   {{ p.contratos.map(nombreContrato).join(' · ') }}
                   <template v-if="p.agente || p.modelo"> · {{ [nombreAgente(p.agente), p.modelo].filter(Boolean).join(' · ') }}</template>
                 </q-item-label>
+                <q-item-label v-if="p.instrucciones" caption class="row no-wrap items-start">
+                  <q-icon name="o_notes" class="q-mr-xs q-mt-xs" /><span class="recortar-2">{{ p.instrucciones }}</span>
+                </q-item-label>
                 <q-item-label v-if="p.error && p.error !== 'desactivado'" caption class="text-negative">{{ p.error }}</q-item-label>
               </q-item-section>
               <q-item-section side>
@@ -83,6 +87,7 @@
                   </q-toggle>
                   <q-btn v-if="p.url" flat dense round icon="content_copy" :aria-label="t('puntos.copiarUrl')" @click="copiar(p.url)"><q-tooltip>{{ t('puntos.copiarUrl') }}</q-tooltip></q-btn>
                   <q-btn flat dense round icon="o_key" :aria-label="t('puntos.verClave')" @click="mostrarClave(p)"><q-tooltip>{{ t('puntos.verClave') }}</q-tooltip></q-btn>
+                  <q-btn flat dense round icon="o_edit_note" :aria-label="t('puntos.editarInstrucciones')" @click="abrirInstrucciones(p)"><q-tooltip>{{ t('puntos.editarInstrucciones') }}</q-tooltip></q-btn>
                   <q-btn flat dense round icon="o_delete" color="negative" :aria-label="t('comun.eliminar')" @click="eliminar(p.nombre)"><q-tooltip>{{ t('comun.eliminar') }}</q-tooltip></q-btn>
                 </div>
               </q-item-section>
@@ -106,6 +111,8 @@
           <q-card-section class="q-gutter-y-md q-pt-none">
             <q-input v-model="formulario.nombre" outlined dense :label="t('puntos.nombre')" autofocus :hint="t('puntos.nombreHint')"
               :rules="[(v: string) => /^[a-z0-9][a-z0-9_-]{0,39}$/.test(v) || t('puntos.nombreRegla')]" />
+            <q-input v-model="formulario.instrucciones" type="textarea" autogrow outlined dense :label="t('puntos.instrucciones')"
+              :placeholder="t('puntos.instruccionesEjemplo')" :hint="t('puntos.instruccionesHint')" />
             <q-select :model-value="formulario.grupo" :options="sugerencias" outlined dense use-input hide-selected fill-input input-debounce="0"
               :label="t('puntos.grupo')" :hint="t('puntos.grupoHint')" maxlength="40" hide-dropdown-icon
               @input-value="(v: string) => (formulario.grupo = v)" @filter="filtrarGrupos" @update:model-value="(v: string) => (formulario.grupo = v)" />
@@ -147,6 +154,23 @@
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="dialogoInstrucciones">
+      <q-card style="width: 560px; max-width: 95vw">
+        <q-card-section>
+          <div class="titulo-seccion">{{ t('puntos.instruccionesDe', { nombre: editando }) }}</div>
+          <div class="texto-suave text-body2">{{ t('puntos.instruccionesHint') }}</div>
+        </q-card-section>
+        <q-card-section class="q-pt-none">
+          <q-input v-model="textoInstrucciones" type="textarea" autogrow autofocus outlined :placeholder="t('puntos.instruccionesEjemplo')"
+            :input-style="{ minHeight: '120px' }" />
+        </q-card-section>
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn v-close-popup flat no-caps :label="t('comun.cancelar')" />
+          <q-btn unelevated color="primary" no-caps :label="t('comun.guardar')" :loading="guardando" @click="guardarInstrucciones" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="dialogoClave">
       <q-card style="width: 560px; max-width: 95vw">
         <q-card-section>
@@ -168,7 +192,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { api, aplicarModelo, avisarError, copiar, nombreAgente, opcionModelo, type ConfigPunto, type EstadoPunto } from '../api'
+import { api, aplicarModelo, avisar, avisarError, copiar, nombreAgente, opcionModelo, type ConfigPunto, type EstadoPunto } from '../api'
 import { t } from '../i18n'
 
 const $q = useQuasar()
@@ -256,7 +280,7 @@ ANTHROPIC_API_KEY=${k}` },
 const ejemplo = computed(() => ejemplos.find((e) => e.id === lenguaje.value) ?? ejemplos[0])
 
 const opciones = computed(() => ids.value.map(opcionModelo))
-const vacio = () => ({ nombre: '', grupo: '', direccion: 'ruta', puerto: '', contratos: [...contratos], modelo: null as string | null,
+const vacio = () => ({ nombre: '', instrucciones: '', grupo: '', direccion: 'ruta', puerto: '', contratos: [...contratos], modelo: null as string | null,
   permitidos: [] as string[], alias: '', forzar: false })
 const formulario = reactive(vacio())
 
@@ -297,6 +321,7 @@ async function crear() {
   const punto: ConfigPunto = {
     nombre: formulario.nombre.trim(),
     grupo: formulario.grupo.trim() || undefined,
+    instrucciones: formulario.instrucciones.trim() || undefined,
     puerto: formulario.direccion === 'puerto' ? Number(formulario.puerto) : undefined,
     contratos: formulario.contratos,
     agente: elegidoModelo.agente,
@@ -355,6 +380,30 @@ function eliminar(nombre: string) {
         avisarError(e)
       }
     })
+}
+
+const dialogoInstrucciones = ref(false)
+const editando = ref('')
+const textoInstrucciones = ref('')
+
+function abrirInstrucciones(p: EstadoPunto) {
+  editando.value = p.nombre
+  textoInstrucciones.value = p.instrucciones ?? ''
+  dialogoInstrucciones.value = true
+}
+
+async function guardarInstrucciones() {
+  guardando.value = true
+  try {
+    await api.instruccionesPunto(editando.value, textoInstrucciones.value)
+    dialogoInstrucciones.value = false
+    avisar(t('puntos.instruccionesGuardadas'))
+    await cargarPuntos()
+  } catch (e) {
+    avisarError(e)
+  } finally {
+    guardando.value = false
+  }
 }
 
 async function mostrarClave(p: EstadoPunto) {

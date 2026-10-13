@@ -51,7 +51,7 @@
             <span class="text-caption texto-suave gt-xs">{{ t('ejecutar.atajo') }}</span>
             <q-space />
             <q-btn v-if="activo" flat color="negative" icon="o_stop_circle" :label="t('comun.cancelar')" no-caps @click="cancelar" />
-            <q-btn unelevated color="primary" icon="o_send" :label="t('menu.ejecutar')" no-caps :loading="enviando" :disable="activo || !mensaje.trim()" @click="ejecutar" />
+            <q-btn unelevated color="primary" icon="o_send" :label="t('ejecutar.enviar')" no-caps :loading="enviando" :disable="activo || !mensaje.trim()" @click="ejecutar" />
           </q-card-actions>
         </q-card>
       </div>

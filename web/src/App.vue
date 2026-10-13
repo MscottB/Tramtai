@@ -13,8 +13,9 @@
         <q-space />
         <q-btn-dropdown v-if="sesion.local && sesion.instancias?.length" flat no-caps :icon="iconoInstancia(sesion.ambito)"
           :label="sesion.nombre || t('app.elegirInstancia')" :aria-label="t('app.cambiarInstancia')">
-          <q-list style="min-width: 280px">
-            <q-item-label header>{{ t('app.instanciasActivas') }}</q-item-label>
+          <q-list style="min-width: 300px; max-width: 360px">
+            <q-item-label header class="q-pb-xs">{{ t('app.instanciasActivas') }}</q-item-label>
+            <div class="q-px-md q-pb-sm text-caption texto-suave">{{ t('app.espacioAyuda') }}</div>
             <q-item v-for="i in sesion.instancias" :key="i.id" v-close-popup clickable :active="i.id === sesion.instancia" @click="cambiar(i.id)">
               <q-item-section avatar><q-icon :name="iconoInstancia(i.ambito)" /></q-item-section>
               <q-item-section>
@@ -49,19 +50,25 @@
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="menu" show-if-above bordered :width="232" :breakpoint="1023" class="cajon-app">
+    <q-drawer v-model="menu" show-if-above bordered :width="256" :breakpoint="1023" class="cajon-app">
       <div class="column full-height no-wrap">
-        <q-list class="q-pt-md">
-          <q-item v-for="p in principales" :key="p.id" v-ripple clickable :active="pagina === p.id" active-class="text-primary" @click="ir(p.id)">
+        <q-list class="q-pt-md q-px-sm">
+          <q-item v-for="p in principales" :key="p.id" v-ripple clickable :active="pagina === p.id" active-class="item-activo" class="item-menu" @click="ir(p.id)">
             <q-item-section avatar><q-icon :name="p.icono" /></q-item-section>
-            <q-item-section>{{ t(p.titulo) }}</q-item-section>
+            <q-item-section>
+              <q-item-label class="text-weight-medium">{{ t(p.titulo) }}</q-item-label>
+              <q-item-label caption>{{ t(p.detalle) }}</q-item-label>
+            </q-item-section>
           </q-item>
         </q-list>
         <q-space />
-        <q-list class="q-pb-md">
-          <q-item v-ripple clickable :active="pagina === ayuda.id" active-class="text-primary" @click="ir(ayuda.id)">
+        <q-list class="q-pb-md q-px-sm">
+          <q-item v-ripple clickable :active="pagina === ayuda.id" active-class="item-activo" class="item-menu" @click="ir(ayuda.id)">
             <q-item-section avatar><q-icon :name="ayuda.icono" /></q-item-section>
-            <q-item-section>{{ t(ayuda.titulo) }}</q-item-section>
+            <q-item-section>
+              <q-item-label class="text-weight-medium">{{ t(ayuda.titulo) }}</q-item-label>
+              <q-item-label caption>{{ t(ayuda.detalle) }}</q-item-label>
+            </q-item-section>
           </q-item>
         </q-list>
       </div>
@@ -99,15 +106,16 @@ import ConfiguracionPagina from './paginas/Configuracion.vue'
 import AgentesPagina from './paginas/Agentes.vue'
 import AyudaPagina from './paginas/Ayuda.vue'
 
+// Orden del menú según el recorrido: conectar un agente, probarlo, conectar las apps y revisar lo ejecutado.
 const principales = [
-  { id: 'inicio', titulo: 'menu.inicio', icono: 'o_home', componente: markRaw(InicioPagina) },
-  { id: 'ejecutar', titulo: 'menu.ejecutar', icono: 'o_play_circle', componente: markRaw(EjecutarPagina) },
-  { id: 'historial', titulo: 'menu.historial', icono: 'o_history', componente: markRaw(HistorialPagina) },
-  { id: 'conectar', titulo: 'menu.conectar', icono: 'o_link', componente: markRaw(ConectarPagina) },
-  { id: 'agentes', titulo: 'menu.agentes', icono: 'o_smart_toy', componente: markRaw(AgentesPagina) },
-  { id: 'configuracion', titulo: 'menu.configuracion', icono: 'o_tune', componente: markRaw(ConfiguracionPagina) },
+  { id: 'inicio', titulo: 'menu.inicio', detalle: 'menuDetalle.inicio', icono: 'o_home', componente: markRaw(InicioPagina) },
+  { id: 'agentes', titulo: 'menu.agentes', detalle: 'menuDetalle.agentes', icono: 'o_smart_toy', componente: markRaw(AgentesPagina) },
+  { id: 'ejecutar', titulo: 'menu.ejecutar', detalle: 'menuDetalle.ejecutar', icono: 'o_chat', componente: markRaw(EjecutarPagina) },
+  { id: 'conectar', titulo: 'menu.conectar', detalle: 'menuDetalle.conectar', icono: 'o_hub', componente: markRaw(ConectarPagina) },
+  { id: 'historial', titulo: 'menu.historial', detalle: 'menuDetalle.historial', icono: 'o_history', componente: markRaw(HistorialPagina) },
+  { id: 'configuracion', titulo: 'menu.configuracion', detalle: 'menuDetalle.configuracion', icono: 'o_settings', componente: markRaw(ConfiguracionPagina) },
 ] as const
-const ayuda = { id: 'ayuda', titulo: 'menu.ayuda', icono: 'o_help_outline', componente: markRaw(AyudaPagina) } as const
+const ayuda = { id: 'ayuda', titulo: 'menu.ayuda', detalle: 'menuDetalle.ayuda', icono: 'o_help_outline', componente: markRaw(AyudaPagina) } as const
 const paginas = [...principales, ayuda]
 // Direcciones de versiones anteriores de la Web UI.
 const antiguas: Record<string, string> = { panel: 'inicio', trabajos: 'historial', accesos: 'conectar' }

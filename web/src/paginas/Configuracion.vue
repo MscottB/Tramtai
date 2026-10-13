@@ -51,43 +51,42 @@
       </div>
     </div>
 
-    <div class="row items-end q-col-gutter-md q-mt-sm">
-      <div class="col-12 col-sm">
-        <div class="titulo-seccion">{{ t('menu.configuracion') }} · {{ sesion?.nombre || sesion?.instancia }}</div>
-      </div>
-      <div class="col-12 col-sm-5 col-md-4">
-        <q-input v-model="filtro" dense outlined clearable debounce="150" :placeholder="t('config.buscar')">
-          <template #prepend><q-icon name="search" /></template>
-        </q-input>
-      </div>
-    </div>
-
     <q-card>
-      <q-card-section class="row q-col-gutter-md text-body2">
-        <div v-for="o in origenes" :key="o.id" class="col-12 col-sm-6 col-md">
-          <q-chip dense square :color="o.color" text-color="white" class="q-ml-none">{{ o.nombre }}</q-chip>
-          <div class="texto-suave text-caption q-mt-xs romper">{{ o.detalle }}</div>
-        </div>
-      </q-card-section>
+      <q-expansion-item icon="o_code" :label="t('config.valoresTecnicos')" :caption="t('config.valoresTexto')" header-class="q-py-md">
+        <q-separator />
+        <q-card-section class="row items-center q-col-gutter-md">
+          <div class="col-12 col-md">
+            <div class="row q-gutter-xs">
+              <q-chip v-for="o in origenes" :key="o.id" dense square :color="o.color" text-color="white">
+                {{ o.nombre }}<q-tooltip>{{ o.detalle }}</q-tooltip>
+              </q-chip>
+            </div>
+          </div>
+          <div class="col-12 col-md-4">
+            <q-input v-model="filtro" dense outlined clearable debounce="150" :placeholder="t('config.buscar')">
+              <template #prepend><q-icon name="search" /></template>
+            </q-input>
+          </div>
+        </q-card-section>
+        <template v-for="g in grupos" :key="g.titulo">
+          <div class="q-px-md q-pt-md text-weight-medium">{{ g.titulo }}</div>
+          <q-list dense separator>
+            <q-item v-for="e in g.entradas" :key="e.clave" class="q-py-sm">
+              <q-item-section>
+                <q-item-label class="codigo">{{ e.clave }}</q-item-label>
+              </q-item-section>
+              <q-item-section side class="text-right" style="max-width: 55%">
+                <q-item-label class="codigo" style="word-break: break-all">{{ valor(e.valor) }}</q-item-label>
+              </q-item-section>
+              <q-item-section side style="min-width: 90px">
+                <q-chip dense square :color="origen(e.origen).color" text-color="white">{{ origen(e.origen).nombre }}</q-chip>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </template>
+        <div v-if="!cargando && !grupos.length" class="vacio">{{ t('config.sinCoincidencias') }}</div>
+      </q-expansion-item>
     </q-card>
-
-    <q-card v-for="g in grupos" :key="g.titulo">
-      <q-card-section class="titulo-seccion q-pb-sm">{{ g.titulo }}</q-card-section>
-      <q-list dense separator>
-        <q-item v-for="e in g.entradas" :key="e.clave" class="q-py-sm">
-          <q-item-section>
-            <q-item-label class="codigo">{{ e.clave }}</q-item-label>
-          </q-item-section>
-          <q-item-section side class="text-right" style="max-width: 55%">
-            <q-item-label class="codigo" style="word-break: break-all">{{ valor(e.valor) }}</q-item-label>
-          </q-item-section>
-          <q-item-section side style="min-width: 90px">
-            <q-chip dense square :color="origen(e.origen).color" text-color="white">{{ origen(e.origen).nombre }}</q-chip>
-          </q-item-section>
-        </q-item>
-      </q-list>
-    </q-card>
-    <div v-if="!cargando && !grupos.length" class="vacio">{{ t('config.sinCoincidencias') }}</div>
   </div>
 </template>
 

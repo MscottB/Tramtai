@@ -16,13 +16,13 @@ import (
 // Claude ejecuta Claude Code con "claude -p" en streaming (stream-json), aislado de la configuración del usuario.
 type Claude struct {
 	Programa      string // nombre o ruta del ejecutable (comandos_agentes.claude)
-	Autenticacion string // clave_api (predeterminada) o suscripcion
+	Autenticacion *Modo  // clave_api (predeterminada) o suscripcion; se puede cambiar con el servicio en marcha
 }
 
 // Detectar implementa Detectable.
 func (c Claude) Detectar(ctx context.Context) Estado {
-	e := Estado{Agente: "claude", Autenticacion: c.Autenticacion}
-	if c.Autenticacion == AutenticacionSuscripcion {
+	e := Estado{Agente: "claude", Autenticacion: c.Autenticacion.Valor()}
+	if c.Autenticacion.Valor() == AutenticacionSuscripcion {
 		e.Terminos = "términos de consumidor de Anthropic: solo uso personal y local"
 	} else {
 		e.Terminos = "términos comerciales de Anthropic (clave de API de Console)"
@@ -49,7 +49,7 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 	var extra []string
 	args := []string{"-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages",
 		"--setting-sources", "", "--strict-mcp-config", "--tools", "", "--no-session-persistence", "--disable-slash-commands"}
-	switch c.Autenticacion {
+	switch c.Autenticacion.Valor() {
 	case AutenticacionSuscripcion:
 	case AutenticacionClaveAPI, "":
 		if clave = claveEntorno("ANTHROPIC_API_KEY"); clave == "" {
@@ -61,7 +61,7 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 			args = append(args, "--bare") // solo admite la clave de API: nunca recurre a la sesión de suscripción
 		}
 	default:
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "autenticación desconocida: "+c.Autenticacion)
+		return Resultado{}, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "autenticación desconocida: "+c.Autenticacion.Valor())
 	}
 	raiz, espacio, err := espacioTemporal()
 	if err != nil {

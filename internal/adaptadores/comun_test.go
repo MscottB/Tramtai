@@ -67,3 +67,17 @@ func TestModeloEfectivoEligeElDeMasSalida(t *testing.T) {
 		t.Fatalf("modelo efectivo %q", r.modeloEfectivo())
 	}
 }
+
+func TestCambiarAutenticacion(t *testing.T) {
+	c := Claude{Autenticacion: NuevoModo(AutenticacionClaveAPI)}
+	registro := map[string]Adaptador{"claude": c, "gemini": Gemini{}}
+	if err := CambiarAutenticacion(registro, "claude", AutenticacionSuscripcion); err != nil || c.Autenticacion.Valor() != AutenticacionSuscripcion {
+		t.Fatalf("%v %s", err, c.Autenticacion.Valor())
+	}
+	if CambiarAutenticacion(registro, "gemini", AutenticacionSuscripcion) == nil || CambiarAutenticacion(registro, "claude", "otra") == nil {
+		t.Fatal("gemini no admite suscripción y un modo desconocido se rechaza")
+	}
+	if (Claude{}).Autenticacion.Valor() != AutenticacionClaveAPI {
+		t.Fatal("sin modo, clave de API")
+	}
+}

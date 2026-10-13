@@ -15,7 +15,7 @@
 ```
 
 - **Sin clave:** en tu propio equipo entras directamente; Tramtai comprueba que el navegador es de tu mismo usuario de Windows. Desde otro equipo o en macOS, la página explica cómo entrar.
-- **Que arranque solo:** en **Configuración → Arranque con Windows** (o `tramtai servicio autoarranque activar`), Tramtai se inicia oculto en la bandeja al entrar en Windows y la Web UI está siempre disponible, sin abrir ninguna terminal.
+- **Que arranque solo:** en **Ajustes → Arranque con Windows** (o `tramtai servicio autoarranque activar`), Tramtai se inicia oculto en la bandeja al entrar en Windows y la Web UI está siempre disponible, sin abrir ninguna terminal.
 - **Ayuda e idioma:** la página **Ayuda** resume estos pasos y responde las dudas comunes; el botón de idioma de la cabecera cambia entre español e inglés.
 - **Aplicación de escritorio:** `bin/tramtai-escritorio.exe` hace lo mismo en su propia ventana y queda en la bandeja. Cerrarla no detiene el servicio.
 - **En un proyecto:** dentro de su carpeta, `tramtai abrir` abre su propia instancia, con trabajos y configuración separados de la global.
@@ -35,7 +35,7 @@ tramtai claves listar                      # de dónde sale cada una, sin mostra
 
 Reinicia el servicio después de guardar una clave: `tramtai servicio detener` y otra vez `tramtai abrir`.
 
-**Tu suscripción** (Claude Pro/Max o cuenta de ChatGPT), solo para uso **personal y local**. Actívala en la configuración global `%APPDATA%\tramtai\config.yaml`:
+**Tu suscripción** (Claude Pro/Max o cuenta de ChatGPT), solo para uso **personal y local**. Lo más fácil es el botón **Usar mi suscripción** de la página Agentes: lo aplica al momento, sin reiniciar. Equivale a escribir esto en la configuración global `%APPDATA%\tramtai\config.yaml`:
 
 ```yaml
 adaptadores:
@@ -49,8 +49,8 @@ Tramtai nunca lee ni copia las credenciales de los CLIs. Antigravity solo funcio
 
 ## 3. Usarlo
 
-- **Web UI → Ejecutar:** escribe un mensaje, adjunta archivos si quieres y mira la respuesta en vivo.
-- **Web UI → Conectar apps:** la URL, la clave y ejemplos en Python, Node y curl para tus aplicaciones.
+- **Web UI → Probar:** escribe un mensaje, adjunta archivos si quieres y mira la respuesta en vivo.
+- **Web UI → Mis APIs:** la URL, la clave y ejemplos en Python, Node y curl para tus aplicaciones.
 - **Terminal interactiva:** `tramtai` sin argumentos abre un menú con todo lo anterior.
 - **Línea de órdenes:**
 

@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -23,8 +24,10 @@ import (
 
 // ConfigPunto es un punto de acceso tal como se escribe en la configuración global o local (sección 5.4).
 type ConfigPunto struct {
-	Nombre            string            `json:"nombre" yaml:"nombre"`
-	Grupo             string            `json:"grupo,omitempty" yaml:"grupo,omitempty"`
+	Nombre string `json:"nombre" yaml:"nombre"`
+	Grupo  string `json:"grupo,omitempty" yaml:"grupo,omitempty"`
+	// Instrucciones se anteponen a las de cada solicitud: por ejemplo, "Responde siempre en español".
+	Instrucciones     string            `json:"instrucciones,omitempty" yaml:"instrucciones,omitempty"`
 	Puerto            int               `json:"puerto,omitempty" yaml:"puerto,omitempty"`
 	RutaBase          string            `json:"ruta_base,omitempty" yaml:"ruta_base,omitempty"`
 	Instancia         string            `json:"instancia,omitempty" yaml:"instancia,omitempty"`
@@ -120,7 +123,7 @@ func (p ConfigPunto) Normalizar(instancia string, puertoServicio int) (ConfigPun
 
 func (p ConfigPunto) politica() *api.Punto {
 	pol := &api.Punto{Nombre: p.Nombre, Contratos: map[string]bool{}, Agente: p.Agente, Modelo: p.Modelo,
-		PerfilModelo: p.PerfilModelo, ModelosPermitidos: p.ModelosPermitidos, ForzarModelo: p.ForzarModelo, Alias: p.AliasModelos}
+		PerfilModelo: p.PerfilModelo, Instrucciones: strings.TrimSpace(p.Instrucciones), ModelosPermitidos: p.ModelosPermitidos, ForzarModelo: p.ForzarModelo, Alias: p.AliasModelos}
 	for _, c := range p.Contratos {
 		pol.Contratos[c] = true
 	}
@@ -155,16 +158,18 @@ func (p *puntoActivo) cerrar() {
 
 // EstadoPunto resume un punto de acceso.
 type EstadoPunto struct {
-	Nombre    string   `json:"nombre"`
-	Grupo     string   `json:"grupo,omitempty"`
-	Instancia string   `json:"instancia"`
-	URL       string   `json:"url,omitempty"`
-	Contratos []string `json:"contratos"`
-	Agente    string   `json:"agente,omitempty"`
-	Modelo    string   `json:"modelo,omitempty"`
-	Activo    bool     `json:"activo"`
-	Error     string   `json:"error,omitempty"`
-	Origen    string   `json:"origen"`
+	Nombre string `json:"nombre"`
+	Grupo  string `json:"grupo,omitempty"`
+	// Instrucciones del punto, para verlas y editarlas en la Web UI.
+	Instrucciones string   `json:"instrucciones,omitempty"`
+	Instancia     string   `json:"instancia"`
+	URL           string   `json:"url,omitempty"`
+	Contratos     []string `json:"contratos"`
+	Agente        string   `json:"agente,omitempty"`
+	Modelo        string   `json:"modelo,omitempty"`
+	Activo        bool     `json:"activo"`
+	Error         string   `json:"error,omitempty"`
+	Origen        string   `json:"origen"`
 }
 
 // candidato es un punto leído de la configuración con el archivo del que procede.
@@ -317,7 +322,7 @@ func (s *Servicio) abrirPunto(c candidato, token, firma string) *puntoActivo {
 func (s *Servicio) estadoPuntos() []EstadoPunto {
 	lista := []EstadoPunto{}
 	for _, p := range s.puntos {
-		lista = append(lista, EstadoPunto{Nombre: p.cfg.Nombre, Grupo: p.cfg.Grupo, Instancia: p.cfg.Instancia, URL: p.url, Contratos: p.cfg.Contratos,
+		lista = append(lista, EstadoPunto{Nombre: p.cfg.Nombre, Grupo: p.cfg.Grupo, Instrucciones: p.cfg.Instrucciones, Instancia: p.cfg.Instancia, URL: p.url, Contratos: p.cfg.Contratos,
 			Agente: p.cfg.Agente, Modelo: p.cfg.Modelo, Activo: p.err == "", Error: p.err, Origen: p.origen})
 	}
 	sort.Slice(lista, func(i, j int) bool { return lista[i].Nombre < lista[j].Nombre })
@@ -327,6 +332,73 @@ func (s *Servicio) estadoPuntos() []EstadoPunto {
 // EditarPuntos modifica la lista puntos_acceso de un archivo YAML conservando el resto del archivo y sus
 // comentarios. Si el resultado no es una configuración válida, deja el archivo como estaba.
 func EditarPuntos(ruta string, origen nucleo.Origen, editar func([]ConfigPunto) ([]ConfigPunto, error)) error {
+	return editarYAML(ruta, origen, func(raiz *yaml.Node) error {
+		indice := -1
+		var lista []any
+		for i := 0; i+1 < len(raiz.Content); i += 2 {
+			if raiz.Content[i].Value == "puntos_acceso" {
+				indice = i + 1
+				if err := raiz.Content[indice].Decode(&lista); err != nil {
+					return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, ruta+": puntos_acceso debe ser una lista")
+				}
+				break
+			}
+		}
+		puntos, err := LeerPuntos(lista)
+		if err != nil {
+			return err
+		}
+		if puntos, err = editar(puntos); err != nil {
+			return err
+		}
+		var valor yaml.Node
+		if err := valor.Encode(puntos); err != nil {
+			return err
+		}
+		if len(puntos) == 0 {
+			valor = yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
+		}
+		if indice >= 0 {
+			raiz.Content[indice] = &valor
+		} else {
+			raiz.Content = append(raiz.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "puntos_acceso"}, &valor)
+		}
+		return nil
+	})
+}
+
+// FijarValor escribe una clave con puntos (adaptadores.claude.autenticacion) en un archivo YAML, creando los
+// mapas que falten y conservando el resto del archivo y sus comentarios.
+func FijarValor(ruta string, origen nucleo.Origen, clave, valor string) error {
+	return editarYAML(ruta, origen, func(nodo *yaml.Node) error {
+		partes := strings.Split(clave, ".")
+		for i, parte := range partes {
+			if nodo.Kind != yaml.MappingNode {
+				return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, ruta+": "+strings.Join(partes[:i], ".")+" debe ser un mapa")
+			}
+			var hijo *yaml.Node
+			for j := 0; j+1 < len(nodo.Content); j += 2 {
+				if nodo.Content[j].Value == parte {
+					hijo = nodo.Content[j+1]
+					break
+				}
+			}
+			if hijo == nil {
+				hijo = &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+				nodo.Content = append(nodo.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: parte}, hijo)
+			}
+			if i == len(partes)-1 {
+				*hijo = yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: valor}
+			}
+			nodo = hijo
+		}
+		return nil
+	})
+}
+
+// editarYAML aplica editar a la raíz de un archivo YAML y lo guarda; si el resultado no es una configuración
+// válida, deja el archivo como estaba.
+func editarYAML(ruta string, origen nucleo.Origen, editar func(raiz *yaml.Node) error) error {
 	original, err := os.ReadFile(ruta)
 	existia := err == nil
 	if err != nil && !os.IsNotExist(err) {
@@ -345,35 +417,8 @@ func EditarPuntos(ruta string, origen nucleo.Origen, editar func([]ConfigPunto) 
 	if raiz.Kind != yaml.MappingNode {
 		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, ruta+": la raíz debe ser un mapa")
 	}
-	indice := -1
-	var lista []any
-	for i := 0; i+1 < len(raiz.Content); i += 2 {
-		if raiz.Content[i].Value == "puntos_acceso" {
-			indice = i + 1
-			if err := raiz.Content[indice].Decode(&lista); err != nil {
-				return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, ruta+": puntos_acceso debe ser una lista")
-			}
-			break
-		}
-	}
-	puntos, err := LeerPuntos(lista)
-	if err != nil {
+	if err := editar(raiz); err != nil {
 		return err
-	}
-	if puntos, err = editar(puntos); err != nil {
-		return err
-	}
-	var valor yaml.Node
-	if err := valor.Encode(puntos); err != nil {
-		return err
-	}
-	if len(puntos) == 0 {
-		valor = yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
-	}
-	if indice >= 0 {
-		raiz.Content[indice] = &valor
-	} else {
-		raiz.Content = append(raiz.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "puntos_acceso"}, &valor)
 	}
 	salida, err := yaml.Marshal(&doc)
 	if err != nil {

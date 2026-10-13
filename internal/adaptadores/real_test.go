@@ -50,9 +50,9 @@ func probar(t *testing.T, a Adaptador, modelo string) {
 }
 
 func TestClaudeReal(t *testing.T) {
-	probar(t, Claude{Programa: "claude", Autenticacion: autenticacion()}, "haiku")
+	probar(t, Claude{Programa: "claude", Autenticacion: NuevoModo(autenticacion())}, "haiku")
 }
 
 func TestCodexReal(t *testing.T) {
-	probar(t, Codex{Programa: "codex", Autenticacion: autenticacion()}, os.Getenv("TRAMTAI_PRUEBA_MODELO_CODEX"))
+	probar(t, Codex{Programa: "codex", Autenticacion: NuevoModo(autenticacion())}, os.Getenv("TRAMTAI_PRUEBA_MODELO_CODEX"))
 }

@@ -3,6 +3,7 @@ package servicio
 import (
 	"crypto/subtle"
 	"io/fs"
+	"net"
 	"net/http"
 	"path"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"tramtai/internal/adaptadores"
 	"tramtai/internal/api"
 	"tramtai/internal/autoarranque"
 	"tramtai/internal/nucleo"
@@ -175,6 +177,25 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.responderSesion(w, r, ses)
+	case r.URL.Path == "/ui/autenticacion" && r.Method == http.MethodPost:
+		_, ses := s.sesionDe(r)
+		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+			api.NoAutorizado(w, r)
+			return
+		}
+		var peticion struct {
+			Agente string `json:"agente"`
+			Modo   string `json:"modo"`
+		}
+		if err := api.LeerJSON(w, r, &peticion); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		if err := s.cambiarAutenticacion(peticion.Agente, peticion.Modo); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	case r.URL.Path == "/ui/sesion" && r.Method == http.MethodDelete:
 		if id, _ := s.sesionDe(r); id != "" {
 			s.muSesiones.Lock()
@@ -193,7 +214,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/?error=codigo", http.StatusSeeOther)
 			return
 		}
-		s.crearSesion(w, entrada.instancia, false)
+		s.crearSesion(w, entrada.instancia, s.esLocal(r)) // con tramtai abrir en este equipo, la sesión es local
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	default:
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "ruta no encontrada: "+r.Method+" "+r.URL.Path))
@@ -460,8 +481,9 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 		}
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"token": token})
 	case accion == "" && r.Method == http.MethodPatch:
-		var cambio struct {
-			Activo bool `json:"activo"`
+		var cambio struct { // solo cambia lo que viene en el cuerpo
+			Activo        *bool   `json:"activo"`
+			Instrucciones *string `json:"instrucciones"`
 		}
 		if err := api.LeerJSON(w, r, &cambio); err != nil {
 			api.EscribirError(w, r, err)
@@ -469,8 +491,14 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 		}
 		if editar(func(lista []ConfigPunto) ([]ConfigPunto, error) {
 			for i := range lista {
-				if lista[i].Nombre == nombre {
-					lista[i].Activo = &cambio.Activo
+				if lista[i].Nombre != nombre {
+					continue
+				}
+				if cambio.Activo != nil {
+					lista[i].Activo = cambio.Activo
+				}
+				if cambio.Instrucciones != nil {
+					lista[i].Instrucciones = strings.TrimSpace(*cambio.Instrucciones)
 				}
 			}
 			return lista, nil
@@ -491,4 +519,26 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 // csrfValido compara en tiempo constante la cabecera X-CSRF-Token con la de la sesión.
 func csrfValido(r *http.Request, ses *sesion) bool {
 	return subtle.ConstantTimeCompare([]byte(r.Header.Get("X-CSRF-Token")), []byte(ses.csrf)) == 1
+}
+
+// cambiarAutenticacion pasa claude o codex a suscripción o clave de API: lo guarda en la configuración global y
+// lo aplica al servicio en marcha, sin reiniciarlo.
+func (s *Servicio) cambiarAutenticacion(agente, modo string) error {
+	if agente != "claude" && agente != "codex" {
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "solo claude y codex admiten la suscripción")
+	}
+	if modo != adaptadores.AutenticacionClaveAPI && modo != adaptadores.AutenticacionSuscripcion {
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "modo de autenticación desconocido: "+modo)
+	}
+	if ip := net.ParseIP(s.opc.Host); modo == adaptadores.AutenticacionSuscripcion && s.opc.Host != "localhost" && (ip == nil || !ip.IsLoopback()) {
+		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "la suscripción no se permite con el servicio abierto a otros equipos (sección 2.4)")
+	}
+	ruta, err := nucleo.RutaGlobal()
+	if err != nil {
+		return err
+	}
+	if err := FijarValor(ruta, nucleo.OrigenGlobal, "adaptadores."+agente+".autenticacion", modo); err != nil {
+		return err
+	}
+	return adaptadores.CambiarAutenticacion(s.opc.Registro, agente, modo)
 }

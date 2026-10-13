@@ -16,7 +16,7 @@ import (
 type opcionesPunto struct {
 	puerto                            int
 	instancia, agente, modelo, perfil string
-	grupo                             string
+	grupo, instrucciones              string
 	contratos, permitidos, alias      []string
 	forzar                            bool
 	modoContexto, formato             string
@@ -26,6 +26,7 @@ type opcionesPunto struct {
 func (o *opcionesPunto) registrar(cmd *cobra.Command) {
 	f := cmd.Flags()
 	f.IntVar(&o.puerto, "puerto", 0, "puerto propio (0 = ruta /p/<nombre> en el puerto del servicio)")
+	f.StringVar(&o.instrucciones, "instrucciones", "", "texto que se antepone a cada solicitud, por ejemplo \"Responde siempre en español\"")
 	f.StringVar(&o.grupo, "grupo", "", "grupo para ordenar los puntos y activarlos o desactivarlos juntos")
 	f.StringVar(&o.instancia, "instancia", "", "instancia a la que pertenece (global, o la del proyecto con --local)")
 	f.StringVar(&o.agente, "agente", "", "agente predeterminado del punto")
@@ -51,6 +52,9 @@ func (o *opcionesPunto) aplicar(cmd *cobra.Command, p *servicio.ConfigPunto) err
 	}
 	if cambio("grupo") {
 		p.Grupo = o.grupo
+	}
+	if cambio("instrucciones") {
+		p.Instrucciones = strings.TrimSpace(o.instrucciones)
 	}
 	if cambio("agente") {
 		p.Agente = o.agente

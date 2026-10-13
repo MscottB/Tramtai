@@ -33,10 +33,10 @@ tramtai-escritorio                 # aplicación de escritorio (o -proyecto <rut
 La Web UI está en español y en inglés (el botón de idioma de la cabecera) y tiene estas páginas:
 
 - **Inicio:** resumen de trabajos, primeros pasos pendientes y estado de los agentes.
-- **Ejecutar:** modelo del catálogo, archivos, mensaje y JSON Schema opcional; muestra la respuesta en vivo y permite cancelar.
+- **Probar:** modelo del catálogo, archivos, mensaje y JSON Schema opcional; muestra la respuesta en vivo y permite cancelar.
 - **Historial:** detalle, seguir en vivo, cancelar, reintentar, eliminar y **vaciar el historial** (los trabajos terminados y sus archivos).
-- **Conectar apps:** URL, clave y ejemplos; puntos de acceso con grupos que se activan o desactivan juntos.
-- **Agentes**, **Configuración** (arranque con Windows, **borrar datos** y valores efectivos) y **Ayuda** (cómo empezar y preguntas frecuentes).
+- **Mis APIs:** URL, clave y ejemplos; puntos de acceso con grupos que se activan o desactivan juntos.
+- **Agentes**, **Ajustes** (arranque con Windows, **borrar datos** y valores efectivos) y **Ayuda** (cómo empezar y preguntas frecuentes).
 
 También se puede abrir `http://127.0.0.1:17373` directamente: en este equipo entra sin clave.
 
@@ -44,13 +44,13 @@ La aplicación de escritorio inicia el servicio si no está en marcha y muestra 
 
 ### Arranque con Windows
 
-Activado en **Configuración** o con `tramtai servicio autoarranque activar`, Tramtai se registra en `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (solo para tu usuario). Al iniciar sesión arranca `tramtai-escritorio.exe --oculto`: inicia el servicio y queda en la bandeja sin abrir ninguna ventana ni terminal. Se quita con `tramtai servicio autoarranque desactivar`. Necesita `tramtai-escritorio.exe` junto a `tramtai.exe`; en Linux y macOS aún no está disponible.
+Activado en **Ajustes** o con `tramtai servicio autoarranque activar`, Tramtai se registra en `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (solo para tu usuario). Al iniciar sesión arranca `tramtai-escritorio.exe --oculto`: inicia el servicio y queda en la bandeja sin abrir ninguna ventana ni terminal. Se quita con `tramtai servicio autoarranque desactivar`. Necesita `tramtai-escritorio.exe` junto a `tramtai.exe`; en Linux y macOS aún no está disponible.
 
 ### Borrar datos
 
 - **Historial:** «Vaciar historial» en la Web UI, o `DELETE /api/v1/trabajos`, borra los trabajos terminados de la instancia con sus eventos y las cargas que ya no usa ninguno. Lo que está en curso se conserva.
-- **Puntos de acceso:** uno a uno en Conectar apps o con `tramtai acceso eliminar`.
-- **Configuración → Borrar datos** hace ambas cosas para la instancia actual. La configuración y las claves de API guardadas no se tocan.
+- **Puntos de acceso:** uno a uno en Mis APIs o con `tramtai acceso eliminar`.
+- **Ajustes → Borrar datos** hace ambas cosas para la instancia actual. La configuración y las claves de API guardadas no se tocan.
 
 ## Comandos equivalentes
 
@@ -101,6 +101,7 @@ tramtai acceso crear app_contable --puerto 17401 --contratos openai `
   --agente claude --modelo sonnet --permitidos claude/sonnet,claude/haiku --alias gpt-4o-mini=claude/haiku
 tramtai acceso crear resumenes --local --forzar --perfil rapido   # ruta /p/resumenes en la instancia del proyecto
 tramtai acceso crear facturas --grupo cliente_x --agente claude   # grupo libre
+tramtai acceso crear soporte --instrucciones "Responde siempre en español."
 tramtai acceso listar
 tramtai acceso editar app_contable --permitidos claude --grupo contabilidad
 tramtai acceso desactivar app_contable resumenes   # uno o varios
@@ -108,7 +109,8 @@ tramtai acceso activar --grupo cliente_x           # todos los de un grupo
 tramtai acceso token app_contable [--rotar]
 ```
 
-- **Grupos:** `--grupo` es una etiqueta libre (hasta 40 caracteres) para ordenar los puntos y activarlos o desactivarlos juntos, desde la CLI o desde Conectar apps. La separación por proyecto ya la dan las instancias: un punto creado con `--local` pertenece a la del proyecto.
+- **Instrucciones:** `--instrucciones` (o el campo del mismo nombre en Mis APIs, editable después) se antepone a las instrucciones de cada petición que llega por ese punto, venga de la aplicación que venga. Sirve, por ejemplo, para que una app que no lo permite configurar responda siempre en español.
+- **Grupos:** `--grupo` es una etiqueta libre (hasta 40 caracteres) para ordenar los puntos y activarlos o desactivarlos juntos, desde la CLI o desde Mis APIs. La separación por proyecto ya la dan las instancias: un punto creado con `--local` pertenece a la del proyecto.
 
 - **Dirección:** sin `--puerto`, el punto queda en `http://127.0.0.1:17373/p/<nombre>`. Con `--puerto`, escucha en su propio puerto; si ese puerto está ocupado, el punto no se activa (no se elige otro) y el estado lo indica.
 - **Dónde se guarda:** en la configuración global, o con `--local` en `.tramtai/local.yaml` del proyecto (pertenece a su instancia). Se conservan los comentarios del archivo, y un cambio inválido se rechaza sin tocarlo.

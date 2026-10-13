@@ -74,6 +74,7 @@ export interface EstadoInstancia {
 export interface EstadoPunto {
   nombre: string
   grupo?: string
+  instrucciones?: string
   instancia: string
   url?: string
   contratos: string[]
@@ -86,6 +87,7 @@ export interface EstadoPunto {
 export interface ConfigPunto {
   nombre: string
   grupo?: string
+  instrucciones?: string
   puerto?: number
   contratos?: string[]
   agente?: string
@@ -155,6 +157,7 @@ export const api = {
   cambiarInstancia: (instancia: string) => pedir<Sesion>('POST', '/ui/sesion', { instancia }).then(recordar),
   activarGlobal: () => pedir<Sesion>('POST', '/ui/instancias', { ambito: 'global' }).then(recordar),
   autoarranque: (activo: boolean) => pedir<Sesion>('POST', '/ui/autoarranque', { activo }).then(recordar),
+  cambiarAutenticacion: (agente: string, modo: 'suscripcion' | 'clave_api') => pedir<void>('POST', '/ui/autenticacion', { agente, modo }),
   salir: () => pedir<void>('DELETE', '/ui/sesion').then(() => (sesion.value = null)),
   instancia: () => pedir<EstadoInstancia>('GET', '/api/v1/instancia'),
   claveInstancia: () => pedir<{ token: string; archivo: string }>('GET', '/api/v1/instancia/token'),
@@ -177,6 +180,7 @@ export const api = {
   puntos: () => pedir<{ puntos_acceso: EstadoPunto[] }>('GET', '/api/v1/puntos').then((r) => r.puntos_acceso),
   crearPunto: (p: ConfigPunto) => pedir<{ punto_acceso?: EstadoPunto; token: string }>('POST', '/api/v1/puntos', p),
   activarPunto: (nombre: string, activo: boolean) => pedir<unknown>('PATCH', `/api/v1/puntos/${nombre}`, { activo }),
+  instruccionesPunto: (nombre: string, instrucciones: string) => pedir<unknown>('PATCH', `/api/v1/puntos/${nombre}`, { instrucciones }),
   eliminarPunto: (nombre: string) => pedir<void>('DELETE', `/api/v1/puntos/${nombre}`),
   tokenPunto: (nombre: string) => pedir<{ token: string }>('GET', `/api/v1/puntos/${nombre}/token`).then((r) => r.token),
 }

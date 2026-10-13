@@ -177,6 +177,23 @@ func TestEntradaLocalSinToken(t *testing.T) {
 	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/instancia/token", pry.token, ""); r.StatusCode != 401 {
 		t.Fatalf("el token de aplicaciones no lee claves: %d", r.StatusCode)
 	}
+	_, cuerpo = n.pedir("GET", "/ui/sesion", "") // cambiar de instancia creó otra sesión con otro CSRF
+	n.csrf = cuerpo[strings.Index(cuerpo, `"csrf":"`)+8:]
+	n.csrf = n.csrf[:strings.Index(n.csrf, `"`)]
+	if r, _ := n.pedir("POST", "/ui/autenticacion", `{"agente":"claude","modo":"suscripcion"}`); r.StatusCode != 401 {
+		t.Fatalf("cambiar la autenticación exige el CSRF: %d", r.StatusCode)
+	}
+	if r, _ := n.pedir("POST", "/ui/autenticacion", `{"agente":"gemini","modo":"suscripcion"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 {
+		t.Fatalf("gemini no admite suscripción: %d", r.StatusCode)
+	}
+
+	// Con el código de un solo uso de tramtai abrir, desde este mismo equipo, la sesión también es local.
+	codigo, _ := s.CodigoSesion("global")
+	otro := nuevoNavegador(t, ts.URL)
+	otro.pedir("GET", "/ui/entrar?codigo="+url.QueryEscape(codigo), "")
+	if _, cuerpo := otro.pedir("GET", "/ui/sesion", ""); !strings.Contains(cuerpo, `"local":true`) {
+		t.Fatalf("la entrada con código desde este equipo debe ser local: %s", cuerpo)
+	}
 }
 
 func TestDireccionesDeProc(t *testing.T) {

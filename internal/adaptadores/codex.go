@@ -15,13 +15,13 @@ import (
 // y no informa el modelo efectivo: el trabajo queda como no verificable salvo con un identificador explícito.
 type Codex struct {
 	Programa      string // comandos_agentes.codex
-	Autenticacion string // clave_api (predeterminada) o suscripcion (cuenta ChatGPT)
+	Autenticacion *Modo  // clave_api (predeterminada) o suscripcion (cuenta ChatGPT); cambiable en marcha
 }
 
 // Detectar implementa Detectable.
 func (c Codex) Detectar(ctx context.Context) Estado {
-	e := Estado{Agente: "codex", Autenticacion: c.Autenticacion}
-	if c.Autenticacion == AutenticacionSuscripcion {
+	e := Estado{Agente: "codex", Autenticacion: c.Autenticacion.Valor()}
+	if c.Autenticacion.Valor() == AutenticacionSuscripcion {
 		e.Terminos = "Terms of Use de OpenAI con cuenta ChatGPT: solo uso personal y local; aislamiento parcial"
 		if inicio, err := os.UserHomeDir(); err == nil {
 			if _, err := os.Stat(filepath.Join(inicio, ".codex", "AGENTS.md")); err == nil {
@@ -57,7 +57,7 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 
 	var clave string
 	var extra []string
-	switch c.Autenticacion {
+	switch c.Autenticacion.Valor() {
 	case AutenticacionSuscripcion:
 	case AutenticacionClaveAPI, "":
 		if clave = claveEntorno("CODEX_API_KEY", "OPENAI_API_KEY"); clave == "" {
@@ -71,7 +71,7 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 		}
 		extra = append(extra, "CODEX_HOME="+home, "CODEX_API_KEY="+clave)
 	default:
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "autenticación desconocida: "+c.Autenticacion)
+		return Resultado{}, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "autenticación desconocida: "+c.Autenticacion.Valor())
 	}
 
 	trabajo := directorioTrabajo(s, espacio)
