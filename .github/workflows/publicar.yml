@@ -127,3 +127,60 @@ jobs:
         run: |
           git fetch --force origin "refs/tags/${env:GITHUB_REF_NAME}:refs/tags/${env:GITHUB_REF_NAME}"
           gh release create $env:GITHUB_REF_NAME (Get-ChildItem dist -File).FullName --title "Tramtai $env:GITHUB_REF_NAME" --notes-from-tag --verify-tag
+
+  # Homebrew (el repositorio hace de tap) y winget: se generan con las sumas del release, se prueban con Homebrew de
+  # verdad y se suben a main. Esos commits no cambian la versión de la app (version.ps1 los ignora).
+  paquetes:
+    needs: windows
+    runs-on: macos-latest
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_ENV_HINTS: 1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Generar Homebrew y winget
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download $env:GITHUB_REF_NAME -p SHA256SUMS.txt -O "$env:RUNNER_TEMP/SHA256SUMS.txt"
+          ./scripts/paquetes.ps1 -Etiqueta $env:GITHUB_REF_NAME -Sumas "$env:RUNNER_TEMP/SHA256SUMS.txt"
+      - name: Confirmar
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks Formula paquetes
+          git commit -m "chore(paquetes): Homebrew y winget para $GITHUB_REF_NAME"
+      - name: Probar la app y la CLI con Homebrew
+        run: |
+          brew tap mscottb/tramtai "$PWD"
+          brew install --cask mscottb/tramtai/tramtai
+          test -d /Applications/Tramtai.app
+          tramtai version
+          if xattr -p com.apple.quarantine /Applications/Tramtai.app 2>/dev/null; then echo "la app sigue en cuarentena"; exit 1; fi
+          brew uninstall --cask tramtai
+          brew install mscottb/tramtai/tramtai
+          brew test mscottb/tramtai/tramtai
+      - name: Subir a main
+        run: git push origin HEAD:main
+
+  # winget: si existe el secreto WINGET_TOKEN (un token de GitHub con permiso public_repo), envía la versión a
+  # microsoft/winget-pkgs con wingetcreate. Sin el secreto no hace nada.
+  winget:
+    needs: paquetes
+    runs-on: windows-latest
+    env:
+      WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.WINGET_TOKEN != ''
+        with:
+          ref: main
+      - name: Enviar a winget-pkgs
+        if: env.WINGET_TOKEN != ''
+        run: |
+          $version = $env:GITHUB_REF_NAME -replace '^v', '' -replace '\+.*$', ''
+          Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+          ./wingetcreate.exe submit --token $env:WINGET_TOKEN "paquetes/winget/$version"

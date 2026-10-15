@@ -42,6 +42,16 @@ Cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
 
 **En macOS** descarga `Tramtai-…-macos.dmg` (Intel y Apple Silicon), ábrelo y arrastra Tramtai a Aplicaciones. La app no está firmada por un desarrollador de Apple, así que la primera vez macOS la bloquea: ábrela, cierra el aviso y ve a *Ajustes del Sistema → Privacidad y seguridad → Abrir igualmente* (o, en la Terminal, `xattr -dr com.apple.quarantine /Applications/Tramtai.app`). Después se abre con normalidad.
 
+**Con Homebrew (macOS y Linux):** el propio repositorio hace de *tap*. La app de macOS se instala sin el bloqueo de Gatekeeper, y la CLI sola sirve también en Linux:
+
+```bash
+brew tap mscottb/tramtai https://github.com/MscottB/Tramtai
+brew install --cask tramtai   # la app de escritorio (macOS)
+brew install tramtai          # o solo la CLI y el servicio (macOS y Linux)
+```
+
+Para actualizar: `brew upgrade`.
+
 **Sin app de escritorio (un servidor Linux, o solo la CLI en macOS)** se instala el servicio con la CLI y la Web UI:
 
 ```bash
@@ -132,7 +142,7 @@ Claude, Codex, Gemini y Antigravity son marcas de sus respectivos dueños. Tramt
 
 **Tramtai turns Claude Code, Codex, Gemini and Antigravity into an OpenAI- and Anthropic-compatible API that runs on your own computer.** Any app or SDK can use them by changing just the base URL.
 
-- **Install:** download the Windows installer (or the portable `.zip`) from [Releases](https://github.com/MscottB/Tramtai/releases/latest); it installs for your user only and needs no administrator rights. On Linux, install the desktop app from the `.deb` or `.rpm` package. On macOS, open the `.dmg` and drag Tramtai to Applications; it is not signed by an Apple developer, so the first time allow it in *System Settings → Privacy & Security → Open Anyway*. CLI only: `curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instalar.sh | sh`.
+- **Install:** download the Windows installer (or the portable `.zip`) from [Releases](https://github.com/MscottB/Tramtai/releases/latest); it installs for your user only and needs no administrator rights. On Linux, install the desktop app from the `.deb` or `.rpm` package. On macOS, open the `.dmg` and drag Tramtai to Applications; it is not signed by an Apple developer, so the first time allow it in *System Settings → Privacy & Security → Open Anyway*. With Homebrew: `brew tap mscottb/tramtai https://github.com/MscottB/Tramtai` and then `brew install --cask tramtai` (app, no Gatekeeper prompt) or `brew install tramtai` (CLI only, macOS and Linux). CLI only: `curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instalar.sh | sh`.
 - **Updates:** every hour Tramtai checks for a new version, so the notice shows up without restarting. The installed Windows app updates with one click (*Update now*), showing what's new inside the app; the other copies show the notice with the download link. `tramtai actualizar` does the same from the terminal.
 - **Connect an agent:** use your Claude or ChatGPT subscription (personal use) or an API key; the agent's CLI must be installed.
 - **Point your app** at `http://127.0.0.1:17373/openai/v1` (or `/anthropic`) with the key from *My APIs*, and pick agent and model in the `model` field, e.g. `claude/sonnet`.
