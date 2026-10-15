@@ -106,7 +106,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import Linea from '../componentes/Linea.vue'
 import MapaRed from '../componentes/MapaRed.vue'
-import { api, avisar, copiar, estadoInfo, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, haceCuanto, mensajeError, sesion, terminales, textoDe, type Adaptador, type EstadoInstancia, type EstadoPunto, type Trabajo } from '../api'
+import { api, avisar, copiar, estadoInfo, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, haceCuanto, mensajeError, sesion, terminales, textoDe, type Adaptador, type EstadoInstancia, type EstadoPunto, type Trabajo, sistema } from '../api'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()
@@ -148,7 +148,7 @@ const pasos = computed(() => {
     { titulo: t('inicio.paso3'), detalle: t('inicio.paso3Detalle'), hecho: puntos.value.length > 0, pagina: 'conectar' },
   ]
   if (sesion.value?.autoarranque !== undefined) {
-    lista.push({ titulo: t('inicio.paso4'), detalle: t('inicio.paso4Detalle'), hecho: sesion.value.autoarranque, pagina: 'configuracion' })
+    lista.push({ titulo: t('inicio.paso4', { sistema }), detalle: t('inicio.paso4Detalle'), hecho: sesion.value.autoarranque, pagina: 'configuracion' })
   }
   return lista
 })

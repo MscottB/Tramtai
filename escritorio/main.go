@@ -267,9 +267,13 @@ func main() {
 			})
 			menu.Add(idioma.T("Detener el servicio…")).SetBitmap(icono("detener")).OnClick(func(*application.Context) { avisar("detener") })
 		}
-		// El arranque con Windows también se cambia en Ajustes; el repaso mantiene la marca al día.
-		if runtime.GOOS == "windows" {
-			menu.AddCheckbox(idioma.T("Iniciar con Windows"), conWindows).OnClick(func(c *application.Context) {
+		// El arranque con el sistema también se cambia en Ajustes; el repaso mantiene la marca al día.
+		if autoarranque.Disponible {
+			etiqueta := idioma.T("Iniciar con Windows")
+			if runtime.GOOS != "windows" {
+				etiqueta = idioma.T("Iniciar al entrar en la sesión")
+			}
+			menu.AddCheckbox(etiqueta, conWindows).OnClick(func(c *application.Context) {
 				if propio, err := os.Executable(); err == nil {
 					if c.IsChecked() {
 						_ = autoarranque.Activar(propio)

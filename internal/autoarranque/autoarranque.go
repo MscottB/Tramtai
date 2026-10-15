@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"tramtai/internal/idioma"
 )
@@ -16,9 +17,13 @@ func Escritorio() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	ruta := filepath.Join(filepath.Dir(propio), "tramtai-escritorio.exe")
+	nombre := "tramtai-escritorio"
+	if runtime.GOOS == "windows" {
+		nombre += ".exe"
+	}
+	ruta := filepath.Join(filepath.Dir(propio), nombre)
 	if _, err := os.Stat(ruta); err != nil {
-		return "", errors.New(idioma.Tf("no se encontró tramtai-escritorio.exe junto a %s", filepath.Base(propio)))
+		return "", errors.New(idioma.Tf("no se encontró %s junto a %s", nombre, filepath.Base(propio)))
 	}
 	return ruta, nil
 }

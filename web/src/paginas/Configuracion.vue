@@ -79,10 +79,10 @@
         <q-card class="full-height">
           <q-card-section class="row items-start no-wrap">
             <div class="col">
-              <div class="titulo-seccion">{{ t('arranque.titulo') }}</div>
-              <div class="texto-suave text-body2 q-mt-xs">{{ t('arranque.texto') }}</div>
+              <div class="titulo-seccion">{{ t('arranque.titulo', { sistema }) }}</div>
+              <div class="texto-suave text-body2 q-mt-xs">{{ t('arranque.texto', { sistema }) }}</div>
             </div>
-            <q-toggle :model-value="sesion.autoarranque" :disable="cambiandoArranque" :aria-label="t('arranque.titulo')" @update:model-value="cambiarArranque" />
+            <q-toggle :model-value="sesion.autoarranque" :disable="cambiandoArranque" :aria-label="t('arranque.titulo', { sistema })" @update:model-value="cambiarArranque" />
           </q-card-section>
         </q-card>
       </div>
@@ -160,7 +160,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { actualizacion, api, avisar, avisarError, opcionModelo, reiniciarYSeguir, sesion, terminales, type EntradaConfiguracion, type EstadoPunto, type Modelo } from '../api'
+import { actualizacion, api, avisar, avisarError, opcionModelo, reiniciarYSeguir, sesion, sistema, terminales, type EntradaConfiguracion, type EstadoPunto, type Modelo } from '../api'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 
@@ -271,7 +271,7 @@ async function cambiarArranque(activo: boolean) {
   cambiandoArranque.value = true
   try {
     await api.autoarranque(activo)
-    avisar(activo ? t('arranque.activado') : t('arranque.desactivado'))
+    avisar(activo ? t('arranque.activado', { sistema }) : t('arranque.desactivado'))
   } catch (e) {
     avisarError(e)
   } finally {

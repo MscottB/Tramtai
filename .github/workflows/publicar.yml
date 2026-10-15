@@ -43,8 +43,49 @@ jobs:
           path: dist/
           retention-days: 1
 
+  linux-app:
+    name: App de escritorio (Linux ${{ matrix.arq }})
+    strategy:
+      matrix:
+        include:
+          - { runner: ubuntu-24.04, arq: amd64 }
+          - { runner: ubuntu-24.04-arm, arq: arm64 }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: GTK 3 y WebKitGTK 4.1
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-3-dev libwebkit2gtk-4.1-dev
+      - name: Compilar y empaquetar (.deb y .rpm)
+        run: |
+          version=$GITHUB_REF_NAME
+          mkdir -p paquete dist
+          CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X tramtai/internal/version.Version=$version" -o paquete/tramtai ./cmd/tramtai
+          (cd escritorio && go build -trimpath -ldflags "-s -w -X tramtai/internal/version.Version=$version" -o ../paquete/tramtai-escritorio .)
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.0
+          export VERSION=${version#v} ARCH=${{ matrix.arq }}
+          "$(go env GOPATH)/bin/nfpm" package -f scripts/linux/nfpm.yaml -p deb -t "dist/Tramtai-$version-linux-${{ matrix.arq }}.deb"
+          "$(go env GOPATH)/bin/nfpm" package -f scripts/linux/nfpm.yaml -p rpm -t "dist/Tramtai-$version-linux-${{ matrix.arq }}.rpm"
+          ls -l dist
+      - name: Comprobar el paquete (instalar y arrancar sin pantalla)
+        run: |
+          sudo apt-get install -y ./dist/*.deb xvfb
+          tramtai version
+          (xvfb-run -a timeout 30 tramtai-escritorio --oculto || true) &
+          for i in $(seq 1 20); do sleep 1; tramtai servicio estado 2>/dev/null | grep -q activo && break; done
+          tramtai servicio estado
+          tramtai servicio estado | grep -q activo
+          tramtai servicio detener --si
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-app-${{ matrix.arq }}
+          path: dist/
+          retention-days: 1
+
   windows:
-    needs: unix
+    needs: [unix, linux-app]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,8 +111,8 @@ jobs:
           ./scripts/compilar.ps1 -Instalador
       - uses: actions/download-artifact@v4
         with:
-          name: unix
           path: dist
+          merge-multiple: true
       - name: Sumas SHA-256 de todos los archivos
         run: |
           Get-ChildItem dist -File -Exclude SHA256SUMS.txt | Sort-Object Name | ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)" } |

@@ -38,6 +38,23 @@ jobs:
           go vet ./...
           go test ./...
 
+  escritorio-linux:
+    name: App de escritorio (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: GTK 3 y WebKitGTK 4.1
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-3-dev libwebkit2gtk-4.1-dev
+      - name: Compilar y probar
+        working-directory: escritorio
+        run: |
+          go vet ./...
+          go build ./...
+          go test ./...
+
   web:
     name: Web UI
     runs-on: ubuntu-latest

@@ -30,6 +30,7 @@ func init() {
 		"Iniciar el servicio":               "Start the service",
 		"Reiniciar el servicio":             "Restart the service",
 		"Detener el servicio…":              "Stop the service…",
+		"Iniciar al entrar en la sesión":    "Start when I sign in",
 		"Iniciar con Windows":               "Start with Windows",
 		"Salir":                             "Quit",
 		"Salir y detener el servicio":       "Quit and stop the service",

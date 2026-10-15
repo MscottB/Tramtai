@@ -179,6 +179,9 @@ async function pedir<T>(metodo: string, ruta: string, cuerpo?: unknown, reintent
 // sesion es la sesión actual, compartida por todas las páginas.
 export const sesion = ref<Sesion | null>(null)
 
+// sistema es el nombre del sistema operativo para los textos de arranque automático («Arranque con Windows»).
+export const sistema = /Windows/i.test(navigator.userAgent) ? 'Windows' : /Mac/i.test(navigator.userAgent) ? 'macOS' : 'Linux'
+
 // EstadoActualizacion es el aviso de versión nueva, compartido por la cabecera y Ajustes. instalable indica que
 // esta copia se puede actualizar desde aquí (instalada con el instalador de Windows).
 export interface EstadoActualizacion {

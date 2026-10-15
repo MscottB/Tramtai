@@ -287,9 +287,11 @@ Object.assign(window, {
     }),
 })
 
-// En la app de escritorio (WebView2) la bandeja abre aquí sus avisos, con el estilo de la app, y la respuesta le
-// vuelve con postMessage.
-const escritorio = (window as { chrome?: { webview?: { postMessage(mensaje: string): void } } }).chrome?.webview
+// En la app de escritorio la bandeja abre aquí sus avisos, con el estilo de la app, y la respuesta le vuelve con
+// postMessage: WebView2 en Windows, WebKit (WebKitGTK o WKWebView) en Linux y macOS.
+type Puente = { postMessage(mensaje: string): void }
+const ventanaApp = window as { chrome?: { webview?: Puente }; webkit?: { messageHandlers?: { external?: Puente } } }
+const escritorio = ventanaApp.chrome?.webview ?? ventanaApp.webkit?.messageHandlers?.external
 function salirEscritorio() {
   $q.dialog({ title: t('escritorio.salirTitulo'), message: t('escritorio.salirTexto'),
     options: { type: 'checkbox', model: [], items: [{ label: t('escritorio.noMostrar'), value: 'no' }] },
@@ -368,7 +370,7 @@ async function cambiar(instancia: string) {
   }
 }
 
-// Abrir un proyecto: la carpeta se escribe o, en la app de escritorio, se elige con el selector de Windows.
+// Abrir un proyecto: la carpeta se escribe o, en la app de escritorio, se elige con el selector del sistema.
 const dialogoProyecto = ref(false)
 const rutaProyecto = ref('')
 const abriendoProyecto = ref(false)

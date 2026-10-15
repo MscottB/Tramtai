@@ -1,0 +1,40 @@
+# Paquetes .deb y .rpm de Tramtai para Linux (servicio, CLI y app de escritorio). Lo usa .github/workflows/publicar.yml:
+#   VERSION=0.28.0+16102026 ARCH=amd64 nfpm package -f scripts/linux/nfpm.yaml -p deb -t dist/...
+# Los ejecutables se compilan antes en paquete/ (la app de escritorio necesita CGO con GTK 3 y WebKitGTK 4.1).
+name: tramtai
+arch: ${ARCH}
+platform: linux
+version: ${VERSION}
+section: utils
+priority: optional
+maintainer: Michael Scott B. <13172368+MscottB@users.noreply.github.com>
+description: |
+  Tus agentes de IA como una API local / Your AI agents as a local API.
+  Tramtai convierte Claude Code, Codex, Gemini y Antigravity en una API compatible con OpenAI y Anthropic.
+vendor: Tramtai
+homepage: https://mscottb.github.io/Tramtai/
+license: PolyForm-Noncommercial-1.0.0
+contents:
+  - src: ./paquete/tramtai
+    dst: /usr/bin/tramtai
+    file_info:
+      mode: 0755
+  - src: ./paquete/tramtai-escritorio
+    dst: /usr/bin/tramtai-escritorio
+    file_info:
+      mode: 0755
+  - src: ./scripts/linux/tramtai.desktop
+    dst: /usr/share/applications/tramtai.desktop
+  - src: ./escritorio/icono/tramtai.png
+    dst: /usr/share/pixmaps/tramtai.png
+  - src: ./LICENSE.md
+    dst: /usr/share/doc/tramtai/LICENCIA.md
+overrides:
+  deb:
+    depends:
+      - libgtk-3-0t64 | libgtk-3-0
+      - libwebkit2gtk-4.1-0
+  rpm:
+    depends:
+      - gtk3
+      - webkit2gtk4.1
