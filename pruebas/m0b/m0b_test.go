@@ -1,8 +1,8 @@
 //go:build m0b
 
-// Package m0b valida los modos con clave de API de cada adaptador (hito M0b, sección 2.4 del documento maestro).
+// Package m0b valida los modos con clave de API de cada adaptador.
 // Cada prueba se omite si falta su clave. Las claves solo se leen del entorno, cada CLI recibe únicamente la suya
-// y nunca se imprimen. Instrucciones en docs/M0B.md.
+// y nunca se imprimen. Instrucciones en docs/equipo/M0B.md.
 //
 //	ANTHROPIC_API_KEY               Claude Code en modo --bare (solo admite clave de API y omite CLAUDE.md)
 //	CODEX_API_KEY u OPENAI_API_KEY  Codex con un CODEX_HOME privado y vacío

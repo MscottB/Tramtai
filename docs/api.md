@@ -63,7 +63,7 @@ Los campos desconocidos en la API nativa son un error (`solicitud_invalida`).
 - `claude`: agente con el modelo predeterminado de su CLI.
 - `haiku`: sin prefijo, solo si ese modelo está configurado en un único agente. Si está en varios, se rechaza con 400 `modelo_ambiguo`.
 
-### Política de parámetros (sección 8.1)
+### Política de parámetros
 
 - **No soportados (error 400 `parametro_no_soportado`):** `tools`, `tool_choice`, `n` mayor que 1, `logprobs`, `stop`, imágenes o audio, `stop_sequences`, `thinking`… Con un valor sin efecto (`null`, `false`, `[]`, `n: 1`) se aceptan.
 - **Ignorables (se aceptan con aviso):** `temperature`, `top_p`, `max_tokens`, `seed`, `user`, `metadata`… El aviso llega en la cabecera `Tramtai-Advertencia: parametros ignorados: …`.

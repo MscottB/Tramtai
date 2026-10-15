@@ -1,4 +1,4 @@
-// Package persistencia guarda trabajos, eventos e idempotencia de una instancia en SQLite (sección 4.3).
+// Package persistencia guarda trabajos, eventos e idempotencia de una instancia en SQLite.
 package persistencia
 
 import (
@@ -57,15 +57,15 @@ CREATE TABLE IF NOT EXISTS idempotencia (
 	vence_en TEXT NOT NULL,
 	PRIMARY KEY (instancia, clave)
 );`,
-	// v2 (M2): modelo resuelto, modelo efectivo y uso informado por el agente.
+	// v2: modelo resuelto, modelo efectivo y uso informado por el agente.
 	`ALTER TABLE trabajos ADD COLUMN modelo_enviado TEXT NOT NULL DEFAULT '';
 ALTER TABLE trabajos ADD COLUMN modelo_efectivo TEXT NOT NULL DEFAULT '';
 ALTER TABLE trabajos ADD COLUMN tokens_entrada INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE trabajos ADD COLUMN tokens_salida INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE trabajos ADD COLUMN costo_usd REAL NOT NULL DEFAULT 0;`,
-	// v3 (M5): punto de acceso que creó el trabajo.
+	// v3: punto de acceso que creó el trabajo.
 	`ALTER TABLE trabajos ADD COLUMN punto_acceso TEXT NOT NULL DEFAULT '';`,
-	// v4 (M7): retención. vencido = pasó la ventana del resultado; entradas_eliminadas = ya no se puede reintentar.
+	// v4: retención. vencido = pasó la ventana del resultado; entradas_eliminadas = ya no se puede reintentar.
 	`ALTER TABLE trabajos ADD COLUMN vencido INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE trabajos ADD COLUMN entradas_eliminadas INTEGER NOT NULL DEFAULT 0;`,
 	// v5: proceso del agente, para terminarlo si el servicio cae y para diagnosticar cancelacion_no_confirmada.
@@ -127,7 +127,7 @@ type Cambio struct {
 	ModeloEfectivo string
 }
 
-// Evento es un registro numerado de un trabajo (sección 7.3).
+// Evento es un registro numerado de un trabajo.
 type Evento struct {
 	Numero   int
 	Tipo     string
@@ -456,9 +456,9 @@ func (a *Almacen) Contar(ctx context.Context, instancia string) (map[nucleo.Esta
 	return conteo, filas.Err()
 }
 
-// Recuperar aplica la sección 4.3 al arrancar: lo que pudo llegar al agente pasa a interrumpido
+// Recuperar se ejecuta al arrancar: lo que pudo llegar al agente pasa a interrumpido
 // (nunca se relanza) y lo que nunca lo lanzó vuelve a en_cola.
-// shortcut: en M1 las entradas viajan dentro de la solicitud y siempre están disponibles; con cargas (M3)
+// shortcut: las entradas pueden viajar dentro de la solicitud y siempre están disponibles; con cargas
 // se verificarán sus hashes y, si falta alguna, el trabajo pasará a fallido con entrada_no_disponible.
 func (a *Almacen) Recuperar(ctx context.Context, instancia string) (interrumpidos, reencolados int, err error) {
 	ids, err := a.ListarPorEstado(ctx, instancia, nucleo.PreparandoEntrada, nucleo.EsperandoAgente,
@@ -485,7 +485,7 @@ func (a *Almacen) Recuperar(ctx context.Context, instancia string) (interrumpido
 	return interrumpidos, reencolados, nil
 }
 
-// Retencion son los plazos de la sección 16.2, contados desde la terminación del trabajo.
+// Retencion son los plazos de retención, contados desde la terminación del trabajo.
 type Retencion struct {
 	Resultado        time.Duration // salida, entradas y eventos con contenido
 	Metadatos        time.Duration // el trabajo entero; hasta entonces se responde 410 en lugar de 404
@@ -591,7 +591,7 @@ func (a *Almacen) ModelosEfectivos(ctx context.Context) (map[string]string, erro
 }
 
 // CargasEnUso devuelve las cargas que algún trabajo puede necesitar todavía: activos o terminados que aún
-// admiten reintento. La purga de cargas no las toca aunque hayan vencido (sección 16.2).
+// admiten reintento. La purga de cargas no las toca aunque hayan vencido.
 func (a *Almacen) CargasEnUso(ctx context.Context, instancia string) (map[string]bool, error) {
 	filas, err := a.db.QueryContext(ctx, `SELECT DISTINCT j.value FROM trabajos t, json_each(t.solicitud, '$.cargas') j
 		WHERE t.instancia = ? AND t.entradas_eliminadas = 0`, instancia)

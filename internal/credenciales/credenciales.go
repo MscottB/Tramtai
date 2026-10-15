@@ -1,5 +1,5 @@
 // Package credenciales guarda las claves de API de los proveedores en el almacén de credenciales del sistema
-// (sección 16.1), para no dejarlas en variables de entorno permanentes ni en archivos. Tramtai no lee ni guarda
+// , para no dejarlas en variables de entorno permanentes ni en archivos. Tramtai no lee ni guarda
 // tokens OAuth de los CLIs: solo las claves que el usuario registra aquí.
 package credenciales
 

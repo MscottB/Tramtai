@@ -20,7 +20,7 @@ const baseGemini = "https://generativelanguage.googleapis.com/v1beta"
 // modeloGeminiPredeterminado se usa si la solicitud no fija modelo ni perfil.
 const modeloGeminiPredeterminado = "gemini-flash-latest"
 
-// Gemini llama directamente a la Gemini API con la clave del usuario (sección 2.4): sin CLI ni sesión OAuth.
+// Gemini llama directamente a la Gemini API con la clave del usuario: sin CLI ni sesión OAuth.
 type Gemini struct {
 	Base    string       // URL base; vacía = baseGemini (las pruebas la sustituyen)
 	Cliente *http.Client // nil = http.DefaultClient
@@ -66,7 +66,7 @@ func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 		return Resultado{}, err
 	}
 	peticion.Header.Set("Content-Type", "application/json")
-	peticion.Header.Set("x-goog-api-key", clave) // en cabecera: nunca en la URL (sección 16.1)
+	peticion.Header.Set("x-goog-api-key", clave) // en cabecera: nunca en la URL
 	cliente := g.Cliente
 	if cliente == nil {
 		cliente = http.DefaultClient
@@ -138,7 +138,7 @@ func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 }
 
 // cuerpoGemini traduce la solicitud: los mensajes van como contents con sus roles y el sistema como
-// systemInstruction, sin reescribir el contenido (sección 6.1). El esquema usa la salida estructurada nativa.
+// systemInstruction, sin reescribir el contenido. El esquema usa la salida estructurada nativa.
 func cuerpoGemini(s nucleo.SolicitudEjecucion) ([]byte, error) {
 	type parte struct {
 		Text string `json:"text"`

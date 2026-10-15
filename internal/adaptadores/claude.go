@@ -71,7 +71,7 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 	defer os.RemoveAll(raiz)
 	if consciente(s) && clave != "" {
 		// --bare omitiría el CLAUDE.md del proyecto; un directorio de configuración privado y vacío evita las reglas
-		// del usuario y cualquier sesión guardada, así que solo vale la clave de API (sección 6.3).
+		// del usuario y cualquier sesión guardada, así que solo vale la clave de API.
 		configuracion := filepath.Join(raiz, "claude-config")
 		if err := os.Mkdir(configuracion, 0o700); err != nil {
 			return Resultado{}, err
@@ -96,7 +96,7 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 		args = append(args, "--effort", v)
 	}
 	if len(s.Salida.Esquema) > 0 {
-		// Salida estructurada nativa: el resultado llega en structured_output (validado en M0).
+		// Salida estructurada nativa: el resultado llega en structured_output (comprobado con el CLI real).
 		var compacto bytes.Buffer
 		if err := json.Compact(&compacto, s.Salida.Esquema); err != nil {
 			return Resultado{}, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("esquema no válido"))
@@ -119,7 +119,7 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 		case "result":
 			final = &e.resultadoClaude
 		}
-		return nil // los demás tipos son informativos (sección 9.4)
+		return nil // los demás tipos son informativos
 	})
 	if err != nil {
 		return Resultado{}, err
@@ -137,7 +137,7 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 	}
 	salida := final.Result
 	if len(final.StructuredOutput) > 0 && string(final.StructuredOutput) != "null" {
-		salida = string(final.StructuredOutput) // el campo estructurado prevalece sobre el texto libre (sección 11)
+		salida = string(final.StructuredOutput) // el campo estructurado prevalece sobre el texto libre
 	}
 	return Resultado{Salida: salida, ModeloEfectivo: final.modeloEfectivo(), Uso: nucleo.Uso{
 		TokensEntrada: final.Usage.InputTokens + final.Usage.CacheCreation + final.Usage.CacheRead,

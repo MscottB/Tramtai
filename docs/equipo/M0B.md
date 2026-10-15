@@ -1,6 +1,6 @@
 # M0b: validación de los modos con clave de API
 
-M0b comprueba que cada adaptador funciona en el modo que Tramtai usa por defecto (sección 2.4 del documento maestro): con clave de API y aislado de la configuración del usuario. Las pruebas están en `pruebas/m0b` y se omiten solas cuando falta la clave correspondiente.
+M0b comprueba que cada adaptador funciona en el modo que Tramtai usa por defecto: con clave de API y aislado de la configuración del usuario. Las pruebas están en `pruebas/m0b` y se omiten solas cuando falta la clave correspondiente.
 
 ## Qué valida cada prueba
 
@@ -47,6 +47,6 @@ Queda la mitad positiva: ejecutar las cuatro pruebas con claves válidas.
 
 ## Cómo interpretar el resultado
 
-- `PASS` en las cuatro: el modo clave queda validado y M0b se da por cerrado en el documento maestro.
+- `PASS` en las cuatro: el modo clave queda validado y M0b se da por cerrado.
 - Fallo en `TestAntigravityProveedorGemini` con el mensaje "sigue usando la sesión OAuth": `agy` no respeta `modelProvider` desde un home privado y el adaptador de Antigravity debe quedar desactivado.
 - Fallo por "cargó archivos de reglas": el aislamiento de ese CLI no es completo y debe revisarse su adaptador.

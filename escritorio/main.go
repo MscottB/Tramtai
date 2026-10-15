@@ -1,4 +1,4 @@
-// Comando tramtai-escritorio: aplicación de escritorio de Tramtai (sección 13.3). Es un cliente del servicio: lo
+// Comando tramtai-escritorio: aplicación de escritorio de Tramtai. Es un cliente del servicio: lo
 // detecta o lo inicia, abre la Web UI ya autenticada en una ventana propia y queda en la bandeja del sistema,
 // donde muestra si el servicio está en marcha y, con el clic derecho, tus APIs y las acciones rápidas.
 // Cerrar la ventana la deja en la bandeja; Salir detiene el servicio (con un aviso que se puede no volver a ver).

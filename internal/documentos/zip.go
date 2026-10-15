@@ -18,7 +18,7 @@ import (
 )
 
 // zip extrae el archivo con límites de cantidad, tamaño descomprimido (medido, no declarado) y profundidad,
-// y rechaza rutas absolutas, con "..", con unidad o enlaces simbólicos (sección 10).
+// y rechaza rutas absolutas, con "..", con unidad o enlaces simbólicos.
 func (t *tarea) zip(ctx context.Context, e Entrada, profundidad int) error {
 	limites := t.conversor.Limites
 	invalida := func(motivo string) error {

@@ -19,7 +19,7 @@ import (
 	"tramtai/internal/version"
 )
 
-// enviar completa la solicitud con los predeterminados y la acepta con la Idempotency-Key del cliente (sección 7.2).
+// enviar completa la solicitud con los predeterminados y la acepta con la Idempotency-Key del cliente.
 func (s *Servidor) enviar(r *http.Request, sol nucleo.SolicitudEjecucion) (nucleo.Trabajo, bool, error) {
 	clave := r.Header.Get("Idempotency-Key")
 	if len(clave) > 255 {
@@ -97,7 +97,7 @@ func (s *Servidor) eliminarTrabajos(w http.ResponseWriter, r *http.Request) {
 	EscribirJSON(w, http.StatusOK, map[string]any{"eliminados": n})
 }
 
-// salidaTrabajo entrega la salida con el tipo de su formato; 410 si la retención ya la borró (sección 16.2).
+// salidaTrabajo entrega la salida con el tipo de su formato; 410 si la retención ya la borró.
 func (s *Servidor) salidaTrabajo(w http.ResponseWriter, r *http.Request) {
 	t, err := s.trabajo(r, r.PathValue("id"))
 	switch {
@@ -212,7 +212,7 @@ func (s *Servidor) ejecutarTrabajo(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(final)
 }
 
-// crearCarga acepta multipart (campo "archivo") o el binario en el cuerpo con ?nombre= (sección 7.1).
+// crearCarga acepta multipart (campo "archivo") o el binario en el cuerpo con ?nombre=.
 func (s *Servidor) crearCarga(w http.ResponseWriter, r *http.Request) {
 	if s.Cargas == nil {
 		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("esta instancia no admite cargas")))
@@ -258,7 +258,7 @@ func (s *Servidor) cargaMultipart(r *http.Request) (documentos.Carga, error) {
 	}
 }
 
-// capacidad es lo que cada adaptador garantiza (sección 8.1); lo no garantizado se declara false.
+// capacidad es lo que cada adaptador garantiza; lo no garantizado se declara false.
 type capacidad struct {
 	Streaming               string
 	ModeloEfectivoInformado bool
@@ -268,7 +268,7 @@ var capacidadesConocidas = map[string]capacidad{
 	"claude": {Streaming: "tokens", ModeloEfectivoInformado: true},
 	"codex":  {Streaming: "final"},
 	"gemini": {Streaming: "tokens", ModeloEfectivoInformado: true},
-	// antigravity: final y sin modelo efectivo (M0); experimental.
+	// antigravity: final y sin modelo efectivo; experimental.
 	"antigravity": {Streaming: "final"},
 }
 
@@ -307,7 +307,7 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// modelo es una entrada del catálogo informativo (sección 9.5).
+// modelo es una entrada del catálogo informativo.
 type modelo struct {
 	ID     string `json:"id"`
 	Agente string `json:"agente,omitempty"`

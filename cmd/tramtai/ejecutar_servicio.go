@@ -38,7 +38,7 @@ func instanciaActual(ctx context.Context, c *cliente.Cliente, preferida string) 
 }
 
 // ejecutarEnServicio envía el trabajo al servicio en marcha, de modo que el mismo trabajo se ve en la terminal
-// interactiva y en la Web UI (recorrido compartido entre interfaces, M6).
+// interactiva y en la Web UI (recorrido compartido entre interfaces).
 func ejecutarEnServicio(cmd *cobra.Command, c *cliente.Cliente, s nucleo.SolicitudEjecucion, archivos []string) error {
 	ctx, cancelar := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancelar()

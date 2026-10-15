@@ -43,7 +43,7 @@ func BuscarProyecto(dir string) (string, bool) {
 	}
 }
 
-// CargarConfiguracion resuelve las capas de la sección 12.2. Con raíz vacía usa solo la global y el entorno
+// CargarConfiguracion resuelve las capas de configuración (interna, global, proyecto, local y entorno). Con raíz vacía usa solo la global y el entorno
 // (instancia global); con la raíz de un proyecto añade su configuración versionada y la local.
 func CargarConfiguracion(raiz string) (*Configuracion, error) {
 	global, err := RutaGlobal()
@@ -140,7 +140,7 @@ func dentroDe(raiz, ruta string) bool {
 }
 
 // ProyectoConfiable indica si la raíz figura en proyectos_confiables. La configuración versionada no puede
-// declararlo (clave administrada), así que un repositorio clonado nunca se marca confiable a sí mismo (sección 6.3).
+// declararlo (clave administrada), así que un repositorio clonado nunca se marca confiable a sí mismo.
 func (c *Configuracion) ProyectoConfiable(raiz string) bool {
 	if raiz == "" {
 		return false

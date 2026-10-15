@@ -21,7 +21,7 @@ import (
 	"tramtai/internal/version"
 )
 
-// sesion es una sesión de la Web UI enlazada a una única instancia (secciones 7.4 y 13.3): cookie HttpOnly con
+// sesion es una sesión de la Web UI enlazada a una única instancia: cookie HttpOnly con
 // SameSite estricto y un token CSRF obligatorio en las peticiones que modifican.
 type sesion struct {
 	instancia string
@@ -76,7 +76,7 @@ func (s *Servicio) crearSesion(w http.ResponseWriter, instancia string, local bo
 
 // CodigoSesion crea un código de un solo uso, válido un minuto, que abre la Web UI de una instancia sin escribir
 // su token. Lo piden la CLI, la terminal interactiva y la aplicación de escritorio con el token de servicio; el
-// token de la instancia nunca viaja en la URL (sección 7.4).
+// token de la instancia nunca viaja en la URL.
 func (s *Servicio) CodigoSesion(instancia string) (string, error) {
 	s.mu.RLock()
 	_, activa := s.instancias[instancia]
@@ -632,7 +632,7 @@ func (s *Servicio) cambiarAutenticacion(agente, modo string) error {
 		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("modo de autenticación desconocido: %s", modo))
 	}
 	if ip := net.ParseIP(s.opc.Host); modo == adaptadores.AutenticacionSuscripcion && s.opc.Host != "localhost" && (ip == nil || !ip.IsLoopback()) {
-		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.T("la suscripción no se permite con el servicio abierto a otros equipos (sección 2.4)"))
+		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.T("la suscripción no se permite con el servicio abierto a otros equipos"))
 	}
 	ruta, err := nucleo.RutaGlobal()
 	if err != nil {

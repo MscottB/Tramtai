@@ -7,8 +7,9 @@ Documentación interna para desarrollar Tramtai. La de usuario está en el [READ
 | [pendientes.md](pendientes.md) | Hitos y lista de tareas (incluye CI/CD) |
 | [versionado.md](versionado.md) | Versión `vX.Y.Z+DDMMAAAA` calculada desde los commits, y etiquetas con notas |
 | [M0B.md](M0B.md) | Validación de los modos con clave de API (pendiente con claves reales) |
+| [Diseño](../diseno/DESIGN.md) | Sistema visual «Red de tranvía» de la Web UI y la página, y [contexto de producto](../diseno/PRODUCT.md) |
 
-El documento maestro (Word) vive en `documentos/` y no se versiona.
+El documento de diseño original del proyecto no forma parte del repositorio.
 
 ## Compilar
 

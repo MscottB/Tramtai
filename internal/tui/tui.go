@@ -1,4 +1,4 @@
-// Package tui es la terminal interactiva (sección 13.2): un selector de ámbito y, por instancia, paneles para
+// Package tui es la terminal interactiva: un selector de ámbito y, por instancia, paneles para
 // ejecutar, ver trabajos, gestionar puntos de acceso y revisar configuración y agentes, sin escribir comandos.
 // Habla con el servicio a través del cliente; puede iniciarlo en segundo plano.
 package tui

@@ -12,5 +12,5 @@ Tramtai es una pasarela local que convierte los CLI de IA instalados en el equip
 - Idiomas: español principal, inglés secundario; preparado para un tercero.
 - Apariencia clara y oscura de igual calidad, más «como el sistema».
 - Uso local y privado: las claves nunca se muestran ni viajan en URL; los tokens OAuth de los CLI nunca se leen ni se copian.
-- Licencia propietaria.
+- Licencia PolyForm Noncommercial 1.0.0: gratis para uso no comercial; el uso comercial necesita licencia aparte.
 - Dirección visual vigente: «Red de tranvía» (ver `.impeccable/superficie-web-ui.md`).

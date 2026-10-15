@@ -1,5 +1,5 @@
 // Package documentos prepara las entradas de un trabajo: guarda las cargas, las convierte a Markdown con
-// markitdown y las ensambla con delimitadores explícitos (sección 10).
+// markitdown y las ensambla con delimitadores explícitos.
 package documentos
 
 import (
@@ -17,7 +17,7 @@ import (
 	"tramtai/internal/nucleo"
 )
 
-// Carga es un archivo recibido, identificado por su contenido (sección 7.1).
+// Carga es un archivo recibido, identificado por su contenido.
 type Carga struct {
 	ID       string    `json:"identificador_carga"`
 	Nombre   string    `json:"nombre"`

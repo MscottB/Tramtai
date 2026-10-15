@@ -24,16 +24,16 @@ type Trabajo struct {
 	Huella       string             `json:"-"`
 	Salida       string             `json:"salida,omitempty"`
 	IntentoDe    string             `json:"intento_de,omitempty"`
-	// PuntoAcceso es el punto de acceso que creó el trabajo (uso por aplicación, sección 5.4).
+	// PuntoAcceso es el punto de acceso que creó el trabajo (uso por aplicación).
 	PuntoAcceso string `json:"punto_acceso,omitempty"`
 	// ModeloEnviado es el identificador pasado al CLI tras resolver el perfil; vacío = predeterminado del CLI.
 	ModeloEnviado string `json:"modelo_enviado,omitempty"`
-	// ModeloEfectivo es el que informó el agente; vacío = no verificable (sección 9.2).
+	// ModeloEfectivo es el que informó el agente; vacío = no verificable.
 	ModeloEfectivo string `json:"modelo_efectivo,omitempty"`
 	Uso            Uso    `json:"uso"`
-	// Disponibilidad de la salida, aparte del estado (sección 4.2): disponible o expirada; vacía si no hubo salida.
+	// Disponibilidad de la salida, aparte del estado: disponible o expirada; vacía si no hubo salida.
 	Disponibilidad string `json:"disponibilidad,omitempty"`
-	// PID es el proceso del agente; se conserva para diagnosticar una cancelación no confirmada (sección 17.2).
+	// PID es el proceso del agente; se conserva para diagnosticar una cancelación no confirmada.
 	PID int `json:"pid,omitempty"`
 	// FirmaProceso distingue ese proceso de otro que reutilice el PID.
 	FirmaProceso string `json:"-"`

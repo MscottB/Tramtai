@@ -11,7 +11,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// preparar crea el proceso suspendido: se asigna al Job Object antes de que pueda lanzar hijos (validado en M0).
+// preparar crea el proceso suspendido: se asigna al Job Object antes de que pueda lanzar hijos.
 func preparar(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: windows.CREATE_SUSPENDED | windows.CREATE_NO_WINDOW}
 }

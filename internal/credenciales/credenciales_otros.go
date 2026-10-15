@@ -8,7 +8,7 @@ import (
 	"tramtai/internal/idioma"
 )
 
-// shortcut: en macOS y Linux las claves siguen por variable de entorno; Llavero y Secret Service llegan con M8.
+// shortcut: en macOS y Linux las claves siguen por variable de entorno; Llavero y Secret Service, cuando haya versión para macOS y Linux.
 var errNoSoportado = errors.New(idioma.T("el almacén de credenciales solo está disponible en Windows; usa variables de entorno"))
 
 // Disponible indica si el sistema tiene almacén de credenciales soportado.

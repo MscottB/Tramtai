@@ -2,22 +2,26 @@
 
 ## Qué necesitas
 
-- **Windows 11** (Linux y macOS: el núcleo funciona; la aplicación de escritorio, de momento, solo en Windows).
-- **Go 1.27** para compilar. Si `go` no se reconoce, añade `C:\Program Files\Go\bin` al PATH de tu usuario y abre una terminal nueva.
+- **Windows 10 u 11** (x64). En Linux y macOS el servicio, la API y la CLI funcionan compilando el código; la app de escritorio y el instalador, de momento, solo existen para Windows.
 - **Al menos un agente:** [Claude Code](https://docs.anthropic.com/claude-code) (`claude`), [Codex CLI](https://developers.openai.com/codex/cli) (`codex`) o una clave de la Gemini API. Antigravity (`agy`) es experimental.
 - **Opcional, para archivos de Office y PDF:** `uv tool install "markitdown[pdf,docx,pptx,xlsx]==0.1.8"`.
 
-## 1. Compilar y abrir
+## 1. Instalar y abrir
 
-```powershell
-./scripts/compilar.ps1     # genera bin/tramtai.exe y bin/tramtai-escritorio.exe
-./bin/tramtai.exe abrir    # inicia el servicio en segundo plano y abre la Web UI
-```
+Descarga `Tramtai-…-instalador-windows-x64.exe` desde [Releases](https://github.com/MscottB/Tramtai/releases/latest) y ejecútalo:
+
+- Se instala solo para tu usuario, en `%LOCALAPPDATA%\Programs\Tramtai`, sin permisos de administrador.
+- Opciones: el comando `tramtai` en la terminal (añade la carpeta a tu PATH), iniciar con Windows y un acceso directo en el escritorio.
+- Para actualizar, ejecuta el instalador de la versión nueva: cierra la app, detiene el servicio y conserva tu configuración, tus APIs y tu historial.
+- Se desinstala desde *Configuración → Aplicaciones*; al final pregunta si borrar también tus datos (`%APPDATA%\tramtai`).
+- Para comprobar la descarga, la suma SHA-256 de cada archivo está en `SHA256SUMS.txt` del mismo release.
+
+Después abre **Tramtai** desde el menú Inicio, o `tramtai abrir` en una terminal nueva. Si prefieres compilarlo tú, la [guía de desarrollo](equipo/desarrollo.md) explica cómo (`./scripts/compilar.ps1`, con Go 1.27).
 
 - **Sin clave:** en tu propio equipo entras directamente; Tramtai comprueba que el navegador es de tu mismo usuario de Windows. Desde otro equipo o en macOS, la página explica cómo entrar.
 - **Que arranque solo:** en **Ajustes → Arranque con Windows** (o `tramtai servicio autoarranque activar`), Tramtai se inicia oculto en la bandeja al entrar en Windows y la Web UI está siempre disponible, sin abrir ninguna terminal.
 - **Ayuda, idioma y apariencia:** la página **Ayuda** resume estos pasos y responde las dudas comunes. En la cabecera, un botón cambia entre español e inglés y otro elige la apariencia: clara, oscura o como el sistema. La guía de **Inicio** es opcional: «Ocultar guía» la quita y **Ayuda** la vuelve a mostrar.
-- **Aplicación de escritorio:** `bin/tramtai-escritorio.exe` hace lo mismo en su propia ventana. Cerrar la ventana la deja en la bandeja con el servicio en marcha; el menú del clic derecho muestra el estado y tus APIs, y «Salir y detener el servicio…» la cierra del todo (con un aviso).
+- **Aplicación de escritorio:** Tramtai, en el menú Inicio, abre la Web UI en su propia ventana. Cerrar la ventana la deja en la bandeja con el servicio en marcha; el menú del clic derecho muestra el estado y tus APIs, y «Salir y detener el servicio…» la cierra del todo (con un aviso).
 - **En un proyecto:** en la Web UI, el selector de espacio de la cabecera → **Abrir un proyecto…**: escribes la carpeta (o, en la app de escritorio, la eliges con **Examinar…**) y Tramtai la prepara si hace falta (crea `.tramtai/`) y la abre, con su historial, sus APIs y sus ajustes separados de la global. Desde la terminal, dentro de su carpeta, `tramtai iniciar` y `tramtai abrir` hacen lo mismo.
 
 ## 2. Dejar listos los agentes

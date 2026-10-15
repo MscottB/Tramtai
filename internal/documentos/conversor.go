@@ -17,10 +17,10 @@ import (
 	"tramtai/internal/procesos"
 )
 
-// EspecificacionMarkitdown es la versión fijada del convertidor (sección 10.1).
+// EspecificacionMarkitdown es la versión fijada del convertidor.
 const EspecificacionMarkitdown = "markitdown[pdf,docx,pptx,xlsx]==0.1.8"
 
-// extensionesTexto se entregan tal como llegan: solo se valida su codificación (sección 10).
+// extensionesTexto se entregan tal como llegan: solo se valida su codificación.
 var extensionesTexto = map[string]bool{".txt": true, ".md": true, ".markdown": true, ".json": true, ".jsonl": true,
 	".xml": true, ".csv": true, ".tsv": true, ".yaml": true, ".yml": true, ".toml": true, ".ini": true, ".log": true}
 
@@ -129,7 +129,7 @@ func leerTexto(e Entrada) (string, error) {
 	return string(datos), nil
 }
 
-// markitdown convierte un archivo en un proceso supervisado con plazo y límite de salida (sección 10.1).
+// markitdown convierte un archivo en un proceso supervisado con plazo y límite de salida.
 func (c *Conversor) markitdown(ctx context.Context, e Entrada, dir string) (string, error) {
 	programa, prefijo, err := c.programa()
 	if err != nil {

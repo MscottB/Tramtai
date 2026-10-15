@@ -12,7 +12,7 @@ import (
 	"tramtai/internal/idioma"
 )
 
-// Perfil es un perfil de ejecución explícito (sección 22.3): un archivo <nombre>.yaml en .tramtai/profiles/ del
+// Perfil es un perfil de ejecución explícito: un archivo <nombre>.yaml en .tramtai/profiles/ del
 // proyecto o en profiles/ junto a la configuración global. Solo se aplica si la solicitud lo pide.
 type Perfil struct {
 	Nombre        string       `yaml:"nombre"`
@@ -40,7 +40,7 @@ type carpetaPerfiles struct{ dir, limite string }
 const maximoEsquema = 1 << 20
 
 // AplicarPerfil completa la solicitud con el perfil que pide; los campos explícitos de la solicitud prevalecen
-// (sección 12.2). El perfil del proyecto tiene prioridad sobre uno global con el mismo nombre.
+// . El perfil del proyecto tiene prioridad sobre uno global con el mismo nombre.
 func (c *Configuracion) AplicarPerfil(s SolicitudEjecucion) (SolicitudEjecucion, error) {
 	if s.Perfil == "" {
 		return s, nil
@@ -53,7 +53,7 @@ func (c *Configuracion) AplicarPerfil(s SolicitudEjecucion) (SolicitudEjecucion,
 		return s, err
 	}
 	if p.Salida.RepararAutomaticamente {
-		return s, errorConfiguracion(s.Perfil, "salida.reparar_automaticamente", idioma.T("no soportado: no se repite la llamada sin autorización (sección 11)"))
+		return s, errorConfiguracion(s.Perfil, "salida.reparar_automaticamente", idioma.T("no soportado: no se repite la llamada sin autorización"))
 	}
 	if s.Agente == "" {
 		s.Agente = p.Agente

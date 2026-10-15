@@ -8,7 +8,7 @@ import (
 	"tramtai/internal/nucleo"
 )
 
-// max_tokens se acepta como tope pero ningún adaptador CLI lo aplica: se ignora con aviso (sección 8).
+// max_tokens se acepta como tope pero ningún adaptador CLI lo aplica: se ignora con aviso.
 var politicaMensajes = politica{
 	soportados:   conjunto("model", "messages", "system", "stream"),
 	ignorables:   conjunto("max_tokens", "temperature", "top_p", "top_k", "metadata", "service_tier"),

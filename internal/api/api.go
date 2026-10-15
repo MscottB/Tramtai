@@ -1,5 +1,5 @@
 // Package api expone el servicio por HTTP: la API nativa /api/v1 y las fachadas /openai/v1 y /anthropic/v1
-// (secciones 7 y 8). Valida Host, Origin y token antes de atender cualquier ruta (sección 16.1).
+// . Valida Host, Origin y token antes de atender cualquier ruta.
 package api
 
 import (
@@ -32,7 +32,7 @@ type Servidor struct {
 	Cargas       *documentos.Cargas
 	Registro     map[string]adaptadores.Adaptador
 	Config       *nucleo.Configuracion
-	// Punto es la política del punto de acceso que atiende este servidor (sección 5.4).
+	// Punto es la política del punto de acceso que atiende este servidor.
 	Punto *Punto
 	// Token es el token de la instancia para Handler; vacío solo si servicio.requerir_token es false.
 	Token string
@@ -321,7 +321,7 @@ func abrirFlujo(w http.ResponseWriter) *flujo {
 	return f
 }
 
-// escribir envía con plazo: un cliente lento se desconecta en 30 s sin bloquear al agente (sección 7.3).
+// escribir envía con plazo: un cliente lento se desconecta en 30 s sin bloquear al agente.
 func (f *flujo) escribir(texto string) error {
 	_ = f.rc.SetWriteDeadline(time.Now().Add(30 * time.Second))
 	if _, err := io.WriteString(f.w, texto); err != nil {

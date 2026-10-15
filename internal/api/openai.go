@@ -104,7 +104,7 @@ func usoOpenAI(t nucleo.Trabajo) map[string]any {
 		"total_tokens": t.Uso.TokensEntrada + t.Uso.TokensSalida}
 }
 
-// chatCompletions implementa /openai/v1/chat/completions con streaming básico (sección 8).
+// chatCompletions implementa /openai/v1/chat/completions con streaming básico.
 func (s *Servidor) chatCompletions(w http.ResponseWriter, r *http.Request) {
 	var p peticionChat
 	avisos, err := s.leerFachada(w, r, politicaChat, &p)

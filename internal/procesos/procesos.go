@@ -1,5 +1,5 @@
 // Package procesos supervisa los procesos de los agentes: los lanza en un grupo propio (Job Object en Windows,
-// grupo de procesos en Unix) para que cancelar o agotar el tiempo termine el árbol completo (sección 17.2).
+// grupo de procesos en Unix) para que cancelar o agotar el tiempo termine el árbol completo.
 package procesos
 
 import (
@@ -40,7 +40,7 @@ type Resultado struct {
 type claveAlIniciar struct{}
 
 // ConAlIniciar devuelve un contexto con el que Ejecutar llamará a f con el PID y la firma de inicio del proceso
-// en cuanto esté supervisado; así se puede terminar si el servicio cae (sección 4.3).
+// en cuanto esté supervisado; así se puede terminar si el servicio cae.
 func ConAlIniciar(ctx context.Context, f func(pid int, firma string)) context.Context {
 	return context.WithValue(ctx, claveAlIniciar{}, f)
 }

@@ -1,5 +1,5 @@
-// Package servicio es el servicio único de Tramtai (sección 5): un proceso y un puerto con varias instancias,
-// global y por proyecto, separadas por token, más los puntos de acceso con puerto o ruta propios (sección 5.4).
+// Package servicio es el servicio único de Tramtai: un proceso y un puerto con varias instancias,
+// global y por proyecto, separadas por token, más los puntos de acceso con puerto o ruta propios.
 package servicio
 
 import (
@@ -38,13 +38,13 @@ type Opciones struct {
 	Datos     string                // directorio de datos del usuario
 	Config    *nucleo.Configuracion // configuración global (sin capas de proyecto)
 	Registro  map[string]adaptadores.Adaptador
-	Semaforos planificador.Semaforos // compartidos por todas las instancias (sección 17)
+	Semaforos planificador.Semaforos // compartidos por todas las instancias
 	Host      string
 	Puerto    int
 	Hosts     []string
 	Registros io.Writer // mensajes de operación; nil los descarta
 	Web       fs.FS     // Web UI compilada (internal/recursos); nil la desactiva
-	// PlazoDrenaje es lo que Drenar espera a los trabajos en curso antes de interrumpirlos (sección 17.3).
+	// PlazoDrenaje es lo que Drenar espera a los trabajos en curso antes de interrumpirlos.
 	PlazoDrenaje time.Duration
 	// EntradaLocal deja entrar en la Web UI sin token al mismo usuario del sistema (servicio.entrada_local).
 	EntradaLocal bool
@@ -56,10 +56,10 @@ type Opciones struct {
 	Reiniciar func() error
 }
 
-// intervaloPurga es cada cuánto se aplica la retención (sección 16.2) a cada instancia activa.
+// intervaloPurga es cada cuánto se aplica la retención a cada instancia activa.
 const intervaloPurga = 5 * time.Minute
 
-// Instancia es un ámbito lógico con configuración, token, cola, base de datos y cargas propios (sección 5).
+// Instancia es un ámbito lógico con configuración, token, cola, base de datos y cargas propios.
 type Instancia struct {
 	ID           string
 	Ambito       string // global o proyecto
@@ -259,7 +259,7 @@ func (s *Servicio) ActivarGlobal() (*Instancia, error) {
 	return s.activar("global", "global", "", s.opc.Config)
 }
 
-// ActivarProyecto activa la instancia del proyecto cuya raíz contiene .tramtai/config.yaml (sección 5.1).
+// ActivarProyecto activa la instancia del proyecto cuya raíz contiene .tramtai/config.yaml.
 func (s *Servicio) ActivarProyecto(raiz string) (*Instancia, error) {
 	raiz, err := filepath.Abs(raiz)
 	if err != nil {
@@ -355,7 +355,7 @@ func (i *Instancia) iniciarPurga(registros io.Writer) {
 }
 
 // Purgar aplica la retención de la instancia: vence resultados y entradas, borra metadatos antiguos y las
-// cargas vencidas que ningún trabajo necesita (sección 16.2).
+// cargas vencidas que ningún trabajo necesita.
 func (i *Instancia) Purgar(ctx context.Context) error {
 	horas := func(clave string) time.Duration { return time.Duration(i.Config.Entero(clave)) * time.Hour }
 	r := persistencia.Retencion{Resultado: horas("retencion.horas_resultado"), Metadatos: horas("retencion.horas_metadatos"),
@@ -372,7 +372,7 @@ func (i *Instancia) Purgar(ctx context.Context) error {
 }
 
 // Desactivar detiene una instancia sin afectar a las demás: vacía su cola (cancela lo que no empezó), lo que
-// estaba en ejecución queda interrumpido y se cierran sus puntos de acceso (sección 5.3).
+// estaba en ejecución queda interrumpido y se cierran sus puntos de acceso.
 func (s *Servicio) Desactivar(id string) error {
 	s.mu.Lock()
 	inst, activa := s.instancias[id]
@@ -404,7 +404,7 @@ func (i *Instancia) cerrar(vaciarCola bool) {
 
 // Drenar deja de aceptar trabajos en todas las instancias y espera hasta PlazoDrenaje a que terminen los que
 // están en ejecución; los que sigan después se interrumpen. Las instancias siguen abiertas, así que los clientes
-// pueden recoger los resultados hasta que se llame a Cerrar (sección 17.3).
+// pueden recoger los resultados hasta que se llame a Cerrar.
 func (s *Servicio) Drenar() {
 	s.mu.RLock()
 	instancias := make([]*Instancia, 0, len(s.instancias))
@@ -425,7 +425,7 @@ func (s *Servicio) Drenar() {
 }
 
 // Cerrar detiene todos los puntos de acceso y todas las instancias. Lo que estaba en cola se reanuda al volver
-// a activar la instancia (sección 4.3).
+// a activar la instancia.
 func (s *Servicio) Cerrar() {
 	s.mu.Lock()
 	puntos, instancias := s.puntos, s.instancias
@@ -528,7 +528,7 @@ func (i *Instancia) estado() EstadoInstancia {
 		Agente: i.Config.Texto("predeterminados.agente"), Perfil: i.Config.Texto("predeterminados.perfil_modelo"), Trabajos: conteo}
 }
 
-// Descriptor identifica el servicio en marcha (sección 14.2).
+// Descriptor identifica el servicio en marcha.
 type Descriptor struct {
 	Identificador string           `json:"identificador_servicio"`
 	PID           int              `json:"pid"`
@@ -624,7 +624,7 @@ func RotarToken(ruta string) (string, error) {
 	return token, os.WriteFile(ruta, []byte(token+"\n"), 0o600)
 }
 
-// RutaTokenInstancia es el archivo del token de una instancia (el global conserva su ruta de M4).
+// RutaTokenInstancia es el archivo del token de una instancia (el global conserva su ruta histórica).
 func RutaTokenInstancia(datos, id string) string {
 	if id == "global" {
 		return filepath.Join(datos, "token-global")

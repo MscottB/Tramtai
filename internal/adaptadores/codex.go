@@ -12,7 +12,7 @@ import (
 	"tramtai/internal/procesos"
 )
 
-// Codex ejecuta "codex exec --json". Solo entrega el resultado final (sin streaming por tokens, validado en M0)
+// Codex ejecuta "codex exec --json". Solo entrega el resultado final (sin streaming por tokens, comprobado con el CLI real)
 // y no informa el modelo efectivo: el trabajo queda como no verificable salvo con un identificador explícito.
 type Codex struct {
 	Programa      string // comandos_agentes.codex
@@ -65,7 +65,7 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 			return Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente,
 				idioma.T("falta CODEX_API_KEY u OPENAI_API_KEY; o configura adaptadores.codex.autenticacion: suscripcion para uso personal local"))
 		}
-		// Un CODEX_HOME privado y vacío evita cargar ~/.codex/AGENTS.md: aislamiento completo (sección 6.4).
+		// Un CODEX_HOME privado y vacío evita cargar ~/.codex/AGENTS.md: aislamiento completo.
 		home := filepath.Join(raiz, "codex-home")
 		if err := os.Mkdir(home, 0o700); err != nil {
 			return Resultado{}, err

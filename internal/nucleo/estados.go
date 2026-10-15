@@ -2,7 +2,7 @@ package nucleo
 
 import "tramtai/internal/idioma"
 
-// Estado es el estado del ciclo de vida de un trabajo (sección 4.2 del documento maestro).
+// Estado es el estado del ciclo de vida de un trabajo.
 type Estado string
 
 const (
@@ -18,8 +18,8 @@ const (
 	Interrumpido          Estado = "interrumpido"
 )
 
-// transiciones es la tabla normativa de la sección 4.2; los estados terminales no tienen salidas.
-// Las vueltas a en_cola son el reencolado de trabajos que nunca lanzaron el agente (sección 4.3).
+// transiciones es la tabla de transiciones permitidas; los estados terminales no tienen salidas.
+// Las vueltas a en_cola son el reencolado de trabajos que nunca lanzaron el agente.
 var transiciones = map[Estado][]Estado{
 	EnCola:                {PreparandoEntrada, EsperandoAgente, Fallido, CancelacionSolicitada},
 	PreparandoEntrada:     {EsperandoAgente, Fallido, CancelacionSolicitada, EnCola},

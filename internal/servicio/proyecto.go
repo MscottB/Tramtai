@@ -36,7 +36,7 @@ func PrepararProyecto(dir string) error {
 	if err := os.WriteFile(ignorar, []byte("# configuración propia de cada máquina\nlocal.yaml\n"), 0o644); err != nil {
 		return err
 	}
-	// Un perfil de ejemplo con su esquema (sección 22.3): tramtai ejecutar --perfil-trabajo resumen "…"
+	// Un perfil de ejemplo con su esquema: tramtai ejecutar --perfil-trabajo resumen "…"
 	for nombre, contenido := range map[string]string{
 		filepath.Join("profiles", "resumen.yaml"):       perfilEjemplo,
 		filepath.Join("schemas", "resumen.schema.json"): esquemaEjemplo,

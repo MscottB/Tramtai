@@ -24,7 +24,7 @@ import (
 	"tramtai/internal/nucleo"
 )
 
-// ConfigPunto es un punto de acceso tal como se escribe en la configuración global o local (sección 5.4).
+// ConfigPunto es un punto de acceso tal como se escribe en la configuración global o local.
 type ConfigPunto struct {
 	Nombre string `json:"nombre" yaml:"nombre"`
 	Grupo  string `json:"grupo,omitempty" yaml:"grupo,omitempty"`
@@ -186,7 +186,7 @@ type candidato struct {
 }
 
 // puntosDeseados lee los puntos de la configuración global y de la local de cada proyecto activo; nunca de la
-// versionada, que la configuración ya rechaza (sección 5.4).
+// versionada, que la configuración ya rechaza.
 func (s *Servicio) puntosDeseados() ([]candidato, []string) {
 	var errores []string
 	var salida []candidato
@@ -239,7 +239,7 @@ func (s *Servicio) puntosDeseados() ([]candidato, []string) {
 }
 
 // Recargar aplica la configuración de puntos de acceso sin reiniciar: abre los nuevos, cierra los retirados y
-// deja intactos los que no cambiaron, sin afectar a los trabajos en curso (sección 5.4).
+// deja intactos los que no cambiaron, sin afectar a los trabajos en curso.
 func (s *Servicio) Recargar() []EstadoPunto {
 	deseados, errores := s.puntosDeseados()
 	s.mu.Lock()
@@ -294,7 +294,7 @@ func firmaPunto(cfg ConfigPunto, token string) string {
 	return string(datos) + "|" + token
 }
 
-// abrirPunto prepara el punto; si tiene puerto propio y está ocupado no se activa ni se elige otro (sección 5.4).
+// abrirPunto prepara el punto; si tiene puerto propio y está ocupado no se activa ni se elige otro.
 // Se llama con s.mu tomado.
 func (s *Servicio) abrirPunto(c candidato, token, firma string) *puntoActivo {
 	p := &puntoActivo{cfg: c.cfg, origen: c.origen, firma: firma, instancia: s.instancias[c.cfg.Instancia]}

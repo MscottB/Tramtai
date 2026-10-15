@@ -14,10 +14,10 @@ import (
 )
 
 // maximoPromptAntigravity acota el prompt, que agy recibe como argumento y Windows limita la línea de órdenes.
-// shortcut: si agy acepta el prompt por stdin (--input-format stream-json), pasar a stdin y quitar el límite (M0b).
+// shortcut: si agy acepta el prompt por stdin (--input-format stream-json), pasar a stdin y quitar el límite.
 const maximoPromptAntigravity = 28000
 
-// Antigravity ejecuta "agy -p" solo con la Gemini API y la clave del usuario (sección 2.4): los términos de
+// Antigravity ejecuta "agy -p" solo con la Gemini API y la clave del usuario: los términos de
 // Antigravity no admiten herramientas de terceros con la sesión OAuth de una cuenta personal. Es experimental.
 type Antigravity struct {
 	Programa      string // nombre o ruta del ejecutable (comandos_agentes.antigravity)
@@ -74,7 +74,7 @@ func (a Antigravity) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, 
 	}
 	defer os.RemoveAll(raiz)
 	// HOME privado: agy no carga las reglas ni la sesión del usuario y su estado (conversaciones) se borra al
-	// terminar; modelProvider gemini obliga a usar la clave (validado en M0b con una clave falsa).
+	// terminar; modelProvider gemini obliga a usar la clave (comprobado con una clave falsa).
 	home := filepath.Join(raiz, "home")
 	ajustes := filepath.Join(home, ".gemini", "antigravity-cli")
 	if err := os.MkdirAll(ajustes, 0o700); err != nil {
@@ -117,14 +117,14 @@ func (a Antigravity) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, 
 	}
 	salida := strings.TrimSpace(final.Response)
 	if len(final.StructuredOutput) > 0 && string(final.StructuredOutput) != "null" {
-		salida = string(final.StructuredOutput) // en M0 el texto libre añadía campos fuera del esquema (sección 11)
+		salida = string(final.StructuredOutput) // con texto libre añadía campos fuera del esquema
 	}
 	if err := emitir(Evento{Tipo: "texto", Datos: salida}); err != nil {
 		return Resultado{}, err
 	}
 	return Resultado{Salida: salida, Uso: nucleo.Uso{
 		TokensEntrada: final.Usage.InputTokens + final.Usage.CacheRead,
-		TokensSalida:  final.Usage.OutputTokens, // incluye thinking_tokens (total = entrada + salida en M0)
+		TokensSalida:  final.Usage.OutputTokens, // incluye thinking_tokens (total = entrada + salida)
 	}}, nil
 }
 

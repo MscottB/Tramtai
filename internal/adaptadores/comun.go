@@ -13,13 +13,13 @@ import (
 	"tramtai/internal/procesos"
 )
 
-// Autenticación admitida por los adaptadores CLI (sección 2.4).
+// Autenticación admitida por los adaptadores CLI.
 const (
 	AutenticacionClaveAPI    = "clave_api"
 	AutenticacionSuscripcion = "suscripcion"
 )
 
-// FormatoSerializacion identifica el enmarcado de conversaciones de varios turnos (sección 8.2);
+// FormatoSerializacion identifica el enmarcado de conversaciones de varios turnos;
 // se publicará en /api/v1/capacidades.
 const FormatoSerializacion = "tramtai-turnos-v1"
 
@@ -42,7 +42,7 @@ type Detectable interface {
 	Detectar(ctx context.Context) Estado
 }
 
-// separar reparte la solicitud en el texto de sistema y el prompt (sección 8.2). Un único mensaje de usuario
+// separar reparte la solicitud en el texto de sistema y el prompt. Un único mensaje de usuario
 // se envía sin enmarcar; una conversación se delimita por turnos con su rol original y el contenido intacto.
 func separar(s nucleo.SolicitudEjecucion) (sistema, prompt string) {
 	var partesSistema []string
@@ -96,7 +96,7 @@ func entornoLimpio(extra ...string) []string {
 }
 
 // claveEntorno devuelve la primera clave definida: la variable de entorno tiene prioridad y, si falta, se busca en el
-// almacén de credenciales del sistema (tramtai claves guardar, sección 16.1).
+// almacén de credenciales del sistema (tramtai claves guardar).
 func claveEntorno(nombres ...string) string {
 	for _, nombre := range nombres {
 		if valor := os.Getenv(nombre); valor != "" {
@@ -112,7 +112,7 @@ func claveEntorno(nombres ...string) string {
 }
 
 // resolverPrograma localiza el ejecutable. Rechaza los envoltorios .cmd/.bat: pasarían los argumentos por
-// cmd.exe (sección 17.2), y en M0 el claude.cmd de npm resultó estar roto.
+// cmd.exe, y el claude.cmd de npm resultó estar roto.
 func resolverPrograma(nombre string) (string, error) {
 	ruta, err := exec.LookPath(nombre)
 	if err != nil {
@@ -157,7 +157,7 @@ func redactar(texto string, secretos ...string) string {
 	return texto
 }
 
-// clasificar traduce un error del proveedor a un código estable (sección 19: errores diferenciados).
+// clasificar traduce un error del proveedor a un código estable, distinto para cada tipo de error.
 func clasificar(texto string, estadoHTTP int) nucleo.CodigoError {
 	t := strings.ToLower(texto)
 	switch {

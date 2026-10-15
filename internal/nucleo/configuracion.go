@@ -14,7 +14,7 @@ import (
 	"tramtai/internal/idioma"
 )
 
-// Origen identifica la capa de la que procede un valor (sección 12.2): a mayor valor, mayor prioridad.
+// Origen identifica la capa de la que procede un valor: a mayor valor, mayor prioridad.
 type Origen int
 
 const (
@@ -54,7 +54,7 @@ const (
 )
 
 // esquema enumera las claves nativas admitidas; un segmento "*" acepta cualquier nombre.
-// shortcut: cubre las claves de M1; compatibilidad (M4) y puntos de acceso (M5) detallarán sus subclaves.
+// shortcut: valida las claves conocidas; las subclaves de compatibilidad y de puntos de acceso se validan en sus paquetes.
 var esquema = map[string]tipoValor{
 	"version":                                     tipoEntero,
 	"proyecto.nombre":                             tipoTexto,
@@ -248,7 +248,7 @@ func (c *Configuracion) Fijar(origen Origen, valores map[string]any) {
 	c.estado.Store(nuevo)
 }
 
-// Resolver aplica la precedencia única de la sección 12.2: gana la capa de mayor prioridad,
+// Resolver aplica la precedencia de las capas: gana la capa de mayor prioridad,
 // sin depender del orden de los argumentos.
 func Resolver(capas ...Capa) *Configuracion {
 	ordenadas := append([]Capa{Internos()}, capas...)
@@ -282,7 +282,7 @@ func (c *Configuracion) Booleano(clave string) bool {
 	return v
 }
 
-// Perfiles devuelve modelos.perfiles como perfil -> agente -> identificador de modelo (sección 9.2).
+// Perfiles devuelve modelos.perfiles como perfil -> agente -> identificador de modelo.
 func (c *Configuracion) Perfiles() map[string]map[string]string {
 	perfiles := map[string]map[string]string{}
 	for clave, valor := range c.e().valores {
@@ -363,7 +363,7 @@ func (c Capa) validar() error {
 			return errorConfiguracion(c.Fuente, clave, idioma.T("tipo incorrecto"))
 		}
 	}
-	// Promesas que Tramtai aún no cumple: se rechazan en vez de aceptarlas sin efecto (sección 16.2).
+	// Promesas que Tramtai aún no cumple: se rechazan en vez de aceptarlas sin efecto.
 	for _, clave := range []string{"retencion.guardar_historial", "retencion.cifrado_aplicacion", "retencion.cache_conversion_habilitada"} {
 		if c.Valores[clave] == true {
 			return errorConfiguracion(c.Fuente, clave, idioma.T("no soportado todavía: no hay historial permanente, cifrado propio ni cache documental"))
@@ -456,7 +456,7 @@ func convertir(tipo tipoValor, texto string) (any, error) {
 	return texto, nil
 }
 
-// errorConfiguracion indica archivo, propiedad y motivo sin revelar valores (sección 12.3).
+// errorConfiguracion indica archivo, propiedad y motivo sin revelar valores.
 func errorConfiguracion(fuente, clave, motivo string) error {
 	if clave == "" {
 		return NuevoError(CodigoConfiguracionInvalida, fuente+": "+motivo)

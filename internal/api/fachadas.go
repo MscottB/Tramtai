@@ -13,7 +13,7 @@ import (
 	"tramtai/internal/persistencia"
 )
 
-// politica clasifica los parámetros de una fachada (sección 8.1).
+// politica clasifica los parámetros de una fachada.
 type politica struct {
 	soportados   map[string]bool
 	ignorables   map[string]bool // se ignoran con aviso en la cabecera Tramtai-Advertencia
@@ -86,7 +86,7 @@ func avisar(w http.ResponseWriter, avisos []string) {
 	}
 }
 
-// avisarUso marca uso_no_verificado cuando el agente no informó tokens: se envían ceros (sección 8.1).
+// avisarUso marca uso_no_verificado cuando el agente no informó tokens: se envían ceros.
 func avisarUso(w http.ResponseWriter, t nucleo.Trabajo) {
 	if t.Uso.TokensEntrada == 0 && t.Uso.TokensSalida == 0 {
 		w.Header().Add("Tramtai-Advertencia", "uso_no_verificado")
@@ -94,7 +94,7 @@ func avisarUso(w http.ResponseWriter, t nucleo.Trabajo) {
 }
 
 // solicitudFachada traduce el campo model: agente/modelo, perfil/nombre, el nombre de un agente o un
-// identificador sin prefijo que solo exista en el catálogo de un agente (sección 9.5).
+// identificador sin prefijo que solo exista en el catálogo de un agente.
 func (s *Servidor) solicitudFachada(model string) (nucleo.SolicitudEjecucion, error) {
 	if s.Punto != nil && s.Punto.ForzarModelo {
 		return nucleo.SolicitudEjecucion{}, nil // el punto fija el modelo e ignora el de la solicitud

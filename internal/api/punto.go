@@ -11,7 +11,7 @@ import (
 	"tramtai/internal/nucleo"
 )
 
-// Punto es la política de un punto de acceso (sección 5.4): contratos, valores predeterminados, alias y
+// Punto es la política de un punto de acceso: contratos, valores predeterminados, alias y
 // restricciones de modelo. Hereda los límites de su instancia y no puede ampliarlos.
 type Punto struct {
 	Nombre            string

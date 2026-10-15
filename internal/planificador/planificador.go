@@ -1,4 +1,4 @@
-// Package planificador admite trabajos, aplica colas y límites y los ejecuta con los adaptadores (sección 17).
+// Package planificador admite trabajos, aplica colas y límites y los ejecuta con los adaptadores.
 package planificador
 
 import (
@@ -38,7 +38,7 @@ type Opciones struct {
 	TiempoLimitePredeterminado time.Duration
 	// Perfiles traduce perfil_modelo a un identificador por agente (perfil -> agente -> modelo).
 	Perfiles map[string]map[string]string
-	// MaximoConversiones limita las conversiones simultáneas, aparte de las ejecuciones (sección 17).
+	// MaximoConversiones limita las conversiones simultáneas, aparte de las ejecuciones.
 	MaximoConversiones int
 	// Preparador convierte las cargas; sin él, un trabajo con cargas falla con entrada_no_disponible.
 	Preparador Preparador
@@ -63,7 +63,7 @@ func OpcionesDesde(c *nucleo.Configuracion, instancia string) Opciones {
 }
 
 // Semaforos limita las ejecuciones simultáneas de cada adaptador en todo el servicio, porque todas
-// las instancias comparten la sesión del CLI (sección 17).
+// las instancias comparten la sesión del CLI.
 type Semaforos map[string]chan struct{}
 
 // NuevosSemaforos crea un semáforo por adaptador con su límite (mínimo 1).
@@ -90,7 +90,7 @@ type Planificador struct {
 	semPuntos map[string]chan struct{}
 	cola      chan string
 	// ctx gobierna la admisión y la toma de trabajos de la cola; ejec, las ejecuciones en curso. Separarlos
-	// permite el drenaje: se deja de aceptar sin cortar lo que ya se ejecuta (sección 17.3).
+	// permite el drenaje: se deja de aceptar sin cortar lo que ya se ejecuta.
 	ctx    context.Context
 	parar  context.CancelFunc
 	ejec   context.Context
@@ -105,7 +105,7 @@ func Nuevo(almacen *persistencia.Almacen, registro map[string]adaptadores.Adapta
 		conversiones: make(chan struct{}, max(opc.MaximoConversiones, 1)), cancelaciones: map[string]context.CancelFunc{}}
 }
 
-// Iniciar recupera el estado tras un reinicio (sección 4.3), reencola lo pendiente y arranca los ejecutores.
+// Iniciar recupera el estado tras un reinicio, reencola lo pendiente y arranca los ejecutores.
 func (p *Planificador) Iniciar(ctx context.Context) error {
 	if err := p.terminarHuerfanos(ctx); err != nil {
 		return err
@@ -131,7 +131,7 @@ func (p *Planificador) Iniciar(ctx context.Context) error {
 	return nil
 }
 
-// terminarHuerfanos mata los agentes que siguieran vivos de una ejecución anterior del servicio (sección 4.3).
+// terminarHuerfanos mata los agentes que siguieran vivos de una ejecución anterior del servicio.
 func (p *Planificador) terminarHuerfanos(ctx context.Context) error {
 	ids, err := p.almacen.ListarPorEstado(ctx, p.opc.Instancia, nucleo.Ejecutando, nucleo.ValidandoSalida, nucleo.CancelacionSolicitada)
 	if err != nil {
@@ -151,7 +151,7 @@ func (p *Planificador) Enviar(ctx context.Context, solicitud nucleo.SolicitudEje
 	return p.aceptar(ctx, solicitud, clave, "", "")
 }
 
-// EnviarPorPunto acepta una solicitud recibida por un punto de acceso y la vincula a él (sección 5.4).
+// EnviarPorPunto acepta una solicitud recibida por un punto de acceso y la vincula a él.
 func (p *Planificador) EnviarPorPunto(ctx context.Context, solicitud nucleo.SolicitudEjecucion, clave, punto string) (nucleo.Trabajo, bool, error) {
 	return p.aceptar(ctx, solicitud, clave, "", punto)
 }
@@ -218,8 +218,8 @@ func (p *Planificador) registrar(t nucleo.Trabajo, evento string) {
 	fmt.Fprintln(p.opc.Registros, linea)
 }
 
-// resolverModelo fija al aceptar el identificador que recibirá el CLI (fotografía del trabajo, sección 12.3).
-// Un perfil sin modelo para el agente se rechaza: nunca se sustituye el modelo en silencio (sección 9.2).
+// resolverModelo fija al aceptar el identificador que recibirá el CLI (fotografía del trabajo).
+// Un perfil sin modelo para el agente se rechaza: nunca se sustituye el modelo en silencio.
 func (p *Planificador) resolverModelo(s nucleo.SolicitudEjecucion) (string, error) {
 	if s.PerfilModelo == "" {
 		return s.Modelo, nil
@@ -247,7 +247,7 @@ func (p *Planificador) encolar(id string) {
 }
 
 // Cancelar es idempotente: en un estado terminal o ya en cancelación devuelve el trabajo sin cambios.
-// Solo registra cancelado cuando la terminación está confirmada (sección 17.2).
+// Solo registra cancelado cuando la terminación está confirmada.
 func (p *Planificador) Cancelar(ctx context.Context, id string) (nucleo.Trabajo, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -266,7 +266,7 @@ func (p *Planificador) Cancelar(ctx context.Context, id string) (nucleo.Trabajo,
 	return p.almacen.Obtener(ctx, id)
 }
 
-// Obtener devuelve un trabajo de esta instancia; los de otras instancias no existen para ella (sección 16.1).
+// Obtener devuelve un trabajo de esta instancia; los de otras instancias no existen para ella.
 func (p *Planificador) Obtener(ctx context.Context, id string) (nucleo.Trabajo, error) {
 	t, err := p.almacen.Obtener(ctx, id)
 	if err == nil && t.Instancia != p.opc.Instancia {
@@ -287,7 +287,7 @@ func (p *Planificador) Eventos(ctx context.Context, id string, desde int) ([]per
 }
 
 // Reintentar crea un intento nuevo vinculado al anterior, que debe haber terminado; reutiliza sus entradas
-// y puede consumir cuota otra vez (sección 17.1).
+// y puede consumir cuota otra vez.
 func (p *Planificador) Reintentar(ctx context.Context, id string) (nucleo.Trabajo, error) {
 	anterior, err := p.Obtener(ctx, id)
 	if err != nil {
@@ -345,7 +345,7 @@ func (p *Planificador) Contar(ctx context.Context) (map[nucleo.Estado]int, error
 func (p *Planificador) Detener() { p.Drenar(0) }
 
 // Drenar deja de aceptar trabajos y de tomarlos de la cola, espera hasta plazo a que terminen los que se
-// están ejecutando y después interrumpe los que queden. Lo que seguía en cola se reanuda al reiniciar (sección 17.3).
+// están ejecutando y después interrumpe los que queden. Lo que seguía en cola se reanuda al reiniciar.
 func (p *Planificador) Drenar(plazo time.Duration) {
 	if p.parar == nil {
 		return
@@ -510,7 +510,7 @@ func (p *Planificador) procesar(id string) {
 	solicitud.Modelo, solicitud.PerfilModelo = t.ModeloEnviado, ""
 	if solicitud.ModoContexto == "consciente_proyecto" {
 		solicitud.RaizProyecto = p.opc.RaizConfiable
-		// Se declara de forma visible qué contexto se carga antes de ejecutar (sección 6.3).
+		// Se declara de forma visible qué contexto se carga antes de ejecutar.
 		_ = p.almacen.AgregarEvento(fondo, id, "aviso", idioma.Tf("modo consciente_proyecto: el agente trabaja en %s"+
 			" y carga las reglas del proyecto y de sus carpetas superiores (CLAUDE.md, AGENTS.md, GEMINI.md), sin MCP, herramientas"+
 			" ni sesión persistente; con autenticación por suscripción el CLI carga también las reglas del usuario", p.opc.RaizConfiable))
@@ -541,7 +541,7 @@ func (p *Planificador) procesar(id string) {
 		cambio := persistencia.Cambio{Codigo: nucleo.CodigoSalidaNoCumpleEsquema,
 			Mensaje: nucleo.MensajeDe(err), Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo}
 		if t.Solicitud.Salida.ConservarSalidaInvalida {
-			cambio.Salida = &resultado.Salida // salida bruta conservada (sección 11), con la retención del resultado
+			cambio.Salida = &resultado.Salida // salida bruta conservada, con la retención del resultado
 		}
 		p.cambiar(id, nucleo.ValidandoSalida, nucleo.Fallido, cambio)
 		return
@@ -591,7 +591,7 @@ func (p *Planificador) preparar(ctx context.Context, cargas []string) (string, e
 }
 
 // conDocumentos antepone las entradas preparadas al último mensaje del usuario sin alterar su texto;
-// cada archivo va en su bloque delimitado con metadatos (sección 10).
+// cada archivo va en su bloque delimitado con metadatos.
 func conDocumentos(s nucleo.SolicitudEjecucion, documentos string) nucleo.SolicitudEjecucion {
 	mensajes := slices.Clone(s.Mensajes)
 	for i := len(mensajes) - 1; i >= 0; i-- {
@@ -605,7 +605,7 @@ func conDocumentos(s nucleo.SolicitudEjecucion, documentos string) nucleo.Solici
 	return s
 }
 
-// validarSalida comprueba el formato pedido y, si hay esquema, que la salida lo cumpla (sección 11).
+// validarSalida comprueba el formato pedido y, si hay esquema, que la salida lo cumpla.
 func validarSalida(config nucleo.ConfigSalida, salida string) error {
 	if len(config.Esquema) > 0 {
 		return salidas.Validar(config.Esquema, salida)

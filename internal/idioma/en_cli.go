@@ -169,7 +169,7 @@ func init() {
 		"activo":       "active",
 		"sin trabajos": "no jobs",
 		"servicio.host %s no es loopback: activa servicio.permitir_remoto (mejor, usa un túnel SSH)":                     "servicio.host %s is not loopback: turn on servicio.permitir_remoto (better, use an SSH tunnel)",
-		"el acceso remoto no se permite con %s en modo suscripción (sección 2.4)":                                        "remote access is not allowed with %s in subscription mode (section 2.4)",
+		"el acceso remoto no se permite con %s en modo suscripción":                                                      "remote access is not allowed with %s in subscription mode",
 		"el servicio ya está en marcha en %s":                                                                            "the service is already running at %s",
 		"el puerto %d está ocupado: Tramtai usa el %d (para fijar otro: Ajustes o «tramtai servicio puerto <número>»)\n": "port %d is in use: Tramtai uses %d (to set another one: Settings or “tramtai servicio puerto <number>”)\n",
 		"no se pudo restaurar una instancia:":                                                                            "could not restore a workspace:",

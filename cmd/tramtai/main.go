@@ -194,7 +194,7 @@ func raizProyecto() string {
 	return raiz
 }
 
-// cargarConfiguracion resuelve las capas de la sección 12.2 para el proyecto actual (o solo la global).
+// cargarConfiguracion resuelve las capas de configuración para el proyecto actual (o solo la global).
 func cargarConfiguracion() (*nucleo.Configuracion, error) {
 	return nucleo.CargarConfiguracion(raizProyecto())
 }

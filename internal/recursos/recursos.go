@@ -1,4 +1,4 @@
-// Package recursos incorpora la Web UI compilada en el ejecutable (sección 21): web/ se compila con
+// Package recursos incorpora la Web UI compilada en el ejecutable: web/ se compila con
 // "npm run build" en internal/recursos/web y se versiona, para que go build no necesite Node.
 package recursos
 

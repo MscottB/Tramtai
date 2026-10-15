@@ -11,7 +11,7 @@ import (
 
 // esLocal indica que la petición llega por loopback desde un programa del mismo usuario del sistema que el
 // servicio (el navegador o la aplicación de escritorio). Entonces la Web UI entra sin token: el token protege
-// frente a otros usuarios del equipo, y eso se comprueba aquí con el dueño de la conexión (sección 16.1). Las
+// frente a otros usuarios del equipo, y eso se comprueba aquí con el dueño de la conexión. Las
 // páginas web ajenas siguen bloqueadas por Host, Origin, SameSite y CSRF; las aplicaciones siguen usando su token.
 func (s *Servicio) esLocal(r *http.Request) bool {
 	if !s.opc.EntradaLocal {

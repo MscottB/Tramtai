@@ -1,4 +1,4 @@
-// Package adaptadores define el contrato con los agentes y el adaptador simulado de M1.
+// Package adaptadores define el contrato con los agentes y el adaptador simulado para pruebas.
 package adaptadores
 
 import (

@@ -175,7 +175,7 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 
 	registro, limites := adaptadores.Registro(c)
 	// shortcut: cada ejecución directa usa su propia instancia para no relanzar trabajos de otra ejecución
-	// interrumpida; el servicio (M4) tendrá instancias persistentes con su recuperación.
+	// interrumpida; el servicio tiene instancias persistentes con su recuperación.
 	opc := planificador.OpcionesDesde(c, "cli-"+nucleo.NuevoID()[len("trabajo_"):])
 	opc.Preparador = documentos.Preparador{Cargas: cargas, Conversor: documentos.Desde(c)}
 	if dir, err := os.Getwd(); err == nil {

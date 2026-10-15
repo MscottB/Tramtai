@@ -33,7 +33,7 @@ import (
 	"tramtai/internal/version"
 )
 
-// dirDatos es el directorio de datos locales del usuario (sección 12.1).
+// dirDatos es el directorio de datos locales del usuario.
 func dirDatos() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
@@ -55,7 +55,7 @@ func conectar() (*cliente.Cliente, error) {
 	return cliente.Conectar(datos)
 }
 
-// asegurarServicio conecta con el servicio o lo inicia en segundo plano (sección 5.1).
+// asegurarServicio conecta con el servicio o lo inicia en segundo plano.
 func asegurarServicio(cmd *cobra.Command) (*cliente.Cliente, error) {
 	datos, err := dirDatos()
 	if err != nil {
@@ -214,7 +214,7 @@ func comandoServicio() *cobra.Command {
 			if err := c.Detener(ctx); err != nil {
 				return err
 			}
-			// El servicio espera a los trabajos en curso hasta servicio.plazo_drenaje_segundos (sección 17.3).
+			// El servicio espera a los trabajos en curso hasta servicio.plazo_drenaje_segundos.
 			plazo := 30 * time.Second
 			if cfg, err := nucleo.CargarConfiguracion(""); err == nil {
 				plazo = time.Duration(cfg.Entero("servicio.plazo_drenaje_segundos")) * time.Second
@@ -432,7 +432,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string) error {
 		}
 		for _, agente := range []string{"claude", "codex"} {
 			if c.Texto("adaptadores."+agente+".autenticacion") == adaptadores.AutenticacionSuscripcion {
-				return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("el acceso remoto no se permite con %s en modo suscripción (sección 2.4)", agente))
+				return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("el acceso remoto no se permite con %s en modo suscripción", agente))
 			}
 		}
 	}
@@ -557,7 +557,7 @@ func mostrarTokenInstancia(cmd *cobra.Command, ambito string) error {
 	return nil
 }
 
-// comandoInstancia crea los comandos de la instancia global o de la del proyecto actual (secciones 5.1 y 5.2).
+// comandoInstancia crea los comandos de la instancia global o de la del proyecto actual.
 func comandoInstancia(ambito string) *cobra.Command {
 	corto := map[string]string{"global": idioma.T("Instancia global: texto y archivos sin repositorio"),
 		"proyecto": idioma.T("Instancia del proyecto actual (.tramtai/config.yaml)")}[ambito]

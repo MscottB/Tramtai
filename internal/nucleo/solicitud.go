@@ -20,7 +20,7 @@ type Mensaje struct {
 type ConfigSalida struct {
 	Formato            string `json:"formato,omitempty"`
 	ValidacionEstricta bool   `json:"validacion_estricta,omitempty"`
-	// Esquema es el JSON Schema que debe cumplir la salida (sección 11); exige formato json.
+	// Esquema es el JSON Schema que debe cumplir la salida; exige formato json.
 	Esquema json.RawMessage `json:"esquema,omitempty"`
 	// ConservarSalidaInvalida guarda la salida que no cumple el esquema, para revisarla, con la misma retención.
 	ConservarSalidaInvalida bool `json:"conservar_salida_invalida,omitempty"`
@@ -32,7 +32,7 @@ type ConfigEjecucion struct {
 	PersistirSesion      bool `json:"persistir_sesion,omitempty"`
 }
 
-// SolicitudEjecucion es el contrato interno único (sección 4.4).
+// SolicitudEjecucion es el contrato interno único.
 type SolicitudEjecucion struct {
 	Agente       string `json:"agente,omitempty"`
 	Modelo       string `json:"modelo,omitempty"`
@@ -43,7 +43,7 @@ type SolicitudEjecucion struct {
 	// Perfil es un perfil de ejecución explícito (profiles/<nombre>.yaml); se aplica al aceptar y queda en la fotografía.
 	Perfil       string `json:"perfil,omitempty"`
 	ModoContexto string `json:"modo_contexto,omitempty"`
-	// RaizProyecto la fija el planificador en modo consciente_proyecto; no viene del cliente (sección 6.3).
+	// RaizProyecto la fija el planificador en modo consciente_proyecto; no viene del cliente.
 	RaizProyecto  string          `json:"-"`
 	Instrucciones string          `json:"instrucciones,omitempty"`
 	Mensajes      []Mensaje       `json:"mensajes,omitempty"`
@@ -66,7 +66,7 @@ var (
 	modosContexto   = map[string]bool{"aislado": true, "consciente_proyecto": true}
 	// NivelesEsfuerzo, de menor a mayor.
 	NivelesEsfuerzo = []string{"bajo", "medio", "alto", "muy_alto", "maximo"}
-	// El modelo es una cadena validada por tamaño y formato técnico, no un enum cerrado (sección 9.2).
+	// El modelo es una cadena validada por tamaño y formato técnico, no un enum cerrado.
 	reIdentificador = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,127}$`)
 )
 
@@ -125,7 +125,7 @@ func (s SolicitudEjecucion) Validar() error {
 	return nil
 }
 
-// Huella resume la solicitud normalizada para la idempotencia sin guardar su texto (sección 7.2).
+// Huella resume la solicitud normalizada para la idempotencia sin guardar su texto.
 func (s SolicitudEjecucion) Huella() string {
 	datos, _ := json.Marshal(s) // el orden fijo de los campos hace la serialización determinista
 	suma := sha256.Sum256(datos)

@@ -1,6 +1,6 @@
 # Arquitectura
 
-El diseño completo está en el documento maestro (v12, en `documentos/`). Resumen de lo implementado:
+Cómo está construido Tramtai por dentro:
 
 ## Paquetes
 
@@ -13,10 +13,10 @@ El diseño completo está en el documento maestro (v12, en `documentos/`). Resum
 | `internal/adaptadores` | Contrato `Adaptador`, agente `Simulado` y los adaptadores reales: Claude, Codex, Gemini API y Antigravity. |
 | `internal/documentos` | Cargas identificadas por SHA-256 (`carga_<hash>`) con vencimiento. Conversión a Markdown con markitdown 0.1.8 en un proceso supervisado con plazo y límite de salida. Los archivos de texto (txt, md, json, xml, csv, yaml…) pasan tal cual, validando que sean UTF-8. ZIP seguro con límites de archivos, tamaño descomprimido medido y profundidad, rechazando rutas con `..`, absolutas, con unidad o enlaces. |
 | `internal/salidas` | Validación de la salida contra el JSON Schema del consumidor (`santhosh-tekuri/jsonschema`), con los `$ref` externos deshabilitados. |
-| `internal/api` | Servicio HTTP (sección 7 y 8): valida Host, Origin y token; API nativa con SSE reanudable por `Last-Event-ID`; fachadas OpenAI y Anthropic con política de parámetros y su formato de errores. Detalle en [api.md](api.md). |
-| `internal/servicio` | Servicio único (sección 5): instancias global y por proyecto con token, base de datos, cola y cargas propios; enrutado por token; administración con token de servicio; puntos de acceso con puerto o ruta `/p/<nombre>`, recarga sin reinicio y edición del YAML conservando comentarios; descriptor `servicio.json`. |
+| `internal/api` | Servicio HTTP: valida Host, Origin y token; API nativa con SSE reanudable por `Last-Event-ID`; fachadas OpenAI y Anthropic con política de parámetros y su formato de errores. Detalle en [api.md](api.md). |
+| `internal/servicio` | Servicio único: instancias global y por proyecto con token, base de datos, cola y cargas propios; enrutado por token; administración con token de servicio; puntos de acceso con puerto o ruta `/p/<nombre>`, recarga sin reinicio y edición del YAML conservando comentarios; descriptor `servicio.json`. |
 | `internal/cliente` | Cliente del servicio para la CLI y la terminal: descubre el servicio por su descriptor, lo inicia en segundo plano y sigue los eventos SSE. |
-| `internal/tui` | Terminal interactiva con Bubble Tea v2 (sección 13.2). |
+| `internal/tui` | Terminal interactiva con Bubble Tea v2. |
 | `internal/recursos` | Web UI compilada incorporada con `go:embed`. Se versiona para que `go build` no necesite Node. |
 | `internal/navegador` | Abre URLs en el navegador del sistema. |
 | `web/` | Web UI con Vue 3 y Quasar 2.35 (Vite). La compila `npm run build` en `internal/recursos/web`. |
@@ -71,7 +71,7 @@ Las cuatro interfaces trabajan sobre el mismo servicio, así que un trabajo crea
 - **Web UI:** servida por el propio servicio en `http://127.0.0.1:17373`.
 - **Aplicación de escritorio:** `tramtai-escritorio`.
 
-La Web UI se enlaza a una instancia con una sesión (sección 7.4):
+La Web UI se enlaza a una instancia con una sesión:
 
 - **Entrada sin clave en el propio equipo:** si la conexión llega por loopback desde un programa del mismo usuario del sistema (el navegador o la app de escritorio), la Web UI entra sola y puede cambiar entre instancias. En Windows se identifica al dueño de la conexión con la tabla TCP del sistema y el SID de su proceso; en Linux, con el uid de `/proc/net/tcp`. Se desactiva con `servicio.entrada_local: false`.
 - **Otras formas de entrar:** con la clave de la instancia, o con un código de un solo uso (un minuto) que piden `tramtai abrir`, la terminal o la app de escritorio. Es lo que se usa en macOS o desde otro equipo.
@@ -93,7 +93,7 @@ en_cola al reiniciar → se reencola
 
 ## Retención, cierre y recuperación
 
-La retención (sección 16.2) se aplica a cada instancia al abrirla y después cada 5 minutos. Los plazos cuentan desde que el trabajo termina, y los trabajos activos nunca se purgan:
+La retención se aplica a cada instancia al abrirla y después cada 5 minutos. Los plazos cuentan desde que el trabajo termina, y los trabajos activos nunca se purgan:
 
 | Clave | Por defecto | Qué borra al vencer |
 |---|---|---|
@@ -103,9 +103,9 @@ La retención (sección 16.2) se aplica a cada instancia al abrirla y después c
 | `retencion.horas_carga_huerfana` | 24 | Las cargas que ningún trabajo necesita. Las de un trabajo que aún se puede reintentar se conservan aunque hayan vencido. |
 | `retencion.eliminar_entradas_al_terminar` | false | Con `true`, las entradas se borran al terminar y el reintento exige reenviarlas. |
 
-**Cierre (sección 17.3):** al detener el servicio se dejan de aceptar trabajos (503 `servicio_detenido`). Lo que se está ejecutando tiene hasta `servicio.plazo_drenaje_segundos` (30) para terminar, mientras la API sigue respondiendo para recoger resultados. Al agotarse el plazo, lo que quede pasa a `interrumpido`. Lo que estaba en cola se conserva y se reanuda al reiniciar. Desactivar una instancia no espera: interrumpe lo que tenga en curso.
+**Cierre:** al detener el servicio se dejan de aceptar trabajos (503 `servicio_detenido`). Lo que se está ejecutando tiene hasta `servicio.plazo_drenaje_segundos` (30) para terminar, mientras la API sigue respondiendo para recoger resultados. Al agotarse el plazo, lo que quede pasa a `interrumpido`. Lo que estaba en cola se conserva y se reanuda al reiniciar. Desactivar una instancia no espera: interrumpe lo que tenga en curso.
 
-**Caída del servicio (sección 4.3):**
+**Caída del servicio:**
 
 - En Windows, el sistema cierra el Job Object de cada agente y termina su árbol de procesos. Se verificó matando el servicio con 6 procesos de Codex en marcha.
 - Al reiniciar, lo que estaba ejecutándose pasa a `interrumpido` y nunca se relanza.
@@ -113,7 +113,7 @@ La retención (sección 16.2) se aplica a cada instancia al abrirla y después c
 
 **Límite:** el vencimiento borra los datos de forma lógica (SQLite y archivos). No garantiza un borrado físico seguro en SSD, copias de seguridad ni páginas libres de SQLite.
 
-## Modo consciente del proyecto (sección 6.3)
+## Modo consciente del proyecto
 
 Por defecto, cada agente se ejecuta aislado en una carpeta temporal vacía. Con `modo_contexto: consciente_proyecto`, en un proyecto declarado en `proyectos_confiables` (global o `local.yaml`, nunca en la configuración versionada):
 
@@ -145,4 +145,4 @@ De menor a mayor: interno → global → proyecto → local → entorno → punt
 
 ## Cumplimiento de proveedores
 
-Por defecto cada adaptador usa clave de API. El modo suscripción es opcional, solo local y sin acceso remoto. Google se usará vía Gemini API directa; `agy` solo con `modelProvider: gemini` + `GEMINI_API_KEY`. Detalle en §2.4 del documento maestro.
+Por defecto cada adaptador usa clave de API. El modo suscripción es opcional, solo local y sin acceso remoto. Google se usará vía Gemini API directa; `agy` solo con `modelProvider: gemini` + `GEMINI_API_KEY`.

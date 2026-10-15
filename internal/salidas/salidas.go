@@ -1,4 +1,4 @@
-// Package salidas valida las salidas estructuradas contra el JSON Schema del consumidor (sección 11).
+// Package salidas valida las salidas estructuradas contra el JSON Schema del consumidor.
 package salidas
 
 import (
