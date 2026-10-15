@@ -168,6 +168,8 @@ func TestPuntosDeAcceso(t *testing.T) {
 	if estado := s.Recargar(); !estado[1].Activo {
 		t.Fatalf("el punto con puerto propio debía reabrirse: %+v", estado[1])
 	}
+	// Las conexiones guardadas eran del servidor anterior, que las cerró; un POST no se reintenta solo.
+	http.DefaultClient.CloseIdleConnections()
 	r, cuerpo = pedir(t, "http://127.0.0.1:"+strconv.Itoa(puerto), "POST", "/api/v1/ejecutar", tokenFijo, `{"agente":"otro","mensajes":[{"rol":"usuario","contenido":"x"}]}`)
 	if r.StatusCode != 200 || !strings.Contains(cuerpo, `"modelo_enviado":"m8"`) {
 		t.Fatalf("punto reabierto en su puerto: %d %s", r.StatusCode, cuerpo)

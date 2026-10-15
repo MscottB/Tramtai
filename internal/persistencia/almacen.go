@@ -517,13 +517,14 @@ func (a *Almacen) Purgar(ctx context.Context, instancia string, r Retencion) (ve
 	}
 	limiteResultado := fecha(ahora.Add(-r.Resultado))
 	// Los eventos de estado se conservan con los metadatos; los demás llevan contenido. Solo se miran los
-	// trabajos que vencen ahora: los ya vencidos se limpiaron en su purga.
+	// trabajos que vencen ahora: los ya vencidos se limpiaron en su purga. Con <= vence también lo terminado en el
+	// mismo instante (retención 0): en Windows el reloj avanza a saltos.
 	if _, err := tx.ExecContext(ctx, `DELETE FROM eventos WHERE tipo <> 'estado' AND trabajo_id IN
-		(SELECT id FROM trabajos WHERE instancia = ? AND terminado_en < ? AND vencido = 0)`, instancia, limiteResultado); err != nil {
+		(SELECT id FROM trabajos WHERE instancia = ? AND terminado_en <= ? AND vencido = 0)`, instancia, limiteResultado); err != nil {
 		return 0, 0, err
 	}
 	res, err := tx.ExecContext(ctx, `UPDATE trabajos SET salida = '', solicitud = `+sinEntradas+`, vencido = 1, entradas_eliminadas = 1
-		WHERE instancia = ? AND terminado_en < ? AND vencido = 0`, instancia, limiteResultado)
+		WHERE instancia = ? AND terminado_en <= ? AND vencido = 0`, instancia, limiteResultado)
 	if err != nil {
 		return 0, 0, err
 	}
