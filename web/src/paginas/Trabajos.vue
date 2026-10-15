@@ -6,7 +6,7 @@
         <div class="texto-suave">{{ t('historial.subtitulo') }}</div>
       </div>
       <div class="col-12 col-sm-auto row no-wrap q-gutter-x-sm">
-        <q-btn flat no-caps color="negative" icon="o_delete_sweep" :label="t('historial.vaciar')" :disable="!trabajos.some((x) => terminales.includes(x.estado))" @click="vaciar" />
+        <q-btn flat no-caps color="negative" icon="o_delete_sweep" :label="t('historial.vaciar')" :disable="!hayTerminados" @click="vaciar" />
         <q-btn flat no-caps color="primary" icon="o_refresh" :label="t('comun.actualizar')" :loading="cargando" @click="cargar()" />
       </div>
     </div>
@@ -123,6 +123,7 @@ import { t } from '../i18n'
 const emit = defineEmits<{ ir: [pagina: string] }>()
 const $q = useQuasar()
 const trabajos = ref<Trabajo[]>([])
+const hayTerminados = computed(() => trabajos.value.some((x) => terminales.includes(x.estado)))
 const cargando = ref(false)
 const dialogo = ref(false)
 const detalle = ref<Trabajo>()

@@ -118,7 +118,7 @@ const catalogo = ref<Modelo[]>([])
 const opciones = computed(() => {
   const perfiles = catalogo.value.filter((m) => m.perfil)
   const resto = catalogo.value.filter((m) => !m.perfil)
-  return [{ label: t('ejecutar.predeterminado'), caption: descripcionPredeterminado(catalogo.value) || t('ejecutar.predeterminadoDetalle'), value: '', predeterminado: false },
+  return [{ label: t('ejecutar.predeterminado'), caption: descripcionPredeterminado(catalogo.value) || t('ejecutar.predeterminadoDetalle'), value: '', predeterminado: false, esfuerzos: [] },
     ...perfiles.map(opcionModelo), ...resto.map(opcionModelo)]
 })
 const modelo = ref<string | null>(modeloInicial.value)

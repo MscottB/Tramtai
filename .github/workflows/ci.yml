@@ -39,6 +39,9 @@ jobs:
           cache-dependency-path: '**/go.sum' # también los módulos de la app de escritorio
       - run: go vet ./...
       - run: go test ./...
+      - name: Dependencias de Go sin vulnerabilidades conocidas
+        if: runner.os == 'Linux'
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
       - name: App de escritorio
         if: runner.os == 'Windows'
         working-directory: escritorio
@@ -96,5 +99,8 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
-      - run: npx tsc --noEmit -p .
-      - run: npm run build
+      - name: Dependencias sin vulnerabilidades conocidas (altas o críticas) y con firmas del registro verificadas
+        run: |
+          npm audit --audit-level=high
+          npm audit signatures
+      - run: npm run build # comprueba los tipos de los .vue con vue-tsc y compila

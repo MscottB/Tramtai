@@ -28,12 +28,20 @@ go run ./scripts/icono     # regenera el icono (escritorio/icono/tramtai.png); c
 cd web
 npm install
 npm run dev      # servidor de desarrollo que llama al servicio en marcha (tramtai servicio iniciar -d)
-npm run build    # compila en internal/recursos/web, que se incorpora al ejecutable con go:embed
+npm run build    # comprueba los tipos (vue-tsc, también los .vue) y compila en internal/recursos/web, que se incorpora con go:embed
 ```
 
 La compilación de la Web UI se versiona para que `go build` no necesite Node.
 
-**Idiomas.** Los textos están en `web/src/idiomas/`: `es.ts` es el principal y define las claves; `en.ts` tiene el tipo `Textos`, así que `npx tsc --noEmit -p .` falla si le falta alguna. Para añadir un idioma, crea `idiomas/<código>.ts` con el mismo tipo y añádelo a `idiomas` en `web/src/i18n.ts` junto al paquete de Quasar (`quasar/lang/<código>`). La preferencia se recuerda en el navegador; sin ella se usa la del navegador y, si no está disponible, español. 
+**Dependencias.** `web/.npmrc` protege las instalaciones:
+
+- `min-release-age=7`: npm no instala versiones publicadas hace menos de 7 días, la ventana en que suelen detectarse y retirarse los paquetes comprometidos. Para una corrección urgente: `npm install --min-release-age=0 …`.
+- `ignore-scripts=true`: ningún paquete ejecuta scripts al instalarse.
+- `save-exact=true`: las versiones quedan fijas, sin `^` ni `~`.
+
+El CI falla si una dependencia de la Web UI tiene una vulnerabilidad alta o crítica conocida (`npm audit --audit-level=high`) o si su firma del registro no se verifica (`npm audit signatures`). Las de Go se revisan con `govulncheck`, que solo avisa de las vulnerabilidades que el código llega a usar.
+
+**Idiomas.** Los textos están en `web/src/idiomas/`: `es.ts` es el principal y define las claves; `en.ts` tiene el tipo `Textos`, así que `npm run tipos` falla si le falta alguna. Para añadir un idioma, crea `idiomas/<código>.ts` con el mismo tipo y añádelo a `idiomas` en `web/src/i18n.ts` junto al paquete de Quasar (`quasar/lang/<código>`). La preferencia se recuerda en el navegador; sin ella se usa la del navegador y, si no está disponible, español. 
 
 La CLI, la terminal interactiva, la app de escritorio y los mensajes de error del servicio usan `internal/idioma`: el texto se escribe en español dentro de `idioma.T("…")` o `idioma.Tf("… %s", x)` (siempre un literal) y su inglés va en `internal/idioma/en_*.go`. `TestCobertura` falla si un texto marcado no tiene traducción, si cambian los verbos de `fmt`, si sobra una traducción o si un mismo texto tiene dos. No se traducen los nombres de comandos y opciones, las claves de configuración, los códigos de error, los registros del servicio ni lo que se envía a los agentes. El idioma sale de `TRAMTAI_IDIOMA` (`es` o `en`) o del sistema; las pruebas comparan textos en español, así que el CI las ejecuta con `TRAMTAI_IDIOMA=es`.
 

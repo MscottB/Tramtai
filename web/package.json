@@ -6,19 +6,21 @@
   "description": "Web UI de Tramtai (Vue 3 + Quasar); se compila en internal/recursos/web y se incorpora al ejecutable.",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "tipos": "vue-tsc --noEmit -p .",
+    "build": "vue-tsc --noEmit -p . && vite build"
   },
   "dependencies": {
     "@fontsource-variable/overpass": "^5.3.0",
     "@quasar/extras": "1.17.0",
     "quasar": "2.35.1",
-    "vue": "3.5.13"
+    "vue": "3.5.43"
   },
   "devDependencies": {
     "@quasar/vite-plugin": "2.0.2",
     "@vitejs/plugin-vue": "6.0.10",
     "sass-embedded": "1.105.1",
     "typescript": "5.8.3",
-    "vite": "8.0.5"
+    "vite": "8.3.4",
+    "vue-tsc": "3.3.12"
   }
 }
