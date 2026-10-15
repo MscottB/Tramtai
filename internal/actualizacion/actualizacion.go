@@ -75,7 +75,11 @@ func Ultima(ctx context.Context) (Version, error) {
 	if _, ok := numeros(ficha.Etiqueta); !ok {
 		return Version{}, fmt.Errorf(idioma.T("la última versión publicada no tiene un número válido: %q"), ficha.Etiqueta)
 	}
-	v := Version{Etiqueta: ficha.Etiqueta, Pagina: ficha.Pagina, Notas: recortar(ficha.Notas, 6000)}
+	v := Version{Etiqueta: ficha.Etiqueta, Notas: recortar(ficha.Notas, 6000)}
+	// La Web UI la muestra como enlace: solo páginas del repositorio, nunca javascript: ni otros sitios.
+	if strings.HasPrefix(ficha.Pagina, "https://github.com/"+repositorio+"/") {
+		v.Pagina = ficha.Pagina
+	}
 	for _, a := range ficha.Archivos {
 		switch {
 		case strings.HasSuffix(a.Nombre, sufijoInstalador):
@@ -184,7 +188,7 @@ func Descargar(ctx context.Context, v Version, dir string) (string, error) {
 		return "", errors.New(idioma.T("esta versión no publicó instalador para Windows"))
 	}
 	for _, u := range []string{v.urlInstalador, v.urlSumas} {
-		if !strings.HasPrefix(u, prefijoDescarga) {
+		if !strings.HasPrefix(u, prefijoDescarga) || strings.Contains(u, "..") || strings.Contains(strings.ToLower(u), "%2e") {
 			return "", fmt.Errorf(idioma.T("dirección de descarga inesperada: %s"), u)
 		}
 	}
