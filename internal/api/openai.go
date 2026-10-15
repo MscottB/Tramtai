@@ -325,9 +325,10 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 	_ = evento("response.completed", map[string]any{"response": objetoRespuesta(final, p.Model, "completed", final.Salida)})
 }
 
-func (s *Servidor) modelosOpenAI(w http.ResponseWriter, _ *http.Request) {
+func (s *Servidor) modelosOpenAI(w http.ResponseWriter, r *http.Request) {
 	datos := []any{}
-	for _, m := range s.catalogo() {
+	efectivos, _ := s.Planificador.ModelosEfectivos(r.Context())
+	for _, m := range s.catalogo(efectivos) {
 		datos = append(datos, map[string]any{"id": m.ID, "object": "model", "created": 0, "owned_by": "tramtai"})
 	}
 	EscribirJSON(w, http.StatusOK, map[string]any{"object": "list", "data": datos})

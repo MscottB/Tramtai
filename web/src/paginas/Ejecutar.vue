@@ -12,18 +12,7 @@
             <div class="titulo-seccion">{{ t('ejecutar.tuMensaje') }}</div>
           </q-card-section>
           <q-card-section class="q-gutter-y-md q-pt-sm">
-            <q-select v-model="modelo" :options="opciones" emit-value map-options outlined dense options-dense :label="t('ejecutar.agenteModelo')">
-              <template #prepend><q-icon name="o_smart_toy" /></template>
-              <template #option="scope">
-                <q-item v-bind="scope.itemProps">
-                  <q-item-section>
-                    <q-item-label>{{ scope.opt.label }}</q-item-label>
-                    <q-item-label caption>{{ scope.opt.caption }}</q-item-label>
-                  </q-item-section>
-                  <q-item-section v-if="scope.opt.predeterminado" side><span class="etiqueta etiqueta--info">{{ t('modelo.esPredeterminado') }}</span></q-item-section>
-                </q-item>
-              </template>
-            </q-select>
+            <SelectorModelo v-model="modelo" :opciones="opciones" :label="t('ejecutar.agenteModelo')" />
             <SelectorEsfuerzo v-model="esfuerzo" :niveles="niveles" />
 
             <q-input v-model="mensaje" type="textarea" outlined :label="t('ejecutar.mensaje')" :placeholder="t('ejecutar.placeholder')"
@@ -120,6 +109,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
 import SelectorEsfuerzo from '../componentes/SelectorEsfuerzo.vue'
+import SelectorModelo from '../componentes/SelectorModelo.vue'
 import { api, aplicarModelo, avisarError, copiar, descripcionPredeterminado, duracion, esfuerzosDe, esJSON, estadoInfo, modeloInicial, nombreEsfuerzo, opcionModelo, terminales, tituloError, trabajoSeguido, type Modelo, type Solicitud, type Trabajo } from '../api'
 import { t } from '../i18n'
 
@@ -130,7 +120,7 @@ const opciones = computed(() => {
   return [{ label: t('ejecutar.predeterminado'), caption: descripcionPredeterminado(catalogo.value) || t('ejecutar.predeterminadoDetalle'), value: '', predeterminado: false },
     ...perfiles.map(opcionModelo), ...resto.map(opcionModelo)]
 })
-const modelo = ref(modeloInicial.value)
+const modelo = ref<string | null>(modeloInicial.value)
 modeloInicial.value = ''
 // esfuerzo: '' deja el del agente; si el modelo nuevo no admite el elegido, vuelve a ''.
 const esfuerzo = ref('')
@@ -191,7 +181,7 @@ async function ejecutar() {
     if (perfil.value.trim()) s.perfil = perfil.value.trim()
     if (tiempo.value) s.ejecucion = { tiempo_limite_segundos: Number(tiempo.value) }
     if (esfuerzo.value) s.esfuerzo = esfuerzo.value
-    s = aplicarModelo(s, modelo.value)
+    s = aplicarModelo(s, modelo.value ?? '')
     seguir(await api.crear(s))
   } catch (e) {
     avisarError(e)

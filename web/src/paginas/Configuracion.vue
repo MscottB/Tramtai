@@ -17,18 +17,8 @@
           </div>
         </div>
         <div class="col-12 col-md-5">
-          <q-select :model-value="actualPredeterminado" :options="opcionesModelo" emit-value map-options outlined :loading="guardandoModelo"
-            :label="t('predeterminado.titulo')" :hint="opcionesModelo.find((o) => o.value === actualPredeterminado)?.caption"
-            @update:model-value="cambiarPredeterminado">
-            <template #option="scope">
-              <q-item v-bind="scope.itemProps">
-                <q-item-section>
-                  <q-item-label>{{ scope.opt.label }}</q-item-label>
-                  <q-item-label caption>{{ scope.opt.caption }}</q-item-label>
-                </q-item-section>
-              </q-item>
-            </template>
-          </q-select>
+          <SelectorModelo :model-value="actualPredeterminado" :opciones="opcionesModelo" :dense="false" :loading="guardandoModelo"
+            :label="t('predeterminado.titulo')" @update:model-value="(id) => id && cambiarPredeterminado(id)" />
         </div>
       </q-card-section>
     </q-card>

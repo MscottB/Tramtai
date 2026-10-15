@@ -173,7 +173,10 @@ type EstadoPunto struct {
 	Contratos     []string `json:"contratos"`
 	Agente        string   `json:"agente,omitempty"`
 	Modelo        string   `json:"modelo,omitempty"`
+	PerfilModelo  string   `json:"perfil_modelo,omitempty"`
 	Esfuerzo      string   `json:"esfuerzo,omitempty"`
+	Permitidos    []string `json:"modelos_permitidos,omitempty"`
+	Forzar        bool     `json:"forzar_modelo,omitempty"`
 	Activo        bool     `json:"activo"`
 	Error         string   `json:"error,omitempty"`
 	Origen        string   `json:"origen"`
@@ -330,7 +333,8 @@ func (s *Servicio) estadoPuntos() []EstadoPunto {
 	lista := []EstadoPunto{}
 	for _, p := range s.puntos {
 		lista = append(lista, EstadoPunto{Nombre: p.cfg.Nombre, Grupo: p.cfg.Grupo, Instrucciones: p.cfg.Instrucciones, Instancia: p.cfg.Instancia, URL: p.url, Contratos: p.cfg.Contratos,
-			Agente: p.cfg.Agente, Modelo: p.cfg.Modelo, Esfuerzo: p.cfg.Esfuerzo, Activo: p.err == "", Error: p.err, Origen: p.origen})
+			Agente: p.cfg.Agente, Modelo: p.cfg.Modelo, PerfilModelo: p.cfg.PerfilModelo, Esfuerzo: p.cfg.Esfuerzo,
+			Permitidos: p.cfg.ModelosPermitidos, Forzar: p.cfg.ForzarModelo, Activo: p.err == "", Error: p.err, Origen: p.origen})
 	}
 	sort.Slice(lista, func(i, j int) bool { return lista[i].Nombre < lista[j].Nombre })
 	return lista

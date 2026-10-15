@@ -434,9 +434,14 @@ func TestCatalogoConVersionesYPredeterminado(t *testing.T) {
 	for _, esperado := range []string{
 		`"id":"simulado/m1","agente":"simulado","modelo":"m1","origen":"configurado","version":"m1-2026"`,
 		`"id":"perfil/rapido","perfil":"rapido","origen":"configurado","resuelto":"simulado/m1","version":"m1-2026","predeterminado":true`,
+		`"id":"simulado/m1-2026","agente":"simulado","modelo":"m1-2026","origen":"visto"`,
 	} {
 		if !strings.Contains(cuerpo, esperado) {
 			t.Fatalf("falta %s en %s", esperado, cuerpo)
 		}
+	}
+	// La versión vista también se lista, una sola vez, en /openai/v1/models.
+	if _, modelos := pedir(t, ts, "GET", "/openai/v1/models", ""); strings.Count(modelos, `"simulado/m1-2026"`) != 1 {
+		t.Fatalf("la versión vista debe aparecer una vez: %s", modelos)
 	}
 }

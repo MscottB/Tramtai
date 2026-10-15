@@ -336,8 +336,9 @@ func (s *Servidor) predeterminado() string {
 }
 
 // catalogo lista cada agente (con el modelo predeterminado de su CLI), los modelos configurados en los perfiles
-// como agente/modelo y los perfiles como perfil/nombre.
-func (s *Servidor) catalogo() []modelo {
+// como agente/modelo, los perfiles como perfil/nombre y las versiones concretas que informaron los agentes
+// (efectivos, de ModelosEfectivos) como agente/version, para poder pedir una en concreto.
+func (s *Servidor) catalogo(efectivos map[string]string) []modelo {
 	var lista []modelo
 	for agente := range s.Registro {
 		lista = append(lista, modelo{ID: agente, Agente: agente, Origen: "predeterminado_del_cli"})
@@ -353,15 +354,23 @@ func (s *Servidor) catalogo() []modelo {
 		}
 	}
 	if agente, m, _ := strings.Cut(s.predeterminado(), "/"); m != "" && agente != "perfil" && !vistos[agente+"/"+m] {
+		vistos[agente+"/"+m] = true
 		lista = append(lista, modelo{ID: agente + "/" + m, Agente: agente, Modelo: m, Origen: "configurado"})
+	}
+	for clave, version := range efectivos {
+		agente, _, _ := strings.Cut(clave, "/")
+		if _, existe := s.Registro[agente]; existe && !vistos[agente+"/"+version] {
+			vistos[agente+"/"+version] = true
+			lista = append(lista, modelo{ID: agente + "/" + version, Agente: agente, Modelo: version, Origen: "visto"})
+		}
 	}
 	sort.Slice(lista, func(i, j int) bool { return lista[i].ID < lista[j].ID })
 	return s.filtrarCatalogo(lista)
 }
 
 func (s *Servidor) modelosNativos(w http.ResponseWriter, r *http.Request) {
-	lista := s.catalogo()
 	efectivos, _ := s.Planificador.ModelosEfectivos(r.Context()) // sin historial, el catálogo va sin versiones
+	lista := s.catalogo(efectivos)
 	pred, agentePred, perfiles := s.predeterminado(), s.Config.Texto("predeterminados.agente"), s.Config.Perfiles()
 	for i := range lista {
 		m := &lista[i]
