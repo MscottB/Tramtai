@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"slices"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/servicio"
 )
@@ -25,20 +27,20 @@ type opcionesPunto struct {
 
 func (o *opcionesPunto) registrar(cmd *cobra.Command) {
 	f := cmd.Flags()
-	f.IntVar(&o.puerto, "puerto", 0, "puerto propio (0 = ruta /p/<nombre> en el puerto del servicio)")
-	f.StringVar(&o.instrucciones, "instrucciones", "", "texto que se antepone a cada solicitud, por ejemplo \"Responde siempre en español\"")
-	f.StringVar(&o.grupo, "grupo", "", "grupo para ordenar los puntos y activarlos o desactivarlos juntos")
-	f.StringVar(&o.instancia, "instancia", "", "instancia a la que pertenece (global, o la del proyecto con --local)")
-	f.StringVar(&o.agente, "agente", "", "agente predeterminado del punto")
-	f.StringVar(&o.modelo, "modelo", "", "modelo predeterminado del punto")
-	f.StringVar(&o.perfil, "perfil", "", "perfil de modelo predeterminado del punto")
-	f.StringSliceVar(&o.contratos, "contratos", nil, "API habilitadas: nativa, openai, anthropic (todas por defecto)")
-	f.StringSliceVar(&o.permitidos, "permitidos", nil, "modelos permitidos: agente, agente/modelo o perfil/nombre")
-	f.StringSliceVar(&o.alias, "alias", nil, "alias de modelos, por ejemplo gpt-4o-mini=claude/haiku")
-	f.BoolVar(&o.forzar, "forzar", false, "ignora el modelo de la solicitud y usa el del punto")
-	f.StringVar(&o.modoContexto, "modo-contexto", "", "modo de contexto del punto")
-	f.StringVar(&o.formato, "formato", "", "formato de salida del punto")
-	f.IntVar(&o.tiempo, "tiempo", 0, "tiempo límite en segundos del punto")
+	f.IntVar(&o.puerto, "puerto", 0, idioma.T("puerto propio (0 = ruta /p/<nombre> en el puerto del servicio)"))
+	f.StringVar(&o.instrucciones, "instrucciones", "", idioma.T("texto que se antepone a cada solicitud, por ejemplo \"Responde siempre en español\""))
+	f.StringVar(&o.grupo, "grupo", "", idioma.T("grupo para ordenar los puntos y activarlos o desactivarlos juntos"))
+	f.StringVar(&o.instancia, "instancia", "", idioma.T("instancia a la que pertenece (global, o la del proyecto con --local)"))
+	f.StringVar(&o.agente, "agente", "", idioma.T("agente predeterminado del punto"))
+	f.StringVar(&o.modelo, "modelo", "", idioma.T("modelo predeterminado del punto"))
+	f.StringVar(&o.perfil, "perfil", "", idioma.T("perfil de modelo predeterminado del punto"))
+	f.StringSliceVar(&o.contratos, "contratos", nil, idioma.T("API habilitadas: nativa, openai, anthropic (todas por defecto)"))
+	f.StringSliceVar(&o.permitidos, "permitidos", nil, idioma.T("modelos permitidos: agente, agente/modelo o perfil/nombre"))
+	f.StringSliceVar(&o.alias, "alias", nil, idioma.T("alias de modelos, por ejemplo gpt-4o-mini=claude/haiku"))
+	f.BoolVar(&o.forzar, "forzar", false, idioma.T("ignora el modelo de la solicitud y usa el del punto"))
+	f.StringVar(&o.modoContexto, "modo-contexto", "", idioma.T("modo de contexto del punto"))
+	f.StringVar(&o.formato, "formato", "", idioma.T("formato de salida del punto"))
+	f.IntVar(&o.tiempo, "tiempo", 0, idioma.T("tiempo límite en segundos del punto"))
 }
 
 // aplicar copia al punto las banderas indicadas en la línea de comandos.
@@ -79,7 +81,7 @@ func (o *opcionesPunto) aplicar(cmd *cobra.Command, p *servicio.ConfigPunto) err
 		for _, par := range o.alias {
 			origen, destino, ok := strings.Cut(par, "=")
 			if !ok || origen == "" || destino == "" {
-				return fmt.Errorf("alias no válido %q: usa nombre=agente/modelo", par)
+				return fmt.Errorf(idioma.T("alias no válido %q: usa nombre=agente/modelo"), par)
 			}
 			p.AliasModelos[origen] = destino
 		}
@@ -103,9 +105,9 @@ func (o *opcionesPunto) aplicar(cmd *cobra.Command, p *servicio.ConfigPunto) err
 }
 
 func comandoAcceso() *cobra.Command {
-	grupo := &cobra.Command{Use: "acceso", Short: "Puntos de acceso: API adicionales con su puerto o ruta, token y modelos"}
+	grupo := &cobra.Command{Use: "acceso", Short: idioma.T("Puntos de acceso: API adicionales con su puerto o ruta, token y modelos")}
 	var local bool
-	grupo.PersistentFlags().BoolVar(&local, "local", false, "usa .tramtai/local.yaml del proyecto actual en lugar de la configuración global")
+	grupo.PersistentFlags().BoolVar(&local, "local", false, idioma.T("usa .tramtai/local.yaml del proyecto actual en lugar de la configuración global"))
 	archivo := func() (string, nucleo.Origen, error) {
 		if !local {
 			ruta, err := nucleo.RutaGlobal()
@@ -113,7 +115,7 @@ func comandoAcceso() *cobra.Command {
 		}
 		raiz := raizProyecto()
 		if raiz == "" {
-			return "", 0, fmt.Errorf("--local exige estar en un proyecto (.tramtai/config.yaml)")
+			return "", 0, errors.New(idioma.T("--local exige estar en un proyecto (.tramtai/config.yaml)"))
 		}
 		return filepath.Join(raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, nil
 	}
@@ -125,19 +127,19 @@ func comandoAcceso() *cobra.Command {
 		if err := servicio.EditarPuntos(ruta, origen, f); err != nil {
 			return err
 		}
-		fmt.Fprintln(cmd.OutOrStdout(), "guardado en "+ruta)
+		fmt.Fprintln(cmd.OutOrStdout(), idioma.Tf("guardado en %s", ruta))
 		recargarSiActivo(cmd)
 		return nil
 	}
 	buscar := func(lista []servicio.ConfigPunto, nombre string) (int, error) {
 		i := slices.IndexFunc(lista, func(p servicio.ConfigPunto) bool { return p.Nombre == nombre })
 		if i < 0 {
-			return i, fmt.Errorf("no existe el punto de acceso %s en este archivo", nombre)
+			return i, fmt.Errorf(idioma.T("no existe el punto de acceso %s en este archivo"), nombre)
 		}
 		return i, nil
 	}
 
-	listar := &cobra.Command{Use: "listar", Short: "Lista los puntos de acceso y su estado",
+	listar := &cobra.Command{Use: "listar", Short: idioma.T("Lista los puntos de acceso y su estado"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if c, err := conectar(); err == nil {
 				ctx, cancelar := contexto()
@@ -162,15 +164,15 @@ func comandoAcceso() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "(servicio inactivo; puntos definidos en "+ruta+")")
+			fmt.Fprintln(cmd.OutOrStdout(), idioma.Tf("(servicio inactivo; puntos definidos en %s)", ruta))
 			for _, p := range puntos {
-				fmt.Fprintf(cmd.OutOrStdout(), "  %-18s puerto %-6d activo %v\n", p.Nombre, p.Puerto, p.EstaActivo())
+				fmt.Fprintf(cmd.OutOrStdout(), idioma.T("  %-18s puerto %-6d activo %v\n"), p.Nombre, p.Puerto, p.EstaActivo())
 			}
 			return nil
 		}}
 
 	var crearOpc, editarOpc opcionesPunto
-	crear := &cobra.Command{Use: "crear <nombre>", Short: "Crea un punto de acceso y su token", Args: cobra.ExactArgs(1),
+	crear := &cobra.Command{Use: "crear <nombre>", Short: idioma.T("Crea un punto de acceso y su token"), Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			p := servicio.ConfigPunto{Nombre: args[0]}
 			if err := crearOpc.aplicar(cmd, &p); err != nil {
@@ -178,7 +180,7 @@ func comandoAcceso() *cobra.Command {
 			}
 			if err := editar(cmd, func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
 				if _, err := buscar(lista, p.Nombre); err == nil {
-					return nil, fmt.Errorf("el punto de acceso %s ya existe: usa tramtai acceso editar", p.Nombre)
+					return nil, fmt.Errorf(idioma.T("el punto de acceso %s ya existe: usa tramtai acceso editar"), p.Nombre)
 				}
 				return append(lista, p), nil
 			}); err != nil {
@@ -187,7 +189,7 @@ func comandoAcceso() *cobra.Command {
 			return mostrarTokenPunto(cmd, p.Nombre, false)
 		}}
 	crearOpc.registrar(crear)
-	editarCmd := &cobra.Command{Use: "editar <nombre>", Short: "Cambia las opciones indicadas de un punto de acceso", Args: cobra.ExactArgs(1),
+	editarCmd := &cobra.Command{Use: "editar <nombre>", Short: idioma.T("Cambia las opciones indicadas de un punto de acceso"), Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return editar(cmd, func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
 				i, err := buscar(lista, args[0])
@@ -201,10 +203,11 @@ func comandoAcceso() *cobra.Command {
 	activo := func(uso string, valor bool) *cobra.Command {
 		var grupoPuntos string
 		c := &cobra.Command{Use: uso + " <nombre>... | --grupo <grupo>",
-			Short: map[bool]string{true: "Activa", false: "Desactiva"}[valor] + " uno o varios puntos de acceso sin reiniciar el servicio",
+			Short: map[bool]string{true: idioma.T("Activa uno o varios puntos de acceso sin reiniciar el servicio"),
+				false: idioma.T("Desactiva uno o varios puntos de acceso sin reiniciar el servicio")}[valor],
 			RunE: func(cmd *cobra.Command, args []string) error {
 				if (len(args) == 0) == (grupoPuntos == "") {
-					return fmt.Errorf("indica los nombres o --grupo, no ambos")
+					return errors.New(idioma.T("indica los nombres o --grupo, no ambos"))
 				}
 				return editar(cmd, func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
 					if grupoPuntos != "" {
@@ -215,7 +218,7 @@ func comandoAcceso() *cobra.Command {
 							}
 						}
 						if n == 0 {
-							return nil, fmt.Errorf("ningún punto de acceso del grupo %s en este archivo", grupoPuntos)
+							return nil, fmt.Errorf(idioma.T("ningún punto de acceso del grupo %s en este archivo"), grupoPuntos)
 						}
 						return lista, nil
 					}
@@ -229,10 +232,10 @@ func comandoAcceso() *cobra.Command {
 					return lista, nil
 				})
 			}}
-		c.Flags().StringVar(&grupoPuntos, "grupo", "", "todos los puntos de ese grupo")
+		c.Flags().StringVar(&grupoPuntos, "grupo", "", idioma.T("todos los puntos de ese grupo"))
 		return c
 	}
-	eliminar := &cobra.Command{Use: "eliminar <nombre>", Short: "Elimina un punto de acceso", Args: cobra.ExactArgs(1),
+	eliminar := &cobra.Command{Use: "eliminar <nombre>", Short: idioma.T("Elimina un punto de acceso"), Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return editar(cmd, func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
 				i, err := buscar(lista, args[0])
@@ -243,9 +246,9 @@ func comandoAcceso() *cobra.Command {
 			})
 		}}
 	var rotar bool
-	token := &cobra.Command{Use: "token <nombre>", Short: "Muestra (o rota con --rotar) el token del punto de acceso", Args: cobra.ExactArgs(1),
+	token := &cobra.Command{Use: "token <nombre>", Short: idioma.T("Muestra (o rota con --rotar) el token del punto de acceso"), Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error { return mostrarTokenPunto(cmd, args[0], rotar) }}
-	token.Flags().BoolVar(&rotar, "rotar", false, "genera un token nuevo; el anterior deja de valer")
+	token.Flags().BoolVar(&rotar, "rotar", false, idioma.T("genera un token nuevo; el anterior deja de valer"))
 	grupo.AddCommand(listar, crear, editarCmd, activo("activar", true), activo("desactivar", false), eliminar, token)
 	return grupo
 }
@@ -265,7 +268,7 @@ func mostrarTokenPunto(cmd *cobra.Command, nombre string, rotar bool) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(cmd.OutOrStdout(), "token de %s (%s):\n%s\n", nombre, ruta, valor)
+	fmt.Fprintf(cmd.OutOrStdout(), idioma.T("token de %s (%s):\n%s\n"), nombre, ruta, valor)
 	if rotar {
 		recargarSiActivo(cmd)
 	}
@@ -276,14 +279,14 @@ func mostrarTokenPunto(cmd *cobra.Command, nombre string, rotar bool) error {
 func recargarSiActivo(cmd *cobra.Command) {
 	c, err := conectar()
 	if err != nil {
-		fmt.Fprintln(cmd.OutOrStdout(), "el servicio no está en marcha: el cambio se aplicará al iniciarlo")
+		fmt.Fprintln(cmd.OutOrStdout(), idioma.T("el servicio no está en marcha: el cambio se aplicará al iniciarlo"))
 		return
 	}
 	ctx, cancelar := contexto()
 	defer cancelar()
 	puntos, err := c.Recargar(ctx)
 	if err != nil {
-		fmt.Fprintln(cmd.ErrOrStderr(), "no se pudo recargar:", err)
+		fmt.Fprintln(cmd.ErrOrStderr(), idioma.T("no se pudo recargar:"), err)
 		return
 	}
 	imprimirPuntos(cmd.OutOrStdout(), puntos)

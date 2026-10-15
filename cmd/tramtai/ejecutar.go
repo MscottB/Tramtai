@@ -15,6 +15,7 @@ import (
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/documentos"
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
 	"tramtai/internal/planificador"
@@ -22,7 +23,7 @@ import (
 )
 
 func comandoAgentes() *cobra.Command {
-	return &cobra.Command{Use: "agentes", Short: "Diagnostica cada agente: versión, autenticación y términos (sin consumir cuota)",
+	return &cobra.Command{Use: "agentes", Short: idioma.T("Diagnostica cada agente: versión, autenticación y términos (sin consumir cuota)"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := cargarConfiguracion()
 			if err != nil {
@@ -44,10 +45,10 @@ func comandoAgentes() *cobra.Command {
 				ctx, cancelar := context.WithTimeout(cmd.Context(), 15*time.Second)
 				e := detectable.Detectar(ctx)
 				cancelar()
-				fmt.Fprintf(out, "\n%s\n  versión:       %s\n  ejecutable:    %s\n  autenticación: %s\n  términos:      %s\n",
+				fmt.Fprintf(out, idioma.T("\n%s\n  versión:       %s\n  ejecutable:    %s\n  autenticación: %s\n  términos:      %s\n"),
 					e.Agente, vacio(e.Version), vacio(e.Ruta), e.Autenticacion, e.Terminos)
 				if e.Problema != "" {
-					fmt.Fprintf(out, "  problema:      %s\n", e.Problema)
+					fmt.Fprintf(out, idioma.T("  problema:      %s\n"), e.Problema)
 				}
 			}
 			return nil
@@ -60,8 +61,8 @@ func comandoEjecutar() *cobra.Command {
 	var tiempo int
 	var directo bool
 	var perfilTrabajo, contexto string
-	cmd := &cobra.Command{Use: "ejecutar [texto]", Short: "Ejecuta un trabajo con un agente y muestra la respuesta en vivo",
-		Long: "Ejecuta un trabajo y muestra la respuesta en vivo. Si el servicio está en marcha, el trabajo va a la instancia del\nproyecto actual (o a la global) y se ve también en la terminal interactiva y en la Web UI; si no, se ejecuta\ndirectamente. Sin texto, se lee de la entrada estándar. Ctrl+C cancela el trabajo.",
+	cmd := &cobra.Command{Use: "ejecutar [texto]", Short: idioma.T("Ejecuta un trabajo con un agente y muestra la respuesta en vivo"),
+		Long: idioma.T("Ejecuta un trabajo y muestra la respuesta en vivo. Si el servicio está en marcha, el trabajo va a la instancia del\nproyecto actual (o a la global) y se ve también en la terminal interactiva y en la Web UI; si no, se ejecuta\ndirectamente. Sin texto, se lee de la entrada estándar. Ctrl+C cancela el trabajo."),
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			texto := strings.Join(args, " ")
@@ -104,22 +105,22 @@ func comandoEjecutar() *cobra.Command {
 			return ejecutar(cmd, c, c.AplicarPredeterminados(s), archivos)
 		}}
 	f := cmd.Flags()
-	f.StringVarP(&agente, "agente", "a", "", "agente: claude, codex, gemini o antigravity (predeterminados.agente)")
-	f.StringVarP(&modelo, "modelo", "m", "", "identificador o alias del modelo, por ejemplo haiku")
-	f.StringVarP(&perfil, "perfil", "p", "", "perfil de modelo: rapido, equilibrado, profundo (modelos.perfiles)")
-	f.StringVarP(&sistema, "sistema", "s", "", "instrucciones de sistema")
-	f.StringVar(&contexto, "contexto", "", "aislado (predeterminado) o consciente_proyecto: solo en proyectos de proyectos_confiables")
-	f.StringVar(&perfilTrabajo, "perfil-trabajo", "", "perfil de ejecución: profiles/<nombre>.yaml del proyecto o global (instrucciones, formato y esquema)")
-	f.IntVarP(&tiempo, "tiempo", "t", 0, "tiempo límite en segundos (300 por defecto)")
-	f.StringArrayVarP(&archivos, "archivo", "f", nil, "archivo de entrada, repetible: PDF, DOCX, PPTX, XLSX, HTML, texto o ZIP")
-	f.StringVarP(&esquema, "esquema", "e", "", "archivo JSON Schema que debe cumplir la salida (implica formato json)")
-	f.StringVar(&formato, "formato", "", "formato de salida: texto, markdown o json")
-	f.BoolVar(&directo, "directo", false, "ejecuta sin el servicio aunque esté en marcha (base cli.db propia)")
+	f.StringVarP(&agente, "agente", "a", "", idioma.T("agente: claude, codex, gemini o antigravity (predeterminados.agente)"))
+	f.StringVarP(&modelo, "modelo", "m", "", idioma.T("identificador o alias del modelo, por ejemplo haiku"))
+	f.StringVarP(&perfil, "perfil", "p", "", idioma.T("perfil de modelo: rapido, equilibrado, profundo (modelos.perfiles)"))
+	f.StringVarP(&sistema, "sistema", "s", "", idioma.T("instrucciones de sistema"))
+	f.StringVar(&contexto, "contexto", "", idioma.T("aislado (predeterminado) o consciente_proyecto: solo en proyectos de proyectos_confiables"))
+	f.StringVar(&perfilTrabajo, "perfil-trabajo", "", idioma.T("perfil de ejecución: profiles/<nombre>.yaml del proyecto o global (instrucciones, formato y esquema)"))
+	f.IntVarP(&tiempo, "tiempo", "t", 0, idioma.T("tiempo límite en segundos (300 por defecto)"))
+	f.StringArrayVarP(&archivos, "archivo", "f", nil, idioma.T("archivo de entrada, repetible: PDF, DOCX, PPTX, XLSX, HTML, texto o ZIP"))
+	f.StringVarP(&esquema, "esquema", "e", "", idioma.T("archivo JSON Schema que debe cumplir la salida (implica formato json)"))
+	f.StringVar(&formato, "formato", "", idioma.T("formato de salida: texto, markdown o json"))
+	f.BoolVar(&directo, "directo", false, idioma.T("ejecuta sin el servicio aunque esté en marcha (base cli.db propia)"))
 	return cmd
 }
 
 func comandoConvertir() *cobra.Command {
-	return &cobra.Command{Use: "convertir <archivo>...", Short: "Muestra el texto que recibiría el agente para esos archivos (sin ejecutar ningún agente)",
+	return &cobra.Command{Use: "convertir <archivo>...", Short: idioma.T("Muestra el texto que recibiría el agente para esos archivos (sin ejecutar ningún agente)"),
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := cargarConfiguracion()
@@ -193,7 +194,7 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 		return err
 	}
 	errOut, out := cmd.ErrOrStderr(), cmd.OutOrStdout()
-	fmt.Fprintf(errOut, "tramtai %s · %s · agente %s · modelo %s\n\n", version.Texto(), t.ID, s.Agente, vacio(t.ModeloEnviado))
+	fmt.Fprintf(errOut, idioma.T("tramtai %s · %s · agente %s · modelo %s\n\n"), version.Texto(), t.ID, s.Agente, vacio(t.ModeloEnviado))
 
 	interrupcion, parar := signal.NotifyContext(cmd.Context(), os.Interrupt)
 	defer parar()
@@ -202,7 +203,7 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 	for {
 		if interrupcion.Err() != nil && !cancelado {
 			cancelado = true
-			fmt.Fprintln(errOut, "\ncancelando…")
+			fmt.Fprintln(errOut, idioma.T("\ncancelando…"))
 			if _, err := p.Cancelar(context.Background(), t.ID); err != nil {
 				return err
 			}
@@ -219,7 +220,7 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 				fmt.Fprint(out, e.Datos)
 				impreso.WriteString(e.Datos)
 			case e.Tipo == "estado" && e.Datos == string(nucleo.PreparandoEntrada):
-				fmt.Fprintln(errOut, "convirtiendo archivos…")
+				fmt.Fprintln(errOut, idioma.T("convirtiendo archivos…"))
 			case e.Tipo == "estado" && nucleo.Estado(e.Datos).Terminal():
 				terminado = true
 			}

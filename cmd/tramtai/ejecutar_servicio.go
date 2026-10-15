@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/cliente"
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/servicio"
 	"tramtai/internal/version"
@@ -54,7 +55,7 @@ func ejecutarEnServicio(cmd *cobra.Command, c *cliente.Cliente, s nucleo.Solicit
 		return err
 	}
 	errOut, out := cmd.ErrOrStderr(), cmd.OutOrStdout()
-	fmt.Fprintf(errOut, "tramtai %s · %s · instancia %s · agente %s · modelo %s\n\n", version.Texto(), t.ID, inst, t.Solicitud.Agente, vacio(t.ModeloEnviado))
+	fmt.Fprintf(errOut, idioma.T("tramtai %s · %s · instancia %s · agente %s · modelo %s\n\n"), version.Texto(), t.ID, inst, t.Solicitud.Agente, vacio(t.ModeloEnviado))
 
 	interrupcion, parar := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer parar()
@@ -67,7 +68,7 @@ func ejecutarEnServicio(cmd *cobra.Command, c *cliente.Cliente, s nucleo.Solicit
 			select {
 			case <-terminado:
 			default:
-				fmt.Fprintln(errOut, "\ncancelando…")
+				fmt.Fprintln(errOut, idioma.T("\ncancelando…"))
 				_, _ = c.Accion(context.Background(), inst, t.ID, "cancelar")
 			}
 		}
@@ -81,7 +82,7 @@ func ejecutarEnServicio(cmd *cobra.Command, c *cliente.Cliente, s nucleo.Solicit
 			fmt.Fprint(out, datos)
 			impreso.WriteString(datos)
 		case tipo == "estado" && datos == string(nucleo.PreparandoEntrada):
-			fmt.Fprintln(errOut, "convirtiendo archivos…")
+			fmt.Fprintln(errOut, idioma.T("convirtiendo archivos…"))
 		}
 		return nil
 	}); err != nil {
@@ -100,15 +101,15 @@ func imprimirFinal(cmd *cobra.Command, final nucleo.Trabajo, impreso string, ini
 	// Con salida estructurada el resultado final no siempre coincide con el texto emitido en vivo.
 	if final.Estado == nucleo.Completado && final.Salida != impreso {
 		if impreso != "" {
-			fmt.Fprint(errOut, "\n\nsalida final:\n")
+			fmt.Fprint(errOut, idioma.T("\n\nsalida final:\n"))
 		}
 		fmt.Fprint(out, final.Salida)
 	}
 	efectivo := final.ModeloEfectivo
 	if efectivo == "" {
-		efectivo = "no verificable"
+		efectivo = idioma.T("no verificable")
 	}
-	fmt.Fprintf(errOut, "\n\n%s · modelo efectivo %s · tokens %d entrada / %d salida", final.Estado, efectivo, final.Uso.TokensEntrada, final.Uso.TokensSalida)
+	fmt.Fprintf(errOut, idioma.T("\n\n%s · modelo efectivo %s · tokens %d entrada / %d salida"), final.Estado, efectivo, final.Uso.TokensEntrada, final.Uso.TokensSalida)
 	if final.Uso.CostoUSD > 0 {
 		fmt.Fprintf(errOut, " · US$ %.4f", final.Uso.CostoUSD)
 	}

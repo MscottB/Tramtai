@@ -6,13 +6,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/cliente"
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/servicio"
 	"tramtai/internal/tui"
 )
 
 func comandoTerminal() *cobra.Command {
-	return &cobra.Command{Use: "terminal", Short: "Abre la terminal interactiva (también: tramtai sin argumentos)",
+	return &cobra.Command{Use: "terminal", Short: idioma.T("Abre la terminal interactiva (también: tramtai sin argumentos)"),
 		RunE: func(*cobra.Command, []string) error { return abrirTerminal() }}
 }
 
