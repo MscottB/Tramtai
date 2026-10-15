@@ -31,6 +31,7 @@ import (
 
 	"tramtai/internal/autoarranque"
 	"tramtai/internal/cliente"
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/servicio"
 	"tramtai/internal/version"
@@ -56,19 +57,19 @@ var (
 	colorRojo  = color.RGBA{0xef, 0x44, 0x44, 0xff}
 )
 
-const textoDetener = "Se detienen todas las instancias y las aplicaciones conectadas dejarán de funcionar. Tramtai sigue en la bandeja para volver a iniciarlo. ¿Continuar?"
-const textoSalir = "Al salir se detiene el servicio: las aplicaciones conectadas a tus APIs dejarán de funcionar hasta que vuelvas a abrir Tramtai. ¿Continuar?"
+var textoDetener = idioma.T("Se detienen todas las instancias y las aplicaciones conectadas dejarán de funcionar. Tramtai sigue en la bandeja para volver a iniciarlo. ¿Continuar?")
+var textoSalir = idioma.T("Al salir se detiene el servicio: las aplicaciones conectadas a tus APIs dejarán de funcionar hasta que vuelvas a abrir Tramtai. ¿Continuar?")
 
 func main() {
-	proyecto := flag.String("proyecto", "", "raíz de un proyecto con .tramtai/config.yaml (por defecto, la instancia global)")
-	oculto := flag.Bool("oculto", false, "arranca solo en la bandeja, sin mostrar la ventana (arranque automático)")
+	proyecto := flag.String("proyecto", "", idioma.T("raíz de un proyecto con .tramtai/config.yaml (por defecto, la instancia global)"))
+	oculto := flag.Bool("oculto", false, idioma.T("arranca solo en la bandeja, sin mostrar la ventana (arranque automático)"))
 	flag.Parse()
 
 	var ventana *application.WebviewWindow
 	var recibir func(mensaje, origen string)
 	app := application.New(application.Options{
 		Name:        "Tramtai",
-		Description: "Pasarela local de agentes",
+		Description: idioma.T("Pasarela local de agentes"),
 		Icon:        icono,
 		SingleInstance: &application.SingleInstanceOptions{
 			UniqueID: "cl.tramtai.escritorio",
@@ -137,7 +138,7 @@ func main() {
 	preguntar := func(titulo, texto, boton string, accion func()) {
 		pregunta := app.Dialog.Question().SetTitle(titulo).SetMessage(texto)
 		pregunta.AddButton(boton).OnClick(accion)
-		pregunta.AddButton("Cancelar").SetAsDefault()
+		pregunta.AddButton(idioma.T("Cancelar")).SetAsDefault()
 		pregunta.Show()
 	}
 	detener := func(cli *cliente.Cliente) {
@@ -162,12 +163,12 @@ func main() {
 			}
 			detenerYSalir(cli)
 		case "tramtai:salir:preguntar":
-			preguntar("Salir de Tramtai", textoSalir, "Salir y detener", func() { detenerYSalir(cli) })
+			preguntar(idioma.T("Salir de Tramtai"), textoSalir, idioma.T("Salir y detener"), func() { detenerYSalir(cli) })
 		case "tramtai:detener:preguntar":
-			preguntar("Detener el servicio", textoDetener, "Detener", func() { detener(cli) })
+			preguntar(idioma.T("Detener el servicio"), textoDetener, idioma.T("Detener"), func() { detener(cli) })
 		case "tramtai:carpeta":
 			// «Examinar…» al abrir un proyecto: la carpeta elegida vuelve a la Web UI.
-			ruta, err := app.Dialog.OpenFile().CanChooseDirectories(true).CanChooseFiles(false).SetTitle("Carpeta del proyecto").PromptForSingleSelection()
+			ruta, err := app.Dialog.OpenFile().CanChooseDirectories(true).CanChooseFiles(false).SetTitle(idioma.T("Carpeta del proyecto")).PromptForSingleSelection()
 			if err == nil && ruta != "" {
 				texto, _ := json.Marshal(ruta)
 				ventana.ExecJS("window.tramtaiCarpeta && window.tramtaiCarpeta(" + string(texto) + ")")
@@ -187,12 +188,12 @@ func main() {
 		icono := func(nombre string) []byte { return iconoMenu(nombre, lado, oscuro) }
 		menu := app.NewMenu()
 		if cli == nil {
-			menu.Add("Servicio detenido").SetBitmap(rojo).OnClick(func(*application.Context) { mostrar() })
+			menu.Add(idioma.T("Servicio detenido")).SetBitmap(rojo).OnClick(func(*application.Context) { mostrar() })
 		} else {
-			menu.Add("Servicio en marcha · " + strings.TrimPrefix(cli.Base, "http://")).SetBitmap(verde).OnClick(func(*application.Context) { mostrar() })
+			menu.Add(idioma.Tf("Servicio en marcha · %s", strings.TrimPrefix(cli.Base, "http://"))).SetBitmap(verde).OnClick(func(*application.Context) { mostrar() })
 		}
 		menu.AddSeparator()
-		menu.Add("Abrir Tramtai").SetBitmap(icono("abrir")).OnClick(func(*application.Context) { mostrar() })
+		menu.Add(idioma.T("Abrir Tramtai")).SetBitmap(icono("abrir")).OnClick(func(*application.Context) { mostrar() })
 		if cli != nil {
 			activas := 0
 			for _, p := range puntos {
@@ -200,7 +201,7 @@ func main() {
 					activas++
 				}
 			}
-			apis := menu.AddSubmenu(fmt.Sprintf("Mis APIs (%d de %d activas)", activas, len(puntos)))
+			apis := menu.AddSubmenu(idioma.Tf("Mis APIs (%d de %d activas)", activas, len(puntos)))
 			for _, p := range puntos {
 				habilitada := p.Error != "desactivado"
 				etiqueta := p.Nombre
@@ -210,7 +211,7 @@ func main() {
 					}
 				}
 				if habilitada && !p.Activo {
-					etiqueta += " (con error)"
+					etiqueta += idioma.T(" (con error)")
 				}
 				circ := rojo
 				if p.Activo {
@@ -226,15 +227,15 @@ func main() {
 			}
 			if len(puntos) > 0 {
 				apis.AddSeparator()
-				apis.Add("Gestionar en Mis APIs").SetBitmap(icono("apis")).OnClick(func(*application.Context) { irA("conectar") })
+				apis.Add(idioma.T("Gestionar en Mis APIs")).SetBitmap(icono("apis")).OnClick(func(*application.Context) { irA("conectar") })
 			} else {
-				apis.Add("Crear una API…").SetBitmap(icono("apis")).OnClick(func(*application.Context) { irA("conectar") })
+				apis.Add(idioma.T("Crear una API…")).SetBitmap(icono("apis")).OnClick(func(*application.Context) { irA("conectar") })
 			}
-			menu.Add("Copiar la dirección para tus apps").SetBitmap(icono("copiar")).OnClick(func(*application.Context) { app.Clipboard.SetText(cli.Base) })
+			menu.Add(idioma.T("Copiar la dirección para tus apps")).SetBitmap(icono("copiar")).OnClick(func(*application.Context) { app.Clipboard.SetText(cli.Base) })
 		}
 		menu.AddSeparator()
 		if cli == nil {
-			menu.Add("Iniciar el servicio").SetBitmap(icono("iniciar")).OnClick(func(*application.Context) {
+			menu.Add(idioma.T("Iniciar el servicio")).SetBitmap(icono("iniciar")).OnClick(func(*application.Context) {
 				// Si ya está en marcha solo vuelve a entrar; si no, lo inicia en segundo plano.
 				if nueva, err := prepararSesion(*proyecto); err != nil {
 					ventana.SetHTML(paginaError(err))
@@ -245,7 +246,7 @@ func main() {
 				repasar()
 			})
 		} else {
-			menu.Add("Reiniciar el servicio").SetBitmap(icono("reiniciar")).OnClick(func(*application.Context) {
+			menu.Add(idioma.T("Reiniciar el servicio")).SetBitmap(icono("reiniciar")).OnClick(func(*application.Context) {
 				ejecutable, err := buscarTramtai()
 				datos, errDatos := dirDatos()
 				if err != nil || errDatos != nil {
@@ -257,11 +258,11 @@ func main() {
 					detener(cli)
 				}
 			})
-			menu.Add("Detener el servicio…").SetBitmap(icono("detener")).OnClick(func(*application.Context) { avisar("detener") })
+			menu.Add(idioma.T("Detener el servicio…")).SetBitmap(icono("detener")).OnClick(func(*application.Context) { avisar("detener") })
 		}
 		// El arranque con Windows también se cambia en Ajustes; el repaso mantiene la marca al día.
 		if runtime.GOOS == "windows" {
-			menu.AddCheckbox("Iniciar con Windows", conWindows).OnClick(func(c *application.Context) {
+			menu.AddCheckbox(idioma.T("Iniciar con Windows"), conWindows).OnClick(func(c *application.Context) {
 				if propio, err := os.Executable(); err == nil {
 					if c.IsChecked() {
 						_ = autoarranque.Activar(propio)
@@ -275,11 +276,11 @@ func main() {
 		menu.AddSeparator()
 		switch {
 		case cli == nil:
-			menu.Add("Salir").SetBitmap(icono("salir")).OnClick(func(*application.Context) { app.Quit() })
+			menu.Add(idioma.T("Salir")).SetBitmap(icono("salir")).OnClick(func(*application.Context) { app.Quit() })
 		case sinPreguntar:
-			menu.Add("Salir y detener el servicio").SetBitmap(icono("salir")).OnClick(func(*application.Context) { detenerYSalir(cli) })
+			menu.Add(idioma.T("Salir y detener el servicio")).SetBitmap(icono("salir")).OnClick(func(*application.Context) { detenerYSalir(cli) })
 		default:
-			menu.Add("Salir y detener el servicio…").SetBitmap(icono("salir")).OnClick(func(*application.Context) { avisar("salir") })
+			menu.Add(idioma.T("Salir y detener el servicio…")).SetBitmap(icono("salir")).OnClick(func(*application.Context) { avisar("salir") })
 		}
 		return menu
 	}
@@ -335,9 +336,9 @@ func main() {
 			return
 		}
 		firma = nueva
-		estado := "Servicio detenido"
+		estado := idioma.T("Servicio detenido")
 		if cli != nil {
-			estado = "Servicio en marcha en " + strings.TrimPrefix(cli.Base, "http://")
+			estado = idioma.Tf("Servicio en marcha en %s", strings.TrimPrefix(cli.Base, "http://"))
 		}
 		bandeja.SetTooltip("Tramtai · " + estado)
 		anterior := menuActual
@@ -510,13 +511,13 @@ func buscarTramtai() (string, error) {
 	}
 	ruta, err := exec.LookPath(nombre)
 	if err != nil {
-		return "", errors.New("no se encontró el ejecutable tramtai junto a la aplicación ni en el PATH")
+		return "", errors.New(idioma.T("no se encontró el ejecutable tramtai junto a la aplicación ni en el PATH"))
 	}
 	return ruta, nil
 }
 
 func paginaError(err error) string {
-	return `<!doctype html><html lang="es"><body style="font-family:system-ui,sans-serif;padding:2rem;background:#1d1d1d;color:#eee">` +
-		`<h2>No se pudo conectar con el servicio de Tramtai</h2><p>` + html.EscapeString(nucleo.MensajeDe(err)) + `</p>` +
-		`<p>Prueba <code>tramtai servicio iniciar -d</code> en una terminal y vuelve a abrir la aplicación.</p></body></html>`
+	return `<!doctype html><html lang="` + idioma.Activo + `"><body style="font-family:system-ui,sans-serif;padding:2rem;background:#1d1d1d;color:#eee">` +
+		`<h2>` + idioma.T("No se pudo conectar con el servicio de Tramtai") + `</h2><p>` + html.EscapeString(nucleo.MensajeDe(err)) + `</p>` +
+		`<p>` + idioma.T("Prueba <code>tramtai servicio iniciar -d</code> en una terminal y vuelve a abrir la aplicación.") + `</p></body></html>`
 }
