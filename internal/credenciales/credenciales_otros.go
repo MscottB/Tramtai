@@ -2,10 +2,14 @@
 
 package credenciales
 
-import "errors"
+import (
+	"errors"
+
+	"tramtai/internal/idioma"
+)
 
 // shortcut: en macOS y Linux las claves siguen por variable de entorno; Llavero y Secret Service llegan con M8.
-var errNoSoportado = errors.New("el almacén de credenciales solo está disponible en Windows; usa variables de entorno")
+var errNoSoportado = errors.New(idioma.T("el almacén de credenciales solo está disponible en Windows; usa variables de entorno"))
 
 // Disponible indica si el sistema tiene almacén de credenciales soportado.
 func Disponible() bool { return false }

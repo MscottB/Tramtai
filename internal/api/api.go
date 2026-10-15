@@ -17,6 +17,7 @@ import (
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/documentos"
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
 	"tramtai/internal/planificador"
@@ -82,7 +83,7 @@ func (s *Servidor) Rutas() http.Handler {
 		mux.HandleFunc("POST /anthropic/v1/messages", s.mensajesAnthropic)
 	}
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "ruta no encontrada: "+r.Method+" "+r.URL.Path))
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ruta no encontrada: %s %s", r.Method, r.URL.Path)))
 	})
 	return mux
 }
@@ -92,12 +93,12 @@ func (s *Servidor) Rutas() http.Handler {
 func Proteger(hosts []string, autorizar func(*http.Request) bool, siguiente http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !hostPermitido(hosts, r.Host) {
-			EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, "cabecera Host no permitida"))
+			EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, idioma.T("cabecera Host no permitida")))
 			return
 		}
 		if origen := r.Header.Get("Origin"); origen != "" {
 			if u, err := url.Parse(origen); err != nil || u.Host != r.Host {
-				EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, "origen no permitido"))
+				EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, idioma.T("origen no permitido")))
 				return
 			}
 		}
@@ -112,7 +113,7 @@ func Proteger(hosts []string, autorizar func(*http.Request) bool, siguiente http
 // NoAutorizado responde 401 con el formato del contrato de la ruta.
 func NoAutorizado(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("WWW-Authenticate", "Bearer")
-	EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado, "falta la clave (token) o no es válida: envíala como «Authorization: Bearer <clave>»; la clave está en Mis APIs de la Web UI"))
+	EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado, idioma.T("falta la clave (token) o no es válida: envíala como «Authorization: Bearer <clave>»; la clave está en Mis APIs de la Web UI")))
 }
 
 func hostPermitido(hosts []string, host string) bool {
@@ -177,7 +178,7 @@ func EscribirError(w http.ResponseWriter, r *http.Request, err error) {
 	codigo, mensaje := nucleo.CodigoDe(err), nucleo.MensajeDe(err)
 	if codigo == "" {
 		log.Printf("error interno en %s %s: %v", r.Method, r.URL.Path, err)
-		codigo, mensaje = nucleo.CodigoErrorInterno, "error interno del servicio"
+		codigo, mensaje = nucleo.CodigoErrorInterno, idioma.T("error interno del servicio")
 	}
 	estado, conocido := estadosHTTP[codigo]
 	if !conocido {
@@ -218,7 +219,7 @@ func errorDeTrabajo(t nucleo.Trabajo) error {
 	if t.CodigoError != "" {
 		return nucleo.NuevoError(t.CodigoError, t.MensajeError)
 	}
-	return nucleo.NuevoError(nucleo.CodigoTrabajoSinSalida, "el trabajo terminó como "+string(t.Estado))
+	return nucleo.NuevoError(nucleo.CodigoTrabajoSinSalida, idioma.Tf("el trabajo terminó como %s", t.Estado))
 }
 
 // EscribirJSON responde con un cuerpo JSON.
@@ -233,7 +234,7 @@ func LeerJSON(w http.ResponseWriter, r *http.Request, destino any) error {
 	d := json.NewDecoder(http.MaxBytesReader(w, r.Body, maximoCuerpo))
 	d.DisallowUnknownFields()
 	if err := d.Decode(destino); err != nil {
-		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "cuerpo JSON no válido: "+err.Error())
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("cuerpo JSON no válido: %s", err.Error()))
 	}
 	return nil
 }

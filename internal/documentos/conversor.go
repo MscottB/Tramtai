@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/procesos"
 )
@@ -102,7 +103,7 @@ func (t *tarea) archivo(ctx context.Context, e Entrada, profundidad int) error {
 		return err
 	}
 	if strings.TrimSpace(texto) == "" {
-		return nucleo.NuevoError(nucleo.CodigoConversionFallida, fmt.Sprintf("%s no produjo texto (¿documento escaneado o sin texto extraíble?)", e.Nombre))
+		return nucleo.NuevoError(nucleo.CodigoConversionFallida, idioma.Tf("%s no produjo texto (¿documento escaneado o sin texto extraíble?)", e.Nombre))
 	}
 	atributos := fmt.Sprintf("nombre=%q", e.Nombre)
 	if e.SHA256 != "" {
@@ -110,7 +111,7 @@ func (t *tarea) archivo(ctx context.Context, e Entrada, profundidad int) error {
 	}
 	fmt.Fprintf(&t.salida, "<<<archivo %s>>>\n%s\n<<<fin archivo>>>\n", atributos, strings.TrimRight(texto, "\n"))
 	if max := t.conversor.MaximoSalida; max > 0 && int64(t.salida.Len()) > max {
-		return nucleo.NuevoError(nucleo.CodigoCargaInvalida, "el texto convertido supera conversion.maximo_salida_mb")
+		return nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.T("el texto convertido supera conversion.maximo_salida_mb"))
 	}
 	return nil
 }
@@ -123,7 +124,7 @@ func leerTexto(e Entrada) (string, error) {
 	}
 	datos = bytes.TrimPrefix(datos, []byte("\xef\xbb\xbf"))
 	if !utf8.Valid(datos) {
-		return "", nucleo.NuevoError(nucleo.CodigoCargaInvalida, e.Nombre+" no está en UTF-8")
+		return "", nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.Tf("%s no está en UTF-8", e.Nombre))
 	}
 	return string(datos), nil
 }
@@ -165,19 +166,19 @@ func (c *Conversor) markitdown(ctx context.Context, e Entrada, dir string) (stri
 	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: programa, Argumentos: args, Directorio: dir, Entorno: entornoConversor()},
 		func(linea string) error {
 			if c.MaximoSalida > 0 && int64(salida.Len()) > c.MaximoSalida {
-				return nucleo.NuevoError(nucleo.CodigoCargaInvalida, e.Nombre+": la conversión supera conversion.maximo_salida_mb")
+				return nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.Tf("%s: la conversión supera conversion.maximo_salida_mb", e.Nombre))
 			}
 			salida.WriteString(linea + "\n")
 			return nil
 		})
 	if ctx.Err() == context.DeadlineExceeded {
-		return "", nucleo.NuevoError(nucleo.CodigoConversionFallida, e.Nombre+": la conversión superó conversion.tiempo_limite_segundos")
+		return "", nucleo.NuevoError(nucleo.CodigoConversionFallida, idioma.Tf("%s: la conversión superó conversion.tiempo_limite_segundos", e.Nombre))
 	}
 	if err != nil {
 		return "", err
 	}
 	if r.CodigoSalida != 0 {
-		return "", nucleo.NuevoError(nucleo.CodigoConversionFallida, fmt.Sprintf("%s: markitdown terminó con código %d: %s", e.Nombre, r.CodigoSalida, ultimaLinea(r.Errores)))
+		return "", nucleo.NuevoError(nucleo.CodigoConversionFallida, idioma.Tf("%s: markitdown terminó con código %d: %s", e.Nombre, r.CodigoSalida, ultimaLinea(r.Errores)))
 	}
 	return salida.String(), nil
 }
@@ -195,7 +196,7 @@ func (c *Conversor) programa() (string, []string, error) {
 		return uvx, []string{"--from", EspecificacionMarkitdown, "markitdown"}, nil
 	}
 	return "", nil, nucleo.NuevoError(nucleo.CodigoConversionFallida,
-		`markitdown no está instalado: uv tool install "`+EspecificacionMarkitdown+`"`)
+		idioma.Tf(`markitdown no está instalado: uv tool install "%s"`, EspecificacionMarkitdown))
 }
 
 // entornoConversor hereda el entorno sin secretos y fuerza UTF-8 en la salida de Python.

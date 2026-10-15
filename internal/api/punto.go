@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
 
@@ -69,7 +70,7 @@ func (s *Servidor) ajustar(sol nucleo.SolicitudEjecucion) (nucleo.SolicitudEjecu
 	sol = s.Config.AplicarPredeterminados(sol)
 	if len(p.ModelosPermitidos) > 0 && !permitido(p.ModelosPermitidos, sol) {
 		return sol, nucleo.NuevoError(nucleo.CodigoModeloNoPermitido,
-			"el modelo "+descripcionModelo(sol)+" no está permitido en el punto de acceso "+p.Nombre)
+			idioma.Tf("el modelo %s no está permitido en el punto de acceso %s", descripcionModelo(sol), p.Nombre))
 	}
 	return sol, nil
 }
@@ -113,7 +114,7 @@ func (s *Servidor) traducirModelo(model string) string {
 func (s *Servidor) trabajo(r *http.Request, id string) (nucleo.Trabajo, error) {
 	t, err := s.Planificador.Obtener(r.Context(), id)
 	if err == nil && s.Punto != nil && t.PuntoAcceso != s.Punto.Nombre {
-		return nucleo.Trabajo{}, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "trabajo no encontrado: "+id)
+		return nucleo.Trabajo{}, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
 	}
 	return t, err
 }
@@ -124,7 +125,7 @@ func (s *Servidor) listarTrabajos(w http.ResponseWriter, r *http.Request) {
 	if valor := r.URL.Query().Get("limite"); valor != "" {
 		n, err := strconv.Atoi(valor)
 		if err != nil || n < 1 || n > 200 {
-			EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "limite debe estar entre 1 y 200"))
+			EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("limite debe estar entre 1 y 200")))
 			return
 		}
 		limite = n

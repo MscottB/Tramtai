@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
 
@@ -49,7 +50,7 @@ func mensajes(entrada []mensajeEntrada) ([]nucleo.Mensaje, error) {
 	var salida []nucleo.Mensaje
 	for _, m := range entrada {
 		if m.Type != "" && m.Type != "message" {
-			return nil, nucleo.NuevoError(nucleo.CodigoParametroNoSoportado, "elemento de entrada no soportado: "+m.Type)
+			return nil, nucleo.NuevoError(nucleo.CodigoParametroNoSoportado, idioma.Tf("elemento de entrada no soportado: %s", m.Type))
 		}
 		rol, err := rolInterno(m.Role)
 		if err != nil {
@@ -78,7 +79,7 @@ func esfuerzoOpenAI(valor string) (string, error) {
 	case "xhigh":
 		return "muy_alto", nil
 	}
-	return "", nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "reasoning_effort desconocido: "+valor)
+	return "", nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("reasoning_effort desconocido: %s", valor))
 }
 
 // formatoSalida aplica response_format (chat) o text.format (responses).
@@ -89,11 +90,11 @@ func formatoSalida(sol *nucleo.SolicitudEjecucion, tipo string, esquema json.Raw
 		sol.Salida.Formato = "json"
 	case "json_schema":
 		if len(esquema) == 0 {
-			return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "json_schema sin schema")
+			return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("json_schema sin schema"))
 		}
 		sol.Salida.Formato, sol.Salida.Esquema = "json", esquema
 	default:
-		return nucleo.NuevoError(nucleo.CodigoParametroNoSoportado, "formato de respuesta no soportado: "+tipo)
+		return nucleo.NuevoError(nucleo.CodigoParametroNoSoportado, idioma.Tf("formato de respuesta no soportado: %s", tipo))
 	}
 	return nil
 }
@@ -242,7 +243,7 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 		} else {
 			var entrada []mensajeEntrada
 			if err = json.Unmarshal(p.Input, &entrada); err != nil {
-				err = nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "input debe ser texto o una lista de mensajes")
+				err = nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("input debe ser texto o una lista de mensajes"))
 			} else {
 				sol.Mensajes, err = mensajes(entrada)
 			}

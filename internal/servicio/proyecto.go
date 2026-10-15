@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
 
@@ -57,11 +58,11 @@ func PrepararProyecto(dir string) error {
 func (s *Servicio) AbrirProyecto(raiz string) (*Instancia, error) {
 	raiz = nucleo.ExpandirCasa(strings.TrimSpace(raiz))
 	if !filepath.IsAbs(raiz) {
-		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "indica la ruta completa de la carpeta del proyecto")
+		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("indica la ruta completa de la carpeta del proyecto"))
 	}
 	info, err := os.Stat(raiz)
 	if err != nil || !info.IsDir() {
-		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "no existe la carpeta "+raiz)
+		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("no existe la carpeta %s", raiz))
 	}
 	// La ruta real (sin nombres cortos como ADMINI~1 ni enlaces): la misma carpeta da siempre el mismo espacio.
 	if real, err := filepath.EvalSymlinks(raiz); err == nil {
@@ -70,7 +71,7 @@ func (s *Servicio) AbrirProyecto(raiz string) (*Instancia, error) {
 	if existente, ok := nucleo.BuscarProyecto(raiz); ok {
 		raiz = existente
 	} else if err := PrepararProyecto(raiz); err != nil {
-		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "no se pudo preparar el proyecto: "+err.Error())
+		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("no se pudo preparar el proyecto: %s", err.Error()))
 	}
 	return s.ActivarProyecto(raiz)
 }

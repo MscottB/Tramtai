@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 
 	"go.yaml.in/yaml/v3"
+
+	"tramtai/internal/idioma"
 )
 
 // Origen identifica la capa de la que procede un valor (sección 12.2): a mayor valor, mayor prioridad.
@@ -129,7 +131,7 @@ func CargarCapa(ruta string, origen Origen) (Capa, error) {
 	}
 	var crudo map[string]any
 	if err := yaml.Unmarshal(datos, &crudo); err != nil {
-		return capa, errorConfiguracion(ruta, "", "YAML no válido: "+err.Error())
+		return capa, errorConfiguracion(ruta, "", idioma.Tf("YAML no válido: %s", err.Error()))
 	}
 	aplanar("", crudo, capa.Valores)
 	return capa, capa.validar()
@@ -147,11 +149,11 @@ func CapaEntorno(entorno []string) (Capa, error) {
 		clave := strings.ToLower(strings.ReplaceAll(nombre[len("TRAMTAI_"):], "__", "."))
 		tipo, conocida := tipoDe(clave)
 		if !conocida {
-			return capa, errorConfiguracion("entorno", nombre, "clave desconocida")
+			return capa, errorConfiguracion("entorno", nombre, idioma.T("clave desconocida"))
 		}
 		convertido, err := convertir(tipo, valor)
 		if err != nil {
-			return capa, errorConfiguracion("entorno", nombre, "tipo incorrecto")
+			return capa, errorConfiguracion("entorno", nombre, idioma.T("tipo incorrecto"))
 		}
 		capa.Valores[clave] = convertido
 	}
@@ -352,26 +354,26 @@ func (c Capa) validar() error {
 	for _, clave := range claves {
 		tipo, conocida := tipoDe(clave)
 		if !conocida {
-			return errorConfiguracion(c.Fuente, clave, "clave desconocida")
+			return errorConfiguracion(c.Fuente, clave, idioma.T("clave desconocida"))
 		}
 		if c.Origen == OrigenProyecto && esAdministrada(clave) {
-			return errorConfiguracion(c.Fuente, clave, "clave de seguridad no admitida en la configuración versionada; defínela en la local o en la global")
+			return errorConfiguracion(c.Fuente, clave, idioma.T("clave de seguridad no admitida en la configuración versionada; defínela en la local o en la global"))
 		}
 		if !tipoCorrecto(tipo, c.Valores[clave]) {
-			return errorConfiguracion(c.Fuente, clave, "tipo incorrecto")
+			return errorConfiguracion(c.Fuente, clave, idioma.T("tipo incorrecto"))
 		}
 	}
 	// Promesas que Tramtai aún no cumple: se rechazan en vez de aceptarlas sin efecto (sección 16.2).
 	for _, clave := range []string{"retencion.guardar_historial", "retencion.cifrado_aplicacion", "retencion.cache_conversion_habilitada"} {
 		if c.Valores[clave] == true {
-			return errorConfiguracion(c.Fuente, clave, "no soportado todavía: no hay historial permanente, cifrado propio ni cache documental")
+			return errorConfiguracion(c.Fuente, clave, idioma.T("no soportado todavía: no hay historial permanente, cifrado propio ni cache documental"))
 		}
 	}
 	if modo, existe := c.Valores["retencion.modo"]; existe && modo != "temporal" {
-		return errorConfiguracion(c.Fuente, "retencion.modo", "solo se admite temporal")
+		return errorConfiguracion(c.Fuente, "retencion.modo", idioma.T("solo se admite temporal"))
 	}
 	if version, existe := c.Valores["version"]; existe && version != 1 {
-		return errorConfiguracion(c.Fuente, "version", "versión de formato no soportada")
+		return errorConfiguracion(c.Fuente, "version", idioma.T("versión de formato no soportada"))
 	}
 	return nil
 }

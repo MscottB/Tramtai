@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"go.yaml.in/yaml/v3"
+
+	"tramtai/internal/idioma"
 )
 
 // Perfil es un perfil de ejecución explícito (sección 22.3): un archivo <nombre>.yaml en .tramtai/profiles/ del
@@ -44,14 +46,14 @@ func (c *Configuracion) AplicarPerfil(s SolicitudEjecucion) (SolicitudEjecucion,
 		return s, nil
 	}
 	if !reIdentificador.MatchString(s.Perfil) || strings.ContainsAny(s.Perfil, "/\\:") || strings.Contains(s.Perfil, "..") {
-		return s, NuevoError(CodigoSolicitudInvalida, "perfil con formato no válido")
+		return s, NuevoError(CodigoSolicitudInvalida, idioma.T("perfil con formato no válido"))
 	}
 	p, carpeta, err := c.buscarPerfil(s.Perfil)
 	if err != nil {
 		return s, err
 	}
 	if p.Salida.RepararAutomaticamente {
-		return s, errorConfiguracion(s.Perfil, "salida.reparar_automaticamente", "no soportado: no se repite la llamada sin autorización (sección 11)")
+		return s, errorConfiguracion(s.Perfil, "salida.reparar_automaticamente", idioma.T("no soportado: no se repite la llamada sin autorización (sección 11)"))
 	}
 	if s.Agente == "" {
 		s.Agente = p.Agente
@@ -91,19 +93,19 @@ func (c *Configuracion) buscarPerfil(nombre string) (Perfil, carpetaPerfiles, er
 		d := yaml.NewDecoder(bytes.NewReader(datos))
 		d.KnownFields(true)
 		if err := d.Decode(&p); err != nil {
-			return p, carpeta, errorConfiguracion(filepath.Join(carpeta.dir, nombre+".yaml"), "", "perfil no válido: "+err.Error())
+			return p, carpeta, errorConfiguracion(filepath.Join(carpeta.dir, nombre+".yaml"), "", idioma.Tf("perfil no válido: %s", err.Error()))
 		}
 		return p, carpeta, nil
 	}
-	return Perfil{}, carpetaPerfiles{}, NuevoError(CodigoSolicitudInvalida, "no existe el perfil "+nombre+" (profiles/"+nombre+".yaml)")
+	return Perfil{}, carpetaPerfiles{}, NuevoError(CodigoSolicitudInvalida, idioma.Tf("no existe el perfil %s (profiles/%s.yaml)", nombre, nombre))
 }
 
 // leerEsquema lee el esquema del perfil sin salir de su carpeta de configuración (ni con ../ ni con enlaces).
 func leerEsquema(carpeta carpetaPerfiles, relativa string) (json.RawMessage, error) {
-	fuera := NuevoError(CodigoConfiguracionInvalida, "el esquema "+relativa+" queda fuera de la carpeta de configuración")
+	fuera := NuevoError(CodigoConfiguracionInvalida, idioma.Tf("el esquema %s queda fuera de la carpeta de configuración", relativa))
 	ruta, err := filepath.EvalSymlinks(filepath.Join(carpeta.dir, relativa))
 	if err != nil {
-		return nil, NuevoError(CodigoConfiguracionInvalida, "no se encontró el esquema "+relativa)
+		return nil, NuevoError(CodigoConfiguracionInvalida, idioma.Tf("no se encontró el esquema %s", relativa))
 	}
 	limite, err := filepath.EvalSymlinks(carpeta.limite)
 	if err != nil {
@@ -114,11 +116,11 @@ func leerEsquema(carpeta carpetaPerfiles, relativa string) (json.RawMessage, err
 	}
 	info, err := os.Stat(ruta)
 	if err != nil || info.Size() > maximoEsquema {
-		return nil, NuevoError(CodigoConfiguracionInvalida, "el esquema "+relativa+" no se puede leer o supera 1 MB")
+		return nil, NuevoError(CodigoConfiguracionInvalida, idioma.Tf("el esquema %s no se puede leer o supera 1 MB", relativa))
 	}
 	datos, err := os.ReadFile(ruta)
 	if err != nil || !json.Valid(datos) {
-		return nil, NuevoError(CodigoConfiguracionInvalida, "el esquema "+relativa+" no es JSON válido")
+		return nil, NuevoError(CodigoConfiguracionInvalida, idioma.Tf("el esquema %s no es JSON válido", relativa))
 	}
 	return datos, nil
 }

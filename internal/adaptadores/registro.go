@@ -3,6 +3,7 @@ package adaptadores
 import (
 	"sync/atomic"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
 
@@ -45,7 +46,7 @@ func (m *Modo) Valor() string {
 // CambiarAutenticacion cambia el modo de claude o codex en el registro del servicio en marcha.
 func CambiarAutenticacion(registro map[string]Adaptador, agente, modo string) error {
 	if modo != AutenticacionClaveAPI && modo != AutenticacionSuscripcion {
-		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "modo de autenticación desconocido: "+modo)
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("modo de autenticación desconocido: %s", modo))
 	}
 	var m *Modo
 	switch a := registro[agente].(type) {
@@ -55,7 +56,7 @@ func CambiarAutenticacion(registro map[string]Adaptador, agente, modo string) er
 		m = a.Autenticacion
 	}
 	if m == nil {
-		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "solo claude y codex admiten la suscripción")
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("solo claude y codex admiten la suscripción"))
 	}
 	m.valor.Store(&modo)
 	return nil

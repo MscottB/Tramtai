@@ -20,6 +20,7 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	"tramtai/internal/api"
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
 
@@ -68,7 +69,7 @@ func LeerPuntos(lista []any) ([]ConfigPunto, error) {
 	}
 	datos, err := json.Marshal(lista)
 	if err != nil {
-		return nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "puntos_acceso no válido")
+		return nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.T("puntos_acceso no válido"))
 	}
 	d := json.NewDecoder(bytes.NewReader(datos))
 	d.DisallowUnknownFields()
@@ -82,46 +83,46 @@ func LeerPuntos(lista []any) ([]ConfigPunto, error) {
 // Normalizar completa los valores predeterminados (instancia, ruta /p/<nombre> y los tres contratos) y valida el punto.
 func (p ConfigPunto) Normalizar(instancia string, puertoServicio int) (ConfigPunto, error) {
 	invalido := func(motivo string) (ConfigPunto, error) {
-		return p, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "punto de acceso "+p.Nombre+": "+motivo)
+		return p, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("punto de acceso %s: %s", p.Nombre, motivo))
 	}
 	if !reNombrePunto.MatchString(p.Nombre) {
-		return invalido("nombre no válido (minúsculas, números, _ y -; hasta 40)")
+		return invalido(idioma.T("nombre no válido (minúsculas, números, _ y -; hasta 40)"))
 	}
 	if p.Instancia == "" {
 		p.Instancia = instancia
 	}
 	if utf8.RuneCountInString(p.Grupo) > 40 {
-		return invalido("grupo de más de 40 caracteres")
+		return invalido(idioma.T("grupo de más de 40 caracteres"))
 	}
 	switch {
 	case p.Puerto != 0 && p.RutaBase != "":
-		return invalido("usa puerto o ruta_base, no ambos")
+		return invalido(idioma.T("usa puerto o ruta_base, no ambos"))
 	case p.Puerto != 0 && (p.Puerto < 1024 || p.Puerto > 65535 || p.Puerto == puertoServicio):
-		return invalido("puerto fuera de 1024-65535 o igual al del servicio")
+		return invalido(idioma.T("puerto fuera de 1024-65535 o igual al del servicio"))
 	case p.Puerto == 0 && p.RutaBase == "":
 		p.RutaBase = "/p/" + p.Nombre
 	case p.Puerto == 0 && p.RutaBase != "/p/"+p.Nombre:
-		return invalido("ruta_base debe ser /p/" + p.Nombre)
+		return invalido(idioma.Tf("ruta_base debe ser /p/%s", p.Nombre))
 	}
 	if len(p.Contratos) == 0 {
 		p.Contratos = []string{"nativa", "openai", "anthropic"}
 	}
 	for _, c := range p.Contratos {
 		if !contratosValidos[c] {
-			return invalido("contrato desconocido " + c + " (nativa, openai, anthropic)")
+			return invalido(idioma.Tf("contrato desconocido %s (nativa, openai, anthropic)", c))
 		}
 	}
 	if p.Modelo != "" && p.PerfilModelo != "" {
-		return invalido("modelo y perfil_modelo son excluyentes")
+		return invalido(idioma.T("modelo y perfil_modelo son excluyentes"))
 	}
 	if p.Esfuerzo != "" && !slices.Contains(nucleo.NivelesEsfuerzo, p.Esfuerzo) {
-		return invalido("esfuerzo desconocido " + p.Esfuerzo + " (bajo, medio, alto, muy_alto, maximo)")
+		return invalido(idioma.Tf("esfuerzo desconocido %s (bajo, medio, alto, muy_alto, maximo)", p.Esfuerzo))
 	}
 	if p.ForzarModelo && p.Agente == "" && p.Modelo == "" && p.PerfilModelo == "" {
-		return invalido("forzar_modelo exige agente, modelo o perfil_modelo")
+		return invalido(idioma.T("forzar_modelo exige agente, modelo o perfil_modelo"))
 	}
 	if p.Ejecucion != nil && p.Ejecucion.MaximoTrabajos < 0 {
-		return invalido("ejecucion.maximo_trabajos no puede ser negativo")
+		return invalido(idioma.T("ejecucion.maximo_trabajos no puede ser negativo"))
 	}
 	return p, nil
 }
@@ -202,7 +203,7 @@ func (s *Servicio) puntosDeseados() ([]candidato, []string) {
 			case err != nil:
 				errores = append(errores, origen+": "+nucleo.MensajeDe(err))
 			case vistos[normalizado.Nombre]:
-				errores = append(errores, origen+": punto de acceso duplicado "+normalizado.Nombre)
+				errores = append(errores, idioma.Tf("%s: punto de acceso duplicado %s", origen, normalizado.Nombre))
 			default:
 				vistos[normalizado.Nombre] = true
 				salida = append(salida, candidato{cfg: normalizado, origen: origen})
@@ -302,7 +303,7 @@ func (s *Servicio) abrirPunto(c candidato, token, firma string) *puntoActivo {
 		p.err = "desactivado"
 		return p
 	case p.instancia == nil:
-		p.err = "la instancia " + c.cfg.Instancia + " no está activa"
+		p.err = idioma.Tf("la instancia %s no está activa", c.cfg.Instancia)
 		return p
 	}
 	inst := p.instancia
@@ -315,7 +316,7 @@ func (s *Servicio) abrirPunto(c candidato, token, firma string) *puntoActivo {
 	direccion := net.JoinHostPort(s.opc.Host, strconv.Itoa(c.cfg.Puerto))
 	oyente, err := net.Listen("tcp", direccion)
 	if err != nil {
-		p.err = "no se pudo abrir " + direccion + " (¿puerto en uso?)"
+		p.err = idioma.Tf("no se pudo abrir %s (¿puerto en uso?)", direccion)
 		return p
 	}
 	p.handler, p.url = handler, "http://"+direccion
@@ -345,7 +346,7 @@ func EditarPuntos(ruta string, origen nucleo.Origen, editar func([]ConfigPunto) 
 			if raiz.Content[i].Value == "puntos_acceso" {
 				indice = i + 1
 				if err := raiz.Content[indice].Decode(&lista); err != nil {
-					return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, ruta+": puntos_acceso debe ser una lista")
+					return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("%s: puntos_acceso debe ser una lista", ruta))
 				}
 				break
 			}
@@ -380,7 +381,7 @@ func FijarValor(ruta string, origen nucleo.Origen, clave string, valor any) erro
 		partes := strings.Split(clave, ".")
 		for i, parte := range partes {
 			if nodo.Kind != yaml.MappingNode {
-				return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, ruta+": "+strings.Join(partes[:i], ".")+" debe ser un mapa")
+				return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("%s: %s debe ser un mapa", ruta, strings.Join(partes[:i], ".")))
 			}
 			var hijo *yaml.Node
 			for j := 0; j+1 < len(nodo.Content); j += 2 {
@@ -417,7 +418,7 @@ func editarYAML(ruta string, origen nucleo.Origen, editar func(raiz *yaml.Node) 
 	var doc yaml.Node
 	if len(bytes.TrimSpace(original)) > 0 {
 		if err := yaml.Unmarshal(original, &doc); err != nil {
-			return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, ruta+": YAML no válido: "+err.Error())
+			return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("%s: YAML no válido: %s", ruta, err.Error()))
 		}
 	}
 	if doc.Kind == 0 {
@@ -425,7 +426,7 @@ func editarYAML(ruta string, origen nucleo.Origen, editar func(raiz *yaml.Node) 
 	}
 	raiz := doc.Content[0]
 	if raiz.Kind != yaml.MappingNode {
-		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, ruta+": la raíz debe ser un mapa")
+		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("%s: la raíz debe ser un mapa", ruta))
 	}
 	if err := editar(raiz); err != nil {
 		return err

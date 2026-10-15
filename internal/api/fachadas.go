@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
 )
@@ -48,12 +49,12 @@ func (p politica) revisar(campos map[string]json.RawMessage, tolerante bool) ([]
 			avisos = append(avisos, clave)
 		case p.noSoportados[clave]:
 			if !sinEfecto(clave, campos[clave]) {
-				return nil, nucleo.NuevoError(nucleo.CodigoParametroNoSoportado, "el parámetro "+clave+" no se puede respetar con los agentes CLI")
+				return nil, nucleo.NuevoError(nucleo.CodigoParametroNoSoportado, idioma.Tf("el parámetro %s no se puede respetar con los agentes CLI", clave))
 			}
 		case tolerante:
 			avisos = append(avisos, clave)
 		default:
-			return nil, nucleo.NuevoError(nucleo.CodigoParametroNoSoportado, "parámetro desconocido: "+clave+" (activa compatibilidad.modo_tolerante para ignorarlo)")
+			return nil, nucleo.NuevoError(nucleo.CodigoParametroNoSoportado, idioma.Tf("parámetro desconocido: %s (activa compatibilidad.modo_tolerante para ignorarlo)", clave))
 		}
 	}
 	return avisos, nil
@@ -63,25 +64,25 @@ func (p politica) revisar(campos map[string]json.RawMessage, tolerante bool) ([]
 func (s *Servidor) leerFachada(w http.ResponseWriter, r *http.Request, p politica, destino any) ([]string, error) {
 	datos, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maximoCuerpo))
 	if err != nil {
-		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "cuerpo demasiado grande o ilegible")
+		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("cuerpo demasiado grande o ilegible"))
 	}
 	var campos map[string]json.RawMessage
 	if err := json.Unmarshal(datos, &campos); err != nil {
-		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "cuerpo JSON no válido: "+err.Error())
+		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("cuerpo JSON no válido: %s", err.Error()))
 	}
 	avisos, err := p.revisar(campos, s.Config.Booleano("compatibilidad.modo_tolerante"))
 	if err != nil {
 		return nil, err
 	}
 	if err := json.Unmarshal(datos, destino); err != nil {
-		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "cuerpo JSON no válido: "+err.Error())
+		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("cuerpo JSON no válido: %s", err.Error()))
 	}
 	return avisos, nil
 }
 
 func avisar(w http.ResponseWriter, avisos []string) {
 	if len(avisos) > 0 {
-		w.Header().Add("Tramtai-Advertencia", "parametros ignorados: "+strings.Join(avisos, ", "))
+		w.Header().Add("Tramtai-Advertencia", idioma.Tf("parametros ignorados: %s", strings.Join(avisos, ", ")))
 	}
 }
 
@@ -126,11 +127,11 @@ func (s *Servidor) solicitudFachada(model string) (nucleo.SolicitudEjecucion, er
 		return nucleo.SolicitudEjecucion{Agente: agentes[0], Modelo: model}, nil
 	case 0:
 		return nucleo.SolicitudEjecucion{}, nucleo.NuevoError(nucleo.CodigoModeloNoDisponible,
-			"modelo desconocido "+model+": usa agente/modelo (consulta /openai/v1/models)")
+			idioma.Tf("modelo desconocido %s: usa agente/modelo (consulta /openai/v1/models)", model))
 	}
 	sort.Strings(agentes)
 	return nucleo.SolicitudEjecucion{}, nucleo.NuevoError(nucleo.CodigoModeloAmbiguo,
-		"el modelo "+model+" existe en varios agentes ("+strings.Join(agentes, ", ")+"): usa agente/modelo")
+		idioma.Tf("el modelo %s existe en varios agentes (%s): usa agente/modelo", model, strings.Join(agentes, ", ")))
 }
 
 func contiene(lista []string, valor string) bool {
@@ -152,7 +153,7 @@ func rolInterno(rol string) (string, error) {
 	case "assistant":
 		return "asistente", nil
 	}
-	return "", nucleo.NuevoError(nucleo.CodigoParametroNoSoportado, "rol no soportado: "+rol)
+	return "", nucleo.NuevoError(nucleo.CodigoParametroNoSoportado, idioma.Tf("rol no soportado: %s", rol))
 }
 
 // textoDe acepta un texto o una lista de partes de texto; imágenes, audio o herramientas no se admiten.
@@ -166,7 +167,7 @@ func textoDe(contenido json.RawMessage) (string, error) {
 		Text string `json:"text"`
 	}
 	if err := json.Unmarshal(contenido, &partes); err != nil {
-		return "", nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "contenido de mensaje no válido")
+		return "", nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("contenido de mensaje no válido"))
 	}
 	var b strings.Builder
 	for i, p := range partes {
@@ -177,7 +178,7 @@ func textoDe(contenido json.RawMessage) (string, error) {
 			}
 			b.WriteString(p.Text)
 		default:
-			return "", nucleo.NuevoError(nucleo.CodigoParametroNoSoportado, "contenido de tipo "+p.Type+" no soportado: solo texto")
+			return "", nucleo.NuevoError(nucleo.CodigoParametroNoSoportado, idioma.Tf("contenido de tipo %s no soportado: solo texto", p.Type))
 		}
 	}
 	return b.String(), nil

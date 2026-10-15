@@ -3,7 +3,6 @@ package servicio
 import (
 	"cmp"
 	"crypto/subtle"
-	"fmt"
 	"io/fs"
 	"net"
 	"net/http"
@@ -17,6 +16,7 @@ import (
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/api"
 	"tramtai/internal/autoarranque"
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/version"
 )
@@ -82,7 +82,7 @@ func (s *Servicio) CodigoSesion(instancia string) (string, error) {
 	_, activa := s.instancias[instancia]
 	s.mu.RUnlock()
 	if !activa {
-		return "", nucleo.NuevoError(nucleo.CodigoNoEncontrado, "la instancia "+instancia+" no está activa")
+		return "", nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("la instancia %s no está activa", instancia))
 	}
 	codigo := aleatorio(16)
 	s.muSesiones.Lock()
@@ -128,7 +128,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if s.instancia(peticion.Instancia) == nil {
-				api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "la instancia "+peticion.Instancia+" no está activa"))
+				api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("la instancia %s no está activa", peticion.Instancia)))
 				return
 			}
 			s.responderSesion(w, r, s.crearSesion(w, peticion.Instancia, true))
@@ -247,7 +247,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if s.opc.Reiniciar == nil {
-			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "este servicio no se puede reiniciar desde la Web UI"))
+			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("este servicio no se puede reiniciar desde la Web UI")))
 			return
 		}
 		if err := s.opc.Reiniciar(); err != nil {
@@ -290,7 +290,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		s.crearSesion(w, entrada.instancia, s.esLocal(r)) // con tramtai abrir en este equipo, la sesión es local
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	default:
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "ruta no encontrada: "+r.Method+" "+r.URL.Path))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ruta no encontrada: %s %s", r.Method, r.URL.Path)))
 	}
 }
 
@@ -362,7 +362,7 @@ func (s *Servicio) responderSesion(w http.ResponseWriter, r *http.Request, ses *
 	}
 	inst := s.instancia(ses.instancia)
 	if inst == nil && !ses.local {
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "la instancia de la sesión ("+ses.instancia+") no está activa"))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("la instancia de la sesión (%s) no está activa", ses.instancia)))
 		return
 	}
 	if inst != nil {
@@ -428,7 +428,7 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 		return false
 	}
 	if !privilegiada {
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado, "requiere una sesión de la Web UI o el token de servicio"))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado, idioma.T("requiere una sesión de la Web UI o el token de servicio")))
 		return true
 	}
 	switch {
@@ -462,7 +462,7 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 	case strings.HasPrefix(ruta, "/api/v1/puntos/"):
 		s.puntoUI(w, r, inst, strings.TrimPrefix(ruta, "/api/v1/puntos/"))
 	default:
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "ruta no encontrada: "+r.Method+" "+ruta))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ruta no encontrada: %s %s", r.Method, ruta)))
 	}
 	return true
 }
@@ -517,7 +517,7 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 	}
 	err = EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		if slices.ContainsFunc(lista, func(c ConfigPunto) bool { return c.Nombre == p.Nombre }) {
-			return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "el punto de acceso "+p.Nombre+" ya existe")
+			return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el punto de acceso %s ya existe", p.Nombre))
 		}
 		return append(lista, p), nil
 	})
@@ -553,7 +553,7 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 		}
 	}
 	if punto == nil {
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "punto de acceso no encontrado en esta instancia: "+nombre))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("punto de acceso no encontrado en esta instancia: %s", nombre)))
 		return
 	}
 	editar := func(f func([]ConfigPunto) ([]ConfigPunto, error)) bool {
@@ -584,7 +584,7 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 			return
 		}
 		if cambio.Esfuerzo != nil && *cambio.Esfuerzo != "" && !slices.Contains(nucleo.NivelesEsfuerzo, *cambio.Esfuerzo) {
-			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "esfuerzo desconocido: "+*cambio.Esfuerzo))
+			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("esfuerzo desconocido: %s", *cambio.Esfuerzo)))
 			return
 		}
 		if editar(func(lista []ConfigPunto) ([]ConfigPunto, error) {
@@ -613,7 +613,7 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 			w.WriteHeader(http.StatusNoContent)
 		}
 	default:
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "ruta no encontrada: "+r.Method+" "+r.URL.Path))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ruta no encontrada: %s %s", r.Method, r.URL.Path)))
 	}
 }
 
@@ -626,13 +626,13 @@ func csrfValido(r *http.Request, ses *sesion) bool {
 // lo aplica al servicio en marcha, sin reiniciarlo.
 func (s *Servicio) cambiarAutenticacion(agente, modo string) error {
 	if agente != "claude" && agente != "codex" {
-		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "solo claude y codex admiten la suscripción")
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("solo claude y codex admiten la suscripción"))
 	}
 	if modo != adaptadores.AutenticacionClaveAPI && modo != adaptadores.AutenticacionSuscripcion {
-		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "modo de autenticación desconocido: "+modo)
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("modo de autenticación desconocido: %s", modo))
 	}
 	if ip := net.ParseIP(s.opc.Host); modo == adaptadores.AutenticacionSuscripcion && s.opc.Host != "localhost" && (ip == nil || !ip.IsLoopback()) {
-		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "la suscripción no se permite con el servicio abierto a otros equipos (sección 2.4)")
+		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.T("la suscripción no se permite con el servicio abierto a otros equipos (sección 2.4)"))
 	}
 	ruta, err := nucleo.RutaGlobal()
 	if err != nil {
@@ -653,11 +653,11 @@ func (s *Servicio) fijarPredeterminado(inst *Instancia, id string) error {
 	switch {
 	case agente == "perfil":
 		if _, existe := inst.Config.Perfiles()[modelo]; !existe {
-			return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "perfil de modelo desconocido: "+modelo)
+			return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("perfil de modelo desconocido: %s", modelo))
 		}
 		valores["predeterminados.perfil_modelo"] = modelo
 	case s.opc.Registro[agente] == nil:
-		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "agente desconocido: "+agente)
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("agente desconocido: %s", agente))
 	default:
 		valores["predeterminados.agente"], valores["predeterminados.modelo"] = agente, modelo
 	}
@@ -686,10 +686,10 @@ func (s *Servicio) fijarPredeterminado(inst *Instancia, id string) error {
 // libre (o es el que ya usa este servicio). Se aplica al reiniciar.
 func (s *Servicio) fijarPuerto(puerto int, automatico bool) error {
 	if puerto < 1024 || puerto > 65535 {
-		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "el puerto debe estar entre 1024 y 65535")
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("el puerto debe estar entre 1024 y 65535"))
 	}
 	if puerto != s.opc.Puerto && !PuertoLibre(s.opc.Host, puerto) {
-		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, fmt.Sprintf("el puerto %d está ocupado por otro programa: elige otro", puerto))
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el puerto %d está ocupado por otro programa: elige otro", puerto))
 	}
 	ruta, err := nucleo.RutaGlobal()
 	if err != nil {

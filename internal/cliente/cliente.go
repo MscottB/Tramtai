@@ -21,12 +21,13 @@ import (
 	"time"
 
 	"tramtai/internal/documentos"
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/servicio"
 )
 
 // ErrServicioInactivo indica que no hay un servicio de Tramtai en marcha para este usuario.
-var ErrServicioInactivo = errors.New("el servicio de Tramtai no está en marcha (tramtai servicio iniciar --segundo-plano)")
+var ErrServicioInactivo = errors.New(idioma.T("el servicio de Tramtai no está en marcha (tramtai servicio iniciar --segundo-plano)"))
 
 // Cliente es una conexión al servicio.
 type Cliente struct {
@@ -94,7 +95,7 @@ func IniciarEnSegundoPlano(ejecutable, datos string) (*Cliente, error) {
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
-	return nil, fmt.Errorf("el servicio no respondió; revisa %s", rutaRegistro)
+	return nil, fmt.Errorf(idioma.T("el servicio no respondió; revisa %s"), rutaRegistro)
 }
 
 // pedir hace una petición con el token de servicio; instancia elige la instancia con Tramtai-Instancia.
@@ -125,7 +126,7 @@ func (c *Cliente) pedir(ctx context.Context, metodo, ruta, instancia string, cue
 		if json.NewDecoder(resp.Body).Decode(&e) == nil && e.Error.Codigo != "" {
 			return nucleo.NuevoError(e.Error.Codigo, e.Error.Mensaje)
 		}
-		return fmt.Errorf("el servicio respondió %s", resp.Status)
+		return fmt.Errorf(idioma.T("el servicio respondió %s"), resp.Status)
 	}
 	if destino == nil || resp.StatusCode == http.StatusNoContent {
 		return nil
@@ -278,7 +279,7 @@ func (c *Cliente) Eventos(ctx context.Context, instancia, id string, desde int, 
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("eventos: el servicio respondió %s", resp.Status)
+		return fmt.Errorf(idioma.T("eventos: el servicio respondió %s"), resp.Status)
 	}
 	lector := bufio.NewScanner(resp.Body)
 	lector.Buffer(make([]byte, 64<<10), 16<<20)

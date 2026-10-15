@@ -1,10 +1,10 @@
 package servicio
 
 import (
-	"fmt"
 	"net/http"
 
 	"tramtai/internal/api"
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
 
@@ -28,7 +28,7 @@ func (s *Servicio) rutasAdmin() http.Handler {
 		s.detenerUna.Do(func() { close(s.detener) })
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "ruta no encontrada: "+r.Method+" "+r.URL.Path))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ruta no encontrada: %s %s", r.Method, r.URL.Path)))
 	})
 	return mux
 }
@@ -56,7 +56,7 @@ func (s *Servicio) adminActivar(w http.ResponseWriter, r *http.Request) {
 	case "proyecto":
 		inst, err = s.ActivarProyecto(peticion.Raiz)
 	default:
-		err = nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, fmt.Sprintf("ámbito desconocido %q: usa global o proyecto", peticion.Ambito))
+		err = nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("ámbito desconocido %q: usa global o proyecto", peticion.Ambito))
 	}
 	if err != nil {
 		api.EscribirError(w, r, err)
@@ -89,7 +89,7 @@ func (s *Servicio) adminConfiguracion(w http.ResponseWriter, r *http.Request) {
 	inst := s.instancias[r.PathValue("id")]
 	s.mu.RUnlock()
 	if inst == nil {
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "la instancia no está activa"))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.T("la instancia no está activa")))
 		return
 	}
 	entradas := []EntradaConfiguracion{}

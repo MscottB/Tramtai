@@ -9,6 +9,7 @@ import (
 	"slices"
 	"sort"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/procesos"
 )
@@ -23,11 +24,11 @@ type Claude struct {
 func (c Claude) Detectar(ctx context.Context) Estado {
 	e := Estado{Agente: "claude", Autenticacion: c.Autenticacion.Valor()}
 	if c.Autenticacion.Valor() == AutenticacionSuscripcion {
-		e.Terminos = "términos de consumidor de Anthropic: solo uso personal y local"
+		e.Terminos = idioma.T("términos de consumidor de Anthropic: solo uso personal y local")
 	} else {
-		e.Terminos = "términos comerciales de Anthropic (clave de API de Console)"
+		e.Terminos = idioma.T("términos comerciales de Anthropic (clave de API de Console)")
 		if claveEntorno("ANTHROPIC_API_KEY") == "" {
-			e.Problema = "falta ANTHROPIC_API_KEY"
+			e.Problema = idioma.T("falta ANTHROPIC_API_KEY")
 		}
 	}
 	ruta, err := resolverPrograma(c.Programa)
@@ -54,14 +55,14 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 	case AutenticacionClaveAPI, "":
 		if clave = claveEntorno("ANTHROPIC_API_KEY"); clave == "" {
 			return Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente,
-				"falta ANTHROPIC_API_KEY; o configura adaptadores.claude.autenticacion: suscripcion para uso personal local")
+				idioma.T("falta ANTHROPIC_API_KEY; o configura adaptadores.claude.autenticacion: suscripcion para uso personal local"))
 		}
 		extra = append(extra, "ANTHROPIC_API_KEY="+clave)
 		if !consciente(s) {
 			args = append(args, "--bare") // solo admite la clave de API: nunca recurre a la sesión de suscripción
 		}
 	default:
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "autenticación desconocida: "+c.Autenticacion.Valor())
+		return Resultado{}, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("autenticación desconocida: %s", c.Autenticacion.Valor()))
 	}
 	raiz, espacio, err := espacioTemporal()
 	if err != nil {
@@ -98,7 +99,7 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 		// Salida estructurada nativa: el resultado llega en structured_output (validado en M0).
 		var compacto bytes.Buffer
 		if err := json.Compact(&compacto, s.Salida.Esquema); err != nil {
-			return Resultado{}, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "esquema no válido")
+			return Resultado{}, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("esquema no válido"))
 		}
 		args = append(args, "--json-schema", compacto.String())
 	}
@@ -126,7 +127,7 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 	if final == nil {
 		texto := redactar(r.Errores, clave)
 		if texto == "" {
-			return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, "claude terminó sin evento result")
+			return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.T("claude terminó sin evento result"))
 		}
 		return Resultado{}, nucleo.NuevoError(clasificar(texto, 0), texto)
 	}

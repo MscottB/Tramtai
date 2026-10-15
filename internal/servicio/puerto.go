@@ -1,10 +1,10 @@
 package servicio
 
 import (
-	"fmt"
 	"net"
 	"strconv"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
 
@@ -30,7 +30,7 @@ func Escuchar(host string, puerto int, automatico bool) (net.Listener, int, erro
 		return oyente, puerto, nil
 	}
 	if !automatico {
-		return nil, 0, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, fmt.Sprintf(
+		return nil, 0, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf(
 			"el puerto %d está ocupado por otro programa: elige otro con «tramtai servicio puerto <número>» (o en Ajustes de la Web UI), o activa servicio.puerto_automatico para usar uno libre", puerto))
 	}
 	for p := puerto + 1; p <= min(puerto+intentosPuerto, 65535); p++ {

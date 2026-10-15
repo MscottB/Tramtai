@@ -4,9 +4,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"regexp"
 	"slices"
+
+	"tramtai/internal/idioma"
 )
 
 // Mensaje es un turno de la conversación con su rol original.
@@ -71,55 +72,55 @@ var (
 
 // Validar rechaza una solicitud inválida antes de aceptarla; nunca se lanza un proceso por ella.
 func (s SolicitudEjecucion) Validar() error {
-	invalida := func(formato string, args ...any) error {
-		return NuevoError(CodigoSolicitudInvalida, fmt.Sprintf(formato, args...))
+	invalida := func(mensaje string) error {
+		return NuevoError(CodigoSolicitudInvalida, mensaje)
 	}
 	if s.Modelo != "" && s.PerfilModelo != "" {
-		return invalida("modelo y perfil_modelo son excluyentes")
+		return invalida(idioma.T("modelo y perfil_modelo son excluyentes"))
 	}
 	for campo, valor := range map[string]string{"agente": s.Agente, "modelo": s.Modelo, "perfil_modelo": s.PerfilModelo} {
 		if valor != "" && !reIdentificador.MatchString(valor) {
-			return invalida("%s con formato no válido", campo)
+			return invalida(idioma.Tf("%s con formato no válido", campo))
 		}
 	}
 	for i, m := range s.Mensajes {
 		if !rolesValidos[m.Rol] {
-			return invalida("mensaje %d con rol desconocido %q", i, m.Rol)
+			return invalida(idioma.Tf("mensaje %d con rol desconocido %q", i, m.Rol))
 		}
 		if m.Contenido == "" {
-			return invalida("mensaje %d sin contenido", i)
+			return invalida(idioma.Tf("mensaje %d sin contenido", i))
 		}
 	}
 	if s.Esfuerzo != "" && !slices.Contains(NivelesEsfuerzo, s.Esfuerzo) {
-		return invalida("esfuerzo desconocido %q (bajo, medio, alto, muy_alto, maximo)", s.Esfuerzo)
+		return invalida(idioma.Tf("esfuerzo desconocido %q (bajo, medio, alto, muy_alto, maximo)", s.Esfuerzo))
 	}
 	if s.ModoContexto != "" && !modosContexto[s.ModoContexto] {
-		return invalida("modo_contexto desconocido %q", s.ModoContexto)
+		return invalida(idioma.Tf("modo_contexto desconocido %q", s.ModoContexto))
 	}
 	if s.Salida.Formato != "" && !formatosValidos[s.Salida.Formato] {
-		return invalida("formato de salida desconocido %q", s.Salida.Formato)
+		return invalida(idioma.Tf("formato de salida desconocido %q", s.Salida.Formato))
 	}
 	if len(s.Salida.Esquema) > 0 {
 		if s.Salida.Formato != "json" {
-			return invalida("un esquema de salida exige formato json")
+			return invalida(idioma.T("un esquema de salida exige formato json"))
 		}
 		if !json.Valid(s.Salida.Esquema) {
-			return invalida("el esquema de salida no es JSON válido")
+			return invalida(idioma.T("el esquema de salida no es JSON válido"))
 		}
 	}
 	if len(s.Cargas) > maximoCargas {
-		return invalida("demasiadas cargas (máximo %d)", maximoCargas)
+		return invalida(idioma.Tf("demasiadas cargas (máximo %d)", maximoCargas))
 	}
 	for i, c := range s.Cargas {
 		if !ReCarga.MatchString(c) {
-			return invalida("carga %d con identificador no válido", i)
+			return invalida(idioma.Tf("carga %d con identificador no válido", i))
 		}
 	}
 	if len(s.Mensajes) == 0 && s.Instrucciones == "" && len(s.Cargas) == 0 {
-		return invalida("la solicitud no tiene mensajes, instrucciones ni cargas")
+		return invalida(idioma.T("la solicitud no tiene mensajes, instrucciones ni cargas"))
 	}
 	if t := s.Ejecucion.TiempoLimiteSegundos; t < 0 || t > maximoTiempoLimiteSegundos {
-		return invalida("tiempo_limite_segundos fuera de rango")
+		return invalida(idioma.T("tiempo_limite_segundos fuera de rango"))
 	}
 	return nil
 }

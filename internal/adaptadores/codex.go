@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/procesos"
 )
@@ -22,16 +23,16 @@ type Codex struct {
 func (c Codex) Detectar(ctx context.Context) Estado {
 	e := Estado{Agente: "codex", Autenticacion: c.Autenticacion.Valor()}
 	if c.Autenticacion.Valor() == AutenticacionSuscripcion {
-		e.Terminos = "Terms of Use de OpenAI con cuenta ChatGPT: solo uso personal y local; aislamiento parcial"
+		e.Terminos = idioma.T("Terms of Use de OpenAI con cuenta ChatGPT: solo uso personal y local; aislamiento parcial")
 		if inicio, err := os.UserHomeDir(); err == nil {
 			if _, err := os.Stat(filepath.Join(inicio, ".codex", "AGENTS.md")); err == nil {
-				e.Problema = "existe ~/.codex/AGENTS.md: Codex lo cargará en cada ejecución"
+				e.Problema = idioma.T("existe ~/.codex/AGENTS.md: Codex lo cargará en cada ejecución")
 			}
 		}
 	} else {
-		e.Terminos = "términos de la API de OpenAI (clave de API)"
+		e.Terminos = idioma.T("términos de la API de OpenAI (clave de API)")
 		if claveEntorno("CODEX_API_KEY", "OPENAI_API_KEY") == "" {
-			e.Problema = "falta CODEX_API_KEY u OPENAI_API_KEY"
+			e.Problema = idioma.T("falta CODEX_API_KEY u OPENAI_API_KEY")
 		}
 	}
 	ruta, err := resolverPrograma(c.Programa)
@@ -62,7 +63,7 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 	case AutenticacionClaveAPI, "":
 		if clave = claveEntorno("CODEX_API_KEY", "OPENAI_API_KEY"); clave == "" {
 			return Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente,
-				"falta CODEX_API_KEY u OPENAI_API_KEY; o configura adaptadores.codex.autenticacion: suscripcion para uso personal local")
+				idioma.T("falta CODEX_API_KEY u OPENAI_API_KEY; o configura adaptadores.codex.autenticacion: suscripcion para uso personal local"))
 		}
 		// Un CODEX_HOME privado y vacío evita cargar ~/.codex/AGENTS.md: aislamiento completo (sección 6.4).
 		home := filepath.Join(raiz, "codex-home")
@@ -71,7 +72,7 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 		}
 		extra = append(extra, "CODEX_HOME="+home, "CODEX_API_KEY="+clave)
 	default:
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "autenticación desconocida: "+c.Autenticacion.Valor())
+		return Resultado{}, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("autenticación desconocida: %s", c.Autenticacion.Valor()))
 	}
 
 	trabajo := directorioTrabajo(s, espacio)
@@ -128,7 +129,7 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 	if errorAgente != "" || !terminado {
 		texto := redactar(strings.TrimSpace(errorAgente+"\n"+r.Errores), clave)
 		if texto == "" {
-			return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, "codex terminó sin turn.completed")
+			return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.T("codex terminó sin turn.completed"))
 		}
 		return Resultado{}, nucleo.NuevoError(clasificar(texto, 0), texto)
 	}
