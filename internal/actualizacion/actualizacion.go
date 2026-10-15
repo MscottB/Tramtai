@@ -200,7 +200,10 @@ func (c *Comprobador) consultar(listo chan struct{}) {
 
 // Descargar baja a dir el instalador de v y comprueba que su SHA-256 coincide con la de SHA256SUMS.txt de la misma
 // versión. Solo acepta direcciones de descarga del repositorio de Tramtai; si la suma no coincide, borra el archivo.
-func Descargar(ctx context.Context, v Version, dir string) (string, error) {
+// Avance recibe los bytes descargados y el total (0 si GitHub no lo informa), como mucho cada 100 ms y al terminar.
+type Avance func(recibidos, total int64)
+
+func Descargar(ctx context.Context, v Version, dir string, avance Avance) (string, error) {
 	if !v.TieneInstalador() {
 		return "", errors.New(idioma.T("esta versión no publicó instalador para Windows"))
 	}
@@ -224,7 +227,7 @@ func Descargar(ctx context.Context, v Version, dir string) (string, error) {
 		return "", fmt.Errorf(idioma.T("SHA256SUMS.txt no incluye %s"), v.nombreInstalador)
 	}
 	destino := filepath.Join(dir, filepath.Base(v.nombreInstalador))
-	suma, err := guardar(ctx, v.urlInstalador, destino)
+	suma, err := guardar(ctx, v.urlInstalador, destino, avance)
 	if err == nil && suma != esperada {
 		err = fmt.Errorf(idioma.T("la suma SHA-256 de %s no coincide: la descarga está dañada o fue alterada"), v.nombreInstalador)
 	}
@@ -264,8 +267,24 @@ func bajar(ctx context.Context, url string, limite int64, aceptar string) ([]byt
 	return io.ReadAll(io.LimitReader(respuesta.Body, limite))
 }
 
+// contador avisa a avance de lo que se va escribiendo.
+type contador struct {
+	recibidos, total int64
+	avance           Avance
+	ultimo           time.Time
+}
+
+func (c *contador) Write(p []byte) (int, error) {
+	c.recibidos += int64(len(p))
+	if c.avance != nil && (time.Since(c.ultimo) >= 100*time.Millisecond || c.recibidos == c.total) {
+		c.ultimo = time.Now()
+		c.avance(c.recibidos, c.total)
+	}
+	return len(p), nil
+}
+
 // guardar escribe la descarga en destino y devuelve su SHA-256 en hexadecimal.
-func guardar(ctx context.Context, url, destino string) (string, error) {
+func guardar(ctx context.Context, url, destino string, avance Avance) (string, error) {
 	respuesta, err := pedir(ctx, url, "")
 	if err != nil {
 		return "", err
@@ -276,7 +295,11 @@ func guardar(ctx context.Context, url, destino string) (string, error) {
 		return "", err
 	}
 	suma := sha256.New()
-	_, err = io.Copy(io.MultiWriter(archivo, suma), io.LimitReader(respuesta.Body, maximoInstalador))
+	cuenta := &contador{total: max(respuesta.ContentLength, 0), avance: avance}
+	_, err = io.Copy(io.MultiWriter(archivo, suma, cuenta), io.LimitReader(respuesta.Body, maximoInstalador))
+	if err == nil && avance != nil {
+		avance(cuenta.recibidos, cuenta.total) // el último aviso, aunque no haya pasado el intervalo
+	}
 	if cerrar := archivo.Close(); err == nil {
 		err = cerrar
 	}

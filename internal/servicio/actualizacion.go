@@ -2,6 +2,7 @@ package servicio
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -54,9 +55,37 @@ func (s *Servicio) fijarBusqueda(buscar bool) error {
 	return nil
 }
 
-// Actualizar descarga la última versión, comprueba su suma SHA-256 y lanza su instalador en silencio. El instalador
-// detiene este servicio (los trabajos en curso terminan dentro del plazo de drenaje) y vuelve a abrir la app.
-func (s *Servicio) Actualizar(ctx context.Context) (actualizacion.Version, error) {
+// ProgresoActualizacion es lo que ve la Web UI mientras se actualiza: la fase (descargando, verificando, instalando o
+// error), los bytes descargados y el total.
+type ProgresoActualizacion struct {
+	Fase      string `json:"fase"`
+	Version   string `json:"version"`
+	Recibidos int64  `json:"recibidos"`
+	Total     int64  `json:"total"`
+	Error     string `json:"error,omitempty"`
+}
+
+// progresoActualizacion devuelve el avance de la actualización en curso (fase vacía si no hay ninguna).
+func (s *Servicio) progresoActualizacion() ProgresoActualizacion {
+	s.muAvance.Lock()
+	defer s.muAvance.Unlock()
+	return s.avance
+}
+
+func (s *Servicio) fijarAvance(cambiar func(*ProgresoActualizacion)) {
+	s.muAvance.Lock()
+	defer s.muAvance.Unlock()
+	cambiar(&s.avance)
+}
+
+// IniciarActualizacion comprueba que hay una versión nueva que se puede instalar desde aquí y, en segundo plano, la
+// descarga, comprueba su suma SHA-256 y lanza su instalador en silencio; el avance se consulta con
+// progresoActualizacion. El instalador detiene este servicio (los trabajos en curso terminan dentro del plazo de
+// drenaje) y vuelve a abrir la app. Si ya hay una en curso, no empieza otra.
+func (s *Servicio) IniciarActualizacion(ctx context.Context) (actualizacion.Version, error) {
+	if p := s.progresoActualizacion(); p.Fase != "" && p.Fase != "error" {
+		return actualizacion.Version{Etiqueta: p.Version}, nil
+	}
 	v, err := actualizacion.Ultima(ctx)
 	if err != nil {
 		return v, nucleo.NuevoError(nucleo.CodigoErrorInterno, idioma.Tf("no se pudo consultar la última versión: %s", err))
@@ -69,15 +98,38 @@ func (s *Servicio) Actualizar(ctx context.Context) (actualizacion.Version, error
 		return v, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida,
 			idioma.Tf("esta copia de Tramtai no se instaló con el instalador de Windows: descarga %s desde %s", v.Etiqueta, v.Pagina))
 	}
+	s.fijarAvance(func(p *ProgresoActualizacion) { *p = ProgresoActualizacion{Fase: "descargando", Version: v.Etiqueta} })
+	go s.actualizar(v, carpeta)
+	return v, nil
+}
+
+func (s *Servicio) actualizar(v actualizacion.Version, carpeta string) {
+	fallar := func(err error) {
+		s.fijarAvance(func(p *ProgresoActualizacion) { p.Fase, p.Error = "error", err.Error() })
+	}
+	ctx, cancelar := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancelar()
 	dir, err := os.MkdirTemp("", "tramtai-actualizacion")
 	if err != nil {
-		return v, err
+		fallar(err)
+		return
 	}
-	instalador, err := actualizacion.Descargar(ctx, v, dir)
+	instalador, err := actualizacion.Descargar(ctx, v, dir, func(recibidos, total int64) {
+		s.fijarAvance(func(p *ProgresoActualizacion) {
+			p.Recibidos, p.Total = recibidos, total
+			if total > 0 && recibidos >= total {
+				p.Fase = "verificando"
+			}
+		})
+	})
 	if err != nil {
 		os.RemoveAll(dir)
-		return v, nucleo.NuevoError(nucleo.CodigoErrorInterno, idioma.Tf("no se pudo descargar la versión nueva: %s", err))
+		fallar(errors.New(idioma.Tf("no se pudo descargar la versión nueva: %s", err)))
+		return
 	}
+	s.fijarAvance(func(p *ProgresoActualizacion) { p.Fase = "instalando" })
 	fmt.Fprintf(s.opc.Registros, "actualizando de %s a %s con %s\n", version.Texto(), v.Etiqueta, instalador)
-	return v, actualizacion.Instalar(instalador, carpeta)
+	if err := actualizacion.Instalar(instalador, carpeta); err != nil {
+		fallar(err)
+	}
 }

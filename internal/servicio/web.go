@@ -300,14 +300,20 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			api.NoAutorizado(w, r)
 			return
 		}
-		ctx, cancelar := context.WithTimeout(r.Context(), 10*time.Minute)
+		ctx, cancelar := context.WithTimeout(r.Context(), 30*time.Second)
 		defer cancelar()
-		v, err := s.Actualizar(ctx)
+		v, err := s.IniciarActualizacion(ctx)
 		if err != nil {
 			api.EscribirError(w, r, err)
 			return
 		}
 		api.EscribirJSON(w, http.StatusAccepted, map[string]any{"version": v.Etiqueta})
+	case r.URL.Path == "/ui/actualizacion/progreso" && r.Method == http.MethodGet:
+		if _, ses := s.sesionDe(r); ses == nil {
+			api.NoAutorizado(w, r)
+			return
+		}
+		api.EscribirJSON(w, http.StatusOK, s.progresoActualizacion())
 	case r.URL.Path == "/ui/sesion" && r.Method == http.MethodDelete:
 		if id, _ := s.sesionDe(r); id != "" {
 			s.muSesiones.Lock()

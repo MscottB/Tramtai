@@ -206,6 +206,14 @@ export interface EstadoActualizacion {
   fallo?: boolean // si esa consulta falló
 }
 export const actualizacion = ref<EstadoActualizacion | null>(null)
+// ProgresoActualizacion es el avance de «Actualizar ahora»: fase vacía si no hay ninguna en curso.
+export interface ProgresoActualizacion {
+  fase: '' | 'descargando' | 'verificando' | 'instalando' | 'error'
+  version: string
+  recibidos: number
+  total: number
+  error?: string
+}
 // dialogoActualizar muestra las novedades y el botón de instalar; lo abren la cabecera, Ajustes y la bandeja.
 export const dialogoActualizar = ref(false)
 
@@ -227,6 +235,7 @@ export const api = {
   buscarActualizaciones: (buscar: boolean) => pedir<EstadoActualizacion>('POST', '/ui/actualizacion', { buscar }),
   buscarAhora: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion?ahora=1'),
   actualizar: () => pedir<{ version: string }>('POST', '/ui/actualizar'),
+  progresoActualizacion: () => pedir<ProgresoActualizacion>('GET', '/ui/actualizacion/progreso'),
   cambiarAutenticacion: (agente: string, modo: 'suscripcion' | 'clave_api') => pedir<void>('POST', '/ui/autenticacion', { agente, modo }),
   salir: () => pedir<void>('DELETE', '/ui/sesion').then(() => (sesion.value = null)),
   detenerServicio: () => pedir<unknown>('POST', '/ui/servicio/detener'),

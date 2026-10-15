@@ -102,6 +102,8 @@ type Servicio struct {
 	detenerUna sync.Once
 
 	actualizaciones actualizacion.Comprobador
+	muAvance        sync.Mutex
+	avance          ProgresoActualizacion // la actualización en curso, para la Web UI
 	buscar          atomic.Bool
 }
 

@@ -3,6 +3,7 @@ package idioma
 // Traducciones al inglés de la CLI (cmd/tramtai).
 func init() {
 	agregar(map[string]string{
+		"Descargando… %d %% (%.1f de %.1f MB)": "Downloading… %d %% (%.1f of %.1f MB)",
 		// tramtai
 		"Pasarela local para ejecutar agentes CLI": "Local gateway for running CLI agents",
 		"Tramtai expone Claude Code, Codex y Gemini como una API local.\n\n  tramtai          terminal interactiva\n  tramtai abrir    Web UI en el navegador (inicia el servicio si hace falta)": "Tramtai exposes Claude Code, Codex and Gemini as a local API.\n\n  tramtai          interactive terminal\n  tramtai abrir    Web UI in the browser (starts the service if needed)",

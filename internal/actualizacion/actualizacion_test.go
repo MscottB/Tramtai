@@ -85,19 +85,23 @@ func TestDescargar(t *testing.T) {
 	if err != nil || !v.TieneInstalador() || v.Notas != "Tramtai v0.26.0\n\n- novedad" {
 		t.Fatalf("Ultima: %+v %v", v, err)
 	}
-	ruta, err := Descargar(context.Background(), v, t.TempDir())
+	var recibidos, total int64
+	ruta, err := Descargar(context.Background(), v, t.TempDir(), func(r, todo int64) { recibidos, total = r, todo })
 	if err != nil {
 		t.Fatal(err)
 	}
 	if datos, _ := os.ReadFile(ruta); string(datos) != "instalador de prueba" {
 		t.Fatalf("contenido descargado: %q", datos)
 	}
+	if n := int64(len("instalador de prueba")); recibidos != n || total != n {
+		t.Fatalf("avance al terminar: %d de %d, se esperaba %d de %d", recibidos, total, n, n)
+	}
 
 	// Una dirección fuera del repositorio de Tramtai no se descarga.
 	ajena := v
 	for _, u := range []string{"https://ejemplo.com/instalador.exe", prefijoDescarga + "../../otro/instalador.exe", prefijoDescarga + "%2e%2e/otro.exe"} {
 		ajena.urlInstalador = u
-		if _, err := Descargar(context.Background(), ajena, t.TempDir()); err == nil {
+		if _, err := Descargar(context.Background(), ajena, t.TempDir(), nil); err == nil {
 			t.Fatalf("se aceptó una dirección de descarga ajena: %s", u)
 		}
 	}
@@ -113,7 +117,7 @@ func TestDescargarRechazaSumaDistinta(t *testing.T) {
 		t.Fatal(err)
 	}
 	dir := t.TempDir()
-	if _, err := Descargar(context.Background(), v, dir); err == nil {
+	if _, err := Descargar(context.Background(), v, dir, nil); err == nil {
 		t.Fatal("se aceptó un instalador cuya suma no coincide")
 	}
 	if archivos, _ := os.ReadDir(dir); len(archivos) != 0 {

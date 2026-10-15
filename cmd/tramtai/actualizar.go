@@ -50,7 +50,16 @@ func comandoActualizar() *cobra.Command {
 				return err
 			}
 			fmt.Fprintln(out, idioma.T("Descargando el instalador…"))
-			instalador, err := actualizacion.Descargar(ctx, v, dir)
+			ultimo := -1
+			instalador, err := actualizacion.Descargar(ctx, v, dir, func(recibidos, total int64) {
+				if porcentaje := int(recibidos * 100 / max(total, 1)); total > 0 && porcentaje != ultimo {
+					ultimo = porcentaje
+					fmt.Fprintf(out, "\r%s", idioma.Tf("Descargando… %d %% (%.1f de %.1f MB)", porcentaje, float64(recibidos)/(1<<20), float64(total)/(1<<20)))
+				}
+			})
+			if ultimo >= 0 {
+				fmt.Fprintln(out)
+			}
 			if err != nil {
 				os.RemoveAll(dir)
 				return err

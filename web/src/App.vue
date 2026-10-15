@@ -175,8 +175,21 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="dialogoActualizar">
-      <q-card v-if="actualizacion" style="width: 540px; max-width: 94vw">
+    <q-dialog v-model="dialogoActualizar" :persistent="!!progreso && progreso.fase !== 'error'">
+      <q-card v-if="progreso" style="width: 540px; max-width: 94vw">
+        <q-card-section>
+          <div class="titulo-seccion">{{ t('actualizacion.progresoTitulo', { version: progreso.version }) }}</div>
+          <q-linear-progress class="q-mt-md" size="10px" rounded :value="fraccion" :indeterminate="indeterminado"
+            :color="progreso.fase === 'error' ? 'negative' : 'primary'" />
+          <p class="q-mt-sm q-mb-none" role="status" aria-live="polite">{{ textoProgreso }}</p>
+          <p v-if="progreso.fase === 'instalando'" class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.cerrara') }}</p>
+        </q-card-section>
+        <q-card-actions v-if="progreso.fase === 'error'" align="right" class="q-px-md q-pb-md">
+          <q-btn v-close-popup flat no-caps :label="t('comun.cerrar')" @click="progreso = null" />
+          <q-btn unelevated no-caps color="primary" icon="o_refresh" :label="t('actualizacion.reintentar')" @click="instalarActualizacion" />
+        </q-card-actions>
+      </q-card>
+      <q-card v-else-if="actualizacion" style="width: 540px; max-width: 94vw">
         <q-card-section>
           <div class="titulo-seccion">{{ t('actualizacion.titulo', { version: actualizacion.version }) }}</div>
           <p class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.detalle', { actual: actualizacion.actual }) }}</p>
@@ -201,7 +214,7 @@
 <script setup lang="ts">
 import { computed, markRaw, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 import { useQuasar } from 'quasar'
-import { actualizacion, api, avisar, avisarError, buscarActualizacionAhora, dialogoActualizar, reiniciarYSeguir, sesion } from './api'
+import { actualizacion, api, avisar, avisarError, buscarActualizacionAhora, dialogoActualizar, reiniciarYSeguir, sesion, type ProgresoActualizacion } from './api'
 import { cambiarIdioma, idioma, idiomas, t } from './i18n'
 import { cambiarTema, tema, type Tema } from './tema'
 import EntrarPagina from './paginas/Entrar.vue'
@@ -280,12 +293,41 @@ async function comprobarActualizacion() {
     // sin servicio o sin sesión: se vuelve a intentar en la próxima comprobación
   }
 }
+// «Actualizar ahora»: el servicio descarga e instala en segundo plano y aquí se sigue su avance hasta que el instalador
+// lo detiene (entonces las consultas fallan y se deja el último estado: «instalando»).
+const progreso = ref<ProgresoActualizacion | null>(null)
+let seguirProgreso: number | undefined
+const megas = (bytes: number) => (bytes / 1048576).toLocaleString(idioma.value, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+const fraccion = computed(() => {
+  const p = progreso.value
+  if (!p || p.fase === 'error') return p?.total ? p.recibidos / p.total : 0
+  return p.fase === 'descargando' && p.total ? p.recibidos / p.total : 1
+})
+const indeterminado = computed(() => !!progreso.value && ((progreso.value.fase === 'descargando' && !progreso.value.total) || progreso.value.fase === 'instalando'))
+const textoProgreso = computed(() => {
+  const p = progreso.value
+  if (!p) return ''
+  if (p.fase === 'error') return t('actualizacion.fallo', { error: p.error ?? '' })
+  if (p.fase === 'verificando') return t('actualizacion.verificando')
+  if (p.fase === 'instalando') return t('actualizacion.instalando')
+  if (!p.total) return t('actualizacion.descargandoSinTotal', { recibido: megas(p.recibidos) })
+  return t('actualizacion.descargando', { recibido: megas(p.recibidos), total: megas(p.total), porcentaje: Math.floor((p.recibidos / p.total) * 100) })
+})
 async function instalarActualizacion() {
   actualizando.value = true
   try {
-    await api.actualizar()
-    dialogoActualizar.value = false
-    avisar(t('actualizacion.enCurso'))
+    const { version } = await api.actualizar()
+    progreso.value = { fase: 'descargando', version, recibidos: 0, total: 0 }
+    clearInterval(seguirProgreso)
+    seguirProgreso = window.setInterval(async () => {
+      try {
+        const p = await api.progresoActualizacion()
+        if (p.fase) progreso.value = p
+        if (p.fase === 'error') clearInterval(seguirProgreso)
+      } catch {
+        // el instalador ya detuvo el servicio: queda «instalando» hasta que la app se cierre
+      }
+    }, 400)
   } catch (e) {
     avisarError(e)
   } finally {
@@ -328,6 +370,7 @@ const alVolver = () => !document.hidden && comprobarActualizacion()
 onUnmounted(() => {
   clearInterval(sondeo)
   clearInterval(buscarActualizacion)
+  clearInterval(seguirProgreso)
   document.removeEventListener('visibilitychange', alVolver)
   window.removeEventListener('popstate', alNavegar)
 })
