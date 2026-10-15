@@ -158,6 +158,7 @@ import { useQuasar } from 'quasar'
 import { actualizacion, api, avisar, avisarError, buscarActualizacionAhora, opcionModelo, reiniciarYSeguir, sesion, sistema, terminales, type EntradaConfiguracion, type EstadoPunto, type Modelo } from '../api'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
+import SelectorModelo from '../componentes/SelectorModelo.vue'
 
 const $q = useQuasar()
 const entradas = ref<EntradaConfiguracion[]>([])
