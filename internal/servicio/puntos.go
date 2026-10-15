@@ -323,7 +323,7 @@ func (s *Servicio) abrirPunto(c candidato, token, firma string) *puntoActivo {
 		return p
 	}
 	p.handler, p.url = handler, "http://"+direccion
-	p.srv = &http.Server{Handler: handler, ReadHeaderTimeout: 10 * time.Second}
+	p.srv = &http.Server{Handler: handler, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 64 << 10}
 	go p.srv.Serve(oyente)
 	return p
 }

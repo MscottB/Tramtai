@@ -477,7 +477,8 @@ func iniciarServicio(cmd *cobra.Command, archivo string) error {
 	for _, err := range sv.Restaurar() {
 		fmt.Fprintln(salida, idioma.T("no se pudo restaurar una instancia:"), nucleo.MensajeDe(err))
 	}
-	srv := &http.Server{Handler: sv, ReadHeaderTimeout: 10 * time.Second}
+	// Sin WriteTimeout global: los flujos SSE duran lo que el trabajo; cada escritura lleva su propio plazo.
+	srv := &http.Server{Handler: sv, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 64 << 10}
 	if err := sv.EscribirDescriptor(); err != nil {
 		oyente.Close()
 		sv.Cerrar()
