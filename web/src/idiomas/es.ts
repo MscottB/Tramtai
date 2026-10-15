@@ -518,7 +518,7 @@ const es = {
   'actualizacion.descargar': 'Ir a la descarga',
   'actualizacion.enCurso': 'Actualizando: Tramtai se cerrará y volverá a abrirse en unos segundos.',
   'actualizacion.ajustesTitulo': 'Buscar actualizaciones',
-  'actualizacion.ajustesTexto': 'Una vez al día, Tramtai consulta en GitHub cuál es la última versión publicada. Solo pide esa ficha pública: no envía ningún dato tuyo.',
+  'actualizacion.ajustesTexto': 'Cada hora, Tramtai consulta en GitHub cuál es la última versión publicada, así el aviso aparece sin reiniciar la app. Solo pide esa ficha pública: no envía ningún dato tuyo.',
   'actualizacion.alDia': 'Tienes la última versión ({actual}).',
   'actualizacion.hayNueva': 'Hay una versión nueva, la {version}: actualiza con el botón Actualizar de la cabecera.',
   'actualizacion.desactivada': 'Desactivado. Tienes la {actual}; también puedes comprobarlo con «tramtai actualizar».',

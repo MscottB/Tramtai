@@ -50,7 +50,7 @@ type Opciones struct {
 	PlazoDrenaje time.Duration
 	// EntradaLocal deja entrar en la Web UI sin token al mismo usuario del sistema (servicio.entrada_local).
 	EntradaLocal bool
-	// BuscarActualizaciones consulta una vez al día si hay una versión nueva (servicio.buscar_actualizaciones).
+	// BuscarActualizaciones consulta cada hora si hay una versión nueva (servicio.buscar_actualizaciones).
 	BuscarActualizaciones bool
 	// PuertoConfigurado y PuertoAutomatico son servicio.puerto y servicio.puerto_automatico; Puerto es el que se
 	// usa, que puede ser otro si el configurado estaba ocupado. Se cambian desde la Web UI (con s.mu).

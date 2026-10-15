@@ -121,7 +121,8 @@ func numeros(v string) ([]int, bool) {
 	return n, true
 }
 
-// Comprobador recuerda la última consulta y la repite como mucho una vez al día (o al cabo de una hora si falló).
+// Comprobador recuerda la última consulta y la repite como mucho una vez por hora (o a los 15 minutos si falló), así
+// una versión publicada aparece sin tener que reiniciar la app.
 type Comprobador struct {
 	Consultar func(context.Context) (Version, error) // Ultima si es nil
 	Actual    string                                 // version.Version si está vacía
@@ -137,7 +138,7 @@ type Comprobador struct {
 // venció, lanza otra en segundo plano; con esperar, aguarda su resultado mientras ctx lo permita.
 func (c *Comprobador) Disponible(ctx context.Context, esperar bool) (Version, bool) {
 	c.mu.Lock()
-	vencida := c.hecha.IsZero() || time.Since(c.hecha) > 24*time.Hour || (c.fallo && time.Since(c.hecha) > time.Hour)
+	vencida := c.hecha.IsZero() || time.Since(c.hecha) > time.Hour || (c.fallo && time.Since(c.hecha) > 15*time.Minute)
 	if vencida && c.enCurso == nil {
 		c.enCurso = make(chan struct{})
 		go c.consultar(c.enCurso)

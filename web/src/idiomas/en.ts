@@ -519,7 +519,7 @@ const en: Textos = {
   'actualizacion.descargar': 'Go to download',
   'actualizacion.enCurso': 'Updating: Tramtai will close and open again in a few seconds.',
   'actualizacion.ajustesTitulo': 'Check for updates',
-  'actualizacion.ajustesTexto': 'Once a day, Tramtai asks GitHub for the latest published version. It only requests that public page: none of your data is sent.',
+  'actualizacion.ajustesTexto': 'Every hour, Tramtai asks GitHub for the latest published version, so the notice shows up without restarting the app. It only requests that public page: none of your data is sent.',
   'actualizacion.alDia': 'You have the latest version ({actual}).',
   'actualizacion.hayNueva': 'A new version is available, {version}: update with the Update button in the header.',
   'actualizacion.desactivada': 'Off. You have {actual}; you can also check with «tramtai actualizar».',

@@ -176,13 +176,13 @@
     </q-dialog>
 
     <q-dialog v-model="dialogoActualizar">
-      <q-card v-if="actualizacion" style="width: 460px; max-width: 92vw">
+      <q-card v-if="actualizacion" style="width: 540px; max-width: 94vw">
         <q-card-section>
           <div class="titulo-seccion">{{ t('actualizacion.titulo', { version: actualizacion.version }) }}</div>
           <p class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.detalle', { actual: actualizacion.actual }) }}</p>
           <template v-if="actualizacion.notas">
             <div class="text-caption texto-suave q-mt-md q-mb-xs">{{ t('actualizacion.novedadesTitulo') }}</div>
-            <div class="notas-version">{{ actualizacion.notas }}</div>
+            <NotasVersion :texto="actualizacion.notas" />
           </template>
           <p class="q-mt-md q-mb-none">{{ actualizacion.instalable ? t('actualizacion.comoInstala') : t('actualizacion.manual') }}</p>
         </q-card-section>
@@ -211,6 +211,7 @@ import ConectarPagina from './paginas/Accesos.vue'
 import ConfiguracionPagina from './paginas/Configuracion.vue'
 import AgentesPagina from './paginas/Agentes.vue'
 import AyudaPagina from './paginas/Ayuda.vue'
+import NotasVersion from './componentes/NotasVersion.vue'
 
 // Orden del menú según el recorrido: conectar un agente, probarlo, conectar las apps y revisar lo ejecutado.
 const $q = useQuasar()
@@ -261,8 +262,8 @@ function detener() {
       }
     })
 }
-// Aviso de versión nueva: el servicio consulta GitHub como mucho una vez al día y aquí se pregunta al cargar y cada
-// seis horas. En la app de escritorio, «Actualizar a…» de la bandeja abre este mismo diálogo.
+// Aviso de versión nueva: el servicio consulta GitHub como mucho una vez por hora y aquí se le pregunta al cargar,
+// cada 15 minutos y cada vez que la ventana vuelve a verse. En la app de escritorio, «Actualizar a…» de la bandeja abre este mismo diálogo.
 const dialogoActualizar = ref(false)
 const actualizando = ref(false)
 async function comprobarActualizacion() {
@@ -357,7 +358,10 @@ onMounted(async () => {
   try {
     await api.sesion()
     comprobarActualizacion()
-    window.setInterval(comprobarActualizacion, 6 * 60 * 60 * 1000)
+    window.setInterval(comprobarActualizacion, 15 * 60 * 1000)
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) comprobarActualizacion()
+    })
   } catch {
     sesion.value = null
   } finally {
@@ -413,16 +417,3 @@ async function activarGlobal() {
 }
 </script>
 
-<style>
-.notas-version {
-  white-space: pre-wrap;
-  max-height: 260px;
-  overflow-y: auto;
-  font-size: 0.875rem;
-  line-height: 1.55;
-  background: var(--superficie-suave);
-  border: 1px solid var(--borde);
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-</style>

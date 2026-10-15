@@ -32,7 +32,7 @@ func TestMasNueva(t *testing.T) {
 	}
 }
 
-func TestComprobadorConsultaUnaVezAlDia(t *testing.T) {
+func TestComprobadorNoRepiteLaConsulta(t *testing.T) {
 	var llamadas atomic.Int32
 	c := &Comprobador{Actual: "v0.25.0+1", Consultar: func(context.Context) (Version, error) {
 		llamadas.Add(1)
@@ -45,7 +45,7 @@ func TestComprobadorConsultaUnaVezAlDia(t *testing.T) {
 	c.Disponible(context.Background(), true)
 	c.Disponible(context.Background(), false)
 	if n := llamadas.Load(); n != 1 {
-		t.Fatalf("se consultó %d veces en el mismo día", n)
+		t.Fatalf("se consultó %d veces en la misma hora", n)
 	}
 }
 

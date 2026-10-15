@@ -19,7 +19,7 @@ try {
     $rango = if ($ultima) { "$ultima..$Hasta" } else { $Hasta }
     [int]$mayor, [int]$menor, [int]$parche = $base.Split('.')
 
-    $crudo = git log --reverse --format='%s%x1f%b%x1e' $rango
+    $crudo = git log --reverse --no-merges --format='%s%x1f%b%x1e' $rango  # los merges solo repiten sus commits
     if ($LASTEXITCODE) { throw 'git log falló: ¿es un repositorio git con commits?' }
     $commits = ($crudo -join "`n").Split([char]0x1e) | Where-Object { $_.Trim() }
 
@@ -34,7 +34,7 @@ try {
                  elseif ($asunto -match '^fix(\([^)]*\))?:') { 'Correcciones' } else { 'Otros cambios' }
         $entrada = '- ' + ($asunto -replace '^\w+(\([^)]*\))?!?:\s*', '')
         foreach ($linea in "$cuerpo" -split "`n") {
-            if ($linea.Trim() -and $linea -notmatch '^(Co-Authored-By|Signed-off-by):') { $entrada += "`n  " + $linea.Trim() }
+            if ($linea.Trim() -and $linea -notmatch '^\s*#' -and $linea -notmatch '^(Co-Authored-By|Signed-off-by):') { $entrada += "`n  " + $linea.Trim() }
         }
         $grupos[$grupo] += $entrada
     }

@@ -57,7 +57,7 @@ Activado en **Ajustes** o con `tramtai servicio autoarranque activar`, Tramtai s
 
 ### Actualizaciones
 
-Una vez al día, el servicio pregunta a GitHub cuál es la última versión publicada (solo esa ficha pública; no envía ningún dato tuyo). Si hay una más nueva:
+Cada hora, el servicio pregunta a GitHub cuál es la última versión publicada (solo esa ficha pública; no envía ningún dato tuyo); la ventana se lo vuelve a preguntar cada 15 minutos y al volver a ella, y la bandeja, cada pocos segundos. Así el aviso aparece sin reiniciar la app. Si hay una más nueva:
 
 - La cabecera de la Web UI muestra **Actualizar** y el menú de la bandeja, **Actualizar a vX…**. **Actualizar ahora** descarga el instalador, comprueba su suma SHA-256 con `SHA256SUMS.txt` y lo ejecuta en silencio: la app se cierra, el servicio se detiene tras terminar las peticiones en curso (`servicio.plazo_drenaje_segundos`) y la app vuelve a abrirse con la versión nueva, con tu configuración y tus datos.
 - Desde la terminal: `tramtai actualizar` hace lo mismo (pide confirmación; `--si` la omite) y `tramtai actualizar --comprobar` solo informa.
