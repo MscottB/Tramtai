@@ -132,6 +132,10 @@ Necesitas Go 1.27 y, para la Web UI, Node.js. En Windows:
 
 Los detalles, las pruebas y el flujo de versiones están en la [guía de desarrollo](docs/equipo/desarrollo.md).
 
+## Términos de uso y de los proveedores
+
+Al usar Tramtai aceptas sus [términos de uso](TERMINOS.md). En resumen: Tramtai no es un proveedor de IA ni está afiliado a ninguno; necesitas tu propia cuenta o clave de API y eres tú quien debe cumplir los términos de cada proveedor. Usar tu **suscripción** (Claude Pro/Max, ChatGPT) es solo para uso personal y local: los términos de los proveedores pueden no permitir usarla para alimentar otras aplicaciones y tu cuenta podría limitarse o suspenderse. Para tus aplicaciones, usa una **clave de API**.
+
 ## Licencia
 
 Tramtai se publica con la licencia [PolyForm Noncommercial 1.0.0](LICENSE.md): puedes usarlo, estudiarlo y modificarlo gratis para fines personales y no comerciales. Para usarlo en una empresa o en un producto comercial hace falta una licencia aparte; escribe a [MscottB](https://github.com/MscottB).

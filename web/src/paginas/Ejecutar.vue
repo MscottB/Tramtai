@@ -25,6 +25,7 @@
 
             <q-expansion-item dense icon="o_tune" :label="t('comun.opcionesAvanzadas')" header-class="q-px-none text-body2 texto-suave" class="q-mt-sm">
               <div class="q-gutter-y-md q-pt-sm">
+                <div class="text-caption texto-suave">{{ t('ejecutar.avanzadasTexto') }}</div>
                 <div class="row q-col-gutter-sm">
                   <div class="col-7">
                     <q-input v-model="perfil" outlined dense :label="t('ejecutar.perfilTrabajo')" :hint="t('ejecutar.perfilHint')" />

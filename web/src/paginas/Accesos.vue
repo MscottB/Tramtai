@@ -136,6 +136,7 @@
             <SelectorEsfuerzo v-model="formulario.esfuerzo" :niveles="nivelesFormulario" :hint="t('esfuerzo.api')" />
             <q-expansion-item dense icon="o_tune" :label="t('comun.opcionesAvanzadas')" header-class="q-px-none text-body2">
               <div class="q-gutter-y-md q-pt-sm">
+                <div class="text-caption texto-suave">{{ t('puntos.avanzadasTexto') }}</div>
                 <div>
                   <div class="text-caption texto-suave">{{ t('puntos.direccion') }}</div>
                   <q-option-group v-model="formulario.direccion" inline

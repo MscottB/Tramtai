@@ -44,6 +44,9 @@ BrandingText "Tramtai ${VERSION}"
 !define MUI_WELCOMEPAGE_TEXT "$(bienvenidaTexto)"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "${RAIZ}\LICENSE.md"
+!define MUI_PAGE_HEADER_TEXT "$(terminosTitulo)"
+!define MUI_PAGE_HEADER_SUBTEXT "$(terminosSubtitulo)"
+!insertmacro MUI_PAGE_LICENSE "${RAIZ}\TERMINOS.md"
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
@@ -86,6 +89,10 @@ LangString descArranque ${LANG_SPANISH} "Al iniciar sesión, Tramtai arranca ocu
 LangString descArranque ${LANG_ENGLISH} "When you sign in, Tramtai starts hidden in the tray with the service running."
 LangString descEscritorio ${LANG_SPANISH} "Un acceso directo a Tramtai en el escritorio."
 LangString descEscritorio ${LANG_ENGLISH} "A Tramtai shortcut on the desktop."
+LangString terminosTitulo ${LANG_SPANISH} "Términos de uso"
+LangString terminosTitulo ${LANG_ENGLISH} "Terms of use"
+LangString terminosSubtitulo ${LANG_SPANISH} "Léelos antes de instalar: explican tu responsabilidad con los servicios de terceros."
+LangString terminosSubtitulo ${LANG_ENGLISH} "Read them before installing: they explain your responsibility with third-party services."
 LangString cerrarAbierta ${LANG_SPANISH} "Tramtai está abierto. Para continuar se cerrará y se detendrá su servicio; las peticiones en curso terminan antes.$\r$\n$\r$\nAl terminar de instalar, Tramtai volverá a abrirse."
 LangString cerrarAbierta ${LANG_ENGLISH} "Tramtai is open. To continue it will be closed and its service stopped; requests in progress finish first.$\r$\n$\r$\nWhen the installation finishes, Tramtai will open again."
 LangString cerrarAbiertaDesinstalar ${LANG_SPANISH} "Tramtai está abierto. Para desinstalarlo se cerrará y se detendrá su servicio; las peticiones en curso terminan antes."
@@ -149,6 +156,7 @@ Section "$(secPrograma)" SecPrograma
   File "${RAIZ}\bin\tramtai.exe"
   File "${RAIZ}\bin\tramtai-escritorio.exe"
   File "/oname=LICENCIA.md" "${RAIZ}\LICENSE.md"
+  File "${RAIZ}\TERMINOS.md"
   WriteUninstaller "$INSTDIR\desinstalar.exe"
   CreateShortcut "$SMPROGRAMS\Tramtai.lnk" "$INSTDIR\tramtai-escritorio.exe"
   WriteRegStr HKCU "${DESINSTALAR}" "DisplayName" "Tramtai"
@@ -189,7 +197,7 @@ Function .onInstSuccess
   ${EndIf}
   ${If} ${Silent}
   ${AndIf} $abierta == 1
-    Exec '"$INSTDIR\tramtai-escritorio.exe"'
+    Exec '"$INSTDIR\tramtai-escritorio.exe" -actualizado'
   ${ElseIf} $servicio == 1
   ${AndIf} $abierta != 1
     Exec '"$INSTDIR\tramtai.exe" servicio iniciar -d'
@@ -212,6 +220,7 @@ Section "Uninstall"
   Delete "$INSTDIR\tramtai.exe"
   Delete "$INSTDIR\tramtai-escritorio.exe"
   Delete "$INSTDIR\LICENCIA.md"
+  Delete "$INSTDIR\TERMINOS.md"
   Delete "$INSTDIR\desinstalar.exe"
   RMDir "$INSTDIR"
   Delete "$SMPROGRAMS\Tramtai.lnk"

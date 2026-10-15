@@ -138,10 +138,17 @@ async function cargar() {
   }
 }
 
+// La suscripción solo se activa si el usuario acepta el riesgo con los términos del proveedor (TERMINOS.md, punto 4).
 function confirmarSuscripcion(a: Adaptador) {
-  $q.dialog({ title: t('agentes.confirmarTitulo', { agente: nombreAgente(a.agente) }), message: t('agentes.confirmarSuscripcion', { cli: cli(a) }),
+  $q.dialog({ title: t('agentes.confirmarTitulo', { agente: nombreAgente(a.agente) }),
+    message: t('agentes.confirmarSuscripcion', { cli: cli(a) }) + '\n\n' + t('agentes.riesgoSuscripcion'),
+    style: 'white-space: pre-line',
+    options: { type: 'checkbox', model: [], items: [{ label: t('agentes.aceptoRiesgo'), value: 'acepto' }] },
     cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'primary', label: t('agentes.usarSuscripcion'), unelevated: true, noCaps: true } })
-    .onOk(() => cambiar(a, 'suscripcion'))
+    .onOk((elegidas: string[]) => {
+      if (elegidas.includes('acepto')) cambiar(a, 'suscripcion')
+      else avisarError(new Error(t('agentes.faltaAceptar')))
+    })
 }
 
 async function cambiar(a: Adaptador, modo: 'suscripcion' | 'clave_api') {
