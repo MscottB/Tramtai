@@ -51,10 +51,10 @@ Los campos desconocidos en la API nativa son un error (`solicitud_invalida`).
 
 | Endpoint | Soporte |
 |---|---|
-| `POST /openai/v1/chat/completions` | Mensajes de texto (`system`, `developer`, `user` y `assistant`), `stream` con `stream_options.include_usage` y `response_format` (`json_object` o `json_schema`). |
-| `POST /openai/v1/responses` | `input` como texto o mensajes, `instructions`, `text.format` y streaming básico (`response.created`, `response.output_text.delta`, `response.completed`). |
+| `POST /openai/v1/chat/completions` | Mensajes de texto (`system`, `developer`, `user` y `assistant`), `stream` con `stream_options.include_usage`, `response_format` (`json_object` o `json_schema`) y herramientas (`tools`, `tool_choice`). |
+| `POST /openai/v1/responses` | `input` como texto o mensajes, `instructions`, `text.format`, herramientas (`function_call`) y streaming básico (`response.created`, `response.output_text.delta`, `response.completed`). |
 | `GET /openai/v1/models` | El mismo catálogo que `/api/v1/modelos`. |
-| `POST /anthropic/v1/messages` | `system`, mensajes de texto, `stream` con la secuencia de eventos de Anthropic. `max_tokens` es obligatorio, pero se ignora con aviso. |
+| `POST /anthropic/v1/messages` | `system`, mensajes de texto, herramientas (`tool_use` y `tool_result`), `stream` con la secuencia de eventos de Anthropic. `max_tokens` es obligatorio, pero se ignora con aviso. |
 
 ### Campo `model`
 
@@ -65,11 +65,20 @@ Los campos desconocidos en la API nativa son un error (`solicitud_invalida`).
 
 ### Política de parámetros
 
-- **No soportados (error 400 `parametro_no_soportado`):** `tools`, `tool_choice`, `n` mayor que 1, `logprobs`, `stop`, imágenes o audio, `stop_sequences`, `thinking`… Con un valor sin efecto (`null`, `false`, `[]`, `n: 1`) se aceptan.
+- **No soportados (error 400 `parametro_no_soportado`):** `n` mayor que 1, herramientas que no son funciones (búsqueda web, archivos, código…), `logprobs`, `stop`, imágenes o audio, `stop_sequences`, `thinking`… Con un valor sin efecto (`null`, `false`, `[]`, `n: 1`) se aceptan.
 - **Ignorables (se aceptan con aviso):** `temperature`, `top_p`, `max_tokens`, `seed`, `user`, `metadata`… El aviso llega en la cabecera `Tramtai-Advertencia: parametros ignorados: …`.
 - **Desconocidos:** error, salvo con `compatibilidad.modo_tolerante: true`.
 - **Uso:** si el agente no informa tokens, se envían ceros con `Tramtai-Advertencia: uso_no_verificado`.
 - **Desconexión:** si el cliente se desconecta, el trabajo se cancela (`compatibilidad.cancelar_al_desconectar: true`). En la API nativa no.
+
+### Herramientas (`tools`)
+
+Las tres rutas aceptan herramientas de tipo función: `tools` y `tool_choice` en chat y responses (con `parallel_tool_calls`), y `tools` con `input_schema` y `tool_choice` (`auto`, `any`, `tool`, `none`, `disable_parallel_tool_use`) en Anthropic. Funciona igual que con OpenAI o Anthropic: el agente **pide** la llamada (`tool_calls` con `finish_reason: "tool_calls"`, o bloques `tool_use` con `stop_reason: "tool_use"`), tu aplicación la ejecuta y devuelve el resultado en el siguiente mensaje (rol `tool`, `function_call_output` o `tool_result`).
+
+- El agente nunca ejecuta nada: Tramtai le describe las herramientas y le pide la respuesta con la salida estructurada de su CLI, y la traduce al formato de cada API.
+- Los argumentos se validan con el JSON Schema de cada herramienta. Si el agente devuelve argumentos que no lo cumplen, o no llama a ninguna cuando `tool_choice` lo exige, la respuesta es 422 `salida_no_cumple_esquema`.
+- La respuesta llega completa al terminar: con herramientas no hay texto en vivo, aunque `stream: true` envía los eventos de siempre.
+- No se combina con `response_format` en JSON.
 
 ### Ejemplos con los SDK oficiales
 

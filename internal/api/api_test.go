@@ -290,12 +290,12 @@ func TestPoliticaDeParametrosYModelo(t *testing.T) {
 	ts := servidor(t, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}, "otro": adaptadores.Simulado{}},
 		map[string]any{"modelos.perfiles.rapido.otro": "m1", "modelos.perfiles.profundo.otro": "m2"})
 	casos := map[string]string{
-		`{"model":"simulado","messages":[{"role":"user","content":"x"}],"tools":[{"type":"function"}]}`: "parametro_no_soportado",
-		`{"model":"simulado","messages":[{"role":"user","content":"x"}],"n":2}`:                         "parametro_no_soportado",
-		`{"model":"simulado","messages":[{"role":"user","content":"x"}],"inventado":1}`:                 "parametro_no_soportado",
-		`{"model":"m1","messages":[{"role":"user","content":"x"}]}`:                                     "modelo_ambiguo",
-		`{"model":"desconocido","messages":[{"role":"user","content":"x"}]}`:                            "modelo_no_disponible",
-		`{"model":"simulado","messages":[{"role":"user","content":[{"type":"image_url"}]}]}`:            "parametro_no_soportado",
+		`{"model":"simulado","messages":[{"role":"user","content":"x"}],"tools":[{"type":"web_search"}]}`: "parametro_no_soportado",
+		`{"model":"simulado","messages":[{"role":"user","content":"x"}],"n":2}`:                           "parametro_no_soportado",
+		`{"model":"simulado","messages":[{"role":"user","content":"x"}],"inventado":1}`:                   "parametro_no_soportado",
+		`{"model":"m1","messages":[{"role":"user","content":"x"}]}`:                                       "modelo_ambiguo",
+		`{"model":"desconocido","messages":[{"role":"user","content":"x"}]}`:                              "modelo_no_disponible",
+		`{"model":"simulado","messages":[{"role":"user","content":[{"type":"image_url"}]}]}`:              "parametro_no_soportado",
 	}
 	for peticion, codigo := range casos {
 		r, cuerpo := pedir(t, ts, "POST", "/openai/v1/chat/completions", peticion)

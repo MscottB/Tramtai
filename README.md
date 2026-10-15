@@ -24,7 +24,7 @@ Cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
 
 ## Qué ofrece
 
-- **Compatible con lo que ya usas.** SDK de OpenAI y Anthropic (Python, Node, curl…), con la respuesta en vivo, y una API propia con eventos que se pueden reanudar.
+- **Compatible con lo que ya usas.** SDK de OpenAI y Anthropic (Python, Node, curl…), con la respuesta en vivo y **herramientas** (`tools`): el agente pide las funciones de tu aplicación como con OpenAI o Anthropic. También una API propia con eventos que se pueden reanudar.
 - **Agente y modelo en cada petición.** `claude/sonnet`, `codex`, `gemini/gemini-flash-latest` o un perfil como `perfil/rapido`; en Claude y Codex también eliges cuánto razona el agente.
 - **Archivos y respuestas con forma.** PDF, Word, Excel, PowerPoint o ZIP como entrada; JSON validado con un esquema como salida.
 - **Una API por aplicación,** con su propia clave, sus modelos permitidos o fijos e instrucciones propias (por ejemplo, «responde siempre en español»). Se activan o detienen sin reiniciar.

@@ -159,8 +159,8 @@ func rolInterno(rol string) (string, error) {
 // textoDe acepta un texto o una lista de partes de texto; imágenes, audio o herramientas no se admiten.
 func textoDe(contenido json.RawMessage) (string, error) {
 	var texto string
-	if json.Unmarshal(contenido, &texto) == nil {
-		return texto, nil
+	if len(contenido) == 0 || json.Unmarshal(contenido, &texto) == nil {
+		return texto, nil // sin contenido o null: el asistente que solo llamó a herramientas
 	}
 	var partes []struct {
 		Type string `json:"type"`

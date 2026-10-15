@@ -10,9 +10,9 @@ import (
 
 // max_tokens se acepta como tope pero ningún adaptador CLI lo aplica: se ignora con aviso.
 var politicaMensajes = politica{
-	soportados:   conjunto("model", "messages", "system", "stream"),
+	soportados:   conjunto("model", "messages", "system", "stream", "tools", "tool_choice"),
 	ignorables:   conjunto("max_tokens", "temperature", "top_p", "top_k", "metadata", "service_tier"),
-	noSoportados: conjunto("tools", "tool_choice", "stop_sequences", "thinking", "mcp_servers", "container"),
+	noSoportados: conjunto("stop_sequences", "thinking", "mcp_servers", "container"),
 }
 
 type peticionMensajes struct {
@@ -21,9 +21,66 @@ type peticionMensajes struct {
 	Messages  []mensajeEntrada `json:"messages"`
 	System    json.RawMessage  `json:"system"`
 	Stream    bool             `json:"stream"`
+	Tools     []struct {
+		Type        string          `json:"type"`
+		Name        string          `json:"name"`
+		Description string          `json:"description"`
+		InputSchema json.RawMessage `json:"input_schema"`
+	} `json:"tools"`
+	ToolChoice *struct {
+		Type                   string `json:"type"`
+		Name                   string `json:"name"`
+		DisableParallelToolUse bool   `json:"disable_parallel_tool_use"`
+	} `json:"tool_choice"`
 }
 
-// mensajesAnthropic implementa /anthropic/v1/messages: system, mensajes de texto y streaming básico.
+// herramientasAnthropic prepara tools y tool_choice (auto, any, tool o none).
+func herramientasAnthropic(sol *nucleo.SolicitudEjecucion, p peticionMensajes) (*herramientas, error) {
+	lista := make([]herramienta, 0, len(p.Tools))
+	for _, t := range p.Tools {
+		if err := soloFunciones(t.Type, "", "custom"); err != nil {
+			return nil, err
+		}
+		lista = append(lista, herramienta{Nombre: t.Name, Descripcion: t.Description, Parametros: t.InputSchema})
+	}
+	var e eleccion
+	if c := p.ToolChoice; c != nil {
+		e.SoloUna = c.DisableParallelToolUse
+		switch c.Type {
+		case "auto":
+		case "any":
+			e.Modo = "obligatoria"
+		case "tool":
+			e.Modo, e.Nombre = "una", c.Name
+		case "none":
+			e.Modo = "ninguna"
+		default:
+			return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("tool_choice desconocido: %s", c.Type))
+		}
+	}
+	return prepararHerramientas(sol, lista, e)
+}
+
+// bloquesAnthropic da el contenido de la respuesta: el texto y un bloque tool_use por llamada.
+func bloquesAnthropic(texto string, llamadas []llamada) []any {
+	var bloques []any
+	if conMensaje(texto, llamadas) {
+		bloques = append(bloques, map[string]any{"type": "text", "text": texto})
+	}
+	for _, l := range llamadas {
+		bloques = append(bloques, map[string]any{"type": "tool_use", "id": l.ID, "name": l.Nombre, "input": json.RawMessage(l.Argumentos)})
+	}
+	return bloques
+}
+
+func razonAnthropic(llamadas []llamada) string {
+	if len(llamadas) > 0 {
+		return "tool_use"
+	}
+	return "end_turn"
+}
+
+// mensajesAnthropic implementa /anthropic/v1/messages: system, mensajes de texto, herramientas y streaming básico.
 func (s *Servidor) mensajesAnthropic(w http.ResponseWriter, r *http.Request) {
 	var p peticionMensajes
 	avisos, err := s.leerFachada(w, r, politicaMensajes, &p)
@@ -39,6 +96,10 @@ func (s *Servidor) mensajesAnthropic(w http.ResponseWriter, r *http.Request) {
 	}
 	if err == nil {
 		sol.Mensajes, err = mensajes(p.Messages)
+	}
+	var h *herramientas
+	if err == nil {
+		h, err = herramientasAnthropic(&sol, p)
 	}
 	if err != nil {
 		EscribirError(w, r, err)
@@ -65,8 +126,13 @@ func (s *Servidor) mensajesAnthropic(w http.ResponseWriter, r *http.Request) {
 			EscribirError(w, r, errorDeTrabajo(final))
 			return
 		}
+		texto, llamadas, err := h.respuesta(final, "toolu_"+t.ID)
+		if err != nil {
+			EscribirError(w, r, err)
+			return
+		}
 		avisarUso(w, final)
-		EscribirJSON(w, http.StatusOK, mensaje(final, []any{map[string]any{"type": "text", "text": final.Salida}}, "end_turn"))
+		EscribirJSON(w, http.StatusOK, mensaje(final, bloquesAnthropic(texto, llamadas), razonAnthropic(llamadas)))
 		return
 	}
 
@@ -75,8 +141,13 @@ func (s *Servidor) mensajesAnthropic(w http.ResponseWriter, r *http.Request) {
 		datos["type"] = tipo
 		return f.json(tipo, datos)
 	}
+	abrirTexto := func() {
+		_ = evento("content_block_start", map[string]any{"index": 0, "content_block": map[string]any{"type": "text", "text": ""}})
+	}
 	_ = evento("message_start", map[string]any{"message": mensaje(t, []any{}, nil)})
-	_ = evento("content_block_start", map[string]any{"index": 0, "content_block": map[string]any{"type": "text", "text": ""}})
+	if h == nil {
+		abrirTexto() // el texto llega en vivo; con herramientas no se sabe qué habrá hasta el final
+	}
 	_ = evento("ping", map[string]any{})
 	directo := enVivo(sol)
 	delta := func(texto string) error {
@@ -91,16 +162,37 @@ func (s *Servidor) mensajesAnthropic(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	if final.Estado != nucleo.Completado {
-		e := errorDeTrabajo(final)
+	fallar := func(e error) {
 		_ = evento("error", map[string]any{"error": map[string]any{"type": tipoAnthropic(estadosHTTP[nucleo.CodigoDe(e)]), "message": nucleo.MensajeDe(e)}})
+	}
+	if final.Estado != nucleo.Completado {
+		fallar(errorDeTrabajo(final))
 		return
 	}
-	if !directo {
-		_ = delta(final.Salida)
+	texto, llamadas, err := h.respuesta(final, "toolu_"+t.ID)
+	if err != nil {
+		fallar(err)
+		return
 	}
-	_ = evento("content_block_stop", map[string]any{"index": 0})
-	_ = evento("message_delta", map[string]any{"delta": map[string]any{"stop_reason": "end_turn", "stop_sequence": nil},
+	indice := 0
+	if conMensaje(texto, llamadas) {
+		if h != nil {
+			abrirTexto()
+		}
+		if !directo {
+			_ = delta(texto)
+		}
+		_ = evento("content_block_stop", map[string]any{"index": 0})
+		indice++
+	}
+	for _, l := range llamadas {
+		_ = evento("content_block_start", map[string]any{"index": indice,
+			"content_block": map[string]any{"type": "tool_use", "id": l.ID, "name": l.Nombre, "input": map[string]any{}}})
+		_ = evento("content_block_delta", map[string]any{"index": indice, "delta": map[string]any{"type": "input_json_delta", "partial_json": l.Argumentos}})
+		_ = evento("content_block_stop", map[string]any{"index": indice})
+		indice++
+	}
+	_ = evento("message_delta", map[string]any{"delta": map[string]any{"stop_reason": razonAnthropic(llamadas), "stop_sequence": nil},
 		"usage": map[string]any{"input_tokens": final.Uso.TokensEntrada, "output_tokens": final.Uso.TokensSalida}})
 	_ = evento("message_stop", map[string]any{})
 }
