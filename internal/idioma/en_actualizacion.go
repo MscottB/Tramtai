@@ -28,6 +28,8 @@ func init() {
 		"Descargando el instalador…": "Downloading the installer…",
 		"Suma SHA-256 correcta. Instalando: Tramtai se cerrará y volverá a abrirse.": "SHA-256 checksum verified. Installing: Tramtai will close and open again.",
 		"solo comprueba si hay una versión nueva, sin instalarla":                    "only checks for a new version, without installing it",
-		"Actualizar a %s…": "Update to %s…",
+		"Versión %s":                     "Version %s",
+		"Versión %s · hay una nueva: %s": "Version %s · new version available: %s",
+		"Actualizar a %s…":               "Update to %s…",
 	})
 }

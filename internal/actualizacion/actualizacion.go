@@ -45,6 +45,7 @@ const (
 type Version struct {
 	Etiqueta         string `json:"version"`
 	Pagina           string `json:"url"`
+	Notas            string `json:"notas,omitempty"` // las novedades, para leerlas dentro de la app
 	nombreInstalador string
 	urlInstalador    string
 	urlSumas         string
@@ -62,6 +63,7 @@ func Ultima(ctx context.Context) (Version, error) {
 	var ficha struct {
 		Etiqueta string `json:"tag_name"`
 		Pagina   string `json:"html_url"`
+		Notas    string `json:"body"`
 		Archivos []struct {
 			Nombre string `json:"name"`
 			URL    string `json:"browser_download_url"`
@@ -73,7 +75,7 @@ func Ultima(ctx context.Context) (Version, error) {
 	if _, ok := numeros(ficha.Etiqueta); !ok {
 		return Version{}, fmt.Errorf(idioma.T("la última versión publicada no tiene un número válido: %q"), ficha.Etiqueta)
 	}
-	v := Version{Etiqueta: ficha.Etiqueta, Pagina: ficha.Pagina}
+	v := Version{Etiqueta: ficha.Etiqueta, Pagina: ficha.Pagina, Notas: recortar(ficha.Notas, 6000)}
 	for _, a := range ficha.Archivos {
 		switch {
 		case strings.HasSuffix(a.Nombre, sufijoInstalador):
@@ -83,6 +85,15 @@ func Ultima(ctx context.Context) (Version, error) {
 		}
 	}
 	return v, nil
+}
+
+// recortar deja texto en un máximo de runas, sin cortar un carácter por la mitad.
+func recortar(texto string, maximo int) string {
+	runas := []rune(strings.TrimSpace(texto))
+	if len(runas) <= maximo {
+		return string(runas)
+	}
+	return string(runas[:maximo]) + "…"
 }
 
 // MasNueva indica si la versión publicada es posterior a la actual. Compara vX.Y.Z, no la fecha (+DDMMAAAA); una

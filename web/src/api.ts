@@ -190,6 +190,7 @@ export interface EstadoActualizacion {
   disponible: boolean
   version: string
   url: string
+  notas?: string
   instalable: boolean
 }
 export const actualizacion = ref<EstadoActualizacion | null>(null)

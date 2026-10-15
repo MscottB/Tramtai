@@ -2,7 +2,7 @@
 
 ## Qué necesitas
 
-- **Windows 10 u 11** (x64), **Linux** (x64 o ARM) o **macOS** (Intel o Apple Silicon). La app de escritorio existe para Windows y Linux; en macOS se instalan el servicio, la API, la CLI y la Web UI.
+- **Windows 10 u 11** (x64), **Linux** (x64 o ARM) o **macOS** 11 o posterior (Intel o Apple Silicon). La app de escritorio existe para los tres.
 - **Al menos un agente:** [Claude Code](https://docs.anthropic.com/claude-code) (`claude`), [Codex CLI](https://developers.openai.com/codex/cli) (`codex`) o una clave de la Gemini API. Antigravity (`agy`) es experimental.
 - **Opcional, para archivos de Office y PDF:** `uv tool install "markitdown[pdf,docx,pptx,xlsx]==0.1.8"`.
 
@@ -18,7 +18,11 @@ Descarga `Tramtai-…-instalador-windows-x64.exe` desde [Releases](https://githu
 
 **En Linux, con la app de escritorio:** instala el `.deb` (`sudo apt install ./Tramtai-…-linux-amd64.deb`) o el `.rpm` (`sudo dnf install ./Tramtai-…-linux-amd64.rpm`) de [Releases](https://github.com/MscottB/Tramtai/releases/latest). Trae el servicio, la CLI, la app con su icono en la bandeja y el acceso en el menú de aplicaciones; necesita GTK 4 y WebKitGTK 6.0 (Ubuntu 24.04+, Debian 12+, Fedora), que el gestor de paquetes instala solo. En GNOME, el icono de la bandeja necesita la extensión *AppIndicator*; sin ella, Tramtai se abre desde el menú de aplicaciones.
 
-**Sin app de escritorio (macOS o un servidor Linux):** `curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instalar.sh | sh` descarga el archivo de tu sistema, comprueba su suma SHA-256 y deja `tramtai` en `~/.local/bin` (otra carpeta con `TRAMTAI_DESTINO`). Para actualizar, vuelve a ejecutarlo. Después, `tramtai abrir` inicia el servicio y abre la Web UI en el navegador.
+**Portable en Windows:** `Tramtai-…-portable-windows-x64.zip` trae la app y el servicio sin instalar nada; descomprímelo y abre `tramtai-escritorio.exe`. Esa copia no se actualiza sola.
+
+**En macOS:** abre `Tramtai-…-macos.dmg` y arrastra Tramtai a Aplicaciones. No está firmada por un desarrollador de Apple: la primera vez macOS la bloquea; ábrela, cierra el aviso y ve a *Ajustes del Sistema → Privacidad y seguridad → Abrir igualmente* (o `xattr -dr com.apple.quarantine /Applications/Tramtai.app` en la Terminal). Para usar `tramtai` en la Terminal: `ln -s /Applications/Tramtai.app/Contents/MacOS/tramtai ~/.local/bin/tramtai` (o instala solo la CLI con el script de abajo).
+
+**Sin app de escritorio (un servidor Linux, o solo la CLI en macOS):** `curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instalar.sh | sh` descarga el archivo de tu sistema, comprueba su suma SHA-256 y deja `tramtai` en `~/.local/bin` (otra carpeta con `TRAMTAI_DESTINO`). Para actualizar, vuelve a ejecutarlo. Después, `tramtai abrir` inicia el servicio y abre la Web UI en el navegador.
 
 Después abre **Tramtai** desde el menú Inicio, o `tramtai abrir` en una terminal nueva. Si prefieres compilarlo tú, la [guía de desarrollo](equipo/desarrollo.md) explica cómo (`./scripts/compilar.ps1`, con Go 1.27).
 

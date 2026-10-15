@@ -25,7 +25,7 @@ func (s *Servicio) estadoActualizacion(ctx context.Context) map[string]any {
 	v, nueva := s.versionNueva(ctx, true)
 	_, instalada := actualizacion.Instalada()
 	return map[string]any{"actual": version.Version, "buscar": s.buscar.Load(), "disponible": nueva,
-		"version": v.Etiqueta, "url": v.Pagina, "instalable": nueva && instalada && v.TieneInstalador()}
+		"version": v.Etiqueta, "url": v.Pagina, "notas": v.Notas, "instalable": nueva && instalada && v.TieneInstalador()}
 }
 
 // fijarBusqueda guarda servicio.buscar_actualizaciones en la configuración global y lo aplica sin reiniciar.

@@ -34,13 +34,15 @@ Cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
 
 ## Empezar
 
-1. **Descarga el instalador** `Tramtai-…-instalador-windows-x64.exe` desde [Releases](https://github.com/MscottB/Tramtai/releases/latest) y ejecútalo. Es solo para tu usuario y no pide permisos de administrador. Las sumas SHA-256 de cada archivo están en `SHA256SUMS.txt`.
+1. **Descarga el instalador** `Tramtai-…-instalador-windows-x64.exe` desde [Releases](https://github.com/MscottB/Tramtai/releases/latest) y ejecútalo. Es solo para tu usuario y no pide permisos de administrador. Las sumas SHA-256 de cada archivo están en `SHA256SUMS.txt`. Si prefieres no instalar nada, `Tramtai-…-portable-windows-x64.zip` trae la misma app para descomprimir y usar (esa copia no se actualiza sola).
 2. **Abre Tramtai** desde el menú Inicio. Queda en la bandeja del sistema con el servicio en marcha.
 3. En la app, **Agentes** te dice qué le falta a cada agente (conectarlo con tu suscripción o con una clave) y **Mis APIs** te da la URL, la clave y ejemplos listos para copiar.
 
 **En Linux** está la app completa, con su icono en la bandeja: descarga el `.deb` (Debian, Ubuntu, Mint…) o el `.rpm` (Fedora, openSUSE…) de [Releases](https://github.com/MscottB/Tramtai/releases/latest) e instálalo con `sudo apt install ./Tramtai-…-linux-amd64.deb` o `sudo dnf install ./Tramtai-…-linux-amd64.rpm`. Necesita GTK 4 y WebKitGTK 6.0, que se instalan solos (Ubuntu 24.04 o posterior, Debian 12 o posterior, Fedora).
 
-**Sin app de escritorio (macOS, o un servidor Linux)** se instala el servicio con la CLI y la Web UI:
+**En macOS** descarga `Tramtai-…-macos.dmg` (Intel y Apple Silicon), ábrelo y arrastra Tramtai a Aplicaciones. La app no está firmada por un desarrollador de Apple, así que la primera vez macOS la bloquea: ábrela, cierra el aviso y ve a *Ajustes del Sistema → Privacidad y seguridad → Abrir igualmente* (o, en la Terminal, `xattr -dr com.apple.quarantine /Applications/Tramtai.app`). Después se abre con normalidad.
+
+**Sin app de escritorio (un servidor Linux, o solo la CLI en macOS)** se instala el servicio con la CLI y la Web UI:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instalar.sh | sh
@@ -64,6 +66,15 @@ print(r.choices[0].message.content)
 Con el SDK de Anthropic, la URL base es `http://127.0.0.1:17373/anthropic`. Todas las rutas y opciones están en la [referencia de la API](docs/api.md).
 
 <p align="center"><img src="docs/imagenes/mis-apis-oscuro.png" alt="Mis APIs en modo oscuro: URL base, clave y ejemplos listos para copiar" width="820"></p>
+
+## Actualizaciones
+
+Tramtai comprueba una vez al día si hay una versión nueva (solo pide a GitHub la ficha pública de la última versión; no envía ningún dato tuyo). Cuando la hay:
+
+- La cabecera de la app muestra **Actualizar**, y el menú del icono de la bandeja indica tu versión y **Actualizar a vX…**.
+- El diálogo enseña las **novedades** sin salir de la app. En Windows, si la instalaste con el instalador, **Actualizar ahora** descarga la versión nueva, comprueba su suma SHA-256 y la instala sin preguntar nada más: la app se cierra, las peticiones en curso terminan y vuelve a abrirse ya actualizada, con tu configuración y tus datos.
+- La copia portable, la de Linux y la de macOS muestran el aviso con el enlace de descarga: ahí se actualiza instalando el paquete nuevo (o volviendo a ejecutar `instalar.sh`).
+- Desde la terminal: `tramtai actualizar` (o `tramtai actualizar --comprobar` para solo mirar). Se desactiva en **Ajustes → Buscar actualizaciones**.
 
 ## Desde la terminal
 
@@ -93,9 +104,9 @@ La CLI sale en el idioma de tu sistema; `TRAMTAI_IDIOMA=en` o `es` lo fija.
 |---|---|---|---|
 | Servicio, API, CLI y terminal | ✅ | ✅ | ✅ |
 | Web UI | ✅ | ✅ | ✅ |
-| App de escritorio con bandeja | ✅ (instalador) | ✅ (.deb y .rpm) | Pendiente |
-| Arranque con el sistema | ✅ | ✅ | Pendiente |
-| Actualización con un clic | ✅ | Aviso con enlace | Aviso con enlace |
+| App de escritorio con bandeja | ✅ (instalador o portable) | ✅ (.deb y .rpm) | ✅ (.dmg sin firmar) |
+| Arranque con el sistema | ✅ | ✅ | ✅ |
+| Actualización con un clic | ✅ (instalada) | Aviso con enlace | Aviso con enlace |
 | Claves en el almacén del sistema | ✅ | Pendiente (variables de entorno) | Pendiente (variables de entorno) |
 
 ## Compilar desde el código
@@ -121,7 +132,8 @@ Claude, Codex, Gemini y Antigravity son marcas de sus respectivos dueños. Tramt
 
 **Tramtai turns Claude Code, Codex, Gemini and Antigravity into an OpenAI- and Anthropic-compatible API that runs on your own computer.** Any app or SDK can use them by changing just the base URL.
 
-- **Install:** download the Windows installer from [Releases](https://github.com/MscottB/Tramtai/releases/latest). It installs for your user only and needs no administrator rights. On Linux, install the desktop app from the `.deb` or `.rpm` package. On macOS (service, CLI and Web UI): `curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instalar.sh | sh`.
+- **Install:** download the Windows installer (or the portable `.zip`) from [Releases](https://github.com/MscottB/Tramtai/releases/latest); it installs for your user only and needs no administrator rights. On Linux, install the desktop app from the `.deb` or `.rpm` package. On macOS, open the `.dmg` and drag Tramtai to Applications; it is not signed by an Apple developer, so the first time allow it in *System Settings → Privacy & Security → Open Anyway*. CLI only: `curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instalar.sh | sh`.
+- **Updates:** once a day Tramtai checks for a new version. The installed Windows app updates with one click (*Update now*), showing what's new inside the app; the other copies show the notice with the download link. `tramtai actualizar` does the same from the terminal.
 - **Connect an agent:** use your Claude or ChatGPT subscription (personal use) or an API key; the agent's CLI must be installed.
 - **Point your app** at `http://127.0.0.1:17373/openai/v1` (or `/anthropic`) with the key from *My APIs*, and pick agent and model in the `model` field, e.g. `claude/sonnet`.
 - The desktop app, Web UI, interactive terminal and CLI are available in English and Spanish. The CLI follows your system language; set `TRAMTAI_IDIOMA=en` to force English.

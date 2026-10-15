@@ -59,7 +59,7 @@ func servidor(t *testing.T, alterado bool) {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	mux.HandleFunc("/ultima", func(w http.ResponseWriter, _ *http.Request) {
-		fmt.Fprintf(w, `{"tag_name":"v0.26.0+2","html_url":"%[1]s/version","assets":[`+
+		fmt.Fprintf(w, `{"tag_name":"v0.26.0+2","html_url":"%[1]s/version","body":"Tramtai v0.26.0\n\n- novedad","assets":[`+
 			`{"name":"%[2]s","browser_download_url":"%[1]s/descargas/%[2]s"},`+
 			`{"name":"SHA256SUMS.txt","browser_download_url":"%[1]s/descargas/SHA256SUMS.txt"}]}`, srv.URL, nombre)
 	})
@@ -81,7 +81,7 @@ func servidor(t *testing.T, alterado bool) {
 func TestDescargar(t *testing.T) {
 	servidor(t, false)
 	v, err := Ultima(context.Background())
-	if err != nil || !v.TieneInstalador() {
+	if err != nil || !v.TieneInstalador() || v.Notas != "Tramtai v0.26.0\n\n- novedad" {
 		t.Fatalf("Ultima: %+v %v", v, err)
 	}
 	ruta, err := Descargar(context.Background(), v, t.TempDir())

@@ -180,10 +180,14 @@
         <q-card-section>
           <div class="titulo-seccion">{{ t('actualizacion.titulo', { version: actualizacion.version }) }}</div>
           <p class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.detalle', { actual: actualizacion.actual }) }}</p>
+          <template v-if="actualizacion.notas">
+            <div class="text-caption texto-suave q-mt-md q-mb-xs">{{ t('actualizacion.novedadesTitulo') }}</div>
+            <div class="notas-version">{{ actualizacion.notas }}</div>
+          </template>
           <p class="q-mt-md q-mb-none">{{ actualizacion.instalable ? t('actualizacion.comoInstala') : t('actualizacion.manual') }}</p>
         </q-card-section>
         <q-card-actions align="right" class="q-px-md q-pb-md">
-          <q-btn flat no-caps :label="t('actualizacion.novedades')" :href="actualizacion.url" target="_blank" rel="noopener" />
+          <q-btn v-close-popup flat no-caps :label="t('comun.cancelar')" />
           <q-btn v-if="actualizacion.instalable" unelevated no-caps color="primary" icon="o_system_update_alt" :loading="actualizando"
             :label="t('actualizacion.instalar')" @click="instalarActualizacion" />
           <q-btn v-else unelevated no-caps color="primary" :label="t('actualizacion.descargar')" :href="actualizacion.url" target="_blank" rel="noopener" />
@@ -408,3 +412,17 @@ async function activarGlobal() {
   }
 }
 </script>
+
+<style>
+.notas-version {
+  white-space: pre-wrap;
+  max-height: 260px;
+  overflow-y: auto;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  background: var(--superficie-suave);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+</style>
