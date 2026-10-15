@@ -141,7 +141,9 @@ Por defecto, cada agente se ejecuta aislado en una carpeta temporal vacía. Con 
 
 ## Precedencia de configuración
 
-De menor a mayor: interno → global → proyecto → local → entorno → punto de acceso → solicitud. Las claves de seguridad (`servicio`, `comandos_agentes`, `adaptadores`, `concurrencia_servicio`…) se rechazan en la capa de proyecto, que es la que va en el repositorio.
+De menor a mayor: interno → global → proyecto → local → entorno → punto de acceso → solicitud. Las claves de seguridad (`servicio`, `comandos_agentes`, `adaptadores`, `concurrencia_servicio`…) se rechazan en la capa de proyecto, que es la que va en el repositorio, y en `local.yaml` salvo que la carpeta figure en `proyectos_confiables` de la configuración global (un `local.yaml` también puede llegar con un clon). `proyectos_confiables` solo se lee de la global.
+
+Los agentes no heredan secretos del entorno: se retiran las credenciales de los demás proveedores, todas las `TRAMTAI_*` (el token del servicio) y cualquier variable cuyo nombre contenga `API_KEY`, `TOKEN`, `SECRET`, `PASSWORD` o `CREDENTIAL` (`GITHUB_TOKEN`, `AWS_SECRET_ACCESS_KEY`…), salvo las propias de cada CLI (`CLAUDE_`, `CODEX_`, `ANTHROPIC_`, `OPENAI_`, `GEMINI_`), que se filtran según el modo de autenticación.
 
 ## Cumplimiento de proveedores
 

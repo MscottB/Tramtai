@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"tramtai/internal/credenciales"
@@ -76,7 +77,9 @@ func enmarcarSistema(sistema, prompt string) string {
 	return "<<<turno rol=sistema>>>\n" + sistema + "\n<<<fin turno>>>\n" + prompt
 }
 
-// entornoLimpio hereda el entorno sin credenciales y añade las variables indicadas.
+// entornoLimpio hereda el entorno sin credenciales y añade las variables indicadas. Quita además las TRAMTAI_*
+// (el token del servicio) y cualquier otro secreto (GITHUB_TOKEN, AWS_*…), salvo la configuración propia de las
+// CLI (CLAUDE_, CODEX_, ANTHROPIC_, OPENAI_, GEMINI_), cuyas credenciales ya filtra variablesCredenciales.
 func entornoLimpio(extra ...string) []string {
 	quitar := map[string]bool{}
 	for _, nombre := range variablesCredenciales {
@@ -88,9 +91,13 @@ func entornoLimpio(extra ...string) []string {
 	}
 	var entorno []string
 	for _, par := range os.Environ() {
-		if nombre, _, _ := strings.Cut(par, "="); !quitar[strings.ToUpper(nombre)] {
-			entorno = append(entorno, par)
+		nombre, _, _ := strings.Cut(par, "=")
+		nombre = strings.ToUpper(nombre)
+		propia := slices.ContainsFunc([]string{"CLAUDE_", "CODEX_", "ANTHROPIC_", "OPENAI_", "GEMINI_"}, func(p string) bool { return strings.HasPrefix(nombre, p) })
+		if quitar[nombre] || strings.HasPrefix(nombre, "TRAMTAI_") || (nucleo.VariableSecreta(nombre) && !propia) {
+			continue
 		}
+		entorno = append(entorno, par)
 	}
 	return append(entorno, extra...)
 }

@@ -77,6 +77,18 @@ func CargarConfiguracion(raiz string) (*Configuracion, error) {
 	return c, nil
 }
 
+// VariableSecreta indica si el nombre de una variable de entorno parece guardar un secreto (claves, tokens,
+// contraseñas, credenciales): los programas externos que lanza Tramtai no la heredan.
+func VariableSecreta(nombre string) bool {
+	nombre = strings.ToUpper(nombre)
+	for _, marca := range []string{"API_KEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL"} {
+		if strings.Contains(nombre, marca) {
+			return true
+		}
+	}
+	return false
+}
+
 // Lista devuelve un valor de tipo lista, o nil si no existe.
 func (c *Configuracion) Lista(clave string) []any {
 	v, _ := c.e().valores[clave].([]any)

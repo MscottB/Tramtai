@@ -1,6 +1,7 @@
 package adaptadores
 
 import (
+	"strings"
 	"testing"
 
 	"tramtai/internal/nucleo"
@@ -45,9 +46,18 @@ func TestClasificar(t *testing.T) {
 
 func TestEntornoLimpioQuitaCredenciales(t *testing.T) {
 	t.Setenv("OPENAI_API_KEY", "secreto")
-	for _, par := range entornoLimpio("CODEX_API_KEY=propia") {
-		if par == "OPENAI_API_KEY=secreto" {
-			t.Fatal("el entorno heredó una credencial ajena")
+	for _, nombre := range []string{"TRAMTAI_TOKEN_GLOBAL", "TRAMTAI_OTRA", "GITHUB_TOKEN", "AWS_SECRET_ACCESS_KEY", "AZURE_CLIENT_SECRET", "DB_PASSWORD", "MI_CREDENTIAL"} {
+		t.Setenv(nombre, "secreto")
+	}
+	t.Setenv("CLAUDE_CODE_TOKEN_EXTRA", "propia")
+	t.Setenv("PATH_PRUEBA", "conservada")
+	entorno := strings.Join(entornoLimpio("CODEX_API_KEY=propia", "MI_TOKEN=explicita"), "\n")
+	if strings.Contains(entorno, "=secreto") {
+		t.Fatalf("el entorno heredó una credencial ajena:\n%s", entorno)
+	}
+	for _, par := range []string{"CLAUDE_CODE_TOKEN_EXTRA=propia", "PATH_PRUEBA=conservada", "CODEX_API_KEY=propia", "MI_TOKEN=explicita"} {
+		if !strings.Contains(entorno, par) {
+			t.Errorf("falta %s: la configuración propia de las CLI y las variables indicadas se conservan", par)
 		}
 	}
 }
