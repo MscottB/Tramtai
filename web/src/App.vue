@@ -201,7 +201,7 @@
 <script setup lang="ts">
 import { computed, markRaw, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 import { useQuasar } from 'quasar'
-import { actualizacion, api, avisar, avisarError, reiniciarYSeguir, sesion } from './api'
+import { actualizacion, api, avisar, avisarError, buscarActualizacionAhora, dialogoActualizar, reiniciarYSeguir, sesion } from './api'
 import { cambiarIdioma, idioma, idiomas, t } from './i18n'
 import { cambiarTema, tema, type Tema } from './tema'
 import EntrarPagina from './paginas/Entrar.vue'
@@ -271,7 +271,6 @@ function detener() {
 }
 // Aviso de versión nueva: el servicio consulta GitHub como mucho una vez por hora y aquí se le pregunta al cargar,
 // cada 15 minutos y cada vez que la ventana vuelve a verse. En la app de escritorio, «Actualizar a…» de la bandeja abre este mismo diálogo.
-const dialogoActualizar = ref(false)
 const actualizando = ref(false)
 async function comprobarActualizacion() {
   if (!sesion.value) return // sin sesión el servicio no responde; se comprueba al entrar
@@ -298,6 +297,7 @@ Object.assign(window, {
     comprobarActualizacion().then(() => {
       if (actualizacion.value?.disponible) dialogoActualizar.value = true
     }),
+  tramtaiBuscarActualizaciones: buscarActualizacionAhora,
 })
 
 // En la app de escritorio la bandeja abre aquí sus avisos, con el estilo de la app, y la respuesta le vuelve con

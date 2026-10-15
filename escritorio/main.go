@@ -206,6 +206,12 @@ func main() {
 				mostrar()
 				ventana.ExecJS("window.tramtaiActualizar && window.tramtaiActualizar()")
 			})
+		} else if cli != nil {
+			// Consulta GitHub en el momento; la ventana muestra el resultado o el diálogo de la versión nueva.
+			menu.Add(idioma.T("Buscar actualizaciones")).SetBitmap(icono("reiniciar")).OnClick(func(*application.Context) {
+				mostrar()
+				ventana.ExecJS("window.tramtaiBuscarActualizaciones && window.tramtaiBuscarActualizaciones()")
+			})
 		}
 		if cli != nil {
 			activas := 0

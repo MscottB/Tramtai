@@ -271,7 +271,8 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		api.EscribirJSON(w, http.StatusAccepted, map[string]any{"estado": "deteniendo"})
 		s.detenerUna.Do(func() { close(s.detener) })
 	case r.URL.Path == "/ui/actualizacion" && (r.Method == http.MethodGet || r.Method == http.MethodPost):
-		// Consultar es de cualquier sesión; activar o desactivar la búsqueda, solo desde este equipo.
+		// Consultar es de cualquier sesión (?ahora=1 va a GitHub en el momento); activar o desactivar la búsqueda,
+		// solo desde este equipo.
 		_, ses := s.sesionDe(r)
 		if ses == nil || (r.Method == http.MethodPost && (!ses.local || !csrfValido(r, ses) || !s.esLocal(r))) {
 			api.NoAutorizado(w, r)
@@ -292,7 +293,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		}
 		ctx, cancelar := context.WithTimeout(r.Context(), 8*time.Second)
 		defer cancelar()
-		api.EscribirJSON(w, http.StatusOK, s.estadoActualizacion(ctx))
+		api.EscribirJSON(w, http.StatusOK, s.estadoActualizacion(ctx, r.Method == http.MethodGet && r.URL.Query().Get("ahora") == "1"))
 	case r.URL.Path == "/ui/actualizar" && r.Method == http.MethodPost:
 		_, ses := s.sesionDe(r)
 		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {

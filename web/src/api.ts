@@ -202,8 +202,12 @@ export interface EstadoActualizacion {
   url: string
   notas?: string
   instalable: boolean
+  comprobado?: string // cuándo consultó el servicio a GitHub por última vez
+  fallo?: boolean // si esa consulta falló
 }
 export const actualizacion = ref<EstadoActualizacion | null>(null)
+// dialogoActualizar muestra las novedades y el botón de instalar; lo abren la cabecera, Ajustes y la bandeja.
+export const dialogoActualizar = ref(false)
 
 function recordar(s: Sesion): Sesion {
   csrf = s.csrf
@@ -221,6 +225,7 @@ export const api = {
   autoarranque: (activo: boolean) => pedir<Sesion>('POST', '/ui/autoarranque', { activo }).then(recordar),
   actualizacion: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion'),
   buscarActualizaciones: (buscar: boolean) => pedir<EstadoActualizacion>('POST', '/ui/actualizacion', { buscar }),
+  buscarAhora: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion?ahora=1'),
   actualizar: () => pedir<{ version: string }>('POST', '/ui/actualizar'),
   cambiarAutenticacion: (agente: string, modo: 'suscripcion' | 'clave_api') => pedir<void>('POST', '/ui/autenticacion', { agente, modo }),
   salir: () => pedir<void>('DELETE', '/ui/sesion').then(() => (sesion.value = null)),
@@ -472,4 +477,18 @@ export async function reiniciarYSeguir() {
   }
   aviso()
   Notify.create({ type: 'negative', message: t('app.reinicioFallido', { url }), position: 'top', timeout: 0, actions: [{ label: 'OK', color: 'white' }] })
+}
+
+// buscarActualizacionAhora consulta GitHub en el momento (Ajustes y la bandeja): si hay versión nueva abre su diálogo
+// y, si no, avisa de que está al día o de que no se pudo consultar.
+export async function buscarActualizacionAhora() {
+  try {
+    const estado = await api.buscarAhora()
+    actualizacion.value = estado
+    if (estado.disponible) dialogoActualizar.value = true
+    else if (estado.fallo) Notify.create({ type: 'warning', message: t('actualizacion.falloConsulta'), position: 'top' })
+    else avisar(t('actualizacion.alDia', { actual: estado.actual }))
+  } catch (e) {
+    avisarError(e)
+  }
 }

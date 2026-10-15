@@ -58,6 +58,11 @@
           <div class="titulo-seccion">{{ t('actualizacion.ajustesTitulo') }}</div>
           <div class="texto-suave text-body2 q-mt-xs">{{ t('actualizacion.ajustesTexto') }}</div>
           <div class="text-body2 q-mt-sm">{{ textoActualizacion }}</div>
+          <div class="row items-center q-gutter-sm q-mt-xs">
+            <q-btn flat dense no-caps color="primary" icon="o_refresh" :label="t('actualizacion.buscarAhora')" :loading="buscandoAhora"
+              @click="buscarAhora" />
+            <span v-if="comprobado" class="texto-suave text-caption">{{ t('actualizacion.comprobado', { hora: comprobado }) }}</span>
+          </div>
         </div>
         <q-toggle :model-value="actualizacion.buscar" :disable="!sesion?.local || cambiandoBusqueda" :aria-label="t('actualizacion.ajustesTitulo')"
           @update:model-value="cambiarBusqueda" />
@@ -150,7 +155,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { actualizacion, api, avisar, avisarError, opcionModelo, reiniciarYSeguir, sesion, sistema, terminales, type EntradaConfiguracion, type EstadoPunto, type Modelo } from '../api'
+import { actualizacion, api, avisar, avisarError, buscarActualizacionAhora, opcionModelo, reiniciarYSeguir, sesion, sistema, terminales, type EntradaConfiguracion, type EstadoPunto, type Modelo } from '../api'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 
@@ -245,9 +250,24 @@ const cambiandoBusqueda = ref(false)
 const textoActualizacion = computed(() => {
   const a = actualizacion.value
   if (!a) return ''
+  if (a.disponible) return t('actualizacion.hayNueva', { version: a.version })
   if (!a.buscar) return t('actualizacion.desactivada', { actual: a.actual })
-  return a.disponible ? t('actualizacion.hayNueva', { version: a.version }) : t('actualizacion.alDia', { actual: a.actual })
+  return a.fallo ? t('actualizacion.falloConsulta') : t('actualizacion.alDia', { actual: a.actual })
 })
+// comprobado es la hora de la última consulta a GitHub, en la hora local.
+const comprobado = computed(() => {
+  const c = actualizacion.value?.comprobado
+  return c ? new Date(c).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+})
+const buscandoAhora = ref(false)
+async function buscarAhora() {
+  buscandoAhora.value = true
+  try {
+    await buscarActualizacionAhora()
+  } finally {
+    buscandoAhora.value = false
+  }
+}
 async function cambiarBusqueda(buscar: boolean) {
   cambiandoBusqueda.value = true
   try {

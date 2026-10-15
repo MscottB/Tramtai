@@ -10,6 +10,7 @@ import (
 	"os"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestMasNueva(t *testing.T) {
@@ -117,5 +118,29 @@ func TestDescargarRechazaSumaDistinta(t *testing.T) {
 	}
 	if archivos, _ := os.ReadDir(dir); len(archivos) != 0 {
 		t.Fatalf("quedó el archivo dañado: %v", archivos)
+	}
+}
+
+func TestComprobadorRenovar(t *testing.T) {
+	var veces atomic.Int32
+	c := &Comprobador{Actual: "v1.0.0", Consultar: func(context.Context) (Version, error) {
+		veces.Add(1)
+		return Version{Etiqueta: "v1.1.0"}, nil
+	}}
+	if _, nueva := c.Disponible(context.Background(), true); !nueva {
+		t.Fatal("la v1.1.0 es más nueva que la v1.0.0")
+	}
+	c.Renovar() // recién consultada: no vuelve a GitHub
+	c.Disponible(context.Background(), true)
+	if n := veces.Load(); n != 1 {
+		t.Fatalf("se consultó %d veces seguidas", n)
+	}
+	c.mu.Lock()
+	c.hecha = time.Now().Add(-11 * time.Second)
+	c.mu.Unlock()
+	c.Renovar()
+	c.Disponible(context.Background(), true)
+	if hecha, fallo := c.Comprobado(); veces.Load() != 2 || fallo || time.Since(hecha) > time.Second {
+		t.Fatalf("Buscar ahora: %d consultas, fallo %v, hecha %v", veces.Load(), fallo, hecha)
 	}
 }

@@ -522,6 +522,9 @@ const en: Textos = {
   'actualizacion.ajustesTexto': 'Every hour, Tramtai asks GitHub for the latest published version, so the notice shows up without restarting the app. It only requests that public page: none of your data is sent.',
   'actualizacion.alDia': 'You have the latest version ({actual}).',
   'actualizacion.hayNueva': 'A new version is available, {version}: update with the Update button in the header.',
+  'actualizacion.buscarAhora': 'Check now',
+  'actualizacion.comprobado': 'Last checked: {hora}',
+  'actualizacion.falloConsulta': "Couldn't reach GitHub. Check your connection and try again.",
   'actualizacion.desactivada': 'Off. You have {actual}; you can also check with «tramtai actualizar».',
 }
 

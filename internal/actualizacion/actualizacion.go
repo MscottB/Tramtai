@@ -164,6 +164,23 @@ func (c *Comprobador) Disponible(ctx context.Context, esperar bool) (Version, bo
 	return c.ultima, MasNueva(c.ultima.Etiqueta, actual)
 }
 
+// Renovar hace que la próxima consulta vaya a GitHub aunque la anterior no haya vencido («Buscar ahora»). Si la
+// última es de hace menos de 10 segundos no cambia nada: GitHub admite 60 consultas por hora sin autenticar.
+func (c *Comprobador) Renovar() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.enCurso == nil && time.Since(c.hecha) > 10*time.Second {
+		c.hecha = time.Time{}
+	}
+}
+
+// Comprobado indica cuándo terminó la última consulta (cero si aún no hubo ninguna) y si falló.
+func (c *Comprobador) Comprobado() (time.Time, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.hecha, c.fallo
+}
+
 func (c *Comprobador) consultar(listo chan struct{}) {
 	ctx, cancelar := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancelar()

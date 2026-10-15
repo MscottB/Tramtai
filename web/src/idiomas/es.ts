@@ -521,6 +521,9 @@ const es = {
   'actualizacion.ajustesTexto': 'Cada hora, Tramtai consulta en GitHub cuál es la última versión publicada, así el aviso aparece sin reiniciar la app. Solo pide esa ficha pública: no envía ningún dato tuyo.',
   'actualizacion.alDia': 'Tienes la última versión ({actual}).',
   'actualizacion.hayNueva': 'Hay una versión nueva, la {version}: actualiza con el botón Actualizar de la cabecera.',
+  'actualizacion.buscarAhora': 'Buscar ahora',
+  'actualizacion.comprobado': 'Última comprobación: {hora}',
+  'actualizacion.falloConsulta': 'No se pudo consultar GitHub. Revisa tu conexión y vuelve a intentarlo.',
   'actualizacion.desactivada': 'Desactivado. Tienes la {actual}; también puedes comprobarlo con «tramtai actualizar».',
 }
 

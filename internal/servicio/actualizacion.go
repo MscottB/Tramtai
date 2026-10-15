@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"tramtai/internal/actualizacion"
 	"tramtai/internal/idioma"
@@ -21,11 +22,23 @@ func (s *Servicio) versionNueva(ctx context.Context, esperar bool) (actualizacio
 }
 
 // estadoActualizacion es lo que muestra la Web UI: la versión actual, si hay otra nueva y si se instala desde aquí.
-func (s *Servicio) estadoActualizacion(ctx context.Context) map[string]any {
-	v, nueva := s.versionNueva(ctx, true)
+// Con ahora consulta GitHub en el momento («Buscar ahora»), aunque la búsqueda automática esté desactivada.
+func (s *Servicio) estadoActualizacion(ctx context.Context, ahora bool) map[string]any {
+	var v actualizacion.Version
+	var nueva bool
+	if ahora {
+		s.actualizaciones.Renovar()
+		v, nueva = s.actualizaciones.Disponible(ctx, true)
+	} else {
+		v, nueva = s.versionNueva(ctx, true)
+	}
 	_, instalada := actualizacion.Instalada()
-	return map[string]any{"actual": version.Version, "buscar": s.buscar.Load(), "disponible": nueva,
+	estado := map[string]any{"actual": version.Version, "buscar": s.buscar.Load(), "disponible": nueva,
 		"version": v.Etiqueta, "url": v.Pagina, "notas": v.Notas, "instalable": nueva && instalada && v.TieneInstalador()}
+	if hecha, fallo := s.actualizaciones.Comprobado(); !hecha.IsZero() {
+		estado["comprobado"], estado["fallo"] = hecha.UTC().Format(time.RFC3339), fallo
+	}
+	return estado
 }
 
 // fijarBusqueda guarda servicio.buscar_actualizaciones en la configuración global y lo aplica sin reiniciar.
