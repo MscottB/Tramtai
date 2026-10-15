@@ -9,11 +9,11 @@ tramtai version
 (WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 dbus-run-session -- xvfb-run -a timeout 40 tramtai-escritorio --oculto || true) &
 for _ in $(seq 1 30); do
 	sleep 1
-	if tramtai servicio estado 2>/dev/null | grep -q activo; then
+	if tramtai servicio estado 2>/dev/null | grep -q "^servicio activo"; then
 		break
 	fi
 done
 tramtai servicio estado
-tramtai servicio estado | grep -q activo
+tramtai servicio estado | grep -q "^servicio activo"
 tramtai servicio detener --si
 echo "la app de escritorio arrancó y levantó el servicio"
