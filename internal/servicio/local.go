@@ -17,6 +17,12 @@ func (s *Servicio) esLocal(r *http.Request) bool {
 	if !s.opc.EntradaLocal {
 		return false
 	}
+	// Un proxy o túnel del mismo usuario reenvía peticiones ajenas desde loopback: con sus cabeceras no hay entrada libre.
+	for _, cabecera := range []string{"Forwarded", "X-Forwarded-For", "X-Forwarded-Host", "X-Real-Ip", "Via"} {
+		if r.Header.Get(cabecera) != "" {
+			return false
+		}
+	}
 	cliente, err := netip.ParseAddrPort(r.RemoteAddr)
 	if err != nil || !cliente.Addr().IsLoopback() {
 		return false
