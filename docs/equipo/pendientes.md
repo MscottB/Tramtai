@@ -21,7 +21,6 @@
   - Revisar en *Settings → Billing → Usage* qué ocupa el espacio; normalmente son artefactos y cachés de otros repositorios, que se liberan al borrarlos y no al cambiar de ciclo.
   - Usar `retention-days: 1–5` en `upload-artifact` y adjuntar los binarios al release en lugar de dejarlos como artefactos.
 - [ ] Ejecutar M0b con claves reales y registrar el resultado en el documento maestro (el avance M1–M7 ya está en la v13, sección 23.4).
-- [ ] `instancia_global.raices_permitidas`: limitar las rutas locales que la CLI puede enviar como archivos (hoy cualquier ruta legible por el usuario).
 - [ ] Compilar y probar la aplicación de escritorio en macOS y Linux (necesita CGO y WebKit; hoy solo Windows).
 - [ ] Revisar Wails en cada beta (fijado en v3.0.0-beta.28) y migrar a la versión estable cuando salga.
 - [ ] Historial permanente, cifrado propio y cache documental (`retencion.guardar_historial`, `cifrado_aplicacion`, `cache_conversion_habilitada`): hoy la configuración los rechaza con «no soportado todavía».

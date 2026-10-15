@@ -6,6 +6,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -644,6 +645,19 @@ func (m *modelo) teclaEjecutar(k tea.KeyPressMsg) tea.Cmd {
 	return nil
 }
 
+// rutaPermitida aplica instancia_global.raices_permitidas con la configuración de la carpeta actual, como la CLI.
+func rutaPermitida(ruta string) (string, error) {
+	raiz := ""
+	if dir, err := os.Getwd(); err == nil {
+		raiz, _ = nucleo.BuscarProyecto(dir)
+	}
+	c, err := nucleo.CargarConfiguracion(raiz)
+	if err != nil {
+		return "", err
+	}
+	return c.RutaPermitida(ruta)
+}
+
 // lanzar sube los archivos, crea el trabajo y sigue sus eventos en vivo.
 func (m *modelo) lanzar() tea.Cmd {
 	if m.enCurso != "" {
@@ -666,7 +680,11 @@ func (m *modelo) lanzar() tea.Cmd {
 		ctx, cancelar := conPlazo(10 * time.Minute)
 		defer cancelar()
 		for _, ruta := range archivos {
-			carga, err := cli.SubirCarga(ctx, inst, strings.Trim(strings.TrimSpace(ruta), `"`))
+			ruta, err := rutaPermitida(strings.Trim(strings.TrimSpace(ruta), `"`))
+			if err != nil {
+				return msgCreado{err: err}
+			}
+			carga, err := cli.SubirCarga(ctx, inst, ruta)
 			if err != nil {
 				return msgCreado{err: err}
 			}

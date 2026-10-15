@@ -52,22 +52,10 @@ func PrepararProyecto(dir string) error {
 	return err
 }
 
-// expandirCasa cambia un ~ inicial por la carpeta personal, como hace la terminal en macOS y Linux.
-func expandirCasa(ruta string) string {
-	if ruta != "~" && !strings.HasPrefix(ruta, "~/") && !strings.HasPrefix(ruta, `~\`) {
-		return ruta
-	}
-	casa, err := os.UserHomeDir()
-	if err != nil {
-		return ruta
-	}
-	return filepath.Join(casa, ruta[1:])
-}
-
 // AbrirProyecto activa la instancia del proyecto en raiz, una carpeta existente con ruta completa. Si la carpeta (o
 // una superior) ya es un proyecto, usa ese; si no, la prepara antes.
 func (s *Servicio) AbrirProyecto(raiz string) (*Instancia, error) {
-	raiz = expandirCasa(strings.TrimSpace(raiz))
+	raiz = nucleo.ExpandirCasa(strings.TrimSpace(raiz))
 	if !filepath.IsAbs(raiz) {
 		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "indica la ruta completa de la carpeta del proyecto")
 	}

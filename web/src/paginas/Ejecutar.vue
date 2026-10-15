@@ -91,7 +91,7 @@
             <template v-else>
               <q-banner v-if="final?.codigo_error" rounded dense class="error-caja q-mb-md">
                 <template #avatar><q-icon name="o_error" /></template>
-                {{ final.mensaje_error || final.codigo_error }}
+                <b>{{ tituloError(final.codigo_error) }}</b><span v-if="final.mensaje_error">: {{ final.mensaje_error }}</span>
               </q-banner>
               <pre class="salida" :class="{ json: esJSON(salida) }">{{ salida }}</pre>
               <div v-if="activo && !salida" class="row items-center texto-suave q-gutter-x-sm">
@@ -120,7 +120,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
 import SelectorEsfuerzo from '../componentes/SelectorEsfuerzo.vue'
-import { api, aplicarModelo, avisarError, copiar, descripcionPredeterminado, duracion, esfuerzosDe, esJSON, estadoInfo, modeloInicial, nombreEsfuerzo, opcionModelo, terminales, trabajoSeguido, type Modelo, type Solicitud, type Trabajo } from '../api'
+import { api, aplicarModelo, avisarError, copiar, descripcionPredeterminado, duracion, esfuerzosDe, esJSON, estadoInfo, modeloInicial, nombreEsfuerzo, opcionModelo, terminales, tituloError, trabajoSeguido, type Modelo, type Solicitud, type Trabajo } from '../api'
 import { t } from '../i18n'
 
 const catalogo = ref<Modelo[]>([])

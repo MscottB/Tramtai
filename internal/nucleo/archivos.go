@@ -3,6 +3,7 @@ package nucleo
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -78,6 +79,62 @@ func CargarConfiguracion(raiz string) (*Configuracion, error) {
 func (c *Configuracion) Lista(clave string) []any {
 	v, _ := c.e().valores[clave].([]any)
 	return v
+}
+
+// ExpandirCasa cambia un ~ inicial por la carpeta personal, como hace la terminal en macOS y Linux.
+func ExpandirCasa(ruta string) string {
+	if ruta != "~" && !strings.HasPrefix(ruta, "~/") && !strings.HasPrefix(ruta, `~\`) {
+		return ruta
+	}
+	casa, err := os.UserHomeDir()
+	if err != nil {
+		return ruta
+	}
+	return filepath.Join(casa, ruta[1:])
+}
+
+// RutaPermitida resuelve un archivo local que la CLI o la terminal van a enviar y devuelve su ruta real si está
+// dentro de instancia_global.raices_permitidas. Sin raíces configuradas no hay límite. Como se resuelven los
+// enlaces, un enlace dentro de una raíz que apunte fuera de ella se rechaza.
+func (c *Configuracion) RutaPermitida(ruta string) (string, error) {
+	abs, err := filepath.Abs(ExpandirCasa(ruta))
+	if err != nil {
+		return "", err
+	}
+	real, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return "", err
+	}
+	raices := c.Lista("instancia_global.raices_permitidas")
+	if len(raices) == 0 {
+		return real, nil
+	}
+	for _, v := range raices {
+		texto, _ := v.(string)
+		if texto == "" {
+			continue
+		}
+		raiz, err := filepath.Abs(ExpandirCasa(texto))
+		if err != nil {
+			continue
+		}
+		if r, err := filepath.EvalSymlinks(raiz); err == nil {
+			raiz = r
+		}
+		if dentroDe(raiz, real) {
+			return real, nil
+		}
+	}
+	return "", NuevoError(CodigoRutaNoPermitida, ruta+" está fuera de instancia_global.raices_permitidas")
+}
+
+// dentroDe indica si ruta es raiz o está debajo de ella; fuera de Linux las mayúsculas no cuentan.
+func dentroDe(raiz, ruta string) bool {
+	if runtime.GOOS != "linux" {
+		raiz, ruta = strings.ToLower(raiz), strings.ToLower(ruta)
+	}
+	rel, err := filepath.Rel(raiz, ruta)
+	return err == nil && !filepath.IsAbs(rel) && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 // ProyectoConfiable indica si la raíz figura en proyectos_confiables. La configuración versionada no puede

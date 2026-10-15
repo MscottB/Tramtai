@@ -108,6 +108,19 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <instancia> 
 
 La configuración versionada del proyecto no puede definir claves de seguridad: ni puertos, ni comandos, ni autenticación, ni puntos de acceso.
 
+### Carpetas desde las que se envían archivos
+
+Por defecto, `tramtai ejecutar -f`, `--esquema`, `tramtai convertir` y la terminal interactiva pueden enviar cualquier archivo que tu usuario pueda leer. Para limitarlo, indica las carpetas en la configuración global (o en `.tramtai/local.yaml`):
+
+```yaml
+instancia_global:
+  raices_permitidas:
+    - C:\Users\yo\Documentos\para-agentes
+    - ~/proyectos        # en macOS y Linux
+```
+
+Se comprueba la ruta real del archivo, así que `..` o un enlace que salga de esas carpetas se rechaza con `ruta_no_permitida`. No afecta a la Web UI ni a la API, que solo reciben archivos subidos, nunca rutas.
+
 ## Puntos de acceso
 
 Un punto de acceso es otra URL, con su propio token, para una aplicación concreta. Fija el agente y el modelo, restringe los modelos permitidos y traduce los nombres fijos que envía la aplicación (sección 5.4).

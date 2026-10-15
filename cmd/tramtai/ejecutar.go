@@ -81,7 +81,15 @@ func comandoEjecutar() *cobra.Command {
 			s.Ejecucion.TiempoLimiteSegundos = tiempo
 			s.Salida.Formato = formato
 			if esquema != "" {
+				if esquema, err = c.RutaPermitida(esquema); err != nil {
+					return err
+				}
 				if s.Salida.Esquema, err = os.ReadFile(esquema); err != nil {
+					return err
+				}
+			}
+			for i, ruta := range archivos {
+				if archivos[i], err = c.RutaPermitida(ruta); err != nil {
 					return err
 				}
 			}
@@ -120,7 +128,11 @@ func comandoConvertir() *cobra.Command {
 			}
 			entradas := make([]documentos.Entrada, len(args))
 			for i, ruta := range args {
-				entradas[i] = documentos.Entrada{Ruta: ruta, Nombre: filepath.Base(ruta)}
+				real, err := c.RutaPermitida(ruta)
+				if err != nil {
+					return err
+				}
+				entradas[i] = documentos.Entrada{Ruta: real, Nombre: filepath.Base(ruta)}
 			}
 			texto, err := documentos.Desde(c).Convertir(cmd.Context(), entradas)
 			if err != nil {

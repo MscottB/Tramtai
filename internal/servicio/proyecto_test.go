@@ -19,8 +19,8 @@ func TestRutasDeProyecto(t *testing.T) {
 		"/srv/app":        "/srv/app",
 		"~otro/app":       "~otro/app", // solo la carpeta personal propia
 	} {
-		if r := expandirCasa(entrada); r != esperada {
-			t.Errorf("expandirCasa(%q) = %q, se esperaba %q", entrada, r, esperada)
+		if r := nucleo.ExpandirCasa(entrada); r != esperada {
+			t.Errorf("ExpandirCasa(%q) = %q, se esperaba %q", entrada, r, esperada)
 		}
 	}
 

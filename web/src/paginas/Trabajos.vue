@@ -67,7 +67,7 @@
         <q-card-section class="col scroll q-gutter-y-lg">
           <q-banner v-if="detalle.codigo_error" rounded dense class="error-caja">
             <template #avatar><q-icon name="o_error" /></template>
-            <b>{{ detalle.codigo_error }}</b>: {{ detalle.mensaje_error }}
+            <b>{{ tituloError(detalle.codigo_error) }}</b><span v-if="detalle.mensaje_error">: {{ detalle.mensaje_error }}</span>
           </q-banner>
           <div>
             <div class="row items-center q-mb-xs">
@@ -116,7 +116,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useQuasar, type QTableColumn } from 'quasar'
 import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
-import { api, avisar, avisarError, copiar, duracion, esJSON, estadoInfo, fecha, filtroHistorial, haceCuanto, origenHistorial, trabajoAbrir, modeloDe, nombreEsfuerzo, terminales, textoDe, trabajoSeguido, type Trabajo } from '../api'
+import { api, avisar, avisarError, copiar, duracion, esJSON, estadoInfo, fecha, filtroHistorial, haceCuanto, origenHistorial, trabajoAbrir, modeloDe, nombreEsfuerzo, terminales, textoDe, tituloError, trabajoSeguido, type Trabajo } from '../api'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()

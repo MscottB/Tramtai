@@ -2,7 +2,7 @@
 // las peticiones que modifican. Las claves nunca se guardan en el navegador.
 import { ref } from 'vue'
 import { Notify } from 'quasar'
-import { idioma, t } from './i18n'
+import { idioma, idiomas, t } from './i18n'
 import type { Clave } from './idiomas/es'
 
 export interface InstanciaResumida {
@@ -385,12 +385,23 @@ export function esJSON(texto?: string): boolean {
   return !!texto && /^\s*[[{]/.test(texto)
 }
 
+// tituloError es el texto de un código de error del servicio en el idioma de la Web UI (o el código si no lo conoce).
+export function tituloError(codigo?: string): string {
+  const clave = ('error.' + codigo) as Clave
+  return codigo && clave in idiomas[idioma.value].textos ? t(clave) : (codigo ?? '')
+}
+
+// mensajeError usa el mensaje del servicio, que está en español y trae el detalle; en otro idioma, el texto del código.
 export function mensajeError(e: unknown): string {
+  if (e instanceof ErrorApi && idioma.value !== 'es' && tituloError(e.codigo) !== e.codigo) return tituloError(e.codigo)
   return e instanceof Error ? e.message : String(e)
 }
 
 export function avisarError(e: unknown) {
-  Notify.create({ type: 'negative', message: mensajeError(e), position: 'top' })
+  const mensaje = mensajeError(e)
+  // En otro idioma, el detalle original va debajo para no perderlo.
+  const detalle = e instanceof Error && e.message !== mensaje ? e.message : undefined
+  Notify.create({ type: 'negative', message: mensaje, caption: detalle, position: 'top' })
 }
 
 export function avisar(mensaje: string) {
