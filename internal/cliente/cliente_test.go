@@ -3,10 +3,12 @@ package cliente
 import (
 	"context"
 	"net"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"tramtai/internal/adaptadores"
@@ -35,7 +37,14 @@ func TestClienteContraServicio(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts.Config.Handler = s
+	// /healthz va sin el token: si otro proceso ocupara el puerto con un descriptor viejo, no lo recibiría.
+	var saludConToken atomic.Bool
+	ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/healthz" && r.Header.Get("Authorization") != "" {
+			saludConToken.Store(true)
+		}
+		s.ServeHTTP(w, r)
+	})
 	ts.Start()
 	defer ts.Close()
 	defer s.Cerrar()
@@ -44,6 +53,9 @@ func TestClienteContraServicio(t *testing.T) {
 	}
 
 	cli, err := Conectar(datos)
+	if saludConToken.Load() {
+		t.Fatal("Conectar envió el token de servicio a /healthz antes de comprobar la identidad")
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
