@@ -31,11 +31,11 @@ func (a Antigravity) Detectar(ctx context.Context) Estado {
 	if err := a.autenticacion(); err != nil {
 		e.Problema = nucleo.MensajeDe(err)
 	} else if claveEntorno("GEMINI_API_KEY") == "" {
-		e.Problema = idioma.T("falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)")
+		e.Problema, e.ProblemaCodigo = idioma.T("falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)"), ProblemaFaltaClave
 	}
 	ruta, err := resolverPrograma(a.Programa)
 	if err != nil {
-		e.Problema = err.Error()
+		e.Problema, e.ProblemaCodigo = err.Error(), ProblemaNoInstalado
 		return e
 	}
 	e.Ruta, e.Version = ruta, version(ctx, ruta)

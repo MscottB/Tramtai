@@ -28,12 +28,12 @@ func (c Claude) Detectar(ctx context.Context) Estado {
 	} else {
 		e.Terminos = idioma.T("términos comerciales de Anthropic (clave de API de Console)")
 		if claveEntorno("ANTHROPIC_API_KEY") == "" {
-			e.Problema = idioma.T("falta ANTHROPIC_API_KEY")
+			e.Problema, e.ProblemaCodigo = idioma.T("falta ANTHROPIC_API_KEY"), ProblemaFaltaClave
 		}
 	}
 	ruta, err := resolverPrograma(c.Programa)
 	if err != nil {
-		e.Problema = err.Error()
+		e.Problema, e.ProblemaCodigo = err.Error(), ProblemaNoInstalado
 		return e
 	}
 	e.Ruta, e.Version = ruta, version(ctx, ruta)

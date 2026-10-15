@@ -153,12 +153,18 @@ const pasos = computed(() => {
   return lista
 })
 
+// consultando evita encadenar consultas si el servicio tarda más que el intervalo.
+let consultando = false
 async function cargar() {
+  if (consultando) return
+  consultando = true
   try {
     ;[instancia.value, recientes.value] = await Promise.all([api.instancia(), api.trabajos(7)])
     error.value = ''
   } catch (e) {
     error.value = mensajeError(e)
+  } finally {
+    consultando = false
   }
 }
 
@@ -167,7 +173,7 @@ onMounted(() => {
   cargar()
   api.capacidades().then((c) => (adaptadores.value = c.adaptadores)).catch(() => (adaptadores.value = []))
   api.puntos().then((p) => (puntos.value = p)).catch(() => {})
-  intervalo = window.setInterval(cargar, 5000)
+  intervalo = window.setInterval(() => !document.hidden && cargar(), 5000)
 })
 onUnmounted(() => clearInterval(intervalo))
 </script>

@@ -207,9 +207,11 @@ async function cambiarPredeterminado(id: string) {
   }
 }
 
+// configGlobal es la ruta habitual del archivo global en cada sistema (os.UserConfigDir del servicio).
+const configGlobal = { Windows: '%APPDATA%\\tramtai\\config.yaml', macOS: '~/Library/Application Support/tramtai/config.yaml', Linux: '~/.config/tramtai/config.yaml' }[sistema]
 const origenes = computed(() => [
   { id: 'interno', nombre: t('origen.interno'), color: 'grey-6', detalle: t('origen.internoDetalle') },
-  { id: 'global', nombre: t('origen.global'), color: 'primary', detalle: '%APPDATA%\\tramtai\\config.yaml' },
+  { id: 'global', nombre: t('origen.global'), color: 'primary', detalle: configGlobal },
   { id: 'proyecto', nombre: t('origen.proyecto'), color: 'teal-8', detalle: t('origen.proyectoDetalle') },
   { id: 'local', nombre: t('origen.local'), color: 'indigo-6', detalle: t('origen.localDetalle') },
   { id: 'entorno', nombre: t('origen.entorno'), color: 'deep-orange-7', detalle: t('origen.entornoDetalle') },

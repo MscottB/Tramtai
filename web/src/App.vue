@@ -43,7 +43,7 @@
           @click="dialogoActualizar = true">
           <q-tooltip>{{ t('actualizacion.titulo', { version: actualizacion.version }) }}</q-tooltip>
         </q-btn>
-        <q-btn flat dense no-caps class="pastilla q-ml-sm" :aria-label="t('app.servicio')">
+        <q-btn flat dense no-caps class="pastilla q-ml-sm" :aria-label="`${t('app.servicio')}: ${conectado ? t('app.enMarcha') : t('app.sinConexion')}`">
           <span class="punto" :class="conectado ? 'punto--ok' : 'punto--error'" />
           <span class="gt-xs q-ml-sm">{{ conectado ? t('app.enMarcha') : t('app.sinConexion') }}</span>
           <q-icon name="arrow_drop_down" size="20px" class="texto-suave" />
@@ -190,7 +190,8 @@
           <q-btn v-close-popup flat no-caps :label="t('comun.cancelar')" />
           <q-btn v-if="actualizacion.instalable" unelevated no-caps color="primary" icon="o_system_update_alt" :loading="actualizando"
             :label="t('actualizacion.instalar')" @click="instalarActualizacion" />
-          <q-btn v-else unelevated no-caps color="primary" :label="t('actualizacion.descargar')" :href="actualizacion.url" target="_blank" rel="noopener" />
+          <!-- Solo se enlaza una dirección https: la URL llega del servicio y no debe poder abrir otro esquema. -->
+          <q-btn v-else-if="actualizacion.url?.startsWith('https://')" unelevated no-caps color="primary" :label="t('actualizacion.descargar')" :href="actualizacion.url" target="_blank" rel="noopener" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -198,7 +199,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, onMounted, onUnmounted, ref, watchEffect } from 'vue'
+import { computed, markRaw, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 import { useQuasar } from 'quasar'
 import { actualizacion, api, avisar, avisarError, reiniciarYSeguir, sesion } from './api'
 import { cambiarIdioma, idioma, idiomas, t } from './i18n'
@@ -242,11 +243,17 @@ const activando = ref(false)
 const conectado = ref(true)
 const origen = location.origin
 let sondeo: number
+let buscarActualizacion: number
+let comprobando = false
 // comprobar consulta /healthz (sin clave): si el servicio se detiene, la cabecera lo muestra; cuando vuelve, la
 // página se recarga para abrir una sesión nueva (las sesiones no sobreviven a un reinicio del servicio).
 async function comprobar() {
+  if (comprobando) return
+  comprobando = true
   const antes = conectado.value
-  conectado.value = await fetch('/healthz', { cache: 'no-store' }).then((r) => r.ok).catch(() => false)
+  const signal = typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(5000) : undefined
+  conectado.value = await fetch('/healthz', { cache: 'no-store', signal }).then((r) => r.ok).catch(() => false)
+  comprobando = false
   if (!antes && conectado.value) location.reload()
 }
 
@@ -267,6 +274,7 @@ function detener() {
 const dialogoActualizar = ref(false)
 const actualizando = ref(false)
 async function comprobarActualizacion() {
+  if (!sesion.value) return // sin sesión el servicio no responde; se comprueba al entrar
   try {
     actualizacion.value = await api.actualizacion()
   } catch {
@@ -316,7 +324,15 @@ const temas: { valor: Tema; etiqueta: 'app.temaSistema' | 'app.temaClaro' | 'app
   { valor: 'oscuro', etiqueta: 'app.temaOscuro', icono: 'o_dark_mode' },
 ]
 const iconoTema = computed(() => temas.find((op) => op.valor === tema.value)?.icono ?? 'o_brightness_auto')
-onUnmounted(() => clearInterval(sondeo))
+const alVolver = () => !document.hidden && comprobarActualizacion()
+onUnmounted(() => {
+  clearInterval(sondeo)
+  clearInterval(buscarActualizacion)
+  document.removeEventListener('visibilitychange', alVolver)
+  window.removeEventListener('popstate', alNavegar)
+})
+// Al abrir la sesión (al cargar o tras Entrar) se busca versión nueva sin esperar al siguiente intervalo.
+watch(() => !!sesion.value, (abierta) => abierta && comprobarActualizacion())
 const avisoEntrada = ref(new URLSearchParams(location.search).get('error') === 'codigo' ? t('app.codigoCaducado') : '')
 
 // pila son las páginas anteriores, para el botón Volver; también funcionan el atrás del navegador y Alt+←.
@@ -345,23 +361,22 @@ function iconoInstancia(ambito?: string) {
   return ambito === 'proyecto' ? 'o_folder' : 'o_public'
 }
 
+// Atrás o adelante en el navegador: la pila sigue el mismo recorrido.
+function alNavegar() {
+  const nueva = desdeHash()
+  if (pila.value[pila.value.length - 1] === nueva) pila.value.pop()
+  else pila.value.push(pagina.value)
+  pagina.value = nueva
+}
+
 onMounted(async () => {
   if (location.search) history.replaceState(null, '', location.pathname + location.hash)
-  // Atrás o adelante en el navegador: la pila sigue el mismo recorrido.
-  window.addEventListener('popstate', () => {
-    const nueva = desdeHash()
-    if (pila.value[pila.value.length - 1] === nueva) pila.value.pop()
-    else pila.value.push(pagina.value)
-    pagina.value = nueva
-  })
-  sondeo = window.setInterval(comprobar, 10000)
+  window.addEventListener('popstate', alNavegar)
+  sondeo = window.setInterval(() => !document.hidden && comprobar(), 10000)
+  buscarActualizacion = window.setInterval(comprobarActualizacion, 15 * 60 * 1000)
+  document.addEventListener('visibilitychange', alVolver)
   try {
     await api.sesion()
-    comprobarActualizacion()
-    window.setInterval(comprobarActualizacion, 15 * 60 * 1000)
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) comprobarActualizacion()
-    })
   } catch {
     sesion.value = null
   } finally {

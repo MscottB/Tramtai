@@ -294,7 +294,7 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 			cancelar()
 			entrada["version_detectada"], entrada["autenticacion"], entrada["terminos"] = e.Version, e.Autenticacion, e.Terminos
 			if e.Problema != "" {
-				entrada["problema"] = e.Problema
+				entrada["problema"], entrada["problema_codigo"] = e.Problema, e.ProblemaCodigo
 			}
 		}
 		lista = append(lista, entrada)

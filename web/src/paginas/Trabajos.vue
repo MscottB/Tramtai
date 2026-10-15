@@ -7,7 +7,7 @@
       </div>
       <div class="col-12 col-sm-auto row no-wrap q-gutter-x-sm">
         <q-btn flat no-caps color="negative" icon="o_delete_sweep" :label="t('historial.vaciar')" :disable="!trabajos.some((x) => terminales.includes(x.estado))" @click="vaciar" />
-        <q-btn flat no-caps color="primary" icon="o_refresh" :label="t('comun.actualizar')" :loading="cargando" @click="cargar" />
+        <q-btn flat no-caps color="primary" icon="o_refresh" :label="t('comun.actualizar')" :loading="cargando" @click="cargar()" />
       </div>
     </div>
 
@@ -42,7 +42,8 @@
         </template>
         <template #body-cell-solicitud="props">
           <q-td :props="props" style="max-width: 420px; white-space: normal">
-            <div class="recortar-2">{{ props.value }}</div>
+            <!-- El clic abre por @row-click; el teclado llega aquí para que cada fila se pueda abrir sin ratón. -->
+            <div class="recortar-2" role="button" tabindex="0" @keydown.enter.prevent="abrir(props.row)" @keydown.space.prevent="abrir(props.row)">{{ props.value }}</div>
           </q-td>
         </template>
         <template #body-cell-cuando="props">
@@ -157,23 +158,37 @@ const filas = computed(() => {
   })
 })
 
-async function cargar() {
-  cargando.value = true
+// pedidoLista y pedidoDetalle numeran las consultas: solo se aplica la respuesta de la última, para que una
+// lenta (otro origen, otra fila) no pise a la más reciente. enVuelo evita encadenar consultas en segundo plano.
+let pedidoLista = 0
+let pedidoDetalle = 0
+let enVuelo = 0
+
+// cargar actualiza la lista; en segundo plano (el sondeo) no muestra el indicador ni avisa de errores.
+async function cargar(segundoPlano = false) {
+  const n = ++pedidoLista
+  if (!segundoPlano) cargando.value = true
+  enVuelo++
   try {
-    trabajos.value = await api.trabajos(200, origen.value === '-' ? '' : origen.value)
+    const lista = await api.trabajos(200, origen.value === '-' ? '' : origen.value)
+    if (n === pedidoLista) trabajos.value = lista
   } catch (e) {
-    avisarError(e)
+    if (n === pedidoLista && !segundoPlano) avisarError(e)
   } finally {
-    cargando.value = false
+    enVuelo--
+    if (n === pedidoLista) cargando.value = false
   }
 }
 
 async function abrir(elegido: Trabajo) {
+  const n = ++pedidoDetalle
   try {
-    detalle.value = await api.trabajo(elegido.id)
+    const trabajo = await api.trabajo(elegido.id)
+    if (n !== pedidoDetalle) return
+    detalle.value = trabajo
     dialogo.value = true
   } catch (e) {
-    avisarError(e)
+    if (n === pedidoDetalle) avisarError(e)
   }
 }
 
@@ -238,7 +253,7 @@ onMounted(() => {
     abrir({ id: trabajoAbrir.value } as Trabajo)
     trabajoAbrir.value = ''
   }
-  intervalo = window.setInterval(() => !dialogo.value && cargar(), 5000)
+  intervalo = window.setInterval(() => !dialogo.value && !document.hidden && !enVuelo && cargar(true), 5000)
 })
 onUnmounted(() => clearInterval(intervalo))
 </script>

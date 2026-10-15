@@ -32,12 +32,12 @@ func (c Codex) Detectar(ctx context.Context) Estado {
 	} else {
 		e.Terminos = idioma.T("términos de la API de OpenAI (clave de API)")
 		if claveEntorno("CODEX_API_KEY", "OPENAI_API_KEY") == "" {
-			e.Problema = idioma.T("falta CODEX_API_KEY u OPENAI_API_KEY")
+			e.Problema, e.ProblemaCodigo = idioma.T("falta CODEX_API_KEY u OPENAI_API_KEY"), ProblemaFaltaClave
 		}
 	}
 	ruta, err := resolverPrograma(c.Programa)
 	if err != nil {
-		e.Problema = err.Error()
+		e.Problema, e.ProblemaCodigo = err.Error(), ProblemaNoInstalado
 		return e
 	}
 	e.Ruta, e.Version = ruta, version(ctx, ruta)

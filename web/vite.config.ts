@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { quasar, transformAssetUrls } from '@quasar/vite-plugin'
 
@@ -6,8 +6,18 @@ import { quasar, transformAssetUrls } from '@quasar/vite-plugin'
 // navegador, así que la cookie y la validación de Origin funcionan igual que en producción.
 const servicio = 'http://127.0.0.1:17373'
 
+// sinWoff quita la alternativa .woff de las fuentes de iconos: los navegadores y webviews actuales cargan la .woff2,
+// y así la .woff (unos 350 KB) no se incorpora al ejecutable.
+const sinWoff: Plugin = {
+  name: 'tramtai-sin-woff',
+  enforce: 'pre',
+  transform(codigo, id) {
+    if (/@quasar[\\/]extras[\\/].*\.css$/.test(id)) return codigo.replace(/,\s*url\([^)]*\.woff['"]?\)\s*format\(['"]woff['"]\)/g, '')
+  },
+}
+
 export default defineConfig({
-  plugins: [vue({ template: { transformAssetUrls } }), quasar()],
+  plugins: [sinWoff, vue({ template: { transformAssetUrls } }), quasar()],
   build: {
     outDir: '../internal/recursos/web',
     emptyOutDir: true,

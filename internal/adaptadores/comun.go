@@ -35,7 +35,15 @@ type Estado struct {
 	Autenticacion string
 	Terminos      string
 	Problema      string
+	// ProblemaCodigo clasifica Problema para la Web UI sin depender del idioma del texto.
+	ProblemaCodigo string
 }
+
+// Códigos de ProblemaCodigo; vacío con Problema es otro problema que hay que revisar.
+const (
+	ProblemaNoInstalado = "no_instalado"
+	ProblemaFaltaClave  = "falta_clave"
+)
 
 // Detectable lo implementan los adaptadores que pueden informar su estado sin consumir cuota.
 type Detectable interface {

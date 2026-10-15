@@ -185,7 +185,8 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="dialogoClave">
+    <!-- Al cerrarse se olvida la clave mostrada: no queda en memoria de la página. -->
+    <q-dialog v-model="dialogoClave" @hide="elegido = undefined">
       <q-card style="width: 560px; max-width: 95vw">
         <q-card-section>
           <div class="titulo-seccion">{{ recienCreado ? t('puntos.listo') : t('puntos.conexionDe', { nombre: elegido?.nombre ?? '' }) }}</div>
