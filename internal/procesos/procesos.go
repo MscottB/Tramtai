@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
 
@@ -66,13 +67,13 @@ func Ejecutar(ctx context.Context, o Orden, linea func(string) error) (Resultado
 	cmd.WaitDelay = 2 * time.Second
 	preparar(cmd)
 	if err := cmd.Start(); err != nil {
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, "no se pudo lanzar el agente: "+err.Error())
+		return Resultado{}, nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf("no se pudo lanzar el agente: %s", err.Error()))
 	}
 	g, err := agrupar(cmd)
 	if err != nil {
 		_ = cmd.Process.Kill()
 		_ = cmd.Wait()
-		return Resultado{}, fmt.Errorf("no se pudo supervisar el proceso: %w", err)
+		return Resultado{}, fmt.Errorf(idioma.T("no se pudo supervisar el proceso: %w"), err)
 	}
 	defer g.cerrar() // elimina cualquier descendiente que siga vivo
 	if alIniciar, ok := ctx.Value(claveAlIniciar{}).(func(int, string)); ok {
@@ -91,7 +92,7 @@ func Ejecutar(ctx context.Context, o Orden, linea func(string) error) (Resultado
 			return Resultado{CodigoSalida: -1, Errores: errores.String()}, ctx.Err()
 		case <-time.After(PlazoTerminacion):
 			return Resultado{CodigoSalida: -1}, nucleo.NuevoError(nucleo.CodigoCancelacionNoConfirmada,
-				fmt.Sprintf("el proceso %d no terminó tras %s", cmd.Process.Pid, PlazoTerminacion))
+				idioma.Tf("el proceso %d no terminó tras %s", cmd.Process.Pid, PlazoTerminacion))
 		}
 	}
 	salida.vaciar()

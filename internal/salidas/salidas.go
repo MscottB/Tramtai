@@ -8,6 +8,7 @@ import (
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
 
@@ -17,23 +18,23 @@ const maximoMensaje = 1000
 type sinCargaExterna struct{}
 
 func (sinCargaExterna) Load(url string) (any, error) {
-	return nil, errors.New("referencias externas deshabilitadas: " + url)
+	return nil, errors.New(idioma.Tf("referencias externas deshabilitadas: %s", url))
 }
 
 // Compilar comprueba que el esquema es válido; un esquema inválido es una solicitud inválida.
 func Compilar(esquema []byte) (*jsonschema.Schema, error) {
 	documento, err := jsonschema.UnmarshalJSON(bytes.NewReader(esquema))
 	if err != nil {
-		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "el esquema no es JSON válido: "+err.Error())
+		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el esquema no es JSON válido: %s", err.Error()))
 	}
 	c := jsonschema.NewCompiler()
 	c.UseLoader(sinCargaExterna{})
 	if err := c.AddResource("tramtai:esquema", documento); err != nil {
-		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "esquema no válido: "+err.Error())
+		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("esquema no válido: %s", err.Error()))
 	}
 	compilado, err := c.Compile("tramtai:esquema")
 	if err != nil {
-		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, recortar("esquema no válido: "+err.Error()))
+		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, recortar(idioma.Tf("esquema no válido: %s", err.Error())))
 	}
 	return compilado, nil
 }
@@ -46,10 +47,10 @@ func Validar(esquema []byte, salida string) error {
 	}
 	instancia, err := jsonschema.UnmarshalJSON(strings.NewReader(salida))
 	if err != nil {
-		return nucleo.NuevoError(nucleo.CodigoSalidaNoCumpleEsquema, "la salida no es JSON válido")
+		return nucleo.NuevoError(nucleo.CodigoSalidaNoCumpleEsquema, idioma.T("la salida no es JSON válido"))
 	}
 	if err := compilado.Validate(instancia); err != nil {
-		return nucleo.NuevoError(nucleo.CodigoSalidaNoCumpleEsquema, recortar("la salida no cumple el esquema: "+err.Error()))
+		return nucleo.NuevoError(nucleo.CodigoSalidaNoCumpleEsquema, recortar(idioma.Tf("la salida no cumple el esquema: %s", err.Error())))
 	}
 	return nil
 }

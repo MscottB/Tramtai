@@ -13,6 +13,7 @@ import (
 	"time"
 	"unicode"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
 
@@ -58,7 +59,7 @@ func (c *Cargas) Guardar(nombre string, r io.Reader) (Carga, error) {
 		return Carga{}, err
 	}
 	if n > c.maximoBytes {
-		return Carga{}, nucleo.NuevoError(nucleo.CodigoCargaInvalida, "el archivo supera el tamaño máximo de carga")
+		return Carga{}, nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.T("el archivo supera el tamaño máximo de carga"))
 	}
 	suma := hex.EncodeToString(resumen.Sum(nil))
 	ahora := time.Now().UTC()
@@ -73,7 +74,7 @@ func (c *Cargas) Guardar(nombre string, r io.Reader) (Carga, error) {
 // Obtener devuelve la carga y la ruta de su contenido, o entrada_no_disponible si no existe. No mira VenceEn:
 // un trabajo ya aceptado protege sus cargas hasta que vence su resultado (Purgar); Vigente lo comprueba al aceptar.
 func (c *Cargas) Obtener(id string) (Carga, string, error) {
-	noDisponible := nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, "la carga "+id+" no existe o venció; vuelve a enviarla")
+	noDisponible := nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.Tf("la carga %s no existe o venció; vuelve a enviarla", id))
 	if !nucleo.ReCarga.MatchString(id) {
 		return Carga{}, "", noDisponible
 	}
@@ -96,7 +97,7 @@ func (c *Cargas) Obtener(id string) (Carga, string, error) {
 func (c *Cargas) Vigente(id string) error {
 	carga, _, err := c.Obtener(id)
 	if err == nil && time.Now().After(carga.VenceEn) {
-		err = nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, "la carga "+id+" venció; vuelve a enviarla")
+		err = nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.Tf("la carga %s venció; vuelve a enviarla", id))
 	}
 	return err
 }

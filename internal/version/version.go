@@ -1,7 +1,11 @@
 // Package version expone la versión del ejecutable para la CLI, el servicio y la aplicación de escritorio.
 package version
 
-import "runtime/debug"
+import (
+	"runtime/debug"
+
+	"tramtai/internal/idioma"
+)
 
 // Version se inyecta al compilar: -ldflags "-X tramtai/internal/version.Version=vX.Y.Z+DDMMAAAA" (scripts/compilar.ps1).
 var Version = "dev"
@@ -34,7 +38,7 @@ func Detalle() string {
 	}
 	detalle := revision[:min(7, len(revision))]
 	if modificado {
-		detalle += ", con cambios sin confirmar"
+		detalle += idioma.T(", con cambios sin confirmar")
 	}
 	return Version + " (" + detalle + ")"
 }

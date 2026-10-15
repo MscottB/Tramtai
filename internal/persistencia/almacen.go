@@ -14,6 +14,7 @@ import (
 
 	_ "modernc.org/sqlite" // driver Go puro: sin CGO
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
 
@@ -163,7 +164,7 @@ func migrar(db *sql.DB) error {
 		return err
 	}
 	if version > len(migraciones) {
-		return fmt.Errorf("versión de base de datos %d no soportada por este ejecutable", version)
+		return fmt.Errorf(idioma.T("versión de base de datos %d no soportada por este ejecutable"), version)
 	}
 	for ; version < len(migraciones); version++ {
 		tx, err := db.Begin()
@@ -172,7 +173,7 @@ func migrar(db *sql.DB) error {
 		}
 		if _, err := tx.Exec(migraciones[version]); err != nil {
 			tx.Rollback()
-			return fmt.Errorf("migración %d: %w", version+1, err)
+			return fmt.Errorf(idioma.T("migración %d: %w"), version+1, err)
 		}
 		if _, err := tx.Exec(fmt.Sprintf("PRAGMA user_version = %d", version+1)); err != nil {
 			tx.Rollback()
@@ -207,7 +208,7 @@ func (a *Almacen) Aceptar(ctx context.Context, t nucleo.Trabajo, clave string, m
 			existente, err := obtener(ctx, tx, id)
 			return existente, true, err
 		case err == nil:
-			return t, false, nucleo.NuevoError(nucleo.CodigoConflictoIdempotencia, "la clave de idempotencia ya se usó con otra solicitud")
+			return t, false, nucleo.NuevoError(nucleo.CodigoConflictoIdempotencia, idioma.T("la clave de idempotencia ya se usó con otra solicitud"))
 		case !errors.Is(err, sql.ErrNoRows):
 			return t, false, err
 		}
@@ -218,7 +219,7 @@ func (a *Almacen) Aceptar(ctx context.Context, t nucleo.Trabajo, clave string, m
 		return t, false, err
 	}
 	if maximoActivos > 0 && activos >= maximoActivos {
-		return t, false, nucleo.NuevoError(nucleo.CodigoColaLlena, "la cola de la instancia está llena")
+		return t, false, nucleo.NuevoError(nucleo.CodigoColaLlena, idioma.T("la cola de la instancia está llena"))
 	}
 	solicitud, err := json.Marshal(t.Solicitud)
 	if err != nil {
@@ -281,7 +282,7 @@ func (a *Almacen) CambiarEstado(ctx context.Context, id string, de, hacia nucleo
 		if _, err := obtener(ctx, tx, id); err != nil {
 			return err
 		}
-		return nucleo.NuevoError(nucleo.CodigoTransicionInvalida, fmt.Sprintf("el trabajo %s ya no está en %s", id, de))
+		return nucleo.NuevoError(nucleo.CodigoTransicionInvalida, idioma.Tf("el trabajo %s ya no está en %s", id, de))
 	}
 	if err := agregarEvento(ctx, tx, id, "estado", string(hacia), ahora); err != nil {
 		return err
@@ -311,7 +312,7 @@ func (a *Almacen) Eliminar(ctx context.Context, id string) error {
 		if _, err := obtener(ctx, tx, id); err != nil {
 			return err
 		}
-		return nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, "solo se elimina un trabajo terminado; cancélalo antes")
+		return nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, idioma.T("solo se elimina un trabajo terminado; cancélalo antes"))
 	}
 	for _, consulta := range []string{`DELETE FROM eventos WHERE trabajo_id = ?`, `DELETE FROM idempotencia WHERE trabajo_id = ?`} {
 		if _, err := tx.ExecContext(ctx, consulta, id); err != nil {
@@ -474,7 +475,7 @@ func (a *Almacen) Recuperar(ctx context.Context, instancia string) (interrumpido
 			err = a.CambiarEstado(ctx, id, t.Estado, nucleo.EnCola, Cambio{})
 			reencolados++
 		} else {
-			err = a.CambiarEstado(ctx, id, t.Estado, nucleo.Interrumpido, Cambio{Mensaje: "el servicio se reinició sin poder confirmar la ejecución"})
+			err = a.CambiarEstado(ctx, id, t.Estado, nucleo.Interrumpido, Cambio{Mensaje: idioma.T("el servicio se reinició sin poder confirmar la ejecución")})
 			interrumpidos++
 		}
 		if err != nil {
@@ -618,7 +619,7 @@ func obtener(ctx context.Context, c consultor, id string) (nucleo.Trabajo, error
 		&codigo, &t.MensajeError, &solicitud, &t.Huella, &t.Salida, &t.IntentoDe, &creado, &actualizado, &terminado,
 		&t.ModeloEnviado, &t.ModeloEfectivo, &t.Uso.TokensEntrada, &t.Uso.TokensSalida, &t.Uso.CostoUSD, &t.PuntoAcceso, &vencido, &t.EntradasEliminadas, &t.PID, &t.FirmaProceso)
 	if errors.Is(err, sql.ErrNoRows) {
-		return t, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "trabajo no encontrado: "+id)
+		return t, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
 	}
 	if err != nil {
 		return t, err

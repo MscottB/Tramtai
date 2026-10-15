@@ -6,6 +6,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+
+	"tramtai/internal/idioma"
 )
 
 // Escritorio devuelve la ruta de la aplicación de escritorio, que se instala junto al ejecutable actual.
@@ -16,7 +18,7 @@ func Escritorio() (string, error) {
 	}
 	ruta := filepath.Join(filepath.Dir(propio), "tramtai-escritorio.exe")
 	if _, err := os.Stat(ruta); err != nil {
-		return "", errors.New("no se encontró tramtai-escritorio.exe junto a " + filepath.Base(propio))
+		return "", errors.New(idioma.Tf("no se encontró tramtai-escritorio.exe junto a %s", filepath.Base(propio)))
 	}
 	return ruta, nil
 }

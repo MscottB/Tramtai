@@ -26,6 +26,7 @@ import (
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/api"
 	"tramtai/internal/documentos"
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
 	"tramtai/internal/planificador"
@@ -158,7 +159,7 @@ func (s *Servicio) enrutar(w http.ResponseWriter, r *http.Request) {
 		api.EscribirError(w, r, err)
 		return
 	case inst == nil && admin:
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "indica una instancia activa en la cabecera Tramtai-Instancia"))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.T("indica una instancia activa en la cabecera Tramtai-Instancia")))
 		return
 	case inst == nil:
 		api.NoAutorizado(w, r)
@@ -176,7 +177,7 @@ func (s *Servicio) enrutarPunto(w http.ResponseWriter, r *http.Request) {
 	p := s.puntos[nombre]
 	s.mu.RUnlock()
 	if p == nil || p.handler == nil || p.cfg.Puerto != 0 {
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "punto de acceso no disponible: "+nombre))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("punto de acceso no disponible: %s", nombre)))
 		return
 	}
 	http.StripPrefix("/p/"+nombre, p.handler).ServeHTTP(w, r)
@@ -199,13 +200,13 @@ func (s *Servicio) instanciaPara(r *http.Request, admin bool) (inst *Instancia, 
 		return nil, false, nil
 	}
 	if r.Method != http.MethodGet && r.Method != http.MethodHead && !csrfValido(r, ses) {
-		return nil, false, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, "falta la cabecera X-CSRF-Token de la sesión")
+		return nil, false, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, idioma.T("falta la cabecera X-CSRF-Token de la sesión"))
 	}
 	s.mu.RLock()
 	inst = s.instancias[ses.instancia]
 	s.mu.RUnlock()
 	if inst == nil {
-		return nil, false, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "la instancia de la sesión ("+ses.instancia+") no está activa")
+		return nil, false, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("la instancia de la sesión (%s) no está activa", ses.instancia))
 	}
 	return inst, true, nil
 }
@@ -265,7 +266,7 @@ func (s *Servicio) ActivarProyecto(raiz string) (*Instancia, error) {
 		return nil, err
 	}
 	if _, err := os.Stat(filepath.Join(raiz, ".tramtai", "config.yaml")); err != nil {
-		return nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, raiz+" no tiene .tramtai/config.yaml: ejecuta tramtai iniciar en el proyecto")
+		return nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("%s no tiene .tramtai/config.yaml: ejecuta tramtai iniciar en el proyecto", raiz))
 	}
 	c, err := nucleo.CargarConfiguracion(raiz)
 	if err != nil {
@@ -378,7 +379,7 @@ func (s *Servicio) Desactivar(id string) error {
 	delete(s.instancias, id)
 	s.mu.Unlock()
 	if !activa {
-		return nucleo.NuevoError(nucleo.CodigoNoEncontrado, "la instancia "+id+" no está activa")
+		return nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("la instancia %s no está activa", id))
 	}
 	s.Recargar()
 	inst.cerrar(true)

@@ -1,6 +1,6 @@
 package nucleo
 
-import "fmt"
+import "tramtai/internal/idioma"
 
 // Estado es el estado del ciclo de vida de un trabajo (sección 4.2 del documento maestro).
 type Estado string
@@ -47,5 +47,5 @@ func ValidarTransicion(de, a Estado) error {
 			return nil
 		}
 	}
-	return NuevoError(CodigoTransicionInvalida, fmt.Sprintf("transición no permitida: %s → %s", de, a))
+	return NuevoError(CodigoTransicionInvalida, idioma.Tf("transición no permitida: %s → %s", de, a))
 }

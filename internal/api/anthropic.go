@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
 
@@ -27,7 +28,7 @@ func (s *Servidor) mensajesAnthropic(w http.ResponseWriter, r *http.Request) {
 	var p peticionMensajes
 	avisos, err := s.leerFachada(w, r, politicaMensajes, &p)
 	if err == nil && p.MaxTokens == nil {
-		err = nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "max_tokens es obligatorio")
+		err = nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("max_tokens es obligatorio"))
 	}
 	var sol nucleo.SolicitudEjecucion
 	if err == nil {

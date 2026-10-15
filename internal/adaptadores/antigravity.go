@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/procesos"
 )
@@ -26,11 +27,11 @@ type Antigravity struct {
 // Detectar implementa Detectable.
 func (a Antigravity) Detectar(ctx context.Context) Estado {
 	e := Estado{Agente: "antigravity", Autenticacion: a.Autenticacion,
-		Terminos: "experimental: solo modelProvider gemini con clave de API propia; nunca la sesión personal"}
+		Terminos: idioma.T("experimental: solo modelProvider gemini con clave de API propia; nunca la sesión personal")}
 	if err := a.autenticacion(); err != nil {
 		e.Problema = nucleo.MensajeDe(err)
 	} else if claveEntorno("GEMINI_API_KEY") == "" {
-		e.Problema = "falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)"
+		e.Problema = idioma.T("falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)")
 	}
 	ruta, err := resolverPrograma(a.Programa)
 	if err != nil {
@@ -44,7 +45,7 @@ func (a Antigravity) Detectar(ctx context.Context) Estado {
 func (a Antigravity) autenticacion() error {
 	if a.Autenticacion != "" && a.Autenticacion != AutenticacionClaveAPI {
 		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida,
-			"antigravity solo admite clave_api: los términos de Antigravity prohíben usar la sesión personal desde otra herramienta")
+			idioma.T("antigravity solo admite clave_api: los términos de Antigravity prohíben usar la sesión personal desde otra herramienta"))
 	}
 	return nil
 }
@@ -56,7 +57,7 @@ func (a Antigravity) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, 
 	}
 	clave := claveEntorno("GEMINI_API_KEY")
 	if clave == "" {
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente, "falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)")
+		return Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente, idioma.T("falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)"))
 	}
 	ruta, err := resolverPrograma(a.Programa)
 	if err != nil {
@@ -65,7 +66,7 @@ func (a Antigravity) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, 
 	sistema, prompt := separar(s)
 	prompt = enmarcarSistema(sistema, prompt)
 	if utf8.RuneCountInString(prompt) > maximoPromptAntigravity {
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "la entrada supera lo que admite antigravity por línea de órdenes; usa gemini")
+		return Resultado{}, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("la entrada supera lo que admite antigravity por línea de órdenes; usa gemini"))
 	}
 	raiz, espacio, err := espacioTemporal()
 	if err != nil {
@@ -106,7 +107,7 @@ func (a Antigravity) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, 
 	if json.Unmarshal([]byte(strings.Join(lineas, "\n")), &final) != nil || final.Status == "" {
 		texto := redactar(strings.TrimSpace(r.Errores+"\n"+strings.Join(lineas, "\n")), clave)
 		if texto == "" {
-			texto = "agy terminó sin resultado JSON"
+			texto = idioma.T("agy terminó sin resultado JSON")
 		}
 		return Resultado{}, nucleo.NuevoError(clasificar(texto, 0), texto)
 	}

@@ -13,6 +13,7 @@ import (
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/documentos"
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
 	"tramtai/internal/version"
@@ -22,7 +23,7 @@ import (
 func (s *Servidor) enviar(r *http.Request, sol nucleo.SolicitudEjecucion) (nucleo.Trabajo, bool, error) {
 	clave := r.Header.Get("Idempotency-Key")
 	if len(clave) > 255 {
-		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "Idempotency-Key supera 255 caracteres")
+		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("Idempotency-Key supera 255 caracteres"))
 	}
 	sol, err := s.ajustar(sol)
 	if err != nil {
@@ -103,9 +104,9 @@ func (s *Servidor) salidaTrabajo(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		EscribirError(w, r, err)
 	case !t.Estado.Terminal():
-		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, "el trabajo está en "+string(t.Estado)))
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, idioma.Tf("el trabajo está en %s", t.Estado)))
 	case t.Disponibilidad == nucleo.SalidaExpirada:
-		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoResultadoExpirado, "el resultado expiró por la retención (retencion.horas_resultado); vuelve a ejecutar la solicitud"))
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoResultadoExpirado, idioma.T("el resultado expiró por la retención (retencion.horas_resultado); vuelve a ejecutar la solicitud")))
 	case t.Estado != nucleo.Completado:
 		EscribirError(w, r, errorDeTrabajo(t))
 	default:
@@ -130,7 +131,7 @@ func (s *Servidor) eventosTrabajo(w http.ResponseWriter, r *http.Request) {
 	if cursor != "" {
 		n, err := strconv.Atoi(cursor)
 		if err != nil || n < 0 {
-			EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "Last-Event-ID no válido"))
+			EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("Last-Event-ID no válido")))
 			return
 		}
 		desde = n
@@ -143,7 +144,7 @@ func (s *Servidor) eventosTrabajo(w http.ResponseWriter, r *http.Request) {
 	f := abrirFlujo(w)
 	if t.Disponibilidad == nucleo.SalidaExpirada {
 		// Solo quedan los eventos de estado: se avisa en lugar de dar a entender que no hubo contenido.
-		_ = f.json("aviso", map[string]any{"codigo": nucleo.CodigoResultadoExpirado, "mensaje": "los eventos con contenido expiraron con el resultado"})
+		_ = f.json("aviso", map[string]any{"codigo": nucleo.CodigoResultadoExpirado, "mensaje": idioma.T("los eventos con contenido expiraron con el resultado")})
 	}
 	final, err := s.seguir(r.Context(), id, desde, func(e persistencia.Evento) error {
 		return f.enviar(strconv.Itoa(e.Numero), e.Tipo, e.Datos)
@@ -214,7 +215,7 @@ func (s *Servidor) ejecutarTrabajo(w http.ResponseWriter, r *http.Request) {
 // crearCarga acepta multipart (campo "archivo") o el binario en el cuerpo con ?nombre= (sección 7.1).
 func (s *Servidor) crearCarga(w http.ResponseWriter, r *http.Request) {
 	if s.Cargas == nil {
-		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, "esta instancia no admite cargas"))
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("esta instancia no admite cargas")))
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, int64(s.Config.Entero("conversion.maximo_carga_mb"))<<20+1<<20)
@@ -223,13 +224,13 @@ func (s *Servidor) crearCarga(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 		carga, err = s.cargaMultipart(r)
 	} else if nombre := r.URL.Query().Get("nombre"); nombre == "" {
-		err = nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "envía multipart con el campo archivo, o el binario con ?nombre=archivo.ext")
+		err = nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("envía multipart con el campo archivo, o el binario con ?nombre=archivo.ext"))
 	} else {
 		carga, err = s.Cargas.Guardar(nombre, r.Body)
 	}
 	var demasiado *http.MaxBytesError
 	if errors.As(err, &demasiado) {
-		err = nucleo.NuevoError(nucleo.CodigoCargaInvalida, "el archivo supera conversion.maximo_carga_mb")
+		err = nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.T("el archivo supera conversion.maximo_carga_mb"))
 	}
 	if err != nil {
 		EscribirError(w, r, err)
@@ -241,12 +242,12 @@ func (s *Servidor) crearCarga(w http.ResponseWriter, r *http.Request) {
 func (s *Servidor) cargaMultipart(r *http.Request) (documentos.Carga, error) {
 	lector, err := r.MultipartReader()
 	if err != nil {
-		return documentos.Carga{}, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "multipart no válido")
+		return documentos.Carga{}, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("multipart no válido"))
 	}
 	for {
 		parte, err := lector.NextPart()
 		if err == io.EOF {
-			return documentos.Carga{}, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "falta el campo archivo")
+			return documentos.Carga{}, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("falta el campo archivo"))
 		}
 		if err != nil {
 			return documentos.Carga{}, err

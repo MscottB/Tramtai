@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
 
@@ -28,9 +29,9 @@ type Gemini struct {
 // Detectar implementa Detectable sin consumir cuota.
 func (g Gemini) Detectar(context.Context) Estado {
 	e := Estado{Agente: "gemini", Autenticacion: AutenticacionClaveAPI, Ruta: g.base(),
-		Terminos: "términos de la Gemini API de Google (clave de API propia)"}
+		Terminos: idioma.T("términos de la Gemini API de Google (clave de API propia)")}
 	if claveEntorno("GEMINI_API_KEY", "GOOGLE_API_KEY") == "" {
-		e.Problema = "falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)"
+		e.Problema = idioma.T("falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)")
 	}
 	return e
 }
@@ -46,10 +47,10 @@ func (g Gemini) base() string {
 func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(Evento) error) (Resultado, error) {
 	clave := claveEntorno("GEMINI_API_KEY", "GOOGLE_API_KEY")
 	if clave == "" {
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente, "falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)")
+		return Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente, idioma.T("falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)"))
 	}
 	if consciente(s) {
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoContextoNoPermitido, "la Gemini API no tiene proyecto: usa modo_contexto aislado")
+		return Resultado{}, nucleo.NuevoError(nucleo.CodigoContextoNoPermitido, idioma.T("la Gemini API no tiene proyecto: usa modo_contexto aislado"))
 	}
 	modelo := strings.TrimPrefix(s.Modelo, "models/")
 	if modelo == "" {
@@ -75,7 +76,7 @@ func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 		if ctx.Err() != nil {
 			return Resultado{}, ctx.Err()
 		}
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, "no se pudo contactar con la Gemini API: "+redactar(err.Error(), clave))
+		return Resultado{}, nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf("no se pudo contactar con la Gemini API: %s", redactar(err.Error(), clave)))
 	}
 	defer respuesta.Body.Close()
 	if respuesta.StatusCode != http.StatusOK {
@@ -99,7 +100,7 @@ func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 		}
 		var f fragmentoGemini
 		if err := json.Unmarshal([]byte(strings.TrimSpace(datos)), &f); err != nil {
-			return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, "fragmento SSE de Gemini no válido")
+			return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.T("fragmento SSE de Gemini no válido"))
 		}
 		if f.Error.Message != "" {
 			return Resultado{}, nucleo.NuevoError(clasificar(f.Error.Message, f.Error.Code), "Gemini API: "+redactar(f.Error.Message, clave))
@@ -115,7 +116,7 @@ func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 				}
 			}
 			if c.FinishReason == "SAFETY" || c.FinishReason == "PROHIBITED_CONTENT" {
-				return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorAgente, "Gemini bloqueó la respuesta ("+c.FinishReason+")")
+				return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorAgente, idioma.Tf("Gemini bloqueó la respuesta (%s)", c.FinishReason))
 			}
 		}
 		if f.UsageMetadata.PromptTokenCount > 0 || f.UsageMetadata.CandidatesTokenCount > 0 {
@@ -130,7 +131,7 @@ func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 		if ctx.Err() != nil {
 			return Resultado{}, ctx.Err()
 		}
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, "flujo de Gemini interrumpido: "+redactar(err.Error(), clave))
+		return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.Tf("flujo de Gemini interrumpido: %s", redactar(err.Error(), clave)))
 	}
 	r.Salida = salida.String()
 	return r, nil
@@ -168,7 +169,7 @@ func cuerpoGemini(s nucleo.SolicitudEjecucion) ([]byte, error) {
 	configuracion := map[string]any{}
 	if len(s.Salida.Esquema) > 0 {
 		if !json.Valid(s.Salida.Esquema) {
-			return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "esquema no válido")
+			return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("esquema no válido"))
 		}
 		configuracion["responseMimeType"] = "application/json"
 		configuracion["responseJsonSchema"] = s.Salida.Esquema

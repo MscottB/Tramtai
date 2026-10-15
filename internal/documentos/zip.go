@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
 
@@ -24,11 +25,11 @@ func (t *tarea) zip(ctx context.Context, e Entrada, profundidad int) error {
 		return nucleo.NuevoError(nucleo.CodigoCargaInvalida, e.Nombre+": "+motivo)
 	}
 	if limites.ProfundidadMaxima > 0 && profundidad > limites.ProfundidadMaxima {
-		return invalida("supera conversion.profundidad_maxima_zip")
+		return invalida(idioma.T("supera conversion.profundidad_maxima_zip"))
 	}
 	lector, err := zip.OpenReader(e.Ruta)
 	if err != nil {
-		return invalida("no es un ZIP válido")
+		return invalida(idioma.T("no es un ZIP válido"))
 	}
 	defer lector.Close()
 	for _, f := range lector.File {
@@ -37,14 +38,14 @@ func (t *tarea) zip(ctx context.Context, e Entrada, profundidad int) error {
 			continue
 		}
 		if f.Mode()&fs.ModeSymlink != 0 {
-			return invalida("contiene un enlace simbólico: " + f.Name)
+			return invalida(idioma.Tf("contiene un enlace simbólico: %s", f.Name))
 		}
 		if path.IsAbs(nombre) || nombre == ".." || strings.HasPrefix(nombre, "../") || strings.Contains(nombre, ":") {
-			return invalida("contiene una ruta insegura: " + f.Name)
+			return invalida(idioma.Tf("contiene una ruta insegura: %s", f.Name))
 		}
 		t.archivos++
 		if limites.MaximoArchivos > 0 && t.archivos > limites.MaximoArchivos {
-			return invalida("supera conversion.maximo_archivos_zip")
+			return invalida(idioma.T("supera conversion.maximo_archivos_zip"))
 		}
 		destino := filepath.Join(t.dir, fmt.Sprintf("zip-%04d%s", t.archivos, strings.ToLower(path.Ext(nombre))))
 		suma, err := t.extraer(f, destino, invalida)
@@ -63,7 +64,7 @@ func (t *tarea) zip(ctx context.Context, e Entrada, profundidad int) error {
 func (t *tarea) extraer(f *zip.File, destino string, invalida func(string) error) (string, error) {
 	origen, err := f.Open()
 	if err != nil {
-		return "", invalida("entrada ilegible: " + f.Name)
+		return "", invalida(idioma.Tf("entrada ilegible: %s", f.Name))
 	}
 	defer origen.Close()
 	salida, err := os.OpenFile(destino, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
@@ -78,11 +79,11 @@ func (t *tarea) extraer(f *zip.File, destino string, invalida func(string) error
 	resumen := sha256.New()
 	n, err := io.Copy(io.MultiWriter(salida, resumen), io.LimitReader(origen, restante+1))
 	if err != nil {
-		return "", invalida("entrada corrupta: " + f.Name)
+		return "", invalida(idioma.Tf("entrada corrupta: %s", f.Name))
 	}
 	t.bytes += n
 	if n > restante {
-		return "", invalida("supera conversion.maximo_descomprimido_mb")
+		return "", invalida(idioma.T("supera conversion.maximo_descomprimido_mb"))
 	}
 	return hex.EncodeToString(resumen.Sum(nil)), nil
 }

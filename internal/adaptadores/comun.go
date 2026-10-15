@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"tramtai/internal/credenciales"
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/procesos"
 )
@@ -115,10 +116,10 @@ func claveEntorno(nombres ...string) string {
 func resolverPrograma(nombre string) (string, error) {
 	ruta, err := exec.LookPath(nombre)
 	if err != nil {
-		return "", nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, "no se encontró el ejecutable "+nombre+"; instálalo o configura comandos_agentes")
+		return "", nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf("no se encontró el ejecutable %s; instálalo o configura comandos_agentes", nombre))
 	}
 	if extension := strings.ToLower(filepath.Ext(ruta)); extension == ".cmd" || extension == ".bat" {
-		return "", nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, ruta+" es un envoltorio "+extension+"; configura comandos_agentes con la ruta al .exe real")
+		return "", nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf("%s es un envoltorio %s; configura comandos_agentes con la ruta al .exe real", ruta, extension))
 	}
 	return ruta, nil
 }

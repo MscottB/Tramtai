@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
 	"tramtai/internal/procesos"
@@ -158,14 +159,14 @@ func (p *Planificador) EnviarPorPunto(ctx context.Context, solicitud nucleo.Soli
 // aceptar registra el trabajo; intentoDe vincula un reintento explícito con el trabajo anterior.
 func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEjecucion, clave, intentoDe, punto string) (nucleo.Trabajo, bool, error) {
 	if p.ctx == nil || p.ctx.Err() != nil {
-		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoServicioDetenido, "el planificador no está en marcha")
+		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoServicioDetenido, idioma.T("el planificador no está en marcha"))
 	}
 	if err := solicitud.Validar(); err != nil {
 		return nucleo.Trabajo{}, false, err
 	}
 	if solicitud.ModoContexto == "consciente_proyecto" && p.opc.RaizConfiable == "" {
 		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoContextoNoPermitido,
-			"consciente_proyecto solo se admite en la instancia de un proyecto incluido en proyectos_confiables (configuración global o local.yaml)")
+			idioma.T("consciente_proyecto solo se admite en la instancia de un proyecto incluido en proyectos_confiables (configuración global o local.yaml)"))
 	}
 	if len(solicitud.Salida.Esquema) > 0 {
 		if _, err := salidas.Compilar(solicitud.Salida.Esquema); err != nil {
@@ -227,7 +228,7 @@ func (p *Planificador) resolverModelo(s nucleo.SolicitudEjecucion) (string, erro
 		return modelo, nil
 	}
 	return "", nucleo.NuevoError(nucleo.CodigoModeloNoConfigurado,
-		fmt.Sprintf("el perfil %q no define modelo para el agente %q (modelos.perfiles.%s.%s)", s.PerfilModelo, s.Agente, s.PerfilModelo, s.Agente))
+		idioma.Tf("el perfil %q no define modelo para el agente %q (modelos.perfiles.%s.%s)", s.PerfilModelo, s.Agente, s.PerfilModelo, s.Agente))
 }
 
 // encolar entrega el trabajo a los ejecutores sin bloquear al cliente. Un trabajo cancelado en cola sigue
@@ -269,7 +270,7 @@ func (p *Planificador) Cancelar(ctx context.Context, id string) (nucleo.Trabajo,
 func (p *Planificador) Obtener(ctx context.Context, id string) (nucleo.Trabajo, error) {
 	t, err := p.almacen.Obtener(ctx, id)
 	if err == nil && t.Instancia != p.opc.Instancia {
-		return nucleo.Trabajo{}, nucleo.NuevoError(nucleo.CodigoNoEncontrado, "trabajo no encontrado: "+id)
+		return nucleo.Trabajo{}, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
 	}
 	return t, err
 }
@@ -293,10 +294,10 @@ func (p *Planificador) Reintentar(ctx context.Context, id string) (nucleo.Trabaj
 		return anterior, err
 	}
 	if !anterior.Estado.Terminal() {
-		return anterior, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, "solo se reintenta un trabajo terminado")
+		return anterior, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, idioma.T("solo se reintenta un trabajo terminado"))
 	}
 	if anterior.EntradasEliminadas {
-		return anterior, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, "las entradas del trabajo ya vencieron o se eliminaron al terminar; vuelve a enviarlas")
+		return anterior, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("las entradas del trabajo ya vencieron o se eliminaron al terminar; vuelve a enviarlas"))
 	}
 	t, _, err := p.aceptar(ctx, anterior.Solicitud, "", anterior.ID, anterior.PuntoAcceso)
 	return t, err
@@ -430,12 +431,12 @@ func (p *Planificador) procesar(id string) {
 		return
 	}
 	if p.opc.TiempoMaximoCola > 0 && time.Since(t.CreadoEn) > p.opc.TiempoMaximoCola {
-		p.cambiar(id, nucleo.EnCola, nucleo.Fallido, persistencia.Cambio{Codigo: nucleo.CodigoTiempoColaAgotado, Mensaje: "se superó el tiempo máximo en cola"})
+		p.cambiar(id, nucleo.EnCola, nucleo.Fallido, persistencia.Cambio{Codigo: nucleo.CodigoTiempoColaAgotado, Mensaje: idioma.T("se superó el tiempo máximo en cola")})
 		return
 	}
 	adaptador, registrado := p.adaptadores[t.Solicitud.Agente]
 	if !registrado {
-		p.cambiar(id, nucleo.EnCola, nucleo.Fallido, persistencia.Cambio{Codigo: nucleo.CodigoAgenteNoDisponible, Mensaje: "agente no registrado: " + t.Solicitud.Agente})
+		p.cambiar(id, nucleo.EnCola, nucleo.Fallido, persistencia.Cambio{Codigo: nucleo.CodigoAgenteNoDisponible, Mensaje: idioma.Tf("agente no registrado: %s", t.Solicitud.Agente)})
 		return
 	}
 
@@ -510,9 +511,9 @@ func (p *Planificador) procesar(id string) {
 	if solicitud.ModoContexto == "consciente_proyecto" {
 		solicitud.RaizProyecto = p.opc.RaizConfiable
 		// Se declara de forma visible qué contexto se carga antes de ejecutar (sección 6.3).
-		_ = p.almacen.AgregarEvento(fondo, id, "aviso", "modo consciente_proyecto: el agente trabaja en "+p.opc.RaizConfiable+
+		_ = p.almacen.AgregarEvento(fondo, id, "aviso", idioma.Tf("modo consciente_proyecto: el agente trabaja en %s"+
 			" y carga las reglas del proyecto y de sus carpetas superiores (CLAUDE.md, AGENTS.md, GEMINI.md), sin MCP, herramientas"+
-			" ni sesión persistente; con autenticación por suscripción el CLI carga también las reglas del usuario")
+			" ni sesión persistente; con autenticación por suscripción el CLI carga también las reglas del usuario", p.opc.RaizConfiable))
 	}
 	resultado, err := adaptador.Ejecutar(ctxEjecucion, solicitud, func(e adaptadores.Evento) error {
 		return p.almacen.AgregarEvento(fondo, id, e.Tipo, e.Datos)
@@ -522,7 +523,7 @@ func (p *Planificador) procesar(id string) {
 		p.cerrarDetenido(id, nucleo.Ejecutando)
 		return
 	case errors.Is(ctxEjecucion.Err(), context.DeadlineExceeded):
-		p.cambiar(id, nucleo.Ejecutando, nucleo.Fallido, persistencia.Cambio{Codigo: nucleo.CodigoTiempoEjecucionAgotado, Mensaje: "se superó el tiempo límite de ejecución"})
+		p.cambiar(id, nucleo.Ejecutando, nucleo.Fallido, persistencia.Cambio{Codigo: nucleo.CodigoTiempoEjecucionAgotado, Mensaje: idioma.T("se superó el tiempo límite de ejecución")})
 		return
 	case err != nil:
 		codigo := nucleo.CodigoDe(err)
@@ -559,7 +560,7 @@ func (p *Planificador) cerrarDetenido(id string, desde nucleo.Estado) {
 	case desde == nucleo.EsperandoAgente || desde == nucleo.PreparandoEntrada:
 		p.cambiar(id, desde, nucleo.EnCola, persistencia.Cambio{}) // nunca lanzó el agente: se reencola al reiniciar
 	default:
-		p.cambiar(id, desde, nucleo.Interrumpido, persistencia.Cambio{Mensaje: "el servicio se detuvo durante la ejecución (sin plazo de drenaje o agotado)"})
+		p.cambiar(id, desde, nucleo.Interrumpido, persistencia.Cambio{Mensaje: idioma.T("el servicio se detuvo durante la ejecución (sin plazo de drenaje o agotado)")})
 	}
 }
 
@@ -578,7 +579,7 @@ func (p *Planificador) cambiar(id string, de, hacia nucleo.Estado, cambio persis
 // preparar convierte las cargas respetando el límite de conversiones de la instancia.
 func (p *Planificador) preparar(ctx context.Context, cargas []string) (string, error) {
 	if p.opc.Preparador == nil {
-		return "", nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, "esta instancia no admite cargas")
+		return "", nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("esta instancia no admite cargas"))
 	}
 	select {
 	case p.conversiones <- struct{}{}:
@@ -610,7 +611,7 @@ func validarSalida(config nucleo.ConfigSalida, salida string) error {
 		return salidas.Validar(config.Esquema, salida)
 	}
 	if config.Formato == "json" && !json.Valid([]byte(salida)) {
-		return errors.New("la salida no es JSON válido")
+		return errors.New(idioma.T("la salida no es JSON válido"))
 	}
 	return nil
 }

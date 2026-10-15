@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"tramtai/internal/idioma"
 )
 
 // RutaGlobal es el archivo de configuración global del usuario; TRAMTAI_CONFIG_GLOBAL lo sustituye
@@ -125,7 +127,7 @@ func (c *Configuracion) RutaPermitida(ruta string) (string, error) {
 			return real, nil
 		}
 	}
-	return "", NuevoError(CodigoRutaNoPermitida, ruta+" está fuera de instancia_global.raices_permitidas")
+	return "", NuevoError(CodigoRutaNoPermitida, idioma.Tf("%s está fuera de instancia_global.raices_permitidas", ruta))
 }
 
 // dentroDe indica si ruta es raiz o está debajo de ella; fuera de Linux las mayúsculas no cuentan.

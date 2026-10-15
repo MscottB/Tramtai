@@ -8,6 +8,8 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+
+	"tramtai/internal/idioma"
 )
 
 // Administrador de credenciales de Windows (credenciales genéricas del usuario, persistencia local).
@@ -48,7 +50,7 @@ func Disponible() bool { return true }
 // Guardar crea o sustituye la clave.
 func Guardar(nombre, valor string) error {
 	if valor == "" || len(valor) > maximoBytesCredencial {
-		return errors.New("la clave está vacía o es demasiado larga")
+		return errors.New(idioma.T("la clave está vacía o es demasiado larga"))
 	}
 	destino, _ := windows.UTF16PtrFromString(objetivo(nombre))
 	comentario, _ := windows.UTF16PtrFromString("Clave de API usada por Tramtai")

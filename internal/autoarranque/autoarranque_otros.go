@@ -2,7 +2,11 @@
 
 package autoarranque
 
-import "errors"
+import (
+	"errors"
+
+	"tramtai/internal/idioma"
+)
 
 // Disponible indica si este sistema admite el arranque automático.
 const Disponible = false
@@ -12,7 +16,7 @@ func Activo() (bool, error) { return false, nil }
 
 // Activar no está disponible fuera de Windows todavía.
 func Activar(string) error {
-	return errors.New("el arranque automático solo está disponible en Windows por ahora")
+	return errors.New(idioma.T("el arranque automático solo está disponible en Windows por ahora"))
 }
 
 // Desactivar no hace nada fuera de Windows.
