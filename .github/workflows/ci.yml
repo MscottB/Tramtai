@@ -5,12 +5,17 @@ name: CI
 on:
   push:
     branches: [main]
-    paths-ignore: ['site/**', '.github/workflows/paginas.yml', 'Casks/**', 'Formula/**', 'paquetes/**']  # la página y los paquetes van aparte
+    paths-ignore: ['site/**', '.github/workflows/paginas.yml', 'Casks/**', 'Formula/**', 'paquetes/**', 'docs/**', '**/*.md']  # la página y los paquetes van aparte
   pull_request:
-    paths-ignore: ['site/**', '.github/workflows/paginas.yml', 'Casks/**', 'Formula/**', 'paquetes/**']
+    paths-ignore: ['site/**', '.github/workflows/paginas.yml', 'Casks/**', 'Formula/**', 'paquetes/**', 'docs/**', '**/*.md']
 
 permissions:
   contents: read
+
+# Un push nuevo a la misma rama cancela la ejecución anterior, que ya no sirve.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 # Las pruebas comparan algunos textos en español, el idioma de origen; los runners de macOS están en inglés.
 env:
@@ -31,6 +36,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache-dependency-path: '**/go.sum' # también los módulos de la app de escritorio
       - run: go vet ./...
       - run: go test ./...
       - name: App de escritorio
@@ -48,6 +54,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache-dependency-path: '**/go.sum' # también los módulos de la app de escritorio
       - name: GTK 4 y WebKitGTK 6.0
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev libwebkitgtk-6.0-dev
       - name: Compilar y probar
@@ -68,10 +75,11 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache-dependency-path: '**/go.sum' # también los módulos de la app de escritorio
       - name: Compilar, empaquetar y abrir la app
         run: |
           (cd escritorio && go vet ./... && go test ./...)
-          sh scripts/macos/empaquetar.sh v0.0.0+ci
+          sh scripts/macos/empaquetar.sh v0.0.0+ci arm64 # solo la arquitectura del runner; el release hace la universal
           sh scripts/macos/probar-app.sh
 
   web:
