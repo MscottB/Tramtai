@@ -59,25 +59,9 @@ jobs:
       - name: GTK 4 y WebKitGTK 6.0
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev libwebkitgtk-6.0-dev
       - name: Compilar y empaquetar (.deb y .rpm)
-        run: |
-          version=$GITHUB_REF_NAME
-          mkdir -p paquete dist
-          CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X tramtai/internal/version.Version=$version" -o paquete/tramtai ./cmd/tramtai
-          (cd escritorio && go build -trimpath -ldflags "-s -w -X tramtai/internal/version.Version=$version" -o ../paquete/tramtai-escritorio .)
-          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.0
-          export VERSION=${version#v} ARCH=${{ matrix.arq }}
-          "$(go env GOPATH)/bin/nfpm" package -f scripts/linux/nfpm.yaml -p deb -t "dist/Tramtai-$version-linux-${{ matrix.arq }}.deb"
-          "$(go env GOPATH)/bin/nfpm" package -f scripts/linux/nfpm.yaml -p rpm -t "dist/Tramtai-$version-linux-${{ matrix.arq }}.rpm"
-          ls -l dist
+        run: sh scripts/linux/empaquetar.sh "$GITHUB_REF_NAME" ${{ matrix.arq }}
       - name: Comprobar el paquete (instalar y arrancar sin pantalla)
-        run: |
-          sudo apt-get install -y ./dist/*.deb xvfb
-          tramtai version
-          (xvfb-run -a timeout 30 tramtai-escritorio --oculto || true) &
-          for i in $(seq 1 20); do sleep 1; tramtai servicio estado 2>/dev/null | grep -q activo && break; done
-          tramtai servicio estado
-          tramtai servicio estado | grep -q activo
-          tramtai servicio detener --si
+        run: sh scripts/linux/probar-paquete.sh
       - uses: actions/upload-artifact@v4
         with:
           name: linux-app-${{ matrix.arq }}

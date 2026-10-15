@@ -38,7 +38,9 @@ Cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
 2. **Abre Tramtai** desde el menú Inicio. Queda en la bandeja del sistema con el servicio en marcha.
 3. En la app, **Agentes** te dice qué le falta a cada agente (conectarlo con tu suscripción o con una clave) y **Mis APIs** te da la URL, la clave y ejemplos listos para copiar.
 
-**En Linux o macOS** se instala el servicio con la CLI y la Web UI (la app de escritorio, de momento, solo existe para Windows):
+**En Linux** está la app completa, con su icono en la bandeja: descarga el `.deb` (Debian, Ubuntu, Mint…) o el `.rpm` (Fedora, openSUSE…) de [Releases](https://github.com/MscottB/Tramtai/releases/latest) e instálalo con `sudo apt install ./Tramtai-…-linux-amd64.deb` o `sudo dnf install ./Tramtai-…-linux-amd64.rpm`. Necesita GTK 4 y WebKitGTK 6.0, que se instalan solos (Ubuntu 24.04 o posterior, Debian 12 o posterior, Fedora).
+
+**Sin app de escritorio (macOS, o un servidor Linux)** se instala el servicio con la CLI y la Web UI:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instalar.sh | sh
@@ -91,7 +93,9 @@ La CLI sale en el idioma de tu sistema; `TRAMTAI_IDIOMA=en` o `es` lo fija.
 |---|---|---|---|
 | Servicio, API, CLI y terminal | ✅ | ✅ | ✅ |
 | Web UI | ✅ | ✅ | ✅ |
-| App de escritorio e instalador | ✅ | Pendiente | Pendiente |
+| App de escritorio con bandeja | ✅ (instalador) | ✅ (.deb y .rpm) | Pendiente |
+| Arranque con el sistema | ✅ | ✅ | Pendiente |
+| Actualización con un clic | ✅ | Aviso con enlace | Aviso con enlace |
 | Claves en el almacén del sistema | ✅ | Pendiente (variables de entorno) | Pendiente (variables de entorno) |
 
 ## Compilar desde el código
@@ -117,7 +121,7 @@ Claude, Codex, Gemini y Antigravity son marcas de sus respectivos dueños. Tramt
 
 **Tramtai turns Claude Code, Codex, Gemini and Antigravity into an OpenAI- and Anthropic-compatible API that runs on your own computer.** Any app or SDK can use them by changing just the base URL.
 
-- **Install:** download the Windows installer from [Releases](https://github.com/MscottB/Tramtai/releases/latest). It installs for your user only and needs no administrator rights. On Linux or macOS: `curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instalar.sh | sh`.
+- **Install:** download the Windows installer from [Releases](https://github.com/MscottB/Tramtai/releases/latest). It installs for your user only and needs no administrator rights. On Linux, install the desktop app from the `.deb` or `.rpm` package. On macOS (service, CLI and Web UI): `curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instalar.sh | sh`.
 - **Connect an agent:** use your Claude or ChatGPT subscription (personal use) or an API key; the agent's CLI must be installed.
 - **Point your app** at `http://127.0.0.1:17373/openai/v1` (or `/anthropic`) with the key from *My APIs*, and pick agent and model in the `model` field, e.g. `claude/sonnet`.
 - The desktop app, Web UI, interactive terminal and CLI are available in English and Spanish. The CLI follows your system language; set `TRAMTAI_IDIOMA=en` to force English.

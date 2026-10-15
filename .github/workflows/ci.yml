@@ -52,8 +52,11 @@ jobs:
         working-directory: escritorio
         run: |
           go vet ./...
-          go build ./...
           go test ./...
+      - name: Empaquetar e instalar el .deb (la app debe arrancar y levantar el servicio)
+        run: |
+          sh scripts/linux/empaquetar.sh v0.0.0+ci amd64
+          sh scripts/linux/probar-paquete.sh
 
   web:
     name: Web UI

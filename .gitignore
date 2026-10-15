@@ -22,3 +22,6 @@ node_modules/
 
 # worktrees de agentes de Claude Code
 /.claude/
+
+# paquetes de Linux generados por scripts/linux/empaquetar.sh
+/paquete/
