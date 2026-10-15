@@ -16,6 +16,7 @@
         <div v-for="c in campos" :key="c.titulo" class="col-12 col-md-6">
           <div class="text-caption texto-suave q-mb-xs">{{ c.titulo }}</div>
           <div class="bloque-codigo">{{ c.valor }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('comun.copiar') + ' ' + c.titulo" @click="copiar(c.valor)" /></div>
+          <div class="text-caption texto-suave q-mt-xs">{{ c.texto }}</div>
         </div>
         <div class="col-12 col-md-6">
           <div class="text-caption texto-suave q-mb-xs">{{ t('conectar.clave') }}</div>
@@ -82,7 +83,7 @@
                 <q-item-label caption class="codigo">{{ p.url || t('puntos.sinDireccion') }}</q-item-label>
                 <q-item-label caption>
                   {{ p.contratos.map(nombreContrato).join(' · ') }}
-                  <template v-if="p.agente || p.modelo"> · {{ [nombreAgente(p.agente), p.modelo].filter(Boolean).join(' · ') }}</template>
+                  <template v-if="idModelo(p)"> · {{ etiquetaDe(idModelo(p)!) }}</template>
                   <template v-if="p.esfuerzo"> · {{ t('esfuerzo.titulo') }} {{ nombreEsfuerzo(p.esfuerzo).toLowerCase() }}</template>
                 </q-item-label>
                 <q-item-label caption>
@@ -130,13 +131,7 @@
             <q-select :model-value="formulario.grupo" :options="sugerencias" outlined dense use-input hide-selected fill-input input-debounce="0"
               :label="t('puntos.grupo')" :hint="t('puntos.grupoHint')" maxlength="40" hide-dropdown-icon
               @input-value="(v: string) => (formulario.grupo = v)" @filter="filtrarGrupos" @update:model-value="(v: string) => (formulario.grupo = v)" />
-            <q-select v-model="formulario.modelo" :options="opciones" emit-value map-options outlined dense clearable :label="t('puntos.modelo')">
-              <template #option="scope">
-                <q-item v-bind="scope.itemProps">
-                  <q-item-section><q-item-label>{{ scope.opt.label }}</q-item-label><q-item-label caption>{{ scope.opt.caption }}</q-item-label></q-item-section>
-                </q-item>
-              </template>
-            </q-select>
+            <SelectorModelo v-model="formulario.modelo" :opciones="opciones" clearable :label="t('puntos.modelo')" />
             <q-toggle v-model="formulario.forzar" :disable="!formulario.modelo" :label="t('puntos.forzar')" />
             <SelectorEsfuerzo v-model="formulario.esfuerzo" :niveles="nivelesFormulario" :hint="t('esfuerzo.api')" />
             <q-expansion-item dense icon="o_tune" :label="t('comun.opcionesAvanzadas')" header-class="q-px-none text-body2">
@@ -155,7 +150,7 @@
                     :options="contratos.map((value) => ({ label: nombreContrato(value), value }))" />
                 </div>
                 <q-select v-model="formulario.permitidos" :options="opciones" emit-value map-options outlined dense multiple use-chips
-                  :label="t('puntos.permitidos')" :hint="t('puntos.permitidosHint')" />
+                  use-input new-value-mode="add-unique" :label="t('puntos.permitidos')" :hint="t('puntos.permitidosHint')" />
                 <q-input v-model="formulario.alias" type="textarea" autogrow outlined dense :label="t('puntos.alias')" input-class="codigo"
                   :hint="t('puntos.aliasHint')" />
               </div>
@@ -175,9 +170,13 @@
           <div class="titulo-seccion">{{ t('puntos.ajustesDe', { nombre: editando }) }}</div>
         </q-card-section>
         <q-card-section class="q-pt-none q-gutter-y-md">
-          <q-input v-model="textoInstrucciones" type="textarea" autogrow autofocus outlined :label="t('puntos.instrucciones')"
-            :placeholder="t('puntos.instruccionesEjemplo')" :hint="t('puntos.instruccionesHint')" :input-style="{ minHeight: '110px' }" />
-          <SelectorEsfuerzo v-model="esfuerzoEditando" :niveles="nivelesEditando" :hint="t('esfuerzo.api')" />
+          <SelectorModelo v-model="ajustes.modelo" :opciones="opciones" clearable :label="t('puntos.modelo')" />
+          <q-toggle v-model="ajustes.forzar" :disable="!ajustes.modelo" :label="t('puntos.forzar')" />
+          <SelectorEsfuerzo v-model="ajustes.esfuerzo" :niveles="nivelesAjustes" :hint="t('esfuerzo.api')" />
+          <q-input v-model="ajustes.instrucciones" type="textarea" autogrow outlined dense :label="t('puntos.instrucciones')"
+            :placeholder="t('puntos.instruccionesEjemplo')" :hint="t('puntos.instruccionesHint')" :input-style="{ minHeight: '80px' }" />
+          <q-select v-model="ajustes.permitidos" :options="opciones" emit-value map-options outlined dense multiple use-chips
+            use-input new-value-mode="add-unique" :label="t('puntos.permitidos')" :hint="t('puntos.permitidosHint')" />
         </q-card-section>
         <q-card-actions align="right" class="q-pa-md">
           <q-btn v-close-popup flat no-caps :label="t('comun.cancelar')" />
@@ -208,7 +207,8 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import SelectorEsfuerzo from '../componentes/SelectorEsfuerzo.vue'
-import { api, aplicarModelo, avisar, avisarError, codigoLinea, copiar, esfuerzosDe, haceCuanto, nombreAgente, nombreEsfuerzo, opcionModelo, origenHistorial, type ConfigPunto, type EstadoPunto, type Modelo, type UsoPunto } from '../api'
+import SelectorModelo from '../componentes/SelectorModelo.vue'
+import { api, aplicarModelo, avisar, avisarError, codigoLinea, copiar, esfuerzosDe, etiquetaModelo, haceCuanto, nombreEsfuerzo, opcionModelo, origenHistorial, type ConfigPunto, type EstadoPunto, type Modelo, type UsoPunto } from '../api'
 import { t } from '../i18n'
 
 const $q = useQuasar()
@@ -247,9 +247,9 @@ function filtrarGrupos(texto: string, actualizar: (f: () => void) => void) {
 }
 
 const campos = computed(() => [
-  { titulo: t('conectar.urlOpenai'), valor: base.value + '/openai/v1' },
-  { titulo: t('conectar.urlAnthropic'), valor: base.value + '/anthropic' },
-  { titulo: t('conectar.apiPropia'), valor: base.value + '/api/v1' },
+  { titulo: t('conectar.urlOpenai'), valor: base.value + '/openai/v1', texto: t('conectar.urlOpenaiTexto') },
+  { titulo: t('conectar.urlAnthropic'), valor: base.value + '/anthropic', texto: t('conectar.urlAnthropicTexto') },
+  { titulo: t('conectar.apiPropia'), valor: base.value + '/api/v1', texto: t('conectar.apiPropiaTexto') },
 ])
 const ejemplosModelo = computed(() => {
   const perfiles = ids.value.filter((id) => id.startsWith('perfil/'))
@@ -297,6 +297,9 @@ ANTHROPIC_API_KEY=${k}` },
 const ejemplo = computed(() => ejemplos.find((e) => e.id === lenguaje.value) ?? ejemplos[0])
 
 const opciones = computed(() => catalogo.value.map(opcionModelo))
+// idModelo es el modelo de una API como id del catálogo (agente, agente/modelo o perfil/nombre); null si no tiene.
+const idModelo = (p: EstadoPunto) => (p.perfil_modelo ? 'perfil/' + p.perfil_modelo : [p.agente, p.modelo].filter(Boolean).join('/') || null)
+const etiquetaDe = (id: string) => opciones.value.find((o) => o.value === id)?.label ?? etiquetaModelo(id)
 const vacio = () => ({ nombre: '', instrucciones: '', grupo: '', direccion: 'ruta', puerto: '', contratos: [...contratos], modelo: null as string | null,
   permitidos: [] as string[], alias: '', forzar: false, esfuerzo: '' })
 const formulario = reactive(vacio())
@@ -425,22 +428,21 @@ function eliminar(nombre: string) {
 
 const dialogoInstrucciones = ref(false)
 const editando = ref('')
-const textoInstrucciones = ref('')
-const esfuerzoEditando = ref('')
-const nivelesEditando = ref<string[]>([])
+const ajustes = reactive({ instrucciones: '', esfuerzo: '', modelo: null as string | null, forzar: false, permitidos: [] as string[] })
+const nivelesAjustes = computed(() => nivelesDe(ajustes.modelo))
 
 function abrirAjustes(p: EstadoPunto) {
   editando.value = p.nombre
-  textoInstrucciones.value = p.instrucciones ?? ''
-  esfuerzoEditando.value = p.esfuerzo ?? ''
-  nivelesEditando.value = nivelesDe(p.agente ? [p.agente, p.modelo].filter(Boolean).join('/') : null)
+  Object.assign(ajustes, { instrucciones: p.instrucciones ?? '', esfuerzo: p.esfuerzo ?? '', modelo: idModelo(p), forzar: !!p.forzar_modelo,
+    permitidos: [...(p.modelos_permitidos ?? [])] })
   dialogoInstrucciones.value = true
 }
 
 async function guardarAjustes() {
   guardando.value = true
   try {
-    await api.ajustesPunto(editando.value, { instrucciones: textoInstrucciones.value, esfuerzo: esfuerzoEditando.value })
+    await api.ajustesPunto(editando.value, { instrucciones: ajustes.instrucciones, esfuerzo: ajustes.esfuerzo, modelo: ajustes.modelo ?? '',
+      forzar_modelo: ajustes.forzar && !!ajustes.modelo, modelos_permitidos: ajustes.permitidos })
     dialogoInstrucciones.value = false
     avisar(t('puntos.ajustesGuardados'))
     await cargarPuntos()

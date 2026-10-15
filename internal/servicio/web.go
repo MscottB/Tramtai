@@ -579,8 +579,8 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 	api.EscribirJSON(w, http.StatusCreated, map[string]any{"token": token})
 }
 
-// puntoUI activa o desactiva (PATCH), elimina (DELETE) o muestra el token (GET <nombre>/token) de un punto de la
-// instancia de la sesión.
+// puntoUI cambia los ajustes (PATCH: activo, instrucciones, esfuerzo y modelo), elimina (DELETE) o muestra el
+// token (GET <nombre>/token) de un punto de la instancia de la sesión.
 func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instancia, resto string) {
 	nombre, accion, _ := strings.Cut(resto, "/")
 	var punto *EstadoPunto
@@ -613,9 +613,12 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"token": token})
 	case accion == "" && r.Method == http.MethodPatch:
 		var cambio struct { // solo cambia lo que viene en el cuerpo
-			Activo        *bool   `json:"activo"`
-			Instrucciones *string `json:"instrucciones"`
-			Esfuerzo      *string `json:"esfuerzo"` // "" vuelve al del agente
+			Activo        *bool     `json:"activo"`
+			Instrucciones *string   `json:"instrucciones"`
+			Esfuerzo      *string   `json:"esfuerzo"` // "" vuelve al del agente
+			Modelo        *string   `json:"modelo"`   // identificador del catálogo; "" vuelve al del espacio
+			Forzar        *bool     `json:"forzar_modelo"`
+			Permitidos    *[]string `json:"modelos_permitidos"`
 		}
 		if err := api.LeerJSON(w, r, &cambio); err != nil {
 			api.EscribirError(w, r, err)
@@ -639,6 +642,17 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 				if cambio.Esfuerzo != nil {
 					lista[i].Esfuerzo = *cambio.Esfuerzo
 				}
+				if cambio.Modelo != nil {
+					if err := s.modeloDePunto(inst, &lista[i], strings.TrimSpace(*cambio.Modelo)); err != nil {
+						return nil, err
+					}
+				}
+				if cambio.Forzar != nil {
+					lista[i].ForzarModelo = *cambio.Forzar
+				}
+				if cambio.Permitidos != nil {
+					lista[i].ModelosPermitidos = slices.DeleteFunc(*cambio.Permitidos, func(m string) bool { return strings.TrimSpace(m) == "" })
+				}
 			}
 			return lista, nil
 		}) {
@@ -653,6 +667,27 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 	default:
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ruta no encontrada: %s %s", r.Method, r.URL.Path)))
 	}
+}
+
+// modeloDePunto fija el modelo de un punto desde un identificador del catálogo (agente, agente/modelo o
+// perfil/nombre). "" lo quita para que valga el del espacio y deja de forzarlo, porque ya no hay qué forzar.
+func (s *Servicio) modeloDePunto(inst *Instancia, c *ConfigPunto, id string) error {
+	c.Agente, c.Modelo, c.PerfilModelo = "", "", ""
+	agente, modelo, _ := strings.Cut(id, "/")
+	switch {
+	case id == "":
+		c.ForzarModelo = false
+	case agente == "perfil":
+		if _, existe := inst.Config.Perfiles()[modelo]; !existe {
+			return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("perfil de modelo desconocido: %s", modelo))
+		}
+		c.PerfilModelo = modelo
+	case s.opc.Registro[agente] == nil:
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("agente desconocido: %s", agente))
+	default:
+		c.Agente, c.Modelo = agente, modelo
+	}
+	return nil
 }
 
 // csrfValido compara en tiempo constante la cabecera X-CSRF-Token con la de la sesión.

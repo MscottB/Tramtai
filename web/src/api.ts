@@ -83,7 +83,10 @@ export interface EstadoPunto {
   contratos: string[]
   agente?: string
   modelo?: string
+  perfil_modelo?: string
   esfuerzo?: string
+  modelos_permitidos?: string[]
+  forzar_modelo?: boolean
   activo: boolean
   error?: string
   origen: string
@@ -115,6 +118,8 @@ export interface Modelo {
   agente?: string
   modelo?: string
   perfil?: string
+  // origen: configurado, predeterminado_del_cli o visto (una versión concreta que informó el agente).
+  origen?: string
   resuelto?: string
   version?: string
   predeterminado?: boolean
@@ -241,7 +246,8 @@ export const api = {
   puntosConUso: () => pedir<{ puntos_acceso: EstadoPunto[]; uso?: Record<string, UsoPunto> }>('GET', '/api/v1/puntos'),
   crearPunto: (p: ConfigPunto) => pedir<{ punto_acceso?: EstadoPunto; token: string }>('POST', '/api/v1/puntos', p),
   activarPunto: (nombre: string, activo: boolean) => pedir<unknown>('PATCH', `/api/v1/puntos/${nombre}`, { activo }),
-  ajustesPunto: (nombre: string, ajustes: { instrucciones?: string; esfuerzo?: string }) => pedir<unknown>('PATCH', `/api/v1/puntos/${nombre}`, ajustes),
+  // ajustesPunto cambia solo lo que se envía; modelo es un id del catálogo y '' vuelve al del espacio.
+  ajustesPunto: (nombre: string, ajustes: { instrucciones?: string; esfuerzo?: string; modelo?: string; forzar_modelo?: boolean; modelos_permitidos?: string[] }) => pedir<unknown>('PATCH', `/api/v1/puntos/${nombre}`, ajustes),
   eliminarPunto: (nombre: string) => pedir<void>('DELETE', `/api/v1/puntos/${nombre}`),
   tokenPunto: (nombre: string) => pedir<{ token: string }>('GET', `/api/v1/puntos/${nombre}/token`).then((r) => r.token),
 }
@@ -337,7 +343,7 @@ export function nombreAgente(agente?: string): string {
 }
 
 // etiquetaModelo da el nombre legible de agente o agente/modelo: "Claude · sonnet".
-function etiquetaModelo(id: string): string {
+export function etiquetaModelo(id: string): string {
   const [agente, ...resto] = id.split('/')
   return resto.length ? `${nombreAgente(agente)} · ${resto.join('/')}` : nombreAgente(agente)
 }
@@ -359,14 +365,19 @@ export function opcionModelo(m: Modelo): OpcionModelo {
     caption = [m.resuelto ? etiquetaModelo(m.resuelto) : t('modelo.perfilDetalle'), m.version].filter(Boolean).join(' · ')
   } else if (!m.modelo) {
     caption = [m.version, t('modelo.predeterminadoCli')].filter(Boolean).join(' · ')
+  } else if (m.origen === 'visto') {
+    caption = t('modelo.versionConcreta')
   }
   if (m.esfuerzos?.length) caption += ' · ' + t('esfuerzo.elegible')
   return { label, caption, value: m.id, predeterminado: !!m.predeterminado, esfuerzos: m.esfuerzos ?? [] }
 }
 
-// esfuerzosDe son los niveles de esfuerzo del modelo elegido ('' es el predeterminado del espacio).
+// esfuerzosDe son los niveles de esfuerzo del modelo elegido ('' es el predeterminado del espacio); uno escrito a
+// mano que no está en el catálogo tiene los de su agente.
 export function esfuerzosDe(catalogo: Modelo[], seleccion: string | null): string[] {
-  const m = seleccion ? catalogo.find((x) => x.id === seleccion) : catalogo.find((x) => x.predeterminado)
+  const m = seleccion
+    ? (catalogo.find((x) => x.id === seleccion) ?? catalogo.find((x) => x.id === seleccion.split('/')[0]))
+    : catalogo.find((x) => x.predeterminado)
   return m?.esfuerzos ?? []
 }
 

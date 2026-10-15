@@ -107,6 +107,21 @@ func TestWebUI(t *testing.T) {
 	if r, cuerpo := n.pedir("PATCH", "/api/v1/puntos/desde_ui", `{"activo":false}`, "X-CSRF-Token", n.csrf); r.StatusCode != 200 || !strings.Contains(cuerpo, "desactivado") {
 		t.Fatalf("desactivar: %d %s", r.StatusCode, cuerpo)
 	}
+	// El modelo de una API ya creada se cambia con un identificador del catálogo; "" vuelve al del espacio.
+	for _, caso := range [][2]string{
+		{`{"modelo":"simulado/haiku","forzar_modelo":true,"modelos_permitidos":["simulado"]}`, `"agente":"simulado","modelo":"haiku","modelos_permitidos":["simulado"],"forzar_modelo":true`},
+		{`{"modelo":"perfil/rapido"}`, `"contratos":["openai"],"perfil_modelo":"rapido","modelos_permitidos":["simulado"],"forzar_modelo":true`},
+		{`{"modelo":"","modelos_permitidos":[]}`, `"contratos":["openai"],"activo"`},
+	} {
+		cuerpoPatch, esperado := caso[0], caso[1]
+		r, cuerpo := n.pedir("PATCH", "/api/v1/puntos/desde_ui", cuerpoPatch, "X-CSRF-Token", n.csrf)
+		if r.StatusCode != 200 || !strings.Contains(cuerpo, esperado) {
+			t.Fatalf("PATCH %s: %d %s; se esperaba %s", cuerpoPatch, r.StatusCode, cuerpo, esperado)
+		}
+	}
+	if r, cuerpo := n.pedir("PATCH", "/api/v1/puntos/desde_ui", `{"modelo":"inexistente/x"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 || !strings.Contains(cuerpo, "solicitud_invalida") {
+		t.Fatalf("un agente desconocido se rechaza: %d %s", r.StatusCode, cuerpo)
+	}
 	if r, _ := n.pedir("DELETE", "/api/v1/puntos/desde_ui", "", "X-CSRF-Token", n.csrf); r.StatusCode != 204 {
 		t.Fatalf("eliminar: %d", r.StatusCode)
 	}
