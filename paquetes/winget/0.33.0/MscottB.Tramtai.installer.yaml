@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.10.0.schema.json
+# Generado por scripts/paquetes.ps1 al publicar v0.33.0+15102026.
+PackageIdentifier: MscottB.Tramtai
+PackageVersion: 0.33.0
+InstallerType: nullsoft
+Scope: user
+InstallModes:
+- interactive
+- silent
+- silentWithProgress
+UpgradeBehavior: install
+ReleaseDate: 2026-10-15
+AppsAndFeaturesEntries:
+- DisplayName: Tramtai
+  Publisher: Michael Scott B.
+  DisplayVersion: v0.33.0+15102026
+  ProductCode: Tramtai
+Installers:
+- Architecture: x64
+  InstallerUrl: https://github.com/MscottB/Tramtai/releases/download/v0.33.0%2B15102026/Tramtai-v0.33.0%2B15102026-instalador-windows-x64.exe
+  InstallerSha256: E407DF8E40A134FE0C991AA5C1231BACAA432D1F464346719144EF11B674D1DA
+ManifestType: installer
+ManifestVersion: 1.10.0

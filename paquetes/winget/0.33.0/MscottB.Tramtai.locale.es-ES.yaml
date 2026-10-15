@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.10.0.schema.json
+# Generado por scripts/paquetes.ps1 al publicar v0.33.0+15102026.
+PackageIdentifier: MscottB.Tramtai
+PackageVersion: 0.33.0
+PackageLocale: es-ES
+Publisher: Michael Scott B.
+PublisherUrl: https://github.com/MscottB
+PublisherSupportUrl: https://github.com/MscottB/Tramtai/issues
+Author: Michael Scott B.
+PackageName: Tramtai
+PackageUrl: https://mscottb.github.io/Tramtai/
+License: PolyForm Noncommercial 1.0.0
+LicenseUrl: https://github.com/MscottB/Tramtai/blob/main/LICENSE.md
+Tags:
+- ai
+- anthropic
+- api
+- claude
+- codex
+- gemini
+- llm
+- openai
+ReleaseNotesUrl: https://github.com/MscottB/Tramtai/releases/tag/v0.33.0%2B15102026
+Moniker: tramtai
+ShortDescription: Tus agentes de IA (Claude Code, Codex, Gemini) como una API local compatible con OpenAI y Anthropic.
+Description: Tramtai convierte Claude Code, Codex, Gemini y Antigravity en una API compatible con OpenAI y Anthropic que funciona en tu propio equipo, con app de escritorio, Web UI, terminal interactiva y línea de órdenes.
+ManifestType: defaultLocale
+ManifestVersion: 1.10.0
