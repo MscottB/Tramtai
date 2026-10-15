@@ -330,18 +330,18 @@ const es = {
   'ayuda.paso4Texto':
     'En Mis APIs crea una API por aplicación, con su clave, sus modelos e instrucciones fijas (por ejemplo, que responda siempre en español). Agrúpalas para activarlas o detenerlas juntas.',
   'ayuda.paso5': 'Haz que arranque solo',
-  'ayuda.paso5Texto': 'En Ajustes activa el arranque con Windows y no tendrás que abrir ninguna terminal.',
+  'ayuda.paso5Texto': 'En Ajustes activa el arranque con el sistema (Windows, macOS o Linux) y no tendrás que abrir ninguna terminal.',
   'ayuda.ir': 'Ir a {pagina}',
   'ayuda.preguntas': 'Preguntas frecuentes',
   'ayuda.p1': '¿Necesito una clave para entrar?',
   'ayuda.r1':
-    'No en este equipo: Tramtai comprueba que el navegador es de tu mismo usuario. Tus aplicaciones sí usan la clave que aparece en Mis APIs. Desde otro equipo, ejecuta «tramtai abrir».',
+    'No en este equipo: en Windows y Linux, Tramtai comprueba que el navegador es de tu mismo usuario. Tus aplicaciones sí usan la clave que aparece en Mis APIs. En macOS, por ahora, o desde otro equipo, ejecuta «tramtai abrir».',
   'ayuda.p2': '¿Las consultas quedan guardadas como chats en Claude Code o Codex?',
   'ayuda.r2':
     'No. Tramtai ejecuta Claude Code sin guardar la sesión, Codex en modo efímero y Antigravity con una carpeta privada que se borra al terminar. Tus historiales de chat no se llenan con las consultas de las aplicaciones: el registro queda solo en el Historial de Tramtai.',
   'ayuda.p3': '¿Dónde se guardan mis datos y cuánto tiempo?',
   'ayuda.r3':
-    'Solo en este equipo, en %APPDATA%\\tramtai. Las respuestas se guardan 24 horas y el resto del historial, 7 días; después se borran solos. También puedes borrarlos cuando quieras en Ajustes.',
+    'Solo en este equipo: en %APPDATA%\\tramtai en Windows, ~/Library/Application Support/tramtai en macOS y ~/.config/tramtai en Linux. Las respuestas se guardan 24 horas y el resto del historial, 7 días; después se borran solos. También puedes borrarlos cuando quieras en Ajustes.',
   'ayuda.p4': '¿Cómo hago que mis apps respondan en español?',
   'ayuda.r4':
     'En Mis APIs crea una API para esa aplicación y escribe en sus instrucciones, por ejemplo, «Responde siempre en español». Se añaden al inicio de cada petición, sin cambiar nada en la aplicación.',

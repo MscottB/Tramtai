@@ -36,7 +36,7 @@ La Web UI está en español y en inglés (el botón de idioma de la cabecera) y 
 - **Probar:** modelo del catálogo, archivos, mensaje y JSON Schema opcional; muestra la respuesta en vivo y permite cancelar.
 - **Historial:** detalle, seguir en vivo, cancelar, reintentar, eliminar y **vaciar el historial** (los trabajos terminados y sus archivos).
 - **Mis APIs:** URL, clave y ejemplos; puntos de acceso con grupos que se activan o desactivan juntos.
-- **Agentes**, **Ajustes** (arranque con Windows, **borrar datos** y valores efectivos) y **Ayuda** (cómo empezar y preguntas frecuentes).
+- **Agentes**, **Ajustes** (arranque con el sistema, **borrar datos** y valores efectivos) y **Ayuda** (cómo empezar y preguntas frecuentes).
 
 También se puede abrir `http://127.0.0.1:17373` directamente: en este equipo entra sin clave.
 
@@ -46,14 +46,20 @@ La aplicación de escritorio inicia el servicio si no está en marcha y muestra 
 - **Mis APIs**: las APIs de todos los espacios en marcha (global y proyectos), con un círculo verde si está activa y rojo si está desactivada o con error. Un clic la desactiva o la vuelve a activar; se guarda y se aplica sin reiniciar. Al final, «Gestionar en Mis APIs» abre esa sección.
 - **Copiar la dirección para tus apps**.
 - **Iniciar el servicio** (si está detenido), o **Reiniciar** y **Detener el servicio…** (si está en marcha). Tras detenerlo, la app sigue en la bandeja para volver a iniciarlo.
-- **Iniciar con Windows**, el mismo ajuste que en Ajustes.
+- **Iniciar con el sistema** (Windows, macOS o Linux), el mismo ajuste que en Ajustes.
 - **Salir y detener el servicio…**: cierra la app y detiene el servicio, así que tus aplicaciones dejan de funcionar hasta que vuelvas a abrirla. Pide confirmación con un aviso que se puede marcar como «No volver a mostrar». Para recuperar el aviso, borra `%APPDATA%\tramtai\escritorio.json`.
 
 Los avisos de Detener y Salir se muestran dentro de la ventana, con el estilo de la app.
 
-### Arranque con Windows
+### Arranque con el sistema
 
-Activado en **Ajustes** o con `tramtai servicio autoarranque activar`, Tramtai se registra en `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (solo para tu usuario). Al iniciar sesión arranca `tramtai-escritorio.exe --oculto`: inicia el servicio y queda en la bandeja sin abrir ninguna ventana ni terminal. Se quita con `tramtai servicio autoarranque desactivar`. Necesita `tramtai-escritorio.exe` junto a `tramtai.exe`; en Linux y macOS aún no está disponible.
+Activado en **Ajustes** o con `tramtai servicio autoarranque activar`, Tramtai se registra solo para tu usuario y, al iniciar sesión, arranca la app de escritorio con `--oculto`: inicia el servicio y queda en la bandeja sin abrir ninguna ventana ni terminal. Se quita con `tramtai servicio autoarranque desactivar`. Necesita la app de escritorio junto a `tramtai`.
+
+| Sistema | Dónde se registra |
+|---|---|
+| Windows | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` |
+| macOS | `~/Library/LaunchAgents/com.mscottb.tramtai.plist` |
+| Linux | `~/.config/autostart/tramtai.desktop` (escritorios compatibles con XDG, como GNOME o KDE) |
 
 ### Actualizaciones
 
@@ -79,7 +85,7 @@ tramtai servicio iniciar -d        # segundo plano (sin -d: primer plano, Ctrl+C
 tramtai servicio estado            # instancias, puntos de acceso y errores
 tramtai servicio recargar          # aplica cambios de puntos de acceso sin reiniciar
 tramtai servicio detener           # pide confirmación (-s para no pedirla); espera a lo que está en curso
-tramtai servicio autoarranque [activar|desactivar]   # arrancar con Windows, oculto en la bandeja
+tramtai servicio autoarranque [activar|desactivar]   # arrancar al iniciar sesión, oculto en la bandeja
 tramtai servicio registro [-f] [-n 30]               # lo que procesa el servicio en segundo plano; -f lo sigue en vivo
 tramtai servicio puerto [número] [--automatico=false] # muestra o cambia el puerto (comprueba que esté libre)
 tramtai servicio iniciar --abrir   # modo desarrollo: primer plano con el registro a la vista y la interfaz abierta
@@ -106,7 +112,7 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <instancia> 
 
 ## Claves de API
 
-`tramtai claves guardar|listar|borrar NOMBRE` las guarda en el Administrador de credenciales de Windows, como credenciales genéricas `tramtai/<NOMBRE>`. Los adaptadores las usan si no hay una variable de entorno con ese nombre, y nunca se muestran. Ver [primeros pasos](inicio.md#2-dejar-listos-los-agentes).
+En Windows, `tramtai claves guardar|listar|borrar NOMBRE` las guarda en el Administrador de credenciales, como credenciales genéricas `tramtai/<NOMBRE>`. En macOS y Linux, por ahora, se leen de variables de entorno con el mismo nombre (el llavero de macOS y el Secret Service de Linux están pendientes). Los adaptadores las usan si no hay una variable de entorno con ese nombre, y nunca se muestran. Ver [primeros pasos](inicio.md#2-dejar-listos-los-agentes).
 
 ## Instancias
 

@@ -26,19 +26,19 @@ Descarga `Tramtai-…-instalador-windows-x64.exe` desde [Releases](https://githu
 
 **Sin app de escritorio (un servidor Linux, o solo la CLI en macOS):** `curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instalar.sh | sh` descarga el archivo de tu sistema, comprueba su suma SHA-256 y deja `tramtai` en `~/.local/bin` (otra carpeta con `TRAMTAI_DESTINO`). Para actualizar, vuelve a ejecutarlo. Después, `tramtai abrir` inicia el servicio y abre la Web UI en el navegador.
 
-Después abre **Tramtai** desde el menú Inicio, o `tramtai abrir` en una terminal nueva. Si prefieres compilarlo tú, la [guía de desarrollo](equipo/desarrollo.md) explica cómo (`./scripts/compilar.ps1`, con Go 1.27).
+Después abre **Tramtai** desde el menú Inicio (Windows), la carpeta Aplicaciones (macOS) o el menú de aplicaciones (Linux), o con `tramtai abrir` en una terminal nueva. Si prefieres compilarlo tú, la [guía de desarrollo](equipo/desarrollo.md) explica cómo (`./scripts/compilar.ps1`, con Go 1.27).
 
-- **Sin clave:** en tu propio equipo entras directamente; Tramtai comprueba que el navegador es de tu mismo usuario de Windows. Desde otro equipo o en macOS, la página explica cómo entrar.
-- **Que arranque solo:** en **Ajustes → Arranque con Windows** (o `tramtai servicio autoarranque activar`), Tramtai se inicia oculto en la bandeja al entrar en Windows y la Web UI está siempre disponible, sin abrir ninguna terminal.
+- **Sin clave:** en tu propio equipo entras directamente; en Windows y Linux, Tramtai comprueba que el navegador es de tu mismo usuario del sistema. En macOS, por ahora, o desde otro equipo, la página explica cómo entrar (`tramtai abrir` lo hace por ti).
+- **Que arranque solo:** en **Ajustes → Arranque con Windows** (o con macOS, o con Linux, según tu sistema) o con `tramtai servicio autoarranque activar`, Tramtai se inicia oculto en la bandeja al iniciar sesión y la Web UI está siempre disponible, sin abrir ninguna terminal.
 - **Ayuda, idioma y apariencia:** la página **Ayuda** resume estos pasos y responde las dudas comunes. En la cabecera, un botón cambia entre español e inglés y otro elige la apariencia: clara, oscura o como el sistema. La guía de **Inicio** es opcional: «Ocultar guía» la quita y **Ayuda** la vuelve a mostrar.
-- **Aplicación de escritorio:** Tramtai, en el menú Inicio, abre la Web UI en su propia ventana. Cerrar la ventana la deja en la bandeja con el servicio en marcha; el menú del clic derecho muestra el estado y tus APIs, y «Salir y detener el servicio…» la cierra del todo (con un aviso).
+- **Aplicación de escritorio:** Tramtai abre la Web UI en su propia ventana, en Windows, macOS y Linux. Cerrar la ventana la deja en la bandeja con el servicio en marcha; el menú del clic derecho muestra el estado y tus APIs, y «Salir y detener el servicio…» la cierra del todo (con un aviso).
 - **En un proyecto:** en la Web UI, el selector de espacio de la cabecera → **Abrir un proyecto…**: escribes la carpeta (o, en la app de escritorio, la eliges con **Examinar…**) y Tramtai la prepara si hace falta (crea `.tramtai/`) y la abre, con su historial, sus APIs y sus ajustes separados de la global. Desde la terminal, dentro de su carpeta, `tramtai iniciar` y `tramtai abrir` hacen lo mismo.
 
 ## 2. Dejar listos los agentes
 
 La página **Agentes** dice qué falta en cada uno. Hay dos formas de autenticarlos:
 
-**Clave de API** (la predeterminada). Guárdala en el Administrador de credenciales de Windows, sin dejarla en variables de entorno:
+**Clave de API** (la predeterminada). En Windows, guárdala en el Administrador de credenciales, sin dejarla en variables de entorno. En macOS y Linux, por ahora, defínela como variable de entorno con el mismo nombre (por ejemplo en `~/.profile`).
 
 ```powershell
 tramtai claves guardar ANTHROPIC_API_KEY   # Claude; la pide sin mostrarla

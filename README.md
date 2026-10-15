@@ -11,10 +11,10 @@ Cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
 
 [![CI](https://github.com/MscottB/Tramtai/actions/workflows/ci.yml/badge.svg)](https://github.com/MscottB/Tramtai/actions/workflows/ci.yml)
 [![Versión](https://img.shields.io/github/v/release/MscottB/Tramtai?label=versi%C3%B3n&color=0b6e64)](https://github.com/MscottB/Tramtai/releases/latest)
-[![Windows 10 y 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4)](https://github.com/MscottB/Tramtai/releases/latest)
+[![Windows, macOS y Linux](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-0078d4)](https://github.com/MscottB/Tramtai/releases/latest)
 [![Licencia](https://img.shields.io/badge/licencia-PolyForm%20Noncommercial-55666a)](LICENSE.md)
 
-[**Descargar para Windows**](https://github.com/MscottB/Tramtai/releases/latest) · [Página del producto](https://mscottb.github.io/Tramtai/) · [Primeros pasos](docs/inicio.md) · [English](#english)
+[**Descargar**](https://mscottb.github.io/Tramtai/#descargar) (Windows, macOS y Linux) · [Página del producto](https://mscottb.github.io/Tramtai/) · [Primeros pasos](docs/inicio.md) · [English](#english)
 
 <br>
 
@@ -30,13 +30,15 @@ Cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
 - **Una API por aplicación,** con su propia clave, sus modelos permitidos o fijos e instrucciones propias (por ejemplo, «responde siempre en español»). Se activan o detienen sin reiniciar.
 - **Tu suscripción o tu clave de API.** Claude y Codex se conectan con un clic a la sesión que ya tienes (uso personal) o con una clave.
 - **Cuatro formas de usarlo** sobre los mismos trabajos: app de escritorio con icono en la bandeja, Web UI con ayuda integrada, terminal interactiva y línea de órdenes. En español y en inglés.
-- **Local y privado.** Escucha solo en `127.0.0.1`, las claves van al Administrador de credenciales de Windows y los resultados caducan a las 24 horas. Sin telemetría.
+- **Local y privado.** Escucha solo en `127.0.0.1`, en Windows las claves van al Administrador de credenciales (en macOS y Linux, por ahora, en variables de entorno) y los resultados caducan a las 24 horas. Sin telemetría.
 
 ## Empezar
 
-1. **Descarga el instalador** `Tramtai-…-instalador-windows-x64.exe` desde [Releases](https://github.com/MscottB/Tramtai/releases/latest) y ejecútalo. Es solo para tu usuario y no pide permisos de administrador. Las sumas SHA-256 de cada archivo están en `SHA256SUMS.txt`. Si prefieres no instalar nada, `Tramtai-…-portable-windows-x64.zip` trae la misma app para descomprimir y usar (esa copia no se actualiza sola).
-2. **Abre Tramtai** desde el menú Inicio. Queda en la bandeja del sistema con el servicio en marcha.
+1. **Instálalo** en Windows, macOS o Linux (abajo, cómo en cada uno). Las sumas SHA-256 de cada archivo están en `SHA256SUMS.txt` del release.
+2. **Abre Tramtai**: queda en la bandeja del sistema con el servicio en marcha.
 3. En la app, **Agentes** te dice qué le falta a cada agente (conectarlo con tu suscripción o con una clave) y **Mis APIs** te da la URL, la clave y ejemplos listos para copiar.
+
+**En Windows 10 y 11** descarga `Tramtai-…-instalador-windows-x64.exe` desde [Releases](https://github.com/MscottB/Tramtai/releases/latest) y ejecútalo. Es solo para tu usuario, no pide permisos de administrador y se actualiza con un clic. Si prefieres no instalar nada, `Tramtai-…-portable-windows-x64.zip` trae la misma app para descomprimir y usar (esa copia no se actualiza sola).
 
 **En Linux** está la app completa, con su icono en la bandeja: descarga el `.deb` (Debian, Ubuntu, Mint…) o el `.rpm` (Fedora, openSUSE…) de [Releases](https://github.com/MscottB/Tramtai/releases/latest) e instálalo con `sudo apt install ./Tramtai-…-linux-amd64.deb` o `sudo dnf install ./Tramtai-…-linux-amd64.rpm`. Necesita GTK 4 y WebKitGTK 6.0, que se instalan solos (Ubuntu 24.04 o posterior, Debian 12 o posterior, Fedora).
 
@@ -105,7 +107,7 @@ La CLI sale en el idioma de tu sistema; `TRAMTAI_IDIOMA=en` o `es` lo fija.
 | Guía | Contenido |
 |---|---|
 | [Primeros pasos](docs/inicio.md) | Instalar, dejar listos los agentes, archivos, modelos, proyectos y configuración |
-| [Operación](docs/operacion.md) | Servicio, espacios global y por proyecto, APIs por aplicación, arranque con Windows y retención |
+| [Operación](docs/operacion.md) | Servicio, espacios global y por proyecto, APIs por aplicación, arranque con el sistema y retención |
 | [API](docs/api.md) | Rutas nativas, compatibles con OpenAI y Anthropic, perfiles, esfuerzo y errores |
 | [Arquitectura](docs/arquitectura.md) | Cómo funciona por dentro: agentes, aislamiento, seguridad y recuperación |
 | [Desarrollo](docs/equipo/desarrollo.md) | Compilar desde el código, pruebas, versiones y publicación |
@@ -123,7 +125,7 @@ La CLI sale en el idioma de tu sistema; `TRAMTAI_IDIOMA=en` o `es` lo fija.
 
 ## Compilar desde el código
 
-Necesitas Go 1.27 y, para la Web UI, Node.js. En Windows:
+Necesitas Go 1.27 y, para la Web UI, Node.js. En Windows (en Linux y macOS, `scripts/linux/empaquetar.sh` y `scripts/macos/empaquetar.sh`):
 
 ```powershell
 ./scripts/compilar.ps1              # bin/tramtai.exe y bin/tramtai-escritorio.exe

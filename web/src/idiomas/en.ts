@@ -331,18 +331,18 @@ const en: Textos = {
   'ayuda.paso4Texto':
     'In My APIs create one API per app, with its own key, models and fixed instructions (for example, always answer in Spanish). Group them to start or stop them together.',
   'ayuda.paso5': 'Make it start by itself',
-  'ayuda.paso5Texto': 'In Settings, turn on start with Windows and you will never need to open a terminal.',
+  'ayuda.paso5Texto': 'In Settings, turn on start with your system (Windows, macOS or Linux) and you will never need to open a terminal.',
   'ayuda.ir': 'Go to {pagina}',
   'ayuda.preguntas': 'Frequently asked questions',
   'ayuda.p1': 'Do I need a key to sign in?',
   'ayuda.r1':
-    'Not on this computer: Tramtai checks that the browser belongs to your same user. Your apps do use the key shown in My APIs. From another computer, run “tramtai abrir”.',
+    'Not on this computer: on Windows and Linux, Tramtai checks that the browser belongs to your same user. Your apps do use the key shown in My APIs. On macOS, for now, or from another computer, run “tramtai abrir”.',
   'ayuda.p2': 'Are requests saved as chats in Claude Code or Codex?',
   'ayuda.r2':
     'No. Tramtai runs Claude Code without saving the session, Codex in ephemeral mode and Antigravity with a private folder that is deleted afterwards. Your chat histories don’t fill up with your apps’ requests: the record stays only in Tramtai’s History.',
   'ayuda.p3': 'Where is my data stored and for how long?',
   'ayuda.r3':
-    'Only on this computer, in %APPDATA%\\tramtai. Answers are kept for 24 hours and the rest of the history for 7 days; then they are deleted automatically. You can also delete them any time in Settings.',
+    'Only on this computer: in %APPDATA%\\tramtai on Windows, ~/Library/Application Support/tramtai on macOS and ~/.config/tramtai on Linux. Answers are kept for 24 hours and the rest of the history for 7 days; then they are deleted automatically. You can also delete them any time in Settings.',
   'ayuda.p4': 'How do I make my apps answer in Spanish?',
   'ayuda.r4':
     'In My APIs create an API for that app and write in its instructions, for example, “Always answer in Spanish”. They are added at the start of every request, without changing anything in the app.',
