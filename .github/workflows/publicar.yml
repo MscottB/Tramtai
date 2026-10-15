@@ -68,8 +68,26 @@ jobs:
           path: dist/
           retention-days: 1
 
+  macos-app:
+    name: App de escritorio (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Compilar y empaquetar (.dmg universal)
+        run: sh scripts/macos/empaquetar.sh "$GITHUB_REF_NAME"
+      - name: Abrir la app y comprobar el servicio
+        run: sh scripts/macos/probar-app.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: dist/
+          retention-days: 1
+
   windows:
-    needs: [unix, linux-app]
+    needs: [unix, linux-app, macos-app]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4

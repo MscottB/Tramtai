@@ -58,6 +58,20 @@ jobs:
           sh scripts/linux/empaquetar.sh v0.0.0+ci amd64
           sh scripts/linux/probar-paquete.sh
 
+  escritorio-macos:
+    name: App de escritorio (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Compilar, empaquetar y abrir la app
+        run: |
+          (cd escritorio && go vet ./... && go test ./...)
+          sh scripts/macos/empaquetar.sh v0.0.0+ci
+          sh scripts/macos/probar-app.sh
+
   web:
     name: Web UI
     runs-on: ubuntu-latest
