@@ -114,10 +114,10 @@ const esfuerzos = ref<Record<string, string[]>>({})
 const cargando = ref(false)
 const cambiando = ref('')
 
-// tipo clasifica el problema que informa el servicio (en español) para mostrar la ayuda adecuada.
+// tipo clasifica el problema por su código (el texto llega en el idioma del servicio) para mostrar la ayuda adecuada.
 function tipo(a: Adaptador) {
-  if (/no se encontró|envoltorio/.test(a.problema ?? '')) return 'agente.noInstalado' as const
-  if (/falta/i.test(a.problema ?? '')) return 'agente.faltaClave' as const
+  if (a.problema_codigo === 'no_instalado') return 'agente.noInstalado' as const
+  if (a.problema_codigo === 'falta_clave') return 'agente.faltaClave' as const
   return 'agente.revisar' as const
 }
 const suscripcion = (a: Adaptador) => a.autenticacion === 'suscripcion'

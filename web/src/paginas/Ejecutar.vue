@@ -72,7 +72,7 @@
               <div class="q-mt-lg text-caption">{{ t('ejecutar.ejemplos') }}</div>
               <div class="column q-gutter-sm q-mt-xs" style="max-width: 460px; margin-left: auto; margin-right: auto">
                 <div v-for="e in ejemplos" :key="e" class="paso text-left row items-center no-wrap" role="button" tabindex="0"
-                  @click="mensaje = e" @keyup.enter="mensaje = e">
+                  @click="mensaje = e" @keyup.enter="mensaje = e" @keydown.space.prevent="mensaje = e">
                   <q-icon name="o_lightbulb" color="primary" size="18px" class="q-mr-sm" /><span class="text-body2" style="color: var(--texto)">{{ e }}</span>
                 </div>
               </div>
@@ -82,7 +82,7 @@
                 <template #avatar><q-icon name="o_error" /></template>
                 <b>{{ tituloError(final.codigo_error) }}</b><span v-if="final.mensaje_error">: {{ final.mensaje_error }}</span>
               </q-banner>
-              <pre class="salida" :class="{ json: esJSON(salida) }">{{ salida }}</pre>
+              <pre class="salida" :class="{ json: esJSON(salida) }" aria-live="polite">{{ salida }}</pre>
               <div v-if="activo && !salida" class="row items-center texto-suave q-gutter-x-sm">
                 <q-spinner-dots color="primary" size="24px" /><span>{{ estadoInfo(estado).etiqueta }}…</span>
               </div>
@@ -153,9 +153,13 @@ let fuente: EventSource | undefined
 onMounted(async () => {
   catalogo.value = await api.catalogo().catch((e) => (avisarError(e), []))
   if (trabajoSeguido.value) {
-    const seguido = await api.trabajo(trabajoSeguido.value)
-    trabajoSeguido.value = ''
-    seguir(seguido)
+    try {
+      seguir(await api.trabajo(trabajoSeguido.value))
+    } catch (e) {
+      avisarError(e)
+    } finally {
+      trabajoSeguido.value = ''
+    }
   }
 })
 onUnmounted(() => fuente?.close()) // el trabajo sigue en el servicio aunque se cierre la página
@@ -198,22 +202,39 @@ function seguir(nuevo: Trabajo) {
   estado.value = nuevo.estado
   salida.value = ''
   activo.value = !terminales.includes(nuevo.estado)
-  fuente = new EventSource(`/api/v1/trabajos/${encodeURIComponent(nuevo.id)}/eventos`)
-  fuente.addEventListener('texto', (e) => (salida.value += (e as MessageEvent).data))
-  fuente.addEventListener('estado', (e) => (estado.value = (e as MessageEvent).data))
-  fuente.addEventListener('fin', () => {
-    fuente?.close()
+  const actual = (fuente = new EventSource(`/api/v1/trabajos/${encodeURIComponent(nuevo.id)}/eventos`))
+  // ultimo: el número del último fragmento recibido; tras reconectar se descarta lo que ya estaba.
+  let ultimo = 0
+  actual.addEventListener('texto', (e) => {
+    const numero = Number((e as MessageEvent).lastEventId)
+    if (numero && numero <= ultimo) return
+    ultimo = numero || ultimo
+    salida.value += (e as MessageEvent).data
+  })
+  actual.addEventListener('estado', (e) => (estado.value = (e as MessageEvent).data))
+  actual.addEventListener('fin', () => {
+    actual.close()
     terminar(nuevo.id)
+  })
+  // Un error con el flujo cerrado (sesión caducada, trabajo inexistente) no se reintenta: se consulta el trabajo
+  // para mostrar su estado en lugar de dejar la espera abierta. Con CONNECTING, el navegador ya está reconectando.
+  actual.addEventListener('error', () => {
+    if (actual.readyState === EventSource.CLOSED && fuente === actual) terminar(nuevo.id)
   })
 }
 
 async function terminar(id: string) {
-  const terminado = await api.trabajo(id)
-  activo.value = false
-  estado.value = terminado.estado
-  // Con salida estructurada el texto en vivo puede diferir del resultado validado: se muestra el resultado.
-  if (terminado.estado === 'completado' && terminado.salida !== undefined && terminado.salida !== salida.value) salida.value = terminado.salida
-  final.value = terminado
+  try {
+    const terminado = await api.trabajo(id)
+    estado.value = terminado.estado
+    // Con salida estructurada el texto en vivo puede diferir del resultado validado: se muestra el resultado.
+    if (terminado.estado === 'completado' && terminado.salida !== undefined && terminado.salida !== salida.value) salida.value = terminado.salida
+    final.value = terminado
+  } catch (e) {
+    avisarError(e)
+  } finally {
+    activo.value = false
+  }
 }
 
 async function cancelar() {

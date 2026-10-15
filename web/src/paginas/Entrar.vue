@@ -23,7 +23,8 @@
         <q-form @submit="entrar">
           <q-input v-model="token" :type="ver ? 'text' : 'password'" outlined dense placeholder="tt_…" autocomplete="off" :aria-label="t('entrar.clave')">
             <template #append>
-              <q-icon :name="ver ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="ver = !ver" />
+              <q-btn flat round dense :icon="ver ? 'visibility_off' : 'visibility'" :aria-label="ver ? t('conectar.ocultarClave') : t('conectar.mostrarClave')"
+                @click="ver = !ver" />
             </template>
           </q-input>
           <div class="text-caption texto-suave q-mt-xs">{{ t('entrar.claveAyuda') }}</div>

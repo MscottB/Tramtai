@@ -31,7 +31,7 @@ func (g Gemini) Detectar(context.Context) Estado {
 	e := Estado{Agente: "gemini", Autenticacion: AutenticacionClaveAPI, Ruta: g.base(),
 		Terminos: idioma.T("términos de la Gemini API de Google (clave de API propia)")}
 	if claveEntorno("GEMINI_API_KEY", "GOOGLE_API_KEY") == "" {
-		e.Problema = idioma.T("falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)")
+		e.Problema, e.ProblemaCodigo = idioma.T("falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)"), ProblemaFaltaClave
 	}
 	return e
 }
