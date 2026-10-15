@@ -500,6 +500,21 @@ const es = {
   'error.contexto_no_permitido': 'Ese proyecto no está entre los confiables',
   'error.ruta_no_permitida': 'El archivo está fuera de las carpetas permitidas',
   'error.sesion_caducada': 'La sesión caducó',
+  // Aviso de versión nueva
+  'actualizacion.boton': 'Actualizar',
+  'actualizacion.titulo': 'Tramtai {version} está disponible',
+  'actualizacion.detalle': 'Ahora tienes la {actual}.',
+  'actualizacion.comoInstala': 'Se descarga el instalador, se comprueba su suma SHA-256 y se instala sin preguntar nada. La app se cerrará y volverá a abrirse en unos segundos, con tu configuración, tus APIs y tu historial; las peticiones en curso terminan antes.',
+  'actualizacion.manual': 'Esta copia de Tramtai no se instaló con el instalador de Windows, así que no se actualiza sola: descarga la versión nueva desde su página.',
+  'actualizacion.novedades': 'Ver novedades',
+  'actualizacion.instalar': 'Actualizar ahora',
+  'actualizacion.descargar': 'Ir a la descarga',
+  'actualizacion.enCurso': 'Actualizando: Tramtai se cerrará y volverá a abrirse en unos segundos.',
+  'actualizacion.ajustesTitulo': 'Buscar actualizaciones',
+  'actualizacion.ajustesTexto': 'Una vez al día, Tramtai consulta en GitHub cuál es la última versión publicada. Solo pide esa ficha pública: no envía ningún dato tuyo.',
+  'actualizacion.alDia': 'Tienes la última versión ({actual}).',
+  'actualizacion.hayNueva': 'Hay una versión nueva, la {version}: actualiza con el botón Actualizar de la cabecera.',
+  'actualizacion.desactivada': 'Desactivado. Tienes la {actual}; también puedes comprobarlo con «tramtai actualizar».',
 }
 
 export type Clave = keyof typeof es

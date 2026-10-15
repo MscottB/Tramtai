@@ -179,6 +179,18 @@ async function pedir<T>(metodo: string, ruta: string, cuerpo?: unknown, reintent
 // sesion es la sesión actual, compartida por todas las páginas.
 export const sesion = ref<Sesion | null>(null)
 
+// EstadoActualizacion es el aviso de versión nueva, compartido por la cabecera y Ajustes. instalable indica que
+// esta copia se puede actualizar desde aquí (instalada con el instalador de Windows).
+export interface EstadoActualizacion {
+  actual: string
+  buscar: boolean
+  disponible: boolean
+  version: string
+  url: string
+  instalable: boolean
+}
+export const actualizacion = ref<EstadoActualizacion | null>(null)
+
 function recordar(s: Sesion): Sesion {
   csrf = s.csrf
   sesion.value = s
@@ -193,6 +205,9 @@ export const api = {
   // abrirProyecto activa el espacio de una carpeta; si aún no es un proyecto, el servicio crea su .tramtai/.
   abrirProyecto: (raiz: string) => pedir<Sesion>('POST', '/ui/proyectos', { raiz }).then(recordar),
   autoarranque: (activo: boolean) => pedir<Sesion>('POST', '/ui/autoarranque', { activo }).then(recordar),
+  actualizacion: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion'),
+  buscarActualizaciones: (buscar: boolean) => pedir<EstadoActualizacion>('POST', '/ui/actualizacion', { buscar }),
+  actualizar: () => pedir<{ version: string }>('POST', '/ui/actualizar'),
   cambiarAutenticacion: (agente: string, modo: 'suscripcion' | 'clave_api') => pedir<void>('POST', '/ui/autenticacion', { agente, modo }),
   salir: () => pedir<void>('DELETE', '/ui/sesion').then(() => (sesion.value = null)),
   detenerServicio: () => pedir<unknown>('POST', '/ui/servicio/detener'),

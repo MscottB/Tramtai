@@ -55,6 +55,15 @@ Los avisos de Detener y Salir se muestran dentro de la ventana, con el estilo de
 
 Activado en **Ajustes** o con `tramtai servicio autoarranque activar`, Tramtai se registra en `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (solo para tu usuario). Al iniciar sesión arranca `tramtai-escritorio.exe --oculto`: inicia el servicio y queda en la bandeja sin abrir ninguna ventana ni terminal. Se quita con `tramtai servicio autoarranque desactivar`. Necesita `tramtai-escritorio.exe` junto a `tramtai.exe`; en Linux y macOS aún no está disponible.
 
+### Actualizaciones
+
+Una vez al día, el servicio pregunta a GitHub cuál es la última versión publicada (solo esa ficha pública; no envía ningún dato tuyo). Si hay una más nueva:
+
+- La cabecera de la Web UI muestra **Actualizar** y el menú de la bandeja, **Actualizar a vX…**. **Actualizar ahora** descarga el instalador, comprueba su suma SHA-256 con `SHA256SUMS.txt` y lo ejecuta en silencio: la app se cierra, el servicio se detiene tras terminar las peticiones en curso (`servicio.plazo_drenaje_segundos`) y la app vuelve a abrirse con la versión nueva, con tu configuración y tus datos.
+- Desde la terminal: `tramtai actualizar` hace lo mismo (pide confirmación; `--si` la omite) y `tramtai actualizar --comprobar` solo informa.
+- Solo se actualiza sola una copia instalada con el instalador de Windows; una compilada a mano o en Linux y macOS muestra el aviso con el enlace de descarga.
+- Se desactiva en **Ajustes → Buscar actualizaciones** o con `servicio.buscar_actualizaciones: false`; `tramtai actualizar` sigue funcionando porque lo pides tú.
+
 ### Borrar datos
 
 - **Historial:** «Vaciar historial» en la Web UI, o `DELETE /api/v1/trabajos`, borra los trabajos terminados de la instancia con sus eventos y las cargas que ya no usa ninguno. Lo que está en curso se conserva.

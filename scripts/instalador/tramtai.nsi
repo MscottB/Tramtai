@@ -23,6 +23,7 @@ BrandingText "Tramtai ${VERSION}"
 
 !include MUI2.nsh
 !include LogicLib.nsh
+!include FileFunc.nsh
 
 !define MUI_ICON "${RAIZ}\escritorio\icono\tramtai.ico"
 !define MUI_UNICON "${RAIZ}\escritorio\icono\tramtai.ico"
@@ -133,6 +134,16 @@ SectionEnd
 Section /o "$(secEscritorio)" SecEscritorio
   CreateShortcut "$DESKTOP\Tramtai.lnk" "$INSTDIR\tramtai-escritorio.exe"
 SectionEnd
+
+; tramtai actualizar ejecuta el instalador en silencio con /abrir: al terminar se vuelve a abrir la app.
+Function .onInstSuccess
+  ${GetParameters} $0
+  ClearErrors
+  ${GetOptions} $0 "/abrir" $1
+  ${IfNot} ${Errors}
+    Exec '"$INSTDIR\tramtai-escritorio.exe"'
+  ${EndIf}
+FunctionEnd
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPrograma} "$(descPrograma)"

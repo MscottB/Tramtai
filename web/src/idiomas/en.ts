@@ -501,6 +501,21 @@ const en: Textos = {
   'error.contexto_no_permitido': 'That project is not trusted',
   'error.ruta_no_permitida': 'The file is outside the allowed folders',
   'error.sesion_caducada': 'The session expired',
+  // New version notice
+  'actualizacion.boton': 'Update',
+  'actualizacion.titulo': 'Tramtai {version} is available',
+  'actualizacion.detalle': 'You have {actual}.',
+  'actualizacion.comoInstala': 'The installer is downloaded, its SHA-256 checksum is verified and it installs without asking anything. The app will close and open again in a few seconds, with your settings, APIs and history; requests in progress finish first.',
+  'actualizacion.manual': 'This copy of Tramtai was not installed with the Windows installer, so it does not update itself: download the new version from its page.',
+  'actualizacion.novedades': 'See what\'s new',
+  'actualizacion.instalar': 'Update now',
+  'actualizacion.descargar': 'Go to download',
+  'actualizacion.enCurso': 'Updating: Tramtai will close and open again in a few seconds.',
+  'actualizacion.ajustesTitulo': 'Check for updates',
+  'actualizacion.ajustesTexto': 'Once a day, Tramtai asks GitHub for the latest published version. It only requests that public page: none of your data is sent.',
+  'actualizacion.alDia': 'You have the latest version ({actual}).',
+  'actualizacion.hayNueva': 'A new version is available, {version}: update with the Update button in the header.',
+  'actualizacion.desactivada': 'Off. You have {actual}; you can also check with «tramtai actualizar».',
 }
 
 export default en

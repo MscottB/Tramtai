@@ -469,7 +469,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string) error {
 		Host: host, Puerto: puertoUsado, PuertoConfigurado: puerto, PuertoAutomatico: automatico, Reiniciar: reiniciar,
 		Hosts: hosts, Registros: salida, Web: recursos.Web(),
 		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,
-		EntradaLocal: c.Booleano("servicio.entrada_local")})
+		EntradaLocal: c.Booleano("servicio.entrada_local"), BuscarActualizaciones: c.Booleano("servicio.buscar_actualizaciones")})
 	if err != nil {
 		oyente.Close()
 		return err

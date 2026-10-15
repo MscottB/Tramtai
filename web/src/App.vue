@@ -38,6 +38,11 @@
           </q-list>
         </q-btn-dropdown>
         <q-chip v-else-if="sesion.instancia" outline :icon="iconoInstancia(sesion.ambito)">{{ sesion.nombre || sesion.instancia }}</q-chip>
+        <q-btn v-if="actualizacion?.disponible" unelevated dense no-caps color="primary" icon="o_system_update_alt" class="q-ml-sm q-px-sm"
+          :label="$q.screen.gt.xs ? t('actualizacion.boton') : undefined" :aria-label="t('actualizacion.titulo', { version: actualizacion.version })"
+          @click="dialogoActualizar = true">
+          <q-tooltip>{{ t('actualizacion.titulo', { version: actualizacion.version }) }}</q-tooltip>
+        </q-btn>
         <q-btn flat dense no-caps class="pastilla q-ml-sm" :aria-label="t('app.servicio')">
           <span class="punto" :class="conectado ? 'punto--ok' : 'punto--error'" />
           <span class="gt-xs q-ml-sm">{{ conectado ? t('app.enMarcha') : t('app.sinConexion') }}</span>
@@ -169,13 +174,29 @@
         </q-form>
       </q-card>
     </q-dialog>
+
+    <q-dialog v-model="dialogoActualizar">
+      <q-card v-if="actualizacion" style="width: 460px; max-width: 92vw">
+        <q-card-section>
+          <div class="titulo-seccion">{{ t('actualizacion.titulo', { version: actualizacion.version }) }}</div>
+          <p class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.detalle', { actual: actualizacion.actual }) }}</p>
+          <p class="q-mt-md q-mb-none">{{ actualizacion.instalable ? t('actualizacion.comoInstala') : t('actualizacion.manual') }}</p>
+        </q-card-section>
+        <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-btn flat no-caps :label="t('actualizacion.novedades')" :href="actualizacion.url" target="_blank" rel="noopener" />
+          <q-btn v-if="actualizacion.instalable" unelevated no-caps color="primary" icon="o_system_update_alt" :loading="actualizando"
+            :label="t('actualizacion.instalar')" @click="instalarActualizacion" />
+          <q-btn v-else unelevated no-caps color="primary" :label="t('actualizacion.descargar')" :href="actualizacion.url" target="_blank" rel="noopener" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-layout>
 </template>
 
 <script setup lang="ts">
 import { computed, markRaw, onMounted, onUnmounted, ref, watchEffect } from 'vue'
 import { useQuasar } from 'quasar'
-import { api, avisar, avisarError, reiniciarYSeguir, sesion } from './api'
+import { actualizacion, api, avisar, avisarError, reiniciarYSeguir, sesion } from './api'
 import { cambiarIdioma, idioma, idiomas, t } from './i18n'
 import { cambiarTema, tema, type Tema } from './tema'
 import EntrarPagina from './paginas/Entrar.vue'
@@ -236,6 +257,36 @@ function detener() {
       }
     })
 }
+// Aviso de versión nueva: el servicio consulta GitHub como mucho una vez al día y aquí se pregunta al cargar y cada
+// seis horas. En la app de escritorio, «Actualizar a…» de la bandeja abre este mismo diálogo.
+const dialogoActualizar = ref(false)
+const actualizando = ref(false)
+async function comprobarActualizacion() {
+  try {
+    actualizacion.value = await api.actualizacion()
+  } catch {
+    // sin servicio o sin sesión: se vuelve a intentar en la próxima comprobación
+  }
+}
+async function instalarActualizacion() {
+  actualizando.value = true
+  try {
+    await api.actualizar()
+    dialogoActualizar.value = false
+    avisar(t('actualizacion.enCurso'))
+  } catch (e) {
+    avisarError(e)
+  } finally {
+    actualizando.value = false
+  }
+}
+Object.assign(window, {
+  tramtaiActualizar: () =>
+    comprobarActualizacion().then(() => {
+      if (actualizacion.value?.disponible) dialogoActualizar.value = true
+    }),
+})
+
 // En la app de escritorio (WebView2) la bandeja abre aquí sus avisos, con el estilo de la app, y la respuesta le
 // vuelve con postMessage.
 const escritorio = (window as { chrome?: { webview?: { postMessage(mensaje: string): void } } }).chrome?.webview
@@ -299,6 +350,8 @@ onMounted(async () => {
   sondeo = window.setInterval(comprobar, 10000)
   try {
     await api.sesion()
+    comprobarActualizacion()
+    window.setInterval(comprobarActualizacion, 6 * 60 * 60 * 1000)
   } catch {
     sesion.value = null
   } finally {

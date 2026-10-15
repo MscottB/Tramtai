@@ -2,6 +2,7 @@ package servicio
 
 import (
 	"cmp"
+	"context"
 	"crypto/subtle"
 	"io/fs"
 	"net"
@@ -269,6 +270,43 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		}
 		api.EscribirJSON(w, http.StatusAccepted, map[string]any{"estado": "deteniendo"})
 		s.detenerUna.Do(func() { close(s.detener) })
+	case r.URL.Path == "/ui/actualizacion" && (r.Method == http.MethodGet || r.Method == http.MethodPost):
+		// Consultar es de cualquier sesión; activar o desactivar la búsqueda, solo desde este equipo.
+		_, ses := s.sesionDe(r)
+		if ses == nil || (r.Method == http.MethodPost && (!ses.local || !csrfValido(r, ses) || !s.esLocal(r))) {
+			api.NoAutorizado(w, r)
+			return
+		}
+		if r.Method == http.MethodPost {
+			var peticion struct {
+				Buscar bool `json:"buscar"`
+			}
+			if err := api.LeerJSON(w, r, &peticion); err != nil {
+				api.EscribirError(w, r, err)
+				return
+			}
+			if err := s.fijarBusqueda(peticion.Buscar); err != nil {
+				api.EscribirError(w, r, err)
+				return
+			}
+		}
+		ctx, cancelar := context.WithTimeout(r.Context(), 8*time.Second)
+		defer cancelar()
+		api.EscribirJSON(w, http.StatusOK, s.estadoActualizacion(ctx))
+	case r.URL.Path == "/ui/actualizar" && r.Method == http.MethodPost:
+		_, ses := s.sesionDe(r)
+		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+			api.NoAutorizado(w, r)
+			return
+		}
+		ctx, cancelar := context.WithTimeout(r.Context(), 10*time.Minute)
+		defer cancelar()
+		v, err := s.Actualizar(ctx)
+		if err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		api.EscribirJSON(w, http.StatusAccepted, map[string]any{"version": v.Etiqueta})
 	case r.URL.Path == "/ui/sesion" && r.Method == http.MethodDelete:
 		if id, _ := s.sesionDe(r); id != "" {
 			s.muSesiones.Lock()

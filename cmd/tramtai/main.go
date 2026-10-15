@@ -41,6 +41,7 @@ func main() {
 		comandoConfiguracion(),
 		comandoClaves(),
 		comandoInstalacion(),
+		comandoActualizar(),
 	)
 	if !idioma.Ingles() {
 		ayudaEnEspanol(raiz)

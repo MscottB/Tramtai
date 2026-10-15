@@ -21,8 +21,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"tramtai/internal/actualizacion"
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/api"
 	"tramtai/internal/documentos"
@@ -48,6 +50,8 @@ type Opciones struct {
 	PlazoDrenaje time.Duration
 	// EntradaLocal deja entrar en la Web UI sin token al mismo usuario del sistema (servicio.entrada_local).
 	EntradaLocal bool
+	// BuscarActualizaciones consulta una vez al día si hay una versión nueva (servicio.buscar_actualizaciones).
+	BuscarActualizaciones bool
 	// PuertoConfigurado y PuertoAutomatico son servicio.puerto y servicio.puerto_automatico; Puerto es el que se
 	// usa, que puede ser otro si el configurado estaba ocupado. Se cambian desde la Web UI (con s.mu).
 	PuertoConfigurado int
@@ -96,6 +100,9 @@ type Servicio struct {
 
 	detener    chan struct{}
 	detenerUna sync.Once
+
+	actualizaciones actualizacion.Comprobador
+	buscar          atomic.Bool
 }
 
 // Nuevo crea el servicio sin instancias; Restaurar o Activar* las abren.
@@ -110,6 +117,7 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 	s := &Servicio{opc: opc, ID: "servicio_" + aleatorio(8), IniciadoEn: time.Now(), tokenAdmin: token,
 		instancias: map[string]*Instancia{}, puntos: map[string]*puntoActivo{}, detener: make(chan struct{}),
 		sesiones: map[string]*sesion{}, codigos: map[string]codigoEntrada{}}
+	s.buscar.Store(opc.BuscarActualizaciones)
 	s.admin = s.rutasAdmin()
 	s.handler = api.Proteger(opc.Hosts, nil, http.HandlerFunc(s.enrutar))
 	return s, nil
@@ -502,14 +510,20 @@ type Estado struct {
 	Instancias    []EstadoInstancia `json:"instancias"`
 	Puntos        []EstadoPunto     `json:"puntos_acceso"`
 	Errores       []string          `json:"errores_configuracion,omitempty"`
+	// Actualizacion es la versión publicada más nueva que la actual, si la hay (la bandeja la ofrece).
+	Actualizacion *actualizacion.Version `json:"actualizacion,omitempty"`
 }
 
 // Estado devuelve el estado actual.
 func (s *Servicio) Estado() Estado {
+	var nueva *actualizacion.Version
+	if v, ok := s.versionNueva(context.Background(), false); ok {
+		nueva = &v
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	e := Estado{Identificador: s.ID, Version: version.Texto(), PID: os.Getpid(), IniciadoEn: s.IniciadoEn, Base: s.Base(),
-		Instancias: []EstadoInstancia{}, Puntos: s.estadoPuntos(), Errores: s.erroresPuntos}
+		Instancias: []EstadoInstancia{}, Puntos: s.estadoPuntos(), Errores: s.erroresPuntos, Actualizacion: nueva}
 	for _, inst := range s.instancias {
 		e.Instancias = append(e.Instancias, inst.estado())
 	}

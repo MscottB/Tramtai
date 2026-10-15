@@ -182,7 +182,7 @@ func main() {
 	bandeja.OnClick(mostrar)
 	var repasar func()
 
-	construir := func(cli *cliente.Cliente, puntos []servicio.EstadoPunto, proyectos map[string]string, conWindows, sinPreguntar bool) *application.Menu {
+	construir := func(cli *cliente.Cliente, puntos []servicio.EstadoPunto, proyectos map[string]string, conWindows, sinPreguntar bool, nueva string) *application.Menu {
 		lado, oscuro := ladoIconoMenu(), menuOscuro()
 		verde, rojo := circulo(colorVerde, lado), circulo(colorRojo, lado)
 		icono := func(nombre string) []byte { return iconoMenu(nombre, lado, oscuro) }
@@ -194,6 +194,13 @@ func main() {
 		}
 		menu.AddSeparator()
 		menu.Add(idioma.T("Abrir Tramtai")).SetBitmap(icono("abrir")).OnClick(func(*application.Context) { mostrar() })
+		if nueva != "" {
+			// La ventana pide confirmación y muestra el avance con el mismo diálogo que la Web UI.
+			menu.Add(idioma.Tf("Actualizar a %s…", nueva)).SetBitmap(icono("reiniciar")).OnClick(func(*application.Context) {
+				mostrar()
+				ventana.ExecJS("window.tramtaiActualizar && window.tramtaiActualizar()")
+			})
+		}
 		if cli != nil {
 			activas := 0
 			for _, p := range puntos {
@@ -328,7 +335,11 @@ func main() {
 		mu.Unlock()
 
 		// También el tema y el DPI del sistema, porque cambian el color y el tamaño de los iconos.
-		nueva := fmt.Sprint(conWindows, sinPreguntar, puntos, menuOscuro(), ladoIconoMenu())
+		masNueva := ""
+		if estadoServicio.Actualizacion != nil {
+			masNueva = estadoServicio.Actualizacion.Etiqueta
+		}
+		nueva := fmt.Sprint(conWindows, sinPreguntar, puntos, menuOscuro(), ladoIconoMenu(), masNueva)
 		if cli != nil {
 			nueva += cli.Base
 		}
@@ -342,7 +353,7 @@ func main() {
 		}
 		bandeja.SetTooltip("Tramtai · " + estado)
 		anterior := menuActual
-		menuActual = construir(cli, puntos, proyectos, conWindows, sinPreguntar)
+		menuActual = construir(cli, puntos, proyectos, conWindows, sinPreguntar, masNueva)
 		bandeja.SetMenu(menuActual)
 		if anterior != nil {
 			anterior.Clear() // suelta los elementos del menú anterior del registro global de Wails

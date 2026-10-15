@@ -62,6 +62,18 @@
       </q-card-section>
     </q-card>
 
+    <q-card v-if="actualizacion">
+      <q-card-section class="row items-start no-wrap">
+        <div class="col">
+          <div class="titulo-seccion">{{ t('actualizacion.ajustesTitulo') }}</div>
+          <div class="texto-suave text-body2 q-mt-xs">{{ t('actualizacion.ajustesTexto') }}</div>
+          <div class="text-body2 q-mt-sm">{{ textoActualizacion }}</div>
+        </div>
+        <q-toggle :model-value="actualizacion.buscar" :disable="!sesion?.local || cambiandoBusqueda" :aria-label="t('actualizacion.ajustesTitulo')"
+          @update:model-value="cambiarBusqueda" />
+      </q-card-section>
+    </q-card>
+
     <div class="row q-col-gutter-md">
       <div v-if="sesion?.autoarranque !== undefined" class="col-12 col-md-6">
         <q-card class="full-height">
@@ -148,7 +160,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { api, avisar, avisarError, opcionModelo, reiniciarYSeguir, sesion, terminales, type EntradaConfiguracion, type EstadoPunto, type Modelo } from '../api'
+import { actualizacion, api, avisar, avisarError, opcionModelo, reiniciarYSeguir, sesion, terminales, type EntradaConfiguracion, type EstadoPunto, type Modelo } from '../api'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 
@@ -235,6 +247,24 @@ function valor(v: unknown): string {
   if (v === true) return t('comun.si').toLowerCase()
   if (v === false) return t('comun.no').toLowerCase()
   return typeof v === 'object' ? JSON.stringify(v) : String(v)
+}
+
+const cambiandoBusqueda = ref(false)
+const textoActualizacion = computed(() => {
+  const a = actualizacion.value
+  if (!a) return ''
+  if (!a.buscar) return t('actualizacion.desactivada', { actual: a.actual })
+  return a.disponible ? t('actualizacion.hayNueva', { version: a.version }) : t('actualizacion.alDia', { actual: a.actual })
+})
+async function cambiarBusqueda(buscar: boolean) {
+  cambiandoBusqueda.value = true
+  try {
+    actualizacion.value = await api.buscarActualizaciones(buscar)
+  } catch (e) {
+    avisarError(e)
+  } finally {
+    cambiandoBusqueda.value = false
+  }
 }
 
 async function cambiarArranque(activo: boolean) {
