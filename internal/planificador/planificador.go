@@ -166,7 +166,7 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 	}
 	if solicitud.ModoContexto == "consciente_proyecto" && p.opc.RaizConfiable == "" {
 		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoContextoNoPermitido,
-			idioma.T("consciente_proyecto solo se admite en la instancia de un proyecto incluido en proyectos_confiables (configuración global o local.yaml)"))
+			idioma.T("consciente_proyecto solo se admite en la instancia de un proyecto incluido en proyectos_confiables de la configuración global"))
 	}
 	if len(solicitud.Salida.Esquema) > 0 {
 		if _, err := salidas.Compilar(solicitud.Salida.Esquema); err != nil {

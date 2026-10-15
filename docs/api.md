@@ -102,7 +102,7 @@ Cuánto razona el modelo antes de responder. Es opcional: sin él, cada CLI usa 
 
 - **`perfil`** (API nativa) o `--perfil-trabajo` (CLI): aplica `profiles/<nombre>.yaml` del proyecto (`.tramtai/profiles/`) o de la configuración global. Aporta instrucciones, formato, esquema y `conservar_salida_invalida`; los campos explícitos de la solicitud prevalecen. `tramtai iniciar` crea el perfil de ejemplo `resumen`.
 - **`salida.conservar_salida_invalida`:** si la salida no cumple el esquema, el trabajo falla con `salida_no_cumple_esquema`, pero conserva la salida bruta para revisarla.
-- **`modo_contexto: consciente_proyecto`** (o `--contexto`): el agente trabaja en la raíz del proyecto y carga sus reglas. Solo se admite en proyectos incluidos en `proyectos_confiables`, en la configuración global o en `local.yaml`; si no, devuelve 403 `contexto_no_permitido`. Antes de ejecutar se registra un evento `aviso` con el contexto que se carga.
+- **`modo_contexto: consciente_proyecto`** (o `--contexto`): el agente trabaja en la raíz del proyecto y carga sus reglas. Solo se admite en proyectos incluidos en `proyectos_confiables` de la configuración global; si no, devuelve 403 `contexto_no_permitido`. Antes de ejecutar se registra un evento `aviso` con el contexto que se carga.
 
 ## Puntos de acceso y administración
 

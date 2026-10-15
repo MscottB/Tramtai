@@ -139,8 +139,8 @@ func dentroDe(raiz, ruta string) bool {
 	return err == nil && !filepath.IsAbs(rel) && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
-// ProyectoConfiable indica si la raíz figura en proyectos_confiables. La configuración versionada no puede
-// declararlo (clave administrada), así que un repositorio clonado nunca se marca confiable a sí mismo.
+// ProyectoConfiable indica si la raíz figura en proyectos_confiables. Solo la configuración global (o el entorno)
+// puede declararlo: la versionada y local.yaml lo rechazan, así que un repositorio clonado nunca se marca confiable a sí mismo.
 func (c *Configuracion) ProyectoConfiable(raiz string) bool {
 	if raiz == "" {
 		return false

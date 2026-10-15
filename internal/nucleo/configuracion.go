@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -110,7 +111,8 @@ var esquema = map[string]tipoValor{
 	"modelos.fallback.habilitado":                 tipoBooleano,
 }
 
-// prefijosAdministrados son límites de seguridad: nunca pueden venir de la configuración versionada del repositorio.
+// prefijosAdministrados son límites de seguridad: nunca pueden venir de la configuración versionada del repositorio,
+// y en local.yaml solo si la carpeta del proyecto es confiable según la configuración global (ver validar).
 var prefijosAdministrados = []string{"servicio", "instancia_global", "proyectos_confiables", "comandos_agentes", "concurrencia_servicio", "puntos_acceso", "adaptadores", "conversion.comando"}
 
 // Capa es un origen de configuración aplanado a claves con puntos.
@@ -353,13 +355,31 @@ func (c Capa) validar() error {
 		claves = append(claves, clave)
 	}
 	sort.Strings(claves)
+	confiable := -1 // se averigua una sola vez y solo si local.yaml trae claves administradas
 	for _, clave := range claves {
 		tipo, conocida := tipoDe(clave)
 		if !conocida {
 			return errorConfiguracion(c.Fuente, clave, idioma.T("clave desconocida"))
 		}
 		if c.Origen == OrigenProyecto && esAdministrada(clave) {
-			return errorConfiguracion(c.Fuente, clave, idioma.T("clave de seguridad no admitida en la configuración versionada; defínela en la local o en la global"))
+			return errorConfiguracion(c.Fuente, clave, idioma.T("clave de seguridad no admitida en la configuración versionada; defínela en la global (o en local.yaml si el proyecto es confiable)"))
+		}
+		// Un local.yaml también puede llegar con el repositorio (git add -f): sus claves administradas solo valen si
+		// el usuario ya confió en la carpeta desde la configuración global, y la confianza nunca se la da el propio proyecto.
+		if c.Origen == OrigenLocal && esAdministrada(clave) {
+			global, _ := RutaGlobal()
+			if clave == "proyectos_confiables" {
+				return errorConfiguracion(c.Fuente, clave, idioma.Tf("solo se admite en la configuración global (%s)", global))
+			}
+			if confiable < 0 {
+				confiable = 0
+				if g, err := CargarConfiguracion(""); err == nil && g.ProyectoConfiable(filepath.Dir(filepath.Dir(c.Fuente))) {
+					confiable = 1
+				}
+			}
+			if confiable == 0 {
+				return errorConfiguracion(c.Fuente, clave, idioma.Tf("clave de seguridad: en local.yaml solo se admite si la carpeta del proyecto figura en proyectos_confiables de la configuración global (%s); añádela allí", global))
+			}
 		}
 		if !tipoCorrecto(tipo, c.Valores[clave]) {
 			return errorConfiguracion(c.Fuente, clave, idioma.T("tipo incorrecto"))

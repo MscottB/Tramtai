@@ -28,7 +28,7 @@ func cargar(t *testing.T, contenido string, origen Origen) Capa {
 func TestPrecedenciaUnica(t *testing.T) {
 	global := cargar(t, "concurrencia:\n  maximo_tamano_cola: 10\n  maximo_trabajos_instancia: 3\npredeterminados:\n  agente: codex\n", OrigenGlobal)
 	proyecto := cargar(t, "version: 1\npredeterminados:\n  agente: claude\n  perfil_modelo: equilibrado\n", OrigenProyecto)
-	local := cargar(t, "concurrencia:\n  maximo_tamano_cola: 5\nservicio:\n  permitir_remoto: false\n", OrigenLocal)
+	local := cargar(t, "concurrencia:\n  maximo_tamano_cola: 5\ncompatibilidad:\n  modo_tolerante: false\n", OrigenLocal)
 	entorno, err := CapaEntorno([]string{"TRAMTAI_CONCURRENCIA__MAXIMO_TAMANO_COLA=7", "TRAMTAI_TOKEN_GLOBAL=x", "PATH=y"})
 	if err != nil {
 		t.Fatal(err)
@@ -42,7 +42,7 @@ func TestPrecedenciaUnica(t *testing.T) {
 		{"concurrencia.maximo_tamano_cola", 7, OrigenEntorno},
 		{"concurrencia.maximo_trabajos_instancia", 3, OrigenGlobal},
 		{"predeterminados.agente", "claude", OrigenProyecto},
-		{"servicio.permitir_remoto", false, OrigenLocal},
+		{"compatibilidad.modo_tolerante", false, OrigenLocal},
 		{"servicio.puerto", 17373, OrigenInterno},
 	}
 	for _, caso := range casos {
@@ -76,9 +76,6 @@ func TestClavesRechazadas(t *testing.T) {
 		if CodigoDe(err) != CodigoConfiguracionInvalida || !strings.Contains(err.Error(), caso.mensaje) || !strings.Contains(err.Error(), ruta) {
 			t.Errorf("%s: error inesperado %v", caso.nombre, err)
 		}
-	}
-	if _, err := CargarCapa(escribir(t, "servicio:\n  permitir_remoto: true\n"), OrigenLocal); err != nil {
-		t.Errorf("la configuración local sí admite claves de seguridad: %v", err)
 	}
 	if capa, err := CargarCapa(filepath.Join(t.TempDir(), "no-existe.yaml"), OrigenGlobal); err != nil || len(capa.Valores) != 0 {
 		t.Errorf("un archivo inexistente debe dar una capa vacía: %v", err)
@@ -136,6 +133,35 @@ func TestProyectoConfiable(t *testing.T) {
 	}
 	if _, err := CargarCapa(escribir(t, "proyectos_confiables: [.]\n"), OrigenProyecto); err == nil {
 		t.Fatal("la configuración versionada no puede declararse confiable")
+	}
+}
+
+// Un local.yaml que llega con el repositorio no puede cambiar comandos ni declararse confiable.
+func TestLocalSoloConfiableDesdeGlobal(t *testing.T) {
+	raiz := t.TempDir()
+	os.MkdirAll(filepath.Join(raiz, ".tramtai"), 0o700)
+	os.WriteFile(filepath.Join(raiz, ".tramtai", "config.yaml"), []byte("version: 1\n"), 0o600)
+	global := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+	local := func(contenido string) error {
+		os.WriteFile(filepath.Join(raiz, ".tramtai", "local.yaml"), []byte(contenido), 0o600)
+		_, err := CargarConfiguracion(raiz)
+		return err
+	}
+	if err := local("predeterminados:\n  modelo: m1\n"); err != nil {
+		t.Fatalf("las claves comunes valen sin confianza: %v", err)
+	}
+	for _, contenido := range []string{"comandos_agentes:\n  claude: x.exe\n", "conversion:\n  comando: x.exe\n", "proyectos_confiables: [.]\n"} {
+		if err := local(contenido); CodigoDe(err) != CodigoConfiguracionInvalida || !strings.Contains(err.Error(), "proyectos_confiables") {
+			t.Errorf("sin confianza global debe rechazarse %q: %v", contenido, err)
+		}
+	}
+	os.WriteFile(global, []byte("proyectos_confiables: ['"+raiz+"']\n"), 0o600)
+	if err := local("comandos_agentes:\n  claude: x.exe\n"); err != nil {
+		t.Errorf("con la carpeta confiable en la global, local.yaml admite claves de seguridad: %v", err)
+	}
+	if err := local("proyectos_confiables: [.]\n"); err == nil {
+		t.Error("proyectos_confiables nunca se acepta en local.yaml")
 	}
 }
 

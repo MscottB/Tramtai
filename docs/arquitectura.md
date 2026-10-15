@@ -115,7 +115,7 @@ La retención se aplica a cada instancia al abrirla y después cada 5 minutos. L
 
 ## Modo consciente del proyecto
 
-Por defecto, cada agente se ejecuta aislado en una carpeta temporal vacía. Con `modo_contexto: consciente_proyecto`, en un proyecto declarado en `proyectos_confiables` (global o `local.yaml`, nunca en la configuración versionada):
+Por defecto, cada agente se ejecuta aislado en una carpeta temporal vacía. Con `modo_contexto: consciente_proyecto`, en un proyecto declarado en `proyectos_confiables` (solo en la configuración global; la versionada y `local.yaml` lo rechazan):
 
 | Agente | Qué cambia |
 |---|---|
