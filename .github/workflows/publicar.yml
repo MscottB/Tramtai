@@ -127,10 +127,36 @@ jobs:
           path: dist/
           retention-days: 1
 
+  # Ningún release sale con dependencias vulnerables o sin firma verificada (los mismos chequeos que el CI).
+  dependencias:
+    name: Dependencias
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Web UI (npm audit y firmas del registro)
+        working-directory: web
+        run: |
+          npm ci
+          npm audit --audit-level=high
+          npm audit signatures
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: '**/go.sum'
+      - name: Servicio y app de escritorio (govulncheck)
+        run: |
+          go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+          cd escritorio && go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+
   # Junta lo que compiló cada sistema, calcula las sumas de todo y publica el release con las notas de la etiqueta.
   publicar:
     name: Publicar el release
-    needs: [unix, linux-app, macos-app, windows]
+    needs: [dependencias, unix, linux-app, macos-app, windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
