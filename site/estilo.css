@@ -168,11 +168,11 @@ footer .envoltura { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 .doc ul, .doc ol { padding-left: 22px; }
 .doc li { margin: 4px 0; }
 .doc .codigo { margin-top: 0; position: relative; padding-top: 42px; }
-.doc :not(pre) > code { font: .88em var(--mono); background: var(--superficie-suave); border: 1px solid var(--borde); border-radius: 6px; padding: 1px 5px; overflow-wrap: anywhere; }
+.doc :not(pre) > code { font: .88em var(--mono); background: var(--superficie-suave); border: 1px solid var(--borde); border-radius: 6px; padding: 2px 6px; overflow-wrap: anywhere; }
 .doc table { width: 100%; border-collapse: collapse; font-size: .93rem; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); overflow: hidden; display: block; overflow-x: auto; }
 .doc th, .doc td { text-align: left; padding: 10px 14px; border-top: 1px solid var(--borde); vertical-align: top; }
 .doc th { border-top: 0; background: var(--superficie-suave); font-weight: 600; }
-.aviso { background: var(--acento-suave); border-left: 4px solid var(--acento); border-radius: 8px; padding: 12px 16px; }
+.aviso { background: var(--acento-suave); border: 1px solid color-mix(in srgb, var(--acento) 25%, transparent); border-radius: 10px; padding: 12px 16px; }
 .doc details { background: var(--superficie); border: 1px solid var(--borde); border-radius: 10px; padding: 0 16px; }
 .doc summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
 .doc details[open] summary { border-bottom: 1px solid var(--borde); margin-bottom: 12px; }
