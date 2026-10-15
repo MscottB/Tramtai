@@ -8,14 +8,15 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/cliente"
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/servicio"
 )
 
 func comandoTrabajos() *cobra.Command {
-	grupo := &cobra.Command{Use: "trabajos", Short: "Trabajos de una instancia (la del proyecto actual si está activa; si no, la global)"}
+	grupo := &cobra.Command{Use: "trabajos", Short: idioma.T("Trabajos de una instancia (la del proyecto actual si está activa; si no, la global)")}
 	var instancia string
-	grupo.PersistentFlags().StringVarP(&instancia, "instancia", "i", "", "identificador de la instancia")
+	grupo.PersistentFlags().StringVarP(&instancia, "instancia", "i", "", idioma.T("identificador de la instancia"))
 	elegir := func(ctx context.Context, c *cliente.Cliente) string {
 		if instancia != "" {
 			return instancia
@@ -35,7 +36,7 @@ func comandoTrabajos() *cobra.Command {
 		return "global"
 	}
 	var limite int
-	listar := &cobra.Command{Use: "listar", Short: "Lista los trabajos más recientes",
+	listar := &cobra.Command{Use: "listar", Short: idioma.T("Lista los trabajos más recientes"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := conectar()
 			if err != nil {
@@ -49,17 +50,17 @@ func comandoTrabajos() *cobra.Command {
 				return err
 			}
 			out := cmd.OutOrStdout()
-			fmt.Fprintf(out, "instancia %s\n", inst)
+			fmt.Fprintf(out, idioma.T("instancia %s\n"), inst)
 			for _, t := range lista {
 				fmt.Fprintf(out, "  %-32s %-12s %-28s %s\n", t.ID, t.Estado, modeloDe(t), t.CreadoEn.Local().Format("02-01 15:04:05"))
 			}
 			if len(lista) == 0 {
-				fmt.Fprintln(out, "  sin trabajos")
+				fmt.Fprintln(out, idioma.T("  sin trabajos"))
 			}
 			return nil
 		}}
-	listar.Flags().IntVarP(&limite, "limite", "n", 20, "cuántos trabajos mostrar (máximo 200)")
-	mostrar := &cobra.Command{Use: "mostrar <id>", Short: "Muestra un trabajo y su salida", Args: cobra.ExactArgs(1),
+	listar.Flags().IntVarP(&limite, "limite", "n", 20, idioma.T("cuántos trabajos mostrar (máximo 200)"))
+	mostrar := &cobra.Command{Use: "mostrar <id>", Short: idioma.T("Muestra un trabajo y su salida"), Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := conectar()
 			if err != nil {
@@ -91,7 +92,7 @@ func comandoTrabajos() *cobra.Command {
 				return nil
 			}}
 	}
-	eliminar := &cobra.Command{Use: "eliminar <id>", Short: "Elimina un trabajo terminado", Args: cobra.ExactArgs(1),
+	eliminar := &cobra.Command{Use: "eliminar <id>", Short: idioma.T("Elimina un trabajo terminado"), Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := conectar()
 			if err != nil {
@@ -102,10 +103,10 @@ func comandoTrabajos() *cobra.Command {
 			if err := c.Eliminar(ctx, elegir(ctx, c), args[0]); err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "eliminado")
+			fmt.Fprintln(cmd.OutOrStdout(), idioma.T("eliminado"))
 			return nil
 		}}
-	grupo.AddCommand(listar, mostrar, accion("cancelar", "Cancela un trabajo"), accion("reintentar", "Crea un intento nuevo de un trabajo terminado"), eliminar)
+	grupo.AddCommand(listar, mostrar, accion("cancelar", idioma.T("Cancela un trabajo")), accion("reintentar", idioma.T("Crea un intento nuevo de un trabajo terminado")), eliminar)
 	return grupo
 }
 
@@ -123,9 +124,9 @@ func modeloDe(t nucleo.Trabajo) string {
 func imprimirTrabajo(out io.Writer, t nucleo.Trabajo) {
 	fmt.Fprintf(out, "%s · %s · %s\n", t.ID, t.Estado, modeloDe(t))
 	if t.PuntoAcceso != "" {
-		fmt.Fprintf(out, "punto de acceso: %s\n", t.PuntoAcceso)
+		fmt.Fprintf(out, idioma.T("punto de acceso: %s\n"), t.PuntoAcceso)
 	}
-	fmt.Fprintf(out, "uso: %d entrada / %d salida", t.Uso.TokensEntrada, t.Uso.TokensSalida)
+	fmt.Fprintf(out, idioma.T("uso: %d entrada / %d salida"), t.Uso.TokensEntrada, t.Uso.TokensSalida)
 	if t.Uso.CostoUSD > 0 {
 		fmt.Fprintf(out, " · US$ %.4f", t.Uso.CostoUSD)
 	}
@@ -134,7 +135,7 @@ func imprimirTrabajo(out io.Writer, t nucleo.Trabajo) {
 		fmt.Fprintf(out, "error: %s: %s\n", t.CodigoError, t.MensajeError)
 	}
 	if t.Disponibilidad == nucleo.SalidaExpirada {
-		fmt.Fprintln(out, "resultado expirado por la retención (retencion.horas_resultado)")
+		fmt.Fprintln(out, idioma.T("resultado expirado por la retención (retencion.horas_resultado)"))
 	}
 	if t.Salida != "" {
 		fmt.Fprintln(out, "\n"+t.Salida)

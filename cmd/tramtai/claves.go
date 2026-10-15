@@ -10,26 +10,27 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/credenciales"
+	"tramtai/internal/idioma"
 )
 
 // comandoClaves administra las claves de API en el almacén de credenciales del sistema. Nunca las imprime.
 func comandoClaves() *cobra.Command {
-	grupo := &cobra.Command{Use: "claves", Short: "Guarda las claves de API en el Administrador de credenciales (no en variables de entorno)",
-		Long: "Guarda las claves de API de los proveedores en el almacén de credenciales del sistema. Una variable de entorno\ncon el mismo nombre tiene prioridad. Claves admitidas: " + strings.Join(credenciales.Nombres, ", ") + ".\nReinicia el servicio después de cambiarlas."}
+	grupo := &cobra.Command{Use: "claves", Short: idioma.T("Guarda las claves de API en el Administrador de credenciales (no en variables de entorno)"),
+		Long: idioma.Tf("Guarda las claves de API de los proveedores en el almacén de credenciales del sistema. Una variable de entorno\ncon el mismo nombre tiene prioridad. Claves admitidas: %s.\nReinicia el servicio después de cambiarlas.", strings.Join(credenciales.Nombres, ", "))}
 	validar := func(nombre string) error {
 		if !credenciales.Admitido(nombre) {
-			return fmt.Errorf("clave no admitida %q; usa una de %s", nombre, strings.Join(credenciales.Nombres, ", "))
+			return fmt.Errorf(idioma.T("clave no admitida %q; usa una de %s"), nombre, strings.Join(credenciales.Nombres, ", "))
 		}
 		return nil
 	}
-	guardar := &cobra.Command{Use: "guardar NOMBRE", Short: "Pide la clave sin mostrarla y la guarda", Args: cobra.ExactArgs(1),
+	guardar := &cobra.Command{Use: "guardar NOMBRE", Short: idioma.T("Pide la clave sin mostrarla y la guarda"), Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := validar(args[0]); err != nil {
 				return err
 			}
 			var valor string
 			if term.IsTerminal(os.Stdin.Fd()) {
-				fmt.Fprintf(cmd.ErrOrStderr(), "%s (no se muestra): ", args[0])
+				fmt.Fprintf(cmd.ErrOrStderr(), idioma.T("%s (no se muestra): "), args[0])
 				datos, err := term.ReadPassword(os.Stdin.Fd())
 				fmt.Fprintln(cmd.ErrOrStderr())
 				if err != nil {
@@ -46,10 +47,10 @@ func comandoClaves() *cobra.Command {
 			if err := credenciales.Guardar(args[0], strings.TrimSpace(valor)); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "%s guardada en el almacén de credenciales; reinicia el servicio para usarla\n", args[0])
+			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("%s guardada en el almacén de credenciales; reinicia el servicio para usarla\n"), args[0])
 			return nil
 		}}
-	borrar := &cobra.Command{Use: "borrar NOMBRE", Short: "Elimina la clave del almacén", Args: cobra.ExactArgs(1),
+	borrar := &cobra.Command{Use: "borrar NOMBRE", Short: idioma.T("Elimina la clave del almacén"), Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := validar(args[0]); err != nil {
 				return err
@@ -57,18 +58,18 @@ func comandoClaves() *cobra.Command {
 			if err := credenciales.Borrar(args[0]); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "%s eliminada\n", args[0])
+			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("%s eliminada\n"), args[0])
 			return nil
 		}}
-	listar := &cobra.Command{Use: "listar", Short: "Indica de dónde sale cada clave, sin mostrarla", Args: cobra.NoArgs,
+	listar := &cobra.Command{Use: "listar", Short: idioma.T("Indica de dónde sale cada clave, sin mostrarla"), Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			for _, nombre := range credenciales.Nombres {
-				origen := "no configurada"
+				origen := idioma.T("no configurada")
 				if v, err := credenciales.Leer(nombre); err == nil && v != "" {
-					origen = "almacén de credenciales"
+					origen = idioma.T("almacén de credenciales")
 				}
 				if os.Getenv(nombre) != "" {
-					origen = "variable de entorno (tiene prioridad)"
+					origen = idioma.T("variable de entorno (tiene prioridad)")
 				}
 				fmt.Fprintf(cmd.OutOrStdout(), "%-18s %s\n", nombre, origen)
 			}
