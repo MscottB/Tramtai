@@ -1,5 +1,7 @@
 # Compila bin/tramtai.exe y, en Windows, bin/tramtai-escritorio.exe con la versión vX.Y.Z+DDMMAAAA incrustada.
 # La Web UI ya compilada está en internal/recursos/web; tras cambiar web/ ejecuta antes: cd web; npm run build
+# Con -Instalador deja además en dist/ el instalador de Windows, tramtai.exe suelto y SHA256SUMS.txt (lo usa el CI).
+param([switch]$Instalador)
 $ErrorActionPreference = 'Stop'
 if (-not (Get-Command go -ErrorAction SilentlyContinue)) { $env:Path = "C:\Program Files\Go\bin;$env:Path" }
 
@@ -52,3 +54,18 @@ try {
         } finally { Pop-Location }
     }
 } finally { Pop-Location }
+
+if ($Instalador) {
+    $makensis = Get-Command makensis -ErrorAction SilentlyContinue
+    if (-not $makensis) { $makensis = Get-Command 'C:\Program Files (x86)\NSIS\makensis.exe' -ErrorAction Stop }
+    $dist = Join-Path $raiz 'dist'
+    New-Item -ItemType Directory -Force $dist | Out-Null
+    Get-ChildItem $dist -File | Remove-Item
+    $archivoInstalador = Join-Path $dist "Tramtai-$version-instalador-windows-x64.exe"
+    & $makensis.Source /V2 /INPUTCHARSET UTF8 "/DVERSION=$version" "/DSALIDA=$archivoInstalador" (Join-Path $raiz 'scripts\instalador\tramtai.nsi')
+    if ($LASTEXITCODE) { throw 'makensis falló' }
+    Copy-Item (Join-Path $raiz 'bin\tramtai.exe') (Join-Path $dist "tramtai-$version-windows-x64.exe")
+    Get-ChildItem $dist -File -Filter *.exe | ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)" } |
+        Set-Content -Encoding ascii (Join-Path $dist 'SHA256SUMS.txt')
+    Get-ChildItem $dist -File | ForEach-Object { Write-Host "dist/$($_.Name)" }
+}

@@ -15,11 +15,8 @@
 
 ## Empezar en tres pasos
 
-```powershell
-./scripts/compilar.ps1          # 1. compila bin/tramtai.exe (requiere Go 1.27)
-./bin/tramtai.exe abrir         # 2. inicia el servicio y abre la Web UI
-```
-
+1. **Descarga el instalador** `Tramtai-…-instalador-windows-x64.exe` desde [Releases](https://github.com/MscottB/Tramtai/releases/latest) e instálalo: es solo para tu usuario y no pide permisos de administrador. Para comprobar la descarga, su suma SHA-256 está en `SHA256SUMS.txt`.
+2. **Abre Tramtai** desde el menú Inicio: queda en la bandeja del sistema con el servicio en marcha.
 3. En la Web UI, **Agentes** te dice qué falta para cada agente (conectarlo con tu suscripción o con una clave) y **Mis APIs** te da la URL, la clave y ejemplos listos para copiar.
 
 En este equipo entras sin escribir ninguna clave: Tramtai reconoce que el navegador es tuyo.
@@ -55,4 +52,10 @@ bin/tramtai-escritorio.exe                     # aplicación de escritorio con i
 | [API](docs/api.md) | Rutas, fachadas OpenAI y Anthropic, perfiles, errores |
 | [Arquitectura](docs/arquitectura.md) | Cómo funciona por dentro: agentes, aislamiento, seguridad y recuperación |
 
-¿Desarrollas Tramtai? La guía del equipo está en [docs/equipo](docs/equipo/desarrollo.md).
+¿Desarrollas Tramtai o quieres compilarlo tú? La guía del equipo está en [docs/equipo](docs/equipo/desarrollo.md).
+
+La página del producto está en [mscottb.github.io/Tramtai](https://mscottb.github.io/Tramtai/).
+
+## Licencia
+
+Tramtai se publica con la licencia [PolyForm Noncommercial 1.0.0](LICENSE.md): puedes usarlo, estudiarlo y modificarlo gratis para fines personales y no comerciales. Para usarlo en una empresa o en un producto comercial hace falta una licencia aparte; escribe a [MscottB](https://github.com/MscottB).

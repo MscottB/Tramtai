@@ -1,0 +1,40 @@
+# Al subir una etiqueta vX.Y.Z+DDMMAAAA (scripts/version.ps1 -Etiquetar): compila, genera el instalador de Windows y
+# publica el release con las notas de la etiqueta. Los binarios van al release, no a artefactos de Actions.
+name: Publicar
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # version.ps1 calcula la versión desde las etiquetas
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Herramientas (wails3 para el icono y NSIS para el instalador)
+        run: |
+          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue) -and -not (Test-Path 'C:\Program Files (x86)\NSIS\makensis.exe')) {
+            choco install nsis -y --no-progress
+          }
+      - name: Pruebas
+        run: |
+          go test ./...
+          cd escritorio; go test ./...
+      - name: Compilar e instalador
+        run: |
+          $version = ./scripts/version.ps1
+          if ($version -ne $env:GITHUB_REF_NAME) { throw "la versión calculada ($version) no coincide con la etiqueta $env:GITHUB_REF_NAME" }
+          ./scripts/compilar.ps1 -Instalador
+      - name: Publicar el release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create $env:GITHUB_REF_NAME (Get-ChildItem dist -File).FullName --title "Tramtai $env:GITHUB_REF_NAME" --notes-from-tag --verify-tag

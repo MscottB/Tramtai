@@ -55,6 +55,6 @@ git push origin --tags             # sube las etiquetas
 1. Commits con prefijo (`feat: …`, `fix: …`, `docs: …`) y la lista de cambios en el cuerpo.
 2. `./scripts/version.ps1 -Explicar` para revisar la versión y sus notas.
 3. `./scripts/version.ps1 -Etiquetar`, y después `git push` y `git push origin --tags`.
-4. El release de GitHub se creará desde la etiqueta cuando exista el CI/CD (ver [pendientes.md](pendientes.md)).
+4. Al subir la etiqueta, `.github/workflows/publicar.yml` compila en Windows, genera el instalador y crea el release de GitHub con las notas de la etiqueta, el instalador, `tramtai.exe` y `SHA256SUMS.txt`. Falla si la versión calculada no coincide con la etiqueta.
 
 Nota: Go no admite `+metadatos` como versión de módulo. No afecta, porque Tramtai es una aplicación y no una biblioteca importable.

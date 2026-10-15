@@ -39,6 +39,7 @@ func main() {
 		comandoAgentes(),
 		comandoConfiguracion(),
 		comandoClaves(),
+		comandoInstalacion(),
 	)
 	if err := raiz.Execute(); err != nil {
 		os.Exit(1)

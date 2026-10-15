@@ -17,9 +17,9 @@
 
 ## Tareas
 
-- [ ] **CI/CD con GitHub Actions** (en espera). Ejecutará `go vet` y `go test` en cada push, y en cada etiqueta `v*` compilará con `scripts/compilar.ps1` y creará el release de GitHub con `tramtai.exe` y, más adelante, el instalador. **Bloqueo:** el almacenamiento de GitHub Actions de la cuenta está lleno y se espera el reinicio del ciclo de facturación (unos 20 días desde el 12-10-2026). Al retomarla:
-  - Revisar en *Settings → Billing → Usage* qué ocupa el espacio; normalmente son artefactos y cachés de otros repositorios, que se liberan al borrarlos y no al cambiar de ciclo.
-  - Usar `retention-days: 1–5` en `upload-artifact` y adjuntar los binarios al release en lugar de dejarlos como artefactos.
+- [ ] **Activar CI/CD y la página al hacer público el repositorio.** Los flujos ya están en `.github/workflows/`: `ci.yml` (vet y pruebas en Windows, Linux y macOS, y la Web UI), `publicar.yml` (en cada etiqueta `v*` compila, genera el instalador y crea el release con `SHA256SUMS.txt`) y `paginas.yml` (publica `site/` en GitHub Pages). En repositorios públicos los runners estándar no consumen minutos ni el almacenamiento de la cuenta. Falta: hacer público el repo, elegir *Settings → Pages → Source: GitHub Actions* y comprobar la primera ejecución de cada flujo (macOS nunca se ha probado en un equipo real y su resultado no bloquea).
+- [ ] Firma de código del instalador y de los `.exe` (SmartScreen avisa de «aplicación desconocida» sin ella): Azure Trusted Signing o un certificado OV.
+- [ ] Aviso de versión nueva en la app y `tramtai actualizar` (descarga el instalador del release, comprueba su SHA-256 y lo ejecuta en silencio).
 - [ ] Ejecutar M0b con claves reales y registrar el resultado en el documento maestro (el avance M1–M7 ya está en la v13, sección 23.4).
 - [ ] Compilar y probar la aplicación de escritorio en macOS y Linux (necesita CGO y WebKit; hoy solo Windows).
 - [ ] Revisar Wails en cada beta (fijado en v3.0.0-beta.28) y migrar a la versión estable cuando salga.

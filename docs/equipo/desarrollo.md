@@ -19,6 +19,8 @@ go run ./scripts/icono     # regenera el icono (escritorio/icono/tramtai.png); c
 
 `compilar.ps1` necesita `wails3` (en `%USERPROFILE%\go\bin`) para el icono y la versión de los `.exe`; sin él compila igual, sin esos recursos.
 
+**Instalador.** `./scripts/compilar.ps1 -Instalador` deja además en `dist/` el instalador de Windows (NSIS, `scripts/instalador/tramtai.nsi`), `tramtai.exe` suelto y `SHA256SUMS.txt`. Necesita NSIS 3. Es por usuario y sin permisos de administrador; el PATH lo edita `tramtai instalacion agregar-ruta|quitar-ruta` (comando oculto), porque NSIS corta las cadenas a 1024 caracteres. Las imágenes del asistente se regeneran con `scripts/instalador/imagenes.ps1`.
+
 ## Web UI
 
 ```powershell
