@@ -86,23 +86,65 @@ LangString descArranque ${LANG_SPANISH} "Al iniciar sesión, Tramtai arranca ocu
 LangString descArranque ${LANG_ENGLISH} "When you sign in, Tramtai starts hidden in the tray with the service running."
 LangString descEscritorio ${LANG_SPANISH} "Un acceso directo a Tramtai en el escritorio."
 LangString descEscritorio ${LANG_ENGLISH} "A Tramtai shortcut on the desktop."
+LangString cerrarAbierta ${LANG_SPANISH} "Tramtai está abierto. Para continuar se cerrará y se detendrá su servicio; las peticiones en curso terminan antes.$\r$\n$\r$\nAl terminar de instalar, Tramtai volverá a abrirse."
+LangString cerrarAbierta ${LANG_ENGLISH} "Tramtai is open. To continue it will be closed and its service stopped; requests in progress finish first.$\r$\n$\r$\nWhen the installation finishes, Tramtai will open again."
+LangString cerrarAbiertaDesinstalar ${LANG_SPANISH} "Tramtai está abierto. Para desinstalarlo se cerrará y se detendrá su servicio; las peticiones en curso terminan antes."
+LangString cerrarAbiertaDesinstalar ${LANG_ENGLISH} "Tramtai is open. To uninstall it, it will be closed and its service stopped; requests in progress finish first."
 LangString borrarDatos ${LANG_SPANISH} "¿Borrar también tu configuración y tus datos de Tramtai (APIs, tokens e historial)?$\r$\n$\r$\nSi vas a volver a instalarlo, elige No."
 LangString borrarDatos ${LANG_ENGLISH} "Also delete your Tramtai settings and data (APIs, tokens and history)?$\r$\n$\r$\nIf you plan to reinstall it, choose No."
 
-; Antes de copiar o borrar: cierra la aplicación y detiene el servicio de esta instalación (los .exe en uso no se
-; pueden reemplazar). El servicio espera a que terminen los trabajos en curso (servicio.plazo_drenaje_segundos).
-!macro DetenerTramtai
-  ${If} ${FileExists} "$INSTDIR\tramtai.exe"
-    nsExec::Exec 'taskkill /F /IM tramtai-escritorio.exe'
+Var abierta  ; la app de escritorio estaba abierta antes de instalar
+Var servicio ; el servicio estaba en marcha
+
+; HayProceso deja 0 en RESULTADO si el usuario tiene abierto un proceso con ese nombre (esté donde esté instalado).
+!macro HayProceso NOMBRE RESULTADO
+  nsExec::Exec 'cmd /c tasklist /FI "USERNAME eq %USERNAME%" /FI "IMAGENAME eq ${NOMBRE}" /NH | find /I "${NOMBRE}" >NUL'
+  Pop ${RESULTADO}
+!macroend
+
+; Antes de copiar o borrar: cierra la aplicación y detiene el servicio de Tramtai, sea esta instalación, la portable o
+; una copia compilada, porque los .exe en uso no se pueden reemplazar y la app nueva no debe quedarse conectada al
+; servicio viejo. El servicio espera a que terminen los trabajos en curso (servicio.plazo_drenaje_segundos). CLI es el
+; tramtai.exe que lo detiene: encuentra el servicio por su servicio.json, lo haya iniciado la copia que sea. Recuerda en
+; $abierta y $servicio qué estaba en marcha para volver a abrirlo al terminar.
+!macro DetenerTramtai CLI AVISO
+  StrCpy $abierta 0
+  StrCpy $servicio 0
+  !insertmacro HayProceso "tramtai-escritorio.exe" $0
+  !insertmacro HayProceso "tramtai.exe" $1
+  ${If} $0 == 0
+    StrCpy $abierta 1
+  ${EndIf}
+  ${If} $0 == 0
+  ${OrIf} $1 == 0
+    ${IfNot} ${Silent}
+      MessageBox MB_OKCANCEL|MB_ICONINFORMATION "${AVISO}" /SD IDOK IDOK +2
+      Abort
+    ${EndIf}
+    nsExec::Exec 'cmd /c taskkill /F /FI "USERNAME eq %USERNAME%" /IM tramtai-escritorio.exe'
     Pop $0
-    nsExec::Exec '"$INSTDIR\tramtai.exe" servicio detener --si'
+    nsExec::Exec '"${CLI}" servicio detener --si'
+    Pop $0
+    ${If} $0 == 0
+      StrCpy $servicio 1
+    ${EndIf}
+    ; Espera hasta 10 s a que salgan los demás tramtai.exe (la CLI, una terminal interactiva…) y cierra los que queden.
+    ${For} $2 1 20
+      !insertmacro HayProceso "tramtai.exe" $1
+      ${IfThen} $1 != 0 ${|} ${Break} ${|}
+      Sleep 500
+    ${Next}
+    nsExec::Exec 'cmd /c taskkill /F /FI "USERNAME eq %USERNAME%" /IM tramtai.exe'
     Pop $0
   ${EndIf}
 !macroend
 
 Section "$(secPrograma)" SecPrograma
   SectionIn RO
-  !insertmacro DetenerTramtai
+  ; La CLI nueva detiene el servicio aunque esta carpeta aún no tenga Tramtai (primera instalación o portable).
+  InitPluginsDir
+  File "/oname=$PLUGINSDIR\tramtai.exe" "${RAIZ}\bin\tramtai.exe"
+  !insertmacro DetenerTramtai "$PLUGINSDIR\tramtai.exe" "$(cerrarAbierta)"
   SetOutPath "$INSTDIR"
   File "${RAIZ}\bin\tramtai.exe"
   File "${RAIZ}\bin\tramtai-escritorio.exe"
@@ -135,13 +177,22 @@ Section /o "$(secEscritorio)" SecEscritorio
   CreateShortcut "$DESKTOP\Tramtai.lnk" "$INSTDIR\tramtai-escritorio.exe"
 SectionEnd
 
-; tramtai actualizar ejecuta el instalador en silencio con /abrir: al terminar se vuelve a abrir la app.
+; Al terminar vuelve a abrir lo que estaba abierto. En silencio, la app si lo estaba o si se pide con /abrir (tramtai
+; actualizar y «Actualizar ahora»); con el asistente, la casilla «Abrir Tramtai» de la última página decide. Si solo
+; estaba el servicio (sin la app), se vuelve a iniciar en segundo plano.
 Function .onInstSuccess
   ${GetParameters} $0
   ClearErrors
   ${GetOptions} $0 "/abrir" $1
   ${IfNot} ${Errors}
+    StrCpy $abierta 1
+  ${EndIf}
+  ${If} ${Silent}
+  ${AndIf} $abierta == 1
     Exec '"$INSTDIR\tramtai-escritorio.exe"'
+  ${ElseIf} $servicio == 1
+  ${AndIf} $abierta != 1
+    Exec '"$INSTDIR\tramtai.exe" servicio iniciar -d'
   ${EndIf}
 FunctionEnd
 
@@ -153,7 +204,7 @@ FunctionEnd
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 Section "Uninstall"
-  !insertmacro DetenerTramtai
+  !insertmacro DetenerTramtai "$INSTDIR\tramtai.exe" "$(cerrarAbiertaDesinstalar)"
   nsExec::Exec '"$INSTDIR\tramtai.exe" servicio autoarranque desactivar'
   Pop $0
   nsExec::Exec '"$INSTDIR\tramtai.exe" instalacion quitar-ruta "$INSTDIR"'
