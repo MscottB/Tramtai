@@ -1,14 +1,17 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
+	"maps"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"tramtai/internal/adaptadores"
@@ -331,6 +334,41 @@ func (s *Servidor) predeterminado() string {
 	return agente
 }
 
+// modelosConcretos pregunta a los agentes que saben decirlo (Claude) qué modelo concreto usarán para cada alias y
+// para su predeterminado, en paralelo y con un plazo; lo que no llegue a tiempo queda en caché para la próxima vez.
+func (s *Servidor) modelosConcretos(ctx context.Context, lista []modelo, destinos [][2]string) map[string]string {
+	ctx, cancelar := context.WithTimeout(ctx, 10*time.Second)
+	defer cancelar()
+	var mu sync.Mutex
+	var grupo sync.WaitGroup
+	concretos, pedidos := map[string]string{}, map[string]bool{}
+	for i, d := range destinos {
+		clave := d[0] + "/" + d[1]
+		if d[0] == "" || lista[i].Origen == "visto" || pedidos[clave] {
+			continue
+		}
+		pedidos[clave] = true
+		grupo.Add(1)
+		go func() {
+			defer grupo.Done()
+			if concreto := adaptadores.ModeloConcreto(context.WithoutCancel(ctx), s.Registro[d[0]], d[0], d[1]); concreto != "" {
+				mu.Lock()
+				concretos[clave] = concreto
+				mu.Unlock()
+			}
+		}()
+	}
+	listo := make(chan struct{})
+	go func() { grupo.Wait(); close(listo) }()
+	select {
+	case <-listo:
+	case <-ctx.Done():
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	return maps.Clone(concretos)
+}
+
 // catalogo lista cada agente (con el modelo predeterminado de su CLI), los modelos configurados en los perfiles
 // como agente/modelo, los perfiles como perfil/nombre y las versiones concretas que informaron los agentes
 // (efectivos, de ModelosEfectivos) como agente/version, para poder pedir una en concreto.
@@ -368,6 +406,7 @@ func (s *Servidor) modelosNativos(w http.ResponseWriter, r *http.Request) {
 	efectivos, _ := s.Planificador.ModelosEfectivos(r.Context()) // sin historial, el catálogo va sin versiones
 	lista := s.catalogo(efectivos)
 	pred, agentePred, perfiles := s.predeterminado(), s.Config.Texto("predeterminados.agente"), s.Config.Perfiles()
+	destinos := make([][2]string, len(lista)) // agente y modelo al que lleva cada entrada
 	for i := range lista {
 		m := &lista[i]
 		m.Predeterminado = m.ID == pred
@@ -378,8 +417,15 @@ func (s *Servidor) modelosNativos(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if agente != "" {
-			m.Version = efectivos[agente+"/"+modelo]
+			destinos[i] = [2]string{agente, modelo}
 			m.Esfuerzos = adaptadores.NivelesEsfuerzo(agente)
+		}
+	}
+	concretos := s.modelosConcretos(r.Context(), lista, destinos)
+	for i := range lista {
+		if d := destinos[i]; d[0] != "" {
+			// Lo que el agente dice que usará ahora manda sobre lo que informó la última vez que se usó.
+			lista[i].Version = cmp.Or(concretos[d[0]+"/"+d[1]], efectivos[d[0]+"/"+d[1]])
 		}
 	}
 	EscribirJSON(w, http.StatusOK, map[string]any{"modelos": lista})

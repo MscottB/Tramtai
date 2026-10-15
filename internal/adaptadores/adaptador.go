@@ -3,6 +3,7 @@ package adaptadores
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"tramtai/internal/nucleo"
@@ -25,6 +26,38 @@ type Resultado struct {
 // Recibe el modelo ya resuelto en solicitud.Modelo (el planificador traduce los perfiles).
 type Adaptador interface {
 	Ejecutar(ctx context.Context, solicitud nucleo.SolicitudEjecucion, emitir func(Evento) error) (Resultado, error)
+}
+
+// Resolvedor lo implementan los adaptadores que saben qué modelo concreto usarán para un alias (sonnet, haiku…) o
+// para su predeterminado ("") sin completar una petición.
+type Resolvedor interface {
+	ResolverModelo(ctx context.Context, modelo string) (string, error)
+}
+
+// resueltos guarda lo que contestó ResolverModelo unas horas: los alias cambian de versión con el CLI.
+var resueltos sync.Map // agente/modelo → resolucion
+
+type resolucion struct {
+	modelo string
+	cuando time.Time
+}
+
+// ModeloConcreto devuelve el modelo que usará a para modelo, o "" si el adaptador no sabe decirlo.
+func ModeloConcreto(ctx context.Context, a Adaptador, agente, modelo string) string {
+	r, ok := a.(Resolvedor)
+	if !ok {
+		return ""
+	}
+	clave := agente + "/" + modelo
+	if v, ok := resueltos.Load(clave); ok && time.Since(v.(resolucion).cuando) < 6*time.Hour {
+		return v.(resolucion).modelo
+	}
+	concreto, err := r.ResolverModelo(ctx, modelo)
+	if err != nil || concreto == "" {
+		return ""
+	}
+	resueltos.Store(clave, resolucion{concreto, time.Now()})
+	return concreto
 }
 
 // Simulado es un agente determinista para pruebas: espera Demora y devuelve Respuesta,

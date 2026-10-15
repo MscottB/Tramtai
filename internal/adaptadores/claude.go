@@ -40,6 +40,51 @@ func (c Claude) Detectar(ctx context.Context) Estado {
 	return e
 }
 
+// ResolverModelo implementa Resolvedor: Claude Code informa el modelo concreto en su evento system/init, antes de
+// enviar la petición, y en cuanto llega se le corta. shortcut: si el CLI tarda en morir puede llegar a enviar un
+// mensaje de un carácter; si alguna vez cobra, pedirlo solo al abrir el selector.
+func (c Claude) ResolverModelo(ctx context.Context, modelo string) (string, error) {
+	ruta, err := resolverPrograma(c.Programa)
+	if err != nil {
+		return "", err
+	}
+	args := []string{"-p", "--output-format", "stream-json", "--verbose", "--setting-sources", "", "--strict-mcp-config",
+		"--tools", "", "--no-session-persistence", "--disable-slash-commands"}
+	var extra []string
+	if c.Autenticacion.Valor() != AutenticacionSuscripcion {
+		clave := claveEntorno("ANTHROPIC_API_KEY")
+		if clave == "" {
+			return "", nucleo.NuevoError(nucleo.CodigoAutenticacionAgente, idioma.T("falta ANTHROPIC_API_KEY"))
+		}
+		extra = append(extra, "ANTHROPIC_API_KEY="+clave)
+		args = append(args, "--bare")
+	}
+	if modelo != "" {
+		args = append(args, "--model", modelo)
+	}
+	raiz, espacio, err := espacioTemporal()
+	if err != nil {
+		return "", err
+	}
+	defer os.RemoveAll(raiz)
+	ctx, cortar := context.WithCancel(ctx)
+	defer cortar()
+	var concreto string
+	_, err = procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: espacio,
+		Entorno: entornoLimpio(extra...), Entrada: "."}, func(linea string) error {
+		var e struct{ Type, Subtype, Model string }
+		if json.Unmarshal([]byte(linea), &e) == nil && e.Type == "system" && e.Subtype == "init" {
+			concreto = e.Model
+			cortar()
+		}
+		return nil
+	})
+	if concreto != "" {
+		return concreto, nil
+	}
+	return "", err
+}
+
 // Ejecutar implementa Adaptador.
 func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(Evento) error) (Resultado, error) {
 	ruta, err := resolverPrograma(c.Programa)

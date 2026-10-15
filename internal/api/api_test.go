@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -443,5 +444,44 @@ func TestCatalogoConVersionesYPredeterminado(t *testing.T) {
 	// La versión vista también se lista, una sola vez, en /openai/v1/models.
 	if _, modelos := pedir(t, ts, "GET", "/openai/v1/models", ""); strings.Count(modelos, `"simulado/m1-2026"`) != 1 {
 		t.Fatalf("la versión vista debe aparecer una vez: %s", modelos)
+	}
+}
+
+// resolvible dice qué modelo concreto usará sin ejecutar nada, como Claude con su evento init.
+type resolvible struct{ consultas *atomic.Int32 }
+
+func (resolvible) Ejecutar(context.Context, nucleo.SolicitudEjecucion, func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	return adaptadores.Resultado{Salida: "ok", ModeloEfectivo: "m1-viejo"}, nil
+}
+
+func (r resolvible) ResolverModelo(_ context.Context, modelo string) (string, error) {
+	r.consultas.Add(1)
+	if modelo == "" {
+		return "predeterminado-2027", nil
+	}
+	return modelo + "-2027", nil
+}
+
+func TestCatalogoConVersionAntesDeUsar(t *testing.T) {
+	var consultas atomic.Int32
+	ts := servidor(t, map[string]adaptadores.Adaptador{"resolvible": resolvible{&consultas}},
+		map[string]any{"predeterminados.agente": "resolvible", "modelos.perfiles.rapido.resolvible": "m1"})
+	if r, cuerpo := pedir(t, ts, "POST", "/api/v1/ejecutar", `{"agente":"resolvible","modelo":"m1","mensajes":[{"rol":"usuario","contenido":"hola"}]}`); r.StatusCode != 200 {
+		t.Fatalf("ejecutar: %d %s", r.StatusCode, cuerpo)
+	}
+	_, cuerpo := pedir(t, ts, "GET", "/api/v1/modelos", "")
+	for _, esperado := range []string{
+		// lo que el agente usará ahora manda sobre lo que informó la última vez
+		`"id":"resolvible/m1","agente":"resolvible","modelo":"m1","origen":"configurado","version":"m1-2027"`,
+		`"id":"resolvible","agente":"resolvible","origen":"predeterminado_del_cli","version":"predeterminado-2027"`,
+	} {
+		if !strings.Contains(cuerpo, esperado) {
+			t.Fatalf("falta %s en %s", esperado, cuerpo)
+		}
+	}
+	antes := consultas.Load()
+	pedir(t, ts, "GET", "/api/v1/modelos", "")
+	if consultas.Load() != antes {
+		t.Fatalf("la segunda consulta del catálogo volvió a preguntar al agente: %d → %d", antes, consultas.Load())
 	}
 }
