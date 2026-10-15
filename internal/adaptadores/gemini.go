@@ -91,6 +91,7 @@ func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 
 	var salida strings.Builder
 	var r Resultado
+	fin := "" // finishReason del candidato: sin él, el flujo se cortó antes de terminar
 	lector := bufio.NewScanner(respuesta.Body)
 	lector.Buffer(make([]byte, 64<<10), 8<<20)
 	for lector.Scan() {
@@ -118,6 +119,9 @@ func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 			if c.FinishReason == "SAFETY" || c.FinishReason == "PROHIBITED_CONTENT" {
 				return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorAgente, idioma.Tf("Gemini bloqueó la respuesta (%s)", c.FinishReason))
 			}
+			if c.FinishReason != "" {
+				fin = c.FinishReason
+			}
 		}
 		if f.UsageMetadata.PromptTokenCount > 0 || f.UsageMetadata.CandidatesTokenCount > 0 {
 			r.Uso = nucleo.Uso{TokensEntrada: f.UsageMetadata.PromptTokenCount,
@@ -132,6 +136,14 @@ func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 			return Resultado{}, ctx.Err()
 		}
 		return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.Tf("flujo de Gemini interrumpido: %s", redactar(err.Error(), clave)))
+	}
+	switch fin {
+	case "": // un proxy o el servidor cerró la conexión: la respuesta parcial no se da por completa
+		return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.T("el flujo de Gemini terminó sin finishReason; la respuesta está incompleta"))
+	case "MAX_TOKENS": // válida, pero cortada: se avisa
+		if err := emitir(Evento{Tipo: "aviso", Datos: idioma.T("Gemini cortó la respuesta al alcanzar el máximo de tokens (MAX_TOKENS)")}); err != nil {
+			return Resultado{}, err
+		}
 	}
 	r.Salida = salida.String()
 	return r, nil

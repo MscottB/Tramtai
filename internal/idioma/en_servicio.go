@@ -29,6 +29,8 @@ func init() {
 		"fragmento SSE de Gemini no válido":                                           "invalid Gemini SSE chunk",
 		"Gemini bloqueó la respuesta (%s)":                                            "Gemini blocked the response (%s)",
 		"flujo de Gemini interrumpido: %s":                                            "Gemini stream interrupted: %s",
+		"el flujo de Gemini terminó sin finishReason; la respuesta está incompleta":   "the Gemini stream ended without finishReason; the response is incomplete",
+		"Gemini cortó la respuesta al alcanzar el máximo de tokens (MAX_TOKENS)":      "Gemini cut the response off at the maximum token count (MAX_TOKENS)",
 		"modo de autenticación desconocido: %s":                                       "unknown authentication mode: %s",
 		"solo claude y codex admiten la suscripción":                                  "only claude and codex support the subscription",
 		"max_tokens es obligatorio":                                                   "max_tokens is required",
