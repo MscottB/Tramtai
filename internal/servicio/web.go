@@ -438,7 +438,7 @@ func (s *Servicio) sitio(w http.ResponseWriter, r *http.Request) {
 	h.Set("Referrer-Policy", "no-referrer")
 	// connect-src admite otros puertos de este equipo para seguir al servicio si un reinicio le cambia el puerto.
 	h.Set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; "+
-		"connect-src 'self' http://127.0.0.1:* http://localhost:* http://[::1]:*; frame-ancestors 'none'")
+		"connect-src 'self' http://127.0.0.1:* http://localhost:*; frame-ancestors 'none'")
 	if strings.HasPrefix(ruta, "assets/") {
 		h.Set("Cache-Control", "public, max-age=31536000, immutable")
 	} else {
