@@ -32,7 +32,9 @@ npm run build    # compila en internal/recursos/web, que se incorpora al ejecuta
 
 La compilación de la Web UI se versiona para que `go build` no necesite Node.
 
-**Idiomas.** Los textos están en `web/src/idiomas/`: `es.ts` es el principal y define las claves; `en.ts` tiene el tipo `Textos`, así que `npx tsc --noEmit -p .` falla si le falta alguna. Para añadir un idioma, crea `idiomas/<código>.ts` con el mismo tipo y añádelo a `idiomas` en `web/src/i18n.ts` junto al paquete de Quasar (`quasar/lang/<código>`). La preferencia se recuerda en el navegador; sin ella se usa la del navegador y, si no está disponible, español. La CLI, la terminal y los mensajes de error del servicio siguen solo en español.
+**Idiomas.** Los textos están en `web/src/idiomas/`: `es.ts` es el principal y define las claves; `en.ts` tiene el tipo `Textos`, así que `npx tsc --noEmit -p .` falla si le falta alguna. Para añadir un idioma, crea `idiomas/<código>.ts` con el mismo tipo y añádelo a `idiomas` en `web/src/i18n.ts` junto al paquete de Quasar (`quasar/lang/<código>`). La preferencia se recuerda en el navegador; sin ella se usa la del navegador y, si no está disponible, español. 
+
+La CLI, la terminal interactiva, la app de escritorio y los mensajes de error del servicio usan `internal/idioma`: el texto se escribe en español dentro de `idioma.T("…")` o `idioma.Tf("… %s", x)` (siempre un literal) y su inglés va en `internal/idioma/en_*.go`. `TestCobertura` falla si un texto marcado no tiene traducción, si cambian los verbos de `fmt`, si sobra una traducción o si un mismo texto tiene dos. No se traducen los nombres de comandos y opciones, las claves de configuración, los códigos de error, los registros del servicio ni lo que se envía a los agentes. El idioma sale de `TRAMTAI_IDIOMA` (`es` o `en`) o del sistema; las pruebas comparan textos en español, así que el CI las ejecuta con `TRAMTAI_IDIOMA=es`.
 
 ## Probar
 

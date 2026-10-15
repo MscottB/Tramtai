@@ -378,7 +378,7 @@ const en: Textos = {
   'puntos.usoUno': '1 request in 7 days',
   'app.servicio': 'Service status',
   'app.servicioDetalle': 'Tramtai {version} at {url}',
-  'app.comoIniciar': 'To start it, run “tramtai abrir” in a terminal or, in the desktop app, use the tray icon → Iniciar el servicio. This page reconnects by itself.',
+  'app.comoIniciar': 'To start it, run “tramtai abrir” in a terminal or, in the desktop app, use the tray icon → Start the service. This page reconnects by itself.',
   'app.reintentar': 'Retry',
   'app.detener': 'Stop the service…',
   'app.detenerTitulo': 'Stop the service',

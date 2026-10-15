@@ -150,7 +150,6 @@ func init() {
 		"puerto configurado: %d · si está ocupado, usar otro libre: %v\n":                                                           "configured port: %d · if it is in use, use another free one: %v\n",
 		"servicio en marcha en %s":                                                                                                  "service running at %s",
 		"el puerto debe ser un número entre 1024 y 65535":                                                                           "the port must be a number between 1024 and 65535",
-		"el puerto %d está ocupado por otro programa: elige otro":                                                                   "port %d is in use by another program: choose another one",
 		"guardado en %s; se aplica al reiniciar el servicio (tramtai servicio detener y tramtai abrir, o Reiniciar en la Web UI)":   "saved to %s; applies when the service restarts (tramtai servicio detener and tramtai abrir, or Restart the service in the Web UI)",
 		"si el puerto está ocupado al iniciar, usar otro libre":                                                                     "if the port is in use at startup, use another free one",
 		"Muestra lo que procesa el servicio en segundo plano (servicio.log); -f lo sigue en vivo":                                   "Shows what the background service processes (servicio.log); -f follows it live",

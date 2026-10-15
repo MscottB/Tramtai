@@ -106,6 +106,10 @@ tramtai abrir       # abre la instancia de ese proyecto
 
   Se pide con `tramtai ejecutar --contexto consciente_proyecto "…"`.
 
+## Idioma
+
+La CLI, la terminal interactiva y la app de escritorio salen en el idioma de tu sistema: en español si está en español y en inglés si no. Para elegirlo, define la variable de entorno `TRAMTAI_IDIOMA` con `es` o `en`. La Web UI tiene su propio selector de idioma, arriba a la derecha.
+
 ## Configuración
 
 Se lee de menor a mayor prioridad: valores internos, `%APPDATA%\tramtai\config.yaml` (global), `.tramtai/config.yaml` (proyecto, se versiona), `.tramtai/local.yaml` (solo este equipo) y variables de entorno `TRAMTAI_SECCION__CLAVE`.

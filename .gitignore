@@ -19,3 +19,6 @@ node_modules/
 
 # Capturas de revisión de diseño (locales)
 .impeccable/review/
+
+# worktrees de agentes de Claude Code
+/.claude/
