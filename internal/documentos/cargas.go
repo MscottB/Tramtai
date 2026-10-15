@@ -64,11 +64,29 @@ func (c *Cargas) Guardar(nombre string, r io.Reader) (Carga, error) {
 	suma := hex.EncodeToString(resumen.Sum(nil))
 	ahora := time.Now().UTC()
 	carga := Carga{ID: "carga_" + suma[:32], Nombre: nombreSeguro(nombre), SHA256: suma, Bytes: n, CreadoEn: ahora, VenceEn: ahora.Add(c.vigencia)}
-	if err := os.Rename(temporal.Name(), filepath.Join(c.dir, carga.ID)); err != nil {
+	// Los metadatos van antes que el contenido: una purga concurrente nunca ve contenido sin metadatos.
+	metadatos, _ := json.Marshal(carga)
+	if err := c.escribir(carga.ID+".json", metadatos); err != nil {
 		return Carga{}, err
 	}
-	metadatos, _ := json.Marshal(carga)
-	return carga, os.WriteFile(filepath.Join(c.dir, carga.ID+".json"), metadatos, 0o600)
+	return carga, os.Rename(temporal.Name(), filepath.Join(c.dir, carga.ID))
+}
+
+// escribir crea o reemplaza un archivo de golpe (temporal + renombrado): nunca se lee a medias.
+func (c *Cargas) escribir(nombre string, datos []byte) error {
+	temporal, err := os.CreateTemp(c.dir, "subida-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(temporal.Name()) // sin efecto si ya se renombró
+	_, err = temporal.Write(datos)
+	if cerrar := temporal.Close(); err == nil {
+		err = cerrar
+	}
+	if err != nil {
+		return err
+	}
+	return os.Rename(temporal.Name(), filepath.Join(c.dir, nombre))
 }
 
 // Obtener devuelve la carga y la ruta de su contenido, o entrada_no_disponible si no existe. No mira VenceEn:
@@ -102,12 +120,31 @@ func (c *Cargas) Vigente(id string) error {
 	return err
 }
 
+// gracia protege lo recién subido: un cliente puede citar la carga en un trabajo poco después de subirla.
+const gracia = time.Hour
+
 // Purgar borra las cargas vencidas que ningún trabajo necesita (enUso) y las subidas a medias de más de una hora.
 // Devuelve cuántas cargas borró.
 func (c *Cargas) Purgar(enUso map[string]bool, ahora time.Time) (int, error) {
+	return c.purgar(enUso, func(carga Carga) bool { return !ahora.Before(carga.VenceEn) })
+}
+
+// PurgarSinUso borra las cargas que ningún trabajo necesita aunque no hayan vencido, salvo las subidas en la
+// última hora (gracia): otro cliente puede estar a punto de enviar el trabajo que las cita.
+func (c *Cargas) PurgarSinUso(enUso map[string]bool) (int, error) {
+	return c.purgar(enUso, func(carga Carga) bool { return time.Since(carga.CreadoEn) > gracia })
+}
+
+// purgar borra las cargas sin uso para las que borrable es cierto. Lo que no se puede leer (metadatos dañados
+// o ausentes) solo se borra pasada la gracia, contada desde la fecha del archivo.
+func (c *Cargas) purgar(enUso map[string]bool, borrable func(Carga) bool) (int, error) {
 	entradas, err := os.ReadDir(c.dir)
 	if err != nil {
 		return 0, err
+	}
+	antiguo := func(e os.DirEntry) bool {
+		info, err := e.Info()
+		return err == nil && time.Since(info.ModTime()) > gracia
 	}
 	borradas := 0
 	for _, e := range entradas {
@@ -115,14 +152,18 @@ func (c *Cargas) Purgar(enUso map[string]bool, ahora time.Time) (int, error) {
 		ruta := filepath.Join(c.dir, nombre)
 		switch {
 		case strings.HasPrefix(nombre, "subida-"):
-			if info, err := e.Info(); err == nil && ahora.Sub(info.ModTime()) > time.Hour {
+			if antiguo(e) {
 				_ = os.Remove(ruta)
 			}
 		case strings.HasSuffix(nombre, ".json"):
 			id := strings.TrimSuffix(nombre, ".json")
+			if enUso[id] {
+				continue
+			}
 			var carga Carga
 			datos, err := os.ReadFile(ruta)
-			if err == nil && json.Unmarshal(datos, &carga) == nil && (ahora.Before(carga.VenceEn) || enUso[id]) {
+			legible := err == nil && json.Unmarshal(datos, &carga) == nil
+			if (legible && !borrable(carga)) || (!legible && !antiguo(e)) {
 				continue
 			}
 			// Primero el contenido: si falla, los metadatos siguen y la próxima purga lo reintenta.
@@ -134,7 +175,7 @@ func (c *Cargas) Purgar(enUso map[string]bool, ahora time.Time) (int, error) {
 			}
 			borradas++
 		default:
-			if _, err := os.Stat(ruta + ".json"); os.IsNotExist(err) {
+			if _, err := os.Stat(ruta + ".json"); os.IsNotExist(err) && !enUso[nombre] && antiguo(e) {
 				_ = os.Remove(ruta) // contenido sin metadatos: una subida que no terminó de registrarse
 			}
 		}

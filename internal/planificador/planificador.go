@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -83,6 +84,8 @@ type Planificador struct {
 	semaforos   Semaforos
 	// conversiones es el semáforo de conversiones de la instancia.
 	conversiones chan struct{}
+	// ranuras limita los trabajos de la instancia en ejecución (MaximoTrabajos).
+	ranuras chan struct{}
 
 	mu            sync.Mutex
 	cancelaciones map[string]context.CancelFunc
@@ -102,10 +105,11 @@ type Planificador struct {
 func Nuevo(almacen *persistencia.Almacen, registro map[string]adaptadores.Adaptador, semaforos Semaforos, opc Opciones) *Planificador {
 	opc.MaximoCola, opc.MaximoTrabajos = max(opc.MaximoCola, 1), max(opc.MaximoTrabajos, 1)
 	return &Planificador{opc: opc, almacen: almacen, adaptadores: registro, semaforos: semaforos,
-		conversiones: make(chan struct{}, max(opc.MaximoConversiones, 1)), cancelaciones: map[string]context.CancelFunc{}}
+		conversiones: make(chan struct{}, max(opc.MaximoConversiones, 1)), ranuras: make(chan struct{}, opc.MaximoTrabajos),
+		cancelaciones: map[string]context.CancelFunc{}}
 }
 
-// Iniciar recupera el estado tras un reinicio, reencola lo pendiente y arranca los ejecutores.
+// Iniciar recupera el estado tras un reinicio, reencola lo pendiente y arranca el despachador.
 func (p *Planificador) Iniciar(ctx context.Context) error {
 	if err := p.terminarHuerfanos(ctx); err != nil {
 		return err
@@ -124,10 +128,8 @@ func (p *Planificador) Iniciar(ctx context.Context) error {
 	}
 	p.ctx, p.parar = context.WithCancel(context.Background())
 	p.ejec, p.cortar = context.WithCancel(context.Background())
-	for range p.opc.MaximoTrabajos {
-		p.grupo.Add(1)
-		go p.ejecutor()
-	}
+	p.grupo.Add(1)
+	go p.despachar()
 	return nil
 }
 
@@ -247,7 +249,8 @@ func (p *Planificador) encolar(id string) {
 }
 
 // Cancelar es idempotente: en un estado terminal o ya en cancelación devuelve el trabajo sin cambios.
-// Solo registra cancelado cuando la terminación está confirmada.
+// Solo registra cancelado cuando la terminación está confirmada: al momento si el trabajo aún no lanzó nada
+// (en cola o esperando al agente) y, si no, cuando su ejecutor confirma que terminó.
 func (p *Planificador) Cancelar(ctx context.Context, id string) (nucleo.Trabajo, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -258,10 +261,16 @@ func (p *Planificador) Cancelar(ctx context.Context, id string) (nucleo.Trabajo,
 	if err := p.almacen.CambiarEstado(ctx, id, t.Estado, nucleo.CancelacionSolicitada, persistencia.Cambio{}); err != nil {
 		return t, err
 	}
-	if cancelar, enCurso := p.cancelaciones[id]; enCurso {
-		cancelar() // el ejecutor confirma la terminación y registra cancelado
-	} else if err := p.almacen.CambiarEstado(ctx, id, nucleo.CancelacionSolicitada, nucleo.Cancelado, persistencia.Cambio{}); err != nil {
-		return t, err
+	cancelar, enCurso := p.cancelaciones[id]
+	if enCurso {
+		cancelar() // con algo en marcha, el ejecutor confirma la terminación y registra cancelado
+	}
+	if !enCurso || t.Estado == nucleo.EnCola || t.Estado == nucleo.EsperandoAgente {
+		// Si el ejecutor se adelantó al ver la cancelación, el trabajo ya está cancelado.
+		if err := p.almacen.CambiarEstado(ctx, id, nucleo.CancelacionSolicitada, nucleo.Cancelado, persistencia.Cambio{}); err != nil &&
+			nucleo.CodigoDe(err) != nucleo.CodigoTransicionInvalida {
+			return t, err
+		}
 	}
 	return p.almacen.Obtener(ctx, id)
 }
@@ -278,12 +287,18 @@ func (p *Planificador) Obtener(ctx context.Context, id string) (nucleo.Trabajo, 
 // Avisos devuelve un canal que se cierra en el próximo cambio de cualquier trabajo de la instancia.
 func (p *Planificador) Avisos() <-chan struct{} { return p.almacen.Avisos() }
 
-// Eventos devuelve los eventos de un trabajo de esta instancia posteriores al número desde.
-func (p *Planificador) Eventos(ctx context.Context, id string, desde int) ([]persistencia.Evento, error) {
-	if _, err := p.Obtener(ctx, id); err != nil {
-		return nil, err
+// Eventos devuelve el estado de un trabajo de esta instancia y sus eventos posteriores al número desde. El estado
+// se lee antes que los eventos: si ya es terminal, los eventos devueltos incluyen el de su último cambio.
+func (p *Planificador) Eventos(ctx context.Context, id string, desde int) ([]persistencia.Evento, nucleo.Estado, error) {
+	instancia, estado, err := p.almacen.Estado(ctx, id)
+	if err == nil && instancia != p.opc.Instancia {
+		err = nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
 	}
-	return p.almacen.Eventos(ctx, id, desde)
+	if err != nil {
+		return nil, "", err
+	}
+	eventos, err := p.almacen.Eventos(ctx, id, desde)
+	return eventos, estado, err
 }
 
 // Reintentar crea un intento nuevo vinculado al anterior, que debe haber terminado; reutiliza sus entradas
@@ -402,21 +417,33 @@ func (p *Planificador) EnCurso() int {
 	return len(p.cancelaciones)
 }
 
-func (p *Planificador) ejecutor() {
+// despachar saca los trabajos de la cola en orden y procesa cada uno en su goroutine: un trabajo que espera
+// a su agente o a su punto de acceso no impide empezar a otro listo. Los semáforos limitan cuántos se ejecutan.
+// Antes de sacar el siguiente espera a que el anterior llegue a su espera: así cada semáforo, que atiende por
+// orden de llegada, conserva el orden de la cola.
+func (p *Planificador) despachar() {
 	defer p.grupo.Done()
 	for {
 		select {
 		case <-p.ctx.Done():
 			return
 		case id := <-p.cola:
-			p.procesar(id)
+			esperando := make(chan struct{})
+			p.grupo.Add(1)
+			go func() {
+				defer p.grupo.Done()
+				p.procesar(id, sync.OnceFunc(func() { close(esperando) }))
+			}()
+			<-esperando
 		}
 	}
 }
 
 // procesar lleva un trabajo de en_cola a un estado terminal. Las escrituras usan context.Background
-// para que el estado quede consistente aunque el servicio se esté deteniendo.
-func (p *Planificador) procesar(id string) {
+// para que el estado quede consistente aunque el servicio se esté deteniendo. esperando se llama al llegar
+// a la espera de los semáforos o de la conversión, o al terminar antes.
+func (p *Planificador) procesar(id string, esperando func()) {
+	defer esperando()
 	fondo := context.Background()
 	defer func() { // una línea en el registro si el trabajo terminó (no si quedó en cola por un cierre)
 		if t, err := p.almacen.Obtener(fondo, id); err == nil && t.Estado.Terminal() {
@@ -453,6 +480,7 @@ func (p *Planificador) procesar(id string) {
 
 	solicitud, desde := t.Solicitud, nucleo.EnCola
 	if len(solicitud.Cargas) > 0 {
+		esperando() // una conversión larga no frena el despacho de los demás
 		if !p.cambiar(id, nucleo.EnCola, nucleo.PreparandoEntrada, persistencia.Cambio{}) {
 			return
 		}
@@ -479,8 +507,20 @@ func (p *Planificador) procesar(id string) {
 	if !p.cambiar(id, desde, nucleo.EsperandoAgente, persistencia.Cambio{}) {
 		return
 	}
-	// Primero el punto de acceso y después el adaptador, para no ocupar el CLI compartido mientras se espera.
-	for _, semaforo := range []chan struct{}{p.semaforoPunto(t.PuntoAcceso), p.semaforos[t.Solicitud.Agente]} {
+	// El plazo en cola cuenta hasta que el trabajo empieza a ejecutarse, también mientras espera al agente.
+	var plazoCola <-chan time.Time
+	if p.opc.TiempoMaximoCola > 0 {
+		temporizador := time.NewTimer(time.Until(t.CreadoEn.Add(p.opc.TiempoMaximoCola)))
+		defer temporizador.Stop()
+		plazoCola = temporizador.C
+	}
+	// shortcut: el siguiente trabajo tarda en llegar a su espera (lee y escribe en la base) mucho más que este en
+	// entrar en el select, así que en la práctica se respeta el orden; si no bastara, un turno por agente.
+	esperando()
+	// Primero el punto de acceso, después el adaptador y al final la plaza de la instancia: quien espera a su
+	// agente no ocupa plaza, así que otro trabajo listo de otro agente puede empezar. Un canal atiende a sus
+	// esperas por orden de llegada, así que cada agente conserva el orden de la cola.
+	for _, semaforo := range []chan struct{}{p.semaforoPunto(t.PuntoAcceso), p.semaforos[t.Solicitud.Agente], p.ranuras} {
 		if semaforo == nil {
 			continue
 		}
@@ -493,7 +533,14 @@ func (p *Planificador) procesar(id string) {
 		case <-p.ctx.Done(): // en drenaje: nunca lanzó el agente, se reencola
 			p.cerrarDetenido(id, nucleo.EsperandoAgente)
 			return
+		case <-plazoCola:
+			p.cambiar(id, nucleo.EsperandoAgente, nucleo.Fallido, persistencia.Cambio{Codigo: nucleo.CodigoTiempoColaAgotado, Mensaje: idioma.T("se superó el tiempo máximo en cola")})
+			return
 		}
+	}
+	if p.ctx.Err() != nil { // el drenaje empezó mientras se tomaban los semáforos
+		p.cerrarDetenido(id, nucleo.EsperandoAgente)
+		return
 	}
 	if !p.cambiar(id, nucleo.EsperandoAgente, nucleo.Ejecutando, persistencia.Cambio{}) {
 		return
@@ -515,9 +562,9 @@ func (p *Planificador) procesar(id string) {
 			" y carga las reglas del proyecto y de sus carpetas superiores (CLAUDE.md, AGENTS.md, GEMINI.md), sin MCP, herramientas"+
 			" ni sesión persistente; con autenticación por suscripción el CLI carga también las reglas del usuario", p.opc.RaizConfiable))
 	}
-	resultado, err := adaptador.Ejecutar(ctxEjecucion, solicitud, func(e adaptadores.Evento) error {
-		return p.almacen.AgregarEvento(fondo, id, e.Tipo, e.Datos)
-	})
+	agrupador := &agrupador{guardar: func(tipo, datos string) error { return p.almacen.AgregarEvento(fondo, id, tipo, datos) }}
+	resultado, err := adaptador.Ejecutar(ctxEjecucion, solicitud, agrupador.emitir)
+	_ = agrupador.vaciar() // antes de cualquier cambio de estado: el texto queda completo y en orden
 	switch {
 	case ctxTrabajo.Err() != nil:
 		p.cerrarDetenido(id, nucleo.Ejecutando)
@@ -554,7 +601,7 @@ func (p *Planificador) procesar(id string) {
 func (p *Planificador) cerrarDetenido(id string, desde nucleo.Estado) {
 	t, err := p.almacen.Obtener(context.Background(), id)
 	switch {
-	case err != nil:
+	case err != nil, t.Estado.Terminal(): // Terminal: Cancelar ya lo dio por cancelado
 	case t.Estado == nucleo.CancelacionSolicitada:
 		p.cambiar(id, nucleo.CancelacionSolicitada, nucleo.Cancelado, persistencia.Cambio{})
 	case desde == nucleo.EsperandoAgente || desde == nucleo.PreparandoEntrada:
@@ -574,6 +621,62 @@ func (p *Planificador) cambiar(id string, de, hacia nucleo.Estado, cambio persis
 		_ = p.almacen.CambiarEstado(fondo, id, nucleo.CancelacionSolicitada, nucleo.Cancelado, persistencia.Cambio{})
 	}
 	return false
+}
+
+// agrupador junta los fragmentos de texto consecutivos antes de guardarlos: un evento por token costaba una
+// transacción y despertaba a todos los que siguen la instancia. Guarda lo acumulado a los 50 ms del primer
+// fragmento o al llegar a 1 KiB, y siempre antes de cualquier otro evento, así que el orden no cambia.
+type agrupador struct {
+	guardar func(tipo, datos string) error
+
+	mu           sync.Mutex
+	texto        strings.Builder
+	temporizador *time.Timer
+}
+
+const (
+	esperaAgrupado = 50 * time.Millisecond
+	maximoAgrupado = 1 << 10
+)
+
+// emitir recibe los eventos del adaptador.
+func (g *agrupador) emitir(e adaptadores.Evento) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if e.Tipo != "texto" {
+		if err := g.vaciarConCerrojo(); err != nil {
+			return err
+		}
+		return g.guardar(e.Tipo, e.Datos)
+	}
+	g.texto.WriteString(e.Datos)
+	if g.texto.Len() >= maximoAgrupado {
+		return g.vaciarConCerrojo()
+	}
+	if g.temporizador == nil {
+		g.temporizador = time.AfterFunc(esperaAgrupado, func() { _ = g.vaciar() })
+	}
+	return nil
+}
+
+// vaciar guarda el texto acumulado.
+func (g *agrupador) vaciar() error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.vaciarConCerrojo()
+}
+
+func (g *agrupador) vaciarConCerrojo() error {
+	if g.temporizador != nil {
+		g.temporizador.Stop()
+		g.temporizador = nil
+	}
+	if g.texto.Len() == 0 {
+		return nil
+	}
+	datos := g.texto.String()
+	g.texto.Reset()
+	return g.guardar("texto", datos)
 }
 
 // preparar convierte las cargas respetando el límite de conversiones de la instancia.

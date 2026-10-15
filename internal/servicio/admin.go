@@ -11,8 +11,8 @@ import (
 // rutasAdmin es la administración del servicio; solo se atiende en el puerto principal con el token de servicio.
 func (s *Servicio) rutasAdmin() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/v1/servicio", func(w http.ResponseWriter, _ *http.Request) {
-		api.EscribirJSON(w, http.StatusOK, s.Estado())
+	mux.HandleFunc("GET /api/v1/servicio", func(w http.ResponseWriter, r *http.Request) {
+		api.EscribirJSON(w, http.StatusOK, s.Estado(r.Context()))
 	})
 	mux.HandleFunc("POST /api/v1/servicio/instancias", s.adminActivar)
 	mux.HandleFunc("DELETE /api/v1/servicio/instancias/{id}", s.adminDesactivar)
@@ -64,7 +64,7 @@ func (s *Servicio) adminActivar(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = s.guardarActivas()
 	_ = s.actualizarDescriptor()
-	api.EscribirJSON(w, http.StatusOK, ActivacionInstancia{Instancia: inst.estado(), Token: inst.token})
+	api.EscribirJSON(w, http.StatusOK, ActivacionInstancia{Instancia: inst.estado(r.Context()), Token: inst.token})
 }
 
 func (s *Servicio) adminDesactivar(w http.ResponseWriter, r *http.Request) {

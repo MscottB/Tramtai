@@ -206,6 +206,131 @@ func TestSemaforoPorAdaptador(t *testing.T) {
 	}
 }
 
+// bloqueado no termina hasta que se cierra soltar.
+type bloqueado struct{ soltar chan struct{} }
+
+func (b bloqueado) Ejecutar(ctx context.Context, _ nucleo.SolicitudEjecucion, _ func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	select {
+	case <-b.soltar:
+		return adaptadores.Resultado{Salida: "ok"}, nil
+	case <-ctx.Done():
+		return adaptadores.Resultado{}, ctx.Err()
+	}
+}
+
+func TestAgenteOcupadoNoBloqueaAOtro(t *testing.T) {
+	alm := abrir(t)
+	opc := opciones() // MaximoTrabajos 2
+	lento := bloqueado{soltar: make(chan struct{})}
+	p := Nuevo(alm, map[string]adaptadores.Adaptador{"lento": lento, "simulado": adaptadores.Simulado{}},
+		NuevosSemaforos(map[string]int{"lento": 1, "simulado": 1}), opc)
+	if err := p.Iniciar(ctx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Detener)
+	s := solicitud("x")
+	s.Agente = "lento"
+	primero := enviar(t, p, s)
+	esperar(t, alm, primero, nucleo.Ejecutando)
+	segundo := enviar(t, p, s)
+	esperar(t, alm, segundo, nucleo.EsperandoAgente)
+	// El segundo trabajo lento espera a su agente sin ocupar plaza: el del otro agente se ejecuta ya.
+	esperar(t, alm, enviar(t, p, solicitud("rápido")), nucleo.Completado)
+	if tr, _ := alm.Obtener(ctx, segundo); tr.Estado != nucleo.EsperandoAgente {
+		t.Fatalf("el segundo trabajo lento sigue esperando a su agente: %s", tr.Estado)
+	}
+	close(lento.soltar)
+	esperar(t, alm, primero, nucleo.Completado)
+	esperar(t, alm, segundo, nucleo.Completado)
+}
+
+func TestOrdenDeLaColaPorAgente(t *testing.T) {
+	alm := abrir(t)
+	opc := opciones()
+	opc.MaximoTrabajos = 3
+	agente := registraSolicitud{recibida: make(chan nucleo.SolicitudEjecucion, 8)}
+	p := iniciar(t, alm, agente, 1, opc)
+	var ids []string
+	for i := range 8 {
+		ids = append(ids, enviar(t, p, solicitud(string(rune('a'+i)))))
+	}
+	for i := range 8 {
+		if s := <-agente.recibida; s.Mensajes[0].Contenido != string(rune('a'+i)) {
+			t.Fatalf("el agente recibió %q en el turno %d", s.Mensajes[0].Contenido, i)
+		}
+	}
+	for _, id := range ids {
+		esperar(t, alm, id, nucleo.Completado)
+	}
+}
+
+func TestLimiteDeLaInstancia(t *testing.T) {
+	alm := abrir(t)
+	c := &contador{}
+	p := iniciar(t, alm, c, 5, opciones()) // el adaptador admite 5; la instancia, 2
+	var ids []string
+	for range 4 {
+		ids = append(ids, enviar(t, p, solicitud("x")))
+	}
+	for _, id := range ids {
+		esperar(t, alm, id, nucleo.Completado)
+	}
+	if c.maximo.Load() != 2 {
+		t.Fatalf("la instancia debía limitar a 2 ejecuciones simultáneas, hubo %d", c.maximo.Load())
+	}
+}
+
+// goteo emite muchos fragmentos diminutos con un aviso en medio.
+type goteo struct{}
+
+func (goteo) Ejecutar(_ context.Context, _ nucleo.SolicitudEjecucion, emitir func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	var salida strings.Builder
+	for i := range 600 {
+		if i == 300 {
+			if err := emitir(adaptadores.Evento{Tipo: "aviso", Datos: "mitad"}); err != nil {
+				return adaptadores.Resultado{}, err
+			}
+		}
+		fragmento := string(rune('a' + i%26))
+		salida.WriteString(fragmento)
+		if err := emitir(adaptadores.Evento{Tipo: "texto", Datos: fragmento}); err != nil {
+			return adaptadores.Resultado{}, err
+		}
+	}
+	return adaptadores.Resultado{Salida: salida.String()}, nil
+}
+
+func TestFragmentosDeTextoSeAgrupan(t *testing.T) {
+	alm := abrir(t)
+	p := iniciar(t, alm, goteo{}, 1, opciones())
+	final := esperar(t, alm, enviar(t, p, solicitud("x")), nucleo.Completado)
+	eventos, _ := alm.Eventos(ctx, final.ID, 0)
+	var texto strings.Builder
+	textos, aviso := 0, -1
+	for i, e := range eventos {
+		switch e.Tipo {
+		case "texto":
+			if aviso >= 0 && texto.Len() < 300 {
+				t.Fatalf("el aviso quedó delante de texto anterior a él: %+v", eventos)
+			}
+			textos++
+			texto.WriteString(e.Datos)
+		case "aviso":
+			aviso = i
+			if texto.Len() != 300 {
+				t.Fatalf("antes del aviso debían guardarse sus 300 fragmentos, hay %d", texto.Len())
+			}
+		case "estado":
+			if e.Datos == string(nucleo.ValidandoSalida) && texto.String() != final.Salida {
+				t.Fatal("todo el texto se guarda antes del cambio de estado")
+			}
+		}
+	}
+	if texto.String() != final.Salida || textos == 0 || textos >= 20 {
+		t.Fatalf("%d eventos de texto para 600 fragmentos; texto igual a la salida: %v", textos, texto.String() == final.Salida)
+	}
+}
+
 func TestTiempoEnColaYAgenteNoRegistrado(t *testing.T) {
 	alm := abrir(t)
 	opc := opciones()

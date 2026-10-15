@@ -88,8 +88,8 @@ func (s *Servidor) eliminarTrabajos(w http.ResponseWriter, r *http.Request) {
 			EscribirError(w, r, err)
 			return
 		}
-		// Con un "ahora" lejano toda carga cuenta como vencida: se borran todas las que no están en uso.
-		if _, err := s.Cargas.Purgar(enUso, time.Now().AddDate(100, 0, 0)); err != nil {
+		// Las que no están en uso, salvo las recién subidas que otro cliente puede estar a punto de citar.
+		if _, err := s.Cargas.PurgarSinUso(enUso); err != nil {
 			EscribirError(w, r, err)
 			return
 		}

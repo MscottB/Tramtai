@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -147,17 +148,28 @@ type puntoActivo struct {
 	instancia *Instancia
 	handler   http.Handler
 	srv       *http.Server
+	oyente    net.Listener
 	url       string
 	err       string
 }
 
+// soltar deja de aceptar conexiones y libera el puerto al momento, para reabrirlo con s.mu tomado.
+func (p *puntoActivo) soltar() {
+	if p.oyente != nil {
+		_ = p.oyente.Close()
+	}
+}
+
+// cerrar espera hasta 2 s a las peticiones en curso; se llama sin s.mu para no frenar al resto del servicio.
 func (p *puntoActivo) cerrar() {
 	if p.srv == nil {
 		return
 	}
+	p.soltar()
 	ctx, cancelar := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancelar()
-	if p.srv.Shutdown(ctx) != nil {
+	// Shutdown también avisa de que el oyente ya estaba cerrado; solo se corta si vence el plazo.
+	if err := p.srv.Shutdown(ctx); errors.Is(err, context.DeadlineExceeded) {
 		p.srv.Close()
 	}
 }
@@ -245,6 +257,12 @@ func (s *Servicio) puntosDeseados() ([]candidato, []string) {
 // deja intactos los que no cambiaron, sin afectar a los trabajos en curso.
 func (s *Servicio) Recargar() []EstadoPunto {
 	deseados, errores := s.puntosDeseados()
+	var retirados []*puntoActivo // se cierran al final, sin s.mu
+	defer func() {
+		for _, p := range retirados {
+			p.cerrar()
+		}
+	}()
 	s.mu.Lock()
 	nuevos := map[string]*puntoActivo{}
 	for _, c := range deseados {
@@ -260,13 +278,14 @@ func (s *Servicio) Recargar() []EstadoPunto {
 			continue
 		}
 		if actual != nil {
-			actual.cerrar()
+			actual.soltar() // libera el puerto por si el punto nuevo usa el mismo
+			retirados = append(retirados, actual)
 		}
 		nuevos[c.cfg.Nombre] = s.abrirPunto(c, token, firma)
 	}
 	for nombre, actual := range s.puntos {
 		if _, sigue := nuevos[nombre]; !sigue {
-			actual.cerrar()
+			retirados = append(retirados, actual)
 		}
 	}
 	s.puntos, s.erroresPuntos = nuevos, errores
@@ -322,7 +341,7 @@ func (s *Servicio) abrirPunto(c candidato, token, firma string) *puntoActivo {
 		p.err = idioma.Tf("no se pudo abrir %s (¿puerto en uso?)", direccion)
 		return p
 	}
-	p.handler, p.url = handler, "http://"+direccion
+	p.handler, p.url, p.oyente = handler, "http://"+direccion, oyente
 	p.srv = &http.Server{Handler: handler, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 64 << 10}
 	go p.srv.Serve(oyente)
 	return p

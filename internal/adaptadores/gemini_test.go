@@ -92,6 +92,35 @@ func TestGeminiStreamingEsquemaYUso(t *testing.T) {
 	}
 }
 
+func TestGeminiFlujoSinFinishReason(t *testing.T) {
+	t.Setenv("GEMINI_API_KEY", "clave-falsa")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		io.WriteString(w, `data: {"candidates":[{"content":{"parts":[{"text":"respuesta a me"}]}}]}`+"\n\n")
+		if strings.Contains(r.URL.Path, "completo") { // si no, el flujo se corta sin finishReason
+			io.WriteString(w, `data: {"candidates":[{"content":{"parts":[{"text":"dias"}]},"finishReason":"MAX_TOKENS"}]}`+"\n\n")
+		}
+	}))
+	defer srv.Close()
+	g := Gemini{Base: srv.URL}
+	s := solicitudSimple("hola")
+	s.Modelo = "cortado"
+	if _, err := g.Ejecutar(context.Background(), s, func(Evento) error { return nil }); nucleo.CodigoDe(err) != nucleo.CodigoErrorProtocoloAgente {
+		t.Fatalf("un flujo cortado sin finishReason no se da por completado: %v", err)
+	}
+	s.Modelo = "completo"
+	var avisos []string
+	r, err := g.Ejecutar(context.Background(), s, func(e Evento) error {
+		if e.Tipo == "aviso" {
+			avisos = append(avisos, e.Datos)
+		}
+		return nil
+	})
+	if err != nil || r.Salida != "respuesta a medias" || len(avisos) != 1 || !strings.Contains(avisos[0], "MAX_TOKENS") {
+		t.Fatalf("MAX_TOKENS es válido pero se avisa: %+v %v %v", r, avisos, err)
+	}
+}
+
 func TestAntigravityAisladoYSoloConClave(t *testing.T) {
 	t.Setenv("GEMINI_API_KEY", "clave-falsa")
 	t.Setenv("AGY_FALSO", "eco")

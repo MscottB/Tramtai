@@ -71,6 +71,10 @@ ALTER TABLE trabajos ADD COLUMN entradas_eliminadas INTEGER NOT NULL DEFAULT 0;`
 	// v5: proceso del agente, para terminarlo si el servicio cae y para diagnosticar cancelacion_no_confirmada.
 	`ALTER TABLE trabajos ADD COLUMN pid INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE trabajos ADD COLUMN firma_proceso TEXT NOT NULL DEFAULT '';`,
+	// v6: índices para el listado de la Web UI, la purga por terminado_en y el vencimiento de idempotencia.
+	`CREATE INDEX IF NOT EXISTS trabajos_instancia_creado ON trabajos (instancia, creado_en);
+CREATE INDEX IF NOT EXISTS trabajos_instancia_terminado ON trabajos (instancia, terminado_en);
+CREATE INDEX IF NOT EXISTS idempotencia_trabajo ON idempotencia (trabajo_id);`,
 }
 
 const columnas = `id, instancia, estado, codigo_error, mensaje_error, solicitud, huella, salida, intento_de, creado_en, actualizado_en, terminado_en,
@@ -366,6 +370,16 @@ func (a *Almacen) Obtener(ctx context.Context, id string) (nucleo.Trabajo, error
 	return obtener(ctx, a.db, id)
 }
 
+// Estado devuelve la instancia y el estado de un trabajo, o no_encontrado; es la lectura barata de quien lo sigue.
+func (a *Almacen) Estado(ctx context.Context, id string) (string, nucleo.Estado, error) {
+	var instancia, estado string
+	err := a.db.QueryRowContext(ctx, `SELECT instancia, estado FROM trabajos WHERE id = ?`, id).Scan(&instancia, &estado)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", "", nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
+	}
+	return instancia, nucleo.Estado(estado), err
+}
+
 // Eventos devuelve los eventos posteriores al número "desde" (Last-Event-ID).
 func (a *Almacen) Eventos(ctx context.Context, id string, desde int) ([]Evento, error) {
 	filas, err := a.db.QueryContext(ctx, `SELECT numero, tipo, datos, creado_en FROM eventos WHERE trabajo_id = ? AND numero > ? ORDER BY numero`, id, desde)
@@ -411,30 +425,21 @@ func (a *Almacen) ListarPorEstado(ctx context.Context, instancia string, estados
 
 // Listar devuelve los trabajos más recientes de la instancia; con punto, solo los de ese punto de acceso.
 func (a *Almacen) Listar(ctx context.Context, instancia, punto string, limite int) ([]nucleo.Trabajo, error) {
-	filas, err := a.db.QueryContext(ctx, `SELECT id FROM trabajos WHERE instancia = ? AND (? = '' OR punto_acceso = ?)
+	filas, err := a.db.QueryContext(ctx, `SELECT `+columnas+` FROM trabajos WHERE instancia = ? AND (? = '' OR punto_acceso = ?)
 		ORDER BY creado_en DESC LIMIT ?`, instancia, punto, punto, limite)
 	if err != nil {
 		return nil, err
 	}
-	var ids []string
+	defer filas.Close()
+	trabajos := []nucleo.Trabajo{}
 	for filas.Next() {
-		var id string
-		if err := filas.Scan(&id); err != nil {
-			filas.Close()
-			return nil, err
-		}
-		ids = append(ids, id)
-	}
-	filas.Close()
-	trabajos := make([]nucleo.Trabajo, 0, len(ids))
-	for _, id := range ids {
-		t, err := a.Obtener(ctx, id)
+		t, err := escanear(filas)
 		if err != nil {
 			return nil, err
 		}
 		trabajos = append(trabajos, t)
 	}
-	return trabajos, nil
+	return trabajos, filas.Err()
 }
 
 // Contar devuelve cuántos trabajos de la instancia hay en cada estado.
@@ -510,8 +515,15 @@ func (a *Almacen) Purgar(ctx context.Context, instancia string, r Retencion) (ve
 			return 0, 0, err
 		}
 	}
+	limiteResultado := fecha(ahora.Add(-r.Resultado))
+	// Los eventos de estado se conservan con los metadatos; los demás llevan contenido. Solo se miran los
+	// trabajos que vencen ahora: los ya vencidos se limpiaron en su purga.
+	if _, err := tx.ExecContext(ctx, `DELETE FROM eventos WHERE tipo <> 'estado' AND trabajo_id IN
+		(SELECT id FROM trabajos WHERE instancia = ? AND terminado_en < ? AND vencido = 0)`, instancia, limiteResultado); err != nil {
+		return 0, 0, err
+	}
 	res, err := tx.ExecContext(ctx, `UPDATE trabajos SET salida = '', solicitud = `+sinEntradas+`, vencido = 1, entradas_eliminadas = 1
-		WHERE instancia = ? AND terminado_en < ? AND vencido = 0`, instancia, fecha(ahora.Add(-r.Resultado)))
+		WHERE instancia = ? AND terminado_en < ? AND vencido = 0`, instancia, limiteResultado)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -522,8 +534,6 @@ func (a *Almacen) Purgar(ctx context.Context, instancia string, r Retencion) (ve
 		consulta string
 		args     []any
 	}{
-		// Los eventos de estado se conservan con los metadatos; los demás llevan contenido.
-		{`DELETE FROM eventos WHERE tipo <> 'estado' AND trabajo_id IN (SELECT id FROM trabajos WHERE instancia = ? AND vencido = 1)`, []any{instancia}},
 		{`DELETE FROM eventos WHERE trabajo_id IN (SELECT id FROM trabajos WHERE instancia = ? AND terminado_en < ?)`, []any{instancia, limiteMetadatos}},
 		{`DELETE FROM idempotencia WHERE instancia = ? AND vence_en < ?`, []any{instancia, fecha(ahora)}},
 		{`DELETE FROM trabajos WHERE instancia = ? AND terminado_en < ?`, []any{instancia, limiteMetadatos}},
@@ -611,16 +621,22 @@ func (a *Almacen) CargasEnUso(ctx context.Context, instancia string) (map[string
 }
 
 func obtener(ctx context.Context, c consultor, id string) (nucleo.Trabajo, error) {
+	t, err := escanear(c.QueryRowContext(ctx, `SELECT `+columnas+` FROM trabajos WHERE id = ?`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return t, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
+	}
+	return t, err
+}
+
+// escanear lee una fila con las columnas de "columnas"; sirve para *sql.Row y *sql.Rows.
+func escanear(fila interface{ Scan(...any) error }) (nucleo.Trabajo, error) {
 	var t nucleo.Trabajo
 	var estado, codigo, solicitud, creado, actualizado string
 	var terminado sql.NullString
 	var vencido bool
-	err := c.QueryRowContext(ctx, `SELECT `+columnas+` FROM trabajos WHERE id = ?`, id).Scan(&t.ID, &t.Instancia, &estado,
+	err := fila.Scan(&t.ID, &t.Instancia, &estado,
 		&codigo, &t.MensajeError, &solicitud, &t.Huella, &t.Salida, &t.IntentoDe, &creado, &actualizado, &terminado,
 		&t.ModeloEnviado, &t.ModeloEfectivo, &t.Uso.TokensEntrada, &t.Uso.TokensSalida, &t.Uso.CostoUSD, &t.PuntoAcceso, &vencido, &t.EntradasEliminadas, &t.PID, &t.FirmaProceso)
-	if errors.Is(err, sql.ErrNoRows) {
-		return t, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
-	}
 	if err != nil {
 		return t, err
 	}

@@ -3,6 +3,7 @@ package persistencia
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -339,5 +340,52 @@ func TestUsoPorPunto(t *testing.T) {
 	uso, err := a.UsoPorPunto(ctx, "global")
 	if err != nil || len(uso) != 2 || uso["soporte"].Peticiones != 2 || uso["soporte"].Errores != 1 || uso["facturas"].Peticiones != 1 || uso["soporte"].Ultima == nil {
 		t.Fatalf("%v %+v", err, uso)
+	}
+}
+
+func TestListarEnUnaConsultaConIndice(t *testing.T) {
+	a := abrir(t)
+	var ids []string
+	for i, punto := range []string{"soporte", "", "soporte"} {
+		tr := trabajo("global", "hola")
+		tr.PuntoAcceso = punto
+		ids = append(ids, aceptar(t, a, tr, "").ID)
+		if i == 0 {
+			avanzar(t, a, ids[0], nucleo.Fallido)
+		}
+	}
+	aceptar(t, a, trabajo("otra", "hola"), "")
+	todos, err := a.Listar(ctx, "global", "", 10)
+	if err != nil || len(todos) != 3 || todos[0].ID != ids[2] || todos[2].ID != ids[0] || todos[2].Estado != nucleo.Fallido ||
+		todos[0].Solicitud.Mensajes[0].Contenido != "hola" {
+		t.Fatalf("del más reciente al más antiguo, solo de la instancia: %+v %v", todos, err)
+	}
+	if soporte, _ := a.Listar(ctx, "global", "soporte", 1); len(soporte) != 1 || soporte[0].ID != ids[2] {
+		t.Fatalf("filtro por punto y límite: %+v", soporte)
+	}
+	if vacio, err := a.Listar(ctx, "nadie", "", 10); err != nil || vacio == nil || len(vacio) != 0 {
+		t.Fatalf("sin trabajos, lista vacía: %v %v", vacio, err)
+	}
+	planes := map[string]string{ // índice esperado -> consulta
+		"trabajos_instancia_creado":    "SELECT id FROM trabajos WHERE instancia = 'g' AND ('' = '' OR punto_acceso = '') ORDER BY creado_en DESC LIMIT 200",
+		"trabajos_instancia_terminado": "SELECT id FROM trabajos WHERE instancia = 'g' AND terminado_en < 'x' AND vencido = 0",
+		"idempotencia_trabajo":         "UPDATE idempotencia SET vence_en = 'x' WHERE trabajo_id = 'y'",
+	}
+	for nombre, consulta := range planes {
+		filas, err := a.db.Query("EXPLAIN QUERY PLAN " + consulta)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var plan strings.Builder
+		for filas.Next() {
+			var id, padre, libre int
+			var detalle string
+			filas.Scan(&id, &padre, &libre, &detalle)
+			plan.WriteString(detalle + "\n")
+		}
+		filas.Close()
+		if !strings.Contains(plan.String(), "INDEX "+nombre) || strings.Contains(plan.String(), "TEMP B-TREE") {
+			t.Errorf("se esperaba %s sin ordenar aparte:\n%s", nombre, plan.String())
+		}
 	}
 }

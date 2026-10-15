@@ -400,7 +400,8 @@ func (i *Instancia) cerrar(vaciarCola bool) {
 	<-i.purgaParada
 	if vaciarCola {
 		ctx := context.Background()
-		if ids, err := i.almacen.ListarPorEstado(ctx, i.ID, nucleo.EnCola); err == nil {
+		// Esperando al agente también es cola: el trabajo aún no tiene plaza ni agente.
+		if ids, err := i.almacen.ListarPorEstado(ctx, i.ID, nucleo.EnCola, nucleo.EsperandoAgente); err == nil {
 			for _, id := range ids {
 				_, _ = i.Planificador.Cancelar(ctx, id)
 			}
@@ -514,26 +515,33 @@ type Estado struct {
 	Actualizacion *actualizacion.Version `json:"actualizacion,omitempty"`
 }
 
-// Estado devuelve el estado actual.
-func (s *Servicio) Estado() Estado {
+// Estado devuelve el estado actual. Las bases se consultan sin s.mu: un Lock pendiente bloquearía todas las peticiones.
+func (s *Servicio) Estado(ctx context.Context) Estado {
 	var nueva *actualizacion.Version
 	if v, ok := s.versionNueva(context.Background(), false); ok {
 		nueva = &v
 	}
 	s.mu.RLock()
-	defer s.mu.RUnlock()
 	e := Estado{Identificador: s.ID, Version: version.Texto(), PID: os.Getpid(), IniciadoEn: s.IniciadoEn, Base: s.Base(),
 		Instancias: []EstadoInstancia{}, Puntos: s.estadoPuntos(), Errores: s.erroresPuntos, Actualizacion: nueva}
+	instancias := make([]*Instancia, 0, len(s.instancias))
 	for _, inst := range s.instancias {
-		e.Instancias = append(e.Instancias, inst.estado())
+		instancias = append(instancias, inst)
+	}
+	s.mu.RUnlock()
+	for _, inst := range instancias {
+		e.Instancias = append(e.Instancias, inst.estado(ctx))
 	}
 	sort.Slice(e.Instancias, func(i, j int) bool { return e.Instancias[i].ID < e.Instancias[j].ID })
 	return e
 }
 
-func (i *Instancia) estado() EstadoInstancia {
+// estado resume la instancia; el conteo de trabajos se abandona a los 2 s para no colgar a quien pregunta.
+func (i *Instancia) estado(ctx context.Context) EstadoInstancia {
+	ctx, cancelar := context.WithTimeout(ctx, 2*time.Second)
+	defer cancelar()
 	conteo := map[string]int{}
-	if porEstado, err := i.Planificador.Contar(context.Background()); err == nil {
+	if porEstado, err := i.Planificador.Contar(ctx); err == nil {
 		for estado, n := range porEstado {
 			conteo[string(estado)] = n
 		}

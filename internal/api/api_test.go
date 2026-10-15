@@ -21,7 +21,7 @@ import (
 	"tramtai/internal/planificador"
 )
 
-// trozos emite la respuesta en tres fragmentos, como un agente con streaming por tokens.
+// trozos emite la respuesta en tres fragmentos, como un agente con streaming por tokens (el planificador puede agruparlos).
 type trozos struct{}
 
 func (trozos) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
@@ -280,7 +280,7 @@ func TestChatCompletions(t *testing.T) {
 
 	r, flujo := pedir(t, ts, "POST", "/openai/v1/chat/completions",
 		`{"model":"perfil/rapido","messages":[{"role":"user","content":"hola"}],"stream":true,"stream_options":{"include_usage":true}}`)
-	if r.Header.Get("Content-Type") != "text/event-stream" || !strings.Contains(flujo, `"delta":{"content":"Ho"}`) ||
+	if r.Header.Get("Content-Type") != "text/event-stream" || !strings.Contains(flujo, `"delta":{"content":"Ho`) ||
 		!strings.Contains(flujo, `"finish_reason":"stop"`) || !strings.Contains(flujo, `"total_tokens":10`) || !strings.HasSuffix(flujo, "data: [DONE]\n\n") {
 		t.Fatalf("chat en streaming:\n%s", flujo)
 	}
