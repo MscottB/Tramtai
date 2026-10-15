@@ -150,7 +150,7 @@ jobs:
           cache-dependency-path: '**/go.sum'
       - name: Servicio y app de escritorio (govulncheck)
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
           govulncheck ./...
           # La app de escritorio se analiza como la de Windows: en Linux necesitaría las cabeceras de GTK para compilar.
           cd escritorio && GOOS=windows govulncheck ./...
