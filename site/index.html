@@ -10,151 +10,7 @@
 <meta property="og:image" content="logo.png">
 <meta name="theme-color" content="#0b6e64">
 <link rel="icon" href="logo.png">
-<style>
-@font-face {
-  font-family: 'Overpass Variable';
-  src: url('overpass.woff2') format('woff2');
-  font-weight: 100 900;
-  font-display: swap;
-}
-:root {
-  --fondo: #eef2f1; --superficie: #ffffff; --superficie-suave: #f4f7f6;
-  --borde: #dce3e2; --borde-fuerte: #c2cccb;
-  --texto: #0f1b1e; --texto-suave: #55666a;
-  --acento: #0b6e64; --acento-texto: #ffffff; --acento-suave: rgba(11, 110, 100, 0.09);
-  --claude: #c4561d; --codex: #2563eb; --gemini: #7c3aed; --antigravity: #db2777;
-  --tablero: #0f1b1e; --tablero-texto: #eef3f2; --tablero-suave: #9fb3b8; --cifra: #ffcf5c;
-  --sombra: 0 1px 2px rgba(15, 27, 30, .05), 0 8px 24px rgba(15, 27, 30, .06);
-  --radio: 14px;
-  --fuente: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', sans-serif;
-  --titulo: 'Overpass Variable', 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
-  --mono: 'Cascadia Code', 'Cascadia Mono', ui-monospace, Consolas, 'SF Mono', monospace;
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --fondo: #0a1116; --superficie: #111c23; --superficie-suave: #15222a;
-    --borde: #1f2f38; --borde-fuerte: #2d404b;
-    --texto: #e5edf0; --texto-suave: #93a5ac;
-    --acento: #2dd4bf; --acento-texto: #042f2b; --acento-suave: rgba(45, 212, 191, .11);
-    --claude: #f28a4f; --codex: #5b8def; --gemini: #a78bfa; --antigravity: #f472b6;
-    --tablero: #060b0e;
-    --sombra: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
-    color-scheme: dark;
-  }
-}
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation: none !important; transition: none !important; } }
-body { margin: 0; background: var(--fondo); color: var(--texto); font: 16px/1.6 var(--fuente); -webkit-font-smoothing: antialiased; }
-html[lang="es"] [lang="en"], html[lang="en"] [lang="es"] { display: none; }
-a { color: var(--acento); }
-.envoltura { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
-h1, h2, h3 { font-family: var(--titulo); letter-spacing: -0.022em; line-height: 1.15; margin: 0; }
-h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); }
-h3 { font-size: 1.1rem; letter-spacing: -0.01em; }
-p { margin: 0; }
-.suave { color: var(--texto-suave); }
-:focus-visible { outline: 3px solid var(--acento); outline-offset: 3px; border-radius: 6px; }
-
-/* Barra superior */
-.barra { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--fondo) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--borde); }
-.barra .envoltura { display: flex; align-items: center; gap: 24px; height: 64px; }
-.marca { display: flex; align-items: center; gap: 10px; font: 700 1.15rem var(--titulo); color: var(--texto); text-decoration: none; }
-.marca img { width: 30px; height: 30px; border-radius: 8px; }
-.barra nav { display: flex; gap: 20px; margin-left: auto; }
-.barra nav a { color: var(--texto-suave); text-decoration: none; font-size: .95rem; }
-.barra nav a:hover { color: var(--texto); }
-.idioma { display: inline-flex; border: 1px solid var(--borde-fuerte); border-radius: 999px; overflow: hidden; }
-.idioma button { border: 0; background: none; color: var(--texto-suave); font: 600 .8rem var(--fuente); padding: 5px 10px; cursor: pointer; }
-.idioma button[aria-pressed="true"] { background: var(--acento); color: var(--acento-texto); }
-
-/* Botones */
-.boton { display: inline-flex; align-items: center; gap: 10px; padding: 12px 20px; border-radius: 10px; font-weight: 600; text-decoration: none; border: 1px solid transparent; transition: transform .15s ease, box-shadow .15s ease; }
-.boton:hover { transform: translateY(-1px); box-shadow: var(--sombra); }
-.boton.principal { background: var(--acento); color: var(--acento-texto); }
-.boton.secundario { background: var(--superficie); color: var(--texto); border-color: var(--borde-fuerte); }
-.boton svg { width: 18px; height: 18px; flex: none; }
-
-/* Portada */
-.portada { padding: 72px 0 56px; }
-.portada .envoltura { display: grid; grid-template-columns: 1.05fr 1fr; gap: 48px; align-items: center; }
-.chapa { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px; background: var(--acento-suave); color: var(--acento); font-size: .85rem; font-weight: 600; }
-.chapa::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-.portada h1 { font-size: clamp(2.3rem, 5.2vw, 3.6rem); margin: 18px 0; }
-.portada h1 em { font-style: normal; color: var(--acento); }
-.portada .entrada { font-size: 1.15rem; color: var(--texto-suave); max-width: 34em; }
-.acciones { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0 14px; }
-.nota { font-size: .875rem; color: var(--texto-suave); }
-.mapa { background: var(--superficie); border: 1px solid var(--borde); border-radius: 20px; box-shadow: var(--sombra); padding: 20px; }
-.mapa svg { width: 100%; height: auto; display: block; }
-.mapa text { font-family: var(--fuente); }
-.tranvia { offset-path: path('M 52 160 L 150 160'); animation: viaje 4.5s cubic-bezier(.45, 0, .2, 1) infinite; }
-@keyframes viaje { 0%, 12% { offset-distance: 0%; opacity: 0; } 22% { opacity: 1; } 55%, 100% { offset-distance: 100%; opacity: 0; } }
-
-/* Secciones */
-section { padding: 72px 0; }
-.cabeza { max-width: 44em; margin-bottom: 36px; }
-.cabeza p { margin-top: 12px; font-size: 1.05rem; }
-.etiqueta { font: 700 .78rem var(--titulo); letter-spacing: .12em; text-transform: uppercase; color: var(--acento); margin-bottom: 10px; display: block; }
-
-/* Recorrido en estaciones */
-.recorrido { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); position: relative; }
-.recorrido::before { content: ''; position: absolute; left: 14px; right: 14px; top: 13px; height: 6px; border-radius: 3px; background: var(--acento); }
-.recorrido li { position: relative; padding: 44px 24px 0 0; }
-.recorrido li::before { content: ''; position: absolute; left: 0; top: 2px; width: 28px; height: 28px; border-radius: 50%; background: var(--fondo); border: 6px solid var(--acento); }
-.recorrido h3 { margin-bottom: 8px; }
-.codigo { margin: 40px 0 0; background: var(--tablero); color: var(--tablero-texto); border-radius: var(--radio); padding: 22px 24px; overflow-x: auto; font: .9rem/1.7 var(--mono); }
-.codigo .c { color: var(--tablero-suave); }
-.codigo .s { color: var(--cifra); }
-.codigo .k { color: #7dd3c8; }
-
-/* Funciones */
-.rejilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.tarjeta { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 22px; }
-.tarjeta .linea { width: 34px; height: 6px; border-radius: 3px; margin-bottom: 16px; background: var(--acento); }
-.tarjeta h3 { margin-bottom: 8px; }
-.tarjeta p { color: var(--texto-suave); font-size: .95rem; }
-
-/* Privacidad: tablero de salidas */
-.tablero { background: var(--tablero); color: var(--tablero-texto); border-radius: 20px; padding: 36px; display: grid; grid-template-columns: 1fr 1.3fr; gap: 36px; }
-.tablero h2 { color: var(--tablero-texto); }
-.tablero .cabeza { margin: 0; }
-.tablero .cabeza p { color: var(--tablero-suave); }
-.tablero ul { list-style: none; margin: 0; padding: 0; }
-.tablero li { display: grid; grid-template-columns: 110px 1fr; gap: 16px; padding: 14px 0; border-top: 1px solid rgba(255, 255, 255, .08); }
-.tablero li:first-child { border-top: 0; }
-.tablero b { font: 700 .82rem var(--titulo); letter-spacing: .08em; text-transform: uppercase; color: var(--cifra); padding-top: 2px; }
-.tablero li > span { color: var(--tablero-suave); }
-.tablero strong { color: var(--tablero-texto); font-weight: 600; }
-
-/* Licencia y cierre */
-.cierre { text-align: center; }
-.cierre .cabeza { margin: 0 auto 28px; }
-.cierre .acciones { justify-content: center; }
-footer { border-top: 1px solid var(--borde); padding: 28px 0 40px; font-size: .875rem; color: var(--texto-suave); }
-footer .envoltura { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; }
-
-@media (max-width: 900px) {
-  .portada .envoltura, .tablero { grid-template-columns: 1fr; }
-  .rejilla { grid-template-columns: 1fr 1fr; }
-  .barra nav { display: none; }
-  .idioma { margin-left: auto; }
-}
-@media (max-width: 640px) {
-  .envoltura { padding: 0 16px; }
-  .portada { padding: 44px 0 32px; }
-  section { padding: 52px 0; }
-  .rejilla { grid-template-columns: 1fr; }
-  .recorrido { grid-template-columns: 1fr; gap: 28px; }
-  .recorrido::before { left: 11px; right: auto; top: 14px; bottom: 14px; width: 6px; height: auto; }
-  .recorrido li { padding: 0 0 0 48px; }
-  .recorrido li::before { top: 0; }
-  .tablero { padding: 24px; }
-  .tablero li { grid-template-columns: 1fr; gap: 4px; }
-  .barra .boton { display: none; }
-}
-</style>
+<link rel="stylesheet" href="estilo.css">
 </head>
 <body>
 <header class="barra">
@@ -163,14 +19,16 @@ footer .envoltura { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
     <nav aria-label="Secciones">
       <a href="#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
       <a href="#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+      <a href="#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
       <a href="#privacidad"><span lang="es">Privacidad</span><span lang="en">Privacy</span></a>
+      <a href="ayuda.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
       <a href="https://github.com/MscottB/Tramtai">GitHub</a>
     </nav>
     <div class="idioma" role="group" aria-label="Idioma / Language">
       <button type="button" data-idioma="es" aria-pressed="true">ES</button>
       <button type="button" data-idioma="en" aria-pressed="false">EN</button>
     </div>
-    <a class="boton principal" href="https://github.com/MscottB/Tramtai/releases/latest"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+    <a class="boton principal" href="#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
   </div>
 </header>
 
@@ -178,7 +36,7 @@ footer .envoltura { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
   <section class="portada">
     <div class="envoltura">
       <div>
-        <span class="chapa"><span lang="es">Pasarela local para Windows</span><span lang="en">Local gateway for Windows</span></span>
+        <span class="chapa"><span lang="es">Pasarela local para Windows, macOS y Linux</span><span lang="en">Local gateway for Windows, macOS and Linux</span></span>
         <h1>
           <span lang="es">Tus agentes de IA, <em>como una API local</em>.</span>
           <span lang="en">Your AI agents, <em>as a local API</em>.</span>
@@ -188,17 +46,17 @@ footer .envoltura { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
           <span lang="en">Tramtai turns Claude Code, Codex, Gemini and Antigravity into an OpenAI- and Anthropic-compatible API that runs on your computer. Connect any app by changing just the URL.</span>
         </p>
         <div class="acciones">
-          <a class="boton principal" href="https://github.com/MscottB/Tramtai/releases/latest">
+          <a class="boton principal" href="#descargar">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
-            <span lang="es">Descargar para Windows</span><span lang="en">Download for Windows</span>
+            <span lang="es">Descargar</span><span lang="en">Download</span>
           </a>
-          <a class="boton secundario" href="https://github.com/MscottB/Tramtai">
-            <span lang="es">Ver el código</span><span lang="en">View the code</span>
+          <a class="boton secundario" href="ayuda.html">
+            <span lang="es">Cómo empezar</span><span lang="en">Get started</span>
           </a>
         </div>
         <p class="nota">
-          <span lang="es">Windows 10 y 11 · sin permisos de administrador · gratis para uso no comercial</span>
-          <span lang="en">Windows 10 and 11 · no administrator rights · free for non-commercial use</span>
+          <span lang="es">Windows 10 y 11, macOS 11 o posterior y Linux · gratis para uso no comercial</span>
+          <span lang="en">Windows 10 and 11, macOS 11 or later and Linux · free for non-commercial use</span>
         </p>
       </div>
 
@@ -243,7 +101,7 @@ footer .envoltura { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
       <ol class="recorrido">
         <li>
           <h3><span lang="es">Instala Tramtai</span><span lang="en">Install Tramtai</span></h3>
-          <p class="suave"><span lang="es">Un instalador para tu usuario. Queda en la bandeja del sistema con el servicio en marcha.</span><span lang="en">A per-user installer. It sits in the system tray with the service running.</span></p>
+          <p class="suave"><span lang="es">En Windows, macOS o Linux. Queda en la bandeja del sistema con el servicio en marcha.</span><span lang="en">On Windows, macOS or Linux. It sits in the system tray with the service running.</span></p>
         </li>
         <li>
           <h3><span lang="es">Conecta un agente</span><span lang="en">Connect an agent</span></h3>
@@ -277,7 +135,7 @@ respuesta = cliente.chat.completions.create(
         <article class="tarjeta">
           <div class="linea"></div>
           <h3><span lang="es">Compatible con tus SDK</span><span lang="en">Works with your SDKs</span></h3>
-          <p><span lang="es">Rutas compatibles con OpenAI (chat y responses) y Anthropic (messages), más una API propia con eventos en vivo.</span><span lang="en">OpenAI-compatible (chat and responses) and Anthropic-compatible (messages) routes, plus a native API with live events.</span></p>
+          <p><span lang="es">Rutas compatibles con OpenAI (chat y responses) y Anthropic (messages), con streaming y herramientas (<code>tools</code>), más una API propia con eventos en vivo.</span><span lang="en">OpenAI-compatible (chat and responses) and Anthropic-compatible (messages) routes, with streaming and tool calling (<code>tools</code>), plus a native API with live events.</span></p>
         </article>
         <article class="tarjeta">
           <div class="linea" style="background: var(--claude)"></div>
@@ -308,6 +166,36 @@ respuesta = cliente.chat.completions.create(
     </div>
   </section>
 
+  <section id="descargar">
+    <div class="envoltura">
+      <div class="cabeza">
+        <span class="etiqueta"><span lang="es">Descargar</span><span lang="en">Download</span></span>
+        <h2><span lang="es">Elige tu sistema.</span><span lang="en">Pick your system.</span></h2>
+        <p class="suave"><span lang="es">La misma app en los tres, con su icono en la bandeja. Cada archivo trae su suma SHA-256 en <code>SHA256SUMS.txt</code>.</span><span lang="en">The same app on all three, with its tray icon. Every file has its SHA-256 checksum in <code>SHA256SUMS.txt</code>.</span></p>
+      </div>
+      <div class="descargas">
+        <article class="tarjeta">
+          <div class="linea" style="background: var(--codex)"></div>
+          <h3>Windows 10 · 11</h3>
+          <p class="suave"><span lang="es">El instalador (<code>…-instalador-windows-x64.exe</code>) es para tu usuario, no pide permisos de administrador y se actualiza con un clic. También hay una copia portable en <code>.zip</code>.</span><span lang="en">The installer (<code>…-instalador-windows-x64.exe</code>) is per user, needs no administrator rights and updates with one click. There's also a portable <code>.zip</code>.</span></p>
+          <a class="boton principal" href="https://github.com/MscottB/Tramtai/releases/latest"><span lang="es">Descargar para Windows</span><span lang="en">Download for Windows</span></a>
+        </article>
+        <article class="tarjeta">
+          <div class="linea" style="background: var(--claude)"></div>
+          <h3>macOS 11+</h3>
+          <p class="suave"><span lang="es">El <code>.dmg</code> sirve para Intel y Apple Silicon. Con Homebrew se instala sin el aviso de Gatekeeper:</span><span lang="en">The <code>.dmg</code> works on Intel and Apple Silicon. With Homebrew it installs without the Gatekeeper prompt:</span><br><code>brew tap mscottb/tramtai https://github.com/MscottB/Tramtai</code><br><code>brew install --cask tramtai</code></p>
+          <a class="boton principal" href="https://github.com/MscottB/Tramtai/releases/latest"><span lang="es">Descargar para macOS</span><span lang="en">Download for macOS</span></a>
+        </article>
+        <article class="tarjeta">
+          <div class="linea" style="background: var(--gemini)"></div>
+          <h3>Linux</h3>
+          <p class="suave"><span lang="es">Paquetes <code>.deb</code> y <code>.rpm</code> (x64 y ARM) con la app de escritorio. Si solo quieres la CLI y el servicio, también con Homebrew:</span><span lang="en"><code>.deb</code> and <code>.rpm</code> packages (x64 and ARM) with the desktop app. For just the CLI and the service, Homebrew works too:</span><br><code>brew install mscottb/tramtai/tramtai</code></p>
+          <a class="boton principal" href="https://github.com/MscottB/Tramtai/releases/latest"><span lang="es">Descargar para Linux</span><span lang="en">Download for Linux</span></a>
+        </article>
+      </div>
+    </div>
+  </section>
+
   <section id="privacidad">
     <div class="envoltura">
       <div class="tablero">
@@ -318,7 +206,7 @@ respuesta = cliente.chat.completions.create(
         </div>
         <ul>
           <li><b><span lang="es">Red</span><span lang="en">Network</span></b><span><span lang="es">Escucha solo en <strong>127.0.0.1</strong> y cada API exige su propia clave.</span><span lang="en">Listens only on <strong>127.0.0.1</strong> and every API requires its own key.</span></span></li>
-          <li><b><span lang="es">Claves</span><span lang="en">Keys</span></b><span><span lang="es">Tus claves de API se guardan en el <strong>Administrador de credenciales de Windows</strong> y nunca se muestran.</span><span lang="en">Your API keys live in the <strong>Windows Credential Manager</strong> and are never shown.</span></span></li>
+          <li><b><span lang="es">Claves</span><span lang="en">Keys</span></b><span><span lang="es">En Windows, tus claves de API se guardan en el <strong>Administrador de credenciales</strong> y nunca se muestran. Tramtai jamás lee las sesiones de los CLI.</span><span lang="en">On Windows, your API keys live in the <strong>Credential Manager</strong> and are never shown. Tramtai never reads the CLIs' sessions.</span></span></li>
           <li><b><span lang="es">Datos</span><span lang="en">Data</span></b><span><span lang="es">Las respuestas <strong>caducan a las 24 horas</strong> y puedes vaciar el historial cuando quieras.</span><span lang="en">Responses <strong>expire after 24 hours</strong> and you can clear the history at any time.</span></span></li>
           <li><b><span lang="es">Telemetría</span><span lang="en">Telemetry</span></b><span><span lang="es"><strong>Ninguna.</strong> Tramtai no envía estadísticas de uso a nadie.</span><span lang="en"><strong>None.</strong> Tramtai sends no usage statistics anywhere.</span></span></li>
         </ul>
@@ -337,8 +225,8 @@ respuesta = cliente.chat.completions.create(
         </p>
       </div>
       <div class="acciones">
-        <a class="boton principal" href="https://github.com/MscottB/Tramtai/releases/latest"><span lang="es">Descargar Tramtai</span><span lang="en">Download Tramtai</span></a>
-        <a class="boton secundario" href="https://github.com/MscottB/Tramtai#readme"><span lang="es">Leer la documentación</span><span lang="en">Read the docs</span></a>
+        <a class="boton principal" href="#descargar"><span lang="es">Descargar Tramtai</span><span lang="en">Download Tramtai</span></a>
+        <a class="boton secundario" href="ayuda.html"><span lang="es">Leer la ayuda</span><span lang="en">Read the help</span></a>
       </div>
     </div>
   </section>
@@ -354,24 +242,6 @@ respuesta = cliente.chat.completions.create(
   </div>
 </footer>
 
-<script>
-  // Idioma: el elegido antes o, si no, el del navegador. Sin almacenamiento disponible también funciona.
-  (function () {
-    var botones = document.querySelectorAll('[data-idioma]');
-    function aplicar(idioma) {
-      document.documentElement.lang = idioma;
-      botones.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.idioma === idioma)); });
-    }
-    var guardado = null;
-    try { guardado = localStorage.getItem('tramtai.idioma'); } catch (e) {}
-    aplicar(guardado || ((navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'));
-    botones.forEach(function (b) {
-      b.addEventListener('click', function () {
-        aplicar(b.dataset.idioma);
-        try { localStorage.setItem('tramtai.idioma', b.dataset.idioma); } catch (e) {}
-      });
-    });
-  })();
-</script>
+<script src="sitio.js"></script>
 </body>
 </html>

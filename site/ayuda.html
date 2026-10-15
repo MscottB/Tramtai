@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ayuda · Tramtai</title>
+<meta name="description" content="Cómo instalar Tramtai en Windows, macOS y Linux, conectar tus agentes y tus aplicaciones, y respuestas a las dudas comunes.">
+<meta property="og:title" content="Ayuda · Tramtai">
+<meta property="og:description" content="Instalar, conectar agentes y aplicaciones, actualizaciones y preguntas frecuentes.">
+<meta property="og:image" content="logo.png">
+<meta name="theme-color" content="#0b6e64">
+<link rel="icon" href="logo.png">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<header class="barra">
+  <div class="envoltura">
+    <a class="marca" href="index.html"><img src="logo.png" alt="">Tramtai</a>
+    <nav aria-label="Secciones">
+      <a href="index.html#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+      <a href="index.html#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+      <a href="index.html#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+      <a href="ayuda.html" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="https://github.com/MscottB/Tramtai">GitHub</a>
+    </nav>
+    <div class="idioma" role="group" aria-label="Idioma / Language">
+      <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+      <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+    </div>
+    <a class="boton principal" href="index.html#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+  </div>
+</header>
+
+<main class="envoltura ayuda">
+  <nav class="indice" aria-label="Índice / Contents">
+    <ol>
+      <li><a href="#instalar"><span lang="es">Instalar</span><span lang="en">Install</span></a></li>
+      <li><a href="#agentes"><span lang="es">Conectar los agentes</span><span lang="en">Connect the agents</span></a></li>
+      <li><a href="#aplicaciones"><span lang="es">Conectar tu aplicación</span><span lang="en">Connect your app</span></a></li>
+      <li><a href="#herramientas"><span lang="es">Herramientas</span><span lang="en">Tool calling</span></a></li>
+      <li><a href="#apis"><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></a></li>
+      <li><a href="#archivos"><span lang="es">Archivos y JSON</span><span lang="en">Files and JSON</span></a></li>
+      <li><a href="#actualizaciones"><span lang="es">Actualizaciones</span><span lang="en">Updates</span></a></li>
+      <li><a href="#preguntas"><span lang="es">Preguntas frecuentes</span><span lang="en">FAQ</span></a></li>
+      <li><a href="#mas"><span lang="es">Más documentación</span><span lang="en">More docs</span></a></li>
+    </ol>
+  </nav>
+
+  <article class="doc">
+    <header>
+      <span class="etiqueta"><span lang="es">Ayuda</span><span lang="en">Help</span></span>
+      <h1><span lang="es">Empieza con Tramtai</span><span lang="en">Get started with Tramtai</span></h1>
+      <p class="suave">
+        <span lang="es">De la descarga a tu primera respuesta en unos minutos: instala la app, conecta un agente y apunta tu aplicación a Tramtai.</span>
+        <span lang="en">From download to your first answer in a few minutes: install the app, connect an agent and point your app at Tramtai.</span>
+      </p>
+    </header>
+
+    <section id="instalar">
+      <h2><span lang="es">Instalar</span><span lang="en">Install</span></h2>
+      <div lang="es">
+        <p>Todo se descarga desde <a href="https://github.com/MscottB/Tramtai/releases/latest">la última versión en GitHub</a>. Cada archivo tiene su suma SHA-256 en <code>SHA256SUMS.txt</code>.</p>
+        <h3>Windows 10 y 11</h3>
+        <ol>
+          <li>Descarga <code>Tramtai-…-instalador-windows-x64.exe</code> y ábrelo. Se instala solo para tu usuario, sin permisos de administrador.</li>
+          <li>Si Windows muestra «Windows protegió su PC», pulsa <strong>Más información → Ejecutar de todas formas</strong>. Aparece porque el instalador no está firmado con un certificado de pago (ver <a href="#preguntas">preguntas frecuentes</a>).</li>
+          <li>Elige las opciones: el comando <code>tramtai</code> en la terminal, iniciar con Windows y un acceso directo en el escritorio.</li>
+        </ol>
+        <p>¿Prefieres no instalar nada? <code>Tramtai-…-portable-windows-x64.zip</code> trae la misma app: descomprímelo y abre <code>tramtai-escritorio.exe</code>. Esa copia no se actualiza sola.</p>
+        <h3>macOS 11 o posterior</h3>
+        <p>Con Homebrew es lo más cómodo: se instala sin el bloqueo de Gatekeeper y se actualiza con <code>brew upgrade</code>.</p>
+      </div>
+      <div lang="en">
+        <p>Everything is on <a href="https://github.com/MscottB/Tramtai/releases/latest">the latest release on GitHub</a>. Every file has its SHA-256 checksum in <code>SHA256SUMS.txt</code>.</p>
+        <h3>Windows 10 and 11</h3>
+        <ol>
+          <li>Download <code>Tramtai-…-instalador-windows-x64.exe</code> and run it. It installs for your user only, with no administrator rights.</li>
+          <li>If Windows shows "Windows protected your PC", click <strong>More info → Run anyway</strong>. It appears because the installer isn't signed with a paid certificate (see the <a href="#preguntas">FAQ</a>).</li>
+          <li>Pick the options: the <code>tramtai</code> command in the terminal, start with Windows and a desktop shortcut.</li>
+        </ol>
+        <p>Rather not install anything? <code>Tramtai-…-portable-windows-x64.zip</code> has the same app: unzip it and open <code>tramtai-escritorio.exe</code>. That copy doesn't update itself.</p>
+        <h3>macOS 11 or later</h3>
+        <p>Homebrew is the easiest way: it installs without the Gatekeeper block and updates with <code>brew upgrade</code>.</p>
+      </div>
+<pre class="codigo">brew tap mscottb/tramtai https://github.com/MscottB/Tramtai
+brew install --cask tramtai</pre>
+      <div lang="es">
+        <p>Sin Homebrew: abre <code>Tramtai-…-macos.dmg</code> (Intel y Apple Silicon) y arrastra Tramtai a Aplicaciones. La app no está firmada por un desarrollador de Apple, así que la primera vez macOS la bloquea: ábrela, cierra el aviso y ve a <strong>Ajustes del Sistema → Privacidad y seguridad → Abrir igualmente</strong>. O, en la Terminal:</p>
+      </div>
+      <div lang="en">
+        <p>Without Homebrew: open <code>Tramtai-…-macos.dmg</code> (Intel and Apple Silicon) and drag Tramtai to Applications. The app isn't signed by an Apple developer, so macOS blocks it the first time: open it, close the warning and go to <strong>System Settings → Privacy &amp; Security → Open Anyway</strong>. Or, in Terminal:</p>
+      </div>
+<pre class="codigo">xattr -dr com.apple.quarantine /Applications/Tramtai.app</pre>
+      <div lang="es">
+        <h3>Linux</h3>
+        <p>Los paquetes <code>.deb</code> (Debian, Ubuntu, Mint…) y <code>.rpm</code> (Fedora, openSUSE…) traen la app de escritorio, el servicio y la CLI, para x64 y ARM. Necesitan GTK 4 y WebKitGTK 6.0 (Ubuntu 24.04+, Debian 12+, Fedora), que se instalan solos. En GNOME, el icono de la bandeja necesita la extensión <em>AppIndicator</em>.</p>
+      </div>
+      <div lang="en">
+        <h3>Linux</h3>
+        <p>The <code>.deb</code> (Debian, Ubuntu, Mint…) and <code>.rpm</code> (Fedora, openSUSE…) packages include the desktop app, the service and the CLI, for x64 and ARM. They need GTK 4 and WebKitGTK 6.0 (Ubuntu 24.04+, Debian 12+, Fedora), installed automatically. On GNOME, the tray icon needs the <em>AppIndicator</em> extension.</p>
+      </div>
+<pre class="codigo">sudo apt install ./Tramtai-…-linux-amd64.deb
+sudo dnf install ./Tramtai-…-linux-amd64.rpm</pre>
+      <div lang="es">
+        <p><strong>Solo la CLI y el servicio</strong> (un servidor, o si no quieres la app): con Homebrew en macOS o Linux, o con el script de instalación, que comprueba la suma SHA-256 y deja <code>tramtai</code> en <code>~/.local/bin</code>. Después, <code>tramtai abrir</code> inicia el servicio y abre la Web UI en el navegador.</p>
+      </div>
+      <div lang="en">
+        <p><strong>CLI and service only</strong> (a server, or if you don't want the app): with Homebrew on macOS or Linux, or with the install script, which checks the SHA-256 checksum and puts <code>tramtai</code> in <code>~/.local/bin</code>. Then <code>tramtai abrir</code> starts the service and opens the Web UI in your browser.</p>
+      </div>
+<pre class="codigo">brew install mscottb/tramtai/tramtai
+curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instalar.sh | sh</pre>
+    </section>
+
+    <section id="agentes">
+      <h2><span lang="es">Conectar los agentes</span><span lang="en">Connect the agents</span></h2>
+      <div lang="es">
+        <p>Tramtai usa los CLI oficiales de cada agente tal como se instalan: <a href="https://docs.anthropic.com/claude-code">Claude Code</a> (<code>claude</code>), <a href="https://developers.openai.com/codex/cli">Codex CLI</a> (<code>codex</code>) o una clave de la Gemini API. Antigravity (<code>agy</code>) es experimental. Abre la app y ve a <strong>Agentes</strong>: te dice qué le falta a cada uno.</p>
+        <h3>Con tu suscripción (uso personal)</h3>
+        <p>Si ya usas Claude Pro/Max o ChatGPT en tu equipo, pulsa <strong>Usar mi suscripción</strong> en la página Agentes. Se aplica al momento. Es solo para uso personal y local, según los términos de cada proveedor. Tramtai nunca lee ni copia las sesiones de los CLI: el propio CLI usa la suya.</p>
+        <h3>Con una clave de API</h3>
+        <p>En Windows, guárdala en el Administrador de credenciales (la pide sin mostrarla) y reinicia el servicio. En macOS y Linux, de momento, usa variables de entorno con los mismos nombres.</p>
+      </div>
+      <div lang="en">
+        <p>Tramtai uses each agent's official CLI as installed: <a href="https://docs.anthropic.com/claude-code">Claude Code</a> (<code>claude</code>), <a href="https://developers.openai.com/codex/cli">Codex CLI</a> (<code>codex</code>) or a Gemini API key. Antigravity (<code>agy</code>) is experimental. Open the app and go to <strong>Agents</strong>: it tells you what each one is missing.</p>
+        <h3>With your subscription (personal use)</h3>
+        <p>If you already use Claude Pro/Max or ChatGPT on your computer, click <strong>Use my subscription</strong> on the Agents page. It applies right away. It's for personal, local use only, under each provider's terms. Tramtai never reads or copies the CLIs' sessions: the CLI uses its own.</p>
+        <h3>With an API key</h3>
+        <p>On Windows, store it in the Credential Manager (it's asked for without being shown) and restart the service. On macOS and Linux, for now, use environment variables with the same names.</p>
+      </div>
+<pre class="codigo">tramtai claves guardar ANTHROPIC_API_KEY   # Claude
+tramtai claves guardar OPENAI_API_KEY      # Codex
+tramtai claves guardar GEMINI_API_KEY      # Gemini, Antigravity
+tramtai servicio detener
+tramtai abrir</pre>
+    </section>
+
+    <section id="aplicaciones">
+      <h2><span lang="es">Conectar tu aplicación</span><span lang="en">Connect your app</span></h2>
+      <div lang="es">
+        <p>En la app, <strong>Mis APIs</strong> te da la URL y la clave, con ejemplos listos para copiar. Cualquier SDK de OpenAI o Anthropic funciona cambiando solo la URL base:</p>
+      </div>
+      <div lang="en">
+        <p>In the app, <strong>My APIs</strong> gives you the URL and the key, with ready-to-copy examples. Any OpenAI or Anthropic SDK works by changing just the base URL:</p>
+      </div>
+      <table>
+        <thead><tr><th><span lang="es">Compatible con</span><span lang="en">Compatible with</span></th><th><span lang="es">URL base</span><span lang="en">Base URL</span></th></tr></thead>
+        <tbody>
+          <tr><td>OpenAI (chat, responses)</td><td><code>http://127.0.0.1:17373/openai/v1</code></td></tr>
+          <tr><td>Anthropic (messages)</td><td><code>http://127.0.0.1:17373/anthropic</code></td></tr>
+          <tr><td><span lang="es">API propia de Tramtai</span><span lang="en">Tramtai's native API</span></td><td><code>http://127.0.0.1:17373/api/v1</code></td></tr>
+        </tbody>
+      </table>
+      <div lang="es">
+        <p>El campo <code>model</code> elige agente y modelo: <code>claude/sonnet</code>, <code>claude/haiku</code>, <code>codex</code>, <code>gemini/gemini-flash-latest</code> o un perfil como <code>perfil/rapido</code>. Sin <code>model</code> se usa el modelo predeterminado de <strong>Ajustes</strong>. En Claude y Codex, <code>reasoning_effort</code> elige cuánto razona el agente.</p>
+      </div>
+      <div lang="en">
+        <p>The <code>model</code> field picks agent and model: <code>claude/sonnet</code>, <code>claude/haiku</code>, <code>codex</code>, <code>gemini/gemini-flash-latest</code> or a profile like <code>perfil/rapido</code>. Without <code>model</code>, the default model from <strong>Settings</strong> is used. For Claude and Codex, <code>reasoning_effort</code> sets how hard the agent reasons.</p>
+      </div>
+<pre class="codigo"><span class="k">from</span> openai <span class="k">import</span> OpenAI
+
+cliente = OpenAI(base_url=<span class="s">"http://127.0.0.1:17373/openai/v1"</span>, api_key=<span class="s">"&lt;clave de Mis APIs&gt;"</span>)
+r = cliente.chat.completions.create(model=<span class="s">"claude/sonnet"</span>, messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Hola"</span>}])
+print(r.choices[0].message.content)</pre>
+<pre class="codigo"><span class="k">import</span> anthropic
+
+cliente = anthropic.Anthropic(base_url=<span class="s">"http://127.0.0.1:17373/anthropic"</span>, api_key=<span class="s">"&lt;clave de Mis APIs&gt;"</span>)
+r = cliente.messages.create(model=<span class="s">"claude/haiku"</span>, max_tokens=1024, messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Hola"</span>}])
+print(r.content[0].text)</pre>
+      <div lang="es">
+        <p class="aviso">Tramtai escucha solo en <code>127.0.0.1</code>: tus aplicaciones deben correr en el mismo equipo. La respuesta en vivo (<code>stream: true</code>) funciona igual que con OpenAI o Anthropic.</p>
+      </div>
+      <div lang="en">
+        <p class="aviso">Tramtai listens only on <code>127.0.0.1</code>: your apps must run on the same computer. Live responses (<code>stream: true</code>) work just like with OpenAI or Anthropic.</p>
+      </div>
+    </section>
+
+    <section id="herramientas">
+      <h2><span lang="es">Herramientas (tools)</span><span lang="en">Tool calling</span></h2>
+      <div lang="es">
+        <p>Pásale tus funciones en <code>tools</code>, como con OpenAI o Anthropic. El agente decide si las necesita y <strong>pide</strong> la llamada; tu aplicación la ejecuta y le devuelve el resultado en el siguiente mensaje. El agente nunca ejecuta nada por su cuenta.</p>
+      </div>
+      <div lang="en">
+        <p>Pass your functions in <code>tools</code>, just like with OpenAI or Anthropic. The agent decides whether it needs them and <strong>requests</strong> the call; your app runs it and sends the result back in the next message. The agent never runs anything on its own.</p>
+      </div>
+<pre class="codigo">herramientas = [{<span class="s">"type"</span>: <span class="s">"function"</span>, <span class="s">"function"</span>: {
+    <span class="s">"name"</span>: <span class="s">"tiempo"</span>, <span class="s">"description"</span>: <span class="s">"El tiempo actual de una ciudad"</span>,
+    <span class="s">"parameters"</span>: {<span class="s">"type"</span>: <span class="s">"object"</span>, <span class="s">"properties"</span>: {<span class="s">"ciudad"</span>: {<span class="s">"type"</span>: <span class="s">"string"</span>}}, <span class="s">"required"</span>: [<span class="s">"ciudad"</span>]}}}]
+
+mensajes = [{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"¿Qué tiempo hace en Lima?"</span>}]
+r = cliente.chat.completions.create(model=<span class="s">"claude/haiku"</span>, messages=mensajes, tools=herramientas)
+llamada = r.choices[0].message.tool_calls[0]          <span class="c"># tiempo({"ciudad": "Lima"})</span>
+
+mensajes += [r.choices[0].message, {<span class="s">"role"</span>: <span class="s">"tool"</span>, <span class="s">"tool_call_id"</span>: llamada.id, <span class="s">"content"</span>: <span class="s">"19 °C, nublado"</span>}]
+r = cliente.chat.completions.create(model=<span class="s">"claude/haiku"</span>, messages=mensajes, tools=herramientas)
+print(r.choices[0].message.content)</pre>
+      <div lang="es">
+        <ul>
+          <li>Los argumentos llegan validados con el JSON Schema de cada herramienta.</li>
+          <li><code>tool_choice</code> (<code>auto</code>, <code>required</code>, <code>none</code> o una función concreta) y las llamadas en paralelo funcionan igual que en OpenAI y Anthropic.</li>
+          <li>Con herramientas, la respuesta llega completa al terminar, aunque pidas <code>stream</code>.</li>
+        </ul>
+      </div>
+      <div lang="en">
+        <ul>
+          <li>Arguments arrive validated against each tool's JSON Schema.</li>
+          <li><code>tool_choice</code> (<code>auto</code>, <code>required</code>, <code>none</code> or a specific function) and parallel calls work as in OpenAI and Anthropic.</li>
+          <li>With tools, the response arrives complete at the end, even if you ask for <code>stream</code>.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="apis">
+      <h2><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></h2>
+      <div lang="es">
+        <p>En <strong>Mis APIs</strong> puedes crear una API para cada aplicación, con su propia clave. Cada una puede:</p>
+        <ul>
+          <li>permitir solo ciertos modelos, o fijar uno que se usa siempre;</li>
+          <li>añadir instrucciones fijas (por ejemplo, «responde siempre en español»);</li>
+          <li>escuchar en su propio puerto si tu aplicación lo necesita.</li>
+        </ul>
+        <p>Se activan o detienen sin reiniciar, y cada una ve solo sus propios trabajos.</p>
+      </div>
+      <div lang="en">
+        <p>In <strong>My APIs</strong> you can create one API per app, each with its own key. Each one can:</p>
+        <ul>
+          <li>allow only certain models, or pin one that is always used;</li>
+          <li>add fixed instructions (for example, "always answer in Spanish");</li>
+          <li>listen on its own port if your app needs it.</li>
+        </ul>
+        <p>They turn on or off without restarting, and each one only sees its own jobs.</p>
+      </div>
+    </section>
+
+    <section id="archivos">
+      <h2><span lang="es">Archivos y respuestas en JSON</span><span lang="en">Files and JSON answers</span></h2>
+      <div lang="es">
+        <p>Tramtai acepta PDF, Word, PowerPoint, Excel, HTML, texto y ZIP, y los convierte a texto antes de pasarlos al agente. Para PDF y Office necesita <a href="https://github.com/microsoft/markitdown">markitdown</a>:</p>
+      </div>
+      <div lang="en">
+        <p>Tramtai accepts PDF, Word, PowerPoint, Excel, HTML, text and ZIP files, and turns them into text before handing them to the agent. PDF and Office files need <a href="https://github.com/microsoft/markitdown">markitdown</a>:</p>
+      </div>
+<pre class="codigo">uv tool install "markitdown[pdf,docx,pptx,xlsx]==0.1.8"
+tramtai ejecutar -f informe.pdf "Resume el documento en tres puntos"</pre>
+      <div lang="es">
+        <p>Para recibir JSON con una forma concreta, usa <code>response_format</code> con un JSON Schema: Tramtai valida la respuesta antes de devolverla y, si no lo cumple, responde 422 <code>salida_no_cumple_esquema</code>.</p>
+      </div>
+      <div lang="en">
+        <p>To get JSON with a specific shape, use <code>response_format</code> with a JSON Schema: Tramtai validates the answer before returning it and, if it doesn't match, replies 422 <code>salida_no_cumple_esquema</code>.</p>
+      </div>
+    </section>
+
+    <section id="actualizaciones">
+      <h2><span lang="es">Actualizaciones</span><span lang="en">Updates</span></h2>
+      <div lang="es">
+        <p>Tramtai comprueba cada hora si hay una versión nueva (solo pide a GitHub la ficha pública de la última versión). Cuando la hay, la cabecera de la app muestra <strong>Actualizar</strong> y el menú de la bandeja indica tu versión y la nueva, con sus novedades.</p>
+        <ul>
+          <li><strong>Windows (instalador):</strong> <strong>Actualizar ahora</strong> la descarga, comprueba su suma SHA-256 y la instala sin preguntar nada más. La app vuelve a abrirse ya actualizada, con tu configuración y tus datos.</li>
+          <li><strong>Homebrew:</strong> <code>brew upgrade</code>.</li>
+          <li><strong>Portable, .dmg, .deb y .rpm:</strong> el aviso trae el enlace de descarga; se actualiza instalando el paquete nuevo encima.</li>
+          <li><strong>Terminal:</strong> <code>tramtai actualizar</code> (o <code>--comprobar</code> para solo mirar).</li>
+        </ul>
+        <p>Se desactiva en <strong>Ajustes → Buscar actualizaciones</strong>.</p>
+      </div>
+      <div lang="en">
+        <p>Tramtai checks for a new version every hour (it only asks GitHub for the public page of the latest release). When there is one, the app's header shows <strong>Update</strong> and the tray menu shows your version and the new one, with what's new.</p>
+        <ul>
+          <li><strong>Windows (installer):</strong> <strong>Update now</strong> downloads it, checks its SHA-256 checksum and installs it without asking anything else. The app reopens already updated, with your settings and data.</li>
+          <li><strong>Homebrew:</strong> <code>brew upgrade</code>.</li>
+          <li><strong>Portable, .dmg, .deb and .rpm:</strong> the notice has the download link; update by installing the new package over the old one.</li>
+          <li><strong>Terminal:</strong> <code>tramtai actualizar</code> (or <code>--comprobar</code> to only check).</li>
+        </ul>
+        <p>Turn it off in <strong>Settings → Check for updates</strong>.</p>
+      </div>
+    </section>
+
+    <section id="preguntas">
+      <h2><span lang="es">Preguntas frecuentes</span><span lang="en">Frequently asked questions</span></h2>
+      <details>
+        <summary><span lang="es">Windows dice que la app no es segura. ¿Lo es?</span><span lang="en">Windows says the app isn't safe. Is it?</span></summary>
+        <p lang="es">El aviso de SmartScreen aparece con cualquier programa que no esté firmado con un certificado de pago, no porque se haya encontrado nada. El código es público y cada descarga trae su suma SHA-256 en <code>SHA256SUMS.txt</code> para que compruebes que no fue alterada. Pulsa <strong>Más información → Ejecutar de todas formas</strong>.</p>
+        <p lang="en">The SmartScreen warning shows up for any program that isn't signed with a paid certificate, not because anything was found. The code is public and every download has its SHA-256 checksum in <code>SHA256SUMS.txt</code> so you can check it wasn't tampered with. Click <strong>More info → Run anyway</strong>.</p>
+      </details>
+      <details>
+        <summary><span lang="es">macOS no deja abrir la app</span><span lang="en">macOS won't open the app</span></summary>
+        <p lang="es">Es Gatekeeper, porque la app no está firmada por un desarrollador de Apple. Instálala con Homebrew (<code>brew install --cask tramtai</code>) o permítela en <strong>Ajustes del Sistema → Privacidad y seguridad → Abrir igualmente</strong>. Solo hace falta la primera vez.</p>
+        <p lang="en">That's Gatekeeper, because the app isn't signed by an Apple developer. Install it with Homebrew (<code>brew install --cask tramtai</code>) or allow it in <strong>System Settings → Privacy &amp; Security → Open Anyway</strong>. You only need to do it once.</p>
+      </details>
+      <details>
+        <summary><span lang="es">El puerto 17373 está ocupado</span><span lang="en">Port 17373 is busy</span></summary>
+        <p lang="es">Si al iniciar el puerto está ocupado, Tramtai usa el siguiente libre y lo avisa; la app y la CLI lo encuentran solas, pero tus aplicaciones deben usar la nueva dirección. Para fijar otro puerto: <strong>Ajustes → Puerto del servicio</strong> o <code>tramtai servicio puerto &lt;número&gt;</code>.</p>
+        <p lang="en">If the port is busy at startup, Tramtai uses the next free one and says so; the app and the CLI find it on their own, but your apps must use the new address. To pin another port: <strong>Settings → Service port</strong> or <code>tramtai servicio puerto &lt;number&gt;</code>.</p>
+      </details>
+      <details>
+        <summary><span lang="es">¿Dónde se guardan mis datos?</span><span lang="en">Where is my data stored?</span></summary>
+        <p lang="es">En tu equipo: <code>%APPDATA%\tramtai</code> en Windows, <code>~/Library/Application Support/tramtai</code> en macOS y <code>~/.config/tramtai</code> en Linux. Las respuestas caducan a las 24 horas y <strong>Ajustes → Borrar datos</strong> vacía el historial cuando quieras. Tramtai no tiene servidores ni telemetría: tus peticiones van de tu equipo al proveedor del agente.</p>
+        <p lang="en">On your computer: <code>%APPDATA%\tramtai</code> on Windows, <code>~/Library/Application Support/tramtai</code> on macOS and <code>~/.config/tramtai</code> on Linux. Responses expire after 24 hours and <strong>Settings → Delete data</strong> empties the history whenever you want. Tramtai has no servers and no telemetry: your requests go from your computer to the agent's provider.</p>
+      </details>
+      <details>
+        <summary><span lang="es">¿Cómo lo desinstalo?</span><span lang="en">How do I uninstall it?</span></summary>
+        <p lang="es">Windows: <strong>Configuración → Aplicaciones → Tramtai</strong>; al final pregunta si borrar también tus datos. macOS: arrastra la app a la Papelera, o <code>brew uninstall --cask --zap tramtai</code>. Linux: <code>sudo apt remove tramtai</code> o <code>sudo dnf remove tramtai</code>.</p>
+        <p lang="en">Windows: <strong>Settings → Apps → Tramtai</strong>; at the end it asks whether to delete your data too. macOS: drag the app to the Trash, or <code>brew uninstall --cask --zap tramtai</code>. Linux: <code>sudo apt remove tramtai</code> or <code>sudo dnf remove tramtai</code>.</p>
+      </details>
+      <details>
+        <summary><span lang="es">Mi aplicación recibe un error</span><span lang="en">My app gets an error</span></summary>
+        <ul lang="es">
+          <li><code>401 no_autorizado</code>: la clave no es la de <strong>Mis APIs</strong>.</li>
+          <li><code>400 modelo_ambiguo</code> o <code>modelo_no_disponible</code>: escribe el modelo como <code>agente/modelo</code>, por ejemplo <code>claude/sonnet</code>.</li>
+          <li><code>400 parametro_no_soportado</code>: el parámetro cambia la respuesta y los agentes CLI no pueden respetarlo (imágenes, <code>n</code> mayor que 1, <code>stop</code>…).</li>
+          <li><code>autenticacion_agente</code>: el agente no tiene sesión ni clave; mira la página <strong>Agentes</strong>.</li>
+          <li><code>422 salida_no_cumple_esquema</code>: la respuesta no cumplió tu JSON Schema o el de una herramienta.</li>
+        </ul>
+        <ul lang="en">
+          <li><code>401 no_autorizado</code>: the key isn't the one from <strong>My APIs</strong>.</li>
+          <li><code>400 modelo_ambiguo</code> or <code>modelo_no_disponible</code>: write the model as <code>agent/model</code>, e.g. <code>claude/sonnet</code>.</li>
+          <li><code>400 parametro_no_soportado</code>: the parameter changes the answer and the CLI agents can't honor it (images, <code>n</code> above 1, <code>stop</code>…).</li>
+          <li><code>autenticacion_agente</code>: the agent has no session or key; check the <strong>Agents</strong> page.</li>
+          <li><code>422 salida_no_cumple_esquema</code>: the answer didn't match your JSON Schema or a tool's.</li>
+        </ul>
+      </details>
+      <details>
+        <summary><span lang="es">¿Puedo usarlo en mi empresa?</span><span lang="en">Can I use it at my company?</span></summary>
+        <p lang="es">Tramtai es gratis para uso personal y no comercial (<a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md">PolyForm Noncommercial 1.0.0</a>). Para usarlo en una empresa o en un producto comercial hace falta una licencia aparte: <a href="https://github.com/MscottB">escríbeme</a>. Ten en cuenta también los términos de cada agente: las suscripciones personales son para uso personal.</p>
+        <p lang="en">Tramtai is free for personal and non-commercial use (<a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md">PolyForm Noncommercial 1.0.0</a>). Using it in a business or a commercial product needs a separate license: <a href="https://github.com/MscottB">get in touch</a>. Also mind each agent's terms: personal subscriptions are for personal use.</p>
+      </details>
+    </section>
+
+    <section id="mas">
+      <h2><span lang="es">Más documentación</span><span lang="en">More documentation</span></h2>
+      <p lang="es">La documentación completa (en español) está en GitHub:</p>
+      <p lang="en">The full documentation (in Spanish) is on GitHub:</p>
+      <ul>
+        <li><a href="https://github.com/MscottB/Tramtai/blob/main/docs/inicio.md"><span lang="es">Primeros pasos</span><span lang="en">Getting started</span></a></li>
+        <li><a href="https://github.com/MscottB/Tramtai/blob/main/docs/operacion.md"><span lang="es">Operación: servicio, proyectos y APIs por aplicación</span><span lang="en">Operation: service, projects and per-app APIs</span></a></li>
+        <li><a href="https://github.com/MscottB/Tramtai/blob/main/docs/api.md"><span lang="es">Referencia de la API</span><span lang="en">API reference</span></a></li>
+        <li><a href="https://github.com/MscottB/Tramtai/blob/main/docs/arquitectura.md"><span lang="es">Arquitectura y seguridad</span><span lang="en">Architecture and security</span></a></li>
+        <li><a href="https://github.com/MscottB/Tramtai/issues"><span lang="es">Reportar un problema</span><span lang="en">Report a problem</span></a></li>
+      </ul>
+    </section>
+  </article>
+</main>
+
+<footer>
+  <div class="envoltura">
+    <span>© 2026 Michael Scott B. · Tramtai</span>
+    <span>
+      <span lang="es">Claude, Codex, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span>
+      <span lang="en">Claude, Codex, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span>
+    </span>
+  </div>
+</footer>
+
+<script src="sitio.js"></script>
+</body>
+</html>
