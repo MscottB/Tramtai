@@ -19,7 +19,9 @@ try {
     $rango = if ($ultima) { "$ultima..$Hasta" } else { $Hasta }
     [int]$mayor, [int]$menor, [int]$parche = $base.Split('.')
 
-    $crudo = git log --reverse --no-merges --format='%s%x1f%b%x1e' $rango  # los merges solo repiten sus commits
+    # Los merges solo repiten sus commits, y los que solo tocan la página (site/) no cambian la app: ni suben la versión
+    # ni salen en sus notas.
+    $crudo = git log --reverse --no-merges --format='%s%x1f%b%x1e' $rango -- . ':(exclude)site' ':(exclude).github/workflows/paginas.yml'
     if ($LASTEXITCODE) { throw 'git log falló: ¿es un repositorio git con commits?' }
     $commits = ($crudo -join "`n").Split([char]0x1e) | Where-Object { $_.Trim() }
 

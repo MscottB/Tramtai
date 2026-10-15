@@ -5,7 +5,9 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore: ['site/**', '.github/workflows/paginas.yml']  # la página se publica aparte (paginas.yml)
   pull_request:
+    paths-ignore: ['site/**', '.github/workflows/paginas.yml']
 
 permissions:
   contents: read
