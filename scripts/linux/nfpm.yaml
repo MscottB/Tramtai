@@ -1,6 +1,6 @@
 # Paquetes .deb y .rpm de Tramtai para Linux (servicio, CLI y app de escritorio). Lo usa .github/workflows/publicar.yml:
 #   VERSION=0.28.0+16102026 ARCH=amd64 nfpm package -f scripts/linux/nfpm.yaml -p deb -t dist/...
-# Los ejecutables se compilan antes en paquete/ (la app de escritorio necesita CGO con GTK 3 y WebKitGTK 4.1).
+# Los ejecutables se compilan antes en paquete/ (la app de escritorio necesita CGO con GTK 4 y WebKitGTK 6.0).
 name: tramtai
 arch: ${ARCH}
 platform: linux
@@ -32,9 +32,9 @@ contents:
 overrides:
   deb:
     depends:
-      - libgtk-3-0t64 | libgtk-3-0
-      - libwebkit2gtk-4.1-0
+      - libgtk-4-1
+      - libwebkitgtk-6.0-4
   rpm:
     depends:
-      - gtk3
-      - webkit2gtk4.1
+      - gtk4
+      - webkitgtk6.0

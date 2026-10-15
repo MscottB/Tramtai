@@ -65,7 +65,7 @@ if ($Instalador) {
     & $makensis.Source /V2 /INPUTCHARSET UTF8 "/DVERSION=$version" "/DSALIDA=$archivoInstalador" (Join-Path $raiz 'scripts\instalador\tramtai.nsi')
     if ($LASTEXITCODE) { throw 'makensis falló' }
     Copy-Item (Join-Path $raiz 'bin\tramtai.exe') (Join-Path $dist "tramtai-$version-windows-x64.exe")
-    Get-ChildItem $dist -File -Exclude SHA256SUMS.txt | ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)" } |
+    Get-ChildItem $dist -File | Where-Object Name -ne 'SHA256SUMS.txt' | ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)" } |
         Set-Content -Encoding ascii (Join-Path $dist 'SHA256SUMS.txt')
     Get-ChildItem $dist -File | ForEach-Object { Write-Host "dist/$($_.Name)" }
 }

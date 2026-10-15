@@ -46,8 +46,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - name: GTK 3 y WebKitGTK 4.1
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-3-dev libwebkit2gtk-4.1-dev
+      - name: GTK 4 y WebKitGTK 6.0
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev libwebkitgtk-6.0-dev
       - name: Compilar y probar
         working-directory: escritorio
         run: |
