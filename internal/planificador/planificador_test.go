@@ -244,6 +244,26 @@ func TestAgenteOcupadoNoBloqueaAOtro(t *testing.T) {
 	esperar(t, alm, segundo, nucleo.Completado)
 }
 
+func TestOrdenDeLaColaPorAgente(t *testing.T) {
+	alm := abrir(t)
+	opc := opciones()
+	opc.MaximoTrabajos = 3
+	agente := registraSolicitud{recibida: make(chan nucleo.SolicitudEjecucion, 8)}
+	p := iniciar(t, alm, agente, 1, opc)
+	var ids []string
+	for i := range 8 {
+		ids = append(ids, enviar(t, p, solicitud(string(rune('a'+i)))))
+	}
+	for i := range 8 {
+		if s := <-agente.recibida; s.Mensajes[0].Contenido != string(rune('a'+i)) {
+			t.Fatalf("el agente recibió %q en el turno %d", s.Mensajes[0].Contenido, i)
+		}
+	}
+	for _, id := range ids {
+		esperar(t, alm, id, nucleo.Completado)
+	}
+}
+
 func TestLimiteDeLaInstancia(t *testing.T) {
 	alm := abrir(t)
 	c := &contador{}

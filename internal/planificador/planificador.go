@@ -419,6 +419,8 @@ func (p *Planificador) EnCurso() int {
 
 // despachar saca los trabajos de la cola en orden y procesa cada uno en su goroutine: un trabajo que espera
 // a su agente o a su punto de acceso no impide empezar a otro listo. Los semáforos limitan cuántos se ejecutan.
+// Antes de sacar el siguiente espera a que el anterior llegue a su espera: así cada semáforo, que atiende por
+// orden de llegada, conserva el orden de la cola.
 func (p *Planificador) despachar() {
 	defer p.grupo.Done()
 	for {
@@ -426,18 +428,22 @@ func (p *Planificador) despachar() {
 		case <-p.ctx.Done():
 			return
 		case id := <-p.cola:
+			esperando := make(chan struct{})
 			p.grupo.Add(1)
 			go func() {
 				defer p.grupo.Done()
-				p.procesar(id)
+				p.procesar(id, sync.OnceFunc(func() { close(esperando) }))
 			}()
+			<-esperando
 		}
 	}
 }
 
 // procesar lleva un trabajo de en_cola a un estado terminal. Las escrituras usan context.Background
-// para que el estado quede consistente aunque el servicio se esté deteniendo.
-func (p *Planificador) procesar(id string) {
+// para que el estado quede consistente aunque el servicio se esté deteniendo. esperando se llama al llegar
+// a la espera de los semáforos o de la conversión, o al terminar antes.
+func (p *Planificador) procesar(id string, esperando func()) {
+	defer esperando()
 	fondo := context.Background()
 	defer func() { // una línea en el registro si el trabajo terminó (no si quedó en cola por un cierre)
 		if t, err := p.almacen.Obtener(fondo, id); err == nil && t.Estado.Terminal() {
@@ -474,6 +480,7 @@ func (p *Planificador) procesar(id string) {
 
 	solicitud, desde := t.Solicitud, nucleo.EnCola
 	if len(solicitud.Cargas) > 0 {
+		esperando() // una conversión larga no frena el despacho de los demás
 		if !p.cambiar(id, nucleo.EnCola, nucleo.PreparandoEntrada, persistencia.Cambio{}) {
 			return
 		}
@@ -507,6 +514,9 @@ func (p *Planificador) procesar(id string) {
 		defer temporizador.Stop()
 		plazoCola = temporizador.C
 	}
+	// shortcut: el siguiente trabajo tarda en llegar a su espera (lee y escribe en la base) mucho más que este en
+	// entrar en el select, así que en la práctica se respeta el orden; si no bastara, un turno por agente.
+	esperando()
 	// Primero el punto de acceso, después el adaptador y al final la plaza de la instancia: quien espera a su
 	// agente no ocupa plaza, así que otro trabajo listo de otro agente puede empezar. Un canal atiende a sus
 	// esperas por orden de llegada, así que cada agente conserva el orden de la cola.
