@@ -5,6 +5,7 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"tramtai/internal/cliente"
+	"tramtai/internal/idioma"
 	"tramtai/internal/navegador"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/servicio"
@@ -223,7 +225,7 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.detalle, m.scroll = msg.t, 0
 		m.pantalla = pDetalle
 	case msgModelos:
-		m.modelos = append([]string{"(predeterminado de la instancia)"}, msg.lista...)
+		m.modelos = append([]string{idioma.T("(predeterminado de la instancia)")}, msg.lista...)
 		if m.iModelo >= len(m.modelos) {
 			m.iModelo = 0
 		}
@@ -243,14 +245,14 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.enCurso, m.flujo = msg.t.ID, msg.flujo
-		m.resumen = "trabajo " + msg.t.ID + " en cola · Esc cancela"
+		m.resumen = idioma.Tf("trabajo %s en cola · Esc cancela", msg.t.ID)
 		return m, escuchar(m.flujo)
 	case msgEvento:
 		switch msg.tipo {
 		case "texto":
 			m.salida.WriteString(msg.datos)
 		case "estado":
-			m.resumen = "trabajo " + m.enCurso + ": " + msg.datos + " · Esc cancela"
+			m.resumen = idioma.Tf("trabajo %s: %s · Esc cancela", m.enCurso, msg.datos)
 		}
 		return m, escuchar(m.flujo)
 	case msgFin:
@@ -262,7 +264,7 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t := msg.t
 		if t.Estado == nucleo.Completado && t.Salida != m.salida.String() {
 			if m.salida.Len() > 0 {
-				m.salida.WriteString("\n\n— salida final —\n")
+				m.salida.WriteString(idioma.T("\n\n— salida final —\n"))
 			}
 			m.salida.WriteString(t.Salida)
 		}
@@ -289,9 +291,9 @@ func escuchar(flujo chan tea.Msg) tea.Cmd {
 func resumenTrabajo(t nucleo.Trabajo) string {
 	modelo := t.ModeloEfectivo
 	if modelo == "" {
-		modelo = "no verificable"
+		modelo = idioma.T("no verificable")
 	}
-	texto := fmt.Sprintf("%s · modelo %s · tokens %d/%d", t.Estado, modelo, t.Uso.TokensEntrada, t.Uso.TokensSalida)
+	texto := idioma.Tf("%s · modelo %s · tokens %d/%d", t.Estado, modelo, t.Uso.TokensEntrada, t.Uso.TokensSalida)
 	if t.Uso.CostoUSD > 0 {
 		texto += fmt.Sprintf(" · US$ %.4f", t.Uso.CostoUSD)
 	}
@@ -437,38 +439,42 @@ func (m *modelo) elegir(tecla string, ops []opcion) tea.Cmd {
 func (m *modelo) opcionesInicio() []opcion {
 	var ops []opcion
 	if m.o.Proyecto != "" {
-		ops = append(ops, opcion{"Instancia del proyecto actual", func() tea.Cmd { m.inst = m.o.IDProyecto; m.ir(pInstancia); return nil }})
+		ops = append(ops, opcion{idioma.T("Instancia del proyecto actual"), func() tea.Cmd { m.inst = m.o.IDProyecto; m.ir(pInstancia); return nil }})
 	}
 	return append(ops,
-		opcion{"Instancia global", func() tea.Cmd { m.inst = "global"; m.ir(pInstancia); return nil }},
-		opcion{"Ver todas las instancias", func() tea.Cmd { m.ir(pTodas); return m.cargarEstado() }},
-		opcion{"Estado del servicio", func() tea.Cmd { m.ir(pServicio); return m.cargarEstado() }},
-		opcion{"Salir", func() tea.Cmd { return tea.Quit }},
+		opcion{idioma.T("Instancia global"), func() tea.Cmd { m.inst = "global"; m.ir(pInstancia); return nil }},
+		opcion{idioma.T("Ver todas las instancias"), func() tea.Cmd { m.ir(pTodas); return m.cargarEstado() }},
+		opcion{idioma.T("Estado del servicio"), func() tea.Cmd { m.ir(pServicio); return m.cargarEstado() }},
+		opcion{idioma.T("Salir"), func() tea.Cmd { return tea.Quit }},
 	)
 }
 
 func (m *modelo) opcionesInstancia() []opcion {
-	volver := opcion{"Volver", func() tea.Cmd { m.ir(pInicio); return nil }}
+	volver := opcion{idioma.T("Volver"), func() tea.Cmd { m.ir(pInicio); return nil }}
 	if m.instancia(m.inst) == nil {
-		texto := "Activar instancia"
+		texto := idioma.T("Activar instancia")
 		if m.cli == nil {
-			texto += " (inicia el servicio en segundo plano)"
+			texto += idioma.T(" (inicia el servicio en segundo plano)")
 		}
 		return []opcion{{texto, m.activar}, volver}
 	}
 	return []opcion{
-		{"Ejecutar", func() tea.Cmd {
+		{idioma.T("Ejecutar"), func() tea.Cmd {
 			m.ir(pEjecutar)
 			m.campo, m.salida, m.resumen = 2, strings.Builder{}, ""
 			return m.cargarModelos()
 		}},
-		{"Trabajos", func() tea.Cmd { m.ir(pTrabajos); return m.cargarTrabajos() }},
-		{"Puntos de acceso", func() tea.Cmd { m.ir(pAccesos); return m.cargarEstado() }},
-		{"Configuración efectiva", func() tea.Cmd { m.ir(pLineas); m.titulo = "Configuración efectiva"; return m.cargarConfiguracion() }},
-		{"Agentes y capacidades", func() tea.Cmd { m.ir(pLineas); m.titulo = "Agentes y capacidades"; return m.cargarAgentes() }},
-		{"Abrir Web UI en el navegador", m.abrirWeb},
-		{"Desactivar instancia", func() tea.Cmd {
-			return m.confirmar("¿Desactivar "+m.inst+"? Se cancela lo que esté en cola.", m.desactivar(m.inst))
+		{idioma.T("Trabajos"), func() tea.Cmd { m.ir(pTrabajos); return m.cargarTrabajos() }},
+		{idioma.T("Puntos de acceso"), func() tea.Cmd { m.ir(pAccesos); return m.cargarEstado() }},
+		{idioma.T("Configuración efectiva"), func() tea.Cmd {
+			m.ir(pLineas)
+			m.titulo = idioma.T("Configuración efectiva")
+			return m.cargarConfiguracion()
+		}},
+		{idioma.T("Agentes y capacidades"), func() tea.Cmd { m.ir(pLineas); m.titulo = idioma.T("Agentes y capacidades"); return m.cargarAgentes() }},
+		{idioma.T("Abrir Web UI en el navegador"), m.abrirWeb},
+		{idioma.T("Desactivar instancia"), func() tea.Cmd {
+			return m.confirmar(idioma.Tf("¿Desactivar %s? Se cancela lo que esté en cola.", m.inst), m.desactivar(m.inst))
 		}},
 		volver,
 	}
@@ -481,7 +487,7 @@ func (m *modelo) activar() tea.Cmd {
 		ambito, raiz = "proyecto", m.o.Proyecto
 	}
 	cli, iniciar := m.cli, m.o.Iniciar
-	m.ocupado = "activando " + m.inst + "…"
+	m.ocupado = idioma.Tf("activando %s…", m.inst)
 	return func() tea.Msg {
 		var err error
 		if cli == nil {
@@ -492,7 +498,7 @@ func (m *modelo) activar() tea.Cmd {
 		ctx, cancelar := conPlazo(60 * time.Second)
 		defer cancelar()
 		_, err = cli.Activar(ctx, ambito, raiz)
-		return msgAviso{texto: "instancia activa", err: err}
+		return msgAviso{texto: idioma.T("instancia activa"), err: err}
 	}
 }
 
@@ -506,7 +512,7 @@ func (m *modelo) abrirWeb() tea.Cmd {
 		if err == nil {
 			err = navegador.Abrir(url)
 		}
-		return msgAviso{texto: "Web UI abierta en el navegador", err: err}
+		return msgAviso{texto: idioma.T("Web UI abierta en el navegador"), err: err}
 	}
 }
 
@@ -515,7 +521,7 @@ func (m *modelo) desactivar(id string) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancelar := conPlazo(60 * time.Second)
 		defer cancelar()
-		return msgAviso{texto: "instancia " + id + " desactivada", err: cli.Desactivar(ctx, id)}
+		return msgAviso{texto: idioma.Tf("instancia %s desactivada", id), err: cli.Desactivar(ctx, id)}
 	}
 }
 
@@ -531,7 +537,7 @@ func (m *modelo) cargarModelos() tea.Cmd {
 
 func (m *modelo) cargarTrabajos() tea.Cmd {
 	cli, inst := m.cli, m.inst
-	m.ocupado = "cargando trabajos…"
+	m.ocupado = idioma.T("cargando trabajos…")
 	return func() tea.Msg {
 		ctx, cancelar := conPlazo(10 * time.Second)
 		defer cancelar()
@@ -552,7 +558,7 @@ func (m *modelo) cargarDetalle(id string) tea.Cmd {
 
 func (m *modelo) cargarConfiguracion() tea.Cmd {
 	cli, inst := m.cli, m.inst
-	m.ocupado, m.lineas = "cargando…", nil
+	m.ocupado, m.lineas = idioma.T("cargando…"), nil
 	return func() tea.Msg {
 		ctx, cancelar := conPlazo(10 * time.Second)
 		defer cancelar()
@@ -567,7 +573,7 @@ func (m *modelo) cargarConfiguracion() tea.Cmd {
 
 func (m *modelo) cargarAgentes() tea.Cmd {
 	cli, inst := m.cli, m.inst
-	m.ocupado, m.lineas = "detectando agentes…", nil
+	m.ocupado, m.lineas = idioma.T("detectando agentes…"), nil
 	return func() tea.Msg {
 		ctx, cancelar := conPlazo(30 * time.Second)
 		defer cancelar()
@@ -577,15 +583,15 @@ func (m *modelo) cargarAgentes() tea.Cmd {
 		for _, a := range lista {
 			datos, _ := a.(map[string]any)
 			capac, _ := datos["capacidades"].(map[string]any)
-			lineas = append(lineas, estilo(negrita, fmt.Sprint(datos["agente"]))+fmt.Sprintf("  versión %v · autenticación %v", datos["version_detectada"], datos["autenticacion"]),
-				fmt.Sprintf("  streaming %v · salida estructurada %v · modelo efectivo %v", capac["streaming"], capac["salida_estructurada"], capac["modelo_efectivo_informado"]),
-				fmt.Sprintf("  términos: %v", datos["terminos"]))
+			lineas = append(lineas, estilo(negrita, fmt.Sprint(datos["agente"]))+idioma.Tf("  versión %v · autenticación %v", datos["version_detectada"], datos["autenticacion"]),
+				idioma.Tf("  streaming %v · salida estructurada %v · modelo efectivo %v", capac["streaming"], capac["salida_estructurada"], capac["modelo_efectivo_informado"]),
+				idioma.Tf("  términos: %v", datos["terminos"]))
 			if p, ok := datos["problema"]; ok {
-				lineas = append(lineas, estilo(amarillo, fmt.Sprintf("  problema: %v", p)))
+				lineas = append(lineas, estilo(amarillo, idioma.Tf("  problema: %v", p)))
 			}
 			lineas = append(lineas, "")
 		}
-		lineas = append(lineas, fmt.Sprintf("formato de conversación: %v", c["formato_serializacion"]))
+		lineas = append(lineas, idioma.Tf("formato de conversación: %v", c["formato_serializacion"]))
 		return msgLineas{lineas: lineas, err: err}
 	}
 }
@@ -664,7 +670,7 @@ func (m *modelo) lanzar() tea.Cmd {
 		return nil
 	}
 	if strings.TrimSpace(m.mensaje) == "" {
-		m.aviso, m.esError = "escribe un mensaje", true
+		m.aviso, m.esError = idioma.T("escribe un mensaje"), true
 		return nil
 	}
 	seleccion := ""
@@ -675,7 +681,7 @@ func (m *modelo) lanzar() tea.Cmd {
 	archivos := strings.FieldsFunc(m.archivos, func(r rune) bool { return r == ',' || r == ';' })
 	cli, inst := m.cli, m.inst
 	m.salida.Reset()
-	m.resumen, m.aviso, m.ocupado = "", "", "enviando…"
+	m.resumen, m.aviso, m.ocupado = "", "", idioma.T("enviando…")
 	return func() tea.Msg {
 		ctx, cancelar := conPlazo(10 * time.Minute)
 		defer cancelar()
@@ -724,7 +730,8 @@ func (m *modelo) accionTrabajo(id, accion string, siguiente tea.Cmd) tea.Cmd {
 		} else {
 			_, err = cli.Accion(ctx, inst, id, accion)
 		}
-		return msgAviso{texto: accion + ": " + id, err: err, siguiente: siguiente}
+		etiqueta := map[string]string{"cancelar": idioma.T("cancelar"), "reintentar": idioma.T("reintentar"), "eliminar": idioma.T("eliminar")}[accion]
+		return msgAviso{texto: etiqueta + ": " + id, err: err, siguiente: siguiente}
 	}
 }
 
@@ -741,7 +748,7 @@ func (m *modelo) teclaTrabajos(tecla string) tea.Cmd {
 	case "t":
 		return m.accionTrabajo(t.ID, "reintentar", m.cargarTrabajos())
 	case "x":
-		return m.confirmar("¿Eliminar "+t.ID+"?", m.accionTrabajo(t.ID, "eliminar", m.cargarTrabajos()))
+		return m.confirmar(idioma.Tf("¿Eliminar %s?", t.ID), m.accionTrabajo(t.ID, "eliminar", m.cargarTrabajos()))
 	}
 	return nil
 }
@@ -754,7 +761,7 @@ func (m *modelo) teclaDetalle(tecla string) tea.Cmd {
 	case "t":
 		return m.accionTrabajo(id, "reintentar", nil)
 	case "x":
-		return m.confirmar("¿Eliminar "+id+"?", m.accionTrabajo(id, "eliminar", func() tea.Msg { return msgTrabajos{} }))
+		return m.confirmar(idioma.Tf("¿Eliminar %s?", id), m.accionTrabajo(id, "eliminar", func() tea.Msg { return msgTrabajos{} }))
 	case "r":
 		return m.cargarDetalle(id)
 	}
@@ -822,16 +829,16 @@ func (m *modelo) teclaAccesos(tecla string) tea.Cmd {
 					return lista, nil
 				}
 			}
-			return nil, fmt.Errorf("el punto %s no está en %s", p.Nombre, p.Origen)
+			return nil, errors.New(idioma.Tf("el punto %s no está en %s", p.Nombre, p.Origen))
 		}
 	}
 	switch tecla {
 	case "enter", "space":
 		activo := !(p.Activo || p.Error != "desactivado")
-		return m.editarPuntos(p.Origen, map[bool]string{true: "punto activado", false: "punto desactivado"}[activo],
+		return m.editarPuntos(p.Origen, map[bool]string{true: idioma.T("punto activado"), false: idioma.T("punto desactivado")}[activo],
 			cambiar(func(c *servicio.ConfigPunto) { c.Activo = &activo }))
 	case "x":
-		return m.confirmar("¿Eliminar el punto de acceso "+p.Nombre+"?", m.editarPuntos(p.Origen, "punto eliminado",
+		return m.confirmar(idioma.Tf("¿Eliminar el punto de acceso %s?", p.Nombre), m.editarPuntos(p.Origen, idioma.T("punto eliminado"),
 			func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
 				var resto []servicio.ConfigPunto
 				for _, c := range lista {
@@ -842,7 +849,7 @@ func (m *modelo) teclaAccesos(tecla string) tea.Cmd {
 				return resto, nil
 			}))
 	case "t":
-		m.aviso, m.esError = "token de "+p.Nombre+": "+servicio.RutaTokenPunto(m.o.Datos, p.Nombre), false
+		m.aviso, m.esError = idioma.Tf("token de %s: %s", p.Nombre, servicio.RutaTokenPunto(m.o.Datos, p.Nombre)), false
 	}
 	return nil
 }
@@ -885,7 +892,7 @@ func (m *modelo) crearPunto() tea.Cmd {
 	if m.puertoPunto != "" {
 		puerto, err := strconv.Atoi(m.puertoPunto)
 		if err != nil {
-			m.aviso, m.esError = "el puerto debe ser un número", true
+			m.aviso, m.esError = idioma.T("el puerto debe ser un número"), true
 			return nil
 		}
 		p.Puerto = puerto
@@ -905,11 +912,11 @@ func (m *modelo) crearPunto() tea.Cmd {
 		return nil
 	}
 	m.ir(pAccesos)
-	return m.editarPuntos("", "punto "+p.Nombre+" creado · token en "+servicio.RutaTokenPunto(m.o.Datos, p.Nombre),
+	return m.editarPuntos("", idioma.Tf("punto %s creado · token en %s", p.Nombre, servicio.RutaTokenPunto(m.o.Datos, p.Nombre)),
 		func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
 			for _, c := range lista {
 				if c.Nombre == p.Nombre {
-					return nil, fmt.Errorf("el punto de acceso %s ya existe", p.Nombre)
+					return nil, errors.New(idioma.Tf("el punto de acceso %s ya existe", p.Nombre))
 				}
 			}
 			return append(lista, p), nil
@@ -930,7 +937,7 @@ func (m *modelo) teclaTodas(tecla string) tea.Cmd {
 		m.inst = i.ID
 		m.ir(pInstancia)
 	case "d":
-		return m.confirmar("¿Desactivar "+i.ID+"? Se cancela lo que esté en cola.", m.desactivar(i.ID))
+		return m.confirmar(idioma.Tf("¿Desactivar %s? Se cancela lo que esté en cola.", i.ID), m.desactivar(i.ID))
 	}
 	return nil
 }
@@ -940,21 +947,21 @@ func (m *modelo) teclaServicio(tecla string) tea.Cmd {
 	case "i":
 		if m.cli == nil {
 			iniciar := m.o.Iniciar
-			m.ocupado = "iniciando el servicio…"
+			m.ocupado = idioma.T("iniciando el servicio…")
 			return func() tea.Msg {
 				_, err := iniciar()
-				return msgAviso{texto: "servicio iniciado", err: err}
+				return msgAviso{texto: idioma.T("servicio iniciado"), err: err}
 			}
 		}
 	case "d":
 		if m.cli != nil {
 			cli := m.cli
-			return m.confirmar("¿Detener el servicio y todas sus instancias?", func() tea.Msg {
+			return m.confirmar(idioma.T("¿Detener el servicio y todas sus instancias?"), func() tea.Msg {
 				ctx, cancelar := conPlazo(30 * time.Second)
 				defer cancelar()
 				err := cli.Detener(ctx)
 				time.Sleep(time.Second)
-				return msgAviso{texto: "servicio detenido", err: err}
+				return msgAviso{texto: idioma.T("servicio detenido"), err: err}
 			})
 		}
 	case "p":
@@ -964,7 +971,7 @@ func (m *modelo) teclaServicio(tecla string) tea.Cmd {
 				ctx, cancelar := conPlazo(30 * time.Second)
 				defer cancelar()
 				_, err := cli.Recargar(ctx)
-				return msgAviso{texto: "puntos de acceso recargados", err: err}
+				return msgAviso{texto: idioma.T("puntos de acceso recargados"), err: err}
 			}
 		}
 	}
@@ -996,7 +1003,7 @@ func (m *modelo) View() tea.View {
 		for _, l := range ventana(m.lineas, m.scroll, m.alto-8) {
 			b.WriteString(l + "\n")
 		}
-		ayuda = "↑↓ desplazar · Esc volver"
+		ayuda = idioma.T("↑↓ desplazar · Esc volver")
 	case pTodas:
 		ayuda = m.vistaTodas(&b)
 	case pServicio:
@@ -1005,7 +1012,7 @@ func (m *modelo) View() tea.View {
 	b.WriteString("\n")
 	switch {
 	case m.pregunta != "":
-		b.WriteString(estilo(amarillo+negrita, m.pregunta+" (s/n)"))
+		b.WriteString(estilo(amarillo+negrita, m.pregunta+idioma.T(" (s/n)")))
 	case m.ocupado != "":
 		b.WriteString(estilo(amarillo, m.ocupado))
 	case m.aviso != "" && m.esError:
@@ -1013,7 +1020,7 @@ func (m *modelo) View() tea.View {
 	case m.aviso != "":
 		b.WriteString(estilo(verde, m.aviso))
 	}
-	b.WriteString("\n" + estilo(tenue, ayuda+" · Ctrl+C salir"))
+	b.WriteString("\n" + estilo(tenue, ayuda+idioma.T(" · Ctrl+C salir")))
 	v := tea.NewView(b.String())
 	v.AltScreen = true
 	return v
@@ -1038,38 +1045,38 @@ func (m *modelo) menu(b *strings.Builder, ops []opcion) {
 
 func marcaActiva(activa bool) string {
 	if activa {
-		return estilo(verde, "activa")
+		return estilo(verde, idioma.T("activa"))
 	}
-	return estilo(tenue, "inactiva")
+	return estilo(tenue, idioma.T("inactiva"))
 }
 
 func (m *modelo) vistaInicio(b *strings.Builder) string {
-	b.WriteString("Seleccione el ámbito de administración:\n\n")
+	b.WriteString(idioma.T("Seleccione el ámbito de administración:\n\n"))
 	m.menu(b, m.opcionesInicio())
 	b.WriteString("\n")
 	if m.o.Proyecto != "" {
-		fmt.Fprintf(b, "Proyecto actual: %s\n", m.o.Proyecto)
+		b.WriteString(idioma.Tf("Proyecto actual: %s\n", m.o.Proyecto))
 	} else {
-		b.WriteString(estilo(tenue, "Proyecto actual: ninguno (tramtai iniciar en un repositorio)") + "\n")
+		b.WriteString(estilo(tenue, idioma.T("Proyecto actual: ninguno (tramtai iniciar en un repositorio)")) + "\n")
 	}
 	if m.cli != nil {
-		fmt.Fprintf(b, "Servicio: %s en %s\n", estilo(verde, "activo"), m.cli.Base)
+		b.WriteString(idioma.Tf("Servicio: %s en %s\n", estilo(verde, idioma.T("activo")), m.cli.Base))
 	} else {
-		fmt.Fprintf(b, "Servicio: %s\n", estilo(tenue, "inactivo"))
+		b.WriteString(idioma.Tf("Servicio: %s\n", estilo(tenue, idioma.T("inactivo"))))
 	}
 	if m.o.Proyecto != "" {
-		fmt.Fprintf(b, "Instancia proyecto: %s\n", marcaActiva(m.instancia(m.o.IDProyecto) != nil))
+		fmt.Fprint(b, idioma.Tf("Instancia proyecto: %s\n", marcaActiva(m.instancia(m.o.IDProyecto) != nil)))
 	}
-	fmt.Fprintf(b, "Instancia global: %s\n", marcaActiva(m.instancia("global") != nil))
-	return "↑↓ o número · Enter elegir · r actualizar · q salir"
+	b.WriteString(idioma.Tf("Instancia global: %s\n", marcaActiva(m.instancia("global") != nil)))
+	return idioma.T("↑↓ o número · Enter elegir · r actualizar · q salir")
 }
 
 func (m *modelo) vistaInstancia(b *strings.Builder) string {
 	inst := m.instancia(m.inst)
-	fmt.Fprintf(b, "%s  %s\n", estilo(negrita, "Instancia "+m.inst), marcaActiva(inst != nil))
+	fmt.Fprintf(b, "%s  %s\n", estilo(negrita, idioma.Tf("Instancia %s", m.inst)), marcaActiva(inst != nil))
 	if inst != nil {
 		if inst.Raiz != "" {
-			fmt.Fprintf(b, "Raíz: %s\n", inst.Raiz)
+			b.WriteString(idioma.Tf("Raíz: %s\n", inst.Raiz))
 		}
 		base := "—"
 		if m.cli != nil {
@@ -1077,12 +1084,20 @@ func (m *modelo) vistaInstancia(b *strings.Builder) string {
 		}
 		fmt.Fprintf(b, "Endpoint: %s  (OpenAI %s/openai/v1 · Anthropic %s/anthropic)\n", base, base, base)
 		fmt.Fprintf(b, "Token: %s\n", inst.ArchivoToken)
-		fmt.Fprintf(b, "Agente predeterminado: %s · perfil: %s\n", valor(inst.Agente), valor(inst.Perfil))
-		fmt.Fprintf(b, "Trabajos: %s\n", conteo(inst.Trabajos))
+		b.WriteString(idioma.Tf("Agente predeterminado: %s · perfil: %s\n", valor(inst.Agente), valor(inst.Perfil)))
+		b.WriteString(idioma.Tf("Trabajos: %s\n", conteo(inst.Trabajos)))
 	}
 	b.WriteString("\n")
 	m.menu(b, m.opcionesInstancia())
-	return "↑↓ o número · Enter elegir · Esc volver"
+	return idioma.T("↑↓ o número · Enter elegir · Esc volver")
+}
+
+// errorPunto muestra el estado de un punto de acceso; «desactivado» es un valor del servicio que el código compara.
+func errorPunto(e string) string {
+	if e == "desactivado" {
+		return idioma.T("desactivado")
+	}
+	return e
 }
 
 func valor(texto string) string {
@@ -1094,7 +1109,7 @@ func valor(texto string) string {
 
 func conteo(c map[string]int) string {
 	if len(c) == 0 {
-		return "ninguno"
+		return idioma.T("ninguno")
 	}
 	var partes []string
 	for _, e := range []string{"en_cola", "ejecutando", "completado", "fallido", "cancelado", "interrumpido"} {
@@ -1113,14 +1128,14 @@ func (m *modelo) campoTexto(indice int, etiqueta, texto string) string {
 }
 
 func (m *modelo) vistaEjecutar(b *strings.Builder) string {
-	fmt.Fprintf(b, "%s\n\n", estilo(negrita, "Ejecutar en "+m.inst))
+	fmt.Fprintf(b, "%s\n\n", estilo(negrita, idioma.Tf("Ejecutar en %s", m.inst)))
 	seleccion := "…"
 	if len(m.modelos) > 0 {
 		seleccion = "◀ " + m.modelos[m.iModelo] + " ▶"
 	}
-	b.WriteString(m.campoTexto(0, "Modelo:  ", seleccion) + "\n")
-	b.WriteString(m.campoTexto(1, "Archivos:", m.archivos+estilo(tenue, map[bool]string{true: " (rutas separadas por comas)", false: ""}[m.archivos == ""])) + "\n")
-	b.WriteString(m.campoTexto(2, "Mensaje: ", m.mensaje) + "\n")
+	b.WriteString(m.campoTexto(0, idioma.T("Modelo:  "), seleccion) + "\n")
+	b.WriteString(m.campoTexto(1, idioma.T("Archivos:"), m.archivos+estilo(tenue, map[bool]string{true: idioma.T(" (rutas separadas por comas)"), false: ""}[m.archivos == ""])) + "\n")
+	b.WriteString(m.campoTexto(2, idioma.T("Mensaje: "), m.mensaje) + "\n")
 	b.WriteString(estilo(tenue, strings.Repeat("─", min(m.ancho, 100))) + "\n")
 	lineas := strings.Split(m.salida.String(), "\n")
 	for _, l := range ventana(lineas, max(len(lineas)-(m.alto-14), 0), m.alto-14) {
@@ -1129,13 +1144,16 @@ func (m *modelo) vistaEjecutar(b *strings.Builder) string {
 	if m.resumen != "" {
 		b.WriteString(estilo(tenue, strings.Repeat("─", min(m.ancho, 100))) + "\n" + estilo(cian, m.resumen) + "\n")
 	}
-	return "Tab cambia de campo · ←→ modelo · Enter ejecuta · Ctrl+U borra el campo · Esc " + map[bool]string{true: "cancela el trabajo", false: "volver"}[m.enCurso != ""]
+	if m.enCurso != "" {
+		return idioma.T("Tab cambia de campo · ←→ modelo · Enter ejecuta · Ctrl+U borra el campo · Esc cancela el trabajo")
+	}
+	return idioma.T("Tab cambia de campo · ←→ modelo · Enter ejecuta · Ctrl+U borra el campo · Esc volver")
 }
 
 func (m *modelo) vistaTrabajos(b *strings.Builder) string {
-	fmt.Fprintf(b, "%s\n\n", estilo(negrita, "Trabajos de "+m.inst))
+	fmt.Fprintf(b, "%s\n\n", estilo(negrita, idioma.Tf("Trabajos de %s", m.inst)))
 	if len(m.trabajos) == 0 {
-		b.WriteString(estilo(tenue, "sin trabajos") + "\n")
+		b.WriteString(estilo(tenue, idioma.T("sin trabajos")) + "\n")
 	}
 	desde := max(m.cursor-(m.alto-10)+1, 0)
 	for i, t := range m.trabajos {
@@ -1153,7 +1171,7 @@ func (m *modelo) vistaTrabajos(b *strings.Builder) string {
 			b.WriteString("  " + linea + "\n")
 		}
 	}
-	return "↑↓ · Enter detalle · c cancelar · t reintentar · x eliminar · r actualizar · Esc volver"
+	return idioma.T("↑↓ · Enter detalle · c cancelar · t reintentar · x eliminar · r actualizar · Esc volver")
 }
 
 func colorEstado(e nucleo.Estado) string {
@@ -1172,32 +1190,32 @@ func colorEstado(e nucleo.Estado) string {
 func (m *modelo) vistaDetalle(b *strings.Builder) string {
 	t := m.detalle
 	fmt.Fprintf(b, "%s  %s\n", estilo(negrita, t.ID), colorEstado(t.Estado))
-	fmt.Fprintf(b, "Agente: %s · modelo enviado %s · efectivo %s\n", valor(t.Solicitud.Agente), valor(t.ModeloEnviado), valor(t.ModeloEfectivo))
+	b.WriteString(idioma.Tf("Agente: %s · modelo enviado %s · efectivo %s\n", valor(t.Solicitud.Agente), valor(t.ModeloEnviado), valor(t.ModeloEfectivo)))
 	if t.PuntoAcceso != "" {
-		fmt.Fprintf(b, "Punto de acceso: %s\n", t.PuntoAcceso)
+		b.WriteString(idioma.Tf("Punto de acceso: %s\n", t.PuntoAcceso))
 	}
 	fmt.Fprintf(b, "%s\n", resumenTrabajo(t))
-	fmt.Fprintf(b, "Creado: %s\n", t.CreadoEn.Local().Format("02-01-2006 15:04:05"))
+	b.WriteString(idioma.Tf("Creado: %s\n", t.CreadoEn.Local().Format("02-01-2006 15:04:05")))
 	if t.Disponibilidad == nucleo.SalidaExpirada {
-		b.WriteString(estilo(tenue, "Resultado expirado por la retención (retencion.horas_resultado)") + "\n")
+		b.WriteString(estilo(tenue, idioma.T("Resultado expirado por la retención (retencion.horas_resultado)")) + "\n")
 	}
 	b.WriteString(estilo(tenue, strings.Repeat("─", min(m.ancho, 100))) + "\n")
 	for _, l := range ventana(strings.Split(t.Salida, "\n"), m.scroll, m.alto-12) {
 		b.WriteString(l + "\n")
 	}
-	return "↑↓ desplazar · c cancelar · t reintentar · x eliminar · r actualizar · Esc volver"
+	return idioma.T("↑↓ desplazar · c cancelar · t reintentar · x eliminar · r actualizar · Esc volver")
 }
 
 func (m *modelo) vistaAccesos(b *strings.Builder) string {
-	fmt.Fprintf(b, "%s\n\n", estilo(negrita, "Puntos de acceso de "+m.inst))
+	fmt.Fprintf(b, "%s\n\n", estilo(negrita, idioma.Tf("Puntos de acceso de %s", m.inst)))
 	puntos := m.puntosDeInstancia()
 	if len(puntos) == 0 {
-		b.WriteString(estilo(tenue, "ninguno; pulsa n para crear uno") + "\n")
+		b.WriteString(estilo(tenue, idioma.T("ninguno; pulsa n para crear uno")) + "\n")
 	}
 	for i, p := range puntos {
-		estado := estilo(verde, "● activo")
+		estado := estilo(verde, idioma.T("● activo"))
 		if p.Error != "" {
-			estado = estilo(rojo, "○ "+p.Error)
+			estado = estilo(rojo, "○ "+errorPunto(p.Error))
 		}
 		modelo := strings.Trim(p.Agente+"/"+p.Modelo, "/")
 		linea := fmt.Sprintf("%-18s %-40s %-22s %-20s %s", p.Nombre, valor(p.URL), "["+strings.Join(p.Contratos, ",")+"]", valor(modelo), estado)
@@ -1207,27 +1225,27 @@ func (m *modelo) vistaAccesos(b *strings.Builder) string {
 			b.WriteString("  " + linea + "\n")
 		}
 	}
-	b.WriteString("\n" + estilo(tenue, "Alias, modelos permitidos y forzado: tramtai acceso editar <nombre> --alias … --permitidos … --forzar") + "\n")
-	return "↑↓ · Enter activar/desactivar · n nuevo · x eliminar · t ruta del token · Esc volver"
+	b.WriteString("\n" + estilo(tenue, idioma.T("Alias, modelos permitidos y forzado: tramtai acceso editar <nombre> --alias … --permitidos … --forzar")) + "\n")
+	return idioma.T("↑↓ · Enter activar/desactivar · n nuevo · x eliminar · t ruta del token · Esc volver")
 }
 
 func (m *modelo) vistaNuevoPunto(b *strings.Builder) string {
-	fmt.Fprintf(b, "%s\n\n", estilo(negrita, "Nuevo punto de acceso en "+m.inst))
-	b.WriteString(m.campoTexto(0, "Nombre:", m.nombrePunto) + "\n")
-	b.WriteString(m.campoTexto(1, "Puerto:", m.puertoPunto+estilo(tenue, map[bool]string{true: " (vacío = /p/<nombre> en el puerto del servicio)", false: ""}[m.puertoPunto == ""])) + "\n")
+	fmt.Fprintf(b, "%s\n\n", estilo(negrita, idioma.Tf("Nuevo punto de acceso en %s", m.inst)))
+	b.WriteString(m.campoTexto(0, idioma.T("Nombre:"), m.nombrePunto) + "\n")
+	b.WriteString(m.campoTexto(1, idioma.T("Puerto:"), m.puertoPunto+estilo(tenue, map[bool]string{true: idioma.T(" (vacío = /p/<nombre> en el puerto del servicio)"), false: ""}[m.puertoPunto == ""])) + "\n")
 	seleccion := "…"
 	if len(m.modelos) > 0 {
 		seleccion = "◀ " + m.modelos[m.iModelo] + " ▶"
 	}
-	b.WriteString(m.campoTexto(2, "Modelo:", seleccion) + "\n")
-	return "Tab cambia de campo · ←→ modelo · Enter crea · Esc volver"
+	b.WriteString(m.campoTexto(2, idioma.T("Modelo:"), seleccion) + "\n")
+	return idioma.T("Tab cambia de campo · ←→ modelo · Enter crea · Esc volver")
 }
 
 func (m *modelo) vistaTodas(b *strings.Builder) string {
-	b.WriteString(estilo(negrita, "Todas las instancias") + "\n\n")
+	b.WriteString(estilo(negrita, idioma.T("Todas las instancias")) + "\n\n")
 	if m.estado == nil || len(m.estado.Instancias) == 0 {
-		b.WriteString(estilo(tenue, "ninguna activa") + "\n")
-		return "Esc volver"
+		b.WriteString(estilo(tenue, idioma.T("ninguna activa")) + "\n")
+		return idioma.T("Esc volver")
 	}
 	for i, inst := range m.estado.Instancias {
 		linea := fmt.Sprintf("%-28s %-9s %s", inst.ID, inst.Ambito, conteo(inst.Trabajos))
@@ -1240,30 +1258,31 @@ func (m *modelo) vistaTodas(b *strings.Builder) string {
 			b.WriteString("  " + linea + "\n")
 		}
 	}
-	return "↑↓ · Enter abrir · d desactivar · r actualizar · Esc volver"
+	return idioma.T("↑↓ · Enter abrir · d desactivar · r actualizar · Esc volver")
 }
 
 func (m *modelo) vistaServicio(b *strings.Builder) string {
-	b.WriteString(estilo(negrita, "Estado del servicio") + "\n\n")
+	b.WriteString(estilo(negrita, idioma.T("Estado del servicio")) + "\n\n")
 	if m.cli == nil || m.estado == nil {
-		b.WriteString("Servicio: " + estilo(tenue, "inactivo") + "\n")
-		return "i iniciar en segundo plano · Esc volver"
+		b.WriteString(idioma.Tf("Servicio: %s\n", estilo(tenue, idioma.T("inactivo"))))
+		return idioma.T("i iniciar en segundo plano · Esc volver")
 	}
 	e := m.estado
-	fmt.Fprintf(b, "Servicio: %s en %s\nVersión: %s · pid %d · desde %s\n", estilo(verde, "activo"), e.Base, e.Version, e.PID, e.IniciadoEn.Local().Format("02-01-2006 15:04"))
-	fmt.Fprintf(b, "Instancias activas: %d\n\nPuntos de acceso:\n", len(e.Instancias))
+	b.WriteString(idioma.Tf("Servicio: %s en %s\n", estilo(verde, idioma.T("activo")), e.Base))
+	b.WriteString(idioma.Tf("Versión: %s · pid %d · desde %s\n", e.Version, e.PID, e.IniciadoEn.Local().Format("02-01-2006 15:04")))
+	b.WriteString(idioma.Tf("Instancias activas: %d\n\nPuntos de acceso:\n", len(e.Instancias)))
 	if len(e.Puntos) == 0 {
-		b.WriteString(estilo(tenue, "  ninguno") + "\n")
+		b.WriteString(estilo(tenue, "  "+idioma.T("ninguno")) + "\n")
 	}
 	for _, p := range e.Puntos {
-		estado := estilo(verde, "activo")
+		estado := estilo(verde, idioma.T("activo"))
 		if p.Error != "" {
-			estado = estilo(rojo, p.Error)
+			estado = estilo(rojo, errorPunto(p.Error))
 		}
 		fmt.Fprintf(b, "  %-18s %-40s %-24s %s\n", p.Nombre, valor(p.URL), p.Instancia, estado)
 	}
 	for _, err := range e.Errores {
-		b.WriteString(estilo(amarillo, "configuración: "+err) + "\n")
+		b.WriteString(estilo(amarillo, idioma.Tf("configuración: %s", err)) + "\n")
 	}
-	return "d detener (pide confirmación) · p recargar puntos · r actualizar · Esc volver"
+	return idioma.T("d detener (pide confirmación) · p recargar puntos · r actualizar · Esc volver")
 }
