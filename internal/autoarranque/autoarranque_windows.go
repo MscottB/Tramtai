@@ -19,6 +19,9 @@ var nombreValor = "Tramtai"
 // Activo indica si el arranque automático está registrado para el usuario actual.
 func Activo() (bool, error) {
 	k, err := registry.OpenKey(registry.CURRENT_USER, claveRun, registry.QUERY_VALUE)
+	if errors.Is(err, registry.ErrNotExist) {
+		return false, nil // en un perfil nuevo la clave Run puede no existir todavía
+	}
 	if err != nil {
 		return false, err
 	}
@@ -45,6 +48,9 @@ func Activar(escritorio string) error {
 // Desactivar quita el registro; no es un error si no existía.
 func Desactivar() error {
 	k, err := registry.OpenKey(registry.CURRENT_USER, claveRun, registry.SET_VALUE)
+	if errors.Is(err, registry.ErrNotExist) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}

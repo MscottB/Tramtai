@@ -9,6 +9,9 @@ on:
 permissions:
   contents: write
 
+env:
+  TRAMTAI_IDIOMA: es # las pruebas comparan textos en español; el runner está en inglés
+
 jobs:
   windows:
     runs-on: windows-latest

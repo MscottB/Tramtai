@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+# Las pruebas comparan algunos textos en español, el idioma de origen; los runners de macOS están en inglés.
+env:
+  TRAMTAI_IDIOMA: es
+
 jobs:
   go:
     name: Go (${{ matrix.os }})
