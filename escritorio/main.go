@@ -63,6 +63,7 @@ var textoSalir = idioma.T("Al salir se detiene el servicio: las aplicaciones con
 func main() {
 	proyecto := flag.String("proyecto", "", idioma.T("raíz de un proyecto con .tramtai/config.yaml (por defecto, la instancia global)"))
 	oculto := flag.Bool("oculto", false, idioma.T("arranca solo en la bandeja, sin mostrar la ventana (arranque automático)"))
+	actualizado := flag.Bool("actualizado", false, idioma.T("recién actualizada: muestra la ventana por delante de las demás"))
 	flag.Parse()
 
 	var ventana *application.WebviewWindow
@@ -124,6 +125,13 @@ func main() {
 	mostrar := func() {
 		ventana.Show()
 		ventana.Focus()
+	}
+	// La abre el instalador, un proceso en segundo plano al que Windows no deja traer ventanas al frente: se pone
+	// encima de las demás un momento para que se vea que volvió.
+	if *actualizado && !*oculto {
+		ventana.SetAlwaysOnTop(true)
+		mostrar()
+		time.AfterFunc(3*time.Second, func() { ventana.SetAlwaysOnTop(false) })
 	}
 	irA := func(pagina string) {
 		ventana.ExecJS("location.hash = '" + pagina + "'")

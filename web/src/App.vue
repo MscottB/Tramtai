@@ -331,6 +331,17 @@ onUnmounted(() => {
   document.removeEventListener('visibilitychange', alVolver)
   window.removeEventListener('popstate', alNavegar)
 })
+// Tras actualizar, avisa de la versión nueva una vez: se recuerda la última versión vista en este navegador.
+watch(() => sesion.value?.version, (version) => {
+  if (!version) return
+  try {
+    const vista = localStorage.getItem('tramtai.version')
+    if (vista && vista !== version) avisar(t('actualizacion.hecha', { version }))
+    localStorage.setItem('tramtai.version', version)
+  } catch {
+    // sin almacenamiento local no hay aviso
+  }
+})
 // Al abrir la sesión (al cargar o tras Entrar) se busca versión nueva sin esperar al siguiente intervalo.
 watch(() => !!sesion.value, (abierta) => abierta && comprobarActualizacion())
 const avisoEntrada = ref(new URLSearchParams(location.search).get('error') === 'codigo' ? t('app.codigoCaducado') : '')

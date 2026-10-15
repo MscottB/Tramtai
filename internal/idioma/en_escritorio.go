@@ -3,6 +3,7 @@ package idioma
 // Traducciones al inglés de la app de escritorio (escritorio).
 func init() {
 	agregar(map[string]string{
+		"recién actualizada: muestra la ventana por delante de las demás": "just updated: shows the window in front of the others",
 		"Buscar actualizaciones": "Check for updates",
 		"raíz de un proyecto con .tramtai/config.yaml (por defecto, la instancia global)": "root of a project with .tramtai/config.yaml (default: the global workspace)",
 		"arranca solo en la bandeja, sin mostrar la ventana (arranque automático)":        "start only in the tray, without showing the window (automatic startup)",
