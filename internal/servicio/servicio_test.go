@@ -157,6 +157,21 @@ func TestPuntosDeAcceso(t *testing.T) {
 	if r.StatusCode != 200 || !strings.Contains(cuerpo, `"modelo_enviado":"m9"`) {
 		t.Fatalf("puerto propio con modelo forzado: %d %s", r.StatusCode, cuerpo)
 	}
+	// Al cambiar el punto se reabre en el mismo puerto: el anterior lo libera antes.
+	rutaGlobal, _ := nucleo.RutaGlobal()
+	if err := EditarPuntos(rutaGlobal, nucleo.OrigenGlobal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+		lista[1].Modelo = "m8"
+		return lista, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if estado := s.Recargar(); !estado[1].Activo {
+		t.Fatalf("el punto con puerto propio debía reabrirse: %+v", estado[1])
+	}
+	r, cuerpo = pedir(t, "http://127.0.0.1:"+strconv.Itoa(puerto), "POST", "/api/v1/ejecutar", tokenFijo, `{"agente":"otro","mensajes":[{"rol":"usuario","contenido":"x"}]}`)
+	if r.StatusCode != 200 || !strings.Contains(cuerpo, `"modelo_enviado":"m8"`) {
+		t.Fatalf("punto reabierto en su puerto: %d %s", r.StatusCode, cuerpo)
+	}
 
 	// El punto del proyecto se abre al activar su instancia y se cierra al desactivarla.
 	pry, err := s.ActivarProyecto(proyecto)

@@ -459,7 +459,7 @@ type estadoConBase struct {
 func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *Instancia, privilegiada bool) bool {
 	ruta := r.URL.Path
 	if ruta == "/api/v1/instancia" && r.Method == http.MethodGet {
-		api.EscribirJSON(w, http.StatusOK, estadoConBase{inst.estado(), s.Base()})
+		api.EscribirJSON(w, http.StatusOK, estadoConBase{inst.estado(r.Context()), s.Base()})
 		return true
 	}
 	if !strings.HasPrefix(ruta, "/api/v1/instancia/") && ruta != "/api/v1/puntos" && !strings.HasPrefix(ruta, "/api/v1/puntos/") {

@@ -484,7 +484,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string) error {
 		return err
 	}
 	fmt.Fprintf(salida, idioma.T("tramtai %s escuchando en %s\nWeb UI: %s (o tramtai abrir)\n"), version.Texto(), sv.Base(), sv.Base())
-	imprimirEstado(salida, sv.Estado())
+	imprimirEstado(salida, sv.Estado(context.Background()))
 	if archivo == "" {
 		fmt.Fprintln(salida, idioma.T("\nAquí verás una línea por cada petición (al recibirla y al terminar). Ctrl+C para detener."))
 	} else {
