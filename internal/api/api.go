@@ -244,53 +244,36 @@ func leerJSON(w http.ResponseWriter, r *http.Request, destino any) error {
 }
 
 // seguir entrega los eventos del trabajo posteriores a "desde" hasta que termina y devuelve el trabajo final.
-// Espera los avisos del almacén en lugar de sondear; Sondeo solo es un respaldo.
+// Espera los avisos del almacén en lugar de sondear; Sondeo solo es un respaldo. En cada aviso solo lee el estado
+// y los eventos nuevos: el trabajo completo se lee una vez, al terminar.
 func (s *Servidor) seguir(ctx context.Context, id string, desde int, alEvento func(persistencia.Evento) error, latido func() error) (nucleo.Trabajo, error) {
 	ultimoLatido := time.Now()
-	entregar := func() (bool, error) {
-		eventos, err := s.Planificador.Eventos(ctx, id, desde)
+	for {
+		aviso := s.Planificador.Avisos() // antes de leer: un cambio entre la lectura y la espera no se pierde
+		eventos, estado, err := s.Planificador.Eventos(ctx, id, desde)
 		if err != nil {
-			return false, err
+			return nucleo.Trabajo{}, err
 		}
-		terminado := false
 		for _, e := range eventos {
 			desde = e.Numero
 			if alEvento != nil {
 				if err := alEvento(e); err != nil {
-					return false, err
+					return nucleo.Trabajo{}, err
 				}
 			}
-			terminado = terminado || (e.Tipo == "estado" && nucleo.Estado(e.Datos).Terminal())
 		}
-		return terminado, nil
-	}
-	for {
-		aviso := s.Planificador.Avisos() // antes de leer: un cambio entre la lectura y la espera no se pierde
-		terminado, err := entregar()
-		if err != nil {
-			return nucleo.Trabajo{}, err
-		}
-		t, err := s.Planificador.Obtener(ctx, id)
-		if err != nil {
-			return t, err
-		}
-		if t.Estado.Terminal() {
-			if !terminado { // el último evento pudo escribirse entre las dos lecturas
-				if _, err := entregar(); err != nil {
-					return t, err
-				}
-			}
-			return t, nil
+		if estado.Terminal() {
+			return s.Planificador.Obtener(ctx, id)
 		}
 		if latido != nil && time.Since(ultimoLatido) > 15*time.Second {
 			if err := latido(); err != nil {
-				return t, err
+				return nucleo.Trabajo{}, err
 			}
 			ultimoLatido = time.Now()
 		}
 		select {
 		case <-ctx.Done():
-			return t, ctx.Err()
+			return nucleo.Trabajo{}, ctx.Err()
 		case <-aviso:
 		case <-time.After(s.sondeo()):
 		}
