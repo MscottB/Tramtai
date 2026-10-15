@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -185,5 +186,43 @@ func TestPurgarCargas(t *testing.T) {
 	}
 	if _, _, err := c.Obtener(huerfana.ID); nucleo.CodigoDe(err) != nucleo.CodigoEntradaNoDisponible {
 		t.Fatalf("la huérfana ya no existe: %v", err)
+	}
+}
+
+func TestPurgarSinUsoRespetaLoRecienteYLoIlegible(t *testing.T) {
+	dir := t.TempDir()
+	c, err := AbrirCargas(dir, 24*time.Hour, 1<<20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reciente, _ := c.Guardar("a.txt", strings.NewReader("a"))
+	antigua, _ := c.Guardar("b.txt", strings.NewReader("b"))
+	antigua.CreadoEn = time.Now().Add(-2 * time.Hour)
+	datos, _ := json.Marshal(antigua)
+	os.WriteFile(filepath.Join(dir, antigua.ID+".json"), datos, 0o600)
+	// Metadatos dañados: uno en uso y otro sin uso, ambos de hace dos horas, y uno sin uso recién escrito.
+	viejo := time.Now().Add(-2 * time.Hour)
+	var danadas []string
+	for _, contenido := range []string{"c", "d", "e"} {
+		k, _ := c.Guardar(contenido+".txt", strings.NewReader(contenido))
+		os.WriteFile(filepath.Join(dir, k.ID+".json"), []byte("{a medias"), 0o600)
+		if contenido != "e" {
+			os.Chtimes(filepath.Join(dir, k.ID+".json"), viejo, viejo)
+		}
+		danadas = append(danadas, k.ID)
+	}
+	n, err := c.PurgarSinUso(map[string]bool{danadas[0]: true})
+	if err != nil || n != 2 {
+		t.Fatalf("se borran la antigua sin uso y la dañada antigua sin uso: %d %v", n, err)
+	}
+	if _, _, err := c.Obtener(reciente.ID); err != nil {
+		t.Fatalf("lo recién subido se conserva: %v", err)
+	}
+	if _, _, err := c.Obtener(antigua.ID); err == nil {
+		t.Fatal("la carga antigua sin uso se borra")
+	}
+	quedan, _ := os.ReadDir(dir)
+	if len(quedan) != 6 { // reciente, la dañada en uso y la dañada reciente: contenido y metadatos de cada una
+		t.Fatalf("quedan %d archivos", len(quedan))
 	}
 }
