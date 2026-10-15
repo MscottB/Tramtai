@@ -111,12 +111,14 @@ tramtai abrir       # abre la instancia de ese proyecto
 ```
 
 - **Perfiles de trabajo:** `.tramtai/profiles/<nombre>.yaml` guarda instrucciones, formato y esquema reutilizables. Se usan con `--perfil-trabajo <nombre>`, o con `perfil` en la API.
-- **Modo consciente del proyecto:** el agente trabaja en la carpeta del proyecto y lee sus reglas (`CLAUDE.md`, `AGENTS.md`). Solo se permite en proyectos que declares confiables en `.tramtai/local.yaml`:
+- **Modo consciente del proyecto:** el agente trabaja en la carpeta del proyecto y lee sus reglas (`CLAUDE.md`, `AGENTS.md`). Solo se permite en proyectos que declares confiables en la configuración global (`%APPDATA%\tramtai\config.yaml`):
 
   ```yaml
   proyectos_confiables:
     - C:\ruta\al\proyecto
   ```
+
+  `proyectos_confiables` solo se lee de la configuración global: un proyecto no puede declararse confiable a sí mismo. Por eso un `.tramtai/local.yaml` con claves de seguridad (comandos de los agentes, `conversion.comando`, puntos de acceso, `servicio`, `adaptadores`…) solo se acepta si la carpeta del proyecto figura en esa lista; si no, Tramtai rechaza la configuración e indica que la añadas. Las demás claves, como el modelo predeterminado del proyecto, valen siempre.
 
   Se pide con `tramtai ejecutar --contexto consciente_proyecto "…"`.
 

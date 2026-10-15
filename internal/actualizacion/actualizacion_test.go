@@ -94,9 +94,14 @@ func TestDescargar(t *testing.T) {
 
 	// Una dirección fuera del repositorio de Tramtai no se descarga.
 	ajena := v
-	ajena.urlInstalador = "https://ejemplo.com/instalador.exe"
-	if _, err := Descargar(context.Background(), ajena, t.TempDir()); err == nil {
-		t.Fatal("se aceptó una dirección de descarga ajena")
+	for _, u := range []string{"https://ejemplo.com/instalador.exe", prefijoDescarga + "../../otro/instalador.exe", prefijoDescarga + "%2e%2e/otro.exe"} {
+		ajena.urlInstalador = u
+		if _, err := Descargar(context.Background(), ajena, t.TempDir()); err == nil {
+			t.Fatalf("se aceptó una dirección de descarga ajena: %s", u)
+		}
+	}
+	if v.Pagina != "" {
+		t.Fatalf("una página de novedades fuera del repositorio no se publica: %q", v.Pagina)
 	}
 }
 

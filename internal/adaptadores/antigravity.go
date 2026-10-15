@@ -19,6 +19,8 @@ const maximoPromptAntigravity = 28000
 
 // Antigravity ejecuta "agy -p" solo con la Gemini API y la clave del usuario: los términos de
 // Antigravity no admiten herramientas de terceros con la sesión OAuth de una cuenta personal. Es experimental.
+// shortcut: no restringe las herramientas de agy (permissions.deny/toolPermission sin validar con el CLI real);
+// añadirlas cuando M0b las compruebe (docs/equipo/pendientes.md).
 type Antigravity struct {
 	Programa      string // nombre o ruta del ejecutable (comandos_agentes.antigravity)
 	Autenticacion string // solo clave_api

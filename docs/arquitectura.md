@@ -44,7 +44,8 @@ Además hay dos adaptadores de Google, probados con un servidor y un CLI simulad
 - **`antigravity`:** `agy -p --output-format json`, experimental.
   - Funciona solo con `modelProvider: gemini` y la clave del usuario, en un `HOME` privado y temporal; rechaza la suscripción por los términos de Antigravity.
   - Usa `structured_output` si hay esquema; no hay streaming ni modelo efectivo.
-  - Recibe el prompt como argumento (hasta 28 000 caracteres).
+  - Recibe el prompt como argumento (hasta 28 000 caracteres), así que otros procesos del equipo pueden verlo en la lista de procesos mientras se ejecuta.
+  - **Sin restricción de herramientas validada:** a diferencia de Claude y Codex, a `agy` no se le desactivan herramientas, shell ni MCP, porque ninguna opción (`permissions.deny`, `toolPermission: strict`) se ha comprobado aún con el CLI real. Solo lo limitan el `HOME` privado y la carpeta temporal vacía; en `consciente_proyecto` trabaja en la raíz del proyecto. Úsalo solo con prompts de confianza.
 
 Las conversaciones de varios turnos se enmarcan con el formato `tramtai-turnos-v1`: un bloque `<<<turno rol=…>>>` por turno, con el contenido intacto. Los errores del proveedor se traducen a `limite_uso_proveedor`, `autenticacion_agente`, `modelo_no_disponible` o `error_agente`. Ningún secreto llega a los mensajes: se redactan antes.
 
@@ -73,7 +74,7 @@ Las cuatro interfaces trabajan sobre el mismo servicio, así que un trabajo crea
 
 La Web UI se enlaza a una instancia con una sesión:
 
-- **Entrada sin clave en el propio equipo:** si la conexión llega por loopback desde un programa del mismo usuario del sistema (el navegador o la app de escritorio), la Web UI entra sola y puede cambiar entre instancias. En Windows se identifica al dueño de la conexión con la tabla TCP del sistema y el SID de su proceso; en Linux, con el uid de `/proc/net/tcp`. Se desactiva con `servicio.entrada_local: false`.
+- **Entrada sin clave en el propio equipo:** si la conexión llega por loopback desde un programa del mismo usuario del sistema (el navegador o la app de escritorio), la Web UI entra sola y puede cambiar entre instancias. En Windows se identifica al dueño de la conexión con la tabla TCP del sistema y el SID de su proceso; en Linux, con el uid de `/proc/net/tcp`. No se aplica si la petición trae cabeceras de proxy (`Forwarded`, `X-Forwarded-For`, `X-Forwarded-Host`, `X-Real-Ip`, `Via`), ni con `servicio.permitir_remoto`, porque un proxy o túnel del mismo usuario reenviaría peticiones de otros equipos. Se desactiva con `servicio.entrada_local: false`.
 - **Otras formas de entrar:** con la clave de la instancia, o con un código de un solo uso (un minuto) que piden `tramtai abrir`, la terminal o la app de escritorio. Es lo que se usa en macOS o desde otro equipo.
 - **Por qué es seguro:** la clave protege frente a otros usuarios del equipo, y eso es justo lo que se comprueba. Una página web ajena no puede aprovecharla: Host, Origin, la cookie `SameSite=Strict` y el CSRF la bloquean, y las aplicaciones siguen necesitando su clave para la API.
 - **Cookie:** `HttpOnly` y `SameSite=Strict`; las peticiones que modifican exigen además `X-CSRF-Token`.
@@ -115,7 +116,7 @@ La retención se aplica a cada instancia al abrirla y después cada 5 minutos. L
 
 ## Modo consciente del proyecto
 
-Por defecto, cada agente se ejecuta aislado en una carpeta temporal vacía. Con `modo_contexto: consciente_proyecto`, en un proyecto declarado en `proyectos_confiables` (global o `local.yaml`, nunca en la configuración versionada):
+Por defecto, cada agente se ejecuta aislado en una carpeta temporal vacía. Con `modo_contexto: consciente_proyecto`, en un proyecto declarado en `proyectos_confiables` (solo en la configuración global; la versionada y `local.yaml` lo rechazan):
 
 | Agente | Qué cambia |
 |---|---|
@@ -129,7 +130,7 @@ Por defecto, cada agente se ejecuta aislado en una carpeta temporal vacía. Con 
 - Con suscripción, carga además el `CLAUDE.md` del usuario.
 - Con clave de API usa un `CLAUDE_CONFIG_DIR` privado, así que las reglas del usuario no se cargan.
 
-**En todos los agentes:** siguen desactivados las herramientas, MCP y la sesión persistente, y antes de ejecutar se registra un `aviso` con el contexto que se carga.
+**En todos los agentes:** siguen desactivados las herramientas, MCP y la sesión persistente (salvo en antigravity, que no tiene restricción de herramientas validada; ver arriba), y antes de ejecutar se registra un `aviso` con el contexto que se carga.
 
 ## Supervisión y recuperación
 
@@ -141,7 +142,9 @@ Por defecto, cada agente se ejecuta aislado en una carpeta temporal vacía. Con 
 
 ## Precedencia de configuración
 
-De menor a mayor: interno → global → proyecto → local → entorno → punto de acceso → solicitud. Las claves de seguridad (`servicio`, `comandos_agentes`, `adaptadores`, `concurrencia_servicio`…) se rechazan en la capa de proyecto, que es la que va en el repositorio.
+De menor a mayor: interno → global → proyecto → local → entorno → punto de acceso → solicitud. Las claves de seguridad (`servicio`, `comandos_agentes`, `adaptadores`, `concurrencia_servicio`…) se rechazan en la capa de proyecto, que es la que va en el repositorio, y en `local.yaml` salvo que la carpeta figure en `proyectos_confiables` de la configuración global (un `local.yaml` también puede llegar con un clon). `proyectos_confiables` solo se lee de la global.
+
+Los agentes no heredan secretos del entorno: se retiran las credenciales de los demás proveedores, todas las `TRAMTAI_*` (el token del servicio) y cualquier variable cuyo nombre contenga `API_KEY`, `TOKEN`, `SECRET`, `PASSWORD` o `CREDENTIAL` (`GITHUB_TOKEN`, `AWS_SECRET_ACCESS_KEY`…), salvo las propias de cada CLI (`CLAUDE_`, `CODEX_`, `ANTHROPIC_`, `OPENAI_`, `GEMINI_`), que se filtran según el modo de autenticación.
 
 ## Cumplimiento de proveedores
 

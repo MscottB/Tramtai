@@ -190,6 +190,9 @@ func TestEntradaLocalSinToken(t *testing.T) {
 	if r.StatusCode != 200 || !strings.Contains(cuerpo, `"local":true`) || !strings.Contains(cuerpo, `"instancias":[]`) {
 		t.Fatalf("el mismo usuario entra sin token aunque no haya instancias: %d %s", r.StatusCode, cuerpo)
 	}
+	if r, _ := nuevoNavegador(t, ts.URL).pedir("GET", "/ui/sesion", "", "X-Forwarded-For", "203.0.113.5"); r.StatusCode != 401 {
+		t.Fatalf("una petición reenviada por un proxy no entra sin token: %d", r.StatusCode)
+	}
 	n.csrf = cuerpo[strings.Index(cuerpo, `"csrf":"`)+8:]
 	n.csrf = n.csrf[:strings.Index(n.csrf, `"`)]
 	if r, cuerpo := n.pedir("POST", "/ui/instancias", `{"ambito":"global"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 200 || !strings.Contains(cuerpo, `"instancia":"global"`) {

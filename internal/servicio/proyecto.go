@@ -11,7 +11,8 @@ import (
 )
 
 const plantillaProyecto = `# Configuración de Tramtai para este proyecto (versionada). Las claves de seguridad, los puertos y los
-# puntos de acceso van en .tramtai/local.yaml (no versionado) o en la configuración global.
+# puntos de acceso van en la configuración global, o en .tramtai/local.yaml (no versionado) si la carpeta del
+# proyecto figura en proyectos_confiables de la configuración global.
 version: 1
 proyecto:
   nombre: %q

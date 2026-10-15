@@ -203,8 +203,7 @@ func (c *Conversor) programa() (string, []string, error) {
 func entornoConversor() []string {
 	var entorno []string
 	for _, par := range os.Environ() {
-		nombre, _, _ := strings.Cut(strings.ToUpper(par), "=")
-		if strings.Contains(nombre, "API_KEY") || strings.Contains(nombre, "TOKEN") || strings.Contains(nombre, "SECRET") || strings.Contains(nombre, "PASSWORD") {
+		if nombre, _, _ := strings.Cut(par, "="); nucleo.VariableSecreta(nombre) {
 			continue
 		}
 		entorno = append(entorno, par)

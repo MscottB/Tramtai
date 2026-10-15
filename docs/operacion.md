@@ -115,11 +115,11 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <instancia> 
 | Token | `%APPDATA%\tramtai\datos\token-global` o la variable `TRAMTAI_TOKEN_GLOBAL` | `%APPDATA%\tramtai\datos\tokens\<id>` |
 | Base de datos | `datos\instancias\global.db` | `datos\instancias\<id>.db` |
 
-La configuración versionada del proyecto no puede definir claves de seguridad: ni puertos, ni comandos, ni autenticación, ni puntos de acceso.
+La configuración versionada del proyecto no puede definir claves de seguridad: ni puertos, ni comandos, ni autenticación, ni puntos de acceso. `.tramtai/local.yaml` tampoco, salvo que la carpeta del proyecto figure en `proyectos_confiables` de la configuración global: un repositorio clonado puede traer un `local.yaml` (forzado con `git add -f`) y no debe poder cambiar qué programas ejecuta Tramtai. `proyectos_confiables` solo se admite en la configuración global.
 
 ### Carpetas desde las que se envían archivos
 
-Por defecto, `tramtai ejecutar -f`, `--esquema`, `tramtai convertir` y la terminal interactiva pueden enviar cualquier archivo que tu usuario pueda leer. Para limitarlo, indica las carpetas en la configuración global (o en `.tramtai/local.yaml`):
+Por defecto, `tramtai ejecutar -f`, `--esquema`, `tramtai convertir` y la terminal interactiva pueden enviar cualquier archivo que tu usuario pueda leer. Para limitarlo, indica las carpetas en la configuración global (o en `.tramtai/local.yaml` de un proyecto confiable):
 
 ```yaml
 instancia_global:
@@ -152,7 +152,7 @@ tramtai acceso token app_contable [--rotar]
 - **Grupos:** `--grupo` es una etiqueta libre (hasta 40 caracteres) para ordenar los puntos y activarlos o desactivarlos juntos, desde la CLI o desde Mis APIs. La separación por proyecto ya la dan las instancias: un punto creado con `--local` pertenece a la del proyecto.
 
 - **Dirección:** sin `--puerto`, el punto queda en `http://127.0.0.1:17373/p/<nombre>`. Con `--puerto`, escucha en su propio puerto; si ese puerto está ocupado, el punto no se activa (no se elige otro) y el estado lo indica.
-- **Dónde se guarda:** en la configuración global, o con `--local` en `.tramtai/local.yaml` del proyecto (pertenece a su instancia). Se conservan los comentarios del archivo, y un cambio inválido se rechaza sin tocarlo.
+- **Dónde se guarda:** en la configuración global, o con `--local` en `.tramtai/local.yaml` del proyecto (pertenece a su instancia; exige que la carpeta figure en `proyectos_confiables` de la configuración global). Se conservan los comentarios del archivo, y un cambio inválido se rechaza sin tocarlo.
 - **Contratos:** cada punto expone solo los suyos (`nativa`, `openai`, `anthropic`), nunca la administración.
 - **Modelos:**
   - `--alias` traduce nombres que la aplicación no deja cambiar, como `gpt-4o-mini`.

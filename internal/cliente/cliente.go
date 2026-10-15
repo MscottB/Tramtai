@@ -104,7 +104,10 @@ func (c *Cliente) pedir(ctx context.Context, metodo, ruta, instancia string, cue
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.token)
+	// /healthz es pública y es la que comprueba la identidad: el token no sale hacia quien ocupe el puerto.
+	if ruta != "/healthz" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
 	if instancia != "" {
 		req.Header.Set("Tramtai-Instancia", instancia)
 	}

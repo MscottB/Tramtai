@@ -158,7 +158,14 @@ func TestPuntosDeAcceso(t *testing.T) {
 		t.Fatalf("puerto propio con modelo forzado: %d %s", r.StatusCode, cuerpo)
 	}
 
-	// El punto del proyecto se abre al activar su instancia y se cierra al desactivarla.
+	// El punto del proyecto se abre al activar su instancia y se cierra al desactivarla. Un punto en local.yaml
+	// exige que la carpeta sea confiable en la configuración global.
+	if _, err := s.ActivarProyecto(proyecto); err == nil {
+		t.Fatal("un punto en local.yaml de un proyecto no confiable debe rechazarse")
+	}
+	rutaGlobal := os.Getenv("TRAMTAI_CONFIG_GLOBAL")
+	actual, _ := os.ReadFile(rutaGlobal)
+	os.WriteFile(rutaGlobal, append(actual, []byte("proyectos_confiables: ['"+proyecto+"']\n")...), 0o600)
 	pry, err := s.ActivarProyecto(proyecto)
 	if err != nil {
 		t.Fatal(err)

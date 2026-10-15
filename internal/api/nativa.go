@@ -198,18 +198,14 @@ func (s *Servidor) ejecutarTrabajo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Location", ubicacion(t.ID))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	rc := http.NewResponseController(w)
-	_ = rc.Flush()
-	final, err := s.seguir(r.Context(), t.ID, 0, nil, func() error {
-		if _, err := io.WriteString(w, " "); err != nil {
-			return err
-		}
-		return rc.Flush()
-	})
+	f := &flujo{w: w, rc: http.NewResponseController(w)} // mismo plazo por escritura que el SSE
+	_ = f.rc.Flush()
+	final, err := s.seguir(r.Context(), t.ID, 0, nil, func() error { return f.escribir(" ") })
 	if err != nil {
 		return
 	}
-	_ = json.NewEncoder(w).Encode(final)
+	datos, _ := json.Marshal(final)
+	_ = f.escribir(string(datos) + "\n")
 }
 
 // crearCarga acepta multipart (campo "archivo") o el binario en el cuerpo con ?nombre=.
