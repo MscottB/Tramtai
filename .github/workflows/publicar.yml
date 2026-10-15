@@ -13,7 +13,38 @@ env:
   TRAMTAI_IDIOMA: es # las pruebas comparan textos en español; el runner está en inglés
 
 jobs:
+  unix:
+    name: Linux y macOS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Servicio y CLI para Linux y macOS (sin CGO)
+        run: |
+          version=$(pwsh -NoProfile -File scripts/version.ps1)
+          [ "$version" = "$GITHUB_REF_NAME" ] || { echo "la versión calculada ($version) no coincide con la etiqueta"; exit 1; }
+          mkdir -p dist
+          for destino in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
+            so=${destino%/*}; arq=${destino#*/}; nombre=$so; [ "$so" = darwin ] && nombre=macos
+            carpeta=$(mktemp -d)
+            mkdir "$carpeta/tramtai"
+            GOOS=$so GOARCH=$arq CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X tramtai/internal/version.Version=$version" -o "$carpeta/tramtai/tramtai" ./cmd/tramtai
+            cp LICENSE.md "$carpeta/tramtai/LICENCIA.md"
+            tar -C "$carpeta" -czf "dist/tramtai-$version-$nombre-$arq.tar.gz" tramtai
+          done
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unix
+          path: dist/
+          retention-days: 1
+
   windows:
+    needs: unix
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,6 +68,15 @@ jobs:
           $version = ./scripts/version.ps1
           if ($version -ne $env:GITHUB_REF_NAME) { throw "la versión calculada ($version) no coincide con la etiqueta $env:GITHUB_REF_NAME" }
           ./scripts/compilar.ps1 -Instalador
+      - uses: actions/download-artifact@v4
+        with:
+          name: unix
+          path: dist
+      - name: Sumas SHA-256 de todos los archivos
+        run: |
+          Get-ChildItem dist -File -Exclude SHA256SUMS.txt | Sort-Object Name | ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)" } |
+            Set-Content -Encoding ascii dist/SHA256SUMS.txt
+          Get-Content dist/SHA256SUMS.txt
       - name: Publicar el release
         env:
           GH_TOKEN: ${{ github.token }}

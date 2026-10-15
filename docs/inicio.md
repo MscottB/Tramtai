@@ -2,7 +2,7 @@
 
 ## Qué necesitas
 
-- **Windows 10 u 11** (x64). En Linux y macOS el servicio, la API y la CLI funcionan compilando el código; la app de escritorio y el instalador, de momento, solo existen para Windows.
+- **Windows 10 u 11** (x64), **Linux** o **macOS** (Intel o Apple Silicon). En Linux y macOS se instalan el servicio, la API, la CLI y la Web UI; la app de escritorio, de momento, solo existe para Windows.
 - **Al menos un agente:** [Claude Code](https://docs.anthropic.com/claude-code) (`claude`), [Codex CLI](https://developers.openai.com/codex/cli) (`codex`) o una clave de la Gemini API. Antigravity (`agy`) es experimental.
 - **Opcional, para archivos de Office y PDF:** `uv tool install "markitdown[pdf,docx,pptx,xlsx]==0.1.8"`.
 
@@ -15,6 +15,8 @@ Descarga `Tramtai-…-instalador-windows-x64.exe` desde [Releases](https://githu
 - Para actualizar no hace falta descargar nada a mano: cuando hay una versión nueva, la app lo avisa y **Actualizar ahora** la instala (también `tramtai actualizar`). Ver [actualizaciones](operacion.md#actualizaciones).
 - Se desinstala desde *Configuración → Aplicaciones*; al final pregunta si borrar también tus datos (`%APPDATA%\tramtai`).
 - Para comprobar la descarga, la suma SHA-256 de cada archivo está en `SHA256SUMS.txt` del mismo release.
+
+**En Linux o macOS:** `curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instalar.sh | sh` descarga el archivo de tu sistema, comprueba su suma SHA-256 y deja `tramtai` en `~/.local/bin` (otra carpeta con `TRAMTAI_DESTINO`). Para actualizar, vuelve a ejecutarlo. Después, `tramtai abrir` inicia el servicio y abre la Web UI en el navegador.
 
 Después abre **Tramtai** desde el menú Inicio, o `tramtai abrir` en una terminal nueva. Si prefieres compilarlo tú, la [guía de desarrollo](equipo/desarrollo.md) explica cómo (`./scripts/compilar.ps1`, con Go 1.27).
 
