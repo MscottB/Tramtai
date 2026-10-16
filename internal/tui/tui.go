@@ -935,7 +935,7 @@ func (m *modelo) crearPunto() tea.Cmd {
 		return nil
 	}
 	m.ir(pAccesos)
-	return m.editarPuntos("", idioma.Tf("punto %s creado · pulsa t para generar su clave", p.Nombre),
+	crear := m.editarPuntos("", "",
 		func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
 			for _, c := range lista {
 				if c.Nombre == p.Nombre {
@@ -944,6 +944,14 @@ func (m *modelo) crearPunto() tea.Cmd {
 			}
 			return append(lista, p), nil
 		})
+	regenerar := m.regenerarClave(p.Nombre)
+	return func() tea.Msg {
+		if a, ok := crear().(msgAviso); ok && a.err != nil {
+			return a
+		}
+		// Clave nueva siempre, mostrada esta única vez: no hereda la de otro punto que tuviera este nombre.
+		return regenerar()
+	}
 }
 
 func (m *modelo) teclaTodas(tecla string) tea.Cmd {

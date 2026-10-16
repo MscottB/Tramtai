@@ -367,6 +367,14 @@ func TestNormalizarReceta(t *testing.T) {
 	}
 }
 
+func TestNombrePuntoValido(t *testing.T) {
+	for nombre, valido := range map[string]bool{"app": true, "bot_soporte-2": true, "": false, "x/../../token-global": false, "Mayus": false, `a\b`: false} {
+		if NombrePuntoValido(nombre) != valido {
+			t.Errorf("%q: se esperaba %v", nombre, valido)
+		}
+	}
+}
+
 func TestClavePuntoSoloHuella(t *testing.T) {
 	ruta := filepath.Join(t.TempDir(), "tokens", "acceso_x")
 	token, err := RotarTokenPunto(ruta)

@@ -104,7 +104,6 @@ func init() {
 		"Modelo:":                                                                                               "Model:",
 		" (vacío = /p/<nombre> en el puerto del servicio)":                                                      " (empty = /p/<name> on the service port)",
 		"el puerto debe ser un número":                                                                          "the port must be a number",
-		"punto %s creado · pulsa t para generar su clave":                                                       "API %s created · press t to generate its key",
 		"el punto de acceso %s ya existe":                                                                       "the API %s already exists",
 		"Tab cambia de campo · ←→ modelo · Enter crea · Esc volver":                                             "Tab next field · ←→ model · Enter create · Esc back",
 

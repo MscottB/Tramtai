@@ -60,6 +60,10 @@ type EjecucionPunto struct {
 	MaximoTrabajos int `json:"maximo_trabajos,omitempty" yaml:"maximo_trabajos,omitempty"`
 }
 
+// NombrePuntoValido indica si el nombre sirve para un punto de acceso: también impide que una ruta derivada de él
+// (como la de su clave) salga de su carpeta.
+func NombrePuntoValido(nombre string) bool { return reNombrePunto.MatchString(nombre) }
+
 // EstaActivo indica si el punto está habilitado (lo está salvo activo: false).
 func (p ConfigPunto) EstaActivo() bool { return p.Activo == nil || *p.Activo }
 

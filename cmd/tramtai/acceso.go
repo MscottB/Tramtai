@@ -262,6 +262,9 @@ func comandoAcceso() *cobra.Command {
 // mostrarTokenPunto genera la clave de un punto y la muestra esta única vez: solo se guarda su huella, así que sin
 // --rotar no hay nada que mostrar.
 func mostrarTokenPunto(cmd *cobra.Command, nombre string, rotar bool) error {
+	if !servicio.NombrePuntoValido(nombre) {
+		return errors.New(idioma.T("nombre no válido (minúsculas, números, _ y -; hasta 40)"))
+	}
 	if !rotar {
 		return errors.New(idioma.Tf("la clave de %s solo se muestra al crearla o regenerarla (se guarda su huella): tramtai acceso token %s --rotar", nombre, nombre))
 	}
