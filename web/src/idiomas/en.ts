@@ -18,6 +18,7 @@ const en: Textos = {
   'comun.hecho': 'Done',
   'comun.crear': 'Create',
   'comun.continuar': 'Continue',
+  'comun.masAcciones': 'More actions',
 
   // Menu
   'menu.inicio': 'Home',

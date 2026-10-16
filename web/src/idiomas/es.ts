@@ -16,6 +16,7 @@ const es = {
   'comun.hecho': 'Hecho',
   'comun.crear': 'Crear',
   'comun.continuar': 'Continuar',
+  'comun.masAcciones': 'Más acciones',
 
   // Menú: cada página con una línea que explica para qué sirve
   'menu.inicio': 'Inicio',
