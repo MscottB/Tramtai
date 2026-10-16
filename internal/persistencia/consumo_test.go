@@ -257,3 +257,26 @@ func TestPurgarConsumo(t *testing.T) {
 		t.Fatalf("se conservan el mes en curso y los 12 anteriores: quedan %d filas", filas)
 	}
 }
+
+func TestReiniciarAPIConservaLaInstancia(t *testing.T) {
+	ahora := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
+	a := conPresupuesto(t, &ahora)
+	aceptar(t, a, enPunto("facturas"), "")
+	aceptar(t, a, enPunto("facturas"), "")
+	aceptar(t, a, enPunto("otra"), "")
+	if err := a.ReiniciarConsumo(ctx, "global", "facturas"); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.ReiniciarConsumo(ctx, "global", "facturas"); err != nil { // dos veces el mismo día
+		t.Fatal(err)
+	}
+	if err := a.EliminarConsumo(ctx, "global", "otra"); err != nil {
+		t.Fatal(err)
+	}
+	if dia, _ := consumoDe(t, a, TodaLaInstancia); dia.Peticiones != 3 {
+		t.Fatalf("reiniciar o eliminar una API no devuelve consumo al presupuesto de la instancia: %+v", dia)
+	}
+	if dia, _ := consumoDe(t, a, "facturas"); dia.Peticiones != 0 {
+		t.Fatalf("la API sí vuelve a cero: %+v", dia)
+	}
+}

@@ -124,13 +124,23 @@ func (a *Almacen) borrarConsumo(ctx context.Context, instancia, punto, dias stri
 	}
 	defer tx.Rollback()
 	ambito := []any{instancia, punto, punto}
-	consumo, argsConsumo := `DELETE FROM consumo WHERE `+ambitoConsumo, ambito
+	filas, argsFilas := ambitoConsumo, ambito
 	avisos, argsAvisos := `DELETE FROM avisos_presupuesto WHERE `+ambitoConsumo, ambito
 	if dias != "" {
-		consumo, argsConsumo = consumo+` AND dia LIKE ?`, append(slices.Clone(ambito), dias)
+		filas, argsFilas = filas+` AND dia LIKE ?`, append(slices.Clone(ambito), dias)
 		avisos, argsAvisos = avisos+` AND periodo IN (?, ?)`, append(slices.Clone(ambito), periodos[0], periodos[1])
 	}
-	if _, err := tx.ExecContext(ctx, consumo, argsConsumo...); err != nil {
+	// Reiniciar o eliminar una API no devuelve consumo a la instancia: sus filas pasan a "~", que ninguna API usa
+	// (NombrePuntoValido no admite "~") y que solo cuenta en la suma de la instancia.
+	if punto != TodaLaInstancia {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO consumo (instancia, punto, dia, peticiones, terminados, tokens, usd)
+			SELECT instancia, '~', dia, peticiones, terminados, tokens, usd FROM consumo WHERE `+filas+`
+			ON CONFLICT (instancia, punto, dia) DO UPDATE SET peticiones = peticiones + excluded.peticiones,
+			terminados = terminados + excluded.terminados, tokens = tokens + excluded.tokens, usd = usd + excluded.usd`, argsFilas...); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM consumo WHERE `+filas, argsFilas...); err != nil {
 		return err
 	}
 	if _, err := tx.ExecContext(ctx, avisos, argsAvisos...); err != nil {
