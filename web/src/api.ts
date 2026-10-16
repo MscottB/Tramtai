@@ -41,6 +41,8 @@ export interface Solicitud {
   perfil_modelo?: string
   perfil?: string
   esfuerzo?: string
+  instrucciones?: string
+  respaldo?: string[]
   mensajes: Mensaje[]
   cargas?: string[]
   salida?: { formato?: string; esquema?: unknown }
@@ -87,6 +89,8 @@ export interface EstadoPunto {
   esfuerzo?: string
   modelos_permitidos?: string[]
   forzar_modelo?: boolean
+  esquema?: Record<string, unknown>
+  respaldo?: string[]
   activo: boolean
   error?: string
   origen: string
@@ -110,6 +114,8 @@ export interface ConfigPunto {
   modelos_permitidos?: string[]
   forzar_modelo?: boolean
   alias_modelos?: Record<string, string>
+  esquema?: Record<string, unknown>
+  respaldo?: string[]
 }
 // Modelo es una entrada del catálogo: agente, agente/modelo o perfil/nombre, con la versión real que informó el
 // agente la última vez y si es el predeterminado del espacio.
@@ -267,10 +273,73 @@ export const api = {
   crearPunto: (p: ConfigPunto) => pedir<{ punto_acceso?: EstadoPunto; token: string }>('POST', '/api/v1/puntos', p),
   activarPunto: (nombre: string, activo: boolean) => pedir<unknown>('PATCH', `/api/v1/puntos/${encodeURIComponent(nombre)}`, { activo }),
   // ajustesPunto cambia solo lo que se envía; modelo es un id del catálogo y '' vuelve al del espacio.
-  ajustesPunto: (nombre: string, ajustes: { instrucciones?: string; esfuerzo?: string; modelo?: string; forzar_modelo?: boolean; modelos_permitidos?: string[] }) => pedir<unknown>('PATCH', `/api/v1/puntos/${encodeURIComponent(nombre)}`, ajustes),
+  ajustesPunto: (nombre: string, ajustes: AjustesPunto) => pedir<unknown>('PATCH', `/api/v1/puntos/${encodeURIComponent(nombre)}`, ajustes),
   eliminarPunto: (nombre: string) => pedir<void>('DELETE', `/api/v1/puntos/${encodeURIComponent(nombre)}`),
   tokenPunto: (nombre: string) => pedir<{ token: string }>('GET', `/api/v1/puntos/${encodeURIComponent(nombre)}/token`).then((r) => r.token),
 }
+
+// AjustesPunto son los cambios de una API (PATCH): solo cambia lo que se envía. modelo es un id del catálogo y ''
+// vuelve al del espacio; esquema null lo quita.
+export interface AjustesPunto {
+  instrucciones?: string
+  esfuerzo?: string
+  modelo?: string
+  forzar_modelo?: boolean
+  modelos_permitidos?: string[]
+  esquema?: Record<string, unknown> | null
+  respaldo?: string[]
+}
+
+// Receta es lo que define una API y se prueba en Probar: instrucciones, modelo, esfuerzo, respaldo y esquema
+// (como texto del editor; '' = sin salida estructurada).
+export interface Receta {
+  instrucciones: string
+  modelo: string | null
+  forzar: boolean
+  esfuerzo: string
+  respaldo: string[]
+  esquema: string
+}
+
+export const recetaVacia = (): Receta => ({ instrucciones: '', modelo: null, forzar: false, esfuerzo: '', respaldo: [], esquema: '' })
+
+// idModeloDe es el modelo de una API como id del catálogo (agente, agente/modelo o perfil/nombre); null si no tiene.
+export const idModeloDe = (p: EstadoPunto) => (p.perfil_modelo ? 'perfil/' + p.perfil_modelo : [p.agente, p.modelo].filter(Boolean).join('/') || null)
+
+export function recetaDePunto(p: EstadoPunto): Receta {
+  return { instrucciones: p.instrucciones ?? '', modelo: idModeloDe(p), forzar: !!p.forzar_modelo, esfuerzo: p.esfuerzo ?? '',
+    respaldo: [...(p.respaldo ?? [])], esquema: p.esquema ? JSON.stringify(p.esquema, null, 2) : '' }
+}
+
+// esquemaDeReceta convierte el texto del esquema en un objeto; lanza un error legible si no es un objeto JSON.
+export function esquemaDeReceta(r: Receta): Record<string, unknown> | undefined {
+  if (!r.esquema.trim()) return undefined
+  let valor: unknown
+  try {
+    valor = JSON.parse(r.esquema)
+  } catch {
+    throw new Error(t('receta.esquemaInvalido'))
+  }
+  if (!valor || typeof valor !== 'object' || Array.isArray(valor)) throw new Error(t('receta.esquemaInvalido'))
+  return valor as Record<string, unknown>
+}
+
+// configDeReceta son los campos de la receta para crear una API.
+export function configDeReceta(r: Receta): Partial<ConfigPunto> {
+  const m = aplicarModelo({ mensajes: [] }, r.modelo ?? '')
+  return { instrucciones: r.instrucciones.trim() || undefined, agente: m.agente, modelo: m.modelo, perfil_modelo: m.perfil_modelo,
+    forzar_modelo: (r.forzar && !!r.modelo) || undefined, esfuerzo: r.esfuerzo || undefined,
+    respaldo: r.respaldo.length ? r.respaldo : undefined, esquema: esquemaDeReceta(r) }
+}
+
+// ajustesDeReceta son los cambios para actualizar una API con la receta.
+export function ajustesDeReceta(r: Receta): AjustesPunto {
+  return { instrucciones: r.instrucciones, esfuerzo: r.esfuerzo, modelo: r.modelo ?? '', forzar_modelo: r.forzar && !!r.modelo,
+    respaldo: r.respaldo, esquema: esquemaDeReceta(r) ?? null }
+}
+
+// recetaInicial es el nombre de la API que Probar debe abrir para editarla (desde Mis APIs).
+export const recetaInicial = ref('')
 
 // trabajoSeguido es el trabajo que la página Ejecutar debe seguir en vivo al abrirse desde el historial.
 export const trabajoSeguido = ref('')
