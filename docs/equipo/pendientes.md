@@ -24,6 +24,7 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | v0.34.0 | Recetas y respaldo entre agentes, claves cifradas y huella de las claves de API, instalador con RTF | ✅ |
 | v0.35.0 | Presupuestos por API y por instancia | 🟡 |
 | v0.36.0 | Quitar Gemini CLI (ya no está disponible): adaptador, configuración, claves, Web UI, docs y sitio | ⬜ |
+| v0.37.0 | Rediseño de la presentación: Inicio (mapa de la red, primeros pasos, tablero), Mis APIs, el resto de la Web UI y la página del producto, con capturas nuevas | ⬜ |
 | — | Copilot CLI como reemplazo de Gemini | ⬜ |
 | — | Webhooks al terminar un trabajo y avisos de presupuesto (`presupuesto.aviso`, `presupuesto.agotado`) | ⬜ |
 | — | Comparar agentes en Probar | ⬜ |
