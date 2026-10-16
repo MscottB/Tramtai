@@ -22,13 +22,14 @@ webhooks y presupuestos.
 | Campo | Tipo | Regla |
 |---|---|---|
 | `esquema` | `map[string]any` (JSON Schema escrito como YAML) | Se compila con `salidas.Compilar` en `Normalizar`; error de configuración si no es válido. |
-| `respaldo` | `[]string` | Máximo 3; cada entrada `agente`, `agente/modelo` o `perfil/nombre`; sin repetir el modelo principal. |
+| `respaldo` | `[]string` | Máximo 3; cada entrada `agente` o `agente/modelo` (no `perfil/…`: un perfil da un modelo por agente y sin agente es ambiguo); sin repetidos. |
 
 `api.Punto` copia ambos campos (el esquema ya serializado a `json.RawMessage`). `EstadoPunto` los devuelve
 para la Web UI.
 
 `nucleo.SolicitudEjecucion` gana `Respaldo []string` (`json:"respaldo,omitempty"`). `Validar` aplica las
-mismas reglas de formato y el máximo de 3. Forma parte de la huella, como el resto de la solicitud.
+mismas reglas de formato y el máximo de 3. Forma parte de la huella, como el resto de la solicitud. Al aceptar,
+el planificador rechaza (`solicitud_invalida`) un agente de respaldo que no está registrado.
 
 ### Aplicación en `Servidor.ajustar` (internal/api/punto.go)
 
