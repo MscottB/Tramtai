@@ -142,6 +142,9 @@
         <q-card-section>
           <div class="titulo-seccion">{{ t('ejecutar.apiCreada', { nombre: creada?.nombre ?? '' }) }}</div>
           <div class="texto-suave text-body2">{{ t('ejecutar.apiCreadaTexto') }}</div>
+          <q-banner rounded dense class="aviso-caja q-mt-sm">
+            <template #avatar><q-icon name="o_lock" color="warning" /></template>{{ t('puntos.claveUnaVez') }}
+          </q-banner>
         </q-card-section>
         <q-card-section class="q-gutter-y-md q-pt-none">
           <div v-for="c in camposCreada" :key="c.titulo">

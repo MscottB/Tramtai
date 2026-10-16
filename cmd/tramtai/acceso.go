@@ -186,7 +186,7 @@ func comandoAcceso() *cobra.Command {
 			}); err != nil {
 				return err
 			}
-			return mostrarTokenPunto(cmd, p.Nombre, false)
+			return mostrarTokenPunto(cmd, p.Nombre, true) // la clave se genera y se muestra ahora, una sola vez
 		}}
 	crearOpc.registrar(crear)
 	editarCmd := &cobra.Command{Use: "editar <nombre>", Short: idioma.T("Cambia las opciones indicadas de un punto de acceso"), Args: cobra.ExactArgs(1),
@@ -237,41 +237,44 @@ func comandoAcceso() *cobra.Command {
 	}
 	eliminar := &cobra.Command{Use: "eliminar <nombre>", Short: idioma.T("Elimina un punto de acceso"), Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return editar(cmd, func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
+			if err := editar(cmd, func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
 				i, err := buscar(lista, args[0])
 				if err != nil {
 					return nil, err
 				}
 				return slices.Delete(lista, i, i+1), nil
-			})
+			}); err != nil {
+				return err
+			}
+			if datos, err := dirDatos(); err == nil {
+				servicio.EliminarTokenPunto(datos, args[0]) // otro punto con este nombre no hereda la clave
+			}
+			return nil
 		}}
 	var rotar bool
-	token := &cobra.Command{Use: "token <nombre>", Short: idioma.T("Muestra (o rota con --rotar) el token del punto de acceso"), Args: cobra.ExactArgs(1),
+	token := &cobra.Command{Use: "token <nombre>", Short: idioma.T("Regenera con --rotar la clave del punto de acceso; solo se ve entonces"), Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error { return mostrarTokenPunto(cmd, args[0], rotar) }}
 	token.Flags().BoolVar(&rotar, "rotar", false, idioma.T("genera un token nuevo; el anterior deja de valer"))
 	grupo.AddCommand(listar, crear, editarCmd, activo("activar", true), activo("desactivar", false), eliminar, token)
 	return grupo
 }
 
+// mostrarTokenPunto genera la clave de un punto y la muestra esta única vez: solo se guarda su huella, así que sin
+// --rotar no hay nada que mostrar.
 func mostrarTokenPunto(cmd *cobra.Command, nombre string, rotar bool) error {
+	if !rotar {
+		return errors.New(idioma.Tf("la clave de %s solo se muestra al crearla o regenerarla (se guarda su huella): tramtai acceso token %s --rotar", nombre, nombre))
+	}
 	datos, err := dirDatos()
 	if err != nil {
 		return err
 	}
-	ruta := servicio.RutaTokenPunto(datos, nombre)
-	var valor string
-	if rotar {
-		valor, err = servicio.RotarToken(ruta)
-	} else {
-		valor, err = servicio.LeerOCrearToken(ruta)
-	}
+	valor, err := servicio.RotarTokenPunto(servicio.RutaTokenPunto(datos, nombre))
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(cmd.OutOrStdout(), idioma.T("token de %s (%s):\n%s\n"), nombre, ruta, valor)
-	if rotar {
-		recargarSiActivo(cmd)
-	}
+	fmt.Fprintf(cmd.OutOrStdout(), idioma.T("clave nueva de %s (guárdala: no se volverá a mostrar):\n%s\n"), nombre, valor)
+	recargarSiActivo(cmd)
 	return nil
 }
 

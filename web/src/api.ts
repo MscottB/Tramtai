@@ -275,7 +275,8 @@ export const api = {
   // ajustesPunto cambia solo lo que se envía; modelo es un id del catálogo y '' vuelve al del espacio.
   ajustesPunto: (nombre: string, ajustes: AjustesPunto) => pedir<unknown>('PATCH', `/api/v1/puntos/${encodeURIComponent(nombre)}`, ajustes),
   eliminarPunto: (nombre: string) => pedir<void>('DELETE', `/api/v1/puntos/${encodeURIComponent(nombre)}`),
-  tokenPunto: (nombre: string) => pedir<{ token: string }>('GET', `/api/v1/puntos/${encodeURIComponent(nombre)}/token`).then((r) => r.token),
+  // regenerarClave crea una clave nueva para la API: solo se guarda su huella, así que es la única vez que se ve.
+  regenerarClave: (nombre: string) => pedir<{ token: string }>('POST', `/api/v1/puntos/${encodeURIComponent(nombre)}/token`).then((r) => r.token),
 }
 
 // AjustesPunto son los cambios de una API (PATCH): solo cambia lo que se envía. modelo es un id del catálogo y ''

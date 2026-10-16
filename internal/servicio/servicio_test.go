@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/api"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
 	"tramtai/internal/planificador"
@@ -131,7 +132,10 @@ func TestPuntosDeAcceso(t *testing.T) {
 	if len(estado) != 2 || !estado[0].Activo || !estado[1].Activo {
 		t.Fatalf("puntos: %+v %v", estado, s.erroresPuntos)
 	}
-	token, _ := LeerOCrearToken(RutaTokenPunto(s.opc.Datos, "app"))
+	// Solo se guarda la huella de la clave de un punto: para conocerla hay que regenerarla.
+	token, _ := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "app"))
+	tokenFijo, _ := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "fijo"))
+	s.Recargar()
 	chat := func(modelo string) string {
 		return `{"model":"` + modelo + `","messages":[{"role":"user","content":"hola"}]}`
 	}
@@ -152,7 +156,6 @@ func TestPuntosDeAcceso(t *testing.T) {
 		t.Fatalf("el trabajo registra su punto de acceso: %s", lista)
 	}
 
-	tokenFijo, _ := LeerOCrearToken(RutaTokenPunto(s.opc.Datos, "fijo"))
 	r, cuerpo := pedir(t, "http://127.0.0.1:"+strconv.Itoa(puerto), "POST", "/api/v1/ejecutar", tokenFijo, `{"agente":"otro","mensajes":[{"rol":"usuario","contenido":"x"}]}`)
 	if r.StatusCode != 200 || !strings.Contains(cuerpo, `"modelo_enviado":"m9"`) {
 		t.Fatalf("puerto propio con modelo forzado: %d %s", r.StatusCode, cuerpo)
@@ -212,7 +215,7 @@ func TestRecargarSinTocarLosDemas(t *testing.T) {
 	if s.puntos["uno"] != antes {
 		t.Fatal("un punto sin cambios no debe reabrirse")
 	}
-	token, _ := LeerOCrearToken(RutaTokenPunto(s.opc.Datos, "dos"))
+	token, _ := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "dos"))
 	if r, _ := pedir(t, ts.URL, "GET", "/p/dos/api/v1/modelos", token, ""); r.StatusCode != 404 {
 		t.Fatalf("un punto desactivado no responde: %d", r.StatusCode)
 	}
@@ -361,5 +364,35 @@ func TestNormalizarReceta(t *testing.T) {
 		if strings.Count(err.Error(), "esquema no válido") > 1 {
 			t.Fatalf("mensaje con el prefijo repetido: %v", err)
 		}
+	}
+}
+
+func TestClavePuntoSoloHuella(t *testing.T) {
+	ruta := filepath.Join(t.TempDir(), "tokens", "acceso_x")
+	token, err := RotarTokenPunto(ruta)
+	if err != nil || !strings.HasPrefix(token, "tt_") {
+		t.Fatalf("clave nueva: %q %v", token, err)
+	}
+	datos, _ := os.ReadFile(ruta)
+	if strings.Contains(string(datos), token) || !strings.HasPrefix(string(datos), api.PrefijoHuella) {
+		t.Fatalf("el archivo debe guardar solo la huella: %q", datos)
+	}
+	if huella, err := LeerHuellaPunto(ruta); err != nil || huella != api.HuellaToken(token) {
+		t.Fatalf("huella leída: %q %v", huella, err)
+	}
+
+	// Una clave antigua guardada en claro se convierte a huella y sigue valiendo.
+	antigua := "tt_" + strings.Repeat("a", 64)
+	_ = os.WriteFile(ruta, []byte(antigua+"\n"), 0o600)
+	if huella, err := LeerHuellaPunto(ruta); err != nil || huella != api.HuellaToken(antigua) {
+		t.Fatalf("migración: %q %v", huella, err)
+	}
+	if datos, _ := os.ReadFile(ruta); strings.Contains(string(datos), antigua) {
+		t.Fatal("la clave antigua no debe quedar en claro")
+	}
+
+	EliminarTokenPunto(filepath.Dir(filepath.Dir(ruta)), "x")
+	if _, err := os.Stat(ruta); !os.IsNotExist(err) {
+		t.Fatalf("eliminar la API debe borrar su clave: %v", err)
 	}
 }

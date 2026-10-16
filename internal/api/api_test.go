@@ -547,3 +547,11 @@ func TestCatalogoConVersionAntesDeUsar(t *testing.T) {
 		t.Fatalf("la segunda consulta del catálogo volvió a preguntar al agente: %d → %d", antes, consultas.Load())
 	}
 }
+
+func TestHuellaValida(t *testing.T) {
+	r := httptest.NewRequest("GET", "/", nil)
+	r.Header.Set("Authorization", "Bearer tt_secreto")
+	if !HuellaValida(r, HuellaToken("tt_secreto")) || HuellaValida(r, HuellaToken("tt_otro")) || HuellaValida(r, "tt_secreto") {
+		t.Fatal("la clave se comprueba contra su huella, nunca en claro")
+	}
+}

@@ -1,6 +1,7 @@
 package servicio
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -104,6 +105,30 @@ func TestWebUI(t *testing.T) {
 	if datos, _ := os.ReadFile(rutaGlobal); !strings.Contains(string(datos), "desde_ui") {
 		t.Fatalf("el punto debía guardarse en la configuración global:\n%s", datos)
 	}
+	// La clave se ve al crearla y al regenerarla; después solo queda su huella y la anterior deja de valer.
+	var creado struct{ Token string }
+	_ = json.Unmarshal([]byte(cuerpo), &creado)
+	if r, _ := pedir(t, ts.URL, "GET", "/p/desde_ui/openai/v1/models", creado.Token, ""); r.StatusCode != 200 {
+		t.Fatalf("la clave de creación debe valer: %d", r.StatusCode)
+	}
+	if r, _ := n.pedir("GET", "/api/v1/puntos/desde_ui/token", ""); r.StatusCode != 404 {
+		t.Fatalf("la clave de un punto no se puede volver a ver: %d", r.StatusCode)
+	}
+	r, cuerpo = n.pedir("POST", "/api/v1/puntos/desde_ui/token", "", "X-CSRF-Token", n.csrf)
+	var regenerado struct{ Token string }
+	_ = json.Unmarshal([]byte(cuerpo), &regenerado)
+	if r.StatusCode != 200 || !strings.HasPrefix(regenerado.Token, "tt_") || regenerado.Token == creado.Token {
+		t.Fatalf("regenerar: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, _ := pedir(t, ts.URL, "GET", "/p/desde_ui/openai/v1/models", creado.Token, ""); r.StatusCode != 401 {
+		t.Fatalf("la clave anterior deja de valer: %d", r.StatusCode)
+	}
+	if r, _ := pedir(t, ts.URL, "GET", "/p/desde_ui/openai/v1/models", regenerado.Token, ""); r.StatusCode != 200 {
+		t.Fatalf("la clave regenerada vale: %d", r.StatusCode)
+	}
+	if datos, _ := os.ReadFile(RutaTokenPunto(s.opc.Datos, "desde_ui")); strings.Contains(string(datos), regenerado.Token) {
+		t.Fatal("el archivo guarda la huella, no la clave")
+	}
 	if r, cuerpo := n.pedir("PATCH", "/api/v1/puntos/desde_ui", `{"activo":false}`, "X-CSRF-Token", n.csrf); r.StatusCode != 200 || !strings.Contains(cuerpo, "desactivado") {
 		t.Fatalf("desactivar: %d %s", r.StatusCode, cuerpo)
 	}
@@ -150,6 +175,9 @@ func TestWebUI(t *testing.T) {
 	}
 	if r, _ := n.pedir("DELETE", "/api/v1/puntos/desde_ui", "", "X-CSRF-Token", n.csrf); r.StatusCode != 204 {
 		t.Fatalf("eliminar: %d", r.StatusCode)
+	}
+	if _, err := os.Stat(RutaTokenPunto(s.opc.Datos, "desde_ui")); !os.IsNotExist(err) {
+		t.Fatalf("eliminar el punto borra su clave: %v", err)
 	}
 
 	// Modelo predeterminado: se guarda, se aplica en marcha y el catálogo lo marca.

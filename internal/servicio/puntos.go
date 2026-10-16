@@ -312,12 +312,12 @@ func (s *Servicio) Recargar() []EstadoPunto {
 	s.mu.Lock()
 	nuevos := map[string]*puntoActivo{}
 	for _, c := range deseados {
-		token, err := LeerOCrearToken(RutaTokenPunto(s.opc.Datos, c.cfg.Nombre))
+		huella, err := LeerHuellaPunto(RutaTokenPunto(s.opc.Datos, c.cfg.Nombre))
 		if err != nil {
 			errores = append(errores, err.Error())
 			continue
 		}
-		firma := firmaPunto(c.cfg, token)
+		firma := firmaPunto(c.cfg, huella)
 		actual := s.puntos[c.cfg.Nombre]
 		if actual != nil && actual.firma == firma && actual.err == "" && actual.instancia == s.instancias[c.cfg.Instancia] {
 			nuevos[c.cfg.Nombre] = actual
@@ -327,7 +327,7 @@ func (s *Servicio) Recargar() []EstadoPunto {
 			actual.soltar() // libera el puerto por si el punto nuevo usa el mismo
 			retirados = append(retirados, actual)
 		}
-		nuevos[c.cfg.Nombre] = s.abrirPunto(c, token, firma)
+		nuevos[c.cfg.Nombre] = s.abrirPunto(c, huella, firma)
 	}
 	for nombre, actual := range s.puntos {
 		if _, sigue := nuevos[nombre]; !sigue {
@@ -357,14 +357,14 @@ func (s *Servicio) Recargar() []EstadoPunto {
 	return estado
 }
 
-func firmaPunto(cfg ConfigPunto, token string) string {
+func firmaPunto(cfg ConfigPunto, huella string) string {
 	datos, _ := json.Marshal(cfg)
-	return string(datos) + "|" + token
+	return string(datos) + "|" + huella
 }
 
-// abrirPunto prepara el punto; si tiene puerto propio y está ocupado no se activa ni se elige otro.
-// Se llama con s.mu tomado.
-func (s *Servicio) abrirPunto(c candidato, token, firma string) *puntoActivo {
+// abrirPunto prepara el punto; si tiene puerto propio y está ocupado no se activa ni se elige otro. huella es la de
+// su clave: el servicio nunca conoce la clave de un punto. Se llama con s.mu tomado.
+func (s *Servicio) abrirPunto(c candidato, huella, firma string) *puntoActivo {
 	p := &puntoActivo{cfg: c.cfg, origen: c.origen, firma: firma, instancia: s.instancias[c.cfg.Instancia]}
 	switch {
 	case !c.cfg.EstaActivo():
@@ -376,7 +376,7 @@ func (s *Servicio) abrirPunto(c candidato, token, firma string) *puntoActivo {
 	}
 	inst := p.instancia
 	srv := &api.Servidor{Planificador: inst.Planificador, Cargas: inst.Cargas, Registro: s.opc.Registro, Config: inst.Config, Punto: c.cfg.politica()}
-	handler := api.Proteger(s.opc.Hosts, func(r *http.Request) bool { return api.TokenValido(r, token) }, srv.Rutas())
+	handler := api.Proteger(s.opc.Hosts, func(r *http.Request) bool { return api.HuellaValida(r, huella) }, srv.Rutas())
 	if c.cfg.Puerto == 0 {
 		p.handler, p.url = handler, s.Base()+c.cfg.RutaBase
 		return p

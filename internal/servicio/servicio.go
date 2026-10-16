@@ -641,11 +641,50 @@ func LeerOCrearToken(ruta string) (string, error) {
 
 // RotarToken genera un token nuevo y lo guarda; el anterior deja de valer al recargar.
 func RotarToken(ruta string) (string, error) {
-	if err := os.MkdirAll(filepath.Dir(ruta), 0o700); err != nil {
-		return "", err
-	}
 	token := "tt_" + aleatorio(32)
-	return token, os.WriteFile(ruta, []byte(token+"\n"), 0o600)
+	return token, guardarSecreto(ruta, token)
+}
+
+// guardarSecreto escribe un token o su huella solo legible por el usuario; Chmod corrige un archivo que ya existía
+// con otros permisos (WriteFile solo los aplica al crearlo).
+func guardarSecreto(ruta, valor string) error {
+	if err := os.MkdirAll(filepath.Dir(ruta), 0o700); err != nil {
+		return err
+	}
+	if err := os.WriteFile(ruta, []byte(valor+"\n"), 0o600); err != nil {
+		return err
+	}
+	return os.Chmod(ruta, 0o600)
+}
+
+// RotarTokenPunto genera la clave nueva de un punto de acceso y guarda solo su huella: la clave se muestra una vez
+// y no se puede recuperar; la anterior deja de valer al recargar.
+func RotarTokenPunto(ruta string) (string, error) {
+	token := "tt_" + aleatorio(32)
+	return token, guardarSecreto(ruta, api.HuellaToken(token))
+}
+
+// LeerHuellaPunto devuelve la huella de la clave de un punto. Un archivo antiguo con la clave en claro se convierte
+// a huella y las aplicaciones siguen funcionando; sin archivo se crea una clave que nadie conoce, así que hay que
+// regenerarla para usar el punto.
+func LeerHuellaPunto(ruta string) (string, error) {
+	if datos, err := os.ReadFile(ruta); err == nil {
+		contenido := strings.TrimSpace(string(datos))
+		if strings.HasPrefix(contenido, api.PrefijoHuella) {
+			return contenido, nil
+		}
+		if len(contenido) >= 32 {
+			huella := api.HuellaToken(contenido)
+			return huella, guardarSecreto(ruta, huella)
+		}
+	}
+	token, err := RotarTokenPunto(ruta)
+	return api.HuellaToken(token), err
+}
+
+// EliminarTokenPunto borra la clave de un punto eliminado: otro con el mismo nombre no hereda la anterior.
+func EliminarTokenPunto(datos, nombre string) {
+	_ = os.Remove(RutaTokenPunto(datos, nombre))
 }
 
 // RutaTokenInstancia es el archivo del token de una instancia (el global conserva su ruta histórica).

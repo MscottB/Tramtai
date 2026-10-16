@@ -4,7 +4,9 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"log"
@@ -129,6 +131,21 @@ func TokenDe(r *http.Request) string {
 		return valor
 	}
 	return r.Header.Get("x-api-key")
+}
+
+// PrefijoHuella marca un archivo que guarda la huella de una clave en lugar de la clave.
+const PrefijoHuella = "sha256:"
+
+// HuellaToken es la huella irreversible de una clave: lo que se guarda de las claves de los puntos de acceso.
+func HuellaToken(token string) string {
+	suma := sha256.Sum256([]byte(token))
+	return PrefijoHuella + hex.EncodeToString(suma[:])
+}
+
+// HuellaValida compara en tiempo constante la huella del token de la petición con la guardada.
+func HuellaValida(r *http.Request, huella string) bool {
+	token := TokenDe(r)
+	return token != "" && subtle.ConstantTimeCompare([]byte(HuellaToken(token)), []byte(huella)) == 1
 }
 
 // TokenValido compara en tiempo constante el token de la petición con el esperado.

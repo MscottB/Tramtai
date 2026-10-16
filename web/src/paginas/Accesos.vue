@@ -103,7 +103,7 @@
                     <q-tooltip>{{ activo(p) ? t('puntos.activo') : t('puntos.desactivado') }}</q-tooltip>
                   </q-toggle>
                   <q-btn v-if="p.url" flat dense round icon="content_copy" :aria-label="t('puntos.copiarUrl')" @click="copiar(p.url)"><q-tooltip>{{ t('puntos.copiarUrl') }}</q-tooltip></q-btn>
-                  <q-btn flat dense round icon="o_key" :aria-label="t('puntos.verClave')" @click="mostrarClave(p)"><q-tooltip>{{ t('puntos.verClave') }}</q-tooltip></q-btn>
+                  <q-btn flat dense round icon="o_key" :aria-label="t('puntos.regenerarClave')" @click="regenerarClave(p)"><q-tooltip>{{ t('puntos.regenerarClave') }}</q-tooltip></q-btn>
                   <q-btn flat dense round icon="o_science" :aria-label="t('puntos.abrirProbar')" @click="abrirEnProbar(p.nombre)"><q-tooltip>{{ t('puntos.abrirProbar') }}</q-tooltip></q-btn>
                   <q-btn flat dense round icon="o_tune" :aria-label="t('puntos.ajustes')" @click="abrirAjustes(p)"><q-tooltip>{{ t('puntos.ajustes') }}</q-tooltip></q-btn>
                   <q-btn flat dense round icon="o_delete" color="negative" :aria-label="t('comun.eliminar')" @click="eliminar(p.nombre)"><q-tooltip>{{ t('comun.eliminar') }}</q-tooltip></q-btn>
@@ -185,8 +185,11 @@
     <q-dialog v-model="dialogoClave" @hide="elegido = undefined">
       <q-card style="width: 560px; max-width: 95vw">
         <q-card-section>
-          <div class="titulo-seccion">{{ recienCreado ? t('puntos.listo') : t('puntos.conexionDe', { nombre: elegido?.nombre ?? '' }) }}</div>
+          <div class="titulo-seccion">{{ recienCreado ? t('puntos.listo') : t('puntos.claveNuevaDe', { nombre: elegido?.nombre ?? '' }) }}</div>
           <div class="texto-suave text-body2">{{ t('puntos.configura') }}</div>
+          <q-banner rounded dense class="aviso-caja q-mt-sm">
+            <template #avatar><q-icon name="o_lock" color="warning" /></template>{{ t('puntos.claveUnaVez') }}
+          </q-banner>
         </q-card-section>
         <q-card-section class="q-gutter-y-md q-pt-none">
           <div v-for="c in camposPunto" :key="c.titulo">
@@ -439,14 +442,19 @@ async function guardarAjustes() {
   }
 }
 
-async function mostrarClave(p: EstadoPunto) {
-  try {
-    elegido.value = { nombre: p.nombre, url: p.url ?? '', clave: await api.tokenPunto(p.nombre) }
-    recienCreado.value = false
-    dialogoClave.value = true
-  } catch (e) {
-    avisarError(e)
-  }
+// regenerarClave crea una clave nueva y la muestra esta única vez: Tramtai solo guarda su huella.
+function regenerarClave(p: EstadoPunto) {
+  $q.dialog({ title: t('puntos.regenerarTitulo', { nombre: p.nombre }), message: t('puntos.regenerarTexto'),
+    cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'primary', label: t('puntos.regenerarClave'), unelevated: true, noCaps: true } })
+    .onOk(async () => {
+      try {
+        elegido.value = { nombre: p.nombre, url: p.url ?? '', clave: await api.regenerarClave(p.nombre) }
+        recienCreado.value = false
+        dialogoClave.value = true
+      } catch (e) {
+        avisarError(e)
+      }
+    })
 }
 
 onMounted(async () => {

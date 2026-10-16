@@ -575,13 +575,14 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 		api.EscribirError(w, r, err)
 		return
 	}
-	s.Recargar()
-	_ = s.actualizarDescriptor()
-	token, err := LeerOCrearToken(RutaTokenPunto(s.opc.Datos, p.Nombre))
+	// Clave nueva siempre (aunque quedara una de otro punto con el mismo nombre); solo se devuelve esta vez.
+	token, err := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, p.Nombre))
 	if err != nil {
 		api.EscribirError(w, r, err)
 		return
 	}
+	s.Recargar()
+	_ = s.actualizarDescriptor()
 	for _, e := range s.puntosDe(inst.ID) {
 		if e.Nombre == p.Nombre {
 			api.EscribirJSON(w, http.StatusCreated, map[string]any{"punto_acceso": e, "token": token})
@@ -591,8 +592,8 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 	api.EscribirJSON(w, http.StatusCreated, map[string]any{"token": token})
 }
 
-// puntoUI cambia los ajustes (PATCH: activo, instrucciones, esfuerzo y modelo), elimina (DELETE) o muestra el
-// token (GET <nombre>/token) de un punto de la instancia de la sesión.
+// puntoUI cambia los ajustes (PATCH), elimina (DELETE, con su clave) o regenera la clave (POST <nombre>/token) de
+// un punto de la instancia de la sesión.
 func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instancia, resto string) {
 	nombre, accion, _ := strings.Cut(resto, "/")
 	var punto *EstadoPunto
@@ -616,12 +617,14 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 		return true
 	}
 	switch {
-	case accion == "token" && r.Method == http.MethodGet:
-		token, err := LeerOCrearToken(RutaTokenPunto(s.opc.Datos, nombre))
+	case accion == "token" && r.Method == http.MethodPost:
+		// Regenera la clave: solo se guarda su huella, así que esta es la única vez que se puede ver.
+		token, err := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, nombre))
 		if err != nil {
 			api.EscribirError(w, r, err)
 			return
 		}
+		s.Recargar()
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"token": token})
 	case accion == "" && r.Method == http.MethodPatch:
 		var cambio struct { // solo cambia lo que viene en el cuerpo
@@ -696,6 +699,7 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 		if editar(func(lista []ConfigPunto) ([]ConfigPunto, error) {
 			return slices.DeleteFunc(lista, func(c ConfigPunto) bool { return c.Nombre == nombre }), nil
 		}) {
+			EliminarTokenPunto(s.opc.Datos, nombre)
 			w.WriteHeader(http.StatusNoContent)
 		}
 	default:

@@ -838,7 +838,7 @@ func (m *modelo) teclaAccesos(tecla string) tea.Cmd {
 		return m.editarPuntos(p.Origen, map[bool]string{true: idioma.T("punto activado"), false: idioma.T("punto desactivado")}[activo],
 			cambiar(func(c *servicio.ConfigPunto) { c.Activo = &activo }))
 	case "x":
-		return m.confirmar(idioma.Tf("¿Eliminar el punto de acceso %s?", p.Nombre), m.editarPuntos(p.Origen, idioma.T("punto eliminado"),
+		borrar := m.editarPuntos(p.Origen, idioma.T("punto eliminado"),
 			func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
 				var resto []servicio.ConfigPunto
 				for _, c := range lista {
@@ -847,11 +847,34 @@ func (m *modelo) teclaAccesos(tecla string) tea.Cmd {
 					}
 				}
 				return resto, nil
-			}))
+			})
+		datos := m.o.Datos
+		return m.confirmar(idioma.Tf("¿Eliminar el punto de acceso %s?", p.Nombre), func() tea.Msg {
+			msg := borrar()
+			if a, ok := msg.(msgAviso); ok && a.err == nil {
+				servicio.EliminarTokenPunto(datos, p.Nombre) // otro punto con este nombre no hereda la clave
+			}
+			return msg
+		})
 	case "t":
-		m.aviso, m.esError = idioma.Tf("token de %s: %s", p.Nombre, servicio.RutaTokenPunto(m.o.Datos, p.Nombre)), false
+		return m.confirmar(idioma.Tf("¿Regenerar la clave de %s? La anterior deja de valer.", p.Nombre), m.regenerarClave(p.Nombre))
 	}
 	return nil
+}
+
+// regenerarClave crea una clave nueva para el punto y la muestra esta única vez: solo se guarda su huella.
+func (m *modelo) regenerarClave(nombre string) tea.Cmd {
+	cli, datos := m.cli, m.o.Datos
+	return func() tea.Msg {
+		token, err := servicio.RotarTokenPunto(servicio.RutaTokenPunto(datos, nombre))
+		if err != nil {
+			return msgAviso{err: err}
+		}
+		ctx, cancelar := conPlazo(30 * time.Second)
+		defer cancelar()
+		_, err = cli.Recargar(ctx)
+		return msgAviso{texto: idioma.Tf("clave nueva de %s (guárdala: no se volverá a mostrar): %s", nombre, token), err: err}
+	}
 }
 
 func (m *modelo) teclaNuevoPunto(k tea.KeyPressMsg) tea.Cmd {
@@ -912,7 +935,7 @@ func (m *modelo) crearPunto() tea.Cmd {
 		return nil
 	}
 	m.ir(pAccesos)
-	return m.editarPuntos("", idioma.Tf("punto %s creado · token en %s", p.Nombre, servicio.RutaTokenPunto(m.o.Datos, p.Nombre)),
+	return m.editarPuntos("", idioma.Tf("punto %s creado · pulsa t para generar su clave", p.Nombre),
 		func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
 			for _, c := range lista {
 				if c.Nombre == p.Nombre {
@@ -1226,7 +1249,7 @@ func (m *modelo) vistaAccesos(b *strings.Builder) string {
 		}
 	}
 	b.WriteString("\n" + estilo(tenue, idioma.T("Alias, modelos permitidos y forzado: tramtai acceso editar <nombre> --alias … --permitidos … --forzar")) + "\n")
-	return idioma.T("↑↓ · Enter activar/desactivar · n nuevo · x eliminar · t ruta del token · Esc volver")
+	return idioma.T("↑↓ · Enter activar/desactivar · n nuevo · x eliminar · t regenerar clave · Esc volver")
 }
 
 func (m *modelo) vistaNuevoPunto(b *strings.Builder) string {
