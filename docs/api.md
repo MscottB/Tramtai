@@ -10,11 +10,14 @@
 
 ## Seguridad
 
-- **Clave (token):** `Authorization: Bearer <clave>` o `x-api-key: <clave>`. La forma más fácil de verla es la página **Mis APIs** de la Web UI; también `tramtai global token` (o `tramtai proyecto token`). Se crea la primera vez en `%APPDATA%\tramtai\datos\token-global`, o sale de la variable `TRAMTAI_TOKEN_GLOBAL`.
-- **Web UI:** en el propio equipo entra sin clave (mismo usuario del sistema); ver [arquitectura](arquitectura.md#interfaces).
+- **Clave (token):** `Authorization: Bearer <clave>` o `x-api-key: <clave>`.
+  - **Clave de la instancia** (la de la *API principal*): se ve en **Mis APIs → API principal** o con `tramtai global token` (o `tramtai proyecto token`). Se crea la primera vez en `datos/token-global` (archivo con permisos 0600 en la [carpeta de Tramtai](inicio.md#configuración)), o sale de la variable que indique `instancia_global.token_variable_entorno` (`TRAMTAI_TOKEN_GLOBAL`).
+  - **Clave de cada API por aplicación:** solo se muestra al crearla o regenerarla; Tramtai guarda únicamente su huella SHA-256. Ver [puntos de acceso](#puntos-de-acceso-y-administración).
+  - Si se filtra alguna, ver [Si se filtra una clave](operacion.md#si-se-filtra-una-clave).
+- **Web UI:** no se abre con la clave de las aplicaciones (`POST /ui/sesion` con una clave responde 401). Se entra en el propio equipo con el mismo usuario del sistema o con el código de un solo uso de la app, la terminal o `tramtai abrir`; ver [arquitectura](arquitectura.md#interfaces).
 - **Host:** solo `127.0.0.1`, `localhost` y `::1`. Cualquier otro nombre en la cabecera `Host` se rechaza con 403 antes de autenticar (protección frente a DNS rebinding).
 - **Navegadores:** no hay CORS. Una petición con `Origin` de otro sitio se rechaza con 403.
-- **Acceso remoto:** está desactivado. Solo se permite con `servicio.permitir_remoto: true`, token obligatorio y ningún agente en modo suscripción. Lo recomendado es un túnel SSH.
+- **Acceso remoto:** está desactivado. Solo se permite con `servicio.permitir_remoto: true`, token obligatorio y ningún agente en modo suscripción. Lo recomendado es un túnel SSH. La Web UI remota solo se abre con un código de `tramtai abrir` hecho en el equipo del servicio.
 - `/healthz` no exige token y no expone datos.
 
 ## API nativa `/api/v1`
@@ -117,7 +120,7 @@ Cuánto razona el modelo antes de responder. Es opcional: sin él, cada CLI usa 
 
 Un punto de acceso expone la misma API bajo su propia URL y token: `http://127.0.0.1:17373/p/<nombre>/openai/v1`, o su propio puerto. Solo expone los contratos que tiene habilitados, antepone sus `instrucciones` (si tiene) a las de cada solicitud, aplica sus alias, modelos permitidos y modelo forzado (cabecera `Tramtai-Modelo-Forzado`) y solo ve sus trabajos. Con `ejecucion.maximo_trabajos` limita sus ejecuciones simultáneas, siempre dentro del límite de su instancia.
 
-Un punto de acceso también puede ser una **receta**: con `esquema` (un JSON Schema escrito como YAML), toda petición que no traiga su propio esquema responde con JSON validado, también por las fachadas sin `response_format`. Con `respaldo` (hasta 3 entradas `agente` o `agente/modelo`), si el agente principal falla antes de emitir texto (`limite_uso_proveedor`, `autenticacion_agente`, `agente_no_disponible`, `modelo_no_disponible`, `error_agente`, `error_protocolo_agente` o `tiempo_ejecucion_agotado`), el mismo trabajo sigue con el siguiente: queda un evento `aviso`, el trabajo muestra el agente que respondió y el tiempo límite cuenta por intento. La API nativa acepta `"respaldo": [...]` en la solicitud; las fachadas lo heredan del punto. Con `modelos_permitidos`, cada entrada del respaldo debe estar permitida.
+Un punto de acceso también puede ser una **receta**: con `esquema` (un JSON Schema escrito como YAML), toda petición que no traiga su propio esquema responde con JSON validado, también por las fachadas sin `response_format`. Con `respaldo` (hasta 3 entradas `agente` o `agente/modelo`), si el agente principal falla antes de emitir texto (`limite_uso_proveedor`, `autenticacion_agente`, `agente_no_disponible`, `modelo_no_disponible`, `error_agente`, `error_protocolo_agente` o `tiempo_ejecucion_agotado`), el mismo trabajo sigue con el siguiente: queda un evento `aviso`, el trabajo muestra el agente que respondió y el tiempo límite cuenta por intento. Tras un salto, el campo `model` de las respuestas de las fachadas OpenAI y Anthropic indica el agente/modelo que respondió (sin salto, sigue siendo el que pidió la aplicación). El trabajo guarda el respaldo que le queda, así que al reencolarlo o reintentarlo no repite agentes. La API nativa acepta `"respaldo": [...]` en la solicitud; las fachadas lo heredan del punto. Un respaldo con un agente que no existe, o fuera de `modelos_permitidos`, se rechaza al guardar el punto.
 
 ```yaml
 puntos_acceso:
@@ -135,6 +138,18 @@ puntos_acceso:
 La administración (`/api/v1/servicio`) y la API de cada instancia con `Tramtai-Instancia` se describen en [operacion.md](operacion.md).
 
 `GET /api/v1/trabajos?limite=20` lista los trabajos recientes de la instancia, o los del punto de acceso si se llama desde uno; `&punto=<nombre>` filtra por un punto de acceso. Desde la Web UI, `GET /api/v1/puntos` incluye `uso` por punto: `peticiones`, `errores` y `ultima`, de lo que conserva la retención.
+
+### Claves de los puntos y de la instancia
+
+Estas rutas exigen una sesión de la Web UI o el token de servicio (con `Tramtai-Instancia`); la clave de las aplicaciones no sirve.
+
+| Método y ruta | Función |
+|---|---|
+| `POST /api/v1/puntos` | Crea un punto de acceso. La respuesta trae su `token`: es la única vez que se ve. |
+| `POST /api/v1/puntos/{nombre}/token` | Regenera la clave del punto y la devuelve una sola vez (`{"token": "…"}`); la anterior deja de valer al momento. Ya no existe `GET` en esta ruta: Tramtai solo guarda la huella (`datos/tokens/acceso_<nombre>` contiene `sha256:…`). Las claves antiguas guardadas en claro se convierten solas a huella y siguen valiendo. |
+| `DELETE /api/v1/puntos/{nombre}` | Elimina el punto y su clave. |
+| `GET /api/v1/instancia/token` | La clave de la instancia, para mostrarla en *API principal* (Mis APIs). |
+| `POST /api/v1/instancia/token` | Regenera la clave de la instancia sin reiniciar y la devuelve. Si viene de una variable de entorno (`instancia_global.token_variable_entorno`), responde 400 `solicitud_invalida`: hay que cambiarla en la variable. |
 
 ## Errores
 

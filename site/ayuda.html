@@ -111,6 +111,8 @@ sudo dnf install ./Tramtai-…-linux-amd64.rpm</pre>
 curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instalar.sh | sh</pre>
       <p lang="es"><strong>Que arranque solo:</strong> en Windows, macOS y Linux, <strong>Ajustes → Arranque con Windows</strong> (o con macOS, o con Linux) abre Tramtai oculto en la bandeja al iniciar sesión, con el servicio en marcha.</p>
       <p lang="en"><strong>Start on its own:</strong> on Windows, macOS and Linux, <strong>Settings → Start with Windows</strong> (or macOS, or Linux) opens Tramtai hidden in the tray when you sign in, with the service running.</p>
+      <p lang="es"><strong>Entrar en la Web UI:</strong> la app entra sola. En el navegador, en Windows y Linux entras directamente si es de tu mismo usuario; en macOS, o si no se puede comprobar, <code>tramtai abrir</code> la abre ya dentro. La clave de tus aplicaciones no sirve para entrar.</p>
+      <p lang="en"><strong>Opening the Web UI:</strong> the app signs in by itself. In a browser, on Windows and Linux you get in directly if it runs as your same user; on macOS, or when that can't be checked, <code>tramtai abrir</code> opens it already signed in. Your apps' key doesn't sign you in.</p>
     </section>
 
     <section id="agentes">
@@ -120,20 +122,18 @@ curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instal
         <h3>Con tu suscripción (uso personal)</h3>
         <p>Si ya usas Claude Pro/Max o ChatGPT en tu equipo, pulsa <strong>Usar mi suscripción</strong> en la página Agentes. Se aplica al momento. Es solo para uso personal y local, según los términos de cada proveedor. Tramtai nunca lee ni copia las sesiones de los CLI: el propio CLI usa la suya.</p>
         <h3>Con una clave de API</h3>
-        <p>En Windows, guárdala en el Administrador de credenciales (la pide sin mostrarla) y reinicia el servicio. En macOS y Linux, de momento, usa variables de entorno con los mismos nombres.</p>
+        <p><code>tramtai claves guardar</code> la pide sin mostrarla y la guarda cifrada en el almacén del sistema: el Administrador de credenciales en Windows, el Llavero en macOS y el Secret Service en Linux (necesita <code>secret-tool</code>, del paquete <code>libsecret-tools</code>). Tramtai nunca la escribe en sus archivos y la usa desde la siguiente petición, sin reiniciar. La página <strong>Agentes</strong> te dice dónde queda en tu sistema.</p>
       </div>
       <div lang="en">
         <p>Tramtai uses each agent's official CLI as installed: <a href="https://docs.anthropic.com/claude-code">Claude Code</a> (<code>claude</code>), <a href="https://developers.openai.com/codex/cli">Codex CLI</a> (<code>codex</code>) or a Gemini API key. Antigravity (<code>agy</code>) is experimental. Open the app and go to <strong>Agents</strong>: it tells you what each one is missing.</p>
         <h3>With your subscription (personal use)</h3>
         <p>If you already use Claude Pro/Max or ChatGPT on your computer, click <strong>Use my subscription</strong> on the Agents page. It applies right away. It's for personal, local use only, under each provider's terms. Tramtai never reads or copies the CLIs' sessions: the CLI uses its own.</p>
         <h3>With an API key</h3>
-        <p>On Windows, store it in the Credential Manager (it's asked for without being shown) and restart the service. On macOS and Linux, for now, use environment variables with the same names.</p>
+        <p><code>tramtai claves guardar</code> asks for it without showing it and stores it encrypted in the system store: Credential Manager on Windows, Keychain on macOS and the Secret Service on Linux (it needs <code>secret-tool</code>, from the <code>libsecret-tools</code> package). Tramtai never writes it to its own files and uses it from the next request, without restarting. The <strong>Agents</strong> page tells you where it lives on your system.</p>
       </div>
 <pre class="codigo">tramtai claves guardar ANTHROPIC_API_KEY   # Claude
 tramtai claves guardar OPENAI_API_KEY      # Codex
-tramtai claves guardar GEMINI_API_KEY      # Gemini, Antigravity
-tramtai servicio detener
-tramtai abrir</pre>
+tramtai claves guardar GEMINI_API_KEY      # Gemini, Antigravity</pre>
     </section>
 
     <section id="aplicaciones">
@@ -214,7 +214,7 @@ print(r.choices[0].message.content)</pre>
     <section id="apis">
       <h2><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></h2>
       <div lang="es">
-        <p>En <strong>Mis APIs</strong> puedes crear una API para cada aplicación, con su propia clave. Cada una puede:</p>
+        <p>En <strong>Mis APIs</strong> puedes crear una API para cada aplicación, con su propia clave. Esa clave solo se muestra al crearla: cópiala entonces. Si la pierdes, <strong>Regenerar la clave</strong> te da una nueva. Cada una puede:</p>
         <ul>
           <li>permitir solo ciertos modelos, o fijar uno que se usa siempre;</li>
           <li>añadir instrucciones fijas (por ejemplo, «responde siempre en español»);</li>
@@ -223,7 +223,7 @@ print(r.choices[0].message.content)</pre>
         <p>Se activan o detienen sin reiniciar, y cada una ve solo sus propios trabajos.</p>
       </div>
       <div lang="en">
-        <p>In <strong>My APIs</strong> you can create one API per app, each with its own key. Each one can:</p>
+        <p>In <strong>My APIs</strong> you can create one API per app, each with its own key. That key is shown only when it is created: copy it then. If you lose it, <strong>Regenerate the key</strong> gives you a new one. Each one can:</p>
         <ul>
           <li>allow only certain models, or pin one that is always used;</li>
           <li>add fixed instructions (for example, "always answer in Spanish");</li>
@@ -321,6 +321,19 @@ tramtai ejecutar -f informe.pdf "Resume el documento en tres puntos"</pre>
           <li><code>400 parametro_no_soportado</code>: the parameter changes the answer and the CLI agents can't honor it (images, <code>n</code> above 1, <code>stop</code>…).</li>
           <li><code>autenticacion_agente</code>: the agent has no session or key; check the <strong>Agents</strong> page.</li>
           <li><code>422 salida_no_cumple_esquema</code>: the answer didn't match your JSON Schema or a tool's.</li>
+        </ul>
+      </details>
+      <details>
+        <summary><span lang="es">¿Qué hago si se filtra una clave?</span><span lang="en">What do I do if a key leaks?</span></summary>
+        <ul lang="es">
+          <li><strong>La de una API:</strong> <strong>Regenerar la clave</strong> en Mis APIs, o <code>tramtai acceso token &lt;nombre&gt; --rotar</code>.</li>
+          <li><strong>La de Tramtai</strong> (la de la <strong>API principal</strong>): <strong>Regenerar la clave</strong> en Mis APIs → API principal, o <code>tramtai global token --rotar</code>. Vale al momento, sin reiniciar.</li>
+          <li><strong>La de un proveedor</strong> (Anthropic, OpenAI, Gemini): revócala en su consola y guarda la nueva con <code>tramtai claves guardar</code>.</li>
+        </ul>
+        <ul lang="en">
+          <li><strong>An API's key:</strong> <strong>Regenerate the key</strong> in My APIs, or <code>tramtai acceso token &lt;name&gt; --rotar</code>.</li>
+          <li><strong>Tramtai's key</strong> (the <strong>Main API</strong> one): <strong>Regenerate the key</strong> in My APIs → Main API, or <code>tramtai global token --rotar</code>. It takes effect right away, without restarting.</li>
+          <li><strong>A provider's key</strong> (Anthropic, OpenAI, Gemini): revoke it in their console and save the new one with <code>tramtai claves guardar</code>.</li>
         </ul>
       </details>
       <details id="terminos">

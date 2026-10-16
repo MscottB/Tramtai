@@ -28,7 +28,7 @@ Descarga `Tramtai-…-instalador-windows-x64.exe` desde [Releases](https://githu
 
 Después abre **Tramtai** desde el menú Inicio (Windows), la carpeta Aplicaciones (macOS) o el menú de aplicaciones (Linux), o con `tramtai abrir` en una terminal nueva. Si prefieres compilarlo tú, la [guía de desarrollo](equipo/desarrollo.md) explica cómo (`./scripts/compilar.ps1`, con Go 1.27).
 
-- **Sin clave:** en tu propio equipo entras directamente; en Windows y Linux, Tramtai comprueba que el navegador es de tu mismo usuario del sistema. En macOS, por ahora, o desde otro equipo, la página explica cómo entrar (`tramtai abrir` lo hace por ti).
+- **Entrar en la Web UI:** la app de escritorio entra sola. En el navegador, en Windows y Linux entras directamente: Tramtai comprueba que es de tu mismo usuario del sistema. En macOS, o si no se puede comprobar, `tramtai abrir` (o la terminal interactiva) la abre ya dentro con un código de un solo uso. La clave de las aplicaciones no sirve para entrar.
 - **Que arranque solo:** en **Ajustes → Arranque con Windows** (o con macOS, o con Linux, según tu sistema) o con `tramtai servicio autoarranque activar`, Tramtai se inicia oculto en la bandeja al iniciar sesión y la Web UI está siempre disponible, sin abrir ninguna terminal.
 - **Ayuda, idioma y apariencia:** la página **Ayuda** resume estos pasos y responde las dudas comunes. En la cabecera, un botón cambia entre español e inglés y otro elige la apariencia: clara, oscura o como el sistema. La guía de **Inicio** es opcional: «Ocultar guía» la quita y **Ayuda** la vuelve a mostrar.
 - **Aplicación de escritorio:** Tramtai abre la Web UI en su propia ventana, en Windows, macOS y Linux. Cerrar la ventana la deja en la bandeja con el servicio en marcha; el menú del clic derecho muestra el estado y tus APIs, y «Salir y detener el servicio…» la cierra del todo (con un aviso).
@@ -38,7 +38,13 @@ Después abre **Tramtai** desde el menú Inicio (Windows), la carpeta Aplicacion
 
 La página **Agentes** dice qué falta en cada uno. Hay dos formas de autenticarlos:
 
-**Clave de API** (la predeterminada). En Windows, guárdala en el Administrador de credenciales, sin dejarla en variables de entorno. En macOS y Linux, por ahora, defínela como variable de entorno con el mismo nombre (por ejemplo en `~/.profile`).
+**Clave de API** (la predeterminada). `tramtai claves guardar` la pide sin mostrarla y la guarda cifrada en el almacén del sistema; Tramtai nunca la escribe en sus archivos:
+
+| Sistema | Dónde queda |
+|---|---|
+| Windows | Administrador de credenciales |
+| macOS | Llavero (vía `/usr/bin/security`) |
+| Linux | Secret Service de GNOME o KDE, vía `secret-tool` (paquete `libsecret-tools`) |
 
 ```powershell
 tramtai claves guardar ANTHROPIC_API_KEY   # Claude; la pide sin mostrarla
@@ -47,9 +53,11 @@ tramtai claves guardar GEMINI_API_KEY      # Gemini y Antigravity
 tramtai claves listar                      # de dónde sale cada una, sin mostrarla
 ```
 
-Reinicia el servicio después de guardar una clave: `tramtai servicio detener` y otra vez `tramtai abrir`.
+- **Sin reiniciar:** la clave del almacén se lee en cada petición, así que guardarla o cambiarla vale desde la siguiente.
+- **Variable de entorno:** si existe una con el mismo nombre, tiene prioridad sobre el almacén, pero el servicio solo la ve si arranca con ella. En macOS, una variable de `~/.zshrc` no llega al servicio que inicia la app o el arranque automático: usa el Llavero. En Linux sin `secret-tool`, la variable es la única opción.
+- La página **Agentes** dice dónde queda la clave en tu sistema.
 
-**Tu suscripción** (Claude Pro/Max o cuenta de ChatGPT), solo para uso **personal y local**. Lo más fácil es el botón **Usar mi suscripción** de la página Agentes: lo aplica al momento, sin reiniciar. Equivale a escribir esto en la configuración global `%APPDATA%\tramtai\config.yaml`:
+**Tu suscripción** (Claude Pro/Max o cuenta de ChatGPT), solo para uso **personal y local**. Lo más fácil es el botón **Usar mi suscripción** de la página Agentes: lo aplica al momento, sin reiniciar. Equivale a escribir esto en la configuración global `config.yaml` (ver [configuración](#configuración)):
 
 ```yaml
 adaptadores:
@@ -111,7 +119,7 @@ tramtai abrir       # abre la instancia de ese proyecto
 ```
 
 - **Perfiles de trabajo:** `.tramtai/profiles/<nombre>.yaml` guarda instrucciones, formato y esquema reutilizables. Se usan con `--perfil-trabajo <nombre>`, o con `perfil` en la API.
-- **Modo consciente del proyecto:** el agente trabaja en la carpeta del proyecto y lee sus reglas (`CLAUDE.md`, `AGENTS.md`). Solo se permite en proyectos que declares confiables en la configuración global (`%APPDATA%\tramtai\config.yaml`):
+- **Modo consciente del proyecto:** el agente trabaja en la carpeta del proyecto y lee sus reglas (`CLAUDE.md`, `AGENTS.md`). Solo se permite en proyectos que declares confiables en la configuración global (`config.yaml`, ver [configuración](#configuración)):
 
   ```yaml
   proyectos_confiables:
@@ -128,7 +136,15 @@ La CLI, la terminal interactiva y la app de escritorio salen en el idioma de tu 
 
 ## Configuración
 
-Se lee de menor a mayor prioridad: valores internos, `%APPDATA%\tramtai\config.yaml` (global), `.tramtai/config.yaml` (proyecto, se versiona), `.tramtai/local.yaml` (solo este equipo) y variables de entorno `TRAMTAI_SECCION__CLAVE`.
+Se lee de menor a mayor prioridad: valores internos, `config.yaml` global, `.tramtai/config.yaml` (proyecto, se versiona), `.tramtai/local.yaml` (solo este equipo) y variables de entorno `TRAMTAI_SECCION__CLAVE`.
+
+La configuración global y los datos (subcarpeta `datos`) están en:
+
+| Sistema | Carpeta |
+|---|---|
+| Windows | `%APPDATA%\tramtai` |
+| macOS | `~/Library/Application Support/tramtai` |
+| Linux | `~/.config/tramtai` (o `$XDG_CONFIG_HOME/tramtai`) |
 
 ```powershell
 tramtai configuracion mostrar --efectiva     # cada valor y de dónde sale (también en la Web UI)

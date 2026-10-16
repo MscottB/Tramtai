@@ -19,10 +19,11 @@ Cómo está construido Tramtai por dentro:
 | `internal/tui` | Terminal interactiva con Bubble Tea v2. |
 | `internal/recursos` | Web UI compilada incorporada con `go:embed`. Se versiona para que `go build` no necesite Node. |
 | `internal/navegador` | Abre URLs en el navegador del sistema. |
+| `internal/credenciales` | Claves de los proveedores en el almacén del sistema: Administrador de credenciales (Windows), Llavero (macOS, `/usr/bin/security`) y Secret Service (Linux, `secret-tool`). |
 | `web/` | Web UI con Vue 3 y Quasar 2.35 (Vite). La compila `npm run build` en `internal/recursos/web`. |
 | `escritorio/` | Aplicación de escritorio con Wails v3 en un módulo Go aparte, para que el núcleo siga sin CGO. Es un cliente del servicio: lo inicia si hace falta y muestra la misma Web UI en su ventana. |
 | `internal/version` | Versión del ejecutable (inyectada al compilar) y commit de git. |
-| `cmd/tramtai` | CLI con Cobra. Sin argumentos abre la terminal interactiva. Comandos: `servicio`, `global`, `proyecto`, `iniciar`, `acceso`, `trabajos`, `ejecutar`, `convertir`, `agentes`, `configuracion`. Detalle en [operacion.md](operacion.md). |
+| `cmd/tramtai` | CLI con Cobra. Sin argumentos abre la terminal interactiva. Comandos: `servicio`, `global`, `proyecto`, `iniciar`, `acceso`, `claves`, `trabajos`, `ejecutar`, `convertir`, `agentes`, `configuracion`. Detalle en [operacion.md](operacion.md). |
 
 ## Agentes
 
@@ -75,12 +76,21 @@ Las cuatro interfaces trabajan sobre el mismo servicio, así que un trabajo crea
 La Web UI se enlaza a una instancia con una sesión:
 
 - **Entrada sin clave en el propio equipo:** si la conexión llega por loopback desde un programa del mismo usuario del sistema (el navegador o la app de escritorio), la Web UI entra sola y puede cambiar entre instancias. En Windows se identifica al dueño de la conexión con la tabla TCP del sistema y el SID de su proceso; en Linux, con el uid de `/proc/net/tcp`. No se aplica si la petición trae cabeceras de proxy (`Forwarded`, `X-Forwarded-For`, `X-Forwarded-Host`, `X-Real-Ip`, `Via`), ni con `servicio.permitir_remoto`, porque un proxy o túnel del mismo usuario reenviaría peticiones de otros equipos. Se desactiva con `servicio.entrada_local: false`.
-- **Otras formas de entrar:** con la clave de la instancia, o con un código de un solo uso (un minuto) que piden `tramtai abrir`, la terminal o la app de escritorio. Es lo que se usa en macOS o desde otro equipo.
-- **Por qué es seguro:** la clave protege frente a otros usuarios del equipo, y eso es justo lo que se comprueba. Una página web ajena no puede aprovecharla: Host, Origin, la cookie `SameSite=Strict` y el CSRF la bloquean, y las aplicaciones siguen necesitando su clave para la API.
+- **Código de un solo uso:** la otra forma de entrar. Lo piden `tramtai abrir`, la terminal interactiva o la app de escritorio con el token de servicio (un minuto de validez). Es lo que se usa en macOS, donde no se identifica al dueño de la conexión. Un código canjeado desde este equipo (loopback y sin cabeceras de proxy) abre una sesión local, como la entrada directa: solo el dueño del servicio puede pedirlo. Con el servicio expuesto en red, la Web UI remota solo se abre con un código de `tramtai abrir` hecho en el equipo del servicio, y esa sesión no es local.
+- **La clave de las aplicaciones no abre la Web UI:** `POST /ui/sesion` con una clave responde 401. Quien tuviera esa clave podría, si no, crear APIs y cambiar la configuración.
+- **Por qué es seguro:** la entrada directa protege frente a otros usuarios del equipo, y eso es justo lo que se comprueba. Una página web ajena no puede aprovecharla: Host, Origin, la cookie `SameSite=Strict` y el CSRF la bloquean, y las aplicaciones siguen necesitando su clave para la API.
 - **Cookie:** `HttpOnly` y `SameSite=Strict`; las peticiones que modifican exigen además `X-CSRF-Token`.
 - **Navegador:** se valida `Origin`, no hay CORS y se aplica una CSP estricta.
 - **El token nunca viaja en la URL** y no se guarda en el navegador.
 - **Configuración y puntos de acceso:** solo se gestionan con una sesión de la Web UI o el token de servicio, no con el token que usan las aplicaciones.
+
+### Claves
+
+| Clave | Cómo se guarda |
+|---|---|
+| De cada punto de acceso | Solo su huella SHA-256 (`datos/tokens/acceso_<nombre>` contiene `sha256:…`), comparada en tiempo constante. Se muestra al crearla o regenerarla; las antiguas en claro se convierten solas a huella. Eliminar el punto borra su clave. |
+| De la instancia y token de servicio | En claro, en archivos con permisos 0600, porque la CLI y la app los leen. La de la instancia se regenera en marcha (`POST /api/v1/instancia/token`), sin reiniciar. |
+| De los proveedores | Cifradas en el almacén del sistema: Administrador de credenciales (Windows), Llavero vía `/usr/bin/security` (macOS) o Secret Service vía `secret-tool` (Linux). Tramtai nunca las escribe en sus archivos. Se leen en cada petición, así que un cambio vale sin reiniciar; una variable de entorno con el mismo nombre tiene prioridad. |
 
 ## Estados del trabajo
 
@@ -145,7 +155,7 @@ Por defecto, cada agente se ejecuta aislado en una carpeta temporal vacía. Con 
 
 De menor a mayor: interno → global → proyecto → local → entorno → punto de acceso → solicitud. Las claves de seguridad (`servicio`, `comandos_agentes`, `adaptadores`, `concurrencia_servicio`…) se rechazan en la capa de proyecto, que es la que va en el repositorio, y en `local.yaml` salvo que la carpeta figure en `proyectos_confiables` de la configuración global (un `local.yaml` también puede llegar con un clon). `proyectos_confiables` solo se lee de la global.
 
-Los agentes no heredan secretos del entorno: se retiran las credenciales de los demás proveedores, todas las `TRAMTAI_*` (el token del servicio) y cualquier variable cuyo nombre contenga `API_KEY`, `TOKEN`, `SECRET`, `PASSWORD` o `CREDENTIAL` (`GITHUB_TOKEN`, `AWS_SECRET_ACCESS_KEY`…), salvo las propias de cada CLI (`CLAUDE_`, `CODEX_`, `ANTHROPIC_`, `OPENAI_`, `GEMINI_`), que se filtran según el modo de autenticación.
+Los agentes no heredan secretos del entorno: se retiran las credenciales conocidas de los proveedores, todas las `TRAMTAI_*` (el token del servicio) y cualquier variable cuyo nombre contenga `API_KEY`, `TOKEN`, `SECRET`, `PASSWORD` o `CREDENTIAL` (`GITHUB_TOKEN`, `AWS_SECRET_ACCESS_KEY`…). Cada CLI solo conserva las variables secretas con los prefijos de su propio proveedor (`CLAUDE_` y `ANTHROPIC_` para Claude, `CODEX_` y `OPENAI_` para Codex, `GEMINI_` para Antigravity), y la clave que necesita se la pasa Tramtai según el modo de autenticación. La consulta `--version` se ejecuta sin ninguna clave.
 
 ## Cumplimiento de proveedores
 

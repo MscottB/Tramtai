@@ -32,7 +32,8 @@ Cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
 - **Respaldo entre agentes.** Si el agente principal llega a su límite, no tiene clave o falla antes de responder, la petición sigue con el siguiente de la lista (hasta 3), sin que tu aplicación lo note.
 - **Tu suscripción o tu clave de API.** Claude y Codex se conectan con un clic a la sesión que ya tienes (uso personal) o con una clave.
 - **Cuatro formas de usarlo** sobre los mismos trabajos: app de escritorio con icono en la bandeja, Web UI con ayuda integrada, terminal interactiva y línea de órdenes. En español y en inglés.
-- **Local y privado.** Escucha solo en `127.0.0.1`, en Windows las claves van al Administrador de credenciales (en macOS y Linux, por ahora, en variables de entorno) y los resultados caducan a las 24 horas. Sin telemetría.
+- **Local y privado.** Escucha solo en `127.0.0.1` y los resultados caducan a las 24 horas. Sin telemetría.
+- **Claves bien guardadas.** Las de tus proveedores quedan cifradas en el almacén del sistema (Administrador de credenciales, Llavero de macOS o Secret Service de Linux), nunca en los archivos de Tramtai. La clave de cada API solo se ve al crearla o regenerarla, y la Web UI se abre desde la app o con `tramtai abrir`, no con esa clave.
 
 ## Empezar
 
@@ -123,7 +124,8 @@ La CLI sale en el idioma de tu sistema; `TRAMTAI_IDIOMA=en` o `es` lo fija.
 | App de escritorio con bandeja | ✅ (instalador o portable) | ✅ (.deb y .rpm) | ✅ (.dmg sin firmar) |
 | Arranque con el sistema | ✅ | ✅ | ✅ |
 | Actualización con un clic | ✅ (instalada) | Aviso con enlace | Aviso con enlace |
-| Claves en el almacén del sistema | ✅ | Pendiente (variables de entorno) | Pendiente (variables de entorno) |
+| Claves en el almacén del sistema | ✅ Administrador de credenciales | ✅ Secret Service (`secret-tool`) | ✅ Llavero |
+| Entrar en la Web UI | Directo (mismo usuario) | Directo (mismo usuario) | Desde la app o con `tramtai abrir` |
 
 ## Compilar desde el código
 
@@ -159,5 +161,6 @@ Claude, Codex, Gemini y Antigravity son marcas de sus respectivos dueños. Tramt
 - **Recipes and fallback:** in *Try*, set instructions, agent, a JSON schema and fallback agents, test them with your files and save them as an API in one click. If the main agent hits its limit or fails before answering, the request continues with the next one.
 - The desktop app, Web UI, interactive terminal and CLI are available in English and Spanish. The CLI follows your system language; set `TRAMTAI_IDIOMA=en` to force English.
 - Everything stays local: it listens only on `127.0.0.1`, has no telemetry, and responses expire after 24 hours.
+- **Keys:** provider keys (`tramtai claves guardar NAME`) are stored encrypted in the system store (Windows Credential Manager, macOS Keychain or the Linux Secret Service), never in Tramtai's files. Each API's key is shown only when it is created or regenerated, and the Web UI opens from the app or with `tramtai abrir`, not with that key.
 
 The detailed documentation is in Spanish. See the [product page](https://mscottb.github.io/Tramtai/) for an English overview. Free for personal and non-commercial use under [PolyForm Noncommercial 1.0.0](LICENSE.md); contact [MscottB](https://github.com/MscottB) for commercial licensing.

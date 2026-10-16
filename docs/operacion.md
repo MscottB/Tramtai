@@ -14,7 +14,7 @@ tramtai            # sin argumentos abre la terminal interactiva (o: tramtai ter
 | Instancia | Endpoint, token, agente predeterminado y recuento de trabajos. Desde aquí se activa o desactiva la instancia; si el servicio no está en marcha, lo inicia en segundo plano. |
 | Ejecutar | Elige el modelo con ←→ entre el catálogo, añade archivos (rutas separadas por comas), escribe el mensaje y ve la respuesta en vivo. Esc cancela el trabajo. |
 | Trabajos | Lista, detalle con la salida, y acciones para cancelar (`c`), reintentar (`t`) o eliminar (`x`). |
-| Puntos de acceso | Activa o desactiva con Enter, crea con `n` (nombre, puerto y modelo), elimina con `x` y muestra la ruta del token con `t`. |
+| Puntos de acceso | Activa o desactiva con Enter, crea con `n` (nombre, puerto y modelo), elimina con `x` (también su clave) y genera o regenera la clave con `t`: se muestra esa única vez. |
 | Configuración efectiva | Cada valor de la instancia y la capa de la que procede. |
 | Agentes y capacidades | Versión, autenticación, términos y capacidades de cada agente. |
 | Estado del servicio | Instancias, puntos de acceso y errores de configuración. Permite detener (con confirmación) y recargar. |
@@ -38,7 +38,7 @@ La Web UI está en español y en inglés (el botón de idioma de la cabecera) y 
 - **Mis APIs:** URL, clave y ejemplos; puntos de acceso con grupos que se activan o desactivan juntos.
 - **Agentes**, **Ajustes** (arranque con el sistema, **borrar datos** y valores efectivos) y **Ayuda** (cómo empezar y preguntas frecuentes).
 
-También se puede abrir `http://127.0.0.1:17373` directamente: en este equipo entra sin clave.
+También se puede abrir `http://127.0.0.1:17373` directamente: en Windows y Linux entra solo si el navegador es de tu mismo usuario del sistema. Si no (en macOS siempre), la página **Entrar** explica cómo abrirla: desde la app o con `tramtai abrir`, que generan un código de un solo uso. La clave de las aplicaciones no abre la Web UI.
 
 La aplicación de escritorio inicia el servicio si no está en marcha y muestra la misma Web UI en su ventana. Al cerrar la ventana queda en la bandeja del sistema vigilando el servicio. Clic en el icono abre la ventana; **clic derecho** abre el menú, sin abrir la app:
 
@@ -47,7 +47,7 @@ La aplicación de escritorio inicia el servicio si no está en marcha y muestra 
 - **Copiar la dirección para tus apps**.
 - **Iniciar el servicio** (si está detenido), o **Reiniciar** y **Detener el servicio…** (si está en marcha). Tras detenerlo, la app sigue en la bandeja para volver a iniciarlo.
 - **Iniciar con el sistema** (Windows, macOS o Linux), el mismo ajuste que en Ajustes.
-- **Salir y detener el servicio…**: cierra la app y detiene el servicio, así que tus aplicaciones dejan de funcionar hasta que vuelvas a abrirla. Pide confirmación con un aviso que se puede marcar como «No volver a mostrar». Para recuperar el aviso, borra `%APPDATA%\tramtai\escritorio.json`.
+- **Salir y detener el servicio…**: cierra la app y detiene el servicio, así que tus aplicaciones dejan de funcionar hasta que vuelvas a abrirla. Pide confirmación con un aviso que se puede marcar como «No volver a mostrar». Para recuperar el aviso, borra `escritorio.json` de la [carpeta de Tramtai](inicio.md#configuración).
 
 Los avisos de Detener y Salir se muestran dentro de la ventana, con el estilo de la app.
 
@@ -76,7 +76,7 @@ Cada hora, el servicio pregunta a GitHub cuál es la última versión publicada 
 
 - **Historial:** «Vaciar historial» en la Web UI, o `DELETE /api/v1/trabajos`, borra los trabajos terminados de la instancia con sus eventos y las cargas que ya no usa ninguno. Lo que está en curso se conserva.
 - **Puntos de acceso:** uno a uno en Mis APIs o con `tramtai acceso eliminar`.
-- **Ajustes → Borrar datos** hace ambas cosas para la instancia actual. La configuración y las claves de API guardadas no se tocan.
+- **Ajustes → Borrar datos** hace ambas cosas para la instancia actual. La configuración y las claves de proveedor guardadas no se tocan.
 
 ## Comandos equivalentes
 
@@ -90,9 +90,9 @@ tramtai servicio registro [-f] [-n 30]               # lo que procesa el servici
 tramtai servicio puerto [número] [--automatico=false] # muestra o cambia el puerto (comprueba que esté libre)
 tramtai servicio iniciar --abrir   # modo desarrollo: primer plano con el registro a la vista y la interfaz abierta
 
-tramtai global iniciar|detener|estado|token
+tramtai global iniciar|detener|estado|token [--rotar]
 tramtai iniciar                    # crea .tramtai/config.yaml en el repositorio actual
-tramtai proyecto iniciar|detener|estado|token   # desde la carpeta del proyecto
+tramtai proyecto iniciar|detener|estado|token [--rotar]   # desde la carpeta del proyecto
 
 tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <instancia> para elegir otra
 ```
@@ -101,7 +101,7 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <instancia> 
 - **¿Sigue en marcha?** `tramtai abrir` y la app de escritorio dejan el servicio en segundo plano: sigue atendiendo a tus aplicaciones aunque cierres la terminal o la ventana. La cabecera de la Web UI muestra «En marcha» o «Sin conexión», y `tramtai servicio estado` lo confirma.
 - **Puerto:** `servicio.puerto` (17373). Si al iniciar está ocupado y `servicio.puerto_automatico` está activado (lo está por defecto), Tramtai usa el siguiente libre y lo avisa en el registro; la CLI y la app de escritorio lo encuentran solas (la ventana de la app vuelve a entrar en la nueva dirección en unos segundos, cambie como cambie el puerto), pero tus aplicaciones deben usar la nueva dirección. Con `servicio.puerto_automatico: false` no arranca y explica cómo elegir otro. Se cambia en **Ajustes → Puerto del servicio** o con `tramtai servicio puerto <número>`: ambos comprueban que esté libre y se aplica al reiniciar (en Ajustes, con «Reiniciar ahora»; la página sigue al servicio a su nuevo puerto).
 - **Iniciar, reiniciar y detener:** desde la Web UI, el indicador «En marcha» tiene «Reiniciar el servicio» y «Detener el servicio…» (solo en este equipo y con confirmación). Iniciarlo no puede hacerse desde la página, porque es el propio servicio el que la sirve: se inicia con `tramtai abrir`, con `tramtai servicio iniciar -d` o desde la bandeja de la app de escritorio (Iniciar el servicio). La página se reconecta sola cuando vuelve.
-- **Registro:** cada petición deja una línea al recibirla y otra al terminar (agente, modelo efectivo, API de origen, duración, tokens o el error). Se limita con `servicio.registro_mb` (5 MB por archivo) y `servicio.registro_copias` (2 copias: `servicio.log.1` y `.2`); con 0 copias el archivo se vacía al llenarse. En segundo plano va a `%APPDATA%\tramtai\datos\servicio.log` (`tramtai servicio registro -f`); en primer plano, a la propia terminal.
+- **Registro:** cada petición deja una línea al recibirla y otra al terminar (agente, modelo efectivo, API de origen, duración, tokens o el error). Se limita con `servicio.registro_mb` (5 MB por archivo) y `servicio.registro_copias` (2 copias: `servicio.log.1` y `.2`); con 0 copias el archivo se vacía al llenarse. En segundo plano va a `datos/servicio.log` en la [carpeta de Tramtai](inicio.md#configuración) (`tramtai servicio registro -f`); en primer plano, a la propia terminal.
 - Las instancias activas se recuerdan: al reiniciar el servicio vuelven a abrirse y recuperan sus trabajos.
 - Detener una instancia cancela lo que tenía en cola; lo que se estaba ejecutando queda `interrumpido`. Las demás instancias no se ven afectadas.
 - **Detener el servicio:**
@@ -112,16 +112,38 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <instancia> 
 
 ## Claves de API
 
-En Windows, `tramtai claves guardar|listar|borrar NOMBRE` las guarda en el Administrador de credenciales, como credenciales genéricas `tramtai/<NOMBRE>`. En macOS y Linux, por ahora, se leen de variables de entorno con el mismo nombre (el llavero de macOS y el Secret Service de Linux están pendientes). Los adaptadores las usan si no hay una variable de entorno con ese nombre, y nunca se muestran. Ver [primeros pasos](inicio.md#2-dejar-listos-los-agentes).
+`tramtai claves guardar|listar|borrar NOMBRE` gestiona las claves de los proveedores (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `CODEX_API_KEY`, `GEMINI_API_KEY`). Se guardan cifradas en el almacén del sistema y Tramtai nunca las escribe en sus archivos ni las muestra:
+
+| Sistema | Almacén |
+|---|---|
+| Windows | Administrador de credenciales, como credenciales genéricas `tramtai/<NOMBRE>` |
+| macOS | Llavero, mediante `/usr/bin/security` |
+| Linux | Secret Service (GNOME, KDE…) mediante `secret-tool`, del paquete `libsecret-tools`; sin él, usa una variable de entorno |
+
+- Una variable de entorno con el mismo nombre tiene prioridad sobre el almacén.
+- **No hace falta reiniciar:** la clave del almacén se lee en cada petición. Solo una variable de entorno exige que el servicio arranque con ella; en macOS, las de `~/.zshrc` no llegan al servicio que inicia la app o el arranque automático, por eso se recomienda el Llavero.
+- La página **Agentes** dice dónde queda la clave en tu sistema. Ver [primeros pasos](inicio.md#2-dejar-listos-los-agentes).
+
+## Si se filtra una clave
+
+| Clave | Qué hacer |
+|---|---|
+| La de una API por aplicación | **Regenerar la clave** en Mis APIs, o `tramtai acceso token <nombre> --rotar`. La anterior deja de valer al momento. |
+| La de la instancia (la de la *API principal*) | **Regenerar la clave** en Mis APIs → API principal, o `tramtai global token --rotar` (`tramtai proyecto token --rotar` en un proyecto). Vale sin reiniciar; si sale de una variable de entorno, cámbiala allí. |
+| La de un proveedor (Anthropic, OpenAI, Gemini) | Revócala en la consola del proveedor y guarda la nueva con `tramtai claves guardar NOMBRE`. |
+
+En los dos primeros casos, pon la clave nueva en las aplicaciones que usaban la anterior.
 
 ## Instancias
 
 | | Global | Proyecto |
 |---|---|---|
-| Configuración | `%APPDATA%\tramtai\config.yaml` | La global, más `.tramtai/config.yaml` (versionada) y `.tramtai/local.yaml` (de esta máquina) |
+| Configuración | `config.yaml` de la [carpeta de Tramtai](inicio.md#configuración) | La global, más `.tramtai/config.yaml` (versionada) y `.tramtai/local.yaml` (de esta máquina) |
 | Identificador | `global` | `<nombre>_<hash de la ruta>`, por ejemplo `demo_app_1a2b3c4d` |
-| Token | `%APPDATA%\tramtai\datos\token-global` o la variable `TRAMTAI_TOKEN_GLOBAL` | `%APPDATA%\tramtai\datos\tokens\<id>` |
-| Base de datos | `datos\instancias\global.db` | `datos\instancias\<id>.db` |
+| Token | `datos/token-global` o la variable `TRAMTAI_TOKEN_GLOBAL` | `datos/tokens/<id>` |
+| Base de datos | `datos/instancias/global.db` | `datos/instancias/<id>.db` |
+
+Las rutas son relativas a la [carpeta de Tramtai](inicio.md#configuración). La clave de la instancia y el token de servicio quedan en claro en archivos con permisos 0600, porque la CLI y la app los leen; las claves de los puntos de acceso, en cambio, solo como huella.
 
 La configuración versionada del proyecto no puede definir claves de seguridad: ni puertos, ni comandos, ni autenticación, ni puntos de acceso. `.tramtai/local.yaml` tampoco, salvo que la carpeta del proyecto figure en `proyectos_confiables` de la configuración global: un repositorio clonado puede traer un `local.yaml` (forzado con `git add -f`) y no debe poder cambiar qué programas ejecuta Tramtai. `proyectos_confiables` solo se admite en la configuración global.
 
@@ -152,9 +174,10 @@ tramtai acceso listar
 tramtai acceso editar app_contable --permitidos claude --grupo contabilidad
 tramtai acceso desactivar app_contable resumenes   # uno o varios
 tramtai acceso activar --grupo cliente_x           # todos los de un grupo
-tramtai acceso token app_contable [--rotar]
+tramtai acceso token app_contable --rotar        # regenera la clave y la muestra esta única vez
 ```
 
+- **Clave:** `tramtai acceso crear`, Mis APIs y «Guardar como API» en Probar muestran la clave una sola vez, al crearla. Tramtai guarda solo su huella SHA-256 (`datos/tokens/acceso_<nombre>` contiene `sha256:…`), así que no se puede volver a ver: si se pierde, se regenera (`--rotar` o **Regenerar la clave**) y la anterior deja de valer. `tramtai acceso token <nombre>` sin `--rotar` lo explica. Las claves antiguas guardadas en claro se convierten solas a huella y siguen valiendo. Eliminar una API borra también su clave.
 - **Instrucciones:** `--instrucciones` (o el campo del mismo nombre en Mis APIs, editable después) se antepone a las instrucciones de cada petición que llega por ese punto, venga de la aplicación que venga. Sirve, por ejemplo, para que una app que no lo permite configurar responda siempre en español.
 - **Uso:** Mis APIs muestra de cada API cuántas peticiones tuvo en los 7 días que conserva la retención, cuántas con error y la última; al pulsarlo se abre el Historial filtrado por esa API (`GET /api/v1/trabajos?punto=<nombre>`).
 - **Grupos:** `--grupo` es una etiqueta libre (hasta 40 caracteres) para ordenar los puntos y activarlos o desactivarlos juntos, desde la CLI o desde Mis APIs. La separación por proyecto ya la dan las instancias: un punto creado con `--local` pertenece a la del proyecto.
@@ -171,7 +194,7 @@ tramtai acceso token app_contable [--rotar]
 
 ## Administración (para la CLI y la terminal)
 
-El token de servicio (`datos\token-servicio`) habilita `/api/v1/servicio`:
+El token de servicio (`datos/token-servicio`) habilita `/api/v1/servicio`:
 
 | Ruta | Para qué |
 |---|---|
@@ -182,4 +205,4 @@ El token de servicio (`datos\token-servicio`) habilita `/api/v1/servicio`:
 | `POST /api/v1/servicio/recargar` | Aplicar los cambios de puntos de acceso. |
 | `POST /api/v1/servicio/detener` | Detener el servicio. |
 
-Con ese mismo token y la cabecera `Tramtai-Instancia: <id>`, la administración puede usar la API de cualquier instancia. El descriptor `datos\servicio.json` indica dónde escucha el servicio. Antes de usar el servicio, la CLI comprueba con `/healthz` que responde ese mismo servicio y no otro proceso que ocupe el puerto.
+Con ese mismo token y la cabecera `Tramtai-Instancia: <id>`, la administración puede usar la API de cualquier instancia. El descriptor `datos/servicio.json` indica dónde escucha el servicio. Antes de usar el servicio, la CLI comprueba con `/healthz` que responde ese mismo servicio y no otro proceso que ocupe el puerto.
