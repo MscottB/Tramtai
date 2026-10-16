@@ -18,6 +18,7 @@ import (
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/api"
 	"tramtai/internal/autoarranque"
+	"tramtai/internal/credenciales"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/version"
@@ -383,7 +384,9 @@ func (s *Servicio) instanciaPredeterminada() string {
 // responderSesion devuelve la sesión. Una sesión local ve además todas las instancias activas para cambiar entre
 // ellas; si no hay ninguna, la Web UI ofrece activar la global.
 func (s *Servicio) responderSesion(w http.ResponseWriter, r *http.Request, ses *sesion) {
-	respuesta := map[string]any{"csrf": ses.csrf, "version": version.Version, "local": ses.local, "instancia": ""}
+	respuesta := map[string]any{"csrf": ses.csrf, "version": version.Version, "local": ses.local, "instancia": "",
+		// almacen: dónde guarda este sistema las claves de proveedor (cifradas, fuera de Tramtai), para Agentes.
+		"almacen": map[string]any{"disponible": credenciales.Disponible(), "nombre": credenciales.Almacen()}}
 	if ses.local {
 		s.mu.RLock()
 		lista := []instanciaResumida{}

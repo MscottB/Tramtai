@@ -55,6 +55,7 @@
                       <div class="text-weight-medium"><q-icon name="o_key" class="q-mr-xs" />{{ t('agentes.opcionClave') }}</div>
                       <div class="text-caption texto-suave q-mt-xs">{{ t('agentes.opcionClaveTexto') }}</div>
                       <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(comando(a))" /></div>
+                      <div class="text-caption texto-suave q-mt-xs">{{ textoAlmacen(a) }}</div>
                     </div>
                   </div>
                 </div>
@@ -62,6 +63,7 @@
               <template v-else>
                 <div class="text-body2">{{ t('agentes.soloClave') }}</div>
                 <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(comando(a))" /></div>
+                <div class="text-caption texto-suave q-mt-xs">{{ textoAlmacen(a) }}</div>
               </template>
             </template>
 
@@ -125,7 +127,15 @@ const suscripcion = (a: Adaptador) => a.autenticacion === 'suscripcion'
 const puedeCambiar = (a: Adaptador) => (a.agente === 'claude' || a.agente === 'codex') && !!sesion.value?.local
 const cli = (a: Adaptador) => ({ claude: 'Claude Code', codex: 'Codex CLI' })[a.agente] ?? a.agente
 const claves: Record<string, string> = { claude: 'ANTHROPIC_API_KEY', codex: 'OPENAI_API_KEY', gemini: 'GEMINI_API_KEY', antigravity: 'GEMINI_API_KEY' }
-const comando = (a: Adaptador) => 'tramtai claves guardar ' + (claves[a.agente] ?? a.problema?.match(/[A-Z_]+_API_KEY/)?.[0] ?? '')
+const variable = (a: Adaptador) => claves[a.agente] ?? a.problema?.match(/[A-Z_]+_API_KEY/)?.[0] ?? ''
+const comando = (a: Adaptador) => 'tramtai claves guardar ' + variable(a)
+// textoAlmacen dice dónde queda la clave en este sistema: cifrada en su almacén, o qué hacer si no lo hay.
+function textoAlmacen(a: Adaptador) {
+  const almacen = sesion.value?.almacen
+  if (almacen?.disponible) return t('agentes.almacenDisponible', { almacen: almacen.nombre })
+  if (almacen?.nombre) return t('agentes.almacenFalta', { variable: variable(a) })
+  return t('agentes.sinAlmacen', { variable: variable(a) })
+}
 
 async function cargar() {
   cargando.value = true

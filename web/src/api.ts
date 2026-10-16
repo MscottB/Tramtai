@@ -25,6 +25,8 @@ export interface Sesion {
   autoarranque?: boolean
   // servicio: el puerto en uso, el configurado y si se puede reiniciar desde aquí (solo sesiones locales).
   servicio?: { puerto: number; puerto_configurado: number; puerto_automatico: boolean; reiniciable: boolean }
+  // almacen: dónde guarda este sistema las claves de proveedor, cifradas y fuera de Tramtai (vacío si no hay).
+  almacen?: { disponible: boolean; nombre: string }
 }
 export interface Uso {
   tokens_entrada: number
