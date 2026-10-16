@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -62,6 +63,7 @@ func servidorCon(t *testing.T, registro map[string]adaptadores.Adaptador, ajuste
 		limites[nombre] = 2
 	}
 	p := planificador.Nuevo(alm, registro, planificador.NuevosSemaforos(limites), opc)
+	p.FijarPresupuestos(map[string]nucleo.Presupuesto{persistencia.TodaLaInstancia: nucleo.PresupuestoDe(c)}) // como el servicio
 	if err := p.Iniciar(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -553,5 +555,51 @@ func TestHuellaValida(t *testing.T) {
 	r.Header.Set("Authorization", "Bearer tt_secreto")
 	if !HuellaValida(r, HuellaToken("tt_secreto")) || HuellaValida(r, HuellaToken("tt_otro")) || HuellaValida(r, "tt_secreto") {
 		t.Fatal("la clave se comprueba contra su huella, nunca en claro")
+	}
+}
+
+func TestPresupuestoAgotadoFachadas(t *testing.T) {
+	ts := servidor(t, simulado(trozos{}), map[string]any{"presupuesto.diario.peticiones": 1})
+	if r, _ := pedir(t, ts, "POST", "/api/v1/trabajos", solicitudHola); r.StatusCode != 202 {
+		t.Fatalf("la primera petición entra: %d", r.StatusCode)
+	}
+	casos := []struct {
+		ruta, cuerpo string
+		comprobar    func(map[string]any) bool
+	}{
+		{"/api/v1/trabajos", solicitudHola, func(v map[string]any) bool {
+			return v["error"].(map[string]any)["codigo"] == "presupuesto_agotado"
+		}},
+		{"/openai/v1/chat/completions", `{"model":"simulado","messages":[{"role":"user","content":"hola"}]}`, func(v map[string]any) bool {
+			e := v["error"].(map[string]any)
+			return e["code"] == "presupuesto_agotado" && e["type"] == "rate_limit_error"
+		}},
+		{"/anthropic/v1/messages", `{"model":"simulado","max_tokens":100,"messages":[{"role":"user","content":"hola"}]}`, func(v map[string]any) bool {
+			return v["error"].(map[string]any)["type"] == "rate_limit_error"
+		}},
+	}
+	for _, c := range casos {
+		r, cuerpo := pedir(t, ts, "POST", c.ruta, c.cuerpo)
+		if r.StatusCode != 429 || !c.comprobar(decodificar(t, cuerpo)) {
+			t.Errorf("%s: %d %s", c.ruta, r.StatusCode, cuerpo)
+		}
+		if segundos, err := strconv.Atoi(r.Header.Get("Retry-After")); err != nil || segundos < 1 || segundos > 86400 {
+			t.Errorf("%s: Retry-After %q", c.ruta, r.Header.Get("Retry-After"))
+		}
+	}
+}
+
+func TestCabeceraPresupuesto(t *testing.T) {
+	ts := servidor(t, simulado(trozos{}), map[string]any{"presupuesto.mensual.peticiones": 4})
+	if r, _ := pedir(t, ts, "POST", "/api/v1/trabajos", solicitudHola); r.Header.Get("X-Tramtai-Presupuesto") != "0" {
+		t.Fatalf("antes de la primera: %q", r.Header.Get("X-Tramtai-Presupuesto"))
+	}
+	pedir(t, ts, "POST", "/api/v1/trabajos", solicitudHola)
+	if r, _ := pedir(t, ts, "POST", "/api/v1/trabajos", solicitudHola); r.Header.Get("X-Tramtai-Presupuesto") != "50" {
+		t.Fatalf("con 2 de 4: %q", r.Header.Get("X-Tramtai-Presupuesto"))
+	}
+	sin := servidor(t, simulado(trozos{}), nil)
+	if r, _ := pedir(t, sin, "POST", "/api/v1/trabajos", solicitudHola); r.Header.Get("X-Tramtai-Presupuesto") != "" {
+		t.Fatalf("sin presupuesto no hay cabecera: %q", r.Header.Get("X-Tramtai-Presupuesto"))
 	}
 }

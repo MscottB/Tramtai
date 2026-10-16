@@ -8,12 +8,15 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -87,7 +90,24 @@ func (s *Servidor) Rutas() http.Handler {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ruta no encontrada: %s %s", r.Method, r.URL.Path)))
 	})
-	return mux
+	return s.conPresupuesto(mux)
+}
+
+// conPresupuesto informa en X-Tramtai-Presupuesto del porcentaje usado del límite más cercano a agotarse (el de la
+// API o el de la instancia) al recibir cada POST, para que la aplicación cliente pueda frenar antes del corte.
+func (s *Servidor) conPresupuesto(siguiente http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost && s.Planificador != nil {
+			punto := ""
+			if s.Punto != nil {
+				punto = s.Punto.Nombre
+			}
+			if n, ok := s.Planificador.PorcentajePresupuesto(r.Context(), punto); ok {
+				w.Header().Set("X-Tramtai-Presupuesto", strconv.Itoa(n))
+			}
+		}
+		siguiente.ServeHTTP(w, r)
+	})
 }
 
 // Proteger valida Host (antes de autenticar), Origin (sin CORS: solo el mismo origen) y, si autorizar no es
@@ -180,6 +200,7 @@ var estadosHTTP = map[nucleo.CodigoError]int{
 	nucleo.CodigoSalidaNoCumpleEsquema:  http.StatusUnprocessableEntity,
 	nucleo.CodigoConversionFallida:      http.StatusUnprocessableEntity,
 	nucleo.CodigoColaLlena:              http.StatusTooManyRequests,
+	nucleo.CodigoPresupuestoAgotado:     http.StatusTooManyRequests,
 	nucleo.CodigoLimiteUsoProveedor:     http.StatusTooManyRequests,
 	nucleo.CodigoErrorAgente:            http.StatusBadGateway,
 	nucleo.CodigoAutenticacionAgente:    http.StatusBadGateway,
@@ -203,6 +224,9 @@ func EscribirError(w http.ResponseWriter, r *http.Request, err error) {
 	}
 	if codigo == nucleo.CodigoColaLlena {
 		w.Header().Set("Retry-After", "5")
+	}
+	if agotado := (*nucleo.PresupuestoAgotado)(nil); errors.As(err, &agotado) {
+		w.Header().Set("Retry-After", strconv.Itoa(max(1, int(math.Ceil(time.Until(agotado.Reinicio).Seconds())))))
 	}
 	switch {
 	case strings.HasPrefix(r.URL.Path, "/openai/"):
