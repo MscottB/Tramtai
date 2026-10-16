@@ -323,3 +323,12 @@ Filtros como un control segmentado de 10 px con 3 px de relleno sobre superficie
 - **Don't** comunicar un estado solo con color.
 - **Don't** usar mayúsculas espaciadas fuera de la cabecera del tablero de salidas.
 - **Don't** poner texto blanco sobre el acento de noche; va el texto oscuro del acento.
+
+## Piezas comunes (rediseño de octubre de 2026)
+
+- **Cabecera de página** (`CabeceraPagina`): «← Volver a {página}» encima del título cuando hay de dónde volver (un paso atrás), título, una línea de descripción y las acciones a la derecha; en pantallas estrechas, debajo. El logo y el nombre de la barra superior llevan siempre a Inicio.
+- **Estado vacío** (`EstadoVacio`): una estación apagada al final de un tramo punteado, un titular que invita a actuar y, si hace falta, un botón. Nunca un icono de aviso para un vacío.
+- **Menú de acciones** (`MenuAcciones`): «⋯» con icono y texto en cada acción; las destructivas al final y en color de error. La acción principal de una fila va visible a su lado (por ejemplo, Ajustes en Mis APIs).
+- **Ayudas bajo los campos**: 0,78 rem con interlineado 1,45 y como mucho una línea.
+- **Orden de los agentes**: Claude, Codex, Gemini API, Antigravity en toda la interfaz (`ordenAgentes`).
+- **Página del producto**: selector de tema Sistema, Claro u Oscuro junto al de idioma; las capturas siguen el tema efectivo.
