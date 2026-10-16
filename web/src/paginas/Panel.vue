@@ -1,21 +1,20 @@
 <template>
   <div class="pagina apilado">
-    <header class="row items-end q-col-gutter-md">
-      <div class="col-12 col-md">
-        <h1 class="titulo-pagina q-ma-none">{{ t('menu.inicio') }}</h1>
-        <div class="row items-center q-gutter-x-sm q-mt-sm texto-suave">
+    <CabeceraPagina :titulo="t('menu.inicio')">
+      <template #descripcion>
+        <div class="row items-center q-gutter-x-sm">
           <span>{{ t('inicio.direccion') }}</span>
           <span class="direccion">{{ instancia?.base ?? '…' }}</span>
           <q-btn v-if="instancia?.base" flat round dense size="sm" icon="o_content_copy" :aria-label="t('inicio.copiarDireccion')" @click="copiar(instancia.base)">
             <q-tooltip>{{ t('inicio.copiarDireccion') }}</q-tooltip>
           </q-btn>
         </div>
-      </div>
-      <div class="col-12 col-md-auto row q-gutter-sm">
+      </template>
+      <template #acciones>
         <q-btn outline color="primary" icon="o_hub" :label="t('menu.conectar')" no-caps @click="$emit('ir', 'conectar')" />
         <q-btn unelevated color="primary" icon="o_play_arrow" :label="t('menu.ejecutar')" no-caps @click="$emit('ir', 'ejecutar')" />
-      </div>
-    </header>
+      </template>
+    </CabeceraPagina>
 
     <q-banner v-if="error" rounded class="error-caja">{{ error }}</q-banner>
 
@@ -104,6 +103,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import Linea from '../componentes/Linea.vue'
 import MapaRed from '../componentes/MapaRed.vue'
 import { api, avisar, copiar, estadoInfo, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, haceCuanto, mensajeError, sesion, terminales, textoDe, type Adaptador, type EstadoInstancia, type EstadoPunto, type Trabajo, sistema } from '../api'

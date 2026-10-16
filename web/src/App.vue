@@ -7,12 +7,11 @@
     <q-header class="cabecera-app">
       <q-toolbar class="q-px-md" style="min-height: 60px">
         <q-btn flat dense round icon="menu" :aria-label="t('app.abrirMenu')" class="lt-md q-mr-sm" @click="menu = !menu" />
-        <q-btn v-if="pila.length" flat round dense icon="arrow_back" :aria-label="t('app.volver')" class="q-mr-xs" @click="volver">
-          <q-tooltip>{{ t('app.volverA', { pagina: tituloDe(pila[pila.length - 1]) }) }}</q-tooltip>
-        </q-btn>
-        <img src="/logo.png" alt="" width="28" height="28" style="border-radius: 8px" />
-        <div class="q-ml-sm marca gt-xs">Tramtai</div>
-        <span class="version q-ml-sm gt-xs">{{ sesion.version }}</span>
+        <button type="button" class="marca-boton" :aria-label="t('app.irInicio')" @click="ir('inicio')">
+          <img src="/logo.png" alt="" width="28" height="28" style="border-radius: 8px" />
+          <span class="q-ml-sm marca gt-xs">Tramtai</span>
+          <span class="version q-ml-sm gt-xs">{{ sesion.version }}</span>
+        </button>
         <q-space />
         <q-btn-dropdown v-if="sesion.local && sesion.instancias?.length" flat no-caps :icon="iconoInstancia(sesion.ambito)"
           :label="$q.screen.gt.xs ? sesion.nombre || t('app.elegirInstancia') : undefined" :aria-label="t('app.cambiarInstancia')">
@@ -212,7 +211,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
+import { computed, markRaw, onMounted, onUnmounted, provide, ref, watch, watchEffect } from 'vue'
 import { useQuasar } from 'quasar'
 import { actualizacion, api, avisar, avisarError, buscarActualizacionAhora, dialogoActualizar, reiniciarYSeguir, sesion, type ProgresoActualizacion } from './api'
 import { cambiarIdioma, idioma, idiomas, t } from './i18n'
@@ -403,6 +402,8 @@ function ir(id: string) {
 function volver() {
   history.back()
 }
+// Las páginas muestran «Volver a …» en su cabecera (CabeceraPagina); la barra superior solo lleva el logo a Inicio.
+provide('navegacion', { anterior: computed(() => tituloDe(pila.value[pila.value.length - 1])), volver })
 
 function tituloDe(id?: string) {
   const p = paginas.find((x) => x.id === id)

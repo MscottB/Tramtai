@@ -209,6 +209,42 @@ input[type='number'] {
   color: var(--texto);
   border-bottom: 1px solid var(--borde);
 }
+.marca-boton {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 6px;
+  margin-left: -6px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.marca-boton:hover {
+  background: var(--superficie-suave);
+}
+.marca-boton:focus-visible,
+.cabecera-pagina__volver:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+.cabecera-pagina__volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 6px -2px;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: var(--acento);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.cabecera-pagina__volver:hover {
+  text-decoration: underline;
+}
 .marca {
   font-family: var(--fuente-titulo);
   font-weight: 700;
