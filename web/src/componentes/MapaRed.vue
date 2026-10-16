@@ -22,23 +22,17 @@
   <div v-else style="overflow-x: auto">
     <svg class="mapa-red" :viewBox="`0 0 ${ANCHO} ${alto}`" :style="{ minWidth: '620px' }" role="img" :aria-label="descripcion">
       <!-- Tus apps → Tramtai -->
-      <path v-for="o in origenes" :key="'p' + o.id" :d="tramo(X_ORIGEN, o.y, X_HUB, centro + paralela(o.i, origenes.length))" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
-        :style="{ stroke: o.activo ? 'color-mix(in srgb, var(--acento) 55%, transparent)' : 'var(--borde-fuerte)' }" :stroke-dasharray="o.activo ? undefined : '5 6'" />
+      <path v-for="o in origenes" :key="'p' + o.id" :d="tramo(X_ORIGEN, o.y, X_HUB, centro + paralela(o.i, origenes.length))" fill="none" stroke-width="3" stroke-linecap="round"
+        :style="{ stroke: o.activo ? 'color-mix(in srgb, var(--acento) 55%, transparent)' : 'var(--borde-fuerte)' }" :stroke-dasharray="o.activo ? undefined : PUNTEADO" />
       <!-- Tramtai → agentes: cada línea con su color -->
-      <path v-for="a in lineas" :key="'l' + a.agente" :d="tramo(X_HUB + HUB_ANCHO, centro + paralela(a.i, lineas.length), X_AGENTE, a.y)" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"
-        :style="{ stroke: a.listo ? a.color : 'var(--borde-fuerte)' }" :stroke-dasharray="a.listo ? undefined : '6 7'" />
+      <path v-for="a in lineas" :key="'l' + a.agente" :d="tramo(X_HUB + HUB_ANCHO, centro + paralela(a.i, lineas.length), X_AGENTE, a.y)" fill="none" stroke-width="4" stroke-linecap="round"
+        :style="{ stroke: a.listo ? a.color : 'var(--borde-fuerte)' }" :stroke-dasharray="a.listo ? undefined : PUNTEADO" />
 
       <g v-for="o in origenes" :key="'o' + o.id" class="cursor-pointer" role="link" tabindex="0" @click="emit('ir', 'conectar')" @keyup.enter="emit('ir', 'conectar')">
         <circle :cx="X_ORIGEN" :cy="o.y" r="7" stroke-width="3" :style="{ fill: 'var(--superficie)', stroke: o.activo ? 'var(--acento)' : 'var(--borde-fuerte)' }" />
         <text :x="X_ORIGEN - 18" :y="o.y + 5" text-anchor="end" font-size="14" :font-weight="o.principal ? 600 : 500"
           :class="{ suave: !o.activo }">{{ o.nombre }}</text>
       </g>
-
-      <!-- Marcas de estación: una parada intermedia en cada línea, como en un plano de tranvía. -->
-      <line v-for="o in origenes" :key="'mo' + o.id" :x1="marcaOrigen(o)" :x2="marcaOrigen(o)" :y1="o.y" :y2="o.y - 9" stroke-width="3"
-        :style="{ stroke: o.activo ? 'color-mix(in srgb, var(--acento) 55%, transparent)' : 'var(--borde-fuerte)' }" />
-      <line v-for="a in lineas" :key="'ma' + a.agente" :x1="marcaAgente(a)" :x2="marcaAgente(a)" :y1="a.y" :y2="a.y - 10" stroke-width="3.5"
-        :style="{ stroke: a.listo ? a.color : 'var(--borde-fuerte)' }" />
 
       <!-- Tramtai es el intercambiador: la cápsula blanca de borde grueso de los transbordos. -->
       <g class="cursor-pointer" role="link" tabindex="0" @click="emit('ir', 'ejecutar')" @keyup.enter="emit('ir', 'ejecutar')">
@@ -48,7 +42,7 @@
       </g>
 
       <g v-for="a in lineas" :key="'a' + a.agente" class="cursor-pointer" role="link" tabindex="0" @click="emit('ir', 'agentes')" @keyup.enter="emit('ir', 'agentes')">
-        <circle :cx="X_AGENTE" :cy="a.y" r="8" stroke-width="3.5" :style="{ fill: a.listo ? a.color : 'var(--superficie)', stroke: a.listo ? a.color : 'var(--borde-fuerte)' }" />
+        <circle :cx="X_AGENTE" :cy="a.y" r="9" stroke-width="3.5" :style="{ fill: a.listo ? a.color : 'var(--superficie)', stroke: a.listo ? a.color : 'var(--borde-fuerte)' }" />
         <text :x="X_AGENTE + 20" :y="a.y - 2" font-size="15" font-weight="650">{{ a.nombre }}</text>
         <text :x="X_AGENTE + 20" :y="a.y + 16" font-size="12" :style="{ fill: a.listo ? 'var(--ok)' : 'var(--aviso)' }">{{ a.estado }}</text>
       </g>
@@ -112,25 +106,17 @@ const vHub = computed(() => vOrigen(origenes.value.length - 1) + 30)
 const vAgente = (i: number) => vHub.value + 58 + 32 + i * V_PASO
 const vAlto = computed(() => vAgente(Math.max(lineas.value.length - 1, 0)) + 20)
 
-// paralela separa unos píxeles cada línea en el borde de Tramtai, para que salgan juntas pero sin cruzarse.
-const paralela = (i: number, n: number) => (i - (n - 1) / 2) * 7
+// paralela separa cada línea en el borde de Tramtai, para que salgan juntas pero sin tocarse.
+const paralela = (i: number, n: number) => (i - (n - 1) / 2) * 10
 
-// Las marcas de estación van en el tramo recto más largo: el de llegada al agente y el de salida de cada app.
-function marcaAgente(a: { i: number; y: number }) {
-  const y1 = centro.value + paralela(a.i, lineas.value.length)
-  const fin = (X_HUB + HUB_ANCHO + X_AGENTE) / 2 + Math.abs(a.y - y1) / 2
-  return (fin + X_AGENTE) / 2
-}
-function marcaOrigen(o: { i: number; y: number }) {
-  const y2 = centro.value + paralela(o.i, origenes.value.length)
-  const inicio = (X_ORIGEN + X_HUB) / 2 - Math.abs(y2 - o.y) / 2
-  return (X_ORIGEN + inicio) / 2
-}
+// Las líneas sin servicio van punteadas: guiones de longitud 0 con extremo redondo, que se ven como puntos limpios
+// también en las curvas (un guion largo se partía en trozos sueltos en cada quiebre).
+const PUNTEADO = '0 9'
 
-// tramo une dos estaciones como en un mapa de líneas: recto, un giro de 45° y recto otra vez.
+// tramo une dos estaciones como en un mapa de líneas: recto, una curva suave y recto otra vez.
 function tramo(x1: number, y1: number, x2: number, y2: number) {
-  const giro = Math.abs(y2 - y1)
   const medio = (x1 + x2) / 2
-  return `M ${x1} ${y1} L ${medio - giro / 2} ${y1} L ${medio + giro / 2} ${y2} L ${x2} ${y2}`
+  const curva = Math.min((x2 - x1) / 2 - 12, Math.max(36, Math.abs(y2 - y1)))
+  return `M ${x1} ${y1} L ${medio - curva} ${y1} C ${medio} ${y1} ${medio} ${y2} ${medio + curva} ${y2} L ${x2} ${y2}`
 }
 </script>
