@@ -17,6 +17,7 @@ const es = {
   'comun.crear': 'Crear',
   'comun.continuar': 'Continuar',
   'comun.masAcciones': 'Más acciones',
+  'receta.opciones': 'Opciones de la receta',
   'conectar.conexion': 'Conexión',
   'conectar.perfiles': 'Perfiles',
   'puntos.accionActivar': 'Activar',

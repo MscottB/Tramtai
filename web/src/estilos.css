@@ -240,6 +240,14 @@ input[type='number'] {
   font-size: 0.78rem;
   color: var(--texto-suave);
 }
+/* Probar: la respuesta queda a la vista mientras se desplaza el formulario. */
+@media (min-width: 1024px) {
+  .respuesta-fija {
+    position: sticky;
+    top: 76px;
+    align-self: flex-start;
+  }
+}
 /* Ayudas bajo los campos: legibles, no diminutas. */
 .q-field__bottom,
 .ayuda-campo {

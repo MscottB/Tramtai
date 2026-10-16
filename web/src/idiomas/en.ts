@@ -19,6 +19,7 @@ const en: Textos = {
   'comun.crear': 'Create',
   'comun.continuar': 'Continue',
   'comun.masAcciones': 'More actions',
+  'receta.opciones': 'Recipe options',
   'conectar.conexion': 'Connection',
   'conectar.perfiles': 'Profiles',
   'puntos.accionActivar': 'Turn on',
