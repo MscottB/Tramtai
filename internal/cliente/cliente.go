@@ -168,6 +168,15 @@ func (c *Cliente) Configuracion(ctx context.Context, id string) ([]servicio.Entr
 	return r.Configuracion, err
 }
 
+// RotarClave regenera la clave de una instancia activa; la anterior deja de valer al momento.
+func (c *Cliente) RotarClave(ctx context.Context, instancia string) (string, error) {
+	var r struct {
+		Token string `json:"token"`
+	}
+	err := c.pedir(ctx, "POST", "/api/v1/instancia/token", instancia, nil, "", &r)
+	return r.Token, err
+}
+
 // Recargar aplica los cambios de puntos de acceso sin reiniciar.
 func (c *Cliente) Recargar(ctx context.Context) ([]servicio.EstadoPunto, error) {
 	var r struct {

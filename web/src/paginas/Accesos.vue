@@ -20,10 +20,13 @@
         </div>
         <div class="col-12 col-md-6">
           <div class="text-caption texto-suave q-mb-xs">{{ t('conectar.clave') }}</div>
-          <div class="bloque-codigo" style="padding-right: 80px">{{ clave ? (verClave ? clave : ocultar(clave)) : t('comun.cargando') }}
+          <div class="bloque-codigo" style="padding-right: 112px">{{ clave ? (verClave ? clave : ocultar(clave)) : t('comun.cargando') }}
             <div class="boton-copiar row no-wrap">
               <q-btn flat dense round size="sm" :icon="verClave ? 'visibility_off' : 'visibility'" :aria-label="verClave ? t('conectar.ocultarClave') : t('conectar.mostrarClave')" @click="verClave = !verClave" />
               <q-btn flat dense round size="sm" icon="content_copy" :aria-label="t('conectar.copiarClave')" :disable="!clave" @click="copiar(clave, t('conectar.claveCopiada'))" />
+              <q-btn flat dense round size="sm" icon="o_autorenew" :aria-label="t('conectar.regenerarClave')" :disable="!clave" @click="regenerarClaveInstancia">
+                <q-tooltip>{{ t('conectar.regenerarClave') }}</q-tooltip>
+              </q-btn>
             </div>
           </div>
         </div>
@@ -440,6 +443,22 @@ async function guardarAjustes() {
   } finally {
     guardando.value = false
   }
+}
+
+// regenerarClaveInstancia cambia la clave de «Conectar» por si se filtró; las aplicaciones que la usan dejan de
+// conectar hasta que se les ponga la nueva.
+function regenerarClaveInstancia() {
+  $q.dialog({ title: t('conectar.regenerarTitulo'), message: t('conectar.regenerarTexto'),
+    cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'negative', label: t('conectar.regenerarClave'), unelevated: true, noCaps: true } })
+    .onOk(async () => {
+      try {
+        clave.value = (await api.regenerarClaveInstancia()).token
+        verClave.value = true
+        avisar(t('conectar.claveRegenerada'))
+      } catch (e) {
+        avisarError(e)
+      }
+    })
 }
 
 // regenerarClave crea una clave nueva y la muestra esta única vez: Tramtai solo guarda su huella.

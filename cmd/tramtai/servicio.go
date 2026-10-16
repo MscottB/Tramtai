@@ -269,7 +269,7 @@ func comandoServicio() *cobra.Command {
 			return nil
 		}}
 	token := &cobra.Command{Use: "token", Short: idioma.T("Muestra el token de la instancia global (igual que tramtai global token)"),
-		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, "global") }}
+		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, "global", false) }}
 	autoarranqueCmd := &cobra.Command{Use: "autoarranque [activar|desactivar]",
 		Short: idioma.T("Arranca Tramtai (la app de escritorio, oculta en la bandeja) al iniciar sesión en Windows"),
 		Args:  cobra.MaximumNArgs(1), ValidArgs: []string{"activar", "desactivar"},
@@ -541,7 +541,7 @@ func identificar(ambito string) (raiz, id string, c *nucleo.Configuracion, err e
 	return raiz, servicio.IDProyecto(raiz, c), c, nil
 }
 
-func mostrarTokenInstancia(cmd *cobra.Command, ambito string) error {
+func mostrarTokenInstancia(cmd *cobra.Command, ambito string, rotar bool) error {
 	_, id, c, err := identificar(ambito)
 	if err != nil {
 		return err
@@ -550,11 +550,42 @@ func mostrarTokenInstancia(cmd *cobra.Command, ambito string) error {
 	if err != nil {
 		return err
 	}
+	if rotar {
+		return rotarTokenInstancia(cmd, datos, id, c)
+	}
 	valor, _, err := servicio.TokenInstancia(datos, id, c)
 	if err != nil {
 		return err
 	}
 	fmt.Fprintln(cmd.OutOrStdout(), valor)
+	return nil
+}
+
+// rotarTokenInstancia regenera la clave de la instancia: con el servicio en marcha vale al momento; si la instancia
+// no está activa se reescribe el archivo y valdrá al activarla.
+func rotarTokenInstancia(cmd *cobra.Command, datos, id string, c *nucleo.Configuracion) error {
+	if cli, err := cliente.Conectar(datos); err == nil {
+		ctx, cancelar := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancelar()
+		token, err := cli.RotarClave(ctx, id)
+		if err == nil {
+			fmt.Fprintln(cmd.OutOrStdout(), token)
+			return nil
+		}
+		if nucleo.CodigoDe(err) != nucleo.CodigoNoEncontrado {
+			return err
+		}
+	}
+	if _, origen, err := servicio.TokenInstancia(datos, id, c); err != nil {
+		return err
+	} else if strings.HasPrefix(origen, "variable ") {
+		return errors.New(idioma.Tf("la clave de %s viene de la %s: cámbiala allí", id, origen))
+	}
+	token, err := servicio.RotarToken(servicio.RutaTokenInstancia(datos, id))
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(cmd.OutOrStdout(), token)
 	return nil
 }
 
@@ -630,8 +661,10 @@ func comandoInstancia(ambito string) *cobra.Command {
 			fmt.Fprintf(out, idioma.T("instancia %s: inactiva%s (tramtai %s iniciar)\n"), id, map[bool]string{true: " · " + raiz}[raiz != ""], ambito)
 			return nil
 		}}
+	var rotarToken bool
 	token := &cobra.Command{Use: "token", Short: idioma.T("Muestra el token de la instancia para configurar clientes"),
-		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, ambito) }}
+		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, ambito, rotarToken) }}
+	token.Flags().BoolVar(&rotarToken, "rotar", false, idioma.T("genera un token nuevo; el anterior deja de valer"))
 	var enNavegador bool
 	abrirWeb := &cobra.Command{Use: "abrir", Short: idioma.T("Abre la instancia en la app de escritorio o, con --navegador, en el navegador"),
 		RunE: func(cmd *cobra.Command, _ []string) error { return abrirWebUI(cmd, ambito, enNavegador) }}

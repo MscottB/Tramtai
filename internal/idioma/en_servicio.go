@@ -182,6 +182,7 @@ func init() {
 		"el puerto %d está ocupado por otro programa: elige otro con «tramtai servicio puerto <número>» (o en Ajustes de la Web UI), o activa servicio.puerto_automatico para usar uno libre": "port %d is in use by another program: choose another with «tramtai servicio puerto <number>» (or in the Web UI Settings), or enable servicio.puerto_automatico to use a free one",
 		"puntos_acceso no válido":                                                  "invalid puntos_acceso",
 		"punto de acceso %s: %s":                                                   "API %s: %s",
+		"la clave de %s viene de la %s: cámbiala allí":                             "the key of %s comes from the %s: change it there",
 		"nombre no válido (minúsculas, números, _ y -; hasta 40)":                  "invalid name (lowercase letters, digits, _ and -; up to 40)",
 		"grupo de más de 40 caracteres":                                            "group longer than 40 characters",
 		"usa puerto o ruta_base, no ambos":                                         "use puerto or ruta_base, not both",

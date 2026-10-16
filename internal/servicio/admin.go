@@ -64,7 +64,7 @@ func (s *Servicio) adminActivar(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = s.guardarActivas()
 	_ = s.actualizarDescriptor()
-	api.EscribirJSON(w, http.StatusOK, ActivacionInstancia{Instancia: inst.estado(r.Context()), Token: inst.token})
+	api.EscribirJSON(w, http.StatusOK, ActivacionInstancia{Instancia: inst.estado(r.Context()), Token: s.tokenDe(inst)})
 }
 
 func (s *Servicio) adminDesactivar(w http.ResponseWriter, r *http.Request) {

@@ -180,6 +180,21 @@ func TestWebUI(t *testing.T) {
 		t.Fatalf("eliminar el punto borra su clave: %v", err)
 	}
 
+	// La clave de la instancia se regenera en marcha: la anterior deja de valer sin reiniciar.
+	anterior := global.token
+	r, cuerpo = n.pedir("POST", "/api/v1/instancia/token", "", "X-CSRF-Token", n.csrf)
+	var rotada struct{ Token string }
+	_ = json.Unmarshal([]byte(cuerpo), &rotada)
+	if r.StatusCode != 200 || !strings.HasPrefix(rotada.Token, "tt_") || rotada.Token == anterior {
+		t.Fatalf("regenerar la clave de la instancia: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/modelos", anterior, ""); r.StatusCode != 401 {
+		t.Fatalf("la clave anterior de la instancia deja de valer: %d", r.StatusCode)
+	}
+	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/modelos", rotada.Token, ""); r.StatusCode != 200 {
+		t.Fatalf("la clave nueva de la instancia vale: %d", r.StatusCode)
+	}
+
 	// Modelo predeterminado: se guarda, se aplica en marcha y el catálogo lo marca.
 	if r, _ := n.pedir("POST", "/api/v1/instancia/predeterminado", `{"modelo":"simulado/m2"}`); r.StatusCode != 403 {
 		t.Fatalf("fijar el predeterminado exige el CSRF: %d", r.StatusCode)

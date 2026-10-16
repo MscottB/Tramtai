@@ -249,6 +249,8 @@ export const api = {
   reiniciarServicio: () => pedir<{ url: string }>('POST', '/ui/servicio/reiniciar'),
   instancia: () => pedir<EstadoInstancia>('GET', '/api/v1/instancia'),
   claveInstancia: () => pedir<{ token: string; archivo: string }>('GET', '/api/v1/instancia/token'),
+  // regenerarClaveInstancia cambia la clave que usan las aplicaciones; la anterior deja de valer al momento.
+  regenerarClaveInstancia: () => pedir<{ token: string; archivo: string }>('POST', '/api/v1/instancia/token'),
   configuracion: () =>
     pedir<{ configuracion: EntradaConfiguracion[] }>('GET', '/api/v1/instancia/configuracion').then((r) => r.configuracion),
   catalogo: () => pedir<{ modelos: Modelo[] }>('GET', '/api/v1/modelos').then((r) => r.modelos),

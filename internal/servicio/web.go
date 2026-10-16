@@ -480,7 +480,15 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 	switch {
 	case ruta == "/api/v1/instancia/token" && r.Method == http.MethodGet:
 		// Para mostrar en «Conectar» la clave que usan las aplicaciones; solo con sesión o token de servicio.
-		api.EscribirJSON(w, http.StatusOK, map[string]any{"token": inst.token, "archivo": inst.ArchivoToken})
+		api.EscribirJSON(w, http.StatusOK, map[string]any{"token": s.tokenDe(inst), "archivo": inst.ArchivoToken})
+	case ruta == "/api/v1/instancia/token" && r.Method == http.MethodPost:
+		// Regenera la clave que usan las aplicaciones (por si se filtró); vale al momento, sin reiniciar.
+		token, err := s.RotarTokenInstancia(inst)
+		if err != nil {
+			api.EscribirError(w, r, err)
+			return true
+		}
+		api.EscribirJSON(w, http.StatusOK, map[string]any{"token": token, "archivo": inst.ArchivoToken})
 	case ruta == "/api/v1/instancia/configuracion" && r.Method == http.MethodGet:
 		entradas := []EntradaConfiguracion{}
 		for _, e := range inst.Config.Efectiva() {

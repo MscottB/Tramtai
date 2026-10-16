@@ -221,6 +221,29 @@ func (s *Servicio) instanciaPara(r *http.Request, admin bool) (inst *Instancia, 
 	return inst, true, nil
 }
 
+// RotarTokenInstancia genera la clave nueva de una instancia y la aplica en marcha: la anterior deja de valer al
+// momento, sin reiniciar. Una clave que llega de una variable de entorno se cambia en esa variable.
+func (s *Servicio) RotarTokenInstancia(inst *Instancia) (string, error) {
+	if strings.HasPrefix(inst.ArchivoToken, "variable ") {
+		return "", nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("la clave de %s viene de la %s: cámbiala allí", inst.ID, inst.ArchivoToken))
+	}
+	token, err := RotarToken(inst.ArchivoToken)
+	if err != nil {
+		return "", err
+	}
+	s.mu.Lock()
+	inst.token = token
+	s.mu.Unlock()
+	return token, nil
+}
+
+// tokenDe lee la clave de una instancia, que puede cambiar en marcha (RotarTokenInstancia).
+func (s *Servicio) tokenDe(inst *Instancia) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return inst.token
+}
+
 // instanciaPorToken compara el token con el de todas las instancias, sin revelar por tiempos cuál existe.
 func (s *Servicio) instanciaPorToken(token string) *Instancia {
 	s.mu.RLock()
