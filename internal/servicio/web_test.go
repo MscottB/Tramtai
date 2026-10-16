@@ -121,8 +121,8 @@ func TestWebUI(t *testing.T) {
 	}
 	// Receta: esquema y respaldo se fijan y se quitan; un esquema no válido no toca la configuración.
 	for _, caso := range [][2]string{
-		{`{"esquema":{"type":"object"},"respaldo":["otro"]}`, `"esquema":{"type":"object"},"respaldo":["otro"]`},
-		{`{"esquema":null}`, `"respaldo":["otro"]`},
+		{`{"esquema":{"type":"object"},"respaldo":["simulado/m2"]}`, `"esquema":{"type":"object"},"respaldo":["simulado/m2"]`},
+		{`{"esquema":null}`, `"respaldo":["simulado/m2"]`},
 	} {
 		r, cuerpo := n.pedir("PATCH", "/api/v1/puntos/desde_ui", caso[0], "X-CSRF-Token", n.csrf)
 		if r.StatusCode != 200 || !strings.Contains(cuerpo, caso[1]) {
@@ -138,6 +138,12 @@ func TestWebUI(t *testing.T) {
 	}
 	if despues, _ := os.ReadFile(rutaGlobal); string(despues) != string(antes) {
 		t.Fatal("un PATCH rechazado no debe cambiar la configuración")
+	}
+	// Un respaldo con el que toda petición fallaría se rechaza al guardar: agente desconocido o no permitido.
+	for _, cuerpoPatch := range []string{`{"respaldo":["nadie"]}`, `{"modelos_permitidos":["simulado/m1"],"respaldo":["simulado/m2"]}`} {
+		if r, cuerpo := n.pedir("PATCH", "/api/v1/puntos/desde_ui", cuerpoPatch, "X-CSRF-Token", n.csrf); r.StatusCode != 400 || !strings.Contains(cuerpo, "configuracion_invalida") {
+			t.Fatalf("PATCH %s debía rechazarse: %d %s", cuerpoPatch, r.StatusCode, cuerpo)
+		}
 	}
 	if r, cuerpo := n.pedir("PATCH", "/api/v1/puntos/desde_ui", `{"modelo":"inexistente/x"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 || !strings.Contains(cuerpo, "solicitud_invalida") {
 		t.Fatalf("un agente desconocido se rechaza: %d %s", r.StatusCode, cuerpo)

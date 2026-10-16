@@ -561,6 +561,10 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 		api.EscribirError(w, r, err)
 		return
 	}
+	if err := s.validarRespaldo(p); err != nil {
+		api.EscribirError(w, r, err)
+		return
+	}
 	err = EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		if slices.ContainsFunc(lista, func(c ConfigPunto) bool { return c.Nombre == p.Nombre }) {
 			return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el punto de acceso %s ya existe", p.Nombre))
@@ -675,8 +679,11 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 				}
 				// La receta se valida antes de escribir: un cambio no válido deja la configuración como estaba. Solo si
 				// cambia, para no impedir desactivar un punto que ya tenía otro error.
-				if len(cambio.Esquema) > 0 || cambio.Respaldo != nil {
+				if len(cambio.Esquema) > 0 || cambio.Respaldo != nil || cambio.Permitidos != nil {
 					if _, err := lista[i].Normalizar(inst.ID, s.opc.Puerto); err != nil {
+						return nil, err
+					}
+					if err := s.validarRespaldo(lista[i]); err != nil {
 						return nil, err
 					}
 				}

@@ -354,8 +354,12 @@ func TestNormalizarReceta(t *testing.T) {
 		{Nombre: "r", Esquema: map[string]any{"type": 5}},
 		{Nombre: "r", Respaldo: []string{"perfil/x"}},
 	} {
-		if _, err := mal.Normalizar("global", 4000); nucleo.CodigoDe(err) != nucleo.CodigoConfiguracionInvalida {
+		_, err := mal.Normalizar("global", 4000)
+		if nucleo.CodigoDe(err) != nucleo.CodigoConfiguracionInvalida {
 			t.Fatalf("%+v debía rechazarse: %v", mal, err)
+		}
+		if strings.Count(err.Error(), "esquema no válido") > 1 {
+			t.Fatalf("mensaje con el prefijo repetido: %v", err)
 		}
 	}
 }

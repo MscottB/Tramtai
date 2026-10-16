@@ -83,13 +83,18 @@ func (s *Servidor) ajustar(sol nucleo.SolicitudEjecucion) (nucleo.SolicitudEjecu
 			idioma.Tf("el modelo %s no está permitido en el punto de acceso %s", descripcionModelo(sol), p.Nombre))
 	}
 	for _, e := range sol.Respaldo {
-		agente, modelo := nucleo.DividirRespaldo(e)
-		if len(p.ModelosPermitidos) > 0 && !permitido(p.ModelosPermitidos, nucleo.SolicitudEjecucion{Agente: agente, Modelo: modelo}) {
+		if len(p.ModelosPermitidos) > 0 && !PermitidoRespaldo(p.ModelosPermitidos, e) {
 			return sol, nucleo.NuevoError(nucleo.CodigoModeloNoPermitido,
 				idioma.Tf("el modelo %s no está permitido en el punto de acceso %s", e, p.Nombre))
 		}
 	}
 	return sol, nil
+}
+
+// PermitidoRespaldo indica si una entrada de respaldo (agente o agente/modelo) cabe en modelos_permitidos.
+func PermitidoRespaldo(lista []string, entrada string) bool {
+	agente, modelo := nucleo.DividirRespaldo(entrada)
+	return permitido(lista, nucleo.SolicitudEjecucion{Agente: agente, Modelo: modelo})
 }
 
 // permitido acepta "agente" (cualquier modelo del agente), "agente/modelo" o "perfil/nombre".

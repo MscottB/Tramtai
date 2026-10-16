@@ -136,13 +136,32 @@ func (p ConfigPunto) Normalizar(instancia string, puertoServicio int) (ConfigPun
 			_, err = salidas.Compilar(esquema)
 		}
 		if err != nil {
-			return invalido(idioma.Tf("esquema no válido: %s", nucleo.MensajeDe(err)))
+			return invalido(nucleo.MensajeDe(err)) // ya dice «esquema no válido» o «el esquema no es JSON válido»
 		}
 	}
 	if err := nucleo.ValidarRespaldo(p.Respaldo); err != nil {
 		return invalido(nucleo.MensajeDe(err))
 	}
 	return p, nil
+}
+
+// validarRespaldo rechaza un respaldo con el que toda petición fallaría: un agente que no está registrado o una
+// entrada fuera de modelos_permitidos. Normalizar solo ve el formato; esto necesita el registro del servicio.
+func (s *Servicio) validarRespaldo(p ConfigPunto) error {
+	for _, e := range p.Respaldo {
+		agente, _ := nucleo.DividirRespaldo(e)
+		motivo := ""
+		switch {
+		case s.opc.Registro[agente] == nil:
+			motivo = idioma.Tf("el agente de respaldo %s no existe", agente)
+		case len(p.ModelosPermitidos) > 0 && !api.PermitidoRespaldo(p.ModelosPermitidos, e):
+			motivo = idioma.Tf("el respaldo %s no está en modelos_permitidos", e)
+		default:
+			continue
+		}
+		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("punto de acceso %s: %s", p.Nombre, motivo))
+	}
+	return nil
 }
 
 func (p ConfigPunto) politica() *api.Punto {
@@ -238,6 +257,9 @@ func (s *Servicio) puntosDeseados() ([]candidato, []string) {
 		}
 		for _, p := range puntos {
 			normalizado, err := p.Normalizar(instancia, s.opc.Puerto)
+			if err == nil {
+				err = s.validarRespaldo(normalizado)
+			}
 			switch {
 			case err != nil:
 				errores = append(errores, origen+": "+nucleo.MensajeDe(err))
