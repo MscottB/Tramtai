@@ -134,6 +134,8 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <instancia> 
 
 En los dos primeros casos, pon la clave nueva en las aplicaciones que usaban la anterior.
 
+**Si vuelves a una versión anterior** a la que guarda las claves de las APIs como huella: esa versión leería el archivo `sha256:…` como si fuera la clave. Al volver, regenera la clave de cada API (`tramtai acceso token <nombre> --rotar`).
+
 ## Instancias
 
 | | Global | Proyecto |
