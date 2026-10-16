@@ -55,6 +55,10 @@ ventana vacía (página de estado propia hasta que el servicio responda); si fal
 - Etiquetas del mapa a la derecha de cada estación, sin cruzar las líneas.
 - Sección nueva con capturas reales (Inicio y Mis APIs) según el tema, con `alt` descriptivo.
 - Funciones agrupadas en «Conecta», «Controla» y «Protege».
+- **Selector de tema** junto al de idioma: Sistema, Claro y Oscuro. Hoy la página solo sigue el tema del sistema
+  (`prefers-color-scheme`); el selector lo fuerza con un atributo en `<html>` y se recuerda en el navegador
+  (`localStorage`, con su fallo tolerado). Las capturas de la app siguen el tema elegido. Los dos temas se revisan
+  con la misma calidad.
 
 ## 6. Verificación
 
