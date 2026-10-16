@@ -79,6 +79,8 @@
                 <q-item-label class="row items-center q-gutter-x-sm">
                   <span class="text-weight-medium">{{ p.nombre }}</span>
                   <span class="etiqueta" :class="!activo(p) ? 'etiqueta--neutro' : p.error ? 'etiqueta--error' : 'etiqueta--ok'">{{ activo(p) ? t('puntos.activo') : t('puntos.desactivado') }}</span>
+                  <span v-if="p.esquema" class="etiqueta etiqueta--info">{{ t('puntos.json') }}</span>
+                  <span v-if="p.respaldo?.length" class="etiqueta etiqueta--neutro">{{ t('puntos.respaldoDe', { agentes: p.respaldo.map(etiquetaDe).join(', ') }) }}</span>
                 </q-item-label>
                 <q-item-label caption class="codigo">{{ p.url || t('puntos.sinDireccion') }}</q-item-label>
                 <q-item-label caption>
@@ -102,6 +104,7 @@
                   </q-toggle>
                   <q-btn v-if="p.url" flat dense round icon="content_copy" :aria-label="t('puntos.copiarUrl')" @click="copiar(p.url)"><q-tooltip>{{ t('puntos.copiarUrl') }}</q-tooltip></q-btn>
                   <q-btn flat dense round icon="o_key" :aria-label="t('puntos.verClave')" @click="mostrarClave(p)"><q-tooltip>{{ t('puntos.verClave') }}</q-tooltip></q-btn>
+                  <q-btn flat dense round icon="o_science" :aria-label="t('puntos.abrirProbar')" @click="abrirEnProbar(p.nombre)"><q-tooltip>{{ t('puntos.abrirProbar') }}</q-tooltip></q-btn>
                   <q-btn flat dense round icon="o_tune" :aria-label="t('puntos.ajustes')" @click="abrirAjustes(p)"><q-tooltip>{{ t('puntos.ajustes') }}</q-tooltip></q-btn>
                   <q-btn flat dense round icon="o_delete" color="negative" :aria-label="t('comun.eliminar')" @click="eliminar(p.nombre)"><q-tooltip>{{ t('comun.eliminar') }}</q-tooltip></q-btn>
                 </div>
@@ -126,14 +129,10 @@
           <q-card-section class="q-gutter-y-md q-pt-none">
             <q-input v-model="formulario.nombre" outlined dense :label="t('puntos.nombre')" autofocus :hint="t('puntos.nombreHint')"
               :rules="[(v: string) => /^[a-z0-9][a-z0-9_-]{0,39}$/.test(v) || t('puntos.nombreRegla')]" />
-            <q-input v-model="formulario.instrucciones" type="textarea" autogrow outlined dense :label="t('puntos.instrucciones')"
-              :placeholder="t('puntos.instruccionesEjemplo')" :hint="t('puntos.instruccionesHint')" />
             <q-select :model-value="formulario.grupo" :options="sugerencias" outlined dense use-input hide-selected fill-input input-debounce="0"
               :label="t('puntos.grupo')" :hint="t('puntos.grupoHint')" maxlength="40" hide-dropdown-icon
               @input-value="(v: string) => (formulario.grupo = v)" @filter="filtrarGrupos" @update:model-value="(v: string) => (formulario.grupo = v)" />
-            <SelectorModelo v-model="formulario.modelo" :opciones="opciones" clearable :label="t('puntos.modelo')" />
-            <q-toggle v-model="formulario.forzar" :disable="!formulario.modelo" :label="t('puntos.forzar')" />
-            <SelectorEsfuerzo v-model="formulario.esfuerzo" :niveles="nivelesFormulario" :hint="t('esfuerzo.api')" />
+            <EditorReceta v-model="formulario.receta" :catalogo="catalogo" para-api />
             <q-expansion-item dense icon="o_tune" :label="t('comun.opcionesAvanzadas')" header-class="q-px-none text-body2">
               <div class="q-gutter-y-md q-pt-sm">
                 <div class="text-caption texto-suave">{{ t('puntos.avanzadasTexto') }}</div>
@@ -171,11 +170,7 @@
           <div class="titulo-seccion">{{ t('puntos.ajustesDe', { nombre: editando }) }}</div>
         </q-card-section>
         <q-card-section class="q-pt-none q-gutter-y-md">
-          <SelectorModelo v-model="ajustes.modelo" :opciones="opciones" clearable :label="t('puntos.modelo')" />
-          <q-toggle v-model="ajustes.forzar" :disable="!ajustes.modelo" :label="t('puntos.forzar')" />
-          <SelectorEsfuerzo v-model="ajustes.esfuerzo" :niveles="nivelesAjustes" :hint="t('esfuerzo.api')" />
-          <q-input v-model="ajustes.instrucciones" type="textarea" autogrow outlined dense :label="t('puntos.instrucciones')"
-            :placeholder="t('puntos.instruccionesEjemplo')" :hint="t('puntos.instruccionesHint')" :input-style="{ minHeight: '80px' }" />
+          <EditorReceta v-model="ajustes.receta" :catalogo="catalogo" para-api />
           <q-select v-model="ajustes.permitidos" :options="opciones" emit-value map-options outlined dense multiple use-chips
             use-input new-value-mode="add-unique" :label="t('puntos.permitidos')" :hint="t('puntos.permitidosHint')" />
         </q-card-section>
@@ -208,9 +203,9 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import SelectorEsfuerzo from '../componentes/SelectorEsfuerzo.vue'
-import SelectorModelo from '../componentes/SelectorModelo.vue'
-import { api, aplicarModelo, avisar, avisarError, codigoLinea, copiar, esfuerzosDe, etiquetaModelo, haceCuanto, nombreEsfuerzo, opcionModelo, origenHistorial, type ConfigPunto, type EstadoPunto, type Modelo, type UsoPunto } from '../api'
+import EditorReceta from '../componentes/EditorReceta.vue'
+import { ajustesDeReceta, api, avisar, avisarError, codigoLinea, configDeReceta, copiar, etiquetaModelo, haceCuanto, idModeloDe as idModelo, nombreEsfuerzo, opcionModelo,
+  origenHistorial, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPunto, type Modelo, type UsoPunto } from '../api'
 import { t } from '../i18n'
 
 const $q = useQuasar()
@@ -299,18 +294,10 @@ ANTHROPIC_API_KEY=${k}` },
 const ejemplo = computed(() => ejemplos.find((e) => e.id === lenguaje.value) ?? ejemplos[0])
 
 const opciones = computed(() => catalogo.value.map(opcionModelo))
-// idModelo es el modelo de una API como id del catálogo (agente, agente/modelo o perfil/nombre); null si no tiene.
-const idModelo = (p: EstadoPunto) => (p.perfil_modelo ? 'perfil/' + p.perfil_modelo : [p.agente, p.modelo].filter(Boolean).join('/') || null)
 const etiquetaDe = (id: string) => opciones.value.find((o) => o.value === id)?.label ?? etiquetaModelo(id)
-const vacio = () => ({ nombre: '', instrucciones: '', grupo: '', direccion: 'ruta', puerto: '', contratos: [...contratos], modelo: null as string | null,
-  permitidos: [] as string[], alias: '', forzar: false, esfuerzo: '' })
+const vacio = () => ({ nombre: '', grupo: '', direccion: 'ruta', puerto: '', contratos: [...contratos], permitidos: [] as string[], alias: '',
+  receta: recetaVacia() })
 const formulario = reactive(vacio())
-
-// Niveles de esfuerzo de una API: los de su modelo, o todos si la aplicación puede elegir el modelo (cada CLI usa
-// el nivel más cercano que admita y los agentes sin esfuerzo lo ignoran).
-const todosLosNiveles = computed(() => catalogo.value.reduce<string[]>((a, m) => ((m.esfuerzos?.length ?? 0) > a.length ? m.esfuerzos! : a), []))
-const nivelesDe = (modelo: string | null) => (modelo ? esfuerzosDe(catalogo.value, modelo) : todosLosNiveles.value)
-const nivelesFormulario = computed(() => nivelesDe(formulario.modelo))
 
 const camposPunto = computed(() => {
   const p = elegido.value
@@ -362,23 +349,17 @@ async function crear() {
     }
     alias[origen] = destino
   }
-  const elegidoModelo = aplicarModelo({ mensajes: [] }, formulario.modelo ?? '')
-  const punto: ConfigPunto = {
-    nombre: formulario.nombre.trim(),
-    grupo: formulario.grupo.trim() || undefined,
-    instrucciones: formulario.instrucciones.trim() || undefined,
-    puerto: formulario.direccion === 'puerto' ? Number(formulario.puerto) : undefined,
-    contratos: formulario.contratos,
-    agente: elegidoModelo.agente,
-    modelo: elegidoModelo.modelo,
-    perfil_modelo: elegidoModelo.perfil_modelo,
-    modelos_permitidos: formulario.permitidos.length ? formulario.permitidos : undefined,
-    alias_modelos: Object.keys(alias).length ? alias : undefined,
-    forzar_modelo: (formulario.forzar && !!formulario.modelo) || undefined,
-    esfuerzo: formulario.esfuerzo || undefined,
-  }
   guardando.value = true
   try {
+    const punto: ConfigPunto = {
+      nombre: formulario.nombre.trim(),
+      grupo: formulario.grupo.trim() || undefined,
+      puerto: formulario.direccion === 'puerto' ? Number(formulario.puerto) : undefined,
+      contratos: formulario.contratos,
+      modelos_permitidos: formulario.permitidos.length ? formulario.permitidos : undefined,
+      alias_modelos: Object.keys(alias).length ? alias : undefined,
+      ...configDeReceta(formulario.receta), // lanza un error legible si el esquema no es válido
+    }
     const r = await api.crearPunto(punto)
     nuevo.value = false
     await cargarPuntos()
@@ -430,21 +411,24 @@ function eliminar(nombre: string) {
 
 const dialogoInstrucciones = ref(false)
 const editando = ref('')
-const ajustes = reactive({ instrucciones: '', esfuerzo: '', modelo: null as string | null, forzar: false, permitidos: [] as string[] })
-const nivelesAjustes = computed(() => nivelesDe(ajustes.modelo))
+const ajustes = reactive({ receta: recetaVacia(), permitidos: [] as string[] })
 
 function abrirAjustes(p: EstadoPunto) {
   editando.value = p.nombre
-  Object.assign(ajustes, { instrucciones: p.instrucciones ?? '', esfuerzo: p.esfuerzo ?? '', modelo: idModelo(p), forzar: !!p.forzar_modelo,
-    permitidos: [...(p.modelos_permitidos ?? [])] })
+  Object.assign(ajustes, { receta: recetaDePunto(p), permitidos: [...(p.modelos_permitidos ?? [])] })
   dialogoInstrucciones.value = true
+}
+
+// abrirEnProbar lleva la receta de la API a Probar para probarla y actualizarla.
+function abrirEnProbar(nombre: string) {
+  recetaInicial.value = nombre
+  emit('ir', 'ejecutar')
 }
 
 async function guardarAjustes() {
   guardando.value = true
   try {
-    await api.ajustesPunto(editando.value, { instrucciones: ajustes.instrucciones, esfuerzo: ajustes.esfuerzo, modelo: ajustes.modelo ?? '',
-      forzar_modelo: ajustes.forzar && !!ajustes.modelo, modelos_permitidos: ajustes.permitidos })
+    await api.ajustesPunto(editando.value, { ...ajustesDeReceta(ajustes.receta), modelos_permitidos: ajustes.permitidos })
     dialogoInstrucciones.value = false
     avisar(t('puntos.ajustesGuardados'))
     await cargarPuntos()
