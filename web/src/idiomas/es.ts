@@ -540,6 +540,7 @@ const es = {
   'receta.esquema': 'JSON Schema',
   'receta.esquemaHint': 'Describe los campos que debe tener la respuesta.',
   'receta.esquemaInvalido': 'El esquema debe ser un objeto JSON válido',
+  'receta.esquemaVacio': 'Escribe el esquema o desactiva la salida estructurada',
   'ejecutar.receta': 'Receta',
   'ejecutar.recetaTexto': 'Lo que hará el agente con cada mensaje. Pruébalo aquí y, cuando funcione, guárdalo como API.',
   'ejecutar.mensajePrueba': 'Mensaje de prueba',

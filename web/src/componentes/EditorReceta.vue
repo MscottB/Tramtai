@@ -20,14 +20,14 @@
     </div>
     <q-input v-if="estructurada" :model-value="modelValue.esquema" type="textarea" autogrow outlined dense input-class="codigo"
       :label="t('receta.esquema')" :error="!!errorEsquema" :error-message="errorEsquema" :hint="t('receta.esquemaHint')"
-      @update:model-value="(v) => cambiar({ esquema: String(v ?? '') })" />
+      @update:model-value="(v) => escribirEsquema(String(v ?? ''))" />
   </div>
 </template>
 
 <script setup lang="ts">
 // EditorReceta edita lo que define una API (instrucciones, modelo, esfuerzo, respaldo y esquema); lo comparten
 // Probar, donde se prueba, y Mis APIs, donde se guarda.
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import SelectorEsfuerzo from './SelectorEsfuerzo.vue'
 import SelectorModelo from './SelectorModelo.vue'
 import { esfuerzosDe, esquemaDeReceta, opcionModelo, type Modelo, type Receta } from '../api'
@@ -57,9 +57,24 @@ const ejemploEsquema = `{
   },
   "required": ["resumen"]
 }`
-const estructurada = computed(() => props.modelValue.esquema !== '')
-const alternarEsquema = (activa: boolean) => cambiar({ esquema: activa ? ejemploEsquema : '' })
+// estructurada no depende del texto: borrarlo mientras se escribe no debe apagar el interruptor ni ocultar el campo.
+// Solo se sincroniza con un esquema que llega de fuera (una receta cargada); el que se escribe aquí no lo toca.
+const estructurada = ref(props.modelValue.esquema !== '')
+let escrito = props.modelValue.esquema
+watch(() => props.modelValue.esquema, (e) => {
+  if (e !== escrito) estructurada.value = e !== ''
+  escrito = e
+})
+function escribirEsquema(texto: string) {
+  escrito = texto
+  cambiar({ esquema: texto })
+}
+function alternarEsquema(activa: boolean) {
+  estructurada.value = activa
+  escribirEsquema(activa ? props.modelValue.esquema || ejemploEsquema : '')
+}
 const errorEsquema = computed(() => {
+  if (!props.modelValue.esquema.trim()) return t('receta.esquemaVacio')
   try {
     esquemaDeReceta(props.modelValue)
     return ''

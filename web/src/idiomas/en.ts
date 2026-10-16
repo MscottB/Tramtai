@@ -541,6 +541,7 @@ const en: Textos = {
   'receta.esquema': 'JSON Schema',
   'receta.esquemaHint': 'Describes the fields the answer must have.',
   'receta.esquemaInvalido': 'The schema must be a valid JSON object',
+  'receta.esquemaVacio': 'Write the schema or turn off structured output',
   'ejecutar.receta': 'Recipe',
   'ejecutar.recetaTexto': 'What the agent will do with each message. Try it here and, once it works, save it as an API.',
   'ejecutar.mensajePrueba': 'Test message',
