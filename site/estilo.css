@@ -95,6 +95,18 @@ p { margin: 0; }
 
 /* Secciones */
 section { padding: 72px 0; }
+/* Capturas de la app: la del tema efectivo (el del sistema o el elegido). */
+.capturas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 24px; }
+.captura { margin: 0; }
+.captura img { width: 100%; height: auto; border: 1px solid var(--borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+.captura figcaption { margin-top: 10px; color: var(--texto-suave); font-size: .9rem; }
+.solo-oscuro { display: none; }
+:root[data-tema="oscuro"] .solo-oscuro { display: block; }
+:root[data-tema="oscuro"] .solo-claro { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="claro"]) .solo-oscuro { display: block; }
+  :root:not([data-tema="claro"]) .solo-claro { display: none; }
+}
 .cabeza { max-width: 44em; margin-bottom: 36px; }
 .cabeza p { margin-top: 12px; font-size: 1.05rem; }
 .etiqueta { font: 700 .78rem var(--titulo); letter-spacing: .12em; text-transform: uppercase; color: var(--acento); margin-bottom: 10px; display: block; }
