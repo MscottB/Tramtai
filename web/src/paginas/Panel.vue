@@ -104,7 +104,7 @@ import EstadoVacio from '../componentes/EstadoVacio.vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import Linea from '../componentes/Linea.vue'
 import MapaRed from '../componentes/MapaRed.vue'
-import { api, avisar, copiar, estadoInfo, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, haceCuanto, mensajeError, sesion, terminales, textoDe, type Adaptador, type EstadoInstancia, type EstadoPunto, type Trabajo, sistema } from '../api'
+import { api, avisar, ordenarAgentes, copiar, estadoInfo, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, haceCuanto, mensajeError, sesion, terminales, textoDe, type Adaptador, type EstadoInstancia, type EstadoPunto, type Trabajo, sistema } from '../api'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()
@@ -169,7 +169,7 @@ async function cargar() {
 let intervalo: number
 onMounted(() => {
   cargar()
-  api.capacidades().then((c) => (adaptadores.value = c.adaptadores)).catch(() => (adaptadores.value = []))
+  api.capacidades().then((c) => (adaptadores.value = ordenarAgentes(c.adaptadores))).catch(() => (adaptadores.value = []))
   api.puntos().then((p) => (puntos.value = p)).catch(() => {})
   intervalo = window.setInterval(() => !document.hidden && cargar(), 5000)
 })

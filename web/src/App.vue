@@ -398,7 +398,7 @@ function ir(id: string) {
   if (id === pagina.value) return
   pila.value.push(pagina.value)
   pagina.value = id
-  history.pushState(null, '', '#' + id)
+  history.pushState({ i: base + pila.value.length }, '', '#' + id)
   window.scrollTo({ top: 0 })
 }
 
@@ -419,17 +419,23 @@ function iconoInstancia(ambito?: string) {
   return ambito === 'proyecto' ? 'o_folder' : 'o_public'
 }
 
-// Atrás o adelante en el navegador: la pila sigue el mismo recorrido.
+// Atrás o adelante en el navegador: cada entrada del historial guarda su profundidad (history.state.i), así se sabe
+// la dirección. base es la profundidad al cargar: antes de ella la pila no conoce las páginas (se recargó).
+let base = (history.state as { i?: number } | null)?.i ?? 0
 function alNavegar() {
   const nueva = desdeHash()
   if (nueva === pagina.value) return // el hash ya apuntaba a esta página: no hay paso que apilar
-  if (pila.value[pila.value.length - 1] === nueva) pila.value.pop()
-  else pila.value.push(pagina.value)
+  const relativa = ((history.state as { i?: number } | null)?.i ?? 0) - base
+  if (relativa < 0) {
+    pila.value = [] // atrás, más allá de la carga: no se sabe qué había antes
+    base += relativa
+  } else if (relativa < pila.value.length) pila.value.length = relativa // atrás
+  else pila.value.push(pagina.value) // adelante
   pagina.value = nueva
 }
 
 onMounted(async () => {
-  if (location.search) history.replaceState(null, '', location.pathname + location.hash)
+  history.replaceState({ i: base }, '', location.search ? location.pathname + location.hash : location.href)
   window.addEventListener('popstate', alNavegar)
   sondeo = window.setInterval(() => !document.hidden && comprobar(), 10000)
   buscarActualizacion = window.setInterval(comprobarActualizacion, 15 * 60 * 1000)

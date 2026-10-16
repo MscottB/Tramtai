@@ -35,6 +35,9 @@ func TestEsfuerzoPredeterminado(t *testing.T) {
 		{"claude", "claude-haiku-5-5"}:  "medio",
 		{"claude", "claude-opus-4-7"}:   "muy_alto",
 		{"claude", "claude-fable-5-1"}:  "alto",
+		{"claude", "claude-opus-4-6"}:   "alto",
+		{"claude", "claude-sonnet-6-0"}: "", // un modelo sin comprobar no recibe un valor supuesto
+		{"claude", "claude-haiku-4-5"}:  "",
 		{"claude", "opus"}:              "", // un alias puede cambiar de modelo: sin la versión real no se sabe
 		{"claude", ""}:                  "",
 		{"codex", "gpt-5.6-sol"}:        "", // Codex depende del modelo y no lo documenta por modelo

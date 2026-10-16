@@ -1,10 +1,6 @@
 package adaptadores
 
-import (
-	"strings"
-
-	"tramtai/internal/nucleo"
-)
+import "tramtai/internal/nucleo"
 
 // valoresEsfuerzo son los niveles que entiende cada CLI, en el orden de nucleo.NivelesEsfuerzo: Claude Code
 // (--effort) llega a max; Codex (model_reasoning_effort) a xhigh. Los demás agentes no tienen esta opción.
@@ -35,14 +31,17 @@ func valorEsfuerzo(agente, nivel string) string {
 // Codex no tiene un valor fijo: depende del modelo y no se documenta por modelo. Los ajustes del usuario en el CLI
 // (effortLevel por modelo) mandan sobre este valor.
 func EsfuerzoPredeterminado(agente, modelo string) string {
-	if agente != "claude" || !strings.HasPrefix(modelo, "claude-") {
+	if agente != "claude" {
 		return ""
 	}
-	switch {
-	case strings.Contains(modelo, "-5-5"):
-		return "medio"
-	case strings.Contains(modelo, "opus-4-7"):
-		return "muy_alto"
-	}
-	return "alto"
+	return esfuerzoClaude[modelo]
+}
+
+// esfuerzoClaude son los modelos comprobados en la documentación de Claude Code; un modelo que no está aquí (uno nuevo
+// o sin esfuerzo regulable) no recibe un valor supuesto.
+var esfuerzoClaude = map[string]string{
+	"claude-opus-5-5": "medio", "claude-sonnet-5-5": "medio", "claude-haiku-5-5": "medio",
+	"claude-opus-4-7":  "muy_alto",
+	"claude-fable-5-1": "alto", "claude-fable-5": "alto", "claude-opus-5": "alto", "claude-sonnet-5": "alto",
+	"claude-opus-4-8": "alto", "claude-opus-4-6": "alto", "claude-sonnet-4-6": "alto",
 }

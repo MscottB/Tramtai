@@ -18,7 +18,7 @@
 
 // Tema: Sistema, Claro u Oscuro; el script de <head> ya aplicó el guardado antes de pintar.
 (function () {
-  var botones = document.querySelectorAll('[data-tema]');
+  var botones = document.querySelectorAll('button[data-tema]'); // <html> también lleva data-tema
   function aplicar(tema) {
     if (tema === 'sistema') delete document.documentElement.dataset.tema;
     else document.documentElement.dataset.tema = tema;

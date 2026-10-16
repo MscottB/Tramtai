@@ -473,6 +473,12 @@ export function codigoLinea(agente?: string): string {
 // ordenAgentes es el orden fijo de los agentes en toda la Web UI.
 export const ordenAgentes = ['claude', 'codex', 'gemini', 'antigravity']
 
+// ordenarAgentes pone los agentes en el orden fijo de la red; los desconocidos, al final y por nombre.
+export function ordenarAgentes<T extends { agente: string }>(lista: T[]): T[] {
+  const posicion = (a: string) => ordenAgentes.indexOf(a) + 1 || ordenAgentes.length + 1
+  return [...lista].sort((a, b) => posicion(a.agente) - posicion(b.agente) || a.agente.localeCompare(b.agente))
+}
+
 export function nombreAgente(agente?: string): string {
   return agente ? (agentes[agente] ?? agente) : '—'
 }
@@ -515,7 +521,9 @@ export function esfuerzosDe(catalogo: Modelo[], seleccion: string | null): strin
 
 // esfuerzoPredeterminadoDe es el nivel que usará el agente con el modelo elegido si no se indica otro ('' si no se sabe).
 export function esfuerzoPredeterminadoDe(catalogo: Modelo[], seleccion: string | null): string {
-  return entradaCatalogo(catalogo, seleccion)?.esfuerzo_predeterminado ?? ''
+  // Solo la entrada exacta: el predeterminado depende del modelo, y la del agente lleva el de otro (el de su CLI).
+  const m = seleccion ? catalogo.find((x) => x.id === seleccion) : catalogo.find((x) => x.predeterminado)
+  return m?.esfuerzo_predeterminado ?? ''
 }
 
 // entradaCatalogo es la entrada del catálogo elegida (o la predeterminada); un id escrito a mano cae en su agente.

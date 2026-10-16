@@ -46,7 +46,11 @@ const emit = defineEmits<{ 'update:modelValue': [valor: Receta] }>()
 
 const cambiar = (parcial: Partial<Receta>) => emit('update:modelValue', { ...props.modelValue, ...parcial })
 const conOpciones = computed(() => props.modelValue.forzar || !!props.modelValue.esfuerzo || props.modelValue.respaldo.length > 0 || !!props.modelValue.esquema)
-const plegable = computed(() => ({ label: t('receta.opciones'), icon: 'o_tune', dense: true, defaultOpened: conOpciones.value, headerClass: 'q-px-none text-body2' }))
+// La receta puede llegar después de montar (Abrir en Probar): se abre en cuanto alguna opción tiene valor.
+const abierta = ref(conOpciones.value)
+watch(conOpciones, (v) => v && (abierta.value = true))
+const plegable = computed(() => ({ label: t('receta.opciones'), icon: 'o_tune', dense: true, modelValue: abierta.value,
+  'onUpdate:modelValue': (v: boolean) => (abierta.value = v), headerClass: 'q-px-none text-body2' }))
 
 const opciones = computed(() => props.catalogo.map(opcionModelo))
 // El respaldo es agente o agente/modelo: un perfil no sirve porque da un modelo distinto por agente.

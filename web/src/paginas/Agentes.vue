@@ -97,7 +97,7 @@
 import { onMounted, ref } from 'vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import { useQuasar } from 'quasar'
-import { api, avisar, avisarError, codigoLinea, copiar, modeloInicial, nombreAgente, nombreEsfuerzo, ordenAgentes, sesion, type Adaptador } from '../api'
+import { api, avisar, avisarError, codigoLinea, copiar, modeloInicial, nombreAgente, nombreEsfuerzo, ordenarAgentes, sesion, type Adaptador } from '../api'
 import { t } from '../i18n'
 
 const $q = useQuasar()
@@ -137,9 +137,7 @@ function textoAlmacen(a: Adaptador) {
 async function cargar() {
   cargando.value = true
   try {
-    // Orden fijo de la red (el mismo que el mapa y Mis APIs); los agentes desconocidos, al final.
-    const posicion = (a: string) => (ordenAgentes.indexOf(a) + 1 || ordenAgentes.length + 1)
-    adaptadores.value = (await api.capacidades()).adaptadores.sort((a, b) => posicion(a.agente) - posicion(b.agente) || a.agente.localeCompare(b.agente))
+    adaptadores.value = ordenarAgentes((await api.capacidades()).adaptadores)
   } catch (e) {
     avisarError(e)
   } finally {
