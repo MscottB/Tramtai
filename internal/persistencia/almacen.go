@@ -356,6 +356,20 @@ func (a *Almacen) RegistrarProceso(ctx context.Context, id string, pid int, firm
 	return err
 }
 
+// CambiarAgente apunta el trabajo al agente de respaldo que lo ejecuta ahora; la huella no cambia.
+func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado string) error {
+	r, err := a.db.ExecContext(ctx, `UPDATE trabajos SET solicitud = json_set(solicitud, '$.agente', ?), modelo_enviado = ? WHERE id = ?`,
+		agente, modeloEnviado, id)
+	if err != nil {
+		return err
+	}
+	if n, err := r.RowsAffected(); err == nil && n == 0 {
+		return nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
+	}
+	a.avisar()
+	return nil
+}
+
 // AgregarEvento añade un evento con el siguiente número del trabajo.
 func (a *Almacen) AgregarEvento(ctx context.Context, id, tipo, datos string) error {
 	if err := agregarEvento(ctx, a.db, id, tipo, datos, a.reloj().UTC()); err != nil {

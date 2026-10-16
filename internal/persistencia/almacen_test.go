@@ -389,3 +389,23 @@ func TestListarEnUnaConsultaConIndice(t *testing.T) {
 		}
 	}
 }
+
+func TestCambiarAgente(t *testing.T) {
+	a := abrir(t)
+	tr := trabajo("global", "hola")
+	tr.ModeloEnviado = "m1"
+	tr = aceptar(t, a, tr, "")
+	if err := a.CambiarAgente(ctx, tr.ID, "otro", "m2"); err != nil {
+		t.Fatal(err)
+	}
+	cambiado, err := a.Obtener(ctx, tr.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cambiado.Solicitud.Agente != "otro" || cambiado.ModeloEnviado != "m2" || cambiado.Huella != tr.Huella {
+		t.Fatalf("cambio de agente incorrecto: %+v", cambiado)
+	}
+	if nucleo.CodigoDe(a.CambiarAgente(ctx, "trabajo_inexistente", "x", "")) != nucleo.CodigoNoEncontrado {
+		t.Fatal("un trabajo inexistente debe dar no_encontrado")
+	}
+}
