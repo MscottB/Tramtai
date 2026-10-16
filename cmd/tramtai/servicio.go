@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -574,6 +575,11 @@ func rotarTokenInstancia(cmd *cobra.Command, datos, id string, c *nucleo.Configu
 		}
 		if nucleo.CodigoDe(err) != nucleo.CodigoNoEncontrado {
 			return err
+		}
+		// No encontrado vale para una instancia inactiva; si está activa, el servicio en marcha es de una versión sin
+		// esta ruta: cambiar solo el archivo mostraría una clave que no usa mientras la anterior sigue valiendo.
+		if estado, err := cli.Estado(ctx); err == nil && slices.ContainsFunc(estado.Instancias, func(i servicio.EstadoInstancia) bool { return i.ID == id }) {
+			return errors.New(idioma.T("el servicio en marcha es de una versión anterior: detenlo (tramtai servicio detener), vuelve a iniciarlo y repite la orden"))
 		}
 	}
 	if _, origen, err := servicio.TokenInstancia(datos, id, c); err != nil {
