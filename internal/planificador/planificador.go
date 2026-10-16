@@ -92,7 +92,9 @@ type Planificador struct {
 	cancelaciones map[string]context.CancelFunc
 	// semPuntos limita las ejecuciones simultáneas de cada punto de acceso, dentro de las de la instancia.
 	semPuntos map[string]chan struct{}
-	cola      chan string
+	// presupuestos son los vigentes por API y de la instancia (ver FijarPresupuestos).
+	presupuestos atomic.Pointer[map[string]nucleo.Presupuesto]
+	cola         chan string
 	// ctx gobierna la admisión y la toma de trabajos de la cola; ejec, las ejecuciones en curso. Separarlos
 	// permite el drenaje: se deja de aceptar sin cortar lo que ya se ejecuta.
 	ctx    context.Context
@@ -105,9 +107,11 @@ type Planificador struct {
 // Nuevo crea un planificador; hay que llamar a Iniciar antes de enviar trabajos.
 func Nuevo(almacen *persistencia.Almacen, registro map[string]adaptadores.Adaptador, semaforos Semaforos, opc Opciones) *Planificador {
 	opc.MaximoCola, opc.MaximoTrabajos = max(opc.MaximoCola, 1), max(opc.MaximoTrabajos, 1)
-	return &Planificador{opc: opc, almacen: almacen, adaptadores: registro, semaforos: semaforos,
+	p := &Planificador{opc: opc, almacen: almacen, adaptadores: registro, semaforos: semaforos,
 		conversiones: make(chan struct{}, max(opc.MaximoConversiones, 1)), ranuras: make(chan struct{}, opc.MaximoTrabajos),
 		cancelaciones: map[string]context.CancelFunc{}}
+	almacen.Topes = p.topes
+	return p
 }
 
 // Iniciar recupera el estado tras un reinicio, reencola lo pendiente y arranca el despachador.
