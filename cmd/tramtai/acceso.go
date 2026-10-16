@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -23,6 +24,7 @@ type opcionesPunto struct {
 	forzar                            bool
 	modoContexto, formato             string
 	tiempo                            int
+	presupuesto                       []string
 }
 
 func (o *opcionesPunto) registrar(cmd *cobra.Command) {
@@ -41,6 +43,32 @@ func (o *opcionesPunto) registrar(cmd *cobra.Command) {
 	f.StringVar(&o.modoContexto, "modo-contexto", "", idioma.T("modo de contexto del punto"))
 	f.StringVar(&o.formato, "formato", "", idioma.T("formato de salida del punto"))
 	f.IntVar(&o.tiempo, "tiempo", 0, idioma.T("tiempo límite en segundos del punto"))
+	f.StringSliceVar(&o.presupuesto, "presupuesto", nil, idioma.T("límite periodo.unidad=valor (diario|mensual, peticiones|tokens|usd), repetible; 0 lo quita"))
+}
+
+// aplicarPresupuesto fija en p cada límite periodo.unidad=valor; 0 quita ese límite.
+func aplicarPresupuesto(p *nucleo.Presupuesto, entradas []string) error {
+	for _, entrada := range entradas {
+		clave, valor, ok := strings.Cut(entrada, "=")
+		periodo, unidad, _ := strings.Cut(clave, ".")
+		limites := map[string]*nucleo.Limites{"diario": &p.Diario, "mensual": &p.Mensual}[periodo]
+		numero, err := strconv.ParseFloat(valor, 64)
+		if !ok || limites == nil || err != nil || numero < 0 {
+			return fmt.Errorf(idioma.T("presupuesto no válido %q: usa diario|mensual.peticiones|tokens|usd=valor"), entrada)
+		}
+		entero, errEntero := strconv.Atoi(valor)
+		switch {
+		case unidad == "usd":
+			limites.USD = numero
+		case unidad == "peticiones" && errEntero == nil:
+			limites.Peticiones = entero
+		case unidad == "tokens" && errEntero == nil:
+			limites.Tokens = entero
+		default:
+			return fmt.Errorf(idioma.T("presupuesto no válido %q: usa diario|mensual.peticiones|tokens|usd=valor"), entrada)
+		}
+	}
+	return nil
 }
 
 // aplicar copia al punto las banderas indicadas en la línea de comandos.
@@ -100,7 +128,16 @@ func (o *opcionesPunto) aplicar(cmd *cobra.Command, p *servicio.ConfigPunto) err
 			p.Ejecucion.TiempoLimiteSegundos = o.tiempo
 		}
 	}
-	_, err := p.Normalizar("global", 0)
+	if cambio("presupuesto") {
+		if p.Presupuesto == nil {
+			p.Presupuesto = &nucleo.Presupuesto{}
+		}
+		if err := aplicarPresupuesto(p.Presupuesto, o.presupuesto); err != nil {
+			return err
+		}
+	}
+	normalizado, err := p.Normalizar("global", 0)
+	p.Presupuesto = normalizado.Presupuesto // sin límites queda sin presupuesto
 	return err
 }
 
@@ -255,7 +292,18 @@ func comandoAcceso() *cobra.Command {
 	token := &cobra.Command{Use: "token <nombre>", Short: idioma.T("Regenera con --rotar la clave del punto de acceso; solo se ve entonces"), Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error { return mostrarTokenPunto(cmd, args[0], rotar) }}
 	token.Flags().BoolVar(&rotar, "rotar", false, idioma.T("genera un token nuevo; el anterior deja de valer"))
-	grupo.AddCommand(listar, crear, editarCmd, activo("activar", true), activo("desactivar", false), eliminar, token)
+	var instanciaPresupuesto string
+	reiniciar := &cobra.Command{Use: "reiniciar-presupuesto [nombre]", Args: cobra.MaximumNArgs(1),
+		Short: idioma.T("Pone a cero el consumo del día y del mes de un punto de acceso, o de la instancia sin nombre"),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			nombre := ""
+			if len(args) == 1 {
+				nombre = args[0]
+			}
+			return reiniciarPresupuesto(cmd, instanciaPresupuesto, nombre)
+		}}
+	reiniciar.Flags().StringVar(&instanciaPresupuesto, "instancia", "", idioma.T("instancia cuyo presupuesto se reinicia (global por defecto)"))
+	grupo.AddCommand(listar, crear, editarCmd, activo("activar", true), activo("desactivar", false), eliminar, token, reiniciar)
 	return grupo
 }
 
@@ -278,6 +326,33 @@ func mostrarTokenPunto(cmd *cobra.Command, nombre string, rotar bool) error {
 	}
 	fmt.Fprintf(cmd.OutOrStdout(), idioma.T("clave nueva de %s (guárdala: no se volverá a mostrar):\n%s\n"), nombre, valor)
 	recargarSiActivo(cmd)
+	return nil
+}
+
+// reiniciarPresupuesto pone a cero el consumo en curso de un punto (en su instancia) o de una instancia. El consumo
+// está en la base del servicio: sin servicio en marcha no hay nada que reiniciar.
+func reiniciarPresupuesto(cmd *cobra.Command, instancia, nombre string) error {
+	c, err := conectar()
+	if err != nil {
+		return errors.New(idioma.T("el servicio no está en marcha: el consumo se guarda en su base (inícialo con tramtai servicio iniciar)"))
+	}
+	ctx, cancelar := contexto()
+	defer cancelar()
+	if nombre != "" {
+		e, err := c.Estado(ctx)
+		if err != nil {
+			return err
+		}
+		i := slices.IndexFunc(e.Puntos, func(p servicio.EstadoPunto) bool { return p.Nombre == nombre })
+		if i < 0 {
+			return fmt.Errorf(idioma.T("no existe el punto de acceso %s en el servicio"), nombre)
+		}
+		instancia = e.Puntos[i].Instancia
+	}
+	if err := c.ReiniciarPresupuesto(ctx, instancia, nombre); err != nil {
+		return err
+	}
+	fmt.Fprintln(cmd.OutOrStdout(), idioma.T("consumo reiniciado"))
 	return nil
 }
 

@@ -199,5 +199,14 @@ func init() {
 		"\n  Ver lo que procesa:  tramtai servicio registro -f\n  Ver su estado:       tramtai servicio estado\n  Detenerlo:           tramtai servicio detener\n": "\n  See what it processes: tramtai servicio registro -f\n  See its status:        tramtai servicio estado\n  Stop it:               tramtai servicio detener\n",
 		"Abriendo la aplicación de escritorio… (con --navegador se abre en el navegador)":                                                                          "Opening the desktop app… (with --navegador it opens in the browser)",
 		"Abriendo la Web UI en el navegador…": "Opening the Web UI in the browser…",
+		// presupuestos
+		"Pone a cero el consumo del día y del mes de un punto de acceso, o de la instancia sin nombre": "Resets today's and this month's usage of an access point, or of the workspace without a name",
+		"consumo reiniciado": "usage reset",
+		"el servicio no está en marcha: el consumo se guarda en su base (inícialo con tramtai servicio iniciar)": "the service is not running: usage is stored in its database (start it with tramtai servicio iniciar)",
+		"instancia cuyo presupuesto se reinicia (global por defecto)":                                            "workspace whose budget is reset (global by default)",
+		"límite periodo.unidad=valor (diario|mensual, peticiones|tokens|usd), repetible; 0 lo quita":             "limit period.unit=value (diario|mensual, peticiones|tokens|usd), repeatable; 0 removes it",
+		"no existe el punto de acceso %s en el servicio":                                                         "access point %s does not exist in the service",
+		"presupuesto no válido %q: usa diario|mensual.peticiones|tokens|usd=valor":                               "invalid budget %q: use diario|mensual.peticiones|tokens|usd=value",
+		"presupuesto:": "budget:",
 	})
 }

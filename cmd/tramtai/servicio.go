@@ -387,7 +387,34 @@ func imprimirPuntos(out io.Writer, puntos []servicio.EstadoPunto) {
 			nombre += " (" + p.Grupo + ")"
 		}
 		fmt.Fprintf(out, "  %-18s %-40s %-24s %s\n", nombre, valorO(p.URL, "—"), "["+strings.Join(p.Contratos, ",")+"]", estado)
+		if p.Presupuesto != nil {
+			fmt.Fprintf(out, "  %-18s %s\n", "", textoPresupuesto(*p.Presupuesto))
+		}
 	}
+}
+
+// textoPresupuesto resume los límites: «presupuesto: diario 500 peticiones; mensual 50 USD».
+func textoPresupuesto(p nucleo.Presupuesto) string {
+	var partes []string
+	for _, per := range []struct {
+		nombre string
+		l      nucleo.Limites
+	}{{idioma.T("diario"), p.Diario}, {idioma.T("mensual"), p.Mensual}} {
+		var limites []string
+		if per.l.Peticiones > 0 {
+			limites = append(limites, strconv.Itoa(per.l.Peticiones)+" "+idioma.T("peticiones"))
+		}
+		if per.l.Tokens > 0 {
+			limites = append(limites, strconv.Itoa(per.l.Tokens)+" tokens")
+		}
+		if per.l.USD > 0 {
+			limites = append(limites, strconv.FormatFloat(per.l.USD, 'f', -1, 64)+" USD")
+		}
+		if len(limites) > 0 {
+			partes = append(partes, per.nombre+" "+strings.Join(limites, ", "))
+		}
+	}
+	return idioma.T("presupuesto:") + " " + strings.Join(partes, "; ")
 }
 
 func resumenTrabajos(conteo map[string]int) string {

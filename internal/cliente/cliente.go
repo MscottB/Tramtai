@@ -186,6 +186,15 @@ func (c *Cliente) Recargar(ctx context.Context) ([]servicio.EstadoPunto, error) 
 	return r.Puntos, err
 }
 
+// ReiniciarPresupuesto pone a cero el consumo del día y del mes de un punto de acceso, o de la instancia sin nombre.
+func (c *Cliente) ReiniciarPresupuesto(ctx context.Context, instancia, nombre string) error {
+	ruta := "/api/v1/instancia/presupuesto/reiniciar"
+	if nombre != "" {
+		ruta = "/api/v1/puntos/" + url.PathEscape(nombre) + "/presupuesto/reiniciar"
+	}
+	return c.pedir(ctx, "POST", ruta, instancia, nil, "", nil)
+}
+
 // ActivarPunto activa o desactiva un punto de acceso; se guarda en su configuración y se aplica sin reiniciar.
 func (c *Cliente) ActivarPunto(ctx context.Context, instancia, nombre string, activo bool) error {
 	return c.pedir(ctx, "PATCH", "/api/v1/puntos/"+url.PathEscape(nombre), instancia, cuerpoJSON(map[string]bool{"activo": activo}), "application/json", nil)
