@@ -19,6 +19,9 @@ const en: Textos = {
   'comun.crear': 'Create',
   'comun.continuar': 'Continue',
   'comun.masAcciones': 'More actions',
+  'historial.vacio': 'No requests yet',
+  'historial.quitarFiltros': 'Clear filters',
+  'historial.irProbar': 'Go to Try',
   'receta.opciones': 'Recipe options',
   'conectar.conexion': 'Connection',
   'conectar.perfiles': 'Profiles',
@@ -334,7 +337,7 @@ const en: Textos = {
   'ayuda.paso4Texto':
     'In My APIs create one API per app, with its own key (shown only when it is created: copy it then), models and fixed instructions (for example, always answer in Spanish). Group them to start or stop them together.',
   'ayuda.paso5': 'Make it start by itself',
-  'ayuda.paso5Texto': 'In Settings, turn on start with your system (Windows, macOS or Linux) and you will never need to open a terminal.',
+  'ayuda.paso5Texto': 'On Windows, turn on start with your system in Settings and you will never need to open a terminal (macOS and Linux will come later).',
   'ayuda.ir': 'Go to {pagina}',
   'ayuda.preguntas': 'Frequently asked questions',
   'ayuda.p1': 'Do I need a key to sign in?',

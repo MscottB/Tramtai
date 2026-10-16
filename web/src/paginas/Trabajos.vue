@@ -1,15 +1,11 @@
 <template>
   <div class="pagina apilado">
-    <div class="row items-end q-col-gutter-md">
-      <div class="col-12 col-sm">
-        <div class="titulo-pagina">{{ t('menu.historial') }}</div>
-        <div class="texto-suave">{{ t('historial.subtitulo') }}</div>
-      </div>
-      <div class="col-12 col-sm-auto row no-wrap q-gutter-x-sm">
+    <CabeceraPagina :titulo="t('menu.historial')" :descripcion="t('historial.subtitulo')">
+      <template #acciones>
         <q-btn flat no-caps color="negative" icon="o_delete_sweep" :label="t('historial.vaciar')" :disable="!hayTerminados" @click="vaciar" />
         <q-btn flat no-caps color="primary" icon="o_refresh" :label="t('comun.actualizar')" :loading="cargando" @click="cargar()" />
-      </div>
-    </div>
+      </template>
+    </CabeceraPagina>
 
     <q-card>
       <q-card-section class="row items-center q-col-gutter-sm">
@@ -30,6 +26,10 @@
       <q-table :rows="filas" :columns="columnas" row-key="id" flat :loading="cargando && !trabajos.length"
         :pagination="{ rowsPerPage: 25 }" :rows-per-page-options="[25, 50, 100]" :no-data-label="t('historial.sinFiltro')"
         table-class="fila-clicable" @row-click="(_e: Event, fila: Trabajo) => abrir(fila)">
+        <template #no-data>
+          <EstadoVacio v-if="!cargando" class="full-width" :titulo="hayFiltro ? t('historial.sinFiltro') : t('historial.vacio')"
+            :accion="hayFiltro ? t('historial.quitarFiltros') : t('historial.irProbar')" @accion="hayFiltro ? quitarFiltros() : emit('ir', 'ejecutar')" />
+        </template>
         <template #body-cell-estado="props">
           <q-td :props="props">
             <span :class="estadoInfo(props.value).clase"><q-icon :name="estadoInfo(props.value).icono" size="14px" />{{ estadoInfo(props.value).etiqueta }}</span>
@@ -114,6 +114,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import CabeceraPagina from '../componentes/CabeceraPagina.vue'
+import EstadoVacio from '../componentes/EstadoVacio.vue'
 import { useQuasar, type QTableColumn } from 'quasar'
 import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
@@ -132,6 +134,12 @@ filtroHistorial.value = ''
 const busqueda = ref<string | null>('')
 // origen: '' todas, '-' la API principal, o el nombre de una API (se filtra en el servicio).
 const origen = ref(origenHistorial.value)
+const hayFiltro = computed(() => filtro.value !== 'todos' || !!busqueda.value || !!origen.value)
+function quitarFiltros() {
+  filtro.value = 'todos'
+  busqueda.value = ''
+  origen.value = ''
+}
 origenHistorial.value = ''
 const nombresApis = ref<string[]>([])
 const origenes = computed(() => [

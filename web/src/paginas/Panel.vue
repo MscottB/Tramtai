@@ -93,16 +93,14 @@
           </q-item-section>
         </q-item>
       </q-list>
-      <div v-else class="vacio">
-        <q-icon name="o_tram" size="40px" />
-        <div class="q-mt-sm">{{ t('inicio.sinTrabajos') }}</div>
-      </div>
+      <EstadoVacio v-else :titulo="t('inicio.sinTrabajos')" />
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import EstadoVacio from '../componentes/EstadoVacio.vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import Linea from '../componentes/Linea.vue'
 import MapaRed from '../componentes/MapaRed.vue'

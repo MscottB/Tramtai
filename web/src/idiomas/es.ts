@@ -17,6 +17,9 @@ const es = {
   'comun.crear': 'Crear',
   'comun.continuar': 'Continuar',
   'comun.masAcciones': 'Más acciones',
+  'historial.vacio': 'Aún no hay peticiones',
+  'historial.quitarFiltros': 'Quitar filtros',
+  'historial.irProbar': 'Ir a Probar',
   'receta.opciones': 'Opciones de la receta',
   'conectar.conexion': 'Conexión',
   'conectar.perfiles': 'Perfiles',
@@ -333,7 +336,7 @@ const es = {
   'ayuda.paso4Texto':
     'En Mis APIs crea una API por aplicación, con su clave (solo se muestra al crearla: cópiala entonces), sus modelos e instrucciones fijas (por ejemplo, que responda siempre en español). Agrúpalas para activarlas o detenerlas juntas.',
   'ayuda.paso5': 'Haz que arranque solo',
-  'ayuda.paso5Texto': 'En Ajustes activa el arranque con el sistema (Windows, macOS o Linux) y no tendrás que abrir ninguna terminal.',
+  'ayuda.paso5Texto': 'En Windows, activa en Ajustes el arranque con el sistema y no tendrás que abrir ninguna terminal (en macOS y Linux llegará más adelante).',
   'ayuda.ir': 'Ir a {pagina}',
   'ayuda.preguntas': 'Preguntas frecuentes',
   'ayuda.p1': '¿Necesito una clave para entrar?',
