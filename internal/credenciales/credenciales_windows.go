@@ -47,9 +47,15 @@ type credencial struct {
 // Disponible indica si el sistema tiene almacén de credenciales soportado.
 func Disponible() bool { return true }
 
+// Almacen es el nombre del almacén, para las instrucciones de la interfaz.
+func Almacen() string { return idioma.T("Administrador de credenciales de Windows") }
+
 // Guardar crea o sustituye la clave.
 func Guardar(nombre, valor string) error {
-	if valor == "" || len(valor) > maximoBytesCredencial {
+	if err := valorValido(valor); err != nil {
+		return err
+	}
+	if len(valor) > maximoBytesCredencial {
 		return errors.New(idioma.T("la clave está vacía o es demasiado larga"))
 	}
 	destino, _ := windows.UTF16PtrFromString(objetivo(nombre))

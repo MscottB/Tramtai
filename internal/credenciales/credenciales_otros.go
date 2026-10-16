@@ -1,4 +1,4 @@
-//go:build !windows
+//go:build !windows && !darwin && !linux
 
 package credenciales
 
@@ -8,17 +8,20 @@ import (
 	"tramtai/internal/idioma"
 )
 
-// shortcut: en macOS y Linux las claves siguen por variable de entorno; Llavero y Secret Service, cuando haya versión para macOS y Linux.
-var errNoSoportado = errors.New(idioma.T("el almacén de credenciales solo está disponible en Windows; usa variables de entorno"))
+// En otros sistemas no hay almacén soportado: las claves van por variable de entorno.
+var errNoSoportado = errors.New(idioma.T("este sistema no tiene almacén de credenciales soportado; usa variables de entorno"))
 
 // Disponible indica si el sistema tiene almacén de credenciales soportado.
 func Disponible() bool { return false }
 
-// Guardar no está disponible fuera de Windows.
+// Almacen es el nombre del almacén; vacío si no hay ninguno.
+func Almacen() string { return "" }
+
+// Guardar no está disponible en este sistema.
 func Guardar(string, string) error { return errNoSoportado }
 
-// Leer no encuentra nada fuera de Windows.
+// Leer no encuentra nada en este sistema.
 func Leer(string) (string, error) { return "", nil }
 
-// Borrar no está disponible fuera de Windows.
+// Borrar no está disponible en este sistema.
 func Borrar(string) error { return errNoSoportado }

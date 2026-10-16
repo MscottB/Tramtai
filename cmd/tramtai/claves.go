@@ -15,8 +15,8 @@ import (
 
 // comandoClaves administra las claves de API en el almacén de credenciales del sistema. Nunca las imprime.
 func comandoClaves() *cobra.Command {
-	grupo := &cobra.Command{Use: "claves", Short: idioma.T("Guarda las claves de API en el Administrador de credenciales (no en variables de entorno)"),
-		Long: idioma.Tf("Guarda las claves de API de los proveedores en el almacén de credenciales del sistema. Una variable de entorno\ncon el mismo nombre tiene prioridad. Claves admitidas: %s.\nReinicia el servicio después de cambiarlas.", strings.Join(credenciales.Nombres, ", "))}
+	grupo := &cobra.Command{Use: "claves", Short: idioma.T("Guarda las claves de API en el almacén cifrado del sistema (no en archivos ni variables de entorno)"),
+		Long: idioma.Tf("Guarda las claves de API de los proveedores en el almacén cifrado del sistema (Administrador de credenciales\nen Windows, Llavero en macOS, Secret Service en Linux); Tramtai nunca las escribe en sus archivos. Una variable\nde entorno con el mismo nombre tiene prioridad. Claves admitidas: %s.\nEl servicio usa la clave nueva desde la siguiente petición, sin reiniciar.", strings.Join(credenciales.Nombres, ", "))}
 	validar := func(nombre string) error {
 		if !credenciales.Admitido(nombre) {
 			return fmt.Errorf(idioma.T("clave no admitida %q; usa una de %s"), nombre, strings.Join(credenciales.Nombres, ", "))
@@ -47,7 +47,7 @@ func comandoClaves() *cobra.Command {
 			if err := credenciales.Guardar(args[0], strings.TrimSpace(valor)); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("%s guardada en el almacén de credenciales; reinicia el servicio para usarla\n"), args[0])
+			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("%s guardada en %s; el servicio la usa desde la siguiente petición\n"), args[0], credenciales.Almacen())
 			return nil
 		}}
 	borrar := &cobra.Command{Use: "borrar NOMBRE", Short: idioma.T("Elimina la clave del almacén"), Args: cobra.ExactArgs(1),
@@ -66,7 +66,7 @@ func comandoClaves() *cobra.Command {
 			for _, nombre := range credenciales.Nombres {
 				origen := idioma.T("no configurada")
 				if v, err := credenciales.Leer(nombre); err == nil && v != "" {
-					origen = idioma.T("almacén de credenciales")
+					origen = credenciales.Almacen()
 				}
 				if os.Getenv(nombre) != "" {
 					origen = idioma.T("variable de entorno (tiene prioridad)")
