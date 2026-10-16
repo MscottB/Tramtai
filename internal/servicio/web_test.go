@@ -67,12 +67,20 @@ func TestWebUI(t *testing.T) {
 	if r, _ := n.pedir("GET", "/ui/sesion", ""); r.StatusCode != 401 {
 		t.Fatalf("sin sesión: %d", r.StatusCode)
 	}
-	if r, _ := n.pedir("POST", "/ui/sesion", `{"token":"incorrecto"}`); r.StatusCode != 401 {
-		t.Fatalf("token incorrecto: %d", r.StatusCode)
+	// La clave que usan las aplicaciones no abre la Web UI: se entra con el código de un solo uso de la app de
+	// escritorio, la terminal o tramtai abrir (o, en el mismo equipo y usuario, sin nada).
+	for _, token := range []string{"incorrecto", global.token} {
+		if r, _ := n.pedir("POST", "/ui/sesion", `{"token":"`+token+`"}`); r.StatusCode != 401 {
+			t.Fatalf("la clave %q no debe abrir la Web UI: %d", token, r.StatusCode)
+		}
 	}
-	r, cuerpo := n.pedir("POST", "/ui/sesion", `{"token":"`+global.token+`"}`)
-	if r.StatusCode != 200 || !strings.Contains(r.Header.Get("Set-Cookie"), "HttpOnly") || !strings.Contains(r.Header.Get("Set-Cookie"), "SameSite=Strict") {
-		t.Fatalf("entrar: %d %s %s", r.StatusCode, cuerpo, r.Header.Get("Set-Cookie"))
+	codigo, _ := s.CodigoSesion("global")
+	if r, _ := n.pedir("GET", "/ui/entrar?codigo="+codigo, ""); r.StatusCode != http.StatusSeeOther {
+		t.Fatalf("entrar con código: %d", r.StatusCode)
+	}
+	r, cuerpo := n.pedir("GET", "/ui/sesion", "")
+	if r.StatusCode != 200 || !strings.Contains(cuerpo, `"local":true`) {
+		t.Fatalf("la sesión con código desde este equipo es local: %d %s", r.StatusCode, cuerpo)
 	}
 	n.csrf = cuerpo[strings.Index(cuerpo, `"csrf":"`)+8:]
 	n.csrf = n.csrf[:strings.Index(n.csrf, `"`)]

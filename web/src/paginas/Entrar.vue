@@ -8,9 +8,9 @@
       </q-card-section>
 
       <q-card-section class="q-pt-none">
-        <q-banner v-if="aviso || error" rounded class="error-caja q-mb-md" dense>
+        <q-banner v-if="aviso" rounded class="error-caja q-mb-md" dense>
           <template #avatar><q-icon name="error_outline" /></template>
-          {{ error || aviso }}
+          {{ aviso }}
         </q-banner>
 
         <div class="text-weight-medium q-mb-xs">{{ t('entrar.rapida') }}</div>
@@ -19,17 +19,11 @@
 
         <q-separator class="q-my-lg" />
 
-        <div class="text-weight-medium q-mb-sm">{{ t('entrar.conClave') }}</div>
-        <q-form @submit="entrar">
-          <q-input v-model="token" :type="ver ? 'text' : 'password'" outlined dense placeholder="tt_…" autocomplete="off" :aria-label="t('entrar.clave')">
-            <template #append>
-              <q-btn flat round dense :icon="ver ? 'visibility_off' : 'visibility'" :aria-label="ver ? t('conectar.ocultarClave') : t('conectar.mostrarClave')"
-                @click="ver = !ver" />
-            </template>
-          </q-input>
-          <div class="text-caption texto-suave q-mt-xs">{{ t('entrar.claveAyuda') }}</div>
-          <q-btn class="q-mt-md full-width" type="submit" color="primary" unelevated no-caps :label="t('entrar.boton')" :loading="enviando" :disable="!token.trim()" />
-        </q-form>
+        <div class="text-weight-medium q-mb-xs">{{ t('entrar.app') }}</div>
+        <div class="texto-suave text-body2">{{ t('entrar.appTexto') }}</div>
+        <div class="text-caption texto-suave q-mt-md row no-wrap items-start">
+          <q-icon name="o_lock" size="16px" class="q-mr-xs q-mt-xs" /><span>{{ t('entrar.sinClave') }}</span>
+        </div>
       </q-card-section>
       <q-card-section class="row justify-center q-pt-none">
         <q-btn-toggle :model-value="idioma" flat dense no-caps toggle-color="primary" :aria-label="t('app.idioma')"
@@ -40,26 +34,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { api, copiar, ErrorApi, mensajeError } from '../api'
+// Entrar se muestra cuando no se puede comprobar que quien abre la Web UI es el dueño del servicio: la clave de las
+// aplicaciones no abre la Web UI, así que se explica cómo entrar con un código de un solo uso.
+import { copiar } from '../api'
 import { cambiarIdioma, idioma, idiomas, t } from '../i18n'
 
 defineProps<{ aviso: string }>()
-const token = ref('')
-const ver = ref(false)
-const error = ref('')
-const enviando = ref(false)
-
-async function entrar() {
-  enviando.value = true
-  error.value = ''
-  try {
-    await api.entrar(token.value)
-    token.value = ''
-  } catch (e) {
-    error.value = e instanceof ErrorApi && e.estado === 401 ? t('entrar.claveInvalida') : mensajeError(e)
-  } finally {
-    enviando.value = false
-  }
-}
 </script>

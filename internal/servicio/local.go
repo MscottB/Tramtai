@@ -14,17 +14,11 @@ import (
 // frente a otros usuarios del equipo, y eso se comprueba aquí con el dueño de la conexión. Las
 // páginas web ajenas siguen bloqueadas por Host, Origin, SameSite y CSRF; las aplicaciones siguen usando su token.
 func (s *Servicio) esLocal(r *http.Request) bool {
-	if !s.opc.EntradaLocal {
+	if !s.opc.EntradaLocal || !desdeEsteEquipo(r) {
 		return false
 	}
-	// Un proxy o túnel del mismo usuario reenvía peticiones ajenas desde loopback: con sus cabeceras no hay entrada libre.
-	for _, cabecera := range []string{"Forwarded", "X-Forwarded-For", "X-Forwarded-Host", "X-Real-Ip", "Via"} {
-		if r.Header.Get(cabecera) != "" {
-			return false
-		}
-	}
 	cliente, err := netip.ParseAddrPort(r.RemoteAddr)
-	if err != nil || !cliente.Addr().IsLoopback() {
+	if err != nil {
 		return false
 	}
 	direccion, ok := r.Context().Value(http.LocalAddrContextKey).(net.Addr)
@@ -36,6 +30,19 @@ func (s *Servicio) esLocal(r *http.Request) bool {
 		return false
 	}
 	return mismoUsuario(netip.AddrPortFrom(cliente.Addr().Unmap(), cliente.Port()), netip.AddrPortFrom(servidor.Addr().Unmap(), servidor.Port()))
+}
+
+// desdeEsteEquipo indica que la petición llega por loopback y no la reenvía un proxy o túnel (que traería peticiones
+// ajenas desde loopback). No dice de qué usuario es: eso lo comprueba esLocal o, con un código de un solo uso, el
+// hecho de que solo el dueño del servicio puede pedirlo con el token de servicio.
+func desdeEsteEquipo(r *http.Request) bool {
+	for _, cabecera := range []string{"Forwarded", "X-Forwarded-For", "X-Forwarded-Host", "X-Real-Ip", "Via"} {
+		if r.Header.Get(cabecera) != "" {
+			return false
+		}
+	}
+	cliente, err := netip.ParseAddrPort(r.RemoteAddr)
+	return err == nil && cliente.Addr().IsLoopback()
 }
 
 // uidDeConexion busca en una tabla con el formato de /proc/net/tcp (o tcp6) la conexión que el cliente abrió hacia

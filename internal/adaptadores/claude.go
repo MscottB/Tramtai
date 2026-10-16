@@ -14,6 +14,9 @@ import (
 	"tramtai/internal/procesos"
 )
 
+// propiosClaude son los prefijos de la configuración de Claude Code que su CLI sí recibe.
+var propiosClaude = []string{"CLAUDE_", "ANTHROPIC_"}
+
 // Claude ejecuta Claude Code con "claude -p" en streaming (stream-json), aislado de la configuración del usuario.
 type Claude struct {
 	Programa      string // nombre o ruta del ejecutable (comandos_agentes.claude)
@@ -71,7 +74,7 @@ func (c Claude) ResolverModelo(ctx context.Context, modelo string) (string, erro
 	defer cortar()
 	var concreto string
 	_, err = procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: espacio,
-		Entorno: entornoLimpio(extra...), Entrada: "."}, func(linea string) error {
+		Entorno: entornoLimpio(propiosClaude, extra...), Entrada: "."}, func(linea string) error {
 		var e struct{ Type, Subtype, Model string }
 		if json.Unmarshal([]byte(linea), &e) == nil && e.Type == "system" && e.Subtype == "init" {
 			concreto = e.Model
@@ -151,7 +154,7 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 
 	var final *resultadoClaude
 	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: directorioTrabajo(s, espacio),
-		Entorno: entornoLimpio(extra...), Entrada: prompt}, func(linea string) error {
+		Entorno: entornoLimpio(propiosClaude, extra...), Entrada: prompt}, func(linea string) error {
 		var e eventoClaude
 		if json.Unmarshal([]byte(linea), &e) != nil {
 			return nil // línea informativa no JSON

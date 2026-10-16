@@ -306,11 +306,9 @@ const en: Textos = {
   'entrar.noConfirmado': 'We could not confirm that this browser is yours.',
   'entrar.rapida': 'The quickest way',
   'entrar.rapidaTexto': 'Run this in a terminal; it opens this page already signed in:',
-  'entrar.conClave': 'Or sign in with the workspace key',
-  'entrar.clave': 'Key',
-  'entrar.claveAyuda': '“tramtai global token” shows it (or “tramtai proyecto token” in a project).',
-  'entrar.boton': 'Sign in',
-  'entrar.claveInvalida': 'That key does not match any active workspace.',
+  'entrar.app': 'Or open it from the app',
+  'entrar.appTexto': 'Open Tramtai from the applications menu or its tray icon: it signs you in directly.',
+  'entrar.sinClave': 'For security, the app key does not open this page: it only calls the API.',
 
   // Help
   'ayuda.subtitulo': 'How to get started and answers to the most common questions.',

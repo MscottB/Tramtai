@@ -52,7 +52,10 @@ func TestEntornoLimpioQuitaCredenciales(t *testing.T) {
 	}
 	t.Setenv("CLAUDE_CODE_TOKEN_EXTRA", "propia")
 	t.Setenv("PATH_PRUEBA", "conservada")
-	entorno := strings.Join(entornoLimpio("CODEX_API_KEY=propia", "MI_TOKEN=explicita"), "\n")
+	// Un secreto con el prefijo de otro proveedor tampoco llega: cada CLI recibe solo los suyos.
+	t.Setenv("CODEX_OTRO_TOKEN", "secreto")
+	t.Setenv("ANTHROPIC_FOUNDRY_API_KEY", "secreto")
+	entorno := strings.Join(entornoLimpio([]string{"CLAUDE_"}, "CODEX_API_KEY=propia", "MI_TOKEN=explicita"), "\n")
 	if strings.Contains(entorno, "=secreto") {
 		t.Fatalf("el entorno heredó una credencial ajena:\n%s", entorno)
 	}

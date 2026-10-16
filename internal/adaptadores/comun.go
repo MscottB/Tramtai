@@ -86,9 +86,9 @@ func enmarcarSistema(sistema, prompt string) string {
 }
 
 // entornoLimpio hereda el entorno sin credenciales y añade las variables indicadas. Quita además las TRAMTAI_*
-// (el token del servicio) y cualquier otro secreto (GITHUB_TOKEN, AWS_*…), salvo la configuración propia de las
-// CLI (CLAUDE_, CODEX_, ANTHROPIC_, OPENAI_, GEMINI_), cuyas credenciales ya filtra variablesCredenciales.
-func entornoLimpio(extra ...string) []string {
+// (el token del servicio) y cualquier otro secreto (GITHUB_TOKEN, AWS_*…), salvo la configuración propia de esa
+// CLI (propios: por ejemplo CLAUDE_ y ANTHROPIC_ para Claude); los secretos de otro proveedor no le llegan.
+func entornoLimpio(propios []string, extra ...string) []string {
 	quitar := map[string]bool{}
 	for _, nombre := range variablesCredenciales {
 		quitar[nombre] = true
@@ -101,7 +101,7 @@ func entornoLimpio(extra ...string) []string {
 	for _, par := range os.Environ() {
 		nombre, _, _ := strings.Cut(par, "=")
 		nombre = strings.ToUpper(nombre)
-		propia := slices.ContainsFunc([]string{"CLAUDE_", "CODEX_", "ANTHROPIC_", "OPENAI_", "GEMINI_"}, func(p string) bool { return strings.HasPrefix(nombre, p) })
+		propia := slices.ContainsFunc(propios, func(p string) bool { return strings.HasPrefix(nombre, p) })
 		if quitar[nombre] || strings.HasPrefix(nombre, "TRAMTAI_") || (nucleo.VariableSecreta(nombre) && !propia) {
 			continue
 		}
@@ -191,6 +191,7 @@ func clasificar(texto string, estadoHTTP int) nucleo.CodigoError {
 // version ejecuta "<programa> --version" sin consumir cuota.
 func version(ctx context.Context, ruta string) string {
 	cmd := exec.CommandContext(ctx, ruta, "--version")
+	cmd.Env = entornoLimpio(nil) // consultar la versión no necesita ninguna clave
 	procesos.SinVentana(cmd)
 	salida, err := cmd.Output()
 	if err != nil {

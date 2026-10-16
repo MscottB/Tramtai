@@ -305,11 +305,9 @@ const es = {
   'entrar.noConfirmado': 'No pudimos confirmar que este navegador es tuyo.',
   'entrar.rapida': 'La forma más rápida',
   'entrar.rapidaTexto': 'Ejecuta esto en una terminal; abre esta página ya dentro:',
-  'entrar.conClave': 'O entra con la clave del espacio',
-  'entrar.clave': 'Clave',
-  'entrar.claveAyuda': 'La muestra «tramtai global token» (o «tramtai proyecto token» en un proyecto).',
-  'entrar.boton': 'Entrar',
-  'entrar.claveInvalida': 'Esa clave no corresponde a ningún espacio activo.',
+  'entrar.app': 'O ábrela desde la app',
+  'entrar.appTexto': 'Abre Tramtai desde el menú de aplicaciones o desde su icono en la bandeja: entra directamente.',
+  'entrar.sinClave': 'Por seguridad, la clave de las aplicaciones no abre esta página: con ella solo se llama a la API.',
 
   // Ayuda
   'ayuda.subtitulo': 'Cómo empezar y respuestas a las dudas más comunes.',

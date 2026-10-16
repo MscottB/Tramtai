@@ -102,7 +102,7 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 	var errorAgente string
 	terminado := false
 	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: trabajo,
-		Entorno: entornoLimpio(extra...), Entrada: enmarcarSistema(sistema, prompt)}, func(linea string) error {
+		Entorno: entornoLimpio([]string{"CODEX_", "OPENAI_"}, extra...), Entrada: enmarcarSistema(sistema, prompt)}, func(linea string) error {
 		var e eventoCodex
 		if json.Unmarshal([]byte(linea), &e) != nil {
 			return nil

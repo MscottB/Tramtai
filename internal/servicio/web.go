@@ -136,12 +136,10 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			s.responderSesion(w, r, s.crearSesion(w, peticion.Instancia, true))
 			return
 		}
-		inst := s.instanciaPorToken(strings.TrimSpace(peticion.Token))
-		if inst == nil {
-			api.NoAutorizado(w, r)
-			return
-		}
-		s.responderSesion(w, r, s.crearSesion(w, inst.ID, false))
+		// La clave de las aplicaciones no abre la Web UI: quien la tuviera podría crear APIs y cambiar la
+		// configuración. Se entra en el mismo equipo y usuario o con el código de un solo uso.
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado,
+			idioma.T("la clave de las aplicaciones no abre la Web UI: ábrela desde la app de Tramtai o con «tramtai abrir»")))
 	case r.URL.Path == "/ui/instancias" && r.Method == http.MethodPost:
 		_, ses := s.sesionDe(r)
 		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
@@ -333,7 +331,9 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/?error=codigo", http.StatusSeeOther)
 			return
 		}
-		s.crearSesion(w, entrada.instancia, s.esLocal(r)) // con tramtai abrir en este equipo, la sesión es local
+		// Con un código canjeado en este equipo la sesión es local: solo el dueño del servicio puede pedirlo (con el
+		// token de servicio). Así funciona también en macOS, donde no se puede comprobar el usuario de la conexión.
+		s.crearSesion(w, entrada.instancia, s.esLocal(r) || desdeEsteEquipo(r))
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	default:
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ruta no encontrada: %s %s", r.Method, r.URL.Path)))

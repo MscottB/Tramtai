@@ -231,7 +231,6 @@ function recordar(s: Sesion): Sesion {
 
 export const api = {
   sesion: () => pedir<Sesion>('GET', '/ui/sesion').then(recordar),
-  entrar: (token: string) => pedir<Sesion>('POST', '/ui/sesion', { token }).then(recordar),
   cambiarInstancia: (instancia: string) => pedir<Sesion>('POST', '/ui/sesion', { instancia }).then(recordar),
   activarGlobal: () => pedir<Sesion>('POST', '/ui/instancias', { ambito: 'global' }).then(recordar),
   // abrirProyecto activa el espacio de una carpeta; si aún no es un proyecto, el servicio crea su .tramtai/.

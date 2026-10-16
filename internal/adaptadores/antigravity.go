@@ -98,7 +98,7 @@ func (a Antigravity) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, 
 	}
 	var lineas []string
 	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: directorioTrabajo(s, espacio),
-		Entorno: entornoLimpio("USERPROFILE="+home, "HOME="+home, "GEMINI_API_KEY="+clave)}, func(linea string) error {
+		Entorno: entornoLimpio([]string{"GEMINI_"}, "USERPROFILE="+home, "HOME="+home, "GEMINI_API_KEY="+clave)}, func(linea string) error {
 		lineas = append(lineas, linea)
 		return nil
 	})
