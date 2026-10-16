@@ -474,14 +474,6 @@ export function nombreEsfuerzo(nivel?: string): string {
   return nivel ? t(`esfuerzo.${nivel}` as Clave) : t('esfuerzo.agente')
 }
 
-// descripcionPredeterminado resume el modelo predeterminado del catálogo: "Claude · sonnet · claude-sonnet-5-5".
-export function descripcionPredeterminado(catalogo: Modelo[]): string {
-  const m = catalogo.find((x) => x.predeterminado)
-  if (!m) return ''
-  const o = opcionModelo(m)
-  return `${o.label} · ${o.caption}`
-}
-
 // aplicarModelo traduce la selección del catálogo a la solicitud.
 export function aplicarModelo(s: Solicitud, seleccion: string): Solicitud {
   if (!seleccion) return s
