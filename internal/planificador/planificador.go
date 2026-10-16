@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"tramtai/internal/adaptadores"
@@ -165,6 +166,11 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 	}
 	if err := solicitud.Validar(); err != nil {
 		return nucleo.Trabajo{}, false, err
+	}
+	for _, e := range solicitud.Respaldo {
+		if agente, _ := nucleo.DividirRespaldo(e); p.adaptadores[agente] == nil {
+			return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("agente de respaldo no disponible: %s", agente))
+		}
 	}
 	if solicitud.ModoContexto == "consciente_proyecto" && p.opc.RaizConfiable == "" {
 		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoContextoNoPermitido,
@@ -461,8 +467,7 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		p.cambiar(id, nucleo.EnCola, nucleo.Fallido, persistencia.Cambio{Codigo: nucleo.CodigoTiempoColaAgotado, Mensaje: idioma.T("se superó el tiempo máximo en cola")})
 		return
 	}
-	adaptador, registrado := p.adaptadores[t.Solicitud.Agente]
-	if !registrado {
+	if _, registrado := p.adaptadores[t.Solicitud.Agente]; !registrado {
 		p.cambiar(id, nucleo.EnCola, nucleo.Fallido, persistencia.Cambio{Codigo: nucleo.CodigoAgenteNoDisponible, Mensaje: idioma.Tf("agente no registrado: %s", t.Solicitud.Agente)})
 		return
 	}
@@ -517,44 +522,6 @@ func (p *Planificador) procesar(id string, esperando func()) {
 	// shortcut: el siguiente trabajo tarda en llegar a su espera (lee y escribe en la base) mucho más que este en
 	// entrar en el select, así que en la práctica se respeta el orden; si no bastara, un turno por agente.
 	esperando()
-	// Primero el punto de acceso, después el adaptador y al final la plaza de la instancia: quien espera a su
-	// agente no ocupa plaza, así que otro trabajo listo de otro agente puede empezar. Un canal atiende a sus
-	// esperas por orden de llegada, así que cada agente conserva el orden de la cola.
-	for _, semaforo := range []chan struct{}{p.semaforoPunto(t.PuntoAcceso), p.semaforos[t.Solicitud.Agente], p.ranuras} {
-		if semaforo == nil {
-			continue
-		}
-		select {
-		case semaforo <- struct{}{}:
-			defer func() { <-semaforo }()
-		case <-ctxTrabajo.Done():
-			p.cerrarDetenido(id, nucleo.EsperandoAgente)
-			return
-		case <-p.ctx.Done(): // en drenaje: nunca lanzó el agente, se reencola
-			p.cerrarDetenido(id, nucleo.EsperandoAgente)
-			return
-		case <-plazoCola:
-			p.cambiar(id, nucleo.EsperandoAgente, nucleo.Fallido, persistencia.Cambio{Codigo: nucleo.CodigoTiempoColaAgotado, Mensaje: idioma.T("se superó el tiempo máximo en cola")})
-			return
-		}
-	}
-	if p.ctx.Err() != nil { // el drenaje empezó mientras se tomaban los semáforos
-		p.cerrarDetenido(id, nucleo.EsperandoAgente)
-		return
-	}
-	if !p.cambiar(id, nucleo.EsperandoAgente, nucleo.Ejecutando, persistencia.Cambio{}) {
-		return
-	}
-
-	limite := time.Duration(t.Solicitud.Ejecucion.TiempoLimiteSegundos) * time.Second
-	if limite == 0 {
-		limite = p.opc.TiempoLimitePredeterminado
-	}
-	ctxEjecucion, cancelarEjecucion := context.WithTimeout(procesos.ConAlIniciar(ctxTrabajo, func(pid int, firma string) {
-		_ = p.almacen.RegistrarProceso(fondo, id, pid, firma)
-	}), limite)
-	defer cancelarEjecucion()
-	solicitud.Modelo, solicitud.PerfilModelo = t.ModeloEnviado, ""
 	if solicitud.ModoContexto == "consciente_proyecto" {
 		solicitud.RaizProyecto = p.opc.RaizConfiable
 		// Se declara de forma visible qué contexto se carga antes de ejecutar.
@@ -562,23 +529,34 @@ func (p *Planificador) procesar(id string, esperando func()) {
 			" y carga las reglas del proyecto y de sus carpetas superiores (CLAUDE.md, AGENTS.md, GEMINI.md), sin MCP, herramientas"+
 			" ni sesión persistente; con autenticación por suscripción el CLI carga también las reglas del usuario", p.opc.RaizConfiable))
 	}
-	agrupador := &agrupador{guardar: func(tipo, datos string) error { return p.almacen.AgregarEvento(fondo, id, tipo, datos) }}
-	resultado, err := adaptador.Ejecutar(ctxEjecucion, solicitud, agrupador.emitir)
-	_ = agrupador.vaciar() // antes de cualquier cambio de estado: el texto queda completo y en orden
-	switch {
-	case ctxTrabajo.Err() != nil:
-		p.cerrarDetenido(id, nucleo.Ejecutando)
-		return
-	case errors.Is(ctxEjecucion.Err(), context.DeadlineExceeded):
-		p.cambiar(id, nucleo.Ejecutando, nucleo.Fallido, persistencia.Cambio{Codigo: nucleo.CodigoTiempoEjecucionAgotado, Mensaje: idioma.T("se superó el tiempo límite de ejecución")})
-		return
-	case err != nil:
+	// El principal y después el respaldo: se salta al siguiente solo si el intento falló antes de emitir texto,
+	// para no mezclar dos respuestas. El plazo en cola vale hasta el primer intento.
+	lista := candidatos(t)
+	var resultado adaptadores.Resultado
+	for i, c := range lista {
+		res, huboTexto, fin, err := p.intentar(ctxTrabajo, id, t, solicitud, c, plazoCola)
+		if fin {
+			return
+		}
+		if err == nil {
+			resultado = res
+			break
+		}
 		codigo := nucleo.CodigoDe(err)
 		if codigo == "" {
 			codigo = nucleo.CodigoErrorAgente
 		}
-		p.cambiar(id, nucleo.Ejecutando, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err)})
-		return
+		if !saltable(codigo) || huboTexto || i+1 == len(lista) {
+			p.cambiar(id, nucleo.Ejecutando, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err)})
+			return
+		}
+		siguiente := lista[i+1]
+		if !p.cambiar(id, nucleo.Ejecutando, nucleo.EsperandoAgente, persistencia.Cambio{}) {
+			return
+		}
+		_ = p.almacen.CambiarAgente(fondo, id, siguiente.agente, siguiente.modelo)
+		_ = p.almacen.AgregarEvento(fondo, id, "aviso", idioma.Tf("%s falló (%s); sigue con %s", c, codigo, siguiente))
+		plazoCola = nil
 	}
 
 	if !p.cambiar(id, nucleo.Ejecutando, nucleo.ValidandoSalida, persistencia.Cambio{}) {
@@ -595,6 +573,104 @@ func (p *Planificador) procesar(id string, esperando func()) {
 	}
 	p.cambiar(id, nucleo.ValidandoSalida, nucleo.Completado, persistencia.Cambio{Salida: &resultado.Salida,
 		Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo})
+}
+
+// candidato es un agente que puede ejecutar el trabajo: el principal o uno del respaldo.
+type candidato struct{ agente, modelo string }
+
+func (c candidato) String() string {
+	if c.modelo == "" {
+		return c.agente
+	}
+	return c.agente + "/" + c.modelo
+}
+
+// candidatos son el agente principal (con el modelo ya resuelto) y después el respaldo. Una entrada que repite un
+// candidato anterior se omite; una sin modelo repite cualquier intento anterior de su agente.
+func candidatos(t nucleo.Trabajo) []candidato {
+	lista := []candidato{{t.Solicitud.Agente, t.ModeloEnviado}}
+	for _, e := range t.Solicitud.Respaldo {
+		agente, modelo := nucleo.DividirRespaldo(e)
+		if !slices.ContainsFunc(lista, func(c candidato) bool { return c.agente == agente && (modelo == "" || c.modelo == modelo) }) {
+			lista = append(lista, candidato{agente, modelo})
+		}
+	}
+	return lista
+}
+
+// saltable indica los errores tras los que otro agente puede tener éxito: límite, credenciales, disponibilidad,
+// fallo del agente o tiempo agotado. La cancelación y un esquema no cumplido nunca saltan.
+func saltable(codigo nucleo.CodigoError) bool {
+	switch codigo {
+	case nucleo.CodigoLimiteUsoProveedor, nucleo.CodigoAutenticacionAgente, nucleo.CodigoAgenteNoDisponible, nucleo.CodigoModeloNoDisponible,
+		nucleo.CodigoErrorAgente, nucleo.CodigoErrorProtocoloAgente, nucleo.CodigoTiempoEjecucionAgotado:
+		return true
+	}
+	return false
+}
+
+// intentar ejecuta un candidato: toma sus semáforos, lo lanza y los suelta al volver. Con fin = true el trabajo ya
+// quedó cerrado (cancelado, reencolado por un drenaje o fuera de plazo en cola) y no hay nada más que hacer; si no,
+// err es el fallo del intento y huboTexto indica si el agente llegó a emitir texto.
+func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.Trabajo, solicitud nucleo.SolicitudEjecucion,
+	c candidato, plazoCola <-chan time.Time) (resultado adaptadores.Resultado, huboTexto, fin bool, err error) {
+	fondo := context.Background()
+	// Primero el punto de acceso, después el adaptador y al final la plaza de la instancia: quien espera a su
+	// agente no ocupa plaza, así que otro trabajo listo de otro agente puede empezar. Un canal atiende a sus
+	// esperas por orden de llegada, así que cada agente conserva el orden de la cola.
+	for _, semaforo := range []chan struct{}{p.semaforoPunto(t.PuntoAcceso), p.semaforos[c.agente], p.ranuras} {
+		if semaforo == nil {
+			continue
+		}
+		select {
+		case semaforo <- struct{}{}:
+			defer func() { <-semaforo }()
+		case <-ctxTrabajo.Done():
+			p.cerrarDetenido(id, nucleo.EsperandoAgente)
+			return resultado, false, true, nil
+		case <-p.ctx.Done(): // en drenaje: nunca lanzó el agente, se reencola
+			p.cerrarDetenido(id, nucleo.EsperandoAgente)
+			return resultado, false, true, nil
+		case <-plazoCola:
+			p.cambiar(id, nucleo.EsperandoAgente, nucleo.Fallido, persistencia.Cambio{Codigo: nucleo.CodigoTiempoColaAgotado, Mensaje: idioma.T("se superó el tiempo máximo en cola")})
+			return resultado, false, true, nil
+		}
+	}
+	if p.ctx.Err() != nil { // el drenaje empezó mientras se tomaban los semáforos
+		p.cerrarDetenido(id, nucleo.EsperandoAgente)
+		return resultado, false, true, nil
+	}
+	if !p.cambiar(id, nucleo.EsperandoAgente, nucleo.Ejecutando, persistencia.Cambio{}) {
+		return resultado, false, true, nil
+	}
+
+	limite := time.Duration(t.Solicitud.Ejecucion.TiempoLimiteSegundos) * time.Second
+	if limite == 0 {
+		limite = p.opc.TiempoLimitePredeterminado
+	}
+	ctxEjecucion, cancelarEjecucion := context.WithTimeout(procesos.ConAlIniciar(ctxTrabajo, func(pid int, firma string) {
+		_ = p.almacen.RegistrarProceso(fondo, id, pid, firma)
+	}), limite)
+	defer cancelarEjecucion()
+	solicitud.Agente, solicitud.Modelo, solicitud.PerfilModelo = c.agente, c.modelo, ""
+	agrupador := &agrupador{guardar: func(tipo, datos string) error { return p.almacen.AgregarEvento(fondo, id, tipo, datos) }}
+	var texto atomic.Bool // algunos adaptadores emiten desde la goroutine que lee la salida del CLI
+	resultado, err = p.adaptadores[c.agente].Ejecutar(ctxEjecucion, solicitud, func(e adaptadores.Evento) error {
+		if e.Tipo == "texto" && e.Datos != "" {
+			texto.Store(true)
+		}
+		return agrupador.emitir(e)
+	})
+	huboTexto = texto.Load()
+	_ = agrupador.vaciar() // antes de cualquier cambio de estado: el texto queda completo y en orden
+	switch {
+	case ctxTrabajo.Err() != nil:
+		p.cerrarDetenido(id, nucleo.Ejecutando)
+		return resultado, huboTexto, true, nil
+	case errors.Is(ctxEjecucion.Err(), context.DeadlineExceeded):
+		return resultado, huboTexto, false, nucleo.NuevoError(nucleo.CodigoTiempoEjecucionAgotado, idioma.T("se superó el tiempo límite de ejecución"))
+	}
+	return resultado, huboTexto, false, err
 }
 
 // cerrarDetenido finaliza un trabajo cuyo contexto se canceló, por petición del usuario o por cierre del servicio.

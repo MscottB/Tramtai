@@ -139,6 +139,8 @@ func init() {
 		"respaldo: máximo 3 agentes":                                                                       "fallback: at most 3 agents",
 		"respaldo %q con formato no válido (agente o agente/modelo)":                                       "fallback %q has an invalid format (agent or agent/model)",
 		"respaldo repetido: %s":                                                                            "repeated fallback: %s",
+		"agente de respaldo no disponible: %s":                                                             "fallback agent not available: %s",
+		"%s falló (%s); sigue con %s":                                                                      "%s failed (%s); continuing with %s",
 		"la solicitud no tiene mensajes, instrucciones ni cargas":                                          "the request has no messages, instructions or uploads",
 		"tiempo_limite_segundos fuera de rango":                                                            "tiempo_limite_segundos out of range",
 		"versión de base de datos %d no soportada por este ejecutable":                                     "database version %d is not supported by this executable",

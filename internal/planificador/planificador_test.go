@@ -659,3 +659,141 @@ func TestRegistroDeTrabajos(t *testing.T) {
 		t.Fatalf("registro:\n%s", texto)
 	}
 }
+
+// iniciarVarios es iniciar con varios agentes, cada uno con el mismo límite de trabajos simultáneos.
+func iniciarVarios(t *testing.T, alm *persistencia.Almacen, lista map[string]adaptadores.Adaptador, limite int) *Planificador {
+	t.Helper()
+	limites := map[string]int{}
+	for nombre := range lista {
+		limites[nombre] = limite
+	}
+	p := Nuevo(alm, lista, NuevosSemaforos(limites), opciones())
+	if err := p.Iniciar(ctx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Detener)
+	return p
+}
+
+// trasTexto emite texto y después falla: el respaldo ya no puede saltar.
+type trasTexto struct{ err error }
+
+func (a trasTexto) Ejecutar(_ context.Context, _ nucleo.SolicitudEjecucion, emitir func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	_ = emitir(adaptadores.Evento{Tipo: "texto", Datos: "parcial"})
+	return adaptadores.Resultado{}, a.err
+}
+
+// contado cuenta cuántas veces se ejecuta el agente.
+type contado struct {
+	n *atomic.Int32
+	adaptadores.Simulado
+}
+
+func (c contado) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	c.n.Add(1)
+	return c.Simulado.Ejecutar(ctx, s, emitir)
+}
+
+func errorDe(codigo nucleo.CodigoError) error { return nucleo.NuevoError(codigo, string(codigo)) }
+
+func conRespaldo(respaldo ...string) nucleo.SolicitudEjecucion {
+	s := solicitud("x")
+	s.Respaldo = respaldo
+	return s
+}
+
+func avisos(t *testing.T, alm *persistencia.Almacen, id string) []string {
+	t.Helper()
+	eventos, err := alm.Eventos(ctx, id, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var lista []string
+	for _, e := range eventos {
+		if e.Tipo == "aviso" {
+			lista = append(lista, e.Datos)
+		}
+	}
+	return lista
+}
+
+func TestRespaldoSaltaPorLimite(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)}, "otro": adaptadores.Simulado{Respuesta: "ok"}}, 2)
+	tr := esperar(t, alm, enviar(t, p, conRespaldo("otro/m2")), nucleo.Completado)
+	if tr.Salida != "ok" || tr.Solicitud.Agente != "otro" || tr.ModeloEnviado != "m2" {
+		t.Fatalf("debía responder el respaldo: %+v", tr)
+	}
+	if a := avisos(t, alm, tr.ID); len(a) != 1 || !strings.Contains(a[0], "simulado") || !strings.Contains(a[0], "otro") {
+		t.Fatalf("falta el aviso del salto: %v", a)
+	}
+
+	// El reintento empieza por el agente que respondió y no repite el salto.
+	nuevo, err := p.Reintentar(ctx, tr.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r := esperar(t, alm, nuevo.ID, nucleo.Completado); r.Solicitud.Agente != "otro" || len(avisos(t, alm, r.ID)) != 0 {
+		t.Fatalf("el reintento debía ir directo a otro: %+v", r)
+	}
+}
+
+func TestRespaldoNoSaltaTrasTexto(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": trasTexto{errorDe(nucleo.CodigoLimiteUsoProveedor)}, "otro": adaptadores.Simulado{Respuesta: "ok"}}, 2)
+	tr := esperar(t, alm, enviar(t, p, conRespaldo("otro")), nucleo.Fallido)
+	if tr.CodigoError != nucleo.CodigoLimiteUsoProveedor || tr.Solicitud.Agente != "simulado" {
+		t.Fatalf("con texto ya emitido no se salta: %+v", tr)
+	}
+}
+
+func TestRespaldoSinCandidatosQuedaElUltimo(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoErrorAgente)},
+		"otro":     adaptadores.Simulado{Error: errorDe(nucleo.CodigoAgenteNoDisponible)}}, 2)
+	if tr := esperar(t, alm, enviar(t, p, conRespaldo("otro")), nucleo.Fallido); tr.CodigoError != nucleo.CodigoAgenteNoDisponible {
+		t.Fatalf("debía quedar el error del último candidato: %+v", tr)
+	}
+}
+
+func TestRespaldoOmiteRepetidos(t *testing.T) {
+	alm := abrir(t)
+	var n atomic.Int32
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": contado{&n, adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)}}, "otro": adaptadores.Simulado{}}, 2)
+	esperar(t, alm, enviar(t, p, conRespaldo("simulado", "otro")), nucleo.Completado)
+	if n.Load() != 1 {
+		t.Fatalf("el principal repetido en el respaldo corrió %d veces", n.Load())
+	}
+}
+
+func TestRespaldoCanceladoEnEspera(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)}, "otro": adaptadores.Simulado{Demora: time.Minute}}, 1)
+	ocupa := solicitud("largo")
+	ocupa.Agente = "otro"
+	esperar(t, alm, enviar(t, p, ocupa), nucleo.Ejecutando)
+	id := enviar(t, p, conRespaldo("otro"))
+	for limite := time.Now().Add(10 * time.Second); len(avisos(t, alm, id)) == 0; time.Sleep(10 * time.Millisecond) {
+		if time.Now().After(limite) {
+			t.Fatal("el trabajo no llegó a saltar")
+		}
+	}
+	esperar(t, alm, id, nucleo.EsperandoAgente)
+	if _, err := p.Cancelar(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	esperar(t, alm, id, nucleo.Cancelado)
+}
+
+func TestRespaldoAgenteDesconocido(t *testing.T) {
+	alm := abrir(t)
+	p := iniciar(t, alm, adaptadores.Simulado{}, 1, opciones())
+	if _, _, err := p.Enviar(ctx, conRespaldo("nadie"), ""); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
+		t.Fatalf("un agente de respaldo desconocido se rechaza al aceptar: %v", err)
+	}
+}
