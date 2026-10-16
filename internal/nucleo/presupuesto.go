@@ -1,6 +1,7 @@
 package nucleo
 
 import (
+	"errors"
 	"math"
 	"time"
 
@@ -93,14 +94,31 @@ func (p Presupuesto) Comprobar(dia, mes Consumo, ahora time.Time, zona *time.Loc
 		consumo  Consumo
 		reinicio time.Time
 	}{{idioma.T("diario"), p.Diario, dia, finDia}, {idioma.T("mensual"), p.Mensual, mes, finMes}}
+	var agotado *PresupuestoAgotado
 	for _, per := range periodos {
-		if f, unidad := per.limites.Fraccion(per.consumo, true); unidad != "" && f >= 1 {
+		if f, unidad := per.limites.Fraccion(per.consumo, true); unidad != "" && f >= 1 && (agotado == nil || per.reinicio.After(agotado.Reinicio)) {
 			nombres := map[string]string{"peticiones": idioma.T("peticiones"), "tokens": "tokens", "usd": "USD"}
-			return &PresupuestoAgotado{Reinicio: per.reinicio, Err: NuevoError(CodigoPresupuestoAgotado,
+			agotado = &PresupuestoAgotado{Reinicio: per.reinicio, Err: NuevoError(CodigoPresupuestoAgotado,
 				idioma.Tf("presupuesto %s de %s %s agotado", per.nombre, nombres[unidad], ambito))}
 		}
 	}
-	return nil
+	if agotado == nil {
+		return nil // un *PresupuestoAgotado nil no es un error nil
+	}
+	return agotado
+}
+
+// MasTardio devuelve, de dos rechazos por presupuesto, el que reinicia más tarde: Retry-After no debe invitar a
+// reintentar antes de que se pueda.
+func MasTardio(a, b error) error {
+	var x, y *PresupuestoAgotado
+	if !errors.As(a, &x) {
+		return b
+	}
+	if errors.As(b, &y) && y.Reinicio.After(x.Reinicio) {
+		return b
+	}
+	return a
 }
 
 // Porcentaje es el porcentaje usado (sin reserva) del límite más cercano a agotarse; false si no hay límites.

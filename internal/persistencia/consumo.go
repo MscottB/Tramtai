@@ -40,6 +40,9 @@ func (a *Almacen) consumoEn(ctx context.Context, c consultor, instancia, punto s
 	return dia, mes, err
 }
 
+// Ahora es la hora del almacén (inyectable en las pruebas), la misma con la que suma y comprueba el consumo.
+func (a *Almacen) Ahora() time.Time { return a.reloj() }
+
 func (a *Almacen) topes(instancia, punto string) []Tope {
 	if a.Topes == nil {
 		return nil
@@ -50,6 +53,7 @@ func (a *Almacen) topes(instancia, punto string) []Tope {
 // comprobarPresupuesto rechaza el trabajo si agotaría algún tope que se le aplica. Un fallo al leer el consumo no
 // lo rechaza: un contador roto no debe tumbar la API.
 func (a *Almacen) comprobarPresupuesto(ctx context.Context, tx *sql.Tx, t nucleo.Trabajo, ahora time.Time) error {
+	var rechazo error
 	for _, tope := range a.topes(t.Instancia, t.PuntoAcceso) {
 		dia, mes, err := a.consumoEn(ctx, tx, t.Instancia, tope.Punto, ahora)
 		if err != nil {
@@ -61,10 +65,10 @@ func (a *Almacen) comprobarPresupuesto(ctx context.Context, tx *sql.Tx, t nucleo
 			ambito = idioma.Tf("de la API %s", tope.Punto)
 		}
 		if err := tope.Presupuesto.Comprobar(dia, mes, ahora, a.Zona, ambito); err != nil {
-			return err
+			rechazo = nucleo.MasTardio(rechazo, err)
 		}
 	}
-	return nil
+	return rechazo
 }
 
 // sumarConsumo suma c en la fila del día de aceptación del trabajo y registra los cruces del 80 % y del 100 %.

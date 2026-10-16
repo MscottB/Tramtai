@@ -80,6 +80,10 @@ func TestPresupuestoPuntoUI(t *testing.T) {
 		!strings.Contains(cuerpo, "configuracion_invalida") {
 		t.Fatalf("un límite negativo se rechaza: %d %s", r.StatusCode, cuerpo)
 	}
+	// Una errata en un campo no debe quitar el presupuesto sin avisar.
+	if r, cuerpo := n.pedir("PATCH", "/api/v1/puntos/facturas", `{"presupuesto":{"diario":{"peticion":5}}}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 {
+		t.Fatalf("un campo desconocido en el presupuesto se rechaza: %d %s", r.StatusCode, cuerpo)
+	}
 	if r, cuerpo := n.pedir("PATCH", "/api/v1/puntos/facturas", `{"presupuesto":null}`, "X-CSRF-Token", n.csrf); r.StatusCode != 200 {
 		t.Fatalf("quitar el presupuesto: %d %s", r.StatusCode, cuerpo)
 	}

@@ -2,7 +2,6 @@ package planificador
 
 import (
 	"context"
-	"time"
 
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
@@ -53,7 +52,7 @@ func (p *Planificador) EstadoPresupuesto(ctx context.Context, punto string) (nuc
 	if err != nil {
 		return nucleo.EstadoPresupuesto{}, true, err
 	}
-	_, _, finDia, finMes := nucleo.Periodos(time.Now(), p.almacen.Zona)
+	_, _, finDia, finMes := nucleo.Periodos(p.almacen.Ahora(), p.almacen.Zona)
 	return nucleo.EstadoPresupuesto{
 		Diario:  nucleo.EstadoPeriodo{Limites: pres.Diario, Consumo: dia, Reinicio: finDia},
 		Mensual: nucleo.EstadoPeriodo{Limites: pres.Mensual, Consumo: mes, Reinicio: finMes},

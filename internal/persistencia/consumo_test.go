@@ -280,3 +280,16 @@ func TestReiniciarAPIConservaLaInstancia(t *testing.T) {
 		t.Fatalf("la API sí vuelve a cero: %+v", dia)
 	}
 }
+
+func TestPresupuestoAgotadoReinicioMasTardio(t *testing.T) {
+	ahora := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
+	a := conPresupuesto(t, &ahora,
+		Tope{"facturas", nucleo.Presupuesto{Diario: nucleo.Limites{Peticiones: 1}}},
+		Tope{TodaLaInstancia, nucleo.Presupuesto{Mensual: nucleo.Limites{Peticiones: 1}}})
+	aceptar(t, a, enPunto("facturas"), "")
+	_, _, err := a.Aceptar(ctx, enPunto("facturas"), "", 0)
+	var agotado *nucleo.PresupuestoAgotado
+	if !errors.As(err, &agotado) || !agotado.Reinicio.Equal(time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)) {
+		t.Fatalf("la API agotada hoy y la instancia este mes: Retry-After hasta el mes siguiente: %v", err)
+	}
+}

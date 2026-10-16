@@ -1,6 +1,7 @@
 package servicio
 
 import (
+	"bytes"
 	"cmp"
 	"context"
 	"crypto/subtle"
@@ -742,7 +743,10 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 				}
 				if len(cambio.Presupuesto) > 0 {
 					lista[i].Presupuesto = nil // null lo quita
-					if err := json.Unmarshal(cambio.Presupuesto, &lista[i].Presupuesto); err != nil {
+					// Sin campos desconocidos: una errata dejaría el presupuesto vacío y lo quitaría sin avisar.
+					leer := json.NewDecoder(bytes.NewReader(cambio.Presupuesto))
+					leer.DisallowUnknownFields()
+					if err := leer.Decode(&lista[i].Presupuesto); err != nil {
 						return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("el presupuesto debe ser un objeto JSON"))
 					}
 				}

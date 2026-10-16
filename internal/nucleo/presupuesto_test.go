@@ -65,6 +65,12 @@ func TestComprobar(t *testing.T) {
 		t.Errorf("agotado en el mes: %v", err)
 	}
 
+	// Con el día y el mes agotados, Retry-After apunta al reinicio más tardío: reintentar mañana volvería a fallar.
+	err = p.Comprobar(Consumo{Peticiones: 2, Terminados: 2}, Consumo{Peticiones: 9, Terminados: 9, Tokens: 1000}, ahora, zona, "de la instancia")
+	if !errors.As(err, &agotado) || !agotado.Reinicio.Equal(finMes) {
+		t.Errorf("día y mes agotados: %v", err)
+	}
+
 	if err := p.Comprobar(Consumo{Peticiones: 1, Terminados: 1}, Consumo{Peticiones: 1, Terminados: 1, Tokens: 100}, ahora, zona, "de la instancia"); err != nil {
 		t.Errorf("sin agotar: %v", err)
 	}
