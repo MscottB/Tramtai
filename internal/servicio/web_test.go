@@ -82,6 +82,18 @@ func TestWebUI(t *testing.T) {
 	if r.StatusCode != 200 || !strings.Contains(cuerpo, `"local":true`) {
 		t.Fatalf("la sesión con código desde este equipo es local: %d %s", r.StatusCode, cuerpo)
 	}
+	// Aunque no se pueda comprobar el usuario de la conexión (macOS, o aquí con entrada_local desactivada), la sesión
+	// abierta con código desde este equipo puede usar los controles locales.
+	// Dos veces: activar la instancia crea otra sesión, que debe conservar que se abrió con código.
+	for i := range 2 {
+		_, cuerpoSesion := n.pedir("GET", "/ui/sesion", "")
+		csrfCodigo := cuerpoSesion[strings.Index(cuerpoSesion, `"csrf":"`)+8:]
+		csrfCodigo = csrfCodigo[:strings.Index(csrfCodigo, `"`)]
+		if r, cuerpo := n.pedir("POST", "/ui/instancias", `{"ambito":"global"}`, "X-CSRF-Token", csrfCodigo); r.StatusCode != 200 {
+			t.Fatalf("vuelta %d: la sesión local por código debe poder usar los controles locales: %d %s", i, r.StatusCode, cuerpo)
+		}
+	}
+	r, cuerpo = n.pedir("GET", "/ui/sesion", "") // activar la instancia creó otra sesión con otro CSRF
 	// La Web UI explica dónde guardar las claves de proveedor según el almacén de este sistema.
 	if !strings.Contains(cuerpo, `"almacen":{"disponible":`) {
 		t.Fatalf("la sesión indica el almacén de claves del sistema: %s", cuerpo)

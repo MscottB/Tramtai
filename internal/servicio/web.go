@@ -30,8 +30,23 @@ type sesion struct {
 	instancia string
 	csrf      string
 	vence     time.Time
-	// local: entró sin token por ser del mismo usuario del sistema (esLocal); puede cambiar de instancia.
-	local bool
+	// local: entró sin token por ser del mismo usuario del sistema (esLocal) o con un código canjeado en este
+	// equipo (porCodigo); puede cambiar de instancia y usar los controles del servicio.
+	local     bool
+	porCodigo bool
+}
+
+// derivarSesion crea la sesión local de otra instancia a partir de la actual, conservando cómo se entró.
+func (s *Servicio) derivarSesion(w http.ResponseWriter, instancia string, actual *sesion) *sesion {
+	nueva := s.crearSesion(w, instancia, true)
+	nueva.porCodigo = actual.porCodigo
+	return nueva
+}
+
+// sesionLocal indica que la sesión es local y que la petición sigue llegando desde este equipo: del mismo usuario
+// (esLocal) o, en una sesión abierta con código, desde loopback sin proxy (en macOS no se puede comprobar el usuario).
+func (s *Servicio) sesionLocal(r *http.Request, ses *sesion) bool {
+	return ses != nil && ses.local && (s.esLocal(r) || (ses.porCodigo && desdeEsteEquipo(r)))
 }
 
 type codigoEntrada struct {
@@ -126,7 +141,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		}
 		if peticion.Instancia != "" { // cambio de instancia: solo en una sesión local y con su CSRF
 			_, ses := s.sesionDe(r)
-			if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+			if !s.sesionLocal(r, ses) || !csrfValido(r, ses) {
 				api.NoAutorizado(w, r)
 				return
 			}
@@ -134,7 +149,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 				api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("la instancia %s no está activa", peticion.Instancia)))
 				return
 			}
-			s.responderSesion(w, r, s.crearSesion(w, peticion.Instancia, true))
+			s.responderSesion(w, r, s.derivarSesion(w, peticion.Instancia, ses))
 			return
 		}
 		// La clave de las aplicaciones no abre la Web UI: quien la tuviera podría crear APIs y cambiar la
@@ -143,7 +158,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			idioma.T("la clave de las aplicaciones no abre la Web UI: ábrela desde la app de Tramtai o con «tramtai abrir»")))
 	case r.URL.Path == "/ui/instancias" && r.Method == http.MethodPost:
 		_, ses := s.sesionDe(r)
-		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+		if !s.sesionLocal(r, ses) || !csrfValido(r, ses) {
 			api.NoAutorizado(w, r)
 			return
 		}
@@ -155,10 +170,10 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			api.EscribirError(w, r, err)
 			return
 		}
-		s.responderSesion(w, r, s.crearSesion(w, inst.ID, true))
+		s.responderSesion(w, r, s.derivarSesion(w, inst.ID, ses))
 	case r.URL.Path == "/ui/proyectos" && r.Method == http.MethodPost:
 		_, ses := s.sesionDe(r)
-		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+		if !s.sesionLocal(r, ses) || !csrfValido(r, ses) {
 			api.NoAutorizado(w, r)
 			return
 		}
@@ -177,10 +192,10 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			api.EscribirError(w, r, err)
 			return
 		}
-		s.responderSesion(w, r, s.crearSesion(w, inst.ID, true))
+		s.responderSesion(w, r, s.derivarSesion(w, inst.ID, ses))
 	case r.URL.Path == "/ui/autoarranque" && r.Method == http.MethodPost:
 		_, ses := s.sesionDe(r)
-		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+		if !s.sesionLocal(r, ses) || !csrfValido(r, ses) {
 			api.NoAutorizado(w, r)
 			return
 		}
@@ -205,7 +220,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		s.responderSesion(w, r, ses)
 	case r.URL.Path == "/ui/autenticacion" && r.Method == http.MethodPost:
 		_, ses := s.sesionDe(r)
-		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+		if !s.sesionLocal(r, ses) || !csrfValido(r, ses) {
 			api.NoAutorizado(w, r)
 			return
 		}
@@ -224,7 +239,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	case r.URL.Path == "/ui/servicio/puerto" && r.Method == http.MethodPost:
 		_, ses := s.sesionDe(r)
-		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+		if !s.sesionLocal(r, ses) || !csrfValido(r, ses) {
 			api.NoAutorizado(w, r)
 			return
 		}
@@ -243,7 +258,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		s.responderSesion(w, r, ses)
 	case r.URL.Path == "/ui/servicio/reiniciar" && r.Method == http.MethodPost:
 		_, ses := s.sesionDe(r)
-		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+		if !s.sesionLocal(r, ses) || !csrfValido(r, ses) {
 			api.NoAutorizado(w, r)
 			return
 		}
@@ -264,7 +279,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 	case r.URL.Path == "/ui/servicio/detener" && r.Method == http.MethodPost:
 		// Solo desde este equipo: detener corta también a las aplicaciones conectadas.
 		_, ses := s.sesionDe(r)
-		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+		if !s.sesionLocal(r, ses) || !csrfValido(r, ses) {
 			api.NoAutorizado(w, r)
 			return
 		}
@@ -274,7 +289,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		// Consultar es de cualquier sesión (?ahora=1 va a GitHub en el momento); activar o desactivar la búsqueda,
 		// solo desde este equipo.
 		_, ses := s.sesionDe(r)
-		if ses == nil || (r.Method == http.MethodPost && (!ses.local || !csrfValido(r, ses) || !s.esLocal(r))) {
+		if ses == nil || (r.Method == http.MethodPost && (!s.sesionLocal(r, ses) || !csrfValido(r, ses))) {
 			api.NoAutorizado(w, r)
 			return
 		}
@@ -296,7 +311,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		api.EscribirJSON(w, http.StatusOK, s.estadoActualizacion(ctx, r.Method == http.MethodGet && r.URL.Query().Get("ahora") == "1"))
 	case r.URL.Path == "/ui/actualizar" && r.Method == http.MethodPost:
 		_, ses := s.sesionDe(r)
-		if ses == nil || !ses.local || !csrfValido(r, ses) || !s.esLocal(r) {
+		if !s.sesionLocal(r, ses) || !csrfValido(r, ses) {
 			api.NoAutorizado(w, r)
 			return
 		}
@@ -334,7 +349,8 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		}
 		// Con un código canjeado en este equipo la sesión es local: solo el dueño del servicio puede pedirlo (con el
 		// token de servicio). Así funciona también en macOS, donde no se puede comprobar el usuario de la conexión.
-		s.crearSesion(w, entrada.instancia, s.esLocal(r) || desdeEsteEquipo(r))
+		ses := s.crearSesion(w, entrada.instancia, s.esLocal(r) || desdeEsteEquipo(r))
+		ses.porCodigo = true // la cookie aún no ha salido: nadie más usa esta sesión
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	default:
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ruta no encontrada: %s %s", r.Method, r.URL.Path)))
