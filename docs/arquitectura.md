@@ -87,6 +87,7 @@ La Web UI se enlaza a una instancia con una sesión:
 ```
 en_cola → preparando_entrada → esperando_agente → ejecutando → validando_salida → completado
                                                                                  ↘ fallido
+ejecutando → esperando_agente   (salto de respaldo: el agente falló antes de emitir texto)
 cualquiera no terminal → cancelacion_solicitada → cancelado
 ejecutando al reiniciar el servicio → interrumpido   (no se relanza)
 en_cola al reiniciar → se reencola

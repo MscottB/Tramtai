@@ -13,7 +13,7 @@
             <div class="texto-suave text-body2">{{ t('ejecutar.recetaTexto') }}</div>
           </q-card-section>
           <q-card-section v-if="editando" class="q-py-none">
-            <q-banner rounded dense class="bg-blue-1 text-dark">
+            <q-banner rounded dense class="info-caja">
               <template #avatar><q-icon name="o_edit" color="primary" /></template>
               {{ t('ejecutar.editando', { nombre: editando }) }}
               <template #action><q-btn flat dense no-caps color="primary" :label="t('ejecutar.dejarEditar')" @click="editando = ''" /></template>
@@ -89,7 +89,7 @@
               </div>
             </div>
             <template v-else>
-              <q-banner v-for="(a, i) in avisos" :key="i" rounded dense class="bg-amber-1 text-dark q-mb-sm">
+              <q-banner v-for="(a, i) in avisos" :key="i" rounded dense class="aviso-caja q-mb-sm">
                 <template #avatar><q-icon name="o_alt_route" color="warning" /></template>{{ a }}
               </q-banner>
               <q-banner v-if="final?.codigo_error" rounded dense class="error-caja q-mb-md">

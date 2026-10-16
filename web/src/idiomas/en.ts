@@ -555,6 +555,12 @@ const en: Textos = {
   'puntos.json': 'JSON',
   'puntos.respaldoDe': 'Fallback: {agentes}',
   'puntos.abrirProbar': 'Open in Try',
+  'ayuda.p11': 'How do I turn a test into an API for my apps?',
+  'ayuda.r11':
+    'In Try, the recipe brings together the instructions, the agent and model, the fallback and, if you want, a JSON schema so the answer always has the same shape. Test it with a message and your files; once it works, click «Save as API» to get a URL and a key for your app. From My APIs, «Open in Try» loads it again to change it and «Update» saves the changes.',
+  'ayuda.p12': 'What happens if an agent hits its limit?',
+  'ayuda.r12':
+    'If the recipe has a fallback, the request continues with the next agent in the list (up to 3) when the main one fails before it starts answering: usage limit, missing key, not installed or an error. You will see a notice in Try, and History shows which agent answered. If the agent had already started answering it is not switched, so two answers are never mixed. The time limit applies to each attempt.',
 }
 
 export default en

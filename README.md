@@ -28,6 +28,8 @@ Cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
 - **Agente y modelo en cada petición.** `claude/sonnet`, `codex`, `gemini/gemini-flash-latest` o un perfil como `perfil/rapido`; en Claude y Codex también eliges cuánto razona el agente.
 - **Archivos y respuestas con forma.** PDF, Word, Excel, PowerPoint o ZIP como entrada; JSON validado con un esquema como salida.
 - **Una API por aplicación,** con su propia clave, sus modelos permitidos o fijos e instrucciones propias (por ejemplo, «responde siempre en español»). Se activan o detienen sin reiniciar.
+- **Recetas: de la prueba a la API en un clic.** En Probar defines instrucciones, agente, esquema JSON y respaldo, lo pruebas con tus archivos y lo guardas como API: tu aplicación envía el mensaje y recibe la respuesta con esa forma.
+- **Respaldo entre agentes.** Si el agente principal llega a su límite, no tiene clave o falla antes de responder, la petición sigue con el siguiente de la lista (hasta 3), sin que tu aplicación lo note.
 - **Tu suscripción o tu clave de API.** Claude y Codex se conectan con un clic a la sesión que ya tienes (uso personal) o con una clave.
 - **Cuatro formas de usarlo** sobre los mismos trabajos: app de escritorio con icono en la bandeja, Web UI con ayuda integrada, terminal interactiva y línea de órdenes. En español y en inglés.
 - **Local y privado.** Escucha solo en `127.0.0.1`, en Windows las claves van al Administrador de credenciales (en macOS y Linux, por ahora, en variables de entorno) y los resultados caducan a las 24 horas. Sin telemetría.
@@ -154,6 +156,7 @@ Claude, Codex, Gemini y Antigravity son marcas de sus respectivos dueños. Tramt
 - **Updates:** every hour Tramtai checks for a new version, so the notice shows up without restarting. The installed Windows app updates with one click (*Update now*), showing what's new inside the app; the other copies show the notice with the download link. `tramtai actualizar` does the same from the terminal.
 - **Connect an agent:** use your Claude or ChatGPT subscription (personal use) or an API key; the agent's CLI must be installed.
 - **Point your app** at `http://127.0.0.1:17373/openai/v1` (or `/anthropic`) with the key from *My APIs*, and pick agent and model in the `model` field, e.g. `claude/sonnet`.
+- **Recipes and fallback:** in *Try*, set instructions, agent, a JSON schema and fallback agents, test them with your files and save them as an API in one click. If the main agent hits its limit or fails before answering, the request continues with the next one.
 - The desktop app, Web UI, interactive terminal and CLI are available in English and Spanish. The CLI follows your system language; set `TRAMTAI_IDIOMA=en` to force English.
 - Everything stays local: it listens only on `127.0.0.1`, has no telemetry, and responses expire after 24 hours.
 

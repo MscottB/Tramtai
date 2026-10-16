@@ -115,7 +115,22 @@ Cuánto razona el modelo antes de responder. Es opcional: sin él, cada CLI usa 
 
 ## Puntos de acceso y administración
 
-Un punto de acceso expone la misma API bajo su propia URL y token: `http://127.0.0.1:17373/p/<nombre>/openai/v1`, o su propio puerto. Solo expone los contratos que tiene habilitados, antepone sus `instrucciones` (si tiene) a las de cada solicitud, aplica sus alias, modelos permitidos y modelo forzado (cabecera `Tramtai-Modelo-Forzado`) y solo ve sus trabajos. Con `ejecucion.maximo_trabajos` limita sus ejecuciones simultáneas, siempre dentro del límite de su instancia. La administración (`/api/v1/servicio`) y la API de cada instancia con `Tramtai-Instancia` se describen en [operacion.md](operacion.md).
+Un punto de acceso expone la misma API bajo su propia URL y token: `http://127.0.0.1:17373/p/<nombre>/openai/v1`, o su propio puerto. Solo expone los contratos que tiene habilitados, antepone sus `instrucciones` (si tiene) a las de cada solicitud, aplica sus alias, modelos permitidos y modelo forzado (cabecera `Tramtai-Modelo-Forzado`) y solo ve sus trabajos. Con `ejecucion.maximo_trabajos` limita sus ejecuciones simultáneas, siempre dentro del límite de su instancia.
+
+Un punto de acceso también puede ser una **receta**: con `esquema` (un JSON Schema escrito como YAML), toda petición que no traiga su propio esquema responde con JSON validado, también por las fachadas sin `response_format`. Con `respaldo` (hasta 3 entradas `agente` o `agente/modelo`), si el agente principal falla antes de emitir texto (`limite_uso_proveedor`, `autenticacion_agente`, `agente_no_disponible`, `modelo_no_disponible`, `error_agente`, `error_protocolo_agente` o `tiempo_ejecucion_agotado`), el mismo trabajo sigue con el siguiente: queda un evento `aviso`, el trabajo muestra el agente que respondió y el tiempo límite cuenta por intento. La API nativa acepta `"respaldo": [...]` en la solicitud; las fachadas lo heredan del punto. Con `modelos_permitidos`, cada entrada del respaldo debe estar permitida.
+
+```yaml
+puntos_acceso:
+  - nombre: facturas
+    instrucciones: Extrae el total y el proveedor de la factura adjunta.
+    agente: claude
+    modelo: sonnet
+    respaldo: [codex, gemini/gemini-flash-latest]
+    esquema:
+      type: object
+      properties: { total: { type: number }, proveedor: { type: string } }
+      required: [total, proveedor]
+``` La administración (`/api/v1/servicio`) y la API de cada instancia con `Tramtai-Instancia` se describen en [operacion.md](operacion.md).
 
 `GET /api/v1/trabajos?limite=20` lista los trabajos recientes de la instancia, o los del punto de acceso si se llama desde uno; `&punto=<nombre>` filtra por un punto de acceso. Desde la Web UI, `GET /api/v1/puntos` incluye `uso` por punto: `peticiones`, `errores` y `ultima`, de lo que conserva la retención.
 

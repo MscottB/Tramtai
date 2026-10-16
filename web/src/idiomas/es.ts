@@ -554,6 +554,12 @@ const es = {
   'puntos.json': 'JSON',
   'puntos.respaldoDe': 'Respaldo: {agentes}',
   'puntos.abrirProbar': 'Abrir en Probar',
+  'ayuda.p11': '¿Cómo convierto una prueba en una API para mis aplicaciones?',
+  'ayuda.r11':
+    'En Probar, la receta reúne las instrucciones, el agente y el modelo, el respaldo y, si quieres, un esquema JSON para que la respuesta tenga siempre la misma forma. Pruébala con un mensaje y tus archivos; cuando funcione, pulsa «Guardar como API»: tendrás una URL y una clave para tu aplicación. Desde Mis APIs, «Abrir en Probar» la vuelve a cargar para cambiarla y «Actualizar» guarda los cambios.',
+  'ayuda.p12': '¿Qué pasa si un agente llega a su límite?',
+  'ayuda.r12':
+    'Si la receta tiene respaldo, la petición sigue con el siguiente agente de la lista (hasta 3) cuando el principal falla antes de empezar a responder: límite de uso, falta la clave, no está instalado o da un error. Verás un aviso en Probar y el Historial muestra qué agente respondió. Si el agente ya había empezado a responder no se cambia, para no mezclar dos respuestas. El tiempo límite cuenta para cada intento.',
 }
 
 export type Clave = keyof typeof es

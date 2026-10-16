@@ -428,6 +428,14 @@ input[type='number'] {
   border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
   color: var(--error);
 }
+.info-caja {
+  background: var(--acento-suave);
+  border: 1px solid color-mix(in srgb, var(--acento) 40%, transparent);
+}
+.aviso-caja {
+  background: var(--aviso-suave);
+  border: 1px solid color-mix(in srgb, var(--aviso) 40%, transparent);
+}
 .romper {
   overflow-wrap: anywhere;
 }
