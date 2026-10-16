@@ -25,6 +25,10 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | v0.35.0 | Presupuestos por API y por instancia; mapa de la red sin cortes | ✅ |
 | v0.35.1 | «Gemini API» en los textos: el agente `gemini` llama a la API de Gemini directamente, no a Gemini CLI, así que sigue disponible y no se quita | ✅ |
 | v0.36.0 | Rediseño de la presentación: cabecera común con Volver, Mis APIs, estados vacíos, esfuerzo predeterminado por modelo; página del producto con tema claro u oscuro y capturas nuevas | ✅ |
+| v0.36.1 | Probar: la línea de la ruta ya no se sale de la tarjeta mientras la petición avanza | ✅ |
+| — | Grupos de APIs plegables y mapa de Inicio por grupo; filtro por grupo en el Historial y Mis APIs; límites del historial (tope de peticiones, plazos en Ajustes, compactar la base); origen de cada petición (Probar, terminal, CLI, app o API) | ⬜ |
+| — | Probar: esfuerzo junto al modelo, esfuerzo por agente de respaldo con su predeterminado, registro con tiempos por etapa, historial breve de pruebas y respuesta con formato Markdown | ⬜ |
+| — | API propia `/api/v1` explicada: guía «¿Qué URL uso?», ejemplos para copiar y documentación | ⬜ |
 | — | Copilot CLI como agente nuevo | ⬜ |
 | — | Webhooks al terminar un trabajo y avisos de presupuesto (`presupuesto.aviso`, `presupuesto.agotado`) | ⬜ |
 | — | Comparar agentes en Probar | ⬜ |

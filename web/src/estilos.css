@@ -737,7 +737,9 @@ body.body--dark .linea__chapa {
   background: var(--borde-fuerte);
   transition: background-color 0.3s ease;
 }
-.ruta__parada:first-child::before {
+/* La primera estación no tiene tramo anterior. first-of-type, no first-child: mientras la petición avanza, el
+   tranvía (un span) va antes de las estaciones y la primera dejaría de ser first-child. */
+.ruta__parada:first-of-type::before {
   display: none;
 }
 .ruta__punto {
