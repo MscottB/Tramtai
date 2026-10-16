@@ -95,6 +95,9 @@ p { margin: 0; }
 
 /* Secciones */
 section { padding: 72px 0; }
+/* Funciones agrupadas: un titular por bloque a todo el ancho de la rejilla. */
+.grupo-funciones { grid-column: 1 / -1; margin: 12px 0 -4px; font: 700 .8rem var(--titulo); letter-spacing: .06em; text-transform: uppercase; color: var(--acento); }
+.grupo-funciones:first-child { margin-top: 0; }
 /* Capturas de la app: la del tema efectivo (el del sistema o el elegido). */
 .capturas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 24px; }
 .captura { margin: 0; }
