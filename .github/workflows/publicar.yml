@@ -217,7 +217,8 @@ jobs:
           brew install mscottb/tramtai/tramtai
           brew test mscottb/tramtai/tramtai
       - name: Subir a main
-        run: git push origin HEAD:main
+        # Un push a main mientras se publica (por ejemplo, la siguiente fusión) rechazaría este; se reaplica encima.
+        run: git pull --rebase origin main && git push origin HEAD:main
 
   # winget: si existe el secreto WINGET_TOKEN (un token de GitHub con permiso public_repo), envía la versión a
   # microsoft/winget-pkgs con wingetcreate. Sin el secreto no hace nada.
