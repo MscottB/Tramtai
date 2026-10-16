@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"sort"
 	"strconv"
@@ -27,6 +28,8 @@ type Punto struct {
 	ModoContexto      string
 	FormatoSalida     string
 	TiempoLimite      int
+	Esquema           json.RawMessage // JSON Schema de la receta, si la solicitud no trae uno
+	Respaldo          []string        // agentes que siguen si el principal falla, si la solicitud no trae los suyos
 }
 
 // aceptar registra el trabajo; en un punto de acceso queda vinculado a él para medir el uso por aplicación.
@@ -61,8 +64,14 @@ func (s *Servidor) ajustar(sol nucleo.SolicitudEjecucion) (nucleo.SolicitudEjecu
 	if sol.ModoContexto == "" {
 		sol.ModoContexto = p.ModoContexto
 	}
+	if len(sol.Salida.Esquema) == 0 && len(p.Esquema) > 0 {
+		sol.Salida.Formato, sol.Salida.Esquema = "json", p.Esquema
+	}
 	if sol.Salida.Formato == "" && len(sol.Salida.Esquema) == 0 {
 		sol.Salida.Formato = p.FormatoSalida
+	}
+	if len(sol.Respaldo) == 0 {
+		sol.Respaldo = p.Respaldo
 	}
 	if sol.Ejecucion.TiempoLimiteSegundos == 0 {
 		sol.Ejecucion.TiempoLimiteSegundos = p.TiempoLimite
@@ -71,6 +80,13 @@ func (s *Servidor) ajustar(sol nucleo.SolicitudEjecucion) (nucleo.SolicitudEjecu
 	if len(p.ModelosPermitidos) > 0 && !permitido(p.ModelosPermitidos, sol) {
 		return sol, nucleo.NuevoError(nucleo.CodigoModeloNoPermitido,
 			idioma.Tf("el modelo %s no está permitido en el punto de acceso %s", descripcionModelo(sol), p.Nombre))
+	}
+	for _, e := range sol.Respaldo {
+		agente, modelo := nucleo.DividirRespaldo(e)
+		if len(p.ModelosPermitidos) > 0 && !permitido(p.ModelosPermitidos, nucleo.SolicitudEjecucion{Agente: agente, Modelo: modelo}) {
+			return sol, nucleo.NuevoError(nucleo.CodigoModeloNoPermitido,
+				idioma.Tf("el modelo %s no está permitido en el punto de acceso %s", e, p.Nombre))
+		}
 	}
 	return sol, nil
 }

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -36,6 +37,12 @@ func (trozos) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir 
 
 func servidor(t *testing.T, registro map[string]adaptadores.Adaptador, ajustes map[string]any) *httptest.Server {
 	t.Helper()
+	return servidorCon(t, registro, ajustes, nil)
+}
+
+// servidorCon es servidor con la política de un punto de acceso (nil: la API de la instancia).
+func servidorCon(t *testing.T, registro map[string]adaptadores.Adaptador, ajustes map[string]any, punto *Punto) *httptest.Server {
+	t.Helper()
 	dir := t.TempDir()
 	alm, err := persistencia.Abrir(filepath.Join(dir, "instancia.db"))
 	if err != nil {
@@ -59,7 +66,7 @@ func servidor(t *testing.T, registro map[string]adaptadores.Adaptador, ajustes m
 		t.Fatal(err)
 	}
 	s := &Servidor{Planificador: p, Cargas: cargas, Registro: registro, Config: c, Token: "secreto",
-		Hosts: []string{"127.0.0.1", "localhost", "::1"}, Sondeo: 10 * time.Millisecond}
+		Hosts: []string{"127.0.0.1", "localhost", "::1"}, Sondeo: 10 * time.Millisecond, Punto: punto}
 	ts := httptest.NewServer(s.Handler())
 	t.Cleanup(func() {
 		ts.Close()
@@ -372,6 +379,38 @@ func TestInstruccionesDelPunto(t *testing.T) {
 	}
 	if sol, _ := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}}); sol.Instrucciones != "Responde siempre en español." {
 		t.Fatalf("sin instrucciones propias: %q", sol.Instrucciones)
+	}
+}
+
+func TestPuntoAplicaEsquemaYRespaldo(t *testing.T) {
+	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
+	s := &Servidor{Config: c, Punto: &Punto{Nombre: "r", Esquema: json.RawMessage(`{"type":"object"}`), Respaldo: []string{"otro"}}}
+	mensajes := []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}
+	sol, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: mensajes})
+	if err != nil || sol.Salida.Formato != "json" || string(sol.Salida.Esquema) != `{"type":"object"}` || !slices.Equal(sol.Respaldo, []string{"otro"}) {
+		t.Fatalf("el punto debe aportar esquema y respaldo: %v %+v", err, sol)
+	}
+	propia := nucleo.SolicitudEjecucion{Mensajes: mensajes, Respaldo: []string{"tercero"},
+		Salida: nucleo.ConfigSalida{Formato: "json", Esquema: json.RawMessage(`{"type":"array"}`)}}
+	if sol, err := s.ajustar(propia); err != nil || string(sol.Salida.Esquema) != `{"type":"array"}` || !slices.Equal(sol.Respaldo, []string{"tercero"}) {
+		t.Fatalf("la solicitud prevalece: %v %+v", err, sol)
+	}
+}
+
+func TestPuntoRespaldoNoPermitido(t *testing.T) {
+	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
+	s := &Servidor{Config: c, Punto: &Punto{Nombre: "r", ModelosPermitidos: []string{"simulado"}, Respaldo: []string{"otro"}}}
+	if _, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}}); nucleo.CodigoDe(err) != nucleo.CodigoModeloNoPermitido {
+		t.Fatalf("un respaldo fuera de modelos_permitidos se rechaza: %v", err)
+	}
+}
+
+func TestFachadaOpenAIConEsquemaDelPunto(t *testing.T) {
+	ts := servidorCon(t, simulado(adaptadores.Simulado{Respuesta: "no es json"}), nil,
+		&Punto{Nombre: "r", Contratos: map[string]bool{"openai": true}, Esquema: json.RawMessage(`{"type":"object"}`)})
+	r, cuerpo := pedir(t, ts, "POST", "/openai/v1/chat/completions", `{"model":"simulado","messages":[{"role":"user","content":"x"}]}`)
+	if r.StatusCode != 422 || !strings.Contains(cuerpo, "salida_no_cumple_esquema") {
+		t.Fatalf("el esquema del punto se valida sin response_format: %d %s", r.StatusCode, cuerpo)
 	}
 }
 
