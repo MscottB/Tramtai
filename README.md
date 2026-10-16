@@ -6,7 +6,7 @@
 
 **Tus agentes de IA, como una API local.**
 
-Tramtai convierte Claude Code, Codex, Gemini y Antigravity en una API compatible con OpenAI y Anthropic que funciona en tu propio equipo.<br>
+Tramtai convierte Claude Code, Codex, Antigravity y la API de Gemini en una API compatible con OpenAI y Anthropic que funciona en tu propio equipo.<br>
 Cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
 
 [![CI](https://github.com/MscottB/Tramtai/actions/workflows/ci.yml/badge.svg)](https://github.com/MscottB/Tramtai/actions/workflows/ci.yml)
@@ -147,13 +147,13 @@ Al usar Tramtai aceptas sus [términos de uso](TERMINOS.md). En resumen: Tramtai
 
 Tramtai se publica con la licencia [PolyForm Noncommercial 1.0.0](LICENSE.md): puedes usarlo, estudiarlo y modificarlo gratis para fines personales y no comerciales. Para usarlo en una empresa o en un producto comercial hace falta una licencia aparte; escribe a [MscottB](https://github.com/MscottB).
 
-Claude, Codex, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ninguno de ellos y usa sus CLI oficiales tal como se instalan.
+Claude, Codex, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ninguno de ellos y usa sus CLI oficiales tal como se instalan; con Gemini, su API pública y tu propia clave.
 
 ---
 
 ## English
 
-**Tramtai turns Claude Code, Codex, Gemini and Antigravity into an OpenAI- and Anthropic-compatible API that runs on your own computer.** Any app or SDK can use them by changing just the base URL.
+**Tramtai turns Claude Code, Codex, Antigravity and the Gemini API into an OpenAI- and Anthropic-compatible API that runs on your own computer.** Any app or SDK can use them by changing just the base URL.
 
 - **Install:** download the Windows installer (or the portable `.zip`) from [Releases](https://github.com/MscottB/Tramtai/releases/latest); it installs for your user only and needs no administrator rights. On Linux, install the desktop app from the `.deb` or `.rpm` package. On macOS, open the `.dmg` and drag Tramtai to Applications; it is not signed by an Apple developer, so the first time allow it in *System Settings → Privacy & Security → Open Anyway*. With Homebrew: `brew tap mscottb/tramtai https://github.com/MscottB/Tramtai` and then `brew install --cask tramtai` (app, no Gatekeeper prompt) or `brew install tramtai` (CLI only, macOS and Linux). CLI only: `curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instalar.sh | sh`.
 - **Updates:** every hour Tramtai checks for a new version, so the notice shows up without restarting. The installed Windows app updates with one click (*Update now*), showing what's new inside the app; the other copies show the notice with the download link. `tramtai actualizar` does the same from the terminal.

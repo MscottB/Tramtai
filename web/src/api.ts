@@ -460,7 +460,7 @@ export function duracion(desde?: string, hasta?: string): string {
   return s < 60 ? `${s.toFixed(1)} s` : `${Math.floor(s / 60)} min ${Math.round(s % 60)} s`
 }
 
-const agentes: Record<string, string> = { claude: 'Claude', codex: 'Codex', gemini: 'Gemini', antigravity: 'Antigravity' }
+const agentes: Record<string, string> = { claude: 'Claude', codex: 'Codex', gemini: 'Gemini API', antigravity: 'Antigravity' }
 const perfiles = ['rapido', 'equilibrado', 'profundo']
 
 // codigoLinea es el distintivo de la línea de un agente, como el número de una línea de tranvía.

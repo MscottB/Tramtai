@@ -10,7 +10,7 @@ priority: optional
 maintainer: Michael Scott B. <13172368+MscottB@users.noreply.github.com>
 description: |
   Tus agentes de IA como una API local / Your AI agents as a local API.
-  Tramtai convierte Claude Code, Codex, Gemini y Antigravity en una API compatible con OpenAI y Anthropic.
+  Tramtai convierte Claude Code, Codex, Antigravity y la API de Gemini en una API compatible con OpenAI y Anthropic.
 vendor: Tramtai
 homepage: https://mscottb.github.io/Tramtai/
 license: PolyForm-Noncommercial-1.0.0

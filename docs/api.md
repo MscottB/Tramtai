@@ -107,7 +107,7 @@ Cuánto razona el modelo antes de responder. Es opcional: sin él, cada CLI usa 
 - **Qué agentes lo admiten:**
   - Claude Code (`--effort`), hasta máximo.
   - Codex (`model_reasoning_effort`), hasta muy alto; si se pide máximo, usa muy alto.
-  - Gemini y Antigravity lo ignoran.
+  - La API de Gemini y Antigravity lo ignoran.
 - **Dónde se ve:** `GET /api/v1/modelos` indica en `esfuerzos` los niveles de cada modelo, y el trabajo guarda el esfuerzo pedido en `solicitud.esfuerzo`.
 
 ### Perfiles de ejecución y modo de contexto

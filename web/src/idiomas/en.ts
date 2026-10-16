@@ -318,7 +318,7 @@ const en: Textos = {
   'ayuda.empezar': 'How to get started',
   'ayuda.paso1': 'Connect an agent',
   'ayuda.paso1Texto':
-    'In Agents, choose “Use my subscription” for Claude or Codex (personal use) or save an API key: it is stored encrypted in the system store and works without restarting. Gemini needs a Gemini API key.',
+    'In Agents, choose “Use my subscription” for Claude or Codex (personal use) or save an API key: it is stored encrypted in the system store and works without restarting. The Gemini API is used directly, without installing Gemini CLI: it only needs a Gemini API key.',
   'ayuda.paso2': 'Try a message',
   'ayuda.paso2Texto': 'In Try, write something, pick an agent and model and watch the answer live. You can attach PDF, Word, Excel or ZIP files.',
   'ayuda.paso3': 'Connect your app',

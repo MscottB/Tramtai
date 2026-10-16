@@ -15,7 +15,7 @@ import (
 
 func main() {
 	raiz := &cobra.Command{Use: "tramtai", Short: idioma.T("Pasarela local para ejecutar agentes CLI"),
-		Long: idioma.T("Tramtai expone Claude Code, Codex y Gemini como una API local.\n\n" +
+		Long: idioma.T("Tramtai expone Claude Code, Codex, Antigravity y la API de Gemini como una API local.\n\n" +
 			"  tramtai          terminal interactiva\n" +
 			"  tramtai abrir    Web UI en el navegador (inicia el servicio si hace falta)"),
 		SilenceUsage: true, Version: version.Texto(),

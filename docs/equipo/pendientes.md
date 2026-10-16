@@ -22,10 +22,10 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | Release | Contenido | Estado |
 |---|---|---|
 | v0.34.0 | Recetas y respaldo entre agentes, claves cifradas y huella de las claves de API, instalador con RTF | ✅ |
-| v0.35.0 | Presupuestos por API y por instancia | 🟡 |
-| v0.36.0 | Quitar Gemini CLI (ya no está disponible): adaptador, configuración, claves, Web UI, docs y sitio | ⬜ |
-| v0.37.0 | Rediseño de la presentación: Inicio (mapa de la red, primeros pasos, tablero), Mis APIs, el resto de la Web UI y la página del producto, con capturas nuevas | ⬜ |
-| — | Copilot CLI como reemplazo de Gemini | ⬜ |
+| v0.35.0 | Presupuestos por API y por instancia; mapa de la red sin cortes | ✅ |
+| v0.35.1 | «Gemini API» en los textos: el agente `gemini` llama a la API de Gemini directamente, no a Gemini CLI, así que sigue disponible y no se quita | 🟡 |
+| — | Rediseño de la presentación: Inicio (mapa de la red, primeros pasos, tablero), Mis APIs, el resto de la Web UI y la página del producto, con capturas nuevas | ⬜ |
+| — | Copilot CLI como agente nuevo | ⬜ |
 | — | Webhooks al terminar un trabajo y avisos de presupuesto (`presupuesto.aviso`, `presupuesto.agotado`) | ⬜ |
 | — | Comparar agentes en Probar | ⬜ |
 | — | Tramtai como servidor MCP | ⬜ |

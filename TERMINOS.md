@@ -6,7 +6,7 @@ Tramtai es un programa gratuito que publica Michael Scott B. ([MscottB](https://
 
 ## 1. Qué es Tramtai
 
-Tramtai funciona en tu propio equipo y conecta tus aplicaciones con agentes de IA de terceros (Claude Code, Codex, Gemini y Antigravity) mediante sus programas oficiales. **Tramtai no es un proveedor de IA:** no tiene servidores, no vende acceso a ningún modelo y no forma parte de Anthropic, OpenAI ni Google, que no lo respaldan.
+Tramtai funciona en tu propio equipo y conecta tus aplicaciones con agentes de IA de terceros: Claude Code, Codex y Antigravity mediante sus programas oficiales, y la API de Gemini con tu propia clave. **Tramtai no es un proveedor de IA:** no tiene servidores, no vende acceso a ningún modelo y no forma parte de Anthropic, OpenAI ni Google, que no lo respaldan.
 
 ## 2. Licencia
 
@@ -77,7 +77,7 @@ Claude, Codex, Gemini, Antigravity, Anthropic, OpenAI y Google son marcas de sus
 
 Tramtai is a free program published by Michael Scott B. ([MscottB](https://github.com/MscottB)), "the author". By installing or using it you accept these terms and the [license](LICENSE.md). If you don't agree, don't install or use it. The Spanish version above prevails.
 
-1. **What Tramtai is.** It runs on your own computer and connects your apps with third-party AI agents (Claude Code, Codex, Gemini, Antigravity) through their official programs. Tramtai is not an AI provider: it has no servers, sells no access to any model and is not affiliated with or endorsed by Anthropic, OpenAI or Google.
+1. **What Tramtai is.** It runs on your own computer and connects your apps with third-party AI agents: Claude Code, Codex and Antigravity through their official programs, and the Gemini API with your own key. Tramtai is not an AI provider: it has no servers, sells no access to any model and is not affiliated with or endorsed by Anthropic, OpenAI or Google.
 2. **License.** Personal, non-commercial use under [PolyForm Noncommercial 1.0.0](LICENSE.md). Business or commercial use needs a separate license from the author.
 3. **Third-party services.** You need your own account or API key with each provider, and you are the one who accepts and must comply with that provider's terms and usage policies. Tramtai grants no rights over those services. Any fees a provider charges you are yours.
 4. **Using your subscription.** Tramtai can let Claude Code or Codex use the session already signed in on your computer instead of an API key.

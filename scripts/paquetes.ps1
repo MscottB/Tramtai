@@ -26,7 +26,7 @@ function Escribir([string]$ruta, [string]$texto) {
     Write-Host "escrito $ruta"
 }
 
-$descripcion = 'Tus agentes de IA (Claude Code, Codex, Gemini) como una API local compatible con OpenAI y Anthropic'
+$descripcion = 'Tus agentes de IA (Claude Code, Codex, la API de Gemini) como una API local compatible con OpenAI y Anthropic'
 $dmg = Archivo "Tramtai-$Etiqueta-macos.dmg"
 Escribir 'Casks/tramtai.rb' @"
 # Generado por scripts/paquetes.ps1 al publicar $Etiqueta; no lo edites a mano.
@@ -161,7 +161,7 @@ PackageLocale: es-ES
 $comun
 Moniker: tramtai
 ShortDescription: $descripcion.
-Description: Tramtai convierte Claude Code, Codex, Gemini y Antigravity en una API compatible con OpenAI y Anthropic que funciona en tu propio equipo, con app de escritorio, Web UI, terminal interactiva y línea de órdenes.
+Description: Tramtai convierte Claude Code, Codex, Antigravity y la API de Gemini en una API compatible con OpenAI y Anthropic que funciona en tu propio equipo, con app de escritorio, Web UI, terminal interactiva y línea de órdenes.
 ManifestType: defaultLocale
 ManifestVersion: 1.10.0
 "@)
@@ -170,8 +170,8 @@ PackageIdentifier: MscottB.Tramtai
 PackageVersion: $numero
 PackageLocale: en-US
 $comun
-ShortDescription: Your AI agents (Claude Code, Codex, Gemini) as a local OpenAI- and Anthropic-compatible API.
-Description: Tramtai turns Claude Code, Codex, Gemini and Antigravity into an OpenAI- and Anthropic-compatible API that runs on your own computer, with a desktop app, Web UI, interactive terminal and CLI.
+ShortDescription: Your AI agents (Claude Code, Codex, the Gemini API) as a local OpenAI- and Anthropic-compatible API.
+Description: Tramtai turns Claude Code, Codex, Antigravity and the Gemini API into an OpenAI- and Anthropic-compatible API that runs on your own computer, with a desktop app, Web UI, interactive terminal and CLI.
 ManifestType: locale
 ManifestVersion: 1.10.0
 "@)

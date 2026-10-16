@@ -317,7 +317,7 @@ const es = {
   'ayuda.empezar': 'Cómo empezar',
   'ayuda.paso1': 'Conecta un agente',
   'ayuda.paso1Texto':
-    'En Agentes, elige para Claude o Codex «Usar mi suscripción» (uso personal) o guarda una clave de API: queda cifrada en el almacén del sistema y vale sin reiniciar. Gemini necesita una clave de la Gemini API.',
+    'En Agentes, elige para Claude o Codex «Usar mi suscripción» (uso personal) o guarda una clave de API: queda cifrada en el almacén del sistema y vale sin reiniciar. La API de Gemini se usa directamente, sin instalar Gemini CLI: solo necesita una clave de la Gemini API.',
   'ayuda.paso2': 'Prueba un mensaje',
   'ayuda.paso2Texto': 'En Probar escribe algo, elige agente y modelo y mira la respuesta en vivo. Puedes adjuntar PDF, Word, Excel o ZIP.',
   'ayuda.paso3': 'Conecta tu aplicación',

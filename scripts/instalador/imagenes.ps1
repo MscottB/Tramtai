@@ -17,7 +17,7 @@ $via.StartCap = 'Round'; $via.EndCap = 'Round'
 $g.DrawLine($via, $x, $arriba, $x, $abajo)
 $fuente = New-Object System.Drawing.Font 'Segoe UI Semibold', 19, ([System.Drawing.FontStyle]::Regular), ([System.Drawing.GraphicsUnit]::Pixel)
 $suave = New-Object System.Drawing.SolidBrush (Color '#9fb3b8')
-$paradas = @(@('Claude Code', '#f28a4f'), @('Codex', '#5b8def'), @('Gemini', '#a78bfa'), @('Antigravity', '#f472b6'))
+$paradas = @(@('Claude Code', '#f28a4f'), @('Codex', '#5b8def'), @('Gemini API', '#a78bfa'), @('Antigravity', '#f472b6'))
 for ($i = 0; $i -lt $paradas.Count; $i++) {
     $y = 120 + $i * 100
     $g.FillEllipse((New-Object System.Drawing.SolidBrush (Color '#0f1b1e')), $x - 17, $y - 17, 34, 34)

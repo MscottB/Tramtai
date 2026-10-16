@@ -6,7 +6,7 @@ func init() {
 		"Descargando… %d %% (%.1f de %.1f MB)": "Downloading… %d %% (%.1f of %.1f MB)",
 		// tramtai
 		"Pasarela local para ejecutar agentes CLI": "Local gateway for running CLI agents",
-		"Tramtai expone Claude Code, Codex y Gemini como una API local.\n\n  tramtai          terminal interactiva\n  tramtai abrir    Web UI en el navegador (inicia el servicio si hace falta)": "Tramtai exposes Claude Code, Codex and Gemini as a local API.\n\n  tramtai          interactive terminal\n  tramtai abrir    Web UI in the browser (starts the service if needed)",
+		"Tramtai expone Claude Code, Codex, Antigravity y la API de Gemini como una API local.\n\n  tramtai          terminal interactiva\n  tramtai abrir    Web UI en el navegador (inicia el servicio si hace falta)": "Tramtai exposes Claude Code, Codex, Antigravity and the Gemini API as a local API.\n\n  tramtai          interactive terminal\n  tramtai abrir    Web UI in the browser (starts the service if needed)",
 		"Muestra la versión":          "Shows the version",
 		"incluye el commit compilado": "includes the commit it was built from",
 		"Abre Tramtai en la app de escritorio o en el navegador (inicia el servicio si hace falta)":  "Opens Tramtai in the desktop app or in the browser (starts the service if needed)",
