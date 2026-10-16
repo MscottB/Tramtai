@@ -23,6 +23,7 @@ import (
 	"tramtai/internal/api"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
+	"tramtai/internal/salidas"
 )
 
 // ConfigPunto es un punto de acceso tal como se escribe en la configuración global o local.
@@ -42,8 +43,12 @@ type ConfigPunto struct {
 	ModelosPermitidos []string          `json:"modelos_permitidos,omitempty" yaml:"modelos_permitidos,omitempty"`
 	ForzarModelo      bool              `json:"forzar_modelo,omitempty" yaml:"forzar_modelo,omitempty"`
 	AliasModelos      map[string]string `json:"alias_modelos,omitempty" yaml:"alias_modelos,omitempty"`
-	Activo            *bool             `json:"activo,omitempty" yaml:"activo,omitempty"`
-	Ejecucion         *EjecucionPunto   `json:"ejecucion,omitempty" yaml:"ejecucion,omitempty"`
+	// Esquema es el JSON Schema de la receta (escrito como YAML); con él la salida es JSON validado.
+	Esquema map[string]any `json:"esquema,omitempty" yaml:"esquema,omitempty"`
+	// Respaldo son los agentes (agente o agente/modelo) que siguen si el principal falla antes de producir texto.
+	Respaldo  []string        `json:"respaldo,omitempty" yaml:"respaldo,omitempty"`
+	Activo    *bool           `json:"activo,omitempty" yaml:"activo,omitempty"`
+	Ejecucion *EjecucionPunto `json:"ejecucion,omitempty" yaml:"ejecucion,omitempty"`
 }
 
 // EjecucionPunto son los valores de ejecución propios del punto, dentro de los límites de la instancia.
@@ -125,6 +130,18 @@ func (p ConfigPunto) Normalizar(instancia string, puertoServicio int) (ConfigPun
 	if p.Ejecucion != nil && p.Ejecucion.MaximoTrabajos < 0 {
 		return invalido(idioma.T("ejecucion.maximo_trabajos no puede ser negativo"))
 	}
+	if len(p.Esquema) > 0 {
+		esquema, err := json.Marshal(p.Esquema)
+		if err == nil {
+			_, err = salidas.Compilar(esquema)
+		}
+		if err != nil {
+			return invalido(idioma.Tf("esquema no válido: %s", nucleo.MensajeDe(err)))
+		}
+	}
+	if err := nucleo.ValidarRespaldo(p.Respaldo); err != nil {
+		return invalido(nucleo.MensajeDe(err))
+	}
 	return p, nil
 }
 
@@ -137,6 +154,10 @@ func (p ConfigPunto) politica() *api.Punto {
 	if e := p.Ejecucion; e != nil {
 		pol.ModoContexto, pol.FormatoSalida, pol.TiempoLimite = e.ModoContexto, e.FormatoSalida, e.TiempoLimiteSegundos
 	}
+	if len(p.Esquema) > 0 {
+		pol.Esquema, _ = json.Marshal(p.Esquema) // ya validado en Normalizar
+	}
+	pol.Respaldo = p.Respaldo
 	return pol
 }
 
@@ -189,9 +210,12 @@ type EstadoPunto struct {
 	Esfuerzo      string   `json:"esfuerzo,omitempty"`
 	Permitidos    []string `json:"modelos_permitidos,omitempty"`
 	Forzar        bool     `json:"forzar_modelo,omitempty"`
-	Activo        bool     `json:"activo"`
-	Error         string   `json:"error,omitempty"`
-	Origen        string   `json:"origen"`
+	// Esquema y Respaldo son la receta del punto, para mostrarla y abrirla en Probar.
+	Esquema  map[string]any `json:"esquema,omitempty"`
+	Respaldo []string       `json:"respaldo,omitempty"`
+	Activo   bool           `json:"activo"`
+	Error    string         `json:"error,omitempty"`
+	Origen   string         `json:"origen"`
 }
 
 // candidato es un punto leído de la configuración con el archivo del que procede.
@@ -353,7 +377,8 @@ func (s *Servicio) estadoPuntos() []EstadoPunto {
 	for _, p := range s.puntos {
 		lista = append(lista, EstadoPunto{Nombre: p.cfg.Nombre, Grupo: p.cfg.Grupo, Instrucciones: p.cfg.Instrucciones, Instancia: p.cfg.Instancia, URL: p.url, Contratos: p.cfg.Contratos,
 			Agente: p.cfg.Agente, Modelo: p.cfg.Modelo, PerfilModelo: p.cfg.PerfilModelo, Esfuerzo: p.cfg.Esfuerzo,
-			Permitidos: p.cfg.ModelosPermitidos, Forzar: p.cfg.ForzarModelo, Activo: p.err == "", Error: p.err, Origen: p.origen})
+			Permitidos: p.cfg.ModelosPermitidos, Forzar: p.cfg.ForzarModelo, Esquema: p.cfg.Esquema, Respaldo: p.cfg.Respaldo,
+			Activo: p.err == "", Error: p.err, Origen: p.origen})
 	}
 	sort.Slice(lista, func(i, j int) bool { return lista[i].Nombre < lista[j].Nombre })
 	return lista

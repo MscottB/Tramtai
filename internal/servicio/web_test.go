@@ -119,6 +119,26 @@ func TestWebUI(t *testing.T) {
 			t.Fatalf("PATCH %s: %d %s; se esperaba %s", cuerpoPatch, r.StatusCode, cuerpo, esperado)
 		}
 	}
+	// Receta: esquema y respaldo se fijan y se quitan; un esquema no válido no toca la configuración.
+	for _, caso := range [][2]string{
+		{`{"esquema":{"type":"object"},"respaldo":["otro"]}`, `"esquema":{"type":"object"},"respaldo":["otro"]`},
+		{`{"esquema":null}`, `"respaldo":["otro"]`},
+	} {
+		r, cuerpo := n.pedir("PATCH", "/api/v1/puntos/desde_ui", caso[0], "X-CSRF-Token", n.csrf)
+		if r.StatusCode != 200 || !strings.Contains(cuerpo, caso[1]) {
+			t.Fatalf("PATCH %s: %d %s; se esperaba %s", caso[0], r.StatusCode, cuerpo, caso[1])
+		}
+		if caso[0] == `{"esquema":null}` && strings.Contains(cuerpo, `"esquema"`) {
+			t.Fatalf("esquema null debía quitarlo: %s", cuerpo)
+		}
+	}
+	antes, _ := os.ReadFile(rutaGlobal)
+	if r, cuerpo := n.pedir("PATCH", "/api/v1/puntos/desde_ui", `{"esquema":{"type":5}}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 || !strings.Contains(cuerpo, "configuracion_invalida") {
+		t.Fatalf("un esquema no válido se rechaza: %d %s", r.StatusCode, cuerpo)
+	}
+	if despues, _ := os.ReadFile(rutaGlobal); string(despues) != string(antes) {
+		t.Fatal("un PATCH rechazado no debe cambiar la configuración")
+	}
 	if r, cuerpo := n.pedir("PATCH", "/api/v1/puntos/desde_ui", `{"modelo":"inexistente/x"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 || !strings.Contains(cuerpo, "solicitud_invalida") {
 		t.Fatalf("un agente desconocido se rechaza: %d %s", r.StatusCode, cuerpo)
 	}

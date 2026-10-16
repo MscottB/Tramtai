@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"crypto/subtle"
+	"encoding/json"
 	"io/fs"
 	"net"
 	"net/http"
@@ -626,6 +627,9 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 			Modelo        *string   `json:"modelo"`   // identificador del catálogo; "" vuelve al del espacio
 			Forzar        *bool     `json:"forzar_modelo"`
 			Permitidos    *[]string `json:"modelos_permitidos"`
+			// Esquema: ausente no cambia; null o {} lo quita; un objeto lo fija.
+			Esquema  json.RawMessage `json:"esquema"`
+			Respaldo *[]string       `json:"respaldo"`
 		}
 		if err := api.LeerJSON(w, r, &cambio); err != nil {
 			api.EscribirError(w, r, err)
@@ -659,6 +663,22 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 				}
 				if cambio.Permitidos != nil {
 					lista[i].ModelosPermitidos = slices.DeleteFunc(*cambio.Permitidos, func(m string) bool { return strings.TrimSpace(m) == "" })
+				}
+				if len(cambio.Esquema) > 0 {
+					lista[i].Esquema = nil // null y {} lo quitan
+					if err := json.Unmarshal(cambio.Esquema, &lista[i].Esquema); err != nil {
+						return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("el esquema debe ser un objeto JSON"))
+					}
+				}
+				if cambio.Respaldo != nil {
+					lista[i].Respaldo = *cambio.Respaldo
+				}
+				// La receta se valida antes de escribir: un cambio no válido deja la configuración como estaba. Solo si
+				// cambia, para no impedir desactivar un punto que ya tenía otro error.
+				if len(cambio.Esquema) > 0 || cambio.Respaldo != nil {
+					if _, err := lista[i].Normalizar(inst.ID, s.opc.Puerto); err != nil {
+						return nil, err
+					}
 				}
 			}
 			return lista, nil

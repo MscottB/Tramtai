@@ -344,3 +344,18 @@ func TestEscucharConPuertoOcupado(t *testing.T) {
 	}
 	oyente.Close()
 }
+
+func TestNormalizarReceta(t *testing.T) {
+	bien := ConfigPunto{Nombre: "r", Esquema: map[string]any{"type": "object"}, Respaldo: []string{"codex", "gemini/flash"}}
+	if _, err := bien.Normalizar("global", 4000); err != nil {
+		t.Fatalf("receta válida: %v", err)
+	}
+	for _, mal := range []ConfigPunto{
+		{Nombre: "r", Esquema: map[string]any{"type": 5}},
+		{Nombre: "r", Respaldo: []string{"perfil/x"}},
+	} {
+		if _, err := mal.Normalizar("global", 4000); nucleo.CodigoDe(err) != nucleo.CodigoConfiguracionInvalida {
+			t.Fatalf("%+v debía rechazarse: %v", mal, err)
+		}
+	}
+}
