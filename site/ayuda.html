@@ -11,6 +11,7 @@
 <meta name="theme-color" content="#0b6e64">
 <link rel="icon" href="logo.png">
 <link rel="stylesheet" href="estilo.css">
+<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t } catch (e) {}</script>
 </head>
 <body>
 <header class="barra">
@@ -26,6 +27,11 @@
     <div class="idioma" role="group" aria-label="Idioma / Language">
       <button type="button" data-idioma="es" aria-pressed="true">ES</button>
       <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+    </div>
+    <div class="idioma tema" role="group" aria-label="Tema / Theme">
+      <button type="button" data-tema="sistema" aria-pressed="true" aria-label="Tema del sistema / System theme" title="Sistema / System">◐</button>
+      <button type="button" data-tema="claro" aria-pressed="false" aria-label="Tema claro / Light theme" title="Claro / Light">☀</button>
+      <button type="button" data-tema="oscuro" aria-pressed="false" aria-label="Tema oscuro / Dark theme" title="Oscuro / Dark">☾</button>
     </div>
     <a class="boton principal" href="index.html#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
   </div>

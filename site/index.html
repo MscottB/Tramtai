@@ -11,6 +11,7 @@
 <meta name="theme-color" content="#0b6e64">
 <link rel="icon" href="logo.png">
 <link rel="stylesheet" href="estilo.css">
+<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t } catch (e) {}</script>
 </head>
 <body>
 <header class="barra">
@@ -27,6 +28,11 @@
     <div class="idioma" role="group" aria-label="Idioma / Language">
       <button type="button" data-idioma="es" aria-pressed="true">ES</button>
       <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+    </div>
+    <div class="idioma tema" role="group" aria-label="Tema / Theme">
+      <button type="button" data-tema="sistema" aria-pressed="true" aria-label="Tema del sistema / System theme" title="Sistema / System">◐</button>
+      <button type="button" data-tema="claro" aria-pressed="false" aria-label="Tema claro / Light theme" title="Claro / Light">☀</button>
+      <button type="button" data-tema="oscuro" aria-pressed="false" aria-label="Tema oscuro / Dark theme" title="Oscuro / Dark">☾</button>
     </div>
     <a class="boton principal" href="#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
   </div>
@@ -61,7 +67,7 @@
       </div>
 
       <div class="mapa" aria-hidden="true">
-        <svg viewBox="0 0 440 320">
+        <svg viewBox="0 0 520 320">
           <g fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M 40 160 L 150 160" stroke="var(--acento)"/>
             <path d="M 270 148 L 284 148 C 324 148 318 70 358 70 L 378 70" stroke="var(--claude)"/>
@@ -80,11 +86,11 @@
             <circle cx="384" cy="190" r="10" stroke="var(--gemini)"/>
             <circle cx="384" cy="250" r="10" stroke="var(--antigravity)"/>
           </g>
-          <g font-size="12.5" fill="var(--texto-suave)" text-anchor="end">
-            <text x="370" y="52">Claude Code</text>
-            <text x="370" y="112">Codex</text>
-            <text x="370" y="214">Gemini API</text>
-            <text x="370" y="274">Antigravity</text>
+          <g font-size="12.5" fill="var(--texto-suave)" text-anchor="start">
+            <text x="404" y="74">Claude Code</text>
+            <text x="404" y="134">Codex</text>
+            <text x="404" y="194">Gemini API</text>
+            <text x="404" y="254">Antigravity</text>
           </g>
           <rect class="tranvia" x="-13" y="-7" width="26" height="14" rx="5" fill="var(--acento)"/>
         </svg>

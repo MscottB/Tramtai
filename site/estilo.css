@@ -19,8 +19,9 @@
   --mono: 'Cascadia Code', 'Cascadia Mono', ui-monospace, Consolas, 'SF Mono', monospace;
   color-scheme: light;
 }
+/* Tema: el del sistema, salvo que se elija Claro u Oscuro (data-tema en <html>, ver sitio.js). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-tema="claro"]) {
     --fondo: #0a1116; --superficie: #111c23; --superficie-suave: #15222a;
     --borde: #1f2f38; --borde-fuerte: #2d404b;
     --texto: #e5edf0; --texto-suave: #93a5ac;
@@ -30,6 +31,16 @@
     --sombra: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
     color-scheme: dark;
   }
+}
+:root[data-tema="oscuro"] {
+  --fondo: #0a1116; --superficie: #111c23; --superficie-suave: #15222a;
+  --borde: #1f2f38; --borde-fuerte: #2d404b;
+  --texto: #e5edf0; --texto-suave: #93a5ac;
+  --acento: #2dd4bf; --acento-texto: #042f2b; --acento-suave: rgba(45, 212, 191, .11);
+  --claude: #f28a4f; --codex: #5b8def; --gemini: #a78bfa; --antigravity: #f472b6;
+  --tablero: #060b0e;
+  --sombra: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -56,6 +67,8 @@ p { margin: 0; }
 .idioma { display: inline-flex; border: 1px solid var(--borde-fuerte); border-radius: 999px; overflow: hidden; }
 .idioma button { border: 0; background: none; color: var(--texto-suave); font: 600 .8rem var(--fuente); padding: 5px 10px; cursor: pointer; }
 .idioma button[aria-pressed="true"] { background: var(--acento); color: var(--acento-texto); }
+.tema { margin-left: 6px; }
+.tema button { padding: 5px 9px; }
 
 /* Botones */
 .boton { display: inline-flex; align-items: center; gap: 10px; padding: 12px 20px; border-radius: 10px; font-weight: 600; text-decoration: none; border: 1px solid transparent; transition: transform .15s ease, box-shadow .15s ease; }
