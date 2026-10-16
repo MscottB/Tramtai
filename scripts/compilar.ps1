@@ -61,6 +61,9 @@ if ($Instalador) {
     $dist = Join-Path $raiz 'dist'
     New-Item -ItemType Directory -Force $dist | Out-Null
     Get-ChildItem $dist -File | Remove-Item
+    # Licencia y términos en RTF para las páginas del instalador (acentos y formato correctos).
+    Push-Location $raiz
+    try { go run ./scripts/rtf; if ($LASTEXITCODE) { throw 'scripts/rtf falló' } } finally { Pop-Location }
     $archivoInstalador = Join-Path $dist "Tramtai-$version-instalador-windows-x64.exe"
     & $makensis.Source /V2 /INPUTCHARSET UTF8 "/DVERSION=$version" "/DSALIDA=$archivoInstalador" (Join-Path $raiz 'scripts\instalador\tramtai.nsi')
     if ($LASTEXITCODE) { throw 'makensis falló' }

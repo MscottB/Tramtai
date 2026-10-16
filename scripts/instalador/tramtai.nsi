@@ -43,10 +43,11 @@ BrandingText "Tramtai ${VERSION}"
 !define MUI_WELCOMEPAGE_TITLE "$(bienvenidaTitulo)"
 !define MUI_WELCOMEPAGE_TEXT "$(bienvenidaTexto)"
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "${RAIZ}\LICENSE.md"
+; Los textos legales van en RTF (go run ./scripts/rtf): el Markdown en UTF-8 salía con los acentos rotos y sin formato.
+!insertmacro MUI_PAGE_LICENSE "${RAIZ}\bin\LICENCIA.rtf"
 !define MUI_PAGE_HEADER_TEXT "$(terminosTitulo)"
 !define MUI_PAGE_HEADER_SUBTEXT "$(terminosSubtitulo)"
-!insertmacro MUI_PAGE_LICENSE "${RAIZ}\TERMINOS.md"
+!insertmacro MUI_PAGE_LICENSE "${RAIZ}\bin\TERMINOS.rtf"
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
