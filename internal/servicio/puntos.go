@@ -346,9 +346,22 @@ func (s *Servicio) Recargar() []EstadoPunto {
 		}
 		nuevos[c.cfg.Nombre] = s.abrirPunto(c, huella, firma)
 	}
+	type eliminado struct {
+		inst   *Instancia
+		nombre string
+	}
+	var eliminados []eliminado
 	for nombre, actual := range s.puntos {
 		if _, sigue := nuevos[nombre]; !sigue {
 			retirados = append(retirados, actual)
+			// Un punto que sale de la configuración sin clave se eliminó (la UI y la CLI la borran antes de recargar): su
+			// consumo deja de ser suyo para que otro con el mismo nombre no lo herede. Con la clave aún en su sitio
+			// (una errata en el YAML lo invalidó) se conserva.
+			// shortcut: no se detecta si se eliminó con el servicio detenido; habría que guardar la huella con el consumo.
+			if _, err := os.Stat(RutaTokenPunto(s.opc.Datos, nombre)); os.IsNotExist(err) && actual.instancia != nil &&
+				s.instancias[actual.instancia.ID] == actual.instancia {
+				eliminados = append(eliminados, eliminado{actual.instancia, nombre})
+			}
 		}
 	}
 	s.puntos, s.erroresPuntos = nuevos, errores
@@ -376,17 +389,35 @@ func (s *Servicio) Recargar() []EstadoPunto {
 		if m == nil {
 			m = map[string]nucleo.Presupuesto{}
 		}
-		m[persistencia.TodaLaInstancia] = nucleo.PresupuestoDe(inst.Config)
+		m[persistencia.TodaLaInstancia] = presupuestoInstancia(inst)
 		inst.Planificador.FijarPresupuestos(m)
 	}
 	estado := s.estadoPuntos()
 	s.mu.Unlock()
+	for _, e := range eliminados {
+		if err := e.inst.Planificador.EliminarConsumo(context.Background(), e.nombre); err != nil {
+			fmt.Fprintf(s.opc.Registros, "punto de acceso %s: no se pudo borrar su consumo: %v\n", e.nombre, err)
+		}
+	}
 	for _, p := range estado {
 		if p.Error != "" && p.Error != "desactivado" {
 			fmt.Fprintf(s.opc.Registros, "punto de acceso %s: %s\n", p.Nombre, p.Error)
 		}
 	}
 	return estado
+}
+
+// presupuestoInstancia relee el presupuesto de la configuración de la instancia, para que un cambio se aplique al
+// recargar sin reiniciar el servicio; si no se puede leer, vale el de la configuración con que se abrió.
+func presupuestoInstancia(inst *Instancia) nucleo.Presupuesto {
+	raiz := ""
+	if inst.Ambito == "proyecto" {
+		raiz = inst.Raiz
+	}
+	if c, err := nucleo.CargarConfiguracion(raiz); err == nil {
+		return nucleo.PresupuestoDe(c)
+	}
+	return nucleo.PresupuestoDe(inst.Config)
 }
 
 func firmaPunto(cfg ConfigPunto, huella string) string {

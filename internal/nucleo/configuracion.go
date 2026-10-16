@@ -402,7 +402,7 @@ func (c Capa) validar() error {
 		if !tipoCorrecto(tipo, c.Valores[clave]) {
 			return errorConfiguracion(c.Fuente, clave, idioma.T("tipo incorrecto"))
 		}
-		if strings.HasPrefix(clave, "presupuesto.") && negativo(c.Valores[clave]) {
+		if strings.HasPrefix(clave, "presupuesto.") && limiteNoValido(c.Valores[clave]) {
 			return errorConfiguracion(c.Fuente, clave, idioma.T("los límites del presupuesto no pueden ser negativos"))
 		}
 	}
@@ -467,12 +467,13 @@ func esAdministrada(clave string) bool {
 	return false
 }
 
-func negativo(valor any) bool {
+// limiteNoValido rechaza los límites negativos y, en decimales, NaN e infinito.
+func limiteNoValido(valor any) bool {
 	switch n := valor.(type) {
 	case int:
 		return n < 0
 	case float64:
-		return n < 0
+		return !finitoNoNegativo(n)
 	}
 	return false
 }

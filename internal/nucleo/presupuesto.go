@@ -26,12 +26,15 @@ func (p Presupuesto) Vacio() bool { return p == Presupuesto{} }
 // Validar rechaza los valores negativos.
 func (p Presupuesto) Validar() error {
 	for _, l := range []Limites{p.Diario, p.Mensual} {
-		if l.Peticiones < 0 || l.Tokens < 0 || l.USD < 0 {
+		if l.Peticiones < 0 || l.Tokens < 0 || !finitoNoNegativo(l.USD) {
 			return NuevoError(CodigoConfiguracionInvalida, idioma.T("los límites del presupuesto no pueden ser negativos"))
 		}
 	}
 	return nil
 }
+
+// finitoNoNegativo rechaza también NaN e infinito: un límite así nunca se alcanzaría y rompería el JSON del estado.
+func finitoNoNegativo(v float64) bool { return v >= 0 && !math.IsInf(v, 1) }
 
 // Consumo es lo gastado en un periodo: peticiones aceptadas, trabajos terminados y lo que informaron.
 type Consumo struct {

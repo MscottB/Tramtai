@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -53,7 +54,7 @@ func aplicarPresupuesto(p *nucleo.Presupuesto, entradas []string) error {
 		periodo, unidad, _ := strings.Cut(clave, ".")
 		limites := map[string]*nucleo.Limites{"diario": &p.Diario, "mensual": &p.Mensual}[periodo]
 		numero, err := strconv.ParseFloat(valor, 64)
-		if !ok || limites == nil || err != nil || numero < 0 {
+		if !ok || limites == nil || err != nil || !(numero >= 0) || math.IsInf(numero, 1) {
 			return fmt.Errorf(idioma.T("presupuesto no válido %q: usa diario|mensual.peticiones|tokens|usd=valor"), entrada)
 		}
 		entero, errEntero := strconv.Atoi(valor)
@@ -274,7 +275,11 @@ func comandoAcceso() *cobra.Command {
 	}
 	eliminar := &cobra.Command{Use: "eliminar <nombre>", Short: idioma.T("Elimina un punto de acceso"), Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := editar(cmd, func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
+			ruta, origen, err := archivo()
+			if err != nil {
+				return err
+			}
+			if err := servicio.EditarPuntos(ruta, origen, func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
 				i, err := buscar(lista, args[0])
 				if err != nil {
 					return nil, err
@@ -283,9 +288,13 @@ func comandoAcceso() *cobra.Command {
 			}); err != nil {
 				return err
 			}
+			fmt.Fprintln(cmd.OutOrStdout(), idioma.Tf("guardado en %s", ruta))
+			// La clave se borra antes de recargar: así el servicio sabe que el punto se eliminó, y otro con este nombre
+			// no hereda ni la clave ni el consumo.
 			if datos, err := dirDatos(); err == nil {
-				servicio.EliminarTokenPunto(datos, args[0]) // otro punto con este nombre no hereda la clave
+				servicio.EliminarTokenPunto(datos, args[0])
 			}
+			recargarSiActivo(cmd)
 			return nil
 		}}
 	var rotar bool

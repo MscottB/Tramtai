@@ -17,7 +17,7 @@ func TestAplicarPresupuesto(t *testing.T) {
 	if err := aplicarPresupuesto(&p, []string{"mensual.tokens=0"}); err != nil || p.Mensual.Tokens != 0 || p.Mensual.USD != 12.5 {
 		t.Fatalf("0 quita solo ese límite: %v %+v", err, p)
 	}
-	for _, malo := range []string{"semanal.tokens=1", "diario.horas=1", "diario.tokens=-1", "diario.tokens", "diario.peticiones=1.5", "mensual.usd=mucho"} {
+	for _, malo := range []string{"semanal.tokens=1", "diario.horas=1", "diario.tokens=-1", "diario.tokens", "diario.peticiones=1.5", "mensual.usd=mucho", "mensual.usd=NaN", "diario.usd=Inf"} {
 		if err := aplicarPresupuesto(&p, []string{malo}); err == nil {
 			t.Errorf("%q debía rechazarse", malo)
 		}

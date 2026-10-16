@@ -2,6 +2,7 @@ package nucleo
 
 import (
 	"errors"
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -80,8 +81,10 @@ func TestPorcentaje(t *testing.T) {
 }
 
 func TestValidarPresupuesto(t *testing.T) {
-	if err := (Presupuesto{Mensual: Limites{USD: -1}}).Validar(); CodigoDe(err) != CodigoConfiguracionInvalida {
-		t.Errorf("USD negativo: %v", err)
+	for _, usd := range []float64{-1, math.NaN(), math.Inf(1)} {
+		if err := (Presupuesto{Mensual: Limites{USD: usd}}).Validar(); CodigoDe(err) != CodigoConfiguracionInvalida {
+			t.Errorf("USD %v: %v", usd, err)
+		}
 	}
 	if err := (Presupuesto{Diario: Limites{Peticiones: 5, Tokens: 10, USD: 1.5}}).Validar(); err != nil {
 		t.Errorf("válido: %v", err)
@@ -108,6 +111,8 @@ func TestPresupuestoConfiguracion(t *testing.T) {
 		{"negativo", "presupuesto:\n  diario:\n    peticiones: -5\n", OrigenGlobal},
 		{"usd negativo", "presupuesto:\n  diario:\n    usd: -0.5\n", OrigenGlobal},
 		{"tipo incorrecto", "presupuesto:\n  diario:\n    usd: mucho\n", OrigenGlobal},
+		{"usd no es un número", "presupuesto:\n  diario:\n    usd: .nan\n", OrigenGlobal},
+		{"usd infinito", "presupuesto:\n  mensual:\n    usd: .inf\n", OrigenGlobal},
 	}
 	for _, caso := range casos {
 		if _, err := CargarCapa(escribir(t, caso.contenido), caso.origen); CodigoDe(err) != CodigoConfiguracionInvalida {

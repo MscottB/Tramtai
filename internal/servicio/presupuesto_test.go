@@ -3,11 +3,13 @@ package servicio
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/nucleo"
+	"tramtai/internal/persistencia"
 )
 
 // abrirSesion entra en la Web UI con un código de un solo uso y deja el CSRF de la sesión.
@@ -131,5 +133,64 @@ func TestNormalizarPresupuestoNegativo(t *testing.T) {
 	vacio := ConfigPunto{Nombre: "x", Presupuesto: &nucleo.Presupuesto{}}
 	if n, err := vacio.Normalizar("global", 17373); err != nil || n.Presupuesto != nil {
 		t.Fatalf("un presupuesto vacío se quita: %v %+v", err, n.Presupuesto)
+	}
+}
+
+func TestRecrearAPINoHeredaConsumo(t *testing.T) {
+	global := `puntos_acceso:
+  - nombre: facturas
+    contratos: [nativa]
+    agente: simulado
+    presupuesto:
+      diario:
+        peticiones: 1
+`
+	s, ts, _ := entorno(t, global, "", adaptadores.Simulado{})
+	s.ActivarGlobal()
+	pedirCon := func(token string) int {
+		r, _ := pedir(t, ts.URL, "POST", "/p/facturas/api/v1/trabajos", token, hola)
+		return r.StatusCode
+	}
+	token, _ := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "facturas"))
+	s.Recargar()
+	if c := pedirCon(token); c != 202 {
+		t.Fatalf("primera petición: %d", c)
+	}
+	// Como tramtai acceso eliminar: quita el punto del archivo, borra su clave y recarga.
+	rutaGlobal, _ := nucleo.RutaGlobal()
+	var anterior []ConfigPunto
+	if err := EditarPuntos(rutaGlobal, nucleo.OrigenGlobal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+		anterior = lista
+		return nil, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	EliminarTokenPunto(s.opc.Datos, "facturas")
+	s.Recargar()
+	// Otra API con el mismo nombre empieza sin consumo.
+	if err := EditarPuntos(rutaGlobal, nucleo.OrigenGlobal, func([]ConfigPunto) ([]ConfigPunto, error) { return anterior, nil }); err != nil {
+		t.Fatal(err)
+	}
+	token, _ = RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "facturas"))
+	s.Recargar()
+	if c := pedirCon(token); c != 202 {
+		t.Fatalf("la API recreada no hereda el consumo de la eliminada: %d", c)
+	}
+}
+
+func TestPresupuestoInstanciaSeAplicaAlRecargar(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	s.ActivarGlobal()
+	if _, ok, _ := s.instancias["global"].Planificador.EstadoPresupuesto(context.Background(), persistencia.TodaLaInstancia); ok {
+		t.Fatal("sin presupuesto todavía")
+	}
+	rutaGlobal, _ := nucleo.RutaGlobal()
+	actual, _ := os.ReadFile(rutaGlobal)
+	if err := os.WriteFile(rutaGlobal, append(actual, []byte("presupuesto:\n  diario:\n    peticiones: 3\n")...), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s.Recargar()
+	if estado, ok, _ := s.instancias["global"].Planificador.EstadoPresupuesto(context.Background(), persistencia.TodaLaInstancia); !ok || estado.Diario.Limites.Peticiones != 3 {
+		t.Fatalf("el presupuesto de la instancia se aplica al recargar, sin reiniciar: %v %+v", ok, estado)
 	}
 }
