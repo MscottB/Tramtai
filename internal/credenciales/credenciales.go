@@ -20,11 +20,12 @@ func Admitido(nombre string) bool { return slices.Contains(Nombres, nombre) }
 
 func objetivo(nombre string) string { return "tramtai/" + nombre }
 
-// valorValido rechaza lo que no puede ser una clave de API: vacío, demasiado largo o con espacios, comillas, barras
-// invertidas o caracteres de control (que además romperían el paso de la clave a la herramienta del Llavero).
+// valorValido rechaza lo que no puede ser una clave de API: vacía, de más de 2048 bytes o con algo que no sea ASCII
+// imprimible, comillas o barras invertidas. Además de no ser claves, romperían el paso a la herramienta del Llavero
+// (que devuelve en hexadecimal lo que no es ASCII) o pasarían de su línea de órdenes.
 func valorValido(valor string) error {
-	if valor == "" || len(valor) > 4096 || strings.ContainsAny(valor, " \t\r\n\"'\\") ||
-		strings.IndexFunc(valor, func(r rune) bool { return r < 0x20 || r == 0x7f }) >= 0 {
+	if valor == "" || len(valor) > 2048 || strings.ContainsAny(valor, "\"'\\") ||
+		strings.IndexFunc(valor, func(r rune) bool { return r <= 0x20 || r >= 0x7f }) >= 0 {
 		return errors.New(idioma.T("eso no parece una clave de API: sin espacios, comillas ni saltos de línea"))
 	}
 	return nil

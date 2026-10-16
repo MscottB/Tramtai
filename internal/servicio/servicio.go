@@ -227,13 +227,14 @@ func (s *Servicio) RotarTokenInstancia(inst *Instancia) (string, error) {
 	if strings.HasPrefix(inst.ArchivoToken, "variable ") {
 		return "", nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("la clave de %s viene de la %s: cámbiala allí", inst.ID, inst.ArchivoToken))
 	}
+	// El archivo y la memoria cambian juntos: dos rotaciones a la vez no pueden dejarlos distintos.
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	token, err := RotarToken(inst.ArchivoToken)
 	if err != nil {
 		return "", err
 	}
-	s.mu.Lock()
 	inst.token = token
-	s.mu.Unlock()
 	return token, nil
 }
 
@@ -668,16 +669,21 @@ func RotarToken(ruta string) (string, error) {
 	return token, guardarSecreto(ruta, token)
 }
 
-// guardarSecreto escribe un token o su huella solo legible por el usuario; Chmod corrige un archivo que ya existía
-// con otros permisos (WriteFile solo los aplica al crearlo).
+// guardarSecreto escribe un token o su huella solo legible por el usuario, en un temporal que luego se renombra: quien
+// lo lee a la vez (un Recargar, la CLI) nunca ve un archivo a medias que tomaría por vacío y regeneraría.
 func guardarSecreto(ruta, valor string) error {
 	if err := os.MkdirAll(filepath.Dir(ruta), 0o700); err != nil {
 		return err
 	}
-	if err := os.WriteFile(ruta, []byte(valor+"\n"), 0o600); err != nil {
+	temporal := ruta + ".tmp-" + aleatorio(4)
+	if err := os.WriteFile(temporal, []byte(valor+"\n"), 0o600); err != nil {
 		return err
 	}
-	return os.Chmod(ruta, 0o600)
+	if err := os.Rename(temporal, ruta); err != nil {
+		_ = os.Remove(temporal)
+		return err
+	}
+	return nil
 }
 
 // RotarTokenPunto genera la clave nueva de un punto de acceso y guarda solo su huella: la clave se muestra una vez

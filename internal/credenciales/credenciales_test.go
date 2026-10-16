@@ -12,9 +12,10 @@ func TestValorValido(t *testing.T) {
 		}
 	}
 	// Una clave con espacios, comillas o saltos de línea no es una clave de API y rompería el paso al Llavero.
-	for _, mal := range []string{"", "con espacio", `comilla"`, "simple'", "a\nb", "barra\\", strings.Repeat("x", 4097)} {
+	// Solo ASCII imprimible: el Llavero devuelve en hexadecimal lo que no lo es, y la comprobación al guardar fallaría.
+	for _, mal := range []string{"", "con espacio", `comilla"`, "simple'", "a\nb", "barra\\", "clavé", strings.Repeat("x", 2049)} {
 		if valorValido(mal) == nil {
-			t.Errorf("%q debía rechazarse", mal)
+			t.Errorf("%.20q (%d bytes) debía rechazarse", mal, len(mal))
 		}
 	}
 }

@@ -29,6 +29,9 @@ func Almacen() string { return idioma.T("Llavero de macOS") }
 // Guardar crea o sustituye la clave. security -i lee la orden por la entrada estándar, así que la clave no aparece
 // en la lista de procesos; como esa orden no informa de un fallo por el código de salida, se comprueba leyéndola.
 func Guardar(nombre, valor string) error {
+	if !Admitido(nombre) { // el nombre también va en la orden de security -i: solo los fijos de Nombres
+		return errors.New(idioma.T("clave no admitida"))
+	}
 	if err := valorValido(valor); err != nil {
 		return err
 	}

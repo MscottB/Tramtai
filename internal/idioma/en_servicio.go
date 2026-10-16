@@ -91,6 +91,7 @@ func init() {
 		"este sistema no tiene almacén de credenciales soportado; usa variables de entorno":                "this system has no supported credential store; use environment variables",
 		"eso no parece una clave de API: sin espacios, comillas ni saltos de línea":                        "that does not look like an API key: no spaces, quotes or line breaks",
 		"Llavero de macOS":                                                                                 "macOS Keychain",
+		"clave no admitida":                                                                                "unsupported key",
 		"no se pudo guardar la clave en el Llavero":                                                        "the key could not be saved in the Keychain",
 		"falta secret-tool: instala el paquete libsecret-tools (o libsecret) o usa variables de entorno":   "secret-tool is missing: install the libsecret-tools (or libsecret) package or use environment variables",
 		"Secret Service (secret-tool)":                                                                     "Secret Service (secret-tool)",
