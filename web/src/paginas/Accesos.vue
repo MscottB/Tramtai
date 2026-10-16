@@ -1,9 +1,6 @@
 <template>
   <div class="pagina apilado">
-    <div>
-      <div class="titulo-pagina">{{ t('menu.conectar') }}</div>
-      <div class="texto-suave">{{ t('conectar.subtitulo') }}</div>
-    </div>
+    <CabeceraPagina :titulo="t('menu.conectar')" :descripcion="t('conectar.subtitulo')" />
 
     <q-card>
       <q-card-section class="seccion">
@@ -12,7 +9,8 @@
           <div class="texto-suave text-body2">{{ t('conectar.directaTexto') }}</div>
         </div>
       </q-card-section>
-      <q-card-section class="row q-col-gutter-md q-pt-none">
+      <div class="q-px-md text-weight-medium">{{ t('conectar.conexion') }}</div>
+      <q-card-section class="row q-col-gutter-md">
         <div v-for="c in campos" :key="c.titulo" class="col-12 col-md-6">
           <div class="text-caption texto-suave q-mb-xs">{{ c.titulo }}</div>
           <div class="bloque-codigo">{{ c.valor }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('comun.copiar') + ' ' + c.titulo" @click="copiar(c.valor)" /></div>
@@ -33,8 +31,11 @@
       </q-card-section>
       <q-card-section class="q-pt-none">
         <div class="text-caption texto-suave q-mb-xs">{{ t('conectar.modeloAntes') }} <span class="codigo">model</span> {{ t('conectar.modeloDespues') }}</div>
-        <div class="row q-gutter-xs">
-          <q-chip v-for="m in ejemplosModelo" :key="m" dense clickable outline color="primary" class="codigo" @click="copiar(m)">{{ m }}</q-chip>
+        <div v-for="g in gruposModelo" :key="g.titulo" class="row items-center q-gutter-xs q-mb-xs">
+          <span class="grupo-modelo">
+            <span v-if="g.agente" class="linea__chapa" :class="'linea--' + g.agente" aria-hidden="true">{{ codigoLinea(g.agente) }}</span>{{ g.titulo }}
+          </span>
+          <q-chip v-for="m in g.ids" :key="m" dense clickable outline color="primary" class="codigo" @click="copiar(m)">{{ m }}</q-chip>
         </div>
       </q-card-section>
       <q-separator />
@@ -81,54 +82,43 @@
             <q-btn flat dense no-caps size="sm" color="grey-8" icon="o_stop" :label="t('puntos.desactivarTodos')"
               :disable="g.activos === 0" :loading="ocupado === g.nombre + ':0'" @click="activarGrupo(g.nombre, false)" />
           </div>
-          <q-list separator>
-            <q-item v-for="p in g.puntos" :key="p.nombre" class="q-py-md">
-              <q-item-section avatar top>
-                <span class="linea__chapa linea__chapa--grande" :class="['linea--' + (p.agente ?? 'otro'), { 'linea__chapa--apagada': !activo(p) }]" aria-hidden="true">{{ p.agente ? codigoLinea(p.agente) : 'API' }}</span>
-              </q-item-section>
-              <q-item-section>
-                <q-item-label class="row items-center q-gutter-x-sm">
+          <div>
+            <div v-for="p in g.puntos" :key="p.nombre" class="fila-api">
+              <span class="linea__chapa linea__chapa--grande" :class="['linea--' + (p.agente ?? 'otro'), { 'linea__chapa--apagada': !activo(p) }]" aria-hidden="true">{{ p.agente ? codigoLinea(p.agente) : 'API' }}</span>
+              <div class="fila-api__info">
+                <div class="row items-center q-gutter-x-sm">
                   <span class="text-weight-medium">{{ p.nombre }}</span>
                   <span class="etiqueta" :class="!activo(p) ? 'etiqueta--neutro' : p.error ? 'etiqueta--error' : 'etiqueta--ok'">{{ activo(p) ? t('puntos.activo') : t('puntos.desactivado') }}</span>
                   <span v-if="p.esquema" class="etiqueta etiqueta--info">{{ t('puntos.json') }}</span>
                   <span v-if="p.respaldo?.length" class="etiqueta etiqueta--neutro">{{ t('puntos.respaldoDe', { agentes: p.respaldo.map(etiquetaDe).join(', ') }) }}</span>
-                </q-item-label>
-                <q-item-label caption class="codigo">{{ p.url || t('puntos.sinDireccion') }}</q-item-label>
-                <q-item-label caption>
-                  {{ p.contratos.map(nombreContrato).join(' · ') }}
-                  <template v-if="idModelo(p)"> · {{ etiquetaDe(idModelo(p)!) }}</template>
-                  <template v-if="p.esfuerzo"> · {{ t('esfuerzo.titulo') }} {{ nombreEsfuerzo(p.esfuerzo).toLowerCase() }}</template>
-                </q-item-label>
-                <q-item-label caption>
-                  <a v-if="uso[p.nombre]" href="#historial" class="enlace" @click.prevent="verPeticiones(p.nombre)">{{ textoUso(p.nombre) }}</a>
-                  <span v-else>{{ t('puntos.sinUso') }}</span>
-                </q-item-label>
-                <BarrasPresupuesto v-if="presupuestos[p.nombre]" :estado="presupuestos[p.nombre]" @reiniciar="reiniciarPresupuesto(p.nombre)" />
-                <q-item-label v-if="p.instrucciones" caption class="row no-wrap items-start">
-                  <q-icon name="o_notes" class="q-mr-xs q-mt-xs" /><span class="recortar-2">{{ p.instrucciones }}</span>
-                </q-item-label>
-                <q-item-label v-if="p.error && p.error !== 'desactivado'" caption class="text-negative">{{ p.error }}</q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <div class="row items-center no-wrap q-gutter-x-xs">
-                  <q-toggle :model-value="activo(p)" :aria-label="t('puntos.activar', { nombre: p.nombre })" @update:model-value="(v: boolean) => activar(p.nombre, v)">
-                    <q-tooltip>{{ activo(p) ? t('puntos.activo') : t('puntos.desactivado') }}</q-tooltip>
-                  </q-toggle>
-                  <q-btn v-if="p.url" flat dense round icon="content_copy" :aria-label="t('puntos.copiarUrl')" @click="copiar(p.url)"><q-tooltip>{{ t('puntos.copiarUrl') }}</q-tooltip></q-btn>
-                  <q-btn flat dense round icon="o_key" :aria-label="t('puntos.regenerarClave')" @click="regenerarClave(p)"><q-tooltip>{{ t('puntos.regenerarClave') }}</q-tooltip></q-btn>
-                  <q-btn flat dense round icon="o_science" :aria-label="t('puntos.abrirProbar')" @click="abrirEnProbar(p.nombre)"><q-tooltip>{{ t('puntos.abrirProbar') }}</q-tooltip></q-btn>
-                  <q-btn flat dense round icon="o_tune" :aria-label="t('puntos.ajustes')" @click="abrirAjustes(p)"><q-tooltip>{{ t('puntos.ajustes') }}</q-tooltip></q-btn>
-                  <q-btn flat dense round icon="o_delete" color="negative" :aria-label="t('comun.eliminar')" @click="eliminar(p.nombre)"><q-tooltip>{{ t('comun.eliminar') }}</q-tooltip></q-btn>
                 </div>
-              </q-item-section>
-            </q-item>
-          </q-list>
+                <div class="row items-center no-wrap codigo texto-suave">
+                  <span class="ellipsis">{{ p.url || t('puntos.sinDireccion') }}</span>
+                  <q-btn v-if="p.url" flat dense round size="sm" icon="content_copy" :aria-label="t('puntos.copiarUrl')" @click="copiar(p.url)"><q-tooltip>{{ t('puntos.copiarUrl') }}</q-tooltip></q-btn>
+                </div>
+                <div class="text-caption texto-suave">
+                  <template v-if="idModelo(p)">{{ etiquetaDe(idModelo(p)!) }} · </template>{{ p.contratos.map(nombreContrato).join(' · ') }}
+                  <template v-if="p.esfuerzo"> · {{ t('esfuerzo.titulo') }} {{ nombreEsfuerzo(p.esfuerzo).toLowerCase() }}</template>
+                </div>
+                <div v-if="p.instrucciones" class="text-caption texto-suave row no-wrap items-start">
+                  <q-icon name="o_notes" class="q-mr-xs q-mt-xs" /><span class="recortar-2">{{ p.instrucciones }}</span>
+                </div>
+                <div v-if="p.error && p.error !== 'desactivado'" class="text-caption text-negative">{{ p.error }}</div>
+              </div>
+              <div class="fila-api__uso text-caption">
+                <a v-if="uso[p.nombre]" href="#historial" class="enlace" @click.prevent="verPeticiones(p.nombre)">{{ textoUso(p.nombre) }}</a>
+                <span v-else class="texto-suave">{{ t('puntos.sinUso') }}</span>
+                <BarrasPresupuesto v-if="presupuestos[p.nombre]" :estado="presupuestos[p.nombre]" sin-boton />
+              </div>
+              <div class="fila-api__acciones row items-center no-wrap q-gutter-x-xs">
+                <q-btn outline dense no-caps color="primary" icon="o_tune" class="q-px-sm" :label="t('puntos.ajustes')" @click="abrirAjustes(p)" />
+                <MenuAcciones :acciones="accionesDe(p)" @elegir="(i: number) => ejecutarAccion(p, i)" />
+              </div>
+            </div>
+          </div>
         </div>
       </template>
-      <div v-else class="vacio">
-        <q-icon name="o_hub" size="40px" />
-        <div class="q-mt-sm">{{ t('puntos.vacio') }}</div>
-      </div>
+      <EstadoVacio v-else :titulo="t('puntos.vacio')" :accion="t('puntos.nuevo')" @accion="abrirNuevo" />
     </q-card>
 
     <q-dialog v-model="nuevo">
@@ -221,9 +211,12 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import BarrasPresupuesto from '../componentes/BarrasPresupuesto.vue'
+import CabeceraPagina from '../componentes/CabeceraPagina.vue'
+import EstadoVacio from '../componentes/EstadoVacio.vue'
+import MenuAcciones, { type Accion } from '../componentes/MenuAcciones.vue'
 import EditorPresupuesto from '../componentes/EditorPresupuesto.vue'
 import EditorReceta from '../componentes/EditorReceta.vue'
-import { ajustesDeReceta, api, avisar, avisarError, codigoLinea, configDeReceta, copiar, etiquetaModelo, haceCuanto, idModeloDe as idModelo, nombreEsfuerzo, opcionModelo,
+import { ajustesDeReceta, api, avisar, avisarError, codigoLinea, nombreAgente, configDeReceta, copiar, etiquetaModelo, haceCuanto, idModeloDe as idModelo, nombreEsfuerzo, opcionModelo,
   origenHistorial, presupuestoLimpio, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPresupuesto, type EstadoPunto, type Modelo,
   type Presupuesto, type UsoPunto } from '../api'
 import { t } from '../i18n'
@@ -268,11 +261,27 @@ const campos = computed(() => [
   { titulo: t('conectar.urlAnthropic'), valor: base.value + '/anthropic', texto: t('conectar.urlAnthropicTexto') },
   { titulo: t('conectar.apiPropia'), valor: base.value + '/api/v1', texto: t('conectar.apiPropiaTexto') },
 ])
-const ejemplosModelo = computed(() => {
-  const perfiles = ids.value.filter((id) => id.startsWith('perfil/'))
-  const modelos = ids.value.filter((id) => !id.startsWith('perfil/') && id.includes('/'))
-  return [...perfiles, ...modelos].slice(0, 10)
-})
+// gruposModelo agrupa los valores de model: primero los perfiles y luego cada agente en el orden fijo de la red.
+const ordenAgentes = ['claude', 'codex', 'gemini', 'antigravity']
+const gruposModelo = computed(() => [
+  { agente: '', titulo: t('conectar.perfiles'), ids: ids.value.filter((id) => id.startsWith('perfil/')) },
+  ...ordenAgentes.map((a) => ({ agente: a, titulo: nombreAgente(a), ids: ids.value.filter((id) => id.startsWith(a + '/')) })),
+].filter((g) => g.ids.length))
+
+// accionesDe son las acciones del menú «⋯» de una API; ejecutarAccion las corre en el mismo orden.
+function accionesDe(p: EstadoPunto): Accion[] {
+  return [
+    { etiqueta: activo(p) ? t('puntos.accionDesactivar') : t('puntos.accionActivar'), icono: activo(p) ? 'o_pause' : 'o_play_arrow' },
+    { etiqueta: t('puntos.abrirProbar'), icono: 'o_science' },
+    { etiqueta: t('puntos.regenerarClave'), icono: 'o_key' },
+    { etiqueta: t('presupuesto.reiniciar'), icono: 'o_restart_alt', oculto: !presupuestos.value[p.nombre] },
+    { etiqueta: t('comun.eliminar'), icono: 'o_delete', peligro: true },
+  ]
+}
+function ejecutarAccion(p: EstadoPunto, i: number) {
+  const acciones = [() => activar(p.nombre, !activo(p)), () => abrirEnProbar(p.nombre), () => regenerarClave(p), () => reiniciarPresupuesto(p.nombre), () => eliminar(p.nombre)]
+  acciones[i]?.()
+}
 const modeloEjemplo = computed(() => ids.value.find((id) => id === 'perfil/rapido') ?? ids.value.find((id) => id.includes('/')) ?? 'claude')
 
 const ocultar = (c: string) => (c ? c.slice(0, 6) + '•'.repeat(18) : '')

@@ -17,6 +17,10 @@ const es = {
   'comun.crear': 'Crear',
   'comun.continuar': 'Continuar',
   'comun.masAcciones': 'Más acciones',
+  'conectar.conexion': 'Conexión',
+  'conectar.perfiles': 'Perfiles',
+  'puntos.accionActivar': 'Activar',
+  'puntos.accionDesactivar': 'Desactivar',
 
   // Menú: cada página con una línea que explica para qué sirve
   'menu.inicio': 'Inicio',

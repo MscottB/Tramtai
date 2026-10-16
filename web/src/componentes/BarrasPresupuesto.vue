@@ -7,7 +7,7 @@
     </div>
     <div class="row items-center text-caption texto-suave">
       <span>{{ t('presupuesto.reinicios', { dia: dia(estado.diario.reinicio), mes: dia(estado.mensual.reinicio) }) }}</span>
-      <q-btn flat dense no-caps size="sm" color="primary" icon="o_restart_alt" class="q-ml-sm" :label="t('presupuesto.reiniciar')" @click="emit('reiniciar')" />
+      <q-btn v-if="!sinBoton" flat dense no-caps size="sm" color="primary" icon="o_restart_alt" class="q-ml-sm" :label="t('presupuesto.reiniciar')" @click="emit('reiniciar')" />
     </div>
   </div>
 </template>
@@ -18,7 +18,8 @@ import { type EstadoPresupuesto } from '../api'
 import { idioma, t } from '../i18n'
 
 // BarrasPresupuesto muestra una barra por límite definido: verde, amarilla desde el 80 % y roja al 100 %.
-const props = defineProps<{ estado: EstadoPresupuesto }>()
+// sinBoton quita «Reiniciar consumo» cuando ya está en otro sitio (el menú de la API).
+const props = defineProps<{ estado: EstadoPresupuesto; sinBoton?: boolean }>()
 const emit = defineEmits<{ reiniciar: [] }>()
 
 // Los periodos reinician a medianoche: basta la fecha.

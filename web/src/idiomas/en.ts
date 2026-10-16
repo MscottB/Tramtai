@@ -19,6 +19,10 @@ const en: Textos = {
   'comun.crear': 'Create',
   'comun.continuar': 'Continue',
   'comun.masAcciones': 'More actions',
+  'conectar.conexion': 'Connection',
+  'conectar.perfiles': 'Profiles',
+  'puntos.accionActivar': 'Turn on',
+  'puntos.accionDesactivar': 'Turn off',
 
   // Menu
   'menu.inicio': 'Home',
