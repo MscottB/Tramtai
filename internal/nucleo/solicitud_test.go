@@ -39,3 +39,24 @@ func TestHuellaEstableYSensible(t *testing.T) {
 		t.Fatal("cambiar el modelo debe cambiar la huella")
 	}
 }
+
+func TestValidarRespaldo(t *testing.T) {
+	for _, ok := range [][]string{nil, {"codex"}, {"codex/gpt-5", "gemini"}, {"a", "b", "c"}} {
+		if err := ValidarRespaldo(ok); err != nil {
+			t.Fatalf("%v: %v", ok, err)
+		}
+	}
+	for _, mal := range [][]string{{"a", "b", "c", "d"}, {"perfil/rapido"}, {""}, {"codex/"}, {"a b"}, {"codex", "codex"}, {"a/b/c"}} {
+		if CodigoDe(ValidarRespaldo(mal)) != CodigoSolicitudInvalida {
+			t.Fatalf("%v debía rechazarse", mal)
+		}
+	}
+	s := solicitudValida()
+	s.Respaldo = []string{"perfil/r"}
+	if s.Validar() == nil {
+		t.Fatal("Validar debe aplicar ValidarRespaldo")
+	}
+	if a, m := DividirRespaldo("codex/gpt-5"); a != "codex" || m != "gpt-5" {
+		t.Fatalf("DividirRespaldo: %q %q", a, m)
+	}
+}

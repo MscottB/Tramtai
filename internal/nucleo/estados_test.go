@@ -6,7 +6,7 @@ func TestTransicionesDeLaTabla(t *testing.T) {
 	validas := [][2]Estado{
 		{EnCola, EsperandoAgente}, {EsperandoAgente, Ejecutando}, {Ejecutando, ValidandoSalida},
 		{ValidandoSalida, Completado}, {Ejecutando, CancelacionSolicitada}, {CancelacionSolicitada, Cancelado},
-		{CancelacionSolicitada, Fallido}, {Ejecutando, Interrumpido}, {EsperandoAgente, EnCola}, {EnCola, Fallido},
+		{CancelacionSolicitada, Fallido}, {Ejecutando, Interrumpido}, {EsperandoAgente, EnCola}, {EnCola, Fallido}, {Ejecutando, EsperandoAgente},
 	}
 	for _, par := range validas {
 		if err := ValidarTransicion(par[0], par[1]); err != nil {

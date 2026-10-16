@@ -21,10 +21,11 @@ const (
 // transiciones es la tabla de transiciones permitidas; los estados terminales no tienen salidas.
 // Las vueltas a en_cola son el reencolado de trabajos que nunca lanzaron el agente.
 var transiciones = map[Estado][]Estado{
-	EnCola:                {PreparandoEntrada, EsperandoAgente, Fallido, CancelacionSolicitada},
-	PreparandoEntrada:     {EsperandoAgente, Fallido, CancelacionSolicitada, EnCola},
-	EsperandoAgente:       {Ejecutando, Fallido, CancelacionSolicitada, EnCola},
-	Ejecutando:            {ValidandoSalida, Fallido, CancelacionSolicitada, Interrumpido},
+	EnCola:            {PreparandoEntrada, EsperandoAgente, Fallido, CancelacionSolicitada},
+	PreparandoEntrada: {EsperandoAgente, Fallido, CancelacionSolicitada, EnCola},
+	EsperandoAgente:   {Ejecutando, Fallido, CancelacionSolicitada, EnCola},
+	// Ejecutando → EsperandoAgente: el agente falló antes de producir texto y sigue uno del respaldo.
+	Ejecutando:            {ValidandoSalida, Fallido, CancelacionSolicitada, Interrumpido, EsperandoAgente},
 	ValidandoSalida:       {Completado, Fallido, CancelacionSolicitada, Interrumpido},
 	CancelacionSolicitada: {Cancelado, Fallido, Interrumpido},
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"regexp"
 	"slices"
+	"strings"
 
 	"tramtai/internal/idioma"
 )
@@ -40,6 +41,9 @@ type SolicitudEjecucion struct {
 	// Esfuerzo es cuánto razona el agente (bajo, medio, alto, muy_alto, maximo); vacío deja el de su CLI. Los
 	// agentes que no lo admiten lo ignoran.
 	Esfuerzo string `json:"esfuerzo,omitempty"`
+	// Respaldo son los agentes (agente o agente/modelo) que siguen, en orden, si el principal falla antes de
+	// producir texto.
+	Respaldo []string `json:"respaldo,omitempty"`
 	// Perfil es un perfil de ejecución explícito (profiles/<nombre>.yaml); se aplica al aceptar y queda en la fotografía.
 	Perfil       string `json:"perfil,omitempty"`
 	ModoContexto string `json:"modo_contexto,omitempty"`
@@ -55,6 +59,7 @@ type SolicitudEjecucion struct {
 const (
 	maximoTiempoLimiteSegundos = 24 * 60 * 60
 	maximoCargas               = 20
+	maximoRespaldo             = 3
 )
 
 // ReCarga es el formato de un identificador de carga: impide rutas u otros valores en su lugar.
@@ -68,6 +73,8 @@ var (
 	NivelesEsfuerzo = []string{"bajo", "medio", "alto", "muy_alto", "maximo"}
 	// El modelo es una cadena validada por tamaño y formato técnico, no un enum cerrado.
 	reIdentificador = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,127}$`)
+	// reParte es un agente o un modelo sin barra: cada mitad de una entrada de respaldo.
+	reParte = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:@-]{0,127}$`)
 )
 
 // Validar rechaza una solicitud inválida antes de aceptarla; nunca se lanza un proceso por ella.
@@ -90,6 +97,9 @@ func (s SolicitudEjecucion) Validar() error {
 		if m.Contenido == "" {
 			return invalida(idioma.Tf("mensaje %d sin contenido", i))
 		}
+	}
+	if err := ValidarRespaldo(s.Respaldo); err != nil {
+		return err
 	}
 	if s.Esfuerzo != "" && !slices.Contains(NivelesEsfuerzo, s.Esfuerzo) {
 		return invalida(idioma.Tf("esfuerzo desconocido %q (bajo, medio, alto, muy_alto, maximo)", s.Esfuerzo))
@@ -123,6 +133,30 @@ func (s SolicitudEjecucion) Validar() error {
 		return invalida(idioma.T("tiempo_limite_segundos fuera de rango"))
 	}
 	return nil
+}
+
+// ValidarRespaldo comprueba la lista de respaldo: hasta 3 entradas agente o agente/modelo, sin repetir. Un perfil
+// no vale: da un modelo por agente y, sin agente, sería ambiguo.
+func ValidarRespaldo(lista []string) error {
+	if len(lista) > maximoRespaldo {
+		return NuevoError(CodigoSolicitudInvalida, idioma.T("respaldo: máximo 3 agentes"))
+	}
+	for i, e := range lista {
+		agente, modelo, conModelo := strings.Cut(e, "/")
+		if !reParte.MatchString(agente) || agente == "perfil" || (conModelo && !reParte.MatchString(modelo)) {
+			return NuevoError(CodigoSolicitudInvalida, idioma.Tf("respaldo %q con formato no válido (agente o agente/modelo)", e))
+		}
+		if slices.Contains(lista[:i], e) {
+			return NuevoError(CodigoSolicitudInvalida, idioma.Tf("respaldo repetido: %s", e))
+		}
+	}
+	return nil
+}
+
+// DividirRespaldo separa una entrada de respaldo en agente y modelo (vacío: el predeterminado del agente).
+func DividirRespaldo(entrada string) (agente, modelo string) {
+	agente, modelo, _ = strings.Cut(entrada, "/")
+	return agente, modelo
 }
 
 // Huella resume la solicitud normalizada para la idempotencia sin guardar su texto.
