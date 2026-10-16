@@ -809,3 +809,42 @@ func TestRespaldoAgenteDesconocido(t *testing.T) {
 		t.Fatalf("un agente de respaldo desconocido se rechaza al aceptar: %v", err)
 	}
 }
+
+func TestRespaldoNoSaltaAlCancelar(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": adaptadores.Simulado{Demora: time.Minute}, "otro": adaptadores.Simulado{Respuesta: "ok"}}, 2)
+	id := enviar(t, p, conRespaldo("otro"))
+	esperar(t, alm, id, nucleo.Ejecutando)
+	if _, err := p.Cancelar(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	if tr := esperar(t, alm, id, nucleo.Cancelado); tr.Solicitud.Agente != "simulado" || len(avisos(t, alm, id)) != 0 {
+		t.Fatalf("cancelar no debe pasar al respaldo: %+v", tr)
+	}
+}
+
+func TestRespaldoSaltaPorTiempoAgotado(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": adaptadores.Simulado{Demora: 5 * time.Second}, "otro": adaptadores.Simulado{Respuesta: "ok"}}, 2)
+	s := conRespaldo("otro")
+	s.Ejecucion.TiempoLimiteSegundos = 1
+	tr := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if a := avisos(t, alm, tr.ID); tr.Solicitud.Agente != "otro" || len(a) != 1 || !strings.Contains(a[0], string(nucleo.CodigoTiempoEjecucionAgotado)) {
+		t.Fatalf("un tiempo agotado sin texto debe pasar al respaldo: %+v %v", tr, a)
+	}
+}
+
+func TestRespaldoGuardaLosRestantes(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)}, "otro": adaptadores.Simulado{Respuesta: "ok"},
+		"tercero": adaptadores.Simulado{}}, 2)
+	// Tras el salto la solicitud guardada solo conserva el respaldo que queda: si el trabajo se reencola o se
+	// reintenta, no vuelve a probar al que ya falló.
+	tr := esperar(t, alm, enviar(t, p, conRespaldo("otro", "tercero")), nucleo.Completado)
+	if tr.Solicitud.Agente != "otro" || len(tr.Solicitud.Respaldo) != 1 || tr.Solicitud.Respaldo[0] != "tercero" {
+		t.Fatalf("respaldo restante incorrecto: %+v", tr.Solicitud)
+	}
+}

@@ -357,10 +357,18 @@ func (a *Almacen) RegistrarProceso(ctx context.Context, id string, pid int, firm
 }
 
 // CambiarAgente apunta el trabajo al agente de respaldo que lo ejecuta ahora, con su modelo (el del principal o su
-// perfil no valen para otro agente, también al reintentar); la huella no cambia.
-func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado string) error {
-	r, err := a.db.ExecContext(ctx, `UPDATE trabajos SET solicitud = json_set(json_remove(solicitud, '$.perfil_modelo'), '$.agente', ?, '$.modelo', ?),
-		modelo_enviado = ? WHERE id = ?`, agente, modeloEnviado, modeloEnviado, id)
+// perfil no valen para otro agente, también al reintentar) y el respaldo que queda tras él, para que un trabajo
+// reencolado o reintentado no vuelva a probar los que ya fallaron; la huella no cambia.
+func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado string, restante []string) error {
+	lista, err := json.Marshal(restante)
+	if err != nil {
+		return err
+	}
+	if restante == nil {
+		lista = []byte("[]")
+	}
+	r, err := a.db.ExecContext(ctx, `UPDATE trabajos SET solicitud = json_set(json_remove(solicitud, '$.perfil_modelo'), '$.agente', ?, '$.modelo', ?,
+		'$.respaldo', json(?)), modelo_enviado = ? WHERE id = ?`, agente, modeloEnviado, string(lista), modeloEnviado, id)
 	if err != nil {
 		return err
 	}
@@ -476,8 +484,8 @@ func (a *Almacen) Contar(ctx context.Context, instancia string) (map[nucleo.Esta
 	return conteo, filas.Err()
 }
 
-// Recuperar se ejecuta al arrancar: lo que pudo llegar al agente pasa a interrumpido
-// (nunca se relanza) y lo que nunca lo lanzó vuelve a en_cola.
+// Recuperar se ejecuta al arrancar: lo que tenía un agente en marcha pasa a interrumpido (nunca se relanza) y lo
+// que no lo tenía vuelve a en_cola, incluido un trabajo que esperaba al siguiente agente del respaldo.
 // shortcut: las entradas pueden viajar dentro de la solicitud y siempre están disponibles; con cargas
 // se verificarán sus hashes y, si falta alguna, el trabajo pasará a fallido con entrada_no_disponible.
 func (a *Almacen) Recuperar(ctx context.Context, instancia string) (interrumpidos, reencolados int, err error) {

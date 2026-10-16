@@ -396,7 +396,7 @@ func TestCambiarAgente(t *testing.T) {
 	tr.Solicitud.PerfilModelo = "rapido" // el modelo del principal no debe quedar para el agente de respaldo
 	tr.ModeloEnviado = "m1"
 	tr = aceptar(t, a, tr, "")
-	if err := a.CambiarAgente(ctx, tr.ID, "otro", "m2"); err != nil {
+	if err := a.CambiarAgente(ctx, tr.ID, "otro", "m2", []string{"tercero"}); err != nil {
 		t.Fatal(err)
 	}
 	cambiado, err := a.Obtener(ctx, tr.ID)
@@ -404,10 +404,11 @@ func TestCambiarAgente(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := cambiado.Solicitud
-	if s.Agente != "otro" || s.Modelo != "m2" || s.PerfilModelo != "" || cambiado.ModeloEnviado != "m2" || cambiado.Huella != tr.Huella {
+	if s.Agente != "otro" || s.Modelo != "m2" || s.PerfilModelo != "" || len(s.Respaldo) != 1 || s.Respaldo[0] != "tercero" ||
+		cambiado.ModeloEnviado != "m2" || cambiado.Huella != tr.Huella {
 		t.Fatalf("cambio de agente incorrecto: %+v", cambiado)
 	}
-	if nucleo.CodigoDe(a.CambiarAgente(ctx, "trabajo_inexistente", "x", "")) != nucleo.CodigoNoEncontrado {
+	if nucleo.CodigoDe(a.CambiarAgente(ctx, "trabajo_inexistente", "x", "", nil)) != nucleo.CodigoNoEncontrado {
 		t.Fatal("un trabajo inexistente debe dar no_encontrado")
 	}
 }

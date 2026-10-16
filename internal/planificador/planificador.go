@@ -554,7 +554,14 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		if !p.cambiar(id, nucleo.Ejecutando, nucleo.EsperandoAgente, persistencia.Cambio{}) {
 			return
 		}
-		_ = p.almacen.CambiarAgente(fondo, id, siguiente.agente, siguiente.modelo)
+		var restante []string
+		for _, c := range lista[i+2:] {
+			restante = append(restante, c.String())
+		}
+		if err := p.almacen.CambiarAgente(fondo, id, siguiente.agente, siguiente.modelo, restante); err != nil && p.opc.Registros != nil {
+			// El respaldo sigue igual, pero el historial atribuiría la respuesta al agente anterior.
+			fmt.Fprintf(p.opc.Registros, "%s no se pudo guardar el cambio a %s: %v\n", id, siguiente, err)
+		}
 		_ = p.almacen.AgregarEvento(fondo, id, "aviso", idioma.Tf("%s falló (%s); sigue con %s", c, codigo, siguiente))
 		plazoCola = nil
 	}

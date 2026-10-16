@@ -19,7 +19,9 @@ const (
 )
 
 // transiciones es la tabla de transiciones permitidas; los estados terminales no tienen salidas.
-// Las vueltas a en_cola son el reencolado de trabajos que nunca lanzaron el agente.
+// Las vueltas a en_cola son el reencolado de trabajos que no tienen un agente en marcha: los que nunca lo lanzaron
+// y los que esperaban al siguiente del respaldo (el intento fallido ya terminó y el respaldo guardado solo
+// conserva los que quedan).
 var transiciones = map[Estado][]Estado{
 	EnCola:            {PreparandoEntrada, EsperandoAgente, Fallido, CancelacionSolicitada},
 	PreparandoEntrada: {EsperandoAgente, Fallido, CancelacionSolicitada, EnCola},
