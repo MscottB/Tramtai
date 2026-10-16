@@ -439,6 +439,7 @@ const es = {
   'esfuerzo.hint': 'Cuánto razona el modelo antes de responder',
   'esfuerzo.elegible': 'esfuerzo elegible',
   'esfuerzo.agente': 'El del agente',
+  'esfuerzo.agenteCon': 'El del agente ({nivel})',
   'esfuerzo.agenteDetalle': 'Lo decide su CLI con su propia configuración',
   'esfuerzo.bajo': 'Bajo',
   'esfuerzo.bajoDetalle': 'Responde antes y consume menos',

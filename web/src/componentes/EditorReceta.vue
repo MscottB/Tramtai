@@ -9,7 +9,7 @@
     <div class="q-gutter-y-md" :class="{ 'q-pt-sm': plegarOpciones }">
     <q-toggle :model-value="modelValue.forzar" :disable="!modelValue.modelo" :label="t('receta.forzar')"
       @update:model-value="(v: boolean) => cambiar({ forzar: v })" />
-    <SelectorEsfuerzo :model-value="modelValue.esfuerzo" :niveles="niveles" :hint="paraApi ? t('esfuerzo.api') : undefined"
+    <SelectorEsfuerzo :model-value="modelValue.esfuerzo" :niveles="niveles" :predeterminado="esfuerzoPredeterminadoDe(catalogo, modelValue.modelo)" :hint="paraApi ? t('esfuerzo.api') : undefined"
       @update:model-value="(v: string) => cambiar({ esfuerzo: v })" />
     <q-select :model-value="modelValue.respaldo" :options="opcionesRespaldo" multiple use-chips emit-value map-options outlined dense
       :max-values="3" :label="t('receta.respaldo')" :hint="t('receta.respaldoHint')"
@@ -35,7 +35,7 @@ import { computed, ref, watch } from 'vue'
 import { QExpansionItem } from 'quasar'
 import SelectorEsfuerzo from './SelectorEsfuerzo.vue'
 import SelectorModelo from './SelectorModelo.vue'
-import { esfuerzosDe, esquemaDeReceta, opcionModelo, type Modelo, type Receta } from '../api'
+import { esfuerzoPredeterminadoDe, esfuerzosDe, esquemaDeReceta, opcionModelo, type Modelo, type Receta } from '../api'
 import { t } from '../i18n'
 
 // paraApi: en una API sin modelo fijo la aplicación puede elegirlo, así que se ofrecen todos los niveles de esfuerzo.

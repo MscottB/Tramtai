@@ -440,6 +440,7 @@ const en: Textos = {
   'esfuerzo.hint': 'How much the model reasons before answering',
   'esfuerzo.elegible': 'adjustable effort',
   'esfuerzo.agente': 'Agent\'s default',
+  'esfuerzo.agenteCon': 'Agent\'s default ({nivel})',
   'esfuerzo.agenteDetalle': 'Its CLI decides with its own settings',
   'esfuerzo.bajo': 'Low',
   'esfuerzo.bajoDetalle': 'Answers sooner and uses less',

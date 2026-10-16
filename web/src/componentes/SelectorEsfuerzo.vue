@@ -22,11 +22,13 @@ import { computed } from 'vue'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 
-const props = defineProps<{ modelValue: string; niveles: string[]; hint?: string }>()
+// predeterminado es el nivel que usa el agente con este modelo si no se elige otro; vacío si no se conoce.
+const props = defineProps<{ modelValue: string; niveles: string[]; hint?: string; predeterminado?: string }>()
 const emit = defineEmits<{ 'update:modelValue': [valor: string] }>()
 
 const opciones = computed(() => [
-  { label: t('esfuerzo.agente'), caption: t('esfuerzo.agenteDetalle'), value: '' },
+  { label: props.predeterminado ? t('esfuerzo.agenteCon', { nivel: t(`esfuerzo.${props.predeterminado}` as Clave).toLowerCase() }) : t('esfuerzo.agente'),
+    caption: t('esfuerzo.agenteDetalle'), value: '' },
   ...props.niveles.map((n) => ({ label: t(`esfuerzo.${n}` as Clave), caption: t(`esfuerzo.${n}Detalle` as Clave), value: n })),
 ])
 </script>
