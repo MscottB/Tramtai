@@ -584,6 +584,7 @@ const en: Textos = {
   'presupuesto.reiniciar': 'Reset usage',
   'presupuesto.reiniciarTitulo': 'Reset the usage of {nombre}',
   'presupuesto.reiniciarEspacio': 'Reset the workspace usage',
+  'presupuesto.reiniciarEspacioTexto': "Sets today's and this month's usage to zero for the whole workspace, including each of your APIs: requests are accepted again even if the limit had been reached.",
   'presupuesto.reiniciarTexto': "Sets today's and this month's usage to zero: requests are accepted again even if the limit had been reached.",
   'presupuesto.reiniciado': 'Usage reset',
   'presupuesto.espacio': 'Workspace budget',

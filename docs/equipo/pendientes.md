@@ -15,6 +15,26 @@
 | M7 | ✅ | Retención con purga periódica (resultado, entradas, eventos, metadatos, idempotencia y cargas), 410 `resultado_expirado`, cierre con plazo de drenaje y recuperación verificada tras matar el servicio |
 | M8 | ⬜ | Distribución, documentación y matriz multiplataforma |
 
+## Hoja de ruta por releases
+
+Cada tema va en su propio release, con su spec, plan, revisión y documentación (Ayuda, README, sitio y docs):
+
+| Release | Contenido | Estado |
+|---|---|---|
+| v0.34.0 | Recetas y respaldo entre agentes, claves cifradas y huella de las claves de API, instalador con RTF | ✅ |
+| v0.35.0 | Presupuestos por API y por instancia | 🟡 |
+| v0.36.0 | Quitar Gemini CLI (ya no está disponible): adaptador, configuración, claves, Web UI, docs y sitio | ⬜ |
+| — | Copilot CLI como reemplazo de Gemini | ⬜ |
+| — | Webhooks al terminar un trabajo y avisos de presupuesto (`presupuesto.aviso`, `presupuesto.agotado`) | ⬜ |
+| — | Comparar agentes en Probar | ⬜ |
+| — | Tramtai como servidor MCP | ⬜ |
+| — | Cursor CLI | ⬜ |
+
+Pendientes ya asignados:
+
+- **Webhooks:** los avisos del 80 % y del 100 % se evalúan con los periodos de la hora actual, pero el consumo va al día de aceptación: un cruce del día anterior causado por un trabajo que termina pasada la medianoche no se registra. Evaluar también el periodo de aceptación al sumar.
+- **Presupuestos (posterior):** detectar una API eliminada con el servicio detenido (hoy su consumo se conserva si se borra a mano o sin servicio); los tokens de intentos fallidos o descartados por el respaldo no se suman.
+
 ## Tareas
 
 - [ ] **Activar CI/CD y la página al hacer público el repositorio.** Los flujos ya están en `.github/workflows/`: `ci.yml` (vet y pruebas en Windows, Linux y macOS, y la Web UI), `publicar.yml` (en cada etiqueta `v*` compila, genera el instalador y crea el release con `SHA256SUMS.txt`) y `paginas.yml` (publica `site/` en GitHub Pages). En repositorios públicos los runners estándar no consumen minutos ni el almacenamiento de la cuenta. Falta: hacer público el repo, elegir *Settings → Pages → Source: GitHub Actions* y comprobar la primera ejecución de cada flujo (macOS nunca se ha probado en un equipo real y su resultado no bloquea).

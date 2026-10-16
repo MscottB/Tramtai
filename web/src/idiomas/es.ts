@@ -583,6 +583,7 @@ const es = {
   'presupuesto.reiniciar': 'Reiniciar consumo',
   'presupuesto.reiniciarTitulo': 'Reiniciar el consumo de {nombre}',
   'presupuesto.reiniciarEspacio': 'Reiniciar el consumo del espacio',
+  'presupuesto.reiniciarEspacioTexto': 'Pone a cero lo consumido hoy y este mes en todo el espacio, también en cada una de tus APIs: las peticiones vuelven a admitirse aunque se hubiera llegado al límite.',
   'presupuesto.reiniciarTexto': 'Pone a cero lo consumido hoy y este mes: las peticiones vuelven a admitirse aunque se hubiera llegado al límite.',
   'presupuesto.reiniciado': 'Consumo reiniciado',
   'presupuesto.espacio': 'Presupuesto del espacio',

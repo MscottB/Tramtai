@@ -469,7 +469,7 @@ async function guardarAjustes() {
 
 // reiniciarPresupuesto pone a cero el consumo del día y del mes de una API, o del espacio sin nombre.
 function reiniciarPresupuesto(nombre?: string) {
-  $q.dialog({ title: nombre ? t('presupuesto.reiniciarTitulo', { nombre }) : t('presupuesto.reiniciarEspacio'), message: t('presupuesto.reiniciarTexto'),
+  $q.dialog({ title: nombre ? t('presupuesto.reiniciarTitulo', { nombre }) : t('presupuesto.reiniciarEspacio'), message: nombre ? t('presupuesto.reiniciarTexto') : t('presupuesto.reiniciarEspacioTexto'),
     cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'primary', label: t('presupuesto.reiniciar'), unelevated: true, noCaps: true } })
     .onOk(async () => {
       try {

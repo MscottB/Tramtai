@@ -141,7 +141,8 @@ Un punto de acceso, y la instancia entera, pueden tener un `presupuesto` diario 
 
 - Al aceptar una petición se comprueban el presupuesto de su punto y el de la instancia. Si alguno está agotado, responde **429** `presupuesto_agotado` en el formato de cada fachada (`rate_limit_error` en OpenAI y Anthropic), con `Retry-After` en segundos hasta el reinicio del periodo agotado. El respaldo no lo evita: el límite es de la API, no del agente.
 - Tokens y USD se conocen al terminar cada trabajo, así que el límite reserva lo que gastarían los trabajos en curso al promedio de los terminados del periodo. Sigue siendo aproximado: un trabajo puede gastar más que el promedio.
-- Cada `POST` a una API o instancia con presupuesto devuelve `X-Tramtai-Presupuesto: <n>`, el porcentaje usado del límite más cercano a agotarse (el del punto o el de la instancia), para que la aplicación pueda frenar antes del corte.
+- Cada `POST` a una API o instancia con presupuesto devuelve `X-Tramtai-Presupuesto: <n>`, el porcentaje usado del límite más cercano a agotarse (el del punto o el de la instancia) al recibir la petición, sin contarla: la que agota el límite puede ver 99. Sirve para que la aplicación frene antes del corte.
+- Si se agotan varios límites a la vez (el diario y el mensual, o el del punto y el de la instancia), `Retry-After` apunta al reinicio más tardío.
 - Los cruces del 80 % y del 100 % se registran una vez por periodo, para avisar por webhook.
 - El presupuesto de la instancia cuenta todas sus peticiones: las de sus puntos, las de la clave principal y las de Probar. Reiniciar o eliminar un punto no le devuelve su consumo.
 

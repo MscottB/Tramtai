@@ -30,6 +30,7 @@ Cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
 - **Una API por aplicación,** con su propia clave, sus modelos permitidos o fijos e instrucciones propias (por ejemplo, «responde siempre en español»). Se activan o detienen sin reiniciar.
 - **Recetas: de la prueba a la API en un clic.** En Probar defines instrucciones, agente, esquema JSON y respaldo, lo pruebas con tus archivos y lo guardas como API: tu aplicación envía el mensaje y recibe la respuesta con esa forma.
 - **Respaldo entre agentes.** Si el agente principal llega a su límite, no tiene clave o falla antes de responder, la petición sigue con el siguiente de la lista (hasta 3), sin que tu aplicación lo note.
+- **Presupuestos.** Cada API, y el espacio entero, pueden tener un límite diario o mensual de peticiones, tokens o dólares: aviso al 80 % y, al 100 %, error 429 hasta que empieza el periodo siguiente o reinicias el consumo.
 - **Tu suscripción o tu clave de API.** Claude y Codex se conectan con un clic a la sesión que ya tienes (uso personal) o con una clave.
 - **Cuatro formas de usarlo** sobre los mismos trabajos: app de escritorio con icono en la bandeja, Web UI con ayuda integrada, terminal interactiva y línea de órdenes. En español y en inglés.
 - **Local y privado.** Escucha solo en `127.0.0.1` y los resultados caducan a las 24 horas. Sin telemetría.
@@ -159,6 +160,7 @@ Claude, Codex, Gemini y Antigravity son marcas de sus respectivos dueños. Tramt
 - **Connect an agent:** use your Claude or ChatGPT subscription (personal use) or an API key; the agent's CLI must be installed.
 - **Point your app** at `http://127.0.0.1:17373/openai/v1` (or `/anthropic`) with the key from *My APIs*, and pick agent and model in the `model` field, e.g. `claude/sonnet`.
 - **Recipes and fallback:** in *Try*, set instructions, agent, a JSON schema and fallback agents, test them with your files and save them as an API in one click. If the main agent hits its limit or fails before answering, the request continues with the next one.
+- **Budgets:** each API, and the whole workspace, can have a daily or monthly limit in requests, tokens or dollars: a warning at 80% and, at 100%, a 429 error until the next period starts or you reset the usage.
 - The desktop app, Web UI, interactive terminal and CLI are available in English and Spanish. The CLI follows your system language; set `TRAMTAI_IDIOMA=en` to force English.
 - Everything stays local: it listens only on `127.0.0.1`, has no telemetry, and responses expire after 24 hours.
 - **Keys:** provider keys (`tramtai claves guardar NAME`) are stored encrypted in the system store (Windows Credential Manager, macOS Keychain or the Linux Secret Service), never in Tramtai's files. Each API's key is shown only when it is created or regenerated, and the Web UI opens from the app or with `tramtai abrir`, not with that key.
