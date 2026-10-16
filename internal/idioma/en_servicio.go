@@ -229,6 +229,8 @@ func init() {
 		"mensual":                         "monthly",
 		"peticiones":                      "requests",
 		"presupuesto %s de %s %s agotado": "%s %s budget %s exhausted",
+		"de la instancia":                 "of the instance",
+		"de la API %s":                    "of the API %s",
 		", con cambios sin confirmar":     ", with uncommitted changes",
 	})
 }

@@ -75,6 +75,26 @@ ALTER TABLE trabajos ADD COLUMN firma_proceso TEXT NOT NULL DEFAULT '';`,
 	`CREATE INDEX IF NOT EXISTS trabajos_instancia_creado ON trabajos (instancia, creado_en);
 CREATE INDEX IF NOT EXISTS trabajos_instancia_terminado ON trabajos (instancia, terminado_en);
 CREATE INDEX IF NOT EXISTS idempotencia_trabajo ON idempotencia (trabajo_id);`,
+	// v7: presupuestos. consumo por API y día de aceptación (punto '' = sin API); avisos al 80 % y al 100 % por
+	// periodo (D:AAAA-MM-DD o M:AAAA-MM), una vez cada uno. La retención de trabajos no los toca.
+	`CREATE TABLE IF NOT EXISTS consumo (
+	instancia TEXT NOT NULL,
+	punto TEXT NOT NULL,
+	dia TEXT NOT NULL,
+	peticiones INTEGER NOT NULL DEFAULT 0,
+	terminados INTEGER NOT NULL DEFAULT 0,
+	tokens INTEGER NOT NULL DEFAULT 0,
+	usd REAL NOT NULL DEFAULT 0,
+	PRIMARY KEY (instancia, punto, dia)
+);
+CREATE TABLE IF NOT EXISTS avisos_presupuesto (
+	instancia TEXT NOT NULL,
+	punto TEXT NOT NULL,
+	periodo TEXT NOT NULL,
+	nivel INTEGER NOT NULL,
+	en TEXT NOT NULL,
+	PRIMARY KEY (instancia, punto, periodo, nivel)
+);`,
 }
 
 const columnas = `id, instancia, estado, codigo_error, mensaje_error, solicitud, huella, salida, intento_de, creado_en, actualizado_en, terminado_en,
@@ -86,6 +106,10 @@ type Almacen struct {
 	// VentanaIdempotencia es el tiempo que una clave sigue vinculada a su trabajo tras terminar.
 	VentanaIdempotencia time.Duration
 	reloj               func() time.Time
+	// Topes da los presupuestos que se aplican a un trabajo de la API punto ("" = sin API); nil = ninguno.
+	Topes func(instancia, punto string) []Tope
+	// Zona fija el día y el mes de los presupuestos (hora local del equipo).
+	Zona *time.Location
 
 	muAviso sync.Mutex
 	aviso   chan struct{}
@@ -159,7 +183,7 @@ func Abrir(ruta string) (*Almacen, error) {
 		db.Close()
 		return nil, err
 	}
-	return &Almacen{db: db, VentanaIdempotencia: 24 * time.Hour, reloj: time.Now}, nil
+	return &Almacen{db: db, VentanaIdempotencia: 24 * time.Hour, reloj: time.Now, Zona: time.Local}, nil
 }
 
 func migrar(db *sql.DB) error {
@@ -225,6 +249,9 @@ func (a *Almacen) Aceptar(ctx context.Context, t nucleo.Trabajo, clave string, m
 	if maximoActivos > 0 && activos >= maximoActivos {
 		return t, false, nucleo.NuevoError(nucleo.CodigoColaLlena, idioma.T("la cola de la instancia está llena"))
 	}
+	if err := a.comprobarPresupuesto(ctx, tx, t, ahora); err != nil {
+		return t, false, err
+	}
 	solicitud, err := json.Marshal(t.Solicitud)
 	if err != nil {
 		return t, false, err
@@ -237,6 +264,7 @@ func (a *Almacen) Aceptar(ctx context.Context, t nucleo.Trabajo, clave string, m
 	if err := agregarEvento(ctx, tx, t.ID, "estado", string(nucleo.EnCola), ahora); err != nil {
 		return t, false, err
 	}
+	a.sumarConsumo(ctx, tx, t.Instancia, t.PuntoAcceso, ahora, ahora, nucleo.Consumo{Peticiones: 1})
 	if clave != "" {
 		if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO idempotencia (instancia, clave, huella, trabajo_id, vence_en) VALUES (?, ?, ?, ?, ?)`,
 			t.Instancia, clave, t.Huella, t.ID, sinVencimiento); err != nil {
@@ -296,6 +324,13 @@ func (a *Almacen) CambiarEstado(ctx context.Context, id string, de, hacia nucleo
 			fecha(ahora.Add(a.VentanaIdempotencia)), id); err != nil {
 			return err
 		}
+		// El consumo va al día de aceptación: así peticiones − terminados de una fila es lo que sigue en curso.
+		var instancia, punto, creado string
+		if err := tx.QueryRowContext(ctx, `SELECT instancia, punto_acceso, creado_en FROM trabajos WHERE id = ?`, id).Scan(&instancia, &punto, &creado); err != nil {
+			return err
+		}
+		aceptado, _ := time.Parse(formatoFecha, creado)
+		a.sumarConsumo(ctx, tx, instancia, punto, aceptado, ahora, nucleo.Consumo{Terminados: 1, Tokens: uso.TokensEntrada + uso.TokensSalida, USD: uso.CostoUSD})
 	}
 	return a.confirmar(tx)
 }
@@ -554,12 +589,17 @@ func (a *Almacen) Purgar(ctx context.Context, instancia string, r Retencion) (ve
 	n, _ := res.RowsAffected()
 	vencidos = int(n)
 	limiteMetadatos := fecha(ahora.Add(-r.Metadatos))
+	local := ahora.In(a.Zona)
+	haceUnAnio := time.Date(local.Year()-1, local.Month(), 1, 0, 0, 0, 0, a.Zona)
 	pasos := []struct {
 		consulta string
 		args     []any
 	}{
 		{`DELETE FROM eventos WHERE trabajo_id IN (SELECT id FROM trabajos WHERE instancia = ? AND terminado_en < ?)`, []any{instancia, limiteMetadatos}},
 		{`DELETE FROM idempotencia WHERE instancia = ? AND vence_en < ?`, []any{instancia, fecha(ahora)}},
+		// Presupuestos: se conservan el mes en curso y los 12 anteriores.
+		{`DELETE FROM consumo WHERE instancia = ? AND dia < ?`, []any{instancia, haceUnAnio.Format("2006-01-02")}},
+		{`DELETE FROM avisos_presupuesto WHERE instancia = ? AND en < ?`, []any{instancia, fecha(haceUnAnio)}},
 		{`DELETE FROM trabajos WHERE instancia = ? AND terminado_en < ?`, []any{instancia, limiteMetadatos}},
 	}
 	for _, p := range pasos {
