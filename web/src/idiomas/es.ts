@@ -587,6 +587,9 @@ const es = {
   'presupuesto.reiniciado': 'Consumo reiniciado',
   'presupuesto.espacio': 'Presupuesto del espacio',
   'presupuesto.espacioTexto': 'Cuenta todas las peticiones del espacio: las de tus APIs, las de la clave principal y las de Probar.',
+  'ayuda.p14': '¿Cómo limito lo que gasta una aplicación?',
+  'ayuda.r14':
+    'En Mis APIs, en los ajustes de cada API, pon un presupuesto diario o mensual en peticiones, tokens o dólares. Verás una barra por límite, amarilla desde el 80 %; al 100 % la aplicación recibe un error 429 hasta el día o el mes siguiente, o hasta que pulses «Reiniciar consumo». El límite en dólares solo suma el coste que informa el agente (hoy Claude). Para limitar todo el espacio, añade «presupuesto» a la configuración global; su consumo aparece arriba en Mis APIs.',
 }
 
 export type Clave = keyof typeof es

@@ -135,9 +135,29 @@ puntos_acceso:
       required: [total, proveedor]
 ```
 
+### Presupuestos
+
+Un punto de acceso, y la instancia entera, pueden tener un `presupuesto` diario y mensual en peticiones, tokens (entrada + salida) y USD (solo el coste que informa el agente: hoy Claude, y con suscripción es estimado). Los periodos son el día y el mes de calendario en la hora local del equipo; 0 o ausente es sin límite.
+
+- Al aceptar una petición se comprueban el presupuesto de su punto y el de la instancia. Si alguno está agotado, responde **429** `presupuesto_agotado` en el formato de cada fachada (`rate_limit_error` en OpenAI y Anthropic), con `Retry-After` en segundos hasta el reinicio del periodo agotado. El respaldo no lo evita: el límite es de la API, no del agente.
+- Tokens y USD se conocen al terminar cada trabajo, así que el límite reserva lo que gastarían los trabajos en curso al promedio de los terminados del periodo. Sigue siendo aproximado: un trabajo puede gastar más que el promedio.
+- Cada `POST` a una API o instancia con presupuesto devuelve `X-Tramtai-Presupuesto: <n>`, el porcentaje usado del límite más cercano a agotarse (el del punto o el de la instancia), para que la aplicación pueda frenar antes del corte.
+- Los cruces del 80 % y del 100 % se registran una vez por periodo, para avisar por webhook.
+- El presupuesto de la instancia cuenta todas sus peticiones: las de sus puntos, las de la clave principal y las de Probar. Reiniciar o eliminar un punto no le devuelve su consumo.
+
+```yaml
+puntos_acceso:
+  - nombre: facturas
+    presupuesto:
+      diario: { peticiones: 500 }
+      mensual: { tokens: 20000000, usd: 50 }
+presupuesto:                     # el de la instancia (configuración global o local.yaml)
+  mensual: { peticiones: 10000 }
+```
+
 La administración (`/api/v1/servicio`) y la API de cada instancia con `Tramtai-Instancia` se describen en [operacion.md](operacion.md).
 
-`GET /api/v1/trabajos?limite=20` lista los trabajos recientes de la instancia, o los del punto de acceso si se llama desde uno; `&punto=<nombre>` filtra por un punto de acceso. Desde la Web UI, `GET /api/v1/puntos` incluye `uso` por punto: `peticiones`, `errores` y `ultima`, de lo que conserva la retención.
+`GET /api/v1/trabajos?limite=20` lista los trabajos recientes de la instancia, o los del punto de acceso si se llama desde uno; `&punto=<nombre>` filtra por un punto de acceso. Desde la Web UI, `GET /api/v1/puntos` incluye `uso` por punto (`peticiones`, `errores` y `ultima`, de lo que conserva la retención) y `presupuestos` (por punto con presupuesto: `diario` y `mensual` con `limites`, `consumo` y `reinicio`).
 
 ### Claves de los puntos y de la instancia
 
@@ -148,6 +168,9 @@ Estas rutas exigen una sesión de la Web UI o el token de servicio (con `Tramtai
 | `POST /api/v1/puntos` | Crea un punto de acceso. La respuesta trae su `token`: es la única vez que se ve. |
 | `POST /api/v1/puntos/{nombre}/token` | Regenera la clave del punto y la devuelve una sola vez (`{"token": "…"}`); la anterior deja de valer al momento. Ya no existe `GET` en esta ruta: Tramtai solo guarda la huella (`datos/tokens/acceso_<nombre>` contiene `sha256:…`). Las claves antiguas guardadas en claro se convierten solas a huella y siguen valiendo. |
 | `DELETE /api/v1/puntos/{nombre}` | Elimina el punto y su clave. |
+| `POST /api/v1/puntos/{nombre}/presupuesto/reiniciar` | Pone a cero el consumo del día y del mes en curso del punto (204). |
+| `GET /api/v1/instancia/presupuesto` | `{"presupuesto": {…}}` con el consumo y los límites de la instancia, o `{}` si no tiene. |
+| `POST /api/v1/instancia/presupuesto/reiniciar` | Pone a cero el consumo del día y del mes en curso de la instancia (204). |
 | `GET /api/v1/instancia/token` | La clave de la instancia, para mostrarla en *API principal* (Mis APIs). |
 | `POST /api/v1/instancia/token` | Regenera la clave de la instancia sin reiniciar y la devuelve. Si viene de una variable de entorno (`instancia_global.token_variable_entorno`), responde 400 `solicitud_invalida`: hay que cambiarla en la variable. |
 
@@ -163,5 +186,5 @@ API nativa: `{"error": {"codigo": "…", "mensaje": "…"}}`. Las fachadas usan 
 | 409 | `conflicto_idempotencia`, `trabajo_no_terminado`, `trabajo_sin_salida` |
 | 410 | `entrada_no_disponible`, `resultado_expirado` |
 | 422 | `salida_no_cumple_esquema`, `conversion_fallida` |
-| 429 | `cola_llena` (con `Retry-After`), `limite_uso_proveedor` |
+| 429 | `cola_llena` y `presupuesto_agotado` (con `Retry-After`), `limite_uso_proveedor` |
 | 502 / 503 / 504 | `error_agente`, `autenticacion_agente` / `agente_no_disponible` / `tiempo_ejecucion_agotado` |

@@ -240,11 +240,13 @@ print(r.choices[0].message.content)</pre>
         <p>En <strong>Probar</strong> defines una <strong>receta</strong>: las instrucciones, el agente y el modelo, un esquema JSON si quieres que la respuesta tenga siempre la misma forma, y un respaldo. La pruebas con un mensaje y tus archivos y, cuando funciona, <strong>Guardar como API</strong> te da una URL y una clave para tu aplicación. Tu aplicación solo envía el mensaje y recibe la respuesta con esa forma.</p>
         <p>El <strong>respaldo</strong> son hasta 3 agentes que siguen, en orden, si el principal falla antes de empezar a responder: llega a su límite, falta la clave o da un error. Verás un aviso en Probar, y el Historial muestra qué agente respondió. Si el agente ya había empezado a responder no se cambia, para no mezclar dos respuestas.</p>
         <p>Desde <strong>Mis APIs</strong>, <strong>Abrir en Probar</strong> carga la receta de una API para cambiarla y <strong>Actualizar</strong> guarda los cambios.</p>
+        <p>Cada API puede tener un <strong>presupuesto</strong> diario y mensual en peticiones, tokens o dólares. Mis APIs muestra una barra por límite, amarilla desde el 80 %; al 100 % la aplicación recibe un error 429 hasta que empieza el día o el mes siguiente, o hasta que pulses <strong>Reiniciar consumo</strong>. El límite en dólares solo suma el coste que informa el agente (hoy Claude).</p>
       </div>
       <div lang="en">
         <p>In <strong>Try</strong> you define a <strong>recipe</strong>: the instructions, the agent and model, a JSON schema if you want the answer to always have the same shape, and a fallback. Test it with a message and your files and, once it works, <strong>Save as API</strong> gives you a URL and a key for your app. Your app just sends the message and gets the answer in that shape.</p>
         <p>The <strong>fallback</strong> is up to 3 agents that take over, in order, if the main one fails before it starts answering: it hits its limit, the key is missing or it errors. You'll see a notice in Try, and History shows which agent answered. If the agent had already started answering it is not switched, so two answers are never mixed.</p>
         <p>From <strong>My APIs</strong>, <strong>Open in Try</strong> loads an API's recipe so you can change it, and <strong>Update</strong> saves the changes.</p>
+        <p>Each API can have a daily and monthly <strong>budget</strong> in requests, tokens or dollars. My APIs shows one bar per limit, yellow from 80%; at 100% the app gets a 429 error until the next day or month starts, or until you press <strong>Reset usage</strong>. The dollar limit only adds up the cost the agent reports (Claude today).</p>
       </div>
     </section>
 

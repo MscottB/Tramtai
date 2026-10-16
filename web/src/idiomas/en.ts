@@ -588,6 +588,9 @@ const en: Textos = {
   'presupuesto.reiniciado': 'Usage reset',
   'presupuesto.espacio': 'Workspace budget',
   'presupuesto.espacioTexto': 'Counts every request in the workspace: your APIs, the main key and Try.',
+  'ayuda.p14': 'How do I limit what an app spends?',
+  'ayuda.r14':
+    'In My APIs, in the settings of each API, set a daily or monthly budget in requests, tokens or dollars. You will see one bar per limit, yellow from 80%; at 100% the app gets a 429 error until the next day or month, or until you press "Reset usage". The dollar limit only adds up the cost the agent reports (Claude today). To limit the whole workspace, add "presupuesto" to the global configuration; its usage shows at the top of My APIs.',
 }
 
 export default en
