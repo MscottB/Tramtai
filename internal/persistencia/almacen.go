@@ -356,10 +356,11 @@ func (a *Almacen) RegistrarProceso(ctx context.Context, id string, pid int, firm
 	return err
 }
 
-// CambiarAgente apunta el trabajo al agente de respaldo que lo ejecuta ahora; la huella no cambia.
+// CambiarAgente apunta el trabajo al agente de respaldo que lo ejecuta ahora, con su modelo (el del principal o su
+// perfil no valen para otro agente, también al reintentar); la huella no cambia.
 func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado string) error {
-	r, err := a.db.ExecContext(ctx, `UPDATE trabajos SET solicitud = json_set(solicitud, '$.agente', ?), modelo_enviado = ? WHERE id = ?`,
-		agente, modeloEnviado, id)
+	r, err := a.db.ExecContext(ctx, `UPDATE trabajos SET solicitud = json_set(json_remove(solicitud, '$.perfil_modelo'), '$.agente', ?, '$.modelo', ?),
+		modelo_enviado = ? WHERE id = ?`, agente, modeloEnviado, modeloEnviado, id)
 	if err != nil {
 		return err
 	}

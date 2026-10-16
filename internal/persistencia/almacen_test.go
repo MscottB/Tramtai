@@ -393,6 +393,7 @@ func TestListarEnUnaConsultaConIndice(t *testing.T) {
 func TestCambiarAgente(t *testing.T) {
 	a := abrir(t)
 	tr := trabajo("global", "hola")
+	tr.Solicitud.PerfilModelo = "rapido" // el modelo del principal no debe quedar para el agente de respaldo
 	tr.ModeloEnviado = "m1"
 	tr = aceptar(t, a, tr, "")
 	if err := a.CambiarAgente(ctx, tr.ID, "otro", "m2"); err != nil {
@@ -402,7 +403,8 @@ func TestCambiarAgente(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cambiado.Solicitud.Agente != "otro" || cambiado.ModeloEnviado != "m2" || cambiado.Huella != tr.Huella {
+	s := cambiado.Solicitud
+	if s.Agente != "otro" || s.Modelo != "m2" || s.PerfilModelo != "" || cambiado.ModeloEnviado != "m2" || cambiado.Huella != tr.Huella {
 		t.Fatalf("cambio de agente incorrecto: %+v", cambiado)
 	}
 	if nucleo.CodigoDe(a.CambiarAgente(ctx, "trabajo_inexistente", "x", "")) != nucleo.CodigoNoEncontrado {
