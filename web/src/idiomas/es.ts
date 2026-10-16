@@ -317,7 +317,7 @@ const es = {
   'ayuda.empezar': 'Cómo empezar',
   'ayuda.paso1': 'Conecta un agente',
   'ayuda.paso1Texto':
-    'En Agentes, elige para Claude o Codex «Usar mi suscripción» (uso personal) o guarda una clave de API. Gemini necesita una clave de la Gemini API.',
+    'En Agentes, elige para Claude o Codex «Usar mi suscripción» (uso personal) o guarda una clave de API: queda cifrada en el almacén del sistema y vale sin reiniciar. Gemini necesita una clave de la Gemini API.',
   'ayuda.paso2': 'Prueba un mensaje',
   'ayuda.paso2Texto': 'En Probar escribe algo, elige agente y modelo y mira la respuesta en vivo. Puedes adjuntar PDF, Word, Excel o ZIP.',
   'ayuda.paso3': 'Conecta tu aplicación',
@@ -325,14 +325,14 @@ const es = {
     'En Mis APIs tienes la URL y la clave. En tu SDK de OpenAI o Anthropic cambia la URL base y elige agente y modelo con el campo model, por ejemplo claude/sonnet.',
   'ayuda.paso4': 'Dale a cada app su propia API (opcional)',
   'ayuda.paso4Texto':
-    'En Mis APIs crea una API por aplicación, con su clave, sus modelos e instrucciones fijas (por ejemplo, que responda siempre en español). Agrúpalas para activarlas o detenerlas juntas.',
+    'En Mis APIs crea una API por aplicación, con su clave (solo se muestra al crearla: cópiala entonces), sus modelos e instrucciones fijas (por ejemplo, que responda siempre en español). Agrúpalas para activarlas o detenerlas juntas.',
   'ayuda.paso5': 'Haz que arranque solo',
   'ayuda.paso5Texto': 'En Ajustes activa el arranque con el sistema (Windows, macOS o Linux) y no tendrás que abrir ninguna terminal.',
   'ayuda.ir': 'Ir a {pagina}',
   'ayuda.preguntas': 'Preguntas frecuentes',
   'ayuda.p1': '¿Necesito una clave para entrar?',
   'ayuda.r1':
-    'No en este equipo: en Windows y Linux, Tramtai comprueba que el navegador es de tu mismo usuario. Tus aplicaciones sí usan la clave que aparece en Mis APIs. En macOS, por ahora, o desde otro equipo, ejecuta «tramtai abrir».',
+    'No. La app de Tramtai entra sola. En el navegador, en Windows y Linux entras directamente si es de tu mismo usuario; en macOS, o si no se puede comprobar, ejecuta «tramtai abrir» en el equipo de Tramtai. Las claves de Mis APIs son solo para tus aplicaciones: no abren esta página.',
   'ayuda.p2': '¿Las consultas quedan guardadas como chats en Claude Code o Codex?',
   'ayuda.r2':
     'No. Tramtai ejecuta Claude Code sin guardar la sesión, Codex en modo efímero y Antigravity con una carpeta privada que se borra al terminar. Tus historiales de chat no se llenan con las consultas de las aplicaciones: el registro queda solo en el Historial de Tramtai.',
@@ -344,7 +344,7 @@ const es = {
     'En Mis APIs crea una API para esa aplicación y escribe en sus instrucciones, por ejemplo, «Responde siempre en español». Se añaden al inicio de cada petición, sin cambiar nada en la aplicación.',
   'ayuda.p5': '¿Suscripción o clave de API?',
   'ayuda.r5':
-    'Tu suscripción de Claude o ChatGPT es solo para uso personal en este equipo, y los términos del proveedor pueden no permitir usarla para alimentar otras aplicaciones. Una clave de API se paga por uso y sirve para cualquier aplicación. Se elige en Agentes.',
+    'Tu suscripción de Claude o ChatGPT es solo para uso personal en este equipo, y los términos del proveedor pueden no permitir usarla para alimentar otras aplicaciones. Una clave de API se paga por uso y sirve para cualquier aplicación; Tramtai la guarda cifrada en el almacén del sistema (Administrador de credenciales, Llavero de macOS o Secret Service de Linux), nunca en sus archivos. Se elige en Agentes.',
   'ayuda.p6': '¿Qué es un espacio de trabajo?',
   'ayuda.r6':
     'El lugar donde se ejecutan y se guardan los trabajos y las APIs. El global sirve para todo; cada proyecto puede tener el suyo, con su historial. Se cambia arriba a la derecha.',
@@ -565,7 +565,10 @@ const es = {
   'puntos.abrirProbar': 'Abrir en Probar',
   'ayuda.p11': '¿Cómo convierto una prueba en una API para mis aplicaciones?',
   'ayuda.r11':
-    'En Probar, la receta reúne las instrucciones, el agente y el modelo, el respaldo y, si quieres, un esquema JSON para que la respuesta tenga siempre la misma forma. Pruébala con un mensaje y tus archivos; cuando funcione, pulsa «Guardar como API»: tendrás una URL y una clave para tu aplicación. Desde Mis APIs, «Abrir en Probar» la vuelve a cargar para cambiarla y «Actualizar» guarda los cambios.',
+    'En Probar, la receta reúne las instrucciones, el agente y el modelo, el respaldo y, si quieres, un esquema JSON para que la respuesta tenga siempre la misma forma. Pruébala con un mensaje y tus archivos; cuando funcione, pulsa «Guardar como API»: tendrás una URL y una clave para tu aplicación (la clave se muestra solo esa vez: cópiala). Desde Mis APIs, «Abrir en Probar» la vuelve a cargar para cambiarla y «Actualizar» guarda los cambios.',
+  'ayuda.p13': '¿Qué hago si se filtra una clave?',
+  'ayuda.r13':
+    'Si es la de una API, pulsa «Regenerar la clave» en Mis APIs. Si es la de la API principal, también en Mis APIs, en «Regenerar la clave» de la API principal. La anterior deja de valer al momento y no hace falta reiniciar: pon la nueva en tus aplicaciones. Si es la de un proveedor (Anthropic, OpenAI o Gemini), revócala en su consola y guarda la nueva con «tramtai claves guardar» (Agentes te muestra la orden).',
   'ayuda.p12': '¿Qué pasa si un agente llega a su límite?',
   'ayuda.r12':
     'Si la receta tiene respaldo, la petición sigue con el siguiente agente de la lista (hasta 3) cuando el principal falla antes de empezar a responder: límite de uso, falta la clave, no está instalado o da un error. Verás un aviso en Probar y el Historial muestra qué agente respondió. Si el agente ya había empezado a responder no se cambia, para no mezclar dos respuestas. El tiempo límite cuenta para cada intento.',

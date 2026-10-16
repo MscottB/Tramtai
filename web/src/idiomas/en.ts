@@ -318,7 +318,7 @@ const en: Textos = {
   'ayuda.empezar': 'How to get started',
   'ayuda.paso1': 'Connect an agent',
   'ayuda.paso1Texto':
-    'In Agents, choose “Use my subscription” for Claude or Codex (personal use) or save an API key. Gemini needs a Gemini API key.',
+    'In Agents, choose “Use my subscription” for Claude or Codex (personal use) or save an API key: it is stored encrypted in the system store and works without restarting. Gemini needs a Gemini API key.',
   'ayuda.paso2': 'Try a message',
   'ayuda.paso2Texto': 'In Try, write something, pick an agent and model and watch the answer live. You can attach PDF, Word, Excel or ZIP files.',
   'ayuda.paso3': 'Connect your app',
@@ -326,14 +326,14 @@ const en: Textos = {
     'My APIs has the URL and the key. In your OpenAI or Anthropic SDK change the base URL and pick the agent and model with the model field, for example claude/sonnet.',
   'ayuda.paso4': 'Give each app its own API (optional)',
   'ayuda.paso4Texto':
-    'In My APIs create one API per app, with its own key, models and fixed instructions (for example, always answer in Spanish). Group them to start or stop them together.',
+    'In My APIs create one API per app, with its own key (shown only when it is created: copy it then), models and fixed instructions (for example, always answer in Spanish). Group them to start or stop them together.',
   'ayuda.paso5': 'Make it start by itself',
   'ayuda.paso5Texto': 'In Settings, turn on start with your system (Windows, macOS or Linux) and you will never need to open a terminal.',
   'ayuda.ir': 'Go to {pagina}',
   'ayuda.preguntas': 'Frequently asked questions',
   'ayuda.p1': 'Do I need a key to sign in?',
   'ayuda.r1':
-    'Not on this computer: on Windows and Linux, Tramtai checks that the browser belongs to your same user. Your apps do use the key shown in My APIs. On macOS, for now, or from another computer, run “tramtai abrir”.',
+    'No. The Tramtai app signs in by itself. In a browser, on Windows and Linux you get in directly if it runs as your same user; on macOS, or when that can’t be checked, run “tramtai abrir” on the Tramtai computer. The keys in My APIs are only for your apps: they don’t open this page.',
   'ayuda.p2': 'Are requests saved as chats in Claude Code or Codex?',
   'ayuda.r2':
     'No. Tramtai runs Claude Code without saving the session, Codex in ephemeral mode and Antigravity with a private folder that is deleted afterwards. Your chat histories don’t fill up with your apps’ requests: the record stays only in Tramtai’s History.',
@@ -345,7 +345,7 @@ const en: Textos = {
     'In My APIs create an API for that app and write in its instructions, for example, “Always answer in Spanish”. They are added at the start of every request, without changing anything in the app.',
   'ayuda.p5': 'Subscription or API key?',
   'ayuda.r5':
-    'Your Claude or ChatGPT subscription is for personal use on this computer only, and the provider’s terms may not allow using it to power other apps. An API key is paid per use and works for any app. Choose it in Agents.',
+    'Your Claude or ChatGPT subscription is for personal use on this computer only, and the provider’s terms may not allow using it to power other apps. An API key is paid per use and works for any app; Tramtai stores it encrypted in the system store (Credential Manager, macOS Keychain or the Linux Secret Service), never in its own files. Choose it in Agents.',
   'ayuda.p6': 'What is a workspace?',
   'ayuda.r6':
     'The place where jobs and APIs run and are stored. The global one is for everything; each project can have its own, with its own history. Switch it at the top right.',
@@ -566,7 +566,10 @@ const en: Textos = {
   'puntos.abrirProbar': 'Open in Try',
   'ayuda.p11': 'How do I turn a test into an API for my apps?',
   'ayuda.r11':
-    'In Try, the recipe brings together the instructions, the agent and model, the fallback and, if you want, a JSON schema so the answer always has the same shape. Test it with a message and your files; once it works, click «Save as API» to get a URL and a key for your app. From My APIs, «Open in Try» loads it again to change it and «Update» saves the changes.',
+    'In Try, the recipe brings together the instructions, the agent and model, the fallback and, if you want, a JSON schema so the answer always has the same shape. Test it with a message and your files; once it works, click «Save as API» to get a URL and a key for your app (the key is shown only that once: copy it). From My APIs, «Open in Try» loads it again to change it and «Update» saves the changes.',
+  'ayuda.p13': 'What do I do if a key leaks?',
+  'ayuda.r13':
+    'If it is an API’s key, click “Regenerate the key” in My APIs. If it is the Main API key, use “Regenerate the key” on the Main API, also in My APIs. The old one stops working right away and there is no need to restart: put the new one in your apps. If it is a provider key (Anthropic, OpenAI or Gemini), revoke it in their console and save the new one with “tramtai claves guardar” (Agents shows you the command).',
   'ayuda.p12': 'What happens if an agent hits its limit?',
   'ayuda.r12':
     'If the recipe has a fallback, the request continues with the next agent in the list (up to 3) when the main one fails before it starts answering: usage limit, missing key, not installed or an error. You will see a notice in Try, and History shows which agent answered. If the agent had already started answering it is not switched, so two answers are never mixed. The time limit applies to each attempt.',
