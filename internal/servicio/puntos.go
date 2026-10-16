@@ -23,6 +23,7 @@ import (
 	"tramtai/internal/api"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
+	"tramtai/internal/persistencia"
 	"tramtai/internal/salidas"
 )
 
@@ -46,9 +47,11 @@ type ConfigPunto struct {
 	// Esquema es el JSON Schema de la receta (escrito como YAML); con él la salida es JSON validado.
 	Esquema map[string]any `json:"esquema,omitempty" yaml:"esquema,omitempty"`
 	// Respaldo son los agentes (agente o agente/modelo) que siguen si el principal falla antes de producir texto.
-	Respaldo  []string        `json:"respaldo,omitempty" yaml:"respaldo,omitempty"`
-	Activo    *bool           `json:"activo,omitempty" yaml:"activo,omitempty"`
-	Ejecucion *EjecucionPunto `json:"ejecucion,omitempty" yaml:"ejecucion,omitempty"`
+	Respaldo []string `json:"respaldo,omitempty" yaml:"respaldo,omitempty"`
+	// Presupuesto limita el consumo diario y mensual de la API (peticiones, tokens, USD).
+	Presupuesto *nucleo.Presupuesto `json:"presupuesto,omitempty" yaml:"presupuesto,omitempty"`
+	Activo      *bool               `json:"activo,omitempty" yaml:"activo,omitempty"`
+	Ejecucion   *EjecucionPunto     `json:"ejecucion,omitempty" yaml:"ejecucion,omitempty"`
 }
 
 // EjecucionPunto son los valores de ejecución propios del punto, dentro de los límites de la instancia.
@@ -141,6 +144,14 @@ func (p ConfigPunto) Normalizar(instancia string, puertoServicio int) (ConfigPun
 		}
 		if err != nil {
 			return invalido(nucleo.MensajeDe(err)) // ya dice «esquema no válido» o «el esquema no es JSON válido»
+		}
+	}
+	if p.Presupuesto != nil {
+		if err := p.Presupuesto.Validar(); err != nil {
+			return invalido(nucleo.MensajeDe(err))
+		}
+		if p.Presupuesto.Vacio() {
+			p.Presupuesto = nil
 		}
 	}
 	if err := nucleo.ValidarRespaldo(p.Respaldo); err != nil {
@@ -348,8 +359,23 @@ func (s *Servicio) Recargar() []EstadoPunto {
 			limites[c.cfg.Instancia][c.cfg.Nombre] = c.cfg.Ejecucion.MaximoTrabajos
 		}
 	}
+	presupuestos := map[string]map[string]nucleo.Presupuesto{}
+	for _, c := range deseados {
+		if c.cfg.Presupuesto != nil {
+			if presupuestos[c.cfg.Instancia] == nil {
+				presupuestos[c.cfg.Instancia] = map[string]nucleo.Presupuesto{}
+			}
+			presupuestos[c.cfg.Instancia][c.cfg.Nombre] = *c.cfg.Presupuesto
+		}
+	}
 	for id, inst := range s.instancias {
 		inst.Planificador.LimitarPuntos(limites[id])
+		m := presupuestos[id]
+		if m == nil {
+			m = map[string]nucleo.Presupuesto{}
+		}
+		m[persistencia.TodaLaInstancia] = nucleo.PresupuestoDe(inst.Config)
+		inst.Planificador.FijarPresupuestos(m)
 	}
 	estado := s.estadoPuntos()
 	s.mu.Unlock()

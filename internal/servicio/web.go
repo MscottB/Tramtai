@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"io/fs"
+	"log"
 	"net"
 	"net/http"
 	"path"
@@ -21,6 +22,7 @@ import (
 	"tramtai/internal/credenciales"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
+	"tramtai/internal/persistencia"
 	"tramtai/internal/version"
 )
 
@@ -529,7 +531,30 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 		w.WriteHeader(http.StatusNoContent)
 	case ruta == "/api/v1/puntos" && r.Method == http.MethodGet:
 		uso, _ := inst.Planificador.UsoPorPunto(r.Context()) // sin uso, la lista se muestra igual
-		api.EscribirJSON(w, http.StatusOK, map[string]any{"puntos_acceso": s.puntosDe(inst.ID), "uso": uso})
+		puntos := s.puntosDe(inst.ID)
+		presupuestos := map[string]nucleo.EstadoPresupuesto{}
+		for _, p := range puntos {
+			if estado, ok, err := inst.Planificador.EstadoPresupuesto(r.Context(), p.Nombre); ok && err == nil {
+				presupuestos[p.Nombre] = estado
+			}
+		}
+		api.EscribirJSON(w, http.StatusOK, map[string]any{"puntos_acceso": puntos, "uso": uso, "presupuestos": presupuestos})
+	case ruta == "/api/v1/instancia/presupuesto" && r.Method == http.MethodGet:
+		estado, ok, err := inst.Planificador.EstadoPresupuesto(r.Context(), persistencia.TodaLaInstancia)
+		switch {
+		case err != nil:
+			api.EscribirError(w, r, err)
+		case ok:
+			api.EscribirJSON(w, http.StatusOK, map[string]any{"presupuesto": estado})
+		default:
+			api.EscribirJSON(w, http.StatusOK, map[string]any{})
+		}
+	case ruta == "/api/v1/instancia/presupuesto/reiniciar" && r.Method == http.MethodPost:
+		if err := inst.Planificador.ReiniciarPresupuesto(r.Context(), persistencia.TodaLaInstancia); err != nil {
+			api.EscribirError(w, r, err)
+			return true
+		}
+		w.WriteHeader(http.StatusNoContent)
 	case ruta == "/api/v1/puntos" && r.Method == http.MethodPost:
 		s.crearPuntoUI(w, r, inst)
 	case strings.HasPrefix(ruta, "/api/v1/puntos/"):
@@ -644,6 +669,12 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 		return true
 	}
 	switch {
+	case accion == "presupuesto/reiniciar" && r.Method == http.MethodPost:
+		if err := inst.Planificador.ReiniciarPresupuesto(r.Context(), nombre); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	case accion == "token" && r.Method == http.MethodPost:
 		// Regenera la clave: solo se guarda su huella, así que esta es la única vez que se puede ver.
 		token, err := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, nombre))
@@ -664,6 +695,8 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 			// Esquema: ausente no cambia; null o {} lo quita; un objeto lo fija.
 			Esquema  json.RawMessage `json:"esquema"`
 			Respaldo *[]string       `json:"respaldo"`
+			// Presupuesto: ausente no cambia; null lo quita; un objeto lo fija.
+			Presupuesto json.RawMessage `json:"presupuesto"`
 		}
 		if err := api.LeerJSON(w, r, &cambio); err != nil {
 			api.EscribirError(w, r, err)
@@ -707,12 +740,20 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 				if cambio.Respaldo != nil {
 					lista[i].Respaldo = *cambio.Respaldo
 				}
+				if len(cambio.Presupuesto) > 0 {
+					lista[i].Presupuesto = nil // null lo quita
+					if err := json.Unmarshal(cambio.Presupuesto, &lista[i].Presupuesto); err != nil {
+						return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("el presupuesto debe ser un objeto JSON"))
+					}
+				}
 				// La receta se valida antes de escribir: un cambio no válido deja la configuración como estaba. Solo si
 				// cambia, para no impedir desactivar un punto que ya tenía otro error.
-				if len(cambio.Esquema) > 0 || cambio.Respaldo != nil || cambio.Permitidos != nil {
-					if _, err := lista[i].Normalizar(inst.ID, s.opc.Puerto); err != nil {
+				if len(cambio.Esquema) > 0 || cambio.Respaldo != nil || cambio.Permitidos != nil || len(cambio.Presupuesto) > 0 {
+					normalizado, err := lista[i].Normalizar(inst.ID, s.opc.Puerto)
+					if err != nil {
 						return nil, err
 					}
+					lista[i].Presupuesto = normalizado.Presupuesto // uno vacío se guarda como ninguno
 					if err := s.validarRespaldo(lista[i]); err != nil {
 						return nil, err
 					}
@@ -727,6 +768,9 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 			return slices.DeleteFunc(lista, func(c ConfigPunto) bool { return c.Nombre == nombre }), nil
 		}) {
 			EliminarTokenPunto(s.opc.Datos, nombre)
+			if err := inst.Planificador.EliminarConsumo(r.Context(), nombre); err != nil {
+				log.Printf("punto de acceso %s: no se pudo borrar su consumo: %v", nombre, err)
+			}
 			w.WriteHeader(http.StatusNoContent)
 		}
 	default:
