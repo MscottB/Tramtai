@@ -23,8 +23,8 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 |---|---|---|
 | v0.34.0 | Recetas y respaldo entre agentes, claves cifradas y huella de las claves de API, instalador con RTF | ✅ |
 | v0.35.0 | Presupuestos por API y por instancia; mapa de la red sin cortes | ✅ |
-| v0.35.1 | «Gemini API» en los textos: el agente `gemini` llama a la API de Gemini directamente, no a Gemini CLI, así que sigue disponible y no se quita | 🟡 |
-| — | Rediseño de la presentación: Inicio (mapa de la red, primeros pasos, tablero), Mis APIs, el resto de la Web UI y la página del producto, con capturas nuevas | ⬜ |
+| v0.35.1 | «Gemini API» en los textos: el agente `gemini` llama a la API de Gemini directamente, no a Gemini CLI, así que sigue disponible y no se quita | ✅ |
+| v0.36.0 | Rediseño de la presentación: cabecera común con Volver, Mis APIs, estados vacíos, esfuerzo predeterminado por modelo; página del producto con tema claro u oscuro y capturas nuevas | ✅ |
 | — | Copilot CLI como agente nuevo | ⬜ |
 | — | Webhooks al terminar un trabajo y avisos de presupuesto (`presupuesto.aviso`, `presupuesto.agotado`) | ⬜ |
 | — | Comparar agentes en Probar | ⬜ |
@@ -34,6 +34,7 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 Pendientes ya asignados:
 
 - **Webhooks:** los avisos del 80 % y del 100 % se evalúan con los periodos de la hora actual, pero el consumo va al día de aceptación: un cruce del día anterior causado por un trabajo que termina pasada la medianoche no se registra. Evaluar también el periodo de aceptación al sumar.
+- **Rediseño (posterior):** la pantalla en blanco al instalar una actualización en la app de escritorio no se reprodujo sin instalar sobre una versión real (v0.36.0 solo muestra el avance al momento); probarla con una instalación real. Menores aplazados de la revisión: flechas y nombre por fila en el menú «⋯», nombre accesible del logo (WCAG 2.5.3), textos alternativos de las capturas solo en español, niveles de título y `theme-color` en oscuro en la página, `.ayuda-campo` y `puntos.activar` sin uso, doble relleno en Probar.
 - **Presupuestos (posterior):** detectar una API eliminada con el servicio detenido (hoy su consumo se conserva si se borra a mano o sin servicio); los tokens de intentos fallidos o descartados por el respaldo no se suman.
 
 ## Tareas
