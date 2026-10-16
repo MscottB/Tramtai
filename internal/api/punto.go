@@ -70,7 +70,8 @@ func (s *Servidor) ajustar(sol nucleo.SolicitudEjecucion) (nucleo.SolicitudEjecu
 	if sol.Salida.Formato == "" && len(sol.Salida.Esquema) == 0 {
 		sol.Salida.Formato = p.FormatoSalida
 	}
-	if len(sol.Respaldo) == 0 {
+	// Con forzar_modelo el dueño de la API decide los modelos: el cliente tampoco elige el respaldo.
+	if len(sol.Respaldo) == 0 || p.ForzarModelo {
 		sol.Respaldo = p.Respaldo
 	}
 	if sol.Ejecucion.TiempoLimiteSegundos == 0 {

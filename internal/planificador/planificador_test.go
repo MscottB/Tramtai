@@ -717,10 +717,21 @@ func avisos(t *testing.T, alm *persistencia.Almacen, id string) []string {
 	return lista
 }
 
+// primeroBien responde la primera vez y después falla por límite, contando sus ejecuciones.
+type primeroBien struct{ n *atomic.Int32 }
+
+func (a primeroBien) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	if a.n.Add(1) == 1 {
+		return adaptadores.Simulado{Respuesta: "ok"}.Ejecutar(ctx, s, emitir)
+	}
+	return adaptadores.Resultado{}, errorDe(nucleo.CodigoLimiteUsoProveedor)
+}
+
 func TestRespaldoSaltaPorLimite(t *testing.T) {
 	alm := abrir(t)
+	var n atomic.Int32
 	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
-		"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)}, "otro": adaptadores.Simulado{Respuesta: "ok"}}, 2)
+		"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)}, "otro": primeroBien{&n}}, 2)
 	tr := esperar(t, alm, enviar(t, p, conRespaldo("otro/m2")), nucleo.Completado)
 	if tr.Salida != "ok" || tr.Solicitud.Agente != "otro" || tr.ModeloEnviado != "m2" {
 		t.Fatalf("debía responder el respaldo: %+v", tr)
@@ -729,13 +740,14 @@ func TestRespaldoSaltaPorLimite(t *testing.T) {
 		t.Fatalf("falta el aviso del salto: %v", a)
 	}
 
-	// El reintento empieza por el agente que respondió y no repite el salto.
+	// El reintento empieza por el agente que respondió y omite su entrada repetida en el respaldo: si otro falla,
+	// no se vuelve a ejecutar.
 	nuevo, err := p.Reintentar(ctx, tr.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r := esperar(t, alm, nuevo.ID, nucleo.Completado); r.Solicitud.Agente != "otro" || len(avisos(t, alm, r.ID)) != 0 {
-		t.Fatalf("el reintento debía ir directo a otro: %+v", r)
+	if r := esperar(t, alm, nuevo.ID, nucleo.Fallido); r.Solicitud.Agente != "otro" || len(avisos(t, alm, r.ID)) != 0 || n.Load() != 2 {
+		t.Fatalf("el reintento debía ir directo a otro y ejecutarlo una vez (%d en total): %+v", n.Load(), r)
 	}
 }
 

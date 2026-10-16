@@ -397,6 +397,15 @@ func TestPuntoAplicaEsquemaYRespaldo(t *testing.T) {
 	}
 }
 
+func TestPuntoForzadoImponeSuRespaldo(t *testing.T) {
+	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
+	s := &Servidor{Config: c, Punto: &Punto{Nombre: "r", Agente: "simulado", ForzarModelo: true, Respaldo: []string{"otro"}}}
+	sol, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}, Respaldo: []string{"caro/opus"}})
+	if err != nil || !slices.Equal(sol.Respaldo, []string{"otro"}) {
+		t.Fatalf("con forzar_modelo el cliente no elige el respaldo: %v %+v", err, sol.Respaldo)
+	}
+}
+
 func TestPuntoRespaldoNoPermitido(t *testing.T) {
 	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
 	s := &Servidor{Config: c, Punto: &Punto{Nombre: "r", ModelosPermitidos: []string{"simulado"}, Respaldo: []string{"otro"}}}

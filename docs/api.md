@@ -130,7 +130,9 @@ puntos_acceso:
       type: object
       properties: { total: { type: number }, proveedor: { type: string } }
       required: [total, proveedor]
-``` La administración (`/api/v1/servicio`) y la API de cada instancia con `Tramtai-Instancia` se describen en [operacion.md](operacion.md).
+```
+
+La administración (`/api/v1/servicio`) y la API de cada instancia con `Tramtai-Instancia` se describen en [operacion.md](operacion.md).
 
 `GET /api/v1/trabajos?limite=20` lista los trabajos recientes de la instancia, o los del punto de acceso si se llama desde uno; `&punto=<nombre>` filtra por un punto de acceso. Desde la Web UI, `GET /api/v1/puntos` incluye `uso` por punto: `peticiones`, `errores` y `ultima`, de lo que conserva la retención.
 
