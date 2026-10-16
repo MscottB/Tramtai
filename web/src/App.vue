@@ -314,6 +314,8 @@ const textoProgreso = computed(() => {
 })
 async function instalarActualizacion() {
   actualizando.value = true
+  // El avance se muestra al instante, antes de que responda el servicio: nunca un diálogo sin nada que ver.
+  progreso.value = { fase: 'descargando', version: actualizacion.value?.version ?? '', recibidos: 0, total: 0 }
   try {
     const { version } = await api.actualizar()
     progreso.value = { fase: 'descargando', version, recibidos: 0, total: 0 }
@@ -328,6 +330,7 @@ async function instalarActualizacion() {
       }
     }, 400)
   } catch (e) {
+    progreso.value = null
     avisarError(e)
   } finally {
     actualizando.value = false
