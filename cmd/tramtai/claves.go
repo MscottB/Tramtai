@@ -65,7 +65,9 @@ func comandoClaves() *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			for _, nombre := range credenciales.Nombres {
 				origen := idioma.T("no configurada")
-				if v, err := credenciales.Leer(nombre); err == nil && v != "" {
+				if v, err := credenciales.Leer(nombre); err != nil {
+					origen = idioma.Tf("el almacén no responde: %s", err)
+				} else if v != "" {
 					origen = credenciales.Almacen()
 				}
 				if os.Getenv(nombre) != "" {

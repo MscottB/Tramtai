@@ -20,6 +20,12 @@ func Admitido(nombre string) bool { return slices.Contains(Nombres, nombre) }
 
 func objetivo(nombre string) string { return "tramtai/" + nombre }
 
+// claveAusente indica que la herramienta del almacén terminó con su código de «no existe» sin explicar ningún error:
+// si escribe algo por stderr (por ejemplo, que no hay sesión de D-Bus) es que el almacén no responde.
+func claveAusente(codigo, codigoAusente int, salida, errores string) bool {
+	return codigo == codigoAusente && strings.TrimSpace(salida) == "" && strings.TrimSpace(errores) == ""
+}
+
 // valorValido rechaza lo que no puede ser una clave de API: vacía, de más de 2048 bytes o con algo que no sea ASCII
 // imprimible, comillas o barras invertidas. Además de no ser claves, romperían el paso a la herramienta del Llavero
 // (que devuelve en hexadecimal lo que no es ASCII) o pasarían de su línea de órdenes.

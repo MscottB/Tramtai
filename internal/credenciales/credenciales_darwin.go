@@ -36,7 +36,7 @@ func Guardar(nombre, valor string) error {
 		return err
 	}
 	orden := "add-generic-password -U -a tramtai -s " + objetivo(nombre) + " -w " + valor + "\n"
-	if _, _, err := ejecutar(orden, valor, security, "-i"); err != nil {
+	if _, _, _, err := ejecutar(orden, valor, security, "-i"); err != nil {
 		return err
 	}
 	if guardada, err := Leer(nombre); err != nil || guardada != valor {
@@ -47,7 +47,7 @@ func Guardar(nombre, valor string) error {
 
 // Leer devuelve la clave, o "" si no está guardada.
 func Leer(nombre string) (string, error) {
-	salida, codigo, err := ejecutar("", "", security, "find-generic-password", "-a", "tramtai", "-s", objetivo(nombre), "-w")
+	salida, _, codigo, err := ejecutar("", "", security, "find-generic-password", "-a", "tramtai", "-s", objetivo(nombre), "-w")
 	if codigo == noEncontrada {
 		return "", nil
 	}
@@ -59,7 +59,7 @@ func Leer(nombre string) (string, error) {
 
 // Borrar elimina la clave; no es un error si no existía.
 func Borrar(nombre string) error {
-	if _, codigo, err := ejecutar("", "", security, "delete-generic-password", "-a", "tramtai", "-s", objetivo(nombre)); err != nil && codigo != noEncontrada {
+	if _, _, codigo, err := ejecutar("", "", security, "delete-generic-password", "-a", "tramtai", "-s", objetivo(nombre)); err != nil && codigo != noEncontrada {
 		return err
 	}
 	return nil

@@ -34,7 +34,7 @@ func Guardar(nombre, valor string) error {
 	if !Disponible() {
 		return errSinSecretTool
 	}
-	_, _, err := ejecutar(valor, valor, secretTool, "store", "--label=Tramtai "+nombre, "servicio", "tramtai", "nombre", nombre)
+	_, _, _, err := ejecutar(valor, valor, secretTool, "store", "--label=Tramtai "+nombre, "servicio", "tramtai", "nombre", nombre)
 	return err
 }
 
@@ -43,9 +43,9 @@ func Leer(nombre string) (string, error) {
 	if !Disponible() {
 		return "", nil
 	}
-	salida, codigo, err := ejecutar("", "", secretTool, "lookup", "servicio", "tramtai", "nombre", nombre)
-	if codigo == 1 && strings.TrimSpace(salida) == "" {
-		return "", nil // no existe
+	salida, errores, codigo, err := ejecutar("", "", secretTool, "lookup", "servicio", "tramtai", "nombre", nombre)
+	if claveAusente(codigo, 1, salida, errores) {
+		return "", nil // no existe; si el llavero no responde, err lo explica
 	}
 	if err != nil {
 		return "", err
@@ -58,6 +58,6 @@ func Borrar(nombre string) error {
 	if !Disponible() {
 		return errSinSecretTool
 	}
-	_, _, err := ejecutar("", "", secretTool, "clear", "servicio", "tramtai", "nombre", nombre)
+	_, _, _, err := ejecutar("", "", secretTool, "clear", "servicio", "tramtai", "nombre", nombre)
 	return err
 }
