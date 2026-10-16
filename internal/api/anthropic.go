@@ -112,7 +112,7 @@ func (s *Servidor) mensajesAnthropic(w http.ResponseWriter, r *http.Request) {
 	}
 	avisar(w, avisos)
 	mensaje := func(final nucleo.Trabajo, contenido []any, razon any) map[string]any {
-		return map[string]any{"id": "msg_" + t.ID, "type": "message", "role": "assistant", "model": p.Model, "content": contenido,
+		return map[string]any{"id": "msg_" + t.ID, "type": "message", "role": "assistant", "model": modeloRespuesta(p.Model, t, final), "content": contenido,
 			"stop_reason": razon, "stop_sequence": nil,
 			"usage": map[string]any{"input_tokens": final.Uso.TokensEntrada, "output_tokens": final.Uso.TokensSalida}}
 	}

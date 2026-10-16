@@ -274,7 +274,7 @@ func (s *Servidor) chatCompletions(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		avisarUso(w, final)
-		EscribirJSON(w, http.StatusOK, map[string]any{"id": id, "object": "chat.completion", "created": creado, "model": p.Model,
+		EscribirJSON(w, http.StatusOK, map[string]any{"id": id, "object": "chat.completion", "created": creado, "model": modeloRespuesta(p.Model, t, final),
 			"choices": []any{map[string]any{"index": 0, "message": mensaje, "finish_reason": fin, "logprobs": nil}},
 			"usage":   usoOpenAI(final)})
 		return
@@ -321,7 +321,7 @@ func (s *Servidor) chatCompletions(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = trozo(map[string]any{}, fin)
 	if p.StreamOptions != nil && p.StreamOptions.IncludeUsage {
-		_ = f.json("", map[string]any{"id": id, "object": "chat.completion.chunk", "created": creado, "model": p.Model,
+		_ = f.json("", map[string]any{"id": id, "object": "chat.completion.chunk", "created": creado, "model": modeloRespuesta(p.Model, t, final),
 			"choices": []any{}, "usage": usoOpenAI(final)})
 	}
 	_ = f.enviar("", "", "[DONE]")
@@ -446,7 +446,7 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		avisarUso(w, final)
-		objeto := objetoRespuesta(final, p.Model, "completed", salidaRespuesta(final, texto, llamadas))
+		objeto := objetoRespuesta(final, modeloRespuesta(p.Model, t, final), "completed", salidaRespuesta(final, texto, llamadas))
 		objeto["output_text"] = texto
 		EscribirJSON(w, http.StatusOK, objeto)
 		return
@@ -485,7 +485,7 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fallar := func(e error) {
-		fallo := objetoRespuesta(final, p.Model, "failed", nil)
+		fallo := objetoRespuesta(final, modeloRespuesta(p.Model, t, final), "failed", nil)
 		fallo["error"] = map[string]any{"code": nucleo.CodigoDe(e), "message": nucleo.MensajeDe(e)}
 		_ = evento("response.failed", map[string]any{"response": fallo})
 	}
@@ -520,7 +520,7 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 		_ = evento("response.output_item.done", map[string]any{"output_index": indice, "item": llamadaRespuesta(l, "completed")})
 		indice++
 	}
-	_ = evento("response.completed", map[string]any{"response": objetoRespuesta(final, p.Model, "completed", salidaRespuesta(final, texto, llamadas))})
+	_ = evento("response.completed", map[string]any{"response": objetoRespuesta(final, modeloRespuesta(p.Model, t, final), "completed", salidaRespuesta(final, texto, llamadas))})
 }
 
 func (s *Servidor) modelosOpenAI(w http.ResponseWriter, r *http.Request) {

@@ -13,6 +13,20 @@ import (
 	"tramtai/internal/persistencia"
 )
 
+// modeloRespuesta es el model que devuelven las fachadas: el que pidió la aplicación (así siguen valiendo sus alias),
+// salvo que el trabajo pasara a un agente del respaldo; entonces el que respondió, para no atribuirle la respuesta a
+// otro modelo.
+func modeloRespuesta(pedido string, aceptado, final nucleo.Trabajo) string {
+	agente, modelo := final.Solicitud.Agente, final.ModeloEnviado
+	if agente == "" || (agente == aceptado.Solicitud.Agente && modelo == aceptado.ModeloEnviado) {
+		return pedido
+	}
+	if modelo == "" {
+		return agente
+	}
+	return agente + "/" + modelo
+}
+
 // politica clasifica los parámetros de una fachada.
 type politica struct {
 	soportados   map[string]bool

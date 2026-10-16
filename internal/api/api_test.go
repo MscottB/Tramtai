@@ -397,6 +397,20 @@ func TestPuntoAplicaEsquemaYRespaldo(t *testing.T) {
 	}
 }
 
+func TestFachadasInformanDelRespaldo(t *testing.T) {
+	registro := map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Error: nucleo.NuevoError(nucleo.CodigoLimiteUsoProveedor, "límite")},
+		"otro": adaptadores.Simulado{Respuesta: "ok"}}
+	ts := servidorCon(t, registro, nil, &Punto{Nombre: "r", Contratos: map[string]bool{"openai": true, "anthropic": true}, Respaldo: []string{"otro"}})
+	_, cuerpo := pedir(t, ts, "POST", "/openai/v1/chat/completions", `{"model":"simulado","messages":[{"role":"user","content":"x"}]}`)
+	if v := decodificar(t, cuerpo); v["model"] != "otro" {
+		t.Fatalf("tras un salto, model debe ser el agente que respondió: %s", cuerpo)
+	}
+	_, cuerpo = pedir(t, ts, "POST", "/anthropic/v1/messages", `{"model":"simulado","max_tokens":10,"messages":[{"role":"user","content":"x"}]}`)
+	if v := decodificar(t, cuerpo); v["model"] != "otro" {
+		t.Fatalf("tras un salto, model debe ser el agente que respondió: %s", cuerpo)
+	}
+}
+
 func TestPuntoForzadoImponeSuRespaldo(t *testing.T) {
 	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
 	s := &Servidor{Config: c, Punto: &Punto{Nombre: "r", Agente: "simulado", ForzarModelo: true, Respaldo: []string{"otro"}}}
