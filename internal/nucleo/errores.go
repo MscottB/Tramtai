@@ -39,6 +39,7 @@ const (
 	CodigoResultadoExpirado       CodigoError = "resultado_expirado"
 	CodigoContextoNoPermitido     CodigoError = "contexto_no_permitido"
 	CodigoRutaNoPermitida         CodigoError = "ruta_no_permitida"
+	CodigoPresupuestoAgotado      CodigoError = "presupuesto_agotado"
 )
 
 // Error es el error propio de Tramtai: un código estable y un mensaje legible sin secretos.

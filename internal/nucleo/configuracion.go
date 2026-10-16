@@ -52,6 +52,7 @@ const (
 	tipoEntero
 	tipoBooleano
 	tipoLista
+	tipoDecimal // entero o decimal (YAML da int para 50 y float64 para 12.5)
 )
 
 // esquema enumera las claves nativas admitidas; un segmento "*" acepta cualquier nombre.
@@ -109,11 +110,17 @@ var esquema = map[string]tipoValor{
 	"compatibilidad.cancelar_al_desconectar":      tipoBooleano,
 	"modelos.perfiles.*.*":                        tipoTexto,
 	"modelos.fallback.habilitado":                 tipoBooleano,
+	"presupuesto.diario.peticiones":               tipoEntero,
+	"presupuesto.diario.tokens":                   tipoEntero,
+	"presupuesto.diario.usd":                      tipoDecimal,
+	"presupuesto.mensual.peticiones":              tipoEntero,
+	"presupuesto.mensual.tokens":                  tipoEntero,
+	"presupuesto.mensual.usd":                     tipoDecimal,
 }
 
 // prefijosAdministrados son límites de seguridad: nunca pueden venir de la configuración versionada del repositorio,
 // y en local.yaml solo si la carpeta del proyecto es confiable según la configuración global (ver validar).
-var prefijosAdministrados = []string{"servicio", "instancia_global", "proyectos_confiables", "comandos_agentes", "concurrencia_servicio", "puntos_acceso", "adaptadores", "conversion.comando"}
+var prefijosAdministrados = []string{"servicio", "instancia_global", "proyectos_confiables", "comandos_agentes", "concurrencia_servicio", "puntos_acceso", "adaptadores", "conversion.comando", "presupuesto"}
 
 // Capa es un origen de configuración aplanado a claves con puntos.
 type Capa struct {
@@ -280,6 +287,17 @@ func (c *Configuracion) Entero(clave string) int {
 	return v
 }
 
+// Decimal devuelve un valor decimal (escrito como entero o con decimales), o 0 si no existe.
+func (c *Configuracion) Decimal(clave string) float64 {
+	switch v := c.e().valores[clave].(type) {
+	case int:
+		return float64(v)
+	case float64:
+		return v
+	}
+	return 0
+}
+
 // Booleano devuelve un valor booleano, o false si no existe.
 func (c *Configuracion) Booleano(clave string) bool {
 	v, _ := c.e().valores[clave].(bool)
@@ -384,6 +402,9 @@ func (c Capa) validar() error {
 		if !tipoCorrecto(tipo, c.Valores[clave]) {
 			return errorConfiguracion(c.Fuente, clave, idioma.T("tipo incorrecto"))
 		}
+		if strings.HasPrefix(clave, "presupuesto.") && negativo(c.Valores[clave]) {
+			return errorConfiguracion(c.Fuente, clave, idioma.T("los límites del presupuesto no pueden ser negativos"))
+		}
 	}
 	// Promesas que Tramtai aún no cumple: se rechazan en vez de aceptarlas sin efecto.
 	for _, clave := range []string{"retencion.guardar_historial", "retencion.cifrado_aplicacion", "retencion.cache_conversion_habilitada"} {
@@ -446,6 +467,16 @@ func esAdministrada(clave string) bool {
 	return false
 }
 
+func negativo(valor any) bool {
+	switch n := valor.(type) {
+	case int:
+		return n < 0
+	case float64:
+		return n < 0
+	}
+	return false
+}
+
 func tipoCorrecto(tipo tipoValor, valor any) bool {
 	var correcto bool
 	switch tipo {
@@ -457,6 +488,11 @@ func tipoCorrecto(tipo tipoValor, valor any) bool {
 		_, correcto = valor.(bool)
 	case tipoLista:
 		_, correcto = valor.([]any)
+	case tipoDecimal:
+		switch valor.(type) {
+		case int, float64:
+			correcto = true
+		}
 	}
 	return correcto
 }
@@ -467,6 +503,8 @@ func convertir(tipo tipoValor, texto string) (any, error) {
 		return strconv.Atoi(texto)
 	case tipoBooleano:
 		return strconv.ParseBool(texto)
+	case tipoDecimal:
+		return strconv.ParseFloat(texto, 64)
 	case tipoLista:
 		partes := strings.Split(texto, ",")
 		lista := make([]any, len(partes))

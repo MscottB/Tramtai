@@ -224,6 +224,11 @@ func init() {
 		"agente desconocido: %s":                                                                                                     "unknown agent: %s",
 		"el puerto debe estar entre 1024 y 65535":                                                                                    "the port must be between 1024 and 65535",
 		"el puerto %d está ocupado por otro programa: elige otro":                                                                    "port %d is in use by another program: choose another",
-		", con cambios sin confirmar":                                                                                                ", with uncommitted changes",
+		"los límites del presupuesto no pueden ser negativos":                                                                        "budget limits cannot be negative",
+		"diario":                          "daily",
+		"mensual":                         "monthly",
+		"peticiones":                      "requests",
+		"presupuesto %s de %s %s agotado": "%s %s budget %s exhausted",
+		", con cambios sin confirmar":     ", with uncommitted changes",
 	})
 }
