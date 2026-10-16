@@ -60,6 +60,14 @@
           <q-btn unelevated color="primary" icon="add" :label="t('puntos.nuevo')" no-caps @click="abrirNuevo" />
         </div>
       </q-card-section>
+      <template v-if="presupuestoEspacio">
+        <q-separator />
+        <q-card-section>
+          <div class="text-weight-medium">{{ t('presupuesto.espacio') }}</div>
+          <div class="text-caption texto-suave">{{ t('presupuesto.espacioTexto') }}</div>
+          <BarrasPresupuesto :estado="presupuestoEspacio" @reiniciar="reiniciarPresupuesto()" />
+        </q-card-section>
+      </template>
       <q-separator />
       <template v-if="puntos.length">
         <div v-for="g in grupos" :key="g.nombre">
@@ -95,6 +103,7 @@
                   <a v-if="uso[p.nombre]" href="#historial" class="enlace" @click.prevent="verPeticiones(p.nombre)">{{ textoUso(p.nombre) }}</a>
                   <span v-else>{{ t('puntos.sinUso') }}</span>
                 </q-item-label>
+                <BarrasPresupuesto v-if="presupuestos[p.nombre]" :estado="presupuestos[p.nombre]" @reiniciar="reiniciarPresupuesto(p.nombre)" />
                 <q-item-label v-if="p.instrucciones" caption class="row no-wrap items-start">
                   <q-icon name="o_notes" class="q-mr-xs q-mt-xs" /><span class="recortar-2">{{ p.instrucciones }}</span>
                 </q-item-label>
@@ -156,6 +165,7 @@
                   use-input new-value-mode="add-unique" :label="t('puntos.permitidos')" :hint="t('puntos.permitidosHint')" />
                 <q-input v-model="formulario.alias" type="textarea" autogrow outlined dense :label="t('puntos.alias')" input-class="codigo"
                   :hint="t('puntos.aliasHint')" />
+                <EditorPresupuesto v-model="formulario.presupuesto" />
               </div>
             </q-expansion-item>
           </q-card-section>
@@ -176,6 +186,7 @@
           <EditorReceta v-model="ajustes.receta" :catalogo="catalogo" para-api />
           <q-select v-model="ajustes.permitidos" :options="opciones" emit-value map-options outlined dense multiple use-chips
             use-input new-value-mode="add-unique" :label="t('puntos.permitidos')" :hint="t('puntos.permitidosHint')" />
+          <EditorPresupuesto v-model="ajustes.presupuesto" />
         </q-card-section>
         <q-card-actions align="right" class="q-pa-md">
           <q-btn v-close-popup flat no-caps :label="t('comun.cancelar')" />
@@ -209,9 +220,12 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useQuasar } from 'quasar'
+import BarrasPresupuesto from '../componentes/BarrasPresupuesto.vue'
+import EditorPresupuesto from '../componentes/EditorPresupuesto.vue'
 import EditorReceta from '../componentes/EditorReceta.vue'
 import { ajustesDeReceta, api, avisar, avisarError, codigoLinea, configDeReceta, copiar, etiquetaModelo, haceCuanto, idModeloDe as idModelo, nombreEsfuerzo, opcionModelo,
-  origenHistorial, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPunto, type Modelo, type UsoPunto } from '../api'
+  origenHistorial, presupuestoLimpio, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPresupuesto, type EstadoPunto, type Modelo,
+  type Presupuesto, type UsoPunto } from '../api'
 import { t } from '../i18n'
 
 const $q = useQuasar()
@@ -302,7 +316,7 @@ const ejemplo = computed(() => ejemplos.find((e) => e.id === lenguaje.value) ?? 
 const opciones = computed(() => catalogo.value.map(opcionModelo))
 const etiquetaDe = (id: string) => opciones.value.find((o) => o.value === id)?.label ?? etiquetaModelo(id)
 const vacio = () => ({ nombre: '', grupo: '', direccion: 'ruta', puerto: '', contratos: [...contratos], permitidos: [] as string[], alias: '',
-  receta: recetaVacia() })
+  receta: recetaVacia(), presupuesto: {} as Presupuesto })
 const formulario = reactive(vacio())
 
 const camposPunto = computed(() => {
@@ -317,6 +331,9 @@ const camposPunto = computed(() => {
 
 // uso son las peticiones de cada API que conserva la retención, contadas por el servicio.
 const uso = ref<Record<string, UsoPunto>>({})
+// presupuestos es el consumo frente a los límites de cada API con presupuesto; presupuestoEspacio, el del espacio.
+const presupuestos = ref<Record<string, EstadoPresupuesto>>({})
+const presupuestoEspacio = ref<EstadoPresupuesto>()
 const emit = defineEmits<{ ir: [pagina: string] }>()
 
 function textoUso(nombre: string) {
@@ -335,6 +352,8 @@ async function cargarPuntos() {
     const r = await api.puntosConUso()
     puntos.value = r.puntos_acceso
     uso.value = r.uso ?? {}
+    presupuestos.value = r.presupuestos ?? {}
+    presupuestoEspacio.value = await api.presupuestoInstancia()
   } catch (e) {
     avisarError(e)
   }
@@ -364,6 +383,7 @@ async function crear() {
       contratos: formulario.contratos,
       modelos_permitidos: formulario.permitidos.length ? formulario.permitidos : undefined,
       alias_modelos: Object.keys(alias).length ? alias : undefined,
+      presupuesto: presupuestoLimpio(formulario.presupuesto),
       ...configDeReceta(formulario.receta), // lanza un error legible si el esquema no es válido
     }
     const r = await api.crearPunto(punto)
@@ -417,11 +437,12 @@ function eliminar(nombre: string) {
 
 const dialogoInstrucciones = ref(false)
 const editando = ref('')
-const ajustes = reactive({ receta: recetaVacia(), permitidos: [] as string[] })
+const ajustes = reactive({ receta: recetaVacia(), permitidos: [] as string[], presupuesto: {} as Presupuesto })
 
 function abrirAjustes(p: EstadoPunto) {
   editando.value = p.nombre
-  Object.assign(ajustes, { receta: recetaDePunto(p), permitidos: [...(p.modelos_permitidos ?? [])] })
+  Object.assign(ajustes, { receta: recetaDePunto(p), permitidos: [...(p.modelos_permitidos ?? [])],
+    presupuesto: JSON.parse(JSON.stringify(p.presupuesto ?? {})) as Presupuesto })
   dialogoInstrucciones.value = true
 }
 
@@ -434,7 +455,8 @@ function abrirEnProbar(nombre: string) {
 async function guardarAjustes() {
   guardando.value = true
   try {
-    await api.ajustesPunto(editando.value, { ...ajustesDeReceta(ajustes.receta), modelos_permitidos: ajustes.permitidos })
+    await api.ajustesPunto(editando.value, { ...ajustesDeReceta(ajustes.receta), modelos_permitidos: ajustes.permitidos,
+      presupuesto: presupuestoLimpio(ajustes.presupuesto) ?? null })
     dialogoInstrucciones.value = false
     avisar(t('puntos.ajustesGuardados'))
     await cargarPuntos()
@@ -443,6 +465,21 @@ async function guardarAjustes() {
   } finally {
     guardando.value = false
   }
+}
+
+// reiniciarPresupuesto pone a cero el consumo del día y del mes de una API, o del espacio sin nombre.
+function reiniciarPresupuesto(nombre?: string) {
+  $q.dialog({ title: nombre ? t('presupuesto.reiniciarTitulo', { nombre }) : t('presupuesto.reiniciarEspacio'), message: t('presupuesto.reiniciarTexto'),
+    cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'primary', label: t('presupuesto.reiniciar'), unelevated: true, noCaps: true } })
+    .onOk(async () => {
+      try {
+        await api.reiniciarPresupuesto(nombre)
+        avisar(t('presupuesto.reiniciado'))
+        await cargarPuntos()
+      } catch (e) {
+        avisarError(e)
+      }
+    })
 }
 
 // regenerarClaveInstancia cambia la clave de «Conectar» por si se filtró; las aplicaciones que la usan dejan de

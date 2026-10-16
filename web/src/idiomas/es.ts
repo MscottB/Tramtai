@@ -572,6 +572,21 @@ const es = {
   'ayuda.p12': '¿Qué pasa si un agente llega a su límite?',
   'ayuda.r12':
     'Si la receta tiene respaldo, la petición sigue con el siguiente agente de la lista (hasta 3) cuando el principal falla antes de empezar a responder: límite de uso, falta la clave, no está instalado o da un error. Verás un aviso en Probar y el Historial muestra qué agente respondió. Si el agente ya había empezado a responder no se cambia, para no mezclar dos respuestas. El tiempo límite cuenta para cada intento.',
+  'presupuesto.editorTexto': 'Presupuesto: límites por día y por mes. Al 80 % se avisa y al 100 % se rechazan las peticiones nuevas hasta el reinicio. Vacío o 0 = sin límite.',
+  'presupuesto.diario': 'Diario',
+  'presupuesto.mensual': 'Mensual',
+  'presupuesto.peticiones': 'Peticiones',
+  'presupuesto.tokens': 'Tokens',
+  'presupuesto.usd': 'USD',
+  'presupuesto.usdHint': 'Solo suma el coste que informa el agente (hoy Claude)',
+  'presupuesto.reinicios': 'Se reinicia el día {dia} y el mes {mes}',
+  'presupuesto.reiniciar': 'Reiniciar consumo',
+  'presupuesto.reiniciarTitulo': 'Reiniciar el consumo de {nombre}',
+  'presupuesto.reiniciarEspacio': 'Reiniciar el consumo del espacio',
+  'presupuesto.reiniciarTexto': 'Pone a cero lo consumido hoy y este mes: las peticiones vuelven a admitirse aunque se hubiera llegado al límite.',
+  'presupuesto.reiniciado': 'Consumo reiniciado',
+  'presupuesto.espacio': 'Presupuesto del espacio',
+  'presupuesto.espacioTexto': 'Cuenta todas las peticiones del espacio: las de tus APIs, las de la clave principal y las de Probar.',
 }
 
 export type Clave = keyof typeof es

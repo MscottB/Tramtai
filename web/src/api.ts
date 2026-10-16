@@ -93,9 +93,40 @@ export interface EstadoPunto {
   forzar_modelo?: boolean
   esquema?: Record<string, unknown>
   respaldo?: string[]
+  presupuesto?: Presupuesto
   activo: boolean
   error?: string
   origen: string
+}
+// Presupuesto son los límites diarios y mensuales de una API o del espacio; 0 o ausente = sin límite.
+export interface Limites {
+  peticiones?: number
+  tokens?: number
+  usd?: number
+}
+export interface Presupuesto {
+  diario?: Limites
+  mensual?: Limites
+}
+// Consumo es lo gastado en un periodo; terminados sirve para estimar lo que gastarán los trabajos en curso.
+export interface Consumo {
+  peticiones: number
+  terminados: number
+  tokens: number
+  usd: number
+}
+export interface EstadoPresupuesto {
+  diario: { limites: Limites; consumo: Consumo; reinicio: string }
+  mensual: { limites: Limites; consumo: Consumo; reinicio: string }
+}
+// presupuestoLimpio deja solo los límites mayores que 0; sin ninguno devuelve undefined (sin presupuesto).
+export function presupuestoLimpio(p: Presupuesto): Presupuesto | undefined {
+  const limpio: Presupuesto = {}
+  for (const periodo of ['diario', 'mensual'] as const) {
+    const l = Object.fromEntries(Object.entries(p[periodo] ?? {}).filter(([, v]) => Number(v) > 0).map(([k, v]) => [k, Number(v)]))
+    if (Object.keys(l).length) limpio[periodo] = l
+  }
+  return Object.keys(limpio).length ? limpio : undefined
 }
 // UsoPunto son las peticiones de una API que conserva la retención (7 días): total, con error y la última.
 export interface UsoPunto {
@@ -118,6 +149,7 @@ export interface ConfigPunto {
   alias_modelos?: Record<string, string>
   esquema?: Record<string, unknown>
   respaldo?: string[]
+  presupuesto?: Presupuesto
 }
 // Modelo es una entrada del catálogo: agente, agente/modelo o perfil/nombre, con la versión real que informó el
 // agente la última vez y si es el predeterminado del espacio.
@@ -272,7 +304,11 @@ export const api = {
     return pedir<{ identificador_carga: string }>('POST', '/api/v1/cargas', datos)
   },
   puntos: () => pedir<{ puntos_acceso: EstadoPunto[] }>('GET', '/api/v1/puntos').then((r) => r.puntos_acceso),
-  puntosConUso: () => pedir<{ puntos_acceso: EstadoPunto[]; uso?: Record<string, UsoPunto> }>('GET', '/api/v1/puntos'),
+  puntosConUso: () => pedir<{ puntos_acceso: EstadoPunto[]; uso?: Record<string, UsoPunto>; presupuestos?: Record<string, EstadoPresupuesto> }>('GET', '/api/v1/puntos'),
+  presupuestoInstancia: () => pedir<{ presupuesto?: EstadoPresupuesto }>('GET', '/api/v1/instancia/presupuesto').then((r) => r.presupuesto),
+  // reiniciarPresupuesto pone a cero el consumo del día y del mes de una API, o del espacio sin nombre.
+  reiniciarPresupuesto: (nombre?: string) =>
+    pedir<void>('POST', nombre ? `/api/v1/puntos/${encodeURIComponent(nombre)}/presupuesto/reiniciar` : '/api/v1/instancia/presupuesto/reiniciar'),
   crearPunto: (p: ConfigPunto) => pedir<{ punto_acceso?: EstadoPunto; token: string }>('POST', '/api/v1/puntos', p),
   activarPunto: (nombre: string, activo: boolean) => pedir<unknown>('PATCH', `/api/v1/puntos/${encodeURIComponent(nombre)}`, { activo }),
   // ajustesPunto cambia solo lo que se envía; modelo es un id del catálogo y '' vuelve al del espacio.
@@ -292,6 +328,7 @@ export interface AjustesPunto {
   modelos_permitidos?: string[]
   esquema?: Record<string, unknown> | null
   respaldo?: string[]
+  presupuesto?: Presupuesto | null
 }
 
 // Receta es lo que define una API y se prueba en Probar: instrucciones, modelo, esfuerzo, respaldo y esquema

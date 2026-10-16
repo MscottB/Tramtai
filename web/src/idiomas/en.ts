@@ -573,6 +573,21 @@ const en: Textos = {
   'ayuda.p12': 'What happens if an agent hits its limit?',
   'ayuda.r12':
     'If the recipe has a fallback, the request continues with the next agent in the list (up to 3) when the main one fails before it starts answering: usage limit, missing key, not installed or an error. You will see a notice in Try, and History shows which agent answered. If the agent had already started answering it is not switched, so two answers are never mixed. The time limit applies to each attempt.',
+  'presupuesto.editorTexto': 'Budget: daily and monthly limits. At 80% you are warned and at 100% new requests are rejected until the reset. Empty or 0 = no limit.',
+  'presupuesto.diario': 'Daily',
+  'presupuesto.mensual': 'Monthly',
+  'presupuesto.peticiones': 'Requests',
+  'presupuesto.tokens': 'Tokens',
+  'presupuesto.usd': 'USD',
+  'presupuesto.usdHint': 'Only adds up the cost the agent reports (Claude today)',
+  'presupuesto.reinicios': 'The day resets {dia} and the month {mes}',
+  'presupuesto.reiniciar': 'Reset usage',
+  'presupuesto.reiniciarTitulo': 'Reset the usage of {nombre}',
+  'presupuesto.reiniciarEspacio': 'Reset the workspace usage',
+  'presupuesto.reiniciarTexto': "Sets today's and this month's usage to zero: requests are accepted again even if the limit had been reached.",
+  'presupuesto.reiniciado': 'Usage reset',
+  'presupuesto.espacio': 'Workspace budget',
+  'presupuesto.espacioTexto': 'Counts every request in the workspace: your APIs, the main key and Try.',
 }
 
 export default en
