@@ -1,9 +1,6 @@
 <template>
   <div class="pagina apilado">
-    <div>
-      <div class="titulo-pagina">{{ t('menu.ejecutar') }}</div>
-      <div class="texto-suave">{{ t('ejecutar.subtitulo') }}</div>
-    </div>
+    <CabeceraPagina :titulo="t('menu.ejecutar')" :descripcion="t('ejecutar.subtitulo')" />
 
     <div class="row q-col-gutter-lg">
       <div class="col-12 col-md-5">
@@ -20,7 +17,7 @@
             </q-banner>
           </q-card-section>
           <q-card-section>
-            <EditorReceta v-model="receta" :catalogo="catalogo" />
+            <EditorReceta v-model="receta" :catalogo="catalogo" plegar-opciones />
           </q-card-section>
           <q-separator />
           <q-card-section class="q-gutter-y-md">
@@ -61,8 +58,8 @@
         </q-card>
       </div>
 
-      <div class="col-12 col-md-7">
-        <q-card class="full-height column">
+      <div class="col-12 col-md-7 respuesta-fija">
+        <q-card class="column">
           <q-card-section class="row items-center no-wrap q-gutter-x-sm">
             <div class="titulo-seccion">{{ t('ejecutar.respuesta') }}</div>
             <q-space />
@@ -78,8 +75,7 @@
           <q-separator />
           <q-card-section class="salida-caja col" style="min-height: 300px">
             <div v-if="!trabajo" class="vacio">
-              <q-icon name="o_forum" size="44px" />
-              <div class="q-mt-sm">{{ t('ejecutar.vacio') }}</div>
+              <EstadoVacio :titulo="t('ejecutar.vacio')" />
               <div class="q-mt-lg text-caption">{{ t('ejecutar.ejemplos') }}</div>
               <div class="column q-gutter-sm q-mt-xs" style="max-width: 460px; margin-left: auto; margin-right: auto">
                 <div v-for="e in ejemplos" :key="e" class="paso text-left row items-center no-wrap" role="button" tabindex="0"
@@ -161,7 +157,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import EditorReceta from '../componentes/EditorReceta.vue'
+import EstadoVacio from '../componentes/EstadoVacio.vue'
 import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
 import { ajustesDeReceta, api, aplicarModelo, avisar, avisarError, configDeReceta, copiar, duracion, esJSON, esquemaDeReceta, estadoInfo, modeloInicial,

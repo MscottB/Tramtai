@@ -27,3 +27,25 @@ func TestEsfuerzo(t *testing.T) {
 		t.Errorf("gemini no admite esfuerzo: %v", n)
 	}
 }
+
+func TestEsfuerzoPredeterminado(t *testing.T) {
+	casos := map[[2]string]string{
+		{"claude", "claude-opus-5-5"}:   "medio",
+		{"claude", "claude-sonnet-5-5"}: "medio",
+		{"claude", "claude-haiku-5-5"}:  "medio",
+		{"claude", "claude-opus-4-7"}:   "muy_alto",
+		{"claude", "claude-fable-5-1"}:  "alto",
+		{"claude", "claude-opus-4-6"}:   "alto",
+		{"claude", "claude-sonnet-6-0"}: "", // un modelo sin comprobar no recibe un valor supuesto
+		{"claude", "claude-haiku-4-5"}:  "",
+		{"claude", "opus"}:              "", // un alias puede cambiar de modelo: sin la versión real no se sabe
+		{"claude", ""}:                  "",
+		{"codex", "gpt-5.6-sol"}:        "", // Codex depende del modelo y no lo documenta por modelo
+		{"gemini", "gemini-pro-latest"}: "",
+	}
+	for c, esperado := range casos {
+		if obtenido := EsfuerzoPredeterminado(c[0], c[1]); obtenido != esperado {
+			t.Errorf("%s/%s: %q, se esperaba %q", c[0], c[1], obtenido, esperado)
+		}
+	}
+}

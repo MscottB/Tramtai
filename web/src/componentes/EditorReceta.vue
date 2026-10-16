@@ -5,9 +5,11 @@
       @update:model-value="(v) => cambiar({ instrucciones: String(v ?? '') })" />
     <SelectorModelo :model-value="modelValue.modelo" :opciones="opciones" clearable :label="t('receta.modelo')"
       @update:model-value="(v) => cambiar({ modelo: v, forzar: v ? modelValue.forzar : false })" />
+    <component :is="plegarOpciones ? QExpansionItem : 'div'" v-bind="plegarOpciones ? plegable : {}">
+    <div class="q-gutter-y-md" :class="{ 'q-pt-sm': plegarOpciones }">
     <q-toggle :model-value="modelValue.forzar" :disable="!modelValue.modelo" :label="t('receta.forzar')"
       @update:model-value="(v: boolean) => cambiar({ forzar: v })" />
-    <SelectorEsfuerzo :model-value="modelValue.esfuerzo" :niveles="niveles" :hint="paraApi ? t('esfuerzo.api') : undefined"
+    <SelectorEsfuerzo :model-value="modelValue.esfuerzo" :niveles="niveles" :predeterminado="esfuerzoPredeterminadoDe(catalogo, modelValue.modelo)" :hint="paraApi ? t('esfuerzo.api') : undefined"
       @update:model-value="(v: string) => cambiar({ esfuerzo: v })" />
     <q-select :model-value="modelValue.respaldo" :options="opcionesRespaldo" multiple use-chips emit-value map-options outlined dense
       :max-values="3" :label="t('receta.respaldo')" :hint="t('receta.respaldoHint')"
@@ -21,6 +23,8 @@
     <q-input v-if="estructurada" :model-value="modelValue.esquema" type="textarea" autogrow outlined dense input-class="codigo"
       :label="t('receta.esquema')" :error="!!errorEsquema" :error-message="errorEsquema" :hint="t('receta.esquemaHint')"
       @update:model-value="(v) => escribirEsquema(String(v ?? ''))" />
+    </div>
+    </component>
   </div>
 </template>
 
@@ -28,16 +32,25 @@
 // EditorReceta edita lo que define una API (instrucciones, modelo, esfuerzo, respaldo y esquema); lo comparten
 // Probar, donde se prueba, y Mis APIs, donde se guarda.
 import { computed, ref, watch } from 'vue'
+import { QExpansionItem } from 'quasar'
 import SelectorEsfuerzo from './SelectorEsfuerzo.vue'
 import SelectorModelo from './SelectorModelo.vue'
-import { esfuerzosDe, esquemaDeReceta, opcionModelo, type Modelo, type Receta } from '../api'
+import { esfuerzoPredeterminadoDe, esfuerzosDe, esquemaDeReceta, opcionModelo, type Modelo, type Receta } from '../api'
 import { t } from '../i18n'
 
 // paraApi: en una API sin modelo fijo la aplicación puede elegirlo, así que se ofrecen todos los niveles de esfuerzo.
-const props = defineProps<{ modelValue: Receta; catalogo: Modelo[]; paraApi?: boolean }>()
+// plegarOpciones (Probar): forzar modelo, esfuerzo, respaldo y salida JSON van en «Opciones de la receta», abierta si
+// alguna tiene valor, para dejar arriba lo esencial.
+const props = defineProps<{ modelValue: Receta; catalogo: Modelo[]; paraApi?: boolean; plegarOpciones?: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [valor: Receta] }>()
 
 const cambiar = (parcial: Partial<Receta>) => emit('update:modelValue', { ...props.modelValue, ...parcial })
+const conOpciones = computed(() => props.modelValue.forzar || !!props.modelValue.esfuerzo || props.modelValue.respaldo.length > 0 || !!props.modelValue.esquema)
+// La receta puede llegar después de montar (Abrir en Probar): se abre en cuanto alguna opción tiene valor.
+const abierta = ref(conOpciones.value)
+watch(conOpciones, (v) => v && (abierta.value = true))
+const plegable = computed(() => ({ label: t('receta.opciones'), icon: 'o_tune', dense: true, modelValue: abierta.value,
+  'onUpdate:modelValue': (v: boolean) => (abierta.value = v), headerClass: 'q-px-none text-body2' }))
 
 const opciones = computed(() => props.catalogo.map(opcionModelo))
 // El respaldo es agente o agente/modelo: un perfil no sirve porque da un modelo distinto por agente.

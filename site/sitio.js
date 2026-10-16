@@ -16,6 +16,25 @@
   });
 })();
 
+// Tema: Sistema, Claro u Oscuro; el script de <head> ya aplicó el guardado antes de pintar.
+(function () {
+  var botones = document.querySelectorAll('button[data-tema]'); // <html> también lleva data-tema
+  function aplicar(tema) {
+    if (tema === 'sistema') delete document.documentElement.dataset.tema;
+    else document.documentElement.dataset.tema = tema;
+    botones.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.tema === tema)); });
+  }
+  var guardado = null;
+  try { guardado = localStorage.getItem('tramtai.tema'); } catch (e) {}
+  aplicar(guardado === 'claro' || guardado === 'oscuro' ? guardado : 'sistema');
+  botones.forEach(function (b) {
+    b.addEventListener('click', function () {
+      aplicar(b.dataset.tema);
+      try { localStorage.setItem('tramtai.tema', b.dataset.tema); } catch (e) {}
+    });
+  });
+})();
+
 // Botón «Copiar» en cada bloque de código (con los dos idiomas, como el resto de la página).
 (function () {
   if (!navigator.clipboard) return;

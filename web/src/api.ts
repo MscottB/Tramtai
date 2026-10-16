@@ -165,6 +165,8 @@ export interface Modelo {
   predeterminado?: boolean
   // esfuerzos: niveles de esfuerzo que admite su agente (vacío si no se puede elegir).
   esfuerzos?: string[]
+  // esfuerzo_predeterminado es el nivel que usa el agente si no se elige; ausente si no se conoce con certeza.
+  esfuerzo_predeterminado?: string
 }
 export interface EntradaConfiguracion {
   clave: string
@@ -468,6 +470,15 @@ export function codigoLinea(agente?: string): string {
   return ({ claude: 'CL', codex: 'CX', gemini: 'GM', antigravity: 'AG' } as Record<string, string>)[agente ?? ''] ?? (agente ?? 'API').slice(0, 2).toUpperCase()
 }
 
+// ordenAgentes es el orden fijo de los agentes en toda la Web UI.
+export const ordenAgentes = ['claude', 'codex', 'gemini', 'antigravity']
+
+// ordenarAgentes pone los agentes en el orden fijo de la red; los desconocidos, al final y por nombre.
+export function ordenarAgentes<T extends { agente: string }>(lista: T[]): T[] {
+  const posicion = (a: string) => ordenAgentes.indexOf(a) + 1 || ordenAgentes.length + 1
+  return [...lista].sort((a, b) => posicion(a.agente) - posicion(b.agente) || a.agente.localeCompare(b.agente))
+}
+
 export function nombreAgente(agente?: string): string {
   return agente ? (agentes[agente] ?? agente) : '—'
 }
@@ -505,10 +516,21 @@ export function opcionModelo(m: Modelo): OpcionModelo {
 // esfuerzosDe son los niveles de esfuerzo del modelo elegido ('' es el predeterminado del espacio); uno escrito a
 // mano que no está en el catálogo tiene los de su agente.
 export function esfuerzosDe(catalogo: Modelo[], seleccion: string | null): string[] {
-  const m = seleccion
+  return entradaCatalogo(catalogo, seleccion)?.esfuerzos ?? []
+}
+
+// esfuerzoPredeterminadoDe es el nivel que usará el agente con el modelo elegido si no se indica otro ('' si no se sabe).
+export function esfuerzoPredeterminadoDe(catalogo: Modelo[], seleccion: string | null): string {
+  // Solo la entrada exacta: el predeterminado depende del modelo, y la del agente lleva el de otro (el de su CLI).
+  const m = seleccion ? catalogo.find((x) => x.id === seleccion) : catalogo.find((x) => x.predeterminado)
+  return m?.esfuerzo_predeterminado ?? ''
+}
+
+// entradaCatalogo es la entrada del catálogo elegida (o la predeterminada); un id escrito a mano cae en su agente.
+function entradaCatalogo(catalogo: Modelo[], seleccion: string | null): Modelo | undefined {
+  return seleccion
     ? (catalogo.find((x) => x.id === seleccion) ?? catalogo.find((x) => x.id === seleccion.split('/')[0]))
     : catalogo.find((x) => x.predeterminado)
-  return m?.esfuerzos ?? []
 }
 
 export function nombreEsfuerzo(nivel?: string): string {

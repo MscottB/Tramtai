@@ -11,6 +11,7 @@
 <meta name="theme-color" content="#0b6e64">
 <link rel="icon" href="logo.png">
 <link rel="stylesheet" href="estilo.css">
+<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t } catch (e) {}</script>
 </head>
 <body>
 <header class="barra">
@@ -27,6 +28,11 @@
     <div class="idioma" role="group" aria-label="Idioma / Language">
       <button type="button" data-idioma="es" aria-pressed="true">ES</button>
       <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+    </div>
+    <div class="idioma tema" role="group" aria-label="Tema / Theme">
+      <button type="button" data-tema="sistema" aria-pressed="true" aria-label="Tema del sistema / System theme" title="Sistema / System">◐</button>
+      <button type="button" data-tema="claro" aria-pressed="false" aria-label="Tema claro / Light theme" title="Claro / Light">☀</button>
+      <button type="button" data-tema="oscuro" aria-pressed="false" aria-label="Tema oscuro / Dark theme" title="Oscuro / Dark">☾</button>
     </div>
     <a class="boton principal" href="#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
   </div>
@@ -61,7 +67,7 @@
       </div>
 
       <div class="mapa" aria-hidden="true">
-        <svg viewBox="0 0 440 320">
+        <svg viewBox="0 0 520 320">
           <g fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M 40 160 L 150 160" stroke="var(--acento)"/>
             <path d="M 270 148 L 284 148 C 324 148 318 70 358 70 L 378 70" stroke="var(--claude)"/>
@@ -80,11 +86,11 @@
             <circle cx="384" cy="190" r="10" stroke="var(--gemini)"/>
             <circle cx="384" cy="250" r="10" stroke="var(--antigravity)"/>
           </g>
-          <g font-size="12.5" fill="var(--texto-suave)" text-anchor="end">
-            <text x="370" y="52">Claude Code</text>
-            <text x="370" y="112">Codex</text>
-            <text x="370" y="214">Gemini API</text>
-            <text x="370" y="274">Antigravity</text>
+          <g font-size="12.5" fill="var(--texto-suave)" text-anchor="start">
+            <text x="404" y="74">Claude Code</text>
+            <text x="404" y="134">Codex</text>
+            <text x="404" y="194">Gemini API</text>
+            <text x="404" y="254">Antigravity</text>
           </g>
           <rect class="tranvia" x="-13" y="-7" width="26" height="14" rx="5" fill="var(--acento)"/>
         </svg>
@@ -124,6 +130,27 @@ respuesta = cliente.chat.completions.create(
     </div>
   </section>
 
+  <section id="capturas">
+    <div class="envoltura">
+      <div class="cabeza">
+        <span class="etiqueta"><span lang="es">Así se ve</span><span lang="en">How it looks</span></span>
+        <h2><span lang="es">Tu red, a la vista.</span><span lang="en">Your network, at a glance.</span></h2>
+      </div>
+      <div class="capturas">
+        <figure class="captura">
+          <img class="solo-claro" src="capturas/inicio-claro.png" width="1440" height="900" loading="lazy" alt="Inicio: tus apps, Tramtai y una línea por agente con su estado">
+          <img class="solo-oscuro" src="capturas/inicio-oscuro.png" width="1440" height="900" loading="lazy" alt="Inicio: tus apps, Tramtai y una línea por agente con su estado">
+          <figcaption><span lang="es">Inicio: tus apps, Tramtai y una línea por agente con su estado</span><span lang="en">Home: your apps, Tramtai and one line per agent with its status</span></figcaption>
+        </figure>
+        <figure class="captura">
+          <img class="solo-claro" src="capturas/mis-apis-claro.png" width="1440" height="900" loading="lazy" alt="Mis APIs: la dirección, la clave y ejemplos listos para copiar">
+          <img class="solo-oscuro" src="capturas/mis-apis-oscuro.png" width="1440" height="900" loading="lazy" alt="Mis APIs: la dirección, la clave y ejemplos listos para copiar">
+          <figcaption><span lang="es">Mis APIs: la dirección, la clave y ejemplos listos para copiar</span><span lang="en">My APIs: the address, the key and ready-to-copy examples</span></figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
   <section id="funciones">
     <div class="envoltura">
       <div class="cabeza">
@@ -132,11 +159,23 @@ respuesta = cliente.chat.completions.create(
         <p class="suave"><span lang="es">Cada petición viaja por la línea de su agente, y tú ves el recorrido completo: en cola, en ejecución y llegada.</span><span lang="en">Every request travels along its agent's line, and you see the whole journey: queued, running and arrived.</span></p>
       </div>
       <div class="rejilla">
+        <p class="grupo-funciones" role="heading" aria-level="3"><span lang="es">Conecta</span><span lang="en">Connect</span></p>
         <article class="tarjeta">
           <div class="linea"></div>
           <h3><span lang="es">Compatible con tus SDK</span><span lang="en">Works with your SDKs</span></h3>
           <p><span lang="es">Rutas compatibles con OpenAI (chat y responses) y Anthropic (messages), con streaming y herramientas (<code>tools</code>), más una API propia con eventos en vivo.</span><span lang="en">OpenAI-compatible (chat and responses) and Anthropic-compatible (messages) routes, with streaming and tool calling (<code>tools</code>), plus a native API with live events.</span></p>
         </article>
+        <article class="tarjeta">
+          <div class="linea" style="background: var(--codex)"></div>
+          <h3><span lang="es">Desde donde prefieras</span><span lang="en">Use it your way</span></h3>
+          <p><span lang="es">App con icono en la bandeja, Web UI en español e inglés, terminal interactiva y CLI. Todas ven los mismos trabajos.</span><span lang="en">Tray app, Web UI in Spanish and English, interactive terminal and CLI. They all see the same jobs.</span></p>
+        </article>
+        <article class="tarjeta">
+          <div class="linea" style="background: var(--gemini)"></div>
+          <h3><span lang="es">Archivos de verdad</span><span lang="en">Real documents</span></h3>
+          <p><span lang="es">Adjunta PDF, Word, Excel, PowerPoint o ZIP: Tramtai los convierte a texto antes de pasarlos al agente.</span><span lang="en">Attach PDF, Word, Excel, PowerPoint or ZIP files: Tramtai turns them into text before handing them to the agent.</span></p>
+        </article>
+        <p class="grupo-funciones" role="heading" aria-level="3"><span lang="es">Controla</span><span lang="en">Control</span></p>
         <article class="tarjeta">
           <div class="linea" style="background: var(--claude)"></div>
           <h3><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></h3>
@@ -148,29 +187,20 @@ respuesta = cliente.chat.completions.create(
           <p><span lang="es">En Probar defines instrucciones, agente y esquema JSON, lo pruebas con tus archivos y lo guardas como API. Tu app envía el mensaje y recibe la respuesta con esa forma.</span><span lang="en">In Try you set instructions, agent and JSON schema, test it with your files and save it as an API. Your app sends the message and gets the answer in that shape.</span></p>
         </article>
         <article class="tarjeta">
+          <div class="linea" style="background: var(--claude)"></div>
+          <h3><span lang="es">Modelo y esfuerzo a tu medida</span><span lang="en">Your model, your effort</span></h3>
+          <p><span lang="es">Elige modelo en cada petición y, en Claude y Codex, cuánto razona el agente: de bajo a máximo.</span><span lang="en">Pick the model per request and, for Claude and Codex, how hard the agent reasons: from low to maximum.</span></p>
+        </article>
+        <p class="grupo-funciones" role="heading" aria-level="3"><span lang="es">Protege</span><span lang="en">Protect</span></p>
+        <article class="tarjeta">
           <div class="linea" style="background: var(--antigravity)"></div>
           <h3><span lang="es">Respaldo entre agentes</span><span lang="en">Agent fallback</span></h3>
           <p><span lang="es">Si un agente llega a su límite o falla antes de responder, la petición sigue con el siguiente de tu lista, sin que tu app lo note.</span><span lang="en">If an agent hits its limit or fails before answering, the request continues with the next one on your list, without your app noticing.</span></p>
         </article>
         <article class="tarjeta">
-          <div class="linea" style="background: var(--gemini)"></div>
-          <h3><span lang="es">Archivos de verdad</span><span lang="en">Real documents</span></h3>
-          <p><span lang="es">Adjunta PDF, Word, Excel, PowerPoint o ZIP: Tramtai los convierte a texto antes de pasarlos al agente.</span><span lang="en">Attach PDF, Word, Excel, PowerPoint or ZIP files: Tramtai turns them into text before handing them to the agent.</span></p>
-        </article>
-        <article class="tarjeta">
           <div class="linea"></div>
           <h3><span lang="es">Respuestas con forma</span><span lang="en">Structured answers</span></h3>
           <p><span lang="es">Pide JSON que cumpla un JSON Schema y Tramtai lo valida antes de devolvértelo.</span><span lang="en">Ask for JSON that matches a JSON Schema and Tramtai validates it before returning it.</span></p>
-        </article>
-        <article class="tarjeta">
-          <div class="linea" style="background: var(--claude)"></div>
-          <h3><span lang="es">Modelo y esfuerzo a tu medida</span><span lang="en">Your model, your effort</span></h3>
-          <p><span lang="es">Elige modelo en cada petición y, en Claude y Codex, cuánto razona el agente: de bajo a máximo.</span><span lang="en">Pick the model per request and, for Claude and Codex, how hard the agent reasons: from low to maximum.</span></p>
-        </article>
-        <article class="tarjeta">
-          <div class="linea" style="background: var(--codex)"></div>
-          <h3><span lang="es">Desde donde prefieras</span><span lang="en">Use it your way</span></h3>
-          <p><span lang="es">App con icono en la bandeja, Web UI en español e inglés, terminal interactiva y CLI. Todas ven los mismos trabajos.</span><span lang="en">Tray app, Web UI in Spanish and English, interactive terminal and CLI. They all see the same jobs.</span></p>
         </article>
         <article class="tarjeta">
           <div class="linea" style="background: var(--antigravity)"></div>

@@ -1,9 +1,6 @@
 <template>
   <div class="pagina apilado">
-    <div>
-      <div class="titulo-pagina">{{ t('menu.configuracion') }}</div>
-      <div class="texto-suave">{{ t('config.subtitulo') }}</div>
-    </div>
+    <CabeceraPagina :titulo="t('menu.configuracion')" :descripcion="t('config.subtitulo')" />
 
     <q-card>
       <q-card-section class="row items-center q-col-gutter-md">
@@ -70,8 +67,8 @@
     </q-card>
 
     <div class="row q-col-gutter-md">
-      <div v-if="sesion?.autoarranque !== undefined" class="col-12 col-md-6">
-        <q-card class="full-height">
+      <div v-if="sesion?.autoarranque !== undefined" class="col-12">
+        <q-card>
           <q-card-section class="row items-start no-wrap">
             <div class="col">
               <div class="titulo-seccion">{{ t('arranque.titulo', { sistema }) }}</div>
@@ -81,8 +78,8 @@
           </q-card-section>
         </q-card>
       </div>
-      <div class="col-12" :class="{ 'col-md-6': sesion?.autoarranque !== undefined }">
-        <q-card class="full-height">
+      <div class="col-12">
+        <q-card>
           <q-card-section class="row items-start no-wrap q-pb-sm">
             <div class="col">
               <div class="titulo-seccion">{{ t('datos.titulo') }}</div>
@@ -154,6 +151,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import { useQuasar } from 'quasar'
 import { actualizacion, api, avisar, avisarError, buscarActualizacionAhora, opcionModelo, reiniciarYSeguir, sesion, sistema, terminales, type EntradaConfiguracion, type EstadoPunto, type Modelo } from '../api'
 import { t } from '../i18n'

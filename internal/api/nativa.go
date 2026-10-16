@@ -320,6 +320,8 @@ type modelo struct {
 	Predeterminado bool   `json:"predeterminado,omitempty"`
 	// Esfuerzos son los niveles de esfuerzo que admite su agente; vacío si no se puede elegir.
 	Esfuerzos []string `json:"esfuerzos,omitempty"`
+	// EsfuerzoPredeterminado es el nivel que usa el agente si no se elige; vacío si no se conoce con certeza.
+	EsfuerzoPredeterminado string `json:"esfuerzo_predeterminado,omitempty"`
 }
 
 // predeterminado es el identificador del catálogo que se usa cuando la solicitud no indica agente ni modelo.
@@ -426,6 +428,7 @@ func (s *Servidor) modelosNativos(w http.ResponseWriter, r *http.Request) {
 		if d := destinos[i]; d[0] != "" {
 			// Lo que el agente dice que usará ahora manda sobre lo que informó la última vez que se usó.
 			lista[i].Version = cmp.Or(concretos[d[0]+"/"+d[1]], efectivos[d[0]+"/"+d[1]])
+			lista[i].EsfuerzoPredeterminado = adaptadores.EsfuerzoPredeterminado(d[0], cmp.Or(lista[i].Version, d[1]))
 		}
 	}
 	EscribirJSON(w, http.StatusOK, map[string]any{"modelos": lista})

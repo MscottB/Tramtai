@@ -4,7 +4,8 @@ import { quasar, transformAssetUrls } from '@quasar/vite-plugin'
 
 // En desarrollo (npm run dev) las llamadas van al servicio en marcha; el origen sigue siendo el mismo para el
 // navegador, así que la cookie y la validación de Origin funcionan igual que en producción.
-const servicio = 'http://127.0.0.1:17373'
+// TRAMTAI_SERVICIO apunta a otro servicio (por ejemplo, uno de prueba aislado en otro puerto).
+const servicio = process.env.TRAMTAI_SERVICIO ?? 'http://127.0.0.1:17373'
 
 // sinWoff quita la alternativa .woff de las fuentes de iconos: los navegadores y webviews actuales cargan la .woff2,
 // y así la .woff (unos 350 KB) no se incorpora al ejecutable.

@@ -209,6 +209,99 @@ input[type='number'] {
   color: var(--texto);
   border-bottom: 1px solid var(--borde);
 }
+/* Fila de una API en Mis APIs: insignia, datos, uso y acciones. */
+.fila-api {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1.3fr) minmax(0, 1fr) auto;
+  gap: 8px 16px;
+  align-items: start;
+  padding: 16px;
+  border-top: 1px solid var(--borde);
+}
+.fila-api__info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+@media (max-width: 1023px) {
+  .fila-api {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .fila-api__uso,
+  .fila-api__acciones {
+    grid-column: 2;
+  }
+}
+.grupo-modelo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 110px;
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+}
+/* Probar: la respuesta queda a la vista mientras se desplaza el formulario. */
+@media (min-width: 1024px) {
+  .respuesta-fija {
+    position: sticky;
+    top: 76px;
+    align-self: flex-start;
+  }
+}
+/* Ayudas bajo los campos: legibles, no diminutas. */
+.q-field__bottom,
+.ayuda-campo {
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+.estado-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 32px 16px;
+  text-align: center;
+}
+.estado-vacio__titulo {
+  margin-top: 8px;
+  font-weight: 650;
+}
+.marca-boton {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 6px;
+  margin-left: -6px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.marca-boton:hover {
+  background: var(--superficie-suave);
+}
+.marca-boton:focus-visible,
+.cabecera-pagina__volver:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+.cabecera-pagina__volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 6px -2px;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: var(--acento);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.cabecera-pagina__volver:hover {
+  text-decoration: underline;
+}
 .marca {
   font-family: var(--fuente-titulo);
   font-weight: 700;

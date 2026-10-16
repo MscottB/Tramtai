@@ -1,9 +1,6 @@
 <template>
   <div class="pagina apilado">
-    <div>
-      <div class="titulo-pagina">{{ t('menu.ayuda') }}</div>
-      <div class="texto-suave">{{ t('ayuda.subtitulo') }}</div>
-    </div>
+    <CabeceraPagina :titulo="t('menu.ayuda')" :descripcion="t('ayuda.subtitulo')" />
 
     <q-card>
       <q-card-section class="row items-center">
@@ -51,6 +48,7 @@
 
 <script setup lang="ts">
 import { guiaOculta, ocultarGuia } from '../api'
+import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import { t } from '../i18n'
 
 defineEmits<{ ir: [pagina: string] }>()

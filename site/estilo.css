@@ -19,8 +19,9 @@
   --mono: 'Cascadia Code', 'Cascadia Mono', ui-monospace, Consolas, 'SF Mono', monospace;
   color-scheme: light;
 }
+/* Tema: el del sistema, salvo que se elija Claro u Oscuro (data-tema en <html>, ver sitio.js). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-tema="claro"]) {
     --fondo: #0a1116; --superficie: #111c23; --superficie-suave: #15222a;
     --borde: #1f2f38; --borde-fuerte: #2d404b;
     --texto: #e5edf0; --texto-suave: #93a5ac;
@@ -30,6 +31,16 @@
     --sombra: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
     color-scheme: dark;
   }
+}
+:root[data-tema="oscuro"] {
+  --fondo: #0a1116; --superficie: #111c23; --superficie-suave: #15222a;
+  --borde: #1f2f38; --borde-fuerte: #2d404b;
+  --texto: #e5edf0; --texto-suave: #93a5ac;
+  --acento: #2dd4bf; --acento-texto: #042f2b; --acento-suave: rgba(45, 212, 191, .11);
+  --claude: #f28a4f; --codex: #5b8def; --gemini: #a78bfa; --antigravity: #f472b6;
+  --tablero: #060b0e;
+  --sombra: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -56,6 +67,8 @@ p { margin: 0; }
 .idioma { display: inline-flex; border: 1px solid var(--borde-fuerte); border-radius: 999px; overflow: hidden; }
 .idioma button { border: 0; background: none; color: var(--texto-suave); font: 600 .8rem var(--fuente); padding: 5px 10px; cursor: pointer; }
 .idioma button[aria-pressed="true"] { background: var(--acento); color: var(--acento-texto); }
+.tema { margin-left: 6px; }
+.tema button { padding: 5px 9px; }
 
 /* Botones */
 .boton { display: inline-flex; align-items: center; gap: 10px; padding: 12px 20px; border-radius: 10px; font-weight: 600; text-decoration: none; border: 1px solid transparent; transition: transform .15s ease, box-shadow .15s ease; }
@@ -82,6 +95,21 @@ p { margin: 0; }
 
 /* Secciones */
 section { padding: 72px 0; }
+/* Funciones agrupadas: un titular por bloque a todo el ancho de la rejilla. */
+.grupo-funciones { grid-column: 1 / -1; margin: 12px 0 -4px; font: 700 .8rem var(--titulo); letter-spacing: .06em; text-transform: uppercase; color: var(--acento); }
+.grupo-funciones:first-child { margin-top: 0; }
+/* Capturas de la app: la del tema efectivo (el del sistema o el elegido). */
+.capturas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 24px; }
+.captura { margin: 0; }
+.captura img { width: 100%; height: auto; border: 1px solid var(--borde); border-radius: var(--radio); box-shadow: var(--sombra); }
+.captura figcaption { margin-top: 10px; color: var(--texto-suave); font-size: .9rem; }
+.solo-oscuro { display: none; }
+:root[data-tema="oscuro"] .solo-oscuro { display: block; }
+:root[data-tema="oscuro"] .solo-claro { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="claro"]) .solo-oscuro { display: block; }
+  :root:not([data-tema="claro"]) .solo-claro { display: none; }
+}
 .cabeza { max-width: 44em; margin-bottom: 36px; }
 .cabeza p { margin-top: 12px; font-size: 1.05rem; }
 .etiqueta { font: 700 .78rem var(--titulo); letter-spacing: .12em; text-transform: uppercase; color: var(--acento); margin-bottom: 10px; display: block; }

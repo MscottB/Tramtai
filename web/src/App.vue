@@ -7,12 +7,11 @@
     <q-header class="cabecera-app">
       <q-toolbar class="q-px-md" style="min-height: 60px">
         <q-btn flat dense round icon="menu" :aria-label="t('app.abrirMenu')" class="lt-md q-mr-sm" @click="menu = !menu" />
-        <q-btn v-if="pila.length" flat round dense icon="arrow_back" :aria-label="t('app.volver')" class="q-mr-xs" @click="volver">
-          <q-tooltip>{{ t('app.volverA', { pagina: tituloDe(pila[pila.length - 1]) }) }}</q-tooltip>
-        </q-btn>
-        <img src="/logo.png" alt="" width="28" height="28" style="border-radius: 8px" />
-        <div class="q-ml-sm marca gt-xs">Tramtai</div>
-        <span class="version q-ml-sm gt-xs">{{ sesion.version }}</span>
+        <button type="button" class="marca-boton" :aria-label="t('app.irInicio')" @click="ir('inicio')">
+          <img src="/logo.png" alt="" width="28" height="28" style="border-radius: 8px" />
+          <span class="q-ml-sm marca gt-xs">Tramtai</span>
+          <span class="version q-ml-sm gt-xs">{{ sesion.version }}</span>
+        </button>
         <q-space />
         <q-btn-dropdown v-if="sesion.local && sesion.instancias?.length" flat no-caps :icon="iconoInstancia(sesion.ambito)"
           :label="$q.screen.gt.xs ? sesion.nombre || t('app.elegirInstancia') : undefined" :aria-label="t('app.cambiarInstancia')">
@@ -212,7 +211,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
+import { computed, markRaw, onMounted, onUnmounted, provide, ref, watch, watchEffect } from 'vue'
 import { useQuasar } from 'quasar'
 import { actualizacion, api, avisar, avisarError, buscarActualizacionAhora, dialogoActualizar, reiniciarYSeguir, sesion, type ProgresoActualizacion } from './api'
 import { cambiarIdioma, idioma, idiomas, t } from './i18n'
@@ -315,6 +314,8 @@ const textoProgreso = computed(() => {
 })
 async function instalarActualizacion() {
   actualizando.value = true
+  // El avance se muestra al instante, antes de que responda el servicio: nunca un diálogo sin nada que ver.
+  progreso.value = { fase: 'descargando', version: actualizacion.value?.version ?? '', recibidos: 0, total: 0 }
   try {
     const { version } = await api.actualizar()
     progreso.value = { fase: 'descargando', version, recibidos: 0, total: 0 }
@@ -329,6 +330,7 @@ async function instalarActualizacion() {
       }
     }, 400)
   } catch (e) {
+    progreso.value = null
     avisarError(e)
   } finally {
     actualizando.value = false
@@ -396,13 +398,15 @@ function ir(id: string) {
   if (id === pagina.value) return
   pila.value.push(pagina.value)
   pagina.value = id
-  history.pushState(null, '', '#' + id)
+  history.pushState({ i: base + pila.value.length }, '', '#' + id)
   window.scrollTo({ top: 0 })
 }
 
 function volver() {
   history.back()
 }
+// Las páginas muestran «Volver a …» en su cabecera (CabeceraPagina); la barra superior solo lleva el logo a Inicio.
+provide('navegacion', { anterior: computed(() => tituloDe(pila.value[pila.value.length - 1])), volver })
 
 function tituloDe(id?: string) {
   const p = paginas.find((x) => x.id === id)
@@ -415,16 +419,23 @@ function iconoInstancia(ambito?: string) {
   return ambito === 'proyecto' ? 'o_folder' : 'o_public'
 }
 
-// Atrás o adelante en el navegador: la pila sigue el mismo recorrido.
+// Atrás o adelante en el navegador: cada entrada del historial guarda su profundidad (history.state.i), así se sabe
+// la dirección. base es la profundidad al cargar: antes de ella la pila no conoce las páginas (se recargó).
+let base = (history.state as { i?: number } | null)?.i ?? 0
 function alNavegar() {
   const nueva = desdeHash()
-  if (pila.value[pila.value.length - 1] === nueva) pila.value.pop()
-  else pila.value.push(pagina.value)
+  if (nueva === pagina.value) return // el hash ya apuntaba a esta página: no hay paso que apilar
+  const relativa = ((history.state as { i?: number } | null)?.i ?? 0) - base
+  if (relativa < 0) {
+    pila.value = [] // atrás, más allá de la carga: no se sabe qué había antes
+    base += relativa
+  } else if (relativa < pila.value.length) pila.value.length = relativa // atrás
+  else pila.value.push(pagina.value) // adelante
   pagina.value = nueva
 }
 
 onMounted(async () => {
-  if (location.search) history.replaceState(null, '', location.pathname + location.hash)
+  history.replaceState({ i: base }, '', location.search ? location.pathname + location.hash : location.href)
   window.addEventListener('popstate', alNavegar)
   sondeo = window.setInterval(() => !document.hidden && comprobar(), 10000)
   buscarActualizacion = window.setInterval(comprobarActualizacion, 15 * 60 * 1000)
