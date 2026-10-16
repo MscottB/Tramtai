@@ -419,6 +419,7 @@ function iconoInstancia(ambito?: string) {
 // Atrás o adelante en el navegador: la pila sigue el mismo recorrido.
 function alNavegar() {
   const nueva = desdeHash()
+  if (nueva === pagina.value) return // el hash ya apuntaba a esta página: no hay paso que apilar
   if (pila.value[pila.value.length - 1] === nueva) pila.value.pop()
   else pila.value.push(pagina.value)
   pagina.value = nueva

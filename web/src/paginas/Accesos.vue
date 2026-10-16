@@ -216,7 +216,7 @@ import EstadoVacio from '../componentes/EstadoVacio.vue'
 import MenuAcciones, { type Accion } from '../componentes/MenuAcciones.vue'
 import EditorPresupuesto from '../componentes/EditorPresupuesto.vue'
 import EditorReceta from '../componentes/EditorReceta.vue'
-import { ajustesDeReceta, api, avisar, avisarError, codigoLinea, nombreAgente, configDeReceta, copiar, etiquetaModelo, haceCuanto, idModeloDe as idModelo, nombreEsfuerzo, opcionModelo,
+import { ajustesDeReceta, api, avisar, avisarError, codigoLinea, nombreAgente, ordenAgentes, configDeReceta, copiar, etiquetaModelo, haceCuanto, idModeloDe as idModelo, nombreEsfuerzo, opcionModelo,
   origenHistorial, presupuestoLimpio, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPresupuesto, type EstadoPunto, type Modelo,
   type Presupuesto, type UsoPunto } from '../api'
 import { t } from '../i18n'
@@ -262,7 +262,6 @@ const campos = computed(() => [
   { titulo: t('conectar.apiPropia'), valor: base.value + '/api/v1', texto: t('conectar.apiPropiaTexto') },
 ])
 // gruposModelo agrupa los valores de model: primero los perfiles y luego cada agente en el orden fijo de la red.
-const ordenAgentes = ['claude', 'codex', 'gemini', 'antigravity']
 const gruposModelo = computed(() => [
   { agente: '', titulo: t('conectar.perfiles'), ids: ids.value.filter((id) => id.startsWith('perfil/')) },
   ...ordenAgentes.map((a) => ({ agente: a, titulo: nombreAgente(a), ids: ids.value.filter((id) => id.startsWith(a + '/')) })),

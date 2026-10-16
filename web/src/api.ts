@@ -468,6 +468,9 @@ export function codigoLinea(agente?: string): string {
   return ({ claude: 'CL', codex: 'CX', gemini: 'GM', antigravity: 'AG' } as Record<string, string>)[agente ?? ''] ?? (agente ?? 'API').slice(0, 2).toUpperCase()
 }
 
+// ordenAgentes es el orden fijo de los agentes en toda la Web UI.
+export const ordenAgentes = ['claude', 'codex', 'gemini', 'antigravity']
+
 export function nombreAgente(agente?: string): string {
   return agente ? (agentes[agente] ?? agente) : '—'
 }

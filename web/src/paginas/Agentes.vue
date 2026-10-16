@@ -1,18 +1,14 @@
 <template>
   <div class="pagina apilado">
-    <div class="row items-end q-col-gutter-md">
-      <div class="col-12 col-sm">
-        <div class="titulo-pagina">{{ t('menu.agentes') }}</div>
-        <div class="texto-suave">{{ t('agentes.subtitulo') }}</div>
-      </div>
-      <div class="col-12 col-sm-auto">
+    <CabeceraPagina :titulo="t('menu.agentes')" :descripcion="t('agentes.subtitulo')">
+      <template #acciones>
         <q-btn flat no-caps color="primary" icon="o_refresh" :label="t('agentes.recomprobar')" :loading="cargando" @click="cargar" />
-      </div>
-    </div>
+      </template>
+    </CabeceraPagina>
 
-    <div v-if="adaptadores" class="row q-col-gutter-md">
+    <div v-if="adaptadores" class="row items-start q-col-gutter-md">
       <div v-for="a in adaptadores" :key="a.agente" class="col-12 col-lg-6">
-        <q-card class="full-height column">
+        <q-card class="column">
           <q-card-section class="row items-center no-wrap">
             <span class="linea__chapa linea__chapa--grande q-mr-md" :class="['linea--' + a.agente, { 'linea__chapa--apagada': a.problema }]" aria-hidden="true">{{ codigoLinea(a.agente) }}</span>
             <div class="col">
@@ -99,8 +95,9 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import { useQuasar } from 'quasar'
-import { api, avisar, avisarError, codigoLinea, copiar, modeloInicial, nombreAgente, nombreEsfuerzo, sesion, type Adaptador } from '../api'
+import { api, avisar, avisarError, codigoLinea, copiar, modeloInicial, nombreAgente, nombreEsfuerzo, ordenAgentes, sesion, type Adaptador } from '../api'
 import { t } from '../i18n'
 
 const $q = useQuasar()
@@ -140,7 +137,9 @@ function textoAlmacen(a: Adaptador) {
 async function cargar() {
   cargando.value = true
   try {
-    adaptadores.value = (await api.capacidades()).adaptadores
+    // Orden fijo de la red (el mismo que el mapa y Mis APIs); los agentes desconocidos, al final.
+    const posicion = (a: string) => (ordenAgentes.indexOf(a) + 1 || ordenAgentes.length + 1)
+    adaptadores.value = (await api.capacidades()).adaptadores.sort((a, b) => posicion(a.agente) - posicion(b.agente) || a.agente.localeCompare(b.agente))
   } catch (e) {
     avisarError(e)
   } finally {
