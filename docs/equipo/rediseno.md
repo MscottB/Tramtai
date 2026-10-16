@@ -39,6 +39,11 @@ el fallo de actualización), nuevas funciones.
   con este filtro» (Quitar filtros).
 - **Ajustes**: una columna, nombre y explicación a la izquierda y control a la derecha en todas las secciones.
 - **Ayuda**: corregir «Haz que arranque solo»: hoy solo en Windows.
+- **Esfuerzo predeterminado por modelo** (Probar, Mis APIs y Ajustes, en `SelectorEsfuerzo`): la opción «El del
+  agente» dice cuál es, por ejemplo «El del agente (medio)». El catálogo de modelos (`/api/v1/modelos`) gana
+  `esfuerzo_predeterminado` por agente y modelo, de una tabla en `internal/adaptadores/esfuerzo.go` comprobada con
+  los CLI reales (y su documentación) antes de publicar. Si para un modelo no se conoce con certeza, el campo va
+  vacío y la opción sigue diciendo solo «El del agente»: nunca se muestra un valor supuesto.
 
 ## 4. Actualizar sin pantalla en blanco
 
