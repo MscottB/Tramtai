@@ -1,0 +1,347 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Tramtai API propia",
+    "version": "1",
+    "description": "Trabajos asíncronos con agentes CLI: archivos que Tramtai convierte, eventos en vivo que se retoman con Last-Event-ID, cancelar, reintentar, idempotencia, respaldo y esfuerzo por petición. Guía: https://github.com/MscottB/Tramtai/blob/main/docs/api.md"
+  },
+  "servers": [{ "url": "http://127.0.0.1:17373/api/v1" }],
+  "security": [{ "bearer": [] }, { "clave": [] }],
+  "paths": {
+    "/trabajos": {
+      "post": {
+        "summary": "Crea un trabajo",
+        "operationId": "crearTrabajo",
+        "parameters": [{ "$ref": "#/components/parameters/IdempotencyKey" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SolicitudEjecucion" } } } },
+        "responses": {
+          "202": { "description": "Aceptado; Location apunta al trabajo", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Trabajo" } } } },
+          "200": { "description": "La Idempotency-Key ya apuntaba a la misma solicitud", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Trabajo" } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "get": {
+        "summary": "Lista los trabajos recientes",
+        "operationId": "listarTrabajos",
+        "parameters": [
+          { "name": "limite", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+          { "name": "punto", "in": "query", "schema": { "type": "string" } },
+          { "name": "grupo", "in": "query", "schema": { "type": "string" } },
+          { "name": "origen", "in": "query", "schema": { "type": "string", "enum": ["probar", "terminal", "cli", "app", "api"] } },
+          { "name": "antes", "in": "query", "description": "creado_en (RFC 3339) del último trabajo visto", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "antes_id", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Trabajos", "content": { "application/json": { "schema": { "type": "object", "properties": { "trabajos": { "type": "array", "items": { "$ref": "#/components/schemas/Trabajo" } } } } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "delete": {
+        "summary": "Vacía el historial (trabajos terminados y cargas sin uso)",
+        "operationId": "eliminarTrabajos",
+        "x-tramtai-solo-instancia": true,
+        "responses": {
+          "200": { "description": "Eliminados", "content": { "application/json": { "schema": { "type": "object", "properties": { "eliminados": { "type": "integer" } } } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/trabajos/{id}": {
+      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "get": {
+        "summary": "Estado del trabajo",
+        "operationId": "obtenerTrabajo",
+        "responses": {
+          "200": { "description": "Trabajo", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Trabajo" } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "delete": {
+        "summary": "Borra un trabajo terminado",
+        "operationId": "eliminarTrabajo",
+        "responses": { "204": { "description": "Borrado" }, "default": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/trabajos/{id}/salida": {
+      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "get": {
+        "summary": "La salida del trabajo",
+        "operationId": "salidaTrabajo",
+        "responses": {
+          "200": {
+            "description": "Salida con su tipo",
+            "content": { "text/markdown": { "schema": { "type": "string" } }, "text/plain": { "schema": { "type": "string" } }, "application/json": { "schema": {} } }
+          },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/trabajos/{id}/eventos": {
+      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "get": {
+        "summary": "Eventos en vivo (SSE)",
+        "description": "Cada evento lleva id, event (estado, entrada, intento, texto, aviso) y data. Termina con un evento fin {\"estado\",\"codigo_error\"} sin id. Latidos cada 15 s.",
+        "operationId": "eventosTrabajo",
+        "parameters": [
+          { "name": "Last-Event-ID", "in": "header", "description": "Reanuda tras ese evento", "schema": { "type": "string" } },
+          { "name": "desde", "in": "query", "description": "Igual que Last-Event-ID", "schema": { "type": "integer", "minimum": 0 } }
+        ],
+        "responses": {
+          "200": { "description": "Flujo de eventos", "content": { "text/event-stream": { "schema": { "type": "string" } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/trabajos/{id}/registro": {
+      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "get": {
+        "summary": "Los pasos del trabajo con su hora, sin el texto de la respuesta",
+        "operationId": "registroTrabajo",
+        "responses": {
+          "200": { "description": "Registro", "content": { "application/json": { "schema": { "type": "object", "properties": { "eventos": { "type": "array", "items": { "$ref": "#/components/schemas/EventoRegistro" } } } } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/trabajos/{id}/cancelar": {
+      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "post": {
+        "summary": "Pide cancelar (idempotente)",
+        "operationId": "cancelarTrabajo",
+        "responses": {
+          "202": { "description": "Cancelación pedida", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Trabajo" } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/trabajos/{id}/reintentar": {
+      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "post": {
+        "summary": "Crea un intento nuevo de un trabajo terminado",
+        "operationId": "reintentarTrabajo",
+        "responses": {
+          "202": { "description": "Trabajo nuevo con intento_de", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Trabajo" } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/ejecutar": {
+      "post": {
+        "summary": "Crea un trabajo y espera el resultado",
+        "description": "Envía Location antes de esperar; si se corta la conexión, el trabajo sigue.",
+        "operationId": "ejecutarTrabajo",
+        "parameters": [{ "$ref": "#/components/parameters/IdempotencyKey" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SolicitudEjecucion" } } } },
+        "responses": {
+          "200": { "description": "Trabajo terminado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Trabajo" } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/cargas": {
+      "post": {
+        "summary": "Sube un archivo para citarlo en cargas",
+        "operationId": "crearCarga",
+        "parameters": [{ "name": "nombre", "in": "query", "description": "Nombre del archivo si se envía el binario en el cuerpo", "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": { "schema": { "type": "object", "required": ["archivo"], "properties": { "archivo": { "type": "string", "contentMediaType": "application/octet-stream" } } } },
+            "application/octet-stream": { "schema": { "type": "string", "contentMediaType": "application/octet-stream" } }
+          }
+        },
+        "responses": {
+          "201": { "description": "Carga guardada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Carga" } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/capacidades": {
+      "get": {
+        "summary": "Qué admite cada agente y los límites",
+        "operationId": "capacidades",
+        "responses": {
+          "200": {
+            "description": "Capacidades",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "adaptadores": { "type": "array", "items": { "type": "object" } }, "limites": { "$ref": "#/components/schemas/Limites" } } } } }
+          },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/limites": {
+      "get": {
+        "summary": "Los topes de una petición",
+        "operationId": "limites",
+        "responses": {
+          "200": { "description": "Límites", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Limites" } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/modelos": {
+      "get": {
+        "summary": "Catálogo de agentes, modelos y perfiles",
+        "operationId": "modelos",
+        "responses": {
+          "200": { "description": "Catálogo", "content": { "application/json": { "schema": { "type": "object", "properties": { "modelos": { "type": "array", "items": { "$ref": "#/components/schemas/Modelo" } } } } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "summary": "Esta descripción, con servers apuntando a la URL de la petición",
+        "operationId": "openapi",
+        "responses": {
+          "200": { "description": "Documento OpenAPI", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": { "type": "http", "scheme": "bearer", "description": "La clave de la API o de la instancia" },
+      "clave": { "type": "apiKey", "in": "header", "name": "x-api-key" }
+    },
+    "parameters": {
+      "Id": { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+      "IdempotencyKey": { "name": "Idempotency-Key", "in": "header", "description": "Repetir la petición con la misma clave devuelve el mismo trabajo (hasta 255 caracteres)", "schema": { "type": "string", "maxLength": 255 } }
+    },
+    "responses": {
+      "Error": { "description": "Error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["codigo", "mensaje"],
+            "properties": { "codigo": { "type": "string", "examples": ["solicitud_invalida", "no_autorizado", "entrada_no_disponible", "presupuesto_agotado"] }, "mensaje": { "type": "string" } }
+          }
+        }
+      },
+      "Mensaje": {
+        "type": "object",
+        "required": ["rol", "contenido"],
+        "additionalProperties": false,
+        "properties": { "rol": { "type": "string", "enum": ["usuario", "asistente", "sistema"] }, "contenido": { "type": "string" } }
+      },
+      "ConfigSalida": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "formato": { "type": "string", "enum": ["texto", "markdown", "json"] },
+          "esquema": { "description": "JSON Schema que debe cumplir la salida; exige formato json" },
+          "validacion_estricta": { "type": "boolean" },
+          "conservar_salida_invalida": { "type": "boolean" }
+        }
+      },
+      "ConfigEjecucion": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": { "tiempo_limite_segundos": { "type": "integer", "minimum": 0 }, "persistir_sesion": { "type": "boolean" } }
+      },
+      "SolicitudEjecucion": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Los campos desconocidos son un error (solicitud_invalida).",
+        "properties": {
+          "agente": { "type": "string", "examples": ["claude"] },
+          "modelo": { "type": "string", "examples": ["claude/sonnet", "perfil/rapido"] },
+          "perfil_modelo": { "type": "string" },
+          "esfuerzo": { "type": "string", "enum": ["bajo", "medio", "alto", "muy_alto", "maximo"] },
+          "respaldo": { "type": "array", "maxItems": 3, "items": { "type": "string" }, "description": "agente o agente/modelo, con +nivel o +agente opcional", "examples": [["codex/gpt-5.5+alto"]] },
+          "perfil": { "type": "string" },
+          "modo_contexto": { "type": "string", "enum": ["aislado", "consciente_proyecto"] },
+          "instrucciones": { "type": "string" },
+          "mensajes": { "type": "array", "items": { "$ref": "#/components/schemas/Mensaje" } },
+          "cargas": { "type": "array", "items": { "type": "string" }, "description": "identificador_carga de POST /cargas" },
+          "salida": { "$ref": "#/components/schemas/ConfigSalida" },
+          "ejecucion": { "$ref": "#/components/schemas/ConfigEjecucion" }
+        }
+      },
+      "Uso": {
+        "type": "object",
+        "properties": { "tokens_entrada": { "type": "integer" }, "tokens_salida": { "type": "integer" }, "costo_usd": { "type": "number" } }
+      },
+      "Trabajo": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "instancia": { "type": "string" },
+          "estado": { "type": "string", "enum": ["en_cola", "preparando_entrada", "esperando_agente", "ejecutando", "validando_salida", "cancelacion_solicitada", "completado", "fallido", "cancelado", "interrumpido"] },
+          "codigo_error": { "type": "string" },
+          "mensaje_error": { "type": "string" },
+          "solicitud": { "$ref": "#/components/schemas/SolicitudEjecucion" },
+          "salida": { "type": "string" },
+          "intento_de": { "type": "string" },
+          "punto_acceso": { "type": "string" },
+          "origen": { "type": "string" },
+          "modelo_enviado": { "type": "string" },
+          "modelo_efectivo": { "type": "string" },
+          "uso": { "$ref": "#/components/schemas/Uso" },
+          "disponibilidad": { "type": "string", "enum": ["disponible", "expirada"] },
+          "entradas_eliminadas": { "type": "boolean" },
+          "creado_en": { "type": "string", "format": "date-time" },
+          "actualizado_en": { "type": "string", "format": "date-time" },
+          "terminado_en": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Carga": {
+        "type": "object",
+        "properties": {
+          "identificador_carga": { "type": "string" },
+          "punto_acceso": { "type": "string" },
+          "nombre": { "type": "string" },
+          "sha256": { "type": "string" },
+          "tamano_bytes": { "type": "integer" },
+          "creado_en": { "type": "string", "format": "date-time" },
+          "vence_en": { "type": "string", "format": "date-time" }
+        }
+      },
+      "EventoRegistro": {
+        "type": "object",
+        "properties": {
+          "numero": { "type": "integer" },
+          "tipo": { "type": "string", "enum": ["estado", "entrada", "intento", "aviso"] },
+          "datos": { "type": "string" },
+          "creado_en": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Limites": {
+        "type": "object",
+        "properties": {
+          "cargas_por_peticion": { "type": "integer" },
+          "carga_mb": { "type": "integer" },
+          "texto_convertido_mb": { "type": "integer" },
+          "cuota_cargas_mb": { "type": "integer" },
+          "cuerpo_mb": { "type": "integer" },
+          "esquema_kb": { "type": "integer" },
+          "mensajes": { "type": "integer" },
+          "reserva_salida_tokens": { "type": "integer" }
+        }
+      },
+      "Modelo": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "agente": { "type": "string" },
+          "modelo": { "type": "string" },
+          "perfil": { "type": "string" },
+          "origen": { "type": "string" },
+          "resuelto": { "type": "string" },
+          "version": { "type": "string" },
+          "predeterminado": { "type": "boolean" },
+          "esfuerzos": { "type": "array", "items": { "type": "string" } },
+          "esfuerzo_predeterminado": { "type": "string" },
+          "contexto_tokens": { "type": "integer" },
+          "contexto_origen": { "type": "string", "enum": ["configurado", "informado"] }
+        }
+      }
+    }
+  }
+}
