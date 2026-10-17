@@ -200,11 +200,15 @@ func main() {
 		} else {
 			menu.Add(idioma.Tf("Servicio en marcha · %s", strings.TrimPrefix(cli.Base, "http://"))).SetBitmap(verde).OnClick(func(*application.Context) { mostrar() })
 		}
-		// La versión de la app, y si hay una más nueva (la opción para instalarla va justo debajo).
+		// La versión de la app, y si hay una más nueva (la opción para instalarla va justo debajo); abre «Acerca de».
+		acercaDe := func(*application.Context) {
+			mostrar()
+			ventana.ExecJS("window.tramtaiAcercaDe && window.tramtaiAcercaDe()")
+		}
 		if nueva != "" {
-			menu.Add(idioma.Tf("Versión %s · hay una nueva: %s", version.Texto(), nueva)).SetEnabled(false)
+			menu.Add(idioma.Tf("Versión %s · hay una nueva: %s", version.Texto(), nueva)).OnClick(acercaDe)
 		} else {
-			menu.Add(idioma.Tf("Versión %s", version.Texto())).SetEnabled(false)
+			menu.Add(idioma.Tf("Versión %s · Acerca de Tramtai", version.Texto())).OnClick(acercaDe)
 		}
 		menu.AddSeparator()
 		menu.Add(idioma.T("Abrir Tramtai")).SetBitmap(icono("abrir")).OnClick(func(*application.Context) { mostrar() })

@@ -339,6 +339,13 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
+	case r.URL.Path == "/ui/acerca" && r.Method == http.MethodGet:
+		_, ses := s.sesionDe(r)
+		if ses == nil {
+			api.NoAutorizado(w, r)
+			return
+		}
+		api.EscribirJSON(w, http.StatusOK, s.acerca(ses.local))
 	case r.URL.Path == "/ui/actualizacion/progreso" && r.Method == http.MethodGet:
 		if _, ses := s.sesionDe(r); ses == nil {
 			api.NoAutorizado(w, r)

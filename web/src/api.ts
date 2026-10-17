@@ -273,6 +273,18 @@ export interface EstadoActualizacion {
   fallo?: boolean // si esa consulta falló
 }
 export const actualizacion = ref<EstadoActualizacion | null>(null)
+// Acerca son los datos de «Acerca de Tramtai»; rutas solo llega a una sesión local.
+export interface Acerca {
+  version: string
+  commit?: string
+  modificado?: boolean
+  go: string
+  sistema: string
+  arquitectura: string
+  almacen: string
+  servicio: { direccion: string; pid: number; iniciado_en: string }
+  rutas?: { datos: string; configuracion: string; registro: string }
+}
 // Novedad es una versión publicada con sus notas, para el diálogo que sale tras actualizar.
 export interface Novedad {
   version: string
@@ -306,6 +318,7 @@ export const api = {
   abrirProyecto: (raiz: string) => pedir<Sesion>('POST', '/ui/proyectos', { raiz }).then(recordar),
   autoarranque: (activo: boolean) => pedir<Sesion>('POST', '/ui/autoarranque', { activo }).then(recordar),
   actualizacion: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion'),
+  acerca: () => pedir<Acerca>('GET', '/ui/acerca'),
   buscarActualizaciones: (buscar: boolean) => pedir<EstadoActualizacion>('POST', '/ui/actualizacion', { buscar }),
   buscarAhora: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion?ahora=1'),
   actualizar: () => pedir<{ version: string }>('POST', '/ui/actualizar'),
