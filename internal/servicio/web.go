@@ -353,7 +353,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		}
 		api.EscribirJSON(w, http.StatusOK, s.progresoActualizacion())
 	case r.URL.Path == "/ui/actualizacion/novedades" && r.Method == http.MethodGet:
-		// Lo que trajo cada versión desde la última vista en este navegador; sin búsqueda de actualizaciones no se
+		// Lo que trajo cada versión desde la última vista en este navegador (o lo que trae cada una hasta la nueva); sin búsqueda de actualizaciones no se
 		// habla con GitHub.
 		if _, ses := s.sesionDe(r); ses == nil {
 			api.NoAutorizado(w, r)
@@ -365,7 +365,12 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		}
 		ctx, cancelar := context.WithTimeout(r.Context(), 8*time.Second)
 		defer cancelar()
-		versiones, err := actualizacion.Novedades(ctx, r.URL.Query().Get("desde"), version.Texto())
+		// hasta (opcional) es la versión nueva, para leer antes de actualizar lo que trae cada una que se salta.
+		hasta := r.URL.Query().Get("hasta")
+		if hasta == "" {
+			hasta = version.Texto()
+		}
+		versiones, err := actualizacion.Novedades(ctx, r.URL.Query().Get("desde"), hasta)
 		if err != nil {
 			fmt.Fprintf(s.opc.Registros, "novedades: %v\n", err) // el detalle (red, proxy) queda aquí, no en la respuesta
 			api.EscribirJSON(w, http.StatusBadGateway, map[string]any{"error": map[string]any{"codigo": "github_no_disponible", "mensaje": idioma.T("GitHub no está disponible")}})

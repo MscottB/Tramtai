@@ -107,6 +107,9 @@ func TestWebUI(t *testing.T) {
 	if r, cuerpo := n.pedir("GET", "/ui/actualizacion/novedades?desde=v0.1.0", ""); r.StatusCode != 200 || !strings.Contains(cuerpo, `"versiones":[]`) {
 		t.Fatalf("sin búsqueda no se consulta GitHub: %d %s", r.StatusCode, cuerpo)
 	}
+	if r, cuerpo := n.pedir("GET", "/ui/actualizacion/novedades?desde=v0.1.0&hasta=v0.2.0", ""); r.StatusCode != 200 || !strings.Contains(cuerpo, `"versiones":[]`) {
+		t.Fatalf("tampoco con hasta: %d %s", r.StatusCode, cuerpo)
+	}
 
 	if r, cuerpo := n.pedir("GET", "/api/v1/instancia", ""); r.StatusCode != 200 || !strings.Contains(cuerpo, `"id":"global"`) {
 		t.Fatalf("instancia con la cookie: %d %s", r.StatusCode, cuerpo)
