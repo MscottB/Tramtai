@@ -19,6 +19,12 @@
 - **Navegadores:** no hay CORS. Una petición con `Origin` de otro sitio se rechaza con 403.
 - **Acceso remoto:** está desactivado. Solo se permite con `servicio.permitir_remoto: true`, token obligatorio y ningún agente en modo suscripción. Lo recomendado es un túnel SSH. La Web UI remota solo se abre con un código de `tramtai abrir` hecho en el equipo del servicio.
 - `/healthz` no exige token y no expone datos.
+- **Contenido hostil:** lo que manda una app (mensaje, instrucciones, documentos, esquema) no puede hacer que un agente
+  lea archivos, ejecute órdenes o salga a la red: Claude Code va sin herramientas y Codex en solo lectura, sin
+  terminal ni búsqueda web (comprobado con [canarios](operacion.md#comprobar-el-aislamiento-de-los-agentes)).
+  Antigravity, sin esa comprobación, no se puede usar desde apps ni APIs (`agente_no_disponible`) salvo
+  `adaptadores.antigravity.permitir_apps`. Los delimitadores de turnos y archivos llevan un código por petición, y una
+  clave de proveedor que aparezca en la salida se tapa (`[REDACTADO]`).
 
 ## API nativa `/api/v1`
 
@@ -28,7 +34,8 @@
 | `GET /trabajos/{id}` | Estado, error, modelo enviado y efectivo, uso, salida y `disponibilidad` (`disponible` o `expirada`). Tras la retención de metadatos (7 días) responde 404. |
 | `GET /trabajos/{id}/salida` | La salida con su tipo (`text/markdown`, `text/plain` o `application/json`). Si no ha terminado, 409 `trabajo_no_terminado`; si la retención ya la borró, 410 `resultado_expirado`. |
 | `GET /trabajos/{id}/eventos` | SSE con `id` monotónico: `estado`, `texto`, `aviso` e `intento` (al empezar cada intento, JSON con `agente`, `modelo`, `esfuerzo` y `del_agente`; un cliente que no lo espera lo ignora). `Last-Event-ID` (o `?desde=`) reanuda tras ese evento. Envía latidos cada 15 s y termina con un evento `fin`. Si el resultado expiró, empieza con un evento `aviso`: solo quedan los eventos de estado e intento. |
-| `GET /trabajos/{id}/registro` | Los pasos de la petición con su hora, sin el texto de la respuesta: `{"eventos":[{"numero","tipo","datos","creado_en"}]}` con los eventos `estado`, `intento` y `aviso`. Mismos permisos que `GET /trabajos/{id}`. |
+| `GET /limites` | Los topes de una petición: `cargas_por_peticion` (20), `carga_mb`, `texto_convertido_mb`, `cuota_cargas_mb`, `cuerpo_mb` (16), `esquema_kb` (256), `mensajes` (1.000) y `reserva_salida_tokens`. Es rápida; `/capacidades` trae el mismo bloque en `limites`. |
+| `GET /trabajos/{id}/registro` | Los pasos de la petición con su hora, sin el texto de la respuesta: `{"eventos":[{"numero","tipo","datos","creado_en"}]}` con los eventos `estado`, `entrada` (caracteres, tokens estimados y cada documento de mayor a menor), `intento` y `aviso`. Mismos permisos que `GET /trabajos/{id}`. |
 | `POST /trabajos/{id}/cancelar` | Cancelación idempotente; responde 202 sin afirmar que ya terminó. |
 | `POST /trabajos/{id}/reintentar` | Crea un intento nuevo (`intento_de`) a partir de un trabajo terminado. Si sus entradas ya vencieron, 410 `entrada_no_disponible`. |
 | `DELETE /trabajos/{id}` | Borra un trabajo terminado: 204, o 409 si sigue activo. |
@@ -179,16 +186,34 @@ Estas rutas exigen una sesión de la Web UI o el token de servicio (con `Tramtai
 | `GET /api/v1/instancia/token` | La clave de la instancia, para mostrarla en *API principal* (Mis APIs). |
 | `POST /api/v1/instancia/token` | Regenera la clave de la instancia sin reiniciar y la devuelve. Si viene de una variable de entorno (`instancia_global.token_variable_entorno`), responde 400 `solicitud_invalida`: hay que cambiarla en la variable. |
 
+## Límites de la entrada
+
+Tras convertir los documentos, Tramtai mide lo que recibirá el agente (instrucciones, mensajes y documentos) y estima
+sus tokens (caracteres ÷ 4). Antes de cada agente lo compara con su contexto menos `limites.reserva_salida_tokens`
+(8.192): si no cabe, pasa al respaldo sin ejecutarlo y deja un `aviso` («La entrada (~45000 tokens; informe.pdf
+~38000) no cabe en claude/haiku…; sigue con codex»); si no cabe en ninguno, el trabajo falla con
+`entrada_demasiado_grande`.
+
+- **Contexto de cada modelo**, en este orden: `limites.contexto_tokens` (una lista de `agente=tokens` o
+  `agente/modelo=tokens`, por ejemplo `- codex/gpt-5.6-terra=272000`), lo que informa el agente (Claude Code en cada
+  respuesta; la API de Gemini con `inputTokenLimit`) o, si no se conoce, no se comprueba.
+- `GET /api/v1/modelos` indica el contexto conocido de cada modelo en `contexto_tokens` y su origen en
+  `contexto_origen` (`configurado` o `informado`); el evento `intento` lo lleva en `contexto_tokens`.
+- La API nativa síncrona (`POST /ejecutar`) responde 200 al aceptar y el trabajo final lleva el código, como cualquier
+  fallo.
+
 ## Errores
 
 API nativa: `{"error": {"codigo": "…", "mensaje": "…"}}`. Las fachadas usan el formato de error de OpenAI o de Anthropic, con el código de Tramtai en `code` (OpenAI).
 
 | HTTP | Códigos |
 |---|---|
-| 400 | `solicitud_invalida`, `parametro_no_soportado`, `modelo_ambiguo`, `modelo_no_permitido`, `modelo_no_disponible`, `modelo_no_configurado`, `carga_invalida` |
+| 400 | `solicitud_invalida`, `parametro_no_soportado`, `modelo_ambiguo`, `modelo_no_permitido`, `modelo_no_disponible`, `modelo_no_configurado`, `carga_invalida`; en las fachadas también `entrada_demasiado_grande` (OpenAI: `context_length_exceeded`) |
 | 401 / 403 | `no_autorizado` / `origen_no_permitido`, `contexto_no_permitido` |
 | 404 | `no_encontrado` |
 | 409 | `conflicto_idempotencia`, `trabajo_no_terminado`, `trabajo_sin_salida` |
+| 413 | `entrada_demasiado_grande` (la entrada, ya con los documentos convertidos, no cabe en el contexto de ningún candidato; no llega al CLI ni gasta cuota) |
+| 507 | `cuota_cargas_agotada` (las cargas guardadas llegan a `conversion.cuota_cargas_mb`) |
 | 410 | `entrada_no_disponible`, `resultado_expirado` |
 | 422 | `salida_no_cumple_esquema`, `conversion_fallida` |
 | 429 | `cola_llena` y `presupuesto_agotado` (con `Retry-After`), `limite_uso_proveedor` |

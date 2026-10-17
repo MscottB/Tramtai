@@ -687,6 +687,12 @@ const es = {
   'ayuda.p15': '¿Cómo veo cuánto tardó cada paso de una petición?',
   'ayuda.r15':
     'Abre «Registro» bajo la respuesta en Probar o en el detalle del Historial: cada paso (en cola, esperando al agente, ejecutando con qué agente, modelo y esfuerzo, avisos y el final) con su hora y el tiempo desde el inicio, y arriba cuánto duró cada etapa.',
+  'ayuda.p18': '¿Por qué se rechazó mi petición por tamaño?',
+  'ayuda.r18':
+    'Antes de llamar al agente, Tramtai mide lo que va a recibir (instrucciones, mensaje y documentos ya convertidos a texto) y lo compara con el contexto del modelo, dejando sitio para la respuesta. Si no cabe, prueba con el siguiente del respaldo y lo avisa en el registro; si no cabe en ninguno, la rechaza con «entrada demasiado grande» sin gastar cuota. Los documentos son lo que más ocupa: el registro dice cuál pesa más. En Agentes ves el contexto de cada modelo cuando se conoce.',
+  'ayuda.p19': '¿Por qué no puedo usar Antigravity en mis APIs?',
+  'ayuda.r19':
+    'Porque todavía no se ha comprobado con el CLI real que, ante un contenido malicioso, no pueda usar herramientas (leer archivos o ejecutar órdenes). Mientras tanto se usa solo desde Probar y la terminal. Claude y Codex sí están comprobados.',
   'ayuda.p17': '¿Qué versión tengo?',
   'ayuda.r17':
     'Pulsa la versión junto al logo, o «Acerca de Tramtai» en el menú lateral o en el menú del estado. Verás la versión con su fecha, si hay una más nueva, los enlaces del proyecto y, en «Detalles técnicos», lo necesario para pedir ayuda: «Copiar datos para soporte» lo copia sin claves ni tokens.',
