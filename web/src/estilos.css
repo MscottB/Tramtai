@@ -1071,3 +1071,13 @@ body.body--dark .tablero {
     transition: none !important;
   }
 }
+
+/* Pestañas que no caben (los ejemplos para copiar en el móvil): una sola fila que se desplaza, sin partir el texto. */
+.desplazable-x {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.desplazable-x .q-btn__content {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
