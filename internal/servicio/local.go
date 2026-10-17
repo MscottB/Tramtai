@@ -14,7 +14,13 @@ import (
 // frente a otros usuarios del equipo, y eso se comprueba aquí con el dueño de la conexión. Las
 // páginas web ajenas siguen bloqueadas por Host, Origin, SameSite y CSRF; las aplicaciones siguen usando su token.
 func (s *Servicio) esLocal(r *http.Request) bool {
-	if !s.opc.EntradaLocal || !desdeEsteEquipo(r) {
+	return s.opc.EntradaLocal && mismoUsuarioLocal(r)
+}
+
+// mismoUsuarioLocal indica que la petición llega por loopback, sin proxy, desde un programa del mismo usuario del
+// sistema que el servicio. Sin poder comprobarlo (macOS), responde que no.
+func mismoUsuarioLocal(r *http.Request) bool {
+	if !desdeEsteEquipo(r) {
 		return false
 	}
 	cliente, err := netip.ParseAddrPort(r.RemoteAddr)

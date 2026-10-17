@@ -171,7 +171,7 @@ Se comprueba la ruta real del archivo, así que `..` o un enlace que salga de es
 
 - **Cargas:** hasta 20 por petición y `conversion.maximo_carga_mb` (50) cada una. Las de una instancia no pasan de
   `conversion.cuota_cargas_mb` (2048) en total: la siguiente responde 507 `cuota_cargas_agotada` hasta que venzan. Cada
-  carga pertenece a la API que la subió: otra API de la instancia no puede citarla.
+  carga pertenece a la API que la subió (o a la instancia): otra API no puede citarla aunque conozca su identificador.
 - **Formatos:** texto, Markdown, JSON, XML, CSV, HTML, PDF, Word, PowerPoint, Excel y ZIP; el resto se rechaza con
   `carga_invalida`, también dentro de un ZIP. Un Word, PowerPoint o Excel que se descomprimiría en más de
   `conversion.maximo_descomprimido_mb` se rechaza antes de convertirlo.
@@ -191,6 +191,10 @@ Se comprueba la ruta real del archivo, así que `..` o un enlace que salga de es
 
 - **Antigravity** solo se usa desde Probar, la terminal y la CLI hasta comprobar con el CLI real que no puede usar
   herramientas; `adaptadores.antigravity.permitir_apps: true` lo habilita también para apps y APIs.
+- **Modo de contexto de una API:** lo fija la API (`aislado` si no indica otro); una app no puede pedir
+  `consciente_proyecto` en una API aislada.
+- **Entorno de los CLI:** no heredan claves, contraseñas, `TRAMTAI_*` ni URL con credenciales, salvo los proxies
+  (`*_PROXY`), que sí necesitan para llegar a su proveedor.
 - **La configuración propia de cada CLI** es cosa suya y tuya: con la suscripción, Codex y Claude usan lo que sus CLI no
   permiten aislar (por ejemplo los servidores MCP de `~/.codex`), y en `consciente_proyecto` Claude carga los hooks
   del proyecto, por eso ese modo solo vale en `proyectos_confiables`.

@@ -153,12 +153,17 @@ func (t *tarea) ooxml(e Entrada, extension string) error {
 		return nil
 	}
 	defer lector.Close()
+	maximo := uint64(t.conversor.Limites.MaximoBytes)
+	if maximo == 0 {
+		return nil
+	}
 	var total uint64
 	for _, f := range lector.File {
+		// Se compara antes de sumar: dos tamaños declarados enormes no pueden dar la vuelta y sumar poco.
+		if f.UncompressedSize64 > maximo-total {
+			return nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.Tf("%s: descomprimido supera conversion.maximo_descomprimido_mb", e.Nombre))
+		}
 		total += f.UncompressedSize64
-	}
-	if maximo := t.conversor.Limites.MaximoBytes; maximo > 0 && total > uint64(maximo) {
-		return nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.Tf("%s: descomprimido supera conversion.maximo_descomprimido_mb", e.Nombre))
 	}
 	return nil
 }

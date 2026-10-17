@@ -127,7 +127,7 @@ var esquema = map[string]tipoValor{
 
 // prefijosAdministrados son límites de seguridad: nunca pueden venir de la configuración versionada del repositorio,
 // y en local.yaml solo si la carpeta del proyecto es confiable según la configuración global (ver validar).
-var prefijosAdministrados = []string{"servicio", "instancia_global", "proyectos_confiables", "comandos_agentes", "concurrencia_servicio", "puntos_acceso", "adaptadores", "conversion", "presupuesto"}
+var prefijosAdministrados = []string{"servicio", "instancia_global", "proyectos_confiables", "comandos_agentes", "concurrencia_servicio", "puntos_acceso", "adaptadores", "conversion", "presupuesto", "limites.memoria_proceso_mb"}
 
 // Capa es un origen de configuración aplanado a claves con puntos.
 type Capa struct {
@@ -323,11 +323,17 @@ var maximosLimites = map[string]int{
 	"conversion.tiempo_total_segundos": 7200, "conversion.cuota_cargas_mb": 102400, "limites.memoria_proceso_mb": 65536,
 }
 
+// limitesConCero admiten 0 (la reserva de salida); por debajo cuentan como 0, no como el predeterminado.
+var limitesConCero = map[string]bool{"limites.reserva_salida_tokens": true}
+
 // Limite devuelve un límite de seguridad siempre positivo: 0 o negativo usa el predeterminado (no «sin límite») y
 // un valor por encima de su máximo usa el máximo.
 func (c *Configuracion) Limite(clave string) int {
 	v := c.Entero(clave)
-	if v <= 0 {
+	switch {
+	case limitesConCero[clave]:
+		v = max(v, 0)
+	case v <= 0:
 		v, _ = Internos().Valores[clave].(int)
 	}
 	if maximo := maximosLimites[clave]; maximo > 0 && v > maximo {

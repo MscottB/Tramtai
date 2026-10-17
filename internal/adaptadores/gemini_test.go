@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"tramtai/internal/nucleo"
 )
@@ -242,5 +243,29 @@ func TestAntigravityLineaOrdenes(t *testing.T) {
 	s := nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: strings.Repeat("x", 28001)}}}
 	if _, err := (Antigravity{Programa: os.Args[0]}).Ejecutar(context.Background(), s, func(Evento) error { return nil }); nucleo.CodigoDe(err) != nucleo.CodigoEntradaDemasiadoGrande {
 		t.Fatalf("más de 28.000 unidades: %v", err)
+	}
+}
+
+func TestContextoGeminiConPlazo(t *testing.T) {
+	t.Setenv("GEMINI_API_KEY", "clave-falsa")
+	var llamadas atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		llamadas.Add(1)
+		time.Sleep(300 * time.Millisecond)
+		http.Error(w, "no", http.StatusServiceUnavailable)
+	}))
+	defer srv.Close()
+	anterior := plazoContextoGemini
+	plazoContextoGemini = 50 * time.Millisecond
+	defer func() { plazoContextoGemini = anterior }()
+	g := Gemini{Base: srv.URL, Cliente: srv.Client()}
+	inicio := time.Now()
+	for range 2 {
+		if n, _ := g.Contexto(context.Background(), "gemini-lento"); n != 0 {
+			t.Fatalf("sin respuesta, contexto desconocido: %d", n)
+		}
+	}
+	if time.Since(inicio) > 250*time.Millisecond || llamadas.Load() != 1 {
+		t.Fatalf("con plazo y el fallo guardado: %s, %d llamadas", time.Since(inicio), llamadas.Load())
 	}
 }

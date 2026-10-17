@@ -100,3 +100,11 @@ func TestEntornoSinSecretos(t *testing.T) {
 		}
 	}
 }
+
+func TestProxyConCredencialesPasa(t *testing.T) {
+	for _, par := range []string{"HTTPS_PROXY=http://u:p@proxy:8080", "http_proxy=http://u:p@proxy:8080", "ALL_PROXY=socks5://u:p@proxy:1080"} {
+		if EntornoSecreto(par) {
+			t.Fatalf("%s debe pasar: los CLI lo necesitan para salir a su proveedor", par)
+		}
+	}
+}

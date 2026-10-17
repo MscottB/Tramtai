@@ -21,6 +21,7 @@ import (
 // Carga es un archivo recibido, identificado por su contenido.
 type Carga struct {
 	ID       string    `json:"identificador_carga"`
+	Punto    string    `json:"punto_acceso,omitempty"` // la API que la subió; vacío, la instancia
 	Nombre   string    `json:"nombre"`
 	SHA256   string    `json:"sha256"`
 	Bytes    int64     `json:"tamano_bytes"`
@@ -69,7 +70,7 @@ func (c *Cargas) Guardar(nombre, punto string, r io.Reader) (Carga, error) {
 	suma := hex.EncodeToString(resumen.Sum(nil))
 	propio := sha256.Sum256([]byte(punto + "\x00" + suma))
 	ahora := time.Now().UTC()
-	carga := Carga{ID: "carga_" + hex.EncodeToString(propio[:])[:32], Nombre: nombreSeguro(nombre), SHA256: suma, Bytes: n, CreadoEn: ahora, VenceEn: ahora.Add(c.vigencia)}
+	carga := Carga{ID: "carga_" + hex.EncodeToString(propio[:])[:32], Punto: punto, Nombre: nombreSeguro(nombre), SHA256: suma, Bytes: n, CreadoEn: ahora, VenceEn: ahora.Add(c.vigencia)}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if anterior, _, err := c.Obtener(carga.ID); err == nil {

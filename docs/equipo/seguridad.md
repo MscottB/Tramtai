@@ -81,7 +81,8 @@ En este orden:
 - Clave `adaptadores.antigravity.permitir_apps` (falso; administrada: una configuración de proyecto no la cambia) para
   habilitarlo cuando pase su canario.
 - Endurecimiento que depende de Tramtai, se use desde donde se use:
-  - el prompt nunca empieza por `-` (siempre va enmarcado), para que no se lea como una opción del CLI;
+  - el prompt nunca empieza por `-` (si empezara, se le antepone un salto de línea), para que no se lea como una opción
+    del CLI;
   - `APPDATA`, `LOCALAPPDATA` y `XDG_*` apuntan a su carpeta privada, como ya `HOME` y `USERPROFILE`;
   - rechaza `consciente_proyecto`, como Gemini;
   - el tope de la línea de órdenes de la sección 1.

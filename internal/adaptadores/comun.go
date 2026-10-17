@@ -24,7 +24,7 @@ const (
 
 // FormatoSerializacion identifica el enmarcado de conversaciones de varios turnos;
 // se publicará en /api/v1/capacidades.
-const FormatoSerializacion = "tramtai-turnos-v1"
+const FormatoSerializacion = "tramtai-turnos-v2"
 
 // variablesCredenciales se retiran del entorno heredado: cada CLI recibe solo la suya.
 var variablesCredenciales = []string{"ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN",

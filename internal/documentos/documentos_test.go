@@ -341,3 +341,35 @@ func TestEntornoConversor(t *testing.T) {
 		}
 	}
 }
+
+func TestOOXMLTamanoQueDesborda(t *testing.T) {
+	// Dos entradas que declaran 1<<63 cada una suman 0 sin la comprobación por entrada.
+	var b bytes.Buffer
+	w := zip.NewWriter(&b)
+	for _, nombre := range []string{"a.xml", "b.xml"} {
+		f, err := w.CreateRaw(&zip.FileHeader{Name: nombre, Method: zip.Store, UncompressedSize64: 1 << 63, CompressedSize64: 1})
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.Write([]byte("x"))
+	}
+	w.Close()
+	_, err := conversor(t, "fallar").Convertir(context.Background(), []Entrada{escribir(t, "desborda.xlsx", b.Bytes())})
+	if nucleo.CodigoDe(err) != nucleo.CodigoCargaInvalida {
+		t.Fatalf("un tamaño declarado que desborda se rechaza: %v", err)
+	}
+}
+
+func TestVerificarCargaDeOtraAPI(t *testing.T) {
+	c, _ := AbrirCargas(t.TempDir(), time.Hour, 1<<20, 0)
+	carga, _ := c.Guardar("a.txt", "tienda", strings.NewReader("x"))
+	p := Preparador{Cargas: c}
+	if err := p.Verificar([]string{carga.ID}, "tienda"); err != nil {
+		t.Fatalf("su API la cita: %v", err)
+	}
+	for _, otra := range []string{"soporte", ""} {
+		if err := p.Verificar([]string{carga.ID}, otra); nucleo.CodigoDe(err) != nucleo.CodigoEntradaNoDisponible {
+			t.Fatalf("%q no puede citar la carga de tienda: %v", otra, err)
+		}
+	}
+}

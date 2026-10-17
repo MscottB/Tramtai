@@ -204,3 +204,13 @@ func TestLimitesNoPositivos(t *testing.T) {
 		}
 	}
 }
+
+func TestLimitesAdministrados(t *testing.T) {
+	c := Resolver(Capa{Origen: OrigenGlobal, Valores: map[string]any{"limites.reserva_salida_tokens": -5000}})
+	if c.Limite("limites.reserva_salida_tokens") != 0 {
+		t.Fatal("una reserva negativa cuenta como 0")
+	}
+	if !esAdministrada("limites.memoria_proceso_mb") {
+		t.Fatal("el tope de memoria solo se cambia en la configuración global")
+	}
+}

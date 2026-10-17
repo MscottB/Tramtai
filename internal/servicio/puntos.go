@@ -179,9 +179,14 @@ func (s *Servicio) validarRespaldo(p ConfigPunto) error {
 	return nil
 }
 
-// validarParaApps rechaza al guardar una API que use Antigravity (como agente o en el respaldo) mientras no esté
-// habilitado para apps (adaptadores.antigravity.permitir_apps): sus peticiones se rechazarían todas.
-func (s *Servicio) validarParaApps(p ConfigPunto) error {
+// ValidarParaApps rechaza al guardar una API que use Antigravity (como agente o en el respaldo) mientras no esté
+// habilitado para apps (adaptadores.antigravity.permitir_apps): sus peticiones se rechazarían todas. La usan la Web
+// UI y la terminal.
+func ValidarParaApps(p ConfigPunto) error {
+	return validarParaApps(p)
+}
+
+func validarParaApps(p ConfigPunto) error {
 	if c, err := nucleo.CargarConfiguracion(""); err == nil && c.Booleano("adaptadores.antigravity.permitir_apps") {
 		return nil
 	}
@@ -195,6 +200,9 @@ func (s *Servicio) validarParaApps(p ConfigPunto) error {
 	}
 	return nil
 }
+
+// validarParaApps es ValidarParaApps como método, para las rutas de la Web UI.
+func (s *Servicio) validarParaApps(p ConfigPunto) error { return validarParaApps(p) }
 
 func (p ConfigPunto) politica() *api.Punto {
 	pol := &api.Punto{Nombre: p.Nombre, Contratos: map[string]bool{}, Agente: p.Agente, Modelo: p.Modelo,

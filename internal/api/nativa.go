@@ -351,7 +351,7 @@ func (s *Servidor) limites() map[string]any {
 		"cuerpo_mb":             maximoCuerpo >> 20,
 		"esquema_kb":            nucleo.MaximoEsquemaPeticion >> 10,
 		"mensajes":              nucleo.MaximoMensajes,
-		"reserva_salida_tokens": s.Config.Entero("limites.reserva_salida_tokens"),
+		"reserva_salida_tokens": s.Config.Limite("limites.reserva_salida_tokens"),
 	}
 }
 

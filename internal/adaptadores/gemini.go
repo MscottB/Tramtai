@@ -243,7 +243,11 @@ type contextoGuardado struct {
 	hasta  time.Time
 }
 
-// Contexto implementa Contextual con models.get de la API de Gemini (inputTokenLimit).
+// plazoContextoGemini acota la consulta: un servidor lento no deja un trabajo esperando ni el catálogo colgado.
+var plazoContextoGemini = 5 * time.Second
+
+// Contexto implementa Contextual con models.get de la API de Gemini (inputTokenLimit). Un fallo también se guarda,
+// 5 minutos, para no repetir la consulta en cada intento ni en cada carga del catálogo.
 func (g Gemini) Contexto(ctx context.Context, modelo string) (int, error) {
 	modelo = cmp.Or(strings.TrimPrefix(modelo, "models/"), modeloGeminiPredeterminado)
 	clave := g.base() + "/" + modelo
@@ -257,25 +261,34 @@ func (g Gemini) Contexto(ctx context.Context, modelo string) (int, error) {
 	if claveAPI == "" {
 		return 0, nil
 	}
+	tokens, vigencia := consultarContextoGemini(ctx, g, modelo, claveAPI), 24*time.Hour
+	if tokens == 0 {
+		vigencia = 5 * time.Minute
+	}
+	contextosGemini.Lock()
+	contextosGemini.datos[clave] = contextoGuardado{tokens, time.Now().Add(vigencia)}
+	contextosGemini.Unlock()
+	return tokens, nil
+}
+
+func consultarContextoGemini(ctx context.Context, g Gemini, modelo, claveAPI string) int {
+	ctx, cancelar := context.WithTimeout(ctx, plazoContextoGemini)
+	defer cancelar()
 	peticion, err := http.NewRequestWithContext(ctx, http.MethodGet, g.base()+"/models/"+url.PathEscape(modelo), nil)
 	if err != nil {
-		return 0, err
+		return 0
 	}
 	peticion.Header.Set("x-goog-api-key", claveAPI)
-	cliente := cmp.Or(g.Cliente, http.DefaultClient)
-	respuesta, err := cliente.Do(peticion)
+	respuesta, err := cmp.Or(g.Cliente, http.DefaultClient).Do(peticion)
 	if err != nil {
-		return 0, err
+		return 0
 	}
 	defer respuesta.Body.Close()
 	var datos struct {
 		InputTokenLimit int `json:"inputTokenLimit"`
 	}
 	if respuesta.StatusCode != http.StatusOK || json.NewDecoder(io.LimitReader(respuesta.Body, 1<<20)).Decode(&datos) != nil {
-		return 0, nil // sin dato: no se comprueba
+		return 0
 	}
-	contextosGemini.Lock()
-	contextosGemini.datos[clave] = contextoGuardado{datos.InputTokenLimit, time.Now().Add(24 * time.Hour)}
-	contextosGemini.Unlock()
-	return datos.InputTokenLimit, nil
+	return datos.InputTokenLimit
 }

@@ -1301,3 +1301,35 @@ func TestLineaRegistroEscapada(t *testing.T) {
 		}
 	}
 }
+
+func TestSaltoPorTamanoConservaPlazoDeCola(t *testing.T) {
+	alm := abrir(t)
+	limites := map[string]int{"simulado": 1, "otro": 1}
+	opc := opciones()
+	opc.Contextos, opc.ReservaSalida, opc.TiempoMaximoCola = map[string]int{"simulado": 10}, 0, 300*time.Millisecond
+	p := Nuevo(alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}, "otro": adaptadores.Simulado{Demora: time.Minute}},
+		NuevosSemaforos(limites), opc)
+	if err := p.Iniciar(ctx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Detener)
+	ocupa := solicitud("x")
+	ocupa.Agente = "otro"
+	esperar(t, alm, enviar(t, p, ocupa), nucleo.Ejecutando)
+	// No cabe en simulado y otro está ocupado: el plazo en cola sigue valiendo hasta que algo se ejecute.
+	s := conRespaldo("otro")
+	s.Mensajes[0].Contenido = strings.Repeat("x", 400)
+	if tr := esperar(t, alm, enviar(t, p, s), nucleo.Fallido); tr.CodigoError != nucleo.CodigoTiempoColaAgotado {
+		t.Fatalf("tras saltar sin ejecutar, el plazo en cola sigue: %+v", tr)
+	}
+}
+
+func TestEntradaNoCabeNoGastaPeticion(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarConContextos(t, alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Respuesta: "ok"}}, map[string]int{"simulado": 10}, 0)
+	esperar(t, alm, enviar(t, p, solicitud(strings.Repeat("x", 400))), nucleo.Fallido)
+	dia, _, err := alm.Consumo(ctx, p.opc.Instancia, persistencia.TodaLaInstancia)
+	if err != nil || dia.Peticiones != 0 {
+		t.Fatalf("una entrada que no cabe no gasta petición del presupuesto: %+v %v", dia, err)
+	}
+}

@@ -560,7 +560,9 @@ const es = {
   'error.error_interno': 'Error interno del servicio',
   'error.modelo_no_permitido': 'Esa API no permite ese modelo',
   'error.resultado_expirado': 'La respuesta ya caducó y se borró',
-  'error.contexto_no_permitido': 'Ese proyecto no está entre los confiables',
+  'error.contexto_no_permitido': 'Ese modo de contexto no está permitido aquí',
+  'error.entrada_demasiado_grande': 'La entrada no cabe en el modelo',
+  'error.cuota_cargas_agotada': 'Se llenó el espacio para archivos',
   'error.ruta_no_permitida': 'El archivo está fuera de las carpetas permitidas',
   'error.sesion_caducada': 'La sesión caducó',
   // Aviso de versión nueva
@@ -689,7 +691,7 @@ const es = {
     'Abre «Registro» bajo la respuesta en Probar o en el detalle del Historial: cada paso (en cola, esperando al agente, ejecutando con qué agente, modelo y esfuerzo, avisos y el final) con su hora y el tiempo desde el inicio, y arriba cuánto duró cada etapa.',
   'ayuda.p18': '¿Por qué se rechazó mi petición por tamaño?',
   'ayuda.r18':
-    'Antes de llamar al agente, Tramtai mide lo que va a recibir (instrucciones, mensaje y documentos ya convertidos a texto) y lo compara con el contexto del modelo, dejando sitio para la respuesta. Si no cabe, prueba con el siguiente del respaldo y lo avisa en el registro; si no cabe en ninguno, la rechaza con «entrada demasiado grande» sin gastar cuota. Los documentos son lo que más ocupa: el registro dice cuál pesa más. En Agentes ves el contexto de cada modelo cuando se conoce.',
+    'Antes de llamar al agente, Tramtai mide lo que va a recibir (instrucciones, mensaje y documentos ya convertidos a texto) y lo compara con el contexto del modelo, dejando sitio para la respuesta. Si no cabe, prueba con el siguiente del respaldo y lo avisa en el registro; si no cabe en ninguno, la rechaza con «La entrada no cabe en el modelo» sin gastar tokens ni contar la petición. Los documentos son lo que más ocupa: el registro dice cuál pesa más. En Agentes ves el contexto de cada modelo cuando se conoce.',
   'ayuda.p19': '¿Por qué no puedo usar Antigravity en mis APIs?',
   'ayuda.r19':
     'Porque todavía no se ha comprobado con el CLI real que, ante un contenido malicioso, no pueda usar herramientas (leer archivos o ejecutar órdenes). Mientras tanto se usa solo desde Probar y la terminal. Claude y Codex sí están comprobados.',

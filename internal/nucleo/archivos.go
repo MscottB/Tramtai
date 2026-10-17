@@ -102,7 +102,10 @@ var credencialEnURL = regexp.MustCompile(`://[^/@\s:]+:[^/@\s]+@`)
 // (VariableSecreta) o porque su valor es una URL con credenciales.
 func EntornoSecreto(par string) bool {
 	nombre, valor, _ := strings.Cut(par, "=")
-	return VariableSecreta(nombre) || credencialEnURL.MatchString(valor)
+	// Un proxy con usuario y clave sí pasa: los CLI lo necesitan para llegar a su proveedor y no tienen herramientas
+	// con que filtrarlo.
+	proxy := strings.HasSuffix(strings.ToUpper(nombre), "_PROXY")
+	return VariableSecreta(nombre) || (!proxy && credencialEnURL.MatchString(valor))
 }
 
 // Lista devuelve un valor de tipo lista, o nil si no existe.

@@ -561,7 +561,9 @@ const en: Textos = {
   'error.error_interno': 'Internal service error',
   'error.modelo_no_permitido': 'That API does not allow that model',
   'error.resultado_expirado': 'The response expired and was deleted',
-  'error.contexto_no_permitido': 'That project is not trusted',
+  'error.contexto_no_permitido': 'That context mode is not allowed here',
+  'error.entrada_demasiado_grande': 'The input does not fit in the model',
+  'error.cuota_cargas_agotada': 'The space for files is full',
   'error.ruta_no_permitida': 'The file is outside the allowed folders',
   'error.sesion_caducada': 'The session expired',
   // New version notice
@@ -690,7 +692,7 @@ const en: Textos = {
     'Open «Log» under the answer in Try or in the History detail: each step (queued, waiting for the agent, running with which agent, model and effort, notices and the end) with its time and the time since the start, and above it how long each stage took.',
   'ayuda.p18': 'Why was my request rejected for size?',
   'ayuda.r18':
-    'Before calling the agent, Tramtai measures what it will receive (instructions, message and documents already converted to text) and compares it with the model context, leaving room for the answer. If it does not fit, it tries the next fallback and says so in the log; if it fits in none, it rejects it with «input too large» without using quota. Documents take the most space: the log says which one weighs the most. In Agents you see the context of each model when it is known.',
+    'Before calling the agent, Tramtai measures what it will receive (instructions, message and documents already converted to text) and compares it with the model context, leaving room for the answer. If it does not fit, it tries the next fallback and says so in the log; if it fits in none, it rejects it with «The input does not fit in the model» without using tokens or counting the request. Documents take the most space: the log says which one weighs the most. In Agents you see the context of each model when it is known.',
   'ayuda.p19': 'Why can I not use Antigravity in my APIs?',
   'ayuda.r19':
     'Because it has not yet been checked with the real CLI that, faced with malicious content, it cannot use tools (read files or run commands). Meanwhile it is only used from Try and the terminal. Claude and Codex are checked.',

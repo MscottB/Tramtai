@@ -73,7 +73,7 @@ func OpcionesDesde(c *nucleo.Configuracion, instancia string) Opciones {
 		Contextos:                  c.Contextos(),
 		PermitirAntigravityApps:    c.Booleano("adaptadores.antigravity.permitir_apps"),
 		TiempoConversion:           time.Duration(c.Limite("conversion.tiempo_total_segundos")) * time.Second,
-		ReservaSalida:              c.Entero("limites.reserva_salida_tokens"),
+		ReservaSalida:              c.Limite("limites.reserva_salida_tokens"),
 	}
 }
 
@@ -199,8 +199,8 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 		}
 	}
 	// Una solicitud nueva no puede citar cargas vencidas; un reintento usa las que su trabajo protegía.
-	if v, ok := p.opc.Preparador.(interface{ Verificar([]string) error }); ok && intentoDe == "" && len(solicitud.Cargas) > 0 {
-		if err := v.Verificar(solicitud.Cargas); err != nil {
+	if v, ok := p.opc.Preparador.(interface{ Verificar([]string, string) error }); ok && intentoDe == "" && len(solicitud.Cargas) > 0 {
+		if err := v.Verificar(solicitud.Cargas, punto); err != nil {
 			return nucleo.Trabajo{}, false, err
 		}
 	}
@@ -601,6 +601,7 @@ func (p *Planificador) procesar(id string, esperando func()) {
 	lista := candidatos(t)
 	var resultado adaptadores.Resultado
 	var usoPrevio nucleo.Uso // lo que gastaron los intentos que fallaron: también cuenta para el presupuesto
+	ejecutado := false       // si algún candidato llegó a ejecutarse (no solo se saltó por tamaño)
 	for i, c := range lista {
 		// Lo que no cabe en el contexto del modelo no llega a su CLI: se salta sin ejecutarlo y el trabajo sigue
 		// esperando agente.
@@ -611,6 +612,7 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		if contexto, _ := p.contextoDe(ctxTrabajo, c); contexto > 0 && !cabe(medida, contexto, p.opc.ReservaSalida) {
 			estado, err = nucleo.EsperandoAgente, noCabe(medida, c, contexto, p.opc.ReservaSalida)
 		} else {
+			ejecutado = true
 			res, huboTexto, fin, err = p.intentar(ctxTrabajo, id, t, solicitud, c, plazoCola)
 		}
 		if fin {
@@ -627,12 +629,18 @@ func (p *Planificador) procesar(id string, esperando func()) {
 			codigo = nucleo.CodigoErrorAgente
 		}
 		if !saltable(codigo) || huboTexto || i+1 == len(lista) {
-			p.cambiar(id, estado, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err), Uso: &usoPrevio})
+			// Si no cabía en ninguno y nada se ejecutó, la petición no cuenta para el presupuesto.
+			p.cambiar(id, estado, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err), Uso: &usoPrevio,
+				DevolverPeticion: codigo == nucleo.CodigoEntradaDemasiadoGrande && !ejecutado})
 			return
 		}
 		siguiente := lista[i+1]
 		// El uso acumulado queda en el trabajo: si se cancela durante el respaldo, también cuenta.
 		if estado == nucleo.Ejecutando && !p.cambiar(id, nucleo.Ejecutando, nucleo.EsperandoAgente, persistencia.Cambio{Uso: &usoPrevio}) {
+			return
+		}
+		if estado == nucleo.EsperandoAgente && (ctxTrabajo.Err() != nil || p.ctx.Err() != nil) {
+			p.cerrarDetenido(id, nucleo.EsperandoAgente) // cancelado o en drenaje mientras se saltaba: no se cambia de agente
 			return
 		}
 		// Lo guardado debe seguir valiendo al reintentar o reencolar: el agente nuevo con el esfuerzo que usa y el
@@ -660,7 +668,9 @@ func (p *Planificador) procesar(id string, esperando func()) {
 			aviso = idioma.Tf("%s; sigue con %s", nucleo.MensajeDe(err), siguiente)
 		}
 		_ = p.almacen.AgregarEvento(fondo, id, "aviso", aviso)
-		plazoCola = nil
+		if estado == nucleo.Ejecutando {
+			plazoCola = nil // el plazo en cola vale hasta que algo se ejecuta; un salto por tamaño no ejecutó nada
+		}
 	}
 
 	if !p.cambiar(id, nucleo.Ejecutando, nucleo.ValidandoSalida, persistencia.Cambio{}) {

@@ -3,6 +3,8 @@ package servicio
 import (
 	"context"
 	"encoding/json"
+	"net/netip"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -51,6 +53,12 @@ func TestOrigenSegunAutenticacion(t *testing.T) {
 		if o := origenDe(t, cuerpo); o != esperado {
 			t.Errorf("con la clave y X-Tramtai-Cliente %q: %q, esperado %q", cliente, o, esperado)
 		}
+	}
+	// Desde otro equipo (o tras un proxy) la etiqueta no vale: es una aplicación, también para el bloqueo de Antigravity.
+	if !mismoUsuario(netip.MustParseAddrPort("127.0.0.1:1"), netip.MustParseAddrPort("127.0.0.1:2")) && runtime.GOOS != "windows" && runtime.GOOS != "linux" {
+		t.Log("sin identificación del dueño de la conexión: no se comprueba la etiqueta remota")
+	} else if _, cuerpo := pedir(t, ts.URL, "POST", "/api/v1/trabajos", global.token, hola, "X-Tramtai-Cliente", "cli", "X-Forwarded-For", "203.0.113.5"); origenDe(t, cuerpo) != "app" {
+		t.Errorf("la etiqueta cli tras un proxy: %q", origenDe(t, cuerpo))
 	}
 	_, cuerpo = pedir(t, ts.URL, "POST", "/p/tienda/api/v1/trabajos", tienda, hola, "X-Tramtai-Cliente", "cli")
 	if o := origenDe(t, cuerpo); o != "api" {
