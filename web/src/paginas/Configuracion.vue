@@ -15,7 +15,7 @@
         </div>
         <div class="col-12 col-md-5">
           <SelectorModelo :model-value="actualPredeterminado" :opciones="opcionesModelo" :dense="false" :loading="guardandoModelo"
-            :label="t('predeterminado.titulo')" @update:model-value="(id) => id && cambiarPredeterminado(id)" />
+            :label="t('predeterminado.titulo')" @update:model-value="(id) => typeof id === 'string' && cambiarPredeterminado(id)" />
         </div>
       </q-card-section>
     </q-card>

@@ -72,10 +72,11 @@ const es = {
   // Modelos y agentes
   'modelo.perfil': 'Perfil {nombre}',
   'modelo.perfilDetalle': 'el modelo de ese perfil en el agente predeterminado',
-  'modelo.predeterminadoCli': 'el modelo predeterminado de su CLI',
+  'modelo.delCli': 'El modelo predeterminado de su CLI',
+  'modelo.contexto': 'contexto {n} tokens',
   'modelo.esPredeterminado': 'Predeterminado',
   'modelo.sinVersion': 'versión aún no informada (aparece tras usarlo)',
-  'modelo.versionConcreta': 'versión concreta, vista en el historial',
+  'modelo.versionConcreta': 'versión exacta, vista en el historial',
   'modelo.escrito': 'escrito a mano',
   'modelo.libreHint': 'O escribe agente/modelo y pulsa Enter, por ejemplo claude/sonnet o claude/claude-sonnet-5-5',
   'modelo.libreRegla': 'Escribe agente/modelo con un agente conocido: {agentes}',

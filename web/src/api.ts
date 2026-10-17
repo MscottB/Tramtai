@@ -577,27 +577,60 @@ export function etiquetaModelo(id: string): string {
 }
 
 export interface OpcionModelo {
+  // label es el nombre completo («Claude · sonnet»); corto, el que se ve dentro del grupo de su agente («sonnet»).
   label: string
+  corto: string
   caption: string
+  // version es el modelo exacto que hay detrás, si se conoce (claude-sonnet-5-5).
+  version: string
+  // grupo es el agente, o «perfil» para los perfiles.
+  grupo: string
   value: string
   predeterminado: boolean
   esfuerzos: string[]
+  // exacta: una versión concreta vista en el historial; va al final de su grupo.
+  exacta?: boolean
+  // cabecera: el título de un grupo en la lista, que no se puede elegir.
+  cabecera?: boolean
+  disable?: boolean
 }
 
-// opcionModelo convierte una entrada del catálogo en una opción legible, con la versión real si se conoce.
+// opcionModelo convierte una entrada del catálogo en una opción legible, con la versión exacta y el contexto si se
+// conocen.
 export function opcionModelo(m: Modelo): OpcionModelo {
+  const grupo = m.perfil ? 'perfil' : (m.agente ?? m.id.split('/')[0])
+  const exacta = !m.perfil && m.origen === 'visto'
   let label = etiquetaModelo(m.id)
-  let caption = m.version || t('modelo.sinVersion')
+  let corto = m.modelo ?? t('modelo.delCli')
+  let version = exacta ? (m.modelo ?? '') : (m.version ?? '')
+  let caption = exacta ? t('modelo.versionConcreta') : m.version || t('modelo.sinVersion')
   if (m.perfil) {
-    label = t('modelo.perfil', { nombre: perfiles.includes(m.perfil) ? t(`perfil.${m.perfil}` as Clave) : m.perfil })
+    label = corto = t('modelo.perfil', { nombre: perfiles.includes(m.perfil) ? t(`perfil.${m.perfil}` as Clave) : m.perfil })
     caption = [m.resuelto ? etiquetaModelo(m.resuelto) : t('modelo.perfilDetalle'), m.version].filter(Boolean).join(' · ')
-  } else if (!m.modelo) {
-    caption = [m.version, t('modelo.predeterminadoCli')].filter(Boolean).join(' · ')
-  } else if (m.origen === 'visto') {
-    caption = t('modelo.versionConcreta')
+    version = m.version ?? ''
   }
-  if (m.esfuerzos?.length) caption += ' · ' + t('esfuerzo.elegible')
-  return { label, caption, value: m.id, predeterminado: !!m.predeterminado, esfuerzos: m.esfuerzos ?? [] }
+  if (m.contexto_tokens) caption += ' · ' + t('modelo.contexto', { n: numero(m.contexto_tokens) })
+  return { label, corto, caption, version, grupo, value: m.id, predeterminado: !!m.predeterminado, esfuerzos: m.esfuerzos ?? [], exacta }
+}
+
+// opcionEscrita es un agente/modelo escrito a mano, que no está en el catálogo.
+export function opcionEscrita(valor: string): OpcionModelo {
+  const [agente, ...resto] = valor.split('/')
+  return { label: etiquetaModelo(valor), corto: resto.join('/') || t('modelo.delCli'), caption: t('modelo.escrito'), version: '', grupo: agente,
+    value: valor, predeterminado: false, esfuerzos: [] }
+}
+
+// agruparOpciones ordena las opciones por grupo (los perfiles, y los agentes en el orden de la red) con un título por
+// grupo; dentro, primero el modelo de su CLI, luego los configurados y al final las versiones vistas.
+export function agruparOpciones(lista: OpcionModelo[]): OpcionModelo[] {
+  const lugar = (g: string) => (g === 'perfil' ? -1 : ordenAgentes.includes(g) ? ordenAgentes.indexOf(g) : ordenAgentes.length)
+  const rango = (o: OpcionModelo) => (o.grupo === 'perfil' ? 1 : !o.value.includes('/') ? 0 : o.exacta ? 2 : 1)
+  const grupos = [...new Set(lista.map((o) => o.grupo))].sort((a, b) => lugar(a) - lugar(b) || a.localeCompare(b))
+  return grupos.flatMap((g) => [
+    { label: g === 'perfil' ? t('conectar.perfiles') : nombreAgente(g), corto: '', caption: '', version: '', grupo: g, value: '#' + g,
+      predeterminado: false, esfuerzos: [], cabecera: true, disable: true },
+    ...lista.filter((o) => o.grupo === g).sort((a, b) => rango(a) - rango(b) || a.corto.localeCompare(b.corto)),
+  ])
 }
 
 // esfuerzosDe son los niveles de esfuerzo del modelo elegido ('' es el predeterminado del espacio); uno escrito a

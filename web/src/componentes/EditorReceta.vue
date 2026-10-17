@@ -6,7 +6,7 @@
     <!-- El esfuerzo va justo bajo el modelo, fuera de las opciones: se ve siempre cuál se usará, también el del agente.
          En una fila no cabe: la columna de la receta es estrecha también en escritorio. -->
     <SelectorModelo :model-value="modelValue.modelo" :opciones="opciones" clearable :label="t('receta.modelo')"
-      @update:model-value="(v) => cambiar({ modelo: v, forzar: v ? modelValue.forzar : false })" />
+      @update:model-value="(v) => cambiar({ modelo: v as string | null, forzar: v ? modelValue.forzar : false })" />
     <div v-if="sinAntigravity" class="text-caption texto-suave q-mt-xs">{{ t('receta.sinAntigravity') }}</div>
     <SelectorEsfuerzo :model-value="modelValue.esfuerzo" :niveles="niveles" :predeterminado="esfuerzoPredeterminadoDe(catalogo, modelValue.modelo)" :hint="paraApi ? t('esfuerzo.api') : undefined"
       @update:model-value="(v: string) => cambiar({ esfuerzo: v })" />
@@ -14,11 +14,8 @@
     <div class="q-gutter-y-md" :class="{ 'q-pt-sm': plegarOpciones }">
     <q-toggle :model-value="modelValue.forzar" :disable="!modelValue.modelo" :label="t('receta.forzar')"
       @update:model-value="(v: boolean) => cambiar({ forzar: v })" />
-    <q-select :model-value="basesRespaldo" :options="opcionesRespaldo" multiple use-chips emit-value map-options outlined dense
-      :max-values="3" :label="t('receta.respaldo')" :hint="t('receta.respaldoHint')"
-      @update:model-value="(v: string[] | null) => elegirRespaldo(v ?? [])">
-      <template #prepend><q-icon name="o_alt_route" /></template>
-    </q-select>
+    <SelectorModelo :model-value="basesRespaldo" :opciones="opcionesRespaldo" multiple :maximo="3" icono="o_alt_route"
+      :label="t('receta.respaldo')" :hint="t('receta.respaldoHint')" @update:model-value="(v) => elegirRespaldo((v as string[] | null) ?? [])" />
     <!-- Cada agente de respaldo puede llevar su propio esfuerzo; sin elegir, el del principal o el de su CLI. -->
     <div v-for="(r, i) in respaldoDividido" :key="r.base" class="q-pl-md">
       <SelectorEsfuerzo v-if="r.niveles.length" :model-value="r.esfuerzo" :niveles="modelValue.esfuerzo ? ['agente', ...r.niveles] : r.niveles" :etiqueta="t('receta.esfuerzoDe', { agente: r.nombre })"

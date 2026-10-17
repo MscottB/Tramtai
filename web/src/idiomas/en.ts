@@ -74,10 +74,11 @@ const en: Textos = {
   // Models and agents
   'modelo.perfil': '{nombre} profile',
   'modelo.perfilDetalle': 'that profile’s model on the default agent',
-  'modelo.predeterminadoCli': 'its CLI’s default model',
+  'modelo.delCli': 'The default model of its CLI',
+  'modelo.contexto': 'context {n} tokens',
   'modelo.esPredeterminado': 'Default',
   'modelo.sinVersion': 'version not reported yet (shown after use)',
-  'modelo.versionConcreta': 'specific version, seen in the history',
+  'modelo.versionConcreta': 'exact version, seen in the history',
   'modelo.escrito': 'typed by hand',
   'modelo.libreHint': 'Or type agent/model and press Enter, for example claude/sonnet or claude/claude-sonnet-5-5',
   'modelo.libreRegla': 'Type agent/model with a known agent: {agentes}',
