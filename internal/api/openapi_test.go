@@ -27,7 +27,7 @@ func TestOpenAPICubreLasRutas(t *testing.T) {
 		t.Fatalf("openapi = %q", doc.OpenAPI)
 	}
 	enCodigo := map[string]bool{}
-	for _, m := range regexp.MustCompile(`HandleFunc\("(GET|POST|DELETE) /api/v1(/[^"]*)"`).FindAllStringSubmatch(string(fuente), -1) {
+	for _, m := range regexp.MustCompile(`HandleFunc\("([A-Z]+) /api/v1(/[^"]*)"`).FindAllStringSubmatch(string(fuente), -1) {
 		enCodigo[strings.ToLower(m[1])+" "+m[2]] = true
 	}
 	if len(enCodigo) < 10 {

@@ -24,10 +24,10 @@
         "summary": "Lista los trabajos recientes",
         "operationId": "listarTrabajos",
         "parameters": [
-          { "name": "limite", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+          { "name": "limite", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 200 } },
           { "name": "punto", "in": "query", "schema": { "type": "string" } },
           { "name": "grupo", "in": "query", "schema": { "type": "string" } },
-          { "name": "origen", "in": "query", "schema": { "type": "string", "enum": ["probar", "terminal", "cli", "app", "api"] } },
+          { "name": "origen", "in": "query", "schema": { "type": "string", "enum": ["probar", "terminal", "cli", "app"] } },
           { "name": "antes", "in": "query", "description": "creado_en (RFC 3339) del último trabajo visto", "schema": { "type": "string", "format": "date-time" } },
           { "name": "antes_id", "in": "query", "schema": { "type": "string" } }
         ],
@@ -228,7 +228,7 @@
         "type": "object",
         "required": ["rol", "contenido"],
         "additionalProperties": false,
-        "properties": { "rol": { "type": "string", "enum": ["usuario", "asistente", "sistema"] }, "contenido": { "type": "string" } }
+        "properties": { "rol": { "type": "string", "enum": ["usuario", "asistente", "sistema"] }, "contenido": { "type": "string", "minLength": 1 } }
       },
       "ConfigSalida": {
         "type": "object",
@@ -243,7 +243,7 @@
       "ConfigEjecucion": {
         "type": "object",
         "additionalProperties": false,
-        "properties": { "tiempo_limite_segundos": { "type": "integer", "minimum": 0 }, "persistir_sesion": { "type": "boolean" } }
+        "properties": { "tiempo_limite_segundos": { "type": "integer", "minimum": 0, "maximum": 86400 }, "persistir_sesion": { "type": "boolean" } }
       },
       "SolicitudEjecucion": {
         "type": "object",
@@ -258,8 +258,8 @@
           "perfil": { "type": "string" },
           "modo_contexto": { "type": "string", "enum": ["aislado", "consciente_proyecto"] },
           "instrucciones": { "type": "string" },
-          "mensajes": { "type": "array", "items": { "$ref": "#/components/schemas/Mensaje" } },
-          "cargas": { "type": "array", "items": { "type": "string" }, "description": "identificador_carga de POST /cargas" },
+          "mensajes": { "type": "array", "maxItems": 1000, "items": { "$ref": "#/components/schemas/Mensaje" } },
+          "cargas": { "type": "array", "maxItems": 20, "items": { "type": "string" }, "description": "identificador_carga de POST /cargas" },
           "salida": { "$ref": "#/components/schemas/ConfigSalida" },
           "ejecucion": { "$ref": "#/components/schemas/ConfigEjecucion" }
         }

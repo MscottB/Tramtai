@@ -60,7 +60,7 @@
         <div class="texto-suave text-body2 q-mt-xs">{{ t('ayuda.guiasTexto') }}</div>
       </q-card-section>
       <q-list separator>
-        <q-expansion-item v-for="g in guiasVistas" :key="g.titulo" :icon="g.icono" :label="t(g.titulo)" header-class="text-weight-medium"
+        <q-expansion-item v-for="g in guiasVistas" :key="g.titulo + (texto ? '?' : '')" :icon="g.icono" :label="t(g.titulo)" header-class="text-weight-medium"
           :default-opened="!!texto" expand-icon-class="texto-suave">
           <div class="q-px-md q-pb-md">
             <ol class="pasos-guia">
@@ -105,7 +105,7 @@
       <template v-for="c in categoriasVistas" :key="c.titulo">
         <div class="q-px-md q-pt-sm text-caption text-weight-medium texto-suave text-uppercase">{{ t(c.titulo) }}</div>
         <q-list separator>
-          <q-expansion-item v-for="f in c.preguntas" :key="f.pregunta" :label="t(f.pregunta)" :default-opened="!!texto" header-class="text-weight-medium" expand-icon-class="texto-suave">
+          <q-expansion-item v-for="f in c.preguntas" :key="f.pregunta + (texto ? '?' : '')" :label="t(f.pregunta)" :default-opened="!!texto" header-class="text-weight-medium" expand-icon-class="texto-suave">
             <div class="q-px-md q-pb-md texto-suave" style="line-height: 1.6">{{ t(f.respuesta) }}</div>
           </q-expansion-item>
         </q-list>
