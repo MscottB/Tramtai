@@ -399,6 +399,17 @@ export function recetaDePunto(p: EstadoPunto): Receta {
     respaldo: [...(p.respaldo ?? [])], esquema: p.esquema ? JSON.stringify(p.esquema, null, 2) : '' }
 }
 
+// recetaDeSolicitud rehace la receta de una petición ya enviada (Usar de nuevo en Probar). Si respondió un agente de
+// respaldo, la solicitud guardada ya apunta a él: la receta empieza por el agente que respondió.
+export function recetaDeSolicitud(s: Solicitud): Receta {
+  return { instrucciones: s.instrucciones ?? '', forzar: false, esfuerzo: s.esfuerzo ?? '', respaldo: [...(s.respaldo ?? [])],
+    modelo: s.perfil_modelo ? 'perfil/' + s.perfil_modelo : [s.agente, s.modelo].filter(Boolean).join('/') || null,
+    esquema: s.salida?.esquema ? JSON.stringify(s.salida.esquema, null, 2) : '' }
+}
+
+// mensajeDe es el último mensaje del usuario de una petición; '' si sus entradas ya se borraron.
+export const mensajeDe = (x: Trabajo) => x.solicitud.mensajes?.filter((m) => m.rol === 'usuario').at(-1)?.contenido ?? ''
+
 // esquemaDeReceta convierte el texto del esquema en un objeto; lanza un error legible si no es un objeto JSON.
 export function esquemaDeReceta(r: Receta): Record<string, unknown> | undefined {
   if (!r.esquema.trim()) return undefined

@@ -141,7 +141,8 @@ const filtro = ref(filtroHistorial.value || 'todos')
 filtroHistorial.value = ''
 const busqueda = ref<string | null>('')
 // origen: '' todos; «o:probar» un origen, «g:web» un grupo o «p:tienda» una API (se filtra en el servicio).
-const origen = ref(origenHistorial.value ? 'p:' + origenHistorial.value : '')
+// Llega una API por su nombre (Mis APIs) o un filtro ya armado («o:probar» desde Probar).
+const origen = ref(origenHistorial.value.includes(':') ? origenHistorial.value : origenHistorial.value ? 'p:' + origenHistorial.value : '')
 const hayFiltro = computed(() => filtro.value !== 'todos' || !!busqueda.value || !!origen.value)
 function quitarFiltros() {
   filtro.value = 'todos'

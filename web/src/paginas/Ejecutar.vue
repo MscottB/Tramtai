@@ -56,6 +56,30 @@
             <q-btn unelevated color="primary" icon="o_send" :label="t('ejecutar.enviar')" no-caps :loading="enviando" :disable="activo || !mensaje.trim()" @click="ejecutar" />
           </q-card-actions>
         </q-card>
+        <!-- Las pruebas recientes van con la receta: «Usar de nuevo» la rellena. -->
+        <q-card class="q-mt-md">
+          <q-card-section class="row items-center no-wrap q-pb-sm">
+            <div class="titulo-seccion col">{{ t('ejecutar.recientes') }}</div>
+            <q-btn v-if="recientes.length" flat dense no-caps color="primary" icon-right="o_chevron_right" :label="t('ejecutar.verTodo')" @click="verTodo" />
+          </q-card-section>
+          <div v-if="!recientes.length" class="q-px-md q-pb-md text-body2 texto-suave">{{ t('ejecutar.sinRecientes') }}</div>
+          <q-list v-else separator>
+            <q-item v-for="x in recientes" :key="x.id" clickable :active="trabajo?.id === x.id" @click="seguir(x)">
+              <q-item-section>
+                <q-item-label lines="1">{{ mensajeDe(x) || t('trabajo.entradaEliminada') }}</q-item-label>
+                <q-item-label caption lines="1">
+                  <span :class="estadoInfo(x.estado).clase"><q-icon :name="estadoInfo(x.estado).icono" size="12px" />{{ estadoInfo(x.estado).etiqueta }}</span>
+                  {{ haceCuanto(x.creado_en) }} · {{ modeloDe(x) }}
+                </q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-btn flat dense round icon="o_replay" color="primary" :disable="!mensajeDe(x)" :aria-label="t('ejecutar.usarDeNuevo')" @click.stop="usarDeNuevo(x)">
+                  <q-tooltip>{{ mensajeDe(x) ? t('ejecutar.usarDeNuevo') : t('trabajo.entradaEliminada') }}</q-tooltip>
+                </q-btn>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card>
       </div>
 
       <div class="col-12 col-md-7 respuesta-fija">
@@ -170,10 +194,12 @@ import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
 import RegistroTrabajo from '../componentes/RegistroTrabajo.vue'
 import SalidaTrabajo from '../componentes/SalidaTrabajo.vue'
-import { ajustesDeReceta, api, aplicarModelo, avisar, avisarError, configDeReceta, copiar, duracion, esquemaDeReceta, esfuerzoUsado, estadoInfo, modeloInicial,
-  recetaDePunto, recetaInicial, recetaVacia, terminales, tituloError, trabajoSeguido, type EventoRegistro, type Modelo, type Receta, type Solicitud,
+import { ajustesDeReceta, api, aplicarModelo, avisar, avisarError, configDeReceta, copiar, duracion, esquemaDeReceta, esfuerzoUsado, estadoInfo, haceCuanto, mensajeDe, modeloDe, modeloInicial,
+  origenHistorial, recetaDePunto, recetaDeSolicitud, recetaInicial, recetaVacia, terminales, tituloError, trabajoSeguido, type EventoRegistro, type Modelo, type Receta, type Solicitud,
   type Trabajo } from '../api'
 import { t } from '../i18n'
+
+const emit = defineEmits<{ ir: [pagina: string] }>()
 
 const catalogo = ref<Modelo[]>([])
 // receta es lo que define la API que se está probando; desde Agentes llega con un modelo ya elegido.
@@ -209,6 +235,7 @@ const esfuerzoFinal = computed(() => (final.value ? esfuerzoUsado(final.value, e
 let fuente: EventSource | undefined
 
 onMounted(async () => {
+  cargarRecientes()
   catalogo.value = await api.catalogo().catch((e) => (avisarError(e), []))
   if (recetaInicial.value) {
     const nombre = recetaInicial.value
@@ -258,6 +285,7 @@ async function ejecutar() {
     if (r.esfuerzo) s.esfuerzo = r.esfuerzo
     s = aplicarModelo(s, r.modelo ?? '')
     seguir(await api.crear(s))
+    cargarRecientes()
   } catch (e) {
     avisarError(e)
   } finally {
@@ -316,11 +344,31 @@ async function terminar(id: string) {
     if (terminado.estado === 'completado' && terminado.salida !== undefined && terminado.salida !== salida.value) salida.value = terminado.salida
     final.value = terminado
     versionRegistro.value++
+    cargarRecientes()
   } catch (e) {
     avisarError(e)
   } finally {
     activo.value = false
   }
+}
+
+// recientes son las últimas pruebas lanzadas desde Probar (las de las APIs y la terminal están en el Historial).
+const recientes = ref<Trabajo[]>([])
+async function cargarRecientes() {
+  recientes.value = await api.trabajos(10, { origen: 'probar' }).catch(() => recientes.value)
+}
+function usarDeNuevo(x: Trabajo) {
+  const texto = mensajeDe(x)
+  if (!texto) return
+  mensaje.value = texto
+  receta.value = recetaDeSolicitud(x.solicitud)
+  editando.value = ''
+  archivos.value = null
+  if (x.solicitud.cargas?.length) avisar(t('ejecutar.sinAdjuntos'))
+}
+function verTodo() {
+  origenHistorial.value = 'o:probar'
+  emit('ir', 'historial')
 }
 
 async function cancelar() {
