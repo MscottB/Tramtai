@@ -1,6 +1,6 @@
 // Package actualizacion consulta la última versión publicada de Tramtai y, en Windows, descarga su instalador,
 // comprueba la suma SHA-256 y lo ejecuta en silencio. Solo habla con GitHub y solo para pedir la ficha pública de la
-// última versión: no envía ningún dato del usuario.
+// última versión y la lista de versiones publicadas (sus notas): no envía ningún dato del usuario.
 package actualizacion
 
 import (
@@ -103,18 +103,8 @@ func armar(etiqueta, pagina, notas string) Version {
 // Novedades devuelve las versiones publicadas después de desde y hasta hasta, de la más nueva a la más vieja y como
 // mucho 10, para leer tras actualizar lo que trajo cada una. Sin desde válido, solo la de hasta.
 func Novedades(ctx context.Context, desde, hasta string) ([]Version, error) {
-	datos, err := bajar(ctx, urlVersiones, 4<<20, "application/vnd.github+json")
+	fichas, err := listaVersiones(ctx)
 	if err != nil {
-		return nil, err
-	}
-	var fichas []struct {
-		Etiqueta string `json:"tag_name"`
-		Pagina   string `json:"html_url"`
-		Notas    string `json:"body"`
-		Borrador bool   `json:"draft"`
-		Previa   bool   `json:"prerelease"`
-	}
-	if err := json.Unmarshal(datos, &fichas); err != nil {
 		return nil, err
 	}
 	_, conDesde := numeros(desde)
@@ -138,6 +128,48 @@ func Novedades(ctx context.Context, desde, hasta string) ([]Version, error) {
 		return slices.Compare(y, x)
 	})
 	return lista[:min(len(lista), 10)], nil
+}
+
+// fichaVersion es lo que se lee de cada versión de la lista de GitHub.
+type fichaVersion struct {
+	Etiqueta string `json:"tag_name"`
+	Pagina   string `json:"html_url"`
+	Notas    string `json:"body"`
+	Borrador bool   `json:"draft"`
+	Previa   bool   `json:"prerelease"`
+}
+
+// La lista de versiones se guarda 10 minutos: GitHub admite 60 consultas por hora sin autenticar y cada navegador
+// que se actualiza la pide al abrirse.
+var cacheVersiones struct {
+	sync.Mutex
+	fichas []fichaVersion
+	cuando time.Time
+}
+
+func listaVersiones(ctx context.Context) ([]fichaVersion, error) {
+	cacheVersiones.Lock()
+	defer cacheVersiones.Unlock()
+	if cacheVersiones.fichas != nil && time.Since(cacheVersiones.cuando) < 10*time.Minute {
+		return cacheVersiones.fichas, nil
+	}
+	datos, err := bajar(ctx, urlVersiones, 4<<20, "application/vnd.github+json")
+	if err != nil {
+		return nil, err
+	}
+	fichas := []fichaVersion{}
+	if err := json.Unmarshal(datos, &fichas); err != nil {
+		return nil, err
+	}
+	cacheVersiones.fichas, cacheVersiones.cuando = fichas, time.Now()
+	return fichas, nil
+}
+
+// reiniciarCache vacía la lista guardada (para las pruebas).
+func reiniciarCache() {
+	cacheVersiones.Lock()
+	defer cacheVersiones.Unlock()
+	cacheVersiones.fichas = nil
 }
 
 // recortar deja texto en un máximo de runas, sin cortar un carácter por la mitad.

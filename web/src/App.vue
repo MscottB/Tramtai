@@ -152,10 +152,10 @@
       </q-page>
     </q-page-container>
 
-    <q-dialog v-model="dialogoProyecto">
+    <q-dialog v-model="dialogoProyecto" aria-labelledby="titulo-proyecto">
       <q-card style="width: 560px; max-width: 95vw">
         <q-card-section>
-          <div class="titulo-seccion">{{ t('proyecto.titulo') }}</div>
+          <div id="titulo-proyecto" class="titulo-seccion">{{ t('proyecto.titulo') }}</div>
           <div class="texto-suave text-body2 q-mt-xs">{{ t('proyecto.texto') }}</div>
         </q-card-section>
         <q-form @submit="abrirProyecto">
@@ -174,12 +174,16 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="dialogoNovedades">
+    <q-dialog v-model="dialogoNovedades" aria-labelledby="titulo-novedades">
       <q-card style="width: 540px; max-width: 94vw">
         <q-card-section>
-          <div class="titulo-seccion">{{ t('actualizacion.hecha', { version: sesion?.version }) }}</div>
-          <p v-if="!novedades.length" class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.sinNotas') }}</p>
-          <NotasVersion v-else-if="novedades.length === 1" class="q-mt-md" :texto="novedades[0].notas ?? ''" />
+          <div id="titulo-novedades" class="titulo-seccion">{{ t('actualizacion.hecha', { version: sesion?.version }) }}</div>
+          <div v-if="cargandoNovedades" class="row justify-center q-pa-lg"><q-spinner size="32px" color="primary" /></div>
+          <p v-else-if="!novedades.length" class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.sinNotas') }}</p>
+          <template v-else-if="novedades.length === 1">
+            <div v-if="novedades[0].version.split('+')[0] !== sesion?.version?.split('+')[0]" class="text-weight-medium q-mt-md">{{ novedades[0].version }}</div>
+            <NotasVersion class="q-mt-md" :texto="novedades[0].notas ?? ''" />
+          </template>
           <q-list v-else class="q-mt-sm">
             <q-expansion-item v-for="(n, i) in novedades" :key="n.version" :label="n.version" :default-opened="i === 0" dense header-class="q-px-none text-weight-medium">
               <NotasVersion :texto="n.notas ?? ''" />
@@ -193,10 +197,10 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="dialogoActualizar" :persistent="!!progreso && progreso.fase !== 'error' && progreso.fase !== 'listo'">
+    <q-dialog v-model="dialogoActualizar" aria-labelledby="titulo-actualizar" :persistent="!!progreso && progreso.fase !== 'error' && progreso.fase !== 'listo'">
       <q-card v-if="progreso" style="width: 540px; max-width: 94vw">
         <q-card-section>
-          <div class="titulo-seccion">{{ t('actualizacion.progresoTitulo', { version: progreso.version }) }}</div>
+          <div id="titulo-actualizar" class="titulo-seccion">{{ t('actualizacion.progresoTitulo', { version: progreso.version }) }}</div>
           <q-linear-progress class="q-mt-md" size="10px" rounded :value="fraccion" :indeterminate="indeterminado"
             :color="progreso.fase === 'error' ? 'negative' : 'primary'" />
           <p class="q-mt-sm q-mb-none" role="status" aria-live="polite">{{ textoProgreso }}</p>
@@ -213,7 +217,7 @@
       </q-card>
       <q-card v-else-if="actualizacion" style="width: 540px; max-width: 94vw">
         <q-card-section>
-          <div class="titulo-seccion">{{ t('actualizacion.titulo', { version: actualizacion.version }) }}</div>
+          <div id="titulo-actualizar" class="titulo-seccion">{{ t('actualizacion.titulo', { version: actualizacion.version }) }}</div>
           <p class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.detalle', { actual: actualizacion.actual }) }}</p>
           <template v-if="actualizacion.notas">
             <div class="text-caption texto-suave q-mt-md q-mb-xs">{{ t('actualizacion.novedadesTitulo') }}</div>
@@ -428,6 +432,7 @@ onUnmounted(() => {
 // compilación dev no tiene versión con la que comparar).
 const dialogoNovedades = ref(false)
 const novedades = ref<Novedad[]>([])
+const cargandoNovedades = ref(false)
 watch(() => sesion.value?.version, async (version) => {
   if (!version) return
   try {
@@ -435,8 +440,12 @@ watch(() => sesion.value?.version, async (version) => {
     localStorage.setItem('tramtai.version', version)
     // Sin la fecha (+DDMMAAAA): la misma versión compilada otro día no es una versión nueva.
     if (vista && vista.split('+')[0] !== version.split('+')[0] && /^v\d/.test(version)) {
-      novedades.value = await api.novedades(vista).catch(() => [])
+      // El diálogo se abre al momento con un indicador; las notas llegan después (o no, sin red).
+      novedades.value = []
+      cargandoNovedades.value = true
       dialogoNovedades.value = true
+      novedades.value = await api.novedades(vista).catch(() => [])
+      cargandoNovedades.value = false
     }
   } catch {
     // sin almacenamiento local no hay aviso

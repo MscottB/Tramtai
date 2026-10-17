@@ -360,7 +360,8 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		defer cancelar()
 		versiones, err := actualizacion.Novedades(ctx, r.URL.Query().Get("desde"), version.Texto())
 		if err != nil {
-			api.EscribirJSON(w, http.StatusBadGateway, map[string]any{"error": map[string]any{"codigo": "github_no_disponible", "mensaje": err.Error()}})
+			fmt.Fprintf(s.opc.Registros, "novedades: %v\n", err) // el detalle (red, proxy) queda aquí, no en la respuesta
+			api.EscribirJSON(w, http.StatusBadGateway, map[string]any{"error": map[string]any{"codigo": "github_no_disponible", "mensaje": idioma.T("GitHub no está disponible")}})
 			return
 		}
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"versiones": versiones})
