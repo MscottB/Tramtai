@@ -221,7 +221,7 @@ async function verMas() {
   if (!ultimo) return
   cargandoMas.value = true
   try {
-    const mas = await api.trabajos(PAGINA, { ...filtroDe(origen.value), antes: ultimo.creado_en })
+    const mas = await api.trabajos(PAGINA, { ...filtroDe(origen.value), antes: ultimo.creado_en, antes_id: ultimo.id })
     trabajos.value = [...trabajos.value, ...mas]
     hayMas.value = mas.length === PAGINA
   } catch (e) {

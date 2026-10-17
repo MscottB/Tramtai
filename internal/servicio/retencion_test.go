@@ -45,6 +45,9 @@ func TestRetencionConfigurable(t *testing.T) {
 	if v := leer(); v.HorasResultado != 48 || v.HorasMetadatos != 240 || v.MaxTrabajos != 500 {
 		t.Fatalf("se aplica al momento: %+v", v)
 	}
+	if c, resp := poner(`{"max_trabajos":500}`); c != 400 || !strings.Contains(resp, "solicitud_invalida") {
+		t.Errorf("un PUT sin los plazos no los pone a 0: %d %s", c, resp)
+	}
 	for _, malo := range []string{`{"horas_resultado":24,"horas_metadatos":12,"max_trabajos":500}`, `{"horas_resultado":24,"horas_metadatos":168,"max_trabajos":50}`} {
 		if c, resp := poner(malo); c != 400 || !strings.Contains(resp, "solicitud_invalida") {
 			t.Errorf("%s debía rechazarse: %d %s", malo, c, resp)

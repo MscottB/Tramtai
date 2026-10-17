@@ -317,7 +317,7 @@ export const api = {
   // capacidades comprueba cada agente con hasta 10 s por agente: lleva un plazo mayor.
   capacidades: () => pedir<{ adaptadores: Adaptador[]; entradas?: string[] }>('GET', '/api/v1/capacidades', undefined, 60000),
   // trabajos lista los más recientes; filtro acota por API, grupo, origen o fecha (antes, para la página siguiente).
-  trabajos: (limite = 50, filtro: { punto?: string; grupo?: string; origen?: string; antes?: string } = {}) => {
+  trabajos: (limite = 50, filtro: { punto?: string; grupo?: string; origen?: string; antes?: string; antes_id?: string } = {}) => {
     const q = new URLSearchParams({ limite: String(limite) })
     for (const [clave, valor] of Object.entries(filtro)) if (valor) q.set(clave, valor)
     return pedir<{ trabajos: Trabajo[] }>('GET', '/api/v1/trabajos?' + q).then((r) => r.trabajos)

@@ -233,11 +233,12 @@ func init() {
 		"de la API %s":                           "of the API %s",
 		"el presupuesto debe ser un objeto JSON": "the budget must be a JSON object",
 		", con cambios sin confirmar":            ", with uncommitted changes",
-		"las horas de respuesta deben estar entre 0 y %d":   "response hours must be between 0 and %d",
-		"las horas de registro deben estar entre 0 y %d":    "record hours must be between 0 and %d",
-		"antes debe ser una fecha RFC 3339":                 "antes must be an RFC 3339 date",
-		"origen debe ser probar, terminal, cli o app":       "origen must be probar, terminal, cli or app",
-		"el registro no puede durar menos que la respuesta": "the record cannot be kept for less time than the response",
-		"el máximo de peticiones debe estar entre %d y %d":  "the maximum number of requests must be between %d and %d",
+		"las horas de respuesta deben estar entre 0 y %d":        "response hours must be between 0 and %d",
+		"las horas de registro deben estar entre 0 y %d":         "record hours must be between 0 and %d",
+		"faltan horas_resultado, horas_metadatos o max_trabajos": "horas_resultado, horas_metadatos or max_trabajos is missing",
+		"antes debe ser una fecha RFC 3339":                      "antes must be an RFC 3339 date",
+		"origen debe ser probar, terminal, cli o app":            "origen must be probar, terminal, cli or app",
+		"el registro no puede durar menos que la respuesta":      "the record cannot be kept for less time than the response",
+		"el máximo de peticiones debe estar entre %d y %d":       "the maximum number of requests must be between %d and %d",
 	})
 }

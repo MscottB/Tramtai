@@ -498,10 +498,11 @@ func (a *Almacen) ListarPorEstado(ctx context.Context, instancia string, estados
 // Listar devuelve los trabajos más recientes de la instancia; con punto, solo los de ese punto de acceso.
 // FiltroTrabajos acota Listar; los campos vacíos no filtran. Puntos limita a esas APIs (no vacío).
 type FiltroTrabajos struct {
-	Punto  string
-	Puntos []string
-	Origen string
-	Antes  time.Time // solo los creados antes, para pedir la página siguiente
+	Punto   string
+	Puntos  []string
+	Origen  string
+	Antes   time.Time // solo los creados antes, para pedir la página siguiente
+	AntesID string    // con Antes: el último que ya se vio; los empatados en creado_en siguen por orden de llegada
 }
 
 func (a *Almacen) Listar(ctx context.Context, instancia string, f FiltroTrabajos, limite int) ([]nucleo.Trabajo, error) {
@@ -518,10 +519,12 @@ func (a *Almacen) Listar(ctx context.Context, instancia string, f FiltroTrabajos
 	if f.Origen != "" {
 		donde, args = donde+" AND origen = ?", append(args, f.Origen)
 	}
-	if !f.Antes.IsZero() {
+	if !f.Antes.IsZero() && f.AntesID != "" {
+		donde, args = donde+" AND (creado_en < ? OR (creado_en = ? AND rowid < (SELECT rowid FROM trabajos WHERE id = ?)))", append(args, fecha(f.Antes), fecha(f.Antes), f.AntesID)
+	} else if !f.Antes.IsZero() {
 		donde, args = donde+" AND creado_en < ?", append(args, fecha(f.Antes))
 	}
-	filas, err := a.db.QueryContext(ctx, `SELECT `+columnas+` FROM trabajos WHERE `+donde+` ORDER BY creado_en DESC LIMIT ?`, append(args, limite)...)
+	filas, err := a.db.QueryContext(ctx, `SELECT `+columnas+` FROM trabajos WHERE `+donde+` ORDER BY creado_en DESC, rowid DESC LIMIT ?`, append(args, limite)...)
 	if err != nil {
 		return nil, err
 	}
@@ -609,7 +612,8 @@ func (a *Almacen) Purgar(ctx context.Context, instancia string, r Retencion) (ve
 		// Tope de cantidad: los terminados más antiguos que pasen de Maximo, con sus eventos. Los activos no cuentan.
 		const sobrantes = `SELECT id FROM trabajos WHERE instancia = ? AND terminado_en IS NOT NULL AND id NOT IN
 			(SELECT id FROM trabajos WHERE instancia = ? AND terminado_en IS NOT NULL ORDER BY terminado_en DESC LIMIT ?)`
-		for _, tabla := range []string{"eventos WHERE trabajo_id", "trabajos WHERE id"} {
+		// Primero sus claves de idempotencia: una clave vigente que apunte a un trabajo borrado daría 404 al reintentar.
+		for _, tabla := range []string{"idempotencia WHERE trabajo_id", "eventos WHERE trabajo_id", "trabajos WHERE id"} {
 			if _, err := tx.ExecContext(ctx, `DELETE FROM `+tabla+` IN (`+sobrantes+`)`, instancia, instancia, r.Maximo); err != nil {
 				return 0, 0, err
 			}
@@ -648,6 +652,7 @@ func (a *Almacen) Purgar(ctx context.Context, instancia string, r Retencion) (ve
 		// Presupuestos: se conservan el mes en curso y los 12 anteriores.
 		{`DELETE FROM consumo WHERE instancia = ? AND dia < ?`, []any{instancia, haceUnAnio.Format("2006-01-02")}},
 		{`DELETE FROM avisos_presupuesto WHERE instancia = ? AND en < ?`, []any{instancia, fecha(haceUnAnio)}},
+		{`DELETE FROM idempotencia WHERE trabajo_id IN (SELECT id FROM trabajos WHERE instancia = ? AND terminado_en < ?)`, []any{instancia, limiteMetadatos}},
 		{`DELETE FROM trabajos WHERE instancia = ? AND terminado_en < ?`, []any{instancia, limiteMetadatos}},
 	}
 	for _, p := range pasos {

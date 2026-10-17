@@ -162,7 +162,7 @@ func (s *Servidor) listarTrabajos(w http.ResponseWriter, r *http.Request) {
 			EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("antes debe ser una fecha RFC 3339")))
 			return
 		}
-		f.Antes = t
+		f.Antes, f.AntesID = t, q.Get("antes_id") // antes_id desempata los creados en el mismo instante
 	}
 	if s.Punto != nil {
 		f.Punto = s.Punto.Nombre // un punto de acceso solo ve las suyas: sin grupo ni origen

@@ -107,3 +107,43 @@ func TestUsoHistorial(t *testing.T) {
 		t.Fatalf("%+v %v", uso, err)
 	}
 }
+
+func TestListarEmpatesEnElCorte(t *testing.T) {
+	a := abrir(t)
+	mismo := time.Now()
+	a.reloj = func() time.Time { return mismo }
+	ids := map[string]bool{}
+	for range 3 { // tres trabajos con el mismo creado_en: el reloj de Windows avanza a saltos
+		ids[aceptar(t, a, trabajo("global", "hola"), "").ID] = true
+	}
+	primera, _ := a.Listar(ctx, "global", FiltroTrabajos{}, 2)
+	ultimo := primera[len(primera)-1]
+	resto, _ := a.Listar(ctx, "global", FiltroTrabajos{Antes: ultimo.CreadoEn, AntesID: ultimo.ID}, 2)
+	vistos := map[string]bool{}
+	for _, tr := range append(primera, resto...) {
+		vistos[tr.ID] = true
+	}
+	if len(vistos) != 3 || len(primera)+len(resto) != 3 {
+		t.Fatalf("la página siguiente trae el empatado que faltaba, sin repetir: %d + %d, %d distintos", len(primera), len(resto), len(vistos))
+	}
+}
+
+func TestTopeLiberaLaClaveDeIdempotencia(t *testing.T) {
+	a := abrir(t)
+	base := time.Now()
+	a.reloj = func() time.Time { return base }
+	primero := aceptar(t, a, trabajo("global", "hola"), "clave-1")
+	avanzar(t, a, primero.ID, nucleo.Fallido)
+	for i := 1; i <= 2; i++ {
+		cuando := base.Add(time.Duration(i) * time.Minute)
+		a.reloj = func() time.Time { return cuando }
+		avanzar(t, a, aceptar(t, a, trabajo("global", "otro"), "").ID, nucleo.Fallido)
+	}
+	if _, _, err := a.Purgar(ctx, "global", Retencion{Resultado: 24 * time.Hour, Metadatos: 168 * time.Hour, Maximo: 1}); err != nil {
+		t.Fatal(err)
+	}
+	otra, reutilizado, err := a.Aceptar(ctx, trabajo("global", "hola"), "clave-1", 0)
+	if err != nil || reutilizado || otra.ID == primero.ID {
+		t.Fatalf("la clave del trabajo borrado por el tope queda libre: %v reutilizado=%t", err, reutilizado)
+	}
+}

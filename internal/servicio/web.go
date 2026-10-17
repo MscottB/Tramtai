@@ -570,16 +570,21 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"horas_resultado": resultado, "horas_metadatos": metadatos,
 			"max_trabajos": maximo, "uso": uso})
 	case ruta == "/api/v1/instancia/retencion" && r.Method == http.MethodPut:
+		// Punteros: un campo que falta no puede valer 0, que borraría el historial en la purga inmediata.
 		var peticion struct {
-			HorasResultado int `json:"horas_resultado"`
-			HorasMetadatos int `json:"horas_metadatos"`
-			MaxTrabajos    int `json:"max_trabajos"`
+			HorasResultado *int `json:"horas_resultado"`
+			HorasMetadatos *int `json:"horas_metadatos"`
+			MaxTrabajos    *int `json:"max_trabajos"`
 		}
 		if err := api.LeerJSON(w, r, &peticion); err != nil {
 			api.EscribirError(w, r, err)
 			return true
 		}
-		if err := s.fijarRetencion(inst, peticion.HorasResultado, peticion.HorasMetadatos, peticion.MaxTrabajos); err != nil {
+		if peticion.HorasResultado == nil || peticion.HorasMetadatos == nil || peticion.MaxTrabajos == nil {
+			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("faltan horas_resultado, horas_metadatos o max_trabajos")))
+			return true
+		}
+		if err := s.fijarRetencion(inst, *peticion.HorasResultado, *peticion.HorasMetadatos, *peticion.MaxTrabajos); err != nil {
 			api.EscribirError(w, r, err)
 			return true
 		}
