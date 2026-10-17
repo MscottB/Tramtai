@@ -143,7 +143,7 @@ export const diasHistorial = ref(7)
 export const periodoHistorial = computed(() =>
   diasHistorial.value === 1 ? t('comun.ultimoDia') : t('comun.ultimosDias', { dias: diasHistorial.value }))
 export function cargarDiasHistorial() {
-  api.retencion().then((r) => (diasHistorial.value = Math.max(1, Math.round(r.horas_metadatos / 24)))).catch(() => {})
+  api.retencion().then((r) => (diasHistorial.value = Math.round((r.horas_metadatos / 24) * 10) / 10)).catch(() => {})
 }
 
 // UsoPunto son las peticiones de una API que conserva la retención: total, con error y la última.

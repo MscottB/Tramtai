@@ -45,9 +45,13 @@
             <div class="text-caption texto-suave q-ml-sm">{{ t('puntos.activos', { activos: g.activos, total: g.total }) }}</div>
             <q-space />
             <q-btn flat dense no-caps size="sm" color="primary" icon="o_play_arrow" :label="$q.screen.gt.xs ? t('puntos.activarTodos') : undefined"
-              :aria-label="t('puntos.activarTodos')" :disable="g.activos === g.total" :loading="ocupado === g.nombre + ':1'" @click="activarGrupo(g.nombre, true)" />
+              :aria-label="t('puntos.activarTodos')" :disable="g.activos === g.total" :loading="ocupado === g.nombre + ':1'" @click="activarGrupo(g.nombre, true)">
+              <q-tooltip v-if="$q.screen.xs">{{ t('puntos.activarTodos') }}</q-tooltip>
+            </q-btn>
             <q-btn flat dense no-caps size="sm" color="grey-8" icon="o_stop" :label="$q.screen.gt.xs ? t('puntos.desactivarTodos') : undefined"
-              :aria-label="t('puntos.desactivarTodos')" :disable="g.activos === 0" :loading="ocupado === g.nombre + ':0'" @click="activarGrupo(g.nombre, false)" />
+              :aria-label="t('puntos.desactivarTodos')" :disable="g.activos === 0" :loading="ocupado === g.nombre + ':0'" @click="activarGrupo(g.nombre, false)">
+              <q-tooltip v-if="$q.screen.xs">{{ t('puntos.desactivarTodos') }}</q-tooltip>
+            </q-btn>
           </div>
           <div v-if="!hayGrupos || !plegados.has(g.nombre)">
             <div v-for="p in g.puntos" :key="p.nombre" class="fila-api cursor-pointer" @click="abrirDetalle(p)">
@@ -218,6 +222,7 @@
         <q-card-section>
           <div class="text-weight-medium">{{ t('puntos.conectar') }}</div>
           <div class="texto-suave text-body2 q-mb-sm">{{ t('puntos.conectarTexto') }}</div>
+          <template v-if="puntoDetalle.url">
           <div class="row q-col-gutter-md">
             <div v-for="u in urlsDe(puntoDetalle)" :key="u.titulo" class="col-12 col-md-6">
               <div class="text-caption texto-suave q-mb-xs">{{ u.titulo }}</div>
@@ -237,10 +242,17 @@
               </div>
             </div>
           </div>
+          <template v-if="ejemplosDetalle.length">
           <div class="text-caption texto-suave q-mt-md q-mb-xs">{{ t('conectar.ejemplos') }}</div>
           <div class="desplazable-x"><q-btn-toggle v-model="lenguaje" no-caps flat dense toggle-color="primary" class="segmentado inline-flex"
             :options="ejemplosDetalle.map((e) => ({ label: e.titulo(), value: e.id }))" /></div>
           <div class="bloque-codigo sin-ajuste q-mt-sm">{{ ejemploDetalle.codigo(claveVista || t('puntos.claveMarcador', { nombre: puntoDetalle.nombre })) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('conectar.copiarEjemplo')" @click="copiar(ejemploDetalle.codigo(claveVista || t('puntos.claveMarcador', { nombre: puntoDetalle.nombre })))" /></div>
+          </template>
+          </template>
+          <div v-else class="row items-center q-gutter-sm">
+            <span class="text-body2 texto-suave col-12 col-sm">{{ t('puntos.activaParaConectar') }}</span>
+            <q-btn outline dense no-caps color="primary" icon="o_play_arrow" class="q-px-sm" :label="t('puntos.accionActivar')" @click="activar(puntoDetalle.nombre, true)" />
+          </div>
         </q-card-section>
         <q-separator />
         <q-card-section>
@@ -295,8 +307,17 @@ const recienCreado = ref(false)
 // detalle es la API abierta; claveVista, su clave recién creada o regenerada (solo se ve esta vez).
 const detalle = ref('')
 const claveVista = ref('')
-const puntoDetalle = computed(() => puntos.value.find((p) => p.nombre === detalle.value))
+// respaldoDetalle es la API con que se abrió el detalle, por si la lista aún no la trae (recién creada y sin recargar).
+const respaldoDetalle = ref<EstadoPunto>()
+const puntoDetalle = computed(() => puntos.value.find((p) => p.nombre === detalle.value) ?? respaldoDetalle.value)
+// Si la API desaparece (borrada desde otro sitio), el detalle se cierra en vez de quedar vacío.
+watch(puntos, (lista) => {
+  if (dialogoDetalle.value && !lista.some((p) => p.nombre === detalle.value)) {
+    if (respaldoDetalle.value?.nombre !== detalle.value) dialogoDetalle.value = false
+  } else respaldoDetalle.value = undefined
+})
 function abrirDetalle(p: EstadoPunto, clave = '', creada = false) {
+  respaldoDetalle.value = p
   detalle.value = p.nombre
   claveVista.value = clave
   recienCreado.value = creada
@@ -389,7 +410,8 @@ const modeloEjemplo = computed(() => ids.value.find((id) => id === 'perfil/rapid
 
 const ocultar = (c: string) => (c ? c.slice(0, 6) + '•'.repeat(18) : '')
 // ejemplosPara son los ejemplos para copiar con la URL base y el modelo de la API principal o de una API.
-const ejemplosPara = (url: string, modelo: string) => [
+// Solo los ejemplos de lo que acepta la API: una que solo habla Anthropic no ofrece los de OpenAI.
+const ejemplosPara = (url: string, modelo: string, contratos: string[] = ['openai', 'anthropic']) => [
   { id: 'python', titulo: () => 'Python · OpenAI', codigo: (k: string) => `from openai import OpenAI
 
 cliente = OpenAI(base_url="${url}/openai/v1", api_key="${k}")
@@ -419,14 +441,14 @@ print(m.content[0].text)` },
   -H "Content-Type: application/json" \\
   -d '{"model": "${modelo}", "messages": [{"role": "user", "content": "${t('conectar.hola')}"}]}'` },
   { id: 'entorno', titulo: () => t('conectar.entorno'), codigo: (k: string) => `${t('conectar.entornoComentario')}
-OPENAI_BASE_URL=${url}/openai/v1
-OPENAI_API_KEY=${k}
-ANTHROPIC_BASE_URL=${url}/anthropic
-ANTHROPIC_API_KEY=${k}` },
-]
+${[contratos.includes('openai') ? `OPENAI_BASE_URL=${url}/openai/v1\nOPENAI_API_KEY=${k}` : '',
+    contratos.includes('anthropic') ? `ANTHROPIC_BASE_URL=${url}/anthropic\nANTHROPIC_API_KEY=${k}` : ''].filter(Boolean).join('\n')}` },
+].filter((e) => (e.id === 'anthropic' ? contratos.includes('anthropic') : e.id === 'entorno'
+  ? contratos.includes('openai') || contratos.includes('anthropic') : contratos.includes('openai')))
 const ejemplos = computed(() => ejemplosPara(base.value, modeloEjemplo.value))
 const ejemplo = computed(() => ejemplos.value.find((e) => e.id === lenguaje.value) ?? ejemplos.value[0])
-const ejemplosDetalle = computed(() => (puntoDetalle.value ? ejemplosPara(puntoDetalle.value.url ?? '', idModelo(puntoDetalle.value) ?? modeloEjemplo.value) : []))
+const ejemplosDetalle = computed(() => (puntoDetalle.value
+  ? ejemplosPara(puntoDetalle.value.url ?? '', idModelo(puntoDetalle.value) ?? modeloEjemplo.value, puntoDetalle.value.contratos) : []))
 const ejemploDetalle = computed(() => ejemplosDetalle.value.find((e) => e.id === lenguaje.value) ?? ejemplosDetalle.value[0])
 
 const opciones = computed(() => catalogo.value.map(opcionModelo))
@@ -496,8 +518,10 @@ async function crear() {
     const r = await api.crearPunto(punto)
     nuevo.value = false
     await cargarPuntos()
-    const creado = puntos.value.find((p) => p.nombre === punto.nombre)
-    if (creado) abrirDetalle(creado, r.token, true) // con la clave recién creada en los ejemplos
+    // Con la clave recién creada en los ejemplos: es la única vez que se ve, así que el detalle se abre siempre.
+    const creado = puntos.value.find((p) => p.nombre === punto.nombre) ?? r.punto_acceso
+    if (creado) abrirDetalle(creado, r.token, true)
+    else avisar(t('puntos.claveCreada', { clave: r.token }))
   } catch (e) {
     avisarError(e)
   } finally {

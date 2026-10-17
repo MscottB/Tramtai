@@ -92,7 +92,7 @@ const origenes = computed(() => {
   const lista: Origen[] = [{ id: '-', nombre: t('mapa.principal'), activo: true, principal: true }, ...estaciones.slice(0, MAX_APIS)]
   if (estaciones.length > MAX_APIS) {
     const resto = estaciones.slice(MAX_APIS)
-    lista.push({ id: '+', nombre: t('mapa.mas', { n: resto.length }), activo: resto.some((o) => o.activo), principal: false })
+    lista.push({ id: '+', nombre: resto.length === 1 ? t('mapa.masUno') : t('mapa.mas', { n: resto.length }), activo: resto.some((o) => o.activo), principal: false })
   }
   return lista.map((o, i, todos) => ({ ...o, i, y: y(i, todos.length) }))
 })

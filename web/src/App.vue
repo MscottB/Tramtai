@@ -178,7 +178,7 @@
       <q-card style="width: 540px; max-width: 94vw">
         <q-card-section>
           <div id="titulo-novedades" class="titulo-seccion">{{ t('actualizacion.hecha', { version: sesion?.version }) }}</div>
-          <div v-if="cargandoNovedades" class="row justify-center q-pa-lg"><q-spinner size="32px" color="primary" /></div>
+          <div v-if="cargandoNovedades" class="row justify-center q-pa-lg" role="status" :aria-label="t('comun.cargando')"><q-spinner size="32px" color="primary" /></div>
           <p v-else-if="!novedades.length" class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.sinNotas') }}</p>
           <template v-else-if="novedades.length === 1">
             <div v-if="novedades[0].version.split('+')[0] !== sesion?.version?.split('+')[0]" class="text-weight-medium q-mt-md">{{ novedades[0].version }}</div>
@@ -336,17 +336,15 @@ const segundosParaInstalar = computed(() => {
   return en ? Math.max(0, Math.ceil((Date.parse(en) - ahora.value) / 1000)) : 0
 })
 async function reiniciarAhora() {
-  try {
-    await api.instalarYa()
-  } catch (e) {
-    avisarError(e)
-  }
+  // Un error aquí es que ya no había nada que decidir (ya instala o se canceló): el sondeo muestra el estado real.
+  await api.instalarYa().catch(() => {})
 }
 async function cancelarInstalacion() {
   try {
     await api.cancelarActualizacion()
   } catch (e) {
-    avisarError(e)
+    avisarError(e) // ya estaba instalando: el diálogo sigue y pasa a «Instalando…»
+    return
   }
   clearInterval(seguirProgreso)
   progreso.value = null
@@ -376,6 +374,12 @@ async function instalarActualizacion() {
         ahora.value = Date.now()
         const p = await api.progresoActualizacion()
         if (p.fase) progreso.value = p
+        else if (progreso.value?.fase === 'listo') {
+          // Otra pestaña la canceló: no queda nada que esperar.
+          clearInterval(seguirProgreso)
+          progreso.value = null
+          dialogoActualizar.value = false
+        }
         if (p.fase === 'error') clearInterval(seguirProgreso)
       } catch {
         // el instalador ya detuvo el servicio: queda «instalando» hasta que la app se cierre

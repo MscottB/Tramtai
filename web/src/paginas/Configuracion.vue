@@ -89,7 +89,7 @@
               <q-input v-model.number="retencion.horas_resultado" type="number" min="0" max="720" outlined dense :label="t('historialAjustes.respuestas')" :hint="t('historialAjustes.respuestasHint')" />
             </div>
             <div class="col-12 col-sm-4">
-              <q-input v-model.number="diasRegistro" type="number" min="0" max="90" step="0.5" outlined dense :label="t('historialAjustes.registro')" :hint="t('historialAjustes.registroHint')" />
+              <q-input v-model.number="diasRegistro" type="number" min="0" max="90" step="any" outlined dense :label="t('historialAjustes.registro')" :hint="t('historialAjustes.registroHint')" />
             </div>
             <div class="col-12 col-sm-4">
               <q-input v-model.number="retencion.max_trabajos" type="number" min="100" max="100000" outlined dense :label="t('historialAjustes.maximo')" :hint="t('historialAjustes.maximoHint')" />
@@ -192,7 +192,7 @@ const guardandoRetencion = ref(false)
 async function leerRetencion() {
   const r = await api.retencion()
   Object.assign(retencion, { horas_resultado: r.horas_resultado, max_trabajos: r.max_trabajos })
-  diasRegistro.value = r.horas_metadatos / 24 // sin redondear: 30 h son 1,25 días
+  diasRegistro.value = Math.round((r.horas_metadatos / 24) * 100) / 100 // 30 h son 1,25 días; al guardar vuelven a 30 h
   usoHistorial.value = { trabajos: r.uso.trabajos.toLocaleString(), mb: (r.uso.bytes / 1048576).toLocaleString(undefined, { maximumFractionDigits: 1 }) }
 }
 async function guardarRetencion() {
