@@ -58,8 +58,11 @@ type SolicitudEjecucion struct {
 
 const (
 	maximoTiempoLimiteSegundos = 24 * 60 * 60
-	maximoCargas               = 20
-	maximoRespaldo             = 3
+	// MaximoCargas, MaximoMensajes y MaximoEsquemaPeticion son límites de una petición (/api/v1/limites).
+	MaximoCargas          = 20
+	maximoRespaldo        = 3
+	MaximoMensajes        = 1000
+	MaximoEsquemaPeticion = 256 << 10
 )
 
 // ReCarga es el formato de un identificador de carga: impide rutas u otros valores en su lugar.
@@ -90,6 +93,12 @@ func (s SolicitudEjecucion) Validar() error {
 			return invalida(idioma.Tf("%s con formato no válido", campo))
 		}
 	}
+	if len(s.Mensajes) > MaximoMensajes {
+		return invalida(idioma.Tf("demasiados mensajes (máximo %d)", MaximoMensajes))
+	}
+	if len(s.Salida.Esquema) > MaximoEsquemaPeticion {
+		return invalida(idioma.T("el esquema supera 256 KB"))
+	}
 	for i, m := range s.Mensajes {
 		if !rolesValidos[m.Rol] {
 			return invalida(idioma.Tf("mensaje %d con rol desconocido %q", i, m.Rol))
@@ -118,8 +127,8 @@ func (s SolicitudEjecucion) Validar() error {
 			return invalida(idioma.T("el esquema de salida no es JSON válido"))
 		}
 	}
-	if len(s.Cargas) > maximoCargas {
-		return invalida(idioma.Tf("demasiadas cargas (máximo %d)", maximoCargas))
+	if len(s.Cargas) > MaximoCargas {
+		return invalida(idioma.Tf("demasiadas cargas (máximo %d)", MaximoCargas))
 	}
 	for i, c := range s.Cargas {
 		if !ReCarga.MatchString(c) {
@@ -178,4 +187,17 @@ func (s SolicitudEjecucion) Huella() string {
 	datos, _ := json.Marshal(s) // el orden fijo de los campos hace la serialización determinista
 	suma := sha256.Sum256(datos)
 	return hex.EncodeToString(suma[:])
+}
+
+// Documentos son las cargas ya convertidas a texto: el texto ensamblado (un bloque delimitado por archivo) y el tamaño
+// de cada archivo, para medir la entrada y decir cuál pesa más.
+type Documentos struct {
+	Texto  string
+	Partes []ParteDocumento
+}
+
+// ParteDocumento es un archivo convertido (los de un ZIP, como «paquete.zip/interno.txt») y sus caracteres.
+type ParteDocumento struct {
+	Nombre     string
+	Caracteres int
 }

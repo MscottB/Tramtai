@@ -80,6 +80,7 @@ func (s *Servidor) Rutas() http.Handler {
 		mux.HandleFunc("POST /api/v1/ejecutar", s.ejecutarTrabajo)
 		mux.HandleFunc("POST /api/v1/cargas", s.crearCarga)
 		mux.HandleFunc("GET /api/v1/capacidades", s.capacidades)
+		mux.HandleFunc("GET /api/v1/limites", func(w http.ResponseWriter, r *http.Request) { EscribirJSON(w, http.StatusOK, s.limites()) })
 		mux.HandleFunc("GET /api/v1/modelos", s.modelosNativos)
 	}
 	if contrato("openai") {
@@ -203,6 +204,8 @@ var estadosHTTP = map[nucleo.CodigoError]int{
 	nucleo.CodigoSalidaNoCumpleEsquema:  http.StatusUnprocessableEntity,
 	nucleo.CodigoConversionFallida:      http.StatusUnprocessableEntity,
 	nucleo.CodigoColaLlena:              http.StatusTooManyRequests,
+	nucleo.CodigoEntradaDemasiadoGrande: http.StatusRequestEntityTooLarge,
+	nucleo.CodigoCuotaCargasAgotada:     http.StatusInsufficientStorage,
 	nucleo.CodigoPresupuestoAgotado:     http.StatusTooManyRequests,
 	nucleo.CodigoLimiteUsoProveedor:     http.StatusTooManyRequests,
 	nucleo.CodigoErrorAgente:            http.StatusBadGateway,
@@ -231,9 +234,18 @@ func EscribirError(w http.ResponseWriter, r *http.Request, err error) {
 	if agotado := (*nucleo.PresupuestoAgotado)(nil); errors.As(err, &agotado) {
 		w.Header().Set("Retry-After", strconv.Itoa(max(1, int(math.Ceil(time.Until(agotado.Reinicio).Seconds())))))
 	}
+	// Las fachadas hablan como su proveedor: una entrada que no cabe es un 400 (context_length_exceeded en OpenAI).
+	fachada := strings.HasPrefix(r.URL.Path, "/openai/") || strings.HasPrefix(r.URL.Path, "/anthropic/")
+	if codigo == nucleo.CodigoEntradaDemasiadoGrande && fachada {
+		estado = http.StatusBadRequest
+	}
 	switch {
 	case strings.HasPrefix(r.URL.Path, "/openai/"):
-		EscribirJSON(w, estado, map[string]any{"error": errorOpenAI(estado, codigo, mensaje)})
+		detalle := errorOpenAI(estado, codigo, mensaje)
+		if codigo == nucleo.CodigoEntradaDemasiadoGrande {
+			detalle["code"] = "context_length_exceeded"
+		}
+		EscribirJSON(w, estado, map[string]any{"error": detalle})
 	case strings.HasPrefix(r.URL.Path, "/anthropic/"):
 		EscribirJSON(w, estado, map[string]any{"type": "error", "error": map[string]any{"type": tipoAnthropic(estado), "message": mensaje}})
 	default:

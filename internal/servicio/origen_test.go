@@ -3,6 +3,8 @@ package servicio
 import (
 	"context"
 	"encoding/json"
+	"net/netip"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -51,6 +53,12 @@ func TestOrigenSegunAutenticacion(t *testing.T) {
 		if o := origenDe(t, cuerpo); o != esperado {
 			t.Errorf("con la clave y X-Tramtai-Cliente %q: %q, esperado %q", cliente, o, esperado)
 		}
+	}
+	// Desde otro equipo (o tras un proxy) la etiqueta no vale: es una aplicación, también para el bloqueo de Antigravity.
+	if !mismoUsuario(netip.MustParseAddrPort("127.0.0.1:1"), netip.MustParseAddrPort("127.0.0.1:2")) && runtime.GOOS != "windows" && runtime.GOOS != "linux" {
+		t.Log("sin identificación del dueño de la conexión: no se comprueba la etiqueta remota")
+	} else if _, cuerpo := pedir(t, ts.URL, "POST", "/api/v1/trabajos", global.token, hola, "X-Tramtai-Cliente", "cli", "X-Forwarded-For", "203.0.113.5"); origenDe(t, cuerpo) != "app" {
+		t.Errorf("la etiqueta cli tras un proxy: %q", origenDe(t, cuerpo))
 	}
 	_, cuerpo = pedir(t, ts.URL, "POST", "/p/tienda/api/v1/trabajos", tienda, hola, "X-Tramtai-Cliente", "cli")
 	if o := origenDe(t, cuerpo); o != "api" {
@@ -126,5 +134,17 @@ func TestConsumoDeAPIAusenteSeBorra(t *testing.T) {
 	errata, _, _ := global.almacen.Consumo(context.Background(), global.ID, "errata")
 	if dia.Peticiones != 0 || tienda.Peticiones != 1 || errata.Peticiones != 1 {
 		t.Fatalf("se borra el consumo de la API ausente y no el de las demás: vieja %+v, tienda %+v", dia, tienda)
+	}
+}
+
+func TestPuntoConAntigravity(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	for _, p := range []ConfigPunto{{Nombre: "a", Agente: "antigravity"}, {Nombre: "b", Respaldo: []string{"antigravity/gemini-x"}}} {
+		if err := s.validarParaApps(p); nucleo.CodigoDe(err) != nucleo.CodigoConfiguracionInvalida || !strings.Contains(nucleo.MensajeDe(err), "Antigravity") {
+			t.Fatalf("%+v: %v", p, err)
+		}
+	}
+	if err := s.validarParaApps(ConfigPunto{Nombre: "c", Agente: "claude", Respaldo: []string{"codex"}}); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -180,7 +180,7 @@ func (s *Servicio) enrutar(w http.ResponseWriter, r *http.Request) {
 	if s.rutaInstancia(w, r, inst, admin || porSesion) {
 		return
 	}
-	inst.rutas.ServeHTTP(w, r.WithContext(nucleo.ConOrigenPeticion(r.Context(), origenPeticion(r, porSesion))))
+	inst.rutas.ServeHTTP(w, r.WithContext(nucleo.ConOrigenPeticion(r.Context(), origenPeticion(r, porSesion, mismoUsuarioLocal(r)))))
 }
 
 func (s *Servicio) enrutarPunto(w http.ResponseWriter, r *http.Request) {
@@ -344,7 +344,8 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuraci
 		alm.VentanaIdempotencia = time.Duration(horas) * time.Hour
 	}
 	cargas, err := documentos.AbrirCargas(filepath.Join(s.opc.Datos, "cargas", id),
-		time.Duration(c.Entero("retencion.horas_carga_huerfana"))*time.Hour, int64(c.Entero("conversion.maximo_carga_mb"))<<20)
+		time.Duration(c.Entero("retencion.horas_carga_huerfana"))*time.Hour, int64(c.Limite("conversion.maximo_carga_mb"))<<20,
+		int64(c.Limite("conversion.cuota_cargas_mb"))<<20)
 	if err != nil {
 		alm.Cerrar()
 		return nil, err
@@ -382,14 +383,18 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuraci
 }
 
 // origenPeticion dice de dónde llegó una petición a la instancia: la sesión de la Web UI es Probar; con la clave,
-// X-Tramtai-Cliente distingue la terminal y la CLI (solo es una etiqueta) y lo demás es una aplicación.
-func origenPeticion(r *http.Request, porSesion bool) string {
+// X-Tramtai-Cliente distingue la terminal y la CLI y lo demás es una aplicación. La etiqueta solo vale desde este
+// equipo y con el mismo usuario que el servicio (local): decide si se admite Antigravity, y una app remota no puede
+// atribuírsela. Un programa local del mismo usuario podría, pero ese ya puede ejecutar los CLI por su cuenta.
+func origenPeticion(r *http.Request, porSesion, local bool) string {
 	if porSesion {
 		return nucleo.DesdeProbar
 	}
 	switch c := r.Header.Get("X-Tramtai-Cliente"); c {
 	case nucleo.DesdeTerminal, nucleo.DesdeCLI:
-		return c
+		if local {
+			return c
+		}
 	}
 	return nucleo.DesdeApp
 }

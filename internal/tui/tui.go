@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -801,7 +803,17 @@ func (m *modelo) editarPuntos(archivo, texto string, f func([]servicio.ConfigPun
 	cli := m.cli
 	ruta, origen := m.rutaConfig(archivo)
 	return func() tea.Msg {
-		if err := servicio.EditarPuntos(ruta, origen, f); err != nil {
+		// Las mismas reglas que la Web UI: una API no puede quedar con Antigravity mientras no esté habilitado para apps.
+		conReglas := func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
+			nueva, err := f(lista)
+			for _, p := range nueva {
+				if err == nil && !slices.ContainsFunc(lista, func(q servicio.ConfigPunto) bool { return reflect.DeepEqual(p, q) }) {
+					err = servicio.ValidarParaApps(p)
+				}
+			}
+			return nueva, err
+		}
+		if err := servicio.EditarPuntos(ruta, origen, conReglas); err != nil {
 			return msgAviso{err: err}
 		}
 		ctx, cancelar := conPlazo(30 * time.Second)

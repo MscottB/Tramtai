@@ -97,6 +97,14 @@ CREATE TABLE IF NOT EXISTS avisos_presupuesto (
 );`,
 	// v8: de dónde llegó cada petición (Probar, terminal, CLI, app o API); '' en los trabajos anteriores.
 	`ALTER TABLE trabajos ADD COLUMN origen TEXT NOT NULL DEFAULT '';`,
+	// v9: el contexto (tokens) que informó cada modelo concreto, para no llamar al CLI con una entrada que no cabe.
+	`CREATE TABLE IF NOT EXISTS modelos_vistos (
+	agente TEXT NOT NULL,
+	modelo TEXT NOT NULL,
+	contexto_tokens INTEGER NOT NULL,
+	visto_en TEXT NOT NULL,
+	PRIMARY KEY (agente, modelo)
+);`,
 }
 
 const columnas = `id, instancia, estado, codigo_error, mensaje_error, solicitud, huella, salida, intento_de, creado_en, actualizado_en, terminado_en,
@@ -157,6 +165,9 @@ type Cambio struct {
 	// Uso y ModeloEfectivo se guardan cuando Uso no es nil (al terminar una ejecución).
 	Uso            *nucleo.Uso
 	ModeloEfectivo string
+	// DevolverPeticion, al terminar, quita la petición del consumo en lugar de contarla como terminada: no llegó a
+	// ningún agente (la entrada no cabía en ninguno).
+	DevolverPeticion bool
 }
 
 // Evento es un registro numerado de un trabajo.
@@ -357,7 +368,11 @@ func (a *Almacen) CambiarEstado(ctx context.Context, id string, de, hacia nucleo
 			uso = guardado
 		}
 		aceptado, _ := time.Parse(formatoFecha, creado)
-		a.sumarConsumo(ctx, tx, instancia, punto, aceptado, ahora, nucleo.Consumo{Terminados: 1, Tokens: uso.TokensEntrada + uso.TokensSalida, USD: uso.CostoUSD})
+		consumo := nucleo.Consumo{Terminados: 1, Tokens: uso.TokensEntrada + uso.TokensSalida, USD: uso.CostoUSD}
+		if cambio.DevolverPeticion {
+			consumo.Peticiones, consumo.Terminados = -1, 0 // peticiones − terminados sigue siendo lo que está en curso
+		}
+		a.sumarConsumo(ctx, tx, instancia, punto, aceptado, ahora, consumo)
 	}
 	return a.confirmar(tx)
 }
@@ -476,9 +491,9 @@ func (a *Almacen) Eventos(ctx context.Context, id string, desde int) ([]Evento, 
 	return a.eventos(ctx, `SELECT numero, tipo, datos, creado_en FROM eventos WHERE trabajo_id = ? AND numero > ? ORDER BY numero`, id, desde)
 }
 
-// EventosDeRegistro devuelve los eventos sin contenido de la respuesta (estado, intento y aviso), sin leer el texto.
+// EventosDeRegistro devuelve los eventos sin contenido de la respuesta (estado, entrada, intento y aviso), sin leer el texto.
 func (a *Almacen) EventosDeRegistro(ctx context.Context, id string) ([]Evento, error) {
-	return a.eventos(ctx, `SELECT numero, tipo, datos, creado_en FROM eventos WHERE trabajo_id = ? AND tipo IN ('estado', 'intento', 'aviso') ORDER BY numero`, id)
+	return a.eventos(ctx, `SELECT numero, tipo, datos, creado_en FROM eventos WHERE trabajo_id = ? AND tipo IN ('estado', 'entrada', 'intento', 'aviso') ORDER BY numero`, id)
 }
 
 func (a *Almacen) eventos(ctx context.Context, consulta string, args ...any) ([]Evento, error) {
@@ -669,10 +684,10 @@ func (a *Almacen) Purgar(ctx context.Context, instancia string, r Retencion) (ve
 		}
 	}
 	limiteResultado := fecha(ahora.Add(-r.Resultado))
-	// Los eventos de estado y de intento se conservan con los metadatos; los demás llevan contenido. Solo se miran los
+	// Los eventos de estado, entrada e intento se conservan con los metadatos; los demás llevan contenido. Solo se miran los
 	// trabajos que vencen ahora: los ya vencidos se limpiaron en su purga. Con <= vence también lo terminado en el
 	// mismo instante (retención 0): en Windows el reloj avanza a saltos.
-	if _, err := tx.ExecContext(ctx, `DELETE FROM eventos WHERE tipo NOT IN ('estado', 'intento') AND trabajo_id IN
+	if _, err := tx.ExecContext(ctx, `DELETE FROM eventos WHERE tipo NOT IN ('estado', 'intento', 'entrada') AND trabajo_id IN
 		(SELECT id FROM trabajos WHERE instancia = ? AND terminado_en <= ? AND vencido = 0)`, instancia, limiteResultado); err != nil {
 		return 0, 0, err
 	}
@@ -780,6 +795,24 @@ func (a *Almacen) ModelosEfectivos(ctx context.Context) (map[string]string, erro
 		}
 	}
 	return modelos, filas.Err()
+}
+
+// GuardarContexto anota el contexto que informó un modelo concreto; el último gana.
+func (a *Almacen) GuardarContexto(ctx context.Context, agente, modelo string, tokens int) error {
+	_, err := a.db.ExecContext(ctx, `INSERT INTO modelos_vistos (agente, modelo, contexto_tokens, visto_en) VALUES (?, ?, ?, ?)
+		ON CONFLICT (agente, modelo) DO UPDATE SET contexto_tokens = excluded.contexto_tokens, visto_en = excluded.visto_en`,
+		agente, modelo, tokens, fecha(a.reloj()))
+	return err
+}
+
+// Contexto devuelve el contexto informado de un modelo concreto; 0 si no se conoce.
+func (a *Almacen) Contexto(ctx context.Context, agente, modelo string) (int, error) {
+	var tokens int
+	err := a.db.QueryRowContext(ctx, `SELECT contexto_tokens FROM modelos_vistos WHERE agente = ? AND modelo = ?`, agente, modelo).Scan(&tokens)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, nil
+	}
+	return tokens, err
 }
 
 // CargasEnUso devuelve las cargas que algún trabajo puede necesitar todavía: activos o terminados que aún

@@ -135,11 +135,11 @@ func comandoConvertir() *cobra.Command {
 				}
 				entradas[i] = documentos.Entrada{Ruta: real, Nombre: filepath.Base(ruta)}
 			}
-			texto, err := documentos.Desde(c).Convertir(cmd.Context(), entradas)
+			docs, err := documentos.Desde(c).Convertir(cmd.Context(), entradas)
 			if err != nil {
 				return err
 			}
-			fmt.Fprint(cmd.OutOrStdout(), texto)
+			fmt.Fprint(cmd.OutOrStdout(), docs.Texto)
 			return nil
 		}}
 }
@@ -156,7 +156,8 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 	defer alm.Cerrar()
 
 	cargas, err := documentos.AbrirCargas(filepath.Join(datos, "cargas", "cli"),
-		time.Duration(c.Entero("retencion.horas_carga_huerfana"))*time.Hour, int64(c.Entero("conversion.maximo_carga_mb"))<<20)
+		time.Duration(c.Entero("retencion.horas_carga_huerfana"))*time.Hour, int64(c.Limite("conversion.maximo_carga_mb"))<<20,
+		int64(c.Limite("conversion.cuota_cargas_mb"))<<20)
 	if err != nil {
 		return err
 	}
@@ -165,7 +166,7 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 		if err != nil {
 			return err
 		}
-		carga, err := cargas.Guardar(filepath.Base(ruta), archivo)
+		carga, err := cargas.Guardar(filepath.Base(ruta), "", archivo)
 		archivo.Close()
 		if err != nil {
 			return err

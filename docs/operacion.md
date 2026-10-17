@@ -167,6 +167,44 @@ instancia_global:
 
 Se comprueba la ruta real del archivo, así que `..` o un enlace que salga de esas carpetas se rechaza con `ruta_no_permitida`. No afecta a la Web UI ni a la API, que solo reciben archivos subidos, nunca rutas.
 
+### Límites y cargas
+
+- **Cargas:** hasta 20 por petición y `conversion.maximo_carga_mb` (50) cada una. Las de una instancia no pasan de
+  `conversion.cuota_cargas_mb` (2048) en total: la siguiente responde 507 `cuota_cargas_agotada` hasta que venzan. Cada
+  carga pertenece a la API que la subió (o a la instancia): otra API no puede citarla aunque conozca su identificador.
+- **Formatos:** texto, Markdown, JSON, XML, CSV, HTML, PDF, Word, PowerPoint, Excel y ZIP; el resto se rechaza con
+  `carga_invalida`, también dentro de un ZIP. Un Word, PowerPoint o Excel que se descomprimiría en más de
+  `conversion.maximo_descomprimido_mb` se rechaza antes de convertirlo.
+- **Conversión:** `conversion.tiempo_limite_segundos` (120) por archivo y `conversion.tiempo_total_segundos` (600) para
+  toda la petición; markitdown corre con un tope de memoria (`limites.memoria_proceso_mb`, 2048; en macOS no se
+  aplica). Los límites de `conversion.*` solo se cambian en la configuración global: un valor 0 o negativo usa el
+  predeterminado y cada uno tiene un máximo.
+- **Contexto:** ver [límites de la entrada](api.md#límites-de-la-entrada). Para fijar el de un modelo que no lo informa
+  (Codex, por ejemplo):
+
+  ```yaml
+  limites:
+    contexto_tokens:
+      - codex/gpt-5.6-terra=272000
+    reserva_salida_tokens: 8192
+  ```
+
+- **Antigravity** solo se usa desde Probar, la terminal y la CLI hasta comprobar con el CLI real que no puede usar
+  herramientas; `adaptadores.antigravity.permitir_apps: true` lo habilita también para apps y APIs.
+- **Modo de contexto de una API:** lo fija la API (`aislado` si no indica otro); una app no puede pedir
+  `consciente_proyecto` en una API aislada.
+- **Entorno de los CLI:** no heredan claves, contraseñas, `TRAMTAI_*` ni URL con credenciales, salvo los proxies
+  (`*_PROXY`), que sí necesitan para llegar a su proveedor.
+- **La configuración propia de cada CLI** es cosa suya y tuya: con la suscripción, Codex y Claude usan lo que sus CLI no
+  permiten aislar (por ejemplo los servidores MCP de `~/.codex`), y en `consciente_proyecto` Claude carga los hooks
+  del proyecto, por eso ese modo solo vale en `proyectos_confiables`.
+
+### Comprobar el aislamiento de los agentes
+
+`go test -tags canario -v -count=1 ./pruebas/canario` pide a Claude (haiku y sonnet) y a Codex (gpt-5.6-terra, esfuerzo
+bajo), con tu suscripción, que lean un archivo trampa, ejecuten una orden y abran una URL local, y comprueba que no lo
+consiguen. Gasta unas pocas peticiones pequeñas.
+
 ## Puntos de acceso
 
 Un punto de acceso es otra URL, con su propio token, para una aplicación concreta. Fija el agente y el modelo, restringe los modelos permitidos y traduce los nombres fijos que envía la aplicación.

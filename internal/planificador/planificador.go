@@ -13,6 +13,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/idioma"
@@ -24,7 +25,7 @@ import (
 
 // Preparador convierte las cargas de un trabajo en texto para el agente (documentos.Preparador).
 type Preparador interface {
-	Preparar(ctx context.Context, cargas []string) (string, error)
+	Preparar(ctx context.Context, cargas []string) (nucleo.Documentos, error)
 }
 
 // Opciones son los límites de una instancia.
@@ -49,6 +50,14 @@ type Opciones struct {
 	// Registros recibe una línea al aceptar y al terminar cada trabajo: la terminal del servicio en primer
 	// plano o servicio.log en segundo plano. nil = sin registro.
 	Registros io.Writer
+	// Contextos es limites.contexto_tokens («agente» o «agente/modelo» → tokens) y ReservaSalida los tokens que se
+	// dejan para la respuesta al comprobar si la entrada cabe.
+	Contextos     map[string]int
+	ReservaSalida int
+	// PermitirAntigravityApps es adaptadores.antigravity.permitir_apps: Antigravity también para apps y APIs.
+	PermitirAntigravityApps bool
+	// TiempoConversion es el plazo total de la preparación de las cargas (conversion.tiempo_total_segundos).
+	TiempoConversion time.Duration
 }
 
 // OpcionesDesde toma los límites de la configuración efectiva.
@@ -61,6 +70,10 @@ func OpcionesDesde(c *nucleo.Configuracion, instancia string) Opciones {
 		TiempoLimitePredeterminado: 300 * time.Second,
 		Perfiles:                   c.Perfiles(),
 		MaximoConversiones:         c.Entero("concurrencia.maximo_conversiones_instancia"),
+		Contextos:                  c.Contextos(),
+		PermitirAntigravityApps:    c.Booleano("adaptadores.antigravity.permitir_apps"),
+		TiempoConversion:           time.Duration(c.Limite("conversion.tiempo_total_segundos")) * time.Second,
+		ReservaSalida:              c.Limite("limites.reserva_salida_tokens"),
 	}
 }
 
@@ -181,13 +194,13 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 			idioma.T("consciente_proyecto solo se admite en la instancia de un proyecto incluido en proyectos_confiables de la configuración global"))
 	}
 	if len(solicitud.Salida.Esquema) > 0 {
-		if _, err := salidas.Compilar(solicitud.Salida.Esquema); err != nil {
+		if err := salidas.Comprobar(solicitud.Salida.Esquema); err != nil {
 			return nucleo.Trabajo{}, false, err
 		}
 	}
 	// Una solicitud nueva no puede citar cargas vencidas; un reintento usa las que su trabajo protegía.
-	if v, ok := p.opc.Preparador.(interface{ Verificar([]string) error }); ok && intentoDe == "" && len(solicitud.Cargas) > 0 {
-		if err := v.Verificar(solicitud.Cargas); err != nil {
+	if v, ok := p.opc.Preparador.(interface{ Verificar([]string, string) error }); ok && intentoDe == "" && len(solicitud.Cargas) > 0 {
+		if err := v.Verificar(solicitud.Cargas, punto); err != nil {
 			return nucleo.Trabajo{}, false, err
 		}
 	}
@@ -200,6 +213,9 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 	if punto != "" {
 		t.Origen = nucleo.DesdeAPI // por una API extra, aunque la app mande otra etiqueta
 	}
+	if err := p.permitidoParaOrigen(t); err != nil {
+		return nucleo.Trabajo{}, false, err
+	}
 	t, reutilizado, err := p.almacen.Aceptar(ctx, t, clave, p.opc.MaximoCola)
 	if err != nil || reutilizado {
 		return t, reutilizado, err
@@ -207,6 +223,20 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 	p.encolar(t.ID)
 	p.registrar(t, "recibido")
 	return t, false, nil
+}
+
+// permitidoParaOrigen rechaza Antigravity (principal o respaldo) en una petición de una app o una API: hasta comprobar
+// con el CLI real que no puede usar herramientas, solo se usa desde Probar, la terminal y la CLI.
+func (p *Planificador) permitidoParaOrigen(t nucleo.Trabajo) error {
+	if p.opc.PermitirAntigravityApps || (t.Origen != nucleo.DesdeApp && t.Origen != nucleo.DesdeAPI) {
+		return nil
+	}
+	for _, c := range candidatos(t) {
+		if c.agente == "antigravity" {
+			return nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.T("Antigravity no está habilitado para aplicaciones: todavía no se ha comprobado con el CLI real que no pueda usar herramientas. Úsalo desde Probar o la terminal"))
+		}
+	}
+	return nil
 }
 
 // registrar escribe una línea legible por trabajo, por ejemplo:
@@ -229,7 +259,7 @@ func (p *Planificador) registrar(t nucleo.Trabajo, evento string) {
 		linea += fmt.Sprintf(" · %d→%d tokens", t.Uso.TokensEntrada, t.Uso.TokensSalida)
 	}
 	if t.CodigoError != "" {
-		linea += " · " + string(t.CodigoError) + ": " + t.MensajeError
+		linea += " · " + string(t.CodigoError) + ": " + lineaSegura(t.MensajeError)
 	}
 	fmt.Fprintln(p.opc.Registros, linea)
 }
@@ -268,12 +298,22 @@ func (p *Planificador) encolar(id string) {
 func (p *Planificador) Cancelar(ctx context.Context, id string) (nucleo.Trabajo, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	t, err := p.Obtener(ctx, id)
-	if err != nil || t.Estado.Terminal() || t.Estado == nucleo.CancelacionSolicitada {
-		return t, err
-	}
-	if err := p.almacen.CambiarEstado(ctx, id, t.Estado, nucleo.CancelacionSolicitada, persistencia.Cambio{}); err != nil {
-		return t, err
+	// El ejecutor cambia el estado sin este cerrojo: si avanzó entre la lectura y el cambio (de en_cola a
+	// esperando_agente, por ejemplo), se vuelve a leer y se reintenta.
+	var t nucleo.Trabajo
+	for intento := 1; ; intento++ {
+		var err error
+		t, err = p.Obtener(ctx, id)
+		if err != nil || t.Estado.Terminal() || t.Estado == nucleo.CancelacionSolicitada {
+			return t, err
+		}
+		err = p.almacen.CambiarEstado(ctx, id, t.Estado, nucleo.CancelacionSolicitada, persistencia.Cambio{})
+		if err == nil {
+			break
+		}
+		if nucleo.CodigoDe(err) != nucleo.CodigoTransicionInvalida || intento == 5 {
+			return t, err
+		}
 	}
 	cancelar, enCurso := p.cancelaciones[id]
 	if enCurso {
@@ -505,13 +545,15 @@ func (p *Planificador) procesar(id string, esperando func()) {
 	}()
 
 	solicitud, desde := t.Solicitud, nucleo.EnCola
+	var documentos nucleo.Documentos
 	if len(solicitud.Cargas) > 0 {
 		esperando() // una conversión larga no frena el despacho de los demás
 		if !p.cambiar(id, nucleo.EnCola, nucleo.PreparandoEntrada, persistencia.Cambio{}) {
 			return
 		}
 		desde = nucleo.PreparandoEntrada
-		documentos, err := p.preparar(ctxTrabajo, solicitud.Cargas)
+		var err error
+		documentos, err = p.preparar(ctxTrabajo, solicitud.Cargas)
 		if ctxTrabajo.Err() != nil {
 			p.cerrarDetenido(id, desde)
 			return
@@ -524,11 +566,15 @@ func (p *Planificador) procesar(id string, esperando func()) {
 			p.cambiar(id, desde, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err)})
 			return
 		}
-		solicitud = conDocumentos(solicitud, documentos)
+		solicitud = conDocumentos(solicitud, documentos.Texto)
 		if p.ctx.Err() != nil { // la conversión terminó durante un drenaje: no se lanza un agente nuevo
 			p.cerrarDetenido(id, desde)
 			return
 		}
+	}
+	medida := medirEntrada(solicitud, documentos)
+	if datos, err := json.Marshal(medida); err == nil {
+		_ = p.almacen.AgregarEvento(fondo, id, "entrada", string(datos))
 	}
 	if !p.cambiar(id, desde, nucleo.EsperandoAgente, persistencia.Cambio{}) {
 		return
@@ -555,8 +601,20 @@ func (p *Planificador) procesar(id string, esperando func()) {
 	lista := candidatos(t)
 	var resultado adaptadores.Resultado
 	var usoPrevio nucleo.Uso // lo que gastaron los intentos que fallaron: también cuenta para el presupuesto
+	ejecutado := false       // si algún candidato llegó a ejecutarse (no solo se saltó por tamaño)
 	for i, c := range lista {
-		res, huboTexto, fin, err := p.intentar(ctxTrabajo, id, t, solicitud, c, plazoCola)
+		// Lo que no cabe en el contexto del modelo no llega a su CLI: se salta sin ejecutarlo y el trabajo sigue
+		// esperando agente.
+		var res adaptadores.Resultado
+		var huboTexto, fin bool
+		var err error
+		estado := nucleo.Ejecutando
+		if contexto, _ := p.contextoDe(ctxTrabajo, c); contexto > 0 && !cabe(medida, contexto, p.opc.ReservaSalida) {
+			estado, err = nucleo.EsperandoAgente, noCabe(medida, c, contexto, p.opc.ReservaSalida)
+		} else {
+			ejecutado = true
+			res, huboTexto, fin, err = p.intentar(ctxTrabajo, id, t, solicitud, c, plazoCola)
+		}
 		if fin {
 			return
 		}
@@ -571,12 +629,18 @@ func (p *Planificador) procesar(id string, esperando func()) {
 			codigo = nucleo.CodigoErrorAgente
 		}
 		if !saltable(codigo) || huboTexto || i+1 == len(lista) {
-			p.cambiar(id, nucleo.Ejecutando, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err), Uso: &usoPrevio})
+			// Si no cabía en ninguno y nada se ejecutó, la petición no cuenta para el presupuesto.
+			p.cambiar(id, estado, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err), Uso: &usoPrevio,
+				DevolverPeticion: codigo == nucleo.CodigoEntradaDemasiadoGrande && !ejecutado})
 			return
 		}
 		siguiente := lista[i+1]
 		// El uso acumulado queda en el trabajo: si se cancela durante el respaldo, también cuenta.
-		if !p.cambiar(id, nucleo.Ejecutando, nucleo.EsperandoAgente, persistencia.Cambio{Uso: &usoPrevio}) {
+		if estado == nucleo.Ejecutando && !p.cambiar(id, nucleo.Ejecutando, nucleo.EsperandoAgente, persistencia.Cambio{Uso: &usoPrevio}) {
+			return
+		}
+		if estado == nucleo.EsperandoAgente && (ctxTrabajo.Err() != nil || p.ctx.Err() != nil) {
+			p.cerrarDetenido(id, nucleo.EsperandoAgente) // cancelado o en drenaje mientras se saltaba: no se cambia de agente
 			return
 		}
 		// Lo guardado debe seguir valiendo al reintentar o reencolar: el agente nuevo con el esfuerzo que usa y el
@@ -599,8 +663,14 @@ func (p *Planificador) procesar(id string, esperando func()) {
 			// El respaldo sigue igual, pero el historial atribuiría la respuesta al agente anterior.
 			fmt.Fprintf(p.opc.Registros, "%s no se pudo guardar el cambio a %s: %v\n", id, siguiente, err)
 		}
-		_ = p.almacen.AgregarEvento(fondo, id, "aviso", idioma.Tf("%s falló (%s); sigue con %s", c, codigo, siguiente))
-		plazoCola = nil
+		aviso := idioma.Tf("%s falló (%s); sigue con %s", c, codigo, siguiente)
+		if codigo == nucleo.CodigoEntradaDemasiadoGrande {
+			aviso = idioma.Tf("%s; sigue con %s", nucleo.MensajeDe(err), siguiente)
+		}
+		_ = p.almacen.AgregarEvento(fondo, id, "aviso", aviso)
+		if estado == nucleo.Ejecutando {
+			plazoCola = nil // el plazo en cola vale hasta que algo se ejecuta; un salto por tamaño no ejecutó nada
+		}
 	}
 
 	if !p.cambiar(id, nucleo.Ejecutando, nucleo.ValidandoSalida, persistencia.Cambio{}) {
@@ -626,6 +696,7 @@ type intento struct {
 	Modelo    string `json:"modelo"`
 	Esfuerzo  string `json:"esfuerzo"`
 	DelAgente bool   `json:"del_agente,omitempty"`
+	Contexto  int    `json:"contexto_tokens,omitempty"` // del modelo, si se conoce
 }
 
 // nuevoIntento arma el evento de un intento; versionVista resuelve un alias (o el modelo vacío) con la última versión
@@ -653,6 +724,90 @@ func nuevoIntento(c candidato, pedido string, versionVista func(agente, modelo s
 func (p *Planificador) versionVista(agente, modelo string) string {
 	efectivos, _ := p.almacen.ModelosEfectivos(context.Background())
 	return efectivos[agente+"/"+modelo]
+}
+
+// medida es lo que ocupa la entrada que recibirá el agente: caracteres y tokens estimados (sin el tokenizador de cada
+// proveedor, caracteres ÷ 4), y cada documento de mayor a menor. Es el evento «entrada»; no lleva contenido.
+type medida struct {
+	Caracteres int           `json:"caracteres"`
+	Tokens     int           `json:"tokens_estimados"`
+	Documentos []parteMedida `json:"documentos"`
+}
+
+type parteMedida struct {
+	Nombre string `json:"nombre"`
+	Tokens int    `json:"tokens_estimados"`
+}
+
+func tokensDe(caracteres int) int { return (caracteres + 3) / 4 }
+
+// cabe dice si la entrada, más lo que se reserva para la respuesta, entra en el contexto del modelo.
+func cabe(m medida, contexto, reserva int) bool { return m.Tokens+reserva <= contexto }
+
+// noCabe explica cuánto mide la entrada, qué documento pesa más y cuánto admite el modelo.
+func noCabe(m medida, c candidato, contexto, reserva int) error {
+	mayor := ""
+	if len(m.Documentos) > 0 {
+		mayor = idioma.Tf("; %s ~%d", m.Documentos[0].Nombre, m.Documentos[0].Tokens)
+	}
+	return nucleo.NuevoError(nucleo.CodigoEntradaDemasiadoGrande, idioma.Tf(
+		"la entrada (~%d tokens%s) no cabe en %s: su contexto es de %d tokens y se reservan %d para la respuesta", m.Tokens, mayor, c, contexto, reserva))
+}
+
+// medirEntrada mide las instrucciones y los mensajes, ya con los documentos dentro.
+func medirEntrada(s nucleo.SolicitudEjecucion, docs nucleo.Documentos) medida {
+	caracteres := utf8.RuneCountInString(s.Instrucciones)
+	for _, m := range s.Mensajes {
+		caracteres += utf8.RuneCountInString(m.Contenido)
+	}
+	m := medida{Caracteres: caracteres, Tokens: tokensDe(caracteres), Documentos: []parteMedida{}}
+	for _, d := range docs.Partes {
+		m.Documentos = append(m.Documentos, parteMedida{Nombre: d.Nombre, Tokens: tokensDe(d.Caracteres)})
+	}
+	slices.SortStableFunc(m.Documentos, func(a, b parteMedida) int { return b.Tokens - a.Tokens })
+	return m
+}
+
+// Contexto es el contexto conocido de un agente y modelo, y de dónde sale (configurado o informado); 0 si no se sabe.
+func (p *Planificador) Contexto(ctx context.Context, agente, modelo string) (int, string) {
+	return p.contextoDe(ctx, candidato{agente: agente, modelo: modelo})
+}
+
+// contextoDe es el contexto (tokens) del modelo de un candidato y de dónde sale: lo configurado en
+// limites.contexto_tokens (agente/modelo y después agente), lo que informa el agente (su API o lo que dijo su CLI en
+// un intento anterior, para el modelo o la versión vista detrás de un alias) o 0 si no se conoce.
+func (p *Planificador) contextoDe(ctx context.Context, c candidato) (int, string) {
+	version := p.versionVista(c.agente, c.modelo)
+	modelos := slices.DeleteFunc([]string{c.modelo, version}, func(m string) bool { return m == "" })
+	for _, m := range modelos {
+		if n := p.opc.Contextos[c.agente+"/"+m]; n > 0 {
+			return n, "configurado"
+		}
+	}
+	if n := p.opc.Contextos[c.agente]; n > 0 {
+		return n, "configurado"
+	}
+	if contextual, ok := p.adaptadores[c.agente].(adaptadores.Contextual); ok {
+		if n, err := contextual.Contexto(ctx, c.modelo); err == nil && n > 0 {
+			return n, "informado"
+		}
+	}
+	for _, m := range modelos {
+		if n, err := p.almacen.Contexto(ctx, c.agente, m); err == nil && n > 0 {
+			return n, "informado"
+		}
+	}
+	return 0, ""
+}
+
+// lineaSegura deja un texto del CLI en una sola línea y corta lo largo: un mensaje de error no puede falsificar
+// líneas del registro del servicio.
+func lineaSegura(texto string) string {
+	texto = strings.NewReplacer("\r", " ", "\n", " ").Replace(texto)
+	if r := []rune(texto); len(r) > 300 {
+		texto = string(r[:300]) + "…"
+	}
+	return texto
 }
 
 // sumarUso junta el uso de dos intentos del mismo trabajo.
@@ -692,7 +847,7 @@ func candidatos(t nucleo.Trabajo) []candidato {
 // fallo del agente o tiempo agotado. La cancelación y un esquema no cumplido nunca saltan.
 func saltable(codigo nucleo.CodigoError) bool {
 	switch codigo {
-	case nucleo.CodigoLimiteUsoProveedor, nucleo.CodigoAutenticacionAgente, nucleo.CodigoAgenteNoDisponible, nucleo.CodigoModeloNoDisponible,
+	case nucleo.CodigoLimiteUsoProveedor, nucleo.CodigoAutenticacionAgente, nucleo.CodigoEntradaDemasiadoGrande, nucleo.CodigoAgenteNoDisponible, nucleo.CodigoModeloNoDisponible,
 		nucleo.CodigoErrorAgente, nucleo.CodigoErrorProtocoloAgente, nucleo.CodigoTiempoEjecucionAgotado:
 		return true
 	}
@@ -751,10 +906,17 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 		solicitud.Esfuerzo = c.esfuerzo
 	}
 	// El registro dice con qué agente, modelo y esfuerzo se intentó; sin contenido del usuario.
-	if datos, err := json.Marshal(nuevoIntento(c, solicitud.Esfuerzo, p.versionVista)); err == nil {
+	registro := nuevoIntento(c, solicitud.Esfuerzo, p.versionVista)
+	registro.Contexto, _ = p.contextoDe(ctxTrabajo, c)
+	if datos, err := json.Marshal(registro); err == nil {
 		_ = p.almacen.AgregarEvento(fondo, id, "intento", string(datos))
 	}
-	agrupador := &agrupador{guardar: func(tipo, datos string) error { return p.almacen.AgregarEvento(fondo, id, tipo, datos) }}
+	// Si el agente escribe una clave de proveedor (lo empujó un contenido hostil), se tapa antes de guardarla o enviarla.
+	// shortcut: una clave partida entre dos fragmentos de texto solo se tapa en la salida final, no en los eventos.
+	secretos := adaptadores.Secretos()
+	agrupador := &agrupador{guardar: func(tipo, datos string) error {
+		return p.almacen.AgregarEvento(fondo, id, tipo, adaptadores.Redactar(datos, secretos))
+	}}
 	var texto atomic.Bool // algunos adaptadores emiten desde la goroutine que lee la salida del CLI
 	resultado, err = p.adaptadores[c.agente].Ejecutar(ctxEjecucion, solicitud, func(e adaptadores.Evento) error {
 		if e.Tipo == "texto" && e.Datos != "" {
@@ -762,8 +924,12 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 		}
 		return agrupador.emitir(e)
 	})
+	if resultado.ContextoTokens > 0 && resultado.ModeloEfectivo != "" {
+		_ = p.almacen.GuardarContexto(fondo, c.agente, resultado.ModeloEfectivo, resultado.ContextoTokens)
+	}
 	huboTexto = texto.Load()
 	_ = agrupador.vaciar() // antes de cualquier cambio de estado: el texto queda completo y en orden
+	resultado.Salida = adaptadores.Redactar(resultado.Salida, secretos)
 	switch {
 	case ctxTrabajo.Err() != nil:
 		p.cerrarDetenido(id, nucleo.Ejecutando)
@@ -857,17 +1023,26 @@ func (g *agrupador) vaciarConCerrojo() error {
 }
 
 // preparar convierte las cargas respetando el límite de conversiones de la instancia.
-func (p *Planificador) preparar(ctx context.Context, cargas []string) (string, error) {
+func (p *Planificador) preparar(ctx context.Context, cargas []string) (nucleo.Documentos, error) {
 	if p.opc.Preparador == nil {
-		return "", nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("esta instancia no admite cargas"))
+		return nucleo.Documentos{}, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("esta instancia no admite cargas"))
 	}
 	select {
 	case p.conversiones <- struct{}{}:
 		defer func() { <-p.conversiones }()
 	case <-ctx.Done():
-		return "", ctx.Err()
+		return nucleo.Documentos{}, ctx.Err()
 	}
-	return p.opc.Preparador.Preparar(ctx, cargas)
+	if p.opc.TiempoConversion > 0 {
+		var cancelar context.CancelFunc
+		ctx, cancelar = context.WithTimeout(ctx, p.opc.TiempoConversion)
+		defer cancelar()
+	}
+	docs, err := p.opc.Preparador.Preparar(ctx, cargas)
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return docs, nucleo.NuevoError(nucleo.CodigoConversionFallida, idioma.T("la preparación de los documentos superó conversion.tiempo_total_segundos"))
+	}
+	return docs, err
 }
 
 // conDocumentos antepone las entradas preparadas al último mensaje del usuario sin alterar su texto;

@@ -26,7 +26,7 @@
               :input-style="{ minHeight: '120px' }" autogrow @keydown.ctrl.enter="ejecutar" @keydown.meta.enter="ejecutar" />
 
             <q-file v-model="archivos" multiple append use-chips clearable outlined dense :label="t('ejecutar.adjuntar')"
-              :hint="t('ejecutar.adjuntarHint')">
+              :hint="limites ? t('ejecutar.adjuntarLimites', { n: limites.cargas_por_peticion, mb: limites.carga_mb, texto: limites.texto_convertido_mb }) : t('ejecutar.adjuntarHint')">
               <template #prepend><q-icon name="o_attach_file" /></template>
             </q-file>
 
@@ -195,7 +195,7 @@ import Ruta from '../componentes/Ruta.vue'
 import RegistroTrabajo from '../componentes/RegistroTrabajo.vue'
 import SalidaTrabajo from '../componentes/SalidaTrabajo.vue'
 import { ajustesDeReceta, api, aplicarModelo, avisar, avisarError, configDeReceta, copiar, duracion, esquemaDeReceta, esfuerzoUsado, estadoInfo, haceCuanto, mensajeDe, modeloDe, modeloInicial,
-  origenHistorial, recetaDePunto, recetaDeSolicitud, recetaInicial, recetaVacia, terminales, tituloError, trabajoSeguido, type EventoRegistro, type Modelo, type Receta, type Solicitud,
+  origenHistorial, recetaDePunto, recetaDeSolicitud, recetaInicial, recetaVacia, terminales, tituloError, trabajoSeguido, type EventoRegistro, type LimitesPeticion, type Modelo, type Receta, type Solicitud,
   type Trabajo } from '../api'
 import { t } from '../i18n'
 
@@ -234,8 +234,11 @@ const eventosRegistro = ref<EventoRegistro[]>([])
 const esfuerzoFinal = computed(() => (final.value ? esfuerzoUsado(final.value, eventosRegistro.value) : ''))
 let fuente: EventSource | undefined
 
+// limites son los topes de las cargas, para la ayuda bajo Adjuntar.
+const limites = ref<LimitesPeticion>()
 onMounted(async () => {
   cargarRecientes()
+  api.limites().then((l) => (limites.value = l)).catch(() => {})
   catalogo.value = await api.catalogo().catch((e) => (avisarError(e), []))
   if (recetaInicial.value) {
     const nombre = recetaInicial.value

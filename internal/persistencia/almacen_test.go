@@ -435,3 +435,18 @@ func TestCambiarAgente(t *testing.T) {
 		t.Fatal("un trabajo inexistente debe dar no_encontrado")
 	}
 }
+
+func TestGuardarContexto(t *testing.T) {
+	a := abrir(t)
+	if n, err := a.Contexto(ctx, "claude", "claude-haiku-4-5"); err != nil || n != 0 {
+		t.Fatalf("sin dato: %d %v", n, err)
+	}
+	for _, n := range []int{100, 200000} {
+		if err := a.GuardarContexto(ctx, "claude", "claude-haiku-4-5", n); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n, err := a.Contexto(ctx, "claude", "claude-haiku-4-5"); err != nil || n != 200000 {
+		t.Fatalf("el último gana: %d %v", n, err)
+	}
+}

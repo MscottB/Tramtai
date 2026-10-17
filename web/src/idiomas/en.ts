@@ -561,7 +561,9 @@ const en: Textos = {
   'error.error_interno': 'Internal service error',
   'error.modelo_no_permitido': 'That API does not allow that model',
   'error.resultado_expirado': 'The response expired and was deleted',
-  'error.contexto_no_permitido': 'That project is not trusted',
+  'error.contexto_no_permitido': 'That context mode is not allowed here',
+  'error.entrada_demasiado_grande': 'The input does not fit in the model',
+  'error.cuota_cargas_agotada': 'The space for files is full',
   'error.ruta_no_permitida': 'The file is outside the allowed folders',
   'error.sesion_caducada': 'The session expired',
   // New version notice
@@ -644,6 +646,14 @@ const en: Textos = {
   'acerca.registro': 'Service log',
   'acerca.copiar': 'Copy support details',
   'acerca.copiarTexto': 'Copies these details as text, without keys or tokens; your user folder shows as ~.',
+  'receta.sinAntigravity': 'Antigravity is not available for APIs: it has not been checked yet that it cannot use tools. Use it from Try.',
+  'ejecutar.adjuntarLimites': 'Up to {n} files of {mb} MB; converted to text, up to {texto} MB. They use the model context: if they do not fit in the main one, the fallback is tried.',
+  'registro.entrada': 'Input: ~{n} tokens',
+  'registro.contexto': 'context {n}',
+  'agentes.contexto': 'Context',
+  'agentes.contextoDesconocido': 'Not known yet: it will be after using it, or you can set it',
+  'agentes.predeterminadoCli': 'default',
+  'agentes.configurado': 'configured',
   'receta.respaldoHint': 'Up to 3 agents that take over, in order, if the main one fails before answering: usage limit, missing key or an error.',
   'receta.esfuerzoDe': 'Effort for {agente}',
   'receta.respaldoIgual': 'Same as the main one ({nivel})',
@@ -680,6 +690,12 @@ const en: Textos = {
   'ayuda.p15': 'How do I see how long each step of a request took?',
   'ayuda.r15':
     'Open «Log» under the answer in Try or in the History detail: each step (queued, waiting for the agent, running with which agent, model and effort, notices and the end) with its time and the time since the start, and above it how long each stage took.',
+  'ayuda.p18': 'Why was my request rejected for size?',
+  'ayuda.r18':
+    'Before calling the agent, Tramtai measures what it will receive (instructions, message and documents already converted to text) and compares it with the model context, leaving room for the answer. If it does not fit, it tries the next fallback and says so in the log; if it fits in none, it rejects it with «The input does not fit in the model» without using tokens or counting the request. Documents take the most space: the log says which one weighs the most. In Agents you see the context of each model when it is known.',
+  'ayuda.p19': 'Why can I not use Antigravity in my APIs?',
+  'ayuda.r19':
+    'Because it has not yet been checked with the real CLI that, faced with malicious content, it cannot use tools (read files or run commands). Meanwhile it is only used from Try and the terminal. Claude and Codex are checked.',
   'ayuda.p17': 'Which version do I have?',
   'ayuda.r17':
     'Click the version next to the logo, or «About Tramtai» in the side menu or the status menu. You will see the version with its date, whether a newer one exists, the project links and, under «Technical details», what you need to ask for help: «Copy support details» copies it without keys or tokens.',

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -63,9 +64,13 @@ func (s *Servidor) ajustar(sol nucleo.SolicitudEjecucion) (nucleo.SolicitudEjecu
 	if p.Instrucciones != "" {
 		sol.Instrucciones = strings.TrimSpace(p.Instrucciones + "\n\n" + sol.Instrucciones)
 	}
-	if sol.ModoContexto == "" {
-		sol.ModoContexto = p.ModoContexto
+	// El modo de contexto lo decide la API (aislado si no dice otro): ni la petición ni un perfil lo amplían.
+	modo := cmp.Or(p.ModoContexto, "aislado")
+	if sol.ModoContexto != "" && sol.ModoContexto != modo {
+		return sol, nucleo.NuevoError(nucleo.CodigoContextoNoPermitido,
+			idioma.Tf("la API %s trabaja en modo %s: la petición no puede pedir %s", p.Nombre, modo, sol.ModoContexto))
 	}
+	sol.ModoContexto = modo
 	if len(sol.Salida.Esquema) == 0 && len(p.Esquema) > 0 {
 		sol.Salida.Formato, sol.Salida.Esquema = "json", p.Esquema
 	}

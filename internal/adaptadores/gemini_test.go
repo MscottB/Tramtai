@@ -10,7 +10,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"tramtai/internal/nucleo"
 )
@@ -24,6 +26,10 @@ func TestMain(m *testing.M) {
 			fmt.Println(`{"status":"ERROR","response":"sin modelProvider gemini"}`)
 		case os.Getenv("GEMINI_API_KEY") != "clave-falsa":
 			fmt.Println(`{"status":"ERROR","response":"API key not valid"}`)
+		case modo == "entorno":
+			r, _ := json.Marshal(map[string]any{"status": "SUCCESS", "response": os.Getenv("USERPROFILE") + "|" + os.Getenv("APPDATA") + "|" +
+				os.Getenv("LOCALAPPDATA") + "|" + os.Getenv("XDG_CONFIG_HOME")})
+			fmt.Println(string(r))
 		case modo == "esquema":
 			fmt.Println(`{"status":"SUCCESS","response":"{\"a\":1,\"extra\":2}","structured_output":{"a":1},"usage":{"input_tokens":10,"output_tokens":3}}`)
 		default:
@@ -145,5 +151,121 @@ func TestAntigravityAisladoYSoloConClave(t *testing.T) {
 	t.Setenv("GEMINI_API_KEY", "")
 	if _, err := a.Ejecutar(context.Background(), s, func(Evento) error { return nil }); nucleo.CodigoDe(err) != nucleo.CodigoAutenticacionAgente {
 		t.Fatalf("sin clave: %v", err)
+	}
+}
+
+func TestContextoClaude(t *testing.T) {
+	var r resultadoClaude
+	datos := `{"result":"ok","modelUsage":{"claude-haiku-4-5":{"outputTokens":5,"contextWindow":200000},"aux":{"outputTokens":1,"contextWindow":100}}}`
+	if err := json.Unmarshal([]byte(datos), &r); err != nil {
+		t.Fatal(err)
+	}
+	if r.contexto() != 200000 {
+		t.Fatalf("el contexto del modelo efectivo: %d", r.contexto())
+	}
+}
+
+func TestContextoGemini(t *testing.T) {
+	t.Setenv("GEMINI_API_KEY", "clave-falsa")
+	var llamadas atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		llamadas.Add(1)
+		if r.URL.Path != "/models/gemini-contexto" || r.Header.Get("x-goog-api-key") != "clave-falsa" {
+			http.Error(w, "no", http.StatusNotFound)
+			return
+		}
+		fmt.Fprint(w, `{"name":"models/gemini-contexto","inputTokenLimit":1048576}`)
+	}))
+	defer srv.Close()
+	g := Gemini{Base: srv.URL, Cliente: srv.Client()}
+	for range 2 {
+		if n, err := g.Contexto(context.Background(), "gemini-contexto"); err != nil || n != 1048576 {
+			t.Fatalf("contexto %d %v", n, err)
+		}
+	}
+	if llamadas.Load() != 1 {
+		t.Fatalf("se guarda 24 h: %d llamadas", llamadas.Load())
+	}
+}
+
+func TestAntigravityNoEmpiezaPorGuion(t *testing.T) {
+	t.Setenv("GEMINI_API_KEY", "clave-falsa")
+	t.Setenv("AGY_FALSO", "eco")
+	s := nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "--yolo"}}}
+	r, err := Antigravity{Programa: os.Args[0]}.Ejecutar(context.Background(), s, func(Evento) error { return nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	// El argumento tras -p no empieza por «-»: un CLI no lo puede leer como una opción.
+	if !strings.Contains(r.Salida, "--yolo") || strings.HasPrefix(strings.TrimPrefix(r.Salida, "eco: "), "-") {
+		t.Fatalf("el prompt llegó como %q", r.Salida)
+	}
+}
+
+func TestAntigravityEntornoPrivado(t *testing.T) {
+	t.Setenv("GEMINI_API_KEY", "clave-falsa")
+	t.Setenv("AGY_FALSO", "entorno")
+	r, err := Antigravity{Programa: os.Args[0]}.Ejecutar(context.Background(), solicitudSimple("x"), func(Evento) error { return nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	partes := strings.Split(r.Salida, "|")
+	if len(partes) != 4 || partes[0] == "" {
+		t.Fatalf("entorno %q", r.Salida)
+	}
+	for _, p := range partes[1:] {
+		if !strings.HasPrefix(p, partes[0]) {
+			t.Fatalf("APPDATA, LOCALAPPDATA y XDG_CONFIG_HOME dentro de la carpeta privada %q: %q", partes[0], r.Salida)
+		}
+	}
+}
+
+func TestAntigravityRechazaConsciente(t *testing.T) {
+	t.Setenv("GEMINI_API_KEY", "clave-falsa")
+	s := solicitudSimple("x")
+	s.ModoContexto, s.RaizProyecto = "consciente_proyecto", t.TempDir()
+	if _, err := (Antigravity{Programa: os.Args[0]}).Ejecutar(context.Background(), s, func(Evento) error { return nil }); nucleo.CodigoDe(err) != nucleo.CodigoContextoNoPermitido {
+		t.Fatalf("consciente_proyecto no se admite: %v", err)
+	}
+}
+
+func TestAntigravityLineaOrdenes(t *testing.T) {
+	for _, c := range []struct {
+		arg      string
+		unidades int
+	}{{"abc", 3}, {"a b", 5}, {`a"b`, 4}, {`a\"b`, 6}, {`a b\`, 7}, {"😀", 2}} {
+		if n := unidadesLineaOrdenes(c.arg); n != c.unidades {
+			t.Fatalf("%q: %d unidades, se esperaban %d", c.arg, n, c.unidades)
+		}
+	}
+	t.Setenv("GEMINI_API_KEY", "clave-falsa")
+	t.Setenv("AGY_FALSO", "eco")
+	s := nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: strings.Repeat("x", 28001)}}}
+	if _, err := (Antigravity{Programa: os.Args[0]}).Ejecutar(context.Background(), s, func(Evento) error { return nil }); nucleo.CodigoDe(err) != nucleo.CodigoEntradaDemasiadoGrande {
+		t.Fatalf("más de 28.000 unidades: %v", err)
+	}
+}
+
+func TestContextoGeminiConPlazo(t *testing.T) {
+	t.Setenv("GEMINI_API_KEY", "clave-falsa")
+	var llamadas atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		llamadas.Add(1)
+		time.Sleep(300 * time.Millisecond)
+		http.Error(w, "no", http.StatusServiceUnavailable)
+	}))
+	defer srv.Close()
+	anterior := plazoContextoGemini
+	plazoContextoGemini = 50 * time.Millisecond
+	defer func() { plazoContextoGemini = anterior }()
+	g := Gemini{Base: srv.URL, Cliente: srv.Client()}
+	inicio := time.Now()
+	for range 2 {
+		if n, _ := g.Contexto(context.Background(), "gemini-lento"); n != 0 {
+			t.Fatalf("sin respuesta, contexto desconocido: %d", n)
+		}
+	}
+	if time.Since(inicio) > 250*time.Millisecond || llamadas.Load() != 1 {
+		t.Fatalf("con plazo y el fallo guardado: %s, %d llamadas", time.Since(inicio), llamadas.Load())
 	}
 }

@@ -19,7 +19,12 @@ func preparar(cmd *exec.Cmd) { cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: t
 
 type grupo struct{ pgid int }
 
-func agrupar(cmd *exec.Cmd) (*grupo, error) { return &grupo{pgid: cmd.Process.Pid}, nil }
+func agrupar(cmd *exec.Cmd, memoriaMB int) (*grupo, error) {
+	if memoriaMB > 0 {
+		limitarMemoria(cmd.Process.Pid, memoriaMB)
+	}
+	return &grupo{pgid: cmd.Process.Pid}, nil
+}
 
 // terminar pide parada cooperativa (SIGTERM) y fuerza SIGKILL a los 3 segundos.
 func (g *grupo) terminar() {

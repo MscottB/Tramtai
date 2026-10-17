@@ -48,21 +48,43 @@ Además hay dos adaptadores de Google, probados con un servidor y un CLI simulad
   - Recibe el prompt como argumento (hasta 28 000 caracteres), así que otros procesos del equipo pueden verlo en la lista de procesos mientras se ejecuta.
   - **Sin restricción de herramientas validada:** a diferencia de Claude y Codex, a `agy` no se le desactivan herramientas, shell ni MCP, porque ninguna opción (`permissions.deny`, `toolPermission: strict`) se ha comprobado aún con el CLI real. Solo lo limitan el `HOME` privado y la carpeta temporal vacía; en `consciente_proyecto` trabaja en la raíz del proyecto. Úsalo solo con prompts de confianza.
 
-Las conversaciones de varios turnos se enmarcan con el formato `tramtai-turnos-v1`: un bloque `<<<turno rol=…>>>` por turno, con el contenido intacto. Los errores del proveedor se traducen a `limite_uso_proveedor`, `autenticacion_agente`, `modelo_no_disponible` o `error_agente`. Ningún secreto llega a los mensajes: se redactan antes.
+Las conversaciones de varios turnos se enmarcan con el formato `tramtai-turnos-v2`: un bloque `<<<turno-<código> rol=…>>>` por turno, con el contenido intacto y un código aleatorio por petición para que un mensaje no pueda cerrar su turno. Los errores del proveedor se traducen a `limite_uso_proveedor`, `autenticacion_agente`, `modelo_no_disponible` o `error_agente`. Ningún secreto llega a los mensajes: se redactan antes.
 
 ## Entradas y salidas
 
 Con cargas, el trabajo pasa por `preparando_entrada`, que tiene su propio límite de conversiones simultáneas (`concurrencia.maximo_conversiones_instancia`). Cada archivo se convierte por separado y se antepone al último mensaje del usuario en un bloque delimitado:
 
 ```
-<<<archivo nombre="paquete.zip/acta.docx" sha256="…">>>
+<<<archivo-3f9a1c2e nombre="paquete.zip/acta.docx" sha256="…">>>
 …Markdown…
-<<<fin archivo>>>
+<<<fin archivo-3f9a1c2e>>>
 ```
+
+El código tras el guion es aleatorio por petición (igual en los turnos `<<<turno-…>>>`): un documento que escriba
+`<<<fin archivo>>>` no cierra su bloque.
 
 Si una carga venció, el trabajo falla con `entrada_no_disponible`. Una conversión vacía o fallida falla con `conversion_fallida`; nunca se presenta como éxito. Un ZIP que supera los límites falla con `carga_invalida`.
 
 Con un esquema, se usa primero la salida estructurada nativa del agente (`--json-schema` y `structured_output` en Claude; `--output-schema` en Codex) y después Tramtai valida el resultado. Si no cumple, el trabajo falla con `salida_no_cumple_esquema` y la salida solo se conserva con `conservar_salida_invalida`. Un esquema inválido se rechaza al aceptar el trabajo.
+
+## Modelo de amenazas
+
+Lo que llega de una app (mensaje, instrucciones, documentos, esquema) se trata como hostil. No se puede impedir que
+intente manipular al modelo; sí que un modelo manipulado haga daño a través de Tramtai:
+
+- **Agentes:** Claude Code sin herramientas, sin configuración del usuario y con el mensaje por stdin; Codex en solo
+  lectura, sin terminal ni búsqueda web, en una carpeta temporal y con el mensaje por stdin; Gemini es HTTP. Las pruebas
+  canario lo comprueban con los CLI reales. Antigravity, sin esa comprobación, queda fuera de las apps; su mensaje nunca
+  empieza por `-` y su configuración es privada.
+- **Entrada:** delimitadores con código por petición; topes de mensajes (1.000), esquema (256 KB), cuerpo (16 MB) y
+  la comprobación del contexto antes de llamar al CLI.
+- **Cargas y conversión:** identificadores por API, cuota por instancia, solo formatos anunciados, ZIP con límites de
+  archivos, tamaño, profundidad y rutas, Office comprobado antes de convertir, plazo por archivo y total, y tope de
+  memoria para markitdown.
+- **Procesos:** cada CLI en un grupo que se termina entero (Job Object en Windows), sin shell, con un tope de 8 MB por
+  línea de salida y sin los secretos del entorno (claves, contraseñas, URL con credenciales, `TRAMTAI_*`).
+- **Salida:** las claves de proveedor se tapan; la Web UI muestra Markdown solo como HTML limpio (DOMPurify) bajo una
+  CSP estricta; un error del CLI no puede escribir líneas falsas en el registro.
 
 ## Interfaces
 

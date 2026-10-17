@@ -3,6 +3,7 @@ package nucleo
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -180,5 +181,36 @@ func TestFijarYModeloPredeterminado(t *testing.T) {
 	}
 	if s := c.AplicarPredeterminados(SolicitudEjecucion{Agente: "claude"}); s.Modelo != "" {
 		t.Fatalf("con otro agente, el modelo predeterminado no se aplica: %s", s.Modelo)
+	}
+}
+
+func TestContextos(t *testing.T) {
+	c := Resolver(Capa{Origen: OrigenGlobal, Valores: map[string]any{"limites.contexto_tokens": []any{
+		"claude/claude-haiku-4-5=200000", " codex/gpt-5.5 = 272000 ", "gemini=1048576", "mal", "x=no", "y=-3"}}})
+	esperado := map[string]int{"claude/claude-haiku-4-5": 200000, "codex/gpt-5.5": 272000, "gemini": 1048576}
+	if got := c.Contextos(); !reflect.DeepEqual(got, esperado) {
+		t.Fatalf("contextos %v", got)
+	}
+	if c.Entero("limites.reserva_salida_tokens") != 8192 {
+		t.Fatal("reserva predeterminada 8192")
+	}
+}
+
+func TestLimitesNoPositivos(t *testing.T) {
+	for valor, esperado := range map[int]int{0: 50, -3: 50, 999999: 1024, 80: 80} {
+		c := Resolver(Capa{Origen: OrigenGlobal, Valores: map[string]any{"conversion.maximo_carga_mb": valor}})
+		if got := c.Limite("conversion.maximo_carga_mb"); got != esperado {
+			t.Fatalf("%d: %d, se esperaba %d", valor, got, esperado)
+		}
+	}
+}
+
+func TestLimitesAdministrados(t *testing.T) {
+	c := Resolver(Capa{Origen: OrigenGlobal, Valores: map[string]any{"limites.reserva_salida_tokens": -5000}})
+	if c.Limite("limites.reserva_salida_tokens") != 0 {
+		t.Fatal("una reserva negativa cuenta como 0")
+	}
+	if !esAdministrada("limites.memoria_proceso_mb") {
+		t.Fatal("el tope de memoria solo se cambia en la configuración global")
 	}
 }

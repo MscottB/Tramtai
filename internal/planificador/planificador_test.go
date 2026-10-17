@@ -1,6 +1,7 @@
 package planificador
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/nucleo"
@@ -82,7 +84,8 @@ func TestCompletaConAgenteSimulado(t *testing.T) {
 	for _, e := range eventos {
 		recorrido = append(recorrido, e.Datos)
 	}
-	esperado := []string{"en_cola", "esperando_agente", "ejecutando", `{"agente":"simulado","modelo":"","esfuerzo":""}`, "hola", "validando_salida", "completado"}
+	esperado := []string{"en_cola", `{"caracteres":4,"tokens_estimados":1,"documentos":[]}`, "esperando_agente", "ejecutando",
+		`{"agente":"simulado","modelo":"","esfuerzo":""}`, "hola", "validando_salida", "completado"}
 	if len(recorrido) != len(esperado) {
 		t.Fatalf("recorrido de eventos %v, se esperaba %v", recorrido, esperado)
 	}
@@ -423,10 +426,13 @@ func TestPerfilSeResuelveAlAceptar(t *testing.T) {
 }
 
 // preparadorFalso devuelve un bloque fijo o un error.
-type preparadorFalso struct{ err error }
+type preparadorFalso struct {
+	err    error
+	partes []nucleo.ParteDocumento
+}
 
-func (p preparadorFalso) Preparar(_ context.Context, cargas []string) (string, error) {
-	return "<<<archivo nombre=\"a.txt\">>>\ncontenido\n<<<fin archivo>>>", p.err
+func (p preparadorFalso) Preparar(_ context.Context, cargas []string) (nucleo.Documentos, error) {
+	return nucleo.Documentos{Texto: "<<<archivo nombre=\"a.txt\">>>\ncontenido\n<<<fin archivo>>>", Partes: p.partes}, p.err
 }
 
 // eco devuelve el último mensaje recibido, para ver qué llegó al agente.
@@ -452,6 +458,46 @@ func TestCargasSePreparanAntesDelAgente(t *testing.T) {
 	eventos, _ := alm.Eventos(ctx, final.ID, 0)
 	if eventos[1].Datos != string(nucleo.PreparandoEntrada) {
 		t.Fatalf("el segundo estado debe ser preparando_entrada: %+v", eventos)
+	}
+}
+
+func TestEventoEntrada(t *testing.T) {
+	alm := abrir(t)
+	opc := opciones()
+	opc.Preparador = preparadorFalso{partes: []nucleo.ParteDocumento{{Nombre: "a.txt", Caracteres: 10}, {Nombre: "b.txt", Caracteres: 400}}}
+	p := iniciar(t, alm, eco{}, 1, opc)
+	s := solicitud("resume")
+	s.Instrucciones = "sé breve"
+	s.Cargas = []string{cargaPrueba}
+	final := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	eventos, _ := alm.Eventos(ctx, final.ID, 0)
+	var entrada struct {
+		Caracteres int `json:"caracteres"`
+		Tokens     int `json:"tokens_estimados"`
+		Documentos []struct {
+			Nombre string `json:"nombre"`
+			Tokens int    `json:"tokens_estimados"`
+		} `json:"documentos"`
+	}
+	posicion := -1
+	for i, e := range eventos {
+		if e.Tipo == "entrada" {
+			posicion = i
+			if err := json.Unmarshal([]byte(e.Datos), &entrada); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if posicion < 0 || eventos[posicion+1].Datos != string(nucleo.EsperandoAgente) {
+		t.Fatalf("un evento entrada justo antes de esperando_agente: %+v", eventos)
+	}
+	// Lo que mide es lo que recibe el agente: instrucciones y mensajes con los documentos.
+	caracteres := utf8.RuneCountInString("sé breve") + utf8.RuneCountInString(final.Salida)
+	if entrada.Caracteres != caracteres || entrada.Tokens != (caracteres+3)/4 {
+		t.Fatalf("medida %+v, se esperaban %d caracteres", entrada, caracteres)
+	}
+	if len(entrada.Documentos) != 2 || entrada.Documentos[0].Nombre != "b.txt" || entrada.Documentos[0].Tokens != 100 || entrada.Documentos[1].Tokens != 3 {
+		t.Fatalf("documentos de mayor a menor: %+v", entrada.Documentos)
 	}
 }
 
@@ -1084,5 +1130,206 @@ func TestIntentoDelAgenteConAlias(t *testing.T) {
 	segundo := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
 	if l := intentos(t, alm, segundo.ID); len(l) != 1 || l[0]["esfuerzo"] != "medio" || l[0]["del_agente"] != true {
 		t.Fatalf("el alias se resuelve con la versión vista: %v", l)
+	}
+}
+
+// conContexto responde como un CLI que informa el contexto de su modelo.
+type conContexto struct{}
+
+func (conContexto) Ejecutar(context.Context, nucleo.SolicitudEjecucion, func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	return adaptadores.Resultado{Salida: "ok", ModeloEfectivo: "claude-haiku-5-5", ContextoTokens: 200000}, nil
+}
+
+func TestContextoDe(t *testing.T) {
+	alm := abrir(t)
+	opc := opciones()
+	opc.Contextos = map[string]int{"claude/claude-haiku-9": 100, "claude": 50}
+	p := Nuevo(alm, map[string]adaptadores.Adaptador{"claude": conContexto{}, "codex": adaptadores.Simulado{}}, NuevosSemaforos(map[string]int{"claude": 1}), opc)
+	if err := p.Iniciar(ctx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Detener)
+	if n, origen := p.contextoDe(ctx, candidato{agente: "claude", modelo: "claude-haiku-9"}); n != 100 || origen != "configurado" {
+		t.Fatalf("agente/modelo configurado: %d %s", n, origen)
+	}
+	if n, origen := p.contextoDe(ctx, candidato{agente: "claude", modelo: "otro"}); n != 50 || origen != "configurado" {
+		t.Fatalf("agente configurado: %d %s", n, origen)
+	}
+	if n, origen := p.contextoDe(ctx, candidato{agente: "codex", modelo: "gpt-x"}); n != 0 || origen != "" {
+		t.Fatalf("desconocido: %d %s", n, origen)
+	}
+	// Tras un intento, el contexto informado queda guardado para el modelo efectivo y un alias lo encuentra.
+	p.opc.Contextos = nil
+	s := solicitud("x")
+	s.Agente, s.Modelo = "claude", "haiku"
+	esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if n, origen := p.contextoDe(ctx, candidato{agente: "claude", modelo: "haiku"}); n != 200000 || origen != "informado" {
+		t.Fatalf("informado y resuelto por el alias: %d %s", n, origen)
+	}
+}
+
+// iniciarConContextos arranca con los adaptadores dados, el contexto configurado de cada uno y una reserva de salida.
+func iniciarConContextos(t *testing.T, alm *persistencia.Almacen, lista map[string]adaptadores.Adaptador, contextos map[string]int, reserva int) *Planificador {
+	t.Helper()
+	limites := map[string]int{}
+	for nombre := range lista {
+		limites[nombre] = 2
+	}
+	opc := opciones()
+	opc.Contextos, opc.ReservaSalida = contextos, reserva
+	p := Nuevo(alm, lista, NuevosSemaforos(limites), opc)
+	if err := p.Iniciar(ctx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Detener)
+	return p
+}
+
+func TestEntradaNoCabeSinRespaldo(t *testing.T) {
+	alm := abrir(t)
+	var n atomic.Int32
+	p := iniciarConContextos(t, alm, map[string]adaptadores.Adaptador{"simulado": contado{&n, adaptadores.Simulado{Respuesta: "ok"}}},
+		map[string]int{"simulado": 1000}, 100)
+	tr := esperar(t, alm, enviar(t, p, solicitud(strings.Repeat("x", 40000))), nucleo.Fallido)
+	if tr.CodigoError != nucleo.CodigoEntradaDemasiadoGrande || n.Load() != 0 || tr.Uso.TokensEntrada != 0 ||
+		!strings.Contains(tr.MensajeError, "10000") || !strings.Contains(tr.MensajeError, "1000") {
+		t.Fatalf("no cabe y no llega al CLI (%d llamadas): %+v", n.Load(), tr)
+	}
+}
+
+func TestEntradaNoCabeSaltaAlRespaldo(t *testing.T) {
+	alm := abrir(t)
+	var n atomic.Int32
+	p := iniciarConContextos(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": contado{&n, adaptadores.Simulado{Respuesta: "no"}}, "otro": adaptadores.Simulado{Respuesta: "ok"}},
+		map[string]int{"simulado": 1000, "otro": 100000}, 100)
+	s := conRespaldo("otro")
+	s.Mensajes[0].Contenido = strings.Repeat("x", 40000)
+	tr := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	a := avisos(t, alm, tr.ID)
+	if n.Load() != 0 || tr.Salida != "ok" || tr.Solicitud.Agente != "otro" || len(a) != 1 || !strings.Contains(a[0], "simulado") ||
+		!strings.Contains(a[0], "otro") || len(intentos(t, alm, tr.ID)) != 1 {
+		t.Fatalf("salta sin ejecutar el principal (%d llamadas), con aviso: %v %+v", n.Load(), a, tr)
+	}
+}
+
+func TestEntradaEnElBorde(t *testing.T) {
+	alm := abrir(t)
+	// 400 caracteres son 100 tokens; con 8 de reserva cabe justo en 108.
+	p := iniciarConContextos(t, alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Respuesta: "ok"}},
+		map[string]int{"simulado": 108}, 8)
+	esperar(t, alm, enviar(t, p, solicitud(strings.Repeat("x", 400))), nucleo.Completado)
+	esperar(t, alm, enviar(t, p, solicitud(strings.Repeat("x", 401))), nucleo.Fallido)
+}
+
+func TestContextoDesconocidoNoComprueba(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarConContextos(t, alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Respuesta: "ok"}}, nil, 8192)
+	esperar(t, alm, enviar(t, p, solicitud(strings.Repeat("x", 400000))), nucleo.Completado)
+}
+
+func TestAntigravityRechazadoParaApps(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{"antigravity": adaptadores.Simulado{Respuesta: "ok"}, "simulado": adaptadores.Simulado{Respuesta: "ok"}}, 1)
+	principal := solicitud("x")
+	principal.Agente = "antigravity"
+	for _, origen := range []string{nucleo.DesdeApp, nucleo.DesdeAPI} {
+		for _, s := range []nucleo.SolicitudEjecucion{principal, conRespaldo("antigravity")} {
+			if _, _, err := p.Enviar(nucleo.ConOrigenPeticion(ctx, origen), s, ""); nucleo.CodigoDe(err) != nucleo.CodigoAgenteNoDisponible {
+				t.Fatalf("origen %s con %s: %v", origen, s.Agente, err)
+			}
+		}
+	}
+	for _, origen := range []string{nucleo.DesdeProbar, nucleo.DesdeTerminal, nucleo.DesdeCLI} {
+		if _, _, err := p.Enviar(nucleo.ConOrigenPeticion(ctx, origen), principal, ""); err != nil {
+			t.Fatalf("desde %s se admite: %v", origen, err)
+		}
+	}
+	p.opc.PermitirAntigravityApps = true
+	if _, _, err := p.Enviar(nucleo.ConOrigenPeticion(ctx, nucleo.DesdeApp), principal, ""); err != nil {
+		t.Fatalf("con permitir_apps se admite: %v", err)
+	}
+}
+
+// preparadorLento tarda hasta que se cancela su contexto.
+type preparadorLento struct{}
+
+func (preparadorLento) Preparar(ctx context.Context, _ []string) (nucleo.Documentos, error) {
+	<-ctx.Done()
+	return nucleo.Documentos{}, ctx.Err()
+}
+
+func TestPlazoTotalConversion(t *testing.T) {
+	alm := abrir(t)
+	opc := opciones()
+	opc.Preparador, opc.TiempoConversion = preparadorLento{}, 50*time.Millisecond
+	p := iniciar(t, alm, eco{}, 1, opc)
+	s := solicitud("x")
+	s.Cargas = []string{cargaPrueba}
+	tr := esperar(t, alm, enviar(t, p, s), nucleo.Fallido)
+	if tr.CodigoError != nucleo.CodigoConversionFallida || !strings.Contains(tr.MensajeError, "conversion.tiempo_total_segundos") {
+		t.Fatalf("la preparación tiene un plazo total: %+v", tr)
+	}
+}
+
+func TestSalidaRedactada(t *testing.T) {
+	t.Setenv("ANTHROPIC_API_KEY", "sk-ant-clave-de-prueba-123456")
+	alm := abrir(t)
+	p := iniciar(t, alm, adaptadores.Simulado{Respuesta: "tu clave es sk-ant-clave-de-prueba-123456"}, 1, opciones())
+	tr := esperar(t, alm, enviar(t, p, solicitud("x")), nucleo.Completado)
+	eventos, _ := alm.Eventos(ctx, tr.ID, 0)
+	for _, e := range eventos {
+		if strings.Contains(e.Datos, "sk-ant-clave") {
+			t.Fatalf("un evento lleva la clave: %+v", e)
+		}
+	}
+	if strings.Contains(tr.Salida, "sk-ant-clave") || !strings.Contains(tr.Salida, "[REDACTADO]") {
+		t.Fatalf("la salida lleva la clave: %q", tr.Salida)
+	}
+}
+
+func TestLineaRegistroEscapada(t *testing.T) {
+	alm := abrir(t)
+	var registro bytes.Buffer
+	opc := opciones()
+	opc.Registros = &registro
+	p := iniciar(t, alm, adaptadores.Simulado{Error: nucleo.NuevoError(nucleo.CodigoErrorAgente, "fallo\n10:00:00 global completado trabajo_falso")}, 1, opc)
+	esperar(t, alm, enviar(t, p, solicitud("x")), nucleo.Fallido)
+	for _, linea := range strings.Split(registro.String(), "\n") {
+		if strings.HasPrefix(linea, "10:00:00") {
+			t.Fatalf("un mensaje del CLI falsificó una línea del registro:\n%s", registro.String())
+		}
+	}
+}
+
+func TestSaltoPorTamanoConservaPlazoDeCola(t *testing.T) {
+	alm := abrir(t)
+	limites := map[string]int{"simulado": 1, "otro": 1}
+	opc := opciones()
+	opc.Contextos, opc.ReservaSalida, opc.TiempoMaximoCola = map[string]int{"simulado": 10}, 0, 300*time.Millisecond
+	p := Nuevo(alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}, "otro": adaptadores.Simulado{Demora: time.Minute}},
+		NuevosSemaforos(limites), opc)
+	if err := p.Iniciar(ctx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Detener)
+	ocupa := solicitud("x")
+	ocupa.Agente = "otro"
+	esperar(t, alm, enviar(t, p, ocupa), nucleo.Ejecutando)
+	// No cabe en simulado y otro está ocupado: el plazo en cola sigue valiendo hasta que algo se ejecute.
+	s := conRespaldo("otro")
+	s.Mensajes[0].Contenido = strings.Repeat("x", 400)
+	if tr := esperar(t, alm, enviar(t, p, s), nucleo.Fallido); tr.CodigoError != nucleo.CodigoTiempoColaAgotado {
+		t.Fatalf("tras saltar sin ejecutar, el plazo en cola sigue: %+v", tr)
+	}
+}
+
+func TestEntradaNoCabeNoGastaPeticion(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarConContextos(t, alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Respuesta: "ok"}}, map[string]int{"simulado": 10}, 0)
+	esperar(t, alm, enviar(t, p, solicitud(strings.Repeat("x", 400))), nucleo.Fallido)
+	dia, _, err := alm.Consumo(ctx, p.opc.Instancia, persistencia.TodaLaInstancia)
+	if err != nil || dia.Peticiones != 0 {
+		t.Fatalf("una entrada que no cabe no gasta petición del presupuesto: %+v %v", dia, err)
 	}
 }

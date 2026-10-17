@@ -74,6 +74,7 @@ var esquema = map[string]tipoValor{
 	"proyectos_confiables":                        tipoLista,
 	"comandos_agentes.*":                          tipoTexto,
 	"adaptadores.*.autenticacion":                 tipoTexto,
+	"adaptadores.*.permitir_apps":                 tipoBooleano,
 	"concurrencia_servicio.adaptadores.*":         tipoEntero,
 	"puntos_acceso":                               tipoLista,
 	"predeterminados.agente":                      tipoTexto,
@@ -97,11 +98,16 @@ var esquema = map[string]tipoValor{
 	"retencion.cache_conversion_habilitada":       tipoBooleano,
 	"retencion.eliminar_entradas_al_terminar":     tipoBooleano,
 	"retencion.cifrado_aplicacion":                tipoBooleano,
+	"limites.contexto_tokens":                     tipoLista,
+	"limites.reserva_salida_tokens":               tipoEntero,
+	"limites.memoria_proceso_mb":                  tipoEntero,
 	"conversion.motor":                            tipoTexto,
 	"conversion.habilitar_plugins":                tipoBooleano,
 	"conversion.transformacion_semantica":         tipoBooleano,
 	"conversion.comando":                          tipoTexto,
 	"conversion.tiempo_limite_segundos":           tipoEntero,
+	"conversion.tiempo_total_segundos":            tipoEntero,
+	"conversion.cuota_cargas_mb":                  tipoEntero,
 	"conversion.maximo_carga_mb":                  tipoEntero,
 	"conversion.maximo_salida_mb":                 tipoEntero,
 	"conversion.maximo_archivos_zip":              tipoEntero,
@@ -121,7 +127,7 @@ var esquema = map[string]tipoValor{
 
 // prefijosAdministrados son límites de seguridad: nunca pueden venir de la configuración versionada del repositorio,
 // y en local.yaml solo si la carpeta del proyecto es confiable según la configuración global (ver validar).
-var prefijosAdministrados = []string{"servicio", "instancia_global", "proyectos_confiables", "comandos_agentes", "concurrencia_servicio", "puntos_acceso", "adaptadores", "conversion.comando", "presupuesto"}
+var prefijosAdministrados = []string{"servicio", "instancia_global", "proyectos_confiables", "comandos_agentes", "concurrencia_servicio", "puntos_acceso", "adaptadores", "conversion", "presupuesto", "limites.memoria_proceso_mb"}
 
 // Capa es un origen de configuración aplanado a claves con puntos.
 type Capa struct {
@@ -191,6 +197,8 @@ func Internos() Capa {
 		"adaptadores.antigravity.autenticacion":         "clave_api",
 		"concurrencia_servicio.adaptadores.gemini":      2,
 		"concurrencia_servicio.adaptadores.antigravity": 1,
+		"limites.reserva_salida_tokens":                 8192,
+		"limites.memoria_proceso_mb":                    2048,
 		"modelos.perfiles.rapido.gemini":                "gemini-flash-lite-latest",
 		"modelos.perfiles.equilibrado.gemini":           "gemini-flash-latest",
 		"modelos.perfiles.profundo.gemini":              "gemini-pro-latest",
@@ -225,6 +233,8 @@ func Internos() Capa {
 		"conversion.transformacion_semantica":           false,
 		"conversion.comando":                            "markitdown",
 		"conversion.tiempo_limite_segundos":             120,
+		"conversion.tiempo_total_segundos":              600,
+		"conversion.cuota_cargas_mb":                    2048,
 		"conversion.maximo_carga_mb":                    50,
 		"conversion.maximo_salida_mb":                   20,
 		"conversion.maximo_archivos_zip":                50,
@@ -304,6 +314,46 @@ func (c *Configuracion) Decimal(clave string) float64 {
 func (c *Configuracion) Booleano(clave string) bool {
 	v, _ := c.e().valores[clave].(bool)
 	return v
+}
+
+// maximosLimites acota los límites de conversión y cargas: un valor mayor usa este.
+var maximosLimites = map[string]int{
+	"conversion.maximo_carga_mb": 1024, "conversion.maximo_salida_mb": 512, "conversion.maximo_archivos_zip": 10000,
+	"conversion.maximo_descomprimido_mb": 8192, "conversion.profundidad_maxima_zip": 10, "conversion.tiempo_limite_segundos": 3600,
+	"conversion.tiempo_total_segundos": 7200, "conversion.cuota_cargas_mb": 102400, "limites.memoria_proceso_mb": 65536,
+}
+
+// limitesConCero admiten 0 (la reserva de salida); por debajo cuentan como 0, no como el predeterminado.
+var limitesConCero = map[string]bool{"limites.reserva_salida_tokens": true}
+
+// Limite devuelve un límite de seguridad siempre positivo: 0 o negativo usa el predeterminado (no «sin límite») y
+// un valor por encima de su máximo usa el máximo.
+func (c *Configuracion) Limite(clave string) int {
+	v := c.Entero(clave)
+	switch {
+	case limitesConCero[clave]:
+		v = max(v, 0)
+	case v <= 0:
+		v, _ = Internos().Valores[clave].(int)
+	}
+	if maximo := maximosLimites[clave]; maximo > 0 && v > maximo {
+		v = maximo
+	}
+	return v
+}
+
+// Contextos devuelve limites.contexto_tokens: «agente» o «agente/modelo» → tokens. Es una lista de entradas
+// «clave=tokens» y no un mapa porque un modelo puede llevar puntos (gpt-5.5) y las claves de configuración los usan
+// como separador. Una entrada mal escrita se ignora.
+func (c *Configuracion) Contextos() map[string]int {
+	contextos := map[string]int{}
+	for _, e := range c.Lista("limites.contexto_tokens") {
+		clave, valor, ok := strings.Cut(fmt.Sprint(e), "=")
+		if n, err := strconv.Atoi(strings.TrimSpace(valor)); ok && err == nil && n > 0 {
+			contextos[strings.TrimSpace(clave)] = n
+		}
+	}
+	return contextos
 }
 
 // Perfiles devuelve modelos.perfiles como perfil -> agente -> identificador de modelo.

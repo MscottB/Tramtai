@@ -560,7 +560,9 @@ const es = {
   'error.error_interno': 'Error interno del servicio',
   'error.modelo_no_permitido': 'Esa API no permite ese modelo',
   'error.resultado_expirado': 'La respuesta ya caducó y se borró',
-  'error.contexto_no_permitido': 'Ese proyecto no está entre los confiables',
+  'error.contexto_no_permitido': 'Ese modo de contexto no está permitido aquí',
+  'error.entrada_demasiado_grande': 'La entrada no cabe en el modelo',
+  'error.cuota_cargas_agotada': 'Se llenó el espacio para archivos',
   'error.ruta_no_permitida': 'El archivo está fuera de las carpetas permitidas',
   'error.sesion_caducada': 'La sesión caducó',
   // Aviso de versión nueva
@@ -643,6 +645,14 @@ const es = {
   'acerca.registro': 'Registro del servicio',
   'acerca.copiar': 'Copiar datos para soporte',
   'acerca.copiarTexto': 'Copia estos detalles como texto, sin claves ni tokens; tu carpeta de usuario aparece como ~.',
+  'receta.sinAntigravity': 'Antigravity no está disponible para APIs: aún no se ha comprobado que no pueda usar herramientas. Úsalo desde Probar.',
+  'ejecutar.adjuntarLimites': 'Hasta {n} archivos de {mb} MB; convertidos a texto, hasta {texto} MB. Ocupan contexto del modelo: si no caben en el principal, se prueba con el respaldo.',
+  'registro.entrada': 'Entrada: ~{n} tokens',
+  'registro.contexto': 'contexto {n}',
+  'agentes.contexto': 'Contexto',
+  'agentes.contextoDesconocido': 'Aún no se conoce: se sabrá al usarlo o puedes configurarlo',
+  'agentes.predeterminadoCli': 'predeterminado',
+  'agentes.configurado': 'configurado',
   'receta.respaldoHint': 'Hasta 3 agentes que siguen, en orden, si el principal falla antes de responder: límite de uso, falta la clave o un error.',
   'receta.esfuerzoDe': 'Esfuerzo de {agente}',
   'receta.respaldoIgual': 'Igual que el principal ({nivel})',
@@ -679,6 +689,12 @@ const es = {
   'ayuda.p15': '¿Cómo veo cuánto tardó cada paso de una petición?',
   'ayuda.r15':
     'Abre «Registro» bajo la respuesta en Probar o en el detalle del Historial: cada paso (en cola, esperando al agente, ejecutando con qué agente, modelo y esfuerzo, avisos y el final) con su hora y el tiempo desde el inicio, y arriba cuánto duró cada etapa.',
+  'ayuda.p18': '¿Por qué se rechazó mi petición por tamaño?',
+  'ayuda.r18':
+    'Antes de llamar al agente, Tramtai mide lo que va a recibir (instrucciones, mensaje y documentos ya convertidos a texto) y lo compara con el contexto del modelo, dejando sitio para la respuesta. Si no cabe, prueba con el siguiente del respaldo y lo avisa en el registro; si no cabe en ninguno, la rechaza con «La entrada no cabe en el modelo» sin gastar tokens ni contar la petición. Los documentos son lo que más ocupa: el registro dice cuál pesa más. En Agentes ves el contexto de cada modelo cuando se conoce.',
+  'ayuda.p19': '¿Por qué no puedo usar Antigravity en mis APIs?',
+  'ayuda.r19':
+    'Porque todavía no se ha comprobado con el CLI real que, ante un contenido malicioso, no pueda usar herramientas (leer archivos o ejecutar órdenes). Mientras tanto se usa solo desde Probar y la terminal. Claude y Codex sí están comprobados.',
   'ayuda.p17': '¿Qué versión tengo?',
   'ayuda.r17':
     'Pulsa la versión junto al logo, o «Acerca de Tramtai» en el menú lateral o en el menú del estado. Verás la versión con su fecha, si hay una más nueva, los enlaces del proyecto y, en «Detalles técnicos», lo necesario para pedir ayuda: «Copiar datos para soporte» lo copia sin claves ni tokens.',

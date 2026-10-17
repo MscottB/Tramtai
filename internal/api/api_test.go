@@ -60,7 +60,7 @@ func nuevoServidor(t *testing.T, registro map[string]adaptadores.Adaptador, ajus
 	valores := map[string]any{"predeterminados.agente": "simulado", "modelos.perfiles.rapido.simulado": "m1"}
 	maps.Copy(valores, ajustes)
 	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: valores})
-	cargas, err := documentos.AbrirCargas(filepath.Join(dir, "cargas"), time.Hour, 1<<20)
+	cargas, err := documentos.AbrirCargas(filepath.Join(dir, "cargas"), time.Hour, 1<<20, int64(c.Limite("conversion.cuota_cargas_mb"))<<20)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -328,7 +328,7 @@ func TestCargaMultipartYTrabajo(t *testing.T) {
 	}
 	solicitud := `{"cargas":["` + carga["identificador_carga"].(string) + `"],"mensajes":[{"rol":"usuario","contenido":"resume"}]}`
 	_, c := pedir(t, ts, "POST", "/api/v1/ejecutar", solicitud)
-	if salida := decodificar(t, strings.TrimSpace(c))["salida"].(string); !strings.Contains(salida, "<<<archivo nombre=\"notas.txt\"") || !strings.HasSuffix(salida, "resume") {
+	if salida := decodificar(t, strings.TrimSpace(c))["salida"].(string); !strings.Contains(salida, "nombre=\"notas.txt\"") || !strings.Contains(salida, "<<<archivo-") || !strings.HasSuffix(salida, "resume") {
 		t.Fatalf("el agente debía recibir el archivo y el mensaje: %q", salida)
 	}
 }
@@ -666,4 +666,79 @@ func TestCabeceraPresupuesto(t *testing.T) {
 	if r, _ := pedir(t, sin, "POST", "/api/v1/trabajos", solicitudHola); r.Header.Get("X-Tramtai-Presupuesto") != "" {
 		t.Fatalf("sin presupuesto no hay cabecera: %q", r.Header.Get("X-Tramtai-Presupuesto"))
 	}
+}
+
+func TestFachadasEntradaDemasiadoGrande(t *testing.T) {
+	ts := servidor(t, simulado(adaptadores.Simulado{Respuesta: "ok"}), map[string]any{"limites.contexto_tokens": []any{"simulado=10"}})
+	largo := strings.Repeat("x", 4000)
+	r, cuerpo := pedir(t, ts, "POST", "/openai/v1/chat/completions", `{"model":"simulado","messages":[{"role":"user","content":"`+largo+`"}]}`)
+	if r.StatusCode != 400 || !strings.Contains(cuerpo, `"code":"context_length_exceeded"`) {
+		t.Fatalf("OpenAI: %d %s", r.StatusCode, cuerpo)
+	}
+	r, cuerpo = pedir(t, ts, "POST", "/anthropic/v1/messages", `{"model":"simulado","max_tokens":10,"messages":[{"role":"user","content":"`+largo+`"}]}`)
+	if r.StatusCode != 400 || !strings.Contains(cuerpo, `"invalid_request_error"`) {
+		t.Fatalf("Anthropic: %d %s", r.StatusCode, cuerpo)
+	}
+	r, cuerpo = pedir(t, ts, "POST", "/api/v1/ejecutar", `{"agente":"simulado","mensajes":[{"rol":"usuario","contenido":"`+largo+`"}]}`)
+	// La API nativa síncrona responde 200 al aceptar y el trabajo final lleva el código, como cualquier fallo.
+	if r.StatusCode != 200 || decodificar(t, cuerpo)["codigo_error"] != "entrada_demasiado_grande" {
+		t.Fatalf("nativa: %d %s", r.StatusCode, cuerpo)
+	}
+}
+
+func TestPuntoImponeModoContexto(t *testing.T) {
+	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
+	hola := []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}
+	s := &Servidor{Config: c, Punto: &Punto{Nombre: "r"}}
+	if sol, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: hola}); err != nil || sol.ModoContexto != "aislado" {
+		t.Fatalf("una API sin modo trabaja aislada: %q %v", sol.ModoContexto, err)
+	}
+	// La petición (o el perfil que aplique, que se resuelve antes) no amplía el modo de su API.
+	if _, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: hola, ModoContexto: "consciente_proyecto"}); nucleo.CodigoDe(err) != nucleo.CodigoContextoNoPermitido {
+		t.Fatalf("consciente_proyecto en una API aislada: %v", err)
+	}
+	s.Punto.ModoContexto = "consciente_proyecto"
+	if sol, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: hola}); err != nil || sol.ModoContexto != "consciente_proyecto" {
+		t.Fatalf("la API con consciente_proyecto lo da: %q %v", sol.ModoContexto, err)
+	}
+}
+
+func TestCuotaCargasHTTP(t *testing.T) {
+	ts := servidor(t, simulado(adaptadores.Simulado{}), map[string]any{"conversion.cuota_cargas_mb": 1})
+	if r, cuerpo := pedir(t, ts, "POST", "/api/v1/cargas?nombre=a.txt", strings.Repeat("a", 600<<10)); r.StatusCode != 201 {
+		t.Fatalf("primera: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, cuerpo := pedir(t, ts, "POST", "/api/v1/cargas?nombre=b.txt", strings.Repeat("b", 600<<10)); r.StatusCode != 507 || !strings.Contains(cuerpo, "cuota_cargas_agotada") {
+		t.Fatalf("la que supera la cuota: %d %s", r.StatusCode, cuerpo)
+	}
+}
+
+func TestCapacidadesLimites(t *testing.T) {
+	ts := servidor(t, simulado(adaptadores.Simulado{}), map[string]any{"conversion.maximo_carga_mb": 30})
+	for _, ruta := range []string{"/api/v1/limites", "/api/v1/capacidades"} {
+		r, cuerpo := pedir(t, ts, "GET", ruta, "")
+		datos := decodificar(t, cuerpo)
+		if ruta == "/api/v1/capacidades" {
+			datos, _ = datos["limites"].(map[string]any)
+		}
+		if r.StatusCode != 200 || datos["carga_mb"] != float64(30) || datos["cargas_por_peticion"] != float64(20) ||
+			datos["mensajes"] != float64(1000) || datos["reserva_salida_tokens"] != float64(8192) || datos["texto_convertido_mb"] != float64(20) {
+			t.Fatalf("%s: %d %s", ruta, r.StatusCode, cuerpo)
+		}
+	}
+}
+
+func TestCatalogoConContexto(t *testing.T) {
+	ts := servidor(t, simulado(adaptadores.Simulado{}), map[string]any{"limites.contexto_tokens": []any{"simulado=12345"}})
+	_, cuerpo := pedir(t, ts, "GET", "/api/v1/modelos", "")
+	for _, m := range decodificar(t, cuerpo)["modelos"].([]any) {
+		entrada := m.(map[string]any)
+		if entrada["id"] == "simulado" {
+			if entrada["contexto_tokens"] != float64(12345) || entrada["contexto_origen"] != "configurado" {
+				t.Fatalf("contexto en el catálogo: %v", entrada)
+			}
+			return
+		}
+	}
+	t.Fatalf("sin la entrada simulado: %s", cuerpo)
 }

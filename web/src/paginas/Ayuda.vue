@@ -72,6 +72,8 @@ const preguntas = [
   { pregunta: 'ayuda.p11', respuesta: 'ayuda.r11' },
   { pregunta: 'ayuda.p12', respuesta: 'ayuda.r12' },
   { pregunta: 'ayuda.p15', respuesta: 'ayuda.r15' },
+  { pregunta: 'ayuda.p18', respuesta: 'ayuda.r18' },
+  { pregunta: 'ayuda.p19', respuesta: 'ayuda.r19' },
   { pregunta: 'ayuda.p14', respuesta: 'ayuda.r14' },
   { pregunta: 'ayuda.p4', respuesta: 'ayuda.r4' },
   { pregunta: 'ayuda.p5', respuesta: 'ayuda.r5' },
