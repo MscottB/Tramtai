@@ -56,8 +56,8 @@ func TestPurgarConTope(t *testing.T) {
 	}
 	activo := aceptar(t, a, trabajo("global", "sigue"), "").ID
 	a.reloj = func() time.Time { return base.Add(10 * time.Minute) }
-	if _, _, err := a.Purgar(ctx, "global", Retencion{Resultado: 24 * time.Hour, Metadatos: 168 * time.Hour, Maximo: 2}); err != nil {
-		t.Fatal(err)
+	if _, eliminados, err := a.Purgar(ctx, "global", Retencion{Resultado: 24 * time.Hour, Metadatos: 168 * time.Hour, Maximo: 2}); err != nil || eliminados != 3 {
+		t.Fatalf("el tope cuenta lo que borra: %d %v", eliminados, err)
 	}
 	quedan := map[string]bool{}
 	l, _ := a.Listar(ctx, "global", FiltroTrabajos{}, 100)
@@ -77,8 +77,8 @@ func TestAutoVacuumIncremental(t *testing.T) {
 		a.db.QueryRow("PRAGMA auto_vacuum").Scan(&n)
 		return n
 	}
-	if n := modo(abrir(t)); n != 2 {
-		t.Fatalf("una base nueva es incremental: %d", n)
+	if nueva := abrir(t); modo(nueva) != 2 || nueva.Compactada {
+		t.Fatalf("una base nueva nace incremental, sin VACUUM: %d %t", modo(nueva), nueva.Compactada)
 	}
 	ruta := filepath.Join(t.TempDir(), "vieja.db")
 	db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(ruta))
@@ -92,8 +92,24 @@ func TestAutoVacuumIncremental(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer a.Cerrar()
-	if n := modo(a); n != 2 {
-		t.Fatalf("una base vieja pasa a incremental: %d", n)
+	if n := modo(a); n != 2 || !a.Compactada {
+		t.Fatalf("una base vieja pasa a incremental y lo indica: %d %t", n, a.Compactada)
+	}
+	a.Cerrar()
+	if b, _ := Abrir(ruta); b == nil || b.Compactada {
+		t.Fatal("al reabrirla ya no hay que compactar")
+	} else {
+		b.Cerrar()
+	}
+}
+
+func TestTopeSinSobrantes(t *testing.T) {
+	a := abrir(t)
+	for range 2 {
+		avanzar(t, a, aceptar(t, a, trabajo("global", "hola"), "").ID, nucleo.Fallido)
+	}
+	if _, eliminados, err := a.Purgar(ctx, "global", Retencion{Resultado: 24 * time.Hour, Metadatos: 168 * time.Hour, Maximo: 5}); err != nil || eliminados != 0 {
+		t.Fatalf("con menos terminados que el tope no se borra nada: %d %v", eliminados, err)
 	}
 }
 

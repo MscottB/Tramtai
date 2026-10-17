@@ -35,6 +35,18 @@ func esperarFase(t *testing.T, s *Servicio, fase string) {
 	t.Fatalf("la fase no llegó a %q: %+v", fase, s.progresoActualizacion())
 }
 
+// esperarInstaladas espera a que el instalador simulado se haya llamado n veces (la fase cambia justo antes).
+func esperarInstaladas(t *testing.T, instaladas *atomic.Int32, n int32) {
+	t.Helper()
+	for range 200 {
+		if instaladas.Load() == n {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatalf("instaló %d veces, esperado %d", instaladas.Load(), n)
+}
+
 func TestCuentaAtrasInstalar(t *testing.T) {
 	v := actualizacion.Version{Etiqueta: "v9.0.0"}
 
@@ -46,9 +58,7 @@ func TestCuentaAtrasInstalar(t *testing.T) {
 			t.Fatal("la fase listo indica cuándo instalará")
 		}
 		esperarFase(t, s, "instalando")
-		if instaladas.Load() != 1 {
-			t.Fatalf("instaló %d veces", instaladas.Load())
-		}
+		esperarInstaladas(t, instaladas, 1)
 	})
 	t.Run("reiniciar ahora instala antes del plazo", func(t *testing.T) {
 		s, instaladas, dir := cuentaAtras(t)
@@ -59,9 +69,7 @@ func TestCuentaAtrasInstalar(t *testing.T) {
 			t.Fatal(err)
 		}
 		esperarFase(t, s, "instalando")
-		if instaladas.Load() != 1 {
-			t.Fatalf("instaló %d veces", instaladas.Load())
-		}
+		esperarInstaladas(t, instaladas, 1)
 	})
 	t.Run("cancelar no instala y borra la descarga", func(t *testing.T) {
 		s, instaladas, dir := cuentaAtras(t)
