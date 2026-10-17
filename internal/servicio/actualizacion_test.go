@@ -3,11 +3,13 @@ package servicio
 import (
 	"io"
 	"os"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"tramtai/internal/actualizacion"
+	"tramtai/internal/adaptadores"
 	"tramtai/internal/nucleo"
 )
 
@@ -90,4 +92,61 @@ func TestCuentaAtrasInstalar(t *testing.T) {
 			t.Fatalf("sin cuenta atrás en curso: %v", err)
 		}
 	})
+}
+
+func TestCancelarConfirmadoNuncaInstala(t *testing.T) {
+	v := actualizacion.Version{Etiqueta: "v9.0.0"}
+	for range 200 {
+		s, instaladas, dir := cuentaAtras(t)
+		esperaInstalacion = time.Millisecond // el plazo vence casi a la vez que llega el cancelar
+		hecho := make(chan struct{})
+		go func() { s.esperarEInstalar(v, dir+"/instalador.exe", dir, "c:/tramtai"); close(hecho) }()
+		err := s.decidirInstalacion(false)
+		for i := 0; i < 2000 && err != nil && s.progresoActualizacion().Fase != "instalando"; i++ {
+			time.Sleep(5 * time.Microsecond)
+			err = s.decidirInstalacion(false)
+		}
+		<-hecho
+		if err == nil && instaladas.Load() != 0 {
+			t.Fatal("se instaló después de un Cancelar confirmado")
+		}
+	}
+}
+
+func TestDetenerCancelaLaCuentaAtras(t *testing.T) {
+	s, instaladas, dir := cuentaAtras(t)
+	esperaInstalacion = time.Hour
+	go s.esperarEInstalar(actualizacion.Version{Etiqueta: "v9.0.0"}, dir+"/instalador.exe", dir, "c:/tramtai")
+	esperarFase(t, s, "listo")
+	s.Drenar()
+	esperarFase(t, s, "")
+	if instaladas.Load() != 0 {
+		t.Fatal("detener el servicio en la cuenta atrás no instala")
+	}
+}
+
+func TestRutasCuentaAtras(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	s.ActivarGlobal()
+	n := abrirSesion(t, s, ts.URL)
+	if r, _ := pedir(t, ts.URL, "POST", "/ui/actualizar/cancelar", "", ""); r.StatusCode != 401 {
+		t.Errorf("sin sesión: %d", r.StatusCode)
+	}
+	if r, _ := n.pedir("POST", "/ui/actualizar/cancelar", ""); r.StatusCode != 401 {
+		t.Errorf("sin CSRF: %d", r.StatusCode)
+	}
+	if r, cuerpo := n.pedir("POST", "/ui/actualizar/instalar", "", "X-CSRF-Token", n.csrf); r.StatusCode != 409 || !strings.Contains(cuerpo, "solicitud_invalida") {
+		t.Errorf("fuera de listo: %d %s", r.StatusCode, cuerpo)
+	}
+	antes, esperaAntes := instalar, esperaInstalacion
+	instalar = func(string, string) error { return nil }
+	esperaInstalacion = time.Hour
+	t.Cleanup(func() { instalar, esperaInstalacion = antes, esperaAntes })
+	dir := t.TempDir()
+	go s.esperarEInstalar(actualizacion.Version{Etiqueta: "v9.0.0"}, dir+"/i.exe", dir, "c:/tramtai")
+	esperarFase(t, s, "listo")
+	if r, _ := n.pedir("POST", "/ui/actualizar/cancelar", "", "X-CSRF-Token", n.csrf); r.StatusCode != 204 {
+		t.Errorf("en listo: %d", r.StatusCode)
+	}
+	esperarFase(t, s, "")
 }

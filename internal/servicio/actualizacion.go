@@ -153,6 +153,10 @@ func (s *Servicio) esperarEInstalar(v actualizacion.Version, instalador, dir, ca
 	case <-reloj.C:
 	}
 	s.muAvance.Lock()
+	select { // una orden que entró mientras vencía el plazo manda: un Cancelar confirmado nunca instala
+	case instalarYa = <-orden:
+	default:
+	}
 	s.ordenInstalar = nil // desde aquí ya no se decide: lo que llegue tarde responde 409
 	if instalarYa {
 		s.avance.Fase, s.avance.InstalaEn = "instalando", nil
@@ -177,9 +181,7 @@ func (s *Servicio) decidirInstalacion(instalarYa bool) error {
 	if s.ordenInstalar == nil {
 		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("no hay ninguna actualización esperando para instalarse"))
 	}
-	select {
-	case s.ordenInstalar <- instalarYa:
-	default: // ya hay una orden: vale la primera
-	}
+	s.ordenInstalar <- instalarYa // búfer 1 y solo una orden: las siguientes responden 409
+	s.ordenInstalar = nil
 	return nil
 }

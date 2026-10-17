@@ -480,6 +480,7 @@ func (i *Instancia) cerrar(vaciarCola bool) {
 // están en ejecución; los que sigan después se interrumpen. Las instancias siguen abiertas, así que los clientes
 // pueden recoger los resultados hasta que se llame a Cerrar.
 func (s *Servicio) Drenar() {
+	_ = s.decidirInstalacion(false) // detener el servicio en la cuenta atrás de una actualización la cancela
 	s.mu.RLock()
 	instancias := make([]*Instancia, 0, len(s.instancias))
 	enCurso := 0

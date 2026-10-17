@@ -346,9 +346,15 @@ func (a *Almacen) CambiarEstado(ctx context.Context, id string, de, hacia nucleo
 			return err
 		}
 		// El consumo va al día de aceptación: así peticiones − terminados de una fila es lo que sigue en curso.
+		// Sin uso en el cambio (una cancelación), cuenta el que ya guardó el trabajo (intentos fallidos del respaldo).
 		var instancia, punto, creado string
-		if err := tx.QueryRowContext(ctx, `SELECT instancia, punto_acceso, creado_en FROM trabajos WHERE id = ?`, id).Scan(&instancia, &punto, &creado); err != nil {
+		var guardado nucleo.Uso
+		if err := tx.QueryRowContext(ctx, `SELECT instancia, punto_acceso, creado_en, tokens_entrada, tokens_salida, costo_usd FROM trabajos WHERE id = ?`, id).
+			Scan(&instancia, &punto, &creado, &guardado.TokensEntrada, &guardado.TokensSalida, &guardado.CostoUSD); err != nil {
 			return err
+		}
+		if !conUso {
+			uso = guardado
 		}
 		aceptado, _ := time.Parse(formatoFecha, creado)
 		a.sumarConsumo(ctx, tx, instancia, punto, aceptado, ahora, nucleo.Consumo{Terminados: 1, Tokens: uso.TokensEntrada + uso.TokensSalida, USD: uso.CostoUSD})

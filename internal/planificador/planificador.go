@@ -563,7 +563,8 @@ func (p *Planificador) procesar(id string, esperando func()) {
 			return
 		}
 		siguiente := lista[i+1]
-		if !p.cambiar(id, nucleo.Ejecutando, nucleo.EsperandoAgente, persistencia.Cambio{}) {
+		// El uso acumulado queda en el trabajo: si se cancela durante el respaldo, también cuenta.
+		if !p.cambiar(id, nucleo.Ejecutando, nucleo.EsperandoAgente, persistencia.Cambio{Uso: &usoPrevio}) {
 			return
 		}
 		var restante []string

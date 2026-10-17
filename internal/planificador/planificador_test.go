@@ -889,3 +889,28 @@ func TestUsoSumaIntentosFallidos(t *testing.T) {
 		t.Fatalf("el uso suma el intento que falló antes del salto: %+v", tr.Uso)
 	}
 }
+
+func TestUsoPrevioAlCancelarElRespaldo(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": conUso{uso: nucleo.Uso{TokensEntrada: 10}, err: nucleo.NuevoError(nucleo.CodigoLimiteUsoProveedor, "límite")},
+		"respaldo": adaptadores.Simulado{Demora: time.Hour},
+	}, 2)
+	s := solicitud("hola")
+	s.Respaldo = []string{"respaldo"}
+	id := enviar(t, p, s)
+	for range 200 { // espera a que el respaldo esté ejecutando
+		if tr, _ := alm.Obtener(ctx, id); tr.Estado == nucleo.Ejecutando && tr.Solicitud.Agente == "respaldo" {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if _, err := p.Cancelar(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	tr := esperar(t, alm, id, nucleo.Cancelado)
+	dia, _, _ := alm.Consumo(ctx, "global", "")
+	if tr.Uso.TokensEntrada != 10 || dia.Tokens != 10 {
+		t.Fatalf("el uso del intento fallido se conserva al cancelar: trabajo %+v, consumo %+v", tr.Uso, dia)
+	}
+}
