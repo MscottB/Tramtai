@@ -2,6 +2,7 @@
 const es = {
   // Comunes
   'comun.cancelar': 'Cancelar',
+  'comun.aceptar': 'Aceptar',
   'comun.eliminar': 'Eliminar',
   'comun.copiar': 'Copiar',
   'comun.copiado': 'Copiado',
@@ -542,6 +543,8 @@ const es = {
   'actualizacion.fallo': 'No se pudo actualizar: {error}',
   'actualizacion.reintentar': 'Reintentar',
   'actualizacion.hecha': 'Tramtai se actualizó a la {version}',
+  'actualizacion.sinNotas': 'Las notas de esta versión están en la página de versiones.',
+  'actualizacion.verTodas': 'Ver todas las versiones',
   'actualizacion.comprobado': 'Última comprobación: {hora}',
   'actualizacion.falloConsulta': 'No se pudo consultar GitHub. Revisa tu conexión y vuelve a intentarlo.',
   'actualizacion.desactivada': 'Desactivado. Tienes la {actual}; también puedes comprobarlo con «tramtai actualizar».',

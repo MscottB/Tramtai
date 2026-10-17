@@ -248,6 +248,13 @@ export interface EstadoActualizacion {
   fallo?: boolean // si esa consulta falló
 }
 export const actualizacion = ref<EstadoActualizacion | null>(null)
+// Novedad es una versión publicada con sus notas, para el diálogo que sale tras actualizar.
+export interface Novedad {
+  version: string
+  url?: string
+  notas?: string
+}
+
 // ProgresoActualizacion es el avance de «Actualizar ahora»: fase vacía si no hay ninguna en curso.
 export interface ProgresoActualizacion {
   fase: '' | 'descargando' | 'verificando' | 'instalando' | 'error'
@@ -277,6 +284,8 @@ export const api = {
   buscarAhora: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion?ahora=1'),
   actualizar: () => pedir<{ version: string }>('POST', '/ui/actualizar'),
   progresoActualizacion: () => pedir<ProgresoActualizacion>('GET', '/ui/actualizacion/progreso'),
+  novedades: (desde: string) =>
+    pedir<{ versiones: Novedad[] }>('GET', '/ui/actualizacion/novedades?desde=' + encodeURIComponent(desde)).then((r) => r.versiones),
   cambiarAutenticacion: (agente: string, modo: 'suscripcion' | 'clave_api') => pedir<void>('POST', '/ui/autenticacion', { agente, modo }),
   salir: () => pedir<void>('DELETE', '/ui/sesion').then(() => (sesion.value = null)),
   detenerServicio: () => pedir<unknown>('POST', '/ui/servicio/detener'),
