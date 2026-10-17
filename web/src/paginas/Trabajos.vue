@@ -50,6 +50,10 @@
           <q-td :props="props">{{ haceCuanto(props.value) }}<q-tooltip>{{ fecha(props.value) }}</q-tooltip></q-td>
         </template>
       </q-table>
+      <div v-if="trabajos.length" class="row items-center q-px-md q-pb-md q-gutter-x-md">
+        <span class="text-caption texto-suave">{{ t('historial.mostrando', { n: trabajos.length }) }}</span>
+        <q-btn v-if="hayMas" flat dense no-caps color="primary" icon="o_expand_more" :label="t('historial.verMas')" :loading="cargandoMas" @click="verMas" />
+      </div>
     </q-card>
 
     <q-dialog v-model="dialogo" position="right" full-height>
@@ -89,7 +93,7 @@
           <div class="ficha text-body2">
             <div>{{ t('historial.agenteModelo') }}</div><div>{{ modeloDe(detalle) }}</div>
             <div>{{ t('historial.esfuerzo') }}</div><div>{{ nombreEsfuerzo(detalle.solicitud.esfuerzo) }}</div>
-            <template v-if="detalle.punto_acceso"><div>{{ t('historial.punto') }}</div><div>{{ detalle.punto_acceso }}</div></template>
+            <div>{{ t('historial.origen') }}</div><div>{{ textoOrigen(detalle) }}</div>
             <div>{{ t('historial.tokens') }}</div><div>{{ detalle.uso.tokens_entrada }} → {{ detalle.uso.tokens_salida }}</div>
             <template v-if="detalle.uso.costo_usd"><div>{{ t('historial.coste') }}</div><div>US$ {{ detalle.uso.costo_usd.toFixed(4) }}</div></template>
             <template v-if="detalle.terminado_en"><div>{{ t('historial.duracion') }}</div><div>{{ duracion(detalle.creado_en, detalle.terminado_en) }}</div></template>
@@ -119,7 +123,7 @@ import EstadoVacio from '../componentes/EstadoVacio.vue'
 import { useQuasar, type QTableColumn } from 'quasar'
 import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
-import { api, avisar, avisarError, copiar, duracion, esJSON, estadoInfo, fecha, filtroHistorial, haceCuanto, origenHistorial, trabajoAbrir, modeloDe, nombreEsfuerzo, terminales, textoDe, tituloError, trabajoSeguido, type Trabajo } from '../api'
+import { api, avisar, avisarError, type EstadoPunto, copiar, duracion, esJSON, estadoInfo, fecha, filtroHistorial, haceCuanto, origenHistorial, trabajoAbrir, modeloDe, nombreEsfuerzo, terminales, textoDe, tituloError, trabajoSeguido, type Trabajo } from '../api'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()
@@ -132,8 +136,8 @@ const detalle = ref<Trabajo>()
 const filtro = ref(filtroHistorial.value || 'todos')
 filtroHistorial.value = ''
 const busqueda = ref<string | null>('')
-// origen: '' todas, '-' la API principal, o el nombre de una API (se filtra en el servicio).
-const origen = ref(origenHistorial.value)
+// origen: '' todos; «o:probar» un origen, «g:web» un grupo o «p:tienda» una API (se filtra en el servicio).
+const origen = ref(origenHistorial.value ? 'p:' + origenHistorial.value : '')
 const hayFiltro = computed(() => filtro.value !== 'todos' || !!busqueda.value || !!origen.value)
 function quitarFiltros() {
   filtro.value = 'todos'
@@ -141,19 +145,35 @@ function quitarFiltros() {
   origen.value = ''
 }
 origenHistorial.value = ''
-const nombresApis = ref<string[]>([])
+const apis = ref<EstadoPunto[]>([])
+const nombresOrigen: Record<string, 'historial.origenProbar' | 'historial.origenTerminal' | 'historial.origenCli' | 'historial.origenApp'> = {
+  probar: 'historial.origenProbar', terminal: 'historial.origenTerminal', cli: 'historial.origenCli', app: 'historial.origenApp',
+}
 const origenes = computed(() => [
   { label: t('historial.todosOrigenes'), value: '' },
-  { label: t('historial.origenPrincipal'), value: '-' },
-  ...nombresApis.value.map((n) => ({ label: 'API ' + n, value: n })),
+  ...Object.entries(nombresOrigen).map(([o, clave]) => ({ label: t(clave), value: 'o:' + o })),
+  ...[...new Set(apis.value.map((p) => p.grupo).filter((g): g is string => !!g))].sort().map((g) => ({ label: t('historial.grupo', { nombre: g }), value: 'g:' + g })),
+  ...apis.value.map((p) => ({ label: 'API ' + p.nombre, value: 'p:' + p.nombre })),
 ])
+// textoOrigen dice de dónde llegó: la API (con su grupo actual), el origen guardado o, en los antiguos, la principal.
+function textoOrigen(x: Trabajo) {
+  if (x.punto_acceso) {
+    const grupo = apis.value.find((p) => p.nombre === x.punto_acceso)?.grupo
+    return 'API ' + x.punto_acceso + (grupo ? ' · ' + grupo : '')
+  }
+  return x.origen && nombresOrigen[x.origen] ? t(nombresOrigen[x.origen]) : t('historial.origenPrincipal')
+}
+function filtroDe(valor: string) {
+  const [tipo, nombre] = [valor.slice(0, 2), valor.slice(2)]
+  return tipo === 'o:' ? { origen: nombre } : tipo === 'g:' ? { grupo: nombre } : tipo === 'p:' ? { punto: nombre } : {}
+}
 watch(origen, () => cargar())
 
 const columnas = computed<QTableColumn<Trabajo>[]>(() => [
   { name: 'estado', label: t('historial.estado'), field: 'estado', align: 'left' },
   { name: 'solicitud', label: t('historial.solicitud'), field: (x) => textoDe(x), align: 'left' },
   { name: 'modelo', label: t('historial.agenteModelo'), field: (x) => modeloDe(x), align: 'left', classes: 'gt-sm', headerClasses: 'gt-sm' },
-  { name: 'origen', label: t('historial.origen'), field: (x) => (x.punto_acceso ? 'API ' + x.punto_acceso : t('historial.origenPrincipal')), align: 'left', classes: 'gt-sm', headerClasses: 'gt-sm' },
+  { name: 'origen', label: t('historial.origen'), field: (x) => textoOrigen(x), align: 'left', classes: 'gt-sm', headerClasses: 'gt-sm' },
   { name: 'tokens', label: t('historial.tokens'), field: (x) => x.uso.tokens_entrada + x.uso.tokens_salida, align: 'right', classes: 'gt-xs', headerClasses: 'gt-xs' },
   { name: 'cuando', label: t('historial.cuando'), field: 'creado_en', align: 'right' },
 ])
@@ -163,7 +183,7 @@ const filas = computed(() => {
   return trabajos.value.filter((x) => {
     const terminado = terminales.includes(x.estado)
     const pasa = { todos: true, curso: !terminado, ok: x.estado === 'completado', error: ['fallido', 'interrumpido'].includes(x.estado) }[filtro.value]
-    return pasa && (origen.value !== '-' || !x.punto_acceso) && (!texto || textoDe(x).toLowerCase().includes(texto) || x.id.includes(texto))
+    return pasa && (!texto || textoDe(x).toLowerCase().includes(texto) || x.id.includes(texto))
   })
 })
 
@@ -179,13 +199,35 @@ async function cargar(segundoPlano = false) {
   if (!segundoPlano) cargando.value = true
   enVuelo++
   try {
-    const lista = await api.trabajos(200, origen.value === '-' ? '' : origen.value)
-    if (n === pedidoLista) trabajos.value = lista
+    const lista = await api.trabajos(PAGINA, filtroDe(origen.value))
+    if (n === pedidoLista) {
+      trabajos.value = lista
+      hayMas.value = lista.length === PAGINA
+    }
   } catch (e) {
     if (n === pedidoLista && !segundoPlano) avisarError(e)
   } finally {
     enVuelo--
     if (n === pedidoLista) cargando.value = false
+  }
+}
+
+// Ver más pide la página siguiente: los creados antes del último que ya se ve.
+const PAGINA = 200
+const hayMas = ref(false)
+const cargandoMas = ref(false)
+async function verMas() {
+  const ultimo = trabajos.value[trabajos.value.length - 1]
+  if (!ultimo) return
+  cargandoMas.value = true
+  try {
+    const mas = await api.trabajos(PAGINA, { ...filtroDe(origen.value), antes: ultimo.creado_en })
+    trabajos.value = [...trabajos.value, ...mas]
+    hayMas.value = mas.length === PAGINA
+  } catch (e) {
+    avisarError(e)
+  } finally {
+    cargandoMas.value = false
   }
 }
 
@@ -257,12 +299,13 @@ function seguirEnVivo() {
 let intervalo: number
 onMounted(() => {
   cargar()
-  api.puntos().then((l) => (nombresApis.value = l.map((x) => x.nombre))).catch(() => {})
+  api.puntos().then((l) => (apis.value = l)).catch(() => {})
   if (trabajoAbrir.value) {
     abrir({ id: trabajoAbrir.value } as Trabajo)
     trabajoAbrir.value = ''
   }
-  intervalo = window.setInterval(() => !dialogo.value && !document.hidden && !enVuelo && cargar(true), 5000)
+  // Con páginas extra cargadas (Ver más), el sondeo no recarga: la recarga solo trae la primera página.
+  intervalo = window.setInterval(() => !dialogo.value && !document.hidden && !enVuelo && trabajos.value.length <= PAGINA && cargar(true), 5000)
 })
 onUnmounted(() => clearInterval(intervalo))
 </script>

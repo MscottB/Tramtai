@@ -232,7 +232,7 @@ import MenuAcciones, { type Accion } from '../componentes/MenuAcciones.vue'
 import EditorPresupuesto from '../componentes/EditorPresupuesto.vue'
 import EditorReceta from '../componentes/EditorReceta.vue'
 import { ajustesDeReceta, api, avisar, avisarError, codigoLinea, nombreAgente, ordenAgentes, configDeReceta, copiar, etiquetaModelo, haceCuanto, idModeloDe as idModelo, nombreEsfuerzo, opcionModelo,
-  grupoInicial, origenHistorial, presupuestoLimpio, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPresupuesto, type EstadoPunto, type Modelo,
+  cargarDiasHistorial, diasHistorial, grupoInicial, origenHistorial, presupuestoLimpio, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPresupuesto, type EstadoPunto, type Modelo,
   type Presupuesto, type UsoPunto } from '../api'
 import { t } from '../i18n'
 
@@ -406,7 +406,7 @@ const emit = defineEmits<{ ir: [pagina: string] }>()
 
 function textoUso(nombre: string) {
   const u = uso.value[nombre]
-  return [t('puntos.uso', { n: u.peticiones }), u.errores ? t('puntos.usoErrores', { n: u.errores }) : '',
+  return [t('puntos.uso', { n: u.peticiones, dias: diasHistorial.value }), u.errores ? t('puntos.usoErrores', { n: u.errores }) : '',
     u.ultima ? t('puntos.usoUltima', { cuando: haceCuanto(u.ultima) }) : ''].filter(Boolean).join(' · ')
 }
 
@@ -582,6 +582,7 @@ function regenerarClave(p: EstadoPunto) {
 }
 
 onMounted(async () => {
+  cargarDiasHistorial()
   if (grupoInicial.value) {
     filtroGrupo.value = grupoInicial.value // llegó desde el mapa de Inicio
     grupoInicial.value = ''

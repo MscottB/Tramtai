@@ -62,6 +62,7 @@ export interface Trabajo {
   entradas_eliminadas?: boolean
   intento_de?: string
   punto_acceso?: string
+  origen?: string
   modelo_enviado?: string
   modelo_efectivo?: string
   uso: Uso
@@ -128,7 +129,21 @@ export function presupuestoLimpio(p: Presupuesto): Presupuesto | undefined {
   }
   return Object.keys(limpio).length ? limpio : undefined
 }
-// UsoPunto son las peticiones de una API que conserva la retención (7 días): total, con error y la última.
+// Retencion son los plazos (horas) y el tope del historial de la instancia, y lo que ocupa ahora.
+export interface Retencion {
+  horas_resultado: number
+  horas_metadatos: number
+  max_trabajos: number
+  uso: { trabajos: number; bytes: number }
+}
+
+// diasHistorial son los días que se guarda el registro (para los textos «en N días»); cargarDiasHistorial lo lee.
+export const diasHistorial = ref(7)
+export function cargarDiasHistorial() {
+  api.retencion().then((r) => (diasHistorial.value = Math.max(1, Math.round(r.horas_metadatos / 24)))).catch(() => {})
+}
+
+// UsoPunto son las peticiones de una API que conserva la retención: total, con error y la última.
 export interface UsoPunto {
   peticiones: number
   errores: number
@@ -301,8 +316,14 @@ export const api = {
   fijarPredeterminado: (modelo: string) => pedir<void>('POST', '/api/v1/instancia/predeterminado', { modelo }),
   // capacidades comprueba cada agente con hasta 10 s por agente: lleva un plazo mayor.
   capacidades: () => pedir<{ adaptadores: Adaptador[]; entradas?: string[] }>('GET', '/api/v1/capacidades', undefined, 60000),
-  trabajos: (limite = 50, punto = '') =>
-    pedir<{ trabajos: Trabajo[] }>('GET', `/api/v1/trabajos?limite=${limite}${punto ? '&punto=' + encodeURIComponent(punto) : ''}`).then((r) => r.trabajos),
+  // trabajos lista los más recientes; filtro acota por API, grupo, origen o fecha (antes, para la página siguiente).
+  trabajos: (limite = 50, filtro: { punto?: string; grupo?: string; origen?: string; antes?: string } = {}) => {
+    const q = new URLSearchParams({ limite: String(limite) })
+    for (const [clave, valor] of Object.entries(filtro)) if (valor) q.set(clave, valor)
+    return pedir<{ trabajos: Trabajo[] }>('GET', '/api/v1/trabajos?' + q).then((r) => r.trabajos)
+  },
+  retencion: () => pedir<Retencion>('GET', '/api/v1/instancia/retencion'),
+  fijarRetencion: (r: { horas_resultado: number; horas_metadatos: number; max_trabajos: number }) => pedir<void>('PUT', '/api/v1/instancia/retencion', r),
   trabajo: (id: string) => pedir<Trabajo>('GET', `/api/v1/trabajos/${encodeURIComponent(id)}`),
   crear: (s: Solicitud) => pedir<Trabajo>('POST', '/api/v1/trabajos', s),
   accion: (id: string, accion: 'cancelar' | 'reintentar') =>
