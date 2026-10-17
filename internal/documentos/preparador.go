@@ -1,6 +1,10 @@
 package documentos
 
-import "context"
+import (
+	"context"
+
+	"tramtai/internal/nucleo"
+)
 
 // Preparador resuelve las cargas de un trabajo y las convierte; lo usa el planificador en preparando_entrada.
 type Preparador struct {
@@ -19,12 +23,12 @@ func (p Preparador) Verificar(cargas []string) error {
 }
 
 // Preparar devuelve el texto ensamblado de las cargas, o entrada_no_disponible si alguna venció.
-func (p Preparador) Preparar(ctx context.Context, ids []string) (string, error) {
+func (p Preparador) Preparar(ctx context.Context, ids []string) (nucleo.Documentos, error) {
 	entradas := make([]Entrada, 0, len(ids))
 	for _, id := range ids {
 		carga, ruta, err := p.Cargas.Obtener(id)
 		if err != nil {
-			return "", err
+			return nucleo.Documentos{}, err
 		}
 		entradas = append(entradas, Entrada{Ruta: ruta, Nombre: carga.Nombre, SHA256: carga.SHA256})
 	}

@@ -14,7 +14,8 @@ func TestMarkitdownReal(t *testing.T) {
 	c := &Conversor{TiempoLimite: 2 * time.Minute}
 	html := escribir(t, "página.html", []byte("<html><body><h1>Título</h1><table><tr><th>a</th><th>b</th></tr><tr><td>1</td><td>2</td></tr></table></body></html>"))
 	inicio := time.Now()
-	salida, err := c.Convertir(context.Background(), []Entrada{html})
+	docs, err := c.Convertir(context.Background(), []Entrada{html})
+	salida := docs.Texto
 	if err != nil {
 		t.Fatal(err)
 	}

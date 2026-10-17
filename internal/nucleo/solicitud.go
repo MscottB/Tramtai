@@ -179,3 +179,16 @@ func (s SolicitudEjecucion) Huella() string {
 	suma := sha256.Sum256(datos)
 	return hex.EncodeToString(suma[:])
 }
+
+// Documentos son las cargas ya convertidas a texto: el texto ensamblado (un bloque delimitado por archivo) y el tamaño
+// de cada archivo, para medir la entrada y decir cuál pesa más.
+type Documentos struct {
+	Texto  string
+	Partes []ParteDocumento
+}
+
+// ParteDocumento es un archivo convertido (los de un ZIP, como «paquete.zip/interno.txt») y sus caracteres.
+type ParteDocumento struct {
+	Nombre     string
+	Caracteres int
+}

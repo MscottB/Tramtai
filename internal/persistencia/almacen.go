@@ -478,7 +478,7 @@ func (a *Almacen) Eventos(ctx context.Context, id string, desde int) ([]Evento, 
 
 // EventosDeRegistro devuelve los eventos sin contenido de la respuesta (estado, intento y aviso), sin leer el texto.
 func (a *Almacen) EventosDeRegistro(ctx context.Context, id string) ([]Evento, error) {
-	return a.eventos(ctx, `SELECT numero, tipo, datos, creado_en FROM eventos WHERE trabajo_id = ? AND tipo IN ('estado', 'intento', 'aviso') ORDER BY numero`, id)
+	return a.eventos(ctx, `SELECT numero, tipo, datos, creado_en FROM eventos WHERE trabajo_id = ? AND tipo IN ('estado', 'entrada', 'intento', 'aviso') ORDER BY numero`, id)
 }
 
 func (a *Almacen) eventos(ctx context.Context, consulta string, args ...any) ([]Evento, error) {
@@ -672,7 +672,7 @@ func (a *Almacen) Purgar(ctx context.Context, instancia string, r Retencion) (ve
 	// Los eventos de estado y de intento se conservan con los metadatos; los demás llevan contenido. Solo se miran los
 	// trabajos que vencen ahora: los ya vencidos se limpiaron en su purga. Con <= vence también lo terminado en el
 	// mismo instante (retención 0): en Windows el reloj avanza a saltos.
-	if _, err := tx.ExecContext(ctx, `DELETE FROM eventos WHERE tipo NOT IN ('estado', 'intento') AND trabajo_id IN
+	if _, err := tx.ExecContext(ctx, `DELETE FROM eventos WHERE tipo NOT IN ('estado', 'intento', 'entrada') AND trabajo_id IN
 		(SELECT id FROM trabajos WHERE instancia = ? AND terminado_en <= ? AND vencido = 0)`, instancia, limiteResultado); err != nil {
 		return 0, 0, err
 	}

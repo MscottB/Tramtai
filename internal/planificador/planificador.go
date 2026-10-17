@@ -13,6 +13,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/idioma"
@@ -24,7 +25,7 @@ import (
 
 // Preparador convierte las cargas de un trabajo en texto para el agente (documentos.Preparador).
 type Preparador interface {
-	Preparar(ctx context.Context, cargas []string) (string, error)
+	Preparar(ctx context.Context, cargas []string) (nucleo.Documentos, error)
 }
 
 // Opciones son los límites de una instancia.
@@ -505,13 +506,15 @@ func (p *Planificador) procesar(id string, esperando func()) {
 	}()
 
 	solicitud, desde := t.Solicitud, nucleo.EnCola
+	var documentos nucleo.Documentos
 	if len(solicitud.Cargas) > 0 {
 		esperando() // una conversión larga no frena el despacho de los demás
 		if !p.cambiar(id, nucleo.EnCola, nucleo.PreparandoEntrada, persistencia.Cambio{}) {
 			return
 		}
 		desde = nucleo.PreparandoEntrada
-		documentos, err := p.preparar(ctxTrabajo, solicitud.Cargas)
+		var err error
+		documentos, err = p.preparar(ctxTrabajo, solicitud.Cargas)
 		if ctxTrabajo.Err() != nil {
 			p.cerrarDetenido(id, desde)
 			return
@@ -524,11 +527,15 @@ func (p *Planificador) procesar(id string, esperando func()) {
 			p.cambiar(id, desde, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err)})
 			return
 		}
-		solicitud = conDocumentos(solicitud, documentos)
+		solicitud = conDocumentos(solicitud, documentos.Texto)
 		if p.ctx.Err() != nil { // la conversión terminó durante un drenaje: no se lanza un agente nuevo
 			p.cerrarDetenido(id, desde)
 			return
 		}
+	}
+	medida := medirEntrada(solicitud, documentos)
+	if datos, err := json.Marshal(medida); err == nil {
+		_ = p.almacen.AgregarEvento(fondo, id, "entrada", string(datos))
 	}
 	if !p.cambiar(id, desde, nucleo.EsperandoAgente, persistencia.Cambio{}) {
 		return
@@ -653,6 +660,35 @@ func nuevoIntento(c candidato, pedido string, versionVista func(agente, modelo s
 func (p *Planificador) versionVista(agente, modelo string) string {
 	efectivos, _ := p.almacen.ModelosEfectivos(context.Background())
 	return efectivos[agente+"/"+modelo]
+}
+
+// medida es lo que ocupa la entrada que recibirá el agente: caracteres y tokens estimados (sin el tokenizador de cada
+// proveedor, caracteres ÷ 4), y cada documento de mayor a menor. Es el evento «entrada»; no lleva contenido.
+type medida struct {
+	Caracteres int           `json:"caracteres"`
+	Tokens     int           `json:"tokens_estimados"`
+	Documentos []parteMedida `json:"documentos"`
+}
+
+type parteMedida struct {
+	Nombre string `json:"nombre"`
+	Tokens int    `json:"tokens_estimados"`
+}
+
+func tokensDe(caracteres int) int { return (caracteres + 3) / 4 }
+
+// medirEntrada mide las instrucciones y los mensajes, ya con los documentos dentro.
+func medirEntrada(s nucleo.SolicitudEjecucion, docs nucleo.Documentos) medida {
+	caracteres := utf8.RuneCountInString(s.Instrucciones)
+	for _, m := range s.Mensajes {
+		caracteres += utf8.RuneCountInString(m.Contenido)
+	}
+	m := medida{Caracteres: caracteres, Tokens: tokensDe(caracteres), Documentos: []parteMedida{}}
+	for _, d := range docs.Partes {
+		m.Documentos = append(m.Documentos, parteMedida{Nombre: d.Nombre, Tokens: tokensDe(d.Caracteres)})
+	}
+	slices.SortStableFunc(m.Documentos, func(a, b parteMedida) int { return b.Tokens - a.Tokens })
+	return m
 }
 
 // sumarUso junta el uso de dos intentos del mismo trabajo.
@@ -857,15 +893,15 @@ func (g *agrupador) vaciarConCerrojo() error {
 }
 
 // preparar convierte las cargas respetando el límite de conversiones de la instancia.
-func (p *Planificador) preparar(ctx context.Context, cargas []string) (string, error) {
+func (p *Planificador) preparar(ctx context.Context, cargas []string) (nucleo.Documentos, error) {
 	if p.opc.Preparador == nil {
-		return "", nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("esta instancia no admite cargas"))
+		return nucleo.Documentos{}, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("esta instancia no admite cargas"))
 	}
 	select {
 	case p.conversiones <- struct{}{}:
 		defer func() { <-p.conversiones }()
 	case <-ctx.Done():
-		return "", ctx.Err()
+		return nucleo.Documentos{}, ctx.Err()
 	}
 	return p.opc.Preparador.Preparar(ctx, cargas)
 }

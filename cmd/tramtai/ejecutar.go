@@ -135,11 +135,11 @@ func comandoConvertir() *cobra.Command {
 				}
 				entradas[i] = documentos.Entrada{Ruta: real, Nombre: filepath.Base(ruta)}
 			}
-			texto, err := documentos.Desde(c).Convertir(cmd.Context(), entradas)
+			docs, err := documentos.Desde(c).Convertir(cmd.Context(), entradas)
 			if err != nil {
 				return err
 			}
-			fmt.Fprint(cmd.OutOrStdout(), texto)
+			fmt.Fprint(cmd.OutOrStdout(), docs.Texto)
 			return nil
 		}}
 }

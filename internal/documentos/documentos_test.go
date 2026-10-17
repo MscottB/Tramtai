@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -63,7 +64,8 @@ func crearZip(t *testing.T, archivos map[string][]byte) []byte {
 
 func TestTextoSeConservaTalCual(t *testing.T) {
 	texto := "línea 1\n  línea 2 con espacios  \n"
-	salida, err := conversor(t, "fallar").Convertir(context.Background(), []Entrada{escribir(t, "notas.txt", []byte("\xef\xbb\xbf"+texto))})
+	docs, err := conversor(t, "fallar").Convertir(context.Background(), []Entrada{escribir(t, "notas.txt", []byte("\xef\xbb\xbf"+texto))})
+	salida := docs.Texto
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +84,8 @@ func TestTextoNoUTF8SeRechaza(t *testing.T) {
 func TestDocumentoSeConvierte(t *testing.T) {
 	e := escribir(t, "informe.PDF", []byte("%PDF"))
 	e.SHA256 = "abc"
-	salida, err := conversor(t, "convertir").Convertir(context.Background(), []Entrada{e})
+	docs, err := conversor(t, "convertir").Convertir(context.Background(), []Entrada{e})
+	salida := docs.Texto
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +108,8 @@ func TestConversionVaciaOFallidaSeInforma(t *testing.T) {
 
 func TestZipSeExtraeYConviertePorSeparado(t *testing.T) {
 	datos := crearZip(t, map[string][]byte{"a.txt": []byte("hola"), "sub/b.docx": []byte("x"), "sub/": nil})
-	salida, err := conversor(t, "convertir").Convertir(context.Background(), []Entrada{escribir(t, "paquete.zip", datos)})
+	docs, err := conversor(t, "convertir").Convertir(context.Background(), []Entrada{escribir(t, "paquete.zip", datos)})
+	salida := docs.Texto
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,5 +228,22 @@ func TestPurgarSinUsoRespetaLoRecienteYLoIlegible(t *testing.T) {
 	quedan, _ := os.ReadDir(dir)
 	if len(quedan) != 6 { // reciente, la dañada en uso y la dañada reciente: contenido y metadatos de cada una
 		t.Fatalf("quedan %d archivos", len(quedan))
+	}
+}
+
+func TestConvertirDevuelvePartes(t *testing.T) {
+	var zipDatos bytes.Buffer
+	w := zip.NewWriter(&zipDatos)
+	f, _ := w.Create("interno.txt")
+	f.Write([]byte("dentro del zip"))
+	w.Close()
+	docs, err := conversor(t, "convertir").Convertir(context.Background(), []Entrada{
+		escribir(t, "uno.txt", []byte("hola")), escribir(t, "dos.txt", []byte("ñandú largo")), escribir(t, "paquete.zip", zipDatos.Bytes())})
+	if err != nil {
+		t.Fatal(err)
+	}
+	esperadas := []nucleo.ParteDocumento{{Nombre: "uno.txt", Caracteres: 4}, {Nombre: "dos.txt", Caracteres: 11}, {Nombre: "paquete.zip/interno.txt", Caracteres: 14}}
+	if !reflect.DeepEqual(docs.Partes, esperadas) || !strings.Contains(docs.Texto, "dentro del zip") {
+		t.Fatalf("partes %+v", docs.Partes)
 	}
 }

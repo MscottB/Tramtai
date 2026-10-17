@@ -64,25 +64,26 @@ func Desde(c *nucleo.Configuracion) *Conversor {
 
 // Convertir prepara las entradas y devuelve el texto ensamblado: un bloque delimitado por archivo, con sus metadatos.
 // Los ZIP se extraen con límites y cada archivo interno se convierte por separado.
-func (c *Conversor) Convertir(ctx context.Context, entradas []Entrada) (string, error) {
+func (c *Conversor) Convertir(ctx context.Context, entradas []Entrada) (nucleo.Documentos, error) {
 	temporal, err := os.MkdirTemp("", "tramtai-conversion-")
 	if err != nil {
-		return "", err
+		return nucleo.Documentos{}, err
 	}
 	defer os.RemoveAll(temporal)
 	t := &tarea{conversor: c, dir: temporal}
 	for _, e := range entradas {
 		if err := t.archivo(ctx, e, 0); err != nil {
-			return "", err
+			return nucleo.Documentos{}, err
 		}
 	}
-	return t.salida.String(), nil
+	return nucleo.Documentos{Texto: t.salida.String(), Partes: t.partes}, nil
 }
 
 type tarea struct {
 	conversor *Conversor
 	dir       string
 	salida    bytes.Buffer
+	partes    []nucleo.ParteDocumento
 	archivos  int
 	bytes     int64
 }
@@ -109,7 +110,9 @@ func (t *tarea) archivo(ctx context.Context, e Entrada, profundidad int) error {
 	if e.SHA256 != "" {
 		atributos += fmt.Sprintf(" sha256=%q", e.SHA256)
 	}
-	fmt.Fprintf(&t.salida, "<<<archivo %s>>>\n%s\n<<<fin archivo>>>\n", atributos, strings.TrimRight(texto, "\n"))
+	texto = strings.TrimRight(texto, "\n")
+	fmt.Fprintf(&t.salida, "<<<archivo %s>>>\n%s\n<<<fin archivo>>>\n", atributos, texto)
+	t.partes = append(t.partes, nucleo.ParteDocumento{Nombre: e.Nombre, Caracteres: utf8.RuneCountInString(texto)})
 	if max := t.conversor.MaximoSalida; max > 0 && int64(t.salida.Len()) > max {
 		return nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.T("el texto convertido supera conversion.maximo_salida_mb"))
 	}

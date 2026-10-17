@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/nucleo"
@@ -82,7 +83,8 @@ func TestCompletaConAgenteSimulado(t *testing.T) {
 	for _, e := range eventos {
 		recorrido = append(recorrido, e.Datos)
 	}
-	esperado := []string{"en_cola", "esperando_agente", "ejecutando", `{"agente":"simulado","modelo":"","esfuerzo":""}`, "hola", "validando_salida", "completado"}
+	esperado := []string{"en_cola", `{"caracteres":4,"tokens_estimados":1,"documentos":[]}`, "esperando_agente", "ejecutando",
+		`{"agente":"simulado","modelo":"","esfuerzo":""}`, "hola", "validando_salida", "completado"}
 	if len(recorrido) != len(esperado) {
 		t.Fatalf("recorrido de eventos %v, se esperaba %v", recorrido, esperado)
 	}
@@ -423,10 +425,13 @@ func TestPerfilSeResuelveAlAceptar(t *testing.T) {
 }
 
 // preparadorFalso devuelve un bloque fijo o un error.
-type preparadorFalso struct{ err error }
+type preparadorFalso struct {
+	err    error
+	partes []nucleo.ParteDocumento
+}
 
-func (p preparadorFalso) Preparar(_ context.Context, cargas []string) (string, error) {
-	return "<<<archivo nombre=\"a.txt\">>>\ncontenido\n<<<fin archivo>>>", p.err
+func (p preparadorFalso) Preparar(_ context.Context, cargas []string) (nucleo.Documentos, error) {
+	return nucleo.Documentos{Texto: "<<<archivo nombre=\"a.txt\">>>\ncontenido\n<<<fin archivo>>>", Partes: p.partes}, p.err
 }
 
 // eco devuelve el último mensaje recibido, para ver qué llegó al agente.
@@ -452,6 +457,46 @@ func TestCargasSePreparanAntesDelAgente(t *testing.T) {
 	eventos, _ := alm.Eventos(ctx, final.ID, 0)
 	if eventos[1].Datos != string(nucleo.PreparandoEntrada) {
 		t.Fatalf("el segundo estado debe ser preparando_entrada: %+v", eventos)
+	}
+}
+
+func TestEventoEntrada(t *testing.T) {
+	alm := abrir(t)
+	opc := opciones()
+	opc.Preparador = preparadorFalso{partes: []nucleo.ParteDocumento{{Nombre: "a.txt", Caracteres: 10}, {Nombre: "b.txt", Caracteres: 400}}}
+	p := iniciar(t, alm, eco{}, 1, opc)
+	s := solicitud("resume")
+	s.Instrucciones = "sé breve"
+	s.Cargas = []string{cargaPrueba}
+	final := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	eventos, _ := alm.Eventos(ctx, final.ID, 0)
+	var entrada struct {
+		Caracteres int `json:"caracteres"`
+		Tokens     int `json:"tokens_estimados"`
+		Documentos []struct {
+			Nombre string `json:"nombre"`
+			Tokens int    `json:"tokens_estimados"`
+		} `json:"documentos"`
+	}
+	posicion := -1
+	for i, e := range eventos {
+		if e.Tipo == "entrada" {
+			posicion = i
+			if err := json.Unmarshal([]byte(e.Datos), &entrada); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if posicion < 0 || eventos[posicion+1].Datos != string(nucleo.EsperandoAgente) {
+		t.Fatalf("un evento entrada justo antes de esperando_agente: %+v", eventos)
+	}
+	// Lo que mide es lo que recibe el agente: instrucciones y mensajes con los documentos.
+	caracteres := utf8.RuneCountInString("sé breve") + utf8.RuneCountInString(final.Salida)
+	if entrada.Caracteres != caracteres || entrada.Tokens != (caracteres+3)/4 {
+		t.Fatalf("medida %+v, se esperaban %d caracteres", entrada, caracteres)
+	}
+	if len(entrada.Documentos) != 2 || entrada.Documentos[0].Nombre != "b.txt" || entrada.Documentos[0].Tokens != 100 || entrada.Documentos[1].Tokens != 3 {
+		t.Fatalf("documentos de mayor a menor: %+v", entrada.Documentos)
 	}
 }
 
