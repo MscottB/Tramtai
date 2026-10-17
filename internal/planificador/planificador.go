@@ -275,12 +275,22 @@ func (p *Planificador) encolar(id string) {
 func (p *Planificador) Cancelar(ctx context.Context, id string) (nucleo.Trabajo, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	t, err := p.Obtener(ctx, id)
-	if err != nil || t.Estado.Terminal() || t.Estado == nucleo.CancelacionSolicitada {
-		return t, err
-	}
-	if err := p.almacen.CambiarEstado(ctx, id, t.Estado, nucleo.CancelacionSolicitada, persistencia.Cambio{}); err != nil {
-		return t, err
+	// El ejecutor cambia el estado sin este cerrojo: si avanzó entre la lectura y el cambio (de en_cola a
+	// esperando_agente, por ejemplo), se vuelve a leer y se reintenta.
+	var t nucleo.Trabajo
+	for intento := 1; ; intento++ {
+		var err error
+		t, err = p.Obtener(ctx, id)
+		if err != nil || t.Estado.Terminal() || t.Estado == nucleo.CancelacionSolicitada {
+			return t, err
+		}
+		err = p.almacen.CambiarEstado(ctx, id, t.Estado, nucleo.CancelacionSolicitada, persistencia.Cambio{})
+		if err == nil {
+			break
+		}
+		if nucleo.CodigoDe(err) != nucleo.CodigoTransicionInvalida || intento == 5 {
+			return t, err
+		}
 	}
 	cancelar, enCurso := p.cancelaciones[id]
 	if enCurso {
@@ -569,7 +579,17 @@ func (p *Planificador) procesar(id string, esperando func()) {
 	var resultado adaptadores.Resultado
 	var usoPrevio nucleo.Uso // lo que gastaron los intentos que fallaron: también cuenta para el presupuesto
 	for i, c := range lista {
-		res, huboTexto, fin, err := p.intentar(ctxTrabajo, id, t, solicitud, c, plazoCola)
+		// Lo que no cabe en el contexto del modelo no llega a su CLI: se salta sin ejecutarlo y el trabajo sigue
+		// esperando agente.
+		var res adaptadores.Resultado
+		var huboTexto, fin bool
+		var err error
+		estado := nucleo.Ejecutando
+		if contexto, _ := p.contextoDe(ctxTrabajo, c); contexto > 0 && !cabe(medida, contexto, p.opc.ReservaSalida) {
+			estado, err = nucleo.EsperandoAgente, noCabe(medida, c, contexto, p.opc.ReservaSalida)
+		} else {
+			res, huboTexto, fin, err = p.intentar(ctxTrabajo, id, t, solicitud, c, plazoCola)
+		}
 		if fin {
 			return
 		}
@@ -584,12 +604,12 @@ func (p *Planificador) procesar(id string, esperando func()) {
 			codigo = nucleo.CodigoErrorAgente
 		}
 		if !saltable(codigo) || huboTexto || i+1 == len(lista) {
-			p.cambiar(id, nucleo.Ejecutando, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err), Uso: &usoPrevio})
+			p.cambiar(id, estado, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err), Uso: &usoPrevio})
 			return
 		}
 		siguiente := lista[i+1]
 		// El uso acumulado queda en el trabajo: si se cancela durante el respaldo, también cuenta.
-		if !p.cambiar(id, nucleo.Ejecutando, nucleo.EsperandoAgente, persistencia.Cambio{Uso: &usoPrevio}) {
+		if estado == nucleo.Ejecutando && !p.cambiar(id, nucleo.Ejecutando, nucleo.EsperandoAgente, persistencia.Cambio{Uso: &usoPrevio}) {
 			return
 		}
 		// Lo guardado debe seguir valiendo al reintentar o reencolar: el agente nuevo con el esfuerzo que usa y el
@@ -612,7 +632,11 @@ func (p *Planificador) procesar(id string, esperando func()) {
 			// El respaldo sigue igual, pero el historial atribuiría la respuesta al agente anterior.
 			fmt.Fprintf(p.opc.Registros, "%s no se pudo guardar el cambio a %s: %v\n", id, siguiente, err)
 		}
-		_ = p.almacen.AgregarEvento(fondo, id, "aviso", idioma.Tf("%s falló (%s); sigue con %s", c, codigo, siguiente))
+		aviso := idioma.Tf("%s falló (%s); sigue con %s", c, codigo, siguiente)
+		if codigo == nucleo.CodigoEntradaDemasiadoGrande {
+			aviso = idioma.Tf("%s; sigue con %s", nucleo.MensajeDe(err), siguiente)
+		}
+		_ = p.almacen.AgregarEvento(fondo, id, "aviso", aviso)
 		plazoCola = nil
 	}
 
@@ -682,6 +706,19 @@ type parteMedida struct {
 }
 
 func tokensDe(caracteres int) int { return (caracteres + 3) / 4 }
+
+// cabe dice si la entrada, más lo que se reserva para la respuesta, entra en el contexto del modelo.
+func cabe(m medida, contexto, reserva int) bool { return m.Tokens+reserva <= contexto }
+
+// noCabe explica cuánto mide la entrada, qué documento pesa más y cuánto admite el modelo.
+func noCabe(m medida, c candidato, contexto, reserva int) error {
+	mayor := ""
+	if len(m.Documentos) > 0 {
+		mayor = idioma.Tf("; %s ~%d", m.Documentos[0].Nombre, m.Documentos[0].Tokens)
+	}
+	return nucleo.NuevoError(nucleo.CodigoEntradaDemasiadoGrande, idioma.Tf(
+		"la entrada (~%d tokens%s) no cabe en %s: su contexto es de %d tokens y se reservan %d para la respuesta", m.Tokens, mayor, c, contexto, reserva))
+}
 
 // medirEntrada mide las instrucciones y los mensajes, ya con los documentos dentro.
 func medirEntrada(s nucleo.SolicitudEjecucion, docs nucleo.Documentos) medida {
@@ -761,7 +798,7 @@ func candidatos(t nucleo.Trabajo) []candidato {
 // fallo del agente o tiempo agotado. La cancelación y un esquema no cumplido nunca saltan.
 func saltable(codigo nucleo.CodigoError) bool {
 	switch codigo {
-	case nucleo.CodigoLimiteUsoProveedor, nucleo.CodigoAutenticacionAgente, nucleo.CodigoAgenteNoDisponible, nucleo.CodigoModeloNoDisponible,
+	case nucleo.CodigoLimiteUsoProveedor, nucleo.CodigoAutenticacionAgente, nucleo.CodigoEntradaDemasiadoGrande, nucleo.CodigoAgenteNoDisponible, nucleo.CodigoModeloNoDisponible,
 		nucleo.CodigoErrorAgente, nucleo.CodigoErrorProtocoloAgente, nucleo.CodigoTiempoEjecucionAgotado:
 		return true
 	}

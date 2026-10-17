@@ -40,6 +40,9 @@ const (
 	CodigoContextoNoPermitido     CodigoError = "contexto_no_permitido"
 	CodigoRutaNoPermitida         CodigoError = "ruta_no_permitida"
 	CodigoPresupuestoAgotado      CodigoError = "presupuesto_agotado"
+	// CodigoEntradaDemasiadoGrande: tras convertir los documentos, la entrada no cabe en el contexto del modelo; no
+	// llegó al CLI (ni gasta cuota) y se prueba con el respaldo.
+	CodigoEntradaDemasiadoGrande CodigoError = "entrada_demasiado_grande"
 )
 
 // Error es el error propio de Tramtai: un código estable y un mensaje legible sin secretos.

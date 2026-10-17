@@ -667,3 +667,21 @@ func TestCabeceraPresupuesto(t *testing.T) {
 		t.Fatalf("sin presupuesto no hay cabecera: %q", r.Header.Get("X-Tramtai-Presupuesto"))
 	}
 }
+
+func TestFachadasEntradaDemasiadoGrande(t *testing.T) {
+	ts := servidor(t, simulado(adaptadores.Simulado{Respuesta: "ok"}), map[string]any{"limites.contexto_tokens": []any{"simulado=10"}})
+	largo := strings.Repeat("x", 4000)
+	r, cuerpo := pedir(t, ts, "POST", "/openai/v1/chat/completions", `{"model":"simulado","messages":[{"role":"user","content":"`+largo+`"}]}`)
+	if r.StatusCode != 400 || !strings.Contains(cuerpo, `"code":"context_length_exceeded"`) {
+		t.Fatalf("OpenAI: %d %s", r.StatusCode, cuerpo)
+	}
+	r, cuerpo = pedir(t, ts, "POST", "/anthropic/v1/messages", `{"model":"simulado","max_tokens":10,"messages":[{"role":"user","content":"`+largo+`"}]}`)
+	if r.StatusCode != 400 || !strings.Contains(cuerpo, `"invalid_request_error"`) {
+		t.Fatalf("Anthropic: %d %s", r.StatusCode, cuerpo)
+	}
+	r, cuerpo = pedir(t, ts, "POST", "/api/v1/ejecutar", `{"agente":"simulado","mensajes":[{"rol":"usuario","contenido":"`+largo+`"}]}`)
+	// La API nativa síncrona responde 200 al aceptar y el trabajo final lleva el código, como cualquier fallo.
+	if r.StatusCode != 200 || decodificar(t, cuerpo)["codigo_error"] != "entrada_demasiado_grande" {
+		t.Fatalf("nativa: %d %s", r.StatusCode, cuerpo)
+	}
+}

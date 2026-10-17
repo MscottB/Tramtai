@@ -1166,3 +1166,63 @@ func TestContextoDe(t *testing.T) {
 		t.Fatalf("informado y resuelto por el alias: %d %s", n, origen)
 	}
 }
+
+// iniciarConContextos arranca con los adaptadores dados, el contexto configurado de cada uno y una reserva de salida.
+func iniciarConContextos(t *testing.T, alm *persistencia.Almacen, lista map[string]adaptadores.Adaptador, contextos map[string]int, reserva int) *Planificador {
+	t.Helper()
+	limites := map[string]int{}
+	for nombre := range lista {
+		limites[nombre] = 2
+	}
+	opc := opciones()
+	opc.Contextos, opc.ReservaSalida = contextos, reserva
+	p := Nuevo(alm, lista, NuevosSemaforos(limites), opc)
+	if err := p.Iniciar(ctx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Detener)
+	return p
+}
+
+func TestEntradaNoCabeSinRespaldo(t *testing.T) {
+	alm := abrir(t)
+	var n atomic.Int32
+	p := iniciarConContextos(t, alm, map[string]adaptadores.Adaptador{"simulado": contado{&n, adaptadores.Simulado{Respuesta: "ok"}}},
+		map[string]int{"simulado": 1000}, 100)
+	tr := esperar(t, alm, enviar(t, p, solicitud(strings.Repeat("x", 40000))), nucleo.Fallido)
+	if tr.CodigoError != nucleo.CodigoEntradaDemasiadoGrande || n.Load() != 0 || tr.Uso.TokensEntrada != 0 ||
+		!strings.Contains(tr.MensajeError, "10000") || !strings.Contains(tr.MensajeError, "1000") {
+		t.Fatalf("no cabe y no llega al CLI (%d llamadas): %+v", n.Load(), tr)
+	}
+}
+
+func TestEntradaNoCabeSaltaAlRespaldo(t *testing.T) {
+	alm := abrir(t)
+	var n atomic.Int32
+	p := iniciarConContextos(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": contado{&n, adaptadores.Simulado{Respuesta: "no"}}, "otro": adaptadores.Simulado{Respuesta: "ok"}},
+		map[string]int{"simulado": 1000, "otro": 100000}, 100)
+	s := conRespaldo("otro")
+	s.Mensajes[0].Contenido = strings.Repeat("x", 40000)
+	tr := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	a := avisos(t, alm, tr.ID)
+	if n.Load() != 0 || tr.Salida != "ok" || tr.Solicitud.Agente != "otro" || len(a) != 1 || !strings.Contains(a[0], "simulado") ||
+		!strings.Contains(a[0], "otro") || len(intentos(t, alm, tr.ID)) != 1 {
+		t.Fatalf("salta sin ejecutar el principal (%d llamadas), con aviso: %v %+v", n.Load(), a, tr)
+	}
+}
+
+func TestEntradaEnElBorde(t *testing.T) {
+	alm := abrir(t)
+	// 400 caracteres son 100 tokens; con 8 de reserva cabe justo en 108.
+	p := iniciarConContextos(t, alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Respuesta: "ok"}},
+		map[string]int{"simulado": 108}, 8)
+	esperar(t, alm, enviar(t, p, solicitud(strings.Repeat("x", 400))), nucleo.Completado)
+	esperar(t, alm, enviar(t, p, solicitud(strings.Repeat("x", 401))), nucleo.Fallido)
+}
+
+func TestContextoDesconocidoNoComprueba(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarConContextos(t, alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Respuesta: "ok"}}, nil, 8192)
+	esperar(t, alm, enviar(t, p, solicitud(strings.Repeat("x", 400000))), nucleo.Completado)
+}
