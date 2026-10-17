@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -171,5 +172,82 @@ func TestLimpiarDescargas(t *testing.T) {
 		if _, err := os.Stat(d); err != nil {
 			t.Errorf("%s debía seguir: %v", filepath.Base(d), err)
 		}
+	}
+}
+
+// servidorVersiones publica la lista de versiones de GitHub con las etiquetas dadas; estado distinto de 200 simula
+// un fallo (límite de consultas).
+func servidorVersiones(t *testing.T, estado int, versiones string) {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(estado)
+		fmt.Fprint(w, versiones)
+	}))
+	t.Cleanup(srv.Close)
+	antes := urlVersiones
+	urlVersiones = srv.URL
+	t.Cleanup(func() { urlVersiones = antes })
+}
+
+func ficha(etiqueta, pagina string, borrador, previa bool) string {
+	return fmt.Sprintf(`{"tag_name":%q,"html_url":%q,"body":"notas de %s","draft":%t,"prerelease":%t}`, etiqueta, pagina, etiqueta, borrador, previa)
+}
+
+func etiquetas(vs []Version) string {
+	var e []string
+	for _, v := range vs {
+		e = append(e, v.Etiqueta)
+	}
+	return strings.Join(e, ",")
+}
+
+func TestNovedades(t *testing.T) {
+	repo := "https://github.com/MscottB/Tramtai/releases/tag/"
+	servidorVersiones(t, http.StatusOK, "["+strings.Join([]string{
+		ficha("v0.37.0+1", repo+"v0.37.0", false, false),
+		ficha("v0.36.3+1", repo+"v0.36.3", false, true),
+		ficha("v0.36.2+1", repo+"v0.36.2", true, false),
+		ficha("v0.36.1+1", repo+"v0.36.1", false, false),
+		ficha("v0.36.0+1", "https://otro.sitio/v0.36.0", false, false),
+		ficha("v0.35.1+1", repo+"v0.35.1", false, false),
+	}, ",")+"]")
+	ctx := context.Background()
+	vs, err := Novedades(ctx, "v0.35.1+9", "v0.36.1+9")
+	if err != nil || etiquetas(vs) != "v0.36.1+1,v0.36.0+1" {
+		t.Fatalf("de la 0.35.1 a la 0.36.1, sin borrador, previa ni futuras: %q %v", etiquetas(vs), err)
+	}
+	if vs[0].Notas != "notas de v0.36.1+1" || vs[0].Pagina != repo+"v0.36.1" || vs[1].Pagina != "" {
+		t.Fatalf("notas y solo páginas del repositorio: %+v", vs)
+	}
+	if vs, _ := Novedades(ctx, "v0.37.0+1", "v0.36.1+1"); len(vs) != 0 {
+		t.Fatalf("al volver a una versión anterior no hay novedades: %q", etiquetas(vs))
+	}
+	if vs, _ := Novedades(ctx, "v0.36.1+16102026", "v0.36.1+17102026"); len(vs) != 0 {
+		t.Fatalf("la misma versión con otra fecha no es nueva: %q", etiquetas(vs))
+	}
+	if vs, _ := Novedades(ctx, "v0.35.1+1", "dev"); len(vs) != 0 {
+		t.Fatalf("una compilación sin versión no tiene novedades: %q", etiquetas(vs))
+	}
+	if vs, _ := Novedades(ctx, "", "v0.36.1+1"); etiquetas(vs) != "v0.36.1+1" {
+		t.Fatalf("sin desde, solo la instalada: %q", etiquetas(vs))
+	}
+}
+
+func TestNovedadesTope(t *testing.T) {
+	var fichas []string
+	for menor := 34; menor >= 20; menor-- {
+		fichas = append(fichas, ficha(fmt.Sprintf("v0.%d.0+1", menor), "", false, false))
+	}
+	servidorVersiones(t, http.StatusOK, "["+strings.Join(fichas, ",")+"]")
+	vs, err := Novedades(context.Background(), "v0.1.0", "v0.34.0")
+	if err != nil || len(vs) != 10 || vs[0].Etiqueta != "v0.34.0+1" {
+		t.Fatalf("como mucho 10, la más nueva primero: %q %v", etiquetas(vs), err)
+	}
+}
+
+func TestNovedadesFallo(t *testing.T) {
+	servidorVersiones(t, http.StatusForbidden, `{"message":"API rate limit exceeded"}`)
+	if _, err := Novedades(context.Background(), "v0.35.0", "v0.36.0"); err == nil {
+		t.Fatal("un 403 de GitHub debe devolver error")
 	}
 }

@@ -31,6 +31,7 @@ const repositorio = "MscottB/Tramtai"
 var (
 	// Variables para que las pruebas apunten a un servidor local.
 	urlUltima       = "https://api.github.com/repos/" + repositorio + "/releases/latest"
+	urlVersiones    = "https://api.github.com/repos/" + repositorio + "/releases?per_page=30"
 	prefijoDescarga = "https://github.com/" + repositorio + "/releases/download/"
 	clienteHTTP     = &http.Client{Timeout: 10 * time.Minute}
 )
@@ -77,11 +78,7 @@ func Ultima(ctx context.Context) (Version, error) {
 	if _, ok := numeros(ficha.Etiqueta); !ok {
 		return Version{}, fmt.Errorf(idioma.T("la última versión publicada no tiene un número válido: %q"), ficha.Etiqueta)
 	}
-	v := Version{Etiqueta: ficha.Etiqueta, Notas: recortar(ficha.Notas, 6000)}
-	// La Web UI la muestra como enlace: solo páginas del repositorio, nunca javascript: ni otros sitios.
-	if strings.HasPrefix(ficha.Pagina, "https://github.com/"+repositorio+"/") {
-		v.Pagina = ficha.Pagina
-	}
+	v := armar(ficha.Etiqueta, ficha.Pagina, ficha.Notas)
 	for _, a := range ficha.Archivos {
 		switch {
 		case strings.HasSuffix(a.Nombre, sufijoInstalador):
@@ -91,6 +88,56 @@ func Ultima(ctx context.Context) (Version, error) {
 		}
 	}
 	return v, nil
+}
+
+// armar arma una versión con lo que la Web UI puede mostrar: las notas recortadas y la página como enlace, solo si
+// es del repositorio (nunca javascript: ni otros sitios).
+func armar(etiqueta, pagina, notas string) Version {
+	v := Version{Etiqueta: etiqueta, Notas: recortar(notas, 6000)}
+	if strings.HasPrefix(pagina, "https://github.com/"+repositorio+"/") {
+		v.Pagina = pagina
+	}
+	return v
+}
+
+// Novedades devuelve las versiones publicadas después de desde y hasta hasta, de la más nueva a la más vieja y como
+// mucho 10, para leer tras actualizar lo que trajo cada una. Sin desde válido, solo la de hasta.
+func Novedades(ctx context.Context, desde, hasta string) ([]Version, error) {
+	datos, err := bajar(ctx, urlVersiones, 4<<20, "application/vnd.github+json")
+	if err != nil {
+		return nil, err
+	}
+	var fichas []struct {
+		Etiqueta string `json:"tag_name"`
+		Pagina   string `json:"html_url"`
+		Notas    string `json:"body"`
+		Borrador bool   `json:"draft"`
+		Previa   bool   `json:"prerelease"`
+	}
+	if err := json.Unmarshal(datos, &fichas); err != nil {
+		return nil, err
+	}
+	_, conDesde := numeros(desde)
+	h, conHasta := numeros(hasta)
+	if !conHasta {
+		return []Version{}, nil // una compilación sin versión (dev) no tiene novedades
+	}
+	lista := []Version{}
+	for _, f := range fichas {
+		n, ok := numeros(f.Etiqueta)
+		if !ok || f.Borrador || f.Previa {
+			continue
+		}
+		if (conDesde && MasNueva(f.Etiqueta, desde) && !MasNueva(f.Etiqueta, hasta)) || (!conDesde && slices.Equal(n, h)) {
+			lista = append(lista, armar(f.Etiqueta, f.Pagina, f.Notas))
+		}
+	}
+	slices.SortFunc(lista, func(a, b Version) int {
+		x, _ := numeros(a.Etiqueta)
+		y, _ := numeros(b.Etiqueta)
+		return slices.Compare(y, x)
+	})
+	return lista[:min(len(lista), 10)], nil
 }
 
 // recortar deja texto en un máximo de runas, sin cortar un carácter por la mitad.

@@ -103,6 +103,10 @@ func TestWebUI(t *testing.T) {
 	if strings.Contains(cuerpo, global.token) {
 		t.Fatal("la sesión no debe devolver el token de la instancia")
 	}
+	// Con la búsqueda de actualizaciones desactivada (así arranca el entorno), las novedades no consultan GitHub.
+	if r, cuerpo := n.pedir("GET", "/ui/actualizacion/novedades?desde=v0.1.0", ""); r.StatusCode != 200 || !strings.Contains(cuerpo, `"versiones":[]`) {
+		t.Fatalf("sin búsqueda no se consulta GitHub: %d %s", r.StatusCode, cuerpo)
+	}
 
 	if r, cuerpo := n.pedir("GET", "/api/v1/instancia", ""); r.StatusCode != 200 || !strings.Contains(cuerpo, `"id":"global"`) {
 		t.Fatalf("instancia con la cookie: %d %s", r.StatusCode, cuerpo)
