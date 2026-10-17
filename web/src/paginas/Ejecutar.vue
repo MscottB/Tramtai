@@ -92,7 +92,7 @@
                 <template #avatar><q-icon name="o_error" /></template>
                 <b>{{ tituloError(final.codigo_error) }}</b><span v-if="final.mensaje_error">: {{ final.mensaje_error }}</span>
               </q-banner>
-              <pre class="salida" :class="{ json: esJSON(salida) }" aria-live="polite">{{ salida }}</pre>
+              <div aria-live="polite"><SalidaTrabajo :texto="salida" /></div>
               <div v-if="activo && !salida" class="row items-center texto-suave q-gutter-x-sm">
                 <q-spinner-dots color="primary" size="24px" /><span>{{ estadoInfo(estado).etiqueta }}…</span>
               </div>
@@ -162,7 +162,8 @@ import EditorReceta from '../componentes/EditorReceta.vue'
 import EstadoVacio from '../componentes/EstadoVacio.vue'
 import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
-import { ajustesDeReceta, api, aplicarModelo, avisar, avisarError, configDeReceta, copiar, duracion, esJSON, esquemaDeReceta, estadoInfo, modeloInicial,
+import SalidaTrabajo from '../componentes/SalidaTrabajo.vue'
+import { ajustesDeReceta, api, aplicarModelo, avisar, avisarError, configDeReceta, copiar, duracion, esquemaDeReceta, estadoInfo, modeloInicial,
   nombreEsfuerzo, recetaDePunto, recetaInicial, recetaVacia, terminales, tituloError, trabajoSeguido, type Modelo, type Receta, type Solicitud,
   type Trabajo } from '../api'
 import { t } from '../i18n'

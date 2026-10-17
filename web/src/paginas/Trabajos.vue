@@ -87,7 +87,7 @@
               <q-btn v-if="detalle.salida" flat dense round size="sm" icon="o_content_copy" :aria-label="t('ejecutar.copiarRespuesta')" @click="copiar(detalle.salida)" />
             </div>
             <div v-if="detalle.disponibilidad === 'expirada'" class="texto-suave">{{ t('historial.expirada') }}</div>
-            <div v-else-if="detalle.salida" class="bloque-texto" :class="{ json: esJSON(detalle.salida) }">{{ detalle.salida }}</div>
+            <SalidaTrabajo v-else-if="detalle.salida" :texto="detalle.salida" caja />
             <div v-else class="texto-suave">{{ terminales.includes(detalle.estado) ? t('historial.sinRespuesta') : t('historial.todaviaEnCurso') }}</div>
           </div>
           <div class="ficha text-body2">
@@ -123,7 +123,7 @@ import EstadoVacio from '../componentes/EstadoVacio.vue'
 import { useQuasar, type QTableColumn } from 'quasar'
 import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
-import { api, avisar, avisarError, type EstadoPunto, copiar, duracion, esJSON, estadoInfo, fecha, filtroHistorial, haceCuanto, origenHistorial, trabajoAbrir, modeloDe, nombreEsfuerzo, terminales, textoDe, tituloError, trabajoSeguido, type Trabajo } from '../api'
+import { api, avisar, avisarError, type EstadoPunto, copiar, duracion, estadoInfo, fecha, filtroHistorial, haceCuanto, origenHistorial, trabajoAbrir, modeloDe, nombreEsfuerzo, terminales, textoDe, tituloError, trabajoSeguido, type Trabajo } from '../api'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()
