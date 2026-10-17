@@ -572,6 +572,13 @@ function entradaCatalogo(catalogo: Modelo[], seleccion: string | null): Modelo |
     : catalogo.find((x) => x.predeterminado)
 }
 
+// dividirRespaldo separa una entrada de respaldo (agente[/modelo][+esfuerzo]) en su base y su esfuerzo propio.
+export function dividirRespaldo(e: string): { base: string; esfuerzo: string } {
+  const [base, esfuerzo = ''] = e.split('+')
+  return { base, esfuerzo }
+}
+export const unirRespaldo = (base: string, esfuerzo: string) => (esfuerzo ? `${base}+${esfuerzo}` : base)
+
 export function nombreEsfuerzo(nivel?: string): string {
   return nivel ? t(`esfuerzo.${nivel}` as Clave) : t('esfuerzo.agente')
 }
