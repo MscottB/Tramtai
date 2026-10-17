@@ -172,7 +172,7 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 		return nucleo.Trabajo{}, false, err
 	}
 	for _, e := range solicitud.Respaldo {
-		if agente, _ := nucleo.DividirRespaldo(e); p.adaptadores[agente] == nil {
+		if agente, _, _ := nucleo.DividirRespaldo(e); p.adaptadores[agente] == nil {
 			return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("agente de respaldo no disponible: %s", agente))
 		}
 	}
@@ -571,7 +571,7 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		for _, c := range lista[i+2:] {
 			restante = append(restante, c.String())
 		}
-		if err := p.almacen.CambiarAgente(fondo, id, siguiente.agente, siguiente.modelo, restante); err != nil && p.opc.Registros != nil {
+		if err := p.almacen.CambiarAgente(fondo, id, siguiente.agente, siguiente.modelo, siguiente.esfuerzo, restante); err != nil && p.opc.Registros != nil {
 			// El respaldo sigue igual, pero el historial atribuiría la respuesta al agente anterior.
 			fmt.Fprintf(p.opc.Registros, "%s no se pudo guardar el cambio a %s: %v\n", id, siguiente, err)
 		}
@@ -600,24 +600,29 @@ func sumarUso(a, b nucleo.Uso) nucleo.Uso {
 	return nucleo.Uso{TokensEntrada: a.TokensEntrada + b.TokensEntrada, TokensSalida: a.TokensSalida + b.TokensSalida, CostoUSD: a.CostoUSD + b.CostoUSD}
 }
 
-// candidato es un agente que puede ejecutar el trabajo: el principal o uno del respaldo.
-type candidato struct{ agente, modelo string }
+// candidato es un agente que puede ejecutar el trabajo: el principal o uno del respaldo. esfuerzo vacío usa el de la
+// solicitud.
+type candidato struct{ agente, modelo, esfuerzo string }
 
 func (c candidato) String() string {
-	if c.modelo == "" {
-		return c.agente
+	texto := c.agente
+	if c.modelo != "" {
+		texto += "/" + c.modelo
 	}
-	return c.agente + "/" + c.modelo
+	if c.esfuerzo != "" {
+		texto += "+" + c.esfuerzo
+	}
+	return texto
 }
 
 // candidatos son el agente principal (con el modelo ya resuelto) y después el respaldo. Una entrada que repite un
 // candidato anterior se omite; una sin modelo repite cualquier intento anterior de su agente.
 func candidatos(t nucleo.Trabajo) []candidato {
-	lista := []candidato{{t.Solicitud.Agente, t.ModeloEnviado}}
+	lista := []candidato{{t.Solicitud.Agente, t.ModeloEnviado, ""}}
 	for _, e := range t.Solicitud.Respaldo {
-		agente, modelo := nucleo.DividirRespaldo(e)
+		agente, modelo, esfuerzo := nucleo.DividirRespaldo(e)
 		if !slices.ContainsFunc(lista, func(c candidato) bool { return c.agente == agente && (modelo == "" || c.modelo == modelo) }) {
-			lista = append(lista, candidato{agente, modelo})
+			lista = append(lista, candidato{agente, modelo, esfuerzo})
 		}
 	}
 	return lista
@@ -678,6 +683,9 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 	}), limite)
 	defer cancelarEjecucion()
 	solicitud.Agente, solicitud.Modelo, solicitud.PerfilModelo = c.agente, c.modelo, ""
+	if c.esfuerzo != "" {
+		solicitud.Esfuerzo = c.esfuerzo
+	}
 	agrupador := &agrupador{guardar: func(tipo, datos string) error { return p.almacen.AgregarEvento(fondo, id, tipo, datos) }}
 	var texto atomic.Bool // algunos adaptadores emiten desde la goroutine que lee la salida del CLI
 	resultado, err = p.adaptadores[c.agente].Ejecutar(ctxEjecucion, solicitud, func(e adaptadores.Evento) error {

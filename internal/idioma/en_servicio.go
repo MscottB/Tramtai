@@ -147,6 +147,7 @@ func init() {
 		"respaldo: máximo 3 agentes":                                                                       "fallback: at most 3 agents",
 		"respaldo %q con formato no válido (agente o agente/modelo)":                                       "fallback %q has an invalid format (agent or agent/model)",
 		"respaldo repetido: %s":                                                                            "repeated fallback: %s",
+		"respaldo %q: esfuerzo desconocido %q":                                                             "fallback %q: unknown effort %q",
 		"agente de respaldo no disponible: %s":                                                             "fallback agent not available: %s",
 		"el agente de respaldo %s no existe":                                                               "the fallback agent %s does not exist",
 		"el respaldo %s no está en modelos_permitidos":                                                     "the fallback %s is not in modelos_permitidos",

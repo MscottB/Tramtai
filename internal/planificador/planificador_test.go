@@ -914,3 +914,40 @@ func TestUsoPrevioAlCancelarElRespaldo(t *testing.T) {
 		t.Fatalf("el uso del intento fallido se conserva al cancelar: trabajo %+v, consumo %+v", tr.Uso, dia)
 	}
 }
+
+// esfuerzoVisto responde bien y anota el esfuerzo con que se le llamó.
+type esfuerzoVisto struct{ visto chan string }
+
+func (a esfuerzoVisto) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	a.visto <- s.Esfuerzo
+	return adaptadores.Simulado{Respuesta: "ok"}.Ejecutar(ctx, s, emitir)
+}
+
+func TestRespaldoConEsfuerzoPropio(t *testing.T) {
+	alm := abrir(t)
+	visto := make(chan string, 4)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)}, "otro": esfuerzoVisto{visto}}, 2)
+	s := conRespaldo("otro+alto")
+	s.Esfuerzo = "bajo"
+	tr := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if e := <-visto; e != "alto" || tr.Solicitud.Esfuerzo != "alto" || len(tr.Solicitud.Respaldo) != 0 {
+		t.Fatalf("el respaldo debía usar su esfuerzo (%q) y el trabajo guardarlo: %+v", e, tr.Solicitud)
+	}
+	// El reintento empieza por el agente que respondió, con el esfuerzo con que respondió.
+	nuevo, err := p.Reintentar(ctx, tr.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	esperar(t, alm, nuevo.ID, nucleo.Completado)
+	if e := <-visto; e != "alto" {
+		t.Fatalf("el reintento debía usar alto: %q", e)
+	}
+
+	s = conRespaldo("otro")
+	s.Esfuerzo = "bajo"
+	tr = esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if e := <-visto; e != "bajo" || tr.Solicitud.Esfuerzo != "bajo" {
+		t.Fatalf("sin sufijo, el respaldo hereda el esfuerzo del principal: %q %+v", e, tr.Solicitud)
+	}
+}

@@ -428,6 +428,11 @@ func TestPuntoRespaldoNoPermitido(t *testing.T) {
 	if _, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}}); nucleo.CodigoDe(err) != nucleo.CodigoModeloNoPermitido {
 		t.Fatalf("un respaldo fuera de modelos_permitidos se rechaza: %v", err)
 	}
+	// El esfuerzo propio no cuenta para modelos_permitidos.
+	s.Punto = &Punto{Nombre: "r", ModelosPermitidos: []string{"simulado", "otro"}, Respaldo: []string{"otro+alto"}}
+	if _, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}}); err != nil {
+		t.Fatalf("otro+alto cabe en modelos_permitidos [otro]: %v", err)
+	}
 }
 
 func TestFachadaOpenAIConEsquemaDelPunto(t *testing.T) {

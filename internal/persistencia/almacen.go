@@ -420,8 +420,9 @@ func (a *Almacen) RegistrarProceso(ctx context.Context, id string, pid int, firm
 
 // CambiarAgente apunta el trabajo al agente de respaldo que lo ejecuta ahora, con su modelo (el del principal o su
 // perfil no valen para otro agente, también al reintentar) y el respaldo que queda tras él, para que un trabajo
-// reencolado o reintentado no vuelva a probar los que ya fallaron; la huella no cambia.
-func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado string, restante []string) error {
+// reencolado o reintentado no vuelva a probar los que ya fallaron; con el esfuerzo propio de ese respaldo, si lo tiene.
+// La huella no cambia.
+func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado, esfuerzo string, restante []string) error {
 	lista, err := json.Marshal(restante)
 	if err != nil {
 		return err
@@ -429,8 +430,13 @@ func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado s
 	if restante == nil {
 		lista = []byte("[]")
 	}
+	// Un esfuerzo vacío conserva el de la solicitud: ese respaldo heredaba el del principal.
+	conEsfuerzo, args := "", []any{agente, modeloEnviado, string(lista)}
+	if esfuerzo != "" {
+		conEsfuerzo, args = ", '$.esfuerzo', ?", append(args, esfuerzo)
+	}
 	r, err := a.db.ExecContext(ctx, `UPDATE trabajos SET solicitud = json_set(json_remove(solicitud, '$.perfil_modelo'), '$.agente', ?, '$.modelo', ?,
-		'$.respaldo', json(?)), modelo_enviado = ? WHERE id = ?`, agente, modeloEnviado, string(lista), modeloEnviado, id)
+		'$.respaldo', json(?)`+conEsfuerzo+`), modelo_enviado = ? WHERE id = ?`, append(args, modeloEnviado, id)...)
 	if err != nil {
 		return err
 	}

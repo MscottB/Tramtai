@@ -95,7 +95,7 @@ func (s *Servidor) ajustar(sol nucleo.SolicitudEjecucion) (nucleo.SolicitudEjecu
 
 // PermitidoRespaldo indica si una entrada de respaldo (agente o agente/modelo) cabe en modelos_permitidos.
 func PermitidoRespaldo(lista []string, entrada string) bool {
-	agente, modelo := nucleo.DividirRespaldo(entrada)
+	agente, modelo, _ := nucleo.DividirRespaldo(entrada)
 	return permitido(lista, nucleo.SolicitudEjecucion{Agente: agente, Modelo: modelo})
 }
 
