@@ -149,6 +149,7 @@ func init() {
 		"respaldo repetido: %s":                                                                            "repeated fallback: %s",
 		"antigravity no admite consciente_proyecto: usa modo_contexto aislado":                             "antigravity does not support consciente_proyecto: use modo_contexto aislado",
 		"Antigravity no está habilitado para aplicaciones: todavía no se ha comprobado con el CLI real que no pueda usar herramientas. Úsalo desde Probar o la terminal": "Antigravity is not enabled for applications: it has not yet been checked with the real CLI that it cannot use tools. Use it from Try or the terminal",
+		"la API %s trabaja en modo %s: la petición no puede pedir %s": "the API %s works in %s mode: the request cannot ask for %s",
 		"%s; sigue con %s": "%s; continuing with %s",
 		"; %s ~%d":         "; %s ~%d",
 		"la entrada (~%d tokens%s) no cabe en %s: su contexto es de %d tokens y se reservan %d para la respuesta": "the input (~%d tokens%s) does not fit in %s: its context is %d tokens and %d are reserved for the answer",

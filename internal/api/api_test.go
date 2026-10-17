@@ -685,3 +685,20 @@ func TestFachadasEntradaDemasiadoGrande(t *testing.T) {
 		t.Fatalf("nativa: %d %s", r.StatusCode, cuerpo)
 	}
 }
+
+func TestPuntoImponeModoContexto(t *testing.T) {
+	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
+	hola := []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}
+	s := &Servidor{Config: c, Punto: &Punto{Nombre: "r"}}
+	if sol, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: hola}); err != nil || sol.ModoContexto != "aislado" {
+		t.Fatalf("una API sin modo trabaja aislada: %q %v", sol.ModoContexto, err)
+	}
+	// La petición (o el perfil que aplique, que se resuelve antes) no amplía el modo de su API.
+	if _, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: hola, ModoContexto: "consciente_proyecto"}); nucleo.CodigoDe(err) != nucleo.CodigoContextoNoPermitido {
+		t.Fatalf("consciente_proyecto en una API aislada: %v", err)
+	}
+	s.Punto.ModoContexto = "consciente_proyecto"
+	if sol, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: hola}); err != nil || sol.ModoContexto != "consciente_proyecto" {
+		t.Fatalf("la API con consciente_proyecto lo da: %q %v", sol.ModoContexto, err)
+	}
+}
