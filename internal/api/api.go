@@ -45,6 +45,8 @@ type Servidor struct {
 	Hosts []string
 	// Sondeo es la espera máxima entre lecturas si no llega ningún aviso del almacén (respaldo).
 	Sondeo time.Duration
+	// PuntosDeGrupo da las APIs de un grupo según la configuración actual, para ?grupo= en la lista de trabajos.
+	PuntosDeGrupo func(grupo string) []string
 }
 
 // Handler devuelve las rutas con las protecciones aplicadas y el token propio del servidor.

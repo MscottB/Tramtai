@@ -189,7 +189,7 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 	}
 	defer p.Detener()
 
-	t, _, err := p.Enviar(cmd.Context(), s, "")
+	t, _, err := p.Enviar(nucleo.ConOrigenPeticion(cmd.Context(), nucleo.DesdeCLI), s, "")
 	if err != nil {
 		return err
 	}

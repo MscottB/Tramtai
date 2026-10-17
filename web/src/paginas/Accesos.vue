@@ -1,6 +1,93 @@
 <template>
   <div class="pagina apilado">
-    <CabeceraPagina :titulo="t('menu.conectar')" :descripcion="t('conectar.subtitulo')" />
+    <CabeceraPagina :titulo="t('menu.conectar')" :descripcion="t('conectar.subtitulo')">
+      <template #acciones>
+        <q-btn unelevated color="primary" icon="add" :label="t('puntos.nuevo')" no-caps @click="abrirNuevo" />
+      </template>
+    </CabeceraPagina>
+
+
+    <q-card>
+      <q-card-section>
+        <div class="titulo-seccion">{{ t('puntos.titulo') }}</div>
+        <div class="texto-suave text-body2">{{ t('puntos.texto') }}</div>
+      </q-card-section>
+      <q-card-section v-if="puntos.length > 1" class="row q-col-gutter-sm q-pt-none">
+        <div class="col-12 col-sm">
+          <q-input v-model="busqueda" dense outlined clearable debounce="150" :placeholder="t('puntos.buscarApi')" :aria-label="t('puntos.buscarApi')">
+            <template #prepend><q-icon name="search" /></template>
+          </q-input>
+        </div>
+        <div v-if="hayGrupos" class="col-6 col-sm-3">
+          <q-select v-model="filtroGrupo" :options="opcionesGrupo" emit-value map-options dense outlined :label="t('puntos.filtroGrupo')" />
+        </div>
+        <div class="col-6 col-sm-3">
+          <q-select v-model="orden" :options="opcionesOrden" emit-value map-options dense outlined :label="t('puntos.orden')" />
+        </div>
+      </q-card-section>
+      <template v-if="presupuestoEspacio">
+        <q-separator />
+        <q-card-section>
+          <div class="text-weight-medium">{{ t('presupuesto.espacio') }}</div>
+          <div class="text-caption texto-suave">{{ t('presupuesto.espacioTexto') }}</div>
+          <BarrasPresupuesto :estado="presupuestoEspacio" @reiniciar="reiniciarPresupuesto()" />
+        </q-card-section>
+      </template>
+      <q-separator />
+      <template v-if="puntos.length">
+        <div v-for="g in grupos" :key="g.nombre">
+          <div v-if="hayGrupos" class="row items-center q-px-md q-pt-md q-pb-xs cabecera-grupo">
+            <q-btn flat dense round size="sm" :icon="plegados.has(g.nombre) ? 'chevron_right' : 'expand_more'" class="q-mr-xs"
+              :aria-expanded="!plegados.has(g.nombre)" :aria-label="t(plegados.has(g.nombre) ? 'puntos.desplegar' : 'puntos.plegar', { grupo: g.nombre || t('puntos.sinGrupo') })"
+              @click="plegar(g.nombre)" />
+            <q-icon :name="g.nombre ? 'o_folder' : 'o_folder_off'" class="q-mr-sm texto-suave" />
+            <div class="text-weight-medium cursor-pointer" @click="plegar(g.nombre)">{{ g.nombre || t('puntos.sinGrupo') }}</div>
+            <div class="text-caption texto-suave q-ml-sm">{{ t('puntos.activos', { activos: g.activos, total: g.total }) }}</div>
+            <q-space />
+            <q-btn flat dense no-caps size="sm" color="primary" icon="o_play_arrow" :label="t('puntos.activarTodos')"
+              :disable="g.activos === g.total" :loading="ocupado === g.nombre + ':1'" @click="activarGrupo(g.nombre, true)" />
+            <q-btn flat dense no-caps size="sm" color="grey-8" icon="o_stop" :label="t('puntos.desactivarTodos')"
+              :disable="g.activos === 0" :loading="ocupado === g.nombre + ':0'" @click="activarGrupo(g.nombre, false)" />
+          </div>
+          <div v-if="!hayGrupos || !plegados.has(g.nombre)">
+            <div v-for="p in g.puntos" :key="p.nombre" class="fila-api">
+              <span class="linea__chapa linea__chapa--grande" :class="['linea--' + (p.agente ?? 'otro'), { 'linea__chapa--apagada': !activo(p) }]" aria-hidden="true">{{ p.agente ? codigoLinea(p.agente) : 'API' }}</span>
+              <div class="fila-api__info">
+                <div class="row items-center q-gutter-x-sm">
+                  <span class="text-weight-medium">{{ p.nombre }}</span>
+                  <span class="etiqueta" :class="!activo(p) ? 'etiqueta--neutro' : p.error ? 'etiqueta--error' : 'etiqueta--ok'">{{ activo(p) ? t('puntos.activo') : t('puntos.desactivado') }}</span>
+                  <span v-if="p.esquema" class="etiqueta etiqueta--info">{{ t('puntos.json') }}</span>
+                  <span v-if="p.respaldo?.length" class="etiqueta etiqueta--neutro">{{ t('puntos.respaldoDe', { agentes: p.respaldo.map(etiquetaDe).join(', ') }) }}</span>
+                </div>
+                <div class="row items-center no-wrap codigo texto-suave">
+                  <span class="ellipsis">{{ p.url || t('puntos.sinDireccion') }}</span>
+                  <q-btn v-if="p.url" flat dense round size="sm" icon="content_copy" :aria-label="t('puntos.copiarUrl')" @click="copiar(p.url)"><q-tooltip>{{ t('puntos.copiarUrl') }}</q-tooltip></q-btn>
+                </div>
+                <div class="text-caption texto-suave">
+                  <template v-if="idModelo(p)">{{ etiquetaDe(idModelo(p)!) }} · </template>{{ p.contratos.map(nombreContrato).join(' · ') }}
+                  <template v-if="p.esfuerzo"> · {{ t('esfuerzo.titulo') }} {{ nombreEsfuerzo(p.esfuerzo).toLowerCase() }}</template>
+                </div>
+                <div v-if="p.instrucciones" class="text-caption texto-suave row no-wrap items-start">
+                  <q-icon name="o_notes" class="q-mr-xs q-mt-xs" /><span class="recortar-2">{{ p.instrucciones }}</span>
+                </div>
+                <div v-if="p.error && p.error !== 'desactivado'" class="text-caption text-negative">{{ p.error }}</div>
+              </div>
+              <div class="fila-api__uso text-caption">
+                <a v-if="uso[p.nombre]" href="#historial" class="enlace" @click.prevent="verPeticiones(p.nombre)">{{ textoUso(p.nombre) }}</a>
+                <span v-else class="texto-suave">{{ t('puntos.sinUso') }}</span>
+                <BarrasPresupuesto v-if="presupuestos[p.nombre]" :estado="presupuestos[p.nombre]" sin-boton />
+              </div>
+              <div class="fila-api__acciones row items-center no-wrap q-gutter-x-xs">
+                <q-btn outline dense no-caps color="primary" icon="o_tune" class="q-px-sm" :label="t('puntos.ajustes')" @click="abrirAjustes(p)" />
+                <MenuAcciones :acciones="accionesDe(p)" @elegir="(i: number) => ejecutarAccion(p, i)" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+      <div v-if="puntos.length && !grupos.length" class="q-pa-md texto-suave">{{ t('puntos.sinResultados') }}</div>
+      <EstadoVacio v-if="!puntos.length" :titulo="t('puntos.vacio')" :accion="t('puntos.nuevo')" @accion="abrirNuevo" />
+    </q-card>
 
     <q-card>
       <q-card-section class="seccion">
@@ -47,78 +134,6 @@
       <q-card-section>
         <div class="bloque-codigo sin-ajuste">{{ ejemplo.codigo(verClave ? clave : ocultar(clave)) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('conectar.copiarEjemplo')" @click="copiar(ejemplo.codigo(clave), t('conectar.ejemploCopiado'))" /></div>
       </q-card-section>
-    </q-card>
-
-    <q-card>
-      <q-card-section class="row items-center q-col-gutter-md">
-        <div class="col-12 col-sm">
-          <div>
-            <div class="titulo-seccion">{{ t('puntos.titulo') }}</div>
-            <div class="texto-suave text-body2">{{ t('puntos.texto') }}</div>
-          </div>
-        </div>
-        <div class="col-12 col-sm-auto">
-          <q-btn unelevated color="primary" icon="add" :label="t('puntos.nuevo')" no-caps @click="abrirNuevo" />
-        </div>
-      </q-card-section>
-      <template v-if="presupuestoEspacio">
-        <q-separator />
-        <q-card-section>
-          <div class="text-weight-medium">{{ t('presupuesto.espacio') }}</div>
-          <div class="text-caption texto-suave">{{ t('presupuesto.espacioTexto') }}</div>
-          <BarrasPresupuesto :estado="presupuestoEspacio" @reiniciar="reiniciarPresupuesto()" />
-        </q-card-section>
-      </template>
-      <q-separator />
-      <template v-if="puntos.length">
-        <div v-for="g in grupos" :key="g.nombre">
-          <div v-if="hayGrupos" class="row items-center q-px-md q-pt-md q-pb-xs cabecera-grupo">
-            <q-icon :name="g.nombre ? 'o_folder' : 'o_folder_off'" class="q-mr-sm texto-suave" />
-            <div class="text-weight-medium">{{ g.nombre || t('puntos.sinGrupo') }}</div>
-            <div class="text-caption texto-suave q-ml-sm">{{ t('puntos.activos', { activos: g.activos, total: g.puntos.length }) }}</div>
-            <q-space />
-            <q-btn flat dense no-caps size="sm" color="primary" icon="o_play_arrow" :label="t('puntos.activarTodos')"
-              :disable="g.activos === g.puntos.length" :loading="ocupado === g.nombre + ':1'" @click="activarGrupo(g.nombre, true)" />
-            <q-btn flat dense no-caps size="sm" color="grey-8" icon="o_stop" :label="t('puntos.desactivarTodos')"
-              :disable="g.activos === 0" :loading="ocupado === g.nombre + ':0'" @click="activarGrupo(g.nombre, false)" />
-          </div>
-          <div>
-            <div v-for="p in g.puntos" :key="p.nombre" class="fila-api">
-              <span class="linea__chapa linea__chapa--grande" :class="['linea--' + (p.agente ?? 'otro'), { 'linea__chapa--apagada': !activo(p) }]" aria-hidden="true">{{ p.agente ? codigoLinea(p.agente) : 'API' }}</span>
-              <div class="fila-api__info">
-                <div class="row items-center q-gutter-x-sm">
-                  <span class="text-weight-medium">{{ p.nombre }}</span>
-                  <span class="etiqueta" :class="!activo(p) ? 'etiqueta--neutro' : p.error ? 'etiqueta--error' : 'etiqueta--ok'">{{ activo(p) ? t('puntos.activo') : t('puntos.desactivado') }}</span>
-                  <span v-if="p.esquema" class="etiqueta etiqueta--info">{{ t('puntos.json') }}</span>
-                  <span v-if="p.respaldo?.length" class="etiqueta etiqueta--neutro">{{ t('puntos.respaldoDe', { agentes: p.respaldo.map(etiquetaDe).join(', ') }) }}</span>
-                </div>
-                <div class="row items-center no-wrap codigo texto-suave">
-                  <span class="ellipsis">{{ p.url || t('puntos.sinDireccion') }}</span>
-                  <q-btn v-if="p.url" flat dense round size="sm" icon="content_copy" :aria-label="t('puntos.copiarUrl')" @click="copiar(p.url)"><q-tooltip>{{ t('puntos.copiarUrl') }}</q-tooltip></q-btn>
-                </div>
-                <div class="text-caption texto-suave">
-                  <template v-if="idModelo(p)">{{ etiquetaDe(idModelo(p)!) }} · </template>{{ p.contratos.map(nombreContrato).join(' · ') }}
-                  <template v-if="p.esfuerzo"> · {{ t('esfuerzo.titulo') }} {{ nombreEsfuerzo(p.esfuerzo).toLowerCase() }}</template>
-                </div>
-                <div v-if="p.instrucciones" class="text-caption texto-suave row no-wrap items-start">
-                  <q-icon name="o_notes" class="q-mr-xs q-mt-xs" /><span class="recortar-2">{{ p.instrucciones }}</span>
-                </div>
-                <div v-if="p.error && p.error !== 'desactivado'" class="text-caption text-negative">{{ p.error }}</div>
-              </div>
-              <div class="fila-api__uso text-caption">
-                <a v-if="uso[p.nombre]" href="#historial" class="enlace" @click.prevent="verPeticiones(p.nombre)">{{ textoUso(p.nombre) }}</a>
-                <span v-else class="texto-suave">{{ t('puntos.sinUso') }}</span>
-                <BarrasPresupuesto v-if="presupuestos[p.nombre]" :estado="presupuestos[p.nombre]" sin-boton />
-              </div>
-              <div class="fila-api__acciones row items-center no-wrap q-gutter-x-xs">
-                <q-btn outline dense no-caps color="primary" icon="o_tune" class="q-px-sm" :label="t('puntos.ajustes')" @click="abrirAjustes(p)" />
-                <MenuAcciones :acciones="accionesDe(p)" @elegir="(i: number) => ejecutarAccion(p, i)" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </template>
-      <EstadoVacio v-else :titulo="t('puntos.vacio')" :accion="t('puntos.nuevo')" @accion="abrirNuevo" />
     </q-card>
 
     <q-dialog v-model="nuevo">
@@ -208,7 +223,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import BarrasPresupuesto from '../componentes/BarrasPresupuesto.vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
@@ -217,7 +232,7 @@ import MenuAcciones, { type Accion } from '../componentes/MenuAcciones.vue'
 import EditorPresupuesto from '../componentes/EditorPresupuesto.vue'
 import EditorReceta from '../componentes/EditorReceta.vue'
 import { ajustesDeReceta, api, avisar, avisarError, codigoLinea, nombreAgente, ordenAgentes, configDeReceta, copiar, etiquetaModelo, haceCuanto, idModeloDe as idModelo, nombreEsfuerzo, opcionModelo,
-  origenHistorial, presupuestoLimpio, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPresupuesto, type EstadoPunto, type Modelo,
+  cargarDiasHistorial, diasHistorial, grupoInicial, origenHistorial, presupuestoLimpio, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPresupuesto, type EstadoPunto, type Modelo,
   type Presupuesto, type UsoPunto } from '../api'
 import { t } from '../i18n'
 
@@ -239,15 +254,60 @@ const contratos = ['openai', 'anthropic', 'nativa']
 const nombreContrato = (c: string) => ({ openai: 'OpenAI', anthropic: 'Anthropic', nativa: t('contrato.nativa') })[c] ?? c
 const activo = (p: EstadoPunto) => p.error !== 'desactivado'
 
-// grupos ordena los puntos por grupo (los que no tienen, al final).
+// leer y guardar recuerdan en este navegador los grupos plegados y el orden; sin almacenamiento, lo predeterminado.
+function leer<T>(clave: string, porDefecto: T): T {
+  try {
+    const v = localStorage.getItem(clave)
+    return v === null ? porDefecto : (JSON.parse(v) as T)
+  } catch {
+    return porDefecto
+  }
+}
+function guardar(clave: string, valor: unknown) {
+  try {
+    localStorage.setItem(clave, JSON.stringify(valor))
+  } catch {
+    // sin almacenamiento solo no se recuerda
+  }
+}
+const busqueda = ref<string | null>('')
+const filtroGrupo = ref<string | null>(null) // null: todos; '': sin grupo
+const orden = ref<'nombre' | 'uso' | 'ultima'>(leer('tramtai.ordenApis', 'nombre'))
+watch(orden, (v) => guardar('tramtai.ordenApis', v))
+const plegados = ref(new Set<string>(leer<string[]>('tramtai.gruposPlegados', [])))
+function plegar(grupo: string) {
+  const nuevos = new Set(plegados.value)
+  if (!nuevos.delete(grupo)) nuevos.add(grupo)
+  plegados.value = nuevos
+  guardar('tramtai.gruposPlegados', [...nuevos])
+}
+const opcionesOrden = computed(() => [
+  { label: t('puntos.ordenNombre'), value: 'nombre' }, { label: t('puntos.ordenUso'), value: 'uso' }, { label: t('puntos.ordenUltima'), value: 'ultima' },
+])
+const comparar = (a: EstadoPunto, b: EstadoPunto) => {
+  if (orden.value === 'uso') return (uso.value[b.nombre]?.peticiones ?? 0) - (uso.value[a.nombre]?.peticiones ?? 0) || a.nombre.localeCompare(b.nombre)
+  if (orden.value === 'ultima') return (uso.value[b.nombre]?.ultima ?? '').localeCompare(uso.value[a.nombre]?.ultima ?? '') || a.nombre.localeCompare(b.nombre)
+  return a.nombre.localeCompare(b.nombre)
+}
+// grupos ordena los puntos por grupo (los que no tienen, al final), aplica el buscador, el grupo elegido y el orden;
+// activos y total cuentan el grupo entero, porque activar o detener todas actúa sobre todo el grupo.
 const grupos = computed(() => {
   const mapa = new Map<string, EstadoPunto[]>()
   for (const p of puntos.value) mapa.set(p.grupo ?? '', [...(mapa.get(p.grupo ?? '') ?? []), p])
+  const texto = (busqueda.value ?? '').trim().toLowerCase()
   return [...mapa.entries()]
     .sort(([a], [b]) => (!a ? 1 : !b ? -1 : a.localeCompare(b)))
-    .map(([nombre, lista]) => ({ nombre, puntos: lista, activos: lista.filter(activo).length }))
+    .filter(([nombre]) => filtroGrupo.value === null || filtroGrupo.value === nombre)
+    .map(([nombre, lista]) => ({ nombre, total: lista.length, activos: lista.filter(activo).length,
+      puntos: lista.filter((p) => !texto || p.nombre.toLowerCase().includes(texto)).sort(comparar) }))
+    .filter((g) => g.puntos.length)
 })
-const hayGrupos = computed(() => grupos.value.some((g) => g.nombre))
+const hayGrupos = computed(() => puntos.value.some((p) => p.grupo))
+const opcionesGrupo = computed(() => [
+  { label: t('puntos.todosGrupos'), value: null },
+  ...[...new Set(puntos.value.map((p) => p.grupo).filter((g): g is string => !!g))].sort().map((g) => ({ label: g, value: g })),
+  { label: t('puntos.sinGrupo'), value: '' },
+])
 const sugerencias = ref<string[]>([])
 function filtrarGrupos(texto: string, actualizar: (f: () => void) => void) {
   actualizar(() => {
@@ -346,7 +406,7 @@ const emit = defineEmits<{ ir: [pagina: string] }>()
 
 function textoUso(nombre: string) {
   const u = uso.value[nombre]
-  return [t('puntos.uso', { n: u.peticiones }), u.errores ? t('puntos.usoErrores', { n: u.errores }) : '',
+  return [t('puntos.uso', { n: u.peticiones, dias: diasHistorial.value }), u.errores ? t('puntos.usoErrores', { n: u.errores }) : '',
     u.ultima ? t('puntos.usoUltima', { cuando: haceCuanto(u.ultima) }) : ''].filter(Boolean).join(' · ')
 }
 
@@ -522,6 +582,11 @@ function regenerarClave(p: EstadoPunto) {
 }
 
 onMounted(async () => {
+  cargarDiasHistorial()
+  if (grupoInicial.value) {
+    filtroGrupo.value = grupoInicial.value // llegó desde el mapa de Inicio
+    grupoInicial.value = ''
+  }
   cargarPuntos()
   api.catalogo().then((m) => (catalogo.value = m)).catch(avisarError)
   api.instancia().then((i) => (base.value = i.base)).catch(() => {})

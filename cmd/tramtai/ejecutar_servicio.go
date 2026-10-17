@@ -42,6 +42,7 @@ func instanciaActual(ctx context.Context, c *cliente.Cliente, preferida string) 
 func ejecutarEnServicio(cmd *cobra.Command, c *cliente.Cliente, s nucleo.SolicitudEjecucion, archivos []string) error {
 	ctx, cancelar := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancelar()
+	c.Origen = nucleo.DesdeCLI
 	inst := instanciaActual(ctx, c, "")
 	for _, ruta := range archivos {
 		carga, err := c.SubirCarga(ctx, inst, ruta)

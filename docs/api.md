@@ -124,7 +124,7 @@ Un punto de acceso también puede ser una **receta**: con `esquema` (un JSON Sch
 
 ```yaml
 puntos_acceso:
-  - nombre: facturas
+  - nombre: tienda
     instrucciones: Extrae el total y el proveedor de la factura adjunta.
     agente: claude
     modelo: sonnet
@@ -148,7 +148,7 @@ Un punto de acceso, y la instancia entera, pueden tener un `presupuesto` diario 
 
 ```yaml
 puntos_acceso:
-  - nombre: facturas
+  - nombre: tienda
     presupuesto:
       diario: { peticiones: 500 }
       mensual: { tokens: 20000000, usd: 50 }
@@ -158,7 +158,9 @@ presupuesto:                     # el de la instancia (configuración global o l
 
 La administración (`/api/v1/servicio`) y la API de cada instancia con `Tramtai-Instancia` se describen en [operacion.md](operacion.md).
 
-`GET /api/v1/trabajos?limite=20` lista los trabajos recientes de la instancia, o los del punto de acceso si se llama desde uno; `&punto=<nombre>` filtra por un punto de acceso. Desde la Web UI, `GET /api/v1/puntos` incluye `uso` por punto (`peticiones`, `errores` y `ultima`, de lo que conserva la retención) y `presupuestos` (por punto con presupuesto: `diario` y `mensual` con `limites`, `consumo` y `reinicio`).
+`GET /api/v1/trabajos?limite=20` lista los trabajos recientes de la instancia, o los del punto de acceso si se llama desde uno; `&punto=<nombre>` filtra por un punto de acceso, `&grupo=<nombre>` por las APIs de ese grupo (según la configuración actual; un grupo sin APIs devuelve una lista vacía), `&origen=probar|terminal|cli|app` por origen y `&antes=<creado_en>` (RFC 3339) con `&antes_id=<id>` del último que ya se vio trae la página siguiente sin saltarse los creados en el mismo instante. Desde un punto de acceso, `grupo` y `origen` se ignoran. Cada trabajo indica su `origen`: `probar` (la sesión de la Web UI), `terminal` o `cli` (la clave de la instancia con el encabezado `X-Tramtai-Cliente`, que es solo una etiqueta y no da permisos), `app` (la clave sin ese encabezado) o `api` (un punto de acceso); vacío en los trabajos anteriores a v0.38.
+
+`GET /api/v1/instancia/retencion` devuelve `horas_resultado`, `horas_metadatos`, `max_trabajos` y `uso` (`trabajos` de la instancia y `bytes` de la base); `PUT` con esos tres números los guarda (en la configuración global para la instancia global, en `local.yaml` para un proyecto), los aplica al momento y purga. Fuera de rango responde 400 `solicitud_invalida` con el motivo. Ambos piden una sesión de la Web UI o el token de servicio, como `/api/v1/instancia/predeterminado`. Desde la Web UI, `GET /api/v1/puntos` incluye `uso` por punto (`peticiones`, `errores` y `ultima`, de lo que conserva la retención) y `presupuestos` (por punto con presupuesto: `diario` y `mensual` con `limites`, `consumo` y `reinicio`).
 
 ### Claves de los puntos y de la instancia
 

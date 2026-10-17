@@ -107,3 +107,19 @@ func TestClienteContraServicio(t *testing.T) {
 	}
 	<-s.Detenido()
 }
+
+func TestEncabezadoDelCliente(t *testing.T) {
+	var recibido []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		recibido = append(recibido, r.Header.Get("X-Tramtai-Cliente"))
+		w.Write([]byte(`{}`))
+	}))
+	defer srv.Close()
+	c := &Cliente{Base: srv.URL, token: "x", http: srv.Client()}
+	c.Estado(context.Background())
+	c.Origen = "cli"
+	c.Estado(context.Background())
+	if len(recibido) != 2 || recibido[0] != "" || recibido[1] != "cli" {
+		t.Fatalf("sin origen no hay encabezado; con origen, su valor: %q", recibido)
+	}
+}

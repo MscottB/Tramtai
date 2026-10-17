@@ -80,6 +80,29 @@
       </div>
       <div class="col-12">
         <q-card>
+          <q-card-section>
+            <div class="titulo-seccion">{{ t('historialAjustes.titulo') }}</div>
+            <div class="texto-suave text-body2 q-mt-xs">{{ t('historialAjustes.texto') }}</div>
+          </q-card-section>
+          <q-card-section class="row q-col-gutter-md q-pt-none">
+            <div class="col-12 col-sm-4">
+              <q-input v-model.number="retencion.horas_resultado" type="number" min="0" max="720" outlined dense :label="t('historialAjustes.respuestas')" :hint="t('historialAjustes.respuestasHint')" />
+            </div>
+            <div class="col-12 col-sm-4">
+              <q-input v-model.number="diasRegistro" type="number" min="0" max="90" outlined dense :label="t('historialAjustes.registro')" :hint="t('historialAjustes.registroHint')" />
+            </div>
+            <div class="col-12 col-sm-4">
+              <q-input v-model.number="retencion.max_trabajos" type="number" min="100" max="100000" outlined dense :label="t('historialAjustes.maximo')" :hint="t('historialAjustes.maximoHint')" />
+            </div>
+          </q-card-section>
+          <q-card-actions class="q-px-md q-pb-md">
+            <q-btn unelevated color="primary" no-caps :label="t('comun.guardar')" :loading="guardandoRetencion" @click="guardarRetencion" />
+            <span v-if="usoHistorial" class="text-caption texto-suave q-ml-md">{{ t('historialAjustes.uso', usoHistorial) }}</span>
+          </q-card-actions>
+        </q-card>
+      </div>
+      <div class="col-12">
+        <q-card>
           <q-card-section class="row items-start no-wrap q-pb-sm">
             <div class="col">
               <div class="titulo-seccion">{{ t('datos.titulo') }}</div>
@@ -150,7 +173,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import { useQuasar } from 'quasar'
 import { actualizacion, api, avisar, avisarError, buscarActualizacionAhora, opcionModelo, reiniciarYSeguir, sesion, sistema, terminales, type EntradaConfiguracion, type EstadoPunto, type Modelo } from '../api'
@@ -160,6 +183,30 @@ import SelectorModelo from '../componentes/SelectorModelo.vue'
 
 const $q = useQuasar()
 const entradas = ref<EntradaConfiguracion[]>([])
+
+// Historial: plazos y tope de la retención; el registro se edita en días y se guarda en horas.
+const retencion = reactive({ horas_resultado: 24, max_trabajos: 10000 })
+const diasRegistro = ref(7)
+const usoHistorial = ref<{ trabajos: string; mb: string }>()
+const guardandoRetencion = ref(false)
+async function leerRetencion() {
+  const r = await api.retencion()
+  Object.assign(retencion, { horas_resultado: r.horas_resultado, max_trabajos: r.max_trabajos })
+  diasRegistro.value = Math.round(r.horas_metadatos / 24)
+  usoHistorial.value = { trabajos: r.uso.trabajos.toLocaleString(), mb: (r.uso.bytes / 1048576).toLocaleString(undefined, { maximumFractionDigits: 1 }) }
+}
+async function guardarRetencion() {
+  guardandoRetencion.value = true
+  try {
+    await api.fijarRetencion({ horas_resultado: retencion.horas_resultado, horas_metadatos: diasRegistro.value * 24, max_trabajos: retencion.max_trabajos })
+    avisar(t('historialAjustes.guardado'))
+    await leerRetencion()
+  } catch (e) {
+    avisarError(e)
+  } finally {
+    guardandoRetencion.value = false
+  }
+}
 const filtro = ref<string | null>('')
 const cargando = ref(true)
 const cambiandoArranque = ref(false)
@@ -316,6 +363,7 @@ function borrar() {
 
 onMounted(async () => {
   contar().catch(avisarError)
+  leerRetencion().catch(avisarError)
   api.catalogo().then((m) => (catalogo.value = m)).catch(avisarError)
   try {
     entradas.value = await api.configuracion()

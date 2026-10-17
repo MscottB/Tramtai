@@ -7,9 +7,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
+	"tramtai/internal/persistencia"
 )
 
 // Punto es la política de un punto de acceso: contratos, valores predeterminados, alias y
@@ -152,11 +154,37 @@ func (s *Servidor) listarTrabajos(w http.ResponseWriter, r *http.Request) {
 		}
 		limite = n
 	}
-	punto := r.URL.Query().Get("punto") // ?punto=nombre: solo las peticiones de ese punto de acceso
-	if s.Punto != nil {
-		punto = s.Punto.Nombre // un punto de acceso solo ve las suyas
+	q := r.URL.Query()
+	f := persistencia.FiltroTrabajos{Punto: q.Get("punto")} // ?punto=nombre: solo las peticiones de ese punto de acceso
+	if antes := q.Get("antes"); antes != "" {               // ?antes=: la página siguiente, por fecha de creación
+		t, err := time.Parse(time.RFC3339Nano, antes)
+		if err != nil {
+			EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("antes debe ser una fecha RFC 3339")))
+			return
+		}
+		f.Antes, f.AntesID = t, q.Get("antes_id") // antes_id desempata los creados en el mismo instante
 	}
-	lista, err := s.Planificador.Listar(r.Context(), limite, punto)
+	if s.Punto != nil {
+		f.Punto = s.Punto.Nombre // un punto de acceso solo ve las suyas: sin grupo ni origen
+	} else {
+		switch o := q.Get("origen"); o {
+		case "", nucleo.DesdeProbar, nucleo.DesdeTerminal, nucleo.DesdeCLI, nucleo.DesdeApp:
+			f.Origen = o
+		default:
+			EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("origen debe ser probar, terminal, cli o app")))
+			return
+		}
+		if grupo := q.Get("grupo"); grupo != "" {
+			if s.PuntosDeGrupo != nil {
+				f.Puntos = s.PuntosDeGrupo(grupo)
+			}
+			if len(f.Puntos) == 0 { // un grupo sin APIs no tiene trabajos (nunca todos)
+				EscribirJSON(w, http.StatusOK, map[string]any{"trabajos": []nucleo.Trabajo{}})
+				return
+			}
+		}
+	}
+	lista, err := s.Planificador.Listar(r.Context(), limite, f)
 	if err != nil {
 		EscribirError(w, r, err)
 		return

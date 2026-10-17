@@ -179,7 +179,7 @@ func (s *Servicio) enrutar(w http.ResponseWriter, r *http.Request) {
 	if s.rutaInstancia(w, r, inst, admin || porSesion) {
 		return
 	}
-	inst.rutas.ServeHTTP(w, r)
+	inst.rutas.ServeHTTP(w, r.WithContext(nucleo.ConOrigenPeticion(r.Context(), origenPeticion(r, porSesion))))
 }
 
 func (s *Servicio) enrutarPunto(w http.ResponseWriter, r *http.Request) {
@@ -361,11 +361,33 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuraci
 		alm.Cerrar()
 		return nil, err
 	}
-	srv := &api.Servidor{Planificador: p, Cargas: cargas, Registro: s.opc.Registro, Config: c}
+	srv := &api.Servidor{Planificador: p, Cargas: cargas, Registro: s.opc.Registro, Config: c,
+		PuntosDeGrupo: func(grupo string) []string {
+			var nombres []string
+			for _, punto := range s.puntosDe(id) {
+				if punto.Grupo == grupo {
+					nombres = append(nombres, punto.Nombre)
+				}
+			}
+			return nombres
+		}}
 	inst := &Instancia{ID: id, Ambito: ambito, Raiz: raiz, Config: c, Planificador: p, Cargas: cargas,
 		ArchivoToken: archivo, token: token, almacen: alm, rutas: srv.Rutas()}
 	inst.iniciarPurga(s.opc.Registros)
 	return inst, nil
+}
+
+// origenPeticion dice de dónde llegó una petición a la instancia: la sesión de la Web UI es Probar; con la clave,
+// X-Tramtai-Cliente distingue la terminal y la CLI (solo es una etiqueta) y lo demás es una aplicación.
+func origenPeticion(r *http.Request, porSesion bool) string {
+	if porSesion {
+		return nucleo.DesdeProbar
+	}
+	switch c := r.Header.Get("X-Tramtai-Cliente"); c {
+	case nucleo.DesdeTerminal, nucleo.DesdeCLI:
+		return c
+	}
+	return nucleo.DesdeApp
 }
 
 // iniciarPurga aplica la retención al abrir la instancia y después cada intervaloPurga.
@@ -376,9 +398,14 @@ func (i *Instancia) iniciarPurga(registros io.Writer) {
 		defer close(i.purgaParada)
 		reloj := time.NewTicker(intervaloPurga)
 		defer reloj.Stop()
+		avisado := false
 		for {
 			if err := i.Purgar(ctx); err != nil && ctx.Err() == nil {
 				fmt.Fprintf(registros, "purga de %s: %s\n", i.ID, nucleo.MensajeDe(err))
+			}
+			if r, m, x, ajustada := i.retencion(); ajustada && !avisado {
+				fmt.Fprintf(registros, "retencion de %s fuera de rango; se usa horas_resultado %d, horas_metadatos %d y max_trabajos %d\n", i.ID, r, m, x)
+				avisado = true
 			}
 			select {
 			case <-ctx.Done():
@@ -392,9 +419,9 @@ func (i *Instancia) iniciarPurga(registros io.Writer) {
 // Purgar aplica la retención de la instancia: vence resultados y entradas, borra metadatos antiguos y las
 // cargas vencidas que ningún trabajo necesita.
 func (i *Instancia) Purgar(ctx context.Context) error {
-	horas := func(clave string) time.Duration { return time.Duration(i.Config.Entero(clave)) * time.Hour }
-	r := persistencia.Retencion{Resultado: horas("retencion.horas_resultado"), Metadatos: horas("retencion.horas_metadatos"),
-		EliminarEntradas: i.Config.Booleano("retencion.eliminar_entradas_al_terminar")}
+	resultado, metadatos, maximo, _ := i.retencion()
+	r := persistencia.Retencion{Resultado: time.Duration(resultado) * time.Hour, Metadatos: time.Duration(metadatos) * time.Hour,
+		Maximo: maximo, EliminarEntradas: i.Config.Booleano("retencion.eliminar_entradas_al_terminar")}
 	if _, _, err := i.almacen.Purgar(ctx, i.ID, r); err != nil {
 		return err
 	}
@@ -404,6 +431,13 @@ func (i *Instancia) Purgar(ctx context.Context) error {
 	}
 	_, err = i.Cargas.Purgar(enUso, time.Now())
 	return err
+}
+
+// retencion da los plazos (horas) y el tope de la instancia, llevados a su rango; ajustada indica que la
+// configuración traía algún valor fuera de él.
+func (i *Instancia) retencion() (resultado, metadatos, maximo int, ajustada bool) {
+	return nucleo.AjustarRetencion(i.Config.Entero("retencion.horas_resultado"), i.Config.Entero("retencion.horas_metadatos"),
+		i.Config.Entero("retencion.max_trabajos"))
 }
 
 // Desactivar detiene una instancia sin afectar a las demás: vacía su cola (cancela lo que no empezó), lo que
