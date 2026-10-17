@@ -341,8 +341,9 @@ export const api = {
   // En la cuenta atrás antes de instalar: instalar ya («Reiniciar ahora») o cancelar.
   instalarYa: () => pedir<void>('POST', '/ui/actualizar/instalar'),
   cancelarActualizacion: () => pedir<void>('POST', '/ui/actualizar/cancelar'),
-  novedades: (desde: string) =>
-    pedir<{ versiones: Novedad[] }>('GET', '/ui/actualizacion/novedades?desde=' + encodeURIComponent(desde)).then((r) => r.versiones),
+  // novedades da lo que trae cada versión después de desde y hasta hasta (sin hasta, la instalada).
+  novedades: (desde: string, hasta = '') =>
+    pedir<{ versiones: Novedad[] }>('GET', '/ui/actualizacion/novedades?' + new URLSearchParams({ desde, ...(hasta ? { hasta } : {}) })).then((r) => r.versiones),
   cambiarAutenticacion: (agente: string, modo: 'suscripcion' | 'clave_api') => pedir<void>('POST', '/ui/autenticacion', { agente, modo }),
   salir: () => pedir<void>('DELETE', '/ui/sesion').then(() => (sesion.value = null)),
   detenerServicio: () => pedir<unknown>('POST', '/ui/servicio/detener'),

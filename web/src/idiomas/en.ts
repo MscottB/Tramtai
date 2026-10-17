@@ -608,6 +608,7 @@ const en: Textos = {
   'actualizacion.comoInstala': 'The installer is downloaded, its SHA-256 checksum is verified and it installs without asking anything. The app will close and open again in a few seconds, with your settings, APIs and history; requests in progress finish first.',
   'actualizacion.manual': 'This copy of Tramtai was not installed with the Windows installer (it is the portable one, the Linux or macOS one, or built by hand), so it does not update itself: download the new version from its page.',
   'actualizacion.novedadesTitulo': "What's new",
+  'actualizacion.novedadesVarias': 'You are skipping {n} versions; this is what each one brings:',
   'actualizacion.instalar': 'Update now',
   'actualizacion.descargar': 'Go to download',
   'actualizacion.ajustesTitulo': 'Check for updates',
