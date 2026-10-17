@@ -44,6 +44,14 @@ func servidor(t *testing.T, registro map[string]adaptadores.Adaptador, ajustes m
 // servidorCon es servidor con la política de un punto de acceso (nil: la API de la instancia).
 func servidorCon(t *testing.T, registro map[string]adaptadores.Adaptador, ajustes map[string]any, punto *Punto) *httptest.Server {
 	t.Helper()
+	ts := httptest.NewServer(nuevoServidor(t, registro, ajustes, punto).Handler())
+	t.Cleanup(ts.Close)
+	return ts
+}
+
+// nuevoServidor arma el servidor con su planificador y su almacén; se cierran al terminar la prueba.
+func nuevoServidor(t *testing.T, registro map[string]adaptadores.Adaptador, ajustes map[string]any, punto *Punto) *Servidor {
+	t.Helper()
 	dir := t.TempDir()
 	alm, err := persistencia.Abrir(filepath.Join(dir, "instancia.db"))
 	if err != nil {
@@ -69,13 +77,11 @@ func servidorCon(t *testing.T, registro map[string]adaptadores.Adaptador, ajuste
 	}
 	s := &Servidor{Planificador: p, Cargas: cargas, Registro: registro, Config: c, Token: "secreto",
 		Hosts: []string{"127.0.0.1", "localhost", "::1"}, Sondeo: 10 * time.Millisecond, Punto: punto}
-	ts := httptest.NewServer(s.Handler())
 	t.Cleanup(func() {
-		ts.Close()
 		p.Detener()
 		alm.Cerrar()
 	})
-	return ts
+	return s
 }
 
 func simulado(a adaptadores.Adaptador) map[string]adaptadores.Adaptador {
@@ -211,9 +217,26 @@ func TestRegistroSinTexto(t *testing.T) {
 	if tipos["texto"] != 0 || tipos["estado"] == 0 || tipos["intento"] != 1 {
 		t.Fatalf("registro sin texto, con estados y un intento: %v", tipos)
 	}
-	// Mismo permiso que GET /api/v1/trabajos/{id}: lo que no se ve da 404.
+	// Mismo permiso que GET /api/v1/trabajos/{id}: lo que no se ve da 404 y sin clave, 401.
 	if r, _ := pedir(t, ts, "GET", "/api/v1/trabajos/trabajo_inexistente/registro", ""); r.StatusCode != 404 {
 		t.Fatalf("un trabajo inexistente da 404: %d", r.StatusCode)
+	}
+	if r, err := http.Get(ts.URL + "/api/v1/trabajos/" + id + "/registro"); err != nil || r.StatusCode != 401 {
+		t.Fatalf("sin clave, 401: %v %v", r, err)
+	}
+}
+
+func TestRegistroDeOtroPunto(t *testing.T) {
+	s := nuevoServidor(t, simulado(adaptadores.Simulado{}), nil, nil)
+	ts := httptest.NewServer(s.Handler())
+	t.Cleanup(ts.Close)
+	_, cuerpo := pedir(t, ts, "POST", "/api/v1/trabajos", solicitudHola)
+	id := decodificar(t, cuerpo)["id"].(string)
+	esperarEstado(t, ts, id, nucleo.Completado)
+	// Una API solo ve sus trabajos: el de la instancia no existe para ella.
+	s.Punto = &Punto{Nombre: "otra"}
+	if r, _ := pedir(t, ts, "GET", "/api/v1/trabajos/"+id+"/registro", ""); r.StatusCode != 404 {
+		t.Fatalf("el trabajo de otro punto da 404: %d", r.StatusCode)
 	}
 }
 

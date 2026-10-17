@@ -430,12 +430,12 @@ func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado, 
 	if restante == nil {
 		lista = []byte("[]")
 	}
-	// Un esfuerzo vacío conserva el de la solicitud: ese respaldo heredaba el del principal.
-	conEsfuerzo, args := "", []any{agente, modeloEnviado, string(lista)}
+	// El esfuerzo es el que usa el agente nuevo: vacío lo quita (usa el de su CLI) en lugar de guardar un null.
+	sinEsfuerzo, conEsfuerzo, args := ", '$.esfuerzo'", "", []any{agente, modeloEnviado, string(lista)}
 	if esfuerzo != "" {
-		conEsfuerzo, args = ", '$.esfuerzo', ?", append(args, esfuerzo)
+		sinEsfuerzo, conEsfuerzo, args = "", ", '$.esfuerzo', ?", append(args, esfuerzo)
 	}
-	r, err := a.db.ExecContext(ctx, `UPDATE trabajos SET solicitud = json_set(json_remove(solicitud, '$.perfil_modelo'), '$.agente', ?, '$.modelo', ?,
+	r, err := a.db.ExecContext(ctx, `UPDATE trabajos SET solicitud = json_set(json_remove(solicitud, '$.perfil_modelo'`+sinEsfuerzo+`), '$.agente', ?, '$.modelo', ?,
 		'$.respaldo', json(?)`+conEsfuerzo+`), modelo_enviado = ? WHERE id = ?`, append(args, modeloEnviado, id)...)
 	if err != nil {
 		return err
@@ -473,7 +473,16 @@ func (a *Almacen) Estado(ctx context.Context, id string) (string, nucleo.Estado,
 
 // Eventos devuelve los eventos posteriores al número "desde" (Last-Event-ID).
 func (a *Almacen) Eventos(ctx context.Context, id string, desde int) ([]Evento, error) {
-	filas, err := a.db.QueryContext(ctx, `SELECT numero, tipo, datos, creado_en FROM eventos WHERE trabajo_id = ? AND numero > ? ORDER BY numero`, id, desde)
+	return a.eventos(ctx, `SELECT numero, tipo, datos, creado_en FROM eventos WHERE trabajo_id = ? AND numero > ? ORDER BY numero`, id, desde)
+}
+
+// EventosDeRegistro devuelve los eventos sin contenido de la respuesta (estado, intento y aviso), sin leer el texto.
+func (a *Almacen) EventosDeRegistro(ctx context.Context, id string) ([]Evento, error) {
+	return a.eventos(ctx, `SELECT numero, tipo, datos, creado_en FROM eventos WHERE trabajo_id = ? AND tipo IN ('estado', 'intento', 'aviso') ORDER BY numero`, id)
+}
+
+func (a *Almacen) eventos(ctx context.Context, consulta string, args ...any) ([]Evento, error) {
+	filas, err := a.db.QueryContext(ctx, consulta, args...)
 	if err != nil {
 		return nil, err
 	}

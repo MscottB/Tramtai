@@ -166,7 +166,7 @@ func (s *Servidor) registroTrabajo(w http.ResponseWriter, r *http.Request) {
 		EscribirError(w, r, err)
 		return
 	}
-	eventos, _, err := s.Planificador.Eventos(r.Context(), id, 0)
+	eventos, err := s.Planificador.Registro(r.Context(), id)
 	if err != nil {
 		EscribirError(w, r, err)
 		return
@@ -179,9 +179,7 @@ func (s *Servidor) registroTrabajo(w http.ResponseWriter, r *http.Request) {
 	}
 	lista := []evento{}
 	for _, e := range eventos {
-		if e.Tipo != "texto" {
-			lista = append(lista, evento{e.Numero, e.Tipo, e.Datos, e.CreadoEn.UTC()})
-		}
+		lista = append(lista, evento{e.Numero, e.Tipo, e.Datos, e.CreadoEn.UTC()})
 	}
 	EscribirJSON(w, http.StatusOK, map[string]any{"eventos": lista})
 }

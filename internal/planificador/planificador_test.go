@@ -924,6 +924,44 @@ func (a esfuerzoVisto) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion
 	return adaptadores.Simulado{Respuesta: "ok"}.Ejecutar(ctx, s, emitir)
 }
 
+// Dos saltos: el segundo respaldo, sin esfuerzo propio, hereda el del principal también en lo guardado, así que el
+// reintento no arrastra el del primer respaldo.
+func TestRespaldoSinSufijoTrasDosSaltos(t *testing.T) {
+	alm := abrir(t)
+	visto := make(chan string, 4)
+	limite := adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)}
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{"simulado": limite, "codex": limite, "otro": esfuerzoVisto{visto}}, 2)
+	s := conRespaldo("codex+bajo", "otro")
+	s.Esfuerzo = "alto"
+	tr := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if e := <-visto; e != "alto" || tr.Solicitud.Agente != "otro" || tr.Solicitud.Esfuerzo != "alto" {
+		t.Fatalf("otro hereda alto del principal y así queda guardado (%q): %+v", e, tr.Solicitud)
+	}
+	nuevo, err := p.Reintentar(ctx, tr.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	esperar(t, alm, nuevo.ID, nucleo.Completado)
+	if e := <-visto; e != "alto" {
+		t.Fatalf("el reintento conserva el esfuerzo del principal: %q", e)
+	}
+}
+
+// Tras saltar a un respaldo con esfuerzo propio, lo que queda del respaldo guarda el esfuerzo del principal: un
+// reintento o un reencolado no lo cambia por el del respaldo.
+func TestRespaldoRestanteConservaElDelPrincipal(t *testing.T) {
+	alm := abrir(t)
+	var n atomic.Int32
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)}, "codex": primeroBien{&n}, "otro": adaptadores.Simulado{Respuesta: "ok"}}, 2)
+	s := conRespaldo("codex+bajo", "otro")
+	s.Esfuerzo = "alto"
+	tr := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if tr.Solicitud.Esfuerzo != "bajo" || len(tr.Solicitud.Respaldo) != 1 || tr.Solicitud.Respaldo[0] != "otro+alto" {
+		t.Fatalf("respondió codex con bajo y el respaldo restante lleva el del principal: %+v", tr.Solicitud)
+	}
+}
+
 func TestRespaldoConEsfuerzoPropio(t *testing.T) {
 	alm := abrir(t)
 	visto := make(chan string, 4)

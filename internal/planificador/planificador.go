@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"slices"
 	"strings"
 	"sync"
@@ -315,6 +316,14 @@ func (p *Planificador) Eventos(ctx context.Context, id string, desde int) ([]per
 	return eventos, estado, err
 }
 
+// Registro devuelve los pasos de un trabajo sin el texto de la respuesta: estados, intentos y avisos.
+func (p *Planificador) Registro(ctx context.Context, id string) ([]persistencia.Evento, error) {
+	if _, _, err := p.Eventos(ctx, id, math.MaxInt); err != nil { // comprueba que es de esta instancia
+		return nil, err
+	}
+	return p.almacen.EventosDeRegistro(ctx, id)
+}
+
 // Reintentar crea un intento nuevo vinculado al anterior, que debe haber terminado; reutiliza sus entradas
 // y puede consumir cuota otra vez.
 func (p *Planificador) Reintentar(ctx context.Context, id string) (nucleo.Trabajo, error) {
@@ -567,11 +576,15 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		if !p.cambiar(id, nucleo.Ejecutando, nucleo.EsperandoAgente, persistencia.Cambio{Uso: &usoPrevio}) {
 			return
 		}
+		// Lo guardado debe seguir valiendo al reintentar o reencolar: el agente nuevo con el esfuerzo que usa y el
+		// respaldo restante con el del principal escrito, porque la solicitud guardada ya no lo tendrá.
+		esfuerzo := cmp.Or(siguiente.esfuerzo, t.Solicitud.Esfuerzo)
 		var restante []string
 		for _, c := range lista[i+2:] {
+			c.esfuerzo = cmp.Or(c.esfuerzo, t.Solicitud.Esfuerzo)
 			restante = append(restante, c.String())
 		}
-		if err := p.almacen.CambiarAgente(fondo, id, siguiente.agente, siguiente.modelo, siguiente.esfuerzo, restante); err != nil && p.opc.Registros != nil {
+		if err := p.almacen.CambiarAgente(fondo, id, siguiente.agente, siguiente.modelo, esfuerzo, restante); err != nil && p.opc.Registros != nil {
 			// El respaldo sigue igual, pero el historial atribuiría la respuesta al agente anterior.
 			fmt.Fprintf(p.opc.Registros, "%s no se pudo guardar el cambio a %s: %v\n", id, siguiente, err)
 		}
@@ -604,7 +617,8 @@ type intento struct {
 	DelAgente bool   `json:"del_agente,omitempty"`
 }
 
-// versionVista resuelve un alias (o el modelo vacío) con la última versión que informó el agente, como el catálogo.
+// nuevoIntento arma el evento de un intento; versionVista resuelve un alias (o el modelo vacío) con la última versión
+// que informó el agente, como el catálogo.
 func nuevoIntento(c candidato, pedido string, versionVista func(agente, modelo string) string) intento {
 	i := intento{Agente: c.agente, Modelo: c.modelo}
 	niveles := adaptadores.NivelesEsfuerzo(c.agente)

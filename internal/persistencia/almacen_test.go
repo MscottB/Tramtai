@@ -418,6 +418,19 @@ func TestCambiarAgente(t *testing.T) {
 		cambiado.ModeloEnviado != "m2" || cambiado.Huella != tr.Huella {
 		t.Fatalf("cambio de agente incorrecto: %+v", cambiado)
 	}
+	// Con esfuerzo se fija; sin él se quita: el agente nuevo usa entonces el suyo.
+	if err := a.CambiarAgente(ctx, tr.ID, "otro", "m2", "alto", nil); err != nil {
+		t.Fatal(err)
+	}
+	if c, _ := a.Obtener(ctx, tr.ID); c.Solicitud.Esfuerzo != "alto" {
+		t.Fatalf("esfuerzo fijado: %+v", c.Solicitud)
+	}
+	if err := a.CambiarAgente(ctx, tr.ID, "otro", "m2", "", nil); err != nil {
+		t.Fatal(err)
+	}
+	if c, _ := a.Obtener(ctx, tr.ID); c.Solicitud.Esfuerzo != "" {
+		t.Fatalf("esfuerzo quitado: %+v", c.Solicitud)
+	}
 	if nucleo.CodigoDe(a.CambiarAgente(ctx, "trabajo_inexistente", "x", "", "", nil)) != nucleo.CodigoNoEncontrado {
 		t.Fatal("un trabajo inexistente debe dar no_encontrado")
 	}
