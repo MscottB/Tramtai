@@ -247,3 +247,54 @@ comparten entre Probar y el Historial. El instalador deja de ser silencioso cuan
 - [ ] **Step 3:** `go vet ./...`, `go test ./...`, `cd escritorio && go vet ./...`, `cd web && npm run build`,
   `graphify update .` → todo verde.
 - [ ] **Step 4: Commit** `docs: Probar con registro, pruebas recientes y Markdown; ventana al actualizar`.
+
+### Tarea 9: Acerca de Tramtai
+
+**Files:**
+- Modify: `internal/servicio/web.go` (ruta `/ui/acerca`), `internal/version/version.go` (si hace falta la versión de Go)
+- Create: `web/src/componentes/AcercaDe.vue`
+- Modify: `web/src/App.vue` (botón de versión, menú del estado, menú lateral, `window.tramtaiAcercaDe`), `web/src/api.ts`,
+  `es.ts`, `en.ts`, `escritorio/main.go` (línea de versión de la bandeja)
+- Test: `internal/servicio/web_test.go`
+
+**Interfaces:**
+- Produces: `GET /ui/acerca` → `{"version","commit","modificado","go","sistema","arquitectura","servicio":{"direccion",
+  "pid","iniciado_en"},"almacen","rutas"?:{"datos","configuracion","registro"}}`; `api.acerca(): Promise<Acerca>`;
+  `window.tramtaiAcercaDe()` abre el diálogo.
+
+- [ ] **Step 1: Prueba que falla** `TestAcercaDe`: sin sesión → 401; sesión local → 200 con `version` = `version.Texto()`,
+  `servicio.pid` = `os.Getpid()` y `rutas.datos` = la carpeta de datos del servicio; sesión no local (token de instancia)
+  → 200 sin `rutas`.
+- [ ] **Step 2:** `go test ./internal/servicio -run TestAcercaDe` → FAIL (404).
+- [ ] **Step 3: Implementar** la ruta junto a las de `/ui/actualizacion` (mismo control de sesión), con `version.Commit()`,
+  `runtime.Version()`, `runtime.GOOS`/`GOARCH`, `s.Base()`, `s.IniciadoEn`, `credenciales.Almacen()`, `nucleo.RutaGlobal()`
+  y `filepath.Join(s.opc.Datos, "servicio.log")`.
+- [ ] **Step 4: Web UI** según la spec, sección 7. Fecha de compilación: `+DDMMAAAA` → `toLocaleDateString(idioma, {
+  dateStyle: 'long' })`; sin sufijo (versión `dev`) no se muestra. «Ver novedades»:
+  `https://github.com/MscottB/Tramtai/releases/tag/` + `encodeURIComponent(version)`. Bandeja: la línea de versión
+  llama a `mostrar()` y `ventana.ExecJS("window.tramtaiAcercaDe && window.tramtaiAcercaDe()")`.
+- [ ] **Step 5:** `go test ./...`, `cd escritorio && go vet ./...`, `npm run build` → todo verde; navegador: abrirlo desde
+  la cabecera, el menú del estado y el menú lateral; Copiar datos; móvil y oscuro.
+- [ ] **Step 6: Commit** `feat: Acerca de Tramtai`.
+
+### Tarea 10: el instalador dice Instalar o Actualizar
+
+**Files:**
+- Modify: `scripts/instalador/tramtai.nsi`
+
+- [ ] **Step 1: Implementar** en `.onInit`: `ReadRegStr` de `InstallLocation` en `${DESINSTALAR}` (HKCU); si no está
+  vacío, `StrCpy $hayInstalacion 1`. Textos con `LangString` (es/en): título de la ventana con `SendMessage $HWNDPARENT
+  ${WM_SETTEXT}` en las funciones `SHOW` (bienvenida y progreso), cabecera de la página de progreso con
+  `!insertmacro MUI_HEADER_TEXT`, y bienvenida con su título y texto de actualizar.
+- [ ] **Step 2:** `scripts/compilar.ps1 -Instalador` sin avisos.
+- [ ] **Step 3: Prueba manual (con el permiso ya dado por el usuario; mismo respaldo y restauración que en la Tarea 7):**
+  con la instalación del usuario registrada, `/S /abrir /D=<temporal>` debe titular «Actualizar Tramtai». No se repite
+  la prueba sin instalación previa: borrar la clave del registro del usuario no compensa; la rama «Instalar» es la de
+  hoy.
+- [ ] **Step 4: Commit** `feat(instalador): dice Actualizar si ya está instalado`.
+
+### Tarea 11: Documentación de Acerca de
+
+- [ ] Ayuda (pregunta «¿Qué versión tengo?»), `docs/operacion.md` (Acerca de y la ventana de actualizar), README si lo
+  menciona; `docs/equipo/pendientes.md`: fila «Seguridad y límites» después de Probar. Commit
+  `docs: Acerca de y el instalador al actualizar`.

@@ -5,7 +5,12 @@ podía elegir el esfuerzo de los agentes de respaldo ni ver el que usan por defe
 para seguirlas, echaba en falta un histórico corto en Probar y la respuesta se veía como texto plano. Al actualizar,
 además, la app desaparece unos segundos sin mostrar nada mientras instala.
 
-Fuera de alcance: la guía de la API nativa (`/api/v1`, siguiente release) y comparar agentes.
+Durante la implementación el usuario añadió dos cosas al mismo release: un «Acerca de» con la versión y otros datos, y
+que el instalador diga «Actualizar» cuando ya hay una instalación (sección 6).
+
+Fuera de alcance: la guía de la API nativa (`/api/v1`, siguiente release), comparar agentes y «Seguridad y límites»
+(auditoría frente a contenido malicioso hacia los CLI y mostrar los límites de los adjuntos y de cada CLI o modelo),
+que va en su propio release después de este.
 
 ## 1. El esfuerzo junto al modelo
 
@@ -76,6 +81,33 @@ Fuera de alcance: la guía de la API nativa (`/api/v1`, siguiente release) y com
   Tramtai, las secciones son las predeterminadas y al terminar se vuelve a abrir la app con `-actualizado`.
 - Como el cambio va en el instalador nuevo, se ve aunque lo lance una versión anterior.
 - Se descarta mostrar solo un cartel (`Banner`): no tiene barra de progreso.
+- Con una instalación previa (`InstallLocation` en la clave de desinstalación de HKCU), la ventana y el asistente dicen
+  «Actualizar» en vez de «Instalar»: título de la ventana «Actualizar Tramtai», página de bienvenida «Actualizar
+  Tramtai a {versión}» y cabecera de la página de progreso «Actualizando Tramtai». Sin instalación previa, todo queda como
+  hoy.
+- La ventana de progreso se trae al frente al actualizar: Windows no deja que el instalador lanzado en segundo plano lo
+  haga solo.
+
+## 7. Acerca de Tramtai
+
+- Diálogo «Acerca de Tramtai» (a pantalla completa en el móvil). Se abre desde:
+  - un enlace bajo Ayuda en el menú lateral;
+  - la versión de la cabecera, que pasa a ser un botón;
+  - el menú del estado;
+  - la bandeja del sistema: la línea «Versión …» deja de estar desactivada y abre la app con el diálogo.
+- Contenido:
+  - logo, nombre y la versión con su fecha de compilación (de `+DDMMAAAA`: «v0.40.0 · 17 de octubre de 2026»);
+  - «Desarrollado por Michael Scott B.», con enlace a https://github.com/MscottB;
+  - el estado de actualizaciones (el que ya conoce la app: «Tienes la última versión» o «Hay una versión nueva: vX»), con
+    **Buscar ahora** y **Ver novedades** (la página de la versión instalada en GitHub Releases);
+  - enlaces: sitio web (https://mscottb.github.io/Tramtai/), repositorio, informar de un problema (issues de GitHub),
+    licencia (PolyForm Noncommercial 1.0.0) y términos de uso;
+  - **Detalles técnicos**, plegado: commit (con enlace) y si tenía cambios sin confirmar, sistema y arquitectura, versión
+    de Go, dirección del servicio, su pid y desde cuándo está en marcha, dónde se guardan las claves y, solo en una
+    sesión local, las rutas de la carpeta de datos, la configuración global y el registro (`servicio.log`);
+  - **Copiar datos para soporte**: copia los detalles técnicos como texto. Nunca lleva claves ni tokens.
+- Ruta nueva `GET /ui/acerca`, con sesión (401 sin ella). Las rutas de carpetas solo van a una sesión local, porque
+  contienen el nombre del usuario del sistema.
 
 ## Documentación
 
@@ -94,4 +126,7 @@ Fuera de alcance: la guía de la API nativa (`/api/v1`, siguiente release) y com
 - Instalador: compilar con `scripts/compilar.ps1 -Instalador` y ejecutarlo con `/S /abrir` sobre una carpeta de
   prueba, avisando antes al usuario porque cierra el Tramtai que tenga abierto; comprobar que se ve la ventana de
   progreso, que se cierra sola y que la app vuelve a abrirse.
-- Navegador: las cinco partes de Probar, en móvil y escritorio, claro y oscuro.
+- `internal/servicio`: `/ui/acerca` con sesión local (con rutas), sin sesión (401) y con una sesión remota (sin rutas).
+- Instalador: con una instalación previa dice «Actualizar»; en una carpeta nueva sin instalación registrada, «Instalar».
+- Navegador: las cinco partes de Probar y Acerca de (cada forma de abrirlo, Copiar datos), en móvil y escritorio,
+  claro y oscuro.
