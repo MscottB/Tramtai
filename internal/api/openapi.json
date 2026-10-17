@@ -251,8 +251,8 @@
         "description": "Los campos desconocidos son un error (solicitud_invalida).",
         "properties": {
           "agente": { "type": "string", "examples": ["claude"] },
-          "modelo": { "type": "string", "examples": ["claude/sonnet", "perfil/rapido"] },
-          "perfil_modelo": { "type": "string" },
+          "modelo": { "type": "string", "description": "El modelo del agente, sin el agente", "examples": ["sonnet"] },
+          "perfil_modelo": { "type": "string", "description": "Un perfil de modelos.perfiles, en lugar de agente y modelo", "examples": ["rapido"] },
           "esfuerzo": { "type": "string", "enum": ["bajo", "medio", "alto", "muy_alto", "maximo"] },
           "respaldo": { "type": "array", "maxItems": 3, "items": { "type": "string" }, "description": "agente o agente/modelo, con +nivel o +agente opcional", "examples": [["codex/gpt-5.5+alto"]] },
           "perfil": { "type": "string" },

@@ -290,6 +290,7 @@ import EditorReceta from '../componentes/EditorReceta.vue'
 import { ajustesDeReceta, api, avisar, avisarError, codigoLinea, nombreAgente, ordenAgentes, configDeReceta, copiar, dividirRespaldo, etiquetaModelo, haceCuanto, idModeloDe as idModelo, nombreEsfuerzo, opcionModelo,
   cargarDiasHistorial, periodoHistorial, grupoInicial, origenHistorial, presupuestoLimpio, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPresupuesto, type EstadoPunto, type Modelo,
   type Presupuesto, type UsoPunto } from '../api'
+import { ejemplos as ejemplosDe } from '../ejemplos'
 import { t } from '../i18n'
 
 const $q = useQuasar()
@@ -409,46 +410,10 @@ const gruposModelo = computed(() => [
 const modeloEjemplo = computed(() => ids.value.find((id) => id === 'perfil/rapido') ?? ids.value.find((id) => id.includes('/')) ?? 'claude')
 
 const ocultar = (c: string) => (c ? c.slice(0, 6) + '•'.repeat(18) : '')
-// ejemplosPara son los ejemplos para copiar con la URL base y el modelo de la API principal o de una API.
-// Solo los ejemplos de lo que acepta la API: una que solo habla Anthropic no ofrece los de OpenAI.
-const ejemplosPara = (url: string, modelo: string, contratos: string[] = ['openai', 'anthropic']) => [
-  { id: 'python', titulo: () => 'Python · OpenAI', codigo: (k: string) => `from openai import OpenAI
-
-cliente = OpenAI(base_url="${url}/openai/v1", api_key="${k}")
-r = cliente.chat.completions.create(
-    model="${modelo}",
-    messages=[{"role": "user", "content": "${t('conectar.hola')}"}],
-)
-print(r.choices[0].message.content)` },
-  { id: 'node', titulo: () => 'Node · OpenAI', codigo: (k: string) => `import OpenAI from 'openai'
-
-const cliente = new OpenAI({ baseURL: '${url}/openai/v1', apiKey: '${k}' })
-const r = await cliente.chat.completions.create({
-  model: '${modelo}',
-  messages: [{ role: 'user', content: '${t('conectar.hola')}' }],
-})
-console.log(r.choices[0].message.content)` },
-  { id: 'anthropic', titulo: () => 'Python · Anthropic', codigo: (k: string) => `import anthropic
-
-cliente = anthropic.Anthropic(base_url="${url}/anthropic", api_key="${k}")
-m = cliente.messages.create(
-    model="${modelo}", max_tokens=1024,
-    messages=[{"role": "user", "content": "${t('conectar.hola')}"}],
-)
-print(m.content[0].text)` },
-  { id: 'curl', titulo: () => 'curl', codigo: (k: string) => `curl ${url}/openai/v1/chat/completions \\
-  -H "Authorization: Bearer ${k}" \\
-  -H "Content-Type: application/json" \\
-  -d '{"model": "${modelo}", "messages": [{"role": "user", "content": "${t('conectar.hola')}"}]}'` },
-  { id: 'entorno', titulo: () => t('conectar.entorno'), codigo: (k: string) => `${t('conectar.entornoComentario')}
-${[contratos.includes('openai') ? `OPENAI_BASE_URL=${url}/openai/v1\nOPENAI_API_KEY=${k}` : '',
-    contratos.includes('anthropic') ? `ANTHROPIC_BASE_URL=${url}/anthropic\nANTHROPIC_API_KEY=${k}` : ''].filter(Boolean).join('\n')}` },
-].filter((e) => (e.id === 'anthropic' ? contratos.includes('anthropic') : e.id === 'entorno'
-  ? contratos.includes('openai') || contratos.includes('anthropic') : contratos.includes('openai')))
-const ejemplos = computed(() => ejemplosPara(base.value, modeloEjemplo.value))
+const ejemplos = computed(() => ejemplosDe({ url: base.value, modelo: modeloEjemplo.value, contratos }))
 const ejemplo = computed(() => ejemplos.value.find((e) => e.id === lenguaje.value) ?? ejemplos.value[0])
 const ejemplosDetalle = computed(() => (puntoDetalle.value
-  ? ejemplosPara(puntoDetalle.value.url ?? '', idModelo(puntoDetalle.value) ?? modeloEjemplo.value, puntoDetalle.value.contratos) : []))
+  ? ejemplosDe({ url: puntoDetalle.value.url ?? '', modelo: idModelo(puntoDetalle.value) ?? modeloEjemplo.value, contratos: puntoDetalle.value.contratos }) : []))
 const ejemploDetalle = computed(() => ejemplosDetalle.value.find((e) => e.id === lenguaje.value) ?? ejemplosDetalle.value[0])
 
 const opciones = computed(() => catalogo.value.map(opcionModelo))
