@@ -1,6 +1,10 @@
 package nucleo
 
-import "testing"
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+)
 
 func solicitudValida() SolicitudEjecucion {
 	return SolicitudEjecucion{Agente: "claude", Modelo: "claude-sonnet-5-5", Mensajes: []Mensaje{{Rol: "usuario", Contenido: "Hola"}}}
@@ -62,5 +66,37 @@ func TestValidarRespaldo(t *testing.T) {
 	}
 	if a, m, e := DividirRespaldo("codex"); a != "codex" || m != "" || e != "" {
 		t.Fatalf("DividirRespaldo sin modelo ni esfuerzo: %q %q %q", a, m, e)
+	}
+}
+
+func TestEsquemaConTope(t *testing.T) {
+	s := solicitudValida()
+	s.Salida.Esquema = json.RawMessage(`{"description":"` + strings.Repeat("x", 256<<10) + `"}`)
+	if CodigoDe(s.Validar()) != CodigoSolicitudInvalida {
+		t.Fatal("un esquema de más de 256 KB se rechaza")
+	}
+}
+
+func TestMensajesConTope(t *testing.T) {
+	s := solicitudValida()
+	for range 1000 {
+		s.Mensajes = append(s.Mensajes, Mensaje{Rol: "usuario", Contenido: "x"})
+	}
+	if CodigoDe(s.Validar()) != CodigoSolicitudInvalida {
+		t.Fatal("más de 1.000 mensajes se rechazan")
+	}
+}
+
+func TestEntornoSinSecretos(t *testing.T) {
+	for _, par := range []string{"STRIPE_KEY=x", "DB_PASS=x", "X_PWD=x", "MI_CLAVE=x", "PRIVATE_KEY=x", "DATABASE_URL=postgres://u:p@h/db",
+		"SSH_AUTH_SOCK=/tmp/s", "GITHUB_TOKEN=x"} {
+		if !EntornoSecreto(par) {
+			t.Fatalf("%s no debe pasar", par)
+		}
+	}
+	for _, par := range []string{"PATH=/bin", "PWD=/home/u", "HTTPS_PROXY=http://proxy:8080", "LANG=es_ES.UTF-8", "KEYBOARD=x"} {
+		if EntornoSecreto(par) {
+			t.Fatalf("%s debe pasar", par)
+		}
 	}
 }

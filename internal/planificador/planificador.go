@@ -194,7 +194,7 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 			idioma.T("consciente_proyecto solo se admite en la instancia de un proyecto incluido en proyectos_confiables de la configuración global"))
 	}
 	if len(solicitud.Salida.Esquema) > 0 {
-		if _, err := salidas.Compilar(solicitud.Salida.Esquema); err != nil {
+		if err := salidas.Comprobar(solicitud.Salida.Esquema); err != nil {
 			return nucleo.Trabajo{}, false, err
 		}
 	}
@@ -259,7 +259,7 @@ func (p *Planificador) registrar(t nucleo.Trabajo, evento string) {
 		linea += fmt.Sprintf(" · %d→%d tokens", t.Uso.TokensEntrada, t.Uso.TokensSalida)
 	}
 	if t.CodigoError != "" {
-		linea += " · " + string(t.CodigoError) + ": " + t.MensajeError
+		linea += " · " + string(t.CodigoError) + ": " + lineaSegura(t.MensajeError)
 	}
 	fmt.Fprintln(p.opc.Registros, linea)
 }
@@ -784,6 +784,16 @@ func (p *Planificador) contextoDe(ctx context.Context, c candidato) (int, string
 	return 0, ""
 }
 
+// lineaSegura deja un texto del CLI en una sola línea y corta lo largo: un mensaje de error no puede falsificar
+// líneas del registro del servicio.
+func lineaSegura(texto string) string {
+	texto = strings.NewReplacer("\r", " ", "\n", " ").Replace(texto)
+	if r := []rune(texto); len(r) > 300 {
+		texto = string(r[:300]) + "…"
+	}
+	return texto
+}
+
 // sumarUso junta el uso de dos intentos del mismo trabajo.
 func sumarUso(a, b nucleo.Uso) nucleo.Uso {
 	return nucleo.Uso{TokensEntrada: a.TokensEntrada + b.TokensEntrada, TokensSalida: a.TokensSalida + b.TokensSalida, CostoUSD: a.CostoUSD + b.CostoUSD}
@@ -883,7 +893,12 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 	if datos, err := json.Marshal(nuevoIntento(c, solicitud.Esfuerzo, p.versionVista)); err == nil {
 		_ = p.almacen.AgregarEvento(fondo, id, "intento", string(datos))
 	}
-	agrupador := &agrupador{guardar: func(tipo, datos string) error { return p.almacen.AgregarEvento(fondo, id, tipo, datos) }}
+	// Si el agente escribe una clave de proveedor (lo empujó un contenido hostil), se tapa antes de guardarla o enviarla.
+	// shortcut: una clave partida entre dos fragmentos de texto solo se tapa en la salida final, no en los eventos.
+	secretos := adaptadores.Secretos()
+	agrupador := &agrupador{guardar: func(tipo, datos string) error {
+		return p.almacen.AgregarEvento(fondo, id, tipo, adaptadores.Redactar(datos, secretos))
+	}}
 	var texto atomic.Bool // algunos adaptadores emiten desde la goroutine que lee la salida del CLI
 	resultado, err = p.adaptadores[c.agente].Ejecutar(ctxEjecucion, solicitud, func(e adaptadores.Evento) error {
 		if e.Tipo == "texto" && e.Datos != "" {
@@ -896,6 +911,7 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 	}
 	huboTexto = texto.Load()
 	_ = agrupador.vaciar() // antes de cualquier cambio de estado: el texto queda completo y en orden
+	resultado.Salida = adaptadores.Redactar(resultado.Salida, secretos)
 	switch {
 	case ctxTrabajo.Err() != nil:
 		p.cerrarDetenido(id, nucleo.Ejecutando)

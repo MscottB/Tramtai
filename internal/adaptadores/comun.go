@@ -2,6 +2,8 @@ package adaptadores
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -70,19 +72,43 @@ func separar(s nucleo.SolicitudEjecucion) (sistema, prompt string) {
 	if len(turnos) == 1 && turnos[0].Rol == "usuario" {
 		return sistema, turnos[0].Contenido
 	}
+	// Los delimitadores llevan un código por petición: un mensaje que escriba «<<<fin turno>>>» no cierra su turno.
+	codigo := codigoDelimitador()
 	var b strings.Builder
 	for _, m := range turnos {
-		b.WriteString("<<<turno rol=" + m.Rol + ">>>\n" + m.Contenido + "\n<<<fin turno>>>\n")
+		b.WriteString("<<<turno-" + codigo + " rol=" + m.Rol + ">>>\n" + m.Contenido + "\n<<<fin turno-" + codigo + ">>>\n")
 	}
 	return sistema, b.String()
 }
+
+// codigoDelimitador es un código aleatorio para los delimitadores de una petición.
+func codigoDelimitador() string {
+	b := make([]byte, 4)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+// Secretos son las claves de proveedor disponibles (entorno o almacén del sistema), para taparlas en la salida.
+func Secretos() []string {
+	var lista []string
+	for _, nombre := range variablesCredenciales {
+		if clave := claveEntorno(nombre); len(clave) >= 8 {
+			lista = append(lista, clave)
+		}
+	}
+	return lista
+}
+
+// Redactar tapa los secretos dados en un texto que llega a la respuesta, al historial o a la Web UI.
+func Redactar(texto string, secretos []string) string { return redactar(texto, secretos...) }
 
 // enmarcarSistema antepone el sistema como primer bloque delimitado, para CLIs sin mecanismo nativo.
 func enmarcarSistema(sistema, prompt string) string {
 	if sistema == "" {
 		return prompt
 	}
-	return "<<<turno rol=sistema>>>\n" + sistema + "\n<<<fin turno>>>\n" + prompt
+	codigo := codigoDelimitador()
+	return "<<<turno-" + codigo + " rol=sistema>>>\n" + sistema + "\n<<<fin turno-" + codigo + ">>>\n" + prompt
 }
 
 // entornoLimpio hereda el entorno sin credenciales y añade las variables indicadas. Quita además las TRAMTAI_*
@@ -102,7 +128,7 @@ func entornoLimpio(propios []string, extra ...string) []string {
 		nombre, _, _ := strings.Cut(par, "=")
 		nombre = strings.ToUpper(nombre)
 		propia := slices.ContainsFunc(propios, func(p string) bool { return strings.HasPrefix(nombre, p) })
-		if quitar[nombre] || strings.HasPrefix(nombre, "TRAMTAI_") || (nucleo.VariableSecreta(nombre) && !propia) {
+		if quitar[nombre] || strings.HasPrefix(nombre, "TRAMTAI_") || (nucleo.EntornoSecreto(par) && !propia) {
 			continue
 		}
 		entorno = append(entorno, par)

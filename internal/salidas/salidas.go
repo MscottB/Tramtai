@@ -3,8 +3,10 @@ package salidas
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"errors"
 	"strings"
+	"sync"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
@@ -41,7 +43,7 @@ func Compilar(esquema []byte) (*jsonschema.Schema, error) {
 
 // Validar comprueba la salida contra el esquema; si no cumple devuelve salida_no_cumple_esquema.
 func Validar(esquema []byte, salida string) error {
-	compilado, err := Compilar(esquema)
+	compilado, err := compiladoDe(esquema)
 	if err != nil {
 		return err
 	}
@@ -60,4 +62,37 @@ func recortar(texto string) string {
 		return texto[:maximoMensaje] + "…"
 	}
 	return texto
+}
+
+// compilados guarda los esquemas ya compilados por su contenido: se compila al aceptar y no otra vez al validar.
+var compilados = struct {
+	sync.Mutex
+	m map[[32]byte]*jsonschema.Schema
+}{m: map[[32]byte]*jsonschema.Schema{}}
+
+func compiladoDe(esquema []byte) (*jsonschema.Schema, error) {
+	clave := sha256.Sum256(esquema)
+	compilados.Lock()
+	compilado, existe := compilados.m[clave]
+	compilados.Unlock()
+	if existe {
+		return compilado, nil
+	}
+	compilado, err := Compilar(esquema)
+	if err != nil {
+		return nil, err
+	}
+	compilados.Lock()
+	if len(compilados.m) >= 256 { // pocos esquemas distintos en uso: se vacía antes que crecer sin límite
+		clear(compilados.m)
+	}
+	compilados.m[clave] = compilado
+	compilados.Unlock()
+	return compilado, nil
+}
+
+// Comprobar compila el esquema (y lo guarda para validar la salida después) o explica por qué no vale.
+func Comprobar(esquema []byte) error {
+	_, err := compiladoDe(esquema)
+	return err
 }

@@ -60,6 +60,8 @@ const (
 	maximoTiempoLimiteSegundos = 24 * 60 * 60
 	maximoCargas               = 20
 	maximoRespaldo             = 3
+	maximoMensajes             = 1000
+	maximoEsquemaPeticion      = 256 << 10
 )
 
 // ReCarga es el formato de un identificador de carga: impide rutas u otros valores en su lugar.
@@ -89,6 +91,12 @@ func (s SolicitudEjecucion) Validar() error {
 		if valor != "" && !reIdentificador.MatchString(valor) {
 			return invalida(idioma.Tf("%s con formato no válido", campo))
 		}
+	}
+	if len(s.Mensajes) > maximoMensajes {
+		return invalida(idioma.Tf("demasiados mensajes (máximo %d)", maximoMensajes))
+	}
+	if len(s.Salida.Esquema) > maximoEsquemaPeticion {
+		return invalida(idioma.T("el esquema supera 256 KB"))
 	}
 	for i, m := range s.Mensajes {
 		if !rolesValidos[m.Rol] {

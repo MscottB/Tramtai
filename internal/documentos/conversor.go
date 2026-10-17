@@ -251,7 +251,7 @@ func entornoConversor(sin ...string) []string {
 	var entorno []string
 	for _, par := range os.Environ() {
 		nombre, _, _ := strings.Cut(par, "=")
-		if nucleo.VariableSecreta(nombre) || strings.HasPrefix(strings.ToUpper(nombre), "TRAMTAI_") ||
+		if nucleo.EntornoSecreto(par) || strings.HasPrefix(strings.ToUpper(nombre), "TRAMTAI_") ||
 			slices.ContainsFunc(sin, func(v string) bool { return strings.EqualFold(v, nombre) }) {
 			continue
 		}

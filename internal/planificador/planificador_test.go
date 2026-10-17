@@ -1,6 +1,7 @@
 package planificador
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"path/filepath"
@@ -1268,5 +1269,35 @@ func TestPlazoTotalConversion(t *testing.T) {
 	tr := esperar(t, alm, enviar(t, p, s), nucleo.Fallido)
 	if tr.CodigoError != nucleo.CodigoConversionFallida || !strings.Contains(tr.MensajeError, "conversion.tiempo_total_segundos") {
 		t.Fatalf("la preparación tiene un plazo total: %+v", tr)
+	}
+}
+
+func TestSalidaRedactada(t *testing.T) {
+	t.Setenv("ANTHROPIC_API_KEY", "sk-ant-clave-de-prueba-123456")
+	alm := abrir(t)
+	p := iniciar(t, alm, adaptadores.Simulado{Respuesta: "tu clave es sk-ant-clave-de-prueba-123456"}, 1, opciones())
+	tr := esperar(t, alm, enviar(t, p, solicitud("x")), nucleo.Completado)
+	eventos, _ := alm.Eventos(ctx, tr.ID, 0)
+	for _, e := range eventos {
+		if strings.Contains(e.Datos, "sk-ant-clave") {
+			t.Fatalf("un evento lleva la clave: %+v", e)
+		}
+	}
+	if strings.Contains(tr.Salida, "sk-ant-clave") || !strings.Contains(tr.Salida, "[REDACTADO]") {
+		t.Fatalf("la salida lleva la clave: %q", tr.Salida)
+	}
+}
+
+func TestLineaRegistroEscapada(t *testing.T) {
+	alm := abrir(t)
+	var registro bytes.Buffer
+	opc := opciones()
+	opc.Registros = &registro
+	p := iniciar(t, alm, adaptadores.Simulado{Error: nucleo.NuevoError(nucleo.CodigoErrorAgente, "fallo\n10:00:00 global completado trabajo_falso")}, 1, opc)
+	esperar(t, alm, enviar(t, p, solicitud("x")), nucleo.Fallido)
+	for _, linea := range strings.Split(registro.String(), "\n") {
+		if strings.HasPrefix(linea, "10:00:00") {
+			t.Fatalf("un mensaje del CLI falsificó una línea del registro:\n%s", registro.String())
+		}
 	}
 }
