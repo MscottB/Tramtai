@@ -42,19 +42,26 @@ BrandingText "Tramtai ${VERSION}"
 
 !define MUI_WELCOMEPAGE_TITLE "$(bienvenidaTitulo)"
 !define MUI_WELCOMEPAGE_TEXT "$(bienvenidaTexto)"
+; Al actualizar (/abrir) solo se ve la página de progreso: SaltarSiActualiza se salta las demás.
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SaltarSiActualiza
 !insertmacro MUI_PAGE_WELCOME
 ; Los textos legales van en RTF (go run ./scripts/rtf): el Markdown en UTF-8 salía con los acentos rotos y sin formato.
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SaltarSiActualiza
 !insertmacro MUI_PAGE_LICENSE "${RAIZ}\bin\LICENCIA.rtf"
 !define MUI_PAGE_HEADER_TEXT "$(terminosTitulo)"
 !define MUI_PAGE_HEADER_SUBTEXT "$(terminosSubtitulo)"
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SaltarSiActualiza
 !insertmacro MUI_PAGE_LICENSE "${RAIZ}\bin\TERMINOS.rtf"
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SaltarSiActualiza
 !insertmacro MUI_PAGE_COMPONENTS
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SaltarSiActualiza
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_TITLE "$(finalTitulo)"
 !define MUI_FINISHPAGE_TEXT "$(finalTexto)"
 !define MUI_FINISHPAGE_RUN "$INSTDIR\tramtai-escritorio.exe"
 !define MUI_FINISHPAGE_RUN_TEXT "$(abrirAhora)"
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SaltarSiActualiza
 !insertmacro MUI_PAGE_FINISH
 
 !insertmacro MUI_UNPAGE_CONFIRM
@@ -103,6 +110,26 @@ LangString borrarDatos ${LANG_ENGLISH} "Also delete your Tramtai settings and da
 
 Var abierta  ; la app de escritorio estaba abierta antes de instalar
 Var servicio ; el servicio estaba en marcha
+Var actualizando ; lo lanzó una actualización (/S /abrir): se ve solo el progreso y se cierra solo
+
+; Una actualización («Actualizar ahora» o tramtai actualizar) lanza el instalador con /S /abrir. En silencio total la
+; app desaparecía unos segundos sin explicación: se muestra solo la página de progreso, sin preguntas.
+Function .onInit
+  ${GetParameters} $0
+  ClearErrors
+  ${GetOptions} $0 "/abrir" $1
+  ${IfNot} ${Errors}
+  ${AndIf} ${Silent}
+    SetSilent normal
+    StrCpy $actualizando 1
+  ${EndIf}
+FunctionEnd
+
+Function SaltarSiActualiza
+  ${If} $actualizando == 1
+    Abort
+  ${EndIf}
+FunctionEnd
 
 ; HayProceso deja 0 en RESULTADO si el usuario tiene abierto un proceso con ese nombre (esté donde esté instalado).
 !macro HayProceso NOMBRE RESULTADO
@@ -126,6 +153,7 @@ Var servicio ; el servicio estaba en marcha
   ${If} $0 == 0
   ${OrIf} $1 == 0
     ${IfNot} ${Silent}
+    ${AndIf} $actualizando != 1
       MessageBox MB_OKCANCEL|MB_ICONINFORMATION "${AVISO}" /SD IDOK IDOK +2
       Abort
     ${EndIf}
@@ -149,6 +177,9 @@ Var servicio ; el servicio estaba en marcha
 
 Section "$(secPrograma)" SecPrograma
   SectionIn RO
+  ${If} $actualizando == 1
+    SetAutoClose true
+  ${EndIf}
   ; La CLI nueva detiene el servicio aunque esta carpeta aún no tenga Tramtai (primera instalación o portable).
   InitPluginsDir
   File "/oname=$PLUGINSDIR\tramtai.exe" "${RAIZ}\bin\tramtai.exe"
@@ -196,7 +227,12 @@ Function .onInstSuccess
   ${IfNot} ${Errors}
     StrCpy $abierta 1
   ${EndIf}
+  ; Sin asistente (en silencio o al actualizar) no hay casilla «Abrir Tramtai»: se abre si estaba abierta.
+  StrCpy $2 $actualizando
   ${If} ${Silent}
+    StrCpy $2 1
+  ${EndIf}
+  ${If} $2 == 1
   ${AndIf} $abierta == 1
     Exec '"$INSTDIR\tramtai-escritorio.exe" -actualizado'
   ${ElseIf} $servicio == 1
