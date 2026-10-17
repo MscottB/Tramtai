@@ -560,6 +560,30 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 			}
 		}
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"puntos_acceso": puntos, "uso": uso, "presupuestos": presupuestos})
+	case ruta == "/api/v1/instancia/retencion" && r.Method == http.MethodGet:
+		uso, err := inst.almacen.UsoHistorial(r.Context(), inst.ID)
+		if err != nil {
+			api.EscribirError(w, r, err)
+			return true
+		}
+		resultado, metadatos, maximo, _ := inst.retencion()
+		api.EscribirJSON(w, http.StatusOK, map[string]any{"horas_resultado": resultado, "horas_metadatos": metadatos,
+			"max_trabajos": maximo, "uso": uso})
+	case ruta == "/api/v1/instancia/retencion" && r.Method == http.MethodPut:
+		var peticion struct {
+			HorasResultado int `json:"horas_resultado"`
+			HorasMetadatos int `json:"horas_metadatos"`
+			MaxTrabajos    int `json:"max_trabajos"`
+		}
+		if err := api.LeerJSON(w, r, &peticion); err != nil {
+			api.EscribirError(w, r, err)
+			return true
+		}
+		if err := s.fijarRetencion(inst, peticion.HorasResultado, peticion.HorasMetadatos, peticion.MaxTrabajos); err != nil {
+			api.EscribirError(w, r, err)
+			return true
+		}
+		w.WriteHeader(http.StatusNoContent)
 	case ruta == "/api/v1/instancia/presupuesto" && r.Method == http.MethodGet:
 		estado, ok, err := inst.Planificador.EstadoPresupuesto(r.Context(), persistencia.TodaLaInstancia)
 		switch {
@@ -867,6 +891,25 @@ func (s *Servicio) fijarPredeterminado(inst *Instancia, id string) error {
 	default:
 		valores["predeterminados.agente"], valores["predeterminados.modelo"] = agente, modelo
 	}
+	return s.guardarValores(inst, valores)
+}
+
+// fijarRetencion guarda los plazos y el tope del historial como fijarPredeterminado y purga al momento.
+func (s *Servicio) fijarRetencion(inst *Instancia, resultado, metadatos, maximo int) error {
+	if err := nucleo.ValidarRetencion(resultado, metadatos, maximo); err != nil {
+		return err
+	}
+	err := s.guardarValores(inst, map[string]any{"retencion.horas_resultado": resultado, "retencion.horas_metadatos": metadatos,
+		"retencion.max_trabajos": maximo})
+	if err == nil {
+		go inst.Purgar(context.Background())
+	}
+	return err
+}
+
+// guardarValores escribe valores en la configuración de la instancia (la global o el local.yaml del proyecto) y los
+// aplica en marcha; en la global alcanzan a todas las instancias que no tengan los suyos.
+func (s *Servicio) guardarValores(inst *Instancia, valores map[string]any) error {
 	ruta, origen, err := archivoPuntos(inst)
 	if err != nil {
 		return err
