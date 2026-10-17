@@ -23,7 +23,9 @@ import { t } from '../i18n'
 const props = defineProps<{ texto?: string; caja?: boolean }>()
 const clase = computed(() => (props.caja ? 'bloque-texto' : 'salida'))
 const json = computed(() => esJSON(props.texto))
-const html = computed(() => DOMPurify.sanitize(conversor.parse(props.texto ?? '', { async: false }), { FORBID_TAGS: ['img', 'style', 'form'] }))
+// Solo HTML: sin SVG ni MathML, que traen enlaces e imágenes por otra vía.
+const html = computed(() => DOMPurify.sanitize(conversor.parse(props.texto ?? '', { async: false }),
+  { USE_PROFILES: { html: true }, FORBID_TAGS: ['img', 'style', 'form'] }))
 const modo = preferencia
 watch(modo, (m) => {
   try {
@@ -50,7 +52,7 @@ const escapar = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)
 // Una imagen externa podría rastrear a quien abre la respuesta: se muestra su texto alternativo.
 const conversor = new Marked({ gfm: true, breaks: true, renderer: { image: ({ text }) => escapar(text) } })
 DOMPurify.addHook('afterSanitizeAttributes', (nodo) => {
-  if (nodo.tagName === 'A') {
+  if (nodo.tagName.toLowerCase() === 'a') {
     nodo.setAttribute('target', '_blank')
     nodo.setAttribute('rel', 'noopener noreferrer')
   }

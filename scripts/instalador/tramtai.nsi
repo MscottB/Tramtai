@@ -56,6 +56,8 @@ BrandingText "Tramtai ${VERSION}"
 !insertmacro MUI_PAGE_COMPONENTS
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SaltarSiActualiza
 !insertmacro MUI_PAGE_DIRECTORY
+; Windows no deja al instalador lanzado en segundo plano traer su ventana al frente por sí solo.
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW TraerAlFrente
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_TITLE "$(finalTitulo)"
 !define MUI_FINISHPAGE_TEXT "$(finalTexto)"
@@ -122,6 +124,12 @@ Function .onInit
   ${AndIf} ${Silent}
     SetSilent normal
     StrCpy $actualizando 1
+  ${EndIf}
+FunctionEnd
+
+Function TraerAlFrente
+  ${If} $actualizando == 1
+    BringToFront
   ${EndIf}
 FunctionEnd
 

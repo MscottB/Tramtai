@@ -17,7 +17,7 @@
 <script setup lang="ts">
 // RegistroTrabajo muestra la hora de cada paso de una petición (estados, intentos y avisos) y cuánto duró cada etapa,
 // para ver lo que la ruta animada pasa demasiado rápido. Vuelve a pedirlo cuando cambia version.
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { api, estadoInfo, nombreAgente, nombreEsfuerzo, type EventoRegistro, type Trabajo } from '../api'
 import { idioma, t } from '../i18n'
 
@@ -28,8 +28,21 @@ const abierto = ref(false)
 const eventos = ref<EventoRegistro[]>([])
 const fallo = ref(false)
 let pedido = 0
+let espera: ReturnType<typeof setTimeout> | undefined
 
-watch(() => [props.trabajo.id, props.version], async () => {
+// Al cambiar de trabajo se vacía al momento (no se mezcla con el anterior); los avisos seguidos de un mismo trabajo
+// (al abrir uno terminado llegan todos sus eventos de golpe) se agrupan en una sola petición.
+watch(() => props.trabajo.id, () => {
+  eventos.value = []
+  fallo.value = false
+})
+watch(() => [props.trabajo.id, props.version], () => {
+  clearTimeout(espera)
+  espera = setTimeout(cargar, 200)
+}, { immediate: true })
+onUnmounted(() => clearTimeout(espera))
+
+async function cargar() {
   const actual = ++pedido // una respuesta vieja no pisa la de un trabajo o una versión posterior
   try {
     const lista = await api.registro(props.trabajo.id)
@@ -40,7 +53,7 @@ watch(() => [props.trabajo.id, props.version], async () => {
   } catch {
     if (actual === pedido) fallo.value = true
   }
-}, { immediate: true })
+}
 
 const ms = (texto: string) => new Date(texto).getTime()
 function tiempo(n: number): string {

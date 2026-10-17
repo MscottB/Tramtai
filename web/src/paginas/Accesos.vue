@@ -287,7 +287,7 @@ import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import EstadoVacio from '../componentes/EstadoVacio.vue'
 import EditorPresupuesto from '../componentes/EditorPresupuesto.vue'
 import EditorReceta from '../componentes/EditorReceta.vue'
-import { ajustesDeReceta, api, avisar, avisarError, codigoLinea, nombreAgente, ordenAgentes, configDeReceta, copiar, etiquetaModelo, haceCuanto, idModeloDe as idModelo, nombreEsfuerzo, opcionModelo,
+import { ajustesDeReceta, api, avisar, avisarError, codigoLinea, nombreAgente, ordenAgentes, configDeReceta, copiar, dividirRespaldo, etiquetaModelo, haceCuanto, idModeloDe as idModelo, nombreEsfuerzo, opcionModelo,
   cargarDiasHistorial, periodoHistorial, grupoInicial, origenHistorial, presupuestoLimpio, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPresupuesto, type EstadoPunto, type Modelo,
   type Presupuesto, type UsoPunto } from '../api'
 import { t } from '../i18n'
@@ -452,7 +452,12 @@ const ejemplosDetalle = computed(() => (puntoDetalle.value
 const ejemploDetalle = computed(() => ejemplosDetalle.value.find((e) => e.id === lenguaje.value) ?? ejemplosDetalle.value[0])
 
 const opciones = computed(() => catalogo.value.map(opcionModelo))
-const etiquetaDe = (id: string) => opciones.value.find((o) => o.value === id)?.label ?? etiquetaModelo(id)
+// etiquetaDe da el nombre legible de un modelo o de una entrada de respaldo con su esfuerzo propio («Codex · alto»).
+const etiquetaDe = (id: string) => {
+  const { base, esfuerzo } = dividirRespaldo(id)
+  const nombre = opciones.value.find((o) => o.value === base)?.label ?? etiquetaModelo(base)
+  return esfuerzo ? `${nombre} · ${nombreEsfuerzo(esfuerzo).toLowerCase()}` : nombre
+}
 const vacio = () => ({ nombre: '', grupo: '', direccion: 'ruta', puerto: '', contratos: [...contratos], permitidos: [] as string[], alias: '',
   receta: recetaVacia(), presupuesto: {} as Presupuesto })
 const formulario = reactive(vacio())

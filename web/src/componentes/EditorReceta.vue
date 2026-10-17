@@ -21,7 +21,7 @@
     <!-- Cada agente de respaldo puede llevar su propio esfuerzo; sin elegir, el del principal o el de su CLI. -->
     <div v-for="(r, i) in respaldoDividido" :key="r.base" class="q-pl-md">
       <SelectorEsfuerzo v-if="r.niveles.length" :model-value="r.esfuerzo" :niveles="r.niveles" :etiqueta="t('receta.esfuerzoDe', { agente: r.nombre })"
-        :vacio="vacioRespaldo(r.base)" hint="" @update:model-value="(v: string) => esfuerzoRespaldo(i, v)" />
+        :vacio="vacioRespaldo(r.base, r.niveles)" hint="" @update:model-value="(v: string) => esfuerzoRespaldo(i, v)" />
       <div v-else class="text-caption texto-suave row items-center no-wrap">
         <q-icon name="o_psychology" size="18px" class="q-mr-xs" />{{ t('receta.respaldoSinEsfuerzo', { agente: r.nombre }) }}
       </div>
@@ -78,9 +78,11 @@ function elegirRespaldo(bases: string[]) {
 function esfuerzoRespaldo(i: number, esfuerzo: string) {
   cambiar({ respaldo: props.modelValue.respaldo.map((e, j) => (j === i ? unirRespaldo(dividirRespaldo(e).base, esfuerzo) : e)) })
 }
-// vacioRespaldo dice qué esfuerzo usa un respaldo sin uno propio: el del principal o, si no hay, el de su CLI.
-function vacioRespaldo(base: string): string {
-  if (props.modelValue.esfuerzo) return t('receta.respaldoIgual', { nivel: nombreEsfuerzo(props.modelValue.esfuerzo).toLowerCase() })
+// vacioRespaldo dice qué esfuerzo usa un respaldo sin uno propio: el del principal (ajustado al máximo de ese agente,
+// como hace el servicio) o, si no hay, el de su CLI.
+function vacioRespaldo(base: string, niveles: string[]): string {
+  const principal = props.modelValue.esfuerzo
+  if (principal) return t('receta.respaldoIgual', { nivel: nombreEsfuerzo(niveles.includes(principal) ? principal : niveles.at(-1)).toLowerCase() })
   const p = esfuerzoPredeterminadoDe(props.catalogo, base)
   return p ? t('esfuerzo.agenteCon', { nivel: nombreEsfuerzo(p).toLowerCase() }) : t('esfuerzo.agente')
 }
