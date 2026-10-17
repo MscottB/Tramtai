@@ -420,8 +420,9 @@ func (a *Almacen) RegistrarProceso(ctx context.Context, id string, pid int, firm
 
 // CambiarAgente apunta el trabajo al agente de respaldo que lo ejecuta ahora, con su modelo (el del principal o su
 // perfil no valen para otro agente, también al reintentar) y el respaldo que queda tras él, para que un trabajo
-// reencolado o reintentado no vuelva a probar los que ya fallaron; la huella no cambia.
-func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado string, restante []string) error {
+// reencolado o reintentado no vuelva a probar los que ya fallaron; con el esfuerzo propio de ese respaldo, si lo tiene.
+// La huella no cambia.
+func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado, esfuerzo string, restante []string) error {
 	lista, err := json.Marshal(restante)
 	if err != nil {
 		return err
@@ -429,8 +430,13 @@ func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado s
 	if restante == nil {
 		lista = []byte("[]")
 	}
-	r, err := a.db.ExecContext(ctx, `UPDATE trabajos SET solicitud = json_set(json_remove(solicitud, '$.perfil_modelo'), '$.agente', ?, '$.modelo', ?,
-		'$.respaldo', json(?)), modelo_enviado = ? WHERE id = ?`, agente, modeloEnviado, string(lista), modeloEnviado, id)
+	// El esfuerzo es el que usa el agente nuevo: vacío lo quita (usa el de su CLI) en lugar de guardar un null.
+	sinEsfuerzo, conEsfuerzo, args := ", '$.esfuerzo'", "", []any{agente, modeloEnviado, string(lista)}
+	if esfuerzo != "" {
+		sinEsfuerzo, conEsfuerzo, args = "", ", '$.esfuerzo', ?", append(args, esfuerzo)
+	}
+	r, err := a.db.ExecContext(ctx, `UPDATE trabajos SET solicitud = json_set(json_remove(solicitud, '$.perfil_modelo'`+sinEsfuerzo+`), '$.agente', ?, '$.modelo', ?,
+		'$.respaldo', json(?)`+conEsfuerzo+`), modelo_enviado = ? WHERE id = ?`, append(args, modeloEnviado, id)...)
 	if err != nil {
 		return err
 	}
@@ -467,7 +473,16 @@ func (a *Almacen) Estado(ctx context.Context, id string) (string, nucleo.Estado,
 
 // Eventos devuelve los eventos posteriores al número "desde" (Last-Event-ID).
 func (a *Almacen) Eventos(ctx context.Context, id string, desde int) ([]Evento, error) {
-	filas, err := a.db.QueryContext(ctx, `SELECT numero, tipo, datos, creado_en FROM eventos WHERE trabajo_id = ? AND numero > ? ORDER BY numero`, id, desde)
+	return a.eventos(ctx, `SELECT numero, tipo, datos, creado_en FROM eventos WHERE trabajo_id = ? AND numero > ? ORDER BY numero`, id, desde)
+}
+
+// EventosDeRegistro devuelve los eventos sin contenido de la respuesta (estado, intento y aviso), sin leer el texto.
+func (a *Almacen) EventosDeRegistro(ctx context.Context, id string) ([]Evento, error) {
+	return a.eventos(ctx, `SELECT numero, tipo, datos, creado_en FROM eventos WHERE trabajo_id = ? AND tipo IN ('estado', 'intento', 'aviso') ORDER BY numero`, id)
+}
+
+func (a *Almacen) eventos(ctx context.Context, consulta string, args ...any) ([]Evento, error) {
+	filas, err := a.db.QueryContext(ctx, consulta, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -654,10 +669,10 @@ func (a *Almacen) Purgar(ctx context.Context, instancia string, r Retencion) (ve
 		}
 	}
 	limiteResultado := fecha(ahora.Add(-r.Resultado))
-	// Los eventos de estado se conservan con los metadatos; los demás llevan contenido. Solo se miran los
+	// Los eventos de estado y de intento se conservan con los metadatos; los demás llevan contenido. Solo se miran los
 	// trabajos que vencen ahora: los ya vencidos se limpiaron en su purga. Con <= vence también lo terminado en el
 	// mismo instante (retención 0): en Windows el reloj avanza a saltos.
-	if _, err := tx.ExecContext(ctx, `DELETE FROM eventos WHERE tipo <> 'estado' AND trabajo_id IN
+	if _, err := tx.ExecContext(ctx, `DELETE FROM eventos WHERE tipo NOT IN ('estado', 'intento') AND trabajo_id IN
 		(SELECT id FROM trabajos WHERE instancia = ? AND terminado_en <= ? AND vencido = 0)`, instancia, limiteResultado); err != nil {
 		return 0, 0, err
 	}

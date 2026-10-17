@@ -247,6 +247,8 @@ func TestPurgaPorRetencion(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.AgregarEvento(ctx, terminado.ID, "texto", "respuesta")
+	a.AgregarEvento(ctx, terminado.ID, "aviso", "simulado falló; sigue con otro")
+	a.AgregarEvento(ctx, terminado.ID, "intento", `{"agente":"otro"}`)
 	activo := trabajo("global", "otro")
 	activo.Solicitud.Cargas = []string{"carga_b"}
 	activo = aceptar(t, a, activo, "")
@@ -270,11 +272,19 @@ func TestPurgaPorRetencion(t *testing.T) {
 	if tr.Disponibilidad != nucleo.SalidaExpirada || tr.Salida != "" || !tr.EntradasEliminadas || len(tr.Solicitud.Mensajes) != 0 || tr.Estado != nucleo.Completado {
 		t.Fatalf("tras vencer: %+v", tr)
 	}
+	// Los estados y los intentos no llevan contenido: se conservan para el registro con los metadatos.
 	eventos, _ := a.Eventos(ctx, terminado.ID, 0)
+	intentos := 0
 	for _, e := range eventos {
-		if e.Tipo != "estado" {
+		if e.Tipo != "estado" && e.Tipo != "intento" {
 			t.Fatalf("quedó un evento con contenido: %+v", e)
 		}
+		if e.Tipo == "intento" {
+			intentos++
+		}
+	}
+	if intentos != 1 {
+		t.Fatalf("el intento debía conservarse: %+v", eventos)
 	}
 	if enUso, _ := a.CargasEnUso(ctx, "global"); enUso["carga_a"] || !enUso["carga_b"] {
 		t.Fatalf("solo el trabajo activo protege su carga: %v", enUso)
@@ -396,7 +406,7 @@ func TestCambiarAgente(t *testing.T) {
 	tr.Solicitud.PerfilModelo = "rapido" // el modelo del principal no debe quedar para el agente de respaldo
 	tr.ModeloEnviado = "m1"
 	tr = aceptar(t, a, tr, "")
-	if err := a.CambiarAgente(ctx, tr.ID, "otro", "m2", []string{"tercero"}); err != nil {
+	if err := a.CambiarAgente(ctx, tr.ID, "otro", "m2", "", []string{"tercero"}); err != nil {
 		t.Fatal(err)
 	}
 	cambiado, err := a.Obtener(ctx, tr.ID)
@@ -408,7 +418,20 @@ func TestCambiarAgente(t *testing.T) {
 		cambiado.ModeloEnviado != "m2" || cambiado.Huella != tr.Huella {
 		t.Fatalf("cambio de agente incorrecto: %+v", cambiado)
 	}
-	if nucleo.CodigoDe(a.CambiarAgente(ctx, "trabajo_inexistente", "x", "", nil)) != nucleo.CodigoNoEncontrado {
+	// Con esfuerzo se fija; sin él se quita: el agente nuevo usa entonces el suyo.
+	if err := a.CambiarAgente(ctx, tr.ID, "otro", "m2", "alto", nil); err != nil {
+		t.Fatal(err)
+	}
+	if c, _ := a.Obtener(ctx, tr.ID); c.Solicitud.Esfuerzo != "alto" {
+		t.Fatalf("esfuerzo fijado: %+v", c.Solicitud)
+	}
+	if err := a.CambiarAgente(ctx, tr.ID, "otro", "m2", "", nil); err != nil {
+		t.Fatal(err)
+	}
+	if c, _ := a.Obtener(ctx, tr.ID); c.Solicitud.Esfuerzo != "" {
+		t.Fatalf("esfuerzo quitado: %+v", c.Solicitud)
+	}
+	if nucleo.CodigoDe(a.CambiarAgente(ctx, "trabajo_inexistente", "x", "", "", nil)) != nucleo.CodigoNoEncontrado {
 		t.Fatal("un trabajo inexistente debe dar no_encontrado")
 	}
 }

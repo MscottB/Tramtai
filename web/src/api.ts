@@ -69,6 +69,13 @@ export interface Trabajo {
   creado_en: string
   terminado_en?: string
 }
+// EventoRegistro es un paso de una petición con su hora: estado, intento (JSON con agente, modelo y esfuerzo) o aviso.
+export interface EventoRegistro {
+  numero: number
+  tipo: string
+  datos: string
+  creado_en: string
+}
 export interface EstadoInstancia {
   id: string
   ambito: string
@@ -266,6 +273,18 @@ export interface EstadoActualizacion {
   fallo?: boolean // si esa consulta falló
 }
 export const actualizacion = ref<EstadoActualizacion | null>(null)
+// Acerca son los datos de «Acerca de Tramtai»; rutas solo llega a una sesión local.
+export interface Acerca {
+  version: string
+  commit?: string
+  modificado?: boolean
+  go: string
+  sistema: string
+  arquitectura: string
+  almacen: string
+  servicio: { direccion: string; pid: number; iniciado_en: string }
+  rutas?: { datos: string; configuracion: string; registro: string }
+}
 // Novedad es una versión publicada con sus notas, para el diálogo que sale tras actualizar.
 export interface Novedad {
   version: string
@@ -299,6 +318,7 @@ export const api = {
   abrirProyecto: (raiz: string) => pedir<Sesion>('POST', '/ui/proyectos', { raiz }).then(recordar),
   autoarranque: (activo: boolean) => pedir<Sesion>('POST', '/ui/autoarranque', { activo }).then(recordar),
   actualizacion: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion'),
+  acerca: () => pedir<Acerca>('GET', '/ui/acerca'),
   buscarActualizaciones: (buscar: boolean) => pedir<EstadoActualizacion>('POST', '/ui/actualizacion', { buscar }),
   buscarAhora: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion?ahora=1'),
   actualizar: () => pedir<{ version: string }>('POST', '/ui/actualizar'),
@@ -332,6 +352,7 @@ export const api = {
   retencion: () => pedir<Retencion>('GET', '/api/v1/instancia/retencion'),
   fijarRetencion: (r: { horas_resultado: number; horas_metadatos: number; max_trabajos: number }) => pedir<void>('PUT', '/api/v1/instancia/retencion', r),
   trabajo: (id: string) => pedir<Trabajo>('GET', `/api/v1/trabajos/${encodeURIComponent(id)}`),
+  registro: (id: string) => pedir<{ eventos: EventoRegistro[] }>('GET', `/api/v1/trabajos/${encodeURIComponent(id)}/registro`).then((r) => r.eventos),
   crear: (s: Solicitud) => pedir<Trabajo>('POST', '/api/v1/trabajos', s),
   accion: (id: string, accion: 'cancelar' | 'reintentar') =>
     pedir<Trabajo>('POST', `/api/v1/trabajos/${encodeURIComponent(id)}/${accion}`),
@@ -390,6 +411,17 @@ export function recetaDePunto(p: EstadoPunto): Receta {
   return { instrucciones: p.instrucciones ?? '', modelo: idModeloDe(p), forzar: !!p.forzar_modelo, esfuerzo: p.esfuerzo ?? '',
     respaldo: [...(p.respaldo ?? [])], esquema: p.esquema ? JSON.stringify(p.esquema, null, 2) : '' }
 }
+
+// recetaDeSolicitud rehace la receta de una petición ya enviada (Usar de nuevo en Probar). Si respondió un agente de
+// respaldo, la solicitud guardada ya apunta a él: la receta empieza por el agente que respondió.
+export function recetaDeSolicitud(s: Solicitud): Receta {
+  return { instrucciones: s.instrucciones ?? '', forzar: false, esfuerzo: s.esfuerzo ?? '', respaldo: [...(s.respaldo ?? [])],
+    modelo: s.perfil_modelo ? 'perfil/' + s.perfil_modelo : [s.agente, s.modelo].filter(Boolean).join('/') || null,
+    esquema: s.salida?.esquema ? JSON.stringify(s.salida.esquema, null, 2) : '' }
+}
+
+// mensajeDe es el último mensaje del usuario de una petición; '' si sus entradas ya se borraron.
+export const mensajeDe = (x: Trabajo) => x.solicitud.mensajes?.filter((m) => m.rol === 'usuario').at(-1)?.contenido ?? ''
 
 // esquemaDeReceta convierte el texto del esquema en un objeto; lanza un error legible si no es un objeto JSON.
 export function esquemaDeReceta(r: Receta): Record<string, unknown> | undefined {
@@ -570,6 +602,27 @@ function entradaCatalogo(catalogo: Modelo[], seleccion: string | null): Modelo |
   return seleccion
     ? (catalogo.find((x) => x.id === seleccion) ?? catalogo.find((x) => x.id === seleccion.split('/')[0]))
     : catalogo.find((x) => x.predeterminado)
+}
+
+// dividirRespaldo separa una entrada de respaldo (agente[/modelo][+esfuerzo]) en su base y su esfuerzo propio.
+export function dividirRespaldo(e: string): { base: string; esfuerzo: string } {
+  const [base, esfuerzo = ''] = e.split('+')
+  return { base, esfuerzo }
+}
+export const unirRespaldo = (base: string, esfuerzo: string) => (esfuerzo ? `${base}+${esfuerzo}` : base)
+
+// esfuerzoUsado es el esfuerzo con que respondió la petición, según su último intento: el pedido o, si no se pidió,
+// el del agente con «(del agente)»; sin intentos registrados, el de la solicitud. '' si no hubo esfuerzo.
+export function esfuerzoUsado(trabajo: Trabajo, eventos: EventoRegistro[]): string {
+  const intento = eventos.filter((e) => e.tipo === 'intento').at(-1)
+  if (!intento) return trabajo.solicitud.esfuerzo ? nombreEsfuerzo(trabajo.solicitud.esfuerzo) : ''
+  try {
+    const i = JSON.parse(intento.datos) as { esfuerzo?: string; del_agente?: boolean }
+    if (!i.esfuerzo) return ''
+    return i.del_agente ? t('esfuerzo.delAgente', { nivel: nombreEsfuerzo(i.esfuerzo) }) : nombreEsfuerzo(i.esfuerzo)
+  } catch {
+    return ''
+  }
 }
 
 export function nombreEsfuerzo(nivel?: string): string {

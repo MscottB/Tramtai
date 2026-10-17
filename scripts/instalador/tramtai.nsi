@@ -16,6 +16,10 @@ SetCompressor /SOLID lzma
 !define RAIZ "..\.."
 
 Name "Tramtai"
+; El título cambia a «Actualizar Tramtai» si ya está instalado: .onInit fija $tituloVentana y NSIS lo lee después y
+; lo reutiliza en cada fase (un WM_SETTEXT desde una página se perdía al cambiar de fase).
+Var tituloVentana
+Caption "$tituloVentana"
 OutFile "${SALIDA}"
 InstallDir "$LOCALAPPDATA\Programs\Tramtai"
 InstallDirRegKey HKCU "${DESINSTALAR}" "InstallLocation"
@@ -40,21 +44,37 @@ BrandingText "Tramtai ${VERSION}"
 !define MUI_ABORTWARNING
 !define MUI_COMPONENTSPAGE_SMALLDESC
 
-!define MUI_WELCOMEPAGE_TITLE "$(bienvenidaTitulo)"
-!define MUI_WELCOMEPAGE_TEXT "$(bienvenidaTexto)"
+; Con una instalación previa el asistente habla de actualizar (lo decide .onInit con estas variables).
+Var hayInstalacion
+Var tituloBienvenida
+Var textoBienvenida
+Var tituloTerminado
+Var textoTerminado
+!define MUI_WELCOMEPAGE_TITLE "$tituloBienvenida"
+!define MUI_WELCOMEPAGE_TEXT "$textoBienvenida"
+!define MUI_INSTFILESPAGE_FINISHHEADER_TEXT "$tituloTerminado"
+!define MUI_INSTFILESPAGE_FINISHHEADER_SUBTEXT "$textoTerminado"
+; Al actualizar (/abrir) solo se ve la página de progreso: SaltarSiActualiza se salta las demás.
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SaltarSiActualiza
 !insertmacro MUI_PAGE_WELCOME
 ; Los textos legales van en RTF (go run ./scripts/rtf): el Markdown en UTF-8 salía con los acentos rotos y sin formato.
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SaltarSiActualiza
 !insertmacro MUI_PAGE_LICENSE "${RAIZ}\bin\LICENCIA.rtf"
 !define MUI_PAGE_HEADER_TEXT "$(terminosTitulo)"
 !define MUI_PAGE_HEADER_SUBTEXT "$(terminosSubtitulo)"
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SaltarSiActualiza
 !insertmacro MUI_PAGE_LICENSE "${RAIZ}\bin\TERMINOS.rtf"
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SaltarSiActualiza
 !insertmacro MUI_PAGE_COMPONENTS
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SaltarSiActualiza
 !insertmacro MUI_PAGE_DIRECTORY
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW MostrarProgreso
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_TITLE "$(finalTitulo)"
 !define MUI_FINISHPAGE_TEXT "$(finalTexto)"
 !define MUI_FINISHPAGE_RUN "$INSTDIR\tramtai-escritorio.exe"
 !define MUI_FINISHPAGE_RUN_TEXT "$(abrirAhora)"
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SaltarSiActualiza
 !insertmacro MUI_PAGE_FINISH
 
 !insertmacro MUI_UNPAGE_CONFIRM
@@ -68,6 +88,20 @@ LangString bienvenidaTitulo ${LANG_SPANISH} "Te damos la bienvenida a Tramtai"
 LangString bienvenidaTitulo ${LANG_ENGLISH} "Welcome to Tramtai"
 LangString bienvenidaTexto ${LANG_SPANISH} "Tramtai convierte Claude Code, Codex, Antigravity y la API de Gemini en una API local para tus aplicaciones.$\r$\n$\r$\nSe instala solo para tu usuario y no pide permisos de administrador. Si ya lo tienes instalado, se actualiza y conserva tu configuración, tus APIs y tu historial."
 LangString bienvenidaTexto ${LANG_ENGLISH} "Tramtai turns Claude Code, Codex, Antigravity and the Gemini API into a local API for your applications.$\r$\n$\r$\nIt installs for your user only and needs no administrator rights. If it is already installed, it is updated and keeps your settings, your APIs and your history."
+LangString ventanaActualizar ${LANG_SPANISH} "Actualizar Tramtai"
+LangString ventanaActualizar ${LANG_ENGLISH} "Update Tramtai"
+LangString actualizarTitulo ${LANG_SPANISH} "Actualizar Tramtai a ${VERSION}"
+LangString actualizarTitulo ${LANG_ENGLISH} "Update Tramtai to ${VERSION}"
+LangString actualizarTexto ${LANG_SPANISH} "Ya tienes Tramtai instalado. Se actualizará a ${VERSION} y se conservan tu configuración, tus APIs y tu historial.$\r$\n$\r$\nSi Tramtai está abierto, se cerrará y volverá a abrirse al terminar."
+LangString actualizarTexto ${LANG_ENGLISH} "Tramtai is already installed. It will be updated to ${VERSION}, keeping your settings, your APIs and your history.$\r$\n$\r$\nIf Tramtai is open, it will close and open again when it finishes."
+LangString actualizandoTitulo ${LANG_SPANISH} "Actualizando Tramtai"
+LangString actualizandoTitulo ${LANG_ENGLISH} "Updating Tramtai"
+LangString actualizandoSubtitulo ${LANG_SPANISH} "Espera mientras Tramtai se actualiza a ${VERSION}."
+LangString actualizandoSubtitulo ${LANG_ENGLISH} "Please wait while Tramtai is updated to ${VERSION}."
+LangString actualizadoTitulo ${LANG_SPANISH} "Actualización completada"
+LangString actualizadoTitulo ${LANG_ENGLISH} "Update completed"
+LangString actualizadoSubtitulo ${LANG_SPANISH} "Tramtai se actualizó correctamente."
+LangString actualizadoSubtitulo ${LANG_ENGLISH} "Tramtai was updated successfully."
 LangString finalTitulo ${LANG_SPANISH} "Tramtai está listo"
 LangString finalTitulo ${LANG_ENGLISH} "Tramtai is ready"
 LangString finalTexto ${LANG_SPANISH} "Al abrirlo queda en la bandeja del sistema con el servicio en marcha. En una terminal nueva puedes usar el comando tramtai."
@@ -103,6 +137,54 @@ LangString borrarDatos ${LANG_ENGLISH} "Also delete your Tramtai settings and da
 
 Var abierta  ; la app de escritorio estaba abierta antes de instalar
 Var servicio ; el servicio estaba en marcha
+Var actualizando ; lo lanzó una actualización (/S /abrir): se ve solo el progreso y se cierra solo
+
+; Una actualización («Actualizar ahora» o tramtai actualizar) lanza el instalador con /S /abrir. En silencio total la
+; app desaparecía unos segundos sin explicación: se muestra solo la página de progreso, sin preguntas.
+Function .onInit
+  ${GetParameters} $0
+  ClearErrors
+  ${GetOptions} $0 "/abrir" $1
+  ${IfNot} ${Errors}
+  ${AndIf} ${Silent}
+    SetSilent normal
+    StrCpy $actualizando 1
+  ${EndIf}
+  ; Hay instalación si Windows la tiene registrada (la clave que escribe esta misma instalación).
+  ReadRegStr $0 HKCU "${DESINSTALAR}" "InstallLocation"
+  ${If} $0 != ""
+    StrCpy $hayInstalacion 1
+    StrCpy $tituloVentana "$(ventanaActualizar)"
+    StrCpy $tituloBienvenida "$(actualizarTitulo)"
+    StrCpy $textoBienvenida "$(actualizarTexto)"
+    StrCpy $tituloTerminado "$(actualizadoTitulo)"
+    StrCpy $textoTerminado "$(actualizadoSubtitulo)"
+  ${Else}
+    StrCpy $tituloVentana "$(^SetupCaption)"
+    StrCpy $tituloBienvenida "$(bienvenidaTitulo)"
+    StrCpy $textoBienvenida "$(bienvenidaTexto)"
+    StrCpy $tituloTerminado "$(MUI_TEXT_FINISH_TITLE)"
+    StrCpy $textoTerminado "$(MUI_TEXT_FINISH_SUBTITLE)"
+  ${EndIf}
+FunctionEnd
+
+
+; MostrarProgreso titula la página de progreso al actualizar y, si la lanzó una actualización, la trae al frente:
+; Windows no deja que un instalador en segundo plano lo haga solo.
+Function MostrarProgreso
+  ${If} $hayInstalacion == 1
+    !insertmacro MUI_HEADER_TEXT "$(actualizandoTitulo)" "$(actualizandoSubtitulo)"
+  ${EndIf}
+  ${If} $actualizando == 1
+    BringToFront
+  ${EndIf}
+FunctionEnd
+
+Function SaltarSiActualiza
+  ${If} $actualizando == 1
+    Abort
+  ${EndIf}
+FunctionEnd
 
 ; HayProceso deja 0 en RESULTADO si el usuario tiene abierto un proceso con ese nombre (esté donde esté instalado).
 !macro HayProceso NOMBRE RESULTADO
@@ -126,6 +208,7 @@ Var servicio ; el servicio estaba en marcha
   ${If} $0 == 0
   ${OrIf} $1 == 0
     ${IfNot} ${Silent}
+    ${AndIf} $actualizando != 1
       MessageBox MB_OKCANCEL|MB_ICONINFORMATION "${AVISO}" /SD IDOK IDOK +2
       Abort
     ${EndIf}
@@ -149,6 +232,9 @@ Var servicio ; el servicio estaba en marcha
 
 Section "$(secPrograma)" SecPrograma
   SectionIn RO
+  ${If} $actualizando == 1
+    SetAutoClose true
+  ${EndIf}
   ; La CLI nueva detiene el servicio aunque esta carpeta aún no tenga Tramtai (primera instalación o portable).
   InitPluginsDir
   File "/oname=$PLUGINSDIR\tramtai.exe" "${RAIZ}\bin\tramtai.exe"
@@ -196,7 +282,12 @@ Function .onInstSuccess
   ${IfNot} ${Errors}
     StrCpy $abierta 1
   ${EndIf}
+  ; Sin asistente (en silencio o al actualizar) no hay casilla «Abrir Tramtai»: se abre si estaba abierta.
+  StrCpy $2 $actualizando
   ${If} ${Silent}
+    StrCpy $2 1
+  ${EndIf}
+  ${If} $2 == 1
   ${AndIf} $abierta == 1
     Exec '"$INSTDIR\tramtai-escritorio.exe" -actualizado'
   ${ElseIf} $servicio == 1

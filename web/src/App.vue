@@ -10,7 +10,10 @@
         <button type="button" class="marca-boton" :aria-label="t('app.irInicio')" @click="ir('inicio')">
           <img src="/logo.png" alt="" width="28" height="28" style="border-radius: 8px" />
           <span class="q-ml-sm marca gt-xs">Tramtai</span>
-          <span class="version q-ml-sm gt-xs">{{ sesion.version }}</span>
+        </button>
+        <!-- La versión abre «Acerca de»: un botón aparte, porque el logo ya lleva a Inicio. -->
+        <button type="button" class="version version-boton gt-xs" :aria-label="t('acerca.abrir', { version: sesion.version })" @click="acercaAbierto = true">
+          {{ sesion.version }}
         </button>
         <q-space />
         <q-btn-dropdown v-if="sesion.local && sesion.instancias?.length" flat no-caps :icon="iconoInstancia(sesion.ambito)"
@@ -54,6 +57,10 @@
                   <q-item-label class="text-weight-medium">{{ conectado ? t('app.enMarcha') : t('app.sinConexion') }}</q-item-label>
                   <q-item-label caption>{{ conectado ? t('app.servicioDetalle', { version: sesion.version, url: origen }) : t('app.comoIniciar') }}</q-item-label>
                 </q-item-section>
+              </q-item>
+              <q-item v-close-popup clickable @click="acercaAbierto = true">
+                <q-item-section avatar><q-icon name="o_info" /></q-item-section>
+                <q-item-section>{{ t('acerca.titulo') }}</q-item-section>
               </q-item>
               <q-separator />
               <q-item v-if="conectado && sesion.local && sesion.servicio?.reiniciable" v-close-popup clickable @click="reiniciarYSeguir().catch(avisarError)">
@@ -122,6 +129,15 @@
               <span class="column">
                 <span class="estacion__nombre">{{ t(ayuda.titulo) }}</span>
                 <span class="estacion__detalle">{{ t(ayuda.detalle) }}</span>
+              </span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="estacion" @click="acercaAbierto = true">
+              <q-icon name="o_info" size="19px" class="texto-suave" style="margin-left: -1px" />
+              <span class="column">
+                <span class="estacion__nombre">{{ t('acerca.titulo') }}</span>
+                <span class="estacion__detalle">{{ t('acerca.detalleMenu', { version: sesion.version }) }}</span>
               </span>
             </button>
           </li>
@@ -234,6 +250,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <AcercaDe v-model="acercaAbierto" />
   </q-layout>
 </template>
 
@@ -251,6 +268,7 @@ import ConectarPagina from './paginas/Accesos.vue'
 import ConfiguracionPagina from './paginas/Configuracion.vue'
 import AgentesPagina from './paginas/Agentes.vue'
 import AyudaPagina from './paginas/Ayuda.vue'
+import AcercaDe from './componentes/AcercaDe.vue'
 import NotasVersion from './componentes/NotasVersion.vue'
 
 // Orden del menú según el recorrido: conectar un agente, probarlo, conectar las apps y revisar lo ejecutado.
@@ -398,6 +416,7 @@ Object.assign(window, {
       if (actualizacion.value?.disponible) dialogoActualizar.value = true
     }),
   tramtaiBuscarActualizaciones: buscarActualizacionAhora,
+  tramtaiAcercaDe: () => (acercaAbierto.value = true),
 })
 
 // En la app de escritorio la bandeja abre aquí sus avisos, con el estilo de la app, y la respuesta le vuelve con
@@ -528,6 +547,8 @@ async function cambiar(instancia: string) {
 
 // Abrir un proyecto: la carpeta se escribe o, en la app de escritorio, se elige con el selector del sistema.
 const dialogoProyecto = ref(false)
+// acercaAbierto muestra «Acerca de Tramtai» (cabecera, menú del estado, menú lateral o la bandeja).
+const acercaAbierto = ref(false)
 const rutaProyecto = ref('')
 const abriendoProyecto = ref(false)
 // En macOS y Linux también vale ~/ para la carpeta personal.

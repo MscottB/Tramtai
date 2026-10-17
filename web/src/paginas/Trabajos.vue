@@ -87,12 +87,12 @@
               <q-btn v-if="detalle.salida" flat dense round size="sm" icon="o_content_copy" :aria-label="t('ejecutar.copiarRespuesta')" @click="copiar(detalle.salida)" />
             </div>
             <div v-if="detalle.disponibilidad === 'expirada'" class="texto-suave">{{ t('historial.expirada') }}</div>
-            <div v-else-if="detalle.salida" class="bloque-texto" :class="{ json: esJSON(detalle.salida) }">{{ detalle.salida }}</div>
+            <SalidaTrabajo v-else-if="detalle.salida" :texto="detalle.salida" caja />
             <div v-else class="texto-suave">{{ terminales.includes(detalle.estado) ? t('historial.sinRespuesta') : t('historial.todaviaEnCurso') }}</div>
           </div>
           <div class="ficha text-body2">
             <div>{{ t('historial.agenteModelo') }}</div><div>{{ modeloDe(detalle) }}</div>
-            <div>{{ t('historial.esfuerzo') }}</div><div>{{ nombreEsfuerzo(detalle.solicitud.esfuerzo) }}</div>
+            <div>{{ t('historial.esfuerzo') }}</div><div>{{ esfuerzoUsado(detalle, eventosDetalle) || '—' }}</div>
             <div>{{ t('historial.origen') }}</div><div>{{ textoOrigen(detalle) }}</div>
             <div>{{ t('historial.tokens') }}</div><div>{{ detalle.uso.tokens_entrada }} → {{ detalle.uso.tokens_salida }}</div>
             <template v-if="detalle.uso.costo_usd"><div>{{ t('historial.coste') }}</div><div>US$ {{ detalle.uso.costo_usd.toFixed(4) }}</div></template>
@@ -100,6 +100,7 @@
             <div>{{ t('historial.identificador') }}</div>
             <div class="codigo cursor-pointer" @click="copiar(detalle.id)">{{ detalle.id }}<q-tooltip>{{ t('comun.copiar') }}</q-tooltip></div>
           </div>
+          <RegistroTrabajo :trabajo="detalle" :version="detalle.estado" @cargado="(e: EventoRegistro[]) => (eventosDetalle = e)" />
         </q-card-section>
         <q-separator />
         <q-card-actions class="q-pa-md">
@@ -123,7 +124,9 @@ import EstadoVacio from '../componentes/EstadoVacio.vue'
 import { useQuasar, type QTableColumn } from 'quasar'
 import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
-import { api, avisar, avisarError, type EstadoPunto, copiar, duracion, esJSON, estadoInfo, fecha, filtroHistorial, haceCuanto, origenHistorial, trabajoAbrir, modeloDe, nombreEsfuerzo, terminales, textoDe, tituloError, trabajoSeguido, type Trabajo } from '../api'
+import RegistroTrabajo from '../componentes/RegistroTrabajo.vue'
+import SalidaTrabajo from '../componentes/SalidaTrabajo.vue'
+import { api, avisar, avisarError, type EstadoPunto, copiar, duracion, estadoInfo, fecha, filtroHistorial, haceCuanto, origenHistorial, trabajoAbrir, modeloDe, esfuerzoUsado, type EventoRegistro, terminales, textoDe, tituloError, trabajoSeguido, type Trabajo } from '../api'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()
@@ -133,11 +136,13 @@ const hayTerminados = computed(() => trabajos.value.some((x) => terminales.inclu
 const cargando = ref(false)
 const dialogo = ref(false)
 const detalle = ref<Trabajo>()
+const eventosDetalle = ref<EventoRegistro[]>([])
 const filtro = ref(filtroHistorial.value || 'todos')
 filtroHistorial.value = ''
 const busqueda = ref<string | null>('')
 // origen: '' todos; «o:probar» un origen, «g:web» un grupo o «p:tienda» una API (se filtra en el servicio).
-const origen = ref(origenHistorial.value ? 'p:' + origenHistorial.value : '')
+// Llega una API por su nombre (Mis APIs) o un filtro ya armado («o:probar» desde Probar).
+const origen = ref(origenHistorial.value.includes(':') ? origenHistorial.value : origenHistorial.value ? 'p:' + origenHistorial.value : '')
 const hayFiltro = computed(() => filtro.value !== 'todos' || !!busqueda.value || !!origen.value)
 function quitarFiltros() {
   filtro.value = 'todos'
@@ -236,6 +241,7 @@ async function verMas() {
 }
 
 async function abrir(elegido: Trabajo) {
+  eventosDetalle.value = []
   const n = ++pedidoDetalle
   try {
     const trabajo = await api.trabajo(elegido.id)

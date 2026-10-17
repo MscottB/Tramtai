@@ -3,19 +3,29 @@
     <q-input :model-value="modelValue.instrucciones" type="textarea" autogrow outlined dense :label="t('receta.instrucciones')"
       :placeholder="t('receta.instruccionesEjemplo')" :hint="t('receta.instruccionesHint')"
       @update:model-value="(v) => cambiar({ instrucciones: String(v ?? '') })" />
+    <!-- El esfuerzo va justo bajo el modelo, fuera de las opciones: se ve siempre cuál se usará, también el del agente.
+         En una fila no cabe: la columna de la receta es estrecha también en escritorio. -->
     <SelectorModelo :model-value="modelValue.modelo" :opciones="opciones" clearable :label="t('receta.modelo')"
       @update:model-value="(v) => cambiar({ modelo: v, forzar: v ? modelValue.forzar : false })" />
+    <SelectorEsfuerzo :model-value="modelValue.esfuerzo" :niveles="niveles" :predeterminado="esfuerzoPredeterminadoDe(catalogo, modelValue.modelo)" :hint="paraApi ? t('esfuerzo.api') : undefined"
+      @update:model-value="(v: string) => cambiar({ esfuerzo: v })" />
     <component :is="plegarOpciones ? QExpansionItem : 'div'" v-bind="plegarOpciones ? plegable : {}">
     <div class="q-gutter-y-md" :class="{ 'q-pt-sm': plegarOpciones }">
     <q-toggle :model-value="modelValue.forzar" :disable="!modelValue.modelo" :label="t('receta.forzar')"
       @update:model-value="(v: boolean) => cambiar({ forzar: v })" />
-    <SelectorEsfuerzo :model-value="modelValue.esfuerzo" :niveles="niveles" :predeterminado="esfuerzoPredeterminadoDe(catalogo, modelValue.modelo)" :hint="paraApi ? t('esfuerzo.api') : undefined"
-      @update:model-value="(v: string) => cambiar({ esfuerzo: v })" />
-    <q-select :model-value="modelValue.respaldo" :options="opcionesRespaldo" multiple use-chips emit-value map-options outlined dense
+    <q-select :model-value="basesRespaldo" :options="opcionesRespaldo" multiple use-chips emit-value map-options outlined dense
       :max-values="3" :label="t('receta.respaldo')" :hint="t('receta.respaldoHint')"
-      @update:model-value="(v: string[] | null) => cambiar({ respaldo: v ?? [] })">
+      @update:model-value="(v: string[] | null) => elegirRespaldo(v ?? [])">
       <template #prepend><q-icon name="o_alt_route" /></template>
     </q-select>
+    <!-- Cada agente de respaldo puede llevar su propio esfuerzo; sin elegir, el del principal o el de su CLI. -->
+    <div v-for="(r, i) in respaldoDividido" :key="r.base" class="q-pl-md">
+      <SelectorEsfuerzo v-if="r.niveles.length" :model-value="r.esfuerzo" :niveles="modelValue.esfuerzo ? ['agente', ...r.niveles] : r.niveles" :etiqueta="t('receta.esfuerzoDe', { agente: r.nombre })"
+        :vacio="vacioRespaldo(r.base, r.niveles)" hint="" @update:model-value="(v: string) => esfuerzoRespaldo(i, v)" />
+      <div v-else class="text-caption texto-suave row items-center no-wrap">
+        <q-icon name="o_psychology" size="18px" class="q-mr-xs" />{{ t('receta.respaldoSinEsfuerzo', { agente: r.nombre }) }}
+      </div>
+    </div>
     <div>
       <q-toggle :model-value="estructurada" :label="t('receta.salidaEstructurada')" @update:model-value="alternarEsquema" />
       <div class="text-caption texto-suave q-pl-sm">{{ t('receta.salidaEstructuradaTexto') }}</div>
@@ -35,7 +45,8 @@ import { computed, ref, watch } from 'vue'
 import { QExpansionItem } from 'quasar'
 import SelectorEsfuerzo from './SelectorEsfuerzo.vue'
 import SelectorModelo from './SelectorModelo.vue'
-import { esfuerzoPredeterminadoDe, esfuerzosDe, esquemaDeReceta, opcionModelo, type Modelo, type Receta } from '../api'
+import { dividirRespaldo, esfuerzoPredeterminadoDe, esfuerzosDe, esquemaDeReceta, nombreEsfuerzo, opcionModelo, unirRespaldo, type Modelo,
+  type Receta } from '../api'
 import { t } from '../i18n'
 
 // paraApi: en una API sin modelo fijo la aplicación puede elegirlo, así que se ofrecen todos los niveles de esfuerzo.
@@ -45,7 +56,7 @@ const props = defineProps<{ modelValue: Receta; catalogo: Modelo[]; paraApi?: bo
 const emit = defineEmits<{ 'update:modelValue': [valor: Receta] }>()
 
 const cambiar = (parcial: Partial<Receta>) => emit('update:modelValue', { ...props.modelValue, ...parcial })
-const conOpciones = computed(() => props.modelValue.forzar || !!props.modelValue.esfuerzo || props.modelValue.respaldo.length > 0 || !!props.modelValue.esquema)
+const conOpciones = computed(() => props.modelValue.forzar || props.modelValue.respaldo.length > 0 || !!props.modelValue.esquema)
 // La receta puede llegar después de montar (Abrir en Probar): se abre en cuanto alguna opción tiene valor.
 const abierta = ref(conOpciones.value)
 watch(conOpciones, (v) => v && (abierta.value = true))
@@ -55,6 +66,29 @@ const plegable = computed(() => ({ label: t('receta.opciones'), icon: 'o_tune', 
 const opciones = computed(() => props.catalogo.map(opcionModelo))
 // El respaldo es agente o agente/modelo: un perfil no sirve porque da un modelo distinto por agente.
 const opcionesRespaldo = computed(() => props.catalogo.filter((m) => !m.perfil).map(opcionModelo))
+// Las entradas de respaldo son agente[/modelo][+esfuerzo]: el selector elige las bases y cada una conserva su esfuerzo.
+// «agente» (el esfuerzo de su propio CLI) solo se distingue de «igual que el principal» si el principal tiene uno; si no,
+// son lo mismo y se muestra como el vacío.
+const respaldoDividido = computed(() => props.modelValue.respaldo.map((e) => {
+  const r = dividirRespaldo(e)
+  if (r.esfuerzo === 'agente' && !props.modelValue.esfuerzo) r.esfuerzo = ''
+  return { ...r, niveles: esfuerzosDe(props.catalogo, r.base), nombre: opcionesRespaldo.value.find((o) => o.value === r.base)?.label ?? r.base }
+}))
+const basesRespaldo = computed(() => respaldoDividido.value.map((r) => r.base))
+function elegirRespaldo(bases: string[]) {
+  cambiar({ respaldo: bases.map((b) => props.modelValue.respaldo.find((e) => dividirRespaldo(e).base === b) ?? b) })
+}
+function esfuerzoRespaldo(i: number, esfuerzo: string) {
+  cambiar({ respaldo: props.modelValue.respaldo.map((e, j) => (j === i ? unirRespaldo(dividirRespaldo(e).base, esfuerzo) : e)) })
+}
+// vacioRespaldo dice qué esfuerzo usa un respaldo sin uno propio: el del principal (ajustado al máximo de ese agente,
+// como hace el servicio) o, si no hay, el de su CLI.
+function vacioRespaldo(base: string, niveles: string[]): string {
+  const principal = props.modelValue.esfuerzo
+  if (principal) return t('receta.respaldoIgual', { nivel: nombreEsfuerzo(niveles.includes(principal) ? principal : niveles.at(-1)).toLowerCase() })
+  const p = esfuerzoPredeterminadoDe(props.catalogo, base)
+  return p ? t('esfuerzo.agenteCon', { nivel: nombreEsfuerzo(p).toLowerCase() }) : t('esfuerzo.agente')
+}
 
 const todosLosNiveles = computed(() => props.catalogo.reduce<string[]>((a, m) => ((m.esfuerzos?.length ?? 0) > a.length ? m.esfuerzos! : a), []))
 const niveles = computed(() => (!props.modelValue.modelo && props.paraApi ? todosLosNiveles.value : esfuerzosDe(props.catalogo, props.modelValue.modelo)))

@@ -44,6 +44,14 @@ func servidor(t *testing.T, registro map[string]adaptadores.Adaptador, ajustes m
 // servidorCon es servidor con la política de un punto de acceso (nil: la API de la instancia).
 func servidorCon(t *testing.T, registro map[string]adaptadores.Adaptador, ajustes map[string]any, punto *Punto) *httptest.Server {
 	t.Helper()
+	ts := httptest.NewServer(nuevoServidor(t, registro, ajustes, punto).Handler())
+	t.Cleanup(ts.Close)
+	return ts
+}
+
+// nuevoServidor arma el servidor con su planificador y su almacén; se cierran al terminar la prueba.
+func nuevoServidor(t *testing.T, registro map[string]adaptadores.Adaptador, ajustes map[string]any, punto *Punto) *Servidor {
+	t.Helper()
 	dir := t.TempDir()
 	alm, err := persistencia.Abrir(filepath.Join(dir, "instancia.db"))
 	if err != nil {
@@ -69,13 +77,11 @@ func servidorCon(t *testing.T, registro map[string]adaptadores.Adaptador, ajuste
 	}
 	s := &Servidor{Planificador: p, Cargas: cargas, Registro: registro, Config: c, Token: "secreto",
 		Hosts: []string{"127.0.0.1", "localhost", "::1"}, Sondeo: 10 * time.Millisecond, Punto: punto}
-	ts := httptest.NewServer(s.Handler())
 	t.Cleanup(func() {
-		ts.Close()
 		p.Detener()
 		alm.Cerrar()
 	})
-	return ts
+	return s
 }
 
 func simulado(a adaptadores.Adaptador) map[string]adaptadores.Adaptador {
@@ -178,6 +184,59 @@ func TestTrabajoNativoYEventos(t *testing.T) {
 	_, reanudados := pedir(t, ts, "GET", "/api/v1/trabajos/"+id+"/eventos", "", "Last-Event-ID", "3")
 	if !strings.HasPrefix(reanudados, "id: 4\n") {
 		t.Fatalf("Last-Event-ID debe reanudar después del 3:\n%s", reanudados)
+	}
+}
+
+func TestRegistroSinTexto(t *testing.T) {
+	ts := servidor(t, simulado(trozos{}), nil)
+	_, cuerpo := pedir(t, ts, "POST", "/api/v1/trabajos", solicitudHola)
+	id := decodificar(t, cuerpo)["id"].(string)
+	esperarEstado(t, ts, id, nucleo.Completado)
+	r, cuerpo := pedir(t, ts, "GET", "/api/v1/trabajos/"+id+"/registro", "")
+	if r.StatusCode != 200 {
+		t.Fatalf("registro: %d %s", r.StatusCode, cuerpo)
+	}
+	var registro struct {
+		Eventos []struct {
+			Numero   int       `json:"numero"`
+			Tipo     string    `json:"tipo"`
+			Datos    string    `json:"datos"`
+			CreadoEn time.Time `json:"creado_en"`
+		} `json:"eventos"`
+	}
+	if err := json.Unmarshal([]byte(cuerpo), &registro); err != nil {
+		t.Fatal(err)
+	}
+	tipos := map[string]int{}
+	for i, e := range registro.Eventos {
+		tipos[e.Tipo]++
+		if i > 0 && e.CreadoEn.Before(registro.Eventos[i-1].CreadoEn) {
+			t.Fatalf("las horas no pueden retroceder: %+v", registro.Eventos)
+		}
+	}
+	if tipos["texto"] != 0 || tipos["estado"] == 0 || tipos["intento"] != 1 {
+		t.Fatalf("registro sin texto, con estados y un intento: %v", tipos)
+	}
+	// Mismo permiso que GET /api/v1/trabajos/{id}: lo que no se ve da 404 y sin clave, 401.
+	if r, _ := pedir(t, ts, "GET", "/api/v1/trabajos/trabajo_inexistente/registro", ""); r.StatusCode != 404 {
+		t.Fatalf("un trabajo inexistente da 404: %d", r.StatusCode)
+	}
+	if r, err := http.Get(ts.URL + "/api/v1/trabajos/" + id + "/registro"); err != nil || r.StatusCode != 401 {
+		t.Fatalf("sin clave, 401: %v %v", r, err)
+	}
+}
+
+func TestRegistroDeOtroPunto(t *testing.T) {
+	s := nuevoServidor(t, simulado(adaptadores.Simulado{}), nil, nil)
+	ts := httptest.NewServer(s.Handler())
+	t.Cleanup(ts.Close)
+	_, cuerpo := pedir(t, ts, "POST", "/api/v1/trabajos", solicitudHola)
+	id := decodificar(t, cuerpo)["id"].(string)
+	esperarEstado(t, ts, id, nucleo.Completado)
+	// Una API solo ve sus trabajos: el de la instancia no existe para ella.
+	s.Punto = &Punto{Nombre: "otra"}
+	if r, _ := pedir(t, ts, "GET", "/api/v1/trabajos/"+id+"/registro", ""); r.StatusCode != 404 {
+		t.Fatalf("el trabajo de otro punto da 404: %d", r.StatusCode)
 	}
 }
 
@@ -427,6 +486,11 @@ func TestPuntoRespaldoNoPermitido(t *testing.T) {
 	s := &Servidor{Config: c, Punto: &Punto{Nombre: "r", ModelosPermitidos: []string{"simulado"}, Respaldo: []string{"otro"}}}
 	if _, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}}); nucleo.CodigoDe(err) != nucleo.CodigoModeloNoPermitido {
 		t.Fatalf("un respaldo fuera de modelos_permitidos se rechaza: %v", err)
+	}
+	// El esfuerzo propio no cuenta para modelos_permitidos.
+	s.Punto = &Punto{Nombre: "r", ModelosPermitidos: []string{"simulado", "otro"}, Respaldo: []string{"otro+alto"}}
+	if _, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}}); err != nil {
+		t.Fatalf("otro+alto cabe en modelos_permitidos [otro]: %v", err)
 	}
 }
 

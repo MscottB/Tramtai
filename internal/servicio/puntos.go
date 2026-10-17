@@ -164,7 +164,7 @@ func (p ConfigPunto) Normalizar(instancia string, puertoServicio int) (ConfigPun
 // entrada fuera de modelos_permitidos. Normalizar solo ve el formato; esto necesita el registro del servicio.
 func (s *Servicio) validarRespaldo(p ConfigPunto) error {
 	for _, e := range p.Respaldo {
-		agente, _ := nucleo.DividirRespaldo(e)
+		agente, _, _ := nucleo.DividirRespaldo(e)
 		motivo := ""
 		switch {
 		case s.opc.Registro[agente] == nil:

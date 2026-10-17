@@ -158,6 +158,32 @@ func (s *Servidor) eventosTrabajo(w http.ResponseWriter, r *http.Request) {
 	_ = f.json("fin", map[string]any{"estado": final.Estado, "codigo_error": final.CodigoError})
 }
 
+// registroTrabajo devuelve los eventos sin texto de la respuesta (estados, intentos y avisos) con su hora, para ver
+// cuánto duró cada etapa y con qué agente se intentó.
+func (s *Servidor) registroTrabajo(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if _, err := s.trabajo(r, id); err != nil {
+		EscribirError(w, r, err)
+		return
+	}
+	eventos, err := s.Planificador.Registro(r.Context(), id)
+	if err != nil {
+		EscribirError(w, r, err)
+		return
+	}
+	type evento struct {
+		Numero   int       `json:"numero"`
+		Tipo     string    `json:"tipo"`
+		Datos    string    `json:"datos"`
+		CreadoEn time.Time `json:"creado_en"`
+	}
+	lista := []evento{}
+	for _, e := range eventos {
+		lista = append(lista, evento{e.Numero, e.Tipo, e.Datos, e.CreadoEn.UTC()})
+	}
+	EscribirJSON(w, http.StatusOK, map[string]any{"eventos": lista})
+}
+
 func (s *Servidor) cancelarTrabajo(w http.ResponseWriter, r *http.Request) {
 	if _, err := s.trabajo(r, r.PathValue("id")); err != nil {
 		EscribirError(w, r, err)

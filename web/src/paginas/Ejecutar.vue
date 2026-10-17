@@ -56,6 +56,30 @@
             <q-btn unelevated color="primary" icon="o_send" :label="t('ejecutar.enviar')" no-caps :loading="enviando" :disable="activo || !mensaje.trim()" @click="ejecutar" />
           </q-card-actions>
         </q-card>
+        <!-- Las pruebas recientes van con la receta: «Usar de nuevo» la rellena. -->
+        <q-card class="q-mt-md">
+          <q-card-section class="row items-center no-wrap q-pb-sm">
+            <div class="titulo-seccion col">{{ t('ejecutar.recientes') }}</div>
+            <q-btn v-if="recientes.length" flat dense no-caps color="primary" icon-right="o_chevron_right" :label="t('ejecutar.verTodo')" @click="verTodo" />
+          </q-card-section>
+          <div v-if="!recientes.length" class="q-px-md q-pb-md text-body2 texto-suave">{{ t('ejecutar.sinRecientes') }}</div>
+          <q-list v-else separator>
+            <q-item v-for="x in recientes" :key="x.id" clickable :active="trabajo?.id === x.id" @click="seguir(x)">
+              <q-item-section>
+                <q-item-label lines="1">{{ mensajeDe(x) || t('trabajo.entradaEliminada') }}</q-item-label>
+                <q-item-label caption lines="1">
+                  <span :class="estadoInfo(x.estado).clase"><q-icon :name="estadoInfo(x.estado).icono" size="12px" />{{ estadoInfo(x.estado).etiqueta }}</span>
+                  {{ haceCuanto(x.creado_en) }} · {{ modeloDe(x) }}
+                </q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-btn flat dense round icon="o_replay" color="primary" :disable="!mensajeDe(x)" :aria-label="t('ejecutar.usarDeNuevo')" @click.stop="usarDeNuevo(x)">
+                  <q-tooltip>{{ mensajeDe(x) ? t('ejecutar.usarDeNuevo') : t('trabajo.entradaEliminada') }}</q-tooltip>
+                </q-btn>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card>
       </div>
 
       <div class="col-12 col-md-7 respuesta-fija">
@@ -92,17 +116,23 @@
                 <template #avatar><q-icon name="o_error" /></template>
                 <b>{{ tituloError(final.codigo_error) }}</b><span v-if="final.mensaje_error">: {{ final.mensaje_error }}</span>
               </q-banner>
-              <pre class="salida" :class="{ json: esJSON(salida) }" aria-live="polite">{{ salida }}</pre>
+              <div aria-live="polite"><SalidaTrabajo :texto="salida" /></div>
               <div v-if="activo && !salida" class="row items-center texto-suave q-gutter-x-sm">
                 <q-spinner-dots color="primary" size="24px" /><span>{{ estadoInfo(estado).etiqueta }}…</span>
               </div>
             </template>
           </q-card-section>
+          <template v-if="trabajo">
+            <q-separator />
+            <q-card-section class="q-py-xs">
+              <RegistroTrabajo :trabajo="trabajo" :version="versionRegistro" @cargado="(e: EventoRegistro[]) => (eventosRegistro = e)" />
+            </q-card-section>
+          </template>
           <template v-if="final">
             <q-separator />
             <q-card-section class="metadatos">
               <Linea :agente="final.solicitud.agente" :modelo="final.modelo_efectivo || final.modelo_enviado" />
-              <span v-if="final.solicitud.esfuerzo"><q-icon name="o_psychology" />{{ nombreEsfuerzo(final.solicitud.esfuerzo) }}</span>
+              <span v-if="esfuerzoFinal"><q-icon name="o_psychology" />{{ esfuerzoFinal }}</span>
               <span><q-icon name="o_data_usage" />{{ final.uso.tokens_entrada }} → {{ final.uso.tokens_salida }} tokens</span>
               <span v-if="final.uso.costo_usd"><q-icon name="o_payments" />US$ {{ final.uso.costo_usd.toFixed(4) }}</span>
               <span v-if="final.terminado_en"><q-icon name="o_timer" />{{ duracion(final.creado_en, final.terminado_en) }}</span>
@@ -162,10 +192,14 @@ import EditorReceta from '../componentes/EditorReceta.vue'
 import EstadoVacio from '../componentes/EstadoVacio.vue'
 import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
-import { ajustesDeReceta, api, aplicarModelo, avisar, avisarError, configDeReceta, copiar, duracion, esJSON, esquemaDeReceta, estadoInfo, modeloInicial,
-  nombreEsfuerzo, recetaDePunto, recetaInicial, recetaVacia, terminales, tituloError, trabajoSeguido, type Modelo, type Receta, type Solicitud,
+import RegistroTrabajo from '../componentes/RegistroTrabajo.vue'
+import SalidaTrabajo from '../componentes/SalidaTrabajo.vue'
+import { ajustesDeReceta, api, aplicarModelo, avisar, avisarError, configDeReceta, copiar, duracion, esquemaDeReceta, esfuerzoUsado, estadoInfo, haceCuanto, mensajeDe, modeloDe, modeloInicial,
+  origenHistorial, recetaDePunto, recetaDeSolicitud, recetaInicial, recetaVacia, terminales, tituloError, trabajoSeguido, type EventoRegistro, type Modelo, type Receta, type Solicitud,
   type Trabajo } from '../api'
 import { t } from '../i18n'
+
+const emit = defineEmits<{ ir: [pagina: string] }>()
 
 const catalogo = ref<Modelo[]>([])
 // receta es lo que define la API que se está probando; desde Agentes llega con un modelo ya elegido.
@@ -194,9 +228,14 @@ const estado = ref('')
 const salida = ref('')
 const avisos = ref<string[]>([])
 const activo = ref(false)
+// versionRegistro sube con cada paso en vivo para que el registro se vuelva a pedir; eventosRegistro da el esfuerzo usado.
+const versionRegistro = ref(0)
+const eventosRegistro = ref<EventoRegistro[]>([])
+const esfuerzoFinal = computed(() => (final.value ? esfuerzoUsado(final.value, eventosRegistro.value) : ''))
 let fuente: EventSource | undefined
 
 onMounted(async () => {
+  cargarRecientes()
   catalogo.value = await api.catalogo().catch((e) => (avisarError(e), []))
   if (recetaInicial.value) {
     const nombre = recetaInicial.value
@@ -246,6 +285,7 @@ async function ejecutar() {
     if (r.esfuerzo) s.esfuerzo = r.esfuerzo
     s = aplicarModelo(s, r.modelo ?? '')
     seguir(await api.crear(s))
+    cargarRecientes()
   } catch (e) {
     avisarError(e)
   } finally {
@@ -261,6 +301,7 @@ function seguir(nuevo: Trabajo) {
   estado.value = nuevo.estado
   salida.value = ''
   avisos.value = []
+  eventosRegistro.value = []
   activo.value = !terminales.includes(nuevo.estado)
   const actual = (fuente = new EventSource(`/api/v1/trabajos/${encodeURIComponent(nuevo.id)}/eventos`))
   // ultimo: el número del último evento recibido; tras reconectar se descarta lo que ya estaba.
@@ -277,8 +318,13 @@ function seguir(nuevo: Trabajo) {
   // aviso: por ejemplo, que un agente llegó a su límite y sigue el del respaldo.
   actual.addEventListener('aviso', (e) => {
     if (nuevoEvento(e)) avisos.value.push((e as MessageEvent).data)
+    versionRegistro.value++
   })
-  actual.addEventListener('estado', (e) => (estado.value = (e as MessageEvent).data))
+  actual.addEventListener('estado', (e) => {
+    estado.value = (e as MessageEvent).data
+    versionRegistro.value++
+  })
+  actual.addEventListener('intento', () => versionRegistro.value++)
   actual.addEventListener('fin', () => {
     actual.close()
     terminar(nuevo.id)
@@ -297,11 +343,32 @@ async function terminar(id: string) {
     // Con salida estructurada el texto en vivo puede diferir del resultado validado: se muestra el resultado.
     if (terminado.estado === 'completado' && terminado.salida !== undefined && terminado.salida !== salida.value) salida.value = terminado.salida
     final.value = terminado
+    versionRegistro.value++
+    cargarRecientes()
   } catch (e) {
     avisarError(e)
   } finally {
     activo.value = false
   }
+}
+
+// recientes son las últimas pruebas lanzadas desde Probar (las de las APIs y la terminal están en el Historial).
+const recientes = ref<Trabajo[]>([])
+async function cargarRecientes() {
+  recientes.value = await api.trabajos(10, { origen: 'probar' }).catch(() => recientes.value)
+}
+function usarDeNuevo(x: Trabajo) {
+  const texto = mensajeDe(x)
+  if (!texto) return
+  mensaje.value = texto
+  receta.value = recetaDeSolicitud(x.solicitud)
+  editando.value = ''
+  archivos.value = null
+  if (x.solicitud.cargas?.length) avisar(t('ejecutar.sinAdjuntos'))
+}
+function verTodo() {
+  origenHistorial.value = 'o:probar'
+  emit('ir', 'historial')
 }
 
 async function cancelar() {

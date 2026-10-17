@@ -2,6 +2,7 @@ package planificador
 
 import (
 	"context"
+	"encoding/json"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -81,7 +82,7 @@ func TestCompletaConAgenteSimulado(t *testing.T) {
 	for _, e := range eventos {
 		recorrido = append(recorrido, e.Datos)
 	}
-	esperado := []string{"en_cola", "esperando_agente", "ejecutando", "hola", "validando_salida", "completado"}
+	esperado := []string{"en_cola", "esperando_agente", "ejecutando", `{"agente":"simulado","modelo":"","esfuerzo":""}`, "hola", "validando_salida", "completado"}
 	if len(recorrido) != len(esperado) {
 		t.Fatalf("recorrido de eventos %v, se esperaba %v", recorrido, esperado)
 	}
@@ -912,5 +913,176 @@ func TestUsoPrevioAlCancelarElRespaldo(t *testing.T) {
 	dia, _, _ := alm.Consumo(ctx, "global", "")
 	if tr.Uso.TokensEntrada != 10 || dia.Tokens != 10 {
 		t.Fatalf("el uso del intento fallido se conserva al cancelar: trabajo %+v, consumo %+v", tr.Uso, dia)
+	}
+}
+
+// esfuerzoVisto responde bien y anota el esfuerzo con que se le llamó.
+type esfuerzoVisto struct{ visto chan string }
+
+func (a esfuerzoVisto) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	a.visto <- s.Esfuerzo
+	return adaptadores.Simulado{Respuesta: "ok"}.Ejecutar(ctx, s, emitir)
+}
+
+// Dos saltos: el segundo respaldo, sin esfuerzo propio, hereda el del principal también en lo guardado, así que el
+// reintento no arrastra el del primer respaldo.
+func TestRespaldoSinSufijoTrasDosSaltos(t *testing.T) {
+	alm := abrir(t)
+	visto := make(chan string, 4)
+	limite := adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)}
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{"simulado": limite, "codex": limite, "otro": esfuerzoVisto{visto}}, 2)
+	s := conRespaldo("codex+bajo", "otro")
+	s.Esfuerzo = "alto"
+	tr := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if e := <-visto; e != "alto" || tr.Solicitud.Agente != "otro" || tr.Solicitud.Esfuerzo != "alto" {
+		t.Fatalf("otro hereda alto del principal y así queda guardado (%q): %+v", e, tr.Solicitud)
+	}
+	nuevo, err := p.Reintentar(ctx, tr.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	esperar(t, alm, nuevo.ID, nucleo.Completado)
+	if e := <-visto; e != "alto" {
+		t.Fatalf("el reintento conserva el esfuerzo del principal: %q", e)
+	}
+}
+
+// Tras saltar a un respaldo con esfuerzo propio, lo que queda del respaldo guarda el esfuerzo del principal: un
+// reintento o un reencolado no lo cambia por el del respaldo.
+func TestRespaldoRestanteConservaElDelPrincipal(t *testing.T) {
+	alm := abrir(t)
+	var n atomic.Int32
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)}, "codex": primeroBien{&n}, "otro": adaptadores.Simulado{Respuesta: "ok"}}, 2)
+	s := conRespaldo("codex+bajo", "otro")
+	s.Esfuerzo = "alto"
+	tr := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if tr.Solicitud.Esfuerzo != "bajo" || len(tr.Solicitud.Respaldo) != 1 || tr.Solicitud.Respaldo[0] != "otro+alto" {
+		t.Fatalf("respondió codex con bajo y el respaldo restante lleva el del principal: %+v", tr.Solicitud)
+	}
+}
+
+// Sin esfuerzo en el principal: tras responder un respaldo con el suyo, el resto del respaldo no lo hereda al
+// reintentar; usa el de su propio CLI, como en la petición original.
+func TestRespaldoSinEsfuerzoPrincipalNoHeredaDelRespaldo(t *testing.T) {
+	alm := abrir(t)
+	var n atomic.Int32
+	visto := make(chan string, 4)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)}, "codex": primeroBien{&n}, "otro": esfuerzoVisto{visto}}, 2)
+	tr := esperar(t, alm, enviar(t, p, conRespaldo("codex+bajo", "otro")), nucleo.Completado)
+	if tr.Solicitud.Agente != "codex" || tr.Solicitud.Esfuerzo != "bajo" {
+		t.Fatalf("respondió codex con bajo: %+v", tr.Solicitud)
+	}
+	nuevo, err := p.Reintentar(ctx, tr.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	esperar(t, alm, nuevo.ID, nucleo.Completado)
+	if e := <-visto; e != "" {
+		t.Fatalf("otro usa el esfuerzo de su CLI, no el bajo de codex: %q", e)
+	}
+}
+
+func TestRespaldoConEsfuerzoPropio(t *testing.T) {
+	alm := abrir(t)
+	visto := make(chan string, 4)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)}, "otro": esfuerzoVisto{visto}}, 2)
+	s := conRespaldo("otro+alto")
+	s.Esfuerzo = "bajo"
+	tr := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if e := <-visto; e != "alto" || tr.Solicitud.Esfuerzo != "alto" || len(tr.Solicitud.Respaldo) != 0 {
+		t.Fatalf("el respaldo debía usar su esfuerzo (%q) y el trabajo guardarlo: %+v", e, tr.Solicitud)
+	}
+	// El reintento empieza por el agente que respondió, con el esfuerzo con que respondió.
+	nuevo, err := p.Reintentar(ctx, tr.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	esperar(t, alm, nuevo.ID, nucleo.Completado)
+	if e := <-visto; e != "alto" {
+		t.Fatalf("el reintento debía usar alto: %q", e)
+	}
+
+	s = conRespaldo("otro")
+	s.Esfuerzo = "bajo"
+	tr = esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if e := <-visto; e != "bajo" || tr.Solicitud.Esfuerzo != "bajo" {
+		t.Fatalf("sin sufijo, el respaldo hereda el esfuerzo del principal: %q %+v", e, tr.Solicitud)
+	}
+}
+
+// intentos devuelve los datos de los eventos intento del trabajo, en orden.
+func intentos(t *testing.T, alm *persistencia.Almacen, id string) []map[string]any {
+	t.Helper()
+	eventos, err := alm.Eventos(ctx, id, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var lista []map[string]any
+	for _, e := range eventos {
+		if e.Tipo == "intento" {
+			var datos map[string]any
+			if err := json.Unmarshal([]byte(e.Datos), &datos); err != nil {
+				t.Fatal(err)
+			}
+			lista = append(lista, datos)
+		}
+	}
+	return lista
+}
+
+func TestEventoIntento(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)}, "codex": adaptadores.Simulado{Respuesta: "ok"}}, 2)
+	s := solicitud("x")
+	s.Agente, s.Esfuerzo = "codex", "maximo"
+	tr := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	niveles := adaptadores.NivelesEsfuerzo("codex")
+	if l := intentos(t, alm, tr.ID); len(l) != 1 || l[0]["agente"] != "codex" || l[0]["esfuerzo"] != niveles[len(niveles)-1] || l[0]["del_agente"] != nil {
+		t.Fatalf("un intento con el esfuerzo ajustado al máximo de codex: %v", l)
+	}
+	// Con un salto, un intento por agente y en orden; uno sin niveles de esfuerzo no informa ninguno.
+	s = conRespaldo("codex+bajo")
+	s.Esfuerzo = "alto"
+	tr = esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if l := intentos(t, alm, tr.ID); len(l) != 2 || l[0]["agente"] != "simulado" || l[0]["esfuerzo"] != "" || l[1]["agente"] != "codex" || l[1]["esfuerzo"] != "bajo" {
+		t.Fatalf("dos intentos en orden: %v", l)
+	}
+}
+
+func TestIntentoDelAgente(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{"claude": adaptadores.Simulado{Respuesta: "ok"}}, 1)
+	s := solicitud("x")
+	s.Agente, s.Modelo = "claude", "claude-opus-5-5"
+	tr := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if l := intentos(t, alm, tr.ID); len(l) != 1 || l[0]["esfuerzo"] != "medio" || l[0]["del_agente"] != true {
+		t.Fatalf("sin esfuerzo pedido, el predeterminado conocido del modelo: %v", l)
+	}
+}
+
+// conVersion responde como un CLI que informa la versión real detrás de un alias.
+type conVersion struct{}
+
+func (conVersion) Ejecutar(context.Context, nucleo.SolicitudEjecucion, func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	return adaptadores.Resultado{Salida: "ok", ModeloEfectivo: "claude-haiku-5-5"}, nil
+}
+
+func TestIntentoDelAgenteConAlias(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{"claude": conVersion{}}, 1)
+	s := solicitud("x")
+	s.Agente, s.Modelo = "claude", "haiku"
+	primero := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if l := intentos(t, alm, primero.ID); len(l) != 1 || l[0]["esfuerzo"] != "" {
+		t.Fatalf("sin versión vista, el alias no tiene un predeterminado seguro: %v", l)
+	}
+	// Con la versión ya vista detrás del alias, el registro dice el esfuerzo que usa el CLI.
+	segundo := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if l := intentos(t, alm, segundo.ID); len(l) != 1 || l[0]["esfuerzo"] != "medio" || l[0]["del_agente"] != true {
+		t.Fatalf("el alias se resuelve con la versión vista: %v", l)
 	}
 }

@@ -172,7 +172,7 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 		return nucleo.Trabajo{}, false, err
 	}
 	for _, e := range solicitud.Respaldo {
-		if agente, _ := nucleo.DividirRespaldo(e); p.adaptadores[agente] == nil {
+		if agente, _, _ := nucleo.DividirRespaldo(e); p.adaptadores[agente] == nil {
 			return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("agente de respaldo no disponible: %s", agente))
 		}
 	}
@@ -313,6 +313,18 @@ func (p *Planificador) Eventos(ctx context.Context, id string, desde int) ([]per
 	}
 	eventos, err := p.almacen.Eventos(ctx, id, desde)
 	return eventos, estado, err
+}
+
+// Registro devuelve los pasos de un trabajo sin el texto de la respuesta: estados, intentos y avisos.
+func (p *Planificador) Registro(ctx context.Context, id string) ([]persistencia.Evento, error) {
+	instancia, _, err := p.almacen.Estado(ctx, id)
+	if err == nil && instancia != p.opc.Instancia {
+		err = nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
+	}
+	if err != nil {
+		return nil, err
+	}
+	return p.almacen.EventosDeRegistro(ctx, id)
 }
 
 // Reintentar crea un intento nuevo vinculado al anterior, que debe haber terminado; reutiliza sus entradas
@@ -567,11 +579,23 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		if !p.cambiar(id, nucleo.Ejecutando, nucleo.EsperandoAgente, persistencia.Cambio{Uso: &usoPrevio}) {
 			return
 		}
+		// Lo guardado debe seguir valiendo al reintentar o reencolar: el agente nuevo con el esfuerzo que usa y el
+		// respaldo restante con lo que heredaba del principal escrito, porque la solicitud guardada ya no lo tendrá
+		// (sin esfuerzo en el principal, +agente: el de su propio CLI).
+		esfuerzo := cmp.Or(siguiente.esfuerzo, t.Solicitud.Esfuerzo)
+		if esfuerzo == nucleo.EsfuerzoDelAgente {
+			esfuerzo = ""
+		}
+		herencia := t.Solicitud.Esfuerzo
+		if herencia == "" && esfuerzo != "" {
+			herencia = nucleo.EsfuerzoDelAgente
+		}
 		var restante []string
 		for _, c := range lista[i+2:] {
+			c.esfuerzo = cmp.Or(c.esfuerzo, herencia)
 			restante = append(restante, c.String())
 		}
-		if err := p.almacen.CambiarAgente(fondo, id, siguiente.agente, siguiente.modelo, restante); err != nil && p.opc.Registros != nil {
+		if err := p.almacen.CambiarAgente(fondo, id, siguiente.agente, siguiente.modelo, esfuerzo, restante); err != nil && p.opc.Registros != nil {
 			// El respaldo sigue igual, pero el historial atribuiría la respuesta al agente anterior.
 			fmt.Fprintf(p.opc.Registros, "%s no se pudo guardar el cambio a %s: %v\n", id, siguiente, err)
 		}
@@ -595,29 +619,70 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo})
 }
 
+// intento es lo que guarda el evento intento: esfuerzo es el nivel que se pidió al CLI, ya ajustado a su máximo, o
+// con DelAgente el que usa por su cuenta para ese modelo (vacío si no se conoce o el agente no tiene esfuerzo).
+type intento struct {
+	Agente    string `json:"agente"`
+	Modelo    string `json:"modelo"`
+	Esfuerzo  string `json:"esfuerzo"`
+	DelAgente bool   `json:"del_agente,omitempty"`
+}
+
+// nuevoIntento arma el evento de un intento; versionVista resuelve un alias (o el modelo vacío) con la última versión
+// que informó el agente, como el catálogo.
+func nuevoIntento(c candidato, pedido string, versionVista func(agente, modelo string) string) intento {
+	i := intento{Agente: c.agente, Modelo: c.modelo}
+	niveles := adaptadores.NivelesEsfuerzo(c.agente)
+	switch {
+	case len(niveles) == 0:
+	case pedido == "":
+		i.Esfuerzo = adaptadores.EsfuerzoPredeterminado(c.agente, c.modelo)
+		if i.Esfuerzo == "" {
+			i.Esfuerzo = adaptadores.EsfuerzoPredeterminado(c.agente, versionVista(c.agente, c.modelo))
+		}
+		i.DelAgente = i.Esfuerzo != ""
+	case slices.Contains(niveles, pedido):
+		i.Esfuerzo = pedido
+	default: // por encima de su máximo: el adaptador usa el máximo
+		i.Esfuerzo = niveles[len(niveles)-1]
+	}
+	return i
+}
+
+// versionVista es el último modelo efectivo que informó el agente para ese modelo enviado ("" si no hay).
+func (p *Planificador) versionVista(agente, modelo string) string {
+	efectivos, _ := p.almacen.ModelosEfectivos(context.Background())
+	return efectivos[agente+"/"+modelo]
+}
+
 // sumarUso junta el uso de dos intentos del mismo trabajo.
 func sumarUso(a, b nucleo.Uso) nucleo.Uso {
 	return nucleo.Uso{TokensEntrada: a.TokensEntrada + b.TokensEntrada, TokensSalida: a.TokensSalida + b.TokensSalida, CostoUSD: a.CostoUSD + b.CostoUSD}
 }
 
-// candidato es un agente que puede ejecutar el trabajo: el principal o uno del respaldo.
-type candidato struct{ agente, modelo string }
+// candidato es un agente que puede ejecutar el trabajo: el principal o uno del respaldo. esfuerzo vacío usa el de la
+// solicitud.
+type candidato struct{ agente, modelo, esfuerzo string }
 
 func (c candidato) String() string {
-	if c.modelo == "" {
-		return c.agente
+	texto := c.agente
+	if c.modelo != "" {
+		texto += "/" + c.modelo
 	}
-	return c.agente + "/" + c.modelo
+	if c.esfuerzo != "" {
+		texto += "+" + c.esfuerzo
+	}
+	return texto
 }
 
 // candidatos son el agente principal (con el modelo ya resuelto) y después el respaldo. Una entrada que repite un
 // candidato anterior se omite; una sin modelo repite cualquier intento anterior de su agente.
 func candidatos(t nucleo.Trabajo) []candidato {
-	lista := []candidato{{t.Solicitud.Agente, t.ModeloEnviado}}
+	lista := []candidato{{t.Solicitud.Agente, t.ModeloEnviado, ""}}
 	for _, e := range t.Solicitud.Respaldo {
-		agente, modelo := nucleo.DividirRespaldo(e)
+		agente, modelo, esfuerzo := nucleo.DividirRespaldo(e)
 		if !slices.ContainsFunc(lista, func(c candidato) bool { return c.agente == agente && (modelo == "" || c.modelo == modelo) }) {
-			lista = append(lista, candidato{agente, modelo})
+			lista = append(lista, candidato{agente, modelo, esfuerzo})
 		}
 	}
 	return lista
@@ -678,6 +743,17 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 	}), limite)
 	defer cancelarEjecucion()
 	solicitud.Agente, solicitud.Modelo, solicitud.PerfilModelo = c.agente, c.modelo, ""
+	switch c.esfuerzo {
+	case "":
+	case nucleo.EsfuerzoDelAgente:
+		solicitud.Esfuerzo = ""
+	default:
+		solicitud.Esfuerzo = c.esfuerzo
+	}
+	// El registro dice con qué agente, modelo y esfuerzo se intentó; sin contenido del usuario.
+	if datos, err := json.Marshal(nuevoIntento(c, solicitud.Esfuerzo, p.versionVista)); err == nil {
+		_ = p.almacen.AgregarEvento(fondo, id, "intento", string(datos))
+	}
 	agrupador := &agrupador{guardar: func(tipo, datos string) error { return p.almacen.AgregarEvento(fondo, id, tipo, datos) }}
 	var texto atomic.Bool // algunos adaptadores emiten desde la goroutine que lee la salida del CLI
 	resultado, err = p.adaptadores[c.agente].Ejecutar(ctxEjecucion, solicitud, func(e adaptadores.Evento) error {

@@ -135,28 +135,42 @@ func (s SolicitudEjecucion) Validar() error {
 	return nil
 }
 
-// ValidarRespaldo comprueba la lista de respaldo: hasta 3 entradas agente o agente/modelo, sin repetir. Un perfil
-// no vale: da un modelo por agente y, sin agente, sería ambiguo.
+// ValidarRespaldo comprueba la lista de respaldo: hasta 3 entradas agente o agente/modelo, con un esfuerzo propio
+// opcional (+nivel), sin repetir agente y modelo. Un perfil no vale: da un modelo por agente y, sin agente, sería
+// ambiguo.
 func ValidarRespaldo(lista []string) error {
 	if len(lista) > maximoRespaldo {
 		return NuevoError(CodigoSolicitudInvalida, idioma.T("respaldo: máximo 3 agentes"))
 	}
-	for i, e := range lista {
-		agente, modelo, conModelo := strings.Cut(e, "/")
+	var vistas []string
+	for _, e := range lista {
+		base, nivel, conNivel := strings.Cut(e, "+")
+		agente, modelo, conModelo := strings.Cut(base, "/")
 		if !reParte.MatchString(agente) || agente == "perfil" || (conModelo && !reParte.MatchString(modelo)) {
 			return NuevoError(CodigoSolicitudInvalida, idioma.Tf("respaldo %q con formato no válido (agente o agente/modelo)", e))
 		}
-		if slices.Contains(lista[:i], e) {
-			return NuevoError(CodigoSolicitudInvalida, idioma.Tf("respaldo repetido: %s", e))
+		if conNivel && nivel != EsfuerzoDelAgente && !slices.Contains(NivelesEsfuerzo, nivel) {
+			return NuevoError(CodigoSolicitudInvalida, idioma.Tf("respaldo %q: esfuerzo desconocido %q", e, nivel))
 		}
+		if slices.Contains(vistas, base) {
+			return NuevoError(CodigoSolicitudInvalida, idioma.Tf("respaldo repetido: %s", base))
+		}
+		vistas = append(vistas, base)
 	}
 	return nil
 }
 
-// DividirRespaldo separa una entrada de respaldo en agente y modelo (vacío: el predeterminado del agente).
-func DividirRespaldo(entrada string) (agente, modelo string) {
-	agente, modelo, _ = strings.Cut(entrada, "/")
-	return agente, modelo
+// EsfuerzoDelAgente, como sufijo de respaldo (codex+agente), deja el esfuerzo que use su CLI en lugar de heredar el del
+// principal. Lo escribe el planificador al saltar si el principal no tenía: la solicitud guardada ya lleva el esfuerzo
+// del respaldo que respondió y el resto no debe heredarlo.
+const EsfuerzoDelAgente = "agente"
+
+// DividirRespaldo separa una entrada de respaldo en agente, modelo (vacío: el predeterminado del agente) y esfuerzo
+// (vacío: el del principal).
+func DividirRespaldo(entrada string) (agente, modelo, esfuerzo string) {
+	base, esfuerzo, _ := strings.Cut(entrada, "+")
+	agente, modelo, _ = strings.Cut(base, "/")
+	return agente, modelo, esfuerzo
 }
 
 // Huella resume la solicitud normalizada para la idempotencia sin guardar su texto.
