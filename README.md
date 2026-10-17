@@ -81,7 +81,7 @@ print(r.choices[0].message.content)
 
 Con el SDK de Anthropic, la URL base es `http://127.0.0.1:17373/anthropic`. Todas las rutas y opciones están en la [referencia de la API](docs/api.md).
 
-<p align="center"><img src="docs/imagenes/mis-apis-oscuro.png" alt="Mis APIs en modo oscuro: URL base, clave y ejemplos listos para copiar" width="820"></p>
+<p align="center"><img src="docs/imagenes/mis-apis-oscuro.png" alt="Mis APIs en modo oscuro: tus APIs por grupo, con buscador, orden y el botón Conectar de cada una" width="820"></p>
 
 ## Actualizaciones
 

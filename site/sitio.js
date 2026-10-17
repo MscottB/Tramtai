@@ -3,6 +3,11 @@
   var botones = document.querySelectorAll('[data-idioma]');
   function aplicar(idioma) {
     document.documentElement.lang = idioma;
+    // Los textos alternativos no admiten <span lang>: cada imagen guarda el inglés en data-alt-en.
+    document.querySelectorAll('img[data-alt-en]').forEach(function (img) {
+      if (!img.dataset.altEs) img.dataset.altEs = img.alt;
+      img.alt = idioma === 'en' ? img.dataset.altEn : img.dataset.altEs;
+    });
     botones.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.idioma === idioma)); });
   }
   var guardado = null;
