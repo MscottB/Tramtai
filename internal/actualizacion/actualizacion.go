@@ -39,6 +39,8 @@ const (
 	sufijoInstalador = "-instalador-windows-x64.exe"
 	archivoSumas     = "SHA256SUMS.txt"
 	maximoInstalador = 500 << 20
+	// PrefijoCarpeta nombra las carpetas temporales de las descargas, para encontrarlas y borrarlas después.
+	PrefijoCarpeta = "tramtai-actualizacion"
 )
 
 // Version es una versión publicada.
@@ -204,6 +206,7 @@ func (c *Comprobador) consultar(listo chan struct{}) {
 type Avance func(recibidos, total int64)
 
 func Descargar(ctx context.Context, v Version, dir string, avance Avance) (string, error) {
+	LimpiarDescargas(time.Now().Add(-10 * time.Minute))
 	if !v.TieneInstalador() {
 		return "", errors.New(idioma.T("esta versión no publicó instalador para Windows"))
 	}
@@ -236,6 +239,18 @@ func Descargar(ctx context.Context, v Version, dir string, avance Avance) (strin
 		return "", err
 	}
 	return destino, nil
+}
+
+// LimpiarDescargas borra las carpetas de descargas anteriores a antes: el instalador no puede borrarse a sí mismo
+// mientras se ejecuta, así que lo hace la siguiente descarga o el servicio al arrancar. Lo que siga en uso se deja
+// para la próxima vez.
+func LimpiarDescargas(antes time.Time) {
+	entradas, _ := os.ReadDir(os.TempDir())
+	for _, e := range entradas {
+		if info, err := e.Info(); err == nil && e.IsDir() && strings.HasPrefix(e.Name(), PrefijoCarpeta) && info.ModTime().Before(antes) {
+			os.RemoveAll(filepath.Join(os.TempDir(), e.Name()))
+		}
+	}
 }
 
 func pedir(ctx context.Context, url, aceptar string) (*http.Response, error) {

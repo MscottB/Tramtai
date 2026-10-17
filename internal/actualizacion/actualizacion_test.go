@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -146,5 +147,29 @@ func TestComprobadorRenovar(t *testing.T) {
 	c.Disponible(context.Background(), true)
 	if hecha, fallo := c.Comprobado(); veces.Load() != 2 || fallo || time.Since(hecha) > time.Second {
 		t.Fatalf("Buscar ahora: %d consultas, fallo %v, hecha %v", veces.Load(), fallo, hecha)
+	}
+}
+
+func TestLimpiarDescargas(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("TMP", tmp)
+	t.Setenv("TEMP", tmp)
+	t.Setenv("TMPDIR", tmp)
+	vieja, reciente, ajena := filepath.Join(tmp, "tramtai-actualizacion111"), filepath.Join(tmp, "tramtai-actualizacion222"), filepath.Join(tmp, "otra-cosa")
+	for _, d := range []string{vieja, reciente, ajena} {
+		os.MkdirAll(d, 0o755)
+		os.WriteFile(filepath.Join(d, "instalador.exe"), []byte("x"), 0o644)
+	}
+	hace := time.Now().Add(-time.Hour)
+	os.Chtimes(vieja, hace, hace)
+	os.Chtimes(ajena, hace, hace)
+	LimpiarDescargas(time.Now().Add(-10 * time.Minute))
+	if _, err := os.Stat(vieja); !os.IsNotExist(err) {
+		t.Errorf("la descarga vieja debía borrarse: %v", err)
+	}
+	for _, d := range []string{reciente, ajena} {
+		if _, err := os.Stat(d); err != nil {
+			t.Errorf("%s debía seguir: %v", filepath.Base(d), err)
+		}
 	}
 }

@@ -120,6 +120,7 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 		instancias: map[string]*Instancia{}, puntos: map[string]*puntoActivo{}, detener: make(chan struct{}),
 		sesiones: map[string]*sesion{}, codigos: map[string]codigoEntrada{}}
 	s.buscar.Store(opc.BuscarActualizaciones)
+	go actualizacion.LimpiarDescargas(time.Now().Add(-10 * time.Minute)) // los instaladores que dejó la versión anterior
 	s.admin = s.rutasAdmin()
 	s.handler = api.Proteger(opc.Hosts, nil, http.HandlerFunc(s.enrutar))
 	return s, nil

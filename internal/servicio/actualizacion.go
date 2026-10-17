@@ -109,7 +109,7 @@ func (s *Servicio) actualizar(v actualizacion.Version, carpeta string) {
 	}
 	ctx, cancelar := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancelar()
-	dir, err := os.MkdirTemp("", "tramtai-actualizacion")
+	dir, err := os.MkdirTemp("", actualizacion.PrefijoCarpeta)
 	if err != nil {
 		fallar(err)
 		return
