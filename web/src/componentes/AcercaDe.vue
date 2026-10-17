@@ -5,7 +5,7 @@
         <img src="/logo.png" alt="" width="56" height="56" style="border-radius: 14px" />
         <div class="col">
           <div id="titulo-acerca" class="titulo-seccion">{{ t('acerca.titulo') }}</div>
-          <div class="text-body2">{{ versionCorta }}<span v-if="fechaCompilacion" class="texto-suave"> · {{ fechaCompilacion }}</span></div>
+          <div class="text-body2 codigo">{{ version }}</div>
           <div class="text-caption texto-suave">
             {{ t('acerca.desarrollado') }} <a class="enlace" :href="autor" target="_blank" rel="noopener noreferrer">Michael Scott B.</a>
           </div>
@@ -59,7 +59,7 @@
 // datos técnicos para pedir ayuda (sin claves ni tokens).
 import { computed, ref, watch } from 'vue'
 import { actualizacion, api, buscarActualizacionAhora, copiar, dialogoActualizar, fecha, sesion, type Acerca } from '../api'
-import { idioma, t } from '../i18n'
+import { t } from '../i18n'
 
 const abierto = defineModel<boolean>({ required: true })
 
@@ -80,14 +80,9 @@ watch(abierto, async (si) => {
 })
 
 const version = computed(() => datos.value?.version ?? sesion.value?.version ?? '')
-// La versión lleva su fecha de compilación (+DDMMAAAA); una compilación de desarrollo no la tiene.
-const fechaCompilacion = computed(() => {
-  const m = /\+(\d{2})(\d{2})(\d{4})$/.exec(version.value)
-  return m ? new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1])).toLocaleDateString(idioma.value, { dateStyle: 'long' }) : ''
-})
-// Sin fecha es una compilación de desarrollo: no tiene página propia y se enlaza la lista de versiones.
-const versionCorta = computed(() => version.value.replace(/\+\d{8}$/, ''))
-const urlNovedades = computed(() => `${repositorio}/releases` + (fechaCompilacion.value ? `/tag/${encodeURIComponent(version.value)}` : ''))
+// Una versión publicada lleva su fecha de compilación (+DDMMAAAA) y tiene página propia; una compilación de desarrollo
+// no, y se enlaza la lista de versiones.
+const urlNovedades = computed(() => `${repositorio}/releases` + (/\+\d{8}$/.test(version.value) ? `/tag/${encodeURIComponent(version.value)}` : ''))
 
 const estadoActualizacion = computed(() => {
   const a = actualizacion.value

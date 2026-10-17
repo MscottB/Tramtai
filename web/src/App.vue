@@ -11,10 +11,6 @@
           <img src="/logo.png" alt="" width="28" height="28" style="border-radius: 8px" />
           <span class="q-ml-sm marca gt-xs">Tramtai</span>
         </button>
-        <!-- La versión abre «Acerca de»: un botón aparte, porque el logo ya lleva a Inicio. -->
-        <button type="button" class="version version-boton gt-xs" :aria-label="t('acerca.abrir', { version: sesion.version })" @click="acercaAbierto = true">
-          {{ sesion.version }}
-        </button>
         <q-space />
         <q-btn-dropdown v-if="sesion.local && sesion.instancias?.length" flat no-caps :icon="iconoInstancia(sesion.ambito)"
           :label="$q.screen.gt.xs ? sesion.nombre || t('app.elegirInstancia') : undefined" :aria-label="t('app.cambiarInstancia')">
@@ -55,7 +51,7 @@
                 <q-item-section avatar><q-icon :name="conectado ? 'o_check_circle' : 'o_cloud_off'" :color="conectado ? 'positive' : 'negative'" /></q-item-section>
                 <q-item-section>
                   <q-item-label class="text-weight-medium">{{ conectado ? t('app.enMarcha') : t('app.sinConexion') }}</q-item-label>
-                  <q-item-label caption>{{ conectado ? t('app.servicioDetalle', { version: sesion.version, url: origen }) : t('app.comoIniciar') }}</q-item-label>
+                  <q-item-label caption>{{ conectado ? t('app.servicioDetalle', { url: origen }) : t('app.comoIniciar') }}</q-item-label>
                 </q-item-section>
               </q-item>
               <q-item v-close-popup clickable @click="acercaAbierto = true">
@@ -135,10 +131,7 @@
           <li>
             <button type="button" class="estacion" @click="acercaAbierto = true">
               <q-icon name="o_info" size="19px" class="texto-suave" style="margin-left: -1px" />
-              <span class="column">
-                <span class="estacion__nombre">{{ t('acerca.titulo') }}</span>
-                <span class="estacion__detalle">{{ t('acerca.detalleMenu', { version: sesion.version }) }}</span>
-              </span>
+              <span class="estacion__nombre">{{ t('acerca.titulo') }}</span>
             </button>
           </li>
         </ul>

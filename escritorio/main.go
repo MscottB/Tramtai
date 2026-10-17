@@ -34,7 +34,6 @@ import (
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/servicio"
-	"tramtai/internal/version"
 )
 
 // icono es el de la ventana y la bandeja (go run ./scripts/icono lo regenera).
@@ -110,7 +109,7 @@ func main() {
 		ventana.SetURL(nueva.url)
 	}
 
-	opciones := application.WebviewWindowOptions{Title: "Tramtai " + version.Version, Width: 1280, Height: 820, MinWidth: 720, MinHeight: 480, Hidden: *oculto}
+	opciones := application.WebviewWindowOptions{Title: "Tramtai", Width: 1280, Height: 820, MinWidth: 720, MinHeight: 480, Hidden: *oculto}
 	if err != nil {
 		opciones.HTML = paginaError(err)
 	} else {
@@ -200,15 +199,15 @@ func main() {
 		} else {
 			menu.Add(idioma.Tf("Servicio en marcha · %s", strings.TrimPrefix(cli.Base, "http://"))).SetBitmap(verde).OnClick(func(*application.Context) { mostrar() })
 		}
-		// La versión de la app, y si hay una más nueva (la opción para instalarla va justo debajo); abre «Acerca de».
+		// «Acerca de» (donde se ve la versión), y si hay una más nueva (la opción para instalarla va justo debajo).
 		acercaDe := func(*application.Context) {
 			mostrar()
 			ventana.ExecJS("window.tramtaiAcercaDe && window.tramtaiAcercaDe()")
 		}
 		if nueva != "" {
-			menu.Add(idioma.Tf("Versión %s · hay una nueva: %s", version.Texto(), nueva)).OnClick(acercaDe)
+			menu.Add(idioma.Tf("Acerca de Tramtai · hay una versión nueva: %s", nueva)).OnClick(acercaDe)
 		} else {
-			menu.Add(idioma.Tf("Versión %s · Acerca de Tramtai", version.Texto())).OnClick(acercaDe)
+			menu.Add(idioma.T("Acerca de Tramtai")).OnClick(acercaDe)
 		}
 		menu.AddSeparator()
 		menu.Add(idioma.T("Abrir Tramtai")).SetBitmap(icono("abrir")).OnClick(func(*application.Context) { mostrar() })
