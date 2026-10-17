@@ -50,6 +50,10 @@ type Opciones struct {
 	// Registros recibe una línea al aceptar y al terminar cada trabajo: la terminal del servicio en primer
 	// plano o servicio.log en segundo plano. nil = sin registro.
 	Registros io.Writer
+	// Contextos es limites.contexto_tokens («agente» o «agente/modelo» → tokens) y ReservaSalida los tokens que se
+	// dejan para la respuesta al comprobar si la entrada cabe.
+	Contextos     map[string]int
+	ReservaSalida int
 }
 
 // OpcionesDesde toma los límites de la configuración efectiva.
@@ -62,6 +66,8 @@ func OpcionesDesde(c *nucleo.Configuracion, instancia string) Opciones {
 		TiempoLimitePredeterminado: 300 * time.Second,
 		Perfiles:                   c.Perfiles(),
 		MaximoConversiones:         c.Entero("concurrencia.maximo_conversiones_instancia"),
+		Contextos:                  c.Contextos(),
+		ReservaSalida:              c.Entero("limites.reserva_salida_tokens"),
 	}
 }
 
@@ -691,6 +697,33 @@ func medirEntrada(s nucleo.SolicitudEjecucion, docs nucleo.Documentos) medida {
 	return m
 }
 
+// contextoDe es el contexto (tokens) del modelo de un candidato y de dónde sale: lo configurado en
+// limites.contexto_tokens (agente/modelo y después agente), lo que informa el agente (su API o lo que dijo su CLI en
+// un intento anterior, para el modelo o la versión vista detrás de un alias) o 0 si no se conoce.
+func (p *Planificador) contextoDe(ctx context.Context, c candidato) (int, string) {
+	version := p.versionVista(c.agente, c.modelo)
+	modelos := slices.DeleteFunc([]string{c.modelo, version}, func(m string) bool { return m == "" })
+	for _, m := range modelos {
+		if n := p.opc.Contextos[c.agente+"/"+m]; n > 0 {
+			return n, "configurado"
+		}
+	}
+	if n := p.opc.Contextos[c.agente]; n > 0 {
+		return n, "configurado"
+	}
+	if contextual, ok := p.adaptadores[c.agente].(adaptadores.Contextual); ok {
+		if n, err := contextual.Contexto(ctx, c.modelo); err == nil && n > 0 {
+			return n, "informado"
+		}
+	}
+	for _, m := range modelos {
+		if n, err := p.almacen.Contexto(ctx, c.agente, m); err == nil && n > 0 {
+			return n, "informado"
+		}
+	}
+	return 0, ""
+}
+
 // sumarUso junta el uso de dos intentos del mismo trabajo.
 func sumarUso(a, b nucleo.Uso) nucleo.Uso {
 	return nucleo.Uso{TokensEntrada: a.TokensEntrada + b.TokensEntrada, TokensSalida: a.TokensSalida + b.TokensSalida, CostoUSD: a.CostoUSD + b.CostoUSD}
@@ -798,6 +831,9 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 		}
 		return agrupador.emitir(e)
 	})
+	if resultado.ContextoTokens > 0 && resultado.ModeloEfectivo != "" {
+		_ = p.almacen.GuardarContexto(fondo, c.agente, resultado.ModeloEfectivo, resultado.ContextoTokens)
+	}
 	huboTexto = texto.Load()
 	_ = agrupador.vaciar() // antes de cualquier cambio de estado: el texto queda completo y en orden
 	switch {

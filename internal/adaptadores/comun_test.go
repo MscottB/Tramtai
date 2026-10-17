@@ -2,6 +2,7 @@ package adaptadores
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -90,9 +91,9 @@ func TestDetectarClasificaProblema(t *testing.T) {
 
 func TestModeloEfectivoEligeElDeMasSalida(t *testing.T) {
 	var r resultadoClaude
-	r.ModelUsage = map[string]struct {
-		OutputTokens int `json:"outputTokens"`
-	}{"auxiliar": {OutputTokens: 3}, "principal": {OutputTokens: 40}}
+	if err := json.Unmarshal([]byte(`{"modelUsage":{"auxiliar":{"outputTokens":3},"principal":{"outputTokens":40}}}`), &r); err != nil {
+		t.Fatal(err)
+	}
 	if r.modeloEfectivo() != "principal" {
 		t.Fatalf("modelo efectivo %q", r.modeloEfectivo())
 	}

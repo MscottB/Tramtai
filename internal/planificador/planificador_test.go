@@ -1131,3 +1131,38 @@ func TestIntentoDelAgenteConAlias(t *testing.T) {
 		t.Fatalf("el alias se resuelve con la versión vista: %v", l)
 	}
 }
+
+// conContexto responde como un CLI que informa el contexto de su modelo.
+type conContexto struct{}
+
+func (conContexto) Ejecutar(context.Context, nucleo.SolicitudEjecucion, func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	return adaptadores.Resultado{Salida: "ok", ModeloEfectivo: "claude-haiku-5-5", ContextoTokens: 200000}, nil
+}
+
+func TestContextoDe(t *testing.T) {
+	alm := abrir(t)
+	opc := opciones()
+	opc.Contextos = map[string]int{"claude/claude-haiku-9": 100, "claude": 50}
+	p := Nuevo(alm, map[string]adaptadores.Adaptador{"claude": conContexto{}, "codex": adaptadores.Simulado{}}, NuevosSemaforos(map[string]int{"claude": 1}), opc)
+	if err := p.Iniciar(ctx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Detener)
+	if n, origen := p.contextoDe(ctx, candidato{agente: "claude", modelo: "claude-haiku-9"}); n != 100 || origen != "configurado" {
+		t.Fatalf("agente/modelo configurado: %d %s", n, origen)
+	}
+	if n, origen := p.contextoDe(ctx, candidato{agente: "claude", modelo: "otro"}); n != 50 || origen != "configurado" {
+		t.Fatalf("agente configurado: %d %s", n, origen)
+	}
+	if n, origen := p.contextoDe(ctx, candidato{agente: "codex", modelo: "gpt-x"}); n != 0 || origen != "" {
+		t.Fatalf("desconocido: %d %s", n, origen)
+	}
+	// Tras un intento, el contexto informado queda guardado para el modelo efectivo y un alias lo encuentra.
+	p.opc.Contextos = nil
+	s := solicitud("x")
+	s.Agente, s.Modelo = "claude", "haiku"
+	esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if n, origen := p.contextoDe(ctx, candidato{agente: "claude", modelo: "haiku"}); n != 200000 || origen != "informado" {
+		t.Fatalf("informado y resuelto por el alias: %d %s", n, origen)
+	}
+}

@@ -20,6 +20,12 @@ type Resultado struct {
 	Salida         string
 	Uso            nucleo.Uso
 	ModeloEfectivo string
+	ContextoTokens int // el contexto del modelo efectivo, si el CLI lo informa; 0 si no
+}
+
+// Contextual es un adaptador que puede consultar el contexto de un modelo sin ejecutarlo (la API de Gemini).
+type Contextual interface {
+	Contexto(ctx context.Context, modelo string) (int, error)
 }
 
 // Adaptador ejecuta una solicitud contra un agente. Debe respetar ctx: al cancelarse, termina y devuelve ctx.Err().

@@ -187,7 +187,7 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 	if len(final.StructuredOutput) > 0 && string(final.StructuredOutput) != "null" {
 		salida = string(final.StructuredOutput) // el campo estructurado prevalece sobre el texto libre
 	}
-	return Resultado{Salida: salida, ModeloEfectivo: final.modeloEfectivo(), Uso: nucleo.Uso{
+	return Resultado{Salida: salida, ModeloEfectivo: final.modeloEfectivo(), ContextoTokens: final.contexto(), Uso: nucleo.Uso{
 		TokensEntrada: final.Usage.InputTokens + final.Usage.CacheCreation + final.Usage.CacheRead,
 		TokensSalida:  final.Usage.OutputTokens,
 		CostoUSD:      final.TotalCostUSD,
@@ -219,9 +219,13 @@ type resultadoClaude struct {
 		CacheRead     int `json:"cache_read_input_tokens"`
 	} `json:"usage"`
 	ModelUsage map[string]struct {
-		OutputTokens int `json:"outputTokens"`
+		OutputTokens  int `json:"outputTokens"`
+		ContextWindow int `json:"contextWindow"`
 	} `json:"modelUsage"`
 }
+
+// contexto es el contexto que Claude Code informa para el modelo efectivo; 0 si no lo informa.
+func (r resultadoClaude) contexto() int { return r.ModelUsage[r.modeloEfectivo()].ContextWindow }
 
 // modeloEfectivo es el modelo que más salida produjo; Claude Code puede usar uno auxiliar en paralelo.
 func (r resultadoClaude) modeloEfectivo() string {

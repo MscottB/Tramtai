@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"tramtai/internal/nucleo"
@@ -145,5 +146,39 @@ func TestAntigravityAisladoYSoloConClave(t *testing.T) {
 	t.Setenv("GEMINI_API_KEY", "")
 	if _, err := a.Ejecutar(context.Background(), s, func(Evento) error { return nil }); nucleo.CodigoDe(err) != nucleo.CodigoAutenticacionAgente {
 		t.Fatalf("sin clave: %v", err)
+	}
+}
+
+func TestContextoClaude(t *testing.T) {
+	var r resultadoClaude
+	datos := `{"result":"ok","modelUsage":{"claude-haiku-4-5":{"outputTokens":5,"contextWindow":200000},"aux":{"outputTokens":1,"contextWindow":100}}}`
+	if err := json.Unmarshal([]byte(datos), &r); err != nil {
+		t.Fatal(err)
+	}
+	if r.contexto() != 200000 {
+		t.Fatalf("el contexto del modelo efectivo: %d", r.contexto())
+	}
+}
+
+func TestContextoGemini(t *testing.T) {
+	t.Setenv("GEMINI_API_KEY", "clave-falsa")
+	var llamadas atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		llamadas.Add(1)
+		if r.URL.Path != "/models/gemini-contexto" || r.Header.Get("x-goog-api-key") != "clave-falsa" {
+			http.Error(w, "no", http.StatusNotFound)
+			return
+		}
+		fmt.Fprint(w, `{"name":"models/gemini-contexto","inputTokenLimit":1048576}`)
+	}))
+	defer srv.Close()
+	g := Gemini{Base: srv.URL, Cliente: srv.Client()}
+	for range 2 {
+		if n, err := g.Contexto(context.Background(), "gemini-contexto"); err != nil || n != 1048576 {
+			t.Fatalf("contexto %d %v", n, err)
+		}
+	}
+	if llamadas.Load() != 1 {
+		t.Fatalf("se guarda 24 h: %d llamadas", llamadas.Load())
 	}
 }

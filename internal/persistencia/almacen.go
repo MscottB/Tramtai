@@ -97,6 +97,14 @@ CREATE TABLE IF NOT EXISTS avisos_presupuesto (
 );`,
 	// v8: de dónde llegó cada petición (Probar, terminal, CLI, app o API); '' en los trabajos anteriores.
 	`ALTER TABLE trabajos ADD COLUMN origen TEXT NOT NULL DEFAULT '';`,
+	// v9: el contexto (tokens) que informó cada modelo concreto, para no llamar al CLI con una entrada que no cabe.
+	`CREATE TABLE IF NOT EXISTS modelos_vistos (
+	agente TEXT NOT NULL,
+	modelo TEXT NOT NULL,
+	contexto_tokens INTEGER NOT NULL,
+	visto_en TEXT NOT NULL,
+	PRIMARY KEY (agente, modelo)
+);`,
 }
 
 const columnas = `id, instancia, estado, codigo_error, mensaje_error, solicitud, huella, salida, intento_de, creado_en, actualizado_en, terminado_en,
@@ -780,6 +788,24 @@ func (a *Almacen) ModelosEfectivos(ctx context.Context) (map[string]string, erro
 		}
 	}
 	return modelos, filas.Err()
+}
+
+// GuardarContexto anota el contexto que informó un modelo concreto; el último gana.
+func (a *Almacen) GuardarContexto(ctx context.Context, agente, modelo string, tokens int) error {
+	_, err := a.db.ExecContext(ctx, `INSERT INTO modelos_vistos (agente, modelo, contexto_tokens, visto_en) VALUES (?, ?, ?, ?)
+		ON CONFLICT (agente, modelo) DO UPDATE SET contexto_tokens = excluded.contexto_tokens, visto_en = excluded.visto_en`,
+		agente, modelo, tokens, fecha(a.reloj()))
+	return err
+}
+
+// Contexto devuelve el contexto informado de un modelo concreto; 0 si no se conoce.
+func (a *Almacen) Contexto(ctx context.Context, agente, modelo string) (int, error) {
+	var tokens int
+	err := a.db.QueryRowContext(ctx, `SELECT contexto_tokens FROM modelos_vistos WHERE agente = ? AND modelo = ?`, agente, modelo).Scan(&tokens)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, nil
+	}
+	return tokens, err
 }
 
 // CargasEnUso devuelve las cargas que algún trabajo puede necesitar todavía: activos o terminados que aún

@@ -97,6 +97,8 @@ var esquema = map[string]tipoValor{
 	"retencion.cache_conversion_habilitada":       tipoBooleano,
 	"retencion.eliminar_entradas_al_terminar":     tipoBooleano,
 	"retencion.cifrado_aplicacion":                tipoBooleano,
+	"limites.contexto_tokens":                     tipoLista,
+	"limites.reserva_salida_tokens":               tipoEntero,
 	"conversion.motor":                            tipoTexto,
 	"conversion.habilitar_plugins":                tipoBooleano,
 	"conversion.transformacion_semantica":         tipoBooleano,
@@ -191,6 +193,7 @@ func Internos() Capa {
 		"adaptadores.antigravity.autenticacion":         "clave_api",
 		"concurrencia_servicio.adaptadores.gemini":      2,
 		"concurrencia_servicio.adaptadores.antigravity": 1,
+		"limites.reserva_salida_tokens":                 8192,
 		"modelos.perfiles.rapido.gemini":                "gemini-flash-lite-latest",
 		"modelos.perfiles.equilibrado.gemini":           "gemini-flash-latest",
 		"modelos.perfiles.profundo.gemini":              "gemini-pro-latest",
@@ -304,6 +307,20 @@ func (c *Configuracion) Decimal(clave string) float64 {
 func (c *Configuracion) Booleano(clave string) bool {
 	v, _ := c.e().valores[clave].(bool)
 	return v
+}
+
+// Contextos devuelve limites.contexto_tokens: «agente» o «agente/modelo» → tokens. Es una lista de entradas
+// «clave=tokens» y no un mapa porque un modelo puede llevar puntos (gpt-5.5) y las claves de configuración los usan
+// como separador. Una entrada mal escrita se ignora.
+func (c *Configuracion) Contextos() map[string]int {
+	contextos := map[string]int{}
+	for _, e := range c.Lista("limites.contexto_tokens") {
+		clave, valor, ok := strings.Cut(fmt.Sprint(e), "=")
+		if n, err := strconv.Atoi(strings.TrimSpace(valor)); ok && err == nil && n > 0 {
+			contextos[strings.TrimSpace(clave)] = n
+		}
+	}
+	return contextos
 }
 
 // Perfiles devuelve modelos.perfiles como perfil -> agente -> identificador de modelo.
