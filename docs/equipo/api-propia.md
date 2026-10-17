@@ -83,6 +83,28 @@ versión más nueva; el de después ya muestra cada versión por separado.
   y el enlace «Ver todas». Con una sola, o si GitHub no responde, las notas de hoy (`actualizacion.notas`).
 - La lista plegable pasa a un componente `ListaNovedades.vue` que usan los dos diálogos.
 
+## 6. La versión, solo en Acerca de
+
+Pedido por el usuario durante la implementación: se quita la versión de la cabecera (junto al logo), del título de la
+ventana de escritorio, del menú del estado, del botón «Acerca de Tramtai» del menú lateral (sin «Versión … y datos para
+soporte») y de la bandeja (queda «Acerca de Tramtai», con «hay una versión nueva: vX» si la hay). Dentro de «Acerca de»
+se muestra como en GitHub (`v0.42.0+17102026`) en lugar de «v0.42.0 · 17 de octubre de 2026».
+
+## 7. Selector de agente y modelo
+
+Pedido por el usuario: el selector de Probar (y de Mis APIs y Ajustes) agrupa las opciones por agente (los perfiles,
+luego Claude, Codex, Gemini API y Antigravity) con un título por grupo; dentro, el modelo de su CLI, los configurados y
+las versiones vistas, cada uno con su versión exacta y su contexto si se conocen; «esfuerzo elegible» pasa a un icono.
+El respaldo usa el mismo selector (varios, hasta 3) y sus chips muestran la versión exacta.
+
+## 8. Ayuda integrada
+
+Pedido por el usuario («que de verdad ayude: explicación, flujos y otros»): buscador; «Cómo funciona» con el recorrido de
+una petición (app → API → cola → agente → respuesta) y la nota de seguridad; «Cómo empezar»; seis guías paso a paso
+con su botón (conectar una app de OpenAI, documentos por la API propia, API con JSON fijo, respaldo, limitar el gasto,
+averiguar por qué falló); conceptos; «Si algo falla» con los errores más comunes y qué hacer; preguntas frecuentes por
+categoría, con «¿Qué URL uso?» y «¿Cómo veo mi prueba como código?».
+
 ## Documentación
 
 - `docs/api.md`: sección «¿Qué URL uso?» (la tabla de la sección 1) y una guía paso a paso de la API propia: subir,

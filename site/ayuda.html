@@ -161,6 +161,12 @@ tramtai claves guardar GEMINI_API_KEY      # Gemini, Antigravity</pre>
         </tbody>
       </table>
       <div lang="es">
+        <p><strong>¿Qué URL uso?</strong> Si tu app ya usa el SDK de OpenAI, o una herramienta que deja cambiar la URL base (LangChain, n8n, un editor con IA), la de OpenAI; si usa el SDK de Anthropic, la de Anthropic. Si necesitas enviar archivos, seguir tareas largas y retomarlas si se corta la conexión, cancelar, reintentar o elegir respaldo en cada petición, la API propia: su descripción OpenAPI está en <code>/api/v1/openapi.json</code>. En la app, <strong>Mis APIs</strong> compara las tres y trae ejemplos de cada una, y <strong>Probar → Ver como código</strong> da tu prueba lista para copiar.</p>
+      </div>
+      <div lang="en">
+        <p><strong>Which URL do I use?</strong> If your app already uses the OpenAI SDK, or a tool that lets you change the base URL (LangChain, n8n, an AI editor), the OpenAI one; if it uses the Anthropic SDK, the Anthropic one. If you need to send files, follow long jobs and resume them if the connection drops, cancel, retry or pick a fallback per request, the Tramtai API: its OpenAPI description is at <code>/api/v1/openapi.json</code>. In the app, <strong>My APIs</strong> compares the three with examples for each, and <strong>Try → View as code</strong> gives you your test ready to copy.</p>
+      </div>
+      <div lang="es">
         <p>El campo <code>model</code> elige agente y modelo: <code>claude/sonnet</code>, <code>claude/haiku</code>, <code>codex</code>, <code>gemini/gemini-flash-latest</code> o un perfil como <code>perfil/rapido</code>. Sin <code>model</code> se usa el modelo predeterminado de <strong>Ajustes</strong>. En Claude y Codex, <code>reasoning_effort</code> elige cuánto razona el agente.</p>
       </div>
       <div lang="en">
@@ -280,7 +286,7 @@ tramtai ejecutar -f informe.pdf "Resume el documento en tres puntos"</pre>
     <section id="actualizaciones">
       <h2><span lang="es">Actualizaciones</span><span lang="en">Updates</span></h2>
       <div lang="es">
-        <p>Tramtai comprueba cada hora si hay una versión nueva (solo pide a GitHub la ficha pública de la última versión). Cuando la hay, la cabecera de la app muestra <strong>Actualizar</strong> y el menú de la bandeja indica tu versión y la nueva, con sus novedades.</p>
+        <p>Tramtai comprueba cada hora si hay una versión nueva (solo pide a GitHub la ficha pública de la última versión). Cuando la hay, la cabecera de la app muestra <strong>Actualizar</strong> y el menú de la bandeja la indica junto a «Acerca de Tramtai». Antes de instalar, el aviso muestra lo que trae cada versión que te saltas.</p>
         <ul>
           <li><strong>Windows (instalador):</strong> <strong>Actualizar ahora</strong> la descarga, comprueba su suma SHA-256 y la instala sin preguntar nada más. La app vuelve a abrirse ya actualizada, con tu configuración y tus datos.</li>
           <li><strong>Homebrew:</strong> <code>brew upgrade</code>.</li>
@@ -292,7 +298,7 @@ tramtai ejecutar -f informe.pdf "Resume el documento en tres puntos"</pre>
         <p>Se desactiva en <strong>Ajustes → Buscar actualizaciones</strong>.</p>
       </div>
       <div lang="en">
-        <p>Tramtai checks for a new version every hour (it only asks GitHub for the public page of the latest release). When there is one, the app's header shows <strong>Update</strong> and the tray menu shows your version and the new one, with what's new.</p>
+        <p>Tramtai checks for a new version every hour (it only asks GitHub for the public page of the latest release). When there is one, the app's header shows <strong>Update</strong> and the tray menu shows it next to "About Tramtai". Before installing, the notice shows what each version you skip brings.</p>
         <ul>
           <li><strong>Windows (installer):</strong> <strong>Update now</strong> downloads it, checks its SHA-256 checksum and installs it without asking anything else. The app reopens already updated, with your settings and data.</li>
           <li><strong>Homebrew:</strong> <code>brew upgrade</code>.</li>
