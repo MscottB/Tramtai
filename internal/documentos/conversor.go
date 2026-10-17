@@ -44,6 +44,7 @@ type Conversor struct {
 	Plugins      bool   // conversion.habilitar_plugins
 	TiempoLimite time.Duration
 	MaximoSalida int64 // bytes de texto ensamblado
+	MemoriaMB    int   // tope de memoria de markitdown (limites.memoria_proceso_mb): un documento hostil no agota la del equipo
 	Limites      Limites
 }
 
@@ -54,6 +55,7 @@ func Desde(c *nucleo.Configuracion) *Conversor {
 		Plugins:      c.Booleano("conversion.habilitar_plugins"),
 		TiempoLimite: time.Duration(c.Entero("conversion.tiempo_limite_segundos")) * time.Second,
 		MaximoSalida: int64(c.Entero("conversion.maximo_salida_mb")) << 20,
+		MemoriaMB:    c.Entero("limites.memoria_proceso_mb"),
 		Limites: Limites{
 			MaximoArchivos:    c.Entero("conversion.maximo_archivos_zip"),
 			MaximoBytes:       int64(c.Entero("conversion.maximo_descomprimido_mb")) << 20,
@@ -166,7 +168,7 @@ func (c *Conversor) markitdown(ctx context.Context, e Entrada, dir string) (stri
 		defer cancelar()
 	}
 	var salida strings.Builder
-	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: programa, Argumentos: args, Directorio: dir, Entorno: entornoConversor()},
+	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: programa, Argumentos: args, Directorio: dir, Entorno: entornoConversor(), MemoriaMB: c.MemoriaMB},
 		func(linea string) error {
 			if c.MaximoSalida > 0 && int64(salida.Len()) > c.MaximoSalida {
 				return nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.Tf("%s: la conversión supera conversion.maximo_salida_mb", e.Nombre))

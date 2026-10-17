@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -21,6 +22,20 @@ func TestMain(m *testing.M) {
 		os.Exit(3)
 	case "dormir":
 		time.Sleep(time.Minute)
+		os.Exit(0)
+	case "linea-larga":
+		// 9 MB sin un solo salto de línea.
+		trozo := strings.Repeat("x", 1<<20)
+		for range 9 {
+			os.Stdout.WriteString(trozo)
+		}
+		os.Exit(0)
+	case "memoria":
+		datos := make([]byte, 300<<20)
+		for i := range datos {
+			datos[i] = 1
+		}
+		os.Stdout.WriteString("reservado\n")
 		os.Exit(0)
 	case "arbol":
 		// Lanza un nieto que dormiría un minuto e informa su PID.
@@ -131,5 +146,30 @@ func TestTerminarHuerfanoSoloConSuFirma(t *testing.T) {
 	case <-listo:
 	case <-time.After(5 * time.Second):
 		t.Fatal("el proceso siguió vivo")
+	}
+}
+
+func TestLineaConTope(t *testing.T) {
+	_, err := Ejecutar(context.Background(), orden("linea-larga", ""), func(string) error { return nil })
+	if err == nil || !strings.Contains(err.Error(), "8 MB") {
+		t.Fatalf("una línea de más de 8 MB debe fallar con un error claro: %v", err)
+	}
+}
+
+func TestMemoriaLimitada(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		t.Skip("macOS no limita la memoria de un proceso hijo")
+	}
+	var lineas []string
+	sinTope := orden("memoria", "")
+	if r, err := Ejecutar(context.Background(), sinTope, func(l string) error { lineas = append(lineas, l); return nil }); err != nil || r.CodigoSalida != 0 {
+		t.Fatalf("sin tope reserva 300 MB: %+v %v", r, err)
+	}
+	conTope := orden("memoria", "")
+	conTope.MemoriaMB = 100
+	lineas = nil
+	r, err := Ejecutar(context.Background(), conTope, func(l string) error { lineas = append(lineas, l); return nil })
+	if err == nil && r.CodigoSalida == 0 {
+		t.Fatalf("con un tope de 100 MB no puede reservar 300 MB: %+v %v", r, lineas)
 	}
 }

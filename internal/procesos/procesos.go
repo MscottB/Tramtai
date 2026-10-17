@@ -29,6 +29,7 @@ type Orden struct {
 	Directorio string
 	Entorno    []string
 	Entrada    string
+	MemoriaMB  int // tope de memoria del proceso (0: sin tope); en macOS no se aplica
 }
 
 // Resultado es el final del proceso: código de salida y las últimas líneas de stderr.
@@ -69,7 +70,7 @@ func Ejecutar(ctx context.Context, o Orden, linea func(string) error) (Resultado
 	if err := cmd.Start(); err != nil {
 		return Resultado{}, nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf("no se pudo lanzar el agente: %s", err.Error()))
 	}
-	g, err := agrupar(cmd)
+	g, err := agrupar(cmd, o.MemoriaMB)
 	if err != nil {
 		_ = cmd.Process.Kill()
 		_ = cmd.Wait()
@@ -116,10 +117,20 @@ type lineas struct {
 	err     error
 }
 
+// maximoLinea acota una línea de salida: una sin saltos crecería en memoria sin límite.
+const maximoLinea = 8 << 20
+
 func (l *lineas) Write(p []byte) (int, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	if l.err != nil {
+		return len(p), nil // ya falló: se sigue leyendo para que el proceso no se bloquee, sin guardar nada
+	}
 	l.buf = append(l.buf, p...)
+	if len(l.buf) > maximoLinea && bytes.IndexByte(l.buf, '\n') < 0 {
+		l.err, l.buf = errors.New(idioma.T("una línea de la salida del proceso supera 8 MB")), nil
+		return len(p), nil
+	}
 	for {
 		i := bytes.IndexByte(l.buf, '\n')
 		if i < 0 {
