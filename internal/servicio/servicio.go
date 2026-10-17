@@ -179,7 +179,7 @@ func (s *Servicio) enrutar(w http.ResponseWriter, r *http.Request) {
 	if s.rutaInstancia(w, r, inst, admin || porSesion) {
 		return
 	}
-	inst.rutas.ServeHTTP(w, r)
+	inst.rutas.ServeHTTP(w, r.WithContext(nucleo.ConOrigenPeticion(r.Context(), origenPeticion(r, porSesion))))
 }
 
 func (s *Servicio) enrutarPunto(w http.ResponseWriter, r *http.Request) {
@@ -361,11 +361,33 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuraci
 		alm.Cerrar()
 		return nil, err
 	}
-	srv := &api.Servidor{Planificador: p, Cargas: cargas, Registro: s.opc.Registro, Config: c}
+	srv := &api.Servidor{Planificador: p, Cargas: cargas, Registro: s.opc.Registro, Config: c,
+		PuntosDeGrupo: func(grupo string) []string {
+			var nombres []string
+			for _, punto := range s.puntosDe(id) {
+				if punto.Grupo == grupo {
+					nombres = append(nombres, punto.Nombre)
+				}
+			}
+			return nombres
+		}}
 	inst := &Instancia{ID: id, Ambito: ambito, Raiz: raiz, Config: c, Planificador: p, Cargas: cargas,
 		ArchivoToken: archivo, token: token, almacen: alm, rutas: srv.Rutas()}
 	inst.iniciarPurga(s.opc.Registros)
 	return inst, nil
+}
+
+// origenPeticion dice de dónde llegó una petición a la instancia: la sesión de la Web UI es Probar; con la clave,
+// X-Tramtai-Cliente distingue la terminal y la CLI (solo es una etiqueta) y lo demás es una aplicación.
+func origenPeticion(r *http.Request, porSesion bool) string {
+	if porSesion {
+		return nucleo.DesdeProbar
+	}
+	switch c := r.Header.Get("X-Tramtai-Cliente"); c {
+	case nucleo.DesdeTerminal, nucleo.DesdeCLI:
+		return c
+	}
+	return nucleo.DesdeApp
 }
 
 // iniciarPurga aplica la retención al abrir la instancia y después cada intervaloPurga.

@@ -848,3 +848,20 @@ func TestRespaldoGuardaLosRestantes(t *testing.T) {
 		t.Fatalf("respaldo restante incorrecto: %+v", tr.Solicitud)
 	}
 }
+
+func TestOrigenDelTrabajo(t *testing.T) {
+	alm := abrir(t)
+	p := iniciar(t, alm, adaptadores.Simulado{}, 2, opciones())
+	desdeProbar := nucleo.ConOrigenPeticion(ctx, nucleo.DesdeProbar)
+	tr, _, err := p.Enviar(desdeProbar, solicitud("hola"), "")
+	if err != nil || tr.Origen != "probar" {
+		t.Fatalf("el origen del contexto se guarda: %q %v", tr.Origen, err)
+	}
+	if porPunto, _, err := p.EnviarPorPunto(nucleo.ConOrigenPeticion(ctx, nucleo.DesdeCLI), solicitud("hola"), "", "tienda"); err != nil || porPunto.Origen != "api" {
+		t.Fatalf("por una API extra el origen es api: %q %v", porPunto.Origen, err)
+	}
+	esperar(t, alm, tr.ID, nucleo.Completado)
+	if nuevo, err := p.Reintentar(ctx, tr.ID); err != nil || nuevo.Origen != "probar" {
+		t.Fatalf("el reintento conserva el origen: %q %v", nuevo.Origen, err)
+	}
+}

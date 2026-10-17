@@ -27,7 +27,11 @@ func abrirTerminal() error {
 		if err != nil {
 			return nil, err
 		}
-		return cliente.IniciarEnSegundoPlano(ejecutable, datos)
+		c, err := cliente.IniciarEnSegundoPlano(ejecutable, datos)
+		if c != nil {
+			c.Origen = nucleo.DesdeTerminal
+		}
+		return c, err
 	}}
 	if raiz := raizProyecto(); raiz != "" {
 		if cfg, err := nucleo.CargarConfiguracion(raiz); err == nil {

@@ -33,8 +33,10 @@ var ErrServicioInactivo = errors.New(idioma.T("el servicio de Tramtai no está e
 type Cliente struct {
 	Base       string
 	Descriptor servicio.Descriptor
-	token      string
-	http       *http.Client
+	// Origen se manda en X-Tramtai-Cliente (terminal o cli) para que el historial diga de dónde llegó la petición.
+	Origen string
+	token  string
+	http   *http.Client
 }
 
 // Conectar lee el descriptor y el token de servicio y comprueba con /healthz que responde ese mismo servicio,
@@ -110,6 +112,9 @@ func (c *Cliente) pedir(ctx context.Context, metodo, ruta, instancia string, cue
 	}
 	if instancia != "" {
 		req.Header.Set("Tramtai-Instancia", instancia)
+	}
+	if c.Origen != "" {
+		req.Header.Set("X-Tramtai-Cliente", c.Origen)
 	}
 	if tipo != "" {
 		req.Header.Set("Content-Type", tipo)

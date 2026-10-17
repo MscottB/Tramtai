@@ -156,6 +156,7 @@ func (m *modelo) cargarEstado() tea.Cmd {
 		if err != nil {
 			return msgEstado{}
 		}
+		cli.Origen = nucleo.DesdeTerminal
 		ctx, cancelar := conPlazo(10 * time.Second)
 		defer cancelar()
 		e, err := cli.Estado(ctx)

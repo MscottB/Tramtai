@@ -195,7 +195,11 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 	if err != nil {
 		return nucleo.Trabajo{}, false, err
 	}
-	t := nucleo.Trabajo{ID: nucleo.NuevoID(), Instancia: p.opc.Instancia, Solicitud: solicitud, Huella: solicitud.Huella(), ModeloEnviado: modelo, IntentoDe: intentoDe, PuntoAcceso: punto}
+	t := nucleo.Trabajo{ID: nucleo.NuevoID(), Instancia: p.opc.Instancia, Solicitud: solicitud, Huella: solicitud.Huella(), ModeloEnviado: modelo, IntentoDe: intentoDe, PuntoAcceso: punto,
+		Origen: nucleo.OrigenPeticion(ctx)}
+	if punto != "" {
+		t.Origen = nucleo.DesdeAPI // por una API extra, aunque la app mande otra etiqueta
+	}
 	t, reutilizado, err := p.almacen.Aceptar(ctx, t, clave, p.opc.MaximoCola)
 	if err != nil || reutilizado {
 		return t, reutilizado, err
@@ -324,7 +328,8 @@ func (p *Planificador) Reintentar(ctx context.Context, id string) (nucleo.Trabaj
 	if anterior.EntradasEliminadas {
 		return anterior, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("las entradas del trabajo ya vencieron o se eliminaron al terminar; vuelve a enviarlas"))
 	}
-	t, _, err := p.aceptar(ctx, anterior.Solicitud, "", anterior.ID, anterior.PuntoAcceso)
+	// El reintento es el mismo pedido otra vez: conserva su API y su origen.
+	t, _, err := p.aceptar(nucleo.ConOrigenPeticion(ctx, anterior.Origen), anterior.Solicitud, "", anterior.ID, anterior.PuntoAcceso)
 	return t, err
 }
 
