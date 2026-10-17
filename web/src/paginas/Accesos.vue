@@ -276,7 +276,7 @@ import EstadoVacio from '../componentes/EstadoVacio.vue'
 import EditorPresupuesto from '../componentes/EditorPresupuesto.vue'
 import EditorReceta from '../componentes/EditorReceta.vue'
 import { ajustesDeReceta, api, avisar, avisarError, codigoLinea, nombreAgente, ordenAgentes, configDeReceta, copiar, etiquetaModelo, haceCuanto, idModeloDe as idModelo, nombreEsfuerzo, opcionModelo,
-  cargarDiasHistorial, diasHistorial, grupoInicial, origenHistorial, presupuestoLimpio, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPresupuesto, type EstadoPunto, type Modelo,
+  cargarDiasHistorial, periodoHistorial, grupoInicial, origenHistorial, presupuestoLimpio, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPresupuesto, type EstadoPunto, type Modelo,
   type Presupuesto, type UsoPunto } from '../api'
 import { t } from '../i18n'
 
@@ -445,7 +445,7 @@ const emit = defineEmits<{ ir: [pagina: string] }>()
 
 function textoUso(nombre: string) {
   const u = uso.value[nombre]
-  return [t('puntos.uso', { n: u.peticiones, dias: diasHistorial.value }), u.errores ? t('puntos.usoErrores', { n: u.errores }) : '',
+  return [u.peticiones === 1 ? t('puntos.usoUno', { periodo: periodoHistorial.value }) : t('puntos.uso', { n: u.peticiones, periodo: periodoHistorial.value }), u.errores ? t('puntos.usoErrores', { n: u.errores }) : '',
     u.ultima ? t('puntos.usoUltima', { cuando: haceCuanto(u.ultima) }) : ''].filter(Boolean).join(' · ')
 }
 

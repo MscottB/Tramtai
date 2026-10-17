@@ -1,6 +1,6 @@
 // Cliente de la API de Tramtai para la Web UI: usa la cookie de sesión (mismo origen) y envía el token CSRF en
 // las peticiones que modifican. Las claves nunca se guardan en el navegador.
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Notify } from 'quasar'
 import { idioma, idiomas, t } from './i18n'
 import type { Clave } from './idiomas/es'
@@ -139,6 +139,9 @@ export interface Retencion {
 
 // diasHistorial son los días que se guarda el registro (para los textos «en N días»); cargarDiasHistorial lo lee.
 export const diasHistorial = ref(7)
+// periodoHistorial es «los últimos N días» o «el último día», para los textos que dicen cuánto se cuenta.
+export const periodoHistorial = computed(() =>
+  diasHistorial.value === 1 ? t('comun.ultimoDia') : t('comun.ultimosDias', { dias: diasHistorial.value }))
 export function cargarDiasHistorial() {
   api.retencion().then((r) => (diasHistorial.value = Math.max(1, Math.round(r.horas_metadatos / 24)))).catch(() => {})
 }

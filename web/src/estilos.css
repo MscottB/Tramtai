@@ -250,10 +250,6 @@ input[type='number'] {
 }
 /* Ayudas bajo los campos: legibles, no diminutas. */
 .q-field__bottom,
-.ayuda-campo {
-  font-size: 0.78rem;
-  line-height: 1.45;
-}
 .estado-vacio {
   display: flex;
   flex-direction: column;
