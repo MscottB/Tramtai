@@ -247,6 +247,8 @@ func TestPurgaPorRetencion(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.AgregarEvento(ctx, terminado.ID, "texto", "respuesta")
+	a.AgregarEvento(ctx, terminado.ID, "aviso", "simulado falló; sigue con otro")
+	a.AgregarEvento(ctx, terminado.ID, "intento", `{"agente":"otro"}`)
 	activo := trabajo("global", "otro")
 	activo.Solicitud.Cargas = []string{"carga_b"}
 	activo = aceptar(t, a, activo, "")
@@ -270,11 +272,19 @@ func TestPurgaPorRetencion(t *testing.T) {
 	if tr.Disponibilidad != nucleo.SalidaExpirada || tr.Salida != "" || !tr.EntradasEliminadas || len(tr.Solicitud.Mensajes) != 0 || tr.Estado != nucleo.Completado {
 		t.Fatalf("tras vencer: %+v", tr)
 	}
+	// Los estados y los intentos no llevan contenido: se conservan para el registro con los metadatos.
 	eventos, _ := a.Eventos(ctx, terminado.ID, 0)
+	intentos := 0
 	for _, e := range eventos {
-		if e.Tipo != "estado" {
+		if e.Tipo != "estado" && e.Tipo != "intento" {
 			t.Fatalf("quedó un evento con contenido: %+v", e)
 		}
+		if e.Tipo == "intento" {
+			intentos++
+		}
+	}
+	if intentos != 1 {
+		t.Fatalf("el intento debía conservarse: %+v", eventos)
 	}
 	if enUso, _ := a.CargasEnUso(ctx, "global"); enUso["carga_a"] || !enUso["carga_b"] {
 		t.Fatalf("solo el trabajo activo protege su carga: %v", enUso)

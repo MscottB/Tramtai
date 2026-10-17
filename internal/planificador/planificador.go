@@ -595,6 +595,31 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo})
 }
 
+// intento es lo que guarda el evento intento: esfuerzo es el nivel que se pidió al CLI, ya ajustado a su máximo, o
+// con DelAgente el que usa por su cuenta para ese modelo (vacío si no se conoce o el agente no tiene esfuerzo).
+type intento struct {
+	Agente    string `json:"agente"`
+	Modelo    string `json:"modelo"`
+	Esfuerzo  string `json:"esfuerzo"`
+	DelAgente bool   `json:"del_agente,omitempty"`
+}
+
+func nuevoIntento(c candidato, pedido string) intento {
+	i := intento{Agente: c.agente, Modelo: c.modelo}
+	niveles := adaptadores.NivelesEsfuerzo(c.agente)
+	switch {
+	case len(niveles) == 0:
+	case pedido == "":
+		i.Esfuerzo = adaptadores.EsfuerzoPredeterminado(c.agente, c.modelo)
+		i.DelAgente = i.Esfuerzo != ""
+	case slices.Contains(niveles, pedido):
+		i.Esfuerzo = pedido
+	default: // por encima de su máximo: el adaptador usa el máximo
+		i.Esfuerzo = niveles[len(niveles)-1]
+	}
+	return i
+}
+
 // sumarUso junta el uso de dos intentos del mismo trabajo.
 func sumarUso(a, b nucleo.Uso) nucleo.Uso {
 	return nucleo.Uso{TokensEntrada: a.TokensEntrada + b.TokensEntrada, TokensSalida: a.TokensSalida + b.TokensSalida, CostoUSD: a.CostoUSD + b.CostoUSD}
@@ -685,6 +710,10 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 	solicitud.Agente, solicitud.Modelo, solicitud.PerfilModelo = c.agente, c.modelo, ""
 	if c.esfuerzo != "" {
 		solicitud.Esfuerzo = c.esfuerzo
+	}
+	// El registro dice con qué agente, modelo y esfuerzo se intentó; sin contenido del usuario.
+	if datos, err := json.Marshal(nuevoIntento(c, solicitud.Esfuerzo)); err == nil {
+		_ = p.almacen.AgregarEvento(fondo, id, "intento", string(datos))
 	}
 	agrupador := &agrupador{guardar: func(tipo, datos string) error { return p.almacen.AgregarEvento(fondo, id, tipo, datos) }}
 	var texto atomic.Bool // algunos adaptadores emiten desde la goroutine que lee la salida del CLI

@@ -74,6 +74,7 @@ func (s *Servidor) Rutas() http.Handler {
 		mux.HandleFunc("DELETE /api/v1/trabajos/{id}", s.eliminarTrabajo)
 		mux.HandleFunc("GET /api/v1/trabajos/{id}/salida", s.salidaTrabajo)
 		mux.HandleFunc("GET /api/v1/trabajos/{id}/eventos", s.eventosTrabajo)
+		mux.HandleFunc("GET /api/v1/trabajos/{id}/registro", s.registroTrabajo)
 		mux.HandleFunc("POST /api/v1/trabajos/{id}/cancelar", s.cancelarTrabajo)
 		mux.HandleFunc("POST /api/v1/trabajos/{id}/reintentar", s.reintentarTrabajo)
 		mux.HandleFunc("POST /api/v1/ejecutar", s.ejecutarTrabajo)

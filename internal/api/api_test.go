@@ -181,6 +181,42 @@ func TestTrabajoNativoYEventos(t *testing.T) {
 	}
 }
 
+func TestRegistroSinTexto(t *testing.T) {
+	ts := servidor(t, simulado(trozos{}), nil)
+	_, cuerpo := pedir(t, ts, "POST", "/api/v1/trabajos", solicitudHola)
+	id := decodificar(t, cuerpo)["id"].(string)
+	esperarEstado(t, ts, id, nucleo.Completado)
+	r, cuerpo := pedir(t, ts, "GET", "/api/v1/trabajos/"+id+"/registro", "")
+	if r.StatusCode != 200 {
+		t.Fatalf("registro: %d %s", r.StatusCode, cuerpo)
+	}
+	var registro struct {
+		Eventos []struct {
+			Numero   int       `json:"numero"`
+			Tipo     string    `json:"tipo"`
+			Datos    string    `json:"datos"`
+			CreadoEn time.Time `json:"creado_en"`
+		} `json:"eventos"`
+	}
+	if err := json.Unmarshal([]byte(cuerpo), &registro); err != nil {
+		t.Fatal(err)
+	}
+	tipos := map[string]int{}
+	for i, e := range registro.Eventos {
+		tipos[e.Tipo]++
+		if i > 0 && e.CreadoEn.Before(registro.Eventos[i-1].CreadoEn) {
+			t.Fatalf("las horas no pueden retroceder: %+v", registro.Eventos)
+		}
+	}
+	if tipos["texto"] != 0 || tipos["estado"] == 0 || tipos["intento"] != 1 {
+		t.Fatalf("registro sin texto, con estados y un intento: %v", tipos)
+	}
+	// Mismo permiso que GET /api/v1/trabajos/{id}: lo que no se ve da 404.
+	if r, _ := pedir(t, ts, "GET", "/api/v1/trabajos/trabajo_inexistente/registro", ""); r.StatusCode != 404 {
+		t.Fatalf("un trabajo inexistente da 404: %d", r.StatusCode)
+	}
+}
+
 func TestIdempotenciaYValidacion(t *testing.T) {
 	ts := servidor(t, simulado(adaptadores.Simulado{}), nil)
 	r1, c1 := pedir(t, ts, "POST", "/api/v1/trabajos", solicitudHola, "Idempotency-Key", "k1")

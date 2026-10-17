@@ -2,6 +2,7 @@ package planificador
 
 import (
 	"context"
+	"encoding/json"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -81,7 +82,7 @@ func TestCompletaConAgenteSimulado(t *testing.T) {
 	for _, e := range eventos {
 		recorrido = append(recorrido, e.Datos)
 	}
-	esperado := []string{"en_cola", "esperando_agente", "ejecutando", "hola", "validando_salida", "completado"}
+	esperado := []string{"en_cola", "esperando_agente", "ejecutando", `{"agente":"simulado","modelo":"","esfuerzo":""}`, "hola", "validando_salida", "completado"}
 	if len(recorrido) != len(esperado) {
 		t.Fatalf("recorrido de eventos %v, se esperaba %v", recorrido, esperado)
 	}
@@ -949,5 +950,56 @@ func TestRespaldoConEsfuerzoPropio(t *testing.T) {
 	tr = esperar(t, alm, enviar(t, p, s), nucleo.Completado)
 	if e := <-visto; e != "bajo" || tr.Solicitud.Esfuerzo != "bajo" {
 		t.Fatalf("sin sufijo, el respaldo hereda el esfuerzo del principal: %q %+v", e, tr.Solicitud)
+	}
+}
+
+// intentos devuelve los datos de los eventos intento del trabajo, en orden.
+func intentos(t *testing.T, alm *persistencia.Almacen, id string) []map[string]any {
+	t.Helper()
+	eventos, err := alm.Eventos(ctx, id, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var lista []map[string]any
+	for _, e := range eventos {
+		if e.Tipo == "intento" {
+			var datos map[string]any
+			if err := json.Unmarshal([]byte(e.Datos), &datos); err != nil {
+				t.Fatal(err)
+			}
+			lista = append(lista, datos)
+		}
+	}
+	return lista
+}
+
+func TestEventoIntento(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)}, "codex": adaptadores.Simulado{Respuesta: "ok"}}, 2)
+	s := solicitud("x")
+	s.Agente, s.Esfuerzo = "codex", "maximo"
+	tr := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	niveles := adaptadores.NivelesEsfuerzo("codex")
+	if l := intentos(t, alm, tr.ID); len(l) != 1 || l[0]["agente"] != "codex" || l[0]["esfuerzo"] != niveles[len(niveles)-1] || l[0]["del_agente"] != nil {
+		t.Fatalf("un intento con el esfuerzo ajustado al máximo de codex: %v", l)
+	}
+	// Con un salto, un intento por agente y en orden; uno sin niveles de esfuerzo no informa ninguno.
+	s = conRespaldo("codex+bajo")
+	s.Esfuerzo = "alto"
+	tr = esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if l := intentos(t, alm, tr.ID); len(l) != 2 || l[0]["agente"] != "simulado" || l[0]["esfuerzo"] != "" || l[1]["agente"] != "codex" || l[1]["esfuerzo"] != "bajo" {
+		t.Fatalf("dos intentos en orden: %v", l)
+	}
+}
+
+func TestIntentoDelAgente(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{"claude": adaptadores.Simulado{Respuesta: "ok"}}, 1)
+	s := solicitud("x")
+	s.Agente, s.Modelo = "claude", "claude-opus-5-5"
+	tr := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if l := intentos(t, alm, tr.ID); len(l) != 1 || l[0]["esfuerzo"] != "medio" || l[0]["del_agente"] != true {
+		t.Fatalf("sin esfuerzo pedido, el predeterminado conocido del modelo: %v", l)
 	}
 }
