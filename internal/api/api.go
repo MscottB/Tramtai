@@ -80,6 +80,7 @@ func (s *Servidor) Rutas() http.Handler {
 		mux.HandleFunc("POST /api/v1/ejecutar", s.ejecutarTrabajo)
 		mux.HandleFunc("POST /api/v1/cargas", s.crearCarga)
 		mux.HandleFunc("GET /api/v1/capacidades", s.capacidades)
+		mux.HandleFunc("GET /api/v1/limites", func(w http.ResponseWriter, r *http.Request) { EscribirJSON(w, http.StatusOK, s.limites()) })
 		mux.HandleFunc("GET /api/v1/modelos", s.modelosNativos)
 	}
 	if contrato("openai") {

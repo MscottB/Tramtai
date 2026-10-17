@@ -26,6 +26,7 @@
               <div class="metadatos">
                 <span><q-icon :name="suscripcion(a) ? 'o_person' : 'o_key'" />{{ suscripcion(a) ? t('agentes.listoSuscripcion') : t('agentes.listoClave') }}</span>
                 <span v-if="esfuerzos[a.agente]?.length"><q-icon name="o_psychology" />{{ t('agentes.esfuerzo') }}: {{ esfuerzos[a.agente].map(nombreEsfuerzo).join(' · ') }}</span>
+                <span v-if="contextos[a.agente]?.length"><q-icon name="o_memory" />{{ t('agentes.contexto') }}: {{ textoContextos(a.agente) }}</span>
               </div>
               <q-btn unelevated dense no-caps color="primary" icon="o_chat" class="q-mt-md q-mr-sm q-px-md" :label="t('agentes.probar')" @click="probar(a)" />
               <q-btn v-if="puedeCambiar(a)" flat dense no-caps color="primary" class="q-mt-md q-px-sm" :loading="cambiando === a.agente"
@@ -78,6 +79,7 @@
                 <div>{{ t('agentes.json') }}</div><div>{{ a.capacidades.salida_estructurada ? t('comun.si') : t('comun.no') }}</div>
                 <div>{{ t('agentes.informaModelo') }}</div><div>{{ a.capacidades.modelo_efectivo_informado ? t('comun.si') : t('comun.no') }}</div>
                 <div>{{ t('agentes.esfuerzo') }}</div><div>{{ esfuerzos[a.agente]?.length ? esfuerzos[a.agente].map(nombreEsfuerzo).join(' · ') : t('comun.no') }}</div>
+                <div>{{ t('agentes.contexto') }}</div><div>{{ contextos[a.agente]?.length ? textoContextos(a.agente) : t('agentes.contextoDesconocido') }}</div>
               </div>
               <div v-if="a.terminos" class="text-caption texto-suave q-mt-sm">{{ a.terminos }}</div>
             </div>
@@ -97,7 +99,7 @@
 import { onMounted, ref } from 'vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import { useQuasar } from 'quasar'
-import { api, avisar, avisarError, codigoLinea, copiar, modeloInicial, nombreAgente, nombreEsfuerzo, ordenarAgentes, sesion, type Adaptador } from '../api'
+import { api, avisar, avisarError, codigoLinea, copiar, modeloInicial, nombreAgente, nombreEsfuerzo, ordenarAgentes, sesion, type Adaptador, numero } from '../api'
 import { t } from '../i18n'
 
 const $q = useQuasar()
@@ -110,6 +112,10 @@ function probar(a: Adaptador) {
 const adaptadores = ref<Adaptador[]>()
 // esfuerzos: los niveles que admite cada agente, según el catálogo de modelos.
 const esfuerzos = ref<Record<string, string[]>>({})
+// contextos: el contexto conocido de los modelos de cada agente (configurado o informado), para ver qué cabe.
+const contextos = ref<Record<string, { nombre: string; tokens: number; origen: string }[]>>({})
+const textoContextos = (agente: string) => (contextos.value[agente] ?? [])
+  .map((c) => `${c.nombre} ${numero(c.tokens)}${c.origen === 'configurado' ? ' (' + t('agentes.configurado') + ')' : ''}`).join(' · ')
 const cargando = ref(false)
 const cambiando = ref('')
 
@@ -175,6 +181,14 @@ onMounted(() => {
   cargar()
   api.catalogo().then((lista) => {
     for (const m of lista) if (m.agente && !m.modelo && !m.perfil) esfuerzos.value[m.agente] = m.esfuerzos ?? []
+    for (const m of lista) {
+      if (m.agente && !m.perfil && m.contexto_tokens) {
+        const nombre = m.version || m.modelo || t('agentes.predeterminadoCli')
+        if (!contextos.value[m.agente]?.some((c) => c.nombre === nombre)) {
+          ;(contextos.value[m.agente] ??= []).push({ nombre, tokens: m.contexto_tokens, origen: m.contexto_origen ?? '' })
+        }
+      }
+    }
   }).catch(() => {})
 })
 </script>

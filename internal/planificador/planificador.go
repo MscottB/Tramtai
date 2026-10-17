@@ -686,6 +686,7 @@ type intento struct {
 	Modelo    string `json:"modelo"`
 	Esfuerzo  string `json:"esfuerzo"`
 	DelAgente bool   `json:"del_agente,omitempty"`
+	Contexto  int    `json:"contexto_tokens,omitempty"` // del modelo, si se conoce
 }
 
 // nuevoIntento arma el evento de un intento; versionVista resuelve un alias (o el modelo vacío) con la última versión
@@ -755,6 +756,11 @@ func medirEntrada(s nucleo.SolicitudEjecucion, docs nucleo.Documentos) medida {
 	}
 	slices.SortStableFunc(m.Documentos, func(a, b parteMedida) int { return b.Tokens - a.Tokens })
 	return m
+}
+
+// Contexto es el contexto conocido de un agente y modelo, y de dónde sale (configurado o informado); 0 si no se sabe.
+func (p *Planificador) Contexto(ctx context.Context, agente, modelo string) (int, string) {
+	return p.contextoDe(ctx, candidato{agente: agente, modelo: modelo})
 }
 
 // contextoDe es el contexto (tokens) del modelo de un candidato y de dónde sale: lo configurado en
@@ -890,7 +896,9 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 		solicitud.Esfuerzo = c.esfuerzo
 	}
 	// El registro dice con qué agente, modelo y esfuerzo se intentó; sin contenido del usuario.
-	if datos, err := json.Marshal(nuevoIntento(c, solicitud.Esfuerzo, p.versionVista)); err == nil {
+	registro := nuevoIntento(c, solicitud.Esfuerzo, p.versionVista)
+	registro.Contexto, _ = p.contextoDe(ctxTrabajo, c)
+	if datos, err := json.Marshal(registro); err == nil {
 		_ = p.almacen.AgregarEvento(fondo, id, "intento", string(datos))
 	}
 	// Si el agente escribe una clave de proveedor (lo empujó un contenido hostil), se tapa antes de guardarla o enviarla.

@@ -18,7 +18,7 @@
 // RegistroTrabajo muestra la hora de cada paso de una petición (estados, intentos y avisos) y cuánto duró cada etapa,
 // para ver lo que la ruta animada pasa demasiado rápido. Vuelve a pedirlo cuando cambia version.
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { api, estadoInfo, nombreAgente, nombreEsfuerzo, type EventoRegistro, type Trabajo } from '../api'
+import { api, estadoInfo, nombreAgente, nombreEsfuerzo, numero, type EventoRegistro, type Trabajo } from '../api'
 import { idioma, t } from '../i18n'
 
 const props = defineProps<{ trabajo: Trabajo; version?: string | number }>()
@@ -67,10 +67,22 @@ function hora(texto: string): string {
 }
 function textoIntento(datos: string): string {
   try {
-    const i = JSON.parse(datos) as { agente: string; modelo?: string; esfuerzo?: string; del_agente?: boolean }
+    const i = JSON.parse(datos) as { agente: string; modelo?: string; esfuerzo?: string; del_agente?: boolean; contexto_tokens?: number }
     const partes = [nombreAgente(i.agente) + (i.modelo ? '/' + i.modelo : '')]
     if (i.esfuerzo) partes.push(nombreEsfuerzo(i.esfuerzo).toLowerCase() + (i.del_agente ? ` (${t('registro.delAgente')})` : ''))
+    if (i.contexto_tokens) partes.push(t('registro.contexto', { n: numero(i.contexto_tokens) }))
     return partes.join(' · ')
+  } catch {
+    return ''
+  }
+}
+
+// textoEntrada dice cuánto ocupa lo que recibe el agente y qué documento pesa más.
+function textoEntrada(datos: string): string {
+  try {
+    const m = JSON.parse(datos) as { tokens_estimados: number; documentos?: { nombre: string; tokens_estimados: number }[] }
+    const mayor = m.documentos?.[0]
+    return t('registro.entrada', { n: numero(m.tokens_estimados) }) + (mayor ? ` (${mayor.nombre} ~${numero(mayor.tokens_estimados)})` : '')
   } catch {
     return ''
   }
@@ -87,6 +99,7 @@ const lineas = computed(() => {
       const siguiente = eventos.value[i + 1]
       if (siguiente?.tipo === 'intento') texto += ' · ' + textoIntento(siguiente.datos)
     } else if (e.tipo === 'aviso') texto = t('registro.aviso', { texto: e.datos })
+    else if (e.tipo === 'entrada') texto = textoEntrada(e.datos)
     if (texto) lista.push({ numero: e.numero, hora: hora(e.creado_en), desde: '+' + tiempo(ms(e.creado_en) - inicio), texto, aviso: e.tipo === 'aviso' })
   })
   return lista

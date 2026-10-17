@@ -58,10 +58,11 @@ type SolicitudEjecucion struct {
 
 const (
 	maximoTiempoLimiteSegundos = 24 * 60 * 60
-	maximoCargas               = 20
-	maximoRespaldo             = 3
-	maximoMensajes             = 1000
-	maximoEsquemaPeticion      = 256 << 10
+	// MaximoCargas, MaximoMensajes y MaximoEsquemaPeticion son límites de una petición (/api/v1/limites).
+	MaximoCargas          = 20
+	maximoRespaldo        = 3
+	MaximoMensajes        = 1000
+	MaximoEsquemaPeticion = 256 << 10
 )
 
 // ReCarga es el formato de un identificador de carga: impide rutas u otros valores en su lugar.
@@ -92,10 +93,10 @@ func (s SolicitudEjecucion) Validar() error {
 			return invalida(idioma.Tf("%s con formato no válido", campo))
 		}
 	}
-	if len(s.Mensajes) > maximoMensajes {
-		return invalida(idioma.Tf("demasiados mensajes (máximo %d)", maximoMensajes))
+	if len(s.Mensajes) > MaximoMensajes {
+		return invalida(idioma.Tf("demasiados mensajes (máximo %d)", MaximoMensajes))
 	}
-	if len(s.Salida.Esquema) > maximoEsquemaPeticion {
+	if len(s.Salida.Esquema) > MaximoEsquemaPeticion {
 		return invalida(idioma.T("el esquema supera 256 KB"))
 	}
 	for i, m := range s.Mensajes {
@@ -126,8 +127,8 @@ func (s SolicitudEjecucion) Validar() error {
 			return invalida(idioma.T("el esquema de salida no es JSON válido"))
 		}
 	}
-	if len(s.Cargas) > maximoCargas {
-		return invalida(idioma.Tf("demasiadas cargas (máximo %d)", maximoCargas))
+	if len(s.Cargas) > MaximoCargas {
+		return invalida(idioma.Tf("demasiadas cargas (máximo %d)", MaximoCargas))
 	}
 	for i, c := range s.Cargas {
 		if !ReCarga.MatchString(c) {

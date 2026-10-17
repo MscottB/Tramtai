@@ -337,7 +337,22 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 		"formato_serializacion": adaptadores.FormatoSerializacion,
 		"entradas":              []string{"texto", "markdown", "json", "xml", "csv", "html", "pdf", "docx", "pptx", "xlsx", "zip"},
 		"adaptadores":           lista,
+		"limites":               s.limites(),
 	})
+}
+
+// limites son los topes de una petición y de sus cargas, para que una app (y Probar) los conozca antes de enviar.
+func (s *Servidor) limites() map[string]any {
+	return map[string]any{
+		"cargas_por_peticion":   nucleo.MaximoCargas,
+		"carga_mb":              s.Config.Limite("conversion.maximo_carga_mb"),
+		"texto_convertido_mb":   s.Config.Limite("conversion.maximo_salida_mb"),
+		"cuota_cargas_mb":       s.Config.Limite("conversion.cuota_cargas_mb"),
+		"cuerpo_mb":             maximoCuerpo >> 20,
+		"esquema_kb":            nucleo.MaximoEsquemaPeticion >> 10,
+		"mensajes":              nucleo.MaximoMensajes,
+		"reserva_salida_tokens": s.Config.Entero("limites.reserva_salida_tokens"),
+	}
 }
 
 // modelo es una entrada del catálogo informativo.
@@ -356,6 +371,10 @@ type modelo struct {
 	Esfuerzos []string `json:"esfuerzos,omitempty"`
 	// EsfuerzoPredeterminado es el nivel que usa el agente si no se elige; vacío si no se conoce con certeza.
 	EsfuerzoPredeterminado string `json:"esfuerzo_predeterminado,omitempty"`
+	// ContextoTokens es el contexto conocido del modelo (configurado o informado por el agente) y ContextoOrigen de
+	// dónde sale; sin dato, no se comprueba si una entrada cabe.
+	ContextoTokens int    `json:"contexto_tokens,omitempty"`
+	ContextoOrigen string `json:"contexto_origen,omitempty"`
 }
 
 // predeterminado es el identificador del catálogo que se usa cuando la solicitud no indica agente ni modelo.
@@ -463,6 +482,7 @@ func (s *Servidor) modelosNativos(w http.ResponseWriter, r *http.Request) {
 			// Lo que el agente dice que usará ahora manda sobre lo que informó la última vez que se usó.
 			lista[i].Version = cmp.Or(concretos[d[0]+"/"+d[1]], efectivos[d[0]+"/"+d[1]])
 			lista[i].EsfuerzoPredeterminado = adaptadores.EsfuerzoPredeterminado(d[0], cmp.Or(lista[i].Version, d[1]))
+			lista[i].ContextoTokens, lista[i].ContextoOrigen = s.Planificador.Contexto(r.Context(), d[0], cmp.Or(lista[i].Version, d[1]))
 		}
 	}
 	EscribirJSON(w, http.StatusOK, map[string]any{"modelos": lista})

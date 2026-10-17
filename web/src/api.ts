@@ -192,6 +192,18 @@ export interface Modelo {
   esfuerzos?: string[]
   // esfuerzo_predeterminado es el nivel que usa el agente si no se elige; ausente si no se conoce con certeza.
   esfuerzo_predeterminado?: string
+  // contexto_tokens es el contexto conocido del modelo y contexto_origen de dónde sale (configurado o informado).
+  contexto_tokens?: number
+  contexto_origen?: string
+}
+// LimitesPeticion son los topes de una petición y de sus cargas (/api/v1/limites).
+export interface LimitesPeticion {
+  cargas_por_peticion: number
+  carga_mb: number
+  texto_convertido_mb: number
+  cuota_cargas_mb: number
+  mensajes: number
+  reserva_salida_tokens: number
 }
 export interface EntradaConfiguracion {
   clave: string
@@ -319,6 +331,7 @@ export const api = {
   autoarranque: (activo: boolean) => pedir<Sesion>('POST', '/ui/autoarranque', { activo }).then(recordar),
   actualizacion: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion'),
   acerca: () => pedir<Acerca>('GET', '/ui/acerca'),
+  limites: () => pedir<LimitesPeticion>('GET', '/api/v1/limites'),
   buscarActualizaciones: (buscar: boolean) => pedir<EstadoActualizacion>('POST', '/ui/actualizacion', { buscar }),
   buscarAhora: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion?ahora=1'),
   actualizar: () => pedir<{ version: string }>('POST', '/ui/actualizar'),
@@ -624,6 +637,9 @@ export function esfuerzoUsado(trabajo: Trabajo, eventos: EventoRegistro[]): stri
     return ''
   }
 }
+
+// numero da un número con los separadores del idioma («200.000»).
+export const numero = (n: number) => n.toLocaleString(idioma.value)
 
 export function nombreEsfuerzo(nivel?: string): string {
   return nivel ? t(`esfuerzo.${nivel}` as Clave) : t('esfuerzo.agente')

@@ -712,3 +712,33 @@ func TestCuotaCargasHTTP(t *testing.T) {
 		t.Fatalf("la que supera la cuota: %d %s", r.StatusCode, cuerpo)
 	}
 }
+
+func TestCapacidadesLimites(t *testing.T) {
+	ts := servidor(t, simulado(adaptadores.Simulado{}), map[string]any{"conversion.maximo_carga_mb": 30})
+	for _, ruta := range []string{"/api/v1/limites", "/api/v1/capacidades"} {
+		r, cuerpo := pedir(t, ts, "GET", ruta, "")
+		datos := decodificar(t, cuerpo)
+		if ruta == "/api/v1/capacidades" {
+			datos, _ = datos["limites"].(map[string]any)
+		}
+		if r.StatusCode != 200 || datos["carga_mb"] != float64(30) || datos["cargas_por_peticion"] != float64(20) ||
+			datos["mensajes"] != float64(1000) || datos["reserva_salida_tokens"] != float64(8192) || datos["texto_convertido_mb"] != float64(20) {
+			t.Fatalf("%s: %d %s", ruta, r.StatusCode, cuerpo)
+		}
+	}
+}
+
+func TestCatalogoConContexto(t *testing.T) {
+	ts := servidor(t, simulado(adaptadores.Simulado{}), map[string]any{"limites.contexto_tokens": []any{"simulado=12345"}})
+	_, cuerpo := pedir(t, ts, "GET", "/api/v1/modelos", "")
+	for _, m := range decodificar(t, cuerpo)["modelos"].([]any) {
+		entrada := m.(map[string]any)
+		if entrada["id"] == "simulado" {
+			if entrada["contexto_tokens"] != float64(12345) || entrada["contexto_origen"] != "configurado" {
+				t.Fatalf("contexto en el catálogo: %v", entrada)
+			}
+			return
+		}
+	}
+	t.Fatalf("sin la entrada simulado: %s", cuerpo)
+}
