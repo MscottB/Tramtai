@@ -404,7 +404,8 @@ watch(() => sesion.value?.version, async (version) => {
   try {
     const vista = localStorage.getItem('tramtai.version')
     localStorage.setItem('tramtai.version', version)
-    if (vista && vista !== version && /^v\d/.test(version)) {
+    // Sin la fecha (+DDMMAAAA): la misma versión compilada otro día no es una versión nueva.
+    if (vista && vista.split('+')[0] !== version.split('+')[0] && /^v\d/.test(version)) {
       novedades.value = await api.novedades(vista).catch(() => [])
       dialogoNovedades.value = true
     }
