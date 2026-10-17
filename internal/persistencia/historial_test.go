@@ -163,3 +163,16 @@ func TestTopeLiberaLaClaveDeIdempotencia(t *testing.T) {
 		t.Fatalf("la clave del trabajo borrado por el tope queda libre: %v reutilizado=%t", err, reutilizado)
 	}
 }
+
+func TestPuntosConConsumo(t *testing.T) {
+	a := abrir(t)
+	for _, punto := range []string{"tienda", "vieja", ""} {
+		tr := trabajo("global", "hola")
+		tr.PuntoAcceso = punto
+		aceptar(t, a, tr, "")
+	}
+	a.EliminarConsumo(ctx, "global", "vieja") // sus filas pasan a «~»
+	if puntos, err := a.PuntosConConsumo(ctx, "global"); err != nil || len(puntos) != 1 || puntos[0] != "tienda" {
+		t.Fatalf("solo las APIs con nombre, sin '', '*' ni '~': %q %v", puntos, err)
+	}
+}

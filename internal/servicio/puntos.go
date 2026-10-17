@@ -357,7 +357,6 @@ func (s *Servicio) Recargar() []EstadoPunto {
 			// Un punto que sale de la configuración sin clave se eliminó (la UI y la CLI la borran antes de recargar): su
 			// consumo deja de ser suyo para que otro con el mismo nombre no lo herede. Con la clave aún en su sitio
 			// (una errata en el YAML lo invalidó) se conserva.
-			// shortcut: no se detecta si se eliminó con el servicio detenido; habría que guardar la huella con el consumo.
 			if _, err := os.Stat(RutaTokenPunto(s.opc.Datos, nombre)); os.IsNotExist(err) && actual.instancia != nil &&
 				s.instancias[actual.instancia.ID] == actual.instancia {
 				eliminados = append(eliminados, eliminado{actual.instancia, nombre})
@@ -393,7 +392,34 @@ func (s *Servicio) Recargar() []EstadoPunto {
 		inst.Planificador.FijarPresupuestos(m)
 	}
 	estado := s.estadoPuntos()
+	instancias := make([]*Instancia, 0, len(s.instancias))
+	for _, inst := range s.instancias {
+		instancias = append(instancias, inst)
+	}
+	deseadosPor := map[string]map[string]bool{}
+	for _, c := range deseados {
+		if deseadosPor[c.cfg.Instancia] == nil {
+			deseadosPor[c.cfg.Instancia] = map[string]bool{}
+		}
+		deseadosPor[c.cfg.Instancia][c.cfg.Nombre] = true
+	}
 	s.mu.Unlock()
+	// Una API que se eliminó con el servicio detenido no pasó por el bucle de arriba: si tiene consumo, no está en
+	// la configuración y ya no tiene clave, su consumo tampoco es de nadie.
+	for _, inst := range instancias {
+		puntos, err := inst.Planificador.PuntosConConsumo(context.Background())
+		if err != nil {
+			continue
+		}
+		for _, nombre := range puntos {
+			if _, sigue := deseadosPor[inst.ID][nombre]; sigue {
+				continue
+			}
+			if _, err := os.Stat(RutaTokenPunto(s.opc.Datos, nombre)); os.IsNotExist(err) {
+				eliminados = append(eliminados, eliminado{inst, nombre})
+			}
+		}
+	}
 	for _, e := range eliminados {
 		if err := e.inst.Planificador.EliminarConsumo(context.Background(), e.nombre); err != nil {
 			fmt.Fprintf(s.opc.Registros, "punto de acceso %s: no se pudo borrar su consumo: %v\n", e.nombre, err)

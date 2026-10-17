@@ -1,11 +1,13 @@
 package servicio
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/nucleo"
 )
 
 const puntosOrigen = `puntos_acceso:
@@ -104,5 +106,23 @@ func TestListarPorGrupoYOrigen(t *testing.T) {
 	}
 	if c, total := contar(tokens["tienda"], "/p/tienda/api/v1/trabajos?grupo=web&origen=probar"); c != 200 || total != 1 {
 		t.Errorf("una API extra solo ve las suyas, sin grupo ni origen: %d %d", c, total)
+	}
+}
+
+func TestConsumoDeAPIAusenteSeBorra(t *testing.T) {
+	s, _, _ := entorno(t, puntosOrigen, "", adaptadores.Simulado{})
+	global, _ := s.ActivarGlobal()
+	for _, punto := range []string{"tienda", "vieja"} { // vieja ya no está en la configuración
+		tr := nucleo.Trabajo{ID: nucleo.NuevoID(), Instancia: global.ID, PuntoAcceso: punto,
+			Solicitud: nucleo.SolicitudEjecucion{Agente: "simulado", Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "hola"}}}}
+		if _, _, err := global.almacen.Aceptar(context.Background(), tr, "", 0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s.Recargar()
+	dia, _, _ := global.almacen.Consumo(context.Background(), global.ID, "vieja")
+	tienda, _, _ := global.almacen.Consumo(context.Background(), global.ID, "tienda")
+	if dia.Peticiones != 0 || tienda.Peticiones != 1 {
+		t.Fatalf("se borra el consumo de la API ausente y no el de las demás: vieja %+v, tienda %+v", dia, tienda)
 	}
 }

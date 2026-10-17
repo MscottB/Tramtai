@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"log"
 	"net"
@@ -918,7 +919,11 @@ func (s *Servicio) fijarRetencion(inst *Instancia, resultado, metadatos, maximo 
 	err := s.guardarValores(inst, map[string]any{"retencion.horas_resultado": resultado, "retencion.horas_metadatos": metadatos,
 		"retencion.max_trabajos": maximo})
 	if err == nil {
-		go inst.Purgar(context.Background())
+		go func() {
+			if err := inst.Purgar(context.Background()); err != nil {
+				fmt.Fprintf(s.opc.Registros, "purga de %s: %s\n", inst.ID, nucleo.MensajeDe(err))
+			}
+		}()
 	}
 	return err
 }

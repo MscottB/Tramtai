@@ -81,6 +81,11 @@ func (p *Planificador) ReiniciarPresupuesto(ctx context.Context, punto string) e
 }
 
 // EliminarConsumo borra todo el consumo de una API (al eliminarla).
+// PuntosConConsumo son las APIs con consumo guardado en la instancia (para borrar el de las que ya no existen).
+func (p *Planificador) PuntosConConsumo(ctx context.Context) ([]string, error) {
+	return p.almacen.PuntosConConsumo(ctx, p.opc.Instancia)
+}
+
 func (p *Planificador) EliminarConsumo(ctx context.Context, punto string) error {
 	return p.almacen.EliminarConsumo(ctx, p.opc.Instancia, punto)
 }
