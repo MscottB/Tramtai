@@ -679,9 +679,12 @@ const en: Textos = {
   'ayuda.p15': 'How do I see how long each step of a request took?',
   'ayuda.r15':
     'Open «Log» under the answer in Try or in the History detail: each step (queued, waiting for the agent, running with which agent, model and effort, notices and the end) with its time and the time since the start, and above it how long each stage took.',
+  'ayuda.p17': 'Which version do I have?',
+  'ayuda.r17':
+    'Click the version next to the logo, or «About Tramtai» in the side menu or the status menu. You will see the version with its date, whether a newer one exists, the project links and, under «Technical details», what you need to ask for help: «Copy support details» copies it without keys or tokens.',
   'ayuda.p16': 'What happens when Tramtai updates?',
   'ayuda.r16':
-    'After downloading the new version, Tramtai warns that it will restart in 10 seconds, with «Restart now» and «Cancel». Then a small window shows the installation progress and closes by itself, and Tramtai opens again with your settings and data and shows you what is new.',
+    'After downloading the new version, Tramtai warns that it will restart in 10 seconds, with «Restart now» and «Cancel». Then a small «Update Tramtai» window shows the progress and closes by itself, and Tramtai opens again with your settings and data and shows you what is new.',
   'presupuesto.editorTexto': 'Budget: daily and monthly limits. At 80% you are warned and at 100% new requests are rejected until the reset. Empty or 0 = no limit.',
   'presupuesto.diario': 'Daily',
   'presupuesto.mensual': 'Monthly',

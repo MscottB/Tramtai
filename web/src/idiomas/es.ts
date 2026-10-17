@@ -678,9 +678,12 @@ const es = {
   'ayuda.p15': '¿Cómo veo cuánto tardó cada paso de una petición?',
   'ayuda.r15':
     'Abre «Registro» bajo la respuesta en Probar o en el detalle del Historial: cada paso (en cola, esperando al agente, ejecutando con qué agente, modelo y esfuerzo, avisos y el final) con su hora y el tiempo desde el inicio, y arriba cuánto duró cada etapa.',
+  'ayuda.p17': '¿Qué versión tengo?',
+  'ayuda.r17':
+    'Pulsa la versión junto al logo, o «Acerca de Tramtai» en el menú lateral o en el menú del estado. Verás la versión con su fecha, si hay una más nueva, los enlaces del proyecto y, en «Detalles técnicos», lo necesario para pedir ayuda: «Copiar datos para soporte» lo copia sin claves ni tokens.',
   'ayuda.p16': '¿Qué pasa al actualizar Tramtai?',
   'ayuda.r16':
-    'Al descargar la versión nueva, Tramtai avisa de que se reiniciará en 10 segundos, con «Reiniciar ahora» y «Cancelar». Después se ve una ventana pequeña con el progreso de la instalación, que se cierra sola, y Tramtai vuelve a abrirse con tu configuración y tus datos y te muestra las novedades.',
+    'Al descargar la versión nueva, Tramtai avisa de que se reiniciará en 10 segundos, con «Reiniciar ahora» y «Cancelar». Después se ve una ventana pequeña, «Actualizar Tramtai», con el progreso, que se cierra sola, y Tramtai vuelve a abrirse con tu configuración y tus datos y te muestra las novedades.',
   'presupuesto.editorTexto': 'Presupuesto: límites por día y por mes. Al 80 % se avisa y al 100 % se rechazan las peticiones nuevas hasta el reinicio. Vacío o 0 = sin límite.',
   'presupuesto.diario': 'Diario',
   'presupuesto.mensual': 'Mensual',
