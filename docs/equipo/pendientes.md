@@ -28,10 +28,12 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | v0.36.1 | Probar: la línea de la ruta ya no se sale de la tarjeta mientras la petición avanza | ✅ |
 | v0.37.0 | Actualizaciones: se borran los instaladores descargados y, tras actualizar, un diálogo con las novedades de las versiones saltadas | ✅ |
 | v0.38.0 | Mis APIs con la lista primero (buscador, grupo, orden), grupos plegables y mapa de Inicio por grupo; Historial por origen y grupo con Ver más; límites del historial (tope de peticiones, plazos en Ajustes, compactar la base); origen de cada petición (Probar, terminal, CLI, app o API) | ✅ |
-| — | Pulido: cuenta atrás de 10 s antes de instalar (Reiniciar ahora o Cancelar); detalle de cada API en Mis APIs con cómo conectarla y sus acciones; todos los pendientes de las revisiones cerrados | ⬜ |
-| — | Probar: esfuerzo junto al modelo, esfuerzo por agente de respaldo con su predeterminado, registro con tiempos por etapa, historial breve de pruebas y respuesta con formato Markdown | ⬜ |
+| v0.39.0 | Pulido: cuenta atrás de 10 s antes de instalar (Reiniciar ahora o Cancelar); detalle de cada API en Mis APIs con cómo conectarla y sus acciones; todos los pendientes de las revisiones cerrados | ✅ |
+| — | Probar: esfuerzo junto al modelo, esfuerzo por agente de respaldo con su predeterminado, registro con tiempos por etapa, historial breve de pruebas y respuesta con formato Markdown; ventana de progreso al instalar una actualización | ⬜ |
 | — | API propia `/api/v1` explicada: guía «¿Qué URL uso?», ejemplos para copiar y documentación | ⬜ |
 | — | Copilot CLI como agente nuevo | ⬜ |
+| — | OpenCode como agente nuevo (`opencode run`), tras su prueba M0 | ⬜ |
+| — | Hermes Agent como agente nuevo, tras su prueba M0 | ⬜ |
 | — | Webhooks al terminar un trabajo y avisos de presupuesto (`presupuesto.aviso`, `presupuesto.agotado`) | ⬜ |
 | — | Comparar agentes en Probar | ⬜ |
 | — | Tramtai como servidor MCP | ⬜ |
