@@ -499,6 +499,24 @@ input[type='number'] {
   font-family: var(--mono);
   font-size: 0.84rem;
 }
+/* RegistroTrabajo: hora, tiempo desde el inicio y paso, en columnas alineadas. */
+.registro {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 2px 12px;
+  font-size: 0.82rem;
+}
+.registro li {
+  display: contents;
+}
+.registro__desde {
+  text-align: right;
+}
+.registro__aviso span:last-child {
+  color: var(--aviso);
+}
 /* SalidaTrabajo: el texto tal cual (pre sin su margen ni su letra) y el Markdown con formato. */
 .texto-plano {
   margin: 0;

@@ -604,13 +604,17 @@ type intento struct {
 	DelAgente bool   `json:"del_agente,omitempty"`
 }
 
-func nuevoIntento(c candidato, pedido string) intento {
+// versionVista resuelve un alias (o el modelo vacío) con la última versión que informó el agente, como el catálogo.
+func nuevoIntento(c candidato, pedido string, versionVista func(agente, modelo string) string) intento {
 	i := intento{Agente: c.agente, Modelo: c.modelo}
 	niveles := adaptadores.NivelesEsfuerzo(c.agente)
 	switch {
 	case len(niveles) == 0:
 	case pedido == "":
 		i.Esfuerzo = adaptadores.EsfuerzoPredeterminado(c.agente, c.modelo)
+		if i.Esfuerzo == "" {
+			i.Esfuerzo = adaptadores.EsfuerzoPredeterminado(c.agente, versionVista(c.agente, c.modelo))
+		}
 		i.DelAgente = i.Esfuerzo != ""
 	case slices.Contains(niveles, pedido):
 		i.Esfuerzo = pedido
@@ -618,6 +622,12 @@ func nuevoIntento(c candidato, pedido string) intento {
 		i.Esfuerzo = niveles[len(niveles)-1]
 	}
 	return i
+}
+
+// versionVista es el último modelo efectivo que informó el agente para ese modelo enviado ("" si no hay).
+func (p *Planificador) versionVista(agente, modelo string) string {
+	efectivos, _ := p.almacen.ModelosEfectivos(context.Background())
+	return efectivos[agente+"/"+modelo]
 }
 
 // sumarUso junta el uso de dos intentos del mismo trabajo.
@@ -712,7 +722,7 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 		solicitud.Esfuerzo = c.esfuerzo
 	}
 	// El registro dice con qué agente, modelo y esfuerzo se intentó; sin contenido del usuario.
-	if datos, err := json.Marshal(nuevoIntento(c, solicitud.Esfuerzo)); err == nil {
+	if datos, err := json.Marshal(nuevoIntento(c, solicitud.Esfuerzo, p.versionVista)); err == nil {
 		_ = p.almacen.AgregarEvento(fondo, id, "intento", string(datos))
 	}
 	agrupador := &agrupador{guardar: func(tipo, datos string) error { return p.almacen.AgregarEvento(fondo, id, tipo, datos) }}

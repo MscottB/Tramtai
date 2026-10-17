@@ -1003,3 +1003,26 @@ func TestIntentoDelAgente(t *testing.T) {
 		t.Fatalf("sin esfuerzo pedido, el predeterminado conocido del modelo: %v", l)
 	}
 }
+
+// conVersion responde como un CLI que informa la versión real detrás de un alias.
+type conVersion struct{}
+
+func (conVersion) Ejecutar(context.Context, nucleo.SolicitudEjecucion, func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	return adaptadores.Resultado{Salida: "ok", ModeloEfectivo: "claude-haiku-5-5"}, nil
+}
+
+func TestIntentoDelAgenteConAlias(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{"claude": conVersion{}}, 1)
+	s := solicitud("x")
+	s.Agente, s.Modelo = "claude", "haiku"
+	primero := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if l := intentos(t, alm, primero.ID); len(l) != 1 || l[0]["esfuerzo"] != "" {
+		t.Fatalf("sin versión vista, el alias no tiene un predeterminado seguro: %v", l)
+	}
+	// Con la versión ya vista detrás del alias, el registro dice el esfuerzo que usa el CLI.
+	segundo := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if l := intentos(t, alm, segundo.ID); len(l) != 1 || l[0]["esfuerzo"] != "medio" || l[0]["del_agente"] != true {
+		t.Fatalf("el alias se resuelve con la versión vista: %v", l)
+	}
+}

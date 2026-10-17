@@ -69,6 +69,13 @@ export interface Trabajo {
   creado_en: string
   terminado_en?: string
 }
+// EventoRegistro es un paso de una petición con su hora: estado, intento (JSON con agente, modelo y esfuerzo) o aviso.
+export interface EventoRegistro {
+  numero: number
+  tipo: string
+  datos: string
+  creado_en: string
+}
 export interface EstadoInstancia {
   id: string
   ambito: string
@@ -332,6 +339,7 @@ export const api = {
   retencion: () => pedir<Retencion>('GET', '/api/v1/instancia/retencion'),
   fijarRetencion: (r: { horas_resultado: number; horas_metadatos: number; max_trabajos: number }) => pedir<void>('PUT', '/api/v1/instancia/retencion', r),
   trabajo: (id: string) => pedir<Trabajo>('GET', `/api/v1/trabajos/${encodeURIComponent(id)}`),
+  registro: (id: string) => pedir<{ eventos: EventoRegistro[] }>('GET', `/api/v1/trabajos/${encodeURIComponent(id)}/registro`).then((r) => r.eventos),
   crear: (s: Solicitud) => pedir<Trabajo>('POST', '/api/v1/trabajos', s),
   accion: (id: string, accion: 'cancelar' | 'reintentar') =>
     pedir<Trabajo>('POST', `/api/v1/trabajos/${encodeURIComponent(id)}/${accion}`),
@@ -578,6 +586,20 @@ export function dividirRespaldo(e: string): { base: string; esfuerzo: string } {
   return { base, esfuerzo }
 }
 export const unirRespaldo = (base: string, esfuerzo: string) => (esfuerzo ? `${base}+${esfuerzo}` : base)
+
+// esfuerzoUsado es el esfuerzo con que respondió la petición, según su último intento: el pedido o, si no se pidió,
+// el del agente con «(del agente)»; sin intentos registrados, el de la solicitud. '' si no hubo esfuerzo.
+export function esfuerzoUsado(trabajo: Trabajo, eventos: EventoRegistro[]): string {
+  const intento = eventos.filter((e) => e.tipo === 'intento').at(-1)
+  if (!intento) return trabajo.solicitud.esfuerzo ? nombreEsfuerzo(trabajo.solicitud.esfuerzo) : ''
+  try {
+    const i = JSON.parse(intento.datos) as { esfuerzo?: string; del_agente?: boolean }
+    if (!i.esfuerzo) return ''
+    return i.del_agente ? t('esfuerzo.delAgente', { nivel: nombreEsfuerzo(i.esfuerzo) }) : nombreEsfuerzo(i.esfuerzo)
+  } catch {
+    return ''
+  }
+}
 
 export function nombreEsfuerzo(nivel?: string): string {
   return nivel ? t(`esfuerzo.${nivel}` as Clave) : t('esfuerzo.agente')

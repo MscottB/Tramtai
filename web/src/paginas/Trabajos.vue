@@ -92,7 +92,7 @@
           </div>
           <div class="ficha text-body2">
             <div>{{ t('historial.agenteModelo') }}</div><div>{{ modeloDe(detalle) }}</div>
-            <div>{{ t('historial.esfuerzo') }}</div><div>{{ nombreEsfuerzo(detalle.solicitud.esfuerzo) }}</div>
+            <div>{{ t('historial.esfuerzo') }}</div><div>{{ esfuerzoUsado(detalle, eventosDetalle) || '—' }}</div>
             <div>{{ t('historial.origen') }}</div><div>{{ textoOrigen(detalle) }}</div>
             <div>{{ t('historial.tokens') }}</div><div>{{ detalle.uso.tokens_entrada }} → {{ detalle.uso.tokens_salida }}</div>
             <template v-if="detalle.uso.costo_usd"><div>{{ t('historial.coste') }}</div><div>US$ {{ detalle.uso.costo_usd.toFixed(4) }}</div></template>
@@ -100,6 +100,7 @@
             <div>{{ t('historial.identificador') }}</div>
             <div class="codigo cursor-pointer" @click="copiar(detalle.id)">{{ detalle.id }}<q-tooltip>{{ t('comun.copiar') }}</q-tooltip></div>
           </div>
+          <RegistroTrabajo :trabajo="detalle" :version="detalle.estado" @cargado="(e: EventoRegistro[]) => (eventosDetalle = e)" />
         </q-card-section>
         <q-separator />
         <q-card-actions class="q-pa-md">
@@ -123,7 +124,9 @@ import EstadoVacio from '../componentes/EstadoVacio.vue'
 import { useQuasar, type QTableColumn } from 'quasar'
 import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
-import { api, avisar, avisarError, type EstadoPunto, copiar, duracion, estadoInfo, fecha, filtroHistorial, haceCuanto, origenHistorial, trabajoAbrir, modeloDe, nombreEsfuerzo, terminales, textoDe, tituloError, trabajoSeguido, type Trabajo } from '../api'
+import RegistroTrabajo from '../componentes/RegistroTrabajo.vue'
+import SalidaTrabajo from '../componentes/SalidaTrabajo.vue'
+import { api, avisar, avisarError, type EstadoPunto, copiar, duracion, estadoInfo, fecha, filtroHistorial, haceCuanto, origenHistorial, trabajoAbrir, modeloDe, esfuerzoUsado, type EventoRegistro, terminales, textoDe, tituloError, trabajoSeguido, type Trabajo } from '../api'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()
@@ -133,6 +136,7 @@ const hayTerminados = computed(() => trabajos.value.some((x) => terminales.inclu
 const cargando = ref(false)
 const dialogo = ref(false)
 const detalle = ref<Trabajo>()
+const eventosDetalle = ref<EventoRegistro[]>([])
 const filtro = ref(filtroHistorial.value || 'todos')
 filtroHistorial.value = ''
 const busqueda = ref<string | null>('')
@@ -236,6 +240,7 @@ async function verMas() {
 }
 
 async function abrir(elegido: Trabajo) {
+  eventosDetalle.value = []
   const n = ++pedidoDetalle
   try {
     const trabajo = await api.trabajo(elegido.id)

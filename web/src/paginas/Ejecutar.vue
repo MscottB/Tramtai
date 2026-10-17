@@ -98,11 +98,17 @@
               </div>
             </template>
           </q-card-section>
+          <template v-if="trabajo">
+            <q-separator />
+            <q-card-section class="q-py-xs">
+              <RegistroTrabajo :trabajo="trabajo" :version="versionRegistro" @cargado="(e: EventoRegistro[]) => (eventosRegistro = e)" />
+            </q-card-section>
+          </template>
           <template v-if="final">
             <q-separator />
             <q-card-section class="metadatos">
               <Linea :agente="final.solicitud.agente" :modelo="final.modelo_efectivo || final.modelo_enviado" />
-              <span v-if="final.solicitud.esfuerzo"><q-icon name="o_psychology" />{{ nombreEsfuerzo(final.solicitud.esfuerzo) }}</span>
+              <span v-if="esfuerzoFinal"><q-icon name="o_psychology" />{{ esfuerzoFinal }}</span>
               <span><q-icon name="o_data_usage" />{{ final.uso.tokens_entrada }} → {{ final.uso.tokens_salida }} tokens</span>
               <span v-if="final.uso.costo_usd"><q-icon name="o_payments" />US$ {{ final.uso.costo_usd.toFixed(4) }}</span>
               <span v-if="final.terminado_en"><q-icon name="o_timer" />{{ duracion(final.creado_en, final.terminado_en) }}</span>
@@ -162,9 +168,10 @@ import EditorReceta from '../componentes/EditorReceta.vue'
 import EstadoVacio from '../componentes/EstadoVacio.vue'
 import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
+import RegistroTrabajo from '../componentes/RegistroTrabajo.vue'
 import SalidaTrabajo from '../componentes/SalidaTrabajo.vue'
-import { ajustesDeReceta, api, aplicarModelo, avisar, avisarError, configDeReceta, copiar, duracion, esquemaDeReceta, estadoInfo, modeloInicial,
-  nombreEsfuerzo, recetaDePunto, recetaInicial, recetaVacia, terminales, tituloError, trabajoSeguido, type Modelo, type Receta, type Solicitud,
+import { ajustesDeReceta, api, aplicarModelo, avisar, avisarError, configDeReceta, copiar, duracion, esquemaDeReceta, esfuerzoUsado, estadoInfo, modeloInicial,
+  recetaDePunto, recetaInicial, recetaVacia, terminales, tituloError, trabajoSeguido, type EventoRegistro, type Modelo, type Receta, type Solicitud,
   type Trabajo } from '../api'
 import { t } from '../i18n'
 
@@ -195,6 +202,10 @@ const estado = ref('')
 const salida = ref('')
 const avisos = ref<string[]>([])
 const activo = ref(false)
+// versionRegistro sube con cada paso en vivo para que el registro se vuelva a pedir; eventosRegistro da el esfuerzo usado.
+const versionRegistro = ref(0)
+const eventosRegistro = ref<EventoRegistro[]>([])
+const esfuerzoFinal = computed(() => (final.value ? esfuerzoUsado(final.value, eventosRegistro.value) : ''))
 let fuente: EventSource | undefined
 
 onMounted(async () => {
@@ -262,6 +273,7 @@ function seguir(nuevo: Trabajo) {
   estado.value = nuevo.estado
   salida.value = ''
   avisos.value = []
+  eventosRegistro.value = []
   activo.value = !terminales.includes(nuevo.estado)
   const actual = (fuente = new EventSource(`/api/v1/trabajos/${encodeURIComponent(nuevo.id)}/eventos`))
   // ultimo: el número del último evento recibido; tras reconectar se descarta lo que ya estaba.
@@ -278,8 +290,13 @@ function seguir(nuevo: Trabajo) {
   // aviso: por ejemplo, que un agente llegó a su límite y sigue el del respaldo.
   actual.addEventListener('aviso', (e) => {
     if (nuevoEvento(e)) avisos.value.push((e as MessageEvent).data)
+    versionRegistro.value++
   })
-  actual.addEventListener('estado', (e) => (estado.value = (e as MessageEvent).data))
+  actual.addEventListener('estado', (e) => {
+    estado.value = (e as MessageEvent).data
+    versionRegistro.value++
+  })
+  actual.addEventListener('intento', () => versionRegistro.value++)
   actual.addEventListener('fin', () => {
     actual.close()
     terminar(nuevo.id)
@@ -298,6 +315,7 @@ async function terminar(id: string) {
     // Con salida estructurada el texto en vivo puede diferir del resultado validado: se muestra el resultado.
     if (terminado.estado === 'completado' && terminado.salida !== undefined && terminado.salida !== salida.value) salida.value = terminado.salida
     final.value = terminado
+    versionRegistro.value++
   } catch (e) {
     avisarError(e)
   } finally {
