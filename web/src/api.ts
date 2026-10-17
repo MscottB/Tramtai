@@ -401,6 +401,8 @@ export const filtroHistorial = ref('')
 export const modeloInicial = ref('')
 // origenHistorial abre el Historial con las peticiones de una API (desde Mis APIs).
 export const origenHistorial = ref('')
+// grupoInicial abre Mis APIs filtrada por un grupo (desde el mapa de Inicio).
+export const grupoInicial = ref('')
 // trabajoAbrir abre el Historial con el detalle de una petición (desde Inicio).
 export const trabajoAbrir = ref('')
 

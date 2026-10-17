@@ -2,7 +2,7 @@
   <!-- En el móvil, la red se lee de arriba abajo: tus apps, Tramtai y las líneas de los agentes en un solo eje. -->
   <svg v-if="$q.screen.lt.sm" class="mapa-red" :viewBox="`0 0 ${V_ANCHO} ${vAlto}`" role="img" :aria-label="descripcion">
     <line :x1="V_EJE" :y1="vOrigen(0)" :x2="V_EJE" :y2="vAgente(lineas.length - 1)" stroke-width="3" :style="{ stroke: 'var(--borde-fuerte)' }" />
-    <g v-for="(o, i) in origenes" :key="'vo' + o.id" class="cursor-pointer" role="link" tabindex="0" @click="emit('ir', 'conectar')" @keyup.enter="emit('ir', 'conectar')">
+    <g v-for="(o, i) in origenes" :key="'vo' + o.id" class="cursor-pointer" role="link" tabindex="0" @click="abrir(o)" @keyup.enter="abrir(o)">
       <circle :cx="V_EJE" :cy="vOrigen(i)" r="6" stroke-width="3" :style="{ fill: 'var(--superficie)', stroke: o.activo ? 'var(--acento)' : 'var(--borde-fuerte)' }" />
       <text :x="V_EJE + 18" :y="vOrigen(i) + 5" font-size="14" :font-weight="o.principal ? 600 : 500" :class="{ suave: !o.activo }">{{ o.nombre }}</text>
     </g>
@@ -28,10 +28,11 @@
       <path v-for="a in lineas" :key="'l' + a.agente" :d="tramo(X_HUB + HUB_ANCHO, centro + paralela(a.i, lineas.length), X_AGENTE, a.y)" fill="none" stroke-width="4" stroke-linecap="round"
         :style="{ stroke: a.listo ? a.color : 'var(--borde-fuerte)' }" :stroke-dasharray="a.listo ? undefined : PUNTEADO" />
 
-      <g v-for="o in origenes" :key="'o' + o.id" class="cursor-pointer" role="link" tabindex="0" @click="emit('ir', 'conectar')" @keyup.enter="emit('ir', 'conectar')">
+      <g v-for="o in origenes" :key="'o' + o.id" class="cursor-pointer" role="link" tabindex="0" @click="abrir(o)" @keyup.enter="abrir(o)">
         <circle :cx="X_ORIGEN" :cy="o.y" r="7" stroke-width="3" :style="{ fill: 'var(--superficie)', stroke: o.activo ? 'var(--acento)' : 'var(--borde-fuerte)' }" />
-        <text :x="X_ORIGEN - 18" :y="o.y + 5" text-anchor="end" font-size="14" :font-weight="o.principal ? 600 : 500"
+        <text :x="X_ORIGEN - 18" :y="o.detalle ? o.y - 2 : o.y + 5" text-anchor="end" font-size="14" :font-weight="o.principal ? 600 : 500"
           :class="{ suave: !o.activo }">{{ o.nombre }}</text>
+        <text v-if="o.detalle" :x="X_ORIGEN - 18" :y="o.y + 15" text-anchor="end" font-size="12" class="suave">{{ o.detalle }}</text>
       </g>
 
       <!-- Tramtai es el intercambiador: la cápsula blanca de borde grueso de los transbordos. -->
@@ -54,7 +55,7 @@
 // MapaRed dibuja la red de Tramtai como un mapa de tranvía: tus apps (la API principal y tus APIs) llegan a
 // Tramtai, que reparte cada petición por la línea de un agente. Las líneas sin servicio van punteadas.
 import { computed } from 'vue'
-import { nombreAgente, type Adaptador, type EstadoPunto } from '../api'
+import { grupoInicial, nombreAgente, type Adaptador, type EstadoPunto } from '../api'
 import { t } from '../i18n'
 
 const props = defineProps<{ adaptadores: Adaptador[]; apis: EstadoPunto[]; base: string }>()
@@ -75,13 +76,30 @@ const alto = computed(() => filas.value * PASO + 16)
 const centro = computed(() => alto.value / 2)
 const y = (i: number, n: number) => centro.value + (i - (n - 1) / 2) * PASO
 
+// origenes: la API principal, una estación por grupo y las APIs sin grupo; como mucho MAX_APIS y «y N más».
+type Origen = { id: string; nombre: string; activo: boolean; principal: boolean; grupo?: string; detalle?: string }
 const origenes = computed(() => {
-  const activas = props.apis.filter((p) => p.error !== 'desactivado')
-  const lista = [{ id: '-', nombre: t('mapa.principal'), activo: true, principal: true }]
-  for (const p of props.apis.slice(0, MAX_APIS)) lista.push({ id: p.nombre, nombre: 'API ' + p.nombre, activo: p.error !== 'desactivado', principal: false })
-  if (props.apis.length > MAX_APIS) lista.push({ id: '+', nombre: t('mapa.mas', { n: props.apis.length - MAX_APIS }), activo: activas.length > MAX_APIS, principal: false })
+  const activa = (p: EstadoPunto) => p.error !== 'desactivado'
+  const estaciones: Origen[] = []
+  const porGrupo = new Map<string, EstadoPunto[]>()
+  for (const p of props.apis) if (p.grupo) porGrupo.set(p.grupo, [...(porGrupo.get(p.grupo) ?? []), p])
+  for (const [grupo, lista] of [...porGrupo].sort(([a], [b]) => a.localeCompare(b))) {
+    estaciones.push({ id: 'g:' + grupo, nombre: t('mapa.grupo', { grupo, n: lista.length }), activo: lista.some(activa), principal: false, grupo,
+      detalle: t('mapa.activas', { n: lista.filter(activa).length }) })
+  }
+  for (const p of props.apis) if (!p.grupo) estaciones.push({ id: p.nombre, nombre: 'API ' + p.nombre, activo: activa(p), principal: false })
+  const lista: Origen[] = [{ id: '-', nombre: t('mapa.principal'), activo: true, principal: true }, ...estaciones.slice(0, MAX_APIS)]
+  if (estaciones.length > MAX_APIS) {
+    const resto = estaciones.slice(MAX_APIS)
+    lista.push({ id: '+', nombre: t('mapa.mas', { n: resto.length }), activo: resto.some((o) => o.activo), principal: false })
+  }
   return lista.map((o, i, todos) => ({ ...o, i, y: y(i, todos.length) }))
 })
+// abrir lleva a Mis APIs; desde un grupo, filtrada por ese grupo.
+function abrir(o: Origen) {
+  if (o.grupo) grupoInicial.value = o.grupo
+  emit('ir', 'conectar')
+}
 
 const lineas = computed(() => props.adaptadores.map((a, i) => ({
   agente: a.agente,
