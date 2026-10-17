@@ -332,6 +332,8 @@ export const api = {
   actualizacion: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion'),
   acerca: () => pedir<Acerca>('GET', '/ui/acerca'),
   limites: () => pedir<LimitesPeticion>('GET', '/api/v1/limites'),
+  // El documento OpenAPI se reescribe tal cual (servers, operaciones) antes de guardarlo.
+  openapi: () => pedir<Record<string, any>>('GET', '/api/v1/openapi.json'),
   buscarActualizaciones: (buscar: boolean) => pedir<EstadoActualizacion>('POST', '/ui/actualizacion', { buscar }),
   buscarAhora: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion?ahora=1'),
   actualizar: () => pedir<{ version: string }>('POST', '/ui/actualizar'),

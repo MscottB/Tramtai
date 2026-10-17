@@ -99,13 +99,10 @@
           <div class="texto-suave text-body2">{{ t('conectar.directaTexto') }}</div>
         </div>
       </q-card-section>
-      <div class="q-px-md text-weight-medium">{{ t('conectar.conexion') }}</div>
-      <q-card-section class="row q-col-gutter-md">
-        <div v-for="c in campos" :key="c.titulo" class="col-12 col-md-6">
-          <div class="text-caption texto-suave q-mb-xs">{{ c.titulo }}</div>
-          <div class="bloque-codigo">{{ c.valor }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('comun.copiar') + ' ' + c.titulo" @click="copiar(c.valor)" /></div>
-          <div class="text-caption texto-suave q-mt-xs">{{ c.texto }}</div>
-        </div>
+      <q-card-section class="q-pt-none">
+        <GuiaUrls :url="base" :contratos="contratos" />
+      </q-card-section>
+      <q-card-section class="row q-col-gutter-md q-pt-none">
         <div class="col-12 col-md-6">
           <div class="text-caption texto-suave q-mb-xs">{{ t('conectar.clave') }}</div>
           <div class="bloque-codigo" style="padding-right: 112px">{{ clave ? (verClave ? clave : ocultar(clave)) : t('comun.cargando') }}
@@ -223,11 +220,8 @@
           <div class="text-weight-medium">{{ t('puntos.conectar') }}</div>
           <div class="texto-suave text-body2 q-mb-sm">{{ t('puntos.conectarTexto') }}</div>
           <template v-if="puntoDetalle.url">
+          <GuiaUrls :url="puntoDetalle.url" :contratos="puntoDetalle.contratos" :nombre="puntoDetalle.nombre" class="q-mb-md" />
           <div class="row q-col-gutter-md">
-            <div v-for="u in urlsDe(puntoDetalle)" :key="u.titulo" class="col-12 col-md-6">
-              <div class="text-caption texto-suave q-mb-xs">{{ u.titulo }}</div>
-              <div class="bloque-codigo">{{ u.valor }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('comun.copiar') + ' ' + u.titulo" @click="copiar(u.valor)" /></div>
-            </div>
             <div class="col-12">
               <div class="text-caption texto-suave q-mb-xs">{{ t('conectar.clave') }}</div>
               <template v-if="claveVista">
@@ -287,6 +281,7 @@ import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import EstadoVacio from '../componentes/EstadoVacio.vue'
 import EditorPresupuesto from '../componentes/EditorPresupuesto.vue'
 import EditorReceta from '../componentes/EditorReceta.vue'
+import GuiaUrls from '../componentes/GuiaUrls.vue'
 import { ajustesDeReceta, api, avisar, avisarError, codigoLinea, nombreAgente, ordenAgentes, configDeReceta, copiar, dividirRespaldo, etiquetaModelo, haceCuanto, idModeloDe as idModelo, nombreEsfuerzo, opcionModelo,
   cargarDiasHistorial, periodoHistorial, grupoInicial, origenHistorial, presupuestoLimpio, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPresupuesto, type EstadoPunto, type Modelo,
   type Presupuesto, type UsoPunto } from '../api'
@@ -323,11 +318,6 @@ function abrirDetalle(p: EstadoPunto, clave = '', creada = false) {
   claveVista.value = clave
   recienCreado.value = creada
   dialogoDetalle.value = true
-}
-// urlsDe son las URL base de una API según lo que acepta.
-function urlsDe(p: EstadoPunto) {
-  const urls = { openai: [t('conectar.urlOpenai'), '/openai/v1'], anthropic: [t('conectar.urlAnthropic'), '/anthropic'], nativa: [t('conectar.apiPropia'), '/api/v1'] }
-  return (['openai', 'anthropic', 'nativa'] as const).filter((c) => p.contratos.includes(c)).map((c) => ({ titulo: urls[c][0], valor: (p.url ?? '') + urls[c][1] }))
 }
 const lenguaje = ref('python')
 const contratos = ['openai', 'anthropic', 'nativa']
@@ -396,11 +386,6 @@ function filtrarGrupos(texto: string, actualizar: (f: () => void) => void) {
   })
 }
 
-const campos = computed(() => [
-  { titulo: t('conectar.urlOpenai'), valor: base.value + '/openai/v1', texto: t('conectar.urlOpenaiTexto') },
-  { titulo: t('conectar.urlAnthropic'), valor: base.value + '/anthropic', texto: t('conectar.urlAnthropicTexto') },
-  { titulo: t('conectar.apiPropia'), valor: base.value + '/api/v1', texto: t('conectar.apiPropiaTexto') },
-])
 // gruposModelo agrupa los valores de model: primero los perfiles y luego cada agente en el orden fijo de la red.
 const gruposModelo = computed(() => [
   { agente: '', titulo: t('conectar.perfiles'), ids: ids.value.filter((id) => id.startsWith('perfil/')) },
