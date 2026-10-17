@@ -72,6 +72,17 @@ En Mis APIs, en la API principal y en el detalle de cada API (bloque Conectar), 
 - Prueba `TestOpenAPICubreLasRutas`: compara las rutas `/api/v1` que registra `api.go` (leyendo sus `HandleFunc`) con
   las de `openapi.json`, en los dos sentidos, y comprueba que el JSON es válido y que `servers` se reescribe.
 
+## 5. Aviso de actualización con cada versión que se salta
+
+Añadido a petición del usuario. Hoy el aviso de antes de actualizar («Actualizar a vX») solo muestra las notas de la
+versión más nueva; el de después ya muestra cada versión por separado.
+
+- `GET /ui/actualizacion/novedades` admite `hasta` (opcional; sin él, la versión instalada, como hoy).
+- Al abrir el aviso con una versión disponible, la Web UI pide las novedades de la instalada a la nueva. Con más de
+  una, las muestra como el diálogo de después: una sección plegable por versión, la más nueva abierta, como mucho 10,
+  y el enlace «Ver todas». Con una sola, o si GitHub no responde, las notas de hoy (`actualizacion.notas`).
+- La lista plegable pasa a un componente `ListaNovedades.vue` que usan los dos diálogos.
+
 ## Documentación
 
 - `docs/api.md`: sección «¿Qué URL uso?» (la tabla de la sección 1) y una guía paso a paso de la API propia: subir,
@@ -85,7 +96,8 @@ En Mis APIs, en la API principal y en el detalle de cada API (bloque Conectar), 
 
 - `internal/api`: `TestOpenAPICubreLasRutas`; `GET /api/v1/openapi.json` con y sin clave (401), y desde un punto de
   acceso con su base en `servers`.
-- Web UI (navegador): la guía y la tabla en Mis APIs y en el detalle; las tres pestañas de la API propia con la URL,
+- `internal/servicio`: novedades con `hasta`.
+- Web UI (navegador): el aviso de actualización con dos versiones saltadas; la guía y la tabla en Mis APIs y en el detalle; las tres pestañas de la API propia con la URL,
   la clave y el modelo de la API; «Ver como código» con una receta con esquema, respaldo y un archivo (nota en
   OpenAI); Descargar OpenAPI; móvil y escritorio, claro y oscuro.
 - Los ejemplos de la API propia se ejecutan una vez contra el servidor de prueba (curl y Python) para comprobar que
