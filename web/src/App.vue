@@ -193,7 +193,7 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="dialogoActualizar" :persistent="!!progreso && progreso.fase !== 'error'">
+    <q-dialog v-model="dialogoActualizar" :persistent="!!progreso && progreso.fase !== 'error' && progreso.fase !== 'listo'">
       <q-card v-if="progreso" style="width: 540px; max-width: 94vw">
         <q-card-section>
           <div class="titulo-seccion">{{ t('actualizacion.progresoTitulo', { version: progreso.version }) }}</div>
@@ -202,6 +202,10 @@
           <p class="q-mt-sm q-mb-none" role="status" aria-live="polite">{{ textoProgreso }}</p>
           <p v-if="progreso.fase === 'instalando'" class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.cerrara') }}</p>
         </q-card-section>
+        <q-card-actions v-if="progreso.fase === 'listo'" align="right" class="q-px-md q-pb-md">
+          <q-btn flat no-caps :label="t('comun.cancelar')" @click="cancelarInstalacion" />
+          <q-btn unelevated no-caps color="primary" icon="o_restart_alt" :label="t('actualizacion.reiniciarAhora')" @click="reiniciarAhora" />
+        </q-card-actions>
         <q-card-actions v-if="progreso.fase === 'error'" align="right" class="q-px-md q-pb-md">
           <q-btn v-close-popup flat no-caps :label="t('comun.cerrar')" @click="progreso = null" />
           <q-btn unelevated no-caps color="primary" icon="o_refresh" :label="t('actualizacion.reintentar')" @click="instalarActualizacion" />
@@ -321,6 +325,29 @@ const fraccion = computed(() => {
   if (!p || p.fase === 'error') return p?.total ? p.recibidos / p.total : 0
   return p.fase === 'descargando' && p.total ? p.recibidos / p.total : 1
 })
+// La cuenta atrás antes de instalar: ahora avanza con el sondeo del avance (cada 400 ms).
+const ahora = ref(Date.now())
+const segundosParaInstalar = computed(() => {
+  const en = progreso.value?.instala_en
+  return en ? Math.max(0, Math.ceil((Date.parse(en) - ahora.value) / 1000)) : 0
+})
+async function reiniciarAhora() {
+  try {
+    await api.instalarYa()
+  } catch (e) {
+    avisarError(e)
+  }
+}
+async function cancelarInstalacion() {
+  try {
+    await api.cancelarActualizacion()
+  } catch (e) {
+    avisarError(e)
+  }
+  clearInterval(seguirProgreso)
+  progreso.value = null
+  dialogoActualizar.value = false
+}
 const indeterminado = computed(() => !!progreso.value && ((progreso.value.fase === 'descargando' && !progreso.value.total) || progreso.value.fase === 'instalando'))
 const textoProgreso = computed(() => {
   const p = progreso.value
@@ -328,6 +355,7 @@ const textoProgreso = computed(() => {
   if (p.fase === 'error') return t('actualizacion.fallo', { error: p.error ?? '' })
   if (p.fase === 'verificando') return t('actualizacion.verificando')
   if (p.fase === 'instalando') return t('actualizacion.instalando')
+  if (p.fase === 'listo') return t('actualizacion.reiniciaraEn', { n: segundosParaInstalar.value })
   if (!p.total) return t('actualizacion.descargandoSinTotal', { recibido: megas(p.recibidos) })
   return t('actualizacion.descargando', { recibido: megas(p.recibidos), total: megas(p.total), porcentaje: Math.floor((p.recibidos / p.total) * 100) })
 })
@@ -341,6 +369,7 @@ async function instalarActualizacion() {
     clearInterval(seguirProgreso)
     seguirProgreso = window.setInterval(async () => {
       try {
+        ahora.value = Date.now()
         const p = await api.progresoActualizacion()
         if (p.fase) progreso.value = p
         if (p.fase === 'error') clearInterval(seguirProgreso)

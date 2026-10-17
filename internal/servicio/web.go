@@ -327,6 +327,17 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		api.EscribirJSON(w, http.StatusAccepted, map[string]any{"version": v.Etiqueta})
+	case (r.URL.Path == "/ui/actualizar/instalar" || r.URL.Path == "/ui/actualizar/cancelar") && r.Method == http.MethodPost:
+		_, ses := s.sesionDe(r)
+		if !s.sesionLocal(r, ses) || !csrfValido(r, ses) {
+			api.NoAutorizado(w, r)
+			return
+		}
+		if err := s.decidirInstalacion(r.URL.Path == "/ui/actualizar/instalar"); err != nil {
+			api.EscribirJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"codigo": nucleo.CodigoDe(err), "mensaje": nucleo.MensajeDe(err)}})
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	case r.URL.Path == "/ui/actualizacion/progreso" && r.Method == http.MethodGet:
 		if _, ses := s.sesionDe(r); ses == nil {
 			api.NoAutorizado(w, r)

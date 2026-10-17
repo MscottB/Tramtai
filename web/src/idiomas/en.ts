@@ -569,6 +569,8 @@ const en: Textos = {
   'actualizacion.descargandoSinTotal': 'Downloading: {recibido} MB',
   'actualizacion.verificando': 'Checking the SHA-256 checksum…',
   'actualizacion.instalando': 'Installing…',
+  'actualizacion.reiniciaraEn': 'Ready to install. Tramtai will restart in {n} s.',
+  'actualizacion.reiniciarAhora': 'Restart now',
   'actualizacion.cerrara': 'Tramtai will close and open again in a few seconds, with your settings and data.',
   'actualizacion.fallo': 'The update failed: {error}',
   'actualizacion.reintentar': 'Retry',

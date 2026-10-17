@@ -568,6 +568,8 @@ const es = {
   'actualizacion.descargandoSinTotal': 'Descargando: {recibido} MB',
   'actualizacion.verificando': 'Comprobando la suma SHA-256…',
   'actualizacion.instalando': 'Instalando…',
+  'actualizacion.reiniciaraEn': 'Listo para instalar. Tramtai se reiniciará en {n} s.',
+  'actualizacion.reiniciarAhora': 'Reiniciar ahora',
   'actualizacion.cerrara': 'Tramtai se cerrará y volverá a abrirse en unos segundos, con tu configuración y tus datos.',
   'actualizacion.fallo': 'No se pudo actualizar: {error}',
   'actualizacion.reintentar': 'Reintentar',

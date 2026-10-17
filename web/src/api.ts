@@ -272,10 +272,11 @@ export interface Novedad {
 
 // ProgresoActualizacion es el avance de «Actualizar ahora»: fase vacía si no hay ninguna en curso.
 export interface ProgresoActualizacion {
-  fase: '' | 'descargando' | 'verificando' | 'instalando' | 'error'
+  fase: '' | 'descargando' | 'verificando' | 'listo' | 'instalando' | 'error'
   version: string
   recibidos: number
   total: number
+  instala_en?: string // en la fase listo: cuándo instalará si nadie decide antes
   error?: string
 }
 // dialogoActualizar muestra las novedades y el botón de instalar; lo abren la cabecera, Ajustes y la bandeja.
@@ -299,6 +300,9 @@ export const api = {
   buscarAhora: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion?ahora=1'),
   actualizar: () => pedir<{ version: string }>('POST', '/ui/actualizar'),
   progresoActualizacion: () => pedir<ProgresoActualizacion>('GET', '/ui/actualizacion/progreso'),
+  // En la cuenta atrás antes de instalar: instalar ya («Reiniciar ahora») o cancelar.
+  instalarYa: () => pedir<void>('POST', '/ui/actualizar/instalar'),
+  cancelarActualizacion: () => pedir<void>('POST', '/ui/actualizar/cancelar'),
   novedades: (desde: string) =>
     pedir<{ versiones: Novedad[] }>('GET', '/ui/actualizacion/novedades?desde=' + encodeURIComponent(desde)).then((r) => r.versiones),
   cambiarAutenticacion: (agente: string, modo: 'suscripcion' | 'clave_api') => pedir<void>('POST', '/ui/autenticacion', { agente, modo }),

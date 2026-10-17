@@ -104,6 +104,7 @@ type Servicio struct {
 	actualizaciones actualizacion.Comprobador
 	muAvance        sync.Mutex
 	avance          ProgresoActualizacion // la actualización en curso, para la Web UI
+	ordenInstalar   chan bool             // en la fase listo: true instala ya, false cancela
 	buscar          atomic.Bool
 }
 
