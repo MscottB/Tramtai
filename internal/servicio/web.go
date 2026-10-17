@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"tramtai/internal/actualizacion"
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/api"
 	"tramtai/internal/autoarranque"
@@ -332,6 +333,25 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		api.EscribirJSON(w, http.StatusOK, s.progresoActualizacion())
+	case r.URL.Path == "/ui/actualizacion/novedades" && r.Method == http.MethodGet:
+		// Lo que trajo cada versión desde la última vista en este navegador; sin búsqueda de actualizaciones no se
+		// habla con GitHub.
+		if _, ses := s.sesionDe(r); ses == nil {
+			api.NoAutorizado(w, r)
+			return
+		}
+		if !s.buscar.Load() {
+			api.EscribirJSON(w, http.StatusOK, map[string]any{"versiones": []actualizacion.Version{}})
+			return
+		}
+		ctx, cancelar := context.WithTimeout(r.Context(), 8*time.Second)
+		defer cancelar()
+		versiones, err := actualizacion.Novedades(ctx, r.URL.Query().Get("desde"), version.Texto())
+		if err != nil {
+			api.EscribirJSON(w, http.StatusBadGateway, map[string]any{"error": map[string]any{"codigo": "github_no_disponible", "mensaje": err.Error()}})
+			return
+		}
+		api.EscribirJSON(w, http.StatusOK, map[string]any{"versiones": versiones})
 	case r.URL.Path == "/ui/sesion" && r.Method == http.MethodDelete:
 		if id, _ := s.sesionDe(r); id != "" {
 			s.muSesiones.Lock()

@@ -174,6 +174,25 @@
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="dialogoNovedades">
+      <q-card style="width: 540px; max-width: 94vw">
+        <q-card-section>
+          <div class="titulo-seccion">{{ t('actualizacion.hecha', { version: sesion?.version }) }}</div>
+          <p v-if="!novedades.length" class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.sinNotas') }}</p>
+          <NotasVersion v-else-if="novedades.length === 1" class="q-mt-md" :texto="novedades[0].notas ?? ''" />
+          <q-list v-else class="q-mt-sm">
+            <q-expansion-item v-for="(n, i) in novedades" :key="n.version" :label="n.version" :default-opened="i === 0" dense header-class="q-px-none text-weight-medium">
+              <NotasVersion :texto="n.notas ?? ''" />
+            </q-expansion-item>
+          </q-list>
+        </q-card-section>
+        <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-btn flat no-caps color="primary" :label="t('actualizacion.verTodas')" href="https://github.com/MscottB/Tramtai/releases" target="_blank" rel="noopener" />
+          <q-btn v-close-popup unelevated no-caps color="primary" :label="t('comun.aceptar')" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="dialogoActualizar" :persistent="!!progreso && progreso.fase !== 'error'">
       <q-card v-if="progreso" style="width: 540px; max-width: 94vw">
         <q-card-section>
@@ -213,7 +232,7 @@
 <script setup lang="ts">
 import { computed, markRaw, onMounted, onUnmounted, provide, ref, watch, watchEffect } from 'vue'
 import { useQuasar } from 'quasar'
-import { actualizacion, api, avisar, avisarError, buscarActualizacionAhora, dialogoActualizar, reiniciarYSeguir, sesion, type ProgresoActualizacion } from './api'
+import { actualizacion, api, avisar, avisarError, buscarActualizacionAhora, dialogoActualizar, reiniciarYSeguir, sesion, type Novedad, type ProgresoActualizacion } from './api'
 import { cambiarIdioma, idioma, idiomas, t } from './i18n'
 import { cambiarTema, tema, type Tema } from './tema'
 import EntrarPagina from './paginas/Entrar.vue'
@@ -376,13 +395,20 @@ onUnmounted(() => {
   document.removeEventListener('visibilitychange', alVolver)
   window.removeEventListener('popstate', alNavegar)
 })
-// Tras actualizar, avisa de la versión nueva una vez: se recuerda la última versión vista en este navegador.
-watch(() => sesion.value?.version, (version) => {
+// Tras actualizar, muestra una vez las novedades de las versiones desde la última vista en este navegador (una
+// compilación dev no tiene versión con la que comparar).
+const dialogoNovedades = ref(false)
+const novedades = ref<Novedad[]>([])
+watch(() => sesion.value?.version, async (version) => {
   if (!version) return
   try {
     const vista = localStorage.getItem('tramtai.version')
-    if (vista && vista !== version) avisar(t('actualizacion.hecha', { version }))
     localStorage.setItem('tramtai.version', version)
+    // Sin la fecha (+DDMMAAAA): la misma versión compilada otro día no es una versión nueva.
+    if (vista && vista.split('+')[0] !== version.split('+')[0] && /^v\d/.test(version)) {
+      novedades.value = await api.novedades(vista).catch(() => [])
+      dialogoNovedades.value = true
+    }
   } catch {
     // sin almacenamiento local no hay aviso
   }

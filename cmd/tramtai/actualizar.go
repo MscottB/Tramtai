@@ -45,7 +45,7 @@ func comandoActualizar() *cobra.Command {
 			if !si && !confirmar(cmd, idioma.T("¿Instalarla ahora? La app se cerrará y el servicio se detendrá unos segundos.")) {
 				return nil
 			}
-			dir, err := os.MkdirTemp("", "tramtai-actualizacion")
+			dir, err := os.MkdirTemp("", actualizacion.PrefijoCarpeta)
 			if err != nil {
 				return err
 			}
