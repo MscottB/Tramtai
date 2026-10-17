@@ -4,7 +4,7 @@
     <line :x1="V_EJE" :y1="vOrigen(0)" :x2="V_EJE" :y2="vAgente(lineas.length - 1)" stroke-width="3" :style="{ stroke: 'var(--borde-fuerte)' }" />
     <g v-for="(o, i) in origenes" :key="'vo' + o.id" class="cursor-pointer" role="link" tabindex="0" @click="abrir(o)" @keyup.enter="abrir(o)">
       <circle :cx="V_EJE" :cy="vOrigen(i)" r="6" stroke-width="3" :style="{ fill: 'var(--superficie)', stroke: o.activo ? 'var(--acento)' : 'var(--borde-fuerte)' }" />
-      <text :x="V_EJE + 18" :y="vOrigen(i) + 5" font-size="14" :font-weight="o.principal ? 600 : 500" :class="{ suave: !o.activo }">{{ o.nombre }}</text>
+      <text :x="V_EJE + 18" :y="vOrigen(i) + 5" font-size="14" :font-weight="o.principal ? 600 : 500" :class="{ suave: !o.activo }">{{ o.detalle ? o.nombre + ' · ' + o.detalle : o.nombre }}</text>
     </g>
     <g class="cursor-pointer" role="link" tabindex="0" @click="emit('ir', 'ejecutar')" @keyup.enter="emit('ir', 'ejecutar')">
       <rect x="4" :y="vHub" :width="V_ANCHO - 8" height="58" rx="29" stroke-width="4" :style="{ fill: 'var(--superficie)', stroke: 'var(--texto)' }" />
@@ -84,14 +84,15 @@ const origenes = computed(() => {
   const porGrupo = new Map<string, EstadoPunto[]>()
   for (const p of props.apis) if (p.grupo) porGrupo.set(p.grupo, [...(porGrupo.get(p.grupo) ?? []), p])
   for (const [grupo, lista] of [...porGrupo].sort(([a], [b]) => a.localeCompare(b))) {
-    estaciones.push({ id: 'g:' + grupo, nombre: t('mapa.grupo', { grupo, n: lista.length }), activo: lista.some(activa), principal: false, grupo,
-      detalle: t('mapa.activas', { n: lista.filter(activa).length }) })
+    const activas = lista.filter(activa).length
+    estaciones.push({ id: 'g:' + grupo, nombre: lista.length === 1 ? t('mapa.grupoUno', { grupo }) : t('mapa.grupo', { grupo, n: lista.length }),
+      activo: activas > 0, principal: false, grupo, detalle: activas === 1 ? t('mapa.activaUno') : t('mapa.activas', { n: activas }) })
   }
   for (const p of props.apis) if (!p.grupo) estaciones.push({ id: p.nombre, nombre: 'API ' + p.nombre, activo: activa(p), principal: false })
   const lista: Origen[] = [{ id: '-', nombre: t('mapa.principal'), activo: true, principal: true }, ...estaciones.slice(0, MAX_APIS)]
   if (estaciones.length > MAX_APIS) {
     const resto = estaciones.slice(MAX_APIS)
-    lista.push({ id: '+', nombre: t('mapa.mas', { n: resto.length }), activo: resto.some((o) => o.activo), principal: false })
+    lista.push({ id: '+', nombre: resto.length === 1 ? t('mapa.masUno') : t('mapa.mas', { n: resto.length }), activo: resto.some((o) => o.activo), principal: false })
   }
   return lista.map((o, i, todos) => ({ ...o, i, y: y(i, todos.length) }))
 })

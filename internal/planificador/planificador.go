@@ -542,6 +542,7 @@ func (p *Planificador) procesar(id string, esperando func()) {
 	// para no mezclar dos respuestas. El plazo en cola vale hasta el primer intento.
 	lista := candidatos(t)
 	var resultado adaptadores.Resultado
+	var usoPrevio nucleo.Uso // lo que gastaron los intentos que fallaron: también cuenta para el presupuesto
 	for i, c := range lista {
 		res, huboTexto, fin, err := p.intentar(ctxTrabajo, id, t, solicitud, c, plazoCola)
 		if fin {
@@ -549,18 +550,21 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		}
 		if err == nil {
 			resultado = res
+			resultado.Uso = sumarUso(resultado.Uso, usoPrevio)
 			break
 		}
+		usoPrevio = sumarUso(usoPrevio, res.Uso)
 		codigo := nucleo.CodigoDe(err)
 		if codigo == "" {
 			codigo = nucleo.CodigoErrorAgente
 		}
 		if !saltable(codigo) || huboTexto || i+1 == len(lista) {
-			p.cambiar(id, nucleo.Ejecutando, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err)})
+			p.cambiar(id, nucleo.Ejecutando, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err), Uso: &usoPrevio})
 			return
 		}
 		siguiente := lista[i+1]
-		if !p.cambiar(id, nucleo.Ejecutando, nucleo.EsperandoAgente, persistencia.Cambio{}) {
+		// El uso acumulado queda en el trabajo: si se cancela durante el respaldo, también cuenta.
+		if !p.cambiar(id, nucleo.Ejecutando, nucleo.EsperandoAgente, persistencia.Cambio{Uso: &usoPrevio}) {
 			return
 		}
 		var restante []string
@@ -589,6 +593,11 @@ func (p *Planificador) procesar(id string, esperando func()) {
 	}
 	p.cambiar(id, nucleo.ValidandoSalida, nucleo.Completado, persistencia.Cambio{Salida: &resultado.Salida,
 		Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo})
+}
+
+// sumarUso junta el uso de dos intentos del mismo trabajo.
+func sumarUso(a, b nucleo.Uso) nucleo.Uso {
+	return nucleo.Uso{TokensEntrada: a.TokensEntrada + b.TokensEntrada, TokensSalida: a.TokensSalida + b.TokensSalida, CostoUSD: a.CostoUSD + b.CostoUSD}
 }
 
 // candidato es un agente que puede ejecutar el trabajo: el principal o uno del respaldo.

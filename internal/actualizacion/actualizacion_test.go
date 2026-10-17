@@ -186,7 +186,8 @@ func servidorVersiones(t *testing.T, estado int, versiones string) {
 	t.Cleanup(srv.Close)
 	antes := urlVersiones
 	urlVersiones = srv.URL
-	t.Cleanup(func() { urlVersiones = antes })
+	reiniciarCache()
+	t.Cleanup(func() { urlVersiones = antes; reiniciarCache() })
 }
 
 func ficha(etiqueta, pagina string, borrador, previa bool) string {
@@ -249,5 +250,28 @@ func TestNovedadesFallo(t *testing.T) {
 	servidorVersiones(t, http.StatusForbidden, `{"message":"API rate limit exceeded"}`)
 	if _, err := Novedades(context.Background(), "v0.35.0", "v0.36.0"); err == nil {
 		t.Fatal("un 403 de GitHub debe devolver error")
+	}
+}
+
+func TestNovedadesCache(t *testing.T) {
+	var consultas atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		consultas.Add(1)
+		fmt.Fprint(w, "["+ficha("v0.36.1+1", "", false, false)+"]")
+	}))
+	t.Cleanup(srv.Close)
+	antes := urlVersiones
+	urlVersiones = srv.URL
+	reiniciarCache()
+	t.Cleanup(func() { urlVersiones = antes; reiniciarCache() })
+	Novedades(context.Background(), "v0.35.0", "v0.36.1")
+	Novedades(context.Background(), "v0.36.0", "v0.36.1")
+	if consultas.Load() != 1 {
+		t.Fatalf("dentro de 10 minutos la lista se reutiliza: %d consultas", consultas.Load())
+	}
+	reiniciarCache()
+	Novedades(context.Background(), "v0.35.0", "v0.36.1")
+	if consultas.Load() != 2 {
+		t.Fatalf("sin caché vuelve a consultar: %d", consultas.Load())
 	}
 }

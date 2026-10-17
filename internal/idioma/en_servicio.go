@@ -236,6 +236,8 @@ func init() {
 		"las horas de respuesta deben estar entre 0 y %d":        "response hours must be between 0 and %d",
 		"las horas de registro deben estar entre 0 y %d":         "record hours must be between 0 and %d",
 		"faltan horas_resultado, horas_metadatos o max_trabajos": "horas_resultado, horas_metadatos or max_trabajos is missing",
+		"no hay ninguna actualización esperando para instalarse": "no update is waiting to be installed",
+		"GitHub no está disponible":                              "GitHub is not available",
 		"antes debe ser una fecha RFC 3339":                      "antes must be an RFC 3339 date",
 		"origen debe ser probar, terminal, cli o app":            "origen must be probar, terminal, cli or app",
 		"el registro no puede durar menos que la respuesta":      "the record cannot be kept for less time than the response",

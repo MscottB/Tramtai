@@ -115,6 +115,26 @@ func (a *Almacen) ReiniciarConsumo(ctx context.Context, instancia, punto string)
 	return a.borrarConsumo(ctx, instancia, punto, mes+"-%", "D:"+dia, "M:"+mes)
 }
 
+// PuntosConConsumo devuelve las APIs con consumo guardado en la instancia, sin las filas especiales: ” (lo que no
+// llegó por una API), TodaLaInstancia y '~' (el archivo de las APIs reiniciadas o eliminadas).
+func (a *Almacen) PuntosConConsumo(ctx context.Context, instancia string) ([]string, error) {
+	filas, err := a.db.QueryContext(ctx, `SELECT DISTINCT punto FROM consumo WHERE instancia = ? AND punto NOT IN ('', ?, '~') ORDER BY punto`,
+		instancia, TodaLaInstancia)
+	if err != nil {
+		return nil, err
+	}
+	defer filas.Close()
+	var puntos []string
+	for filas.Next() {
+		var p string
+		if err := filas.Scan(&p); err != nil {
+			return nil, err
+		}
+		puntos = append(puntos, p)
+	}
+	return puntos, filas.Err()
+}
+
 // EliminarConsumo borra todo el consumo y los avisos de una API (al eliminarla).
 func (a *Almacen) EliminarConsumo(ctx context.Context, instancia, punto string) error {
 	return a.borrarConsumo(ctx, instancia, punto, "")

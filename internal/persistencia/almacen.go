@@ -108,6 +108,8 @@ type Almacen struct {
 	// VentanaIdempotencia es el tiempo que una clave sigue vinculada a su trabajo tras terminar.
 	VentanaIdempotencia time.Duration
 	reloj               func() time.Time
+	// Compactada indica que Abrir pasó la base a auto_vacuum incremental (un VACUUM único, al actualizar).
+	Compactada bool
 	// Topes da los presupuestos que se aplican a un trabajo de la API punto ("" = sin API); nil = ninguno.
 	Topes func(instancia, punto string) []Tope
 	// Zona fija el día y el mes de los presupuestos (hora local del equipo).
@@ -175,29 +177,34 @@ type ejecutor interface {
 
 // Abrir abre o crea la base en WAL y aplica las migraciones pendientes.
 func Abrir(ruta string) (*Almacen, error) {
-	db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(ruta)+"?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)")
+	db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(ruta)+"?_pragma=auto_vacuum(2)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)")
 	if err != nil {
 		return nil, err
 	}
+	// auto_vacuum va antes del WAL: en una base nueva se fija sin VACUUM (en una vieja no hace nada; ver compactable).
 	// Una sola conexión serializa las escrituras de la instancia y conserva los PRAGMA.
 	db.SetMaxOpenConns(1)
 	if err := migrar(db); err != nil {
 		db.Close()
 		return nil, err
 	}
-	compactable(db)
-	return &Almacen{db: db, VentanaIdempotencia: 24 * time.Hour, reloj: time.Now, Zona: time.Local}, nil
+	compactada := compactable(db)
+	return &Almacen{db: db, VentanaIdempotencia: 24 * time.Hour, reloj: time.Now, Zona: time.Local, Compactada: compactada}, nil
 }
 
 // compactable pasa la base a auto_vacuum incremental (con un VACUUM único, fuera de transacción) para que la purga
 // devuelva espacio al disco. Si falla (disco lleno), la base se abre igual y se reintenta en el próximo arranque.
-func compactable(db *sql.DB) {
+func compactable(db *sql.DB) bool {
 	var modo int
-	if db.QueryRow("PRAGMA auto_vacuum").Scan(&modo) == nil && modo != 2 {
-		if _, err := db.Exec("PRAGMA auto_vacuum = INCREMENTAL"); err == nil {
-			db.Exec("VACUUM")
-		}
+	if db.QueryRow("PRAGMA auto_vacuum").Scan(&modo) != nil || modo == 2 {
+		return false
 	}
+	if _, err := db.Exec("PRAGMA auto_vacuum = INCREMENTAL"); err != nil {
+		return false
+	}
+	db.Exec("VACUUM")
+	db.Exec("PRAGMA wal_checkpoint(TRUNCATE)") // el VACUUM deja un WAL del tamaño de la base hasta el cierre
+	return true
 }
 
 func migrar(db *sql.DB) error {
@@ -339,9 +346,15 @@ func (a *Almacen) CambiarEstado(ctx context.Context, id string, de, hacia nucleo
 			return err
 		}
 		// El consumo va al día de aceptación: así peticiones − terminados de una fila es lo que sigue en curso.
+		// Sin uso en el cambio (una cancelación), cuenta el que ya guardó el trabajo (intentos fallidos del respaldo).
 		var instancia, punto, creado string
-		if err := tx.QueryRowContext(ctx, `SELECT instancia, punto_acceso, creado_en FROM trabajos WHERE id = ?`, id).Scan(&instancia, &punto, &creado); err != nil {
+		var guardado nucleo.Uso
+		if err := tx.QueryRowContext(ctx, `SELECT instancia, punto_acceso, creado_en, tokens_entrada, tokens_salida, costo_usd FROM trabajos WHERE id = ?`, id).
+			Scan(&instancia, &punto, &creado, &guardado.TokensEntrada, &guardado.TokensSalida, &guardado.CostoUSD); err != nil {
 			return err
+		}
+		if !conUso {
+			uso = guardado
 		}
 		aceptado, _ := time.Parse(formatoFecha, creado)
 		a.sumarConsumo(ctx, tx, instancia, punto, aceptado, ahora, nucleo.Consumo{Terminados: 1, Tokens: uso.TokensEntrada + uso.TokensSalida, USD: uso.CostoUSD})
@@ -608,15 +621,30 @@ func (a *Almacen) Purgar(ctx context.Context, instancia string, r Retencion) (ve
 	}
 	defer tx.Rollback()
 	ahora := a.reloj().UTC()
+	porTope := 0
 	if r.Maximo > 0 {
-		// Tope de cantidad: los terminados más antiguos que pasen de Maximo, con sus eventos. Los activos no cuentan.
-		const sobrantes = `SELECT id FROM trabajos WHERE instancia = ? AND terminado_en IS NOT NULL AND id NOT IN
-			(SELECT id FROM trabajos WHERE instancia = ? AND terminado_en IS NOT NULL ORDER BY terminado_en DESC LIMIT ?)`
-		// Primero sus claves de idempotencia: una clave vigente que apunte a un trabajo borrado daría 404 al reintentar.
-		for _, tabla := range []string{"idempotencia WHERE trabajo_id", "eventos WHERE trabajo_id", "trabajos WHERE id"} {
-			if _, err := tx.ExecContext(ctx, `DELETE FROM `+tabla+` IN (`+sobrantes+`)`, instancia, instancia, r.Maximo); err != nil {
+		// Tope de cantidad: el corte es la fecha del terminado número Maximo; se borra lo terminado antes, con sus
+		// claves de idempotencia (una vigente daría 404 al reintentar) y sus eventos. Los activos no cuentan. Los
+		// empatados en el corte pueden dejar unos pocos de más.
+		var corte string
+		err := tx.QueryRowContext(ctx, `SELECT terminado_en FROM trabajos WHERE instancia = ? AND terminado_en IS NOT NULL
+			ORDER BY terminado_en DESC LIMIT 1 OFFSET ?`, instancia, r.Maximo-1).Scan(&corte)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return 0, 0, err
+		}
+		if corte != "" {
+			const viejos = `SELECT id FROM trabajos WHERE instancia = ? AND terminado_en < ?`
+			for _, tabla := range []string{"idempotencia WHERE trabajo_id", "eventos WHERE trabajo_id"} {
+				if _, err := tx.ExecContext(ctx, `DELETE FROM `+tabla+` IN (`+viejos+`)`, instancia, corte); err != nil {
+					return 0, 0, err
+				}
+			}
+			res, err := tx.ExecContext(ctx, `DELETE FROM trabajos WHERE instancia = ? AND terminado_en < ?`, instancia, corte)
+			if err != nil {
 				return 0, 0, err
 			}
+			n, _ := res.RowsAffected()
+			porTope = int(n)
 		}
 	}
 	if r.EliminarEntradas {
@@ -665,7 +693,7 @@ func (a *Almacen) Purgar(ctx context.Context, instancia string, r Retencion) (ve
 		return 0, 0, err
 	}
 	a.db.ExecContext(ctx, "PRAGMA incremental_vacuum") // devuelve al disco lo liberado; un fallo solo lo aplaza
-	return vencidos, int(n), nil
+	return vencidos, int(n) + porTope, nil
 }
 
 // UsoHistorial es lo que ocupa el historial: los trabajos de la instancia y el tamaño de la base.

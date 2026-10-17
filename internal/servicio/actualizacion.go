@@ -55,15 +55,22 @@ func (s *Servicio) fijarBusqueda(buscar bool) error {
 	return nil
 }
 
-// ProgresoActualizacion es lo que ve la Web UI mientras se actualiza: la fase (descargando, verificando, instalando o
-// error), los bytes descargados y el total.
+// ProgresoActualizacion es lo que ve la Web UI mientras se actualiza: la fase (descargando, verificando, listo,
+// instalando o error), los bytes descargados y el total; en listo, cuándo instalará.
 type ProgresoActualizacion struct {
-	Fase      string `json:"fase"`
-	Version   string `json:"version"`
-	Recibidos int64  `json:"recibidos"`
-	Total     int64  `json:"total"`
-	Error     string `json:"error,omitempty"`
+	Fase      string     `json:"fase"`
+	Version   string     `json:"version"`
+	Recibidos int64      `json:"recibidos"`
+	Total     int64      `json:"total"`
+	InstalaEn *time.Time `json:"instala_en,omitempty"`
+	Error     string     `json:"error,omitempty"`
 }
+
+// instalar y esperaInstalacion son variables para que las pruebas usen un instalador simulado y una espera corta.
+var (
+	instalar          = actualizacion.Instalar
+	esperaInstalacion = 10 * time.Second
+)
 
 // progresoActualizacion devuelve el avance de la actualización en curso (fase vacía si no hay ninguna).
 func (s *Servicio) progresoActualizacion() ProgresoActualizacion {
@@ -127,9 +134,54 @@ func (s *Servicio) actualizar(v actualizacion.Version, carpeta string) {
 		fallar(errors.New(idioma.Tf("no se pudo descargar la versión nueva: %s", err)))
 		return
 	}
-	s.fijarAvance(func(p *ProgresoActualizacion) { p.Fase = "instalando" })
-	fmt.Fprintf(s.opc.Registros, "actualizando de %s a %s con %s\n", version.Texto(), v.Etiqueta, instalador)
-	if err := actualizacion.Instalar(instalador, carpeta); err != nil {
-		fallar(err)
+	s.esperarEInstalar(v, instalador, dir, carpeta)
+}
+
+// esperarEInstalar deja la descarga lista y avisa (fase listo) de que instalará al vencer esperaInstalacion, para que
+// el cierre de la app no llegue de golpe; antes, «Reiniciar ahora» instala ya y «Cancelar» borra la descarga.
+func (s *Servicio) esperarEInstalar(v actualizacion.Version, instalador, dir, carpeta string) {
+	orden := make(chan bool, 1)
+	cuando := time.Now().Add(esperaInstalacion)
+	s.muAvance.Lock()
+	s.avance.Fase, s.avance.InstalaEn, s.ordenInstalar = "listo", &cuando, orden
+	s.muAvance.Unlock()
+	reloj := time.NewTimer(esperaInstalacion)
+	defer reloj.Stop()
+	instalarYa := true
+	select {
+	case instalarYa = <-orden:
+	case <-reloj.C:
 	}
+	s.muAvance.Lock()
+	select { // una orden que entró mientras vencía el plazo manda: un Cancelar confirmado nunca instala
+	case instalarYa = <-orden:
+	default:
+	}
+	s.ordenInstalar = nil // desde aquí ya no se decide: lo que llegue tarde responde 409
+	if instalarYa {
+		s.avance.Fase, s.avance.InstalaEn = "instalando", nil
+	} else {
+		s.avance = ProgresoActualizacion{}
+	}
+	s.muAvance.Unlock()
+	if !instalarYa {
+		os.RemoveAll(dir)
+		return
+	}
+	fmt.Fprintf(s.opc.Registros, "actualizando de %s a %s con %s\n", version.Texto(), v.Etiqueta, instalador)
+	if err := instalar(instalador, carpeta); err != nil {
+		s.fijarAvance(func(p *ProgresoActualizacion) { p.Fase, p.Error = "error", err.Error() })
+	}
+}
+
+// decidirInstalacion atiende «Reiniciar ahora» (true) o «Cancelar» (false) mientras la descarga espera en la fase listo.
+func (s *Servicio) decidirInstalacion(instalarYa bool) error {
+	s.muAvance.Lock()
+	defer s.muAvance.Unlock()
+	if s.ordenInstalar == nil {
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("no hay ninguna actualización esperando para instalarse"))
+	}
+	s.ordenInstalar <- instalarYa // búfer 1 y solo una orden: las siguientes responden 409
+	s.ordenInstalar = nil
+	return nil
 }

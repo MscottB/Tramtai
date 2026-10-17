@@ -152,10 +152,10 @@
       </q-page>
     </q-page-container>
 
-    <q-dialog v-model="dialogoProyecto">
+    <q-dialog v-model="dialogoProyecto" aria-labelledby="titulo-proyecto">
       <q-card style="width: 560px; max-width: 95vw">
         <q-card-section>
-          <div class="titulo-seccion">{{ t('proyecto.titulo') }}</div>
+          <div id="titulo-proyecto" class="titulo-seccion">{{ t('proyecto.titulo') }}</div>
           <div class="texto-suave text-body2 q-mt-xs">{{ t('proyecto.texto') }}</div>
         </q-card-section>
         <q-form @submit="abrirProyecto">
@@ -174,12 +174,16 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="dialogoNovedades">
+    <q-dialog v-model="dialogoNovedades" aria-labelledby="titulo-novedades">
       <q-card style="width: 540px; max-width: 94vw">
         <q-card-section>
-          <div class="titulo-seccion">{{ t('actualizacion.hecha', { version: sesion?.version }) }}</div>
-          <p v-if="!novedades.length" class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.sinNotas') }}</p>
-          <NotasVersion v-else-if="novedades.length === 1" class="q-mt-md" :texto="novedades[0].notas ?? ''" />
+          <div id="titulo-novedades" class="titulo-seccion">{{ t('actualizacion.hecha', { version: sesion?.version }) }}</div>
+          <div v-if="cargandoNovedades" class="row justify-center q-pa-lg" role="status" :aria-label="t('comun.cargando')"><q-spinner size="32px" color="primary" /></div>
+          <p v-else-if="!novedades.length" class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.sinNotas') }}</p>
+          <template v-else-if="novedades.length === 1">
+            <div v-if="novedades[0].version.split('+')[0] !== sesion?.version?.split('+')[0]" class="text-weight-medium q-mt-md">{{ novedades[0].version }}</div>
+            <NotasVersion class="q-mt-md" :texto="novedades[0].notas ?? ''" />
+          </template>
           <q-list v-else class="q-mt-sm">
             <q-expansion-item v-for="(n, i) in novedades" :key="n.version" :label="n.version" :default-opened="i === 0" dense header-class="q-px-none text-weight-medium">
               <NotasVersion :texto="n.notas ?? ''" />
@@ -193,15 +197,19 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="dialogoActualizar" :persistent="!!progreso && progreso.fase !== 'error'">
+    <q-dialog v-model="dialogoActualizar" aria-labelledby="titulo-actualizar" :persistent="!!progreso && progreso.fase !== 'error' && progreso.fase !== 'listo'">
       <q-card v-if="progreso" style="width: 540px; max-width: 94vw">
         <q-card-section>
-          <div class="titulo-seccion">{{ t('actualizacion.progresoTitulo', { version: progreso.version }) }}</div>
+          <div id="titulo-actualizar" class="titulo-seccion">{{ t('actualizacion.progresoTitulo', { version: progreso.version }) }}</div>
           <q-linear-progress class="q-mt-md" size="10px" rounded :value="fraccion" :indeterminate="indeterminado"
             :color="progreso.fase === 'error' ? 'negative' : 'primary'" />
           <p class="q-mt-sm q-mb-none" role="status" aria-live="polite">{{ textoProgreso }}</p>
           <p v-if="progreso.fase === 'instalando'" class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.cerrara') }}</p>
         </q-card-section>
+        <q-card-actions v-if="progreso.fase === 'listo'" align="right" class="q-px-md q-pb-md">
+          <q-btn flat no-caps :label="t('comun.cancelar')" @click="cancelarInstalacion" />
+          <q-btn unelevated no-caps color="primary" icon="o_restart_alt" :label="t('actualizacion.reiniciarAhora')" @click="reiniciarAhora" />
+        </q-card-actions>
         <q-card-actions v-if="progreso.fase === 'error'" align="right" class="q-px-md q-pb-md">
           <q-btn v-close-popup flat no-caps :label="t('comun.cerrar')" @click="progreso = null" />
           <q-btn unelevated no-caps color="primary" icon="o_refresh" :label="t('actualizacion.reintentar')" @click="instalarActualizacion" />
@@ -209,7 +217,7 @@
       </q-card>
       <q-card v-else-if="actualizacion" style="width: 540px; max-width: 94vw">
         <q-card-section>
-          <div class="titulo-seccion">{{ t('actualizacion.titulo', { version: actualizacion.version }) }}</div>
+          <div id="titulo-actualizar" class="titulo-seccion">{{ t('actualizacion.titulo', { version: actualizacion.version }) }}</div>
           <p class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.detalle', { actual: actualizacion.actual }) }}</p>
           <template v-if="actualizacion.notas">
             <div class="text-caption texto-suave q-mt-md q-mb-xs">{{ t('actualizacion.novedadesTitulo') }}</div>
@@ -321,6 +329,27 @@ const fraccion = computed(() => {
   if (!p || p.fase === 'error') return p?.total ? p.recibidos / p.total : 0
   return p.fase === 'descargando' && p.total ? p.recibidos / p.total : 1
 })
+// La cuenta atrás antes de instalar: ahora avanza con el sondeo del avance (cada 400 ms).
+const ahora = ref(Date.now())
+const segundosParaInstalar = computed(() => {
+  const en = progreso.value?.instala_en
+  return en ? Math.max(0, Math.ceil((Date.parse(en) - ahora.value) / 1000)) : 0
+})
+async function reiniciarAhora() {
+  // Un error aquí es que ya no había nada que decidir (ya instala o se canceló): el sondeo muestra el estado real.
+  await api.instalarYa().catch(() => {})
+}
+async function cancelarInstalacion() {
+  try {
+    await api.cancelarActualizacion()
+  } catch (e) {
+    avisarError(e) // ya estaba instalando: el diálogo sigue y pasa a «Instalando…»
+    return
+  }
+  clearInterval(seguirProgreso)
+  progreso.value = null
+  dialogoActualizar.value = false
+}
 const indeterminado = computed(() => !!progreso.value && ((progreso.value.fase === 'descargando' && !progreso.value.total) || progreso.value.fase === 'instalando'))
 const textoProgreso = computed(() => {
   const p = progreso.value
@@ -328,6 +357,7 @@ const textoProgreso = computed(() => {
   if (p.fase === 'error') return t('actualizacion.fallo', { error: p.error ?? '' })
   if (p.fase === 'verificando') return t('actualizacion.verificando')
   if (p.fase === 'instalando') return t('actualizacion.instalando')
+  if (p.fase === 'listo') return t('actualizacion.reiniciaraEn', { n: segundosParaInstalar.value })
   if (!p.total) return t('actualizacion.descargandoSinTotal', { recibido: megas(p.recibidos) })
   return t('actualizacion.descargando', { recibido: megas(p.recibidos), total: megas(p.total), porcentaje: Math.floor((p.recibidos / p.total) * 100) })
 })
@@ -341,8 +371,15 @@ async function instalarActualizacion() {
     clearInterval(seguirProgreso)
     seguirProgreso = window.setInterval(async () => {
       try {
+        ahora.value = Date.now()
         const p = await api.progresoActualizacion()
         if (p.fase) progreso.value = p
+        else if (progreso.value?.fase === 'listo') {
+          // Otra pestaña la canceló: no queda nada que esperar.
+          clearInterval(seguirProgreso)
+          progreso.value = null
+          dialogoActualizar.value = false
+        }
         if (p.fase === 'error') clearInterval(seguirProgreso)
       } catch {
         // el instalador ya detuvo el servicio: queda «instalando» hasta que la app se cierre
@@ -399,6 +436,7 @@ onUnmounted(() => {
 // compilación dev no tiene versión con la que comparar).
 const dialogoNovedades = ref(false)
 const novedades = ref<Novedad[]>([])
+const cargandoNovedades = ref(false)
 watch(() => sesion.value?.version, async (version) => {
   if (!version) return
   try {
@@ -406,8 +444,12 @@ watch(() => sesion.value?.version, async (version) => {
     localStorage.setItem('tramtai.version', version)
     // Sin la fecha (+DDMMAAAA): la misma versión compilada otro día no es una versión nueva.
     if (vista && vista.split('+')[0] !== version.split('+')[0] && /^v\d/.test(version)) {
-      novedades.value = await api.novedades(vista).catch(() => [])
+      // El diálogo se abre al momento con un indicador; las notas llegan después (o no, sin red).
+      novedades.value = []
+      cargandoNovedades.value = true
       dialogoNovedades.value = true
+      novedades.value = await api.novedades(vista).catch(() => [])
+      cargandoNovedades.value = false
     }
   } catch {
     // sin almacenamiento local no hay aviso

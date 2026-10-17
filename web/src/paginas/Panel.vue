@@ -55,11 +55,11 @@
       <div class="row items-end q-mb-sm">
         <div class="col">
           <h2 class="titulo-seccion q-ma-none">{{ t('inicio.peticiones') }}</h2>
-          <div class="texto-suave text-body2 q-mt-xs">{{ t('inicio.peticionesTexto', { dias: diasHistorial }) }}</div>
+          <div class="texto-suave text-body2 q-mt-xs">{{ t('inicio.peticionesTexto', { periodo: periodoHistorial }) }}</div>
         </div>
       </div>
       <div class="tablero">
-        <div class="tablero__cabecera"><span>{{ t('inicio.tablero') }}</span><span>{{ t('inicio.tableroPeriodo', { dias: diasHistorial }) }}</span></div>
+        <div class="tablero__cabecera"><span>{{ t('inicio.tablero') }}</span><span>{{ t('inicio.tableroPeriodo', { periodo: periodoHistorial }) }}</span></div>
         <button v-for="c in contadores" :key="c.titulo" type="button" class="tablero__fila" @click="verHistorial(c.filtro)">
           <span class="tablero__punto" :class="'tablero__punto--' + c.tipo" aria-hidden="true" />
           <span class="tablero__nombre">{{ c.titulo }}</span>
@@ -104,7 +104,7 @@ import EstadoVacio from '../componentes/EstadoVacio.vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import Linea from '../componentes/Linea.vue'
 import MapaRed from '../componentes/MapaRed.vue'
-import { api, avisar, cargarDiasHistorial, diasHistorial, ordenarAgentes, copiar, estadoInfo, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, haceCuanto, mensajeError, sesion, terminales, textoDe, type Adaptador, type EstadoInstancia, type EstadoPunto, type Trabajo, sistema } from '../api'
+import { api, avisar, cargarDiasHistorial, periodoHistorial, ordenarAgentes, copiar, estadoInfo, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, haceCuanto, mensajeError, sesion, terminales, textoDe, type Adaptador, type EstadoInstancia, type EstadoPunto, type Trabajo, sistema } from '../api'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()

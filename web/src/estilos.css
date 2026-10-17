@@ -249,8 +249,7 @@ input[type='number'] {
   }
 }
 /* Ayudas bajo los campos: legibles, no diminutas. */
-.q-field__bottom,
-.ayuda-campo {
+.q-field__bottom {
   font-size: 0.78rem;
   line-height: 1.45;
 }
@@ -1070,4 +1069,14 @@ body.body--dark .tablero {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* Pestañas que no caben (los ejemplos para copiar en el móvil): una sola fila que se desplaza, sin partir el texto. */
+.desplazable-x {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.desplazable-x .q-btn__content {
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }

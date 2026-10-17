@@ -16,7 +16,7 @@
               <template #action><q-btn flat dense no-caps color="primary" :label="t('ejecutar.dejarEditar')" @click="editando = ''" /></template>
             </q-banner>
           </q-card-section>
-          <q-card-section>
+          <q-card-section class="q-pt-sm">
             <EditorReceta v-model="receta" :catalogo="catalogo" plegar-opciones />
           </q-card-section>
           <q-separator />

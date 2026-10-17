@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"log"
 	"net"
@@ -327,6 +328,17 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		api.EscribirJSON(w, http.StatusAccepted, map[string]any{"version": v.Etiqueta})
+	case (r.URL.Path == "/ui/actualizar/instalar" || r.URL.Path == "/ui/actualizar/cancelar") && r.Method == http.MethodPost:
+		_, ses := s.sesionDe(r)
+		if !s.sesionLocal(r, ses) || !csrfValido(r, ses) {
+			api.NoAutorizado(w, r)
+			return
+		}
+		if err := s.decidirInstalacion(r.URL.Path == "/ui/actualizar/instalar"); err != nil {
+			api.EscribirJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"codigo": nucleo.CodigoDe(err), "mensaje": nucleo.MensajeDe(err)}})
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	case r.URL.Path == "/ui/actualizacion/progreso" && r.Method == http.MethodGet:
 		if _, ses := s.sesionDe(r); ses == nil {
 			api.NoAutorizado(w, r)
@@ -348,7 +360,8 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		defer cancelar()
 		versiones, err := actualizacion.Novedades(ctx, r.URL.Query().Get("desde"), version.Texto())
 		if err != nil {
-			api.EscribirJSON(w, http.StatusBadGateway, map[string]any{"error": map[string]any{"codigo": "github_no_disponible", "mensaje": err.Error()}})
+			fmt.Fprintf(s.opc.Registros, "novedades: %v\n", err) // el detalle (red, proxy) queda aquí, no en la respuesta
+			api.EscribirJSON(w, http.StatusBadGateway, map[string]any{"error": map[string]any{"codigo": "github_no_disponible", "mensaje": idioma.T("GitHub no está disponible")}})
 			return
 		}
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"versiones": versiones})
@@ -907,7 +920,11 @@ func (s *Servicio) fijarRetencion(inst *Instancia, resultado, metadatos, maximo 
 	err := s.guardarValores(inst, map[string]any{"retencion.horas_resultado": resultado, "retencion.horas_metadatos": metadatos,
 		"retencion.max_trabajos": maximo})
 	if err == nil {
-		go inst.Purgar(context.Background())
+		go func() {
+			if err := inst.Purgar(context.Background()); err != nil {
+				fmt.Fprintf(s.opc.Registros, "purga de %s: %s\n", inst.ID, nucleo.MensajeDe(err))
+			}
+		}()
 	}
 	return err
 }

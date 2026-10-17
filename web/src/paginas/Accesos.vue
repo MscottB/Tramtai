@@ -12,7 +12,7 @@
         <div class="titulo-seccion">{{ t('puntos.titulo') }}</div>
         <div class="texto-suave text-body2">{{ t('puntos.texto') }}</div>
       </q-card-section>
-      <q-card-section v-if="puntos.length > 1" class="row q-col-gutter-sm q-pt-none">
+      <q-card-section v-if="puntos.length > 1 || busqueda || filtroGrupo !== null" class="row q-col-gutter-sm q-pt-none">
         <div class="col-12 col-sm">
           <q-input v-model="busqueda" dense outlined clearable debounce="150" :placeholder="t('puntos.buscarApi')" :aria-label="t('puntos.buscarApi')">
             <template #prepend><q-icon name="search" /></template>
@@ -44,13 +44,17 @@
             <div class="text-weight-medium cursor-pointer" @click="plegar(g.nombre)">{{ g.nombre || t('puntos.sinGrupo') }}</div>
             <div class="text-caption texto-suave q-ml-sm">{{ t('puntos.activos', { activos: g.activos, total: g.total }) }}</div>
             <q-space />
-            <q-btn flat dense no-caps size="sm" color="primary" icon="o_play_arrow" :label="t('puntos.activarTodos')"
-              :disable="g.activos === g.total" :loading="ocupado === g.nombre + ':1'" @click="activarGrupo(g.nombre, true)" />
-            <q-btn flat dense no-caps size="sm" color="grey-8" icon="o_stop" :label="t('puntos.desactivarTodos')"
-              :disable="g.activos === 0" :loading="ocupado === g.nombre + ':0'" @click="activarGrupo(g.nombre, false)" />
+            <q-btn flat dense no-caps size="sm" color="primary" icon="o_play_arrow" :label="$q.screen.gt.xs ? t('puntos.activarTodos') : undefined"
+              :aria-label="t('puntos.activarTodos')" :disable="g.activos === g.total" :loading="ocupado === g.nombre + ':1'" @click="activarGrupo(g.nombre, true)">
+              <q-tooltip v-if="$q.screen.xs">{{ t('puntos.activarTodos') }}</q-tooltip>
+            </q-btn>
+            <q-btn flat dense no-caps size="sm" color="grey-8" icon="o_stop" :label="$q.screen.gt.xs ? t('puntos.desactivarTodos') : undefined"
+              :aria-label="t('puntos.desactivarTodos')" :disable="g.activos === 0" :loading="ocupado === g.nombre + ':0'" @click="activarGrupo(g.nombre, false)">
+              <q-tooltip v-if="$q.screen.xs">{{ t('puntos.desactivarTodos') }}</q-tooltip>
+            </q-btn>
           </div>
           <div v-if="!hayGrupos || !plegados.has(g.nombre)">
-            <div v-for="p in g.puntos" :key="p.nombre" class="fila-api">
+            <div v-for="p in g.puntos" :key="p.nombre" class="fila-api cursor-pointer" @click="abrirDetalle(p)">
               <span class="linea__chapa linea__chapa--grande" :class="['linea--' + (p.agente ?? 'otro'), { 'linea__chapa--apagada': !activo(p) }]" aria-hidden="true">{{ p.agente ? codigoLinea(p.agente) : 'API' }}</span>
               <div class="fila-api__info">
                 <div class="row items-center q-gutter-x-sm">
@@ -61,7 +65,7 @@
                 </div>
                 <div class="row items-center no-wrap codigo texto-suave">
                   <span class="ellipsis">{{ p.url || t('puntos.sinDireccion') }}</span>
-                  <q-btn v-if="p.url" flat dense round size="sm" icon="content_copy" :aria-label="t('puntos.copiarUrl')" @click="copiar(p.url)"><q-tooltip>{{ t('puntos.copiarUrl') }}</q-tooltip></q-btn>
+                  <q-btn v-if="p.url" flat dense round size="sm" icon="content_copy" :aria-label="t('puntos.copiarUrl')" @click.stop="copiar(p.url)"><q-tooltip>{{ t('puntos.copiarUrl') }}</q-tooltip></q-btn>
                 </div>
                 <div class="text-caption texto-suave">
                   <template v-if="idModelo(p)">{{ etiquetaDe(idModelo(p)!) }} · </template>{{ p.contratos.map(nombreContrato).join(' · ') }}
@@ -73,13 +77,12 @@
                 <div v-if="p.error && p.error !== 'desactivado'" class="text-caption text-negative">{{ p.error }}</div>
               </div>
               <div class="fila-api__uso text-caption">
-                <a v-if="uso[p.nombre]" href="#historial" class="enlace" @click.prevent="verPeticiones(p.nombre)">{{ textoUso(p.nombre) }}</a>
+                <a v-if="uso[p.nombre]" href="#historial" class="enlace" @click.prevent.stop="verPeticiones(p.nombre)">{{ textoUso(p.nombre) }}</a>
                 <span v-else class="texto-suave">{{ t('puntos.sinUso') }}</span>
                 <BarrasPresupuesto v-if="presupuestos[p.nombre]" :estado="presupuestos[p.nombre]" sin-boton />
               </div>
               <div class="fila-api__acciones row items-center no-wrap q-gutter-x-xs">
-                <q-btn outline dense no-caps color="primary" icon="o_tune" class="q-px-sm" :label="t('puntos.ajustes')" @click="abrirAjustes(p)" />
-                <MenuAcciones :acciones="accionesDe(p)" @elegir="(i: number) => ejecutarAccion(p, i)" />
+                <q-btn unelevated dense no-caps color="primary" icon="o_cable" class="q-px-sm" :label="t('puntos.conectar')" @click.stop="abrirDetalle(p)" />
               </div>
             </div>
           </div>
@@ -128,8 +131,8 @@
       <q-separator />
       <div class="q-px-md q-pt-md text-weight-medium">{{ t('conectar.ejemplos') }}</div>
       <div class="q-px-md q-pt-sm">
-        <q-btn-toggle v-model="lenguaje" no-caps flat dense toggle-color="primary" class="segmentado inline-flex"
-          :options="ejemplos.map((e) => ({ label: e.titulo(), value: e.id }))" />
+        <div class="desplazable-x"><q-btn-toggle v-model="lenguaje" no-caps flat dense toggle-color="primary" class="segmentado inline-flex"
+          :options="ejemplos.map((e) => ({ label: e.titulo(), value: e.id }))" /></div>
       </div>
       <q-card-section>
         <div class="bloque-codigo sin-ajuste">{{ ejemplo.codigo(verClave ? clave : ocultar(clave)) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('conectar.copiarEjemplo')" @click="copiar(ejemplo.codigo(clave), t('conectar.ejemploCopiado'))" /></div>
@@ -200,23 +203,77 @@
       </q-card>
     </q-dialog>
 
-    <!-- Al cerrarse se olvida la clave mostrada: no queda en memoria de la página. -->
-    <q-dialog v-model="dialogoClave" @hide="elegido = undefined">
-      <q-card style="width: 560px; max-width: 95vw">
-        <q-card-section>
-          <div class="titulo-seccion">{{ recienCreado ? t('puntos.listo') : t('puntos.claveNuevaDe', { nombre: elegido?.nombre ?? '' }) }}</div>
-          <div class="texto-suave text-body2">{{ t('puntos.configura') }}</div>
-          <q-banner rounded dense class="aviso-caja q-mt-sm">
-            <template #avatar><q-icon name="o_lock" color="warning" /></template>{{ t('puntos.claveUnaVez') }}
-          </q-banner>
+    <!-- Detalle de una API: cómo conectarla, sus acciones y la zona de peligro. Al cerrarse se olvida la clave
+         mostrada: no queda en memoria de la página. -->
+    <q-dialog v-model="dialogoDetalle" :maximized="$q.screen.lt.sm" aria-labelledby="titulo-detalle" @hide="claveVista = ''">
+      <q-card v-if="puntoDetalle" style="width: 760px; max-width: 96vw">
+        <q-card-section class="row items-center no-wrap q-gutter-x-sm">
+          <span class="linea__chapa linea__chapa--grande" :class="['linea--' + (puntoDetalle.agente ?? 'otro'), { 'linea__chapa--apagada': !activo(puntoDetalle) }]" aria-hidden="true">{{ puntoDetalle.agente ? codigoLinea(puntoDetalle.agente) : 'API' }}</span>
+          <div class="col">
+            <div id="titulo-detalle" class="titulo-seccion">{{ recienCreado ? t('puntos.listo') : puntoDetalle.nombre }}</div>
+            <div class="row items-center q-gutter-x-sm text-caption texto-suave">
+              <span class="etiqueta" :class="!activo(puntoDetalle) ? 'etiqueta--neutro' : puntoDetalle.error ? 'etiqueta--error' : 'etiqueta--ok'">{{ activo(puntoDetalle) ? t('puntos.activo') : t('puntos.desactivado') }}</span>
+              <span v-if="puntoDetalle.grupo"><q-icon name="o_folder" /> {{ puntoDetalle.grupo }}</span>
+            </div>
+          </div>
+          <q-btn v-close-popup flat round dense icon="close" :aria-label="t('comun.cerrar')" />
         </q-card-section>
-        <q-card-section class="q-gutter-y-md q-pt-none">
-          <div v-for="c in camposPunto" :key="c.titulo">
-            <div class="text-caption texto-suave q-mb-xs">{{ c.titulo }}</div>
-            <div class="bloque-codigo">{{ c.valor }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('comun.copiar') + ' ' + c.titulo" @click="copiar(c.valor)" /></div>
+        <q-separator />
+        <q-card-section>
+          <div class="text-weight-medium">{{ t('puntos.conectar') }}</div>
+          <div class="texto-suave text-body2 q-mb-sm">{{ t('puntos.conectarTexto') }}</div>
+          <template v-if="puntoDetalle.url">
+          <div class="row q-col-gutter-md">
+            <div v-for="u in urlsDe(puntoDetalle)" :key="u.titulo" class="col-12 col-md-6">
+              <div class="text-caption texto-suave q-mb-xs">{{ u.titulo }}</div>
+              <div class="bloque-codigo">{{ u.valor }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('comun.copiar') + ' ' + u.titulo" @click="copiar(u.valor)" /></div>
+            </div>
+            <div class="col-12">
+              <div class="text-caption texto-suave q-mb-xs">{{ t('conectar.clave') }}</div>
+              <template v-if="claveVista">
+                <div class="bloque-codigo">{{ claveVista }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('conectar.copiarClave')" @click="copiar(claveVista, t('conectar.claveCopiada'))" /></div>
+                <q-banner rounded dense class="aviso-caja q-mt-sm">
+                  <template #avatar><q-icon name="o_lock" color="warning" /></template>{{ t('puntos.claveUnaVez') }}
+                </q-banner>
+              </template>
+              <div v-else class="row items-center q-gutter-sm">
+                <span class="text-body2 texto-suave col-12 col-sm">{{ t('puntos.claveOculta') }}</span>
+                <q-btn outline dense no-caps color="primary" icon="o_key" class="q-px-sm" :label="t('puntos.regenerarClave')" @click="regenerarClave(puntoDetalle)" />
+              </div>
+            </div>
+          </div>
+          <template v-if="ejemplosDetalle.length">
+          <div class="text-caption texto-suave q-mt-md q-mb-xs">{{ t('conectar.ejemplos') }}</div>
+          <div class="desplazable-x"><q-btn-toggle v-model="lenguaje" no-caps flat dense toggle-color="primary" class="segmentado inline-flex"
+            :options="ejemplosDetalle.map((e) => ({ label: e.titulo(), value: e.id }))" /></div>
+          <div class="bloque-codigo sin-ajuste q-mt-sm">{{ ejemploDetalle.codigo(claveVista || t('puntos.claveMarcador', { nombre: puntoDetalle.nombre })) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('conectar.copiarEjemplo')" @click="copiar(ejemploDetalle.codigo(claveVista || t('puntos.claveMarcador', { nombre: puntoDetalle.nombre })))" /></div>
+          </template>
+          </template>
+          <div v-else class="row items-center q-gutter-sm">
+            <span class="text-body2 texto-suave col-12 col-sm">{{ t('puntos.activaParaConectar') }}</span>
+            <q-btn outline dense no-caps color="primary" icon="o_play_arrow" class="q-px-sm" :label="t('puntos.accionActivar')" @click="activar(puntoDetalle.nombre, true)" />
           </div>
         </q-card-section>
-        <q-card-actions align="right" class="q-pa-md"><q-btn v-close-popup unelevated color="primary" no-caps :label="t('comun.hecho')" /></q-card-actions>
+        <q-separator />
+        <q-card-section>
+          <div class="text-weight-medium q-mb-sm">{{ t('puntos.acciones') }}</div>
+          <div class="row q-gutter-sm">
+            <q-btn outline no-caps color="primary" icon="o_tune" :label="t('puntos.ajustes')" @click="abrirAjustes(puntoDetalle)" />
+            <q-btn outline no-caps color="primary" icon="o_science" :label="t('puntos.abrirProbar')" @click="abrirEnProbar(puntoDetalle.nombre)" />
+            <q-btn outline no-caps color="primary" icon="o_history" :label="t('puntos.verPeticiones')" @click="verPeticiones(puntoDetalle.nombre)" />
+            <q-btn outline no-caps color="primary" :icon="activo(puntoDetalle) ? 'o_pause' : 'o_play_arrow'"
+              :label="activo(puntoDetalle) ? t('puntos.accionDesactivar') : t('puntos.accionActivar')" @click="activar(puntoDetalle.nombre, !activo(puntoDetalle))" />
+            <q-btn v-if="presupuestos[puntoDetalle.nombre]" outline no-caps color="primary" icon="o_restart_alt" :label="t('presupuesto.reiniciar')" @click="reiniciarPresupuesto(puntoDetalle.nombre)" />
+          </div>
+        </q-card-section>
+        <q-separator />
+        <q-card-section>
+          <div class="text-weight-medium text-negative">{{ t('puntos.peligro') }}</div>
+          <div class="row items-center q-gutter-sm q-mt-xs">
+            <span class="text-body2 texto-suave col-12 col-sm">{{ t('puntos.peligroTexto') }}</span>
+            <q-btn outline no-caps color="negative" icon="o_delete" :label="t('puntos.eliminarApi')" @click="eliminar(puntoDetalle.nombre)" />
+          </div>
+        </q-card-section>
       </q-card>
     </q-dialog>
   </div>
@@ -228,11 +285,10 @@ import { useQuasar } from 'quasar'
 import BarrasPresupuesto from '../componentes/BarrasPresupuesto.vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import EstadoVacio from '../componentes/EstadoVacio.vue'
-import MenuAcciones, { type Accion } from '../componentes/MenuAcciones.vue'
 import EditorPresupuesto from '../componentes/EditorPresupuesto.vue'
 import EditorReceta from '../componentes/EditorReceta.vue'
 import { ajustesDeReceta, api, avisar, avisarError, codigoLinea, nombreAgente, ordenAgentes, configDeReceta, copiar, etiquetaModelo, haceCuanto, idModeloDe as idModelo, nombreEsfuerzo, opcionModelo,
-  cargarDiasHistorial, diasHistorial, grupoInicial, origenHistorial, presupuestoLimpio, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPresupuesto, type EstadoPunto, type Modelo,
+  cargarDiasHistorial, periodoHistorial, grupoInicial, origenHistorial, presupuestoLimpio, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPresupuesto, type EstadoPunto, type Modelo,
   type Presupuesto, type UsoPunto } from '../api'
 import { t } from '../i18n'
 
@@ -246,9 +302,32 @@ const puntos = ref<EstadoPunto[]>([])
 const nuevo = ref(false)
 const guardando = ref(false)
 const ocupado = ref('')
-const dialogoClave = ref(false)
+const dialogoDetalle = ref(false)
 const recienCreado = ref(false)
-const elegido = ref<{ nombre: string; url: string; clave: string }>()
+// detalle es la API abierta; claveVista, su clave recién creada o regenerada (solo se ve esta vez).
+const detalle = ref('')
+const claveVista = ref('')
+// respaldoDetalle es la API con que se abrió el detalle, por si la lista aún no la trae (recién creada y sin recargar).
+const respaldoDetalle = ref<EstadoPunto>()
+const puntoDetalle = computed(() => puntos.value.find((p) => p.nombre === detalle.value) ?? respaldoDetalle.value)
+// Si la API desaparece (borrada desde otro sitio), el detalle se cierra en vez de quedar vacío.
+watch(puntos, (lista) => {
+  if (dialogoDetalle.value && !lista.some((p) => p.nombre === detalle.value)) {
+    if (respaldoDetalle.value?.nombre !== detalle.value) dialogoDetalle.value = false
+  } else respaldoDetalle.value = undefined
+})
+function abrirDetalle(p: EstadoPunto, clave = '', creada = false) {
+  respaldoDetalle.value = p
+  detalle.value = p.nombre
+  claveVista.value = clave
+  recienCreado.value = creada
+  dialogoDetalle.value = true
+}
+// urlsDe son las URL base de una API según lo que acepta.
+function urlsDe(p: EstadoPunto) {
+  const urls = { openai: [t('conectar.urlOpenai'), '/openai/v1'], anthropic: [t('conectar.urlAnthropic'), '/anthropic'], nativa: [t('conectar.apiPropia'), '/api/v1'] }
+  return (['openai', 'anthropic', 'nativa'] as const).filter((c) => p.contratos.includes(c)).map((c) => ({ titulo: urls[c][0], valor: (p.url ?? '') + urls[c][1] }))
+}
 const lenguaje = ref('python')
 const contratos = ['openai', 'anthropic', 'nativa']
 const nombreContrato = (c: string) => ({ openai: 'OpenAI', anthropic: 'Anthropic', nativa: t('contrato.nativa') })[c] ?? c
@@ -327,59 +406,50 @@ const gruposModelo = computed(() => [
   ...ordenAgentes.map((a) => ({ agente: a, titulo: nombreAgente(a), ids: ids.value.filter((id) => id.startsWith(a + '/')) })),
 ].filter((g) => g.ids.length))
 
-// accionesDe son las acciones del menú «⋯» de una API; ejecutarAccion las corre en el mismo orden.
-function accionesDe(p: EstadoPunto): Accion[] {
-  return [
-    { etiqueta: activo(p) ? t('puntos.accionDesactivar') : t('puntos.accionActivar'), icono: activo(p) ? 'o_pause' : 'o_play_arrow' },
-    { etiqueta: t('puntos.abrirProbar'), icono: 'o_science' },
-    { etiqueta: t('puntos.regenerarClave'), icono: 'o_key' },
-    { etiqueta: t('presupuesto.reiniciar'), icono: 'o_restart_alt', oculto: !presupuestos.value[p.nombre] },
-    { etiqueta: t('comun.eliminar'), icono: 'o_delete', peligro: true },
-  ]
-}
-function ejecutarAccion(p: EstadoPunto, i: number) {
-  const acciones = [() => activar(p.nombre, !activo(p)), () => abrirEnProbar(p.nombre), () => regenerarClave(p), () => reiniciarPresupuesto(p.nombre), () => eliminar(p.nombre)]
-  acciones[i]?.()
-}
 const modeloEjemplo = computed(() => ids.value.find((id) => id === 'perfil/rapido') ?? ids.value.find((id) => id.includes('/')) ?? 'claude')
 
 const ocultar = (c: string) => (c ? c.slice(0, 6) + '•'.repeat(18) : '')
-const ejemplos = [
+// ejemplosPara son los ejemplos para copiar con la URL base y el modelo de la API principal o de una API.
+// Solo los ejemplos de lo que acepta la API: una que solo habla Anthropic no ofrece los de OpenAI.
+const ejemplosPara = (url: string, modelo: string, contratos: string[] = ['openai', 'anthropic']) => [
   { id: 'python', titulo: () => 'Python · OpenAI', codigo: (k: string) => `from openai import OpenAI
 
-cliente = OpenAI(base_url="${base.value}/openai/v1", api_key="${k}")
+cliente = OpenAI(base_url="${url}/openai/v1", api_key="${k}")
 r = cliente.chat.completions.create(
-    model="${modeloEjemplo.value}",
+    model="${modelo}",
     messages=[{"role": "user", "content": "${t('conectar.hola')}"}],
 )
 print(r.choices[0].message.content)` },
   { id: 'node', titulo: () => 'Node · OpenAI', codigo: (k: string) => `import OpenAI from 'openai'
 
-const cliente = new OpenAI({ baseURL: '${base.value}/openai/v1', apiKey: '${k}' })
+const cliente = new OpenAI({ baseURL: '${url}/openai/v1', apiKey: '${k}' })
 const r = await cliente.chat.completions.create({
-  model: '${modeloEjemplo.value}',
+  model: '${modelo}',
   messages: [{ role: 'user', content: '${t('conectar.hola')}' }],
 })
 console.log(r.choices[0].message.content)` },
   { id: 'anthropic', titulo: () => 'Python · Anthropic', codigo: (k: string) => `import anthropic
 
-cliente = anthropic.Anthropic(base_url="${base.value}/anthropic", api_key="${k}")
+cliente = anthropic.Anthropic(base_url="${url}/anthropic", api_key="${k}")
 m = cliente.messages.create(
-    model="${modeloEjemplo.value}", max_tokens=1024,
+    model="${modelo}", max_tokens=1024,
     messages=[{"role": "user", "content": "${t('conectar.hola')}"}],
 )
 print(m.content[0].text)` },
-  { id: 'curl', titulo: () => 'curl', codigo: (k: string) => `curl ${base.value}/openai/v1/chat/completions \\
+  { id: 'curl', titulo: () => 'curl', codigo: (k: string) => `curl ${url}/openai/v1/chat/completions \\
   -H "Authorization: Bearer ${k}" \\
   -H "Content-Type: application/json" \\
-  -d '{"model": "${modeloEjemplo.value}", "messages": [{"role": "user", "content": "${t('conectar.hola')}"}]}'` },
+  -d '{"model": "${modelo}", "messages": [{"role": "user", "content": "${t('conectar.hola')}"}]}'` },
   { id: 'entorno', titulo: () => t('conectar.entorno'), codigo: (k: string) => `${t('conectar.entornoComentario')}
-OPENAI_BASE_URL=${base.value}/openai/v1
-OPENAI_API_KEY=${k}
-ANTHROPIC_BASE_URL=${base.value}/anthropic
-ANTHROPIC_API_KEY=${k}` },
-]
-const ejemplo = computed(() => ejemplos.find((e) => e.id === lenguaje.value) ?? ejemplos[0])
+${[contratos.includes('openai') ? `OPENAI_BASE_URL=${url}/openai/v1\nOPENAI_API_KEY=${k}` : '',
+    contratos.includes('anthropic') ? `ANTHROPIC_BASE_URL=${url}/anthropic\nANTHROPIC_API_KEY=${k}` : ''].filter(Boolean).join('\n')}` },
+].filter((e) => (e.id === 'anthropic' ? contratos.includes('anthropic') : e.id === 'entorno'
+  ? contratos.includes('openai') || contratos.includes('anthropic') : contratos.includes('openai')))
+const ejemplos = computed(() => ejemplosPara(base.value, modeloEjemplo.value))
+const ejemplo = computed(() => ejemplos.value.find((e) => e.id === lenguaje.value) ?? ejemplos.value[0])
+const ejemplosDetalle = computed(() => (puntoDetalle.value
+  ? ejemplosPara(puntoDetalle.value.url ?? '', idModelo(puntoDetalle.value) ?? modeloEjemplo.value, puntoDetalle.value.contratos) : []))
+const ejemploDetalle = computed(() => ejemplosDetalle.value.find((e) => e.id === lenguaje.value) ?? ejemplosDetalle.value[0])
 
 const opciones = computed(() => catalogo.value.map(opcionModelo))
 const etiquetaDe = (id: string) => opciones.value.find((o) => o.value === id)?.label ?? etiquetaModelo(id)
@@ -387,15 +457,6 @@ const vacio = () => ({ nombre: '', grupo: '', direccion: 'ruta', puerto: '', con
   receta: recetaVacia(), presupuesto: {} as Presupuesto })
 const formulario = reactive(vacio())
 
-const camposPunto = computed(() => {
-  const p = elegido.value
-  if (!p) return []
-  return [
-    { titulo: t('conectar.urlOpenai'), valor: p.url + '/openai/v1' },
-    { titulo: t('conectar.urlAnthropic'), valor: p.url + '/anthropic' },
-    { titulo: t('conectar.clave'), valor: p.clave },
-  ]
-})
 
 // uso son las peticiones de cada API que conserva la retención, contadas por el servicio.
 const uso = ref<Record<string, UsoPunto>>({})
@@ -406,7 +467,7 @@ const emit = defineEmits<{ ir: [pagina: string] }>()
 
 function textoUso(nombre: string) {
   const u = uso.value[nombre]
-  return [t('puntos.uso', { n: u.peticiones, dias: diasHistorial.value }), u.errores ? t('puntos.usoErrores', { n: u.errores }) : '',
+  return [u.peticiones === 1 ? t('puntos.usoUno', { periodo: periodoHistorial.value }) : t('puntos.uso', { n: u.peticiones, periodo: periodoHistorial.value }), u.errores ? t('puntos.usoErrores', { n: u.errores }) : '',
     u.ultima ? t('puntos.usoUltima', { cuando: haceCuanto(u.ultima) }) : ''].filter(Boolean).join(' · ')
 }
 
@@ -457,10 +518,10 @@ async function crear() {
     const r = await api.crearPunto(punto)
     nuevo.value = false
     await cargarPuntos()
-    const url = r.punto_acceso?.url ?? puntos.value.find((p) => p.nombre === punto.nombre)?.url ?? ''
-    elegido.value = { nombre: punto.nombre, url, clave: r.token }
-    recienCreado.value = true
-    dialogoClave.value = true
+    // Con la clave recién creada en los ejemplos: es la única vez que se ve, así que el detalle se abre siempre.
+    const creado = puntos.value.find((p) => p.nombre === punto.nombre) ?? r.punto_acceso
+    if (creado) abrirDetalle(creado, r.token, true)
+    else avisar(t('puntos.claveCreada', { clave: r.token }))
   } catch (e) {
     avisarError(e)
   } finally {
@@ -496,6 +557,7 @@ function eliminar(nombre: string) {
     .onOk(async () => {
       try {
         await api.eliminarPunto(nombre)
+        if (detalle.value === nombre) dialogoDetalle.value = false
         await cargarPuntos()
       } catch (e) {
         avisarError(e)
@@ -572,9 +634,7 @@ function regenerarClave(p: EstadoPunto) {
     cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'primary', label: t('puntos.regenerarClave'), unelevated: true, noCaps: true } })
     .onOk(async () => {
       try {
-        elegido.value = { nombre: p.nombre, url: p.url ?? '', clave: await api.regenerarClave(p.nombre) }
-        recienCreado.value = false
-        dialogoClave.value = true
+        abrirDetalle(p, await api.regenerarClave(p.nombre))
       } catch (e) {
         avisarError(e)
       }

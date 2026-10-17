@@ -104,6 +104,7 @@ type Servicio struct {
 	actualizaciones actualizacion.Comprobador
 	muAvance        sync.Mutex
 	avance          ProgresoActualizacion // la actualización en curso, para la Web UI
+	ordenInstalar   chan bool             // en la fase listo: true instala ya, false cancela
 	buscar          atomic.Bool
 }
 
@@ -336,6 +337,9 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuraci
 	if err != nil {
 		return nil, err
 	}
+	if alm.Compactada {
+		fmt.Fprintf(s.opc.Registros, "se compactó la base de %s: desde ahora devuelve al disco lo que libera la purga\n", id)
+	}
 	if horas := c.Entero("retencion.horas_idempotencia"); horas > 0 {
 		alm.VentanaIdempotencia = time.Duration(horas) * time.Hour
 	}
@@ -476,6 +480,7 @@ func (i *Instancia) cerrar(vaciarCola bool) {
 // están en ejecución; los que sigan después se interrumpen. Las instancias siguen abiertas, así que los clientes
 // pueden recoger los resultados hasta que se llame a Cerrar.
 func (s *Servicio) Drenar() {
+	_ = s.decidirInstalacion(false) // detener el servicio en la cuenta atrás de una actualización la cancela
 	s.mu.RLock()
 	instancias := make([]*Instancia, 0, len(s.instancias))
 	enCurso := 0

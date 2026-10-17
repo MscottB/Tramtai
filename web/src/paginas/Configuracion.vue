@@ -89,7 +89,7 @@
               <q-input v-model.number="retencion.horas_resultado" type="number" min="0" max="720" outlined dense :label="t('historialAjustes.respuestas')" :hint="t('historialAjustes.respuestasHint')" />
             </div>
             <div class="col-12 col-sm-4">
-              <q-input v-model.number="diasRegistro" type="number" min="0" max="90" outlined dense :label="t('historialAjustes.registro')" :hint="t('historialAjustes.registroHint')" />
+              <q-input v-model.number="diasRegistro" type="number" min="0" max="90" step="any" outlined dense :label="t('historialAjustes.registro')" :hint="t('historialAjustes.registroHint')" />
             </div>
             <div class="col-12 col-sm-4">
               <q-input v-model.number="retencion.max_trabajos" type="number" min="100" max="100000" outlined dense :label="t('historialAjustes.maximo')" :hint="t('historialAjustes.maximoHint')" />
@@ -192,13 +192,18 @@ const guardandoRetencion = ref(false)
 async function leerRetencion() {
   const r = await api.retencion()
   Object.assign(retencion, { horas_resultado: r.horas_resultado, max_trabajos: r.max_trabajos })
-  diasRegistro.value = Math.round(r.horas_metadatos / 24)
+  diasRegistro.value = Math.round((r.horas_metadatos / 24) * 100) / 100 // 30 h son 1,25 días; al guardar vuelven a 30 h
   usoHistorial.value = { trabajos: r.uso.trabajos.toLocaleString(), mb: (r.uso.bytes / 1048576).toLocaleString(undefined, { maximumFractionDigits: 1 }) }
 }
 async function guardarRetencion() {
+  const numeros = [retencion.horas_resultado, diasRegistro.value, retencion.max_trabajos]
+  if (numeros.some((v) => typeof v !== 'number' || Number.isNaN(v))) {
+    avisarError(new Error(t('historialAjustes.completa')))
+    return
+  }
   guardandoRetencion.value = true
   try {
-    await api.fijarRetencion({ horas_resultado: retencion.horas_resultado, horas_metadatos: diasRegistro.value * 24, max_trabajos: retencion.max_trabajos })
+    await api.fijarRetencion({ horas_resultado: retencion.horas_resultado, horas_metadatos: Math.round(diasRegistro.value * 24), max_trabajos: retencion.max_trabajos })
     avisar(t('historialAjustes.guardado'))
     await leerRetencion()
   } catch (e) {

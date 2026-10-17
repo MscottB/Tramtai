@@ -219,14 +219,18 @@ const cargandoMas = ref(false)
 async function verMas() {
   const ultimo = trabajos.value[trabajos.value.length - 1]
   if (!ultimo) return
+  const n = pedidoLista // si el filtro cambia mientras carga, esta página ya no es de la lista que se ve
   cargandoMas.value = true
+  enVuelo++
   try {
     const mas = await api.trabajos(PAGINA, { ...filtroDe(origen.value), antes: ultimo.creado_en, antes_id: ultimo.id })
+    if (n !== pedidoLista) return
     trabajos.value = [...trabajos.value, ...mas]
     hayMas.value = mas.length === PAGINA
   } catch (e) {
-    avisarError(e)
+    if (n === pedidoLista) avisarError(e)
   } finally {
+    enVuelo--
     cargandoMas.value = false
   }
 }
