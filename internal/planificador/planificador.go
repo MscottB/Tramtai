@@ -357,8 +357,8 @@ func (p *Planificador) CargasEnUso(ctx context.Context) (map[string]bool, error)
 }
 
 // Listar devuelve los trabajos más recientes de la instancia; con punto, solo los de ese punto de acceso.
-func (p *Planificador) Listar(ctx context.Context, limite int, punto string) ([]nucleo.Trabajo, error) {
-	return p.almacen.Listar(ctx, p.opc.Instancia, punto, limite)
+func (p *Planificador) Listar(ctx context.Context, limite int, f persistencia.FiltroTrabajos) ([]nucleo.Trabajo, error) {
+	return p.almacen.Listar(ctx, p.opc.Instancia, f, limite)
 }
 
 // Contar devuelve cuántos trabajos de la instancia hay en cada estado.

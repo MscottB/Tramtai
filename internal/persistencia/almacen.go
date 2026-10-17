@@ -95,10 +95,12 @@ CREATE TABLE IF NOT EXISTS avisos_presupuesto (
 	en TEXT NOT NULL,
 	PRIMARY KEY (instancia, punto, periodo, nivel)
 );`,
+	// v8: de dónde llegó cada petición (Probar, terminal, CLI, app o API); '' en los trabajos anteriores.
+	`ALTER TABLE trabajos ADD COLUMN origen TEXT NOT NULL DEFAULT '';`,
 }
 
 const columnas = `id, instancia, estado, codigo_error, mensaje_error, solicitud, huella, salida, intento_de, creado_en, actualizado_en, terminado_en,
-	modelo_enviado, modelo_efectivo, tokens_entrada, tokens_salida, costo_usd, punto_acceso, vencido, entradas_eliminadas, pid, firma_proceso`
+	modelo_enviado, modelo_efectivo, tokens_entrada, tokens_salida, costo_usd, punto_acceso, vencido, entradas_eliminadas, pid, firma_proceso, origen`
 
 // Almacen es la base SQLite de una instancia.
 type Almacen struct {
@@ -183,7 +185,19 @@ func Abrir(ruta string) (*Almacen, error) {
 		db.Close()
 		return nil, err
 	}
+	compactable(db)
 	return &Almacen{db: db, VentanaIdempotencia: 24 * time.Hour, reloj: time.Now, Zona: time.Local}, nil
+}
+
+// compactable pasa la base a auto_vacuum incremental (con un VACUUM único, fuera de transacción) para que la purga
+// devuelva espacio al disco. Si falla (disco lleno), la base se abre igual y se reintenta en el próximo arranque.
+func compactable(db *sql.DB) {
+	var modo int
+	if db.QueryRow("PRAGMA auto_vacuum").Scan(&modo) == nil && modo != 2 {
+		if _, err := db.Exec("PRAGMA auto_vacuum = INCREMENTAL"); err == nil {
+			db.Exec("VACUUM")
+		}
+	}
 }
 
 func migrar(db *sql.DB) error {
@@ -257,8 +271,8 @@ func (a *Almacen) Aceptar(ctx context.Context, t nucleo.Trabajo, clave string, m
 		return t, false, err
 	}
 	t.Estado, t.CreadoEn, t.ActualizadoEn = nucleo.EnCola, ahora, ahora
-	if _, err := tx.ExecContext(ctx, `INSERT INTO trabajos (id, instancia, estado, solicitud, huella, intento_de, modelo_enviado, punto_acceso, creado_en, actualizado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		t.ID, t.Instancia, string(t.Estado), string(solicitud), t.Huella, t.IntentoDe, t.ModeloEnviado, t.PuntoAcceso, fecha(ahora), fecha(ahora)); err != nil {
+	if _, err := tx.ExecContext(ctx, `INSERT INTO trabajos (id, instancia, estado, solicitud, huella, intento_de, modelo_enviado, punto_acceso, origen, creado_en, actualizado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		t.ID, t.Instancia, string(t.Estado), string(solicitud), t.Huella, t.IntentoDe, t.ModeloEnviado, t.PuntoAcceso, t.Origen, fecha(ahora), fecha(ahora)); err != nil {
 		return t, false, err
 	}
 	if err := agregarEvento(ctx, tx, t.ID, "estado", string(nucleo.EnCola), ahora); err != nil {
@@ -482,9 +496,32 @@ func (a *Almacen) ListarPorEstado(ctx context.Context, instancia string, estados
 }
 
 // Listar devuelve los trabajos más recientes de la instancia; con punto, solo los de ese punto de acceso.
-func (a *Almacen) Listar(ctx context.Context, instancia, punto string, limite int) ([]nucleo.Trabajo, error) {
-	filas, err := a.db.QueryContext(ctx, `SELECT `+columnas+` FROM trabajos WHERE instancia = ? AND (? = '' OR punto_acceso = ?)
-		ORDER BY creado_en DESC LIMIT ?`, instancia, punto, punto, limite)
+// FiltroTrabajos acota Listar; los campos vacíos no filtran. Puntos limita a esas APIs (no vacío).
+type FiltroTrabajos struct {
+	Punto  string
+	Puntos []string
+	Origen string
+	Antes  time.Time // solo los creados antes, para pedir la página siguiente
+}
+
+func (a *Almacen) Listar(ctx context.Context, instancia string, f FiltroTrabajos, limite int) ([]nucleo.Trabajo, error) {
+	donde, args := "instancia = ?", []any{instancia}
+	if f.Punto != "" {
+		donde, args = donde+" AND punto_acceso = ?", append(args, f.Punto)
+	}
+	if len(f.Puntos) > 0 {
+		donde += " AND punto_acceso IN (?" + strings.Repeat(", ?", len(f.Puntos)-1) + ")"
+		for _, p := range f.Puntos {
+			args = append(args, p)
+		}
+	}
+	if f.Origen != "" {
+		donde, args = donde+" AND origen = ?", append(args, f.Origen)
+	}
+	if !f.Antes.IsZero() {
+		donde, args = donde+" AND creado_en < ?", append(args, fecha(f.Antes))
+	}
+	filas, err := a.db.QueryContext(ctx, `SELECT `+columnas+` FROM trabajos WHERE `+donde+` ORDER BY creado_en DESC LIMIT ?`, append(args, limite)...)
 	if err != nil {
 		return nil, err
 	}
@@ -552,6 +589,7 @@ func (a *Almacen) Recuperar(ctx context.Context, instancia string) (interrumpido
 type Retencion struct {
 	Resultado        time.Duration // salida, entradas y eventos con contenido
 	Metadatos        time.Duration // el trabajo entero; hasta entonces se responde 410 en lugar de 404
+	Maximo           int           // trabajos terminados que se conservan como mucho; 0 = sin tope
 	EliminarEntradas bool          // borra las entradas al terminar: el reintento exige reenviarlas
 }
 
@@ -567,6 +605,16 @@ func (a *Almacen) Purgar(ctx context.Context, instancia string, r Retencion) (ve
 	}
 	defer tx.Rollback()
 	ahora := a.reloj().UTC()
+	if r.Maximo > 0 {
+		// Tope de cantidad: los terminados más antiguos que pasen de Maximo, con sus eventos. Los activos no cuentan.
+		const sobrantes = `SELECT id FROM trabajos WHERE instancia = ? AND terminado_en IS NOT NULL AND id NOT IN
+			(SELECT id FROM trabajos WHERE instancia = ? AND terminado_en IS NOT NULL ORDER BY terminado_en DESC LIMIT ?)`
+		for _, tabla := range []string{"eventos WHERE trabajo_id", "trabajos WHERE id"} {
+			if _, err := tx.ExecContext(ctx, `DELETE FROM `+tabla+` IN (`+sobrantes+`)`, instancia, instancia, r.Maximo); err != nil {
+				return 0, 0, err
+			}
+		}
+	}
 	if r.EliminarEntradas {
 		if _, err := tx.ExecContext(ctx, `UPDATE trabajos SET solicitud = `+sinEntradas+`, entradas_eliminadas = 1
 			WHERE instancia = ? AND terminado_en IS NOT NULL AND entradas_eliminadas = 0`, instancia); err != nil {
@@ -608,7 +656,29 @@ func (a *Almacen) Purgar(ctx context.Context, instancia string, r Retencion) (ve
 		}
 	}
 	n, _ = res.RowsAffected() // el último paso: trabajos eliminados
-	return vencidos, int(n), a.confirmar(tx)
+	if err := a.confirmar(tx); err != nil {
+		return 0, 0, err
+	}
+	a.db.ExecContext(ctx, "PRAGMA incremental_vacuum") // devuelve al disco lo liberado; un fallo solo lo aplaza
+	return vencidos, int(n), nil
+}
+
+// UsoHistorial es lo que ocupa el historial: los trabajos de la instancia y el tamaño de la base.
+type UsoHistorial struct {
+	Trabajos int   `json:"trabajos"`
+	Bytes    int64 `json:"bytes"`
+}
+
+func (a *Almacen) UsoHistorial(ctx context.Context, instancia string) (UsoHistorial, error) {
+	var u UsoHistorial
+	if err := a.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM trabajos WHERE instancia = ?`, instancia).Scan(&u.Trabajos); err != nil {
+		return u, err
+	}
+	var paginas, tamano int64
+	a.db.QueryRowContext(ctx, "PRAGMA page_count").Scan(&paginas)
+	a.db.QueryRowContext(ctx, "PRAGMA page_size").Scan(&tamano)
+	u.Bytes = paginas * tamano
+	return u, nil
 }
 
 // UsoPunto resume las peticiones de un punto de acceso que conserva la retención.
@@ -700,7 +770,7 @@ func escanear(fila interface{ Scan(...any) error }) (nucleo.Trabajo, error) {
 	var vencido bool
 	err := fila.Scan(&t.ID, &t.Instancia, &estado,
 		&codigo, &t.MensajeError, &solicitud, &t.Huella, &t.Salida, &t.IntentoDe, &creado, &actualizado, &terminado,
-		&t.ModeloEnviado, &t.ModeloEfectivo, &t.Uso.TokensEntrada, &t.Uso.TokensSalida, &t.Uso.CostoUSD, &t.PuntoAcceso, &vencido, &t.EntradasEliminadas, &t.PID, &t.FirmaProceso)
+		&t.ModeloEnviado, &t.ModeloEfectivo, &t.Uso.TokensEntrada, &t.Uso.TokensSalida, &t.Uso.CostoUSD, &t.PuntoAcceso, &vencido, &t.EntradasEliminadas, &t.PID, &t.FirmaProceso, &t.Origen)
 	if err != nil {
 		return t, err
 	}

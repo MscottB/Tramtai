@@ -10,6 +10,7 @@ import (
 
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
+	"tramtai/internal/persistencia"
 )
 
 // Punto es la política de un punto de acceso: contratos, valores predeterminados, alias y
@@ -156,7 +157,7 @@ func (s *Servidor) listarTrabajos(w http.ResponseWriter, r *http.Request) {
 	if s.Punto != nil {
 		punto = s.Punto.Nombre // un punto de acceso solo ve las suyas
 	}
-	lista, err := s.Planificador.Listar(r.Context(), limite, punto)
+	lista, err := s.Planificador.Listar(r.Context(), limite, persistencia.FiltroTrabajos{Punto: punto})
 	if err != nil {
 		EscribirError(w, r, err)
 		return

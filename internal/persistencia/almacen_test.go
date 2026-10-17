@@ -355,15 +355,15 @@ func TestListarEnUnaConsultaConIndice(t *testing.T) {
 		}
 	}
 	aceptar(t, a, trabajo("otra", "hola"), "")
-	todos, err := a.Listar(ctx, "global", "", 10)
+	todos, err := a.Listar(ctx, "global", FiltroTrabajos{}, 10)
 	if err != nil || len(todos) != 3 || todos[0].ID != ids[2] || todos[2].ID != ids[0] || todos[2].Estado != nucleo.Fallido ||
 		todos[0].Solicitud.Mensajes[0].Contenido != "hola" {
 		t.Fatalf("del más reciente al más antiguo, solo de la instancia: %+v %v", todos, err)
 	}
-	if soporte, _ := a.Listar(ctx, "global", "soporte", 1); len(soporte) != 1 || soporte[0].ID != ids[2] {
+	if soporte, _ := a.Listar(ctx, "global", FiltroTrabajos{Punto: "soporte"}, 1); len(soporte) != 1 || soporte[0].ID != ids[2] {
 		t.Fatalf("filtro por punto y límite: %+v", soporte)
 	}
-	if vacio, err := a.Listar(ctx, "nadie", "", 10); err != nil || vacio == nil || len(vacio) != 0 {
+	if vacio, err := a.Listar(ctx, "nadie", FiltroTrabajos{}, 10); err != nil || vacio == nil || len(vacio) != 0 {
 		t.Fatalf("sin trabajos, lista vacía: %v %v", vacio, err)
 	}
 	planes := map[string]string{ // índice esperado -> consulta
