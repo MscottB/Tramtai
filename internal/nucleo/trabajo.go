@@ -26,6 +26,8 @@ type Trabajo struct {
 	IntentoDe    string             `json:"intento_de,omitempty"`
 	// PuntoAcceso es el punto de acceso que creó el trabajo (uso por aplicación).
 	PuntoAcceso string `json:"punto_acceso,omitempty"`
+	// Origen es de dónde llegó la petición (DesdeProbar, DesdeCLI…); vacío en los trabajos anteriores.
+	Origen string `json:"origen,omitempty"`
 	// ModeloEnviado es el identificador pasado al CLI tras resolver el perfil; vacío = predeterminado del CLI.
 	ModeloEnviado string `json:"modelo_enviado,omitempty"`
 	// ModeloEfectivo es el que informó el agente; vacío = no verificable.
