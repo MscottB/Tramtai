@@ -109,8 +109,9 @@ La retención se aplica a cada instancia al abrirla y después cada 5 minutos. L
 
 | Clave | Por defecto | Qué borra al vencer |
 |---|---|---|
-| `retencion.horas_resultado` | 24 | La salida, los mensajes, las instrucciones, las cargas citadas y los eventos con contenido. El trabajo sigue `completado`, con `disponibilidad: expirada`, y la salida responde 410. |
-| `retencion.horas_metadatos` | 168 | El trabajo entero y sus eventos de estado. Desde entonces responde 404. |
+| `retencion.horas_resultado` | 24 (0 a 720) | La salida, los mensajes, las instrucciones, las cargas citadas y los eventos con contenido. El trabajo sigue `completado`, con `disponibilidad: expirada`, y la salida responde 410. |
+| `retencion.horas_metadatos` | 168 (0 a 2160, y no menos que `horas_resultado`) | El trabajo entero y sus eventos de estado. Desde entonces responde 404. |
+| `retencion.max_trabajos` | 10000 (100 a 100000) | Los trabajos terminados más antiguos que pasen del tope, con sus eventos. Los activos no cuentan. |
 | `retencion.horas_idempotencia` | 24 | La clave `Idempotency-Key`; después la misma clave crea otro trabajo. |
 | `retencion.horas_carga_huerfana` | 24 | Las cargas que ningún trabajo necesita. Las de un trabajo que aún se puede reintentar se conservan aunque hayan vencido. |
 | `retencion.eliminar_entradas_al_terminar` | false | Con `true`, las entradas se borran al terminar y el reintento exige reenviarlas. |

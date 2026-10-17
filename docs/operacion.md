@@ -111,6 +111,8 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <instancia> 
   - Lo que estaba en cola se reanuda al volver a iniciarlo.
   - En primer plano, un segundo Ctrl+C corta la espera.
 - **Resultados:** se conservan 24 horas (`retencion.horas_resultado`); después la salida responde 410 y se borra lo que escribió el usuario. El registro del trabajo dura 7 días (`retencion.horas_metadatos`). Ver [arquitectura](arquitectura.md#retención-cierre-y-recuperación).
+- **Límites del historial:** como mucho se guardan 10 000 peticiones terminadas por instancia (`retencion.max_trabajos`, de 100 a 100 000); en cada purga se borran las más antiguas que pasen del tope. Las respuestas se guardan de 0 a 720 horas (0 no las guarda) y el registro de 0 a 90 días, nunca menos que las respuestas. Un valor fuera de rango en `config.yaml` se ajusta al límite y deja un aviso en el registro del servicio. Tras cada purga la base devuelve al disco el espacio liberado. Los tres valores se cambian en **Ajustes → Historial**, que también muestra cuántas peticiones hay y cuánto ocupa la base.
+- **Origen:** cada petición guarda de dónde llegó: Probar (la Web UI), la terminal, la CLI, una aplicación con la clave principal o una API. El Historial lo muestra y filtra por origen, por grupo de APIs o por API, y trae las peticiones de 200 en 200 con **Ver más**.
 
 ## Claves de API
 
@@ -172,16 +174,18 @@ Un punto de acceso es otra URL, con su propio token, para una aplicación concre
 tramtai acceso crear app_contable --puerto 17401 --contratos openai `
   --agente claude --modelo sonnet --permitidos claude/sonnet,claude/haiku --alias gpt-4o-mini=claude/haiku
 tramtai acceso crear resumenes --local --forzar --perfil rapido   # ruta /p/resumenes en la instancia del proyecto
-tramtai acceso crear facturas --grupo cliente_x --agente claude   # grupo libre
+tramtai acceso crear tienda --grupo cliente_x --agente claude   # grupo libre
 tramtai acceso crear soporte --instrucciones "Responde siempre en español."
 tramtai acceso listar
 tramtai acceso editar app_contable --permitidos claude --grupo contabilidad
 tramtai acceso desactivar app_contable resumenes   # uno o varios
 tramtai acceso activar --grupo cliente_x           # todos los de un grupo
 tramtai acceso token app_contable --rotar        # regenera la clave y la muestra esta única vez
-tramtai acceso editar facturas --presupuesto diario.peticiones=500 --presupuesto mensual.usd=50
-tramtai acceso reiniciar-presupuesto facturas    # sin nombre, el de la instancia
+tramtai acceso editar tienda --presupuesto diario.peticiones=500 --presupuesto mensual.usd=50
+tramtai acceso reiniciar-presupuesto tienda    # sin nombre, el de la instancia
 ```
+
+En **Mis APIs**, la lista de APIs va primero, con un buscador, un selector de grupo y el orden (nombre, más usadas o última petición); la conexión de la API principal y los ejemplos van debajo. Cada grupo se pliega desde su cabecera y el navegador recuerda cuáles quedaron plegados. En el mapa de **Inicio**, cada grupo es una estación («web · 3 APIs», con sus activas debajo) que abre Mis APIs filtrada por ese grupo.
 
 - **Clave:** `tramtai acceso crear`, Mis APIs y «Guardar como API» en Probar muestran la clave una sola vez, al crearla. Tramtai guarda solo su huella SHA-256 (`datos/tokens/acceso_<nombre>` contiene `sha256:…`), así que no se puede volver a ver: si se pierde, se regenera (`--rotar` o **Regenerar la clave**) y la anterior deja de valer. `tramtai acceso token <nombre>` sin `--rotar` lo explica. Las claves antiguas guardadas en claro se convierten solas a huella y siguen valiendo. Eliminar una API borra también su clave.
 - **Instrucciones:** `--instrucciones` (o el campo del mismo nombre en Mis APIs, editable después) se antepone a las instrucciones de cada petición que llega por ese punto, venga de la aplicación que venga. Sirve, por ejemplo, para que una app que no lo permite configurar responda siempre en español.

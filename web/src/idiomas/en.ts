@@ -359,7 +359,7 @@ const en: Textos = {
     'No. Tramtai runs Claude Code without saving the session, Codex in ephemeral mode and Antigravity with a private folder that is deleted afterwards. Your chat histories don’t fill up with your apps’ requests: the record stays only in Tramtai’s History.',
   'ayuda.p3': 'Where is my data stored and for how long?',
   'ayuda.r3':
-    'Only on this computer: in %APPDATA%\\tramtai on Windows, ~/Library/Application Support/tramtai on macOS and ~/.config/tramtai on Linux. Answers are kept for 24 hours and the rest of the history for 7 days; then they are deleted automatically. You can also delete them any time in Settings.',
+    'Only on this computer: in %APPDATA%\\tramtai on Windows, ~/Library/Application Support/tramtai on macOS and ~/.config/tramtai on Linux. By default, answers are kept for 24 hours and the rest of the history for 7 days, up to 10,000 requests; then they are deleted automatically. Change it in Settings → History, where you can also delete it any time.',
   'ayuda.p4': 'How do I make my apps answer in Spanish?',
   'ayuda.r4':
     'In My APIs create an API for that app and write in its instructions, for example, “Always answer in Spanish”. They are added at the start of every request, without changing anything in the app.',

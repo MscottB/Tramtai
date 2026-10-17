@@ -358,7 +358,7 @@ const es = {
     'No. Tramtai ejecuta Claude Code sin guardar la sesión, Codex en modo efímero y Antigravity con una carpeta privada que se borra al terminar. Tus historiales de chat no se llenan con las consultas de las aplicaciones: el registro queda solo en el Historial de Tramtai.',
   'ayuda.p3': '¿Dónde se guardan mis datos y cuánto tiempo?',
   'ayuda.r3':
-    'Solo en este equipo: en %APPDATA%\\tramtai en Windows, ~/Library/Application Support/tramtai en macOS y ~/.config/tramtai en Linux. Las respuestas se guardan 24 horas y el resto del historial, 7 días; después se borran solos. También puedes borrarlos cuando quieras en Ajustes.',
+    'Solo en este equipo: en %APPDATA%\\tramtai en Windows, ~/Library/Application Support/tramtai en macOS y ~/.config/tramtai en Linux. Por defecto, las respuestas se guardan 24 horas y el resto del historial, 7 días, con un máximo de 10 000 peticiones; después se borran solos. Se cambia en Ajustes → Historial, donde también puedes borrarlo cuando quieras.',
   'ayuda.p4': '¿Cómo hago que mis apps respondan en español?',
   'ayuda.r4':
     'En Mis APIs crea una API para esa aplicación y escribe en sus instrucciones, por ejemplo, «Responde siempre en español». Se añaden al inicio de cada petición, sin cambiar nada en la aplicación.',
