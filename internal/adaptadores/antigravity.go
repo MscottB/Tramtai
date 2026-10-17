@@ -6,14 +6,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"unicode/utf8"
+	"unicode/utf16"
 
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/procesos"
 )
 
-// maximoPromptAntigravity acota el prompt, que agy recibe como argumento y Windows limita la línea de órdenes.
+// maximoPromptAntigravity acota el prompt, que agy recibe como argumento y Windows limita la línea de órdenes
+// (32.767 unidades UTF-16): se cuenta ya escapado, con margen para el resto de la orden.
 // shortcut: si agy acepta el prompt por stdin (--input-format stream-json), pasar a stdin y quitar el límite.
 const maximoPromptAntigravity = 28000
 
@@ -65,10 +66,17 @@ func (a Antigravity) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, 
 	if err != nil {
 		return Resultado{}, err
 	}
+	if consciente(s) {
+		// Sin restricción de herramientas comprobada, no trabaja en la carpeta del proyecto.
+		return Resultado{}, nucleo.NuevoError(nucleo.CodigoContextoNoPermitido, idioma.T("antigravity no admite consciente_proyecto: usa modo_contexto aislado"))
+	}
 	sistema, prompt := separar(s)
 	prompt = enmarcarSistema(sistema, prompt)
-	if utf8.RuneCountInString(prompt) > maximoPromptAntigravity {
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("la entrada supera lo que admite antigravity por línea de órdenes; usa gemini"))
+	if strings.HasPrefix(prompt, "-") {
+		prompt = "\n" + prompt // tras -p, un argumento que empieza por «-» se leería como una opción de agy
+	}
+	if unidadesLineaOrdenes(prompt) > maximoPromptAntigravity {
+		return Resultado{}, nucleo.NuevoError(nucleo.CodigoEntradaDemasiadoGrande, idioma.T("la entrada supera lo que admite antigravity por línea de órdenes; usa gemini"))
 	}
 	raiz, espacio, err := espacioTemporal()
 	if err != nil {
@@ -98,7 +106,10 @@ func (a Antigravity) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, 
 	}
 	var lineas []string
 	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: directorioTrabajo(s, espacio),
-		Entorno: entornoLimpio([]string{"GEMINI_"}, "USERPROFILE="+home, "HOME="+home, "GEMINI_API_KEY="+clave)}, func(linea string) error {
+		Entorno: entornoLimpio([]string{"GEMINI_"}, "USERPROFILE="+home, "HOME="+home, "APPDATA="+filepath.Join(home, "AppData", "Roaming"),
+			"LOCALAPPDATA="+filepath.Join(home, "AppData", "Local"), "XDG_CONFIG_HOME="+filepath.Join(home, ".config"),
+			"XDG_DATA_HOME="+filepath.Join(home, ".local", "share"), "XDG_CACHE_HOME="+filepath.Join(home, ".cache"),
+			"XDG_STATE_HOME="+filepath.Join(home, ".local", "state"), "GEMINI_API_KEY="+clave)}, func(linea string) error {
 		lineas = append(lineas, linea)
 		return nil
 	})
@@ -139,4 +150,44 @@ type resultadoAntigravity struct {
 		OutputTokens int `json:"output_tokens"`
 		CacheRead    int `json:"cache_read_tokens"`
 	} `json:"usage"`
+}
+
+// unidadesLineaOrdenes cuenta las unidades UTF-16 que ocupa un argumento en la línea de órdenes de Windows tras
+// escaparlo como syscall.EscapeArg: comillas si hay espacios, \" por cada comilla y las barras previas dobladas.
+func unidadesLineaOrdenes(arg string) int {
+	especial, espacio := false, false
+	for _, r := range arg {
+		switch r {
+		case '"', '\\':
+			especial = true
+		case ' ', '\t':
+			espacio = true
+		}
+	}
+	n := 0
+	for _, r := range arg {
+		n += utf16.RuneLen(r)
+	}
+	if espacio {
+		n += 2
+	}
+	if !especial {
+		return n
+	}
+	barras := 0
+	for _, r := range arg {
+		switch r {
+		case '\\':
+			barras++
+		case '"':
+			n += barras + 1
+			barras = 0
+		default:
+			barras = 0
+		}
+	}
+	if espacio {
+		n += barras // las barras finales se doblan antes de la comilla de cierre
+	}
+	return n
 }

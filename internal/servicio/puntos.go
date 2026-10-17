@@ -179,6 +179,23 @@ func (s *Servicio) validarRespaldo(p ConfigPunto) error {
 	return nil
 }
 
+// validarParaApps rechaza al guardar una API que use Antigravity (como agente o en el respaldo) mientras no esté
+// habilitado para apps (adaptadores.antigravity.permitir_apps): sus peticiones se rechazarían todas.
+func (s *Servicio) validarParaApps(p ConfigPunto) error {
+	if c, err := nucleo.CargarConfiguracion(""); err == nil && c.Booleano("adaptadores.antigravity.permitir_apps") {
+		return nil
+	}
+	agentes := []string{p.Agente}
+	for _, e := range p.Respaldo {
+		agente, _, _ := nucleo.DividirRespaldo(e)
+		agentes = append(agentes, agente)
+	}
+	if slices.Contains(agentes, "antigravity") {
+		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("punto de acceso %s: %s", p.Nombre, idioma.T("Antigravity no está habilitado para aplicaciones: todavía no se ha comprobado con el CLI real que no pueda usar herramientas. Úsalo desde Probar o la terminal")))
+	}
+	return nil
+}
+
 func (p ConfigPunto) politica() *api.Punto {
 	pol := &api.Punto{Nombre: p.Nombre, Contratos: map[string]bool{}, Agente: p.Agente, Modelo: p.Modelo,
 		PerfilModelo: p.PerfilModelo, Esfuerzo: p.Esfuerzo, Instrucciones: strings.TrimSpace(p.Instrucciones), ModelosPermitidos: p.ModelosPermitidos, ForzarModelo: p.ForzarModelo, Alias: p.AliasModelos}

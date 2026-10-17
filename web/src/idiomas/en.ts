@@ -644,6 +644,7 @@ const en: Textos = {
   'acerca.registro': 'Service log',
   'acerca.copiar': 'Copy support details',
   'acerca.copiarTexto': 'Copies these details as text, without keys or tokens; your user folder shows as ~.',
+  'receta.sinAntigravity': 'Antigravity is not available for APIs: it has not been checked yet that it cannot use tools. Use it from Try.',
   'receta.respaldoHint': 'Up to 3 agents that take over, in order, if the main one fails before answering: usage limit, missing key or an error.',
   'receta.esfuerzoDe': 'Effort for {agente}',
   'receta.respaldoIgual': 'Same as the main one ({nivel})',

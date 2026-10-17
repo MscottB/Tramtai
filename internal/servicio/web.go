@@ -687,6 +687,10 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 		api.EscribirError(w, r, err)
 		return
 	}
+	if err := s.validarParaApps(p); err != nil {
+		api.EscribirError(w, r, err)
+		return
+	}
 	err = EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		if slices.ContainsFunc(lista, func(c ConfigPunto) bool { return c.Nombre == p.Nombre }) {
 			return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el punto de acceso %s ya existe", p.Nombre))
@@ -828,6 +832,11 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 					}
 					lista[i].Presupuesto = normalizado.Presupuesto // uno vacío se guarda como ninguno
 					if err := s.validarRespaldo(lista[i]); err != nil {
+						return nil, err
+					}
+				}
+				if cambio.Modelo != nil || cambio.Respaldo != nil {
+					if err := s.validarParaApps(lista[i]); err != nil {
 						return nil, err
 					}
 				}

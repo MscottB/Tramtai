@@ -7,6 +7,7 @@
          En una fila no cabe: la columna de la receta es estrecha también en escritorio. -->
     <SelectorModelo :model-value="modelValue.modelo" :opciones="opciones" clearable :label="t('receta.modelo')"
       @update:model-value="(v) => cambiar({ modelo: v, forzar: v ? modelValue.forzar : false })" />
+    <div v-if="sinAntigravity" class="text-caption texto-suave q-mt-xs">{{ t('receta.sinAntigravity') }}</div>
     <SelectorEsfuerzo :model-value="modelValue.esfuerzo" :niveles="niveles" :predeterminado="esfuerzoPredeterminadoDe(catalogo, modelValue.modelo)" :hint="paraApi ? t('esfuerzo.api') : undefined"
       @update:model-value="(v: string) => cambiar({ esfuerzo: v })" />
     <component :is="plegarOpciones ? QExpansionItem : 'div'" v-bind="plegarOpciones ? plegable : {}">
@@ -63,9 +64,13 @@ watch(conOpciones, (v) => v && (abierta.value = true))
 const plegable = computed(() => ({ label: t('receta.opciones'), icon: 'o_tune', dense: true, modelValue: abierta.value,
   'onUpdate:modelValue': (v: boolean) => (abierta.value = v), headerClass: 'q-px-none text-body2' }))
 
-const opciones = computed(() => props.catalogo.map(opcionModelo))
+// Una API no ofrece Antigravity (ni como agente ni de respaldo): hasta comprobarlo con el CLI real, solo se usa desde
+// Probar y la terminal. El servicio lo rechaza igual al guardar.
+const sinAntigravity = computed(() => !!props.paraApi && props.catalogo.some((m) => m.agente === 'antigravity'))
+const usables = computed(() => (props.paraApi ? props.catalogo.filter((m) => m.agente !== 'antigravity') : props.catalogo))
+const opciones = computed(() => usables.value.map(opcionModelo))
 // El respaldo es agente o agente/modelo: un perfil no sirve porque da un modelo distinto por agente.
-const opcionesRespaldo = computed(() => props.catalogo.filter((m) => !m.perfil).map(opcionModelo))
+const opcionesRespaldo = computed(() => usables.value.filter((m) => !m.perfil).map(opcionModelo))
 // Las entradas de respaldo son agente[/modelo][+esfuerzo]: el selector elige las bases y cada una conserva su esfuerzo.
 // «agente» (el esfuerzo de su propio CLI) solo se distingue de «igual que el principal» si el principal tiene uno; si no,
 // son lo mismo y se muestra como el vacío.

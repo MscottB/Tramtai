@@ -54,6 +54,8 @@ type Opciones struct {
 	// dejan para la respuesta al comprobar si la entrada cabe.
 	Contextos     map[string]int
 	ReservaSalida int
+	// PermitirAntigravityApps es adaptadores.antigravity.permitir_apps: Antigravity también para apps y APIs.
+	PermitirAntigravityApps bool
 }
 
 // OpcionesDesde toma los límites de la configuración efectiva.
@@ -67,6 +69,7 @@ func OpcionesDesde(c *nucleo.Configuracion, instancia string) Opciones {
 		Perfiles:                   c.Perfiles(),
 		MaximoConversiones:         c.Entero("concurrencia.maximo_conversiones_instancia"),
 		Contextos:                  c.Contextos(),
+		PermitirAntigravityApps:    c.Booleano("adaptadores.antigravity.permitir_apps"),
 		ReservaSalida:              c.Entero("limites.reserva_salida_tokens"),
 	}
 }
@@ -207,6 +210,9 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 	if punto != "" {
 		t.Origen = nucleo.DesdeAPI // por una API extra, aunque la app mande otra etiqueta
 	}
+	if err := p.permitidoParaOrigen(t); err != nil {
+		return nucleo.Trabajo{}, false, err
+	}
 	t, reutilizado, err := p.almacen.Aceptar(ctx, t, clave, p.opc.MaximoCola)
 	if err != nil || reutilizado {
 		return t, reutilizado, err
@@ -214,6 +220,20 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 	p.encolar(t.ID)
 	p.registrar(t, "recibido")
 	return t, false, nil
+}
+
+// permitidoParaOrigen rechaza Antigravity (principal o respaldo) en una petición de una app o una API: hasta comprobar
+// con el CLI real que no puede usar herramientas, solo se usa desde Probar, la terminal y la CLI.
+func (p *Planificador) permitidoParaOrigen(t nucleo.Trabajo) error {
+	if p.opc.PermitirAntigravityApps || (t.Origen != nucleo.DesdeApp && t.Origen != nucleo.DesdeAPI) {
+		return nil
+	}
+	for _, c := range candidatos(t) {
+		if c.agente == "antigravity" {
+			return nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.T("Antigravity no está habilitado para aplicaciones: todavía no se ha comprobado con el CLI real que no pueda usar herramientas. Úsalo desde Probar o la terminal"))
+		}
+	}
+	return nil
 }
 
 // registrar escribe una línea legible por trabajo, por ejemplo:

@@ -1226,3 +1226,26 @@ func TestContextoDesconocidoNoComprueba(t *testing.T) {
 	p := iniciarConContextos(t, alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Respuesta: "ok"}}, nil, 8192)
 	esperar(t, alm, enviar(t, p, solicitud(strings.Repeat("x", 400000))), nucleo.Completado)
 }
+
+func TestAntigravityRechazadoParaApps(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{"antigravity": adaptadores.Simulado{Respuesta: "ok"}, "simulado": adaptadores.Simulado{Respuesta: "ok"}}, 1)
+	principal := solicitud("x")
+	principal.Agente = "antigravity"
+	for _, origen := range []string{nucleo.DesdeApp, nucleo.DesdeAPI} {
+		for _, s := range []nucleo.SolicitudEjecucion{principal, conRespaldo("antigravity")} {
+			if _, _, err := p.Enviar(nucleo.ConOrigenPeticion(ctx, origen), s, ""); nucleo.CodigoDe(err) != nucleo.CodigoAgenteNoDisponible {
+				t.Fatalf("origen %s con %s: %v", origen, s.Agente, err)
+			}
+		}
+	}
+	for _, origen := range []string{nucleo.DesdeProbar, nucleo.DesdeTerminal, nucleo.DesdeCLI} {
+		if _, _, err := p.Enviar(nucleo.ConOrigenPeticion(ctx, origen), principal, ""); err != nil {
+			t.Fatalf("desde %s se admite: %v", origen, err)
+		}
+	}
+	p.opc.PermitirAntigravityApps = true
+	if _, _, err := p.Enviar(nucleo.ConOrigenPeticion(ctx, nucleo.DesdeApp), principal, ""); err != nil {
+		t.Fatalf("con permitir_apps se admite: %v", err)
+	}
+}

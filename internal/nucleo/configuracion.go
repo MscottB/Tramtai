@@ -74,6 +74,7 @@ var esquema = map[string]tipoValor{
 	"proyectos_confiables":                        tipoLista,
 	"comandos_agentes.*":                          tipoTexto,
 	"adaptadores.*.autenticacion":                 tipoTexto,
+	"adaptadores.*.permitir_apps":                 tipoBooleano,
 	"concurrencia_servicio.adaptadores.*":         tipoEntero,
 	"puntos_acceso":                               tipoLista,
 	"predeterminados.agente":                      tipoTexto,

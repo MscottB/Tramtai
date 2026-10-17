@@ -643,6 +643,7 @@ const es = {
   'acerca.registro': 'Registro del servicio',
   'acerca.copiar': 'Copiar datos para soporte',
   'acerca.copiarTexto': 'Copia estos detalles como texto, sin claves ni tokens; tu carpeta de usuario aparece como ~.',
+  'receta.sinAntigravity': 'Antigravity no está disponible para APIs: aún no se ha comprobado que no pueda usar herramientas. Úsalo desde Probar.',
   'receta.respaldoHint': 'Hasta 3 agentes que siguen, en orden, si el principal falla antes de responder: límite de uso, falta la clave o un error.',
   'receta.esfuerzoDe': 'Esfuerzo de {agente}',
   'receta.respaldoIgual': 'Igual que el principal ({nivel})',

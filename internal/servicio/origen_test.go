@@ -128,3 +128,15 @@ func TestConsumoDeAPIAusenteSeBorra(t *testing.T) {
 		t.Fatalf("se borra el consumo de la API ausente y no el de las demás: vieja %+v, tienda %+v", dia, tienda)
 	}
 }
+
+func TestPuntoConAntigravity(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	for _, p := range []ConfigPunto{{Nombre: "a", Agente: "antigravity"}, {Nombre: "b", Respaldo: []string{"antigravity/gemini-x"}}} {
+		if err := s.validarParaApps(p); nucleo.CodigoDe(err) != nucleo.CodigoConfiguracionInvalida || !strings.Contains(nucleo.MensajeDe(err), "Antigravity") {
+			t.Fatalf("%+v: %v", p, err)
+		}
+	}
+	if err := s.validarParaApps(ConfigPunto{Nombre: "c", Agente: "claude", Respaldo: []string{"codex"}}); err != nil {
+		t.Fatal(err)
+	}
+}
