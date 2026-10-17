@@ -28,7 +28,7 @@ Cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
 - **Agente y modelo en cada petición.** `claude/sonnet`, `codex`, `gemini/gemini-flash-latest` o un perfil como `perfil/rapido`; en Claude y Codex también eliges cuánto razona el agente.
 - **Archivos y respuestas con forma.** PDF, Word, Excel, PowerPoint o ZIP como entrada; JSON validado con un esquema como salida.
 - **Una API por aplicación,** con su propia clave, sus modelos permitidos o fijos e instrucciones propias (por ejemplo, «responde siempre en español»). Se activan o detienen sin reiniciar.
-- **Recetas: de la prueba a la API en un clic.** En Probar defines instrucciones, agente, esquema JSON y respaldo, lo pruebas con tus archivos y lo guardas como API: tu aplicación envía el mensaje y recibe la respuesta con esa forma.
+- **Recetas: de la prueba a la API en un clic.** En Probar defines instrucciones, agente con su esfuerzo, esquema JSON y respaldo, lo pruebas con tus archivos, ves la respuesta con formato y cuánto tardó cada paso, y lo guardas como API: tu aplicación envía el mensaje y recibe la respuesta con esa forma.
 - **Respaldo entre agentes.** Si el agente principal llega a su límite, no tiene clave o falla antes de responder, la petición sigue con el siguiente de la lista (hasta 3), sin que tu aplicación lo note.
 - **Presupuestos.** Cada API, y el espacio entero, pueden tener un límite diario o mensual de peticiones, tokens o dólares: aviso al 80 % y, al 100 %, error 429 hasta que empieza el periodo siguiente o reinicias el consumo.
 - **Tu suscripción o tu clave de API.** Claude y Codex se conectan con un clic a la sesión que ya tienes (uso personal) o con una clave.

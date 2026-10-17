@@ -347,7 +347,8 @@ const en: Textos = {
   'ayuda.paso1Texto':
     'In Agents, choose “Use my subscription” for Claude or Codex (personal use) or save an API key: it is stored encrypted in the system store and works without restarting. The Gemini API is used directly, without installing Gemini CLI: it only needs a Gemini API key.',
   'ayuda.paso2': 'Try a message',
-  'ayuda.paso2Texto': 'In Try, write something, pick an agent and model and watch the answer live. You can attach PDF, Word, Excel or ZIP files.',
+  'ayuda.paso2Texto':
+    'In Try, type something, pick the agent, model and effort and watch the answer live, formatted or as plain text. You can attach PDF, Word, Excel or ZIP, and your recent tests stay at hand to run them again.',
   'ayuda.paso3': 'Connect your app',
   'ayuda.paso3Texto':
     'My APIs has the URL and the key. In your OpenAI or Anthropic SDK change the base URL and pick the agent and model with the model field, for example claude/sonnet.',
@@ -645,7 +646,13 @@ const en: Textos = {
     'If it is an API’s key, click “Regenerate the key” in My APIs. If it is the Main API key, use “Regenerate the key” on the Main API, also in My APIs. The old one stops working right away and there is no need to restart: put the new one in your apps. If it is a provider key (Anthropic, OpenAI or Gemini), revoke it in their console and save the new one with “tramtai claves guardar” (Agents shows you the command).',
   'ayuda.p12': 'What happens if an agent hits its limit?',
   'ayuda.r12':
-    'If the recipe has a fallback, the request continues with the next agent in the list (up to 3) when the main one fails before it starts answering: usage limit, missing key, not installed or an error. You will see a notice in Try, and History shows which agent answered. If the agent had already started answering it is not switched, so two answers are never mixed. The time limit applies to each attempt.',
+    'If the recipe has a fallback, the request continues with the next agent in the list (up to 3) when the main one fails before it starts answering: usage limit, missing key, not installed or an error. You will see a notice in Try, and History shows which agent answered. If the agent had already started answering it is not switched, so two answers are never mixed. The time limit applies to each attempt. Each fallback agent can have its own effort; if you do not pick one, it uses the effort of the main one.',
+  'ayuda.p15': 'How do I see how long each step of a request took?',
+  'ayuda.r15':
+    'Open «Log» under the answer in Try or in the History detail: each step (queued, waiting for the agent, running with which agent, model and effort, notices and the end) with its time and the time since the start, and above it how long each stage took.',
+  'ayuda.p16': 'What happens when Tramtai updates?',
+  'ayuda.r16':
+    'After downloading the new version, Tramtai warns that it will restart in 10 seconds, with «Restart now» and «Cancel». Then a small window shows the installation progress and closes by itself, and Tramtai opens again with your settings and data and shows you what is new.',
   'presupuesto.editorTexto': 'Budget: daily and monthly limits. At 80% you are warned and at 100% new requests are rejected until the reset. Empty or 0 = no limit.',
   'presupuesto.diario': 'Daily',
   'presupuesto.mensual': 'Monthly',

@@ -346,7 +346,8 @@ const es = {
   'ayuda.paso1Texto':
     'En Agentes, elige para Claude o Codex «Usar mi suscripción» (uso personal) o guarda una clave de API: queda cifrada en el almacén del sistema y vale sin reiniciar. La API de Gemini se usa directamente, sin instalar Gemini CLI: solo necesita una clave de la Gemini API.',
   'ayuda.paso2': 'Prueba un mensaje',
-  'ayuda.paso2Texto': 'En Probar escribe algo, elige agente y modelo y mira la respuesta en vivo. Puedes adjuntar PDF, Word, Excel o ZIP.',
+  'ayuda.paso2Texto':
+    'En Probar escribe algo, elige agente, modelo y esfuerzo y mira la respuesta en vivo, con formato o como texto. Puedes adjuntar PDF, Word, Excel o ZIP, y tus pruebas recientes quedan a mano para repetirlas.',
   'ayuda.paso3': 'Conecta tu aplicación',
   'ayuda.paso3Texto':
     'En Mis APIs tienes la URL y la clave. En tu SDK de OpenAI o Anthropic cambia la URL base y elige agente y modelo con el campo model, por ejemplo claude/sonnet.',
@@ -644,7 +645,13 @@ const es = {
     'Si es la de una API, pulsa «Regenerar la clave» en Mis APIs. Si es la de la API principal, también en Mis APIs, en «Regenerar la clave» de la API principal. La anterior deja de valer al momento y no hace falta reiniciar: pon la nueva en tus aplicaciones. Si es la de un proveedor (Anthropic, OpenAI o Gemini), revócala en su consola y guarda la nueva con «tramtai claves guardar» (Agentes te muestra la orden).',
   'ayuda.p12': '¿Qué pasa si un agente llega a su límite?',
   'ayuda.r12':
-    'Si la receta tiene respaldo, la petición sigue con el siguiente agente de la lista (hasta 3) cuando el principal falla antes de empezar a responder: límite de uso, falta la clave, no está instalado o da un error. Verás un aviso en Probar y el Historial muestra qué agente respondió. Si el agente ya había empezado a responder no se cambia, para no mezclar dos respuestas. El tiempo límite cuenta para cada intento.',
+    'Si la receta tiene respaldo, la petición sigue con el siguiente agente de la lista (hasta 3) cuando el principal falla antes de empezar a responder: límite de uso, falta la clave, no está instalado o da un error. Verás un aviso en Probar y el Historial muestra qué agente respondió. Si el agente ya había empezado a responder no se cambia, para no mezclar dos respuestas. El tiempo límite cuenta para cada intento. Cada agente del respaldo puede tener su propio esfuerzo; si no eliges uno, usa el del principal.',
+  'ayuda.p15': '¿Cómo veo cuánto tardó cada paso de una petición?',
+  'ayuda.r15':
+    'Abre «Registro» bajo la respuesta en Probar o en el detalle del Historial: cada paso (en cola, esperando al agente, ejecutando con qué agente, modelo y esfuerzo, avisos y el final) con su hora y el tiempo desde el inicio, y arriba cuánto duró cada etapa.',
+  'ayuda.p16': '¿Qué pasa al actualizar Tramtai?',
+  'ayuda.r16':
+    'Al descargar la versión nueva, Tramtai avisa de que se reiniciará en 10 segundos, con «Reiniciar ahora» y «Cancelar». Después se ve una ventana pequeña con el progreso de la instalación, que se cierra sola, y Tramtai vuelve a abrirse con tu configuración y tus datos y te muestra las novedades.',
   'presupuesto.editorTexto': 'Presupuesto: límites por día y por mes. Al 80 % se avisa y al 100 % se rechazan las peticiones nuevas hasta el reinicio. Vacío o 0 = sin límite.',
   'presupuesto.diario': 'Diario',
   'presupuesto.mensual': 'Mensual',
