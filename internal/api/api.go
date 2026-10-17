@@ -204,6 +204,7 @@ var estadosHTTP = map[nucleo.CodigoError]int{
 	nucleo.CodigoConversionFallida:      http.StatusUnprocessableEntity,
 	nucleo.CodigoColaLlena:              http.StatusTooManyRequests,
 	nucleo.CodigoEntradaDemasiadoGrande: http.StatusRequestEntityTooLarge,
+	nucleo.CodigoCuotaCargasAgotada:     http.StatusInsufficientStorage,
 	nucleo.CodigoPresupuestoAgotado:     http.StatusTooManyRequests,
 	nucleo.CodigoLimiteUsoProveedor:     http.StatusTooManyRequests,
 	nucleo.CodigoErrorAgente:            http.StatusBadGateway,

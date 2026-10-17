@@ -43,6 +43,8 @@ const (
 	// CodigoEntradaDemasiadoGrande: tras convertir los documentos, la entrada no cabe en el contexto del modelo; no
 	// llegó al CLI (ni gasta cuota) y se prueba con el respaldo.
 	CodigoEntradaDemasiadoGrande CodigoError = "entrada_demasiado_grande"
+	// CodigoCuotaCargasAgotada: las cargas guardadas de la instancia llegan a conversion.cuota_cargas_mb.
+	CodigoCuotaCargasAgotada CodigoError = "cuota_cargas_agotada"
 )
 
 // Error es el error propio de Tramtai: un código estable y un mensaje legible sin secretos.

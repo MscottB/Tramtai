@@ -56,6 +56,8 @@ type Opciones struct {
 	ReservaSalida int
 	// PermitirAntigravityApps es adaptadores.antigravity.permitir_apps: Antigravity también para apps y APIs.
 	PermitirAntigravityApps bool
+	// TiempoConversion es el plazo total de la preparación de las cargas (conversion.tiempo_total_segundos).
+	TiempoConversion time.Duration
 }
 
 // OpcionesDesde toma los límites de la configuración efectiva.
@@ -70,6 +72,7 @@ func OpcionesDesde(c *nucleo.Configuracion, instancia string) Opciones {
 		MaximoConversiones:         c.Entero("concurrencia.maximo_conversiones_instancia"),
 		Contextos:                  c.Contextos(),
 		PermitirAntigravityApps:    c.Booleano("adaptadores.antigravity.permitir_apps"),
+		TiempoConversion:           time.Duration(c.Limite("conversion.tiempo_total_segundos")) * time.Second,
 		ReservaSalida:              c.Entero("limites.reserva_salida_tokens"),
 	}
 }
@@ -996,7 +999,16 @@ func (p *Planificador) preparar(ctx context.Context, cargas []string) (nucleo.Do
 	case <-ctx.Done():
 		return nucleo.Documentos{}, ctx.Err()
 	}
-	return p.opc.Preparador.Preparar(ctx, cargas)
+	if p.opc.TiempoConversion > 0 {
+		var cancelar context.CancelFunc
+		ctx, cancelar = context.WithTimeout(ctx, p.opc.TiempoConversion)
+		defer cancelar()
+	}
+	docs, err := p.opc.Preparador.Preparar(ctx, cargas)
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return docs, nucleo.NuevoError(nucleo.CodigoConversionFallida, idioma.T("la preparación de los documentos superó conversion.tiempo_total_segundos"))
+	}
+	return docs, err
 }
 
 // conDocumentos antepone las entradas preparadas al último mensaje del usuario sin alterar su texto;

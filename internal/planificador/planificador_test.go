@@ -1249,3 +1249,24 @@ func TestAntigravityRechazadoParaApps(t *testing.T) {
 		t.Fatalf("con permitir_apps se admite: %v", err)
 	}
 }
+
+// preparadorLento tarda hasta que se cancela su contexto.
+type preparadorLento struct{}
+
+func (preparadorLento) Preparar(ctx context.Context, _ []string) (nucleo.Documentos, error) {
+	<-ctx.Done()
+	return nucleo.Documentos{}, ctx.Err()
+}
+
+func TestPlazoTotalConversion(t *testing.T) {
+	alm := abrir(t)
+	opc := opciones()
+	opc.Preparador, opc.TiempoConversion = preparadorLento{}, 50*time.Millisecond
+	p := iniciar(t, alm, eco{}, 1, opc)
+	s := solicitud("x")
+	s.Cargas = []string{cargaPrueba}
+	tr := esperar(t, alm, enviar(t, p, s), nucleo.Fallido)
+	if tr.CodigoError != nucleo.CodigoConversionFallida || !strings.Contains(tr.MensajeError, "conversion.tiempo_total_segundos") {
+		t.Fatalf("la preparación tiene un plazo total: %+v", tr)
+	}
+}

@@ -344,7 +344,8 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuraci
 		alm.VentanaIdempotencia = time.Duration(horas) * time.Hour
 	}
 	cargas, err := documentos.AbrirCargas(filepath.Join(s.opc.Datos, "cargas", id),
-		time.Duration(c.Entero("retencion.horas_carga_huerfana"))*time.Hour, int64(c.Entero("conversion.maximo_carga_mb"))<<20)
+		time.Duration(c.Entero("retencion.horas_carga_huerfana"))*time.Hour, int64(c.Limite("conversion.maximo_carga_mb"))<<20,
+		int64(c.Limite("conversion.cuota_cargas_mb"))<<20)
 	if err != nil {
 		alm.Cerrar()
 		return nil, err

@@ -60,7 +60,7 @@ func nuevoServidor(t *testing.T, registro map[string]adaptadores.Adaptador, ajus
 	valores := map[string]any{"predeterminados.agente": "simulado", "modelos.perfiles.rapido.simulado": "m1"}
 	maps.Copy(valores, ajustes)
 	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: valores})
-	cargas, err := documentos.AbrirCargas(filepath.Join(dir, "cargas"), time.Hour, 1<<20)
+	cargas, err := documentos.AbrirCargas(filepath.Join(dir, "cargas"), time.Hour, 1<<20, int64(c.Limite("conversion.cuota_cargas_mb"))<<20)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -328,7 +328,7 @@ func TestCargaMultipartYTrabajo(t *testing.T) {
 	}
 	solicitud := `{"cargas":["` + carga["identificador_carga"].(string) + `"],"mensajes":[{"rol":"usuario","contenido":"resume"}]}`
 	_, c := pedir(t, ts, "POST", "/api/v1/ejecutar", solicitud)
-	if salida := decodificar(t, strings.TrimSpace(c))["salida"].(string); !strings.Contains(salida, "<<<archivo nombre=\"notas.txt\"") || !strings.HasSuffix(salida, "resume") {
+	if salida := decodificar(t, strings.TrimSpace(c))["salida"].(string); !strings.Contains(salida, "nombre=\"notas.txt\"") || !strings.Contains(salida, "<<<archivo-") || !strings.HasSuffix(salida, "resume") {
 		t.Fatalf("el agente debía recibir el archivo y el mensaje: %q", salida)
 	}
 }
@@ -700,5 +700,15 @@ func TestPuntoImponeModoContexto(t *testing.T) {
 	s.Punto.ModoContexto = "consciente_proyecto"
 	if sol, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: hola}); err != nil || sol.ModoContexto != "consciente_proyecto" {
 		t.Fatalf("la API con consciente_proyecto lo da: %q %v", sol.ModoContexto, err)
+	}
+}
+
+func TestCuotaCargasHTTP(t *testing.T) {
+	ts := servidor(t, simulado(adaptadores.Simulado{}), map[string]any{"conversion.cuota_cargas_mb": 1})
+	if r, cuerpo := pedir(t, ts, "POST", "/api/v1/cargas?nombre=a.txt", strings.Repeat("a", 600<<10)); r.StatusCode != 201 {
+		t.Fatalf("primera: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, cuerpo := pedir(t, ts, "POST", "/api/v1/cargas?nombre=b.txt", strings.Repeat("b", 600<<10)); r.StatusCode != 507 || !strings.Contains(cuerpo, "cuota_cargas_agotada") {
+		t.Fatalf("la que supera la cuota: %d %s", r.StatusCode, cuerpo)
 	}
 }

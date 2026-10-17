@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -33,18 +34,22 @@ type Cargas struct {
 	dir         string
 	vigencia    time.Duration
 	maximoBytes int64
+	cuota       int64      // bytes que pueden ocupar todas las cargas guardadas (0: sin cuota)
+	mu          sync.Mutex // comprobar la cuota y guardar van juntos: dos subidas a la vez no la superan
 }
 
 // AbrirCargas crea el directorio si no existe.
-func AbrirCargas(dir string, vigencia time.Duration, maximoBytes int64) (*Cargas, error) {
+func AbrirCargas(dir string, vigencia time.Duration, maximoBytes, cuota int64) (*Cargas, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
 	}
-	return &Cargas{dir: dir, vigencia: vigencia, maximoBytes: maximoBytes}, nil
+	return &Cargas{dir: dir, vigencia: vigencia, maximoBytes: maximoBytes, cuota: cuota}, nil
 }
 
-// Guardar copia el contenido calculando su hash; el mismo contenido produce el mismo identificador.
-func (c *Cargas) Guardar(nombre string, r io.Reader) (Carga, error) {
+// Guardar copia el contenido calculando su hash. El identificador sale del contenido y de la API que lo sube (punto,
+// vacío para la instancia): el mismo contenido de la misma API da el mismo identificador y otra API no puede
+// citar ni pisar el suyo.
+func (c *Cargas) Guardar(nombre, punto string, r io.Reader) (Carga, error) {
 	temporal, err := os.CreateTemp(c.dir, "subida-*")
 	if err != nil {
 		return Carga{}, err
@@ -62,14 +67,38 @@ func (c *Cargas) Guardar(nombre string, r io.Reader) (Carga, error) {
 		return Carga{}, nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.T("el archivo supera el tamaño máximo de carga"))
 	}
 	suma := hex.EncodeToString(resumen.Sum(nil))
+	propio := sha256.Sum256([]byte(punto + "\x00" + suma))
 	ahora := time.Now().UTC()
-	carga := Carga{ID: "carga_" + suma[:32], Nombre: nombreSeguro(nombre), SHA256: suma, Bytes: n, CreadoEn: ahora, VenceEn: ahora.Add(c.vigencia)}
+	carga := Carga{ID: "carga_" + hex.EncodeToString(propio[:])[:32], Nombre: nombreSeguro(nombre), SHA256: suma, Bytes: n, CreadoEn: ahora, VenceEn: ahora.Add(c.vigencia)}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if anterior, _, err := c.Obtener(carga.ID); err == nil {
+		// Ya estaba: solo se renueva su plazo; el nombre (y con él el formato) es el de la primera subida.
+		anterior.VenceEn = carga.VenceEn
+		carga = anterior
+	} else if c.cuota > 0 && c.ocupado()+n > c.cuota {
+		return Carga{}, nucleo.NuevoError(nucleo.CodigoCuotaCargasAgotada, idioma.T("las cargas guardadas llegan a conversion.cuota_cargas_mb: espera a que venzan o borra el historial"))
+	}
 	// Los metadatos van antes que el contenido: una purga concurrente nunca ve contenido sin metadatos.
 	metadatos, _ := json.Marshal(carga)
 	if err := c.escribir(carga.ID+".json", metadatos); err != nil {
 		return Carga{}, err
 	}
 	return carga, os.Rename(temporal.Name(), filepath.Join(c.dir, carga.ID))
+}
+
+// ocupado suma lo que ocupan las cargas guardadas (sin metadatos ni subidas a medias).
+func (c *Cargas) ocupado() int64 {
+	entradas, _ := os.ReadDir(c.dir)
+	var total int64
+	for _, e := range entradas {
+		if nombre := e.Name(); strings.HasPrefix(nombre, "carga_") && !strings.HasSuffix(nombre, ".json") {
+			if info, err := e.Info(); err == nil {
+				total += info.Size()
+			}
+		}
+	}
+	return total
 }
 
 // escribir crea o reemplaza un archivo de golpe (temporal + renombrado): nunca se lee a medias.

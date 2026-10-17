@@ -243,7 +243,7 @@ func (s *Servidor) crearCarga(w http.ResponseWriter, r *http.Request) {
 		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("esta instancia no admite cargas")))
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, int64(s.Config.Entero("conversion.maximo_carga_mb"))<<20+1<<20)
+	r.Body = http.MaxBytesReader(w, r.Body, int64(s.Config.Limite("conversion.maximo_carga_mb"))<<20+1<<20)
 	var carga documentos.Carga
 	var err error
 	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
@@ -251,7 +251,7 @@ func (s *Servidor) crearCarga(w http.ResponseWriter, r *http.Request) {
 	} else if nombre := r.URL.Query().Get("nombre"); nombre == "" {
 		err = nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("envía multipart con el campo archivo, o el binario con ?nombre=archivo.ext"))
 	} else {
-		carga, err = s.Cargas.Guardar(nombre, r.Body)
+		carga, err = s.Cargas.Guardar(nombre, s.nombrePunto(), r.Body)
 	}
 	var demasiado *http.MaxBytesError
 	if errors.As(err, &demasiado) {
@@ -262,6 +262,14 @@ func (s *Servidor) crearCarga(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	EscribirJSON(w, http.StatusCreated, carga)
+}
+
+// nombrePunto es la API de la petición; vacío para la instancia.
+func (s *Servidor) nombrePunto() string {
+	if s.Punto == nil {
+		return ""
+	}
+	return s.Punto.Nombre
 }
 
 func (s *Servidor) cargaMultipart(r *http.Request) (documentos.Carga, error) {
@@ -278,7 +286,7 @@ func (s *Servidor) cargaMultipart(r *http.Request) (documentos.Carga, error) {
 			return documentos.Carga{}, err
 		}
 		if parte.FormName() == "archivo" {
-			return s.Cargas.Guardar(parte.FileName(), parte)
+			return s.Cargas.Guardar(parte.FileName(), s.nombrePunto(), parte)
 		}
 	}
 }

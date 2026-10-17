@@ -195,3 +195,12 @@ func TestContextos(t *testing.T) {
 		t.Fatal("reserva predeterminada 8192")
 	}
 }
+
+func TestLimitesNoPositivos(t *testing.T) {
+	for valor, esperado := range map[int]int{0: 50, -3: 50, 999999: 1024, 80: 80} {
+		c := Resolver(Capa{Origen: OrigenGlobal, Valores: map[string]any{"conversion.maximo_carga_mb": valor}})
+		if got := c.Limite("conversion.maximo_carga_mb"); got != esperado {
+			t.Fatalf("%d: %d, se esperaba %d", valor, got, esperado)
+		}
+	}
+}
