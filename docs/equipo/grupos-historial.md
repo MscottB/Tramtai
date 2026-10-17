@@ -19,6 +19,12 @@ otro. Un tope por tamaño en MB (difícil de medir por trabajo) y filtrar el tab
 
 ### Mis APIs
 
+- **Orden de la página** (pedido por el usuario durante la implementación): primero **tus APIs** y después
+  **Conectar** (la API principal: URLs, clave, valores de `model` y ejemplos para copiar), que hoy va arriba y empuja
+  la lista al final.
+- **Barra de la lista:** buscador por nombre, selector de grupo, **orden** («Nombre», «Más usadas», «Última
+  petición», recordado en `localStorage` `tramtai.ordenApis`) y el botón «Nueva API». Sin APIs, el estado vacío con
+  Nueva API ocupa el lugar de la lista.
 - **Plegables:** la cabecera de cada grupo pliega y despliega su lista. Los grupos plegados se recuerdan en el
   navegador (`localStorage` `tramtai.gruposPlegados`, lista de nombres); sin almacenamiento, todo abierto.
 - **Filtro:** con más de una API, encima de la lista, un selector de grupo («Todos», cada grupo y «Sin grupo») y un
