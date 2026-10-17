@@ -33,6 +33,7 @@ let espera: ReturnType<typeof setTimeout> | undefined
 // Al cambiar de trabajo se vacía al momento (no se mezcla con el anterior); los avisos seguidos de un mismo trabajo
 // (al abrir uno terminado llegan todos sus eventos de golpe) se agrupan en una sola petición.
 watch(() => props.trabajo.id, () => {
+  pedido++ // la respuesta del trabajo anterior que aún esté en camino ya no vale
   eventos.value = []
   fallo.value = false
 })

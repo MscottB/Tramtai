@@ -29,7 +29,9 @@ que va en su propio release después de este.
 - `nucleo.ValidarRespaldo` acepta el sufijo solo con un nivel de `NivelesEsfuerzo`; dos entradas que solo difieren en
   el esfuerzo cuentan como repetidas. `DividirRespaldo` devuelve también el esfuerzo.
 - Sin sufijo, la entrada se comporta como hoy: usa el esfuerzo del principal (ajustado al máximo de ese agente) y, si
-  el principal no tiene, el del propio CLI.
+  el principal no tiene, el del propio CLI. `+agente` usa siempre el de su CLI (en el editor, «El del agente», solo si el
+  principal tiene esfuerzo). Al saltar, el planificador escribe en el respaldo restante lo que heredaba (`+nivel` o
+  `+agente`), porque la solicitud guardada pasa a llevar el esfuerzo del respaldo que respondió.
 - El planificador lleva el esfuerzo en cada `candidato` y lo pasa al adaptador en su intento.
 - Web UI: bajo el selector de respaldo, una línea por agente elegido con su selector de esfuerzo; la opción vacía dice
   «Igual que el principal ({nivel})» si el principal tiene uno, o «Del agente ({nivel})» con el predeterminado de ese

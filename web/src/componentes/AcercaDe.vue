@@ -5,7 +5,7 @@
         <img src="/logo.png" alt="" width="56" height="56" style="border-radius: 14px" />
         <div class="col">
           <div id="titulo-acerca" class="titulo-seccion">{{ t('acerca.titulo') }}</div>
-          <div class="text-body2">{{ version }}<span v-if="fechaCompilacion" class="texto-suave"> · {{ fechaCompilacion }}</span></div>
+          <div class="text-body2">{{ versionCorta }}<span v-if="fechaCompilacion" class="texto-suave"> · {{ fechaCompilacion }}</span></div>
           <div class="text-caption texto-suave">
             {{ t('acerca.desarrollado') }} <a class="enlace" :href="autor" target="_blank" rel="noopener noreferrer">Michael Scott B.</a>
           </div>
@@ -85,13 +85,16 @@ const fechaCompilacion = computed(() => {
   const m = /\+(\d{2})(\d{2})(\d{4})$/.exec(version.value)
   return m ? new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1])).toLocaleDateString(idioma.value, { dateStyle: 'long' }) : ''
 })
-const urlNovedades = computed(() => `${repositorio}/releases/tag/${encodeURIComponent(version.value)}`)
+// Sin fecha es una compilación de desarrollo: no tiene página propia y se enlaza la lista de versiones.
+const versionCorta = computed(() => version.value.replace(/\+\d{8}$/, ''))
+const urlNovedades = computed(() => `${repositorio}/releases` + (fechaCompilacion.value ? `/tag/${encodeURIComponent(version.value)}` : ''))
 
 const estadoActualizacion = computed(() => {
   const a = actualizacion.value
   if (a?.disponible) return t('acerca.hayNueva', { version: a.version })
   if (a?.fallo) return t('actualizacion.falloConsulta')
-  if (a && !a.buscar) return t('acerca.sinBuscar')
+  if (!a) return t('acerca.sinComprobar')
+  if (!a.buscar) return t('acerca.sinBuscar')
   return t('acerca.alDia')
 })
 async function buscar() {
@@ -132,5 +135,8 @@ const detalles = computed<[string, string, string?][]>(() => {
   }
   return lista
 })
-const textoSoporte = computed(() => ['Tramtai', ...detalles.value.map((d) => `${d[0]}: ${d[1]}`)].join('\n'))
+// Se pega en una incidencia pública: la carpeta del usuario va como ~ para no publicar su nombre (también con el
+// nombre corto de Windows, como ADMINI~1).
+const carpetaUsuario = /(?:[A-Za-z]:\\Users\\|\/home\/|\/Users\/)[^\\/\n]+/g
+const textoSoporte = computed(() => ['Tramtai', ...detalles.value.map((d) => `${d[0]}: ${d[1]}`)].join('\n').replace(carpetaUsuario, '~'))
 </script>

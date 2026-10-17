@@ -20,7 +20,7 @@
     </q-select>
     <!-- Cada agente de respaldo puede llevar su propio esfuerzo; sin elegir, el del principal o el de su CLI. -->
     <div v-for="(r, i) in respaldoDividido" :key="r.base" class="q-pl-md">
-      <SelectorEsfuerzo v-if="r.niveles.length" :model-value="r.esfuerzo" :niveles="r.niveles" :etiqueta="t('receta.esfuerzoDe', { agente: r.nombre })"
+      <SelectorEsfuerzo v-if="r.niveles.length" :model-value="r.esfuerzo" :niveles="modelValue.esfuerzo ? ['agente', ...r.niveles] : r.niveles" :etiqueta="t('receta.esfuerzoDe', { agente: r.nombre })"
         :vacio="vacioRespaldo(r.base, r.niveles)" hint="" @update:model-value="(v: string) => esfuerzoRespaldo(i, v)" />
       <div v-else class="text-caption texto-suave row items-center no-wrap">
         <q-icon name="o_psychology" size="18px" class="q-mr-xs" />{{ t('receta.respaldoSinEsfuerzo', { agente: r.nombre }) }}
@@ -67,8 +67,11 @@ const opciones = computed(() => props.catalogo.map(opcionModelo))
 // El respaldo es agente o agente/modelo: un perfil no sirve porque da un modelo distinto por agente.
 const opcionesRespaldo = computed(() => props.catalogo.filter((m) => !m.perfil).map(opcionModelo))
 // Las entradas de respaldo son agente[/modelo][+esfuerzo]: el selector elige las bases y cada una conserva su esfuerzo.
+// «agente» (el esfuerzo de su propio CLI) solo se distingue de «igual que el principal» si el principal tiene uno; si no,
+// son lo mismo y se muestra como el vacío.
 const respaldoDividido = computed(() => props.modelValue.respaldo.map((e) => {
   const r = dividirRespaldo(e)
+  if (r.esfuerzo === 'agente' && !props.modelValue.esfuerzo) r.esfuerzo = ''
   return { ...r, niveles: esfuerzosDe(props.catalogo, r.base), nombre: opcionesRespaldo.value.find((o) => o.value === r.base)?.label ?? r.base }
 }))
 const basesRespaldo = computed(() => respaldoDividido.value.map((r) => r.base))

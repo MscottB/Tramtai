@@ -962,6 +962,28 @@ func TestRespaldoRestanteConservaElDelPrincipal(t *testing.T) {
 	}
 }
 
+// Sin esfuerzo en el principal: tras responder un respaldo con el suyo, el resto del respaldo no lo hereda al
+// reintentar; usa el de su propio CLI, como en la petición original.
+func TestRespaldoSinEsfuerzoPrincipalNoHeredaDelRespaldo(t *testing.T) {
+	alm := abrir(t)
+	var n atomic.Int32
+	visto := make(chan string, 4)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)}, "codex": primeroBien{&n}, "otro": esfuerzoVisto{visto}}, 2)
+	tr := esperar(t, alm, enviar(t, p, conRespaldo("codex+bajo", "otro")), nucleo.Completado)
+	if tr.Solicitud.Agente != "codex" || tr.Solicitud.Esfuerzo != "bajo" {
+		t.Fatalf("respondió codex con bajo: %+v", tr.Solicitud)
+	}
+	nuevo, err := p.Reintentar(ctx, tr.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	esperar(t, alm, nuevo.ID, nucleo.Completado)
+	if e := <-visto; e != "" {
+		t.Fatalf("otro usa el esfuerzo de su CLI, no el bajo de codex: %q", e)
+	}
+}
+
 func TestRespaldoConEsfuerzoPropio(t *testing.T) {
 	alm := abrir(t)
 	visto := make(chan string, 4)

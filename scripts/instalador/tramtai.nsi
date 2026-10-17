@@ -16,8 +16,8 @@ SetCompressor /SOLID lzma
 !define RAIZ "..\.."
 
 Name "Tramtai"
-; El título cambia a «Actualizar Tramtai» si ya está instalado: .onInit fija $tituloVentana y NSIS lo usa cada vez
-; que rehace el título (lo hace en cada fase de la instalación).
+; El título cambia a «Actualizar Tramtai» si ya está instalado: .onInit fija $tituloVentana y NSIS lo lee después y
+; lo reutiliza en cada fase (un WM_SETTEXT desde una página se perdía al cambiar de fase).
 Var tituloVentana
 Caption "$tituloVentana"
 OutFile "${SALIDA}"

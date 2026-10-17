@@ -109,7 +109,7 @@ Cuánto razona el modelo antes de responder. Es opcional: sin él, cada CLI usa 
   - Claude Code (`--effort`), hasta máximo.
   - Codex (`model_reasoning_effort`), hasta muy alto; si se pide máximo, usa muy alto.
   - La API de Gemini y Antigravity lo ignoran.
-- **Respaldo:** cada entrada puede llevar su propio esfuerzo con `+nivel` (`codex/gpt-5.5+alto`); sin él, usa el del principal.
+- **Respaldo:** cada entrada puede llevar su propio esfuerzo con `+nivel` (`codex/gpt-5.5+alto`), o `+agente` para usar el de su CLI aunque el principal tenga uno; sin sufijo, usa el del principal. Tras un salto, el trabajo guarda el respaldo que queda con lo que heredaba ya escrito (`+alto` o `+agente`), así un reintento no hereda el esfuerzo del respaldo que respondió.
 - **Dónde se ve:** `GET /api/v1/modelos` indica en `esfuerzos` los niveles de cada modelo, el trabajo guarda el esfuerzo pedido en `solicitud.esfuerzo` y cada evento `intento` dice el que se usó: el pedido, ajustado al máximo del agente, o con `del_agente: true` el que usa el CLI por su cuenta, si se conoce.
 
 ### Perfiles de ejecución y modo de contexto

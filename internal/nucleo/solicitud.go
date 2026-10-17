@@ -149,7 +149,7 @@ func ValidarRespaldo(lista []string) error {
 		if !reParte.MatchString(agente) || agente == "perfil" || (conModelo && !reParte.MatchString(modelo)) {
 			return NuevoError(CodigoSolicitudInvalida, idioma.Tf("respaldo %q con formato no válido (agente o agente/modelo)", e))
 		}
-		if conNivel && !slices.Contains(NivelesEsfuerzo, nivel) {
+		if conNivel && nivel != EsfuerzoDelAgente && !slices.Contains(NivelesEsfuerzo, nivel) {
 			return NuevoError(CodigoSolicitudInvalida, idioma.Tf("respaldo %q: esfuerzo desconocido %q", e, nivel))
 		}
 		if slices.Contains(vistas, base) {
@@ -159,6 +159,11 @@ func ValidarRespaldo(lista []string) error {
 	}
 	return nil
 }
+
+// EsfuerzoDelAgente, como sufijo de respaldo (codex+agente), deja el esfuerzo que use su CLI en lugar de heredar el del
+// principal. Lo escribe el planificador al saltar si el principal no tenía: la solicitud guardada ya lleva el esfuerzo
+// del respaldo que respondió y el resto no debe heredarlo.
+const EsfuerzoDelAgente = "agente"
 
 // DividirRespaldo separa una entrada de respaldo en agente, modelo (vacío: el predeterminado del agente) y esfuerzo
 // (vacío: el del principal).

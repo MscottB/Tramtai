@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"slices"
 	"strings"
 	"sync"
@@ -318,7 +317,11 @@ func (p *Planificador) Eventos(ctx context.Context, id string, desde int) ([]per
 
 // Registro devuelve los pasos de un trabajo sin el texto de la respuesta: estados, intentos y avisos.
 func (p *Planificador) Registro(ctx context.Context, id string) ([]persistencia.Evento, error) {
-	if _, _, err := p.Eventos(ctx, id, math.MaxInt); err != nil { // comprueba que es de esta instancia
+	instancia, _, err := p.almacen.Estado(ctx, id)
+	if err == nil && instancia != p.opc.Instancia {
+		err = nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
+	}
+	if err != nil {
 		return nil, err
 	}
 	return p.almacen.EventosDeRegistro(ctx, id)
@@ -577,11 +580,19 @@ func (p *Planificador) procesar(id string, esperando func()) {
 			return
 		}
 		// Lo guardado debe seguir valiendo al reintentar o reencolar: el agente nuevo con el esfuerzo que usa y el
-		// respaldo restante con el del principal escrito, porque la solicitud guardada ya no lo tendrá.
+		// respaldo restante con lo que heredaba del principal escrito, porque la solicitud guardada ya no lo tendrá
+		// (sin esfuerzo en el principal, +agente: el de su propio CLI).
 		esfuerzo := cmp.Or(siguiente.esfuerzo, t.Solicitud.Esfuerzo)
+		if esfuerzo == nucleo.EsfuerzoDelAgente {
+			esfuerzo = ""
+		}
+		herencia := t.Solicitud.Esfuerzo
+		if herencia == "" && esfuerzo != "" {
+			herencia = nucleo.EsfuerzoDelAgente
+		}
 		var restante []string
 		for _, c := range lista[i+2:] {
-			c.esfuerzo = cmp.Or(c.esfuerzo, t.Solicitud.Esfuerzo)
+			c.esfuerzo = cmp.Or(c.esfuerzo, herencia)
 			restante = append(restante, c.String())
 		}
 		if err := p.almacen.CambiarAgente(fondo, id, siguiente.agente, siguiente.modelo, esfuerzo, restante); err != nil && p.opc.Registros != nil {
@@ -732,7 +743,11 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 	}), limite)
 	defer cancelarEjecucion()
 	solicitud.Agente, solicitud.Modelo, solicitud.PerfilModelo = c.agente, c.modelo, ""
-	if c.esfuerzo != "" {
+	switch c.esfuerzo {
+	case "":
+	case nucleo.EsfuerzoDelAgente:
+		solicitud.Esfuerzo = ""
+	default:
 		solicitud.Esfuerzo = c.esfuerzo
 	}
 	// El registro dice con qué agente, modelo y esfuerzo se intentó; sin contenido del usuario.

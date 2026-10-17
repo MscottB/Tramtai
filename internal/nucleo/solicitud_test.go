@@ -41,7 +41,7 @@ func TestHuellaEstableYSensible(t *testing.T) {
 }
 
 func TestValidarRespaldo(t *testing.T) {
-	for _, ok := range [][]string{nil, {"codex"}, {"codex/gpt-5", "gemini"}, {"a", "b", "c"}, {"codex+alto"}, {"codex/gpt-5+maximo", "claude"}} {
+	for _, ok := range [][]string{nil, {"codex"}, {"codex/gpt-5", "gemini"}, {"a", "b", "c"}, {"codex+alto"}, {"codex/gpt-5+maximo", "claude"}, {"codex+agente"}} {
 		if err := ValidarRespaldo(ok); err != nil {
 			t.Fatalf("%v: %v", ok, err)
 		}
