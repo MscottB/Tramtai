@@ -30,6 +30,9 @@ Sirven a la spec de agentes por módulos (`agentes-modulos.md`) y a los releases
     --no-ask-user --no-auto-update`: ninguna llamada a herramientas y «NO PUEDO» a las tres tareas.
 - **Persistencia:** guarda la sesión (`session-store.db`, `session-state/`) en `COPILOT_HOME`: carpeta privada por
   ejecución que se borra al terminar.
+- **Entrada y errores (pruebas del 2026-10-18):** el mensaje por la entrada estándar funciona (tildes y eñes bien, 1
+  premium request). Un modelo inexistente sale con código 1 y `Error: Model "…" from --model flag is not available.`
+  por stderr, sin gastar créditos. No hay orden para listar modelos.
 - **Archivos:** `--attachment` admite imágenes y documentos nativos; Tramtai seguirá enviando el texto convertido.
 
 ## OpenCode 1.19.3 (`npm install -g opencode-ai`)
