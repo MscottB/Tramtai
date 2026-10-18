@@ -37,6 +37,23 @@
         <div class="col-6 col-sm-3 col-md-2">
           <q-select v-model="orden" :options="opcionesOrden" emit-value map-options dense outlined :label="t('puntos.orden')" />
         </div>
+        <div class="col-12">
+          <q-btn flat dense no-caps color="primary" :icon="masFiltros ? 'expand_less' : 'o_filter_list'" :aria-expanded="masFiltros"
+            :label="filtrosExtra ? t('puntos.masFiltrosN', { n: filtrosExtra }) : t('puntos.masFiltros')" @click="masFiltros = !masFiltros" />
+          <q-btn v-if="hayFiltro" flat dense no-caps color="grey-8" icon="o_filter_alt_off" :label="t('puntos.limpiarFiltros')" class="q-ml-sm" @click="limpiarFiltros" />
+        </div>
+        <template v-if="masFiltros">
+          <div class="col-12 col-sm-4">
+            <q-select v-model="filtroContrato" :options="opcionesContrato" emit-value map-options dense outlined :label="t('puntos.filtroContrato')" />
+          </div>
+          <div class="col-12 col-sm-5">
+            <q-select v-model="filtroCaracteristicas" :options="opcionesCaracteristicas" emit-value map-options multiple use-chips dense outlined
+              :label="t('puntos.filtroCaracteristicas')" :hint="t('puntos.filtroCaracteristicasHint')" />
+          </div>
+          <div class="col-12 col-sm-3">
+            <q-select v-model="filtroUso" :options="opcionesUso" emit-value map-options dense outlined :label="t('puntos.filtroUso')" />
+          </div>
+        </template>
       </q-card-section>
       <q-separator />
       <template v-if="puntos.length">
@@ -376,16 +393,54 @@ const comparar = (a: EstadoPunto, b: EstadoPunto) => {
 }
 // grupos ordena los puntos por grupo (los que no tienen, al final), aplica el buscador, el grupo elegido y el orden;
 // activos y total cuentan el grupo entero, porque activar o detener todas actúa sobre todo el grupo.
-// filtroEstado y filtroAgente se suman al buscador y al grupo; pasa dice si una API los cumple todos.
+// Filtros: el buscador (nombre, grupo, modelo e instrucciones), el grupo, el estado y el agente, y en «Más filtros» lo
+// que acepta (contrato), lo que tiene configurado (características, todas a la vez) y si tiene peticiones; pasa dice si
+// una API los cumple todos.
 const filtroEstado = ref<'todas' | 'activas' | 'detenidas' | 'error'>('todas')
 const filtroAgente = ref<string | null>(null)
-const hayFiltro = computed(() => !!busqueda.value || filtroGrupo.value !== null || filtroEstado.value !== 'todas' || filtroAgente.value !== null)
+const filtroContrato = ref<string | null>(null)
+const filtroCaracteristicas = ref<string[]>([])
+const filtroUso = ref<'todas' | 'con' | 'sin'>('todas')
+const masFiltros = ref(false)
+const filtrosExtra = computed(() => Number(filtroContrato.value !== null) + filtroCaracteristicas.value.length + Number(filtroUso.value !== 'todas'))
+const hayFiltro = computed(() => !!busqueda.value || filtroGrupo.value !== null || filtroEstado.value !== 'todas' || filtroAgente.value !== null ||
+  filtrosExtra.value > 0)
+function limpiarFiltros() {
+  busqueda.value = ''
+  filtroGrupo.value = null
+  filtroEstado.value = 'todas'
+  filtroAgente.value = null
+  filtroContrato.value = null
+  filtroCaracteristicas.value = []
+  filtroUso.value = 'todas'
+}
+const caracteristicas: Record<string, (p: EstadoPunto) => boolean> = {
+  json: (p) => !!p.esquema,
+  respaldo: (p) => !!p.respaldo?.length,
+  presupuesto: (p) => !!presupuestos.value[p.nombre],
+  instrucciones: (p) => !!p.instrucciones?.trim(),
+  forzado: (p) => !!p.forzar_modelo,
+  restringida: (p) => !!p.modelos_permitidos?.length,
+}
 function pasa(p: EstadoPunto) {
   const texto = (busqueda.value ?? '').trim().toLowerCase()
   const estado = !activo(p) ? 'detenidas' : p.error ? 'error' : 'activas'
-  return (!texto || p.nombre.toLowerCase().includes(texto)) && (filtroEstado.value === 'todas' || filtroEstado.value === estado) &&
-    (filtroAgente.value === null || (p.agente ?? '') === filtroAgente.value)
+  const buscable = [p.nombre, p.grupo, idModelo(p), p.instrucciones].filter(Boolean).join(' ').toLowerCase()
+  return (!texto || buscable.includes(texto)) && (filtroEstado.value === 'todas' || filtroEstado.value === estado) &&
+    (filtroAgente.value === null || (p.agente ?? '') === filtroAgente.value) &&
+    (filtroContrato.value === null || p.contratos.includes(filtroContrato.value)) &&
+    filtroCaracteristicas.value.every((c) => caracteristicas[c]?.(p)) &&
+    (filtroUso.value === 'todas' || (filtroUso.value === 'con') === !!uso.value[p.nombre]?.peticiones)
 }
+const opcionesContrato = computed(() => [{ label: t('puntos.contratosTodos'), value: null }, ...contratos.map((value) => ({ label: nombreContrato(value), value }))])
+const opcionesCaracteristicas = computed(() => [
+  { label: t('puntos.carJson'), value: 'json' }, { label: t('puntos.carRespaldo'), value: 'respaldo' },
+  { label: t('puntos.carPresupuesto'), value: 'presupuesto' }, { label: t('puntos.carInstrucciones'), value: 'instrucciones' },
+  { label: t('puntos.carForzado'), value: 'forzado' }, { label: t('puntos.carRestringida'), value: 'restringida' },
+])
+const opcionesUso = computed(() => [
+  { label: t('puntos.usoTodas'), value: 'todas' }, { label: t('puntos.usoCon'), value: 'con' }, { label: t('puntos.usoSin'), value: 'sin' },
+])
 const opcionesEstado = computed(() => [
   { label: t('puntos.estadoTodas'), value: 'todas' }, { label: t('puntos.estadoActivas'), value: 'activas' },
   { label: t('puntos.estadoDetenidas'), value: 'detenidas' }, { label: t('puntos.estadoError'), value: 'error' },
@@ -444,7 +499,7 @@ const filasPagina = computed(() => {
   }
   return lista
 })
-watch([busqueda, filtroGrupo, filtroEstado, filtroAgente, orden], () => (pagina.value = 1))
+watch([busqueda, filtroGrupo, filtroEstado, filtroAgente, filtroContrato, filtroCaracteristicas, filtroUso, orden], () => (pagina.value = 1))
 watch(totalPaginas, (n) => pagina.value > n && (pagina.value = n))
 
 // pestana es la pestaña abierta: las APIs por aplicación o la API principal; se recuerda en este navegador.

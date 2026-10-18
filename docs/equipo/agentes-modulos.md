@@ -100,6 +100,13 @@ sigue:
   - **«API principal»**, con la guía de URL, la clave, los modelos, los ejemplos y el presupuesto del espacio.
 - En «APIs por aplicación»:
   - **Filtros:** los de ahora (buscador, grupo y orden), más estado (activas, detenidas, con error) y agente.
+  - **Más filtros** (pedido por el usuario durante la implementación; Mis APIs tiene más filtros que Agentes):
+    - un botón con el número de filtros activos y «Quitar filtros»;
+    - qué acepta (OpenAI, Anthropic o API propia);
+    - qué tiene, todo lo elegido a la vez: respuesta JSON, respaldo, presupuesto, instrucciones, modelo forzado o modelos
+      restringidos;
+    - si tiene peticiones;
+    - el buscador también encuentra por grupo, modelo e instrucciones.
   - **Páginas:** de 20 APIs, con «Mostrando 21–40 de 57»; los grupos se ven dentro de cada página.
   - **Reinicio:** al cambiar un filtro, se vuelve a la primera página.
   - **Con pocas APIs:** si caben en una página, no se ve la paginación; si hay menos de 2, tampoco los filtros (como
