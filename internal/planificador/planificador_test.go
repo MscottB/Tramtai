@@ -1296,6 +1296,10 @@ func TestLineaRegistroEscapada(t *testing.T) {
 	opc.Registros = &registro
 	p := iniciar(t, alm, adaptadores.Simulado{Error: nucleo.NuevoError(nucleo.CodigoErrorAgente, "fallo\n10:00:00 global completado trabajo_falso")}, 1, opc)
 	esperar(t, alm, enviar(t, p, solicitud("x")), nucleo.Fallido)
+	p.Detener() // la línea se escribe al cerrar el trabajo: leerla antes sería una carrera (go test -race)
+	if registro.Len() == 0 {
+		t.Fatal("el trabajo no dejó línea en el registro")
+	}
 	for _, linea := range strings.Split(registro.String(), "\n") {
 		if strings.HasPrefix(linea, "10:00:00") {
 			t.Fatalf("un mensaje del CLI falsificó una línea del registro:\n%s", registro.String())
