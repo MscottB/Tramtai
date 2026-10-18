@@ -14,6 +14,7 @@ import (
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes/claude"
 	"tramtai/internal/agentes/codex"
+	"tramtai/internal/agentes/copilot"
 	"tramtai/internal/nucleo"
 )
 
@@ -54,6 +55,10 @@ func probar(t *testing.T, a adaptadores.Adaptador, modelo string) {
 
 func TestClaudeReal(t *testing.T) {
 	probar(t, claude.Claude{Programa: "claude", Autenticacion: adaptadores.NuevoModo(autenticacion())}, "haiku")
+}
+
+func TestCopilotReal(t *testing.T) {
+	probar(t, copilot.Copilot{Programa: "copilot", Autenticacion: adaptadores.NuevoModo(autenticacion())}, os.Getenv("TRAMTAI_PRUEBA_MODELO_COPILOT"))
 }
 
 func TestCodexReal(t *testing.T) {
