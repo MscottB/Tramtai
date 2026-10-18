@@ -51,7 +51,7 @@ a { color: var(--acento); }
 .envoltura { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
 h1, h2, h3 { font-family: var(--titulo); letter-spacing: -0.022em; line-height: 1.15; margin: 0; }
 h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); }
-h3 { font-size: 1.1rem; letter-spacing: -0.01em; }
+h3 { font-size: 1.25rem; letter-spacing: -0.01em; }
 p { margin: 0; }
 .suave { color: var(--texto-suave); }
 :focus-visible { outline: 3px solid var(--acento); outline-offset: 3px; border-radius: 6px; }
@@ -91,12 +91,12 @@ p { margin: 0; }
 .chapa { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px; background: var(--acento-suave); color: var(--acento); font-size: .85rem; font-weight: 600; }
 .chapa::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .portada h1 { font-size: clamp(2.4rem, 6vw, 4.2rem); margin: 20px auto 18px; max-width: 14em; }
-.portada h1 em, .destacado h2 em { font-style: normal; background: linear-gradient(90deg, var(--acento), var(--codex)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.portada h1 em, .destacado h2 em { font-style: normal; color: var(--acento); }
 .portada .entrada { font-size: 1.18rem; color: var(--texto-suave); max-width: 38em; margin: 0 auto; }
 .acciones { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0 14px; }
 .portada .acciones { justify-content: center; }
 .nota { font-size: .875rem; color: var(--texto-suave); }
-.mapa { background: var(--superficie); border: 1px solid color-mix(in srgb, var(--acento) 35%, var(--borde)); border-radius: 22px; box-shadow: var(--sombra), 0 0 60px color-mix(in srgb, var(--acento) 14%, transparent); padding: 24px; max-width: 760px; margin: 48px auto 0; }
+.mapa { background: var(--superficie); border: 1px solid color-mix(in srgb, var(--acento) 35%, var(--borde)); border-radius: 22px; box-shadow: var(--sombra); padding: 24px; max-width: 760px; margin: 48px auto 0; }
 .mapa svg { width: 100%; height: auto; display: block; }
 .mapa text { font-family: var(--fuente); }
 .tranvia { offset-path: path('M 52 160 L 150 160'); animation: viaje 4.5s cubic-bezier(.45, 0, .2, 1) infinite; }
@@ -109,7 +109,7 @@ section { padding: 72px 0; }
 .grupo-funciones:first-child { margin-top: 0; }
 /* Capturas de la app: la del tema efectivo (el del sistema o el elegido). */
 .captura { margin: 0; }
-.captura img { width: 100%; height: auto; border: 1px solid color-mix(in srgb, var(--acento) 30%, var(--borde)); border-radius: var(--radio); box-shadow: var(--sombra), 0 0 40px color-mix(in srgb, var(--acento) 10%, transparent); }
+.captura img { width: 100%; height: auto; border: 1px solid color-mix(in srgb, var(--acento) 30%, var(--borde)); border-radius: var(--radio); box-shadow: var(--sombra); }
 .solo-oscuro { display: none; }
 :root[data-tema="oscuro"] .solo-oscuro { display: block; }
 :root[data-tema="oscuro"] .solo-claro { display: none; }
@@ -163,9 +163,9 @@ section { padding: 72px 0; }
 .rejilla { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 /* Agentes: una tarjeta por agente con su sigla y el color de su línea (--c) */
 .agentes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; }
-.agente { background: var(--superficie); border: 1px solid var(--borde); border-top: 6px solid var(--c); border-radius: var(--radio); padding: 20px; }
+.agente { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 20px; }
 .agente header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.agente h3 { margin: 0; font-size: 1.02rem; }
+.agente h3 { margin: 0; font-size: 1.15rem; }
 .sigla { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; border: 4px solid var(--c); font: 700 .72rem var(--titulo); color: var(--texto); }
 .agente p { color: var(--texto-suave); font-size: .92rem; margin: 0 0 10px; }
 .agente ul { margin: 0; padding-left: 18px; color: var(--texto-suave); font-size: .86rem; }
