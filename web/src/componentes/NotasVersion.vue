@@ -15,19 +15,18 @@
       </section>
     </template>
     <p v-else class="notas__texto">{{ textoLibre }}</p>
-    <q-btn v-if="enIngles && pagina" flat dense no-caps color="primary" icon-right="o_open_in_new" class="q-px-none"
+    <q-btn v-if="pagina" flat dense no-caps color="primary" icon-right="o_open_in_new" class="q-px-none"
       :label="t('actualizacion.todosLosCambios')" :href="pagina" target="_blank" rel="noopener" />
   </div>
 </template>
 
 <script setup lang="ts">
-// Las notas de cada versión salen de scripts/version.ps1: un título, un resumen opcional, «Cambios desde …:» y
-// secciones («Nuevas funciones:», «Correcciones:»…) con elementos «- asunto», sus detalles «  - …» y líneas que
-// continúan la anterior. Se dibujan como la red de la app: cada sección es una línea y cada cambio, una estación.
-// Si el texto no tiene secciones, se muestra tal cual, con sus párrafos y viñetas.
-// Desde la v0.44 las notas terminan con un bloque «## English» (título y resumen en inglés; la lista de cambios sale
-// de los commits, en español): en inglés se muestra ese resumen, sin el título ni la línea que remite a la lista, y
-// un enlace a la página de la versión. Las versiones anteriores no lo tienen y se ven en español.
+// Las notas de cada versión salen de scripts/version.ps1: un título, un resumen y, si hace falta, secciones
+// («Novedades:», «Mejoras:», «Correcciones:», o en inglés «New:», «Fixes:»…) con elementos «- …» y sus detalles «  - …».
+// Se dibujan como la red de la app: cada sección es una línea y cada cambio, una estación. Sin secciones, el texto se
+// muestra con sus párrafos y viñetas. Las notas terminan con el enlace a la comparación en GitHub, que se muestra como
+// el botón «Ver todos los cambios en GitHub» (también en las versiones anteriores, con la página del release).
+// Desde la v0.44 llevan un bloque «## English»: en inglés se muestra ese bloque; las anteriores se ven en español.
 import { computed } from 'vue'
 import { idioma, t } from '../i18n'
 
@@ -39,10 +38,13 @@ const partes = computed(() => {
 })
 const enIngles = computed(() => idioma.value === 'en' && partes.value.en !== '')
 const elegido = computed(() => (enIngles.value ? partes.value.en : partes.value.es))
+// Sin secciones, el texto tal cual, sin el título ni la línea con el enlace (va como botón).
 const textoLibre = computed(() =>
-  enIngles.value
-    ? elegido.value.split('\n').filter((l) => !/^Tramtai v\S+$/.test(l.trim()) && !/^Full list of changes/.test(l.trim())).join('\n').trim()
-    : elegido.value,
+  elegido.value
+    .split('\n')
+    .filter((l) => !/^Tramtai v\S+$/.test(l.trim()) && !/^(Full list of changes|(Cambios técnicos|Technical changes): https?:)/.test(l.trim()))
+    .join('\n')
+    .trim(),
 )
 
 type Tipo = 'nuevo' | 'arreglo' | 'incompatible' | 'otro'
@@ -57,9 +59,9 @@ interface Seccion {
 }
 
 function tipoDe(titulo: string): Tipo {
-  if (/incompatible/i.test(titulo)) return 'incompatible'
-  if (/nueva|nuevo|funci/i.test(titulo)) return 'nuevo'
-  if (/correcci|arreglo/i.test(titulo)) return 'arreglo'
+  if (/incompatible|breaking/i.test(titulo)) return 'incompatible'
+  if (/nueva|nuevo|novedad|funci|new|feature/i.test(titulo)) return 'nuevo'
+  if (/correcci|arreglo|fix/i.test(titulo)) return 'arreglo'
   return 'otro'
 }
 
@@ -73,7 +75,8 @@ const analizadas = computed(() => {
   for (const bruta of elegido.value.split('\n')) {
     const linea = bruta.trimEnd()
     const limpia = linea.trim()
-    if (!limpia || /^Tramtai v\S+$/.test(limpia) || /^Cambios desde .*:$/.test(limpia) || /^Full list of changes/.test(limpia)) continue
+    if (!limpia || /^Tramtai v\S+$/.test(limpia) || /^Cambios desde .*:$/.test(limpia) || /^Full list of changes/.test(limpia) ||
+      /^(Cambios técnicos|Technical changes): https?:\/\//.test(limpia)) continue
     if (!/^[\s-]/.test(linea) && limpia.endsWith(':')) {
       seccion = { titulo: limpia.slice(0, -1), tipo: tipoDe(limpia), items: [] }
       secciones.push(seccion)

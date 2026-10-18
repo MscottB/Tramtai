@@ -5,12 +5,12 @@ import (
 	"tramtai/internal/nucleo"
 )
 
-// Ficha es la de Antigravity (agy) para el catálogo de agentes. Experimental: no se usa desde apps ni APIs hasta que su
-// canario pase con el CLI real.
+// Ficha es la de Antigravity (agy) para el catálogo de agentes. Solo con la clave de la Gemini API. No se usa desde apps ni
+// APIs hasta que su canario pase con esa clave (el de la M0, con el CLI real y el hook que niega las herramientas, pasa).
 var Ficha = adaptadores.Ficha{
 	Nombre: "antigravity", NombreVisible: "Antigravity", Programa: "Antigravity CLI", Codigo: "AG",
 	ColorClaro: "#db2777", ColorOscuro: "#f472b6", Orden: 40,
-	Streaming: "final", SalidaEstructurada: true,
+	Streaming: "tokens", ValoresEsfuerzo: valoresEsfuerzo,
 	Autenticaciones: []string{adaptadores.AutenticacionClaveAPI},
 	VariablesClave:  []string{"GEMINI_API_KEY"},
 	Comando:         "agy", Concurrencia: 1,

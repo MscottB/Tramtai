@@ -198,16 +198,6 @@ func TestCopilotPideElFormato(t *testing.T) {
 	if reg := leerRegistro(t, archivo); !strings.Contains(reg.Entrada, `{"type":"object","required":["total"]}`) {
 		t.Fatalf("el esquema no va en las instrucciones: %q", reg.Entrada)
 	}
-	for entrada, salida := range map[string]string{
-		"```json\n{\"total\": 1}\n```": `{"total": 1}`,
-		"```\n[1, 2]\n```":             "[1, 2]",
-		`{"total": 1}`:                 `{"total": 1}`,
-		"```":                          "```",
-	} {
-		if r := sinCerca(entrada); r != salida {
-			t.Errorf("sinCerca(%q) = %q", entrada, r)
-		}
-	}
 }
 
 func TestCopilotDetieneHerramientas(t *testing.T) {

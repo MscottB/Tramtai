@@ -4,15 +4,25 @@
 #   "feat:"                                    -> menor  (X.Y+1.0)
 #   cualquier otro commit (fix, docs, chore…)  -> parche (X.Y.Z+1)
 # DDMMAAAA es la fecha del commit versionado. Sin commits nuevos devuelve la etiqueta tal cual; sin etiquetas parte de 0.0.0.
-# Uso: scripts/version.ps1 [-Hasta <commit>] [-Resumen <texto>] [-ResumenEn <text>] [-Explicar] [-Etiquetar]
-#   -Explicar   muestra las notas de la versión (los cambios agrupados por tipo)
-#   -Etiquetar  crea la etiqueta anotada con esas notas como mensaje (no la sube)
-#   -Resumen    texto que encabeza las notas, para explicar lo que los mensajes de commit no dicen
-#   -ResumenEn  el mismo resumen en inglés: va al final, tras «## English», y la app lo muestra en inglés
-#               (obligatorio al etiquetar con -Resumen; la lista de cambios sale de los commits, en español)
+# Uso: scripts/version.ps1 [-Hasta <commit>] [-Resumen <texto|archivo>] [-ResumenEn <text|file>] [-Explicar] [-Etiquetar]
+#   -Explicar   muestra las notas y, aparte, los commits que entran en la versión (estos no van en las notas)
+#   -Etiquetar  crea la etiqueta anotada con las notas como mensaje (no la sube); exige -Resumen y -ResumenEn
+#   -Resumen    las notas para quien usa Tramtai, cortas y sin detalles internos (el repositorio es público):
+#               secciones «Novedades:», «Mejoras:» o «Correcciones:» con viñetas «- …». Texto o ruta de un archivo.
+#   -ResumenEn  las mismas notas en inglés: van tras «## English» y la app las muestra si está en inglés
+# Las notas terminan con el enlace a la comparación en GitHub, para quien quiera el detalle técnico.
 param([string]$Hasta = 'HEAD', [string]$Resumen = '', [string]$ResumenEn = '', [switch]$Etiquetar, [switch]$Explicar)
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+# Las notas pueden venir en un archivo: la ruta se resuelve desde donde se lanza, antes de ir a la raíz del repositorio.
+function Leer-Notas([string]$valor) {
+    if (-not $valor) { return '' }
+    if (Test-Path -LiteralPath $valor -PathType Leaf) { return (Get-Content -Raw -Encoding UTF8 -LiteralPath $valor).Trim() }
+    if ($valor -match '\.(txt|md)$') { throw "No existe el archivo de notas: $valor" }
+    $valor
+}
+$Resumen = Leer-Notas $Resumen
+$ResumenEn = Leer-Notas $ResumenEn
 Push-Location (Join-Path $PSScriptRoot '..')
 try {
     $ultima = git describe --tags --abbrev=0 --match 'v[0-9]*' $Hasta 2>$null
@@ -51,18 +61,23 @@ try {
     $fecha = git log -1 --format='%cd' --date='format:%d%m%Y' $Hasta
     $version = if ($nivel -eq 0 -and $ultima) { $ultima } else { "v$mayor.$menor.$parche+$fecha" }
 
-    $notas = "Tramtai $version"
-    if ($Resumen) { $notas += "`n`n$Resumen" }
-    $notas += "`n`nCambios desde $(if ($ultima) { $ultima } else { 'el inicio del proyecto' }):"
-    foreach ($g in $grupos.Keys) {
-        if ($grupos[$g].Count) { $notas += "`n`n${g}:`n" + ($grupos[$g] -join "`n") }
+    $comparar = if ($ultima) { "https://github.com/MscottB/Tramtai/compare/$([uri]::EscapeDataString($ultima))...$([uri]::EscapeDataString($version))" } else { '' }
+    $notas = "Tramtai $version`n`n$Resumen"
+    if ($comparar) { $notas += "`n`nCambios técnicos: $comparar" }
+    $notas += "`n`n## English`n`nTramtai $version`n`n$ResumenEn"
+    if ($comparar) { $notas += "`n`nTechnical changes: $comparar" }
+    if ($Explicar) {
+        Write-Host $notas`n
+        Write-Host "Commits desde $(if ($ultima) { $ultima } else { 'el inicio' }) (no van en las notas):"
+        foreach ($g in $grupos.Keys) {
+            if ($grupos[$g].Count) { Write-Host "`n${g}:`n$($grupos[$g] -join "`n")" }
+        }
+        Write-Host ''
     }
-    if ($ResumenEn) { $notas += "`n`n## English`n`nTramtai $version`n`n$ResumenEn`n`nFull list of changes (in Spanish) above." }
-    if ($Explicar) { Write-Host $notas`n }
 
     if ($Etiquetar) {
         if ($nivel -eq 0) { throw "No hay commits nuevos desde $ultima." }
-        if ($Resumen -and -not $ResumenEn) { throw 'Falta -ResumenEn: las notas van también en inglés.' }
+        if (-not $Resumen -or -not $ResumenEn) { throw 'Faltan -Resumen y -ResumenEn: las notas se escriben para quien usa Tramtai, en español e inglés.' }
         if ($Hasta -eq 'HEAD' -and (git status --porcelain)) { throw 'Hay cambios sin confirmar: haz commit antes de etiquetar.' }
         $archivo = New-TemporaryFile
         try {

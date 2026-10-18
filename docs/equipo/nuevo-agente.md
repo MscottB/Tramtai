@@ -2,7 +2,7 @@
 
 Cada agente vive en su módulo, `internal/agentes/<nombre>`, con su adaptador, su ficha y sus pruebas. El resto del código
 (servicio, planificador, API, Web UI) pregunta al catálogo, `internal/agentes`, y no nombra agentes: lo comprueba
-`TestSinNombresFuera`. Un agente es un release (v0.44 Copilot CLI, v0.45 OpenCode, v0.46 Hermes Agent).
+`TestSinNombresFuera`. Un agente es un release (v0.44 Copilot CLI, v0.46 OpenCode, v0.47 Hermes Agent).
 
 ## 1. M0 con el CLI real
 
@@ -27,6 +27,11 @@ Antes de escribir código, se prueba el CLI tal como lo instala el usuario y se 
   Se anota con qué opciones falla y con cuáles pasa. Sin un canario que pase, la ficha va con `PermitidoEnApps: false`.
   Comprueba que la opción que quita las herramientas de verdad se aplica: con Copilot, `--available-tools=` (vacío) se
   ignoraba y el agente leyó el archivo trampa; `--available-tools none` sí deja la lista vacía.
+- **Si el CLI tiene hooks** (como Antigravity), un hook `PreToolUse` que responda `deny` a todo es la forma más firme de
+  dejarlo sin herramientas. Comprueba que niega de verdad (el error debe decir que lo negó el hook, no que el hook
+  falló) y que su orden no lleva comillas: en Windows llegan mal escapadas a `cmd`.
+- **Salvaguarda:** si el CLI informa de las herramientas que ejecuta, corta la ejecución cuando una se complete, como
+  hacen Copilot y Antigravity.
 - **En Windows:** si se instala con npm, en el PATH queda un envoltorio `.cmd`, que `ResolverPrograma` rechaza. Busca el
   ejecutable nativo del paquete de la plataforma, como hace `programa` en `internal/agentes/copilot`.
 
@@ -68,7 +73,8 @@ Una línea en `fichas` de `internal/agentes/catalogo.go`. Con eso:
   - texto en vivo, uso, modelo efectivo y errores clasificados;
   - el entorno sin claves ajenas;
   - la carpeta privada;
-  - que el prompt no empiece por `-`.
+  - que el mensaje vaya por stdin y no en la línea de órdenes;
+  - si el CLI tiene hooks, que el hook niegue de verdad, y que tras una herramienta no se emita nada más.
 - **Del catálogo:** `TestFichasCompletas`, `TestRegistroYValoresPredeterminados` y `TestSinNombresFuera` pasan sin
   tocarlos.
 - **Canario:** el caso del agente en `pruebas/canario/canario_test.go` (`go test -tags canario`), con su modelo más

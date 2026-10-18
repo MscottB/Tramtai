@@ -88,6 +88,6 @@ scripts/               compilar, versionar e icono
 Commits con prefijo `feat:`, `fix:` o `docs:` y la lista de cambios en el cuerpo; después:
 
 ```powershell
-./scripts/version.ps1 -Etiquetar -Resumen "…" -ResumenEn "…"
+./scripts/version.ps1 -Etiquetar -Resumen notas-es.txt -ResumenEn notas-en.txt   # notas cortas, para quien usa Tramtai
 git push origin HEAD; git push origin --tags
 ```

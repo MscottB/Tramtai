@@ -3,7 +3,7 @@
 ## Qué necesitas
 
 - **Windows 10 u 11** (x64), **Linux** (x64 o ARM) o **macOS** 11 o posterior (Intel o Apple Silicon). La app de escritorio existe para los tres.
-- **Al menos un agente:** [Claude Code](https://docs.anthropic.com/claude-code) (`claude`), [Codex CLI](https://developers.openai.com/codex/cli) (`codex`), [GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/set-up/install-copilot-cli) (`copilot`, también con Copilot Free) o una clave de la Gemini API. Antigravity (`agy`) es experimental.
+- **Al menos un agente:** [Claude Code](https://docs.anthropic.com/claude-code) (`claude`), [Codex CLI](https://developers.openai.com/codex/cli) (`codex`), [GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/set-up/install-copilot-cli) (`copilot`, con cualquier plan de Copilot) o una clave de la Gemini API, que también sirve para Antigravity (`agy`).
 - **Opcional, para archivos de Office y PDF:** `uv tool install "markitdown[pdf,docx,pptx,xlsx]==0.1.8"`.
 
 ## 1. Instalar y abrir
@@ -99,7 +99,7 @@ tramtai convertir informe.pdf     # muestra el texto que recibiría el agente, s
 ### Modelos
 
 - `-m` (o `model` en la API) acepta el nombre que entienda el CLI: `haiku`, `sonnet`, `claude-sonnet-5-5`, `gemini-flash-latest`…
-- **Copilot:** `copilot` (o `copilot/auto`) usa el modelo automático, el único de Copilot Free: Copilot elige el modelo,
+- **Copilot:** `copilot` (o `copilot/auto`) usa el modelo automático (el único del plan Free): Copilot elige el modelo,
   Tramtai muestra cuál usó y cada petición gasta créditos del plan. Con un plan de pago, `copilot/<modelo>`. Inicia
   sesión con `copilot login` y elige en Agentes «Usar mi suscripción», o guarda `COPILOT_GITHUB_TOKEN`.
 - `-p` usa un perfil: `rapido`, `equilibrado` o `profundo`. Para Claude equivalen a `haiku`, `sonnet` y `opus`, y para Gemini a los modelos *flash-lite*, *flash* y *pro*. Para Codex defínelos tú:

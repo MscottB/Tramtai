@@ -45,11 +45,11 @@ Además hay dos adaptadores de Google, probados con un servidor y un CLI simulad
   - Streaming por fragmentos (`streamGenerateContent`) y sistema en `systemInstruction`.
   - Salida estructurada nativa (`responseJsonSchema`), modelo efectivo (`modelVersion`) y uso.
   - Perfiles: `gemini-flash-lite-latest`, `gemini-flash-latest` y `gemini-pro-latest`.
-- **`antigravity`:** `agy -p --output-format json`, experimental.
+- **`antigravity`:** `agy --input-format stream-json --output-format stream-json`, con el mensaje por stdin.
   - Funciona solo con `modelProvider: gemini` y la clave del usuario, en un `HOME` privado y temporal; rechaza la suscripción por los términos de Antigravity.
-  - Usa `structured_output` si hay esquema; no hay streaming ni modelo efectivo.
-  - Recibe el prompt como argumento (hasta 28 000 caracteres), así que otros procesos del equipo pueden verlo en la lista de procesos mientras se ejecuta.
-  - **Sin restricción de herramientas validada:** a diferencia de Claude, Codex y Copilot, a `agy` no se le desactivan herramientas, shell ni MCP, porque ninguna opción (`permissions.deny`, `toolPermission: strict`) se ha comprobado aún con el CLI real. Solo lo limitan el `HOME` privado y la carpeta temporal vacía; en `consciente_proyecto` trabaja en la raíz del proyecto. Úsalo solo con prompts de confianza.
+  - **Sin herramientas:** un hook `PreToolUse` (`.agents/hooks.json` en la carpeta de trabajo, `matcher: "*"`) responde `deny` a todas; probado con el CLI real en Windows (lectura, órdenes y web), con la sesión del usuario y fuera de Tramtai. Falta su canario con `GEMINI_API_KEY` y en Linux y macOS. Si una herramienta llegara a completarse, Tramtai corta la ejecución.
+  - Respuesta en vivo (`text_delta`), esfuerzo (`--effort`) y uso. El formato JSON va en las instrucciones: con `--json-schema` agy entrega el JSON con su herramienta `finish`, que el hook niega.
+  - No admite `consciente_proyecto`.
 
 Las conversaciones de varios turnos se enmarcan con el formato `tramtai-turnos-v2`: un bloque `<<<turno-<código> rol=…>>>` por turno, con el contenido intacto y un código aleatorio por petición para que un mensaje no pueda cerrar su turno. Los errores del proveedor se traducen a `limite_uso_proveedor`, `autenticacion_agente`, `modelo_no_disponible` o `error_agente`. Ningún secreto llega a los mensajes: se redactan antes.
 
@@ -78,8 +78,8 @@ intente manipular al modelo; sí que un modelo manipulado haga daño a través d
 - **Agentes:** Claude Code sin herramientas, sin configuración del usuario y con el mensaje por stdin; Codex en solo
   lectura, sin terminal ni búsqueda web, en una carpeta temporal y con el mensaje por stdin; Copilot sin herramientas ni
   MCP, con un `COPILOT_HOME` privado y el mensaje por stdin; Gemini es HTTP. Las pruebas
-  canario lo comprueban con los CLI reales. Antigravity, sin esa comprobación, queda fuera de las apps; su mensaje nunca
-  empieza por `-` y su configuración es privada.
+  canario lo comprueban con los CLI reales. Antigravity va sin herramientas por un hook, con el mensaje por stdin
+  y la configuración privada; queda fuera de las apps hasta que su canario pase con una clave de la Gemini API.
 - **Entrada:** delimitadores con código por petición; topes de mensajes (1.000), esquema (256 KB), cuerpo (16 MB) y
   la comprobación del contexto antes de llamar al CLI.
 - **Cargas y conversión:** identificadores por API, cuota por instancia, solo formatos anunciados, ZIP con límites de
@@ -160,7 +160,7 @@ Por defecto, cada agente se ejecuta aislado en una carpeta temporal vacía. Con 
 |---|---|
 | claude | Trabaja en la raíz del proyecto con `--setting-sources project`. |
 | codex | Trabaja en la raíz del proyecto (`-C`) sin `--ignore-rules`, así que carga su `AGENTS.md`. |
-| antigravity | Trabaja en la raíz del proyecto y carga `AGENTS.md` y `GEMINI.md`. |
+| antigravity | No lo admite (`contexto_no_permitido`): trabaja siempre en la carpeta temporal, donde está su hook. |
 | gemini | No lo admite, porque no tiene proyecto. |
 
 **Límites comprobados (Claude):**
@@ -168,7 +168,7 @@ Por defecto, cada agente se ejecuta aislado en una carpeta temporal vacía. Con 
 - Con suscripción, carga además el `CLAUDE.md` del usuario.
 - Con clave de API usa un `CLAUDE_CONFIG_DIR` privado, así que las reglas del usuario no se cargan.
 
-**En todos los agentes:** siguen desactivados las herramientas, MCP y la sesión persistente (salvo en antigravity, que no tiene restricción de herramientas validada; ver arriba), y antes de ejecutar se registra un `aviso` con el contexto que se carga.
+**En todos los agentes:** siguen desactivados las herramientas, MCP y la sesión persistente, y antes de ejecutar se registra un `aviso` con el contexto que se carga.
 
 ## Supervisión y recuperación
 

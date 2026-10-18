@@ -196,7 +196,7 @@ func validarParaApps(p ConfigPunto) error {
 	for _, agente := range usados {
 		if agente != "" && !agentes.PermitidoEnApps(c, agente) {
 			return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("punto de acceso %s: %s", p.Nombre,
-				idioma.Tf("%s no está habilitado para aplicaciones: todavía no se ha comprobado con el CLI real que no pueda usar herramientas. Úsalo desde Probar o la terminal", agentes.NombreVisible(agente))))
+				idioma.Tf("%s no está habilitado para aplicaciones: todavía no ha pasado su prueba de seguridad (canario). Úsalo desde Probar o la terminal", agentes.NombreVisible(agente))))
 		}
 	}
 	return nil

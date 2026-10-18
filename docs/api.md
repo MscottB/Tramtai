@@ -44,8 +44,8 @@ de la API propia), y **Probar → Ver como código** da la prueba actual como pe
 - **Contenido hostil:** lo que manda una app (mensaje, instrucciones, documentos, esquema) no puede hacer que un agente
   lea archivos, ejecute órdenes o salga a la red: Claude Code y Copilot van sin herramientas y Codex en solo lectura, sin
   terminal ni búsqueda web (comprobado con [canarios](operacion.md#comprobar-el-aislamiento-de-los-agentes)).
-  Antigravity, sin esa comprobación, no se puede usar desde apps ni APIs (`agente_no_disponible`) salvo
-  `adaptadores.antigravity.permitir_apps`. Los delimitadores de turnos y archivos llevan un código por petición, y una
+  Antigravity también va sin herramientas (un hook de agy las niega), pero hasta que su canario pase con una clave de la
+  Gemini API no se puede usar desde apps ni APIs (`agente_no_disponible`) salvo `adaptadores.antigravity.permitir_apps`. Los delimitadores de turnos y archivos llevan un código por petición, y una
   clave de proveedor que aparezca en la salida se tapa (`[REDACTADO]`).
 
 ## API nativa `/api/v1`
@@ -168,8 +168,9 @@ Cuánto razona el modelo antes de responder. Es opcional: sin él, cada CLI usa 
   - Claude Code (`--effort`), hasta máximo.
   - Codex (`model_reasoning_effort`), hasta muy alto; si se pide máximo, usa muy alto.
   - Copilot (`--reasoning-effort`), hasta máximo, solo con un modelo concreto: con `copilot` o `copilot/auto` (el
-    automático, el único del plan gratuito) se ignora y `GET /api/v1/modelos` no lo ofrece.
-  - La API de Gemini y Antigravity lo ignoran.
+    automático, el único del plan Free) se ignora y `GET /api/v1/modelos` no lo ofrece.
+  - Antigravity (`--effort`), hasta máximo.
+  - La API de Gemini lo ignora.
 - **Respaldo:** cada entrada puede llevar su propio esfuerzo con `+nivel` (`codex/gpt-5.5+alto`), o `+agente` para usar el de su CLI aunque el principal tenga uno; sin sufijo, usa el del principal. Tras un salto, el trabajo guarda el respaldo que queda con lo que heredaba ya escrito (`+alto` o `+agente`), así un reintento no hereda el esfuerzo del respaldo que respondió.
 - **Dónde se ve:** `GET /api/v1/modelos` indica en `esfuerzos` los niveles de cada modelo, el trabajo guarda el esfuerzo pedido en `solicitud.esfuerzo` y cada evento `intento` dice el que se usó: el pedido, ajustado al máximo del agente, o con `del_agente: true` el que usa el CLI por su cuenta, si se conoce.
 
