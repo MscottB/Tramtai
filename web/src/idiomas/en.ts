@@ -761,6 +761,7 @@ const en: Textos = {
   'actualizacion.hecha': 'Tramtai was updated to {version}',
   'actualizacion.sinNotas': 'The notes for this version are on the releases page.',
   'actualizacion.verTodas': 'See all releases',
+  'actualizacion.todosLosCambios': 'See every change on GitHub',
   'actualizacion.comprobado': 'Last checked: {hora}',
   'actualizacion.falloConsulta': "Couldn't reach GitHub. Check your connection and try again.",
   'actualizacion.desactivada': 'Off. You have {actual}; you can also check with «tramtai actualizar».',

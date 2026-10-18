@@ -275,3 +275,14 @@ func TestNovedadesCache(t *testing.T) {
 		t.Fatalf("sin caché vuelve a consultar: %d", consultas.Load())
 	}
 }
+
+// Las notas llevan el bloque inglés al final: el recorte deja sitio para las dos partes.
+func TestArmarNotasEnDosIdiomas(t *testing.T) {
+	notas := "Tramtai v0.44.0\n\n" + strings.Repeat("cambio ", 1100) + "\n\n## English\n\nTramtai v0.44.0\n\nSummary."
+	if v := armar("v0.44.0", "", notas); !strings.HasSuffix(v.Notas, "Summary.") {
+		t.Fatalf("se perdió el bloque inglés: …%q", v.Notas[len(v.Notas)-40:])
+	}
+	if v := armar("v0.44.0", "", strings.Repeat("x", 12001)); len([]rune(v.Notas)) != 12001 || !strings.HasSuffix(v.Notas, "…") {
+		t.Fatalf("recorte: %d runas", len([]rune(v.Notas)))
+	}
+}

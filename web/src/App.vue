@@ -191,7 +191,7 @@
           <p v-else-if="!novedades.length" class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.sinNotas') }}</p>
           <template v-else-if="novedades.length === 1">
             <div v-if="novedades[0].version.split('+')[0] !== sesion?.version?.split('+')[0]" class="text-weight-medium q-mt-md">{{ novedades[0].version }}</div>
-            <NotasVersion class="q-mt-md" :texto="novedades[0].notas ?? ''" />
+            <NotasVersion class="q-mt-md" :texto="novedades[0].notas ?? ''" :pagina="novedades[0].url" />
           </template>
           <ListaNovedades v-else :versiones="novedades" />
         </q-card-section>
@@ -232,7 +232,7 @@
           </template>
           <template v-else-if="notasNueva">
             <div class="text-caption texto-suave q-mt-md q-mb-xs">{{ t('actualizacion.novedadesTitulo') }}</div>
-            <NotasVersion :texto="notasNueva" />
+            <NotasVersion :texto="notasNueva" :pagina="paginaNueva" />
           </template>
           <p class="q-mt-md q-mb-none">{{ actualizacion?.instalable ? t('actualizacion.comoInstala') : t('actualizacion.manual') }}</p>
         </q-card-section>
@@ -475,6 +475,7 @@ watch(() => sesion.value?.version, async (version) => {
 const novedadesNueva = ref<Novedad[]>([])
 let novedadesPedidas = ''
 const notasNueva = computed(() => actualizacion.value?.notas ?? '')
+const paginaNueva = computed(() => actualizacion.value?.url)
 watch(() => (dialogoActualizar.value && actualizacion.value?.disponible ? actualizacion.value.version : ''), async (nueva) => {
   if (!nueva || nueva === novedadesPedidas || !actualizacion.value) return
   novedadesPedidas = nueva
