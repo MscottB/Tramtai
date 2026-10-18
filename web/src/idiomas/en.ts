@@ -465,7 +465,7 @@ const en: Textos = {
   'ayuda.funcionaNota': 'Everything happens on your computer: Tramtai has no server of its own and does not see your data. Agents run without tools, so a message or a document cannot make them read files, run commands or go online.',
   'ayuda.guiasTexto': 'The most common tasks, from start to finish. Each guide ends with a button to the page where it is done.',
   'ayuda.g1': 'Connect an app that already uses OpenAI',
-  'ayuda.g1Pasos': 'Open My APIs and copy the OpenAI base URL and the key.\nIn your app or SDK, replace the base URL (base_url) with it and the key (api_key) with the Tramtai one.\nIn the model field put the agent and the model, for example claude/sonnet or perfil/rapido.\nSend a request: it shows up in the History with the agent that answered.',
+  'ayuda.g1Pasos': 'Open My APIs, "Main API" tab, and copy the OpenAI base URL and the key.\nIn your app or SDK, replace the base URL (base_url) with it and the key (api_key) with the Tramtai one.\nIn the model field put the agent and the model, for example claude/sonnet or perfil/rapido.\nSend a request: it shows up in the History with the agent that answered.',
   'ayuda.g2': 'Process documents from your app',
   'ayuda.g2Pasos': 'Use the Tramtai API (/api/v1): it is the only one that accepts files (PDF, Word, Excel, ZIP…).\nUpload each file with POST /cargas and keep its identifier.\nCreate the job with POST /trabajos citing the uploads and follow it live with /eventos; if it drops, resume with Last-Event-ID.\nRead the result with /salida. My APIs has this code ready in curl, Python and Node.',
   'ayuda.g3': 'Create an API that always answers with the same JSON',
@@ -520,6 +520,9 @@ const en: Textos = {
   'ayuda.catApp': 'The app',
   'ayuda.p20': 'Which URL do I use to connect my app?',
   'ayuda.r20': 'It depends on your app. If it already uses the OpenAI SDK, or a tool that lets you change the base URL (LangChain, n8n, an AI editor), use the OpenAI URL; if it uses the Anthropic SDK, the Anthropic one. If you need to send files, follow long jobs, cancel or retry, use the Tramtai API (/api/v1). In My APIs, "Which URL do I use?" compares the three and has examples to copy.',
+  'ayuda.p22': 'Which agents can I use?',
+  'ayuda.r22':
+    'The ones you see in Agents: today Claude Code, Codex, the Gemini API and Antigravity (the last one only from Try and the terminal until it is checked with its real CLI). Each one connects with your subscription or an API key; the ones that are not installed appear at the end of the page, with a link to install them. The search box and filter at the top help when there are many.',
   'ayuda.p21': 'How do I see my test as code?',
   'ayuda.r21': 'In Try, press "View as code" in the recipe: you will see the request in curl, Python or Node through the Tramtai API, in Python or curl through OpenAI and in Python through Anthropic (if the API accepts them), with the key as <your key>. If the test has something only the Tramtai API accepts (files, fallback, a schema through Anthropic), that tab says so.',
   'ayuda.documentacion': 'Full documentation',

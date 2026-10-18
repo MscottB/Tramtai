@@ -32,9 +32,10 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | v0.40.0 | Probar: esfuerzo junto al modelo, esfuerzo por agente de respaldo con su predeterminado, registro con tiempos por etapa, historial breve de pruebas y respuesta con formato Markdown; ventana de progreso al instalar una actualización (dice Actualizar si ya está instalado); Acerca de Tramtai | ✅ |
 | v0.41.0 | Seguridad y límites: la entrada que no cabe en el modelo no llega al CLI (salta al respaldo o falla con entrada_demasiado_grande); Antigravity solo desde Probar y la terminal; cuota y formatos de cargas, topes de conversión y procesos, delimitadores con código, entorno sin secretos, salida sin claves; canarios con los CLI reales; límites a la vista | ✅ |
 | v0.42.0 | API propia explicada: guía «¿Qué URL uso?» en Mis APIs, ejemplos de la API propia en curl, Python y Node, «Ver como código» en Probar y descripción OpenAPI (`/api/v1/openapi.json`, Descargar OpenAPI); el aviso de actualización muestra cada versión que se salta; la versión solo en Acerca de, como en GitHub; selector de modelo agrupado por agente con la versión exacta (también en el respaldo); Ayuda con recorrido, guías paso a paso, conceptos, errores y buscador; agentes no disponibles apartados en el selector y esfuerzo predeterminado en Ajustes; «Buscar actualización ahora» | ✅ |
-| — | Copilot CLI como agente nuevo | ⬜ |
-| — | OpenCode como agente nuevo (`opencode run`), tras su prueba M0 | ⬜ |
-| — | Hermes Agent como agente nuevo, tras su prueba M0 | ⬜ |
+| v0.43.0 | Agentes por módulos: cada agente en `internal/agentes/<nombre>` con su ficha, un catálogo que consulta el resto del código y `GET /api/v1/agentes`; la Web UI saca nombres y colores de las fichas; Mis APIs en pestañas (APIs por aplicación y API principal) con filtro por estado y agente y páginas de 20; Agentes en filas con buscador, filtro y los no instalados aparte; cómo añadir un agente (`nuevo-agente.md`) y la M0 de Copilot CLI, OpenCode y Hermes Agent | ✅ |
+| v0.44 | Copilot CLI como agente nuevo (M0 hecha: `m0-agentes.md`; el usuario tiene Copilot Free, solo modelo automático) | ⬜ |
+| v0.45 | OpenCode como agente nuevo (`opencode run`; M0 hecha) | ⬜ |
+| v0.46 | Hermes Agent como agente nuevo (instalado; falta `hermes setup` del usuario y su M0) | ⬜ |
 | — | Webhooks al terminar un trabajo y avisos de presupuesto (`presupuesto.aviso`, `presupuesto.agotado`) | ⬜ |
 | — | Comparar agentes en Probar | ⬜ |
 | — | Tramtai como servidor MCP | ⬜ |

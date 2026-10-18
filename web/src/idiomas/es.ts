@@ -464,7 +464,7 @@ const es = {
   'ayuda.funcionaNota': 'Todo ocurre en tu equipo: Tramtai no tiene servidor propio ni ve tus datos. Los agentes van sin herramientas, así que un mensaje o un documento no puede hacer que lean archivos, ejecuten órdenes o salgan a internet.',
   'ayuda.guiasTexto': 'Las tareas más comunes, de principio a fin. Cada guía termina con un botón a la página donde se hace.',
   'ayuda.g1': 'Conectar una app que ya usa OpenAI',
-  'ayuda.g1Pasos': 'Abre Mis APIs y copia la URL base para OpenAI y la clave.\nEn tu app o SDK, cambia la URL base (base_url) por esa y la clave (api_key) por la de Tramtai.\nEn el campo model pon el agente y el modelo, por ejemplo claude/sonnet o perfil/rapido.\nEnvía una petición: aparece en el Historial con el agente que respondió.',
+  'ayuda.g1Pasos': 'Abre Mis APIs, pestaña «API principal», y copia la URL base para OpenAI y la clave.\nEn tu app o SDK, cambia la URL base (base_url) por esa y la clave (api_key) por la de Tramtai.\nEn el campo model pon el agente y el modelo, por ejemplo claude/sonnet o perfil/rapido.\nEnvía una petición: aparece en el Historial con el agente que respondió.',
   'ayuda.g2': 'Procesar documentos desde tu app',
   'ayuda.g2Pasos': 'Usa la API propia (/api/v1): es la única que acepta archivos (PDF, Word, Excel, ZIP…).\nSube cada archivo con POST /cargas y guarda su identificador.\nCrea el trabajo con POST /trabajos citando las cargas y síguelo en vivo con /eventos; si se corta, retómalo con Last-Event-ID.\nLee el resultado con /salida. En Mis APIs tienes este código listo en curl, Python y Node.',
   'ayuda.g3': 'Crear una API que responda siempre con el mismo JSON',
@@ -519,6 +519,9 @@ const es = {
   'ayuda.catApp': 'La aplicación',
   'ayuda.p20': '¿Qué URL uso para conectar mi app?',
   'ayuda.r20': 'Depende de tu app. Si ya usa el SDK de OpenAI, o una herramienta que deja cambiar la URL base (LangChain, n8n, un editor con IA), usa la URL para OpenAI; si usa el SDK de Anthropic, la de Anthropic. Si necesitas enviar archivos, seguir tareas largas, cancelar o reintentar, usa la API propia (/api/v1). En Mis APIs, «¿Qué URL uso?» compara las tres y tiene ejemplos para copiar.',
+  'ayuda.p22': '¿Qué agentes puedo usar?',
+  'ayuda.r22':
+    'Los que ves en Agentes: hoy Claude Code, Codex, la API de Gemini y Antigravity (este, solo desde Probar y la terminal hasta comprobarlo con su CLI real). Cada uno se conecta con tu suscripción o con una clave de API; los que no están instalados aparecen al final de la página, con un enlace para instalarlos. El buscador y el filtro de arriba sirven cuando hay muchos.',
   'ayuda.p21': '¿Cómo veo mi prueba como código?',
   'ayuda.r21': 'En Probar, pulsa «Ver como código» en la receta: verás la petición en curl, Python o Node por la API propia, y en Python o curl por OpenAI y en Python por Anthropic (si la API los acepta), con la clave como <tu clave>. Si la prueba lleva algo que solo admite la API propia (archivos, respaldo, esquema por Anthropic), esa pestaña lo avisa.',
   'ayuda.documentacion': 'Documentación completa',
