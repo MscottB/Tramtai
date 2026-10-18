@@ -41,7 +41,7 @@ const enIngles = computed(() => idioma.value === 'en' && partes.value.en !== '')
 const elegido = computed(() => (enIngles.value ? partes.value.en : partes.value.es))
 const textoLibre = computed(() =>
   enIngles.value
-    ? elegido.value.split('\n').filter((l) => !/^Tramtai v\S+$/.test(l.trim()) && !/^Full list of changes/.test(l.trim())).join('\n').trim()
+    ? elegido.value.split('\n').filter((l) => !/^Tramtai v\S+$/.test(l.trim()) && !/^(Full list of changes|Technical changes: https?:)/.test(l.trim())).join('\n').trim()
     : elegido.value,
 )
 
@@ -57,9 +57,9 @@ interface Seccion {
 }
 
 function tipoDe(titulo: string): Tipo {
-  if (/incompatible/i.test(titulo)) return 'incompatible'
-  if (/nueva|nuevo|funci/i.test(titulo)) return 'nuevo'
-  if (/correcci|arreglo/i.test(titulo)) return 'arreglo'
+  if (/incompatible|breaking/i.test(titulo)) return 'incompatible'
+  if (/nueva|nuevo|novedad|funci|new|feature/i.test(titulo)) return 'nuevo'
+  if (/correcci|arreglo|fix/i.test(titulo)) return 'arreglo'
   return 'otro'
 }
 
@@ -73,7 +73,8 @@ const analizadas = computed(() => {
   for (const bruta of elegido.value.split('\n')) {
     const linea = bruta.trimEnd()
     const limpia = linea.trim()
-    if (!limpia || /^Tramtai v\S+$/.test(limpia) || /^Cambios desde .*:$/.test(limpia) || /^Full list of changes/.test(limpia)) continue
+    if (!limpia || /^Tramtai v\S+$/.test(limpia) || /^Cambios desde .*:$/.test(limpia) || /^Full list of changes/.test(limpia) ||
+      /^(Cambios técnicos|Technical changes): https?:\/\//.test(limpia)) continue
     if (!/^[\s-]/.test(linea) && limpia.endsWith(':')) {
       seccion = { titulo: limpia.slice(0, -1), tipo: tipoDe(limpia), items: [] }
       secciones.push(seccion)

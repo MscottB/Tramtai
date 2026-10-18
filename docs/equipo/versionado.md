@@ -24,14 +24,19 @@ Formato: **`vX.Y.Z+DDMMAAAA`**, por ejemplo `v0.1.0+12102026`. La versión **se 
 
 ## Etiquetas y notas de versión
 
-Cada versión publicada tiene una **etiqueta anotada** cuyo mensaje son sus notas: los commits desde la etiqueta anterior agrupados en *Cambios incompatibles*, *Nuevas funciones*, *Correcciones* y *Otros cambios*, con el cuerpo de cada commit. Con `-Resumen` se añade un párrafo inicial que explica lo que los mensajes no dicen, y con `-ResumenEn` el mismo resumen en inglés al final, tras `## English` (obligatorio al etiquetar con `-Resumen`): la app muestra esa parte si está en inglés.
+Cada versión publicada tiene una **etiqueta anotada** cuyo mensaje son sus notas, que GitHub publica en el release y la app muestra en «Novedades». El repositorio es público, así que las notas se escriben para quien usa Tramtai:
+
+- **Cortas y claras:** una frase de resumen y, si hace falta, secciones `Novedades:`, `Mejoras:` o `Correcciones:` con viñetas `- …`, una por cambio que se note al usarlo.
+- **Sin detalles internos:** ni nombres de funciones, archivos o pruebas, ni decisiones de diseño, ni revisiones. Los commits no entran en las notas (`-Explicar` los muestra aparte).
+- **En los dos idiomas:** `-Resumen` en español y `-ResumenEn` en inglés, obligatorios al etiquetar. Cada uno puede ser un texto o la ruta de un archivo. El inglés va tras `## English` y la app lo muestra si está en inglés.
+- Al final se añade el enlace a la comparación en GitHub, para quien quiera el detalle técnico.
 
 ```powershell
 git tag -n99 --sort=creatordate          # todas las versiones con sus notas
 git show v0.1.0+12102026                 # una versión concreta
 ```
 
-En GitHub se ven en *Tags*. Un buen cuerpo de commit produce buenas notas: escribe en él la lista de cambios.
+En GitHub se ven en *Releases* y en *Tags*.
 
 | Etiqueta | Commit | Contenido |
 |---|---|---|
@@ -44,8 +49,7 @@ En GitHub se ven en *Tags*. Un buen cuerpo de commit produce buenas notas: escri
 ```powershell
 ./scripts/version.ps1 -Explicar    # versión resultante y sus notas
 ./scripts/compilar.ps1             # compila bin/tramtai.exe con esa versión incrustada
-./scripts/version.ps1 -Etiquetar   # crea la etiqueta anotada con las notas (exige árbol limpio y commits nuevos)
-./scripts/version.ps1 -Etiquetar -Resumen "Hito M3: …" -ResumenEn "Milestone M3: …"   # con resumen en los dos idiomas
+./scripts/version.ps1 -Etiquetar -Resumen notas-es.txt -ResumenEn notas-en.txt   # crea la etiqueta (árbol limpio y commits nuevos)
 ./scripts/version.ps1 -Hasta <commit> -Etiquetar          # etiqueta un commit anterior
 git push origin --tags             # sube las etiquetas
 ```
