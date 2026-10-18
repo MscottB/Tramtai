@@ -50,7 +50,7 @@ En GitHub se ven en *Releases* y en *Tags*.
 ./scripts/version.ps1 -Explicar    # versión resultante y sus notas
 ./scripts/compilar.ps1             # compila bin/tramtai.exe con esa versión incrustada
 ./scripts/version.ps1 -Etiquetar -Resumen notas-es.txt -ResumenEn notas-en.txt   # crea la etiqueta (árbol limpio y commits nuevos)
-./scripts/version.ps1 -Hasta <commit> -Etiquetar          # etiqueta un commit anterior
+./scripts/version.ps1 -Hasta <commit> -Etiquetar -Resumen notas-es.txt -ResumenEn notas-en.txt   # etiqueta un commit anterior
 git push origin --tags             # sube las etiquetas
 ```
 

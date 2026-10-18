@@ -69,6 +69,25 @@ Sirven a la spec de agentes por módulos (`agentes-modulos.md`) y a los releases
   - las claves de proveedores irán por variables de entorno;
   - el modelo efectivo no aparece en los eventos de texto.
 
+## Antigravity CLI 1.4.2 (repaso del 2026-10-18)
+
+- **Mensaje por stdin:** `agy --input-format stream-json --output-format stream-json -p=` lee una línea
+  `{"event":"user","message":{"role":"user","content":"…"}}`. El `-p` vacío va al final: con un valor aparte, agy toma la
+  opción siguiente como mensaje.
+- **Salida:** `init` (herramientas disponibles), `step_update` (`step_type` `agent_response` con `text_delta` en vivo, o
+  `tool` con `state` `ACTIVE`/`DONE`/`ERROR`) y `result` (`status`, `response`, `error`, `usage` con `input_tokens`,
+  `output_tokens`, `thinking_tokens` y `cache_read_tokens`). No informa el modelo efectivo.
+- **Sin herramientas:** un hook en `.agents/hooks.json` de la carpeta de trabajo, `PreToolUse` con `matcher: "*"` y una
+  orden que imprime `{"decision":"deny",…}`, niega todas: el canario (leer un archivo, ejecutar una orden y abrir una
+  URL) termina con las tres herramientas en `ERROR` «denied by pre-tool hook» y nada filtrado. Se carga aunque la
+  carpeta no sea de confianza. La orden no puede llevar comillas (en Windows llegan como `\"` a `cmd` y el hook falla);
+  se usa un `.cmd` o `.sh` aparte, que admite rutas con espacios.
+- **Esquema:** con `--json-schema`, agy entrega el JSON con su herramienta `finish`, que el hook niega; el formato va en
+  las instrucciones.
+- **Esfuerzo:** `--effort low|medium|high|xhigh|max`.
+- **Pendiente:** el canario con `GEMINI_API_KEY` y `modelProvider: gemini`, que es como lo ejecuta Tramtai (estas pruebas
+  usaron la sesión del usuario directamente con agy, fuera de Tramtai).
+
 ## Hermes Agent 0.22.2
 
 - **Instalación:** instalador oficial de Nous Research en PowerShell (revisado antes: uv, Git portable con SHA-256,
