@@ -392,6 +392,73 @@ func (p *Planificador) Reintentar(ctx context.Context, id string) (nucleo.Trabaj
 	return t, err
 }
 
+// Corregir es un reintento que pide al mismo agente que corrija la respuesta anterior: la conversación sigue con esa
+// respuesta y los problemas que tenía. Solo vale para un trabajo que falló por el esquema y conservó su salida.
+func (p *Planificador) Corregir(ctx context.Context, id string) (nucleo.Trabajo, error) {
+	anterior, err := p.Obtener(ctx, id)
+	if err != nil {
+		return anterior, err
+	}
+	if !anterior.Estado.Terminal() {
+		return anterior, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, idioma.T("solo se reintenta un trabajo terminado"))
+	}
+	if anterior.CodigoError != nucleo.CodigoSalidaNoCumpleEsquema || anterior.Salida == "" {
+		return anterior, nucleo.NuevoError(nucleo.CodigoCorreccionNoDisponible,
+			idioma.T("solo se corrige un trabajo que falló porque la respuesta no cumplía el formato y que conservó esa respuesta (conservar_salida_invalida)"))
+	}
+	if anterior.EntradasEliminadas {
+		return anterior, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("las entradas del trabajo ya vencieron o se eliminaron al terminar; vuelve a enviarlas"))
+	}
+	problemas, err := p.ProblemasSalida(ctx, id)
+	if err != nil {
+		return anterior, err
+	}
+	solicitud := conCorreccion(anterior.Solicitud, anterior.Salida, problemas, anterior.MensajeError)
+	solicitud.Salida.Reintentos = 0 // la corrección manual es una sola
+	t, _, err := p.aceptar(nucleo.ConOrigenPeticion(ctx, anterior.Origen), solicitud, "", anterior.ID, anterior.PuntoAcceso)
+	return t, err
+}
+
+// ProblemasSalida son los problemas de la última validación fallida de un trabajo (nil si no la hubo).
+func (p *Planificador) ProblemasSalida(ctx context.Context, id string) ([]salidas.Problema, error) {
+	eventos, err := p.almacen.Eventos(ctx, id, 0)
+	if err != nil {
+		return nil, err
+	}
+	for i := len(eventos) - 1; i >= 0; i-- {
+		if eventos[i].Tipo == "validacion" {
+			var v validacion
+			if err := json.Unmarshal([]byte(eventos[i].Datos), &v); err != nil {
+				return nil, err
+			}
+			return v.Problemas, nil
+		}
+	}
+	return nil, nil
+}
+
+// validacion es lo que guarda el evento validacion cuando la salida no cumple: correccion es cuántas se habían pedido.
+type validacion struct {
+	Problemas  []salidas.Problema `json:"problemas"`
+	Correccion int                `json:"correccion"`
+}
+
+// conCorreccion sigue la conversación con la respuesta que no cumplía y un mensaje con sus problemas. El mensaje es
+// para el modelo: no se traduce. mensaje sustituye a los problemas si no se conocen.
+func conCorreccion(s nucleo.SolicitudEjecucion, salida string, problemas []salidas.Problema, mensaje string) nucleo.SolicitudEjecucion {
+	var b strings.Builder
+	b.WriteString("Tu respuesta no cumple el formato pedido:\n")
+	for _, pr := range problemas {
+		b.WriteString("- " + pr.Texto + "\n")
+	}
+	if len(problemas) == 0 && mensaje != "" {
+		b.WriteString("- " + mensaje + "\n")
+	}
+	b.WriteString("Devuelve solo el JSON corregido, sin texto adicional.")
+	s.Mensajes = append(slices.Clone(s.Mensajes), nucleo.Mensaje{Rol: "asistente", Contenido: salida}, nucleo.Mensaje{Rol: "usuario", Contenido: b.String()})
+	return s
+}
+
 // Eliminar borra un trabajo terminado de esta instancia.
 func (p *Planificador) Eliminar(ctx context.Context, id string) error {
 	if _, err := p.Obtener(ctx, id); err != nil {
@@ -605,6 +672,7 @@ func (p *Planificador) procesar(id string, esperando func()) {
 	// para no mezclar dos respuestas. El plazo en cola vale hasta el primer intento.
 	lista := candidatos(t)
 	var resultado adaptadores.Resultado
+	var elegido candidato    // el que respondió: las correcciones se le piden a él
 	var usoPrevio nucleo.Uso // lo que gastaron los intentos que fallaron: también cuenta para el presupuesto
 	ejecutado := false       // si algún candidato llegó a ejecutarse (no solo se saltó por tamaño)
 	for i, c := range lista {
@@ -618,13 +686,13 @@ func (p *Planificador) procesar(id string, esperando func()) {
 			estado, err = nucleo.EsperandoAgente, noCabe(medida, c, contexto, p.opc.ReservaSalida)
 		} else {
 			ejecutado = true
-			res, huboTexto, fin, err = p.intentar(ctxTrabajo, id, t, solicitud, c, plazoCola, esperando)
+			res, huboTexto, fin, err = p.intentar(ctxTrabajo, id, t, solicitud, c, plazoCola, esperando, 0)
 		}
 		if fin {
 			return
 		}
 		if err == nil {
-			resultado = res
+			resultado, elegido = res, c
 			resultado.Uso = sumarUso(resultado.Uso, usoPrevio)
 			break
 		}
@@ -678,20 +746,49 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		}
 	}
 
-	if !p.cambiar(id, nucleo.Ejecutando, nucleo.ValidandoSalida, persistencia.Cambio{}) {
-		return
-	}
-	if err := validarSalida(t.Solicitud.Salida, resultado.Salida); err != nil {
-		cambio := persistencia.Cambio{Codigo: nucleo.CodigoSalidaNoCumpleEsquema,
-			Mensaje: nucleo.MensajeDe(err), Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo}
-		if t.Solicitud.Salida.ConservarSalidaInvalida {
-			cambio.Salida = &resultado.Salida // salida bruta conservada, con la retención del resultado
+	// Si la salida no cumple y quedan correcciones, se pide otra al mismo agente (nunca al respaldo) con la respuesta
+	// y sus problemas; cada una suma su uso al trabajo.
+	reintentos := min(t.Solicitud.Salida.Reintentos, nucleo.MaximoReintentosSalida)
+	for correccion := 0; ; correccion++ {
+		if !p.cambiar(id, nucleo.Ejecutando, nucleo.ValidandoSalida, persistencia.Cambio{}) {
+			return
 		}
-		p.cambiar(id, nucleo.ValidandoSalida, nucleo.Fallido, cambio)
-		return
+		err := validarSalida(t.Solicitud.Salida, resultado.Salida)
+		if err == nil {
+			p.cambiar(id, nucleo.ValidandoSalida, nucleo.Completado, persistencia.Cambio{Salida: &resultado.Salida,
+				Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo})
+			return
+		}
+		problemas := salidas.ProblemasDe(err)
+		if datos, errJSON := json.Marshal(validacion{Problemas: problemas, Correccion: correccion}); errJSON == nil {
+			_ = p.almacen.AgregarEvento(fondo, id, "validacion", string(datos))
+		}
+		if correccion >= reintentos {
+			cambio := persistencia.Cambio{Codigo: nucleo.CodigoSalidaNoCumpleEsquema,
+				Mensaje: nucleo.MensajeDe(err), Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo}
+			if t.Solicitud.Salida.ConservarSalidaInvalida {
+				cambio.Salida = &resultado.Salida // salida bruta conservada, con la retención del resultado
+			}
+			p.cambiar(id, nucleo.ValidandoSalida, nucleo.Fallido, cambio)
+			return
+		}
+		if !p.cambiar(id, nucleo.ValidandoSalida, nucleo.EsperandoAgente, persistencia.Cambio{Uso: &resultado.Uso}) {
+			return
+		}
+		solicitud = conCorreccion(solicitud, resultado.Salida, problemas, nucleo.MensajeDe(err))
+		res, _, fin, err := p.intentar(ctxTrabajo, id, t, solicitud, elegido, nil, esperando, correccion+1)
+		if fin {
+			return
+		}
+		uso := sumarUso(resultado.Uso, res.Uso)
+		if err != nil {
+			codigo := cmp.Or(nucleo.CodigoDe(err), nucleo.CodigoErrorAgente)
+			p.cambiar(id, nucleo.Ejecutando, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err), Uso: &uso})
+			return
+		}
+		resultado = res
+		resultado.Uso = uso
 	}
-	p.cambiar(id, nucleo.ValidandoSalida, nucleo.Completado, persistencia.Cambio{Salida: &resultado.Salida,
-		Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo})
 }
 
 // intento es lo que guarda el evento intento: esfuerzo es el nivel que se pidió al CLI, ya ajustado a su máximo, o
@@ -702,6 +799,9 @@ type intento struct {
 	Esfuerzo  string `json:"esfuerzo"`
 	DelAgente bool   `json:"del_agente,omitempty"`
 	Contexto  int    `json:"contexto_tokens,omitempty"` // del modelo, si se conoce
+	// Correccion es el número de corrección (desde 1) de Correcciones pedidas; 0 en un intento normal.
+	Correccion   int `json:"correccion,omitempty"`
+	Correcciones int `json:"correcciones,omitempty"`
 }
 
 // nuevoIntento arma el evento de un intento; versionVista resuelve un alias (o el modelo vacío) con la última versión
@@ -863,7 +963,7 @@ func saltable(codigo nucleo.CodigoError) bool {
 // quedó cerrado (cancelado, reencolado por un drenaje o fuera de plazo en cola) y no hay nada más que hacer; si no,
 // err es el fallo del intento y huboTexto indica si el agente llegó a emitir texto.
 func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.Trabajo, solicitud nucleo.SolicitudEjecucion,
-	c candidato, plazoCola <-chan time.Time, esperando func()) (resultado adaptadores.Resultado, huboTexto, fin bool, err error) {
+	c candidato, plazoCola <-chan time.Time, esperando func(), correccion int) (resultado adaptadores.Resultado, huboTexto, fin bool, err error) {
 	fondo := context.Background()
 	// Primero el punto de acceso, después el adaptador y al final la plaza de la instancia: quien espera a su
 	// agente no ocupa plaza, así que otro trabajo listo de otro agente puede empezar. Un canal atiende a sus
@@ -921,6 +1021,9 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 	// El registro dice con qué agente, modelo y esfuerzo se intentó; sin contenido del usuario.
 	registro := nuevoIntento(c, solicitud.Esfuerzo, p.versionVista)
 	registro.Contexto, _ = p.contextoDe(ctxTrabajo, c)
+	if correccion > 0 {
+		registro.Correccion, registro.Correcciones = correccion, max(t.Solicitud.Salida.Reintentos, correccion)
+	}
 	if datos, err := json.Marshal(registro); err == nil {
 		_ = p.almacen.AgregarEvento(fondo, id, "intento", string(datos))
 	}
@@ -1078,8 +1181,8 @@ func validarSalida(config nucleo.ConfigSalida, salida string) error {
 	if len(config.Esquema) > 0 {
 		return salidas.Validar(config.Esquema, salida)
 	}
-	if config.Formato == "json" && !json.Valid([]byte(salida)) {
-		return errors.New(idioma.T("la salida no es JSON válido"))
+	if config.Formato == "json" {
+		return salidas.Validar([]byte("true"), salida) // el esquema true admite cualquier JSON: solo se comprueba que lo sea
 	}
 	return nil
 }

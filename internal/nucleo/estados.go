@@ -27,8 +27,9 @@ var transiciones = map[Estado][]Estado{
 	PreparandoEntrada: {EsperandoAgente, Fallido, CancelacionSolicitada, EnCola},
 	EsperandoAgente:   {Ejecutando, Fallido, CancelacionSolicitada, EnCola},
 	// Ejecutando → EsperandoAgente: el agente falló antes de producir texto y sigue uno del respaldo.
-	Ejecutando:            {ValidandoSalida, Fallido, CancelacionSolicitada, Interrumpido, EsperandoAgente},
-	ValidandoSalida:       {Completado, Fallido, CancelacionSolicitada, Interrumpido},
+	Ejecutando: {ValidandoSalida, Fallido, CancelacionSolicitada, Interrumpido, EsperandoAgente},
+	// ValidandoSalida → EsperandoAgente: la salida no cumple y se pide una corrección al mismo agente.
+	ValidandoSalida:       {Completado, Fallido, CancelacionSolicitada, Interrumpido, EsperandoAgente},
 	CancelacionSolicitada: {Cancelado, Fallido, Interrumpido},
 }
 

@@ -45,6 +45,8 @@ const (
 	CodigoEntradaDemasiadoGrande CodigoError = "entrada_demasiado_grande"
 	// CodigoCuotaCargasAgotada: las cargas guardadas de la instancia llegan a conversion.cuota_cargas_mb.
 	CodigoCuotaCargasAgotada CodigoError = "cuota_cargas_agotada"
+	// CodigoCorreccionNoDisponible: se pidió corregir un trabajo que no falló por el esquema o no conservó su salida.
+	CodigoCorreccionNoDisponible CodigoError = "correccion_no_disponible"
 )
 
 // Error es el error propio de Tramtai: un código estable y un mensaje legible sin secretos.

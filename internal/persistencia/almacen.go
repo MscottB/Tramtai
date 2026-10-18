@@ -493,7 +493,7 @@ func (a *Almacen) Eventos(ctx context.Context, id string, desde int) ([]Evento, 
 
 // EventosDeRegistro devuelve los eventos sin contenido de la respuesta (estado, entrada, intento y aviso), sin leer el texto.
 func (a *Almacen) EventosDeRegistro(ctx context.Context, id string) ([]Evento, error) {
-	return a.eventos(ctx, `SELECT numero, tipo, datos, creado_en FROM eventos WHERE trabajo_id = ? AND tipo IN ('estado', 'entrada', 'intento', 'aviso') ORDER BY numero`, id)
+	return a.eventos(ctx, `SELECT numero, tipo, datos, creado_en FROM eventos WHERE trabajo_id = ? AND tipo IN ('estado', 'entrada', 'intento', 'aviso', 'validacion') ORDER BY numero`, id)
 }
 
 func (a *Almacen) eventos(ctx context.Context, consulta string, args ...any) ([]Evento, error) {
