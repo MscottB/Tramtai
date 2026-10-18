@@ -553,25 +553,75 @@ export function duracion(desde?: string, hasta?: string): string {
   return s < 60 ? `${s.toFixed(1)} s` : `${Math.floor(s / 60)} min ${Math.round(s % 60)} s`
 }
 
-const agentes: Record<string, string> = { claude: 'Claude', codex: 'Codex', gemini: 'Gemini API', antigravity: 'Antigravity' }
 const perfiles = ['rapido', 'equilibrado', 'profundo']
+
+// FichaAgente es lo que el servicio sabe de cada agente (GET /api/v1/agentes): nombre, color, qué admite y dónde se
+// instala. La Web UI no nombra agentes: todo lo que depende de uno sale de su ficha.
+export interface FichaAgente {
+  agente: string
+  nombre: string
+  programa: string
+  codigo: string
+  color: { claro: string; oscuro: string }
+  orden: number
+  streaming: string
+  salida_estructurada: boolean
+  modelo_efectivo_informado: boolean
+  esfuerzos: string[]
+  autenticaciones: string[]
+  variables_clave: string[]
+  permitido_apps: boolean
+  url_instalacion: string
+}
+
+// fichas son las de los agentes del servicio, en su orden; se cargan al abrir la sesión.
+export const fichas = ref<FichaAgente[]>([])
+export const fichaDe = (agente?: string) => fichas.value.find((f) => f.agente === agente)
+
+export async function cargarFichas() {
+  try {
+    fichas.value = (await pedir<{ agentes: FichaAgente[] }>('GET', '/api/v1/agentes')).agentes
+    pintarLineas(fichas.value)
+  } catch {
+    // sin fichas se ven los ids y el color neutro; se vuelven a pedir en la próxima sesión
+  }
+}
+
+// pintarLineas da a cada agente su color (--linea-<id> en cada tema y la clase .linea--<id>), para que uno nuevo tenga
+// el suyo sin tocar los estilos. Solo se aceptan ids y colores con forma conocida: el texto va a una hoja de estilos.
+function pintarLineas(lista: FichaAgente[]) {
+  const color = (c: string) => (/^#[0-9a-f]{6}$/i.test(c) ? c : 'var(--linea-otro)')
+  const reglas = lista.filter((f) => /^[a-z0-9_-]+$/.test(f.agente)).map((f) => `:root{--linea-${f.agente}:${color(f.color.claro)}}` +
+    `body.body--dark{--linea-${f.agente}:${color(f.color.oscuro)}}.linea--${f.agente}{--c:var(--linea-${f.agente})}`)
+  let estilo = document.getElementById('tramtai-lineas')
+  if (!estilo) {
+    estilo = document.createElement('style')
+    estilo.id = 'tramtai-lineas'
+    document.head.appendChild(estilo)
+  }
+  estilo.textContent = reglas.join('\n')
+}
+
+// colorLinea es el color de la línea de un agente para usarlo en estilos en línea (el mapa de Inicio).
+export const colorLinea = (agente: string) => (/^[a-z0-9_-]+$/.test(agente) ? `var(--linea-${agente}, var(--linea-otro))` : 'var(--linea-otro)')
 
 // codigoLinea es el distintivo de la línea de un agente, como el número de una línea de tranvía.
 export function codigoLinea(agente?: string): string {
-  return ({ claude: 'CL', codex: 'CX', gemini: 'GM', antigravity: 'AG' } as Record<string, string>)[agente ?? ''] ?? (agente ?? 'API').slice(0, 2).toUpperCase()
+  return fichaDe(agente)?.codigo || (agente ?? 'API').slice(0, 2).toUpperCase()
 }
 
-// ordenAgentes es el orden fijo de los agentes en toda la Web UI.
-export const ordenAgentes = ['claude', 'codex', 'gemini', 'antigravity']
+// ordenAgentes es el orden de los agentes en toda la Web UI: el de sus fichas.
+export const ordenAgentes = computed(() => fichas.value.map((f) => f.agente))
 
-// ordenarAgentes pone los agentes en el orden fijo de la red; los desconocidos, al final y por nombre.
+// ordenarAgentes pone los agentes en el orden de sus fichas; los desconocidos, al final y por nombre.
 export function ordenarAgentes<T extends { agente: string }>(lista: T[]): T[] {
-  const posicion = (a: string) => ordenAgentes.indexOf(a) + 1 || ordenAgentes.length + 1
+  const orden = ordenAgentes.value
+  const posicion = (a: string) => orden.indexOf(a) + 1 || orden.length + 1
   return [...lista].sort((a, b) => posicion(a.agente) - posicion(b.agente) || a.agente.localeCompare(b.agente))
 }
 
 export function nombreAgente(agente?: string): string {
-  return agente ? (agentes[agente] ?? agente) : '—'
+  return agente ? (fichaDe(agente)?.nombre ?? agente) : '—'
 }
 
 // etiquetaModelo da el nombre legible de agente o agente/modelo: "Claude · sonnet".
@@ -647,7 +697,8 @@ export const esfuerzoEspacio = (catalogo: Modelo[]) => catalogo.find((m) => m.pr
 // versiones vistas.
 export function agruparOpciones(lista: OpcionModelo[]): OpcionModelo[] {
   const apagado = (g: string) => lista.filter((o) => o.grupo === g).every((o) => o.disable)
-  const lugar = (g: string) => (apagado(g) ? 100 : 0) + (g === 'perfil' ? -1 : ordenAgentes.includes(g) ? ordenAgentes.indexOf(g) : ordenAgentes.length)
+  const orden = ordenAgentes.value
+  const lugar = (g: string) => (apagado(g) ? 100 : 0) + (g === 'perfil' ? -1 : orden.includes(g) ? orden.indexOf(g) : orden.length)
   const rango = (o: OpcionModelo) => (o.grupo === 'perfil' ? 1 : !o.value.includes('/') ? 0 : o.exacta ? 2 : 1)
   const grupos = [...new Set(lista.map((o) => o.grupo))].sort((a, b) => lugar(a) - lugar(b) || a.localeCompare(b))
   return grupos.flatMap((g) => [

@@ -388,10 +388,10 @@ function filtrarGrupos(texto: string, actualizar: (f: () => void) => void) {
 // gruposModelo agrupa los valores de model: primero los perfiles y luego cada agente en el orden fijo de la red.
 const gruposModelo = computed(() => [
   { agente: '', titulo: t('conectar.perfiles'), ids: ids.value.filter((id) => id.startsWith('perfil/')) },
-  ...ordenAgentes.map((a) => ({ agente: a, titulo: nombreAgente(a), ids: ids.value.filter((id) => id.startsWith(a + '/')) })),
+  ...ordenAgentes.value.map((a) => ({ agente: a, titulo: nombreAgente(a), ids: ids.value.filter((id) => id.startsWith(a + '/')) })),
 ].filter((g) => g.ids.length))
 
-const modeloEjemplo = computed(() => ids.value.find((id) => id === 'perfil/rapido') ?? ids.value.find((id) => id.includes('/')) ?? 'claude')
+const modeloEjemplo = computed(() => ids.value.find((id) => id === 'perfil/rapido') ?? ids.value.find((id) => id.includes('/')) ?? ids.value[0] ?? '')
 
 const ocultar = (c: string) => (c ? c.slice(0, 6) + '•'.repeat(18) : '')
 const ejemplos = computed(() => ejemplosDe({ url: base.value, modelo: modeloEjemplo.value, contratos }))

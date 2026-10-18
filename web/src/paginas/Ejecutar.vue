@@ -331,7 +331,7 @@ async function verCodigo() {
   const p = editando.value ? apiEditada.value : undefined
   const url = editando.value ? p?.url || `${base}/p/${editando.value}` : base
   const contratos = p?.contratos ?? ['nativa', 'openai', 'anthropic']
-  const modelo = (editando.value ? p && idModeloDe(p) : receta.value.modelo) || catalogo.value.find((m) => m.predeterminado)?.id || 'claude'
+  const modelo = (editando.value ? p && idModeloDe(p) : receta.value.modelo) || catalogo.value.find((m) => m.predeterminado)?.id || catalogo.value[0]?.id || ''
   let solicitud = solicitudDe([], esquema)
   if (editando.value) solicitud = { mensajes: solicitud.mensajes, perfil: solicitud.perfil, ejecucion: solicitud.ejecucion }
   else if (!receta.value.modelo && !receta.value.esfuerzo && esfuerzoEspacio(catalogo.value)) solicitud.esfuerzo = esfuerzoEspacio(catalogo.value)
@@ -451,7 +451,7 @@ async function guardarComoApi() {
   try {
     const nombre = nueva.nombre.trim()
     const r = await api.crearPunto({ nombre, grupo: nueva.grupo.trim() || undefined, ...configDeReceta(receta.value) })
-    const modelo = receta.value.modelo || catalogo.value.find((m) => m.predeterminado)?.id || 'claude'
+    const modelo = receta.value.modelo || catalogo.value.find((m) => m.predeterminado)?.id || catalogo.value[0]?.id || ''
     creada.value = { nombre, url: r.punto_acceso?.url ?? '', clave: r.token, modelo }
     apiEditada.value = r.punto_acceso
     dialogoGuardar.value = false

@@ -99,7 +99,7 @@
 import { onMounted, ref } from 'vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import { useQuasar } from 'quasar'
-import { api, avisar, avisarError, codigoLinea, copiar, modeloInicial, nombreAgente, nombreEsfuerzo, fijarDisponibilidad, ordenarAgentes, sesion, type Adaptador, numero } from '../api'
+import { api, avisar, avisarError, codigoLinea, copiar, fichaDe, modeloInicial, nombreAgente, nombreEsfuerzo, fijarDisponibilidad, ordenarAgentes, sesion, type Adaptador, numero } from '../api'
 import { t } from '../i18n'
 
 const $q = useQuasar()
@@ -126,11 +126,10 @@ function tipo(a: Adaptador) {
   return 'agente.revisar' as const
 }
 const suscripcion = (a: Adaptador) => a.autenticacion === 'suscripcion'
-// Solo Claude y Codex tienen suscripción, y solo se cambia desde una sesión de este mismo equipo.
-const puedeCambiar = (a: Adaptador) => (a.agente === 'claude' || a.agente === 'codex') && !!sesion.value?.local
-const cli = (a: Adaptador) => ({ claude: 'Claude Code', codex: 'Codex CLI' })[a.agente] ?? a.agente
-const claves: Record<string, string> = { claude: 'ANTHROPIC_API_KEY', codex: 'OPENAI_API_KEY', gemini: 'GEMINI_API_KEY', antigravity: 'GEMINI_API_KEY' }
-const variable = (a: Adaptador) => claves[a.agente] ?? a.problema?.match(/[A-Z_]+_API_KEY/)?.[0] ?? ''
+// La suscripción la admiten los agentes cuya ficha la incluye, y solo se cambia desde una sesión de este mismo equipo.
+const puedeCambiar = (a: Adaptador) => !!fichaDe(a.agente)?.autenticaciones.includes('suscripcion') && !!sesion.value?.local
+const cli = (a: Adaptador) => fichaDe(a.agente)?.programa ?? a.agente
+const variable = (a: Adaptador) => fichaDe(a.agente)?.variables_clave[0] ?? a.problema?.match(/[A-Z_]+_API_KEY/)?.[0] ?? ''
 const comando = (a: Adaptador) => 'tramtai claves guardar ' + variable(a)
 // textoAlmacen dice dónde queda la clave en este sistema: cifrada en su almacén, o qué hacer si no lo hay.
 function textoAlmacen(a: Adaptador) {

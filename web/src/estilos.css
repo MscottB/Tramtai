@@ -20,10 +20,6 @@
   --aviso: #a16207;
   --aviso-suave: rgba(202, 138, 4, 0.13);
   --neutro-suave: rgba(85, 102, 106, 0.1);
-  --linea-claude: #c4561d;
-  --linea-codex: #2563eb;
-  --linea-gemini: #7c3aed;
-  --linea-antigravity: #db2777;
   --linea-otro: #64748b;
   --sombra: 0 1px 2px rgba(15, 27, 30, 0.05), 0 2px 6px rgba(15, 27, 30, 0.04);
   --sombra-alta: 0 12px 32px rgba(15, 27, 30, 0.14), 0 2px 6px rgba(15, 27, 30, 0.06);
@@ -53,10 +49,6 @@ body.body--dark {
   --aviso: #fbbf24;
   --aviso-suave: rgba(251, 191, 36, 0.12);
   --neutro-suave: rgba(147, 165, 172, 0.13);
-  --linea-claude: #f28a4f;
-  --linea-codex: #5b8def;
-  --linea-gemini: #a78bfa;
-  --linea-antigravity: #f472b6;
   --linea-otro: #8a9aa8;
   --sombra: none;
   --sombra-alta: 0 16px 40px rgba(0, 0, 0, 0.5);
@@ -719,18 +711,6 @@ body.body--dark .linea__chapa {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.linea--claude {
-  --c: var(--linea-claude);
-}
-.linea--codex {
-  --c: var(--linea-codex);
-}
-.linea--gemini {
-  --c: var(--linea-gemini);
-}
-.linea--antigravity {
-  --c: var(--linea-antigravity);
 }
 
 /* Paso numerado como una estación: aro del color de la marca con su número. */

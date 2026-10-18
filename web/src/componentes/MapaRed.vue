@@ -55,7 +55,7 @@
 // MapaRed dibuja la red de Tramtai como un mapa de tranvía: tus apps (la API principal y tus APIs) llegan a
 // Tramtai, que reparte cada petición por la línea de un agente. Las líneas sin servicio van punteadas.
 import { computed } from 'vue'
-import { grupoInicial, nombreAgente, type Adaptador, type EstadoPunto } from '../api'
+import { grupoInicial, nombreAgente, type Adaptador, type EstadoPunto, colorLinea } from '../api'
 import { t } from '../i18n'
 
 const props = defineProps<{ adaptadores: Adaptador[]; apis: EstadoPunto[]; base: string }>()
@@ -69,7 +69,6 @@ const X_AGENTE = 770
 const PASO = 58
 const MAX_APIS = 3
 
-const colores: Record<string, string> = { claude: 'var(--linea-claude)', codex: 'var(--linea-codex)', gemini: 'var(--linea-gemini)', antigravity: 'var(--linea-antigravity)' }
 const direccion = computed(() => props.base.replace(/^https?:\/\//, ''))
 const filas = computed(() => Math.max(props.adaptadores.length, 1 + Math.min(props.apis.length, MAX_APIS + 1), 3))
 const alto = computed(() => filas.value * PASO + 16)
@@ -108,7 +107,7 @@ const lineas = computed(() => props.adaptadores.map((a, i) => ({
   nombre: nombreAgente(a.agente),
   listo: !a.problema,
   estado: a.problema ? t('mapa.sinServicio') : t('mapa.enServicio'),
-  color: colores[a.agente] ?? 'var(--linea-otro)',
+  color: colorLinea(a.agente),
   y: y(i, props.adaptadores.length),
 })))
 

@@ -768,7 +768,7 @@ const es = {
   'acerca.registro': 'Registro del servicio',
   'acerca.copiar': 'Copiar datos para soporte',
   'acerca.copiarTexto': 'Copia estos detalles como texto, sin claves ni tokens; tu carpeta de usuario aparece como ~.',
-  'receta.sinAntigravity': 'Antigravity no está disponible para APIs: aún no se ha comprobado que no pueda usar herramientas. Úsalo desde Probar.',
+  'receta.fueraDeApps': 'No disponible para APIs: {agentes}. Aún no se ha comprobado que no puedan usar herramientas; úsalos desde Probar.',
   'ejecutar.adjuntarLimites': 'Hasta {n} archivos de {mb} MB; convertidos a texto, hasta {texto} MB. Ocupan contexto del modelo: si no caben en el principal, se prueba con el respaldo.',
   'registro.entrada': 'Entrada: ~{n} tokens',
   'registro.contexto': 'contexto {n}',

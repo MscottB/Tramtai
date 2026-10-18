@@ -769,7 +769,7 @@ const en: Textos = {
   'acerca.registro': 'Service log',
   'acerca.copiar': 'Copy support details',
   'acerca.copiarTexto': 'Copies these details as text, without keys or tokens; your user folder shows as ~.',
-  'receta.sinAntigravity': 'Antigravity is not available for APIs: it has not been checked yet that it cannot use tools. Use it from Try.',
+  'receta.fueraDeApps': 'Not available for APIs: {agentes}. It has not been checked yet that they cannot use tools; use them from Try.',
   'ejecutar.adjuntarLimites': 'Up to {n} files of {mb} MB; converted to text, up to {texto} MB. They use the model context: if they do not fit in the main one, the fallback is tried.',
   'registro.entrada': 'Input: ~{n} tokens',
   'registro.contexto': 'context {n}',
