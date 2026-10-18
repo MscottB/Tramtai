@@ -14,7 +14,7 @@ var Ficha = adaptadores.Ficha{
 	Nombre: "copilot", NombreVisible: "Copilot", Programa: "GitHub Copilot CLI", Codigo: "GH",
 	ColorClaro: "#1f883d", ColorOscuro: "#3fb950", Orden: 25,
 	Streaming: "tokens", ModeloEfectivoInformado: true,
-	ValoresEsfuerzo: valoresEsfuerzo,
+	ValoresEsfuerzo: valoresEsfuerzo, ModelosSinEsfuerzo: []string{"", "auto"},
 	Autenticaciones: []string{adaptadores.AutenticacionSuscripcion, adaptadores.AutenticacionClaveAPI},
 	VariablesClave:  []string{variableClave},
 	Comando:         "copilot", Concurrencia: 1, PermitidoEnApps: true,

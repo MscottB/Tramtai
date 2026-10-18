@@ -510,7 +510,7 @@ func (s *Servidor) modelosNativos(w http.ResponseWriter, r *http.Request) {
 		}
 		if agente != "" {
 			destinos[i] = [2]string{agente, modelo}
-			m.Esfuerzos = agentes.Niveles(agente)
+			m.Esfuerzos = agentes.NivelesDeModelo(agente, modelo)
 		}
 	}
 	concretos := s.modelosConcretos(r.Context(), lista, destinos)

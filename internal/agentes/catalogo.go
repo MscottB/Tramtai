@@ -79,6 +79,14 @@ func Niveles(nombre string) []string {
 	return adaptadores.NivelesDe(f.ValoresEsfuerzo)
 }
 
+// NivelesDeModelo son los niveles que admite el agente con ese modelo: ninguno si su ficha dice que con él no se elige.
+func NivelesDeModelo(nombre, modelo string) []string {
+	if f, _ := Buscar(nombre); slices.Contains(f.ModelosSinEsfuerzo, modelo) {
+		return nil
+	}
+	return Niveles(nombre)
+}
+
 // EsfuerzoPredeterminado es el nivel que usa el CLI con un modelo concreto si no se le indica uno; "" si no se conoce.
 func EsfuerzoPredeterminado(nombre, modelo string) string {
 	if f, ok := Buscar(nombre); ok && f.EsfuerzoPredeterminado != nil {

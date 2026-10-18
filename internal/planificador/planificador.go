@@ -707,7 +707,7 @@ type intento struct {
 // que informó el agente, como el catálogo.
 func nuevoIntento(c candidato, pedido string, versionVista func(agente, modelo string) string) intento {
 	i := intento{Agente: c.agente, Modelo: c.modelo}
-	niveles := agentes.Niveles(c.agente)
+	niveles := agentes.NivelesDeModelo(c.agente, c.modelo)
 	switch {
 	case len(niveles) == 0:
 	case pedido == "":

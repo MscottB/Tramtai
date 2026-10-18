@@ -213,7 +213,7 @@ const problemas = computed(() => [
 const problemasVistos = computed(() => problemas.value.filter((p) => coincide(p.titulo, p.codigo, t(p.solucion))))
 
 const categorias = [
-  { titulo: 'ayuda.catEmpezar', preguntas: [['ayuda.p22', 'ayuda.r22'], ['ayuda.p20', 'ayuda.r20'], ['ayuda.p5', 'ayuda.r5'], ['ayuda.p1', 'ayuda.r1'], ['ayuda.p6', 'ayuda.r6'], ['ayuda.p9', 'ayuda.r9']] },
+  { titulo: 'ayuda.catEmpezar', preguntas: [['ayuda.p22', 'ayuda.r22'], ['ayuda.p23', 'ayuda.r23'], ['ayuda.p20', 'ayuda.r20'], ['ayuda.p5', 'ayuda.r5'], ['ayuda.p1', 'ayuda.r1'], ['ayuda.p6', 'ayuda.r6'], ['ayuda.p9', 'ayuda.r9']] },
   { titulo: 'ayuda.catApis', preguntas: [['ayuda.p11', 'ayuda.r11'], ['ayuda.p21', 'ayuda.r21'], ['ayuda.p4', 'ayuda.r4'], ['ayuda.p12', 'ayuda.r12'],
     ['ayuda.p14', 'ayuda.r14'], ['ayuda.p15', 'ayuda.r15'], ['ayuda.p18', 'ayuda.r18'], ['ayuda.p19', 'ayuda.r19']] },
   { titulo: 'ayuda.catDatos', preguntas: [['ayuda.p2', 'ayuda.r2'], ['ayuda.p3', 'ayuda.r3'], ['ayuda.p13', 'ayuda.r13'], ['ayuda.p7', 'ayuda.r7']] },

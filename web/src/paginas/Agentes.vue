@@ -37,7 +37,7 @@
               </q-item-section>
             </template>
             <div class="q-px-md q-pb-md">
-        <!-- Listo: cómo está conectado y, en Claude y Codex, la otra forma -->
+        <!-- Listo: cómo está conectado y, si su ficha admite las dos, la otra forma -->
         <template v-if="listo(a)">
           <div v-if="a.problema" class="aviso text-body2 q-mb-sm">{{ a.problema }}</div>
           <div class="metadatos">
@@ -52,7 +52,7 @@
         </template>
 
         <!-- Falta conectarlo: las dos opciones, lado a lado -->
-        <template v-else-if="tipo(a) === 'agente.faltaClave'">
+        <template v-else-if="tipo(a) === 'agente.faltaClave' && !suscripcion(a)">
           <template v-if="puedeCambiar(a)">
             <div class="text-weight-medium q-mb-sm">{{ t('agentes.elegir') }}</div>
             <div class="row q-col-gutter-sm">
@@ -79,6 +79,13 @@
             <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(comando(a))" /></div>
             <div class="text-caption texto-suave q-mt-xs">{{ textoAlmacen(a) }}</div>
           </template>
+        </template>
+
+        <!-- Con suscripción y sin sesión: cómo iniciarla o, si se prefiere, la clave -->
+        <template v-else-if="tipo(a) === 'agente.faltaClave'">
+          <div class="aviso text-body2">{{ a.problema }}</div>
+          <q-btn v-if="puedeCambiar(a)" flat dense no-caps color="primary" class="q-mt-sm q-px-sm" :loading="cambiando === a.agente"
+            :label="t('agentes.cambiarAClave')" @click="cambiar(a, 'clave_api')" />
         </template>
 
         <div v-else-if="tipo(a) === 'agente.noInstalado'" class="aviso text-body2">

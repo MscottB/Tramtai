@@ -45,7 +45,8 @@ func (c Copilot) Detectar(ctx context.Context) adaptadores.Estado {
 		e.Problema, e.ProblemaCodigo = err.Error(), adaptadores.ProblemaNoInstalado
 		return e
 	}
-	e.Ruta, e.Version = ruta, adaptadores.VersionDe(ctx, ruta)
+	// «GitHub Copilot CLI 1.0.98.» queda en «1.0.98»: el nombre ya se muestra al lado.
+	e.Ruta, e.Version = ruta, strings.TrimSuffix(strings.TrimPrefix(adaptadores.VersionDe(ctx, ruta), "GitHub Copilot CLI "), ".")
 	return e
 }
 
@@ -108,7 +109,7 @@ func (c Copilot) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emit
 		return adaptadores.Resultado{}, nucleo.NuevoError(adaptadores.Clasificar(texto, 0), texto)
 	}
 	if e.creditos > 0 {
-		if err := emitir(adaptadores.Evento{Tipo: "aviso", Datos: idioma.Tf("Copilot gastó %d créditos (premium requests) de tu plan", e.creditos)}); err != nil {
+		if err := emitir(adaptadores.Evento{Tipo: "aviso", Datos: idioma.Tf("Créditos de tu plan de Copilot gastados (premium requests): %d", e.creditos)}); err != nil {
 			return adaptadores.Resultado{}, err
 		}
 	}
@@ -125,7 +126,7 @@ func argumentos(s nucleo.SolicitudEjecucion, archivoUso string) []string {
 		args = append(args, "--no-custom-instructions") // en modo consciente carga las instrucciones del proyecto
 	}
 	// auto no admite esfuerzo: Copilot falla con «Model "auto" does not support reasoning effort».
-	if v := adaptadores.ValorEsfuerzo(valoresEsfuerzo, s.Esfuerzo); v != "" && modelo != "auto" {
+	if v := adaptadores.ValorEsfuerzo(valoresEsfuerzo, s.Esfuerzo); v != "" && !slices.Contains(Ficha.ModelosSinEsfuerzo, s.Modelo) {
 		args = append(args, "--reasoning-effort", v)
 	}
 	return args

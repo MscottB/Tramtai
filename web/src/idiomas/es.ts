@@ -37,7 +37,7 @@ const es = {
   'menuDetalle.ejecutar': 'Envía un mensaje a un agente',
   'menuDetalle.historial': 'Todo lo que se ha ejecutado',
   'menuDetalle.conectar': 'Conecta tus aplicaciones',
-  'menuDetalle.agentes': 'Claude, Codex, Gemini…',
+  'menuDetalle.agentes': 'Claude, Codex, Copilot…',
   'menuDetalle.configuracion': 'Arranque y borrado de datos',
   'menuDetalle.ayuda': 'Cómo empezar y dudas',
 
@@ -343,7 +343,7 @@ const es = {
   'agentes.opcionSuscripcionTexto': 'Usa la sesión que ya tienes iniciada en {cli}. Solo para uso personal en este equipo, según los términos del proveedor.',
   'agentes.usarSuscripcion': 'Usar mi suscripción',
   'agentes.opcionClave': 'Con una clave de API',
-  'agentes.opcionClaveTexto': 'Pago por uso; sirve para cualquier aplicación. Ejecuta esto en una terminal (pide la clave sin mostrarla) y pulsa «Volver a comprobar»:',
+  'agentes.opcionClaveTexto': 'Con la clave de API o el token del proveedor; sirve para cualquier aplicación. Ejecuta esto en una terminal (pide la clave sin mostrarla) y pulsa «Volver a comprobar»:',
   'agentes.soloClave': 'Necesita una clave de API. Ejecuta esto en una terminal (pide la clave sin mostrarla) y pulsa «Volver a comprobar»:',
   'agentes.almacenDisponible': 'La clave queda cifrada en el {almacen}, no en los archivos de Tramtai, y se usa sin reiniciar.',
   'agentes.almacenFalta': 'Para guardarla cifrada instala secret-tool (paquete libsecret-tools). Mientras, define {variable} en el entorno con el que arranca Tramtai.',
@@ -427,7 +427,7 @@ const es = {
   'ayuda.empezar': 'Cómo empezar',
   'ayuda.paso1': 'Conecta un agente',
   'ayuda.paso1Texto':
-    'En Agentes, elige para Claude o Codex «Usar mi suscripción» (uso personal) o guarda una clave de API: queda cifrada en el almacén del sistema y vale sin reiniciar. La API de Gemini se usa directamente, sin instalar Gemini CLI: solo necesita una clave de la Gemini API.',
+    'En Agentes, elige para Claude, Codex o Copilot «Usar mi suscripción» (uso personal) o guarda una clave de API: queda cifrada en el almacén del sistema y vale sin reiniciar. La API de Gemini se usa directamente, sin instalar Gemini CLI: solo necesita una clave de la Gemini API.',
   'ayuda.paso2': 'Prueba un mensaje',
   'ayuda.paso2Texto':
     'En Probar escribe algo, elige agente, modelo y esfuerzo y mira la respuesta en vivo, con formato o como texto. Puedes adjuntar PDF, Word, Excel o ZIP, y tus pruebas recientes quedan a mano para repetirlas.',
@@ -444,9 +444,9 @@ const es = {
   'ayuda.p1': '¿Necesito una clave para entrar?',
   'ayuda.r1':
     'No. La app de Tramtai entra sola. En el navegador, en Windows y Linux entras directamente si es de tu mismo usuario; en macOS, o si no se puede comprobar, ejecuta «tramtai abrir» en el equipo de Tramtai. Las claves de Mis APIs son solo para tus aplicaciones: no abren esta página.',
-  'ayuda.p2': '¿Las consultas quedan guardadas como chats en Claude Code o Codex?',
+  'ayuda.p2': '¿Las consultas quedan guardadas como chats en Claude Code, Codex o Copilot?',
   'ayuda.r2':
-    'No. Tramtai ejecuta Claude Code sin guardar la sesión, Codex en modo efímero y Antigravity con una carpeta privada que se borra al terminar. Tus historiales de chat no se llenan con las consultas de las aplicaciones: el registro queda solo en el Historial de Tramtai.',
+    'No. Tramtai ejecuta Claude Code sin guardar la sesión, Codex en modo efímero, y Copilot y Antigravity con una carpeta privada que se borra al terminar. Tus historiales de chat no se llenan con las consultas de las aplicaciones: el registro queda solo en el Historial de Tramtai.',
   'ayuda.p3': '¿Dónde se guardan mis datos y cuánto tiempo?',
   'ayuda.r3':
     'Solo en este equipo: en %APPDATA%\\tramtai en Windows, ~/Library/Application Support/tramtai en macOS y ~/.config/tramtai en Linux. Por defecto, las respuestas se guardan 24 horas y el resto del historial, 7 días, con un máximo de 10 000 peticiones; después se borran solos. Se cambia en Ajustes → Historial, donde también puedes borrarlo cuando quieras.',
@@ -467,7 +467,7 @@ const es = {
   'ayuda.secGuias': 'Guías paso a paso',
   'ayuda.secConceptos': 'Conceptos',
   'ayuda.secProblemas': 'Si algo falla',
-  'ayuda.funcionaTexto': 'Tramtai pone tus agentes de IA (Claude Code, Codex y la API de Gemini) detrás de una API en tu equipo. Tus aplicaciones le hablan como hablarían con OpenAI o Anthropic, y esto es lo que pasa con cada petición:',
+  'ayuda.funcionaTexto': 'Tramtai pone tus agentes de IA (Claude Code, Codex, Copilot, la API de Gemini y Antigravity) detrás de una API en tu equipo. Tus aplicaciones le hablan como hablarían con OpenAI o Anthropic, y esto es lo que pasa con cada petición:',
   'ayuda.f1': 'Tu aplicación',
   'ayuda.f1Texto': 'Envía la petición a una URL de Mis APIs con su clave, o la escribes en Probar.',
   'ayuda.f2': 'La API',
@@ -475,7 +475,7 @@ const es = {
   'ayuda.f3': 'La cola',
   'ayuda.f3Texto': 'Convierte los archivos a texto, mide si caben en el modelo y espera su turno.',
   'ayuda.f4': 'El agente',
-  'ayuda.f4Texto': 'Responde el CLI de Claude o Codex, o la API de Gemini. Si falla antes de empezar, sigue el respaldo.',
+  'ayuda.f4Texto': 'Responde el CLI del agente (Claude Code, Codex, Copilot o Antigravity) o la API de Gemini. Si falla antes de empezar, sigue el respaldo.',
   'ayuda.f5': 'La respuesta',
   'ayuda.f5Texto': 'Llega en vivo, se valida con el esquema si lo hay y queda en el Historial con su registro.',
   'ayuda.funcionaNota': 'Todo ocurre en tu equipo: Tramtai no tiene servidor propio ni ve tus datos. Los agentes van sin herramientas, así que un mensaje o un documento no puede hacer que lean archivos, ejecuten órdenes o salgan a internet.',
@@ -493,7 +493,7 @@ const es = {
   'ayuda.g6': 'Averiguar por qué falló una petición',
   'ayuda.g6Pasos': 'Abre el Historial y pulsa la petición con error.\nLee el error: en «Si algo falla», aquí abajo, está qué significa cada uno y qué hacer.\nAbre «Registro» para ver cada paso: con qué agente se intentó, los avisos y cuánto tardó.\nCorrige la causa (clave, modelo, tamaño de los archivos) y pulsa «Reintentar».',
   'ayuda.cAgente': 'Agente',
-  'ayuda.cAgenteTexto': 'El programa de IA que responde: Claude Code, Codex, la API de Gemini o Antigravity. Se conecta en Agentes, con tu suscripción o una clave de API.',
+  'ayuda.cAgenteTexto': 'El programa de IA que responde: Claude Code, Codex, Copilot, la API de Gemini o Antigravity. Se conecta en Agentes, con tu suscripción o una clave de API.',
   'ayuda.cModelo': 'Modelo',
   'ayuda.cModeloTexto': 'El modelo que usa el agente (sonnet, opus, gpt-5.5…). Se escribe agente/modelo; la lista muestra la versión exacta que hay detrás.',
   'ayuda.cPerfil': 'Perfil',
@@ -538,7 +538,10 @@ const es = {
   'ayuda.r20': 'Depende de tu app. Si ya usa el SDK de OpenAI, o una herramienta que deja cambiar la URL base (LangChain, n8n, un editor con IA), usa la URL para OpenAI; si usa el SDK de Anthropic, la de Anthropic. Si necesitas enviar archivos, seguir tareas largas, cancelar o reintentar, usa la API propia (/api/v1). En Mis APIs, «¿Qué URL uso?» compara las tres y tiene ejemplos para copiar.',
   'ayuda.p22': '¿Qué agentes puedo usar?',
   'ayuda.r22':
-    'Los que ves en Agentes: hoy Claude Code, Codex, la API de Gemini y Antigravity (este, solo desde Probar y la terminal hasta comprobarlo con su CLI real). Claude Code y Codex se conectan con tu suscripción o con una clave de API; la API de Gemini y Antigravity, con una clave; los que no están instalados aparecen al final de la página, con un enlace para instalarlos. El buscador y el filtro de arriba sirven cuando hay muchos.',
+    'Los que ves en Agentes: hoy Claude Code, Codex, GitHub Copilot CLI, la API de Gemini y Antigravity (este, solo desde Probar y la terminal hasta comprobarlo con su CLI real). Claude Code, Codex y Copilot se conectan con tu suscripción (en Copilot, la sesión de copilot login) o con una clave de API; la API de Gemini y Antigravity, con una clave; los que no están instalados aparecen al final de la página, con un enlace para instalarlos. El buscador y el filtro de arriba sirven cuando hay muchos.',
+  'ayuda.p23': '¿Puedo usar Copilot con el plan gratuito?',
+  'ayuda.r23':
+    'Sí. Instala GitHub Copilot CLI, inicia sesión con copilot login en una terminal y, en Agentes, elige usar tu suscripción. Con Copilot Free solo está el modelo automático (copilot, o copilot/auto): Copilot elige el modelo y Tramtai muestra cuál usó. El esfuerzo no se puede elegir con el automático. Cada petición gasta créditos de tu plan (premium requests) y Tramtai lo avisa en el registro de la prueba. Con un plan de pago puedes pedir un modelo concreto como copilot/<modelo>.',
   'ayuda.p21': '¿Cómo veo mi prueba como código?',
   'ayuda.r21': 'En Probar, pulsa «Ver como código» en la receta: verás la petición en curl, Python o Node por la API propia, y en Python o curl por OpenAI y en Python por Anthropic (si la API los acepta), con la clave como <tu clave>. Si la prueba lleva algo que solo admite la API propia (archivos, respaldo, esquema por Anthropic), esa pestaña lo avisa.',
   'ayuda.documentacion': 'Documentación completa',
@@ -650,8 +653,8 @@ const es = {
   'esfuerzo.muy_altoDetalle': 'Para tareas complejas; tarda más',
   'esfuerzo.maximo': 'Máximo',
   'esfuerzo.maximoDetalle': 'Todo el razonamiento posible; lo más lento',
-  'esfuerzo.noAdmite': 'Este modelo no permite elegir el esfuerzo (solo Claude y Codex).',
-  'esfuerzo.api': 'Se usa cuando la aplicación no pide uno. Solo Claude y Codex lo admiten.',
+  'esfuerzo.noAdmite': 'Este modelo no permite elegir el esfuerzo.',
+  'esfuerzo.api': 'Se usa cuando la aplicación no pide uno, en los agentes y modelos que lo admiten.',
   'historial.esfuerzo': 'Esfuerzo',
   'puntos.ajustes': 'Ajustes de la API',
   'puntos.ajustesDe': 'Ajustes de {nombre}',
@@ -857,7 +860,7 @@ const es = {
     'Antes de llamar al agente, Tramtai mide lo que va a recibir (instrucciones, mensaje y documentos ya convertidos a texto) y lo compara con el contexto del modelo, dejando sitio para la respuesta. Si no cabe, prueba con el siguiente del respaldo y lo avisa en el registro; si no cabe en ninguno, la rechaza con «La entrada no cabe en el modelo» sin gastar tokens ni contar la petición. Los documentos son lo que más ocupa: el registro dice cuál pesa más. En Agentes ves el contexto de cada modelo cuando se conoce.',
   'ayuda.p19': '¿Por qué no puedo usar Antigravity en mis APIs?',
   'ayuda.r19':
-    'Porque todavía no se ha comprobado con el CLI real que, ante un contenido malicioso, no pueda usar herramientas (leer archivos o ejecutar órdenes). Mientras tanto se usa solo desde Probar y la terminal. Claude y Codex sí están comprobados.',
+    'Porque todavía no se ha comprobado con el CLI real que, ante un contenido malicioso, no pueda usar herramientas (leer archivos o ejecutar órdenes). Mientras tanto se usa solo desde Probar y la terminal. Claude, Codex y Copilot sí están comprobados.',
   'ayuda.p17': '¿Qué versión tengo?',
   'ayuda.r17':
     'Abre «Acerca de Tramtai» en el menú lateral, en el menú del estado (arriba a la derecha) o en el icono de la bandeja. Verás la versión tal como aparece en GitHub (por ejemplo v0.42.0+17102026), si hay una más nueva, los enlaces del proyecto y, en «Detalles técnicos», lo necesario para pedir ayuda: «Copiar datos para soporte» lo copia sin claves ni tokens.',

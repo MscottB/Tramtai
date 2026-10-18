@@ -27,7 +27,7 @@ func init() {
 		"falta COPILOT_GITHUB_TOKEN; o configura adaptadores.copilot.autenticacion: suscripcion para usar la sesión de copilot login": "COPILOT_GITHUB_TOKEN is missing; or set adaptadores.copilot.autenticacion: suscripcion to use the copilot login session",
 		"copilot terminó sin result":                                                  "copilot finished without a result",
 		"copilot terminó con el código %d":                                            "copilot finished with exit code %d",
-		"Copilot gastó %d créditos (premium requests) de tu plan":                     "Copilot used %d credits (premium requests) from your plan",
+		"Créditos de tu plan de Copilot gastados (premium requests): %d":              "Copilot plan credits used (premium requests): %d",
 		"codex terminó sin turn.completed":                                            "codex finished without turn.completed",
 		"no se encontró el ejecutable %s; instálalo o configura comandos_agentes":     "could not find the executable %s; install it or set comandos_agentes",
 		"%s es un envoltorio %s; configura comandos_agentes con la ruta al .exe real": "%s is a %s wrapper; set comandos_agentes to the path of the real .exe",
