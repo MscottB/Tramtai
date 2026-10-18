@@ -916,7 +916,8 @@ func (s *Servicio) cambiarAutenticacion(agente, modo string) error {
 }
 
 // fijarPredeterminado guarda el modelo que se usa cuando la solicitud no indica agente ni modelo (un identificador
-// del catálogo: agente, agente/modelo o perfil/nombre), y su esfuerzo si se indica, y lo aplica en marcha. En la
+// del catálogo: agente, agente/modelo o perfil/nombre), y su esfuerzo si se indica (con id vacío, solo el esfuerzo), y
+// lo aplica en marcha. En la
 // instancia global va a la configuración global y alcanza también a los proyectos que no tengan el suyo; en un
 // proyecto, a su local.yaml.
 func (s *Servicio) fijarPredeterminado(inst *Instancia, id string, esfuerzo *string) error {
@@ -924,6 +925,9 @@ func (s *Servicio) fijarPredeterminado(inst *Instancia, id string, esfuerzo *str
 	if esfuerzo != nil {
 		if *esfuerzo != "" && !slices.Contains(nucleo.NivelesEsfuerzo, *esfuerzo) {
 			return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("esfuerzo desconocido: %s", *esfuerzo))
+		}
+		if id == "" { // solo el esfuerzo: el modelo sigue siendo el que haya (en un proyecto, quizá el heredado)
+			return s.guardarValores(inst, map[string]any{"predeterminados.esfuerzo": *esfuerzo})
 		}
 		valores["predeterminados.esfuerzo"] = *esfuerzo
 	}

@@ -111,7 +111,7 @@ Pedido por el usuario antes de publicar: los botones de buscar versión nueva di
 selector de modelo deja al final, apagados y con el motivo (no instalado, falta la sesión o la clave), los agentes que
 no se pueden usar, según la comprobación de Agentes (una vez por sesión de la página); los modelos permitidos de Mis
 APIs usan el mismo selector agrupado; y Ajustes elige, junto al modelo predeterminado (con su versión), su esfuerzo
-(`predeterminados.esfuerzo`), que se aplica cuando la petición no elige agente ni esfuerzo y que Probar muestra como
+(`predeterminados.esfuerzo`), que se aplica cuando la petición no elige agente, modelo, perfil ni esfuerzo y que Probar muestra como
 «El del espacio (nivel)».
 
 ## Documentación

@@ -404,11 +404,11 @@ func (c *Configuracion) AplicarPredeterminados(s SolicitudEjecucion) SolicitudEj
 		// El modelo predeterminado va con su agente: si la solicitud eligió otro agente, usa el modelo de ese CLI.
 		if s.Modelo == "" && s.PerfilModelo == "" {
 			s.Modelo = c.Texto("predeterminados.modelo")
-		}
-		// Su esfuerzo también: solo cuando la petición tampoco eligió agente. Un valor escrito a mano que no es un
-		// nivel se ignora (el del agente) en lugar de rechazar todas las peticiones.
-		if e := c.Texto("predeterminados.esfuerzo"); s.Esfuerzo == "" && slices.Contains(NivelesEsfuerzo, e) {
-			s.Esfuerzo = e
+			// Su esfuerzo también: solo cuando la petición no eligió agente, modelo ni perfil. Un valor escrito a mano
+			// que no es un nivel se ignora (el del agente) en lugar de rechazar todas las peticiones.
+			if e := c.Texto("predeterminados.esfuerzo"); s.Esfuerzo == "" && slices.Contains(NivelesEsfuerzo, e) {
+				s.Esfuerzo = e
+			}
 		}
 	}
 	if s.Modelo == "" && s.PerfilModelo == "" {

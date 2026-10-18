@@ -218,7 +218,7 @@ export interface Adaptador {
   autenticacion?: string
   terminos?: string
   problema?: string
-  // problema_codigo: no_instalado, falta_clave u otro (vacío) que hay que revisar.
+  // problema_codigo: no_instalado, falta_clave, aviso (no impide usarlo) u otro (vacío) que hay que revisar.
   problema_codigo?: string
   capacidades: { streaming: string; salida_estructurada: boolean; modelo_efectivo_informado: boolean }
 }
@@ -358,7 +358,8 @@ export const api = {
   configuracion: () =>
     pedir<{ configuracion: EntradaConfiguracion[] }>('GET', '/api/v1/instancia/configuracion').then((r) => r.configuracion),
   catalogo: () => pedir<{ modelos: Modelo[] }>('GET', '/api/v1/modelos').then((r) => r.modelos),
-  // fijarPredeterminado guarda el modelo predeterminado y, si se indica, su esfuerzo ('' = el del agente).
+  // fijarPredeterminado guarda el modelo predeterminado y, si se indica, su esfuerzo ('' = el del agente); con modelo
+  // vacío solo cambia el esfuerzo (en un proyecto no fija el modelo heredado).
   fijarPredeterminado: (modelo: string, esfuerzo?: string) => pedir<void>('POST', '/api/v1/instancia/predeterminado', { modelo, esfuerzo }),
   // capacidades comprueba cada agente con hasta 10 s por agente: lleva un plazo mayor.
   capacidades: () => pedir<{ adaptadores: Adaptador[]; entradas?: string[] }>('GET', '/api/v1/capacidades', undefined, 60000),
@@ -628,7 +629,7 @@ export function opcionEscrita(valor: string): OpcionModelo {
 export const problemasAgentes = ref<Record<string, string>>({})
 let disponibilidad: Promise<void> | undefined
 export function fijarDisponibilidad(adaptadores: Adaptador[]) {
-  problemasAgentes.value = Object.fromEntries(adaptadores.filter((a) => a.problema).map((a) => [a.agente,
+  problemasAgentes.value = Object.fromEntries(adaptadores.filter((a) => a.problema && a.problema_codigo !== 'aviso').map((a) => [a.agente,
     a.problema_codigo === 'no_instalado' ? t('modelo.noInstalado') : a.problema_codigo === 'falta_clave' ? t('modelo.faltaClave') : t('modelo.conProblema', { problema: a.problema ?? '' })]))
 }
 export function cargarDisponibilidad() {

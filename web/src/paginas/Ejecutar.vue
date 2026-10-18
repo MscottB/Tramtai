@@ -204,7 +204,7 @@ import SalidaTrabajo from '../componentes/SalidaTrabajo.vue'
 import VerComoCodigo from '../componentes/VerComoCodigo.vue'
 import { ejemplos as ejemplosDe, type Ejemplo } from '../ejemplos'
 import { ajustesDeReceta, api, aplicarModelo, avisar, avisarError, configDeReceta, copiar, duracion, esquemaDeReceta, esfuerzoUsado, estadoInfo, haceCuanto, mensajeDe, modeloDe, modeloInicial,
-  origenHistorial, recetaDePunto, recetaDeSolicitud, recetaInicial, recetaVacia, terminales, tituloError, trabajoSeguido, idModeloDe, type EstadoPunto, type EventoRegistro, type LimitesPeticion, type Modelo, type Receta, type Solicitud,
+  origenHistorial, recetaDePunto, recetaDeSolicitud, recetaInicial, recetaVacia, terminales, tituloError, trabajoSeguido, idModeloDe, esfuerzoEspacio, type EstadoPunto, type EventoRegistro, type LimitesPeticion, type Modelo, type Receta, type Solicitud,
   type Trabajo } from '../api'
 import { t } from '../i18n'
 
@@ -334,6 +334,7 @@ async function verCodigo() {
   const modelo = (editando.value ? p && idModeloDe(p) : receta.value.modelo) || catalogo.value.find((m) => m.predeterminado)?.id || 'claude'
   let solicitud = solicitudDe([], esquema)
   if (editando.value) solicitud = { mensajes: solicitud.mensajes, perfil: solicitud.perfil, ejecucion: solicitud.ejecucion }
+  else if (!receta.value.modelo && !receta.value.esfuerzo && esfuerzoEspacio(catalogo.value)) solicitud.esfuerzo = esfuerzoEspacio(catalogo.value)
   if (!solicitud.mensajes[0].contenido.trim()) solicitud.mensajes[0].contenido = archivos.value?.length ? t('ejemplos.mensaje') : t('conectar.hola')
   ejemplosCodigo.value = ejemplosDe({ url, modelo, contratos,
     prueba: { solicitud, archivos: (archivos.value ?? []).map((a) => a.name) } })
@@ -481,6 +482,7 @@ async function actualizarApi() {
   try {
     await api.ajustesPunto(editando.value, ajustesDeReceta(receta.value))
     avisar(t('ejecutar.apiActualizada', { nombre: editando.value }))
+    apiEditada.value = (await api.puntos().catch(() => [])).find((x) => x.nombre === editando.value) ?? apiEditada.value
   } catch (e) {
     avisarError(e)
   } finally {

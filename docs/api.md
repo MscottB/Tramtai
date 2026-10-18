@@ -162,7 +162,7 @@ Cuánto razona el modelo antes de responder. Es opcional: sin él, cada CLI usa 
 - **API nativa:** `"esfuerzo": "bajo" | "medio" | "alto" | "muy_alto" | "maximo"`. Un valor desconocido devuelve 400.
 - **OpenAI:** `reasoning_effort` (chat) o `reasoning.effort` (Responses). `minimal` y `low` equivalen a bajo; `medium` a medio; `high` a alto; `xhigh` a muy alto; `none` deja el del agente.
 - **Por API:** el campo `esfuerzo` de un punto de acceso, que se edita en Mis APIs, se usa cuando la aplicación no pide uno.
-- **Del espacio:** `predeterminados.esfuerzo` (en **Ajustes**, bajo el modelo predeterminado) va con el modelo predeterminado: se usa cuando la petición no elige agente ni esfuerzo (una API por aplicación sin agente propio también lo hereda). `GET /api/v1/modelos` lo indica en `esfuerzo_espacio` del modelo predeterminado, y `POST /api/v1/instancia/predeterminado` acepta `{"modelo", "esfuerzo"}` (`""` vuelve al del agente; sin `esfuerzo`, no cambia). Un valor escrito a mano que no es un nivel se ignora.
+- **Del espacio:** `predeterminados.esfuerzo` (en **Ajustes**, bajo el modelo predeterminado) va con el modelo predeterminado: se usa cuando la petición no elige agente, modelo, perfil ni esfuerzo (una API por aplicación sin modelo propio también lo hereda). `GET /api/v1/modelos` lo indica en `esfuerzo_espacio` del modelo predeterminado, y `POST /api/v1/instancia/predeterminado` acepta `{"modelo", "esfuerzo"}` (`""` vuelve al del agente; sin `esfuerzo`, no cambia; con `modelo` vacío solo cambia el esfuerzo). Un valor escrito a mano que no es un nivel se ignora.
 - **Qué agentes lo admiten:**
   - Claude Code (`--effort`), hasta máximo.
   - Codex (`model_reasoning_effort`), hasta muy alto; si se pide máximo, usa muy alto.

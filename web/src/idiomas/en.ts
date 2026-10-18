@@ -92,7 +92,7 @@ const en: Textos = {
   'predeterminado.proyecto': 'Only for this project: saved in .tramtai/local.yaml.',
   'predeterminado.guardado': 'Default model: {modelo}',
   'predeterminado.esfuerzoGuardado': 'Default effort: {nivel}',
-  'predeterminado.esfuerzoHint': 'The effort with this model when an app or a test does not choose an agent or an effort.',
+  'predeterminado.esfuerzoHint': 'The effort with this model when an app or a test does not choose an agent, a model or an effort.',
   'perfil.rapido': 'Fast',
   'perfil.equilibrado': 'Balanced',
   'perfil.profundo': 'Deep',

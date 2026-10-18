@@ -256,7 +256,10 @@ const actualPredeterminado = computed(() => catalogo.value.find((m) => m.predete
 async function cambiarPredeterminado(id: string) {
   guardandoModelo.value = true
   try {
-    await api.fijarPredeterminado(id)
+    // Un esfuerzo que el modelo nuevo no admite (máximo con Codex, o cualquiera con un agente sin niveles) vuelve al
+    // del agente: si no, se aplicaría sin verse y lo heredarían los respaldos.
+    const actual = esfuerzoEspacio(catalogo.value)
+    await api.fijarPredeterminado(id, actual && !esfuerzosDe(catalogo.value, id).includes(actual) ? '' : undefined)
     catalogo.value = await api.catalogo()
     const o = opcionesModelo.value.find((x) => x.value === id)
     avisar(t('predeterminado.guardado', { modelo: o?.label ?? id }))
@@ -269,10 +272,9 @@ async function cambiarPredeterminado(id: string) {
 
 // cambiarEsfuerzo guarda el esfuerzo que se usa con el modelo predeterminado ('' = el de su agente).
 async function cambiarEsfuerzo(esfuerzo: string) {
-  if (!actualPredeterminado.value) return
   guardandoModelo.value = true
   try {
-    await api.fijarPredeterminado(actualPredeterminado.value, esfuerzo)
+    await api.fijarPredeterminado('', esfuerzo)
     catalogo.value = await api.catalogo()
     avisar(t('predeterminado.esfuerzoGuardado', { nivel: esfuerzo ? nombreEsfuerzo(esfuerzo).toLowerCase() : t('esfuerzo.agente').toLowerCase() }))
   } catch (e) {

@@ -90,7 +90,7 @@ const es = {
   'predeterminado.proyecto': 'Solo para este proyecto: se guarda en .tramtai/local.yaml.',
   'predeterminado.guardado': 'Modelo predeterminado: {modelo}',
   'predeterminado.esfuerzoGuardado': 'Esfuerzo predeterminado: {nivel}',
-  'predeterminado.esfuerzoHint': 'El esfuerzo con este modelo cuando una aplicación o una prueba no elige agente ni esfuerzo.',
+  'predeterminado.esfuerzoHint': 'El esfuerzo con este modelo cuando una aplicación o una prueba no elige agente, modelo ni esfuerzo.',
   'perfil.rapido': 'rápido',
   'perfil.equilibrado': 'equilibrado',
   'perfil.profundo': 'profundo',

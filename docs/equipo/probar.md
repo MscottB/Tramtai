@@ -101,7 +101,7 @@ que va en su propio release después de este.
   - logo, nombre y la versión con su fecha de compilación (de `+DDMMAAAA`: «v0.40.0 · 17 de octubre de 2026»);
   - «Desarrollado por Michael Scott B.», con enlace a https://github.com/MscottB;
   - el estado de actualizaciones (el que ya conoce la app: «Tienes la última versión» o «Hay una versión nueva: vX»), con
-    **Buscar ahora** y **Ver novedades** (la página de la versión instalada en GitHub Releases);
+    **Buscar actualización ahora** y **Ver novedades** (la página de la versión instalada en GitHub Releases);
   - enlaces: sitio web (https://mscottb.github.io/Tramtai/), repositorio, informar de un problema (issues de GitHub),
     licencia (PolyForm Noncommercial 1.0.0) y términos de uso;
   - **Detalles técnicos**, plegado: commit (con enlace) y si tenía cambios sin confirmar, sistema y arquitectura, versión

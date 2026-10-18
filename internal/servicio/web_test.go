@@ -255,6 +255,13 @@ func TestWebUI(t *testing.T) {
 	if datos, _ := os.ReadFile(rutaGlobal); !strings.Contains(string(datos), "esfuerzo: alto") {
 		t.Fatalf("el esfuerzo predeterminado debía guardarse:\n%s", datos)
 	}
+	// Solo el esfuerzo (modelo vacío): no toca el modelo.
+	if r, cuerpo := n.pedir("POST", "/api/v1/instancia/predeterminado", `{"modelo":"","esfuerzo":"bajo"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 204 {
+		t.Fatalf("fijar solo el esfuerzo: %d %s", r.StatusCode, cuerpo)
+	}
+	if datos, _ := os.ReadFile(rutaGlobal); !strings.Contains(string(datos), "esfuerzo: bajo") || !strings.Contains(string(datos), "modelo: m2") {
+		t.Fatalf("solo el esfuerzo cambia, el modelo sigue:\n%s", datos)
+	}
 
 	if r, _ := n.pedir("DELETE", "/ui/sesion", ""); r.StatusCode != 204 {
 		t.Fatalf("salir: %d", r.StatusCode)

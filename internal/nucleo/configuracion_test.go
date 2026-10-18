@@ -108,6 +108,12 @@ func TestAplicarPredeterminados(t *testing.T) {
 	if s := c.AplicarPredeterminados(SolicitudEjecucion{Agente: "codex"}); s.Esfuerzo != "" {
 		t.Errorf("con otro agente, el de su CLI: %q", s.Esfuerzo)
 	}
+	if s := c.AplicarPredeterminados(SolicitudEjecucion{PerfilModelo: "rapido"}); s.Esfuerzo != "" {
+		t.Errorf("con un perfil elegido, el de su agente: %q", s.Esfuerzo)
+	}
+	if s := c.AplicarPredeterminados(SolicitudEjecucion{Modelo: "opus"}); s.Esfuerzo != "" {
+		t.Errorf("con un modelo elegido, el de su agente: %q", s.Esfuerzo)
+	}
 	c = Resolver(cargar(t, "predeterminados:\n  esfuerzo: muchisimo\n", OrigenGlobal))
 	if s := c.AplicarPredeterminados(SolicitudEjecucion{}); s.Esfuerzo != "" {
 		t.Errorf("un nivel inválido se ignora: %q", s.Esfuerzo)

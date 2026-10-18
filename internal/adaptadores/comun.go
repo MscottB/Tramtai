@@ -46,6 +46,8 @@ type Estado struct {
 const (
 	ProblemaNoInstalado = "no_instalado"
 	ProblemaFaltaClave  = "falta_clave"
+	// ProblemaAviso es algo que conviene saber pero no impide usar el agente.
+	ProblemaAviso = "aviso"
 )
 
 // Detectable lo implementan los adaptadores que pueden informar su estado sin consumir cuota.
