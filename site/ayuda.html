@@ -126,21 +126,24 @@ curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instal
     <section id="agentes">
       <h2><span lang="es">Conectar los agentes</span><span lang="en">Connect the agents</span></h2>
       <div lang="es">
-        <p>Tramtai usa los CLI oficiales de cada agente tal como se instalan: <a href="https://docs.anthropic.com/claude-code">Claude Code</a> (<code>claude</code>), <a href="https://developers.openai.com/codex/cli">Codex CLI</a> (<code>codex</code>) o una clave de la Gemini API. Antigravity (<code>agy</code>) es experimental. Abre la app y ve a <strong>Agentes</strong>: te dice qué le falta a cada uno.</p>
+        <p>Tramtai usa los CLI oficiales de cada agente tal como se instalan: <a href="https://docs.anthropic.com/claude-code">Claude Code</a> (<code>claude</code>), <a href="https://developers.openai.com/codex/cli">Codex CLI</a> (<code>codex</code>), <a href="https://docs.github.com/copilot/how-tos/set-up/install-copilot-cli">GitHub Copilot CLI</a> (<code>copilot</code>) o una clave de la Gemini API. Antigravity (<code>agy</code>) es experimental. Abre la app y ve a <strong>Agentes</strong>: te dice qué le falta a cada uno.</p>
         <h3>Con tu suscripción (uso personal)</h3>
         <p>Si ya usas Claude Pro/Max o ChatGPT en tu equipo, pulsa <strong>Usar mi suscripción</strong> en la página Agentes. Se aplica al momento. Es solo para uso personal y local, según los términos de cada proveedor. Tramtai nunca lee ni copia las sesiones de los CLI: el propio CLI usa la suya.</p>
+        <p><strong>Copilot:</strong> inicia sesión una vez con <code>copilot login</code> en una terminal y elige <strong>Usar mi suscripción</strong>. Funciona con Copilot Free, que solo tiene el modelo automático (<code>copilot</code>); cada petición gasta créditos de tu plan (premium requests). Con un plan de pago puedes pedir <code>copilot/&lt;modelo&gt;</code>. En Windows, Tramtai usa el <code>copilot.exe</code> que instala npm, no el envoltorio <code>copilot.cmd</code>.</p>
         <h3>Con una clave de API</h3>
         <p><code>tramtai claves guardar</code> la pide sin mostrarla y la guarda cifrada en el almacén del sistema: el Administrador de credenciales en Windows, el Llavero en macOS y el Secret Service en Linux (necesita <code>secret-tool</code>, del paquete <code>libsecret-tools</code>). Tramtai nunca la escribe en sus archivos y la usa desde la siguiente petición, sin reiniciar. La página <strong>Agentes</strong> te dice dónde queda en tu sistema.</p>
       </div>
       <div lang="en">
-        <p>Tramtai uses each agent's official CLI as installed: <a href="https://docs.anthropic.com/claude-code">Claude Code</a> (<code>claude</code>), <a href="https://developers.openai.com/codex/cli">Codex CLI</a> (<code>codex</code>) or a Gemini API key. Antigravity (<code>agy</code>) is experimental. Open the app and go to <strong>Agents</strong>: it tells you what each one is missing.</p>
+        <p>Tramtai uses each agent's official CLI as installed: <a href="https://docs.anthropic.com/claude-code">Claude Code</a> (<code>claude</code>), <a href="https://developers.openai.com/codex/cli">Codex CLI</a> (<code>codex</code>), <a href="https://docs.github.com/copilot/how-tos/set-up/install-copilot-cli">GitHub Copilot CLI</a> (<code>copilot</code>) or a Gemini API key. Antigravity (<code>agy</code>) is experimental. Open the app and go to <strong>Agents</strong>: it tells you what each one is missing.</p>
         <h3>With your subscription (personal use)</h3>
         <p>If you already use Claude Pro/Max or ChatGPT on your computer, click <strong>Use my subscription</strong> on the Agents page. It applies right away. It's for personal, local use only, under each provider's terms. Tramtai never reads or copies the CLIs' sessions: the CLI uses its own.</p>
+        <p><strong>Copilot:</strong> sign in once with <code>copilot login</code> in a terminal and choose <strong>Use my subscription</strong>. It works with Copilot Free, which only has the automatic model (<code>copilot</code>); every request uses credits from your plan (premium requests). With a paid plan you can ask for <code>copilot/&lt;model&gt;</code>. On Windows, Tramtai uses the <code>copilot.exe</code> that npm installs, not the <code>copilot.cmd</code> wrapper.</p>
         <h3>With an API key</h3>
         <p><code>tramtai claves guardar</code> asks for it without showing it and stores it encrypted in the system store: Credential Manager on Windows, Keychain on macOS and the Secret Service on Linux (it needs <code>secret-tool</code>, from the <code>libsecret-tools</code> package). Tramtai never writes it to its own files and uses it from the next request, without restarting. The <strong>Agents</strong> page tells you where it lives on your system.</p>
       </div>
 <pre class="codigo">tramtai claves guardar ANTHROPIC_API_KEY   # Claude
 tramtai claves guardar OPENAI_API_KEY      # Codex
+tramtai claves guardar COPILOT_GITHUB_TOKEN  # Copilot (token fine-grained con «Copilot Requests»)
 tramtai claves guardar GEMINI_API_KEY      # Gemini, Antigravity</pre>
     </section>
 
@@ -167,10 +170,10 @@ tramtai claves guardar GEMINI_API_KEY      # Gemini, Antigravity</pre>
         <p><strong>Which URL do I use?</strong> If your app already uses the OpenAI SDK, or a tool that lets you change the base URL (LangChain, n8n, an AI editor), the OpenAI one; if it uses the Anthropic SDK, the Anthropic one. If you need to send files, follow long jobs and resume them if the connection drops, cancel, retry or pick a fallback per request, the Tramtai API: its OpenAPI description is at <code>/api/v1/openapi.json</code>. In the app, <strong>My APIs</strong> compares the three with examples for each, and <strong>Try → View as code</strong> gives you your test ready to copy.</p>
       </div>
       <div lang="es">
-        <p>El campo <code>model</code> elige agente y modelo: <code>claude/sonnet</code>, <code>claude/haiku</code>, <code>codex</code>, <code>gemini/gemini-flash-latest</code> o un perfil como <code>perfil/rapido</code>. Sin <code>model</code> se usa el modelo predeterminado de <strong>Ajustes</strong>. En Claude y Codex, <code>reasoning_effort</code> elige cuánto razona el agente.</p>
+        <p>El campo <code>model</code> elige agente y modelo: <code>claude/sonnet</code>, <code>claude/haiku</code>, <code>codex</code>, <code>copilot</code>, <code>gemini/gemini-flash-latest</code> o un perfil como <code>perfil/rapido</code>. Sin <code>model</code> se usa el modelo predeterminado de <strong>Ajustes</strong>. En Claude, Codex y Copilot (con un modelo concreto), <code>reasoning_effort</code> elige cuánto razona el agente.</p>
       </div>
       <div lang="en">
-        <p>The <code>model</code> field picks agent and model: <code>claude/sonnet</code>, <code>claude/haiku</code>, <code>codex</code>, <code>gemini/gemini-flash-latest</code> or a profile like <code>perfil/rapido</code>. Without <code>model</code>, the default model from <strong>Settings</strong> is used. For Claude and Codex, <code>reasoning_effort</code> sets how hard the agent reasons.</p>
+        <p>The <code>model</code> field picks agent and model: <code>claude/sonnet</code>, <code>claude/haiku</code>, <code>codex</code>, <code>copilot</code>, <code>gemini/gemini-flash-latest</code> or a profile like <code>perfil/rapido</code>. Without <code>model</code>, the default model from <strong>Settings</strong> is used. For Claude, Codex and Copilot (with a specific model), <code>reasoning_effort</code> sets how hard the agent reasons.</p>
       </div>
 <pre class="codigo"><span class="k">from</span> openai <span class="k">import</span> OpenAI
 
@@ -370,8 +373,8 @@ tramtai ejecutar -f informe.pdf "Resume el documento en tres puntos"</pre>
       </details>
       <details id="terminos">
         <summary><span lang="es">¿Puedo usar mi suscripción en vez de una clave de API?</span><span lang="en">Can I use my subscription instead of an API key?</span></summary>
-        <p lang="es">Solo para uso personal y local. Los términos de Anthropic y OpenAI pueden no permitir usar una suscripción personal de forma automatizada o para alimentar otras aplicaciones, y tu cuenta podría limitarse o suspenderse: ese riesgo es tuyo, y por eso Tramtai te pide aceptarlo antes de activarla. Para tus aplicaciones, usa una clave de API. Todo el detalle está en los <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md">términos de uso</a>.</p>
-        <p lang="en">Only for personal, local use. Anthropic's and OpenAI's terms may not allow using a personal subscription in an automated way or to power other apps, and your account could be limited or suspended: that risk is yours, which is why Tramtai asks you to accept it before turning it on. For your apps, use an API key. Full details in the <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md">terms of use</a>.</p>
+        <p lang="es">Solo para uso personal y local. Los términos de Anthropic, OpenAI y GitHub pueden no permitir usar una suscripción personal de forma automatizada o para alimentar otras aplicaciones, y tu cuenta podría limitarse o suspenderse: ese riesgo es tuyo, y por eso Tramtai te pide aceptarlo antes de activarla. Para tus aplicaciones, usa una clave de API. Todo el detalle está en los <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md">términos de uso</a>.</p>
+        <p lang="en">Only for personal, local use. Anthropic's, OpenAI's and GitHub's terms may not allow using a personal subscription in an automated way or to power other apps, and your account could be limited or suspended: that risk is yours, which is why Tramtai asks you to accept it before turning it on. For your apps, use an API key. Full details in the <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md">terms of use</a>.</p>
       </details>
       <details>
         <summary><span lang="es">¿Puedo usarlo en mi empresa?</span><span lang="en">Can I use it at my company?</span></summary>
@@ -399,8 +402,8 @@ tramtai ejecutar -f informe.pdf "Resume el documento en tres puntos"</pre>
   <div class="envoltura">
     <span>© 2026 Michael Scott B. · Tramtai · <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a></span>
     <span>
-      <span lang="es">Claude, Codex, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span>
-      <span lang="en">Claude, Codex, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span>
+      <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span>
+      <span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span>
     </span>
   </div>
 </footer>
