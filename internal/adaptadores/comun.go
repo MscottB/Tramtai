@@ -28,7 +28,7 @@ const FormatoSerializacion = "tramtai-turnos-v2"
 
 // variablesCredenciales se retiran del entorno heredado: cada CLI recibe solo la suya.
 var variablesCredenciales = []string{"ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN",
-	"CODEX_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"}
+	"CODEX_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"}
 
 // Estado es el resultado de la detección de un adaptador para el diagnóstico.
 type Estado struct {
@@ -94,7 +94,13 @@ func codigoDelimitador() string {
 func Secretos() []string {
 	var lista []string
 	for _, nombre := range variablesCredenciales {
-		if clave := ClaveEntorno(nombre); len(clave) >= 8 {
+		// Las que el almacén no admite (GH_TOKEN, GITHUB_TOKEN…) solo pueden venir del entorno: no se pregunta al almacén,
+		// que en macOS y Linux lanza un proceso por consulta.
+		clave := os.Getenv(nombre)
+		if clave == "" && credenciales.Admitido(nombre) {
+			clave = ClaveEntorno(nombre)
+		}
+		if len(clave) >= 8 {
 			lista = append(lista, clave)
 		}
 	}

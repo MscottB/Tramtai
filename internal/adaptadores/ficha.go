@@ -27,6 +27,8 @@ type Ficha struct {
 	// EsfuerzoPredeterminado da el nivel que usa el CLI con un modelo concreto si no se le indica otro ("" si no se
 	// conoce con certeza); nil si nunca se conoce.
 	EsfuerzoPredeterminado func(modelo string) string
+	// ModelosSinEsfuerzo son los modelos con los que el CLI no admite elegir el esfuerzo ("" es su predeterminado).
+	ModelosSinEsfuerzo []string
 	// Autenticaciones son los modos que admite (AutenticacionSuscripcion, AutenticacionClaveAPI).
 	Autenticaciones []string
 	// VariablesClave son las variables de su clave. La primera es la que Agentes muestra para guardarla con tramtai claves

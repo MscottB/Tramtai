@@ -1296,6 +1296,10 @@ func TestLineaRegistroEscapada(t *testing.T) {
 	opc.Registros = &registro
 	p := iniciar(t, alm, adaptadores.Simulado{Error: nucleo.NuevoError(nucleo.CodigoErrorAgente, "fallo\n10:00:00 global completado trabajo_falso")}, 1, opc)
 	esperar(t, alm, enviar(t, p, solicitud("x")), nucleo.Fallido)
+	p.Detener() // la línea se escribe al cerrar el trabajo: leerla antes sería una carrera (go test -race)
+	if registro.Len() == 0 {
+		t.Fatal("el trabajo no dejó línea en el registro")
+	}
 	for _, linea := range strings.Split(registro.String(), "\n") {
 		if strings.HasPrefix(linea, "10:00:00") {
 			t.Fatalf("un mensaje del CLI falsificó una línea del registro:\n%s", registro.String())
@@ -1332,5 +1336,18 @@ func TestEntradaNoCabeNoGastaPeticion(t *testing.T) {
 	dia, _, err := alm.Consumo(ctx, p.opc.Instancia, persistencia.TodaLaInstancia)
 	if err != nil || dia.Peticiones != 0 {
 		t.Fatalf("una entrada que no cabe no gasta petición del presupuesto: %+v %v", dia, err)
+	}
+}
+
+// Con el modelo automático de Copilot no se elige esfuerzo: el intento no anota uno que el CLI no usa.
+func TestIntentoSinEsfuerzoConCopilotAuto(t *testing.T) {
+	sinVersion := func(string, string) string { return "" }
+	for _, modelo := range []string{"", "auto"} {
+		if i := nuevoIntento(candidato{agente: "copilot", modelo: modelo}, "alto", sinVersion); i.Esfuerzo != "" {
+			t.Fatalf("copilot/%s: esfuerzo %q", modelo, i.Esfuerzo)
+		}
+	}
+	if i := nuevoIntento(candidato{agente: "copilot", modelo: "gpt-6-luna"}, "alto", sinVersion); i.Esfuerzo != "alto" {
+		t.Fatalf("copilot con un modelo concreto: esfuerzo %q", i.Esfuerzo)
 	}
 }

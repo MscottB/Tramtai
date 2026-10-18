@@ -4,11 +4,13 @@
 #   "feat:"                                    -> menor  (X.Y+1.0)
 #   cualquier otro commit (fix, docs, chore…)  -> parche (X.Y.Z+1)
 # DDMMAAAA es la fecha del commit versionado. Sin commits nuevos devuelve la etiqueta tal cual; sin etiquetas parte de 0.0.0.
-# Uso: scripts/version.ps1 [-Hasta <commit>] [-Resumen <texto>] [-Explicar] [-Etiquetar]
+# Uso: scripts/version.ps1 [-Hasta <commit>] [-Resumen <texto>] [-ResumenEn <text>] [-Explicar] [-Etiquetar]
 #   -Explicar   muestra las notas de la versión (los cambios agrupados por tipo)
 #   -Etiquetar  crea la etiqueta anotada con esas notas como mensaje (no la sube)
 #   -Resumen    texto que encabeza las notas, para explicar lo que los mensajes de commit no dicen
-param([string]$Hasta = 'HEAD', [string]$Resumen = '', [switch]$Etiquetar, [switch]$Explicar)
+#   -ResumenEn  el mismo resumen en inglés: va al final, tras «## English», y la app lo muestra en inglés
+#               (obligatorio al etiquetar con -Resumen; la lista de cambios sale de los commits, en español)
+param([string]$Hasta = 'HEAD', [string]$Resumen = '', [string]$ResumenEn = '', [switch]$Etiquetar, [switch]$Explicar)
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 Push-Location (Join-Path $PSScriptRoot '..')
@@ -55,10 +57,12 @@ try {
     foreach ($g in $grupos.Keys) {
         if ($grupos[$g].Count) { $notas += "`n`n${g}:`n" + ($grupos[$g] -join "`n") }
     }
+    if ($ResumenEn) { $notas += "`n`n## English`n`nTramtai $version`n`n$ResumenEn`n`nFull list of changes (in Spanish) above." }
     if ($Explicar) { Write-Host $notas`n }
 
     if ($Etiquetar) {
         if ($nivel -eq 0) { throw "No hay commits nuevos desde $ultima." }
+        if ($Resumen -and -not $ResumenEn) { throw 'Falta -ResumenEn: las notas van también en inglés.' }
         if ($Hasta -eq 'HEAD' -and (git status --porcelain)) { throw 'Hay cambios sin confirmar: haz commit antes de etiquetar.' }
         $archivo = New-TemporaryFile
         try {

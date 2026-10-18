@@ -13,7 +13,7 @@ import (
 )
 
 // Nombres son las variables que admite el almacén; cada una se guarda como tramtai/<NOMBRE>.
-var Nombres = []string{"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "CODEX_API_KEY", "GEMINI_API_KEY"}
+var Nombres = []string{"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "CODEX_API_KEY", "GEMINI_API_KEY", "COPILOT_GITHUB_TOKEN"}
 
 // Admitido indica si el nombre es una de las claves que Tramtai sabe usar.
 func Admitido(nombre string) bool { return slices.Contains(Nombres, nombre) }

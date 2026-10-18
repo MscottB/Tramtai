@@ -201,8 +201,8 @@ Se comprueba la ruta real del archivo, así que `..` o un enlace que salga de es
 
 ### Comprobar el aislamiento de los agentes
 
-`go test -tags canario -v -count=1 ./pruebas/canario` pide a Claude (haiku y sonnet) y a Codex (gpt-5.6-terra, esfuerzo
-bajo), con tu suscripción, que lean un archivo trampa, ejecuten una orden y abran una URL local, y comprueba que no lo
+`go test -tags canario -v -count=1 ./pruebas/canario` pide a Claude (haiku y sonnet), a Codex (gpt-5.6-terra, esfuerzo
+bajo) y a Copilot (automático; gasta un crédito del plan), con tu suscripción, que lean un archivo trampa, ejecuten una orden y abran una URL local, y comprueba que no lo
 consiguen. Gasta unas pocas peticiones pequeñas.
 
 ## Puntos de acceso

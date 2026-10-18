@@ -114,7 +114,7 @@
             </div>
             <template v-else>
               <q-banner v-for="(a, i) in avisos" :key="i" rounded dense class="aviso-caja q-mb-sm">
-                <template #avatar><q-icon name="o_alt_route" color="warning" /></template>{{ a }}
+                <template #avatar><q-icon name="o_info" color="warning" /></template>{{ a }}
               </q-banner>
               <q-banner v-if="final?.codigo_error" rounded dense class="error-caja q-mb-md">
                 <template #avatar><q-icon name="o_error" /></template>

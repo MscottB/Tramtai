@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tramtai · Tus agentes de IA como una API local</title>
-<meta name="description" content="Tramtai convierte Claude Code, Codex, Antigravity y la API de Gemini en una API local compatible con OpenAI y Anthropic, en tu propio equipo.">
+<meta name="description" content="Tramtai convierte Claude Code, Codex, GitHub Copilot CLI, Antigravity y la API de Gemini en una API local compatible con OpenAI y Anthropic, en tu propio equipo.">
 <meta property="og:title" content="Tramtai · Tus agentes de IA como una API local">
-<meta property="og:description" content="Claude Code, Codex, Antigravity y la API de Gemini como una API compatible con OpenAI y Anthropic, en tu equipo.">
+<meta property="og:description" content="Claude Code, Codex, GitHub Copilot CLI, Antigravity y la API de Gemini como una API compatible con OpenAI y Anthropic, en tu equipo.">
 <meta property="og:image" content="logo.png">
 <meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
@@ -20,6 +20,7 @@
     <a class="marca" href="#"><img src="logo.png" alt="">Tramtai</a>
     <nav aria-label="Secciones">
       <a href="#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+      <a href="#agentes"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
       <a href="#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
       <a href="#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
       <a href="#privacidad"><span lang="es">Privacidad</span><span lang="en">Privacy</span></a>
@@ -49,8 +50,8 @@
           <span lang="en">Your AI agents, <em>as a local API</em>.</span>
         </h1>
         <p class="entrada">
-          <span lang="es">Tramtai convierte Claude Code, Codex, Antigravity y la API de Gemini en una API compatible con OpenAI y Anthropic que funciona en tu equipo. Conecta cualquier aplicación cambiando solo la URL.</span>
-          <span lang="en">Tramtai turns Claude Code, Codex, Antigravity and the Gemini API into an OpenAI- and Anthropic-compatible API that runs on your computer. Connect any app by changing just the URL.</span>
+          <span lang="es">Tramtai convierte Claude Code, Codex, GitHub Copilot CLI, Antigravity y la API de Gemini en una API compatible con OpenAI y Anthropic que funciona en tu equipo. Conecta cualquier aplicación cambiando solo la URL.</span>
+          <span lang="en">Tramtai turns Claude Code, Codex, GitHub Copilot CLI, Antigravity and the Gemini API into an OpenAI- and Anthropic-compatible API that runs on your computer. Connect any app by changing just the URL.</span>
         </p>
         <div class="acciones">
           <a class="boton principal" href="#descargar">
@@ -71,10 +72,11 @@
         <svg viewBox="0 0 520 320">
           <g fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M 40 160 L 150 160" stroke="var(--acento)"/>
-            <path d="M 270 148 L 284 148 C 324 148 318 70 358 70 L 378 70" stroke="var(--claude)"/>
-            <path d="M 270 156 L 292 156 C 322 156 318 130 348 130 L 378 130" stroke="var(--codex)"/>
-            <path d="M 270 164 L 292 164 C 322 164 318 190 348 190 L 378 190" stroke="var(--gemini)"/>
-            <path d="M 270 172 L 284 172 C 324 172 318 250 358 250 L 378 250" stroke="var(--antigravity)"/>
+            <path d="M 270 144 L 284 144 C 324 144 318 50 358 50 L 378 50" stroke="var(--claude)"/>
+            <path d="M 270 152 L 292 152 C 322 152 318 105 348 105 L 378 105" stroke="var(--codex)"/>
+            <path d="M 270 160 L 378 160" stroke="var(--copilot)"/>
+            <path d="M 270 168 L 292 168 C 322 168 318 215 348 215 L 378 215" stroke="var(--gemini)"/>
+            <path d="M 270 176 L 284 176 C 324 176 318 270 358 270 L 378 270" stroke="var(--antigravity)"/>
           </g>
           <circle cx="40" cy="160" r="11" fill="var(--superficie)" stroke="var(--acento)" stroke-width="5"/>
           <text x="40" y="196" text-anchor="middle" font-size="13" fill="var(--texto-suave)"><tspan lang="es">Tu app</tspan><tspan lang="en">Your app</tspan></text>
@@ -82,16 +84,18 @@
           <text x="210" y="157" text-anchor="middle" font-size="17" font-weight="700" fill="var(--texto)" style="font-family: var(--titulo)">Tramtai</text>
           <text x="210" y="176" text-anchor="middle" font-size="11" fill="var(--texto-suave)" style="font-family: var(--mono)">127.0.0.1</text>
           <g stroke-width="5" fill="var(--superficie)">
-            <circle cx="384" cy="70" r="10" stroke="var(--claude)"/>
-            <circle cx="384" cy="130" r="10" stroke="var(--codex)"/>
-            <circle cx="384" cy="190" r="10" stroke="var(--gemini)"/>
-            <circle cx="384" cy="250" r="10" stroke="var(--antigravity)"/>
+            <circle cx="384" cy="50" r="10" stroke="var(--claude)"/>
+            <circle cx="384" cy="105" r="10" stroke="var(--codex)"/>
+            <circle cx="384" cy="160" r="10" stroke="var(--copilot)"/>
+            <circle cx="384" cy="215" r="10" stroke="var(--gemini)"/>
+            <circle cx="384" cy="270" r="10" stroke="var(--antigravity)"/>
           </g>
           <g font-size="12.5" fill="var(--texto-suave)" text-anchor="start">
-            <text x="404" y="74">Claude Code</text>
-            <text x="404" y="134">Codex</text>
-            <text x="404" y="194">Gemini API</text>
-            <text x="404" y="254">Antigravity</text>
+            <text x="404" y="54">Claude Code</text>
+            <text x="404" y="109">Codex</text>
+            <text x="404" y="164">Copilot CLI</text>
+            <text x="404" y="219">Gemini API</text>
+            <text x="404" y="274">Antigravity</text>
           </g>
           <rect class="tranvia" x="-13" y="-7" width="26" height="14" rx="5" fill="var(--acento)"/>
         </svg>
@@ -112,7 +116,7 @@
         </li>
         <li>
           <h3><span lang="es">Conecta un agente</span><span lang="en">Connect an agent</span></h3>
-          <p class="suave"><span lang="es">Usa tu suscripción de Claude o ChatGPT para uso personal, o una clave de API. Necesitas tener instalado el CLI del agente.</span><span lang="en">Use your Claude or ChatGPT subscription for personal use, or an API key. The agent's CLI must be installed.</span></p>
+          <p class="suave"><span lang="es">Usa tu suscripción de Claude, ChatGPT o GitHub Copilot para uso personal, o una clave de API. Necesitas tener instalado el CLI del agente.</span><span lang="en">Use your Claude, ChatGPT or GitHub Copilot subscription for personal use, or an API key. The agent's CLI must be installed.</span></p>
         </li>
         <li>
           <h3><span lang="es">Apunta tu aplicación</span><span lang="en">Point your app</span></h3>
@@ -128,6 +132,44 @@ respuesta = cliente.chat.completions.create(
     model=<span class="s">"claude/sonnet"</span>,
     messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Resume este contrato en tres puntos"</span>}],
 )</pre>
+    </div>
+  </section>
+
+  <section id="agentes">
+    <div class="envoltura">
+      <div class="cabeza">
+        <span class="etiqueta"><span lang="es">Agentes</span><span lang="en">Agents</span></span>
+        <h2><span lang="es">Cinco agentes, una sola API.</span><span lang="en">Five agents, one API.</span></h2>
+        <p class="suave"><span lang="es">Tu app pide <code>agente/modelo</code> en el campo <code>model</code> y Tramtai la lleva por la línea de ese agente.</span><span lang="en">Your app asks for <code>agent/model</code> in the <code>model</code> field and Tramtai sends it down that agent's line.</span></p>
+      </div>
+      <div class="agentes">
+        <article class="agente" style="--c: var(--claude)">
+          <header><span class="sigla">CL</span><h3>Claude Code</h3></header>
+          <p><span lang="es">Tu suscripción de Claude (uso personal) o una clave de API de Anthropic.</span><span lang="en">Your Claude subscription (personal use) or an Anthropic API key.</span></p>
+          <ul><li><span lang="es">Esfuerzo de bajo a máximo</span><span lang="en">Effort from low to maximum</span></li><li><span lang="es">Respuesta en vivo</span><span lang="en">Live answer</span></li></ul>
+        </article>
+        <article class="agente" style="--c: var(--codex)">
+          <header><span class="sigla">CX</span><h3>Codex</h3></header>
+          <p><span lang="es">Tu cuenta de ChatGPT (uso personal) o una clave de API de OpenAI.</span><span lang="en">Your ChatGPT account (personal use) or an OpenAI API key.</span></p>
+          <ul><li><span lang="es">Esfuerzo de bajo a muy alto</span><span lang="en">Effort from low to very high</span></li><li><span lang="es">Respuestas con esquema JSON</span><span lang="en">JSON schema answers</span></li></ul>
+        </article>
+        <article class="agente" style="--c: var(--copilot)">
+          <header><span class="sigla">GH</span><h3>GitHub Copilot CLI</h3></header>
+          <p><span lang="es">La sesión de <code>copilot login</code> o un token de GitHub. Funciona con Copilot Free, con el modelo automático; cada petición gasta créditos de tu plan.</span><span lang="en">Your <code>copilot login</code> session or a GitHub token. Works with Copilot Free, with the automatic model; every request uses credits from your plan.</span></p>
+          <ul><li><span lang="es">Muestra el modelo que eligió</span><span lang="en">Shows the model it picked</span></li><li><span lang="es">Respuesta en vivo</span><span lang="en">Live answer</span></li></ul>
+        </article>
+        <article class="agente" style="--c: var(--gemini)">
+          <header><span class="sigla">GM</span><h3>Gemini API</h3></header>
+          <p><span lang="es">Tu clave de la Gemini API, sin instalar ningún CLI.</span><span lang="en">Your Gemini API key, with no CLI to install.</span></p>
+          <ul><li><span lang="es">Respuesta en vivo</span><span lang="en">Live answer</span></li><li><span lang="es">Respuestas con esquema JSON</span><span lang="en">JSON schema answers</span></li></ul>
+        </article>
+        <article class="agente" style="--c: var(--antigravity)">
+          <header><span class="sigla">AG</span><h3>Antigravity</h3></header>
+          <p><span lang="es">Experimental: con una clave de la Gemini API, solo desde Probar y la terminal hasta pasar su prueba con el CLI real.</span><span lang="en">Experimental: with a Gemini API key, only from Try and the terminal until it passes its test with the real CLI.</span></p>
+          <ul><li><span lang="es">Carpeta privada que se borra al terminar</span><span lang="en">Private folder deleted afterwards</span></li></ul>
+        </article>
+      </div>
+      <p class="nota-agentes suave"><span lang="es">Cada agente vive en su propio módulo y se comprueba con su CLI real antes de usarse desde tus apps: un mensaje hostil no le hace leer archivos, ejecutar órdenes ni salir a la red.</span><span lang="en">Each agent lives in its own module and is checked with its real CLI before your apps can use it: a hostile message can't make it read files, run commands or reach the network.</span></p>
     </div>
   </section>
 
@@ -147,6 +189,16 @@ respuesta = cliente.chat.completions.create(
           <img class="solo-claro" src="capturas/mis-apis-claro.png" width="1440" height="900" loading="lazy" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas" data-alt-en="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
           <img class="solo-oscuro" src="capturas/mis-apis-oscuro.png" width="1440" height="900" loading="lazy" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas" data-alt-en="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
           <figcaption><span lang="es">Mis APIs: tus APIs por grupo, con buscador, filtros y páginas, y cómo conectar cada una</span><span lang="en">My APIs: your APIs by group, with search, filters and pages, and how to connect each one</span></figcaption>
+        </figure>
+        <figure class="captura">
+          <img class="solo-claro" src="capturas/agentes-claro.png" width="1440" height="900" loading="lazy" alt="Agentes: una fila por agente con su versión, cómo está conectado y el filtro por estado" data-alt-en="Agents: one row per agent with its version, how it is connected and the status filter">
+          <img class="solo-oscuro" src="capturas/agentes-oscuro.png" width="1440" height="900" loading="lazy" alt="Agentes: una fila por agente con su versión, cómo está conectado y el filtro por estado" data-alt-en="Agents: one row per agent with its version, how it is connected and the status filter">
+          <figcaption><span lang="es">Agentes: una fila por agente, con su versión y cómo está conectado</span><span lang="en">Agents: one row per agent, with its version and how it is connected</span></figcaption>
+        </figure>
+        <figure class="captura">
+          <img class="solo-claro" src="capturas/probar-claro.png" width="1440" height="900" loading="lazy" alt="Probar: la receta con Copilot y «Ver como código» con la petición lista en Python" data-alt-en="Try: the recipe with Copilot and “View as code” with the request ready in Python">
+          <img class="solo-oscuro" src="capturas/probar-oscuro.png" width="1440" height="900" loading="lazy" alt="Probar: la receta con Copilot y «Ver como código» con la petición lista en Python" data-alt-en="Try: the recipe with Copilot and “View as code” with the request ready in Python">
+          <figcaption><span lang="es">Probar: prueba la receta y cópiala como código para tu app</span><span lang="en">Try: test the recipe and copy it as code for your app</span></figcaption>
         </figure>
       </div>
     </div>
@@ -176,6 +228,11 @@ respuesta = cliente.chat.completions.create(
           <h3><span lang="es">Archivos de verdad</span><span lang="en">Real documents</span></h3>
           <p><span lang="es">Adjunta PDF, Word, Excel, PowerPoint o ZIP: Tramtai los convierte a texto antes de pasarlos al agente.</span><span lang="en">Attach PDF, Word, Excel, PowerPoint or ZIP files: Tramtai turns them into text before handing them to the agent.</span></p>
         </article>
+        <article class="tarjeta">
+          <div class="linea" style="background: var(--copilot)"></div>
+          <h3><span lang="es">API propia con OpenAPI</span><span lang="en">Native API with OpenAPI</span></h3>
+          <p><span lang="es">Con <code>/api/v1</code> sigues, cancelas y reintentas cada petición. Trae su especificación OpenAPI, y «Ver como código» te da la petición lista en curl, Python o Node.</span><span lang="en">With <code>/api/v1</code> you follow, cancel and retry every request. It ships its OpenAPI spec, and “View as code” gives you the request ready in curl, Python or Node.</span></p>
+        </article>
         <p class="grupo-funciones" role="heading" aria-level="3"><span lang="es">Controla</span><span lang="en">Control</span></p>
         <article class="tarjeta">
           <div class="linea" style="background: var(--claude)"></div>
@@ -190,7 +247,12 @@ respuesta = cliente.chat.completions.create(
         <article class="tarjeta">
           <div class="linea" style="background: var(--claude)"></div>
           <h3><span lang="es">Modelo y esfuerzo a tu medida</span><span lang="en">Your model, your effort</span></h3>
-          <p><span lang="es">Elige modelo en cada petición y, en Claude y Codex, cuánto razona el agente: de bajo a máximo.</span><span lang="en">Pick the model per request and, for Claude and Codex, how hard the agent reasons: from low to maximum.</span></p>
+          <p><span lang="es">Elige modelo en cada petición y, en Claude, Codex y Copilot (con un modelo concreto), cuánto razona el agente: de bajo a máximo.</span><span lang="en">Pick the model per request and, for Claude, Codex and Copilot (with a specific model), how hard the agent reasons: from low to maximum.</span></p>
+        </article>
+        <article class="tarjeta">
+          <div class="linea" style="background: var(--gemini)"></div>
+          <h3><span lang="es">Ayuda dentro de la app</span><span lang="en">Help inside the app</span></h3>
+          <p><span lang="es">Guías paso a paso, qué hacer ante cada error y un buscador, en español e inglés, sin salir de Tramtai.</span><span lang="en">Step-by-step guides, what to do about each error and a search box, in Spanish and English, without leaving Tramtai.</span></p>
         </article>
         <p class="grupo-funciones" role="heading" aria-level="3"><span lang="es">Protege</span><span lang="en">Protect</span></p>
         <article class="tarjeta">
@@ -207,6 +269,11 @@ respuesta = cliente.chat.completions.create(
           <div class="linea" style="background: var(--antigravity)"></div>
           <h3><span lang="es">Claves a salvo</span><span lang="en">Keys kept safe</span></h3>
           <p><span lang="es">Tus claves de proveedor quedan cifradas en el almacén del sistema, y las de tus APIs se ven una sola vez y se regeneran con un clic si se filtran.</span><span lang="en">Your provider keys stay encrypted in the system store, and your APIs' keys are shown only once and can be regenerated in one click if they leak.</span></p>
+        </article>
+        <article class="tarjeta">
+          <div class="linea" style="background: var(--copilot)"></div>
+          <h3><span lang="es">Agentes con las manos atadas</span><span lang="en">Agents with their hands tied</span></h3>
+          <p><span lang="es">Los agentes que usan tus apps no tienen terminal ni pueden escribir archivos o salir a la red (Claude y Copilot, sin herramientas; Codex, en solo lectura), trabajan en una carpeta temporal vacía y no reciben las claves de los demás.</span><span lang="en">The agents your apps use have no terminal and can't write files or reach the network (Claude and Copilot without tools; Codex read-only), work in an empty temporary folder and never get the other agents' keys.</span></p>
         </article>
       </div>
     </div>
@@ -252,7 +319,7 @@ respuesta = cliente.chat.completions.create(
         </div>
         <ul>
           <li><b><span lang="es">Red</span><span lang="en">Network</span></b><span><span lang="es">Escucha solo en <strong>127.0.0.1</strong> y cada API exige su propia clave.</span><span lang="en">Listens only on <strong>127.0.0.1</strong> and every API requires its own key.</span></span></li>
-          <li><b><span lang="es">Claves</span><span lang="en">Keys</span></b><span><span lang="es">Tus claves de API quedan <strong>cifradas en el almacén del sistema</strong> (Administrador de credenciales, Llavero de macOS o Secret Service de Linux), nunca en los archivos de Tramtai. La clave de cada API solo se ve al crearla y la Web UI no se abre con ella. Tramtai jamás lee las sesiones de los CLI.</span><span lang="en">Your API keys are <strong>encrypted in the system store</strong> (Credential Manager, macOS Keychain or the Linux Secret Service), never in Tramtai's files. Each API's key is shown only when it's created, and it doesn't open the Web UI. Tramtai never reads the CLIs' sessions.</span></span></li>
+          <li><b><span lang="es">Claves</span><span lang="en">Keys</span></b><span><span lang="es">Tus claves de API quedan <strong>cifradas en el almacén del sistema</strong> (Administrador de credenciales, Llavero de macOS o Secret Service de Linux), nunca en los archivos de Tramtai. La clave de cada API solo se ve al crearla y la Web UI no se abre con ella. Tramtai jamás lee las credenciales de los CLI: con Copilot solo anota qué cuenta inició sesión.</span><span lang="en">Your API keys are <strong>encrypted in the system store</strong> (Credential Manager, macOS Keychain or the Linux Secret Service), never in Tramtai's files. Each API's key is shown only when it's created, and it doesn't open the Web UI. Tramtai never reads the CLIs' credentials: with Copilot it only notes which account is signed in.</span></span></li>
           <li><b><span lang="es">Datos</span><span lang="en">Data</span></b><span><span lang="es">Las respuestas <strong>caducan a las 24 horas</strong> y puedes vaciar el historial cuando quieras.</span><span lang="en">Responses <strong>expire after 24 hours</strong> and you can clear the history at any time.</span></span></li>
           <li><b><span lang="es">Telemetría</span><span lang="en">Telemetry</span></b><span><span lang="es"><strong>Ninguna.</strong> Tramtai no envía estadísticas de uso a nadie.</span><span lang="en"><strong>None.</strong> Tramtai sends no usage statistics anywhere.</span></span></li>
         </ul>
@@ -282,8 +349,8 @@ respuesta = cliente.chat.completions.create(
   <div class="envoltura">
     <span>© 2026 Michael Scott B. · Tramtai · <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a></span>
     <span>
-      <span lang="es">Claude, Codex, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span>
-      <span lang="en">Claude, Codex, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span>
+      <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span>
+      <span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span>
     </span>
   </div>
 </footer>

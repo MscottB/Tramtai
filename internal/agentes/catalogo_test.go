@@ -108,9 +108,24 @@ func TestEsfuerzoPredeterminado(t *testing.T) {
 	}
 }
 
+func TestNivelesDeModelo(t *testing.T) {
+	if n := NivelesDeModelo("copilot", "auto"); n != nil {
+		t.Fatalf("copilot/auto no admite esfuerzo: %v", n)
+	}
+	if n := NivelesDeModelo("copilot", ""); n != nil {
+		t.Fatalf("el predeterminado de copilot es auto: %v", n)
+	}
+	if n := NivelesDeModelo("copilot", "gpt-6-luna"); len(n) != 5 {
+		t.Fatalf("copilot con un modelo concreto: %v", n)
+	}
+	if n := NivelesDeModelo("claude", ""); len(n) != 5 {
+		t.Fatalf("claude: %v", n)
+	}
+}
+
 func TestSuscripcionYApps(t *testing.T) {
-	if !AdmiteSuscripcion("claude") || !AdmiteSuscripcion("codex") || AdmiteSuscripcion("gemini") || AdmiteSuscripcion("antigravity") {
-		t.Fatal("solo Claude y Codex admiten la suscripción")
+	if !AdmiteSuscripcion("claude") || !AdmiteSuscripcion("codex") || !AdmiteSuscripcion("copilot") || AdmiteSuscripcion("gemini") || AdmiteSuscripcion("antigravity") {
+		t.Fatal("solo Claude, Codex y Copilot admiten la suscripción")
 	}
 	c := nucleo.Resolver()
 	if PermitidoEnApps(c, "antigravity") || !PermitidoEnApps(c, "claude") || !PermitidoEnApps(c, "simulado") {

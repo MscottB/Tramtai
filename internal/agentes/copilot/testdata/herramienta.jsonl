@@ -1,0 +1,7 @@
+{"type":"session.auto_mode_resolved","data":{"chosenModel":"gpt-6-luna"}}
+{"type":"assistant.message_delta","data":{"deltaContent":"Voy a leerlo."}}
+{"type":"assistant.message","data":{"model":"gpt-6-luna","content":"Voy a leerlo.","toolRequests":[{"name":"view","arguments":{"path":"trampa.txt"}}]}}
+{"type":"tool.execution_start","data":{"toolName":"view"}}
+{"type":"tool.execution_complete","data":{"toolName":"view"}}
+{"type":"assistant.message","data":{"model":"gpt-6-luna","content":"El archivo dice: SECRETO"}}
+{"type":"result","exitCode":0,"usage":{"premiumRequests":1}}

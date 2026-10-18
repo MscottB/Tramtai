@@ -30,6 +30,13 @@ Sirven a la spec de agentes por módulos (`agentes-modulos.md`) y a los releases
     --no-ask-user --no-auto-update`: ninguna llamada a herramientas y «NO PUEDO» a las tres tareas.
 - **Persistencia:** guarda la sesión (`session-store.db`, `session-state/`) en `COPILOT_HOME`: carpeta privada por
   ejecución que se borra al terminar.
+- **Entrada y errores (pruebas del 2026-10-18):** el mensaje por la entrada estándar funciona (tildes y eñes bien, 1
+  premium request). Un modelo inexistente sale con código 1 y `Error: Model "…" from --model flag is not available.`
+  por stderr, sin gastar créditos. No hay orden para listar modelos.
+- **Con el adaptador de Tramtai (v0.44):** el canario pasa (`gpt-6-luna`, «NO PUEDO» a las tres tareas) y la prueba
+  real responde y se cancela en 4 s. Con `--no-custom-instructions` y sin MCP la entrada baja a unos 1 700–6 300 tokens.
+  Gastaron 3 créditos del plan gratuito (canario, respuesta y cancelación). En Windows, npm deja `copilot.cmd`; el
+  adaptador usa el `copilot.exe` nativo de `@github/copilot-win32-x64`.
 - **Archivos:** `--attachment` admite imágenes y documentos nativos; Tramtai seguirá enviando el texto convertido.
 
 ## OpenCode 1.19.3 (`npm install -g opencode-ai`)

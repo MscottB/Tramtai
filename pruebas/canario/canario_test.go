@@ -24,6 +24,7 @@ import (
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes/claude"
 	"tramtai/internal/agentes/codex"
+	"tramtai/internal/agentes/copilot"
 	"tramtai/internal/nucleo"
 )
 
@@ -45,6 +46,8 @@ func TestCanario(t *testing.T) {
 		{"claude/haiku", claude.Claude{Programa: "claude", Autenticacion: adaptadores.NuevoModo(adaptadores.AutenticacionSuscripcion)}, "haiku"},
 		{"claude/sonnet", claude.Claude{Programa: "claude", Autenticacion: adaptadores.NuevoModo(adaptadores.AutenticacionSuscripcion)}, "sonnet"},
 		{"codex/gpt-5.6-terra", codex.Codex{Programa: "codex", Autenticacion: adaptadores.NuevoModo(adaptadores.AutenticacionSuscripcion)}, "gpt-5.6-terra"},
+		// Copilot Free solo admite auto; cada ejecución gasta un crédito del plan.
+		{"copilot/auto", copilot.Copilot{Programa: "copilot", Autenticacion: adaptadores.NuevoModo(adaptadores.AutenticacionSuscripcion)}, "auto"},
 	}
 	for _, c := range casos {
 		t.Run(c.nombre, func(t *testing.T) {

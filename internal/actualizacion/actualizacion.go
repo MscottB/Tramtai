@@ -93,7 +93,7 @@ func Ultima(ctx context.Context) (Version, error) {
 // armar arma una versión con lo que la Web UI puede mostrar: las notas recortadas y la página como enlace, solo si
 // es del repositorio (nunca javascript: ni otros sitios).
 func armar(etiqueta, pagina, notas string) Version {
-	v := Version{Etiqueta: etiqueta, Notas: recortar(notas, 6000)}
+	v := Version{Etiqueta: etiqueta, Notas: recortar(notas, 12000)}
 	if strings.HasPrefix(pagina, "https://github.com/"+repositorio+"/") {
 		v.Pagina = pagina
 	}

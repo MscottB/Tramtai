@@ -88,6 +88,6 @@ scripts/               compilar, versionar e icono
 Commits con prefijo `feat:`, `fix:` o `docs:` y la lista de cambios en el cuerpo; después:
 
 ```powershell
-./scripts/version.ps1 -Etiquetar -Resumen "…"
+./scripts/version.ps1 -Etiquetar -Resumen "…" -ResumenEn "…"
 git push origin HEAD; git push origin --tags
 ```
