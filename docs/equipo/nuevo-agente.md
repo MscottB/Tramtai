@@ -73,7 +73,8 @@ Una línea en `fichas` de `internal/agentes/catalogo.go`. Con eso:
   - texto en vivo, uso, modelo efectivo y errores clasificados;
   - el entorno sin claves ajenas;
   - la carpeta privada;
-  - que el prompt no empiece por `-`.
+  - que el mensaje vaya por stdin y no en la línea de órdenes;
+  - si el CLI tiene hooks, que el hook niegue de verdad, y que tras una herramienta no se emita nada más.
 - **Del catálogo:** `TestFichasCompletas`, `TestRegistroYValoresPredeterminados` y `TestSinNombresFuera` pasan sin
   tocarlos.
 - **Canario:** el caso del agente en `pruebas/canario/canario_test.go` (`go test -tags canario`), con su modelo más

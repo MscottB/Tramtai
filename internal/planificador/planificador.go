@@ -240,7 +240,7 @@ func (p *Planificador) permitidoParaOrigen(t nucleo.Trabajo) error {
 	}
 	for _, c := range candidatos(t) {
 		if !permitido(c.agente) {
-			return nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf("%s no está habilitado para aplicaciones: todavía no se ha comprobado con el CLI real que no pueda usar herramientas. Úsalo desde Probar o la terminal", agentes.NombreVisible(c.agente)))
+			return nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf("%s no está habilitado para aplicaciones: todavía no ha pasado su prueba de seguridad (canario). Úsalo desde Probar o la terminal", agentes.NombreVisible(c.agente)))
 		}
 	}
 	return nil

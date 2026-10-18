@@ -862,7 +862,7 @@ const en: Textos = {
     'Before calling the agent, Tramtai measures what it will receive (instructions, message and documents already converted to text) and compares it with the model context, leaving room for the answer. If it does not fit, it tries the next fallback and says so in the log; if it fits in none, it rejects it with «The input does not fit in the model» without using tokens or counting the request. Documents take the most space: the log says which one weighs the most. In Agents you see the context of each model when it is known.',
   'ayuda.p19': 'Why can I not use Antigravity in my APIs?',
   'ayuda.r19':
-    'Tramtai already runs it without tools (an agy hook denies them all, checked with the real CLI), but it is only enabled in apps and APIs once its security test passes with a Gemini API key, which is how Tramtai uses it. Meanwhile it is used from Try, the terminal and the CLI. If you checked it yourself, adaptadores.antigravity.permitir_apps: true enables it.',
+    'Tramtai already runs it without tools (an agy hook denies them all; it was tried with the real CLI), but it is only enabled in apps and APIs once its security test passes with a Gemini API key, which is how Tramtai uses it. Meanwhile it is used from Try, the terminal and the CLI. If you checked it yourself, adaptadores.antigravity.permitir_apps: true enables it.',
   'ayuda.p17': 'Which version do I have?',
   'ayuda.r17':
     'Open "About Tramtai" in the side menu, in the status menu (top right) or in the tray icon. You will see the version as it appears on GitHub (for example v0.42.0+17102026), whether there is a newer one, the project links and, in "Technical details", what you need to ask for help: "Copy support data" copies it without keys or tokens.',

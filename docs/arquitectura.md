@@ -47,7 +47,7 @@ Además hay dos adaptadores de Google, probados con un servidor y un CLI simulad
   - Perfiles: `gemini-flash-lite-latest`, `gemini-flash-latest` y `gemini-pro-latest`.
 - **`antigravity`:** `agy --input-format stream-json --output-format stream-json`, con el mensaje por stdin.
   - Funciona solo con `modelProvider: gemini` y la clave del usuario, en un `HOME` privado y temporal; rechaza la suscripción por los términos de Antigravity.
-  - **Sin herramientas:** un hook `PreToolUse` (`.agents/hooks.json` en la carpeta de trabajo, `matcher: "*"`) responde `deny` a todas; comprobado con el CLI real (lectura, órdenes y web). Si una herramienta llegara a completarse, Tramtai corta la ejecución.
+  - **Sin herramientas:** un hook `PreToolUse` (`.agents/hooks.json` en la carpeta de trabajo, `matcher: "*"`) responde `deny` a todas; probado con el CLI real en Windows (lectura, órdenes y web), con la sesión del usuario y fuera de Tramtai. Falta su canario con `GEMINI_API_KEY` y en Linux y macOS. Si una herramienta llegara a completarse, Tramtai corta la ejecución.
   - Respuesta en vivo (`text_delta`), esfuerzo (`--effort`) y uso. El formato JSON va en las instrucciones: con `--json-schema` agy entrega el JSON con su herramienta `finish`, que el hook niega.
   - No admite `consciente_proyecto`.
 
@@ -160,7 +160,7 @@ Por defecto, cada agente se ejecuta aislado en una carpeta temporal vacía. Con 
 |---|---|
 | claude | Trabaja en la raíz del proyecto con `--setting-sources project`. |
 | codex | Trabaja en la raíz del proyecto (`-C`) sin `--ignore-rules`, así que carga su `AGENTS.md`. |
-| antigravity | Trabaja en la raíz del proyecto y carga `AGENTS.md` y `GEMINI.md`. |
+| antigravity | No lo admite (`contexto_no_permitido`): trabaja siempre en la carpeta temporal, donde está su hook. |
 | gemini | No lo admite, porque no tiene proyecto. |
 
 **Límites comprobados (Claude):**
@@ -168,7 +168,7 @@ Por defecto, cada agente se ejecuta aislado en una carpeta temporal vacía. Con 
 - Con suscripción, carga además el `CLAUDE.md` del usuario.
 - Con clave de API usa un `CLAUDE_CONFIG_DIR` privado, así que las reglas del usuario no se cargan.
 
-**En todos los agentes:** siguen desactivados las herramientas, MCP y la sesión persistente (salvo en antigravity, que no tiene restricción de herramientas validada; ver arriba), y antes de ejecutar se registra un `aviso` con el contexto que se carga.
+**En todos los agentes:** siguen desactivados las herramientas, MCP y la sesión persistente, y antes de ejecutar se registra un `aviso` con el contexto que se carga.
 
 ## Supervisión y recuperación
 

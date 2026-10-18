@@ -189,8 +189,9 @@ Se comprueba la ruta real del archivo, así que `..` o un enlace que salga de es
     reserva_salida_tokens: 8192
   ```
 
-- **Antigravity** solo se usa desde Probar, la terminal y la CLI hasta comprobar con el CLI real que no puede usar
-  herramientas; `adaptadores.antigravity.permitir_apps: true` lo habilita también para apps y APIs.
+- **Antigravity** va sin herramientas (un hook de agy las niega), pero solo se usa desde Probar, la terminal y la CLI
+  hasta que su canario pase con una clave de la Gemini API; `adaptadores.antigravity.permitir_apps: true` lo habilita
+  también para apps y APIs.
 - **Modo de contexto de una API:** lo fija la API (`aislado` si no indica otro); una app no puede pedir
   `consciente_proyecto` en una API aislada.
 - **Entorno de los CLI:** no heredan claves, contraseñas, `TRAMTAI_*` ni URL con credenciales, salvo los proxies
