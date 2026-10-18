@@ -339,7 +339,8 @@
           "esfuerzos": { "type": "array", "items": { "type": "string" } },
           "esfuerzo_predeterminado": { "type": "string" },
           "contexto_tokens": { "type": "integer" },
-          "contexto_origen": { "type": "string", "enum": ["configurado", "informado"] }
+          "contexto_origen": { "type": "string", "enum": ["configurado", "informado"] },
+          "esfuerzo_espacio": { "type": "string", "description": "Solo en el modelo predeterminado: el esfuerzo que usa el espacio con él (predeterminados.esfuerzo)" }
         }
       }
     }

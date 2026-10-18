@@ -563,14 +563,16 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 		}
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"configuracion": entradas})
 	case ruta == "/api/v1/instancia/predeterminado" && r.Method == http.MethodPost:
+		// esfuerzo es opcional: sin él no cambia; "" vuelve al del agente.
 		var peticion struct {
-			Modelo string `json:"modelo"`
+			Modelo   string  `json:"modelo"`
+			Esfuerzo *string `json:"esfuerzo"`
 		}
 		if err := api.LeerJSON(w, r, &peticion); err != nil {
 			api.EscribirError(w, r, err)
 			return true
 		}
-		if err := s.fijarPredeterminado(inst, peticion.Modelo); err != nil {
+		if err := s.fijarPredeterminado(inst, peticion.Modelo, peticion.Esfuerzo); err != nil {
 			api.EscribirError(w, r, err)
 			return true
 		}
@@ -914,10 +916,17 @@ func (s *Servicio) cambiarAutenticacion(agente, modo string) error {
 }
 
 // fijarPredeterminado guarda el modelo que se usa cuando la solicitud no indica agente ni modelo (un identificador
-// del catálogo: agente, agente/modelo o perfil/nombre) y lo aplica en marcha. En la instancia global va a la
-// configuración global y alcanza también a los proyectos que no tengan el suyo; en un proyecto, a su local.yaml.
-func (s *Servicio) fijarPredeterminado(inst *Instancia, id string) error {
+// del catálogo: agente, agente/modelo o perfil/nombre), y su esfuerzo si se indica, y lo aplica en marcha. En la
+// instancia global va a la configuración global y alcanza también a los proyectos que no tengan el suyo; en un
+// proyecto, a su local.yaml.
+func (s *Servicio) fijarPredeterminado(inst *Instancia, id string, esfuerzo *string) error {
 	valores := map[string]any{"predeterminados.modelo": "", "predeterminados.perfil_modelo": ""}
+	if esfuerzo != nil {
+		if *esfuerzo != "" && !slices.Contains(nucleo.NivelesEsfuerzo, *esfuerzo) {
+			return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("esfuerzo desconocido: %s", *esfuerzo))
+		}
+		valores["predeterminados.esfuerzo"] = *esfuerzo
+	}
 	agente, modelo, _ := strings.Cut(id, "/")
 	switch {
 	case agente == "perfil":
