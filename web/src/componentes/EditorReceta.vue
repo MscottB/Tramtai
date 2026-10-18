@@ -7,7 +7,7 @@
          En una fila no cabe: la columna de la receta es estrecha también en escritorio. -->
     <SelectorModelo :model-value="modelValue.modelo" :opciones="opciones" clearable :label="t('receta.modelo')"
       @update:model-value="(v) => cambiar({ modelo: v as string | null, forzar: v ? modelValue.forzar : false })" />
-    <div v-if="sinAntigravity" class="text-caption texto-suave q-mt-xs">{{ t('receta.sinAntigravity') }}</div>
+    <div v-if="fueraDeApps.length" class="text-caption texto-suave q-mt-xs">{{ t('receta.fueraDeApps', { agentes: fueraDeApps.map(nombreAgente).join(', ') }) }}</div>
     <SelectorEsfuerzo :model-value="modelValue.esfuerzo" :niveles="niveles" :predeterminado="esfuerzoPredeterminadoDe(catalogo, modelValue.modelo)" :hint="paraApi ? t('esfuerzo.api') : undefined"
       :vacio="delEspacio ? t('esfuerzo.espacioCon', { nivel: nombreEsfuerzo(delEspacio).toLowerCase() }) : undefined"
       @update:model-value="(v: string) => cambiar({ esfuerzo: v })" />
@@ -44,7 +44,7 @@ import { computed, ref, watch } from 'vue'
 import { QExpansionItem } from 'quasar'
 import SelectorEsfuerzo from './SelectorEsfuerzo.vue'
 import SelectorModelo from './SelectorModelo.vue'
-import { dividirRespaldo, esfuerzoEspacio, esfuerzoPredeterminadoDe, esfuerzosDe, esquemaDeReceta, nombreEsfuerzo, opcionModelo, unirRespaldo, type Modelo,
+import { dividirRespaldo, fichas, nombreAgente, esfuerzoEspacio, esfuerzoPredeterminadoDe, esfuerzosDe, esquemaDeReceta, nombreEsfuerzo, opcionModelo, unirRespaldo, type Modelo,
   type Receta } from '../api'
 import { t } from '../i18n'
 
@@ -62,10 +62,11 @@ watch(conOpciones, (v) => v && (abierta.value = true))
 const plegable = computed(() => ({ label: t('receta.opciones'), icon: 'o_tune', dense: true, modelValue: abierta.value,
   'onUpdate:modelValue': (v: boolean) => (abierta.value = v), headerClass: 'q-px-none text-body2' }))
 
-// Una API no ofrece Antigravity (ni como agente ni de respaldo): hasta comprobarlo con el CLI real, solo se usa desde
-// Probar y la terminal. El servicio lo rechaza igual al guardar.
-const sinAntigravity = computed(() => !!props.paraApi && props.catalogo.some((m) => m.agente === 'antigravity'))
-const usables = computed(() => (props.paraApi ? props.catalogo.filter((m) => m.agente !== 'antigravity') : props.catalogo))
+// Una API no ofrece los agentes que su ficha no permite en apps (ni como agente ni de respaldo): hasta comprobarlos con
+// el CLI real, solo se usan desde Probar y la terminal. El servicio los rechaza igual al guardar.
+const noPermitidos = computed(() => new Set(fichas.value.filter((f) => !f.permitido_apps).map((f) => f.agente)))
+const fueraDeApps = computed(() => (props.paraApi ? [...noPermitidos.value].filter((a) => props.catalogo.some((m) => m.agente === a)) : []))
+const usables = computed(() => (props.paraApi ? props.catalogo.filter((m) => !noPermitidos.value.has(m.agente ?? '')) : props.catalogo))
 const opciones = computed(() => usables.value.map(opcionModelo))
 // El respaldo es agente o agente/modelo: un perfil no sirve porque da un modelo distinto por agente.
 const opcionesRespaldo = computed(() => usables.value.filter((m) => !m.perfil).map(opcionModelo))

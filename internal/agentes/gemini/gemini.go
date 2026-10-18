@@ -1,4 +1,4 @@
-package adaptadores
+package gemini
 
 import (
 	"bufio"
@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"tramtai/internal/adaptadores"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
@@ -30,11 +31,11 @@ type Gemini struct {
 }
 
 // Detectar implementa Detectable sin consumir cuota.
-func (g Gemini) Detectar(context.Context) Estado {
-	e := Estado{Agente: "gemini", Autenticacion: AutenticacionClaveAPI, Ruta: g.base(),
+func (g Gemini) Detectar(context.Context) adaptadores.Estado {
+	e := adaptadores.Estado{Agente: "gemini", Autenticacion: adaptadores.AutenticacionClaveAPI, Ruta: g.base(),
 		Terminos: idioma.T("términos de la Gemini API de Google (clave de API propia)")}
-	if claveEntorno("GEMINI_API_KEY", "GOOGLE_API_KEY") == "" {
-		e.Problema, e.ProblemaCodigo = idioma.T("falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)"), ProblemaFaltaClave
+	if adaptadores.ClaveEntorno("GEMINI_API_KEY", "GOOGLE_API_KEY") == "" {
+		e.Problema, e.ProblemaCodigo = idioma.T("falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)"), adaptadores.ProblemaFaltaClave
 	}
 	return e
 }
@@ -47,13 +48,13 @@ func (g Gemini) base() string {
 }
 
 // Ejecutar implementa Adaptador con streamGenerateContent (SSE): el texto llega por fragmentos.
-func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(Evento) error) (Resultado, error) {
-	clave := claveEntorno("GEMINI_API_KEY", "GOOGLE_API_KEY")
+func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	clave := adaptadores.ClaveEntorno("GEMINI_API_KEY", "GOOGLE_API_KEY")
 	if clave == "" {
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente, idioma.T("falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)"))
+		return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente, idioma.T("falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)"))
 	}
-	if consciente(s) {
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoContextoNoPermitido, idioma.T("la Gemini API no tiene proyecto: usa modo_contexto aislado"))
+	if adaptadores.Consciente(s) {
+		return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoContextoNoPermitido, idioma.T("la Gemini API no tiene proyecto: usa modo_contexto aislado"))
 	}
 	modelo := strings.TrimPrefix(s.Modelo, "models/")
 	if modelo == "" {
@@ -61,12 +62,12 @@ func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 	}
 	cuerpo, err := cuerpoGemini(s)
 	if err != nil {
-		return Resultado{}, err
+		return adaptadores.Resultado{}, err
 	}
 	destino := g.base() + "/models/" + url.PathEscape(modelo) + ":streamGenerateContent?alt=sse"
 	peticion, err := http.NewRequestWithContext(ctx, http.MethodPost, destino, bytes.NewReader(cuerpo))
 	if err != nil {
-		return Resultado{}, err
+		return adaptadores.Resultado{}, err
 	}
 	peticion.Header.Set("Content-Type", "application/json")
 	peticion.Header.Set("x-goog-api-key", clave) // en cabecera: nunca en la URL
@@ -77,23 +78,23 @@ func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 	respuesta, err := cliente.Do(peticion)
 	if err != nil {
 		if ctx.Err() != nil {
-			return Resultado{}, ctx.Err()
+			return adaptadores.Resultado{}, ctx.Err()
 		}
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf("no se pudo contactar con la Gemini API: %s", redactar(err.Error(), clave)))
+		return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf("no se pudo contactar con la Gemini API: %s", adaptadores.RedactarCon(err.Error(), clave)))
 	}
 	defer respuesta.Body.Close()
 	if respuesta.StatusCode != http.StatusOK {
 		datos, _ := io.ReadAll(io.LimitReader(respuesta.Body, 16<<10))
-		texto := redactar(mensajeGemini(datos), clave)
-		codigo := clasificar(texto, respuesta.StatusCode)
+		texto := adaptadores.RedactarCon(mensajeGemini(datos), clave)
+		codigo := adaptadores.Clasificar(texto, respuesta.StatusCode)
 		if respuesta.StatusCode == http.StatusNotFound {
 			codigo = nucleo.CodigoModeloNoDisponible
 		}
-		return Resultado{}, nucleo.NuevoError(codigo, "Gemini API ("+respuesta.Status+"): "+texto)
+		return adaptadores.Resultado{}, nucleo.NuevoError(codigo, "Gemini API ("+respuesta.Status+"): "+texto)
 	}
 
 	var salida strings.Builder
-	var r Resultado
+	var r adaptadores.Resultado
 	fin := "" // finishReason del candidato: sin él, el flujo se cortó antes de terminar
 	lector := bufio.NewScanner(respuesta.Body)
 	lector.Buffer(make([]byte, 64<<10), 8<<20)
@@ -104,10 +105,10 @@ func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 		}
 		var f fragmentoGemini
 		if err := json.Unmarshal([]byte(strings.TrimSpace(datos)), &f); err != nil {
-			return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.T("fragmento SSE de Gemini no válido"))
+			return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.T("fragmento SSE de Gemini no válido"))
 		}
 		if f.Error.Message != "" {
-			return Resultado{}, nucleo.NuevoError(clasificar(f.Error.Message, f.Error.Code), "Gemini API: "+redactar(f.Error.Message, clave))
+			return adaptadores.Resultado{}, nucleo.NuevoError(adaptadores.Clasificar(f.Error.Message, f.Error.Code), "Gemini API: "+adaptadores.RedactarCon(f.Error.Message, clave))
 		}
 		for _, c := range f.Candidates {
 			for _, p := range c.Content.Parts {
@@ -115,12 +116,12 @@ func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 					continue
 				}
 				salida.WriteString(p.Text)
-				if err := emitir(Evento{Tipo: "texto", Datos: p.Text}); err != nil {
-					return Resultado{}, err
+				if err := emitir(adaptadores.Evento{Tipo: "texto", Datos: p.Text}); err != nil {
+					return adaptadores.Resultado{}, err
 				}
 			}
 			if c.FinishReason == "SAFETY" || c.FinishReason == "PROHIBITED_CONTENT" {
-				return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorAgente, idioma.Tf("Gemini bloqueó la respuesta (%s)", c.FinishReason))
+				return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorAgente, idioma.Tf("Gemini bloqueó la respuesta (%s)", c.FinishReason))
 			}
 			if c.FinishReason != "" {
 				fin = c.FinishReason
@@ -136,16 +137,16 @@ func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 	}
 	if err := lector.Err(); err != nil {
 		if ctx.Err() != nil {
-			return Resultado{}, ctx.Err()
+			return adaptadores.Resultado{}, ctx.Err()
 		}
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.Tf("flujo de Gemini interrumpido: %s", redactar(err.Error(), clave)))
+		return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.Tf("flujo de Gemini interrumpido: %s", adaptadores.RedactarCon(err.Error(), clave)))
 	}
 	switch fin {
 	case "": // un proxy o el servidor cerró la conexión: la respuesta parcial no se da por completa
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.T("el flujo de Gemini terminó sin finishReason; la respuesta está incompleta"))
+		return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.T("el flujo de Gemini terminó sin finishReason; la respuesta está incompleta"))
 	case "MAX_TOKENS": // válida, pero cortada: se avisa
-		if err := emitir(Evento{Tipo: "aviso", Datos: idioma.T("Gemini cortó la respuesta al alcanzar el máximo de tokens (MAX_TOKENS)")}); err != nil {
-			return Resultado{}, err
+		if err := emitir(adaptadores.Evento{Tipo: "aviso", Datos: idioma.T("Gemini cortó la respuesta al alcanzar el máximo de tokens (MAX_TOKENS)")}); err != nil {
+			return adaptadores.Resultado{}, err
 		}
 	}
 	r.Salida = salida.String()
@@ -257,7 +258,7 @@ func (g Gemini) Contexto(ctx context.Context, modelo string) (int, error) {
 	if existe && time.Now().Before(guardado.hasta) {
 		return guardado.tokens, nil
 	}
-	claveAPI := claveEntorno("GEMINI_API_KEY", "GOOGLE_API_KEY")
+	claveAPI := adaptadores.ClaveEntorno("GEMINI_API_KEY", "GOOGLE_API_KEY")
 	if claveAPI == "" {
 		return 0, nil
 	}

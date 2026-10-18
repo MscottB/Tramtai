@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
@@ -54,8 +55,9 @@ type Opciones struct {
 	// dejan para la respuesta al comprobar si la entrada cabe.
 	Contextos     map[string]int
 	ReservaSalida int
-	// PermitirAntigravityApps es adaptadores.antigravity.permitir_apps: Antigravity también para apps y APIs.
-	PermitirAntigravityApps bool
+	// PermitidoEnApps dice si un agente se puede usar desde apps y APIs (su canario pasó o
+	// adaptadores.<nombre>.permitir_apps lo habilita); nil usa solo la ficha de cada agente.
+	PermitidoEnApps func(agente string) bool
 	// TiempoConversion es el plazo total de la preparación de las cargas (conversion.tiempo_total_segundos).
 	TiempoConversion time.Duration
 }
@@ -71,7 +73,7 @@ func OpcionesDesde(c *nucleo.Configuracion, instancia string) Opciones {
 		Perfiles:                   c.Perfiles(),
 		MaximoConversiones:         c.Entero("concurrencia.maximo_conversiones_instancia"),
 		Contextos:                  c.Contextos(),
-		PermitirAntigravityApps:    c.Booleano("adaptadores.antigravity.permitir_apps"),
+		PermitidoEnApps:            func(agente string) bool { return agentes.PermitidoEnApps(c, agente) },
 		TiempoConversion:           time.Duration(c.Limite("conversion.tiempo_total_segundos")) * time.Second,
 		ReservaSalida:              c.Limite("limites.reserva_salida_tokens"),
 	}
@@ -225,15 +227,20 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 	return t, false, nil
 }
 
-// permitidoParaOrigen rechaza Antigravity (principal o respaldo) en una petición de una app o una API: hasta comprobar
-// con el CLI real que no puede usar herramientas, solo se usa desde Probar, la terminal y la CLI.
+// permitidoParaOrigen rechaza en una petición de una app o una API un agente (principal o respaldo) que no se permite
+// en apps: hasta comprobar con el CLI real que no puede usar herramientas, solo se usa desde Probar, la terminal y la
+// CLI.
 func (p *Planificador) permitidoParaOrigen(t nucleo.Trabajo) error {
-	if p.opc.PermitirAntigravityApps || (t.Origen != nucleo.DesdeApp && t.Origen != nucleo.DesdeAPI) {
+	if t.Origen != nucleo.DesdeApp && t.Origen != nucleo.DesdeAPI {
 		return nil
 	}
+	permitido := p.opc.PermitidoEnApps
+	if permitido == nil {
+		permitido = func(agente string) bool { return agentes.PermitidoEnApps(nil, agente) }
+	}
 	for _, c := range candidatos(t) {
-		if c.agente == "antigravity" {
-			return nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.T("Antigravity no está habilitado para aplicaciones: todavía no se ha comprobado con el CLI real que no pueda usar herramientas. Úsalo desde Probar o la terminal"))
+		if !permitido(c.agente) {
+			return nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf("%s no está habilitado para aplicaciones: todavía no se ha comprobado con el CLI real que no pueda usar herramientas. Úsalo desde Probar o la terminal", agentes.NombreVisible(c.agente)))
 		}
 	}
 	return nil
@@ -703,13 +710,13 @@ type intento struct {
 // que informó el agente, como el catálogo.
 func nuevoIntento(c candidato, pedido string, versionVista func(agente, modelo string) string) intento {
 	i := intento{Agente: c.agente, Modelo: c.modelo}
-	niveles := adaptadores.NivelesEsfuerzo(c.agente)
+	niveles := agentes.Niveles(c.agente)
 	switch {
 	case len(niveles) == 0:
 	case pedido == "":
-		i.Esfuerzo = adaptadores.EsfuerzoPredeterminado(c.agente, c.modelo)
+		i.Esfuerzo = agentes.EsfuerzoPredeterminado(c.agente, c.modelo)
 		if i.Esfuerzo == "" {
-			i.Esfuerzo = adaptadores.EsfuerzoPredeterminado(c.agente, versionVista(c.agente, c.modelo))
+			i.Esfuerzo = agentes.EsfuerzoPredeterminado(c.agente, versionVista(c.agente, c.modelo))
 		}
 		i.DelAgente = i.Esfuerzo != ""
 	case slices.Contains(niveles, pedido):

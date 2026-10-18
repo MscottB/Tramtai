@@ -1,4 +1,4 @@
-package adaptadores
+package claude
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 	"slices"
 	"sort"
 
+	"tramtai/internal/adaptadores"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/procesos"
@@ -19,27 +20,27 @@ var propiosClaude = []string{"CLAUDE_", "ANTHROPIC_"}
 
 // Claude ejecuta Claude Code con "claude -p" en streaming (stream-json), aislado de la configuración del usuario.
 type Claude struct {
-	Programa      string // nombre o ruta del ejecutable (comandos_agentes.claude)
-	Autenticacion *Modo  // clave_api (predeterminada) o suscripcion; se puede cambiar con el servicio en marcha
+	Programa      string            // nombre o ruta del ejecutable (comandos_agentes.claude)
+	Autenticacion *adaptadores.Modo // clave_api (predeterminada) o suscripcion; se puede cambiar con el servicio en marcha
 }
 
 // Detectar implementa Detectable.
-func (c Claude) Detectar(ctx context.Context) Estado {
-	e := Estado{Agente: "claude", Autenticacion: c.Autenticacion.Valor()}
-	if c.Autenticacion.Valor() == AutenticacionSuscripcion {
+func (c Claude) Detectar(ctx context.Context) adaptadores.Estado {
+	e := adaptadores.Estado{Agente: "claude", Autenticacion: c.Autenticacion.Valor()}
+	if c.Autenticacion.Valor() == adaptadores.AutenticacionSuscripcion {
 		e.Terminos = idioma.T("términos de consumidor de Anthropic: solo uso personal y local")
 	} else {
 		e.Terminos = idioma.T("términos comerciales de Anthropic (clave de API de Console)")
-		if claveEntorno("ANTHROPIC_API_KEY") == "" {
-			e.Problema, e.ProblemaCodigo = idioma.T("falta ANTHROPIC_API_KEY"), ProblemaFaltaClave
+		if adaptadores.ClaveEntorno("ANTHROPIC_API_KEY") == "" {
+			e.Problema, e.ProblemaCodigo = idioma.T("falta ANTHROPIC_API_KEY"), adaptadores.ProblemaFaltaClave
 		}
 	}
-	ruta, err := resolverPrograma(c.Programa)
+	ruta, err := adaptadores.ResolverPrograma(c.Programa)
 	if err != nil {
-		e.Problema, e.ProblemaCodigo = err.Error(), ProblemaNoInstalado
+		e.Problema, e.ProblemaCodigo = err.Error(), adaptadores.ProblemaNoInstalado
 		return e
 	}
-	e.Ruta, e.Version = ruta, version(ctx, ruta)
+	e.Ruta, e.Version = ruta, adaptadores.VersionDe(ctx, ruta)
 	return e
 }
 
@@ -47,15 +48,15 @@ func (c Claude) Detectar(ctx context.Context) Estado {
 // enviar la petición, y en cuanto llega se le corta. shortcut: si el CLI tarda en morir puede llegar a enviar un
 // mensaje de un carácter; si alguna vez cobra, pedirlo solo al abrir el selector.
 func (c Claude) ResolverModelo(ctx context.Context, modelo string) (string, error) {
-	ruta, err := resolverPrograma(c.Programa)
+	ruta, err := adaptadores.ResolverPrograma(c.Programa)
 	if err != nil {
 		return "", err
 	}
 	args := []string{"-p", "--output-format", "stream-json", "--verbose", "--setting-sources", "", "--strict-mcp-config",
 		"--tools", "", "--no-session-persistence", "--disable-slash-commands"}
 	var extra []string
-	if c.Autenticacion.Valor() != AutenticacionSuscripcion {
-		clave := claveEntorno("ANTHROPIC_API_KEY")
+	if c.Autenticacion.Valor() != adaptadores.AutenticacionSuscripcion {
+		clave := adaptadores.ClaveEntorno("ANTHROPIC_API_KEY")
 		if clave == "" {
 			return "", nucleo.NuevoError(nucleo.CodigoAutenticacionAgente, idioma.T("falta ANTHROPIC_API_KEY"))
 		}
@@ -65,7 +66,7 @@ func (c Claude) ResolverModelo(ctx context.Context, modelo string) (string, erro
 	if modelo != "" {
 		args = append(args, "--model", modelo)
 	}
-	raiz, espacio, err := espacioTemporal()
+	raiz, espacio, err := adaptadores.EspacioTemporal()
 	if err != nil {
 		return "", err
 	}
@@ -74,7 +75,7 @@ func (c Claude) ResolverModelo(ctx context.Context, modelo string) (string, erro
 	defer cortar()
 	var concreto string
 	_, err = procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: espacio,
-		Entorno: entornoLimpio(propiosClaude, extra...), Entrada: "."}, func(linea string) error {
+		Entorno: adaptadores.EntornoLimpio(propiosClaude, extra...), Entrada: "."}, func(linea string) error {
 		var e struct{ Type, Subtype, Model string }
 		if json.Unmarshal([]byte(linea), &e) == nil && e.Type == "system" && e.Subtype == "init" {
 			concreto = e.Model
@@ -89,72 +90,72 @@ func (c Claude) ResolverModelo(ctx context.Context, modelo string) (string, erro
 }
 
 // Ejecutar implementa Adaptador.
-func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(Evento) error) (Resultado, error) {
-	ruta, err := resolverPrograma(c.Programa)
+func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	ruta, err := adaptadores.ResolverPrograma(c.Programa)
 	if err != nil {
-		return Resultado{}, err
+		return adaptadores.Resultado{}, err
 	}
 	var clave string
 	var extra []string
 	args := []string{"-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages",
 		"--setting-sources", "", "--strict-mcp-config", "--tools", "", "--no-session-persistence", "--disable-slash-commands"}
 	switch c.Autenticacion.Valor() {
-	case AutenticacionSuscripcion:
-	case AutenticacionClaveAPI, "":
-		if clave = claveEntorno("ANTHROPIC_API_KEY"); clave == "" {
-			return Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente,
+	case adaptadores.AutenticacionSuscripcion:
+	case adaptadores.AutenticacionClaveAPI, "":
+		if clave = adaptadores.ClaveEntorno("ANTHROPIC_API_KEY"); clave == "" {
+			return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente,
 				idioma.T("falta ANTHROPIC_API_KEY; o configura adaptadores.claude.autenticacion: suscripcion para uso personal local"))
 		}
 		extra = append(extra, "ANTHROPIC_API_KEY="+clave)
-		if !consciente(s) {
+		if !adaptadores.Consciente(s) {
 			args = append(args, "--bare") // solo admite la clave de API: nunca recurre a la sesión de suscripción
 		}
 	default:
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("autenticación desconocida: %s", c.Autenticacion.Valor()))
+		return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("autenticación desconocida: %s", c.Autenticacion.Valor()))
 	}
-	raiz, espacio, err := espacioTemporal()
+	raiz, espacio, err := adaptadores.EspacioTemporal()
 	if err != nil {
-		return Resultado{}, err
+		return adaptadores.Resultado{}, err
 	}
 	defer os.RemoveAll(raiz)
-	if consciente(s) && clave != "" {
+	if adaptadores.Consciente(s) && clave != "" {
 		// --bare omitiría el CLAUDE.md del proyecto; un directorio de configuración privado y vacío evita las reglas
 		// del usuario y cualquier sesión guardada, así que solo vale la clave de API.
 		configuracion := filepath.Join(raiz, "claude-config")
 		if err := os.Mkdir(configuracion, 0o700); err != nil {
-			return Resultado{}, err
+			return adaptadores.Resultado{}, err
 		}
 		extra = append(extra, "CLAUDE_CONFIG_DIR="+configuracion)
 	}
 
 	// El sistema propio sustituye al de Claude Code (vacío si no hay): passthrough y ~650 tokens fijos en vez de ~24 000.
-	sistema, prompt := separar(s)
+	sistema, prompt := adaptadores.Separar(s)
 	archivoSistema := filepath.Join(raiz, "sistema.txt")
 	if err := os.WriteFile(archivoSistema, []byte(sistema), 0o600); err != nil {
-		return Resultado{}, err
+		return adaptadores.Resultado{}, err
 	}
 	args = append(args, "--system-prompt-file", archivoSistema)
-	if consciente(s) {
+	if adaptadores.Consciente(s) {
 		args[slices.Index(args, "--setting-sources")+1] = "project" // reglas del proyecto, nunca las del usuario
 	}
 	if s.Modelo != "" {
 		args = append(args, "--model", s.Modelo)
 	}
-	if v := valorEsfuerzo("claude", s.Esfuerzo); v != "" {
+	if v := adaptadores.ValorEsfuerzo(valoresEsfuerzo, s.Esfuerzo); v != "" {
 		args = append(args, "--effort", v)
 	}
 	if len(s.Salida.Esquema) > 0 {
 		// Salida estructurada nativa: el resultado llega en structured_output (comprobado con el CLI real).
 		var compacto bytes.Buffer
 		if err := json.Compact(&compacto, s.Salida.Esquema); err != nil {
-			return Resultado{}, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("esquema no válido"))
+			return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("esquema no válido"))
 		}
 		args = append(args, "--json-schema", compacto.String())
 	}
 
 	var final *resultadoClaude
-	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: directorioTrabajo(s, espacio),
-		Entorno: entornoLimpio(propiosClaude, extra...), Entrada: prompt}, func(linea string) error {
+	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: adaptadores.DirectorioTrabajo(s, espacio),
+		Entorno: adaptadores.EntornoLimpio(propiosClaude, extra...), Entrada: prompt}, func(linea string) error {
 		var e eventoClaude
 		if json.Unmarshal([]byte(linea), &e) != nil {
 			return nil // línea informativa no JSON
@@ -162,7 +163,7 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 		switch e.Type {
 		case "stream_event":
 			if e.Event.Type == "content_block_delta" && e.Event.Delta.Type == "text_delta" && e.Event.Delta.Text != "" {
-				return emitir(Evento{Tipo: "texto", Datos: e.Event.Delta.Text})
+				return emitir(adaptadores.Evento{Tipo: "texto", Datos: e.Event.Delta.Text})
 			}
 		case "result":
 			final = &e.resultadoClaude
@@ -170,24 +171,24 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 		return nil // los demás tipos son informativos
 	})
 	if err != nil {
-		return Resultado{}, err
+		return adaptadores.Resultado{}, err
 	}
 	if final == nil {
-		texto := redactar(r.Errores, clave)
+		texto := adaptadores.RedactarCon(r.Errores, clave)
 		if texto == "" {
-			return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.T("claude terminó sin evento result"))
+			return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.T("claude terminó sin evento result"))
 		}
-		return Resultado{}, nucleo.NuevoError(clasificar(texto, 0), texto)
+		return adaptadores.Resultado{}, nucleo.NuevoError(adaptadores.Clasificar(texto, 0), texto)
 	}
 	if final.IsError {
-		texto := redactar(final.Result, clave)
-		return Resultado{}, nucleo.NuevoError(clasificar(texto, final.APIErrorStatus), texto)
+		texto := adaptadores.RedactarCon(final.Result, clave)
+		return adaptadores.Resultado{}, nucleo.NuevoError(adaptadores.Clasificar(texto, final.APIErrorStatus), texto)
 	}
 	salida := final.Result
 	if len(final.StructuredOutput) > 0 && string(final.StructuredOutput) != "null" {
 		salida = string(final.StructuredOutput) // el campo estructurado prevalece sobre el texto libre
 	}
-	return Resultado{Salida: salida, ModeloEfectivo: final.modeloEfectivo(), ContextoTokens: final.contexto(), Uso: nucleo.Uso{
+	return adaptadores.Resultado{Salida: salida, ModeloEfectivo: final.modeloEfectivo(), ContextoTokens: final.contexto(), Uso: nucleo.Uso{
 		TokensEntrada: final.Usage.InputTokens + final.Usage.CacheCreation + final.Usage.CacheRead,
 		TokensSalida:  final.Usage.OutputTokens,
 		CostoUSD:      final.TotalCostUSD,

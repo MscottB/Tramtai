@@ -224,7 +224,15 @@ tramtai acceso editar tienda --presupuesto diario.peticiones=500 --presupuesto m
 tramtai acceso reiniciar-presupuesto tienda    # sin nombre, el de la instancia
 ```
 
-En **Mis APIs**, la lista de APIs va primero, con un buscador, un selector de grupo y el orden (nombre, más usadas o última petición); la conexión de la API principal y los ejemplos van debajo. Cada grupo se pliega desde su cabecera y el navegador recuerda cuáles quedaron plegados. En el mapa de **Inicio**, cada grupo es una estación («web · 3 APIs», con sus activas debajo) que abre Mis APIs filtrada por ese grupo.
+**Mis APIs** tiene dos pestañas, que el navegador recuerda:
+
+- **APIs por aplicación:**
+  - **Filtros:** buscador (por nombre, grupo, modelo o instrucciones), grupo, estado (activas, detenidas, con error) y agente.
+  - **Más filtros:** qué acepta (OpenAI, Anthropic, API propia), qué tiene (respuesta JSON, respaldo, presupuesto, instrucciones, modelo forzado, modelos restringidos) y si tiene peticiones.
+  - **Orden:** por nombre, más usadas o última petición.
+  - **Páginas:** de 20; una página que empieza en medio de un grupo repite su cabecera con «(continúa)».
+  - **Grupos:** cada uno se pliega desde su cabecera y el navegador recuerda cuáles quedaron plegados.
+- **API principal:** la guía «¿Qué URL uso?», la clave, los modelos, los ejemplos y el presupuesto del espacio. En el mapa de **Inicio**, cada grupo es una estación («web · 3 APIs», con sus activas debajo) que abre Mis APIs filtrada por ese grupo.
 
 Cada API tiene un botón **Conectar** (también se abre pulsando su fila) con su detalle: las URL base según lo que acepta (OpenAI, Anthropic, API propia), la clave —que solo se ve al crearla o regenerarla; si no la tienes, **Regenerar la clave** muestra una nueva y la anterior deja de valer—, los ejemplos para copiar con su URL y su modelo, las acciones (ajustes, Probar, peticiones, activar o detener) y, aparte, **Eliminar la API**. Al crear una API se abre su detalle con la clave nueva.
 

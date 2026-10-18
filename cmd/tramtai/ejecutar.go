@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -29,7 +30,7 @@ func comandoAgentes() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			registro, _ := adaptadores.Registro(c)
+			registro, _ := agentes.Registro(c)
 			nombres := make([]string, 0, len(registro))
 			for nombre := range registro {
 				nombres = append(nombres, nombre)
@@ -174,7 +175,7 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 		s.Cargas = append(s.Cargas, carga.ID)
 	}
 
-	registro, limites := adaptadores.Registro(c)
+	registro, limites := agentes.Registro(c)
 	// shortcut: cada ejecución directa usa su propia instancia para no relanzar trabajos de otra ejecución
 	// interrumpida; el servicio tiene instancias persistentes con su recuperación.
 	opc := planificador.OpcionesDesde(c, "cli-"+nucleo.NuevoID()[len("trabajo_"):])

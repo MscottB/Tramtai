@@ -1,8 +1,8 @@
 //go:build agentes
 
-// Pruebas contra los CLIs reales (consumen cuota): go test -tags agentes -v ./internal/adaptadores
+// Pruebas contra los CLIs reales (consumen cuota): go test -tags agentes -v ./internal/agentes
 // Usan el modo de autenticación de TRAMTAI_PRUEBA_AUTENTICACION (clave_api por defecto).
-package adaptadores
+package agentes
 
 import (
 	"context"
@@ -11,6 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes/claude"
+	"tramtai/internal/agentes/codex"
 	"tramtai/internal/nucleo"
 )
 
@@ -18,10 +21,10 @@ func autenticacion() string {
 	if a := os.Getenv("TRAMTAI_PRUEBA_AUTENTICACION"); a != "" {
 		return a
 	}
-	return AutenticacionClaveAPI
+	return adaptadores.AutenticacionClaveAPI
 }
 
-func probar(t *testing.T, a Adaptador, modelo string) {
+func probar(t *testing.T, a adaptadores.Adaptador, modelo string) {
 	t.Helper()
 	s := nucleo.SolicitudEjecucion{Modelo: modelo, Mensajes: []nucleo.Mensaje{
 		{Rol: "sistema", Contenido: "Responde solo con la palabra pedida, en mayúsculas."},
@@ -29,7 +32,7 @@ func probar(t *testing.T, a Adaptador, modelo string) {
 	ctx, cancelar := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancelar()
 	var eventos int
-	r, err := a.Ejecutar(ctx, s, func(Evento) error { eventos++; return nil })
+	r, err := a.Ejecutar(ctx, s, func(adaptadores.Evento) error { eventos++; return nil })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,16 +46,16 @@ func probar(t *testing.T, a Adaptador, modelo string) {
 	s.Mensajes = []nucleo.Mensaje{{Rol: "usuario", Contenido: "Escribe un ensayo de 2000 palabras sobre los puentes."}}
 	time.AfterFunc(4*time.Second, cancelar)
 	inicio := time.Now()
-	if _, err := a.Ejecutar(ctx, s, func(Evento) error { return nil }); err != context.Canceled {
+	if _, err := a.Ejecutar(ctx, s, func(adaptadores.Evento) error { return nil }); err != context.Canceled {
 		t.Fatalf("se esperaba context.Canceled: %v", err)
 	}
 	t.Logf("cancelado en %s", time.Since(inicio).Round(time.Millisecond))
 }
 
 func TestClaudeReal(t *testing.T) {
-	probar(t, Claude{Programa: "claude", Autenticacion: NuevoModo(autenticacion())}, "haiku")
+	probar(t, claude.Claude{Programa: "claude", Autenticacion: adaptadores.NuevoModo(autenticacion())}, "haiku")
 }
 
 func TestCodexReal(t *testing.T) {
-	probar(t, Codex{Programa: "codex", Autenticacion: NuevoModo(autenticacion())}, os.Getenv("TRAMTAI_PRUEBA_MODELO_CODEX"))
+	probar(t, codex.Codex{Programa: "codex", Autenticacion: adaptadores.NuevoModo(autenticacion())}, os.Getenv("TRAMTAI_PRUEBA_MODELO_CODEX"))
 }

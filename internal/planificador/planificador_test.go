@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
 )
@@ -1086,7 +1087,7 @@ func TestEventoIntento(t *testing.T) {
 	s := solicitud("x")
 	s.Agente, s.Esfuerzo = "codex", "maximo"
 	tr := esperar(t, alm, enviar(t, p, s), nucleo.Completado)
-	niveles := adaptadores.NivelesEsfuerzo("codex")
+	niveles := agentes.Niveles("codex")
 	if l := intentos(t, alm, tr.ID); len(l) != 1 || l[0]["agente"] != "codex" || l[0]["esfuerzo"] != niveles[len(niveles)-1] || l[0]["del_agente"] != nil {
 		t.Fatalf("un intento con el esfuerzo ajustado al máximo de codex: %v", l)
 	}
@@ -1245,7 +1246,7 @@ func TestAntigravityRechazadoParaApps(t *testing.T) {
 			t.Fatalf("desde %s se admite: %v", origen, err)
 		}
 	}
-	p.opc.PermitirAntigravityApps = true
+	p.opc.PermitidoEnApps = func(string) bool { return true }
 	if _, _, err := p.Enviar(nucleo.ConOrigenPeticion(ctx, nucleo.DesdeApp), principal, ""); err != nil {
 		t.Fatalf("con permitir_apps se admite: %v", err)
 	}

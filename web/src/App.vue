@@ -252,7 +252,7 @@
 <script setup lang="ts">
 import { computed, markRaw, onMounted, onUnmounted, provide, ref, watch, watchEffect } from 'vue'
 import { useQuasar } from 'quasar'
-import { actualizacion, api, avisar, avisarError, buscarActualizacionAhora, dialogoActualizar, reiniciarYSeguir, sesion, type Novedad, type ProgresoActualizacion } from './api'
+import { actualizacion, api, cargarFichas, avisar, avisarError, buscarActualizacionAhora, dialogoActualizar, reiniciarYSeguir, sesion, type Novedad, type ProgresoActualizacion } from './api'
 import { cambiarIdioma, idioma, idiomas, t } from './i18n'
 import { cambiarTema, tema, type Tema } from './tema'
 import EntrarPagina from './paginas/Entrar.vue'
@@ -486,7 +486,11 @@ watch(() => (dialogoActualizar.value && actualizacion.value?.disponible ? actual
   }
 })
 // Al abrir la sesión (al cargar o tras Entrar) se busca versión nueva sin esperar al siguiente intervalo.
-watch(() => !!sesion.value, (abierta) => abierta && comprobarActualizacion())
+watch(() => !!sesion.value, (abierta) => {
+  if (!abierta) return
+  comprobarActualizacion()
+  cargarFichas()
+})
 const avisoEntrada = ref(new URLSearchParams(location.search).get('error') === 'codigo' ? t('app.codigoCaducado') : '')
 
 // pila son las páginas anteriores, para el botón Volver; también funcionan el atrás del navegador y Alt+←.

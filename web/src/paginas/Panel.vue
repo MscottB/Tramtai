@@ -27,7 +27,7 @@
         <q-btn flat dense no-caps color="primary" :label="t('inicio.detalles')" @click="$emit('ir', 'agentes')" />
       </div>
       <div class="q-px-md q-pb-lg q-pt-sm">
-        <MapaRed v-if="adaptadores && instancia" :adaptadores="adaptadores" :apis="puntos" :base="instancia.base" @ir="(p) => $emit('ir', p)" />
+        <MapaRed v-if="adaptadores && instancia" :adaptadores="ordenarAgentes(adaptadores)" :apis="puntos" :base="instancia.base" @ir="(p) => $emit('ir', p)" />
         <q-skeleton v-else type="rect" height="200px" />
       </div>
     </section>
@@ -104,7 +104,7 @@ import EstadoVacio from '../componentes/EstadoVacio.vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import Linea from '../componentes/Linea.vue'
 import MapaRed from '../componentes/MapaRed.vue'
-import { api, avisar, cargarDiasHistorial, periodoHistorial, ordenarAgentes, copiar, estadoInfo, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, haceCuanto, mensajeError, sesion, terminales, textoDe, type Adaptador, type EstadoInstancia, type EstadoPunto, type Trabajo, sistema } from '../api'
+import { agenteListo, api, asegurarFichas, avisar, cargarDiasHistorial, periodoHistorial, ordenarAgentes, copiar, estadoInfo, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, haceCuanto, mensajeError, sesion, terminales, textoDe, type Adaptador, type EstadoInstancia, type EstadoPunto, type Trabajo, sistema } from '../api'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()
@@ -138,7 +138,7 @@ const contadores = computed(() => [
 ])
 
 const pasos = computed(() => {
-  const listos = adaptadores.value?.filter((a) => !a.problema).length ?? 0
+  const listos = adaptadores.value?.filter(agenteListo).length ?? 0
   const lista = [
     { titulo: t('inicio.paso1'), detalle: adaptadores.value ? t('inicio.paso1Detalle', { listos, total: adaptadores.value.length }) : t('inicio.comprobando'),
       hecho: listos > 0, pagina: 'agentes' },
@@ -170,7 +170,8 @@ let intervalo: number
 onMounted(() => {
   cargarDiasHistorial()
   cargar()
-  api.capacidades().then((c) => (adaptadores.value = ordenarAgentes(c.adaptadores))).catch(() => (adaptadores.value = []))
+  asegurarFichas()
+  api.capacidades().then((c) => (adaptadores.value = c.adaptadores)).catch(() => (adaptadores.value = []))
   api.puntos().then((p) => (puntos.value = p)).catch(() => {})
   intervalo = window.setInterval(() => !document.hidden && cargar(), 5000)
 })

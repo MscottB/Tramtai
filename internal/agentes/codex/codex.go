@@ -1,4 +1,4 @@
-package adaptadores
+package codex
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"tramtai/internal/adaptadores"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/procesos"
@@ -15,94 +16,94 @@ import (
 // Codex ejecuta "codex exec --json". Solo entrega el resultado final (sin streaming por tokens, comprobado con el CLI real)
 // y no informa el modelo efectivo: el trabajo queda como no verificable salvo con un identificador explícito.
 type Codex struct {
-	Programa      string // comandos_agentes.codex
-	Autenticacion *Modo  // clave_api (predeterminada) o suscripcion (cuenta ChatGPT); cambiable en marcha
+	Programa      string            // comandos_agentes.codex
+	Autenticacion *adaptadores.Modo // clave_api (predeterminada) o suscripcion (cuenta ChatGPT); cambiable en marcha
 }
 
 // Detectar implementa Detectable.
-func (c Codex) Detectar(ctx context.Context) Estado {
-	e := Estado{Agente: "codex", Autenticacion: c.Autenticacion.Valor()}
-	if c.Autenticacion.Valor() == AutenticacionSuscripcion {
+func (c Codex) Detectar(ctx context.Context) adaptadores.Estado {
+	e := adaptadores.Estado{Agente: "codex", Autenticacion: c.Autenticacion.Valor()}
+	if c.Autenticacion.Valor() == adaptadores.AutenticacionSuscripcion {
 		e.Terminos = idioma.T("Terms of Use de OpenAI con cuenta ChatGPT: solo uso personal y local; aislamiento parcial")
 		if inicio, err := os.UserHomeDir(); err == nil {
 			if _, err := os.Stat(filepath.Join(inicio, ".codex", "AGENTS.md")); err == nil {
-				e.Problema, e.ProblemaCodigo = idioma.T("existe ~/.codex/AGENTS.md: Codex lo cargará en cada ejecución"), ProblemaAviso
+				e.Problema, e.ProblemaCodigo = idioma.T("existe ~/.codex/AGENTS.md: Codex lo cargará en cada ejecución"), adaptadores.ProblemaAviso
 			}
 		}
 	} else {
 		e.Terminos = idioma.T("términos de la API de OpenAI (clave de API)")
-		if claveEntorno("CODEX_API_KEY", "OPENAI_API_KEY") == "" {
-			e.Problema, e.ProblemaCodigo = idioma.T("falta CODEX_API_KEY u OPENAI_API_KEY"), ProblemaFaltaClave
+		if adaptadores.ClaveEntorno("CODEX_API_KEY", "OPENAI_API_KEY") == "" {
+			e.Problema, e.ProblemaCodigo = idioma.T("falta CODEX_API_KEY u OPENAI_API_KEY"), adaptadores.ProblemaFaltaClave
 		}
 	}
-	ruta, err := resolverPrograma(c.Programa)
+	ruta, err := adaptadores.ResolverPrograma(c.Programa)
 	if err != nil {
-		e.Problema, e.ProblemaCodigo = err.Error(), ProblemaNoInstalado
+		e.Problema, e.ProblemaCodigo = err.Error(), adaptadores.ProblemaNoInstalado
 		return e
 	}
-	e.Ruta, e.Version = ruta, version(ctx, ruta)
+	e.Ruta, e.Version = ruta, adaptadores.VersionDe(ctx, ruta)
 	return e
 }
 
 // Ejecutar implementa Adaptador.
-func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(Evento) error) (Resultado, error) {
-	ruta, err := resolverPrograma(c.Programa)
+func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	ruta, err := adaptadores.ResolverPrograma(c.Programa)
 	if err != nil {
-		return Resultado{}, err
+		return adaptadores.Resultado{}, err
 	}
-	raiz, espacio, err := espacioTemporal()
+	raiz, espacio, err := adaptadores.EspacioTemporal()
 	if err != nil {
-		return Resultado{}, err
+		return adaptadores.Resultado{}, err
 	}
 	defer os.RemoveAll(raiz)
 
 	var clave string
 	var extra []string
 	switch c.Autenticacion.Valor() {
-	case AutenticacionSuscripcion:
-	case AutenticacionClaveAPI, "":
-		if clave = claveEntorno("CODEX_API_KEY", "OPENAI_API_KEY"); clave == "" {
-			return Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente,
+	case adaptadores.AutenticacionSuscripcion:
+	case adaptadores.AutenticacionClaveAPI, "":
+		if clave = adaptadores.ClaveEntorno("CODEX_API_KEY", "OPENAI_API_KEY"); clave == "" {
+			return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente,
 				idioma.T("falta CODEX_API_KEY u OPENAI_API_KEY; o configura adaptadores.codex.autenticacion: suscripcion para uso personal local"))
 		}
 		// Un CODEX_HOME privado y vacío evita cargar ~/.codex/AGENTS.md: aislamiento completo.
 		home := filepath.Join(raiz, "codex-home")
 		if err := os.Mkdir(home, 0o700); err != nil {
-			return Resultado{}, err
+			return adaptadores.Resultado{}, err
 		}
 		extra = append(extra, "CODEX_HOME="+home, "CODEX_API_KEY="+clave)
 	default:
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("autenticación desconocida: %s", c.Autenticacion.Valor()))
+		return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("autenticación desconocida: %s", c.Autenticacion.Valor()))
 	}
 
-	trabajo := directorioTrabajo(s, espacio)
+	trabajo := adaptadores.DirectorioTrabajo(s, espacio)
 	args := []string{"exec", "--json", "--ephemeral", "--skip-git-repo-check", "-C", trabajo, "-s", "read-only",
 		"-c", `approval_policy="never"`, "-c", "features.shell_tool=false", "-c", `web_search="disabled"`, "-c", `history.persistence="none"`}
-	if !consciente(s) {
+	if !adaptadores.Consciente(s) {
 		args = append(args, "--ignore-rules") // en modo consciente carga el AGENTS.md del proyecto
 	}
 	if s.Modelo != "" {
 		args = append(args, "-m", s.Modelo)
 	}
-	if v := valorEsfuerzo("codex", s.Esfuerzo); v != "" {
+	if v := adaptadores.ValorEsfuerzo(valoresEsfuerzo, s.Esfuerzo); v != "" {
 		args = append(args, "-c", `model_reasoning_effort="`+v+`"`)
 	}
 	if len(s.Salida.Esquema) > 0 {
 		archivo := filepath.Join(raiz, "esquema.json")
 		if err := os.WriteFile(archivo, s.Salida.Esquema, 0o600); err != nil {
-			return Resultado{}, err
+			return adaptadores.Resultado{}, err
 		}
 		args = append(args, "--output-schema", archivo)
 	}
 	args = append(args, "-") // el prompt llega por stdin
-	sistema, prompt := separar(s)
+	sistema, prompt := adaptadores.Separar(s)
 
 	var mensajes []string
 	var uso nucleo.Uso
 	var errorAgente string
 	terminado := false
 	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: trabajo,
-		Entorno: entornoLimpio([]string{"CODEX_", "OPENAI_"}, extra...), Entrada: enmarcarSistema(sistema, prompt)}, func(linea string) error {
+		Entorno: adaptadores.EntornoLimpio([]string{"CODEX_", "OPENAI_"}, extra...), Entrada: adaptadores.EnmarcarSistema(sistema, prompt)}, func(linea string) error {
 		var e eventoCodex
 		if json.Unmarshal([]byte(linea), &e) != nil {
 			return nil
@@ -111,7 +112,7 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 		case "item.completed":
 			if e.Item.Type == "agent_message" && e.Item.Text != "" {
 				mensajes = append(mensajes, e.Item.Text)
-				return emitir(Evento{Tipo: "texto", Datos: e.Item.Text})
+				return emitir(adaptadores.Evento{Tipo: "texto", Datos: e.Item.Text})
 			}
 		case "turn.completed":
 			terminado = true
@@ -124,16 +125,16 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 		return nil
 	})
 	if err != nil {
-		return Resultado{}, err
+		return adaptadores.Resultado{}, err
 	}
 	if errorAgente != "" || !terminado {
-		texto := redactar(strings.TrimSpace(errorAgente+"\n"+r.Errores), clave)
+		texto := adaptadores.RedactarCon(strings.TrimSpace(errorAgente+"\n"+r.Errores), clave)
 		if texto == "" {
-			return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.T("codex terminó sin turn.completed"))
+			return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.T("codex terminó sin turn.completed"))
 		}
-		return Resultado{}, nucleo.NuevoError(clasificar(texto, 0), texto)
+		return adaptadores.Resultado{}, nucleo.NuevoError(adaptadores.Clasificar(texto, 0), texto)
 	}
-	return Resultado{Salida: strings.Join(mensajes, "\n\n"), Uso: uso}, nil
+	return adaptadores.Resultado{Salida: strings.Join(mensajes, "\n\n"), Uso: uso}, nil
 }
 
 type eventoCodex struct {

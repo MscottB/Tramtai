@@ -169,6 +169,16 @@
         }
       }
     },
+    "/agentes": {
+      "get": {
+        "summary": "La ficha de cada agente, sin comprobar los CLI",
+        "operationId": "agentes",
+        "responses": {
+          "200": { "description": "Fichas en su orden", "content": { "application/json": { "schema": { "type": "object", "properties": { "agentes": { "type": "array", "items": { "$ref": "#/components/schemas/Agente" } } } } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
     "/limites": {
       "get": {
         "summary": "Los topes de una petición",
@@ -310,6 +320,25 @@
           "tipo": { "type": "string", "enum": ["estado", "entrada", "intento", "aviso"] },
           "datos": { "type": "string" },
           "creado_en": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Agente": {
+        "type": "object",
+        "properties": {
+          "agente": { "type": "string", "description": "El id, el que va delante de agente/modelo" },
+          "nombre": { "type": "string" },
+          "programa": { "type": "string", "description": "El CLI o servicio que hay detrás" },
+          "codigo": { "type": "string", "description": "Dos letras para su línea; vacío si no tiene ficha" },
+          "color": { "type": "object", "properties": { "claro": { "type": "string" }, "oscuro": { "type": "string" } } },
+          "orden": { "type": "integer" },
+          "streaming": { "type": "string", "enum": ["tokens", "final"] },
+          "salida_estructurada": { "type": "boolean" },
+          "modelo_efectivo_informado": { "type": "boolean" },
+          "esfuerzos": { "type": "array", "items": { "type": "string" } },
+          "autenticaciones": { "type": "array", "items": { "type": "string", "enum": ["suscripcion", "clave_api"] } },
+          "variables_clave": { "type": "array", "items": { "type": "string" } },
+          "permitido_apps": { "type": "boolean", "description": "Si se puede usar desde apps y APIs" },
+          "url_instalacion": { "type": "string" }
         }
       },
       "Limites": {
