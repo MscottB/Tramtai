@@ -33,8 +33,9 @@ Fuera de alcance:
 | Permitido en apps | sí: su canario pasa con las opciones de abajo |
 | Instalación | `https://docs.github.com/copilot/how-tos/set-up/install-copilot-cli` |
 
-Con `auto`, el esfuerzo no se envía: Copilot lo rechaza («Model "auto" does not support reasoning effort»). El
-intento se registra con el esfuerzo del agente.
+Con `auto`, el esfuerzo no se envía: Copilot lo rechaza («Model "auto" does not support reasoning effort»). La ficha
+lo dice con `ModelosSinEsfuerzo` (`""` y `auto`): el catálogo de modelos no ofrece niveles y el intento se registra sin
+esfuerzo.
 
 **Cómo se lanza:**
 `copilot --output-format json --model <modelo|auto> [--reasoning-effort <nivel>] --available-tools none

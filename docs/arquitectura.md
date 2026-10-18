@@ -49,7 +49,7 @@ Además hay dos adaptadores de Google, probados con un servidor y un CLI simulad
   - Funciona solo con `modelProvider: gemini` y la clave del usuario, en un `HOME` privado y temporal; rechaza la suscripción por los términos de Antigravity.
   - Usa `structured_output` si hay esquema; no hay streaming ni modelo efectivo.
   - Recibe el prompt como argumento (hasta 28 000 caracteres), así que otros procesos del equipo pueden verlo en la lista de procesos mientras se ejecuta.
-  - **Sin restricción de herramientas validada:** a diferencia de Claude y Codex, a `agy` no se le desactivan herramientas, shell ni MCP, porque ninguna opción (`permissions.deny`, `toolPermission: strict`) se ha comprobado aún con el CLI real. Solo lo limitan el `HOME` privado y la carpeta temporal vacía; en `consciente_proyecto` trabaja en la raíz del proyecto. Úsalo solo con prompts de confianza.
+  - **Sin restricción de herramientas validada:** a diferencia de Claude, Codex y Copilot, a `agy` no se le desactivan herramientas, shell ni MCP, porque ninguna opción (`permissions.deny`, `toolPermission: strict`) se ha comprobado aún con el CLI real. Solo lo limitan el `HOME` privado y la carpeta temporal vacía; en `consciente_proyecto` trabaja en la raíz del proyecto. Úsalo solo con prompts de confianza.
 
 Las conversaciones de varios turnos se enmarcan con el formato `tramtai-turnos-v2`: un bloque `<<<turno-<código> rol=…>>>` por turno, con el contenido intacto y un código aleatorio por petición para que un mensaje no pueda cerrar su turno. Los errores del proveedor se traducen a `limite_uso_proveedor`, `autenticacion_agente`, `modelo_no_disponible` o `error_agente`. Ningún secreto llega a los mensajes: se redactan antes.
 

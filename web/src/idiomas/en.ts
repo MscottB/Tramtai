@@ -479,7 +479,7 @@ const en: Textos = {
   'ayuda.f4Texto': 'The agent’s CLI (Claude Code, Codex, Copilot or Antigravity) or the Gemini API answers. If it fails before starting, the fallback takes over.',
   'ayuda.f5': 'The response',
   'ayuda.f5Texto': 'Arrives live, is validated against the schema if there is one, and stays in the History with its log.',
-  'ayuda.funcionaNota': 'Everything happens on your computer: Tramtai has no server of its own and does not see your data. Agents run without tools, so a message or a document cannot make them read files, run commands or go online.',
+  'ayuda.funcionaNota': 'Everything happens on your computer: Tramtai has no server of its own and does not see your data. The agents your apps use have no terminal and no tools that write or go online (Claude and Copilot have none; Codex reads only an empty folder), so a message or a document cannot make them read your files, run commands or go online. Antigravity, not yet checked, is only used from Try and the terminal.',
   'ayuda.guiasTexto': 'The most common tasks, from start to finish. Each guide ends with a button to the page where it is done.',
   'ayuda.g1': 'Connect an app that already uses OpenAI',
   'ayuda.g1Pasos': 'Open My APIs, "Main API" tab, and copy the OpenAI base URL and the key.\nIn your app or SDK, replace the base URL (base_url) with it and the key (api_key) with the Tramtai one.\nIn the model field put the agent and the model, for example claude/sonnet or perfil/rapido.\nSend a request: it shows up in the History with the agent that answered.',

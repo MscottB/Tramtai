@@ -478,7 +478,7 @@ const es = {
   'ayuda.f4Texto': 'Responde el CLI del agente (Claude Code, Codex, Copilot o Antigravity) o la API de Gemini. Si falla antes de empezar, sigue el respaldo.',
   'ayuda.f5': 'La respuesta',
   'ayuda.f5Texto': 'Llega en vivo, se valida con el esquema si lo hay y queda en el Historial con su registro.',
-  'ayuda.funcionaNota': 'Todo ocurre en tu equipo: Tramtai no tiene servidor propio ni ve tus datos. Los agentes van sin herramientas, así que un mensaje o un documento no puede hacer que lean archivos, ejecuten órdenes o salgan a internet.',
+  'ayuda.funcionaNota': 'Todo ocurre en tu equipo: Tramtai no tiene servidor propio ni ve tus datos. Los agentes que usan tus apps van sin terminal ni herramientas que escriban o salgan a internet (Claude y Copilot, sin ninguna; Codex, en solo lectura de una carpeta vacía), así que un mensaje o un documento no puede hacer que lean tus archivos, ejecuten órdenes o salgan a internet. Antigravity, sin esa comprobación, solo se usa desde Probar y la terminal.',
   'ayuda.guiasTexto': 'Las tareas más comunes, de principio a fin. Cada guía termina con un botón a la página donde se hace.',
   'ayuda.g1': 'Conectar una app que ya usa OpenAI',
   'ayuda.g1Pasos': 'Abre Mis APIs, pestaña «API principal», y copia la URL base para OpenAI y la clave.\nEn tu app o SDK, cambia la URL base (base_url) por esa y la clave (api_key) por la de Tramtai.\nEn el campo model pon el agente y el modelo, por ejemplo claude/sonnet o perfil/rapido.\nEnvía una petición: aparece en el Historial con el agente que respondió.',
