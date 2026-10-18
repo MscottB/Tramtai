@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes/antigravity"
 	"tramtai/internal/agentes/claude"
 	"tramtai/internal/agentes/codex"
 	"tramtai/internal/agentes/copilot"
@@ -48,9 +49,14 @@ func TestCanario(t *testing.T) {
 		{"codex/gpt-5.6-terra", codex.Codex{Programa: "codex", Autenticacion: adaptadores.NuevoModo(adaptadores.AutenticacionSuscripcion)}, "gpt-5.6-terra"},
 		// Copilot Free solo admite auto; cada ejecución gasta un crédito del plan.
 		{"copilot/auto", copilot.Copilot{Programa: "copilot", Autenticacion: adaptadores.NuevoModo(adaptadores.AutenticacionSuscripcion)}, "auto"},
+		// Antigravity solo con la clave de la Gemini API (tramtai claves guardar GEMINI_API_KEY); sin ella se salta.
+		{"antigravity/predeterminado", antigravity.Antigravity{Programa: "agy", Autenticacion: adaptadores.AutenticacionClaveAPI}, ""},
 	}
 	for _, c := range casos {
 		t.Run(c.nombre, func(t *testing.T) {
+			if _, ok := c.adaptador.(antigravity.Antigravity); ok && adaptadores.ClaveEntorno("GEMINI_API_KEY") == "" {
+				t.Skip("falta GEMINI_API_KEY")
+			}
 			dir := t.TempDir()
 			secreto := marca(t)
 			trampa := filepath.Join(dir, "trampa.txt")
