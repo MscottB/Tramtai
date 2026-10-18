@@ -3,7 +3,7 @@
 ## Qué necesitas
 
 - **Windows 10 u 11** (x64), **Linux** (x64 o ARM) o **macOS** 11 o posterior (Intel o Apple Silicon). La app de escritorio existe para los tres.
-- **Al menos un agente:** [Claude Code](https://docs.anthropic.com/claude-code) (`claude`), [Codex CLI](https://developers.openai.com/codex/cli) (`codex`), [GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/set-up/install-copilot-cli) (`copilot`, con cualquier plan de Copilot) o una clave de la Gemini API, que también sirve para Antigravity (`agy`).
+- **Al menos un agente:** [Claude Code](https://docs.anthropic.com/claude-code) (`claude`), [Codex CLI](https://developers.openai.com/codex/cli) (`codex`), [GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/set-up/install-copilot-cli) (`copilot`, con cualquier plan de GitHub Copilot) o una clave de la Gemini API, que también sirve para Antigravity (`agy`).
 - **Opcional, para archivos de Office y PDF:** `uv tool install "markitdown[pdf,docx,pptx,xlsx]==0.1.8"`.
 
 ## 1. Instalar y abrir
@@ -49,7 +49,7 @@ La página **Agentes** dice qué falta en cada uno. Hay dos formas de autenticar
 ```powershell
 tramtai claves guardar ANTHROPIC_API_KEY   # Claude; la pide sin mostrarla
 tramtai claves guardar OPENAI_API_KEY      # Codex
-tramtai claves guardar COPILOT_GITHUB_TOKEN  # Copilot (token fine-grained con «Copilot Requests»)
+tramtai claves guardar COPILOT_GITHUB_TOKEN  # GitHub Copilot (token fine-grained con «Copilot Requests»)
 tramtai claves guardar GEMINI_API_KEY      # Gemini y Antigravity
 tramtai claves listar                      # de dónde sale cada una, sin mostrarla
 ```
@@ -99,7 +99,7 @@ tramtai convertir informe.pdf     # muestra el texto que recibiría el agente, s
 ### Modelos
 
 - `-m` (o `model` en la API) acepta el nombre que entienda el CLI: `haiku`, `sonnet`, `claude-sonnet-5-5`, `gemini-flash-latest`…
-- **Copilot:** `copilot` (o `copilot/auto`) usa el modelo automático (el único del plan Free): Copilot elige el modelo,
+- **GitHub Copilot:** `copilot` (o `copilot/auto`) usa el modelo automático (el único del plan Free): GitHub Copilot elige el modelo,
   Tramtai muestra cuál usó y cada petición gasta créditos del plan. Con un plan de pago, `copilot/<modelo>`. Inicia
   sesión con `copilot login` y elige en Agentes «Usar mi suscripción», o guarda `COPILOT_GITHUB_TOKEN`.
 - `-p` usa un perfil: `rapido`, `equilibrado` o `profundo`. Para Claude equivalen a `haiku`, `sonnet` y `opus`, y para Gemini a los modelos *flash-lite*, *flash* y *pro*. Para Codex defínelos tú:
@@ -113,7 +113,7 @@ tramtai convertir informe.pdf     # muestra el texto que recibiría el agente, s
 
 - Si un perfil no tiene modelo para el agente, el trabajo se rechaza: Tramtai nunca cambia el modelo en silencio.
 - **Modelo predeterminado:** el que se usa cuando una aplicación no elige agente ni modelo. Se cambia en **Ajustes → Modelo predeterminado** (al momento, sin reiniciar) o con `predeterminados.agente` y `predeterminados.modelo` (o `predeterminados.perfil_modelo`) en la configuración. En un proyecto se guarda en su `.tramtai/local.yaml`. Debajo se elige su **esfuerzo** (`predeterminados.esfuerzo`): se usa con el modelo predeterminado cuando la petición tampoco elige esfuerzo; con otro agente, modelo o perfil, cada CLI usa el suyo. Si el modelo nuevo no admite ese esfuerzo, vuelve al del agente.
-- **Versión real:** los selectores muestran bajo cada alias (`sonnet`, `haiku`…) la versión que informó el agente la última vez que se usó, por ejemplo `claude-haiku-4-5-20251001`. Codex no informa el modelo efectivo; Copilot sí, también el que elige el automático.
+- **Versión real:** los selectores muestran bajo cada alias (`sonnet`, `haiku`…) la versión que informó el agente la última vez que se usó, por ejemplo `claude-haiku-4-5-20251001`. Codex no informa el modelo efectivo; GitHub Copilot sí, también el que elige el automático.
 
 ## Proyectos
 

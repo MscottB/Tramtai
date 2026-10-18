@@ -11,6 +11,10 @@ Decisiones del usuario:
 
 Este release reordena la hoja de ruta: OpenCode pasa a la v0.47 y Hermes Agent a la v0.48.
 
+Añadido por el usuario a este release: el agente se llama **GitHub Copilot** en todas partes (app, web, README, términos
+y documentación), para no confundirlo con Microsoft 365 Copilot. El nombre visible de su ficha pasa de «Copilot» a
+«GitHub Copilot»; el id (`copilot`), `copilot login` y `copilot/<modelo>` no cambian.
+
 Fuera de alcance:
 - JSON Schema completo en el editor visual (`oneOf`, `$ref`, patrones…): esos esquemas se siguen escribiendo en JSON.
 - Plantillas propias guardadas por el usuario: una API ya guarda su esquema, y «Guardar como API» sirve para eso.

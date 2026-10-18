@@ -39,7 +39,7 @@ const en: Textos = {
   'menuDetalle.ejecutar': 'Send a message to an agent',
   'menuDetalle.historial': 'Everything that has run',
   'menuDetalle.conectar': 'Connect your apps',
-  'menuDetalle.agentes': 'Claude, Codex, Copilot…',
+  'menuDetalle.agentes': 'Claude, Codex, GitHub Copilot…',
   'menuDetalle.configuracion': 'Startup and data cleanup',
   'menuDetalle.ayuda': 'Getting started and FAQ',
 
@@ -428,7 +428,7 @@ const en: Textos = {
   'ayuda.empezar': 'How to get started',
   'ayuda.paso1': 'Connect an agent',
   'ayuda.paso1Texto':
-    'In Agents, choose “Use my subscription” for Claude, Codex or Copilot (personal use) or save an API key: it is stored encrypted in the system store and works without restarting. The Gemini API is used directly, without installing Gemini CLI: it only needs a Gemini API key.',
+    'In Agents, choose “Use my subscription” for Claude, Codex or GitHub Copilot (personal use) or save an API key: it is stored encrypted in the system store and works without restarting. The Gemini API is used directly, without installing Gemini CLI: it only needs a Gemini API key.',
   'ayuda.paso2': 'Try a message',
   'ayuda.paso2Texto':
     'In Try, type something, pick the agent, model and effort and watch the answer live, formatted or as plain text. You can attach PDF, Word, Excel or ZIP, and your recent tests stay at hand to run them again.',
@@ -445,9 +445,9 @@ const en: Textos = {
   'ayuda.p1': 'Do I need a key to sign in?',
   'ayuda.r1':
     'No. The Tramtai app signs in by itself. In a browser, on Windows and Linux you get in directly if it runs as your same user; on macOS, or when that can’t be checked, run “tramtai abrir” on the Tramtai computer. The keys in My APIs are only for your apps: they don’t open this page.',
-  'ayuda.p2': 'Are requests saved as chats in Claude Code, Codex or Copilot?',
+  'ayuda.p2': 'Are requests saved as chats in Claude Code, Codex or GitHub Copilot?',
   'ayuda.r2':
-    'No. Tramtai runs Claude Code without saving the session, Codex in ephemeral mode, and Copilot and Antigravity with a private folder that is deleted afterwards. Your chat histories don’t fill up with your apps’ requests: the record stays only in Tramtai’s History.',
+    'No. Tramtai runs Claude Code without saving the session, Codex in ephemeral mode, and GitHub Copilot and Antigravity with a private folder that is deleted afterwards. Your chat histories don’t fill up with your apps’ requests: the record stays only in Tramtai’s History.',
   'ayuda.p3': 'Where is my data stored and for how long?',
   'ayuda.r3':
     'Only on this computer: in %APPDATA%\\tramtai on Windows, ~/Library/Application Support/tramtai on macOS and ~/.config/tramtai on Linux. By default, answers are kept for 24 hours and the rest of the history for 7 days, up to 10,000 requests; then they are deleted automatically. Change it in Settings → History, where you can also delete it any time.',
@@ -468,7 +468,7 @@ const en: Textos = {
   'ayuda.secGuias': 'Step-by-step guides',
   'ayuda.secConceptos': 'Concepts',
   'ayuda.secProblemas': 'If something fails',
-  'ayuda.funcionaTexto': 'Tramtai puts your AI agents (Claude Code, Codex, Copilot, the Gemini API and Antigravity) behind an API on your computer. Your apps talk to it as they would to OpenAI or Anthropic, and this is what happens with each request:',
+  'ayuda.funcionaTexto': 'Tramtai puts your AI agents (Claude Code, Codex, GitHub Copilot, the Gemini API and Antigravity) behind an API on your computer. Your apps talk to it as they would to OpenAI or Anthropic, and this is what happens with each request:',
   'ayuda.f1': 'Your app',
   'ayuda.f1Texto': 'Sends the request to a URL from My APIs with its key, or you type it in Try.',
   'ayuda.f2': 'The API',
@@ -476,10 +476,10 @@ const en: Textos = {
   'ayuda.f3': 'The queue',
   'ayuda.f3Texto': 'Converts the files to text, measures whether they fit in the model and waits its turn.',
   'ayuda.f4': 'The agent',
-  'ayuda.f4Texto': 'The agent’s CLI (Claude Code, Codex, Copilot or Antigravity) or the Gemini API answers. If it fails before starting, the fallback takes over.',
+  'ayuda.f4Texto': 'The agent’s CLI (Claude Code, Codex, GitHub Copilot or Antigravity) or the Gemini API answers. If it fails before starting, the fallback takes over.',
   'ayuda.f5': 'The response',
   'ayuda.f5Texto': 'Arrives live, is validated against the schema if there is one, and stays in the History with its log.',
-  'ayuda.funcionaNota': 'Everything happens on your computer: Tramtai has no server of its own and does not see your data. The agents your apps use have no terminal and no tools that write or go online (Claude and Copilot have none; Codex reads only an empty folder), so a message or a document cannot make them read your files, run commands or go online. Antigravity also runs without tools and, until it passes its test with a Gemini API key, is used from Try, the terminal and the CLI.',
+  'ayuda.funcionaNota': 'Everything happens on your computer: Tramtai has no server of its own and does not see your data. The agents your apps use have no terminal and no tools that write or go online (Claude and GitHub Copilot have none; Codex reads only an empty folder), so a message or a document cannot make them read your files, run commands or go online. Antigravity also runs without tools and, until it passes its test with a Gemini API key, is used from Try, the terminal and the CLI.',
   'ayuda.guiasTexto': 'The most common tasks, from start to finish. Each guide ends with a button to the page where it is done.',
   'ayuda.g1': 'Connect an app that already uses OpenAI',
   'ayuda.g1Pasos': 'Open My APIs, "Main API" tab, and copy the OpenAI base URL and the key.\nIn your app or SDK, replace the base URL (base_url) with it and the key (api_key) with the Tramtai one.\nIn the model field put the agent and the model, for example claude/sonnet or perfil/rapido.\nSend a request: it shows up in the History with the agent that answered.',
@@ -494,7 +494,7 @@ const en: Textos = {
   'ayuda.g6': 'Find out why a request failed',
   'ayuda.g6Pasos': 'Open the History and click the failed request.\nRead the error: "If something fails", below, explains each one and what to do.\nOpen "Log" to see each step: which agent was tried, the notices and how long it took.\nFix the cause (key, model, file size) and press "Retry".',
   'ayuda.cAgente': 'Agent',
-  'ayuda.cAgenteTexto': 'The AI program that answers: Claude Code, Codex, Copilot, the Gemini API or Antigravity. Connect it in Agents, with your subscription or an API key.',
+  'ayuda.cAgenteTexto': 'The AI program that answers: Claude Code, Codex, GitHub Copilot, the Gemini API or Antigravity. Connect it in Agents, with your subscription or an API key.',
   'ayuda.cModelo': 'Model',
   'ayuda.cModeloTexto': 'The model the agent uses (sonnet, opus, gpt-5.5…). It is written agent/model; the list shows the exact version behind it.',
   'ayuda.cPerfil': 'Profile',
@@ -539,10 +539,10 @@ const en: Textos = {
   'ayuda.r20': 'It depends on your app. If it already uses the OpenAI SDK, or a tool that lets you change the base URL (LangChain, n8n, an AI editor), use the OpenAI URL; if it uses the Anthropic SDK, the Anthropic one. If you need to send files, follow long jobs, cancel or retry, use the Tramtai API (/api/v1). In My APIs, "Which URL do I use?" compares the three and has examples to copy.',
   'ayuda.p22': 'Which agents can I use?',
   'ayuda.r22':
-    'The ones you see in Agents: today Claude Code, Codex, GitHub Copilot CLI, the Gemini API and Antigravity. Claude Code, Codex and Copilot connect with your subscription (for Copilot, the copilot login session with your account, whether Free, Pro or business) or an API key; the Gemini API and Antigravity, with a Gemini API key; the ones that are not installed appear at the end of the page, with a link to install them. The search box and filter at the top help when there are many.',
-  'ayuda.p23': 'Which Copilot plan do I need?',
+    'The ones you see in Agents: today Claude Code, Codex, GitHub Copilot CLI, the Gemini API and Antigravity. Claude Code, Codex and GitHub Copilot connect with your subscription (for GitHub Copilot, the copilot login session with your account, whether Free, Pro or business) or an API key; the Gemini API and Antigravity, with a Gemini API key; the ones that are not installed appear at the end of the page, with a link to install them. The search box and filter at the top help when there are many.',
+  'ayuda.p23': 'Which GitHub Copilot plan do I need?',
   'ayuda.r23':
-    'Any plan that includes Copilot CLI: Free, Pro, Pro+, Business or Enterprise. Install GitHub Copilot CLI, sign in with copilot login in a terminal and, in Agents, choose to use your subscription. copilot (or copilot/auto) uses the automatic model: Copilot picks the model and Tramtai shows which one it used; on the Free plan it is the only one. On the other plans you can ask for a specific model as copilot/<model> and choose its effort. Every request uses credits from your plan (premium requests), and Tramtai says so in the test log.',
+    'Any plan that includes GitHub Copilot CLI: Free, Pro, Pro+, Business or Enterprise. Install GitHub Copilot CLI, sign in with copilot login in a terminal and, in Agents, choose to use your subscription. copilot (or copilot/auto) uses the automatic model: GitHub Copilot picks the model and Tramtai shows which one it used; on the Free plan it is the only one. On the other plans you can ask for a specific model as copilot/<model> and choose its effort. Every request uses credits from your plan (premium requests), and Tramtai says so in the test log.',
   'ayuda.p21': 'How do I see my test as code?',
   'ayuda.r21': 'In Try, press "View as code" in the recipe: you will see the request in curl, Python or Node through the Tramtai API, in Python or curl through OpenAI and in Python through Anthropic (if the API accepts them), with the key as <your key>. If the test has something only the Tramtai API accepts (files, fallback, a schema through Anthropic), that tab says so.',
   'ayuda.documentacion': 'Full documentation',

@@ -77,7 +77,7 @@ func (c Copilot) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emit
 		if err != nil {
 			mensaje := problemaSesion(err)
 			if sinSesion(err) {
-				mensaje = idioma.T("no hay sesión de Copilot: inicia sesión con copilot login o configura adaptadores.copilot.autenticacion: clave_api")
+				mensaje = idioma.T("no hay sesión de GitHub Copilot: inicia sesión con copilot login o configura adaptadores.copilot.autenticacion: clave_api")
 			}
 			return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente, mensaje)
 		}
@@ -126,7 +126,7 @@ func (c Copilot) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emit
 		return adaptadores.Resultado{}, nucleo.NuevoError(adaptadores.Clasificar(texto, 0), texto)
 	}
 	if e.creditos > 0 {
-		if err := emitir(adaptadores.Evento{Tipo: "aviso", Datos: idioma.Tf("Créditos de tu plan de Copilot gastados (premium requests): %g", e.creditos)}); err != nil {
+		if err := emitir(adaptadores.Evento{Tipo: "aviso", Datos: idioma.Tf("Créditos de tu plan de GitHub Copilot gastados (premium requests): %g", e.creditos)}); err != nil {
 			return adaptadores.Resultado{}, err
 		}
 	}
@@ -168,9 +168,9 @@ func sinSesion(err error) bool { return errors.Is(err, errSinSesion) || errors.I
 
 func problemaSesion(err error) string {
 	if sinSesion(err) {
-		return idioma.T("no hay sesión de Copilot: inicia sesión con copilot login")
+		return idioma.T("no hay sesión de GitHub Copilot: inicia sesión con copilot login")
 	}
-	return idioma.Tf("no se pudo leer la sesión de Copilot: %v", err)
+	return idioma.Tf("no se pudo leer la sesión de GitHub Copilot: %v", err)
 }
 
 // sesion devuelve el config.json para el COPILOT_HOME privado: solo la cuenta con la que el usuario inició sesión

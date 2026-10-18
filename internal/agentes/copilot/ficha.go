@@ -11,7 +11,7 @@ var valoresEsfuerzo = []string{"low", "medium", "high", "xhigh", "max"}
 // Ficha es la de GitHub Copilot CLI para el catálogo de agentes. No tiene salida estructurada propia: el esquema va en
 // las instrucciones y Tramtai valida la respuesta. Su esfuerzo predeterminado depende del modelo y no se documenta.
 var Ficha = adaptadores.Ficha{
-	Nombre: "copilot", NombreVisible: "Copilot", Programa: "GitHub Copilot CLI", Codigo: "GH",
+	Nombre: "copilot", NombreVisible: "GitHub Copilot", Programa: "GitHub Copilot CLI", Codigo: "GH",
 	ColorClaro: "#1f883d", ColorOscuro: "#3fb950", Orden: 25,
 	Streaming: "tokens", ModeloEfectivoInformado: true,
 	ValoresEsfuerzo: valoresEsfuerzo, ModelosSinEsfuerzo: []string{"", "auto"},

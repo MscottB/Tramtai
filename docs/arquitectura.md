@@ -68,7 +68,7 @@ El código tras el guion es aleatorio por petición (igual en los turnos `<<<tur
 
 Si una carga venció, el trabajo falla con `entrada_no_disponible`. Una conversión vacía o fallida falla con `conversion_fallida`; nunca se presenta como éxito. Un ZIP que supera los límites falla con `carga_invalida`.
 
-Con un esquema, se usa primero la salida estructurada nativa del agente (`--json-schema` y `structured_output` en Claude; `--output-schema` en Codex); Copilot, que no la tiene, lo recibe en las instrucciones. Después Tramtai valida el resultado. Si no cumple, el trabajo falla con `salida_no_cumple_esquema` y la salida solo se conserva con `conservar_salida_invalida`. Un esquema inválido se rechaza al aceptar el trabajo.
+Con un esquema, se usa primero la salida estructurada nativa del agente (`--json-schema` y `structured_output` en Claude; `--output-schema` en Codex); GitHub Copilot, que no la tiene, lo recibe en las instrucciones. Después Tramtai valida el resultado. Si no cumple, el trabajo falla con `salida_no_cumple_esquema` y la salida solo se conserva con `conservar_salida_invalida`. Un esquema inválido se rechaza al aceptar el trabajo.
 
 ## Modelo de amenazas
 
@@ -76,7 +76,7 @@ Lo que llega de una app (mensaje, instrucciones, documentos, esquema) se trata c
 intente manipular al modelo; sí que un modelo manipulado haga daño a través de Tramtai:
 
 - **Agentes:** Claude Code sin herramientas, sin configuración del usuario y con el mensaje por stdin; Codex en solo
-  lectura, sin terminal ni búsqueda web, en una carpeta temporal y con el mensaje por stdin; Copilot sin herramientas ni
+  lectura, sin terminal ni búsqueda web, en una carpeta temporal y con el mensaje por stdin; GitHub Copilot sin herramientas ni
   MCP, con un `COPILOT_HOME` privado y el mensaje por stdin; Gemini es HTTP. Las pruebas
   canario lo comprueban con los CLI reales. Antigravity va sin herramientas por un hook, con el mensaje por stdin
   y la configuración privada; queda fuera de las apps hasta que su canario pase con una clave de la Gemini API.
@@ -182,7 +182,7 @@ Por defecto, cada agente se ejecuta aislado en una carpeta temporal vacía. Con 
 
 De menor a mayor: interno → global → proyecto → local → entorno → punto de acceso → solicitud. Las claves de seguridad (`servicio`, `comandos_agentes`, `adaptadores`, `concurrencia_servicio`…) se rechazan en la capa de proyecto, que es la que va en el repositorio, y en `local.yaml` salvo que la carpeta figure en `proyectos_confiables` de la configuración global (un `local.yaml` también puede llegar con un clon). `proyectos_confiables` solo se lee de la global.
 
-Los agentes no heredan secretos del entorno: se retiran las credenciales conocidas de los proveedores, todas las `TRAMTAI_*` (el token del servicio) y cualquier variable cuyo nombre contenga `API_KEY`, `TOKEN`, `SECRET`, `PASSWORD` o `CREDENTIAL` (`GITHUB_TOKEN`, `AWS_SECRET_ACCESS_KEY`…). Cada CLI solo conserva las variables secretas con los prefijos de su propio proveedor (`CLAUDE_` y `ANTHROPIC_` para Claude, `CODEX_` y `OPENAI_` para Codex, `GEMINI_` para Antigravity; Copilot no conserva ninguna `COPILOT_*` heredada, ni `GH_TOKEN` ni `GITHUB_TOKEN`), y la clave que necesita se la pasa Tramtai según el modo de autenticación. La consulta `--version` se ejecuta sin ninguna clave.
+Los agentes no heredan secretos del entorno: se retiran las credenciales conocidas de los proveedores, todas las `TRAMTAI_*` (el token del servicio) y cualquier variable cuyo nombre contenga `API_KEY`, `TOKEN`, `SECRET`, `PASSWORD` o `CREDENTIAL` (`GITHUB_TOKEN`, `AWS_SECRET_ACCESS_KEY`…). Cada CLI solo conserva las variables secretas con los prefijos de su propio proveedor (`CLAUDE_` y `ANTHROPIC_` para Claude, `CODEX_` y `OPENAI_` para Codex, `GEMINI_` para Antigravity; GitHub Copilot no conserva ninguna `COPILOT_*` heredada, ni `GH_TOKEN` ni `GITHUB_TOKEN`), y la clave que necesita se la pasa Tramtai según el modo de autenticación. La consulta `--version` se ejecuta sin ninguna clave.
 
 ## Cumplimiento de proveedores
 

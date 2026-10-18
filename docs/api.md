@@ -42,7 +42,7 @@ de la API propia), y **Probar → Ver como código** da la prueba actual como pe
 - **Acceso remoto:** está desactivado. Solo se permite con `servicio.permitir_remoto: true`, token obligatorio y ningún agente en modo suscripción. Lo recomendado es un túnel SSH. La Web UI remota solo se abre con un código de `tramtai abrir` hecho en el equipo del servicio.
 - `/healthz` no exige token y no expone datos.
 - **Contenido hostil:** lo que manda una app (mensaje, instrucciones, documentos, esquema) no puede hacer que un agente
-  lea archivos, ejecute órdenes o salga a la red: Claude Code y Copilot van sin herramientas y Codex en solo lectura, sin
+  lea archivos, ejecute órdenes o salga a la red: Claude Code y GitHub Copilot van sin herramientas y Codex en solo lectura, sin
   terminal ni búsqueda web (comprobado con [canarios](operacion.md#comprobar-el-aislamiento-de-los-agentes)).
   Antigravity también va sin herramientas (un hook de agy las niega), pero hasta que su canario pase con una clave de la
   Gemini API no se puede usar desde apps ni APIs (`agente_no_disponible`) salvo `adaptadores.antigravity.permitir_apps`. Los delimitadores de turnos y archivos llevan un código por petición, y una
@@ -167,7 +167,7 @@ Cuánto razona el modelo antes de responder. Es opcional: sin él, cada CLI usa 
 - **Qué agentes lo admiten:**
   - Claude Code (`--effort`), hasta máximo.
   - Codex (`model_reasoning_effort`), hasta muy alto; si se pide máximo, usa muy alto.
-  - Copilot (`--reasoning-effort`), hasta máximo, solo con un modelo concreto: con `copilot` o `copilot/auto` (el
+  - GitHub Copilot (`--reasoning-effort`), hasta máximo, solo con un modelo concreto: con `copilot` o `copilot/auto` (el
     automático, el único del plan Free) se ignora y `GET /api/v1/modelos` no lo ofrece.
   - Antigravity (`--effort`), hasta máximo.
   - La API de Gemini lo ignora.
