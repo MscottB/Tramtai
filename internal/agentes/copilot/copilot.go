@@ -91,6 +91,10 @@ func (c Copilot) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emit
 
 	archivoUso := filepath.Join(raiz, "uso.json")
 	sistema, prompt := adaptadores.Separar(s)
+	formato := instruccionesSalida(s.Salida)
+	if formato != "" {
+		sistema = strings.TrimSpace(sistema + "\n\n" + formato)
+	}
 	var e estado
 	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: argumentos(s, archivoUso),
 		Directorio: adaptadores.DirectorioTrabajo(s, espacio), Entorno: entorno(extra),
@@ -113,7 +117,36 @@ func (c Copilot) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emit
 			return adaptadores.Resultado{}, err
 		}
 	}
-	return adaptadores.Resultado{Salida: strings.Join(e.mensajes, "\n\n"), Uso: leerUso(archivoUso), ModeloEfectivo: e.modelo}, nil
+	salida := strings.Join(e.mensajes, "\n\n")
+	if formato != "" {
+		salida = sinCerca(salida)
+	}
+	return adaptadores.Resultado{Salida: salida, Uso: leerUso(archivoUso), ModeloEfectivo: e.modelo}, nil
+}
+
+// instruccionesSalida pide el formato en las instrucciones: Copilot no tiene salida estructurada propia, y Tramtai
+// valida la respuesta después como con cualquier agente. Va al modelo, no al usuario: no se traduce.
+func instruccionesSalida(c nucleo.ConfigSalida) string {
+	switch {
+	case len(c.Esquema) > 0:
+		return "Responde solo con un JSON válido que cumpla este JSON Schema, sin texto adicional ni bloques de código:\n" + string(c.Esquema)
+	case c.Formato == "json":
+		return "Responde solo con un JSON válido, sin texto adicional ni bloques de código."
+	}
+	return ""
+}
+
+// sinCerca quita el bloque ```json … ``` con el que algunos modelos envuelven el JSON aunque se les pida que no.
+func sinCerca(texto string) string {
+	t := strings.TrimSpace(texto)
+	if !strings.HasPrefix(t, "```") || !strings.HasSuffix(t, "```") || len(t) < 6 {
+		return texto
+	}
+	_, cuerpo, ok := strings.Cut(strings.TrimSuffix(t, "```"), "\n")
+	if !ok {
+		return texto
+	}
+	return strings.TrimSpace(cuerpo)
 }
 
 // argumentos son los que pasaron el canario: sin herramientas («none» no es ninguna, así que la lista queda vacía),

@@ -179,6 +179,30 @@ func TestCopilotConClave(t *testing.T) {
 	}
 }
 
+func TestCopilotPideElFormato(t *testing.T) {
+	archivo := falso(t)
+	t.Setenv("COPILOT_GITHUB_TOKEN", "github_pat_de_prueba_123")
+	c := Copilot{Programa: os.Args[0], Autenticacion: adaptadores.NuevoModo(adaptadores.AutenticacionClaveAPI)}
+	s := solicitud("hola")
+	s.Salida.Esquema = []byte(`{"type":"object","required":["total"]}`)
+	if _, err := c.Ejecutar(context.Background(), s, func(adaptadores.Evento) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if reg := leerRegistro(t, archivo); !strings.Contains(reg.Entrada, `{"type":"object","required":["total"]}`) {
+		t.Fatalf("el esquema no va en las instrucciones: %q", reg.Entrada)
+	}
+	for entrada, salida := range map[string]string{
+		"```json\n{\"total\": 1}\n```": `{"total": 1}`,
+		"```\n[1, 2]\n```":             "[1, 2]",
+		`{"total": 1}`:                 `{"total": 1}`,
+		"```":                          "```",
+	} {
+		if r := sinCerca(entrada); r != salida {
+			t.Errorf("sinCerca(%q) = %q", entrada, r)
+		}
+	}
+}
+
 func TestCopilotModeloNoDisponible(t *testing.T) {
 	falso(t)
 	t.Setenv("FALSO_COPILOT_FALLO", "1")
