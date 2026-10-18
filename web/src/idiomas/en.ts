@@ -434,7 +434,7 @@ const en: Textos = {
     'In Try, type something, pick the agent, model and effort and watch the answer live, formatted or as plain text. You can attach PDF, Word, Excel or ZIP, and your recent tests stay at hand to run them again.',
   'ayuda.paso3': 'Connect your app',
   'ayuda.paso3Texto':
-    'My APIs has the URL and the key. In your OpenAI or Anthropic SDK change the base URL and pick the agent and model with the model field, for example claude/sonnet.',
+    'My APIs, "Main API" tab, has the URL and the key. In your OpenAI or Anthropic SDK change the base URL and pick the agent and model with the model field, for example claude/sonnet.',
   'ayuda.paso4': 'Give each app its own API (optional)',
   'ayuda.paso4Texto':
     'In My APIs create one API per app, with its own key (shown only when it is created: copy it then), models and fixed instructions (for example, always answer in Spanish). Group them to start or stop them together.',
@@ -539,7 +539,7 @@ const en: Textos = {
   'ayuda.r20': 'It depends on your app. If it already uses the OpenAI SDK, or a tool that lets you change the base URL (LangChain, n8n, an AI editor), use the OpenAI URL; if it uses the Anthropic SDK, the Anthropic one. If you need to send files, follow long jobs, cancel or retry, use the Tramtai API (/api/v1). In My APIs, "Which URL do I use?" compares the three and has examples to copy.',
   'ayuda.p22': 'Which agents can I use?',
   'ayuda.r22':
-    'The ones you see in Agents: today Claude Code, Codex, the Gemini API and Antigravity (the last one only from Try and the terminal until it is checked with its real CLI). Each one connects with your subscription or an API key; the ones that are not installed appear at the end of the page, with a link to install them. The search box and filter at the top help when there are many.',
+    'The ones you see in Agents: today Claude Code, Codex, the Gemini API and Antigravity (the last one only from Try and the terminal until it is checked with its real CLI). Claude Code and Codex connect with your subscription or an API key; the Gemini API and Antigravity, with a key; the ones that are not installed appear at the end of the page, with a link to install them. The search box and filter at the top help when there are many.',
   'ayuda.p21': 'How do I see my test as code?',
   'ayuda.r21': 'In Try, press "View as code" in the recipe: you will see the request in curl, Python or Node through the Tramtai API, in Python or curl through OpenAI and in Python through Anthropic (if the API accepts them), with the key as <your key>. If the test has something only the Tramtai API accepts (files, fallback, a schema through Anthropic), that tab says so.',
   'ayuda.documentacion': 'Full documentation',
@@ -883,7 +883,7 @@ const en: Textos = {
   'presupuesto.espacioTexto': 'Counts every request in the workspace: your APIs, the main key and Try.',
   'ayuda.p14': 'How do I limit what an app spends?',
   'ayuda.r14':
-    'In My APIs, in the settings of each API, set a daily or monthly budget in requests, tokens or dollars. You will see one bar per limit, yellow from 80%; at 100% the app gets a 429 error until the next day or month, or until you press "Reset usage". The dollar limit only adds up the cost the agent reports (Claude today). To limit the whole workspace, add "presupuesto" to the global configuration; its usage shows at the top of My APIs.',
+    'In My APIs, in the settings of each API, set a daily or monthly budget in requests, tokens or dollars. You will see one bar per limit, yellow from 80%; at 100% the app gets a 429 error until the next day or month, or until you press "Reset usage". The dollar limit only adds up the cost the agent reports (Claude today). To limit the whole workspace, add "presupuesto" to the global configuration; its usage shows in My APIs, at the end of the "Main API" tab.',
 }
 
 export default en

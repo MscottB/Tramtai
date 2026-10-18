@@ -75,7 +75,7 @@ func Separar(s nucleo.SolicitudEjecucion) (sistema, prompt string) {
 		return sistema, turnos[0].Contenido
 	}
 	// Los delimitadores llevan un código por petición: un mensaje que escriba «<<<fin turno>>>» no cierra su turno.
-	codigo := CodigoDelimitador()
+	codigo := codigoDelimitador()
 	var b strings.Builder
 	for _, m := range turnos {
 		b.WriteString("<<<turno-" + codigo + " rol=" + m.Rol + ">>>\n" + m.Contenido + "\n<<<fin turno-" + codigo + ">>>\n")
@@ -83,8 +83,8 @@ func Separar(s nucleo.SolicitudEjecucion) (sistema, prompt string) {
 	return sistema, b.String()
 }
 
-// CodigoDelimitador es un código aleatorio para los delimitadores de una petición.
-func CodigoDelimitador() string {
+// codigoDelimitador es un código aleatorio para los delimitadores de una petición.
+func codigoDelimitador() string {
 	b := make([]byte, 4)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
@@ -109,7 +109,7 @@ func EnmarcarSistema(sistema, prompt string) string {
 	if sistema == "" {
 		return prompt
 	}
-	codigo := CodigoDelimitador()
+	codigo := codigoDelimitador()
 	return "<<<turno-" + codigo + " rol=sistema>>>\n" + sistema + "\n<<<fin turno-" + codigo + ">>>\n" + prompt
 }
 

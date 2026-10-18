@@ -46,4 +46,5 @@ func CambiarAutenticacion(registro map[string]Adaptador, agente, modo string) er
 }
 
 // EsVariableCredencial indica si una variable de entorno es una clave de proveedor que se retira del entorno heredado.
+// La usa la prueba del catálogo para que la clave de cada agente nuevo no llegue a los demás CLI.
 func EsVariableCredencial(nombre string) bool { return slices.Contains(variablesCredenciales, nombre) }

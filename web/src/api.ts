@@ -578,6 +578,14 @@ export interface FichaAgente {
 export const fichas = ref<FichaAgente[]>([])
 export const fichaDe = (agente?: string) => fichas.value.find((f) => f.agente === agente)
 
+// agenteListo: se puede usar ya (un aviso, como el AGENTS.md de Codex, no lo impide).
+export const agenteListo = (a: Adaptador) => !a.problema || a.problema_codigo === 'aviso'
+
+// asegurarFichas las vuelve a pedir si faltan (si falló la petición al abrir la sesión).
+export function asegurarFichas() {
+  if (!fichas.value.length) cargarFichas()
+}
+
 export async function cargarFichas() {
   try {
     fichas.value = (await pedir<{ agentes: FichaAgente[] }>('GET', '/api/v1/agentes')).agentes

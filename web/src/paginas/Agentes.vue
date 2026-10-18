@@ -106,8 +106,11 @@
       </q-card>
 
       <!-- Los que no están instalados van aparte, plegados: con muchos agentes no tapan a los que se usan. -->
+      <q-card v-if="filtro === 'instalar' && !otros.length">
+        <div class="q-pa-md texto-suave">{{ t('agentes.sinResultados') }}</div>
+      </q-card>
       <q-card v-if="otros.length && filtro !== 'listos' && filtro !== 'conectar'">
-        <q-expansion-item :model-value="filtro === 'instalar' || otrosAbierto" icon="o_download" header-class="text-weight-medium"
+        <q-expansion-item :model-value="otrosAbierto" icon="o_download" header-class="text-weight-medium"
           :label="t('agentes.otros', { n: otros.length })" :caption="t('agentes.otrosTexto')" @update:model-value="(v: boolean) => (otrosAbierto = v)">
           <q-list separator>
             <q-item v-for="a in otros" :key="a.agente">
@@ -136,10 +139,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import { useQuasar } from 'quasar'
-import { api, avisar, avisarError, codigoLinea, copiar, fichaDe, modeloInicial, nombreAgente, nombreEsfuerzo, fijarDisponibilidad, ordenarAgentes, sesion, type Adaptador, numero } from '../api'
+import { agenteListo, api, asegurarFichas, avisar, avisarError, codigoLinea, copiar, fichaDe, modeloInicial, nombreAgente, nombreEsfuerzo, fijarDisponibilidad, ordenarAgentes, sesion, type Adaptador, numero } from '../api'
 import { t } from '../i18n'
 
 const $q = useQuasar()
@@ -159,23 +162,25 @@ const textoContextos = (agente: string) => (contextos.value[agente] ?? [])
 const cargando = ref(false)
 const cambiando = ref('')
 
-// listo: se puede usar ya (un aviso, como el AGENTS.md de Codex, no lo impide).
-const listo = (a: Adaptador) => !a.problema || a.problema_codigo === 'aviso'
+const listo = agenteListo
 const instalado = (a: Adaptador) => a.problema_codigo !== 'no_instalado'
 // Lista para crecer: buscador, filtro por estado con su número y los no instalados aparte. Primero los listos, luego los
 // que falta conectar, en el orden de sus fichas.
 const busqueda = ref<string | null>('')
 const filtro = ref<'todos' | 'listos' | 'conectar' | 'instalar'>('todos')
 const otrosAbierto = ref(false)
+watch(filtro, (f) => f === 'instalar' && (otrosAbierto.value = true))
 const coincide = (a: Adaptador) => {
   const texto = (busqueda.value ?? '').trim().toLowerCase()
   return !texto || [a.agente, nombreAgente(a.agente), cli(a)].some((x) => x.toLowerCase().includes(texto))
 }
-const instalados = computed(() => (adaptadores.value ?? []).filter(instalado))
+// El orden se calcula al mostrar: las fichas pueden llegar después que la comprobación de los agentes.
+const ordenados = computed(() => ordenarAgentes(adaptadores.value ?? []))
+const instalados = computed(() => ordenados.value.filter(instalado))
 const visibles = computed(() => instalados.value.filter(coincide)
   .filter((a) => filtro.value === 'todos' || (filtro.value === 'listos') === listo(a))
   .sort((a, b) => Number(listo(b)) - Number(listo(a))))
-const otros = computed(() => (adaptadores.value ?? []).filter((a) => !instalado(a) && coincide(a)))
+const otros = computed(() => ordenados.value.filter((a) => !instalado(a) && coincide(a)))
 const opcionesFiltro = computed(() => {
   const n = (f: (a: Adaptador) => boolean) => (adaptadores.value ?? []).filter(f).length
   return [
@@ -215,7 +220,7 @@ function textoAlmacen(a: Adaptador) {
 async function cargar() {
   cargando.value = true
   try {
-    adaptadores.value = ordenarAgentes((await api.capacidades()).adaptadores)
+    adaptadores.value = (await api.capacidades()).adaptadores
     fijarDisponibilidad(adaptadores.value)
   } catch (e) {
     avisarError(e)
@@ -251,6 +256,7 @@ async function cambiar(a: Adaptador, modo: 'suscripcion' | 'clave_api') {
 }
 
 onMounted(() => {
+  asegurarFichas()
   cargar()
   api.catalogo().then((lista) => {
     for (const m of lista) if (m.agente && !m.modelo && !m.perfil) esfuerzos.value[m.agente] = m.esfuerzos ?? []

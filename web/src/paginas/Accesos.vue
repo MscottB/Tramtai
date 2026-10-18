@@ -314,7 +314,7 @@ import EditorPresupuesto from '../componentes/EditorPresupuesto.vue'
 import EditorReceta from '../componentes/EditorReceta.vue'
 import GuiaUrls from '../componentes/GuiaUrls.vue'
 import SelectorModelo from '../componentes/SelectorModelo.vue'
-import { ajustesDeReceta, api, avisar, avisarError, codigoLinea, nombreAgente, ordenAgentes, ordenarAgentes, configDeReceta, copiar, dividirRespaldo, etiquetaModelo, haceCuanto, idModeloDe as idModelo, nombreEsfuerzo, opcionModelo,
+import { ajustesDeReceta, api, asegurarFichas, avisar, avisarError, codigoLinea, nombreAgente, ordenAgentes, ordenarAgentes, configDeReceta, copiar, dividirRespaldo, etiquetaModelo, haceCuanto, idModeloDe as idModelo, nombreEsfuerzo, opcionModelo,
   cargarDiasHistorial, periodoHistorial, grupoInicial, origenHistorial, presupuestoLimpio, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPresupuesto, type EstadoPunto, type Modelo,
   type Presupuesto, type UsoPunto } from '../api'
 import { ejemplos as ejemplosDe } from '../ejemplos'
@@ -731,6 +731,7 @@ function regenerarClave(p: EstadoPunto) {
 }
 
 onMounted(async () => {
+  asegurarFichas()
   cargarDiasHistorial()
   if (grupoInicial.value) {
     pestana.value = 'apis'

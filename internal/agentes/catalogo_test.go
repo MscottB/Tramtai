@@ -8,6 +8,7 @@ import (
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes/claude"
 	"tramtai/internal/agentes/gemini"
+	"tramtai/internal/credenciales"
 	"tramtai/internal/nucleo"
 )
 
@@ -30,11 +31,19 @@ func TestFichasCompletas(t *testing.T) {
 		if len(f.ValoresEsfuerzo) > len(nucleo.NivelesEsfuerzo) {
 			t.Errorf("%s: más valores de esfuerzo que niveles", f.Nombre)
 		}
-		// La clave de cada agente se retira del entorno que heredan los demás CLI.
+		// La clave de cada agente se retira del entorno que heredan los demás CLI, y la primera (la que muestra
+		// Agentes en «tramtai claves guardar») la admite el almacén de credenciales.
 		for _, v := range f.VariablesClave {
 			if !adaptadores.EsVariableCredencial(v) {
 				t.Errorf("%s: %s no está entre las variables de credenciales", f.Nombre, v)
 			}
+		}
+		if len(f.VariablesClave) > 0 && !credenciales.Admitido(f.VariablesClave[0]) {
+			t.Errorf("%s: el almacén no admite %s (credenciales.Nombres)", f.Nombre, f.VariablesClave[0])
+		}
+		// Admitir la suscripción en la ficha exige que el adaptador la cambie en marcha (ConAutenticacion).
+		if _, cambia := f.Crear(nucleo.Resolver()).(adaptadores.ConAutenticacion); cambia != slices.Contains(f.Autenticaciones, adaptadores.AutenticacionSuscripcion) {
+			t.Errorf("%s: la ficha dice suscripción=%v y el adaptador ConAutenticacion=%v", f.Nombre, !cambia, cambia)
 		}
 	}
 }
@@ -54,8 +63,13 @@ func TestRegistroYValoresPredeterminados(t *testing.T) {
 
 func TestEsfuerzo(t *testing.T) {
 	casos := []struct{ agente, nivel, valor string }{
-		{"claude", "bajo", "low"}, {"claude", "maximo", "max"}, {"codex", "muy_alto", "xhigh"}, {"codex", "maximo", "xhigh"},
-		{"gemini", "alto", ""}, {"claude", "", ""},
+		{"claude", "bajo", "low"},
+		{"claude", "muy_alto", "xhigh"},
+		{"claude", "maximo", "max"},
+		{"codex", "medio", "medium"},
+		{"codex", "maximo", "xhigh"}, // por encima de su máximo, el máximo
+		{"gemini", "alto", ""},       // no admite esfuerzo
+		{"claude", "", ""},
 	}
 	for _, c := range casos {
 		f, _ := Buscar(c.agente)
@@ -69,10 +83,27 @@ func TestEsfuerzo(t *testing.T) {
 	if n := Niveles("gemini"); len(n) != 0 {
 		t.Errorf("gemini no admite esfuerzo: %v", n)
 	}
-	for _, c := range [][3]string{{"claude", "claude-opus-5-5", "medio"}, {"claude", "claude-opus-4-7", "muy_alto"},
-		{"claude", "claude-fable-5-1", "alto"}, {"claude", "modelo-nuevo", ""}, {"codex", "gpt-5.5", ""}, {"otro", "x", ""}} {
-		if obtenido := EsfuerzoPredeterminado(c[0], c[1]); obtenido != c[2] {
-			t.Errorf("%s %s: %q, se esperaba %q", c[0], c[1], obtenido, c[2])
+}
+
+func TestEsfuerzoPredeterminado(t *testing.T) {
+	casos := map[[2]string]string{
+		{"claude", "claude-opus-5-5"}:   "medio",
+		{"claude", "claude-sonnet-5-5"}: "medio",
+		{"claude", "claude-haiku-5-5"}:  "medio",
+		{"claude", "claude-opus-4-7"}:   "muy_alto",
+		{"claude", "claude-fable-5-1"}:  "alto",
+		{"claude", "claude-opus-4-6"}:   "alto",
+		{"claude", "claude-sonnet-6-0"}: "", // un modelo sin comprobar no recibe un valor supuesto
+		{"claude", "claude-haiku-4-5"}:  "",
+		{"claude", "opus"}:              "", // un alias puede cambiar de modelo: sin la versión real no se sabe
+		{"claude", ""}:                  "",
+		{"codex", "gpt-5.6-sol"}:        "", // Codex depende del modelo y no lo documenta por modelo
+		{"gemini", "gemini-pro-latest"}: "",
+		{"otro", "x"}:                   "",
+	}
+	for c, esperado := range casos {
+		if obtenido := EsfuerzoPredeterminado(c[0], c[1]); obtenido != esperado {
+			t.Errorf("%s/%s: %q, se esperaba %q", c[0], c[1], obtenido, esperado)
 		}
 	}
 }

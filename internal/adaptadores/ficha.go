@@ -29,7 +29,8 @@ type Ficha struct {
 	EsfuerzoPredeterminado func(modelo string) string
 	// Autenticaciones son los modos que admite (AutenticacionSuscripcion, AutenticacionClaveAPI).
 	Autenticaciones []string
-	// VariablesClave son las variables de su clave, la preferida primero (la que se guarda con tramtai claves).
+	// VariablesClave son las variables de su clave. La primera es la que Agentes muestra para guardarla con tramtai claves
+	// (debe estar en credenciales.Nombres); el adaptador decide en qué orden las lee.
 	VariablesClave []string
 	// Comando es el valor predeterminado de comandos_agentes.<nombre>; vacío si no es un CLI.
 	Comando string

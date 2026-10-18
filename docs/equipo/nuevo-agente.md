@@ -42,7 +42,7 @@ Antes de escribir código, se prueba el CLI tal como lo instala el usuario y se 
   | `Codigo`, `ColorClaro`, `ColorOscuro`, `Orden` | Las dos letras y el color de su línea en la Web UI, y su lugar en las listas. Únicos. |
   | `Streaming`, `SalidaEstructurada`, `ModeloEfectivoInformado` | Lo que garantiza, según la M0. |
   | `ValoresEsfuerzo`, `EsfuerzoPredeterminado` | El valor del CLI para cada nivel de `nucleo.NivelesEsfuerzo` (hasta su máximo) y, si se conoce, el que usa por defecto con cada modelo. |
-  | `Autenticaciones`, `VariablesClave` | Los modos que admite y las variables de su clave, la preferida primero. Cada variable debe estar en `variablesCredenciales` (`adaptadores/comun.go`): se retira del entorno de los demás CLI. |
+  | `Autenticaciones` (si incluye `suscripcion`, el adaptador cumple `adaptadores.ConAutenticacion`), `VariablesClave` | Los modos que admite y las variables de su clave, la preferida primero. Cada variable debe estar en `variablesCredenciales` (`adaptadores/comun.go`): se retira del entorno de los demás CLI. La primera es la que Agentes muestra en `tramtai claves guardar` y debe estar en `credenciales.Nombres` (`internal/credenciales`). |
   | `Comando`, `Concurrencia` | Los valores predeterminados de `comandos_agentes.<nombre>` y `concurrencia_servicio.adaptadores.<nombre>`. |
   | `PermitidoEnApps` | `true` solo si su canario pasó. |
   | `URLInstalacion` | Dónde se instala, o dónde se consigue la clave si no hay CLI. |

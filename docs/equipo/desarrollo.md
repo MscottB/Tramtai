@@ -52,7 +52,7 @@ go vet ./...
 go test ./...                                    # sin agentes reales: simulado, procesos, persistencia, servicio
 $env:CGO_ENABLED = '1'; go test -race ./...      # necesita un compilador C (llvm-mingw, instalado con winget)
 $env:TRAMTAI_PRUEBA_AUTENTICACION = 'suscripcion'
-go test -tags agentes -v ./internal/adaptadores  # CLIs reales: respuesta, uso y cancelación (consume cuota)
+go test -tags agentes -v ./internal/agentes      # CLIs reales: respuesta, uso y cancelación (consume cuota)
 go test -tags m0b -v -count=1 ./pruebas/m0b      # modos con clave de API, ver M0B.md
 ```
 

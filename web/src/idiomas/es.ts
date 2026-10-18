@@ -433,7 +433,7 @@ const es = {
     'En Probar escribe algo, elige agente, modelo y esfuerzo y mira la respuesta en vivo, con formato o como texto. Puedes adjuntar PDF, Word, Excel o ZIP, y tus pruebas recientes quedan a mano para repetirlas.',
   'ayuda.paso3': 'Conecta tu aplicación',
   'ayuda.paso3Texto':
-    'En Mis APIs tienes la URL y la clave. En tu SDK de OpenAI o Anthropic cambia la URL base y elige agente y modelo con el campo model, por ejemplo claude/sonnet.',
+    'En Mis APIs, pestaña «API principal», tienes la URL y la clave. En tu SDK de OpenAI o Anthropic cambia la URL base y elige agente y modelo con el campo model, por ejemplo claude/sonnet.',
   'ayuda.paso4': 'Dale a cada app su propia API (opcional)',
   'ayuda.paso4Texto':
     'En Mis APIs crea una API por aplicación, con su clave (solo se muestra al crearla: cópiala entonces), sus modelos e instrucciones fijas (por ejemplo, que responda siempre en español). Agrúpalas para activarlas o detenerlas juntas.',
@@ -538,7 +538,7 @@ const es = {
   'ayuda.r20': 'Depende de tu app. Si ya usa el SDK de OpenAI, o una herramienta que deja cambiar la URL base (LangChain, n8n, un editor con IA), usa la URL para OpenAI; si usa el SDK de Anthropic, la de Anthropic. Si necesitas enviar archivos, seguir tareas largas, cancelar o reintentar, usa la API propia (/api/v1). En Mis APIs, «¿Qué URL uso?» compara las tres y tiene ejemplos para copiar.',
   'ayuda.p22': '¿Qué agentes puedo usar?',
   'ayuda.r22':
-    'Los que ves en Agentes: hoy Claude Code, Codex, la API de Gemini y Antigravity (este, solo desde Probar y la terminal hasta comprobarlo con su CLI real). Cada uno se conecta con tu suscripción o con una clave de API; los que no están instalados aparecen al final de la página, con un enlace para instalarlos. El buscador y el filtro de arriba sirven cuando hay muchos.',
+    'Los que ves en Agentes: hoy Claude Code, Codex, la API de Gemini y Antigravity (este, solo desde Probar y la terminal hasta comprobarlo con su CLI real). Claude Code y Codex se conectan con tu suscripción o con una clave de API; la API de Gemini y Antigravity, con una clave; los que no están instalados aparecen al final de la página, con un enlace para instalarlos. El buscador y el filtro de arriba sirven cuando hay muchos.',
   'ayuda.p21': '¿Cómo veo mi prueba como código?',
   'ayuda.r21': 'En Probar, pulsa «Ver como código» en la receta: verás la petición en curl, Python o Node por la API propia, y en Python o curl por OpenAI y en Python por Anthropic (si la API los acepta), con la clave como <tu clave>. Si la prueba lleva algo que solo admite la API propia (archivos, respaldo, esquema por Anthropic), esa pestaña lo avisa.',
   'ayuda.documentacion': 'Documentación completa',
@@ -882,7 +882,7 @@ const es = {
   'presupuesto.espacioTexto': 'Cuenta todas las peticiones del espacio: las de tus APIs, las de la clave principal y las de Probar.',
   'ayuda.p14': '¿Cómo limito lo que gasta una aplicación?',
   'ayuda.r14':
-    'En Mis APIs, en los ajustes de cada API, pon un presupuesto diario o mensual en peticiones, tokens o dólares. Verás una barra por límite, amarilla desde el 80 %; al 100 % la aplicación recibe un error 429 hasta el día o el mes siguiente, o hasta que pulses «Reiniciar consumo». El límite en dólares solo suma el coste que informa el agente (hoy Claude). Para limitar todo el espacio, añade «presupuesto» a la configuración global; su consumo aparece arriba en Mis APIs.',
+    'En Mis APIs, en los ajustes de cada API, pon un presupuesto diario o mensual en peticiones, tokens o dólares. Verás una barra por límite, amarilla desde el 80 %; al 100 % la aplicación recibe un error 429 hasta el día o el mes siguiente, o hasta que pulses «Reiniciar consumo». El límite en dólares solo suma el coste que informa el agente (hoy Claude). Para limitar todo el espacio, añade «presupuesto» a la configuración global; su consumo aparece en Mis APIs, al final de la pestaña «API principal».',
 }
 
 export type Clave = keyof typeof es
