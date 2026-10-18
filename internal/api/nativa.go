@@ -293,6 +293,48 @@ func (s *Servidor) cargaMultipart(r *http.Request) (documentos.Carga, error) {
 	}
 }
 
+// fichasAgentes devuelve la ficha de cada agente del registro, en su orden y sin comprobar los CLI: la Web UI saca de
+// aquí sus nombres, colores y lo que admite cada uno. Un agente sin ficha (los simulados) va al final con su id.
+func (s *Servidor) fichasAgentes(w http.ResponseWriter, _ *http.Request) {
+	lista := []map[string]any{}
+	vistos := map[string]bool{}
+	agregar := func(f adaptadores.Ficha) {
+		vistos[f.Nombre] = true
+		lista = append(lista, map[string]any{
+			"agente": f.Nombre, "nombre": cmp.Or(f.NombreVisible, f.Nombre), "programa": cmp.Or(f.Programa, f.Nombre),
+			"codigo": f.Codigo, "color": map[string]string{"claro": f.ColorClaro, "oscuro": f.ColorOscuro}, "orden": f.Orden,
+			"streaming": cmp.Or(f.Streaming, "final"), "salida_estructurada": f.SalidaEstructurada,
+			"modelo_efectivo_informado": f.ModeloEfectivoInformado, "esfuerzos": noNulo(agentes.Niveles(f.Nombre)),
+			"autenticaciones": noNulo(f.Autenticaciones), "variables_clave": noNulo(f.VariablesClave),
+			"permitido_apps": agentes.PermitidoEnApps(s.Config, f.Nombre), "url_instalacion": f.URLInstalacion,
+		})
+	}
+	for _, f := range agentes.Todos() {
+		if s.Registro[f.Nombre] != nil {
+			agregar(f)
+		}
+	}
+	otros := make([]string, 0, len(s.Registro))
+	for nombre := range s.Registro {
+		if !vistos[nombre] {
+			otros = append(otros, nombre)
+		}
+	}
+	sort.Strings(otros)
+	for _, nombre := range otros {
+		agregar(adaptadores.Ficha{Nombre: nombre})
+	}
+	EscribirJSON(w, http.StatusOK, map[string]any{"agentes": lista})
+}
+
+// noNulo devuelve una lista vacía en lugar de nil, para que el JSON lleve [] y no null.
+func noNulo(v []string) []string {
+	if v == nil {
+		return []string{}
+	}
+	return v
+}
+
 func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 	nombres := make([]string, 0, len(s.Registro))
 	for nombre := range s.Registro {

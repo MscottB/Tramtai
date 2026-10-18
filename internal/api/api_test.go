@@ -164,6 +164,34 @@ func TestSeguridad(t *testing.T) {
 	}
 }
 
+func TestFichasAgentes(t *testing.T) {
+	ts := servidor(t, map[string]adaptadores.Adaptador{"simulado": trozos{}, "antigravity": trozos{}, "gemini": trozos{}}, nil)
+	sinClave, err := http.Get(ts.URL + "/api/v1/agentes")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sinClave.Body.Close()
+	if sinClave.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("sin clave: %d", sinClave.StatusCode)
+	}
+	r, cuerpo := pedir(t, ts, "GET", "/api/v1/agentes", "")
+	var datos struct {
+		Agentes []struct {
+			Agente, Nombre, Codigo string
+			PermitidoApps          bool `json:"permitido_apps"`
+		}
+	}
+	if r.StatusCode != http.StatusOK || json.Unmarshal([]byte(cuerpo), &datos) != nil || len(datos.Agentes) != 3 {
+		t.Fatalf("%d %s", r.StatusCode, cuerpo)
+	}
+	// En el orden de las fichas, y los que no tienen ficha al final con su id.
+	a := datos.Agentes
+	if a[0].Agente != "gemini" || a[0].Codigo != "GM" || !a[0].PermitidoApps || a[1].Agente != "antigravity" || a[1].PermitidoApps ||
+		a[2].Agente != "simulado" || a[2].Nombre != "simulado" || a[2].Codigo != "" || !a[2].PermitidoApps {
+		t.Fatalf("fichas: %+v", a)
+	}
+}
+
 func TestTrabajoNativoYEventos(t *testing.T) {
 	ts := servidor(t, simulado(adaptadores.Simulado{}), nil)
 	r, cuerpo := pedir(t, ts, "POST", "/api/v1/trabajos", solicitudHola)
