@@ -1,6 +1,6 @@
 <template>
   <div class="notas">
-    <template v-if="analizadas.secciones.length || analizadas.resumen">
+    <template v-if="analizadas.secciones.length">
       <p v-if="analizadas.resumen" class="notas__resumen">{{ analizadas.resumen }}</p>
       <section v-for="s in analizadas.secciones" :key="s.titulo" class="notas__seccion" :class="'notas--' + s.tipo">
         <div class="notas__titulo"><span class="notas__chapa" />{{ s.titulo }}</div>
@@ -13,10 +13,10 @@
           </li>
         </ol>
       </section>
-      <q-btn v-if="enIngles && pagina" flat dense no-caps color="primary" icon-right="o_open_in_new" class="q-px-none"
-        :label="t('actualizacion.todosLosCambios')" :href="pagina" target="_blank" rel="noopener" />
     </template>
-    <p v-else class="notas__texto">{{ elegido }}</p>
+    <p v-else class="notas__texto">{{ textoLibre }}</p>
+    <q-btn v-if="enIngles && pagina" flat dense no-caps color="primary" icon-right="o_open_in_new" class="q-px-none"
+      :label="t('actualizacion.todosLosCambios')" :href="pagina" target="_blank" rel="noopener" />
   </div>
 </template>
 
@@ -24,10 +24,10 @@
 // Las notas de cada versión salen de scripts/version.ps1: un título, un resumen opcional, «Cambios desde …:» y
 // secciones («Nuevas funciones:», «Correcciones:»…) con elementos «- asunto», sus detalles «  - …» y líneas que
 // continúan la anterior. Se dibujan como la red de la app: cada sección es una línea y cada cambio, una estación.
-// Si el texto no sigue ese formato, se muestra tal cual.
+// Si el texto no tiene secciones, se muestra tal cual, con sus párrafos y viñetas.
 // Desde la v0.44 las notas terminan con un bloque «## English» (título y resumen en inglés; la lista de cambios sale
-// de los commits, en español): en inglés se muestra ese bloque y un enlace a la página de la versión. Las versiones
-// anteriores no lo tienen y se ven en español.
+// de los commits, en español): en inglés se muestra ese resumen, sin el título ni la línea que remite a la lista, y
+// un enlace a la página de la versión. Las versiones anteriores no lo tienen y se ven en español.
 import { computed } from 'vue'
 import { idioma, t } from '../i18n'
 
@@ -39,6 +39,11 @@ const partes = computed(() => {
 })
 const enIngles = computed(() => idioma.value === 'en' && partes.value.en !== '')
 const elegido = computed(() => (enIngles.value ? partes.value.en : partes.value.es))
+const textoLibre = computed(() =>
+  enIngles.value
+    ? elegido.value.split('\n').filter((l) => !/^Tramtai v\S+$/.test(l.trim()) && !/^Full list of changes/.test(l.trim())).join('\n').trim()
+    : elegido.value,
+)
 
 type Tipo = 'nuevo' | 'arreglo' | 'incompatible' | 'otro'
 interface Item {

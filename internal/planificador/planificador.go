@@ -597,8 +597,9 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		solicitud.RaizProyecto = p.opc.RaizConfiable
 		// Se declara de forma visible qué contexto se carga antes de ejecutar.
 		_ = p.almacen.AgregarEvento(fondo, id, "aviso", idioma.Tf("modo consciente_proyecto: el agente trabaja en %s"+
-			" y carga las reglas del proyecto y de sus carpetas superiores (CLAUDE.md, AGENTS.md, GEMINI.md), sin MCP, herramientas"+
-			" ni sesión persistente; con autenticación por suscripción el CLI carga también las reglas del usuario", p.opc.RaizConfiable))
+			" y carga las reglas del proyecto y de sus carpetas superiores (CLAUDE.md, AGENTS.md, GEMINI.md o"+
+			" .github/copilot-instructions.md, según el agente), con las mismas restricciones de herramientas que en modo aislado y"+
+			" sin sesión persistente; con autenticación por suscripción algunos CLI cargan también las reglas del usuario", p.opc.RaizConfiable))
 	}
 	// El principal y después el respaldo: se salta al siguiente solo si el intento falló antes de emitir texto,
 	// para no mezclar dos respuestas. El plazo en cola vale hasta el primer intento.
@@ -875,6 +876,9 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 		// cargada, el siguiente trabajo podía llegar antes a su select y adelantarse en el semáforo del agente.
 		// shortcut: queda la ventana entre este aviso y entrar en el select, mucho menor que lo que tarda el
 		// siguiente trabajo en llegar a su espera (lee y escribe en la base); si no bastara, un turno por agente.
+		// El coste: el despachador no saca otro trabajo mientras este prepara el intento, incluida la consulta del
+		// contexto del modelo (hasta 5 s con Gemini la primera vez; luego queda en caché un día). Si eso frenara a
+		// otros agentes, el turno por agente también lo resuelve.
 		esperando()
 		select {
 		case semaforo <- struct{}{}:

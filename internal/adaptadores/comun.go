@@ -94,7 +94,13 @@ func codigoDelimitador() string {
 func Secretos() []string {
 	var lista []string
 	for _, nombre := range variablesCredenciales {
-		if clave := ClaveEntorno(nombre); len(clave) >= 8 {
+		// Las que el almacén no admite (GH_TOKEN, GITHUB_TOKEN…) solo pueden venir del entorno: no se pregunta al almacén,
+		// que en macOS y Linux lanza un proceso por consulta.
+		clave := os.Getenv(nombre)
+		if clave == "" && credenciales.Admitido(nombre) {
+			clave = ClaveEntorno(nombre)
+		}
+		if len(clave) >= 8 {
 			lista = append(lista, clave)
 		}
 	}
