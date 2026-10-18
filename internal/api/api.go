@@ -82,6 +82,7 @@ func (s *Servidor) Rutas() http.Handler {
 		mux.HandleFunc("GET /api/v1/capacidades", s.capacidades)
 		mux.HandleFunc("GET /api/v1/limites", func(w http.ResponseWriter, r *http.Request) { EscribirJSON(w, http.StatusOK, s.limites()) })
 		mux.HandleFunc("GET /api/v1/modelos", s.modelosNativos)
+		mux.HandleFunc("GET /api/v1/openapi.json", s.openapi)
 	}
 	if contrato("openai") {
 		mux.HandleFunc("POST /openai/v1/chat/completions", s.chatCompletions)

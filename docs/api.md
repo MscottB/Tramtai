@@ -8,6 +8,28 @@
 | OpenAI | `/openai/v1` | SDK y herramientas de OpenAI (`base_url`) |
 | Anthropic | `/anthropic` | SDK de Anthropic (`base_url`) |
 
+## ¿Qué URL uso?
+
+- **OpenAI** (`/openai/v1`): tu app ya usa el SDK de OpenAI o una herramienta que deja cambiar la «URL base» (LangChain,
+  n8n, un editor con IA). Cambias la URL y la clave; el resto sigue igual.
+- **Anthropic** (`/anthropic`): tu app usa el SDK de Anthropic.
+- **API propia** (`/api/v1`): necesitas lo que las otras no tienen: enviar archivos (PDF, Word, Excel, ZIP…) que
+  Tramtai convierte, tareas largas que sigues en vivo y retomas si se corta la conexión, cancelar y reintentar, elegir
+  respaldo y esfuerzo en cada petición, idempotencia, el registro de cada paso y los límites.
+
+| | OpenAI | Anthropic | API propia |
+|---|---|---|---|
+| SDK oficial y herramientas existentes | sí | sí | no (HTTP y JSON) |
+| Respuesta en vivo | sí | sí | sí, y se retoma tras un corte |
+| Respuesta JSON con esquema | sí (`response_format`) | no | sí (`salida.esquema`) |
+| Enviar archivos | no | no | sí |
+| Tareas largas: seguir, cancelar, reintentar | no | no | sí |
+| Respaldo y esfuerzo por petición | solo el esfuerzo | no | sí |
+| Registro de cada paso y límites | no | no | sí |
+
+En la app, **Mis APIs** muestra esta guía con las URL de cada API y ejemplos para copiar (curl, Python y Node, también
+de la API propia), y **Probar → Ver como código** da la prueba actual como petición.
+
 ## Seguridad
 
 - **Clave (token):** `Authorization: Bearer <clave>` o `x-api-key: <clave>`.
@@ -43,6 +65,7 @@
 | `POST /ejecutar` | Igual que `POST /trabajos`, pero espera el resultado. Envía `Location` antes de esperar; si se corta la conexión, el trabajo no se cancela. |
 | `POST /cargas` | Multipart con el campo `archivo`, o el binario en el cuerpo con `?nombre=`. Devuelve `identificador_carga`, `sha256`, `tamano_bytes` y `vence_en`. Un trabajo nuevo que cite una carga vencida se rechaza con 410; las cargas de un trabajo aceptado se conservan mientras se pueda reintentar. |
 | `GET /capacidades` | Por agente: streaming (`tokens` o `final`), salida estructurada, modelo efectivo, versión detectada, autenticación y términos. Incluye el formato de serialización. |
+| `GET /openapi.json` | La descripción OpenAPI 3.1 de esta API, con `servers` apuntando a la URL de la petición (la de la instancia, `/p/<nombre>/api/v1` o el puerto de la API). Mismos permisos que el resto. En Mis APIs, **Descargar OpenAPI** la guarda con la URL de cada API. |
 | `GET /modelos` | Catálogo: agentes, `agente/modelo` configurados y perfiles. Cada entrada indica `predeterminado: true` si es el modelo predeterminado, `version` con el último modelo efectivo informado por el agente y, en los perfiles, `resuelto` con el agente/modelo al que llevan. |
 
 Ejemplo:
@@ -57,6 +80,33 @@ curl -sN http://127.0.0.1:17373/api/v1/trabajos/trabajo_…/eventos -H "Authoriz
 ```
 
 Los campos desconocidos en la API nativa son un error (`solicitud_invalida`).
+
+### Guía paso a paso
+
+1. **Subir los archivos** (si hay): `POST /cargas` multipart con el campo `archivo`. Guarda `identificador_carga`.
+
+   ```bash
+   curl -s http://127.0.0.1:17373/api/v1/cargas -H "Authorization: Bearer $TOKEN" -F "archivo=@informe.pdf"
+   ```
+
+2. **Crear el trabajo**: `POST /trabajos` con `mensajes`, el modelo (`agente` y `modelo`, o `perfil_modelo`), las
+   `cargas` y, si quieres JSON, `salida: {"formato": "json", "esquema": {…}}`. Responde 202 con el trabajo (`id`).
+3. **Seguirlo en vivo**: `GET /trabajos/{id}/eventos` (SSE). Cada evento trae `id`, `event` y `data`: los `texto` son
+   trozos de la respuesta (una línea `data:` por línea del texto); `estado`, `entrada`, `intento` y `aviso` cuentan lo
+   que pasa, y `fin` (`{"estado","codigo_error"}`) cierra el flujo. Si se corta, vuelve a pedirlo con la cabecera
+   `Last-Event-ID` (o `?desde=`) con el último `id` recibido: sigue desde ahí y el trabajo no se repite ni se cancela.
+4. **Leer el resultado**: `GET /trabajos/{id}/salida` (con esquema, el JSON ya validado). `GET /trabajos/{id}` da el
+   estado, el modelo efectivo y el uso de tokens.
+5. **Cancelar o reintentar**: `POST /trabajos/{id}/cancelar` (idempotente) y `POST /trabajos/{id}/reintentar` (un
+   trabajo nuevo con `intento_de`, con las mismas cargas mientras no venzan).
+6. **Idempotencia**: repetir `POST /trabajos` con la misma `Idempotency-Key` y la misma solicitud devuelve el mismo
+   trabajo (200) en lugar de crear otro; con otra solicitud, 409 `conflicto_idempotencia`. Útil para reintentar tras
+   un corte de red sin duplicar el trabajo.
+
+Errores frecuentes: 401 `no_autorizado` (falta la clave o no es de esta API), 400 `solicitud_invalida` (un campo que no
+existe o un valor no válido; el mensaje dice cuál), 410 `entrada_no_disponible` (la carga venció: súbela otra vez), 409
+`trabajo_no_terminado` (pediste la salida antes del final), 429 `presupuesto_agotado` o `cola_llena` (con
+`Retry-After`). En Mis APIs y en Probar (**Ver como código**) tienes este flujo completo en curl, Python y Node.
 
 ## Fachadas compatibles
 
@@ -112,6 +162,7 @@ Cuánto razona el modelo antes de responder. Es opcional: sin él, cada CLI usa 
 - **API nativa:** `"esfuerzo": "bajo" | "medio" | "alto" | "muy_alto" | "maximo"`. Un valor desconocido devuelve 400.
 - **OpenAI:** `reasoning_effort` (chat) o `reasoning.effort` (Responses). `minimal` y `low` equivalen a bajo; `medium` a medio; `high` a alto; `xhigh` a muy alto; `none` deja el del agente.
 - **Por API:** el campo `esfuerzo` de un punto de acceso, que se edita en Mis APIs, se usa cuando la aplicación no pide uno.
+- **Del espacio:** `predeterminados.esfuerzo` (en **Ajustes**, bajo el modelo predeterminado) va con el modelo predeterminado: se usa cuando la petición no elige agente, modelo, perfil ni esfuerzo (una API por aplicación sin modelo propio también lo hereda). `GET /api/v1/modelos` lo indica en `esfuerzo_espacio` del modelo predeterminado, y `POST /api/v1/instancia/predeterminado` acepta `{"modelo", "esfuerzo"}` (`""` vuelve al del agente; sin `esfuerzo`, no cambia; con `modelo` vacío solo cambia el esfuerzo). Un valor escrito a mano que no es un nivel se ignora.
 - **Qué agentes lo admiten:**
   - Claude Code (`--effort`), hasta máximo.
   - Codex (`model_reasoning_effort`), hasta muy alto; si se pide máximo, usa muy alto.

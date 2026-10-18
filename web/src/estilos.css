@@ -307,27 +307,6 @@ input[type='number'] {
   font-size: 1.0625rem;
   letter-spacing: -0.015em;
 }
-.version {
-  font-size: 0.72rem;
-  color: var(--texto-suave);
-  font-variant-numeric: tabular-nums;
-}
-.version-boton {
-  border: 0;
-  background: none;
-  padding: 4px 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-family: inherit;
-}
-.version-boton:hover {
-  background: var(--superficie-suave);
-  color: var(--texto);
-}
-.version-boton:focus-visible {
-  outline: 2px solid var(--acento);
-  outline-offset: 2px;
-}
 /* Estado del servicio: como un indicador de andén, punto con pulso suave y texto. */
 .pastilla {
   border: 1px solid var(--borde);

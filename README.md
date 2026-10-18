@@ -79,6 +79,9 @@ r = cliente.chat.completions.create(model="claude/sonnet", messages=[{"role": "u
 print(r.choices[0].message.content)
 ```
 
+Para enviar archivos, seguir tareas largas o reintentar, usa la API propia (`/api/v1`, con su OpenAPI en
+`/api/v1/openapi.json`). En la app, **Mis APIs → ¿Qué URL uso?** compara las tres URL con ejemplos para copiar.
+
 Con el SDK de Anthropic, la URL base es `http://127.0.0.1:17373/anthropic`. Todas las rutas y opciones están en la [referencia de la API](docs/api.md).
 
 <p align="center"><img src="docs/imagenes/mis-apis-oscuro.png" alt="Mis APIs en modo oscuro: tus APIs por grupo, con buscador, orden y el botón Conectar de cada una" width="820"></p>
@@ -90,7 +93,7 @@ Tramtai comprueba cada hora si hay una versión nueva, así el aviso aparece sin
 - La cabecera de la app muestra **Actualizar**, y el menú del icono de la bandeja indica tu versión y **Actualizar a vX…**.
 - El diálogo enseña las **novedades** sin salir de la app. En Windows, si la instalaste con el instalador, **Actualizar ahora** descarga la versión nueva, comprueba su suma SHA-256 y la instala sin preguntar nada más: la app se cierra, las peticiones en curso terminan y vuelve a abrirse ya actualizada, con tu configuración y tus datos.
 - La copia portable, la de Linux y la de macOS muestran el aviso con el enlace de descarga: ahí se actualiza instalando el paquete nuevo (o volviendo a ejecutar `instalar.sh`).
-- Para no esperar: **Ajustes → Buscar ahora**, o **Buscar actualizaciones** en la bandeja.
+- Para no esperar: **Ajustes → Buscar actualización ahora**, o **Buscar actualizaciones** en la bandeja.
 - Si instalas una versión a mano con Tramtai abierto, el instalador lo cierra, instala y lo vuelve a abrir.
 - Desde la terminal: `tramtai actualizar` (o `tramtai actualizar --comprobar` para solo mirar). Se desactiva en **Ajustes → Buscar actualizaciones**.
 
@@ -158,7 +161,7 @@ Claude, Codex, Gemini y Antigravity son marcas de sus respectivos dueños. Tramt
 - **Install:** download the Windows installer (or the portable `.zip`) from [Releases](https://github.com/MscottB/Tramtai/releases/latest); it installs for your user only and needs no administrator rights. On Linux, install the desktop app from the `.deb` or `.rpm` package. On macOS, open the `.dmg` and drag Tramtai to Applications; it is not signed by an Apple developer, so the first time allow it in *System Settings → Privacy & Security → Open Anyway*. With Homebrew: `brew tap mscottb/tramtai https://github.com/MscottB/Tramtai` and then `brew install --cask tramtai` (app, no Gatekeeper prompt) or `brew install tramtai` (CLI only, macOS and Linux). CLI only: `curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instalar.sh | sh`.
 - **Updates:** every hour Tramtai checks for a new version, so the notice shows up without restarting. The installed Windows app updates with one click (*Update now*), showing what's new inside the app; the other copies show the notice with the download link. `tramtai actualizar` does the same from the terminal.
 - **Connect an agent:** use your Claude or ChatGPT subscription (personal use) or an API key; the agent's CLI must be installed.
-- **Point your app** at `http://127.0.0.1:17373/openai/v1` (or `/anthropic`) with the key from *My APIs*, and pick agent and model in the `model` field, e.g. `claude/sonnet`.
+- **Point your app** at `http://127.0.0.1:17373/openai/v1` (or `/anthropic`) with the key from *My APIs*, and pick agent and model in the `model` field, e.g. `claude/sonnet`. To send files, follow long jobs or retry, use the Tramtai API (`/api/v1`, with its OpenAPI at `/api/v1/openapi.json`); *My APIs → Which URL do I use?* compares the three with examples to copy.
 - **Recipes and fallback:** in *Try*, set instructions, agent, a JSON schema and fallback agents, test them with your files and save them as an API in one click. If the main agent hits its limit or fails before answering, the request continues with the next one.
 - **Budgets:** each API, and the whole workspace, can have a daily or monthly limit in requests, tokens or dollars: a warning at 80% and, at 100%, a 429 error until the next period starts or you reset the usage.
 - The desktop app, Web UI, interactive terminal and CLI are available in English and Spanish. The CLI follows your system language; set `TRAMTAI_IDIOMA=en` to force English.

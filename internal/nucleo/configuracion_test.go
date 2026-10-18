@@ -96,6 +96,28 @@ func TestAplicarPredeterminados(t *testing.T) {
 	if vacia.Agente != "claude" || vacia.PerfilModelo != "equilibrado" {
 		t.Errorf("los vacíos deben tomar los predeterminados: %+v", vacia)
 	}
+
+	// El esfuerzo predeterminado va con el agente predeterminado y no pisa uno elegido ni un valor inválido.
+	c = Resolver(cargar(t, "predeterminados:\n  agente: claude\n  esfuerzo: alto\n", OrigenGlobal))
+	if s := c.AplicarPredeterminados(SolicitudEjecucion{}); s.Esfuerzo != "alto" {
+		t.Errorf("sin agente ni esfuerzo, el del espacio: %q", s.Esfuerzo)
+	}
+	if s := c.AplicarPredeterminados(SolicitudEjecucion{Esfuerzo: "bajo"}); s.Esfuerzo != "bajo" {
+		t.Errorf("el esfuerzo elegido prevalece: %q", s.Esfuerzo)
+	}
+	if s := c.AplicarPredeterminados(SolicitudEjecucion{Agente: "codex"}); s.Esfuerzo != "" {
+		t.Errorf("con otro agente, el de su CLI: %q", s.Esfuerzo)
+	}
+	if s := c.AplicarPredeterminados(SolicitudEjecucion{PerfilModelo: "rapido"}); s.Esfuerzo != "" {
+		t.Errorf("con un perfil elegido, el de su agente: %q", s.Esfuerzo)
+	}
+	if s := c.AplicarPredeterminados(SolicitudEjecucion{Modelo: "opus"}); s.Esfuerzo != "" {
+		t.Errorf("con un modelo elegido, el de su agente: %q", s.Esfuerzo)
+	}
+	c = Resolver(cargar(t, "predeterminados:\n  esfuerzo: muchisimo\n", OrigenGlobal))
+	if s := c.AplicarPredeterminados(SolicitudEjecucion{}); s.Esfuerzo != "" {
+		t.Errorf("un nivel inválido se ignora: %q", s.Esfuerzo)
+	}
 }
 
 func TestPerfilDeEjecucion(t *testing.T) {

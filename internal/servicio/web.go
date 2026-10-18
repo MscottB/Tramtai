@@ -353,7 +353,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		}
 		api.EscribirJSON(w, http.StatusOK, s.progresoActualizacion())
 	case r.URL.Path == "/ui/actualizacion/novedades" && r.Method == http.MethodGet:
-		// Lo que trajo cada versión desde la última vista en este navegador; sin búsqueda de actualizaciones no se
+		// Lo que trajo cada versión desde la última vista en este navegador (o lo que trae cada una hasta la nueva); sin búsqueda de actualizaciones no se
 		// habla con GitHub.
 		if _, ses := s.sesionDe(r); ses == nil {
 			api.NoAutorizado(w, r)
@@ -365,7 +365,12 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		}
 		ctx, cancelar := context.WithTimeout(r.Context(), 8*time.Second)
 		defer cancelar()
-		versiones, err := actualizacion.Novedades(ctx, r.URL.Query().Get("desde"), version.Texto())
+		// hasta (opcional) es la versión nueva, para leer antes de actualizar lo que trae cada una que se salta.
+		hasta := r.URL.Query().Get("hasta")
+		if hasta == "" {
+			hasta = version.Texto()
+		}
+		versiones, err := actualizacion.Novedades(ctx, r.URL.Query().Get("desde"), hasta)
 		if err != nil {
 			fmt.Fprintf(s.opc.Registros, "novedades: %v\n", err) // el detalle (red, proxy) queda aquí, no en la respuesta
 			api.EscribirJSON(w, http.StatusBadGateway, map[string]any{"error": map[string]any{"codigo": "github_no_disponible", "mensaje": idioma.T("GitHub no está disponible")}})
@@ -558,14 +563,16 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 		}
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"configuracion": entradas})
 	case ruta == "/api/v1/instancia/predeterminado" && r.Method == http.MethodPost:
+		// esfuerzo es opcional: sin él no cambia; "" vuelve al del agente.
 		var peticion struct {
-			Modelo string `json:"modelo"`
+			Modelo   string  `json:"modelo"`
+			Esfuerzo *string `json:"esfuerzo"`
 		}
 		if err := api.LeerJSON(w, r, &peticion); err != nil {
 			api.EscribirError(w, r, err)
 			return true
 		}
-		if err := s.fijarPredeterminado(inst, peticion.Modelo); err != nil {
+		if err := s.fijarPredeterminado(inst, peticion.Modelo, peticion.Esfuerzo); err != nil {
 			api.EscribirError(w, r, err)
 			return true
 		}
@@ -909,10 +916,21 @@ func (s *Servicio) cambiarAutenticacion(agente, modo string) error {
 }
 
 // fijarPredeterminado guarda el modelo que se usa cuando la solicitud no indica agente ni modelo (un identificador
-// del catálogo: agente, agente/modelo o perfil/nombre) y lo aplica en marcha. En la instancia global va a la
-// configuración global y alcanza también a los proyectos que no tengan el suyo; en un proyecto, a su local.yaml.
-func (s *Servicio) fijarPredeterminado(inst *Instancia, id string) error {
+// del catálogo: agente, agente/modelo o perfil/nombre), y su esfuerzo si se indica (con id vacío, solo el esfuerzo), y
+// lo aplica en marcha. En la
+// instancia global va a la configuración global y alcanza también a los proyectos que no tengan el suyo; en un
+// proyecto, a su local.yaml.
+func (s *Servicio) fijarPredeterminado(inst *Instancia, id string, esfuerzo *string) error {
 	valores := map[string]any{"predeterminados.modelo": "", "predeterminados.perfil_modelo": ""}
+	if esfuerzo != nil {
+		if *esfuerzo != "" && !slices.Contains(nucleo.NivelesEsfuerzo, *esfuerzo) {
+			return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("esfuerzo desconocido: %s", *esfuerzo))
+		}
+		if id == "" { // solo el esfuerzo: el modelo sigue siendo el que haya (en un proyecto, quizá el heredado)
+			return s.guardarValores(inst, map[string]any{"predeterminados.esfuerzo": *esfuerzo})
+		}
+		valores["predeterminados.esfuerzo"] = *esfuerzo
+	}
 	agente, modelo, _ := strings.Cut(id, "/")
 	switch {
 	case agente == "perfil":

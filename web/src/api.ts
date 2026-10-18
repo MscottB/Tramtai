@@ -195,6 +195,8 @@ export interface Modelo {
   // contexto_tokens es el contexto conocido del modelo y contexto_origen de dónde sale (configurado o informado).
   contexto_tokens?: number
   contexto_origen?: string
+  // esfuerzo_espacio, solo en el modelo predeterminado: el esfuerzo que el espacio usa con él (vacío, el de su agente).
+  esfuerzo_espacio?: string
 }
 // LimitesPeticion son los topes de una petición y de sus cargas (/api/v1/limites).
 export interface LimitesPeticion {
@@ -216,7 +218,7 @@ export interface Adaptador {
   autenticacion?: string
   terminos?: string
   problema?: string
-  // problema_codigo: no_instalado, falta_clave u otro (vacío) que hay que revisar.
+  // problema_codigo: no_instalado, falta_clave, aviso (no impide usarlo) u otro (vacío) que hay que revisar.
   problema_codigo?: string
   capacidades: { streaming: string; salida_estructurada: boolean; modelo_efectivo_informado: boolean }
 }
@@ -332,6 +334,8 @@ export const api = {
   actualizacion: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion'),
   acerca: () => pedir<Acerca>('GET', '/ui/acerca'),
   limites: () => pedir<LimitesPeticion>('GET', '/api/v1/limites'),
+  // El documento OpenAPI se reescribe tal cual (servers, operaciones) antes de guardarlo.
+  openapi: () => pedir<Record<string, any>>('GET', '/api/v1/openapi.json'),
   buscarActualizaciones: (buscar: boolean) => pedir<EstadoActualizacion>('POST', '/ui/actualizacion', { buscar }),
   buscarAhora: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion?ahora=1'),
   actualizar: () => pedir<{ version: string }>('POST', '/ui/actualizar'),
@@ -339,8 +343,9 @@ export const api = {
   // En la cuenta atrás antes de instalar: instalar ya («Reiniciar ahora») o cancelar.
   instalarYa: () => pedir<void>('POST', '/ui/actualizar/instalar'),
   cancelarActualizacion: () => pedir<void>('POST', '/ui/actualizar/cancelar'),
-  novedades: (desde: string) =>
-    pedir<{ versiones: Novedad[] }>('GET', '/ui/actualizacion/novedades?desde=' + encodeURIComponent(desde)).then((r) => r.versiones),
+  // novedades da lo que trae cada versión después de desde y hasta hasta (sin hasta, la instalada).
+  novedades: (desde: string, hasta = '') =>
+    pedir<{ versiones: Novedad[] }>('GET', '/ui/actualizacion/novedades?' + new URLSearchParams({ desde, ...(hasta ? { hasta } : {}) })).then((r) => r.versiones),
   cambiarAutenticacion: (agente: string, modo: 'suscripcion' | 'clave_api') => pedir<void>('POST', '/ui/autenticacion', { agente, modo }),
   salir: () => pedir<void>('DELETE', '/ui/sesion').then(() => (sesion.value = null)),
   detenerServicio: () => pedir<unknown>('POST', '/ui/servicio/detener'),
@@ -353,7 +358,9 @@ export const api = {
   configuracion: () =>
     pedir<{ configuracion: EntradaConfiguracion[] }>('GET', '/api/v1/instancia/configuracion').then((r) => r.configuracion),
   catalogo: () => pedir<{ modelos: Modelo[] }>('GET', '/api/v1/modelos').then((r) => r.modelos),
-  fijarPredeterminado: (modelo: string) => pedir<void>('POST', '/api/v1/instancia/predeterminado', { modelo }),
+  // fijarPredeterminado guarda el modelo predeterminado y, si se indica, su esfuerzo ('' = el del agente); con modelo
+  // vacío solo cambia el esfuerzo (en un proyecto no fija el modelo heredado).
+  fijarPredeterminado: (modelo: string, esfuerzo?: string) => pedir<void>('POST', '/api/v1/instancia/predeterminado', { modelo, esfuerzo }),
   // capacidades comprueba cada agente con hasta 10 s por agente: lleva un plazo mayor.
   capacidades: () => pedir<{ adaptadores: Adaptador[]; entradas?: string[] }>('GET', '/api/v1/capacidades', undefined, 60000),
   // trabajos lista los más recientes; filtro acota por API, grupo, origen o fecha (antes, para la página siguiente).
@@ -574,27 +581,80 @@ export function etiquetaModelo(id: string): string {
 }
 
 export interface OpcionModelo {
+  // label es el nombre completo («Claude · sonnet»); corto, el que se ve dentro del grupo de su agente («sonnet»).
   label: string
+  corto: string
   caption: string
+  // version es el modelo exacto que hay detrás, si se conoce (claude-sonnet-5-5).
+  version: string
+  // grupo es el agente, o «perfil» para los perfiles.
+  grupo: string
   value: string
   predeterminado: boolean
   esfuerzos: string[]
+  // exacta: una versión concreta vista en el historial; va al final de su grupo.
+  exacta?: boolean
+  // cabecera: el título de un grupo en la lista, que no se puede elegir.
+  cabecera?: boolean
+  disable?: boolean
 }
 
-// opcionModelo convierte una entrada del catálogo en una opción legible, con la versión real si se conoce.
+// opcionModelo convierte una entrada del catálogo en una opción legible, con la versión exacta y el contexto si se
+// conocen.
 export function opcionModelo(m: Modelo): OpcionModelo {
+  const grupo = m.perfil ? 'perfil' : (m.agente ?? m.id.split('/')[0])
+  const exacta = !m.perfil && m.origen === 'visto'
   let label = etiquetaModelo(m.id)
-  let caption = m.version || t('modelo.sinVersion')
+  let corto = m.modelo ?? t('modelo.delCli')
+  let version = exacta ? (m.modelo ?? '') : (m.version ?? '')
+  let caption = exacta ? t('modelo.versionConcreta') : m.version || t('modelo.sinVersion')
   if (m.perfil) {
-    label = t('modelo.perfil', { nombre: perfiles.includes(m.perfil) ? t(`perfil.${m.perfil}` as Clave) : m.perfil })
+    label = corto = t('modelo.perfil', { nombre: perfiles.includes(m.perfil) ? t(`perfil.${m.perfil}` as Clave) : m.perfil })
     caption = [m.resuelto ? etiquetaModelo(m.resuelto) : t('modelo.perfilDetalle'), m.version].filter(Boolean).join(' · ')
-  } else if (!m.modelo) {
-    caption = [m.version, t('modelo.predeterminadoCli')].filter(Boolean).join(' · ')
-  } else if (m.origen === 'visto') {
-    caption = t('modelo.versionConcreta')
+    version = m.version ?? ''
   }
-  if (m.esfuerzos?.length) caption += ' · ' + t('esfuerzo.elegible')
-  return { label, caption, value: m.id, predeterminado: !!m.predeterminado, esfuerzos: m.esfuerzos ?? [] }
+  if (m.contexto_tokens) caption += ' · ' + t('modelo.contexto', { n: numero(m.contexto_tokens) })
+  return { label, corto, caption, version, grupo, value: m.id, predeterminado: !!m.predeterminado, esfuerzos: m.esfuerzos ?? [], exacta }
+}
+
+// opcionEscrita es un agente/modelo escrito a mano, que no está en el catálogo.
+export function opcionEscrita(valor: string): OpcionModelo {
+  const [agente, ...resto] = valor.split('/')
+  return { label: etiquetaModelo(valor), corto: resto.join('/') || t('modelo.delCli'), caption: t('modelo.escrito'), version: '', grupo: agente,
+    value: valor, predeterminado: false, esfuerzos: [] }
+}
+
+// problemasAgentes dice por qué no se puede usar cada agente (no instalado, sin sesión o clave…); comprobar los CLI
+// tarda, así que se pide una vez por sesión de la página y se renueva cuando Agentes vuelve a comprobarlos.
+export const problemasAgentes = ref<Record<string, string>>({})
+let disponibilidad: Promise<void> | undefined
+export function fijarDisponibilidad(adaptadores: Adaptador[]) {
+  problemasAgentes.value = Object.fromEntries(adaptadores.filter((a) => a.problema && a.problema_codigo !== 'aviso').map((a) => [a.agente,
+    a.problema_codigo === 'no_instalado' ? t('modelo.noInstalado') : a.problema_codigo === 'falta_clave' ? t('modelo.faltaClave') : t('modelo.conProblema', { problema: a.problema ?? '' })]))
+}
+export function cargarDisponibilidad() {
+  disponibilidad ??= api.capacidades().then((r) => fijarDisponibilidad(r.adaptadores)).catch(() => {
+    disponibilidad = undefined // sin respuesta no se marca nada: se vuelve a pedir la próxima vez
+  })
+  return disponibilidad
+}
+
+// esfuerzoEspacio es el esfuerzo que el espacio usa con su modelo predeterminado ('' si usa el de su agente).
+export const esfuerzoEspacio = (catalogo: Modelo[]) => catalogo.find((m) => m.predeterminado)?.esfuerzo_espacio ?? ''
+
+// agruparOpciones ordena las opciones por grupo (los perfiles, los agentes en el orden de la red y al final los que no
+// se pueden usar) con un título por grupo; dentro, primero el modelo de su CLI, luego los configurados y al final las
+// versiones vistas.
+export function agruparOpciones(lista: OpcionModelo[]): OpcionModelo[] {
+  const apagado = (g: string) => lista.filter((o) => o.grupo === g).every((o) => o.disable)
+  const lugar = (g: string) => (apagado(g) ? 100 : 0) + (g === 'perfil' ? -1 : ordenAgentes.includes(g) ? ordenAgentes.indexOf(g) : ordenAgentes.length)
+  const rango = (o: OpcionModelo) => (o.grupo === 'perfil' ? 1 : !o.value.includes('/') ? 0 : o.exacta ? 2 : 1)
+  const grupos = [...new Set(lista.map((o) => o.grupo))].sort((a, b) => lugar(a) - lugar(b) || a.localeCompare(b))
+  return grupos.flatMap((g) => [
+    { label: (g === 'perfil' ? t('conectar.perfiles') : nombreAgente(g)) + (apagado(g) ? ' · ' + t('modelo.noDisponible') : ''), corto: '', caption: '', version: '', grupo: g, value: '#' + g,
+      predeterminado: false, esfuerzos: [], cabecera: true, disable: true },
+    ...lista.filter((o) => o.grupo === g).sort((a, b) => rango(a) - rango(b) || a.corto.localeCompare(b.corto)),
+  ])
 }
 
 // esfuerzosDe son los niveles de esfuerzo del modelo elegido ('' es el predeterminado del espacio); uno escrito a

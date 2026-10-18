@@ -99,7 +99,7 @@
 import { onMounted, ref } from 'vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import { useQuasar } from 'quasar'
-import { api, avisar, avisarError, codigoLinea, copiar, modeloInicial, nombreAgente, nombreEsfuerzo, ordenarAgentes, sesion, type Adaptador, numero } from '../api'
+import { api, avisar, avisarError, codigoLinea, copiar, modeloInicial, nombreAgente, nombreEsfuerzo, fijarDisponibilidad, ordenarAgentes, sesion, type Adaptador, numero } from '../api'
 import { t } from '../i18n'
 
 const $q = useQuasar()
@@ -144,6 +144,7 @@ async function cargar() {
   cargando.value = true
   try {
     adaptadores.value = ordenarAgentes((await api.capacidades()).adaptadores)
+    fijarDisponibilidad(adaptadores.value)
   } catch (e) {
     avisarError(e)
   } finally {

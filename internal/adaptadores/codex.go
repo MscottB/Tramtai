@@ -26,7 +26,7 @@ func (c Codex) Detectar(ctx context.Context) Estado {
 		e.Terminos = idioma.T("Terms of Use de OpenAI con cuenta ChatGPT: solo uso personal y local; aislamiento parcial")
 		if inicio, err := os.UserHomeDir(); err == nil {
 			if _, err := os.Stat(filepath.Join(inicio, ".codex", "AGENTS.md")); err == nil {
-				e.Problema = idioma.T("existe ~/.codex/AGENTS.md: Codex lo cargará en cada ejecución")
+				e.Problema, e.ProblemaCodigo = idioma.T("existe ~/.codex/AGENTS.md: Codex lo cargará en cada ejecución"), ProblemaAviso
 			}
 		}
 	} else {

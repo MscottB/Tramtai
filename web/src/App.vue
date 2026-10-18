@@ -11,10 +11,6 @@
           <img src="/logo.png" alt="" width="28" height="28" style="border-radius: 8px" />
           <span class="q-ml-sm marca gt-xs">Tramtai</span>
         </button>
-        <!-- La versión abre «Acerca de»: un botón aparte, porque el logo ya lleva a Inicio. -->
-        <button type="button" class="version version-boton gt-xs" :aria-label="t('acerca.abrir', { version: sesion.version })" @click="acercaAbierto = true">
-          {{ sesion.version }}
-        </button>
         <q-space />
         <q-btn-dropdown v-if="sesion.local && sesion.instancias?.length" flat no-caps :icon="iconoInstancia(sesion.ambito)"
           :label="$q.screen.gt.xs ? sesion.nombre || t('app.elegirInstancia') : undefined" :aria-label="t('app.cambiarInstancia')">
@@ -55,7 +51,7 @@
                 <q-item-section avatar><q-icon :name="conectado ? 'o_check_circle' : 'o_cloud_off'" :color="conectado ? 'positive' : 'negative'" /></q-item-section>
                 <q-item-section>
                   <q-item-label class="text-weight-medium">{{ conectado ? t('app.enMarcha') : t('app.sinConexion') }}</q-item-label>
-                  <q-item-label caption>{{ conectado ? t('app.servicioDetalle', { version: sesion.version, url: origen }) : t('app.comoIniciar') }}</q-item-label>
+                  <q-item-label caption>{{ conectado ? t('app.servicioDetalle', { url: origen }) : t('app.comoIniciar') }}</q-item-label>
                 </q-item-section>
               </q-item>
               <q-item v-close-popup clickable @click="acercaAbierto = true">
@@ -135,10 +131,7 @@
           <li>
             <button type="button" class="estacion" @click="acercaAbierto = true">
               <q-icon name="o_info" size="19px" class="texto-suave" style="margin-left: -1px" />
-              <span class="column">
-                <span class="estacion__nombre">{{ t('acerca.titulo') }}</span>
-                <span class="estacion__detalle">{{ t('acerca.detalleMenu', { version: sesion.version }) }}</span>
-              </span>
+              <span class="estacion__nombre">{{ t('acerca.titulo') }}</span>
             </button>
           </li>
         </ul>
@@ -200,11 +193,7 @@
             <div v-if="novedades[0].version.split('+')[0] !== sesion?.version?.split('+')[0]" class="text-weight-medium q-mt-md">{{ novedades[0].version }}</div>
             <NotasVersion class="q-mt-md" :texto="novedades[0].notas ?? ''" />
           </template>
-          <q-list v-else class="q-mt-sm">
-            <q-expansion-item v-for="(n, i) in novedades" :key="n.version" :label="n.version" :default-opened="i === 0" dense header-class="q-px-none text-weight-medium">
-              <NotasVersion :texto="n.notas ?? ''" />
-            </q-expansion-item>
-          </q-list>
+          <ListaNovedades v-else :versiones="novedades" />
         </q-card-section>
         <q-card-actions align="right" class="q-px-md q-pb-md">
           <q-btn flat no-caps color="primary" :label="t('actualizacion.verTodas')" href="https://github.com/MscottB/Tramtai/releases" target="_blank" rel="noopener" />
@@ -235,18 +224,24 @@
         <q-card-section>
           <div id="titulo-actualizar" class="titulo-seccion">{{ t('actualizacion.titulo', { version: actualizacion.version }) }}</div>
           <p class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.detalle', { actual: actualizacion.actual }) }}</p>
-          <template v-if="actualizacion.notas">
-            <div class="text-caption texto-suave q-mt-md q-mb-xs">{{ t('actualizacion.novedadesTitulo') }}</div>
-            <NotasVersion :texto="actualizacion.notas" />
+          <template v-if="novedadesNueva.length > 1">
+            <div class="text-caption texto-suave q-mt-md">{{ t(novedadesNueva.length >= 10 ? 'actualizacion.novedadesRecientes' : 'actualizacion.novedadesVarias', { n: novedadesNueva.length }) }}</div>
+            <ListaNovedades :versiones="novedadesNueva" />
+            <q-btn flat dense no-caps color="primary" icon-right="o_open_in_new" class="q-mt-xs" :label="t('actualizacion.verTodas')"
+              href="https://github.com/MscottB/Tramtai/releases" target="_blank" rel="noopener" />
           </template>
-          <p class="q-mt-md q-mb-none">{{ actualizacion.instalable ? t('actualizacion.comoInstala') : t('actualizacion.manual') }}</p>
+          <template v-else-if="notasNueva">
+            <div class="text-caption texto-suave q-mt-md q-mb-xs">{{ t('actualizacion.novedadesTitulo') }}</div>
+            <NotasVersion :texto="notasNueva" />
+          </template>
+          <p class="q-mt-md q-mb-none">{{ actualizacion?.instalable ? t('actualizacion.comoInstala') : t('actualizacion.manual') }}</p>
         </q-card-section>
         <q-card-actions align="right" class="q-px-md q-pb-md">
           <q-btn v-close-popup flat no-caps :label="t('comun.cancelar')" />
-          <q-btn v-if="actualizacion.instalable" unelevated no-caps color="primary" icon="o_system_update_alt" :loading="actualizando"
+          <q-btn v-if="actualizacion?.instalable" unelevated no-caps color="primary" icon="o_system_update_alt" :loading="actualizando"
             :label="t('actualizacion.instalar')" @click="instalarActualizacion" />
           <!-- Solo se enlaza una dirección https: la URL llega del servicio y no debe poder abrir otro esquema. -->
-          <q-btn v-else-if="actualizacion.url?.startsWith('https://')" unelevated no-caps color="primary" :label="t('actualizacion.descargar')" :href="actualizacion.url" target="_blank" rel="noopener" />
+          <q-btn v-else-if="actualizacion?.url?.startsWith('https://')" unelevated no-caps color="primary" :label="t('actualizacion.descargar')" :href="actualizacion?.url" target="_blank" rel="noopener" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -269,6 +264,7 @@ import ConfiguracionPagina from './paginas/Configuracion.vue'
 import AgentesPagina from './paginas/Agentes.vue'
 import AyudaPagina from './paginas/Ayuda.vue'
 import AcercaDe from './componentes/AcercaDe.vue'
+import ListaNovedades from './componentes/ListaNovedades.vue'
 import NotasVersion from './componentes/NotasVersion.vue'
 
 // Orden del menú según el recorrido: conectar un agente, probarlo, conectar las apps y revisar lo ejecutado.
@@ -472,6 +468,21 @@ watch(() => sesion.value?.version, async (version) => {
     }
   } catch {
     // sin almacenamiento local no hay aviso
+  }
+})
+// novedadesNueva es lo que trae cada versión desde la instalada hasta la nueva, para el aviso de antes de actualizar;
+// se pide una vez por versión nueva y, si GitHub no responde, el aviso muestra solo las notas de la nueva.
+const novedadesNueva = ref<Novedad[]>([])
+let novedadesPedidas = ''
+const notasNueva = computed(() => actualizacion.value?.notas ?? '')
+watch(() => (dialogoActualizar.value && actualizacion.value?.disponible ? actualizacion.value.version : ''), async (nueva) => {
+  if (!nueva || nueva === novedadesPedidas || !actualizacion.value) return
+  novedadesPedidas = nueva
+  novedadesNueva.value = []
+  try {
+    novedadesNueva.value = await api.novedades(actualizacion.value.actual, nueva)
+  } catch {
+    novedadesPedidas = '' // se vuelve a intentar al abrir el aviso otra vez
   }
 })
 // Al abrir la sesión (al cargar o tras Entrar) se busca versión nueva sin esperar al siguiente intervalo.

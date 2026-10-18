@@ -107,6 +107,9 @@ func TestWebUI(t *testing.T) {
 	if r, cuerpo := n.pedir("GET", "/ui/actualizacion/novedades?desde=v0.1.0", ""); r.StatusCode != 200 || !strings.Contains(cuerpo, `"versiones":[]`) {
 		t.Fatalf("sin búsqueda no se consulta GitHub: %d %s", r.StatusCode, cuerpo)
 	}
+	if r, cuerpo := n.pedir("GET", "/ui/actualizacion/novedades?desde=v0.1.0&hasta=v0.2.0", ""); r.StatusCode != 200 || !strings.Contains(cuerpo, `"versiones":[]`) {
+		t.Fatalf("tampoco con hasta: %d %s", r.StatusCode, cuerpo)
+	}
 
 	if r, cuerpo := n.pedir("GET", "/api/v1/instancia", ""); r.StatusCode != 200 || !strings.Contains(cuerpo, `"id":"global"`) {
 		t.Fatalf("instancia con la cookie: %d %s", r.StatusCode, cuerpo)
@@ -238,6 +241,26 @@ func TestWebUI(t *testing.T) {
 	}
 	if datos, _ := os.ReadFile(rutaGlobal); !strings.Contains(string(datos), "modelo: m2") {
 		t.Fatalf("el predeterminado debía guardarse en la configuración global:\n%s", datos)
+	}
+	// Con su esfuerzo: un nivel desconocido se rechaza y uno válido se guarda y lo indica el catálogo.
+	if r, cuerpo := n.pedir("POST", "/api/v1/instancia/predeterminado", `{"modelo":"simulado/m2","esfuerzo":"muchisimo"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 {
+		t.Fatalf("un esfuerzo desconocido se rechaza: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, cuerpo := n.pedir("POST", "/api/v1/instancia/predeterminado", `{"modelo":"simulado/m2","esfuerzo":"alto"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 204 {
+		t.Fatalf("fijar el esfuerzo predeterminado: %d %s", r.StatusCode, cuerpo)
+	}
+	if _, cuerpo := n.pedir("GET", "/api/v1/modelos", ""); !strings.Contains(cuerpo, `"esfuerzo_espacio":"alto"`) {
+		t.Fatalf("el catálogo indica el esfuerzo del espacio: %s", cuerpo)
+	}
+	if datos, _ := os.ReadFile(rutaGlobal); !strings.Contains(string(datos), "esfuerzo: alto") {
+		t.Fatalf("el esfuerzo predeterminado debía guardarse:\n%s", datos)
+	}
+	// Solo el esfuerzo (modelo vacío): no toca el modelo.
+	if r, cuerpo := n.pedir("POST", "/api/v1/instancia/predeterminado", `{"modelo":"","esfuerzo":"bajo"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 204 {
+		t.Fatalf("fijar solo el esfuerzo: %d %s", r.StatusCode, cuerpo)
+	}
+	if datos, _ := os.ReadFile(rutaGlobal); !strings.Contains(string(datos), "esfuerzo: bajo") || !strings.Contains(string(datos), "modelo: m2") {
+		t.Fatalf("solo el esfuerzo cambia, el modelo sigue:\n%s", datos)
 	}
 
 	if r, _ := n.pedir("DELETE", "/ui/sesion", ""); r.StatusCode != 204 {

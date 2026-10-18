@@ -15,7 +15,10 @@
         </div>
         <div class="col-12 col-md-5">
           <SelectorModelo :model-value="actualPredeterminado" :opciones="opcionesModelo" :dense="false" :loading="guardandoModelo"
-            :label="t('predeterminado.titulo')" @update:model-value="(id) => id && cambiarPredeterminado(id)" />
+            :label="t('predeterminado.titulo')" @update:model-value="(id) => typeof id === 'string' && cambiarPredeterminado(id)" />
+          <SelectorEsfuerzo v-if="actualPredeterminado" class="q-mt-md" :model-value="esfuerzoEspacio(catalogo)" :niveles="esfuerzosDe(catalogo, actualPredeterminado)"
+            :predeterminado="catalogo.find((m) => m.predeterminado)?.esfuerzo_predeterminado" :hint="t('predeterminado.esfuerzoHint')"
+            @update:model-value="cambiarEsfuerzo" />
         </div>
       </q-card-section>
     </q-card>
@@ -176,9 +179,10 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import { useQuasar } from 'quasar'
-import { actualizacion, api, avisar, avisarError, buscarActualizacionAhora, opcionModelo, reiniciarYSeguir, sesion, sistema, terminales, type EntradaConfiguracion, type EstadoPunto, type Modelo } from '../api'
+import { actualizacion, api, avisar, avisarError, buscarActualizacionAhora, esfuerzoEspacio, esfuerzosDe, nombreEsfuerzo, opcionModelo, reiniciarYSeguir, sesion, sistema, terminales, type EntradaConfiguracion, type EstadoPunto, type Modelo } from '../api'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
+import SelectorEsfuerzo from '../componentes/SelectorEsfuerzo.vue'
 import SelectorModelo from '../componentes/SelectorModelo.vue'
 
 const $q = useQuasar()
@@ -252,10 +256,27 @@ const actualPredeterminado = computed(() => catalogo.value.find((m) => m.predete
 async function cambiarPredeterminado(id: string) {
   guardandoModelo.value = true
   try {
-    await api.fijarPredeterminado(id)
+    // Un esfuerzo que el modelo nuevo no admite (máximo con Codex, o cualquiera con un agente sin niveles) vuelve al
+    // del agente: si no, se aplicaría sin verse y lo heredarían los respaldos.
+    const actual = esfuerzoEspacio(catalogo.value)
+    await api.fijarPredeterminado(id, actual && !esfuerzosDe(catalogo.value, id).includes(actual) ? '' : undefined)
     catalogo.value = await api.catalogo()
     const o = opcionesModelo.value.find((x) => x.value === id)
     avisar(t('predeterminado.guardado', { modelo: o?.label ?? id }))
+  } catch (e) {
+    avisarError(e)
+  } finally {
+    guardandoModelo.value = false
+  }
+}
+
+// cambiarEsfuerzo guarda el esfuerzo que se usa con el modelo predeterminado ('' = el de su agente).
+async function cambiarEsfuerzo(esfuerzo: string) {
+  guardandoModelo.value = true
+  try {
+    await api.fijarPredeterminado('', esfuerzo)
+    catalogo.value = await api.catalogo()
+    avisar(t('predeterminado.esfuerzoGuardado', { nivel: esfuerzo ? nombreEsfuerzo(esfuerzo).toLowerCase() : t('esfuerzo.agente').toLowerCase() }))
   } catch (e) {
     avisarError(e)
   } finally {

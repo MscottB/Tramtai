@@ -5,9 +5,13 @@
     <div class="row q-col-gutter-lg">
       <div class="col-12 col-md-5">
         <q-card>
-          <q-card-section class="q-pb-sm">
-            <div class="titulo-seccion">{{ t('ejecutar.receta') }}</div>
-            <div class="texto-suave text-body2">{{ t('ejecutar.recetaTexto') }}</div>
+          <q-card-section class="q-pb-sm row items-start no-wrap q-gutter-x-sm">
+            <div class="col">
+              <div class="titulo-seccion">{{ t('ejecutar.receta') }}</div>
+              <div class="texto-suave text-body2">{{ t('ejecutar.recetaTexto') }}</div>
+            </div>
+            <q-btn flat dense no-caps color="primary" icon="o_code" :label="$q.screen.gt.xs ? t('codigo.boton') : undefined" :aria-label="t('codigo.boton')"
+              @click="verCodigo" />
           </q-card-section>
           <q-card-section v-if="editando" class="q-py-none">
             <q-banner rounded dense class="info-caja">
@@ -162,6 +166,8 @@
       </q-card>
     </q-dialog>
 
+    <VerComoCodigo v-model="dialogoCodigo" :ejemplos="ejemplosCodigo" :aviso="editando ? t('codigo.recetaEnApi', { nombre: editando }) : undefined" />
+
     <!-- Al cerrarse se olvida la clave mostrada: no queda en memoria de la página. -->
     <q-dialog v-model="dialogoCreada" @hide="creada = undefined">
       <q-card style="width: 640px; max-width: 95vw">
@@ -187,6 +193,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { useQuasar } from 'quasar'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import EditorReceta from '../componentes/EditorReceta.vue'
 import EstadoVacio from '../componentes/EstadoVacio.vue'
@@ -194,19 +201,24 @@ import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
 import RegistroTrabajo from '../componentes/RegistroTrabajo.vue'
 import SalidaTrabajo from '../componentes/SalidaTrabajo.vue'
+import VerComoCodigo from '../componentes/VerComoCodigo.vue'
+import { ejemplos as ejemplosDe, type Ejemplo } from '../ejemplos'
 import { ajustesDeReceta, api, aplicarModelo, avisar, avisarError, configDeReceta, copiar, duracion, esquemaDeReceta, esfuerzoUsado, estadoInfo, haceCuanto, mensajeDe, modeloDe, modeloInicial,
-  origenHistorial, recetaDePunto, recetaDeSolicitud, recetaInicial, recetaVacia, terminales, tituloError, trabajoSeguido, type EventoRegistro, type LimitesPeticion, type Modelo, type Receta, type Solicitud,
+  origenHistorial, recetaDePunto, recetaDeSolicitud, recetaInicial, recetaVacia, terminales, tituloError, trabajoSeguido, idModeloDe, esfuerzoEspacio, type EstadoPunto, type EventoRegistro, type LimitesPeticion, type Modelo, type Receta, type Solicitud,
   type Trabajo } from '../api'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()
+const $q = useQuasar()
 
 const catalogo = ref<Modelo[]>([])
 // receta es lo que define la API que se está probando; desde Agentes llega con un modelo ya elegido.
 const receta = ref<Receta>({ ...recetaVacia(), modelo: modeloInicial.value || null })
 modeloInicial.value = ''
-// editando es la API que se abrió desde Mis APIs: Guardar la actualiza en lugar de crear otra.
+// editando es la API que se abrió desde Mis APIs: Guardar la actualiza en lugar de crear otra; apiEditada, cómo está
+// guardada (URL, contratos y modelo) para «Ver como código».
 const editando = ref('')
+const apiEditada = ref<EstadoPunto>()
 const ejemplos = computed(() => [t('ejecutar.ejemplo1'), t('ejecutar.ejemplo2'), t('ejecutar.ejemplo3')])
 
 // nuevaPrueba deja la página lista para otro mensaje; la receta se conserva y el trabajo anterior queda en el Historial.
@@ -248,6 +260,7 @@ onMounted(async () => {
       if (p) {
         receta.value = recetaDePunto(p)
         editando.value = p.nombre
+        apiEditada.value = p
       }
     } catch (e) {
       avisarError(e)
@@ -279,21 +292,53 @@ async function ejecutar() {
   try {
     const cargas: string[] = []
     for (const archivo of archivos.value ?? []) cargas.push((await api.subir(archivo)).identificador_carga)
-    const r = receta.value
-    let s: Solicitud = { mensajes: [{ rol: 'usuario', contenido: mensaje.value }], cargas: cargas.length ? cargas : undefined,
-      instrucciones: r.instrucciones.trim() || undefined, respaldo: r.respaldo.length ? r.respaldo : undefined }
-    if (esquema) s.salida = { formato: 'json', esquema }
-    if (perfil.value.trim()) s.perfil = perfil.value.trim()
-    if (tiempo.value) s.ejecucion = { tiempo_limite_segundos: Number(tiempo.value) }
-    if (r.esfuerzo) s.esfuerzo = r.esfuerzo
-    s = aplicarModelo(s, r.modelo ?? '')
-    seguir(await api.crear(s))
+    seguir(await api.crear(solicitudDe(cargas, esquema)))
     cargarRecientes()
   } catch (e) {
     avisarError(e)
   } finally {
     enviando.value = false
   }
+}
+
+// solicitudDe arma la petición de la receta y el mensaje, tal como la envía Probar.
+function solicitudDe(cargas: string[], esquema: Record<string, unknown> | undefined): Solicitud {
+  const r = receta.value
+  const s: Solicitud = { mensajes: [{ rol: 'usuario', contenido: mensaje.value }], cargas: cargas.length ? cargas : undefined,
+    instrucciones: r.instrucciones.trim() || undefined, respaldo: r.respaldo.length ? r.respaldo : undefined }
+  if (esquema) s.salida = { formato: 'json', esquema }
+  if (perfil.value.trim()) s.perfil = perfil.value.trim()
+  if (tiempo.value && /^\d+$/.test(tiempo.value)) s.ejecucion = { tiempo_limite_segundos: Number(tiempo.value) }
+  if (r.esfuerzo) s.esfuerzo = r.esfuerzo
+  return aplicarModelo(s, r.modelo ?? '')
+}
+
+// «Ver como código»: la prueba actual por la API propia y por OpenAI, con la URL de la API que se edita o la de la
+// API principal. Al editar una API, su receta la aplica la propia API: el código solo lleva el mensaje.
+const dialogoCodigo = ref(false)
+const ejemplosCodigo = ref<Ejemplo[]>([])
+async function verCodigo() {
+  let esquema: Record<string, unknown> | undefined
+  try {
+    esquema = esquemaDeReceta(receta.value)
+  } catch (e) {
+    avisarError(e)
+    return
+  }
+  const base = await api.instancia().then((i) => i.base).catch(() => location.origin)
+  // Una API editada: su URL (o la de su ruta, si aún no tiene), lo que acepta y el modelo que tiene guardado, que es
+  // el que usará; OpenAI y Anthropic exigen un modelo en cada petición.
+  const p = editando.value ? apiEditada.value : undefined
+  const url = editando.value ? p?.url || `${base}/p/${editando.value}` : base
+  const contratos = p?.contratos ?? ['nativa', 'openai', 'anthropic']
+  const modelo = (editando.value ? p && idModeloDe(p) : receta.value.modelo) || catalogo.value.find((m) => m.predeterminado)?.id || 'claude'
+  let solicitud = solicitudDe([], esquema)
+  if (editando.value) solicitud = { mensajes: solicitud.mensajes, perfil: solicitud.perfil, ejecucion: solicitud.ejecucion }
+  else if (!receta.value.modelo && !receta.value.esfuerzo && esfuerzoEspacio(catalogo.value)) solicitud.esfuerzo = esfuerzoEspacio(catalogo.value)
+  if (!solicitud.mensajes[0].contenido.trim()) solicitud.mensajes[0].contenido = archivos.value?.length ? t('ejemplos.mensaje') : t('conectar.hola')
+  ejemplosCodigo.value = ejemplosDe({ url, modelo, contratos,
+    prueba: { solicitud, archivos: (archivos.value ?? []).map((a) => a.name) } })
+  dialogoCodigo.value = true
 }
 
 // seguir muestra los eventos en vivo; EventSource se reconecta solo y reanuda con Last-Event-ID.
@@ -408,6 +453,7 @@ async function guardarComoApi() {
     const r = await api.crearPunto({ nombre, grupo: nueva.grupo.trim() || undefined, ...configDeReceta(receta.value) })
     const modelo = receta.value.modelo || catalogo.value.find((m) => m.predeterminado)?.id || 'claude'
     creada.value = { nombre, url: r.punto_acceso?.url ?? '', clave: r.token, modelo }
+    apiEditada.value = r.punto_acceso
     dialogoGuardar.value = false
     dialogoCreada.value = true
     editando.value = nombre
@@ -436,6 +482,7 @@ async function actualizarApi() {
   try {
     await api.ajustesPunto(editando.value, ajustesDeReceta(receta.value))
     avisar(t('ejecutar.apiActualizada', { nombre: editando.value }))
+    apiEditada.value = (await api.puntos().catch(() => [])).find((x) => x.nombre === editando.value) ?? apiEditada.value
   } catch (e) {
     avisarError(e)
   } finally {

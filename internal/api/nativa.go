@@ -8,6 +8,7 @@ import (
 	"io"
 	"maps"
 	"net/http"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -375,6 +376,9 @@ type modelo struct {
 	// dónde sale; sin dato, no se comprueba si una entrada cabe.
 	ContextoTokens int    `json:"contexto_tokens,omitempty"`
 	ContextoOrigen string `json:"contexto_origen,omitempty"`
+	// EsfuerzoEspacio, solo en el modelo predeterminado, es el esfuerzo que el espacio usa con él
+	// (predeterminados.esfuerzo); vacío, el de su agente.
+	EsfuerzoEspacio string `json:"esfuerzo_espacio,omitempty"`
 }
 
 // predeterminado es el identificador del catálogo que se usa cuando la solicitud no indica agente ni modelo.
@@ -465,6 +469,9 @@ func (s *Servidor) modelosNativos(w http.ResponseWriter, r *http.Request) {
 	for i := range lista {
 		m := &lista[i]
 		m.Predeterminado = m.ID == pred
+		if m.Predeterminado && slices.Contains(nucleo.NivelesEsfuerzo, s.Config.Texto("predeterminados.esfuerzo")) {
+			m.EsfuerzoEspacio = s.Config.Texto("predeterminados.esfuerzo")
+		}
 		agente, modelo := m.Agente, m.Modelo
 		if m.Perfil != "" {
 			if agente, modelo = agentePred, perfiles[m.Perfil][agentePred]; modelo != "" {
