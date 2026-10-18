@@ -6,7 +6,7 @@
 
 **Tus agentes de IA, como una API local.**
 
-Tramtai convierte Claude Code, Codex, Antigravity y la API de Gemini en una API compatible con OpenAI y Anthropic que funciona en tu propio equipo.<br>
+Tramtai convierte Claude Code, Codex, GitHub Copilot CLI, Antigravity y la API de Gemini en una API compatible con OpenAI y Anthropic que funciona en tu propio equipo.<br>
 Cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
 
 [![CI](https://github.com/MscottB/Tramtai/actions/workflows/ci.yml/badge.svg)](https://github.com/MscottB/Tramtai/actions/workflows/ci.yml)
@@ -25,13 +25,13 @@ Cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
 ## Qué ofrece
 
 - **Compatible con lo que ya usas.** SDK de OpenAI y Anthropic (Python, Node, curl…), con la respuesta en vivo y **herramientas** (`tools`): el agente pide las funciones de tu aplicación como con OpenAI o Anthropic. También una API propia con eventos que se pueden reanudar.
-- **Agente y modelo en cada petición.** `claude/sonnet`, `codex`, `gemini/gemini-flash-latest` o un perfil como `perfil/rapido`; en Claude y Codex también eliges cuánto razona el agente.
+- **Agente y modelo en cada petición.** `claude/sonnet`, `codex`, `copilot`, `gemini/gemini-flash-latest` o un perfil como `perfil/rapido`; en Claude, Codex y Copilot (con un modelo concreto) también eliges cuánto razona el agente.
 - **Archivos y respuestas con forma.** PDF, Word, Excel, PowerPoint o ZIP como entrada; JSON validado con un esquema como salida.
 - **Una API por aplicación,** con su propia clave, sus modelos permitidos o fijos e instrucciones propias (por ejemplo, «responde siempre en español»). Se activan o detienen sin reiniciar.
 - **Recetas: de la prueba a la API en un clic.** En Probar defines instrucciones, agente con su esfuerzo, esquema JSON y respaldo, lo pruebas con tus archivos, ves la respuesta con formato y cuánto tardó cada paso, y lo guardas como API: tu aplicación envía el mensaje y recibe la respuesta con esa forma.
 - **Respaldo entre agentes.** Si el agente principal llega a su límite, no tiene clave o falla antes de responder, la petición sigue con el siguiente de la lista (hasta 3), sin que tu aplicación lo note.
 - **Presupuestos.** Cada API, y el espacio entero, pueden tener un límite diario o mensual de peticiones, tokens o dólares: aviso al 80 % y, al 100 %, error 429 hasta que empieza el periodo siguiente o reinicias el consumo.
-- **Tu suscripción o tu clave de API.** Claude y Codex se conectan con un clic a la sesión que ya tienes (uso personal) o con una clave.
+- **Tu suscripción o tu clave de API.** Claude, Codex y Copilot se conectan con un clic a la sesión que ya tienes (uso personal; Copilot funciona también con el plan gratuito) o con una clave.
 - **Cuatro formas de usarlo** sobre los mismos trabajos: app de escritorio con icono en la bandeja, Web UI con ayuda integrada, terminal interactiva y línea de órdenes. En español y en inglés.
 - **Local y privado.** Escucha solo en `127.0.0.1` y los resultados caducan a las 24 horas. Sin telemetría.
 - **Claves bien guardadas.** Las de tus proveedores quedan cifradas en el almacén del sistema (Administrador de credenciales, Llavero de macOS o Secret Service de Linux), nunca en los archivos de Tramtai. La clave de cada API solo se ve al crearla o regenerarla, y la Web UI se abre desde la app o con `tramtai abrir`, no con esa clave.
@@ -67,7 +67,7 @@ tramtai abrir   # inicia el servicio y abre la Web UI en el navegador
 
 El script elige el archivo de tu sistema (Intel o ARM), comprueba su suma SHA-256 y deja `tramtai` en `~/.local/bin`; para actualizar, vuelve a ejecutarlo.
 
-Necesitas al menos un agente instalado: [Claude Code](https://docs.anthropic.com/claude-code), [Codex CLI](https://developers.openai.com/codex/cli) o una clave de la Gemini API. Para leer PDF y archivos de Office, instala también [markitdown](https://github.com/microsoft/markitdown) (`uv tool install "markitdown[pdf,docx,pptx,xlsx]==0.1.8"`).
+Necesitas al menos un agente instalado: [Claude Code](https://docs.anthropic.com/claude-code), [Codex CLI](https://developers.openai.com/codex/cli), [GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/set-up/install-copilot-cli) o una clave de la Gemini API. Para leer PDF y archivos de Office, instala también [markitdown](https://github.com/microsoft/markitdown) (`uv tool install "markitdown[pdf,docx,pptx,xlsx]==0.1.8"`).
 
 ## Conectar una aplicación
 
@@ -150,20 +150,22 @@ Al usar Tramtai aceptas sus [términos de uso](TERMINOS.md). En resumen: Tramtai
 
 Tramtai se publica con la licencia [PolyForm Noncommercial 1.0.0](LICENSE.md): puedes usarlo, estudiarlo y modificarlo gratis para fines personales y no comerciales. Para usarlo en una empresa o en un producto comercial hace falta una licencia aparte; escribe a [MscottB](https://github.com/MscottB).
 
-Claude, Codex, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ninguno de ellos y usa sus CLI oficiales tal como se instalan; con Gemini, su API pública y tu propia clave.
+Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ninguno de ellos y usa sus CLI oficiales tal como se instalan; con Gemini, su API pública y tu propia clave.
 
 ---
 
 ## English
 
-**Tramtai turns Claude Code, Codex, Antigravity and the Gemini API into an OpenAI- and Anthropic-compatible API that runs on your own computer.** Any app or SDK can use them by changing just the base URL.
+**Tramtai turns Claude Code, Codex, GitHub Copilot CLI, Antigravity and the Gemini API into an OpenAI- and Anthropic-compatible API that runs on your own computer.** Any app or SDK can use them by changing just the base URL.
 
 - **Install:** download the Windows installer (or the portable `.zip`) from [Releases](https://github.com/MscottB/Tramtai/releases/latest); it installs for your user only and needs no administrator rights. On Linux, install the desktop app from the `.deb` or `.rpm` package. On macOS, open the `.dmg` and drag Tramtai to Applications; it is not signed by an Apple developer, so the first time allow it in *System Settings → Privacy & Security → Open Anyway*. With Homebrew: `brew tap mscottb/tramtai https://github.com/MscottB/Tramtai` and then `brew install --cask tramtai` (app, no Gatekeeper prompt) or `brew install tramtai` (CLI only, macOS and Linux). CLI only: `curl -fsSL https://raw.githubusercontent.com/MscottB/Tramtai/main/scripts/instalar.sh | sh`.
 - **Updates:** every hour Tramtai checks for a new version, so the notice shows up without restarting. The installed Windows app updates with one click (*Update now*), showing what's new inside the app; the other copies show the notice with the download link. `tramtai actualizar` does the same from the terminal.
-- **Connect an agent:** use your Claude or ChatGPT subscription (personal use) or an API key; the agent's CLI must be installed.
+- **Connect an agent:** use your Claude, ChatGPT or GitHub Copilot subscription (personal use; Copilot also works with the free plan, with its automatic model) or an API key; the agent's CLI must be installed. Each agent runs without tools, in a private folder that is deleted afterwards, and is checked with its real CLI before your apps can use it.
 - **Point your app** at `http://127.0.0.1:17373/openai/v1` (or `/anthropic`) with the key from *My APIs*, and pick agent and model in the `model` field, e.g. `claude/sonnet`. To send files, follow long jobs or retry, use the Tramtai API (`/api/v1`, with its OpenAPI at `/api/v1/openapi.json`); *My APIs → Which URL do I use?* compares the three with examples to copy.
 - **Recipes and fallback:** in *Try*, set instructions, agent, a JSON schema and fallback agents, test them with your files and save them as an API in one click. If the main agent hits its limit or fails before answering, the request continues with the next one.
 - **Budgets:** each API, and the whole workspace, can have a daily or monthly limit in requests, tokens or dollars: a warning at 80% and, at 100%, a 429 error until the next period starts or you reset the usage.
+- **Help inside the app:** step-by-step guides, what to do about each error and a search box; *Try → View as code* gives you each test ready in curl, Python or Node.
+- **Release notes in English:** what's new in each version shows in the app's language, with a link to every change on GitHub.
 - The desktop app, Web UI, interactive terminal and CLI are available in English and Spanish. The CLI follows your system language; set `TRAMTAI_IDIOMA=en` to force English.
 - Everything stays local: it listens only on `127.0.0.1`, has no telemetry, and responses expire after 24 hours.
 - **Keys:** provider keys (`tramtai claves guardar NAME`) are stored encrypted in the system store (Windows Credential Manager, macOS Keychain or the Linux Secret Service), never in Tramtai's files. Each API's key is shown only when it is created or regenerated, and the Web UI opens from the app or with `tramtai abrir`, not with that key.

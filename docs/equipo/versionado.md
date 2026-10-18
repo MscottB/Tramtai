@@ -24,7 +24,7 @@ Formato: **`vX.Y.Z+DDMMAAAA`**, por ejemplo `v0.1.0+12102026`. La versión **se 
 
 ## Etiquetas y notas de versión
 
-Cada versión publicada tiene una **etiqueta anotada** cuyo mensaje son sus notas: los commits desde la etiqueta anterior agrupados en *Cambios incompatibles*, *Nuevas funciones*, *Correcciones* y *Otros cambios*, con el cuerpo de cada commit. Con `-Resumen` se añade un párrafo inicial que explica lo que los mensajes no dicen.
+Cada versión publicada tiene una **etiqueta anotada** cuyo mensaje son sus notas: los commits desde la etiqueta anterior agrupados en *Cambios incompatibles*, *Nuevas funciones*, *Correcciones* y *Otros cambios*, con el cuerpo de cada commit. Con `-Resumen` se añade un párrafo inicial que explica lo que los mensajes no dicen, y con `-ResumenEn` el mismo resumen en inglés al final, tras `## English` (obligatorio al etiquetar con `-Resumen`): la app muestra esa parte si está en inglés.
 
 ```powershell
 git tag -n99 --sort=creatordate          # todas las versiones con sus notas
@@ -45,7 +45,7 @@ En GitHub se ven en *Tags*. Un buen cuerpo de commit produce buenas notas: escri
 ./scripts/version.ps1 -Explicar    # versión resultante y sus notas
 ./scripts/compilar.ps1             # compila bin/tramtai.exe con esa versión incrustada
 ./scripts/version.ps1 -Etiquetar   # crea la etiqueta anotada con las notas (exige árbol limpio y commits nuevos)
-./scripts/version.ps1 -Etiquetar -Resumen "Hito M3: …"   # con párrafo de resumen
+./scripts/version.ps1 -Etiquetar -Resumen "Hito M3: …" -ResumenEn "Milestone M3: …"   # con resumen en los dos idiomas
 ./scripts/version.ps1 -Hasta <commit> -Etiquetar          # etiqueta un commit anterior
 git push origin --tags             # sube las etiquetas
 ```

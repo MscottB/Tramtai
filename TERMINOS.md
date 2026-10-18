@@ -6,7 +6,7 @@ Tramtai es un programa gratuito que publica Michael Scott B. ([MscottB](https://
 
 ## 1. Qué es Tramtai
 
-Tramtai funciona en tu propio equipo y conecta tus aplicaciones con agentes de IA de terceros: Claude Code, Codex y Antigravity mediante sus programas oficiales, y la API de Gemini con tu propia clave. **Tramtai no es un proveedor de IA:** no tiene servidores, no vende acceso a ningún modelo y no forma parte de Anthropic, OpenAI ni Google, que no lo respaldan.
+Tramtai funciona en tu propio equipo y conecta tus aplicaciones con agentes de IA de terceros: Claude Code, Codex, GitHub Copilot CLI y Antigravity mediante sus programas oficiales, y la API de Gemini con tu propia clave. **Tramtai no es un proveedor de IA:** no tiene servidores, no vende acceso a ningún modelo y no forma parte de Anthropic, OpenAI, GitHub, Microsoft ni Google, que no lo respaldan.
 
 ## 2. Licencia
 
@@ -20,13 +20,13 @@ Puedes usar, estudiar y modificar Tramtai para fines personales y no comerciales
 
 ## 4. Uso con tu suscripción
 
-Tramtai permite que Claude Code o Codex usen la sesión que ya tienes iniciada en tu equipo (por ejemplo, Claude Pro/Max o ChatGPT) en lugar de una clave de API. Sobre esta función:
+Tramtai permite que Claude Code, Codex o GitHub Copilot CLI usen la sesión que ya tienes iniciada en tu equipo (por ejemplo, Claude Pro/Max, ChatGPT o GitHub Copilot) en lugar de una clave de API. Sobre esta función:
 
 - Es **solo para uso personal y local**, en tu propio equipo y para ti.
 - Los términos de los proveedores **pueden no permitir** el uso automatizado de una suscripción personal, ni usarla para alimentar otras aplicaciones o servir a otras personas, y esos términos cambian con el tiempo. Revísalos antes de activarla.
 - Usarla puede llevar a que el proveedor **limite o suspenda tu cuenta**. Ese riesgo y la decisión de usarla son **exclusivamente tuyos**.
 - Para aplicaciones, automatizaciones o cualquier uso que no sea estrictamente personal, usa una **clave de API**.
-- Tramtai nunca lee, copia ni envía las credenciales de los programas de los proveedores. El autor puede cambiar o retirar esta función en cualquier momento, por ejemplo si un proveedor lo pide.
+- Tramtai nunca lee, copia ni envía las credenciales de los programas de los proveedores. Con Copilot solo copia a su carpeta privada qué cuenta inició sesión (sin el token, que queda en el almacén del sistema). El autor puede cambiar o retirar esta función en cualquier momento, por ejemplo si un proveedor lo pide.
 
 ## 5. Uso aceptable
 
@@ -61,7 +61,7 @@ En la medida que permita la ley aplicable, te comprometes a mantener indemne al 
 
 ## 11. Marcas
 
-Claude, Codex, Gemini, Antigravity, Anthropic, OpenAI y Google son marcas de sus respectivos dueños. Se nombran solo para indicar con qué programas funciona Tramtai.
+Claude, Codex, GitHub Copilot, Gemini, Antigravity, Anthropic, OpenAI, GitHub, Microsoft y Google son marcas de sus respectivos dueños. Se nombran solo para indicar con qué programas funciona Tramtai.
 
 ## 12. Cambios y otras disposiciones
 
@@ -77,10 +77,10 @@ Claude, Codex, Gemini, Antigravity, Anthropic, OpenAI y Google son marcas de sus
 
 Tramtai is a free program published by Michael Scott B. ([MscottB](https://github.com/MscottB)), "the author". By installing or using it you accept these terms and the [license](LICENSE.md). If you don't agree, don't install or use it. The Spanish version above prevails.
 
-1. **What Tramtai is.** It runs on your own computer and connects your apps with third-party AI agents: Claude Code, Codex and Antigravity through their official programs, and the Gemini API with your own key. Tramtai is not an AI provider: it has no servers, sells no access to any model and is not affiliated with or endorsed by Anthropic, OpenAI or Google.
+1. **What Tramtai is.** It runs on your own computer and connects your apps with third-party AI agents: Claude Code, Codex, GitHub Copilot CLI and Antigravity through their official programs, and the Gemini API with your own key. Tramtai is not an AI provider: it has no servers, sells no access to any model and is not affiliated with or endorsed by Anthropic, OpenAI, GitHub, Microsoft or Google.
 2. **License.** Personal, non-commercial use under [PolyForm Noncommercial 1.0.0](LICENSE.md). Business or commercial use needs a separate license from the author.
 3. **Third-party services.** You need your own account or API key with each provider, and you are the one who accepts and must comply with that provider's terms and usage policies. Tramtai grants no rights over those services. Any fees a provider charges you are yours.
-4. **Using your subscription.** Tramtai can let Claude Code or Codex use the session already signed in on your computer instead of an API key.
+4. **Using your subscription.** Tramtai can let Claude Code, Codex or GitHub Copilot CLI use the session already signed in on your computer instead of an API key.
    - This is for personal, local use only.
    - Providers' terms may not allow automated use of a personal subscription, or using it to power other apps or serve other people, and those terms change over time.
    - It may lead the provider to limit or suspend your account. That risk and the decision to use it are yours alone.

@@ -28,14 +28,16 @@ Cómo está construido Tramtai por dentro:
 
 ## Agentes
 
-| | Claude Code | Codex CLI |
-|---|---|---|
-| Invocación | `claude -p --output-format stream-json`, prompt por stdin | `codex exec --json -`, prompt por stdin |
-| Aislamiento | `--setting-sources ""`, `--strict-mcp-config`, `--tools ""`, `--no-session-persistence` y espacio de trabajo temporal vacío. Con clave de API, también `--bare`. | `--ephemeral`, `--ignore-rules`, `-s read-only`, shell y búsqueda web desactivadas. Con clave de API, `CODEX_HOME` privado y vacío. |
-| Sistema | `--system-prompt-file`: sustituye el prompt de Claude Code (≈650 tokens fijos en vez de ≈24 000) | primer bloque delimitado del prompt |
-| Streaming | por tokens (`text_delta`) | solo el mensaje final |
-| Modelo efectivo | sí (`modelUsage`) | no: queda como no verificable |
-| Uso | tokens y coste en USD | tokens |
+| | Claude Code | Codex CLI | GitHub Copilot CLI |
+|---|---|---|---|
+| Invocación | `claude -p --output-format stream-json`, prompt por stdin | `codex exec --json -`, prompt por stdin | `copilot --output-format json`, prompt por stdin; en Windows, el `copilot.exe` nativo del paquete de npm (no el envoltorio `.cmd`) |
+| Aislamiento | `--setting-sources ""`, `--strict-mcp-config`, `--tools ""`, `--no-session-persistence` y espacio de trabajo temporal vacío. Con clave de API, también `--bare`. | `--ephemeral`, `--ignore-rules`, `-s read-only`, shell y búsqueda web desactivadas. Con clave de API, `CODEX_HOME` privado y vacío. | `--available-tools none` (lista vacía), `--disable-builtin-mcps`, `--no-custom-instructions`, `--disallow-temp-dir`, `--no-ask-user`, `--no-auto-update` y `COPILOT_HOME` privado por ejecución, que se borra al terminar. Con suscripción, su `config.json` solo lleva la cuenta de `copilot login` (el token queda en el almacén del sistema); con clave, `COPILOT_GITHUB_TOKEN`. |
+| Sistema | `--system-prompt-file`: sustituye el prompt de Claude Code (≈650 tokens fijos en vez de ≈24 000) | primer bloque delimitado del prompt | primer bloque delimitado del prompt |
+| Esquema | nativo (`--json-schema`) | nativo (`--output-schema`) | en las instrucciones; se quita el bloque ```` ```json ```` si llega |
+| Streaming | por tokens (`text_delta`) | solo el mensaje final | por tokens (`assistant.message_delta`) |
+| Modelo efectivo | sí (`modelUsage`) | no: queda como no verificable | sí, también el que elige `auto` (`session.auto_mode_resolved`) |
+| Esfuerzo | `--effort`, hasta máximo | `model_reasoning_effort`, hasta muy alto | `--reasoning-effort`, hasta máximo; no con `auto` |
+| Uso | tokens y coste en USD | tokens | tokens (`--usage-output-file`) y un aviso con los créditos del plan |
 
 Además hay dos adaptadores de Google, probados con un servidor y un CLI simulados:
 
@@ -66,7 +68,7 @@ El código tras el guion es aleatorio por petición (igual en los turnos `<<<tur
 
 Si una carga venció, el trabajo falla con `entrada_no_disponible`. Una conversión vacía o fallida falla con `conversion_fallida`; nunca se presenta como éxito. Un ZIP que supera los límites falla con `carga_invalida`.
 
-Con un esquema, se usa primero la salida estructurada nativa del agente (`--json-schema` y `structured_output` en Claude; `--output-schema` en Codex) y después Tramtai valida el resultado. Si no cumple, el trabajo falla con `salida_no_cumple_esquema` y la salida solo se conserva con `conservar_salida_invalida`. Un esquema inválido se rechaza al aceptar el trabajo.
+Con un esquema, se usa primero la salida estructurada nativa del agente (`--json-schema` y `structured_output` en Claude; `--output-schema` en Codex); Copilot, que no la tiene, lo recibe en las instrucciones. Después Tramtai valida el resultado. Si no cumple, el trabajo falla con `salida_no_cumple_esquema` y la salida solo se conserva con `conservar_salida_invalida`. Un esquema inválido se rechaza al aceptar el trabajo.
 
 ## Modelo de amenazas
 
@@ -74,7 +76,8 @@ Lo que llega de una app (mensaje, instrucciones, documentos, esquema) se trata c
 intente manipular al modelo; sí que un modelo manipulado haga daño a través de Tramtai:
 
 - **Agentes:** Claude Code sin herramientas, sin configuración del usuario y con el mensaje por stdin; Codex en solo
-  lectura, sin terminal ni búsqueda web, en una carpeta temporal y con el mensaje por stdin; Gemini es HTTP. Las pruebas
+  lectura, sin terminal ni búsqueda web, en una carpeta temporal y con el mensaje por stdin; Copilot sin herramientas ni
+  MCP, con un `COPILOT_HOME` privado y el mensaje por stdin; Gemini es HTTP. Las pruebas
   canario lo comprueban con los CLI reales. Antigravity, sin esa comprobación, queda fuera de las apps; su mensaje nunca
   empieza por `-` y su configuración es privada.
 - **Entrada:** delimitadores con código por petición; topes de mensajes (1.000), esquema (256 KB), cuerpo (16 MB) y
@@ -179,7 +182,7 @@ Por defecto, cada agente se ejecuta aislado en una carpeta temporal vacía. Con 
 
 De menor a mayor: interno → global → proyecto → local → entorno → punto de acceso → solicitud. Las claves de seguridad (`servicio`, `comandos_agentes`, `adaptadores`, `concurrencia_servicio`…) se rechazan en la capa de proyecto, que es la que va en el repositorio, y en `local.yaml` salvo que la carpeta figure en `proyectos_confiables` de la configuración global (un `local.yaml` también puede llegar con un clon). `proyectos_confiables` solo se lee de la global.
 
-Los agentes no heredan secretos del entorno: se retiran las credenciales conocidas de los proveedores, todas las `TRAMTAI_*` (el token del servicio) y cualquier variable cuyo nombre contenga `API_KEY`, `TOKEN`, `SECRET`, `PASSWORD` o `CREDENTIAL` (`GITHUB_TOKEN`, `AWS_SECRET_ACCESS_KEY`…). Cada CLI solo conserva las variables secretas con los prefijos de su propio proveedor (`CLAUDE_` y `ANTHROPIC_` para Claude, `CODEX_` y `OPENAI_` para Codex, `GEMINI_` para Antigravity), y la clave que necesita se la pasa Tramtai según el modo de autenticación. La consulta `--version` se ejecuta sin ninguna clave.
+Los agentes no heredan secretos del entorno: se retiran las credenciales conocidas de los proveedores, todas las `TRAMTAI_*` (el token del servicio) y cualquier variable cuyo nombre contenga `API_KEY`, `TOKEN`, `SECRET`, `PASSWORD` o `CREDENTIAL` (`GITHUB_TOKEN`, `AWS_SECRET_ACCESS_KEY`…). Cada CLI solo conserva las variables secretas con los prefijos de su propio proveedor (`CLAUDE_` y `ANTHROPIC_` para Claude, `CODEX_` y `OPENAI_` para Codex, `GEMINI_` para Antigravity; Copilot no conserva ninguna `COPILOT_*` heredada, ni `GH_TOKEN` ni `GITHUB_TOKEN`), y la clave que necesita se la pasa Tramtai según el modo de autenticación. La consulta `--version` se ejecuta sin ninguna clave.
 
 ## Cumplimiento de proveedores
 

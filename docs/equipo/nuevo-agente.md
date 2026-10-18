@@ -25,6 +25,10 @@ Antes de escribir código, se prueba el CLI tal como lo instala el usuario y se 
 - **Persistencia:** qué deja guardado (sesiones, historial, memoria) y cómo evitarlo.
 - **Canario** (`pruebas/canario`): un mensaje hostil que pide leer un archivo, ejecutar una orden y abrir una URL local.
   Se anota con qué opciones falla y con cuáles pasa. Sin un canario que pase, la ficha va con `PermitidoEnApps: false`.
+  Comprueba que la opción que quita las herramientas de verdad se aplica: con Copilot, `--available-tools=` (vacío) se
+  ignoraba y el agente leyó el archivo trampa; `--available-tools none` sí deja la lista vacía.
+- **En Windows:** si se instala con npm, en el PATH queda un envoltorio `.cmd`, que `ResolverPrograma` rechaza. Busca el
+  ejecutable nativo del paquete de la plataforma, como hace `programa` en `internal/agentes/copilot`.
 
 ## 2. El módulo
 
@@ -40,8 +44,8 @@ Antes de escribir código, se prueba el CLI tal como lo instala el usuario y se 
   | `Nombre` | El id, el que va delante de `agente/modelo` (`claude`). |
   | `NombreVisible`, `Programa` | Cómo se muestra («Claude») y el CLI o servicio que hay detrás («Claude Code»). |
   | `Codigo`, `ColorClaro`, `ColorOscuro`, `Orden` | Las dos letras y el color de su línea en la Web UI, y su lugar en las listas. Únicos. |
-  | `Streaming`, `SalidaEstructurada`, `ModeloEfectivoInformado` | Lo que garantiza, según la M0. |
-  | `ValoresEsfuerzo`, `EsfuerzoPredeterminado` | El valor del CLI para cada nivel de `nucleo.NivelesEsfuerzo` (hasta su máximo) y, si se conoce, el que usa por defecto con cada modelo. |
+  | `Streaming`, `SalidaEstructurada`, `ModeloEfectivoInformado` | Lo que garantiza, según la M0. Sin salida estructurada propia, el adaptador pide el formato en las instrucciones (ver `instruccionesSalida` en Copilot) y Tramtai valida igual. |
+  | `ValoresEsfuerzo`, `EsfuerzoPredeterminado`, `ModelosSinEsfuerzo` | El valor del CLI para cada nivel de `nucleo.NivelesEsfuerzo` (hasta su máximo); si se conoce, el que usa por defecto con cada modelo; y los modelos con los que no se puede elegir (`""` es su predeterminado; en Copilot, el automático). |
   | `Autenticaciones` (si incluye `suscripcion`, el adaptador cumple `adaptadores.ConAutenticacion`), `VariablesClave` | Los modos que admite y las variables de su clave, la preferida primero. Cada variable debe estar en `variablesCredenciales` (`adaptadores/comun.go`): se retira del entorno de los demás CLI. La primera es la que Agentes muestra en `tramtai claves guardar` y debe estar en `credenciales.Nombres` (`internal/credenciales`). |
   | `Comando`, `Concurrencia` | Los valores predeterminados de `comandos_agentes.<nombre>` y `concurrencia_servicio.adaptadores.<nombre>`. |
   | `PermitidoEnApps` | `true` solo si su canario pasó. |
@@ -74,5 +78,7 @@ Una línea en `fichas` de `internal/agentes/catalogo.go`. Con eso:
 ## 5. Textos y documentación
 
 - Mensajes nuevos en Go con `idioma.T`/`Tf` y su traducción en `internal/idioma/en_*.go` (`TestCobertura`).
-- Ayuda (`web/src/idiomas`), README, `site/ayuda.html`, `docs/arquitectura.md` (sus diferencias en la tabla de
-  adaptadores) y `docs/equipo/pendientes.md`.
+- Ayuda (`web/src/idiomas`), README (también su sección en inglés), `site/index.html` (mapa, sección de agentes y
+  marcas), `site/ayuda.html`, `TERMINOS.md` si admite suscripción, `docs/arquitectura.md` (sus diferencias en la tabla
+  de adaptadores) y `docs/equipo/pendientes.md`.
+- Textos que nombren agentes en la Web UI: búscalos (`Claude y Codex`…) y déjalos genéricos o al día.
