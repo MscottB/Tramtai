@@ -1334,3 +1334,16 @@ func TestEntradaNoCabeNoGastaPeticion(t *testing.T) {
 		t.Fatalf("una entrada que no cabe no gasta petición del presupuesto: %+v %v", dia, err)
 	}
 }
+
+// Con el modelo automático de Copilot no se elige esfuerzo: el intento no anota uno que el CLI no usa.
+func TestIntentoSinEsfuerzoConCopilotAuto(t *testing.T) {
+	sinVersion := func(string, string) string { return "" }
+	for _, modelo := range []string{"", "auto"} {
+		if i := nuevoIntento(candidato{agente: "copilot", modelo: modelo}, "alto", sinVersion); i.Esfuerzo != "" {
+			t.Fatalf("copilot/%s: esfuerzo %q", modelo, i.Esfuerzo)
+		}
+	}
+	if i := nuevoIntento(candidato{agente: "copilot", modelo: "gpt-6-luna"}, "alto", sinVersion); i.Esfuerzo != "alto" {
+		t.Fatalf("copilot con un modelo concreto: esfuerzo %q", i.Esfuerzo)
+	}
+}

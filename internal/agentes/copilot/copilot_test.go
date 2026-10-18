@@ -23,6 +23,7 @@ type registro struct {
 	Entorno []string `json:"entorno"`
 	Home    string   `json:"home"`
 	Config  string   `json:"config"`
+	Dir     string   `json:"dir"`
 }
 
 // TestMain hace de copilot falso cuando FALSO_COPILOT_REGISTRO está definido (Tramtai quita las variables COPILOT_*
@@ -32,7 +33,8 @@ func TestMain(m *testing.M) {
 		entrada, _ := io.ReadAll(os.Stdin)
 		home := os.Getenv("COPILOT_HOME")
 		config, _ := os.ReadFile(filepath.Join(home, "config.json"))
-		datos, _ := json.Marshal(registro{Entrada: string(entrada), Args: os.Args[1:], Entorno: os.Environ(), Home: home, Config: string(config)})
+		dir, _ := os.Getwd()
+		datos, _ := json.Marshal(registro{Entrada: string(entrada), Args: os.Args[1:], Entorno: os.Environ(), Home: home, Config: string(config), Dir: dir})
 		os.WriteFile(archivo, datos, 0o600)
 		if os.Getenv("FALSO_COPILOT_FALLO") != "" {
 			fmt.Fprintf(os.Stderr, "Error: Model \"%s\" from --model flag is not available. %s\n", os.Args[4], os.Getenv("COPILOT_GITHUB_TOKEN"))
@@ -43,7 +45,11 @@ func TestMain(m *testing.M) {
 			uso, _ := os.ReadFile(filepath.Join(muestras, "uso.json"))
 			os.WriteFile(os.Args[i+1], uso, 0o600)
 		}
-		salida, _ := os.ReadFile(filepath.Join(muestras, "salida.jsonl"))
+		nombre := os.Getenv("FALSO_COPILOT_SALIDA")
+		if nombre == "" {
+			nombre = "salida.jsonl"
+		}
+		salida, _ := os.ReadFile(filepath.Join(muestras, nombre))
 		os.Stdout.Write(salida)
 		os.Exit(0)
 	}
@@ -103,6 +109,7 @@ func TestCopilotConSesion(t *testing.T) {
 	t.Setenv("OPENAI_API_KEY", "clave-openai-de-prueba")
 	t.Setenv("COPILOT_PROVIDER_API_KEY", "clave-byok-de-prueba")
 	t.Setenv("COPILOT_PROVIDER_BASE_URL", "http://127.0.0.1:1")
+	t.Setenv("COPILOT_GITHUB_TOKEN", "github_pat_que_no_debe_llegar")
 
 	var textos, avisos []string
 	r, err := suscripcion().Ejecutar(context.Background(), solicitud("Responde solo con la palabra: piña"), func(e adaptadores.Evento) error {
@@ -123,7 +130,7 @@ func TestCopilotConSesion(t *testing.T) {
 	if r.Uso.TokensEntrada != 12160+40+100 || r.Uso.TokensSalida != 7 {
 		t.Fatalf("uso %+v", r.Uso)
 	}
-	if len(avisos) != 1 || !strings.Contains(avisos[0], "1") {
+	if len(avisos) != 1 || !strings.HasSuffix(avisos[0], "): 1") {
 		t.Fatalf("avisos %q", avisos)
 	}
 
@@ -203,6 +210,59 @@ func TestCopilotPideElFormato(t *testing.T) {
 	}
 }
 
+func TestCopilotDetieneHerramientas(t *testing.T) {
+	falso(t)
+	t.Setenv("FALSO_COPILOT_SALIDA", "herramienta.jsonl")
+	t.Setenv("COPILOT_GITHUB_TOKEN", "github_pat_de_prueba_123")
+	c := Copilot{Programa: os.Args[0], Autenticacion: adaptadores.NuevoModo(adaptadores.AutenticacionClaveAPI)}
+	r, err := c.Ejecutar(context.Background(), solicitud("lee un archivo"), func(adaptadores.Evento) error { return nil })
+	if nucleo.CodigoDe(err) != nucleo.CodigoErrorAgente || !strings.Contains(err.Error(), "herramienta") {
+		t.Fatalf("una petición de herramienta debe cortar la ejecución: %v (%+v)", err, r)
+	}
+}
+
+func TestCopilotConsciente(t *testing.T) {
+	archivo := falso(t)
+	t.Setenv("COPILOT_GITHUB_TOKEN", "github_pat_de_prueba_123")
+	raiz := t.TempDir()
+	s := solicitud("hola")
+	s.ModoContexto, s.RaizProyecto = "consciente_proyecto", raiz
+	c := Copilot{Programa: os.Args[0], Autenticacion: adaptadores.NuevoModo(adaptadores.AutenticacionClaveAPI)}
+	if _, err := c.Ejecutar(context.Background(), s, func(adaptadores.Evento) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	reg := leerRegistro(t, archivo)
+	if slices.Contains(reg.Args, "--no-custom-instructions") || !mismaRuta(reg.Dir, raiz) {
+		t.Fatalf("en modo consciente carga las instrucciones del proyecto y trabaja en su raíz: %q en %q", reg.Args, reg.Dir)
+	}
+}
+
+func mismaRuta(a, b string) bool {
+	x, _ := filepath.EvalSymlinks(a)
+	y, _ := filepath.EvalSymlinks(b)
+	return strings.EqualFold(x, y)
+}
+
+// Los créditos pueden ser fraccionarios y los errores llegar como eventos: ninguno hace perder el resultado.
+func TestLeerResultadoYErrores(t *testing.T) {
+	var e estado
+	for _, linea := range []string{
+		`{"type":"session.error","data":{"message":"Rate limit exceeded"}}`,
+		`{"type":"result","exitCode":0,"usage":{"premiumRequests":0.33}}`,
+	} {
+		if err := e.leer(linea, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !e.terminado || e.creditos != 0.33 || len(e.errores) != 1 || e.errores[0] != "Rate limit exceeded" {
+		t.Fatalf("estado %+v", e)
+	}
+	var raro estado
+	if raro.leer(`{"type":"result","exitCode":0,"usage":{"premiumRequests":"mucho"}}`, nil); !raro.terminado {
+		t.Fatal("un uso con otra forma no debe hacer perder el result")
+	}
+}
+
 func TestCopilotModeloNoDisponible(t *testing.T) {
 	falso(t)
 	t.Setenv("FALSO_COPILOT_FALLO", "1")
@@ -231,6 +291,14 @@ func TestCopilotSinSesion(t *testing.T) {
 	sesionDeUsuario(t)
 	if e := suscripcion().Detectar(context.Background()); e.Problema != "" {
 		t.Fatalf("Detectar con sesión: %+v", e)
+	}
+	roto := t.TempDir()
+	if err := os.WriteFile(filepath.Join(roto, "config.json"), []byte(`{"loggedInUsers": [`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("COPILOT_HOME", roto)
+	if e := suscripcion().Detectar(context.Background()); !strings.Contains(e.Problema, "config.json") {
+		t.Fatalf("un config.json roto no es «sin sesión»: %+v", e)
 	}
 }
 

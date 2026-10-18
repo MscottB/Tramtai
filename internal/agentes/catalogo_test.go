@@ -124,8 +124,8 @@ func TestNivelesDeModelo(t *testing.T) {
 }
 
 func TestSuscripcionYApps(t *testing.T) {
-	if !AdmiteSuscripcion("claude") || !AdmiteSuscripcion("codex") || AdmiteSuscripcion("gemini") || AdmiteSuscripcion("antigravity") {
-		t.Fatal("solo Claude y Codex admiten la suscripción")
+	if !AdmiteSuscripcion("claude") || !AdmiteSuscripcion("codex") || !AdmiteSuscripcion("copilot") || AdmiteSuscripcion("gemini") || AdmiteSuscripcion("antigravity") {
+		t.Fatal("solo Claude, Codex y Copilot admiten la suscripción")
 	}
 	c := nucleo.Resolver()
 	if PermitidoEnApps(c, "antigravity") || !PermitidoEnApps(c, "claude") || !PermitidoEnApps(c, "simulado") {

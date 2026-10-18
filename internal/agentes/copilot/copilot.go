@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -35,7 +37,7 @@ func (c Copilot) Detectar(ctx context.Context) adaptadores.Estado {
 		Terminos: idioma.T("términos de GitHub Copilot: tu cuenta y tu plan; cada petición gasta créditos")}
 	if c.Autenticacion.Valor() == adaptadores.AutenticacionSuscripcion {
 		if _, err := sesion(); err != nil {
-			e.Problema, e.ProblemaCodigo = idioma.T("no hay sesión de Copilot: inicia sesión con copilot login"), adaptadores.ProblemaFaltaClave
+			e.Problema, e.ProblemaCodigo = problemaSesion(err), adaptadores.ProblemaFaltaClave
 		}
 	} else if adaptadores.ClaveEntorno(variableClave) == "" {
 		e.Problema, e.ProblemaCodigo = idioma.T("falta COPILOT_GITHUB_TOKEN"), adaptadores.ProblemaFaltaClave
@@ -73,8 +75,11 @@ func (c Copilot) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emit
 	case adaptadores.AutenticacionSuscripcion:
 		config, err := sesion()
 		if err != nil {
-			return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente,
-				idioma.T("no hay sesión de Copilot: inicia sesión con copilot login o configura adaptadores.copilot.autenticacion: clave_api"))
+			mensaje := problemaSesion(err)
+			if sinSesion(err) {
+				mensaje = idioma.T("no hay sesión de Copilot: inicia sesión con copilot login o configura adaptadores.copilot.autenticacion: clave_api")
+			}
+			return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente, mensaje)
 		}
 		if err := os.WriteFile(filepath.Join(home, "config.json"), config, 0o600); err != nil {
 			return adaptadores.Resultado{}, err
@@ -95,15 +100,23 @@ func (c Copilot) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emit
 	if formato != "" {
 		sistema = strings.TrimSpace(sistema + "\n\n" + formato)
 	}
-	var e estado
-	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: argumentos(s, archivoUso),
+	// Salvaguarda: si una versión de Copilot dejara de respetar la lista vacía de herramientas, la ejecución se corta en
+	// cuanto pida una (procesos.Ejecutar no corta el proceso porque la lectura devuelva un error: hace falta cancelar).
+	ctxCLI, cancelar := context.WithCancel(ctx)
+	defer cancelar()
+	e := estado{detener: cancelar}
+	r, err := procesos.Ejecutar(ctxCLI, procesos.Orden{Programa: ruta, Argumentos: argumentos(s, archivoUso),
 		Directorio: adaptadores.DirectorioTrabajo(s, espacio), Entorno: entorno(extra),
 		Entrada: adaptadores.EnmarcarSistema(sistema, prompt)}, func(linea string) error { return e.leer(linea, emitir) })
+	if e.herramienta && ctx.Err() == nil {
+		return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorAgente,
+			idioma.T("copilot intentó usar una herramienta y se detuvo: Tramtai lo ejecuta sin herramientas"))
+	}
 	if err != nil {
 		return adaptadores.Resultado{}, err
 	}
 	if !e.terminado || e.codigo != 0 {
-		texto := adaptadores.RedactarCon(strings.TrimSpace(r.Errores), clave)
+		texto := adaptadores.RedactarCon(strings.TrimSpace(strings.Join(e.errores, "\n")+"\n"+r.Errores), clave)
 		switch {
 		case texto == "" && !e.terminado:
 			return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.T("copilot terminó sin result"))
@@ -113,7 +126,7 @@ func (c Copilot) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emit
 		return adaptadores.Resultado{}, nucleo.NuevoError(adaptadores.Clasificar(texto, 0), texto)
 	}
 	if e.creditos > 0 {
-		if err := emitir(adaptadores.Evento{Tipo: "aviso", Datos: idioma.Tf("Créditos de tu plan de Copilot gastados (premium requests): %d", e.creditos)}); err != nil {
+		if err := emitir(adaptadores.Evento{Tipo: "aviso", Datos: idioma.Tf("Créditos de tu plan de Copilot gastados (premium requests): %g", e.creditos)}); err != nil {
 			return adaptadores.Resultado{}, err
 		}
 	}
@@ -175,6 +188,16 @@ func entorno(extra []string) []string {
 
 var errSinSesion = errors.New("sin sesión de Copilot")
 
+// sinSesion distingue «no hay sesión» de un config.json que no se pudo leer o entender.
+func sinSesion(err error) bool { return errors.Is(err, errSinSesion) || errors.Is(err, fs.ErrNotExist) }
+
+func problemaSesion(err error) string {
+	if sinSesion(err) {
+		return idioma.T("no hay sesión de Copilot: inicia sesión con copilot login")
+	}
+	return idioma.Tf("no se pudo leer la sesión de Copilot: %v", err)
+}
+
 // sesion devuelve el config.json para el COPILOT_HOME privado: solo la cuenta con la que el usuario inició sesión
 // (loggedInUsers y lastLoggedInUser, sin secretos: el token está en el almacén del sistema).
 func sesion() ([]byte, error) {
@@ -186,7 +209,8 @@ func sesion() ([]byte, error) {
 		}
 		dir = filepath.Join(inicio, ".copilot")
 	}
-	datos, err := os.ReadFile(filepath.Join(dir, "config.json"))
+	archivo := filepath.Join(dir, "config.json")
+	datos, err := os.ReadFile(archivo)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +221,7 @@ func sesion() ([]byte, error) {
 		Ultimo   json.RawMessage   `json:"lastLoggedInUser"`
 	}
 	if err := json.Unmarshal([]byte(strings.Join(lineas, "\n")), &config); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", archivo, err)
 	}
 	if len(config.Usuarios) == 0 {
 		return nil, errSinSesion
@@ -237,11 +261,21 @@ func esArchivo(ruta string) bool {
 
 // estado es lo que se va leyendo del JSONL de Copilot.
 type estado struct {
-	mensajes  []string
-	modelo    string
-	terminado bool
-	codigo    int
-	creditos  int
+	mensajes    []string
+	errores     []string // los que Copilot informa como eventos, además de stderr
+	modelo      string
+	terminado   bool
+	codigo      int
+	creditos    float64 // los multiplicadores de los planes de pago son fraccionarios (0,33×…)
+	herramienta bool    // pidió una herramienta: se corta la ejecución
+	detener     func()
+}
+
+func (e *estado) pararPorHerramienta() {
+	e.herramienta = true
+	if e.detener != nil {
+		e.detener()
+	}
 }
 
 func (e *estado) leer(linea string, emitir func(adaptadores.Evento) error) error {
@@ -255,6 +289,10 @@ func (e *estado) leer(linea string, emitir func(adaptadores.Evento) error) error
 			return emitir(adaptadores.Evento{Tipo: "texto", Datos: ev.Data.DeltaContent})
 		}
 	case "assistant.message":
+		if len(ev.Data.ToolRequests) > 0 {
+			e.pararPorHerramienta()
+			return nil
+		}
 		if ev.Data.Content != "" {
 			e.mensajes = append(e.mensajes, ev.Data.Content)
 		}
@@ -262,7 +300,21 @@ func (e *estado) leer(linea string, emitir func(adaptadores.Evento) error) error
 	case "session.auto_mode_resolved":
 		e.modelo = cmp.Or(e.modelo, ev.Data.ChosenModel)
 	case "result":
-		e.terminado, e.codigo, e.creditos = true, ev.ExitCode, ev.Usage.PremiumRequests
+		e.terminado, e.codigo = true, ev.ExitCode
+		// El uso va aparte: un cambio en su forma no debe hacer perder el resultado.
+		var uso struct {
+			PremiumRequests float64 `json:"premiumRequests"`
+		}
+		if json.Unmarshal(ev.Usage, &uso) == nil {
+			e.creditos = uso.PremiumRequests
+		}
+	default:
+		switch {
+		case strings.HasPrefix(ev.Type, "tool."):
+			e.pararPorHerramienta()
+		case strings.HasSuffix(ev.Type, "error") && ev.Data.Message != "":
+			e.errores = append(e.errores, ev.Data.Message)
+		}
 	}
 	return nil // los demás tipos son informativos
 }
@@ -270,15 +322,15 @@ func (e *estado) leer(linea string, emitir func(adaptadores.Evento) error) error
 type eventoCopilot struct {
 	Type string `json:"type"`
 	Data struct {
-		DeltaContent string `json:"deltaContent"`
-		Content      string `json:"content"`
-		Model        string `json:"model"`
-		ChosenModel  string `json:"chosenModel"`
+		DeltaContent string            `json:"deltaContent"`
+		Content      string            `json:"content"`
+		Model        string            `json:"model"`
+		ChosenModel  string            `json:"chosenModel"`
+		Message      string            `json:"message"`
+		ToolRequests []json.RawMessage `json:"toolRequests"`
 	} `json:"data"`
-	ExitCode int `json:"exitCode"`
-	Usage    struct {
-		PremiumRequests int `json:"premiumRequests"`
-	} `json:"usage"`
+	ExitCode int             `json:"exitCode"`
+	Usage    json.RawMessage `json:"usage"`
 }
 
 // leerUso suma los tokens de cada modelo del archivo de --usage-output-file; sin archivo, el uso queda en cero.
