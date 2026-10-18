@@ -1,0 +1,12 @@
+{
+  "totalPremiumRequestCost": 1,
+  "modelMetrics": {
+    "mai-code-1.1-flash": {
+      "requests": {"count": 1, "cost": 1},
+      "usage": {"inputTokens": 12160, "outputTokens": 5, "cacheReadTokens": 40, "cacheWriteTokens": 0, "reasoningTokens": 0}
+    },
+    "gpt-6-luna": {
+      "usage": {"inputTokens": 100, "outputTokens": 2, "cacheReadTokens": 0, "cacheWriteTokens": 0}
+    }
+  }
+}

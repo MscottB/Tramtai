@@ -1,0 +1,9 @@
+{"type":"session.info","data":{"infoType":"configuration","message":"Unknown tool name in the tool allowlist: \"none\""},"ephemeral":true}
+línea informativa que no es JSON
+{"type":"session.auto_mode_resolved","data":{"chosenModel":"mai-code-1.1-flash","routingMethod":"auto_v2","fallback":false},"ephemeral":true}
+{"type":"assistant.turn_start","data":{"turnId":"0"}}
+{"type":"assistant.message_delta","data":{"deltaContent":"pi"},"ephemeral":true}
+{"type":"assistant.message_delta","data":{"deltaContent":"ña"},"ephemeral":true}
+{"type":"assistant.message","data":{"model":"mai-code-1.1-flash","providerId":"copilot","content":"piña","toolRequests":[],"phase":"final_answer"}}
+{"type":"assistant.turn_end","data":{"turnId":"0"}}
+{"type":"result","exitCode":0,"usage":{"premiumRequests":1,"totalApiDurationMs":823}}

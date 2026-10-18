@@ -28,7 +28,7 @@ const FormatoSerializacion = "tramtai-turnos-v2"
 
 // variablesCredenciales se retiran del entorno heredado: cada CLI recibe solo la suya.
 var variablesCredenciales = []string{"ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN",
-	"CODEX_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"}
+	"CODEX_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"}
 
 // Estado es el resultado de la detección de un adaptador para el diagnóstico.
 type Estado struct {

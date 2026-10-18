@@ -10,12 +10,13 @@ import (
 	"tramtai/internal/agentes/antigravity"
 	"tramtai/internal/agentes/claude"
 	"tramtai/internal/agentes/codex"
+	"tramtai/internal/agentes/copilot"
 	"tramtai/internal/agentes/gemini"
 	"tramtai/internal/nucleo"
 )
 
 // fichas son los agentes que conoce Tramtai, en el orden de su ficha.
-var fichas = ordenar(claude.Ficha, codex.Ficha, gemini.Ficha, antigravity.Ficha)
+var fichas = ordenar(claude.Ficha, codex.Ficha, copilot.Ficha, gemini.Ficha, antigravity.Ficha)
 
 func ordenar(lista ...adaptadores.Ficha) []adaptadores.Ficha {
 	slices.SortStableFunc(lista, func(a, b adaptadores.Ficha) int { return a.Orden - b.Orden })
