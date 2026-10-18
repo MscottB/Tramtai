@@ -195,6 +195,8 @@ export interface Modelo {
   // contexto_tokens es el contexto conocido del modelo y contexto_origen de dónde sale (configurado o informado).
   contexto_tokens?: number
   contexto_origen?: string
+  // esfuerzo_espacio, solo en el modelo predeterminado: el esfuerzo que el espacio usa con él (vacío, el de su agente).
+  esfuerzo_espacio?: string
 }
 // LimitesPeticion son los topes de una petición y de sus cargas (/api/v1/limites).
 export interface LimitesPeticion {
@@ -356,7 +358,8 @@ export const api = {
   configuracion: () =>
     pedir<{ configuracion: EntradaConfiguracion[] }>('GET', '/api/v1/instancia/configuracion').then((r) => r.configuracion),
   catalogo: () => pedir<{ modelos: Modelo[] }>('GET', '/api/v1/modelos').then((r) => r.modelos),
-  fijarPredeterminado: (modelo: string) => pedir<void>('POST', '/api/v1/instancia/predeterminado', { modelo }),
+  // fijarPredeterminado guarda el modelo predeterminado y, si se indica, su esfuerzo ('' = el del agente).
+  fijarPredeterminado: (modelo: string, esfuerzo?: string) => pedir<void>('POST', '/api/v1/instancia/predeterminado', { modelo, esfuerzo }),
   // capacidades comprueba cada agente con hasta 10 s por agente: lleva un plazo mayor.
   capacidades: () => pedir<{ adaptadores: Adaptador[]; entradas?: string[] }>('GET', '/api/v1/capacidades', undefined, 60000),
   // trabajos lista los más recientes; filtro acota por API, grupo, origen o fecha (antes, para la página siguiente).
@@ -620,14 +623,34 @@ export function opcionEscrita(valor: string): OpcionModelo {
     value: valor, predeterminado: false, esfuerzos: [] }
 }
 
-// agruparOpciones ordena las opciones por grupo (los perfiles, y los agentes en el orden de la red) con un título por
-// grupo; dentro, primero el modelo de su CLI, luego los configurados y al final las versiones vistas.
+// problemasAgentes dice por qué no se puede usar cada agente (no instalado, sin sesión o clave…); comprobar los CLI
+// tarda, así que se pide una vez por sesión de la página y se renueva cuando Agentes vuelve a comprobarlos.
+export const problemasAgentes = ref<Record<string, string>>({})
+let disponibilidad: Promise<void> | undefined
+export function fijarDisponibilidad(adaptadores: Adaptador[]) {
+  problemasAgentes.value = Object.fromEntries(adaptadores.filter((a) => a.problema).map((a) => [a.agente,
+    a.problema_codigo === 'no_instalado' ? t('modelo.noInstalado') : a.problema_codigo === 'falta_clave' ? t('modelo.faltaClave') : t('modelo.conProblema', { problema: a.problema ?? '' })]))
+}
+export function cargarDisponibilidad() {
+  disponibilidad ??= api.capacidades().then((r) => fijarDisponibilidad(r.adaptadores)).catch(() => {
+    disponibilidad = undefined // sin respuesta no se marca nada: se vuelve a pedir la próxima vez
+  })
+  return disponibilidad
+}
+
+// esfuerzoEspacio es el esfuerzo que el espacio usa con su modelo predeterminado ('' si usa el de su agente).
+export const esfuerzoEspacio = (catalogo: Modelo[]) => catalogo.find((m) => m.predeterminado)?.esfuerzo_espacio ?? ''
+
+// agruparOpciones ordena las opciones por grupo (los perfiles, los agentes en el orden de la red y al final los que no
+// se pueden usar) con un título por grupo; dentro, primero el modelo de su CLI, luego los configurados y al final las
+// versiones vistas.
 export function agruparOpciones(lista: OpcionModelo[]): OpcionModelo[] {
-  const lugar = (g: string) => (g === 'perfil' ? -1 : ordenAgentes.includes(g) ? ordenAgentes.indexOf(g) : ordenAgentes.length)
+  const apagado = (g: string) => lista.filter((o) => o.grupo === g).every((o) => o.disable)
+  const lugar = (g: string) => (apagado(g) ? 100 : 0) + (g === 'perfil' ? -1 : ordenAgentes.includes(g) ? ordenAgentes.indexOf(g) : ordenAgentes.length)
   const rango = (o: OpcionModelo) => (o.grupo === 'perfil' ? 1 : !o.value.includes('/') ? 0 : o.exacta ? 2 : 1)
   const grupos = [...new Set(lista.map((o) => o.grupo))].sort((a, b) => lugar(a) - lugar(b) || a.localeCompare(b))
   return grupos.flatMap((g) => [
-    { label: g === 'perfil' ? t('conectar.perfiles') : nombreAgente(g), corto: '', caption: '', version: '', grupo: g, value: '#' + g,
+    { label: (g === 'perfil' ? t('conectar.perfiles') : nombreAgente(g)) + (apagado(g) ? ' · ' + t('modelo.noDisponible') : ''), corto: '', caption: '', version: '', grupo: g, value: '#' + g,
       predeterminado: false, esfuerzos: [], cabecera: true, disable: true },
     ...lista.filter((o) => o.grupo === g).sort((a, b) => rango(a) - rango(b) || a.corto.localeCompare(b.corto)),
   ])

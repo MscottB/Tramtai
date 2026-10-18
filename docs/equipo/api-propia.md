@@ -105,6 +105,15 @@ con su botón (conectar una app de OpenAI, documentos por la API propia, API con
 averiguar por qué falló); conceptos; «Si algo falla» con los errores más comunes y qué hacer; preguntas frecuentes por
 categoría, con «¿Qué URL uso?» y «¿Cómo veo mi prueba como código?».
 
+## 9. Selectores de modelo y esfuerzo predeterminado
+
+Pedido por el usuario antes de publicar: los botones de buscar versión nueva dicen «Buscar actualización ahora»; el
+selector de modelo deja al final, apagados y con el motivo (no instalado, falta la sesión o la clave), los agentes que
+no se pueden usar, según la comprobación de Agentes (una vez por sesión de la página); los modelos permitidos de Mis
+APIs usan el mismo selector agrupado; y Ajustes elige, junto al modelo predeterminado (con su versión), su esfuerzo
+(`predeterminados.esfuerzo`), que se aplica cuando la petición no elige agente ni esfuerzo y que Probar muestra como
+«El del espacio (nivel)».
+
 ## Documentación
 
 - `docs/api.md`: sección «¿Qué URL uso?» (la tabla de la sección 1) y una guía paso a paso de la API propia: subir,

@@ -9,6 +9,7 @@
       @update:model-value="(v) => cambiar({ modelo: v as string | null, forzar: v ? modelValue.forzar : false })" />
     <div v-if="sinAntigravity" class="text-caption texto-suave q-mt-xs">{{ t('receta.sinAntigravity') }}</div>
     <SelectorEsfuerzo :model-value="modelValue.esfuerzo" :niveles="niveles" :predeterminado="esfuerzoPredeterminadoDe(catalogo, modelValue.modelo)" :hint="paraApi ? t('esfuerzo.api') : undefined"
+      :vacio="delEspacio ? t('esfuerzo.espacioCon', { nivel: nombreEsfuerzo(delEspacio).toLowerCase() }) : undefined"
       @update:model-value="(v: string) => cambiar({ esfuerzo: v })" />
     <component :is="plegarOpciones ? QExpansionItem : 'div'" v-bind="plegarOpciones ? plegable : {}">
     <div class="q-gutter-y-md" :class="{ 'q-pt-sm': plegarOpciones }">
@@ -43,7 +44,7 @@ import { computed, ref, watch } from 'vue'
 import { QExpansionItem } from 'quasar'
 import SelectorEsfuerzo from './SelectorEsfuerzo.vue'
 import SelectorModelo from './SelectorModelo.vue'
-import { dividirRespaldo, esfuerzoPredeterminadoDe, esfuerzosDe, esquemaDeReceta, nombreEsfuerzo, opcionModelo, unirRespaldo, type Modelo,
+import { dividirRespaldo, esfuerzoEspacio, esfuerzoPredeterminadoDe, esfuerzosDe, esquemaDeReceta, nombreEsfuerzo, opcionModelo, unirRespaldo, type Modelo,
   type Receta } from '../api'
 import { t } from '../i18n'
 
@@ -86,12 +87,14 @@ function esfuerzoRespaldo(i: number, esfuerzo: string) {
 // vacioRespaldo dice qué esfuerzo usa un respaldo sin uno propio: el del principal (ajustado al máximo de ese agente,
 // como hace el servicio) o, si no hay, el de su CLI.
 function vacioRespaldo(base: string, niveles: string[]): string {
-  const principal = props.modelValue.esfuerzo
+  const principal = props.modelValue.esfuerzo || delEspacio.value
   if (principal) return t('receta.respaldoIgual', { nivel: nombreEsfuerzo(niveles.includes(principal) ? principal : niveles.at(-1)).toLowerCase() })
   const p = esfuerzoPredeterminadoDe(props.catalogo, base)
   return p ? t('esfuerzo.agenteCon', { nivel: nombreEsfuerzo(p).toLowerCase() }) : t('esfuerzo.agente')
 }
 
+// delEspacio es el esfuerzo que se usará sin elegir uno: el del espacio, que solo va con su modelo predeterminado.
+const delEspacio = computed(() => (props.modelValue.modelo ? '' : esfuerzoEspacio(props.catalogo)))
 const todosLosNiveles = computed(() => props.catalogo.reduce<string[]>((a, m) => ((m.esfuerzos?.length ?? 0) > a.length ? m.esfuerzos! : a), []))
 const niveles = computed(() => (!props.modelValue.modelo && props.paraApi ? todosLosNiveles.value : esfuerzosDe(props.catalogo, props.modelValue.modelo)))
 // Un nivel que el modelo nuevo no admite vuelve al del agente.

@@ -166,8 +166,7 @@
                   <q-option-group v-model="formulario.contratos" type="checkbox" inline
                     :options="contratos.map((value) => ({ label: nombreContrato(value), value }))" />
                 </div>
-                <q-select v-model="formulario.permitidos" :options="opciones" emit-value map-options outlined dense multiple use-chips
-                  use-input new-value-mode="add-unique" :label="t('puntos.permitidos')" :hint="t('puntos.permitidosHint')" />
+                <SelectorModelo v-model="formulario.permitidos" :opciones="opciones" multiple icono="o_rule" :label="t('puntos.permitidos')" :hint="t('puntos.permitidosHint')" />
                 <q-input v-model="formulario.alias" type="textarea" autogrow outlined dense :label="t('puntos.alias')" input-class="codigo"
                   :hint="t('puntos.aliasHint')" />
                 <EditorPresupuesto v-model="formulario.presupuesto" />
@@ -189,8 +188,7 @@
         </q-card-section>
         <q-card-section class="q-pt-none q-gutter-y-md">
           <EditorReceta v-model="ajustes.receta" :catalogo="catalogo" para-api />
-          <q-select v-model="ajustes.permitidos" :options="opciones" emit-value map-options outlined dense multiple use-chips
-            use-input new-value-mode="add-unique" :label="t('puntos.permitidos')" :hint="t('puntos.permitidosHint')" />
+          <SelectorModelo v-model="ajustes.permitidos" :opciones="opciones" multiple icono="o_rule" :label="t('puntos.permitidos')" :hint="t('puntos.permitidosHint')" />
           <EditorPresupuesto v-model="ajustes.presupuesto" />
         </q-card-section>
         <q-card-actions align="right" class="q-pa-md">
@@ -282,6 +280,7 @@ import EstadoVacio from '../componentes/EstadoVacio.vue'
 import EditorPresupuesto from '../componentes/EditorPresupuesto.vue'
 import EditorReceta from '../componentes/EditorReceta.vue'
 import GuiaUrls from '../componentes/GuiaUrls.vue'
+import SelectorModelo from '../componentes/SelectorModelo.vue'
 import { ajustesDeReceta, api, avisar, avisarError, codigoLinea, nombreAgente, ordenAgentes, configDeReceta, copiar, dividirRespaldo, etiquetaModelo, haceCuanto, idModeloDe as idModelo, nombreEsfuerzo, opcionModelo,
   cargarDiasHistorial, periodoHistorial, grupoInicial, origenHistorial, presupuestoLimpio, recetaDePunto, recetaInicial, recetaVacia, type ConfigPunto, type EstadoPresupuesto, type EstadoPunto, type Modelo,
   type Presupuesto, type UsoPunto } from '../api'

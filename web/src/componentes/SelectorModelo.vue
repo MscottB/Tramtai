@@ -17,7 +17,7 @@
         <span v-if="scope.opt.grupo !== 'perfil'" class="linea__chapa q-mr-sm" :class="'linea--' + scope.opt.grupo" aria-hidden="true">{{ codigoLinea(scope.opt.grupo) }}</span>
         <q-icon v-else name="o_tune" size="18px" class="q-mr-sm" />{{ scope.opt.label }}
       </q-item-label>
-      <q-item v-else v-bind="scope.itemProps" class="q-pl-lg">
+      <q-item v-else v-bind="scope.itemProps" class="q-pl-lg" :class="{ 'texto-suave': scope.opt.disable }">
         <q-item-section>
           <q-item-label>{{ scope.opt.corto }}</q-item-label>
           <q-item-label caption>{{ scope.opt.caption }}</q-item-label>
@@ -34,8 +34,8 @@
 <script setup lang="ts">
 // SelectorModelo elige un modelo del catálogo (o varios, para el respaldo), agrupado por agente y con la versión
 // exacta de cada uno; también acepta uno escrito como agente/modelo (por ejemplo una versión que aún no se usó).
-import { computed, ref } from 'vue'
-import { agruparOpciones, codigoLinea, opcionEscrita, type OpcionModelo } from '../api'
+import { computed, onMounted, ref } from 'vue'
+import { agruparOpciones, cargarDisponibilidad, codigoLinea, opcionEscrita, problemasAgentes, type OpcionModelo } from '../api'
 import { t } from '../i18n'
 
 const props = defineProps<{ modelValue: string | string[] | null; opciones: OpcionModelo[]; multiple?: boolean; maximo?: number; hint?: string; icono?: string }>()
@@ -44,7 +44,10 @@ const emit = defineEmits<{ 'update:modelValue': [valor: string | string[] | null
 const agentes = computed(() => new Set(props.opciones.map((o) => o.grupo).filter((g) => g !== 'perfil')))
 const elegidos = computed(() => (Array.isArray(props.modelValue) ? props.modelValue : props.modelValue ? [props.modelValue] : []))
 // todas añade los valores escritos a mano, que no están en el catálogo, para que se vean como una opción más.
-const todas = computed(() => [...props.opciones, ...elegidos.value.filter((v) => !props.opciones.some((o) => o.value === v)).map(opcionEscrita)])
+// Un agente no instalado o sin sesión no se puede elegir: sus modelos quedan al final, apagados y con el motivo.
+const todas = computed(() => [...props.opciones, ...elegidos.value.filter((v) => !props.opciones.some((o) => o.value === v)).map(opcionEscrita)]
+  .map((o) => (problemasAgentes.value[o.grupo] && !elegidos.value.includes(o.value) ? { ...o, disable: true, caption: problemasAgentes.value[o.grupo] } : o)))
+onMounted(() => cargarDisponibilidad())
 const filtro = ref('')
 const filtradas = computed(() => agruparOpciones(todas.value.filter((o) => `${o.label} ${o.caption} ${o.value}`.toLowerCase().includes(filtro.value))))
 const aviso = ref('')
