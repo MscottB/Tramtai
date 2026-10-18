@@ -231,6 +231,7 @@ func init() {
 		"salida.reintentos exige formato json o un esquema":                           "salida.reintentos requires the json format or a schema",
 		"reintentos_salida va de 0 a %d":                                              "reintentos_salida ranges from 0 to %d",
 		"solo se corrige un trabajo que falló porque la respuesta no cumplía el formato y que conservó esa respuesta (conservar_salida_invalida)": "only a job that failed because the response did not match the format, and that kept that response (conservar_salida_invalida), can be corrected",
+		"falta el esquema":                                   "the schema is missing",
 		"La respuesta no es JSON válido":                     "The response is not valid JSON",
 		"ámbito desconocido %q: usa global o proyecto":       "unknown scope %q: use global or proyecto",
 		"la instancia no está activa":                        "the workspace is not active",

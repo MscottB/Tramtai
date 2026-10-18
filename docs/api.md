@@ -53,13 +53,14 @@ de la API propia), y **Probar → Ver como código** da la prueba actual como pe
 | Método y ruta | Función |
 |---|---|
 | `POST /trabajos` | Crea un trabajo (`SolicitudEjecucion`). Responde 202 con el trabajo y `Location`; si la `Idempotency-Key` ya apuntaba a la misma solicitud, responde 200. |
-| `GET /trabajos/{id}` | Estado, error, modelo enviado y efectivo, uso, salida y `disponibilidad` (`disponible` o `expirada`). Tras la retención de metadatos (7 días) responde 404. |
+| `GET /trabajos/{id}` | Estado, error, modelo enviado y efectivo, uso, salida y `disponibilidad` (`disponible` o `expirada`). Si falló con `salida_no_cumple_esquema`, `errores_salida` lista los problemas de la última respuesta (`campo`, `problema` y `texto`; ver [Respuestas con forma](#respuestas-con-forma)). Tras la retención de metadatos (7 días) responde 404. |
 | `GET /trabajos/{id}/salida` | La salida con su tipo (`text/markdown`, `text/plain` o `application/json`). Si no ha terminado, 409 `trabajo_no_terminado`; si la retención ya la borró, 410 `resultado_expirado`. |
 | `GET /trabajos/{id}/eventos` | SSE con `id` monotónico: `estado`, `entrada` (antes de esperar al agente: lo que ocupa la entrada), `texto`, `aviso` e `intento` (al empezar cada intento, JSON con `agente`, `modelo`, `esfuerzo` y `del_agente`; un cliente que no lo espera lo ignora). `Last-Event-ID` (o `?desde=`) reanuda tras ese evento. Envía latidos cada 15 s y termina con un evento `fin`. Si el resultado expiró, empieza con un evento `aviso`: solo quedan los eventos de estado, entrada e intento. |
 | `GET /limites` | Los topes de una petición: `cargas_por_peticion` (20), `carga_mb`, `texto_convertido_mb`, `cuota_cargas_mb`, `cuerpo_mb` (16), `esquema_kb` (256), `mensajes` (1.000) y `reserva_salida_tokens`. Es rápida; `/capacidades` trae el mismo bloque en `limites`. |
-| `GET /trabajos/{id}/registro` | Los pasos de la petición con su hora, sin el texto de la respuesta: `{"eventos":[{"numero","tipo","datos","creado_en"}]}` con los eventos `estado`, `entrada` (caracteres, tokens estimados y cada documento de mayor a menor), `intento` y `aviso`. Mismos permisos que `GET /trabajos/{id}`. |
+| `GET /trabajos/{id}/registro` | Los pasos de la petición con su hora, sin el texto de la respuesta: `{"eventos":[{"numero","tipo","datos","creado_en"}]}` con los eventos `estado`, `entrada` (caracteres, tokens estimados y cada documento de mayor a menor), `intento` (en una corrección, con `correccion` y `correcciones`), `aviso` y `validacion` (los problemas de una respuesta que no cumplía el esquema). Mismos permisos que `GET /trabajos/{id}`. |
 | `POST /trabajos/{id}/cancelar` | Cancelación idempotente; responde 202 sin afirmar que ya terminó. |
-| `POST /trabajos/{id}/reintentar` | Crea un intento nuevo (`intento_de`) a partir de un trabajo terminado. Si sus entradas ya vencieron, 410 `entrada_no_disponible`. |
+| `POST /trabajos/{id}/reintentar` | Crea un intento nuevo (`intento_de`) a partir de un trabajo terminado. Si sus entradas ya vencieron, 410 `entrada_no_disponible`. Con el cuerpo opcional `{"corregir": true}`, el intento nuevo pide al mismo agente que corrija la respuesta anterior; solo vale si falló con `salida_no_cumple_esquema` y conservó su salida (si no, 400 `correccion_no_disponible`). |
+| `POST /esquemas/validar` | Comprueba un JSON Schema sin ejecutar nada: `{"esquema": …}` con el esquema como objeto o como texto. Responde `{"valido": true}` o `{"valido": false, "error": "…"}`, con `linea` y `columna` si el texto no es JSON válido. Mismo tope que en una petición (256 KB). |
 | `DELETE /trabajos/{id}` | Borra un trabajo terminado: 204, o 409 si sigue activo. |
 | `DELETE /trabajos` | Vacía el historial: borra los trabajos terminados de la instancia y las cargas que ya no usa ninguno; conserva los activos. Responde `{"eliminados": n}`. No existe en los puntos de acceso. |
 | `POST /ejecutar` | Igual que `POST /trabajos`, pero espera el resultado. Envía `Location` antes de esperar; si se corta la conexión, el trabajo no se cancela. |
@@ -179,14 +180,28 @@ Cuánto razona el modelo antes de responder. Es opcional: sin él, cada CLI usa 
 En un punto de acceso el modo de contexto lo fija la API (`aislado` si no indica otro): una petición, o un perfil, que pida otro recibe 403 `contexto_no_permitido`.
 
 - **`perfil`** (API nativa) o `--perfil-trabajo` (CLI): aplica `profiles/<nombre>.yaml` del proyecto (`.tramtai/profiles/`) o de la configuración global. Aporta instrucciones, formato, esquema y `conservar_salida_invalida`; los campos explícitos de la solicitud prevalecen. `tramtai iniciar` crea el perfil de ejemplo `resumen`.
-- **`salida.conservar_salida_invalida`:** si la salida no cumple el esquema, el trabajo falla con `salida_no_cumple_esquema`, pero conserva la salida bruta para revisarla.
+- **`salida.conservar_salida_invalida`:** si la salida no cumple el esquema, el trabajo falla con `salida_no_cumple_esquema`, pero conserva la salida bruta para revisarla (y para corregirla después con `reintentar`).
+- **`salida.reintentos`** (0 a 3; 0 por defecto): ver [Respuestas con forma](#respuestas-con-forma).
+
+### Respuestas con forma
+
+Con `salida.esquema` (o el de la receta del punto) la respuesta se valida con JSON Schema 2020-12; los `format` (como `date` o `email`) también se comprueban.
+
+- **Si no cumple**, el trabajo falla con `salida_no_cumple_esquema`:
+  - el mensaje es el primer problema, con «(y N más)» si hay más;
+  - `errores_salida` los lista (hasta 20): `campo` (la ruta legible, como `tareas[2].fecha`; vacía, la respuesta entera), `problema` (`falta`, `tipo`, `valor_no_permitido`, `sobra`, `formato`, `tamaño` u `otro`) y `texto`, en el idioma del servicio.
+- **`salida.reintentos`** (0 a 3, exige formato `json`): cuántas veces se pide al **mismo** agente que corrija una respuesta que no cumple.
+  - La corrección sigue la conversación con la respuesta y sus problemas; nunca salta al respaldo.
+  - Cada corrección es otra petición al agente: aparece como un `intento` más en el registro y su uso (tokens y coste) se suma al trabajo y a los presupuestos, aunque como petición cuenta una sola vez.
+  - En un punto de acceso, `reintentos_salida` es el valor de la receta para las peticiones que no piden otro, también las de las fachadas OpenAI y Anthropic.
+- **Corregir a mano:** con 0 reintentos, `POST /trabajos/{id}/reintentar` con `{"corregir": true}` hace una corrección como un trabajo nuevo vinculado (si el trabajo conservó su salida con `conservar_salida_invalida`).
 - **`modo_contexto: consciente_proyecto`** (o `--contexto`): el agente trabaja en la raíz del proyecto y carga sus reglas. Solo se admite en proyectos incluidos en `proyectos_confiables` de la configuración global; si no, devuelve 403 `contexto_no_permitido`. Antes de ejecutar se registra un evento `aviso` con el contexto que se carga.
 
 ## Puntos de acceso y administración
 
 Un punto de acceso expone la misma API bajo su propia URL y token: `http://127.0.0.1:17373/p/<nombre>/openai/v1`, o su propio puerto. Solo expone los contratos que tiene habilitados, antepone sus `instrucciones` (si tiene) a las de cada solicitud, aplica sus alias, modelos permitidos y modelo forzado (cabecera `Tramtai-Modelo-Forzado`) y solo ve sus trabajos. Con `ejecucion.maximo_trabajos` limita sus ejecuciones simultáneas, siempre dentro del límite de su instancia.
 
-Un punto de acceso también puede ser una **receta**: con `esquema` (un JSON Schema escrito como YAML), toda petición que no traiga su propio esquema responde con JSON validado, también por las fachadas sin `response_format`. Con `respaldo` (hasta 3 entradas `agente` o `agente/modelo`, cada una con un esfuerzo propio opcional `+nivel`), si el agente principal falla antes de emitir texto (`limite_uso_proveedor`, `autenticacion_agente`, `agente_no_disponible`, `modelo_no_disponible`, `error_agente`, `error_protocolo_agente` o `tiempo_ejecucion_agotado`), o si su entrada no cabe en su contexto (`entrada_demasiado_grande`, sin ejecutarlo), el mismo trabajo sigue con el siguiente: queda un evento `aviso`, el trabajo muestra el agente que respondió y el tiempo límite cuenta por intento. Tras un salto, el campo `model` de las respuestas de las fachadas OpenAI y Anthropic indica el agente/modelo que respondió (sin salto, sigue siendo el que pidió la aplicación). En streaming, los primeros fragmentos salen antes de saber si habrá salto y llevan el modelo pedido; el que respondió aparece en el fragmento final de uso de OpenAI (`stream_options.include_usage`) y en el trabajo (`GET /api/v1/trabajos/{id}`). El trabajo guarda el respaldo que le queda, así que al reencolarlo o reintentarlo no repite agentes. La API nativa acepta `"respaldo": [...]` en la solicitud; las fachadas lo heredan del punto. Un respaldo con un agente que no existe, o fuera de `modelos_permitidos`, se rechaza al guardar el punto.
+Un punto de acceso también puede ser una **receta**: con `esquema` (un JSON Schema escrito como YAML), toda petición que no traiga su propio esquema responde con JSON validado, también por las fachadas sin `response_format`; con `reintentos_salida` (0 a 3) se corrige la respuesta que no lo cumpla. Con `respaldo` (hasta 3 entradas `agente` o `agente/modelo`, cada una con un esfuerzo propio opcional `+nivel`), si el agente principal falla antes de emitir texto (`limite_uso_proveedor`, `autenticacion_agente`, `agente_no_disponible`, `modelo_no_disponible`, `error_agente`, `error_protocolo_agente` o `tiempo_ejecucion_agotado`), o si su entrada no cabe en su contexto (`entrada_demasiado_grande`, sin ejecutarlo), el mismo trabajo sigue con el siguiente: queda un evento `aviso`, el trabajo muestra el agente que respondió y el tiempo límite cuenta por intento. Tras un salto, el campo `model` de las respuestas de las fachadas OpenAI y Anthropic indica el agente/modelo que respondió (sin salto, sigue siendo el que pidió la aplicación). En streaming, los primeros fragmentos salen antes de saber si habrá salto y llevan el modelo pedido; el que respondió aparece en el fragmento final de uso de OpenAI (`stream_options.include_usage`) y en el trabajo (`GET /api/v1/trabajos/{id}`). El trabajo guarda el respaldo que le queda, así que al reencolarlo o reintentarlo no repite agentes. La API nativa acepta `"respaldo": [...]` en la solicitud; las fachadas lo heredan del punto. Un respaldo con un agente que no existe, o fuera de `modelos_permitidos`, se rechaza al guardar el punto.
 
 ```yaml
 puntos_acceso:
@@ -267,7 +282,7 @@ API nativa: `{"error": {"codigo": "…", "mensaje": "…"}}`. Las fachadas usan 
 
 | HTTP | Códigos |
 |---|---|
-| 400 | `solicitud_invalida`, `parametro_no_soportado`, `modelo_ambiguo`, `modelo_no_permitido`, `modelo_no_disponible`, `modelo_no_configurado`, `carga_invalida`; en las fachadas también `entrada_demasiado_grande` (OpenAI: `context_length_exceeded`) |
+| 400 | `solicitud_invalida`, `parametro_no_soportado`, `modelo_ambiguo`, `modelo_no_permitido`, `modelo_no_disponible`, `modelo_no_configurado`, `carga_invalida`, `correccion_no_disponible`; en las fachadas también `entrada_demasiado_grande` (OpenAI: `context_length_exceeded`) |
 | 401 / 403 | `no_autorizado` / `origen_no_permitido`, `contexto_no_permitido` |
 | 404 | `no_encontrado` |
 | 409 | `conflicto_idempotencia`, `trabajo_no_terminado`, `trabajo_sin_salida` |
