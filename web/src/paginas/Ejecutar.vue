@@ -204,7 +204,7 @@ import SalidaTrabajo from '../componentes/SalidaTrabajo.vue'
 import VerComoCodigo from '../componentes/VerComoCodigo.vue'
 import { ejemplos as ejemplosDe, type Ejemplo } from '../ejemplos'
 import { ajustesDeReceta, api, aplicarModelo, avisar, avisarError, configDeReceta, copiar, duracion, esquemaDeReceta, esfuerzoUsado, estadoInfo, haceCuanto, mensajeDe, modeloDe, modeloInicial,
-  origenHistorial, recetaDePunto, recetaDeSolicitud, recetaInicial, recetaVacia, terminales, tituloError, trabajoSeguido, type EventoRegistro, type LimitesPeticion, type Modelo, type Receta, type Solicitud,
+  origenHistorial, recetaDePunto, recetaDeSolicitud, recetaInicial, recetaVacia, terminales, tituloError, trabajoSeguido, idModeloDe, type EstadoPunto, type EventoRegistro, type LimitesPeticion, type Modelo, type Receta, type Solicitud,
   type Trabajo } from '../api'
 import { t } from '../i18n'
 
@@ -215,9 +215,10 @@ const catalogo = ref<Modelo[]>([])
 // receta es lo que define la API que se está probando; desde Agentes llega con un modelo ya elegido.
 const receta = ref<Receta>({ ...recetaVacia(), modelo: modeloInicial.value || null })
 modeloInicial.value = ''
-// editando es la API que se abrió desde Mis APIs: Guardar la actualiza en lugar de crear otra; urlEditando, su URL.
+// editando es la API que se abrió desde Mis APIs: Guardar la actualiza en lugar de crear otra; apiEditada, cómo está
+// guardada (URL, contratos y modelo) para «Ver como código».
 const editando = ref('')
-const urlEditando = ref('')
+const apiEditada = ref<EstadoPunto>()
 const ejemplos = computed(() => [t('ejecutar.ejemplo1'), t('ejecutar.ejemplo2'), t('ejecutar.ejemplo3')])
 
 // nuevaPrueba deja la página lista para otro mensaje; la receta se conserva y el trabajo anterior queda en el Historial.
@@ -259,7 +260,7 @@ onMounted(async () => {
       if (p) {
         receta.value = recetaDePunto(p)
         editando.value = p.nombre
-        urlEditando.value = p.url ?? ''
+        apiEditada.value = p
       }
     } catch (e) {
       avisarError(e)
@@ -324,12 +325,17 @@ async function verCodigo() {
     avisarError(e)
     return
   }
-  const url = editando.value ? urlEditando.value : await api.instancia().then((i) => i.base).catch(() => location.origin)
-  const modelo = receta.value.modelo || catalogo.value.find((m) => m.predeterminado)?.id || 'claude'
+  const base = await api.instancia().then((i) => i.base).catch(() => location.origin)
+  // Una API editada: su URL (o la de su ruta, si aún no tiene), lo que acepta y el modelo que tiene guardado, que es
+  // el que usará; OpenAI y Anthropic exigen un modelo en cada petición.
+  const p = editando.value ? apiEditada.value : undefined
+  const url = editando.value ? p?.url || `${base}/p/${editando.value}` : base
+  const contratos = p?.contratos ?? ['nativa', 'openai', 'anthropic']
+  const modelo = (editando.value ? p && idModeloDe(p) : receta.value.modelo) || catalogo.value.find((m) => m.predeterminado)?.id || 'claude'
   let solicitud = solicitudDe([], esquema)
   if (editando.value) solicitud = { mensajes: solicitud.mensajes, perfil: solicitud.perfil, ejecucion: solicitud.ejecucion }
   if (!solicitud.mensajes[0].contenido.trim()) solicitud.mensajes[0].contenido = archivos.value?.length ? t('ejemplos.mensaje') : t('conectar.hola')
-  ejemplosCodigo.value = ejemplosDe({ url, modelo, contratos: ['nativa', 'openai'],
+  ejemplosCodigo.value = ejemplosDe({ url, modelo, contratos,
     prueba: { solicitud, archivos: (archivos.value ?? []).map((a) => a.name) } })
   dialogoCodigo.value = true
 }
@@ -446,6 +452,7 @@ async function guardarComoApi() {
     const r = await api.crearPunto({ nombre, grupo: nueva.grupo.trim() || undefined, ...configDeReceta(receta.value) })
     const modelo = receta.value.modelo || catalogo.value.find((m) => m.predeterminado)?.id || 'claude'
     creada.value = { nombre, url: r.punto_acceso?.url ?? '', clave: r.token, modelo }
+    apiEditada.value = r.punto_acceso
     dialogoGuardar.value = false
     dialogoCreada.value = true
     editando.value = nombre

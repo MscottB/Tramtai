@@ -225,7 +225,7 @@
           <div id="titulo-actualizar" class="titulo-seccion">{{ t('actualizacion.titulo', { version: actualizacion.version }) }}</div>
           <p class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.detalle', { actual: actualizacion.actual }) }}</p>
           <template v-if="novedadesNueva.length > 1">
-            <div class="text-caption texto-suave q-mt-md">{{ t('actualizacion.novedadesVarias', { n: novedadesNueva.length }) }}</div>
+            <div class="text-caption texto-suave q-mt-md">{{ t(novedadesNueva.length >= 10 ? 'actualizacion.novedadesRecientes' : 'actualizacion.novedadesVarias', { n: novedadesNueva.length }) }}</div>
             <ListaNovedades :versiones="novedadesNueva" />
             <q-btn flat dense no-caps color="primary" icon-right="o_open_in_new" class="q-mt-xs" :label="t('actualizacion.verTodas')"
               href="https://github.com/MscottB/Tramtai/releases" target="_blank" rel="noopener" />

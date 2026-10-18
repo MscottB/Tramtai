@@ -398,7 +398,8 @@ const ocultar = (c: string) => (c ? c.slice(0, 6) + '•'.repeat(18) : '')
 const ejemplos = computed(() => ejemplosDe({ url: base.value, modelo: modeloEjemplo.value, contratos }))
 const ejemplo = computed(() => ejemplos.value.find((e) => e.id === lenguaje.value) ?? ejemplos.value[0])
 const ejemplosDetalle = computed(() => (puntoDetalle.value
-  ? ejemplosDe({ url: puntoDetalle.value.url ?? '', modelo: idModelo(puntoDetalle.value) ?? modeloEjemplo.value, contratos: puntoDetalle.value.contratos }) : []))
+  ? ejemplosDe({ url: puntoDetalle.value.url ?? '', modelo: idModelo(puntoDetalle.value) ?? modeloEjemplo.value, contratos: puntoDetalle.value.contratos,
+    muestra: { archivos: ['informe.pdf'], solicitud: { mensajes: [{ rol: 'usuario', contenido: t('ejemplos.mensaje') }] } } }) : []))
 const ejemploDetalle = computed(() => ejemplosDetalle.value.find((e) => e.id === lenguaje.value) ?? ejemplosDetalle.value[0])
 
 const opciones = computed(() => catalogo.value.map(opcionModelo))

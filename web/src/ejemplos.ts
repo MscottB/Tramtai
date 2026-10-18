@@ -49,7 +49,8 @@ function curlNativa(url: string, p: Prueba, k: string): string {
   if (p.archivos.length) {
     lineas.push(`# ${paso('ejemplos.subir')} (${t('ejemplos.jq')})`, 'CARGAS=""',
       `for ARCHIVO in ${p.archivos.map(sh).join(' ')}; do`,
-      `  ID=$(curl -s ${url}/api/v1/cargas ${auth} -F "archivo=@$ARCHIVO" | jq -r .identificador_carga)`,
+      // Entre comillas para curl: un nombre con «;» o «,» no se toma como opción del campo.
+      `  ID=$(curl -s ${url}/api/v1/cargas ${auth} -F "archivo=@\\"$ARCHIVO\\"" | jq -r .identificador_carga)`,
       '  CARGAS="$CARGAS${CARGAS:+,}\\"$ID\\""', 'done', '')
   }
   // La lista de cargas sale de la variable: se cierra la comilla simple, se expande "$CARGAS" y se vuelve a abrir.
@@ -76,8 +77,7 @@ function pythonNativa(url: string, p: Prueba, k: string): string {
     'if not r.ok:', '    sys.exit(r.text)', 'trabajo = r.json()["id"]', '',
     `# ${paso('ejemplos.seguir')}`, 'fin, evento, datos = {}, "", []',
     'with requests.get(f"{BASE}/trabajos/{trabajo}/eventos", headers=CABECERAS, stream=True) as eventos:',
-    '    eventos.encoding = "utf-8"',
-    '    for linea in eventos.iter_lines(decode_unicode=True):',
+    '    for linea in (l.decode("utf-8") for l in eventos.iter_lines()):',
     '        if linea.startswith("event: "):', '            evento = linea[7:]',
     '        elif linea.startswith("data: "):', '            datos.append(linea[6:])',
     '        elif linea == "" and evento:', '            if evento == "texto":', '                print("\\n".join(datos), end="", flush=True)',
@@ -117,8 +117,16 @@ function nodeNativa(url: string, p: Prueba, k: string): string {
 const rolesOpenAI: Record<string, string> = { usuario: 'user', asistente: 'assistant', sistema: 'system' }
 const esfuerzosOpenAI: Record<string, string> = { bajo: 'low', medio: 'medium', alto: 'high', muy_alto: 'xhigh', maximo: 'xhigh' }
 
+// notaFachada dice lo que la prueba pide y solo admite la API propia (más lo que esa fachada no tiene).
+function notaFachada(p: Prueba, ...extras: (string | false | undefined)[]) {
+  const s = p.solicitud
+  const faltan = [p.archivos.length && t('codigo.archivos'), s.respaldo?.length && t('codigo.respaldo'), s.perfil && t('codigo.perfil'),
+    s.ejecucion?.tiempo_limite_segundos && t('codigo.tiempo'), ...extras].filter(Boolean)
+  return faltan.length ? t('codigo.soloNativa', { que: faltan.join(', ') }) : undefined
+}
+
 // chatOpenAI es la misma prueba por /openai/v1/chat/completions: instrucciones como mensaje de sistema, esfuerzo
-// como reasoning_effort y el esquema como response_format; nota dice lo que solo admite la API propia.
+// como reasoning_effort y el esquema como response_format.
 function chatOpenAI(p: Prueba, modelo: string) {
   const s = p.solicitud
   const cuerpo: Record<string, unknown> = { model: modelo, messages: [
@@ -127,19 +135,28 @@ function chatOpenAI(p: Prueba, modelo: string) {
   ] }
   if (s.esfuerzo) cuerpo.reasoning_effort = esfuerzosOpenAI[s.esfuerzo]
   if (s.salida?.esquema) cuerpo.response_format = { type: 'json_schema', json_schema: { name: 'salida', schema: s.salida.esquema } }
-  const faltan = [p.archivos.length && t('codigo.archivos'), s.respaldo?.length && t('codigo.respaldo'), s.perfil && t('codigo.perfil'),
-    s.ejecucion?.tiempo_limite_segundos && t('codigo.tiempo'), s.esfuerzo === 'maximo' && t('codigo.maximo')].filter(Boolean)
-  return { cuerpo, nota: faltan.length ? t('codigo.soloNativa', { que: faltan.join(', ') }) : undefined }
+  return { cuerpo, nota: notaFachada(p, s.esfuerzo === 'maximo' && t('codigo.maximo')) }
+}
+
+// mensajesAnthropic es la misma prueba por /anthropic/v1/messages: las instrucciones (y los mensajes de sistema) van
+// en system; esa API no admite esquema ni esfuerzo.
+function mensajesAnthropic(p: Prueba, modelo: string) {
+  const s = p.solicitud
+  const sistema = [s.instrucciones, ...s.mensajes.filter((m) => m.rol === 'sistema').map((m) => m.contenido)].filter(Boolean).join('\n\n')
+  const cuerpo: Record<string, unknown> = { model: modelo, max_tokens: 1024, ...(sistema ? { system: sistema } : {}),
+    messages: s.mensajes.filter((m) => m.rol !== 'sistema').map((m) => ({ role: rolesOpenAI[m.rol] ?? m.rol, content: m.contenido })) }
+  return { cuerpo, nota: notaFachada(p, !!s.salida?.esquema && t('codigo.esquema'), !!s.esfuerzo && t('codigo.esfuerzo')) }
 }
 
 // esquemaEjemplo es el de los ejemplos de Mis APIs: un JSON con un resumen.
 const esquemaEjemplo = { type: 'object', properties: { resumen: { type: 'string' } }, required: ['resumen'] }
 
 // ejemplos son los de lo que acepta la API (una que solo habla Anthropic no ofrece los de OpenAI); con prueba, el
-// código de esa petición por la API propia y por OpenAI.
-export function ejemplos(o: { url: string; modelo: string; contratos: string[]; prueba?: Prueba }): Ejemplo[] {
+// código de esa petición por la API propia, por OpenAI y por Anthropic. muestra sustituye la petición de ejemplo de la
+// API propia: la de una API por aplicación solo lleva el mensaje y el archivo, porque su receta la aplica la API.
+export function ejemplos(o: { url: string; modelo: string; contratos: string[]; prueba?: Prueba; muestra?: Prueba }): Ejemplo[] {
   const { url, modelo, contratos } = o
-  const prueba = o.prueba ?? { archivos: ['informe.pdf'],
+  const prueba = o.prueba ?? o.muestra ?? { archivos: ['informe.pdf'],
     solicitud: aplicarModelo({ mensajes: [{ rol: 'usuario', contenido: t('ejemplos.mensaje') }], salida: { formato: 'json', esquema: esquemaEjemplo } }, modelo) }
   const nativos: Ejemplo[] = contratos.includes('nativa') ? [
     { id: 'curl-nativa', titulo: () => `curl · ${t('ejemplos.nativa')}`, codigo: (k) => curlNativa(url, prueba, k) },
@@ -147,21 +164,33 @@ export function ejemplos(o: { url: string; modelo: string; contratos: string[]; 
     { id: 'node-nativa', titulo: () => `Node · ${t('ejemplos.nativa')}`, codigo: (k) => nodeNativa(url, prueba, k) },
   ] : []
   if (o.prueba) {
-    if (!contratos.includes('openai')) return nativos
-    const { cuerpo, nota } = chatOpenAI(o.prueba, modelo)
-    return [...nativos,
-      { id: 'python', titulo: () => 'Python · OpenAI', nota, codigo: (k) => `from openai import OpenAI
+    const lista = [...nativos]
+    const argumentos = (cuerpo: Record<string, unknown>) => Object.entries(cuerpo).map(([c, v]) => `    ${c}=${py(v, '    ')},`).join('\n')
+    if (contratos.includes('openai')) {
+      const { cuerpo, nota } = chatOpenAI(o.prueba, modelo)
+      lista.push({ id: 'python', titulo: () => 'Python · OpenAI', nota, codigo: (k) => `from openai import OpenAI
 
 cliente = OpenAI(base_url="${url}/openai/v1", api_key="${k}")
 r = cliente.chat.completions.create(
-${Object.entries(cuerpo).map(([c, v]) => `    ${c}=${py(v, '    ')},`).join('\n')}
+${argumentos(cuerpo)}
 )
 print(r.choices[0].message.content)` },
       { id: 'curl', titulo: () => 'curl · OpenAI', nota, codigo: (k) => `curl ${url}/openai/v1/chat/completions \\
   -H "Authorization: Bearer ${k}" \\
   -H "Content-Type: application/json" \\
-  -d ${sh(JSON.stringify(cuerpo, null, 2))}` },
-    ]
+  -d ${sh(JSON.stringify(cuerpo, null, 2))}` })
+    }
+    if (contratos.includes('anthropic')) {
+      const { cuerpo, nota } = mensajesAnthropic(o.prueba, modelo)
+      lista.push({ id: 'anthropic', titulo: () => 'Python · Anthropic', nota, codigo: (k) => `import anthropic
+
+cliente = anthropic.Anthropic(base_url="${url}/anthropic", api_key="${k}")
+m = cliente.messages.create(
+${argumentos(cuerpo)}
+)
+print(m.content[0].text)` })
+    }
+    return lista
   }
   return [
     { id: 'python', titulo: () => 'Python · OpenAI', codigo: (k: string) => `from openai import OpenAI
