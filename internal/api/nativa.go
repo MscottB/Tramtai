@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -292,20 +293,6 @@ func (s *Servidor) cargaMultipart(r *http.Request) (documentos.Carga, error) {
 	}
 }
 
-// capacidad es lo que cada adaptador garantiza; lo no garantizado se declara false.
-type capacidad struct {
-	Streaming               string
-	ModeloEfectivoInformado bool
-}
-
-var capacidadesConocidas = map[string]capacidad{
-	"claude": {Streaming: "tokens", ModeloEfectivoInformado: true},
-	"codex":  {Streaming: "final"},
-	"gemini": {Streaming: "tokens", ModeloEfectivoInformado: true},
-	// antigravity: final y sin modelo efectivo; experimental.
-	"antigravity": {Streaming: "final"},
-}
-
 func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 	nombres := make([]string, 0, len(s.Registro))
 	for nombre := range s.Registro {
@@ -314,13 +301,14 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 	sort.Strings(nombres)
 	lista := []map[string]any{}
 	for _, nombre := range nombres {
-		c, conocida := capacidadesConocidas[nombre]
+		// Lo que garantiza cada agente sale de su ficha; uno sin ficha (simulado) no garantiza nada.
+		f, conocida := agentes.Buscar(nombre)
 		if !conocida {
-			c = capacidad{Streaming: "final"}
+			f.Streaming = "final"
 		}
 		entrada := map[string]any{"agente": nombre, "capacidades": map[string]any{
-			"texto": true, "streaming": c.Streaming, "salida_estructurada": conocida, "uso_tokens": "informado_por_cli",
-			"modelo_efectivo_informado": c.ModeloEfectivoInformado, "tool_calling_compatible": false, "imagenes": false, "sesiones_persistentes": false,
+			"texto": true, "streaming": f.Streaming, "salida_estructurada": f.SalidaEstructurada, "uso_tokens": "informado_por_cli",
+			"modelo_efectivo_informado": f.ModeloEfectivoInformado, "tool_calling_compatible": false, "imagenes": false, "sesiones_persistentes": false,
 		}}
 		if d, ok := s.Registro[nombre].(adaptadores.Detectable); ok {
 			ctx, cancelar := context.WithTimeout(r.Context(), 10*time.Second)
@@ -480,7 +468,7 @@ func (s *Servidor) modelosNativos(w http.ResponseWriter, r *http.Request) {
 		}
 		if agente != "" {
 			destinos[i] = [2]string{agente, modelo}
-			m.Esfuerzos = adaptadores.NivelesEsfuerzo(agente)
+			m.Esfuerzos = agentes.Niveles(agente)
 		}
 	}
 	concretos := s.modelosConcretos(r.Context(), lista, destinos)
@@ -488,7 +476,7 @@ func (s *Servidor) modelosNativos(w http.ResponseWriter, r *http.Request) {
 		if d := destinos[i]; d[0] != "" {
 			// Lo que el agente dice que usará ahora manda sobre lo que informó la última vez que se usó.
 			lista[i].Version = cmp.Or(concretos[d[0]+"/"+d[1]], efectivos[d[0]+"/"+d[1]])
-			lista[i].EsfuerzoPredeterminado = adaptadores.EsfuerzoPredeterminado(d[0], cmp.Or(lista[i].Version, d[1]))
+			lista[i].EsfuerzoPredeterminado = agentes.EsfuerzoPredeterminado(d[0], cmp.Or(lista[i].Version, d[1]))
 			lista[i].ContextoTokens, lista[i].ContextoOrigen = s.Planificador.Contexto(r.Context(), d[0], cmp.Or(lista[i].Version, d[1]))
 		}
 	}

@@ -20,6 +20,7 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
+	"tramtai/internal/agentes"
 	"tramtai/internal/api"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -179,24 +180,24 @@ func (s *Servicio) validarRespaldo(p ConfigPunto) error {
 	return nil
 }
 
-// ValidarParaApps rechaza al guardar una API que use Antigravity (como agente o en el respaldo) mientras no esté
-// habilitado para apps (adaptadores.antigravity.permitir_apps): sus peticiones se rechazarían todas. La usan la Web
-// UI y la terminal.
+// ValidarParaApps rechaza al guardar una API que use (como agente o en el respaldo) un agente que no se permite en apps
+// (adaptadores.<nombre>.permitir_apps): sus peticiones se rechazarían todas. La usan la Web UI y la terminal.
 func ValidarParaApps(p ConfigPunto) error {
 	return validarParaApps(p)
 }
 
 func validarParaApps(p ConfigPunto) error {
-	if c, err := nucleo.CargarConfiguracion(""); err == nil && c.Booleano("adaptadores.antigravity.permitir_apps") {
-		return nil
-	}
-	agentes := []string{p.Agente}
+	c, _ := nucleo.CargarConfiguracion("") // sin configuración, solo cuenta la ficha de cada agente
+	usados := []string{p.Agente}
 	for _, e := range p.Respaldo {
 		agente, _, _ := nucleo.DividirRespaldo(e)
-		agentes = append(agentes, agente)
+		usados = append(usados, agente)
 	}
-	if slices.Contains(agentes, "antigravity") {
-		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("punto de acceso %s: %s", p.Nombre, idioma.T("Antigravity no está habilitado para aplicaciones: todavía no se ha comprobado con el CLI real que no pueda usar herramientas. Úsalo desde Probar o la terminal")))
+	for _, agente := range usados {
+		if agente != "" && !agentes.PermitidoEnApps(c, agente) {
+			return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("punto de acceso %s: %s", p.Nombre,
+				idioma.Tf("%s no está habilitado para aplicaciones: todavía no se ha comprobado con el CLI real que no pueda usar herramientas. Úsalo desde Probar o la terminal", agentes.NombreVisible(agente))))
+		}
 	}
 	return nil
 }

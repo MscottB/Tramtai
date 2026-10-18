@@ -179,70 +179,77 @@ func CapaEntorno(entorno []string) (Capa, error) {
 	return capa, nil
 }
 
+// internosAgregados son los valores predeterminados que aportan otros paquetes (los de cada agente, desde su ficha):
+// nucleo no puede importarlos sin crear un ciclo.
+var internosAgregados = map[string]any{}
+
+// AgregarInternos añade valores predeterminados de diseño; no pisa los que ya define nucleo.
+func AgregarInternos(valores map[string]any) {
+	for clave, valor := range valores {
+		internosAgregados[clave] = valor
+	}
+}
+
 // Internos son los valores predeterminados de diseño (prioridad 1).
 func Internos() Capa {
-	return Capa{Origen: OrigenInterno, Fuente: "interno", Valores: map[string]any{
-		"servicio.host":                                 "127.0.0.1",
-		"servicio.puerto":                               17373,
-		"servicio.puerto_automatico":                    true,
-		"servicio.plazo_drenaje_segundos":               30,
-		"servicio.entrada_local":                        true,
-		"servicio.buscar_actualizaciones":               true,
-		"servicio.requerir_token":                       true,
-		"servicio.permitir_remoto":                      false,
-		"instancia_global.token_variable_entorno":       "TRAMTAI_TOKEN_GLOBAL",
-		"compatibilidad.modo_tolerante":                 false,
-		"compatibilidad.cancelar_al_desconectar":        true,
-		"comandos_agentes.claude":                       "claude",
-		"comandos_agentes.codex":                        "codex",
-		"comandos_agentes.antigravity":                  "agy",
-		"adaptadores.antigravity.autenticacion":         "clave_api",
-		"concurrencia_servicio.adaptadores.gemini":      2,
-		"concurrencia_servicio.adaptadores.antigravity": 1,
-		"limites.reserva_salida_tokens":                 8192,
-		"limites.memoria_proceso_mb":                    2048,
-		"modelos.perfiles.rapido.gemini":                "gemini-flash-lite-latest",
-		"modelos.perfiles.equilibrado.gemini":           "gemini-flash-latest",
-		"modelos.perfiles.profundo.gemini":              "gemini-pro-latest",
-		"adaptadores.claude.autenticacion":              "clave_api",
-		"adaptadores.codex.autenticacion":               "clave_api",
-		"concurrencia_servicio.adaptadores.claude":      1,
-		"concurrencia_servicio.adaptadores.codex":       1,
-		"predeterminados.agente":                        "claude",
-		"servicio.registro_mb":                          5,
-		"servicio.registro_copias":                      2,
-		"modelos.perfiles.rapido.claude":                "haiku",
-		"modelos.perfiles.equilibrado.claude":           "sonnet",
-		"modelos.perfiles.profundo.claude":              "opus",
-		"predeterminados.modo_contexto":                 "aislado",
-		"predeterminados.formato_salida":                "markdown",
-		"concurrencia.maximo_trabajos_instancia":        2,
-		"concurrencia.maximo_conversiones_instancia":    1,
-		"concurrencia.maximo_tamano_cola":               20,
-		"concurrencia.tiempo_maximo_en_cola_segundos":   1800,
-		"retencion.modo":                                "temporal",
-		"retencion.guardar_historial":                   false,
-		"retencion.horas_resultado":                     24,
-		"retencion.horas_metadatos":                     168,
-		"retencion.max_trabajos":                        10000,
-		"retencion.horas_idempotencia":                  24,
-		"retencion.horas_carga_huerfana":                24,
-		"retencion.cache_conversion_habilitada":         false,
-		"retencion.eliminar_entradas_al_terminar":       false,
-		"retencion.cifrado_aplicacion":                  false,
-		"conversion.motor":                              "markitdown",
-		"conversion.habilitar_plugins":                  false,
-		"conversion.transformacion_semantica":           false,
-		"conversion.comando":                            "markitdown",
-		"conversion.tiempo_limite_segundos":             120,
-		"conversion.tiempo_total_segundos":              600,
-		"conversion.cuota_cargas_mb":                    2048,
-		"conversion.maximo_carga_mb":                    50,
-		"conversion.maximo_salida_mb":                   20,
-		"conversion.maximo_archivos_zip":                50,
-		"conversion.maximo_descomprimido_mb":            200,
-		"conversion.profundidad_maxima_zip":             3,
-	}}
+	valores := map[string]any{
+		"servicio.host":                               "127.0.0.1",
+		"servicio.puerto":                             17373,
+		"servicio.puerto_automatico":                  true,
+		"servicio.plazo_drenaje_segundos":             30,
+		"servicio.entrada_local":                      true,
+		"servicio.buscar_actualizaciones":             true,
+		"servicio.requerir_token":                     true,
+		"servicio.permitir_remoto":                    false,
+		"instancia_global.token_variable_entorno":     "TRAMTAI_TOKEN_GLOBAL",
+		"compatibilidad.modo_tolerante":               false,
+		"compatibilidad.cancelar_al_desconectar":      true,
+		"limites.reserva_salida_tokens":               8192,
+		"limites.memoria_proceso_mb":                  2048,
+		"modelos.perfiles.rapido.gemini":              "gemini-flash-lite-latest",
+		"modelos.perfiles.equilibrado.gemini":         "gemini-flash-latest",
+		"modelos.perfiles.profundo.gemini":            "gemini-pro-latest",
+		"predeterminados.agente":                      "claude",
+		"servicio.registro_mb":                        5,
+		"servicio.registro_copias":                    2,
+		"modelos.perfiles.rapido.claude":              "haiku",
+		"modelos.perfiles.equilibrado.claude":         "sonnet",
+		"modelos.perfiles.profundo.claude":            "opus",
+		"predeterminados.modo_contexto":               "aislado",
+		"predeterminados.formato_salida":              "markdown",
+		"concurrencia.maximo_trabajos_instancia":      2,
+		"concurrencia.maximo_conversiones_instancia":  1,
+		"concurrencia.maximo_tamano_cola":             20,
+		"concurrencia.tiempo_maximo_en_cola_segundos": 1800,
+		"retencion.modo":                              "temporal",
+		"retencion.guardar_historial":                 false,
+		"retencion.horas_resultado":                   24,
+		"retencion.horas_metadatos":                   168,
+		"retencion.max_trabajos":                      10000,
+		"retencion.horas_idempotencia":                24,
+		"retencion.horas_carga_huerfana":              24,
+		"retencion.cache_conversion_habilitada":       false,
+		"retencion.eliminar_entradas_al_terminar":     false,
+		"retencion.cifrado_aplicacion":                false,
+		"conversion.motor":                            "markitdown",
+		"conversion.habilitar_plugins":                false,
+		"conversion.transformacion_semantica":         false,
+		"conversion.comando":                          "markitdown",
+		"conversion.tiempo_limite_segundos":           120,
+		"conversion.tiempo_total_segundos":            600,
+		"conversion.cuota_cargas_mb":                  2048,
+		"conversion.maximo_carga_mb":                  50,
+		"conversion.maximo_salida_mb":                 20,
+		"conversion.maximo_archivos_zip":              50,
+		"conversion.maximo_descomprimido_mb":          200,
+		"conversion.profundidad_maxima_zip":           3,
+	}
+	for clave, valor := range internosAgregados {
+		if _, propio := valores[clave]; !propio {
+			valores[clave] = valor
+		}
+	}
+	return Capa{Origen: OrigenInterno, Fuente: "interno", Valores: valores}
 }
 
 // Configuracion es la vista efectiva, con el origen de cada valor.

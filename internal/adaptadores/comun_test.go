@@ -1,8 +1,6 @@
 package adaptadores
 
 import (
-	"context"
-	"encoding/json"
 	"regexp"
 	"strings"
 	"testing"
@@ -71,46 +69,6 @@ func TestEntornoLimpioQuitaCredenciales(t *testing.T) {
 func TestResolverProgramaRechazaInexistente(t *testing.T) {
 	if _, err := ResolverPrograma("tramtai-no-existe-xyz"); nucleo.CodigoDe(err) != nucleo.CodigoAgenteNoDisponible {
 		t.Fatalf("se esperaba agente_no_disponible: %v", err)
-	}
-}
-
-// La Web UI decide la ayuda por el código del problema, no por su texto (que cambia con el idioma).
-func TestDetectarClasificaProblema(t *testing.T) {
-	sin := Claude{Programa: "tramtai-no-existe-xyz", Autenticacion: NuevoModo(AutenticacionSuscripcion)}
-	if e := sin.Detectar(context.Background()); e.ProblemaCodigo != ProblemaNoInstalado {
-		t.Fatalf("se esperaba no_instalado: %+v", e)
-	}
-	t.Setenv("GEMINI_API_KEY", "")
-	t.Setenv("GOOGLE_API_KEY", "")
-	if ClaveEntorno("GEMINI_API_KEY", "GOOGLE_API_KEY") != "" {
-		t.Skip("hay una clave de Gemini en el almacén de credenciales")
-	}
-	if e := (Gemini{}).Detectar(context.Background()); e.ProblemaCodigo != ProblemaFaltaClave {
-		t.Fatalf("se esperaba falta_clave: %+v", e)
-	}
-}
-
-func TestModeloEfectivoEligeElDeMasSalida(t *testing.T) {
-	var r resultadoClaude
-	if err := json.Unmarshal([]byte(`{"modelUsage":{"auxiliar":{"outputTokens":3},"principal":{"outputTokens":40}}}`), &r); err != nil {
-		t.Fatal(err)
-	}
-	if r.modeloEfectivo() != "principal" {
-		t.Fatalf("modelo efectivo %q", r.modeloEfectivo())
-	}
-}
-
-func TestCambiarAutenticacion(t *testing.T) {
-	c := Claude{Autenticacion: NuevoModo(AutenticacionClaveAPI)}
-	registro := map[string]Adaptador{"claude": c, "gemini": Gemini{}}
-	if err := CambiarAutenticacion(registro, "claude", AutenticacionSuscripcion); err != nil || c.Autenticacion.Valor() != AutenticacionSuscripcion {
-		t.Fatalf("%v %s", err, c.Autenticacion.Valor())
-	}
-	if CambiarAutenticacion(registro, "gemini", AutenticacionSuscripcion) == nil || CambiarAutenticacion(registro, "claude", "otra") == nil {
-		t.Fatal("gemini no admite suscripción y un modo desconocido se rechaza")
-	}
-	if (Claude{}).Autenticacion.Valor() != AutenticacionClaveAPI {
-		t.Fatal("sin modo, clave de API")
 	}
 }
 

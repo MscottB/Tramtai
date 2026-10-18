@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes/claude"
+	"tramtai/internal/agentes/codex"
 	"tramtai/internal/nucleo"
 )
 
@@ -40,9 +42,9 @@ func TestCanario(t *testing.T) {
 		adaptador adaptadores.Adaptador
 		modelo    string
 	}{
-		{"claude/haiku", adaptadores.Claude{Programa: "claude", Autenticacion: adaptadores.NuevoModo(adaptadores.AutenticacionSuscripcion)}, "haiku"},
-		{"claude/sonnet", adaptadores.Claude{Programa: "claude", Autenticacion: adaptadores.NuevoModo(adaptadores.AutenticacionSuscripcion)}, "sonnet"},
-		{"codex/gpt-5.6-terra", adaptadores.Codex{Programa: "codex", Autenticacion: adaptadores.NuevoModo(adaptadores.AutenticacionSuscripcion)}, "gpt-5.6-terra"},
+		{"claude/haiku", claude.Claude{Programa: "claude", Autenticacion: adaptadores.NuevoModo(adaptadores.AutenticacionSuscripcion)}, "haiku"},
+		{"claude/sonnet", claude.Claude{Programa: "claude", Autenticacion: adaptadores.NuevoModo(adaptadores.AutenticacionSuscripcion)}, "sonnet"},
+		{"codex/gpt-5.6-terra", codex.Codex{Programa: "codex", Autenticacion: adaptadores.NuevoModo(adaptadores.AutenticacionSuscripcion)}, "gpt-5.6-terra"},
 	}
 	for _, c := range casos {
 		t.Run(c.nombre, func(t *testing.T) {

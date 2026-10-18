@@ -22,6 +22,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes"
 	"tramtai/internal/autoarranque"
 	"tramtai/internal/cliente"
 	"tramtai/internal/idioma"
@@ -458,8 +459,8 @@ func iniciarServicio(cmd *cobra.Command, archivo string) error {
 		if !c.Booleano("servicio.permitir_remoto") {
 			return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("servicio.host %s no es loopback: activa servicio.permitir_remoto (mejor, usa un túnel SSH)", host))
 		}
-		for _, agente := range []string{"claude", "codex"} {
-			if c.Texto("adaptadores."+agente+".autenticacion") == adaptadores.AutenticacionSuscripcion {
+		for _, f := range agentes.Todos() {
+			if agente := f.Nombre; agentes.AdmiteSuscripcion(agente) && c.Texto("adaptadores."+agente+".autenticacion") == adaptadores.AutenticacionSuscripcion {
 				return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("el acceso remoto no se permite con %s en modo suscripción", agente))
 			}
 		}
@@ -492,8 +493,8 @@ func iniciarServicio(cmd *cobra.Command, archivo string) error {
 		}
 		return cliente.Lanzar(ejecutable, datos, "servicio", "iniciar", "--esperar-cierre", "--registro", registroReinicio)
 	}
-	agentes, limites := adaptadores.Registro(c)
-	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: agentes, Semaforos: planificador.NuevosSemaforos(limites),
+	registro, limites := agentes.Registro(c)
+	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites),
 		Host: host, Puerto: puertoUsado, PuertoConfigurado: puerto, PuertoAutomatico: automatico, Reiniciar: reiniciar,
 		Hosts: hosts, Registros: salida, Web: recursos.Web(),
 		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,

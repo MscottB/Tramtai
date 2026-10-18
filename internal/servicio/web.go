@@ -20,6 +20,7 @@ import (
 
 	"tramtai/internal/actualizacion"
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes"
 	"tramtai/internal/api"
 	"tramtai/internal/autoarranque"
 	"tramtai/internal/credenciales"
@@ -893,11 +894,11 @@ func csrfValido(r *http.Request, ses *sesion) bool {
 	return subtle.ConstantTimeCompare([]byte(r.Header.Get("X-CSRF-Token")), []byte(ses.csrf)) == 1
 }
 
-// cambiarAutenticacion pasa claude o codex a suscripción o clave de API: lo guarda en la configuración global y
-// lo aplica al servicio en marcha, sin reiniciarlo.
+// cambiarAutenticacion pasa un agente que admite la suscripción a suscripción o clave de API: lo guarda en la
+// configuración global y lo aplica al servicio en marcha, sin reiniciarlo.
 func (s *Servicio) cambiarAutenticacion(agente, modo string) error {
-	if agente != "claude" && agente != "codex" {
-		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("solo claude y codex admiten la suscripción"))
+	if !agentes.AdmiteSuscripcion(agente) {
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("%s no admite la suscripción", agente))
 	}
 	if modo != adaptadores.AutenticacionClaveAPI && modo != adaptadores.AutenticacionSuscripcion {
 		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("modo de autenticación desconocido: %s", modo))
