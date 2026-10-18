@@ -23,10 +23,11 @@
       <a href="#agentes"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
       <a href="#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
       <a href="#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
-      <a href="#privacidad"><span lang="es">Privacidad</span><span lang="en">Privacy</span></a>
       <a href="ayuda.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
-      <a href="https://github.com/MscottB/Tramtai">GitHub</a>
     </nav>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+    </a>
     <div class="idioma" role="group" aria-label="Idioma / Language">
       <button type="button" data-idioma="es" aria-pressed="true">ES</button>
       <button type="button" data-idioma="en" aria-pressed="false">EN</button>
@@ -43,30 +44,26 @@
 <main>
   <section class="portada">
     <div class="envoltura">
-      <div>
-        <span class="chapa"><span lang="es">Pasarela local para Windows, macOS y Linux</span><span lang="en">Local gateway for Windows, macOS and Linux</span></span>
-        <h1>
-          <span lang="es">Tus agentes de IA, <em>como una API local</em>.</span>
-          <span lang="en">Your AI agents, <em>as a local API</em>.</span>
-        </h1>
-        <p class="entrada">
-          <span lang="es">Tramtai convierte Claude Code, Codex, GitHub Copilot CLI, Antigravity y la API de Gemini en una API compatible con OpenAI y Anthropic que funciona en tu equipo. Conecta cualquier aplicación cambiando solo la URL.</span>
-          <span lang="en">Tramtai turns Claude Code, Codex, GitHub Copilot CLI, Antigravity and the Gemini API into an OpenAI- and Anthropic-compatible API that runs on your computer. Connect any app by changing just the URL.</span>
-        </p>
-        <div class="acciones">
-          <a class="boton principal" href="#descargar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
-            <span lang="es">Descargar</span><span lang="en">Download</span>
-          </a>
-          <a class="boton secundario" href="ayuda.html">
-            <span lang="es">Cómo empezar</span><span lang="en">Get started</span>
-          </a>
-        </div>
-        <p class="nota">
-          <span lang="es">Windows 10 y 11, macOS 11 o posterior y Linux · gratis para uso no comercial</span>
-          <span lang="en">Windows 10 and 11, macOS 11 or later and Linux · free for non-commercial use</span>
-        </p>
+      <span class="chapa"><span lang="es">Pasarela local para Windows, macOS y Linux</span><span lang="en">Local gateway for Windows, macOS and Linux</span></span>
+      <h1>
+        <span lang="es">Tus agentes de IA, <em>como una API local</em>.</span>
+        <span lang="en">Your AI agents, <em>as a local API</em>.</span>
+      </h1>
+      <p class="entrada">
+        <span lang="es">Tramtai convierte Claude Code, Codex, GitHub Copilot CLI, Antigravity y la API de Gemini en una API compatible con OpenAI y Anthropic que funciona en tu equipo. Conecta cualquier aplicación cambiando solo la URL.</span>
+        <span lang="en">Tramtai turns Claude Code, Codex, GitHub Copilot CLI, Antigravity and the Gemini API into an OpenAI- and Anthropic-compatible API that runs on your computer. Connect any app by changing just the URL.</span>
+      </p>
+      <div class="acciones">
+        <a class="boton principal" href="#descargar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
+          <span lang="es">Descargar gratis</span><span lang="en">Download for free</span>
+        </a>
+        <a class="boton secundario" href="ayuda.html"><span lang="es">Cómo empezar</span><span lang="en">Get started</span></a>
       </div>
+      <p class="nota">
+        <span lang="es">Windows 10 y 11, macOS 11 o posterior y Linux · gratis para uso no comercial</span>
+        <span lang="en">Windows 10 and 11, macOS 11 or later and Linux · free for non-commercial use</span>
+      </p>
 
       <div class="mapa" aria-hidden="true">
         <svg viewBox="0 0 520 320">
@@ -103,26 +100,53 @@
     </div>
   </section>
 
+  <section class="conexiones">
+    <div class="envoltura">
+      <div class="panel">
+        <h2 class="panel-titulo"><span lang="es">Conecta estos agentes</span><span lang="en">Connects these agents</span></h2>
+        <ul class="fichas">
+          <li style="--c: var(--claude)"><span class="punto"></span>Claude Code</li>
+          <li style="--c: var(--codex)"><span class="punto"></span>Codex</li>
+          <li style="--c: var(--copilot)"><span class="punto"></span>GitHub Copilot CLI</li>
+          <li style="--c: var(--gemini)"><span class="punto"></span>Gemini API</li>
+          <li style="--c: var(--antigravity)"><span class="punto"></span>Antigravity</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h2 class="panel-titulo"><span lang="es">Desde tus apps y SDK</span><span lang="en">From your apps and SDKs</span></h2>
+        <ul class="fichas">
+          <li><span class="punto"></span><span lang="es">SDK de OpenAI</span><span lang="en">OpenAI SDK</span></li>
+          <li><span class="punto"></span><span lang="es">SDK de Anthropic</span><span lang="en">Anthropic SDK</span></li>
+          <li><span class="punto"></span>curl</li>
+          <li><span class="punto"></span>LangChain</li>
+          <li><span class="punto"></span>n8n</li>
+          <li><span class="punto"></span><span lang="es">API propia (OpenAPI)</span><span lang="en">Native API (OpenAPI)</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
   <section id="como">
     <div class="envoltura">
-      <div class="cabeza">
+      <div class="cabeza centrada">
         <span class="etiqueta"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></span>
         <h2><span lang="es">Tres paradas y tu app ya habla con un agente.</span><span lang="en">Three stops and your app is talking to an agent.</span></h2>
       </div>
-      <ol class="recorrido">
-        <li>
-          <h3><span lang="es">Instala Tramtai</span><span lang="en">Install Tramtai</span></h3>
-          <p class="suave"><span lang="es">En Windows, macOS o Linux. Queda en la bandeja del sistema con el servicio en marcha.</span><span lang="en">On Windows, macOS or Linux. It sits in the system tray with the service running.</span></p>
-        </li>
-        <li>
-          <h3><span lang="es">Conecta un agente</span><span lang="en">Connect an agent</span></h3>
-          <p class="suave"><span lang="es">Usa tu suscripción de Claude, ChatGPT o GitHub Copilot para uso personal, o una clave de API. Necesitas tener instalado el CLI del agente.</span><span lang="en">Use your Claude, ChatGPT or GitHub Copilot subscription for personal use, or an API key. The agent's CLI must be installed.</span></p>
-        </li>
-        <li>
-          <h3><span lang="es">Apunta tu aplicación</span><span lang="en">Point your app</span></h3>
-          <p class="suave"><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic y elige agente y modelo en el campo <code>model</code>.</span><span lang="en">Change the base URL of your OpenAI or Anthropic SDK and pick agent and model in the <code>model</code> field.</span></p>
-        </li>
-      </ol>
+      <div class="como">
+        <ol class="paradas">
+          <li>
+            <h3><span lang="es">Instala Tramtai</span><span lang="en">Install Tramtai</span></h3>
+            <p class="suave"><span lang="es">En Windows, macOS o Linux. Queda en la bandeja del sistema con el servicio en marcha.</span><span lang="en">On Windows, macOS or Linux. It sits in the system tray with the service running.</span></p>
+          </li>
+          <li>
+            <h3><span lang="es">Conecta un agente</span><span lang="en">Connect an agent</span></h3>
+            <p class="suave"><span lang="es">Usa tu suscripción de Claude, ChatGPT o GitHub Copilot para uso personal, o una clave de API. Necesitas tener instalado el CLI del agente.</span><span lang="en">Use your Claude, ChatGPT or GitHub Copilot subscription for personal use, or an API key. The agent's CLI must be installed.</span></p>
+          </li>
+          <li>
+            <h3><span lang="es">Apunta tu aplicación</span><span lang="en">Point your app</span></h3>
+            <p class="suave"><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic y elige agente y modelo en el campo <code>model</code>.</span><span lang="en">Change the base URL of your OpenAI or Anthropic SDK and pick agent and model in the <code>model</code> field.</span></p>
+          </li>
+        </ol>
 <pre class="codigo"><span class="k">from</span> openai <span class="k">import</span> OpenAI
 
 <span class="c"># Tramtai → Mis APIs / My APIs: URL y clave · URL and key</span>
@@ -132,12 +156,96 @@ respuesta = cliente.chat.completions.create(
     model=<span class="s">"claude/sonnet"</span>,
     messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Resume este contrato en tres puntos"</span>}],
 )</pre>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="envoltura">
+      <div class="destacado">
+        <div class="cabeza">
+          <span class="etiqueta"><span lang="es">Por qué Tramtai</span><span lang="en">Why Tramtai</span></span>
+          <h2><span lang="es">Los agentes que ya pagas, <em>al servicio de tus apps</em>.</span><span lang="en">The agents you already pay for, <em>working for your apps</em>.</span></h2>
+          <p class="suave"><span lang="es">Sin servidores intermedios ni cuentas nuevas: tu app habla con Tramtai como con OpenAI o Anthropic, y Tramtai con el agente que elijas.</span><span lang="en">No middle servers, no new accounts: your app talks to Tramtai as it would to OpenAI or Anthropic, and Tramtai talks to the agent you pick.</span></p>
+        </div>
+        <div class="motivos">
+          <div>
+            <h3><span lang="es">Local</span><span lang="en">Local</span></h3>
+            <p><span lang="es">Escucha solo en tu equipo y no envía estadísticas a nadie.</span><span lang="en">Listens only on your computer and sends no statistics anywhere.</span></p>
+          </div>
+          <div>
+            <h3><span lang="es">Compatible</span><span lang="en">Compatible</span></h3>
+            <p><span lang="es">Rutas de OpenAI y Anthropic, con streaming y herramientas, más una API propia.</span><span lang="en">OpenAI and Anthropic routes, with streaming and tools, plus a native API.</span></p>
+          </div>
+          <div>
+            <h3><span lang="es">Sin cortes</span><span lang="en">No outages</span></h3>
+            <p><span lang="es">Si un agente llega a su límite, la petición sigue con el siguiente de tu lista.</span><span lang="en">If an agent hits its limit, the request moves on to the next one on your list.</span></p>
+          </div>
+          <div>
+            <h3><span lang="es">Bajo control</span><span lang="en">Under control</span></h3>
+            <p><span lang="es">Una clave y un presupuesto por aplicación, con aviso antes del límite.</span><span lang="en">One key and one budget per app, with a warning before the limit.</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="capturas">
+    <div class="envoltura">
+      <div class="cabeza centrada">
+        <span class="etiqueta"><span lang="es">Así se ve</span><span lang="en">How it looks</span></span>
+        <h2><span lang="es">Tu red, a la vista.</span><span lang="en">Your network, at a glance.</span></h2>
+      </div>
+      <article class="par">
+        <div>
+          <span class="etiqueta"><span lang="es">Inicio</span><span lang="en">Home</span></span>
+          <h3><span lang="es">Una línea por agente, con su estado</span><span lang="en">One line per agent, with its status</span></h3>
+          <p class="suave"><span lang="es">Ves de un vistazo qué apps llegan a Tramtai, qué agentes están en servicio y cómo van tus peticiones.</span><span lang="en">See at a glance which apps reach Tramtai, which agents are in service and how your requests are going.</span></p>
+        </div>
+        <figure class="captura">
+          <img class="solo-claro" src="capturas/inicio-claro.png" width="1440" height="900" loading="lazy" alt="Inicio: tus apps, Tramtai y una línea por agente con su estado" data-alt-en="Home: your apps, Tramtai and one line per agent with its status">
+          <img class="solo-oscuro" src="capturas/inicio-oscuro.png" width="1440" height="900" loading="lazy" alt="Inicio: tus apps, Tramtai y una línea por agente con su estado" data-alt-en="Home: your apps, Tramtai and one line per agent with its status">
+        </figure>
+      </article>
+      <article class="par invertido">
+        <div>
+          <span class="etiqueta"><span lang="es">Probar</span><span lang="en">Try</span></span>
+          <h3><span lang="es">De la prueba al código en un clic</span><span lang="en">From test to code in one click</span></h3>
+          <p class="suave"><span lang="es">Escribe instrucciones, elige agente y esfuerzo, prueba con tus archivos y copia la petición lista en curl, Python o Node. Si funciona, guárdala como API.</span><span lang="en">Write instructions, pick agent and effort, test with your files and copy the request ready in curl, Python or Node. If it works, save it as an API.</span></p>
+        </div>
+        <figure class="captura">
+          <img class="solo-claro" src="capturas/probar-claro.png" width="1440" height="900" loading="lazy" alt="Probar: la receta con Copilot y «Ver como código» con la petición lista en Python" data-alt-en="Try: the recipe with Copilot and “View as code” with the request ready in Python">
+          <img class="solo-oscuro" src="capturas/probar-oscuro.png" width="1440" height="900" loading="lazy" alt="Probar: la receta con Copilot y «Ver como código» con la petición lista en Python" data-alt-en="Try: the recipe with Copilot and “View as code” with the request ready in Python">
+        </figure>
+      </article>
+      <article class="par">
+        <div>
+          <span class="etiqueta"><span lang="es">Mis APIs</span><span lang="en">My APIs</span></span>
+          <h3><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></h3>
+          <p class="suave"><span lang="es">Cada app con su clave, sus modelos y su presupuesto. Búscalas, fíltralas y mira cómo conectar cada una.</span><span lang="en">Each app with its own key, models and budget. Search, filter and see how to connect each one.</span></p>
+        </div>
+        <figure class="captura">
+          <img class="solo-claro" src="capturas/mis-apis-claro.png" width="1440" height="900" loading="lazy" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas" data-alt-en="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
+          <img class="solo-oscuro" src="capturas/mis-apis-oscuro.png" width="1440" height="900" loading="lazy" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas" data-alt-en="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
+        </figure>
+      </article>
+      <article class="par invertido">
+        <div>
+          <span class="etiqueta"><span lang="es">Agentes</span><span lang="en">Agents</span></span>
+          <h3><span lang="es">Conecta cada agente a tu manera</span><span lang="en">Connect each agent your way</span></h3>
+          <p class="suave"><span lang="es">Con tu suscripción o con una clave guardada cifrada en el sistema. Tramtai te dice qué le falta a cada uno.</span><span lang="en">With your subscription or with a key stored encrypted in the system. Tramtai tells you what each one is missing.</span></p>
+        </div>
+        <figure class="captura">
+          <img class="solo-claro" src="capturas/agentes-claro.png" width="1440" height="900" loading="lazy" alt="Agentes: una fila por agente con su versión, cómo está conectado y el filtro por estado" data-alt-en="Agents: one row per agent with its version, how it is connected and the status filter">
+          <img class="solo-oscuro" src="capturas/agentes-oscuro.png" width="1440" height="900" loading="lazy" alt="Agentes: una fila por agente con su versión, cómo está conectado y el filtro por estado" data-alt-en="Agents: one row per agent with its version, how it is connected and the status filter">
+        </figure>
+      </article>
     </div>
   </section>
 
   <section id="agentes">
     <div class="envoltura">
-      <div class="cabeza">
+      <div class="cabeza centrada">
         <span class="etiqueta"><span lang="es">Agentes</span><span lang="en">Agents</span></span>
         <h2><span lang="es">Cinco agentes, una sola API.</span><span lang="en">Five agents, one API.</span></h2>
         <p class="suave"><span lang="es">Tu app pide <code>agente/modelo</code> en el campo <code>model</code> y Tramtai la lleva por la línea de ese agente.</span><span lang="en">Your app asks for <code>agent/model</code> in the <code>model</code> field and Tramtai sends it down that agent's line.</span></p>
@@ -166,47 +274,16 @@ respuesta = cliente.chat.completions.create(
         <article class="agente" style="--c: var(--antigravity)">
           <header><span class="sigla">AG</span><h3>Antigravity</h3></header>
           <p><span lang="es">El CLI de Google con tu clave de la Gemini API, sin herramientas: un hook las niega todas.</span><span lang="en">Google's CLI with your Gemini API key, without tools: a hook denies them all.</span></p>
-          <ul><li><span lang="es">Carpeta privada que se borra al terminar</span><span lang="en">Private folder deleted afterwards</span></li></ul>
+          <ul><li><span lang="es">Esfuerzo de bajo a máximo</span><span lang="en">Effort from low to maximum</span></li><li><span lang="es">Respuesta en vivo</span><span lang="en">Live answer</span></li></ul>
         </article>
       </div>
       <p class="nota-agentes suave"><span lang="es">Cada agente vive en su propio módulo y se comprueba con su CLI real antes de usarse desde tus apps: un mensaje hostil no le hace leer archivos, ejecutar órdenes ni salir a la red.</span><span lang="en">Each agent lives in its own module and is checked with its real CLI before your apps can use it: a hostile message can't make it read files, run commands or reach the network.</span></p>
     </div>
   </section>
 
-  <section id="capturas">
-    <div class="envoltura">
-      <div class="cabeza">
-        <span class="etiqueta"><span lang="es">Así se ve</span><span lang="en">How it looks</span></span>
-        <h2><span lang="es">Tu red, a la vista.</span><span lang="en">Your network, at a glance.</span></h2>
-      </div>
-      <div class="capturas">
-        <figure class="captura">
-          <img class="solo-claro" src="capturas/inicio-claro.png" width="1440" height="900" loading="lazy" alt="Inicio: tus apps, Tramtai y una línea por agente con su estado" data-alt-en="Home: your apps, Tramtai and one line per agent with its status">
-          <img class="solo-oscuro" src="capturas/inicio-oscuro.png" width="1440" height="900" loading="lazy" alt="Inicio: tus apps, Tramtai y una línea por agente con su estado" data-alt-en="Home: your apps, Tramtai and one line per agent with its status">
-          <figcaption><span lang="es">Inicio: tus apps, Tramtai y una línea por agente con su estado</span><span lang="en">Home: your apps, Tramtai and one line per agent with its status</span></figcaption>
-        </figure>
-        <figure class="captura">
-          <img class="solo-claro" src="capturas/mis-apis-claro.png" width="1440" height="900" loading="lazy" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas" data-alt-en="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
-          <img class="solo-oscuro" src="capturas/mis-apis-oscuro.png" width="1440" height="900" loading="lazy" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas" data-alt-en="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
-          <figcaption><span lang="es">Mis APIs: tus APIs por grupo, con buscador, filtros y páginas, y cómo conectar cada una</span><span lang="en">My APIs: your APIs by group, with search, filters and pages, and how to connect each one</span></figcaption>
-        </figure>
-        <figure class="captura">
-          <img class="solo-claro" src="capturas/agentes-claro.png" width="1440" height="900" loading="lazy" alt="Agentes: una fila por agente con su versión, cómo está conectado y el filtro por estado" data-alt-en="Agents: one row per agent with its version, how it is connected and the status filter">
-          <img class="solo-oscuro" src="capturas/agentes-oscuro.png" width="1440" height="900" loading="lazy" alt="Agentes: una fila por agente con su versión, cómo está conectado y el filtro por estado" data-alt-en="Agents: one row per agent with its version, how it is connected and the status filter">
-          <figcaption><span lang="es">Agentes: una fila por agente, con su versión y cómo está conectado</span><span lang="en">Agents: one row per agent, with its version and how it is connected</span></figcaption>
-        </figure>
-        <figure class="captura">
-          <img class="solo-claro" src="capturas/probar-claro.png" width="1440" height="900" loading="lazy" alt="Probar: la receta con Copilot y «Ver como código» con la petición lista en Python" data-alt-en="Try: the recipe with Copilot and “View as code” with the request ready in Python">
-          <img class="solo-oscuro" src="capturas/probar-oscuro.png" width="1440" height="900" loading="lazy" alt="Probar: la receta con Copilot y «Ver como código» con la petición lista en Python" data-alt-en="Try: the recipe with Copilot and “View as code” with the request ready in Python">
-          <figcaption><span lang="es">Probar: prueba la receta y cópiala como código para tu app</span><span lang="en">Try: test the recipe and copy it as code for your app</span></figcaption>
-        </figure>
-      </div>
-    </div>
-  </section>
-
   <section id="funciones">
     <div class="envoltura">
-      <div class="cabeza">
+      <div class="cabeza centrada">
         <span class="etiqueta"><span lang="es">Funciones</span><span lang="en">Features</span></span>
         <h2><span lang="es">Una red con una línea por agente.</span><span lang="en">A network with one line per agent.</span></h2>
         <p class="suave"><span lang="es">Cada petición viaja por la línea de su agente, y tú ves el recorrido completo: en cola, en ejecución y llegada.</span><span lang="en">Every request travels along its agent's line, and you see the whole journey: queued, running and arrived.</span></p>
@@ -247,7 +324,7 @@ respuesta = cliente.chat.completions.create(
         <article class="tarjeta">
           <div class="linea" style="background: var(--claude)"></div>
           <h3><span lang="es">Modelo y esfuerzo a tu medida</span><span lang="en">Your model, your effort</span></h3>
-          <p><span lang="es">Elige modelo en cada petición y, en Claude, Codex y Copilot (con un modelo concreto), cuánto razona el agente: de bajo a máximo.</span><span lang="en">Pick the model per request and, for Claude, Codex and Copilot (with a specific model), how hard the agent reasons: from low to maximum.</span></p>
+          <p><span lang="es">Elige modelo en cada petición y, en los agentes que lo admiten, cuánto razona: de bajo a máximo.</span><span lang="en">Pick the model per request and, with the agents that support it, how hard it reasons: from low to maximum.</span></p>
         </article>
         <article class="tarjeta">
           <div class="linea" style="background: var(--gemini)"></div>
@@ -273,7 +350,7 @@ respuesta = cliente.chat.completions.create(
         <article class="tarjeta">
           <div class="linea" style="background: var(--copilot)"></div>
           <h3><span lang="es">Agentes con las manos atadas</span><span lang="en">Agents with their hands tied</span></h3>
-          <p><span lang="es">Los agentes que usan tus apps no tienen terminal ni pueden escribir archivos o salir a la red (Claude y Copilot, sin herramientas; Codex, en solo lectura), trabajan en una carpeta temporal vacía y no reciben las claves de los demás.</span><span lang="en">The agents your apps use have no terminal and can't write files or reach the network (Claude and Copilot without tools; Codex read-only), work in an empty temporary folder and never get the other agents' keys.</span></p>
+          <p><span lang="es">Los agentes no tienen terminal ni pueden escribir archivos o salir a la red (Claude, Copilot y Antigravity, sin herramientas; Codex, en solo lectura), trabajan en una carpeta temporal vacía y no reciben las claves de los demás.</span><span lang="en">Agents have no terminal and can't write files or reach the network (Claude, Copilot and Antigravity without tools; Codex read-only), work in an empty temporary folder and never get the other agents' keys.</span></p>
         </article>
       </div>
     </div>
@@ -281,7 +358,7 @@ respuesta = cliente.chat.completions.create(
 
   <section id="descargar">
     <div class="envoltura">
-      <div class="cabeza">
+      <div class="cabeza centrada">
         <span class="etiqueta"><span lang="es">Descargar</span><span lang="en">Download</span></span>
         <h2><span lang="es">Elige tu sistema.</span><span lang="en">Pick your system.</span></h2>
         <p class="suave"><span lang="es">La misma app en los tres, con su icono en la bandeja. Cada archivo trae su suma SHA-256 en <code>SHA256SUMS.txt</code>.</span><span lang="en">The same app on all three, with its tray icon. Every file has its SHA-256 checksum in <code>SHA256SUMS.txt</code>.</span></p>
@@ -329,18 +406,26 @@ respuesta = cliente.chat.completions.create(
 
   <section class="cierre">
     <div class="envoltura">
-      <div class="cabeza">
-        <span class="etiqueta"><span lang="es">Licencia</span><span lang="en">License</span></span>
+      <div class="cabeza centrada">
+        <span class="etiqueta"><span lang="es">Empieza</span><span lang="en">Get started</span></span>
         <h2><span lang="es">Gratis para uso personal y no comercial.</span><span lang="en">Free for personal and non-commercial use.</span></h2>
-        <p class="suave">
-          <span lang="es">Tramtai se publica con la licencia <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md">PolyForm Noncommercial 1.0.0</a>. Para usarlo en una empresa o en un producto comercial, <a href="https://github.com/MscottB">escríbeme</a>.</span>
-          <span lang="en">Tramtai is released under the <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md">PolyForm Noncommercial 1.0.0</a> license. To use it in a business or a commercial product, <a href="https://github.com/MscottB">get in touch</a>.</span>
-        </p>
       </div>
-      <div class="acciones">
-        <a class="boton principal" href="#descargar"><span lang="es">Descargar Tramtai</span><span lang="en">Download Tramtai</span></a>
-        <a class="boton secundario" href="ayuda.html"><span lang="es">Leer la ayuda</span><span lang="en">Read the help</span></a>
+      <div class="empezar">
+        <a class="tarjeta" href="#descargar">
+          <div class="linea"></div>
+          <h3><span lang="es">Descarga Tramtai</span><span lang="en">Download Tramtai</span></h3>
+          <p><span lang="es">Para Windows, macOS y Linux. En unos minutos tienes tu primera API.</span><span lang="en">For Windows, macOS and Linux. Your first API is minutes away.</span></p>
+        </a>
+        <a class="tarjeta" href="ayuda.html">
+          <div class="linea" style="background: var(--codex)"></div>
+          <h3><span lang="es">Lee la ayuda</span><span lang="en">Read the help</span></h3>
+          <p><span lang="es">Cómo conectar cada agente, apuntar tus apps y resolver los errores habituales.</span><span lang="en">How to connect each agent, point your apps and fix the usual errors.</span></p>
+        </a>
       </div>
+      <p class="suave licencia">
+        <span lang="es">Tramtai se publica con la licencia <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md">PolyForm Noncommercial 1.0.0</a>. Para usarlo en una empresa o en un producto comercial, <a href="https://github.com/MscottB">escríbeme</a>.</span>
+        <span lang="en">Tramtai is released under the <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md">PolyForm Noncommercial 1.0.0</a> license. To use it in a business or a commercial product, <a href="https://github.com/MscottB">get in touch</a>.</span>
+      </p>
     </div>
   </section>
 </main>
