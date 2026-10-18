@@ -775,8 +775,9 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 			Forzar        *bool     `json:"forzar_modelo"`
 			Permitidos    *[]string `json:"modelos_permitidos"`
 			// Esquema: ausente no cambia; null o {} lo quita; un objeto lo fija.
-			Esquema  json.RawMessage `json:"esquema"`
-			Respaldo *[]string       `json:"respaldo"`
+			Esquema    json.RawMessage `json:"esquema"`
+			Respaldo   *[]string       `json:"respaldo"`
+			Reintentos *int            `json:"reintentos_salida"`
 			// Presupuesto: ausente no cambia; null lo quita; un objeto lo fija.
 			Presupuesto json.RawMessage `json:"presupuesto"`
 		}
@@ -822,6 +823,9 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 				if cambio.Respaldo != nil {
 					lista[i].Respaldo = *cambio.Respaldo
 				}
+				if cambio.Reintentos != nil {
+					lista[i].ReintentosSalida = *cambio.Reintentos
+				}
 				if len(cambio.Presupuesto) > 0 {
 					lista[i].Presupuesto = nil // null lo quita
 					// Sin campos desconocidos: una errata dejaría el presupuesto vacío y lo quitaría sin avisar.
@@ -833,7 +837,7 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 				}
 				// La receta se valida antes de escribir: un cambio no válido deja la configuración como estaba. Solo si
 				// cambia, para no impedir desactivar un punto que ya tenía otro error.
-				if len(cambio.Esquema) > 0 || cambio.Respaldo != nil || cambio.Permitidos != nil || len(cambio.Presupuesto) > 0 {
+				if len(cambio.Esquema) > 0 || cambio.Respaldo != nil || cambio.Permitidos != nil || len(cambio.Presupuesto) > 0 || cambio.Reintentos != nil {
 					normalizado, err := lista[i].Normalizar(inst.ID, s.opc.Puerto)
 					if err != nil {
 						return nil, err

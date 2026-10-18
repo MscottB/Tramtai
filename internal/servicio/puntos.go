@@ -49,6 +49,8 @@ type ConfigPunto struct {
 	Esquema map[string]any `json:"esquema,omitempty" yaml:"esquema,omitempty"`
 	// Respaldo son los agentes (agente o agente/modelo) que siguen si el principal falla antes de producir texto.
 	Respaldo []string `json:"respaldo,omitempty" yaml:"respaldo,omitempty"`
+	// ReintentosSalida es cuántas veces se pide al agente que corrija una respuesta JSON que no cumple (0 a 3).
+	ReintentosSalida int `json:"reintentos_salida,omitempty" yaml:"reintentos_salida,omitempty"`
 	// Presupuesto limita el consumo diario y mensual de la API (peticiones, tokens, USD).
 	Presupuesto *nucleo.Presupuesto `json:"presupuesto,omitempty" yaml:"presupuesto,omitempty"`
 	Activo      *bool               `json:"activo,omitempty" yaml:"activo,omitempty"`
@@ -135,6 +137,9 @@ func (p ConfigPunto) Normalizar(instancia string, puertoServicio int) (ConfigPun
 	if p.ForzarModelo && p.Agente == "" && p.Modelo == "" && p.PerfilModelo == "" {
 		return invalido(idioma.T("forzar_modelo exige agente, modelo o perfil_modelo"))
 	}
+	if p.ReintentosSalida < 0 || p.ReintentosSalida > nucleo.MaximoReintentosSalida {
+		return invalido(idioma.Tf("reintentos_salida va de 0 a %d", nucleo.MaximoReintentosSalida))
+	}
 	if p.Ejecucion != nil && p.Ejecucion.MaximoTrabajos < 0 {
 		return invalido(idioma.T("ejecucion.maximo_trabajos no puede ser negativo"))
 	}
@@ -217,7 +222,7 @@ func (p ConfigPunto) politica() *api.Punto {
 	if len(p.Esquema) > 0 {
 		pol.Esquema, _ = json.Marshal(p.Esquema) // ya validado en Normalizar
 	}
-	pol.Respaldo = p.Respaldo
+	pol.Respaldo, pol.ReintentosSalida = p.Respaldo, p.ReintentosSalida
 	return pol
 }
 
@@ -273,6 +278,8 @@ type EstadoPunto struct {
 	// Esquema y Respaldo son la receta del punto, para mostrarla y abrirla en Probar.
 	Esquema  map[string]any `json:"esquema,omitempty"`
 	Respaldo []string       `json:"respaldo,omitempty"`
+	// ReintentosSalida son las correcciones de la receta si la respuesta no cumple el esquema.
+	ReintentosSalida int `json:"reintentos_salida,omitempty"`
 	// Presupuesto son los límites de la API; su consumo lo da GET /api/v1/puntos en «presupuestos».
 	Presupuesto *nucleo.Presupuesto `json:"presupuesto,omitempty"`
 	Activo      bool                `json:"activo"`
@@ -514,7 +521,7 @@ func (s *Servicio) estadoPuntos() []EstadoPunto {
 	for _, p := range s.puntos {
 		lista = append(lista, EstadoPunto{Nombre: p.cfg.Nombre, Grupo: p.cfg.Grupo, Instrucciones: p.cfg.Instrucciones, Instancia: p.cfg.Instancia, URL: p.url, Contratos: p.cfg.Contratos,
 			Agente: p.cfg.Agente, Modelo: p.cfg.Modelo, PerfilModelo: p.cfg.PerfilModelo, Esfuerzo: p.cfg.Esfuerzo,
-			Permitidos: p.cfg.ModelosPermitidos, Forzar: p.cfg.ForzarModelo, Esquema: p.cfg.Esquema, Respaldo: p.cfg.Respaldo, Presupuesto: p.cfg.Presupuesto,
+			Permitidos: p.cfg.ModelosPermitidos, Forzar: p.cfg.ForzarModelo, Esquema: p.cfg.Esquema, Respaldo: p.cfg.Respaldo, ReintentosSalida: p.cfg.ReintentosSalida, Presupuesto: p.cfg.Presupuesto,
 			Activo: p.err == "", Error: p.err, Origen: p.origen})
 	}
 	sort.Slice(lista, func(i, j int) bool { return lista[i].Nombre < lista[j].Nombre })
