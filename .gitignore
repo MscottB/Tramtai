@@ -25,3 +25,6 @@ node_modules/
 
 # paquetes de Linux generados por scripts/linux/empaquetar.sh
 /paquete/
+
+# Notas de versión en preparación (scripts/version.ps1 -Resumen notas-es.txt -ResumenEn notas-en.txt)
+notas-*.txt

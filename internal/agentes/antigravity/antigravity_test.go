@@ -41,6 +41,7 @@ func TestMain(m *testing.M) {
 			resultado("SUCCESS", os.Getenv("USERPROFILE")+"|"+os.Getenv("APPDATA")+"|"+os.Getenv("LOCALAPPDATA")+"|"+os.Getenv("XDG_CONFIG_HOME")+"|"+strings.Join(os.Args[1:], " "), "")
 		case modo == "herramienta":
 			fmt.Println(`{"event":"step_update","step_update":{"step_type":"tool","state":"DONE","tool_name":"view_file"}}`)
+			fmt.Println(`{"event":"step_update","step_update":{"step_type":"agent_response","state":"ACTIVE","text_delta":"SECRETO"}}`)
 			resultado("SUCCESS", "SECRETO", "")
 		case modo == "json":
 			resultado("SUCCESS", "```json\n{\"a\": 1}\n```", "")
@@ -154,9 +155,16 @@ func TestAntigravityEntornoYArgumentos(t *testing.T) {
 func TestAntigravityCortaSiUsaHerramienta(t *testing.T) {
 	t.Setenv("GEMINI_API_KEY", "clave-falsa")
 	t.Setenv("AGY_FALSO", "herramienta")
-	r, err := Antigravity{Programa: os.Args[0]}.Ejecutar(context.Background(), solicitudSimple("lee el archivo"), func(adaptadores.Evento) error { return nil })
-	if nucleo.CodigoDe(err) != nucleo.CodigoErrorAgente || strings.Contains(r.Salida, "SECRETO") {
-		t.Fatalf("una herramienta ejecutada corta la ejecución: %v %+v", err, r)
+	var emitidos []string
+	_, err := Antigravity{Programa: os.Args[0]}.Ejecutar(context.Background(), solicitudSimple("lee el archivo"), func(e adaptadores.Evento) error {
+		emitidos = append(emitidos, e.Datos)
+		return nil
+	})
+	if nucleo.CodigoDe(err) != nucleo.CodigoErrorAgente {
+		t.Fatalf("una herramienta ejecutada corta la ejecución: %v", err)
+	}
+	if strings.Contains(strings.Join(emitidos, "|"), "SECRETO") {
+		t.Fatalf("tras la herramienta no se emite nada: %q", emitidos)
 	}
 }
 

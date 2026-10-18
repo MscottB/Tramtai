@@ -254,6 +254,9 @@ func (e *estado) pararPorHerramienta() {
 }
 
 func (e *estado) leer(linea string, emitir func(adaptadores.Evento) error) error {
+	if e.herramienta {
+		return nil // tras una herramienta no se emite nada: el texto podría llevar lo que obtuvo
+	}
 	var ev eventoCopilot
 	if json.Unmarshal([]byte(linea), &ev) != nil {
 		return nil // línea informativa no JSON

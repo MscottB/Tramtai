@@ -178,6 +178,9 @@ type estado struct {
 }
 
 func (e *estado) leer(linea string, emitir func(adaptadores.Evento) error) error {
+	if e.herramienta {
+		return nil // tras una herramienta no se emite nada: el texto podría llevar lo que obtuvo
+	}
 	var ev struct {
 		Event string `json:"event"`
 		Paso  struct {

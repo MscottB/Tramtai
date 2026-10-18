@@ -14,6 +14,15 @@
 param([string]$Hasta = 'HEAD', [string]$Resumen = '', [string]$ResumenEn = '', [switch]$Etiquetar, [switch]$Explicar)
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+# Las notas pueden venir en un archivo: la ruta se resuelve desde donde se lanza, antes de ir a la raíz del repositorio.
+function Leer-Notas([string]$valor) {
+    if (-not $valor) { return '' }
+    if (Test-Path -LiteralPath $valor -PathType Leaf) { return (Get-Content -Raw -Encoding UTF8 -LiteralPath $valor).Trim() }
+    if ($valor -match '\.(txt|md)$') { throw "No existe el archivo de notas: $valor" }
+    $valor
+}
+$Resumen = Leer-Notas $Resumen
+$ResumenEn = Leer-Notas $ResumenEn
 Push-Location (Join-Path $PSScriptRoot '..')
 try {
     $ultima = git describe --tags --abbrev=0 --match 'v[0-9]*' $Hasta 2>$null
@@ -52,9 +61,6 @@ try {
     $fecha = git log -1 --format='%cd' --date='format:%d%m%Y' $Hasta
     $version = if ($nivel -eq 0 -and $ultima) { $ultima } else { "v$mayor.$menor.$parche+$fecha" }
 
-    # Un valor que es la ruta de un archivo se lee entero (notas de varias líneas).
-    if ($Resumen -and (Test-Path -LiteralPath $Resumen -PathType Leaf)) { $Resumen = (Get-Content -Raw -Encoding UTF8 -LiteralPath $Resumen).Trim() }
-    if ($ResumenEn -and (Test-Path -LiteralPath $ResumenEn -PathType Leaf)) { $ResumenEn = (Get-Content -Raw -Encoding UTF8 -LiteralPath $ResumenEn).Trim() }
     $comparar = if ($ultima) { "https://github.com/MscottB/Tramtai/compare/$([uri]::EscapeDataString($ultima))...$([uri]::EscapeDataString($version))" } else { '' }
     $notas = "Tramtai $version`n`n$Resumen"
     if ($comparar) { $notas += "`n`nCambios técnicos: $comparar" }

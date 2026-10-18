@@ -140,7 +140,7 @@ section { padding: 72px 0; }
 .paradas li::before { content: counter(parada); position: absolute; left: 0; top: -4px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
   background: var(--fondo); border: 6px solid var(--acento); font: 700 .95rem var(--titulo); color: var(--texto); box-sizing: border-box; }
 .paradas h3 { margin-bottom: 6px; }
-.como .codigo { margin: 0; }
+.como .codigo { margin: 0; position: relative; padding-top: 42px; }
 
 /* Destacado: un panel grande con cuatro motivos */
 .destacado { border: 1px solid color-mix(in srgb, var(--acento) 40%, var(--borde)); border-radius: 22px; padding: 40px;
@@ -218,6 +218,8 @@ footer .envoltura { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
   .tablero { padding: 24px; }
   .tablero li { grid-template-columns: 1fr; gap: 4px; }
   .barra .boton { display: none; }
+  .barra .envoltura { gap: 10px; }
+  .idioma { flex: none; }
 }
 
 /* Descargas: una tarjeta por sistema */
