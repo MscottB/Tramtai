@@ -31,26 +31,26 @@ func (c Codex) Detectar(ctx context.Context) Estado {
 		}
 	} else {
 		e.Terminos = idioma.T("términos de la API de OpenAI (clave de API)")
-		if claveEntorno("CODEX_API_KEY", "OPENAI_API_KEY") == "" {
+		if ClaveEntorno("CODEX_API_KEY", "OPENAI_API_KEY") == "" {
 			e.Problema, e.ProblemaCodigo = idioma.T("falta CODEX_API_KEY u OPENAI_API_KEY"), ProblemaFaltaClave
 		}
 	}
-	ruta, err := resolverPrograma(c.Programa)
+	ruta, err := ResolverPrograma(c.Programa)
 	if err != nil {
 		e.Problema, e.ProblemaCodigo = err.Error(), ProblemaNoInstalado
 		return e
 	}
-	e.Ruta, e.Version = ruta, version(ctx, ruta)
+	e.Ruta, e.Version = ruta, VersionDe(ctx, ruta)
 	return e
 }
 
 // Ejecutar implementa Adaptador.
 func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(Evento) error) (Resultado, error) {
-	ruta, err := resolverPrograma(c.Programa)
+	ruta, err := ResolverPrograma(c.Programa)
 	if err != nil {
 		return Resultado{}, err
 	}
-	raiz, espacio, err := espacioTemporal()
+	raiz, espacio, err := EspacioTemporal()
 	if err != nil {
 		return Resultado{}, err
 	}
@@ -61,7 +61,7 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 	switch c.Autenticacion.Valor() {
 	case AutenticacionSuscripcion:
 	case AutenticacionClaveAPI, "":
-		if clave = claveEntorno("CODEX_API_KEY", "OPENAI_API_KEY"); clave == "" {
+		if clave = ClaveEntorno("CODEX_API_KEY", "OPENAI_API_KEY"); clave == "" {
 			return Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente,
 				idioma.T("falta CODEX_API_KEY u OPENAI_API_KEY; o configura adaptadores.codex.autenticacion: suscripcion para uso personal local"))
 		}
@@ -75,10 +75,10 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 		return Resultado{}, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("autenticación desconocida: %s", c.Autenticacion.Valor()))
 	}
 
-	trabajo := directorioTrabajo(s, espacio)
+	trabajo := DirectorioTrabajo(s, espacio)
 	args := []string{"exec", "--json", "--ephemeral", "--skip-git-repo-check", "-C", trabajo, "-s", "read-only",
 		"-c", `approval_policy="never"`, "-c", "features.shell_tool=false", "-c", `web_search="disabled"`, "-c", `history.persistence="none"`}
-	if !consciente(s) {
+	if !Consciente(s) {
 		args = append(args, "--ignore-rules") // en modo consciente carga el AGENTS.md del proyecto
 	}
 	if s.Modelo != "" {
@@ -95,14 +95,14 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 		args = append(args, "--output-schema", archivo)
 	}
 	args = append(args, "-") // el prompt llega por stdin
-	sistema, prompt := separar(s)
+	sistema, prompt := Separar(s)
 
 	var mensajes []string
 	var uso nucleo.Uso
 	var errorAgente string
 	terminado := false
 	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: trabajo,
-		Entorno: entornoLimpio([]string{"CODEX_", "OPENAI_"}, extra...), Entrada: enmarcarSistema(sistema, prompt)}, func(linea string) error {
+		Entorno: EntornoLimpio([]string{"CODEX_", "OPENAI_"}, extra...), Entrada: EnmarcarSistema(sistema, prompt)}, func(linea string) error {
 		var e eventoCodex
 		if json.Unmarshal([]byte(linea), &e) != nil {
 			return nil
@@ -127,11 +127,11 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 		return Resultado{}, err
 	}
 	if errorAgente != "" || !terminado {
-		texto := redactar(strings.TrimSpace(errorAgente+"\n"+r.Errores), clave)
+		texto := RedactarCon(strings.TrimSpace(errorAgente+"\n"+r.Errores), clave)
 		if texto == "" {
 			return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.T("codex terminó sin turn.completed"))
 		}
-		return Resultado{}, nucleo.NuevoError(clasificar(texto, 0), texto)
+		return Resultado{}, nucleo.NuevoError(Clasificar(texto, 0), texto)
 	}
 	return Resultado{Salida: strings.Join(mensajes, "\n\n"), Uso: uso}, nil
 }

@@ -55,9 +55,9 @@ type Detectable interface {
 	Detectar(ctx context.Context) Estado
 }
 
-// separar reparte la solicitud en el texto de sistema y el prompt. Un único mensaje de usuario
+// Separar reparte la solicitud en el texto de sistema y el prompt. Un único mensaje de usuario
 // se envía sin enmarcar; una conversación se delimita por turnos con su rol original y el contenido intacto.
-func separar(s nucleo.SolicitudEjecucion) (sistema, prompt string) {
+func Separar(s nucleo.SolicitudEjecucion) (sistema, prompt string) {
 	var partesSistema []string
 	if s.Instrucciones != "" {
 		partesSistema = append(partesSistema, s.Instrucciones)
@@ -75,7 +75,7 @@ func separar(s nucleo.SolicitudEjecucion) (sistema, prompt string) {
 		return sistema, turnos[0].Contenido
 	}
 	// Los delimitadores llevan un código por petición: un mensaje que escriba «<<<fin turno>>>» no cierra su turno.
-	codigo := codigoDelimitador()
+	codigo := CodigoDelimitador()
 	var b strings.Builder
 	for _, m := range turnos {
 		b.WriteString("<<<turno-" + codigo + " rol=" + m.Rol + ">>>\n" + m.Contenido + "\n<<<fin turno-" + codigo + ">>>\n")
@@ -83,8 +83,8 @@ func separar(s nucleo.SolicitudEjecucion) (sistema, prompt string) {
 	return sistema, b.String()
 }
 
-// codigoDelimitador es un código aleatorio para los delimitadores de una petición.
-func codigoDelimitador() string {
+// CodigoDelimitador es un código aleatorio para los delimitadores de una petición.
+func CodigoDelimitador() string {
 	b := make([]byte, 4)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
@@ -94,7 +94,7 @@ func codigoDelimitador() string {
 func Secretos() []string {
 	var lista []string
 	for _, nombre := range variablesCredenciales {
-		if clave := claveEntorno(nombre); len(clave) >= 8 {
+		if clave := ClaveEntorno(nombre); len(clave) >= 8 {
 			lista = append(lista, clave)
 		}
 	}
@@ -102,21 +102,21 @@ func Secretos() []string {
 }
 
 // Redactar tapa los secretos dados en un texto que llega a la respuesta, al historial o a la Web UI.
-func Redactar(texto string, secretos []string) string { return redactar(texto, secretos...) }
+func Redactar(texto string, secretos []string) string { return RedactarCon(texto, secretos...) }
 
-// enmarcarSistema antepone el sistema como primer bloque delimitado, para CLIs sin mecanismo nativo.
-func enmarcarSistema(sistema, prompt string) string {
+// EnmarcarSistema antepone el sistema como primer bloque delimitado, para CLIs sin mecanismo nativo.
+func EnmarcarSistema(sistema, prompt string) string {
 	if sistema == "" {
 		return prompt
 	}
-	codigo := codigoDelimitador()
+	codigo := CodigoDelimitador()
 	return "<<<turno-" + codigo + " rol=sistema>>>\n" + sistema + "\n<<<fin turno-" + codigo + ">>>\n" + prompt
 }
 
-// entornoLimpio hereda el entorno sin credenciales y añade las variables indicadas. Quita además las TRAMTAI_*
+// EntornoLimpio hereda el entorno sin credenciales y añade las variables indicadas. Quita además las TRAMTAI_*
 // (el token del servicio) y cualquier otro secreto (GITHUB_TOKEN, AWS_*…), salvo la configuración propia de esa
 // CLI (propios: por ejemplo CLAUDE_ y ANTHROPIC_ para Claude); los secretos de otro proveedor no le llegan.
-func entornoLimpio(propios []string, extra ...string) []string {
+func EntornoLimpio(propios []string, extra ...string) []string {
 	quitar := map[string]bool{}
 	for _, nombre := range variablesCredenciales {
 		quitar[nombre] = true
@@ -138,9 +138,9 @@ func entornoLimpio(propios []string, extra ...string) []string {
 	return append(entorno, extra...)
 }
 
-// claveEntorno devuelve la primera clave definida: la variable de entorno tiene prioridad y, si falta, se busca en el
+// ClaveEntorno devuelve la primera clave definida: la variable de entorno tiene prioridad y, si falta, se busca en el
 // almacén de credenciales del sistema (tramtai claves guardar).
-func claveEntorno(nombres ...string) string {
+func ClaveEntorno(nombres ...string) string {
 	for _, nombre := range nombres {
 		if valor := os.Getenv(nombre); valor != "" {
 			return valor
@@ -154,9 +154,9 @@ func claveEntorno(nombres ...string) string {
 	return ""
 }
 
-// resolverPrograma localiza el ejecutable. Rechaza los envoltorios .cmd/.bat: pasarían los argumentos por
+// ResolverPrograma localiza el ejecutable. Rechaza los envoltorios .cmd/.bat: pasarían los argumentos por
 // cmd.exe, y el claude.cmd de npm resultó estar roto.
-func resolverPrograma(nombre string) (string, error) {
+func ResolverPrograma(nombre string) (string, error) {
 	ruta, err := exec.LookPath(nombre)
 	if err != nil {
 		return "", nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf("no se encontró el ejecutable %s; instálalo o configura comandos_agentes", nombre))
@@ -167,21 +167,21 @@ func resolverPrograma(nombre string) (string, error) {
 	return ruta, nil
 }
 
-// directorioTrabajo es donde se ejecuta el agente: el espacio vacío (aislado) o la raíz del proyecto confiable.
-func directorioTrabajo(s nucleo.SolicitudEjecucion, espacio string) string {
-	if consciente(s) {
+// DirectorioTrabajo es donde se ejecuta el agente: el espacio vacío (aislado) o la raíz del proyecto confiable.
+func DirectorioTrabajo(s nucleo.SolicitudEjecucion, espacio string) string {
+	if Consciente(s) {
 		return s.RaizProyecto
 	}
 	return espacio
 }
 
-// consciente indica el modo consciente_proyecto ya autorizado por el planificador.
-func consciente(s nucleo.SolicitudEjecucion) bool {
+// Consciente indica el modo consciente_proyecto ya autorizado por el planificador.
+func Consciente(s nucleo.SolicitudEjecucion) bool {
 	return s.ModoContexto == "consciente_proyecto" && s.RaizProyecto != ""
 }
 
-// espacioTemporal crea el directorio privado de una ejecución con un espacio de trabajo vacío (modo aislado).
-func espacioTemporal() (raiz, espacio string, err error) {
+// EspacioTemporal crea el directorio privado de una ejecución con un espacio de trabajo vacío (modo aislado).
+func EspacioTemporal() (raiz, espacio string, err error) {
 	raiz, err = os.MkdirTemp("", "tramtai-")
 	if err != nil {
 		return "", "", err
@@ -190,8 +190,8 @@ func espacioTemporal() (raiz, espacio string, err error) {
 	return raiz, espacio, os.Mkdir(espacio, 0o700)
 }
 
-// redactar elimina los secretos de un texto que puede acabar en un registro o en la respuesta.
-func redactar(texto string, secretos ...string) string {
+// RedactarCon elimina los secretos de un texto que puede acabar en un registro o en la respuesta.
+func RedactarCon(texto string, secretos ...string) string {
 	for _, secreto := range secretos {
 		if secreto != "" {
 			texto = strings.ReplaceAll(texto, secreto, "[REDACTADO]")
@@ -200,8 +200,8 @@ func redactar(texto string, secretos ...string) string {
 	return texto
 }
 
-// clasificar traduce un error del proveedor a un código estable, distinto para cada tipo de error.
-func clasificar(texto string, estadoHTTP int) nucleo.CodigoError {
+// Clasificar traduce un error del proveedor a un código estable, distinto para cada tipo de error.
+func Clasificar(texto string, estadoHTTP int) nucleo.CodigoError {
 	t := strings.ToLower(texto)
 	switch {
 	case estadoHTTP == 429 || strings.Contains(t, "rate limit") || strings.Contains(t, "usage limit") || strings.Contains(t, "quota"):
@@ -216,10 +216,10 @@ func clasificar(texto string, estadoHTTP int) nucleo.CodigoError {
 	return nucleo.CodigoErrorAgente
 }
 
-// version ejecuta "<programa> --version" sin consumir cuota.
-func version(ctx context.Context, ruta string) string {
+// VersionDe ejecuta "<programa> --version" sin consumir cuota.
+func VersionDe(ctx context.Context, ruta string) string {
 	cmd := exec.CommandContext(ctx, ruta, "--version")
-	cmd.Env = entornoLimpio(nil) // consultar la versión no necesita ninguna clave
+	cmd.Env = EntornoLimpio(nil) // consultar la versión no necesita ninguna clave
 	procesos.SinVentana(cmd)
 	salida, err := cmd.Output()
 	if err != nil {

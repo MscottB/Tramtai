@@ -33,15 +33,15 @@ func (a Antigravity) Detectar(ctx context.Context) Estado {
 		Terminos: idioma.T("experimental: solo modelProvider gemini con clave de API propia; nunca la sesión personal")}
 	if err := a.autenticacion(); err != nil {
 		e.Problema = nucleo.MensajeDe(err)
-	} else if claveEntorno("GEMINI_API_KEY") == "" {
+	} else if ClaveEntorno("GEMINI_API_KEY") == "" {
 		e.Problema, e.ProblemaCodigo = idioma.T("falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)"), ProblemaFaltaClave
 	}
-	ruta, err := resolverPrograma(a.Programa)
+	ruta, err := ResolverPrograma(a.Programa)
 	if err != nil {
 		e.Problema, e.ProblemaCodigo = err.Error(), ProblemaNoInstalado
 		return e
 	}
-	e.Ruta, e.Version = ruta, version(ctx, ruta)
+	e.Ruta, e.Version = ruta, VersionDe(ctx, ruta)
 	return e
 }
 
@@ -58,27 +58,27 @@ func (a Antigravity) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, 
 	if err := a.autenticacion(); err != nil {
 		return Resultado{}, err
 	}
-	clave := claveEntorno("GEMINI_API_KEY")
+	clave := ClaveEntorno("GEMINI_API_KEY")
 	if clave == "" {
 		return Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente, idioma.T("falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)"))
 	}
-	ruta, err := resolverPrograma(a.Programa)
+	ruta, err := ResolverPrograma(a.Programa)
 	if err != nil {
 		return Resultado{}, err
 	}
-	if consciente(s) {
+	if Consciente(s) {
 		// Sin restricción de herramientas comprobada, no trabaja en la carpeta del proyecto.
 		return Resultado{}, nucleo.NuevoError(nucleo.CodigoContextoNoPermitido, idioma.T("antigravity no admite consciente_proyecto: usa modo_contexto aislado"))
 	}
-	sistema, prompt := separar(s)
-	prompt = enmarcarSistema(sistema, prompt)
+	sistema, prompt := Separar(s)
+	prompt = EnmarcarSistema(sistema, prompt)
 	if strings.HasPrefix(prompt, "-") {
 		prompt = "\n" + prompt // tras -p, un argumento que empieza por «-» se leería como una opción de agy
 	}
 	if unidadesLineaOrdenes(prompt) > maximoPromptAntigravity {
 		return Resultado{}, nucleo.NuevoError(nucleo.CodigoEntradaDemasiadoGrande, idioma.T("la entrada supera lo que admite antigravity por línea de órdenes; usa gemini"))
 	}
-	raiz, espacio, err := espacioTemporal()
+	raiz, espacio, err := EspacioTemporal()
 	if err != nil {
 		return Resultado{}, err
 	}
@@ -105,8 +105,8 @@ func (a Antigravity) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, 
 		args = append(args, "--json-schema", archivo)
 	}
 	var lineas []string
-	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: directorioTrabajo(s, espacio),
-		Entorno: entornoLimpio([]string{"GEMINI_"}, "USERPROFILE="+home, "HOME="+home, "APPDATA="+filepath.Join(home, "AppData", "Roaming"),
+	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: ruta, Argumentos: args, Directorio: DirectorioTrabajo(s, espacio),
+		Entorno: EntornoLimpio([]string{"GEMINI_"}, "USERPROFILE="+home, "HOME="+home, "APPDATA="+filepath.Join(home, "AppData", "Roaming"),
 			"LOCALAPPDATA="+filepath.Join(home, "AppData", "Local"), "XDG_CONFIG_HOME="+filepath.Join(home, ".config"),
 			"XDG_DATA_HOME="+filepath.Join(home, ".local", "share"), "XDG_CACHE_HOME="+filepath.Join(home, ".cache"),
 			"XDG_STATE_HOME="+filepath.Join(home, ".local", "state"), "GEMINI_API_KEY="+clave)}, func(linea string) error {
@@ -118,15 +118,15 @@ func (a Antigravity) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, 
 	}
 	var final resultadoAntigravity
 	if json.Unmarshal([]byte(strings.Join(lineas, "\n")), &final) != nil || final.Status == "" {
-		texto := redactar(strings.TrimSpace(r.Errores+"\n"+strings.Join(lineas, "\n")), clave)
+		texto := RedactarCon(strings.TrimSpace(r.Errores+"\n"+strings.Join(lineas, "\n")), clave)
 		if texto == "" {
 			texto = idioma.T("agy terminó sin resultado JSON")
 		}
-		return Resultado{}, nucleo.NuevoError(clasificar(texto, 0), texto)
+		return Resultado{}, nucleo.NuevoError(Clasificar(texto, 0), texto)
 	}
 	if final.Status != "SUCCESS" {
-		texto := redactar(strings.TrimSpace(final.Status+": "+final.Response+" "+r.Errores), clave)
-		return Resultado{}, nucleo.NuevoError(clasificar(texto, 0), texto)
+		texto := RedactarCon(strings.TrimSpace(final.Status+": "+final.Response+" "+r.Errores), clave)
+		return Resultado{}, nucleo.NuevoError(Clasificar(texto, 0), texto)
 	}
 	salida := strings.TrimSpace(final.Response)
 	if len(final.StructuredOutput) > 0 && string(final.StructuredOutput) != "null" {

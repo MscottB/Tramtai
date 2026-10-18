@@ -33,7 +33,7 @@ type Gemini struct {
 func (g Gemini) Detectar(context.Context) Estado {
 	e := Estado{Agente: "gemini", Autenticacion: AutenticacionClaveAPI, Ruta: g.base(),
 		Terminos: idioma.T("términos de la Gemini API de Google (clave de API propia)")}
-	if claveEntorno("GEMINI_API_KEY", "GOOGLE_API_KEY") == "" {
+	if ClaveEntorno("GEMINI_API_KEY", "GOOGLE_API_KEY") == "" {
 		e.Problema, e.ProblemaCodigo = idioma.T("falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)"), ProblemaFaltaClave
 	}
 	return e
@@ -48,11 +48,11 @@ func (g Gemini) base() string {
 
 // Ejecutar implementa Adaptador con streamGenerateContent (SSE): el texto llega por fragmentos.
 func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(Evento) error) (Resultado, error) {
-	clave := claveEntorno("GEMINI_API_KEY", "GOOGLE_API_KEY")
+	clave := ClaveEntorno("GEMINI_API_KEY", "GOOGLE_API_KEY")
 	if clave == "" {
 		return Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente, idioma.T("falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)"))
 	}
-	if consciente(s) {
+	if Consciente(s) {
 		return Resultado{}, nucleo.NuevoError(nucleo.CodigoContextoNoPermitido, idioma.T("la Gemini API no tiene proyecto: usa modo_contexto aislado"))
 	}
 	modelo := strings.TrimPrefix(s.Modelo, "models/")
@@ -79,13 +79,13 @@ func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 		if ctx.Err() != nil {
 			return Resultado{}, ctx.Err()
 		}
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf("no se pudo contactar con la Gemini API: %s", redactar(err.Error(), clave)))
+		return Resultado{}, nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf("no se pudo contactar con la Gemini API: %s", RedactarCon(err.Error(), clave)))
 	}
 	defer respuesta.Body.Close()
 	if respuesta.StatusCode != http.StatusOK {
 		datos, _ := io.ReadAll(io.LimitReader(respuesta.Body, 16<<10))
-		texto := redactar(mensajeGemini(datos), clave)
-		codigo := clasificar(texto, respuesta.StatusCode)
+		texto := RedactarCon(mensajeGemini(datos), clave)
+		codigo := Clasificar(texto, respuesta.StatusCode)
 		if respuesta.StatusCode == http.StatusNotFound {
 			codigo = nucleo.CodigoModeloNoDisponible
 		}
@@ -107,7 +107,7 @@ func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 			return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.T("fragmento SSE de Gemini no válido"))
 		}
 		if f.Error.Message != "" {
-			return Resultado{}, nucleo.NuevoError(clasificar(f.Error.Message, f.Error.Code), "Gemini API: "+redactar(f.Error.Message, clave))
+			return Resultado{}, nucleo.NuevoError(Clasificar(f.Error.Message, f.Error.Code), "Gemini API: "+RedactarCon(f.Error.Message, clave))
 		}
 		for _, c := range f.Candidates {
 			for _, p := range c.Content.Parts {
@@ -138,7 +138,7 @@ func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 		if ctx.Err() != nil {
 			return Resultado{}, ctx.Err()
 		}
-		return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.Tf("flujo de Gemini interrumpido: %s", redactar(err.Error(), clave)))
+		return Resultado{}, nucleo.NuevoError(nucleo.CodigoErrorProtocoloAgente, idioma.Tf("flujo de Gemini interrumpido: %s", RedactarCon(err.Error(), clave)))
 	}
 	switch fin {
 	case "": // un proxy o el servidor cerró la conexión: la respuesta parcial no se da por completa
@@ -257,7 +257,7 @@ func (g Gemini) Contexto(ctx context.Context, modelo string) (int, error) {
 	if existe && time.Now().Before(guardado.hasta) {
 		return guardado.tokens, nil
 	}
-	claveAPI := claveEntorno("GEMINI_API_KEY", "GOOGLE_API_KEY")
+	claveAPI := ClaveEntorno("GEMINI_API_KEY", "GOOGLE_API_KEY")
 	if claveAPI == "" {
 		return 0, nil
 	}
