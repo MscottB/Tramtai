@@ -95,8 +95,12 @@ func (s *Servidor) mensajesAnthropic(w http.ResponseWriter, r *http.Request) {
 	if err == nil && len(p.System) > 0 && string(p.System) != "null" {
 		sol.Instrucciones, err = textoDe(p.System)
 	}
+	var archivos []archivoEnLinea
 	if err == nil {
-		sol.Mensajes, err = mensajes(p.Messages)
+		sol.Mensajes, archivos, err = mensajes(p.Messages)
+	}
+	if err == nil {
+		err = s.guardarEnLinea(archivos, &sol)
 	}
 	var h *herramientas
 	if err == nil {

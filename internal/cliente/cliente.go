@@ -294,6 +294,18 @@ func (c *Cliente) Detener(ctx context.Context) error {
 	return c.pedir(ctx, "POST", "/api/v1/servicio/detener", "", nil, "", nil)
 }
 
+// Conversor devuelve el estado del conversor de archivos (markitdown).
+func (c *Cliente) Conversor(ctx context.Context, instancia string) (contrato.EstadoConversor, error) {
+	var e contrato.EstadoConversor
+	return e, c.pedir(ctx, "GET", "/api/v1/conversor", instancia, nil, "", &e)
+}
+
+// PrepararConversor lanza la preparación del conversor (o devuelve la que está en curso).
+func (c *Cliente) PrepararConversor(ctx context.Context, instancia string) (contrato.EstadoConversor, error) {
+	var e contrato.EstadoConversor
+	return e, c.pedir(ctx, "POST", "/api/v1/conversor/preparar", instancia, nil, "", &e)
+}
+
 // Trabajos lista los trabajos recientes de una instancia.
 func (c *Cliente) Trabajos(ctx context.Context, instancia string, limite int) ([]nucleo.Trabajo, error) {
 	var r struct {

@@ -33,6 +33,7 @@
               :hint="limites ? t('ejecutar.adjuntarLimites', { n: limites.cargas_por_peticion, mb: limites.carga_mb, texto: limites.texto_convertido_mb }) : t('ejecutar.adjuntarHint')">
               <template #prepend><q-icon name="o_attach_file" /></template>
             </q-file>
+            <AvisoConversor v-if="avisoConversor" />
 
             <q-expansion-item dense icon="o_tune" :label="t('comun.opcionesAvanzadas')" header-class="q-px-none text-body2 texto-suave" class="q-mt-sm">
               <div class="q-gutter-y-md q-pt-sm">
@@ -57,7 +58,7 @@
             <q-btn v-if="editando" outline color="primary" icon="o_save" :label="t('ejecutar.actualizarApi', { nombre: editando })" no-caps
               :loading="guardando" @click="actualizarApi" />
             <q-btn v-else outline color="primary" icon="o_hub" :label="t('ejecutar.guardarApi')" no-caps @click="guardarApi?.abrirGuardar()" />
-            <q-btn unelevated color="primary" icon="o_send" :label="t('ejecutar.enviar')" no-caps :loading="enviando" :disable="activo || !mensaje.trim()" @click="ejecutar" />
+            <q-btn unelevated color="primary" icon="o_send" :label="t('ejecutar.enviar')" no-caps :loading="enviando" :disable="activo || !mensaje.trim() || bloqueaConversor" @click="ejecutar" />
           </q-card-actions>
         </q-card>
         <!-- Las pruebas recientes van con la receta: «Usar de nuevo» la rellena. -->
@@ -174,6 +175,8 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
+import AvisoConversor from '../componentes/AvisoConversor.vue'
+import { cargarConversor, conversor, necesitaConversor } from '../conversor'
 import EditorReceta from '../componentes/EditorReceta.vue'
 import EstadoVacio from '../componentes/EstadoVacio.vue'
 import Linea from '../componentes/Linea.vue'
@@ -230,9 +233,16 @@ const eventosRegistro = ref<EventoRegistro[]>([])
 const esfuerzoFinal = computed(() => (final.value ? esfuerzoUsado(final.value, eventosRegistro.value) : ''))
 let fuente: EventSource | undefined
 
+// avisoConversor: algún adjunto necesita el conversor y no está listo; con uno que no es ZIP no se puede enviar (un ZIP
+// solo avisa, porque quizá trae solo texto: lo decide el servicio).
+const convertibles = computed(() => (archivos.value ?? []).filter((a) => necesitaConversor(a.name)))
+const avisoConversor = computed(() => convertibles.value.length > 0 && !!conversor.value && conversor.value.estado !== 'listo')
+const bloqueaConversor = computed(() => avisoConversor.value && convertibles.value.some((a) => !a.name.toLowerCase().endsWith('.zip')))
+
 // limites son los topes de las cargas, para la ayuda bajo Adjuntar.
 const limites = ref<LimitesPeticion>()
 onMounted(async () => {
+  cargarConversor()
   cargarRecientes()
   api.limites().then((l) => (limites.value = l)).catch(() => {})
   catalogo.value = await api.catalogo().catch((e) => (avisarError(e), []))

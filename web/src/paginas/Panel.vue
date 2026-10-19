@@ -17,6 +17,7 @@
     </CabeceraPagina>
 
     <q-banner v-if="error" rounded class="error-caja">{{ error }}</q-banner>
+    <AvisoConversor v-if="conversor && conversor.estado !== 'preparando'" enlace-ajustes @ajustes="$emit('ir', 'configuracion')" />
 
     <section class="q-card">
       <div class="seccion row items-end">
@@ -104,6 +105,8 @@ import EstadoVacio from '../componentes/EstadoVacio.vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import Linea from '../componentes/Linea.vue'
 import MapaRed from '../componentes/MapaRed.vue'
+import AvisoConversor from '../componentes/AvisoConversor.vue'
+import { cargarConversor, conversor } from '../conversor'
 import { api, avisar, cargarDiasHistorial, copiar, mensajeError } from '../api/cliente'
 import type { Adaptador, EstadoInstancia, EstadoPunto, Trabajo } from '../api/tipos'
 import { periodoHistorial, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, sesion, sistema } from '../estado'
@@ -172,6 +175,7 @@ async function cargar() {
 
 let intervalo: number
 onMounted(() => {
+  cargarConversor()
   cargarDiasHistorial()
   cargar()
   asegurarFichas()

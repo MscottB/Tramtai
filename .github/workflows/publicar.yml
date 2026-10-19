@@ -37,8 +37,14 @@ jobs:
             carpeta=$(mktemp -d)
             mkdir "$carpeta/tramtai"
             GOOS=$so GOARCH=$arq CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X tramtai/internal/version.Version=$version" -o "$carpeta/tramtai/tramtai" ./cmd/tramtai
+            case $destino in
+              linux/amd64) objetivo=x86_64-unknown-linux-musl ;; linux/arm64) objetivo=aarch64-unknown-linux-musl ;;
+              darwin/amd64) objetivo=x86_64-apple-darwin ;; darwin/arm64) objetivo=aarch64-apple-darwin ;;
+            esac
+            sh scripts/uv.sh "$objetivo" "$carpeta/tramtai" # prepara el conversor de archivos (scripts/uv.txt)
             cp LICENSE.md "$carpeta/tramtai/LICENCIA.md"
             tar -C "$carpeta" -czf "dist/tramtai-$version-$nombre-$arq.tar.gz" tramtai
+            tar -tzf "dist/tramtai-$version-$nombre-$arq.tar.gz" | grep -qx 'tramtai/uv' || { echo "el .tar.gz de $destino no trae uv"; exit 1; }
           done
           ls -l dist
       - uses: actions/upload-artifact@v7
@@ -153,6 +159,10 @@ jobs:
         run: Expand-Archive (Get-Item dist/*-portable-windows-x64.zip).FullName "$env:RUNNER_TEMP\portable"
       - name: Portable (trae portable.txt)
         run: if (-not (Test-Path "$env:RUNNER_TEMP\portable\portable.txt")) { throw 'el .zip portable no trae portable.txt' }
+      - name: Portable (trae uv.exe)
+        run: '& "$env:RUNNER_TEMP\portable\uv.exe" --version'
+      - name: Instalador (lleva uv.exe)
+        run: if (-not (Test-Path bin/uv.exe)) { throw 'el instalador se compiló sin bin/uv.exe' }
       - name: Portable (iniciar el servicio)
         run: '& "$env:RUNNER_TEMP\portable\tramtai.exe" servicio iniciar -d'
       - name: Portable (estado)
@@ -170,6 +180,58 @@ jobs:
           path: dist/
           retention-days: 1
 
+  # El paquete del conversor: markitdown y su Python ya preparados, para equipos cuya red no deja descargarlos. Se
+  # prepara con el uv y el lock de la versión y se comprueba sin red antes de comprimirlo.
+  conversor:
+    name: Paquete del conversor (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # version.ps1 calcula la versión desde las etiquetas
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: '**/go.sum'
+      - name: Preparar el conversor con el uv fijado
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $armar = "$env:RUNNER_TEMP\armar"
+          go build -o "$armar\tramtai.exe" ./cmd/tramtai
+          if ($LASTEXITCODE) { throw 'go build falló' }
+          ./scripts/uv.ps1 -Objetivo x86_64-pc-windows-msvc -Destino $armar
+          & "$armar\tramtai.exe" conversor preparar --en "$env:RUNNER_TEMP\paquete\conversor"
+          if ($LASTEXITCODE) { throw 'no se pudo preparar el conversor' }
+      # Sin red (proxy a un puerto cerrado y uv sin conexión): el paquete debe convertir sin descargar nada.
+      - name: Comprobar el paquete sin red
+        env:
+          HTTPS_PROXY: http://127.0.0.1:9
+          HTTP_PROXY: http://127.0.0.1:9
+          UV_OFFLINE: '1'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $prueba = "$env:RUNNER_TEMP\prueba"
+          New-Item -ItemType Directory $prueba | Out-Null
+          Copy-Item "$env:RUNNER_TEMP\armar\tramtai.exe" $prueba
+          Copy-Item -Recurse "$env:RUNNER_TEMP\paquete\conversor" $prueba
+          $salida = & "$prueba\tramtai.exe" convertir internal/documentos/testdata/muestra.pdf internal/documentos/testdata/muestra.docx internal/documentos/testdata/muestra.xlsx | Out-String
+          if ($LASTEXITCODE) { throw "la conversión falló:`n$salida" }
+          if ([regex]::Matches($salida, 'Tramtai muestra').Count -ne 3) { throw "el paquete no convierte las muestras:`n$salida" }
+      - name: Comprimir
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = ./scripts/version.ps1
+          if ($version -ne $env:GITHUB_REF_NAME) { throw "la versión calculada ($version) no coincide con la etiqueta $env:GITHUB_REF_NAME" }
+          Copy-Item scripts/conversor-leeme.txt "$env:RUNNER_TEMP\paquete\LEEME.txt"
+          New-Item -ItemType Directory dist | Out-Null
+          Compress-Archive -Path "$env:RUNNER_TEMP\paquete\*" -DestinationPath "dist/Tramtai-$version-conversor-windows-x64.zip"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: conversor
+          path: dist/
+          retention-days: 1
+
   # Las pruebas y el análisis de dependencias son los del CI, los mismos que exige un PR a main, a la vez que se
   # compila: ningún release sale con una prueba rota, dependencias vulnerables o paquetes de npm sin firma verificada.
   ci:
@@ -181,7 +243,7 @@ jobs:
   # Junta lo que compiló cada sistema, calcula las sumas de todo y publica el release con las notas de la etiqueta.
   publicar:
     name: Publicar el release
-    needs: [ci, unix, linux-app, macos-app, windows]
+    needs: [ci, unix, linux-app, macos-app, windows, conversor]
     runs-on: ubuntu-latest
     permissions:
       contents: write

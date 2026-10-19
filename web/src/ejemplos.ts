@@ -116,12 +116,57 @@ function nodeNativa(url: string, p: Prueba, k: string): string {
 }
 
 const rolesOpenAI: Record<string, string> = { usuario: 'user', asistente: 'assistant', sistema: 'system' }
+
+// tiposMIME dan el tipo de un archivo por su extensión, para mandarlo en base64 por OpenAI o Anthropic.
+const tiposMIME: Record<string, string> = {
+  '.pdf': 'application/pdf', '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.html': 'text/html', '.htm': 'text/html',
+  '.txt': 'text/plain', '.md': 'text/markdown', '.csv': 'text/csv', '.json': 'application/json', '.xml': 'application/xml',
+  '.zip': 'application/zip',
+}
+const mimeDe = (nombre: string) => tiposMIME[nombre.slice(nombre.lastIndexOf('.')).toLowerCase()] ?? 'application/octet-stream'
+// ficha marca en el cuerpo dónde va el archivo i; cada lenguaje la sustituye por su forma de leerlo en base64.
+const ficha = (i: number) => `__ARCHIVO_${i}__`
+const fichas = /"__ARCHIVO_(\d+)__"/
+
+// conArchivos pone las fichas de los archivos en el último mensaje del usuario (o en uno nuevo), detrás de su texto.
+function conArchivos(mensajes: { role: string; content: unknown }[], p: Prueba) {
+  if (!p.archivos.length) return mensajes
+  const partes = p.archivos.map((_, i) => ficha(i))
+  const ultimo = mensajes.map((m) => m.role).lastIndexOf('user')
+  if (ultimo < 0) return [...mensajes, { role: 'user', content: partes }]
+  return mensajes.map((m, i) => (i === ultimo ? { ...m, content: [{ type: 'text', text: m.content }, ...partes] } : m))
+}
+
+// pythonConArchivos sustituye las fichas por la llamada que lee cada archivo (archivo() o documento()).
+function pythonConArchivos(codigo: string, p: Prueba, funcion: string) {
+  return codigo.replace(new RegExp(fichas, 'g'), (_, i: string) => `${funcion}(${JSON.stringify(p.archivos[+i])}, ${JSON.stringify(mimeDe(p.archivos[+i]))})`)
+}
+
+// curlConArchivos arma el cuerpo por partes y lo pasa por la entrada estándar: el base64 de un archivo grande no cabe
+// como argumento de curl.
+function curlConArchivos(json: string, p: Prueba, inicio: string): string {
+  const trozos = json.split(fichas)
+  const lineas = ['{']
+  trozos.forEach((trozo, i) => {
+    if (i % 2 === 0) {
+      if (trozo) lineas.push(`  printf '%s' ${sh(trozo)}`)
+      return
+    }
+    const nombre = p.archivos[+trozo]
+    lineas.push(`  printf '%s' ${sh(`{"type": "file", "file": {"filename": ${JSON.stringify(nombre)}, "file_data": "data:${mimeDe(nombre)};base64,`)}`,
+      `  base64 < ${sh(nombre)} | tr -d '\\n'`, `  printf '%s' '"}}'`)
+  })
+  lineas.push(`} | ${inicio} --data-binary @-`)
+  return lineas.join('\n')
+}
 const esfuerzosOpenAI: Record<string, string> = { bajo: 'low', medio: 'medium', alto: 'high', muy_alto: 'xhigh', maximo: 'xhigh' }
 
 // notaFachada dice lo que la prueba pide y solo admite la API propia (más lo que esa fachada no tiene).
 function notaFachada(p: Prueba, ...extras: (string | false | undefined)[]) {
   const s = p.solicitud
-  const faltan = [p.archivos.length && t('codigo.archivos'), s.respaldo?.length && t('codigo.respaldo'), s.perfil && t('codigo.perfil'),
+  const faltan = [s.respaldo?.length && t('codigo.respaldo'), s.perfil && t('codigo.perfil'),
     s.ejecucion?.tiempo_limite_segundos && t('codigo.tiempo'), ...extras].filter(Boolean)
   return faltan.length ? t('codigo.soloNativa', { que: faltan.join(', ') }) : undefined
 }
@@ -130,10 +175,10 @@ function notaFachada(p: Prueba, ...extras: (string | false | undefined)[]) {
 // como reasoning_effort y el esquema como response_format.
 function chatOpenAI(p: Prueba, modelo: string) {
   const s = p.solicitud
-  const cuerpo: Record<string, unknown> = { model: modelo, messages: [
+  const cuerpo: Record<string, unknown> = { model: modelo, messages: conArchivos([
     ...(s.instrucciones ? [{ role: 'system', content: s.instrucciones }] : []),
     ...(s.mensajes ?? []).map((m) => ({ role: rolesOpenAI[m.rol] ?? m.rol, content: m.contenido })),
-  ] }
+  ], p) }
   if (s.esfuerzo) cuerpo.reasoning_effort = esfuerzosOpenAI[s.esfuerzo]
   if (s.salida?.esquema) cuerpo.response_format = { type: 'json_schema', json_schema: { name: 'salida', schema: s.salida.esquema } }
   return { cuerpo, nota: notaFachada(p, s.esfuerzo === 'maximo' && t('codigo.maximo')) }
@@ -146,7 +191,7 @@ function mensajesAnthropic(p: Prueba, modelo: string) {
   const mensajes = s.mensajes ?? []
   const sistema = [s.instrucciones, ...mensajes.filter((m) => m.rol === 'sistema').map((m) => m.contenido)].filter(Boolean).join('\n\n')
   const cuerpo: Record<string, unknown> = { model: modelo, max_tokens: 1024, ...(sistema ? { system: sistema } : {}),
-    messages: mensajes.filter((m) => m.rol !== 'sistema').map((m) => ({ role: rolesOpenAI[m.rol] ?? m.rol, content: m.contenido })) }
+    messages: conArchivos(mensajes.filter((m) => m.rol !== 'sistema').map((m) => ({ role: rolesOpenAI[m.rol] ?? m.rol, content: m.contenido })), p) }
   return { cuerpo, nota: notaFachada(p, !!s.salida?.esquema && t('codigo.esquema'), !!s.esfuerzo && t('codigo.esfuerzo')) }
 }
 
@@ -170,25 +215,46 @@ export function ejemplos(o: { url: string; modelo: string; contratos: string[]; 
     const argumentos = (cuerpo: Record<string, unknown>) => Object.entries(cuerpo).map(([c, v]) => `    ${c}=${py(v, '    ')},`).join('\n')
     if (contratos.includes('openai')) {
       const { cuerpo, nota } = chatOpenAI(o.prueba, modelo)
-      lista.push({ id: 'python', titulo: () => 'Python · OpenAI', nota, codigo: (k) => `from openai import OpenAI
-
+      const prueba = o.prueba
+      const leerPy = prueba.archivos.length ? `import base64
+` : ''
+      const funcionPy = prueba.archivos.length ? `
+# archivo lee un archivo y lo deja como parte del mensaje, en base64 (Tramtai lo convierte a texto para el agente).
+def archivo(nombre, tipo):
+    with open(nombre, "rb") as f:
+        return {"type": "file", "file": {"filename": nombre, "file_data": f"data:{tipo};base64," + base64.b64encode(f.read()).decode()}}
+` : ''
+      lista.push({ id: 'python', titulo: () => 'Python · OpenAI', nota, codigo: (k) => `${leerPy}from openai import OpenAI
+${funcionPy}
 cliente = OpenAI(base_url="${url}/openai/v1", api_key="${k}")
 r = cliente.chat.completions.create(
-${argumentos(cuerpo)}
+${pythonConArchivos(argumentos(cuerpo), prueba, 'archivo')}
 )
 print(r.choices[0].message.content)` },
-      { id: 'curl', titulo: () => 'curl · OpenAI', nota, codigo: (k) => `curl ${url}/openai/v1/chat/completions \\
+      { id: 'curl', titulo: () => 'curl · OpenAI', nota, codigo: (k) => {
+        const inicio = `curl ${url}/openai/v1/chat/completions \\
   -H "Authorization: Bearer ${k}" \\
-  -H "Content-Type: application/json" \\
-  -d ${sh(JSON.stringify(cuerpo, null, 2))}` })
+  -H "Content-Type: application/json"`
+        return prueba.archivos.length ? curlConArchivos(JSON.stringify(cuerpo, null, 2), prueba, inicio) : `${inicio} \\
+  -d ${sh(JSON.stringify(cuerpo, null, 2))}`
+      } })
     }
     if (contratos.includes('anthropic')) {
       const { cuerpo, nota } = mensajesAnthropic(o.prueba, modelo)
-      lista.push({ id: 'anthropic', titulo: () => 'Python · Anthropic', nota, codigo: (k) => `import anthropic
-
+      const prueba = o.prueba
+      const funcionPy = prueba.archivos.length ? `import base64
+` : ''
+      const documentoPy = prueba.archivos.length ? `
+# documento lee un archivo y lo deja como bloque del mensaje, en base64 (Tramtai lo convierte a texto para el agente).
+def documento(nombre, tipo):
+    with open(nombre, "rb") as f:
+        return {"type": "document", "title": nombre, "source": {"type": "base64", "media_type": tipo, "data": base64.b64encode(f.read()).decode()}}
+` : ''
+      lista.push({ id: 'anthropic', titulo: () => 'Python · Anthropic', nota, codigo: (k) => `${funcionPy}import anthropic
+${documentoPy}
 cliente = anthropic.Anthropic(base_url="${url}/anthropic", api_key="${k}")
 m = cliente.messages.create(
-${argumentos(cuerpo)}
+${pythonConArchivos(argumentos(cuerpo), prueba, 'documento')}
 )
 print(m.content[0].text)` })
     }

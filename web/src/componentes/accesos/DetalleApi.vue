@@ -19,7 +19,7 @@
         <div class="text-weight-medium">{{ t('puntos.conectar') }}</div>
         <div class="texto-suave text-body2 q-mb-sm">{{ t('puntos.conectarTexto') }}</div>
         <template v-if="puntoDetalle.url">
-        <GuiaUrls :url="puntoDetalle.url" :contratos="puntoDetalle.contratos" :nombre="puntoDetalle.nombre" class="q-mb-md" />
+        <GuiaUrls :url="puntoDetalle.url" :contratos="puntoDetalle.contratos" :nombre="puntoDetalle.nombre" class="q-mb-md" @usar="usarApiPropia" />
         <div class="row q-col-gutter-md">
           <div class="col-12">
             <div class="text-caption texto-suave q-mb-xs">{{ t('conectar.clave') }}</div>
@@ -36,7 +36,7 @@
           </div>
         </div>
         <template v-if="ejemplosDetalle.length">
-        <div class="text-caption texto-suave q-mt-md q-mb-xs">{{ t('conectar.ejemplos') }}</div>
+        <div ref="ejemplosRef" class="text-caption texto-suave q-mt-md q-mb-xs">{{ t('conectar.ejemplos') }}</div>
         <div class="desplazable-x"><q-btn-toggle v-model="lenguaje" no-caps flat dense toggle-color="primary" class="segmentado inline-flex"
           :options="ejemplosDetalle.map((e) => ({ label: e.titulo(), value: e.id }))" /></div>
         <div class="bloque-codigo sin-ajuste q-mt-sm">{{ ejemploDetalle.codigo(claveVista || t('puntos.claveMarcador', { nombre: puntoDetalle.nombre })) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('conectar.copiarEjemplo')" @click="copiar(ejemploDetalle.codigo(claveVista || t('puntos.claveMarcador', { nombre: puntoDetalle.nombre })))" /></div>
@@ -72,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import GuiaUrls from '../GuiaUrls.vue'
 import { copiar } from '../../api/cliente'
@@ -90,6 +90,12 @@ const emit = defineEmits<{ activar: [nombre: string, valor: boolean]; ajustes: [
 const abierto = defineModel<boolean>({ required: true })
 const claveVista = defineModel<string>('claveVista', { required: true })
 const lenguaje = defineModel<string>('lenguaje', { required: true })
+// usarApiPropia muestra los pasos de la API propia: su ejemplo en curl, con la URL y la clave puestas.
+const ejemplosRef = ref<HTMLElement>()
+function usarApiPropia() {
+  lenguaje.value = 'curl-nativa'
+  ejemplosRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 const $q = useQuasar()
 
 const ejemplosDetalle = computed(() => (props.puntoDetalle

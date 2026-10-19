@@ -5,8 +5,7 @@ import { idioma, idiomas, t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 import { compartida } from '../compartida'
 import { actualizacion, dialogoActualizar, diasHistorial, sesion } from '../estado'
-import type { Acerca, Adaptador, AjustesPunto, ConfigPunto, EntradaConfiguracion, EstadoActualizacion, EstadoInstancia, EstadoPresupuesto, EstadoPunto,
-  EventoRegistro, LimitesPeticion, Modelo, Novedad, ProgresoActualizacion, Retencion, Sesion, Solicitud, Trabajo, UsoPunto } from './tipos'
+import type { Acerca, Adaptador, AjustesPunto, ConfigPunto, EntradaConfiguracion, EstadoActualizacion, EstadoConversor, EstadoInstancia, EstadoPresupuesto, EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Novedad, ProgresoActualizacion, Retencion, Sesion, Solicitud, Trabajo, UsoPunto } from './tipos'
 
 // Campos declarados aparte (no en el constructor): node --test ejecuta este archivo quitando solo los tipos.
 export class ErrorApi extends Error {
@@ -120,6 +119,9 @@ export const api = {
     pedir<{ valido: boolean; error?: string; linea?: number; columna?: number }>('POST', '/api/v1/esquemas/validar', { esquema: texto }),
   eliminar: (id: string) => pedir<void>('DELETE', `/api/v1/trabajos/${encodeURIComponent(id)}`),
   vaciarHistorial: () => pedir<{ eliminados: number }>('DELETE', '/api/v1/trabajos').then((r) => r.eliminados),
+  conversor: () => pedir<EstadoConversor>('GET', '/api/v1/conversor'),
+  prepararConversor: () => pedir<EstadoConversor>('POST', '/api/v1/conversor/preparar'),
+  ajustesConversor: (prepararAlIniciar: boolean) => pedir<void>('PUT', '/api/v1/conversor/ajustes', { preparar_al_iniciar: prepararAlIniciar }),
   subir: (archivo: File) => {
     const datos = new FormData()
     datos.append('archivo', archivo)

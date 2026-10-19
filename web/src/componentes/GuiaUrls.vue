@@ -7,8 +7,13 @@
           <div class="text-weight-medium">{{ c.titulo }}</div>
           <div class="text-caption texto-suave q-mt-xs col">{{ c.texto }}</div>
           <div class="bloque-codigo q-mt-sm">{{ c.url }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('comun.copiar') + ' ' + c.titulo" @click="copiar(c.url)" /></div>
-          <q-btn v-if="c.id === 'nativa'" flat dense no-caps color="primary" icon="o_download" class="self-start q-mt-xs" :label="t('guia.descargarOpenapi')"
-            :loading="descargando" @click="descargarOpenapi" />
+          <template v-if="c.id === 'nativa'">
+            <q-btn flat dense no-caps color="primary" icon="o_menu_book" class="self-start q-mt-xs" :label="t('guia.comoUsarla')" @click="emit('usar')" />
+            <div class="text-caption texto-suave q-mt-xs">
+              {{ t('guia.avanzado') }}
+              <a href="#" class="enlace" :aria-busy="descargando" @click.prevent="descargarOpenapi">{{ t('guia.descargarOpenapi') }}</a>
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -34,6 +39,8 @@ import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 
 const props = defineProps<{ url: string; contratos: string[]; nombre?: string }>()
+// usar pide mostrar los pasos de la API propia (los ejemplos de código con la URL y la clave).
+const emit = defineEmits<{ usar: [] }>()
 
 const tarjetas = computed(() => ([
   { id: 'openai', titulo: t('conectar.urlOpenai'), texto: t('guia.openai'), url: props.url + '/openai/v1' },
@@ -45,7 +52,7 @@ const filas: Clave[][] = [
   ['guia.fSdk', 'guia.si', 'guia.si', 'guia.noHttp'],
   ['guia.fVivo', 'guia.si', 'guia.si', 'guia.siRetoma'],
   ['guia.fJson', 'guia.siResponseFormat', 'guia.no', 'guia.siEsquema'],
-  ['guia.fArchivos', 'guia.no', 'guia.no', 'guia.si'],
+  ['guia.fArchivos', 'guia.siBase64', 'guia.siBase64', 'guia.si'],
   ['guia.fTareas', 'guia.no', 'guia.no', 'guia.si'],
   ['guia.fRespaldo', 'guia.soloEsfuerzo', 'guia.no', 'guia.si'],
   ['guia.fRegistro', 'guia.no', 'guia.no', 'guia.si'],

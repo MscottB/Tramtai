@@ -10,6 +10,12 @@ mkdir -p paquete dist
 ldflags="-s -w -X tramtai/internal/version.Version=$version"
 CGO_ENABLED=0 go build -trimpath -ldflags "$ldflags" -o paquete/tramtai ./cmd/tramtai
 (cd escritorio && go build -trimpath -ldflags "$ldflags" -o ../paquete/tramtai-escritorio .)
+case $arq in
+amd64) objetivo=x86_64-unknown-linux-musl ;;
+arm64) objetivo=aarch64-unknown-linux-musl ;;
+*) echo "arquitectura sin uv fijado: $arq" >&2 && exit 1 ;;
+esac
+sh scripts/uv.sh "$objetivo" paquete
 go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.0
 nfpm="$(go env GOPATH)/bin/nfpm"
 export VERSION="${version#v}" ARCH="$arq"

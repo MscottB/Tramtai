@@ -3,6 +3,15 @@ package idioma
 // Traducciones al inglés de la CLI (cmd/tramtai).
 func init() {
 	agregar(map[string]string{
+		"Conversor de archivos (markitdown): estado y preparación":                              "File converter (markitdown): status and preparation",
+		"Muestra si el conversor de archivos está listo":                                        "Shows whether the file converter is ready",
+		"Descarga Python y markitdown en la carpeta de Tramtai (no instala nada en el sistema)": "Downloads Python and markitdown into the Tramtai folder (installs nothing on the system)",
+		"no se pudo preparar el conversor de archivos":                                          "the file converter could not be prepared",
+		"prepara el conversor en esa carpeta, sin el servicio (para el paquete del conversor)":  "prepares the converter in that folder, without the service (for the converter package)",
+		"estado: %s\n":       "status: %s\n",
+		"origen: %s\n":       "source: %s\n",
+		"último error: %s\n": "last error: %s\n",
+		"prepáralo con «tramtai conversor preparar» o en la Web UI, en Ajustes → Archivos":                                                                               "prepare it with \"tramtai conversor preparar\" or in the Web UI, in Settings → Files",
 		"Tramtai expone %s como una API local.\n\n  tramtai          terminal interactiva\n  tramtai abrir    Web UI en el navegador (inicia el servicio si hace falta)": "Tramtai exposes %s as a local API.\n\n  tramtai          interactive terminal\n  tramtai abrir    Web UI in the browser (starts the service if needed)",
 		"agente: %s (predeterminados.agente)": "agent: %s (predeterminados.agente)",
 		"y":                                   "and",

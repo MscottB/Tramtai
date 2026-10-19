@@ -452,7 +452,8 @@ func (s *Servicio) abrirPunto(c candidato, huella, firma string) *puntoActivo {
 		return p
 	}
 	inst := p.instancia
-	srv := &api.Servidor{Planificador: inst.Planificador, Cargas: inst.Cargas, Registro: s.opc.Registro, Config: inst.Config, Punto: politicaDe(c.cfg)}
+	srv := &api.Servidor{Planificador: inst.Planificador, Cargas: inst.Cargas, Registro: s.opc.Registro, Config: inst.Config, Punto: politicaDe(c.cfg),
+		Conversor: s.conversor}
 	handler := api.Proteger(s.opc.Hosts, func(r *http.Request) bool { return api.HuellaValida(r, huella) }, srv.Rutas())
 	if c.cfg.Puerto == 0 {
 		p.handler, p.url = handler, s.Base()+c.cfg.RutaBase

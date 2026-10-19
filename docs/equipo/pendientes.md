@@ -41,7 +41,7 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | v0.48 | Portable de verdad (`releases/v0.48-portable/spec.md`): los datos junto al `.exe` con `portable.txt`, carpeta solo para el usuario, instalada y portable a la vez sin pisarse (servicio, ventana, «Iniciar con Windows», cookie y reinicio), el instalador solo cierra lo de su carpeta, la ayuda de la CLI nombra a todos los agentes | ✅ |
 | v0.49 | Orden del código (`releases/v0.49-orden/spec.md`): contrato ligero entre cliente y servicio (la app de escritorio deja de enlazar el servicio), la CLI y la terminal sobre la API del servicio, archivos grandes divididos, capacidades en paralelo y modelos efectivos con un índice, pruebas de Codex, Claude y la Web UI, CI reutilizable desde Publicar, Dependabot e índice de `docs/equipo/` | ✅ |
 | v0.49.1 | Publicar instala NSIS 3.13 desde su instalador oficial con el SHA-256 fijado y se para si falla (la v0.49.0 no llegó a publicarse: Chocolatey estaba caído); trae todo lo de la v0.49 | ✅ |
-| v0.50 | Archivos: markitdown incluido con Tramtai, aviso antes de trabajar archivos si falta, el recorrido de un archivo por cada API y cómo lo usa quien desarrolla | ⬜ |
+| v0.50 | Archivos (`releases/v0.50-archivos/spec.md`): uv en todos los paquetes y markitdown preparado en la carpeta de Tramtai (solo la primera vez y con «Preparar archivos»), paquete del conversor para Windows sin red, aviso antes de enviar y 503 `conversor_no_disponible` al aceptar, archivos también por OpenAI y Anthropic (base64), «El recorrido de un archivo» en la Ayuda y «Cómo usarla» en lugar de «Descargar OpenAPI» | ✅ |
 | v0.51 | Herramientas (`tools`) explicadas para cualquier lenguaje, con ejemplos en Python, JavaScript, Go y curl, y guía del desarrollador | ⬜ |
 | v0.52 | Ayuda renovada en la app y en la web: menos texto, con diagramas, ejemplos, búsqueda y capturas | ⬜ |
 | v0.53 | Diagramas vivos: en la web, el recorrido llega a los agentes con ejemplos; en la app, el mapa muestra el recorrido de un trabajo en curso | ⬜ |
@@ -56,6 +56,8 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | — | Comparar agentes en Probar | ⬜ |
 | — | Tramtai como servidor MCP | ⬜ |
 | — | Cursor CLI | ⬜ |
+| — | SDK oficial de la API propia en Python y TypeScript (sobre `openapi.json`), en su propio repositorio | ⬜ |
+| — | Paquetes base y Pro (con la Pro/Team) | ⬜ |
 
 Pendientes ya asignados:
 

@@ -3,6 +3,8 @@ package idioma
 // Traducciones al inglés de la terminal interactiva (internal/tui).
 func init() {
 	agregar(map[string]string{
+		"el conversor de archivos no está listo (%s): ctrl+p lo prepara":                                                      "the file converter is not ready (%s): ctrl+p prepares it",
+		"preparando el conversor de archivos (%s): sigue en Ajustes → Archivos de la Web UI o con «tramtai conversor estado»": "preparing the file converter (%s): follow it in Settings → Files in the Web UI or with \"tramtai conversor estado\"",
 		// Inicio
 		"Seleccione el ámbito de administración:\n\n": "Choose what to manage:\n\n",
 		"Instancia del proyecto actual":               "Current project workspace",
@@ -66,8 +68,8 @@ func init() {
 		"\n\n— salida final —\n":           "\n\n— final output —\n",
 		"no verificable":                   "not verifiable",
 		"%s · modelo %s · tokens %d/%d":    "%s · model %s · tokens %d/%d",
-		"Tab cambia de campo · ←→ modelo · Enter ejecuta · Ctrl+U borra el campo · Esc cancela el trabajo": "Tab next field · ←→ model · Enter run · Ctrl+U clear field · Esc cancel the job",
-		"Tab cambia de campo · ←→ modelo · Enter ejecuta · Ctrl+U borra el campo · Esc volver":             "Tab next field · ←→ model · Enter run · Ctrl+U clear field · Esc back",
+		"Tab cambia de campo · ←→ modelo · Enter ejecuta · Ctrl+U borra el campo · Ctrl+P prepara el conversor · Esc cancela el trabajo": "Tab next field · ←→ model · Enter run · Ctrl+U clear field · Ctrl+P prepare the converter · Esc cancel the job",
+		"Tab cambia de campo · ←→ modelo · Enter ejecuta · Ctrl+U borra el campo · Ctrl+P prepara el conversor · Esc volver":             "Tab next field · ←→ model · Enter run · Ctrl+U clear field · Ctrl+P prepare the converter · Esc back",
 
 		// Trabajos
 		"Trabajos de %s":     "Jobs in %s",

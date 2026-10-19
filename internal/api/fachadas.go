@@ -82,6 +82,11 @@ func (s *Servidor) leerFachada(w http.ResponseWriter, r *http.Request, p politic
 		datos, err = io.ReadAll(http.MaxBytesReader(w, r.Body, maximoCuerpo))
 		return err
 	})
+	var demasiado *http.MaxBytesError
+	if errors.As(err, &demasiado) {
+		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida,
+			idioma.T("la petición supera 16 MB: por esta API caben unos 12 MB de archivos en base64; para más, súbelos a /api/v1/cargas de la API propia"))
+	}
 	if err != nil {
 		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("cuerpo demasiado grande o ilegible"))
 	}

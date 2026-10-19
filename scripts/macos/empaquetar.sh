@@ -22,6 +22,16 @@ done
 lipo -create -output "$app/Contents/MacOS/tramtai" $(for arq in $arquitecturas; do echo "paquete/tramtai-$arq"; done)
 # shellcheck disable=SC2046
 lipo -create -output "$app/Contents/MacOS/tramtai-escritorio" $(for arq in $arquitecturas; do echo "paquete/escritorio-$arq"; done)
+# uv (fijado en scripts/uv.txt) prepara el conversor de archivos; universal como el resto.
+for arq in $arquitecturas; do
+	case $arq in
+	arm64) objetivo=aarch64-apple-darwin ;;
+	amd64) objetivo=x86_64-apple-darwin ;;
+	esac
+	sh scripts/uv.sh "$objetivo" "paquete/uv-$arq"
+done
+# shellcheck disable=SC2046
+lipo -create -output "$app/Contents/MacOS/uv" $(for arq in $arquitecturas; do echo "paquete/uv-$arq/uv"; done)
 cp escritorio/icono/tramtai.icns "$app/Contents/Resources/tramtai.icns"
 cp LICENSE.md "$app/Contents/Resources/LICENCIA.md"
 cat >"$app/Contents/Info.plist" <<FIN

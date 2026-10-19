@@ -46,9 +46,12 @@ type mensajeEntrada struct {
 }
 
 // mensajes traduce los mensajes de OpenAI o Anthropic al contrato interno. Las llamadas a herramientas anteriores y
-// sus resultados pasan a turnos de texto con el formato que el agente conoce (herramientas.go).
-func mensajes(entrada []mensajeEntrada) ([]nucleo.Mensaje, error) {
+// sus resultados pasan a turnos de texto con el formato que el agente conoce (herramientas.go); los archivos se
+// devuelven aparte para guardarlos como cargas (guardarEnLinea).
+func mensajes(entrada []mensajeEntrada) ([]nucleo.Mensaje, []archivoEnLinea, error) {
 	var salida []nucleo.Mensaje
+	var archivos []archivoEnLinea
+	numero := 0                    // archivos de la petición, para documento-<n>
 	nombres := map[string]string{} // id de llamada → herramienta, para nombrar sus resultados
 	var pendientes []llamada       // function_call seguidos de responses: un único turno del asistente
 	cerrar := func() {
@@ -64,7 +67,7 @@ func mensajes(entrada []mensajeEntrada) ([]nucleo.Mensaje, error) {
 		}
 		return err
 	}
-	for _, m := range entrada {
+	for indice, m := range entrada {
 		switch m.Type {
 		case "function_call":
 			nombres[m.CallID] = m.Name
@@ -73,27 +76,33 @@ func mensajes(entrada []mensajeEntrada) ([]nucleo.Mensaje, error) {
 		case "function_call_output":
 			cerrar()
 			if err := resultado(m.CallID, m.Output); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			continue
 		case "", "message":
 		default:
-			return nil, nucleo.NuevoError(nucleo.CodigoParametroNoSoportado, idioma.Tf("elemento de entrada no soportado: %s", m.Type))
+			return nil, nil, nucleo.NuevoError(nucleo.CodigoParametroNoSoportado, idioma.Tf("elemento de entrada no soportado: %s", m.Type))
 		}
 		cerrar()
 		if m.Role == "tool" {
 			if err := resultado(m.ToolCallID, m.Content); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			continue
 		}
 		rol, err := rolInterno(m.Role)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		texto, llamadas, resultados, err := contenidoDe(m.Content, nombres)
+		texto, llamadas, resultados, adjuntos, err := contenidoDe(m.Content, nombres, indice+1, &numero)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
+		}
+		archivos = append(archivos, adjuntos...)
+		// El contenido va en el bloque de documentos; en el turno queda una marca de qué archivo venía en él (y un
+		// mensaje con solo un archivo no queda vacío).
+		for _, a := range adjuntos {
+			texto = strings.TrimSpace(texto + "\n[attached file: " + a.Nombre + "]")
 		}
 		for _, c := range m.ToolCalls {
 			nombres[c.ID] = c.Function.Name
@@ -108,7 +117,7 @@ func mensajes(entrada []mensajeEntrada) ([]nucleo.Mensaje, error) {
 		salida = append(salida, nucleo.Mensaje{Rol: rol, Contenido: texto})
 	}
 	cerrar()
-	return salida, nil
+	return salida, archivos, nil
 }
 
 // esfuerzoOpenAI traduce reasoning_effort de OpenAI (none, minimal, low, medium, high, xhigh) al nivel interno.
@@ -224,8 +233,12 @@ func (s *Servidor) chatCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sol, err := s.solicitudFachada(p.Model)
+	var archivos []archivoEnLinea
 	if err == nil {
-		sol.Mensajes, err = mensajes(p.Messages)
+		sol.Mensajes, archivos, err = mensajes(p.Messages)
+	}
+	if err == nil {
+		err = s.guardarEnLinea(archivos, &sol)
 	}
 	if err == nil {
 		sol.Esfuerzo, err = esfuerzoOpenAI(p.ReasoningEffort)
@@ -413,7 +426,10 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 			if err = json.Unmarshal(p.Input, &entrada); err != nil {
 				err = nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("input debe ser texto o una lista de mensajes"))
 			} else {
-				sol.Mensajes, err = mensajes(entrada)
+				var archivos []archivoEnLinea
+				if sol.Mensajes, archivos, err = mensajes(entrada); err == nil {
+					err = s.guardarEnLinea(archivos, &sol)
+				}
 			}
 		}
 	}

@@ -93,6 +93,7 @@ class Tramtai < Formula
 
   def install
     bin.install "tramtai"
+    (lib/"tramtai").install "uv" # prepara el conversor de archivos; Tramtai lo busca en ../lib/tramtai
   end
 
   test do

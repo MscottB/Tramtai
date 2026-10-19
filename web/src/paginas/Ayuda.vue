@@ -31,6 +31,30 @@
         </q-card-section>
       </q-card>
 
+      <q-card id="ayuda-archivos">
+        <q-card-section>
+          <div class="titulo-seccion">{{ t('ayuda.secArchivos') }}</div>
+          <div class="texto-suave text-body2 q-mt-xs">{{ t('ayuda.archivosTexto') }}</div>
+        </q-card-section>
+        <q-card-section class="q-pt-none">
+          <ol class="recorrido">
+            <li v-for="(e, i) in recorridoArchivo" :key="e.titulo" class="recorrido__parada">
+              <q-icon :name="e.icono" size="22px" color="primary" />
+              <div class="text-weight-medium q-mt-xs">{{ i + 1 }}. {{ t(e.titulo) }}</div>
+              <div class="text-caption texto-suave">{{ t(e.texto) }}</div>
+            </li>
+          </ol>
+          <ul class="text-body2 q-mt-md q-mb-none q-pl-lg">
+            <li v-for="n in notasArchivo" :key="n" class="q-mb-xs">{{ t(n) }}</li>
+          </ul>
+          <div class="text-weight-medium q-mt-md">{{ t('ayuda.archivosEjemplos') }}</div>
+          <div class="desplazable-x q-mt-xs"><q-btn-toggle v-model="ejemploArchivo" no-caps flat dense toggle-color="primary" class="segmentado inline-flex"
+            :options="ejemplosArchivo.map((e) => ({ label: e.titulo(), value: e.id }))" /></div>
+          <div class="bloque-codigo sin-ajuste q-mt-sm">{{ codigoArchivo }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar"
+            :aria-label="t('conectar.copiarEjemplo')" @click="copiar(codigoArchivo, t('conectar.ejemploCopiado'))" /></div>
+        </q-card-section>
+      </q-card>
+
       <q-card id="ayuda-empezar">
         <q-card-section class="row items-center">
           <div class="titulo-seccion col">{{ t('ayuda.empezar') }}</div>
@@ -133,7 +157,8 @@
 // Ayuda explica qué hace Tramtai (el recorrido de una petición), cómo empezar, guías por tarea, los conceptos, qué
 // hacer ante cada error y las preguntas frecuentes; el buscador filtra todo menos el recorrido y los primeros pasos.
 import { computed, ref } from 'vue'
-import { tituloError } from '../api/cliente'
+import { copiar, tituloError } from '../api/cliente'
+import { ejemplos } from '../ejemplos'
 import { guiaOculta, ocultarGuia } from '../estado'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import { t } from '../i18n'
@@ -146,6 +171,7 @@ const coincide = (...textos: string[]) => !texto.value || textos.some((x) => x.t
 
 const secciones = [
   { id: 'funciona', titulo: 'ayuda.secFunciona', icono: 'o_route' },
+  { id: 'archivos', titulo: 'ayuda.secArchivos', icono: 'o_description' },
   { id: 'empezar', titulo: 'ayuda.empezar', icono: 'o_flag' },
   { id: 'guias', titulo: 'ayuda.secGuias', icono: 'o_checklist' },
   { id: 'conceptos', titulo: 'ayuda.secConceptos', icono: 'o_lightbulb' },
@@ -161,6 +187,21 @@ const recorrido = [
   { titulo: 'ayuda.f4', texto: 'ayuda.f4Texto', icono: 'o_smart_toy' },
   { titulo: 'ayuda.f5', texto: 'ayuda.f5Texto', icono: 'o_task_alt' },
 ] as const
+
+// recorridoArchivo es el camino de un archivo, de la app al agente, igual por las tres APIs.
+const recorridoArchivo = [
+  { titulo: 'ayuda.a1', texto: 'ayuda.a1Texto', icono: 'o_upload_file' },
+  { titulo: 'ayuda.a2', texto: 'ayuda.a2Texto', icono: 'o_inventory_2' },
+  { titulo: 'ayuda.a3', texto: 'ayuda.a3Texto', icono: 'o_transform' },
+  { titulo: 'ayuda.a4', texto: 'ayuda.a4Texto', icono: 'o_smart_toy' },
+  { titulo: 'ayuda.a5', texto: 'ayuda.a5Texto', icono: 'o_task_alt' },
+] as const
+const notasArchivo = ['ayuda.archivosNota1', 'ayuda.archivosNota2', 'ayuda.archivosNota3'] as const
+// ejemplosArchivo envían un PDF por cada API, con la dirección predeterminada y la clave por poner.
+const ejemplosArchivo = computed(() => ejemplos({ url: 'http://127.0.0.1:17373', modelo: 'perfil/rapido', contratos: ['nativa', 'openai', 'anthropic'],
+  prueba: { archivos: ['informe.pdf'], solicitud: { mensajes: [{ rol: 'usuario', contenido: t('ejemplos.mensaje') }] } } }))
+const ejemploArchivo = ref('python')
+const codigoArchivo = computed(() => (ejemplosArchivo.value.find((e) => e.id === ejemploArchivo.value) ?? ejemplosArchivo.value[0]).codigo(t('codigo.tuClave')))
 
 const pasos = [
   { titulo: 'ayuda.paso1', texto: 'ayuda.paso1Texto', pagina: 'agentes', menu: 'menu.agentes' },
@@ -210,6 +251,7 @@ const problemas = computed(() => [
   { codigo: 'tiempo_ejecucion_agotado', titulo: tituloError('tiempo_ejecucion_agotado'), solucion: 'ayuda.sTiempo' },
   { codigo: 'cola_llena', titulo: tituloError('cola_llena'), solucion: 'ayuda.sCola' },
   { codigo: 'conversion_fallida', titulo: tituloError('conversion_fallida'), solucion: 'ayuda.sConversion' },
+  { codigo: 'conversor_no_disponible', titulo: tituloError('conversor_no_disponible'), solucion: 'ayuda.sConversor' },
 ] as const)
 const problemasVistos = computed(() => problemas.value.filter((p) => coincide(p.titulo, p.codigo, t(p.solucion))))
 

@@ -2,12 +2,16 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 
+	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
@@ -54,6 +58,9 @@ func (m *modelo) teclaEjecutar(k tea.KeyPressMsg) tea.Cmd {
 		return m.volver()
 	case "tab", "down":
 		m.campo = (m.campo + 1) % 3
+		if m.campo == 2 {
+			return m.comprobarConversor()
+		}
 	case "shift+tab", "up":
 		m.campo = (m.campo + 2) % 3
 	case "left", "right":
@@ -64,6 +71,9 @@ func (m *modelo) teclaEjecutar(k tea.KeyPressMsg) tea.Cmd {
 	case "enter":
 		if m.campo < 2 {
 			m.campo++
+			if m.campo == 2 {
+				return m.comprobarConversor()
+			}
 			return nil
 		}
 		return m.lanzar()
@@ -73,6 +83,8 @@ func (m *modelo) teclaEjecutar(k tea.KeyPressMsg) tea.Cmd {
 		} else if m.campo == 2 {
 			m.mensaje = borrarUltimo(m.mensaje)
 		}
+	case "ctrl+p":
+		return m.prepararConversor()
 	case "ctrl+u":
 		if m.campo == 1 {
 			m.archivos = ""
@@ -85,6 +97,38 @@ func (m *modelo) teclaEjecutar(k tea.KeyPressMsg) tea.Cmd {
 		}
 	}
 	return nil
+}
+
+// comprobarConversor avisa, al dejar el campo de archivos, si alguno necesita el conversor y no está listo.
+func (m *modelo) comprobarConversor() tea.Cmd {
+	archivos := strings.FieldsFunc(m.archivos, func(r rune) bool { return r == ',' || r == ';' })
+	necesita := slices.ContainsFunc(archivos, func(ruta string) bool {
+		ruta = strings.Trim(strings.TrimSpace(ruta), `"`)
+		return documentos.NecesitaConversor(filepath.Base(ruta), ruta)
+	})
+	if !necesita || m.cli == nil {
+		return nil
+	}
+	cli, inst := m.cli, m.inst
+	return func() tea.Msg {
+		ctx, cancelar := conPlazo(10 * time.Second)
+		defer cancelar()
+		if e, err := cli.Conversor(ctx, inst); err == nil && e.Estado != "listo" {
+			return msgAviso{err: errors.New(idioma.Tf("el conversor de archivos no está listo (%s): ctrl+p lo prepara", e.Estado))}
+		}
+		return nil
+	}
+}
+
+// prepararConversor lanza la preparación del conversor de archivos en el servicio.
+func (m *modelo) prepararConversor() tea.Cmd {
+	cli, inst := m.cli, m.inst
+	return func() tea.Msg {
+		ctx, cancelar := conPlazo(15 * time.Second)
+		defer cancelar()
+		e, err := cli.PrepararConversor(ctx, inst)
+		return msgAviso{texto: idioma.Tf("preparando el conversor de archivos (%s): sigue en Ajustes → Archivos de la Web UI o con «tramtai conversor estado»", e.Estado), err: err}
+	}
 }
 
 // rutaPermitida aplica instancia_global.raices_permitidas con la configuración de la carpeta actual, como la CLI.
@@ -121,6 +165,16 @@ func (m *modelo) lanzar() tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancelar := conPlazo(10 * time.Minute)
 		defer cancelar()
+		// Sin conversor listo, un archivo que lo necesita se avisa antes de subir nada (ctrl+p lo prepara).
+		necesita := slices.ContainsFunc(archivos, func(ruta string) bool {
+			ruta = strings.Trim(strings.TrimSpace(ruta), `"`)
+			return documentos.NecesitaConversor(filepath.Base(ruta), ruta)
+		})
+		if necesita {
+			if e, err := cli.Conversor(ctx, inst); err == nil && e.Estado != "listo" {
+				return msgCreado{err: errors.New(idioma.Tf("el conversor de archivos no está listo (%s): ctrl+p lo prepara", e.Estado))}
+			}
+		}
 		for _, ruta := range archivos {
 			ruta, err := rutaPermitida(strings.Trim(strings.TrimSpace(ruta), `"`))
 			if err != nil {

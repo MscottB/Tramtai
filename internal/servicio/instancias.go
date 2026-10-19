@@ -147,13 +147,18 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuraci
 	if c.ProyectoConfiable(raiz) {
 		opc.RaizConfiable = raiz
 	}
-	opc.Preparador = documentos.Preparador{Cargas: cargas, Conversor: documentos.Desde(c)}
+	conversor := documentos.Desde(c)
+	if s.opc.RaizConversor != "" {
+		conversor.Raiz = s.opc.RaizConversor
+	}
+	opc.Preparador = documentos.Preparador{Cargas: cargas, Conversor: conversor, Preparacion: s.conversor}
 	p := planificador.Nuevo(alm, s.opc.Registro, s.opc.Semaforos, opc)
 	if err := p.Iniciar(context.Background()); err != nil {
 		alm.Cerrar()
 		return nil, err
 	}
-	srv := &api.Servidor{Planificador: p, Cargas: cargas, Registro: s.opc.Registro, Config: c,
+	srv := &api.Servidor{Planificador: p, Cargas: cargas, Registro: s.opc.Registro, Config: c, Conversor: s.conversor,
+		FijarPrepararAlIniciar: s.fijarPrepararConversor,
 		PuntosDeGrupo: func(grupo string) []string {
 			var nombres []string
 			for _, punto := range s.puntosDe(id) {

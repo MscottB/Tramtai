@@ -212,14 +212,16 @@ func objetoJSON(crudo json.RawMessage) (string, error) {
 	return compacto.String(), nil
 }
 
-// contenidoDe lee el contenido de un mensaje: texto, partes de texto y los bloques tool_use y tool_result de Anthropic,
-// que devuelve como llamadas y como turnos de resultado. nombres recuerda la herramienta de cada llamada.
-func contenidoDe(crudo json.RawMessage, nombres map[string]string) (string, []llamada, []string, error) {
+// contenidoDe lee el contenido de un mensaje: texto, partes de texto, archivos (file, input_file y document) y los
+// bloques tool_use y tool_result de Anthropic, que devuelve como llamadas y como turnos de resultado. nombres recuerda
+// la herramienta de cada llamada; mensaje (desde 1) y n sitúan y numeran los archivos.
+func contenidoDe(crudo json.RawMessage, nombres map[string]string, mensaje int, n *int) (string, []llamada, []string, []archivoEnLinea, error) {
 	var texto string
 	if len(crudo) == 0 || json.Unmarshal(crudo, &texto) == nil {
-		return texto, nil, nil, nil
+		return texto, nil, nil, nil, nil
 	}
 	var partes []struct {
+		parteArchivo
 		Type      string          `json:"type"`
 		Text      string          `json:"text"`
 		ID        string          `json:"id"`
@@ -230,32 +232,42 @@ func contenidoDe(crudo json.RawMessage, nombres map[string]string) (string, []ll
 		IsError   bool            `json:"is_error"`
 	}
 	if err := json.Unmarshal(crudo, &partes); err != nil {
-		return "", nil, nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("contenido de mensaje no válido"))
+		return "", nil, nil, nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("contenido de mensaje no válido"))
 	}
 	var textos, resultados []string
 	var llamadas []llamada
-	for _, p := range partes {
+	var archivos []archivoEnLinea
+	for i, p := range partes {
 		switch p.Type {
+		case "file", "input_file", "document":
+			a, err := archivoDeParte(p.Type, p.parteArchivo, mensaje, i+1, n)
+			if err != nil {
+				return "", nil, nil, nil, err
+			}
+			archivos = append(archivos, a)
+		case "image_url", "input_image", "image":
+			return "", nil, nil, nil, nucleo.NuevoError(nucleo.CodigoParametroNoSoportado,
+				idioma.Tf("mensaje %d, parte %d: Tramtai no admite imágenes todavía", mensaje, i+1))
 		case "text", "input_text", "output_text":
 			textos = append(textos, p.Text)
 		case "tool_use":
 			argumentos, err := objetoJSON(p.Input)
 			if err != nil {
-				return "", nil, nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("los argumentos de %s no son un objeto JSON", p.Name))
+				return "", nil, nil, nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("los argumentos de %s no son un objeto JSON", p.Name))
 			}
 			nombres[p.ID] = p.Name
 			llamadas = append(llamadas, llamada{ID: p.ID, Nombre: p.Name, Argumentos: argumentos})
 		case "tool_result":
 			contenido, err := textoDe(p.Content)
 			if err != nil {
-				return "", nil, nil, err
+				return "", nil, nil, nil, err
 			}
 			resultados = append(resultados, turnoResultado(nombres[p.ToolUseID], p.ToolUseID, contenido, p.IsError))
 		default:
-			return "", nil, nil, nucleo.NuevoError(nucleo.CodigoParametroNoSoportado, idioma.Tf("contenido de tipo %s no soportado: solo texto", p.Type))
+			return "", nil, nil, nil, nucleo.NuevoError(nucleo.CodigoParametroNoSoportado, idioma.Tf("contenido de tipo %s no soportado: solo texto y archivos", p.Type))
 		}
 	}
-	return strings.Join(textos, "\n"), llamadas, resultados, nil
+	return strings.Join(textos, "\n"), llamadas, resultados, archivos, nil
 }
 
 // sobreLlamadas escribe un turno anterior del asistente con el mismo formato que se le pide al agente.

@@ -39,6 +39,7 @@ func main() {
 		comandoTrabajos(),
 		comandoEjecutar(),
 		comandoConvertir(),
+		comandoConversor(),
 		comandoAgentes(),
 		comandoConfiguracion(),
 		comandoClaves(),

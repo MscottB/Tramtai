@@ -174,6 +174,9 @@ func TestIdempotenciaEnPlanificador(t *testing.T) {
 // contador mide cuántas ejecuciones simultáneas recibe el adaptador.
 type contador struct {
 	actual, maximo atomic.Int32
+	// juntos, si no es 0, hace que cada ejecución espere (hasta 5 s) a que haya tantas en marcha: así una prueba del
+	// límite no depende de que dos trabajos coincidan por azar en 150 ms (en un runner lento no coincidían).
+	juntos int32
 }
 
 func (c *contador) Ejecutar(ctx context.Context, _ nucleo.SolicitudEjecucion, _ func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
@@ -185,11 +188,25 @@ func (c *contador) Ejecutar(ctx context.Context, _ nucleo.SolicitudEjecucion, _ 
 			break
 		}
 	}
+	for limite := time.Now().Add(5 * time.Second); c.actual.Load() < c.juntos && time.Now().Before(limite); {
+		time.Sleep(5 * time.Millisecond)
+	}
+	c.registrarMaximo()
 	select {
 	case <-time.After(150 * time.Millisecond):
 		return adaptadores.Resultado{Salida: "ok"}, nil
 	case <-ctx.Done():
 		return adaptadores.Resultado{}, ctx.Err()
+	}
+}
+
+// registrarMaximo apunta las ejecuciones en marcha si superan el máximo visto.
+func (c *contador) registrarMaximo() {
+	for {
+		n, m := c.actual.Load(), c.maximo.Load()
+		if n <= m || c.maximo.CompareAndSwap(m, n) {
+			return
+		}
 	}
 }
 
@@ -271,7 +288,7 @@ func TestOrdenDeLaColaPorAgente(t *testing.T) {
 
 func TestLimiteDeLaInstancia(t *testing.T) {
 	alm := abrir(t)
-	c := &contador{}
+	c := &contador{juntos: 2}
 	p := iniciar(t, alm, c, 5, opciones()) // el adaptador admite 5; la instancia, 2
 	var ids []string
 	for range 4 {
@@ -1366,5 +1383,38 @@ func TestCambiarConLaBaseCerrada(t *testing.T) {
 	}
 	if !strings.Contains(registro.String(), "trabajo_x no se pudo pasar de ejecutando a validando_salida") {
 		t.Fatalf("registro: %q", registro.String())
+	}
+}
+
+// preparadorSinConversor es preparadorFalso con ConversorListo: falla mientras sinConversor sea cierto.
+type preparadorSinConversor struct {
+	preparadorFalso
+	sinConversor *bool
+}
+
+func (p preparadorSinConversor) ConversorListo([]string) error {
+	if *p.sinConversor {
+		return nucleo.NuevoError(nucleo.CodigoConversorNoDisponible, "sin conversor")
+	}
+	return nil
+}
+
+func TestConversorAlAceptarYAlReintentar(t *testing.T) {
+	alm := abrir(t)
+	opc := opciones()
+	sinConversor := true
+	opc.Preparador = preparadorSinConversor{sinConversor: &sinConversor}
+	p := iniciar(t, alm, eco{}, 1, opc)
+	s := solicitud("resume")
+	s.Cargas = []string{cargaPrueba}
+	if _, _, err := p.Enviar(ctx, s, ""); nucleo.CodigoDe(err) != nucleo.CodigoConversorNoDisponible {
+		t.Fatalf("sin conversor no se acepta: %v", err)
+	}
+	sinConversor = false
+	id := enviar(t, p, s)
+	esperar(t, alm, id, nucleo.Completado)
+	sinConversor = true
+	if _, err := p.Reintentar(ctx, id); nucleo.CodigoDe(err) != nucleo.CodigoConversorNoDisponible {
+		t.Fatalf("el reintento también lo comprueba: %v", err)
 	}
 }

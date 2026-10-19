@@ -65,6 +65,8 @@ if ($Instalador) {
     $dist = Join-Path $raiz 'dist'
     New-Item -ItemType Directory -Force $dist | Out-Null
     Get-ChildItem $dist -File | Remove-Item
+    # uv (fijado en scripts/uv.txt) prepara el conversor de archivos en la carpeta de Tramtai.
+    & (Join-Path $PSScriptRoot 'uv.ps1') -Objetivo x86_64-pc-windows-msvc -Destino (Join-Path $raiz 'bin')
     # Licencia y términos en RTF para las páginas del instalador (acentos y formato correctos).
     Push-Location $raiz
     try { go run ./scripts/rtf; if ($LASTEXITCODE) { throw 'scripts/rtf falló' } } finally { Pop-Location }
@@ -74,7 +76,7 @@ if ($Instalador) {
     # Portable: la app y el servicio en un .zip, para usar Tramtai sin instalarlo (no se actualiza solo).
     $portable = Join-Path ([IO.Path]::GetTempPath()) "tramtai-portable-$PID"
     New-Item -ItemType Directory -Force $portable | Out-Null
-    Copy-Item (Join-Path $raiz 'bin\tramtai.exe'), (Join-Path $raiz 'bin\tramtai-escritorio.exe') $portable
+    Copy-Item (Join-Path $raiz 'bin\tramtai.exe'), (Join-Path $raiz 'bin\tramtai-escritorio.exe'), (Join-Path $raiz 'bin\uv.exe') $portable
     Copy-Item (Join-Path $raiz 'LICENSE.md') (Join-Path $portable 'LICENCIA.md')
     # portable.txt la pone en modo portable: los datos van a datos-tramtai, junto al .exe (internal/nucleo/raiz.go).
     Copy-Item (Join-Path $PSScriptRoot 'portable.txt') $portable

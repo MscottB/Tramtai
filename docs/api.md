@@ -13,8 +13,7 @@
 - **OpenAI** (`/openai/v1`): tu app ya usa el SDK de OpenAI o una herramienta que deja cambiar la «URL base» (LangChain,
   n8n, un editor con IA). Cambias la URL y la clave; el resto sigue igual.
 - **Anthropic** (`/anthropic`): tu app usa el SDK de Anthropic.
-- **API propia** (`/api/v1`): necesitas lo que las otras no tienen: enviar archivos (PDF, Word, Excel, ZIP…) que
-  Tramtai convierte, tareas largas que sigues en vivo y retomas si se corta la conexión, cancelar y reintentar, elegir
+- **API propia** (`/api/v1`): necesitas lo que las otras no tienen: archivos grandes (más de ~12 MB), tareas largas que sigues en vivo y retomas si se corta la conexión, cancelar y reintentar, elegir
   respaldo y esfuerzo en cada petición, idempotencia, el registro de cada paso y los límites.
 
 | | OpenAI | Anthropic | API propia |
@@ -22,7 +21,7 @@
 | SDK oficial y herramientas existentes | sí | sí | no (HTTP y JSON) |
 | Respuesta en vivo | sí | sí | sí, y se retoma tras un corte |
 | Respuesta JSON con esquema | sí (`response_format`) | no | sí (`salida.esquema`) |
-| Enviar archivos | no | no | sí |
+| Enviar archivos | sí, en base64 dentro del mensaje (~12 MB) | sí, en base64 dentro del mensaje (~12 MB) | sí (50 MB cada uno) |
 | Tareas largas: seguir, cancelar, reintentar | no | no | sí |
 | Respaldo y esfuerzo por petición | solo el esfuerzo | no | sí |
 | Registro de cada paso y límites | no | no | sí |
@@ -67,7 +66,10 @@ de la API propia), y **Probar → Ver como código** da la prueba actual como pe
 | `POST /cargas` | Multipart con el campo `archivo`, o el binario en el cuerpo con `?nombre=`. Devuelve `identificador_carga`, `sha256`, `tamano_bytes` y `vence_en`. Un trabajo nuevo que cite una carga vencida se rechaza con 410; las cargas de un trabajo aceptado se conservan mientras se pueda reintentar. |
 | `GET /agentes` | La ficha de cada agente, al momento y sin comprobar los CLI: `agente`, `nombre`, `programa`, `codigo`, `color` (`claro`, `oscuro`), `orden`, `streaming`, `salida_estructurada`, `modelo_efectivo_informado`, `esfuerzos`, `autenticaciones`, `variables_clave`, `permitido_apps` y `url_instalacion`. Un agente sin ficha (de pruebas) va al final con su id. |
 | `GET /capacidades` | Por agente: streaming (`tokens` o `final`), salida estructurada, modelo efectivo, versión detectada, autenticación y términos. Incluye el formato de serialización. |
-| `GET /openapi.json` | La descripción OpenAPI 3.1 de esta API, con `servers` apuntando a la URL de la petición (la de la instancia, `/p/<nombre>/api/v1` o el puerto de la API). Mismos permisos que el resto. En Mis APIs, **Descargar OpenAPI** la guarda con la URL de cada API. |
+| `GET /conversor` | Estado del conversor de archivos (markitdown): `estado` (`listo`, `preparando`, `falta` o `error`), `origen` (`configurado`, `paquete`, `preparado` o `sistema`), `version`, `etapa` y `progreso` mientras se prepara, `mensaje` del último error y `preparar_al_iniciar`. `/capacidades` lo trae en `conversor`. |
+| `POST /conversor/preparar` | Prepara el conversor en segundo plano (Python y markitdown en la carpeta de Tramtai, sin instalar nada en el sistema) y responde 202 con el estado; si ya se está preparando, devuelve ese estado. No existe en los puntos de acceso: una app no lanza una descarga de cientos de MB. |
+| `PUT /conversor/ajustes` | `{"preparar_al_iniciar": true}` o `false`: si el servicio lo prepara solo al iniciar cuando falta. No existe en los puntos de acceso. |
+| `GET /openapi.json` | La descripción OpenAPI 3.1 de esta API, con `servers` apuntando a la URL de la petición (la de la instancia, `/p/<nombre>/api/v1` o el puerto de la API). Mismos permisos que el resto. Sirve para importar la API en Postman o Insomnia, o generar un cliente; en Mis APIs, «Cómo usarla» muestra los pasos con código y el enlace «descarga la descripción OpenAPI» la guarda con la URL de cada API. |
 | `GET /modelos` | Catálogo: agentes, `agente/modelo` configurados y perfiles. Cada entrada indica `predeterminado: true` si es el modelo predeterminado, `version` con el último modelo efectivo informado por el agente y, en los perfiles, `resuelto` con el agente/modelo al que llevan. |
 
 Ejemplo:
@@ -118,7 +120,59 @@ existe o un valor no válido; el mensaje dice cuál), 410 `entrada_no_disponible
 | `POST /openai/v1/chat/completions` | Mensajes de texto (`system`, `developer`, `user` y `assistant`), `stream` con `stream_options.include_usage`, `response_format` (`json_object` o `json_schema`) y herramientas (`tools`, `tool_choice`). |
 | `POST /openai/v1/responses` | `input` como texto o mensajes, `instructions`, `text.format`, herramientas (`function_call`) y streaming básico (`response.created`, `response.output_text.delta`, `response.completed`). |
 | `GET /openai/v1/models` | El mismo catálogo que `/api/v1/modelos`. |
-| `POST /anthropic/v1/messages` | `system`, mensajes de texto, herramientas (`tool_use` y `tool_result`), `stream` con la secuencia de eventos de Anthropic. `max_tokens` es obligatorio, pero se ignora con aviso. |
+| `POST /anthropic/v1/messages` | `system`, mensajes de texto, documentos (`document`), herramientas (`tool_use` y `tool_result`), `stream` con la secuencia de eventos de Anthropic. `max_tokens` es obligatorio, pero se ignora con aviso. |
+
+### Archivos por las fachadas
+
+Las tres puertas aceptan archivos y hacen el mismo recorrido: Tramtai guarda el archivo como una carga (la misma
+cuota, el mismo vencimiento y la misma API como dueña), lo convierte a texto y se lo da al agente en el bloque de
+documentos de la petición, junto con tu mensaje. En el turno donde venía queda una marca `[attached file: <nombre>]`.
+
+| Fachada | Cómo va el archivo |
+|---|---|
+| OpenAI chat | Una parte `{"type": "file", "file": {"filename": "informe.pdf", "file_data": "data:application/pdf;base64,…"}}` en `content` |
+| OpenAI responses | Una parte `{"type": "input_file", "filename": "informe.pdf", "file_data": "data:application/pdf;base64,…"}` |
+| Anthropic | Un bloque `{"type": "document", "title": "Contrato", "source": {"type": "base64", "media_type": "application/pdf", "data": "…"}}`; también `source.type: "text"` |
+
+- **Formatos:** los de la API propia (texto, Markdown, JSON, XML, CSV, HTML, PDF, Word, PowerPoint, Excel y ZIP). Sin
+  nombre, el archivo se llama `documento-<n>` con la extensión de su tipo MIME.
+- **Tamaño:** el cuerpo de la petición tiene un tope de 16 MB y el base64 ocupa un tercio más: caben unos **12 MB** de
+  archivos en total. Para más, la API propia (`POST /cargas`, hasta `conversion.maximo_carga_mb` cada uno).
+- **El mismo archivo en varios turnos** se guarda y se convierte una sola vez.
+- **No se admiten:** `file_id` (Tramtai no tiene `/files`), `file_url` y `source.type: "url"` (no descarga URL), ni
+  imágenes; responden 400 `parametro_no_soportado` con lo que hay que enviar en su lugar. Un base64 roto responde 400
+  `solicitud_invalida` con el mensaje y la parte.
+- **Sin conversor listo**, un archivo que lo necesita (HTML, PDF, Office o un ZIP que los traiga) se rechaza al
+  aceptar la petición con 503 `conversor_no_disponible`; mientras se prepara, con `Retry-After: 60`.
+
+```python
+import base64
+from openai import OpenAI
+
+cliente = OpenAI(base_url="http://127.0.0.1:17373/openai/v1", api_key="<tu clave>")
+with open("informe.pdf", "rb") as f:
+    pdf = base64.b64encode(f.read()).decode()
+r = cliente.chat.completions.create(model="perfil/rapido", messages=[{"role": "user", "content": [
+    {"type": "text", "text": "Resume el documento adjunto en una frase."},
+    {"type": "file", "file": {"filename": "informe.pdf", "file_data": "data:application/pdf;base64," + pdf}},
+]}])
+print(r.choices[0].message.content)
+```
+
+```javascript
+import { readFile } from 'node:fs/promises'
+import Anthropic from '@anthropic-ai/sdk'
+
+const cliente = new Anthropic({ baseURL: 'http://127.0.0.1:17373/anthropic', apiKey: '<tu clave>' })
+const m = await cliente.messages.create({ model: 'perfil/rapido', max_tokens: 1024, messages: [{ role: 'user', content: [
+  { type: 'document', title: 'informe.pdf', source: { type: 'base64', media_type: 'application/pdf', data: (await readFile('informe.pdf')).toString('base64') } },
+  { type: 'text', text: 'Resume el documento adjunto en una frase.' },
+] }] })
+console.log(m.content[0].text)
+```
+
+La Ayuda de la app («El recorrido de un archivo») y Probar → «Ver como código» tienen el mismo envío en curl y Python
+para cada API.
 
 ### Campo `model`
 
@@ -298,4 +352,4 @@ API nativa: `{"error": {"codigo": "…", "mensaje": "…"}}`. Las fachadas usan 
 | 422 | `salida_no_cumple_esquema`, `conversion_fallida` |
 | 429 | `cola_llena` y `presupuesto_agotado` (con `Retry-After`), `limite_uso_proveedor` |
 | 507 | `cuota_cargas_agotada` (las cargas guardadas llegan a `conversion.cuota_cargas_mb`) |
-| 502 / 503 / 504 | `error_agente`, `autenticacion_agente` / `agente_no_disponible` / `tiempo_ejecucion_agotado` |
+| 502 / 503 / 504 | `error_agente`, `autenticacion_agente` / `agente_no_disponible`, `conversor_no_disponible` (con `Retry-After` mientras se prepara) / `tiempo_ejecucion_agotado` |

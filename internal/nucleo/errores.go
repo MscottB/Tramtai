@@ -47,6 +47,8 @@ const (
 	CodigoCuotaCargasAgotada CodigoError = "cuota_cargas_agotada"
 	// CodigoCorreccionNoDisponible: se pidió corregir un trabajo que no falló por el esquema o no conservó su salida.
 	CodigoCorreccionNoDisponible CodigoError = "correccion_no_disponible"
+	// CodigoConversorNoDisponible: un archivo necesita el conversor (markitdown) y no hay ninguno listo.
+	CodigoConversorNoDisponible CodigoError = "conversor_no_disponible"
 )
 
 // Error es el error propio de Tramtai: un código estable y un mensaje legible sin secretos.
@@ -79,3 +81,11 @@ func MensajeDe(err error) string {
 	}
 	return err.Error()
 }
+
+// ConversorPreparando es conversor_no_disponible mientras el conversor se prepara: la API añade Retry-After.
+type ConversorPreparando struct {
+	Err error
+}
+
+func (e *ConversorPreparando) Error() string { return e.Err.Error() }
+func (e *ConversorPreparando) Unwrap() error { return e.Err }

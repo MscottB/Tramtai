@@ -26,7 +26,7 @@
         </div>
       </q-card-section>
       <q-card-section class="q-pt-none">
-        <GuiaUrls :url="base" :contratos="contratos" />
+        <GuiaUrls :url="base" :contratos="contratos" @usar="usarApiPropia" />
       </q-card-section>
       <q-card-section class="row q-col-gutter-md q-pt-none">
         <div class="col-12 col-md-6">
@@ -52,7 +52,7 @@
         </div>
       </q-card-section>
       <q-separator />
-      <div class="q-px-md q-pt-md text-weight-medium">{{ t('conectar.ejemplos') }}</div>
+      <div ref="ejemplosRef" class="q-px-md q-pt-md text-weight-medium">{{ t('conectar.ejemplos') }}</div>
       <div class="q-px-md q-pt-sm">
         <div class="desplazable-x"><q-btn-toggle v-model="lenguaje" no-caps flat dense toggle-color="primary" class="segmentado inline-flex"
           :options="ejemplos.map((e) => ({ label: e.titulo(), value: e.id }))" /></div>
@@ -126,6 +126,12 @@ function abrirDetalle(p: EstadoPunto, clave = '', creada = false) {
   dialogoDetalle.value = true
 }
 const lenguaje = ref('python')
+// usarApiPropia muestra los pasos de la API propia: su ejemplo en curl, con la URL y la clave puestas.
+const ejemplosRef = ref<HTMLElement>()
+function usarApiPropia() {
+  lenguaje.value = 'curl-nativa'
+  ejemplosRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 const filtroGrupo = ref<string | null>(null) // null: todos; '': sin grupo
 
 // pestana es la pestaña abierta: las APIs por aplicación o la API principal; se recuerda en este navegador.
