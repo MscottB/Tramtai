@@ -115,12 +115,33 @@ jobs:
         with:
           path: ~/go/bin/wails3.exe
           key: wails3-v3.0.0-beta.28-${{ runner.os }}
+      # NSIS 3.13 (el mismo que en local) sale de su instalador oficial con el SHA-256 fijado, el del manifiesto de winget
+      # (NSIS.NSIS 3.13); antes venía de Chocolatey, que puede caerse. Si algo falla, el paso se para aquí y no al compilar.
       - name: Herramientas (wails3 para el icono y NSIS para el instalador)
+        env:
+          NSIS_URL: https://sourceforge.net/projects/nsis/files/NSIS%203/3.13/nsis-3.13-setup.exe/download
+          NSIS_SHA256: DB9A1038BBC0E53FEF24F423FD609979BD578E942F1BE1198DB186D1C42652A3
         run: |
-          if (-not (Test-Path "$env:USERPROFILE\go\bin\wails3.exe")) { go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28 }
-          if (-not (Get-Command makensis -ErrorAction SilentlyContinue) -and -not (Test-Path 'C:\Program Files (x86)\NSIS\makensis.exe')) {
-            choco install nsis -y --no-progress
+          $ErrorActionPreference = 'Stop'
+          if (-not (Test-Path "$env:USERPROFILE\go\bin\wails3.exe")) {
+            go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28
+            if ($LASTEXITCODE) { throw 'no se pudo instalar wails3' }
           }
+          $makensis = 'C:\Program Files (x86)\NSIS\makensis.exe'
+          if (-not (Test-Path $makensis)) {
+            $instalador = Join-Path $env:RUNNER_TEMP 'nsis-3.13-setup.exe'
+            # Tres intentos: SourceForge reparte entre réplicas y alguna puede fallar.
+            foreach ($intento in 1..3) {
+              try { Invoke-WebRequest $env:NSIS_URL -OutFile $instalador -UserAgent 'Wget/1.21.4' -MaximumRedirection 10; break }
+              catch { if ($intento -eq 3) { throw "no se pudo descargar NSIS: $_" }; Start-Sleep -Seconds 15 }
+            }
+            $hash = (Get-FileHash $instalador -Algorithm SHA256).Hash
+            if ($hash -ne $env:NSIS_SHA256) { throw "el instalador de NSIS no es el esperado (SHA-256 $hash)" }
+            $proceso = Start-Process $instalador -ArgumentList '/S' -Wait -PassThru
+            if ($proceso.ExitCode) { throw "el instalador de NSIS terminó con código $($proceso.ExitCode)" }
+          }
+          & $makensis /VERSION
+          if ($LASTEXITCODE) { throw 'makensis no funciona' }
       - name: Compilar e instalador
         run: |
           $version = ./scripts/version.ps1
