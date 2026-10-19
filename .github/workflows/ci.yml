@@ -74,6 +74,41 @@ jobs:
         if: runner.os == 'Windows' && github.ref == 'refs/heads/main'
         run: if (-not (Test-Path "$env:USERPROFILE\go\bin\wails3.exe")) { go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28 }
 
+  # Prepara de verdad el conversor con el uv fijado y el lock, y convierte las muestras: comprueba en cada sistema que
+  # el lock sirve y que scripts/uv.sh y uv.ps1 descargan lo esperado.
+  conversor:
+    name: Conversor (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: '**/go.sum'
+      - name: uv fijado (Linux y macOS)
+        if: runner.os != 'Windows'
+        run: |
+          case "$(uname -s)-$(uname -m)" in
+            Linux-x86_64) objetivo=x86_64-unknown-linux-musl ;;
+            Darwin-arm64) objetivo=aarch64-apple-darwin ;;
+            *) echo "sistema sin uv fijado: $(uname -sm)"; exit 1 ;;
+          esac
+          sh scripts/uv.sh "$objetivo" "$RUNNER_TEMP/uv"
+          echo "TRAMTAI_UV=$RUNNER_TEMP/uv/uv" >> "$GITHUB_ENV"
+      - name: uv fijado (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          ./scripts/uv.ps1 -Objetivo x86_64-pc-windows-msvc -Destino "$env:RUNNER_TEMP\uv"
+          "TRAMTAI_UV=$env:RUNNER_TEMP\uv\uv.exe" >> $env:GITHUB_ENV
+      - name: Preparar el conversor y convertir las muestras
+        run: go test -tags conversor -run TestConversorReal -v -timeout 25m ./internal/documentos
+
   escritorio-linux:
     name: App de escritorio (Linux)
     runs-on: ubuntu-latest

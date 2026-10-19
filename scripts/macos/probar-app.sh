@@ -4,6 +4,7 @@ set -eu
 cd "$(dirname "$0")/../.."
 macos=paquete/Tramtai.app/Contents/MacOS
 "$macos/tramtai" version
+"$macos/uv" --version
 ("$macos/tramtai-escritorio" --oculto >/tmp/tramtai-escritorio.log 2>&1 || true) &
 for _ in $(seq 1 30); do
 	sleep 1

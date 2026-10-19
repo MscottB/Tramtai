@@ -6,6 +6,7 @@ set -eu
 cd "$(dirname "$0")/../.."
 sudo apt-get install -y ./dist/*.deb xvfb dbus-x11
 tramtai version
+/usr/lib/tramtai/uv --version
 (WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 dbus-run-session -- xvfb-run -a timeout 40 tramtai-escritorio --oculto || true) &
 for _ in $(seq 1 30); do
 	sleep 1

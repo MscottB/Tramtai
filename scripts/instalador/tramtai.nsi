@@ -248,6 +248,7 @@ Section "$(secPrograma)" SecPrograma
   Delete "$INSTDIR\portable.txt"
   File "${RAIZ}\bin\tramtai.exe"
   File "${RAIZ}\bin\tramtai-escritorio.exe"
+  File "${RAIZ}\bin\uv.exe" ; prepara el conversor de archivos (markitdown) en la carpeta del usuario
   File "/oname=LICENCIA.md" "${RAIZ}\LICENSE.md"
   File "${RAIZ}\TERMINOS.md"
   WriteUninstaller "$INSTDIR\desinstalar.exe"
@@ -317,6 +318,8 @@ Section "Uninstall"
   Pop $0
   Delete "$INSTDIR\tramtai.exe"
   Delete "$INSTDIR\tramtai-escritorio.exe"
+  Delete "$INSTDIR\uv.exe"
+  RMDir /r "$INSTDIR\conversor" ; el paquete del conversor, si se descomprimió aquí
   Delete "$INSTDIR\LICENCIA.md"
   Delete "$INSTDIR\TERMINOS.md"
   Delete "$INSTDIR\desinstalar.exe"

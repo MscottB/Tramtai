@@ -1,0 +1,26 @@
+Paquete del conversor de archivos de Tramtai
+=============================================
+
+Trae markitdown 0.1.8 con su propio Python, listo para usar sin internet. Sirve en equipos cuya red no deja
+descargar el conversor (Ajustes → Archivos → «Preparar archivos»).
+
+1. Cierra Tramtai.
+2. Descomprime este .zip junto a tramtai.exe: en la carpeta donde instalaste Tramtai o junto a la versión portable.
+   Debe quedar una carpeta «conversor» al lado de tramtai.exe.
+3. Abre Tramtai. En Ajustes → Archivos verás «Listo: markitdown 0.1.8, del paquete del conversor».
+
+No instala nada en el sistema ni pide permisos de administrador. Para quitarlo, borra la carpeta «conversor».
+
+
+Tramtai file converter package
+==============================
+
+It brings markitdown 0.1.8 with its own Python, ready to use without internet. Use it on computers whose network
+does not let Tramtai download the converter (Settings → Files → "Prepare files").
+
+1. Close Tramtai.
+2. Unzip this .zip next to tramtai.exe: in the folder where you installed Tramtai or next to the portable version.
+   A "conversor" folder must end up next to tramtai.exe.
+3. Open Tramtai. In Settings → Files you will see "Ready: markitdown 0.1.8, from the converter package".
+
+It installs nothing on the system and needs no administrator rights. To remove it, delete the "conversor" folder.

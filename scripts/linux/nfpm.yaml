@@ -23,6 +23,11 @@ contents:
     dst: /usr/bin/tramtai-escritorio
     file_info:
       mode: 0755
+  # uv prepara el conversor de archivos; fuera de /usr/bin para no chocar con otro uv (Tramtai lo busca en ../lib/tramtai).
+  - src: ./paquete/uv
+    dst: /usr/lib/tramtai/uv
+    file_info:
+      mode: 0755
   - src: ./scripts/linux/tramtai.desktop
     dst: /usr/share/applications/tramtai.desktop
   - src: ./escritorio/icono/tramtai.png
