@@ -1,2 +1,6 @@
-# Los scripts de shell se ejecutan en Linux y macOS: siempre con saltos de línea LF.
-*.sh text eol=lf
+# Todo el texto con saltos de línea LF, también en Windows: así la Web UI compilada en local es la misma que compila el
+# CI (Vue calcula los data-v- con el contenido de cada .vue) y los scripts de shell funcionan en Linux y macOS.
+* text=auto eol=lf
+
+# Salidas generadas: GitHub no las cuenta como código ni las despliega en los diffs.
+internal/recursos/web/** linguist-generated
