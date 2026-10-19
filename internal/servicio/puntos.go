@@ -125,8 +125,7 @@ func NormalizarPunto(p ConfigPunto, instancia string, puertoServicio int) (Confi
 }
 
 // validarRespaldo rechaza un respaldo con el que toda petición fallaría: un agente que no existe o una entrada fuera de
-// modelos_permitidos. Normalizar solo ve el formato. El servicio pregunta a su registro; la CLI y la terminal, al
-// catálogo (enCatalogo).
+// modelos_permitidos. NormalizarPunto solo ve el formato; existe pregunta al registro del servicio.
 func validarRespaldo(p ConfigPunto, existe func(agente string) bool) error {
 	for _, e := range p.Respaldo {
 		agente, _, _ := nucleo.DividirRespaldo(e)
@@ -162,53 +161,16 @@ func validarParaApps(p ConfigPunto) error {
 	return nil
 }
 
-func enCatalogo(agente string) bool {
-	_, ok := agentes.Buscar(agente)
-	return ok
-}
-
 // existe dice si el agente está en el registro del servicio.
 func (s *Servicio) existe(agente string) bool { return s.opc.Registro[agente] != nil }
 
-// ValidarPunto aplica las reglas para guardar una API que la Web UI, la CLI y la terminal comparten: un respaldo con el que
-// funcione y solo agentes habilitados para apps. El formato lo comprueba Normalizar.
-func ValidarPunto(p ConfigPunto) error { return validarPunto(p, enCatalogo) }
-
+// validarPunto aplica las reglas para guardar una API: un respaldo con el que funcione y solo agentes habilitados para
+// apps. El formato lo comprueba NormalizarPunto. Las usan todas las rutas que guardan un punto.
 func validarPunto(p ConfigPunto, existe func(string) bool) error {
 	if err := validarRespaldo(p, existe); err != nil {
 		return err
 	}
 	return validarParaApps(p)
-}
-
-// ConReglas envuelve una edición de puntos de acceso con ValidarPunto en los puntos nuevos o que cambian algo más que
-// activo: así se puede desactivar una API que ya tenía otro error, pero no guardar una nueva que fallaría siempre.
-func ConReglas(editar func([]ConfigPunto) ([]ConfigPunto, error)) func([]ConfigPunto) ([]ConfigPunto, error) {
-	// huella es el contenido del punto sin activo: se toma antes de editar, porque editar puede cambiar la lista (y lo
-	// que apuntan sus punteros) en su sitio.
-	huella := func(p ConfigPunto) string {
-		p.Activo = nil
-		datos, _ := json.Marshal(p)
-		return string(datos)
-	}
-	return func(lista []ConfigPunto) ([]ConfigPunto, error) {
-		antes := map[string]bool{}
-		for _, p := range lista {
-			antes[huella(p)] = true
-		}
-		nueva, err := editar(lista)
-		if err != nil {
-			return nil, err
-		}
-		for _, p := range nueva {
-			if !antes[huella(p)] {
-				if err := ValidarPunto(p); err != nil {
-					return nil, err
-				}
-			}
-		}
-		return nueva, nil
-	}
 }
 
 // EliminarPunto quita un punto de acceso del archivo y después borra su clave, antes de recargar: así el servicio sabe al

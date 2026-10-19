@@ -925,7 +925,7 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 			w.WriteHeader(http.StatusNoContent) // ahora es de otra instancia
 		}
 	case accion == "" && r.Method == http.MethodDelete:
-		// Como la CLI y la terminal: archivo y clave antes de recargar (404 si ya no estaba).
+		// Archivo y clave antes de recargar (404 si ya no estaba); la CLI y la terminal también borran por aquí.
 		if err := EliminarPunto(s.opc.Datos, punto.Origen, origenDeArchivo(punto.Origen), nombre); err != nil {
 			api.EscribirError(w, r, err)
 			return

@@ -5,7 +5,6 @@ package tui
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -15,10 +14,10 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"tramtai/internal/cliente"
+	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/navegador"
 	"tramtai/internal/nucleo"
-	"tramtai/internal/servicio"
 	"tramtai/internal/version"
 )
 
@@ -71,7 +70,7 @@ type opcion struct {
 type modelo struct {
 	o           Opciones
 	cli         *cliente.Cliente
-	estado      *servicio.Estado
+	estado      *contrato.Estado
 	pantalla    pantalla
 	cursor      int
 	inst        string
@@ -107,7 +106,7 @@ func nuevo(o Opciones) *modelo { return &modelo{o: o, ancho: 100, alto: 30} }
 type (
 	msgEstado struct {
 		cli    *cliente.Cliente
-		estado *servicio.Estado
+		estado *contrato.Estado
 		err    error
 	}
 	msgAviso struct {
@@ -193,7 +192,7 @@ func (m *modelo) confirmar(pregunta string, accion tea.Cmd) tea.Cmd {
 	return nil
 }
 
-func (m *modelo) instancia(id string) *servicio.EstadoInstancia {
+func (m *modelo) instancia(id string) *contrato.EstadoInstancia {
 	if m.estado == nil {
 		return nil
 	}
@@ -799,8 +798,8 @@ func (m *modelo) teclaDetalle(tecla string) tea.Cmd {
 	return nil
 }
 
-func (m *modelo) puntosDeInstancia() []servicio.EstadoPunto {
-	var lista []servicio.EstadoPunto
+func (m *modelo) puntosDeInstancia() []contrato.EstadoPunto {
+	var lista []contrato.EstadoPunto
 	if m.estado != nil {
 		for _, p := range m.estado.Puntos {
 			if p.Instancia == m.inst {
@@ -811,32 +810,14 @@ func (m *modelo) puntosDeInstancia() []servicio.EstadoPunto {
 	return lista
 }
 
-// rutaConfig devuelve el archivo donde se guardan los puntos de esta instancia y su origen.
-func (m *modelo) rutaConfig(archivo string) (string, nucleo.Origen) {
-	if strings.HasSuffix(archivo, "local.yaml") {
-		return archivo, nucleo.OrigenLocal
-	}
-	if archivo != "" {
-		return archivo, nucleo.OrigenGlobal
-	}
-	if m.inst != "global" && m.o.Proyecto != "" {
-		return m.o.Proyecto + "/.tramtai/local.yaml", nucleo.OrigenLocal
-	}
-	ruta, _ := nucleo.RutaGlobal()
-	return ruta, nucleo.OrigenGlobal
-}
-
-func (m *modelo) editarPuntos(archivo, texto string, f func([]servicio.ConfigPunto) ([]servicio.ConfigPunto, error)) tea.Cmd {
+// conServicio ejecuta f con el cliente y un plazo, y lo convierte en el aviso de la pantalla: las APIs se editan por
+// la API del servicio, con sus reglas, como en la Web UI y la CLI.
+func (m *modelo) conServicio(f func(ctx context.Context, cli *cliente.Cliente) (string, error)) tea.Cmd {
 	cli := m.cli
-	ruta, origen := m.rutaConfig(archivo)
 	return func() tea.Msg {
-		// Las mismas reglas que la Web UI y la CLI para guardar una API.
-		if err := servicio.EditarPuntos(ruta, origen, servicio.ConReglas(f)); err != nil {
-			return msgAviso{err: err}
-		}
 		ctx, cancelar := conPlazo(30 * time.Second)
 		defer cancelar()
-		_, err := cli.Recargar(ctx)
+		texto, err := f(ctx, cli)
 		return msgAviso{texto: texto, err: err}
 	}
 }
@@ -852,54 +833,31 @@ func (m *modelo) teclaAccesos(tecla string) tea.Cmd {
 		return nil
 	}
 	p := puntos[m.cursor]
-	cambiar := func(f func(*servicio.ConfigPunto)) func([]servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
-		return func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
-			for i := range lista {
-				if lista[i].Nombre == p.Nombre {
-					f(&lista[i])
-					return lista, nil
-				}
-			}
-			return nil, errors.New(idioma.Tf("el punto %s no está en %s", p.Nombre, p.Origen))
-		}
-	}
 	switch tecla {
 	case "enter", "space":
 		activo := !(p.Activo || p.Error != "desactivado")
-		return m.editarPuntos(p.Origen, map[bool]string{true: idioma.T("punto activado"), false: idioma.T("punto desactivado")}[activo],
-			cambiar(func(c *servicio.ConfigPunto) { c.Activo = &activo }))
-	case "x":
-		cli, datos := m.cli, m.o.Datos
-		ruta, origen := m.rutaConfig(p.Origen)
-		return m.confirmar(idioma.Tf("¿Eliminar el punto de acceso %s?", p.Nombre), func() tea.Msg {
-			// Archivo y clave antes de recargar, como la CLI: otro punto con este nombre no hereda ni la clave ni el consumo.
-			if err := servicio.EliminarPunto(datos, ruta, origen, p.Nombre); err != nil {
-				return msgAviso{err: err}
-			}
-			ctx, cancelar := conPlazo(30 * time.Second)
-			defer cancelar()
-			_, err := cli.Recargar(ctx)
-			return msgAviso{texto: idioma.T("punto eliminado"), err: err}
+		return m.conServicio(func(ctx context.Context, cli *cliente.Cliente) (string, error) {
+			return map[bool]string{true: idioma.T("punto activado"), false: idioma.T("punto desactivado")}[activo],
+				cli.ActivarPunto(ctx, p.Instancia, p.Nombre, activo)
 		})
+	case "x":
+		return m.confirmar(idioma.Tf("¿Eliminar el punto de acceso %s?", p.Nombre),
+			m.conServicio(func(ctx context.Context, cli *cliente.Cliente) (string, error) {
+				// El servicio borra el punto, su clave y su consumo: otro con este nombre no hereda nada.
+				return idioma.T("punto eliminado"), cli.EliminarPunto(ctx, p.Instancia, p.Nombre)
+			}))
 	case "t":
-		return m.confirmar(idioma.Tf("¿Regenerar la clave de %s? La anterior deja de valer.", p.Nombre), m.regenerarClave(p.Nombre))
+		return m.confirmar(idioma.Tf("¿Regenerar la clave de %s? La anterior deja de valer.", p.Nombre), m.regenerarClave(p.Instancia, p.Nombre))
 	}
 	return nil
 }
 
 // regenerarClave crea una clave nueva para el punto y la muestra esta única vez: solo se guarda su huella.
-func (m *modelo) regenerarClave(nombre string) tea.Cmd {
-	cli, datos := m.cli, m.o.Datos
-	return func() tea.Msg {
-		token, err := servicio.RotarTokenPunto(servicio.RutaTokenPunto(datos, nombre))
-		if err != nil {
-			return msgAviso{err: err}
-		}
-		ctx, cancelar := conPlazo(30 * time.Second)
-		defer cancelar()
-		_, err = cli.Recargar(ctx)
-		return msgAviso{texto: idioma.Tf("clave nueva de %s (guárdala: no se volverá a mostrar): %s", nombre, token), err: err}
-	}
+func (m *modelo) regenerarClave(instancia, nombre string) tea.Cmd {
+	return m.conServicio(func(ctx context.Context, cli *cliente.Cliente) (string, error) {
+		token, err := cli.RotarTokenPunto(ctx, instancia, nombre)
+		return idioma.Tf("clave nueva de %s (guárdala: no se volverá a mostrar): %s", nombre, token), err
+	})
 }
 
 func (m *modelo) teclaNuevoPunto(k tea.KeyPressMsg) tea.Cmd {
@@ -935,8 +893,10 @@ func (m *modelo) teclaNuevoPunto(k tea.KeyPressMsg) tea.Cmd {
 	return nil
 }
 
+// crearPunto crea la API en la instancia de la pantalla: el servicio la guarda donde la Web UI (la configuración
+// global para la global, .tramtai/local.yaml para un proyecto) y devuelve su clave, que se muestra esta única vez.
 func (m *modelo) crearPunto() tea.Cmd {
-	p := servicio.ConfigPunto{Nombre: m.nombrePunto}
+	p := contrato.ConfigPunto{Nombre: m.nombrePunto}
 	if m.puertoPunto != "" {
 		puerto, err := strconv.Atoi(m.puertoPunto)
 		if err != nil {
@@ -949,38 +909,16 @@ func (m *modelo) crearPunto() tea.Cmd {
 		s := solicitudDesde(m.modelos[m.iModelo], "")
 		p.Agente, p.Modelo, p.PerfilModelo = s.Agente, s.Modelo, s.PerfilModelo
 	}
-	ruta, _ := m.rutaConfig("")
-	if m.inst == "global" || !strings.HasSuffix(ruta, "local.yaml") {
-		if m.inst != "global" {
-			p.Instancia = m.inst
-		}
-	}
-	if _, err := servicio.NormalizarPunto(p, m.inst, 0); err != nil {
-		m.avisar(err)
-		return nil
-	}
 	m.ir(pAccesos)
-	crear := m.editarPuntos("", "",
-		func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
-			for _, c := range lista {
-				if c.Nombre == p.Nombre {
-					return nil, errors.New(idioma.Tf("el punto de acceso %s ya existe", p.Nombre))
-				}
-			}
-			return append(lista, p), nil
-		})
-	regenerar := m.regenerarClave(p.Nombre)
-	return func() tea.Msg {
-		if a, ok := crear().(msgAviso); ok && a.err != nil {
-			return a
-		}
-		// Clave nueva siempre, mostrada esta única vez: no hereda la de otro punto que tuviera este nombre.
-		return regenerar()
-	}
+	instancia := m.inst
+	return m.conServicio(func(ctx context.Context, cli *cliente.Cliente) (string, error) {
+		_, token, err := cli.CrearPunto(ctx, instancia, p)
+		return idioma.Tf("clave nueva de %s (guárdala: no se volverá a mostrar): %s", p.Nombre, token), err
+	})
 }
 
 func (m *modelo) teclaTodas(tecla string) tea.Cmd {
-	var lista []servicio.EstadoInstancia
+	var lista []contrato.EstadoInstancia
 	if m.estado != nil {
 		lista = m.estado.Instancias
 	}

@@ -68,3 +68,27 @@ func TestReemplazarPuntoUI(t *testing.T) {
 		t.Fatalf("un punto que no existe: %d", r.StatusCode)
 	}
 }
+
+// Las reglas se aplican a lo nuevo o cambiado, no a desactivar: una API que ya usaba Antigravity se puede desactivar,
+// pero no editar ni crear otra con él (fallaría siempre).
+func TestReglasAlGuardarPorLaAPI(t *testing.T) {
+	global := `puntos_acceso:
+  - nombre: vieja
+    agente: antigravity
+`
+	s, ts, _ := entorno(t, global, "", adaptadores.Simulado{})
+	s.ActivarGlobal()
+	RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "vieja"))
+	s.Recargar()
+	n := abrirSesion(t, s, ts.URL)
+	csrf := []string{"X-CSRF-Token", n.csrf}
+	if r, cuerpo := n.pedir("PATCH", "/api/v1/puntos/vieja", `{"activo":false}`, csrf...); r.StatusCode != 200 {
+		t.Fatalf("desactivar una API existente no pasa por las reglas: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, cuerpo := n.pedir("PUT", "/api/v1/puntos/vieja", `{"nombre":"vieja","agente":"antigravity","grupo":"otro"}`, csrf...); r.StatusCode < 400 || !strings.Contains(cuerpo, "Antigravity") {
+		t.Fatalf("editarla sí: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, cuerpo := n.pedir("POST", "/api/v1/puntos", `{"nombre":"nueva","agente":"antigravity"}`, csrf...); r.StatusCode < 400 || !strings.Contains(cuerpo, "Antigravity") {
+		t.Fatalf("y crear otra con él: %d %s", r.StatusCode, cuerpo)
+	}
+}
