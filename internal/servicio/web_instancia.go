@@ -234,15 +234,6 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("punto de acceso no encontrado en esta instancia: %s", nombre)))
 		return
 	}
-	editar := func(f func([]ConfigPunto) ([]ConfigPunto, error)) bool {
-		if err := EditarPuntos(punto.Origen, origenDeArchivo(punto.Origen), f); err != nil {
-			api.EscribirError(w, r, err)
-			return false
-		}
-		s.Recargar()
-		_ = s.actualizarDescriptor()
-		return true
-	}
 	switch {
 	case accion == "presupuesto/reiniciar" && r.Method == http.MethodPost:
 		if err := inst.Planificador.ReiniciarPresupuesto(r.Context(), nombre); err != nil {
@@ -260,158 +251,11 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 		s.Recargar()
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"token": token})
 	case accion == "" && r.Method == http.MethodPatch:
-		var cambio struct { // solo cambia lo que viene en el cuerpo
-			Activo        *bool     `json:"activo"`
-			Instrucciones *string   `json:"instrucciones"`
-			Esfuerzo      *string   `json:"esfuerzo"` // "" vuelve al del agente
-			Modelo        *string   `json:"modelo"`   // identificador del catálogo; "" vuelve al del espacio
-			Forzar        *bool     `json:"forzar_modelo"`
-			Permitidos    *[]string `json:"modelos_permitidos"`
-			// Esquema: ausente no cambia; null o {} lo quita; un objeto lo fija.
-			Esquema    json.RawMessage `json:"esquema"`
-			Respaldo   *[]string       `json:"respaldo"`
-			Reintentos *int            `json:"reintentos_salida"`
-			// Presupuesto: ausente no cambia; null lo quita; un objeto lo fija.
-			Presupuesto json.RawMessage `json:"presupuesto"`
-		}
-		if err := api.LeerJSON(w, r, &cambio); err != nil {
-			api.EscribirError(w, r, err)
-			return
-		}
-		if cambio.Esfuerzo != nil && *cambio.Esfuerzo != "" && !slices.Contains(nucleo.NivelesEsfuerzo, *cambio.Esfuerzo) {
-			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("esfuerzo desconocido: %s", *cambio.Esfuerzo)))
-			return
-		}
-		if editar(func(lista []ConfigPunto) ([]ConfigPunto, error) {
-			for i := range lista {
-				if lista[i].Nombre != nombre {
-					continue
-				}
-				if cambio.Activo != nil {
-					lista[i].Activo = cambio.Activo
-				}
-				if cambio.Instrucciones != nil {
-					lista[i].Instrucciones = strings.TrimSpace(*cambio.Instrucciones)
-				}
-				if cambio.Esfuerzo != nil {
-					lista[i].Esfuerzo = *cambio.Esfuerzo
-				}
-				if cambio.Modelo != nil {
-					if err := s.modeloDePunto(inst, &lista[i], strings.TrimSpace(*cambio.Modelo)); err != nil {
-						return nil, err
-					}
-				}
-				if cambio.Forzar != nil {
-					lista[i].ForzarModelo = *cambio.Forzar
-				}
-				if cambio.Permitidos != nil {
-					lista[i].ModelosPermitidos = slices.DeleteFunc(*cambio.Permitidos, func(m string) bool { return strings.TrimSpace(m) == "" })
-				}
-				if len(cambio.Esquema) > 0 {
-					lista[i].Esquema = nil // null y {} lo quitan
-					if err := json.Unmarshal(cambio.Esquema, &lista[i].Esquema); err != nil {
-						return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("el esquema debe ser un objeto JSON"))
-					}
-				}
-				if cambio.Respaldo != nil {
-					lista[i].Respaldo = *cambio.Respaldo
-				}
-				if cambio.Reintentos != nil {
-					lista[i].ReintentosSalida = *cambio.Reintentos
-				}
-				if len(cambio.Presupuesto) > 0 {
-					lista[i].Presupuesto = nil // null lo quita
-					// Sin campos desconocidos: una errata dejaría el presupuesto vacío y lo quitaría sin avisar.
-					leer := json.NewDecoder(bytes.NewReader(cambio.Presupuesto))
-					leer.DisallowUnknownFields()
-					if err := leer.Decode(&lista[i].Presupuesto); err != nil {
-						return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("el presupuesto debe ser un objeto JSON"))
-					}
-				}
-				// La receta se valida antes de escribir: un cambio no válido deja la configuración como estaba. Solo si
-				// cambia, para no impedir desactivar un punto que ya tenía otro error.
-				if len(cambio.Esquema) > 0 || cambio.Respaldo != nil || cambio.Permitidos != nil || len(cambio.Presupuesto) > 0 || cambio.Reintentos != nil {
-					normalizado, err := NormalizarPunto(lista[i], inst.ID, s.opc.Puerto)
-					if err != nil {
-						return nil, err
-					}
-					lista[i].Presupuesto = normalizado.Presupuesto // uno vacío se guarda como ninguno
-					if err := validarRespaldo(lista[i], s.existe); err != nil {
-						return nil, err
-					}
-				}
-				if cambio.Modelo != nil || cambio.Respaldo != nil {
-					if err := validarParaApps(lista[i]); err != nil {
-						return nil, err
-					}
-				}
-			}
-			return lista, nil
-		}) {
-			api.EscribirJSON(w, http.StatusOK, map[string]any{"puntos_acceso": s.puntosDe(inst.ID)})
-		}
+		s.cambiarPuntoUI(w, r, inst, punto)
 	case accion == "config" && r.Method == http.MethodGet:
-		// El punto tal como está guardado, para que la CLI lo edite entero con PUT.
-		capa, err := nucleo.CargarCapa(punto.Origen, origenDeArchivo(punto.Origen))
-		if err != nil {
-			api.EscribirError(w, r, err)
-			return
-		}
-		lista, _ := capa.Valores["puntos_acceso"].([]any)
-		puntos, err := LeerPuntos(lista)
-		if err != nil {
-			api.EscribirError(w, r, err)
-			return
-		}
-		for _, p := range puntos {
-			if p.Nombre == nombre {
-				api.EscribirJSON(w, http.StatusOK, p)
-				return
-			}
-		}
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("punto de acceso no encontrado en esta instancia: %s", nombre)))
+		s.configPuntoUI(w, r, punto)
 	case accion == "" && r.Method == http.MethodPut:
-		// Reemplaza el punto entero (lo que cambia tramtai acceso editar); el PATCH solo cubre lo que edita la Web UI.
-		// shortcut: sin control de versión, dos ediciones del mismo punto a la vez se pisan (gana la última); pasar a
-		// If-Match si la terminal y la Web UI llegan a editar el mismo punto a menudo.
-		var p ConfigPunto
-		if err := api.LeerJSON(w, r, &p); err != nil {
-			api.EscribirError(w, r, err)
-			return
-		}
-		if p.Nombre != nombre {
-			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el nombre del cuerpo (%s) no coincide con el de la ruta (%s)", p.Nombre, nombre)))
-			return
-		}
-		if editar(func(lista []ConfigPunto) ([]ConfigPunto, error) {
-			for i := range lista {
-				if lista[i].Nombre != nombre {
-					continue
-				}
-				if p.Instancia == "" {
-					p.Instancia = lista[i].Instancia
-				}
-				normalizado, err := NormalizarPunto(p, inst.ID, s.opc.Puerto)
-				if err != nil {
-					return nil, err
-				}
-				p.Presupuesto = normalizado.Presupuesto // uno vacío se guarda como ninguno
-				if err := validarPunto(p, s.existe); err != nil {
-					return nil, err
-				}
-				lista[i] = p
-				return lista, nil
-			}
-			return nil, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("punto de acceso no encontrado en esta instancia: %s", nombre))
-		}) {
-			for _, e := range s.puntosDe(inst.ID) {
-				if e.Nombre == nombre {
-					api.EscribirJSON(w, http.StatusOK, e)
-					return
-				}
-			}
-			w.WriteHeader(http.StatusNoContent) // ahora es de otra instancia
-		}
+		s.reemplazarPuntoUI(w, r, inst, punto)
 	case accion == "" && r.Method == http.MethodDelete:
 		// Archivo y clave antes de recargar (404 si ya no estaba); la CLI y la terminal también borran por aquí.
 		if err := EliminarPunto(s.opc.Datos, punto.Origen, origenDeArchivo(punto.Origen), nombre); err != nil {
@@ -492,4 +336,180 @@ func (s *Servicio) fijarRetencion(inst *Instancia, resultado, metadatos, maximo 
 		inst.purgarPronto()
 	}
 	return err
+}
+
+// editarPunto aplica f al archivo del punto y recarga; si falla, responde con el error y devuelve false.
+func (s *Servicio) editarPunto(w http.ResponseWriter, r *http.Request, punto *EstadoPunto, f func([]ConfigPunto) ([]ConfigPunto, error)) bool {
+	if err := EditarPuntos(punto.Origen, origenDeArchivo(punto.Origen), f); err != nil {
+		api.EscribirError(w, r, err)
+		return false
+	}
+	s.Recargar()
+	_ = s.actualizarDescriptor()
+	return true
+}
+
+// cambiarPuntoUI cambia solo lo que viene en el cuerpo (PATCH): lo que edita la Web UI.
+func (s *Servicio) cambiarPuntoUI(w http.ResponseWriter, r *http.Request, inst *Instancia, punto *EstadoPunto) {
+	nombre := punto.Nombre
+	var cambio struct { // solo cambia lo que viene en el cuerpo
+		Activo        *bool     `json:"activo"`
+		Instrucciones *string   `json:"instrucciones"`
+		Esfuerzo      *string   `json:"esfuerzo"` // "" vuelve al del agente
+		Modelo        *string   `json:"modelo"`   // identificador del catálogo; "" vuelve al del espacio
+		Forzar        *bool     `json:"forzar_modelo"`
+		Permitidos    *[]string `json:"modelos_permitidos"`
+		// Esquema: ausente no cambia; null o {} lo quita; un objeto lo fija.
+		Esquema    json.RawMessage `json:"esquema"`
+		Respaldo   *[]string       `json:"respaldo"`
+		Reintentos *int            `json:"reintentos_salida"`
+		// Presupuesto: ausente no cambia; null lo quita; un objeto lo fija.
+		Presupuesto json.RawMessage `json:"presupuesto"`
+	}
+	if err := api.LeerJSON(w, r, &cambio); err != nil {
+		api.EscribirError(w, r, err)
+		return
+	}
+	if cambio.Esfuerzo != nil && *cambio.Esfuerzo != "" && !slices.Contains(nucleo.NivelesEsfuerzo, *cambio.Esfuerzo) {
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("esfuerzo desconocido: %s", *cambio.Esfuerzo)))
+		return
+	}
+	if s.editarPunto(w, r, punto, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+		for i := range lista {
+			if lista[i].Nombre != nombre {
+				continue
+			}
+			if cambio.Activo != nil {
+				lista[i].Activo = cambio.Activo
+			}
+			if cambio.Instrucciones != nil {
+				lista[i].Instrucciones = strings.TrimSpace(*cambio.Instrucciones)
+			}
+			if cambio.Esfuerzo != nil {
+				lista[i].Esfuerzo = *cambio.Esfuerzo
+			}
+			if cambio.Modelo != nil {
+				if err := s.modeloDePunto(inst, &lista[i], strings.TrimSpace(*cambio.Modelo)); err != nil {
+					return nil, err
+				}
+			}
+			if cambio.Forzar != nil {
+				lista[i].ForzarModelo = *cambio.Forzar
+			}
+			if cambio.Permitidos != nil {
+				lista[i].ModelosPermitidos = slices.DeleteFunc(*cambio.Permitidos, func(m string) bool { return strings.TrimSpace(m) == "" })
+			}
+			if len(cambio.Esquema) > 0 {
+				lista[i].Esquema = nil // null y {} lo quitan
+				if err := json.Unmarshal(cambio.Esquema, &lista[i].Esquema); err != nil {
+					return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("el esquema debe ser un objeto JSON"))
+				}
+			}
+			if cambio.Respaldo != nil {
+				lista[i].Respaldo = *cambio.Respaldo
+			}
+			if cambio.Reintentos != nil {
+				lista[i].ReintentosSalida = *cambio.Reintentos
+			}
+			if len(cambio.Presupuesto) > 0 {
+				lista[i].Presupuesto = nil // null lo quita
+				// Sin campos desconocidos: una errata dejaría el presupuesto vacío y lo quitaría sin avisar.
+				leer := json.NewDecoder(bytes.NewReader(cambio.Presupuesto))
+				leer.DisallowUnknownFields()
+				if err := leer.Decode(&lista[i].Presupuesto); err != nil {
+					return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("el presupuesto debe ser un objeto JSON"))
+				}
+			}
+			// La receta se valida antes de escribir: un cambio no válido deja la configuración como estaba. Solo si
+			// cambia, para no impedir desactivar un punto que ya tenía otro error.
+			if len(cambio.Esquema) > 0 || cambio.Respaldo != nil || cambio.Permitidos != nil || len(cambio.Presupuesto) > 0 || cambio.Reintentos != nil {
+				normalizado, err := NormalizarPunto(lista[i], inst.ID, s.opc.Puerto)
+				if err != nil {
+					return nil, err
+				}
+				lista[i].Presupuesto = normalizado.Presupuesto // uno vacío se guarda como ninguno
+				if err := validarRespaldo(lista[i], s.existe); err != nil {
+					return nil, err
+				}
+			}
+			if cambio.Modelo != nil || cambio.Respaldo != nil {
+				if err := validarParaApps(lista[i]); err != nil {
+					return nil, err
+				}
+			}
+		}
+		return lista, nil
+	}) {
+		api.EscribirJSON(w, http.StatusOK, map[string]any{"puntos_acceso": s.puntosDe(inst.ID)})
+	}
+}
+
+// configPuntoUI devuelve el punto tal como está guardado (GET <nombre>/config).
+func (s *Servicio) configPuntoUI(w http.ResponseWriter, r *http.Request, punto *EstadoPunto) {
+	nombre := punto.Nombre
+	// El punto tal como está guardado, para que la CLI lo edite entero con PUT.
+	capa, err := nucleo.CargarCapa(punto.Origen, origenDeArchivo(punto.Origen))
+	if err != nil {
+		api.EscribirError(w, r, err)
+		return
+	}
+	lista, _ := capa.Valores["puntos_acceso"].([]any)
+	puntos, err := LeerPuntos(lista)
+	if err != nil {
+		api.EscribirError(w, r, err)
+		return
+	}
+	for _, p := range puntos {
+		if p.Nombre == nombre {
+			api.EscribirJSON(w, http.StatusOK, p)
+			return
+		}
+	}
+	api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("punto de acceso no encontrado en esta instancia: %s", nombre)))
+}
+
+// reemplazarPuntoUI reemplaza el punto entero (PUT).
+func (s *Servicio) reemplazarPuntoUI(w http.ResponseWriter, r *http.Request, inst *Instancia, punto *EstadoPunto) {
+	nombre := punto.Nombre
+	// Reemplaza el punto entero (lo que cambia tramtai acceso editar); el PATCH solo cubre lo que edita la Web UI.
+	// shortcut: sin control de versión, dos ediciones del mismo punto a la vez se pisan (gana la última); pasar a
+	// If-Match si la terminal y la Web UI llegan a editar el mismo punto a menudo.
+	var p ConfigPunto
+	if err := api.LeerJSON(w, r, &p); err != nil {
+		api.EscribirError(w, r, err)
+		return
+	}
+	if p.Nombre != nombre {
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el nombre del cuerpo (%s) no coincide con el de la ruta (%s)", p.Nombre, nombre)))
+		return
+	}
+	if s.editarPunto(w, r, punto, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+		for i := range lista {
+			if lista[i].Nombre != nombre {
+				continue
+			}
+			if p.Instancia == "" {
+				p.Instancia = lista[i].Instancia
+			}
+			normalizado, err := NormalizarPunto(p, inst.ID, s.opc.Puerto)
+			if err != nil {
+				return nil, err
+			}
+			p.Presupuesto = normalizado.Presupuesto // uno vacío se guarda como ninguno
+			if err := validarPunto(p, s.existe); err != nil {
+				return nil, err
+			}
+			lista[i] = p
+			return lista, nil
+		}
+		return nil, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("punto de acceso no encontrado en esta instancia: %s", nombre))
+	}) {
+		for _, e := range s.puntosDe(inst.ID) {
+			if e.Nombre == nombre {
+				api.EscribirJSON(w, http.StatusOK, e)
+				return
+			}
+		}
+		w.WriteHeader(http.StatusNoContent) // ahora es de otra instancia
+	}
 }
