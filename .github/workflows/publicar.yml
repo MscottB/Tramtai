@@ -111,7 +111,7 @@ jobs:
       # Solo se lee: desde una etiqueta se ve la caché de main, que deja el CI; guardarla aquí la dejaría donde nadie la
       # vuelve a ver.
       - name: wails3 en caché (la deja el CI de main)
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ~/go/bin/wails3.exe
           key: wails3-v3.0.0-beta.28-${{ runner.os }}
