@@ -3,7 +3,7 @@
 **Objetivo:** arreglar los errores reales y de seguridad que encontró la revisión completa del 2026-10-19, sin cambiar
 la estructura del código. La estructura es de la v0.49.
 
-**Spec:** `docs/equipo/correcciones.md`. Rama: `fix/correcciones`.
+**Spec:** `docs/equipo/releases/v0.47-correcciones/spec.md`. Rama: `fix/correcciones`.
 
 **Tecnología:** Go 1.27 y Vue 3 + Quasar + TypeScript. Las funciones puras de la web se prueban con `node --test`.
 

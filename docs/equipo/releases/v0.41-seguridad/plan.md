@@ -13,7 +13,7 @@ hijo) y `api` (puntos de acceso y fachadas).
 
 **Tech Stack:** Go 1.27, SQLite (modernc), Windows Job Objects (`golang.org/x/sys/windows`), Vue 3 + Quasar.
 
-**Spec:** `docs/equipo/seguridad.md`
+**Spec:** `docs/equipo/releases/v0.41-seguridad/spec.md`
 
 ## Global Constraints
 

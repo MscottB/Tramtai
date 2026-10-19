@@ -16,7 +16,7 @@
 
 **Tech Stack:** Go 1.27, Vue 3 + Quasar + TypeScript, HTML y CSS estáticos en `site/`.
 
-**Spec:** `docs/equipo/copilot.md`. **Evidencia M0:** `docs/equipo/m0-agentes.md` y las capturas de `scratchpad/m0copilot`.
+**Spec:** `docs/equipo/releases/v0.44-copilot/spec.md`. **Evidencia M0:** `docs/equipo/m0-agentes.md` y las capturas de `scratchpad/m0copilot`.
 
 ## Global Constraints
 

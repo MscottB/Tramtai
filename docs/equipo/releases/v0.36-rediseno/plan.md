@@ -14,7 +14,7 @@ corregirse.
 
 **Stack:** Vue 3 + Quasar (vue-tsc), Go 1.27, Wails v3 (escritorio), HTML/CSS/JS estático (`site/`).
 
-**Spec:** docs/equipo/rediseno.md
+**Spec:** docs/equipo/releases/v0.36-rediseno/spec.md
 
 ## Restricciones globales
 

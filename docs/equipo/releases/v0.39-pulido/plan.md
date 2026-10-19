@@ -11,7 +11,7 @@ actualización y Web UI.
 
 **Stack:** Go 1.27, SQLite (modernc), Vue 3 + Quasar (vue-tsc), HTML estático (`site/`).
 
-**Spec:** docs/equipo/pulido.md
+**Spec:** docs/equipo/releases/v0.39-pulido/spec.md
 
 ## Restricciones globales
 

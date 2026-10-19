@@ -12,7 +12,7 @@ comparten entre Probar y el Historial. El instalador deja de ser silencioso cuan
 
 **Tech Stack:** Go 1.27, SQLite (modernc), Vue 3 + Quasar, `marked` + `dompurify` (nuevas), NSIS.
 
-**Spec:** `docs/equipo/probar.md`
+**Spec:** `docs/equipo/releases/v0.40-probar/spec.md`
 
 ## Global Constraints
 

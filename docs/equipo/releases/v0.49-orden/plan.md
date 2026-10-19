@@ -3,7 +3,7 @@
 **Objetivo:** que el código sea más fácil de leer y de cambiar sin que cambie lo que hace. Es la base de la v0.54
 (la terminal a la par de la Web UI).
 
-**Spec:** `docs/equipo/orden.md`, aprobada. **Rama:** `feat/orden`, con PR a `main`.
+**Spec:** `docs/equipo/releases/v0.49-orden/spec.md`, aprobada. **Rama:** `feat/orden`, con PR a `main`.
 
 ## Restricciones generales
 
@@ -303,3 +303,29 @@ muestras de `testdata`.
   - el job `ci` llamado desde Publicar pasa;
   - el release trae sus 13 archivos con la firma válida;
   - el commit de paquetes llega a `main`.
+
+## Cambios respecto al plan
+
+Lo que se hizo distinto al implementar, y por qué:
+
+- **Modelos efectivos (tarea 6): un índice en lugar de un mapa en memoria.** Medido con 20 000 trabajos, la consulta
+  tardaba 44 ms porque ordenaba la tabla entera; con un índice parcial (`trabajos_efectivo`, sobre `creado_en` donde hay
+  modelo efectivo) tarda 0,6 ms y no crece con el historial. Devuelve exactamente lo mismo que antes, sin el riesgo de
+  carreras ni de que un mapa se desvíe de la base. El índice se crea al abrir la base sin cambiar su versión, así que
+  una versión anterior de Tramtai la sigue abriendo.
+- **Archivos divididos (tarea 5):**
+  - `planificador`: `correccion.go` en lugar de `presupuestos.go`, que ya existía (`presupuesto.go`);
+  - `persistencia`: `historial.go` en lugar de `purga.go` (ya había `historial_test.go`), y el uso por API va a
+    `consumo.go`;
+  - `servicio.go`: además, `claves.go` con los tokens;
+  - también `cmd/tramtai/servicio.go` (783 líneas) en `instancia.go`, `abrir.go` y `estado.go`, por el tope de 700;
+  - `puntoUI` (209 líneas) en una función por cada cambio (PATCH, PUT y la configuración);
+  - `rutaInstancia` se queda con su `switch`: todas sus rutas tienen el mismo permiso, así que una tabla no añade nada.
+- **Las reglas para guardar una API (tarea 4):** `ConReglas`, `ValidarPunto` y `enCatalogo` se eliminaron, porque ya
+  solo las usaban las pruebas; lo que comprobaba `TestConReglas` (desactivar sí, editar o crear con Antigravity no) pasa
+  a una prueba de las rutas.
+- **CI (tarea 9):** Publicar también deja de repetir el job `dependencias`, porque el CI ya pasa `govulncheck`,
+  `npm audit` y las firmas del registro. El `concurrency` del CI no cambia: su grupo lleva la referencia, y la de una
+  etiqueta nunca coincide con la de una rama.
+- **`crear` con el servicio parado (tarea 3):** no tiene prueba automática, porque el binario de pruebas no puede
+  iniciarse a sí mismo como servicio; se comprueba a mano (tarea 11).

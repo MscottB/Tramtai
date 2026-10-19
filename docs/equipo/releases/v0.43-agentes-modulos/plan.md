@@ -15,7 +15,7 @@ APIs y Agentes sigan siendo cómodos con muchas APIs y muchos agentes.
 
 **Tech Stack:** Go 1.27, Vue 3 + Quasar + TypeScript.
 
-**Spec:** `docs/equipo/agentes-modulos.md`. **Evidencia M0:** `docs/equipo/m0-agentes.md`.
+**Spec:** `docs/equipo/releases/v0.43-agentes-modulos/spec.md`. **Evidencia M0:** `docs/equipo/m0-agentes.md`.
 
 ## Global Constraints
 

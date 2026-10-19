@@ -12,7 +12,7 @@ mismo trabajo. La Web UI comparte un componente `EditorReceta` entre Probar y Mi
 
 **Tecnología:** Go 1.27 (SQLite modernc, yaml.v3, santhosh-tekuri/jsonschema), Vue 3 + Quasar 2.35 + Vite 8.
 
-**Especificación:** [recetas-respaldo.md](recetas-respaldo.md)
+**Especificación:** [spec.md](spec.md)
 
 ## Restricciones globales
 

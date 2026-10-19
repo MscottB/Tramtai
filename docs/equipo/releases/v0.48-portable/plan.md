@@ -2,7 +2,7 @@
 
 **Objetivo:** que la portable de Windows guarde todo junto a su `.exe` y conviva con la instalada sin pisarse.
 
-**Spec:** `docs/equipo/portable.md`, aprobada y revisada por arquitectura. **Rama:** `feat/portable`, con PR a `main`.
+**Spec:** `docs/equipo/releases/v0.48-portable/spec.md`, aprobada y revisada por arquitectura. **Rama:** `feat/portable`, con PR a `main`.
 
 ## Restricciones generales
 

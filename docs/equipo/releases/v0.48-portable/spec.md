@@ -11,7 +11,7 @@ Decisiones del usuario:
   - «Iniciar con Windows» solo se marca si apunta a esta copia;
   - y la ayuda de la CLI nombra a GitHub Copilot.
 
-Va después de las correcciones de la revisión (v0.47, `correcciones.md`). OpenCode pasa a la v0.50 y Hermes Agent a la v0.51.
+Va después de las correcciones de la revisión (v0.47, `releases/v0.47-correcciones/spec.md`). OpenCode pasa a la v0.50 y Hermes Agent a la v0.51.
 
 Comprobado en la v0.46.1, con la portable aislada en un `%APPDATA%` vacío:
 - arranca el `tramtai.exe` de su carpeta;

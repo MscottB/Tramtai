@@ -12,7 +12,7 @@ así hereda la protección del resto) y el parámetro `hasta` de las novedades.
 
 **Tech Stack:** Go 1.27 (`embed`), Vue 3 + Quasar + TypeScript.
 
-**Spec:** `docs/equipo/api-propia.md`
+**Spec:** `docs/equipo/releases/v0.42-api-propia/spec.md`
 
 ## Global Constraints
 

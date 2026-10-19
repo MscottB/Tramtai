@@ -1,6 +1,6 @@
 # Orden del código (v0.49)
 
-Diseño del 2026-10-19. La revisión completa del 2026-10-19 (`correcciones.md`) dejó para este release lo que es
+Diseño del 2026-10-19. La revisión completa del 2026-10-19 (`releases/v0.47-correcciones/spec.md`) dejó para este release lo que es
 estructura, pruebas, CI y rendimiento: lo que no falla hoy, pero hace el código más difícil de leer y de cambiar. Las
 correcciones de errores reales fueron la v0.47 y la portable la v0.48.
 
@@ -91,7 +91,8 @@ Quienes importan `api.ts` (23 archivos) pasan a importar del módulo que usan. N
   detectarlos a la vez, con el mismo plazo por agente y el resultado en el mismo orden.
 - **Modelos efectivos:** el planificador consulta los 500 últimos trabajos (`ModelosEfectivos`) cada vez que crea uno
   (`versionVista`), y las fachadas lo hacen en cada `/models`. Pasa a un mapa en memoria del planificador, que se carga
-  de la base una vez y se actualiza cuando un trabajo informa su modelo efectivo.
+  de la base una vez y se actualiza cuando un trabajo informa su modelo efectivo. *(Al implementarlo se usó un índice:
+  ver «Cambios respecto al plan» en `plan.md`.)*
 - Se mide antes y después: el tiempo de `/api/v1/capacidades` con los agentes instalados y el de crear 100 trabajos.
 
 ## 5. Pruebas que faltan
@@ -119,7 +120,7 @@ Quienes importan `api.ts` (23 archivos) pasan a importar del módulo que usan. N
 ## 7. Documentación del equipo
 
 - **`docs/equipo/README.md`:** un índice con:
-  - lo que vale siempre: `desarrollo.md`, `versionado.md`, `nuevo-agente.md`, `seguridad.md`, `m0-agentes.md`,
+  - lo que vale siempre: `desarrollo.md`, `versionado.md`, `nuevo-agente.md`, `m0-agentes.md`, `M0B.md` y
     `pendientes.md`;
   - y cada release con su spec y su plan.
 - **Specs y planes por release:** pasan a `docs/equipo/releases/<versión>-<tema>/` (`spec.md` y `plan.md`). Se mueven

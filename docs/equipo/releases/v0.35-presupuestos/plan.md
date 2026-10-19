@@ -14,7 +14,7 @@ añade el 429, `Retry-After` y la cabecera; servicio, CLI y Web UI configuran, m
 
 **Stack:** Go 1.27 (SQLite modernc, cobra), Vue 3 + Quasar.
 
-**Spec:** docs/equipo/presupuestos.md
+**Spec:** docs/equipo/releases/v0.35-presupuestos/spec.md
 
 ## Restricciones globales
 

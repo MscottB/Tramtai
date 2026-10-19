@@ -13,7 +13,7 @@ Su veredicto fue que el núcleo está bien diseñado y que los problemas están 
 Decisiones del usuario:
 - **Orden de la hoja de ruta:**
   1. v0.47, estas correcciones;
-  2. v0.48, la portable de verdad (`portable.md`);
+  2. v0.48, la portable de verdad (`releases/v0.48-portable/spec.md`);
   3. v0.49, orden del código: dividir archivos grandes, centralizar los puntos de acceso en el cliente, contrato
      cliente/servidor, CI reutilizable, índice de `docs/equipo/`, pruebas de Codex, Claude y la Web UI, y rendimiento;
   4. v0.50, OpenCode;

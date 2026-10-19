@@ -14,7 +14,7 @@ eso en Mis APIs, el mapa, el Historial, Ajustes e Inicio.
 
 **Stack:** Go 1.27, SQLite (modernc), Vue 3 + Quasar (vue-tsc).
 
-**Spec:** docs/equipo/grupos-historial.md
+**Spec:** docs/equipo/releases/v0.38-grupos-historial/spec.md
 
 ## Restricciones globales
 

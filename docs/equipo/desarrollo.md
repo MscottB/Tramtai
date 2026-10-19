@@ -4,6 +4,7 @@ Documentación interna para desarrollar Tramtai. La de usuario está en el [READ
 
 | Documento | Contenido |
 |---|---|
+| [README.md](README.md) | Índice de esta carpeta y de la spec y el plan de cada release |
 | [pendientes.md](pendientes.md) | Hitos y lista de tareas (incluye CI/CD) |
 | [versionado.md](versionado.md) | Versión `vX.Y.Z+DDMMAAAA` calculada desde los commits, y etiquetas con notas |
 | [M0B.md](M0B.md) | Validación de los modos con clave de API (pendiente con claves reales) |

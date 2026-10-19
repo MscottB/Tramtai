@@ -12,7 +12,7 @@ el aviso corto. Sin cambios en el instalador ni en el esquema de datos.
 
 **Stack:** Go 1.27, Vue 3 + Quasar (vue-tsc).
 
-**Spec:** docs/equipo/actualizaciones.md
+**Spec:** docs/equipo/releases/v0.37-actualizaciones/spec.md
 
 ## Restricciones globales
 

@@ -15,7 +15,7 @@ poder corregirla: cuántas veces lo decide el usuario (0 por defecto), y si no h
 **Tech Stack:** Go 1.27, Vue 3 + Quasar + TypeScript. Las funciones puras de la web se prueban con `node --test`, que
 ejecuta TypeScript sin compilar.
 
-**Spec:** `docs/equipo/json.md`.
+**Spec:** `docs/equipo/releases/v0.46-json/spec.md`.
 
 ## Global Constraints
 
