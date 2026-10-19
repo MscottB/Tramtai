@@ -41,12 +41,13 @@ jobs:
         if: runner.os == 'Linux'
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
       # La app de escritorio se analiza como la de Windows: en Linux necesitaría las cabeceras de GTK para compilar.
+      # govulncheck se instala para Linux y solo el análisis va con GOOS=windows (con go run saldría un .exe).
       - name: App de escritorio sin vulnerabilidades conocidas
         if: runner.os == 'Linux'
         working-directory: escritorio
-        env:
-          GOOS: windows
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
+          GOOS=windows "$(go env GOPATH)/bin/govulncheck" ./...
       # Una orden por paso: en Windows (pwsh) un paso de varias órdenes solo falla si falla la última.
       - name: App de escritorio (vet)
         if: runner.os == 'Windows'
