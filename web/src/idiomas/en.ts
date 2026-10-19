@@ -968,6 +968,27 @@ const en: Textos = {
   'ayuda.p14': 'How do I limit what an app spends?',
   'ayuda.r14':
     'In My APIs, in the settings of each API, set a daily or monthly budget in requests, tokens or dollars. You will see one bar per limit, yellow from 80%; at 100% the app gets a 429 error until the next day or month, or until you press "Reset usage". The dollar limit only adds up the cost the agent reports (Claude today). To limit the whole workspace, add "presupuesto" to the global configuration; its usage shows in My APIs, at the end of the "Main API" tab.',
+  // Conversor de archivos (markitdown)
+  'conversor.titulo': "Files",
+  'conversor.texto': "To read PDF, Word, PowerPoint, Excel and HTML, Tramtai uses markitdown. It prepares it in its own folder: it installs nothing on the system and needs no administrator rights.",
+  'conversor.listo': "Ready: markitdown {version}, {origen}.",
+  'conversor.listoSinVersion': "Ready: {origen}.",
+  'conversor.ultimoError': "The last preparation failed: {mensaje}",
+  'conversor.falta': "The file converter is missing: without it you cannot send PDF, Word, PowerPoint, Excel or HTML. Preparing it takes a couple of minutes and uses about 300 MB in the Tramtai folder, once.",
+  'conversor.preparando': "Preparing the file converter: {etapa} ({progreso} %)…",
+  'conversor.error': "The file converter could not be prepared: {mensaje}",
+  'conversor.redEmpresa': "If your company network blocks the download, get the Windows converter package from the downloads page and unzip it next to Tramtai.",
+  'conversor.preparar': "Prepare files",
+  'conversor.prepararDeNuevo': "Prepare again",
+  'conversor.alIniciar': "Prepare on start",
+  'conversor.irAjustes': "Settings",
+  'conversor.etapa.python': "downloading Python",
+  'conversor.etapa.paquetes': "installing markitdown",
+  'conversor.etapa.comprobacion': "checking",
+  'conversor.origen.preparado': "prepared by Tramtai",
+  'conversor.origen.paquete': "from the converter package",
+  'conversor.origen.sistema': "the one installed on the system",
+  'conversor.origen.configurado': "the one set by hand",
 }
 
 export default en

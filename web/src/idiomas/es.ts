@@ -967,6 +967,27 @@ const es = {
   'ayuda.p14': '¿Cómo limito lo que gasta una aplicación?',
   'ayuda.r14':
     'En Mis APIs, en los ajustes de cada API, pon un presupuesto diario o mensual en peticiones, tokens o dólares. Verás una barra por límite, amarilla desde el 80 %; al 100 % la aplicación recibe un error 429 hasta el día o el mes siguiente, o hasta que pulses «Reiniciar consumo». El límite en dólares solo suma el coste que informa el agente (hoy Claude). Para limitar todo el espacio, añade «presupuesto» a la configuración global; su consumo aparece en Mis APIs, al final de la pestaña «API principal».',
+  // Conversor de archivos (markitdown)
+  'conversor.titulo': "Archivos",
+  'conversor.texto': "Para leer PDF, Word, PowerPoint, Excel y HTML, Tramtai usa markitdown. Lo prepara en su propia carpeta: no instala nada en el sistema ni pide permisos de administrador.",
+  'conversor.listo': "Listo: markitdown {version}, {origen}.",
+  'conversor.listoSinVersion': "Listo: {origen}.",
+  'conversor.ultimoError': "La última preparación falló: {mensaje}",
+  'conversor.falta': "Falta el conversor de archivos: sin él no se pueden enviar PDF, Word, PowerPoint, Excel ni HTML. Prepararlo lleva un par de minutos y ocupa unos 300 MB en la carpeta de Tramtai, una sola vez.",
+  'conversor.preparando': "Preparando el conversor de archivos: {etapa} ({progreso} %)…",
+  'conversor.error': "No se pudo preparar el conversor de archivos: {mensaje}",
+  'conversor.redEmpresa': "Si la red de tu empresa bloquea la descarga, descarga el paquete del conversor para Windows desde la página de descargas y descomprímelo junto a Tramtai.",
+  'conversor.preparar': "Preparar archivos",
+  'conversor.prepararDeNuevo': "Preparar de nuevo",
+  'conversor.alIniciar': "Preparar al iniciar",
+  'conversor.irAjustes': "Ajustes",
+  'conversor.etapa.python': "descargando Python",
+  'conversor.etapa.paquetes': "instalando markitdown",
+  'conversor.etapa.comprobacion': "comprobando",
+  'conversor.origen.preparado': "preparado por Tramtai",
+  'conversor.origen.paquete': "del paquete del conversor",
+  'conversor.origen.sistema': "el instalado en el sistema",
+  'conversor.origen.configurado': "el configurado a mano",
 }
 
 export type Clave = keyof typeof es

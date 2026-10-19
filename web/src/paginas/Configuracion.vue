@@ -52,6 +52,24 @@
       </q-card-section>
     </q-card>
 
+    <q-card v-if="conversor">
+      <q-card-section class="row items-start no-wrap">
+        <div class="col">
+          <div class="titulo-seccion">{{ t('conversor.titulo') }}</div>
+          <div class="texto-suave text-body2 q-mt-xs">{{ t('conversor.texto') }}</div>
+          <div class="text-body2 q-mt-sm" role="status">{{ textoConversor(conversor) }}</div>
+          <div v-if="conversor.estado === 'error'" class="text-caption texto-suave q-mt-xs">{{ t('conversor.redEmpresa') }}</div>
+          <q-linear-progress v-if="conversor.estado === 'preparando'" :value="(conversor.progreso ?? 0) / 100" rounded class="q-mt-sm" />
+          <div class="row items-center q-gutter-sm q-mt-xs">
+            <q-btn flat dense no-caps color="primary" icon="o_download" :loading="conversor.estado === 'preparando'"
+              :label="conversor.estado === 'listo' ? t('conversor.prepararDeNuevo') : t('conversor.preparar')" @click="prepararConversor" />
+          </div>
+        </div>
+        <q-toggle :model-value="conversor.preparar_al_iniciar" :disable="cambiandoConversor" :label="t('conversor.alIniciar')" left-label
+          @update:model-value="cambiarAlIniciar" />
+      </q-card-section>
+    </q-card>
+
     <q-card v-if="actualizacion">
       <q-card-section class="row items-start no-wrap">
         <div class="col">
@@ -188,6 +206,7 @@ import { idioma, t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 import SelectorEsfuerzo from '../componentes/SelectorEsfuerzo.vue'
 import SelectorModelo from '../componentes/SelectorModelo.vue'
+import { cargarConversor, conversor, prepararConversor, textoConversor } from '../conversor'
 
 const $q = useQuasar()
 const entradas = ref<EntradaConfiguracion[]>([])
@@ -394,7 +413,22 @@ function borrar() {
     })
 }
 
+// cambiarAlIniciar guarda conversion.preparar_al_iniciar.
+const cambiandoConversor = ref(false)
+async function cambiarAlIniciar(preparar: boolean) {
+  cambiandoConversor.value = true
+  try {
+    await api.ajustesConversor(preparar)
+    if (conversor.value) conversor.value = { ...conversor.value, preparar_al_iniciar: preparar }
+  } catch (e) {
+    avisarError(e)
+  } finally {
+    cambiandoConversor.value = false
+  }
+}
+
 onMounted(async () => {
+  cargarConversor()
   api.acerca().then((a) => (rutaConfigReal.value = a.rutas?.configuracion ?? '')).catch(() => {})
   contar().catch(avisarError)
   leerRetencion().catch(avisarError)

@@ -188,6 +188,16 @@ export interface Modelo {
   esfuerzo_espacio?: string
 }
 // LimitesPeticion son los topes de una petición y de sus cargas (/api/v1/limites).
+// EstadoConversor es el del conversor de archivos (markitdown): GET /api/v1/conversor.
+export interface EstadoConversor {
+  estado: 'listo' | 'preparando' | 'falta' | 'error'
+  origen?: 'configurado' | 'paquete' | 'preparado' | 'sistema'
+  version?: string
+  etapa?: 'python' | 'paquetes' | 'comprobacion'
+  progreso?: number
+  mensaje?: string
+  preparar_al_iniciar: boolean
+}
 export interface LimitesPeticion {
   cargas_por_peticion: number
   carga_mb: number
