@@ -636,31 +636,6 @@ func (s *Servicio) Restaurar() []error {
 	return errores
 }
 
-// EstadoInstancia resume una instancia para la CLI y la TUI.
-type EstadoInstancia struct {
-	ID           string         `json:"id"`
-	Ambito       string         `json:"ambito"`
-	Raiz         string         `json:"raiz,omitempty"`
-	ArchivoToken string         `json:"archivo_token"`
-	Agente       string         `json:"agente_predeterminado"`
-	Perfil       string         `json:"perfil_predeterminado,omitempty"`
-	Trabajos     map[string]int `json:"trabajos"`
-}
-
-// Estado es la vista del servicio que devuelve GET /api/v1/servicio.
-type Estado struct {
-	Identificador string            `json:"identificador_servicio"`
-	Version       string            `json:"version"`
-	PID           int               `json:"pid"`
-	IniciadoEn    time.Time         `json:"iniciado_en"`
-	Base          string            `json:"base"`
-	Instancias    []EstadoInstancia `json:"instancias"`
-	Puntos        []EstadoPunto     `json:"puntos_acceso"`
-	Errores       []string          `json:"errores_configuracion,omitempty"`
-	// Actualizacion es la versión publicada más nueva que la actual, si la hay (la bandeja la ofrece).
-	Actualizacion *actualizacion.Version `json:"actualizacion,omitempty"`
-}
-
 // Estado devuelve el estado actual. Las bases se consultan sin s.mu: un Lock pendiente bloquearía todas las peticiones.
 func (s *Servicio) Estado(ctx context.Context) Estado {
 	var nueva *actualizacion.Version
@@ -694,33 +669,6 @@ func (i *Instancia) estado(ctx context.Context) EstadoInstancia {
 	}
 	return EstadoInstancia{ID: i.ID, Ambito: i.Ambito, Raiz: i.Raiz, ArchivoToken: i.ArchivoToken,
 		Agente: i.Config.Texto("predeterminados.agente"), Perfil: i.Config.Texto("predeterminados.perfil_modelo"), Trabajos: conteo}
-}
-
-// Descriptor identifica el servicio en marcha.
-type Descriptor struct {
-	Identificador string           `json:"identificador_servicio"`
-	PID           int              `json:"pid"`
-	FirmaInicio   string           `json:"firma_inicio_proceso"`
-	IniciadoEn    time.Time        `json:"iniciado_en"`
-	Host          string           `json:"host"`
-	Puerto        int              `json:"puerto"`
-	Base          string           `json:"base"`
-	Version       string           `json:"version"`
-	Instancias    []string         `json:"instancias_activas"`
-	Puntos        []map[string]any `json:"puntos_acceso"`
-}
-
-// RutaDescriptor es el archivo del descriptor en el directorio de datos.
-func RutaDescriptor(datos string) string { return filepath.Join(datos, "servicio.json") }
-
-// LeerDescriptor lee el descriptor; no comprueba que el servicio siga vivo (lo hace el cliente con /healthz).
-func LeerDescriptor(datos string) (Descriptor, error) {
-	var d Descriptor
-	contenido, err := os.ReadFile(RutaDescriptor(datos))
-	if err != nil {
-		return d, err
-	}
-	return d, json.Unmarshal(contenido, &d)
 }
 
 // EscribirDescriptor publica el descriptor y lo mantiene actualizado al cambiar instancias o puntos.

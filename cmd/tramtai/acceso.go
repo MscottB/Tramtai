@@ -137,7 +137,7 @@ func (o *opcionesPunto) aplicar(cmd *cobra.Command, p *servicio.ConfigPunto) err
 			return err
 		}
 	}
-	normalizado, err := p.Normalizar("global", 0)
+	normalizado, err := servicio.NormalizarPunto(*p, "global", 0)
 	p.Presupuesto = normalizado.Presupuesto // sin límites queda sin presupuesto
 	return err
 }

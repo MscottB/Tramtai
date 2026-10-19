@@ -955,7 +955,7 @@ func (m *modelo) crearPunto() tea.Cmd {
 			p.Instancia = m.inst
 		}
 	}
-	if _, err := p.Normalizar(m.inst, 0); err != nil {
+	if _, err := servicio.NormalizarPunto(p, m.inst, 0); err != nil {
 		m.avisar(err)
 		return nil
 	}

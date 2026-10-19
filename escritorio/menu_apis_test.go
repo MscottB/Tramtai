@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"testing"
 
-	"tramtai/internal/servicio"
+	"tramtai/internal/contrato"
 )
 
 func TestMenuApis(t *testing.T) {
-	var puntos []servicio.EstadoPunto
+	var puntos []contrato.EstadoPunto
 	for i := range 40 {
-		p := servicio.EstadoPunto{Nombre: fmt.Sprintf("api%02d", i), Activo: i%3 != 0}
+		p := contrato.EstadoPunto{Nombre: fmt.Sprintf("api%02d", i), Activo: i%3 != 0}
 		if i%3 == 0 {
 			p.Error = "desactivado"
 		}

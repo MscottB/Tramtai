@@ -33,12 +33,6 @@ func (s *Servicio) rutasAdmin() http.Handler {
 	return mux
 }
 
-// ActivacionInstancia es la respuesta a la activación de una instancia.
-type ActivacionInstancia struct {
-	Instancia EstadoInstancia `json:"instancia"`
-	Token     string          `json:"token"`
-}
-
 func (s *Servicio) adminActivar(w http.ResponseWriter, r *http.Request) {
 	var peticion struct {
 		Ambito string `json:"ambito"`
@@ -81,13 +75,6 @@ func (s *Servicio) adminDesactivar(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = s.actualizarDescriptor()
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// EntradaConfiguracion es una fila de la configuración efectiva de una instancia.
-type EntradaConfiguracion struct {
-	Clave  string `json:"clave"`
-	Valor  any    `json:"valor"`
-	Origen string `json:"origen"`
 }
 
 func (s *Servicio) adminConfiguracion(w http.ResponseWriter, r *http.Request) {

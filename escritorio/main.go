@@ -31,9 +31,9 @@ import (
 
 	"tramtai/internal/autoarranque"
 	"tramtai/internal/cliente"
+	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
-	"tramtai/internal/servicio"
 )
 
 // icono es el de la ventana y la bandeja (go run ./scripts/icono lo regenera).
@@ -206,7 +206,7 @@ func main() {
 	bandeja.OnClick(mostrar)
 	var repasar func()
 
-	construir := func(cli *cliente.Cliente, puntos []servicio.EstadoPunto, proyectos map[string]string, conWindows, sinPreguntar bool, nueva string) *application.Menu {
+	construir := func(cli *cliente.Cliente, puntos []contrato.EstadoPunto, proyectos map[string]string, conWindows, sinPreguntar bool, nueva string) *application.Menu {
 		lado, oscuro := ladoIconoMenu(), menuOscuro()
 		verde, rojo := circulo(colorVerde, lado), circulo(colorRojo, lado)
 		icono := func(nombre string) []byte { return iconoMenu(nombre, lado, oscuro) }
@@ -368,7 +368,7 @@ func main() {
 			}
 		}
 		// Las APIs de todos los espacios en marcha (global y proyectos), no solo las de la ventana.
-		var estadoServicio servicio.Estado
+		var estadoServicio contrato.Estado
 		if cli != nil {
 			ctx, cancelar := context.WithTimeout(context.Background(), 5*time.Second)
 			estadoServicio, _ = cli.Estado(ctx)

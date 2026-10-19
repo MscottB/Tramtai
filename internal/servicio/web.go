@@ -691,7 +691,7 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 	if origen == nucleo.OrigenGlobal && inst.ID != "global" {
 		p.Instancia = inst.ID
 	}
-	if _, err := p.Normalizar(inst.ID, s.opc.Puerto); err != nil {
+	if _, err := NormalizarPunto(p, inst.ID, s.opc.Puerto); err != nil {
 		api.EscribirError(w, r, err)
 		return
 	}
@@ -838,7 +838,7 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 				// La receta se valida antes de escribir: un cambio no válido deja la configuración como estaba. Solo si
 				// cambia, para no impedir desactivar un punto que ya tenía otro error.
 				if len(cambio.Esquema) > 0 || cambio.Respaldo != nil || cambio.Permitidos != nil || len(cambio.Presupuesto) > 0 || cambio.Reintentos != nil {
-					normalizado, err := lista[i].Normalizar(inst.ID, s.opc.Puerto)
+					normalizado, err := NormalizarPunto(lista[i], inst.ID, s.opc.Puerto)
 					if err != nil {
 						return nil, err
 					}

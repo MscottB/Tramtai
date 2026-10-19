@@ -12,9 +12,10 @@ import (
 	"testing"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/contrato"
+	"tramtai/internal/servicio"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/planificador"
-	"tramtai/internal/servicio"
 )
 
 func TestClienteContraServicio(t *testing.T) {
@@ -65,7 +66,7 @@ func TestClienteContraServicio(t *testing.T) {
 		t.Fatal(err)
 	}
 	id := activacion.Instancia.ID
-	if d, _ := servicio.LeerDescriptor(datos); len(d.Instancias) != 1 || d.Instancias[0] != id {
+	if d, _ := contrato.LeerDescriptor(datos); len(d.Instancias) != 1 || d.Instancias[0] != id {
 		t.Fatalf("el descriptor lista las instancias activas: %+v", d)
 	}
 	ruta := filepath.Join(dir, "notas.txt")
