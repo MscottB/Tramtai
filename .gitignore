@@ -10,6 +10,9 @@
 *.docx
 *.pdf
 ~$*
+# salvo las muestras de la prueba real del conversor (TestConversorReal y el paquete del conversor en Publicar)
+!/internal/documentos/testdata/muestra.docx
+!/internal/documentos/testdata/muestra.pdf
 
 # Herramientas locales
 graphify-out/
