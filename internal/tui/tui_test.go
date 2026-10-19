@@ -149,3 +149,52 @@ func TestAccesosPorElServicio(t *testing.T) {
 		t.Fatal("la API vuelta a crear debía tener otra clave")
 	}
 }
+
+func TestAvisoConversorAlAdjuntar(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+	dir := t.TempDir()
+	global := filepath.Join(dir, "config.yaml")
+	os.WriteFile(global, []byte("predeterminados:\n  agente: simulado\n"), 0o600)
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+	datos := filepath.Join(dir, "datos")
+	c, _ := nucleo.CargarConfiguracion("")
+	ts := httptest.NewUnstartedServer(nil)
+	s, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}},
+		Semaforos: planificador.NuevosSemaforos(nil), Host: "127.0.0.1", Puerto: ts.Listener.Addr().(*net.TCPAddr).Port, Hosts: []string{"127.0.0.1"},
+		RaizUsuario: dir, UV: filepath.Join(dir, "no-existe-uv")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts.Config.Handler = s
+	ts.Start()
+	defer ts.Close()
+	defer s.Cerrar()
+	s.ActivarGlobal()
+	s.EscribirDescriptor()
+	cli, err := cliente.Conectar(datos)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pdf := filepath.Join(dir, "informe.pdf")
+	os.WriteFile(pdf, []byte("%PDF"), 0o600)
+	m := nuevo(Opciones{})
+	m.cli, m.inst = cli, "global"
+	m.archivos, m.mensaje = pdf, "resume"
+	creado, _ := m.lanzar()().(msgCreado)
+	if creado.err == nil || !strings.Contains(creado.err.Error(), "ctrl+p") {
+		t.Fatalf("sin conversor, aviso con la tecla para prepararlo: %v", creado.err)
+	}
+	if trabajos, _ := cli.Trabajos(context.Background(), "global", 10); len(trabajos) != 0 {
+		t.Fatalf("no se crea el trabajo: %d", len(trabajos))
+	}
+	cmd := m.teclaEjecutar(tea.KeyPressMsg{Code: 'p', Mod: tea.ModCtrl})
+	if cmd == nil {
+		t.Fatal("ctrl+p prepara el conversor")
+	}
+	if a, ok := cmd().(msgAviso); !ok || a.err != nil {
+		t.Fatalf("preparar: %+v", a)
+	}
+	if e, _ := cli.Conversor(context.Background(), "global"); e.Estado == "falta" {
+		t.Fatalf("la preparación se lanzó: %+v", e)
+	}
+}

@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/cliente"
+	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/servicio"
@@ -44,6 +47,11 @@ func ejecutarEnServicio(cmd *cobra.Command, c *cliente.Cliente, s nucleo.Solicit
 	defer cancelar()
 	c.Origen = nucleo.DesdeCLI
 	inst := instanciaActual(ctx, c, "")
+	if slices.ContainsFunc(archivos, func(ruta string) bool { return documentos.NecesitaConversor(filepath.Base(ruta), ruta) }) {
+		if e, err := c.Conversor(ctx, inst); err == nil && e.Estado != "listo" {
+			return documentos.ErrSinConversor() // antes de subir nada
+		}
+	}
 	for _, ruta := range archivos {
 		carga, err := c.SubirCarga(ctx, inst, ruta)
 		if err != nil {

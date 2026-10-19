@@ -146,6 +146,19 @@ func comandoConvertir() *cobra.Command {
 		}}
 }
 
+// archivosSinConversor falla, antes de subir nada, si algún archivo necesita el conversor y no hay ninguno listo.
+func archivosSinConversor(conversor *documentos.Conversor, archivos []string) error {
+	for _, ruta := range archivos {
+		if documentos.NecesitaConversor(filepath.Base(ruta), ruta) {
+			if _, ok := documentos.Localizar(conversor.Comando, conversor.Raiz); !ok {
+				return documentos.ErrSinConversor()
+			}
+			return nil
+		}
+	}
+	return nil
+}
+
 func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEjecucion, archivos []string) error {
 	datos, err := nucleo.DirDatos()
 	if err != nil {
@@ -171,6 +184,10 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 			}
 		}
 	}()
+	conversor := documentos.Desde(c)
+	if err := archivosSinConversor(conversor, archivos); err != nil {
+		return err
+	}
 	for _, ruta := range archivos {
 		archivo, err := os.Open(ruta)
 		if err != nil {
@@ -188,7 +205,7 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 	// shortcut: cada ejecución directa usa su propia instancia para no relanzar trabajos de otra ejecución
 	// interrumpida; el servicio tiene instancias persistentes con su recuperación.
 	opc := planificador.OpcionesDesde(c, "cli-"+nucleo.NuevoID()[len("trabajo_"):])
-	opc.Preparador = documentos.Preparador{Cargas: cargas, Conversor: documentos.Desde(c)}
+	opc.Preparador = documentos.Preparador{Cargas: cargas, Conversor: conversor}
 	if dir, err := os.Getwd(); err == nil {
 		if raiz, ok := nucleo.BuscarProyecto(dir); ok && c.ProyectoConfiable(raiz) {
 			opc.RaizConfiable = raiz
