@@ -28,3 +28,6 @@ node_modules/
 
 # Notas de versión en preparación (scripts/version.ps1 -Resumen notas-es.txt -ResumenEn notas-en.txt)
 notas-*.txt
+
+# Binarios compilados a mano (go build en la carpeta de un paquete main): nunca van al repo.
+*.exe

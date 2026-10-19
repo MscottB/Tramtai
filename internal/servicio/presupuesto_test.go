@@ -132,11 +132,11 @@ func TestPresupuestoInstanciaUI(t *testing.T) {
 
 func TestNormalizarPresupuestoNegativo(t *testing.T) {
 	p := ConfigPunto{Nombre: "x", Presupuesto: &nucleo.Presupuesto{Diario: nucleo.Limites{Tokens: -1}}}
-	if _, err := p.Normalizar("global", 17373); nucleo.CodigoDe(err) != nucleo.CodigoConfiguracionInvalida {
+	if _, err := NormalizarPunto(p, "global", 17373); nucleo.CodigoDe(err) != nucleo.CodigoConfiguracionInvalida {
 		t.Fatalf("límite negativo: %v", err)
 	}
 	vacio := ConfigPunto{Nombre: "x", Presupuesto: &nucleo.Presupuesto{}}
-	if n, err := vacio.Normalizar("global", 17373); err != nil || n.Presupuesto != nil {
+	if n, err := NormalizarPunto(vacio, "global", 17373); err != nil || n.Presupuesto != nil {
 		t.Fatalf("un presupuesto vacío se quita: %v %+v", err, n.Presupuesto)
 	}
 }

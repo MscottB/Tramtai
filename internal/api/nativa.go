@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"maps"
 	"net/http"
@@ -405,8 +406,11 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 		nombres = append(nombres, nombre)
 	}
 	sort.Strings(nombres)
-	lista := []map[string]any{}
-	for _, nombre := range nombres {
+	// Cada agente se detecta a la vez que los demás (cada Detectar ejecuta su CLI y puede tardar); cada uno escribe en
+	// su posición, así que la lista sale en orden alfabético.
+	lista := make([]map[string]any, len(nombres))
+	var esperar sync.WaitGroup
+	for i, nombre := range nombres {
 		// Lo que garantiza cada agente sale de su ficha; uno sin ficha (simulado) no garantiza nada.
 		f, conocida := agentes.Buscar(nombre)
 		if !conocida {
@@ -416,17 +420,26 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 			"texto": true, "streaming": f.Streaming, "salida_estructurada": f.SalidaEstructurada, "uso_tokens": "informado_por_cli",
 			"modelo_efectivo_informado": f.ModeloEfectivoInformado, "tool_calling_compatible": false, "imagenes": false, "sesiones_persistentes": false,
 		}}
+		lista[i] = entrada
 		if d, ok := s.Registro[nombre].(adaptadores.Detectable); ok {
-			ctx, cancelar := context.WithTimeout(r.Context(), 10*time.Second)
-			e := d.Detectar(ctx)
-			cancelar()
-			entrada["version_detectada"], entrada["autenticacion"], entrada["terminos"] = e.Version, e.Autenticacion, e.Terminos
-			if e.Problema != "" {
-				entrada["problema"], entrada["problema_codigo"] = e.Problema, e.ProblemaCodigo
-			}
+			esperar.Go(func() {
+				// Fuera de la goroutine de la petición, net/http no recupera un pánico: tiraría el servicio entero.
+				defer func() {
+					if v := recover(); v != nil {
+						entrada["problema"], entrada["problema_codigo"] = fmt.Sprint(v), adaptadores.ProblemaAviso
+					}
+				}()
+				ctx, cancelar := context.WithTimeout(r.Context(), 10*time.Second)
+				e := d.Detectar(ctx)
+				cancelar()
+				entrada["version_detectada"], entrada["autenticacion"], entrada["terminos"] = e.Version, e.Autenticacion, e.Terminos
+				if e.Problema != "" {
+					entrada["problema"], entrada["problema_codigo"] = e.Problema, e.ProblemaCodigo
+				}
+			})
 		}
-		lista = append(lista, entrada)
 	}
+	esperar.Wait()
 	EscribirJSON(w, http.StatusOK, map[string]any{
 		"version":               version.Version,
 		"formato_serializacion": adaptadores.FormatoSerializacion,

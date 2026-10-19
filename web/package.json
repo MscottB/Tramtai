@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "tipos": "vue-tsc --noEmit -p .",
-    "test": "node --test src/*.test.ts",
+    "test": "node --import ./pruebas.mjs --test \"src/**/*.test.ts\"",
     "build": "vue-tsc --noEmit -p . && vite build"
   },
   "dependencies": {

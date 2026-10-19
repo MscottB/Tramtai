@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/contrato"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/planificador"
 	"tramtai/internal/servicio"
@@ -65,7 +66,7 @@ func TestClienteContraServicio(t *testing.T) {
 		t.Fatal(err)
 	}
 	id := activacion.Instancia.ID
-	if d, _ := servicio.LeerDescriptor(datos); len(d.Instancias) != 1 || d.Instancias[0] != id {
+	if d, _ := contrato.LeerDescriptor(datos); len(d.Instancias) != 1 || d.Instancias[0] != id {
 		t.Fatalf("el descriptor lista las instancias activas: %+v", d)
 	}
 	ruta := filepath.Join(dir, "notas.txt")
@@ -96,7 +97,52 @@ func TestClienteContraServicio(t *testing.T) {
 	if cfg, err := cli.Configuracion(ctx, id); err != nil || len(cfg) == 0 {
 		t.Fatalf("configuración: %v", err)
 	}
+	if _, err := cli.Activar(ctx, "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	estado, token, err := cli.CrearPunto(ctx, "global", contrato.ConfigPunto{Nombre: "facturas", Agente: "simulado"})
+	if err != nil || token == "" || estado.Nombre != "facturas" {
+		t.Fatalf("crear punto: %+v %q %v", estado, token, err)
+	}
+	if nueva, err := cli.RotarTokenPunto(ctx, "global", "facturas"); err != nil || nueva == "" || nueva == token {
+		t.Fatalf("rotar la clave: %q %v", nueva, err)
+	}
+	if err := cli.ActivarPunto(ctx, "global", "facturas", false); err != nil {
+		t.Fatal(err)
+	}
+	if err := cli.EliminarPunto(ctx, "global", "facturas"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cli.EliminarPunto(ctx, "global", "facturas"); nucleo.CodigoDe(err) != nucleo.CodigoNoEncontrado {
+		t.Fatalf("eliminar otra vez da no encontrado: %v", err)
+	}
+
+	// Los de tramtai acceso, sobre el archivo global.
+	g, err := cli.CrearPuntoEnArchivo(ctx, "", contrato.ConfigPunto{Nombre: "ventas", Agente: "simulado", Grupo: "tienda"})
+	if err != nil || g.Token == "" || g.Archivo != global {
+		t.Fatalf("crear en el archivo: %+v %v", g, err)
+	}
+	archivo, puntos, err := cli.PuntosEnArchivo(ctx, "")
+	if err != nil || archivo != global || len(puntos) != 1 || puntos[0].Grupo != "tienda" {
+		t.Fatalf("puntos del archivo: %s %+v %v", archivo, puntos, err)
+	}
+	puntos[0].Instrucciones = "Sé breve."
+	if _, err := cli.GuardarPuntoEnArchivo(ctx, "", puntos[0]); err != nil {
+		t.Fatal(err)
+	}
+	if g, err := cli.ActivarPuntosEnArchivo(ctx, "", nil, "tienda", false); err != nil || len(g.Puntos) != 1 || g.Puntos[0].Activo {
+		t.Fatalf("desactivar el grupo: %+v %v", g, err)
+	}
+	if nueva, err := cli.RotarTokenEnArchivo(ctx, "ventas"); err != nil || nueva == "" || nueva == g.Token {
+		t.Fatalf("rotar en el archivo: %q %v", nueva, err)
+	}
+	if _, err := cli.EliminarPuntoEnArchivo(ctx, "", "ventas"); err != nil {
+		t.Fatal(err)
+	}
 	if err := cli.Desactivar(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	if err := cli.Desactivar(ctx, "global"); err != nil {
 		t.Fatal(err)
 	}
 	if e, _ := cli.Estado(ctx); len(e.Instancias) != 0 {

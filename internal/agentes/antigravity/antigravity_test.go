@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/credenciales"
 	"tramtai/internal/nucleo"
 )
 
@@ -116,6 +117,12 @@ func TestAntigravityAisladoYSoloConClave(t *testing.T) {
 	if _, err := (Antigravity{Programa: os.Args[0], Autenticacion: adaptadores.AutenticacionSuscripcion}).Ejecutar(context.Background(), solicitudSimple("x"),
 		func(adaptadores.Evento) error { return nil }); nucleo.CodigoDe(err) != nucleo.CodigoConfiguracionInvalida {
 		t.Fatalf("la sesión personal no se admite: %v", err)
+	}
+	// Sin clave en el entorno, ClaveEntorno mira el almacén del sistema: con una guardada ahí, esta prueba no aplica.
+	for _, nombre := range []string{"GEMINI_API_KEY"} {
+		if valor, _ := credenciales.Leer(nombre); valor != "" {
+			t.Skip("hay una clave guardada en el almacén del sistema: " + nombre)
+		}
 	}
 	t.Setenv("GEMINI_API_KEY", "")
 	if _, err := a.Ejecutar(context.Background(), solicitudSimple("x"), func(adaptadores.Evento) error { return nil }); nucleo.CodigoDe(err) != nucleo.CodigoAutenticacionAgente {

@@ -9,7 +9,7 @@
 <script setup lang="ts">
 // ListaNovedades muestra lo que trae cada versión por separado, la más nueva abierta; la usan los avisos de antes y
 // de después de actualizar.
-import type { Novedad } from '../api'
+import type { Novedad } from '../api/tipos'
 import NotasVersion from './NotasVersion.vue'
 
 defineProps<{ versiones: Novedad[] }>()

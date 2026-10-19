@@ -225,6 +225,8 @@ tramtai acceso editar tienda --presupuesto diario.peticiones=500 --presupuesto m
 tramtai acceso reiniciar-presupuesto tienda    # sin nombre, el de la instancia
 ```
 
+`tramtai acceso` guarda los cambios a través del servicio, con las mismas reglas que Mis APIs y la terminal, y lo inicia en segundo plano si no está en marcha. Trabaja sobre el archivo (la configuración global o, con `--local`, `.tramtai/local.yaml` del proyecto), así que también llega a una API cuya instancia no está activa o que no se pudo abrir: se puede desactivar o eliminar, pero no guardar otra vez con su error.
+
 **Mis APIs** tiene dos pestañas, que el navegador recuerda:
 
 - **APIs por aplicación:**

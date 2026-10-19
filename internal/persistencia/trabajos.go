@@ -1,0 +1,447 @@
+package persistencia
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"strings"
+	"time"
+
+	"tramtai/internal/idioma"
+	"tramtai/internal/nucleo"
+)
+
+// Cambio son los datos opcionales que acompañan una transición.
+type Cambio struct {
+	Codigo  nucleo.CodigoError
+	Mensaje string
+	Salida  *string
+	// Uso y ModeloEfectivo se guardan cuando Uso no es nil (al terminar una ejecución).
+	Uso            *nucleo.Uso
+	ModeloEfectivo string
+	// DevolverPeticion, al terminar, quita la petición del consumo en lugar de contarla como terminada: no llegó a
+	// ningún agente (la entrada no cabía en ninguno).
+	DevolverPeticion bool
+}
+
+// Aceptar registra el trabajo en_cola, su primer evento y su clave de idempotencia en una transacción.
+// Con la misma clave y huella devuelve el trabajo original (reutilizado = true); con otra huella, conflicto_idempotencia.
+// Si la instancia ya tiene maximoActivos trabajos sin empezar, rechaza con cola_llena sin reservar la clave.
+func (a *Almacen) Aceptar(ctx context.Context, t nucleo.Trabajo, clave string, maximoActivos int) (nucleo.Trabajo, bool, error) {
+	tx, err := a.db.BeginTx(ctx, nil)
+	if err != nil {
+		return t, false, err
+	}
+	defer tx.Rollback()
+	ahora := a.reloj().UTC()
+	if clave != "" {
+		var huella, id string
+		err := tx.QueryRowContext(ctx, `SELECT huella, trabajo_id FROM idempotencia WHERE instancia = ? AND clave = ? AND vence_en > ?`,
+			t.Instancia, clave, fecha(ahora)).Scan(&huella, &id)
+		switch {
+		case err == nil && huella == t.Huella:
+			existente, err := obtener(ctx, tx, id)
+			return existente, true, err
+		case err == nil:
+			return t, false, nucleo.NuevoError(nucleo.CodigoConflictoIdempotencia, idioma.T("la clave de idempotencia ya se usó con otra solicitud"))
+		case !errors.Is(err, sql.ErrNoRows):
+			return t, false, err
+		}
+	}
+	var activos int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM trabajos WHERE instancia = ? AND estado IN (?, ?, ?)`,
+		t.Instancia, string(nucleo.EnCola), string(nucleo.PreparandoEntrada), string(nucleo.EsperandoAgente)).Scan(&activos); err != nil {
+		return t, false, err
+	}
+	if maximoActivos > 0 && activos >= maximoActivos {
+		return t, false, nucleo.NuevoError(nucleo.CodigoColaLlena, idioma.T("la cola de la instancia está llena"))
+	}
+	if err := a.comprobarPresupuesto(ctx, tx, t, ahora); err != nil {
+		return t, false, err
+	}
+	solicitud, err := json.Marshal(t.Solicitud)
+	if err != nil {
+		return t, false, err
+	}
+	t.Estado, t.CreadoEn, t.ActualizadoEn = nucleo.EnCola, ahora, ahora
+	if _, err := tx.ExecContext(ctx, `INSERT INTO trabajos (id, instancia, estado, solicitud, huella, intento_de, modelo_enviado, punto_acceso, origen, creado_en, actualizado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		t.ID, t.Instancia, string(t.Estado), string(solicitud), t.Huella, t.IntentoDe, t.ModeloEnviado, t.PuntoAcceso, t.Origen, fecha(ahora), fecha(ahora)); err != nil {
+		return t, false, err
+	}
+	if err := agregarEvento(ctx, tx, t.ID, "estado", string(nucleo.EnCola), ahora); err != nil {
+		return t, false, err
+	}
+	a.sumarConsumo(ctx, tx, t.Instancia, t.PuntoAcceso, ahora, ahora, nucleo.Consumo{Peticiones: 1})
+	if clave != "" {
+		if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO idempotencia (instancia, clave, huella, trabajo_id, vence_en) VALUES (?, ?, ?, ?, ?)`,
+			t.Instancia, clave, t.Huella, t.ID, sinVencimiento); err != nil {
+			return t, false, err
+		}
+	}
+	return t, false, a.confirmar(tx)
+}
+
+// CambiarEstado aplica una transición validada y registra su evento. Si el trabajo ya no está en "de"
+// (otro actor lo cambió antes), devuelve transicion_invalida sin modificar nada.
+func (a *Almacen) CambiarEstado(ctx context.Context, id string, de, hacia nucleo.Estado, cambio Cambio) error {
+	if err := nucleo.ValidarTransicion(de, hacia); err != nil {
+		return err
+	}
+	tx, err := a.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	ahora := a.reloj().UTC()
+	var terminado any
+	if hacia.Terminal() {
+		terminado = fecha(ahora)
+	}
+	salida, conSalida := "", cambio.Salida != nil
+	if conSalida {
+		salida = *cambio.Salida
+	}
+	uso, conUso := nucleo.Uso{}, cambio.Uso != nil
+	if conUso {
+		uso = *cambio.Uso
+	}
+	resultado, err := tx.ExecContext(ctx, `UPDATE trabajos SET estado = ?, codigo_error = ?, mensaje_error = ?,
+		salida = CASE WHEN ? THEN ? ELSE salida END, actualizado_en = ?, terminado_en = COALESCE(?, terminado_en),
+		modelo_efectivo = CASE WHEN ? THEN ? ELSE modelo_efectivo END,
+		tokens_entrada = CASE WHEN ? THEN ? ELSE tokens_entrada END,
+		tokens_salida = CASE WHEN ? THEN ? ELSE tokens_salida END,
+		costo_usd = CASE WHEN ? THEN ? ELSE costo_usd END
+		WHERE id = ? AND estado = ?`,
+		string(hacia), string(cambio.Codigo), cambio.Mensaje, conSalida, salida, fecha(ahora), terminado,
+		conUso, cambio.ModeloEfectivo, conUso, uso.TokensEntrada, conUso, uso.TokensSalida, conUso, uso.CostoUSD, id, string(de))
+	if err != nil {
+		return err
+	}
+	if filas, _ := resultado.RowsAffected(); filas == 0 {
+		if _, err := obtener(ctx, tx, id); err != nil {
+			return err
+		}
+		return nucleo.NuevoError(nucleo.CodigoTransicionInvalida, idioma.Tf("el trabajo %s ya no está en %s", id, de))
+	}
+	if err := agregarEvento(ctx, tx, id, "estado", string(hacia), ahora); err != nil {
+		return err
+	}
+	if hacia.Terminal() {
+		if _, err := tx.ExecContext(ctx, `UPDATE idempotencia SET vence_en = ? WHERE trabajo_id = ?`,
+			fecha(ahora.Add(a.VentanaIdempotencia)), id); err != nil {
+			return err
+		}
+		// El consumo va al día de aceptación: así peticiones − terminados de una fila es lo que sigue en curso.
+		// Sin uso en el cambio (una cancelación), cuenta el que ya guardó el trabajo (intentos fallidos del respaldo).
+		var instancia, punto, creado string
+		var guardado nucleo.Uso
+		if err := tx.QueryRowContext(ctx, `SELECT instancia, punto_acceso, creado_en, tokens_entrada, tokens_salida, costo_usd FROM trabajos WHERE id = ?`, id).
+			Scan(&instancia, &punto, &creado, &guardado.TokensEntrada, &guardado.TokensSalida, &guardado.CostoUSD); err != nil {
+			return err
+		}
+		if !conUso {
+			uso = guardado
+		}
+		aceptado, _ := time.Parse(formatoFecha, creado)
+		consumo := nucleo.Consumo{Terminados: 1, Tokens: uso.TokensEntrada + uso.TokensSalida, USD: uso.CostoUSD}
+		if cambio.DevolverPeticion {
+			consumo.Peticiones, consumo.Terminados = -1, 0 // peticiones − terminados sigue siendo lo que está en curso
+		}
+		a.sumarConsumo(ctx, tx, instancia, punto, aceptado, ahora, consumo)
+	}
+	return a.confirmar(tx)
+}
+
+// Eliminar borra un trabajo terminado con sus eventos y su clave de idempotencia.
+func (a *Almacen) Eliminar(ctx context.Context, id string) error {
+	tx, err := a.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	resultado, err := tx.ExecContext(ctx, `DELETE FROM trabajos WHERE id = ? AND estado IN (?, ?, ?, ?)`, id,
+		string(nucleo.Completado), string(nucleo.Fallido), string(nucleo.Cancelado), string(nucleo.Interrumpido))
+	if err != nil {
+		return err
+	}
+	if filas, _ := resultado.RowsAffected(); filas == 0 {
+		if _, err := obtener(ctx, tx, id); err != nil {
+			return err
+		}
+		return nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, idioma.T("solo se elimina un trabajo terminado; cancélalo antes"))
+	}
+	for _, consulta := range []string{`DELETE FROM eventos WHERE trabajo_id = ?`, `DELETE FROM idempotencia WHERE trabajo_id = ?`} {
+		if _, err := tx.ExecContext(ctx, consulta, id); err != nil {
+			return err
+		}
+	}
+	return a.confirmar(tx)
+}
+
+// EliminarTerminados borra todos los trabajos terminados de la instancia con sus eventos y claves de
+// idempotencia; los que están en cola o en ejecución se conservan. Devuelve cuántos borró.
+func (a *Almacen) EliminarTerminados(ctx context.Context, instancia string) (int, error) {
+	tx, err := a.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	terminados := `SELECT id FROM trabajos WHERE instancia = ? AND estado IN (?, ?, ?, ?)`
+	args := []any{instancia, string(nucleo.Completado), string(nucleo.Fallido), string(nucleo.Cancelado), string(nucleo.Interrumpido)}
+	for _, consulta := range []string{`DELETE FROM eventos WHERE trabajo_id IN (` + terminados + `)`,
+		`DELETE FROM idempotencia WHERE trabajo_id IN (` + terminados + `)`} {
+		if _, err := tx.ExecContext(ctx, consulta, args...); err != nil {
+			return 0, err
+		}
+	}
+	res, err := tx.ExecContext(ctx, `DELETE FROM trabajos WHERE id IN (`+terminados+`)`, args...)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	return int(n), a.confirmar(tx)
+}
+
+// RegistrarProceso guarda el PID y la firma de inicio del proceso del agente de un trabajo.
+func (a *Almacen) RegistrarProceso(ctx context.Context, id string, pid int, firma string) error {
+	_, err := a.db.ExecContext(ctx, `UPDATE trabajos SET pid = ?, firma_proceso = ? WHERE id = ?`, pid, firma, id)
+	return err
+}
+
+// CambiarAgente apunta el trabajo al agente de respaldo que lo ejecuta ahora, con su modelo (el del principal o su
+// perfil no valen para otro agente, también al reintentar) y el respaldo que queda tras él, para que un trabajo
+// reencolado o reintentado no vuelva a probar los que ya fallaron; con el esfuerzo propio de ese respaldo, si lo tiene.
+// La huella no cambia.
+func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado, esfuerzo string, restante []string) error {
+	lista, err := json.Marshal(restante)
+	if err != nil {
+		return err
+	}
+	if restante == nil {
+		lista = []byte("[]")
+	}
+	// El esfuerzo es el que usa el agente nuevo: vacío lo quita (usa el de su CLI) en lugar de guardar un null.
+	sinEsfuerzo, conEsfuerzo, args := ", '$.esfuerzo'", "", []any{agente, modeloEnviado, string(lista)}
+	if esfuerzo != "" {
+		sinEsfuerzo, conEsfuerzo, args = "", ", '$.esfuerzo', ?", append(args, esfuerzo)
+	}
+	r, err := a.db.ExecContext(ctx, `UPDATE trabajos SET solicitud = json_set(json_remove(solicitud, '$.perfil_modelo'`+sinEsfuerzo+`), '$.agente', ?, '$.modelo', ?,
+		'$.respaldo', json(?)`+conEsfuerzo+`), modelo_enviado = ? WHERE id = ?`, append(args, modeloEnviado, id)...)
+	if err != nil {
+		return err
+	}
+	if n, err := r.RowsAffected(); err == nil && n == 0 {
+		return nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
+	}
+	a.avisar()
+	return nil
+}
+
+// Obtener devuelve un trabajo o no_encontrado.
+func (a *Almacen) Obtener(ctx context.Context, id string) (nucleo.Trabajo, error) {
+	return obtener(ctx, a.db, id)
+}
+
+// Estado devuelve la instancia y el estado de un trabajo, o no_encontrado; es la lectura barata de quien lo sigue.
+func (a *Almacen) Estado(ctx context.Context, id string) (string, nucleo.Estado, error) {
+	var instancia, estado string
+	err := a.db.QueryRowContext(ctx, `SELECT instancia, estado FROM trabajos WHERE id = ?`, id).Scan(&instancia, &estado)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", "", nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
+	}
+	return instancia, nucleo.Estado(estado), err
+}
+
+// ListarPorEstado devuelve los identificadores de la instancia en esos estados, del más antiguo al más reciente.
+func (a *Almacen) ListarPorEstado(ctx context.Context, instancia string, estados ...nucleo.Estado) ([]string, error) {
+	args := []any{instancia}
+	for _, e := range estados {
+		args = append(args, string(e))
+	}
+	marcas := strings.TrimSuffix(strings.Repeat("?, ", len(estados)), ", ")
+	filas, err := a.db.QueryContext(ctx, `SELECT id FROM trabajos WHERE instancia = ? AND estado IN (`+marcas+`) ORDER BY creado_en`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer filas.Close()
+	var ids []string
+	for filas.Next() {
+		var id string
+		if err := filas.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, filas.Err()
+}
+
+// Listar devuelve los trabajos más recientes de la instancia; con punto, solo los de ese punto de acceso.
+// FiltroTrabajos acota Listar; los campos vacíos no filtran. Puntos limita a esas APIs (no vacío).
+type FiltroTrabajos struct {
+	Punto   string
+	Puntos  []string
+	Origen  string
+	Antes   time.Time // solo los creados antes, para pedir la página siguiente
+	AntesID string    // con Antes: el último que ya se vio; los empatados en creado_en siguen por orden de llegada
+}
+
+func (a *Almacen) Listar(ctx context.Context, instancia string, f FiltroTrabajos, limite int) ([]nucleo.Trabajo, error) {
+	donde, args := "instancia = ?", []any{instancia}
+	if f.Punto != "" {
+		donde, args = donde+" AND punto_acceso = ?", append(args, f.Punto)
+	}
+	if len(f.Puntos) > 0 {
+		donde += " AND punto_acceso IN (?" + strings.Repeat(", ?", len(f.Puntos)-1) + ")"
+		for _, p := range f.Puntos {
+			args = append(args, p)
+		}
+	}
+	if f.Origen != "" {
+		donde, args = donde+" AND origen = ?", append(args, f.Origen)
+	}
+	if !f.Antes.IsZero() && f.AntesID != "" {
+		donde, args = donde+" AND (creado_en < ? OR (creado_en = ? AND rowid < (SELECT rowid FROM trabajos WHERE id = ?)))", append(args, fecha(f.Antes), fecha(f.Antes), f.AntesID)
+	} else if !f.Antes.IsZero() {
+		donde, args = donde+" AND creado_en < ?", append(args, fecha(f.Antes))
+	}
+	filas, err := a.db.QueryContext(ctx, `SELECT `+columnas+` FROM trabajos WHERE `+donde+` ORDER BY creado_en DESC, rowid DESC LIMIT ?`, append(args, limite)...)
+	if err != nil {
+		return nil, err
+	}
+	defer filas.Close()
+	trabajos := []nucleo.Trabajo{}
+	for filas.Next() {
+		t, err := escanear(filas)
+		if err != nil {
+			return nil, err
+		}
+		trabajos = append(trabajos, t)
+	}
+	return trabajos, filas.Err()
+}
+
+// Contar devuelve cuántos trabajos de la instancia hay en cada estado.
+func (a *Almacen) Contar(ctx context.Context, instancia string) (map[nucleo.Estado]int, error) {
+	filas, err := a.db.QueryContext(ctx, `SELECT estado, COUNT(*) FROM trabajos WHERE instancia = ? GROUP BY estado`, instancia)
+	if err != nil {
+		return nil, err
+	}
+	defer filas.Close()
+	conteo := map[nucleo.Estado]int{}
+	for filas.Next() {
+		var estado string
+		var n int
+		if err := filas.Scan(&estado, &n); err != nil {
+			return nil, err
+		}
+		conteo[nucleo.Estado(estado)] = n
+	}
+	return conteo, filas.Err()
+}
+
+// Recuperar se ejecuta al arrancar: lo que tenía un agente en marcha pasa a interrumpido (nunca se relanza) y lo
+// que no lo tenía vuelve a en_cola, incluido un trabajo que esperaba al siguiente agente del respaldo.
+// shortcut: las entradas pueden viajar dentro de la solicitud y siempre están disponibles; con cargas
+// se verificarán sus hashes y, si falta alguna, el trabajo pasará a fallido con entrada_no_disponible.
+func (a *Almacen) Recuperar(ctx context.Context, instancia string) (interrumpidos, reencolados int, err error) {
+	ids, err := a.ListarPorEstado(ctx, instancia, nucleo.PreparandoEntrada, nucleo.EsperandoAgente,
+		nucleo.Ejecutando, nucleo.ValidandoSalida, nucleo.CancelacionSolicitada)
+	if err != nil {
+		return 0, 0, err
+	}
+	for _, id := range ids {
+		t, err := a.Obtener(ctx, id)
+		if err != nil {
+			return interrumpidos, reencolados, err
+		}
+		if t.Estado == nucleo.PreparandoEntrada || t.Estado == nucleo.EsperandoAgente {
+			err = a.CambiarEstado(ctx, id, t.Estado, nucleo.EnCola, Cambio{})
+			reencolados++
+		} else {
+			err = a.CambiarEstado(ctx, id, t.Estado, nucleo.Interrumpido, Cambio{Mensaje: idioma.T("el servicio se reinició sin poder confirmar la ejecución")})
+			interrumpidos++
+		}
+		if err != nil {
+			return interrumpidos, reencolados, err
+		}
+	}
+	return interrumpidos, reencolados, nil
+}
+
+// Instancias devuelve las instancias que tienen trabajos en la base.
+func (a *Almacen) Instancias(ctx context.Context) ([]string, error) {
+	filas, err := a.db.QueryContext(ctx, `SELECT DISTINCT instancia FROM trabajos ORDER BY instancia`)
+	if err != nil {
+		return nil, err
+	}
+	defer filas.Close()
+	var ids []string
+	for filas.Next() {
+		var id string
+		if err := filas.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, filas.Err()
+}
+
+// CargasEnUso devuelve las cargas que algún trabajo puede necesitar todavía: activos o terminados que aún
+// admiten reintento. La purga de cargas no las toca aunque hayan vencido.
+func (a *Almacen) CargasEnUso(ctx context.Context, instancia string) (map[string]bool, error) {
+	filas, err := a.db.QueryContext(ctx, `SELECT DISTINCT j.value FROM trabajos t, json_each(t.solicitud, '$.cargas') j
+		WHERE t.instancia = ? AND t.entradas_eliminadas = 0`, instancia)
+	if err != nil {
+		return nil, err
+	}
+	defer filas.Close()
+	enUso := map[string]bool{}
+	for filas.Next() {
+		var id string
+		if err := filas.Scan(&id); err != nil {
+			return nil, err
+		}
+		enUso[id] = true
+	}
+	return enUso, filas.Err()
+}
+
+func obtener(ctx context.Context, c consultor, id string) (nucleo.Trabajo, error) {
+	t, err := escanear(c.QueryRowContext(ctx, `SELECT `+columnas+` FROM trabajos WHERE id = ?`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return t, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
+	}
+	return t, err
+}
+
+// escanear lee una fila con las columnas de "columnas"; sirve para *sql.Row y *sql.Rows.
+func escanear(fila interface{ Scan(...any) error }) (nucleo.Trabajo, error) {
+	var t nucleo.Trabajo
+	var estado, codigo, solicitud, creado, actualizado string
+	var terminado sql.NullString
+	var vencido bool
+	err := fila.Scan(&t.ID, &t.Instancia, &estado,
+		&codigo, &t.MensajeError, &solicitud, &t.Huella, &t.Salida, &t.IntentoDe, &creado, &actualizado, &terminado,
+		&t.ModeloEnviado, &t.ModeloEfectivo, &t.Uso.TokensEntrada, &t.Uso.TokensSalida, &t.Uso.CostoUSD, &t.PuntoAcceso, &vencido, &t.EntradasEliminadas, &t.PID, &t.FirmaProceso, &t.Origen)
+	if err != nil {
+		return t, err
+	}
+	t.Estado, t.CodigoError = nucleo.Estado(estado), nucleo.CodigoError(codigo)
+	if err := json.Unmarshal([]byte(solicitud), &t.Solicitud); err != nil {
+		return t, err
+	}
+	t.CreadoEn, _ = time.Parse(formatoFecha, creado)
+	t.ActualizadoEn, _ = time.Parse(formatoFecha, actualizado)
+	if terminado.Valid {
+		fin, _ := time.Parse(formatoFecha, terminado.String)
+		t.TerminadoEn = &fin
+	}
+	switch {
+	case vencido:
+		t.Disponibilidad = nucleo.SalidaExpirada
+	case t.Estado == nucleo.Completado:
+		t.Disponibilidad = nucleo.SalidaDisponible
+	}
+	return t, nil
+}

@@ -113,8 +113,6 @@ func init() {
 		"guardado en %s": "saved to %s",
 		"no existe el punto de acceso %s en este archivo":                                                                "there is no API named %s in this file",
 		"Lista los puntos de acceso y su estado":                                                                         "Lists the APIs and their status",
-		"(servicio inactivo; puntos definidos en %s)":                                                                    "(service not running; APIs defined in %s)",
-		"  %-18s puerto %-6d activo %v\n":                                                                                "  %-18s port %-6d active %v\n",
 		"Crea un punto de acceso y su token":                                                                             "Creates an API and its token",
 		"el punto de acceso %s ya existe: usa tramtai acceso editar":                                                     "the API %s already exists: use tramtai acceso editar",
 		"Cambia las opciones indicadas de un punto de acceso":                                                            "Changes the given options of an API",
@@ -128,8 +126,6 @@ func init() {
 		"la clave de %s solo se muestra al crearla o regenerarla (se guarda su huella): tramtai acceso token %s --rotar": "the key of %s is only shown when it is created or regenerated (only its hash is stored): tramtai acceso token %s --rotar",
 		"genera un token nuevo; el anterior deja de valer":                                                               "generates a new token; the previous one stops working",
 		"clave nueva de %s (guárdala: no se volverá a mostrar):\n%s\n":                                                   "new key for %s (save it: it will not be shown again):\n%s\n",
-		"el servicio no está en marcha: el cambio se aplicará al iniciarlo":                                              "the service is not running: the change will apply when it starts",
-		"no se pudo recargar:":                                                                                           "could not reload:",
 
 		// tramtai servicio
 		"Servicio único: todas las instancias y puntos de acceso en un puerto":                     "Single service: all workspaces and APIs on one port",

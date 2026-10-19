@@ -18,6 +18,12 @@ func (s *Servicio) rutasAdmin() http.Handler {
 	mux.HandleFunc("DELETE /api/v1/servicio/instancias/{id}", s.adminDesactivar)
 	mux.HandleFunc("GET /api/v1/servicio/instancias/{id}/configuracion", s.adminConfiguracion)
 	mux.HandleFunc("POST /api/v1/servicio/sesiones", s.adminSesion)
+	mux.HandleFunc("GET /api/v1/servicio/puntos", s.adminListarPuntos)
+	mux.HandleFunc("POST /api/v1/servicio/puntos", s.adminCrearPunto)
+	mux.HandleFunc("POST /api/v1/servicio/puntos/activo", s.adminActivarPuntos)
+	mux.HandleFunc("PUT /api/v1/servicio/puntos/{nombre}", s.adminGuardarPunto)
+	mux.HandleFunc("DELETE /api/v1/servicio/puntos/{nombre}", s.adminEliminarPunto)
+	mux.HandleFunc("POST /api/v1/servicio/puntos/{nombre}/token", s.adminRotarToken)
 	mux.HandleFunc("POST /api/v1/servicio/recargar", func(w http.ResponseWriter, _ *http.Request) {
 		puntos := s.Recargar()
 		_ = s.actualizarDescriptor()
@@ -31,12 +37,6 @@ func (s *Servicio) rutasAdmin() http.Handler {
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ruta no encontrada: %s %s", r.Method, r.URL.Path)))
 	})
 	return mux
-}
-
-// ActivacionInstancia es la respuesta a la activación de una instancia.
-type ActivacionInstancia struct {
-	Instancia EstadoInstancia `json:"instancia"`
-	Token     string          `json:"token"`
 }
 
 func (s *Servicio) adminActivar(w http.ResponseWriter, r *http.Request) {
@@ -81,13 +81,6 @@ func (s *Servicio) adminDesactivar(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = s.actualizarDescriptor()
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// EntradaConfiguracion es una fila de la configuración efectiva de una instancia.
-type EntradaConfiguracion struct {
-	Clave  string `json:"clave"`
-	Valor  any    `json:"valor"`
-	Origen string `json:"origen"`
 }
 
 func (s *Servicio) adminConfiguracion(w http.ResponseWriter, r *http.Request) {

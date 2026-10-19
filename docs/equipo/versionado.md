@@ -63,7 +63,11 @@ git push origin --tags             # sube las etiquetas
 3. Con la CI en verde, `gh pr merge --merge --delete-branch`. Si `main` avanzó (por ejemplo, con el commit de paquetes del release anterior), antes `gh pr update-branch` y otra vez la CI.
 4. En `main` actualizada (`git pull`), `./scripts/version.ps1 -Explicar` para revisar la versión y sus notas.
 5. `./scripts/version.ps1 -Etiquetar -Resumen notas-es.txt -ResumenEn notas-en.txt` y `git push origin <etiqueta>`.
-6. Al subir la etiqueta, `.github/workflows/publicar.yml` prueba en Windows, Linux y macOS, compila en cada sistema y crea el release de GitHub con las notas de la etiqueta: en Windows el instalador y el `.zip` portable; en Linux los `.deb` y `.rpm` (amd64 y arm64); en macOS el `.dmg` universal; los `.tar.gz` de la CLI para Linux y macOS; y `SHA256SUMS.txt` con todos. Falla si la versión calculada no coincide con la etiqueta o si alguna app no arranca.
+6. Al subir la etiqueta, `.github/workflows/publicar.yml` pasa el mismo CI que los PR (lo llama con `workflow_call`: pruebas en Windows, Linux y macOS y análisis de dependencias), compila en cada sistema y crea el release de GitHub con las notas de la etiqueta: en Windows el instalador y el `.zip` portable; en Linux los `.deb` y `.rpm` (amd64 y arm64); en macOS el `.dmg` universal; los `.tar.gz` de la CLI para Linux y macOS; y `SHA256SUMS.txt` con todos. Falla si la versión calculada no coincide con la etiqueta o si alguna app no arranca.
+
+Antes del paso 1 van la spec y el plan del release, en `docs/equipo/releases/<versión>-<tema>/` (índice en [README.md](README.md)).
+
+**Dependabot** (`.github/dependabot.yml`) propone cada semana, en un PR por ecosistema, las versiones menores y los parches de Go (el servicio y la app de escritorio, sin Wails, que va fijado en una beta), npm (la Web UI) y GitHub Actions. Pasan por los mismos checks que cualquier PR y se fusionan igual; un cambio de versión mayor llega en su propio PR.
 
 Nota: Go no admite `+metadatos` como versión de módulo. No afecta, porque Tramtai es una aplicación y no una biblioteca importable.
 
@@ -77,5 +81,5 @@ Nota: Go no admite `+metadatos` como versión de módulo. No afecta, porque Tram
 
   Si se cambia el secreto antes del paso 2, las copias instaladas no podrán actualizarse con un clic.
 - **Protección de `main`.** Un ruleset del repositorio exige PR (sin aprobaciones: el proyecto tiene una sola persona), los checks de la CI (`Go` en los tres sistemas, `App de escritorio` en Linux y macOS y `Web UI`) con la rama al día, e impide borrar `main` o reescribir su historia. La única excepción es la deploy key «Publicar: paquetes a main» (secreto `PAQUETES_DEPLOY_KEY`), con la que el job `paquetes` sube el commit de Homebrew y winget de cada release; en un repositorio personal GitHub no deja que la app de Actions se salte un ruleset, pero sí una deploy key, que solo vale para este repositorio.
-- **Permisos.** Publicar tiene `contents: read` por defecto: los jobs que compilan y prueban ejecutan código de terceros. Solo `publicar` (crea el release) y `paquetes` (sube Homebrew y winget a `main`) tienen `contents: write`, y los checkouts del resto no guardan el token. wingetcreate va fijado por versión y SHA-256, y `WINGET_TOKEN` solo llega al paso que envía el manifiesto.
+- **Permisos.** Publicar tiene `contents: read` por defecto: los jobs que compilan y prueban ejecutan código de terceros. Solo `publicar` (crea el release) tiene `contents: write`; `paquetes` sube Homebrew y winget a `main` con la deploy key, no con el token, y los checkouts no guardan el token (tampoco los del CI). wingetcreate va fijado por versión y SHA-256, y `WINGET_TOKEN` solo llega al paso que envía el manifiesto.
 

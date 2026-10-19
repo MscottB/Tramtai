@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/credenciales"
 	"tramtai/internal/nucleo"
 )
 
@@ -144,6 +145,12 @@ func TestContextoGeminiConPlazo(t *testing.T) {
 
 // La Web UI decide la ayuda por el código del problema, no por su texto (que cambia con el idioma).
 func TestDetectarFaltaClave(t *testing.T) {
+	// Sin clave en el entorno, ClaveEntorno mira el almacén del sistema: con una guardada ahí, esta prueba no aplica.
+	for _, nombre := range []string{"GEMINI_API_KEY"} {
+		if valor, _ := credenciales.Leer(nombre); valor != "" {
+			t.Skip("hay una clave guardada en el almacén del sistema: " + nombre)
+		}
+	}
 	t.Setenv("GEMINI_API_KEY", "")
 	t.Setenv("GOOGLE_API_KEY", "")
 	if adaptadores.ClaveEntorno("GEMINI_API_KEY", "GOOGLE_API_KEY") != "" {

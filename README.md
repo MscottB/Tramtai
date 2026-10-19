@@ -104,7 +104,7 @@ tramtai                                        # terminal interactiva: todo desd
 tramtai ejecutar "Resume en una frase qué es Go"
 tramtai ejecutar -f acta.pdf -e compromisos.schema.json "Extrae los compromisos"
 tramtai claves guardar ANTHROPIC_API_KEY       # guarda una clave sin mostrarla
-tramtai acceso crear tienda --modelo claude/haiku   # una API propia para otra aplicación
+tramtai acceso crear tienda --modelo claude/haiku   # una API propia para otra aplicación (inicia el servicio si hace falta)
 ```
 
 La CLI sale en el idioma de tu sistema; `TRAMTAI_IDIOMA=en` o `es` lo fija.

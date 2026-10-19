@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"sort"
 	"strconv"
@@ -23,59 +22,14 @@ import (
 
 	"tramtai/internal/agentes"
 	"tramtai/internal/api"
+	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
 	"tramtai/internal/salidas"
 )
 
-// ConfigPunto es un punto de acceso tal como se escribe en la configuración global o local.
-type ConfigPunto struct {
-	Nombre string `json:"nombre" yaml:"nombre"`
-	Grupo  string `json:"grupo,omitempty" yaml:"grupo,omitempty"`
-	// Instrucciones se anteponen a las de cada solicitud: por ejemplo, "Responde siempre en español".
-	Instrucciones     string            `json:"instrucciones,omitempty" yaml:"instrucciones,omitempty"`
-	Puerto            int               `json:"puerto,omitempty" yaml:"puerto,omitempty"`
-	RutaBase          string            `json:"ruta_base,omitempty" yaml:"ruta_base,omitempty"`
-	Instancia         string            `json:"instancia,omitempty" yaml:"instancia,omitempty"`
-	Contratos         []string          `json:"contratos,omitempty" yaml:"contratos,omitempty"`
-	Agente            string            `json:"agente,omitempty" yaml:"agente,omitempty"`
-	Modelo            string            `json:"modelo,omitempty" yaml:"modelo,omitempty"`
-	PerfilModelo      string            `json:"perfil_modelo,omitempty" yaml:"perfil_modelo,omitempty"`
-	Esfuerzo          string            `json:"esfuerzo,omitempty" yaml:"esfuerzo,omitempty"`
-	ModelosPermitidos []string          `json:"modelos_permitidos,omitempty" yaml:"modelos_permitidos,omitempty"`
-	ForzarModelo      bool              `json:"forzar_modelo,omitempty" yaml:"forzar_modelo,omitempty"`
-	AliasModelos      map[string]string `json:"alias_modelos,omitempty" yaml:"alias_modelos,omitempty"`
-	// Esquema es el JSON Schema de la receta (escrito como YAML); con él la salida es JSON validado.
-	Esquema map[string]any `json:"esquema,omitempty" yaml:"esquema,omitempty"`
-	// Respaldo son los agentes (agente o agente/modelo) que siguen si el principal falla antes de producir texto.
-	Respaldo []string `json:"respaldo,omitempty" yaml:"respaldo,omitempty"`
-	// ReintentosSalida es cuántas veces se pide al agente que corrija una respuesta JSON que no cumple (0 a 3).
-	ReintentosSalida int `json:"reintentos_salida,omitempty" yaml:"reintentos_salida,omitempty"`
-	// Presupuesto limita el consumo diario y mensual de la API (peticiones, tokens, USD).
-	Presupuesto *nucleo.Presupuesto `json:"presupuesto,omitempty" yaml:"presupuesto,omitempty"`
-	Activo      *bool               `json:"activo,omitempty" yaml:"activo,omitempty"`
-	Ejecucion   *EjecucionPunto     `json:"ejecucion,omitempty" yaml:"ejecucion,omitempty"`
-}
-
-// EjecucionPunto son los valores de ejecución propios del punto, dentro de los límites de la instancia.
-type EjecucionPunto struct {
-	ModoContexto         string `json:"modo_contexto,omitempty" yaml:"modo_contexto,omitempty"`
-	FormatoSalida        string `json:"formato_salida,omitempty" yaml:"formato_salida,omitempty"`
-	TiempoLimiteSegundos int    `json:"tiempo_limite_segundos,omitempty" yaml:"tiempo_limite_segundos,omitempty"`
-	// MaximoTrabajos limita las ejecuciones simultáneas del punto; no amplía las de su instancia.
-	MaximoTrabajos int `json:"maximo_trabajos,omitempty" yaml:"maximo_trabajos,omitempty"`
-}
-
-// NombrePuntoValido indica si el nombre sirve para un punto de acceso: también impide que una ruta derivada de él
-// (como la de su clave) salga de su carpeta.
-func NombrePuntoValido(nombre string) bool { return reNombrePunto.MatchString(nombre) }
-
-// EstaActivo indica si el punto está habilitado (lo está salvo activo: false).
-func (p ConfigPunto) EstaActivo() bool { return p.Activo == nil || *p.Activo }
-
 var (
-	reNombrePunto    = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,39}$`)
 	contratosValidos = map[string]bool{"nativa": true, "openai": true, "anthropic": true}
 )
 
@@ -97,12 +51,12 @@ func LeerPuntos(lista []any) ([]ConfigPunto, error) {
 	return puntos, nil
 }
 
-// Normalizar completa los valores predeterminados (instancia, ruta /p/<nombre> y los tres contratos) y valida el punto.
-func (p ConfigPunto) Normalizar(instancia string, puertoServicio int) (ConfigPunto, error) {
+// NormalizarPunto completa los valores predeterminados (instancia, ruta /p/<nombre> y los tres contratos) y valida el punto.
+func NormalizarPunto(p ConfigPunto, instancia string, puertoServicio int) (ConfigPunto, error) {
 	invalido := func(motivo string) (ConfigPunto, error) {
 		return p, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("punto de acceso %s: %s", p.Nombre, motivo))
 	}
-	if !reNombrePunto.MatchString(p.Nombre) {
+	if !contrato.NombrePuntoValido(p.Nombre) {
 		return invalido(idioma.T("nombre no válido (minúsculas, números, _ y -; hasta 40)"))
 	}
 	if p.Instancia == "" {
@@ -171,8 +125,7 @@ func (p ConfigPunto) Normalizar(instancia string, puertoServicio int) (ConfigPun
 }
 
 // validarRespaldo rechaza un respaldo con el que toda petición fallaría: un agente que no existe o una entrada fuera de
-// modelos_permitidos. Normalizar solo ve el formato. El servicio pregunta a su registro; la CLI y la terminal, al
-// catálogo (enCatalogo).
+// modelos_permitidos. NormalizarPunto solo ve el formato; existe pregunta al registro del servicio.
 func validarRespaldo(p ConfigPunto, existe func(agente string) bool) error {
 	for _, e := range p.Respaldo {
 		agente, _, _ := nucleo.DividirRespaldo(e)
@@ -208,53 +161,16 @@ func validarParaApps(p ConfigPunto) error {
 	return nil
 }
 
-func enCatalogo(agente string) bool {
-	_, ok := agentes.Buscar(agente)
-	return ok
-}
-
 // existe dice si el agente está en el registro del servicio.
 func (s *Servicio) existe(agente string) bool { return s.opc.Registro[agente] != nil }
 
-// ValidarPunto aplica las reglas para guardar una API que la Web UI, la CLI y la terminal comparten: un respaldo con el que
-// funcione y solo agentes habilitados para apps. El formato lo comprueba Normalizar.
-func ValidarPunto(p ConfigPunto) error { return validarPunto(p, enCatalogo) }
-
+// validarPunto aplica las reglas para guardar una API: un respaldo con el que funcione y solo agentes habilitados para
+// apps. El formato lo comprueba NormalizarPunto. Las usan todas las rutas que guardan un punto.
 func validarPunto(p ConfigPunto, existe func(string) bool) error {
 	if err := validarRespaldo(p, existe); err != nil {
 		return err
 	}
 	return validarParaApps(p)
-}
-
-// ConReglas envuelve una edición de puntos de acceso con ValidarPunto en los puntos nuevos o que cambian algo más que
-// activo: así se puede desactivar una API que ya tenía otro error, pero no guardar una nueva que fallaría siempre.
-func ConReglas(editar func([]ConfigPunto) ([]ConfigPunto, error)) func([]ConfigPunto) ([]ConfigPunto, error) {
-	// huella es el contenido del punto sin activo: se toma antes de editar, porque editar puede cambiar la lista (y lo
-	// que apuntan sus punteros) en su sitio.
-	huella := func(p ConfigPunto) string {
-		p.Activo = nil
-		datos, _ := json.Marshal(p)
-		return string(datos)
-	}
-	return func(lista []ConfigPunto) ([]ConfigPunto, error) {
-		antes := map[string]bool{}
-		for _, p := range lista {
-			antes[huella(p)] = true
-		}
-		nueva, err := editar(lista)
-		if err != nil {
-			return nil, err
-		}
-		for _, p := range nueva {
-			if !antes[huella(p)] {
-				if err := ValidarPunto(p); err != nil {
-					return nil, err
-				}
-			}
-		}
-		return nueva, nil
-	}
 }
 
 // EliminarPunto quita un punto de acceso del archivo y después borra su clave, antes de recargar: así el servicio sabe al
@@ -274,7 +190,7 @@ func EliminarPunto(datos, ruta string, origen nucleo.Origen, nombre string) erro
 	return err
 }
 
-func (p ConfigPunto) politica() *api.Punto {
+func politicaDe(p ConfigPunto) *api.Punto {
 	pol := &api.Punto{Nombre: p.Nombre, Contratos: map[string]bool{}, Agente: p.Agente, Modelo: p.Modelo,
 		PerfilModelo: p.PerfilModelo, Esfuerzo: p.Esfuerzo, Instrucciones: strings.TrimSpace(p.Instrucciones), ModelosPermitidos: p.ModelosPermitidos, ForzarModelo: p.ForzarModelo, Alias: p.AliasModelos}
 	for _, c := range p.Contratos {
@@ -284,7 +200,7 @@ func (p ConfigPunto) politica() *api.Punto {
 		pol.ModoContexto, pol.FormatoSalida, pol.TiempoLimite = e.ModoContexto, e.FormatoSalida, e.TiempoLimiteSegundos
 	}
 	if len(p.Esquema) > 0 {
-		pol.Esquema, _ = json.Marshal(p.Esquema) // ya validado en Normalizar
+		pol.Esquema, _ = json.Marshal(p.Esquema) // ya validado en NormalizarPunto
 	}
 	pol.Respaldo, pol.ReintentosSalida = p.Respaldo, p.ReintentosSalida
 	return pol
@@ -324,33 +240,6 @@ func (p *puntoActivo) cerrar() {
 	}
 }
 
-// EstadoPunto resume un punto de acceso.
-type EstadoPunto struct {
-	Nombre string `json:"nombre"`
-	Grupo  string `json:"grupo,omitempty"`
-	// Instrucciones del punto, para verlas y editarlas en la Web UI.
-	Instrucciones string   `json:"instrucciones,omitempty"`
-	Instancia     string   `json:"instancia"`
-	URL           string   `json:"url,omitempty"`
-	Contratos     []string `json:"contratos"`
-	Agente        string   `json:"agente,omitempty"`
-	Modelo        string   `json:"modelo,omitempty"`
-	PerfilModelo  string   `json:"perfil_modelo,omitempty"`
-	Esfuerzo      string   `json:"esfuerzo,omitempty"`
-	Permitidos    []string `json:"modelos_permitidos,omitempty"`
-	Forzar        bool     `json:"forzar_modelo,omitempty"`
-	// Esquema y Respaldo son la receta del punto, para mostrarla y abrirla en Probar.
-	Esquema  map[string]any `json:"esquema,omitempty"`
-	Respaldo []string       `json:"respaldo,omitempty"`
-	// ReintentosSalida son las correcciones de la receta si la respuesta no cumple el esquema.
-	ReintentosSalida int `json:"reintentos_salida,omitempty"`
-	// Presupuesto son los límites de la API; su consumo lo da GET /api/v1/puntos en «presupuestos».
-	Presupuesto *nucleo.Presupuesto `json:"presupuesto,omitempty"`
-	Activo      bool                `json:"activo"`
-	Error       string              `json:"error,omitempty"`
-	Origen      string              `json:"origen"`
-}
-
 // candidato es un punto leído de la configuración con el archivo del que procede.
 type candidato struct {
 	cfg    ConfigPunto
@@ -370,7 +259,7 @@ func (s *Servicio) puntosDeseados() ([]candidato, []string) {
 			return
 		}
 		for _, p := range puntos {
-			normalizado, err := p.Normalizar(instancia, s.opc.Puerto)
+			normalizado, err := NormalizarPunto(p, instancia, s.opc.Puerto)
 			if err == nil {
 				err = validarRespaldo(normalizado, s.existe)
 			}
@@ -563,7 +452,7 @@ func (s *Servicio) abrirPunto(c candidato, huella, firma string) *puntoActivo {
 		return p
 	}
 	inst := p.instancia
-	srv := &api.Servidor{Planificador: inst.Planificador, Cargas: inst.Cargas, Registro: s.opc.Registro, Config: inst.Config, Punto: c.cfg.politica()}
+	srv := &api.Servidor{Planificador: inst.Planificador, Cargas: inst.Cargas, Registro: s.opc.Registro, Config: inst.Config, Punto: politicaDe(c.cfg)}
 	handler := api.Proteger(s.opc.Hosts, func(r *http.Request) bool { return api.HuellaValida(r, huella) }, srv.Rutas())
 	if c.cfg.Puerto == 0 {
 		p.handler, p.url = handler, s.Base()+c.cfg.RutaBase

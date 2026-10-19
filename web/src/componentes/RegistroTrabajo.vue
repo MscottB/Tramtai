@@ -18,7 +18,10 @@
 // RegistroTrabajo muestra la hora de cada paso de una petición (estados, intentos y avisos) y cuánto duró cada etapa,
 // para ver lo que la ruta animada pasa demasiado rápido. Vuelve a pedirlo cuando cambia version.
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { api, estadoInfo, nombreAgente, nombreEsfuerzo, numero, type EventoRegistro, type Trabajo } from '../api'
+import { api } from '../api/cliente'
+import type { EventoRegistro, Trabajo } from '../api/tipos'
+import { nombreAgente } from '../agentes'
+import { estadoInfo, nombreEsfuerzo, numero } from '../formato'
 import { idioma, t } from '../i18n'
 
 const props = defineProps<{ trabajo: Trabajo; version?: string | number }>()

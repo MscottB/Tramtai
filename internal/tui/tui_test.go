@@ -1,12 +1,22 @@
 package tui
 
 import (
+	"context"
+	"net"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
 
+	"tramtai/internal/adaptadores"
+	"tramtai/internal/cliente"
+	"tramtai/internal/contrato"
 	"tramtai/internal/nucleo"
+	"tramtai/internal/planificador"
 	"tramtai/internal/servicio"
 )
 
@@ -78,5 +88,64 @@ func TestInstanciaActivaMuestraPanel(t *testing.T) {
 	m.Update(tecla("i"))
 	if m.mensaje != "hi" {
 		t.Fatalf("el campo de mensaje recibe el texto: %q", m.mensaje)
+	}
+}
+
+// TestAccesosPorElServicio crea, borra y vuelve a crear una API desde la terminal contra un servicio en memoria: los
+// cambios pasan por su API, que los guarda en la configuración global.
+func TestAccesosPorElServicio(t *testing.T) {
+	dir := t.TempDir()
+	global := filepath.Join(dir, "config.yaml")
+	os.WriteFile(global, []byte("predeterminados:\n  agente: simulado\n"), 0o600)
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+	datos := filepath.Join(dir, "datos")
+	c, _ := nucleo.CargarConfiguracion("")
+	ts := httptest.NewUnstartedServer(nil)
+	s, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}},
+		Semaforos: planificador.NuevosSemaforos(nil), Host: "127.0.0.1", Puerto: ts.Listener.Addr().(*net.TCPAddr).Port, Hosts: []string{"127.0.0.1"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts.Config.Handler = s
+	ts.Start()
+	defer ts.Close()
+	defer s.Cerrar()
+	s.ActivarGlobal()
+	s.EscribirDescriptor()
+	cli, err := cliente.Conectar(datos)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m := nuevo(Opciones{})
+	m.cli, m.inst = cli, "global"
+	crear := func() string {
+		t.Helper()
+		m.nombrePunto, m.puertoPunto = "tuiapi", ""
+		a := m.crearPunto()().(msgAviso)
+		if a.err != nil || !strings.Contains(a.texto, "tuiapi") || !strings.Contains(a.texto, "tt_") {
+			t.Fatalf("crear: %+v", a)
+		}
+		return a.texto[strings.Index(a.texto, "tt_"):]
+	}
+	primera := crear()
+	if guardado, _ := os.ReadFile(global); !strings.Contains(string(guardado), "tuiapi") {
+		t.Fatalf("se guarda en la configuración global:\n%s", guardado)
+	}
+	e, _ := cli.Estado(context.Background())
+	m.estado = &e
+	m.ir(pAccesos)
+	m.cursor = slices.IndexFunc(m.puntosDeInstancia(), func(p contrato.EstadoPunto) bool { return p.Nombre == "tuiapi" })
+	if m.teclaAccesos("x"); m.pregunta == "" {
+		t.Fatal("eliminar pide confirmación")
+	}
+	if a := m.siConfirma().(msgAviso); a.err != nil {
+		t.Fatalf("eliminar: %v", a.err)
+	}
+	if guardado, _ := os.ReadFile(global); strings.Contains(string(guardado), "tuiapi") {
+		t.Fatalf("eliminar la quita:\n%s", guardado)
+	}
+	if crear() == primera { // con el mismo nombre: es una API nueva, con clave nueva
+		t.Fatal("la API vuelta a crear debía tener otra clave")
 	}
 }

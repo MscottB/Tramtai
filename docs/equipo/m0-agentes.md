@@ -1,7 +1,7 @@
 # Evidencia M0: Copilot CLI, OpenCode y Hermes Agent
 
 Pruebas con los CLI reales el 2026-10-18 en Windows 11, con las cuentas del usuario y modelos pequeños o gratuitos.
-Sirven a la spec de agentes por módulos (`agentes-modulos.md`) y a los releases de cada agente.
+Sirven a la spec de agentes por módulos (`releases/v0.43-agentes-modulos/spec.md`) y a los releases de cada agente.
 
 ## GitHub Copilot CLI 1.0.98 (`npm install -g @github/copilot`)
 

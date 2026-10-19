@@ -29,7 +29,7 @@
 // GuiaUrls explica qué URL usar según lo que hace la app, con la URL de cada contrato que acepta la API y una tabla
 // de lo que permite cada uno. nombre es la API por aplicación (vacío: la API principal).
 import { computed, ref } from 'vue'
-import { api, avisarError, copiar } from '../api'
+import { api, avisarError, copiar } from '../api/cliente'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 

@@ -56,7 +56,7 @@
             <q-btn v-if="activo" flat color="negative" icon="o_stop_circle" :label="t('comun.cancelar')" no-caps @click="cancelar" />
             <q-btn v-if="editando" outline color="primary" icon="o_save" :label="t('ejecutar.actualizarApi', { nombre: editando })" no-caps
               :loading="guardando" @click="actualizarApi" />
-            <q-btn v-else outline color="primary" icon="o_hub" :label="t('ejecutar.guardarApi')" no-caps @click="abrirGuardar" />
+            <q-btn v-else outline color="primary" icon="o_hub" :label="t('ejecutar.guardarApi')" no-caps @click="guardarApi?.abrirGuardar()" />
             <q-btn unelevated color="primary" icon="o_send" :label="t('ejecutar.enviar')" no-caps :loading="enviando" :disable="activo || !mensaje.trim()" @click="ejecutar" />
           </q-card-actions>
         </q-card>
@@ -164,53 +164,14 @@
       </div>
     </div>
 
-    <q-dialog v-model="dialogoGuardar" aria-labelledby="titulo-guardar-api">
-      <q-card style="width: 520px; max-width: 95vw">
-        <q-card-section>
-          <div id="titulo-guardar-api" class="titulo-seccion">{{ t('ejecutar.guardarApi') }}</div>
-          <div class="texto-suave text-body2">{{ t('ejecutar.guardarTexto') }}</div>
-        </q-card-section>
-        <q-form @submit="guardarComoApi">
-          <q-card-section class="q-gutter-y-md q-pt-none">
-            <q-input v-model="nueva.nombre" outlined dense autofocus :label="t('puntos.nombre')" :hint="t('puntos.nombreHint')"
-              :rules="[(v: string) => /^[a-z0-9][a-z0-9_-]{0,39}$/.test(v) || t('puntos.nombreRegla')]" />
-            <q-input v-model="nueva.grupo" outlined dense maxlength="40" :label="t('puntos.grupo')" :hint="t('puntos.grupoHint')" />
-          </q-card-section>
-          <q-card-actions align="right" class="q-pa-md">
-            <q-btn v-close-popup flat no-caps :label="t('comun.cancelar')" />
-            <q-btn unelevated color="primary" no-caps type="submit" :label="t('comun.crear')" :loading="guardando" />
-          </q-card-actions>
-        </q-form>
-      </q-card>
-    </q-dialog>
-
     <VerComoCodigo v-model="dialogoCodigo" :ejemplos="ejemplosCodigo" :aviso="editando ? t('codigo.recetaEnApi', { nombre: editando }) : undefined" />
 
-    <!-- Al cerrarse se olvida la clave mostrada: no queda en memoria de la página. -->
-    <q-dialog v-model="dialogoCreada" aria-labelledby="titulo-api-creada" @hide="creada = undefined">
-      <q-card style="width: 640px; max-width: 95vw">
-        <q-card-section>
-          <div id="titulo-api-creada" class="titulo-seccion">{{ t('ejecutar.apiCreada', { nombre: creada?.nombre ?? '' }) }}</div>
-          <div class="texto-suave text-body2">{{ t('ejecutar.apiCreadaTexto') }}</div>
-          <q-banner rounded dense class="aviso-caja q-mt-sm">
-            <template #avatar><q-icon name="o_lock" color="warning" /></template>{{ t('puntos.claveUnaVez') }}
-          </q-banner>
-        </q-card-section>
-        <q-card-section class="q-gutter-y-md q-pt-none">
-          <div v-for="c in camposCreada" :key="c.titulo">
-            <div class="text-caption texto-suave q-mb-xs">{{ c.titulo }}</div>
-            <div class="bloque-codigo" :class="{ 'sin-ajuste': c.codigo }">{{ c.valor }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar"
-              :aria-label="t('comun.copiar') + ' ' + c.titulo" @click="copiar(c.valor)" /></div>
-          </div>
-        </q-card-section>
-        <q-card-actions align="right" class="q-pa-md"><q-btn v-close-popup unelevated color="primary" no-caps :label="t('comun.hecho')" /></q-card-actions>
-      </q-card>
-    </q-dialog>
+    <GuardarComoApi ref="guardarApi" :receta="receta" :catalogo="catalogo" @creada="alCrear" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import EditorReceta from '../componentes/EditorReceta.vue'
@@ -219,12 +180,16 @@ import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
 import RegistroTrabajo from '../componentes/RegistroTrabajo.vue'
 import SalidaTrabajo from '../componentes/SalidaTrabajo.vue'
+import GuardarComoApi from '../componentes/GuardarComoApi.vue'
 import VerComoCodigo from '../componentes/VerComoCodigo.vue'
 import { ejemplos as ejemplosDe, type Ejemplo } from '../ejemplos'
-import { lineasConRuta } from '../esquemaCampos'
-import { ajustesDeReceta, api, aplicarModelo, avisar, avisarError, configDeReceta, copiar, duracion, esquemaDeReceta, esfuerzoUsado, estadoInfo, haceCuanto, mensajeDe, modeloDe, modeloInicial,
-  origenHistorial, recetaDePunto, recetaDeSolicitud, recetaInicial, recetaVacia, terminales, tituloError, trabajoSeguido, idModeloDe, esfuerzoEspacio, type EstadoPunto, type EventoRegistro, type LimitesPeticion, type Modelo, type Receta, type Solicitud,
-  type Trabajo } from '../api'
+import { marcarLineas } from '../esquemaCampos'
+import { api, avisar, avisarError, copiar, tituloError } from '../api/cliente'
+import type { EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Solicitud, Trabajo } from '../api/tipos'
+import { modeloInicial, origenHistorial, recetaInicial, trabajoSeguido } from '../estado'
+import { modeloDe, esfuerzoEspacio } from '../agentes'
+import { ajustesDeReceta, aplicarModelo, esquemaDeReceta, mensajeDe, recetaDePunto, recetaDeSolicitud, recetaVacia, idModeloDe, type Receta } from '../recetas'
+import { duracion, esfuerzoUsado, estadoInfo, haceCuanto, terminales } from '../formato'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()
@@ -458,25 +423,7 @@ async function corregir() {
     corrigiendo.value = false
   }
 }
-// lineasMarcadas es la respuesta JSON, ordenada, con las líneas de los campos que tienen problemas resaltadas.
-const lineasMarcadas = computed(() => {
-  if (!problemas.value.length || !salida.value) return undefined
-  let valor: unknown
-  try {
-    valor = JSON.parse(salida.value)
-  } catch {
-    return undefined
-  }
-  // Se marca la primera línea de cada campo con problemas, comparando su ruta completa (tareas[2].fecha), como la
-  // escribe el servicio.
-  const rutas = new Set(problemas.value.map((p) => p.campo).filter(Boolean))
-  const vistas = new Set<string>()
-  return lineasConRuta(valor).map(({ texto, ruta }) => {
-    const marcada = rutas.has(ruta) && !vistas.has(ruta)
-    vistas.add(ruta)
-    return { texto, marcada }
-  })
-})
+const lineasMarcadas = computed(() => marcarLineas(salida.value, problemas.value))
 
 
 // recientes son las últimas pruebas lanzadas desde Probar (las de las APIs y la terminal están en el Historial).
@@ -507,54 +454,13 @@ async function cancelar() {
   }
 }
 
-// Guardar como API crea un punto de acceso con la receta tal como está en Probar.
-const dialogoGuardar = ref(false)
-const dialogoCreada = ref(false)
+// guardarApi crea una API con la receta tal como está en Probar; al crearla, Probar pasa a editarla.
+const guardarApi = ref<InstanceType<typeof GuardarComoApi>>()
 const guardando = ref(false)
-const nueva = reactive({ nombre: '', grupo: '' })
-const creada = ref<{ nombre: string; url: string; clave: string; modelo: string }>()
-
-function abrirGuardar() {
-  try {
-    esquemaDeReceta(receta.value)
-  } catch (e) {
-    avisarError(e)
-    return
-  }
-  Object.assign(nueva, { nombre: '', grupo: '' })
-  dialogoGuardar.value = true
+function alCrear(nombre: string, p?: EstadoPunto) {
+  apiEditada.value = p
+  editando.value = nombre
 }
-
-async function guardarComoApi() {
-  guardando.value = true
-  try {
-    const nombre = nueva.nombre.trim()
-    const r = await api.crearPunto({ nombre, grupo: nueva.grupo.trim() || undefined, ...configDeReceta(receta.value) })
-    const modelo = receta.value.modelo || catalogo.value.find((m) => m.predeterminado)?.id || catalogo.value[0]?.id || ''
-    creada.value = { nombre, url: r.punto_acceso?.url ?? '', clave: r.token, modelo }
-    apiEditada.value = r.punto_acceso
-    dialogoGuardar.value = false
-    dialogoCreada.value = true
-    editando.value = nombre
-  } catch (e) {
-    avisarError(e)
-  } finally {
-    guardando.value = false
-  }
-}
-
-const camposCreada = computed(() => {
-  const c = creada.value
-  if (!c) return []
-  return [
-    { titulo: t('conectar.urlOpenai'), valor: c.url + '/openai/v1', codigo: false },
-    { titulo: t('conectar.clave'), valor: c.clave, codigo: false },
-    { titulo: 'curl', codigo: true, valor: `curl ${c.url}/openai/v1/chat/completions \\
-  -H "Authorization: Bearer ${c.clave}" \\
-  -H "Content-Type: application/json" \\
-  -d '{"model": "${c.modelo}", "messages": [{"role": "user", "content": "${t('conectar.hola')}"}]}'` },
-  ]
-})
 
 async function actualizarApi() {
   guardando.value = true

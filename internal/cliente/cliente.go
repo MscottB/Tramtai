@@ -20,10 +20,10 @@ import (
 	"strings"
 	"time"
 
+	"tramtai/internal/contrato"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
-	"tramtai/internal/servicio"
 )
 
 // ErrServicioInactivo indica que no hay un servicio de Tramtai en marcha para este usuario.
@@ -32,7 +32,7 @@ var ErrServicioInactivo = errors.New(idioma.T("el servicio de Tramtai no está e
 // Cliente es una conexión al servicio.
 type Cliente struct {
 	Base       string
-	Descriptor servicio.Descriptor
+	Descriptor contrato.Descriptor
 	// Origen se manda en X-Tramtai-Cliente (terminal o cli) para que el historial diga de dónde llegó la petición.
 	Origen string
 	token  string
@@ -42,7 +42,7 @@ type Cliente struct {
 // Conectar lee el descriptor y el token de servicio y comprueba con /healthz que responde ese mismo servicio,
 // no otro proceso que ocupe el puerto.
 func Conectar(datos string) (*Cliente, error) {
-	d, err := servicio.LeerDescriptor(datos)
+	d, err := contrato.LeerDescriptor(datos)
 	if err != nil {
 		return nil, ErrServicioInactivo
 	}
@@ -148,14 +148,14 @@ func cuerpoJSON(v any) io.Reader {
 }
 
 // Estado devuelve el estado del servicio, sus instancias y sus puntos de acceso.
-func (c *Cliente) Estado(ctx context.Context) (servicio.Estado, error) {
-	var e servicio.Estado
+func (c *Cliente) Estado(ctx context.Context) (contrato.Estado, error) {
+	var e contrato.Estado
 	return e, c.pedir(ctx, "GET", "/api/v1/servicio", "", nil, "", &e)
 }
 
 // Activar activa la instancia global (raiz vacía) o la del proyecto en raiz.
-func (c *Cliente) Activar(ctx context.Context, ambito, raiz string) (servicio.ActivacionInstancia, error) {
-	var a servicio.ActivacionInstancia
+func (c *Cliente) Activar(ctx context.Context, ambito, raiz string) (contrato.ActivacionInstancia, error) {
+	var a contrato.ActivacionInstancia
 	return a, c.pedir(ctx, "POST", "/api/v1/servicio/instancias", "", cuerpoJSON(map[string]string{"ambito": ambito, "raiz": raiz}), "application/json", &a)
 }
 
@@ -165,9 +165,9 @@ func (c *Cliente) Desactivar(ctx context.Context, id string) error {
 }
 
 // Configuracion devuelve la configuración efectiva de una instancia con el origen de cada valor.
-func (c *Cliente) Configuracion(ctx context.Context, id string) ([]servicio.EntradaConfiguracion, error) {
+func (c *Cliente) Configuracion(ctx context.Context, id string) ([]contrato.EntradaConfiguracion, error) {
 	var r struct {
-		Configuracion []servicio.EntradaConfiguracion `json:"configuracion"`
+		Configuracion []contrato.EntradaConfiguracion `json:"configuracion"`
 	}
 	err := c.pedir(ctx, "GET", "/api/v1/servicio/instancias/"+url.PathEscape(id)+"/configuracion", "", nil, "", &r)
 	return r.Configuracion, err
@@ -183,9 +183,9 @@ func (c *Cliente) RotarClave(ctx context.Context, instancia string) (string, err
 }
 
 // Recargar aplica los cambios de puntos de acceso sin reiniciar.
-func (c *Cliente) Recargar(ctx context.Context) ([]servicio.EstadoPunto, error) {
+func (c *Cliente) Recargar(ctx context.Context) ([]contrato.EstadoPunto, error) {
 	var r struct {
-		Puntos []servicio.EstadoPunto `json:"puntos_acceso"`
+		Puntos []contrato.EstadoPunto `json:"puntos_acceso"`
 	}
 	err := c.pedir(ctx, "POST", "/api/v1/servicio/recargar", "", nil, "", &r)
 	return r.Puntos, err
@@ -203,6 +203,90 @@ func (c *Cliente) ReiniciarPresupuesto(ctx context.Context, instancia, nombre st
 // ActivarPunto activa o desactiva un punto de acceso; se guarda en su configuración y se aplica sin reiniciar.
 func (c *Cliente) ActivarPunto(ctx context.Context, instancia, nombre string, activo bool) error {
 	return c.pedir(ctx, "PATCH", "/api/v1/puntos/"+url.PathEscape(nombre), instancia, cuerpoJSON(map[string]bool{"activo": activo}), "application/json", nil)
+}
+
+// CrearPunto crea un punto de acceso y devuelve su estado y su clave, que solo se ve esta vez.
+func (c *Cliente) CrearPunto(ctx context.Context, instancia string, p contrato.ConfigPunto) (contrato.EstadoPunto, string, error) {
+	var r struct {
+		Punto contrato.EstadoPunto `json:"punto_acceso"`
+		Token string               `json:"token"`
+	}
+	err := c.pedir(ctx, "POST", "/api/v1/puntos", instancia, cuerpoJSON(p), "application/json", &r)
+	return r.Punto, r.Token, err
+}
+
+// EliminarPunto elimina un punto de acceso con su clave y su consumo.
+func (c *Cliente) EliminarPunto(ctx context.Context, instancia, nombre string) error {
+	return c.pedir(ctx, "DELETE", "/api/v1/puntos/"+url.PathEscape(nombre), instancia, nil, "", nil)
+}
+
+// RotarTokenPunto regenera la clave de un punto de acceso; solo se ve esta vez.
+func (c *Cliente) RotarTokenPunto(ctx context.Context, instancia, nombre string) (string, error) {
+	var r struct {
+		Token string `json:"token"`
+	}
+	err := c.pedir(ctx, "POST", "/api/v1/puntos/"+url.PathEscape(nombre)+"/token", instancia, nil, "", &r)
+	return r.Token, err
+}
+
+// GuardadoEnArchivo es lo que devuelven los cambios de puntos en un archivo: dónde quedó y los puntos del servicio
+// tras recargar (y la clave, al crear).
+type GuardadoEnArchivo struct {
+	Archivo string                 `json:"archivo"`
+	Puntos  []contrato.EstadoPunto `json:"puntos_acceso"`
+	Token   string                 `json:"token"`
+}
+
+// rutaArchivo es una ruta de /api/v1/servicio/puntos sobre el archivo global (proyecto vacío) o el .tramtai/local.yaml
+// del proyecto en esa raíz.
+func rutaArchivo(sufijo, proyecto string) string {
+	ruta := "/api/v1/servicio/puntos" + sufijo
+	if proyecto != "" {
+		ruta += "?proyecto=" + url.QueryEscape(proyecto)
+	}
+	return ruta
+}
+
+// PuntosEnArchivo devuelve los puntos tal como están en el archivo, también los de una instancia inactiva.
+func (c *Cliente) PuntosEnArchivo(ctx context.Context, proyecto string) (string, []contrato.ConfigPunto, error) {
+	var r struct {
+		Archivo string                 `json:"archivo"`
+		Puntos  []contrato.ConfigPunto `json:"puntos"`
+	}
+	err := c.pedir(ctx, "GET", rutaArchivo("", proyecto), "", nil, "", &r)
+	return r.Archivo, r.Puntos, err
+}
+
+// CrearPuntoEnArchivo añade un punto al archivo con las reglas del servicio; la clave nueva solo se ve esta vez.
+func (c *Cliente) CrearPuntoEnArchivo(ctx context.Context, proyecto string, p contrato.ConfigPunto) (GuardadoEnArchivo, error) {
+	var g GuardadoEnArchivo
+	return g, c.pedir(ctx, "POST", rutaArchivo("", proyecto), "", cuerpoJSON(p), "application/json", &g)
+}
+
+// GuardarPuntoEnArchivo reemplaza el punto entero, con su nombre de siempre.
+func (c *Cliente) GuardarPuntoEnArchivo(ctx context.Context, proyecto string, p contrato.ConfigPunto) (GuardadoEnArchivo, error) {
+	var g GuardadoEnArchivo
+	return g, c.pedir(ctx, "PUT", rutaArchivo("/"+url.PathEscape(p.Nombre), proyecto), "", cuerpoJSON(p), "application/json", &g)
+}
+
+// ActivarPuntosEnArchivo activa o desactiva de una vez los puntos indicados o, con grupo, los de ese grupo.
+func (c *Cliente) ActivarPuntosEnArchivo(ctx context.Context, proyecto string, nombres []string, grupo string, activo bool) (GuardadoEnArchivo, error) {
+	var g GuardadoEnArchivo
+	cuerpo := cuerpoJSON(map[string]any{"nombres": nombres, "grupo": grupo, "activo": activo})
+	return g, c.pedir(ctx, "POST", rutaArchivo("/activo", proyecto), "", cuerpo, "application/json", &g)
+}
+
+// EliminarPuntoEnArchivo quita el punto del archivo y borra su clave.
+func (c *Cliente) EliminarPuntoEnArchivo(ctx context.Context, proyecto, nombre string) (GuardadoEnArchivo, error) {
+	var g GuardadoEnArchivo
+	return g, c.pedir(ctx, "DELETE", rutaArchivo("/"+url.PathEscape(nombre), proyecto), "", nil, "", &g)
+}
+
+// RotarTokenEnArchivo regenera la clave de un punto; solo se ve esta vez.
+func (c *Cliente) RotarTokenEnArchivo(ctx context.Context, nombre string) (string, error) {
+	var g GuardadoEnArchivo
+	err := c.pedir(ctx, "POST", rutaArchivo("/"+url.PathEscape(nombre)+"/token", ""), "", nil, "", &g)
+	return g.Token, err
 }
 
 // Detener pide al servicio que se detenga con todas sus instancias.

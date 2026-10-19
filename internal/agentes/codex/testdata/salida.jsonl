@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"0199-prueba"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"reasoning","text":"pensando"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"hola desde codex"}}
+{"type":"turn.completed","usage":{"input_tokens":120,"cached_input_tokens":0,"output_tokens":7}}

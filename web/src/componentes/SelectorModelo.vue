@@ -35,7 +35,7 @@
 // SelectorModelo elige un modelo del catálogo (o varios, para el respaldo), agrupado por agente y con la versión
 // exacta de cada uno; también acepta uno escrito como agente/modelo (por ejemplo una versión que aún no se usó).
 import { computed, onMounted, ref } from 'vue'
-import { agruparOpciones, cargarDisponibilidad, codigoLinea, opcionEscrita, problemasAgentes, type OpcionModelo } from '../api'
+import { agruparOpciones, cargarDisponibilidad, codigoLinea, opcionEscrita, problemasAgentes, type OpcionModelo } from '../agentes'
 import { t } from '../i18n'
 
 const props = defineProps<{ modelValue: string | string[] | null; opciones: OpcionModelo[]; multiple?: boolean; maximo?: number; hint?: string; icono?: string }>()
