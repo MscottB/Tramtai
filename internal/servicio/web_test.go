@@ -1,6 +1,7 @@
 package servicio
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -407,6 +408,72 @@ func TestEntradaLocalSinToken(t *testing.T) {
 	case <-s.Detenido():
 	case <-time.After(2 * time.Second):
 		t.Fatal("el servicio no recibió la orden de detenerse")
+	}
+}
+
+// pcblist arma una tabla como la de net.inet.tcp.pcblist_n de macOS: cabecera, por cada conexión un xinpcb_n y un
+// xsocket_n (más largos que lo que se lee y sin alinear, como en el sistema) y la cabecera de cierre.
+func pcblist(conexiones ...struct {
+	local, remota netip.AddrPort
+	uid           uint32
+}) []byte {
+	le := binary.LittleEndian
+	cabecera := func() []byte { b := make([]byte, 24); le.PutUint32(b, 24); return b }
+	elemento := func(tipo uint32, largo int) []byte {
+		b := make([]byte, (largo+7)&^7)
+		le.PutUint32(b, uint32(largo))
+		le.PutUint32(b[4:], tipo)
+		return b
+	}
+	datos := cabecera()
+	for _, c := range conexiones {
+		pcb := elemento(xsoInpcb, 105)
+		binary.BigEndian.PutUint16(pcb[16:], c.remota.Port())
+		binary.BigEndian.PutUint16(pcb[18:], c.local.Port())
+		escribir := func(union []byte, d netip.Addr) {
+			if d.Is4() {
+				a := d.As4()
+				copy(union[12:], a[:])
+			} else {
+				a := d.As16()
+				copy(union, a[:])
+			}
+		}
+		pcb[48] = 0x1
+		if c.local.Addr().Is6() {
+			pcb[48] = 0x2
+		}
+		escribir(pcb[52:68], c.remota.Addr())
+		escribir(pcb[68:84], c.local.Addr())
+		so := elemento(xsoSocket, 101)
+		le.PutUint32(so[68:], c.uid)
+		datos = append(append(append(datos, pcb...), so...), elemento(0x002, 50)...) // y un elemento de otro tipo
+	}
+	return append(datos, cabecera()...)
+}
+
+func TestConexionesDePcblist(t *testing.T) {
+	cliente, servidor := netip.MustParseAddrPort("127.0.0.1:50082"), netip.MustParseAddrPort("127.0.0.1:17271")
+	cliente6, servidor6 := netip.MustParseAddrPort("[::1]:50083"), netip.MustParseAddrPort("[::1]:17271")
+	type c = struct {
+		local, remota netip.AddrPort
+		uid           uint32
+	}
+	// El lado del servidor (local = servidor) es del servicio: no debe confundirse con el del cliente.
+	tabla := pcblist(c{servidor, cliente, 0}, c{cliente, servidor, 501}, c{cliente6, servidor6, 502})
+	for _, caso := range []struct {
+		cliente, servidor netip.AddrPort
+		uid               int
+	}{{cliente, servidor, 501}, {cliente6, servidor6, 502}} {
+		if uid, ok := uidDePcblist(tabla, caso.cliente, caso.servidor); !ok || uid != caso.uid {
+			t.Errorf("%v: uid %d %v", caso.cliente, uid, ok)
+		}
+	}
+	if _, ok := uidDePcblist(tabla, netip.MustParseAddrPort("127.0.0.1:1"), servidor); ok {
+		t.Error("una conexión ajena no coincide")
+	}
+	if _, ok := uidDePcblist(tabla[:30], cliente, servidor); ok {
+		t.Error("una tabla cortada no debe leerse fuera de sus límites")
 	}
 }
 
