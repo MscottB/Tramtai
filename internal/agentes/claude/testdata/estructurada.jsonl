@@ -1,0 +1,1 @@
+{"type":"result","subtype":"success","is_error":false,"result":"tres","structured_output":{"total":3},"usage":{"input_tokens":10,"output_tokens":3},"modelUsage":{"claude-haiku-4-5-20251001":{"outputTokens":3}}}

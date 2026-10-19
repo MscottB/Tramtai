@@ -1,0 +1,4 @@
+{"type":"system","subtype":"init","model":"claude-haiku-4-5-20251001"}
+{"type":"stream_event","event":{"type":"content_block_delta","delta":{"type":"text_delta","text":"Hola"}}}
+{"type":"stream_event","event":{"type":"content_block_delta","delta":{"type":"text_delta","text":" mundo"}}}
+{"type":"result","subtype":"success","is_error":false,"result":"Hola mundo","total_cost_usd":0.0012,"usage":{"input_tokens":10,"output_tokens":3,"cache_creation_input_tokens":5,"cache_read_input_tokens":100},"modelUsage":{"claude-haiku-4-5-20251001":{"outputTokens":3,"contextWindow":200000}}}

@@ -1,0 +1,3 @@
+{"type":"turn.started"}
+{"type":"error","message":"unexpected status 401 Unauthorized"}
+{"type":"turn.failed","error":{"message":"unexpected status 401 Unauthorized"}}
