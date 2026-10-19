@@ -284,11 +284,14 @@ async function cambiarEsfuerzo(esfuerzo: string) {
   }
 }
 
-// configGlobal es la ruta habitual del archivo global en cada sistema (os.UserConfigDir del servicio).
-const configGlobal = { Windows: '%APPDATA%\\tramtai\\config.yaml', macOS: '~/Library/Application Support/tramtai/config.yaml', Linux: '~/.config/tramtai/config.yaml' }[sistema]
+// configGlobal es la ruta del archivo global: la real que da el servicio a una sesión local (también la de una portable,
+// en datos-tramtai) o, si no, la habitual de cada sistema.
+const configHabitual = { Windows: '%APPDATA%\\tramtai\\config.yaml', macOS: '~/Library/Application Support/tramtai/config.yaml', Linux: '~/.config/tramtai/config.yaml' }[sistema]
+const rutaConfigReal = ref('')
+const configGlobal = computed(() => rutaConfigReal.value || configHabitual)
 const origenes = computed(() => [
   { id: 'interno', nombre: t('origen.interno'), color: 'grey-6', detalle: t('origen.internoDetalle') },
-  { id: 'global', nombre: t('origen.global'), color: 'primary', detalle: configGlobal },
+  { id: 'global', nombre: t('origen.global'), color: 'primary', detalle: configGlobal.value },
   { id: 'proyecto', nombre: t('origen.proyecto'), color: 'teal-8', detalle: t('origen.proyectoDetalle') },
   { id: 'local', nombre: t('origen.local'), color: 'indigo-6', detalle: t('origen.localDetalle') },
   { id: 'entorno', nombre: t('origen.entorno'), color: 'deep-orange-7', detalle: t('origen.entornoDetalle') },
@@ -388,6 +391,7 @@ function borrar() {
 }
 
 onMounted(async () => {
+  api.acerca().then((a) => (rutaConfigReal.value = a.rutas?.configuracion ?? '')).catch(() => {})
   contar().catch(avisarError)
   leerRetencion().catch(avisarError)
   api.catalogo().then((m) => (catalogo.value = m)).catch(avisarError)

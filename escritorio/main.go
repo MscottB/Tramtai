@@ -73,7 +73,8 @@ func main() {
 	datosNavegador := "" // modo normal: el predeterminado de Wails
 	switch {
 	case errRaiz != nil:
-		datosNavegador, _ = os.MkdirTemp("", "tramtai-navegador-")
+		// Una carpeta fija: la app solo enseña el error, y así no deja un perfil nuevo en %TEMP% en cada arranque.
+		datosNavegador = filepath.Join(os.TempDir(), "tramtai-navegador-error")
 	case nucleo.Portable():
 		datosNavegador = filepath.Join(raizUsuario, "webview")
 	}
@@ -88,7 +89,7 @@ func main() {
 		Icon:        icono,
 		Windows:     application.WindowsOptions{WebviewUserDataPath: datosNavegador},
 		SingleInstance: &application.SingleInstanceOptions{
-			UniqueID: uniqueID(filepath.Dir(propio), nucleo.Portable()),
+			UniqueID: uniqueID(carpetaCopia(propio, raizUsuario), nucleo.Portable()),
 			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
 				if ventana != nil {
 					ventana.Show()
@@ -575,7 +576,12 @@ func buscarTramtai() (string, error) {
 }
 
 func paginaError(err error) string {
+	titulo, consejo := idioma.T("No se pudo conectar con el servicio de Tramtai"),
+		`<p>`+idioma.T("Prueba <code>tramtai servicio iniciar -d</code> en una terminal y vuelve a abrir la aplicación.")+`</p>`
+	if _, errRaiz := nucleo.RaizUsuario(); errRaiz != nil {
+		// La carpeta de la copia no sirve (temporal, dentro del .zip o de solo lectura): el mensaje ya dice qué hacer.
+		titulo, consejo = idioma.T("Tramtai no puede usar esta carpeta"), ""
+	}
 	return `<!doctype html><html lang="` + idioma.Activo + `"><body style="font-family:system-ui,sans-serif;padding:2rem;background:#1d1d1d;color:#eee">` +
-		`<h2>` + idioma.T("No se pudo conectar con el servicio de Tramtai") + `</h2><p>` + html.EscapeString(nucleo.MensajeDe(err)) + `</p>` +
-		`<p>` + idioma.T("Prueba <code>tramtai servicio iniciar -d</code> en una terminal y vuelve a abrir la aplicación.") + `</p></body></html>`
+		`<h2>` + titulo + `</h2><p>` + html.EscapeString(nucleo.MensajeDe(err)) + `</p>` + consejo + `</body></html>`
 }

@@ -71,3 +71,17 @@ func TestRaizEnCarpetaTemporal(t *testing.T) {
 		t.Fatal("no debía crear datos-tramtai en la carpeta temporal")
 	}
 }
+
+// Un .exe abierto desde dentro de un .zip (el Explorador lo extrae a %TEMP%\Temp1_….zip\, a veces sin portable.txt)
+// no se pone a escribir en ninguna parte.
+func TestRaizDesdeDentroDelZip(t *testing.T) {
+	temporal := t.TempDir()
+	conTemporal(t, temporal)
+	carpeta := filepath.Join(temporal, "Temp1_Tramtai-v0.48.0-portable-windows-x64.zip")
+	os.MkdirAll(carpeta, 0o700)
+	exe := filepath.Join(carpeta, "tramtai-escritorio.exe")
+	os.WriteFile(exe, nil, 0o700)
+	if _, _, err := raizDe(exe); err == nil {
+		t.Fatal("desde dentro de un .zip debe dar error, con o sin portable.txt")
+	}
+}

@@ -141,6 +141,7 @@ jobs:
       - name: Portable (nada en %APPDATA%)
         run: if (Test-Path "$env:APPDATA\tramtai") { throw 'la portable escribió en %APPDATA%\tramtai' }
       - name: Portable (detener)
+        if: always()
         run: '& "$env:RUNNER_TEMP\portable\tramtai.exe" servicio detener --si'
       - uses: actions/upload-artifact@v4
         with:

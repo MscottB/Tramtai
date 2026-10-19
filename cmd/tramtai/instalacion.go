@@ -23,10 +23,13 @@ func comandoInstalacion() *cobra.Command {
 		Args: cobra.ExactArgs(2), SilenceUsage: true, SilenceErrors: true,
 		RunE: func(_ *cobra.Command, args []string) error {
 			pids, err := instalacion.ProcesosEn(args[0], args[1])
-			if err == nil && len(pids) == 0 {
-				err = errors.New(idioma.T("no hay ninguno abierto"))
+			if err != nil {
+				return nil // sin poder mirar, se da por abierto: es lo seguro para el instalador
 			}
-			return err
+			if len(pids) == 0 {
+				return errors.New(idioma.T("no hay ninguno abierto"))
+			}
+			return nil
 		}})
 	cmd.AddCommand(&cobra.Command{Use: "cerrar <carpeta> <exe>", Short: idioma.T("Cierra los procesos exe de la carpeta"),
 		Args: cobra.ExactArgs(2),

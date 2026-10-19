@@ -198,10 +198,10 @@ La bandeja, Ajustes y `tramtai servicio autoarranque` usan las mismas funciones;
 
 ## 6. Ayuda de la CLI
 
-- **`tramtai --help`:** «Tramtai expone Claude Code, Codex, GitHub Copilot, Antigravity y la API de Gemini como una API
-  local.»
-- **`tramtai ejecutar --agente`:** «agente: claude, codex, copilot, gemini o antigravity (predeterminados.agente)».
-- Se revisan las demás listas de agentes de la CLI y de `en_cli.go` para que no falte ninguno.
+- **`tramtai --help`** y **`tramtai ejecutar --agente`** sacan la lista del catálogo de agentes: los programas («Claude
+  Code, Codex CLI, GitHub Copilot CLI, Gemini API y Antigravity CLI») y los identificadores («claude, codex, copilot,
+  gemini o antigravity»). Así no falta ninguno ni faltará con los agentes nuevos.
+- El texto de bienvenida del instalador también nombra a GitHub Copilot.
 
 ## 7. Acerca de, migración y documentación
 

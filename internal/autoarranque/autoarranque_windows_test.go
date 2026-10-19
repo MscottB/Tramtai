@@ -88,15 +88,17 @@ func TestActivoSoloDeEstaCopia(t *testing.T) {
 	}
 }
 
-// La portable usa su propio valor y se lleva el que dejó una 0.46 (con el nombre de la instalada) para esta copia.
+// La portable usa su propio valor y se lleva el que dejó una portable anterior a la 0.48 (con el nombre de la instalada) para esta copia.
 func TestPortableMigraElValorViejo(t *testing.T) {
 	dir := t.TempDir()
 	ruta := filepath.Join(dir, "tramtai-escritorio.exe")
-	os.WriteFile(ruta, nil, 0o700)
+	if err := os.WriteFile(ruta, nil, 0o700); err != nil {
+		t.Fatal(err)
+	}
 	conCopia(t, ruta, true)
 	escribir(nombreValor, orden(ruta))
 	if activo, _ := Activo(); !activo {
-		t.Fatal("el valor de la 0.46 de esta portable cuenta como activo")
+		t.Fatal("el valor de una portable anterior a la 0.48 cuenta como activo")
 	}
 	if err := Activar(ruta); err != nil {
 		t.Fatal(err)

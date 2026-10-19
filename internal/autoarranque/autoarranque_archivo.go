@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // Disponible indica si este sistema admite el arranque automático.
@@ -30,7 +29,7 @@ func Activo() (bool, error) {
 		return false, err
 	}
 	escritorio, err := propia()
-	return err == nil && (string(datos) == contenido(escritorio) || strings.Contains(string(datos), escritorio)), nil
+	return err == nil && string(datos) == contenido(escritorio), nil
 }
 
 // Activar registra la aplicación de escritorio para que arranque oculta al iniciar sesión (solo este usuario).

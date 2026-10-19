@@ -297,8 +297,8 @@ Lo que conviene saber:
 - **Pasar lo de la instalada.** Con las dos cerradas, copia el contenido de `%APPDATA%\tramtai` en `datos-tramtai`:
   configuración, APIs, tokens e historial. Si ese `config.yaml` tiene `servicio.puerto_automatico: false` y la
   instalada usa ese puerto, cambia el de una de las dos.
-- **Quien ya usaba la portable 0.46.** Desde la 0.47 la portable empieza con datos propios y tokens nuevos; para
-  conservar lo anterior, copia `%APPDATA%\tramtai` como en el punto anterior.
+- **Quien ya usaba la portable 0.47 o anterior.** Desde la 0.48 la portable empieza con datos propios y tokens nuevos;
+  para conservar lo anterior, copia `%APPDATA%\tramtai` como en el punto anterior.
 - **Actualizar.** Descomprime la versión nueva encima: `datos-tramtai` no viene en el `.zip` y no se pisa.
 - **Volver a %APPDATA%.** Borra `portable.txt` con Tramtai cerrado.
 

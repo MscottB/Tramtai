@@ -146,7 +146,7 @@ La configuración global y los datos (subcarpeta `datos`) están en:
 
 | Sistema | Carpeta |
 |---|---|
-| Windows | `%APPDATA%\tramtai` |
+| Windows | `%APPDATA%\tramtai` (la portable, en `datos-tramtai`, junto a sus archivos) |
 | macOS | `~/Library/Application Support/tramtai` |
 | Linux | `~/.config/tramtai` (o `$XDG_CONFIG_HOME/tramtai`) |
 

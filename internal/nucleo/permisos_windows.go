@@ -1,15 +1,20 @@
 package nucleo
 
 import (
-	"path/filepath"
-
 	"golang.org/x/sys/windows"
 )
 
 // protegerCarpeta deja la carpeta solo para el usuario actual y SYSTEM, sin heredar permisos de la carpeta de encima:
 // una portable en C:\Tramtai heredaría «Usuarios autenticados: Modificar», y dentro está el token que administra el
-// servicio. En un volumen sin ACL (FAT o exFAT de un pendrive) no hay nada que poner y no es un error.
+// servicio. Solo se aplica si la carpeta aún no está protegida (al crearla, o una datos-tramtai copiada a mano): aplicar
+// una DACL la propaga a todo lo de dentro, y eso no debe pasar en cada arranque. En un volumen sin ACL (FAT o exFAT de
+// un pendrive) no hay nada que poner y no es un error.
 func protegerCarpeta(ruta string) error {
+	if actual, err := windows.GetNamedSecurityInfo(ruta, windows.SE_FILE_OBJECT, windows.DACL_SECURITY_INFORMATION); err == nil {
+		if control, _, err := actual.Control(); err == nil && control&windows.SE_DACL_PROTECTED != 0 {
+			return nil
+		}
+	}
 	usuario, err := windows.GetCurrentProcessToken().GetTokenUser()
 	if err != nil {
 		return err
@@ -30,14 +35,19 @@ func protegerCarpeta(ruta string) error {
 	return err
 }
 
-// conACL dice si el volumen de ruta guarda permisos (NTFS sí; FAT y exFAT no).
+// conACL dice si el volumen de ruta guarda permisos (NTFS sí; FAT y exFAT no). GetVolumePathName da el volumen real
+// también si está montado en una carpeta (C:\mnt\usb).
 func conACL(ruta string) bool {
-	volumen, err := windows.UTF16PtrFromString(filepath.VolumeName(ruta) + `\`)
+	p, err := windows.UTF16PtrFromString(ruta)
 	if err != nil {
 		return true
 	}
+	volumen := make([]uint16, windows.MAX_PATH+1)
+	if err := windows.GetVolumePathName(p, &volumen[0], uint32(len(volumen))); err != nil {
+		return true
+	}
 	var marcas uint32
-	if err := windows.GetVolumeInformation(volumen, nil, 0, nil, nil, &marcas, nil, 0); err != nil {
+	if err := windows.GetVolumeInformation(&volumen[0], nil, 0, nil, nil, &marcas, nil, 0); err != nil {
 		return true
 	}
 	return marcas&windows.FILE_PERSISTENT_ACLS != 0

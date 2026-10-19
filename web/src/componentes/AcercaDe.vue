@@ -118,7 +118,7 @@ const sistemas: Record<string, string> = { windows: 'Windows', darwin: 'macOS', 
 const detalles = computed<[string, string, string?][]>(() => {
   const d = datos.value
   if (!d) return []
-  const lista: [string, string, string?][] = [[t('acerca.version'), d.version]]
+  const lista: [string, string, string?][] = [[t('acerca.version'), d.version + (d.portable ? ` (${t('acerca.portable')})` : '')]]
   if (d.commit) {
     lista.push([t('acerca.commit'), d.commit.slice(0, 12) + (d.modificado ? ` (${t('acerca.modificado')})` : ''), `${repositorio}/commit/${d.commit}`])
   }

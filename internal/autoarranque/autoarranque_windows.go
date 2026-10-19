@@ -18,7 +18,7 @@ const Disponible = true
 const claveRun = `Software\Microsoft\Windows\CurrentVersion\Run`
 
 // Valores de la clave Run: uno para la instalada y otro para la portable, así que activar una no toca la otra. Las
-// portables de la 0.46 usaban el de la instalada: en la portable también se reconoce, y al activarla se mueve al suyo.
+// portables anteriores a la 0.48 usaban el de la instalada: en la portable también se reconoce, y al activarla se mueve al suyo.
 // Las pruebas usan otros nombres para no tocar los reales.
 var (
 	nombreValor    = "Tramtai"
@@ -76,7 +76,7 @@ func Activo() (bool, error) {
 }
 
 // Activar registra la aplicación de escritorio para que arranque oculta al iniciar sesión (solo este usuario). En la
-// portable, el valor que dejó una 0.46 para esta copia pasa al suyo.
+// portable, el valor que dejó una portable anterior a la 0.48 para esta copia pasa al suyo.
 func Activar(escritorio string) error {
 	k, _, err := registry.CreateKey(registry.CURRENT_USER, claveRun, registry.SET_VALUE|registry.QUERY_VALUE)
 	if err != nil {

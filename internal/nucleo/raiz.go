@@ -1,8 +1,11 @@
 package nucleo
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"tramtai/internal/idioma"
@@ -28,19 +31,31 @@ func raizDe(ejecutable string) (raiz string, portable bool, err error) {
 		ejecutable = real
 	}
 	carpeta := filepath.Dir(ejecutable)
-	if info, err := os.Stat(filepath.Join(carpeta, ArchivoPortable)); err != nil || !info.Mode().IsRegular() {
+	temporal := carpetaTemporal()
+	if real, err := filepath.EvalSymlinks(temporal); err == nil {
+		temporal = real // en Windows, la temporal suele venir con nombres cortos (ADMINI~1)
+	}
+	enTemporal := dentroDe(temporal, carpeta)
+	// El Explorador, al abrir un .exe de dentro de un .zip sin descomprimirlo, lo extrae solo a %TEMP%\Temp1_….zip\, a
+	// veces sin portable.txt: esa copia no debe ponerse a escribir en ninguna parte.
+	if enTemporal && strings.HasSuffix(strings.ToLower(filepath.Base(carpeta)), ".zip") {
+		return "", false, NuevoError(CodigoConfiguracionInvalida, idioma.T(
+			"Tramtai se está ejecutando desde dentro del .zip: descomprímelo en una carpeta donde puedas escribir"))
+	}
+	info, err := os.Stat(filepath.Join(carpeta, ArchivoPortable))
+	switch {
+	case errors.Is(err, fs.ErrNotExist) || err == nil && !info.Mode().IsRegular():
 		dir, err := os.UserConfigDir()
 		if err != nil {
 			return "", false, err
 		}
 		return filepath.Join(dir, "tramtai"), false, nil
+	case err != nil: // portable.txt existe pero no se puede leer: no se cae en la carpeta del sistema
+		return "", true, NuevoError(CodigoConfiguracionInvalida, idioma.Tf(
+			"no se pudo leer %s (%s): descomprime Tramtai en una carpeta donde puedas escribir", ArchivoPortable, err.Error()))
 	}
 	raiz = filepath.Join(carpeta, CarpetaPortable)
-	temporal := carpetaTemporal()
-	if real, err := filepath.EvalSymlinks(temporal); err == nil {
-		temporal = real // en Windows, la temporal suele venir con nombres cortos (ADMINI~1)
-	}
-	if dentroDe(temporal, carpeta) {
+	if enTemporal {
 		return raiz, true, NuevoError(CodigoConfiguracionInvalida, idioma.Tf(
 			"Tramtai está en una carpeta temporal (%s), que se borrará con sus datos: descomprime Tramtai en una carpeta donde puedas escribir", carpeta))
 	}

@@ -6,7 +6,18 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"tramtai/internal/nucleo"
 )
+
+// carpetaCopia es la carpeta de esta copia: en la portable, la de su raíz (ya resuelta, sin nombres cortos ni enlaces),
+// para que la misma portable lanzada por otro camino no abra una segunda instancia sobre los mismos datos.
+func carpetaCopia(ejecutable, raiz string) string {
+	if raiz != "" && filepath.Base(raiz) == nucleo.CarpetaPortable {
+		return filepath.Dir(raiz)
+	}
+	return filepath.Dir(ejecutable)
+}
 
 // uniqueID identifica la app para la instancia única: la instalada usa siempre el mismo, y cada portable el suyo según
 // su carpeta, así que abrir una no trae al frente a la otra. La carpeta se compara como el sistema (sin distinguir
