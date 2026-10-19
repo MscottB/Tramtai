@@ -201,6 +201,13 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 			return nucleo.Trabajo{}, false, err
 		}
 	}
+	// Un archivo que necesita el conversor sin conversor listo se rechaza ya (también al reintentar): no se acepta un
+	// trabajo que fallaría al convertir.
+	if v, ok := p.opc.Preparador.(interface{ ConversorListo([]string) error }); ok && len(solicitud.Cargas) > 0 {
+		if err := v.ConversorListo(solicitud.Cargas); err != nil {
+			return nucleo.Trabajo{}, false, err
+		}
+	}
 	modelo, err := p.resolverModelo(solicitud)
 	if err != nil {
 		return nucleo.Trabajo{}, false, err

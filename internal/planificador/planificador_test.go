@@ -1368,3 +1368,36 @@ func TestCambiarConLaBaseCerrada(t *testing.T) {
 		t.Fatalf("registro: %q", registro.String())
 	}
 }
+
+// preparadorSinConversor es preparadorFalso con ConversorListo: falla mientras sinConversor sea cierto.
+type preparadorSinConversor struct {
+	preparadorFalso
+	sinConversor *bool
+}
+
+func (p preparadorSinConversor) ConversorListo([]string) error {
+	if *p.sinConversor {
+		return nucleo.NuevoError(nucleo.CodigoConversorNoDisponible, "sin conversor")
+	}
+	return nil
+}
+
+func TestConversorAlAceptarYAlReintentar(t *testing.T) {
+	alm := abrir(t)
+	opc := opciones()
+	sinConversor := true
+	opc.Preparador = preparadorSinConversor{sinConversor: &sinConversor}
+	p := iniciar(t, alm, eco{}, 1, opc)
+	s := solicitud("resume")
+	s.Cargas = []string{cargaPrueba}
+	if _, _, err := p.Enviar(ctx, s, ""); nucleo.CodigoDe(err) != nucleo.CodigoConversorNoDisponible {
+		t.Fatalf("sin conversor no se acepta: %v", err)
+	}
+	sinConversor = false
+	id := enviar(t, p, s)
+	esperar(t, alm, id, nucleo.Completado)
+	sinConversor = true
+	if _, err := p.Reintentar(ctx, id); nucleo.CodigoDe(err) != nucleo.CodigoConversorNoDisponible {
+		t.Fatalf("el reintento también lo comprueba: %v", err)
+	}
+}

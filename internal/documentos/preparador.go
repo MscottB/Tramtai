@@ -1,7 +1,10 @@
 package documentos
 
 import (
+	"archive/zip"
 	"context"
+	"path/filepath"
+	"strings"
 
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -11,6 +14,52 @@ import (
 type Preparador struct {
 	Cargas    *Cargas
 	Conversor *Conversor
+	// Preparacion es la del servicio (nil en la CLI directa): dice si el conversor se está preparando.
+	Preparacion *Preparacion
+}
+
+// ConversorListo rechaza, al aceptar un trabajo, las cargas que necesitan el conversor cuando no hay ninguno: así no
+// se acepta un trabajo que fallaría al convertir. Mientras se prepara, el error es ConversorPreparando (Retry-After).
+func (p Preparador) ConversorListo(cargas []string) error {
+	necesita := false
+	for _, id := range cargas {
+		if carga, ruta, err := p.Cargas.Obtener(id); err == nil && NecesitaConversor(carga.Nombre, ruta) {
+			necesita = true
+			break
+		}
+	}
+	if !necesita {
+		return nil
+	}
+	if p.Preparacion != nil && p.Preparacion.Estado().Estado == "preparando" {
+		return &nucleo.ConversorPreparando{Err: nucleo.NuevoError(nucleo.CodigoConversorNoDisponible,
+			idioma.T("el conversor de archivos se está preparando: vuelve a intentarlo en un momento"))}
+	}
+	if _, ok := Localizar(p.Conversor.Comando, p.Conversor.Raiz); !ok {
+		return ErrSinConversor()
+	}
+	return nil
+}
+
+// NecesitaConversor indica si un archivo pasa por markitdown: HTML, PDF y Office, o un ZIP que los traiga (se mira su
+// índice, sin extraer; un ZIP dentro de otro cuenta, porque no se ve su interior sin extraerlo).
+func NecesitaConversor(nombre, ruta string) bool {
+	extension := strings.ToLower(filepath.Ext(nombre))
+	if extension != ".zip" {
+		return extensionesConvertibles[extension]
+	}
+	lector, err := zip.OpenReader(ruta)
+	if err != nil {
+		return false // un ZIP que no se abre lo rechaza la conversión con su propio error
+	}
+	defer lector.Close()
+	for _, f := range lector.File {
+		interna := strings.ToLower(filepath.Ext(f.Name))
+		if extensionesConvertibles[interna] || interna == ".zip" {
+			return true
+		}
+	}
+	return false
 }
 
 // Verificar comprueba que las cargas de una solicitud nueva existan, no hayan vencido y sean de la misma API (punto,

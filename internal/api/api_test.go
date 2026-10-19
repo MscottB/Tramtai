@@ -65,7 +65,9 @@ func nuevoServidor(t *testing.T, registro map[string]adaptadores.Adaptador, ajus
 		t.Fatal(err)
 	}
 	opc := planificador.OpcionesDesde(c, "global")
-	opc.Preparador = documentos.Preparador{Cargas: cargas, Conversor: documentos.Desde(c)}
+	conversor := documentos.Desde(c)
+	conversor.Raiz = dir // el conversor que haya preparado el usuario de este equipo no cuenta en las pruebas
+	opc.Preparador = documentos.Preparador{Cargas: cargas, Conversor: conversor}
 	limites := map[string]int{}
 	for nombre := range registro {
 		limites[nombre] = 2
@@ -774,4 +776,27 @@ func TestCatalogoConContexto(t *testing.T) {
 		}
 	}
 	t.Fatalf("sin la entrada simulado: %s", cuerpo)
+}
+
+func TestCrearTrabajoSinConversor(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+	ts := servidor(t, simulado(adaptadores.Simulado{}), nil)
+	_, respuesta := pedir(t, ts, "POST", "/api/v1/cargas?nombre=informe.pdf", "%PDF-1.4")
+	solicitud := `{"cargas":["` + decodificar(t, respuesta)["identificador_carga"].(string) + `"],"mensajes":[{"rol":"usuario","contenido":"resume"}]}`
+	r, cuerpo := pedir(t, ts, "POST", "/api/v1/trabajos", solicitud)
+	if r.StatusCode != 503 || !strings.Contains(cuerpo, "conversor_no_disponible") {
+		t.Fatalf("sin conversor, 503 al aceptar: %d %s", r.StatusCode, cuerpo)
+	}
+	if _, lista := pedir(t, ts, "GET", "/api/v1/trabajos", ""); strings.Contains(lista, "trabajo_") {
+		t.Fatalf("no queda trabajo creado: %s", lista)
+	}
+}
+
+func TestRetryAfterConversorPreparando(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api/v1/trabajos", nil)
+	EscribirError(w, r, &nucleo.ConversorPreparando{Err: nucleo.NuevoError(nucleo.CodigoConversorNoDisponible, "preparando")})
+	if w.Code != 503 || w.Header().Get("Retry-After") != "60" {
+		t.Fatalf("preparando: %d Retry-After=%q", w.Code, w.Header().Get("Retry-After"))
+	}
 }

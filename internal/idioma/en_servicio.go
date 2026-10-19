@@ -124,6 +124,7 @@ func init() {
 		"el conversor preparado no convierte: %s":                                                          "the prepared converter does not convert: %s",
 		"la preparación del conversor superó su plazo (¿red o proxy que no responde?)":                     "preparing the converter took too long (is a network or proxy not responding?)",
 		"uv terminó con código %d: %s":                                                                     "uv exited with code %d: %s",
+		"el conversor de archivos se está preparando: vuelve a intentarlo en un momento":                   "the file converter is being prepared: try again in a moment",
 		"no hay conversor de archivos: prepáralo en Ajustes → Archivos o con «tramtai conversor preparar»": "no file converter: prepare it in Settings → Files or with \"tramtai conversor preparar\"",
 		"supera conversion.profundidad_maxima_zip":                                                         "exceeds conversion.profundidad_maxima_zip",
 		"no es un ZIP válido":                                                                              "is not a valid ZIP",

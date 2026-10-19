@@ -236,6 +236,9 @@ func EscribirError(w http.ResponseWriter, r *http.Request, err error) {
 	if codigo == nucleo.CodigoColaLlena {
 		w.Header().Set("Retry-After", "5")
 	}
+	if preparando := (*nucleo.ConversorPreparando)(nil); errors.As(err, &preparando) {
+		w.Header().Set("Retry-After", "60")
+	}
 	if agotado := (*nucleo.PresupuestoAgotado)(nil); errors.As(err, &agotado) {
 		w.Header().Set("Retry-After", strconv.Itoa(max(1, int(math.Ceil(time.Until(agotado.Reinicio).Seconds())))))
 	}
