@@ -205,6 +205,50 @@ func (c *Cliente) ActivarPunto(ctx context.Context, instancia, nombre string, ac
 	return c.pedir(ctx, "PATCH", "/api/v1/puntos/"+url.PathEscape(nombre), instancia, cuerpoJSON(map[string]bool{"activo": activo}), "application/json", nil)
 }
 
+// Puntos devuelve los puntos de acceso de una instancia.
+func (c *Cliente) Puntos(ctx context.Context, instancia string) ([]contrato.EstadoPunto, error) {
+	var r struct {
+		Puntos []contrato.EstadoPunto `json:"puntos_acceso"`
+	}
+	err := c.pedir(ctx, "GET", "/api/v1/puntos", instancia, nil, "", &r)
+	return r.Puntos, err
+}
+
+// ConfigDePunto devuelve un punto de acceso tal como está guardado en su configuración.
+func (c *Cliente) ConfigDePunto(ctx context.Context, instancia, nombre string) (contrato.ConfigPunto, error) {
+	var p contrato.ConfigPunto
+	return p, c.pedir(ctx, "GET", "/api/v1/puntos/"+url.PathEscape(nombre)+"/config", instancia, nil, "", &p)
+}
+
+// CrearPunto crea un punto de acceso y devuelve su estado y su clave, que solo se ve esta vez.
+func (c *Cliente) CrearPunto(ctx context.Context, instancia string, p contrato.ConfigPunto) (contrato.EstadoPunto, string, error) {
+	var r struct {
+		Punto contrato.EstadoPunto `json:"punto_acceso"`
+		Token string               `json:"token"`
+	}
+	err := c.pedir(ctx, "POST", "/api/v1/puntos", instancia, cuerpoJSON(p), "application/json", &r)
+	return r.Punto, r.Token, err
+}
+
+// ReemplazarPunto guarda el punto de acceso entero (con su nombre de siempre) y lo aplica sin reiniciar.
+func (c *Cliente) ReemplazarPunto(ctx context.Context, instancia string, p contrato.ConfigPunto) error {
+	return c.pedir(ctx, "PUT", "/api/v1/puntos/"+url.PathEscape(p.Nombre), instancia, cuerpoJSON(p), "application/json", nil)
+}
+
+// EliminarPunto elimina un punto de acceso con su clave y su consumo.
+func (c *Cliente) EliminarPunto(ctx context.Context, instancia, nombre string) error {
+	return c.pedir(ctx, "DELETE", "/api/v1/puntos/"+url.PathEscape(nombre), instancia, nil, "", nil)
+}
+
+// RotarTokenPunto regenera la clave de un punto de acceso; solo se ve esta vez.
+func (c *Cliente) RotarTokenPunto(ctx context.Context, instancia, nombre string) (string, error) {
+	var r struct {
+		Token string `json:"token"`
+	}
+	err := c.pedir(ctx, "POST", "/api/v1/puntos/"+url.PathEscape(nombre)+"/token", instancia, nil, "", &r)
+	return r.Token, err
+}
+
 // Detener pide al servicio que se detenga con todas sus instancias.
 func (c *Cliente) Detener(ctx context.Context) error {
 	return c.pedir(ctx, "POST", "/api/v1/servicio/detener", "", nil, "", nil)

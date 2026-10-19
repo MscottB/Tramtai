@@ -726,8 +726,8 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 	api.EscribirJSON(w, http.StatusCreated, map[string]any{"token": token})
 }
 
-// puntoUI cambia los ajustes (PATCH), elimina (DELETE, con su clave) o regenera la clave (POST <nombre>/token) de
-// un punto de la instancia de la sesión.
+// puntoUI cambia los ajustes (PATCH), reemplaza el punto entero (PUT), devuelve lo guardado (GET <nombre>/config),
+// elimina (DELETE, con su clave) o regenera la clave (POST <nombre>/token) de un punto de la instancia de la sesión.
 func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instancia, resto string) {
 	nombre, accion, _ := strings.Cut(resto, "/")
 	var punto *EstadoPunto
@@ -856,6 +856,68 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 			return lista, nil
 		}) {
 			api.EscribirJSON(w, http.StatusOK, map[string]any{"puntos_acceso": s.puntosDe(inst.ID)})
+		}
+	case accion == "config" && r.Method == http.MethodGet:
+		// El punto tal como está guardado, para que la CLI lo edite entero con PUT.
+		capa, err := nucleo.CargarCapa(punto.Origen, origenDeArchivo(punto.Origen))
+		if err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		lista, _ := capa.Valores["puntos_acceso"].([]any)
+		puntos, err := LeerPuntos(lista)
+		if err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		for _, p := range puntos {
+			if p.Nombre == nombre {
+				api.EscribirJSON(w, http.StatusOK, p)
+				return
+			}
+		}
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("punto de acceso no encontrado en esta instancia: %s", nombre)))
+	case accion == "" && r.Method == http.MethodPut:
+		// Reemplaza el punto entero (lo que cambia tramtai acceso editar); el PATCH solo cubre lo que edita la Web UI.
+		// shortcut: sin control de versión, dos ediciones del mismo punto a la vez se pisan (gana la última); pasar a
+		// If-Match si la terminal y la Web UI llegan a editar el mismo punto a menudo.
+		var p ConfigPunto
+		if err := api.LeerJSON(w, r, &p); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		if p.Nombre != nombre {
+			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el nombre del cuerpo (%s) no coincide con el de la ruta (%s)", p.Nombre, nombre)))
+			return
+		}
+		if editar(func(lista []ConfigPunto) ([]ConfigPunto, error) {
+			for i := range lista {
+				if lista[i].Nombre != nombre {
+					continue
+				}
+				if p.Instancia == "" {
+					p.Instancia = lista[i].Instancia
+				}
+				normalizado, err := NormalizarPunto(p, inst.ID, s.opc.Puerto)
+				if err != nil {
+					return nil, err
+				}
+				p.Presupuesto = normalizado.Presupuesto // uno vacío se guarda como ninguno
+				if err := validarPunto(p, s.existe); err != nil {
+					return nil, err
+				}
+				lista[i] = p
+				return lista, nil
+			}
+			return nil, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("punto de acceso no encontrado en esta instancia: %s", nombre))
+		}) {
+			for _, e := range s.puntosDe(inst.ID) {
+				if e.Nombre == nombre {
+					api.EscribirJSON(w, http.StatusOK, e)
+					return
+				}
+			}
+			w.WriteHeader(http.StatusNoContent) // ahora es de otra instancia
 		}
 	case accion == "" && r.Method == http.MethodDelete:
 		// Como la CLI y la terminal: archivo y clave antes de recargar (404 si ya no estaba).

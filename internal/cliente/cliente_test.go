@@ -13,9 +13,9 @@ import (
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/contrato"
-	"tramtai/internal/servicio"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/planificador"
+	"tramtai/internal/servicio"
 )
 
 func TestClienteContraServicio(t *testing.T) {
@@ -97,7 +97,37 @@ func TestClienteContraServicio(t *testing.T) {
 	if cfg, err := cli.Configuracion(ctx, id); err != nil || len(cfg) == 0 {
 		t.Fatalf("configuración: %v", err)
 	}
+	if _, err := cli.Activar(ctx, "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	estado, token, err := cli.CrearPunto(ctx, "global", contrato.ConfigPunto{Nombre: "facturas", Agente: "simulado"})
+	if err != nil || token == "" || estado.Nombre != "facturas" {
+		t.Fatalf("crear punto: %+v %q %v", estado, token, err)
+	}
+	p, err := cli.ConfigDePunto(ctx, "global", "facturas")
+	if err != nil || p.Agente != "simulado" {
+		t.Fatalf("config del punto: %+v %v", p, err)
+	}
+	p.Grupo = "ventas"
+	if err := cli.ReemplazarPunto(ctx, "global", p); err != nil {
+		t.Fatal(err)
+	}
+	if puntos, err := cli.Puntos(ctx, "global"); err != nil || len(puntos) != 1 || puntos[0].Grupo != "ventas" {
+		t.Fatalf("puntos: %+v %v", puntos, err)
+	}
+	if nueva, err := cli.RotarTokenPunto(ctx, "global", "facturas"); err != nil || nueva == "" || nueva == token {
+		t.Fatalf("rotar la clave: %q %v", nueva, err)
+	}
+	if err := cli.EliminarPunto(ctx, "global", "facturas"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cli.EliminarPunto(ctx, "global", "facturas"); nucleo.CodigoDe(err) != nucleo.CodigoNoEncontrado {
+		t.Fatalf("eliminar otra vez da no encontrado: %v", err)
+	}
 	if err := cli.Desactivar(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	if err := cli.Desactivar(ctx, "global"); err != nil {
 		t.Fatal(err)
 	}
 	if e, _ := cli.Estado(ctx); len(e.Instancias) != 0 {
