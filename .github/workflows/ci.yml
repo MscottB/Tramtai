@@ -29,8 +29,6 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    # macOS aún no se ha probado en un equipo real: su resultado informa pero no bloquea.
-    continue-on-error: ${{ matrix.os == 'macos-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -42,12 +40,26 @@ jobs:
       - name: Dependencias de Go sin vulnerabilidades conocidas
         if: runner.os == 'Linux'
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
-      - name: App de escritorio
+      # Una orden por paso: en Windows (pwsh) un paso de varias órdenes solo falla si falla la última.
+      - name: App de escritorio (vet)
         if: runner.os == 'Windows'
         working-directory: escritorio
-        run: |
-          go vet ./...
-          go test ./...
+        run: go vet ./...
+      - name: App de escritorio (pruebas)
+        if: runner.os == 'Windows'
+        working-directory: escritorio
+        run: go test ./...
+      # Publicar se lanza desde una etiqueta, y una etiqueta solo ve la caché de main: aquí se deja wails3 en ella para
+      # no compilarlo en cada release.
+      - name: wails3 en caché para Publicar
+        if: runner.os == 'Windows' && github.ref == 'refs/heads/main'
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin/wails3.exe
+          key: wails3-v3.0.0-beta.28-${{ runner.os }}
+      - name: wails3
+        if: runner.os == 'Windows' && github.ref == 'refs/heads/main'
+        run: if (-not (Test-Path "$env:USERPROFILE\go\bin\wails3.exe")) { go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.28 }
 
   escritorio-linux:
     name: App de escritorio (Linux)

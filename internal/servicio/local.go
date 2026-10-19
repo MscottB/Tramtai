@@ -1,13 +1,30 @@
 package servicio
 
 import (
+	"context"
+	"encoding/binary"
 	"encoding/hex"
 	"net"
 	"net/http"
 	"net/netip"
 	"strconv"
 	"strings"
+	"sync"
 )
+
+// duenoConexion recuerda, por conexión, si su dueño es el usuario del servicio: no cambia mientras siga abierta, así
+// que la tabla TCP del sistema se lee una vez por conexión y no en cada petición.
+type duenoConexion struct {
+	una   sync.Once
+	mismo bool
+}
+
+type claveDueno struct{}
+
+// ContextoDeConexion es el ConnContext de los servidores HTTP del servicio: prepara lo que se recuerda por conexión.
+func ContextoDeConexion(ctx context.Context, _ net.Conn) context.Context {
+	return context.WithValue(ctx, claveDueno{}, &duenoConexion{})
+}
 
 // esLocal indica que la petición llega por loopback desde un programa del mismo usuario del sistema que el
 // servicio (el navegador o la aplicación de escritorio). Entonces la Web UI entra sin token: el token protege
@@ -18,7 +35,7 @@ func (s *Servicio) esLocal(r *http.Request) bool {
 }
 
 // mismoUsuarioLocal indica que la petición llega por loopback, sin proxy, desde un programa del mismo usuario del
-// sistema que el servicio. Sin poder comprobarlo (macOS), responde que no.
+// sistema que el servicio. Sin poder comprobarlo (un sistema sin implementación), responde que no.
 func mismoUsuarioLocal(r *http.Request) bool {
 	if !desdeEsteEquipo(r) {
 		return false
@@ -35,7 +52,14 @@ func mismoUsuarioLocal(r *http.Request) bool {
 	if err != nil {
 		return false
 	}
-	return mismoUsuario(netip.AddrPortFrom(cliente.Addr().Unmap(), cliente.Port()), netip.AddrPortFrom(servidor.Addr().Unmap(), servidor.Port()))
+	comprobar := func() bool {
+		return mismoUsuario(netip.AddrPortFrom(cliente.Addr().Unmap(), cliente.Port()), netip.AddrPortFrom(servidor.Addr().Unmap(), servidor.Port()))
+	}
+	if d, ok := r.Context().Value(claveDueno{}).(*duenoConexion); ok {
+		d.una.Do(func() { d.mismo = comprobar() })
+		return d.mismo
+	}
+	return comprobar()
 }
 
 // desdeEsteEquipo indica que la petición llega por loopback y no la reenvía un proxy o túnel (que traería peticiones
@@ -85,3 +109,65 @@ func direccionProc(texto string) (netip.AddrPort, bool) {
 	direccion, _ := netip.AddrFromSlice(crudo)
 	return netip.AddrPortFrom(direccion.Unmap(), uint16(p)), true
 }
+
+// Tipos y posiciones de los elementos de net.inet.tcp.pcblist_n en macOS (xnu, bsd/netinet/in_pcb.h y
+// sys/socketvar.h). Esas estructuras se declaran con #pragma pack(4): los enteros de 64 bits van alineados a 4 bytes,
+// no a 8 (comprobado con una conexión real en el CI de macOS, TestMismoUsuarioDarwin).
+const (
+	xsoSocket    = 0x001
+	xsoInpcb     = 0x010
+	largoXinpgen = 24 // la cabecera, que también cierra la lista
+	// xinpcb_n: inp_fport y inp_lport (orden de red), inp_vflag, y las direcciones remota y local (16 bytes cada una).
+	pcbPuertos   = 16
+	pcbVflag     = 44
+	pcbRemota    = 48
+	pcbLocal     = 64
+	largoXinpcbN = 80
+	// xsocket_n: so_uid.
+	socketUID     = 64
+	largoXsocketN = 68
+)
+
+// uidDePcblist busca la conexión en la salida de net.inet.tcp.pcblist_n de macOS, la que lee netstat: una cabecera
+// xinpgen y, por cada conexión, elementos {largo, tipo, …} alineados a 8 bytes; primero xinpcb_n con los puertos
+// (orden de red) y las direcciones, y después xsocket_n con el uid de su dueño (so_uid). Todo en el orden del
+// procesador, little endian en Intel y Apple Silicon.
+func uidDePcblist(datos []byte, cliente, servidor netip.AddrPort) (int, bool) {
+	le := binary.LittleEndian
+	if len(datos) < largoXinpgen {
+		return 0, false
+	}
+	coincide := false
+	for pos := alinear8(int(le.Uint32(datos))); pos+8 <= len(datos); {
+		largo := int(le.Uint32(datos[pos:]))
+		if largo <= largoXinpgen || pos+largo > len(datos) {
+			break
+		}
+		elemento := datos[pos : pos+largo]
+		switch le.Uint32(elemento[4:]) {
+		case xsoInpcb:
+			coincide = largo >= largoXinpcbN && conexionPcb(elemento) == [2]netip.AddrPort{cliente, servidor}
+		case xsoSocket:
+			if coincide && largo >= largoXsocketN {
+				return int(le.Uint32(elemento[socketUID:])), true
+			}
+			coincide = false
+		}
+		pos += alinear8(largo)
+	}
+	return 0, false
+}
+
+// conexionPcb lee de un xinpcb_n la dirección local y la remota.
+func conexionPcb(e []byte) [2]netip.AddrPort {
+	remoto, local := binary.BigEndian.Uint16(e[pcbPuertos:]), binary.BigEndian.Uint16(e[pcbPuertos+2:])
+	direccion := func(union []byte) netip.Addr {
+		if e[pcbVflag]&0x2 != 0 { // INP_IPV6
+			return netip.AddrFrom16([16]byte(union)).Unmap()
+		}
+		return netip.AddrFrom4([4]byte(union[12:16])) // in_addr_4in6: tres palabras de relleno y la IPv4
+	}
+	return [2]netip.AddrPort{netip.AddrPortFrom(direccion(e[pcbLocal:pcbLocal+16]), local), netip.AddrPortFrom(direccion(e[pcbRemota:pcbRemota+16]), remoto)}
+}
+
+func alinear8(n int) int { return (n + 7) &^ 7 }

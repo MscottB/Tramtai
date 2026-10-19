@@ -38,7 +38,7 @@ La Web UI está en español y en inglés (el botón de idioma de la cabecera) y 
 - **Mis APIs:** URL, clave y ejemplos; puntos de acceso con grupos que se activan o desactivan juntos.
 - **Agentes**, **Ajustes** (arranque con el sistema, **borrar datos** y valores efectivos) y **Ayuda** (cómo empezar y preguntas frecuentes).
 
-También se puede abrir `http://127.0.0.1:17373` directamente: en Windows y Linux entra solo si el navegador es de tu mismo usuario del sistema. Si no (en macOS siempre), la página **Entrar** explica cómo abrirla: desde la app o con `tramtai abrir`, que generan un código de un solo uso. La clave de las aplicaciones no abre la Web UI.
+También se puede abrir `http://127.0.0.1:17373` directamente: en Windows, Linux y macOS entra solo si el navegador es de tu mismo usuario del sistema. Si no, la página **Entrar** explica cómo abrirla: desde la app o con `tramtai abrir`, que generan un código de un solo uso. La clave de las aplicaciones no abre la Web UI.
 
 La aplicación de escritorio inicia el servicio si no está en marcha y muestra la misma Web UI en su ventana. Al cerrar la ventana queda en la bandeja del sistema vigilando el servicio. Clic en el icono abre la ventana; **clic derecho** abre el menú, sin abrir la app:
 

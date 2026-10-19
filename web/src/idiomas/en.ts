@@ -444,7 +444,7 @@ const en: Textos = {
   'ayuda.preguntas': 'Frequently asked questions',
   'ayuda.p1': 'Do I need a key to sign in?',
   'ayuda.r1':
-    'No. The Tramtai app signs in by itself. In a browser, on Windows and Linux you get in directly if it runs as your same user; on macOS, or when that can’t be checked, run “tramtai abrir” on the Tramtai computer. The keys in My APIs are only for your apps: they don’t open this page.',
+    'No. The Tramtai app signs in by itself. In a browser you get in directly if it runs as your same user (Windows, Linux and macOS); when that can’t be checked, run “tramtai abrir” on the Tramtai computer. The keys in My APIs are only for your apps: they don’t open this page.',
   'ayuda.p2': 'Are requests saved as chats in Claude Code, Codex or GitHub Copilot?',
   'ayuda.r2':
     'No. Tramtai runs Claude Code without saving the session, Codex in ephemeral mode, and GitHub Copilot and Antigravity with a private folder that is deleted afterwards. Your chat histories don’t fill up with your apps’ requests: the record stays only in Tramtai’s History.',

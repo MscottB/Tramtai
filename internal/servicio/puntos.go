@@ -513,7 +513,8 @@ func (s *Servicio) abrirPunto(c candidato, huella, firma string) *puntoActivo {
 		return p
 	}
 	p.handler, p.url, p.oyente = handler, "http://"+direccion, oyente
-	p.srv = &http.Server{Handler: handler, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 64 << 10}
+	p.srv = &http.Server{Handler: handler, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 64 << 10,
+		ConnContext: ContextoDeConexion}
 	go p.srv.Serve(oyente)
 	return p
 }

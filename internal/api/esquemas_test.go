@@ -71,11 +71,8 @@ func TestErroresSalidaYCorregir(t *testing.T) {
 		t.Fatalf("corregir: %d %s", r.StatusCode, cuerpo)
 	}
 	nuevo := decodificar(t, cuerpo)["id"].(string)
-	for range 500 {
-		if _, cuerpo = pedir(t, ts, "GET", "/api/v1/trabajos/"+nuevo, ""); strings.Contains(cuerpo, `"estado":"completado"`) {
-			break
-		}
-	}
+	esperarEstado(t, ts, nuevo, nucleo.Completado)
+	_, cuerpo = pedir(t, ts, "GET", "/api/v1/trabajos/"+nuevo, "")
 	if !strings.Contains(cuerpo, `"salida":"{\"total\":10}"`) || !strings.Contains(cuerpo, `"rol":"asistente"`) {
 		t.Fatalf("la corrección completa con la conversación: %s", cuerpo)
 	}
