@@ -244,12 +244,13 @@ jobs:
           gh release create "$GITHUB_REF_NAME" dist/* --title "Tramtai $GITHUB_REF_NAME" --notes-from-tag --verify-tag
 
   # Homebrew (el repositorio hace de tap) y winget: se generan con las sumas del release, se prueban con Homebrew de
-  # verdad y se suben a main. Esos commits no cambian la versión de la app (version.ps1 los ignora).
+  # verdad y se suben a main. Esos commits no cambian la versión de la app (version.ps1 los ignora). main está protegida
+  # (solo por PR): este commit sube con la deploy key PAQUETES_DEPLOY_KEY, la única excepción de la regla.
   paquetes:
     needs: publicar
     runs-on: macos-latest
     permissions:
-      contents: write
+      contents: read
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
       HOMEBREW_NO_ENV_HINTS: 1
@@ -282,12 +283,18 @@ jobs:
           brew install mscottb/tramtai/tramtai
           brew test mscottb/tramtai/tramtai
       - name: Subir a main
-        # Un push a main mientras se publica (por ejemplo, la siguiente fusión) rechazaría este; se reaplica encima.
+        # Un push a main mientras se publica (por ejemplo, la siguiente fusión) rechazaría este; se reaplica encima. La
+        # llave se escribe aquí, después de brew install, y la huella de github.com es la que publica GitHub (api/meta).
         env:
-          GH_TOKEN: ${{ github.token }}
+          LLAVE: ${{ secrets.PAQUETES_DEPLOY_KEY }}
         run: |
           git pull --rebase origin main
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
+          llave="$RUNNER_TEMP/paquetes"
+          printf '%s\n' "$LLAVE" > "$llave" && chmod 600 "$llave"
+          echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > "$RUNNER_TEMP/known_hosts"
+          GIT_SSH_COMMAND="ssh -i $llave -o IdentitiesOnly=yes -o UserKnownHostsFile=$RUNNER_TEMP/known_hosts -o StrictHostKeyChecking=yes" \
+            git push "git@github.com:${GITHUB_REPOSITORY}.git" HEAD:main
+          rm -f "$llave"
 
   # winget: si existe el secreto WINGET_TOKEN (un token de GitHub que puede abrir PR desde el fork de winget-pkgs), envía
   # la versión a microsoft/winget-pkgs con wingetcreate. Sin el secreto no hace nada. wingetcreate va fijado por versión
