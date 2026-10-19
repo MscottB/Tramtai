@@ -32,9 +32,10 @@ Fuera de alcance (a la hoja de ruta):
 
 - El binario de **`uv`** de su sistema y arquitectura, de la versión fijada en Publicar (la misma para todos), descargado
   de su release oficial con el **SHA-256 fijado**, como NSIS. Va junto a `tramtai.exe` en Windows (instalador y
-  portable) y junto a `tramtai` en los `.tar.gz`, el `.dmg` y Homebrew; en el `.deb`/`.rpm`, en `/usr/lib/tramtai/uv`
-  para no chocar con un `uv` del sistema en `/usr/bin`. Tramtai lo busca en ese orden: junto al ejecutable,
-  `/usr/lib/tramtai/` y el PATH. Suma unos 15–18 MB comprimido.
+  portable) y junto a `tramtai` en los `.tar.gz` y el `.dmg`; donde el binario va en una carpeta compartida (`.deb`/`.rpm`
+  en `/usr/bin`, Homebrew en `bin`), en `../lib/tramtai/uv` desde esa carpeta (`/usr/lib/tramtai/uv`), para no chocar
+  con otro `uv`. Tramtai lo busca en ese orden: junto al ejecutable, `../lib/tramtai/` y el PATH. Suma unos 15–18 MB
+  comprimido. En Linux, la variante `musl` (estática, vale en cualquier distribución).
 - **`conversor.lock`** incrustado en el binario (`go:embed`): todas las dependencias de `markitdown[pdf,docx,pptx,xlsx]==0.1.8`
   con sus hashes, generado con `uv pip compile --universal --generate-hashes` y guardado en el repo. Lo que se descarga es
   siempre lo mismo; una versión nueva de pandas u onnxruntime no se cuela.
@@ -56,9 +57,11 @@ portable llevada a otro equipo. Se ejecuta con `python -m markitdown <archivo>`.
 ### Cómo se prepara
 
 1. Se trabaja en `conversor.nuevo/` (se borra antes si quedó de un intento anterior).
-2. `uv python install 3.12 --install-dir conversor.nuevo/descarga` y se mueve el intérprete a `conversor.nuevo/python`.
-3. `uv pip install --python conversor.nuevo/python/… --require-hashes --no-deps -r conversor.lock`, con la caché de uv en
-   una carpeta temporal que se borra al final.
+2. `uv python install 3.12 --install-dir conversor.nuevo/descarga --no-bin --no-registry` (sin accesos en el PATH ni
+   registro de Windows) y se mueve el intérprete a `conversor.nuevo/python`.
+3. `uv pip install --python conversor.nuevo/python/… --break-system-packages --require-hashes --no-deps -r conversor.lock`
+   (el Python de uv se marca como gestionado; aquí es de Tramtai), con la caché de uv en una carpeta temporal que se
+   borra al final.
 4. Se comprueba convirtiendo un HTML mínimo incrustado.
 5. Se escribe `listo.json` y se renombra `conversor.nuevo/` a `conversor/` (sustituyendo el anterior). Un corte a medias
    nunca deja un conversor que parezca listo.
