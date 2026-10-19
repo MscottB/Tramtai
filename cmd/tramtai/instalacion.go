@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/idioma"
@@ -16,5 +18,18 @@ func comandoInstalacion() *cobra.Command {
 			Args: cobra.ExactArgs(1),
 			RunE: func(_ *cobra.Command, args []string) error { return instalacion.EditarRutaUsuario(args[0], agregar) }})
 	}
+	// abierto y cerrar miran solo los procesos de la carpeta de la instalación: el instalador no cierra una portable.
+	cmd.AddCommand(&cobra.Command{Use: "abierto <carpeta> <exe>", Short: idioma.T("Sale con 0 si hay un proceso exe de la carpeta"),
+		Args: cobra.ExactArgs(2), SilenceUsage: true, SilenceErrors: true,
+		RunE: func(_ *cobra.Command, args []string) error {
+			pids, err := instalacion.ProcesosEn(args[0], args[1])
+			if err == nil && len(pids) == 0 {
+				err = errors.New(idioma.T("no hay ninguno abierto"))
+			}
+			return err
+		}})
+	cmd.AddCommand(&cobra.Command{Use: "cerrar <carpeta> <exe>", Short: idioma.T("Cierra los procesos exe de la carpeta"),
+		Args: cobra.ExactArgs(2),
+		RunE: func(_ *cobra.Command, args []string) error { return instalacion.Cerrar(args[0], args[1]) }})
 	return cmd
 }

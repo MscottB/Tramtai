@@ -186,9 +186,10 @@ Function SaltarSiActualiza
   ${EndIf}
 FunctionEnd
 
-; HayProceso deja 0 en RESULTADO si el usuario tiene abierto un proceso con ese nombre (esté donde esté instalado).
-!macro HayProceso NOMBRE RESULTADO
-  nsExec::Exec 'cmd /c tasklist /FI "USERNAME eq %USERNAME%" /FI "IMAGENAME eq ${NOMBRE}" /NH | find /I "${NOMBRE}" >NUL'
+; HayProceso deja 0 en RESULTADO si hay un proceso NOMBRE de la carpeta de la instalación: una portable abierta (en
+; otra carpeta y con sus propios datos) no cuenta ni se cierra.
+!macro HayProceso CLI NOMBRE RESULTADO
+  nsExec::Exec '"${CLI}" instalacion abierto "$INSTDIR" ${NOMBRE}'
   Pop ${RESULTADO}
 !macroend
 
@@ -200,8 +201,8 @@ FunctionEnd
 !macro DetenerTramtai CLI AVISO
   StrCpy $abierta 0
   StrCpy $servicio 0
-  !insertmacro HayProceso "tramtai-escritorio.exe" $0
-  !insertmacro HayProceso "tramtai.exe" $1
+  !insertmacro HayProceso "${CLI}" "tramtai-escritorio.exe" $0
+  !insertmacro HayProceso "${CLI}" "tramtai.exe" $1
   ${If} $0 == 0
     StrCpy $abierta 1
   ${EndIf}
@@ -212,7 +213,7 @@ FunctionEnd
       MessageBox MB_OKCANCEL|MB_ICONINFORMATION "${AVISO}" /SD IDOK IDOK +2
       Abort
     ${EndIf}
-    nsExec::Exec 'cmd /c taskkill /F /FI "USERNAME eq %USERNAME%" /IM tramtai-escritorio.exe'
+    nsExec::Exec '"${CLI}" instalacion cerrar "$INSTDIR" tramtai-escritorio.exe'
     Pop $0
     nsExec::Exec '"${CLI}" servicio detener --si'
     Pop $0
@@ -221,11 +222,11 @@ FunctionEnd
     ${EndIf}
     ; Espera hasta 10 s a que salgan los demás tramtai.exe (la CLI, una terminal interactiva…) y cierra los que queden.
     ${For} $2 1 20
-      !insertmacro HayProceso "tramtai.exe" $1
+      !insertmacro HayProceso "${CLI}" "tramtai.exe" $1
       ${IfThen} $1 != 0 ${|} ${Break} ${|}
       Sleep 500
     ${Next}
-    nsExec::Exec 'cmd /c taskkill /F /FI "USERNAME eq %USERNAME%" /IM tramtai.exe'
+    nsExec::Exec '"${CLI}" instalacion cerrar "$INSTDIR" tramtai.exe'
     Pop $0
   ${EndIf}
 !macroend
@@ -240,6 +241,8 @@ Section "$(secPrograma)" SecPrograma
   File "/oname=$PLUGINSDIR\tramtai.exe" "${RAIZ}\bin\tramtai.exe"
   !insertmacro DetenerTramtai "$PLUGINSDIR\tramtai.exe" "$(cerrarAbierta)"
   SetOutPath "$INSTDIR"
+  ; Si alguien descomprimió la portable aquí, su portable.txt haría que la instalada guardara los datos en la carpeta.
+  Delete "$INSTDIR\portable.txt"
   File "${RAIZ}\bin\tramtai.exe"
   File "${RAIZ}\bin\tramtai-escritorio.exe"
   File "/oname=LICENCIA.md" "${RAIZ}\LICENSE.md"
@@ -322,6 +325,7 @@ Section "Uninstall"
   ${IfNot} ${Silent}
     MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2 "$(borrarDatos)" IDNO conservar
     RMDir /r "$APPDATA\tramtai"
+    RMDir /r "$APPDATA\tramtai-escritorio.exe" ; el perfil del navegador de la app (WebView2)
     conservar:
   ${EndIf}
 SectionEnd
