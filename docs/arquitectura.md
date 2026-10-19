@@ -25,7 +25,7 @@ Cómo está construido Tramtai por dentro:
 | `web/` | Web UI con Vue 3 y Quasar 2.35 (Vite). La compila `npm run build` en `internal/recursos/web`. |
 | `escritorio/` | Aplicación de escritorio con Wails v3 en un módulo Go aparte, para que el núcleo siga sin CGO. Es un cliente del servicio: lo inicia si hace falta y muestra la misma Web UI en su ventana. Solo usa `cliente` y `contrato`, no el servicio. |
 | `internal/version` | Versión del ejecutable (inyectada al compilar) y commit de git. |
-| `cmd/tramtai` | CLI con Cobra. Sin argumentos abre la terminal interactiva. Salvo `tramtai servicio`, que es el propio servicio, todo habla con él por HTTP con `internal/cliente`, como la terminal, la Web UI y la app de escritorio. Comandos: `servicio`, `global`, `proyecto`, `iniciar`, `acceso`, `claves`, `trabajos`, `ejecutar`, `convertir`, `agentes`, `configuracion`. Detalle en [operacion.md](operacion.md). |
+| `cmd/tramtai` | CLI con Cobra. Sin argumentos abre la terminal interactiva. `tramtai acceso` guarda las APIs por la API del servicio (`/api/v1/servicio/puntos`, con el token de servicio), como la terminal y la app de escritorio usan `internal/cliente`; `tramtai ejecutar` sin servicio usa su propia base, y `tramtai servicio` es el propio servicio. Comandos: `servicio`, `global`, `proyecto`, `iniciar`, `acceso`, `claves`, `trabajos`, `ejecutar`, `convertir`, `agentes`, `configuracion`. Detalle en [operacion.md](operacion.md). |
 
 ## Agentes
 

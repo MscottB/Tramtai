@@ -312,5 +312,7 @@ func init() {
 		"el registro no puede durar menos que la respuesta":            "the record cannot be kept for less time than the response",
 		"el máximo de peticiones debe estar entre %d y %d":             "the maximum number of requests must be between %d and %d",
 		"el nombre del cuerpo (%s) no coincide con el de la ruta (%s)": "the name in the body (%s) does not match the one in the path (%s)",
+		"proyecto debe ser una ruta absoluta":                          "proyecto must be an absolute path",
+		"%s no es un proyecto de Tramtai (.tramtai/config.yaml)":       "%s is not a Tramtai project (.tramtai/config.yaml)",
 	})
 }

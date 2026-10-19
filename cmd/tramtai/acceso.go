@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -143,156 +142,93 @@ func (o *opcionesPunto) aplicar(cmd *cobra.Command, p *contrato.ConfigPunto) err
 	return nil
 }
 
-// servicioAcceso conecta con el servicio o lo inicia en segundo plano: tramtai acceso edita las APIs por su API, con
-// las mismas reglas que la Web UI y la terminal. Las pruebas lo cambian por un servicio en memoria.
+// servicioAcceso conecta con el servicio o lo inicia en segundo plano: tramtai acceso guarda las APIs a través de él,
+// con las mismas reglas que la Web UI y la terminal. Las pruebas lo cambian por un servicio en memoria.
 var servicioAcceso = asegurarServicio
 
-// acceso es lo que comparten los subcomandos: el cliente y el archivo elegido (el global o, con --local, el
-// .tramtai/local.yaml del proyecto, cuya instancia se activa para ver sus puntos).
-type acceso struct {
-	cmd      *cobra.Command
-	cli      *cliente.Cliente
-	ctx      context.Context
-	proyecto string // instancia del proyecto con --local; vacío, el archivo global
-}
-
-func abrirAcceso(cmd *cobra.Command, local bool) (*acceso, context.CancelFunc, error) {
-	if local && raizProyecto() == "" {
-		return nil, nil, errors.New(idioma.T("--local exige estar en un proyecto (.tramtai/config.yaml)"))
-	}
-	cli, err := servicioAcceso(cmd)
-	if err != nil {
-		return nil, nil, err
-	}
-	ctx, cancelar := contexto()
-	a := &acceso{cmd: cmd, cli: cli, ctx: ctx}
-	if local {
-		activacion, err := cli.Activar(ctx, "proyecto", raizProyecto())
-		if err != nil {
-			cancelar()
-			return nil, nil, err
-		}
-		a.proyecto = activacion.Instancia.ID
-	}
-	return a, cancelar, nil
-}
-
-// esLocal indica si el archivo de un punto es el .tramtai/local.yaml de un proyecto.
-func esLocal(origen string) bool {
-	return strings.HasSuffix(filepath.ToSlash(origen), ".tramtai/local.yaml")
-}
-
-// puntos son los puntos del archivo elegido.
-func (a *acceso) puntos() ([]contrato.EstadoPunto, error) {
-	e, err := a.cli.Estado(a.ctx)
-	if err != nil {
-		return nil, err
-	}
-	var lista []contrato.EstadoPunto
-	for _, p := range e.Puntos {
-		if a.proyecto == "" && !esLocal(p.Origen) || a.proyecto != "" && esLocal(p.Origen) && p.Instancia == a.proyecto {
-			lista = append(lista, p)
-		}
-	}
-	return lista, nil
-}
-
-func (a *acceso) buscar(nombre string) (contrato.EstadoPunto, error) {
-	lista, err := a.puntos()
-	if err != nil {
-		return contrato.EstadoPunto{}, err
-	}
-	i := slices.IndexFunc(lista, func(p contrato.EstadoPunto) bool { return p.Nombre == nombre })
-	if i < 0 {
-		return contrato.EstadoPunto{}, fmt.Errorf(idioma.T("no existe el punto de acceso %s en este archivo"), nombre)
-	}
-	return lista[i], nil
-}
-
-// instanciaNueva es donde se crea un punto: la del proyecto con --local; si no, la global, que lo guarda en la
-// configuración global (con su instancia si se indicó --instancia).
-func (a *acceso) instanciaNueva() string {
-	if a.proyecto != "" {
-		return a.proyecto
-	}
-	return "global"
-}
-
-// guardado cuenta dónde quedó el cambio y lista los puntos, como tras recargar.
-func (a *acceso) guardado(origen string) error {
-	if origen != "" {
-		fmt.Fprintln(a.cmd.OutOrStdout(), idioma.Tf("guardado en %s", origen))
-	}
-	e, err := a.cli.Estado(a.ctx)
-	if err != nil {
-		return err
-	}
-	imprimirPuntos(a.cmd.OutOrStdout(), e.Puntos)
-	return nil
+// guardado cuenta dónde quedó el cambio y lista los puntos del servicio tras recargar.
+func guardado(cmd *cobra.Command, g cliente.GuardadoEnArchivo) {
+	fmt.Fprintln(cmd.OutOrStdout(), idioma.Tf("guardado en %s", g.Archivo))
+	imprimirPuntos(cmd.OutOrStdout(), g.Puntos)
 }
 
 func comandoAcceso() *cobra.Command {
 	grupo := &cobra.Command{Use: "acceso", Short: idioma.T("Puntos de acceso: API adicionales con su puerto o ruta, token y modelos")}
 	var local bool
 	grupo.PersistentFlags().BoolVar(&local, "local", false, idioma.T("usa .tramtai/local.yaml del proyecto actual en lugar de la configuración global"))
-	con := func(f func(a *acceso, args []string) error) func(*cobra.Command, []string) error {
+	// con conecta con el servicio y pasa el archivo elegido: "" es la configuración global; con --local, la raíz del
+	// proyecto, cuyo .tramtai/local.yaml edita el servicio.
+	con := func(f func(cmd *cobra.Command, cli *cliente.Cliente, ctx context.Context, proyecto string, args []string) error) func(*cobra.Command, []string) error {
 		return func(cmd *cobra.Command, args []string) error {
-			a, cancelar, err := abrirAcceso(cmd, local)
+			proyecto := ""
+			if local {
+				if proyecto = raizProyecto(); proyecto == "" {
+					return errors.New(idioma.T("--local exige estar en un proyecto (.tramtai/config.yaml)"))
+				}
+			}
+			cli, err := servicioAcceso(cmd)
 			if err != nil {
 				return err
 			}
+			ctx, cancelar := contexto()
 			defer cancelar()
-			return f(a, args)
+			return f(cmd, cli, ctx, proyecto, args)
 		}
+	}
+	buscar := func(ctx context.Context, cli *cliente.Cliente, proyecto, nombre string) (contrato.ConfigPunto, error) {
+		_, lista, err := cli.PuntosEnArchivo(ctx, proyecto)
+		if err != nil {
+			return contrato.ConfigPunto{}, err
+		}
+		i := slices.IndexFunc(lista, func(p contrato.ConfigPunto) bool { return p.Nombre == nombre })
+		if i < 0 {
+			return contrato.ConfigPunto{}, fmt.Errorf(idioma.T("no existe el punto de acceso %s en este archivo"), nombre)
+		}
+		return lista[i], nil
 	}
 
 	listar := &cobra.Command{Use: "listar", Short: idioma.T("Lista los puntos de acceso y su estado"),
-		RunE: con(func(a *acceso, _ []string) error { return a.guardado("") })}
-
-	var crearOpc, editarOpc opcionesPunto
-	crear := &cobra.Command{Use: "crear <nombre>", Short: idioma.T("Crea un punto de acceso y su token"), Args: cobra.ExactArgs(1),
-		RunE: con(func(a *acceso, args []string) error {
-			if _, err := a.buscar(args[0]); err == nil {
-				return fmt.Errorf(idioma.T("el punto de acceso %s ya existe: usa tramtai acceso editar"), args[0])
-			}
-			p := contrato.ConfigPunto{Nombre: args[0]}
-			if err := crearOpc.aplicar(a.cmd, &p); err != nil {
-				return err
-			}
-			if a.proyecto != "" {
-				p.Instancia = "" // un punto de .tramtai/local.yaml es siempre de su proyecto
-			} else if _, err := a.cli.Activar(a.ctx, "global", ""); err != nil { // se crea desde la global, como en la Web UI
-				return err
-			}
-			_, token, err := a.cli.CrearPunto(a.ctx, a.instanciaNueva(), p)
+		RunE: con(func(cmd *cobra.Command, cli *cliente.Cliente, ctx context.Context, _ string, _ []string) error {
+			e, err := cli.Estado(ctx)
 			if err != nil {
 				return err
 			}
-			creado, _ := a.buscar(p.Nombre)
-			if err := a.guardado(creado.Origen); err != nil {
+			imprimirPuntos(cmd.OutOrStdout(), e.Puntos)
+			return nil
+		})}
+
+	var crearOpc, editarOpc opcionesPunto
+	crear := &cobra.Command{Use: "crear <nombre>", Short: idioma.T("Crea un punto de acceso y su token"), Args: cobra.ExactArgs(1),
+		RunE: con(func(cmd *cobra.Command, cli *cliente.Cliente, ctx context.Context, proyecto string, args []string) error {
+			p := contrato.ConfigPunto{Nombre: args[0]}
+			if err := crearOpc.aplicar(cmd, &p); err != nil {
 				return err
 			}
-			fmt.Fprintf(a.cmd.OutOrStdout(), idioma.T("clave nueva de %s (guárdala: no se volverá a mostrar):\n%s\n"), p.Nombre, token)
+			g, err := cli.CrearPuntoEnArchivo(ctx, proyecto, p)
+			if err != nil {
+				return err
+			}
+			guardado(cmd, g)
+			// La clave se genera y se muestra ahora, una sola vez: solo se guarda su huella.
+			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("clave nueva de %s (guárdala: no se volverá a mostrar):\n%s\n"), p.Nombre, g.Token)
 			return nil
 		})}
 	crearOpc.registrar(crear)
 	editarCmd := &cobra.Command{Use: "editar <nombre>", Short: idioma.T("Cambia las opciones indicadas de un punto de acceso"), Args: cobra.ExactArgs(1),
-		RunE: con(func(a *acceso, args []string) error {
-			e, err := a.buscar(args[0])
+		RunE: con(func(cmd *cobra.Command, cli *cliente.Cliente, ctx context.Context, proyecto string, args []string) error {
+			p, err := buscar(ctx, cli, proyecto, args[0])
 			if err != nil {
 				return err
 			}
-			p, err := a.cli.ConfigDePunto(a.ctx, e.Instancia, e.Nombre)
+			if err := editarOpc.aplicar(cmd, &p); err != nil {
+				return err
+			}
+			g, err := cli.GuardarPuntoEnArchivo(ctx, proyecto, p)
 			if err != nil {
 				return err
 			}
-			if err := editarOpc.aplicar(a.cmd, &p); err != nil {
-				return err
-			}
-			if err := a.cli.ReemplazarPunto(a.ctx, e.Instancia, p); err != nil {
-				return err
-			}
-			return a.guardado(e.Origen)
+			guardado(cmd, g)
+			return nil
 		})}
 	editarOpc.registrar(editarCmd)
 	activo := func(uso string, valor bool) *cobra.Command {
@@ -300,52 +236,30 @@ func comandoAcceso() *cobra.Command {
 		c := &cobra.Command{Use: uso + " <nombre>... | --grupo <grupo>",
 			Short: map[bool]string{true: idioma.T("Activa uno o varios puntos de acceso sin reiniciar el servicio"),
 				false: idioma.T("Desactiva uno o varios puntos de acceso sin reiniciar el servicio")}[valor],
-			RunE: con(func(a *acceso, args []string) error {
+			RunE: func(cmd *cobra.Command, args []string) error {
 				if (len(args) == 0) == (grupoPuntos == "") {
 					return errors.New(idioma.T("indica los nombres o --grupo, no ambos"))
 				}
-				var elegidos []contrato.EstadoPunto
-				if grupoPuntos != "" {
-					lista, err := a.puntos()
+				return con(func(cmd *cobra.Command, cli *cliente.Cliente, ctx context.Context, proyecto string, args []string) error {
+					g, err := cli.ActivarPuntosEnArchivo(ctx, proyecto, args, grupoPuntos, valor)
 					if err != nil {
 						return err
 					}
-					for _, p := range lista {
-						if p.Grupo == grupoPuntos {
-							elegidos = append(elegidos, p)
-						}
-					}
-					if len(elegidos) == 0 {
-						return fmt.Errorf(idioma.T("ningún punto de acceso del grupo %s en este archivo"), grupoPuntos)
-					}
-				}
-				for _, nombre := range args {
-					p, err := a.buscar(nombre)
-					if err != nil {
-						return err
-					}
-					elegidos = append(elegidos, p)
-				}
-				for _, p := range elegidos {
-					if err := a.cli.ActivarPunto(a.ctx, p.Instancia, p.Nombre, valor); err != nil {
-						return err
-					}
-				}
-				return a.guardado(elegidos[0].Origen)
-			})}
+					guardado(cmd, g)
+					return nil
+				})(cmd, args)
+			}}
 		c.Flags().StringVar(&grupoPuntos, "grupo", "", idioma.T("todos los puntos de ese grupo"))
 		return c
 	}
 	eliminar := &cobra.Command{Use: "eliminar <nombre>", Short: idioma.T("Elimina un punto de acceso"), Args: cobra.ExactArgs(1),
-		RunE: con(func(a *acceso, args []string) error {
-			p, err := a.buscar(args[0])
+		RunE: con(func(cmd *cobra.Command, cli *cliente.Cliente, ctx context.Context, proyecto string, args []string) error {
+			g, err := cli.EliminarPuntoEnArchivo(ctx, proyecto, args[0])
 			if err != nil {
 				return err
 			}
-			if err := a.cli.EliminarPunto(a.ctx, p.Instancia, p.Nombre); err != nil {
-				return err
-			}
-			return a.guardado(p.Origen)
+			guardado(cmd, g)
+			return nil
 		})}
 	var rotar bool
 	token := &cobra.Command{Use: "token <nombre>", Short: idioma.T("Regenera con --rotar la clave del punto de acceso; solo se ve entonces"), Args: cobra.ExactArgs(1),
@@ -354,16 +268,12 @@ func comandoAcceso() *cobra.Command {
 			if !rotar {
 				return errors.New(idioma.Tf("la clave de %s solo se muestra al crearla o regenerarla (se guarda su huella): tramtai acceso token %s --rotar", args[0], args[0]))
 			}
-			return con(func(a *acceso, args []string) error {
-				p, err := a.buscar(args[0])
+			return con(func(cmd *cobra.Command, cli *cliente.Cliente, ctx context.Context, _ string, args []string) error {
+				valor, err := cli.RotarTokenEnArchivo(ctx, args[0])
 				if err != nil {
 					return err
 				}
-				valor, err := a.cli.RotarTokenPunto(a.ctx, p.Instancia, p.Nombre)
-				if err != nil {
-					return err
-				}
-				fmt.Fprintf(a.cmd.OutOrStdout(), idioma.T("clave nueva de %s (guárdala: no se volverá a mostrar):\n%s\n"), p.Nombre, valor)
+				fmt.Fprintf(cmd.OutOrStdout(), idioma.T("clave nueva de %s (guárdala: no se volverá a mostrar):\n%s\n"), args[0], valor)
 				return nil
 			})(cmd, args)
 		}}

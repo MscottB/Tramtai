@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"maps"
 	"net/http"
@@ -422,6 +423,12 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 		lista[i] = entrada
 		if d, ok := s.Registro[nombre].(adaptadores.Detectable); ok {
 			esperar.Go(func() {
+				// Fuera de la goroutine de la petición, net/http no recupera un pánico: tiraría el servicio entero.
+				defer func() {
+					if v := recover(); v != nil {
+						entrada["problema"], entrada["problema_codigo"] = fmt.Sprint(v), adaptadores.ProblemaAviso
+					}
+				}()
 				ctx, cancelar := context.WithTimeout(r.Context(), 10*time.Second)
 				e := d.Detectar(ctx)
 				cancelar()

@@ -104,25 +104,40 @@ func TestClienteContraServicio(t *testing.T) {
 	if err != nil || token == "" || estado.Nombre != "facturas" {
 		t.Fatalf("crear punto: %+v %q %v", estado, token, err)
 	}
-	p, err := cli.ConfigDePunto(ctx, "global", "facturas")
-	if err != nil || p.Agente != "simulado" {
-		t.Fatalf("config del punto: %+v %v", p, err)
-	}
-	p.Grupo = "ventas"
-	if err := cli.ReemplazarPunto(ctx, "global", p); err != nil {
-		t.Fatal(err)
-	}
-	if puntos, err := cli.Puntos(ctx, "global"); err != nil || len(puntos) != 1 || puntos[0].Grupo != "ventas" {
-		t.Fatalf("puntos: %+v %v", puntos, err)
-	}
 	if nueva, err := cli.RotarTokenPunto(ctx, "global", "facturas"); err != nil || nueva == "" || nueva == token {
 		t.Fatalf("rotar la clave: %q %v", nueva, err)
+	}
+	if err := cli.ActivarPunto(ctx, "global", "facturas", false); err != nil {
+		t.Fatal(err)
 	}
 	if err := cli.EliminarPunto(ctx, "global", "facturas"); err != nil {
 		t.Fatal(err)
 	}
 	if err := cli.EliminarPunto(ctx, "global", "facturas"); nucleo.CodigoDe(err) != nucleo.CodigoNoEncontrado {
 		t.Fatalf("eliminar otra vez da no encontrado: %v", err)
+	}
+
+	// Los de tramtai acceso, sobre el archivo global.
+	g, err := cli.CrearPuntoEnArchivo(ctx, "", contrato.ConfigPunto{Nombre: "ventas", Agente: "simulado", Grupo: "tienda"})
+	if err != nil || g.Token == "" || g.Archivo != global {
+		t.Fatalf("crear en el archivo: %+v %v", g, err)
+	}
+	archivo, puntos, err := cli.PuntosEnArchivo(ctx, "")
+	if err != nil || archivo != global || len(puntos) != 1 || puntos[0].Grupo != "tienda" {
+		t.Fatalf("puntos del archivo: %s %+v %v", archivo, puntos, err)
+	}
+	puntos[0].Instrucciones = "Sé breve."
+	if _, err := cli.GuardarPuntoEnArchivo(ctx, "", puntos[0]); err != nil {
+		t.Fatal(err)
+	}
+	if g, err := cli.ActivarPuntosEnArchivo(ctx, "", nil, "tienda", false); err != nil || len(g.Puntos) != 1 || g.Puntos[0].Activo {
+		t.Fatalf("desactivar el grupo: %+v %v", g, err)
+	}
+	if nueva, err := cli.RotarTokenEnArchivo(ctx, "ventas"); err != nil || nueva == "" || nueva == g.Token {
+		t.Fatalf("rotar en el archivo: %q %v", nueva, err)
+	}
+	if _, err := cli.EliminarPuntoEnArchivo(ctx, "", "ventas"); err != nil {
+		t.Fatal(err)
 	}
 	if err := cli.Desactivar(ctx, id); err != nil {
 		t.Fatal(err)

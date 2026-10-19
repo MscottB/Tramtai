@@ -174,3 +174,32 @@ func TestAccesoLocal(t *testing.T) {
 		t.Fatalf("eliminar --local:\n%s", local)
 	}
 }
+
+// tramtai acceso trabaja sobre el archivo, como antes de pasar por el servicio: llega a una API cuya instancia no está
+// activa y a una que no se pudo abrir (se puede desactivar o eliminar, pero no guardar otra vez con su error).
+func TestAccesoFueraDeLasInstancias(t *testing.T) {
+	ruta := servicioDePrueba(t)
+	if _, err := acceder(t, "crear", "de-otro", "--agente", "simulado", "--instancia", "proyecto_inactivo"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := acceder(t, "editar", "de-otro", "--grupo", "g"); err != nil {
+		t.Fatalf("editar una API de una instancia inactiva: %v", err)
+	}
+	if _, err := acceder(t, "eliminar", "de-otro"); err != nil {
+		t.Fatalf("eliminar una API de una instancia inactiva: %v", err)
+	}
+
+	os.WriteFile(ruta, []byte("predeterminados:\n  agente: simulado\npuntos_acceso:\n  - nombre: rota\n    agente: simulado\n    respaldo: [agente_retirado]\n"), 0o600)
+	if _, err := acceder(t, "editar", "rota", "--grupo", "g"); err == nil || !strings.Contains(err.Error(), "agente_retirado") {
+		t.Fatalf("guardarla con su error se rechaza: %v", err)
+	}
+	if _, err := acceder(t, "desactivar", "rota"); err != nil {
+		t.Fatalf("desactivarla no pasa por las reglas: %v", err)
+	}
+	if _, err := acceder(t, "eliminar", "rota"); err != nil {
+		t.Fatalf("eliminarla: %v", err)
+	}
+	if guardado, _ := os.ReadFile(ruta); strings.Contains(string(guardado), "rota") || strings.Contains(string(guardado), "de-otro") {
+		t.Fatalf("quedaron en el archivo:\n%s", guardado)
+	}
+}

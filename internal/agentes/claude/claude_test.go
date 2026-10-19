@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/credenciales"
 	"tramtai/internal/nucleo"
 )
 
@@ -158,6 +159,12 @@ func TestClaudeErrores(t *testing.T) {
 	falso(t, "sin-resultado.jsonl")
 	if _, err := conClave().Ejecutar(context.Background(), solicitud("hola"), sinEventos); nucleo.CodigoDe(err) != nucleo.CodigoErrorProtocoloAgente {
 		t.Fatalf("sin result: %v", err)
+	}
+	// Sin clave en el entorno, ClaveEntorno mira el almacén del sistema: con una guardada ahí, esta prueba no aplica.
+	for _, nombre := range []string{"ANTHROPIC_API_KEY"} {
+		if valor, _ := credenciales.Leer(nombre); valor != "" {
+			t.Skip("hay una clave guardada en el almacén del sistema: " + nombre)
+		}
 	}
 	t.Setenv("ANTHROPIC_API_KEY", "")
 	if _, err := conClave().Ejecutar(context.Background(), solicitud("hola"), sinEventos); nucleo.CodigoDe(err) != nucleo.CodigoAutenticacionAgente {

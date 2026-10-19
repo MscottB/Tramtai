@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/credenciales"
 	"tramtai/internal/nucleo"
 )
 
@@ -131,6 +132,12 @@ func TestCodexConClave(t *testing.T) {
 }
 
 func TestCodexSinClave(t *testing.T) {
+	// Sin clave en el entorno, ClaveEntorno mira el almacén del sistema: con una guardada ahí, esta prueba no aplica.
+	for _, nombre := range []string{"OPENAI_API_KEY", "CODEX_API_KEY"} {
+		if valor, _ := credenciales.Leer(nombre); valor != "" {
+			t.Skip("hay una clave guardada en el almacén del sistema: " + nombre)
+		}
+	}
 	falso(t, "salida.jsonl")
 	t.Setenv("OPENAI_API_KEY", "")
 	t.Setenv("CODEX_API_KEY", "")

@@ -119,14 +119,16 @@ func TestAccesosPorElServicio(t *testing.T) {
 
 	m := nuevo(Opciones{})
 	m.cli, m.inst = cli, "global"
-	crear := func() {
+	crear := func() string {
 		t.Helper()
 		m.nombrePunto, m.puertoPunto = "tuiapi", ""
-		if a := m.crearPunto()().(msgAviso); a.err != nil || !strings.Contains(a.texto, "tuiapi") {
+		a := m.crearPunto()().(msgAviso)
+		if a.err != nil || !strings.Contains(a.texto, "tuiapi") || !strings.Contains(a.texto, "tt_") {
 			t.Fatalf("crear: %+v", a)
 		}
+		return a.texto[strings.Index(a.texto, "tt_"):]
 	}
-	crear()
+	primera := crear()
 	if guardado, _ := os.ReadFile(global); !strings.Contains(string(guardado), "tuiapi") {
 		t.Fatalf("se guarda en la configuración global:\n%s", guardado)
 	}
@@ -143,5 +145,7 @@ func TestAccesosPorElServicio(t *testing.T) {
 	if guardado, _ := os.ReadFile(global); strings.Contains(string(guardado), "tuiapi") {
 		t.Fatalf("eliminar la quita:\n%s", guardado)
 	}
-	crear() // con el mismo nombre: es una API nueva, con clave nueva
+	if crear() == primera { // con el mismo nombre: es una API nueva, con clave nueva
+		t.Fatal("la API vuelta a crear debía tener otra clave")
+	}
 }
