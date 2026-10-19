@@ -232,7 +232,8 @@ func main() {
 				}
 			}
 			apis := menu.AddSubmenu(idioma.Tf("Mis APIs (%d de %d activas)", activas, len(puntos)))
-			for _, p := range puntos {
+			visibles, resto := menuApis(puntos, maximoApisMenu)
+			for _, p := range visibles {
 				habilitada := p.Error != "desactivado"
 				etiqueta := p.Nombre
 				for _, extra := range []string{p.Grupo, proyectos[p.Instancia]} {
@@ -251,9 +252,17 @@ func main() {
 				apis.Add(etiqueta).SetBitmap(circ).OnClick(func(*application.Context) {
 					ctx, cancelar := context.WithTimeout(context.Background(), 10*time.Second)
 					defer cancelar()
-					_ = cli.ActivarPunto(ctx, p.Instancia, p.Nombre, !habilitada)
+					if err := cli.ActivarPunto(ctx, p.Instancia, p.Nombre, !habilitada); err != nil {
+						// Sin aviso no pasaría nada visible: se abre la ventana con el error, como en la Web UI.
+						mostrar()
+						texto, _ := json.Marshal(nucleo.MensajeDe(err))
+						ventana.ExecJS("window.tramtaiAviso && window.tramtaiAviso(" + string(texto) + ")")
+					}
 					repasar()
 				})
+			}
+			if resto > 0 {
+				apis.Add(idioma.Tf("Ver las %d restantes en Mis APIs…", resto)).OnClick(func(*application.Context) { irA("conectar") })
 			}
 			if len(puntos) > 0 {
 				apis.AddSeparator()
