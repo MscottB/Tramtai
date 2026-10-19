@@ -5,7 +5,7 @@
         <img src="/logo.png" alt="" width="56" height="56" style="border-radius: 14px" />
         <div class="col">
           <div id="titulo-acerca" class="titulo-seccion">{{ t('acerca.titulo') }}</div>
-          <div class="text-body2 codigo">{{ version }}</div>
+          <div class="text-body2 codigo">{{ version }}<span v-if="datos?.portable" class="texto-suave"> · {{ t('acerca.portable') }}</span></div>
           <div class="text-caption texto-suave">
             {{ t('acerca.desarrollado') }} <a class="enlace" :href="autor" target="_blank" rel="noopener noreferrer">Michael Scott B.</a>
           </div>

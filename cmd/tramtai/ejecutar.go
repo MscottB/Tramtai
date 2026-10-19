@@ -107,7 +107,7 @@ func comandoEjecutar() *cobra.Command {
 			return ejecutar(cmd, c, c.AplicarPredeterminados(s), archivos)
 		}}
 	f := cmd.Flags()
-	f.StringVarP(&agente, "agente", "a", "", idioma.T("agente: claude, codex, gemini o antigravity (predeterminados.agente)"))
+	f.StringVarP(&agente, "agente", "a", "", idioma.Tf("agente: %s (predeterminados.agente)", enumerar(idsAgentes(), idioma.T("o"))))
 	f.StringVarP(&modelo, "modelo", "m", "", idioma.T("identificador o alias del modelo, por ejemplo haiku"))
 	f.StringVarP(&perfil, "perfil", "p", "", idioma.T("perfil de modelo: rapido, equilibrado, profundo (modelos.perfiles)"))
 	f.StringVarP(&sistema, "sistema", "s", "", idioma.T("instrucciones de sistema"))
@@ -270,4 +270,13 @@ func vacio(texto string) string {
 		return "—"
 	}
 	return texto
+}
+
+// idsAgentes son los identificadores del catálogo (claude, codex…), en su orden.
+func idsAgentes() []string {
+	var ids []string
+	for _, f := range agentes.Todos() {
+		ids = append(ids, f.Nombre)
+	}
+	return ids
 }

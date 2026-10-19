@@ -803,6 +803,7 @@ const es = {
   'acerca.detalles': 'Detalles técnicos',
   'acerca.sinDatos': 'No se pudieron cargar: el servicio no responde.',
   'acerca.version': 'Versión',
+  'acerca.portable': 'Portable',
   'acerca.commit': 'Commit',
   'acerca.modificado': 'con cambios sin confirmar',
   'acerca.sistema': 'Sistema',

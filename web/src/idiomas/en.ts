@@ -804,6 +804,7 @@ const en: Textos = {
   'acerca.detalles': 'Technical details',
   'acerca.sinDatos': 'They could not be loaded: the service is not responding.',
   'acerca.version': 'Version',
+  'acerca.portable': 'Portable',
   'acerca.commit': 'Commit',
   'acerca.modificado': 'with uncommitted changes',
   'acerca.sistema': 'System',

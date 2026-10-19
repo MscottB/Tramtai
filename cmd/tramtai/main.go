@@ -4,10 +4,12 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
 
+	"tramtai/internal/agentes"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/version"
@@ -15,9 +17,9 @@ import (
 
 func main() {
 	raiz := &cobra.Command{Use: "tramtai", Short: idioma.T("Pasarela local para ejecutar agentes CLI"),
-		Long: idioma.T("Tramtai expone Claude Code, Codex, Antigravity y la API de Gemini como una API local.\n\n" +
-			"  tramtai          terminal interactiva\n" +
-			"  tramtai abrir    Web UI en el navegador (inicia el servicio si hace falta)"),
+		Long: idioma.Tf("Tramtai expone %s como una API local.\n\n"+
+			"  tramtai          terminal interactiva\n"+
+			"  tramtai abrir    Web UI en el navegador (inicia el servicio si hace falta)", enumerar(programasAgentes(), idioma.T("y"))),
 		SilenceUsage: true, Version: version.Texto(),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if !term.IsTerminal(os.Stdin.Fd()) || !term.IsTerminal(os.Stdout.Fd()) {
@@ -198,4 +200,22 @@ func raizProyecto() string {
 // cargarConfiguracion resuelve las capas de configuración para el proyecto actual (o solo la global).
 func cargarConfiguracion() (*nucleo.Configuracion, error) {
 	return nucleo.CargarConfiguracion(raizProyecto())
+}
+
+// programasAgentes son los programas que hay detrás de cada agente del catálogo, en su orden: la ayuda los nombra a
+// todos sin una lista fija que se quede atrás al añadir uno.
+func programasAgentes() []string {
+	var programas []string
+	for _, f := range agentes.Todos() {
+		programas = append(programas, f.Programa)
+	}
+	return programas
+}
+
+// enumerar une una lista como en una frase: «a, b y c».
+func enumerar(elementos []string, conjuncion string) string {
+	if len(elementos) < 2 {
+		return strings.Join(elementos, "")
+	}
+	return strings.Join(elementos[:len(elementos)-1], ", ") + " " + conjuncion + " " + elementos[len(elementos)-1]
 }
