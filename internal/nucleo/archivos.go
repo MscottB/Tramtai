@@ -10,17 +10,17 @@ import (
 	"tramtai/internal/idioma"
 )
 
-// RutaGlobal es el archivo de configuración global del usuario; TRAMTAI_CONFIG_GLOBAL lo sustituye
-// (pruebas e instalaciones portátiles).
+// RutaGlobal es el archivo de configuración global del usuario, en RaizUsuario; TRAMTAI_CONFIG_GLOBAL lo sustituye
+// (y con él la carpeta profiles/ de al lado).
 func RutaGlobal() (string, error) {
 	if ruta := os.Getenv("TRAMTAI_CONFIG_GLOBAL"); ruta != "" {
 		return ruta, nil
 	}
-	dir, err := os.UserConfigDir()
+	raiz, err := RaizUsuario()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "tramtai", "config.yaml"), nil
+	return filepath.Join(raiz, "config.yaml"), nil
 }
 
 // BuscarProyecto sube desde dir hasta encontrar .tramtai/config.yaml y devuelve la raíz del proyecto.

@@ -147,7 +147,7 @@ func comandoConvertir() *cobra.Command {
 }
 
 func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEjecucion, archivos []string) error {
-	datos, err := dirDatos()
+	datos, err := nucleo.DirDatos()
 	if err != nil {
 		return err
 	}

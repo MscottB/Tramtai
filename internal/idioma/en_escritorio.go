@@ -3,6 +3,8 @@ package idioma
 // Traducciones al inglés de la app de escritorio (escritorio).
 func init() {
 	agregar(map[string]string{
+		"Tramtai portable": "Tramtai portable",
+		"falta tramtai.exe junto a la aplicación portable: vuelve a descomprimir Tramtai": "tramtai.exe is missing next to the portable app: unzip Tramtai again",
 		"Ver las %d restantes en Mis APIs…":                                               "See the other %d in My APIs…",
 		"recién actualizada: muestra la ventana por delante de las demás":                 "just updated: shows the window in front of the others",
 		"Buscar actualizaciones":                                                          "Check for updates",

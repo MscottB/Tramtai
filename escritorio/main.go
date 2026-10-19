@@ -67,12 +67,28 @@ func main() {
 
 	var ventana *application.WebviewWindow
 	var recibir func(mensaje, origen string)
+	// La raíz se resuelve antes de crear la app: Wails cierra la app con su propio aviso si la carpeta del navegador no
+	// vale, y así el error de la portable (carpeta de solo lectura o temporal) se ve en la ventana, como los demás.
+	raizUsuario, errRaiz := nucleo.RaizUsuario()
+	datosNavegador := "" // modo normal: el predeterminado de Wails
+	switch {
+	case errRaiz != nil:
+		datosNavegador, _ = os.MkdirTemp("", "tramtai-navegador-")
+	case nucleo.Portable():
+		datosNavegador = filepath.Join(raizUsuario, "webview")
+	}
+	propio, _ := os.Executable()
+	nombre := "Tramtai"
+	if nucleo.Portable() {
+		nombre = idioma.T("Tramtai portable")
+	}
 	app := application.New(application.Options{
 		Name:        "Tramtai",
 		Description: idioma.T("Pasarela local de agentes"),
 		Icon:        icono,
+		Windows:     application.WindowsOptions{WebviewUserDataPath: datosNavegador},
 		SingleInstance: &application.SingleInstanceOptions{
-			UniqueID: "cl.tramtai.escritorio",
+			UniqueID: uniqueID(filepath.Dir(propio), nucleo.Portable()),
 			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
 				if ventana != nil {
 					ventana.Show()
@@ -109,7 +125,7 @@ func main() {
 		ventana.SetURL(nueva.url)
 	}
 
-	opciones := application.WebviewWindowOptions{Title: "Tramtai", Width: 1280, Height: 820, MinWidth: 720, MinHeight: 480, Hidden: *oculto}
+	opciones := application.WebviewWindowOptions{Title: nombre, Width: 1280, Height: 820, MinWidth: 720, MinHeight: 480, Hidden: *oculto}
 	if err != nil {
 		opciones.HTML = paginaError(err)
 	} else {
@@ -287,7 +303,7 @@ func main() {
 		} else {
 			menu.Add(idioma.T("Reiniciar el servicio")).SetBitmap(icono("reiniciar")).OnClick(func(*application.Context) {
 				ejecutable, err := buscarTramtai()
-				datos, errDatos := dirDatos()
+				datos, errDatos := nucleo.DirDatos()
 				if err != nil || errDatos != nil {
 					return
 				}
@@ -337,7 +353,7 @@ func main() {
 	repasar = func() {
 		muMenu.Lock()
 		defer muMenu.Unlock()
-		datos, err := dirDatos()
+		datos, err := nucleo.DirDatos()
 		if err != nil {
 			return
 		}
@@ -387,7 +403,7 @@ func main() {
 		if cli != nil {
 			estado = idioma.Tf("Servicio en marcha en %s", strings.TrimPrefix(cli.Base, "http://"))
 		}
-		bandeja.SetTooltip("Tramtai · " + estado)
+		bandeja.SetTooltip(nombre + " · " + estado)
 		anterior := menuActual
 		menuActual = construir(cli, puntos, proyectos, conWindows, sinPreguntar, masNueva)
 		bandeja.SetMenu(menuActual)
@@ -418,8 +434,8 @@ type preferencias struct {
 }
 
 func rutaPreferencias() (string, error) {
-	datos, err := dirDatos()
-	return filepath.Join(filepath.Dir(datos), "escritorio.json"), err
+	raiz, err := nucleo.RaizUsuario()
+	return filepath.Join(raiz, "escritorio.json"), err
 }
 
 func leerPreferencias() (p preferencias) {
@@ -498,19 +514,10 @@ func codificar(img image.Image) []byte {
 	return b.Bytes()
 }
 
-// dirDatos es el directorio de datos de Tramtai, donde está el descriptor del servicio.
-func dirDatos() (string, error) {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "tramtai", "datos"), nil
-}
-
 // prepararSesion conecta con el servicio (o lo inicia), activa la instancia y obtiene una URL de entrada de un
 // solo uso: el token de la instancia nunca pasa por la ventana.
 func prepararSesion(proyecto string) (*sesionEscritorio, error) {
-	datos, err := dirDatos()
+	datos, err := nucleo.DirDatos()
 	if err != nil {
 		return nil, err
 	}
@@ -545,7 +552,8 @@ func prepararSesion(proyecto string) (*sesionEscritorio, error) {
 	return &sesionEscritorio{cli: cli, url: url}, nil
 }
 
-// buscarTramtai localiza el ejecutable del servicio: junto a esta aplicación o en el PATH.
+// buscarTramtai localiza el ejecutable del servicio: junto a esta aplicación o, salvo en la portable, en el PATH. La
+// portable no usa el del PATH: sería la copia instalada, con sus datos en otra carpeta.
 func buscarTramtai() (string, error) {
 	nombre := "tramtai"
 	if propio, err := os.Executable(); err == nil {
@@ -555,6 +563,9 @@ func buscarTramtai() (string, error) {
 				return ruta, nil
 			}
 		}
+	}
+	if nucleo.Portable() {
+		return "", errors.New(idioma.T("falta tramtai.exe junto a la aplicación portable: vuelve a descomprimir Tramtai"))
 	}
 	ruta, err := exec.LookPath(nombre)
 	if err != nil {
