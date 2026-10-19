@@ -98,8 +98,10 @@ p { margin: 0; }
 .nota { font-size: .875rem; color: var(--texto-suave); }
 .mapa { background: var(--superficie); border: 1px solid color-mix(in srgb, var(--acento) 35%, var(--borde)); border-radius: 22px; box-shadow: var(--sombra); padding: 24px; max-width: 760px; margin: 48px auto 0; }
 .mapa svg { width: 100%; height: auto; display: block; }
+/* En el móvil el mapa se lee de arriba abajo, como en la app: el horizontal quedaría con letra diminuta. */
+.mapa .mapa-alto { display: none; max-width: 360px; margin: 0 auto; }
 .mapa text { font-family: var(--fuente); }
-.tranvia { offset-path: path('M 52 160 L 150 160'); animation: viaje 4.5s cubic-bezier(.45, 0, .2, 1) infinite; }
+.tranvia { offset-path: path('M 200 153 L 290 153'); animation: viaje 4.5s cubic-bezier(.45, 0, .2, 1) infinite; }
 @keyframes viaje { 0%, 12% { offset-distance: 0%; opacity: 0; } 22% { opacity: 1; } 55%, 100% { offset-distance: 100%; opacity: 0; } }
 
 /* Secciones */
@@ -215,6 +217,8 @@ footer .envoltura { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
   .motivos, .empezar { grid-template-columns: 1fr; }
   .destacado { padding: 24px; }
   .mapa { padding: 12px; margin-top: 32px; }
+  .mapa .mapa-ancho { display: none; }
+  .mapa .mapa-alto { display: block; }
   .tablero { padding: 24px; }
   .tablero li { grid-template-columns: 1fr; gap: 4px; }
   .barra .boton { display: none; }

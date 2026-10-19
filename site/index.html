@@ -66,35 +66,76 @@
       </p>
 
       <div class="mapa" aria-hidden="true">
-        <svg viewBox="0 0 520 320">
-          <g fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M 40 160 L 150 160" stroke="var(--acento)"/>
-            <path d="M 270 144 L 284 144 C 324 144 318 50 358 50 L 378 50" stroke="var(--claude)"/>
-            <path d="M 270 152 L 292 152 C 322 152 318 105 348 105 L 378 105" stroke="var(--codex)"/>
-            <path d="M 270 160 L 378 160" stroke="var(--copilot)"/>
-            <path d="M 270 168 L 292 168 C 322 168 318 215 348 215 L 378 215" stroke="var(--gemini)"/>
-            <path d="M 270 176 L 284 176 C 324 176 318 270 358 270 L 378 270" stroke="var(--antigravity)"/>
+        <svg class="mapa-ancho" viewBox="0 0 760 306">
+          <!-- Tus apps → Tramtai, y Tramtai → cada agente por su línea (como el mapa de la app). -->
+          <g fill="none" stroke-linecap="round">
+            <path d="M 190 95 L 202 95 C 240 95 240 143 278 143 L 290 143" stroke-width="3" stroke="color-mix(in srgb, var(--acento) 55%, transparent)"/>
+            <path d="M 190 153 L 204 153 C 240 153 240 153 276 153 L 290 153" stroke-width="3" stroke="color-mix(in srgb, var(--acento) 55%, transparent)"/>
+            <path d="M 190 211 L 202 211 C 240 211 240 163 278 163 L 290 163" stroke-width="3" stroke="color-mix(in srgb, var(--acento) 55%, transparent)"/>
+            <path d="M 460 133 L 472 133 C 515 133 515 37 558 37 L 570 37" stroke-width="4" stroke="var(--claude)"/>
+            <path d="M 460 143 L 472 143 C 515 143 515 95 558 95 L 570 95" stroke-width="4" stroke="var(--codex)"/>
+            <path d="M 460 153 L 479 153 C 515 153 515 153 551 153 L 570 153" stroke-width="4" stroke="var(--copilot)"/>
+            <path d="M 460 163 L 472 163 C 515 163 515 211 558 211 L 570 211" stroke-width="4" stroke="var(--gemini)"/>
+            <path d="M 460 173 L 472 173 C 515 173 515 269 558 269 L 570 269" stroke-width="4" stroke="var(--antigravity)"/>
           </g>
-          <circle cx="40" cy="160" r="11" fill="var(--superficie)" stroke="var(--acento)" stroke-width="5"/>
-          <text x="40" y="196" text-anchor="middle" font-size="13" fill="var(--texto-suave)"><tspan lang="es">Tu app</tspan><tspan lang="en">Your app</tspan></text>
-          <rect x="150" y="128" width="120" height="64" rx="32" fill="var(--superficie)" stroke="var(--texto)" stroke-width="4"/>
-          <text x="210" y="157" text-anchor="middle" font-size="17" font-weight="700" fill="var(--texto)" style="font-family: var(--titulo)">Tramtai</text>
-          <text x="210" y="176" text-anchor="middle" font-size="11" fill="var(--texto-suave)" style="font-family: var(--mono)">127.0.0.1</text>
-          <g stroke-width="5" fill="var(--superficie)">
-            <circle cx="384" cy="50" r="10" stroke="var(--claude)"/>
-            <circle cx="384" cy="105" r="10" stroke="var(--codex)"/>
-            <circle cx="384" cy="160" r="10" stroke="var(--copilot)"/>
-            <circle cx="384" cy="215" r="10" stroke="var(--gemini)"/>
-            <circle cx="384" cy="270" r="10" stroke="var(--antigravity)"/>
-          </g>
-          <g font-size="12.5" fill="var(--texto-suave)" text-anchor="start">
-            <text x="404" y="54">Claude Code</text>
-            <text x="404" y="109">Codex</text>
-            <text x="404" y="164">GitHub Copilot</text>
-            <text x="404" y="219">Gemini API</text>
-            <text x="404" y="274">Antigravity</text>
-          </g>
+          <circle cx="190" cy="95" r="7" stroke-width="3" fill="var(--superficie)" stroke="var(--acento)"/>
+          <text x="172" y="100" text-anchor="end" font-size="14" font-weight="600" fill="var(--texto)"><tspan lang="es">Tu app</tspan><tspan lang="en">Your app</tspan></text>
+          <circle cx="190" cy="153" r="7" stroke-width="3" fill="var(--superficie)" stroke="var(--acento)"/>
+          <text x="172" y="158" text-anchor="end" font-size="14" font-weight="500" fill="var(--texto)"><tspan lang="es">Tus scripts</tspan><tspan lang="en">Your scripts</tspan></text>
+          <circle cx="190" cy="211" r="7" stroke-width="3" fill="var(--superficie)" stroke="var(--acento)"/>
+          <text x="172" y="216" text-anchor="end" font-size="14" font-weight="500" fill="var(--texto)"><tspan lang="es">Tus automatizaciones</tspan><tspan lang="en">Your automations</tspan></text>
+          <!-- Tramtai es el intercambiador: la cápsula de borde grueso de los transbordos. -->
+          <rect x="290" y="117" width="170" height="72" rx="36" stroke-width="5" fill="var(--superficie)" stroke="var(--texto)"/>
+          <text x="375" y="150" text-anchor="middle" font-size="18" font-weight="800" fill="var(--texto)" style="font-family: var(--titulo)">Tramtai</text>
+          <text x="375" y="170" text-anchor="middle" font-size="12" fill="var(--texto-suave)"><tspan lang="es">en tu equipo</tspan><tspan lang="en">on your computer</tspan></text>
+          <circle cx="570" cy="37" r="9" stroke-width="3.5" fill="var(--claude)" stroke="var(--claude)"/>
+          <text x="590" y="35" font-size="15" font-weight="650" fill="var(--texto)">Claude Code</text>
+          <text x="590" y="53" font-size="12" fill="var(--texto-suave)">Anthropic</text>
+          <circle cx="570" cy="95" r="9" stroke-width="3.5" fill="var(--codex)" stroke="var(--codex)"/>
+          <text x="590" y="93" font-size="15" font-weight="650" fill="var(--texto)">Codex</text>
+          <text x="590" y="111" font-size="12" fill="var(--texto-suave)">OpenAI</text>
+          <circle cx="570" cy="153" r="9" stroke-width="3.5" fill="var(--copilot)" stroke="var(--copilot)"/>
+          <text x="590" y="151" font-size="15" font-weight="650" fill="var(--texto)">GitHub Copilot</text>
+          <text x="590" y="169" font-size="12" fill="var(--texto-suave)">GitHub</text>
+          <circle cx="570" cy="211" r="9" stroke-width="3.5" fill="var(--gemini)" stroke="var(--gemini)"/>
+          <text x="590" y="209" font-size="15" font-weight="650" fill="var(--texto)">Gemini API</text>
+          <text x="590" y="227" font-size="12" fill="var(--texto-suave)">Google</text>
+          <circle cx="570" cy="269" r="9" stroke-width="3.5" fill="var(--antigravity)" stroke="var(--antigravity)"/>
+          <text x="590" y="267" font-size="15" font-weight="650" fill="var(--texto)">Antigravity</text>
+          <text x="590" y="285" font-size="12" fill="var(--texto-suave)">Google</text>
           <rect class="tranvia" x="-13" y="-7" width="26" height="14" rx="5" fill="var(--acento)"/>
+        </svg>
+        <svg class="mapa-alto" viewBox="0 0 320 382">
+          <line x1="18" y1="14" x2="18" y2="362" stroke-width="3" stroke="var(--borde-fuerte)"/>
+          <circle cx="18" cy="14" r="6" stroke-width="3" fill="var(--superficie)" stroke="var(--acento)"/>
+          <text x="36" y="19" font-size="14" font-weight="600" fill="var(--texto)"><tspan lang="es">Tu app</tspan><tspan lang="en">Your app</tspan></text>
+          <circle cx="18" cy="52" r="6" stroke-width="3" fill="var(--superficie)" stroke="var(--acento)"/>
+          <text x="36" y="57" font-size="14" font-weight="500" fill="var(--texto)"><tspan lang="es">Tus scripts</tspan><tspan lang="en">Your scripts</tspan></text>
+          <circle cx="18" cy="90" r="6" stroke-width="3" fill="var(--superficie)" stroke="var(--acento)"/>
+          <text x="36" y="95" font-size="14" font-weight="500" fill="var(--texto)"><tspan lang="es">Tus automatizaciones</tspan><tspan lang="en">Your automations</tspan></text>
+          <rect x="4" y="120" width="312" height="58" rx="29" stroke-width="4" fill="var(--superficie)" stroke="var(--texto)"/>
+          <text x="160" y="146" text-anchor="middle" font-size="16" font-weight="800" fill="var(--texto)" style="font-family: var(--titulo)">Tramtai</text>
+          <text x="160" y="164" text-anchor="middle" font-size="12" fill="var(--texto-suave)"><tspan lang="es">en tu equipo</tspan><tspan lang="en">on your computer</tspan></text>
+          <line x1="18" y1="210" x2="44" y2="210" stroke-width="4" stroke-linecap="round" stroke="var(--claude)"/>
+          <circle cx="52" cy="210" r="7" stroke-width="3" fill="var(--claude)" stroke="var(--claude)"/>
+          <text x="70" y="215" font-size="15" font-weight="650" fill="var(--texto)">Claude Code</text>
+          <text x="314" y="215" text-anchor="end" font-size="12" fill="var(--texto-suave)">Anthropic</text>
+          <line x1="18" y1="248" x2="44" y2="248" stroke-width="4" stroke-linecap="round" stroke="var(--codex)"/>
+          <circle cx="52" cy="248" r="7" stroke-width="3" fill="var(--codex)" stroke="var(--codex)"/>
+          <text x="70" y="253" font-size="15" font-weight="650" fill="var(--texto)">Codex</text>
+          <text x="314" y="253" text-anchor="end" font-size="12" fill="var(--texto-suave)">OpenAI</text>
+          <line x1="18" y1="286" x2="44" y2="286" stroke-width="4" stroke-linecap="round" stroke="var(--copilot)"/>
+          <circle cx="52" cy="286" r="7" stroke-width="3" fill="var(--copilot)" stroke="var(--copilot)"/>
+          <text x="70" y="291" font-size="15" font-weight="650" fill="var(--texto)">GitHub Copilot</text>
+          <text x="314" y="291" text-anchor="end" font-size="12" fill="var(--texto-suave)">GitHub</text>
+          <line x1="18" y1="324" x2="44" y2="324" stroke-width="4" stroke-linecap="round" stroke="var(--gemini)"/>
+          <circle cx="52" cy="324" r="7" stroke-width="3" fill="var(--gemini)" stroke="var(--gemini)"/>
+          <text x="70" y="329" font-size="15" font-weight="650" fill="var(--texto)">Gemini API</text>
+          <text x="314" y="329" text-anchor="end" font-size="12" fill="var(--texto-suave)">Google</text>
+          <line x1="18" y1="362" x2="44" y2="362" stroke-width="4" stroke-linecap="round" stroke="var(--antigravity)"/>
+          <circle cx="52" cy="362" r="7" stroke-width="3" fill="var(--antigravity)" stroke="var(--antigravity)"/>
+          <text x="70" y="367" font-size="15" font-weight="650" fill="var(--texto)">Antigravity</text>
+          <text x="314" y="367" text-anchor="end" font-size="12" fill="var(--texto-suave)">Google</text>
         </svg>
       </div>
     </div>
