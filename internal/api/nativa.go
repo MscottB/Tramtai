@@ -21,6 +21,7 @@ import (
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
+	"tramtai/internal/salidas"
 	"tramtai/internal/version"
 )
 
@@ -65,7 +66,57 @@ func (s *Servidor) obtenerTrabajo(w http.ResponseWriter, r *http.Request) {
 		EscribirError(w, r, err)
 		return
 	}
-	EscribirJSON(w, http.StatusOK, t)
+	EscribirJSON(w, http.StatusOK, s.conErrores(r.Context(), t))
+}
+
+// conErrores añade errores_salida, los problemas de la última validación, a un trabajo que falló por el esquema.
+func (s *Servidor) conErrores(ctx context.Context, t nucleo.Trabajo) any {
+	if t.CodigoError != nucleo.CodigoSalidaNoCumpleEsquema {
+		return t
+	}
+	problemas, err := s.Planificador.ProblemasSalida(ctx, t.ID)
+	if err != nil || len(problemas) == 0 {
+		return t
+	}
+	return struct {
+		nucleo.Trabajo
+		ErroresSalida []salidas.Problema `json:"errores_salida"`
+	}{t, problemas}
+}
+
+// validarEsquema compila un esquema sin ejecutar nada y explica por qué no vale, con la línea y la columna si no es
+// JSON. El esquema llega como objeto o como el texto que escribe el usuario (así un JSON roto también se valida).
+func (s *Servidor) validarEsquema(w http.ResponseWriter, r *http.Request) {
+	var cuerpo struct {
+		Esquema json.RawMessage `json:"esquema"`
+	}
+	if err := leerJSON(w, r, &cuerpo); err != nil {
+		EscribirError(w, r, err)
+		return
+	}
+	esquema := []byte(cuerpo.Esquema)
+	var texto string
+	if json.Unmarshal(cuerpo.Esquema, &texto) == nil {
+		esquema = []byte(texto)
+	}
+	if len(strings.TrimSpace(string(esquema))) == 0 {
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("falta el esquema")))
+		return
+	}
+	if len(esquema) > nucleo.MaximoEsquemaPeticion {
+		EscribirJSON(w, http.StatusOK, map[string]any{"valido": false, "error": idioma.T("el esquema supera 256 KB")})
+		return
+	}
+	linea, columna, err := salidas.CompilarDetallado(esquema)
+	if err != nil {
+		respuesta := map[string]any{"valido": false, "error": nucleo.MensajeDe(err)}
+		if linea > 0 {
+			respuesta["linea"], respuesta["columna"] = linea, columna
+		}
+		EscribirJSON(w, http.StatusOK, respuesta)
+		return
+	}
+	EscribirJSON(w, http.StatusOK, map[string]any{"valido": true})
 }
 
 func (s *Servidor) eliminarTrabajo(w http.ResponseWriter, r *http.Request) {
@@ -204,7 +255,21 @@ func (s *Servidor) reintentarTrabajo(w http.ResponseWriter, r *http.Request) {
 		EscribirError(w, r, err)
 		return
 	}
-	t, err := s.Planificador.Reintentar(r.Context(), r.PathValue("id"))
+	// El cuerpo es opcional: {"corregir": true} pide al agente que corrija la respuesta que no cumplía el esquema.
+	var cuerpo struct {
+		Corregir bool `json:"corregir"`
+	}
+	leer := json.NewDecoder(http.MaxBytesReader(w, r.Body, maximoCuerpo))
+	leer.DisallowUnknownFields()
+	if err := leer.Decode(&cuerpo); err != nil && !errors.Is(err, io.EOF) {
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("cuerpo JSON no válido: %s", err.Error())))
+		return
+	}
+	reintentar := s.Planificador.Reintentar
+	if cuerpo.Corregir {
+		reintentar = s.Planificador.Corregir
+	}
+	t, err := reintentar(r.Context(), r.PathValue("id"))
 	if err != nil {
 		EscribirError(w, r, err)
 		return
@@ -235,7 +300,7 @@ func (s *Servidor) ejecutarTrabajo(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	datos, _ := json.Marshal(final)
+	datos, _ := json.Marshal(s.conErrores(context.Background(), final))
 	_ = f.escribir(string(datos) + "\n")
 }
 

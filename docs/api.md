@@ -42,7 +42,7 @@ de la API propia), y **Probar → Ver como código** da la prueba actual como pe
 - **Acceso remoto:** está desactivado. Solo se permite con `servicio.permitir_remoto: true`, token obligatorio y ningún agente en modo suscripción. Lo recomendado es un túnel SSH. La Web UI remota solo se abre con un código de `tramtai abrir` hecho en el equipo del servicio.
 - `/healthz` no exige token y no expone datos.
 - **Contenido hostil:** lo que manda una app (mensaje, instrucciones, documentos, esquema) no puede hacer que un agente
-  lea archivos, ejecute órdenes o salga a la red: Claude Code y Copilot van sin herramientas y Codex en solo lectura, sin
+  lea archivos, ejecute órdenes o salga a la red: Claude Code y GitHub Copilot van sin herramientas y Codex en solo lectura, sin
   terminal ni búsqueda web (comprobado con [canarios](operacion.md#comprobar-el-aislamiento-de-los-agentes)).
   Antigravity también va sin herramientas (un hook de agy las niega), pero hasta que su canario pase con una clave de la
   Gemini API no se puede usar desde apps ni APIs (`agente_no_disponible`) salvo `adaptadores.antigravity.permitir_apps`. Los delimitadores de turnos y archivos llevan un código por petición, y una
@@ -53,16 +53,17 @@ de la API propia), y **Probar → Ver como código** da la prueba actual como pe
 | Método y ruta | Función |
 |---|---|
 | `POST /trabajos` | Crea un trabajo (`SolicitudEjecucion`). Responde 202 con el trabajo y `Location`; si la `Idempotency-Key` ya apuntaba a la misma solicitud, responde 200. |
-| `GET /trabajos/{id}` | Estado, error, modelo enviado y efectivo, uso, salida y `disponibilidad` (`disponible` o `expirada`). Tras la retención de metadatos (7 días) responde 404. |
+| `GET /trabajos/{id}` | Estado, error, modelo enviado y efectivo, uso, salida y `disponibilidad` (`disponible` o `expirada`). Si falló con `salida_no_cumple_esquema`, `errores_salida` lista los problemas de la última respuesta (`campo`, `problema` y `texto`; ver [Respuestas con forma](#respuestas-con-forma)). Tras la retención de metadatos (7 días) responde 404. |
 | `GET /trabajos/{id}/salida` | La salida con su tipo (`text/markdown`, `text/plain` o `application/json`). Si no ha terminado, 409 `trabajo_no_terminado`; si la retención ya la borró, 410 `resultado_expirado`. |
-| `GET /trabajos/{id}/eventos` | SSE con `id` monotónico: `estado`, `entrada` (antes de esperar al agente: lo que ocupa la entrada), `texto`, `aviso` e `intento` (al empezar cada intento, JSON con `agente`, `modelo`, `esfuerzo` y `del_agente`; un cliente que no lo espera lo ignora). `Last-Event-ID` (o `?desde=`) reanuda tras ese evento. Envía latidos cada 15 s y termina con un evento `fin`. Si el resultado expiró, empieza con un evento `aviso`: solo quedan los eventos de estado, entrada e intento. |
+| `GET /trabajos/{id}/eventos` | SSE con `id` monotónico: `estado`, `entrada` (antes de esperar al agente: lo que ocupa la entrada), `texto`, `aviso`, `intento` (al empezar cada intento, JSON con `agente`, `modelo`, `esfuerzo` y `del_agente`, y en una corrección `correccion` y `correcciones`; un cliente que no lo espera lo ignora) y `validacion` (los problemas de una respuesta que no cumplía el esquema). `Last-Event-ID` (o `?desde=`) reanuda tras ese evento. Envía latidos cada 15 s y termina con un evento `fin`. Si el resultado expiró, empieza con un evento `aviso`: solo quedan los eventos de estado, entrada e intento. |
 | `GET /limites` | Los topes de una petición: `cargas_por_peticion` (20), `carga_mb`, `texto_convertido_mb`, `cuota_cargas_mb`, `cuerpo_mb` (16), `esquema_kb` (256), `mensajes` (1.000) y `reserva_salida_tokens`. Es rápida; `/capacidades` trae el mismo bloque en `limites`. |
-| `GET /trabajos/{id}/registro` | Los pasos de la petición con su hora, sin el texto de la respuesta: `{"eventos":[{"numero","tipo","datos","creado_en"}]}` con los eventos `estado`, `entrada` (caracteres, tokens estimados y cada documento de mayor a menor), `intento` y `aviso`. Mismos permisos que `GET /trabajos/{id}`. |
+| `GET /trabajos/{id}/registro` | Los pasos de la petición con su hora, sin el texto de la respuesta: `{"eventos":[{"numero","tipo","datos","creado_en"}]}` con los eventos `estado`, `entrada` (caracteres, tokens estimados y cada documento de mayor a menor), `intento` (en una corrección, con `correccion` y `correcciones`), `aviso` y `validacion` (los problemas de una respuesta que no cumplía el esquema). Mismos permisos que `GET /trabajos/{id}`. |
 | `POST /trabajos/{id}/cancelar` | Cancelación idempotente; responde 202 sin afirmar que ya terminó. |
-| `POST /trabajos/{id}/reintentar` | Crea un intento nuevo (`intento_de`) a partir de un trabajo terminado. Si sus entradas ya vencieron, 410 `entrada_no_disponible`. |
+| `POST /trabajos/{id}/reintentar` | Crea un intento nuevo (`intento_de`) a partir de un trabajo terminado. Si sus entradas ya vencieron, 410 `entrada_no_disponible`. Con el cuerpo opcional `{"corregir": true}`, el intento nuevo pide al mismo agente que corrija la respuesta anterior; solo vale si falló con `salida_no_cumple_esquema` y conservó su salida (si no, 400 `correccion_no_disponible`). |
+| `POST /esquemas/validar` | Comprueba un JSON Schema sin ejecutar nada: `{"esquema": …}` con el esquema como objeto o como texto. Responde `{"valido": true}` o `{"valido": false, "error": "…"}`, con `linea` y `columna` si el texto no es JSON válido. Mismo tope que en una petición (256 KB). |
 | `DELETE /trabajos/{id}` | Borra un trabajo terminado: 204, o 409 si sigue activo. |
 | `DELETE /trabajos` | Vacía el historial: borra los trabajos terminados de la instancia y las cargas que ya no usa ninguno; conserva los activos. Responde `{"eliminados": n}`. No existe en los puntos de acceso. |
-| `POST /ejecutar` | Igual que `POST /trabajos`, pero espera el resultado. Envía `Location` antes de esperar; si se corta la conexión, el trabajo no se cancela. |
+| `POST /ejecutar` | Igual que `POST /trabajos`, pero espera el resultado: el trabajo final, con `errores_salida` si falló por el esquema. Envía `Location` antes de esperar; si se corta la conexión, el trabajo no se cancela. |
 | `POST /cargas` | Multipart con el campo `archivo`, o el binario en el cuerpo con `?nombre=`. Devuelve `identificador_carga`, `sha256`, `tamano_bytes` y `vence_en`. Un trabajo nuevo que cite una carga vencida se rechaza con 410; las cargas de un trabajo aceptado se conservan mientras se pueda reintentar. |
 | `GET /agentes` | La ficha de cada agente, al momento y sin comprobar los CLI: `agente`, `nombre`, `programa`, `codigo`, `color` (`claro`, `oscuro`), `orden`, `streaming`, `salida_estructurada`, `modelo_efectivo_informado`, `esfuerzos`, `autenticaciones`, `variables_clave`, `permitido_apps` y `url_instalacion`. Un agente sin ficha (de pruebas) va al final con su id. |
 | `GET /capacidades` | Por agente: streaming (`tokens` o `final`), salida estructurada, modelo efectivo, versión detectada, autenticación y términos. Incluye el formato de serialización. |
@@ -93,8 +94,9 @@ Los campos desconocidos en la API nativa son un error (`solicitud_invalida`).
 2. **Crear el trabajo**: `POST /trabajos` con `mensajes`, el modelo (`agente` y `modelo`, o `perfil_modelo`), las
    `cargas` y, si quieres JSON, `salida: {"formato": "json", "esquema": {…}}`. Responde 202 con el trabajo (`id`).
 3. **Seguirlo en vivo**: `GET /trabajos/{id}/eventos` (SSE). Cada evento trae `id`, `event` y `data`: los `texto` son
-   trozos de la respuesta (una línea `data:` por línea del texto); `estado`, `entrada`, `intento` y `aviso` cuentan lo
-   que pasa, y `fin` (`{"estado","codigo_error"}`) cierra el flujo. Si se corta, vuelve a pedirlo con la cabecera
+   trozos de la respuesta (una línea `data:` por línea del texto; con correcciones llegan los de cada intento, y un
+   `intento` con `correccion` empieza una respuesta nueva); `estado`, `entrada`, `intento`, `aviso` y `validacion`
+   cuentan lo que pasa, y `fin` (`{"estado","codigo_error"}`) cierra el flujo. Si se corta, vuelve a pedirlo con la cabecera
    `Last-Event-ID` (o `?desde=`) con el último `id` recibido: sigue desde ahí y el trabajo no se repite ni se cancela.
 4. **Leer el resultado**: `GET /trabajos/{id}/salida` (con esquema, el JSON ya validado). `GET /trabajos/{id}` da el
    estado, el modelo efectivo y el uso de tokens.
@@ -138,7 +140,7 @@ existe o un valor no válido; el mensaje dice cuál), 410 `entrada_no_disponible
 Las tres rutas aceptan herramientas de tipo función: `tools` y `tool_choice` en chat y responses (con `parallel_tool_calls`), y `tools` con `input_schema` y `tool_choice` (`auto`, `any`, `tool`, `none`, `disable_parallel_tool_use`) en Anthropic. Funciona igual que con OpenAI o Anthropic: el agente **pide** la llamada (`tool_calls` con `finish_reason: "tool_calls"`, o bloques `tool_use` con `stop_reason: "tool_use"`), tu aplicación la ejecuta y devuelve el resultado en el siguiente mensaje (rol `tool`, `function_call_output` o `tool_result`).
 
 - El agente nunca ejecuta nada: Tramtai le describe las herramientas y le pide la respuesta con la salida estructurada de su CLI, y la traduce al formato de cada API.
-- Los argumentos se validan con el JSON Schema de cada herramienta. Si el agente devuelve argumentos que no lo cumplen, o no llama a ninguna cuando `tool_choice` lo exige, la respuesta es 422 `salida_no_cumple_esquema`.
+- Los argumentos se validan con el JSON Schema de cada herramienta, también sus `format` (desde la v0.46). Si el agente devuelve argumentos que no lo cumplen, o no llama a ninguna cuando `tool_choice` lo exige, la respuesta es 422 `salida_no_cumple_esquema`.
 - La respuesta llega completa al terminar: con herramientas no hay texto en vivo, aunque `stream: true` envía los eventos de siempre.
 - No se combina con `response_format` en JSON.
 
@@ -167,7 +169,7 @@ Cuánto razona el modelo antes de responder. Es opcional: sin él, cada CLI usa 
 - **Qué agentes lo admiten:**
   - Claude Code (`--effort`), hasta máximo.
   - Codex (`model_reasoning_effort`), hasta muy alto; si se pide máximo, usa muy alto.
-  - Copilot (`--reasoning-effort`), hasta máximo, solo con un modelo concreto: con `copilot` o `copilot/auto` (el
+  - GitHub Copilot (`--reasoning-effort`), hasta máximo, solo con un modelo concreto: con `copilot` o `copilot/auto` (el
     automático, el único del plan Free) se ignora y `GET /api/v1/modelos` no lo ofrece.
   - Antigravity (`--effort`), hasta máximo.
   - La API de Gemini lo ignora.
@@ -179,14 +181,34 @@ Cuánto razona el modelo antes de responder. Es opcional: sin él, cada CLI usa 
 En un punto de acceso el modo de contexto lo fija la API (`aislado` si no indica otro): una petición, o un perfil, que pida otro recibe 403 `contexto_no_permitido`.
 
 - **`perfil`** (API nativa) o `--perfil-trabajo` (CLI): aplica `profiles/<nombre>.yaml` del proyecto (`.tramtai/profiles/`) o de la configuración global. Aporta instrucciones, formato, esquema y `conservar_salida_invalida`; los campos explícitos de la solicitud prevalecen. `tramtai iniciar` crea el perfil de ejemplo `resumen`.
-- **`salida.conservar_salida_invalida`:** si la salida no cumple el esquema, el trabajo falla con `salida_no_cumple_esquema`, pero conserva la salida bruta para revisarla.
+- **`salida.conservar_salida_invalida`:** si la salida no cumple el esquema, el trabajo falla con `salida_no_cumple_esquema`, pero conserva la salida bruta para revisarla (y para corregirla después con `reintentar`).
+- **`salida.reintentos`** (0 a 3; 0 por defecto): ver [Respuestas con forma](#respuestas-con-forma).
+
+### Respuestas con forma
+
+Con `salida.esquema` (o el de la receta del punto) la respuesta se valida con JSON Schema 2020-12.
+
+> **Cambio en la v0.46:** los `format` (`date`, `date-time`, `email`, `uri`, `uuid`…) ahora se comprueban, en las
+> respuestas y en los argumentos de las herramientas; antes se ignoraban. Por ejemplo, `"2026-10-18T10:00:00"` (sin
+> zona horaria) ya no cumple `date-time`, y un esquema de Pydantic con `datetime`, `EmailStr` o `HttpUrl` exige el
+> formato exacto. Si tu aplicación aceptaba valores aproximados, quita el `format` del esquema o pide el formato en
+> las instrucciones.
+
+- **Si no cumple**, el trabajo falla con `salida_no_cumple_esquema`:
+  - el mensaje es el primer problema, con «(y N más)» si hay más;
+  - `errores_salida` los lista (hasta 20): `campo` (la ruta legible, como `tareas[2].fecha`; vacía, la respuesta entera), `problema` (`falta`, `tipo`, `valor_no_permitido`, `sobra`, `formato`, `tamaño` u `otro`) y `texto`, en el idioma del servicio.
+- **`salida.reintentos`** (0 a 3, exige formato `json`): cuántas veces se pide al **mismo** agente que corrija una respuesta que no cumple.
+  - La corrección sigue la conversación con la respuesta y sus problemas; nunca salta al respaldo.
+  - Cada corrección es otra petición al agente: aparece como un `intento` más en el registro y su uso (tokens y coste) se suma al trabajo y a los presupuestos, aunque como petición cuenta una sola vez.
+  - En un punto de acceso, `reintentos_salida` es el valor de la receta para las peticiones que no piden otro, también las de las fachadas OpenAI y Anthropic.
+- **Corregir a mano:** con 0 reintentos, `POST /trabajos/{id}/reintentar` con `{"corregir": true}` hace una corrección como un trabajo nuevo vinculado (si el trabajo conservó su salida con `conservar_salida_invalida`).
 - **`modo_contexto: consciente_proyecto`** (o `--contexto`): el agente trabaja en la raíz del proyecto y carga sus reglas. Solo se admite en proyectos incluidos en `proyectos_confiables` de la configuración global; si no, devuelve 403 `contexto_no_permitido`. Antes de ejecutar se registra un evento `aviso` con el contexto que se carga.
 
 ## Puntos de acceso y administración
 
 Un punto de acceso expone la misma API bajo su propia URL y token: `http://127.0.0.1:17373/p/<nombre>/openai/v1`, o su propio puerto. Solo expone los contratos que tiene habilitados, antepone sus `instrucciones` (si tiene) a las de cada solicitud, aplica sus alias, modelos permitidos y modelo forzado (cabecera `Tramtai-Modelo-Forzado`) y solo ve sus trabajos. Con `ejecucion.maximo_trabajos` limita sus ejecuciones simultáneas, siempre dentro del límite de su instancia.
 
-Un punto de acceso también puede ser una **receta**: con `esquema` (un JSON Schema escrito como YAML), toda petición que no traiga su propio esquema responde con JSON validado, también por las fachadas sin `response_format`. Con `respaldo` (hasta 3 entradas `agente` o `agente/modelo`, cada una con un esfuerzo propio opcional `+nivel`), si el agente principal falla antes de emitir texto (`limite_uso_proveedor`, `autenticacion_agente`, `agente_no_disponible`, `modelo_no_disponible`, `error_agente`, `error_protocolo_agente` o `tiempo_ejecucion_agotado`), o si su entrada no cabe en su contexto (`entrada_demasiado_grande`, sin ejecutarlo), el mismo trabajo sigue con el siguiente: queda un evento `aviso`, el trabajo muestra el agente que respondió y el tiempo límite cuenta por intento. Tras un salto, el campo `model` de las respuestas de las fachadas OpenAI y Anthropic indica el agente/modelo que respondió (sin salto, sigue siendo el que pidió la aplicación). En streaming, los primeros fragmentos salen antes de saber si habrá salto y llevan el modelo pedido; el que respondió aparece en el fragmento final de uso de OpenAI (`stream_options.include_usage`) y en el trabajo (`GET /api/v1/trabajos/{id}`). El trabajo guarda el respaldo que le queda, así que al reencolarlo o reintentarlo no repite agentes. La API nativa acepta `"respaldo": [...]` en la solicitud; las fachadas lo heredan del punto. Un respaldo con un agente que no existe, o fuera de `modelos_permitidos`, se rechaza al guardar el punto.
+Un punto de acceso también puede ser una **receta**: con `esquema` (un JSON Schema escrito como YAML), toda petición que no traiga su propio esquema responde con JSON validado, también por las fachadas sin `response_format`; con `reintentos_salida` (0 a 3) se corrige la respuesta que no lo cumpla. Con `respaldo` (hasta 3 entradas `agente` o `agente/modelo`, cada una con un esfuerzo propio opcional `+nivel`), si el agente principal falla antes de emitir texto (`limite_uso_proveedor`, `autenticacion_agente`, `agente_no_disponible`, `modelo_no_disponible`, `error_agente`, `error_protocolo_agente` o `tiempo_ejecucion_agotado`), o si su entrada no cabe en su contexto (`entrada_demasiado_grande`, sin ejecutarlo), el mismo trabajo sigue con el siguiente: queda un evento `aviso`, el trabajo muestra el agente que respondió y el tiempo límite cuenta por intento. Tras un salto, el campo `model` de las respuestas de las fachadas OpenAI y Anthropic indica el agente/modelo que respondió (sin salto, sigue siendo el que pidió la aplicación). En streaming, los primeros fragmentos salen antes de saber si habrá salto y llevan el modelo pedido; el que respondió aparece en el fragmento final de uso de OpenAI (`stream_options.include_usage`) y en el trabajo (`GET /api/v1/trabajos/{id}`). El trabajo guarda el respaldo que le queda, así que al reencolarlo o reintentarlo no repite agentes. La API nativa acepta `"respaldo": [...]` en la solicitud; las fachadas lo heredan del punto. Un respaldo con un agente que no existe, o fuera de `modelos_permitidos`, se rechaza al guardar el punto.
 
 ```yaml
 puntos_acceso:
@@ -199,6 +221,7 @@ puntos_acceso:
       type: object
       properties: { total: { type: number }, proveedor: { type: string } }
       required: [total, proveedor]
+    reintentos_salida: 1 # una corrección si la respuesta no cumple el esquema
 ```
 
 ### Presupuestos
@@ -267,7 +290,7 @@ API nativa: `{"error": {"codigo": "…", "mensaje": "…"}}`. Las fachadas usan 
 
 | HTTP | Códigos |
 |---|---|
-| 400 | `solicitud_invalida`, `parametro_no_soportado`, `modelo_ambiguo`, `modelo_no_permitido`, `modelo_no_disponible`, `modelo_no_configurado`, `carga_invalida`; en las fachadas también `entrada_demasiado_grande` (OpenAI: `context_length_exceeded`) |
+| 400 | `solicitud_invalida`, `parametro_no_soportado`, `modelo_ambiguo`, `modelo_no_permitido`, `modelo_no_disponible`, `modelo_no_configurado`, `carga_invalida`, `correccion_no_disponible`; en las fachadas también `entrada_demasiado_grande` (OpenAI: `context_length_exceeded`) |
 | 401 / 403 | `no_autorizado` / `origen_no_permitido`, `contexto_no_permitido` |
 | 404 | `no_encontrado` |
 | 409 | `conflicto_idempotencia`, `trabajo_no_terminado`, `trabajo_sin_salida` |

@@ -4,6 +4,7 @@ package salidas
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"strings"
 	"sync"
@@ -31,17 +32,42 @@ func Compilar(esquema []byte) (*jsonschema.Schema, error) {
 	}
 	c := jsonschema.NewCompiler()
 	c.UseLoader(sinCargaExterna{})
+	c.AssertFormat() // las fechas del editor de campos (format: date) se comprueban de verdad
 	if err := c.AddResource("tramtai:esquema", documento); err != nil {
 		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("esquema no válido: %s", err.Error()))
 	}
 	compilado, err := c.Compile("tramtai:esquema")
 	if err != nil {
-		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, recortar(idioma.Tf("esquema no válido: %s", err.Error())))
+		motivo := err.Error()
+		var sv *jsonschema.SchemaValidationError
+		var v *jsonschema.ValidationError
+		if errors.As(err, &sv) && errors.As(sv.Err, &v) {
+			if p := problemasDe(v, documento); len(p) > 0 {
+				motivo = p[0].Texto // el primer problema del esquema frente al metaesquema, legible
+			}
+		}
+		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, recortar(idioma.Tf("esquema no válido: %s", motivo)))
 	}
 	return compilado, nil
 }
 
-// Validar comprueba la salida contra el esquema; si no cumple devuelve salida_no_cumple_esquema.
+// CompilarDetallado es Compilar con la línea y la columna (desde 1) cuando el esquema no es JSON válido; 0 si no
+// aplican.
+func CompilarDetallado(esquema []byte) (linea, columna int, err error) {
+	var documento any
+	var sintaxis *json.SyntaxError
+	if errors.As(json.Unmarshal(esquema, &documento), &sintaxis) {
+		antes := esquema[:min(int(sintaxis.Offset), len(esquema))]
+		linea = bytes.Count(antes, []byte("\n")) + 1
+		columna = len([]rune(string(antes[bytes.LastIndexByte(antes, '\n')+1:])))
+		return linea, columna, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el esquema no es JSON válido (línea %d, columna %d)", linea, columna))
+	}
+	_, err = Compilar(esquema)
+	return 0, 0, err
+}
+
+// Validar comprueba la salida contra el esquema; si no cumple devuelve un *ErrorSalida (salida_no_cumple_esquema) con
+// los problemas.
 func Validar(esquema []byte, salida string) error {
 	compilado, err := compiladoDe(esquema)
 	if err != nil {
@@ -49,20 +75,21 @@ func Validar(esquema []byte, salida string) error {
 	}
 	instancia, err := jsonschema.UnmarshalJSON(strings.NewReader(salida))
 	if err != nil {
-		return nucleo.NuevoError(nucleo.CodigoSalidaNoCumpleEsquema, idioma.T("la salida no es JSON válido"))
+		return errorSalida([]Problema{{Problema: "tipo", Texto: idioma.T("La respuesta no es JSON válido")}})
 	}
 	if err := compilado.Validate(instancia); err != nil {
-		return nucleo.NuevoError(nucleo.CodigoSalidaNoCumpleEsquema, recortar(idioma.Tf("la salida no cumple el esquema: %s", err.Error())))
+		var v *jsonschema.ValidationError
+		if errors.As(err, &v) {
+			if p := problemasDe(v, instancia); len(p) > 0 {
+				return errorSalida(p)
+			}
+		}
+		return errorSalida([]Problema{{Problema: "otro", Texto: recortar(idioma.Tf("la salida no cumple el esquema: %s", err.Error()))}})
 	}
 	return nil
 }
 
-func recortar(texto string) string {
-	if len(texto) > maximoMensaje {
-		return texto[:maximoMensaje] + "…"
-	}
-	return texto
-}
+func recortar(texto string) string { return acortar(texto, maximoMensaje) }
 
 // compilados guarda los esquemas ya compilados por su contenido: se compila al aceptar y no otra vez al validar.
 var compilados = struct {

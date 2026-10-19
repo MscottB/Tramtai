@@ -118,7 +118,9 @@
       "parameters": [{ "$ref": "#/components/parameters/Id" }],
       "post": {
         "summary": "Crea un intento nuevo de un trabajo terminado",
+        "description": "Con {\"corregir\": true}, el intento nuevo pide al mismo agente que corrija la respuesta anterior: solo si falló con salida_no_cumple_esquema y conservó su salida (si no, correccion_no_disponible).",
         "operationId": "reintentarTrabajo",
+        "requestBody": { "required": false, "content": { "application/json": { "schema": { "type": "object", "additionalProperties": false, "properties": { "corregir": { "type": "boolean" } } } } } },
         "responses": {
           "202": { "description": "Trabajo nuevo con intento_de", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Trabajo" } } } },
           "default": { "$ref": "#/components/responses/Error" }
@@ -175,6 +177,18 @@
         "operationId": "agentes",
         "responses": {
           "200": { "description": "Fichas en su orden", "content": { "application/json": { "schema": { "type": "object", "properties": { "agentes": { "type": "array", "items": { "$ref": "#/components/schemas/Agente" } } } } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/esquemas/validar": {
+      "post": {
+        "summary": "Comprueba un JSON Schema sin ejecutar nada",
+        "description": "El esquema va como objeto o como texto; si no es JSON válido, la respuesta indica la línea y la columna.",
+        "operationId": "validarEsquema",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "additionalProperties": false, "required": ["esquema"], "properties": { "esquema": { "description": "JSON Schema (objeto) o su texto (string)" } } } } } },
+        "responses": {
+          "200": { "description": "Resultado", "content": { "application/json": { "schema": { "type": "object", "properties": { "valido": { "type": "boolean" }, "error": { "type": "string" }, "linea": { "type": "integer" }, "columna": { "type": "integer" } } } } } },
           "default": { "$ref": "#/components/responses/Error" }
         }
       }
@@ -247,7 +261,8 @@
           "formato": { "type": "string", "enum": ["texto", "markdown", "json"] },
           "esquema": { "description": "JSON Schema que debe cumplir la salida; exige formato json" },
           "validacion_estricta": { "type": "boolean" },
-          "conservar_salida_invalida": { "type": "boolean" }
+          "conservar_salida_invalida": { "type": "boolean" },
+          "reintentos": { "type": "integer", "minimum": 0, "maximum": 3, "description": "Correcciones que se piden al mismo agente si la salida no cumple; cada una es otra petición. Exige formato json." }
         }
       },
       "ConfigEjecucion": {
@@ -278,6 +293,14 @@
         "type": "object",
         "properties": { "tokens_entrada": { "type": "integer" }, "tokens_salida": { "type": "integer" }, "costo_usd": { "type": "number" } }
       },
+      "ProblemaSalida": {
+        "type": "object",
+        "properties": {
+          "campo": { "type": "string", "description": "Ruta legible (tareas[2].fecha); vacía, la respuesta entera" },
+          "problema": { "type": "string", "enum": ["falta", "tipo", "valor_no_permitido", "sobra", "formato", "tamaño", "otro"] },
+          "texto": { "type": "string" }
+        }
+      },
       "Trabajo": {
         "type": "object",
         "properties": {
@@ -286,6 +309,7 @@
           "estado": { "type": "string", "enum": ["en_cola", "preparando_entrada", "esperando_agente", "ejecutando", "validando_salida", "cancelacion_solicitada", "completado", "fallido", "cancelado", "interrumpido"] },
           "codigo_error": { "type": "string" },
           "mensaje_error": { "type": "string" },
+          "errores_salida": { "type": "array", "description": "Con salida_no_cumple_esquema: los problemas de la última respuesta", "items": { "$ref": "#/components/schemas/ProblemaSalida" } },
           "solicitud": { "$ref": "#/components/schemas/SolicitudEjecucion" },
           "salida": { "type": "string" },
           "intento_de": { "type": "string" },

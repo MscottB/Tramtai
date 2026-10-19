@@ -1,6 +1,8 @@
 package salidas
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"tramtai/internal/nucleo"
@@ -24,6 +26,102 @@ func TestEsquemaInvalido(t *testing.T) {
 		if _, err := Compilar([]byte(e)); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
 			t.Errorf("%s: se esperaba solicitud_invalida: %v", e, err)
 		}
+	}
+}
+
+func TestProblemas(t *testing.T) {
+	const esq = `{"type":"object","additionalProperties":false,"required":["total","categoria","tareas"],"properties":{
+		"total":{"type":"number","minimum":0},"categoria":{"enum":["consulta","queja","otro"]},
+		"puntos":{"type":"array","items":{"type":"string"},"minItems":3},"fecha":{"type":"string","format":"date"},
+		"tareas":{"type":"array","items":{"type":"object","required":["tarea","fecha"],"properties":{"tarea":{"type":"string"},"fecha":{"type":"string"}}}}}}`
+	casos := []struct{ salida, campo, problema, texto string }{
+		{`{"categoria":"otro","tareas":[]}`, "total", "falta", "Falta el campo `total`"},
+		{`{"total":"diez","categoria":"otro","tareas":[]}`, "total", "tipo", "`total` debería ser un número y llegó un texto"},
+		{`{"total":1,"categoria":"x","tareas":[]}`, "categoria", "valor_no_permitido", "`categoria` debe ser una de: consulta, queja, otro"},
+		{`{"total":1,"categoria":"otro","tareas":[],"notas":1}`, "notas", "sobra", "Sobra el campo `notas`"},
+		{`{"total":1,"categoria":"otro","tareas":[],"fecha":"mañana"}`, "fecha", "formato", "`fecha` no tiene el formato date"},
+		{`{"total":1,"categoria":"otro","tareas":[],"puntos":["a"]}`, "puntos", "tamaño", "`puntos` debe tener al menos 3 elementos y tiene 1"},
+		{`{"total":-0.5,"categoria":"otro","tareas":[]}`, "total", "tamaño", "`total` debe ser como mínimo 0"},
+		{`{"total":1,"categoria":"otro","tareas":[{"tarea":"a","fecha":"x"},{"tarea":"b","fecha":"x"},{"tarea":"c"}]}`, "tareas[2].fecha", "falta", "Falta el campo `tareas[2].fecha`"},
+		{`[1]`, "", "tipo", "La respuesta debería ser un objeto y llegó una lista"},
+		{`no es json`, "", "tipo", "La respuesta no es JSON válido"},
+	}
+	for _, c := range casos {
+		err := Validar([]byte(esq), c.salida)
+		p := ProblemasDe(err)
+		if nucleo.CodigoDe(err) != nucleo.CodigoSalidaNoCumpleEsquema || len(p) != 1 {
+			t.Errorf("%s: se esperaba un problema: %v %+v", c.salida, err, p)
+			continue
+		}
+		if p[0] != (Problema{Campo: c.campo, Problema: c.problema, Texto: c.texto}) {
+			t.Errorf("%s: %+v", c.salida, p[0])
+		}
+		if nucleo.MensajeDe(err) != c.texto {
+			t.Errorf("%s: el mensaje debe ser el problema: %q", c.salida, nucleo.MensajeDe(err))
+		}
+	}
+}
+
+func TestProblemasTopeYMensaje(t *testing.T) {
+	esq, salida := `{"type":"object","properties":{`, `{`
+	for i := range 25 {
+		if i > 0 {
+			esq, salida = esq+",", salida+","
+		}
+		esq += fmt.Sprintf(`"c%d":{"type":"number"}`, i)
+		salida += fmt.Sprintf(`"c%d":"x"`, i)
+	}
+	err := Validar([]byte(esq+"}}"), salida+"}")
+	if p := ProblemasDe(err); len(p) != MaximoProblemas {
+		t.Fatalf("se esperaban %d problemas: %d", MaximoProblemas, len(p))
+	}
+	if m := nucleo.MensajeDe(err); !strings.HasSuffix(m, "(y 19 más)") {
+		t.Errorf("mensaje: %q", m)
+	}
+}
+
+func TestProblemasDeOpcionesYTopes(t *testing.T) {
+	enum := make([]string, 30)
+	for i := range enum {
+		enum[i] = fmt.Sprintf(`"v%d"`, i)
+	}
+	casos := []struct{ esquema, salida, problema, texto string }{
+		// Optional[str] de Pydantic: un solo problema con los dos tipos.
+		{`{"type":"object","properties":{"n":{"anyOf":[{"type":"string"},{"type":"null"}]}}}`, `{"n":5}`, "tipo",
+			"`n` debería ser un texto o null y llegó un número"},
+		// Opciones que piden campos distintos: no se contradicen, se explican como una.
+		{`{"type":"object","properties":{"v":{"oneOf":[{"type":"object","required":["a"]},{"type":"object","required":["b"]}]}}}`, `{"v":{}}`, "otro",
+			"`v` no cumple ninguna de las opciones del esquema"},
+		{`{"type":"object","properties":{"v":{"oneOf":[{"type":"object"},{"required":["a"]}]}}}`, `{"v":{"a":1}}`, "otro",
+			"`v` cumple más de una de las opciones del esquema y debe cumplir solo una"},
+		{`{"type":"object","properties":{"e":{"enum":[` + strings.Join(enum, ",") + `]}}}`, `{"e":"x"}`, "valor_no_permitido",
+			"`e` debe ser una de: v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, …"},
+		{`{"type":"object","properties":{"l":{"type":"array","minItems":1}}}`, `{"l":[]}`, "tamaño", "`l` debe tener al menos un elemento"},
+		{`{"type":"object","properties":{"s":{"type":"string","minLength":1}}}`, `{"s":""}`, "tamaño", "`s` no puede estar vacío"},
+		{`{"type":"object","properties":{"m":{"type":"number","multipleOf":2}}}`, `{"m":3}`, "otro", "`m` no cumple la regla «multipleOf» del esquema"},
+	}
+	for _, c := range casos {
+		p := ProblemasDe(Validar([]byte(c.esquema), c.salida))
+		if len(p) != 1 || p[0].Problema != c.problema || p[0].Texto != c.texto {
+			t.Errorf("%s: %+v", c.salida, p)
+		}
+	}
+	// Ningún texto pasa del tope, aunque el valor permitido sea enorme.
+	largo := `{"type":"object","properties":{"c":{"const":"` + strings.Repeat("ñ", 1000) + `"}}}`
+	if p := ProblemasDe(Validar([]byte(largo), `{"c":"x"}`)); len(p) != 1 || len([]rune(p[0].Texto)) > maximoTexto+1 {
+		t.Errorf("texto sin tope: %d", len([]rune(p[0].Texto)))
+	}
+}
+
+func TestCompilarDetallado(t *testing.T) {
+	if l, c, err := CompilarDetallado([]byte("{\n  \"type\": \"object\",\n  \"properties\": {\n    \"x\" {}\n}}")); err == nil || l != 4 || c != 9 {
+		t.Errorf("JSON roto: línea %d columna %d: %v", l, c, err)
+	}
+	if _, _, err := CompilarDetallado([]byte(`{"type":"objeto"}`)); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida || !strings.Contains(err.Error(), "`type`") {
+		t.Errorf("tipo inválido: %v", err)
+	}
+	if _, _, err := CompilarDetallado([]byte(esquema)); err != nil {
+		t.Error(err)
 	}
 }
 

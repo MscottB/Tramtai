@@ -2,7 +2,7 @@
 
 Cada agente vive en su módulo, `internal/agentes/<nombre>`, con su adaptador, su ficha y sus pruebas. El resto del código
 (servicio, planificador, API, Web UI) pregunta al catálogo, `internal/agentes`, y no nombra agentes: lo comprueba
-`TestSinNombresFuera`. Un agente es un release (v0.44 Copilot CLI, v0.46 OpenCode, v0.47 Hermes Agent).
+`TestSinNombresFuera`. Un agente es un release (v0.44 Copilot CLI, v0.47 OpenCode, v0.48 Hermes Agent).
 
 ## 1. M0 con el CLI real
 

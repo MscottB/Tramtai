@@ -26,7 +26,7 @@ Tramtai permite que Claude Code, Codex o GitHub Copilot CLI usen la sesión que 
 - Los términos de los proveedores **pueden no permitir** el uso automatizado de una suscripción personal, ni usarla para alimentar otras aplicaciones o servir a otras personas, y esos términos cambian con el tiempo. Revísalos antes de activarla.
 - Usarla puede llevar a que el proveedor **limite o suspenda tu cuenta**. Ese riesgo y la decisión de usarla son **exclusivamente tuyos**.
 - Para aplicaciones, automatizaciones o cualquier uso que no sea estrictamente personal, usa una **clave de API**.
-- Tramtai nunca lee, copia ni envía las credenciales de los programas de los proveedores. Con Copilot solo copia a su carpeta privada qué cuenta inició sesión (sin el token). El autor puede cambiar o retirar esta función en cualquier momento, por ejemplo si un proveedor lo pide.
+- Tramtai nunca lee, copia ni envía las credenciales de los programas de los proveedores. Con GitHub Copilot solo copia a su carpeta privada qué cuenta inició sesión (sin el token). El autor puede cambiar o retirar esta función en cualquier momento, por ejemplo si un proveedor lo pide.
 
 ## 5. Uso aceptable
 

@@ -103,4 +103,5 @@ jobs:
         run: |
           npm audit --audit-level=high
           npm audit signatures
+      - run: npm test # funciones puras (plantillas y editor de campos) con node --test
       - run: npm run build # comprueba los tipos de los .vue con vue-tsc y compila

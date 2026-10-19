@@ -25,7 +25,12 @@ type ConfigSalida struct {
 	Esquema json.RawMessage `json:"esquema,omitempty"`
 	// ConservarSalidaInvalida guarda la salida que no cumple el esquema, para revisarla, con la misma retención.
 	ConservarSalidaInvalida bool `json:"conservar_salida_invalida,omitempty"`
+	// Reintentos es cuántas veces se pide al mismo agente que corrija una salida que no cumple (0 a 3; 0, ninguna).
+	Reintentos int `json:"reintentos,omitempty"`
 }
+
+// MaximoReintentosSalida es el tope de correcciones de una salida: cada una es otra petición al agente.
+const MaximoReintentosSalida = 3
 
 // ConfigEjecucion agrupa los límites de ejecución pedidos.
 type ConfigEjecucion struct {
@@ -118,6 +123,12 @@ func (s SolicitudEjecucion) Validar() error {
 	}
 	if s.Salida.Formato != "" && !formatosValidos[s.Salida.Formato] {
 		return invalida(idioma.Tf("formato de salida desconocido %q", s.Salida.Formato))
+	}
+	if s.Salida.Reintentos < 0 || s.Salida.Reintentos > MaximoReintentosSalida {
+		return invalida(idioma.Tf("salida.reintentos va de 0 a %d", MaximoReintentosSalida))
+	}
+	if s.Salida.Reintentos > 0 && s.Salida.Formato != "json" {
+		return invalida(idioma.T("salida.reintentos exige formato json o un esquema"))
 	}
 	if len(s.Salida.Esquema) > 0 {
 		if s.Salida.Formato != "json" {

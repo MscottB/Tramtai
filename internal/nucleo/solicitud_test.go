@@ -15,14 +15,17 @@ func TestValidarSolicitud(t *testing.T) {
 		t.Fatalf("la solicitud base debe ser válida: %v", err)
 	}
 	casos := map[string]func(*SolicitudEjecucion){
-		"modelo y perfil":     func(s *SolicitudEjecucion) { s.PerfilModelo = "rapido" },
-		"sin entrada":         func(s *SolicitudEjecucion) { s.Mensajes = nil },
-		"rol desconocido":     func(s *SolicitudEjecucion) { s.Mensajes[0].Rol = "user" },
-		"contenido vacío":     func(s *SolicitudEjecucion) { s.Mensajes[0].Contenido = "" },
-		"modelo con espacios": func(s *SolicitudEjecucion) { s.Modelo = "modelo raro" },
-		"modo desconocido":    func(s *SolicitudEjecucion) { s.ModoContexto = "otro" },
-		"formato desconocido": func(s *SolicitudEjecucion) { s.Salida.Formato = "xml" },
-		"tiempo negativo":     func(s *SolicitudEjecucion) { s.Ejecucion.TiempoLimiteSegundos = -1 },
+		"modelo y perfil":      func(s *SolicitudEjecucion) { s.PerfilModelo = "rapido" },
+		"sin entrada":          func(s *SolicitudEjecucion) { s.Mensajes = nil },
+		"rol desconocido":      func(s *SolicitudEjecucion) { s.Mensajes[0].Rol = "user" },
+		"contenido vacío":      func(s *SolicitudEjecucion) { s.Mensajes[0].Contenido = "" },
+		"modelo con espacios":  func(s *SolicitudEjecucion) { s.Modelo = "modelo raro" },
+		"modo desconocido":     func(s *SolicitudEjecucion) { s.ModoContexto = "otro" },
+		"formato desconocido":  func(s *SolicitudEjecucion) { s.Salida.Formato = "xml" },
+		"tiempo negativo":      func(s *SolicitudEjecucion) { s.Ejecucion.TiempoLimiteSegundos = -1 },
+		"reintentos de más":    func(s *SolicitudEjecucion) { s.Salida = ConfigSalida{Formato: "json", Reintentos: 4} },
+		"reintentos negativos": func(s *SolicitudEjecucion) { s.Salida = ConfigSalida{Formato: "json", Reintentos: -1} },
+		"reintentos sin json":  func(s *SolicitudEjecucion) { s.Salida.Reintentos = 1 },
 	}
 	for nombre, modificar := range casos {
 		s := solicitudValida()

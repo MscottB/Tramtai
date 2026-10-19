@@ -81,6 +81,7 @@ func (s *Servidor) Rutas() http.Handler {
 		mux.HandleFunc("POST /api/v1/cargas", s.crearCarga)
 		mux.HandleFunc("GET /api/v1/capacidades", s.capacidades)
 		mux.HandleFunc("GET /api/v1/agentes", s.fichasAgentes)
+		mux.HandleFunc("POST /api/v1/esquemas/validar", s.validarEsquema)
 		mux.HandleFunc("GET /api/v1/limites", func(w http.ResponseWriter, r *http.Request) { EscribirJSON(w, http.StatusOK, s.limites()) })
 		mux.HandleFunc("GET /api/v1/modelos", s.modelosNativos)
 		mux.HandleFunc("GET /api/v1/openapi.json", s.openapi)
@@ -194,6 +195,7 @@ var estadosHTTP = map[nucleo.CodigoError]int{
 	nucleo.CodigoContextoNoPermitido:    http.StatusForbidden,
 	nucleo.CodigoParametroNoSoportado:   http.StatusBadRequest,
 	nucleo.CodigoCargaInvalida:          http.StatusBadRequest,
+	nucleo.CodigoCorreccionNoDisponible: http.StatusBadRequest,
 	nucleo.CodigoNoAutorizado:           http.StatusUnauthorized,
 	nucleo.CodigoOrigenNoPermitido:      http.StatusForbidden,
 	nucleo.CodigoNoEncontrado:           http.StatusNotFound,

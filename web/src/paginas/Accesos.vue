@@ -82,6 +82,7 @@
               <span class="text-weight-medium">{{ f.p.nombre }}</span>
               <span class="etiqueta" :class="!activo(f.p) ? 'etiqueta--neutro' : f.p.error ? 'etiqueta--error' : 'etiqueta--ok'">{{ activo(f.p) ? t('puntos.activo') : t('puntos.desactivado') }}</span>
               <span v-if="f.p.esquema" class="etiqueta etiqueta--info">{{ t('puntos.json') }}</span>
+              <span v-if="f.p.esquema && f.p.reintentos_salida" class="etiqueta etiqueta--neutro">{{ t('puntos.correcciones', { n: f.p.reintentos_salida }) }}</span>
               <span v-if="f.p.respaldo?.length" class="etiqueta etiqueta--neutro">{{ t('puntos.respaldoDe', { agentes: f.p.respaldo.map(etiquetaDe).join(', ') }) }}</span>
             </div>
             <div class="row items-center no-wrap codigo texto-suave">

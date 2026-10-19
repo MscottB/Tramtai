@@ -47,7 +47,7 @@ export interface Solicitud {
   respaldo?: string[]
   mensajes: Mensaje[]
   cargas?: string[]
-  salida?: { formato?: string; esquema?: unknown }
+  salida?: { formato?: string; esquema?: unknown; reintentos?: number; conservar_salida_invalida?: boolean }
   ejecucion?: { tiempo_limite_segundos?: number }
 }
 export interface Trabajo {
@@ -68,6 +68,15 @@ export interface Trabajo {
   uso: Uso
   creado_en: string
   terminado_en?: string
+  // errores_salida: con salida_no_cumple_esquema, por qué la última respuesta no cumplía.
+  errores_salida?: ProblemaSalida[]
+}
+// ProblemaSalida es un motivo por el que la respuesta no cumple el esquema; campo es la ruta (tareas[2].fecha), vacía
+// para la respuesta entera.
+export interface ProblemaSalida {
+  campo: string
+  problema: 'falta' | 'tipo' | 'valor_no_permitido' | 'sobra' | 'formato' | 'tamaño' | 'otro'
+  texto: string
 }
 // EventoRegistro es un paso de una petición con su hora: estado, intento (JSON con agente, modelo y esfuerzo) o aviso.
 export interface EventoRegistro {
@@ -101,6 +110,7 @@ export interface EstadoPunto {
   forzar_modelo?: boolean
   esquema?: Record<string, unknown>
   respaldo?: string[]
+  reintentos_salida?: number
   presupuesto?: Presupuesto
   activo: boolean
   error?: string
@@ -174,6 +184,7 @@ export interface ConfigPunto {
   alias_modelos?: Record<string, string>
   esquema?: Record<string, unknown>
   respaldo?: string[]
+  reintentos_salida?: number
   presupuesto?: Presupuesto
 }
 // Modelo es una entrada del catálogo: agente, agente/modelo o perfil/nombre, con la versión real que informó el
@@ -376,6 +387,11 @@ export const api = {
   crear: (s: Solicitud) => pedir<Trabajo>('POST', '/api/v1/trabajos', s),
   accion: (id: string, accion: 'cancelar' | 'reintentar') =>
     pedir<Trabajo>('POST', `/api/v1/trabajos/${encodeURIComponent(id)}/${accion}`),
+  // corregir pide al mismo agente que corrija la respuesta que no cumplía el esquema, como un intento nuevo.
+  corregir: (id: string) => pedir<Trabajo>('POST', `/api/v1/trabajos/${encodeURIComponent(id)}/reintentar`, { corregir: true }),
+  // validarEsquema compila el texto del esquema en el servicio, sin ejecutar nada; linea y columna si no es JSON.
+  validarEsquema: (texto: string) =>
+    pedir<{ valido: boolean; error?: string; linea?: number; columna?: number }>('POST', '/api/v1/esquemas/validar', { esquema: texto }),
   eliminar: (id: string) => pedir<void>('DELETE', `/api/v1/trabajos/${encodeURIComponent(id)}`),
   vaciarHistorial: () => pedir<{ eliminados: number }>('DELETE', '/api/v1/trabajos').then((r) => r.eliminados),
   subir: (archivo: File) => {
@@ -408,11 +424,12 @@ export interface AjustesPunto {
   modelos_permitidos?: string[]
   esquema?: Record<string, unknown> | null
   respaldo?: string[]
+  reintentos_salida?: number
   presupuesto?: Presupuesto | null
 }
 
-// Receta es lo que define una API y se prueba en Probar: instrucciones, modelo, esfuerzo, respaldo y esquema
-// (como texto del editor; '' = sin salida estructurada).
+// Receta es lo que define una API y se prueba en Probar: instrucciones, modelo, esfuerzo, respaldo, esquema (como
+// texto del editor; '' = sin respuesta con forma) y cuántas veces se corrige una respuesta que no lo cumple (0 a 3).
 export interface Receta {
   instrucciones: string
   modelo: string | null
@@ -420,16 +437,17 @@ export interface Receta {
   esfuerzo: string
   respaldo: string[]
   esquema: string
+  reintentos: number
 }
 
-export const recetaVacia = (): Receta => ({ instrucciones: '', modelo: null, forzar: false, esfuerzo: '', respaldo: [], esquema: '' })
+export const recetaVacia = (): Receta => ({ instrucciones: '', modelo: null, forzar: false, esfuerzo: '', respaldo: [], esquema: '', reintentos: 0 })
 
 // idModeloDe es el modelo de una API como id del catálogo (agente, agente/modelo o perfil/nombre); null si no tiene.
 export const idModeloDe = (p: EstadoPunto) => (p.perfil_modelo ? 'perfil/' + p.perfil_modelo : [p.agente, p.modelo].filter(Boolean).join('/') || null)
 
 export function recetaDePunto(p: EstadoPunto): Receta {
   return { instrucciones: p.instrucciones ?? '', modelo: idModeloDe(p), forzar: !!p.forzar_modelo, esfuerzo: p.esfuerzo ?? '',
-    respaldo: [...(p.respaldo ?? [])], esquema: p.esquema ? JSON.stringify(p.esquema, null, 2) : '' }
+    respaldo: [...(p.respaldo ?? [])], esquema: p.esquema ? JSON.stringify(p.esquema, null, 2) : '', reintentos: p.reintentos_salida ?? 0 }
 }
 
 // recetaDeSolicitud rehace la receta de una petición ya enviada (Usar de nuevo en Probar). Si respondió un agente de
@@ -437,11 +455,18 @@ export function recetaDePunto(p: EstadoPunto): Receta {
 export function recetaDeSolicitud(s: Solicitud): Receta {
   return { instrucciones: s.instrucciones ?? '', forzar: false, esfuerzo: s.esfuerzo ?? '', respaldo: [...(s.respaldo ?? [])],
     modelo: s.perfil_modelo ? 'perfil/' + s.perfil_modelo : [s.agente, s.modelo].filter(Boolean).join('/') || null,
-    esquema: s.salida?.esquema ? JSON.stringify(s.salida.esquema, null, 2) : '' }
+    esquema: s.salida?.esquema ? JSON.stringify(s.salida.esquema, null, 2) : '', reintentos: s.salida?.reintentos ?? 0 }
 }
 
-// mensajeDe es el último mensaje del usuario de una petición; '' si sus entradas ya se borraron.
-export const mensajeDe = (x: Trabajo) => x.solicitud.mensajes?.filter((m) => m.rol === 'usuario').at(-1)?.contenido ?? ''
+// mensajeDe es el último mensaje del usuario de una petición; '' si sus entradas ya se borraron. Una corrección añade
+// la respuesta y el pedido de corrección (el texto fijo que escribe el servicio): se muestra el mensaje de antes.
+export function mensajeDe(x: Trabajo): string {
+  const m = x.solicitud.mensajes ?? []
+  let fin = m.length
+  while (fin >= 3 && m[fin - 2].rol === 'asistente' && m[fin - 1].rol === 'usuario' && m[fin - 1].contenido.startsWith(prefijoCorreccion)) fin -= 2
+  return m.slice(0, fin).filter((x) => x.rol === 'usuario').at(-1)?.contenido ?? ''
+}
+const prefijoCorreccion = 'Tu respuesta no cumple el formato pedido:'
 
 // esquemaDeReceta convierte el texto del esquema en un objeto; lanza un error legible si no es un objeto JSON.
 export function esquemaDeReceta(r: Receta): Record<string, unknown> | undefined {
@@ -456,18 +481,20 @@ export function esquemaDeReceta(r: Receta): Record<string, unknown> | undefined 
   return valor as Record<string, unknown>
 }
 
-// configDeReceta son los campos de la receta para crear una API.
+// configDeReceta son los campos de la receta para crear una API; los reintentos solo valen con esquema.
 export function configDeReceta(r: Receta): Partial<ConfigPunto> {
   const m = aplicarModelo({ mensajes: [] }, r.modelo ?? '')
+  const esquema = esquemaDeReceta(r)
   return { instrucciones: r.instrucciones.trim() || undefined, agente: m.agente, modelo: m.modelo, perfil_modelo: m.perfil_modelo,
     forzar_modelo: (r.forzar && !!r.modelo) || undefined, esfuerzo: r.esfuerzo || undefined,
-    respaldo: r.respaldo.length ? r.respaldo : undefined, esquema: esquemaDeReceta(r) }
+    respaldo: r.respaldo.length ? r.respaldo : undefined, esquema, reintentos_salida: (esquema && r.reintentos) || undefined }
 }
 
 // ajustesDeReceta son los cambios para actualizar una API con la receta.
 export function ajustesDeReceta(r: Receta): AjustesPunto {
+  const esquema = esquemaDeReceta(r)
   return { instrucciones: r.instrucciones, esfuerzo: r.esfuerzo, modelo: r.modelo ?? '', forzar_modelo: r.forzar && !!r.modelo,
-    respaldo: r.respaldo, esquema: esquemaDeReceta(r) ?? null }
+    respaldo: r.respaldo, esquema: esquema ?? null, reintentos_salida: esquema ? r.reintentos : 0 }
 }
 
 // recetaInicial es el nombre de la API que Probar debe abrir para editarla (desde Mis APIs).

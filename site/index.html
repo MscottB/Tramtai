@@ -90,7 +90,7 @@
           <g font-size="12.5" fill="var(--texto-suave)" text-anchor="start">
             <text x="404" y="54">Claude Code</text>
             <text x="404" y="109">Codex</text>
-            <text x="404" y="164">Copilot CLI</text>
+            <text x="404" y="164">GitHub Copilot</text>
             <text x="404" y="219">Gemini API</text>
             <text x="404" y="274">Antigravity</text>
           </g>
@@ -214,8 +214,8 @@ respuesta = cliente.chat.completions.create(
           <p class="suave"><span lang="es">Escribe instrucciones, elige agente y esfuerzo, prueba con tus archivos y copia la petición lista en curl, Python o Node. Si funciona, guárdala como API.</span><span lang="en">Write instructions, pick agent and effort, test with your files and copy the request ready in curl, Python or Node. If it works, save it as an API.</span></p>
         </div>
         <figure class="captura">
-          <img class="solo-claro" src="capturas/probar-claro.png" width="1440" height="900" loading="lazy" alt="Probar: la receta con Copilot y «Ver como código» con la petición lista en Python" data-alt-en="Try: the recipe with Copilot and “View as code” with the request ready in Python">
-          <img class="solo-oscuro" src="capturas/probar-oscuro.png" width="1440" height="900" loading="lazy" alt="Probar: la receta con Copilot y «Ver como código» con la petición lista en Python" data-alt-en="Try: the recipe with Copilot and “View as code” with the request ready in Python">
+          <img class="solo-claro" src="capturas/probar-claro.png" width="1440" height="900" loading="lazy" alt="Probar: la receta con GitHub Copilot y «Ver como código» con la petición lista en Python" data-alt-en="Try: the recipe with GitHub Copilot and “View as code” with the request ready in Python">
+          <img class="solo-oscuro" src="capturas/probar-oscuro.png" width="1440" height="900" loading="lazy" alt="Probar: la receta con GitHub Copilot y «Ver como código» con la petición lista en Python" data-alt-en="Try: the recipe with GitHub Copilot and “View as code” with the request ready in Python">
         </figure>
       </article>
       <article class="par">
@@ -339,8 +339,8 @@ respuesta = cliente.chat.completions.create(
         </article>
         <article class="tarjeta">
           <div class="linea"></div>
-          <h3><span lang="es">Respuestas con forma</span><span lang="en">Structured answers</span></h3>
-          <p><span lang="es">Pide JSON que cumpla un JSON Schema y Tramtai lo valida antes de devolvértelo.</span><span lang="en">Ask for JSON that matches a JSON Schema and Tramtai validates it before returning it.</span></p>
+          <h3><span lang="es">Respuestas con forma</span><span lang="en">Shaped responses</span></h3>
+          <p><span lang="es">Elige una plantilla o arma los campos, sin escribir JSON Schema. Tramtai valida la respuesta, te dice qué campo falló y la corrige con un clic.</span><span lang="en">Pick a template or build the fields, without writing JSON Schema. Tramtai validates the response, tells you which field failed and corrects it with one click.</span></p>
         </article>
         <article class="tarjeta">
           <div class="linea" style="background: var(--antigravity)"></div>
@@ -350,7 +350,7 @@ respuesta = cliente.chat.completions.create(
         <article class="tarjeta">
           <div class="linea" style="background: var(--copilot)"></div>
           <h3><span lang="es">Agentes con las manos atadas</span><span lang="en">Agents with their hands tied</span></h3>
-          <p><span lang="es">Los agentes no tienen terminal ni pueden escribir archivos o salir a la red (Claude, Copilot y Antigravity, sin herramientas; Codex, en solo lectura), trabajan en una carpeta temporal vacía y no reciben las claves de los demás.</span><span lang="en">Agents have no terminal and can't write files or reach the network (Claude, Copilot and Antigravity without tools; Codex read-only), work in an empty temporary folder and never get the other agents' keys.</span></p>
+          <p><span lang="es">Los agentes no tienen terminal ni pueden escribir archivos o salir a la red (Claude, GitHub Copilot y Antigravity, sin herramientas; Codex, en solo lectura), trabajan en una carpeta temporal vacía y no reciben las claves de los demás.</span><span lang="en">Agents have no terminal and can't write files or reach the network (Claude, GitHub Copilot and Antigravity without tools; Codex read-only), work in an empty temporary folder and never get the other agents' keys.</span></p>
         </article>
       </div>
     </div>
@@ -396,7 +396,7 @@ respuesta = cliente.chat.completions.create(
         </div>
         <ul>
           <li><b><span lang="es">Red</span><span lang="en">Network</span></b><span><span lang="es">Escucha solo en <strong>127.0.0.1</strong> y cada API exige su propia clave.</span><span lang="en">Listens only on <strong>127.0.0.1</strong> and every API requires its own key.</span></span></li>
-          <li><b><span lang="es">Claves</span><span lang="en">Keys</span></b><span><span lang="es">Tus claves de API quedan <strong>cifradas en el almacén del sistema</strong> (Administrador de credenciales, Llavero de macOS o Secret Service de Linux), nunca en los archivos de Tramtai. La clave de cada API solo se ve al crearla y la Web UI no se abre con ella. Tramtai jamás lee las credenciales de los CLI: con Copilot solo anota qué cuenta inició sesión.</span><span lang="en">Your API keys are <strong>encrypted in the system store</strong> (Credential Manager, macOS Keychain or the Linux Secret Service), never in Tramtai's files. Each API's key is shown only when it's created, and it doesn't open the Web UI. Tramtai never reads the CLIs' credentials: with Copilot it only notes which account is signed in.</span></span></li>
+          <li><b><span lang="es">Claves</span><span lang="en">Keys</span></b><span><span lang="es">Tus claves de API quedan <strong>cifradas en el almacén del sistema</strong> (Administrador de credenciales, Llavero de macOS o Secret Service de Linux), nunca en los archivos de Tramtai. La clave de cada API solo se ve al crearla y la Web UI no se abre con ella. Tramtai jamás lee las credenciales de los CLI: con GitHub Copilot solo anota qué cuenta inició sesión.</span><span lang="en">Your API keys are <strong>encrypted in the system store</strong> (Credential Manager, macOS Keychain or the Linux Secret Service), never in Tramtai's files. Each API's key is shown only when it's created, and it doesn't open the Web UI. Tramtai never reads the CLIs' credentials: with GitHub Copilot it only notes which account is signed in.</span></span></li>
           <li><b><span lang="es">Datos</span><span lang="en">Data</span></b><span><span lang="es">Las respuestas <strong>caducan a las 24 horas</strong> y puedes vaciar el historial cuando quieras.</span><span lang="en">Responses <strong>expire after 24 hours</strong> and you can clear the history at any time.</span></span></li>
           <li><b><span lang="es">Telemetría</span><span lang="en">Telemetry</span></b><span><span lang="es"><strong>Ninguna.</strong> Tramtai no envía estadísticas de uso a nadie.</span><span lang="en"><strong>None.</strong> Tramtai sends no usage statistics anywhere.</span></span></li>
         </ul>

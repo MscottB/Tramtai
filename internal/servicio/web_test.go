@@ -179,6 +179,7 @@ func TestWebUI(t *testing.T) {
 	for _, caso := range [][2]string{
 		{`{"esquema":{"type":"object"},"respaldo":["simulado/m2"]}`, `"esquema":{"type":"object"},"respaldo":["simulado/m2"]`},
 		{`{"esquema":null}`, `"respaldo":["simulado/m2"]`},
+		{`{"esquema":{"type":"object"},"reintentos_salida":2}`, `"reintentos_salida":2`},
 	} {
 		r, cuerpo := n.pedir("PATCH", "/api/v1/puntos/desde_ui", caso[0], "X-CSRF-Token", n.csrf)
 		if r.StatusCode != 200 || !strings.Contains(cuerpo, caso[1]) {
@@ -191,6 +192,13 @@ func TestWebUI(t *testing.T) {
 	antes, _ := os.ReadFile(rutaGlobal)
 	if r, cuerpo := n.pedir("PATCH", "/api/v1/puntos/desde_ui", `{"esquema":{"type":5}}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 || !strings.Contains(cuerpo, "configuracion_invalida") {
 		t.Fatalf("un esquema no válido se rechaza: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, cuerpo := n.pedir("PATCH", "/api/v1/puntos/desde_ui", `{"reintentos_salida":4}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 || !strings.Contains(cuerpo, "reintentos_salida") {
+		t.Fatalf("reintentos_salida fuera de rango se rechaza: %d %s", r.StatusCode, cuerpo)
+	}
+	// Quitar el esquema dejando correcciones: no habría nada que corregir.
+	if r, cuerpo := n.pedir("PATCH", "/api/v1/puntos/desde_ui", `{"esquema":null}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 || !strings.Contains(cuerpo, "reintentos_salida") {
+		t.Fatalf("reintentos_salida sin esquema se rechaza: %d %s", r.StatusCode, cuerpo)
 	}
 	if despues, _ := os.ReadFile(rutaGlobal); string(despues) != string(antes) {
 		t.Fatal("un PATCH rechazado no debe cambiar la configuración")

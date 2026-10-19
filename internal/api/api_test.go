@@ -473,16 +473,21 @@ func TestInstruccionesDelPunto(t *testing.T) {
 
 func TestPuntoAplicaEsquemaYRespaldo(t *testing.T) {
 	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
-	s := &Servidor{Config: c, Punto: &Punto{Nombre: "r", Esquema: json.RawMessage(`{"type":"object"}`), Respaldo: []string{"otro"}}}
+	s := &Servidor{Config: c, Punto: &Punto{Nombre: "r", Esquema: json.RawMessage(`{"type":"object"}`), Respaldo: []string{"otro"}, ReintentosSalida: 2}}
 	mensajes := []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}
 	sol, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: mensajes})
-	if err != nil || sol.Salida.Formato != "json" || string(sol.Salida.Esquema) != `{"type":"object"}` || !slices.Equal(sol.Respaldo, []string{"otro"}) {
-		t.Fatalf("el punto debe aportar esquema y respaldo: %v %+v", err, sol)
+	if err != nil || sol.Salida.Formato != "json" || string(sol.Salida.Esquema) != `{"type":"object"}` || !slices.Equal(sol.Respaldo, []string{"otro"}) || sol.Salida.Reintentos != 2 {
+		t.Fatalf("el punto debe aportar esquema, respaldo y reintentos: %v %+v", err, sol)
 	}
 	propia := nucleo.SolicitudEjecucion{Mensajes: mensajes, Respaldo: []string{"tercero"},
-		Salida: nucleo.ConfigSalida{Formato: "json", Esquema: json.RawMessage(`{"type":"array"}`)}}
-	if sol, err := s.ajustar(propia); err != nil || string(sol.Salida.Esquema) != `{"type":"array"}` || !slices.Equal(sol.Respaldo, []string{"tercero"}) {
+		Salida: nucleo.ConfigSalida{Formato: "json", Esquema: json.RawMessage(`{"type":"array"}`), Reintentos: 1}}
+	if sol, err := s.ajustar(propia); err != nil || string(sol.Salida.Esquema) != `{"type":"array"}` || !slices.Equal(sol.Respaldo, []string{"tercero"}) || sol.Salida.Reintentos != 1 {
 		t.Fatalf("la solicitud prevalece: %v %+v", err, sol)
+	}
+	// Sin salida JSON los reintentos del punto no aplican: no habría nada que corregir.
+	s.Punto.Esquema = nil
+	if sol, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: mensajes}); err != nil || sol.Salida.Reintentos != 0 {
+		t.Fatalf("sin JSON no hay reintentos: %v %+v", err, sol.Salida)
 	}
 }
 

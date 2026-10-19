@@ -29,9 +29,37 @@
       <q-toggle :model-value="estructurada" :label="t('receta.salidaEstructurada')" @update:model-value="alternarEsquema" />
       <div class="text-caption texto-suave q-pl-sm">{{ t('receta.salidaEstructuradaTexto') }}</div>
     </div>
-    <q-input v-if="estructurada" :model-value="modelValue.esquema" type="textarea" autogrow outlined dense input-class="codigo"
-      :label="t('receta.esquema')" :error="!!errorEsquema" :error-message="errorEsquema" :hint="t('receta.esquemaHint')"
-      @update:model-value="(v) => escribirEsquema(String(v ?? ''))" />
+    <template v-if="estructurada">
+      <div class="row items-center no-wrap justify-between">
+        <q-btn-toggle v-model="modo" dense flat no-caps toggle-color="primary" :aria-label="t('receta.modo')"
+          :options="[{ label: t('receta.modoCampos'), value: 'campos', disable: !camposDelEsquema }, { label: t('receta.modoJson'), value: 'json' }]" />
+        <q-btn-dropdown flat dense no-caps color="primary" icon="o_auto_awesome" :label="t('receta.plantillaCorta')" :aria-label="t('receta.plantilla')">
+          <q-list style="max-width: 340px">
+            <q-item v-for="p in plantillas" :key="p.id" v-close-popup clickable @click="usarPlantilla(p)">
+              <q-item-section>
+                <q-item-label>{{ t(p.nombre) }}</q-item-label>
+                <q-item-label caption>{{ t(p.descripcion) }}</q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-btn-dropdown>
+      </div>
+      <q-banner v-if="!camposDelEsquema && !errorEsquema" rounded dense class="info-caja">
+        <template #avatar><q-icon name="o_info" color="primary" /></template>{{ t('receta.esquemaAvanzado') }}
+      </q-banner>
+      <div v-if="modo === 'campos' && camposDelEsquema">
+        <CamposEsquema :model-value="campos" :nivel="1" :ordenable="!paraApi" @update:model-value="escribirCampos" />
+        <div v-if="problemaCampos" class="text-caption text-negative" role="alert">{{ problemaCampos }}</div>
+      </div>
+      <q-input v-else :model-value="modelValue.esquema" type="textarea" autogrow outlined dense input-class="codigo"
+        :label="t('receta.esquema')" :error="!!errorEsquema" :error-message="errorEsquema" :hint="t('receta.esquemaHint')"
+        @update:model-value="(v) => escribirEsquema(String(v ?? ''))" />
+      <q-expansion-item v-if="ejemplo" dense icon="o_preview" :label="t('receta.ejemplo')" header-class="q-px-none text-body2">
+        <div class="bloque-codigo sin-ajuste">{{ ejemplo }}</div>
+      </q-expansion-item>
+      <q-select :model-value="modelValue.reintentos" :options="opcionesReintentos" emit-value map-options outlined dense
+        :label="t('receta.reintentos')" :hint="t('receta.reintentosHint')" @update:model-value="(v: number) => cambiar({ reintentos: v })" />
+    </template>
     </div>
     </component>
   </div>
@@ -40,22 +68,26 @@
 <script setup lang="ts">
 // EditorReceta edita lo que define una API (instrucciones, modelo, esfuerzo, respaldo y esquema); lo comparten
 // Probar, donde se prueba, y Mis APIs, donde se guarda.
-import { computed, ref, watch } from 'vue'
-import { QExpansionItem } from 'quasar'
+import { computed, onUnmounted, ref, watch } from 'vue'
+import { QExpansionItem, useQuasar } from 'quasar'
+import CamposEsquema from './CamposEsquema.vue'
 import SelectorEsfuerzo from './SelectorEsfuerzo.vue'
 import SelectorModelo from './SelectorModelo.vue'
-import { dividirRespaldo, fichas, nombreAgente, esfuerzoEspacio, esfuerzoPredeterminadoDe, esfuerzosDe, esquemaDeReceta, nombreEsfuerzo, opcionModelo, unirRespaldo, type Modelo,
+import { api, dividirRespaldo, fichas, nombreAgente, esfuerzoEspacio, esfuerzoPredeterminadoDe, esfuerzosDe, esquemaDeReceta, nombreEsfuerzo, opcionModelo, unirRespaldo, type Modelo,
   type Receta } from '../api'
-import { t } from '../i18n'
+import { aEsquema, desdeEsquema, ejemploDe, problemaDeCampos, type Campo } from '../esquemaCampos'
+import { plantillas, type Plantilla } from '../plantillas'
+import { idioma, t } from '../i18n'
 
 // paraApi: en una API sin modelo fijo la aplicación puede elegirlo, así que se ofrecen todos los niveles de esfuerzo.
 // plegarOpciones (Probar): forzar modelo, esfuerzo, respaldo y salida JSON van en «Opciones de la receta», abierta si
 // alguna tiene valor, para dejar arriba lo esencial.
 const props = defineProps<{ modelValue: Receta; catalogo: Modelo[]; paraApi?: boolean; plegarOpciones?: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [valor: Receta] }>()
+const $q = useQuasar()
 
 const cambiar = (parcial: Partial<Receta>) => emit('update:modelValue', { ...props.modelValue, ...parcial })
-const conOpciones = computed(() => props.modelValue.forzar || props.modelValue.respaldo.length > 0 || !!props.modelValue.esquema)
+const conOpciones = computed(() => props.modelValue.forzar || props.modelValue.respaldo.length > 0 || !!props.modelValue.esquema || props.modelValue.reintentos > 0)
 // La receta puede llegar después de montar (Abrir en Probar): se abre en cuanto alguna opción tiene valor.
 const abierta = ref(conOpciones.value)
 watch(conOpciones, (v) => v && (abierta.value = true))
@@ -105,13 +137,9 @@ watch(niveles, (n) => {
   if (props.modelValue.esfuerzo && !n.includes(props.modelValue.esfuerzo)) cambiar({ esfuerzo: '' })
 })
 
-const ejemploEsquema = `{
-  "type": "object",
-  "properties": {
-    "resumen": { "type": "string" }
-  },
-  "required": ["resumen"]
-}`
+// El esquema de partida es el que genera el editor de campos: así se abre en la pestaña Campos.
+const texto = (campos: Campo[]) => JSON.stringify(aEsquema(campos), null, 2)
+const ejemploEsquema = () => texto([{ nombre: idioma.value === 'en' ? 'summary' : 'resumen', tipo: 'texto', obligatorio: true, descripcion: '' }])
 // estructurada no depende del texto: borrarlo mientras se escribe no debe apagar el interruptor ni ocultar el campo.
 // Solo se sincroniza con un esquema que llega de fuera (una receta cargada); el que se escribe aquí no lo toca.
 const estructurada = ref(props.modelValue.esquema !== '')
@@ -126,9 +154,79 @@ function escribirEsquema(texto: string) {
 }
 function alternarEsquema(activa: boolean) {
   estructurada.value = activa
-  escribirEsquema(activa ? props.modelValue.esquema || ejemploEsquema : '')
+  const esquema = activa ? props.modelValue.esquema || ejemploEsquema() : ''
+  escrito = esquema
+  cambiar({ esquema, reintentos: activa ? props.modelValue.reintentos : 0 })
 }
-const errorEsquema = computed(() => {
+
+// Campos y JSON editan el mismo esquema. En Campos, la lista del editor manda: puede tener un campo aún sin nombre o
+// repetido, que el esquema no puede guardar. Un esquema que llega de fuera (o se escribe en JSON) rehace la lista si
+// el editor lo representa; si no, se queda en JSON con un aviso, sin perder nada.
+const modo = ref<'campos' | 'json'>('campos')
+const campos = ref<Campo[]>([])
+let generado: string | undefined
+const leerCampos = (esquema: string) => {
+  try {
+    return desdeEsquema(JSON.parse(esquema))
+  } catch {
+    return null
+  }
+}
+const camposDelEsquema = computed(() => (props.modelValue.esquema === generado ? campos.value : leerCampos(props.modelValue.esquema)))
+watch(() => props.modelValue.esquema, (e) => {
+  if (e === generado) return
+  const c = leerCampos(e)
+  if (c) campos.value = c
+  else if (e.trim()) modo.value = 'json'
+}, { immediate: true })
+function escribirCampos(lista: Campo[]) {
+  campos.value = lista
+  generado = texto(lista)
+  escribirEsquema(generado)
+}
+const problemaCampos = computed(() => {
+  const p = problemaDeCampos(campos.value)
+  return p ? t(`campos.problema.${p.problema}`, { campo: p.campo }) : ''
+})
+const ejemplo = computed(() => {
+  const c = camposDelEsquema.value?.filter((x) => x.nombre)
+  return c?.length ? JSON.stringify(ejemploDe(c), null, 2) : ''
+})
+
+// usarPlantilla pone su esquema (tras confirmar si ya había uno) y sus instrucciones si la receta no tiene.
+function usarPlantilla(p: Plantilla) {
+  const aplicar = () => {
+    const lista = p.campos(idioma.value)
+    campos.value = lista
+    generado = escrito = texto(lista)
+    modo.value = 'campos'
+    cambiar({ esquema: generado, ...(props.modelValue.instrucciones.trim() ? {} : { instrucciones: p.instrucciones(idioma.value) }) })
+  }
+  if (!props.modelValue.esquema.trim() || props.modelValue.esquema === ejemploEsquema()) return aplicar()
+  $q.dialog({ title: t('receta.plantillaReemplazar'), message: t('receta.plantillaReemplazarTexto', { nombre: t(p.nombre) }),
+    cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'primary', label: t('receta.plantillaUsar'), unelevated: true, noCaps: true } })
+    .onOk(aplicar)
+}
+
+// El esquema se compila en el servicio tras una pausa al escribir: dice lo mismo que diría la petición, con la línea
+// si el JSON está roto. Sin servicio queda la comprobación local.
+const errorServidor = ref('')
+let pausa: ReturnType<typeof setTimeout> | undefined
+watch(() => [props.modelValue.esquema, estructurada.value] as const, ([esquema, activa]) => {
+  clearTimeout(pausa)
+  errorServidor.value = ''
+  if (!activa || !esquema.trim()) return
+  pausa = setTimeout(async () => {
+    try {
+      const r = await api.validarEsquema(esquema)
+      if (esquema === props.modelValue.esquema) errorServidor.value = r.valido ? '' : r.error ?? ''
+    } catch {
+      // sin respuesta del servicio: vale la comprobación local
+    }
+  }, 500)
+}, { immediate: true })
+onUnmounted(() => clearTimeout(pausa))
+const errorLocal = computed(() => {
   if (!props.modelValue.esquema.trim()) return t('receta.esquemaVacio')
   try {
     esquemaDeReceta(props.modelValue)
@@ -137,4 +235,8 @@ const errorEsquema = computed(() => {
     return (e as Error).message
   }
 })
+const errorEsquema = computed(() => (errorLocal.value && errorServidor.value) || errorLocal.value || errorServidor.value)
+
+// Cada corrección es otra petición al agente: 0 (lo predeterminado) no corrige y Probar ofrece «Corregir».
+const opcionesReintentos = computed(() => [0, 1, 2, 3].map((n) => ({ value: n, label: n ? t('receta.reintentosN', { n }) : t('receta.reintentos0') })))
 </script>

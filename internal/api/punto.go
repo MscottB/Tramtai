@@ -33,6 +33,7 @@ type Punto struct {
 	TiempoLimite      int
 	Esquema           json.RawMessage // JSON Schema de la receta, si la solicitud no trae uno
 	Respaldo          []string        // agentes que siguen si el principal falla, si la solicitud no trae los suyos
+	ReintentosSalida  int             // correcciones de una salida JSON que no cumple, si la solicitud no pide otras
 }
 
 // aceptar registra el trabajo; en un punto de acceso queda vinculado a él para medir el uso por aplicación.
@@ -76,6 +77,9 @@ func (s *Servidor) ajustar(sol nucleo.SolicitudEjecucion) (nucleo.SolicitudEjecu
 	}
 	if sol.Salida.Formato == "" && len(sol.Salida.Esquema) == 0 {
 		sol.Salida.Formato = p.FormatoSalida
+	}
+	if sol.Salida.Reintentos == 0 && sol.Salida.Formato == "json" {
+		sol.Salida.Reintentos = p.ReintentosSalida
 	}
 	// Con forzar_modelo el dueño de la API decide los modelos: el cliente tampoco elige el respaldo.
 	if len(sol.Respaldo) == 0 || p.ForzarModelo {

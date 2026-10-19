@@ -35,8 +35,9 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | v0.43.0 | Agentes por módulos: cada agente en `internal/agentes/<nombre>` con su ficha, un catálogo que consulta el resto del código y `GET /api/v1/agentes`; la Web UI saca nombres y colores de las fichas; Mis APIs en pestañas (APIs por aplicación y API principal) con filtro por estado y agente y páginas de 20; Agentes en filas con buscador, filtro y los no instalados aparte; cómo añadir un agente (`nuevo-agente.md`) y la M0 de Copilot CLI, OpenCode y Hermes Agent | ✅ |
 | v0.44.0 | GitHub Copilot CLI como agente (`internal/agentes/copilot`: sin herramientas ni MCP, `COPILOT_HOME` privado, texto en vivo, modelo efectivo también con el automático, esquema en las instrucciones, `copilot.exe` nativo en Windows; canario pasado con Copilot Free); modelos sin esfuerzo en la ficha; novedades de cada versión también en inglés (`-ResumenEn`); web del producto con sección de agentes, funciones nuevas y capturas de Agentes y Probar; la cola respeta el orden por agente con la máquina cargada | ✅ |
 | v0.45.0 | Antigravity sin herramientas (hook que las niega, comprobado con el CLI real), con el mensaje por stdin, respuesta en vivo y esfuerzo; textos de Copilot para cualquier plan; notas de versión cortas, para quien usa Tramtai y en dos idiomas; página del producto renovada con el logo de GitHub | ✅ |
-| v0.46 | OpenCode como agente nuevo (spec en `opencode.md`, rama `feat/opencode`; M0 hecha) | ⬜ |
-| v0.47 | Hermes Agent como agente nuevo (instalado; falta `hermes setup` del usuario y su M0) | ⬜ |
+| v0.46 | Respuestas JSON mejoradas (`json.md`): plantillas listas y editor de campos en Probar y Mis APIs, validación que explica cada problema (`errores_salida`, `POST /api/v1/esquemas/validar`), correcciones configurables (`salida.reintentos`, `reintentos_salida`, 0 por defecto) y «Corregir» a mano; GitHub Copilot con su nombre completo en todas partes | ✅ |
+| v0.47 | OpenCode como agente nuevo (spec en `opencode.md`, rama `feat/opencode`; M0 hecha) | ⬜ |
+| v0.48 | Hermes Agent como agente nuevo (instalado; falta `hermes setup` del usuario y su M0) | ⬜ |
 | — | Webhooks al terminar un trabajo y avisos de presupuesto (`presupuesto.aviso`, `presupuesto.agotado`) | ⬜ |
 | — | Comparar agentes en Probar | ⬜ |
 | — | Tramtai como servidor MCP | ⬜ |
