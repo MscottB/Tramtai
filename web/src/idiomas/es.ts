@@ -196,8 +196,8 @@ const es = {
   'guia.titulo': '¿Qué URL uso?',
   'guia.openai': 'Tu app ya usa el SDK de OpenAI o una herramienta que deja cambiar la «URL base» (LangChain, n8n, un editor con IA…). Cambias la URL y la clave; lo demás sigue igual.',
   'guia.anthropic': 'Tu app usa el SDK de Anthropic. Cambias la URL y la clave; lo demás sigue igual.',
-  'guia.nativa': 'Para lo que las otras no tienen: enviar archivos (PDF, Word, Excel, ZIP…) que Tramtai convierte, tareas largas que sigues en vivo y retomas si se corta, cancelar y reintentar, respaldo y esfuerzo en cada petición, idempotencia, el registro de cada paso y los límites.',
-  'guia.descargarOpenapi': 'Descargar OpenAPI',
+  'guia.nativa': 'Para lo que las otras no tienen: archivos grandes (más de ~12 MB), tareas largas que sigues en vivo y retomas si se corta, cancelar y reintentar, respaldo y esfuerzo en cada petición, idempotencia, el registro de cada paso y los límites.',
+  'guia.descargarOpenapi': 'descarga la descripción OpenAPI',
   'guia.tabla': 'Qué permite cada una',
   'guia.fSdk': 'SDK oficial y herramientas existentes',
   'guia.fVivo': 'Respuesta en vivo',
@@ -226,7 +226,6 @@ const es = {
   'codigo.texto': 'Copia la petición para hacerla desde tu app. Pon tu clave donde dice <tu clave>.',
   'codigo.tuClave': '<tu clave>',
   'codigo.recetaEnApi': 'La receta de {nombre} (instrucciones, esfuerzo, respaldo y esquema) la aplica la propia API: el código envía el mensaje, los archivos y, por OpenAI o Anthropic, el modelo que tiene guardado. Guarda antes los cambios de la receta para que valgan.',
-  'codigo.archivos': 'archivos',
   'codigo.esfuerzo': 'esfuerzo',
   'codigo.esquema': 'esquema JSON',
   'codigo.respaldo': 'respaldo',
@@ -988,6 +987,9 @@ const es = {
   'conversor.origen.paquete': "del paquete del conversor",
   'conversor.origen.sistema': "el instalado en el sistema",
   'conversor.origen.configurado': "el configurado a mano",
+  'guia.comoUsarla': "Cómo usarla",
+  'guia.avanzado': "Avanzado: para importar todas las peticiones en Postman o Insomnia, o generar un cliente,",
+  'guia.siBase64': "sí, en base64 dentro del mensaje (hasta ~12 MB)",
 }
 
 export type Clave = keyof typeof es

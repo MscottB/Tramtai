@@ -198,8 +198,8 @@ const en: Textos = {
   'guia.titulo': 'Which URL do I use?',
   'guia.openai': 'Your app already uses the OpenAI SDK or a tool that lets you change the "base URL" (LangChain, n8n, an AI editor…). Change the URL and the key; everything else stays the same.',
   'guia.anthropic': 'Your app uses the Anthropic SDK. Change the URL and the key; everything else stays the same.',
-  'guia.nativa': 'For what the others lack: sending files (PDF, Word, Excel, ZIP…) that Tramtai converts, long jobs you follow live and resume if the connection drops, cancel and retry, fallback and effort per request, idempotency, the log of each step and the limits.',
-  'guia.descargarOpenapi': 'Download OpenAPI',
+  'guia.nativa': 'For what the others lack: large files (over ~12 MB), long jobs you follow live and resume if the connection drops, cancel and retry, fallback and effort per request, idempotency, the log of each step and the limits.',
+  'guia.descargarOpenapi': 'download the OpenAPI description',
   'guia.tabla': 'What each one allows',
   'guia.fSdk': 'Official SDK and existing tools',
   'guia.fVivo': 'Live response',
@@ -228,7 +228,6 @@ const en: Textos = {
   'codigo.texto': 'Copy the request to make it from your app. Put your key where it says <your key>.',
   'codigo.tuClave': '<your key>',
   'codigo.recetaEnApi': 'The recipe of {nombre} (instructions, effort, fallback and schema) is applied by the API itself: the code sends the message, the files and, through OpenAI or Anthropic, the model it has saved. Save the recipe changes first so they take effect.',
-  'codigo.archivos': 'files',
   'codigo.esfuerzo': 'effort',
   'codigo.esquema': 'JSON schema',
   'codigo.respaldo': 'fallback',
@@ -989,6 +988,9 @@ const en: Textos = {
   'conversor.origen.paquete': "from the converter package",
   'conversor.origen.sistema': "the one installed on the system",
   'conversor.origen.configurado': "the one set by hand",
+  'guia.comoUsarla': "How to use it",
+  'guia.avanzado': "Advanced: to import every request into Postman or Insomnia, or to generate a client,",
+  'guia.siBase64': "yes, in base64 inside the message (up to ~12 MB)",
 }
 
 export default en
