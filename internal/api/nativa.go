@@ -27,15 +27,11 @@ import (
 
 // enviar completa la solicitud con los predeterminados y la acepta con la Idempotency-Key del cliente.
 func (s *Servidor) enviar(r *http.Request, sol nucleo.SolicitudEjecucion) (nucleo.Trabajo, bool, error) {
-	clave := r.Header.Get("Idempotency-Key")
-	if len(clave) > 255 {
-		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("Idempotency-Key supera 255 caracteres"))
-	}
 	sol, err := s.ajustar(sol)
 	if err != nil {
 		return nucleo.Trabajo{}, false, err
 	}
-	return s.aceptar(r.Context(), sol, clave)
+	return s.aceptar(r.Context(), sol, r.Header.Get("Idempotency-Key"))
 }
 
 func ubicacion(id string) string { return "/api/v1/trabajos/" + id }
@@ -312,14 +308,17 @@ func (s *Servidor) crearCarga(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, int64(s.Config.Limite("conversion.maximo_carga_mb"))<<20+1<<20)
 	var carga documentos.Carga
-	var err error
-	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
-		carga, err = s.cargaMultipart(r)
-	} else if nombre := r.URL.Query().Get("nombre"); nombre == "" {
-		err = nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("envía multipart con el campo archivo, o el binario con ?nombre=archivo.ext"))
-	} else {
-		carga, err = s.Cargas.Guardar(nombre, s.nombrePunto(), r.Body)
-	}
+	err := conPlazoDeLectura(w, plazoLecturaCarga, func() error {
+		var err error
+		if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+			carga, err = s.cargaMultipart(r)
+		} else if nombre := r.URL.Query().Get("nombre"); nombre == "" {
+			err = nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("envía multipart con el campo archivo, o el binario con ?nombre=archivo.ext"))
+		} else {
+			carga, err = s.Cargas.Guardar(nombre, s.nombrePunto(), r.Body)
+		}
+		return err
+	})
 	var demasiado *http.MaxBytesError
 	if errors.As(err, &demasiado) {
 		err = nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.T("el archivo supera conversion.maximo_carga_mb"))

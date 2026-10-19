@@ -36,8 +36,12 @@ type Punto struct {
 	ReintentosSalida  int             // correcciones de una salida JSON que no cumple, si la solicitud no pide otras
 }
 
-// aceptar registra el trabajo; en un punto de acceso queda vinculado a él para medir el uso por aplicación.
+// aceptar registra el trabajo; en un punto de acceso queda vinculado a él para medir el uso por aplicación. La
+// Idempotency-Key se comprueba aquí para que la cumplan por igual la API propia y las fachadas.
 func (s *Servidor) aceptar(ctx context.Context, sol nucleo.SolicitudEjecucion, clave string) (nucleo.Trabajo, bool, error) {
+	if len(clave) > 255 {
+		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("Idempotency-Key supera 255 caracteres"))
+	}
 	if s.Punto != nil {
 		return s.Planificador.EnviarPorPunto(ctx, sol, clave, s.Punto.Nombre)
 	}

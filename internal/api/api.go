@@ -289,14 +289,33 @@ func EscribirJSON(w http.ResponseWriter, estado int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
-// LeerJSON decodifica el cuerpo con límite de tamaño; los campos desconocidos son un error.
+// Plazos para que llegue el cuerpo de una petición: uno de 16 MB enviado byte a byte no retiene la conexión sin fin.
+// Las cargas de archivos tienen más. Son variables para las pruebas.
+var (
+	plazoLectura      = 30 * time.Second
+	plazoLecturaCarga = 5 * time.Minute
+)
+
+// conPlazoDeLectura ejecuta leer con un plazo para el cuerpo y lo quita al terminar: con el plazo puesto, Go cancelaría
+// la petición a mitad de un trabajo largo (su lectura en segundo plano daría error), y eso se tomaría por una
+// desconexión.
+func conPlazoDeLectura(w http.ResponseWriter, plazo time.Duration, leer func() error) error {
+	rc := http.NewResponseController(w)
+	_ = rc.SetReadDeadline(time.Now().Add(plazo)) // http.ErrNotSupported en un ResponseWriter de prueba: sin plazo
+	defer func() { _ = rc.SetReadDeadline(time.Time{}) }()
+	return leer()
+}
+
+// LeerJSON decodifica el cuerpo con límite de tamaño y de tiempo; los campos desconocidos son un error.
 func LeerJSON(w http.ResponseWriter, r *http.Request, destino any) error {
-	d := json.NewDecoder(http.MaxBytesReader(w, r.Body, maximoCuerpo))
-	d.DisallowUnknownFields()
-	if err := d.Decode(destino); err != nil {
-		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("cuerpo JSON no válido: %s", err.Error()))
-	}
-	return nil
+	return conPlazoDeLectura(w, plazoLectura, func() error {
+		d := json.NewDecoder(http.MaxBytesReader(w, r.Body, maximoCuerpo))
+		d.DisallowUnknownFields()
+		if err := d.Decode(destino); err != nil {
+			return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("cuerpo JSON no válido: %s", err.Error()))
+		}
+		return nil
+	})
 }
 
 func leerJSON(w http.ResponseWriter, r *http.Request, destino any) error {

@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"tramtai/internal/idioma"
@@ -120,6 +121,9 @@ func (s *Servidor) mensajesAnthropic(w http.ResponseWriter, r *http.Request) {
 	if !p.Stream {
 		final, err := s.ejecutarFachada(r, t, nil, nil)
 		if err != nil {
+			if !errors.Is(err, errDesconectado) {
+				EscribirError(w, r, err)
+			}
 			return
 		}
 		if final.Estado != nucleo.Completado {
@@ -159,11 +163,14 @@ func (s *Servidor) mensajesAnthropic(w http.ResponseWriter, r *http.Request) {
 		}
 		return delta(texto)
 	}, f.latido)
-	if err != nil {
-		return
-	}
 	fallar := func(e error) {
 		_ = evento("error", map[string]any{"error": map[string]any{"type": tipoAnthropic(estadosHTTP[nucleo.CodigoDe(e)]), "message": nucleo.MensajeDe(e)}})
+	}
+	if err != nil {
+		if !errors.Is(err, errDesconectado) {
+			fallar(err)
+		}
+		return
 	}
 	if final.Estado != nucleo.Completado {
 		fallar(errorDeTrabajo(final))

@@ -194,6 +194,7 @@ func init() {
 		"solo se reintenta un trabajo terminado":                                                "only a finished job can be retried",
 		"las entradas del trabajo ya vencieron o se eliminaron al terminar; vuelve a enviarlas": "the job inputs have expired or were deleted when it finished; send them again",
 		"se superó el tiempo máximo en cola":                                                    "the maximum queue time was exceeded",
+		"no se pudo guardar el estado del trabajo":                                              "the job state could not be saved",
 		"agente no registrado: %s":                                                              "agent not registered: %s",
 		"modo consciente_proyecto: el agente trabaja en %s y carga las reglas del proyecto y de sus carpetas superiores (CLAUDE.md, AGENTS.md, GEMINI.md o .github/copilot-instructions.md, según el agente), con las mismas restricciones de herramientas que en modo aislado y sin sesión persistente; con autenticación por suscripción algunos CLI cargan también las reglas del usuario": "consciente_proyecto mode: the agent works in %s and loads the rules of the project and its parent folders (CLAUDE.md, AGENTS.md, GEMINI.md or .github/copilot-instructions.md, depending on the agent), with the same tool restrictions as in isolated mode and without a persistent session; with subscription authentication some CLIs also load the user's rules",
 		"se superó el tiempo límite de ejecución":                                     "the run time limit was exceeded",

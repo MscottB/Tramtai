@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -255,6 +256,9 @@ func (s *Servidor) chatCompletions(w http.ResponseWriter, r *http.Request) {
 	if !p.Stream {
 		final, err := s.ejecutarFachada(r, t, nil, nil)
 		if err != nil {
+			if !errors.Is(err, errDesconectado) {
+				EscribirError(w, r, err)
+			}
 			return
 		}
 		if final.Estado != nucleo.Completado {
@@ -300,6 +304,9 @@ func (s *Servidor) chatCompletions(w http.ResponseWriter, r *http.Request) {
 		return trozo(map[string]any{"content": texto}, nil)
 	}, f.latido)
 	if err != nil {
+		if !errors.Is(err, errDesconectado) {
+			fallar(err)
+		}
 		return
 	}
 	if final.Estado != nucleo.Completado {
@@ -434,6 +441,9 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 	if !p.Stream {
 		final, err := s.ejecutarFachada(r, t, nil, nil)
 		if err != nil {
+			if !errors.Is(err, errDesconectado) {
+				EscribirError(w, r, err)
+			}
 			return
 		}
 		if final.Estado != nucleo.Completado {
@@ -481,13 +491,19 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 		}
 		return delta(texto)
 	}, f.latido)
-	if err != nil {
-		return
+	if err != nil && !errors.Is(err, errDesconectado) {
+		final = t // la base no devolvió el trabajo: se informa con lo que se aceptó
 	}
 	fallar := func(e error) {
 		fallo := objetoRespuesta(final, modeloRespuesta(p.Model, t, final), "failed", nil)
 		fallo["error"] = map[string]any{"code": nucleo.CodigoDe(e), "message": nucleo.MensajeDe(e)}
 		_ = evento("response.failed", map[string]any{"response": fallo})
+	}
+	if err != nil {
+		if !errors.Is(err, errDesconectado) {
+			fallar(err)
+		}
+		return
 	}
 	if final.Estado != nucleo.Completado {
 		fallar(errorDeTrabajo(final))
