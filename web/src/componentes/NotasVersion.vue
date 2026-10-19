@@ -15,8 +15,8 @@
       </section>
     </template>
     <p v-else class="notas__texto">{{ textoLibre }}</p>
-    <q-btn v-if="pagina" flat dense no-caps color="primary" icon-right="o_open_in_new" class="q-px-none"
-      :label="t('actualizacion.todosLosCambios')" :href="pagina" target="_blank" rel="noopener" />
+    <q-btn v-if="enlace" flat dense no-caps color="primary" icon-right="o_open_in_new" class="q-px-none"
+      :label="t('actualizacion.todosLosCambios')" :href="enlace" target="_blank" rel="noopener" />
   </div>
 </template>
 
@@ -28,9 +28,11 @@
 // el botón «Ver todos los cambios en GitHub» (también en las versiones anteriores, con la página del release).
 // Desde la v0.44 llevan un bloque «## English»: en inglés se muestra ese bloque; las anteriores se ven en español.
 import { computed } from 'vue'
+import { enlaceSeguro } from '../enlaces'
 import { idioma, t } from '../i18n'
 
 const props = defineProps<{ texto: string; pagina?: string }>()
+const enlace = computed(() => enlaceSeguro(props.pagina))
 
 const partes = computed(() => {
   const [es, en] = props.texto.split(/^## English[ \t]*\r?$/m, 2)

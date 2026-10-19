@@ -170,10 +170,10 @@
       </q-tab-panels>
     </q-card>
 
-    <q-dialog v-model="nuevo">
+    <q-dialog v-model="nuevo" aria-labelledby="titulo-nueva-api">
       <q-card style="width: 600px; max-width: 95vw">
         <q-card-section>
-          <div class="titulo-seccion">{{ t('puntos.nuevo') }}</div>
+          <div id="titulo-nueva-api" class="titulo-seccion">{{ t('puntos.nuevo') }}</div>
           <div class="texto-suave text-body2">{{ t('puntos.nuevoTexto') }}</div>
         </q-card-section>
         <q-form @submit="crear">
@@ -215,10 +215,10 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="dialogoInstrucciones">
+    <q-dialog v-model="dialogoInstrucciones" aria-labelledby="titulo-ajustes-api">
       <q-card style="width: 560px; max-width: 95vw">
         <q-card-section>
-          <div class="titulo-seccion">{{ t('puntos.ajustesDe', { nombre: editando }) }}</div>
+          <div id="titulo-ajustes-api" class="titulo-seccion">{{ t('puntos.ajustesDe', { nombre: editando }) }}</div>
         </q-card-section>
         <q-card-section class="q-pt-none q-gutter-y-md">
           <EditorReceta v-model="ajustes.receta" :catalogo="catalogo" para-api />
@@ -611,7 +611,9 @@ async function crear() {
     // Con la clave recién creada en los ejemplos: es la única vez que se ve, así que el detalle se abre siempre.
     const creado = puntos.value.find((p) => p.nombre === punto.nombre) ?? r.punto_acceso
     if (creado) abrirDetalle(creado, r.token, true)
-    else avisar(t('puntos.claveCreada', { clave: r.token }))
+    // Sin el detalle, la clave queda en un aviso que no se cierra solo: no se puede volver a ver.
+    else $q.notify({ type: 'positive', message: t('puntos.claveCreada', { clave: r.token }), position: 'top', timeout: 0,
+      actions: [{ label: t('comun.copiar'), color: 'white', noDismiss: true, handler: () => copiar(r.token) }, { label: t('comun.cerrar'), color: 'white' }] })
   } catch (e) {
     avisarError(e)
   } finally {

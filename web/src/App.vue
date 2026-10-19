@@ -241,7 +241,7 @@
           <q-btn v-if="actualizacion?.instalable" unelevated no-caps color="primary" icon="o_system_update_alt" :loading="actualizando"
             :label="t('actualizacion.instalar')" @click="instalarActualizacion" />
           <!-- Solo se enlaza una dirección https: la URL llega del servicio y no debe poder abrir otro esquema. -->
-          <q-btn v-else-if="actualizacion?.url?.startsWith('https://')" unelevated no-caps color="primary" :label="t('actualizacion.descargar')" :href="actualizacion?.url" target="_blank" rel="noopener" />
+          <q-btn v-else-if="enlaceSeguro(actualizacion?.url)" unelevated no-caps color="primary" :label="t('actualizacion.descargar')" :href="enlaceSeguro(actualizacion?.url)" target="_blank" rel="noopener" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -253,6 +253,7 @@
 import { computed, markRaw, onMounted, onUnmounted, provide, ref, watch, watchEffect } from 'vue'
 import { useQuasar } from 'quasar'
 import { actualizacion, api, cargarFichas, avisar, avisarError, buscarActualizacionAhora, dialogoActualizar, reiniciarYSeguir, sesion, type Novedad, type ProgresoActualizacion } from './api'
+import { enlaceSeguro } from './enlaces'
 import { cambiarIdioma, idioma, idiomas, t } from './i18n'
 import { cambiarTema, tema, type Tema } from './tema'
 import EntrarPagina from './paginas/Entrar.vue'
@@ -383,7 +384,10 @@ async function instalarActualizacion() {
     const { version } = await api.actualizar()
     progreso.value = { fase: 'descargando', version, recibidos: 0, total: 0 }
     clearInterval(seguirProgreso)
+    let enVuelo = false // si el servicio va lento, no se acumulan consultas
     seguirProgreso = window.setInterval(async () => {
+      if (enVuelo) return
+      enVuelo = true
       try {
         ahora.value = Date.now()
         const p = await api.progresoActualizacion()
@@ -397,6 +401,8 @@ async function instalarActualizacion() {
         if (p.fase === 'error') clearInterval(seguirProgreso)
       } catch {
         // el instalador ya detuvo el servicio: queda «instalando» hasta que la app se cierre
+      } finally {
+        enVuelo = false
       }
     }, 400)
   } catch (e) {
@@ -413,6 +419,8 @@ Object.assign(window, {
     }),
   tramtaiBuscarActualizaciones: buscarActualizacionAhora,
   tramtaiAcercaDe: () => (acercaAbierto.value = true),
+  // Un error de la bandeja (activar o desactivar una API) se muestra aquí, con el aviso de la Web UI.
+  tramtaiAviso: (mensaje: string) => avisarError(new Error(mensaje)),
 })
 
 // En la app de escritorio la bandeja abre aquí sus avisos, con el estilo de la app, y la respuesta le vuelve con

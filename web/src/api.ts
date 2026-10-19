@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 import { Notify } from 'quasar'
 import { idioma, idiomas, t } from './i18n'
 import type { Clave } from './idiomas/es'
+import { compartida } from './compartida'
 
 export interface InstanciaResumida {
   id: string
@@ -45,7 +46,7 @@ export interface Solicitud {
   esfuerzo?: string
   instrucciones?: string
   respaldo?: string[]
-  mensajes: Mensaje[]
+  mensajes?: Mensaje[] // la retención la borra al terminar
   cargas?: string[]
   salida?: { formato?: string; esquema?: unknown; reintentos?: number; conservar_salida_invalida?: boolean }
   ejecucion?: { tiempo_limite_segundos?: number }
@@ -245,6 +246,8 @@ export class ErrorApi extends Error {
 }
 
 let csrf = ''
+// Una sola renovación a la vez, por muchas peticiones que reciban 401 juntas (ver compartida).
+const renovarSesion = compartida(() => api.sesion())
 
 // plazo corta las consultas (GET) que se quedan colgadas; las que modifican no lo llevan porque abortarlas no
 // deshace la acción en el servicio, y las subidas o la actualización pueden tardar lo que haga falta.
@@ -266,7 +269,7 @@ async function pedir<T>(metodo: string, ruta: string, cuerpo?: unknown, plazo = 
     // La sesión dejó de valer porque el servicio se reinició: se abre otra y se repite la petición una vez.
     if (respuesta.status === 401 && !reintento && ruta !== '/ui/sesion' && sesion.value) {
       try {
-        await api.sesion()
+        await renovarSesion()
       } catch {
         sesion.value = null
         throw new ErrorApi('sesion_caducada', t('app.sesionCaducada'), 401)
@@ -863,7 +866,7 @@ export async function reiniciarYSeguir() {
     await esperar(500)
   }
   aviso()
-  Notify.create({ type: 'negative', message: t('app.reinicioFallido', { url }), position: 'top', timeout: 0, actions: [{ label: 'OK', color: 'white' }] })
+  Notify.create({ type: 'negative', message: t('app.reinicioFallido', { url }), position: 'top', timeout: 0, actions: [{ label: t('comun.aceptar'), color: 'white' }] })
 }
 
 // buscarActualizacionAhora consulta GitHub en el momento (Ajustes y la bandeja): si hay versión nueva abre su diálogo

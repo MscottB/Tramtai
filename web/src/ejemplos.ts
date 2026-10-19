@@ -131,7 +131,7 @@ function chatOpenAI(p: Prueba, modelo: string) {
   const s = p.solicitud
   const cuerpo: Record<string, unknown> = { model: modelo, messages: [
     ...(s.instrucciones ? [{ role: 'system', content: s.instrucciones }] : []),
-    ...s.mensajes.map((m) => ({ role: rolesOpenAI[m.rol] ?? m.rol, content: m.contenido })),
+    ...(s.mensajes ?? []).map((m) => ({ role: rolesOpenAI[m.rol] ?? m.rol, content: m.contenido })),
   ] }
   if (s.esfuerzo) cuerpo.reasoning_effort = esfuerzosOpenAI[s.esfuerzo]
   if (s.salida?.esquema) cuerpo.response_format = { type: 'json_schema', json_schema: { name: 'salida', schema: s.salida.esquema } }
@@ -142,9 +142,10 @@ function chatOpenAI(p: Prueba, modelo: string) {
 // en system; esa API no admite esquema ni esfuerzo.
 function mensajesAnthropic(p: Prueba, modelo: string) {
   const s = p.solicitud
-  const sistema = [s.instrucciones, ...s.mensajes.filter((m) => m.rol === 'sistema').map((m) => m.contenido)].filter(Boolean).join('\n\n')
+  const mensajes = s.mensajes ?? []
+  const sistema = [s.instrucciones, ...mensajes.filter((m) => m.rol === 'sistema').map((m) => m.contenido)].filter(Boolean).join('\n\n')
   const cuerpo: Record<string, unknown> = { model: modelo, max_tokens: 1024, ...(sistema ? { system: sistema } : {}),
-    messages: s.mensajes.filter((m) => m.rol !== 'sistema').map((m) => ({ role: rolesOpenAI[m.rol] ?? m.rol, content: m.contenido })) }
+    messages: mensajes.filter((m) => m.rol !== 'sistema').map((m) => ({ role: rolesOpenAI[m.rol] ?? m.rol, content: m.contenido })) }
   return { cuerpo, nota: notaFachada(p, !!s.salida?.esquema && t('codigo.esquema'), !!s.esfuerzo && t('codigo.esfuerzo')) }
 }
 

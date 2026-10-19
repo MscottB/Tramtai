@@ -17,7 +17,7 @@
           <q-select v-model="origen" :options="origenes" emit-value map-options dense outlined :label="t('historial.origen')" />
         </div>
         <div class="col-12 col-sm-6 col-md-3">
-          <q-input v-model="busqueda" dense outlined clearable :placeholder="t('historial.buscar')" debounce="150">
+          <q-input v-model="busqueda" dense outlined clearable :placeholder="t('historial.buscar')" :aria-label="t('historial.buscar')" debounce="150">
             <template #prepend><q-icon name="search" /></template>
           </q-input>
         </div>
@@ -98,7 +98,7 @@
             <template v-if="detalle.uso.costo_usd"><div>{{ t('historial.coste') }}</div><div>US$ {{ detalle.uso.costo_usd.toFixed(4) }}</div></template>
             <template v-if="detalle.terminado_en"><div>{{ t('historial.duracion') }}</div><div>{{ duracion(detalle.creado_en, detalle.terminado_en) }}</div></template>
             <div>{{ t('historial.identificador') }}</div>
-            <div class="codigo cursor-pointer" @click="copiar(detalle.id)">{{ detalle.id }}<q-tooltip>{{ t('comun.copiar') }}</q-tooltip></div>
+            <div><q-btn flat dense no-caps class="codigo q-pa-none" :label="detalle.id" :aria-label="t('comun.copiar') + ' ' + detalle.id" @click="copiar(detalle.id)"><q-tooltip>{{ t('comun.copiar') }}</q-tooltip></q-btn></div>
           </div>
           <RegistroTrabajo :trabajo="detalle" :version="detalle.estado" @cargado="(e: EventoRegistro[]) => (eventosDetalle = e)" />
         </q-card-section>
@@ -158,13 +158,13 @@ const origenes = computed(() => [
   { label: t('historial.todosOrigenes'), value: '' },
   ...Object.entries(nombresOrigen).map(([o, clave]) => ({ label: t(clave), value: 'o:' + o })),
   ...[...new Set(apis.value.map((p) => p.grupo).filter((g): g is string => !!g))].sort().map((g) => ({ label: t('historial.grupo', { nombre: g }), value: 'g:' + g })),
-  ...apis.value.map((p) => ({ label: 'API ' + p.nombre, value: 'p:' + p.nombre })),
+  ...apis.value.map((p) => ({ label: t('historial.api', { nombre: p.nombre }), value: 'p:' + p.nombre })),
 ])
 // textoOrigen dice de dónde llegó: la API (con su grupo actual), el origen guardado o, en los antiguos, la principal.
 function textoOrigen(x: Trabajo) {
   if (x.punto_acceso) {
     const grupo = apis.value.find((p) => p.nombre === x.punto_acceso)?.grupo
-    return 'API ' + x.punto_acceso + (grupo ? ' · ' + grupo : '')
+    return t('historial.api', { nombre: x.punto_acceso }) + (grupo ? ' · ' + grupo : '')
   }
   return x.origen && nombresOrigen[x.origen] ? t(nombresOrigen[x.origen]) : t('historial.origenPrincipal')
 }
