@@ -98,8 +98,10 @@ barrera solo corta después de que la herramienta se ejecutó.
   puede guardar una API con Antigravity que después rechaza todas sus peticiones. La TUI no aplica `validarRespaldo`.
 
 **Cambio:**
-- `servicio.EditarPuntos` aplica dentro las tres validaciones (`Normalizar`, `ValidarParaApps` y `validarRespaldo`), así
-  que todo el que edite pasa por ellas;
+- `servicio.ConReglas(editar)` envuelve cualquier edición con `ValidarPunto` (respaldo con el que funcione y agentes
+  habilitados para apps) en los puntos nuevos o que cambian algo más que `activo`. Lo usan la CLI y la terminal; la Web
+  aplica las mismas funciones en sus rutas. No se metió dentro de `EditarPuntos` porque `Normalizar` necesita la
+  instancia y el puerto del servicio, que solo conoce quien llama;
 - una sola `servicio.EliminarPunto(datos, ruta, origen, nombre)` hace editar, luego borrar la clave y luego
   `EliminarConsumo`; la usan la Web, la CLI y la TUI;
 - se añade una prueba de borrar y volver a crear con el mismo nombre, que empieza con consumo cero.
@@ -159,10 +161,11 @@ Que la CLI y la TUI pasen por la API del servicio es el cambio grande y va a la 
     dueño, y la purga puede correr con la base ya cerrada.
   - **Cambio:** un `sync.WaitGroup` en `Servicio` que `Cerrar` espera.
 - **`tramtai ejecutar --directo`:**
-  - **Problema:** no purga nunca `cli.db` ni `cargas/cli` (en contra de `retencion`), no aplica el presupuesto de la
-    instancia y no tiene la ventana de idempotencia.
-  - **Cambio:** el servicio y el modo directo abren la instancia con el mismo constructor, y el modo directo purga al
-    terminar. Además, un segundo Ctrl+C sale aunque el trabajo no confirme la cancelación.
+  - **Problema:** no purga nunca `cli.db` ni `cargas/cli` (en contra de `retencion`).
+  - **Cambio:** al terminar aplica la retención a todas las instancias de `cli.db` con la misma función que el servicio
+    (`servicio.PurgarBase`). Además, un segundo Ctrl+C sale aunque el trabajo no confirme la cancelación.
+  - **Lo que no aplica:** el presupuesto y la ventana de idempotencia de la instancia. Cada ejecución directa es una
+    instancia nueva (para no relanzar trabajos de otra) y no manda `Idempotency-Key`.
 
 ## 6. Errores pequeños del Go
 
@@ -177,7 +180,9 @@ Que la CLI y la TUI pasen por la API del servicio es el cambio grande y va a la 
   suspendido.
 - **Procesos en Linux:**
   - **Problema:** el tope de memoria se aplica después de `Start`, así que los hijos que se crean antes escapan.
-  - **Cambio:** el hijo se lanza a través de un comando oculto de `tramtai`, que fija `setrlimit` y luego hace `exec`.
+  - **Cambio:** el hijo se lanza con `/bin/sh -c 'ulimit -v …; exec "$@"'`, de modo que el tope rige desde el primer
+    instante para él y para lo que lance, con su mismo PID y grupo. Los argumentos van como posicionales, nunca dentro
+    del guion. No hace falta un comando oculto de `tramtai`.
 - **Registro:** si la rotación no puede abrir el archivo nuevo, se vuelve a abrir el anterior en modo añadir. Así no se
   pierde el registro sin aviso.
 - **Navegador:** `navegador.Abrir` espera al proceso en segundo plano, para que no quede zombi en Unix.
@@ -243,7 +248,17 @@ necesitan atención quedan perdidas. Además, si falla activar o desactivar una 
 - **La regla de orden y recorte** es una función pura (`menuApis(puntos, maximo)`) con su prueba: con 3, con 15 y con
   40 APIs, y con errores mezclados.
 
-## 9. Pruebas
+## 9. El mapa del sitio
+
+Añadido por el usuario a este release. El mapa de la portada de `site/` llevaba `127.0.0.1` bajo Tramtai, y la dirección
+es cosa de la documentación. Además, se veía peor que el mapa de Inicio de la app.
+
+**Cambio:**
+- el mapa del sitio usa la geometría de `MapaRed.vue`: tus apps a la izquierda, la cápsula de Tramtai («en tu equipo») y
+  una estación de color por agente, con su proveedor debajo;
+- en el móvil se dibuja en vertical, como en la app.
+
+## 10. Pruebas
 
 Cada arreglo lleva su prueba:
 - **Paquetes Go afectados:**

@@ -91,7 +91,7 @@ Con el SDK de Anthropic, la URL base es `http://127.0.0.1:17373/anthropic`. Toda
 Tramtai comprueba cada hora si hay una versión nueva, así el aviso aparece sin reiniciar la app (solo pide a GitHub la ficha pública de la última versión; no envía ningún dato tuyo). Cuando la hay:
 
 - La cabecera de la app muestra **Actualizar**, y el menú del icono de la bandeja indica tu versión y **Actualizar a vX…**.
-- El diálogo enseña las **novedades** sin salir de la app. En Windows, si la instalaste con el instalador, **Actualizar ahora** descarga la versión nueva, comprueba su suma SHA-256 y la instala sin preguntar nada más: la app se cierra, las peticiones en curso terminan y vuelve a abrirse ya actualizada, con tu configuración y tus datos.
+- El diálogo enseña las **novedades** sin salir de la app. En Windows, si la instalaste con el instalador, **Actualizar ahora** descarga la versión nueva, comprueba que lleva la firma de Tramtai y su suma SHA-256, y la instala sin preguntar nada más: la app se cierra, las peticiones en curso terminan y vuelve a abrirse ya actualizada, con tu configuración y tus datos.
 - La copia portable, la de Linux y la de macOS muestran el aviso con el enlace de descarga: ahí se actualiza instalando el paquete nuevo (o volviendo a ejecutar `instalar.sh`).
 - Para no esperar: **Ajustes → Buscar actualización ahora**, o **Buscar actualizaciones** en la bandeja.
 - Si instalas una versión a mano con Tramtai abierto, el instalador lo cierra, instala y lo vuelve a abrir.

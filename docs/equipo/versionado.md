@@ -62,3 +62,10 @@ git push origin --tags             # sube las etiquetas
 4. Al subir la etiqueta, `.github/workflows/publicar.yml` prueba en Windows, Linux y macOS, compila en cada sistema y crea el release de GitHub con las notas de la etiqueta: en Windows el instalador y el `.zip` portable; en Linux los `.deb` y `.rpm` (amd64 y arm64); en macOS el `.dmg` universal; los `.tar.gz` de la CLI para Linux y macOS; y `SHA256SUMS.txt` con todos. Falla si la versión calculada no coincide con la etiqueta o si alguna app no arranca.
 
 Nota: Go no admite `+metadatos` como versión de módulo. No afecta, porque Tramtai es una aplicación y no una biblioteca importable.
+
+## Firma de las actualizaciones y permisos de Publicar
+
+- **Firma.** Publicar firma `SHA256SUMS.txt` con ed25519 (`scripts/firmar`) y sube `SHA256SUMS.txt.sig`. La clave privada es el secreto `FIRMA_ACTUALIZACIONES` del repositorio y solo llega al paso que firma; la pública está en `internal/actualizacion/firma.go`. Antes de crear el release, Publicar comprueba la firma con esa pública. La actualización de un clic de Windows no instala una versión sin firma válida.
+- **Cambiar la clave.** `go run ./scripts/firmar -generar` imprime la pública por la salida estándar y la semilla por stderr (que va directa a `gh secret set FIRMA_ACTUALIZACIONES`, sin pasar por el disco). La pública nueva se publica primero en un release firmado todavía con la anterior; después se cambia el secreto. Si se cambia el secreto antes, las copias instaladas no podrán actualizarse con un clic.
+- **Permisos.** Publicar tiene `contents: read` por defecto: los jobs que compilan y prueban ejecutan código de terceros. Solo `publicar` (crea el release) y `paquetes` (sube Homebrew y winget a `main`) tienen `contents: write`, y los checkouts del resto no guardan el token. wingetcreate va fijado por versión y SHA-256, y `WINGET_TOKEN` solo llega al paso que envía el manifiesto.
+
