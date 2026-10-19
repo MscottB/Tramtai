@@ -18,7 +18,7 @@ func comandoTerminal() *cobra.Command {
 }
 
 func abrirTerminal() error {
-	datos, err := dirDatos()
+	datos, err := nucleo.DirDatos()
 	if err != nil {
 		return err
 	}

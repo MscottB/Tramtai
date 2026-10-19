@@ -312,6 +312,7 @@ export interface Acerca {
   almacen: string
   servicio: { direccion: string; pid: number; iniciado_en: string }
   rutas?: { datos: string; configuracion: string; registro: string }
+  portable?: boolean // la copia guarda sus datos junto al .exe (portable.txt)
 }
 // Novedad es una versión publicada con sus notas, para el diálogo que sale tras actualizar.
 export interface Novedad {

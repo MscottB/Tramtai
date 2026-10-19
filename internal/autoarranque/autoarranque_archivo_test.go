@@ -12,11 +12,17 @@ func TestActivarYDesactivar(t *testing.T) {
 	carpeta := t.TempDir()
 	t.Setenv("HOME", carpeta)            // macOS: ~/Library/LaunchAgents
 	t.Setenv("XDG_CONFIG_HOME", carpeta) // Linux: ~/.config/autostart
+	nombreAnterior := nombreArchivo
 	nombreArchivo = "prueba-" + nombreArchivo
+	t.Cleanup(func() { nombreArchivo = nombreAnterior })
+	const escritorio = "/opt/con espacios & más/tramtai-escritorio"
+	anterior := propia
+	propia = func() (string, error) { return escritorio, nil }
+	t.Cleanup(func() { propia = anterior })
 	if activo, err := Activo(); err != nil || activo {
 		t.Fatalf("antes de activar: %v %v", activo, err)
 	}
-	if err := Activar("/opt/con espacios & más/tramtai-escritorio"); err != nil {
+	if err := Activar(escritorio); err != nil {
 		t.Fatal(err)
 	}
 	if activo, err := Activo(); err != nil || !activo {
@@ -38,5 +44,31 @@ func TestActivarYDesactivar(t *testing.T) {
 	}
 	if activo, _ := Activo(); activo {
 		t.Fatal("sigue activo")
+	}
+}
+
+// El arranque de otra copia no cuenta como activo ni se borra.
+func TestActivoSoloDeEstaCopia(t *testing.T) {
+	carpeta := t.TempDir()
+	t.Setenv("HOME", carpeta)
+	t.Setenv("XDG_CONFIG_HOME", carpeta)
+	nombreAnterior := nombreArchivo
+	nombreArchivo = "prueba-otra-" + nombreArchivo
+	t.Cleanup(func() { nombreArchivo = nombreAnterior })
+	anterior := propia
+	propia = func() (string, error) { return "/opt/una/tramtai-escritorio", nil }
+	t.Cleanup(func() { propia = anterior })
+	// Una ruta que contiene a la propia («…-escritorio-dev») tampoco es esta copia.
+	if err := Activar("/opt/una/tramtai-escritorio-dev"); err != nil {
+		t.Fatal(err)
+	}
+	if activo, _ := Activo(); activo {
+		t.Fatal("el arranque de otra copia se vio como propio")
+	}
+	if err := Desactivar(); err != nil {
+		t.Fatal(err)
+	}
+	if ruta, _ := archivo(); func() bool { _, err := os.Stat(ruta); return err != nil }() {
+		t.Fatal("Desactivar borró el arranque de otra copia")
 	}
 }

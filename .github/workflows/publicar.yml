@@ -127,6 +127,22 @@ jobs:
           if ($version -ne $env:GITHUB_REF_NAME) { throw "la versión calculada ($version) no coincide con la etiqueta $env:GITHUB_REF_NAME" }
           ./scripts/compilar.ps1 -Instalador
           Remove-Item dist/SHA256SUMS.txt # las sumas de todos los archivos se calculan al publicar
+      # La portable del .zip guarda sus datos junto al .exe y nunca en %APPDATA%. Una orden por paso (pwsh).
+      - name: Portable (descomprimir)
+        run: Expand-Archive (Get-Item dist/*-portable-windows-x64.zip).FullName "$env:RUNNER_TEMP\portable"
+      - name: Portable (trae portable.txt)
+        run: if (-not (Test-Path "$env:RUNNER_TEMP\portable\portable.txt")) { throw 'el .zip portable no trae portable.txt' }
+      - name: Portable (iniciar el servicio)
+        run: '& "$env:RUNNER_TEMP\portable\tramtai.exe" servicio iniciar -d'
+      - name: Portable (estado)
+        run: '& "$env:RUNNER_TEMP\portable\tramtai.exe" servicio estado'
+      - name: Portable (datos junto al .exe)
+        run: if (-not (Test-Path "$env:RUNNER_TEMP\portable\datos-tramtai\datos\servicio.json")) { throw 'la portable no guardó su servicio.json junto al .exe' }
+      - name: Portable (nada en %APPDATA%)
+        run: if (Test-Path "$env:APPDATA\tramtai") { throw 'la portable escribió en %APPDATA%\tramtai' }
+      - name: Portable (detener)
+        if: always()
+        run: '& "$env:RUNNER_TEMP\portable\tramtai.exe" servicio detener --si'
       - uses: actions/upload-artifact@v4
         with:
           name: windows

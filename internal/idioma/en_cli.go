@@ -3,12 +3,18 @@ package idioma
 // Traducciones al inglés de la CLI (cmd/tramtai).
 func init() {
 	agregar(map[string]string{
-		"Descargando… %d %% (%.1f de %.1f MB)": "Downloading… %d %% (%.1f of %.1f MB)",
+		"Tramtai expone %s como una API local.\n\n  tramtai          terminal interactiva\n  tramtai abrir    Web UI en el navegador (inicia el servicio si hace falta)": "Tramtai exposes %s as a local API.\n\n  tramtai          interactive terminal\n  tramtai abrir    Web UI in the browser (starts the service if needed)",
+		"agente: %s (predeterminados.agente)": "agent: %s (predeterminados.agente)",
+		"y":                                   "and",
+		"o":                                   "or",
+		"Sale con 0 si hay un proceso exe de la carpeta": "Exits with 0 if an exe process from the folder is running",
+		"no hay ninguno abierto":                         "none is running",
+		"Cierra los procesos exe de la carpeta":          "Closes the exe processes from the folder",
+		"Descargando… %d %% (%.1f de %.1f MB)":           "Downloading… %d %% (%.1f of %.1f MB)",
 		// tramtai
 		"Pasarela local para ejecutar agentes CLI": "Local gateway for running CLI agents",
-		"Tramtai expone Claude Code, Codex, Antigravity y la API de Gemini como una API local.\n\n  tramtai          terminal interactiva\n  tramtai abrir    Web UI en el navegador (inicia el servicio si hace falta)": "Tramtai exposes Claude Code, Codex, Antigravity and the Gemini API as a local API.\n\n  tramtai          interactive terminal\n  tramtai abrir    Web UI in the browser (starts the service if needed)",
-		"Muestra la versión":          "Shows the version",
-		"incluye el commit compilado": "includes the commit it was built from",
+		"Muestra la versión":                       "Shows the version",
+		"incluye el commit compilado":              "includes the commit it was built from",
 		"Abre Tramtai en la app de escritorio o en el navegador (inicia el servicio si hace falta)":  "Opens Tramtai in the desktop app or in the browser (starts the service if needed)",
 		"abre la Web UI en el navegador en lugar de la app de escritorio":                            "opens the Web UI in the browser instead of the desktop app",
 		"Abre la terminal interactiva (también: tramtai sin argumentos)":                             "Opens the interactive terminal (also: tramtai with no arguments)",
@@ -47,7 +53,6 @@ func init() {
 		"  problema:      %s\n": "  problem:        %s\n",
 		"Ejecuta un trabajo con un agente y muestra la respuesta en vivo": "Runs a job with an agent and shows the response live",
 		"Ejecuta un trabajo y muestra la respuesta en vivo. Si el servicio está en marcha, el trabajo va a la instancia del\nproyecto actual (o a la global) y se ve también en la terminal interactiva y en la Web UI; si no, se ejecuta\ndirectamente. Sin texto, se lee de la entrada estándar. Ctrl+C cancela el trabajo.": "Runs a job and shows the response live. If the service is running, the job goes to the workspace of the\ncurrent project (or to the global one) and also shows in the interactive terminal and in the Web UI; otherwise it\nruns directly. Without text, it is read from standard input. Ctrl+C cancels the job.",
-		"agente: claude, codex, gemini o antigravity (predeterminados.agente)":                                 "agent: claude, codex, gemini or antigravity (predeterminados.agente)",
 		"identificador o alias del modelo, por ejemplo haiku":                                                  "model ID or alias, for example haiku",
 		"perfil de modelo: rapido, equilibrado, profundo (modelos.perfiles)":                                   "model profile: rapido, equilibrado, profundo (modelos.perfiles)",
 		"instrucciones de sistema":                                                                             "system instructions",

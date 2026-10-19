@@ -280,7 +280,7 @@ func comandoAcceso() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			datos, err := dirDatos()
+			datos, err := nucleo.DirDatos()
 			if err != nil {
 				return err
 			}
@@ -319,7 +319,7 @@ func mostrarTokenPunto(cmd *cobra.Command, nombre string, rotar bool) error {
 	if !rotar {
 		return errors.New(idioma.Tf("la clave de %s solo se muestra al crearla o regenerarla (se guarda su huella): tramtai acceso token %s --rotar", nombre, nombre))
 	}
-	datos, err := dirDatos()
+	datos, err := nucleo.DirDatos()
 	if err != nil {
 		return err
 	}

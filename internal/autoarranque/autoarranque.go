@@ -11,6 +11,10 @@ import (
 	"tramtai/internal/idioma"
 )
 
+// propia es la aplicación de escritorio de esta copia: el arranque solo cuenta como activo si es el de ella (la
+// instalada y la portable no se pisan). Las pruebas la sustituyen.
+var propia = Escritorio
+
 // Escritorio devuelve la ruta de la aplicación de escritorio, que se instala junto al ejecutable actual.
 func Escritorio() (string, error) {
 	propio, err := os.Executable()

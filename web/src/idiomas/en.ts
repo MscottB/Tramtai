@@ -452,7 +452,7 @@ const en: Textos = {
     'No. Tramtai runs Claude Code without saving the session, Codex in ephemeral mode, and GitHub Copilot and Antigravity with a private folder that is deleted afterwards. Your chat histories don’t fill up with your apps’ requests: the record stays only in Tramtai’s History.',
   'ayuda.p3': 'Where is my data stored and for how long?',
   'ayuda.r3':
-    'Only on this computer: in %APPDATA%\\tramtai on Windows, ~/Library/Application Support/tramtai on macOS and ~/.config/tramtai on Linux. By default, answers are kept for 24 hours and the rest of the history for 7 days, up to 10,000 requests; then they are deleted automatically. Change it in Settings → History, where you can also delete it any time.',
+    'Only on this computer: in %APPDATA%\\tramtai on Windows (in the portable copy, in "datos-tramtai" next to its files), ~/Library/Application Support/tramtai on macOS and ~/.config/tramtai on Linux. By default, answers are kept for 24 hours and the rest of the history for 7 days, up to 10,000 requests; then they are deleted automatically. Change it in Settings → History, where you can also delete it any time.',
   'ayuda.p4': 'How do I make my apps answer in Spanish?',
   'ayuda.r4':
     'In My APIs create an API for that app and write in its instructions, for example, “Always answer in Spanish”. They are added at the start of every request, without changing anything in the app.',
@@ -804,6 +804,7 @@ const en: Textos = {
   'acerca.detalles': 'Technical details',
   'acerca.sinDatos': 'They could not be loaded: the service is not responding.',
   'acerca.version': 'Version',
+  'acerca.portable': 'Portable',
   'acerca.commit': 'Commit',
   'acerca.modificado': 'with uncommitted changes',
   'acerca.sistema': 'System',
@@ -939,6 +940,9 @@ const en: Textos = {
   'ayuda.p19': 'Why can I not use Antigravity in my APIs?',
   'ayuda.r19':
     'Tramtai already runs it without tools (an agy hook denies them all; it was tried with the real CLI), but it is only enabled in apps and APIs once its security test passes with a Gemini API key, which is how Tramtai uses it. Meanwhile it is used from Try, the terminal and the CLI. If you checked it yourself, adaptadores.antigravity.permitir_apps: true enables it.',
+  'ayuda.p24': 'How does the portable copy work?',
+  'ayuda.r24':
+    'The portable copy (the Windows .zip) keeps everything in the "datos-tramtai" folder next to its files: settings, APIs with their keys, history and the app\'s browser. It does not touch the installation on this computer; both can be open at once, each with its own data, and you can take the folder to another computer.\nProvider keys (ANTHROPIC_API_KEY…) stay in the system\'s encrypted store: they are shared with the installed copy, and on another computer you have to save them again.\nTo update it, unzip the new version over it: "datos-tramtai" is not overwritten. To bring over the installed copy\'s data, copy the contents of %APPDATA%\\tramtai into "datos-tramtai" with both closed.\nFrom a terminal, use .\\tramtai.exe from its folder. If you delete portable.txt (with Tramtai closed), it goes back to %APPDATA%.\nIf you used the portable copy 0.47 or earlier, unzipping this one over it starts with its own data and new API keys: copy %APPDATA%\\tramtai into "datos-tramtai" to keep them.\nOn a FAT or exFAT USB drive the folder cannot be protected: whoever has the drive can read your API keys.',
   'ayuda.p17': 'Which version do I have?',
   'ayuda.r17':
     'Open "About Tramtai" in the side menu, in the status menu (top right) or in the tray icon. You will see the version as it appears on GitHub (for example v0.42.0+17102026), whether there is a newer one, the project links and, in "Technical details", what you need to ask for help: "Copy support data" copies it without keys or tokens.',

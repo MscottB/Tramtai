@@ -66,8 +66,12 @@ const (
 	duracionCodigo = time.Minute
 )
 
+// nombreCookie lleva el puerto: las cookies valen para todo 127.0.0.1, sin distinguir puerto, y dos Tramtai a la vez
+// (la instalada y una portable) en el mismo navegador se echarían la una a la otra.
+func (s *Servicio) nombreCookie() string { return cookieSesion + "_" + strconv.Itoa(s.opc.Puerto) }
+
 func (s *Servicio) sesionDe(r *http.Request) (string, *sesion) {
-	cookie, err := r.Cookie(cookieSesion)
+	cookie, err := r.Cookie(s.nombreCookie())
 	if err != nil {
 		return "", nil
 	}
@@ -93,7 +97,7 @@ func (s *Servicio) crearSesion(w http.ResponseWriter, instancia string, local bo
 	}
 	s.sesiones[id] = ses
 	s.muSesiones.Unlock()
-	http.SetCookie(w, &http.Cookie{Name: cookieSesion, Value: id, Path: "/", HttpOnly: true,
+	http.SetCookie(w, &http.Cookie{Name: s.nombreCookie(), Value: id, Path: "/", HttpOnly: true,
 		SameSite: http.SameSiteStrictMode, MaxAge: int(duracionSesion.Seconds())})
 	return ses
 }
@@ -277,7 +281,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.mu.RLock()
-		puerto := cmp.Or(s.opc.PuertoConfigurado, s.opc.Puerto)
+		puerto := puertoTrasReiniciar(s.opc.Host, s.opc.Puerto, s.opc.PuertoConfigurado)
 		s.mu.RUnlock()
 		// El servicio nuevo espera a que este termine y escucha en el puerto configurado (o en otro libre).
 		api.EscribirJSON(w, http.StatusAccepted, map[string]any{"url": "http://" + net.JoinHostPort(s.opc.Host, strconv.Itoa(puerto))})
@@ -384,7 +388,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			delete(s.sesiones, id)
 			s.muSesiones.Unlock()
 		}
-		http.SetCookie(w, &http.Cookie{Name: cookieSesion, Value: "", Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: -1})
+		http.SetCookie(w, &http.Cookie{Name: s.nombreCookie(), Value: "", Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: -1})
 		w.WriteHeader(http.StatusNoContent)
 	case r.URL.Path == "/ui/entrar" && r.Method == http.MethodGet:
 		codigo := r.URL.Query().Get("codigo")
@@ -1009,4 +1013,14 @@ func (s *Servicio) fijarPuerto(puerto int, automatico bool) error {
 	s.opc.PuertoConfigurado, s.opc.PuertoAutomatico = puerto, automatico
 	s.mu.Unlock()
 	return nil
+}
+
+// puertoTrasReiniciar es donde escuchará el servicio nuevo: el configurado si cambió y está libre; si no, el actual. Si
+// en el configurado escucha otro Tramtai (la instalada mientras esta es la portable), la Web UI no salta a él: el
+// servicio nuevo, que lo encontrará ocupado, vuelve a buscar en orden y cae otra vez en este.
+func puertoTrasReiniciar(host string, actual, configurado int) int {
+	if configurado != 0 && configurado != actual && PuertoLibre(host, configurado) {
+		return configurado
+	}
+	return actual
 }

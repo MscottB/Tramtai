@@ -86,8 +86,8 @@ Var textoTerminado
 
 LangString bienvenidaTitulo ${LANG_SPANISH} "Te damos la bienvenida a Tramtai"
 LangString bienvenidaTitulo ${LANG_ENGLISH} "Welcome to Tramtai"
-LangString bienvenidaTexto ${LANG_SPANISH} "Tramtai convierte Claude Code, Codex, Antigravity y la API de Gemini en una API local para tus aplicaciones.$\r$\n$\r$\nSe instala solo para tu usuario y no pide permisos de administrador. Si ya lo tienes instalado, se actualiza y conserva tu configuración, tus APIs y tu historial."
-LangString bienvenidaTexto ${LANG_ENGLISH} "Tramtai turns Claude Code, Codex, Antigravity and the Gemini API into a local API for your applications.$\r$\n$\r$\nIt installs for your user only and needs no administrator rights. If it is already installed, it is updated and keeps your settings, your APIs and your history."
+LangString bienvenidaTexto ${LANG_SPANISH} "Tramtai convierte Claude Code, Codex, GitHub Copilot, Antigravity y la API de Gemini en una API local para tus aplicaciones.$\r$\n$\r$\nSe instala solo para tu usuario y no pide permisos de administrador. Si ya lo tienes instalado, se actualiza y conserva tu configuración, tus APIs y tu historial."
+LangString bienvenidaTexto ${LANG_ENGLISH} "Tramtai turns Claude Code, Codex, GitHub Copilot, Antigravity and the Gemini API into a local API for your applications.$\r$\n$\r$\nIt installs for your user only and needs no administrator rights. If it is already installed, it is updated and keeps your settings, your APIs and your history."
 LangString ventanaActualizar ${LANG_SPANISH} "Actualizar Tramtai"
 LangString ventanaActualizar ${LANG_ENGLISH} "Update Tramtai"
 LangString actualizarTitulo ${LANG_SPANISH} "Actualizar Tramtai a ${VERSION}"
@@ -186,22 +186,24 @@ Function SaltarSiActualiza
   ${EndIf}
 FunctionEnd
 
-; HayProceso deja 0 en RESULTADO si el usuario tiene abierto un proceso con ese nombre (esté donde esté instalado).
-!macro HayProceso NOMBRE RESULTADO
-  nsExec::Exec 'cmd /c tasklist /FI "USERNAME eq %USERNAME%" /FI "IMAGENAME eq ${NOMBRE}" /NH | find /I "${NOMBRE}" >NUL'
+; HayProceso deja 0 en RESULTADO si hay un proceso NOMBRE de la carpeta de la instalación: una portable abierta (en
+; otra carpeta y con sus propios datos) no cuenta ni se cierra.
+!macro HayProceso CLI NOMBRE RESULTADO
+  nsExec::Exec '"${CLI}" instalacion abierto "$INSTDIR" ${NOMBRE}'
   Pop ${RESULTADO}
 !macroend
 
-; Antes de copiar o borrar: cierra la aplicación y detiene el servicio de Tramtai, sea esta instalación, la portable o
-; una copia compilada, porque los .exe en uso no se pueden reemplazar y la app nueva no debe quedarse conectada al
-; servicio viejo. El servicio espera a que terminen los trabajos en curso (servicio.plazo_drenaje_segundos). CLI es el
-; tramtai.exe que lo detiene: encuentra el servicio por su servicio.json, lo haya iniciado la copia que sea. Recuerda en
-; $abierta y $servicio qué estaba en marcha para volver a abrirlo al terminar.
+; Antes de copiar o borrar: cierra la aplicación de esta instalación y detiene el servicio de %APPDATA%, porque los .exe
+; en uso no se pueden reemplazar y la app nueva no debe quedarse conectada al servicio viejo. Una portable 0.48 o
+; posterior (portable.txt) tiene sus datos y su servicio aparte: ni cuenta como abierta ni se cierra. El servicio de
+; %APPDATA% se detiene siempre, lo haya iniciado esta instalación, una portable anterior a la 0.48 o una copia compilada,
+; y espera a que terminen los trabajos en curso (servicio.plazo_drenaje_segundos). CLI es el tramtai.exe que lo
+; detiene. Recuerda en $abierta y $servicio qué estaba en marcha para volver a abrirlo al terminar.
 !macro DetenerTramtai CLI AVISO
   StrCpy $abierta 0
   StrCpy $servicio 0
-  !insertmacro HayProceso "tramtai-escritorio.exe" $0
-  !insertmacro HayProceso "tramtai.exe" $1
+  !insertmacro HayProceso "${CLI}" "tramtai-escritorio.exe" $0
+  !insertmacro HayProceso "${CLI}" "tramtai.exe" $1
   ${If} $0 == 0
     StrCpy $abierta 1
   ${EndIf}
@@ -212,21 +214,23 @@ FunctionEnd
       MessageBox MB_OKCANCEL|MB_ICONINFORMATION "${AVISO}" /SD IDOK IDOK +2
       Abort
     ${EndIf}
-    nsExec::Exec 'cmd /c taskkill /F /FI "USERNAME eq %USERNAME%" /IM tramtai-escritorio.exe'
-    Pop $0
-    nsExec::Exec '"${CLI}" servicio detener --si'
-    Pop $0
-    ${If} $0 == 0
-      StrCpy $servicio 1
-    ${EndIf}
+    nsExec::Exec '"${CLI}" instalacion cerrar "$INSTDIR" tramtai-escritorio.exe'
+    Pop $3
+  ${EndIf}
+  nsExec::Exec '"${CLI}" servicio detener --si'
+  Pop $3
+  ${If} $3 == 0
+    StrCpy $servicio 1
+  ${EndIf}
+  ${If} $1 == 0
     ; Espera hasta 10 s a que salgan los demás tramtai.exe (la CLI, una terminal interactiva…) y cierra los que queden.
     ${For} $2 1 20
-      !insertmacro HayProceso "tramtai.exe" $1
+      !insertmacro HayProceso "${CLI}" "tramtai.exe" $1
       ${IfThen} $1 != 0 ${|} ${Break} ${|}
       Sleep 500
     ${Next}
-    nsExec::Exec 'cmd /c taskkill /F /FI "USERNAME eq %USERNAME%" /IM tramtai.exe'
-    Pop $0
+    nsExec::Exec '"${CLI}" instalacion cerrar "$INSTDIR" tramtai.exe'
+    Pop $3
   ${EndIf}
 !macroend
 
@@ -240,6 +244,8 @@ Section "$(secPrograma)" SecPrograma
   File "/oname=$PLUGINSDIR\tramtai.exe" "${RAIZ}\bin\tramtai.exe"
   !insertmacro DetenerTramtai "$PLUGINSDIR\tramtai.exe" "$(cerrarAbierta)"
   SetOutPath "$INSTDIR"
+  ; Si alguien descomprimió la portable aquí, su portable.txt haría que la instalada guardara los datos en la carpeta.
+  Delete "$INSTDIR\portable.txt"
   File "${RAIZ}\bin\tramtai.exe"
   File "${RAIZ}\bin\tramtai-escritorio.exe"
   File "/oname=LICENCIA.md" "${RAIZ}\LICENSE.md"
@@ -322,6 +328,7 @@ Section "Uninstall"
   ${IfNot} ${Silent}
     MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2 "$(borrarDatos)" IDNO conservar
     RMDir /r "$APPDATA\tramtai"
+    RMDir /r "$APPDATA\tramtai-escritorio.exe" ; el perfil del navegador de la app (WebView2)
     conservar:
   ${EndIf}
 SectionEnd

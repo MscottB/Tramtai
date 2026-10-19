@@ -76,6 +76,8 @@ if ($Instalador) {
     New-Item -ItemType Directory -Force $portable | Out-Null
     Copy-Item (Join-Path $raiz 'bin\tramtai.exe'), (Join-Path $raiz 'bin\tramtai-escritorio.exe') $portable
     Copy-Item (Join-Path $raiz 'LICENSE.md') (Join-Path $portable 'LICENCIA.md')
+    # portable.txt la pone en modo portable: los datos van a datos-tramtai, junto al .exe (internal/nucleo/raiz.go).
+    Copy-Item (Join-Path $PSScriptRoot 'portable.txt') $portable
     Compress-Archive -Path (Join-Path $portable '*') -DestinationPath (Join-Path $dist "Tramtai-$version-portable-windows-x64.zip") -Force
     Remove-Item -Recurse -Force $portable
     Get-ChildItem $dist -File | Where-Object Name -ne 'SHA256SUMS.txt' | ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)" } |

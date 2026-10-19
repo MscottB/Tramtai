@@ -35,22 +35,12 @@ import (
 	"tramtai/internal/version"
 )
 
-// dirDatos es el directorio de datos locales del usuario.
-func dirDatos() (string, error) {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		return "", err
-	}
-	datos := filepath.Join(dir, "tramtai", "datos")
-	return datos, os.MkdirAll(datos, 0o700)
-}
-
 func contexto() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), 60*time.Second)
 }
 
 func conectar() (*cliente.Cliente, error) {
-	datos, err := dirDatos()
+	datos, err := nucleo.DirDatos()
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +49,7 @@ func conectar() (*cliente.Cliente, error) {
 
 // asegurarServicio conecta con el servicio o lo inicia en segundo plano.
 func asegurarServicio(cmd *cobra.Command) (*cliente.Cliente, error) {
-	datos, err := dirDatos()
+	datos, err := nucleo.DirDatos()
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +74,7 @@ func confirmar(cmd *cobra.Command, pregunta string) bool {
 
 // esperarCierreServicio espera, como mucho dos minutos, a que el servicio en marcha termine (drena sus trabajos).
 func esperarCierreServicio() {
-	datos, err := dirDatos()
+	datos, err := nucleo.DirDatos()
 	if err != nil {
 		return
 	}
@@ -98,7 +88,7 @@ func esperarCierreServicio() {
 
 // abrirCuandoResponda espera a que el servicio en primer plano acepte conexiones y abre la interfaz global.
 func abrirCuandoResponda(cmd *cobra.Command, enNavegador bool) {
-	datos, err := dirDatos()
+	datos, err := nucleo.DirDatos()
 	if err != nil {
 		return
 	}
@@ -115,7 +105,7 @@ func abrirCuandoResponda(cmd *cobra.Command, enNavegador bool) {
 
 // seguirRegistro muestra las últimas n líneas de servicio.log y, con seguir, lo que se añada hasta Ctrl+C.
 func seguirRegistro(cmd *cobra.Command, n int, seguir bool) error {
-	datos, err := dirDatos()
+	datos, err := nucleo.DirDatos()
 	if err != nil {
 		return err
 	}
@@ -465,7 +455,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string) error {
 			}
 		}
 	}
-	datos, err := dirDatos()
+	datos, err := nucleo.DirDatos()
 	if err != nil {
 		return err
 	}
@@ -576,7 +566,7 @@ func mostrarTokenInstancia(cmd *cobra.Command, ambito string, rotar bool) error 
 	if err != nil {
 		return err
 	}
-	datos, err := dirDatos()
+	datos, err := nucleo.DirDatos()
 	if err != nil {
 		return err
 	}
@@ -716,7 +706,7 @@ func abrirWebUI(cmd *cobra.Command, ambito string, enNavegador bool) error {
 	if err != nil {
 		return err
 	}
-	datos, err := dirDatos()
+	datos, err := nucleo.DirDatos()
 	if err != nil {
 		return err
 	}

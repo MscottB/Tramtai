@@ -15,7 +15,8 @@ import (
 func (s *Servicio) acerca(local bool) map[string]any {
 	commit, modificado := version.Commit()
 	datos := map[string]any{"version": version.Texto(), "commit": commit, "modificado": modificado, "go": runtime.Version(),
-		"sistema": runtime.GOOS, "arquitectura": runtime.GOARCH, "almacen": credenciales.Almacen(),
+		"portable": nucleo.Portable(),
+		"sistema":  runtime.GOOS, "arquitectura": runtime.GOARCH, "almacen": credenciales.Almacen(),
 		"servicio": map[string]any{"direccion": s.Base(), "pid": os.Getpid(), "iniciado_en": s.IniciadoEn.UTC()}}
 	if local {
 		configuracion, _ := nucleo.RutaGlobal()

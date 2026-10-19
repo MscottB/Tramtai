@@ -76,7 +76,7 @@
           <li>Si Windows muestra «Windows protegió su PC», pulsa <strong>Más información → Ejecutar de todas formas</strong>. Aparece porque el instalador no está firmado con un certificado de pago (ver <a href="#preguntas">preguntas frecuentes</a>).</li>
           <li>Elige las opciones: el comando <code>tramtai</code> en la terminal, iniciar con Windows y un acceso directo en el escritorio.</li>
         </ol>
-        <p>¿Prefieres no instalar nada? <code>Tramtai-…-portable-windows-x64.zip</code> trae la misma app: descomprímelo y abre <code>tramtai-escritorio.exe</code>. Esa copia no se actualiza sola.</p>
+        <p>¿Prefieres no instalar nada? <code>Tramtai-…-portable-windows-x64.zip</code> trae la misma app: descomprímelo en una carpeta tuya y abre <code>tramtai-escritorio.exe</code>. Guarda todo en la carpeta <code>datos-tramtai</code>, a su lado: no se mezcla con una instalación y puedes llevarla a otro equipo (las claves de los proveedores siguen en el almacén cifrado de Windows y allí hay que volver a guardarlas). Esa copia no se actualiza sola: descomprime la versión nueva encima. Si ya usabas la portable 0.47 o anterior, esta empieza con datos propios: copia <code>%APPDATA%\tramtai</code> en <code>datos-tramtai</code> para conservarlos. En un pendrive con FAT o exFAT la carpeta no se puede proteger, y quien lo tenga puede leer las claves de tus APIs.</p>
         <h3>macOS 11 o posterior</h3>
         <p>Con Homebrew es lo más cómodo: se instala sin el bloqueo de Gatekeeper y se actualiza con <code>brew upgrade</code>.</p>
       </div>
@@ -88,7 +88,7 @@
           <li>If Windows shows "Windows protected your PC", click <strong>More info → Run anyway</strong>. It appears because the installer isn't signed with a paid certificate (see the <a href="#preguntas">FAQ</a>).</li>
           <li>Pick the options: the <code>tramtai</code> command in the terminal, start with Windows and a desktop shortcut.</li>
         </ol>
-        <p>Rather not install anything? <code>Tramtai-…-portable-windows-x64.zip</code> has the same app: unzip it and open <code>tramtai-escritorio.exe</code>. That copy doesn't update itself.</p>
+        <p>Rather not install anything? <code>Tramtai-…-portable-windows-x64.zip</code> has the same app: unzip it into a folder of your own and open <code>tramtai-escritorio.exe</code>. It keeps everything in the <code>datos-tramtai</code> folder next to it: it doesn't mix with an installation and you can take it to another computer (provider keys stay in Windows' encrypted store and have to be saved again there). That copy doesn't update itself: unzip the new version over it. If you used the portable copy 0.47 or earlier, this one starts with its own data: copy <code>%APPDATA%\tramtai</code> into <code>datos-tramtai</code> to keep it. On a FAT or exFAT USB drive the folder cannot be protected, and whoever has it can read your API keys.</p>
         <h3>macOS 11 or later</h3>
         <p>Homebrew is the easiest way: it installs without the Gatekeeper block and updates with <code>brew upgrade</code>.</p>
       </div>
@@ -337,8 +337,8 @@ tramtai ejecutar -f informe.pdf "Resume el documento en tres puntos"</pre>
       </details>
       <details>
         <summary><span lang="es">¿Dónde se guardan mis datos?</span><span lang="en">Where is my data stored?</span></summary>
-        <p lang="es">En tu equipo: <code>%APPDATA%\tramtai</code> en Windows, <code>~/Library/Application Support/tramtai</code> en macOS y <code>~/.config/tramtai</code> en Linux. Las respuestas caducan a las 24 horas y <strong>Ajustes → Borrar datos</strong> vacía el historial cuando quieras. Tramtai no tiene servidores ni telemetría: tus peticiones van de tu equipo al proveedor del agente.</p>
-        <p lang="en">On your computer: <code>%APPDATA%\tramtai</code> on Windows, <code>~/Library/Application Support/tramtai</code> on macOS and <code>~/.config/tramtai</code> on Linux. Responses expire after 24 hours and <strong>Settings → Delete data</strong> empties the history whenever you want. Tramtai has no servers and no telemetry: your requests go from your computer to the agent's provider.</p>
+        <p lang="es">En tu equipo: <code>%APPDATA%\tramtai</code> en Windows (en la portable, en <code>datos-tramtai</code>, junto a sus archivos), <code>~/Library/Application Support/tramtai</code> en macOS y <code>~/.config/tramtai</code> en Linux. Las respuestas caducan a las 24 horas y <strong>Ajustes → Borrar datos</strong> vacía el historial cuando quieras. Tramtai no tiene servidores ni telemetría: tus peticiones van de tu equipo al proveedor del agente.</p>
+        <p lang="en">On your computer: <code>%APPDATA%\tramtai</code> on Windows (in the portable copy, in <code>datos-tramtai</code> next to its files), <code>~/Library/Application Support/tramtai</code> on macOS and <code>~/.config/tramtai</code> on Linux. Responses expire after 24 hours and <strong>Settings → Delete data</strong> empties the history whenever you want. Tramtai has no servers and no telemetry: your requests go from your computer to the agent's provider.</p>
       </details>
       <details>
         <summary><span lang="es">¿Cómo lo desinstalo?</span><span lang="en">How do I uninstall it?</span></summary>

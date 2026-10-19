@@ -267,3 +267,38 @@ El token de servicio (`datos/token-servicio`) habilita `/api/v1/servicio`:
 | `POST /api/v1/servicio/detener` | Detener el servicio. |
 
 Con ese mismo token y la cabecera `Tramtai-Instancia: <id>`, la administración puede usar la API de cualquier instancia. El descriptor `datos/servicio.json` indica dónde escucha el servicio. Antes de usar el servicio, la CLI comprueba con `/healthz` que responde ese mismo servicio y no otro proceso que ocupe el puerto.
+
+## Versión portable
+
+El `.zip` portable de Windows trae `portable.txt` junto a `tramtai.exe` y `tramtai-escritorio.exe`. Con ese archivo,
+esa copia guarda todo en `datos-tramtai`, a su lado, en lugar de en `%APPDATA%\tramtai`:
+
+- `config.yaml` y `profiles\`;
+- `datos\`: descriptor del servicio, tokens, instancias, registros y cargas;
+- `escritorio.json`;
+- `webview\`: el perfil del navegador de la app.
+
+Lo que conviene saber:
+
+- **Permisos.** Al crearla, `datos-tramtai` queda solo para tu usuario y SYSTEM, sin heredar los de la carpeta de
+  encima. En un pendrive FAT o exFAT no hay permisos: quien tenga el pendrive puede leer las claves de tus APIs.
+- **Dónde no funciona.** Si la carpeta no se puede escribir, o es la temporal donde el Explorador abre un `.zip` sin
+  descomprimir, la app y la CLI lo dicen y no usan `%APPDATA%`.
+- **Claves de los proveedores.** Siguen en el almacén cifrado de Windows: se comparten con la instalación de este
+  equipo (borrarlas en una las borra para las dos) y en otro equipo hay que volver a guardarlas.
+- **Instalada y portable a la vez.** Son dos Tramtai independientes:
+  - cada una tiene su servicio y su token;
+  - si el puerto está ocupado, la segunda usa otro libre (`puerto_automatico`);
+  - el título de la ventana y la bandeja dicen «Tramtai portable»;
+  - «Iniciar con Windows» se marca por separado en cada una;
+  - el instalador no cierra la portable.
+- **La CLI.** En una terminal, `tramtai` es el del PATH, la instalada. Para la portable, `.\tramtai.exe` desde su
+  carpeta.
+- **Pasar lo de la instalada.** Con las dos cerradas, copia el contenido de `%APPDATA%\tramtai` en `datos-tramtai`:
+  configuración, APIs, tokens e historial. Si ese `config.yaml` tiene `servicio.puerto_automatico: false` y la
+  instalada usa ese puerto, cambia el de una de las dos.
+- **Quien ya usaba la portable 0.47 o anterior.** Desde la 0.48 la portable empieza con datos propios y tokens nuevos;
+  para conservar lo anterior, copia `%APPDATA%\tramtai` como en el punto anterior.
+- **Actualizar.** Descomprime la versión nueva encima: `datos-tramtai` no viene en el `.zip` y no se pisa.
+- **Volver a %APPDATA%.** Borra `portable.txt` con Tramtai cerrado.
+

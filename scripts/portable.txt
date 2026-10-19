@@ -1,0 +1,29 @@
+Tramtai portable
+================
+
+Este archivo hace que esta copia de Tramtai guarde todo en la carpeta «datos-tramtai», aquí al lado: configuración,
+APIs con sus claves, historial y el navegador de la app. No toca la instalación de este equipo (si la hay) y puedes
+llevarte la carpeta a otro equipo.
+
+- Las claves de los proveedores (ANTHROPIC_API_KEY, OPENAI_API_KEY…) siguen en el almacén cifrado de Windows: las
+  comparte con la instalación de este equipo y en otro equipo hay que volver a guardarlas.
+- Para actualizar, descomprime la versión nueva encima de esta carpeta: «datos-tramtai» no viene en el .zip y no se
+  pisa.
+- Desde una terminal, usa .\tramtai.exe de esta carpeta: «tramtai» a secas es el de la instalación.
+- Si borras este archivo (con Tramtai cerrado), esta copia vuelve a usar %APPDATA%\tramtai, como la instalada.
+- En un pendrive con FAT o exFAT, la carpeta no puede protegerse: quien tenga el pendrive puede leer las claves de tus
+  APIs.
+
+English
+-------
+
+This file makes this copy of Tramtai keep everything in the "datos-tramtai" folder next to it: settings, APIs with
+their keys, history and the app's browser. It does not touch the installation on this computer (if any) and you can
+take the folder to another computer.
+
+- Provider keys (ANTHROPIC_API_KEY, OPENAI_API_KEY…) stay in Windows' encrypted store: they are shared with the
+  installation on this computer, and on another computer you have to save them again.
+- To update, unzip the new version over this folder: "datos-tramtai" is not in the .zip and is not overwritten.
+- From a terminal, use .\tramtai.exe from this folder: plain "tramtai" is the installed one.
+- If you delete this file (with Tramtai closed), this copy goes back to %APPDATA%\tramtai, like the installed one.
+- On a FAT or exFAT USB drive the folder cannot be protected: whoever has the drive can read your API keys.
