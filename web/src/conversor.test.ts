@@ -21,3 +21,14 @@ test('seguir una preparación consulta hasta que deja de preparar', async () => 
   assert.deepEqual(vistos, ['preparando', 'preparando', 'listo'])
   assert.equal(esperas, 2)
 })
+
+test('se sigue consultando mientras se prepara uno nuevo con el anterior listo', async () => {
+  const estados: EstadoConversor[] = [
+    { estado: 'listo', origen: 'preparado', etapa: 'paquetes', progreso: 50, preparar_al_iniciar: true },
+    { estado: 'listo', origen: 'preparado', version: '0.1.8', preparar_al_iniciar: true },
+  ]
+  let consultas = 0
+  const final = await seguirPreparacion(async () => (consultas++, estados.shift()!), () => {}, async () => {})
+  assert.equal(consultas, 2)
+  assert.equal(final.etapa, undefined)
+})

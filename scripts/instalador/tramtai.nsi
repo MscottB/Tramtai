@@ -331,6 +331,7 @@ Section "Uninstall"
   ${IfNot} ${Silent}
     MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2 "$(borrarDatos)" IDNO conservar
     RMDir /r "$APPDATA\tramtai"
+    RMDir /r "$LOCALAPPDATA\tramtai" ; el conversor de archivos (markitdown y su Python)
     RMDir /r "$APPDATA\tramtai-escritorio.exe" ; el perfil del navegador de la app (WebView2)
     conservar:
   ${EndIf}

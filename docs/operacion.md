@@ -175,13 +175,17 @@ Se comprueba la ruta real del archivo, así que `..` o un enlace que salga de es
 - **Formatos:** texto, Markdown, JSON, XML, CSV, HTML, PDF, Word, PowerPoint, Excel y ZIP; el resto se rechaza con
   `carga_invalida`, también dentro de un ZIP. Un Word, PowerPoint o Excel que se descomprimiría en más de
   `conversion.maximo_descomprimido_mb` se rechaza antes de convertirlo.
-- **Conversor:** markitdown 0.1.8 con su propio Python, en `<carpeta de Tramtai>/conversor` (en la portable, en
-  `datos-tramtai/conversor`). Se prepara solo la primera vez que arranca el servicio (`conversion.preparar_al_iniciar`,
+- **Conversor:** markitdown 0.1.8 con su propio Python, en la carpeta local: `%LOCALAPPDATA%\tramtai\conversor` en
+  Windows (no viaja con un perfil móvil), `~/.local/share/tramtai/conversor` en Linux (o `$XDG_DATA_HOME`), la carpeta
+  de Tramtai en macOS y `datos-tramtai/conversor` en la portable. Se prepara solo la primera vez que arranca el servicio (`conversion.preparar_al_iniciar`,
   `true` por defecto) y a mano con **Ajustes → Archivos** o `tramtai conversor preparar`; `tramtai conversor estado`
   dice si está listo. Se usa, por este orden: `conversion.comando` si lo cambiaste, el paquete del conversor junto al
-  ejecutable, el preparado y `markitdown` del PATH. La descarga usa el proxy del sistema (`HTTPS_PROXY`, `NO_PROXY`) y
-  sus certificados (redes que inspeccionan TLS); si aun así se bloquea, descomprime el paquete del conversor para
-  Windows junto a `tramtai.exe`. Sin conversor listo, una petición con un archivo que lo necesita responde 503
+  ejecutable, el preparado y `markitdown` del PATH. La descarga usa las variables `HTTPS_PROXY` y `NO_PROXY` del entorno del
+  servicio y los certificados del sistema (redes que inspeccionan TLS). Un proxy configurado solo en las opciones del
+  sistema o con un PAC no se lee: define esas variables para tu usuario (también las hereda el servicio que arranca con
+  el sistema) o, si aun así se bloquea, descomprime el paquete del conversor para Windows junto a `tramtai.exe`.
+  Mientras se prepara uno nuevo (una versión de Tramtai que cambia markitdown, o «Preparar de nuevo»), se sigue usando
+  el anterior; cerrar Tramtai corta la preparación. Sin conversor listo, una petición con un archivo que lo necesita responde 503
   `conversor_no_disponible` antes de aceptarse.
 - **Conversión:** `conversion.tiempo_limite_segundos` (120) por archivo y `conversion.tiempo_total_segundos` (600) para
   toda la petición; markitdown corre con un tope de memoria (`limites.memoria_proceso_mb`, 2048; en macOS no se

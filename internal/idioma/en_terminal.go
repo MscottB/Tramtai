@@ -68,8 +68,8 @@ func init() {
 		"\n\n— salida final —\n":           "\n\n— final output —\n",
 		"no verificable":                   "not verifiable",
 		"%s · modelo %s · tokens %d/%d":    "%s · model %s · tokens %d/%d",
-		"Tab cambia de campo · ←→ modelo · Enter ejecuta · Ctrl+U borra el campo · Esc cancela el trabajo": "Tab next field · ←→ model · Enter run · Ctrl+U clear field · Esc cancel the job",
-		"Tab cambia de campo · ←→ modelo · Enter ejecuta · Ctrl+U borra el campo · Esc volver":             "Tab next field · ←→ model · Enter run · Ctrl+U clear field · Esc back",
+		"Tab cambia de campo · ←→ modelo · Enter ejecuta · Ctrl+U borra el campo · Ctrl+P prepara el conversor · Esc cancela el trabajo": "Tab next field · ←→ model · Enter run · Ctrl+U clear field · Ctrl+P prepare the converter · Esc cancel the job",
+		"Tab cambia de campo · ←→ modelo · Enter ejecuta · Ctrl+U borra el campo · Ctrl+P prepara el conversor · Esc volver":             "Tab next field · ←→ model · Enter run · Ctrl+U clear field · Ctrl+P prepare the converter · Esc back",
 
 		// Trabajos
 		"Trabajos de %s":     "Jobs in %s",

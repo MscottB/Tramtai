@@ -38,11 +38,15 @@ Fuera de alcance (a la hoja de ruta):
   comprimido. En Linux, la variante `musl` (estática, vale en cualquier distribución).
 - **`conversor.lock`** incrustado en el binario (`go:embed`): todas las dependencias de `markitdown[pdf,docx,pptx,xlsx]==0.1.8`
   con sus hashes, generado con `uv pip compile --universal --generate-hashes` y guardado en el repo. Lo que se descarga es
-  siempre lo mismo; una versión nueva de pandas u onnxruntime no se cuela.
+  siempre lo mismo; una versión nueva de pandas u onnxruntime no se cuela. `onnxruntime<1.20`: la 1.20 solo trae ruedas
+  para macOS 13+ y Tramtai admite macOS 11 (lo destapó la revisión final).
 
 ### Dónde queda
 
-En `<raíz de usuario>/conversor/` (en la portable, `datos-tramtai/conversor/`):
+En la carpeta local del usuario, `<carpeta>/conversor/` (`documentos.RaizConversor`): `%LOCALAPPDATA%\tramtai` en
+Windows, para no cargar un perfil móvil con ~300 MB de Python; `$XDG_DATA_HOME/tramtai` o `~/.local/share/tramtai` en
+Linux, fuera de `~/.config`; la carpeta de Tramtai en macOS; y en la portable, `datos-tramtai/` (cambio tras la
+revisión final de la rama):
 
 ```
 conversor/

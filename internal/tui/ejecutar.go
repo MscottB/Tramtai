@@ -58,6 +58,9 @@ func (m *modelo) teclaEjecutar(k tea.KeyPressMsg) tea.Cmd {
 		return m.volver()
 	case "tab", "down":
 		m.campo = (m.campo + 1) % 3
+		if m.campo == 2 {
+			return m.comprobarConversor()
+		}
 	case "shift+tab", "up":
 		m.campo = (m.campo + 2) % 3
 	case "left", "right":
@@ -68,6 +71,9 @@ func (m *modelo) teclaEjecutar(k tea.KeyPressMsg) tea.Cmd {
 	case "enter":
 		if m.campo < 2 {
 			m.campo++
+			if m.campo == 2 {
+				return m.comprobarConversor()
+			}
 			return nil
 		}
 		return m.lanzar()
@@ -91,6 +97,27 @@ func (m *modelo) teclaEjecutar(k tea.KeyPressMsg) tea.Cmd {
 		}
 	}
 	return nil
+}
+
+// comprobarConversor avisa, al dejar el campo de archivos, si alguno necesita el conversor y no está listo.
+func (m *modelo) comprobarConversor() tea.Cmd {
+	archivos := strings.FieldsFunc(m.archivos, func(r rune) bool { return r == ',' || r == ';' })
+	necesita := slices.ContainsFunc(archivos, func(ruta string) bool {
+		ruta = strings.Trim(strings.TrimSpace(ruta), `"`)
+		return documentos.NecesitaConversor(filepath.Base(ruta), ruta)
+	})
+	if !necesita || m.cli == nil {
+		return nil
+	}
+	cli, inst := m.cli, m.inst
+	return func() tea.Msg {
+		ctx, cancelar := conPlazo(10 * time.Second)
+		defer cancelar()
+		if e, err := cli.Conversor(ctx, inst); err == nil && e.Estado != "listo" {
+			return msgAviso{err: errors.New(idioma.Tf("el conversor de archivos no está listo (%s): ctrl+p lo prepara", e.Estado))}
+		}
+		return nil
+	}
 }
 
 // prepararConversor lanza la preparación del conversor de archivos en el servicio.

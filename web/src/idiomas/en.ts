@@ -1009,6 +1009,8 @@ const en: Textos = {
   'ayuda.archivosEjemplos': "Send a PDF, ready to copy",
   'ayuda.sConversor': "The file needs the converter (markitdown) and it is not ready yet. Go to Settings → Files and press \"Prepare files\" (or use \"tramtai conversor preparar\"); if it is being prepared, wait for it to finish. If your network blocks the download, get the Windows converter package and unzip it next to Tramtai.",
   'error.conversor_no_disponible': "The file converter is missing",
+  'conversor.progreso': "Converter preparation progress",
+  'conversor.preparandoNuevo': "A new one is being prepared: {etapa} ({progreso} %); this one is used meanwhile.",
 }
 
 export default en

@@ -161,7 +161,7 @@ func TestAvisoConversorAlAdjuntar(t *testing.T) {
 	ts := httptest.NewUnstartedServer(nil)
 	s, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}},
 		Semaforos: planificador.NuevosSemaforos(nil), Host: "127.0.0.1", Puerto: ts.Listener.Addr().(*net.TCPAddr).Port, Hosts: []string{"127.0.0.1"},
-		RaizUsuario: dir, UV: filepath.Join(dir, "no-existe-uv")})
+		RaizConversor: dir, UV: filepath.Join(dir, "no-existe-uv")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,6 +180,14 @@ func TestAvisoConversorAlAdjuntar(t *testing.T) {
 	m := nuevo(Opciones{})
 	m.cli, m.inst = cli, "global"
 	m.archivos, m.mensaje = pdf, "resume"
+	m.campo = 1
+	alSalir := m.teclaEjecutar(tea.KeyPressMsg{Code: tea.KeyTab})
+	if alSalir == nil {
+		t.Fatal("al salir del campo de archivos se comprueba el conversor")
+	}
+	if a, _ := alSalir().(msgAviso); a.err == nil || !strings.Contains(a.err.Error(), "ctrl+p") {
+		t.Fatalf("aviso al adjuntar: %+v", a)
+	}
 	creado, _ := m.lanzar()().(msgCreado)
 	if creado.err == nil || !strings.Contains(creado.err.Error(), "ctrl+p") {
 		t.Fatalf("sin conversor, aviso con la tecla para prepararlo: %v", creado.err)

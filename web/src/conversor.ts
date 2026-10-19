@@ -17,12 +17,15 @@ export function necesitaConversor(nombre: string): boolean {
 // conversor es null mientras no se sabe, o si el servicio no tiene conversor (entonces no se avisa de nada).
 export const conversor = ref<EstadoConversor | null>(null)
 
+// preparando dice si hay una preparación en curso: «preparando», o «listo» con etapa (sirve el anterior mientras tanto).
+export const preparando = (e: EstadoConversor | null) => !!e && (e.estado === 'preparando' || !!e.etapa)
+
 // seguirPreparacion consulta el estado hasta que deja de preparar; esperar separa las consultas.
 export async function seguirPreparacion(obtener: () => Promise<EstadoConversor>, alCambiar: (e: EstadoConversor) => void,
   esperar: () => Promise<void> = () => new Promise((listo) => setTimeout(listo, 2000))): Promise<EstadoConversor> {
   let e = await obtener()
   alCambiar(e)
-  while (e.estado === 'preparando') {
+  while (preparando(e)) {
     await esperar()
     e = await obtener()
     alCambiar(e)
@@ -49,7 +52,7 @@ export async function cargarConversor() {
   } catch {
     conversor.value = null // sin conversor en este servicio: no hay nada que avisar
   }
-  if (conversor.value?.estado === 'preparando') void seguir()
+  if (preparando(conversor.value)) void seguir()
 }
 
 export async function prepararConversor() {
@@ -67,6 +70,7 @@ export function textoConversor(e: EstadoConversor): string {
     case 'listo': {
       const origen = t(`conversor.origen.${e.origen ?? 'sistema'}` as Clave)
       const listo = e.version ? t('conversor.listo', { version: e.version, origen }) : t('conversor.listoSinVersion', { origen })
+      if (e.etapa) return `${listo} ${t('conversor.preparandoNuevo', { etapa: t(`conversor.etapa.${e.etapa}` as Clave), progreso: e.progreso ?? 0 })}`
       return e.mensaje ? `${listo} ${t('conversor.ultimoError', { mensaje: e.mensaje })}` : listo
     }
     case 'preparando':

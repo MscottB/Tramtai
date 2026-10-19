@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"tramtai/internal/nucleo"
 )
 
 // uvFalso hace de uv: «python install» deja en --install-dir un Python falso (una copia de este binario, que con
@@ -238,5 +240,85 @@ func TestEstadoLlevaPrepararAlIniciar(t *testing.T) {
 	p.FijarAlIniciar(false)
 	if p.Estado().PrepararAlIniciar {
 		t.Fatal("y lo cambia")
+	}
+}
+
+func TestPrepararConservaElAnteriorMientrasPrepara(t *testing.T) {
+	p, raiz, _ := preparacionFalsa(t, "colgar")
+	conversorFalso(t, filepath.Join(raiz, "conversor"), "lock-anterior", true)
+	t.Cleanup(func() { p.Cerrar(); esperar(t, p) })
+	p.Preparar()
+	if e := p.Estado(); e.Estado != "listo" || e.Etapa == "" {
+		t.Fatalf("mientras prepara uno nuevo, el anterior sigue listo y se ve la etapa: %+v", e)
+	}
+	cargas, err := AbrirCargas(t.TempDir(), time.Hour, 1<<20, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, _ := cargas.Guardar("informe.pdf", "", strings.NewReader("%PDF"))
+	prep := Preparador{Cargas: cargas, Conversor: &Conversor{Comando: "markitdown", Raiz: raiz}, Preparacion: p}
+	if err := prep.ConversorListo([]string{c.ID}); err != nil {
+		t.Fatalf("se acepta con el anterior mientras se prepara el nuevo: %v", err)
+	}
+}
+
+func TestCerrarCancelaPreparacion(t *testing.T) {
+	p, _, _ := preparacionFalsa(t, "colgar")
+	p.Preparar()
+	time.Sleep(200 * time.Millisecond)
+	inicio := time.Now()
+	p.Cerrar()
+	if estado := esperar(t, p); estado != "error" || time.Since(inicio) > 10*time.Second {
+		t.Fatalf("cerrar el servicio corta la preparación: %s tras %s", estado, time.Since(inicio))
+	}
+}
+
+func TestPrepararEnNoBorraCarpetaAjena(t *testing.T) {
+	dir := t.TempDir()
+	importante := filepath.Join(dir, "importante.txt")
+	os.WriteFile(importante, []byte("no me borres"), 0o600)
+	if err := PrepararEn(context.Background(), dir, os.Args[0], func(string, int) {}); err == nil {
+		t.Fatal("una carpeta con otras cosas no se usa para el conversor")
+	}
+	if _, err := os.Stat(importante); err != nil {
+		t.Fatalf("no se borra lo que había: %v", err)
+	}
+}
+
+func TestReemplazoEsperaConversiones(t *testing.T) {
+	p, raiz, _ := preparacionFalsa(t, "ok")
+	p.uso.RLock() // una conversión en curso
+	p.Preparar()
+	limite := time.Now().Add(30 * time.Second)
+	for p.Estado().Progreso < 100 && time.Now().Before(limite) {
+		time.Sleep(50 * time.Millisecond)
+	}
+	time.Sleep(300 * time.Millisecond)
+	_, err := os.Stat(filepath.Join(raiz, "conversor", "listo.json"))
+	p.uso.RUnlock()
+	if err == nil {
+		t.Fatal("no se reemplaza el conversor mientras convierte")
+	}
+	if estado := esperar(t, p); estado != "listo" {
+		t.Fatalf("al terminar la conversión se reemplaza: %+v", p.Estado())
+	}
+}
+
+func TestRaizConversor(t *testing.T) {
+	var quiere string
+	switch runtime.GOOS {
+	case "windows":
+		d := t.TempDir()
+		t.Setenv("LOCALAPPDATA", d)
+		quiere = filepath.Join(d, "tramtai")
+	case "darwin":
+		quiere, _ = nucleo.RaizUsuario()
+	default:
+		d := t.TempDir()
+		t.Setenv("XDG_DATA_HOME", d)
+		quiere = filepath.Join(d, "tramtai")
+	}
+	if r, err := RaizConversor(); err != nil || r != quiere {
+		t.Fatalf("el conversor va en la carpeta local, no en el perfil móvil: %q %v (quiere %q)", r, err, quiere)
 	}
 }

@@ -140,3 +140,12 @@ func TestArchivoSinConversorFachada(t *testing.T) {
 		t.Fatalf("Anthropic sin conversor: %d %s", r.StatusCode, cuerpo)
 	}
 }
+
+func TestCuerpoGrandeFachada(t *testing.T) {
+	ts := servidor(t, simulado(adaptadores.Simulado{}), nil)
+	cuerpo := `{"model":"simulado","messages":[{"role":"user","content":"` + strings.Repeat("a", 17<<20) + `"}]}`
+	r, respuesta := pedir(t, ts, "POST", "/openai/v1/chat/completions", cuerpo)
+	if r.StatusCode != 400 || !strings.Contains(respuesta, "12 MB") || !strings.Contains(respuesta, "/api/v1/cargas") {
+		t.Fatalf("un cuerpo de más de 16 MB explica el tope y la alternativa: %d %.300s", r.StatusCode, respuesta)
+	}
+}

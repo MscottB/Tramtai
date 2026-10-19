@@ -59,9 +59,11 @@
           <div class="texto-suave text-body2 q-mt-xs">{{ t('conversor.texto') }}</div>
           <div class="text-body2 q-mt-sm" role="status">{{ textoConversor(conversor) }}</div>
           <div v-if="conversor.estado === 'error'" class="text-caption texto-suave q-mt-xs">{{ t('conversor.redEmpresa') }}</div>
-          <q-linear-progress v-if="conversor.estado === 'preparando'" :value="(conversor.progreso ?? 0) / 100" rounded class="q-mt-sm" />
-          <div class="row items-center q-gutter-sm q-mt-xs">
-            <q-btn flat dense no-caps color="primary" icon="o_download" :loading="conversor.estado === 'preparando'"
+          <q-linear-progress v-if="preparando(conversor)" :value="(conversor.progreso ?? 0) / 100" rounded class="q-mt-sm"
+            :aria-label="t('conversor.progreso')" />
+          <!-- Preparar de nuevo solo cambia algo si el que se usa es el preparado por Tramtai (no un paquete ni el del sistema). -->
+          <div v-if="conversor.estado !== 'listo' || conversor.origen === 'preparado'" class="row items-center q-gutter-sm q-mt-xs">
+            <q-btn flat dense no-caps color="primary" icon="o_download" :loading="preparando(conversor)"
               :label="conversor.estado === 'listo' ? t('conversor.prepararDeNuevo') : t('conversor.preparar')" @click="prepararConversor" />
           </div>
         </div>
@@ -206,7 +208,7 @@ import { idioma, t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 import SelectorEsfuerzo from '../componentes/SelectorEsfuerzo.vue'
 import SelectorModelo from '../componentes/SelectorModelo.vue'
-import { cargarConversor, conversor, prepararConversor, textoConversor } from '../conversor'
+import { cargarConversor, conversor, prepararConversor, preparando, textoConversor } from '../conversor'
 
 const $q = useQuasar()
 const entradas = ref<EntradaConfiguracion[]>([])

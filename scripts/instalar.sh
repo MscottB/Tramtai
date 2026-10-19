@@ -52,6 +52,10 @@ tar -xzf "$temporal/$archivo" -C "$temporal"
 mkdir -p "$destino"
 cp "$temporal/tramtai/tramtai" "$destino/tramtai"
 chmod 755 "$destino/tramtai"
+# uv prepara el conversor de archivos; en ../lib/tramtai (donde lo busca Tramtai) para no tapar otro uv del PATH.
+mkdir -p "$destino/../lib/tramtai"
+cp "$temporal/tramtai/uv" "$destino/../lib/tramtai/uv"
+chmod 755 "$destino/../lib/tramtai/uv"
 echo "Tramtai $etiqueta instalado en $destino/tramtai (suma SHA-256 comprobada)."
 
 case ":$PATH:" in

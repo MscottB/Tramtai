@@ -190,9 +190,9 @@ func (m *modelo) vistaEjecutar(b *strings.Builder) string {
 		b.WriteString(estilo(tenue, strings.Repeat("─", min(m.ancho, 100))) + "\n" + estilo(cian, m.resumen) + "\n")
 	}
 	if m.enCurso != "" {
-		return idioma.T("Tab cambia de campo · ←→ modelo · Enter ejecuta · Ctrl+U borra el campo · Esc cancela el trabajo")
+		return idioma.T("Tab cambia de campo · ←→ modelo · Enter ejecuta · Ctrl+U borra el campo · Ctrl+P prepara el conversor · Esc cancela el trabajo")
 	}
-	return idioma.T("Tab cambia de campo · ←→ modelo · Enter ejecuta · Ctrl+U borra el campo · Esc volver")
+	return idioma.T("Tab cambia de campo · ←→ modelo · Enter ejecuta · Ctrl+U borra el campo · Ctrl+P prepara el conversor · Esc volver")
 }
 
 func (m *modelo) vistaTrabajos(b *strings.Builder) string {

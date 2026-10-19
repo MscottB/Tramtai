@@ -62,7 +62,7 @@ type Conversor struct {
 
 // Desde crea el conversor con la configuración efectiva.
 func Desde(c *nucleo.Configuracion) *Conversor {
-	raiz, _ := nucleo.RaizUsuario()
+	raiz, _ := RaizConversor()
 	return &Conversor{
 		Comando:      c.Texto("conversion.comando"),
 		Raiz:         raiz,

@@ -50,9 +50,9 @@ type Opciones struct {
 	PuertoAutomatico  bool
 	// Reiniciar lanza un servicio nuevo que espera a que este termine; nil = sin reinicio desde la Web UI.
 	Reiniciar func() error
-	// RaizUsuario es la carpeta de Tramtai del usuario, donde se prepara el conversor de archivos (vacía: sin
-	// preparación, como en las pruebas que no la usan).
-	RaizUsuario string
+	// RaizConversor es la carpeta donde se prepara el conversor de archivos (documentos.RaizConversor; vacía: sin
+	// conversor en el servicio, como en las pruebas que no lo usan).
+	RaizConversor string
 	// PrepararConversor prepara el conversor al iniciar si falta o es de otra versión (conversion.preparar_al_iniciar).
 	PrepararConversor bool
 	// UV es la ruta de uv; vacía, la del que viene con Tramtai (documentos.BuscarUV).
@@ -141,28 +141,15 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 	s.fondo.Go(func() { actualizacion.LimpiarDescargas(time.Now().Add(-10 * time.Minute)) }) // los instaladores que dejó la versión anterior
 	s.admin = s.rutasAdmin()
 	s.handler = api.Proteger(opc.Hosts, nil, http.HandlerFunc(s.enrutar))
-	if opc.RaizUsuario != "" {
-		s.conversor = documentos.NuevaPreparacion(opc.RaizUsuario, opc.Config.Texto("conversion.comando"), opc.UV)
+	if opc.RaizConversor != "" {
+		s.conversor = documentos.NuevaPreparacion(opc.RaizConversor, opc.Config.Texto("conversion.comando"), opc.UV)
+		s.conversor.Registros = opc.Registros // cada preparación, también la que se pide a mano, queda anotada
 		s.conversor.FijarAlIniciar(opc.PrepararConversor)
 		if e := s.conversor.Estado(); opc.PrepararConversor && (e.Estado == "falta" || s.conversor.Desactualizado()) {
-			s.prepararConversor()
+			s.conversor.Preparar()
 		}
 	}
 	return s, nil
-}
-
-// prepararConversor lanza la preparación de markitdown en segundo plano y deja constancia en los registros.
-func (s *Servicio) prepararConversor() {
-	s.conversor.Preparar()
-	fmt.Fprintln(s.opc.Registros, "preparando el conversor de archivos (markitdown) en segundo plano")
-	go func() {
-		e := s.conversor.Esperar(context.Background())
-		if e.Mensaje != "" {
-			fmt.Fprintf(s.opc.Registros, "no se pudo preparar el conversor de archivos: %s\n", e.Mensaje)
-			return
-		}
-		fmt.Fprintf(s.opc.Registros, "conversor de archivos listo (%s)\n", e.Origen)
-	}()
 }
 
 // fijarPrepararConversor guarda conversion.preparar_al_iniciar en la configuración global y lo muestra en el estado.
@@ -319,6 +306,9 @@ func (s *Servicio) Drenar() {
 // Cerrar detiene todos los puntos de acceso y todas las instancias. Lo que estaba en cola se reanuda al volver
 // a activar la instancia.
 func (s *Servicio) Cerrar() {
+	if s.conversor != nil {
+		s.conversor.Cerrar() // uv no sobrevive al servicio
+	}
 	s.mu.Lock()
 	s.cerrado = true
 	s.mu.Unlock()

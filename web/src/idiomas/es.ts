@@ -1008,6 +1008,8 @@ const es = {
   'ayuda.archivosEjemplos': "Enviar un PDF, listo para copiar",
   'ayuda.sConversor': "El archivo necesita el conversor (markitdown) y todavía no está listo. Ve a Ajustes → Archivos y pulsa «Preparar archivos» (o usa «tramtai conversor preparar»); si se está preparando, espera a que termine. Si tu red bloquea la descarga, descarga el paquete del conversor para Windows y descomprímelo junto a Tramtai.",
   'error.conversor_no_disponible': "Falta el conversor de archivos",
+  'conversor.progreso': "Progreso de la preparación del conversor",
+  'conversor.preparandoNuevo': "Se está preparando uno nuevo: {etapa} ({progreso} %); mientras tanto se usa este.",
 }
 
 export type Clave = keyof typeof es

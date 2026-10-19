@@ -48,7 +48,9 @@ func ejecutarEnServicio(cmd *cobra.Command, c *cliente.Cliente, s nucleo.Solicit
 	c.Origen = nucleo.DesdeCLI
 	inst := instanciaActual(ctx, c, "")
 	if slices.ContainsFunc(archivos, func(ruta string) bool { return documentos.NecesitaConversor(filepath.Base(ruta), ruta) }) {
-		if e, err := c.Conversor(ctx, inst); err == nil && e.Estado != "listo" {
+		if e, err := c.Conversor(ctx, inst); err == nil && e.Estado == "preparando" {
+			return nucleo.NuevoError(nucleo.CodigoConversorNoDisponible, idioma.T("el conversor de archivos se está preparando: vuelve a intentarlo en un momento"))
+		} else if err == nil && e.Estado != "listo" {
 			return documentos.ErrSinConversor() // antes de subir nada
 		}
 	}

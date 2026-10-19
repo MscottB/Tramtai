@@ -148,8 +148,8 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuraci
 		opc.RaizConfiable = raiz
 	}
 	conversor := documentos.Desde(c)
-	if s.opc.RaizUsuario != "" {
-		conversor.Raiz = s.opc.RaizUsuario
+	if s.opc.RaizConversor != "" {
+		conversor.Raiz = s.opc.RaizConversor
 	}
 	opc.Preparador = documentos.Preparador{Cargas: cargas, Conversor: conversor, Preparacion: s.conversor}
 	p := planificador.Nuevo(alm, s.opc.Registro, s.opc.Semaforos, opc)

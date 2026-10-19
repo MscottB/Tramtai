@@ -44,6 +44,7 @@ jobs:
             sh scripts/uv.sh "$objetivo" "$carpeta/tramtai" # prepara el conversor de archivos (scripts/uv.txt)
             cp LICENSE.md "$carpeta/tramtai/LICENCIA.md"
             tar -C "$carpeta" -czf "dist/tramtai-$version-$nombre-$arq.tar.gz" tramtai
+            tar -tzf "dist/tramtai-$version-$nombre-$arq.tar.gz" | grep -qx 'tramtai/uv' || { echo "el .tar.gz de $destino no trae uv"; exit 1; }
           done
           ls -l dist
       - uses: actions/upload-artifact@v7
@@ -158,6 +159,10 @@ jobs:
         run: Expand-Archive (Get-Item dist/*-portable-windows-x64.zip).FullName "$env:RUNNER_TEMP\portable"
       - name: Portable (trae portable.txt)
         run: if (-not (Test-Path "$env:RUNNER_TEMP\portable\portable.txt")) { throw 'el .zip portable no trae portable.txt' }
+      - name: Portable (trae uv.exe)
+        run: '& "$env:RUNNER_TEMP\portable\uv.exe" --version'
+      - name: Instalador (lleva uv.exe)
+        run: if (-not (Test-Path bin/uv.exe)) { throw 'el instalador se compiló sin bin/uv.exe' }
       - name: Portable (iniciar el servicio)
         run: '& "$env:RUNNER_TEMP\portable\tramtai.exe" servicio iniciar -d'
       - name: Portable (estado)

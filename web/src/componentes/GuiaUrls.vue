@@ -11,7 +11,7 @@
             <q-btn flat dense no-caps color="primary" icon="o_menu_book" class="self-start q-mt-xs" :label="t('guia.comoUsarla')" @click="emit('usar')" />
             <div class="text-caption texto-suave q-mt-xs">
               {{ t('guia.avanzado') }}
-              <a href="#" class="enlace" @click.prevent="descargarOpenapi">{{ descargando ? '…' : t('guia.descargarOpenapi') }}</a>
+              <a href="#" class="enlace" :aria-busy="descargando" @click.prevent="descargarOpenapi">{{ t('guia.descargarOpenapi') }}</a>
             </div>
           </template>
         </div>

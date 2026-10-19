@@ -31,14 +31,15 @@ func (p Preparador) ConversorListo(cargas []string) error {
 	if !necesita {
 		return nil
 	}
+	// Uno que ya sirve basta, aunque se esté preparando otro (una versión nueva o «Preparar de nuevo»).
+	if _, ok := Localizar(p.Conversor.Comando, p.Conversor.Raiz); ok {
+		return nil
+	}
 	if p.Preparacion != nil && p.Preparacion.Estado().Estado == "preparando" {
 		return &nucleo.ConversorPreparando{Err: nucleo.NuevoError(nucleo.CodigoConversorNoDisponible,
 			idioma.T("el conversor de archivos se está preparando: vuelve a intentarlo en un momento"))}
 	}
-	if _, ok := Localizar(p.Conversor.Comando, p.Conversor.Raiz); !ok {
-		return ErrSinConversor()
-	}
-	return nil
+	return ErrSinConversor()
 }
 
 // NecesitaConversor indica si un archivo pasa por markitdown: HTML, PDF y Office, o un ZIP que los traiga (se mira su
@@ -78,6 +79,10 @@ func (p Preparador) Verificar(cargas []string, punto string) error {
 
 // Preparar devuelve el texto ensamblado de las cargas, o entrada_no_disponible si alguna venció.
 func (p Preparador) Preparar(ctx context.Context, ids []string) (nucleo.Documentos, error) {
+	if p.Preparacion != nil { // mientras convierte, una preparación nueva no reemplaza la carpeta del conversor
+		p.Preparacion.uso.RLock()
+		defer p.Preparacion.uso.RUnlock()
+	}
 	entradas := make([]Entrada, 0, len(ids))
 	for _, id := range ids {
 		carga, ruta, err := p.Cargas.Obtener(id)

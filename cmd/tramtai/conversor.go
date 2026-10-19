@@ -52,7 +52,7 @@ func comandoConversor() *cobra.Command {
 			defer cancelar()
 			e, err := c.PrepararConversor(ctx, inst)
 			ultimo := ""
-			for err == nil && e.Estado == "preparando" {
+			for err == nil && (e.Estado == "preparando" || e.Etapa != "") { // con etapa: prepara uno nuevo y sirve el anterior
 				if linea := fmt.Sprintf("%s %d%%", e.Etapa, e.Progreso); linea != ultimo {
 					fmt.Fprintln(out, linea)
 					ultimo = linea
