@@ -443,7 +443,7 @@ const es = {
   'ayuda.preguntas': 'Preguntas frecuentes',
   'ayuda.p1': '¿Necesito una clave para entrar?',
   'ayuda.r1':
-    'No. La app de Tramtai entra sola. En el navegador, en Windows y Linux entras directamente si es de tu mismo usuario; en macOS, o si no se puede comprobar, ejecuta «tramtai abrir» en el equipo de Tramtai. Las claves de Mis APIs son solo para tus aplicaciones: no abren esta página.',
+    'No. La app de Tramtai entra sola. En el navegador entras directamente si es de tu mismo usuario (Windows, Linux y macOS); si no se puede comprobar, ejecuta «tramtai abrir» en el equipo de Tramtai. Las claves de Mis APIs son solo para tus aplicaciones: no abren esta página.',
   'ayuda.p2': '¿Las consultas quedan guardadas como chats en Claude Code, Codex o GitHub Copilot?',
   'ayuda.r2':
     'No. Tramtai ejecuta Claude Code sin guardar la sesión, Codex en modo efímero, y GitHub Copilot y Antigravity con una carpeta privada que se borra al terminar. Tus historiales de chat no se llenan con las consultas de las aplicaciones: el registro queda solo en el Historial de Tramtai.',
