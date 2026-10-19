@@ -5,3 +5,5 @@ declare module '*.vue' {
 }
 declare module 'quasar/lang/es'
 declare module 'quasar/lang/en-US'
+// Las hojas de estilo se importan solo por su efecto (TypeScript 6 exige declararlas).
+declare module '*.css'
