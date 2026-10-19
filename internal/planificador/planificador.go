@@ -444,7 +444,8 @@ type validacion struct {
 }
 
 // conCorreccion sigue la conversación con la respuesta que no cumplía y un mensaje con sus problemas. El mensaje es
-// para el modelo: no se traduce. mensaje sustituye a los problemas si no se conocen.
+// para el modelo: no se traduce. mensaje sustituye a los problemas si no se conocen. La Web UI reconoce su inicio para
+// mostrar el mensaje original (mensajeDe en web/src/api.ts): si cambia, cambiarlo también allí.
 func conCorreccion(s nucleo.SolicitudEjecucion, salida string, problemas []salidas.Problema, mensaje string) nucleo.SolicitudEjecucion {
 	var b strings.Builder
 	b.WriteString("Tu respuesta no cumple el formato pedido:\n")

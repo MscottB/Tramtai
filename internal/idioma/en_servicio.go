@@ -226,7 +226,7 @@ func init() {
 		"sí o no (true/false)":                                                        "yes or no (true/false)",
 		"un objeto":                                                                   "an object",
 		"una lista":                                                                   "a list",
-		"el esquema no es JSON válido (línea %d, columna %d): %s":                     "the schema is not valid JSON (line %d, column %d): %s",
+		"el esquema no es JSON válido (línea %d, columna %d)":                         "the schema is not valid JSON (line %d, column %d)",
 		"salida.reintentos va de 0 a %d":                                              "salida.reintentos ranges from 0 to %d",
 		"salida.reintentos exige formato json o un esquema":                           "salida.reintentos requires the json format or a schema",
 		"reintentos_salida va de 0 a %d":                                              "reintentos_salida ranges from 0 to %d",

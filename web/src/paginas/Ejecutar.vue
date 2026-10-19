@@ -118,9 +118,23 @@
               </q-banner>
               <q-banner v-if="final?.codigo_error" rounded dense class="error-caja q-mb-md">
                 <template #avatar><q-icon name="o_error" /></template>
-                <b>{{ tituloError(final.codigo_error) }}</b><span v-if="final.mensaje_error">: {{ final.mensaje_error }}</span>
+                <b>{{ tituloError(final.codigo_error) }}</b><span v-if="final.mensaje_error && !problemas.length">: {{ final.mensaje_error }}</span>
               </q-banner>
-              <div aria-live="polite"><SalidaTrabajo :texto="salida" /></div>
+              <!-- La respuesta no cumplía la forma pedida: qué falló, la respuesta tal como llegó y «Corregir». -->
+              <div v-if="problemas.length" class="q-mb-md">
+                <ul class="problemas q-my-none q-pl-md">
+                  <li v-for="(p, i) in problemas" :key="i">{{ p.texto }}</li>
+                </ul>
+                <div v-if="puedeCorregir" class="row items-center q-gutter-sm q-mt-sm">
+                  <q-btn unelevated no-caps color="primary" icon="o_auto_fix_high" :label="t('ejecutar.corregir')" :loading="corrigiendo" @click="corregir" />
+                  <span class="text-caption texto-suave col">{{ t('ejecutar.corregirTexto') }}</span>
+                </div>
+                <div v-if="final?.salida" class="text-caption texto-suave q-mt-md">{{ lineasMarcadas ? t('ejecutar.respuestaMarcada') : t('ejecutar.respuestaRecibida') }}</div>
+              </div>
+              <div v-if="lineasMarcadas" class="bloque-codigo sin-ajuste respuesta-marcada">
+                <div v-for="(l, i) in lineasMarcadas" :key="i" :class="{ 'respuesta-marcada__linea': l.marcada }">{{ l.texto || ' ' }}</div>
+              </div>
+              <div v-else aria-live="polite"><SalidaTrabajo :texto="salida" /></div>
               <div v-if="activo && !salida" class="row items-center texto-suave q-gutter-x-sm">
                 <q-spinner-dots color="primary" size="24px" /><span>{{ estadoInfo(estado).etiqueta }}…</span>
               </div>
@@ -292,7 +306,10 @@ async function ejecutar() {
   try {
     const cargas: string[] = []
     for (const archivo of archivos.value ?? []) cargas.push((await api.subir(archivo)).identificador_carga)
-    seguir(await api.crear(solicitudDe(cargas, esquema)))
+    const s = solicitudDe(cargas, esquema)
+    // Probar conserva la respuesta que no cumple el esquema: se muestra con sus problemas y se puede corregir.
+    if (s.salida) s.salida.conservar_salida_invalida = true
+    seguir(await api.crear(s))
     cargarRecientes()
   } catch (e) {
     avisarError(e)
@@ -306,7 +323,7 @@ function solicitudDe(cargas: string[], esquema: Record<string, unknown> | undefi
   const r = receta.value
   const s: Solicitud = { mensajes: [{ rol: 'usuario', contenido: mensaje.value }], cargas: cargas.length ? cargas : undefined,
     instrucciones: r.instrucciones.trim() || undefined, respaldo: r.respaldo.length ? r.respaldo : undefined }
-  if (esquema) s.salida = { formato: 'json', esquema }
+  if (esquema) s.salida = { formato: 'json', esquema, ...(r.reintentos ? { reintentos: r.reintentos } : {}) }
   if (perfil.value.trim()) s.perfil = perfil.value.trim()
   if (tiempo.value && /^\d+$/.test(tiempo.value)) s.ejecucion = { tiempo_limite_segundos: Number(tiempo.value) }
   if (r.esfuerzo) s.esfuerzo = r.esfuerzo
@@ -372,7 +389,16 @@ function seguir(nuevo: Trabajo) {
     estado.value = (e as MessageEvent).data
     versionRegistro.value++
   })
-  actual.addEventListener('intento', () => versionRegistro.value++)
+  // Una corrección vuelve a escribir la respuesta desde cero; validacion son los problemas de la anterior.
+  actual.addEventListener('intento', (e) => {
+    try {
+      if (nuevoEvento(e) && JSON.parse((e as MessageEvent).data).correccion) salida.value = ''
+    } catch {
+      // un intento sin JSON no cambia la respuesta
+    }
+    versionRegistro.value++
+  })
+  actual.addEventListener('validacion', () => versionRegistro.value++)
   actual.addEventListener('fin', () => {
     actual.close()
     terminar(nuevo.id)
@@ -390,6 +416,8 @@ async function terminar(id: string) {
     estado.value = terminado.estado
     // Con salida estructurada el texto en vivo puede diferir del resultado validado: se muestra el resultado.
     if (terminado.estado === 'completado' && terminado.salida !== undefined && terminado.salida !== salida.value) salida.value = terminado.salida
+    // Si no cumplía el esquema se muestra la última respuesta conservada, no el texto de todos los intentos.
+    if (terminado.codigo_error === 'salida_no_cumple_esquema' && terminado.salida !== undefined) salida.value = terminado.salida
     final.value = terminado
     versionRegistro.value++
     cargarRecientes()
@@ -399,6 +427,39 @@ async function terminar(id: string) {
     activo.value = false
   }
 }
+
+// problemas explica por qué la respuesta no cumplía el esquema; «Corregir» la pide de nuevo al mismo agente con esos
+// problemas, como un intento nuevo (solo si el trabajo conservó la respuesta).
+const problemas = computed(() => (final.value?.codigo_error === 'salida_no_cumple_esquema' ? final.value.errores_salida ?? [] : []))
+const puedeCorregir = computed(() => problemas.value.length > 0 && !!final.value?.salida)
+const corrigiendo = ref(false)
+async function corregir() {
+  if (!final.value) return
+  corrigiendo.value = true
+  try {
+    seguir(await api.corregir(final.value.id))
+    cargarRecientes()
+  } catch (e) {
+    avisarError(e)
+  } finally {
+    corrigiendo.value = false
+  }
+}
+// lineasMarcadas es la respuesta JSON, ordenada, con las líneas de los campos que tienen problemas resaltadas.
+const lineasMarcadas = computed(() => {
+  if (!problemas.value.length || !salida.value) return undefined
+  let valor: unknown
+  try {
+    valor = JSON.parse(salida.value)
+  } catch {
+    return undefined
+  }
+  const claves = new Set(problemas.value.map((p) => p.campo.replace(/\[\d+\]/g, '').split('.').at(-1)).filter(Boolean))
+  return JSON.stringify(valor, null, 2).split('\n').map((texto) => {
+    const clave = /^\s*"((?:[^"\\]|\\.)*)":/.exec(texto)?.[1]
+    return { texto, marcada: !!clave && claves.has(clave) }
+  })
+})
 
 // recientes son las últimas pruebas lanzadas desde Probar (las de las APIs y la terminal están en el Historial).
 const recientes = ref<Trabajo[]>([])
@@ -490,3 +551,10 @@ async function actualizarApi() {
   }
 }
 </script>
+
+<style scoped>
+.respuesta-marcada__linea {
+  background: var(--error-suave);
+  box-shadow: inset 3px 0 0 var(--error);
+}
+</style>

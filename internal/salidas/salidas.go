@@ -60,7 +60,7 @@ func CompilarDetallado(esquema []byte) (linea, columna int, err error) {
 		antes := esquema[:min(int(sintaxis.Offset), len(esquema))]
 		linea = bytes.Count(antes, []byte("\n")) + 1
 		columna = len([]rune(string(antes[bytes.LastIndexByte(antes, '\n')+1:])))
-		return linea, columna, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el esquema no es JSON válido (línea %d, columna %d): %s", linea, columna, sintaxis.Error()))
+		return linea, columna, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el esquema no es JSON válido (línea %d, columna %d)", linea, columna))
 	}
 	_, err = Compilar(esquema)
 	return 0, 0, err

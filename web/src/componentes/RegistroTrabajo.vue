@@ -67,8 +67,9 @@ function hora(texto: string): string {
 }
 function textoIntento(datos: string): string {
   try {
-    const i = JSON.parse(datos) as { agente: string; modelo?: string; esfuerzo?: string; del_agente?: boolean; contexto_tokens?: number }
+    const i = JSON.parse(datos) as { agente: string; modelo?: string; esfuerzo?: string; del_agente?: boolean; contexto_tokens?: number; correccion?: number; correcciones?: number }
     const partes = [nombreAgente(i.agente) + (i.modelo ? '/' + i.modelo : '')]
+    if (i.correccion) partes.unshift(t('registro.correccion', { n: i.correccion, de: i.correcciones ?? i.correccion }))
     if (i.esfuerzo) partes.push(nombreEsfuerzo(i.esfuerzo).toLowerCase() + (i.del_agente ? ` (${t('registro.delAgente')})` : ''))
     if (i.contexto_tokens) partes.push(t('registro.contexto', { n: numero(i.contexto_tokens) }))
     return partes.join(' · ')
@@ -88,6 +89,18 @@ function textoEntrada(datos: string): string {
   }
 }
 
+// textoValidacion resume por qué la respuesta no cumplía el esquema: el primer problema y cuántos más.
+function textoValidacion(datos: string): string {
+  try {
+    const v = JSON.parse(datos) as { problemas?: { texto: string }[] }
+    const p = v.problemas ?? []
+    if (!p.length) return ''
+    return t('registro.validacion', { texto: p[0].texto }) + (p.length > 1 ? ' ' + t('registro.validacionMas', { n: p.length - 1 }) : '')
+  } catch {
+    return ''
+  }
+}
+
 // El intento va justo después de su estado ejecutando: se muestran en una sola línea.
 const lineas = computed(() => {
   const inicio = ms(props.trabajo.creado_en)
@@ -100,7 +113,8 @@ const lineas = computed(() => {
       if (siguiente?.tipo === 'intento') texto += ' · ' + textoIntento(siguiente.datos)
     } else if (e.tipo === 'aviso') texto = t('registro.aviso', { texto: e.datos })
     else if (e.tipo === 'entrada') texto = textoEntrada(e.datos)
-    if (texto) lista.push({ numero: e.numero, hora: hora(e.creado_en), desde: '+' + tiempo(ms(e.creado_en) - inicio), texto, aviso: e.tipo === 'aviso' })
+    else if (e.tipo === 'validacion') texto = textoValidacion(e.datos)
+    if (texto) lista.push({ numero: e.numero, hora: hora(e.creado_en), desde: '+' + tiempo(ms(e.creado_en) - inicio), texto, aviso: e.tipo === 'aviso' || e.tipo === 'validacion' })
   })
   return lista
 })
