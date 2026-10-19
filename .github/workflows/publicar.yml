@@ -23,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache-dependency-path: '**/go.sum' # también los módulos de la app de escritorio
@@ -59,7 +59,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache-dependency-path: '**/go.sum' # también los módulos de la app de escritorio
@@ -82,7 +82,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache-dependency-path: '**/go.sum' # también los módulos de la app de escritorio
@@ -104,7 +104,7 @@ jobs:
         with:
           fetch-depth: 0 # version.ps1 calcula la versión desde las etiquetas
           persist-credentials: false
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache-dependency-path: '**/go.sum'
@@ -201,7 +201,7 @@ jobs:
           mv ../SHA256SUMS.txt .
           cat SHA256SUMS.txt
       # Sin caché: este job tiene el secreto de firma, y la caché de Go la escriben jobs que ejecutan código de terceros.
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: false

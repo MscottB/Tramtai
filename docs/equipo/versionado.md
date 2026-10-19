@@ -67,7 +67,7 @@ git push origin --tags             # sube las etiquetas
 
 Antes del paso 1 van la spec y el plan del release, en `docs/equipo/releases/<versión>-<tema>/` (índice en [README.md](README.md)).
 
-**Dependabot** (`.github/dependabot.yml`) propone cada semana, en un PR por ecosistema, las versiones menores y los parches de Go (el servicio y la app de escritorio, sin Wails, que va fijado en una beta), npm (la Web UI) y GitHub Actions. Pasan por los mismos checks que cualquier PR y se fusionan igual; un cambio de versión mayor llega en su propio PR.
+**Dependabot** (`.github/dependabot.yml`) propone cada semana, en un PR por ecosistema, las versiones menores y los parches de Go (el servicio y la app de escritorio, sin Wails, que va fijado en una beta), npm (la Web UI) y GitHub Actions. Pasan por los mismos checks que cualquier PR y se fusionan igual; un cambio de versión mayor llega en su propio PR (hasta 10 abiertos por ecosistema). Una versión mayor que todavía no se puede usar se cierra con «@dependabot ignore this major version» y un comentario con el motivo (por ejemplo, TypeScript 7, que `vue-tsc` aún no admite).
 
 Nota: Go no admite `+metadatos` como versión de módulo. No afecta, porque Tramtai es una aplicación y no una biblioteca importable.
 
