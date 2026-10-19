@@ -19,7 +19,7 @@ jobs:
     name: Linux y macOS
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -56,7 +56,7 @@ jobs:
           - { runner: ubuntu-24.04-arm, arq: arm64 }
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: actions/setup-go@v5
@@ -79,7 +79,7 @@ jobs:
     name: App de escritorio (macOS)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: actions/setup-go@v5
@@ -100,7 +100,7 @@ jobs:
     name: Windows (instalador y portable)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # version.ps1 calcula la versión desde las etiquetas
           persist-credentials: false
@@ -186,7 +186,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: actions/download-artifact@v4
@@ -234,7 +234,7 @@ jobs:
       HOMEBREW_NO_AUTO_UPDATE: 1
       HOMEBREW_NO_ENV_HINTS: 1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           persist-credentials: false # brew install ejecuta código ajeno: el token solo llega al push
@@ -286,7 +286,7 @@ jobs:
       WINGETCREATE: https://github.com/microsoft/winget-create/releases/download/v1.12.13.0/wingetcreate.exe
       WINGETCREATE_SHA256: 24042bd37915805615e6cf969ac57c6439124c3fe85823327f5f3fb24bd9ffea
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: env.HAY_TOKEN == 'true'
         with:
           ref: main
