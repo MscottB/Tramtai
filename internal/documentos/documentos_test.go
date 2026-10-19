@@ -21,7 +21,14 @@ import (
 
 // TestMain hace de markitdown falso: imprime un encabezado con la extensión y un texto con tildes.
 func TestMain(m *testing.M) {
+	if modo := os.Getenv("UV_FALSO"); modo != "" && len(os.Args) > 1 && (os.Args[1] == "python" || os.Args[1] == "pip") {
+		uvFalso(modo)
+	}
 	switch os.Getenv("MARKITDOWN_FALSO") {
+	case "eco":
+		datos, _ := os.ReadFile(os.Args[len(os.Args)-1])
+		fmt.Print(string(datos))
+		os.Exit(0)
 	case "convertir":
 		fmt.Printf("# %s\nÑandú convertido\n", filepath.Ext(os.Args[len(os.Args)-1]))
 		os.Exit(0)

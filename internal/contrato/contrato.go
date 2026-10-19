@@ -151,3 +151,16 @@ type EstadoPunto struct {
 	Error       string              `json:"error,omitempty"`
 	Origen      string              `json:"origen"`
 }
+
+// EstadoConversor es el del conversor de archivos (markitdown): listo, preparando, falta o error.
+type EstadoConversor struct {
+	Estado  string `json:"estado"`
+	Origen  string `json:"origen,omitempty"`  // configurado, paquete, preparado o sistema
+	Version string `json:"version,omitempty"` // la de markitdown, si la conoce Tramtai
+	Etapa   string `json:"etapa,omitempty"`   // python, paquetes o comprobacion
+	// Progreso aproximado de la preparación, de 0 a 100.
+	Progreso int `json:"progreso,omitempty"`
+	// Mensaje es el error de la última preparación, legible.
+	Mensaje           string `json:"mensaje,omitempty"`
+	PrepararAlIniciar bool   `json:"preparar_al_iniciar"`
+}
