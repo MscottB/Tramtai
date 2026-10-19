@@ -440,13 +440,17 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	esperar.Wait()
-	EscribirJSON(w, http.StatusOK, map[string]any{
+	respuesta := map[string]any{
 		"version":               version.Version,
 		"formato_serializacion": adaptadores.FormatoSerializacion,
 		"entradas":              []string{"texto", "markdown", "json", "xml", "csv", "html", "pdf", "docx", "pptx", "xlsx", "zip"},
 		"adaptadores":           lista,
 		"limites":               s.limites(),
-	})
+	}
+	if s.Conversor != nil {
+		respuesta["conversor"] = s.Conversor.Estado()
+	}
+	EscribirJSON(w, http.StatusOK, respuesta)
 }
 
 // limites son los topes de una petición y de sus cargas, para que una app (y Probar) los conozca antes de enviar.

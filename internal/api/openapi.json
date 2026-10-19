@@ -193,6 +193,40 @@
         }
       }
     },
+    "/conversor": {
+      "get": {
+        "summary": "Estado del conversor de archivos (markitdown)",
+        "description": "listo, preparando (con etapa y progreso), falta o error. Para seguir una preparación.",
+        "operationId": "estadoConversor",
+        "responses": {
+          "200": { "description": "Estado del conversor", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EstadoConversor" } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/conversor/preparar": {
+      "post": {
+        "summary": "Prepara el conversor de archivos",
+        "description": "Descarga Python y markitdown en la carpeta de Tramtai, en segundo plano; si ya se está preparando, devuelve ese estado. Solo con la clave de la instancia: no existe en las APIs por aplicación.",
+        "operationId": "prepararConversor",
+        "responses": {
+          "202": { "description": "Preparación lanzada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EstadoConversor" } } } },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/conversor/ajustes": {
+      "put": {
+        "summary": "Si el conversor se prepara solo al iniciar",
+        "description": "Guarda conversion.preparar_al_iniciar. Solo con la clave de la instancia.",
+        "operationId": "ajustesConversor",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["preparar_al_iniciar"], "properties": { "preparar_al_iniciar": { "type": "boolean" } } } } } },
+        "responses": {
+          "204": { "description": "Guardado" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
     "/limites": {
       "get": {
         "summary": "Los topes de una petición",
@@ -237,6 +271,19 @@
       "Error": { "description": "Error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
     },
     "schemas": {
+      "EstadoConversor": {
+        "type": "object",
+        "required": ["estado", "preparar_al_iniciar"],
+        "properties": {
+          "estado": { "type": "string", "enum": ["listo", "preparando", "falta", "error"] },
+          "origen": { "type": "string", "enum": ["configurado", "paquete", "preparado", "sistema"] },
+          "version": { "type": "string", "description": "Versión de markitdown, si Tramtai la conoce" },
+          "etapa": { "type": "string", "enum": ["python", "paquetes", "comprobacion"] },
+          "progreso": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "mensaje": { "type": "string", "description": "El error de la última preparación" },
+          "preparar_al_iniciar": { "type": "boolean" }
+        }
+      },
       "Error": {
         "type": "object",
         "required": ["error"],

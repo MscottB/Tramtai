@@ -47,6 +47,10 @@ type Servidor struct {
 	Sondeo time.Duration
 	// PuntosDeGrupo da las APIs de un grupo según la configuración actual, para ?grupo= en la lista de trabajos.
 	PuntosDeGrupo func(grupo string) []string
+	// Conversor es la preparación de markitdown del servicio (nil: sin rutas de conversor ni bloque en capacidades).
+	Conversor *documentos.Preparacion
+	// FijarPrepararAlIniciar guarda conversion.preparar_al_iniciar en la configuración global.
+	FijarPrepararAlIniciar func(bool) error
 }
 
 // Handler devuelve las rutas con las protecciones aplicadas y el token propio del servidor.
@@ -85,6 +89,11 @@ func (s *Servidor) Rutas() http.Handler {
 		mux.HandleFunc("GET /api/v1/limites", func(w http.ResponseWriter, r *http.Request) { EscribirJSON(w, http.StatusOK, s.limites()) })
 		mux.HandleFunc("GET /api/v1/modelos", s.modelosNativos)
 		mux.HandleFunc("GET /api/v1/openapi.json", s.openapi)
+		mux.HandleFunc("GET /api/v1/conversor", s.estadoConversor)
+		if s.Punto == nil { // una API por aplicación ve el estado, pero no lanza una descarga de cientos de MB
+			mux.HandleFunc("POST /api/v1/conversor/preparar", s.prepararConversor)
+			mux.HandleFunc("PUT /api/v1/conversor/ajustes", s.ajustesConversor)
+		}
 	}
 	if contrato("openai") {
 		mux.HandleFunc("POST /openai/v1/chat/completions", s.chatCompletions)

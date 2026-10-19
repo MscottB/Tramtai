@@ -380,11 +380,13 @@ func iniciarServicio(cmd *cobra.Command, archivo string) error {
 		return cliente.Lanzar(ejecutable, datos, "servicio", "iniciar", "--esperar-cierre", "--registro", registroReinicio)
 	}
 	registro, limites := agentes.Registro(c)
+	raizUsuario, _ := nucleo.RaizUsuario() // ahí se prepara el conversor de archivos
 	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites),
 		Host: host, Puerto: puertoUsado, PuertoConfigurado: puerto, PuertoAutomatico: automatico, Reiniciar: reiniciar,
 		Hosts: hosts, Registros: salida, Web: recursos.Web(),
 		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,
-		EntradaLocal: c.Booleano("servicio.entrada_local") && !remoto, BuscarActualizaciones: c.Booleano("servicio.buscar_actualizaciones")})
+		EntradaLocal: c.Booleano("servicio.entrada_local") && !remoto, BuscarActualizaciones: c.Booleano("servicio.buscar_actualizaciones"),
+		RaizUsuario: raizUsuario, PrepararConversor: c.Booleano("conversion.preparar_al_iniciar")})
 	if err != nil {
 		oyente.Close()
 		return err

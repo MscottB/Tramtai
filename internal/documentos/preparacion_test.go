@@ -227,3 +227,16 @@ func TestPrepararSinUV(t *testing.T) {
 		t.Fatalf("sin uv, error legible: %+v", p.Estado())
 	}
 }
+
+func TestEstadoLlevaPrepararAlIniciar(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+	p := NuevaPreparacion(t.TempDir(), "markitdown", "")
+	p.FijarAlIniciar(true)
+	if !p.Estado().PrepararAlIniciar {
+		t.Fatal("el estado dice si se prepara al iniciar")
+	}
+	p.FijarAlIniciar(false)
+	if p.Estado().PrepararAlIniciar {
+		t.Fatal("y lo cambia")
+	}
+}

@@ -35,6 +35,14 @@ type Preparacion struct {
 	etapa     string
 	progreso  int
 	error     string // de la última preparación
+	alIniciar bool   // conversion.preparar_al_iniciar, para mostrarlo con el estado
+}
+
+// FijarAlIniciar guarda si el servicio prepara el conversor solo al iniciar (el estado lo muestra).
+func (p *Preparacion) FijarAlIniciar(preparar bool) {
+	p.mu.Lock()
+	p.alIniciar = preparar
+	p.mu.Unlock()
 }
 
 // NuevaPreparacion recoge lo que dejó una preparación cortada (conversor.nuevo a medias, conversor.viejo de un
@@ -54,6 +62,12 @@ func NuevaPreparacion(raiz, comando, uv string) *Preparacion {
 func (p *Preparacion) Estado() contrato.EstadoConversor {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	e := p.estado()
+	e.PrepararAlIniciar = p.alIniciar
+	return e
+}
+
+func (p *Preparacion) estado() contrato.EstadoConversor {
 	if p.corriendo {
 		return contrato.EstadoConversor{Estado: "preparando", Etapa: p.etapa, Progreso: p.progreso}
 	}
