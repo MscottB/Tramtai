@@ -586,3 +586,47 @@ func TestPcblistDeMacOSReal(t *testing.T) {
 		t.Fatalf("uid %d %v", uid, ok)
 	}
 }
+
+// Al reiniciar, la Web UI va al puerto configurado solo si está libre: si ahí escucha otro Tramtai, se queda en el actual.
+func TestPuertoTrasReiniciar(t *testing.T) {
+	ocupado, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ocupado.Close()
+	puertoOcupado := ocupado.Addr().(*net.TCPAddr).Port
+	libre, _ := net.Listen("tcp", "127.0.0.1:0")
+	puertoLibre := libre.Addr().(*net.TCPAddr).Port
+	libre.Close()
+	casos := []struct{ actual, configurado, esperado int }{
+		{17374, puertoOcupado, 17374}, // otro Tramtai en el configurado
+		{17374, puertoLibre, puertoLibre},
+		{17374, 0, 17374},
+		{17374, 17374, 17374},
+	}
+	for _, c := range casos {
+		if p := puertoTrasReiniciar("127.0.0.1", c.actual, c.configurado); p != c.esperado {
+			t.Errorf("actual %d, configurado %d: %d, se esperaba %d", c.actual, c.configurado, p, c.esperado)
+		}
+	}
+}
+
+// La cookie de sesión lleva el puerto: dos Tramtai en el mismo navegador (la instalada y una portable) no se pisan.
+func TestCookieConPuerto(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	s.ActivarGlobal()
+	codigo, _ := s.CodigoSesion("global")
+	cliente := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	r, err := cliente.Get(ts.URL + "/ui/entrar?codigo=" + codigo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Body.Close()
+	esperado := "tramtai_sesion_" + strconv.Itoa(s.opc.Puerto)
+	for _, c := range r.Cookies() {
+		if c.Name == esperado {
+			return
+		}
+	}
+	t.Fatalf("la sesión debía ir en la cookie %s: %v", esperado, r.Cookies())
+}
