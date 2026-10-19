@@ -1,6 +1,10 @@
 package main
 
 import (
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"tramtai/internal/nucleo"
@@ -21,5 +25,22 @@ func TestAplicarPresupuesto(t *testing.T) {
 		if err := aplicarPresupuesto(&p, []string{malo}); err == nil {
 			t.Errorf("%q debía rechazarse", malo)
 		}
+	}
+}
+
+// La CLI aplica las mismas reglas que la Web UI: no guarda una API con Antigravity (aún no habilitado para apps), que
+// rechazaría todas sus peticiones.
+func TestAccesoCrearConAgenteNoPermitido(t *testing.T) {
+	ruta := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", ruta)
+	cmd := comandoAcceso()
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+	cmd.SetArgs([]string{"crear", "con-agy", "--agente", "antigravity"})
+	if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), "Antigravity") {
+		t.Fatalf("se creó una API con Antigravity: %v", err)
+	}
+	if datos, err := os.ReadFile(ruta); err == nil && strings.Contains(string(datos), "con-agy") {
+		t.Fatalf("quedó guardada:\n%s", datos)
 	}
 }

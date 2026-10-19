@@ -138,13 +138,41 @@ func TestConsumoDeAPIAusenteSeBorra(t *testing.T) {
 }
 
 func TestPuntoConAntigravity(t *testing.T) {
-	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	entorno(t, "", "", adaptadores.Simulado{}) // la configuración de la prueba (sin permitir_apps)
 	for _, p := range []ConfigPunto{{Nombre: "a", Agente: "antigravity"}, {Nombre: "b", Respaldo: []string{"antigravity/gemini-x"}}} {
-		if err := s.validarParaApps(p); nucleo.CodigoDe(err) != nucleo.CodigoConfiguracionInvalida || !strings.Contains(nucleo.MensajeDe(err), "Antigravity") {
+		if err := ValidarPunto(p); nucleo.CodigoDe(err) != nucleo.CodigoConfiguracionInvalida || !strings.Contains(nucleo.MensajeDe(err), "Antigravity") {
 			t.Fatalf("%+v: %v", p, err)
 		}
 	}
-	if err := s.validarParaApps(ConfigPunto{Nombre: "c", Agente: "claude", Respaldo: []string{"codex"}}); err != nil {
+	if err := ValidarPunto(ConfigPunto{Nombre: "c", Agente: "claude", Respaldo: []string{"codex"}}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Las reglas para guardar se aplican a lo nuevo o cambiado, no a desactivar: una API que ya usaba Antigravity se puede
+// desactivar, pero no se puede crear otra con él ni cambiarle el modelo a uno que fallaría siempre.
+func TestConReglas(t *testing.T) {
+	activo := true
+	vieja := ConfigPunto{Nombre: "vieja", Agente: "antigravity", Activo: &activo}
+	desactivar := ConReglas(func(l []ConfigPunto) ([]ConfigPunto, error) {
+		apagado := false
+		l[0].Activo = &apagado // en su sitio, como hace la CLI
+		return l, nil
+	})
+	if _, err := desactivar([]ConfigPunto{vieja}); err != nil {
+		t.Fatalf("desactivar una API existente no debe pasar por las reglas: %v", err)
+	}
+	crear := ConReglas(func(l []ConfigPunto) ([]ConfigPunto, error) {
+		return append(l, ConfigPunto{Nombre: "nueva", Agente: "antigravity"}), nil
+	})
+	if _, err := crear(nil); err == nil {
+		t.Fatal("se creó una API con Antigravity")
+	}
+	respaldo := ConReglas(func(l []ConfigPunto) ([]ConfigPunto, error) {
+		l[0].Respaldo = []string{"no-existe"}
+		return l, nil
+	})
+	if _, err := respaldo([]ConfigPunto{{Nombre: "c", Agente: "claude"}}); err == nil || !strings.Contains(nucleo.MensajeDe(err), "no-existe") {
+		t.Fatalf("un respaldo con un agente que no existe debe rechazarse: %v", err)
 	}
 }

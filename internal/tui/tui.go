@@ -8,8 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"reflect"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -803,17 +801,8 @@ func (m *modelo) editarPuntos(archivo, texto string, f func([]servicio.ConfigPun
 	cli := m.cli
 	ruta, origen := m.rutaConfig(archivo)
 	return func() tea.Msg {
-		// Las mismas reglas que la Web UI: una API no puede quedar con Antigravity mientras no esté habilitado para apps.
-		conReglas := func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
-			nueva, err := f(lista)
-			for _, p := range nueva {
-				if err == nil && !slices.ContainsFunc(lista, func(q servicio.ConfigPunto) bool { return reflect.DeepEqual(p, q) }) {
-					err = servicio.ValidarParaApps(p)
-				}
-			}
-			return nueva, err
-		}
-		if err := servicio.EditarPuntos(ruta, origen, conReglas); err != nil {
+		// Las mismas reglas que la Web UI y la CLI para guardar una API.
+		if err := servicio.EditarPuntos(ruta, origen, servicio.ConReglas(f)); err != nil {
 			return msgAviso{err: err}
 		}
 		ctx, cancelar := conPlazo(30 * time.Second)
@@ -851,23 +840,17 @@ func (m *modelo) teclaAccesos(tecla string) tea.Cmd {
 		return m.editarPuntos(p.Origen, map[bool]string{true: idioma.T("punto activado"), false: idioma.T("punto desactivado")}[activo],
 			cambiar(func(c *servicio.ConfigPunto) { c.Activo = &activo }))
 	case "x":
-		borrar := m.editarPuntos(p.Origen, idioma.T("punto eliminado"),
-			func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
-				var resto []servicio.ConfigPunto
-				for _, c := range lista {
-					if c.Nombre != p.Nombre {
-						resto = append(resto, c)
-					}
-				}
-				return resto, nil
-			})
-		datos := m.o.Datos
+		cli, datos := m.cli, m.o.Datos
+		ruta, origen := m.rutaConfig(p.Origen)
 		return m.confirmar(idioma.Tf("¿Eliminar el punto de acceso %s?", p.Nombre), func() tea.Msg {
-			msg := borrar()
-			if a, ok := msg.(msgAviso); ok && a.err == nil {
-				servicio.EliminarTokenPunto(datos, p.Nombre) // otro punto con este nombre no hereda la clave
+			// Archivo y clave antes de recargar, como la CLI: otro punto con este nombre no hereda ni la clave ni el consumo.
+			if err := servicio.EliminarPunto(datos, ruta, origen, p.Nombre); err != nil {
+				return msgAviso{err: err}
 			}
-			return msg
+			ctx, cancelar := conPlazo(30 * time.Second)
+			defer cancelar()
+			_, err := cli.Recargar(ctx)
+			return msgAviso{texto: idioma.T("punto eliminado"), err: err}
 		})
 	case "t":
 		return m.confirmar(idioma.Tf("¿Regenerar la clave de %s? La anterior deja de valer.", p.Nombre), m.regenerarClave(p.Nombre))

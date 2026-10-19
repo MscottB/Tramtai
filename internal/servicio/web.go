@@ -691,11 +691,7 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 		api.EscribirError(w, r, err)
 		return
 	}
-	if err := s.validarRespaldo(p); err != nil {
-		api.EscribirError(w, r, err)
-		return
-	}
-	if err := s.validarParaApps(p); err != nil {
+	if err := validarPunto(p, s.existe); err != nil {
 		api.EscribirError(w, r, err)
 		return
 	}
@@ -843,12 +839,12 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 						return nil, err
 					}
 					lista[i].Presupuesto = normalizado.Presupuesto // uno vacío se guarda como ninguno
-					if err := s.validarRespaldo(lista[i]); err != nil {
+					if err := validarRespaldo(lista[i], s.existe); err != nil {
 						return nil, err
 					}
 				}
 				if cambio.Modelo != nil || cambio.Respaldo != nil {
-					if err := s.validarParaApps(lista[i]); err != nil {
+					if err := validarParaApps(lista[i]); err != nil {
 						return nil, err
 					}
 				}

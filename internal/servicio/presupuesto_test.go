@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -160,16 +161,21 @@ func TestRecrearAPINoHeredaConsumo(t *testing.T) {
 	if c := pedirCon(token); c != 202 {
 		t.Fatalf("primera petición: %d", c)
 	}
-	// Como tramtai acceso eliminar: quita el punto del archivo, borra su clave y recarga.
+	// Como tramtai acceso eliminar y la terminal: EliminarPunto (archivo y clave) y después recargar.
 	rutaGlobal, _ := nucleo.RutaGlobal()
 	var anterior []ConfigPunto
 	if err := EditarPuntos(rutaGlobal, nucleo.OrigenGlobal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
-		anterior = lista
-		return nil, nil
+		anterior = slices.Clone(lista)
+		return lista, nil
 	}); err != nil {
 		t.Fatal(err)
 	}
-	EliminarTokenPunto(s.opc.Datos, "facturas")
+	if err := EliminarPunto(s.opc.Datos, rutaGlobal, nucleo.OrigenGlobal, "facturas"); err != nil {
+		t.Fatal(err)
+	}
+	if err := EliminarPunto(s.opc.Datos, rutaGlobal, nucleo.OrigenGlobal, "facturas"); err == nil {
+		t.Fatal("eliminar un punto que ya no existe debe dar error")
+	}
 	s.Recargar()
 	// Otra API con el mismo nombre empieza sin consumo.
 	if err := EditarPuntos(rutaGlobal, nucleo.OrigenGlobal, func([]ConfigPunto) ([]ConfigPunto, error) { return anterior, nil }); err != nil {

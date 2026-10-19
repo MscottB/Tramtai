@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"slices"
 	"sort"
@@ -170,14 +171,15 @@ func (p ConfigPunto) Normalizar(instancia string, puertoServicio int) (ConfigPun
 	return p, nil
 }
 
-// validarRespaldo rechaza un respaldo con el que toda petición fallaría: un agente que no está registrado o una
-// entrada fuera de modelos_permitidos. Normalizar solo ve el formato; esto necesita el registro del servicio.
-func (s *Servicio) validarRespaldo(p ConfigPunto) error {
+// validarRespaldo rechaza un respaldo con el que toda petición fallaría: un agente que no existe o una entrada fuera de
+// modelos_permitidos. Normalizar solo ve el formato. El servicio pregunta a su registro; la CLI y la terminal, al
+// catálogo (enCatalogo).
+func validarRespaldo(p ConfigPunto, existe func(agente string) bool) error {
 	for _, e := range p.Respaldo {
 		agente, _, _ := nucleo.DividirRespaldo(e)
 		motivo := ""
 		switch {
-		case s.opc.Registro[agente] == nil:
+		case !existe(agente):
 			motivo = idioma.Tf("el agente de respaldo %s no existe", agente)
 		case len(p.ModelosPermitidos) > 0 && !api.PermitidoRespaldo(p.ModelosPermitidos, e):
 			motivo = idioma.Tf("el respaldo %s no está en modelos_permitidos", e)
@@ -191,10 +193,6 @@ func (s *Servicio) validarRespaldo(p ConfigPunto) error {
 
 // ValidarParaApps rechaza al guardar una API que use (como agente o en el respaldo) un agente que no se permite en apps
 // (adaptadores.<nombre>.permitir_apps): sus peticiones se rechazarían todas. La usan la Web UI y la terminal.
-func ValidarParaApps(p ConfigPunto) error {
-	return validarParaApps(p)
-}
-
 func validarParaApps(p ConfigPunto) error {
 	c, _ := nucleo.CargarConfiguracion("") // sin configuración, solo cuenta la ficha de cada agente
 	usados := []string{p.Agente}
@@ -211,8 +209,63 @@ func validarParaApps(p ConfigPunto) error {
 	return nil
 }
 
-// validarParaApps es ValidarParaApps como método, para las rutas de la Web UI.
-func (s *Servicio) validarParaApps(p ConfigPunto) error { return validarParaApps(p) }
+func enCatalogo(agente string) bool {
+	_, ok := agentes.Buscar(agente)
+	return ok
+}
+
+// existe dice si el agente está en el registro del servicio.
+func (s *Servicio) existe(agente string) bool { return s.opc.Registro[agente] != nil }
+
+// ValidarPunto aplica las reglas para guardar una API que la Web UI, la CLI y la terminal comparten: un respaldo con el que
+// funcione y solo agentes habilitados para apps. El formato lo comprueba Normalizar.
+func ValidarPunto(p ConfigPunto) error { return validarPunto(p, enCatalogo) }
+
+func validarPunto(p ConfigPunto, existe func(string) bool) error {
+	if err := validarRespaldo(p, existe); err != nil {
+		return err
+	}
+	return validarParaApps(p)
+}
+
+// ConReglas envuelve una edición de puntos de acceso con ValidarPunto en los puntos nuevos o que cambian algo más que
+// activo: así se puede desactivar una API que ya tenía otro error, pero no guardar una nueva que fallaría siempre.
+func ConReglas(editar func([]ConfigPunto) ([]ConfigPunto, error)) func([]ConfigPunto) ([]ConfigPunto, error) {
+	return func(lista []ConfigPunto) ([]ConfigPunto, error) {
+		antes := slices.Clone(lista) // editar puede cambiar lista en su sitio
+		nueva, err := editar(lista)
+		if err != nil {
+			return nil, err
+		}
+		sinActivo := func(p ConfigPunto) ConfigPunto { p.Activo = nil; return p }
+		for _, p := range nueva {
+			igual := func(q ConfigPunto) bool { return reflect.DeepEqual(sinActivo(p), sinActivo(q)) }
+			if !slices.ContainsFunc(antes, igual) {
+				if err := ValidarPunto(p); err != nil {
+					return nil, err
+				}
+			}
+		}
+		return nueva, nil
+	}
+}
+
+// EliminarPunto quita un punto de acceso del archivo y después borra su clave, antes de recargar: así el servicio sabe al
+// recargar que se eliminó (y no que una errata lo invalidó), y otro con el mismo nombre no hereda ni la clave ni el
+// consumo de su presupuesto.
+func EliminarPunto(datos, ruta string, origen nucleo.Origen, nombre string) error {
+	err := EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+		i := slices.IndexFunc(lista, func(p ConfigPunto) bool { return p.Nombre == nombre })
+		if i < 0 {
+			return nil, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("no existe el punto de acceso %s en este archivo", nombre))
+		}
+		return slices.Delete(lista, i, i+1), nil
+	})
+	if err == nil {
+		EliminarTokenPunto(datos, nombre)
+	}
+	return err
+}
 
 func (p ConfigPunto) politica() *api.Punto {
 	pol := &api.Punto{Nombre: p.Nombre, Contratos: map[string]bool{}, Agente: p.Agente, Modelo: p.Modelo,
@@ -312,7 +365,7 @@ func (s *Servicio) puntosDeseados() ([]candidato, []string) {
 		for _, p := range puntos {
 			normalizado, err := p.Normalizar(instancia, s.opc.Puerto)
 			if err == nil {
-				err = s.validarRespaldo(normalizado)
+				err = validarRespaldo(normalizado, s.existe)
 			}
 			switch {
 			case err != nil:
