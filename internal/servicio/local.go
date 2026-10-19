@@ -87,13 +87,22 @@ func direccionProc(texto string) (netip.AddrPort, bool) {
 	return netip.AddrPortFrom(direccion.Unmap(), uint16(p)), true
 }
 
-// Tipos de los elementos de net.inet.tcp.pcblist_n en macOS (xnu, bsd/netinet/in_pcb.h y sys/socketvar.h).
+// Tipos y posiciones de los elementos de net.inet.tcp.pcblist_n en macOS (xnu, bsd/netinet/in_pcb.h y
+// sys/socketvar.h). Esas estructuras se declaran con #pragma pack(4): los enteros de 64 bits van alineados a 4 bytes,
+// no a 8 (comprobado con una conexión real en el CI de macOS, TestMismoUsuarioDarwin).
 const (
-	xsoSocket     = 0x001
-	xsoInpcb      = 0x010
-	largoXinpgen  = 24 // la cabecera, que también cierra la lista
-	largoXinpcbN  = 84 // hasta inp_dependladdr inclusive
-	largoXsocketN = 72 // hasta so_uid inclusive
+	xsoSocket    = 0x001
+	xsoInpcb     = 0x010
+	largoXinpgen = 24 // la cabecera, que también cierra la lista
+	// xinpcb_n: inp_fport y inp_lport (orden de red), inp_vflag, y las direcciones remota y local (16 bytes cada una).
+	pcbPuertos   = 16
+	pcbVflag     = 44
+	pcbRemota    = 48
+	pcbLocal     = 64
+	largoXinpcbN = 80
+	// xsocket_n: so_uid.
+	socketUID     = 64
+	largoXsocketN = 68
 )
 
 // uidDePcblist busca la conexión en la salida de net.inet.tcp.pcblist_n de macOS, la que lee netstat: una cabecera
@@ -117,7 +126,7 @@ func uidDePcblist(datos []byte, cliente, servidor netip.AddrPort) (int, bool) {
 			coincide = largo >= largoXinpcbN && conexionPcb(elemento) == [2]netip.AddrPort{cliente, servidor}
 		case xsoSocket:
 			if coincide && largo >= largoXsocketN {
-				return int(le.Uint32(elemento[68:])), true
+				return int(le.Uint32(elemento[socketUID:])), true
 			}
 			coincide = false
 		}
@@ -128,14 +137,14 @@ func uidDePcblist(datos []byte, cliente, servidor netip.AddrPort) (int, bool) {
 
 // conexionPcb lee de un xinpcb_n la dirección local y la remota.
 func conexionPcb(e []byte) [2]netip.AddrPort {
-	remoto, local := binary.BigEndian.Uint16(e[16:]), binary.BigEndian.Uint16(e[18:])
+	remoto, local := binary.BigEndian.Uint16(e[pcbPuertos:]), binary.BigEndian.Uint16(e[pcbPuertos+2:])
 	direccion := func(union []byte) netip.Addr {
-		if e[48]&0x2 != 0 { // INP_IPV6
+		if e[pcbVflag]&0x2 != 0 { // INP_IPV6
 			return netip.AddrFrom16([16]byte(union)).Unmap()
 		}
 		return netip.AddrFrom4([4]byte(union[12:16])) // in_addr_4in6: tres palabras de relleno y la IPv4
 	}
-	return [2]netip.AddrPort{netip.AddrPortFrom(direccion(e[68:84]), local), netip.AddrPortFrom(direccion(e[52:68]), remoto)}
+	return [2]netip.AddrPort{netip.AddrPortFrom(direccion(e[pcbLocal:pcbLocal+16]), local), netip.AddrPortFrom(direccion(e[pcbRemota:pcbRemota+16]), remoto)}
 }
 
 func alinear8(n int) int { return (n + 7) &^ 7 }

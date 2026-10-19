@@ -2,6 +2,7 @@ package servicio
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -428,8 +429,8 @@ func pcblist(conexiones ...struct {
 	datos := cabecera()
 	for _, c := range conexiones {
 		pcb := elemento(xsoInpcb, 105)
-		binary.BigEndian.PutUint16(pcb[16:], c.remota.Port())
-		binary.BigEndian.PutUint16(pcb[18:], c.local.Port())
+		binary.BigEndian.PutUint16(pcb[pcbPuertos:], c.remota.Port())
+		binary.BigEndian.PutUint16(pcb[pcbPuertos+2:], c.local.Port())
 		escribir := func(union []byte, d netip.Addr) {
 			if d.Is4() {
 				a := d.As4()
@@ -439,14 +440,14 @@ func pcblist(conexiones ...struct {
 				copy(union, a[:])
 			}
 		}
-		pcb[48] = 0x1
+		pcb[pcbVflag] = 0x1
 		if c.local.Addr().Is6() {
-			pcb[48] = 0x2
+			pcb[pcbVflag] = 0x2
 		}
-		escribir(pcb[52:68], c.remota.Addr())
-		escribir(pcb[68:84], c.local.Addr())
+		escribir(pcb[pcbRemota:pcbRemota+16], c.remota.Addr())
+		escribir(pcb[pcbLocal:pcbLocal+16], c.local.Addr())
 		so := elemento(xsoSocket, 101)
-		le.PutUint32(so[68:], c.uid)
+		le.PutUint32(so[socketUID:], c.uid)
 		datos = append(append(append(datos, pcb...), so...), elemento(0x002, 50)...) // y un elemento de otro tipo
 	}
 	return append(datos, cabecera()...)
@@ -490,5 +491,19 @@ func TestDireccionesDeProc(t *testing.T) {
 	}
 	if d, ok := direccionProc("00000000000000000000000001000000:1F90"); !ok || d != netip.MustParseAddrPort("[::1]:8080") {
 		t.Fatalf("IPv6: %v", d)
+	}
+}
+
+// Un xinpcb_n y un xsocket_n copiados de una conexión real en el CI de macOS (127.0.0.1:49253 aceptó a :49254; este
+// es el lado del servidor, uid 501): fijan las posiciones de las estructuras con #pragma pack(4).
+func TestPcblistDeMacOSReal(t *testing.T) {
+	pcb, _ := hex.DecodeString("68000000100000002992cdd2abd4f18ec066c0650106e86fdc4b6db7b0010000000000000000800000000200014000000000000000000000000000007f0000010000000000000000000000007f000001000000000000000000000000000000005137139a12000000")
+	so, _ := hex.DecodeString("6800000001000000ee3e416292e6c7aa010000000c000000000002012992cdd2abd4f18e06000000020000000000000000000000000000000000000000000000f50100005c07000000000000220f0000000000008000000000080001020000000000000000000000")
+	cabecera := make([]byte, 24)
+	binary.LittleEndian.PutUint32(cabecera, 24)
+	tabla := append(append(append(cabecera, pcb...), so...), cabecera...)
+	servidor, cliente := netip.MustParseAddrPort("127.0.0.1:49253"), netip.MustParseAddrPort("127.0.0.1:49254")
+	if uid, ok := uidDePcblist(tabla, servidor, cliente); !ok || uid != 501 {
+		t.Fatalf("uid %d %v", uid, ok)
 	}
 }
