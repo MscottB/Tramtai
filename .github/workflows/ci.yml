@@ -1,8 +1,9 @@
 # Pruebas en cada push y pull request: el servicio y la CLI en Windows, Linux y macOS, la app de escritorio en Windows
-# y la Web UI (tipos y compilación).
+# y la Web UI (tipos y compilación). Publicar también lo llama antes de crear un release.
 name: CI
 
 on:
+  workflow_call:
   push:
     branches: [main]
     paths-ignore: ['site/**', '.github/workflows/paginas.yml', 'Casks/**', 'Formula/**', 'paquetes/**', 'docs/**', '**/*.md']  # la página y los paquetes van aparte
@@ -31,6 +32,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -74,6 +77,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -95,6 +100,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -113,6 +120,8 @@ jobs:
         working-directory: web
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 24
