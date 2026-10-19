@@ -62,7 +62,10 @@ func (s *Servicio) adminActivar(w http.ResponseWriter, r *http.Request) {
 		api.EscribirError(w, r, err)
 		return
 	}
-	_ = s.guardarActivas()
+	if err := s.guardarActivas(); err != nil {
+		api.EscribirError(w, r, err)
+		return
+	}
 	_ = s.actualizarDescriptor()
 	api.EscribirJSON(w, http.StatusOK, ActivacionInstancia{Instancia: inst.estado(r.Context()), Token: s.tokenDe(inst)})
 }
@@ -72,7 +75,10 @@ func (s *Servicio) adminDesactivar(w http.ResponseWriter, r *http.Request) {
 		api.EscribirError(w, r, err)
 		return
 	}
-	_ = s.guardarActivas()
+	if err := s.guardarActivas(); err != nil {
+		api.EscribirError(w, r, err)
+		return
+	}
 	_ = s.actualizarDescriptor()
 	w.WriteHeader(http.StatusNoContent)
 }

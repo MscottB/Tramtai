@@ -1,6 +1,7 @@
 package servicio
 
 import (
+	"context"
 	"io"
 	"net"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -463,5 +465,120 @@ func TestEscribirAtomicoConcurrente(t *testing.T) {
 	datos, _ := os.ReadFile(ruta)
 	if len(datos) != 1000 || strings.Count(string(datos), string(datos[0])) != 1000 {
 		t.Fatalf("contenido mezclado o a medias: %d bytes", len(datos))
+	}
+}
+
+// conBase sustituye la apertura de las bases durante la prueba.
+func conBase(t *testing.T, f func(string) (*persistencia.Almacen, error)) {
+	anterior := abrirBase
+	abrirBase = f
+	t.Cleanup(func() { abrirBase = anterior })
+}
+
+// Activar la misma instancia a la vez abre su base una sola vez y todos reciben la misma.
+func TestActivarALaVez(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	var aperturas atomic.Int32
+	conBase(t, func(ruta string) (*persistencia.Almacen, error) {
+		aperturas.Add(1)
+		time.Sleep(100 * time.Millisecond)
+		return persistencia.Abrir(ruta)
+	})
+	instancias := make([]*Instancia, 5)
+	var grupo sync.WaitGroup
+	for i := range instancias {
+		grupo.Go(func() {
+			inst, err := s.ActivarGlobal()
+			if err != nil {
+				t.Error(err)
+			}
+			instancias[i] = inst
+		})
+	}
+	grupo.Wait()
+	for _, inst := range instancias {
+		if inst == nil || inst != instancias[0] {
+			t.Fatal("activaciones a la vez dieron instancias distintas")
+		}
+	}
+	if n := aperturas.Load(); n != 1 {
+		t.Fatalf("la base se abrió %d veces", n)
+	}
+}
+
+// Mientras una instancia abre su base (migraciones, recuperación), las demás siguen respondiendo.
+func TestAbrirUnaInstanciaNoBloqueaLasDemas(t *testing.T) {
+	s, _, proyecto := entorno(t, "", "", adaptadores.Simulado{})
+	if _, err := s.ActivarGlobal(); err != nil {
+		t.Fatal(err)
+	}
+	soltar := make(chan struct{})
+	conBase(t, func(ruta string) (*persistencia.Almacen, error) {
+		<-soltar
+		return persistencia.Abrir(ruta)
+	})
+	listo := make(chan error, 1)
+	go func() {
+		_, err := s.ActivarProyecto(proyecto)
+		listo <- err
+	}()
+	for i := 0; ; i++ {
+		s.mu.RLock()
+		abriendo := len(s.abriendo)
+		s.mu.RUnlock()
+		if abriendo == 1 {
+			break
+		}
+		if i > 200 {
+			t.Fatal("el proyecto no empezó a abrirse")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	hecho := make(chan struct{})
+	go func() {
+		s.ActivarGlobal()
+		s.Estado(context.Background())
+		close(hecho)
+	}()
+	select {
+	case <-hecho:
+	case <-time.After(2 * time.Second):
+		t.Fatal("la instancia global quedó bloqueada mientras se abría otra")
+	}
+	close(soltar)
+	if err := <-listo; err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Cerrar espera a las tareas de fondo que usan las bases (una purga en curso) antes de cerrarlas.
+func TestCerrarEsperaElFondo(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	var terminada atomic.Bool
+	s.fondo.Go(func() {
+		time.Sleep(100 * time.Millisecond)
+		terminada.Store(true)
+	})
+	s.Cerrar()
+	if !terminada.Load() {
+		t.Fatal("Cerrar no esperó a la tarea de fondo")
+	}
+}
+
+// Un instancias.json dañado no deja el servicio sin aviso: se aparta, se informa y se abre la global.
+func TestRestaurarConInstanciasDanado(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	ruta := filepath.Join(s.opc.Datos, "instancias.json")
+	os.MkdirAll(s.opc.Datos, 0o700)
+	os.WriteFile(ruta, []byte("{no es json"), 0o600)
+	errores := s.Restaurar()
+	if len(errores) != 1 || !strings.Contains(errores[0].Error(), "dañado") {
+		t.Fatalf("errores: %v", errores)
+	}
+	if _, err := os.Stat(ruta + ".dañado"); err != nil {
+		t.Fatalf("no se apartó el archivo dañado: %v", err)
+	}
+	if _, activa := s.instancias["global"]; !activa {
+		t.Fatal("la instancia global debía abrirse")
 	}
 }

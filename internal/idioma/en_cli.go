@@ -61,10 +61,13 @@ func init() {
 		"Muestra el texto que recibiría el agente para esos archivos (sin ejecutar ningún agente)":             "Shows the text the agent would receive for those files (without running any agent)",
 		"tramtai %s · %s · agente %s · modelo %s\n\n":                                                          "tramtai %s · %s · agent %s · model %s\n\n",
 		"tramtai %s · %s · instancia %s · agente %s · modelo %s\n\n":                                           "tramtai %s · %s · workspace %s · agent %s · model %s\n\n",
-		"\ncancelando…":          "\ncanceling…",
-		"convirtiendo archivos…": "converting files…",
-		"\n\nsalida final:\n":    "\n\nfinal output:\n",
-		"no verificable":         "not verifiable",
+		"\ncancelando…": "\ncanceling…",
+		"\ncancelando… (Ctrl+C otra vez para salir sin esperar)":      "\ncanceling… (Ctrl+C again to exit without waiting)",
+		"se sale sin esperar a que termine la cancelación":            "exiting without waiting for the cancellation to finish",
+		"no se pudo aplicar la retención: %s":                         "the retention could not be applied: %s",
+		"convirtiendo archivos…":                                      "converting files…",
+		"\n\nsalida final:\n":                                         "\n\nfinal output:\n",
+		"no verificable":                                              "not verifiable",
 		"\n\n%s · modelo efectivo %s · tokens %d entrada / %d salida": "\n\n%s · effective model %s · tokens %d in / %d out",
 
 		// tramtai trabajos

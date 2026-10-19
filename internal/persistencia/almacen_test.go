@@ -467,3 +467,15 @@ func TestAbrirEnCarpetaConSignos(t *testing.T) {
 		t.Fatalf("la base no quedó en su carpeta: %v", err)
 	}
 }
+
+// Instancias lista las instancias con trabajos en la base, cada una una vez (tramtai ejecutar --directo las purga todas).
+func TestInstancias(t *testing.T) {
+	a := abrir(t)
+	for _, id := range []string{"cli-b", "cli-a", "cli-b"} {
+		aceptar(t, a, trabajo(id, "hola"), "")
+	}
+	ids, err := a.Instancias(context.Background())
+	if err != nil || strings.Join(ids, ",") != "cli-a,cli-b" {
+		t.Fatalf("%v %v", ids, err)
+	}
+}

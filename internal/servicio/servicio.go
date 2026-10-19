@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"net"
 	"net/http"
 	"os"
@@ -91,6 +92,8 @@ type Servicio struct {
 	muRecargar    sync.Mutex // una recarga a la vez: cada una lee la configuración y la aplica entera
 	mu            sync.RWMutex
 	instancias    map[string]*Instancia
+	abriendo      map[string]*apertura // instancias que se están abriendo, fuera de mu
+	cerrado       bool                 // Cerrar ya empezó: no se publican instancias nuevas
 	puntos        map[string]*puntoActivo
 	erroresPuntos []string
 	descriptor    bool
@@ -107,7 +110,19 @@ type Servicio struct {
 	avance          ProgresoActualizacion // la actualización en curso, para la Web UI
 	ordenInstalar   chan bool             // en la fase listo: true instala ya, false cancela
 	buscar          atomic.Bool
+
+	fondo sync.WaitGroup // tareas en segundo plano que usan las bases (purgas): Cerrar las espera
 }
+
+// apertura es una instancia que se está abriendo: quien la pida a la vez espera a listo y recibe la misma.
+type apertura struct {
+	listo chan struct{}
+	inst  *Instancia
+	err   error
+}
+
+// abrirBase abre la base de una instancia; las pruebas la sustituyen para simular una base lenta.
+var abrirBase = persistencia.Abrir
 
 // Nuevo crea el servicio sin instancias; Restaurar o Activar* las abren.
 func Nuevo(opc Opciones) (*Servicio, error) {
@@ -119,10 +134,10 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 		return nil, err
 	}
 	s := &Servicio{opc: opc, ID: "servicio_" + aleatorio(8), IniciadoEn: time.Now(), tokenAdmin: token,
-		instancias: map[string]*Instancia{}, puntos: map[string]*puntoActivo{}, detener: make(chan struct{}),
+		instancias: map[string]*Instancia{}, abriendo: map[string]*apertura{}, puntos: map[string]*puntoActivo{}, detener: make(chan struct{}),
 		sesiones: map[string]*sesion{}, codigos: map[string]codigoEntrada{}}
 	s.buscar.Store(opc.BuscarActualizaciones)
-	go actualizacion.LimpiarDescargas(time.Now().Add(-10 * time.Minute)) // los instaladores que dejó la versión anterior
+	s.fondo.Go(func() { actualizacion.LimpiarDescargas(time.Now().Add(-10 * time.Minute)) }) // los instaladores que dejó la versión anterior
 	s.admin = s.rutasAdmin()
 	s.handler = api.Proteger(opc.Hosts, nil, http.HandlerFunc(s.enrutar))
 	return s, nil
@@ -312,29 +327,47 @@ func (s *Servicio) ActivarProyecto(raiz string) (*Instancia, error) {
 	return s.activar(IDProyecto(raiz, c), "proyecto", raiz, c)
 }
 
+// activar abre la instancia si no está activa. La base se abre (migraciones, huérfanos, recuperación) fuera de mu: así
+// no se detienen las peticiones de las demás instancias, y quien pida la misma a la vez espera y recibe la misma.
 func (s *Servicio) activar(id, ambito, raiz string, c *nucleo.Configuracion) (*Instancia, error) {
 	s.mu.Lock()
 	if inst, activa := s.instancias[id]; activa {
 		s.mu.Unlock()
 		return inst, nil
 	}
-	inst, err := s.abrirInstancia(id, ambito, raiz, c)
-	if err == nil {
-		s.instancias[id] = inst
+	if a, enCurso := s.abriendo[id]; enCurso {
+		s.mu.Unlock()
+		<-a.listo
+		return a.inst, a.err
+	}
+	a := &apertura{listo: make(chan struct{})}
+	s.abriendo[id] = a
+	s.mu.Unlock()
+
+	a.inst, a.err = s.abrirInstancia(id, ambito, raiz, c)
+	s.mu.Lock()
+	delete(s.abriendo, id)
+	if a.err == nil && s.cerrado {
+		a.inst.cerrar(false)
+		a.inst, a.err = nil, nucleo.NuevoError(nucleo.CodigoServicioDetenido, idioma.T("el servicio se está deteniendo"))
+	}
+	if a.err == nil {
+		s.instancias[id] = a.inst
 	}
 	s.mu.Unlock()
-	if err != nil {
-		return nil, err
+	close(a.listo)
+	if a.err != nil {
+		return nil, a.err
 	}
 	s.Recargar() // abre los puntos de acceso de la instancia
-	return inst, nil
+	return a.inst, nil
 }
 
 func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuracion) (*Instancia, error) {
 	if err := os.MkdirAll(filepath.Join(s.opc.Datos, "instancias"), 0o700); err != nil {
 		return nil, err
 	}
-	alm, err := persistencia.Abrir(filepath.Join(s.opc.Datos, "instancias", id+".db"))
+	alm, err := abrirBase(filepath.Join(s.opc.Datos, "instancias", id+".db"))
 	if err != nil {
 		return nil, err
 	}
@@ -429,17 +462,28 @@ func (i *Instancia) iniciarPurga(registros io.Writer) {
 // Purgar aplica la retención de la instancia: vence resultados y entradas, borra metadatos antiguos y las
 // cargas vencidas que ningún trabajo necesita.
 func (i *Instancia) Purgar(ctx context.Context) error {
-	resultado, metadatos, maximo, _ := i.retencion()
+	return PurgarBase(ctx, i.almacen, i.Cargas, i.Config, i.ID)
+}
+
+// PurgarBase aplica la retención de c a las instancias de una base y a sus cargas. La usan cada instancia del servicio
+// y tramtai ejecutar --directo, cuya base guarda una instancia por ejecución.
+func PurgarBase(ctx context.Context, alm *persistencia.Almacen, cargas *documentos.Cargas, c *nucleo.Configuracion, instancias ...string) error {
+	resultado, metadatos, maximo, _ := nucleo.AjustarRetencion(c.Entero("retencion.horas_resultado"), c.Entero("retencion.horas_metadatos"),
+		c.Entero("retencion.max_trabajos"))
 	r := persistencia.Retencion{Resultado: time.Duration(resultado) * time.Hour, Metadatos: time.Duration(metadatos) * time.Hour,
-		Maximo: maximo, EliminarEntradas: i.Config.Booleano("retencion.eliminar_entradas_al_terminar")}
-	if _, _, err := i.almacen.Purgar(ctx, i.ID, r); err != nil {
-		return err
+		Maximo: maximo, EliminarEntradas: c.Booleano("retencion.eliminar_entradas_al_terminar")}
+	enUso := map[string]bool{}
+	for _, id := range instancias {
+		if _, _, err := alm.Purgar(ctx, id, r); err != nil {
+			return err
+		}
+		usadas, err := alm.CargasEnUso(ctx, id)
+		if err != nil {
+			return err
+		}
+		maps.Copy(enUso, usadas)
 	}
-	enUso, err := i.almacen.CargasEnUso(ctx, i.ID)
-	if err != nil {
-		return err
-	}
-	_, err = i.Cargas.Purgar(enUso, time.Now())
+	_, err := cargas.Purgar(enUso, time.Now())
 	return err
 }
 
@@ -467,8 +511,10 @@ func (s *Servicio) Desactivar(id string) error {
 
 // cerrar detiene la purga y el planificador (interrumpe lo que aún se ejecuta) y cierra la base.
 func (i *Instancia) cerrar(vaciarCola bool) {
-	i.pararPurga()
-	<-i.purgaParada
+	if i.pararPurga != nil {
+		i.pararPurga()
+		<-i.purgaParada
+	}
 	if vaciarCola {
 		ctx := context.Background()
 		// Esperando al agente también es cola: el trabajo aún no tiene plaza ni agente.
@@ -509,6 +555,10 @@ func (s *Servicio) Drenar() {
 // a activar la instancia.
 func (s *Servicio) Cerrar() {
 	s.mu.Lock()
+	s.cerrado = true
+	s.mu.Unlock()
+	s.fondo.Wait() // una purga en curso termina antes de cerrar su base
+	s.mu.Lock()
 	puntos, instancias := s.puntos, s.instancias
 	s.puntos, s.instancias = map[string]*puntoActivo{}, map[string]*Instancia{}
 	s.mu.Unlock()
@@ -545,10 +595,17 @@ func (s *Servicio) guardarActivas() error {
 // errores de las que no pudieron abrirse, por ejemplo un proyecto movido.
 func (s *Servicio) Restaurar() []error {
 	a := activas{Global: true}
-	if datos, err := os.ReadFile(filepath.Join(s.opc.Datos, "instancias.json")); err == nil {
-		_ = json.Unmarshal(datos, &a)
-	}
+	ruta := filepath.Join(s.opc.Datos, "instancias.json")
 	var errores []error
+	if datos, err := os.ReadFile(ruta); err == nil {
+		if err := json.Unmarshal(datos, &a); err != nil {
+			// Dañado: se aparta (para poder mirarlo) y se abre la global, como sin registro previo.
+			a = activas{Global: true}
+			_ = os.Rename(ruta, ruta+".dañado")
+			errores = append(errores, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida,
+				idioma.Tf("%s no se pudo leer (%s): se apartó como instancias.json.dañado y se abre solo la instancia global", ruta, err.Error())))
+		}
+	}
 	if a.Global {
 		if _, err := s.ActivarGlobal(); err != nil {
 			errores = append(errores, err)

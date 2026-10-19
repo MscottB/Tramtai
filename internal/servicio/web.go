@@ -955,11 +955,17 @@ func (s *Servicio) fijarRetencion(inst *Instancia, resultado, metadatos, maximo 
 	err := s.guardarValores(inst, map[string]any{"retencion.horas_resultado": resultado, "retencion.horas_metadatos": metadatos,
 		"retencion.max_trabajos": maximo})
 	if err == nil {
-		go func() {
+		s.fondo.Go(func() {
+			s.mu.RLock()
+			abierta := s.instancias[inst.ID] == inst // no se purga una base que Cerrar o Desactivar ya cerraron
+			s.mu.RUnlock()
+			if !abierta {
+				return
+			}
 			if err := inst.Purgar(context.Background()); err != nil {
 				fmt.Fprintf(s.opc.Registros, "purga de %s: %s\n", inst.ID, nucleo.MensajeDe(err))
 			}
-		}()
+		})
 	}
 	return err
 }
