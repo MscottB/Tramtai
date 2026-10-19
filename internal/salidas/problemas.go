@@ -3,21 +3,24 @@ package salidas
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/santhosh-tekuri/jsonschema/v6/kind"
-	"golang.org/x/text/language"
-	"golang.org/x/text/message"
 
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
 
 // MaximoProblemas es cuántos problemas se guardan de una respuesta: con más, el resto no ayuda a corregirla.
-const MaximoProblemas = 20
+// maximoTexto (en caracteres) y maximoValores acotan cada texto: van en el evento y en el mensaje de corrección.
+const (
+	MaximoProblemas = 20
+	maximoTexto     = 300
+	maximoValores   = 10
+)
 
 // Problema explica una razón por la que la respuesta no cumple el esquema. Campo es la ruta legible
 // (tareas[2].fecha); vacío, la respuesta entera.
@@ -62,6 +65,13 @@ func problemasDe(v *jsonschema.ValidationError, instancia any) []Problema {
 		if len(lista) >= MaximoProblemas {
 			return
 		}
+		switch v.ErrorKind.(type) {
+		case *kind.AnyOf, *kind.OneOf:
+			// Las opciones fallan cada una por su lado: sus problemas se contradicen («falta a» y «falta b»), así que
+			// se explican como uno solo del campo.
+			lista = append(lista, opciones(v, ruta(v.InstanceLocation, instancia)))
+			return
+		}
 		if len(v.Causes) > 0 {
 			for _, c := range v.Causes {
 				recorrer(c)
@@ -74,11 +84,61 @@ func problemasDe(v *jsonschema.ValidationError, instancia any) []Problema {
 	if len(lista) > MaximoProblemas {
 		lista = lista[:MaximoProblemas]
 	}
+	for i := range lista {
+		lista[i].Texto = acortar(lista[i].Texto, maximoTexto)
+	}
 	return lista
 }
 
+// opciones explica un anyOf o un oneOf que no se cumple. Si todas las opciones solo piden un tipo (como texto o null),
+// dice qué tipos valen; si no, que debe cumplir una de las opciones.
+func opciones(v *jsonschema.ValidationError, campo string) Problema {
+	s := sujeto(campo)
+	var tipos []string
+	got := ""
+	var hojas func(*jsonschema.ValidationError) bool
+	hojas = func(c *jsonschema.ValidationError) bool {
+		if len(c.Causes) > 0 {
+			for _, h := range c.Causes {
+				if !hojas(h) {
+					return false
+				}
+			}
+			return true
+		}
+		t, ok := c.ErrorKind.(*kind.Type)
+		if !ok || !slices.Equal(c.InstanceLocation, v.InstanceLocation) {
+			return false
+		}
+		got = t.Got
+		for _, w := range t.Want {
+			if nombre := nombreTipo(w); !slices.Contains(tipos, nombre) {
+				tipos = append(tipos, nombre)
+			}
+		}
+		return true
+	}
+	if len(v.Causes) > 0 && hojas(v) {
+		return Problema{Campo: campo, Problema: "tipo", Texto: idioma.Tf("%s debería ser %s y llegó %s", s, strings.Join(tipos, idioma.T(" o ")), nombreTipo(got))}
+	}
+	if _, varias := v.ErrorKind.(*kind.OneOf); varias && len(v.Causes) == 0 {
+		return Problema{Campo: campo, Problema: "otro", Texto: idioma.Tf("%s cumple más de una de las opciones del esquema y debe cumplir solo una", s)}
+	}
+	return Problema{Campo: campo, Problema: "otro", Texto: idioma.Tf("%s no cumple ninguna de las opciones del esquema", s)}
+}
+
+// acortar deja un texto en n caracteres como mucho, sin partir ninguno.
+func acortar(texto string, n int) string {
+	if r := []rune(texto); len(r) > n {
+		return string(r[:n]) + "…"
+	}
+	return texto
+}
+
 func traducir(v *jsonschema.ValidationError, campo string) []Problema {
-	uno := func(problema, texto string) []Problema { return []Problema{{Campo: campo, Problema: problema, Texto: texto}} }
+	uno := func(problema, texto string) []Problema {
+		return []Problema{{Campo: campo, Problema: problema, Texto: texto}}
+	}
 	s := sujeto(campo)
 	switch k := v.ErrorKind.(type) {
 	case *kind.Required:
@@ -103,8 +163,11 @@ func traducir(v *jsonschema.ValidationError, campo string) []Problema {
 		return uno("tipo", idioma.Tf("%s debería ser %s y llegó %s", s, strings.Join(quiere, idioma.T(" o ")), nombreTipo(k.Got)))
 	case *kind.Enum:
 		var valores []string
-		for _, w := range k.Want {
+		for _, w := range k.Want[:min(len(k.Want), maximoValores)] {
 			valores = append(valores, valor(w))
+		}
+		if len(k.Want) > maximoValores {
+			valores = append(valores, "…")
 		}
 		return uno("valor_no_permitido", idioma.Tf("%s debe ser una de: %s", s, strings.Join(valores, ", ")))
 	case *kind.Const:
@@ -112,19 +175,32 @@ func traducir(v *jsonschema.ValidationError, campo string) []Problema {
 	case *kind.Format:
 		return uno("formato", idioma.Tf("%s no tiene el formato %s", s, k.Want))
 	case *kind.MinItems:
+		if k.Want == 1 {
+			return uno("tamaño", idioma.Tf("%s debe tener al menos un elemento", s))
+		}
 		return uno("tamaño", idioma.Tf("%s debe tener al menos %d elementos y tiene %d", s, k.Want, k.Got))
 	case *kind.MaxItems:
+		if k.Want == 1 {
+			return uno("tamaño", idioma.Tf("%s debe tener como mucho un elemento y tiene %d", s, k.Got))
+		}
 		return uno("tamaño", idioma.Tf("%s debe tener como mucho %d elementos y tiene %d", s, k.Want, k.Got))
 	case *kind.MinLength:
+		if k.Want == 1 {
+			return uno("tamaño", idioma.Tf("%s no puede estar vacío", s))
+		}
 		return uno("tamaño", idioma.Tf("%s debe tener al menos %d caracteres y tiene %d", s, k.Want, k.Got))
 	case *kind.MaxLength:
+		if k.Want == 1 {
+			return uno("tamaño", idioma.Tf("%s debe tener como mucho un carácter y tiene %d", s, k.Got))
+		}
 		return uno("tamaño", idioma.Tf("%s debe tener como mucho %d caracteres y tiene %d", s, k.Want, k.Got))
 	case *kind.Minimum:
 		return uno("tamaño", idioma.Tf("%s debe ser como mínimo %s", s, numero(k.Want.RatString())))
 	case *kind.Maximum:
 		return uno("tamaño", idioma.Tf("%s debe ser como máximo %s", s, numero(k.Want.RatString())))
 	}
-	return uno("otro", fmt.Sprintf("%s: %s", s, v.ErrorKind.LocalizedString(message.NewPrinter(language.English))))
+	// El resto se explica con la regla del esquema que no se cumple: la biblioteca solo tiene sus textos en inglés.
+	return uno("otro", idioma.Tf("%s no cumple la regla «%s» del esquema", s, strings.Join(v.ErrorKind.KeywordPath(), "/")))
 }
 
 // ruta convierte la ubicación de la biblioteca (["tareas","2","fecha"]) en tareas[2].fecha; un número solo es índice

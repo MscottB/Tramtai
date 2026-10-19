@@ -89,12 +89,7 @@ func Validar(esquema []byte, salida string) error {
 	return nil
 }
 
-func recortar(texto string) string {
-	if len(texto) > maximoMensaje {
-		return texto[:maximoMensaje] + "…"
-	}
-	return texto
-}
+func recortar(texto string) string { return acortar(texto, maximoMensaje) }
 
 // compilados guarda los esquemas ya compilados por su contenido: se compila al aceptar y no otra vez al validar.
 var compilados = struct {

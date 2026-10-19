@@ -421,7 +421,7 @@ func (p *Planificador) Corregir(ctx context.Context, id string) (nucleo.Trabajo,
 
 // ProblemasSalida son los problemas de la última validación fallida de un trabajo (nil si no la hubo).
 func (p *Planificador) ProblemasSalida(ctx context.Context, id string) ([]salidas.Problema, error) {
-	eventos, err := p.almacen.Eventos(ctx, id, 0)
+	eventos, err := p.almacen.EventosDeRegistro(ctx, id) // sin el texto de la respuesta
 	if err != nil {
 		return nil, err
 	}
@@ -443,12 +443,19 @@ type validacion struct {
 	Correccion int                `json:"correccion"`
 }
 
+// inicioCorreccion empieza el mensaje de una corrección. La Web UI lo reconoce para mostrar el mensaje original
+// (mensajeDe en web/src/api.ts): si cambia, cambiarlo también allí.
+const inicioCorreccion = "Tu respuesta no cumple el formato pedido:"
+
+// errCorreccionDetenida: el servicio se detuvo mientras una corrección esperaba al agente. No se reencola (repetiría
+// la petición entera y perdería el uso de los intentos): se cierra con los problemas que tenía.
+var errCorreccionDetenida = errors.New("corrección detenida")
+
 // conCorreccion sigue la conversación con la respuesta que no cumplía y un mensaje con sus problemas. El mensaje es
-// para el modelo: no se traduce. mensaje sustituye a los problemas si no se conocen. La Web UI reconoce su inicio para
-// mostrar el mensaje original (mensajeDe en web/src/api.ts): si cambia, cambiarlo también allí.
+// para el modelo: no se traduce. mensaje sustituye a los problemas si no se conocen.
 func conCorreccion(s nucleo.SolicitudEjecucion, salida string, problemas []salidas.Problema, mensaje string) nucleo.SolicitudEjecucion {
 	var b strings.Builder
-	b.WriteString("Tu respuesta no cumple el formato pedido:\n")
+	b.WriteString(inicioCorreccion + "\n")
 	for _, pr := range problemas {
 		b.WriteString("- " + pr.Texto + "\n")
 	}
@@ -754,37 +761,47 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		if !p.cambiar(id, nucleo.Ejecutando, nucleo.ValidandoSalida, persistencia.Cambio{}) {
 			return
 		}
-		err := validarSalida(t.Solicitud.Salida, resultado.Salida)
-		if err == nil {
+		errSalida := validarSalida(t.Solicitud.Salida, resultado.Salida)
+		if errSalida == nil {
 			p.cambiar(id, nucleo.ValidandoSalida, nucleo.Completado, persistencia.Cambio{Salida: &resultado.Salida,
 				Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo})
 			return
 		}
-		problemas := salidas.ProblemasDe(err)
+		problemas := salidas.ProblemasDe(errSalida)
 		if datos, errJSON := json.Marshal(validacion{Problemas: problemas, Correccion: correccion}); errJSON == nil {
 			_ = p.almacen.AgregarEvento(fondo, id, "validacion", string(datos))
 		}
-		if correccion >= reintentos {
+		// fallar cierra el trabajo con los problemas de la última respuesta (y la respuesta, si se pidió conservarla).
+		fallar := func(desde nucleo.Estado) {
 			cambio := persistencia.Cambio{Codigo: nucleo.CodigoSalidaNoCumpleEsquema,
-				Mensaje: nucleo.MensajeDe(err), Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo}
+				Mensaje: nucleo.MensajeDe(errSalida), Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo}
 			if t.Solicitud.Salida.ConservarSalidaInvalida {
 				cambio.Salida = &resultado.Salida // salida bruta conservada, con la retención del resultado
 			}
-			p.cambiar(id, nucleo.ValidandoSalida, nucleo.Fallido, cambio)
+			p.cambiar(id, desde, nucleo.Fallido, cambio)
+		}
+		// En drenaje no se pide otra corrección: el trabajo ya ejecutó y no puede volver a la cola.
+		if correccion >= reintentos || p.ctx.Err() != nil {
+			fallar(nucleo.ValidandoSalida)
 			return
 		}
-		if !p.cambiar(id, nucleo.ValidandoSalida, nucleo.EsperandoAgente, persistencia.Cambio{Uso: &resultado.Uso}) {
+		if !p.cambiar(id, nucleo.ValidandoSalida, nucleo.EsperandoAgente, persistencia.Cambio{Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo}) {
 			return
 		}
-		solicitud = conCorreccion(solicitud, resultado.Salida, problemas, nucleo.MensajeDe(err))
+		solicitud = conCorreccion(solicitud, resultado.Salida, problemas, nucleo.MensajeDe(errSalida))
 		res, _, fin, err := p.intentar(ctxTrabajo, id, t, solicitud, elegido, nil, esperando, correccion+1)
+		if errors.Is(err, errCorreccionDetenida) {
+			fallar(nucleo.EsperandoAgente)
+			return
+		}
 		if fin {
 			return
 		}
 		uso := sumarUso(resultado.Uso, res.Uso)
 		if err != nil {
 			codigo := cmp.Or(nucleo.CodigoDe(err), nucleo.CodigoErrorAgente)
-			p.cambiar(id, nucleo.Ejecutando, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err), Uso: &uso})
+			p.cambiar(id, nucleo.Ejecutando, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err), Uso: &uso,
+				ModeloEfectivo: cmp.Or(res.ModeloEfectivo, resultado.ModeloEfectivo)})
 			return
 		}
 		resultado = res
@@ -966,6 +983,15 @@ func saltable(codigo nucleo.CodigoError) bool {
 func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.Trabajo, solicitud nucleo.SolicitudEjecucion,
 	c candidato, plazoCola <-chan time.Time, esperando func(), correccion int) (resultado adaptadores.Resultado, huboTexto, fin bool, err error) {
 	fondo := context.Background()
+	// detenido cierra el trabajo que no llegó a lanzar el agente: se reencola. Una corrección no, porque el trabajo ya
+	// ejecutó: el bucle de corrección la cierra con sus problemas (salvo que el usuario la cancelara).
+	detenido := func() (adaptadores.Resultado, bool, bool, error) {
+		if actual, err := p.almacen.Obtener(fondo, id); correccion > 0 && err == nil && actual.Estado == nucleo.EsperandoAgente {
+			return resultado, false, false, errCorreccionDetenida
+		}
+		p.cerrarDetenido(id, nucleo.EsperandoAgente)
+		return resultado, false, true, nil
+	}
 	// Primero el punto de acceso, después el adaptador y al final la plaza de la instancia: quien espera a su
 	// agente no ocupa plaza, así que otro trabajo listo de otro agente puede empezar. Un canal atiende a sus
 	// esperas por orden de llegada, así que cada agente conserva el orden de la cola.
@@ -985,19 +1011,16 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 		case semaforo <- struct{}{}:
 			defer func() { <-semaforo }()
 		case <-ctxTrabajo.Done():
-			p.cerrarDetenido(id, nucleo.EsperandoAgente)
-			return resultado, false, true, nil
+			return detenido()
 		case <-p.ctx.Done(): // en drenaje: nunca lanzó el agente, se reencola
-			p.cerrarDetenido(id, nucleo.EsperandoAgente)
-			return resultado, false, true, nil
+			return detenido()
 		case <-plazoCola:
 			p.cambiar(id, nucleo.EsperandoAgente, nucleo.Fallido, persistencia.Cambio{Codigo: nucleo.CodigoTiempoColaAgotado, Mensaje: idioma.T("se superó el tiempo máximo en cola")})
 			return resultado, false, true, nil
 		}
 	}
 	if p.ctx.Err() != nil { // el drenaje empezó mientras se tomaban los semáforos
-		p.cerrarDetenido(id, nucleo.EsperandoAgente)
-		return resultado, false, true, nil
+		return detenido()
 	}
 	if !p.cambiar(id, nucleo.EsperandoAgente, nucleo.Ejecutando, persistencia.Cambio{}) {
 		return resultado, false, true, nil
@@ -1163,10 +1186,15 @@ func (p *Planificador) preparar(ctx context.Context, cargas []string) (nucleo.Do
 }
 
 // conDocumentos antepone las entradas preparadas al último mensaje del usuario sin alterar su texto;
-// cada archivo va en su bloque delimitado con metadatos.
+// cada archivo va en su bloque delimitado con metadatos. En una corrección hecha a mano van con la pregunta, no con
+// el pedido de corrección.
 func conDocumentos(s nucleo.SolicitudEjecucion, documentos string) nucleo.SolicitudEjecucion {
 	mensajes := slices.Clone(s.Mensajes)
-	for i := len(mensajes) - 1; i >= 0; i-- {
+	fin := len(mensajes)
+	for fin >= 3 && mensajes[fin-2].Rol == "asistente" && mensajes[fin-1].Rol == "usuario" && strings.HasPrefix(mensajes[fin-1].Contenido, inicioCorreccion) {
+		fin -= 2
+	}
+	for i := fin - 1; i >= 0; i-- {
 		if mensajes[i].Rol == "usuario" {
 			mensajes[i].Contenido = documentos + "\n" + mensajes[i].Contenido
 			s.Mensajes = mensajes

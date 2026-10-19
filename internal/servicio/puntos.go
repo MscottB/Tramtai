@@ -140,6 +140,9 @@ func (p ConfigPunto) Normalizar(instancia string, puertoServicio int) (ConfigPun
 	if p.ReintentosSalida < 0 || p.ReintentosSalida > nucleo.MaximoReintentosSalida {
 		return invalido(idioma.Tf("reintentos_salida va de 0 a %d", nucleo.MaximoReintentosSalida))
 	}
+	if p.ReintentosSalida > 0 && len(p.Esquema) == 0 && (p.Ejecucion == nil || p.Ejecucion.FormatoSalida != "json") {
+		return invalido(idioma.T("reintentos_salida exige un esquema o ejecucion.formato_salida json"))
+	}
 	if p.Ejecucion != nil && p.Ejecucion.MaximoTrabajos < 0 {
 		return invalido(idioma.T("ejecucion.maximo_trabajos no puede ser negativo"))
 	}

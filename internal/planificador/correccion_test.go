@@ -5,11 +5,138 @@ import (
 	"encoding/json"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/nucleo"
 )
+
+// porFuncion es un adaptador hecho con una función, para guiones de prueba.
+type porFuncion func(context.Context, nucleo.SolicitudEjecucion) (adaptadores.Resultado, error)
+
+func (f porFuncion) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, _ func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	return f(ctx, s)
+}
+
+// esperarQue sondea hasta que se cumple la condición.
+func esperarQue(t *testing.T, que string, condicion func() bool) {
+	t.Helper()
+	for limite := time.Now().Add(10 * time.Second); !condicion(); time.Sleep(5 * time.Millisecond) {
+		if time.Now().After(limite) {
+			t.Fatalf("no ocurrió: %s", que)
+		}
+	}
+}
+
+// Un drenaje justo antes de pedir la corrección no devuelve el trabajo a la cola: ya ejecutó y se cerraría dos veces.
+func TestDrenajeAntesDeCorregir(t *testing.T) {
+	alm := abrir(t)
+	var p *Planificador
+	var llamadas atomic.Int32
+	p = iniciar(t, alm, porFuncion(func(context.Context, nucleo.SolicitudEjecucion) (adaptadores.Resultado, error) {
+		llamadas.Add(1)
+		go p.Drenar(time.Minute)
+		esperarQue(t, "el drenaje empieza", func() bool { return p.ctx.Err() != nil })
+		return adaptadores.Resultado{Salida: `{}`, ModeloEfectivo: "m1", Uso: nucleo.Uso{TokensEntrada: 10}}, nil
+	}), 1, opciones())
+	tr := esperar(t, alm, enviar(t, p, conEsquema(2)), nucleo.Fallido)
+	if llamadas.Load() != 1 || tr.CodigoError != nucleo.CodigoSalidaNoCumpleEsquema || tr.Uso.TokensEntrada != 10 || tr.Salida != `{}` || tr.ModeloEfectivo != "m1" {
+		t.Fatalf("se cierra con los problemas, el uso y la salida: %d %+v", llamadas.Load(), tr)
+	}
+}
+
+// lentoORapido: «lento» ocupa el agente hasta que lo detienen; el resto responde `{}` (no cumple) tras una pausa.
+func lentoORapido() porFuncion {
+	return func(ctx context.Context, s nucleo.SolicitudEjecucion) (adaptadores.Resultado, error) {
+		if s.Mensajes[0].Contenido == "lento" {
+			<-ctx.Done()
+			return adaptadores.Resultado{}, ctx.Err()
+		}
+		time.Sleep(200 * time.Millisecond)
+		return adaptadores.Resultado{Salida: `{}`, Uso: nucleo.Uso{TokensEntrada: 10}}, nil
+	}
+}
+
+// corrigiendoEnEspera deja un trabajo esperando al agente para su corrección, con otro trabajo ocupándolo.
+func corrigiendoEnEspera(t *testing.T) (*Planificador, string) {
+	alm := abrir(t)
+	p := iniciar(t, alm, lentoORapido(), 1, opciones())
+	id := enviar(t, p, conEsquema(1))
+	esperar(t, alm, id, nucleo.Ejecutando)
+	lento := enviar(t, p, solicitud("lento")) // espera el agente y lo toma antes que la corrección
+	esperar(t, alm, lento, nucleo.Ejecutando)
+	esperarQue(t, "la corrección espera al agente", func() bool {
+		tr, _ := alm.Obtener(ctx, id)
+		return tr.Estado == nucleo.EsperandoAgente
+	})
+	return p, id
+}
+
+func TestDrenajeConLaCorreccionEnEspera(t *testing.T) {
+	p, id := corrigiendoEnEspera(t)
+	p.Drenar(100 * time.Millisecond)
+	tr, _ := p.almacen.Obtener(ctx, id)
+	if tr.Estado != nucleo.Fallido || tr.CodigoError != nucleo.CodigoSalidaNoCumpleEsquema || tr.Uso.TokensEntrada != 10 || tr.Salida != `{}` {
+		t.Fatalf("no vuelve a la cola: se cierra con los problemas y el uso: %+v", tr)
+	}
+}
+
+func TestCancelarConLaCorreccionEnEspera(t *testing.T) {
+	p, id := corrigiendoEnEspera(t)
+	if _, err := p.Cancelar(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	if tr := esperar(t, p.almacen, id, nucleo.Cancelado); tr.Uso.TokensEntrada != 10 {
+		t.Fatalf("cancelado, con el uso del intento: %+v", tr.Uso)
+	}
+}
+
+// Si respondió el respaldo, la corrección se le pide al respaldo.
+func TestCorreccionAlRespaldoQueRespondio(t *testing.T) {
+	alm := abrir(t)
+	var principal atomic.Int32
+	respaldo := nuevoEnOrden(`{}`, `{"total":1}`)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": porFuncion(func(context.Context, nucleo.SolicitudEjecucion) (adaptadores.Resultado, error) {
+			principal.Add(1)
+			return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoLimiteUsoProveedor, "límite")
+		}),
+		"respaldo": respaldo,
+	}, 2)
+	s := conEsquema(1)
+	s.Respaldo = []string{"respaldo"}
+	esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if principal.Load() != 1 || len(respaldo.llamadas()) != 2 {
+		t.Fatalf("la corrección va al respaldo: principal %d, respaldo %d", principal.Load(), len(respaldo.llamadas()))
+	}
+}
+
+// Un error del agente durante la corrección cierra con ese error, el uso de los dos intentos y el modelo que respondió.
+func TestErrorDelAgenteEnLaCorreccion(t *testing.T) {
+	alm := abrir(t)
+	var n atomic.Int32
+	p := iniciar(t, alm, porFuncion(func(context.Context, nucleo.SolicitudEjecucion) (adaptadores.Resultado, error) {
+		if n.Add(1) == 1 {
+			return adaptadores.Resultado{Salida: `{}`, ModeloEfectivo: "m1", Uso: nucleo.Uso{TokensEntrada: 10}}, nil
+		}
+		return adaptadores.Resultado{Uso: nucleo.Uso{TokensEntrada: 5}}, nucleo.NuevoError(nucleo.CodigoErrorAgente, "se cayó")
+	}), 1, opciones())
+	tr := esperar(t, alm, enviar(t, p, conEsquema(1)), nucleo.Fallido)
+	if tr.CodigoError != nucleo.CodigoErrorAgente || tr.Uso.TokensEntrada != 15 || tr.ModeloEfectivo != "m1" {
+		t.Fatalf("error, uso sumado y modelo: %+v", tr)
+	}
+}
+
+// En una corrección a mano los documentos van con la pregunta, no con el pedido de corrección.
+func TestDocumentosConLaPreguntaAlCorregir(t *testing.T) {
+	s := conCorreccion(solicitud("¿cuánto es?"), `{}`, nil, "no cumple")
+	m := conDocumentos(s, "[documento]").Mensajes
+	if !strings.HasPrefix(m[0].Contenido, "[documento]") || strings.Contains(m[2].Contenido, "[documento]") {
+		t.Fatalf("documentos en el mensaje equivocado: %+v", m)
+	}
+}
 
 // enOrden responde por turnos (el último se repite) y guarda las solicitudes que recibe.
 type enOrden struct {
