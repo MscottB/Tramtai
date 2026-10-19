@@ -41,7 +41,7 @@ jobs:
             tar -C "$carpeta" -czf "dist/tramtai-$version-$nombre-$arq.tar.gz" tramtai
           done
           ls -l dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: unix
           path: dist/
@@ -69,7 +69,7 @@ jobs:
         run: sh scripts/linux/empaquetar.sh "$GITHUB_REF_NAME" ${{ matrix.arq }}
       - name: Comprobar el paquete (instalar y arrancar sin pantalla)
         run: sh scripts/linux/probar-paquete.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux-app-${{ matrix.arq }}
           path: dist/
@@ -90,7 +90,7 @@ jobs:
         run: sh scripts/macos/empaquetar.sh "$GITHUB_REF_NAME"
       - name: Abrir la app y comprobar el servicio
         run: sh scripts/macos/probar-app.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: macos-app
           path: dist/
@@ -164,7 +164,7 @@ jobs:
       - name: Portable (detener)
         if: always()
         run: '& "$env:RUNNER_TEMP\portable\tramtai.exe" servicio detener --si'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows
           path: dist/
