@@ -28,6 +28,12 @@ var extensionesTexto = map[string]bool{".txt": true, ".md": true, ".markdown": t
 // extensionesConvertibles son las que markitdown convierte y /api/v1/capacidades anuncia; el resto se rechaza.
 var extensionesConvertibles = map[string]bool{".html": true, ".htm": true, ".pdf": true, ".docx": true, ".pptx": true, ".xlsx": true}
 
+// ExtensionAdmitida indica si Tramtai acepta un archivo con esa extensión: texto, convertible o ZIP.
+func ExtensionAdmitida(extension string) bool {
+	extension = strings.ToLower(extension)
+	return extensionesTexto[extension] || extensionesConvertibles[extension] || extension == ".zip"
+}
+
 // Entrada es un archivo que hay que preparar para el agente.
 type Entrada struct {
 	Ruta   string

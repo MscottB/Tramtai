@@ -101,7 +101,7 @@ func TestHistorialConHerramientas(t *testing.T) {
 	decodificarEn(t, `{"messages":[{"role":"user","content":"tiempo en Lima"},
 		{"role":"assistant","content":null,"tool_calls":[{"id":"call_1","type":"function","function":{"name":"tiempo","arguments":"{\"ciudad\":\"Lima\"}"}}]},
 		{"role":"tool","tool_call_id":"call_1","content":"18 grados"}]}`, &chat)
-	m, err := mensajes(chat.Messages)
+	m, _, err := mensajes(chat.Messages)
 	if err != nil || len(m) != 3 || m[1].Rol != "asistente" || !strings.Contains(m[1].Contenido, `"tool_calls":[{"id":"call_1","name":"tiempo"`) ||
 		m[2].Rol != "usuario" || m[2].Contenido != "Tool result for tiempo (call call_1):\n18 grados" {
 		t.Fatalf("chat: %v %#v", err, m)
@@ -111,7 +111,7 @@ func TestHistorialConHerramientas(t *testing.T) {
 	decodificarEn(t, `{"messages":[{"role":"user","content":"tiempo en Lima"},
 		{"role":"assistant","content":[{"type":"text","text":"Lo miro."},{"type":"tool_use","id":"toolu_1","name":"tiempo","input":{"ciudad":"Lima"}}]},
 		{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_1","content":[{"type":"text","text":"18 grados"}]},{"type":"text","text":"¿Y mañana?"}]}]}`, &anthropic)
-	m, err = mensajes(anthropic.Messages)
+	m, _, err = mensajes(anthropic.Messages)
 	if err != nil || len(m) != 3 || !strings.Contains(m[1].Contenido, `"content":"Lo miro."`) ||
 		m[2].Contenido != "Tool result for tiempo (call toolu_1):\n18 grados\n\n¿Y mañana?" {
 		t.Fatalf("anthropic: %v %#v", err, m)
@@ -120,7 +120,7 @@ func TestHistorialConHerramientas(t *testing.T) {
 	var entrada []mensajeEntrada
 	decodificarEn(t, `[{"role":"user","content":"tiempo en Lima"},{"type":"function_call","call_id":"call_1","name":"tiempo","arguments":"{}"},
 		{"type":"function_call_output","call_id":"call_1","output":"18 grados"}]`, &entrada)
-	if m, err = mensajes(entrada); err != nil || len(m) != 3 || m[1].Rol != "asistente" || !strings.HasPrefix(m[2].Contenido, "Tool result for tiempo") {
+	if m, _, err = mensajes(entrada); err != nil || len(m) != 3 || m[1].Rol != "asistente" || !strings.HasPrefix(m[2].Contenido, "Tool result for tiempo") {
 		t.Fatalf("responses: %v %#v", err, m)
 	}
 }
