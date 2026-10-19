@@ -148,7 +148,7 @@
             </div>
           </div>
           <div class="col-12 col-md-4">
-            <q-input v-model="filtro" dense outlined clearable debounce="150" :placeholder="t('config.buscar')">
+            <q-input v-model="filtro" dense outlined clearable debounce="150" :placeholder="t('config.buscar')" :aria-label="t('config.buscar')">
               <template #prepend><q-icon name="search" /></template>
             </q-input>
           </div>
@@ -180,7 +180,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import { useQuasar } from 'quasar'
 import { actualizacion, api, avisar, avisarError, buscarActualizacionAhora, esfuerzoEspacio, esfuerzosDe, nombreEsfuerzo, opcionModelo, reiniciarYSeguir, sesion, sistema, terminales, type EntradaConfiguracion, type EstadoPunto, type Modelo } from '../api'
-import { t } from '../i18n'
+import { idioma, t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 import SelectorEsfuerzo from '../componentes/SelectorEsfuerzo.vue'
 import SelectorModelo from '../componentes/SelectorModelo.vue'
@@ -197,7 +197,7 @@ async function leerRetencion() {
   const r = await api.retencion()
   Object.assign(retencion, { horas_resultado: r.horas_resultado, max_trabajos: r.max_trabajos })
   diasRegistro.value = Math.round((r.horas_metadatos / 24) * 100) / 100 // 30 h son 1,25 días; al guardar vuelven a 30 h
-  usoHistorial.value = { trabajos: r.uso.trabajos.toLocaleString(), mb: (r.uso.bytes / 1048576).toLocaleString(undefined, { maximumFractionDigits: 1 }) }
+  usoHistorial.value = { trabajos: r.uso.trabajos.toLocaleString(idioma.value), mb: (r.uso.bytes / 1048576).toLocaleString(idioma.value, { maximumFractionDigits: 1 }) }
 }
 async function guardarRetencion() {
   const numeros = [retencion.horas_resultado, diasRegistro.value, retencion.max_trabajos]
@@ -329,7 +329,7 @@ const textoActualizacion = computed(() => {
 // comprobado es la hora de la última consulta a GitHub, en la hora local.
 const comprobado = computed(() => {
   const c = actualizacion.value?.comprobado
-  return c ? new Date(c).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+  return c ? new Date(c).toLocaleTimeString(idioma.value, { hour: '2-digit', minute: '2-digit' }) : ''
 })
 const buscandoAhora = ref(false)
 async function buscarAhora() {

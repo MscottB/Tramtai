@@ -19,10 +19,8 @@ func preparar(cmd *exec.Cmd) { cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: t
 
 type grupo struct{ pgid int }
 
-func agrupar(cmd *exec.Cmd, memoriaMB int) (*grupo, error) {
-	if memoriaMB > 0 {
-		limitarMemoria(cmd.Process.Pid, memoriaMB)
-	}
+// agrupar no hace nada más en Unix: el grupo es el del proceso (Setpgid) y el tope de memoria lo pone conTope.
+func agrupar(cmd *exec.Cmd, _ int) (*grupo, error) {
 	return &grupo{pgid: cmd.Process.Pid}, nil
 }
 

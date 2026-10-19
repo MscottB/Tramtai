@@ -140,14 +140,19 @@ type Capa struct {
 
 // CargarCapa lee y valida un archivo YAML; si no existe devuelve una capa vacía.
 func CargarCapa(ruta string, origen Origen) (Capa, error) {
-	capa := Capa{Origen: origen, Fuente: ruta, Valores: map[string]any{}}
 	datos, err := os.ReadFile(ruta)
 	if os.IsNotExist(err) {
-		return capa, nil
+		return Capa{Origen: origen, Fuente: ruta, Valores: map[string]any{}}, nil
 	}
 	if err != nil {
-		return capa, errorConfiguracion(ruta, "", err.Error())
+		return Capa{Origen: origen, Fuente: ruta, Valores: map[string]any{}}, errorConfiguracion(ruta, "", err.Error())
 	}
+	return CargarCapaDe(datos, ruta, origen)
+}
+
+// CargarCapaDe valida el contenido YAML de ruta sin leerlo del disco: así se comprueba un cambio antes de guardarlo.
+func CargarCapaDe(datos []byte, ruta string, origen Origen) (Capa, error) {
+	capa := Capa{Origen: origen, Fuente: ruta, Valores: map[string]any{}}
 	var crudo map[string]any
 	if err := yaml.Unmarshal(datos, &crudo); err != nil {
 		return capa, errorConfiguracion(ruta, "", idioma.Tf("YAML no válido: %s", err.Error()))
@@ -269,15 +274,20 @@ func (c *Configuracion) e() *estadoConfiguracion { return c.estado.Load() }
 
 // Fijar cambia valores con el servicio en marcha, como si la capa origen los tuviera. Un valor de una capa con
 // más prioridad (por ejemplo, una variable de entorno) se respeta, igual que al cargar los archivos.
+// Dos Fijar a la vez no se pierden: si otro cambió la configuración entretanto, se vuelve a aplicar sobre la suya.
 func (c *Configuracion) Fijar(origen Origen, valores map[string]any) {
-	actual := c.e()
-	nuevo := &estadoConfiguracion{valores: maps.Clone(actual.valores), origenes: maps.Clone(actual.origenes)}
-	for clave, valor := range valores {
-		if nuevo.origenes[clave] <= origen {
-			nuevo.valores[clave], nuevo.origenes[clave] = valor, origen
+	for {
+		actual := c.e()
+		nuevo := &estadoConfiguracion{valores: maps.Clone(actual.valores), origenes: maps.Clone(actual.origenes)}
+		for clave, valor := range valores {
+			if nuevo.origenes[clave] <= origen {
+				nuevo.valores[clave], nuevo.origenes[clave] = valor, origen
+			}
+		}
+		if c.estado.CompareAndSwap(actual, nuevo) {
+			return
 		}
 	}
-	c.estado.Store(nuevo)
 }
 
 // Resolver aplica la precedencia de las capas: gana la capa de mayor prioridad,

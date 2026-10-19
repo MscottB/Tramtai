@@ -27,6 +27,9 @@ func TestMain(m *testing.M) {
 		os.Exit(0)
 	case "vacio":
 		os.Exit(0)
+	case "dormir":
+		time.Sleep(10 * time.Second)
+		os.Exit(0)
 	case "fallar":
 		fmt.Fprintln(os.Stderr, "MissingDependencyException: falta el extra pdf")
 		os.Exit(1)
@@ -371,5 +374,44 @@ func TestVerificarCargaDeOtraAPI(t *testing.T) {
 		if err := p.Verificar([]string{carga.ID}, otra); nucleo.CodigoDe(err) != nucleo.CodigoEntradaNoDisponible {
 			t.Fatalf("%q no puede citar la carga de tienda: %v", otra, err)
 		}
+	}
+}
+
+// Guardar y purgar a la vez (-race): la carga que se vuelve a subir no queda a medias ni da error.
+func TestGuardarMientrasSePurga(t *testing.T) {
+	c, err := AbrirCargas(t.TempDir(), time.Hour, 1<<20, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var grupo sync.WaitGroup
+	for i := range 20 {
+		grupo.Go(func() {
+			if i%2 == 0 {
+				if _, err := c.Guardar("a.txt", "", strings.NewReader("mismo contenido")); err != nil {
+					t.Error(err)
+				}
+			} else if _, err := c.Purgar(nil, time.Now()); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+	grupo.Wait()
+	carga, err := c.Guardar("a.txt", "", strings.NewReader("mismo contenido"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := c.Obtener(carga.ID); err != nil {
+		t.Fatalf("la carga no quedó entera: %v", err)
+	}
+}
+
+// Si vence el plazo del trabajo (no el del conversor), el error no culpa a conversion.tiempo_limite_segundos.
+func TestPlazoDelTrabajoNoEsDelConversor(t *testing.T) {
+	c := conversor(t, "dormir")
+	ctx, cancelar := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	defer cancelar()
+	_, err := c.Convertir(ctx, []Entrada{escribir(t, "a.docx", []byte("x"))})
+	if err == nil || strings.Contains(err.Error(), "tiempo_limite") {
+		t.Fatalf("el plazo vencido era el del trabajo: %v", err)
 	}
 }

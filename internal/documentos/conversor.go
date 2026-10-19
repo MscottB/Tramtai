@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -208,6 +209,7 @@ func (c *Conversor) markitdown(ctx context.Context, e Entrada, dir string) (stri
 	if c.Plugins {
 		args = append(args, "--use-plugins")
 	}
+	padre := ctx
 	if c.TiempoLimite > 0 {
 		var cancelar context.CancelFunc
 		ctx, cancelar = context.WithTimeout(ctx, c.TiempoLimite)
@@ -222,7 +224,8 @@ func (c *Conversor) markitdown(ctx context.Context, e Entrada, dir string) (stri
 			salida.WriteString(linea + "\n")
 			return nil
 		})
-	if ctx.Err() == context.DeadlineExceeded {
+	// Solo es culpa del conversor si venció su plazo; si venció el del trabajo, ese error es el del trabajo.
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) && padre.Err() == nil {
 		return "", nucleo.NuevoError(nucleo.CodigoConversionFallida, idioma.Tf("%s: la conversión superó conversion.tiempo_limite_segundos", e.Nombre))
 	}
 	if err != nil {

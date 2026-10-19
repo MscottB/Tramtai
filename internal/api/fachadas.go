@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"sort"
@@ -76,7 +77,11 @@ func (p politica) revisar(campos map[string]json.RawMessage, tolerante bool) ([]
 
 // leerFachada lee el cuerpo, aplica la política de parámetros y lo decodifica en destino.
 func (s *Servidor) leerFachada(w http.ResponseWriter, r *http.Request, p politica, destino any) ([]string, error) {
-	datos, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maximoCuerpo))
+	var datos []byte
+	err := conPlazoDeLectura(w, plazoLectura, func() (err error) {
+		datos, err = io.ReadAll(http.MaxBytesReader(w, r.Body, maximoCuerpo))
+		return err
+	})
 	if err != nil {
 		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("cuerpo demasiado grande o ilegible"))
 	}
@@ -218,17 +223,36 @@ func (s *Servidor) aceptarFachada(w http.ResponseWriter, r *http.Request, sol nu
 	return sol, t, err
 }
 
-// ejecutarFachada sigue el trabajo; si el cliente se desconecta y compatibilidad.cancelar_al_desconectar está
-// activo, lo cancela, porque los clientes de estas API esperan que cerrar la conexión detenga la generación.
+// errDesconectado indica que el cliente cerró la conexión mientras se seguía el trabajo: ya no hay a quién responder.
+var errDesconectado = errors.New("el cliente se desconectó")
+
+// ejecutarFachada sigue el trabajo. Si el cliente se desconecta (su petición se cancela o falla escribirle) y
+// compatibilidad.cancelar_al_desconectar está activo, lo cancela, porque los clientes de estas API esperan que cerrar la
+// conexión detenga la generación, y devuelve errDesconectado. Cualquier otro error (de la base, por ejemplo) se
+// devuelve tal cual para responderlo, sin cancelar el trabajo.
 func (s *Servidor) ejecutarFachada(r *http.Request, t nucleo.Trabajo, alTexto func(string) error, latido func() error) (nucleo.Trabajo, error) {
+	escribir := false // el error vino de escribir al cliente
+	var conLatido func() error
+	if latido != nil {
+		conLatido = func() error {
+			err := latido()
+			escribir = escribir || err != nil
+			return err
+		}
+	}
 	final, err := s.seguir(r.Context(), t.ID, 0, func(e persistencia.Evento) error {
 		if e.Tipo == "texto" && alTexto != nil {
-			return alTexto(e.Datos)
+			err := alTexto(e.Datos)
+			escribir = escribir || err != nil
+			return err
 		}
 		return nil
-	}, latido)
-	if err != nil && s.Config.Booleano("compatibilidad.cancelar_al_desconectar") {
-		_, _ = s.Planificador.Cancelar(context.Background(), t.ID)
+	}, conLatido)
+	if err != nil && (escribir || r.Context().Err() != nil) {
+		if s.Config.Booleano("compatibilidad.cancelar_al_desconectar") {
+			_, _ = s.Planificador.Cancelar(context.Background(), t.ID)
+		}
+		return final, errDesconectado
 	}
 	return final, err
 }

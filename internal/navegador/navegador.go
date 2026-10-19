@@ -17,5 +17,9 @@ func Abrir(url string) error {
 	default:
 		cmd = exec.Command("xdg-open", url)
 	}
-	return cmd.Start()
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	go cmd.Wait() // recoge el proceso al terminar: en Unix no queda zombi mientras viva la TUI o la app
+	return nil
 }

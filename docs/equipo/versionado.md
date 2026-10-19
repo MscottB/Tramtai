@@ -62,3 +62,15 @@ git push origin --tags             # sube las etiquetas
 4. Al subir la etiqueta, `.github/workflows/publicar.yml` prueba en Windows, Linux y macOS, compila en cada sistema y crea el release de GitHub con las notas de la etiqueta: en Windows el instalador y el `.zip` portable; en Linux los `.deb` y `.rpm` (amd64 y arm64); en macOS el `.dmg` universal; los `.tar.gz` de la CLI para Linux y macOS; y `SHA256SUMS.txt` con todos. Falla si la versión calculada no coincide con la etiqueta o si alguna app no arranca.
 
 Nota: Go no admite `+metadatos` como versión de módulo. No afecta, porque Tramtai es una aplicación y no una biblioteca importable.
+
+## Firma de las actualizaciones y permisos de Publicar
+
+- **Firma.** Publicar firma `SHA256SUMS.txt` con ed25519 (`scripts/firmar`) y sube `SHA256SUMS.txt.sig`. La clave privada es el secreto `FIRMA_ACTUALIZACIONES` del repositorio y solo llega al paso que firma; las públicas están en la lista `clavesPublicasB64` de `internal/actualizacion/firma.go` (una firma vale si la verifica cualquiera). Antes de crear el release, Publicar comprueba la firma con esas mismas claves (`go run ./scripts/firmar -comprobar`), en un job sin caché de Go porque es el que tiene el secreto. La actualización de un clic de Windows no instala una versión sin firma válida.
+- **Cambiar la clave**, en tres pasos:
+  1. `go run ./scripts/firmar -generar` imprime la pública nueva por la salida estándar y la semilla por stderr. La semilla va directa a otro secreto (por ejemplo, `FIRMA_ACTUALIZACIONES_NUEVA`), sin pasar por el disco.
+  2. Un release añade la pública nueva a `clavesPublicasB64`, junto a la vieja, y se firma todavía con el secreto viejo.
+  3. Cuando las copias instaladas ya tienen ese release, se pone la semilla nueva en `FIRMA_ACTUALIZACIONES`. Más adelante, otro release puede quitar la pública vieja.
+
+  Si se cambia el secreto antes del paso 2, las copias instaladas no podrán actualizarse con un clic.
+- **Permisos.** Publicar tiene `contents: read` por defecto: los jobs que compilan y prueban ejecutan código de terceros. Solo `publicar` (crea el release) y `paquetes` (sube Homebrew y winget a `main`) tienen `contents: write`, y los checkouts del resto no guardan el token. wingetcreate va fijado por versión y SHA-256, y `WINGET_TOKEN` solo llega al paso que envía el manifiesto.
+

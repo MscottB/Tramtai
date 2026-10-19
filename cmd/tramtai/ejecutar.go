@@ -20,6 +20,7 @@ import (
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
 	"tramtai/internal/planificador"
+	"tramtai/internal/servicio"
 	"tramtai/internal/version"
 )
 
@@ -162,6 +163,14 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 	if err != nil {
 		return err
 	}
+	// cli.db guarda una instancia por ejecución: al terminar se aplica la retención a todas (antes de cerrar la base).
+	defer func() {
+		if ids, err := alm.Instancias(context.Background()); err == nil {
+			if err := servicio.PurgarBase(context.Background(), alm, cargas, c, ids...); err != nil {
+				fmt.Fprintln(cmd.ErrOrStderr(), idioma.Tf("no se pudo aplicar la retención: %s", nucleo.MensajeDe(err)))
+			}
+		}
+	}()
 	for _, ruta := range archivos {
 		archivo, err := os.Open(ruta)
 		if err != nil {
@@ -198,17 +207,33 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 	errOut, out := cmd.ErrOrStderr(), cmd.OutOrStdout()
 	fmt.Fprintf(errOut, idioma.T("tramtai %s · %s · agente %s · modelo %s\n\n"), version.Texto(), t.ID, s.Agente, vacio(t.ModeloEnviado))
 
-	interrupcion, parar := signal.NotifyContext(cmd.Context(), os.Interrupt)
-	defer parar()
+	// Ctrl+C cancela el trabajo; un segundo Ctrl+C sale sin esperar a que el agente lo confirme.
+	senales := make(chan os.Signal, 2)
+	signal.Notify(senales, os.Interrupt)
+	defer signal.Stop(senales)
 	inicio, ultimo, cancelado := time.Now(), 0, false
 	var impreso strings.Builder
 	for {
-		if interrupcion.Err() != nil && !cancelado {
+		select {
+		case <-senales:
+			if cancelado {
+				fmt.Fprintln(errOut, idioma.T("se sale sin esperar a que termine la cancelación"))
+				// Se detiene el planificador (termina el árbol del agente, que en Unix tiene su propio grupo y no recibe
+				// el Ctrl+C) con un tope, para salir aunque no lo confirme.
+				detenido := make(chan struct{})
+				go func() { p.Detener(); close(detenido) }()
+				select {
+				case <-detenido:
+				case <-time.After(5 * time.Second):
+				}
+				os.Exit(130)
+			}
 			cancelado = true
-			fmt.Fprintln(errOut, idioma.T("\ncancelando…"))
+			fmt.Fprintln(errOut, idioma.T("\ncancelando… (Ctrl+C otra vez para salir sin esperar)"))
 			if _, err := p.Cancelar(context.Background(), t.ID); err != nil {
 				return err
 			}
+		default:
 		}
 		eventos, err := alm.Eventos(context.Background(), t.ID, ultimo)
 		if err != nil {

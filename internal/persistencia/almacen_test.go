@@ -2,6 +2,7 @@ package persistencia
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -448,5 +449,33 @@ func TestGuardarContexto(t *testing.T) {
 	}
 	if n, err := a.Contexto(ctx, "claude", "claude-haiku-4-5"); err != nil || n != 200000 {
 		t.Fatalf("el último gana: %d %v", n, err)
+	}
+}
+
+// Una carpeta con %, # o espacios (por ejemplo «Datos #2») no corta la ruta de la base ni se lee como parámetros.
+func TestAbrirEnCarpetaConSignos(t *testing.T) {
+	ruta := filepath.Join(t.TempDir(), "a#b%c d", "instancia.db")
+	if err := os.MkdirAll(filepath.Dir(ruta), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	a, err := Abrir(ruta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.Cerrar()
+	if _, err := os.Stat(ruta); err != nil {
+		t.Fatalf("la base no quedó en su carpeta: %v", err)
+	}
+}
+
+// Instancias lista las instancias con trabajos en la base, cada una una vez (tramtai ejecutar --directo las purga todas).
+func TestInstancias(t *testing.T) {
+	a := abrir(t)
+	for _, id := range []string{"cli-b", "cli-a", "cli-b"} {
+		aceptar(t, a, trabajo(id, "hola"), "")
+	}
+	ids, err := a.Instancias(context.Background())
+	if err != nil || strings.Join(ids, ",") != "cli-a,cli-b" {
+		t.Fatalf("%v %v", ids, err)
 	}
 }

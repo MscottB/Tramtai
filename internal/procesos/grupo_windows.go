@@ -3,6 +3,7 @@
 package procesos
 
 import (
+	"fmt"
 	"os/exec"
 	"strconv"
 	"syscall"
@@ -68,6 +69,7 @@ func reanudar(pid uint32) error {
 	}
 	defer windows.CloseHandle(instantanea)
 	hilo := windows.ThreadEntry32{Size: uint32(unsafe.Sizeof(windows.ThreadEntry32{}))}
+	reanudados := 0
 	for err = windows.Thread32First(instantanea, &hilo); err == nil; err = windows.Thread32Next(instantanea, &hilo) {
 		if hilo.OwnerProcessID != pid {
 			continue
@@ -81,9 +83,17 @@ func reanudar(pid uint32) error {
 		if err != nil {
 			return err
 		}
+		reanudados++
+	}
+	if reanudados == 0 {
+		// Sin ningún hilo reanudado el proceso seguiría suspendido hasta el plazo del trabajo.
+		return fmt.Errorf("no se encontró ningún hilo del proceso %d para reanudarlo", pid)
 	}
 	return nil
 }
+
+// conTope no cambia la orden en Windows: el tope de memoria lo pone el Job Object (agrupar).
+func conTope(programa string, args []string, _ int) (string, []string) { return programa, args }
 
 // terminar finaliza el árbol completo.
 // shortcut: en Windows no hay parada cooperativa (CTRL_BREAK exige consola compartida); se termina el job directamente.

@@ -186,9 +186,15 @@ type ejecutor interface {
 	ExecContext(ctx context.Context, consulta string, args ...any) (sql.Result, error)
 }
 
+// rutaURI escribe ruta para un URI file: de SQLite: con barras y con %, ? y # escapados, que si no cortarían la ruta o
+// se leerían como parámetros (una carpeta «Datos #2» o «100%»).
+func rutaURI(ruta string) string {
+	return strings.NewReplacer("%", "%25", "?", "%3F", "#", "%23").Replace(filepath.ToSlash(ruta))
+}
+
 // Abrir abre o crea la base en WAL y aplica las migraciones pendientes.
 func Abrir(ruta string) (*Almacen, error) {
-	db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(ruta)+"?_pragma=auto_vacuum(2)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)")
+	db, err := sql.Open("sqlite", "file:"+rutaURI(ruta)+"?_pragma=auto_vacuum(2)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)")
 	if err != nil {
 		return nil, err
 	}
@@ -739,8 +745,12 @@ func (a *Almacen) UsoHistorial(ctx context.Context, instancia string) (UsoHistor
 		return u, err
 	}
 	var paginas, tamano int64
-	a.db.QueryRowContext(ctx, "PRAGMA page_count").Scan(&paginas)
-	a.db.QueryRowContext(ctx, "PRAGMA page_size").Scan(&tamano)
+	if err := a.db.QueryRowContext(ctx, "PRAGMA page_count").Scan(&paginas); err != nil {
+		return u, err
+	}
+	if err := a.db.QueryRowContext(ctx, "PRAGMA page_size").Scan(&tamano); err != nil {
+		return u, err
+	}
 	u.Bytes = paginas * tamano
 	return u, nil
 }
@@ -814,6 +824,24 @@ func (a *Almacen) Contexto(ctx context.Context, agente, modelo string) (int, err
 		return 0, nil
 	}
 	return tokens, err
+}
+
+// Instancias devuelve las instancias que tienen trabajos en la base.
+func (a *Almacen) Instancias(ctx context.Context) ([]string, error) {
+	filas, err := a.db.QueryContext(ctx, `SELECT DISTINCT instancia FROM trabajos ORDER BY instancia`)
+	if err != nil {
+		return nil, err
+	}
+	defer filas.Close()
+	var ids []string
+	for filas.Next() {
+		var id string
+		if err := filas.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, filas.Err()
 }
 
 // CargasEnUso devuelve las cargas que algún trabajo puede necesitar todavía: activos o terminados que aún

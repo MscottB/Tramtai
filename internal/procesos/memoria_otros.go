@@ -2,6 +2,6 @@
 
 package procesos
 
-// limitarMemoria no hace nada fuera de Linux y Windows: macOS no permite fijar el tope a otro proceso.
-// shortcut: sin tope en macOS; si hiciera falta, lanzar el hijo a través de un ayudante que fije setrlimit.
-func limitarMemoria(int, int) {}
+// conTope no cambia la orden fuera de Linux y Windows: macOS no hace cumplir RLIMIT_AS.
+// shortcut: sin tope de memoria en macOS; si hiciera falta, vigilar el tamaño del proceso desde Tramtai.
+func conTope(programa string, args []string, _ int) (string, []string) { return programa, args }

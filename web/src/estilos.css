@@ -1141,3 +1141,13 @@ body.body--dark .tablero {
   flex-wrap: nowrap;
   white-space: nowrap;
 }
+
+/* Texto solo para lectores de pantalla (el estado final de un trabajo, por ejemplo). */
+.solo-lector {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

@@ -13,7 +13,7 @@
 | M5 | ✅ | Servicio único con instancias global y por proyecto por token, descriptor y segundo plano, puntos de acceso con recarga en caliente, terminal interactiva |
 | M6 | ✅ | Web UI embebida (Vue 3 + Quasar) con sesión por cookie y CSRF, aplicación de escritorio Wails v3 con bandeja, y recorrido compartido: CLI, terminal, Web y escritorio sobre los mismos trabajos |
 | M7 | ✅ | Retención con purga periódica (resultado, entradas, eventos, metadatos, idempotencia y cargas), 410 `resultado_expirado`, cierre con plazo de drenaje y recuperación verificada tras matar el servicio |
-| M8 | ⬜ | Distribución, documentación y matriz multiplataforma |
+| M8 | ✅ | Distribución (instalador, portable, .deb, .rpm, .dmg, Homebrew, winget), documentación y matriz multiplataforma |
 
 ## Hoja de ruta por releases
 
@@ -37,8 +37,11 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | v0.45.0 | Antigravity sin herramientas (hook que las niega, comprobado con el CLI real), con el mensaje por stdin, respuesta en vivo y esfuerzo; textos de Copilot para cualquier plan; notas de versión cortas, para quien usa Tramtai y en dos idiomas; página del producto renovada con el logo de GitHub | ✅ |
 | v0.46 | Respuestas JSON mejoradas (`json.md`): plantillas listas y editor de campos en Probar y Mis APIs, validación que explica cada problema (`errores_salida`, `POST /api/v1/esquemas/validar`), correcciones configurables (`salida.reintentos`, `reintentos_salida`, 0 por defecto) y «Corregir» a mano; GitHub Copilot con su nombre completo en todas partes | ✅ |
 | v0.46.1 | macOS identifica al dueño de la conexión (`net.inet.tcp.pcblist_n`): las etiquetas `cli` y `terminal` valen y el navegador entra a la Web UI sin código; el CI de macOS vuelve a bloquear; prueba con carreras arreglada; Publicar más corto (wails3 en caché desde `main` y pruebas de Windows en paralelo) | ✅ |
-| v0.47 | OpenCode como agente nuevo (spec en `opencode.md`, rama `feat/opencode`; M0 hecha) | ⬜ |
-| v0.48 | Hermes Agent como agente nuevo (instalado; falta `hermes setup` del usuario y su M0) | ⬜ |
+| v0.47 | Correcciones de la revisión completa del código (`correcciones.md`): Publicar con permisos mínimos y actualizaciones firmadas, configuración atómica, las mismas reglas para las APIs en la Web, la CLI y la terminal, trabajos que no quedan colgados, errores pequeños de Go y de la Web UI, Mis APIs en la bandeja con muchas APIs y el mapa del sitio como el de la app | ✅ |
+| v0.48 | Portable de verdad: los datos junto al `.exe` (`portable.md`) | ⬜ |
+| v0.49 | Orden del código: dividir los archivos grandes (`tui.go`, `web.go`, `planificador.go`, `api.ts`, `App.vue`, `Accesos.vue`), la CLI y la terminal sobre la API del servicio, contrato cliente/servidor ligero para el escritorio, CI reutilizable desde Publicar, Dependabot, índice de `docs/equipo/` y planes agrupados por release, pruebas de Codex, Claude y la Web UI, y rendimiento (`ModelosEfectivos`, `capacidades` en paralelo) | ⬜ |
+| v0.50 | OpenCode como agente nuevo (spec en `opencode.md`, rama `feat/opencode`; M0 hecha) | ⬜ |
+| v0.51 | Hermes Agent como agente nuevo (instalado; falta `hermes setup` del usuario y su M0) | ⬜ |
 | — | Webhooks al terminar un trabajo y avisos de presupuesto (`presupuesto.aviso`, `presupuesto.agotado`) | ⬜ |
 | — | Comparar agentes en Probar | ⬜ |
 | — | Tramtai como servidor MCP | ⬜ |
@@ -50,10 +53,8 @@ Pendientes ya asignados:
 
 ## Tareas
 
-- [ ] **Activar CI/CD y la página al hacer público el repositorio.** Los flujos ya están en `.github/workflows/`: `ci.yml` (vet y pruebas en Windows, Linux y macOS, y la Web UI), `publicar.yml` (en cada etiqueta `v*` compila, genera el instalador y crea el release con `SHA256SUMS.txt`) y `paginas.yml` (publica `site/` en GitHub Pages). En repositorios públicos los runners estándar no consumen minutos ni el almacenamiento de la cuenta. Falta: hacer público el repo, elegir *Settings → Pages → Source: GitHub Actions* y comprobar la primera ejecución de cada flujo.
 - [ ] Firma de código del instalador y de los `.exe` (SmartScreen avisa de «aplicación desconocida» sin ella): Azure Trusted Signing o un certificado OV.
 - [ ] Ejecutar M0b con claves reales y registrar el resultado en [M0B.md](M0B.md).
-- [ ] Compilar y probar la aplicación de escritorio en macOS y Linux (necesita CGO y WebKit; hoy solo Windows).
 - [ ] Revisar Wails en cada beta (fijado en v3.0.0-beta.28) y migrar a la versión estable cuando salga.
 - [ ] Historial permanente, cifrado propio y cache documental (`retencion.guardar_historial`, `cifrado_aplicacion`, `cache_conversion_habilitada`): hoy la configuración los rechaza con «no soportado todavía».
 - [ ] Probar con una clave real los adaptadores `gemini` y `antigravity` (hoy con servidor y CLI simulados). En `agy`, el canario con `GEMINI_API_KEY` y `modelProvider: gemini` (`go test -tags canario`), y la M0 del hook en Linux y macOS; si pasan, `PermitidoEnApps: true` en su ficha.

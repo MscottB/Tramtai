@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // nombreArchivo es la entrada de ~/.config/autostart; las pruebas usan otra para no tocar la real.
@@ -25,9 +26,17 @@ func contenido(escritorio string) string {
 Type=Application
 Name=Tramtai
 Comment=Tramtai en la bandeja con el servicio en marcha
-Exec="%s" --oculto
+Exec=%s --oculto
 Icon=tramtai
 Terminal=false
 X-GNOME-Autostart-enabled=true
-`, escritorio)
+`, escaparExec(escritorio))
+}
+
+// escaparExec entrecomilla una ruta para la clave Exec de freedesktop: dentro de las comillas se escapan ", `, $ y \, y
+// después se aplica el escape de las cadenas del archivo (cada \ se duplica); % se escribe %% porque introduce códigos
+// de campo como %u.
+func escaparExec(ruta string) string {
+	citada := strings.NewReplacer(`\`, `\\`, `"`, `\"`, "`", "\\`", `$`, `\$`).Replace(ruta)
+	return `"` + strings.NewReplacer(`\`, `\\`, `%`, `%%`).Replace(citada) + `"`
 }

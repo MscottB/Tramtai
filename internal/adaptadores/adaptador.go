@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/sync/singleflight"
+
 	"tramtai/internal/nucleo"
 )
 
@@ -48,6 +50,14 @@ type resolucion struct {
 	cuando time.Time
 }
 
+// resolviendo comparte una resolución en curso entre peticiones: mientras la caché está vacía, varias consultas a
+// /api/v1/modelos no lanzan cada una su CLI.
+var resolviendo singleflight.Group
+
+// plazoResolver acota cada resolución, aunque quien la pide no tenga plazo: un CLI colgado antes de contestar (red,
+// autenticación) no deja su proceso vivo para siempre. Es variable para las pruebas.
+var plazoResolver = 60 * time.Second
+
 // ModeloConcreto devuelve el modelo que usará a para modelo, o "" si el adaptador no sabe decirlo.
 func ModeloConcreto(ctx context.Context, a Adaptador, agente, modelo string) string {
 	r, ok := a.(Resolvedor)
@@ -58,12 +68,17 @@ func ModeloConcreto(ctx context.Context, a Adaptador, agente, modelo string) str
 	if v, ok := resueltos.Load(clave); ok && time.Since(v.(resolucion).cuando) < 6*time.Hour {
 		return v.(resolucion).modelo
 	}
-	concreto, err := r.ResolverModelo(ctx, modelo)
-	if err != nil || concreto == "" {
-		return ""
-	}
-	resueltos.Store(clave, resolucion{concreto, time.Now()})
-	return concreto
+	v, _, _ := resolviendo.Do(clave, func() (any, error) {
+		ctx, cancelar := context.WithTimeout(ctx, plazoResolver)
+		defer cancelar()
+		concreto, err := r.ResolverModelo(ctx, modelo)
+		if err != nil || concreto == "" {
+			return "", nil
+		}
+		resueltos.Store(clave, resolucion{concreto, time.Now()})
+		return concreto, nil
+	})
+	return v.(string)
 }
 
 // Simulado es un agente determinista para pruebas: espera Demora y devuelve Respuesta,

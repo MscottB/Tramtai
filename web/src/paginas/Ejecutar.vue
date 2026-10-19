@@ -132,11 +132,13 @@
                 <div v-if="final?.salida" class="text-caption texto-suave q-mt-md">{{ lineasMarcadas ? t('ejecutar.respuestaMarcada') : t('ejecutar.respuestaRecibida') }}</div>
               </div>
               <!-- La marca no es solo color: cada línea con problema lleva un icono con su texto para lectores de pantalla. -->
-              <div v-if="lineasMarcadas" class="bloque-codigo sin-ajuste respuesta-marcada" aria-live="polite">
+              <div v-if="lineasMarcadas" class="bloque-codigo sin-ajuste respuesta-marcada">
                 <div v-for="(l, i) in lineasMarcadas" :key="i" :class="{ 'respuesta-marcada__linea': l.marcada }">{{ l.texto }}<q-icon v-if="l.marcada"
                   name="o_error_outline" color="negative" size="14px" class="q-ml-sm" role="img" :aria-label="t('ejecutar.lineaConProblema')" /></div>
               </div>
-              <div v-else aria-live="polite"><SalidaTrabajo :texto="salida" /></div>
+              <!-- Sin aria-live: un lector de pantalla leería cada fragmento según llega. Se anuncia solo el final. -->
+              <div v-else :aria-busy="activo"><SalidaTrabajo :texto="salida" /></div>
+              <span class="solo-lector" role="status">{{ final ? estadoInfo(final.estado).etiqueta : '' }}</span>
               <div v-if="activo && !salida" class="row items-center texto-suave q-gutter-x-sm">
                 <q-spinner-dots color="primary" size="24px" /><span>{{ estadoInfo(estado).etiqueta }}…</span>
               </div>
@@ -153,7 +155,7 @@
             <q-card-section class="metadatos">
               <Linea :agente="final.solicitud.agente" :modelo="final.modelo_efectivo || final.modelo_enviado" />
               <span v-if="esfuerzoFinal"><q-icon name="o_psychology" />{{ esfuerzoFinal }}</span>
-              <span><q-icon name="o_data_usage" />{{ final.uso.tokens_entrada }} → {{ final.uso.tokens_salida }} tokens</span>
+              <span><q-icon name="o_data_usage" />{{ final.uso.tokens_entrada }} → {{ final.uso.tokens_salida }} {{ t('comun.tokens') }}</span>
               <span v-if="final.uso.costo_usd"><q-icon name="o_payments" />US$ {{ final.uso.costo_usd.toFixed(4) }}</span>
               <span v-if="final.terminado_en"><q-icon name="o_timer" />{{ duracion(final.creado_en, final.terminado_en) }}</span>
             </q-card-section>
@@ -162,10 +164,10 @@
       </div>
     </div>
 
-    <q-dialog v-model="dialogoGuardar">
+    <q-dialog v-model="dialogoGuardar" aria-labelledby="titulo-guardar-api">
       <q-card style="width: 520px; max-width: 95vw">
         <q-card-section>
-          <div class="titulo-seccion">{{ t('ejecutar.guardarApi') }}</div>
+          <div id="titulo-guardar-api" class="titulo-seccion">{{ t('ejecutar.guardarApi') }}</div>
           <div class="texto-suave text-body2">{{ t('ejecutar.guardarTexto') }}</div>
         </q-card-section>
         <q-form @submit="guardarComoApi">
@@ -185,10 +187,10 @@
     <VerComoCodigo v-model="dialogoCodigo" :ejemplos="ejemplosCodigo" :aviso="editando ? t('codigo.recetaEnApi', { nombre: editando }) : undefined" />
 
     <!-- Al cerrarse se olvida la clave mostrada: no queda en memoria de la página. -->
-    <q-dialog v-model="dialogoCreada" @hide="creada = undefined">
+    <q-dialog v-model="dialogoCreada" aria-labelledby="titulo-api-creada" @hide="creada = undefined">
       <q-card style="width: 640px; max-width: 95vw">
         <q-card-section>
-          <div class="titulo-seccion">{{ t('ejecutar.apiCreada', { nombre: creada?.nombre ?? '' }) }}</div>
+          <div id="titulo-api-creada" class="titulo-seccion">{{ t('ejecutar.apiCreada', { nombre: creada?.nombre ?? '' }) }}</div>
           <div class="texto-suave text-body2">{{ t('ejecutar.apiCreadaTexto') }}</div>
           <q-banner rounded dense class="aviso-caja q-mt-sm">
             <template #avatar><q-icon name="o_lock" color="warning" /></template>{{ t('puntos.claveUnaVez') }}
@@ -293,7 +295,12 @@ onMounted(async () => {
     }
   }
 })
-onUnmounted(() => fuente?.close()) // el trabajo sigue en el servicio aunque se cierre la página
+// desmontado: la página se cerró mientras cargaba; seguir no debe abrir la conexión en vivo después.
+let desmontado = false
+onUnmounted(() => {
+  desmontado = true
+  fuente?.close() // el trabajo sigue en el servicio aunque se cierre la página
+})
 
 async function ejecutar() {
   if (activo.value || enviando.value || !mensaje.value.trim()) return
@@ -355,7 +362,8 @@ async function verCodigo() {
   let solicitud = solicitudDe([], esquema)
   if (editando.value) solicitud = { mensajes: solicitud.mensajes, perfil: solicitud.perfil, ejecucion: solicitud.ejecucion }
   else if (!receta.value.modelo && !receta.value.esfuerzo && esfuerzoEspacio(catalogo.value)) solicitud.esfuerzo = esfuerzoEspacio(catalogo.value)
-  if (!solicitud.mensajes[0].contenido.trim()) solicitud.mensajes[0].contenido = archivos.value?.length ? t('ejemplos.mensaje') : t('conectar.hola')
+  const primero = solicitud.mensajes?.[0]
+  if (primero && !primero.contenido.trim()) primero.contenido = archivos.value?.length ? t('ejemplos.mensaje') : t('conectar.hola')
   ejemplosCodigo.value = ejemplosDe({ url, modelo, contratos,
     prueba: { solicitud, archivos: (archivos.value ?? []).map((a) => a.name) } })
   dialogoCodigo.value = true
@@ -363,6 +371,7 @@ async function verCodigo() {
 
 // seguir muestra los eventos en vivo; EventSource se reconecta solo y reanuda con Last-Event-ID.
 function seguir(nuevo: Trabajo) {
+  if (desmontado) return
   fuente?.close()
   trabajo.value = nuevo
   final.value = undefined
@@ -416,6 +425,7 @@ function seguir(nuevo: Trabajo) {
 async function terminar(id: string) {
   try {
     const terminado = await api.trabajo(id)
+    if (trabajo.value?.id !== id) return // entretanto se abrió otro trabajo: estos datos no son suyos
     estado.value = terminado.estado
     // Con salida estructurada el texto en vivo puede diferir del resultado validado: se muestra el resultado.
     if (terminado.estado === 'completado' && terminado.salida !== undefined && terminado.salida !== salida.value) salida.value = terminado.salida
@@ -427,7 +437,7 @@ async function terminar(id: string) {
   } catch (e) {
     avisarError(e)
   } finally {
-    activo.value = false
+    if (trabajo.value?.id === id) activo.value = false
   }
 }
 

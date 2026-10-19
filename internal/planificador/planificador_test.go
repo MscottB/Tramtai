@@ -1351,3 +1351,20 @@ func TestIntentoSinEsfuerzoConCopilotAuto(t *testing.T) {
 		t.Fatalf("copilot con un modelo concreto: esfuerzo %q", i.Esfuerzo)
 	}
 }
+
+// Si la base no puede guardar un cambio de estado (aquí está cerrada), cambiar no lo da por hecho y queda en el
+// registro, en lugar de perderse en silencio con el trabajo colgado.
+func TestCambiarConLaBaseCerrada(t *testing.T) {
+	alm := abrir(t)
+	var registro strings.Builder
+	opc := opciones()
+	opc.Registros = &registro
+	p := Nuevo(alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}}, NuevosSemaforos(map[string]int{"simulado": 1}), opc)
+	alm.Cerrar()
+	if p.cambiar("trabajo_x", nucleo.Ejecutando, nucleo.ValidandoSalida, persistencia.Cambio{}) {
+		t.Fatal("un cambio que la base no guardó se dio por hecho")
+	}
+	if !strings.Contains(registro.String(), "trabajo_x no se pudo pasar de ejecutando a validando_salida") {
+		t.Fatalf("registro: %q", registro.String())
+	}
+}

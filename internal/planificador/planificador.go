@@ -246,6 +246,21 @@ func (p *Planificador) permitidoParaOrigen(t nucleo.Trabajo) error {
 	return nil
 }
 
+// anotar escribe en el registro del servicio un problema que no tiene a quién devolverse (un error de la base dentro de
+// la ejecución).
+func (p *Planificador) anotar(formato string, args ...any) {
+	if p.opc.Registros != nil {
+		fmt.Fprintf(p.opc.Registros, "%s %s "+formato+"\n", append([]any{time.Now().Format("15:04:05"), p.opc.Instancia}, args...)...)
+	}
+}
+
+// evento guarda un evento del trabajo; si la base no puede, lo anota en el registro en lugar de perderlo en silencio.
+func (p *Planificador) evento(id, tipo, datos string) {
+	if err := p.almacen.AgregarEvento(context.Background(), id, tipo, datos); err != nil {
+		p.anotar("%s no se pudo guardar el evento %s: %v", id, tipo, err)
+	}
+}
+
 // registrar escribe una línea legible por trabajo, por ejemplo:
 // 10:01:22 global completado trabajo_dc76… claude/claude-haiku-4-5 · API soporte · 5.2s · 577→40 tokens
 func (p *Planificador) registrar(t nucleo.Trabajo, evento string) {
@@ -656,7 +671,7 @@ func (p *Planificador) procesar(id string, esperando func()) {
 	}
 	medida := medirEntrada(solicitud, documentos)
 	if datos, err := json.Marshal(medida); err == nil {
-		_ = p.almacen.AgregarEvento(fondo, id, "entrada", string(datos))
+		p.evento(id, "entrada", string(datos))
 	}
 	if !p.cambiar(id, desde, nucleo.EsperandoAgente, persistencia.Cambio{}) {
 		return
@@ -671,7 +686,7 @@ func (p *Planificador) procesar(id string, esperando func()) {
 	if solicitud.ModoContexto == "consciente_proyecto" {
 		solicitud.RaizProyecto = p.opc.RaizConfiable
 		// Se declara de forma visible qué contexto se carga antes de ejecutar.
-		_ = p.almacen.AgregarEvento(fondo, id, "aviso", idioma.Tf("modo consciente_proyecto: el agente trabaja en %s"+
+		p.evento(id, "aviso", idioma.Tf("modo consciente_proyecto: el agente trabaja en %s"+
 			" y carga las reglas del proyecto y de sus carpetas superiores (CLAUDE.md, AGENTS.md, GEMINI.md o"+
 			" .github/copilot-instructions.md, según el agente), con las mismas restricciones de herramientas que en modo aislado y"+
 			" sin sesión persistente; con autenticación por suscripción algunos CLI cargan también las reglas del usuario", p.opc.RaizConfiable))
@@ -748,7 +763,7 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		if codigo == nucleo.CodigoEntradaDemasiadoGrande {
 			aviso = idioma.Tf("%s; sigue con %s", nucleo.MensajeDe(err), siguiente)
 		}
-		_ = p.almacen.AgregarEvento(fondo, id, "aviso", aviso)
+		p.evento(id, "aviso", aviso)
 		if estado == nucleo.Ejecutando {
 			plazoCola = nil // el plazo en cola vale hasta que algo se ejecuta; un salto por tamaño no ejecutó nada
 		}
@@ -769,7 +784,7 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		}
 		problemas := salidas.ProblemasDe(errSalida)
 		if datos, errJSON := json.Marshal(validacion{Problemas: problemas, Correccion: correccion}); errJSON == nil {
-			_ = p.almacen.AgregarEvento(fondo, id, "validacion", string(datos))
+			p.evento(id, "validacion", string(datos))
 		}
 		// fallar cierra el trabajo con los problemas de la última respuesta (y la respuesta, si se pidió conservarla).
 		fallar := func(desde nucleo.Estado) {
@@ -1049,7 +1064,7 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 		registro.Correccion, registro.Correcciones = correccion, max(t.Solicitud.Salida.Reintentos, correccion)
 	}
 	if datos, err := json.Marshal(registro); err == nil {
-		_ = p.almacen.AgregarEvento(fondo, id, "intento", string(datos))
+		p.evento(id, "intento", string(datos))
 	}
 	// Si el agente escribe una clave de proveedor (lo empujó un contenido hostil), se tapa antes de guardarla o enviarla.
 	// shortcut: una clave partida entre dos fragmentos de texto solo se tapa en la salida final, no en los eventos.
@@ -1094,11 +1109,28 @@ func (p *Planificador) cerrarDetenido(id string, desde nucleo.Estado) {
 	}
 }
 
-// cambiar aplica una transición; si falla porque el usuario canceló entretanto, confirma la cancelación.
+// cambiar aplica una transición; si falla porque el usuario canceló entretanto, confirma la cancelación. Si la base no
+// pudo guardarla (disco lleno, base ocupada o cerrada), lo registra y cierra el trabajo con error_interno, para que no
+// quede en curso para siempre con sus clientes esperando.
 func (p *Planificador) cambiar(id string, de, hacia nucleo.Estado, cambio persistencia.Cambio) bool {
 	fondo := context.Background()
-	if err := p.almacen.CambiarEstado(fondo, id, de, hacia, cambio); err == nil {
+	err := p.almacen.CambiarEstado(fondo, id, de, hacia, cambio)
+	if err == nil {
 		return true
+	}
+	if nucleo.CodigoDe(err) != nucleo.CodigoTransicionInvalida {
+		p.anotar("%s no se pudo pasar de %s a %s: %v", id, de, hacia, err)
+		cierre := nucleo.Interrumpido
+		if nucleo.ValidarTransicion(de, cierre) != nil {
+			cierre = nucleo.Fallido
+		}
+		if hacia != cierre && nucleo.ValidarTransicion(de, cierre) == nil {
+			fallo := persistencia.Cambio{Codigo: nucleo.CodigoErrorInterno, Mensaje: idioma.T("no se pudo guardar el estado del trabajo")}
+			if err := p.almacen.CambiarEstado(fondo, id, de, cierre, fallo); err != nil {
+				p.anotar("%s tampoco se pudo cerrar: %v", id, err)
+			}
+		}
+		return false
 	}
 	if t, err := p.almacen.Obtener(fondo, id); err == nil && t.Estado == nucleo.CancelacionSolicitada {
 		_ = p.almacen.CambiarEstado(fondo, id, nucleo.CancelacionSolicitada, nucleo.Cancelado, persistencia.Cambio{})

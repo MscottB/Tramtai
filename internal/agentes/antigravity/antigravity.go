@@ -140,6 +140,24 @@ func argumentos(s nucleo.SolicitudEjecucion) []string {
 	return append(args, "-p=")
 }
 
+// ordenDelHook es la ruta del guion tal como la ejecutará agy: sin comillas (llegan mal escapadas a cmd) y, por eso,
+// solo con letras, números y _ - . : ~ \ /, sin espacios ni nada que cmd o sh interpreten (& ^ % ! ( ) …). En Windows se
+// usa su nombre corto (C:\Users\ANAMAR~1\…) si la carpeta temporal tiene espacios. Si aun así queda algo fuera de lo
+// seguro, no se ejecuta: sin el hook, Antigravity podría usar herramientas.
+func ordenDelHook(guion string) (string, error) {
+	orden := rutaCorta(guion)
+	if strings.IndexFunc(orden, func(r rune) bool { return !segura(r) }) >= 0 {
+		return "", nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf(
+			"la carpeta temporal tiene espacios (%s) y Antigravity no ejecutaría el hook que le niega las herramientas: define TMP con una carpeta sin espacios", filepath.Dir(orden)))
+	}
+	return orden, nil
+}
+
+// segura dice si una letra de la ruta del hook llega igual a cmd y a sh sin comillas.
+func segura(r rune) bool {
+	return r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune(`_-.:~\/`, r)
+}
+
 // prepararCarpetas crea el HOME privado con modelProvider gemini y el hook que niega todas las herramientas. El hook
 // está en la carpeta de trabajo (.agents/hooks.json, que agy carga aunque no sea de confianza) y su orden es un
 // archivo fuera de ella: una orden con comillas llega mal escapada a cmd en Windows.
@@ -162,8 +180,12 @@ func prepararCarpetas(raiz, home, espacio string) error {
 	if err := os.WriteFile(guion, []byte(contenido), 0o700); err != nil {
 		return err
 	}
+	orden, err := ordenDelHook(guion)
+	if err != nil {
+		return err
+	}
 	hooks, err := json.Marshal(map[string]any{"tramtai-sin-herramientas": map[string]any{"PreToolUse": []any{
-		map[string]any{"matcher": "*", "hooks": []any{map[string]any{"type": "command", "command": guion, "timeout": 10}}}}}})
+		map[string]any{"matcher": "*", "hooks": []any{map[string]any{"type": "command", "command": orden, "timeout": 10}}}}}})
 	if err != nil {
 		return err
 	}

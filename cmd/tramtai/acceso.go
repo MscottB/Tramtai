@@ -162,7 +162,8 @@ func comandoAcceso() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		if err := servicio.EditarPuntos(ruta, origen, f); err != nil {
+		// Las mismas reglas que la Web UI y la terminal para guardar una API.
+		if err := servicio.EditarPuntos(ruta, origen, servicio.ConReglas(f)); err != nil {
 			return err
 		}
 		fmt.Fprintln(cmd.OutOrStdout(), idioma.Tf("guardado en %s", ruta))
@@ -279,21 +280,14 @@ func comandoAcceso() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := servicio.EditarPuntos(ruta, origen, func(lista []servicio.ConfigPunto) ([]servicio.ConfigPunto, error) {
-				i, err := buscar(lista, args[0])
-				if err != nil {
-					return nil, err
-				}
-				return slices.Delete(lista, i, i+1), nil
-			}); err != nil {
+			datos, err := dirDatos()
+			if err != nil {
+				return err
+			}
+			if err := servicio.EliminarPunto(datos, ruta, origen, args[0]); err != nil {
 				return err
 			}
 			fmt.Fprintln(cmd.OutOrStdout(), idioma.Tf("guardado en %s", ruta))
-			// La clave se borra antes de recargar: así el servicio sabe que el punto se eliminó, y otro con este nombre
-			// no hereda ni la clave ni el consumo.
-			if datos, err := dirDatos(); err == nil {
-				servicio.EliminarTokenPunto(datos, args[0])
-			}
 			recargarSiActivo(cmd)
 			return nil
 		}}

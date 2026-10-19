@@ -133,8 +133,9 @@ const esfuerzoPrincipal = computed(() => props.modelValue.esfuerzo || delEspacio
 const todosLosNiveles = computed(() => props.catalogo.reduce<string[]>((a, m) => ((m.esfuerzos?.length ?? 0) > a.length ? m.esfuerzos! : a), []))
 const niveles = computed(() => (!props.modelValue.modelo && props.paraApi ? todosLosNiveles.value : esfuerzosDe(props.catalogo, props.modelValue.modelo)))
 // Un nivel que el modelo nuevo no admite vuelve al del agente.
+// Sin catálogo (no cargó) no hay niveles que comparar: no se borra el esfuerzo guardado.
 watch(niveles, (n) => {
-  if (props.modelValue.esfuerzo && !n.includes(props.modelValue.esfuerzo)) cambiar({ esfuerzo: '' })
+  if (props.catalogo.length && props.modelValue.esfuerzo && !n.includes(props.modelValue.esfuerzo)) cambiar({ esfuerzo: '' })
 })
 
 // El esquema de partida es el que genera el editor de campos: así se abre en la pestaña Campos.

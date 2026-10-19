@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"net"
 	"net/http"
 	"os"
@@ -77,6 +78,7 @@ type Instancia struct {
 	rutas        http.Handler
 	pararPurga   context.CancelFunc
 	purgaParada  chan struct{}
+	purgarYa     chan struct{} // pide al bucle de purga una vuelta ahora (por ejemplo, tras cambiar la retención)
 }
 
 // Servicio atiende todas las instancias en un único puerto; el token de cada petición elige la instancia.
@@ -88,8 +90,11 @@ type Servicio struct {
 	handler    http.Handler
 	admin      http.Handler
 
+	muRecargar    sync.Mutex // una recarga a la vez: cada una lee la configuración y la aplica entera
 	mu            sync.RWMutex
 	instancias    map[string]*Instancia
+	abriendo      map[string]*apertura // instancias que se están abriendo, fuera de mu
+	cerrado       bool                 // Cerrar ya empezó: no se publican instancias nuevas
 	puntos        map[string]*puntoActivo
 	erroresPuntos []string
 	descriptor    bool
@@ -106,7 +111,19 @@ type Servicio struct {
 	avance          ProgresoActualizacion // la actualización en curso, para la Web UI
 	ordenInstalar   chan bool             // en la fase listo: true instala ya, false cancela
 	buscar          atomic.Bool
+
+	fondo sync.WaitGroup // tareas en segundo plano que usan las bases (purgas): Cerrar las espera
 }
+
+// apertura es una instancia que se está abriendo: quien la pida a la vez espera a listo y recibe la misma.
+type apertura struct {
+	listo chan struct{}
+	inst  *Instancia
+	err   error
+}
+
+// abrirBase abre la base de una instancia; las pruebas la sustituyen para simular una base lenta.
+var abrirBase = persistencia.Abrir
 
 // Nuevo crea el servicio sin instancias; Restaurar o Activar* las abren.
 func Nuevo(opc Opciones) (*Servicio, error) {
@@ -118,10 +135,10 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 		return nil, err
 	}
 	s := &Servicio{opc: opc, ID: "servicio_" + aleatorio(8), IniciadoEn: time.Now(), tokenAdmin: token,
-		instancias: map[string]*Instancia{}, puntos: map[string]*puntoActivo{}, detener: make(chan struct{}),
+		instancias: map[string]*Instancia{}, abriendo: map[string]*apertura{}, puntos: map[string]*puntoActivo{}, detener: make(chan struct{}),
 		sesiones: map[string]*sesion{}, codigos: map[string]codigoEntrada{}}
 	s.buscar.Store(opc.BuscarActualizaciones)
-	go actualizacion.LimpiarDescargas(time.Now().Add(-10 * time.Minute)) // los instaladores que dejó la versión anterior
+	s.fondo.Go(func() { actualizacion.LimpiarDescargas(time.Now().Add(-10 * time.Minute)) }) // los instaladores que dejó la versión anterior
 	s.admin = s.rutasAdmin()
 	s.handler = api.Proteger(opc.Hosts, nil, http.HandlerFunc(s.enrutar))
 	return s, nil
@@ -311,29 +328,51 @@ func (s *Servicio) ActivarProyecto(raiz string) (*Instancia, error) {
 	return s.activar(IDProyecto(raiz, c), "proyecto", raiz, c)
 }
 
+// activar abre la instancia si no está activa. La base se abre (migraciones, huérfanos, recuperación) fuera de mu: así
+// no se detienen las peticiones de las demás instancias, y quien pida la misma a la vez espera y recibe la misma.
 func (s *Servicio) activar(id, ambito, raiz string, c *nucleo.Configuracion) (*Instancia, error) {
 	s.mu.Lock()
 	if inst, activa := s.instancias[id]; activa {
 		s.mu.Unlock()
 		return inst, nil
 	}
-	inst, err := s.abrirInstancia(id, ambito, raiz, c)
-	if err == nil {
-		s.instancias[id] = inst
+	if a, enCurso := s.abriendo[id]; enCurso {
+		s.mu.Unlock()
+		<-a.listo
+		return a.inst, a.err
+	}
+	a := &apertura{listo: make(chan struct{})}
+	s.abriendo[id] = a
+	s.mu.Unlock()
+
+	a.inst, a.err = s.abrirInstancia(id, ambito, raiz, c)
+	var sobra *Instancia // abierta mientras el servicio se cerraba: se cierra fuera de mu
+	s.mu.Lock()
+	delete(s.abriendo, id)
+	if a.err == nil && s.cerrado {
+		sobra = a.inst
+		a.inst, a.err = nil, nucleo.NuevoError(nucleo.CodigoServicioDetenido, idioma.T("el servicio se está deteniendo"))
+	}
+	if a.err == nil {
+		s.instancias[id] = a.inst
 	}
 	s.mu.Unlock()
-	if err != nil {
-		return nil, err
+	if sobra != nil {
+		sobra.cerrar(false)
+	}
+	close(a.listo)
+	if a.err != nil {
+		return nil, a.err
 	}
 	s.Recargar() // abre los puntos de acceso de la instancia
-	return inst, nil
+	return a.inst, nil
 }
 
 func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuracion) (*Instancia, error) {
 	if err := os.MkdirAll(filepath.Join(s.opc.Datos, "instancias"), 0o700); err != nil {
 		return nil, err
 	}
-	alm, err := persistencia.Abrir(filepath.Join(s.opc.Datos, "instancias", id+".db"))
+	alm, err := abrirBase(filepath.Join(s.opc.Datos, "instancias", id+".db"))
 	if err != nil {
 		return nil, err
 	}
@@ -402,7 +441,7 @@ func origenPeticion(r *http.Request, porSesion, local bool) string {
 // iniciarPurga aplica la retención al abrir la instancia y después cada intervaloPurga.
 func (i *Instancia) iniciarPurga(registros io.Writer) {
 	ctx, parar := context.WithCancel(context.Background())
-	i.pararPurga, i.purgaParada = parar, make(chan struct{})
+	i.pararPurga, i.purgaParada, i.purgarYa = parar, make(chan struct{}), make(chan struct{}, 1)
 	go func() {
 		defer close(i.purgaParada)
 		reloj := time.NewTicker(intervaloPurga)
@@ -420,25 +459,46 @@ func (i *Instancia) iniciarPurga(registros io.Writer) {
 			case <-ctx.Done():
 				return
 			case <-reloj.C:
+			case <-i.purgarYa:
 			}
 		}
 	}()
 }
 
+// purgarPronto pide una purga sin esperarla. La hace el bucle de la instancia, así que cerrar (Desactivar, Cerrar)
+// la espera y nunca corre sobre una base cerrada.
+func (i *Instancia) purgarPronto() {
+	select {
+	case i.purgarYa <- struct{}{}:
+	default: // ya había una pedida, o la instancia no tiene bucle de purga
+	}
+}
+
 // Purgar aplica la retención de la instancia: vence resultados y entradas, borra metadatos antiguos y las
 // cargas vencidas que ningún trabajo necesita.
 func (i *Instancia) Purgar(ctx context.Context) error {
-	resultado, metadatos, maximo, _ := i.retencion()
+	return PurgarBase(ctx, i.almacen, i.Cargas, i.Config, i.ID)
+}
+
+// PurgarBase aplica la retención de c a las instancias de una base y a sus cargas. La usan cada instancia del servicio
+// y tramtai ejecutar --directo, cuya base guarda una instancia por ejecución.
+func PurgarBase(ctx context.Context, alm *persistencia.Almacen, cargas *documentos.Cargas, c *nucleo.Configuracion, instancias ...string) error {
+	resultado, metadatos, maximo, _ := nucleo.AjustarRetencion(c.Entero("retencion.horas_resultado"), c.Entero("retencion.horas_metadatos"),
+		c.Entero("retencion.max_trabajos"))
 	r := persistencia.Retencion{Resultado: time.Duration(resultado) * time.Hour, Metadatos: time.Duration(metadatos) * time.Hour,
-		Maximo: maximo, EliminarEntradas: i.Config.Booleano("retencion.eliminar_entradas_al_terminar")}
-	if _, _, err := i.almacen.Purgar(ctx, i.ID, r); err != nil {
-		return err
+		Maximo: maximo, EliminarEntradas: c.Booleano("retencion.eliminar_entradas_al_terminar")}
+	enUso := map[string]bool{}
+	for _, id := range instancias {
+		if _, _, err := alm.Purgar(ctx, id, r); err != nil {
+			return err
+		}
+		usadas, err := alm.CargasEnUso(ctx, id)
+		if err != nil {
+			return err
+		}
+		maps.Copy(enUso, usadas)
 	}
-	enUso, err := i.almacen.CargasEnUso(ctx, i.ID)
-	if err != nil {
-		return err
-	}
-	_, err = i.Cargas.Purgar(enUso, time.Now())
+	_, err := cargas.Purgar(enUso, time.Now())
 	return err
 }
 
@@ -466,8 +526,10 @@ func (s *Servicio) Desactivar(id string) error {
 
 // cerrar detiene la purga y el planificador (interrumpe lo que aún se ejecuta) y cierra la base.
 func (i *Instancia) cerrar(vaciarCola bool) {
-	i.pararPurga()
-	<-i.purgaParada
+	if i.pararPurga != nil {
+		i.pararPurga()
+		<-i.purgaParada
+	}
 	if vaciarCola {
 		ctx := context.Background()
 		// Esperando al agente también es cola: el trabajo aún no tiene plaza ni agente.
@@ -508,6 +570,10 @@ func (s *Servicio) Drenar() {
 // a activar la instancia.
 func (s *Servicio) Cerrar() {
 	s.mu.Lock()
+	s.cerrado = true
+	s.mu.Unlock()
+	s.fondo.Wait() // una purga en curso termina antes de cerrar su base
+	s.mu.Lock()
 	puntos, instancias := s.puntos, s.instancias
 	s.puntos, s.instancias = map[string]*puntoActivo{}, map[string]*Instancia{}
 	s.mu.Unlock()
@@ -544,10 +610,19 @@ func (s *Servicio) guardarActivas() error {
 // errores de las que no pudieron abrirse, por ejemplo un proyecto movido.
 func (s *Servicio) Restaurar() []error {
 	a := activas{Global: true}
-	if datos, err := os.ReadFile(filepath.Join(s.opc.Datos, "instancias.json")); err == nil {
-		_ = json.Unmarshal(datos, &a)
-	}
+	ruta := filepath.Join(s.opc.Datos, "instancias.json")
 	var errores []error
+	if datos, err := os.ReadFile(ruta); err == nil {
+		if err := json.Unmarshal(datos, &a); err != nil {
+			// Dañado: se aparta (para poder mirarlo) y se abre la global, como sin registro previo.
+			a = activas{Global: true}
+			texto := idioma.Tf("%s no se pudo leer (%s): se apartó como instancias.json.dañado y se abre solo la instancia global", ruta, err.Error())
+			if errApartar := os.Rename(ruta, ruta+".dañado"); errApartar != nil {
+				texto = idioma.Tf("%s no se pudo leer (%s) ni apartar (%s): se abre solo la instancia global y se reescribirá", ruta, err.Error(), errApartar.Error())
+			}
+			errores = append(errores, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, texto))
+		}
+	}
 	if a.Global {
 		if _, err := s.ActivarGlobal(); err != nil {
 			errores = append(errores, err)
@@ -691,11 +766,58 @@ func escribirJSONArchivo(ruta string, v any) error {
 	if err != nil {
 		return err
 	}
-	temporal := ruta + ".tmp"
-	if err := os.WriteFile(temporal, datos, 0o600); err != nil {
+	return escribirAtomico(ruta, datos, 0o600)
+}
+
+// escritores serializa, dentro del proceso, las escrituras de cada ruta: en Windows dos renombrados a la vez sobre el
+// mismo archivo pueden fallar.
+var escritores sync.Map // ruta → *sync.Mutex
+
+// escribirAtomico escribe datos en un temporal propio de la misma carpeta y lo renombra: quien lee a la vez (un Recargar,
+// la CLI, la TUI) ve el archivo anterior o el nuevo, nunca uno a medias, y un corte a mitad no deja el archivo truncado.
+func escribirAtomico(ruta string, datos []byte, permisos os.FileMode) error {
+	if real, err := filepath.EvalSymlinks(ruta); err == nil {
+		ruta = real // un config.yaml enlazado (dotfiles) sigue siendo un enlace: se escribe el archivo al que apunta
+	}
+	m, _ := escritores.LoadOrStore(filepath.Clean(ruta), &sync.Mutex{})
+	m.(*sync.Mutex).Lock()
+	defer m.(*sync.Mutex).Unlock()
+	if err := os.MkdirAll(filepath.Dir(ruta), 0o700); err != nil {
 		return err
 	}
-	return os.Rename(temporal, ruta)
+	f, err := os.CreateTemp(filepath.Dir(ruta), filepath.Base(ruta)+".*.tmp")
+	if err != nil {
+		return err
+	}
+	temporal := f.Name()
+	_, err = f.Write(datos)
+	if err == nil {
+		err = f.Sync()
+	}
+	if cerrar := f.Close(); err == nil {
+		err = cerrar
+	}
+	if err == nil {
+		err = os.Chmod(temporal, permisos)
+	}
+	if err == nil {
+		err = renombrar(temporal, ruta)
+	}
+	if err != nil {
+		_ = os.Remove(temporal)
+	}
+	return err
+}
+
+// renombrar reintenta en Windows durante unos 600 ms: allí Rename falla mientras otro proceso tiene abierto el destino
+// (un Recargar que lo lee, la CLI, la terminal o el antivirus). En los demás sistemas no hace falta.
+func renombrar(origen, destino string) error {
+	err := os.Rename(origen, destino)
+	for espera := 5 * time.Millisecond; err != nil && runtime.GOOS == "windows" && espera <= 320*time.Millisecond; espera *= 2 {
+		time.Sleep(espera)
+		err = os.Rename(origen, destino)
+	}
+	return err
 }
 
 // LeerOCrearToken lee el token del archivo o crea uno aleatorio (permisos 0600, fuera del repositorio).
@@ -714,21 +836,10 @@ func RotarToken(ruta string) (string, error) {
 	return token, guardarSecreto(ruta, token)
 }
 
-// guardarSecreto escribe un token o su huella solo legible por el usuario, en un temporal que luego se renombra: quien
-// lo lee a la vez (un Recargar, la CLI) nunca ve un archivo a medias que tomaría por vacío y regeneraría.
+// guardarSecreto escribe un token o su huella solo legible por el usuario, de forma atómica: quien lo lee a la vez (un
+// Recargar, la CLI) nunca ve un archivo a medias que tomaría por vacío y regeneraría.
 func guardarSecreto(ruta, valor string) error {
-	if err := os.MkdirAll(filepath.Dir(ruta), 0o700); err != nil {
-		return err
-	}
-	temporal := ruta + ".tmp-" + aleatorio(4)
-	if err := os.WriteFile(temporal, []byte(valor+"\n"), 0o600); err != nil {
-		return err
-	}
-	if err := os.Rename(temporal, ruta); err != nil {
-		_ = os.Remove(temporal)
-		return err
-	}
-	return nil
+	return escribirAtomico(ruta, []byte(valor+"\n"), 0o600)
 }
 
 // RotarTokenPunto genera la clave nueva de un punto de acceso y guarda solo su huella: la clave se muestra una vez

@@ -4,7 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -234,5 +236,20 @@ func TestLimitesAdministrados(t *testing.T) {
 	}
 	if !esAdministrada("limites.memoria_proceso_mb") {
 		t.Fatal("el tope de memoria solo se cambia en la configuración global")
+	}
+}
+
+// Ajustes guardados a la vez (la retención y el modelo predeterminado, por ejemplo) se conservan todos en memoria.
+func TestFijarConcurrente(t *testing.T) {
+	c := Resolver()
+	var grupo sync.WaitGroup
+	for i := range 50 {
+		grupo.Go(func() { c.Fijar(OrigenGlobal, map[string]any{"prueba." + strconv.Itoa(i): i}) })
+	}
+	grupo.Wait()
+	for i := range 50 {
+		if v := c.Entero("prueba." + strconv.Itoa(i)); v != i {
+			t.Fatalf("se perdió prueba.%d: %v", i, v)
+		}
 	}
 }

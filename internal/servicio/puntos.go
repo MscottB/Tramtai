@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -169,14 +170,15 @@ func (p ConfigPunto) Normalizar(instancia string, puertoServicio int) (ConfigPun
 	return p, nil
 }
 
-// validarRespaldo rechaza un respaldo con el que toda petición fallaría: un agente que no está registrado o una
-// entrada fuera de modelos_permitidos. Normalizar solo ve el formato; esto necesita el registro del servicio.
-func (s *Servicio) validarRespaldo(p ConfigPunto) error {
+// validarRespaldo rechaza un respaldo con el que toda petición fallaría: un agente que no existe o una entrada fuera de
+// modelos_permitidos. Normalizar solo ve el formato. El servicio pregunta a su registro; la CLI y la terminal, al
+// catálogo (enCatalogo).
+func validarRespaldo(p ConfigPunto, existe func(agente string) bool) error {
 	for _, e := range p.Respaldo {
 		agente, _, _ := nucleo.DividirRespaldo(e)
 		motivo := ""
 		switch {
-		case s.opc.Registro[agente] == nil:
+		case !existe(agente):
 			motivo = idioma.Tf("el agente de respaldo %s no existe", agente)
 		case len(p.ModelosPermitidos) > 0 && !api.PermitidoRespaldo(p.ModelosPermitidos, e):
 			motivo = idioma.Tf("el respaldo %s no está en modelos_permitidos", e)
@@ -190,10 +192,6 @@ func (s *Servicio) validarRespaldo(p ConfigPunto) error {
 
 // ValidarParaApps rechaza al guardar una API que use (como agente o en el respaldo) un agente que no se permite en apps
 // (adaptadores.<nombre>.permitir_apps): sus peticiones se rechazarían todas. La usan la Web UI y la terminal.
-func ValidarParaApps(p ConfigPunto) error {
-	return validarParaApps(p)
-}
-
 func validarParaApps(p ConfigPunto) error {
 	c, _ := nucleo.CargarConfiguracion("") // sin configuración, solo cuenta la ficha de cada agente
 	usados := []string{p.Agente}
@@ -210,8 +208,71 @@ func validarParaApps(p ConfigPunto) error {
 	return nil
 }
 
-// validarParaApps es ValidarParaApps como método, para las rutas de la Web UI.
-func (s *Servicio) validarParaApps(p ConfigPunto) error { return validarParaApps(p) }
+func enCatalogo(agente string) bool {
+	_, ok := agentes.Buscar(agente)
+	return ok
+}
+
+// existe dice si el agente está en el registro del servicio.
+func (s *Servicio) existe(agente string) bool { return s.opc.Registro[agente] != nil }
+
+// ValidarPunto aplica las reglas para guardar una API que la Web UI, la CLI y la terminal comparten: un respaldo con el que
+// funcione y solo agentes habilitados para apps. El formato lo comprueba Normalizar.
+func ValidarPunto(p ConfigPunto) error { return validarPunto(p, enCatalogo) }
+
+func validarPunto(p ConfigPunto, existe func(string) bool) error {
+	if err := validarRespaldo(p, existe); err != nil {
+		return err
+	}
+	return validarParaApps(p)
+}
+
+// ConReglas envuelve una edición de puntos de acceso con ValidarPunto en los puntos nuevos o que cambian algo más que
+// activo: así se puede desactivar una API que ya tenía otro error, pero no guardar una nueva que fallaría siempre.
+func ConReglas(editar func([]ConfigPunto) ([]ConfigPunto, error)) func([]ConfigPunto) ([]ConfigPunto, error) {
+	// huella es el contenido del punto sin activo: se toma antes de editar, porque editar puede cambiar la lista (y lo
+	// que apuntan sus punteros) en su sitio.
+	huella := func(p ConfigPunto) string {
+		p.Activo = nil
+		datos, _ := json.Marshal(p)
+		return string(datos)
+	}
+	return func(lista []ConfigPunto) ([]ConfigPunto, error) {
+		antes := map[string]bool{}
+		for _, p := range lista {
+			antes[huella(p)] = true
+		}
+		nueva, err := editar(lista)
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range nueva {
+			if !antes[huella(p)] {
+				if err := ValidarPunto(p); err != nil {
+					return nil, err
+				}
+			}
+		}
+		return nueva, nil
+	}
+}
+
+// EliminarPunto quita un punto de acceso del archivo y después borra su clave, antes de recargar: así el servicio sabe al
+// recargar que se eliminó (y no que una errata lo invalidó), y otro con el mismo nombre no hereda ni la clave ni el
+// consumo de su presupuesto.
+func EliminarPunto(datos, ruta string, origen nucleo.Origen, nombre string) error {
+	err := EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+		i := slices.IndexFunc(lista, func(p ConfigPunto) bool { return p.Nombre == nombre })
+		if i < 0 {
+			return nil, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("no existe el punto de acceso %s en este archivo", nombre))
+		}
+		return slices.Delete(lista, i, i+1), nil
+	})
+	if err == nil {
+		EliminarTokenPunto(datos, nombre)
+	}
+	return err
+}
 
 func (p ConfigPunto) politica() *api.Punto {
 	pol := &api.Punto{Nombre: p.Nombre, Contratos: map[string]bool{}, Agente: p.Agente, Modelo: p.Modelo,
@@ -311,7 +372,7 @@ func (s *Servicio) puntosDeseados() ([]candidato, []string) {
 		for _, p := range puntos {
 			normalizado, err := p.Normalizar(instancia, s.opc.Puerto)
 			if err == nil {
-				err = s.validarRespaldo(normalizado)
+				err = validarRespaldo(normalizado, s.existe)
 			}
 			switch {
 			case err != nil:
@@ -355,9 +416,11 @@ func (s *Servicio) puntosDeseados() ([]candidato, []string) {
 // Recargar aplica la configuración de puntos de acceso sin reiniciar: abre los nuevos, cierra los retirados y
 // deja intactos los que no cambiaron, sin afectar a los trabajos en curso.
 func (s *Servicio) Recargar() []EstadoPunto {
+	s.muRecargar.Lock()
 	deseados, errores := s.puntosDeseados()
-	var retirados []*puntoActivo // se cierran al final, sin s.mu
+	var retirados []*puntoActivo // se cierran al final, sin s.mu ni muRecargar: cerrar uno puede tardar
 	defer func() {
+		s.muRecargar.Unlock()
 		for _, p := range retirados {
 			p.cerrar()
 		}
@@ -603,11 +666,17 @@ func FijarValor(ruta string, origen nucleo.Origen, clave string, valor any) erro
 	})
 }
 
+// muYAML serializa leer → editar → guardar de los archivos de configuración dentro del proceso: dos ediciones a la vez
+// (dos pestañas de la Web UI, un ajuste y una API) no se pisan.
+var muYAML sync.Mutex
+
 // editarYAML aplica editar a la raíz de un archivo YAML y lo guarda; si el resultado no es una configuración
-// válida, deja el archivo como estaba.
+// válida, no toca el archivo. El resultado se valida antes de escribir y se escribe de forma atómica: quien lo lee a
+// la vez nunca ve un YAML a medias.
 func editarYAML(ruta string, origen nucleo.Origen, editar func(raiz *yaml.Node) error) error {
+	muYAML.Lock()
+	defer muYAML.Unlock()
 	original, err := os.ReadFile(ruta)
-	existia := err == nil
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -631,19 +700,8 @@ func editarYAML(ruta string, origen nucleo.Origen, editar func(raiz *yaml.Node) 
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(ruta), 0o700); err != nil {
+	if _, err := nucleo.CargarCapaDe(salida, ruta, origen); err != nil {
 		return err
 	}
-	if err := os.WriteFile(ruta, salida, 0o600); err != nil {
-		return err
-	}
-	if _, err := nucleo.CargarCapa(ruta, origen); err != nil {
-		if existia {
-			_ = os.WriteFile(ruta, original, 0o600)
-		} else {
-			_ = os.Remove(ruta)
-		}
-		return err
-	}
-	return nil
+	return escribirAtomico(ruta, salida, 0o600)
 }
