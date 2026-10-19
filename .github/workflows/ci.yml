@@ -6,8 +6,8 @@ on:
   push:
     branches: [main]
     paths-ignore: ['site/**', '.github/workflows/paginas.yml', 'Casks/**', 'Formula/**', 'paquetes/**', 'docs/**', '**/*.md']  # la página y los paquetes van aparte
+  # En los PR siempre: main exige estos checks para fusionar, y un PR que solo toca docs se quedaría sin ellos.
   pull_request:
-    paths-ignore: ['site/**', '.github/workflows/paginas.yml', 'Casks/**', 'Formula/**', 'paquetes/**', 'docs/**', '**/*.md']
 
 permissions:
   contents: read

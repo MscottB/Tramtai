@@ -56,10 +56,14 @@ git push origin --tags             # sube las etiquetas
 
 ## Flujo para publicar
 
-1. Commits con prefijo (`feat: …`, `fix: …`, `docs: …`) y la lista de cambios en el cuerpo.
-2. `./scripts/version.ps1 -Explicar` para revisar la versión y sus notas.
-3. `./scripts/version.ps1 -Etiquetar`, y después `git push` y `git push origin --tags`.
-4. Al subir la etiqueta, `.github/workflows/publicar.yml` prueba en Windows, Linux y macOS, compila en cada sistema y crea el release de GitHub con las notas de la etiqueta: en Windows el instalador y el `.zip` portable; en Linux los `.deb` y `.rpm` (amd64 y arm64); en macOS el `.dmg` universal; los `.tar.gz` de la CLI para Linux y macOS; y `SHA256SUMS.txt` con todos. Falla si la versión calculada no coincide con la etiqueta o si alguna app no arranca.
+`main` está protegida: solo cambia por PR, con la CI en verde y la rama al día con `main`.
+
+1. Una rama por release (`feat/…`, `fix/…`, `chore/…`) con commits con prefijo (`feat: …`, `fix: …`, `docs: …`) y la lista de cambios en el cuerpo.
+2. Un PR a `main` (`gh pr create`), que lanza la CI en Windows, Linux y macOS.
+3. Con la CI en verde, `gh pr merge --merge --delete-branch`. Si `main` avanzó (por ejemplo, con el commit de paquetes del release anterior), antes `gh pr update-branch` y otra vez la CI.
+4. En `main` actualizada (`git pull`), `./scripts/version.ps1 -Explicar` para revisar la versión y sus notas.
+5. `./scripts/version.ps1 -Etiquetar -Resumen notas-es.txt -ResumenEn notas-en.txt` y `git push origin <etiqueta>`.
+6. Al subir la etiqueta, `.github/workflows/publicar.yml` prueba en Windows, Linux y macOS, compila en cada sistema y crea el release de GitHub con las notas de la etiqueta: en Windows el instalador y el `.zip` portable; en Linux los `.deb` y `.rpm` (amd64 y arm64); en macOS el `.dmg` universal; los `.tar.gz` de la CLI para Linux y macOS; y `SHA256SUMS.txt` con todos. Falla si la versión calculada no coincide con la etiqueta o si alguna app no arranca.
 
 Nota: Go no admite `+metadatos` como versión de módulo. No afecta, porque Tramtai es una aplicación y no una biblioteca importable.
 
@@ -72,5 +76,6 @@ Nota: Go no admite `+metadatos` como versión de módulo. No afecta, porque Tram
   3. Cuando las copias instaladas ya tienen ese release, se pone la semilla nueva en `FIRMA_ACTUALIZACIONES`. Más adelante, otro release puede quitar la pública vieja.
 
   Si se cambia el secreto antes del paso 2, las copias instaladas no podrán actualizarse con un clic.
+- **Protección de `main`.** Un ruleset del repositorio exige PR (sin aprobaciones: el proyecto tiene una sola persona), los checks de la CI (`Go` en los tres sistemas, `App de escritorio` en Linux y macOS y `Web UI`) con la rama al día, e impide borrar `main` o reescribir su historia. Solo GitHub Actions puede saltárselo, porque el job `paquetes` sube a `main` el commit de Homebrew y winget de cada release.
 - **Permisos.** Publicar tiene `contents: read` por defecto: los jobs que compilan y prueban ejecutan código de terceros. Solo `publicar` (crea el release) y `paquetes` (sube Homebrew y winget a `main`) tienen `contents: write`, y los checkouts del resto no guardan el token. wingetcreate va fijado por versión y SHA-256, y `WINGET_TOKEN` solo llega al paso que envía el manifiesto.
 
