@@ -13,12 +13,18 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// TestMismoUsuarioDarwin abre una conexión de verdad por loopback y comprueba que su dueño es este usuario. Si falla,
-// muestra los elementos de net.inet.tcp.pcblist_n de esa conexión, para ver su formato.
+// TestMismoUsuarioDarwin abre conexiones de verdad por loopback (IPv4 e IPv6) y comprueba que su dueño es este
+// usuario. Si falla, muestra los elementos de net.inet.tcp.pcblist_n de esa conexión, para ver su formato.
 func TestMismoUsuarioDarwin(t *testing.T) {
-	oyente, err := net.Listen("tcp", "127.0.0.1:0")
+	for _, direccion := range []string{"127.0.0.1:0", "[::1]:0"} {
+		t.Run(direccion, func(t *testing.T) { comprobarDueno(t, direccion) })
+	}
+}
+
+func comprobarDueno(t *testing.T, direccion string) {
+	oyente, err := net.Listen("tcp", direccion)
 	if err != nil {
-		t.Fatal(err)
+		t.Skipf("sin %s: %v", direccion, err)
 	}
 	defer oyente.Close()
 	go func() {
@@ -45,9 +51,12 @@ func TestMismoUsuarioDarwin(t *testing.T) {
 	puerto := binary.BigEndian.AppendUint16(nil, cliente.Port())
 	le := binary.LittleEndian
 	mostrar := 0
+	if len(datos) < 4 {
+		return
+	}
 	for pos := alinear8(int(le.Uint32(datos))); pos+8 <= len(datos); {
 		largo := int(le.Uint32(datos[pos:]))
-		if largo <= 0 || pos+largo > len(datos) {
+		if largo < 8 || pos+largo > len(datos) {
 			t.Logf("fin en %d: largo %d", pos, largo)
 			break
 		}

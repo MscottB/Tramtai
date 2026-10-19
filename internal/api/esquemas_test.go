@@ -6,7 +6,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/nucleo"
@@ -72,12 +71,8 @@ func TestErroresSalidaYCorregir(t *testing.T) {
 		t.Fatalf("corregir: %d %s", r.StatusCode, cuerpo)
 	}
 	nuevo := decodificar(t, cuerpo)["id"].(string)
-	// Con un plazo y no un número de intentos: en un equipo rápido 500 consultas seguidas acababan antes que el trabajo.
-	for limite := time.Now().Add(10 * time.Second); time.Now().Before(limite); time.Sleep(10 * time.Millisecond) {
-		if _, cuerpo = pedir(t, ts, "GET", "/api/v1/trabajos/"+nuevo, ""); strings.Contains(cuerpo, `"estado":"completado"`) {
-			break
-		}
-	}
+	esperarEstado(t, ts, nuevo, nucleo.Completado)
+	_, cuerpo = pedir(t, ts, "GET", "/api/v1/trabajos/"+nuevo, "")
 	if !strings.Contains(cuerpo, `"salida":"{\"total\":10}"`) || !strings.Contains(cuerpo, `"rol":"asistente"`) {
 		t.Fatalf("la corrección completa con la conversación: %s", cuerpo)
 	}

@@ -1,6 +1,7 @@
 package servicio
 
 import (
+	"context"
 	"encoding/binary"
 	"encoding/hex"
 	"net"
@@ -8,7 +9,22 @@ import (
 	"net/netip"
 	"strconv"
 	"strings"
+	"sync"
 )
+
+// duenoConexion recuerda, por conexión, si su dueño es el usuario del servicio: no cambia mientras siga abierta, así
+// que la tabla TCP del sistema se lee una vez por conexión y no en cada petición.
+type duenoConexion struct {
+	una   sync.Once
+	mismo bool
+}
+
+type claveDueno struct{}
+
+// ContextoDeConexion es el ConnContext de los servidores HTTP del servicio: prepara lo que se recuerda por conexión.
+func ContextoDeConexion(ctx context.Context, _ net.Conn) context.Context {
+	return context.WithValue(ctx, claveDueno{}, &duenoConexion{})
+}
 
 // esLocal indica que la petición llega por loopback desde un programa del mismo usuario del sistema que el
 // servicio (el navegador o la aplicación de escritorio). Entonces la Web UI entra sin token: el token protege
@@ -36,7 +52,14 @@ func mismoUsuarioLocal(r *http.Request) bool {
 	if err != nil {
 		return false
 	}
-	return mismoUsuario(netip.AddrPortFrom(cliente.Addr().Unmap(), cliente.Port()), netip.AddrPortFrom(servidor.Addr().Unmap(), servidor.Port()))
+	comprobar := func() bool {
+		return mismoUsuario(netip.AddrPortFrom(cliente.Addr().Unmap(), cliente.Port()), netip.AddrPortFrom(servidor.Addr().Unmap(), servidor.Port()))
+	}
+	if d, ok := r.Context().Value(claveDueno{}).(*duenoConexion); ok {
+		d.una.Do(func() { d.mismo = comprobar() })
+		return d.mismo
+	}
+	return comprobar()
 }
 
 // desdeEsteEquipo indica que la petición llega por loopback y no la reenvía un proxy o túnel (que traería peticiones

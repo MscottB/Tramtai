@@ -100,8 +100,10 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: '**/go.sum'
+      # Solo se lee: desde una etiqueta se ve la caché de main, que deja el CI; guardarla aquí la dejaría donde nadie la
+      # vuelve a ver.
       - name: wails3 en caché (la deja el CI de main)
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ~/go/bin/wails3.exe
           key: wails3-v3.0.0-beta.28-${{ runner.os }}
@@ -133,10 +135,27 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: '**/go.sum'
-      - name: Servicio, CLI y app de escritorio
-        run: |
-          go test ./...
-          cd escritorio; go test ./...
+      # Una orden por paso: en Windows (pwsh) un paso de varias órdenes solo falla si falla la última.
+      - name: Servicio y CLI
+        run: go test ./...
+      - name: App de escritorio
+        working-directory: escritorio
+        run: go test ./...
+
+  # Y las de Linux y macOS (en macOS, también la identificación del dueño de la conexión con una conexión real).
+  pruebas-unix:
+    name: Pruebas (${{ matrix.os }})
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: '**/go.sum'
+      - run: go test ./...
 
   # Ningún release sale con dependencias vulnerables o sin firma verificada (los mismos chequeos que el CI).
   dependencias:
@@ -169,7 +188,7 @@ jobs:
   # Junta lo que compiló cada sistema, calcula las sumas de todo y publica el release con las notas de la etiqueta.
   publicar:
     name: Publicar el release
-    needs: [dependencias, pruebas-windows, unix, linux-app, macos-app, windows]
+    needs: [dependencias, pruebas-windows, pruebas-unix, unix, linux-app, macos-app, windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

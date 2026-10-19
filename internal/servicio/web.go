@@ -50,7 +50,7 @@ func (s *Servicio) derivarSesion(w http.ResponseWriter, instancia string, actual
 }
 
 // sesionLocal indica que la sesión es local y que la petición sigue llegando desde este equipo: del mismo usuario
-// (esLocal) o, en una sesión abierta con código, desde loopback sin proxy (en macOS no se puede comprobar el usuario).
+// (esLocal) o, en una sesión abierta con código, desde loopback sin proxy (cuando no se puede comprobar el usuario).
 func (s *Servicio) sesionLocal(r *http.Request, ses *sesion) bool {
 	return ses != nil && ses.local && (s.esLocal(r) || (ses.porCodigo && desdeEsteEquipo(r)))
 }
@@ -397,7 +397,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// Con un código canjeado en este equipo la sesión es local: solo el dueño del servicio puede pedirlo (con el
-		// token de servicio). Así funciona también en macOS, donde no se puede comprobar el usuario de la conexión.
+		// token de servicio). Así funciona también cuando no se puede comprobar el usuario de la conexión.
 		ses := s.crearSesion(w, entrada.instancia, s.esLocal(r) || desdeEsteEquipo(r))
 		ses.porCodigo = true // la cookie aún no ha salido: nadie más usa esta sesión
 		http.Redirect(w, r, "/", http.StatusSeeOther)

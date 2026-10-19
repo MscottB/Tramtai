@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/cookiejar"
+	"net/http/httptest"
 	"net/netip"
 	"net/url"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -84,7 +86,7 @@ func TestWebUI(t *testing.T) {
 	if r.StatusCode != 200 || !strings.Contains(cuerpo, `"local":true`) {
 		t.Fatalf("la sesión con código desde este equipo es local: %d %s", r.StatusCode, cuerpo)
 	}
-	// Aunque no se pueda comprobar el usuario de la conexión (macOS, o aquí con entrada_local desactivada), la sesión
+	// Aunque no se pueda comprobar el usuario de la conexión (aquí, con entrada_local desactivada), la sesión
 	// abierta con código desde este equipo puede usar los controles locales.
 	// Dos veces: activar la instancia crea otra sesión, que debe conservar que se abrió con código.
 	for i := range 2 {
@@ -496,6 +498,83 @@ func TestDireccionesDeProc(t *testing.T) {
 
 // Un xinpcb_n y un xsocket_n copiados de una conexión real en el CI de macOS (127.0.0.1:49253 aceptó a :49254; este
 // es el lado del servidor, uid 501): fijan las posiciones de las estructuras con #pragma pack(4).
+func TestPcblistCasosLimite(t *testing.T) {
+	cliente, servidor := netip.MustParseAddrPort("127.0.0.1:50082"), netip.MustParseAddrPort("127.0.0.1:17271")
+	type c = struct {
+		local, remota netip.AddrPort
+		uid           uint32
+	}
+	// Un socket IPv6 que habla con IPv4 guarda las direcciones como ::ffff:127.0.0.1.
+	mapeada := pcblist(c{netip.MustParseAddrPort("[::ffff:127.0.0.1]:50082"), netip.MustParseAddrPort("[::ffff:127.0.0.1]:17271"), 503})
+	if uid, ok := uidDePcblist(mapeada, cliente, servidor); !ok || uid != 503 {
+		t.Errorf("IPv4 mapeada: uid %d %v", uid, ok)
+	}
+	le := binary.LittleEndian
+	normal := pcblist(c{cliente, servidor, 501})
+	// Un xinpcb_n más corto de lo que se lee no se usa.
+	corto := append([]byte(nil), normal...)
+	le.PutUint32(corto[24:], 60)
+	if _, ok := uidDePcblist(corto, cliente, servidor); ok {
+		t.Error("un xinpcb_n corto no debe coincidir")
+	}
+	// Un xsocket_n sin su xinpcb_n delante no dice de quién es.
+	sinPcb := append(append([]byte(nil), normal[:24]...), normal[24+104:]...)
+	if _, ok := uidDePcblist(sinPcb, cliente, servidor); ok {
+		t.Error("un xsocket_n suelto no debe coincidir")
+	}
+	// Una cabecera que dice ser enorme termina sin leer fuera.
+	enorme := append([]byte(nil), normal...)
+	le.PutUint32(enorme, 0xFFFFFFF0)
+	if _, ok := uidDePcblist(enorme, cliente, servidor); ok {
+		t.Error("con la cabecera rota no hay conexiones")
+	}
+}
+
+// FuzzUidDePcblist: con cualquier tabla, el análisis no se sale de los límites.
+func FuzzUidDePcblist(f *testing.F) {
+	f.Add(pcblist(struct {
+		local, remota netip.AddrPort
+		uid           uint32
+	}{netip.MustParseAddrPort("127.0.0.1:1"), netip.MustParseAddrPort("127.0.0.1:2"), 1}))
+	f.Fuzz(func(t *testing.T, datos []byte) {
+		uidDePcblist(datos, netip.MustParseAddrPort("127.0.0.1:1"), netip.MustParseAddrPort("127.0.0.1:2"))
+	})
+}
+
+// Con ContextoDeConexion el dueño se comprueba una vez por conexión: las peticiones de la misma conexión comparten el
+// resultado (y en este sistema, la conexión de la prueba es de este usuario).
+func TestDuenoUnaVezPorConexion(t *testing.T) {
+	var mu sync.Mutex
+	var vistos []*duenoConexion
+	var resultados []bool
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		resultados = append(resultados, mismoUsuarioLocal(r))
+		vistos = append(vistos, r.Context().Value(claveDueno{}).(*duenoConexion))
+	}))
+	ts.Config.ConnContext = ContextoDeConexion
+	ts.Start()
+	defer ts.Close()
+	cliente := ts.Client()
+	for range 2 {
+		r, err := cliente.Get(ts.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = io.Copy(io.Discard, r.Body)
+		r.Body.Close()
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(vistos) != 2 || vistos[0] != vistos[1] {
+		t.Fatalf("las dos peticiones de la misma conexión deben compartir el dueño: %v", vistos)
+	}
+	if !resultados[0] || !resultados[1] {
+		t.Fatalf("la conexión de la prueba es de este usuario: %v", resultados)
+	}
+}
+
 func TestPcblistDeMacOSReal(t *testing.T) {
 	pcb, _ := hex.DecodeString("68000000100000002992cdd2abd4f18ec066c0650106e86fdc4b6db7b0010000000000000000800000000200014000000000000000000000000000007f0000010000000000000000000000007f000001000000000000000000000000000000005137139a12000000")
 	so, _ := hex.DecodeString("6800000001000000ee3e416292e6c7aa010000000c000000000002012992cdd2abd4f18e06000000020000000000000000000000000000000000000000000000f50100005c07000000000000220f0000000000008000000000080001020000000000000000000000")

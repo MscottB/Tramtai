@@ -40,12 +40,15 @@ jobs:
       - name: Dependencias de Go sin vulnerabilidades conocidas
         if: runner.os == 'Linux'
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
-      - name: App de escritorio
+      # Una orden por paso: en Windows (pwsh) un paso de varias órdenes solo falla si falla la última.
+      - name: App de escritorio (vet)
         if: runner.os == 'Windows'
         working-directory: escritorio
-        run: |
-          go vet ./...
-          go test ./...
+        run: go vet ./...
+      - name: App de escritorio (pruebas)
+        if: runner.os == 'Windows'
+        working-directory: escritorio
+        run: go test ./...
       # Publicar se lanza desde una etiqueta, y una etiqueta solo ve la caché de main: aquí se deja wails3 en ella para
       # no compilarlo en cada release.
       - name: wails3 en caché para Publicar
