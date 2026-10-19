@@ -19,11 +19,11 @@ jobs:
     name: Linux y macOS
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache-dependency-path: '**/go.sum' # también los módulos de la app de escritorio
@@ -41,7 +41,7 @@ jobs:
             tar -C "$carpeta" -czf "dist/tramtai-$version-$nombre-$arq.tar.gz" tramtai
           done
           ls -l dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: unix
           path: dist/
@@ -56,10 +56,10 @@ jobs:
           - { runner: ubuntu-24.04-arm, arq: arm64 }
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache-dependency-path: '**/go.sum' # también los módulos de la app de escritorio
@@ -69,7 +69,7 @@ jobs:
         run: sh scripts/linux/empaquetar.sh "$GITHUB_REF_NAME" ${{ matrix.arq }}
       - name: Comprobar el paquete (instalar y arrancar sin pantalla)
         run: sh scripts/linux/probar-paquete.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux-app-${{ matrix.arq }}
           path: dist/
@@ -79,10 +79,10 @@ jobs:
     name: App de escritorio (macOS)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache-dependency-path: '**/go.sum' # también los módulos de la app de escritorio
@@ -90,7 +90,7 @@ jobs:
         run: sh scripts/macos/empaquetar.sh "$GITHUB_REF_NAME"
       - name: Abrir la app y comprobar el servicio
         run: sh scripts/macos/probar-app.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: macos-app
           path: dist/
@@ -100,18 +100,18 @@ jobs:
     name: Windows (instalador y portable)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # version.ps1 calcula la versión desde las etiquetas
           persist-credentials: false
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache-dependency-path: '**/go.sum'
       # Solo se lee: desde una etiqueta se ve la caché de main, que deja el CI; guardarla aquí la dejaría donde nadie la
       # vuelve a ver.
       - name: wails3 en caché (la deja el CI de main)
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ~/go/bin/wails3.exe
           key: wails3-v3.0.0-beta.28-${{ runner.os }}
@@ -164,7 +164,7 @@ jobs:
       - name: Portable (detener)
         if: always()
         run: '& "$env:RUNNER_TEMP\portable\tramtai.exe" servicio detener --si'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows
           path: dist/
@@ -186,10 +186,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
@@ -201,7 +201,7 @@ jobs:
           mv ../SHA256SUMS.txt .
           cat SHA256SUMS.txt
       # Sin caché: este job tiene el secreto de firma, y la caché de Go la escriben jobs que ejecutan código de terceros.
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: false
@@ -234,7 +234,7 @@ jobs:
       HOMEBREW_NO_AUTO_UPDATE: 1
       HOMEBREW_NO_ENV_HINTS: 1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           persist-credentials: false # brew install ejecuta código ajeno: el token solo llega al push
@@ -286,7 +286,7 @@ jobs:
       WINGETCREATE: https://github.com/microsoft/winget-create/releases/download/v1.12.13.0/wingetcreate.exe
       WINGETCREATE_SHA256: 24042bd37915805615e6cf969ac57c6439124c3fe85823327f5f3fb24bd9ffea
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: env.HAY_TOKEN == 'true'
         with:
           ref: main

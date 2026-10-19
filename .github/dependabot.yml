@@ -6,6 +6,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 10 # con el límite de 5, las que no caben no se proponen
     groups:
       menores:
         update-types: [minor, patch]
@@ -13,6 +14,7 @@ updates:
     directory: /escritorio
     schedule:
       interval: weekly
+    open-pull-requests-limit: 10 # con el límite de 5, las que no caben no se proponen
     # Wails va fijado en una beta con replace (docs/equipo/pendientes.md): se revisa a mano en cada beta.
     ignore:
       - dependency-name: github.com/wailsapp/wails/v3
@@ -23,6 +25,7 @@ updates:
     directory: /web
     schedule:
       interval: weekly
+    open-pull-requests-limit: 10 # con el límite de 5, las que no caben no se proponen
     groups:
       menores:
         update-types: [minor, patch]
@@ -30,6 +33,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 10 # con el límite de 5, las que no caben no se proponen
     groups:
       menores:
         update-types: [minor, patch]

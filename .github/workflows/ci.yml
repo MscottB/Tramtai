@@ -31,26 +31,28 @@ jobs:
         os: [windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache-dependency-path: '**/go.sum' # también los módulos de la app de escritorio
       - run: go vet ./...
       - run: go test ./...
+      # govulncheck se instala con hasta tres intentos: un corte de red al verificarlo en sum.golang.org no es un fallo
+      # del código. Se instala para Linux y la app de escritorio se analiza con GOOS=windows (con go run saldría un .exe).
+      - name: govulncheck
+        if: runner.os == 'Linux'
+        run: for intento in 1 2 3; do go install golang.org/x/vuln/cmd/govulncheck@v1.8.0 && exit 0; sleep 20; done; exit 1
       - name: Dependencias de Go sin vulnerabilidades conocidas
         if: runner.os == 'Linux'
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+        run: '"$(go env GOPATH)/bin/govulncheck" ./...'
       # La app de escritorio se analiza como la de Windows: en Linux necesitaría las cabeceras de GTK para compilar.
-      # govulncheck se instala para Linux y solo el análisis va con GOOS=windows (con go run saldría un .exe).
       - name: App de escritorio sin vulnerabilidades conocidas
         if: runner.os == 'Linux'
         working-directory: escritorio
-        run: |
-          go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
-          GOOS=windows "$(go env GOPATH)/bin/govulncheck" ./...
+        run: GOOS=windows "$(go env GOPATH)/bin/govulncheck" ./...
       # Una orden por paso: en Windows (pwsh) un paso de varias órdenes solo falla si falla la última.
       - name: App de escritorio (vet)
         if: runner.os == 'Windows'
@@ -64,7 +66,7 @@ jobs:
       # no compilarlo en cada release.
       - name: wails3 en caché para Publicar
         if: runner.os == 'Windows' && github.ref == 'refs/heads/main'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/go/bin/wails3.exe
           key: wails3-v3.0.0-beta.28-${{ runner.os }}
@@ -76,10 +78,10 @@ jobs:
     name: App de escritorio (Linux)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache-dependency-path: '**/go.sum' # también los módulos de la app de escritorio
@@ -99,10 +101,10 @@ jobs:
     name: App de escritorio (macOS)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache-dependency-path: '**/go.sum' # también los módulos de la app de escritorio
@@ -119,10 +121,10 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
