@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -355,6 +356,8 @@ func (s *Servicio) puntosDeseados() ([]candidato, []string) {
 // Recargar aplica la configuración de puntos de acceso sin reiniciar: abre los nuevos, cierra los retirados y
 // deja intactos los que no cambiaron, sin afectar a los trabajos en curso.
 func (s *Servicio) Recargar() []EstadoPunto {
+	s.muRecargar.Lock()
+	defer s.muRecargar.Unlock()
 	deseados, errores := s.puntosDeseados()
 	var retirados []*puntoActivo // se cierran al final, sin s.mu
 	defer func() {
@@ -603,11 +606,17 @@ func FijarValor(ruta string, origen nucleo.Origen, clave string, valor any) erro
 	})
 }
 
+// muYAML serializa leer → editar → guardar de los archivos de configuración dentro del proceso: dos ediciones a la vez
+// (dos pestañas de la Web UI, un ajuste y una API) no se pisan.
+var muYAML sync.Mutex
+
 // editarYAML aplica editar a la raíz de un archivo YAML y lo guarda; si el resultado no es una configuración
-// válida, deja el archivo como estaba.
+// válida, no toca el archivo. El resultado se valida antes de escribir y se escribe de forma atómica: quien lo lee a
+// la vez nunca ve un YAML a medias.
 func editarYAML(ruta string, origen nucleo.Origen, editar func(raiz *yaml.Node) error) error {
+	muYAML.Lock()
+	defer muYAML.Unlock()
 	original, err := os.ReadFile(ruta)
-	existia := err == nil
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -631,19 +640,8 @@ func editarYAML(ruta string, origen nucleo.Origen, editar func(raiz *yaml.Node) 
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(ruta), 0o700); err != nil {
+	if _, err := nucleo.CargarCapaDe(salida, ruta, origen); err != nil {
 		return err
 	}
-	if err := os.WriteFile(ruta, salida, 0o600); err != nil {
-		return err
-	}
-	if _, err := nucleo.CargarCapa(ruta, origen); err != nil {
-		if existia {
-			_ = os.WriteFile(ruta, original, 0o600)
-		} else {
-			_ = os.Remove(ruta)
-		}
-		return err
-	}
-	return nil
+	return escribirAtomico(ruta, salida, 0o600)
 }

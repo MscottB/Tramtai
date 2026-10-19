@@ -88,6 +88,7 @@ type Servicio struct {
 	handler    http.Handler
 	admin      http.Handler
 
+	muRecargar    sync.Mutex // una recarga a la vez: cada una lee la configuración y la aplica entera
 	mu            sync.RWMutex
 	instancias    map[string]*Instancia
 	puntos        map[string]*puntoActivo
@@ -691,11 +692,44 @@ func escribirJSONArchivo(ruta string, v any) error {
 	if err != nil {
 		return err
 	}
-	temporal := ruta + ".tmp"
-	if err := os.WriteFile(temporal, datos, 0o600); err != nil {
+	return escribirAtomico(ruta, datos, 0o600)
+}
+
+// escritores serializa, dentro del proceso, las escrituras de cada ruta: en Windows dos renombrados a la vez sobre el
+// mismo archivo pueden fallar.
+var escritores sync.Map // ruta → *sync.Mutex
+
+// escribirAtomico escribe datos en un temporal propio de la misma carpeta y lo renombra: quien lee a la vez (un Recargar,
+// la CLI, la TUI) ve el archivo anterior o el nuevo, nunca uno a medias, y un corte a mitad no deja el archivo truncado.
+func escribirAtomico(ruta string, datos []byte, permisos os.FileMode) error {
+	m, _ := escritores.LoadOrStore(filepath.Clean(ruta), &sync.Mutex{})
+	m.(*sync.Mutex).Lock()
+	defer m.(*sync.Mutex).Unlock()
+	if err := os.MkdirAll(filepath.Dir(ruta), 0o700); err != nil {
 		return err
 	}
-	return os.Rename(temporal, ruta)
+	f, err := os.CreateTemp(filepath.Dir(ruta), filepath.Base(ruta)+".*.tmp")
+	if err != nil {
+		return err
+	}
+	temporal := f.Name()
+	_, err = f.Write(datos)
+	if err == nil {
+		err = f.Sync()
+	}
+	if cerrar := f.Close(); err == nil {
+		err = cerrar
+	}
+	if err == nil {
+		err = os.Chmod(temporal, permisos)
+	}
+	if err == nil {
+		err = os.Rename(temporal, ruta)
+	}
+	if err != nil {
+		_ = os.Remove(temporal)
+	}
+	return err
 }
 
 // LeerOCrearToken lee el token del archivo o crea uno aleatorio (permisos 0600, fuera del repositorio).
@@ -714,21 +748,10 @@ func RotarToken(ruta string) (string, error) {
 	return token, guardarSecreto(ruta, token)
 }
 
-// guardarSecreto escribe un token o su huella solo legible por el usuario, en un temporal que luego se renombra: quien
-// lo lee a la vez (un Recargar, la CLI) nunca ve un archivo a medias que tomaría por vacío y regeneraría.
+// guardarSecreto escribe un token o su huella solo legible por el usuario, de forma atómica: quien lo lee a la vez (un
+// Recargar, la CLI) nunca ve un archivo a medias que tomaría por vacío y regeneraría.
 func guardarSecreto(ruta, valor string) error {
-	if err := os.MkdirAll(filepath.Dir(ruta), 0o700); err != nil {
-		return err
-	}
-	temporal := ruta + ".tmp-" + aleatorio(4)
-	if err := os.WriteFile(temporal, []byte(valor+"\n"), 0o600); err != nil {
-		return err
-	}
-	if err := os.Rename(temporal, ruta); err != nil {
-		_ = os.Remove(temporal)
-		return err
-	}
-	return nil
+	return escribirAtomico(ruta, []byte(valor+"\n"), 0o600)
 }
 
 // RotarTokenPunto genera la clave nueva de un punto de acceso y guarda solo su huella: la clave se muestra una vez

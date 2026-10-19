@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -402,5 +403,65 @@ func TestClavePuntoSoloHuella(t *testing.T) {
 	EliminarTokenPunto(filepath.Dir(filepath.Dir(ruta)), "x")
 	if _, err := os.Stat(ruta); !os.IsNotExist(err) {
 		t.Fatalf("eliminar la API debe borrar su clave: %v", err)
+	}
+}
+
+// Veinte ediciones a la vez del mismo config.yaml (pestañas, la TUI, la CLI) no se pisan: al final están todas.
+func TestEditarPuntosConcurrente(t *testing.T) {
+	ruta := filepath.Join(t.TempDir(), "config.yaml")
+	var grupo sync.WaitGroup
+	for i := range 20 {
+		grupo.Go(func() {
+			err := EditarPuntos(ruta, nucleo.OrigenGlobal, func(l []ConfigPunto) ([]ConfigPunto, error) {
+				return append(l, ConfigPunto{Nombre: "p" + strconv.Itoa(i), Puerto: 17500 + i, Agente: "claude"}), nil
+			})
+			if err != nil {
+				t.Error(err)
+			}
+		})
+	}
+	grupo.Wait()
+	capa, err := nucleo.CargarCapa(ruta, nucleo.OrigenGlobal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	puntos, err := LeerPuntos(capa.Valores["puntos_acceso"].([]any))
+	if err != nil || len(puntos) != 20 {
+		t.Fatalf("quedaron %d de 20 puntos: %v", len(puntos), err)
+	}
+}
+
+// Un valor que no es válido no llega al disco: el archivo queda igual, byte a byte, y sin temporales.
+func TestFijarValorInvalidoNoEscribe(t *testing.T) {
+	dir := t.TempDir()
+	ruta := filepath.Join(dir, "config.yaml")
+	original := []byte("# mía\nservicio:\n  puerto: 17373\n")
+	os.WriteFile(ruta, original, 0o600)
+	if err := FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto", "no es un número"); err == nil {
+		t.Fatal("se aceptó un puerto que no es un número")
+	}
+	if datos, _ := os.ReadFile(ruta); string(datos) != string(original) {
+		t.Fatalf("el archivo cambió:\n%s", datos)
+	}
+	if entradas, _ := os.ReadDir(dir); len(entradas) != 1 {
+		t.Fatalf("quedaron temporales: %v", entradas)
+	}
+}
+
+// Escrituras atómicas a la vez sobre el mismo archivo: todas terminan bien y queda una de ellas entera.
+func TestEscribirAtomicoConcurrente(t *testing.T) {
+	ruta := filepath.Join(t.TempDir(), "servicio.json")
+	var grupo sync.WaitGroup
+	for i := range 20 {
+		grupo.Go(func() {
+			if err := escribirAtomico(ruta, []byte(strings.Repeat(strconv.Itoa(i%10), 1000)), 0o600); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+	grupo.Wait()
+	datos, _ := os.ReadFile(ruta)
+	if len(datos) != 1000 || strings.Count(string(datos), string(datos[0])) != 1000 {
+		t.Fatalf("contenido mezclado o a medias: %d bytes", len(datos))
 	}
 }

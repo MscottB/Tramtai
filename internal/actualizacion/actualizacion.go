@@ -56,7 +56,9 @@ type Version struct {
 }
 
 // TieneInstalador indica si la versión publicó el instalador de Windows, sus sumas y la firma de las sumas.
-func (v Version) TieneInstalador() bool { return v.urlInstalador != "" && v.urlSumas != "" && v.urlFirma != "" }
+func (v Version) TieneInstalador() bool {
+	return v.urlInstalador != "" && v.urlSumas != "" && v.urlFirma != ""
+}
 
 // Ultima pide a GitHub la última versión publicada.
 func Ultima(ctx context.Context) (Version, error) {
