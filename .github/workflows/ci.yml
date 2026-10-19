@@ -64,7 +64,7 @@ jobs:
       # no compilarlo en cada release.
       - name: wails3 en caché para Publicar
         if: runner.os == 'Windows' && github.ref == 'refs/heads/main'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/go/bin/wails3.exe
           key: wails3-v3.0.0-beta.28-${{ runner.os }}
