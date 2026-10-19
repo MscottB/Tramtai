@@ -221,6 +221,19 @@ jobs:
           LC_ALL=C ls | xargs sha256sum > ../SHA256SUMS.txt
           mv ../SHA256SUMS.txt .
           cat SHA256SUMS.txt
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: '**/go.sum'
+      # La actualización de un clic solo instala si las sumas llevan esta firma (internal/actualizacion/firma.go).
+      - name: Firmar las sumas
+        working-directory: dist
+        env:
+          FIRMA_ACTUALIZACIONES: ${{ secrets.FIRMA_ACTUALIZACIONES }}
+        run: go run ../scripts/firmar SHA256SUMS.txt
+      - name: Comprobar la firma con la clave pública de la app
+        working-directory: dist
+        run: go run ../scripts/firmar -verificar "$(sed -n 's/^const clavePublicaB64 = "\(.*\)"$/\1/p' ../internal/actualizacion/firma.go)" SHA256SUMS.txt
       - name: Publicar el release
         env:
           GH_TOKEN: ${{ github.token }}

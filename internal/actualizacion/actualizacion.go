@@ -52,10 +52,11 @@ type Version struct {
 	nombreInstalador string
 	urlInstalador    string
 	urlSumas         string
+	urlFirma         string
 }
 
-// TieneInstalador indica si la versión publicó el instalador de Windows y sus sumas.
-func (v Version) TieneInstalador() bool { return v.urlInstalador != "" && v.urlSumas != "" }
+// TieneInstalador indica si la versión publicó el instalador de Windows, sus sumas y la firma de las sumas.
+func (v Version) TieneInstalador() bool { return v.urlInstalador != "" && v.urlSumas != "" && v.urlFirma != "" }
 
 // Ultima pide a GitHub la última versión publicada.
 func Ultima(ctx context.Context) (Version, error) {
@@ -85,6 +86,8 @@ func Ultima(ctx context.Context) (Version, error) {
 			v.nombreInstalador, v.urlInstalador = a.Nombre, a.URL
 		case a.Nombre == archivoSumas:
 			v.urlSumas = a.URL
+		case a.Nombre == archivoFirma:
+			v.urlFirma = a.URL
 		}
 	}
 	return v, nil
@@ -280,7 +283,8 @@ func (c *Comprobador) consultar(listo chan struct{}) {
 }
 
 // Descargar baja a dir el instalador de v y comprueba que su SHA-256 coincide con la de SHA256SUMS.txt de la misma
-// versión. Solo acepta direcciones de descarga del repositorio de Tramtai; si la suma no coincide, borra el archivo.
+// versión, y antes que esas sumas llevan la firma de Tramtai. Solo acepta direcciones de descarga del repositorio de
+// Tramtai; si la suma no coincide, borra el archivo.
 // Avance recibe los bytes descargados y el total (0 si GitHub no lo informa), como mucho cada 100 ms y al terminar.
 type Avance func(recibidos, total int64)
 
@@ -289,13 +293,20 @@ func Descargar(ctx context.Context, v Version, dir string, avance Avance) (strin
 	if !v.TieneInstalador() {
 		return "", errors.New(idioma.T("esta versión no publicó instalador para Windows"))
 	}
-	for _, u := range []string{v.urlInstalador, v.urlSumas} {
+	for _, u := range []string{v.urlInstalador, v.urlSumas, v.urlFirma} {
 		if !strings.HasPrefix(u, prefijoDescarga) || strings.Contains(u, "..") || strings.Contains(strings.ToLower(u), "%2e") {
 			return "", fmt.Errorf(idioma.T("dirección de descarga inesperada: %s"), u)
 		}
 	}
 	sumas, err := bajar(ctx, v.urlSumas, 1<<16, "")
 	if err != nil {
+		return "", err
+	}
+	firma, err := bajar(ctx, v.urlFirma, 1<<10, "")
+	if err != nil {
+		return "", err
+	}
+	if err := verificarFirma(sumas, firma); err != nil {
 		return "", err
 	}
 	esperada := ""

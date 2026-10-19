@@ -2,7 +2,9 @@ package actualizacion
 
 import (
 	"context"
+	"crypto/ed25519"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -52,22 +54,52 @@ func TestComprobadorNoRepiteLaConsulta(t *testing.T) {
 	}
 }
 
-// servidor publica una versión falsa con su instalador y sus sumas; alterado sirve otro contenido que el sumado.
-func servidor(t *testing.T, alterado bool) {
+// Firmas de la versión falsa: la buena, la de otro par, ninguna o unas sumas cambiadas después de firmar.
+const (
+	firmaValida = iota
+	firmaDeOtro
+	sinFirma
+	sumasCambiadas
+)
+
+// servidor publica una versión falsa con su instalador, sus sumas y su firma (con un par de la prueba, que pasa a ser
+// la clave pública de confianza); alterado sirve otro contenido que el sumado.
+func servidor(t *testing.T, alterado bool, firma int) {
 	t.Helper()
 	contenido := []byte("instalador de prueba")
 	suma := sha256.Sum256(contenido)
 	const nombre = "Tramtai-v0.26.0+2-instalador-windows-x64.exe"
+	sumas := fmt.Sprintf("%s  %s\n", hex.EncodeToString(suma[:]), nombre)
+	publica, privada, _ := ed25519.GenerateKey(nil)
+	_, otra, _ := ed25519.GenerateKey(nil)
+	clave := privada
+	if firma == firmaDeOtro {
+		clave = otra
+	}
+	firmada := base64.StdEncoding.EncodeToString(ed25519.Sign(clave, []byte(sumas)))
+	if firma == sumasCambiadas {
+		sumas += "0000  otro.exe\n"
+	}
+	anterior := clavePublica
+	clavePublica = publica
+	t.Cleanup(func() { clavePublica = anterior })
 	mux := http.NewServeMux()
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	mux.HandleFunc("/ultima", func(w http.ResponseWriter, _ *http.Request) {
+		archivoDeFirma := ""
+		if firma != sinFirma {
+			archivoDeFirma = fmt.Sprintf(`,{"name":"SHA256SUMS.txt.sig","browser_download_url":"%s/descargas/SHA256SUMS.txt.sig"}`, srv.URL)
+		}
 		fmt.Fprintf(w, `{"tag_name":"v0.26.0+2","html_url":"%[1]s/version","body":"Tramtai v0.26.0\n\n- novedad","assets":[`+
 			`{"name":"%[2]s","browser_download_url":"%[1]s/descargas/%[2]s"},`+
-			`{"name":"SHA256SUMS.txt","browser_download_url":"%[1]s/descargas/SHA256SUMS.txt"}]}`, srv.URL, nombre)
+			`{"name":"SHA256SUMS.txt","browser_download_url":"%[1]s/descargas/SHA256SUMS.txt"}%[3]s]}`, srv.URL, nombre, archivoDeFirma)
 	})
 	mux.HandleFunc("/descargas/SHA256SUMS.txt", func(w http.ResponseWriter, _ *http.Request) {
-		fmt.Fprintf(w, "%s  %s\n", hex.EncodeToString(suma[:]), nombre)
+		fmt.Fprint(w, sumas)
+	})
+	mux.HandleFunc("/descargas/SHA256SUMS.txt.sig", func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprintln(w, firmada)
 	})
 	mux.HandleFunc("/descargas/"+nombre, func(w http.ResponseWriter, _ *http.Request) {
 		if alterado {
@@ -82,7 +114,7 @@ func servidor(t *testing.T, alterado bool) {
 }
 
 func TestDescargar(t *testing.T) {
-	servidor(t, false)
+	servidor(t, false, firmaValida)
 	v, err := Ultima(context.Background())
 	if err != nil || !v.TieneInstalador() || v.Notas != "Tramtai v0.26.0\n\n- novedad" {
 		t.Fatalf("Ultima: %+v %v", v, err)
@@ -113,7 +145,7 @@ func TestDescargar(t *testing.T) {
 }
 
 func TestDescargarRechazaSumaDistinta(t *testing.T) {
-	servidor(t, true)
+	servidor(t, true, firmaValida)
 	v, err := Ultima(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -124,6 +156,35 @@ func TestDescargarRechazaSumaDistinta(t *testing.T) {
 	}
 	if archivos, _ := os.ReadDir(dir); len(archivos) != 0 {
 		t.Fatalf("quedó el archivo dañado: %v", archivos)
+	}
+}
+
+// Sin una firma válida de las sumas no se descarga el instalador: ni firmadas con otra clave, ni cambiadas después de
+// firmar, ni sin firma (entonces la versión no es instalable).
+func TestDescargarExigeLaFirma(t *testing.T) {
+	for nombre, firma := range map[string]int{"otra clave": firmaDeOtro, "sumas cambiadas": sumasCambiadas} {
+		t.Run(nombre, func(t *testing.T) {
+			servidor(t, false, firma)
+			v, err := Ultima(context.Background())
+			if err != nil || !v.TieneInstalador() {
+				t.Fatalf("Ultima: %+v %v", v, err)
+			}
+			dir := t.TempDir()
+			if _, err := Descargar(context.Background(), v, dir, nil); err == nil || !strings.Contains(err.Error(), "firma") {
+				t.Fatalf("se aceptó una firma inválida: %v", err)
+			}
+			if archivos, _ := os.ReadDir(dir); len(archivos) != 0 {
+				t.Fatalf("se descargó el instalador sin firma válida: %v", archivos)
+			}
+		})
+	}
+	servidor(t, false, sinFirma)
+	v, err := Ultima(context.Background())
+	if err != nil || v.TieneInstalador() {
+		t.Fatalf("una versión sin firma no es instalable: %+v %v", v, err)
+	}
+	if _, err := Descargar(context.Background(), v, t.TempDir(), nil); err == nil {
+		t.Fatal("se descargó una versión sin firma")
 	}
 }
 
