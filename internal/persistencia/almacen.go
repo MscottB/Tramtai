@@ -104,6 +104,10 @@ CREATE TABLE IF NOT EXISTS avisos_presupuesto (
 );`,
 }
 
+// indices son índices que no cambian el esquema: se crean al abrir sin subir la versión de la base, así que una
+// versión anterior de Tramtai la sigue abriendo (al volver a una versión anterior, por ejemplo).
+const indices = `CREATE INDEX IF NOT EXISTS trabajos_efectivo ON trabajos (creado_en) WHERE modelo_efectivo <> '';`
+
 const columnas = `id, instancia, estado, codigo_error, mensaje_error, solicitud, huella, salida, intento_de, creado_en, actualizado_en, terminado_en,
 	modelo_enviado, modelo_efectivo, tokens_entrada, tokens_salida, costo_usd, punto_acceso, vencido, entradas_eliminadas, pid, firma_proceso, origen`
 
@@ -178,6 +182,10 @@ func Abrir(ruta string) (*Almacen, error) {
 	// Una sola conexión serializa las escrituras de la instancia y conserva los PRAGMA.
 	db.SetMaxOpenConns(1)
 	if err := migrar(db); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if _, err := db.Exec(indices); err != nil {
 		db.Close()
 		return nil, err
 	}

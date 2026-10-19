@@ -6,11 +6,14 @@ import (
 	"errors"
 )
 
+const consultaEfectivos = `SELECT COALESCE(json_extract(solicitud, '$.agente'), ''), modelo_enviado, modelo_efectivo
+		FROM trabajos WHERE modelo_efectivo <> '' ORDER BY creado_en DESC LIMIT 500`
+
 // ModelosEfectivos devuelve, por "agente/modelo enviado" (modelo vacío: el predeterminado del CLI), el último
-// modelo efectivo que informó el agente; así la Web UI muestra la versión real detrás de un alias como "sonnet".
+// modelo efectivo que informó el agente; así la Web UI muestra la versión real detrás de un alias como "sonnet". Con el
+// índice trabajos_efectivo lee solo esas filas, por largo que sea el historial.
 func (a *Almacen) ModelosEfectivos(ctx context.Context) (map[string]string, error) {
-	filas, err := a.db.QueryContext(ctx, `SELECT COALESCE(json_extract(solicitud, '$.agente'), ''), modelo_enviado, modelo_efectivo
-		FROM trabajos WHERE modelo_efectivo <> '' ORDER BY creado_en DESC LIMIT 500`)
+	filas, err := a.db.QueryContext(ctx, consultaEfectivos)
 	if err != nil {
 		return nil, err
 	}
