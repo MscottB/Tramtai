@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -21,9 +20,6 @@ import (
 	"tramtai/internal/nucleo"
 	"tramtai/internal/procesos"
 )
-
-// EspecificacionMarkitdown es la versión fijada del convertidor.
-const EspecificacionMarkitdown = "markitdown[pdf,docx,pptx,xlsx]==0.1.8"
 
 // extensionesTexto se entregan tal como llegan: solo se valida su codificación.
 var extensionesTexto = map[string]bool{".txt": true, ".md": true, ".markdown": true, ".json": true, ".jsonl": true,
@@ -49,6 +45,7 @@ type Limites struct {
 // Conversor convierte entradas a Markdown con la herramienta markitdown.
 type Conversor struct {
 	Comando      string // nombre o ruta de markitdown (conversion.comando)
+	Raiz         string // raíz de usuario: ahí está el conversor preparado
 	Plugins      bool   // conversion.habilitar_plugins
 	TiempoLimite time.Duration
 	MaximoSalida int64    // bytes de texto ensamblado
@@ -59,8 +56,10 @@ type Conversor struct {
 
 // Desde crea el conversor con la configuración efectiva.
 func Desde(c *nucleo.Configuracion) *Conversor {
+	raiz, _ := nucleo.RaizUsuario()
 	return &Conversor{
 		Comando:      c.Texto("conversion.comando"),
+		Raiz:         raiz,
 		Plugins:      c.Booleano("conversion.habilitar_plugins"),
 		TiempoLimite: time.Duration(c.Limite("conversion.tiempo_limite_segundos")) * time.Second,
 		MaximoSalida: int64(c.Limite("conversion.maximo_salida_mb")) << 20,
@@ -237,20 +236,18 @@ func (c *Conversor) markitdown(ctx context.Context, e Entrada, dir string) (stri
 	return salida.String(), nil
 }
 
-// programa localiza markitdown; si no está instalado recurre a uvx con la versión fijada.
+// programa localiza el conversor (Localizar); sin conversor, conversor_no_disponible con cómo prepararlo.
 func (c *Conversor) programa() (string, []string, error) {
-	comando := c.Comando
-	if comando == "" {
-		comando = "markitdown"
+	if u, ok := Localizar(c.Comando, c.Raiz); ok {
+		return u.Programa, u.Argumentos, nil
 	}
-	if ruta, err := exec.LookPath(comando); err == nil {
-		return ruta, nil, nil
-	}
-	if uvx, err := exec.LookPath("uvx"); err == nil {
-		return uvx, []string{"--from", EspecificacionMarkitdown, "markitdown"}, nil
-	}
-	return "", nil, nucleo.NuevoError(nucleo.CodigoConversionFallida,
-		idioma.Tf(`markitdown no está instalado: uv tool install "%s"`, EspecificacionMarkitdown))
+	return "", nil, ErrSinConversor()
+}
+
+// ErrSinConversor es el error de un archivo que necesita el conversor cuando no hay ninguno.
+func ErrSinConversor() error {
+	return nucleo.NuevoError(nucleo.CodigoConversorNoDisponible,
+		idioma.T("no hay conversor de archivos: prepáralo en Ajustes → Archivos o con «tramtai conversor preparar»"))
 }
 
 // entornoConversor hereda el entorno sin secretos, sin las TRAMTAI_* ni las variables dadas (como la del token de la

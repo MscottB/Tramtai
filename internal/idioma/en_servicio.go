@@ -118,7 +118,7 @@ func init() {
 		"%s: la conversión supera conversion.maximo_salida_mb":                                             "%s: the conversion exceeds conversion.maximo_salida_mb",
 		"%s: la conversión superó conversion.tiempo_limite_segundos":                                       "%s: the conversion exceeded conversion.tiempo_limite_segundos",
 		"%s: markitdown terminó con código %d: %s":                                                         "%s: markitdown exited with code %d: %s",
-		"markitdown no está instalado: uv tool install \"%s\"":                                             "markitdown is not installed: uv tool install \"%s\"",
+		"no hay conversor de archivos: prepáralo en Ajustes → Archivos o con «tramtai conversor preparar»": "no file converter: prepare it in Settings → Files or with \"tramtai conversor preparar\"",
 		"supera conversion.profundidad_maxima_zip":                                                         "exceeds conversion.profundidad_maxima_zip",
 		"no es un ZIP válido":                                                                              "is not a valid ZIP",
 		"supera conversion.maximo_archivos_zip":                                                            "exceeds conversion.maximo_archivos_zip",

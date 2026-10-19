@@ -218,6 +218,7 @@ var estadosHTTP = map[nucleo.CodigoError]int{
 	nucleo.CodigoAgenteNoDisponible:     http.StatusServiceUnavailable,
 	nucleo.CodigoServicioDetenido:       http.StatusServiceUnavailable,
 	nucleo.CodigoTiempoColaAgotado:      http.StatusServiceUnavailable,
+	nucleo.CodigoConversorNoDisponible:  http.StatusServiceUnavailable,
 	nucleo.CodigoTiempoEjecucionAgotado: http.StatusGatewayTimeout,
 }
 
