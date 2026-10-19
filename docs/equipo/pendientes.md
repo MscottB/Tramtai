@@ -39,9 +39,18 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | v0.46.1 | macOS identifica al dueño de la conexión (`net.inet.tcp.pcblist_n`): las etiquetas `cli` y `terminal` valen y el navegador entra a la Web UI sin código; el CI de macOS vuelve a bloquear; prueba con carreras arreglada; Publicar más corto (wails3 en caché desde `main` y pruebas de Windows en paralelo) | ✅ |
 | v0.47 | Correcciones de la revisión completa del código (`correcciones.md`): Publicar con permisos mínimos y actualizaciones firmadas, configuración atómica, las mismas reglas para las APIs en la Web, la CLI y la terminal, trabajos que no quedan colgados, errores pequeños de Go y de la Web UI, Mis APIs en la bandeja con muchas APIs y el mapa del sitio como el de la app | ✅ |
 | v0.48 | Portable de verdad (`portable.md`): los datos junto al `.exe` con `portable.txt`, carpeta solo para el usuario, instalada y portable a la vez sin pisarse (servicio, ventana, «Iniciar con Windows», cookie y reinicio), el instalador solo cierra lo de su carpeta, la ayuda de la CLI nombra a todos los agentes | ✅ |
-| v0.49 | Orden del código: dividir los archivos grandes (`tui.go`, `web.go`, `planificador.go`, `api.ts`, `App.vue`, `Accesos.vue`), la CLI y la terminal sobre la API del servicio, contrato cliente/servidor ligero para el escritorio, CI reutilizable desde Publicar, Dependabot, índice de `docs/equipo/` y planes agrupados por release, pruebas de Codex, Claude y la Web UI, y rendimiento (`ModelosEfectivos`, `capacidades` en paralelo) | ⬜ |
-| v0.50 | OpenCode como agente nuevo (spec en `opencode.md`, rama `feat/opencode`; M0 hecha) | ⬜ |
-| v0.51 | Hermes Agent como agente nuevo (instalado; falta `hermes setup` del usuario y su M0) | ⬜ |
+| v0.49 | Orden del código (`orden.md`): contrato ligero entre cliente y servicio (la app de escritorio deja de enlazar el servicio), la CLI y la terminal sobre la API del servicio, archivos grandes divididos, capacidades en paralelo y modelos efectivos en memoria, pruebas de Codex, Claude y la Web UI, CI reutilizable desde Publicar, Dependabot e índice de `docs/equipo/` | ⬜ |
+| v0.50 | Archivos: markitdown incluido con Tramtai, aviso antes de trabajar archivos si falta, el recorrido de un archivo por cada API y cómo lo usa quien desarrolla | ⬜ |
+| v0.51 | Herramientas (`tools`) explicadas para cualquier lenguaje, con ejemplos en Python, JavaScript, Go y curl, y guía del desarrollador | ⬜ |
+| v0.52 | Ayuda renovada en la app y en la web: menos texto, con diagramas, ejemplos, búsqueda y capturas | ⬜ |
+| v0.53 | Diagramas vivos: en la web, el recorrido llega a los agentes con ejemplos; en la app, el mapa muestra el recorrido de un trabajo en curso | ⬜ |
+| v0.54 | La terminal a la par de la Web UI (Panel, consumo, Mis APIs completo, Probar, plantillas, Ajustes, Ayuda) y Tramtai solo terminal en Windows | ⬜ |
+| v0.55 | Configurar los clientes solos (Claude Code, Codex, Cline…), con copia de su configuración antes de tocarla | ⬜ |
+| v0.56 | Uso y diagnóstico: panel de uso con tendencias, alias que también fijan el esfuerzo y «Comprobar conexión» | ⬜ |
+| v0.57 | Actualización que vuelve a la versión anterior si la nueva no arranca | ⬜ |
+| — | OpenCode como agente nuevo (spec en `opencode.md`, rama `feat/opencode`; M0 hecha) | ⬜ |
+| — | Hermes Agent como agente nuevo (instalado; falta `hermes setup` del usuario y su M0) | ⬜ |
+| — | Proveedor compatible con Anthropic en el adaptador de Claude (DeepSeek, Kimi, GLM) | ⬜ |
 | — | Webhooks al terminar un trabajo y avisos de presupuesto (`presupuesto.aviso`, `presupuesto.agotado`) | ⬜ |
 | — | Comparar agentes en Probar | ⬜ |
 | — | Tramtai como servidor MCP | ⬜ |
