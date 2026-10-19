@@ -687,9 +687,14 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 		api.EscribirError(w, r, err)
 		return
 	}
-	p.Instancia, p.Activo = "", nil
-	if origen == nucleo.OrigenGlobal && inst.ID != "global" {
-		p.Instancia = inst.ID
+	// En la configuración global, un punto puede ser de otra instancia (tramtai acceso crear --instancia); desde la de
+	// un proyecto, siempre es suyo.
+	p.Activo = nil
+	if inst.ID != "global" {
+		p.Instancia = ""
+		if origen == nucleo.OrigenGlobal {
+			p.Instancia = inst.ID
+		}
 	}
 	if _, err := NormalizarPunto(p, inst.ID, s.opc.Puerto); err != nil {
 		api.EscribirError(w, r, err)
