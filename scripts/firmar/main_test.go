@@ -6,25 +6,21 @@ import (
 	"testing"
 )
 
-// Lo que firma este programa lo verifica la misma clave pública; otra clave, unas sumas cambiadas o una semilla rota no.
-func TestFirmarYComprobar(t *testing.T) {
+// Lo que firma este programa lo verifica su clave pública, y no otra ni unas sumas cambiadas; una semilla rota no firma.
+func TestFirmar(t *testing.T) {
 	publica, privada, _ := ed25519.GenerateKey(nil)
-	semilla := base64.StdEncoding.EncodeToString(privada.Seed())
-	clave := base64.StdEncoding.EncodeToString(publica)
 	sumas := []byte("abc  Tramtai-v1.0.0+1-instalador-windows-x64.exe\n")
-	firma, err := firmar(sumas, semilla+"\n")
+	firma, err := firmar(sumas, base64.StdEncoding.EncodeToString(privada.Seed())+"\n")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := comprobar(sumas, []byte(firma+"\n"), clave); err != nil {
-		t.Fatalf("la firma propia no se verifica: %v", err)
+	sig, _ := base64.StdEncoding.DecodeString(firma)
+	if !ed25519.Verify(publica, sumas, sig) {
+		t.Fatal("la firma no se verifica con su clave pública")
 	}
 	otra, _, _ := ed25519.GenerateKey(nil)
-	if comprobar(sumas, []byte(firma), base64.StdEncoding.EncodeToString(otra)) == nil {
-		t.Fatal("se verificó con otra clave")
-	}
-	if comprobar(append(sumas, 'x'), []byte(firma), clave) == nil {
-		t.Fatal("se verificaron unas sumas cambiadas")
+	if ed25519.Verify(otra, sumas, sig) || ed25519.Verify(publica, append(sumas, 'x'), sig) {
+		t.Fatal("la firma vale con otra clave o con otras sumas")
 	}
 	for _, mala := range []string{"", "no-es-base64", base64.StdEncoding.EncodeToString([]byte("corta"))} {
 		if _, err := firmar(sumas, mala); err == nil {

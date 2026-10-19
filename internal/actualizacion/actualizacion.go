@@ -308,7 +308,7 @@ func Descargar(ctx context.Context, v Version, dir string, avance Avance) (strin
 	if err != nil {
 		return "", err
 	}
-	if err := verificarFirma(sumas, firma); err != nil {
+	if err := VerificarFirma(sumas, firma); err != nil {
 		return "", err
 	}
 	esperada := ""

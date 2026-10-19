@@ -34,3 +34,17 @@ func TestHookEnCarpetaConEspacios(t *testing.T) {
 		t.Fatalf("cmd no ejecutó el hook: %v %q", err, salida)
 	}
 }
+
+// Con & en la ruta (un usuario «Ana&Luis»), que cmd tomaría por otra orden, el hook no se registra: Antigravity no se
+// ejecuta sin él.
+func TestHookConCaracteresDeCmd(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "Ana&Luis")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	guion := filepath.Join(dir, "denegar.cmd")
+	os.WriteFile(guion, []byte("@echo x\r\n"), 0o700)
+	if orden, err := ordenDelHook(guion); err == nil && strings.ContainsAny(orden, "&") {
+		t.Fatalf("se aceptó una orden con &: %s", orden)
+	}
+}

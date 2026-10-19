@@ -14,23 +14,35 @@ import (
 // cambiar sus sumas, pero no firmarlas.
 const archivoFirma = archivoSumas + ".sig"
 
-// clavePublicaB64 es la pública del secreto FIRMA_ACTUALIZACIONES de Publicar. Cambiarla exige un release firmado aún con
-// la anterior que ya la incluya (docs/equipo/versionado.md).
-const clavePublicaB64 = "6lZqaLao2eDv8cR5MaVkhXt+9G4luy8pDoHYo3sq1BA="
+// clavesPublicasB64 son las públicas con las que una firma vale. Para cambiar la del secreto FIRMA_ACTUALIZACIONES, un
+// release (firmado aún con la anterior) añade la nueva aquí; después se cambia el secreto y, más adelante, se quita la
+// vieja (docs/equipo/versionado.md).
+var clavesPublicasB64 = []string{"6lZqaLao2eDv8cR5MaVkhXt+9G4luy8pDoHYo3sq1BA="}
 
-// clavePublica es variable para que las pruebas firmen con su propio par.
-var clavePublica = ed25519.PublicKey(desdeBase64(clavePublicaB64))
+// clavesPublicas es variable para que las pruebas firmen con su propio par.
+var clavesPublicas = func() []ed25519.PublicKey {
+	var claves []ed25519.PublicKey
+	for _, b := range clavesPublicasB64 {
+		claves = append(claves, desdeBase64(b))
+	}
+	return claves
+}()
 
 func desdeBase64(texto string) []byte {
 	datos, _ := base64.StdEncoding.DecodeString(texto)
 	return datos
 }
 
-// verificarFirma comprueba que firma (en base64) es la de sumas con clavePublica.
-func verificarFirma(sumas, firma []byte) error {
+// VerificarFirma comprueba que firma (en base64) es la de sumas con alguna de las claves públicas de la app. Publicar la
+// usa antes de crear el release (scripts/firmar -comprobar), con las mismas claves que las copias instaladas.
+func VerificarFirma(sumas, firma []byte) error {
 	sig, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(firma)))
-	if err != nil || len(sig) != ed25519.SignatureSize || len(clavePublica) != ed25519.PublicKeySize || !ed25519.Verify(clavePublica, sumas, sig) {
-		return errors.New(idioma.T("la firma de esta versión no es válida: descárgala desde su página"))
+	if err == nil && len(sig) == ed25519.SignatureSize {
+		for _, clave := range clavesPublicas {
+			if len(clave) == ed25519.PublicKeySize && ed25519.Verify(clave, sumas, sig) {
+				return nil
+			}
+		}
 	}
-	return nil
+	return errors.New(idioma.T("la firma de esta versión no es válida: descárgala desde su página"))
 }

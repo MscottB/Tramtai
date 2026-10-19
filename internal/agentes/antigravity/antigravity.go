@@ -141,15 +141,21 @@ func argumentos(s nucleo.SolicitudEjecucion) []string {
 }
 
 // ordenDelHook es la ruta del guion tal como la ejecutará agy: sin comillas (llegan mal escapadas a cmd) y, por eso,
-// sin espacios. En Windows se usa su nombre corto (C:\Users\ANAMAR~1\…) si la carpeta temporal tiene espacios. Si aun
-// así los tiene, no se ejecuta: sin el hook, Antigravity podría usar herramientas.
+// solo con letras, números y _ - . : ~ \ /, sin espacios ni nada que cmd o sh interpreten (& ^ % ! ( ) …). En Windows se
+// usa su nombre corto (C:\Users\ANAMAR~1\…) si la carpeta temporal tiene espacios. Si aun así queda algo fuera de lo
+// seguro, no se ejecuta: sin el hook, Antigravity podría usar herramientas.
 func ordenDelHook(guion string) (string, error) {
 	orden := rutaCorta(guion)
-	if strings.ContainsAny(orden, " \t") {
+	if strings.IndexFunc(orden, func(r rune) bool { return !segura(r) }) >= 0 {
 		return "", nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf(
 			"la carpeta temporal tiene espacios (%s) y Antigravity no ejecutaría el hook que le niega las herramientas: define TMP con una carpeta sin espacios", filepath.Dir(orden)))
 	}
 	return orden, nil
+}
+
+// segura dice si una letra de la ruta del hook llega igual a cmd y a sh sin comillas.
+func segura(r rune) bool {
+	return r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune(`_-.:~\/`, r)
 }
 
 // prepararCarpetas crea el HOME privado con modelProvider gemini y el hook que niega todas las herramientas. El hook

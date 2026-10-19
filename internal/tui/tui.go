@@ -685,7 +685,7 @@ func rutaPermitida(ruta string) (string, error) {
 
 // lanzar sube los archivos, crea el trabajo y sigue sus eventos en vivo.
 func (m *modelo) lanzar() tea.Cmd {
-	if m.enCurso != "" {
+	if m.enCurso != "" || m.ocupado != "" { // ocupado: un envío que aún no ha vuelto (dos Enter seguidos)
 		return nil
 	}
 	if strings.TrimSpace(m.mensaje) == "" {
@@ -740,7 +740,10 @@ func (m *modelo) lanzar() tea.Cmd {
 			if err == nil {
 				err = err2
 			}
-			flujo <- msgFin{t: final, err: err}
+			select {
+			case flujo <- msgFin{t: final, err: err}:
+			case <-seguir.Done():
+			}
 		}()
 		return msgCreado{t: t, flujo: flujo, parar: parar}
 	}

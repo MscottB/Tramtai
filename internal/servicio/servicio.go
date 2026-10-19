@@ -78,6 +78,7 @@ type Instancia struct {
 	rutas        http.Handler
 	pararPurga   context.CancelFunc
 	purgaParada  chan struct{}
+	purgarYa     chan struct{} // pide al bucle de purga una vuelta ahora (por ejemplo, tras cambiar la retención)
 }
 
 // Servicio atiende todas las instancias en un único puerto; el token de cada petición elige la instancia.
@@ -345,16 +346,20 @@ func (s *Servicio) activar(id, ambito, raiz string, c *nucleo.Configuracion) (*I
 	s.mu.Unlock()
 
 	a.inst, a.err = s.abrirInstancia(id, ambito, raiz, c)
+	var sobra *Instancia // abierta mientras el servicio se cerraba: se cierra fuera de mu
 	s.mu.Lock()
 	delete(s.abriendo, id)
 	if a.err == nil && s.cerrado {
-		a.inst.cerrar(false)
+		sobra = a.inst
 		a.inst, a.err = nil, nucleo.NuevoError(nucleo.CodigoServicioDetenido, idioma.T("el servicio se está deteniendo"))
 	}
 	if a.err == nil {
 		s.instancias[id] = a.inst
 	}
 	s.mu.Unlock()
+	if sobra != nil {
+		sobra.cerrar(false)
+	}
 	close(a.listo)
 	if a.err != nil {
 		return nil, a.err
@@ -436,7 +441,7 @@ func origenPeticion(r *http.Request, porSesion, local bool) string {
 // iniciarPurga aplica la retención al abrir la instancia y después cada intervaloPurga.
 func (i *Instancia) iniciarPurga(registros io.Writer) {
 	ctx, parar := context.WithCancel(context.Background())
-	i.pararPurga, i.purgaParada = parar, make(chan struct{})
+	i.pararPurga, i.purgaParada, i.purgarYa = parar, make(chan struct{}), make(chan struct{}, 1)
 	go func() {
 		defer close(i.purgaParada)
 		reloj := time.NewTicker(intervaloPurga)
@@ -454,9 +459,19 @@ func (i *Instancia) iniciarPurga(registros io.Writer) {
 			case <-ctx.Done():
 				return
 			case <-reloj.C:
+			case <-i.purgarYa:
 			}
 		}
 	}()
+}
+
+// purgarPronto pide una purga sin esperarla. La hace el bucle de la instancia, así que cerrar (Desactivar, Cerrar)
+// la espera y nunca corre sobre una base cerrada.
+func (i *Instancia) purgarPronto() {
+	select {
+	case i.purgarYa <- struct{}{}:
+	default: // ya había una pedida, o la instancia no tiene bucle de purga
+	}
 }
 
 // Purgar aplica la retención de la instancia: vence resultados y entradas, borra metadatos antiguos y las
@@ -601,9 +616,11 @@ func (s *Servicio) Restaurar() []error {
 		if err := json.Unmarshal(datos, &a); err != nil {
 			// Dañado: se aparta (para poder mirarlo) y se abre la global, como sin registro previo.
 			a = activas{Global: true}
-			_ = os.Rename(ruta, ruta+".dañado")
-			errores = append(errores, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida,
-				idioma.Tf("%s no se pudo leer (%s): se apartó como instancias.json.dañado y se abre solo la instancia global", ruta, err.Error())))
+			texto := idioma.Tf("%s no se pudo leer (%s): se apartó como instancias.json.dañado y se abre solo la instancia global", ruta, err.Error())
+			if errApartar := os.Rename(ruta, ruta+".dañado"); errApartar != nil {
+				texto = idioma.Tf("%s no se pudo leer (%s) ni apartar (%s): se abre solo la instancia global y se reescribirá", ruta, err.Error(), errApartar.Error())
+			}
+			errores = append(errores, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, texto))
 		}
 	}
 	if a.Global {
@@ -759,6 +776,9 @@ var escritores sync.Map // ruta → *sync.Mutex
 // escribirAtomico escribe datos en un temporal propio de la misma carpeta y lo renombra: quien lee a la vez (un Recargar,
 // la CLI, la TUI) ve el archivo anterior o el nuevo, nunca uno a medias, y un corte a mitad no deja el archivo truncado.
 func escribirAtomico(ruta string, datos []byte, permisos os.FileMode) error {
+	if real, err := filepath.EvalSymlinks(ruta); err == nil {
+		ruta = real // un config.yaml enlazado (dotfiles) sigue siendo un enlace: se escribe el archivo al que apunta
+	}
 	m, _ := escritores.LoadOrStore(filepath.Clean(ruta), &sync.Mutex{})
 	m.(*sync.Mutex).Lock()
 	defer m.(*sync.Mutex).Unlock()
@@ -781,10 +801,21 @@ func escribirAtomico(ruta string, datos []byte, permisos os.FileMode) error {
 		err = os.Chmod(temporal, permisos)
 	}
 	if err == nil {
-		err = os.Rename(temporal, ruta)
+		err = renombrar(temporal, ruta)
 	}
 	if err != nil {
 		_ = os.Remove(temporal)
+	}
+	return err
+}
+
+// renombrar reintenta en Windows durante unos 600 ms: allí Rename falla mientras otro proceso tiene abierto el destino
+// (un Recargar que lo lee, la CLI, la terminal o el antivirus). En los demás sistemas no hace falta.
+func renombrar(origen, destino string) error {
+	err := os.Rename(origen, destino)
+	for espera := 5 * time.Millisecond; err != nil && runtime.GOOS == "windows" && espera <= 320*time.Millisecond; espera *= 2 {
+		time.Sleep(espera)
+		err = os.Rename(origen, destino)
 	}
 	return err
 }

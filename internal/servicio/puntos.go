@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"slices"
 	"sort"
@@ -231,16 +230,24 @@ func validarPunto(p ConfigPunto, existe func(string) bool) error {
 // ConReglas envuelve una edición de puntos de acceso con ValidarPunto en los puntos nuevos o que cambian algo más que
 // activo: así se puede desactivar una API que ya tenía otro error, pero no guardar una nueva que fallaría siempre.
 func ConReglas(editar func([]ConfigPunto) ([]ConfigPunto, error)) func([]ConfigPunto) ([]ConfigPunto, error) {
+	// huella es el contenido del punto sin activo: se toma antes de editar, porque editar puede cambiar la lista (y lo
+	// que apuntan sus punteros) en su sitio.
+	huella := func(p ConfigPunto) string {
+		p.Activo = nil
+		datos, _ := json.Marshal(p)
+		return string(datos)
+	}
 	return func(lista []ConfigPunto) ([]ConfigPunto, error) {
-		antes := slices.Clone(lista) // editar puede cambiar lista en su sitio
+		antes := map[string]bool{}
+		for _, p := range lista {
+			antes[huella(p)] = true
+		}
 		nueva, err := editar(lista)
 		if err != nil {
 			return nil, err
 		}
-		sinActivo := func(p ConfigPunto) ConfigPunto { p.Activo = nil; return p }
 		for _, p := range nueva {
-			igual := func(q ConfigPunto) bool { return reflect.DeepEqual(sinActivo(p), sinActivo(q)) }
-			if !slices.ContainsFunc(antes, igual) {
+			if !antes[huella(p)] {
 				if err := ValidarPunto(p); err != nil {
 					return nil, err
 				}
@@ -410,10 +417,10 @@ func (s *Servicio) puntosDeseados() ([]candidato, []string) {
 // deja intactos los que no cambiaron, sin afectar a los trabajos en curso.
 func (s *Servicio) Recargar() []EstadoPunto {
 	s.muRecargar.Lock()
-	defer s.muRecargar.Unlock()
 	deseados, errores := s.puntosDeseados()
-	var retirados []*puntoActivo // se cierran al final, sin s.mu
+	var retirados []*puntoActivo // se cierran al final, sin s.mu ni muRecargar: cerrar uno puede tardar
 	defer func() {
+		s.muRecargar.Unlock()
 		for _, p := range retirados {
 			p.cerrar()
 		}

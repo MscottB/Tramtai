@@ -9,6 +9,9 @@ import (
 // Si el archivo nuevo no se puede abrir al rotar (aquí es de solo lectura), el registro sigue en la copia y lo anota:
 // no se pierde en silencio.
 func TestRotarSinPoderAbrir(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root escribe en archivos de solo lectura")
+	}
 	ruta := t.TempDir() + "/servicio.log"
 	r, err := Abrir(ruta, 10, 0)
 	if err != nil {

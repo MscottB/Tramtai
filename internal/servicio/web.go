@@ -854,15 +854,17 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 			api.EscribirJSON(w, http.StatusOK, map[string]any{"puntos_acceso": s.puntosDe(inst.ID)})
 		}
 	case accion == "" && r.Method == http.MethodDelete:
-		if editar(func(lista []ConfigPunto) ([]ConfigPunto, error) {
-			return slices.DeleteFunc(lista, func(c ConfigPunto) bool { return c.Nombre == nombre }), nil
-		}) {
-			EliminarTokenPunto(s.opc.Datos, nombre)
-			if err := inst.Planificador.EliminarConsumo(r.Context(), nombre); err != nil {
-				log.Printf("punto de acceso %s: no se pudo borrar su consumo: %v", nombre, err)
-			}
-			w.WriteHeader(http.StatusNoContent)
+		// Como la CLI y la terminal: archivo y clave antes de recargar (404 si ya no estaba).
+		if err := EliminarPunto(s.opc.Datos, punto.Origen, origenDeArchivo(punto.Origen), nombre); err != nil {
+			api.EscribirError(w, r, err)
+			return
 		}
+		s.Recargar()
+		_ = s.actualizarDescriptor()
+		if err := inst.Planificador.EliminarConsumo(r.Context(), nombre); err != nil {
+			log.Printf("punto de acceso %s: no se pudo borrar su consumo: %v", nombre, err)
+		}
+		w.WriteHeader(http.StatusNoContent)
 	default:
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ruta no encontrada: %s %s", r.Method, r.URL.Path)))
 	}
@@ -955,17 +957,7 @@ func (s *Servicio) fijarRetencion(inst *Instancia, resultado, metadatos, maximo 
 	err := s.guardarValores(inst, map[string]any{"retencion.horas_resultado": resultado, "retencion.horas_metadatos": metadatos,
 		"retencion.max_trabajos": maximo})
 	if err == nil {
-		s.fondo.Go(func() {
-			s.mu.RLock()
-			abierta := s.instancias[inst.ID] == inst // no se purga una base que Cerrar o Desactivar ya cerraron
-			s.mu.RUnlock()
-			if !abierta {
-				return
-			}
-			if err := inst.Purgar(context.Background()); err != nil {
-				fmt.Fprintf(s.opc.Registros, "purga de %s: %s\n", inst.ID, nucleo.MensajeDe(err))
-			}
-		})
+		inst.purgarPronto()
 	}
 	return err
 }

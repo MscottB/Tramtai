@@ -218,6 +218,14 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 		case <-senales:
 			if cancelado {
 				fmt.Fprintln(errOut, idioma.T("se sale sin esperar a que termine la cancelación"))
+				// Se detiene el planificador (termina el árbol del agente, que en Unix tiene su propio grupo y no recibe
+				// el Ctrl+C) con un tope, para salir aunque no lo confirme.
+				detenido := make(chan struct{})
+				go func() { p.Detener(); close(detenido) }()
+				select {
+				case <-detenido:
+				case <-time.After(5 * time.Second):
+				}
 				os.Exit(130)
 			}
 			cancelado = true

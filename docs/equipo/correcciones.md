@@ -58,7 +58,9 @@ del mismo release. Quien pudiera escribir en los releases cambiaría ambos, y el
 - **Firma:** Publicar firma `SHA256SUMS.txt` con ed25519 y sube `SHA256SUMS.txt.sig`.
 - **Clave privada:** es un secreto del repo (`FIRMA_ACTUALIZACIONES`). Se genera en local, tú apruebas el
   `gh secret set` y no se guarda en ningún archivo.
-- **Clave pública:** va incrustada en `internal/actualizacion`.
+- **Claves públicas:** van incrustadas en `internal/actualizacion` como una lista. Una firma vale si la verifica
+  cualquiera de ellas; así se puede cambiar de clave sin dejar atrás a las copias instaladas. Publicar comprueba la
+  firma con esas mismas claves (`scripts/firmar -comprobar`) antes de crear el release, en un job sin caché de Go.
 - **Al instalar:** `Instalar` exige una firma válida antes de usar las sumas. Sin firma, o con una firma inválida, no
   instala y muestra el aviso con el enlace de descarga.
   - No se acepta una versión sin firma, porque entonces bastaría con quitarla.
@@ -102,8 +104,9 @@ barrera solo corta después de que la herramienta se ejecutó.
   habilitados para apps) en los puntos nuevos o que cambian algo más que `activo`. Lo usan la CLI y la terminal; la Web
   aplica las mismas funciones en sus rutas. No se metió dentro de `EditarPuntos` porque `Normalizar` necesita la
   instancia y el puerto del servicio, que solo conoce quien llama;
-- una sola `servicio.EliminarPunto(datos, ruta, origen, nombre)` hace editar, luego borrar la clave y luego
-  `EliminarConsumo`; la usan la Web, la CLI y la TUI;
+- una sola `servicio.EliminarPunto(datos, ruta, origen, nombre)` quita el punto del archivo y después borra su clave
+  (404 si no estaba). La usan la Web, la CLI y la TUI, que después recargan. La Web, además, pone a cero su consumo con
+  `EliminarConsumo`;
 - se añade una prueba de borrar y volver a crear con el mismo nombre, que empieza con consumo cero.
 
 Que la CLI y la TUI pasen por la API del servicio es el cambio grande y va a la v0.49.
@@ -130,7 +133,7 @@ Que la CLI y la TUI pasen por la API del servicio es el cambio grande y va a la 
 - **Ruta de la base de datos:**
   - **Problema:** el DSN de SQLite se arma concatenando la ruta (`almacen.go`). Una carpeta con `?`, `#` o `%` rompe los
     pragmas, y con la portable de la v0.48 esas rutas serán más frecuentes.
-  - **Cambio:** se construye con `url.URL`.
+  - **Cambio:** la ruta se escribe con `%`, `?` y `#` escapados (`rutaURI`).
 
 ## 5. Trabajos que no quedan colgados
 
@@ -157,15 +160,22 @@ Que la CLI y la TUI pasen por la API del servicio es el cambio grande y va a la 
   - **Cambio:** el lock solo cubre comprobar e insertar, y la apertura va fuera, compartida por quien espere la misma
     instancia.
 - **Goroutines sueltas:**
-  - **Problema:** `LimpiarDescargas`, la purga tras cambiar la retención y la comprobación de actualizaciones no tienen
-    dueño, y la purga puede correr con la base ya cerrada.
-  - **Cambio:** un `sync.WaitGroup` en `Servicio` que `Cerrar` espera.
+  - **Problema:** `LimpiarDescargas` y la purga tras cambiar la retención no tienen dueño, y la purga puede correr con la
+    base ya cerrada.
+  - **Cambio:**
+    - `LimpiarDescargas` va en un `sync.WaitGroup` del servicio que `Cerrar` espera;
+    - la purga tras cambiar la retención la hace el bucle de purga de la instancia (`purgarPronto`), que `cerrar`
+      (Desactivar y Cerrar) ya espera;
+    - la comprobación de actualizaciones no toca las bases y sigue aparte.
 - **`tramtai ejecutar --directo`:**
   - **Problema:** no purga nunca `cli.db` ni `cargas/cli` (en contra de `retencion`).
   - **Cambio:** al terminar aplica la retención a todas las instancias de `cli.db` con la misma función que el servicio
     (`servicio.PurgarBase`). Además, un segundo Ctrl+C sale aunque el trabajo no confirme la cancelación.
-  - **Lo que no aplica:** el presupuesto y la ventana de idempotencia de la instancia. Cada ejecución directa es una
-    instancia nueva (para no relanzar trabajos de otra) y no manda `Idempotency-Key`.
+  - **Lo que no aplica:** el presupuesto, `retencion.max_trabajos` y la ventana de idempotencia de la instancia. Cada
+    ejecución directa es una instancia nueva (para no relanzar trabajos de otra) con un solo trabajo, y no manda
+    `Idempotency-Key`. Sí aplican los plazos de `retencion`.
+  - **Segundo Ctrl+C:** detiene el planificador (que termina el árbol del agente, con su propio grupo en Unix) con un
+    tope de 5 s y sale con código 130.
 
 ## 6. Errores pequeños del Go
 

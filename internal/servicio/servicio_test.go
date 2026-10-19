@@ -582,3 +582,26 @@ func TestRestaurarConInstanciasDanado(t *testing.T) {
 		t.Fatal("la instancia global debía abrirse")
 	}
 }
+
+// Guardar mientras otro proceso lee el archivo (un Recargar, la CLI, el antivirus) termina bien en cuanto lo suelta: en
+// Windows el renombrado se reintenta.
+func TestEscribirAtomicoConUnLector(t *testing.T) {
+	ruta := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(ruta, []byte("antes\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	lector, err := os.Open(ruta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		lector.Close()
+	}()
+	if err := escribirAtomico(ruta, []byte("después\n"), 0o600); err != nil {
+		t.Fatalf("guardar con un lector abierto: %v", err)
+	}
+	if datos, _ := os.ReadFile(ruta); string(datos) != "después\n" {
+		t.Fatalf("contenido: %q", datos)
+	}
+}

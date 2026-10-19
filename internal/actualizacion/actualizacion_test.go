@@ -80,9 +80,9 @@ func servidor(t *testing.T, alterado bool, firma int) {
 	if firma == sumasCambiadas {
 		sumas += "0000  otro.exe\n"
 	}
-	anterior := clavePublica
-	clavePublica = publica
-	t.Cleanup(func() { clavePublica = anterior })
+	anterior := clavesPublicas
+	clavesPublicas = []ed25519.PublicKey{publica}
+	t.Cleanup(func() { clavesPublicas = anterior })
 	mux := http.NewServeMux()
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)

@@ -1,8 +1,8 @@
 // Command firmar firma SHA256SUMS.txt para la actualización de un clic (internal/actualizacion la verifica).
 //
-//	go run ./scripts/firmar SHA256SUMS.txt                      firma con la semilla de FIRMA_ACTUALIZACIONES
-//	go run ./scripts/firmar -verificar <publica> SHA256SUMS.txt comprueba SHA256SUMS.txt.sig
-//	go run ./scripts/firmar -generar                            par nuevo: la pública por stdout y la semilla por stderr
+//	go run ./scripts/firmar SHA256SUMS.txt            firma con la semilla de FIRMA_ACTUALIZACIONES
+//	go run ./scripts/firmar -comprobar SHA256SUMS.txt comprueba SHA256SUMS.txt.sig con las claves de la app
+//	go run ./scripts/firmar -generar                  par nuevo: la pública por stdout y la semilla por stderr
 //
 // La semilla (privada, ed25519 en base64) solo se lee del entorno, nunca de un argumento ni de un archivo, para que no
 // quede en el historial de órdenes ni en el disco.
@@ -16,19 +16,21 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"tramtai/internal/actualizacion"
 )
 
 func main() {
 	generar := flag.Bool("generar", false, "genera un par nuevo")
-	verificar := flag.String("verificar", "", "clave pública en base64 con la que comprobar la firma")
+	comprobar := flag.Bool("comprobar", false, "comprueba la firma con las claves públicas de la app")
 	flag.Parse()
-	if err := ejecutar(*generar, *verificar, flag.Args()); err != nil {
+	if err := ejecutar(*generar, *comprobar, flag.Args()); err != nil {
 		fmt.Fprintln(os.Stderr, "firmar:", err)
 		os.Exit(1)
 	}
 }
 
-func ejecutar(generar bool, verificar string, args []string) error {
+func ejecutar(generar, comprobar bool, args []string) error {
 	if generar {
 		publica, privada, err := ed25519.GenerateKey(nil)
 		if err != nil {
@@ -45,12 +47,12 @@ func ejecutar(generar bool, verificar string, args []string) error {
 	if err != nil {
 		return err
 	}
-	if verificar != "" {
+	if comprobar {
 		firma, err := os.ReadFile(args[0] + ".sig")
 		if err != nil {
 			return err
 		}
-		if err := comprobar(datos, firma, verificar); err != nil {
+		if err := actualizacion.VerificarFirma(datos, firma); err != nil {
 			return err
 		}
 		fmt.Println("firma válida")
@@ -70,17 +72,4 @@ func firmar(datos []byte, semilla string) (string, error) {
 		return "", errors.New("FIRMA_ACTUALIZACIONES no tiene una semilla ed25519 válida")
 	}
 	return base64.StdEncoding.EncodeToString(ed25519.Sign(ed25519.NewKeyFromSeed(s), datos)), nil
-}
-
-// comprobar verifica la firma (en base64) de datos con la clave pública (en base64).
-func comprobar(datos, firma []byte, publica string) error {
-	clave, err := base64.StdEncoding.DecodeString(publica)
-	if err != nil || len(clave) != ed25519.PublicKeySize {
-		return errors.New("la clave pública no es válida")
-	}
-	sig, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(firma)))
-	if err != nil || !ed25519.Verify(clave, datos, sig) {
-		return errors.New("la firma no es válida")
-	}
-	return nil
 }
