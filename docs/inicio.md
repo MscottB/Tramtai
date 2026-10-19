@@ -4,7 +4,11 @@
 
 - **Windows 10 u 11** (x64), **Linux** (x64 o ARM) o **macOS** 11 o posterior (Intel o Apple Silicon). La app de escritorio existe para los tres.
 - **Al menos un agente:** [Claude Code](https://docs.anthropic.com/claude-code) (`claude`), [Codex CLI](https://developers.openai.com/codex/cli) (`codex`), [GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/set-up/install-copilot-cli) (`copilot`, con cualquier plan de GitHub Copilot) o una clave de la Gemini API, que también sirve para Antigravity (`agy`).
-- **Opcional, para archivos de Office y PDF:** `uv tool install "markitdown[pdf,docx,pptx,xlsx]==0.1.8"`.
+- **Para archivos de Office y PDF no hace falta instalar nada:** Tramtai prepara su conversor (markitdown, con su
+  propio Python) en su carpeta la primera vez que arranca; lo ves y lo repites en **Ajustes → Archivos** o con
+  `tramtai conversor preparar`. Ocupa unos 300 MB y no pide permisos de administrador. Si la red de tu empresa bloquea
+  la descarga, baja el **paquete del conversor** para Windows (`Tramtai-…-conversor-windows-x64.zip`, unos 100 MB) de
+  la misma página de descargas y descomprímelo junto a `tramtai.exe`.
 
 ## 1. Instalar y abrir
 

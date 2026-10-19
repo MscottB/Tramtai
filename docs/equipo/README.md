@@ -12,6 +12,7 @@ Lo interno para desarrollar Tramtai. La documentación para usuarios está en el
 | [nuevo-agente.md](nuevo-agente.md) | Cómo añadir un agente |
 | [m0-agentes.md](m0-agentes.md) | Evidencia M0 de los CLI de cada agente |
 | [M0B.md](M0B.md) | Validación de los modos con clave de API |
+| [conversor.md](conversor.md) | El conversor de archivos: lock, uv fijado y cómo cambiar sus versiones |
 | [pendientes.md](pendientes.md) | Hitos, hoja de ruta por releases y tareas |
 | [Diseño](../diseno/DESIGN.md) | Sistema visual de la Web UI y de la página |
 

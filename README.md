@@ -67,7 +67,7 @@ tramtai abrir   # inicia el servicio y abre la Web UI en el navegador
 
 El script elige el archivo de tu sistema (Intel o ARM), comprueba su suma SHA-256 y deja `tramtai` en `~/.local/bin`; para actualizar, vuelve a ejecutarlo.
 
-Necesitas al menos un agente instalado: [Claude Code](https://docs.anthropic.com/claude-code), [Codex CLI](https://developers.openai.com/codex/cli), [GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/set-up/install-copilot-cli) o una clave de la Gemini API. Para leer PDF y archivos de Office, instala también [markitdown](https://github.com/microsoft/markitdown) (`uv tool install "markitdown[pdf,docx,pptx,xlsx]==0.1.8"`).
+Necesitas al menos un agente instalado: [Claude Code](https://docs.anthropic.com/claude-code), [Codex CLI](https://developers.openai.com/codex/cli), [GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/set-up/install-copilot-cli) o una clave de la Gemini API. Para leer PDF y archivos de Office no hace falta instalar nada más: Tramtai prepara [markitdown](https://github.com/microsoft/markitdown) en su carpeta la primera vez que arranca (y, si tu red lo bloquea, trae un paquete del conversor para Windows).
 
 ## Conectar una aplicación
 
@@ -79,8 +79,8 @@ r = cliente.chat.completions.create(model="claude/sonnet", messages=[{"role": "u
 print(r.choices[0].message.content)
 ```
 
-Para enviar archivos, seguir tareas largas o reintentar, usa la API propia (`/api/v1`, con su OpenAPI en
-`/api/v1/openapi.json`). En la app, **Mis APIs → ¿Qué URL uso?** compara las tres URL con ejemplos para copiar.
+Las tres aceptan archivos (por OpenAI y Anthropic, en base64 dentro del mensaje). Para archivos grandes, seguir tareas
+largas o reintentar, usa la API propia (`/api/v1`, con su OpenAPI en `/api/v1/openapi.json`). En la app, **Mis APIs → ¿Qué URL uso?** compara las tres URL con ejemplos para copiar.
 
 Con el SDK de Anthropic, la URL base es `http://127.0.0.1:17373/anthropic`. Todas las rutas y opciones están en la [referencia de la API](docs/api.md).
 

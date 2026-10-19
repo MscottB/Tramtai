@@ -175,6 +175,14 @@ Se comprueba la ruta real del archivo, así que `..` o un enlace que salga de es
 - **Formatos:** texto, Markdown, JSON, XML, CSV, HTML, PDF, Word, PowerPoint, Excel y ZIP; el resto se rechaza con
   `carga_invalida`, también dentro de un ZIP. Un Word, PowerPoint o Excel que se descomprimiría en más de
   `conversion.maximo_descomprimido_mb` se rechaza antes de convertirlo.
+- **Conversor:** markitdown 0.1.8 con su propio Python, en `<carpeta de Tramtai>/conversor` (en la portable, en
+  `datos-tramtai/conversor`). Se prepara solo la primera vez que arranca el servicio (`conversion.preparar_al_iniciar`,
+  `true` por defecto) y a mano con **Ajustes → Archivos** o `tramtai conversor preparar`; `tramtai conversor estado`
+  dice si está listo. Se usa, por este orden: `conversion.comando` si lo cambiaste, el paquete del conversor junto al
+  ejecutable, el preparado y `markitdown` del PATH. La descarga usa el proxy del sistema (`HTTPS_PROXY`, `NO_PROXY`) y
+  sus certificados (redes que inspeccionan TLS); si aun así se bloquea, descomprime el paquete del conversor para
+  Windows junto a `tramtai.exe`. Sin conversor listo, una petición con un archivo que lo necesita responde 503
+  `conversor_no_disponible` antes de aceptarse.
 - **Conversión:** `conversion.tiempo_limite_segundos` (120) por archivo y `conversion.tiempo_total_segundos` (600) para
   toda la petición; markitdown corre con un tope de memoria (`limites.memoria_proceso_mb`, 2048; en macOS no se
   aplica). Los límites de `conversion.*` solo se cambian en la configuración global: un valor 0 o negativo usa el
