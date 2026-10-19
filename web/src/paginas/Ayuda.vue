@@ -217,7 +217,7 @@ const categorias = [
   { titulo: 'ayuda.catApis', preguntas: [['ayuda.p11', 'ayuda.r11'], ['ayuda.p21', 'ayuda.r21'], ['ayuda.p4', 'ayuda.r4'], ['ayuda.p12', 'ayuda.r12'],
     ['ayuda.p14', 'ayuda.r14'], ['ayuda.p15', 'ayuda.r15'], ['ayuda.p18', 'ayuda.r18'], ['ayuda.p19', 'ayuda.r19']] },
   { titulo: 'ayuda.catDatos', preguntas: [['ayuda.p2', 'ayuda.r2'], ['ayuda.p3', 'ayuda.r3'], ['ayuda.p13', 'ayuda.r13'], ['ayuda.p7', 'ayuda.r7']] },
-  { titulo: 'ayuda.catApp', preguntas: [['ayuda.p8', 'ayuda.r8'], ['ayuda.p16', 'ayuda.r16'], ['ayuda.p17', 'ayuda.r17'], ['ayuda.p10', 'ayuda.r10']] },
+  { titulo: 'ayuda.catApp', preguntas: [['ayuda.p8', 'ayuda.r8'], ['ayuda.p16', 'ayuda.r16'], ['ayuda.p17', 'ayuda.r17'], ['ayuda.p24', 'ayuda.r24'], ['ayuda.p10', 'ayuda.r10']] },
 ] as const
 const categoriasVistas = computed(() => categorias
   .map((c) => ({ titulo: c.titulo, preguntas: c.preguntas.filter(([p, r]) => coincide(t(p), t(r))).map(([pregunta, respuesta]) => ({ pregunta, respuesta })) }))

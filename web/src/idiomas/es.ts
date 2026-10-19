@@ -939,6 +939,9 @@ const es = {
   'ayuda.p19': '¿Por qué no puedo usar Antigravity en mis APIs?',
   'ayuda.r19':
     'Tramtai ya lo ejecuta sin herramientas (un hook de agy las niega todas; se probó con el CLI real), pero solo se habilita en apps y APIs cuando su prueba de seguridad pasa con una clave de la Gemini API, que es como lo usa Tramtai. Mientras tanto se usa desde Probar, la terminal y la CLI. Si ya lo comprobaste tú, adaptadores.antigravity.permitir_apps: true lo habilita.',
+  'ayuda.p24': '¿Cómo funciona la copia portable?',
+  'ayuda.r24':
+    'La portable (el .zip de Windows) guarda todo en la carpeta «datos-tramtai», junto a sus archivos: configuración, APIs con sus claves, historial y el navegador de la app. No toca la instalación de este equipo; las dos pueden estar abiertas a la vez, cada una con lo suyo, y puedes llevarte la carpeta a otro equipo.\nLas claves de los proveedores (ANTHROPIC_API_KEY…) siguen en el almacén cifrado del sistema: se comparten con la instalada y en otro equipo hay que volver a guardarlas.\nPara actualizarla, descomprime la versión nueva encima: «datos-tramtai» no se pisa. Para pasarle lo de la instalada, copia el contenido de %APPDATA%\\tramtai en «datos-tramtai» con las dos cerradas.\nDesde una terminal, usa .\\tramtai.exe de su carpeta. Si borras portable.txt (con Tramtai cerrado), vuelve a usar %APPDATA%.',
   'ayuda.p17': '¿Qué versión tengo?',
   'ayuda.r17':
     'Abre «Acerca de Tramtai» en el menú lateral, en el menú del estado (arriba a la derecha) o en el icono de la bandeja. Verás la versión tal como aparece en GitHub (por ejemplo v0.42.0+17102026), si hay una más nueva, los enlaces del proyecto y, en «Detalles técnicos», lo necesario para pedir ayuda: «Copiar datos para soporte» lo copia sin claves ni tokens.',

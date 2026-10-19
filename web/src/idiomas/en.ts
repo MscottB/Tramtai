@@ -940,6 +940,9 @@ const en: Textos = {
   'ayuda.p19': 'Why can I not use Antigravity in my APIs?',
   'ayuda.r19':
     'Tramtai already runs it without tools (an agy hook denies them all; it was tried with the real CLI), but it is only enabled in apps and APIs once its security test passes with a Gemini API key, which is how Tramtai uses it. Meanwhile it is used from Try, the terminal and the CLI. If you checked it yourself, adaptadores.antigravity.permitir_apps: true enables it.',
+  'ayuda.p24': 'How does the portable copy work?',
+  'ayuda.r24':
+    'The portable copy (the Windows .zip) keeps everything in the "datos-tramtai" folder next to its files: settings, APIs with their keys, history and the app\'s browser. It does not touch the installation on this computer; both can be open at once, each with its own data, and you can take the folder to another computer.\nProvider keys (ANTHROPIC_API_KEY…) stay in the system\'s encrypted store: they are shared with the installed copy, and on another computer you have to save them again.\nTo update it, unzip the new version over it: "datos-tramtai" is not overwritten. To bring over the installed copy\'s data, copy the contents of %APPDATA%\\tramtai into "datos-tramtai" with both closed.\nFrom a terminal, use .\\tramtai.exe from its folder. If you delete portable.txt (with Tramtai closed), it goes back to %APPDATA%.',
   'ayuda.p17': 'Which version do I have?',
   'ayuda.r17':
     'Open "About Tramtai" in the side menu, in the status menu (top right) or in the tray icon. You will see the version as it appears on GitHub (for example v0.42.0+17102026), whether there is a newer one, the project links and, in "Technical details", what you need to ask for help: "Copy support data" copies it without keys or tokens.',
