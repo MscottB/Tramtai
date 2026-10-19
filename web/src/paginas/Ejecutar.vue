@@ -131,8 +131,10 @@
                 </div>
                 <div v-if="final?.salida" class="text-caption texto-suave q-mt-md">{{ lineasMarcadas ? t('ejecutar.respuestaMarcada') : t('ejecutar.respuestaRecibida') }}</div>
               </div>
-              <div v-if="lineasMarcadas" class="bloque-codigo sin-ajuste respuesta-marcada">
-                <div v-for="(l, i) in lineasMarcadas" :key="i" :class="{ 'respuesta-marcada__linea': l.marcada }">{{ l.texto || ' ' }}</div>
+              <!-- La marca no es solo color: cada línea con problema lleva un icono con su texto para lectores de pantalla. -->
+              <div v-if="lineasMarcadas" class="bloque-codigo sin-ajuste respuesta-marcada" aria-live="polite">
+                <div v-for="(l, i) in lineasMarcadas" :key="i" :class="{ 'respuesta-marcada__linea': l.marcada }">{{ l.texto }}<q-icon v-if="l.marcada"
+                  name="o_error_outline" color="negative" size="14px" class="q-ml-sm" role="img" :aria-label="t('ejecutar.lineaConProblema')" /></div>
               </div>
               <div v-else aria-live="polite"><SalidaTrabajo :texto="salida" /></div>
               <div v-if="activo && !salida" class="row items-center texto-suave q-gutter-x-sm">
@@ -217,6 +219,7 @@ import RegistroTrabajo from '../componentes/RegistroTrabajo.vue'
 import SalidaTrabajo from '../componentes/SalidaTrabajo.vue'
 import VerComoCodigo from '../componentes/VerComoCodigo.vue'
 import { ejemplos as ejemplosDe, type Ejemplo } from '../ejemplos'
+import { lineasConRuta } from '../esquemaCampos'
 import { ajustesDeReceta, api, aplicarModelo, avisar, avisarError, configDeReceta, copiar, duracion, esquemaDeReceta, esfuerzoUsado, estadoInfo, haceCuanto, mensajeDe, modeloDe, modeloInicial,
   origenHistorial, recetaDePunto, recetaDeSolicitud, recetaInicial, recetaVacia, terminales, tituloError, trabajoSeguido, idModeloDe, esfuerzoEspacio, type EstadoPunto, type EventoRegistro, type LimitesPeticion, type Modelo, type Receta, type Solicitud,
   type Trabajo } from '../api'
@@ -454,12 +457,17 @@ const lineasMarcadas = computed(() => {
   } catch {
     return undefined
   }
-  const claves = new Set(problemas.value.map((p) => p.campo.replace(/\[\d+\]/g, '').split('.').at(-1)).filter(Boolean))
-  return JSON.stringify(valor, null, 2).split('\n').map((texto) => {
-    const clave = /^\s*"((?:[^"\\]|\\.)*)":/.exec(texto)?.[1]
-    return { texto, marcada: !!clave && claves.has(clave) }
+  // Se marca la primera línea de cada campo con problemas, comparando su ruta completa (tareas[2].fecha), como la
+  // escribe el servicio.
+  const rutas = new Set(problemas.value.map((p) => p.campo).filter(Boolean))
+  const vistas = new Set<string>()
+  return lineasConRuta(valor).map(({ texto, ruta }) => {
+    const marcada = rutas.has(ruta) && !vistas.has(ruta)
+    vistas.add(ruta)
+    return { texto, marcada }
   })
 })
+
 
 // recientes son las últimas pruebas lanzadas desde Probar (las de las APIs y la terminal están en el Historial).
 const recientes = ref<Trabajo[]>([])

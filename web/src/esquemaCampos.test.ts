@@ -1,7 +1,9 @@
 // node --test web/src/*.test.ts (Node ejecuta TypeScript sin compilar).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { aEsquema, desdeEsquema, ejemploDe, problemaDeCampos, type Campo } from './esquemaCampos.ts'
+import { readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { aEsquema, desdeEsquema, ejemploDe, lineasConRuta, problemaDeCampos, type Campo } from './esquemaCampos.ts'
 import { plantillas } from './plantillas.ts'
 
 const campos: Campo[] = [
@@ -36,6 +38,10 @@ test('un esquema avanzado se queda en JSON', () => {
     { type: 'object', additionalProperties: false, required: ['b'], properties: { a: { type: 'string' } } },
     { type: 'array', items: { type: 'string' } },
     { $schema: 'https://json-schema.org/draft/2020-12/schema', type: 'object', additionalProperties: false, properties: {} },
+    // description en la raíz o en los elementos de una lista: el editor no la guardaría.
+    { type: 'object', description: 'Factura', additionalProperties: false, properties: { x: { type: 'string' } } },
+    { type: 'object', additionalProperties: false, properties: { l: { type: 'array',
+      items: { type: 'object', description: 'Una línea', additionalProperties: false, properties: { x: { type: 'string' } } } } } },
   ]
   for (const e of avanzados) assert.equal(desdeEsquema(e), null, JSON.stringify(e))
   // Cuatro niveles de objetos: el editor llega a tres.
@@ -71,6 +77,24 @@ test('problemas de los campos', () => {
   assert.deepEqual(problemaDeCampos([a, a]), { campo: 'a', problema: 'repetido' })
   assert.deepEqual(problemaDeCampos([{ ...a, tipo: 'opcion', opciones: [' '] }]), { campo: 'a', problema: 'sin_opciones' })
   assert.deepEqual(problemaDeCampos([{ ...a, tipo: 'objeto', campos: [] }]), { campo: 'a', problema: 'sin_campos' })
+  assert.deepEqual(problemaDeCampos([{ ...a, tipo: 'lista', elemento: 'texto', minimo: 5, maximo: 2 }]), { campo: 'a', problema: 'rango' })
+})
+
+test('el ejemplo respeta los límites', () => {
+  const ejemplo = ejemploDe([
+    { nombre: 'n', tipo: 'numero', obligatorio: true, descripcion: '', maximo: -1 },
+    { nombre: 'l', tipo: 'lista', elemento: 'texto', obligatorio: true, descripcion: '', maximo: 0 },
+    { nombre: 'e', tipo: 'entero', obligatorio: true, descripcion: '', minimo: 1.5 },
+  ])
+  assert.deepEqual(ejemplo, { n: -1, l: [], e: 2 })
+})
+
+test('un campo llamado __proto__ no se pierde', () => {
+  const c: Campo[] = [{ nombre: '__proto__', tipo: 'texto', obligatorio: true, descripcion: '' }]
+  const esquema = JSON.parse(JSON.stringify(aEsquema(c)))
+  assert.deepEqual(Object.keys(esquema.properties), ['__proto__'])
+  assert.deepEqual(desdeEsquema(esquema), c)
+  assert.deepEqual(Object.keys(ejemploDe(c)), ['__proto__'])
 })
 
 // cumple es una comprobación sencilla de lo que genera aEsquema: tipos, enum, obligatorios, sobrantes y tamaño.
@@ -102,3 +126,24 @@ function cumple(e: Record<string, unknown>, v: unknown, ruta = ''): string[] {
   }
   return fallos
 }
+
+// Los esquemas de las plantillas, con un ejemplo de respuesta, quedan en internal/salidas/testdata/plantillas.json:
+// una prueba de Go los compila con la misma biblioteca que valida. Si cambian, ACTUALIZAR=1 npm test lo reescribe.
+test('las plantillas coinciden con su copia para la prueba de Go', () => {
+  const ruta = join(import.meta.dirname, '..', '..', 'internal', 'salidas', 'testdata', 'plantillas.json')
+  const lista = plantillas.flatMap((p) => (['es', 'en'] as const).map((idioma) => {
+    const c = p.campos(idioma)
+    return { id: p.id, idioma, esquema: aEsquema(c), ejemplo: ejemploDe(c) }
+  }))
+  const texto = JSON.stringify(lista, null, 2) + '\n'
+  if (process.env.ACTUALIZAR) writeFileSync(ruta, texto)
+  assert.equal(readFileSync(ruta, 'utf8').replace(/\r\n/g, '\n'), texto, 'ejecuta ACTUALIZAR=1 npm test')
+})
+
+test('las líneas del JSON llevan la ruta completa de cada campo', () => {
+  const valor = { fecha: 'x', tareas: [{ fecha: 'a' }, { fecha: 'b', n: [] }], vacio: {} }
+  const lineas = lineasConRuta(valor)
+  assert.equal(lineas.map((l) => l.texto).join('\n'), JSON.stringify(valor, null, 2))
+  assert.deepEqual(lineas.filter((l) => l.ruta === 'tareas[1].fecha').map((l) => l.texto.trim()), ['"fecha": "b",'])
+  assert.deepEqual(lineas.filter((l) => l.ruta === 'fecha').length, 1)
+})

@@ -55,7 +55,7 @@ de la API propia), y **Probar → Ver como código** da la prueba actual como pe
 | `POST /trabajos` | Crea un trabajo (`SolicitudEjecucion`). Responde 202 con el trabajo y `Location`; si la `Idempotency-Key` ya apuntaba a la misma solicitud, responde 200. |
 | `GET /trabajos/{id}` | Estado, error, modelo enviado y efectivo, uso, salida y `disponibilidad` (`disponible` o `expirada`). Si falló con `salida_no_cumple_esquema`, `errores_salida` lista los problemas de la última respuesta (`campo`, `problema` y `texto`; ver [Respuestas con forma](#respuestas-con-forma)). Tras la retención de metadatos (7 días) responde 404. |
 | `GET /trabajos/{id}/salida` | La salida con su tipo (`text/markdown`, `text/plain` o `application/json`). Si no ha terminado, 409 `trabajo_no_terminado`; si la retención ya la borró, 410 `resultado_expirado`. |
-| `GET /trabajos/{id}/eventos` | SSE con `id` monotónico: `estado`, `entrada` (antes de esperar al agente: lo que ocupa la entrada), `texto`, `aviso` e `intento` (al empezar cada intento, JSON con `agente`, `modelo`, `esfuerzo` y `del_agente`; un cliente que no lo espera lo ignora). `Last-Event-ID` (o `?desde=`) reanuda tras ese evento. Envía latidos cada 15 s y termina con un evento `fin`. Si el resultado expiró, empieza con un evento `aviso`: solo quedan los eventos de estado, entrada e intento. |
+| `GET /trabajos/{id}/eventos` | SSE con `id` monotónico: `estado`, `entrada` (antes de esperar al agente: lo que ocupa la entrada), `texto`, `aviso`, `intento` (al empezar cada intento, JSON con `agente`, `modelo`, `esfuerzo` y `del_agente`, y en una corrección `correccion` y `correcciones`; un cliente que no lo espera lo ignora) y `validacion` (los problemas de una respuesta que no cumplía el esquema). `Last-Event-ID` (o `?desde=`) reanuda tras ese evento. Envía latidos cada 15 s y termina con un evento `fin`. Si el resultado expiró, empieza con un evento `aviso`: solo quedan los eventos de estado, entrada e intento. |
 | `GET /limites` | Los topes de una petición: `cargas_por_peticion` (20), `carga_mb`, `texto_convertido_mb`, `cuota_cargas_mb`, `cuerpo_mb` (16), `esquema_kb` (256), `mensajes` (1.000) y `reserva_salida_tokens`. Es rápida; `/capacidades` trae el mismo bloque en `limites`. |
 | `GET /trabajos/{id}/registro` | Los pasos de la petición con su hora, sin el texto de la respuesta: `{"eventos":[{"numero","tipo","datos","creado_en"}]}` con los eventos `estado`, `entrada` (caracteres, tokens estimados y cada documento de mayor a menor), `intento` (en una corrección, con `correccion` y `correcciones`), `aviso` y `validacion` (los problemas de una respuesta que no cumplía el esquema). Mismos permisos que `GET /trabajos/{id}`. |
 | `POST /trabajos/{id}/cancelar` | Cancelación idempotente; responde 202 sin afirmar que ya terminó. |
@@ -63,7 +63,7 @@ de la API propia), y **Probar → Ver como código** da la prueba actual como pe
 | `POST /esquemas/validar` | Comprueba un JSON Schema sin ejecutar nada: `{"esquema": …}` con el esquema como objeto o como texto. Responde `{"valido": true}` o `{"valido": false, "error": "…"}`, con `linea` y `columna` si el texto no es JSON válido. Mismo tope que en una petición (256 KB). |
 | `DELETE /trabajos/{id}` | Borra un trabajo terminado: 204, o 409 si sigue activo. |
 | `DELETE /trabajos` | Vacía el historial: borra los trabajos terminados de la instancia y las cargas que ya no usa ninguno; conserva los activos. Responde `{"eliminados": n}`. No existe en los puntos de acceso. |
-| `POST /ejecutar` | Igual que `POST /trabajos`, pero espera el resultado. Envía `Location` antes de esperar; si se corta la conexión, el trabajo no se cancela. |
+| `POST /ejecutar` | Igual que `POST /trabajos`, pero espera el resultado: el trabajo final, con `errores_salida` si falló por el esquema. Envía `Location` antes de esperar; si se corta la conexión, el trabajo no se cancela. |
 | `POST /cargas` | Multipart con el campo `archivo`, o el binario en el cuerpo con `?nombre=`. Devuelve `identificador_carga`, `sha256`, `tamano_bytes` y `vence_en`. Un trabajo nuevo que cite una carga vencida se rechaza con 410; las cargas de un trabajo aceptado se conservan mientras se pueda reintentar. |
 | `GET /agentes` | La ficha de cada agente, al momento y sin comprobar los CLI: `agente`, `nombre`, `programa`, `codigo`, `color` (`claro`, `oscuro`), `orden`, `streaming`, `salida_estructurada`, `modelo_efectivo_informado`, `esfuerzos`, `autenticaciones`, `variables_clave`, `permitido_apps` y `url_instalacion`. Un agente sin ficha (de pruebas) va al final con su id. |
 | `GET /capacidades` | Por agente: streaming (`tokens` o `final`), salida estructurada, modelo efectivo, versión detectada, autenticación y términos. Incluye el formato de serialización. |
@@ -94,8 +94,9 @@ Los campos desconocidos en la API nativa son un error (`solicitud_invalida`).
 2. **Crear el trabajo**: `POST /trabajos` con `mensajes`, el modelo (`agente` y `modelo`, o `perfil_modelo`), las
    `cargas` y, si quieres JSON, `salida: {"formato": "json", "esquema": {…}}`. Responde 202 con el trabajo (`id`).
 3. **Seguirlo en vivo**: `GET /trabajos/{id}/eventos` (SSE). Cada evento trae `id`, `event` y `data`: los `texto` son
-   trozos de la respuesta (una línea `data:` por línea del texto); `estado`, `entrada`, `intento` y `aviso` cuentan lo
-   que pasa, y `fin` (`{"estado","codigo_error"}`) cierra el flujo. Si se corta, vuelve a pedirlo con la cabecera
+   trozos de la respuesta (una línea `data:` por línea del texto; con correcciones llegan los de cada intento, y un
+   `intento` con `correccion` empieza una respuesta nueva); `estado`, `entrada`, `intento`, `aviso` y `validacion`
+   cuentan lo que pasa, y `fin` (`{"estado","codigo_error"}`) cierra el flujo. Si se corta, vuelve a pedirlo con la cabecera
    `Last-Event-ID` (o `?desde=`) con el último `id` recibido: sigue desde ahí y el trabajo no se repite ni se cancela.
 4. **Leer el resultado**: `GET /trabajos/{id}/salida` (con esquema, el JSON ya validado). `GET /trabajos/{id}` da el
    estado, el modelo efectivo y el uso de tokens.
@@ -139,7 +140,7 @@ existe o un valor no válido; el mensaje dice cuál), 410 `entrada_no_disponible
 Las tres rutas aceptan herramientas de tipo función: `tools` y `tool_choice` en chat y responses (con `parallel_tool_calls`), y `tools` con `input_schema` y `tool_choice` (`auto`, `any`, `tool`, `none`, `disable_parallel_tool_use`) en Anthropic. Funciona igual que con OpenAI o Anthropic: el agente **pide** la llamada (`tool_calls` con `finish_reason: "tool_calls"`, o bloques `tool_use` con `stop_reason: "tool_use"`), tu aplicación la ejecuta y devuelve el resultado en el siguiente mensaje (rol `tool`, `function_call_output` o `tool_result`).
 
 - El agente nunca ejecuta nada: Tramtai le describe las herramientas y le pide la respuesta con la salida estructurada de su CLI, y la traduce al formato de cada API.
-- Los argumentos se validan con el JSON Schema de cada herramienta. Si el agente devuelve argumentos que no lo cumplen, o no llama a ninguna cuando `tool_choice` lo exige, la respuesta es 422 `salida_no_cumple_esquema`.
+- Los argumentos se validan con el JSON Schema de cada herramienta, también sus `format` (desde la v0.46). Si el agente devuelve argumentos que no lo cumplen, o no llama a ninguna cuando `tool_choice` lo exige, la respuesta es 422 `salida_no_cumple_esquema`.
 - La respuesta llega completa al terminar: con herramientas no hay texto en vivo, aunque `stream: true` envía los eventos de siempre.
 - No se combina con `response_format` en JSON.
 
@@ -185,7 +186,13 @@ En un punto de acceso el modo de contexto lo fija la API (`aislado` si no indica
 
 ### Respuestas con forma
 
-Con `salida.esquema` (o el de la receta del punto) la respuesta se valida con JSON Schema 2020-12; los `format` (como `date` o `email`) también se comprueban.
+Con `salida.esquema` (o el de la receta del punto) la respuesta se valida con JSON Schema 2020-12.
+
+> **Cambio en la v0.46:** los `format` (`date`, `date-time`, `email`, `uri`, `uuid`…) ahora se comprueban, en las
+> respuestas y en los argumentos de las herramientas; antes se ignoraban. Por ejemplo, `"2026-10-18T10:00:00"` (sin
+> zona horaria) ya no cumple `date-time`, y un esquema de Pydantic con `datetime`, `EmailStr` o `HttpUrl` exige el
+> formato exacto. Si tu aplicación aceptaba valores aproximados, quita el `format` del esquema o pide el formato en
+> las instrucciones.
 
 - **Si no cumple**, el trabajo falla con `salida_no_cumple_esquema`:
   - el mensaje es el primer problema, con «(y N más)» si hay más;
@@ -213,8 +220,8 @@ puntos_acceso:
     esquema:
       type: object
       properties: { total: { type: number }, proveedor: { type: string } }
-    reintentos_salida: 1 # una corrección si la respuesta no cumple el esquema
       required: [total, proveedor]
+    reintentos_salida: 1 # una corrección si la respuesta no cumple el esquema
 ```
 
 ### Presupuestos

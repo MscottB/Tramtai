@@ -23,11 +23,13 @@ export const plantillas: Plantilla[] = [
     id: 'extraer', nombre: 'plantilla.extraer', descripcion: 'plantilla.extraerTexto',
     campos: (i) => [
       texto(de(i, 'nombre', 'name'), de(i, 'Nombre de la persona o empresa', 'Name of the person or company')),
-      { nombre: de(i, 'fecha', 'date'), tipo: 'fecha', obligatorio: true, descripcion: de(i, 'Fecha del documento (AAAA-MM-DD)', 'Document date (YYYY-MM-DD)') },
-      { nombre: 'total', tipo: 'numero', obligatorio: true, descripcion: de(i, 'Importe total, sin símbolo de moneda', 'Total amount, without currency symbol') },
+      { nombre: de(i, 'fecha', 'date'), tipo: 'fecha', obligatorio: false, descripcion: de(i, 'Fecha del documento (AAAA-MM-DD)', 'Document date (YYYY-MM-DD)') },
+      { nombre: 'total', tipo: 'numero', obligatorio: false, descripcion: de(i, 'Importe total, sin símbolo de moneda', 'Total amount, without currency symbol') },
     ],
-    instrucciones: (i) => de(i, 'Extrae del texto los datos pedidos. Si un dato no aparece, déjalo vacío o en 0.',
-      'Extract the requested data from the text. If a value does not appear, leave it empty or 0.'),
+    // La fecha y el total no son obligatorios: si no aparecen se omiten (un «0» o una fecha vacía se confundirían con un
+    // valor real o no cumplirían el formato).
+    instrucciones: (i) => de(i, 'Extrae del texto los datos pedidos. Si la fecha o el total no aparecen, omite ese campo.',
+      'Extract the requested data from the text. If the date or the total does not appear, leave that field out.'),
   },
   {
     id: 'clasificar', nombre: 'plantilla.clasificar', descripcion: 'plantilla.clasificarTexto',

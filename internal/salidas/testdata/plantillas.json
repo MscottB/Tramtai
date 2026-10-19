@@ -1,0 +1,528 @@
+[
+  {
+    "id": "extraer",
+    "idioma": "es",
+    "esquema": {
+      "type": "object",
+      "properties": {
+        "nombre": {
+          "type": "string",
+          "description": "Nombre de la persona o empresa"
+        },
+        "fecha": {
+          "type": "string",
+          "format": "date",
+          "description": "Fecha del documento (AAAA-MM-DD)"
+        },
+        "total": {
+          "type": "number",
+          "description": "Importe total, sin símbolo de moneda"
+        }
+      },
+      "required": [
+        "nombre"
+      ],
+      "additionalProperties": false
+    },
+    "ejemplo": {
+      "nombre": "…",
+      "fecha": "2026-01-31",
+      "total": 0
+    }
+  },
+  {
+    "id": "extraer",
+    "idioma": "en",
+    "esquema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the person or company"
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "Document date (YYYY-MM-DD)"
+        },
+        "total": {
+          "type": "number",
+          "description": "Total amount, without currency symbol"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "ejemplo": {
+      "name": "…",
+      "date": "2026-01-31",
+      "total": 0
+    }
+  },
+  {
+    "id": "clasificar",
+    "idioma": "es",
+    "esquema": {
+      "type": "object",
+      "properties": {
+        "categoria": {
+          "type": "string",
+          "enum": [
+            "consulta",
+            "queja",
+            "otro"
+          ],
+          "description": "La categoría que mejor encaja"
+        },
+        "confianza": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "De 0 a 1"
+        },
+        "motivo": {
+          "type": "string",
+          "description": "Por qué esa categoría, en una frase"
+        }
+      },
+      "required": [
+        "categoria",
+        "confianza",
+        "motivo"
+      ],
+      "additionalProperties": false
+    },
+    "ejemplo": {
+      "categoria": "consulta",
+      "confianza": 0,
+      "motivo": "…"
+    }
+  },
+  {
+    "id": "clasificar",
+    "idioma": "en",
+    "esquema": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "inquiry",
+            "complaint",
+            "other"
+          ],
+          "description": "The category that fits best"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "From 0 to 1"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why that category, in one sentence"
+        }
+      },
+      "required": [
+        "category",
+        "confidence",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "ejemplo": {
+      "category": "inquiry",
+      "confidence": 0,
+      "reason": "…"
+    }
+  },
+  {
+    "id": "resumen",
+    "idioma": "es",
+    "esquema": {
+      "type": "object",
+      "properties": {
+        "resumen": {
+          "type": "string",
+          "description": "Resumen en dos o tres frases"
+        },
+        "puntos": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 3,
+          "maxItems": 7,
+          "description": "Las ideas clave"
+        }
+      },
+      "required": [
+        "resumen",
+        "puntos"
+      ],
+      "additionalProperties": false
+    },
+    "ejemplo": {
+      "resumen": "…",
+      "puntos": [
+        "…",
+        "…",
+        "…"
+      ]
+    }
+  },
+  {
+    "id": "resumen",
+    "idioma": "en",
+    "esquema": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "type": "string",
+          "description": "Summary in two or three sentences"
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 3,
+          "maxItems": 7,
+          "description": "The key ideas"
+        }
+      },
+      "required": [
+        "summary",
+        "points"
+      ],
+      "additionalProperties": false
+    },
+    "ejemplo": {
+      "summary": "…",
+      "points": [
+        "…",
+        "…",
+        "…"
+      ]
+    }
+  },
+  {
+    "id": "sentimiento",
+    "idioma": "es",
+    "esquema": {
+      "type": "object",
+      "properties": {
+        "sentimiento": {
+          "type": "string",
+          "enum": [
+            "positivo",
+            "neutral",
+            "negativo"
+          ]
+        },
+        "motivo": {
+          "type": "string",
+          "description": "Qué lo indica, en una frase"
+        }
+      },
+      "required": [
+        "sentimiento",
+        "motivo"
+      ],
+      "additionalProperties": false
+    },
+    "ejemplo": {
+      "sentimiento": "positivo",
+      "motivo": "…"
+    }
+  },
+  {
+    "id": "sentimiento",
+    "idioma": "en",
+    "esquema": {
+      "type": "object",
+      "properties": {
+        "sentiment": {
+          "type": "string",
+          "enum": [
+            "positive",
+            "neutral",
+            "negative"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "description": "What shows it, in one sentence"
+        }
+      },
+      "required": [
+        "sentiment",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "ejemplo": {
+      "sentiment": "positive",
+      "reason": "…"
+    }
+  },
+  {
+    "id": "si_no",
+    "idioma": "es",
+    "esquema": {
+      "type": "object",
+      "properties": {
+        "respuesta": {
+          "type": "boolean",
+          "description": "true para sí, false para no"
+        },
+        "motivo": {
+          "type": "string",
+          "description": "Por qué, en una frase"
+        }
+      },
+      "required": [
+        "respuesta",
+        "motivo"
+      ],
+      "additionalProperties": false
+    },
+    "ejemplo": {
+      "respuesta": true,
+      "motivo": "…"
+    }
+  },
+  {
+    "id": "si_no",
+    "idioma": "en",
+    "esquema": {
+      "type": "object",
+      "properties": {
+        "answer": {
+          "type": "boolean",
+          "description": "true for yes, false for no"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why, in one sentence"
+        }
+      },
+      "required": [
+        "answer",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "ejemplo": {
+      "answer": true,
+      "reason": "…"
+    }
+  },
+  {
+    "id": "tareas",
+    "idioma": "es",
+    "esquema": {
+      "type": "object",
+      "properties": {
+        "tareas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "tarea": {
+                "type": "string",
+                "description": "Qué hay que hacer"
+              },
+              "responsable": {
+                "type": "string",
+                "description": "Quién la hace, si se dice"
+              },
+              "fecha": {
+                "type": "string",
+                "format": "date",
+                "description": "Fecha límite, si se dice"
+              }
+            },
+            "required": [
+              "tarea"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Cada tarea que aparece en el texto"
+        }
+      },
+      "required": [
+        "tareas"
+      ],
+      "additionalProperties": false
+    },
+    "ejemplo": {
+      "tareas": [
+        {
+          "tarea": "…",
+          "responsable": "…",
+          "fecha": "2026-01-31"
+        }
+      ]
+    }
+  },
+  {
+    "id": "tareas",
+    "idioma": "en",
+    "esquema": {
+      "type": "object",
+      "properties": {
+        "tasks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "description": "What needs to be done"
+              },
+              "owner": {
+                "type": "string",
+                "description": "Who does it, if stated"
+              },
+              "date": {
+                "type": "string",
+                "format": "date",
+                "description": "Due date, if stated"
+              }
+            },
+            "required": [
+              "task"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Each task that appears in the text"
+        }
+      },
+      "required": [
+        "tasks"
+      ],
+      "additionalProperties": false
+    },
+    "ejemplo": {
+      "tasks": [
+        {
+          "task": "…",
+          "owner": "…",
+          "date": "2026-01-31"
+        }
+      ]
+    }
+  },
+  {
+    "id": "entidades",
+    "idioma": "es",
+    "esquema": {
+      "type": "object",
+      "properties": {
+        "personas": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "organizaciones": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lugares": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fechas": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "personas",
+        "organizaciones",
+        "lugares",
+        "fechas"
+      ],
+      "additionalProperties": false
+    },
+    "ejemplo": {
+      "personas": [
+        "…"
+      ],
+      "organizaciones": [
+        "…"
+      ],
+      "lugares": [
+        "…"
+      ],
+      "fechas": [
+        "…"
+      ]
+    }
+  },
+  {
+    "id": "entidades",
+    "idioma": "en",
+    "esquema": {
+      "type": "object",
+      "properties": {
+        "people": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "organizations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "places": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "people",
+        "organizations",
+        "places",
+        "dates"
+      ],
+      "additionalProperties": false
+    },
+    "ejemplo": {
+      "people": [
+        "…"
+      ],
+      "organizations": [
+        "…"
+      ],
+      "places": [
+        "…"
+      ],
+      "dates": [
+        "…"
+      ]
+    }
+  }
+]

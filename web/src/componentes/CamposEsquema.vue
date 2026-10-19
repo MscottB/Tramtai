@@ -1,12 +1,12 @@
 <template>
-  <div class="campos-esquema" :class="{ 'campos-esquema--anidado': nivel > 1 }">
-    <div v-for="(c, i) in modelValue" :key="i" class="campos-esquema__campo">
+  <div ref="raiz" class="campos-esquema" :class="{ 'campos-esquema--anidado': nivel > 1 }">
+    <div v-for="(c, i) in modelValue" :key="clave(c)" :data-clave="clave(c)" class="campos-esquema__campo">
       <!-- Apilado: la columna de la receta es estrecha también en escritorio. -->
       <div class="row no-wrap items-start q-gutter-x-xs">
         <q-input :model-value="c.nombre" outlined dense class="col" :label="t('campos.nombre')" input-class="codigo"
-          @update:model-value="(v) => cambiar(i, { nombre: String(v ?? '').trim() })" />
-        <q-btn v-if="ordenable" flat dense round size="sm" icon="o_arrow_upward" class="q-mt-xs" :disable="i === 0" :aria-label="t('campos.subir', { campo: c.nombre || i + 1 })" @click="mover(i, -1)" />
-        <q-btn v-if="ordenable" flat dense round size="sm" icon="o_arrow_downward" class="q-mt-xs" :disable="i === modelValue.length - 1" :aria-label="t('campos.bajar', { campo: c.nombre || i + 1 })" @click="mover(i, 1)" />
+          @update:model-value="(v) => cambiar(i, { nombre: String(v ?? '').replace(/\s+/g, '_') })" />
+        <q-btn v-if="ordenable" flat dense round size="sm" icon="o_arrow_upward" data-accion="subir" class="q-mt-xs" :disable="i === 0" :aria-label="t('campos.subir', { campo: c.nombre || i + 1 })" @click="mover(i, -1)" />
+        <q-btn v-if="ordenable" flat dense round size="sm" icon="o_arrow_downward" data-accion="bajar" class="q-mt-xs" :disable="i === modelValue.length - 1" :aria-label="t('campos.bajar', { campo: c.nombre || i + 1 })" @click="mover(i, 1)" />
         <q-btn flat dense round size="sm" icon="o_delete" class="q-mt-xs" :aria-label="t('campos.quitar', { campo: c.nombre || i + 1 })" @click="quitar(i)" />
       </div>
       <div class="row no-wrap items-center q-gutter-x-sm q-mt-sm">
@@ -47,7 +47,7 @@
 <script setup lang="ts">
 // CamposEsquema edita una lista de campos de «Respuesta con forma»; los objetos y las listas de objetos se editan con
 // este mismo componente, hasta NIVELES niveles.
-import { computed } from 'vue'
+import { computed, nextTick, ref, toRaw } from 'vue'
 import { campoVacio, NIVELES, type Campo, type Elemento, type TipoCampo } from '../esquemaCampos'
 import { t } from '../i18n'
 
@@ -63,13 +63,23 @@ const elementos = computed(() => (['texto', 'numero', 'objeto'] as const)
   .filter((v) => v !== 'objeto' || props.nivel < NIVELES).map((value) => ({ value, label: t(`campos.elemento.${value}`) })))
 
 const emitir = (lista: Campo[]) => emit('update:modelValue', lista)
-const cambiar = (i: number, parcial: Partial<Campo>) => emitir(props.modelValue.map((c, j) => (j === i ? limpio({ ...c, ...parcial }) : c)))
+const cambiar = (i: number, parcial: Partial<Campo>) => emitir(props.modelValue.map((c, j) => (j === i ? sigue(c, limpio({ ...c, ...parcial })) : c)))
 const anadir = () => emitir([...props.modelValue, campoVacio()])
 const quitar = (i: number) => emitir(props.modelValue.filter((_, j) => j !== i))
+// mover devuelve el foco al botón con el que se movió el campo (el navegador lo pierde al mover la fila); si en la
+// nueva posición ese botón queda desactivado, al otro.
+const raiz = ref<HTMLElement>()
 function mover(i: number, paso: number) {
   const lista = [...props.modelValue]
   ;[lista[i], lista[i + paso]] = [lista[i + paso], lista[i]]
+  const fila = clave(props.modelValue[i])
   emitir(lista)
+  nextTick(() => {
+    const botones = [...(raiz.value?.querySelectorAll<HTMLButtonElement>(`:scope > [data-clave="${fila}"] [data-accion]`) ?? [])]
+    const accion = paso < 0 ? 'subir' : 'bajar'
+    const boton = botones.find((b) => b.dataset.accion === accion && !b.disabled) ?? botones.find((b) => !b.disabled)
+    boton?.focus()
+  })
 }
 // Al cambiar de tipo se quita lo que el tipo nuevo no usa y se prepara lo que necesita.
 function cambiarTipo(i: number, tipo: TipoCampo) {
@@ -78,7 +88,21 @@ function cambiarTipo(i: number, tipo: TipoCampo) {
   if (tipo === 'opcion') nuevo.opciones = c.opciones ?? []
   if (tipo === 'lista') nuevo.elemento = 'texto'
   if (tipo === 'objeto') nuevo.campos = c.campos?.length ? c.campos : [campoVacio()]
-  emitir(props.modelValue.map((x, j) => (j === i ? nuevo : x)))
+  emitir(props.modelValue.map((x, j) => (j === i ? sigue(c, nuevo) : x)))
+}
+// Cada campo tiene una clave estable (no su posición): al subirlo o bajarlo, su fila y el botón con el foco se mueven
+// con él. Un campo cambiado es un objeto nuevo que sigue con la clave del anterior; la clave no llega al esquema.
+const claves = new WeakMap<Campo, number>()
+let ultima = 0
+function clave(c: Campo): number {
+  // toRaw: el campo llega como proxy reactivo, y la clave se guarda con el objeto de verdad.
+  let n = claves.get(toRaw(c))
+  if (n === undefined) claves.set(toRaw(c), (n = ++ultima))
+  return n
+}
+function sigue(antes: Campo, despues: Campo): Campo {
+  claves.set(toRaw(despues), clave(antes))
+  return despues
 }
 // limpio quita las propiedades sin valor: el campo queda igual que el que rehace desdeEsquema.
 function limpio(c: Campo): Campo {

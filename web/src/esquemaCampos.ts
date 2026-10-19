@@ -28,8 +28,8 @@ export function campoVacio(): Campo {
 
 // aEsquema genera el esquema de un objeto con esos campos.
 export function aEsquema(campos: Campo[]): Esquema {
-  const properties: Record<string, Esquema> = {}
-  for (const c of campos) properties[c.nombre] = propiedad(c)
+  // fromEntries crea propiedades propias: un campo llamado __proto__ no cambia el prototipo ni desaparece.
+  const properties = Object.fromEntries(campos.map((c) => [c.nombre, propiedad(c)]))
   const esquema: Esquema = { type: 'object', properties }
   const required = campos.filter((c) => c.obligatorio).map((c) => c.nombre)
   if (required.length) esquema.required = required
@@ -61,10 +61,11 @@ function propiedad(c: Campo): Esquema {
   return p
 }
 
-// desdeEsquema rehace los campos de un esquema, o null si usa algo que el editor no representa.
-export function desdeEsquema(esquema: unknown, nivel = 1): Campo[] | null {
+// desdeEsquema rehace los campos de un esquema, o null si usa algo que el editor no representa. conDescripcion: el
+// objeto es el valor de un campo, que guarda su descripción; en la raíz o en los elementos de una lista se perdería.
+export function desdeEsquema(esquema: unknown, nivel = 1, conDescripcion = false): Campo[] | null {
   if (!esObjeto(esquema) || nivel > NIVELES) return null
-  if (!soloClaves(esquema, ['type', 'properties', 'required', 'additionalProperties', 'description'])) return null
+  if (!soloClaves(esquema, ['type', 'properties', 'required', 'additionalProperties', ...(conDescripcion ? ['description'] : [])])) return null
   if (esquema.type !== 'object' || esquema.additionalProperties !== false || !esObjeto(esquema.properties)) return null
   const propiedades = esquema.properties
   const required = esquema.required ?? []
@@ -104,7 +105,7 @@ function campoDe(nombre: string, p: unknown, obligatorio: boolean, nivel: number
     case 'boolean':
       return soloClaves(p, ['type', 'description']) ? { ...c, tipo: 'si_no' } : null
     case 'object': {
-      const campos = desdeEsquema(p, nivel + 1)
+      const campos = desdeEsquema(p, nivel + 1, true)
       return campos ? { ...c, tipo: 'objeto', campos } : null
     }
     case 'array': {
@@ -126,28 +127,28 @@ function campoDe(nombre: string, p: unknown, obligatorio: boolean, nivel: number
 
 // ejemploDe es una respuesta de muestra con esa forma, para la vista previa.
 export function ejemploDe(campos: Campo[]): Record<string, unknown> {
-  const ejemplo: Record<string, unknown> = {}
-  for (const c of campos) ejemplo[c.nombre] = valorDe(c)
-  return ejemplo
+  return Object.fromEntries(campos.map((c) => [c.nombre, valorDe(c)]))
 }
 
 function valorDe(c: Campo): unknown {
+  // Un número de ejemplo dentro de los límites: el mínimo, o 0 si cabe, o el máximo.
+  const numero = c.minimo ?? Math.min(0, c.maximo ?? 0)
   switch (c.tipo) {
     case 'texto': return '…'
     case 'fecha': return '2026-01-31'
-    case 'numero': return c.minimo ?? 0
-    case 'entero': return Math.ceil(c.minimo ?? 0)
+    case 'numero': return numero
+    case 'entero': return c.minimo !== undefined ? Math.ceil(c.minimo) : Math.floor(numero)
     case 'si_no': return true
     case 'opcion': return c.opciones?.find((o) => o.trim()) ?? ''
     case 'objeto': return ejemploDe(c.campos ?? [])
     case 'lista': {
       const elemento = () => (c.elemento === 'objeto' ? ejemploDe(c.campos ?? []) : c.elemento === 'numero' ? 0 : '…')
-      return Array.from({ length: Math.max(c.minimo ?? 1, 1) }, elemento)
+      return Array.from({ length: Math.min(Math.max(c.minimo ?? 1, 1), c.maximo ?? Infinity) }, elemento)
     }
   }
 }
 
-export type ProblemaCampo = { campo: string; problema: 'sin_nombre' | 'repetido' | 'sin_opciones' | 'sin_campos' }
+export type ProblemaCampo = { campo: string; problema: 'sin_nombre' | 'repetido' | 'sin_opciones' | 'sin_campos' | 'rango' }
 
 // problemaDeCampos es el primer campo que impide generar un esquema útil, o null si no hay ninguno.
 export function problemaDeCampos(campos: Campo[], ruta = ''): ProblemaCampo | null {
@@ -158,6 +159,8 @@ export function problemaDeCampos(campos: Campo[], ruta = ''): ProblemaCampo | nu
     if (vistos.has(c.nombre)) return { campo: aqui, problema: 'repetido' }
     vistos.add(c.nombre)
     if (c.tipo === 'opcion' && !(c.opciones ?? []).some((o) => o.trim())) return { campo: aqui, problema: 'sin_opciones' }
+    // Con el mínimo por encima del máximo ninguna respuesta cumple: cada corrección se gastaría en balde.
+    if (c.minimo !== undefined && c.maximo !== undefined && c.minimo > c.maximo) return { campo: aqui, problema: 'rango' }
     const sub = c.tipo === 'objeto' || (c.tipo === 'lista' && c.elemento === 'objeto')
     if (sub && !(c.campos ?? []).length) return { campo: aqui, problema: 'sin_campos' }
     if (sub) {
@@ -166,6 +169,23 @@ export function problemaDeCampos(campos: Campo[], ruta = ''): ProblemaCampo | nu
     }
   }
   return null
+}
+
+// lineasConRuta escribe un JSON con sangría de 2 espacios y la ruta de cada línea (tareas[2].fecha, como la escribe el
+// servicio en los problemas): Probar marca así los campos con problemas.
+export function lineasConRuta(valor: unknown, ruta = '', nivel = 0, prefijo = '', fin = ''): { texto: string; ruta: string }[] {
+  const sangria = '  '.repeat(nivel)
+  const hijos = Array.isArray(valor)
+    ? valor.map((x, i) => [`${ruta}[${i}]`, '', x] as const)
+    : valor && typeof valor === 'object'
+      ? Object.entries(valor).map(([k, x]) => [ruta ? `${ruta}.${k}` : k, JSON.stringify(k) + ': ', x] as const)
+      : undefined
+  if (!hijos) return [{ texto: sangria + prefijo + JSON.stringify(valor) + fin, ruta }]
+  const [abre, cierra] = Array.isArray(valor) ? ['[', ']'] : ['{', '}']
+  if (!hijos.length) return [{ texto: sangria + prefijo + abre + cierra + fin, ruta }]
+  return [{ texto: sangria + prefijo + abre, ruta },
+    ...hijos.flatMap(([r, p, x], i) => lineasConRuta(x, r, nivel + 1, p, i < hijos.length - 1 ? ',' : '')),
+    { texto: sangria + cierra + fin, ruta }]
 }
 
 function esObjeto(v: unknown): v is Esquema {
