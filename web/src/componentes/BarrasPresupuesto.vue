@@ -14,7 +14,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { type EstadoPresupuesto } from '../api'
+import type { EstadoPresupuesto } from '../api/tipos'
 import { idioma, t } from '../i18n'
 
 // BarrasPresupuesto muestra una barra por límite definido: verde, amarilla desde el 80 % y roja al 100 %.

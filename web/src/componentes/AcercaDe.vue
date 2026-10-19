@@ -58,7 +58,10 @@
 // AcercaDe muestra la versión, quién la desarrolla, el estado de las actualizaciones, los enlaces del proyecto y los
 // datos técnicos para pedir ayuda (sin claves ni tokens).
 import { computed, ref, watch } from 'vue'
-import { actualizacion, api, buscarActualizacionAhora, copiar, dialogoActualizar, fecha, sesion, type Acerca } from '../api'
+import { api, buscarActualizacionAhora, copiar } from '../api/cliente'
+import type { Acerca } from '../api/tipos'
+import { actualizacion, dialogoActualizar, sesion } from '../estado'
+import { fecha } from '../formato'
 import { t } from '../i18n'
 
 const abierto = defineModel<boolean>({ required: true })

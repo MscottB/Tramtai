@@ -104,7 +104,11 @@ import EstadoVacio from '../componentes/EstadoVacio.vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import Linea from '../componentes/Linea.vue'
 import MapaRed from '../componentes/MapaRed.vue'
-import { agenteListo, api, asegurarFichas, avisar, cargarDiasHistorial, periodoHistorial, ordenarAgentes, copiar, estadoInfo, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, haceCuanto, mensajeError, sesion, terminales, textoDe, type Adaptador, type EstadoInstancia, type EstadoPunto, type Trabajo, sistema } from '../api'
+import { api, avisar, cargarDiasHistorial, copiar, mensajeError } from '../api/cliente'
+import type { Adaptador, EstadoInstancia, EstadoPunto, Trabajo } from '../api/tipos'
+import { periodoHistorial, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, sesion, sistema } from '../estado'
+import { agenteListo, asegurarFichas, ordenarAgentes } from '../agentes'
+import { estadoInfo, haceCuanto, terminales, textoDe } from '../formato'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()

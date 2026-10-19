@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import { type Limites, type Presupuesto } from '../api'
+import type { Limites, Presupuesto } from '../api/tipos'
 import { t } from '../i18n'
 
 // EditorPresupuesto edita los límites diarios y mensuales de una API; un campo vacío o 0 es sin límite.

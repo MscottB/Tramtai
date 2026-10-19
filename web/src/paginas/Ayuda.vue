@@ -133,7 +133,8 @@
 // Ayuda explica qué hace Tramtai (el recorrido de una petición), cómo empezar, guías por tarea, los conceptos, qué
 // hacer ante cada error y las preguntas frecuentes; el buscador filtra todo menos el recorrido y los primeros pasos.
 import { computed, ref } from 'vue'
-import { guiaOculta, ocultarGuia, tituloError } from '../api'
+import { tituloError } from '../api/cliente'
+import { guiaOculta, ocultarGuia } from '../estado'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import { t } from '../i18n'
 

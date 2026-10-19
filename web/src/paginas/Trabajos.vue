@@ -126,7 +126,11 @@ import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
 import RegistroTrabajo from '../componentes/RegistroTrabajo.vue'
 import SalidaTrabajo from '../componentes/SalidaTrabajo.vue'
-import { api, avisar, avisarError, type EstadoPunto, copiar, duracion, estadoInfo, fecha, filtroHistorial, haceCuanto, origenHistorial, trabajoAbrir, modeloDe, esfuerzoUsado, type EventoRegistro, terminales, textoDe, tituloError, trabajoSeguido, type Trabajo } from '../api'
+import { api, avisar, avisarError, copiar, tituloError } from '../api/cliente'
+import type { EstadoPunto, EventoRegistro, Trabajo } from '../api/tipos'
+import { filtroHistorial, origenHistorial, trabajoAbrir, trabajoSeguido } from '../estado'
+import { modeloDe } from '../agentes'
+import { duracion, estadoInfo, fecha, haceCuanto, esfuerzoUsado, terminales, textoDe } from '../formato'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()

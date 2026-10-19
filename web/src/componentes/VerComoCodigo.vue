@@ -27,7 +27,7 @@
 <script setup lang="ts">
 // VerComoCodigo muestra la prueba de Probar como código para copiar; la clave va como marcador: Probar nunca la muestra.
 import { computed, ref } from 'vue'
-import { copiar } from '../api'
+import { copiar } from '../api/cliente'
 import type { Ejemplo } from '../ejemplos'
 import { t } from '../i18n'
 

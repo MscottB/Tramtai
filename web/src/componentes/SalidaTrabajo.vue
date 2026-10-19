@@ -16,7 +16,7 @@
 import DOMPurify from 'dompurify'
 import { Marked } from 'marked'
 import { computed, ref, watch } from 'vue'
-import { esJSON } from '../api'
+import { esJSON } from '../formato'
 import { t } from '../i18n'
 
 // caja: el estilo con fondo y borde del Historial; sin ella, el de Probar.

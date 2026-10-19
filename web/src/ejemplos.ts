@@ -1,5 +1,6 @@
 // ejemplos genera el código para copiar de Mis APIs (los ejemplos de cada contrato) y de Probar («Ver como código»).
-import { aplicarModelo, type Solicitud } from './api'
+import type { Solicitud } from './api/tipos'
+import { aplicarModelo } from './recetas'
 import { t } from './i18n'
 import type { Clave } from './idiomas/es'
 

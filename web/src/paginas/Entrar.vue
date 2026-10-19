@@ -36,7 +36,7 @@
 <script setup lang="ts">
 // Entrar se muestra cuando no se puede comprobar que quien abre la Web UI es el dueño del servicio: la clave de las
 // aplicaciones no abre la Web UI, así que se explica cómo entrar con un código de un solo uso.
-import { copiar } from '../api'
+import { copiar } from '../api/cliente'
 import { cambiarIdioma, idioma, idiomas, t } from '../i18n'
 
 defineProps<{ aviso: string }>()

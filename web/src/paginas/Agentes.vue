@@ -149,7 +149,11 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import { useQuasar } from 'quasar'
-import { agenteListo, api, asegurarFichas, avisar, avisarError, codigoLinea, copiar, fichaDe, modeloInicial, nombreAgente, nombreEsfuerzo, fijarDisponibilidad, ordenarAgentes, sesion, type Adaptador, numero } from '../api'
+import { api, avisar, avisarError, copiar } from '../api/cliente'
+import type { Adaptador } from '../api/tipos'
+import { modeloInicial, sesion } from '../estado'
+import { agenteListo, asegurarFichas, codigoLinea, fichaDe, nombreAgente, fijarDisponibilidad, ordenarAgentes } from '../agentes'
+import { nombreEsfuerzo, numero } from '../formato'
 import { t } from '../i18n'
 
 const $q = useQuasar()

@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { aEsquema, desdeEsquema, ejemploDe, lineasConRuta, problemaDeCampos, type Campo } from './esquemaCampos.ts'
+import { aEsquema, desdeEsquema, ejemploDe, lineasConRuta, marcarLineas, problemaDeCampos, type Campo } from './esquemaCampos.ts'
 import { plantillas } from './plantillas.ts'
 
 const campos: Campo[] = [
@@ -146,4 +146,13 @@ test('las líneas del JSON llevan la ruta completa de cada campo', () => {
   assert.equal(lineas.map((l) => l.texto).join('\n'), JSON.stringify(valor, null, 2))
   assert.deepEqual(lineas.filter((l) => l.ruta === 'tareas[1].fecha').map((l) => l.texto.trim()), ['"fecha": "b",'])
   assert.deepEqual(lineas.filter((l) => l.ruta === 'fecha').length, 1)
+})
+
+test('marcarLineas resalta solo la primera línea de cada campo con problemas', () => {
+  const salida = JSON.stringify({ tareas: [{ fecha: 'a' }, { fecha: 'b' }], total: 3 })
+  const lineas = marcarLineas(salida, [{ campo: 'tareas[1].fecha' }, { campo: '' }])!
+  assert.deepEqual(lineas.filter((l) => l.marcada).map((l) => l.texto.trim()), ['"fecha": "b"'])
+  assert.equal(marcarLineas(salida, []), undefined)
+  assert.equal(marcarLineas('no es JSON', [{ campo: 'total' }]), undefined)
+  assert.equal(marcarLineas('', [{ campo: 'total' }]), undefined)
 })

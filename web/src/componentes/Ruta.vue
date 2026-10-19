@@ -13,7 +13,7 @@
 // Ruta dibuja una petición como un trayecto: cola, preparación, ejecución, validación y llegada. Mientras avanza,
 // un tranvía se desliza hasta la estación actual; al terminar, la llegada toma el color del resultado.
 import { computed } from 'vue'
-import { estadoInfo } from '../api'
+import { estadoInfo } from '../formato'
 import { t } from '../i18n'
 
 const props = defineProps<{ estado: string }>()

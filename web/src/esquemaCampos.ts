@@ -188,6 +188,26 @@ export function lineasConRuta(valor: unknown, ruta = '', nivel = 0, prefijo = ''
     { texto: sangria + cierra + fin, ruta }]
 }
 
+// marcarLineas da la respuesta JSON, ordenada, con las líneas de los campos que tienen problemas resaltadas.
+export function marcarLineas(salida: string, problemas: { campo: string }[]): { texto: string; marcada: boolean }[] | undefined {
+  if (!problemas.length || !salida) return undefined
+  let valor: unknown
+  try {
+    valor = JSON.parse(salida)
+  } catch {
+    return undefined
+  }
+  // Se marca la primera línea de cada campo con problemas, comparando su ruta completa (tareas[2].fecha), como la
+  // escribe el servicio.
+  const rutas = new Set(problemas.map((p) => p.campo).filter(Boolean))
+  const vistas = new Set<string>()
+  return lineasConRuta(valor).map(({ texto, ruta }) => {
+    const marcada = rutas.has(ruta) && !vistas.has(ruta)
+    vistas.add(ruta)
+    return { texto, marcada }
+  })
+}
+
 function esObjeto(v: unknown): v is Esquema {
   return !!v && typeof v === 'object' && !Array.isArray(v)
 }
