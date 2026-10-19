@@ -14,7 +14,8 @@ func TestUniqueID(t *testing.T) {
 	if a == b || a == "cl.tramtai.escritorio" {
 		t.Fatalf("cada portable el suyo: %s %s", a, b)
 	}
-	if runtime.GOOS != "linux" && uniqueID(`c:\portable\tramtai\`, true) != a {
+	// Rutas de Windows: solo allí \ separa carpetas y no se distinguen las mayúsculas.
+	if runtime.GOOS == "windows" && uniqueID(`c:\portable\tramtai\`, true) != a {
 		t.Fatal("la misma carpeta escrita de otra forma da otro identificador")
 	}
 	// Válido para D-Bus: ninguna parte vacía ni empezando por un dígito, también con cualquier hash.
