@@ -94,7 +94,7 @@ tramtai convertir informe.pdf     # muestra el texto que recibiría el agente, s
 ```
 
 - `-f` admite PDF, Word, PowerPoint, Excel, HTML, texto (txt, md, json, csv…) y ZIP, y se puede repetir.
-- `-e` recibe un JSON Schema: la respuesta será un JSON que lo cumpla, o el trabajo fallará con `salida_no_cumple_esquema`.
+- `-e` recibe un JSON Schema: la respuesta será un JSON que lo cumpla, o el trabajo fallará con `salida_no_cumple_esquema` y el primer problema («Falta el campo `total`»). En Probar el esquema se arma con plantillas o campo a campo, y la respuesta que no cumple se corrige con un clic (o hasta 3 veces sola, con «Si la respuesta no cumple»).
 
 ### Modelos
 

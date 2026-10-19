@@ -213,6 +213,7 @@ puntos_acceso:
     esquema:
       type: object
       properties: { total: { type: number }, proveedor: { type: string } }
+    reintentos_salida: 1 # una corrección si la respuesta no cumple el esquema
       required: [total, proveedor]
 ```
 

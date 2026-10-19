@@ -281,10 +281,12 @@ print(r.choices[0].message.content)</pre>
 <pre class="codigo">uv tool install "markitdown[pdf,docx,pptx,xlsx]==0.1.8"
 tramtai ejecutar -f informe.pdf "Resume el documento en tres puntos"</pre>
       <div lang="es">
-        <p>Para recibir JSON con una forma concreta, usa <code>response_format</code> con un JSON Schema: Tramtai valida la respuesta antes de devolverla y, si no lo cumple, responde 422 <code>salida_no_cumple_esquema</code>.</p>
+        <p>Para recibir JSON con una forma concreta, usa <code>response_format</code> con un JSON Schema: Tramtai valida la respuesta antes de devolverla y, si no lo cumple, responde 422 <code>salida_no_cumple_esquema</code> con el primer problema (por ejemplo, «Falta el campo `total`»).</p>
+        <p>En <strong>Probar</strong>, «Respuesta con forma» arma el esquema con <strong>plantillas</strong> (extraer datos, clasificar, resumen en puntos, sentimiento, sí o no, lista de tareas, entidades) o <strong>campo a campo</strong>; la pestaña JSON queda para lo avanzado. Si la respuesta no cumple, verás cada problema y el botón <strong>Corregir</strong>, que pide al mismo agente que la arregle. En la receta, «Si la respuesta no cumple» permite hasta 3 correcciones automáticas; cada una es otra petición al agente.</p>
       </div>
       <div lang="en">
-        <p>To get JSON with a specific shape, use <code>response_format</code> with a JSON Schema: Tramtai validates the answer before returning it and, if it doesn't match, replies 422 <code>salida_no_cumple_esquema</code>.</p>
+        <p>To get JSON with a specific shape, use <code>response_format</code> with a JSON Schema: Tramtai validates the answer before returning it and, if it doesn't match, replies 422 <code>salida_no_cumple_esquema</code> with the first problem (for example, "The field `total` is missing").</p>
+        <p>In <strong>Try</strong>, "Shaped response" builds the schema from <strong>templates</strong> (extract data, classify, summary in points, sentiment, yes or no, task list, entities) or <strong>field by field</strong>; the JSON tab is for advanced cases. If the response doesn't match, you'll see each problem and the <strong>Correct</strong> button, which asks the same agent to fix it. In the recipe, "If the response does not match" allows up to 3 automatic corrections; each one is another request to the agent.</p>
       </div>
     </section>
 
