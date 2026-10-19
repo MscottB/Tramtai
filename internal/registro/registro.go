@@ -68,7 +68,18 @@ func (r *Rotativo) rotar() error {
 		}
 		vaciar = os.Rename(r.ruta, copia(r.ruta, 1)) != nil
 	}
-	return r.abrir(vaciar)
+	err := r.abrir(vaciar)
+	if err == nil {
+		return nil
+	}
+	// Sin archivo nuevo el registro se perdería en silencio: se sigue en la copia más reciente y se anota por qué.
+	f, err2 := os.OpenFile(copia(r.ruta, 1), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	if err2 != nil {
+		return err
+	}
+	r.f, r.tamano = f, 0
+	fmt.Fprintf(f, "no se pudo rotar el registro %s: %v\n", r.ruta, err)
+	return nil
 }
 
 func copia(ruta string, n int) string { return fmt.Sprintf("%s.%d", ruta, n) }

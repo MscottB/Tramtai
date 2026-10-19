@@ -73,10 +73,11 @@ func (c *Cargas) Guardar(nombre, punto string, r io.Reader) (Carga, error) {
 	carga := Carga{ID: "carga_" + hex.EncodeToString(propio[:])[:32], Punto: punto, Nombre: nombreSeguro(nombre), SHA256: suma, Bytes: n, CreadoEn: ahora, VenceEn: ahora.Add(c.vigencia)}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	repetida := false
 	if anterior, _, err := c.Obtener(carga.ID); err == nil {
 		// Ya estaba: solo se renueva su plazo; el nombre (y con él el formato) es el de la primera subida.
 		anterior.VenceEn = carga.VenceEn
-		carga = anterior
+		carga, repetida = anterior, true
 	} else if c.cuota > 0 && c.ocupado()+n > c.cuota {
 		return Carga{}, nucleo.NuevoError(nucleo.CodigoCuotaCargasAgotada, idioma.T("las cargas guardadas llegan a conversion.cuota_cargas_mb: espera a que venzan o borra el historial"))
 	}
@@ -84,6 +85,9 @@ func (c *Cargas) Guardar(nombre, punto string, r io.Reader) (Carga, error) {
 	metadatos, _ := json.Marshal(carga)
 	if err := c.escribir(carga.ID+".json", metadatos); err != nil {
 		return Carga{}, err
+	}
+	if repetida {
+		return carga, nil // el contenido es el mismo (sale de su hash); no se pisa, que en Windows falla si está abierto
 	}
 	return carga, os.Rename(temporal.Name(), filepath.Join(c.dir, carga.ID))
 }
@@ -168,6 +172,10 @@ func (c *Cargas) PurgarSinUso(enUso map[string]bool) (int, error) {
 // purgar borra las cargas sin uso para las que borrable es cierto. Lo que no se puede leer (metadatos dañados
 // o ausentes) solo se borra pasada la gracia, contada desde la fecha del archivo.
 func (c *Cargas) purgar(enUso map[string]bool, borrable func(Carga) bool) (int, error) {
+	// El mismo cerrojo que Guardar: una carga que se vuelve a subir mientras tanto renueva su plazo antes o después de
+	// la purga, nunca a medias.
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	entradas, err := os.ReadDir(c.dir)
 	if err != nil {
 		return 0, err

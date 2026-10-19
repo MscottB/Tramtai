@@ -59,7 +59,8 @@ func TerminarHuerfano(pid int, firma string) bool {
 // árbol y devuelve ctx.Err() solo cuando confirma la terminación; si no puede confirmarla, devuelve
 // cancelacion_no_confirmada con el PID para el diagnóstico.
 func Ejecutar(ctx context.Context, o Orden, linea func(string) error) (Resultado, error) {
-	cmd := exec.Command(o.Programa, o.Argumentos...)
+	programa, args := conTope(o.Programa, o.Argumentos, o.MemoriaMB)
+	cmd := exec.Command(programa, args...)
 	cmd.Dir, cmd.Env, cmd.Stdin = o.Directorio, o.Entorno, strings.NewReader(o.Entrada)
 	salida := &lineas{alLinea: linea}
 	errores := &cola{limite: maximoErrores}

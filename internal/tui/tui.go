@@ -89,6 +89,7 @@ type modelo struct {
 	salida            strings.Builder
 	enCurso           string
 	flujo             chan tea.Msg
+	dejarDeSeguir     context.CancelFunc // corta el flujo de eventos del trabajo en curso
 	resumen           string
 
 	trabajos []nucleo.Trabajo
@@ -133,6 +134,7 @@ type (
 	msgCreado struct {
 		t     nucleo.Trabajo
 		flujo chan tea.Msg
+		parar context.CancelFunc
 		err   error
 	}
 	msgEvento struct{ tipo, datos string }
@@ -166,6 +168,20 @@ func (m *modelo) cargarEstado() tea.Cmd {
 
 func (m *modelo) avisar(err error) {
 	m.aviso, m.esError = nucleo.MensajeDe(err), true
+}
+
+// parar deja de seguir el trabajo en curso (si lo hay): su goroutine termina aunque el servicio no conteste.
+func (m *modelo) parar() {
+	if m.dejarDeSeguir != nil {
+		m.dejarDeSeguir()
+		m.dejarDeSeguir = nil
+	}
+}
+
+// salir cierra la terminal sin dejar flujos abiertos.
+func (m *modelo) salir() tea.Cmd {
+	m.parar()
+	return tea.Quit
 }
 
 func (m *modelo) ir(p pantalla) {
@@ -245,7 +261,8 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.avisar(msg.err)
 			return m, nil
 		}
-		m.enCurso, m.flujo = msg.t.ID, msg.flujo
+		m.parar()
+		m.enCurso, m.flujo, m.dejarDeSeguir = msg.t.ID, msg.flujo, msg.parar
 		m.resumen = idioma.Tf("trabajo %s en cola · Esc cancela", msg.t.ID)
 		return m, escuchar(m.flujo)
 	case msgEvento:
@@ -257,6 +274,7 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, escuchar(m.flujo)
 	case msgFin:
+		m.parar()
 		m.enCurso = ""
 		if msg.err != nil {
 			m.avisar(msg.err)
@@ -330,7 +348,7 @@ func borrarUltimo(texto string) string {
 func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 	tecla := k.String()
 	if tecla == "ctrl+c" {
-		return tea.Quit
+		return m.salir()
 	}
 	if m.pregunta != "" {
 		switch tecla {
@@ -358,7 +376,7 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 	switch m.pantalla {
 	case pInicio:
 		if tecla == "q" {
-			return tea.Quit
+			return m.salir()
 		}
 		return m.elegir(tecla, m.opcionesInicio())
 	case pInstancia:
@@ -446,7 +464,7 @@ func (m *modelo) opcionesInicio() []opcion {
 		opcion{idioma.T("Instancia global"), func() tea.Cmd { m.inst = "global"; m.ir(pInstancia); return nil }},
 		opcion{idioma.T("Ver todas las instancias"), func() tea.Cmd { m.ir(pTodas); return m.cargarEstado() }},
 		opcion{idioma.T("Estado del servicio"), func() tea.Cmd { m.ir(pServicio); return m.cargarEstado() }},
-		opcion{idioma.T("Salir"), func() tea.Cmd { return tea.Quit }},
+		opcion{idioma.T("Salir"), m.salir},
 	)
 }
 
@@ -702,12 +720,20 @@ func (m *modelo) lanzar() tea.Cmd {
 			return msgCreado{err: err}
 		}
 		flujo := make(chan tea.Msg, 256)
+		seguir, parar := context.WithCancel(context.Background())
 		go func() {
 			defer close(flujo)
-			err := cli.Eventos(context.Background(), inst, t.ID, 0, func(_ int, tipo, datos string) error {
-				flujo <- msgEvento{tipo: tipo, datos: datos}
-				return nil
+			err := cli.Eventos(seguir, inst, t.ID, 0, func(_ int, tipo, datos string) error {
+				select {
+				case flujo <- msgEvento{tipo: tipo, datos: datos}:
+					return nil
+				case <-seguir.Done():
+					return seguir.Err()
+				}
 			})
+			if seguir.Err() != nil {
+				return // se dejó de seguir (salir o un trabajo nuevo): nadie espera el final
+			}
 			ctx, cancelar := conPlazo(10 * time.Second)
 			defer cancelar()
 			final, err2 := cli.Trabajo(ctx, inst, t.ID)
@@ -716,7 +742,7 @@ func (m *modelo) lanzar() tea.Cmd {
 			}
 			flujo <- msgFin{t: final, err: err}
 		}()
-		return msgCreado{t: t, flujo: flujo}
+		return msgCreado{t: t, flujo: flujo, parar: parar}
 	}
 }
 
