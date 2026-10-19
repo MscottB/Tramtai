@@ -13,7 +13,11 @@ $version = & (Join-Path $PSScriptRoot 'version.ps1')
 function Escribir-Recursos([string]$destino, [string]$descripcion) {
     $wails = Get-Command wails3 -ErrorAction SilentlyContinue
     if (-not $wails) { $wails = Get-Command (Join-Path $env:USERPROFILE 'go\bin\wails3.exe') -ErrorAction SilentlyContinue }
-    if (-not $wails) { Write-Warning 'wails3 no está instalado: el .exe queda sin icono ni versión en sus propiedades'; return }
+    if (-not $wails) {
+        # Un release sin icono ni versión no debe salir: en el CI y con -Instalador es un error.
+        if ($Instalador -or $env:CI) { throw 'wails3 no está instalado: hace falta para el icono y la versión del .exe' }
+        Write-Warning 'wails3 no está instalado: el .exe queda sin icono ni versión en sus propiedades'; return
+    }
     $numero = ($version -replace '^v', '') -replace '\+.*$', ''
     $info = [ordered]@{
         fixed = @{ file_version = "$numero.0" }

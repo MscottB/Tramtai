@@ -6,8 +6,10 @@ on:
   push:
     tags: ['v*']
 
+# Solo lectura por defecto: los jobs que compilan y prueban ejecutan código de terceros (go install, npm, choco). Solo
+# escriben publicar (crea el release) y paquetes (sube a main).
 permissions:
-  contents: write
+  contents: read
 
 env:
   TRAMTAI_IDIOMA: es # las pruebas comparan textos en español; el runner está en inglés
@@ -20,6 +22,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -54,6 +57,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -75,6 +80,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -96,6 +103,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # version.ps1 calcula la versión desde las etiquetas
+          persist-credentials: false
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -131,6 +139,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -151,6 +161,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -163,6 +175,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -190,8 +204,12 @@ jobs:
     name: Publicar el release
     needs: [dependencias, pruebas-windows, pruebas-unix, unix, linux-app, macos-app, windows]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
           path: dist
@@ -216,6 +234,8 @@ jobs:
   paquetes:
     needs: publicar
     runs-on: macos-latest
+    permissions:
+      contents: write
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
       HOMEBREW_NO_ENV_HINTS: 1
@@ -250,21 +270,31 @@ jobs:
         # Un push a main mientras se publica (por ejemplo, la siguiente fusión) rechazaría este; se reaplica encima.
         run: git pull --rebase origin main && git push origin HEAD:main
 
-  # winget: si existe el secreto WINGET_TOKEN (un token de GitHub con permiso public_repo), envía la versión a
-  # microsoft/winget-pkgs con wingetcreate. Sin el secreto no hace nada.
+  # winget: si existe el secreto WINGET_TOKEN (un token de GitHub que puede abrir PR desde el fork de winget-pkgs), envía
+  # la versión a microsoft/winget-pkgs con wingetcreate. Sin el secreto no hace nada. wingetcreate va fijado por versión
+  # y SHA-256, y el token solo llega al paso que lo usa.
   winget:
     needs: paquetes
     runs-on: windows-latest
     env:
-      WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+      HAY_TOKEN: ${{ secrets.WINGET_TOKEN != '' }}
+      WINGETCREATE: https://github.com/microsoft/winget-create/releases/download/v1.12.13.0/wingetcreate.exe
+      WINGETCREATE_SHA256: 24042bd37915805615e6cf969ac57c6439124c3fe85823327f5f3fb24bd9ffea
     steps:
       - uses: actions/checkout@v4
-        if: env.WINGET_TOKEN != ''
+        if: env.HAY_TOKEN == 'true'
         with:
           ref: main
+          persist-credentials: false
+      - name: Descargar wingetcreate
+        if: env.HAY_TOKEN == 'true'
+        run: |
+          Invoke-WebRequest $env:WINGETCREATE -OutFile wingetcreate.exe
+          if ((Get-FileHash wingetcreate.exe -Algorithm SHA256).Hash -ne $env:WINGETCREATE_SHA256) { throw 'wingetcreate.exe no coincide con su SHA-256' }
       - name: Enviar a winget-pkgs
-        if: env.WINGET_TOKEN != ''
+        if: env.HAY_TOKEN == 'true'
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
         run: |
           $version = $env:GITHUB_REF_NAME -replace '^v', '' -replace '\+.*$', ''
-          Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
           ./wingetcreate.exe submit --token $env:WINGET_TOKEN "paquetes/winget/$version"

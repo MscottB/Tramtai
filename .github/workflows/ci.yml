@@ -40,6 +40,13 @@ jobs:
       - name: Dependencias de Go sin vulnerabilidades conocidas
         if: runner.os == 'Linux'
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+      # La app de escritorio se analiza como la de Windows: en Linux necesitaría las cabeceras de GTK para compilar.
+      - name: App de escritorio sin vulnerabilidades conocidas
+        if: runner.os == 'Linux'
+        working-directory: escritorio
+        env:
+          GOOS: windows
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
       # Una orden por paso: en Windows (pwsh) un paso de varias órdenes solo falla si falla la última.
       - name: App de escritorio (vet)
         if: runner.os == 'Windows'
@@ -117,3 +124,7 @@ jobs:
           npm audit signatures
       - run: npm test # funciones puras (plantillas y editor de campos) con node --test
       - run: npm run build # comprueba los tipos de los .vue con vue-tsc y compila
+      # La Web UI compilada va en el repo (go build no necesita Node): tiene que ser la de web/src, o el release saldría
+      # con la vieja. Las fuentes van con LF también en Windows (.gitattributes), así que el build es el mismo.
+      - name: La Web UI compilada coincide con web/src
+        run: git diff --exit-code --stat -- ../internal/recursos/web || { echo "::error::compila la Web UI (cd web; npm run build) y sube internal/recursos/web"; exit 1; }
