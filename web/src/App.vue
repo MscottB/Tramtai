@@ -297,6 +297,11 @@ const pagina = ref(desdeHash())
 const actual = computed(() => paginas.find((p) => p.id === pagina.value) ?? paginas[0])
 const menu = ref(false)
 const origen = location.origin
+// Antes que los composables, como cuando todo iba en un solo onMounted: la URL se limpia antes de pedir la sesión.
+onMounted(() => {
+  history.replaceState({ i: base }, '', location.search ? location.pathname + location.hash : location.href)
+  window.addEventListener('popstate', alNavegar)
+})
 const { conectado, comprobar } = useSondeo()
 const { actualizando, comprobarActualizacion, progreso, fraccion, indeterminado, textoProgreso, reiniciarAhora, cancelarInstalacion,
   instalarActualizacion, dialogoNovedades, novedades, cargandoNovedades, novedadesNueva, notasNueva, paginaNueva } = useActualizacion()
@@ -394,10 +399,6 @@ function alNavegar() {
   pagina.value = nueva
 }
 
-onMounted(() => {
-  history.replaceState({ i: base }, '', location.search ? location.pathname + location.hash : location.href)
-  window.addEventListener('popstate', alNavegar)
-})
 
 // Abrir un proyecto: la carpeta se escribe o, en la app de escritorio, se elige con el selector del sistema.
 const dialogoProyecto = ref(false)

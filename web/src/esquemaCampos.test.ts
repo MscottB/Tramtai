@@ -152,6 +152,9 @@ test('marcarLineas resalta solo la primera línea de cada campo con problemas', 
   const salida = JSON.stringify({ tareas: [{ fecha: 'a' }, { fecha: 'b' }], total: 3 })
   const lineas = marcarLineas(salida, [{ campo: 'tareas[1].fecha' }, { campo: '' }])!
   assert.deepEqual(lineas.filter((l) => l.marcada).map((l) => l.texto.trim()), ['"fecha": "b"'])
+  // Un problema en una lista marca la línea que la abre, no la que la cierra (las dos tienen la misma ruta).
+  const enLista = marcarLineas(salida, [{ campo: 'tareas' }])!
+  assert.deepEqual(enLista.filter((l) => l.marcada).map((l) => l.texto.trim()), ['"tareas": ['])
   assert.equal(marcarLineas(salida, []), undefined)
   assert.equal(marcarLineas('no es JSON', [{ campo: 'total' }]), undefined)
   assert.equal(marcarLineas('', [{ campo: 'total' }]), undefined)
