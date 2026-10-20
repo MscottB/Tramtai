@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"tramtai/internal/herramientas"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
@@ -82,7 +83,7 @@ func (s *Servidor) ajustar(sol nucleo.SolicitudEjecucion) (nucleo.SolicitudEjecu
 	if sol.Salida.Formato == "" && len(sol.Salida.Esquema) == 0 {
 		sol.Salida.Formato = p.FormatoSalida
 	}
-	if sol.Salida.Reintentos == 0 && sol.Salida.Formato == "json" {
+	if sol.Salida.Reintentos == 0 && (sol.Salida.Formato == "json" || herramientas.Activas(sol)) {
 		sol.Salida.Reintentos = p.ReintentosSalida
 	}
 	// Con forzar_modelo el dueño de la API decide los modelos: el cliente tampoco elige el respaldo.
