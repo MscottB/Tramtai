@@ -166,7 +166,7 @@
   });
   var guardado = null;
   try { guardado = localStorage.getItem('tramtai.lenguaje'); } catch (e) {}
-  if (guardado) elegir(guardado);
+  elegir(guardado || 'python'); // sin JavaScript se ven todos los paneles, cada uno con su enlace a GitHub
   document.querySelectorAll('pre[data-ejemplo]').forEach(function (pre) {
     fetch('ejemplos/' + pre.dataset.ejemplo).then(function (r) {
       if (!r.ok) throw r;

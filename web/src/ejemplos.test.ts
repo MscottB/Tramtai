@@ -52,3 +52,11 @@ test('el ejemplo de herramientas hace el ciclo completo por OpenAI', () => {
   // Solo con OpenAI: una API que solo habla Anthropic no lo ofrece.
   assert.equal(ejemplos({ url: 'http://x', modelo: 'm', contratos: ['anthropic'] }).find((e) => e.id === 'python-herramientas'), undefined)
 })
+
+test('Go por la API propia no se rompe con comillas invertidas ni %', () => {
+  const rara: Prueba = { archivos: ['a.pdf'], solicitud: { mensajes: [{ rol: 'usuario', contenido: 'usa `x` al 100%' }] } }
+  const go = ejemplos({ url: 'http://x', modelo: 'm', contratos: ['nativa'], prueba: rara }).find((e) => e.id === 'go-nativa')!.codigo('k')
+  assert.ok(!go.includes('Sprintf(solicitud'), 'no pasa el mensaje por un formato')
+  assert.ok(!/solicitud := `/.test(go), 'no usa un literal con comillas invertidas')
+  assert.ok(go.includes('usa `x` al 100%'), 'el mensaje llega intacto')
+})

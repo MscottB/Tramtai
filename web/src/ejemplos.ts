@@ -135,9 +135,9 @@ function goNativa(url: string, p: Prueba, k: string): string {
       '\t\tjson.NewDecoder(pedir("POST", "/cargas", formulario.FormDataContentType(), &cuerpo).Body).Decode(&carga)',
       '\t\tcargas = append(cargas, carga.ID)', '\t}', '')
   }
-  const solicitud = JSON.stringify(cuerpo(p), null, 2).split('\n').map((l, i) => (i ? '\t' + l : l)).join('\n')
-  lineas.push(`\t// ${paso('ejemplos.crear')}`, `\tsolicitud := \`${solicitud.replace(`"${CARGAS}"`, '%s')}\``)
-  if (conArchivos) lineas.push('\tlista, _ := json.Marshal(cargas)', '\tsolicitud = fmt.Sprintf(solicitud, lista)')
+  // Un literal de Go con comillas (el texto JSON de una cadena lo es): un mensaje con comillas invertidas o % llega intacto.
+  lineas.push(`\t// ${paso('ejemplos.crear')}`, `\tsolicitud := ${JSON.stringify(JSON.stringify(cuerpo(p)))}`)
+  if (conArchivos) lineas.push('\tlista, _ := json.Marshal(cargas)', `\tsolicitud = strings.Replace(solicitud, ${JSON.stringify(`"${CARGAS}"`)}, string(lista), 1)`)
   lineas.push('\tvar trabajo struct {', '\t\tID string `json:"id"`', '\t}',
     '\tjson.NewDecoder(pedir("POST", "/trabajos", "application/json", strings.NewReader(solicitud)).Body).Decode(&trabajo)', '',
     `\t// ${paso('ejemplos.seguir')}`, '\teventos := bufio.NewScanner(pedir("GET", "/trabajos/"+trabajo.ID+"/eventos", "", nil).Body)',
