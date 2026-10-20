@@ -219,7 +219,7 @@ func (s SolicitudEjecucion) Validar() error {
 			return invalida(idioma.Tf("mensaje %d: un resultado de herramienta necesita id_llamada", i))
 		}
 		// Un turno del asistente que solo pidió herramientas no tiene texto.
-		if m.Contenido == "" && len(m.Llamadas) == 0 {
+		if m.Contenido == "" && len(m.Llamadas) == 0 && m.Rol != "herramienta" {
 			return invalida(idioma.Tf("mensaje %d sin contenido", i))
 		}
 	}

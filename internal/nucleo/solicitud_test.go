@@ -188,3 +188,13 @@ func TestValidarMensajesDeHerramientas(t *testing.T) {
 		}
 	}
 }
+
+func TestResultadoDeHerramientaVacio(t *testing.T) {
+	s := solicitudValida()
+	s.Mensajes = append(s.Mensajes,
+		Mensaje{Rol: "asistente", Llamadas: []Llamada{{ID: "l0", Nombre: "clima", Argumentos: json.RawMessage(`{}`)}}},
+		Mensaje{Rol: "herramienta", IDLlamada: "l0"})
+	if err := s.Validar(); err != nil {
+		t.Fatalf("un resultado de herramienta puede venir vacío (OpenAI lo permite): %v", err)
+	}
+}
