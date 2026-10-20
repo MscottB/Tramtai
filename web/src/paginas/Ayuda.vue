@@ -55,6 +55,14 @@
         </q-card-section>
       </q-card>
 
+      <q-card id="ayuda-apis">
+        <q-card-section>
+          <div class="titulo-seccion">{{ t('ayuda.secApis') }}</div>
+          <div class="texto-suave text-body2 q-mt-xs">{{ t('ayuda.apisTexto') }}</div>
+        </q-card-section>
+        <q-card-section class="q-pt-none"><TablaApis /></q-card-section>
+      </q-card>
+
       <q-card id="ayuda-empezar">
         <q-card-section class="row items-center">
           <div class="titulo-seccion col">{{ t('ayuda.empezar') }}</div>
@@ -161,6 +169,7 @@ import { copiar, tituloError } from '../api/cliente'
 import { ejemplos } from '../ejemplos'
 import { guiaOculta, ocultarGuia } from '../estado'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
+import TablaApis from '../componentes/TablaApis.vue'
 import { t } from '../i18n'
 
 defineEmits<{ ir: [pagina: string] }>()
@@ -172,6 +181,7 @@ const coincide = (...textos: string[]) => !texto.value || textos.some((x) => x.t
 const secciones = [
   { id: 'funciona', titulo: 'ayuda.secFunciona', icono: 'o_route' },
   { id: 'archivos', titulo: 'ayuda.secArchivos', icono: 'o_description' },
+  { id: 'apis', titulo: 'ayuda.secApis', icono: 'o_compare_arrows' },
   { id: 'empezar', titulo: 'ayuda.empezar', icono: 'o_flag' },
   { id: 'guias', titulo: 'ayuda.secGuias', icono: 'o_checklist' },
   { id: 'conceptos', titulo: 'ayuda.secConceptos', icono: 'o_lightbulb' },

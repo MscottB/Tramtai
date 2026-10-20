@@ -14,17 +14,27 @@
   n8n, un editor con IA). Cambias la URL y la clave; el resto sigue igual.
 - **Anthropic** (`/anthropic`): tu app usa el SDK de Anthropic.
 - **API propia** (`/api/v1`): necesitas lo que las otras no tienen: archivos grandes (más de ~12 MB), tareas largas que sigues en vivo y retomas si se corta la conexión, cancelar y reintentar, elegir
-  respaldo y esfuerzo en cada petición, idempotencia, el registro de cada paso y los límites.
+  respaldo y esfuerzo en cada petición, el registro de cada paso y los límites.
 
 | | OpenAI | Anthropic | API propia |
 |---|---|---|---|
 | SDK oficial y herramientas existentes | sí | sí | no (HTTP y JSON) |
 | Respuesta en vivo | sí | sí | sí, y se retoma tras un corte |
-| Respuesta JSON con esquema | sí (`response_format`) | no | sí (`salida.esquema`) |
+| Respuesta JSON con esquema | sí (`response_format`) | no | sí (`salida.esquema`), con «Corregir» |
 | Enviar archivos | sí, en base64 dentro del mensaje (~12 MB) | sí, en base64 dentro del mensaje (~12 MB) | sí (50 MB cada uno) |
 | Tareas largas: seguir, cancelar, reintentar | no | no | sí |
 | Respaldo y esfuerzo por petición | solo el esfuerzo | no | sí |
-| Registro de cada paso y límites | no | no | sí |
+| Registro de cada paso | no | no | sí |
+| Consultar los límites antes de enviar | no | no | sí (`GET /limites`) |
+
+**¿Por qué no pueden todas lo mismo?** Las URL de OpenAI y Anthropic imitan el formato exacto de esos servicios para
+que sus SDK y herramientas funcionen sin cambios. Ese formato es de pregunta y respuesta inmediata: no tiene campos para
+un trabajo que sigue en marcha, para cancelarlo, para pedir otro agente de respaldo ni para ver su registro, y si
+Tramtai añadiera campos propios, los SDK no sabrían enviarlos. La API propia es de Tramtai y puede ofrecerlo todo, a
+cambio de llamarla con HTTP y JSON.
+
+Lo que se configura en la receta de una API (respaldo, esquema y `reintentos_salida`) se aplica a las tres URL; solo la
+API propia permite pedirlo distinto en cada petición. La `Idempotency-Key` la aceptan las tres.
 
 En la app, **Mis APIs** muestra esta guía con las URL de cada API y ejemplos para copiar (curl, Python y Node, también
 de la API propia), y **Probar → Ver como código** da la prueba actual como petición.
