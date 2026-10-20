@@ -56,6 +56,15 @@ test('cada ancla vieja de ayuda.html lleva a un tema que existe', () => {
   assert.equal(destinoAncla('#__proto__'), 'ayuda/')
 })
 
+test('el script de la página de paso funciona tal cual sale en ayuda.html', () => {
+  const script = paginas.get('ayuda.html')!.match(/<script>([\s\S]*?)<\/script>/)![1]
+  for (const [hash, destino] of [['#terminos', 'ayuda/agentes.html#terminos'], ['#nada', 'ayuda/'], ['', 'ayuda/']]) {
+    let a = ''
+    new Function('location', script)({ hash, replace: (url: string) => { a = url } })
+    assert.equal(a, destino, hash)
+  }
+})
+
 test('el índice de búsqueda tiene los 14 temas en los dos idiomas', () => {
   const indice = JSON.parse(paginas.get('ayuda/indice.json')!)
   for (const idioma of ['es', 'en']) assert.equal(new Set(indice[idioma].map((e: { t: string }) => e.t)).size, 14)

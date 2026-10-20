@@ -229,7 +229,7 @@ function paginaDePaso(): string {
 <meta http-equiv="refresh" content="0; url=ayuda/">
 <link rel="canonical" href="ayuda/">
 <script>var ANCLAS_VIEJAS = ${JSON.stringify(ANCLAS_VIEJAS)};
-${destinoAncla.toString().replace(/\s+/g, ' ')}
+${destinoAncla.toString().replace(/[ \t]+/g, ' ')}
 location.replace(destinoAncla(location.hash));</script>
 </head>
 <body>
