@@ -7,7 +7,7 @@
       </template>
     </CabeceraPagina>
 
-    <q-card>
+    <q-card data-captura="historial">
       <q-card-section class="row items-center q-col-gutter-sm">
         <div class="col-12 col-md">
           <q-btn-toggle v-model="filtro" no-caps flat dense toggle-color="primary" class="segmentado inline-flex"

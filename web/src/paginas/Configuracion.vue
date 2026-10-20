@@ -52,7 +52,7 @@
       </q-card-section>
     </q-card>
 
-    <q-card v-if="conversor">
+    <q-card v-if="conversor" data-captura="conversor">
       <q-card-section class="row items-start no-wrap">
         <div class="col">
           <div class="titulo-seccion">{{ t('conversor.titulo') }}</div>
@@ -72,7 +72,7 @@
       </q-card-section>
     </q-card>
 
-    <q-card v-if="actualizacion">
+    <q-card v-if="actualizacion" data-captura="actualizaciones">
       <q-card-section class="row items-start no-wrap">
         <div class="col">
           <div class="titulo-seccion">{{ t('actualizacion.ajustesTitulo') }}</div>

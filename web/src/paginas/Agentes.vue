@@ -18,7 +18,7 @@
         </div>
       </div>
 
-      <q-card v-if="filtro !== 'instalar'">
+      <q-card v-if="filtro !== 'instalar'" data-captura="agente">
         <q-list separator>
           <q-expansion-item v-for="a in visibles" :key="a.agente" group="agentes" header-class="q-py-sm">
             <template #header>

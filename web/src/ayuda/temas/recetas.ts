@@ -20,7 +20,7 @@ export const recetas: Tema = {
       ramas: [{ desde: 1, hacia: 2, etiqueta: 'ayuda.recetas.rama' }],
     },
     { tipo: 'pasos', pasos: ['ayuda.recetas.paso1', 'ayuda.recetas.paso2', 'ayuda.recetas.paso3'] },
-    { tipo: 'captura', id: 'editor-receta', alt: 'ayuda.recetas.captura' },
+    { tipo: 'captura', id: 'receta', alt: 'ayuda.recetas.captura' },
     {
       tipo: 'preguntas',
       preguntas: [

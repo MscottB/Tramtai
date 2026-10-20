@@ -19,7 +19,6 @@ export const json: Tema = {
       ],
     },
     { tipo: 'pasos', pasos: ['ayuda.json.paso1', 'ayuda.json.paso2', 'ayuda.json.paso3', 'ayuda.json.paso4', 'ayuda.json.paso5'] },
-    { tipo: 'captura', id: 'editor-campos', alt: 'ayuda.json.captura' },
     { tipo: 'nota', texto: 'ayuda.json.nota' },
     {
       tipo: 'preguntas',

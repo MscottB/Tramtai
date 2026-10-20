@@ -4,7 +4,7 @@
 
     <div class="row q-col-gutter-lg">
       <div class="col-12 col-md-5">
-        <q-card>
+        <q-card data-captura="receta">
           <q-card-section class="q-pb-sm row items-start no-wrap q-gutter-x-sm">
             <div class="col">
               <div class="titulo-seccion">{{ t('ejecutar.receta') }}</div>

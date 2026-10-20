@@ -19,8 +19,7 @@ export const probar: Tema = {
       ],
     },
     { tipo: 'pasos', pasos: ['ayuda.probar.paso1', 'ayuda.probar.paso2', 'ayuda.probar.paso3', 'ayuda.probar.paso4'] },
-    { tipo: 'captura', id: 'probar-modelo', alt: 'ayuda.probar.capturaModelo' },
-    { tipo: 'captura', id: 'probar-respuesta', alt: 'ayuda.probar.capturaRespuesta' },
+    { tipo: 'captura', id: 'receta', alt: 'ayuda.probar.capturaModelo' },
     {
       tipo: 'preguntas',
       preguntas: [

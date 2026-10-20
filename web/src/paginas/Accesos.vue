@@ -7,7 +7,7 @@
     </CabeceraPagina>
 
 
-    <q-card>
+    <q-card data-captura="mis-apis">
       <q-tabs v-model="pestana" dense no-caps align="left" active-color="primary" indicator-color="primary" class="q-px-sm" :breakpoint="0">
         <q-tab name="apis" icon="o_hub" :label="t('puntos.pestana', { n: puntos.length })" />
         <q-tab name="principal" icon="o_cable" :label="t('conectar.directa')" />
