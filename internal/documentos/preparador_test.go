@@ -11,18 +11,15 @@ import (
 )
 
 func TestNecesitaConversor(t *testing.T) {
-	zipTexto := escribir(t, "textos.zip", crearZip(t, map[string][]byte{"a.txt": []byte("a")}))
-	zipWord := escribir(t, "informes.zip", crearZip(t, map[string][]byte{"dentro/b.docx": []byte("b")}))
 	casos := []struct {
-		nombre, ruta string
-		quiere       bool
+		nombre string
+		quiere bool
 	}{
-		{"informe.PDF", "", true}, {"tabla.xlsx", "", true}, {"pagina.htm", "", true},
-		{"notas.md", "", false}, {"datos.csv", "", false},
-		{"textos.zip", zipTexto.Ruta, false}, {"informes.zip", zipWord.Ruta, true},
+		{"informe.PDF", true}, {"tabla.xlsx", true}, {"pagina.htm", true},
+		{"notas.md", false}, {"datos.csv", false}, {"informes.zip", false},
 	}
 	for _, c := range casos {
-		if got := NecesitaConversor(c.nombre, c.ruta); got != c.quiere {
+		if got := NecesitaConversor(c.nombre); got != c.quiere {
 			t.Errorf("%s: %v, se esperaba %v", c.nombre, got, c.quiere)
 		}
 	}

@@ -1,7 +1,6 @@
 package documentos
 
 import (
-	"archive/zip"
 	"context"
 	"path/filepath"
 	"strings"
@@ -23,7 +22,7 @@ type Preparador struct {
 func (p Preparador) ConversorListo(cargas []string) error {
 	necesita := false
 	for _, id := range cargas {
-		if carga, ruta, err := p.Cargas.Obtener(id); err == nil && NecesitaConversor(carga.Nombre, ruta) {
+		if carga, _, err := p.Cargas.Obtener(id); err == nil && NecesitaConversor(carga.Nombre) {
 			necesita = true
 			break
 		}
@@ -42,25 +41,9 @@ func (p Preparador) ConversorListo(cargas []string) error {
 	return ErrSinConversor()
 }
 
-// NecesitaConversor indica si un archivo pasa por markitdown: HTML, PDF y Office, o un ZIP que los traiga (se mira su
-// índice, sin extraer; un ZIP dentro de otro cuenta, porque no se ve su interior sin extraerlo).
-func NecesitaConversor(nombre, ruta string) bool {
-	extension := strings.ToLower(filepath.Ext(nombre))
-	if extension != ".zip" {
-		return extensionesConvertibles[extension]
-	}
-	lector, err := zip.OpenReader(ruta)
-	if err != nil {
-		return false // un ZIP que no se abre lo rechaza la conversión con su propio error
-	}
-	defer lector.Close()
-	for _, f := range lector.File {
-		interna := strings.ToLower(filepath.Ext(f.Name))
-		if extensionesConvertibles[interna] || interna == ".zip" {
-			return true
-		}
-	}
-	return false
+// NecesitaConversor indica si un archivo pasa por markitdown: HTML, PDF y Office.
+func NecesitaConversor(nombre string) bool {
+	return extensionesConvertibles[strings.ToLower(filepath.Ext(nombre))]
 }
 
 // Verificar comprueba que las cargas de una solicitud nueva existan, no hayan vencido y sean de la misma API (punto,

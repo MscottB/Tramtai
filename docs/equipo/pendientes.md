@@ -42,6 +42,8 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | v0.49 | Orden del código (`releases/v0.49-orden/spec.md`): contrato ligero entre cliente y servicio (la app de escritorio deja de enlazar el servicio), la CLI y la terminal sobre la API del servicio, archivos grandes divididos, capacidades en paralelo y modelos efectivos con un índice, pruebas de Codex, Claude y la Web UI, CI reutilizable desde Publicar, Dependabot e índice de `docs/equipo/` | ✅ |
 | v0.49.1 | Publicar instala NSIS 3.13 desde su instalador oficial con el SHA-256 fijado y se para si falla (la v0.49.0 no llegó a publicarse: Chocolatey estaba caído); trae todo lo de la v0.49 | ✅ |
 | v0.50 | Archivos (`releases/v0.50-archivos/spec.md`): uv en todos los paquetes y markitdown preparado en la carpeta de Tramtai (solo la primera vez y con «Preparar archivos»), paquete del conversor para Windows sin red, aviso antes de enviar y 503 `conversor_no_disponible` al aceptar, archivos también por OpenAI y Anthropic (base64), «El recorrido de un archivo» en la Ayuda y «Cómo usarla» en lugar de «Descargar OpenAPI» | ✅ |
+| v0.50.1 | Comparación de las tres APIs con el porqué (Mis APIs y Ayuda), descargas del sitio con enlace directo por sistema y README corto | ✅ |
+| v0.50.2 | Archivos admitidos, claros: una sola lista (`documentos.Formatos`) en `/limites`, el selector de Probar, la CLI, la terminal y la Ayuda; lo no admitido se rechaza al subir; fuera el ZIP por seguridad | ✅ |
 | v0.51 | Herramientas (`tools`) explicadas para cualquier lenguaje, con ejemplos en Python, JavaScript, Go y curl, y guía del desarrollador | ⬜ |
 | v0.52 | Ayuda renovada en la app y en la web: menos texto, con diagramas, ejemplos, búsqueda y capturas | ⬜ |
 | v0.53 | Diagramas vivos: en la web, el recorrido llega a los agentes con ejemplos; en la app, el mapa muestra el recorrido de un trabajo en curso | ⬜ |
@@ -58,6 +60,36 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | — | Cursor CLI | ⬜ |
 | — | SDK oficial de la API propia en Python y TypeScript (sobre `openapi.json`), en su propio repositorio | ⬜ |
 | — | Paquetes base y Pro (con la Pro/Team) | ⬜ |
+| — | Más formatos de archivo: EPub, Outlook `.msg`, Excel antiguo `.xls` y Jupyter `.ipynb` (markitdown 0.1.8 los convierte en el equipo; EPub es un ZIP por dentro y necesita el mismo tope que Office) | ⬜ |
+| — | Imágenes: enviarlas a los agentes que las ven y OCR local para los demás | ⬜ |
+| — | Audio: transcripción local y opcional | ⬜ |
+| — | Antivirus: analizar cada archivo al subirlo | ⬜ |
+| — | Modo servidor en Linux y Windows Server | ⬜ |
+
+Lo investigado para esos cinco (2026-10-20, falta analizarlo más antes de su spec):
+
+- **Formatos de markitdown que no se suman:** audio (`recognize_google` envía el audio a Google), YouTube (el servicio
+  tendría que salir a internet) e imágenes (solo metadatos con `exiftool` instalado y descripción con un LLM; no hay OCR
+  local).
+- **Imágenes:** `codex exec -i <imagen>` (Codex 0.160), `copilot --attachment <ruta>` («imagen o documento nativo», no
+  interactivo; Copilot 1.0.98) y la Gemini API las aceptan sin herramientas; Claude Code 2.1.288 tiene
+  `--input-format stream-json`, pero que acepte imágenes por ahí está sin confirmar (hace falta su M0); Antigravity no.
+  OCR local: RapidOCR (modelos de PaddleOCR sobre onnxruntime, que ya va en el conversor; el latino, con español, pesa
+  ~7,5 MB) dentro del mismo `conversor.lock`. Descartados: `ocrs` (sin binarios, «solo alfabeto latino, p. ej. inglés»),
+  `rusty-tesseract` (exige Tesseract instalado), `oneocr-rs` (la DLL interna de Recortes de Windows 11) y
+  `paddle-ocr-rs`/`oar_ocr` (habría que compilar Rust para 5 sistemas).
+- **Audio:** scribble (Rust, MIT, ~100 estrellas, una persona, API inestable, binarios solo Linux x64) usa whisper.cpp por
+  dentro y consume lo mismo; lo que pesa es el modelo (*tiny*/*base* poco, *small* ~1,5 GB de RAM en CPU). whisper.cpp
+  (MIT, ~54 000 estrellas) publica binarios para Windows x64 (8 MB) y Linux x64/ARM (4–9 MB), sin Python ni ffmpeg para
+  WAV, MP3, FLAC y OGG; en macOS habría que compilarlo en el CI. faster-whisper es la alternativa en Python.
+- **Antivirus:** en Windows, AMSI (`AmsiScanBuffer`) pregunta al antivirus instalado (Defender u otro) sin ocupar nada;
+  `MpCmdRun` falla con análisis en paralelo. ClamAV aislado es posible (`.zip` portable oficial de 215 MB en Windows,
+  `freshclam` se actualiza solo en su carpeta; GPL-2.0, mejor descargarlo la primera vez), pero `clamd` ocupa ~1 GB de
+  RAM permanente; encaja como opción en Linux y en el modo servidor. macOS no tiene una API pública. El antivirus solo
+  detecta malware conocido: no frena un fallo en un lector de PDF u Office ni un texto con instrucciones escondidas.
+- **Modo servidor:** hoy el servicio corre sin escritorio y el acceso remoto existe apagado (`servicio.permitir_remoto`,
+  sin suscripciones). Faltan: unidad systemd del sistema y servicio de Windows (sin sesión iniciada), claves sin
+  escritorio (en Linux sin sesión no hay Secret Service), HTTPS propio o detrás de un proxy, y guía.
 
 Pendientes ya asignados:
 

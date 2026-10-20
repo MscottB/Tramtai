@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -28,10 +29,39 @@ var extensionesTexto = map[string]bool{".txt": true, ".md": true, ".markdown": t
 // extensionesConvertibles son las que markitdown convierte y /api/v1/capacidades anuncia; el resto se rechaza.
 var extensionesConvertibles = map[string]bool{".html": true, ".htm": true, ".pdf": true, ".docx": true, ".pptx": true, ".xlsx": true}
 
-// ExtensionAdmitida indica si Tramtai acepta un archivo con esa extensión: texto, convertible o ZIP.
+// ExtensionAdmitida indica si Tramtai acepta un archivo con esa extensión: de texto o convertible.
 func ExtensionAdmitida(extension string) bool {
 	extension = strings.ToLower(extension)
-	return extensionesTexto[extension] || extensionesConvertibles[extension] || extension == ".zip"
+	return extensionesTexto[extension] || extensionesConvertibles[extension]
+}
+
+// Formatos son las extensiones admitidas, ordenadas: las de texto pasan tal cual y las del conversor, por markitdown.
+// Es la lista que anuncian /limites y /capacidades y que usan la Web UI, la CLI y los errores.
+func Formatos() (texto, conversor []string) {
+	return slices.Sorted(maps.Keys(extensionesTexto)), slices.Sorted(maps.Keys(extensionesConvertibles))
+}
+
+// AdmitirArchivos falla con ErrFormato en el primer archivo que Tramtai no admite: la CLI y la terminal lo avisan
+// antes de subir nada.
+func AdmitirArchivos(rutas []string) error {
+	for _, ruta := range rutas {
+		if !ExtensionAdmitida(filepath.Ext(ruta)) {
+			return ErrFormato(filepath.Base(ruta))
+		}
+	}
+	return nil
+}
+
+// ErrFormato es el error de un archivo que Tramtai no admite: dice cuáles sí (o, con un ZIP, que se descomprima).
+func ErrFormato(nombre string) error {
+	if strings.EqualFold(filepath.Ext(nombre), ".zip") {
+		return nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.Tf(
+			"%s: los ZIP no se admiten; descomprímelo y envía los archivos sueltos (hasta %d por petición)", nombre, nucleo.MaximoCargas))
+	}
+	texto, _ := Formatos()
+	return nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.Tf(
+		"%s: formato no admitido. Se admiten PDF, Word (.docx), PowerPoint (.pptx), Excel (.xlsx), HTML y texto (%s)",
+		nombre, strings.Join(texto, ", ")))
 }
 
 // Entrada es un archivo que hay que preparar para el agente.
@@ -41,11 +71,9 @@ type Entrada struct {
 	SHA256 string
 }
 
-// Limites acotan la extracción de ZIP (conversion.*).
+// Limites acotan lo que se entrega a markitdown (conversion.*).
 type Limites struct {
-	MaximoArchivos    int
-	MaximoBytes       int64
-	ProfundidadMaxima int
+	MaximoBytes int64 // descomprimido de un Word, PowerPoint o Excel
 }
 
 // Conversor convierte entradas a Markdown con la herramienta markitdown.
@@ -71,16 +99,11 @@ func Desde(c *nucleo.Configuracion) *Conversor {
 		MaximoSalida: int64(c.Limite("conversion.maximo_salida_mb")) << 20,
 		MemoriaMB:    c.Limite("limites.memoria_proceso_mb"),
 		SinVariables: []string{c.Texto("instancia_global.token_variable_entorno")},
-		Limites: Limites{
-			MaximoArchivos:    c.Limite("conversion.maximo_archivos_zip"),
-			MaximoBytes:       int64(c.Limite("conversion.maximo_descomprimido_mb")) << 20,
-			ProfundidadMaxima: c.Limite("conversion.profundidad_maxima_zip"),
-		},
+		Limites:      Limites{MaximoBytes: int64(c.Limite("conversion.maximo_descomprimido_mb")) << 20},
 	}
 }
 
 // Convertir prepara las entradas y devuelve el texto ensamblado: un bloque delimitado por archivo, con sus metadatos.
-// Los ZIP se extraen con límites y cada archivo interno se convierte por separado.
 func (c *Conversor) Convertir(ctx context.Context, entradas []Entrada) (nucleo.Documentos, error) {
 	temporal, err := os.MkdirTemp("", "tramtai-conversion-")
 	if err != nil {
@@ -92,7 +115,7 @@ func (c *Conversor) Convertir(ctx context.Context, entradas []Entrada) (nucleo.D
 	_, _ = rand.Read(codigo)
 	t := &tarea{conversor: c, dir: temporal, codigo: hex.EncodeToString(codigo)}
 	for _, e := range entradas {
-		if err := t.archivo(ctx, e, 0); err != nil {
+		if err := t.archivo(ctx, e); err != nil {
 			return nucleo.Documentos{}, err
 		}
 	}
@@ -105,15 +128,10 @@ type tarea struct {
 	salida    bytes.Buffer
 	partes    []nucleo.ParteDocumento
 	codigo    string
-	archivos  int
-	bytes     int64
 }
 
-func (t *tarea) archivo(ctx context.Context, e Entrada, profundidad int) error {
+func (t *tarea) archivo(ctx context.Context, e Entrada) error {
 	extension := strings.ToLower(filepath.Ext(e.Nombre))
-	if extension == ".zip" {
-		return t.zip(ctx, e, profundidad+1)
-	}
 	var texto string
 	var err error
 	switch {
@@ -125,7 +143,7 @@ func (t *tarea) archivo(ctx context.Context, e Entrada, profundidad int) error {
 		}
 		texto, err = t.conversor.markitdown(ctx, e, t.dir)
 	default:
-		return nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.Tf("%s: formato no admitido (texto, Markdown, JSON, XML, CSV, HTML, PDF, Word, PowerPoint, Excel o ZIP)", e.Nombre))
+		return ErrFormato(e.Nombre)
 	}
 	if err != nil {
 		return err
@@ -148,7 +166,7 @@ func (t *tarea) archivo(ctx context.Context, e Entrada, profundidad int) error {
 
 // leerTexto conserva el contenido tal cual; solo exige UTF-8 válido y quita la marca BOM.
 // ooxml comprueba, antes de entregarlo a markitdown, que un Word, PowerPoint o Excel (que son un ZIP) no se
-// descomprima en más de conversion.maximo_descomprimido_mb: los límites de ZIP de Tramtai no alcanzan su interior.
+// descomprima en más de conversion.maximo_descomprimido_mb.
 // Si no se abre como ZIP, decide markitdown.
 func (t *tarea) ooxml(e Entrada, extension string) error {
 	if extension != ".docx" && extension != ".pptx" && extension != ".xlsx" {

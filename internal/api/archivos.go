@@ -46,7 +46,7 @@ var extensionesMIME = map[string]string{
 	"application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
 	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":         ".xlsx",
 	"text/html": ".html", "text/plain": ".txt", "text/markdown": ".md", "text/csv": ".csv",
-	"application/json": ".json", "application/xml": ".xml", "text/xml": ".xml", "application/zip": ".zip",
+	"application/json": ".json", "application/xml": ".xml", "text/xml": ".xml",
 }
 
 // extensionDeMIME es la extensión de un tipo MIME admitido, o vacía.

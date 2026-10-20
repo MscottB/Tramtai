@@ -6,8 +6,18 @@ import type { EstadoConversor } from './api/tipos'
 import { t } from './i18n'
 import type { Clave } from './idiomas/es'
 
-// convertibles son las extensiones que pasan por markitdown (un ZIP, por si trae alguna: lo decide el servicio).
-const convertibles = ['.html', '.htm', '.pdf', '.docx', '.pptx', '.xlsx', '.zip']
+// convertibles son las extensiones que pasan por markitdown.
+const convertibles = ['.html', '.htm', '.pdf', '.docx', '.pptx', '.xlsx']
+
+// Formatos son las extensiones que admite el servicio (/api/v1/limites).
+type Formatos = { extensiones_texto?: string[]; extensiones_conversor?: string[] }
+const extensiones = (f?: Formatos) => [...(f?.extensiones_conversor ?? []), ...(f?.extensiones_texto ?? [])]
+
+// aceptar es el filtro del selector de archivos; sin la lista (un servicio anterior) no filtra y decide el servicio.
+export const aceptar = (f?: Formatos) => extensiones(f).join(',') || undefined
+
+// listaFormatos es la lista para leer: «DOCX, PDF, MD, TXT».
+export const listaFormatos = (f?: Formatos) => extensiones(f).map((e) => e.slice(1).toUpperCase()).join(', ')
 
 export function necesitaConversor(nombre: string): boolean {
   const punto = nombre.lastIndexOf('.')

@@ -68,7 +68,7 @@ func init() {
 		"aislado (predeterminado) o consciente_proyecto: solo en proyectos de proyectos_confiables":            "aislado (default) or consciente_proyecto: only in projects listed in proyectos_confiables",
 		"perfil de ejecución: profiles/<nombre>.yaml del proyecto o global (instrucciones, formato y esquema)": "job profile: profiles/<name>.yaml of the project or global (instructions, format and schema)",
 		"tiempo límite en segundos (300 por defecto)":                                                          "time limit in seconds (300 by default)",
-		"archivo de entrada, repetible: PDF, DOCX, PPTX, XLSX, HTML, texto o ZIP":                              "input file, repeatable: PDF, DOCX, PPTX, XLSX, HTML, text or ZIP",
+		"archivo de entrada, repetible: PDF, Word, PowerPoint, Excel, HTML o texto (txt, md, json, csv…)":      "input file, repeatable: PDF, Word, PowerPoint, Excel, HTML or text (txt, md, json, csv…)",
 		"archivo JSON Schema que debe cumplir la salida (implica formato json)":                                "JSON Schema file the output must match (implies json format)",
 		"formato de salida: texto, markdown o json":                                                            "output format: texto, markdown or json",
 		"ejecuta sin el servicio aunque esté en marcha (base cli.db propia)":                                   "runs without the service even if it is running (its own cli.db database)",

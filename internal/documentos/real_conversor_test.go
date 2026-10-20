@@ -30,7 +30,7 @@ func TestConversorReal(t *testing.T) {
 	}
 	// Como en el servicio: el conversor preparado en la raíz del usuario gana al markitdown del PATH.
 	c := &Conversor{Comando: "markitdown", Raiz: raiz, TiempoLimite: 2 * time.Minute, MaximoSalida: 1 << 20,
-		Limites: Limites{MaximoArchivos: 5, MaximoBytes: 1 << 20, ProfundidadMaxima: 2}}
+		Limites: Limites{MaximoBytes: 1 << 20}}
 	for _, nombre := range []string{"muestra.pdf", "muestra.docx", "muestra.xlsx"} {
 		ruta, _ := filepath.Abs(filepath.Join("testdata", nombre))
 		d, err := c.Convertir(ctx, []Entrada{{Ruta: ruta, Nombre: nombre}})

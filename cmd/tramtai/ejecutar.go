@@ -96,6 +96,9 @@ func comandoEjecutar() *cobra.Command {
 					return err
 				}
 			}
+			if err := documentos.AdmitirArchivos(archivos); err != nil {
+				return err
+			}
 			if !directo {
 				if cli, err := conectar(); err == nil {
 					return ejecutarEnServicio(cmd, cli, s, archivos)
@@ -114,7 +117,7 @@ func comandoEjecutar() *cobra.Command {
 	f.StringVar(&contexto, "contexto", "", idioma.T("aislado (predeterminado) o consciente_proyecto: solo en proyectos de proyectos_confiables"))
 	f.StringVar(&perfilTrabajo, "perfil-trabajo", "", idioma.T("perfil de ejecución: profiles/<nombre>.yaml del proyecto o global (instrucciones, formato y esquema)"))
 	f.IntVarP(&tiempo, "tiempo", "t", 0, idioma.T("tiempo límite en segundos (300 por defecto)"))
-	f.StringArrayVarP(&archivos, "archivo", "f", nil, idioma.T("archivo de entrada, repetible: PDF, DOCX, PPTX, XLSX, HTML, texto o ZIP"))
+	f.StringArrayVarP(&archivos, "archivo", "f", nil, idioma.T("archivo de entrada, repetible: PDF, Word, PowerPoint, Excel, HTML o texto (txt, md, json, csv…)"))
 	f.StringVarP(&esquema, "esquema", "e", "", idioma.T("archivo JSON Schema que debe cumplir la salida (implica formato json)"))
 	f.StringVar(&formato, "formato", "", idioma.T("formato de salida: texto, markdown o json"))
 	f.BoolVar(&directo, "directo", false, idioma.T("ejecuta sin el servicio aunque esté en marcha (base cli.db propia)"))
@@ -149,7 +152,7 @@ func comandoConvertir() *cobra.Command {
 // archivosSinConversor falla, antes de subir nada, si algún archivo necesita el conversor y no hay ninguno listo.
 func archivosSinConversor(conversor *documentos.Conversor, archivos []string) error {
 	for _, ruta := range archivos {
-		if documentos.NecesitaConversor(filepath.Base(ruta), ruta) {
+		if documentos.NecesitaConversor(ruta) {
 			if _, ok := documentos.Localizar(conversor.Comando, conversor.Raiz); !ok {
 				return documentos.ErrSinConversor()
 			}

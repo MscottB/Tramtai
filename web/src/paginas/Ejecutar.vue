@@ -29,10 +29,12 @@
             <q-input v-model="mensaje" type="textarea" outlined :label="t('ejecutar.mensaje')" :placeholder="t('ejecutar.placeholder')"
               :input-style="{ minHeight: '120px' }" autogrow @keydown.ctrl.enter="ejecutar" @keydown.meta.enter="ejecutar" />
 
-            <q-file v-model="archivos" multiple append use-chips clearable outlined dense :label="t('ejecutar.adjuntar')"
-              :hint="limites ? t('ejecutar.adjuntarLimites', { n: limites.cargas_por_peticion, mb: limites.carga_mb, texto: limites.texto_convertido_mb }) : t('ejecutar.adjuntarHint')">
+            <q-file v-model="archivos" multiple append use-chips clearable outlined dense :label="t('ejecutar.adjuntar')" :accept="aceptar(limites)"
+              :hint="limites ? t('ejecutar.adjuntarLimites', { n: limites.cargas_por_peticion, mb: limites.carga_mb, texto: limites.texto_convertido_mb }) : t('ejecutar.adjuntarHint')"
+              @rejected="rechazados">
               <template #prepend><q-icon name="o_attach_file" /></template>
             </q-file>
+            <div v-if="listaFormatos(limites)" class="text-caption texto-suave q-mt-lg">{{ t('ejecutar.formatos', { lista: listaFormatos(limites) }) }}</div>
             <AvisoConversor v-if="avisoConversor" />
 
             <q-expansion-item dense icon="o_tune" :label="t('comun.opcionesAvanzadas')" header-class="q-px-none text-body2 texto-suave" class="q-mt-sm">
@@ -176,7 +178,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import AvisoConversor from '../componentes/AvisoConversor.vue'
-import { cargarConversor, conversor, necesitaConversor } from '../conversor'
+import { aceptar, cargarConversor, conversor, listaFormatos, necesitaConversor } from '../conversor'
 import EditorReceta from '../componentes/EditorReceta.vue'
 import EstadoVacio from '../componentes/EstadoVacio.vue'
 import Linea from '../componentes/Linea.vue'
@@ -233,11 +235,14 @@ const eventosRegistro = ref<EventoRegistro[]>([])
 const esfuerzoFinal = computed(() => (final.value ? esfuerzoUsado(final.value, eventosRegistro.value) : ''))
 let fuente: EventSource | undefined
 
-// avisoConversor: algún adjunto necesita el conversor y no está listo; con uno que no es ZIP no se puede enviar (un ZIP
-// solo avisa, porque quizá trae solo texto: lo decide el servicio).
-const convertibles = computed(() => (archivos.value ?? []).filter((a) => necesitaConversor(a.name)))
-const avisoConversor = computed(() => convertibles.value.length > 0 && !!conversor.value && conversor.value.estado !== 'listo')
-const bloqueaConversor = computed(() => avisoConversor.value && convertibles.value.some((a) => !a.name.toLowerCase().endsWith('.zip')))
+// avisoConversor: algún adjunto necesita el conversor y no está listo; así no se puede enviar.
+const avisoConversor = computed(() => (archivos.value ?? []).some((a) => necesitaConversor(a.name)) && !!conversor.value && conversor.value.estado !== 'listo')
+const bloqueaConversor = avisoConversor
+
+// rechazados avisa de los archivos que el selector no dejó adjuntar por su formato.
+function rechazados(lista: { file: File }[]) {
+  avisarError(new Error(t('ejecutar.noAdmitidos', { nombres: lista.map((r) => r.file.name).join(', '), lista: listaFormatos(limites.value) })))
+}
 
 // limites son los topes de las cargas, para la ayuda bajo Adjuntar.
 const limites = ref<LimitesPeticion>()

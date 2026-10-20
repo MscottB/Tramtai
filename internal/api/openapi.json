@@ -415,6 +415,8 @@
       "Limites": {
         "type": "object",
         "properties": {
+          "extensiones_texto": { "type": "array", "items": { "type": "string" }, "description": "Extensiones que pasan tal cual (.txt, .md, .json, .csv…)" },
+          "extensiones_conversor": { "type": "array", "items": { "type": "string" }, "description": "Extensiones que convierte markitdown (.pdf, .docx, .pptx, .xlsx, .html, .htm)" },
           "cargas_por_peticion": { "type": "integer" },
           "carga_mb": { "type": "integer" },
           "texto_convertido_mb": { "type": "integer" },

@@ -199,6 +199,8 @@ export interface EstadoConversor {
   preparar_al_iniciar: boolean
 }
 export interface LimitesPeticion {
+  extensiones_texto?: string[]
+  extensiones_conversor?: string[]
   cargas_por_peticion: number
   carga_mb: number
   texto_convertido_mb: number

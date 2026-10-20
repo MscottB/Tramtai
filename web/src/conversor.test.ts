@@ -1,11 +1,19 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { necesitaConversor, seguirPreparacion } from './conversor.ts'
+import { aceptar, listaFormatos, necesitaConversor, seguirPreparacion } from './conversor.ts'
 import type { EstadoConversor } from './api/tipos.ts'
 
-test('necesitan el conversor HTML, PDF, Office y ZIP; el texto no', () => {
-  for (const n of ['a.PDF', 'b.docx', 'c.xlsx', 'd.pptx', 'e.html', 'f.htm', 'g.zip']) assert.equal(necesitaConversor(n), true, n)
-  for (const n of ['a.md', 'b.txt', 'c.json', 'd.csv', 'sin-extension']) assert.equal(necesitaConversor(n), false, n)
+test('necesitan el conversor HTML, PDF y Office; el texto y el ZIP no', () => {
+  for (const n of ['a.PDF', 'b.docx', 'c.xlsx', 'd.pptx', 'e.html', 'f.htm']) assert.equal(necesitaConversor(n), true, n)
+  for (const n of ['a.md', 'b.txt', 'c.json', 'd.csv', 'g.zip', 'sin-extension']) assert.equal(necesitaConversor(n), false, n)
+})
+
+test('el selector y la lista de formatos salen de los límites del servicio', () => {
+  const limites = { extensiones_texto: ['.md', '.txt'], extensiones_conversor: ['.docx', '.pdf'] }
+  assert.equal(aceptar(limites), '.docx,.pdf,.md,.txt')
+  assert.equal(listaFormatos(limites), 'DOCX, PDF, MD, TXT')
+  // Sin límites (un servicio anterior) no se filtra nada: decide el servicio.
+  assert.equal(aceptar(undefined), undefined)
 })
 
 test('seguir una preparación consulta hasta que deja de preparar', async () => {

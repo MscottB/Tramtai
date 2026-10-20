@@ -172,9 +172,10 @@ Se comprueba la ruta real del archivo, así que `..` o un enlace que salga de es
 - **Cargas:** hasta 20 por petición y `conversion.maximo_carga_mb` (50) cada una. Las de una instancia no pasan de
   `conversion.cuota_cargas_mb` (2048) en total: la siguiente responde 507 `cuota_cargas_agotada` hasta que venzan. Cada
   carga pertenece a la API que la subió (o a la instancia): otra API no puede citarla aunque conozca su identificador.
-- **Formatos:** texto, Markdown, JSON, XML, CSV, HTML, PDF, Word, PowerPoint, Excel y ZIP; el resto se rechaza con
-  `carga_invalida`, también dentro de un ZIP. Un Word, PowerPoint o Excel que se descomprimiría en más de
-  `conversion.maximo_descomprimido_mb` se rechaza antes de convertirlo.
+- **Formatos:** los de [Formatos admitidos](api.md#formatos-admitidos); el resto, también los ZIP, se rechaza al
+  subirlo con `carga_invalida`. Un Word, PowerPoint o Excel que se descomprimiría en más de
+  `conversion.maximo_descomprimido_mb` se rechaza antes de convertirlo. `conversion.maximo_archivos_zip` y
+  `conversion.profundidad_maxima_zip` se aceptan todavía en la configuración, pero ya no hacen nada.
 - **Conversor:** markitdown 0.1.8 con su propio Python, en la carpeta local: `%LOCALAPPDATA%\tramtai\conversor` en
   Windows (no viaja con un perfil móvil), `~/.local/share/tramtai/conversor` en Linux (o `$XDG_DATA_HOME`), la carpeta
   de Tramtai en macOS y `datos-tramtai/conversor` en la portable. Se prepara solo la primera vez que arranca el servicio (`conversion.preparar_al_iniciar`,

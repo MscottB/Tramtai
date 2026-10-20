@@ -113,9 +113,9 @@ var esquema = map[string]tipoValor{
 	"conversion.cuota_cargas_mb":                  tipoEntero,
 	"conversion.maximo_carga_mb":                  tipoEntero,
 	"conversion.maximo_salida_mb":                 tipoEntero,
-	"conversion.maximo_archivos_zip":              tipoEntero,
+	"conversion.maximo_archivos_zip":              tipoEntero, // retirada en la v0.50.2 (sin ZIP): se acepta y no hace nada
 	"conversion.maximo_descomprimido_mb":          tipoEntero,
-	"conversion.profundidad_maxima_zip":           tipoEntero,
+	"conversion.profundidad_maxima_zip":           tipoEntero, // retirada en la v0.50.2
 	"compatibilidad.modo_tolerante":               tipoBooleano,
 	"compatibilidad.cancelar_al_desconectar":      tipoBooleano,
 	"modelos.perfiles.*.*":                        tipoTexto,
@@ -247,9 +247,7 @@ func Internos() Capa {
 		"conversion.cuota_cargas_mb":                  2048,
 		"conversion.maximo_carga_mb":                  50,
 		"conversion.maximo_salida_mb":                 20,
-		"conversion.maximo_archivos_zip":              50,
 		"conversion.maximo_descomprimido_mb":          200,
-		"conversion.profundidad_maxima_zip":           3,
 	}
 	for clave, valor := range internosAgregados {
 		if _, propio := valores[clave]; !propio {
@@ -339,8 +337,8 @@ func (c *Configuracion) Booleano(clave string) bool {
 
 // maximosLimites acota los límites de conversión y cargas: un valor mayor usa este.
 var maximosLimites = map[string]int{
-	"conversion.maximo_carga_mb": 1024, "conversion.maximo_salida_mb": 512, "conversion.maximo_archivos_zip": 10000,
-	"conversion.maximo_descomprimido_mb": 8192, "conversion.profundidad_maxima_zip": 10, "conversion.tiempo_limite_segundos": 3600,
+	"conversion.maximo_carga_mb": 1024, "conversion.maximo_salida_mb": 512,
+	"conversion.maximo_descomprimido_mb": 8192, "conversion.tiempo_limite_segundos": 3600,
 	"conversion.tiempo_total_segundos": 7200, "conversion.cuota_cargas_mb": 102400, "limites.memoria_proceso_mb": 65536,
 }
 
