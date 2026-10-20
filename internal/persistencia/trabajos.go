@@ -227,7 +227,7 @@ func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado, 
 		sinEsfuerzo, conEsfuerzo, args = "", ", '$.esfuerzo', ?", append(args, esfuerzo)
 	}
 	r, err := a.db.ExecContext(ctx, `UPDATE trabajos SET solicitud = json_set(json_remove(solicitud, '$.perfil_modelo'`+sinEsfuerzo+`), '$.agente', ?, '$.modelo', ?,
-		'$.respaldo', json(?)`+conEsfuerzo+`), modelo_enviado = ? WHERE id = ?`, append(args, modeloEnviado, id)...)
+		'$.respaldo', json(?)`+conEsfuerzo+`), modelo_enviado = ?, actualizado_en = ? WHERE id = ?`, append(args, modeloEnviado, fecha(a.reloj()), id)...)
 	if err != nil {
 		return err
 	}
@@ -306,6 +306,39 @@ func (a *Almacen) Listar(ctx context.Context, instancia string, f FiltroTrabajos
 		donde, args = donde+" AND creado_en < ?", append(args, fecha(f.Antes))
 	}
 	filas, err := a.db.QueryContext(ctx, `SELECT `+columnas+` FROM trabajos WHERE `+donde+` ORDER BY creado_en DESC, rowid DESC LIMIT ?`, append(args, limite)...)
+	if err != nil {
+		return nil, err
+	}
+	defer filas.Close()
+	trabajos := []nucleo.Trabajo{}
+	for filas.Next() {
+		t, err := escanear(filas)
+		if err != nil {
+			return nil, err
+		}
+		trabajos = append(trabajos, t)
+	}
+	return trabajos, filas.Err()
+}
+
+// Vivos devuelve los trabajos de la instancia sin terminar y los terminados desde terminadosDesde, por orden de
+// cambio: es la foto con la que empieza el flujo de eventos de la instancia. punto vacío: los de todas las APIs.
+func (a *Almacen) Vivos(ctx context.Context, instancia, punto string, terminadosDesde time.Time) ([]nucleo.Trabajo, error) {
+	return a.porCambio(ctx, instancia, punto, "(terminado_en IS NULL OR terminado_en >= ?)", fecha(terminadosDesde))
+}
+
+// CambiadosDesde devuelve los trabajos de la instancia que cambiaron después de desde (estado, agente…), por orden de
+// cambio y como mucho 500: lo que el flujo de eventos envía tras cada aviso.
+func (a *Almacen) CambiadosDesde(ctx context.Context, instancia, punto string, desde time.Time) ([]nucleo.Trabajo, error) {
+	return a.porCambio(ctx, instancia, punto, "actualizado_en > ?", fecha(desde))
+}
+
+func (a *Almacen) porCambio(ctx context.Context, instancia, punto, condicion string, valor any) ([]nucleo.Trabajo, error) {
+	donde, args := "instancia = ? AND "+condicion, []any{instancia, valor}
+	if punto != "" {
+		donde, args = donde+" AND punto_acceso = ?", append(args, punto)
+	}
+	filas, err := a.db.QueryContext(ctx, `SELECT `+columnas+` FROM trabajos WHERE `+donde+` ORDER BY actualizado_en, rowid LIMIT 500`, args...)
 	if err != nil {
 		return nil, err
 	}
