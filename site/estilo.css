@@ -232,6 +232,10 @@ footer .envoltura { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 .descargas .tarjeta p { flex: 1; }
 .descargas code { font: .82rem var(--mono); background: var(--superficie-suave); border: 1px solid var(--borde); border-radius: 6px; padding: 1px 6px; overflow-wrap: anywhere; }
 .descargas .boton { align-self: flex-start; padding: 9px 16px; font-size: .92rem; }
+.descargas .tarjeta p.otras { flex: none; font-size: .88rem; }
+.descargas .tu-sistema { border-color: var(--acento); box-shadow: var(--sombra); }
+.descargas .tu-sistema .chapa { align-self: flex-start; }
+.todas { margin-top: 18px; text-align: center; font-size: .92rem; }
 
 /* Ayuda: índice lateral y contenido */
 .ayuda { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; padding-top: 48px; padding-bottom: 72px; }

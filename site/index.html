@@ -37,7 +37,7 @@
       <button type="button" data-tema="claro" aria-pressed="false" aria-label="Tema claro / Light theme" title="Claro / Light">☀</button>
       <button type="button" data-tema="oscuro" aria-pressed="false" aria-label="Tema oscuro / Dark theme" title="Oscuro / Dark">☾</button>
     </div>
-    <a class="boton principal" href="#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+    <a class="boton principal" href="#descargar" data-descarga><span class="texto-descarga"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
   </div>
 </header>
 
@@ -54,9 +54,9 @@
         <span lang="en">Tramtai turns Claude Code, Codex, GitHub Copilot CLI, Antigravity and the Gemini API into an OpenAI- and Anthropic-compatible API that runs on your computer. Connect any app by changing just the URL.</span>
       </p>
       <div class="acciones">
-        <a class="boton principal" href="#descargar">
+        <a class="boton principal" href="#descargar" data-descarga>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
-          <span lang="es">Descargar gratis</span><span lang="en">Download for free</span>
+          <span class="texto-descarga"><span lang="es">Descargar gratis</span><span lang="en">Download for free</span></span>
         </a>
         <a class="boton secundario" href="ayuda.html"><span lang="es">Cómo empezar</span><span lang="en">Get started</span></a>
       </div>
@@ -405,25 +405,29 @@ respuesta = cliente.chat.completions.create(
         <p class="suave"><span lang="es">La misma app en los tres, con su icono en la bandeja. Cada archivo trae su suma SHA-256 en <code>SHA256SUMS.txt</code>.</span><span lang="en">The same app on all three, with its tray icon. Every file has its SHA-256 checksum in <code>SHA256SUMS.txt</code>.</span></p>
       </div>
       <div class="descargas">
-        <article class="tarjeta">
+        <article class="tarjeta" data-sistema="windows">
           <div class="linea" style="background: var(--codex)"></div>
           <h3>Windows 10 · 11</h3>
           <p class="suave"><span lang="es">El instalador (<code>…-instalador-windows-x64.exe</code>) es para tu usuario, no pide permisos de administrador y se actualiza con un clic. También hay una copia portable en <code>.zip</code>.</span><span lang="en">The installer (<code>…-instalador-windows-x64.exe</code>) is per user, needs no administrator rights and updates with one click. There's also a portable <code>.zip</code>.</span></p>
-          <a class="boton principal" href="https://github.com/MscottB/Tramtai/releases/latest"><span lang="es">Descargar para Windows</span><span lang="en">Download for Windows</span></a>
+          <a class="boton principal" href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="instalador-windows-x64.exe"><span lang="es">Descargar el instalador</span><span lang="en">Download the installer</span></a>
+          <p class="otras"><a href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="portable-windows-x64.zip">Portable (.zip)</a> · <a href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="conversor-windows-x64.zip"><span lang="es">Conversor de archivos sin conexión (.zip)</span><span lang="en">Offline file converter (.zip)</span></a></p>
         </article>
-        <article class="tarjeta">
+        <article class="tarjeta" data-sistema="macos">
           <div class="linea" style="background: var(--claude)"></div>
           <h3>macOS 11+</h3>
           <p class="suave"><span lang="es">El <code>.dmg</code> sirve para Intel y Apple Silicon. Con Homebrew se instala sin el aviso de Gatekeeper:</span><span lang="en">The <code>.dmg</code> works on Intel and Apple Silicon. With Homebrew it installs without the Gatekeeper prompt:</span><br><code>brew tap mscottb/tramtai https://github.com/MscottB/Tramtai</code><br><code>brew install --cask tramtai</code></p>
-          <a class="boton principal" href="https://github.com/MscottB/Tramtai/releases/latest"><span lang="es">Descargar para macOS</span><span lang="en">Download for macOS</span></a>
+          <a class="boton principal" href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="macos.dmg"><span lang="es">Descargar el .dmg</span><span lang="en">Download the .dmg</span></a>
+          <p class="otras"><span lang="es">Solo CLI y servicio:</span><span lang="en">CLI and service only:</span> <a href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="macos-arm64.tar.gz">Apple Silicon</a> · <a href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="macos-amd64.tar.gz">Intel</a></p>
         </article>
-        <article class="tarjeta">
+        <article class="tarjeta" data-sistema="linux">
           <div class="linea" style="background: var(--gemini)"></div>
           <h3>Linux</h3>
           <p class="suave"><span lang="es">Paquetes <code>.deb</code> y <code>.rpm</code> (x64 y ARM) con la app de escritorio. Si solo quieres la CLI y el servicio, también con Homebrew:</span><span lang="en"><code>.deb</code> and <code>.rpm</code> packages (x64 and ARM) with the desktop app. For just the CLI and the service, Homebrew works too:</span><br><code>brew install mscottb/tramtai/tramtai</code></p>
-          <a class="boton principal" href="https://github.com/MscottB/Tramtai/releases/latest"><span lang="es">Descargar para Linux</span><span lang="en">Download for Linux</span></a>
+          <a class="boton principal" href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="linux-amd64.deb" data-arm="linux-arm64.deb"><span lang="es">Descargar el .deb</span><span lang="en">Download the .deb</span> <span data-arq>(x64)</span></a>
+          <p class="otras"><a href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="linux-amd64.rpm" data-arm="linux-arm64.rpm">.rpm <span data-arq>(x64)</span></a> · <span lang="es">otra arquitectura:</span><span lang="en">other architecture:</span> <a href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="linux-arm64.deb" data-arm="linux-amd64.deb">.deb <span data-arq-otra>(ARM)</span></a> · <a href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="linux-arm64.rpm" data-arm="linux-amd64.rpm">.rpm <span data-arq-otra>(ARM)</span></a></p>
         </article>
       </div>
+      <p class="suave todas"><a href="https://github.com/MscottB/Tramtai/releases/latest"><span lang="es">Todas las descargas</span><span lang="en">All downloads</span></a><span data-version></span> · <code>SHA256SUMS.txt</code></p>
     </div>
   </section>
 

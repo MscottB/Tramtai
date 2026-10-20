@@ -73,3 +73,60 @@
   }, { rootMargin: '-80px 0px -70% 0px' });
   document.querySelectorAll('.doc section[id]').forEach(function (s) { observador.observe(s); });
 })();
+
+// Descargas: enlaza cada botón con su archivo del último release (los nombres llevan la versión) y marca el sistema
+// del visitante. Sin JavaScript o si GitHub no responde, los enlaces siguen llevando a la página del release.
+(function () {
+  if (!document.querySelector('[data-archivo]')) return;
+  var nombres = {
+    windows: '<span lang="es">Descargar para Windows</span><span lang="en">Download for Windows</span>',
+    macos: '<span lang="es">Descargar para macOS</span><span lang="en">Download for macOS</span>',
+    linux: '<span lang="es">Descargar para Linux</span><span lang="en">Download for Linux</span>'
+  };
+  var plataforma = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+  var movil = /android|iphone|ipad/i.test(navigator.userAgent);
+  var sistema = movil ? '' : /win/i.test(plataforma) ? 'windows' : /mac/i.test(plataforma) ? 'macos' : /linux|x11|cros/i.test(plataforma) ? 'linux' : '';
+  var tarjeta = sistema && document.querySelector('[data-sistema="' + sistema + '"]');
+  if (tarjeta) {
+    tarjeta.classList.add('tu-sistema');
+    tarjeta.insertAdjacentHTML('afterbegin', '<span class="chapa"><span lang="es">Tu sistema</span><span lang="en">Your system</span></span>');
+    document.querySelectorAll('[data-descarga] .texto-descarga').forEach(function (t) { t.innerHTML = nombres[sistema]; });
+  }
+  var principal = tarjeta && tarjeta.querySelector('a.boton[data-archivo]');
+
+  function enlazar(archivos) {
+    document.querySelectorAll('[data-archivo]').forEach(function (a) {
+      var url = archivos[a.dataset.archivo];
+      if (url) a.href = url;
+    });
+    if (principal && archivos[principal.dataset.archivo]) {
+      document.querySelectorAll('[data-descarga]').forEach(function (a) { a.href = principal.href; });
+    }
+  }
+
+  // En Linux con ARM (solo lo dicen los navegadores Chromium) el botón principal ofrece la versión ARM.
+  function arquitectura() {
+    if (sistema !== 'linux' || !navigator.userAgentData || !navigator.userAgentData.getHighEntropyValues) return Promise.resolve();
+    return navigator.userAgentData.getHighEntropyValues(['architecture']).then(function (v) {
+      if (v.architecture !== 'arm') return;
+      document.querySelectorAll('[data-sistema="linux"] [data-arm]').forEach(function (a) { a.dataset.archivo = a.dataset.arm; });
+      document.querySelectorAll('[data-sistema="linux"] [data-arq]').forEach(function (s) { s.textContent = '(ARM)'; });
+      document.querySelectorAll('[data-sistema="linux"] [data-arq-otra]').forEach(function (s) { s.textContent = '(x64)'; });
+    }).catch(function () {});
+  }
+
+  Promise.all([
+    arquitectura(),
+    fetch('https://api.github.com/repos/MscottB/Tramtai/releases/latest').then(function (r) { if (!r.ok) throw r; return r.json(); })
+  ]).then(function (res) {
+    var release = res[1];
+    var archivos = {};
+    (release.assets || []).forEach(function (f) {
+      document.querySelectorAll('[data-archivo]').forEach(function (a) {
+        if (f.name.slice(-a.dataset.archivo.length - 1) === '-' + a.dataset.archivo) archivos[a.dataset.archivo] = f.browser_download_url;
+      });
+    });
+    enlazar(archivos);
+    document.querySelectorAll('[data-version]').forEach(function (s) { s.textContent = ' · ' + String(release.tag_name).split('+')[0]; });
+  }).catch(function () {});
+})();
