@@ -1151,3 +1151,115 @@ body.body--dark .tablero {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Ayuda: un recorrido como las paradas de una línea, en fila en pantallas anchas y en columna en el móvil. */
+.diagrama {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--paradas, 5), minmax(0, 1fr));
+  gap: 12px;
+}
+.diagrama__parada {
+  position: relative;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+  padding: 12px;
+}
+.diagrama__parada:not(:last-child)::after {
+  content: '→';
+  position: absolute;
+  right: -11px;
+  top: 14px;
+  color: var(--acento);
+  font-weight: 700;
+}
+.diagrama__rama {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--texto-suave);
+}
+@media (max-width: 899px) {
+  .diagrama {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .diagrama__parada:not(:last-child)::after {
+    content: '↓';
+    right: auto;
+    left: 18px;
+    top: auto;
+    bottom: -15px;
+  }
+}
+.pasos-guia {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.pasos-guia li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  line-height: 1.5;
+}
+.pasos-guia .numero-estacion {
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+.tarjeta-tema {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 16px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: var(--superficie, transparent);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+  cursor: pointer;
+}
+.tarjeta-tema:hover,
+.tarjeta-tema:focus-visible {
+  border-color: var(--acento);
+}
+.tabla-ayuda {
+  border-collapse: collapse;
+  min-width: 560px;
+  width: 100%;
+}
+.tabla-ayuda th,
+.tabla-ayuda td {
+  border-bottom: 1px solid var(--borde);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.tabla-ayuda thead th {
+  font-weight: 600;
+}
+.tabla-ayuda tbody th {
+  font-weight: 400;
+  color: var(--texto-suave);
+}
+.captura-ayuda {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+}
+.borde-redondeado {
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+}
+.ayuda-resaltado {
+  outline: 2px solid var(--acento);
+  outline-offset: -2px;
+}

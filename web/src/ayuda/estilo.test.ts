@@ -4,7 +4,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import es from '../idiomas/es.ts'
 import en from '../idiomas/en.ts'
-import { temas, temaDe, temaPorId } from './indice.ts'
+import ayudaEs from '../idiomas/ayuda.es.ts'
+import { CLAVES_UI, temas, temaDe, temaPorId } from './indice.ts'
 import type { Bloque, Pagina } from './tipos.ts'
 
 const idiomas: Record<string, Record<string, string>> = { es, en }
@@ -82,6 +83,20 @@ test('cada pregunta tiene un ancla única en toda la Ayuda y su tema existe', ()
     assert.ok(!p.id.startsWith('e-'), `${p.id}: e- es de los errores`)
     if (p.tema) assert.ok(temaPorId(p.tema), `${p.id}: el tema ${p.tema} no existe`)
   }
+})
+
+test('ningún texto de la Ayuda queda sin usar', () => {
+  const usadas = new Set<string>(CLAVES_UI)
+  for (const tema of temas) {
+    usadas.add(tema.titulo)
+    usadas.add(tema.resumen)
+    for (const b of tema.bloques) for (const c of cortas(b)) usadas.add(c)
+  }
+  for (const e of Object.values(problemas?.ERRORES ?? {})) {
+    usadas.add(e.solucion)
+    if (e.titulo) usadas.add(e.titulo)
+  }
+  assert.deepEqual(Object.keys(ayudaEs).filter((k) => !usadas.has(k)), [])
 })
 
 test('cada error tiene título y una solución corta en los dos idiomas', () => {

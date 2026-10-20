@@ -108,7 +108,7 @@
         <!-- El menú es una línea de tranvía: cada sección es una estación y la actual se ilumina. -->
         <ul class="nav-red">
           <li v-for="p in principales" :key="p.id">
-            <button type="button" class="estacion" :class="{ 'estacion--activa': pagina === p.id }" :aria-current="pagina === p.id ? 'page' : undefined" @click="ir(p.id)">
+            <button type="button" class="estacion" :class="{ 'estacion--activa': seccion === p.id }" :aria-current="seccion === p.id ? 'page' : undefined" @click="ir(p.id)">
               <span class="estacion__punto" aria-hidden="true" />
               <span class="column">
                 <span class="estacion__nombre">{{ t(p.titulo) }}</span>
@@ -120,7 +120,7 @@
         <q-space />
         <ul class="nav-red nav-red--aparte q-pb-md">
           <li>
-            <button type="button" class="estacion" :class="{ 'estacion--activa': pagina === ayuda.id }" :aria-current="pagina === ayuda.id ? 'page' : undefined" @click="ir(ayuda.id)">
+            <button type="button" class="estacion" :class="{ 'estacion--activa': seccion === ayuda.id }" :aria-current="seccion === ayuda.id ? 'page' : undefined" @click="ir(ayuda.id)">
               <q-icon :name="ayuda.icono" size="19px" class="texto-suave" style="margin-left: -1px" />
               <span class="column">
                 <span class="estacion__nombre">{{ t(ayuda.titulo) }}</span>
@@ -157,7 +157,7 @@
             </div>
           </q-card>
         </div>
-        <component :is="actual.componente" v-else :key="sesion.instancia" @ir="ir" />
+        <component :is="actual.componente" v-else :key="sesion.instancia" v-bind="seccion === 'ayuda' ? { tema: ruta.tema } : {}" @ir="ir" />
       </q-page>
     </q-page-container>
 
@@ -268,6 +268,8 @@ import ConectarPagina from './paginas/Accesos.vue'
 import ConfiguracionPagina from './paginas/Configuracion.vue'
 import AgentesPagina from './paginas/Agentes.vue'
 import AyudaPagina from './paginas/Ayuda.vue'
+import { hashDe, leerHash } from './ayuda/ruta'
+import { temaPorId } from './ayuda/indice'
 import AcercaDe from './componentes/AcercaDe.vue'
 import ListaNovedades from './componentes/ListaNovedades.vue'
 import NotasVersion from './componentes/NotasVersion.vue'
@@ -285,16 +287,17 @@ const principales = [
 ] as const
 const ayuda = { id: 'ayuda', titulo: 'menu.ayuda', detalle: 'menuDetalle.ayuda', icono: 'o_help_outline', componente: markRaw(AyudaPagina) } as const
 const paginas = [...principales, ayuda]
-// Direcciones de versiones anteriores de la Web UI.
-const antiguas: Record<string, string> = { panel: 'inicio', trabajos: 'historial', accesos: 'conectar' }
 
+// pagina es la dirección sin # («ayuda/archivos» para un tema); seccion, la página que la muestra.
 function desdeHash(): string {
-  const id = location.hash.slice(1)
-  return antiguas[id] ?? (paginas.some((p) => p.id === id) ? id : 'inicio')
+  const r = leerHash(location.hash)
+  return hashDe(r.pagina, r.tema).slice(1)
 }
 
 const pagina = ref(desdeHash())
-const actual = computed(() => paginas.find((p) => p.id === pagina.value) ?? paginas[0])
+const ruta = computed(() => leerHash('#' + pagina.value))
+const seccion = computed(() => ruta.value.pagina)
+const actual = computed(() => paginas.find((p) => p.id === seccion.value) ?? paginas[0])
 const menu = ref(false)
 const origen = location.origin
 // Antes que los composables, como cuando todo iba en un solo onMounted: la URL se limpia antes de pedir la sesión.
@@ -374,8 +377,11 @@ function volver() {
 provide('navegacion', { anterior: computed(() => tituloDe(pila.value[pila.value.length - 1])), volver })
 
 function tituloDe(id?: string) {
-  const p = paginas.find((x) => x.id === id)
-  return p ? t(p.titulo) : ''
+  if (id === undefined) return ''
+  const r = leerHash('#' + id)
+  const tema = r.tema ? temaPorId(r.tema) : undefined
+  const p = paginas.find((x) => x.id === r.pagina)
+  return tema ? t(tema.titulo) : p ? t(p.titulo) : ''
 }
 
 watchEffect(() => (document.title = `${tituloDe(pagina.value)} · Tramtai`))
