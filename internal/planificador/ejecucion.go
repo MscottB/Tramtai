@@ -14,6 +14,7 @@ import (
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
+	"tramtai/internal/herramientas"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
@@ -81,7 +82,9 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		p.mu.Unlock()
 	}()
 
-	solicitud, desde := t.Solicitud, nucleo.EnCola
+	// Lo que recibe el agente: con las herramientas descritas y la conversación escrita como texto; el trabajo guarda
+	// la solicitud del cliente.
+	solicitud, desde := herramientas.Preparar(t.Solicitud), nucleo.EnCola
 	var documentos nucleo.Documentos
 	if len(solicitud.Cargas) > 0 {
 		esperando() // una conversión larga no frena el despacho de los demás
@@ -216,7 +219,7 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		if !p.cambiar(id, nucleo.Ejecutando, nucleo.ValidandoSalida, persistencia.Cambio{}) {
 			return
 		}
-		errSalida := validarSalida(t.Solicitud.Salida, resultado.Salida)
+		errSalida := validarSalida(t.Solicitud, resultado.Salida)
 		if errSalida == nil {
 			p.cambiar(id, nucleo.ValidandoSalida, nucleo.Completado, persistencia.Cambio{Salida: &resultado.Salida,
 				Uso: &resultado.Uso, ModeloEfectivo: resultado.ModeloEfectivo})
@@ -393,10 +396,14 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 	agrupador := &agrupador{guardar: func(tipo, datos string) error {
 		return p.almacen.AgregarEvento(fondo, id, tipo, adaptadores.Redactar(datos, secretos))
 	}}
-	var texto atomic.Bool // algunos adaptadores emiten desde la goroutine que lee la salida del CLI
+	var texto atomic.Bool                               // algunos adaptadores emiten desde la goroutine que lee la salida del CLI
+	sinTextoEnVivo := herramientas.Activas(t.Solicitud) // el texto sería el sobre interno: la respuesta llega al terminar
 	resultado, err = p.adaptadores[c.agente].Ejecutar(ctxEjecucion, solicitud, func(e adaptadores.Evento) error {
 		if e.Tipo == "texto" && e.Datos != "" {
 			texto.Store(true)
+		}
+		if e.Tipo == "texto" && sinTextoEnVivo {
+			return nil
 		}
 		return agrupador.emitir(e)
 	})
@@ -558,8 +565,14 @@ func conDocumentos(s nucleo.SolicitudEjecucion, documentos string) nucleo.Solici
 	return s
 }
 
-// validarSalida comprueba el formato pedido y, si hay esquema, que la salida lo cumpla.
-func validarSalida(config nucleo.ConfigSalida, salida string) error {
+// validarSalida comprueba el formato pedido y, si hay esquema, que la salida lo cumpla. Con herramientas, que la
+// salida sea un sobre válido y que cada llamada cumpla el esquema de su herramienta.
+func validarSalida(sol nucleo.SolicitudEjecucion, salida string) error {
+	if herramientas.Activas(sol) {
+		_, _, err := herramientas.Interpretar(sol, salida, "")
+		return err
+	}
+	config := sol.Salida
 	if len(config.Esquema) > 0 {
 		return salidas.Validar(config.Esquema, salida)
 	}
