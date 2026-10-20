@@ -299,7 +299,39 @@
         "type": "object",
         "required": ["rol", "contenido"],
         "additionalProperties": false,
-        "properties": { "rol": { "type": "string", "enum": ["usuario", "asistente", "sistema"] }, "contenido": { "type": "string", "minLength": 1 } }
+        "properties": {
+          "rol": { "type": "string", "enum": ["usuario", "asistente", "sistema", "herramienta"] },
+          "contenido": { "type": "string", "description": "Obligatorio salvo en un mensaje del asistente con llamadas o en el resultado de una herramienta" },
+          "llamadas": { "type": "array", "description": "Solo en un mensaje del asistente: las herramientas que pidió en un turno anterior", "items": { "$ref": "#/components/schemas/Llamada" } },
+          "id_llamada": { "type": "string", "description": "Obligatorio con rol herramienta: la llamada a la que responde este resultado" },
+          "es_error": { "type": "boolean", "description": "Con rol herramienta: el resultado es un error" }
+        }
+      },
+      "Herramienta": {
+        "type": "object",
+        "required": ["nombre"],
+        "additionalProperties": false,
+        "properties": {
+          "nombre": { "type": "string", "examples": ["clima"] },
+          "descripcion": { "type": "string", "examples": ["El tiempo actual de una ciudad"] },
+          "parametros": { "type": "object", "description": "JSON Schema 2020-12 de los argumentos" }
+        }
+      },
+      "Llamada": {
+        "type": "object",
+        "required": ["id", "nombre", "argumentos"],
+        "properties": {
+          "id": { "type": "string", "examples": ["llamada_trabajo_0123456789abcdef01234567_0"] },
+          "nombre": { "type": "string", "examples": ["clima"] },
+          "argumentos": { "type": "object", "description": "Validados contra los parámetros de la herramienta; al reenviarlos se aceptan también como texto con un objeto JSON" }
+        }
+      },
+      "EleccionHerramienta": {
+        "description": "auto (predeterminada), ninguna, obligatoria o una herramienta concreta",
+        "oneOf": [
+          { "type": "string", "enum": ["auto", "ninguna", "obligatoria"] },
+          { "type": "object", "required": ["nombre"], "additionalProperties": false, "properties": { "nombre": { "type": "string" } } }
+        ]
       },
       "ConfigSalida": {
         "type": "object",
@@ -333,7 +365,10 @@
           "mensajes": { "type": "array", "maxItems": 1000, "items": { "$ref": "#/components/schemas/Mensaje" } },
           "cargas": { "type": "array", "maxItems": 20, "items": { "type": "string" }, "description": "identificador_carga de POST /cargas" },
           "salida": { "$ref": "#/components/schemas/ConfigSalida" },
-          "ejecucion": { "$ref": "#/components/schemas/ConfigEjecucion" }
+          "ejecucion": { "$ref": "#/components/schemas/ConfigEjecucion" },
+          "herramientas": { "type": "array", "description": "Funciones que tu aplicación ejecuta: el agente pide la llamada y tú devuelves el resultado en un mensaje herramienta. No se combinan con una respuesta en JSON.", "items": { "$ref": "#/components/schemas/Herramienta" } },
+          "eleccion_herramienta": { "$ref": "#/components/schemas/EleccionHerramienta" },
+          "llamadas_paralelas": { "type": "boolean", "description": "false: como mucho una llamada por respuesta (true por defecto)" }
         }
       },
       "Uso": {
@@ -358,7 +393,8 @@
           "mensaje_error": { "type": "string" },
           "errores_salida": { "type": "array", "description": "Con salida_no_cumple_esquema: los problemas de la última respuesta", "items": { "$ref": "#/components/schemas/ProblemaSalida" } },
           "solicitud": { "$ref": "#/components/schemas/SolicitudEjecucion" },
-          "salida": { "type": "string" },
+          "salida": { "type": "string", "description": "Con herramientas, solo el texto para el usuario" },
+          "llamadas": { "type": "array", "description": "Con herramientas, en un trabajo completado: las que pidió el agente", "items": { "$ref": "#/components/schemas/Llamada" } },
           "intento_de": { "type": "string" },
           "punto_acceso": { "type": "string" },
           "origen": { "type": "string" },

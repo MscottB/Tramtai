@@ -214,12 +214,48 @@ para cada API.
 
 ### Herramientas (`tools`)
 
-Las tres rutas aceptan herramientas de tipo función: `tools` y `tool_choice` en chat y responses (con `parallel_tool_calls`), y `tools` con `input_schema` y `tool_choice` (`auto`, `any`, `tool`, `none`, `disable_parallel_tool_use`) en Anthropic. Funciona igual que con OpenAI o Anthropic: el agente **pide** la llamada (`tool_calls` con `finish_reason: "tool_calls"`, o bloques `tool_use` con `stop_reason: "tool_use"`), tu aplicación la ejecuta y devuelve el resultado en el siguiente mensaje (rol `tool`, `function_call_output` o `tool_result`).
+Las tres APIs aceptan herramientas de tipo función: tu aplicación las ofrece, el agente **pide** una llamada, tu
+aplicación la ejecuta y le devuelve el resultado en el turno siguiente. El agente nunca ejecuta nada: Tramtai le
+describe las herramientas y le pide la respuesta con la salida estructurada de su CLI (`internal/herramientas`, el
+mismo motor para las tres). El ciclo completo, con ejemplos en Python, JavaScript, Go y curl, está en la
+[guía del desarrollador](desarrolladores.md).
 
-- El agente nunca ejecuta nada: Tramtai le describe las herramientas y le pide la respuesta con la salida estructurada de su CLI, y la traduce al formato de cada API.
-- Los argumentos se validan con el JSON Schema de cada herramienta, también sus `format` (desde la v0.46). Si el agente devuelve argumentos que no lo cumplen, o no llama a ninguna cuando `tool_choice` lo exige, la respuesta es 422 `salida_no_cumple_esquema`.
-- La respuesta llega completa al terminar: con herramientas no hay texto en vivo, aunque `stream: true` envía los eventos de siempre.
-- No se combina con `response_format` en JSON.
+**Por OpenAI y Anthropic**, como con sus SDK: `tools` y `tool_choice` en chat y responses (con `parallel_tool_calls`),
+y `tools` con `input_schema` y `tool_choice` (`auto`, `any`, `tool`, `none`, `disable_parallel_tool_use`) en Anthropic.
+El agente pide la llamada con `tool_calls` y `finish_reason: "tool_calls"`, o bloques `tool_use` con
+`stop_reason: "tool_use"`; tu aplicación devuelve el resultado con rol `tool`, `function_call_output` o `tool_result`.
+
+**Por la API propia** (`POST /trabajos`):
+
+```json
+{
+  "mensajes": [{ "rol": "usuario", "contenido": "¿Qué tiempo hace en Santiago?" }],
+  "herramientas": [{ "nombre": "clima", "descripcion": "El tiempo actual de una ciudad",
+    "parametros": { "type": "object", "properties": { "ciudad": { "type": "string" } }, "required": ["ciudad"] } }],
+  "eleccion_herramienta": "auto"
+}
+```
+
+- `eleccion_herramienta`: `"auto"` (predeterminada), `"ninguna"`, `"obligatoria"` o `{"nombre": "clima"}`;
+  `llamadas_paralelas: false` deja como mucho una llamada por respuesta.
+- El trabajo terminado trae `llamadas` (`id`, `nombre` y `argumentos` como objeto, ya validados) y `salida` con solo
+  el texto para el usuario.
+- El turno siguiente reenvía la conversación y las mismas `herramientas`: el mensaje del asistente con sus
+  `llamadas` y un mensaje `{"rol": "herramienta", "id_llamada": "…", "contenido": "…"}` por resultado
+  (`"es_error": true` si falló). Un `id_llamada` que no aparece en una llamada anterior es 400 `solicitud_invalida`.
+
+**Reglas comunes:**
+
+- Los argumentos se validan con el JSON Schema de cada herramienta, también sus `format`. Si el agente devuelve
+  argumentos que no lo cumplen, pide una herramienta que no existe o no llama a ninguna cuando la elección lo exige, la
+  respuesta no cumple: se pide una corrección al mismo agente si hay correcciones (`salida.reintentos` o las de la
+  receta) y, si no, `salida_no_cumple_esquema` (422 en las fachadas; el trabajo falla en la API propia, con reintento y
+  «Corregir» como con un esquema).
+- La respuesta llega completa al terminar: con herramientas no hay texto en vivo, aunque `stream: true` envía los
+  eventos de siempre.
+- No se combinan con una respuesta en JSON (`response_format`, `salida.esquema` o el esquema de una receta):
+  400 `parametro_no_soportado`.
+- Van en cada petición: las recetas no las guardan.
 
 ### Ejemplos con los SDK oficiales
 

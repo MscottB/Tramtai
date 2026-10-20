@@ -19,6 +19,7 @@ import (
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
 	"tramtai/internal/documentos"
+	"tramtai/internal/herramientas"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
@@ -66,19 +67,34 @@ func (s *Servidor) obtenerTrabajo(w http.ResponseWriter, r *http.Request) {
 	EscribirJSON(w, http.StatusOK, s.conErrores(r.Context(), t))
 }
 
-// conErrores añade errores_salida, los problemas de la última validación, a un trabajo que falló por el esquema.
-func (s *Servidor) conErrores(ctx context.Context, t nucleo.Trabajo) any {
-	if t.CodigoError != nucleo.CodigoSalidaNoCumpleEsquema {
-		return t
+// vista es un trabajo como lo ve la API propia: con herramientas, la salida es el texto para el usuario y llamadas las
+// que pidió el agente; si falló por el esquema, errores_salida. Un trabajo sin herramientas ni errores se ve igual.
+type vista struct {
+	nucleo.Trabajo
+	Llamadas      []nucleo.Llamada   `json:"llamadas,omitempty"`
+	ErroresSalida []salidas.Problema `json:"errores_salida,omitempty"`
+}
+
+// vistaTrabajo interpreta la salida de un trabajo con herramientas que terminó bien (ya validada al terminar).
+func vistaTrabajo(t nucleo.Trabajo) vista {
+	v := vista{Trabajo: t}
+	if t.Estado == nucleo.Completado && t.Disponibilidad != nucleo.SalidaExpirada && herramientas.Activas(t.Solicitud) {
+		if texto, llamadas, err := herramientas.Interpretar(t.Solicitud, t.Salida, "llamada_"+t.ID); err == nil {
+			v.Salida, v.Llamadas = texto, llamadas
+		}
 	}
-	problemas, err := s.Planificador.ProblemasSalida(ctx, t.ID)
-	if err != nil || len(problemas) == 0 {
-		return t
+	return v
+}
+
+// conErrores es la vista del trabajo con errores_salida, los problemas de la última validación, si falló por el esquema.
+func (s *Servidor) conErrores(ctx context.Context, t nucleo.Trabajo) vista {
+	v := vistaTrabajo(t)
+	if t.CodigoError == nucleo.CodigoSalidaNoCumpleEsquema {
+		if problemas, err := s.Planificador.ProblemasSalida(ctx, t.ID); err == nil {
+			v.ErroresSalida = problemas
+		}
 	}
-	return struct {
-		nucleo.Trabajo
-		ErroresSalida []salidas.Problema `json:"errores_salida"`
-	}{t, problemas}
+	return v
 }
 
 // validarEsquema compila un esquema sin ejecutar nada y explica por qué no vale, con la línea y la columna si no es
@@ -168,7 +184,7 @@ func (s *Servidor) salidaTrabajo(w http.ResponseWriter, r *http.Request) {
 			tipo = "text/markdown; charset=utf-8"
 		}
 		w.Header().Set("Content-Type", tipo)
-		_, _ = io.WriteString(w, t.Salida)
+		_, _ = io.WriteString(w, vistaTrabajo(t).Salida)
 	}
 }
 

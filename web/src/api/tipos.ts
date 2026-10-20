@@ -31,6 +31,15 @@ export interface Uso {
 export interface Mensaje {
   rol: string
   contenido: string
+  llamadas?: Llamada[] // en un mensaje del asistente: las herramientas que pidió
+  id_llamada?: string // con rol herramienta: la llamada a la que responde
+  es_error?: boolean
+}
+// Llamada es una herramienta que pidió el agente, con sus argumentos ya validados.
+export interface Llamada {
+  id: string
+  nombre: string
+  argumentos: Record<string, unknown>
 }
 export interface Solicitud {
   agente?: string
@@ -44,6 +53,9 @@ export interface Solicitud {
   cargas?: string[]
   salida?: { formato?: string; esquema?: unknown; reintentos?: number; conservar_salida_invalida?: boolean }
   ejecucion?: { tiempo_limite_segundos?: number }
+  herramientas?: { nombre: string; descripcion?: string; parametros?: unknown }[]
+  eleccion_herramienta?: 'auto' | 'ninguna' | 'obligatoria' | { nombre: string }
+  llamadas_paralelas?: boolean
 }
 export interface Trabajo {
   id: string
@@ -65,6 +77,7 @@ export interface Trabajo {
   terminado_en?: string
   // errores_salida: con salida_no_cumple_esquema, por qué la última respuesta no cumplía.
   errores_salida?: ProblemaSalida[]
+  llamadas?: Llamada[] // con herramientas: las que pidió el agente (salida es solo el texto)
 }
 // ProblemaSalida es un motivo por el que la respuesta no cumple el esquema; campo es la ruta (tareas[2].fecha), vacía
 // para la respuesta entera.

@@ -203,10 +203,11 @@ func (s *Servidor) listarTrabajos(w http.ResponseWriter, r *http.Request) {
 		EscribirError(w, r, err)
 		return
 	}
-	if lista == nil {
-		lista = []nucleo.Trabajo{}
+	vistas := make([]vista, len(lista))
+	for i, t := range lista {
+		vistas[i] = vistaTrabajo(t)
 	}
-	EscribirJSON(w, http.StatusOK, map[string]any{"trabajos": lista})
+	EscribirJSON(w, http.StatusOK, map[string]any{"trabajos": vistas})
 }
 
 // filtrarCatalogo deja en un punto de acceso solo los modelos permitidos y añade sus alias.
