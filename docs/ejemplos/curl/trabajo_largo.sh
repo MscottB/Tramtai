@@ -7,8 +7,10 @@ CLAVE="${TRAMTAI_CLAVE:-<clave de Mis APIs>}"
 MODELO="${TRAMTAI_MODELO:-claude/haiku}"
 
 AGENTE="${MODELO%%/*}"
+SUBMODELO=""
+case "$MODELO" in */*) SUBMODELO=', "modelo": "'"${MODELO#*/}"'"' ;; esac
 TRABAJO=$(curl -sf "$URL/api/v1/trabajos" -H "Authorization: Bearer $CLAVE" -H "Content-Type: application/json" \
-  -d '{"agente": "'"$AGENTE"'", "mensajes": [{"rol": "usuario", "contenido": "Hola, ¿quién eres?"}]}' | jq -r .id)
+  -d '{"agente": "'"$AGENTE"'"'"$SUBMODELO"', "mensajes": [{"rol": "usuario", "contenido": "Hola, ¿quién eres?"}]}' | jq -r .id)
 echo "trabajo $TRABAJO"
 curl -sN "$URL/api/v1/trabajos/$TRABAJO/eventos" -H "Authorization: Bearer $CLAVE"
 curl -s "$URL/api/v1/trabajos/$TRABAJO/salida" -H "Authorization: Bearer $CLAVE"

@@ -22,7 +22,7 @@ def clima(ciudad):
 
 cliente = OpenAI(base_url=f"{URL}/openai/v1", api_key=CLAVE)
 mensajes = [{"role": "user", "content": "¿Qué tiempo hace en Santiago?"}]
-while True:
+for _ in range(5):  # un tope: si el agente sigue pidiendo herramientas, no se gasta cuota sin fin
     mensaje = cliente.chat.completions.create(model=MODELO, messages=mensajes, tools=herramientas).choices[0].message
     if not mensaje.tool_calls:
         print(mensaje.content)
@@ -36,3 +36,5 @@ while True:
         argumentos = json.loads(llamada.function.arguments)
         print(f"El agente pide {llamada.function.name}({argumentos})")
         mensajes.append({"role": "tool", "tool_call_id": llamada.id, "content": clima(**argumentos)})
+else:
+    raise SystemExit("el agente siguió pidiendo herramientas tras 5 rondas")

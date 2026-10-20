@@ -22,7 +22,7 @@ def clima(ciudad):
 
 
 mensajes = [{"rol": "usuario", "contenido": "¿Qué tiempo hace en Santiago?"}]
-while True:
+for _ in range(5):  # un tope: si el agente sigue pidiendo herramientas, no se gasta cuota sin fin
     solicitud = {"agente": agente, "mensajes": mensajes, "herramientas": herramientas}
     if modelo:
         solicitud["modelo"] = modelo
@@ -37,3 +37,5 @@ while True:
     for llamada in llamadas:
         print(f"El agente pide {llamada['nombre']}({llamada['argumentos']})")
         mensajes.append({"rol": "herramienta", "id_llamada": llamada["id"], "contenido": clima(**llamada["argumentos"])})
+else:
+    raise SystemExit("el agente siguió pidiendo herramientas tras 5 rondas")

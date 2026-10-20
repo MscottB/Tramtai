@@ -16,7 +16,11 @@ pedir() {
 }
 
 MENSAJE=$(pedir "[$PREGUNTA]" | jq -c '.choices[0].message')
-LLAMADA=$(echo "$MENSAJE" | jq -c '.tool_calls[0]')
+LLAMADA=$(echo "$MENSAJE" | jq -c '.tool_calls[0] // empty')
+if [ -z "$LLAMADA" ]; then
+  echo "$MENSAJE" | jq -r .content # respondió sin pedir la herramienta
+  exit 0
+fi
 echo "El agente pide $(echo "$LLAMADA" | jq -r '.function.name + .function.arguments')"
 RESULTADO=$(jq -cn --arg id "$(echo "$LLAMADA" | jq -r .id)" '{role: "tool", tool_call_id: $id, content: "18 °C y despejado en Santiago"}')
 pedir "[$PREGUNTA, $MENSAJE, $RESULTADO]" | jq -r '.choices[0].message.content'

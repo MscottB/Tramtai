@@ -19,10 +19,12 @@ const clima = ({ ciudad }) => `18 °C y despejado en ${ciudad}`
 
 const cliente = new OpenAI({ baseURL: `${BASE}/openai/v1`, apiKey: CLAVE })
 const mensajes = [{ role: 'user', content: '¿Qué tiempo hace en Santiago?' }]
-for (;;) {
+let terminado = false
+for (let ronda = 0; ronda < 5 && !terminado; ronda++) { // un tope: si el agente sigue pidiendo herramientas, no se gasta cuota sin fin
   const mensaje = (await cliente.chat.completions.create({ model: MODELO, messages: mensajes, tools: herramientas })).choices[0].message
   if (!mensaje.tool_calls?.length) {
     console.log(mensaje.content)
+    terminado = true
     break
   }
   // El turno del asistente con sus llamadas, y un resultado por cada una.
@@ -33,3 +35,4 @@ for (;;) {
     mensajes.push({ role: 'tool', tool_call_id: llamada.id, content: clima(argumentos) })
   }
 }
+if (!terminado) throw new Error('el agente siguió pidiendo herramientas tras 5 rondas')

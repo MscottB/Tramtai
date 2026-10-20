@@ -7,7 +7,9 @@ MODELO="${TRAMTAI_MODELO:-claude/haiku}"
 
 CARPETA="$(dirname "$0")"
 AGENTE="${MODELO%%/*}"
+SUBMODELO=""
+case "$MODELO" in */*) SUBMODELO=', "modelo": "'"${MODELO#*/}"'"' ;; esac
 CARGA=$(curl -sf "$URL/api/v1/cargas" -H "Authorization: Bearer $CLAVE" -F "archivo=@$CARPETA/../muestra.txt" | jq -r .identificador_carga)
 curl -sf "$URL/api/v1/ejecutar" -H "Authorization: Bearer $CLAVE" -H "Content-Type: application/json" \
-  -d '{"agente": "'"$AGENTE"'", "cargas": ["'"$CARGA"'"], "mensajes": [{"rol": "usuario", "contenido": "¿Qué dice este archivo?"}]}' \
+  -d '{"agente": "'"$AGENTE"'"'"$SUBMODELO"', "cargas": ["'"$CARGA"'"], "mensajes": [{"rol": "usuario", "contenido": "¿Qué dice este archivo?"}]}' \
   | jq -r .salida

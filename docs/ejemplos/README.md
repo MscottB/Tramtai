@@ -11,7 +11,8 @@ Todos leen tres variables:
 | `TRAMTAI_CLAVE` | Su clave | — |
 | `TRAMTAI_MODELO` | Agente y modelo | `claude/haiku` |
 
-- **Python:** `pip install -r python/requirements.txt` y `python python/herramientas.py`.
+- **Python:** `pip install -r python/requirements.txt` (todas las dependencias fijadas, generadas desde
+  `requirements.in` con `uv pip compile`) y `python python/herramientas.py`.
 - **JavaScript (Node 20+):** `cd javascript && npm install` y `node herramientas.mjs`.
 - **Go:** `cd go && go run ./herramientas`.
 - **curl:** `sh curl/herramientas.sh` (los que encadenan pasos usan [jq](https://jqlang.org/)).

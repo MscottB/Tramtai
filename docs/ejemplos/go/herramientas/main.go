@@ -37,7 +37,7 @@ func main() {
 		},
 	})}
 	mensajes := []openai.ChatCompletionMessageParamUnion{openai.UserMessage("¿Qué tiempo hace en Santiago?")}
-	for {
+	for ronda := 0; ronda < 5; ronda++ { // un tope: si el agente sigue pidiendo herramientas, no se gasta cuota sin fin
 		respuesta, err := cliente.Chat.Completions.New(context.Background(), openai.ChatCompletionNewParams{
 			Model: modelo, Messages: mensajes, Tools: herramientas,
 		})
@@ -62,4 +62,5 @@ func main() {
 			mensajes = append(mensajes, openai.ToolMessage(clima(argumentos.Ciudad), llamada.ID))
 		}
 	}
+	log.Fatal("el agente siguió pidiendo herramientas tras 5 rondas")
 }
