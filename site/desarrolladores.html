@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desarrolladores · Tramtai</title>
+<meta name="description" content="Conecta tu aplicación a Tramtai: primer mensaje, archivos, JSON, herramientas (tools), trabajos largos y errores, con ejemplos en Python, JavaScript, Go y curl.">
+<meta property="og:title" content="Desarrolladores · Tramtai">
+<meta property="og:description" content="Guía del desarrollador con ejemplos en Python, JavaScript, Go y curl.">
+<meta property="og:image" content="logo.png">
+<meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="logo.png">
+<link rel="stylesheet" href="estilo.css">
+<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t } catch (e) {}</script>
+</head>
+<body>
+<header class="barra">
+  <div class="envoltura">
+    <a class="marca" href="index.html"><img src="logo.png" alt="">Tramtai</a>
+    <nav aria-label="Secciones">
+      <a href="index.html#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+      <a href="index.html#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+      <a href="index.html#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+      <a href="ayuda.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="desarrolladores.html" aria-current="page"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+    </nav>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+    </a>
+    <div class="idioma" role="group" aria-label="Idioma / Language">
+      <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+      <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+    </div>
+    <div class="idioma tema" role="group" aria-label="Tema / Theme">
+      <button type="button" data-tema="sistema" aria-pressed="true" aria-label="Tema del sistema / System theme" title="Sistema / System">◐</button>
+      <button type="button" data-tema="claro" aria-pressed="false" aria-label="Tema claro / Light theme" title="Claro / Light">☀</button>
+      <button type="button" data-tema="oscuro" aria-pressed="false" aria-label="Tema oscuro / Dark theme" title="Oscuro / Dark">☾</button>
+    </div>
+    <a class="boton principal" href="index.html#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+  </div>
+</header>
+
+<main class="envoltura ayuda">
+  <nav class="indice" aria-label="Índice / Contents">
+    <ol>
+      <li><a href="#empezar"><span lang="es">Empezar</span><span lang="en">Get started</span></a></li>
+      <li><a href="#primer-mensaje"><span lang="es">Tu primer mensaje</span><span lang="en">Your first message</span></a></li>
+      <li><a href="#archivos"><span lang="es">Archivos</span><span lang="en">Files</span></a></li>
+      <li><a href="#json"><span lang="es">Respuestas en JSON</span><span lang="en">JSON answers</span></a></li>
+      <li><a href="#herramientas"><span lang="es">Herramientas</span><span lang="en">Tool calling</span></a></li>
+      <li><a href="#trabajos"><span lang="es">Trabajos largos</span><span lang="en">Long jobs</span></a></li>
+      <li><a href="#errores"><span lang="es">Errores y reintentos</span><span lang="en">Errors and retries</span></a></li>
+      <li><a href="#limites"><span lang="es">Límites</span><span lang="en">Limits</span></a></li>
+    </ol>
+  </nav>
+
+  <article class="doc">
+    <header>
+      <span class="etiqueta"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></span>
+      <h1><span lang="es">Conecta tu aplicación</span><span lang="en">Connect your app</span></h1>
+      <p class="suave">
+        <span lang="es">Todo lo que necesitas para usar Tramtai desde tu código, con ejemplos que funcionan tal cual en Python, JavaScript, Go y curl.</span>
+        <span lang="en">Everything you need to use Tramtai from your code, with examples that work as is in Python, JavaScript, Go and curl.</span>
+      </p>
+    </header>
+
+    <section id="empezar">
+      <h2><span lang="es">Empezar</span><span lang="en">Get started</span></h2>
+      <div lang="es">
+        <p>Necesitas Tramtai en marcha con al menos un agente conectado, y la <strong>URL</strong> y la <strong>clave</strong> de tu API (en la app, <strong>Mis APIs</strong>). Los ejemplos las leen de tres variables: <code>TRAMTAI_URL</code> (por defecto <code>http://127.0.0.1:17373</code>), <code>TRAMTAI_CLAVE</code> y <code>TRAMTAI_MODELO</code> (agente y modelo, por defecto <code>claude/haiku</code>).</p>
+        <p><strong>¿Qué API uso?</strong> Si tu app ya usa el SDK de OpenAI o el de Anthropic, su URL (<code>/openai/v1</code> o <code>/anthropic</code>): no cambias nada más. Si necesitas trabajos largos que sigues, cancelas o reintentas, la API propia (<code>/api/v1</code>). <a href="ayuda.html#aplicaciones">La ayuda compara las tres.</a></p>
+        <ul>
+          <li><strong>Python:</strong> <code>pip install openai requests</code></li>
+          <li><strong>JavaScript (Node 20+):</strong> <code>npm install openai</code></li>
+          <li><strong>Go:</strong> <code>go get github.com/openai/openai-go/v3</code></li>
+          <li><strong>curl:</strong> los ejemplos que encadenan pasos usan <a href="https://jqlang.org/">jq</a>.</li>
+        </ul>
+        <p>Todos los ejemplos están en <a href="https://github.com/MscottB/Tramtai/tree/main/docs/ejemplos">docs/ejemplos</a> y el CI los ejecuta en cada cambio.</p>
+      </div>
+      <div lang="en">
+        <p>You need Tramtai running with at least one agent connected, plus your API's <strong>URL</strong> and <strong>key</strong> (in the app, <strong>My APIs</strong>). The examples read them from three variables: <code>TRAMTAI_URL</code> (default <code>http://127.0.0.1:17373</code>), <code>TRAMTAI_CLAVE</code> and <code>TRAMTAI_MODELO</code> (agent and model, default <code>claude/haiku</code>).</p>
+        <p><strong>Which API?</strong> If your app already uses the OpenAI or Anthropic SDK, its URL (<code>/openai/v1</code> or <code>/anthropic</code>): nothing else changes. If you need long jobs you follow, cancel or retry, the native API (<code>/api/v1</code>). <a href="ayuda.html#aplicaciones">Help compares all three.</a></p>
+        <ul>
+          <li><strong>Python:</strong> <code>pip install openai requests</code></li>
+          <li><strong>JavaScript (Node 20+):</strong> <code>npm install openai</code></li>
+          <li><strong>Go:</strong> <code>go get github.com/openai/openai-go/v3</code></li>
+          <li><strong>curl:</strong> the examples that chain steps use <a href="https://jqlang.org/">jq</a>.</li>
+        </ul>
+        <p>Every example lives in <a href="https://github.com/MscottB/Tramtai/tree/main/docs/ejemplos">docs/ejemplos</a> and CI runs them on every change.</p>
+      </div>
+    </section>
+
+    <section id="primer-mensaje">
+      <h2><span lang="es">Tu primer mensaje</span><span lang="en">Your first message</span></h2>
+      <div lang="es">
+        <p>Por la URL compatible con OpenAI y con la respuesta en vivo. El campo <code>model</code> elige agente y modelo.</p>
+      </div>
+      <div lang="en">
+        <p>Through the OpenAI-compatible URL, with the answer streamed live. The <code>model</code> field picks agent and model.</p>
+      </div>
+<div class="pestanas" data-pestanas>
+  <div class="pestanas-lista" role="tablist" aria-label="Lenguaje / Language"><button type="button" role="tab" id="p1-python" aria-controls="p1-python-panel" aria-selected="true" tabindex="0" data-lenguaje="python">Python</button><button type="button" role="tab" id="p1-javascript" aria-controls="p1-javascript-panel" aria-selected="false" tabindex="-1" data-lenguaje="javascript">JavaScript</button><button type="button" role="tab" id="p1-go" aria-controls="p1-go-panel" aria-selected="false" tabindex="-1" data-lenguaje="go">Go</button><button type="button" role="tab" id="p1-curl" aria-controls="p1-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl</button></div>
+  <pre class="codigo" role="tabpanel" id="p1-python-panel" aria-labelledby="p1-python" tabindex="0" data-ejemplo="python/primer_mensaje.py"><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/python/primer_mensaje.py">docs/ejemplos/python/primer_mensaje.py</a></code></pre>
+  <pre class="codigo" role="tabpanel" id="p1-javascript-panel" aria-labelledby="p1-javascript" tabindex="0" data-ejemplo="javascript/primer_mensaje.mjs" hidden><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/javascript/primer_mensaje.mjs">docs/ejemplos/javascript/primer_mensaje.mjs</a></code></pre>
+  <pre class="codigo" role="tabpanel" id="p1-go-panel" aria-labelledby="p1-go" tabindex="0" data-ejemplo="go/primer_mensaje/main.go" hidden><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/go/primer_mensaje/main.go">docs/ejemplos/go/primer_mensaje/main.go</a></code></pre>
+  <pre class="codigo" role="tabpanel" id="p1-curl-panel" aria-labelledby="p1-curl" tabindex="0" data-ejemplo="curl/primer_mensaje.sh" hidden><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/curl/primer_mensaje.sh">docs/ejemplos/curl/primer_mensaje.sh</a></code></pre>
+</div>
+    </section>
+
+    <section id="archivos">
+      <h2><span lang="es">Archivos</span><span lang="en">Files</span></h2>
+      <div lang="es">
+        <p>Se admiten PDF, Word (<code>.docx</code>), PowerPoint (<code>.pptx</code>), Excel (<code>.xlsx</code>) y HTML, que Tramtai convierte a texto, y texto tal cual (<code>.txt</code>, <code>.md</code>, <code>.json</code>, <code>.csv</code>, <code>.xml</code>, <code>.yaml</code>…). Por OpenAI y Anthropic el archivo va en base64 dentro del mensaje (hasta unos 12 MB en total); por la API propia se sube a <code>/cargas</code> (hasta 50 MB cada uno) y el trabajo lo cita. La lista exacta está en <code>GET /api/v1/limites</code>.</p>
+      </div>
+      <div lang="en">
+        <p>Accepted: PDF, Word (<code>.docx</code>), PowerPoint (<code>.pptx</code>), Excel (<code>.xlsx</code>) and HTML, which Tramtai turns into text, and plain text as is (<code>.txt</code>, <code>.md</code>, <code>.json</code>, <code>.csv</code>, <code>.xml</code>, <code>.yaml</code>…). Through OpenAI and Anthropic the file goes in base64 inside the message (about 12 MB in total); through the native API you upload it to <code>/cargas</code> (up to 50 MB each) and the job cites it. The exact list is at <code>GET /api/v1/limites</code>.</p>
+      </div>
+<div class="pestanas" data-pestanas>
+  <div class="pestanas-lista" role="tablist" aria-label="Lenguaje / Language"><button type="button" role="tab" id="p2-python" aria-controls="p2-python-panel" aria-selected="true" tabindex="0" data-lenguaje="python">Python</button><button type="button" role="tab" id="p2-javascript" aria-controls="p2-javascript-panel" aria-selected="false" tabindex="-1" data-lenguaje="javascript">JavaScript</button><button type="button" role="tab" id="p2-go" aria-controls="p2-go-panel" aria-selected="false" tabindex="-1" data-lenguaje="go">Go</button><button type="button" role="tab" id="p2-curl" aria-controls="p2-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl</button></div>
+  <pre class="codigo" role="tabpanel" id="p2-python-panel" aria-labelledby="p2-python" tabindex="0" data-ejemplo="python/archivo.py"><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/python/archivo.py">docs/ejemplos/python/archivo.py</a></code></pre>
+  <pre class="codigo" role="tabpanel" id="p2-javascript-panel" aria-labelledby="p2-javascript" tabindex="0" data-ejemplo="javascript/archivo.mjs" hidden><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/javascript/archivo.mjs">docs/ejemplos/javascript/archivo.mjs</a></code></pre>
+  <pre class="codigo" role="tabpanel" id="p2-go-panel" aria-labelledby="p2-go" tabindex="0" data-ejemplo="go/archivo/main.go" hidden><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/go/archivo/main.go">docs/ejemplos/go/archivo/main.go</a></code></pre>
+  <pre class="codigo" role="tabpanel" id="p2-curl-panel" aria-labelledby="p2-curl" tabindex="0" data-ejemplo="curl/archivo.sh" hidden><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/curl/archivo.sh">docs/ejemplos/curl/archivo.sh</a></code></pre>
+</div>
+    </section>
+
+    <section id="json">
+      <h2><span lang="es">Respuestas en JSON</span><span lang="en">JSON answers</span></h2>
+      <div lang="es">
+        <p>Pide la respuesta con un JSON Schema: Tramtai la valida antes de devolverla y, si no cumple, puede pedir al agente que la corrija.</p>
+      </div>
+      <div lang="en">
+        <p>Ask for the answer with a JSON Schema: Tramtai validates it before returning it and, if it does not match, can ask the agent to fix it.</p>
+      </div>
+<div class="pestanas" data-pestanas>
+  <div class="pestanas-lista" role="tablist" aria-label="Lenguaje / Language"><button type="button" role="tab" id="p3-python" aria-controls="p3-python-panel" aria-selected="true" tabindex="0" data-lenguaje="python">Python</button><button type="button" role="tab" id="p3-javascript" aria-controls="p3-javascript-panel" aria-selected="false" tabindex="-1" data-lenguaje="javascript">JavaScript</button><button type="button" role="tab" id="p3-go" aria-controls="p3-go-panel" aria-selected="false" tabindex="-1" data-lenguaje="go">Go</button><button type="button" role="tab" id="p3-curl" aria-controls="p3-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl</button></div>
+  <pre class="codigo" role="tabpanel" id="p3-python-panel" aria-labelledby="p3-python" tabindex="0" data-ejemplo="python/respuesta_json.py"><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/python/respuesta_json.py">docs/ejemplos/python/respuesta_json.py</a></code></pre>
+  <pre class="codigo" role="tabpanel" id="p3-javascript-panel" aria-labelledby="p3-javascript" tabindex="0" data-ejemplo="javascript/respuesta_json.mjs" hidden><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/javascript/respuesta_json.mjs">docs/ejemplos/javascript/respuesta_json.mjs</a></code></pre>
+  <pre class="codigo" role="tabpanel" id="p3-go-panel" aria-labelledby="p3-go" tabindex="0" data-ejemplo="go/respuesta_json/main.go" hidden><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/go/respuesta_json/main.go">docs/ejemplos/go/respuesta_json/main.go</a></code></pre>
+  <pre class="codigo" role="tabpanel" id="p3-curl-panel" aria-labelledby="p3-curl" tabindex="0" data-ejemplo="curl/respuesta_json.sh" hidden><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/curl/respuesta_json.sh">docs/ejemplos/curl/respuesta_json.sh</a></code></pre>
+</div>
+    </section>
+
+    <section id="herramientas">
+      <h2><span lang="es">Herramientas</span><span lang="en">Tool calling</span></h2>
+      <div lang="es">
+        <p>Las herramientas (<code>tools</code>) son funciones de <strong>tu</strong> aplicación: consultar un pedido, buscar en tu base de datos, mirar el tiempo. Se las describes al agente; si las necesita, <strong>pide</strong> la llamada con sus argumentos, tu app la ejecuta y le devuelve el resultado en el turno siguiente. El agente nunca ejecuta nada: solo pide.</p>
+      </div>
+      <div lang="en">
+        <p>Tools are functions of <strong>your</strong> app: look up an order, search your database, check the weather. You describe them to the agent; if it needs one, it <strong>asks</strong> for the call with its arguments, your app runs it and sends back the result in the next turn. The agent never runs anything: it only asks.</p>
+      </div>
+      <ol class="ciclo"><li><span lang="es">Tu app ofrece funciones</span><span lang="en">Your app offers functions</span></li><li><span lang="es">El agente pide una</span><span lang="en">The agent asks for one</span></li><li><span lang="es">Tu app la ejecuta</span><span lang="en">Your app runs it</span></li><li><span lang="es">Le devuelve el resultado</span><span lang="en">It sends back the result</span></li><li><span lang="es">El agente responde</span><span lang="en">The agent answers</span></li></ol>
+      <div lang="es">
+        <h3>Por la URL de OpenAI</h3>
+        <p>Con los SDK oficiales, como con OpenAI: <code>tools</code>, <code>tool_calls</code> y el rol <code>tool</code>.</p>
+      </div>
+      <div lang="en">
+        <h3>Through the OpenAI URL</h3>
+        <p>With the official SDKs, just like with OpenAI: <code>tools</code>, <code>tool_calls</code> and the <code>tool</code> role.</p>
+      </div>
+<div class="pestanas" data-pestanas>
+  <div class="pestanas-lista" role="tablist" aria-label="Lenguaje / Language"><button type="button" role="tab" id="p4-python" aria-controls="p4-python-panel" aria-selected="true" tabindex="0" data-lenguaje="python">Python</button><button type="button" role="tab" id="p4-javascript" aria-controls="p4-javascript-panel" aria-selected="false" tabindex="-1" data-lenguaje="javascript">JavaScript</button><button type="button" role="tab" id="p4-go" aria-controls="p4-go-panel" aria-selected="false" tabindex="-1" data-lenguaje="go">Go</button><button type="button" role="tab" id="p4-curl" aria-controls="p4-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl</button></div>
+  <pre class="codigo" role="tabpanel" id="p4-python-panel" aria-labelledby="p4-python" tabindex="0" data-ejemplo="python/herramientas.py"><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/python/herramientas.py">docs/ejemplos/python/herramientas.py</a></code></pre>
+  <pre class="codigo" role="tabpanel" id="p4-javascript-panel" aria-labelledby="p4-javascript" tabindex="0" data-ejemplo="javascript/herramientas.mjs" hidden><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/javascript/herramientas.mjs">docs/ejemplos/javascript/herramientas.mjs</a></code></pre>
+  <pre class="codigo" role="tabpanel" id="p4-go-panel" aria-labelledby="p4-go" tabindex="0" data-ejemplo="go/herramientas/main.go" hidden><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/go/herramientas/main.go">docs/ejemplos/go/herramientas/main.go</a></code></pre>
+  <pre class="codigo" role="tabpanel" id="p4-curl-panel" aria-labelledby="p4-curl" tabindex="0" data-ejemplo="curl/herramientas.sh" hidden><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/curl/herramientas.sh">docs/ejemplos/curl/herramientas.sh</a></code></pre>
+</div>
+      <div lang="es">
+        <h3>Por la API propia</h3>
+        <p><code>herramientas</code> en la solicitud; el trabajo terminado trae <code>llamadas</code> con los argumentos como objeto, y el turno siguiente lleva un mensaje <code>{"rol": "herramienta", "id_llamada": …}</code> por resultado.</p>
+      </div>
+      <div lang="en">
+        <h3>Through the native API</h3>
+        <p><code>herramientas</code> in the request; the finished job brings <code>llamadas</code> with the arguments as an object, and the next turn carries a <code>{"rol": "herramienta", "id_llamada": …}</code> message per result.</p>
+      </div>
+<div class="pestanas" data-pestanas>
+  <div class="pestanas-lista" role="tablist" aria-label="Lenguaje / Language"><button type="button" role="tab" id="p5-python" aria-controls="p5-python-panel" aria-selected="true" tabindex="0" data-lenguaje="python">Python</button><button type="button" role="tab" id="p5-curl" aria-controls="p5-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl</button></div>
+  <pre class="codigo" role="tabpanel" id="p5-python-panel" aria-labelledby="p5-python" tabindex="0" data-ejemplo="python/herramientas_api_propia.py"><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/python/herramientas_api_propia.py">docs/ejemplos/python/herramientas_api_propia.py</a></code></pre>
+  <pre class="codigo" role="tabpanel" id="p5-curl-panel" aria-labelledby="p5-curl" tabindex="0" data-ejemplo="curl/herramientas_api_propia.sh" hidden><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/curl/herramientas_api_propia.sh">docs/ejemplos/curl/herramientas_api_propia.sh</a></code></pre>
+</div>
+      <div lang="es">
+        <h3>Por la URL de Anthropic</h3>
+        <p>Igual que con su SDK: <code>tools</code> con <code>input_schema</code>, bloques <code>tool_use</code> en la respuesta y <code>tool_result</code> en el mensaje siguiente.</p>
+        <h3>Lo que conviene saber</h3>
+        <ul>
+          <li>Los argumentos llegan <strong>validados</strong> con el JSON Schema de cada herramienta; si el agente se equivoca, Tramtai le pide que corrija (con las correcciones de la petición o de la receta) antes de responder.</li>
+          <li>Con herramientas, la respuesta llega completa al terminar, aunque pidas <code>stream</code>.</li>
+          <li>No se combinan con una respuesta en JSON, y van en cada petición: las recetas no las guardan.</li>
+        </ul>
+        <table id="agentes-herramientas">
+          <thead><tr><th>Agente</th><th>Modelo probado</th><th>OpenAI</th><th>Anthropic</th><th>API propia</th></tr></thead>
+          <tbody data-agentes>
+            <tr><td colspan="5">Por comprobar con los agentes reales.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div lang="en">
+        <h3>Through the Anthropic URL</h3>
+        <p>Just like with its SDK: <code>tools</code> with <code>input_schema</code>, <code>tool_use</code> blocks in the answer and <code>tool_result</code> in the next message.</p>
+        <h3>Good to know</h3>
+        <ul>
+          <li>Arguments arrive <strong>validated</strong> against each tool's JSON Schema; if the agent gets them wrong, Tramtai asks it to fix them (with the request's or the recipe's corrections) before answering.</li>
+          <li>With tools, the answer arrives complete at the end, even if you ask for <code>stream</code>.</li>
+          <li>They can't be combined with a JSON answer, and they go in every request: recipes don't store them.</li>
+        </ul>
+        <table>
+          <thead><tr><th>Agent</th><th>Model tested</th><th>OpenAI</th><th>Anthropic</th><th>Native API</th></tr></thead>
+          <tbody data-agentes>
+            <tr><td colspan="5">To be checked with the real agents.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="trabajos">
+      <h2><span lang="es">Trabajos largos</span><span lang="en">Long jobs</span></h2>
+      <div lang="es">
+        <p>Solo por la API propia: creas el trabajo, lo sigues en vivo por eventos (si se corta la conexión, retomas con <code>Last-Event-ID</code>) y lees el resultado. <code>POST /trabajos/{id}/cancelar</code> lo detiene y <code>POST /trabajos/{id}/reintentar</code> lo vuelve a lanzar.</p>
+      </div>
+      <div lang="en">
+        <p>Native API only: you create the job, follow it live through events (if the connection drops, resume with <code>Last-Event-ID</code>) and read the result. <code>POST /trabajos/{id}/cancelar</code> stops it and <code>POST /trabajos/{id}/reintentar</code> runs it again.</p>
+      </div>
+<div class="pestanas" data-pestanas>
+  <div class="pestanas-lista" role="tablist" aria-label="Lenguaje / Language"><button type="button" role="tab" id="p6-python" aria-controls="p6-python-panel" aria-selected="true" tabindex="0" data-lenguaje="python">Python</button><button type="button" role="tab" id="p6-curl" aria-controls="p6-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl</button></div>
+  <pre class="codigo" role="tabpanel" id="p6-python-panel" aria-labelledby="p6-python" tabindex="0" data-ejemplo="python/trabajo_largo.py"><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/python/trabajo_largo.py">docs/ejemplos/python/trabajo_largo.py</a></code></pre>
+  <pre class="codigo" role="tabpanel" id="p6-curl-panel" aria-labelledby="p6-curl" tabindex="0" data-ejemplo="curl/trabajo_largo.sh" hidden><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/curl/trabajo_largo.sh">docs/ejemplos/curl/trabajo_largo.sh</a></code></pre>
+</div>
+    </section>
+
+    <section id="errores">
+      <h2><span lang="es">Errores y reintentos</span><span lang="en">Errors and retries</span></h2>
+      <div lang="es">
+        <p>Los errores llegan en el formato de la API que usas, con un <code>code</code> estable. Para reintentar sin duplicar un trabajo, envía la cabecera <code>Idempotency-Key</code>: la misma clave con la misma petición devuelve el mismo trabajo (en las tres APIs).</p>
+        <table><thead><tr><th>HTTP</th><th>Código</th><th>Qué hacer</th></tr></thead><tbody><tr><td>400</td><td><code>solicitud_invalida, parametro_no_soportado, carga_invalida</code></td><td>Corrige la petición: el mensaje dice qué campo falla.</td></tr><tr><td>401</td><td><code>no_autorizado</code></td><td>Revisa la clave (Mis APIs); si la regeneraste, la anterior ya no vale.</td></tr><tr><td>409</td><td><code>conflicto_idempotencia</code></td><td>Esa Idempotency-Key ya se usó con otra petición: usa otra.</td></tr><tr><td>422</td><td><code>salida_no_cumple_esquema</code></td><td>La respuesta o las llamadas no cumplían el esquema: pide correcciones o «Corregir».</td></tr><tr><td>429</td><td><code>cola_llena, presupuesto_agotado, limite_uso_proveedor</code></td><td>Espera lo que diga Retry-After y reintenta.</td></tr><tr><td>502</td><td><code>error_agente, autenticacion_agente</code></td><td>El agente falló o no tiene sesión: revisa Agentes en la app.</td></tr><tr><td>503</td><td><code>agente_no_disponible, conversor_no_disponible</code></td><td>Algo no está listo; con Retry-After, reintenta después.</td></tr></tbody></table>
+      </div>
+      <div lang="en">
+        <p>Errors arrive in the format of the API you use, with a stable <code>code</code>. To retry without duplicating a job, send the <code>Idempotency-Key</code> header: the same key with the same request returns the same job (on all three APIs).</p>
+        <table><thead><tr><th>HTTP</th><th>Code</th><th>What to do</th></tr></thead><tbody><tr><td>400</td><td><code>solicitud_invalida, parametro_no_soportado, carga_invalida</code></td><td>Fix the request: the message says which field fails.</td></tr><tr><td>401</td><td><code>no_autorizado</code></td><td>Check the key (My APIs); if you regenerated it, the old one no longer works.</td></tr><tr><td>409</td><td><code>conflicto_idempotencia</code></td><td>That Idempotency-Key was used with another request: use a new one.</td></tr><tr><td>422</td><td><code>salida_no_cumple_esquema</code></td><td>The answer or the calls did not match the schema: ask for corrections or «Correct».</td></tr><tr><td>429</td><td><code>cola_llena, presupuesto_agotado, limite_uso_proveedor</code></td><td>Wait for Retry-After and retry.</td></tr><tr><td>502</td><td><code>error_agente, autenticacion_agente</code></td><td>The agent failed or has no session: check Agents in the app.</td></tr><tr><td>503</td><td><code>agente_no_disponible, conversor_no_disponible</code></td><td>Something is not ready; with Retry-After, retry later.</td></tr></tbody></table>
+      </div>
+    </section>
+
+    <section id="limites">
+      <h2><span lang="es">Límites</span><span lang="en">Limits</span></h2>
+      <div lang="es">
+        <p><code>GET /api/v1/limites</code> da los topes de una petición (archivos, tamaños, mensajes) y los formatos admitidos, para que tu app los conozca antes de enviar.</p>
+      </div>
+      <div lang="en">
+        <p><code>GET /api/v1/limites</code> gives a request's caps (files, sizes, messages) and the accepted formats, so your app knows them before sending.</p>
+      </div>
+<div class="pestanas" data-pestanas>
+  <div class="pestanas-lista" role="tablist" aria-label="Lenguaje / Language"><button type="button" role="tab" id="p7-curl" aria-controls="p7-curl-panel" aria-selected="true" tabindex="0" data-lenguaje="curl">curl</button></div>
+  <pre class="codigo" role="tabpanel" id="p7-curl-panel" aria-labelledby="p7-curl" tabindex="0" data-ejemplo="curl/limites.sh"><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/curl/limites.sh">docs/ejemplos/curl/limites.sh</a></code></pre>
+</div>
+    </section>
+  </article>
+</main>
+
+<footer>
+  <div class="envoltura">
+    <span>© 2026 Michael Scott B. · Tramtai · <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a></span>
+    <span>
+      <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span>
+      <span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span>
+    </span>
+  </div>
+</footer>
+
+<script src="sitio.js"></script>
+</body>
+</html>

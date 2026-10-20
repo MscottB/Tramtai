@@ -14,7 +14,7 @@ Cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
 [![Windows, macOS y Linux](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-0078d4)](https://github.com/MscottB/Tramtai/releases/latest)
 [![Licencia](https://img.shields.io/badge/licencia-PolyForm%20Noncommercial-55666a)](LICENSE.md)
 
-[**Descargar**](https://mscottb.github.io/Tramtai/#descargar) · [Página del producto](https://mscottb.github.io/Tramtai/) · [Ayuda](https://mscottb.github.io/Tramtai/ayuda.html) · [English](#english)
+[**Descargar**](https://mscottb.github.io/Tramtai/#descargar) · [Página del producto](https://mscottb.github.io/Tramtai/) · [Ayuda](https://mscottb.github.io/Tramtai/ayuda.html) · [Desarrolladores](https://mscottb.github.io/Tramtai/desarrolladores.html) · [English](#english)
 
 <br>
 
@@ -54,6 +54,7 @@ APIs y trae ejemplos para copiar.
 |---|---|
 | [Primeros pasos](docs/inicio.md) | Instalar en cada sistema (también portable, Homebrew y solo CLI), agentes, archivos y modelos |
 | [Operación](docs/operacion.md) | Servicio, APIs por aplicación, actualizaciones, arranque con el sistema y retención |
+| [Desarrolladores](docs/desarrolladores.md) | Conectar tu app: primer mensaje, archivos, JSON, herramientas y errores, con ejemplos en Python, JavaScript, Go y curl |
 | [API](docs/api.md) | Las tres APIs, sus rutas, opciones y errores |
 | [Arquitectura](docs/arquitectura.md) | Cómo funciona por dentro: agentes, aislamiento y seguridad |
 | [Desarrollo](docs/equipo/desarrollo.md) | Compilar desde el código, pruebas y publicación |
