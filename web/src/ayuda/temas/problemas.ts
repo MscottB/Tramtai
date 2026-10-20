@@ -18,6 +18,12 @@ export const ERRORES: Record<string, { titulo?: Clave; solucion: Clave }> = {
   cola_llena: { solucion: 'ayuda.problemas.cola_llena' },
   conversion_fallida: { solucion: 'ayuda.problemas.conversion_fallida' },
   conversor_no_disponible: { solucion: 'ayuda.problemas.conversor_no_disponible' },
+  error_agente: { solucion: 'ayuda.problemas.error_agente' },
+  error_protocolo_agente: { solucion: 'ayuda.problemas.error_protocolo_agente' },
+  tiempo_cola_agotado: { solucion: 'ayuda.problemas.tiempo_cola_agotado' },
+  modelo_no_permitido: { solucion: 'ayuda.problemas.modelo_no_permitido' },
+  modelo_no_configurado: { solucion: 'ayuda.problemas.modelo_no_configurado' },
+  cuota_cargas_agotada: { solucion: 'ayuda.problemas.cuota_cargas_agotada' },
 }
 export const CODIGOS_ERROR: readonly string[] = Object.keys(ERRORES)
 

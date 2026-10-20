@@ -273,6 +273,7 @@ import { hashDe, leerHash } from './ayuda/ruta'
 import { temaPorId } from './ayuda/indice'
 import type { Pagina } from './ayuda/tipos'
 import PanelAyuda from './componentes/ayuda/PanelAyuda.vue'
+import { cerrarAyuda } from './ayuda/panel'
 import AcercaDe from './componentes/AcercaDe.vue'
 import ListaNovedades from './componentes/ListaNovedades.vue'
 import NotasVersion from './componentes/NotasVersion.vue'
@@ -288,6 +289,8 @@ const principales = [
   { id: 'historial', titulo: 'menu.historial', detalle: 'menuDetalle.historial', icono: 'o_history', componente: markRaw(HistorialPagina) },
   { id: 'configuracion', titulo: 'menu.configuracion', detalle: 'menuDetalle.configuracion', icono: 'o_settings', componente: markRaw(ConfiguracionPagina) },
 ] as const
+// Cada página principal es una de PAGINAS (ayuda/tipos.ts): la dirección #<id> y su tema de la Ayuda la conocen.
+const _principalesConocidas: readonly Pagina[] = principales.map((p) => p.id)
 const ayuda = { id: 'ayuda', titulo: 'menu.ayuda', detalle: 'menuDetalle.ayuda', icono: 'o_help_outline', componente: markRaw(AyudaPagina) } as const
 const paginas = [...principales, ayuda]
 
@@ -367,6 +370,7 @@ const pila = ref<string[]>([])
 
 function ir(id: string) {
   if (id === pagina.value) return
+  cerrarAyuda()
   pila.value.push(pagina.value)
   pagina.value = id
   history.pushState({ i: base + pila.value.length }, '', '#' + id)
@@ -405,6 +409,7 @@ function alNavegar() {
     base += relativa
   } else if (relativa < pila.value.length) pila.value.length = relativa // atrás
   else pila.value.push(pagina.value) // adelante
+  cerrarAyuda()
   pagina.value = nueva
 }
 

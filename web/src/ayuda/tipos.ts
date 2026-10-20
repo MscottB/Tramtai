@@ -2,8 +2,10 @@
 // (componentes/ayuda) y el generador del sitio (web/scripts), así que solo importan tipos, nunca i18n ni Vue.
 import type { Clave } from '../idiomas/es'
 
-// Pagina son las páginas principales de la app; cada una tiene un tema que abre su botón ?.
-export type Pagina = 'inicio' | 'agentes' | 'ejecutar' | 'conectar' | 'historial' | 'configuracion'
+// PAGINAS son las páginas principales de la app (App.vue las usa con este tipo); cada una tiene un tema que abre su
+// botón ?.
+export const PAGINAS = ['inicio', 'agentes', 'ejecutar', 'conectar', 'historial', 'configuracion'] as const
+export type Pagina = (typeof PAGINAS)[number]
 
 export interface Parada {
   icono: string

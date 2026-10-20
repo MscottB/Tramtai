@@ -122,7 +122,7 @@
               <q-banner v-if="final?.codigo_error" rounded dense class="error-caja q-mb-md">
                 <template #avatar><q-icon name="o_error" /></template>
                 <b>{{ tituloError(final.codigo_error) }}</b><span v-if="final.mensaje_error && !problemas.length">: {{ final.mensaje_error }}</span>
-                <template #action><BotonAyuda tema="problemas" :ancla="'e-' + final.codigo_error" que-hago /></template>
+                <template v-if="final.codigo_error in ERRORES" #action><BotonAyuda tema="problemas" :ancla="'e-' + final.codigo_error" que-hago /></template>
               </q-banner>
               <!-- La respuesta no cumplía la forma pedida: qué falló, la respuesta tal como llegó y «Corregir». -->
               <div v-if="problemas.length" class="q-mb-md">
@@ -176,6 +176,7 @@
 
 <script setup lang="ts">
 import BotonAyuda from '../componentes/ayuda/BotonAyuda.vue'
+import { ERRORES } from '../ayuda/temas/problemas'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'

@@ -324,3 +324,6 @@ footer .envoltura { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
   .diagrama { grid-template-columns: 1fr; }
   .diagrama li:not(:last-child)::after { content: '↓'; right: auto; left: 18px; top: auto; bottom: -16px; }
 }
+/* Las capturas de la Ayuda vienen en los dos idiomas: la del otro se oculta también en oscuro (le gana a .solo-oscuro). */
+html[lang="es"] .captura img[lang="en"], html[lang="en"] .captura img[lang="es"] { display: none !important; }
+.solo-lectores { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

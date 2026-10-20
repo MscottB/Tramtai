@@ -1,5 +1,5 @@
 <template>
-  <div class="apilado">
+  <div class="apilado vista-tema">
     <div v-if="!sinCabecera">
       <h2 class="titulo-seccion q-ma-none">{{ t(tema.titulo) }}</h2>
       <div class="texto-suave q-mt-xs">{{ t(tema.resumen) }}</div>

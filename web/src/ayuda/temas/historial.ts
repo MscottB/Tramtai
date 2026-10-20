@@ -18,6 +18,7 @@ export const historial: Tema = {
         { id: 'estados', pregunta: 'ayuda.historial.pEstados', respuesta: 'ayuda.historial.rEstados' },
         { id: 'tiempos', pregunta: 'ayuda.historial.pTiempos', respuesta: 'ayuda.historial.rTiempos' },
         { id: 'en-vivo', pregunta: 'ayuda.historial.pVivo', respuesta: 'ayuda.historial.rVivo' },
+        { id: 'primer-plano', pregunta: 'ayuda.historial.pPrimerPlano', respuesta: 'ayuda.historial.rPrimerPlano' },
         { id: 'borrar-datos', pregunta: 'ayuda.historial.pBorrar', respuesta: 'ayuda.historial.rBorrar' },
       ],
     },

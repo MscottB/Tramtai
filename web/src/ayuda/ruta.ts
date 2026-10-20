@@ -1,7 +1,8 @@
 // ruta traduce la dirección de la app (#pagina o #ayuda/<tema>) y la arma; App.vue navega con ella.
 import { temaPorId } from './indice'
+import { PAGINAS as PRINCIPALES } from './tipos'
 
-const PAGINAS = ['inicio', 'agentes', 'ejecutar', 'conectar', 'historial', 'configuracion', 'ayuda']
+const PAGINAS: readonly string[] = [...PRINCIPALES, 'ayuda']
 // ANTIGUAS son direcciones de versiones anteriores de la Web UI.
 const ANTIGUAS: Record<string, string> = { panel: 'inicio', trabajos: 'historial', accesos: 'conectar' }
 

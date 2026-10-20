@@ -45,7 +45,7 @@ function ir(destino: string) {
 // Esc cierra solo el panel: se atrapa antes que el diálogo que haya debajo (el detalle del Historial), que si no se
 // cerraría con la misma tecla. Quasar escucha keyup para Esc, así que se detienen las dos.
 function alTeclear(e: KeyboardEvent) {
-  if (e.key !== 'Escape' || !panel.abierto) return
+  if (e.key !== 'Escape' || !panel.abierto || document.querySelector('.q-menu')) return
   e.stopImmediatePropagation()
   if (e.type === 'keyup') cerrarAyuda()
 }

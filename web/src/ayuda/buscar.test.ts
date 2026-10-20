@@ -37,6 +37,11 @@ test('busca por palabras, en cualquier orden, y el guion bajo cuenta como espaci
   assert.ok(buscar('clave   filtra', temas, es, te).some((r) => r.ancla === 'clave-filtrada'))
 })
 
+test('encuentra con otra forma de la palabra y dentro de las tablas', () => {
+  assert.ok(buscar('clave filtrada', temas, es, te).some((r) => r.ancla === 'clave-filtrada'))
+  assert.ok(buscar((es as Record<string, string>)['guia.fLimites'], temas, es, te).some((r) => r.tema === 'conectar'))
+})
+
 test('vacía o solo espacios no devuelve nada', () => {
   assert.deepEqual(buscar('   ', temas, es, te), [])
   assert.deepEqual(buscar('', temas, es, te), [])

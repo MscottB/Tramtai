@@ -20,6 +20,14 @@ export function normalizar(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[\s_]+/g, ' ').trim()
 }
 
+// raiz quita a una palabra buscada las terminaciones más comunes, así «filtrada» encuentra «se filtra» y «claves»
+// encuentra «clave». sitio.js hace lo mismo en el buscador del sitio.
+export function raiz(palabra: string): string {
+  if (palabra.length <= 5) return palabra
+  const corta = palabra.replace(/(aciones|acion|adas|ados|ada|ado|idas|idos|ida|ido|es|s)$/, '')
+  return corta.length >= 4 ? corta : palabra
+}
+
 // campos son los textos donde se busca, cada uno con su ancla, lo que se muestra y cuánto pesa; el sitio arma con
 // ellos su índice de búsqueda.
 export function campos(tema: Tema, textos: Record<string, string>, tituloError: (c: string) => string) {
@@ -32,6 +40,8 @@ export function campos(tema: Tema, textos: Record<string, string>, tituloError: 
   for (const b of tema.bloques) {
     if (b.tipo === 'pasos') for (const p of b.pasos) lista.push({ ancla: '', donde: titulo, texto: t(p), peso: 1 })
     if (b.tipo === 'nota') lista.push({ ancla: '', donde: titulo, texto: t(b.texto), peso: 1 })
+    if (b.tipo === 'tabla')
+      for (const f of b.filas) lista.push({ ancla: '', donde: titulo, texto: [f.titulo, ...f.celdas].map(t).join(' '), peso: 1 })
     if (b.tipo === 'diagrama')
       for (const p of b.paradas) lista.push({ ancla: '', donde: titulo, texto: `${t(p.titulo)} ${p.nota ? t(p.nota) : ''}`, peso: 1 })
     if (b.tipo === 'preguntas')
@@ -51,8 +61,8 @@ export function campos(tema: Tema, textos: Record<string, string>, tituloError: 
 }
 
 export function buscar(consulta: string, temas: Tema[], textos: Record<string, string>, tituloError: (c: string) => string): Resultado[] {
-  // Coincide un texto que tenga todas las palabras buscadas, en cualquier orden.
-  const palabras = normalizar(consulta).split(' ').filter(Boolean)
+  // Coincide un texto que tenga todas las palabras buscadas (por su raíz), en cualquier orden.
+  const palabras = normalizar(consulta).split(' ').filter(Boolean).map(raiz)
   if (!palabras.length) return []
   // mejores guarda, por tema y ancla, el campo que más pesa de los que coinciden.
   const mejores = new Map<string, Resultado & { orden: number }>()

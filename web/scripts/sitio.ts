@@ -25,7 +25,8 @@ export const ANCLAS_VIEJAS: Record<string, string> = {
 
 // destinoAncla es también el script de la página de paso (se incrusta tal cual con ANCLAS_VIEJAS).
 export function destinoAncla(hash: string): string {
-  return 'ayuda/' + (ANCLAS_VIEJAS[hash.replace(/^#/, '')] ?? '')
+  const ancla = hash.replace(/^#/, '')
+  return 'ayuda/' + (Object.hasOwn(ANCLAS_VIEJAS, ancla) ? ANCLAS_VIEJAS[ancla] : '')
 }
 
 export function escapar(s: string): string {
@@ -187,7 +188,8 @@ function paginaInicio(f: Fuente): string {
 </header>
 <div class="buscar-ayuda" hidden>
   <input type="search" id="buscar-ayuda" placeholder="Buscar en la ayuda / Search help" aria-label="Buscar en la ayuda / Search help">
-  <ol id="resultados-ayuda" aria-live="polite"></ol>
+  <p id="cuenta-ayuda" class="solo-lectores" aria-live="polite"></p>
+  <ol id="resultados-ayuda"></ol>
 </div>
 ${tarjetas(f, f.temas)}
 <h2>${bilingue('Más documentación', 'More documentation')}</h2>

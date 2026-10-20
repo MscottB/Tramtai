@@ -33,6 +33,8 @@ export const empezar: Tema = {
         { id: 'macos', pregunta: 'ayuda.empezar.pMacos', respuesta: 'ayuda.empezar.rMacos' },
         { id: 'linux', pregunta: 'ayuda.empezar.pLinux', respuesta: 'ayuda.empezar.rLinux' },
         { id: 'portable', pregunta: 'ayuda.empezar.pPortable', respuesta: 'ayuda.empezar.rPortable' },
+        { id: 'portable-datos', pregunta: 'ayuda.empezar.pPortableDatos', respuesta: 'ayuda.empezar.rPortableDatos' },
+        { id: 'pendrive', pregunta: 'ayuda.empezar.pPendrive', respuesta: 'ayuda.empezar.rPendrive' },
         { id: 'solo-terminal', pregunta: 'ayuda.empezar.pTerminal', respuesta: 'ayuda.empezar.rTerminal' },
       ],
     },

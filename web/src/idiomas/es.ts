@@ -370,7 +370,7 @@ const es = {
   'agentes.confirmarSuscripcion':
     'Tramtai usará la sesión de {cli} que ya tienes iniciada en este equipo. Según los términos del proveedor es solo para uso personal y local: no la compartas con otras personas.',
   'agentes.riesgoSuscripcion':
-    'Los términos de cada proveedor pueden no permitir usar una suscripción personal de forma automatizada o para alimentar otras aplicaciones, y el proveedor podría limitar o suspender tu cuenta. Ese riesgo es tuyo. Para tus aplicaciones, lo recomendado es una clave de API. Más detalle en los términos de uso de Tramtai (mscottb.github.io/Tramtai/ayuda/agentes.html#terminos).',
+    'Los términos de cada proveedor pueden no permitir usar una suscripción personal de forma automatizada o para alimentar otras aplicaciones, y el proveedor podría limitar o suspender tu cuenta. Ese riesgo es tuyo. Para tus aplicaciones, lo recomendado es una clave de API. Más detalle en los términos de uso de Tramtai (github.com/MscottB/Tramtai/blob/main/TERMINOS.md).',
   'agentes.aceptoRiesgo': 'Entiendo el riesgo y acepto los términos de uso',
   'agentes.faltaAceptar': 'Para usar tu suscripción tienes que marcar que entiendes el riesgo y aceptas los términos.',
   'agentes.suscripcionActivada': '{agente} usa ahora tu suscripción',

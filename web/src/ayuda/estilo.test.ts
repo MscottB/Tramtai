@@ -6,10 +6,10 @@ import es from '../idiomas/es.ts'
 import en from '../idiomas/en.ts'
 import ayudaEs from '../idiomas/ayuda.es.ts'
 import { CLAVES_UI, temas, temaDe, temaPorId } from './indice.ts'
-import type { Bloque, Pagina } from './tipos.ts'
+import { PAGINAS } from './tipos.ts'
+import type { Bloque } from './tipos.ts'
 
 const idiomas: Record<string, Record<string, string>> = { es, en }
-const PAGINAS: Pagina[] = ['inicio', 'agentes', 'ejecutar', 'conectar', 'historial', 'configuracion']
 const problemas = await import('./temas/problemas.ts').catch(() => null)
 
 // cortas son las claves de un bloque que deben caber en 200 caracteres.
@@ -97,6 +97,17 @@ test('ningún texto de la Ayuda queda sin usar', () => {
     if (e.titulo) usadas.add(e.titulo)
   }
   assert.deepEqual(Object.keys(ayudaEs).filter((k) => !usadas.has(k)), [])
+})
+
+test('no se pierde lo que decía la ayuda vieja (rutas, pendrive, claves, créditos)', () => {
+  const anclas = new Set(temas.flatMap((t) => t.bloques.flatMap((b) => (b.tipo === 'preguntas' ? b.preguntas.map((p) => p.id) : []))))
+  for (const id of ['pendrive', 'datos-ruta', 'portable-datos', 'copilot-creditos', 'gemini-clave', 'linux-claves'])
+    assert.ok(anclas.has(id), `falta la pregunta ${id}`)
+})
+
+test('los errores más comunes del servicio tienen su solución', () => {
+  for (const c of ['error_agente', 'tiempo_cola_agotado', 'modelo_no_permitido', 'modelo_no_configurado', 'error_protocolo_agente', 'cuota_cargas_agotada'])
+    assert.ok(problemas?.CODIGOS_ERROR.includes(c), `falta ${c}`)
 })
 
 test('cada error tiene título y una solución corta en los dos idiomas', () => {

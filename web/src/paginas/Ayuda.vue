@@ -10,7 +10,8 @@
       <template #prepend><q-icon name="search" /></template>
     </q-input>
 
-    <div aria-live="polite">
+    <div class="solo-lectores" aria-live="polite">{{ texto ? t('ayuda.ui.resultados', { n: resultados.length }) : '' }}</div>
+    <div>
       <template v-if="texto">
         <q-card v-if="resultados.length">
           <q-list separator>
@@ -61,7 +62,7 @@
 <script setup lang="ts">
 // Ayuda es el inicio por temas (tarjetas y buscador) o un tema (#ayuda/<tema>); los temas son los datos de
 // web/src/ayuda, los mismos que genera el sitio.
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { tituloError } from '../api/cliente'
 import { guiaOculta, ocultarGuia } from '../estado'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
@@ -79,10 +80,14 @@ const texto = computed(() => (busqueda.value ?? '').trim())
 const resultados = computed(() => buscar(texto.value, temas, idiomas[idioma.value].textos, tituloError))
 const actual = computed(() => (props.tema ? temaPorId(props.tema) : undefined))
 const ancla = ref('')
+// Al llegar a otro tema por Volver o por los relacionados, la pregunta buscada antes ya no cuenta.
+watch(() => props.tema, () => { if (!abriendo) ancla.value = ''; abriendo = false })
+let abriendo = false
 
 // abrir lleva a un tema (y a una pregunta o error dentro de él) y deja de buscar.
 function abrir(tema: string, a = '') {
   ancla.value = a
+  abriendo = tema !== props.tema
   busqueda.value = ''
   emit('ir', 'ayuda/' + tema)
 }

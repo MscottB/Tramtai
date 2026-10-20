@@ -1263,8 +1263,36 @@ body.body--dark .tablero {
   outline: 2px solid var(--acento);
   outline-offset: -2px;
 }
-/* El panel de la Ayuda también se abre desde un diálogo («¿Qué hago?» en el detalle del Historial): va por encima. */
+/* El panel de la Ayuda también se abre desde un diálogo («¿Qué hago?» en el detalle del Historial): va por encima de los
+   diálogos y debajo de los menús (idioma y tema de la cabecera, que se usan con el panel abierto). */
 .q-drawer-container:has(.panel-ayuda),
 .q-drawer:has(.panel-ayuda) {
   z-index: 6100;
+}
+.q-menu {
+  z-index: 6200;
+}
+/* El recorrido se apila según el ancho de la vista del tema (en el panel es estrecha aunque la ventana sea ancha). */
+.vista-tema {
+  container-type: inline-size;
+}
+@container (max-width: 640px) {
+  .diagrama {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .diagrama__parada:not(:last-child)::after {
+    content: '↓';
+    right: auto;
+    left: 18px;
+    top: auto;
+    bottom: -15px;
+  }
+}
+.solo-lectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }

@@ -18,6 +18,10 @@ const args = process.argv.slice(2)
 const solo = args.includes('--solo') ? args[args.indexOf('--solo') + 1] : ''
 const modelo = process.env.TRAMTAI_CAPTURAS_MODELO || 'claude/haiku'
 const esperar = (ms) => new Promise((ok) => setTimeout(ok, ms))
+if (solo && !CAPTURAS.some((c) => c.id === solo)) {
+  console.error(`no hay una captura «${solo}»: usa uno de ${CAPTURAS.map((c) => c.id).join(', ')}`)
+  process.exit(1)
+}
 
 // puertoLibre prueba primero el preferido (así la dirección que sale en las capturas no cambia en cada corrida).
 function puertoLibre(preferido = 0) {
@@ -73,6 +77,12 @@ mkdirSync(join(raiz, 'bin'), { recursive: true })
 const temporal = mkdtempSync(join(raiz, 'bin', 'capturas-'))
 const exe = join(temporal, process.platform === 'win32' ? 'tramtai.exe' : 'tramtai')
 const procesos = []
+// Con Ctrl+C se detiene igual lo que se arrancó (el finally no corre si el proceso termina por la señal).
+process.on('SIGINT', () => {
+  try { execFileSync(exe, ['servicio', 'detener'], { cwd: temporal, stdio: 'ignore' }) } catch { /* no estaba en marcha */ }
+  for (const p of procesos) p.kill()
+  process.exit(130)
+})
 try {
   console.log('Compilando Tramtai…')
   execFileSync('go', ['build', '-o', exe, './cmd/tramtai'], { cwd: raiz, stdio: 'inherit' })
@@ -98,7 +108,8 @@ try {
 
   const depuracion = await puertoLibre()
   const nav = spawn(navegador(), ['--headless=new', `--remote-debugging-port=${depuracion}`, `--user-data-dir=${join(temporal, 'navegador')}`,
-    '--no-first-run', '--no-default-browser-check', '--hide-scrollbars', 'about:blank'], { stdio: 'ignore' })
+    '--no-first-run', '--no-default-browser-check', '--hide-scrollbars', '--disable-extensions',
+    '--disable-component-extensions-with-background-pages', 'about:blank'], { stdio: 'ignore' })
   procesos.push(nav)
   let pestana
   await hasta(async () => {

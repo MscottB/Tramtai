@@ -52,6 +52,8 @@ test('cada ancla vieja de ayuda.html lleva a un tema que existe', () => {
   assert.equal(destinoAncla('#terminos'), 'ayuda/agentes.html#terminos')
   assert.equal(destinoAncla('#noexiste'), 'ayuda/')
   assert.equal(destinoAncla(''), 'ayuda/')
+  assert.equal(destinoAncla('#constructor'), 'ayuda/')
+  assert.equal(destinoAncla('#__proto__'), 'ayuda/')
 })
 
 test('el índice de búsqueda tiene los 14 temas en los dos idiomas', () => {

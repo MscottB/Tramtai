@@ -189,9 +189,17 @@
   function normalizar(s) {
     return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[\s_]+/g, ' ').trim();
   }
+  // raiz es la de web/src/ayuda/buscar.ts: «filtrada» encuentra «se filtra».
+  function raiz(p) {
+    if (p.length <= 5) return p;
+    var corta = p.replace(/(aciones|acion|adas|ados|ada|ado|idas|idos|ida|ido|es|s)$/, '');
+    return corta.length >= 4 ? corta : p;
+  }
   function mostrar() {
-    var palabras = normalizar(campo.value).split(' ').filter(Boolean);
+    var palabras = normalizar(campo.value).split(' ').filter(Boolean).map(raiz);
+    var cuenta = document.getElementById('cuenta-ayuda');
     lista.innerHTML = '';
+    if (cuenta) cuenta.textContent = '';
     if (!palabras.length || !indice) return;
     var entradas = indice[document.documentElement.lang === 'en' ? 'en' : 'es'] || [];
     var hallados = entradas.filter(function (e) {
@@ -214,13 +222,21 @@
       li.appendChild(a);
       lista.appendChild(li);
     });
-    if (!hallados.length) lista.innerHTML = '<li><span lang="es">Nada coincide.</span><span lang="en">Nothing matches.</span></li>';
+    var en = document.documentElement.lang === 'en';
+    if (cuenta) cuenta.textContent = hallados.length + (en ? (hallados.length === 1 ? ' result' : ' results') : (hallados.length === 1 ? ' resultado' : ' resultados'));
+    if (!hallados.length) {
+      var vacio = document.createElement('li');
+      vacio.textContent = (en ? 'Nothing matches “' : 'Nada coincide con «') + campo.value.trim() + (en ? '”.' : '».');
+      lista.appendChild(vacio);
+    }
   }
   fetch('indice.json').then(function (r) { if (!r.ok) throw r; return r.json(); }).then(function (datos) {
     indice = datos;
     mostrar();
   }).catch(function () { caja.hidden = true; });
   campo.addEventListener('input', mostrar);
+  // Al cambiar de idioma, los resultados se rehacen en el nuevo.
+  document.querySelectorAll('[data-idioma]').forEach(function (b) { b.addEventListener('click', function () { setTimeout(mostrar); }); });
 })();
 
 // Al llegar a una pregunta de la Ayuda por su ancla (#terminos), se abre.

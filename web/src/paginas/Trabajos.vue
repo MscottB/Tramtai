@@ -74,7 +74,7 @@
           <q-banner v-if="detalle.codigo_error" rounded dense class="error-caja">
             <template #avatar><q-icon name="o_error" /></template>
             <b>{{ tituloError(detalle.codigo_error) }}</b><span v-if="detalle.mensaje_error">: {{ detalle.mensaje_error }}</span>
-            <template #action><BotonAyuda tema="problemas" :ancla="'e-' + detalle.codigo_error" que-hago /></template>
+            <template v-if="detalle.codigo_error in ERRORES" #action><BotonAyuda tema="problemas" :ancla="'e-' + detalle.codigo_error" que-hago /></template>
           </q-banner>
           <div>
             <div class="row items-center q-mb-xs">
@@ -121,6 +121,7 @@
 
 <script setup lang="ts">
 import BotonAyuda from '../componentes/ayuda/BotonAyuda.vue'
+import { ERRORES } from '../ayuda/temas/problemas'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import EstadoVacio from '../componentes/EstadoVacio.vue'

@@ -655,9 +655,9 @@ print(m.content[0].text)</code></pre>
   </div>
 </div>
 
-<p class="aviso"><span lang="es">Se convierten PDF, .docx, .pptx, .xlsx y HTML; van tal cual .txt, .md, .json, .jsonl, .csv, .tsv, .xml, .yaml, .toml, .ini y .log. Los ZIP no: envía los archivos sueltos.</span><span lang="en">PDF, .docx, .pptx, .xlsx and HTML are converted; .txt, .md, .json, .jsonl, .csv, .tsv, .xml, .yaml, .toml, .ini and .log go as is. No ZIP files: send the files on their own.</span></p>
+<p class="aviso"><span lang="es">Se convierten PDF, .docx, .pptx, .xlsx y HTML; van tal cual .txt, .md, .markdown, .json, .jsonl, .csv, .tsv, .xml, .yaml, .yml, .toml, .ini y .log. Sin ZIP.</span><span lang="en">PDF, .docx, .pptx, .xlsx and HTML are converted; .txt, .md, .markdown, .json, .jsonl, .csv, .tsv, .xml, .yaml, .yml, .toml, .ini and .log go as is. No ZIP.</span></p>
 
-<p class="aviso"><span lang="es">Por la API propia, hasta 50 MB por archivo y 20 archivos por petición; por OpenAI y Anthropic, unos 12 MB en total, porque van en base64.</span><span lang="en">Through the native API, up to 50 MB per file and 20 files per request; through OpenAI and Anthropic, about 12 MB in total, since they go in base64.</span></p>
+<p class="aviso"><span lang="es">Por la API propia, hasta 50 MB por archivo y 20 por petición; convertidos, hasta 20 MB de texto. Por OpenAI y Anthropic, unos 12 MB en total. Detalle: /api/v1/limites.</span><span lang="en">Native API: up to 50 MB per file and 20 per request; converted, up to 20 MB of text. OpenAI and Anthropic: about 12 MB in total. Details: /api/v1/limites.</span></p>
 
 <figure class="captura"><img class="solo-claro" lang="es" src="capturas/conversor.claro.es.webp" loading="lazy" alt="El estado del conversor de archivos en Ajustes"><img class="solo-claro" lang="en" src="capturas/conversor.claro.en.webp" loading="lazy" alt="The file converter status in Settings"><img class="solo-oscuro" lang="es" src="capturas/conversor.oscuro.es.webp" loading="lazy" alt="El estado del conversor de archivos en Ajustes"><img class="solo-oscuro" lang="en" src="capturas/conversor.oscuro.en.webp" loading="lazy" alt="The file converter status in Settings"></figure>
 
