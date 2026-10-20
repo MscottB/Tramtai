@@ -157,6 +157,36 @@ jobs:
           sh scripts/macos/empaquetar.sh v0.0.0+ci arm64 # solo la arquitectura del runner; el release hace la universal
           sh scripts/macos/probar-app.sh
 
+  # Los ejemplos de la guía del desarrollador (docs/ejemplos) se ejecutan contra el servidor de la API con un agente
+  # simulado: si uno se rompe, se sabe antes de publicar. Python con el uv fijado (scripts/uv.txt), Node 24 y Go del repo.
+  ejemplos:
+    name: Ejemplos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: '**/go.sum'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: docs/ejemplos/javascript/package-lock.json
+      - name: Python con openai y requests (uv fijado)
+        run: |
+          sh scripts/uv.sh x86_64-unknown-linux-musl "$RUNNER_TEMP/uv"
+          "$RUNNER_TEMP/uv/uv" venv --python 3.13 "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/uv/uv" pip install --python "$RUNNER_TEMP/venv/bin/python" -r docs/ejemplos/python/requirements.txt
+          echo "TRAMTAI_PYTHON=$RUNNER_TEMP/venv/bin/python" >> "$GITHUB_ENV"
+      - name: SDK de OpenAI para Node
+        working-directory: docs/ejemplos/javascript
+        run: npm ci
+      - name: Ejecutar cada ejemplo
+        run: go test -tags ejemplos -run TestEjemplos -v ./internal/api/
+
   web:
     name: Web UI
     runs-on: ubuntu-latest

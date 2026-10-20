@@ -1,0 +1,8 @@
+{
+  "name": "tramtai-ejemplos",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "openai": "7.39.0"
+  }
+}

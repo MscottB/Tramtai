@@ -75,7 +75,7 @@ func TestNativaHerramientasDosTurnos(t *testing.T) {
 	primero := `{"agente":"simulado","mensajes":[{"rol":"usuario","contenido":"¿Qué tiempo hace en Santiago?"}],"herramientas":[` + herramientaClima + `],"eleccion_herramienta":"auto"}`
 	v := crearYEsperar(t, ts, primero, nucleo.Completado)
 	llamadas := llamadasDe(v)
-	if v["salida"] != nil && v["salida"] != "" || len(llamadas) != 1 || llamadas[0]["id"] != "llamada_"+v["id"].(string)+"_0" ||
+	if salida, hay := v["salida"]; !hay || salida != "" || len(llamadas) != 1 || llamadas[0]["id"] != "llamada_"+v["id"].(string)+"_0" ||
 		llamadas[0]["nombre"] != "clima" || fmt.Sprint(llamadas[0]["argumentos"]) != "map[ciudad:Santiago]" {
 		t.Fatalf("primer turno: %v", v)
 	}
