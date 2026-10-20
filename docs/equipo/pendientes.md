@@ -58,6 +58,7 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | — | Comparar agentes en Probar | ⬜ |
 | — | Tramtai como servidor MCP | ⬜ |
 | — | Herramientas en Probar y guardadas en las recetas; texto en vivo mientras se usan herramientas (fuera de la v0.51) | ⬜ |
+| — | Plataforma de módulos: contrato de módulo, catálogo en un repo aparte, pestaña Módulos para instalarlos y, como primer módulo, flujos y analítica (detalle abajo) | ⬜ |
 | — | Cursor CLI | ⬜ |
 | — | SDK oficial de la API propia en Python y TypeScript (sobre `openapi.json`), en su propio repositorio | ⬜ |
 | — | Paquetes base y Pro (con la Pro/Team) | ⬜ |
@@ -91,6 +92,30 @@ Lo investigado para esos cinco (2026-10-20, falta analizarlo más antes de su sp
 - **Modo servidor:** hoy el servicio corre sin escritorio y el acceso remoto existe apagado (`servicio.permitir_remoto`,
   sin suscripciones). Faltan: unidad systemd del sistema y servicio de Windows (sin sesión iniciada), claves sin
   escritorio (en Linux sin sesión no hay Secret Service), HTTPS propio o detrás de un proxy, y guía.
+
+Lo conversado sobre la plataforma de módulos (2026-10-20, falta su diseño y spec):
+
+- **Por qué:** transformar la petición antes del agente y la respuesta después (sin dejarlo al modelo), flujos por
+  lotes y analítica, OCR, audio o antivirus no son parte del puente. Van como módulos aparte para que Tramtai se quede en
+  lo suyo y no crezca con dependencias pesadas.
+- **Dos relaciones:** módulos *cliente*, que usan a Tramtai solo por `/api/v1` con `openapi.json` como contrato
+  (OpenAPI es el estándar para describir APIs, no tiene que ver con OpenAI), y módulos *extensión*, que Tramtai
+  ejecuta (un paso de receta, una herramienta). Las extensiones obligan a cuidar la seguridad: índice firmado, permisos
+  a la vista antes de instalar, proceso aparte y sin las claves de Tramtai.
+- **Contrato de módulo:** manifiesto (`tramtai-modulo.json`: nombre, versión, Tramtai mínimo, qué ofrece, permisos),
+  protocolo (MCP para procesos aparte, que además sirven en otros clientes; WASM con `wazero` para transformaciones
+  deterministas y aisladas; los plugins de Go no sirven en Windows) y plantilla para crear un módulo nuevo con su CI.
+- **Catálogo:** repo aparte (p. ej. `tramtai-modulos`) con `indice.json` firmado y una web en Pages generada desde él;
+  cada módulo en su repo y se publica con un PR al catálogo, sin sacar versión de Tramtai. Tramtai lee el índice en una
+  pestaña Módulos (buscar, instalar, actualizar, quitar) y verifica huella y firma como en `internal/actualizacion`.
+- **Primer módulo, flujos y analítica:** para desarrolladores (flujo en un archivo de pasos) y analistas (interfaz:
+  subir CSV, elegir receta, descargar), con vista previa por paso, prueba con pocas filas, costo estimado y retomar un
+  lote que falló. Su base no es la de Tramtai: comparar SQLite (Go puro), DuckDB (analítica, CSV/Parquet; su driver de Go
+  pide CGO, por confirmar) y SQLite con DuckDB opcional antes de elegir.
+- **API:** hoy solo la usa el dueño del proyecto, así que puede cambiar antes de los módulos; después, `/api/v1` se
+  congela y lo incompatible va a una v2.
+- **Orden propuesto (sin decidir):** las herramientas en Probar y recetas primero (lo que un paso de receta necesita),
+  luego el contrato y el catálogo, el módulo de flujos sobre ellos y después OpenCode.
 
 Pendientes ya asignados:
 
