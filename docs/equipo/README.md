@@ -38,7 +38,7 @@ Cada release tiene su spec (el diseño aprobado) y su plan (las tareas), en `rel
 | v0.48 | Portable de verdad | [spec](releases/v0.48-portable/spec.md) | [plan](releases/v0.48-portable/plan.md) |
 | v0.49 | Orden del código | [spec](releases/v0.49-orden/spec.md) | [plan](releases/v0.49-orden/plan.md) |
 | v0.50 | Archivos | [spec](releases/v0.50-archivos/spec.md) | [plan](releases/v0.50-archivos/plan.md) |
-| v0.51 | Herramientas y guía del desarrollador | [spec](releases/v0.51-herramientas/spec.md) | plan (por escribir) |
+| v0.51 | Herramientas y guía del desarrollador | [spec](releases/v0.51-herramientas/spec.md) | [plan](releases/v0.51-herramientas/plan.md) |
 
 Los releases sin carpeta (v0.45 y los parches) se diseñaron dentro de otro o no tuvieron spec propia; su contenido
 está en la hoja de ruta de [pendientes.md](pendientes.md).
