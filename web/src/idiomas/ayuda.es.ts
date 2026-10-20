@@ -358,6 +358,12 @@ const ayudaEs = {
   'ayuda.historial.rPrimerPlano': 'Sí: detén el servicio y ejecuta «tramtai servicio iniciar --abrir»: corre con el registro a la vista, abre la app y Ctrl+C lo detiene.',
   'ayuda.ui.resultados': '{n} resultados',
   'ayuda.ui.resultadosUno': '1 resultado',
+  'ayuda.empezar.pTranvias': '¿Qué son los tranvías del mapa de Inicio?',
+  'ayuda.empezar.rTranvias': 'Cada petición en curso: sale de su API, pasa por Tramtai y recorre la línea de su agente. Se pone roja si falla y cambia de línea si salta al respaldo.',
+  'ayuda.historial.pSeguir': '¿Puedo seguir una petición en vivo?',
+  'ayuda.historial.rSeguir': 'Sí: pulsa su tranvía en el mapa de Inicio y verás su ruta (cola, preparación, ejecución, validación y llegada) mientras avanza.',
+  'ayuda.conectar.pEventos': '¿Mi app puede ver lo que pasa en vivo?',
+  'ayuda.conectar.rEventos': 'Sí: GET /api/v1/eventos (SSE) avisa cada cambio de etapa de las peticiones, sin su contenido. Con la clave de una API, solo las suyas.',
 }
 
 export default ayudaEs

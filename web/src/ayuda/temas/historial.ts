@@ -16,6 +16,7 @@ export const historial: Tema = {
       tipo: 'preguntas',
       preguntas: [
         { id: 'estados', pregunta: 'ayuda.historial.pEstados', respuesta: 'ayuda.historial.rEstados' },
+        { id: 'seguir-en-vivo', pregunta: 'ayuda.historial.pSeguir', respuesta: 'ayuda.historial.rSeguir' },
         { id: 'tiempos', pregunta: 'ayuda.historial.pTiempos', respuesta: 'ayuda.historial.rTiempos' },
         { id: 'en-vivo', pregunta: 'ayuda.historial.pVivo', respuesta: 'ayuda.historial.rVivo' },
         { id: 'primer-plano', pregunta: 'ayuda.historial.pPrimerPlano', respuesta: 'ayuda.historial.rPrimerPlano' },

@@ -27,6 +27,7 @@ export const empezar: Tema = {
     {
       tipo: 'preguntas',
       preguntas: [
+        { id: 'tranvias', pregunta: 'ayuda.empezar.pTranvias', respuesta: 'ayuda.empezar.rTranvias' },
         { id: 'entrar', pregunta: 'ayuda.empezar.pEntrar', respuesta: 'ayuda.empezar.rEntrar' },
         { id: 'en-marcha', pregunta: 'ayuda.empezar.pMarcha', respuesta: 'ayuda.empezar.rMarcha' },
         { id: 'windows', pregunta: 'ayuda.empezar.pWindows', respuesta: 'ayuda.empezar.rWindows' },

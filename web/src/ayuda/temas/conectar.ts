@@ -50,6 +50,7 @@ export const conectar: Tema = {
         { id: 'clave-nueva', pregunta: 'ayuda.conectar.pClave', respuesta: 'ayuda.conectar.rClave' },
         { id: 'prueba-a-api', pregunta: 'ayuda.conectar.pPruebaApi', respuesta: 'ayuda.conectar.rPruebaApi' },
         { id: 'clave-filtrada', pregunta: 'ayuda.conectar.pFiltrada', respuesta: 'ayuda.conectar.rFiltrada' },
+        { id: 'eventos-app', pregunta: 'ayuda.conectar.pEventos', respuesta: 'ayuda.conectar.rEventos' },
       ],
     },
     { tipo: 'ir', pagina: 'conectar' },
