@@ -85,6 +85,6 @@ Una línea en `fichas` de `internal/agentes/catalogo.go`. Con eso:
 
 - Mensajes nuevos en Go con `idioma.T`/`Tf` y su traducción en `internal/idioma/en_*.go` (`TestCobertura`).
 - Ayuda (`web/src/idiomas`), README (también su sección en inglés), `site/index.html` (mapa, sección de agentes y
-  marcas), `site/ayuda.html`, `TERMINOS.md` si admite suscripción, `docs/arquitectura.md` (sus diferencias en la tabla
+  marcas), el tema `agentes` de la Ayuda (`web/src/ayuda/temas/agentes.ts`, que genera también el sitio), `TERMINOS.md` si admite suscripción, `docs/arquitectura.md` (sus diferencias en la tabla
   de adaptadores) y `docs/equipo/pendientes.md`.
 - Textos que nombren agentes en la Web UI: búscalos (`Claude y Codex`…) y déjalos genéricos o al día.

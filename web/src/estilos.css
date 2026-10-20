@@ -1263,3 +1263,8 @@ body.body--dark .tablero {
   outline: 2px solid var(--acento);
   outline-offset: -2px;
 }
+/* El panel de la Ayuda también se abre desde un diálogo («¿Qué hago?» en el detalle del Historial): va por encima. */
+.q-drawer-container:has(.panel-ayuda),
+.q-drawer:has(.panel-ayuda) {
+  z-index: 6100;
+}

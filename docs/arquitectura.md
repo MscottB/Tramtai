@@ -23,7 +23,7 @@ Cómo está construido Tramtai por dentro:
 | `internal/recursos` | Web UI compilada incorporada con `go:embed`. Se versiona para que `go build` no necesite Node. |
 | `internal/navegador` | Abre URLs en el navegador del sistema. |
 | `internal/credenciales` | Claves de los proveedores en el almacén del sistema: Administrador de credenciales (Windows), Llavero (macOS, `/usr/bin/security`) y Secret Service (Linux, `secret-tool`). |
-| `web/` | Web UI con Vue 3 y Quasar 2.35 (Vite). La compila `npm run build` en `internal/recursos/web`. |
+| `web/` | Web UI con Vue 3 y Quasar 2.35 (Vite). La compila `npm run build` en `internal/recursos/web`. La Ayuda son datos (`web/src/ayuda`): la app los muestra y `npm run sitio` genera con ellos `site/ayuda/`. |
 | `escritorio/` | Aplicación de escritorio con Wails v3 en un módulo Go aparte, para que el núcleo siga sin CGO. Es un cliente del servicio: lo inicia si hace falta y muestra la misma Web UI en su ventana. Solo usa `cliente` y `contrato`, no el servicio. |
 | `internal/version` | Versión del ejecutable (inyectada al compilar) y commit de git. |
 | `cmd/tramtai` | CLI con Cobra. Sin argumentos abre la terminal interactiva. `tramtai acceso` guarda las APIs por la API del servicio (`/api/v1/servicio/puntos`, con el token de servicio), como la terminal y la app de escritorio usan `internal/cliente`; `tramtai ejecutar` sin servicio usa su propia base, y `tramtai servicio` es el propio servicio. Comandos: `servicio`, `global`, `proyecto`, `iniciar`, `acceso`, `claves`, `trabajos`, `ejecutar`, `convertir`, `agentes`, `configuracion`. Detalle en [operacion.md](operacion.md). |

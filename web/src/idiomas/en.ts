@@ -371,7 +371,7 @@ const en: Textos = {
   'agentes.confirmarSuscripcion':
     'Tramtai will use the {cli} session you already have on this computer. Under the provider’s terms this is for personal, local use only: do not share it with other people.',
   'agentes.riesgoSuscripcion':
-    'Each provider’s terms may not allow using a personal subscription in an automated way or to power other apps, and the provider could limit or suspend your account. That risk is yours. For your apps, an API key is recommended. More in Tramtai’s terms of use (mscottb.github.io/Tramtai/ayuda.html#terminos).',
+    'Each provider’s terms may not allow using a personal subscription in an automated way or to power other apps, and the provider could limit or suspend your account. That risk is yours. For your apps, an API key is recommended. More in Tramtai’s terms of use (mscottb.github.io/Tramtai/ayuda/agentes.html#terminos).',
   'agentes.aceptoRiesgo': 'I understand the risk and accept the terms of use',
   'agentes.faltaAceptar': 'To use your subscription, tick that you understand the risk and accept the terms.',
   'agentes.suscripcionActivada': '{agente} now uses your subscription',

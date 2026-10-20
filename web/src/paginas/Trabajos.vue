@@ -56,7 +56,8 @@
       </div>
     </q-card>
 
-    <q-dialog v-model="dialogo" position="right" full-height>
+    <!-- allow-focus-outside: «¿Qué hago?» abre el panel de la Ayuda encima y el foco tiene que poder ir a él. -->
+    <q-dialog v-model="dialogo" position="right" full-height allow-focus-outside>
       <q-card v-if="detalle" class="column no-wrap hoja-detalle" style="width: 600px; max-width: 100vw">
         <q-card-section class="row items-center no-wrap q-gutter-x-sm">
           <span :class="estadoInfo(detalle.estado).clase"><q-icon :name="estadoInfo(detalle.estado).icono" size="14px" />{{ estadoInfo(detalle.estado).etiqueta }}</span>

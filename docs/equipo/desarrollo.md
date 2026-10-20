@@ -46,6 +46,31 @@ El CI falla si una dependencia de la Web UI tiene una vulnerabilidad alta o crí
 
 La CLI, la terminal interactiva, la app de escritorio y los mensajes de error del servicio usan `internal/idioma`: el texto se escribe en español dentro de `idioma.T("…")` o `idioma.Tf("… %s", x)` (siempre un literal) y su inglés va en `internal/idioma/en_*.go`. `TestCobertura` falla si un texto marcado no tiene traducción, si cambian los verbos de `fmt`, si sobra una traducción o si un mismo texto tiene dos. No se traducen los nombres de comandos y opciones, las claves de configuración, los códigos de error, los registros del servicio ni lo que se envía a los agentes. El idioma sale de `TRAMTAI_IDIOMA` (`es` o `en`) o del sistema; las pruebas comparan textos en español, así que el CI las ejecuta con `TRAMTAI_IDIOMA=es`.
 
+## Ayuda y sitio en cada función
+
+**Regla:** ninguna función se da por terminada sin su tema de Ayuda (en la app y en la web, en el estilo de abajo), la
+página del sitio al día y el código con buenas prácticas (archivos acotados, nombres claros, pruebas, sin duplicar).
+Va en la spec y el plan de cada release, no para después.
+
+La Ayuda es **una sola fuente** en `web/src/ayuda/`: cada tema (`temas/<id>.ts`) es una lista de bloques de tipos
+fijos (`diagrama`, `pasos`, `captura`, `ejemplo`, `tabla`, `preguntas`, `errores`, `nota`, `ir`, `descargas`, en
+`tipos.ts`) y sus textos van por clave en `idiomas/ayuda.es.ts` y `ayuda.en.ts`. La app los dibuja con
+`componentes/ayuda/` (inicio por temas, `#ayuda/<tema>` y el panel del botón **?** de cada página) y el sitio se genera
+desde los mismos datos.
+
+- **Añadir un tema:** su archivo en `temas/`, su lugar en `indice.ts` (y `paginaApp` si es el de una página) y sus
+  textos en los dos idiomas. **Añadir un tipo de bloque:** en `tipos.ts`, su componente `Bloque<Tipo>.vue`, su HTML en
+  `web/scripts/sitio.ts` y, si tiene texto, en `buscar.ts` (`campos`).
+- **La regla del estilo es una prueba** (`estilo.test.ts`): resumen de una línea (140 caracteres), pasos, notas y
+  respuestas de 200 como máximo, diagrama donde hay un recorrido, un tema por página de la app, anclas únicas y ningún
+  texto sin usar. `capturas.test.ts` exige las cuatro variantes de cada captura, ninguna huérfana y 3 MB en total.
+- **Sitio:** `cd web; npm run sitio` escribe `site/ayuda/` y la página de paso `site/ayuda.html`; el CI lo regenera y
+  falla si lo guardado no coincide.
+- **Capturas:** `cd web; npm run build; npm run capturas` (o `-- --solo <id>`) compila Tramtai en `bin/`, la arranca
+  portable en otro puerto con datos de ejemplo y saca cada zona `[data-captura="<id>"]` en claro y oscuro y en español e
+  inglés, más las de la portada. Necesita Edge o Chrome y un agente conectado (`TRAMTAI_CAPTURAS_MODELO`, por defecto
+  `claude/haiku`); se corre en el equipo de desarrollo cuando cambia una pantalla que sale en la Ayuda.
+
 ## Probar
 
 ```powershell

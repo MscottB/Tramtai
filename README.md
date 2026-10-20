@@ -14,7 +14,7 @@ Cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
 [![Windows, macOS y Linux](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-0078d4)](https://github.com/MscottB/Tramtai/releases/latest)
 [![Licencia](https://img.shields.io/badge/licencia-PolyForm%20Noncommercial-55666a)](LICENSE.md)
 
-[**Descargar**](https://mscottb.github.io/Tramtai/#descargar) · [Página del producto](https://mscottb.github.io/Tramtai/) · [Ayuda](https://mscottb.github.io/Tramtai/ayuda.html) · [Desarrolladores](https://mscottb.github.io/Tramtai/desarrolladores.html) · [English](#english)
+[**Descargar**](https://mscottb.github.io/Tramtai/#descargar) · [Página del producto](https://mscottb.github.io/Tramtai/) · [Ayuda](https://mscottb.github.io/Tramtai/ayuda/) · [Desarrolladores](https://mscottb.github.io/Tramtai/desarrolladores.html) · [English](#english)
 
 <br>
 

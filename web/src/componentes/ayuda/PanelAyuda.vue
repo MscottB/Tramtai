@@ -42,9 +42,19 @@ function ir(destino: string) {
   emit('ir', destino)
 }
 
+// Esc cierra solo el panel: se atrapa antes que el diálogo que haya debajo (el detalle del Historial), que si no se
+// cerraría con la misma tecla. Quasar escucha keyup para Esc, así que se detienen las dos.
 function alTeclear(e: KeyboardEvent) {
-  if (e.key === 'Escape' && panel.abierto) cerrarAyuda()
+  if (e.key !== 'Escape' || !panel.abierto) return
+  e.stopImmediatePropagation()
+  if (e.type === 'keyup') cerrarAyuda()
 }
-onMounted(() => window.addEventListener('keydown', alTeclear))
-onUnmounted(() => window.removeEventListener('keydown', alTeclear))
+onMounted(() => {
+  window.addEventListener('keydown', alTeclear, true)
+  window.addEventListener('keyup', alTeclear, true)
+})
+onUnmounted(() => {
+  window.removeEventListener('keydown', alTeclear, true)
+  window.removeEventListener('keyup', alTeclear, true)
+})
 </script>
