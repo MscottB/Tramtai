@@ -327,3 +327,12 @@ footer .envoltura { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 /* Las capturas de la Ayuda vienen en los dos idiomas: la del otro se oculta también en oscuro (le gana a .solo-oscuro). */
 html[lang="es"] .captura img[lang="en"], html[lang="en"] .captura img[lang="es"] { display: none !important; }
 .solo-lectores { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* Ejemplos del recorrido de la portada (sitio.js): leyenda, un punto por ejemplo y pausa. */
+.mapa-ejemplos { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 12px; }
+.mapa-ejemplos[hidden] { display: none; }
+.mapa-leyenda { margin: 0; min-height: 1.5em; font-size: .95rem; color: var(--texto-suave); text-align: center; }
+.mapa-controles { display: flex; align-items: center; gap: 8px; }
+.mapa-punto { width: 14px; height: 14px; padding: 0; border-radius: 50%; border: 2px solid var(--acento); background: transparent; cursor: pointer; }
+.mapa-punto[aria-pressed="true"] { background: var(--acento); }
+.mapa-pausa { font: 600 .85rem var(--fuente); color: var(--texto); background: var(--superficie); border: 1px solid var(--borde); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.mapa-punto:focus-visible, .mapa-pausa:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }

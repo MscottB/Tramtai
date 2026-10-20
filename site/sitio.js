@@ -244,3 +244,132 @@
   var destino = location.hash && document.getElementById(location.hash.slice(1));
   if (destino && destino.tagName === 'DETAILS') destino.open = true;
 })();
+
+// Recorrido de la portada: el tranvía va de una app a Tramtai y sigue por la línea de un agente hasta su estación, con
+// cuatro ejemplos que se turnan (uno, el respaldo: Claude falla a mitad y sigue Codex). La leyenda y el código de
+// «Cómo funciona» cambian con cada uno. Pausa, puntos para elegir, y sin animación con «reducir movimiento».
+(function () {
+  var datos = document.getElementById('ejemplos-mapa');
+  var caja = document.querySelector('.mapa-ejemplos');
+  var ancho = document.querySelector('.mapa-ancho');
+  var alto = document.querySelector('.mapa-alto');
+  if (!datos || !caja || !ancho || !alto || !Element.prototype.animate) return;
+  var ejemplos = JSON.parse(datos.textContent);
+  var quieto = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var ORIGENES = ['M 190 95 L 202 95 C 240 95 240 143 278 143 L 290 143', 'M 190 153 L 204 153 C 240 153 240 153 276 153 L 290 153',
+    'M 190 211 L 202 211 C 240 211 240 163 278 163 L 290 163'];
+  var LINEAS = ['M 460 133 L 472 133 C 515 133 515 37 558 37 L 570 37', 'M 460 143 L 472 143 C 515 143 515 95 558 95 L 570 95',
+    'M 460 153 L 479 153 C 515 153 515 153 551 153 L 570 153', 'M 460 163 L 472 163 C 515 163 515 211 558 211 L 570 211',
+    'M 460 173 L 472 173 C 515 173 515 269 558 269 L 570 269'];
+  var ALTO_ORIGEN = [14, 52, 90];
+  var ALTO_LINEA = [210, 248, 286, 324, 362];
+  var ROJO = '#d64545';
+  var trams = [ancho.querySelector('.tranvia'), alto.querySelector('.tranvia-alto')];
+  trams.forEach(function (t) { t.style.animation = 'none'; t.style.opacity = '0'; });
+
+  // largo mide un camino con un path temporal dentro del svg.
+  function largo(svg, d) {
+    var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', d);
+    svg.appendChild(p);
+    var l = p.getTotalLength();
+    svg.removeChild(p);
+    return l;
+  }
+  // camino devuelve, para cada mapa, el recorrido de un origen a un agente y dónde están la entrada, el centro y la
+  // salida de Tramtai (en % del camino).
+  function camino(origen, agente) {
+    var yLinea = parseFloat(LINEAS[agente].split(' ')[2]);
+    var dAncho = ORIGENES[origen] + ' L 460 ' + yLinea + ' ' + LINEAS[agente].replace(/^M/, 'L');
+    var total = largo(ancho, dAncho);
+    var entrada = largo(ancho, ORIGENES[origen]);
+    var salida = entrada + Math.hypot(170, yLinea - parseFloat(ORIGENES[origen].split(' ').pop()));
+    var oy = ALTO_ORIGEN[origen], ly = ALTO_LINEA[agente];
+    var dAlto = 'M 18 ' + oy + ' L 18 ' + ly + ' L 52 ' + ly;
+    var totalAlto = (ly - oy) + 34;
+    return [
+      { d: dAncho, entrada: entrada / total * 100, centro: (entrada + salida) / 2 / total * 100, salida: salida / total * 100 },
+      { d: dAlto, entrada: (120 - oy) / totalAlto * 100, centro: (149 - oy) / totalAlto * 100, salida: (178 - oy) / totalAlto * 100 }
+    ];
+  }
+
+  var actual = 0, pausado = quieto, temporizador = null, animaciones = [];
+  var leyenda = caja.querySelector('.mapa-leyenda');
+  var puntos = caja.querySelectorAll('.mapa-punto');
+  var pausa = caja.querySelector('.mapa-pausa');
+
+  function parar() {
+    animaciones.forEach(function (a) { a.cancel(); });
+    animaciones = [];
+    clearTimeout(temporizador);
+  }
+  function mover(i, desde, hasta, ms, retraso) {
+    var a = trams[i].animate([{ offsetDistance: desde + '%' }, { offsetDistance: hasta + '%' }],
+      { duration: ms, delay: retraso || 0, fill: 'forwards', easing: 'ease-in-out' });
+    animaciones.push(a);
+    return a;
+  }
+  function mostrar(n) {
+    var e = ejemplos[n];
+    leyenda.innerHTML = '';
+    [['es', ' de '], ['en', ' of ']].forEach(function (par) {
+      var s = document.createElement('span');
+      s.lang = par[0];
+      s.textContent = (n + 1) + par[1] + ejemplos.length + ' · ' + e[par[0]];
+      leyenda.appendChild(s);
+    });
+    puntos.forEach(function (p, i) { p.setAttribute('aria-pressed', String(i === n)); });
+    ejemplos.forEach(function (x) { var pre = document.getElementById(x.codigo); if (pre) pre.hidden = x !== e; });
+  }
+  // recorrer anima el ejemplo n en los dos mapas (uno se ve según el ancho) y programa el siguiente.
+  function recorrer(n) {
+    parar();
+    actual = n;
+    var e = ejemplos[n];
+    mostrar(n);
+    var primero = camino(e.origen, e.agentes[0]);
+    var segundo = e.agentes[1] !== undefined ? camino(e.origen, e.agentes[1]) : null;
+    trams.forEach(function (t, i) {
+      t.style.offsetPath = "path('" + primero[i].d + "')";
+      t.style.opacity = '1';
+      t.setAttribute('fill', 'var(--acento)');
+      if (quieto || pausado) {
+        var fin = segundo || primero;
+        t.style.offsetPath = "path('" + fin[i].d + "')";
+        t.style.offsetDistance = '100%';
+        return;
+      }
+      if (!segundo) {
+        mover(i, 0, primero[i].centro, 1800);
+        mover(i, primero[i].centro, 100, 2400, 1800 + (e.pausaCentro ? 900 : 200));
+        return;
+      }
+      var mitad = primero[i].salida + (100 - primero[i].salida) / 2;
+      mover(i, 0, mitad, 2200).finished.then(function () {
+        t.setAttribute('fill', ROJO);
+        return mover(i, mitad, primero[i].centro, 900, 400).finished;
+      }).then(function () {
+        t.setAttribute('fill', 'var(--acento)');
+        t.style.offsetPath = "path('" + segundo[i].d + "')";
+        return mover(i, segundo[i].centro, 100, 1800, 200).finished;
+      }).catch(function () {});
+    });
+    if (!quieto && !pausado) temporizador = setTimeout(function () { recorrer((actual + 1) % ejemplos.length); }, 6500);
+  }
+
+  puntos.forEach(function (p, i) { p.addEventListener('click', function () { recorrer(i); }); });
+  pausa.addEventListener('click', function () {
+    pausado = !pausado;
+    pausa.setAttribute('aria-pressed', String(pausado));
+    pausa.innerHTML = pausado ? '<span lang="es">Seguir</span><span lang="en">Play</span>' : '<span lang="es">Pausa</span><span lang="en">Pause</span>';
+    recorrer(actual);
+  });
+  // En una pestaña oculta no se anima ni se acumulan animaciones; al volver sigue donde iba.
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) parar();
+    else recorrer(actual);
+  });
+  if (quieto) pausa.hidden = true;
+  caja.hidden = false;
+  recorrer(0);
+})();
