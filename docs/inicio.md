@@ -10,6 +10,15 @@
   la descarga, baja el **paquete del conversor** para Windows (`Tramtai-…-conversor-windows-x64.zip`, unos 100 MB) de
   la misma página de descargas y descomprímelo junto a `tramtai.exe`.
 
+| | Windows 10 y 11 | Linux | macOS |
+|---|---|---|---|
+| Servicio, API, CLI, terminal y Web UI | ✅ | ✅ | ✅ |
+| App de escritorio con bandeja | ✅ (instalador o portable) | ✅ (.deb y .rpm) | ✅ (.dmg sin firmar) |
+| Arranque con el sistema | ✅ | ✅ | ✅ |
+| Actualización con un clic | ✅ (instalada) | Aviso con enlace | Aviso con enlace |
+| Claves en el almacén del sistema | ✅ Administrador de credenciales | ✅ Secret Service (`secret-tool`) | ✅ Llavero |
+| Entrar en la Web UI | Directo (mismo usuario) | Directo (mismo usuario) | Desde la app o con `tramtai abrir` |
+
 ## 1. Instalar y abrir
 
 Descarga `Tramtai-…-instalador-windows-x64.exe` desde [Releases](https://github.com/MscottB/Tramtai/releases/latest) y ejecútalo:
