@@ -2,9 +2,9 @@
   <div>
     <div class="desplazable-x">
       <table class="guia-tabla text-body2">
-        <thead><tr><th /><th>OpenAI</th><th>Anthropic</th><th>{{ t('ejemplos.nativa') }}</th></tr></thead>
+        <thead><tr><th /><th v-for="c in tablaApis.columnas" :key="c">{{ t(c) }}</th></tr></thead>
         <tbody>
-          <tr v-for="f in filas" :key="f[0]"><th scope="row">{{ t(f[0]) }}</th><td v-for="(c, i) in f.slice(1)" :key="i">{{ t(c) }}</td></tr>
+          <tr v-for="f in tablaApis.filas" :key="f.titulo"><th scope="row">{{ t(f.titulo) }}</th><td v-for="(c, i) in f.celdas" :key="i">{{ t(c) }}</td></tr>
         </tbody>
       </table>
     </div>
@@ -16,21 +16,9 @@
 
 <script setup lang="ts">
 // TablaApis compara lo que permite cada contrato (OpenAI, Anthropic y la API propia) y explica por qué no todos
-// pueden lo mismo; la usan «¿Qué URL uso?» en Mis APIs y la Ayuda.
+// pueden lo mismo; la usan «¿Qué URL uso?» en Mis APIs y la Ayuda. Las filas son las del tema «Conectar mi app».
 import { t } from '../i18n'
-import type { Clave } from '../idiomas/es'
-
-const filas: Clave[][] = [
-  ['guia.fSdk', 'guia.si', 'guia.si', 'guia.noHttp'],
-  ['guia.fVivo', 'guia.si', 'guia.si', 'guia.siRetoma'],
-  ['guia.fJson', 'guia.siResponseFormat', 'guia.no', 'guia.siEsquema'],
-  ['guia.fArchivos', 'guia.siBase64', 'guia.siBase64', 'guia.si50'],
-  ['guia.fHerramientas', 'guia.si', 'guia.si', 'guia.si'],
-  ['guia.fTareas', 'guia.no', 'guia.no', 'guia.si'],
-  ['guia.fRespaldo', 'guia.soloEsfuerzo', 'guia.no', 'guia.si'],
-  ['guia.fRegistro', 'guia.no', 'guia.no', 'guia.si'],
-  ['guia.fLimites', 'guia.no', 'guia.no', 'guia.si'],
-]
+import { tablaApis } from '../ayuda/temas/conectar'
 </script>
 
 <style scoped>

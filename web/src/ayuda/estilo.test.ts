@@ -1,0 +1,73 @@
+// La regla del estilo de la Ayuda hecha prueba: textos cortos, diagrama donde hay un recorrido, un tema por página
+// de la app y cada clave escrita en los dos idiomas.
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import es from '../idiomas/es.ts'
+import en from '../idiomas/en.ts'
+import { temas, temaDe, temaPorId } from './indice.ts'
+import type { Bloque, Pagina } from './tipos.ts'
+
+const idiomas: Record<string, Record<string, string>> = { es, en }
+const PAGINAS: Pagina[] = ['inicio', 'agentes', 'ejecutar', 'conectar', 'historial', 'configuracion']
+const problemas = await import('./temas/problemas.ts').catch(() => null)
+
+// cortas son las claves de un bloque que deben caber en 200 caracteres.
+function cortas(b: Bloque): string[] {
+  switch (b.tipo) {
+    case 'diagrama':
+      return [...b.paradas.flatMap((p) => [p.titulo, ...(p.nota ? [p.nota] : [])]), ...(b.ramas ?? []).map((r) => r.etiqueta)]
+    case 'pasos':
+      return b.pasos
+    case 'captura':
+      return [b.alt]
+    case 'tabla':
+      return [...b.columnas, ...b.filas.flatMap((f) => [f.titulo, ...f.celdas])]
+    case 'preguntas':
+      return b.preguntas.flatMap((p) => [p.pregunta, p.respuesta])
+    case 'nota':
+      return [b.texto]
+    default:
+      return []
+  }
+}
+
+test('cada tema tiene un resumen de una línea en los dos idiomas', () => {
+  for (const tema of temas)
+    for (const [idioma, textos] of Object.entries(idiomas)) {
+      for (const clave of [tema.titulo, tema.resumen]) assert.ok(textos[clave], `${tema.id}: falta ${clave} en ${idioma}`)
+      assert.ok(textos[tema.resumen].length <= 140, `${tema.id}: el resumen en ${idioma} pasa de 140 caracteres`)
+    }
+})
+
+test('pasos, notas, paradas y respuestas caben en 200 caracteres en los dos idiomas', () => {
+  for (const tema of temas)
+    for (const bloque of tema.bloques)
+      for (const clave of cortas(bloque))
+        for (const [idioma, textos] of Object.entries(idiomas)) {
+          assert.ok(textos[clave], `${tema.id}: falta ${clave} en ${idioma}`)
+          assert.ok(textos[clave].length <= 200, `${tema.id}: ${clave} en ${idioma} tiene ${textos[clave].length} caracteres`)
+        }
+})
+
+test('un tema que explica un recorrido tiene su diagrama', () => {
+  for (const tema of temas.filter((t) => t.conDiagrama)) assert.ok(tema.bloques.some((b) => b.tipo === 'diagrama'), tema.id)
+})
+
+test('cada página principal de la app tiene su tema', () => {
+  for (const pagina of PAGINAS) assert.ok(temaDe(pagina), `la página ${pagina} no tiene tema`)
+})
+
+test('relacionados, errores e ids son válidos', () => {
+  const ids = temas.map((t) => t.id)
+  assert.equal(new Set(ids).size, ids.length, 'ids de tema repetidos')
+  for (const tema of temas) {
+    assert.match(tema.id, /^[a-z]+$/)
+    for (const b of tema.bloques)
+      if (b.tipo === 'errores' && problemas)
+        for (const c of b.codigos) assert.ok(problemas.CODIGOS_ERROR.includes(c), `${tema.id}: error ${c} desconocido`)
+  }
+})
+
+test('los relacionados existen (cuando están los 14 temas)', { skip: temas.length < 14 }, () => {
+  for (const tema of temas) for (const r of tema.relacionados) assert.ok(temaPorId(r), `${tema.id}: relacionado ${r} no existe`)
+})
