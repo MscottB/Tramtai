@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Historial · Tramtai</title>
+<meta name="description" content="Cada petición queda en el Historial con su respuesta, el agente que respondió y el registro de cada paso.">
+<meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../logo.png">
+<link rel="stylesheet" href="../estilo.css">
+<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t } catch (e) {}</script>
+</head>
+<body>
+<header class="barra">
+  <div class="envoltura">
+    <a class="marca" href="../index.html"><img src="../logo.png" alt="">Tramtai</a>
+    <nav aria-label="Secciones">
+      <a href="../index.html#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+      <a href="../index.html#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+      <a href="index.html" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+    </nav>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+    </a>
+    <div class="idioma" role="group" aria-label="Idioma / Language">
+      <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+      <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+    </div>
+    <div class="idioma tema" role="group" aria-label="Tema / Theme">
+      <button type="button" data-tema="sistema" aria-pressed="true" aria-label="Tema del sistema / System theme" title="Sistema / System">◐</button>
+      <button type="button" data-tema="claro" aria-pressed="false" aria-label="Tema claro / Light theme" title="Claro / Light">☀</button>
+      <button type="button" data-tema="oscuro" aria-pressed="false" aria-label="Tema oscuro / Dark theme" title="Oscuro / Dark">☾</button>
+    </div>
+    <a class="boton principal" href="../index.html#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+  </div>
+</header>
+
+<main class="envoltura ayuda-temas">
+<nav class="migas" aria-label="Ruta / Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Historial</span><span lang="en">History</span></nav>
+<article class="doc tema-ayuda">
+<header>
+  <h1><span lang="es">Historial</span><span lang="en">History</span></h1>
+  <p class="entradilla"><span lang="es">Cada petición queda en el Historial con su respuesta, el agente que respondió y el registro de cada paso.</span><span lang="en">Every request stays in History with its answer, the agent that answered and the log of each step.</span></p>
+</header>
+
+<ol class="pasos">
+  <li><span lang="es">Filtra por estado, origen o grupo, o busca por texto.</span><span lang="en">Filter by status, origin or group, or search by text.</span></li>
+  <li><span lang="es">Abre una petición para ver la respuesta y su «Registro», con cada paso y su hora.</span><span lang="en">Open a request to see the answer and its &quot;Log&quot;, with every step and its time.</span></li>
+  <li><span lang="es">Si falló, corrige la causa y pulsa «Reintentar».</span><span lang="en">If it failed, fix the cause and click &quot;Retry&quot;.</span></li>
+</ol>
+
+<figure class="captura"><img class="solo-claro" lang="es" src="capturas/historial.claro.es.webp" loading="lazy" alt="La lista del Historial con sus filtros"><img class="solo-claro" lang="en" src="capturas/historial.claro.en.webp" loading="lazy" alt="The History list with its filters"><img class="solo-oscuro" lang="es" src="capturas/historial.oscuro.es.webp" loading="lazy" alt="La lista del Historial con sus filtros"><img class="solo-oscuro" lang="en" src="capturas/historial.oscuro.en.webp" loading="lazy" alt="The History list with its filters"></figure>
+
+<details id="estados"><summary><span lang="es">¿Qué significan Completadas, En proceso y Con error?</span><span lang="en">What do Completed, In progress and With errors mean?</span></summary><p><span lang="es">Completadas recibieron respuesta; En proceso esperan o se están ejecutando; Con error fallaron o se interrumpieron.</span><span lang="en">Completed got an answer; In progress are waiting or running; With errors failed or were interrupted.</span></p></details>
+<details id="tiempos"><summary><span lang="es">¿Cómo veo cuánto tardó cada paso?</span><span lang="en">How do I see how long each step took?</span></summary><p><span lang="es">En «Registro», bajo la respuesta o en el detalle: cada paso con su hora y, arriba, cuánto duró cada etapa.</span><span lang="en">In &quot;Log&quot;, under the answer or in the detail: every step with its time and, at the top, how long each stage took.</span></p></details>
+<details id="en-vivo"><summary><span lang="es">¿Cómo veo lo que procesa mientras desarrollo?</span><span lang="en">How do I watch what it processes while developing?</span></summary><p><span lang="es">«tramtai servicio registro -f» muestra en vivo una línea por petición: agente, modelo, duración, tokens y la API de origen.</span><span lang="en">&quot;tramtai servicio registro -f&quot; shows one live line per request: agent, model, duration, tokens and the API it came from.</span></p></details>
+<details id="primer-plano"><summary><span lang="es">¿Puedo ver el servicio en primer plano?</span><span lang="en">Can I run the service in the foreground?</span></summary><p><span lang="es">Sí: detén el servicio y ejecuta «tramtai servicio iniciar --abrir»: corre con el registro a la vista, abre la app y Ctrl+C lo detiene.</span><span lang="en">Yes: stop the service and run &quot;tramtai servicio iniciar --abrir&quot;: it runs with the log in view, opens the app and Ctrl+C stops it.</span></p></details>
+<details id="borrar-datos"><summary><span lang="es">¿Cómo borro los datos de prueba?</span><span lang="en">How do I delete test data?</span></summary><p><span lang="es">En Ajustes, «Borrar datos» elimina el historial y las APIs por aplicación. También puedes vaciar el Historial.</span><span lang="en">In Settings, &quot;Delete data&quot; removes the history and the per-app APIs. You can also empty History.</span></p></details>
+
+<h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
+<div class="tarjetas-temas">
+  <a class="tarjeta-tema" href="problemas.html"><strong><span lang="es">Algo falló</span><span lang="en">Something failed</span></strong><span><span lang="es">Los errores más comunes, con el mismo título que ves en la app, y qué hacer con cada uno.</span><span lang="en">The most common errors, with the same title you see in the app, and what to do about each.</span></span></a>
+  <a class="tarjeta-tema" href="probar.html"><strong><span lang="es">Probar</span><span lang="en">Try</span></strong><span><span lang="es">Escribe un mensaje, elige agente, modelo y esfuerzo, y mira la respuesta antes de llevarla a tu app.</span><span lang="en">Type a message, pick agent, model and effort, and see the answer before taking it to your app.</span></span></a>
+  <a class="tarjeta-tema" href="ajustes.html"><strong><span lang="es">Ajustes y actualizaciones</span><span lang="en">Settings and updates</span></strong><span><span lang="es">Arranque con el sistema, modelo predeterminado, archivos, historial y actualizaciones.</span><span lang="en">Start with the system, default model, files, history and updates.</span></span></a>
+</div>
+</article>
+</main>
+
+<footer>
+  <div class="envoltura">
+    <span>© 2026 Michael Scott B. · Tramtai · <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a></span>
+    <span>
+      <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span>
+    </span>
+  </div>
+</footer>
+
+<script src="../sitio.js"></script>
+</body>
+</html>

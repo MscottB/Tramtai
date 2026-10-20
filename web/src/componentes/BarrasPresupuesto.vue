@@ -1,5 +1,5 @@
 <template>
-  <div class="q-mt-xs" style="max-width: 420px">
+  <div class="q-mt-xs" style="max-width: 420px" data-captura="presupuesto">
     <div v-for="b in barras" :key="b.clave" class="q-mb-xs">
       <div class="row text-caption"><span>{{ b.titulo }}</span><q-space /><span>{{ b.texto }}</span></div>
       <q-linear-progress :value="Math.min(b.fraccion, 1)" rounded size="6px" :aria-label="b.titulo + ': ' + b.texto"

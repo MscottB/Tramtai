@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-model="nuevo" aria-labelledby="titulo-nueva-api">
+  <q-dialog v-model="nuevo" aria-labelledby="titulo-nueva-api" allow-focus-outside>
     <q-card style="width: 600px; max-width: 95vw">
       <q-card-section>
         <div id="titulo-nueva-api" class="titulo-seccion">{{ t('puntos.nuevo') }}</div>
@@ -44,7 +44,7 @@
     </q-card>
   </q-dialog>
 
-  <q-dialog v-model="dialogoInstrucciones" aria-labelledby="titulo-ajustes-api">
+  <q-dialog v-model="dialogoInstrucciones" aria-labelledby="titulo-ajustes-api" allow-focus-outside>
     <q-card style="width: 560px; max-width: 95vw">
       <q-card-section>
         <div id="titulo-ajustes-api" class="titulo-seccion">{{ t('puntos.ajustesDe', { nombre: editando }) }}</div>

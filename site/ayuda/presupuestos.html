@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Presupuestos · Tramtai</title>
+<meta name="description" content="Pon límites por día o por mes a una API o a todo el espacio, en peticiones, tokens o dólares.">
+<meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../logo.png">
+<link rel="stylesheet" href="../estilo.css">
+<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t } catch (e) {}</script>
+</head>
+<body>
+<header class="barra">
+  <div class="envoltura">
+    <a class="marca" href="../index.html"><img src="../logo.png" alt="">Tramtai</a>
+    <nav aria-label="Secciones">
+      <a href="../index.html#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+      <a href="../index.html#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+      <a href="index.html" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+    </nav>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+    </a>
+    <div class="idioma" role="group" aria-label="Idioma / Language">
+      <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+      <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+    </div>
+    <div class="idioma tema" role="group" aria-label="Tema / Theme">
+      <button type="button" data-tema="sistema" aria-pressed="true" aria-label="Tema del sistema / System theme" title="Sistema / System">◐</button>
+      <button type="button" data-tema="claro" aria-pressed="false" aria-label="Tema claro / Light theme" title="Claro / Light">☀</button>
+      <button type="button" data-tema="oscuro" aria-pressed="false" aria-label="Tema oscuro / Dark theme" title="Oscuro / Dark">☾</button>
+    </div>
+    <a class="boton principal" href="../index.html#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+  </div>
+</header>
+
+<main class="envoltura ayuda-temas">
+<nav class="migas" aria-label="Ruta / Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Presupuestos</span><span lang="en">Budgets</span></nav>
+<article class="doc tema-ayuda">
+<header>
+  <h1><span lang="es">Presupuestos</span><span lang="en">Budgets</span></h1>
+  <p class="entradilla"><span lang="es">Pon límites por día o por mes a una API o a todo el espacio, en peticiones, tokens o dólares.</span><span lang="en">Set daily or monthly limits for an API or the whole workspace, in requests, tokens or dollars.</span></p>
+</header>
+
+<ol class="diagrama" style="--paradas: 3">
+  <li><strong>1. <span lang="es">Consumo</span><span lang="en">Usage</span></strong><span><span lang="es">Cada petición suma peticiones, tokens y, si el agente lo informa, dólares.</span><span lang="en">Every request adds requests, tokens and, if the agent reports it, dollars.</span></span></li>
+  <li><strong>2. <span lang="es">Aviso al 80 %</span><span lang="en">Warning at 80%</span></strong><span><span lang="es">La barra se pone amarilla.</span><span lang="en">The bar turns yellow.</span></span></li>
+  <li><strong>3. <span lang="es">Tope al 100 %</span><span lang="en">Cap at 100%</span></strong><span><span lang="es">La app recibe un error 429 hasta que empieza el día o el mes siguiente.</span><span lang="en">The app gets a 429 error until the next day or month starts.</span></span></li>
+</ol>
+
+<ol class="pasos">
+  <li><span lang="es">Crea en Mis APIs una API para esa aplicación.</span><span lang="en">Create an API for that app in My APIs.</span></li>
+  <li><span lang="es">En sus ajustes, pon un presupuesto diario o mensual en peticiones, tokens o dólares.</span><span lang="en">In its settings, set a daily or monthly budget in requests, tokens or dollars.</span></li>
+  <li><span lang="es">Si hace falta, «Reiniciar consumo» la vuelve a abrir al momento.</span><span lang="en">If needed, &quot;Reset usage&quot; opens it again right away.</span></li>
+</ol>
+
+<figure class="captura"><img class="solo-claro" lang="es" src="capturas/presupuesto.claro.es.webp" loading="lazy" alt="Las barras de presupuesto de una API"><img class="solo-claro" lang="en" src="capturas/presupuesto.claro.en.webp" loading="lazy" alt="An API’s budget bars"><img class="solo-oscuro" lang="es" src="capturas/presupuesto.oscuro.es.webp" loading="lazy" alt="Las barras de presupuesto de una API"><img class="solo-oscuro" lang="en" src="capturas/presupuesto.oscuro.en.webp" loading="lazy" alt="An API’s budget bars"></figure>
+
+<p class="aviso"><span lang="es">El límite en dólares solo suma el costo que informa el agente (hoy Claude). Para todo el espacio, añade «presupuesto» a la configuración global.</span><span lang="en">The dollar limit only adds up the cost the agent reports (Claude today). For the whole workspace, add &quot;presupuesto&quot; to the global settings.</span></p>
+
+<dl class="errores">
+  <div id="e-presupuesto_agotado"><dt><span lang="es">Se agotó el presupuesto</span><span lang="en">The budget ran out</span> <code>presupuesto_agotado</code></dt><dd><span lang="es">Esa API o el espacio llegó a su límite (error 429). Espera al reinicio del día o del mes, o pulsa «Reiniciar consumo» en Mis APIs.</span><span lang="en">That API or the workspace hit its limit (error 429). Wait for the day or month to reset, or click &quot;Reset usage&quot; in My APIs.</span></dd></div>
+</dl>
+
+<h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
+<div class="tarjetas-temas">
+  <a class="tarjeta-tema" href="conectar.html"><strong><span lang="es">Conectar mi app</span><span lang="en">Connect my app</span></strong><span><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.</span><span lang="en">Change your OpenAI or Anthropic SDK’s base URL to Tramtai’s and pick the agent with model.</span></span></a>
+  <a class="tarjeta-tema" href="historial.html"><strong><span lang="es">Historial</span><span lang="en">History</span></strong><span><span lang="es">Cada petición queda en el Historial con su respuesta, el agente que respondió y el registro de cada paso.</span><span lang="en">Every request stays in History with its answer, the agent that answered and the log of each step.</span></span></a>
+  <a class="tarjeta-tema" href="conceptos.html"><strong><span lang="es">Conceptos</span><span lang="en">Concepts</span></strong><span><span lang="es">Las palabras que usa Tramtai, en una línea cada una.</span><span lang="en">The words Tramtai uses, one line each.</span></span></a>
+</div>
+</article>
+</main>
+
+<footer>
+  <div class="envoltura">
+    <span>© 2026 Michael Scott B. · Tramtai · <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a></span>
+    <span>
+      <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span>
+    </span>
+  </div>
+</footer>
+
+<script src="../sitio.js"></script>
+</body>
+</html>

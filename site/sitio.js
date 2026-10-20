@@ -176,3 +176,71 @@
     }).catch(function () {});
   });
 })();
+
+// Buscador de la Ayuda (site/ayuda/): busca por palabras en indice.json, en el idioma que se ve. Sin JavaScript queda
+// oculto y se navega por las tarjetas.
+(function () {
+  var caja = document.querySelector('.buscar-ayuda');
+  var campo = document.getElementById('buscar-ayuda');
+  var lista = document.getElementById('resultados-ayuda');
+  if (!caja || !campo || !lista) return;
+  var indice = null;
+  caja.hidden = false;
+  function normalizar(s) {
+    return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[\s_]+/g, ' ').trim();
+  }
+  // raiz es la de web/src/ayuda/buscar.ts: «filtrada» encuentra «se filtra».
+  function raiz(p) {
+    if (p.length <= 5) return p;
+    var corta = p.replace(/(aciones|acion|adas|ados|ada|ado|idas|idos|ida|ido|es|s)$/, '');
+    return corta.length >= 4 ? corta : p;
+  }
+  function mostrar() {
+    var palabras = normalizar(campo.value).split(' ').filter(Boolean).map(raiz);
+    var cuenta = document.getElementById('cuenta-ayuda');
+    lista.innerHTML = '';
+    if (cuenta) cuenta.textContent = '';
+    if (!palabras.length || !indice) return;
+    var entradas = indice[document.documentElement.lang === 'en' ? 'en' : 'es'] || [];
+    var hallados = entradas.filter(function (e) {
+      return palabras.every(function (p) { return e.x.indexOf(p) >= 0; });
+    }).sort(function (a, b) {
+      var pa = palabras.every(function (p) { return normalizar(a.d).indexOf(p) >= 0; }) ? 0 : 1;
+      var pb = palabras.every(function (p) { return normalizar(b.d).indexOf(p) >= 0; }) ? 0 : 1;
+      return pa - pb;
+    }).slice(0, 30);
+    hallados.forEach(function (e) {
+      var li = document.createElement('li');
+      var a = document.createElement('a');
+      a.href = e.t + '.html' + (e.a ? '#' + e.a : '');
+      a.textContent = e.d;
+      if (e.d !== e.ti) {
+        var donde = document.createElement('span');
+        donde.textContent = e.ti;
+        a.appendChild(donde);
+      }
+      li.appendChild(a);
+      lista.appendChild(li);
+    });
+    var en = document.documentElement.lang === 'en';
+    if (cuenta) cuenta.textContent = hallados.length + (en ? (hallados.length === 1 ? ' result' : ' results') : (hallados.length === 1 ? ' resultado' : ' resultados'));
+    if (!hallados.length) {
+      var vacio = document.createElement('li');
+      vacio.textContent = (en ? 'Nothing matches “' : 'Nada coincide con «') + campo.value.trim() + (en ? '”.' : '».');
+      lista.appendChild(vacio);
+    }
+  }
+  fetch('indice.json').then(function (r) { if (!r.ok) throw r; return r.json(); }).then(function (datos) {
+    indice = datos;
+    mostrar();
+  }).catch(function () { caja.hidden = true; });
+  campo.addEventListener('input', mostrar);
+  // Al cambiar de idioma, los resultados se rehacen en el nuevo.
+  document.querySelectorAll('[data-idioma]').forEach(function (b) { b.addEventListener('click', function () { setTimeout(mostrar); }); });
+})();
+
+// Al llegar a una pregunta de la Ayuda por su ancla (#terminos), se abre.
+(function () {
+  var destino = location.hash && document.getElementById(location.hash.slice(1));
+  if (destino && destino.tagName === 'DETAILS') destino.open = true;
+})();

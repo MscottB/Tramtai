@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Respuestas JSON · Tramtai</title>
+<meta name="description" content="Pide la respuesta con una forma fija (un esquema JSON) y Tramtai la valida antes de entregarla.">
+<meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../logo.png">
+<link rel="stylesheet" href="../estilo.css">
+<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t } catch (e) {}</script>
+</head>
+<body>
+<header class="barra">
+  <div class="envoltura">
+    <a class="marca" href="../index.html"><img src="../logo.png" alt="">Tramtai</a>
+    <nav aria-label="Secciones">
+      <a href="../index.html#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+      <a href="../index.html#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+      <a href="index.html" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+    </nav>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+    </a>
+    <div class="idioma" role="group" aria-label="Idioma / Language">
+      <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+      <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+    </div>
+    <div class="idioma tema" role="group" aria-label="Tema / Theme">
+      <button type="button" data-tema="sistema" aria-pressed="true" aria-label="Tema del sistema / System theme" title="Sistema / System">◐</button>
+      <button type="button" data-tema="claro" aria-pressed="false" aria-label="Tema claro / Light theme" title="Claro / Light">☀</button>
+      <button type="button" data-tema="oscuro" aria-pressed="false" aria-label="Tema oscuro / Dark theme" title="Oscuro / Dark">☾</button>
+    </div>
+    <a class="boton principal" href="../index.html#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+  </div>
+</header>
+
+<main class="envoltura ayuda-temas">
+<nav class="migas" aria-label="Ruta / Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Respuestas JSON</span><span lang="en">JSON answers</span></nav>
+<article class="doc tema-ayuda">
+<header>
+  <h1><span lang="es">Respuestas JSON</span><span lang="en">JSON answers</span></h1>
+  <p class="entradilla"><span lang="es">Pide la respuesta con una forma fija (un esquema JSON) y Tramtai la valida antes de entregarla.</span><span lang="en">Ask for the answer in a fixed shape (a JSON schema) and Tramtai validates it before handing it over.</span></p>
+</header>
+
+<ol class="diagrama" style="--paradas: 4">
+  <li><strong>1. <span lang="es">El esquema</span><span lang="en">The schema</span></strong><span><span lang="es">Los campos y su tipo, armados con plantillas o en JSON.</span><span lang="en">The fields and their type, built from templates or in JSON.</span></span></li>
+  <li><strong>2. <span lang="es">El agente</span><span lang="en">The agent</span></strong><span><span lang="es">Responde siguiendo la forma pedida.</span><span lang="en">Answers following the requested shape.</span></span></li>
+  <li><strong>3. <span lang="es">La validación</span><span lang="en">Validation</span></strong><span><span lang="es">Tramtai comprueba cada campo, también los formatos: fecha, correo, URL…</span><span lang="en">Tramtai checks every field, formats too: date, email, URL…</span></span></li>
+  <li><strong>4. <span lang="es">La corrección</span><span lang="en">Correction</span></strong><span><span lang="es">Si no cumple, puede pedir al mismo agente que la arregle, hasta 3 veces.</span><span lang="en">If it does not match, it can ask the same agent to fix it, up to 3 times.</span></span></li>
+</ol>
+
+<ol class="pasos">
+  <li><span lang="es">En Probar, abre «Opciones de la receta» y activa «Respuesta con forma».</span><span lang="en">In Try, open &quot;Recipe options&quot; and turn on &quot;Shaped response&quot;.</span></li>
+  <li><span lang="es">Elige una plantilla (extraer datos, clasificar, resumen, tareas…) o añade tus campos con su tipo y descripción.</span><span lang="en">Pick a template (extract data, classify, summary, tasks…) or add your fields with their type and description.</span></li>
+  <li><span lang="es">Prueba: si no cumple, verás qué campo falló y el botón «Corregir».</span><span lang="en">Test it: if it does not match, you will see which field failed and the &quot;Correct&quot; button.</span></li>
+  <li><span lang="es">En «Si la respuesta no cumple» pide hasta 3 correcciones automáticas; cada una es otra petición.</span><span lang="en">In &quot;If the response does not match&quot; ask for up to 3 automatic corrections; each one is another request.</span></li>
+  <li><span lang="es">Pulsa «Guardar como API»: tu app recibirá siempre esa forma.</span><span lang="en">Click &quot;Save as API&quot;: your app will always get that shape.</span></li>
+</ol>
+
+<p class="aviso"><span lang="es">Por OpenAI el esquema va en response_format; por la API propia, en salida. Si la respuesta no cumple, llega 422 salida_no_cumple_esquema.</span><span lang="en">Through OpenAI the schema goes in response_format; through the native API, in salida. If the answer does not match, you get 422 salida_no_cumple_esquema.</span></p>
+
+<details id="formatos-json"><summary><span lang="es">¿Se comprueban los formatos?</span><span lang="en">Are formats checked?</span></summary><p><span lang="es">Sí: fecha, fecha y hora, correo, URL… Una fecha y hora sin zona horaria no cumple «date-time».</span><span lang="en">Yes: date, date-time, email, URL… A date-time without a time zone does not match &quot;date-time&quot;.</span></p></details>
+<details id="esquema-a-mano"><summary><span lang="es">¿Puedo escribir el esquema a mano?</span><span lang="en">Can I write the schema by hand?</span></summary><p><span lang="es">Sí, en la pestaña JSON de «Respuesta con forma». Si falla siempre, simplifícalo o aclara la descripción de los campos.</span><span lang="en">Yes, in the JSON tab of &quot;Shaped response&quot;. If it keeps failing, simplify it or clarify the fields’ descriptions.</span></p></details>
+
+<dl class="errores">
+  <div id="e-salida_no_cumple_esquema"><dt><span lang="es">La respuesta no cumple el JSON Schema</span><span lang="en">The response does not match the JSON Schema</span> <code>salida_no_cumple_esquema</code></dt><dd><span lang="es">La respuesta no tenía la forma pedida. En Probar verás qué campo falló; «Corregir» pide al agente que la arregle. Si falla siempre, simplifica el esquema.</span><span lang="en">The answer did not have the requested shape. Try shows which field failed; &quot;Correct&quot; asks the agent to fix it. If it keeps failing, simplify the schema.</span></dd></div>
+</dl>
+
+<h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
+<div class="tarjetas-temas">
+  <a class="tarjeta-tema" href="probar.html"><strong><span lang="es">Probar</span><span lang="en">Try</span></strong><span><span lang="es">Escribe un mensaje, elige agente, modelo y esfuerzo, y mira la respuesta antes de llevarla a tu app.</span><span lang="en">Type a message, pick agent, model and effort, and see the answer before taking it to your app.</span></span></a>
+  <a class="tarjeta-tema" href="recetas.html"><strong><span lang="es">Recetas y respaldo</span><span lang="en">Recipes and fallback</span></strong><span><span lang="es">Una receta fija instrucciones, agente, modelo, esquema y respaldo, para que tu app solo envíe el mensaje.</span><span lang="en">A recipe fixes instructions, agent, model, schema and fallback, so your app only sends the message.</span></span></a>
+  <a class="tarjeta-tema" href="conectar.html"><strong><span lang="es">Conectar mi app</span><span lang="en">Connect my app</span></strong><span><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.</span><span lang="en">Change your OpenAI or Anthropic SDK’s base URL to Tramtai’s and pick the agent with model.</span></span></a>
+</div>
+</article>
+</main>
+
+<footer>
+  <div class="envoltura">
+    <span>© 2026 Michael Scott B. · Tramtai · <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a></span>
+    <span>
+      <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span>
+    </span>
+  </div>
+</footer>
+
+<script src="../sitio.js"></script>
+</body>
+</html>

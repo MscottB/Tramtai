@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Herramientas · Tramtai</title>
+<meta name="description" content="Tu app ofrece funciones; el agente pide una con sus argumentos y tu app la ejecuta y le devuelve el resultado.">
+<meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../logo.png">
+<link rel="stylesheet" href="../estilo.css">
+<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t } catch (e) {}</script>
+</head>
+<body>
+<header class="barra">
+  <div class="envoltura">
+    <a class="marca" href="../index.html"><img src="../logo.png" alt="">Tramtai</a>
+    <nav aria-label="Secciones">
+      <a href="../index.html#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+      <a href="../index.html#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+      <a href="index.html" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+    </nav>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+    </a>
+    <div class="idioma" role="group" aria-label="Idioma / Language">
+      <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+      <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+    </div>
+    <div class="idioma tema" role="group" aria-label="Tema / Theme">
+      <button type="button" data-tema="sistema" aria-pressed="true" aria-label="Tema del sistema / System theme" title="Sistema / System">◐</button>
+      <button type="button" data-tema="claro" aria-pressed="false" aria-label="Tema claro / Light theme" title="Claro / Light">☀</button>
+      <button type="button" data-tema="oscuro" aria-pressed="false" aria-label="Tema oscuro / Dark theme" title="Oscuro / Dark">☾</button>
+    </div>
+    <a class="boton principal" href="../index.html#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+  </div>
+</header>
+
+<main class="envoltura ayuda-temas">
+<nav class="migas" aria-label="Ruta / Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Herramientas</span><span lang="en">Tools</span></nav>
+<article class="doc tema-ayuda">
+<header>
+  <h1><span lang="es">Herramientas</span><span lang="en">Tools</span></h1>
+  <p class="entradilla"><span lang="es">Tu app ofrece funciones; el agente pide una con sus argumentos y tu app la ejecuta y le devuelve el resultado.</span><span lang="en">Your app offers functions; the agent asks for one with its arguments, and your app runs it and returns the result.</span></p>
+</header>
+
+<ol class="diagrama" style="--paradas: 4">
+  <li><strong>1. <span lang="es">Tu app ofrece</span><span lang="en">Your app offers</span></strong><span><span lang="es">Las funciones, con un JSON Schema para sus argumentos.</span><span lang="en">The functions, with a JSON Schema for their arguments.</span></span></li>
+  <li><strong>2. <span lang="es">El agente pide</span><span lang="en">The agent asks</span></strong><span><span lang="es">Una llamada con argumentos ya validados. Nunca ejecuta nada.</span><span lang="en">A call with arguments already validated. It never runs anything.</span></span></li>
+  <li><strong>3. <span lang="es">Tu app ejecuta</span><span lang="en">Your app runs it</span></strong><span><span lang="es">La función, y le devuelve el resultado en el siguiente mensaje.</span><span lang="en">The function, and returns the result in the next message.</span></span></li>
+  <li><strong>4. <span lang="es">La respuesta</span><span lang="en">The answer</span></strong><span><span lang="es">El agente responde usando ese resultado.</span><span lang="en">The agent answers using that result.</span></span></li>
+</ol>
+
+<ol class="pasos">
+  <li><span lang="es">Pasa tus funciones en tools (OpenAI y Anthropic) o en herramientas (API propia).</span><span lang="en">Pass your functions in tools (OpenAI and Anthropic) or herramientas (native API).</span></li>
+  <li><span lang="es">Si el agente pide una, ejecútala en tu app con los argumentos que llegan.</span><span lang="en">If the agent asks for one, run it in your app with the arguments it sends.</span></li>
+  <li><span lang="es">Devuelve el resultado en el siguiente mensaje (rol tool o herramienta) y vuelve a llamar.</span><span lang="en">Return the result in the next message (tool or herramienta role) and call again.</span></li>
+</ol>
+
+<p class="aviso"><span lang="es">tool_choice (auto, required, none o una función) y las llamadas en paralelo funcionan igual que en OpenAI y Anthropic.</span><span lang="en">tool_choice (auto, required, none or one function) and parallel calls work as in OpenAI and Anthropic.</span></p>
+
+<p class="aviso"><span lang="es">Con herramientas, la respuesta llega completa al terminar, aunque pidas stream.</span><span lang="en">With tools, the answer arrives complete at the end, even if you ask for stream.</span></p>
+
+<details id="ejemplo-completo"><summary><span lang="es">¿Dónde está el ejemplo completo?</span><span lang="en">Where is the full example?</span></summary><p><span lang="es">En la guía del desarrollador: el ciclo completo en Python, JavaScript, Go y curl, por las tres URL.</span><span lang="en">In the developer guide: the whole cycle in Python, JavaScript, Go and curl, through all three URLs.</span></p></details>
+<details id="ejecuta-algo"><summary><span lang="es">¿El agente puede ejecutar algo en mi equipo?</span><span lang="en">Can the agent run something on my computer?</span></summary><p><span lang="es">No. Solo pide la llamada; ejecutarla o no lo decide tu app.</span><span lang="en">No. It only asks for the call; whether to run it is up to your app.</span></p></details>
+<p class="aviso"><a href="../desarrolladores.html"><span lang="es">Guía del desarrollador</span><span lang="en">Developer guide</span></a>: <span lang="es">el ciclo completo en Python, JavaScript, Go y curl.</span><span lang="en">the full cycle in Python, JavaScript, Go and curl.</span></p>
+
+<h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
+<div class="tarjetas-temas">
+  <a class="tarjeta-tema" href="conectar.html"><strong><span lang="es">Conectar mi app</span><span lang="en">Connect my app</span></strong><span><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.</span><span lang="en">Change your OpenAI or Anthropic SDK’s base URL to Tramtai’s and pick the agent with model.</span></span></a>
+  <a class="tarjeta-tema" href="json.html"><strong><span lang="es">Respuestas JSON</span><span lang="en">JSON answers</span></strong><span><span lang="es">Pide la respuesta con una forma fija (un esquema JSON) y Tramtai la valida antes de entregarla.</span><span lang="en">Ask for the answer in a fixed shape (a JSON schema) and Tramtai validates it before handing it over.</span></span></a>
+  <a class="tarjeta-tema" href="archivos.html"><strong><span lang="es">Archivos</span><span lang="en">Files</span></strong><span><span lang="es">Tramtai convierte tus PDF, Word, Excel y otros documentos a texto antes de pasárselos al agente.</span><span lang="en">Tramtai turns your PDF, Word, Excel and other documents into text before handing them to the agent.</span></span></a>
+</div>
+</article>
+</main>
+
+<footer>
+  <div class="envoltura">
+    <span>© 2026 Michael Scott B. · Tramtai · <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a></span>
+    <span>
+      <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span>
+    </span>
+  </div>
+</footer>
+
+<script src="../sitio.js"></script>
+</body>
+</html>

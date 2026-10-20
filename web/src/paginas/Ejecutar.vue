@@ -1,10 +1,10 @@
 <template>
   <div class="pagina apilado">
-    <CabeceraPagina :titulo="t('menu.ejecutar')" :descripcion="t('ejecutar.subtitulo')" />
+    <CabeceraPagina tema="ejecutar" :titulo="t('menu.ejecutar')" :descripcion="t('ejecutar.subtitulo')" />
 
     <div class="row q-col-gutter-lg">
       <div class="col-12 col-md-5">
-        <q-card>
+        <q-card data-captura="receta">
           <q-card-section class="q-pb-sm row items-start no-wrap q-gutter-x-sm">
             <div class="col">
               <div class="titulo-seccion">{{ t('ejecutar.receta') }}</div>
@@ -122,6 +122,7 @@
               <q-banner v-if="final?.codigo_error" rounded dense class="error-caja q-mb-md">
                 <template #avatar><q-icon name="o_error" /></template>
                 <b>{{ tituloError(final.codigo_error) }}</b><span v-if="final.mensaje_error && !problemas.length">: {{ final.mensaje_error }}</span>
+                <template v-if="final.codigo_error in ERRORES" #action><BotonAyuda tema="problemas" :ancla="'e-' + final.codigo_error" que-hago /></template>
               </q-banner>
               <!-- La respuesta no cumplía la forma pedida: qué falló, la respuesta tal como llegó y «Corregir». -->
               <div v-if="problemas.length" class="q-mb-md">
@@ -174,6 +175,8 @@
 </template>
 
 <script setup lang="ts">
+import BotonAyuda from '../componentes/ayuda/BotonAyuda.vue'
+import { ERRORES } from '../ayuda/temas/problemas'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'

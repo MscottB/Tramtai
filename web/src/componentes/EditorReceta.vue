@@ -17,6 +17,7 @@
       @update:model-value="(v: boolean) => cambiar({ forzar: v })" />
     <SelectorModelo :model-value="basesRespaldo" :opciones="opcionesRespaldo" multiple :maximo="3" icono="o_alt_route"
       :label="t('receta.respaldo')" :hint="t('receta.respaldoHint')" @update:model-value="(v) => elegirRespaldo((v as string[] | null) ?? [])" />
+    <div><BotonAyuda tema="recetas" /></div>
     <!-- Cada agente de respaldo puede llevar su propio esfuerzo; sin elegir, el del principal o el de su CLI. -->
     <div v-for="(r, i) in respaldoDividido" :key="r.base" class="q-pl-md">
       <SelectorEsfuerzo v-if="r.niveles.length" :model-value="r.esfuerzo" :niveles="esfuerzoPrincipal ? ['agente', ...r.niveles] : r.niveles" :etiqueta="t('receta.esfuerzoDe', { agente: r.nombre })"
@@ -47,6 +48,7 @@
       <q-banner v-if="!camposDelEsquema && !errorEsquema" rounded dense class="info-caja">
         <template #avatar><q-icon name="o_info" color="primary" /></template>{{ t('receta.esquemaAvanzado') }}
       </q-banner>
+      <div><BotonAyuda tema="json" /></div>
       <div v-if="modo === 'campos' && camposDelEsquema">
         <CamposEsquema :model-value="campos" :nivel="1" :ordenable="!paraApi" @update:model-value="escribirCampos" />
         <div v-if="problemaCampos" class="text-caption text-negative" role="alert">{{ problemaCampos }}</div>
@@ -68,6 +70,7 @@
 <script setup lang="ts">
 // EditorReceta edita lo que define una API (instrucciones, modelo, esfuerzo, respaldo y esquema); lo comparten
 // Probar, donde se prueba, y Mis APIs, donde se guarda.
+import BotonAyuda from './ayuda/BotonAyuda.vue'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { QExpansionItem, useQuasar } from 'quasar'
 import CamposEsquema from './CamposEsquema.vue'

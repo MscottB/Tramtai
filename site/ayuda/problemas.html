@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Algo falló · Tramtai</title>
+<meta name="description" content="Los errores más comunes, con el mismo título que ves en la app, y qué hacer con cada uno.">
+<meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../logo.png">
+<link rel="stylesheet" href="../estilo.css">
+<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t } catch (e) {}</script>
+</head>
+<body>
+<header class="barra">
+  <div class="envoltura">
+    <a class="marca" href="../index.html"><img src="../logo.png" alt="">Tramtai</a>
+    <nav aria-label="Secciones">
+      <a href="../index.html#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+      <a href="../index.html#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+      <a href="index.html" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+    </nav>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+    </a>
+    <div class="idioma" role="group" aria-label="Idioma / Language">
+      <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+      <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+    </div>
+    <div class="idioma tema" role="group" aria-label="Tema / Theme">
+      <button type="button" data-tema="sistema" aria-pressed="true" aria-label="Tema del sistema / System theme" title="Sistema / System">◐</button>
+      <button type="button" data-tema="claro" aria-pressed="false" aria-label="Tema claro / Light theme" title="Claro / Light">☀</button>
+      <button type="button" data-tema="oscuro" aria-pressed="false" aria-label="Tema oscuro / Dark theme" title="Oscuro / Dark">☾</button>
+    </div>
+    <a class="boton principal" href="../index.html#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+  </div>
+</header>
+
+<main class="envoltura ayuda-temas">
+<nav class="migas" aria-label="Ruta / Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Algo falló</span><span lang="en">Something failed</span></nav>
+<article class="doc tema-ayuda">
+<header>
+  <h1><span lang="es">Algo falló</span><span lang="en">Something failed</span></h1>
+  <p class="entradilla"><span lang="es">Los errores más comunes, con el mismo título que ves en la app, y qué hacer con cada uno.</span><span lang="en">The most common errors, with the same title you see in the app, and what to do about each.</span></p>
+</header>
+
+<ol class="pasos">
+  <li><span lang="es">Abre el Historial y pulsa la petición con error.</span><span lang="en">Open History and click the request with the error.</span></li>
+  <li><span lang="es">Busca su error aquí abajo: cada uno dice qué significa y qué hacer.</span><span lang="en">Find its error below: each one says what it means and what to do.</span></li>
+  <li><span lang="es">Abre «Registro» para ver con qué agente se intentó, los avisos y cuánto tardó.</span><span lang="en">Open &quot;Log&quot; to see which agent was tried, the warnings and how long it took.</span></li>
+  <li><span lang="es">Corrige la causa y pulsa «Reintentar».</span><span lang="en">Fix the cause and click &quot;Retry&quot;.</span></li>
+</ol>
+
+<dl class="errores">
+  <div id="e-sin_conexion"><dt><span lang="es">Sin conexión</span><span lang="en">Offline</span></dt><dd><span lang="es">El servicio no está en marcha. Abre la app o ejecuta «tramtai servicio iniciar»; con el arranque automático de Ajustes no vuelve a pasar.</span><span lang="en">The service is not running. Open the app or run &quot;tramtai servicio iniciar&quot;; with start-up in Settings it won’t happen again.</span></dd></div>
+  <div id="e-no_autorizado"><dt><span lang="es">Falta la clave o no es válida</span><span lang="en">The key is missing or not valid</span> <code>no_autorizado</code></dt><dd><span lang="es">Revisa la clave en tu app: la de la API principal o la de esa API. Si la regeneraste, la anterior ya no vale.</span><span lang="en">Check the key in your app: the Main API one or that API’s. If you regenerated it, the old one no longer works.</span></dd></div>
+  <div id="e-autenticacion_agente"><dt><span lang="es">El agente no tiene una sesión o clave válida</span><span lang="en">The agent has no valid session or key</span> <code>autenticacion_agente</code></dt><dd><span lang="es">El agente no tiene sesión ni clave. En Agentes, inicia sesión en su CLI o guarda una clave de API.</span><span lang="en">The agent has no session or key. In Agents, sign in to its CLI or save an API key.</span></dd></div>
+  <div id="e-agente_no_disponible"><dt><span lang="es">El agente no está disponible</span><span lang="en">The agent is not available</span> <code>agente_no_disponible</code></dt><dd><span lang="es">El CLI no está instalado o no se encuentra; Agentes dice cómo instalarlo. Antigravity, además, no se usa desde APIs.</span><span lang="en">The CLI is not installed or cannot be found; Agents says how to install it. Antigravity also cannot be used from APIs.</span></dd></div>
+  <div id="e-limite_uso_proveedor"><dt><span lang="es">Se alcanzó el límite de uso del proveedor</span><span lang="en">The provider usage limit was reached</span> <code>limite_uso_proveedor</code></dt><dd><span lang="es">Llegaste al límite de tu plan o de tu clave. Espera a que el proveedor lo reinicie o añade un respaldo a la receta.</span><span lang="en">You hit your plan’s or key’s limit. Wait for the provider to reset it or add a fallback to the recipe.</span></dd></div>
+  <div id="e-modelo_no_disponible"><dt><span lang="es">Ese modelo no está disponible</span><span lang="en">That model is not available</span> <code>modelo_no_disponible</code></dt><dd><span lang="es">Usa un modelo de la lista con el agente delante, por ejemplo claude/sonnet, o un perfil como perfil/rapido.</span><span lang="en">Use a model from the list with the agent in front, for example claude/sonnet, or a profile like perfil/rapido.</span></dd></div>
+  <div id="e-parametro_no_soportado"><dt><span lang="es">Hay un parámetro que no se admite</span><span lang="en">A parameter is not supported</span> <code>parametro_no_soportado</code></dt><dd><span lang="es">Pediste algo que los agentes de terminal no pueden respetar (imágenes, n mayor que 1, stop…): quítalo. Uno desconocido se acepta con compatibilidad.modo_tolerante.</span><span lang="en">You asked for something terminal agents cannot honor (images, n above 1, stop…): remove it. Unknown ones are accepted with compatibilidad.modo_tolerante.</span></dd></div>
+  <div id="e-entrada_demasiado_grande"><dt><span lang="es">La entrada no cabe en el modelo</span><span lang="en">The input does not fit in the model</span> <code>entrada_demasiado_grande</code></dt><dd><span lang="es">Los documentos no caben en el modelo. Envía menos páginas, divide el archivo o pon en el respaldo un modelo con más contexto.</span><span lang="en">The documents do not fit the model. Send fewer pages, split the file or put a model with more context in the fallback.</span></dd></div>
+  <div id="e-presupuesto_agotado"><dt><span lang="es">Se agotó el presupuesto</span><span lang="en">The budget ran out</span> <code>presupuesto_agotado</code></dt><dd><span lang="es">Esa API o el espacio llegó a su límite (error 429). Espera al reinicio del día o del mes, o pulsa «Reiniciar consumo» en Mis APIs.</span><span lang="en">That API or the workspace hit its limit (error 429). Wait for the day or month to reset, or click &quot;Reset usage&quot; in My APIs.</span></dd></div>
+  <div id="e-salida_no_cumple_esquema"><dt><span lang="es">La respuesta no cumple el JSON Schema</span><span lang="en">The response does not match the JSON Schema</span> <code>salida_no_cumple_esquema</code></dt><dd><span lang="es">La respuesta no tenía la forma pedida. En Probar verás qué campo falló; «Corregir» pide al agente que la arregle. Si falla siempre, simplifica el esquema.</span><span lang="en">The answer did not have the requested shape. Try shows which field failed; &quot;Correct&quot; asks the agent to fix it. If it keeps failing, simplify the schema.</span></dd></div>
+  <div id="e-tiempo_ejecucion_agotado"><dt><span lang="es">Se agotó el tiempo límite</span><span lang="en">The time limit ran out</span> <code>tiempo_ejecucion_agotado</code></dt><dd><span lang="es">Tardó más que el tiempo límite. Súbelo en las opciones avanzadas de Probar o en la petición, o baja el esfuerzo.</span><span lang="en">It took longer than the time limit. Raise it in Try’s advanced options or in the request, or lower the effort.</span></dd></div>
+  <div id="e-cola_llena"><dt><span lang="es">La cola está llena; inténtalo en un momento</span><span lang="en">The queue is full; try again shortly</span> <code>cola_llena</code></dt><dd><span lang="es">Hay demasiadas peticiones a la vez. Reintenta en unos segundos: la respuesta trae Retry-After con la espera.</span><span lang="en">Too many requests at once. Retry in a few seconds: the response carries Retry-After with the wait.</span></dd></div>
+  <div id="e-conversion_fallida"><dt><span lang="es">No se pudo convertir el archivo</span><span lang="en">The file could not be converted</span> <code>conversion_fallida</code></dt><dd><span lang="es">No se pudo convertir un archivo. Comprueba que no esté dañado ni protegido con contraseña y que su formato se admita.</span><span lang="en">A file could not be converted. Check that it is not damaged or password-protected and that its format is accepted.</span></dd></div>
+  <div id="e-conversor_no_disponible"><dt><span lang="es">Falta el conversor de archivos</span><span lang="en">The file converter is missing</span> <code>conversor_no_disponible</code></dt><dd><span lang="es">Falta el conversor de archivos: Ajustes → Archivos → «Preparar archivos». Si tu red bloquea la descarga, usa el paquete del conversor para Windows.</span><span lang="en">The file converter is missing: Settings → Files → &quot;Prepare files&quot;. If your network blocks the download, use the converter package for Windows.</span></dd></div>
+  <div id="e-error_agente"><dt><span lang="es">El agente devolvió un error</span><span lang="en">The agent returned an error</span> <code>error_agente</code></dt><dd><span lang="es">El agente falló al responder. Abre «Registro» para ver su mensaje; reintenta, o pon un respaldo en la receta para que siga otro agente.</span><span lang="en">The agent failed while answering. Open &quot;Log&quot; to see its message; retry, or add a fallback to the recipe so another agent takes over.</span></dd></div>
+  <div id="e-error_protocolo_agente"><dt><span lang="es">No se entendió la respuesta del agente</span><span lang="en">The agent response could not be understood</span> <code>error_protocolo_agente</code></dt><dd><span lang="es">El CLI respondió algo que Tramtai no entiende; suele pasar tras actualizar el CLI. Actualiza Tramtai o prueba con otro agente.</span><span lang="en">The CLI answered something Tramtai does not understand; it usually happens after updating the CLI. Update Tramtai or try another agent.</span></dd></div>
+  <div id="e-tiempo_cola_agotado"><dt><span lang="es">Esperó demasiado en la cola</span><span lang="en">It waited too long in the queue</span> <code>tiempo_cola_agotado</code></dt><dd><span lang="es">La petición esperó demasiado su turno porque había muchas a la vez. Reintenta en un momento o envía menos peticiones juntas.</span><span lang="en">The request waited too long for its turn because there were many at once. Retry in a moment or send fewer requests together.</span></dd></div>
+  <div id="e-modelo_no_permitido"><dt><span lang="es">Esa API no permite ese modelo</span><span lang="en">That API does not allow that model</span> <code>modelo_no_permitido</code></dt><dd><span lang="es">Esa API solo admite ciertos modelos. Usa uno de los suyos o añade ese modelo a sus permitidos en Mis APIs.</span><span lang="en">That API only accepts certain models. Use one of its own or add that model to its allowed list in My APIs.</span></dd></div>
+  <div id="e-modelo_no_configurado"><dt><span lang="es">No hay un modelo configurado para ese perfil</span><span lang="en">No model is configured for that profile</span> <code>modelo_no_configurado</code></dt><dd><span lang="es">El perfil pedido (por ejemplo perfil/rapido) no tiene modelo para ese agente. Elige un modelo concreto, como claude/sonnet.</span><span lang="en">The requested profile (for example perfil/rapido) has no model for that agent. Pick a specific model, like claude/sonnet.</span></dd></div>
+  <div id="e-cuota_cargas_agotada"><dt><span lang="es">Se llenó el espacio para archivos</span><span lang="en">The space for files is full</span> <code>cuota_cargas_agotada</code></dt><dd><span lang="es">Se llenó el espacio para archivos subidos. Espera a que venzan los anteriores o borra datos en Ajustes.</span><span lang="en">The space for uploaded files is full. Wait for older ones to expire or delete data in Settings.</span></dd></div>
+</dl>
+
+<h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
+<div class="tarjetas-temas">
+  <a class="tarjeta-tema" href="historial.html"><strong><span lang="es">Historial</span><span lang="en">History</span></strong><span><span lang="es">Cada petición queda en el Historial con su respuesta, el agente que respondió y el registro de cada paso.</span><span lang="en">Every request stays in History with its answer, the agent that answered and the log of each step.</span></span></a>
+  <a class="tarjeta-tema" href="agentes.html"><strong><span lang="es">Agentes y modelos</span><span lang="en">Agents and models</span></strong><span><span lang="es">Tramtai usa el CLI oficial de cada agente; lo conectas con tu suscripción o con una clave de API.</span><span lang="en">Tramtai uses each agent’s official CLI; you connect it with your subscription or an API key.</span></span></a>
+  <a class="tarjeta-tema" href="conectar.html"><strong><span lang="es">Conectar mi app</span><span lang="en">Connect my app</span></strong><span><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.</span><span lang="en">Change your OpenAI or Anthropic SDK’s base URL to Tramtai’s and pick the agent with model.</span></span></a>
+</div>
+</article>
+</main>
+
+<footer>
+  <div class="envoltura">
+    <span>© 2026 Michael Scott B. · Tramtai · <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a></span>
+    <span>
+      <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span>
+    </span>
+  </div>
+</footer>
+
+<script src="../sitio.js"></script>
+</body>
+</html>

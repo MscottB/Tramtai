@@ -1,6 +1,6 @@
 <template>
   <div class="pagina apilado">
-    <CabeceraPagina :titulo="t('menu.inicio')">
+    <CabeceraPagina tema="inicio" :titulo="t('menu.inicio')">
       <template #descripcion>
         <div class="row items-center q-gutter-x-sm">
           <span>{{ t('inicio.direccion') }}</span>
@@ -19,7 +19,7 @@
     <q-banner v-if="error" rounded class="error-caja">{{ error }}</q-banner>
     <AvisoConversor v-if="conversor && conversor.estado !== 'preparando'" enlace-ajustes @ajustes="$emit('ir', 'configuracion')" />
 
-    <section class="q-card">
+    <section class="q-card" data-captura="inicio">
       <div class="seccion row items-end">
         <div class="col">
           <h2 class="titulo-seccion q-ma-none">{{ t('inicio.red') }}</h2>

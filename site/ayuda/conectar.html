@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conectar mi app · Tramtai</title>
+<meta name="description" content="Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.">
+<meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../logo.png">
+<link rel="stylesheet" href="../estilo.css">
+<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t } catch (e) {}</script>
+</head>
+<body>
+<header class="barra">
+  <div class="envoltura">
+    <a class="marca" href="../index.html"><img src="../logo.png" alt="">Tramtai</a>
+    <nav aria-label="Secciones">
+      <a href="../index.html#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+      <a href="../index.html#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+      <a href="index.html" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+    </nav>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+    </a>
+    <div class="idioma" role="group" aria-label="Idioma / Language">
+      <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+      <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+    </div>
+    <div class="idioma tema" role="group" aria-label="Tema / Theme">
+      <button type="button" data-tema="sistema" aria-pressed="true" aria-label="Tema del sistema / System theme" title="Sistema / System">◐</button>
+      <button type="button" data-tema="claro" aria-pressed="false" aria-label="Tema claro / Light theme" title="Claro / Light">☀</button>
+      <button type="button" data-tema="oscuro" aria-pressed="false" aria-label="Tema oscuro / Dark theme" title="Oscuro / Dark">☾</button>
+    </div>
+    <a class="boton principal" href="../index.html#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+  </div>
+</header>
+
+<main class="envoltura ayuda-temas">
+<nav class="migas" aria-label="Ruta / Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Conectar mi app</span><span lang="en">Connect my app</span></nav>
+<article class="doc tema-ayuda">
+<header>
+  <h1><span lang="es">Conectar mi app</span><span lang="en">Connect my app</span></h1>
+  <p class="entradilla"><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.</span><span lang="en">Change your OpenAI or Anthropic SDK’s base URL to Tramtai’s and pick the agent with model.</span></p>
+</header>
+
+<ol class="diagrama" style="--paradas: 4">
+  <li><strong>1. <span lang="es">Tu app</span><span lang="en">Your app</span></strong><span><span lang="es">Con el SDK de OpenAI, el de Anthropic o la API propia.</span><span lang="en">With the OpenAI SDK, the Anthropic SDK or the native API.</span></span></li>
+  <li><strong>2. <span lang="es">URL y clave</span><span lang="en">URL and key</span></strong><span><span lang="es">Las de Mis APIs: la API principal o una API por aplicación.</span><span lang="en">The ones from My APIs: the Main API or one API per app.</span></span></li>
+  <li><strong>3. <span lang="es">Tramtai</span><span lang="en">Tramtai</span></strong><span><span lang="es">Aplica la receta de esa API y pone la petición en la cola.</span><span lang="en">Applies that API’s recipe and puts the request in the queue.</span></span></li>
+  <li><strong>4. <span lang="es">El agente</span><span lang="en">The agent</span></strong><span><span lang="es">El que diga model, por ejemplo claude/sonnet o perfil/rapido.</span><span lang="en">The one model names, for example claude/sonnet or perfil/rapido.</span></span></li>
+</ol>
+
+<ol class="pasos">
+  <li><span lang="es">En Mis APIs, pestaña «API principal», copia la URL para OpenAI (o Anthropic) y la clave.</span><span lang="en">In My APIs, &quot;Main API&quot; tab, copy the URL for OpenAI (or Anthropic) and the key.</span></li>
+  <li><span lang="es">En tu app cambia la URL base (base_url) y la clave (api_key) por las de Tramtai.</span><span lang="en">In your app change the base URL (base_url) and the key (api_key) to Tramtai’s.</span></li>
+  <li><span lang="es">En model pon agente y modelo, por ejemplo claude/sonnet, o un perfil como perfil/rapido.</span><span lang="en">In model put agent and model, for example claude/sonnet, or a profile like perfil/rapido.</span></li>
+  <li><span lang="es">Envía una petición: aparece en el Historial con el agente que respondió.</span><span lang="en">Send a request: it shows up in History with the agent that answered.</span></li>
+</ol>
+
+<div class="pestanas" data-pestanas>
+  <div class="pestanas-lista" role="tablist" aria-label="Lenguaje / Language"><button type="button" role="tab" id="e2-curl-nativa" aria-controls="e2-curl-nativa-panel" aria-selected="true" tabindex="0" data-lenguaje="curl-nativa">curl · API propia</button><button type="button" role="tab" id="e2-python-nativa" aria-controls="e2-python-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="python-nativa">Python · API propia</button><button type="button" role="tab" id="e2-node-nativa" aria-controls="e2-node-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="node-nativa">Node · API propia</button><button type="button" role="tab" id="e2-go-nativa" aria-controls="e2-go-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="go-nativa">Go · API propia</button><button type="button" role="tab" id="e2-python" aria-controls="e2-python-panel" aria-selected="false" tabindex="-1" data-lenguaje="python">Python · OpenAI</button><button type="button" role="tab" id="e2-curl" aria-controls="e2-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl · OpenAI</button><button type="button" role="tab" id="e2-anthropic" aria-controls="e2-anthropic-panel" aria-selected="false" tabindex="-1" data-lenguaje="anthropic">Python · Anthropic</button></div>
+  <div role="tabpanel" id="e2-curl-nativa-panel" aria-labelledby="e2-curl-nativa">
+    <pre class="codigo" lang="es"><code># 1. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
+TRABAJO=$(curl -s http://127.0.0.1:17373/api/v1/trabajos -H &quot;Authorization: Bearer &lt;tu clave&gt;&quot; \
+  -H &quot;Content-Type: application/json&quot; -H &quot;Idempotency-Key: $(date +%s)&quot; \
+  -d &#39;{
+  &quot;mensajes&quot;: [
+    {
+      &quot;rol&quot;: &quot;usuario&quot;,
+      &quot;contenido&quot;: &quot;Resume el documento adjunto en una frase.&quot;
+    }
+  ]
+}&#39; | jq -r .id)
+
+# 2. Síguelo en vivo hasta el evento «fin» (si lo cortas, el trabajo sigue y puedes volver con Last-Event-ID)
+curl -sN http://127.0.0.1:17373/api/v1/trabajos/$TRABAJO/eventos -H &quot;Authorization: Bearer &lt;tu clave&gt;&quot;
+
+# 3. Lee el resultado (con esquema, el JSON ya validado)
+curl -s http://127.0.0.1:17373/api/v1/trabajos/$TRABAJO/salida -H &quot;Authorization: Bearer &lt;tu clave&gt;&quot;</code></pre>
+    <pre class="codigo" lang="en"><code># 1. Create the job; repeating the Idempotency-Key returns the same job instead of a duplicate
+TRABAJO=$(curl -s http://127.0.0.1:17373/api/v1/trabajos -H &quot;Authorization: Bearer &lt;your key&gt;&quot; \
+  -H &quot;Content-Type: application/json&quot; -H &quot;Idempotency-Key: $(date +%s)&quot; \
+  -d &#39;{
+  &quot;mensajes&quot;: [
+    {
+      &quot;rol&quot;: &quot;usuario&quot;,
+      &quot;contenido&quot;: &quot;Summarize the attached document in one sentence.&quot;
+    }
+  ]
+}&#39; | jq -r .id)
+
+# 2. Follow it live until the &quot;fin&quot; event (if you stop, the job keeps running and you can resume with Last-Event-ID)
+curl -sN http://127.0.0.1:17373/api/v1/trabajos/$TRABAJO/eventos -H &quot;Authorization: Bearer &lt;your key&gt;&quot;
+
+# 3. Read the result (with a schema, the JSON already validated)
+curl -s http://127.0.0.1:17373/api/v1/trabajos/$TRABAJO/salida -H &quot;Authorization: Bearer &lt;your key&gt;&quot;</code></pre>
+  </div>
+  <div role="tabpanel" id="e2-python-nativa-panel" aria-labelledby="e2-python-nativa">
+    <pre class="codigo" lang="es"><code>import json, sys, uuid
+import requests
+
+BASE = &quot;http://127.0.0.1:17373/api/v1&quot;
+CABECERAS = {&quot;Authorization&quot;: &quot;Bearer &lt;tu clave&gt;&quot;}
+
+# 1. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
+solicitud = {
+    &quot;mensajes&quot;: [
+        {
+            &quot;rol&quot;: &quot;usuario&quot;,
+            &quot;contenido&quot;: &quot;Resume el documento adjunto en una frase.&quot;,
+        },
+    ],
+}
+r = requests.post(f&quot;{BASE}/trabajos&quot;, headers={**CABECERAS, &quot;Idempotency-Key&quot;: str(uuid.uuid4())}, json=solicitud)
+if not r.ok:
+    sys.exit(r.text)
+trabajo = r.json()[&quot;id&quot;]
+
+# 2. Síguelo en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
+fin, evento, datos = {}, &quot;&quot;, []
+with requests.get(f&quot;{BASE}/trabajos/{trabajo}/eventos&quot;, headers=CABECERAS, stream=True) as eventos:
+    for linea in (l.decode(&quot;utf-8&quot;) for l in eventos.iter_lines()):
+        if linea.startswith(&quot;event: &quot;):
+            evento = linea[7:]
+        elif linea.startswith(&quot;data: &quot;):
+            datos.append(linea[6:])
+        elif linea == &quot;&quot; and evento:
+            if evento == &quot;texto&quot;:
+                print(&quot;\n&quot;.join(datos), end=&quot;&quot;, flush=True)
+            elif evento == &quot;fin&quot;:
+                fin = json.loads(&quot;\n&quot;.join(datos))
+                break
+            evento, datos = &quot;&quot;, []
+if fin.get(&quot;estado&quot;) != &quot;completado&quot;:
+    sys.exit(f&quot;\n{fin}&quot;)
+
+# 3. Lee el resultado (con esquema, el JSON ya validado)
+print(&quot;\n&quot; + requests.get(f&quot;{BASE}/trabajos/{trabajo}/salida&quot;, headers=CABECERAS).content.decode(&quot;utf-8&quot;))</code></pre>
+    <pre class="codigo" lang="en"><code>import json, sys, uuid
+import requests
+
+BASE = &quot;http://127.0.0.1:17373/api/v1&quot;
+CABECERAS = {&quot;Authorization&quot;: &quot;Bearer &lt;your key&gt;&quot;}
+
+# 1. Create the job; repeating the Idempotency-Key returns the same job instead of a duplicate
+solicitud = {
+    &quot;mensajes&quot;: [
+        {
+            &quot;rol&quot;: &quot;usuario&quot;,
+            &quot;contenido&quot;: &quot;Summarize the attached document in one sentence.&quot;,
+        },
+    ],
+}
+r = requests.post(f&quot;{BASE}/trabajos&quot;, headers={**CABECERAS, &quot;Idempotency-Key&quot;: str(uuid.uuid4())}, json=solicitud)
+if not r.ok:
+    sys.exit(r.text)
+trabajo = r.json()[&quot;id&quot;]
+
+# 2. Follow it live: each &quot;texto&quot; event carries a piece of the answer and &quot;fin&quot; ends the stream
+fin, evento, datos = {}, &quot;&quot;, []
+with requests.get(f&quot;{BASE}/trabajos/{trabajo}/eventos&quot;, headers=CABECERAS, stream=True) as eventos:
+    for linea in (l.decode(&quot;utf-8&quot;) for l in eventos.iter_lines()):
+        if linea.startswith(&quot;event: &quot;):
+            evento = linea[7:]
+        elif linea.startswith(&quot;data: &quot;):
+            datos.append(linea[6:])
+        elif linea == &quot;&quot; and evento:
+            if evento == &quot;texto&quot;:
+                print(&quot;\n&quot;.join(datos), end=&quot;&quot;, flush=True)
+            elif evento == &quot;fin&quot;:
+                fin = json.loads(&quot;\n&quot;.join(datos))
+                break
+            evento, datos = &quot;&quot;, []
+if fin.get(&quot;estado&quot;) != &quot;completado&quot;:
+    sys.exit(f&quot;\n{fin}&quot;)
+
+# 3. Read the result (with a schema, the JSON already validated)
+print(&quot;\n&quot; + requests.get(f&quot;{BASE}/trabajos/{trabajo}/salida&quot;, headers=CABECERAS).content.decode(&quot;utf-8&quot;))</code></pre>
+  </div>
+  <div role="tabpanel" id="e2-node-nativa-panel" aria-labelledby="e2-node-nativa">
+    <pre class="codigo" lang="es"><code>import { randomUUID } from &#39;node:crypto&#39;
+
+const BASE = &#39;http://127.0.0.1:17373/api/v1&#39;
+const cabeceras = { Authorization: &#39;Bearer &lt;tu clave&gt;&#39; }
+async function pedir(ruta, opciones = {}) {
+  const r = await fetch(BASE + ruta, { ...opciones, headers: { ...cabeceras, ...opciones.headers } })
+  if (!r.ok) throw new Error(await r.text())
+  return r
+}
+
+// 1. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
+const solicitud = {
+  &quot;mensajes&quot;: [
+    {
+      &quot;rol&quot;: &quot;usuario&quot;,
+      &quot;contenido&quot;: &quot;Resume el documento adjunto en una frase.&quot;
+    }
+  ]
+}
+const { id } = await (await pedir(&#39;/trabajos&#39;, { method: &#39;POST&#39;, body: JSON.stringify(solicitud),
+  headers: { &#39;Content-Type&#39;: &#39;application/json&#39;, &#39;Idempotency-Key&#39;: randomUUID() } })).json()
+
+// 2. Síguelo en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
+const eventos = await pedir(`/trabajos/${id}/eventos`)
+const lector = new TextDecoder()
+let pendiente = &#39;&#39;, fin
+for await (const trozo of eventos.body) {
+  pendiente += lector.decode(trozo, { stream: true })
+  let corte
+  while ((corte = pendiente.indexOf(&#39;\n\n&#39;)) &gt;= 0) {
+    const bloque = pendiente.slice(0, corte).split(&#39;\n&#39;)
+    pendiente = pendiente.slice(corte + 2)
+    const evento = bloque.find((l) =&gt; l.startsWith(&#39;event: &#39;))?.slice(7)
+    const datos = bloque.filter((l) =&gt; l.startsWith(&#39;data: &#39;)).map((l) =&gt; l.slice(6)).join(&#39;\n&#39;)
+    if (evento === &#39;texto&#39;) process.stdout.write(datos)
+    if (evento === &#39;fin&#39;) fin = JSON.parse(datos)
+  }
+}
+if (fin?.estado !== &#39;completado&#39;) throw new Error(JSON.stringify(fin))
+
+// 3. Lee el resultado (con esquema, el JSON ya validado)
+console.log(&#39;\n&#39; + await (await pedir(`/trabajos/${id}/salida`)).text())</code></pre>
+    <pre class="codigo" lang="en"><code>import { randomUUID } from &#39;node:crypto&#39;
+
+const BASE = &#39;http://127.0.0.1:17373/api/v1&#39;
+const cabeceras = { Authorization: &#39;Bearer &lt;your key&gt;&#39; }
+async function pedir(ruta, opciones = {}) {
+  const r = await fetch(BASE + ruta, { ...opciones, headers: { ...cabeceras, ...opciones.headers } })
+  if (!r.ok) throw new Error(await r.text())
+  return r
+}
+
+// 1. Create the job; repeating the Idempotency-Key returns the same job instead of a duplicate
+const solicitud = {
+  &quot;mensajes&quot;: [
+    {
+      &quot;rol&quot;: &quot;usuario&quot;,
+      &quot;contenido&quot;: &quot;Summarize the attached document in one sentence.&quot;
+    }
+  ]
+}
+const { id } = await (await pedir(&#39;/trabajos&#39;, { method: &#39;POST&#39;, body: JSON.stringify(solicitud),
+  headers: { &#39;Content-Type&#39;: &#39;application/json&#39;, &#39;Idempotency-Key&#39;: randomUUID() } })).json()
+
+// 2. Follow it live: each &quot;texto&quot; event carries a piece of the answer and &quot;fin&quot; ends the stream
+const eventos = await pedir(`/trabajos/${id}/eventos`)
+const lector = new TextDecoder()
+let pendiente = &#39;&#39;, fin
+for await (const trozo of eventos.body) {
+  pendiente += lector.decode(trozo, { stream: true })
+  let corte
+  while ((corte = pendiente.indexOf(&#39;\n\n&#39;)) &gt;= 0) {
+    const bloque = pendiente.slice(0, corte).split(&#39;\n&#39;)
+    pendiente = pendiente.slice(corte + 2)
+    const evento = bloque.find((l) =&gt; l.startsWith(&#39;event: &#39;))?.slice(7)
+    const datos = bloque.filter((l) =&gt; l.startsWith(&#39;data: &#39;)).map((l) =&gt; l.slice(6)).join(&#39;\n&#39;)
+    if (evento === &#39;texto&#39;) process.stdout.write(datos)
+    if (evento === &#39;fin&#39;) fin = JSON.parse(datos)
+  }
+}
+if (fin?.estado !== &#39;completado&#39;) throw new Error(JSON.stringify(fin))
+
+// 3. Read the result (with a schema, the JSON already validated)
+console.log(&#39;\n&#39; + await (await pedir(`/trabajos/${id}/salida`)).text())</code></pre>
+  </div>
+  <div role="tabpanel" id="e2-go-nativa-panel" aria-labelledby="e2-go-nativa">
+    <pre class="codigo" lang="es"><code>package main
+
+import (
+	&quot;bufio&quot;
+	&quot;encoding/json&quot;
+	&quot;fmt&quot;
+	&quot;io&quot;
+	&quot;log&quot;
+	&quot;net/http&quot;
+	&quot;strings&quot;
+)
+
+const base = &quot;http://127.0.0.1:17373/api/v1&quot;
+
+// pedir hace una petición con la clave y falla si la respuesta no es 2xx.
+func pedir(metodo, ruta, tipo string, cuerpo io.Reader) *http.Response {
+	peticion, err := http.NewRequest(metodo, base+ruta, cuerpo)
+	if err != nil {
+		log.Fatal(err)
+	}
+	peticion.Header.Set(&quot;Authorization&quot;, &quot;Bearer &lt;tu clave&gt;&quot;)
+	if tipo != &quot;&quot; {
+		peticion.Header.Set(&quot;Content-Type&quot;, tipo)
+	}
+	respuesta, err := http.DefaultClient.Do(peticion)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if respuesta.StatusCode &gt;= 300 {
+		datos, _ := io.ReadAll(respuesta.Body)
+		log.Fatalf(&quot;%s: %s&quot;, respuesta.Status, datos)
+	}
+	return respuesta
+}
+
+func main() {
+	// 1. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
+	solicitud := &quot;{\&quot;mensajes\&quot;:[{\&quot;rol\&quot;:\&quot;usuario\&quot;,\&quot;contenido\&quot;:\&quot;Resume el documento adjunto en una frase.\&quot;}]}&quot;
+	var trabajo struct {
+		ID string `json:&quot;id&quot;`
+	}
+	json.NewDecoder(pedir(&quot;POST&quot;, &quot;/trabajos&quot;, &quot;application/json&quot;, strings.NewReader(solicitud)).Body).Decode(&amp;trabajo)
+
+	// 2. Síguelo en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
+	eventos := bufio.NewScanner(pedir(&quot;GET&quot;, &quot;/trabajos/&quot;+trabajo.ID+&quot;/eventos&quot;, &quot;&quot;, nil).Body)
+	evento := &quot;&quot;
+	for eventos.Scan() {
+		linea := eventos.Text()
+		switch {
+		case strings.HasPrefix(linea, &quot;event: &quot;):
+			evento = linea[7:]
+		case strings.HasPrefix(linea, &quot;data: &quot;) &amp;&amp; evento == &quot;texto&quot;:
+			fmt.Print(linea[6:])
+		case strings.HasPrefix(linea, &quot;data: &quot;) &amp;&amp; evento == &quot;fin&quot;:
+			fmt.Println(&quot;\n&quot; + linea[6:])
+		}
+	}
+
+	// 3. Lee el resultado (con esquema, el JSON ya validado)
+	salida, _ := io.ReadAll(pedir(&quot;GET&quot;, &quot;/trabajos/&quot;+trabajo.ID+&quot;/salida&quot;, &quot;&quot;, nil).Body)
+	fmt.Println(string(salida))
+}</code></pre>
+    <pre class="codigo" lang="en"><code>package main
+
+import (
+	&quot;bufio&quot;
+	&quot;encoding/json&quot;
+	&quot;fmt&quot;
+	&quot;io&quot;
+	&quot;log&quot;
+	&quot;net/http&quot;
+	&quot;strings&quot;
+)
+
+const base = &quot;http://127.0.0.1:17373/api/v1&quot;
+
+// pedir hace una petición con la clave y falla si la respuesta no es 2xx.
+func pedir(metodo, ruta, tipo string, cuerpo io.Reader) *http.Response {
+	peticion, err := http.NewRequest(metodo, base+ruta, cuerpo)
+	if err != nil {
+		log.Fatal(err)
+	}
+	peticion.Header.Set(&quot;Authorization&quot;, &quot;Bearer &lt;your key&gt;&quot;)
+	if tipo != &quot;&quot; {
+		peticion.Header.Set(&quot;Content-Type&quot;, tipo)
+	}
+	respuesta, err := http.DefaultClient.Do(peticion)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if respuesta.StatusCode &gt;= 300 {
+		datos, _ := io.ReadAll(respuesta.Body)
+		log.Fatalf(&quot;%s: %s&quot;, respuesta.Status, datos)
+	}
+	return respuesta
+}
+
+func main() {
+	// 1. Create the job; repeating the Idempotency-Key returns the same job instead of a duplicate
+	solicitud := &quot;{\&quot;mensajes\&quot;:[{\&quot;rol\&quot;:\&quot;usuario\&quot;,\&quot;contenido\&quot;:\&quot;Summarize the attached document in one sentence.\&quot;}]}&quot;
+	var trabajo struct {
+		ID string `json:&quot;id&quot;`
+	}
+	json.NewDecoder(pedir(&quot;POST&quot;, &quot;/trabajos&quot;, &quot;application/json&quot;, strings.NewReader(solicitud)).Body).Decode(&amp;trabajo)
+
+	// 2. Follow it live: each &quot;texto&quot; event carries a piece of the answer and &quot;fin&quot; ends the stream
+	eventos := bufio.NewScanner(pedir(&quot;GET&quot;, &quot;/trabajos/&quot;+trabajo.ID+&quot;/eventos&quot;, &quot;&quot;, nil).Body)
+	evento := &quot;&quot;
+	for eventos.Scan() {
+		linea := eventos.Text()
+		switch {
+		case strings.HasPrefix(linea, &quot;event: &quot;):
+			evento = linea[7:]
+		case strings.HasPrefix(linea, &quot;data: &quot;) &amp;&amp; evento == &quot;texto&quot;:
+			fmt.Print(linea[6:])
+		case strings.HasPrefix(linea, &quot;data: &quot;) &amp;&amp; evento == &quot;fin&quot;:
+			fmt.Println(&quot;\n&quot; + linea[6:])
+		}
+	}
+
+	// 3. Read the result (with a schema, the JSON already validated)
+	salida, _ := io.ReadAll(pedir(&quot;GET&quot;, &quot;/trabajos/&quot;+trabajo.ID+&quot;/salida&quot;, &quot;&quot;, nil).Body)
+	fmt.Println(string(salida))
+}</code></pre>
+  </div>
+  <div role="tabpanel" id="e2-python-panel" aria-labelledby="e2-python">
+    <pre class="codigo" lang="es"><code>from openai import OpenAI
+
+cliente = OpenAI(base_url=&quot;http://127.0.0.1:17373/openai/v1&quot;, api_key=&quot;&lt;tu clave&gt;&quot;)
+r = cliente.chat.completions.create(
+    model=&quot;perfil/rapido&quot;,
+    messages=[
+        {
+            &quot;role&quot;: &quot;user&quot;,
+            &quot;content&quot;: &quot;Resume el documento adjunto en una frase.&quot;,
+        },
+    ],
+)
+print(r.choices[0].message.content)</code></pre>
+    <pre class="codigo" lang="en"><code>from openai import OpenAI
+
+cliente = OpenAI(base_url=&quot;http://127.0.0.1:17373/openai/v1&quot;, api_key=&quot;&lt;your key&gt;&quot;)
+r = cliente.chat.completions.create(
+    model=&quot;perfil/rapido&quot;,
+    messages=[
+        {
+            &quot;role&quot;: &quot;user&quot;,
+            &quot;content&quot;: &quot;Summarize the attached document in one sentence.&quot;,
+        },
+    ],
+)
+print(r.choices[0].message.content)</code></pre>
+  </div>
+  <div role="tabpanel" id="e2-curl-panel" aria-labelledby="e2-curl">
+    <pre class="codigo" lang="es"><code>curl http://127.0.0.1:17373/openai/v1/chat/completions \
+  -H &quot;Authorization: Bearer &lt;tu clave&gt;&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &#39;{
+  &quot;model&quot;: &quot;perfil/rapido&quot;,
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: &quot;Resume el documento adjunto en una frase.&quot;
+    }
+  ]
+}&#39;</code></pre>
+    <pre class="codigo" lang="en"><code>curl http://127.0.0.1:17373/openai/v1/chat/completions \
+  -H &quot;Authorization: Bearer &lt;your key&gt;&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &#39;{
+  &quot;model&quot;: &quot;perfil/rapido&quot;,
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: &quot;Summarize the attached document in one sentence.&quot;
+    }
+  ]
+}&#39;</code></pre>
+  </div>
+  <div role="tabpanel" id="e2-anthropic-panel" aria-labelledby="e2-anthropic">
+    <pre class="codigo" lang="es"><code>import anthropic
+
+cliente = anthropic.Anthropic(base_url=&quot;http://127.0.0.1:17373/anthropic&quot;, api_key=&quot;&lt;tu clave&gt;&quot;)
+m = cliente.messages.create(
+    model=&quot;perfil/rapido&quot;,
+    max_tokens=1024,
+    messages=[
+        {
+            &quot;role&quot;: &quot;user&quot;,
+            &quot;content&quot;: &quot;Resume el documento adjunto en una frase.&quot;,
+        },
+    ],
+)
+print(m.content[0].text)</code></pre>
+    <pre class="codigo" lang="en"><code>import anthropic
+
+cliente = anthropic.Anthropic(base_url=&quot;http://127.0.0.1:17373/anthropic&quot;, api_key=&quot;&lt;your key&gt;&quot;)
+m = cliente.messages.create(
+    model=&quot;perfil/rapido&quot;,
+    max_tokens=1024,
+    messages=[
+        {
+            &quot;role&quot;: &quot;user&quot;,
+            &quot;content&quot;: &quot;Summarize the attached document in one sentence.&quot;,
+        },
+    ],
+)
+print(m.content[0].text)</code></pre>
+  </div>
+</div>
+
+<figure class="captura"><img class="solo-claro" lang="es" src="capturas/mis-apis.claro.es.webp" loading="lazy" alt="Una API en Mis APIs, con su URL y sus acciones"><img class="solo-claro" lang="en" src="capturas/mis-apis.claro.en.webp" loading="lazy" alt="An API in My APIs, with its URL and actions"><img class="solo-oscuro" lang="es" src="capturas/mis-apis.oscuro.es.webp" loading="lazy" alt="Una API en Mis APIs, con su URL y sus acciones"><img class="solo-oscuro" lang="en" src="capturas/mis-apis.oscuro.en.webp" loading="lazy" alt="An API in My APIs, with its URL and actions"></figure>
+
+<table>
+  <thead><tr><th></th><th><span lang="es">OpenAI</span><span lang="en">OpenAI</span></th><th><span lang="es">Anthropic</span><span lang="en">Anthropic</span></th><th><span lang="es">API propia</span><span lang="en">Tramtai API</span></th></tr></thead>
+  <tbody>
+    <tr><th scope="row"><span lang="es">SDK oficial y herramientas existentes</span><span lang="en">Official SDK and existing tools</span></th><td><span lang="es">sí</span><span lang="en">yes</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td><td><span lang="es">no (HTTP y JSON)</span><span lang="en">no (HTTP and JSON)</span></td></tr>
+    <tr><th scope="row"><span lang="es">Respuesta en vivo</span><span lang="en">Live response</span></th><td><span lang="es">sí</span><span lang="en">yes</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td><td><span lang="es">sí, y se retoma tras un corte</span><span lang="en">yes, and it resumes after a drop</span></td></tr>
+    <tr><th scope="row"><span lang="es">Respuesta JSON con esquema</span><span lang="en">JSON response with a schema</span></th><td><span lang="es">sí (response_format)</span><span lang="en">yes (response_format)</span></td><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">sí (salida.esquema), con «Corregir»</span><span lang="en">yes (salida.esquema), with &quot;Correct&quot;</span></td></tr>
+    <tr><th scope="row"><span lang="es">Enviar archivos</span><span lang="en">Send files</span></th><td><span lang="es">sí, en base64 dentro del mensaje (hasta ~12 MB)</span><span lang="en">yes, in base64 inside the message (up to ~12 MB)</span></td><td><span lang="es">sí, en base64 dentro del mensaje (hasta ~12 MB)</span><span lang="en">yes, in base64 inside the message (up to ~12 MB)</span></td><td><span lang="es">sí, hasta 50 MB cada uno</span><span lang="en">yes, up to 50 MB each</span></td></tr>
+    <tr><th scope="row"><span lang="es">Herramientas (tools)</span><span lang="en">Tool calling</span></th><td><span lang="es">sí</span><span lang="en">yes</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td></tr>
+    <tr><th scope="row"><span lang="es">Tareas largas: seguir, cancelar, reintentar</span><span lang="en">Long jobs: follow, cancel, retry</span></th><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td></tr>
+    <tr><th scope="row"><span lang="es">Respaldo y esfuerzo por petición</span><span lang="en">Fallback and effort per request</span></th><td><span lang="es">solo el esfuerzo</span><span lang="en">effort only</span></td><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td></tr>
+    <tr><th scope="row"><span lang="es">Registro de cada paso</span><span lang="en">Log of each step</span></th><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td></tr>
+    <tr><th scope="row"><span lang="es">Consultar los límites antes de enviar</span><span lang="en">Check the limits before sending</span></th><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td></tr>
+  </tbody>
+</table>
+
+<p class="aviso"><span lang="es">Las URL de OpenAI y Anthropic imitan esos servicios para que sus SDK funcionen igual, así que no tienen campos para seguir o cancelar un trabajo. La receta vale en las tres.</span><span lang="en">The OpenAI and Anthropic URLs mimic those services so their SDKs work unchanged, so they have no fields to follow or cancel a job. The recipe applies to all three.</span></p>
+
+<p class="aviso"><span lang="es">Tramtai escucha solo en 127.0.0.1: tus apps deben correr en el mismo equipo.</span><span lang="en">Tramtai only listens on 127.0.0.1: your apps must run on the same computer.</span></p>
+
+<details id="que-url"><summary><span lang="es">¿Qué URL uso?</span><span lang="en">Which URL do I use?</span></summary><p><span lang="es">La de OpenAI si tu app usa su SDK o deja cambiar la URL base (LangChain, n8n); la de Anthropic con su SDK; la API propia para trabajos largos o para cancelar.</span><span lang="en">OpenAI’s if your app uses its SDK or lets you change the base URL (LangChain, n8n); Anthropic’s with its SDK; the native API for long jobs or to cancel.</span></p></details>
+<details id="api-por-app"><summary><span lang="es">¿Para qué sirve una API por aplicación?</span><span lang="en">What is an API per app for?</span></summary><p><span lang="es">Cada app tiene su clave, sus modelos, instrucciones fijas y presupuesto, y solo ve sus trabajos. Se activan o detienen sin reiniciar.</span><span lang="en">Each app gets its key, its models, fixed instructions and budget, and only sees its own jobs. They turn on or off without restarting.</span></p></details>
+<details id="clave-nueva"><summary><span lang="es">¿Dónde está la clave de una API nueva?</span><span lang="en">Where is a new API’s key?</span></summary><p><span lang="es">Solo se muestra al crearla: cópiala entonces. Si la pierdes, «Regenerar la clave» te da otra.</span><span lang="en">It is shown only when created: copy it then. If you lose it, &quot;Regenerate the key&quot; gives you another.</span></p></details>
+<details id="prueba-a-api"><summary><span lang="es">¿Cómo convierto una prueba en una API?</span><span lang="en">How do I turn a test into an API?</span></summary><p><span lang="es">En Probar, «Guardar como API» te da URL y clave. Desde Mis APIs, «Abrir en Probar» la carga para cambiarla y «Actualizar» guarda.</span><span lang="en">In Try, &quot;Save as API&quot; gives you a URL and a key. From My APIs, &quot;Open in Try&quot; loads it to change it and &quot;Update&quot; saves it.</span></p></details>
+<details id="clave-filtrada"><summary><span lang="es">¿Qué hago si se filtra una clave?</span><span lang="en">What if a key leaks?</span></summary><p><span lang="es">En Mis APIs, «Regenerar la clave»: la anterior deja de valer al momento. Si es de un proveedor, revócala en su consola y guarda la nueva.</span><span lang="en">In My APIs, &quot;Regenerate the key&quot;: the old one stops working at once. If it is a provider’s, revoke it in their console and save the new one.</span></p></details>
+<p class="aviso"><a href="../desarrolladores.html"><span lang="es">Guía del desarrollador</span><span lang="en">Developer guide</span></a>: <span lang="es">el ciclo completo en Python, JavaScript, Go y curl.</span><span lang="en">the full cycle in Python, JavaScript, Go and curl.</span></p>
+
+<h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
+<div class="tarjetas-temas">
+  <a class="tarjeta-tema" href="archivos.html"><strong><span lang="es">Archivos</span><span lang="en">Files</span></strong><span><span lang="es">Tramtai convierte tus PDF, Word, Excel y otros documentos a texto antes de pasárselos al agente.</span><span lang="en">Tramtai turns your PDF, Word, Excel and other documents into text before handing them to the agent.</span></span></a>
+  <a class="tarjeta-tema" href="herramientas.html"><strong><span lang="es">Herramientas</span><span lang="en">Tools</span></strong><span><span lang="es">Tu app ofrece funciones; el agente pide una con sus argumentos y tu app la ejecuta y le devuelve el resultado.</span><span lang="en">Your app offers functions; the agent asks for one with its arguments, and your app runs it and returns the result.</span></span></a>
+  <a class="tarjeta-tema" href="presupuestos.html"><strong><span lang="es">Presupuestos</span><span lang="en">Budgets</span></strong><span><span lang="es">Pon límites por día o por mes a una API o a todo el espacio, en peticiones, tokens o dólares.</span><span lang="en">Set daily or monthly limits for an API or the whole workspace, in requests, tokens or dollars.</span></span></a>
+</div>
+</article>
+</main>
+
+<footer>
+  <div class="envoltura">
+    <span>© 2026 Michael Scott B. · Tramtai · <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a></span>
+    <span>
+      <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span>
+    </span>
+  </div>
+</footer>
+
+<script src="../sitio.js"></script>
+</body>
+</html>
