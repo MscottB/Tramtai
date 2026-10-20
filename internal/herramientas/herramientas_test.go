@@ -152,6 +152,9 @@ func TestInterpretarDevuelveProblemas(t *testing.T) {
 		"argumentos malos":   {conTiempo(), `{"content":"","tool_calls":[{"name":"tiempo","arguments":"{\"ciudad\":7}"}]}`},
 		"argumentos no JSON": {conTiempo(), `{"content":"","tool_calls":[{"name":"tiempo","arguments":"x"}]}`},
 		"faltó la llamada":   {obligatoria, `{"content":"no sé","tool_calls":[]}`},
+		"sin el sobre":       {conTiempo(), `{"respuesta":"Hace 18 grados"}`},
+		"null":               {conTiempo(), `null`},
+		"name no es texto":   {conTiempo(), `{"content":"","tool_calls":[{"name":7,"arguments":"{}"}]}`},
 	}
 	for nombre, c := range casos {
 		_, _, err := Interpretar(c.sol, c.salida, "x")

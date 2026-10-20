@@ -163,6 +163,11 @@ func Interpretar(sol nucleo.SolicitudEjecucion, salida, prefijo string) (string,
 	if !Activas(sol) {
 		return salida, nil, nil
 	}
+	// La forma del sobre primero, con los problemas detallados para la corrección (los CLI que no fuerzan el esquema
+	// pueden responder otra cosa); después, cada llamada.
+	if err := salidas.Validar(formaSobre, salida); err != nil {
+		return "", nil, err
+	}
 	noCumple := func(texto string) error {
 		return salidas.NoCumple([]salidas.Problema{{Problema: "otro", Texto: texto}})
 	}
@@ -201,6 +206,12 @@ func Interpretar(sol nucleo.SolicitudEjecucion, salida, prefijo string) (string,
 	}
 	return sobre.Content, llamadas, nil
 }
+
+// formaSobre es la forma que se exige al sobre del agente: más flexible que el esquema estricto de Preparar (admite los
+// argumentos como objeto y campos de más), porque no todos los CLI fuerzan ese esquema.
+var formaSobre = []byte(`{"type":"object","required":["content","tool_calls"],"properties":{"content":{"type":"string"},` +
+	`"tool_calls":{"type":"array","items":{"type":"object","required":["name","arguments"],` +
+	`"properties":{"name":{"type":"string"},"arguments":{"type":["string","object"]}}}}}}`)
 
 // llamadaSobre es una llamada con la forma del sobre que conoce el agente: los argumentos como texto.
 type llamadaSobre struct {
