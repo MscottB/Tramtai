@@ -2,6 +2,7 @@ package herramientas
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -161,5 +162,27 @@ func TestInterpretarDevuelveProblemas(t *testing.T) {
 		if nucleo.CodigoDe(err) != nucleo.CodigoSalidaNoCumpleEsquema || len(salidas.ProblemasDe(err)) == 0 {
 			t.Errorf("%s: %v", nombre, err)
 		}
+	}
+}
+
+func TestValidarTopes(t *testing.T) {
+	muchas := make([]nucleo.Herramienta, 129)
+	for i := range muchas {
+		muchas[i] = nucleo.Herramienta{Nombre: fmt.Sprintf("h%d", i)}
+	}
+	grande := json.RawMessage(`{"type":"object","description":"` + strings.Repeat("x", 300<<10) + `"}`)
+	casos := map[string][]nucleo.Herramienta{
+		"más de 128":         muchas,
+		"nombre con espacio": {{Nombre: "mal nombre"}},
+		"nombre largo":       {{Nombre: strings.Repeat("a", 65)}},
+		"esquemas enormes":   {{Nombre: "a", Parametros: grande}},
+	}
+	for nombre, lista := range casos {
+		if nucleo.CodigoDe(Validar(nucleo.SolicitudEjecucion{Herramientas: lista})) != nucleo.CodigoSolicitudInvalida {
+			t.Errorf("%s: se esperaba solicitud_invalida", nombre)
+		}
+	}
+	if err := Validar(nucleo.SolicitudEjecucion{Herramientas: []nucleo.Herramienta{{Nombre: "buscar_pedido-2"}}}); err != nil {
+		t.Fatalf("un nombre con letras, números, _ y - vale: %v", err)
 	}
 }

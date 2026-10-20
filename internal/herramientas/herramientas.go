@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -26,9 +27,25 @@ func conParametros(h nucleo.Herramienta) bool {
 	return len(h.Parametros) > 0 && string(h.Parametros) != "null"
 }
 
+// Topes de las herramientas de una petición (los de OpenAI): cuántas, su nombre y el tamaño de todos sus esquemas, que
+// se compilan al aceptar y van en las instrucciones del agente.
+const maximoHerramientas = 128
+
+var reNombre = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
+
 // Validar comprueba las herramientas, la elección y que cada resultado responda a una llamada anterior.
 func Validar(sol nucleo.SolicitudEjecucion) error {
 	invalida := func(texto string) error { return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, texto) }
+	if len(sol.Herramientas) > maximoHerramientas {
+		return invalida(idioma.Tf("demasiadas herramientas (máximo %d)", maximoHerramientas))
+	}
+	total := 0
+	for _, h := range sol.Herramientas {
+		total += len(h.Parametros)
+	}
+	if total > nucleo.MaximoEsquemaPeticion {
+		return invalida(idioma.T("los parámetros de las herramientas superan 256 KB"))
+	}
 	e := sol.EleccionHerramienta
 	if len(sol.Herramientas) == 0 && (e.Modo == "obligatoria" || e.Modo == "una") {
 		return invalida(idioma.T("se exige llamar a una herramienta, pero no se ofreció ninguna"))
@@ -37,6 +54,9 @@ func Validar(sol nucleo.SolicitudEjecucion) error {
 	for i, h := range sol.Herramientas {
 		if h.Nombre == "" {
 			return invalida(idioma.Tf("la herramienta %d no tiene nombre", i))
+		}
+		if !reNombre.MatchString(h.Nombre) {
+			return invalida(idioma.Tf("nombre de herramienta no válido: %s (letras, números, _ y -, hasta 64)", h.Nombre))
 		}
 		if slices.Contains(nombres, h.Nombre) {
 			return invalida(idioma.Tf("herramienta repetida: %s", h.Nombre))
