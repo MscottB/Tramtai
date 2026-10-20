@@ -28,8 +28,11 @@
         <q-btn flat dense no-caps color="primary" :label="t('inicio.detalles')" @click="$emit('ir', 'agentes')" />
       </div>
       <div class="q-px-md q-pb-lg q-pt-sm">
-        <MapaRed v-if="adaptadores && instancia" :adaptadores="ordenarAgentes(adaptadores)" :apis="puntos" :base="instancia.base" @ir="(p) => $emit('ir', p)" />
+        <MapaRed v-if="adaptadores && instancia" :adaptadores="ordenarAgentes(adaptadores)" :apis="puntos" :base="instancia.base"
+          :tranvias="vivos.lista" :resto="vivos.resto" @ir="(p) => $emit('ir', p)" @seguir="seguir" />
         <q-skeleton v-else type="rect" height="200px" />
+        <SiguiendoTrabajo v-if="seguido" :tranvia="seguido" class="q-mt-md" @dejar="seguido = undefined" @ir="(p) => $emit('ir', p)" />
+        <div v-else-if="vivos.lista.length" class="text-caption texto-suave q-mt-sm">{{ t('vivo.pista') }}</div>
       </div>
     </section>
 
@@ -100,11 +103,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import EstadoVacio from '../componentes/EstadoVacio.vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import Linea from '../componentes/Linea.vue'
 import MapaRed from '../componentes/MapaRed.vue'
+import SiguiendoTrabajo from '../componentes/SiguiendoTrabajo.vue'
+import { useEventosInstancia } from '../composables/useEventosInstancia'
+import { visibles, type Tranvia } from '../vivo'
 import AvisoConversor from '../componentes/AvisoConversor.vue'
 import { cargarConversor, conversor } from '../conversor'
 import { api, avisar, cargarDiasHistorial, copiar, mensajeError } from '../api/cliente'
@@ -134,6 +140,19 @@ const instancia = ref<EstadoInstancia>()
 const recientes = ref<Trabajo[]>([])
 const adaptadores = ref<Adaptador[]>()
 const puntos = ref<EstadoPunto[]>([])
+
+// Las peticiones en curso, en vivo; la seguida guarda su último estado aunque ya haya salido del mapa.
+const { tranvias } = useEventosInstancia()
+const vivos = computed(() => visibles(tranvias.value))
+const seguido = ref<Tranvia>()
+function seguir(id: string) {
+  const tr = tranvias.value.get(id)
+  if (tr) seguido.value = { ...tr }
+}
+watch(tranvias, (m) => {
+  const tr = seguido.value && m.get(seguido.value.id)
+  if (tr) seguido.value = { ...tr }
+}, { deep: true })
 const error = ref('')
 
 const total = (estados: string[]) => estados.reduce((n, e) => n + (instancia.value?.trabajos[e] ?? 0), 0)

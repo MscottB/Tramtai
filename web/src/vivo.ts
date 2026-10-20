@@ -1,6 +1,8 @@
 // vivo convierte los eventos de GET /api/v1/eventos en los tranvías del mapa de Inicio: dónde va cada petición en
 // curso y cuándo deja de verse. Sin Vue, para poder probarlo; MapaRed.vue solo dibuja lo que sale de aquí.
 
+import type { Clave } from './idiomas/es'
+
 export type Etapa = 'cola' | 'preparacion' | 'ejecucion' | 'validacion' | 'llegada'
 export type Tramo = 'entrada' | 'centro' | 'linea'
 
@@ -35,6 +37,10 @@ export interface Tranvia {
 }
 
 export type Tranvias = Map<string, Tranvia>
+
+// CLAVES_ETAPA son los textos de cada etapa («en ejecución»…) para los nombres de los tranvías.
+export const CLAVES_ETAPA: Record<Etapa, Clave> = { cola: 'vivo.etapaCola', preparacion: 'vivo.etapaPreparacion', ejecucion: 'vivo.etapaEjecucion',
+  validacion: 'vivo.etapaValidacion', llegada: 'vivo.etapaLlegada' }
 
 // PARADAS es dónde está cada etapa: el tramo del mapa y cuánto avanzó por él (de 0 a 1).
 const PARADAS: Record<Etapa, { tramo: Tramo; avance: number }> = {
@@ -76,6 +82,16 @@ export function posicion(tr: Tranvia): { tramo: Tramo; avance: number } {
 export function visibles(t: Tranvias, max = 12): { lista: Tranvia[]; resto: number } {
   const todos = [...t.values()].sort((a, b) => b.desde - a.desde)
   return { lista: todos.slice(0, max), resto: Math.max(0, todos.length - max) }
+}
+
+// etapaDe agrupa un estado en una de las 5 paradas, igual que EtapaDe del servicio (internal/api/vivo.go); la usa el
+// mapa cuando no hay flujo y consulta los trabajos cada 5 s.
+export function etapaDe(estado: string): Etapa {
+  if (estado === 'en_cola') return 'cola'
+  if (estado === 'preparando_entrada' || estado === 'esperando_agente') return 'preparacion'
+  if (estado === 'ejecutando' || estado === 'cancelacion_solicitada') return 'ejecucion'
+  if (estado === 'validando_salida') return 'validacion'
+  return 'llegada'
 }
 
 // esperaReconexion es la espera antes del intento n de reconectar el flujo: 1, 2, 4, 8, 16 s y después 30 s.

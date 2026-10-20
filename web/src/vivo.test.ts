@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { aplicar, esperaReconexion, limpiar, posicion, visibles, type EventoTrabajo, type Tranvias } from './vivo.ts'
+import { aplicar, esperaReconexion, etapaDe, limpiar, posicion, visibles, type EventoTrabajo, type Tranvias } from './vivo.ts'
 
 const ev = (o: Partial<EventoTrabajo>): EventoTrabajo => ({ id: 'a', estado: 'en_cola', etapa: 'cola', agente: 'claude', modelo: 'claude/sonnet',
   api: '', origen: 'probar', intento: 1, codigo_error: '', actualizado: '', ...o })
@@ -70,6 +70,12 @@ test('como mucho 12 visibles, los más recientes, y el resto', () => {
   assert.equal(resto, 3)
   assert.equal(lista[0].id, 't14')
   assert.ok(!lista.some((x) => x.id === 't0'))
+})
+
+test('etapaDe agrupa los estados como el servicio', () => {
+  const casos: Record<string, string> = { en_cola: 'cola', preparando_entrada: 'preparacion', esperando_agente: 'preparacion', ejecutando: 'ejecucion',
+    cancelacion_solicitada: 'ejecucion', validando_salida: 'validacion', completado: 'llegada', fallido: 'llegada', cancelado: 'llegada', interrumpido: 'llegada' }
+  for (const [estado, etapa] of Object.entries(casos)) assert.equal(etapaDe(estado), etapa, estado)
 })
 
 test('esperas de reconexión', () => {

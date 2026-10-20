@@ -18,6 +18,10 @@
       <text :x="V_EJE + 52" :y="vAgente(i) + 5" font-size="15" font-weight="650">{{ a.nombre }}</text>
       <text :x="V_ANCHO - 6" :y="vAgente(i) + 5" text-anchor="end" font-size="12" :style="{ fill: a.listo ? 'var(--ok)' : 'var(--aviso)' }">{{ a.estado }}</text>
     </g>
+    <g v-for="v in vivos" :key="'vv' + v.tr.id" class="tranvia-vivo" role="button" tabindex="0" :aria-label="nombreTranvia(v.tr)"
+      @click="emit('seguir', v.tr.id)" @keyup.enter="emit('seguir', v.tr.id)">
+      <rect x="-12" y="-6" width="24" height="12" rx="5" :style="{ offsetPath: `path('${v.vCamino}')`, offsetDistance: v.distancia + '%', fill: v.color }" />
+    </g>
   </svg>
   <div v-else style="overflow-x: auto">
     <svg class="mapa-red" :viewBox="`0 0 ${ANCHO} ${alto}`" :style="{ minWidth: '620px' }" role="img" :aria-label="descripcion">
@@ -47,6 +51,13 @@
         <text :x="X_AGENTE + 20" :y="a.y - 2" font-size="15" font-weight="650">{{ a.nombre }}</text>
         <text :x="X_AGENTE + 20" :y="a.y + 16" font-size="12" :style="{ fill: a.listo ? 'var(--ok)' : 'var(--aviso)' }">{{ a.estado }}</text>
       </g>
+
+      <!-- Las peticiones en curso: cada tranvía va de su estación a Tramtai y sigue por la línea de su agente. -->
+      <text v-if="resto" :x="X_HUB + HUB_ANCHO - 14" :y="centro - 44" text-anchor="end" font-size="12" font-weight="700">+{{ resto }}</text>
+      <g v-for="v in vivos" :key="'v' + v.tr.id" class="tranvia-vivo" role="button" tabindex="0" :aria-label="nombreTranvia(v.tr)"
+        @click="emit('seguir', v.tr.id)" @keyup.enter="emit('seguir', v.tr.id)">
+        <rect x="-13" y="-7" width="26" height="14" rx="5" :style="{ offsetPath: `path('${v.camino}')`, offsetDistance: v.distancia + '%', fill: v.color }" />
+      </g>
     </svg>
   </div>
 </template>
@@ -59,9 +70,10 @@ import type { Adaptador, EstadoPunto } from '../api/tipos'
 import { grupoInicial } from '../estado'
 import { nombreAgente, colorLinea, agenteListo } from '../agentes'
 import { t } from '../i18n'
+import { CLAVES_ETAPA, type Tranvia } from '../vivo'
 
-const props = defineProps<{ adaptadores: Adaptador[]; apis: EstadoPunto[]; base: string }>()
-const emit = defineEmits<{ ir: [pagina: string] }>()
+const props = defineProps<{ adaptadores: Adaptador[]; apis: EstadoPunto[]; base: string; tranvias?: Tranvia[]; resto?: number }>()
+const emit = defineEmits<{ ir: [pagina: string]; seguir: [id: string] }>()
 
 const ANCHO = 980
 const X_ORIGEN = 230
@@ -113,9 +125,42 @@ const lineas = computed(() => props.adaptadores.map((a, i) => ({
   y: y(i, props.adaptadores.length),
 })))
 
+const enCurso = computed(() => (props.tranvias?.length ?? 0) + (props.resto ?? 0))
 const descripcion = computed(() => t('mapa.descripcion', {
   apis: origenes.value.length, listos: lineas.value.filter((l) => l.listo).length, total: lineas.value.length,
-}))
+}) + (enCurso.value ? ' ' + t('vivo.enCurso', { n: enCurso.value }) : ''))
+
+// estacionDe es la estación de donde salió una petición: la de su API o su grupo; sin API (la principal, Probar, la
+// terminal o la CLI), la API principal.
+function estacionDe(tr: Tranvia) {
+  const p = tr.api ? props.apis.find((x) => x.nombre === tr.api) : undefined
+  const id = !p ? '-' : p.grupo ? 'g:' + p.grupo : p.nombre
+  return origenes.value.find((o) => o.id === id) ?? origenes.value.find((o) => o.id === '+') ?? origenes.value[0]
+}
+// TRAMOS reparte el camino completo (estación → Tramtai → línea) en porcentajes: dónde empieza cada tramo y cuánto
+// ocupa. Varios tranvías en la misma línea se separan un 4 % para no taparse.
+const TRAMOS = { entrada: [0, 35], centro: [35, 15], linea: [50, 50] } as const
+const vivos = computed(() => {
+  const porLinea = new Map<string, number>()
+  return (props.tranvias ?? []).map((tr) => {
+    const k = porLinea.get(tr.agente) ?? 0
+    porLinea.set(tr.agente, k + 1)
+    const o = estacionDe(tr)
+    const a = lineas.value.find((l) => l.agente === tr.agente)
+    const entrada = centro.value + paralela(o.i, origenes.value.length)
+    const salida = a ? centro.value + paralela(a.i, lineas.value.length) : centro.value
+    const linea = a ? tramo(X_HUB + HUB_ANCHO, salida, X_AGENTE, a.y).replace(/^M/, 'L') : ''
+    const [base, peso] = TRAMOS[tr.tramo]
+    return {
+      tr,
+      camino: `${tramo(X_ORIGEN, o.y, X_HUB, entrada)} L ${X_HUB + HUB_ANCHO} ${salida} ${linea}`,
+      vCamino: `M ${V_EJE} ${vOrigen(o.i)} L ${V_EJE} ${vAgente(a?.i ?? 0)} L ${V_EJE + 34} ${vAgente(a?.i ?? 0)}`,
+      distancia: Math.max(0, base + peso * (tr.tramo === 'centro' ? 0.5 : tr.avance) - 4 * k),
+      color: tr.estado === 'fallido' || tr.estado === 'interrumpido' ? 'var(--error)' : tr.estado === 'cancelado' ? 'var(--borde-fuerte)' : colorLinea(tr.agente),
+    }
+  })
+})
+const nombreTranvia = (tr: Tranvia) => t('vivo.tranvia', { agente: nombreAgente(tr.agente), etapa: t(CLAVES_ETAPA[tr.etapa]) })
 
 // Disposición vertical (móvil): orígenes arriba, Tramtai en medio y los agentes debajo, sobre un mismo eje.
 const V_ANCHO = 320
