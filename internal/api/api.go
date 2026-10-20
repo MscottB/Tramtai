@@ -217,6 +217,7 @@ var estadosHTTP = map[nucleo.CodigoError]int{
 	nucleo.CodigoSalidaNoCumpleEsquema:  http.StatusUnprocessableEntity,
 	nucleo.CodigoConversionFallida:      http.StatusUnprocessableEntity,
 	nucleo.CodigoColaLlena:              http.StatusTooManyRequests,
+	nucleo.CodigoLimiteFlujos:           http.StatusTooManyRequests,
 	nucleo.CodigoEntradaDemasiadoGrande: http.StatusRequestEntityTooLarge,
 	nucleo.CodigoCuotaCargasAgotada:     http.StatusInsufficientStorage,
 	nucleo.CodigoPresupuestoAgotado:     http.StatusTooManyRequests,
@@ -242,7 +243,7 @@ func EscribirError(w http.ResponseWriter, r *http.Request, err error) {
 	if !conocido {
 		estado = http.StatusInternalServerError
 	}
-	if codigo == nucleo.CodigoColaLlena {
+	if codigo == nucleo.CodigoColaLlena || codigo == nucleo.CodigoLimiteFlujos {
 		w.Header().Set("Retry-After", "5")
 	}
 	if preparando := (*nucleo.ConversorPreparando)(nil); errors.As(err, &preparando) {
