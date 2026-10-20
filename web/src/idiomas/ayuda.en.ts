@@ -360,6 +360,12 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.historial.rPrimerPlano': 'Yes: stop the service and run "tramtai servicio iniciar --abrir": it runs with the log in view, opens the app and Ctrl+C stops it.',
   'ayuda.ui.resultados': '{n} results',
   'ayuda.ui.resultadosUno': '1 result',
+  'ayuda.empezar.pTranvias': 'What are the trams on the Home map?',
+  'ayuda.empezar.rTranvias': 'Each request in progress: it leaves its API, goes through Tramtai and runs along its agent’s line. It turns red if it fails and changes line if it falls back.',
+  'ayuda.historial.pSeguir': 'Can I follow a request live?',
+  'ayuda.historial.rSeguir': 'Yes: click its tram on the Home map and you will see its route (queue, preparation, running, validation and arrival) as it moves.',
+  'ayuda.conectar.pEventos': 'Can my app see what happens live?',
+  'ayuda.conectar.rEventos': 'Yes: GET /api/v1/eventos (SSE) reports every stage change of the requests, without their content. With an API’s key, only its own.',
 }
 
 export default ayudaEn

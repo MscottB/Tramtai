@@ -74,6 +74,7 @@ func init() {
 		"Idempotency-Key supera 255 caracteres":                                                              "Idempotency-Key exceeds 255 characters",
 		"el trabajo está en %s":                                                                              "the job is in state %s",
 		"el resultado expiró por la retención (retencion.horas_resultado); vuelve a ejecutar la solicitud":   "the result expired under the retention policy (retencion.horas_resultado); run the request again",
+		"hay demasiados flujos de eventos abiertos en esta instancia":                                        "too many event streams are open on this instance",
 		"Last-Event-ID no válido":                                                                            "invalid Last-Event-ID",
 		"los eventos con contenido expiraron con el resultado":                                               "the content events expired with the result",
 		"esta instancia no admite cargas":                                                                    "this workspace does not accept uploads",

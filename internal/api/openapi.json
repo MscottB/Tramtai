@@ -76,6 +76,18 @@
         }
       }
     },
+    "/eventos": {
+      "get": {
+        "summary": "Eventos en vivo de la instancia (SSE)",
+        "description": "Empieza con un evento trabajo por cada trabajo sin terminar y por cada uno terminado hace menos de 10 s, y un evento foto (data {}) que cierra esa foto: lo que tenías y no vino ya terminó. Después, uno por cada cambio de estado o de agente (intento sube con el respaldo). Solo dice dónde va cada trabajo: nunca el mensaje, la respuesta ni los archivos. La clave de una API por aplicación solo ve los suyos. Latidos cada 15 s; hasta 8 flujos abiertos por instancia (429 limite_flujos con Retry-After). No se reanuda: al reconectar llega otra foto.",
+        "operationId": "eventosInstancia",
+        "responses": {
+          "200": { "description": "Flujo de eventos «trabajo» con un EventoTrabajo en data, y un «foto» al acabar la foto inicial", "content": { "text/event-stream": { "schema": { "$ref": "#/components/schemas/EventoTrabajo" } } } },
+          "429": { "$ref": "#/components/responses/Error" },
+          "default": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
     "/trabajos/{id}/eventos": {
       "parameters": [{ "$ref": "#/components/parameters/Id" }],
       "get": {
@@ -419,6 +431,23 @@
           "creado_en": { "type": "string", "format": "date-time" },
           "vence_en": { "type": "string", "format": "date-time" }
         }
+      },
+      "EventoTrabajo": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "estado": { "type": "string" },
+          "etapa": { "type": "string", "enum": ["cola", "preparacion", "ejecucion", "validacion", "llegada"] },
+          "agente": { "type": "string" },
+          "modelo": { "type": "string" },
+          "api": { "type": "string", "description": "API por aplicación que lo envió; vacía, la principal" },
+          "origen": { "type": "string" },
+          "intento": { "type": "integer", "minimum": 1, "description": "Agentes que probó desde que se abrió el flujo: sube cada vez que el respaldo pasa a otro" },
+          "codigo_error": { "type": "string" },
+          "creado": { "type": "string", "format": "date-time", "description": "Cuándo se aceptó la petición" },
+          "actualizado": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "estado", "etapa", "agente", "modelo", "api", "origen", "intento", "codigo_error", "creado", "actualizado"]
       },
       "EventoRegistro": {
         "type": "object",

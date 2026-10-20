@@ -1296,3 +1296,22 @@ body.body--dark .tablero {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Mapa vivo: los tranvías de las peticiones en curso avanzan por su camino; con «reducir movimiento», saltan. */
+.tranvia-vivo {
+  cursor: pointer;
+}
+.tranvia-vivo rect {
+  transition: offset-distance 600ms ease, fill 300ms;
+  stroke: var(--superficie);
+  stroke-width: 2;
+}
+.tranvia-vivo:focus-visible rect {
+  stroke: var(--texto);
+  stroke-width: 3;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tranvia-vivo rect {
+    transition: none;
+  }
+}

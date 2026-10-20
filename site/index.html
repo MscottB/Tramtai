@@ -136,8 +136,22 @@
           <circle cx="52" cy="362" r="7" stroke-width="3" fill="var(--antigravity)" stroke="var(--antigravity)"/>
           <text x="70" y="367" font-size="15" font-weight="650" fill="var(--texto)">Antigravity</text>
           <text x="314" y="367" text-anchor="end" font-size="12" fill="var(--texto-suave)">Google</text>
+          <rect class="tranvia-alto" x="-11" y="-6" width="22" height="12" rx="5" fill="var(--acento)" opacity="0"/>
         </svg>
       </div>
+      <!-- Los ejemplos del recorrido: el tranvía de cada uno llega a la estación de su agente (sitio.js). Sin JavaScript
+           quedan ocultos y se ve el mapa fijo con el primer ejemplo de código. -->
+      <div class="mapa-ejemplos" hidden>
+        <p class="mapa-leyenda" aria-live="off"></p>
+        <div class="mapa-controles">
+          <button type="button" class="mapa-punto" data-ejemplo="0" aria-pressed="true"><span lang="es" class="solo-lectores">Ejemplo 1</span><span lang="en" class="solo-lectores">Example 1</span></button>
+          <button type="button" class="mapa-punto" data-ejemplo="1" aria-pressed="false"><span lang="es" class="solo-lectores">Ejemplo 2</span><span lang="en" class="solo-lectores">Example 2</span></button>
+          <button type="button" class="mapa-punto" data-ejemplo="2" aria-pressed="false"><span lang="es" class="solo-lectores">Ejemplo 3</span><span lang="en" class="solo-lectores">Example 3</span></button>
+          <button type="button" class="mapa-punto" data-ejemplo="3" aria-pressed="false"><span lang="es" class="solo-lectores">Ejemplo 4</span><span lang="en" class="solo-lectores">Example 4</span></button>
+          <button type="button" class="mapa-pausa"><span lang="es">Pausa</span><span lang="en">Pause</span></button>
+        </div>
+      </div>
+      <script type="application/json" id="ejemplos-mapa">[{"origen": 0, "agentes": [0], "pausaCentro": false, "codigo": "codigo-mapa-1", "es": "Tu app con el SDK de OpenAI → Claude: «Resume este contrato en tres puntos»", "en": "Your app with the OpenAI SDK → Claude: “Summarize this contract in three points”"}, {"origen": 1, "agentes": [1], "pausaCentro": true, "codigo": "codigo-mapa-2", "es": "Un PDF por la API propia → Codex, con respuesta JSON (Tramtai lo convierte a texto)", "en": "A PDF through the native API → Codex, with a JSON answer (Tramtai turns it into text)"}, {"origen": 2, "agentes": [2], "pausaCentro": false, "codigo": "codigo-mapa-3", "es": "El SDK de Anthropic → GitHub Copilot: «Traduce este texto al inglés»", "en": "The Anthropic SDK → GitHub Copilot: “Translate this text into English”"}, {"origen": 0, "agentes": [0, 1], "pausaCentro": false, "codigo": "codigo-mapa-4", "es": "Respaldo: Claude llegó a su límite y la petición sigue con Codex", "en": "Fallback: Claude hit its limit and the request continues with Codex"}]</script>
     </div>
   </section>
 
@@ -188,7 +202,7 @@
             <p class="suave"><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic y elige agente y modelo en el campo <code>model</code>.</span><span lang="en">Change the base URL of your OpenAI or Anthropic SDK and pick agent and model in the <code>model</code> field.</span></p>
           </li>
         </ol>
-<pre class="codigo"><span class="k">from</span> openai <span class="k">import</span> OpenAI
+<pre class="codigo" id="codigo-mapa-1"><span class="k">from</span> openai <span class="k">import</span> OpenAI
 
 <span class="c"># Tramtai → Mis APIs / My APIs: URL y clave · URL and key</span>
 cliente = OpenAI(base_url=<span class="s">"http://127.0.0.1:17373/openai/v1"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
@@ -197,6 +211,29 @@ respuesta = cliente.chat.completions.create(
     model=<span class="s">"claude/sonnet"</span>,
     messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Resume este contrato en tres puntos"</span>}],
 )</pre>
+<pre class="codigo" id="codigo-mapa-2" hidden><span class="c"># 1. Sube el PDF · Upload the PDF</span>
+curl http://127.0.0.1:17373/api/v1/cargas -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -F archivo=@acta.pdf
+
+<span class="c"># 2. Pide la respuesta con forma · Ask for a shaped answer</span>
+curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -d <span class="s">'{
+  "agente": "codex", "cargas": ["carga_…"],
+  "mensajes": [{"rol": "usuario", "contenido": "Saca las fechas y los nombres de esta acta"}],
+  "salida": {"formato": "json", "esquema": {"type": "object",
+    "properties": {"fechas": {"type": "array"}, "nombres": {"type": "array"}}}}
+}'</span></pre>
+<pre class="codigo" id="codigo-mapa-3" hidden><span class="k">import</span> anthropic
+
+cliente = anthropic.Anthropic(base_url=<span class="s">"http://127.0.0.1:17373/anthropic"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
+
+respuesta = cliente.messages.create(
+    model=<span class="s">"copilot"</span>, max_tokens=1024,
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Traduce este texto al inglés"</span>}],
+)</pre>
+<pre class="codigo" id="codigo-mapa-4" hidden><span class="c"># Primero Claude; si falla antes de responder, Codex · Claude first, Codex as fallback</span>
+curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -d <span class="s">'{
+  "agente": "claude", "respaldo": ["codex"],
+  "mensajes": [{"rol": "usuario", "contenido": "Resume este contrato en tres puntos"}]
+}'</span></pre>
       </div>
     </div>
   </section>

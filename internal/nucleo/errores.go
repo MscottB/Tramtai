@@ -10,6 +10,7 @@ const (
 	CodigoSolicitudInvalida       CodigoError = "solicitud_invalida"
 	CodigoConfiguracionInvalida   CodigoError = "configuracion_invalida"
 	CodigoColaLlena               CodigoError = "cola_llena"
+	CodigoLimiteFlujos            CodigoError = "limite_flujos"
 	CodigoConflictoIdempotencia   CodigoError = "conflicto_idempotencia"
 	CodigoNoEncontrado            CodigoError = "no_encontrado"
 	CodigoServicioDetenido        CodigoError = "servicio_detenido"

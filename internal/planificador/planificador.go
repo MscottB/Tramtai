@@ -105,7 +105,9 @@ type Planificador struct {
 	semPuntos map[string]chan struct{}
 	// presupuestos son los vigentes por API y de la instancia (ver FijarPresupuestos).
 	presupuestos atomic.Pointer[map[string]nucleo.Presupuesto]
-	cola         chan string
+	// flujos son los flujos de eventos de la instancia abiertos (ver ReservarFlujo); se cuentan con mu.
+	flujos int
+	cola   chan string
 	// ctx gobierna la admisión y la toma de trabajos de la cola; ejec, las ejecuciones en curso. Separarlos
 	// permite el drenaje: se deja de aceptar sin cortar lo que ya se ejecuta.
 	ctx    context.Context
