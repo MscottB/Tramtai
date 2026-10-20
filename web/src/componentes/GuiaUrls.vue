@@ -9,6 +9,7 @@
           <div class="bloque-codigo q-mt-sm">{{ c.url }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('comun.copiar') + ' ' + c.titulo" @click="copiar(c.url)" /></div>
           <template v-if="c.id === 'nativa'">
             <q-btn flat dense no-caps color="primary" icon="o_menu_book" class="self-start q-mt-xs" :label="t('guia.comoUsarla')" @click="emit('usar')" />
+            <a class="enlace text-caption q-mt-xs" href="https://mscottb.github.io/Tramtai/desarrolladores.html" target="_blank" rel="noopener">{{ t('guia.desarrolladores') }}</a>
             <div class="text-caption texto-suave q-mt-xs">
               {{ t('guia.avanzado') }}
               <a href="#" class="enlace" :aria-busy="descargando" @click.prevent="descargarOpenapi">{{ t('guia.descargarOpenapi') }}</a>

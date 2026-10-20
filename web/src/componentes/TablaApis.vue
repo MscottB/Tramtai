@@ -25,6 +25,7 @@ const filas: Clave[][] = [
   ['guia.fVivo', 'guia.si', 'guia.si', 'guia.siRetoma'],
   ['guia.fJson', 'guia.siResponseFormat', 'guia.no', 'guia.siEsquema'],
   ['guia.fArchivos', 'guia.siBase64', 'guia.siBase64', 'guia.si50'],
+  ['guia.fHerramientas', 'guia.si', 'guia.si', 'guia.si'],
   ['guia.fTareas', 'guia.no', 'guia.no', 'guia.si'],
   ['guia.fRespaldo', 'guia.soloEsfuerzo', 'guia.no', 'guia.si'],
   ['guia.fRegistro', 'guia.no', 'guia.no', 'guia.si'],

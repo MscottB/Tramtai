@@ -115,6 +115,74 @@ function nodeNativa(url: string, p: Prueba, k: string): string {
   return lineas.join('\n')
 }
 
+function goNativa(url: string, p: Prueba, k: string): string {
+  const paso = pasos()
+  const conArchivos = p.archivos.length > 0
+  const importar = ['bufio', 'encoding/json', 'fmt', 'io', 'log', 'net/http', 'strings', ...(conArchivos ? ['bytes', 'mime/multipart', 'os', 'path/filepath'] : [])].sort()
+  const lineas = ['package main', '', 'import (', ...importar.map((i) => `\t"${i}"`), ')', '', `const base = "${url}/api/v1"`, '',
+    '// pedir hace una petición con la clave y falla si la respuesta no es 2xx.',
+    'func pedir(metodo, ruta, tipo string, cuerpo io.Reader) *http.Response {',
+    '\tpeticion, err := http.NewRequest(metodo, base+ruta, cuerpo)', '\tif err != nil {', '\t\tlog.Fatal(err)', '\t}',
+    `\tpeticion.Header.Set("Authorization", "Bearer ${k}")`, '\tif tipo != "" {', '\t\tpeticion.Header.Set("Content-Type", tipo)', '\t}',
+    '\trespuesta, err := http.DefaultClient.Do(peticion)', '\tif err != nil {', '\t\tlog.Fatal(err)', '\t}',
+    '\tif respuesta.StatusCode >= 300 {', '\t\tdatos, _ := io.ReadAll(respuesta.Body)', '\t\tlog.Fatalf("%s: %s", respuesta.Status, datos)', '\t}',
+    '\treturn respuesta', '}', '', 'func main() {']
+  if (conArchivos) {
+    lineas.push(`\t// ${paso('ejemplos.subir')}`, '\tvar cargas []string', `\tfor _, nombre := range []string{${p.archivos.map((a) => JSON.stringify(a)).join(', ')}} {`,
+      '\t\tvar cuerpo bytes.Buffer', '\t\tformulario := multipart.NewWriter(&cuerpo)', '\t\tparte, _ := formulario.CreateFormFile("archivo", filepath.Base(nombre))',
+      '\t\tdatos, err := os.ReadFile(nombre)', '\t\tif err != nil {', '\t\t\tlog.Fatal(err)', '\t\t}', '\t\tparte.Write(datos)', '\t\tformulario.Close()',
+      '\t\tvar carga struct {', '\t\t\tID string `json:"identificador_carga"`', '\t\t}',
+      '\t\tjson.NewDecoder(pedir("POST", "/cargas", formulario.FormDataContentType(), &cuerpo).Body).Decode(&carga)',
+      '\t\tcargas = append(cargas, carga.ID)', '\t}', '')
+  }
+  const solicitud = JSON.stringify(cuerpo(p), null, 2).split('\n').map((l, i) => (i ? '\t' + l : l)).join('\n')
+  lineas.push(`\t// ${paso('ejemplos.crear')}`, `\tsolicitud := \`${solicitud.replace(`"${CARGAS}"`, '%s')}\``)
+  if (conArchivos) lineas.push('\tlista, _ := json.Marshal(cargas)', '\tsolicitud = fmt.Sprintf(solicitud, lista)')
+  lineas.push('\tvar trabajo struct {', '\t\tID string `json:"id"`', '\t}',
+    '\tjson.NewDecoder(pedir("POST", "/trabajos", "application/json", strings.NewReader(solicitud)).Body).Decode(&trabajo)', '',
+    `\t// ${paso('ejemplos.seguir')}`, '\teventos := bufio.NewScanner(pedir("GET", "/trabajos/"+trabajo.ID+"/eventos", "", nil).Body)',
+    '\tevento := ""', '\tfor eventos.Scan() {', '\t\tlinea := eventos.Text()', '\t\tswitch {', '\t\tcase strings.HasPrefix(linea, "event: "):',
+    '\t\t\tevento = linea[7:]', '\t\tcase strings.HasPrefix(linea, "data: ") && evento == "texto":', '\t\t\tfmt.Print(linea[6:])',
+    '\t\tcase strings.HasPrefix(linea, "data: ") && evento == "fin":', '\t\t\tfmt.Println("\\n" + linea[6:])', '\t\t}', '\t}', '',
+    `\t// ${paso('ejemplos.resultado')}`, '\tsalida, _ := io.ReadAll(pedir("GET", "/trabajos/"+trabajo.ID+"/salida", "", nil).Body)',
+    '\tfmt.Println(string(salida))', '}')
+  return lineas.join('\n')
+}
+
+// herramientasPython es el ciclo de herramientas por OpenAI de la guía del desarrollador (docs/ejemplos/python/herramientas.py)
+// con la URL, la clave y el modelo de esta API.
+function herramientasPython(url: string, modelo: string, k: string): string {
+  return `import json
+
+from openai import OpenAI
+
+# ${t('ejemplos.herramientasComentario')}
+herramientas = [{"type": "function", "function": {
+    "name": "clima",
+    "description": "El tiempo actual de una ciudad",
+    "parameters": {"type": "object", "properties": {"ciudad": {"type": "string"}}, "required": ["ciudad"]},
+}}]
+
+
+def clima(ciudad):
+    return f"18 °C y despejado en {ciudad}"
+
+
+cliente = OpenAI(base_url="${url}/openai/v1", api_key="${k}")
+mensajes = [{"role": "user", "content": "¿Qué tiempo hace en Santiago?"}]
+while True:
+    mensaje = cliente.chat.completions.create(model="${modelo}", messages=mensajes, tools=herramientas).choices[0].message
+    if not mensaje.tool_calls:
+        print(mensaje.content)
+        break
+    mensajes.append({"role": "assistant", "content": mensaje.content, "tool_calls": [
+        {"id": l.id, "type": "function", "function": {"name": l.function.name, "arguments": l.function.arguments}}
+        for l in mensaje.tool_calls
+    ]})
+    for llamada in mensaje.tool_calls:
+        mensajes.append({"role": "tool", "tool_call_id": llamada.id, "content": clima(**json.loads(llamada.function.arguments))})`
+}
+
 const rolesOpenAI: Record<string, string> = { usuario: 'user', asistente: 'assistant', sistema: 'system' }
 
 // tiposMIME dan el tipo de un archivo por su extensión, para mandarlo en base64 por OpenAI o Anthropic.
@@ -123,7 +191,6 @@ const tiposMIME: Record<string, string> = {
   '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.html': 'text/html', '.htm': 'text/html',
   '.txt': 'text/plain', '.md': 'text/markdown', '.csv': 'text/csv', '.json': 'application/json', '.xml': 'application/xml',
-  '.zip': 'application/zip',
 }
 const mimeDe = (nombre: string) => tiposMIME[nombre.slice(nombre.lastIndexOf('.')).toLowerCase()] ?? 'application/octet-stream'
 // ficha marca en el cuerpo dónde va el archivo i; cada lenguaje la sustituye por su forma de leerlo en base64.
@@ -209,6 +276,7 @@ export function ejemplos(o: { url: string; modelo: string; contratos: string[]; 
     { id: 'curl-nativa', titulo: () => `curl · ${t('ejemplos.nativa')}`, codigo: (k) => curlNativa(url, prueba, k) },
     { id: 'python-nativa', titulo: () => `Python · ${t('ejemplos.nativa')}`, codigo: (k) => pythonNativa(url, prueba, k) },
     { id: 'node-nativa', titulo: () => `Node · ${t('ejemplos.nativa')}`, codigo: (k) => nodeNativa(url, prueba, k) },
+    { id: 'go-nativa', titulo: () => `Go · ${t('ejemplos.nativa')}`, codigo: (k) => goNativa(url, prueba, k) },
   ] : []
   if (o.prueba) {
     const lista = [...nativos]
@@ -289,6 +357,7 @@ print(m.content[0].text)` },
   -H "Authorization: Bearer ${k}" \\
   -H "Content-Type: application/json" \\
   -d '{"model": "${modelo}", "messages": [{"role": "user", "content": "${t('conectar.hola')}"}]}'` },
+    { id: 'python-herramientas', titulo: () => `Python · ${t('ejemplos.herramientas')}`, codigo: (k: string) => herramientasPython(url, modelo, k) },
     { id: 'entorno', titulo: () => t('conectar.entorno'), codigo: (k: string) => `${t('conectar.entornoComentario')}
 ${[contratos.includes('openai') ? `OPENAI_BASE_URL=${url}/openai/v1\nOPENAI_API_KEY=${k}` : '',
     contratos.includes('anthropic') ? `ANTHROPIC_BASE_URL=${url}/anthropic\nANTHROPIC_API_KEY=${k}` : ''].filter(Boolean).join('\n')}` },
