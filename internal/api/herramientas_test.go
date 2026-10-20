@@ -155,3 +155,43 @@ func TestFachadaCorrigeArgumentosInvalidos(t *testing.T) {
 		t.Fatalf("unos argumentos inválidos se corrigen con la receta antes de responder: %d %s (%d intentos)", r.StatusCode, cuerpo, n.Load())
 	}
 }
+
+// datosDe devuelve los datos JSON de los eventos SSE de un tipo.
+func datosDe(t *testing.T, flujo, tipo string) []map[string]any {
+	t.Helper()
+	var lista []map[string]any
+	for _, bloque := range strings.Split(flujo, "\n\n") {
+		if !strings.Contains(bloque, "event: "+tipo+"\n") {
+			continue
+		}
+		for _, linea := range strings.Split(bloque, "\n") {
+			if datos, ok := strings.CutPrefix(linea, "data: "); ok {
+				lista = append(lista, decodificar(t, datos))
+			}
+		}
+	}
+	return lista
+}
+
+func TestStreamingDeHerramientasConArgumentosComoTexto(t *testing.T) {
+	ts := servidor(t, simulado(pideTiempo), nil)
+	anthropic := `{"model":"simulado","max_tokens":100,"stream":true,"messages":[{"role":"user","content":"tiempo en Lima"}],"tools":[` +
+		strings.Replace(herramientaTiempo, `"parameters"`, `"input_schema"`, 1) + `]}`
+	_, flujo := pedir(t, ts, "POST", "/anthropic/v1/messages", anthropic)
+	deltas := datosDe(t, flujo, "content_block_delta")
+	if len(deltas) == 0 {
+		t.Fatalf("sin deltas:\n%s", flujo)
+	}
+	if parcial, ok := deltas[len(deltas)-1]["delta"].(map[string]any)["partial_json"].(string); !ok || !strings.Contains(parcial, "Lima") {
+		t.Fatalf("partial_json debe ser texto con el JSON: %v", deltas[len(deltas)-1])
+	}
+	responses := `{"model":"simulado","stream":true,"input":"tiempo en Lima","tools":[{"type":"function",` + strings.TrimPrefix(herramientaTiempo, "{") + `]}`
+	_, flujo = pedir(t, ts, "POST", "/openai/v1/responses", responses)
+	argumentos := datosDe(t, flujo, "response.function_call_arguments.delta")
+	if len(argumentos) == 0 {
+		t.Fatalf("sin deltas de argumentos:\n%s", flujo)
+	}
+	if delta, ok := argumentos[0]["delta"].(string); !ok || !strings.Contains(delta, "Lima") {
+		t.Fatalf("delta debe ser texto con el JSON: %v", argumentos[0])
+	}
+}

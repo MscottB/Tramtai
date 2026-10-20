@@ -551,7 +551,7 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 		item := llamadaRespuesta(l, "in_progress")
 		item["arguments"] = ""
 		_ = evento("response.output_item.added", map[string]any{"output_index": indice, "item": item})
-		_ = evento("response.function_call_arguments.delta", map[string]any{"item_id": item["id"], "output_index": indice, "delta": l.Argumentos})
+		_ = evento("response.function_call_arguments.delta", map[string]any{"item_id": item["id"], "output_index": indice, "delta": string(l.Argumentos)})
 		_ = evento("response.function_call_arguments.done", map[string]any{"item_id": item["id"], "output_index": indice, "arguments": string(l.Argumentos)})
 		_ = evento("response.output_item.done", map[string]any{"output_index": indice, "item": llamadaRespuesta(l, "completed")})
 		indice++

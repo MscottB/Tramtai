@@ -200,7 +200,7 @@ func (s *Servidor) mensajesAnthropic(w http.ResponseWriter, r *http.Request) {
 	for _, l := range llamadas {
 		_ = evento("content_block_start", map[string]any{"index": indice,
 			"content_block": map[string]any{"type": "tool_use", "id": l.ID, "name": l.Nombre, "input": map[string]any{}}})
-		_ = evento("content_block_delta", map[string]any{"index": indice, "delta": map[string]any{"type": "input_json_delta", "partial_json": l.Argumentos}})
+		_ = evento("content_block_delta", map[string]any{"index": indice, "delta": map[string]any{"type": "input_json_delta", "partial_json": string(l.Argumentos)}})
 		_ = evento("content_block_stop", map[string]any{"index": indice})
 		indice++
 	}
