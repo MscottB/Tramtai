@@ -563,6 +563,8 @@ const es = {
   'vivo.etapaEjecucion': 'en ejecución',
   'vivo.etapaValidacion': 'validándose',
   'vivo.etapaLlegada': 'terminada',
+  'vivo.etapaFallida': 'falló',
+  'vivo.etapaCancelada': 'cancelada',
   'vivo.enCurso': '{n} peticiones en curso.',
   'vivo.enCursoUno': '1 petición en curso.',
   'vivo.siguiendo': 'Siguiendo una petición',

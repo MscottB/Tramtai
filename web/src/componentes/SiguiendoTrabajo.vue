@@ -12,7 +12,7 @@
     </q-card-section>
     <q-card-section class="q-pt-none">
       <Ruta :estado="tranvia.estado" />
-      <div class="solo-lectores" aria-live="polite">{{ t('vivo.tranvia', { agente: nombreAgente(tranvia.agente), etapa: t(CLAVES_ETAPA[tranvia.etapa]) }) }}</div>
+      <div class="solo-lectores" aria-live="polite">{{ t('vivo.tranvia', { agente: nombreAgente(tranvia.agente), etapa: t(claveEtapa(tranvia)) }) }}</div>
     </q-card-section>
     <q-card-actions class="q-px-md q-pb-md q-pt-none">
       <q-btn outline color="primary" no-caps icon="o_history" :label="t('vivo.verHistorial')" @click="verHistorial" />
@@ -29,7 +29,7 @@ import Ruta from './Ruta.vue'
 import { nombreAgente } from '../agentes'
 import { trabajoAbrir } from '../estado'
 import { t } from '../i18n'
-import { CLAVES_ETAPA, type Tranvia } from '../vivo'
+import { claveEtapa, type Tranvia } from '../vivo'
 
 const props = defineProps<{ tranvia?: Tranvia }>()
 const emit = defineEmits<{ dejar: []; ir: [pagina: string] }>()

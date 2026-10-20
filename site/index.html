@@ -142,13 +142,13 @@
       <!-- Los ejemplos del recorrido: el tranvía de cada uno llega a la estación de su agente (sitio.js). Sin JavaScript
            quedan ocultos y se ve el mapa fijo con el primer ejemplo de código. -->
       <div class="mapa-ejemplos" hidden>
-        <p class="mapa-leyenda" aria-live="polite"></p>
+        <p class="mapa-leyenda" aria-live="off"></p>
         <div class="mapa-controles">
-          <button type="button" class="mapa-punto" data-ejemplo="0" aria-pressed="true" aria-label="Ejemplo 1 / Example 1"></button>
-          <button type="button" class="mapa-punto" data-ejemplo="1" aria-pressed="false" aria-label="Ejemplo 2 / Example 2"></button>
-          <button type="button" class="mapa-punto" data-ejemplo="2" aria-pressed="false" aria-label="Ejemplo 3 / Example 3"></button>
-          <button type="button" class="mapa-punto" data-ejemplo="3" aria-pressed="false" aria-label="Ejemplo 4 / Example 4"></button>
-          <button type="button" class="mapa-pausa" aria-pressed="false"><span lang="es">Pausa</span><span lang="en">Pause</span></button>
+          <button type="button" class="mapa-punto" data-ejemplo="0" aria-pressed="true"><span lang="es" class="solo-lectores">Ejemplo 1</span><span lang="en" class="solo-lectores">Example 1</span></button>
+          <button type="button" class="mapa-punto" data-ejemplo="1" aria-pressed="false"><span lang="es" class="solo-lectores">Ejemplo 2</span><span lang="en" class="solo-lectores">Example 2</span></button>
+          <button type="button" class="mapa-punto" data-ejemplo="2" aria-pressed="false"><span lang="es" class="solo-lectores">Ejemplo 3</span><span lang="en" class="solo-lectores">Example 3</span></button>
+          <button type="button" class="mapa-punto" data-ejemplo="3" aria-pressed="false"><span lang="es" class="solo-lectores">Ejemplo 4</span><span lang="en" class="solo-lectores">Example 4</span></button>
+          <button type="button" class="mapa-pausa"><span lang="es">Pausa</span><span lang="en">Pause</span></button>
         </div>
       </div>
       <script type="application/json" id="ejemplos-mapa">[{"origen": 0, "agentes": [0], "pausaCentro": false, "codigo": "codigo-mapa-1", "es": "Tu app con el SDK de OpenAI → Claude: «Resume este contrato en tres puntos»", "en": "Your app with the OpenAI SDK → Claude: “Summarize this contract in three points”"}, {"origen": 1, "agentes": [1], "pausaCentro": true, "codigo": "codigo-mapa-2", "es": "Un PDF por la API propia → Codex, con respuesta JSON (Tramtai lo convierte a texto)", "en": "A PDF through the native API → Codex, with a JSON answer (Tramtai turns it into text)"}, {"origen": 2, "agentes": [2], "pausaCentro": false, "codigo": "codigo-mapa-3", "es": "El SDK de Anthropic → GitHub Copilot: «Traduce este texto al inglés»", "en": "The Anthropic SDK → GitHub Copilot: “Translate this text into English”"}, {"origen": 0, "agentes": [0, 1], "pausaCentro": false, "codigo": "codigo-mapa-4", "es": "Respaldo: Claude llegó a su límite y la petición sigue con Codex", "en": "Fallback: Claude hit its limit and the request continues with Codex"}]</script>

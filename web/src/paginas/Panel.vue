@@ -110,7 +110,7 @@ import Linea from '../componentes/Linea.vue'
 import MapaRed from '../componentes/MapaRed.vue'
 import SiguiendoTrabajo from '../componentes/SiguiendoTrabajo.vue'
 import { useEventosInstancia } from '../composables/useEventosInstancia'
-import { visibles, type Tranvia } from '../vivo'
+import { aplicar, eventoDe, visibles, type Tranvia } from '../vivo'
 import AvisoConversor from '../componentes/AvisoConversor.vue'
 import { cargarConversor, conversor } from '../conversor'
 import { api, avisar, cargarDiasHistorial, copiar, mensajeError } from '../api/cliente'
@@ -149,10 +149,23 @@ function seguir(id: string) {
   const tr = tranvias.value.get(id)
   if (tr) seguido.value = { ...tr }
 }
+let pidiendoFinal = ''
 watch(tranvias, (m) => {
   const tr = seguido.value && m.get(seguido.value.id)
   if (tr) seguido.value = { ...tr }
+  else if (seguido.value && seguido.value.terminadoEn === undefined) traerFinal(seguido.value)
 }, { deep: true })
+// traerFinal pide cómo acabó la seguida cuando salió del mapa sin llegar (el flujo estuvo cortado mientras terminaba).
+function traerFinal(previo: Tranvia) {
+  if (pidiendoFinal === previo.id) return
+  pidiendoFinal = previo.id
+  api.trabajo(previo.id).then((trabajo) => {
+    if (seguido.value?.id !== previo.id) return
+    const m = new Map([[previo.id, previo]])
+    aplicar(m, eventoDe(trabajo), Date.now(), new Set())
+    seguido.value = m.get(previo.id)
+  }).catch(() => {}).finally(() => (pidiendoFinal = '')) // sin servicio: la tarjeta se queda como estaba
+}
 const error = ref('')
 
 const total = (estados: string[]) => estados.reduce((n, e) => n + (instancia.value?.trabajos[e] ?? 0), 0)

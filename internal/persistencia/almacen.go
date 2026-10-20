@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS trabajos (
 );
 CREATE INDEX IF NOT EXISTS trabajos_instancia_estado ON trabajos (instancia, estado, creado_en);
 CREATE INDEX IF NOT EXISTS trabajos_instancia_actualizado ON trabajos (instancia, actualizado_en);
+CREATE INDEX IF NOT EXISTS trabajos_instancia_terminado ON trabajos (instancia, terminado_en);
 CREATE TABLE IF NOT EXISTS eventos (
 	trabajo_id TEXT NOT NULL REFERENCES trabajos (id) ON DELETE CASCADE,
 	numero INTEGER NOT NULL,

@@ -8,14 +8,30 @@ import (
 	"net/http/httptest"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/nucleo"
+	"tramtai/internal/persistencia"
 )
 
-// flujoVivo abre /api/v1/eventos y entrega cada evento trabajo por el canal hasta que se cierra la prueba.
+// hastaLaFoto lee los eventos de la foto inicial: id → etapa.
+func hastaLaFoto(t *testing.T, eventos <-chan map[string]any) map[string]string {
+	t.Helper()
+	vistos := map[string]string{}
+	for {
+		e := esperarEvento(t, eventos, func(map[string]any) bool { return true })
+		if e["foto"] == true {
+			return vistos
+		}
+		vistos[e["id"].(string)] = e["etapa"].(string)
+	}
+}
+
+// flujoVivo abre /api/v1/eventos y entrega cada evento trabajo por el canal hasta que se cierra la prueba; el fin de la
+// foto llega como {"foto": true}.
 func flujoVivo(t *testing.T, ts *httptest.Server) (<-chan map[string]any, *http.Response) {
 	t.Helper()
 	ctx, cancelar := context.WithCancel(context.Background())
@@ -44,6 +60,8 @@ func flujoVivo(t *testing.T, ts *httptest.Server) (<-chan map[string]any, *http.
 			switch {
 			case strings.HasPrefix(linea, "event: "):
 				tipo = strings.TrimPrefix(linea, "event: ")
+			case strings.HasPrefix(linea, "data: ") && tipo == "foto":
+				eventos <- map[string]any{"foto": true}
 			case strings.HasPrefix(linea, "data: ") && tipo == "trabajo":
 				var e map[string]any
 				if json.Unmarshal([]byte(strings.TrimPrefix(linea, "data: ")), &e) == nil {
@@ -100,13 +118,63 @@ func TestEventosFotoInicial(t *testing.T) {
 	enCurso := crearHola(t, ts, `{"agente":"lento","mensajes":[{"rol":"usuario","contenido":"hola"}]}`)
 	esperarEstado(t, ts, enCurso, nucleo.Ejecutando)
 	eventos, _ := flujoVivo(t, ts)
-	vistos := map[string]string{}
-	for len(vistos) < 2 {
-		e := esperarEvento(t, eventos, func(map[string]any) bool { return true })
-		vistos[e["id"].(string)] = e["etapa"].(string)
-	}
-	if vistos[hecho] != "llegada" || vistos[enCurso] != "ejecucion" {
+	if vistos := hastaLaFoto(t, eventos); len(vistos) != 2 || vistos[hecho] != "llegada" || vistos[enCurso] != "ejecucion" {
 		t.Fatalf("foto = %v", vistos)
+	}
+}
+
+func TestEventosFotoPorPaginas(t *testing.T) {
+	antes := persistencia.LimiteCambios
+	persistencia.LimiteCambios = 2
+	t.Cleanup(func() { persistencia.LimiteCambios = antes })
+	ts := servidor(t, map[string]adaptadores.Adaptador{"lento": adaptadores.Simulado{Demora: time.Minute}}, nil)
+	for i := 0; i < 5; i++ {
+		crearHola(t, ts, `{"agente":"lento","mensajes":[{"rol":"usuario","contenido":"hola"}]}`)
+	}
+	eventos, _ := flujoVivo(t, ts)
+	if vistos := hastaLaFoto(t, eventos); len(vistos) != 5 {
+		t.Fatalf("con páginas de 2, la foto debe traer los 5: %v", vistos)
+	}
+}
+
+func TestEventosAvisosSeguidosUnaLectura(t *testing.T) {
+	var lecturas atomic.Int32
+	original := leerCambios
+	leerCambios = func(s *Servidor, ctx context.Context, punto string, desde time.Time) ([]nucleo.Trabajo, error) {
+		lecturas.Add(1)
+		return original(s, ctx, punto, desde)
+	}
+	t.Cleanup(func() { leerCambios = original })
+	s := nuevoServidor(t, simulado(adaptadores.Simulado{}), nil, nil)
+	s.Sondeo = time.Hour // solo despiertan los avisos
+	ts := httptest.NewServer(s.Handler())
+	t.Cleanup(ts.Close)
+	eventos, _ := flujoVivo(t, ts)
+	hastaLaFoto(t, eventos)
+	inicio := time.Now()
+	var ids []string
+	for i := 0; i < 10; i++ { // cada trabajo cambia varias veces: decenas de avisos
+		ids = append(ids, crearHola(t, ts, solicitudHola))
+	}
+	for _, id := range ids {
+		esperarEstado(t, ts, id, nucleo.Completado)
+	}
+	time.Sleep(500 * time.Millisecond)
+	if maximo := int32(time.Since(inicio)/esperaLecturas) + 2; lecturas.Load() > maximo {
+		t.Fatalf("%d lecturas en %v: los avisos seguidos deben juntarse (máximo %d)", lecturas.Load(), time.Since(inicio), maximo)
+	}
+}
+
+func TestOlvidarVistos(t *testing.T) {
+	ahora := time.Now()
+	vistos := map[string]visto{
+		"viejo":    {estado: "completado", terminado: true, cambio: ahora.Add(-time.Minute)},
+		"reciente": {estado: "completado", terminado: true, cambio: ahora},
+		"vivo":     {estado: "ejecutando", cambio: ahora.Add(-time.Hour)},
+	}
+	olvidar(vistos, ahora.Add(-time.Second))
+	if _, ok := vistos["viejo"]; ok || len(vistos) != 2 {
+		t.Fatalf("solo se olvidan los terminados de antes del límite: %v", vistos)
 	}
 }
 
@@ -169,8 +237,11 @@ func TestEventosSinContenido(t *testing.T) {
 		claves = append(claves, k)
 	}
 	sort.Strings(claves)
-	if strings.Join(claves, ",") != "actualizado,agente,api,codigo_error,estado,etapa,id,intento,modelo,origen" {
+	if strings.Join(claves, ",") != "actualizado,agente,api,codigo_error,creado,estado,etapa,id,intento,modelo,origen" {
 		t.Fatalf("claves del evento: %v", claves)
+	}
+	if creado, _ := time.Parse(time.RFC3339Nano, e["creado"].(string)); creado.IsZero() || creado.After(time.Now()) {
+		t.Fatalf("creado = %v", e["creado"])
 	}
 }
 

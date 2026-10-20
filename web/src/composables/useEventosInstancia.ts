@@ -1,17 +1,10 @@
 // useEventosInstancia sigue en vivo las peticiones de la instancia (GET /api/v1/eventos) mientras la página que lo
-// usa está montada. Si el flujo se corta reconecta con espera creciente; tras 3 fallos seguidos, o sin EventSource,
-// consulta los trabajos cada 5 s hasta que el flujo vuelva.
+// usa está montada y a la vista: con la pestaña oculta cierra el flujo (no ocupa una plaza ni una conexión) y al volver
+// lo abre de nuevo, y la foto pone el mapa al día. Si el flujo se corta reconecta con espera creciente; tras 3 fallos
+// seguidos, o sin EventSource, consulta los trabajos cada 5 s hasta que el flujo vuelva.
 import { onMounted, onUnmounted, ref } from 'vue'
 import { api } from '../api/cliente'
-import type { Trabajo } from '../api/tipos'
-import { terminales } from '../formato'
-import { aplicar, esperaReconexion, etapaDe, limpiar, type EventoTrabajo, type Tranvias } from '../vivo'
-
-// eventoDe convierte un trabajo de la consulta en el evento que habría mandado el flujo.
-function eventoDe(t: Trabajo): EventoTrabajo {
-  return { id: t.id, estado: t.estado, etapa: etapaDe(t.estado), agente: t.solicitud?.agente ?? '', modelo: t.modelo_efectivo || t.modelo_enviado || '',
-    api: t.punto_acceso ?? '', origen: t.origen ?? '', intento: 1, codigo_error: t.codigo_error ?? '', actualizado: '' }
-}
+import { aplicar, esperaReconexion, eventoDe, limpiar, podar, reconciliar, type Tranvias } from '../vivo'
 
 export function useEventosInstancia() {
   const tranvias = ref<Tranvias>(new Map())
@@ -27,7 +20,7 @@ export function useEventosInstancia() {
   async function consultar() {
     if (document.hidden) return
     try {
-      for (const t of await api.trabajos(20)) if (!terminales.includes(t.estado)) aplicar(tranvias.value, eventoDe(t), Date.now(), borrados)
+      reconciliar(tranvias.value, (await api.trabajos(20)).map(eventoDe), Date.now(), borrados)
     } catch {
       // sin servicio: el mapa se queda como está hasta la próxima
     }
@@ -38,16 +31,24 @@ export function useEventosInstancia() {
     consulta = window.setInterval(consultar, 5000)
   }
   function abrir() {
-    if (!activo) return
+    if (!activo || fuente || document.hidden) return
     if (typeof EventSource === 'undefined') return consultarCada5s()
+    let enFoto: Set<string> | undefined = new Set() // los ids de la foto, hasta el evento foto que la cierra
     fuente = new EventSource('/api/v1/eventos')
-    fuente.addEventListener('trabajo', (m) => aplicar(tranvias.value, JSON.parse((m as MessageEvent).data), Date.now(), borrados))
-    fuente.onopen = () => {
+    fuente.addEventListener('trabajo', (m) => {
+      const e = JSON.parse((m as MessageEvent).data)
+      enFoto?.add(e.id)
+      aplicar(tranvias.value, e, Date.now(), borrados)
+    })
+    // Solo con la foto entera el flujo cuenta como recuperado: uno que abre y se corta enseguida sigue esperando más.
+    fuente.addEventListener('foto', () => {
+      podar(tranvias.value, enFoto ?? new Set())
+      enFoto = undefined
       fallos = 0
       enVivo.value = true
       window.clearInterval(consulta)
       consulta = undefined
-    }
+    })
     fuente.onerror = () => {
       fuente?.close()
       fuente = undefined
@@ -57,15 +58,27 @@ export function useEventosInstancia() {
     }
   }
 
+  function cerrar() {
+    fuente?.close()
+    fuente = undefined
+    window.clearTimeout(reconexion)
+  }
+  function alCambiarVisibilidad() {
+    if (document.hidden) return cerrar()
+    fallos = 0
+    abrir()
+  }
+
   onMounted(() => {
     activo = true
     abrir()
+    document.addEventListener('visibilitychange', alCambiarVisibilidad)
     limpieza = window.setInterval(() => limpiar(tranvias.value, Date.now(), borrados), 500)
   })
   onUnmounted(() => {
     activo = false
-    fuente?.close()
-    window.clearTimeout(reconexion)
+    cerrar()
+    document.removeEventListener('visibilitychange', alCambiarVisibilidad)
     window.clearInterval(consulta)
     window.clearInterval(limpieza)
   })

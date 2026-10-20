@@ -563,6 +563,8 @@ const en: Textos = {
   'vivo.etapaEjecucion': 'running',
   'vivo.etapaValidacion': 'being validated',
   'vivo.etapaLlegada': 'finished',
+  'vivo.etapaFallida': 'failed',
+  'vivo.etapaCancelada': 'cancelled',
   'vivo.enCurso': '{n} requests in progress.',
   'vivo.enCursoUno': '1 request in progress.',
   'vivo.siguiendo': 'Following a request',

@@ -1,6 +1,7 @@
 // vivo convierte los eventos de GET /api/v1/eventos en los tranvías del mapa de Inicio: dónde va cada petición en
 // curso y cuándo deja de verse. Sin Vue, para poder probarlo; MapaRed.vue solo dibuja lo que sale de aquí.
 
+import type { Trabajo } from './api/tipos'
 import type { Clave } from './idiomas/es'
 
 export type Etapa = 'cola' | 'preparacion' | 'ejecucion' | 'validacion' | 'llegada'
@@ -16,6 +17,7 @@ export interface EventoTrabajo {
   origen: string
   intento: number
   codigo_error: string
+  creado: string
   actualizado: string
 }
 
@@ -29,7 +31,8 @@ export interface Tranvia {
   estado: string
   intento: number
   codigoError: string
-  // desde es cuándo apareció en el mapa; terminadoEn, cuándo llegó (o falló), para borrarlo después.
+  // desde es cuándo se aceptó la petición (o, si no se sabe, cuándo apareció en el mapa); terminadoEn, cuándo llegó
+  // (o falló), para borrarlo después.
   desde: number
   terminadoEn?: number
   tramo: Tramo
@@ -61,7 +64,7 @@ export function aplicar(t: Tranvias, e: EventoTrabajo, ahora: number, borrados: 
   const parada = e.etapa === 'llegada' && e.estado !== 'completado' ? (previo ? { tramo: previo.tramo, avance: previo.avance } : PARADAS.preparacion) : PARADAS[e.etapa]
   t.set(e.id, {
     id: e.id, agente: e.agente, modelo: e.modelo, api: e.api, origen: e.origen, etapa: e.etapa, estado: e.estado, intento: e.intento,
-    codigoError: e.codigo_error, desde: previo?.desde ?? ahora, terminadoEn: e.etapa === 'llegada' ? (previo?.terminadoEn ?? ahora) : undefined,
+    codigoError: e.codigo_error, desde: previo?.desde ?? (Date.parse(e.creado) || ahora), terminadoEn: e.etapa === 'llegada' ? (previo?.terminadoEn ?? ahora) : undefined,
     tramo: parada.tramo, avance: parada.avance,
   })
 }
@@ -72,6 +75,31 @@ export function limpiar(t: Tranvias, ahora: number, borrados: Set<string>): void
       t.delete(id)
       borrados.add(id)
     }
+}
+
+// podar quita los tranvías que no llegaron y no están entre presentes: lo que la foto de un flujo nuevo no trajo ya
+// terminó hace rato (un corte largo del flujo no deja tranvías congelados).
+export function podar(t: Tranvias, presentes: Set<string>): void {
+  for (const [id, tr] of t) if (tr.terminadoEn === undefined && !presentes.has(id)) t.delete(id)
+}
+
+// reconciliar pone el mapa al día con una consulta de los trabajos recientes cuando no hay flujo: los del mapa que
+// terminaron llegan, los que ya no salen se van y los terminados que no estaban no aparecen.
+export function reconciliar(t: Tranvias, eventos: EventoTrabajo[], ahora: number, borrados: Set<string>): void {
+  for (const e of eventos) if (e.etapa !== 'llegada' || t.has(e.id)) aplicar(t, e, ahora, borrados)
+  podar(t, new Set(eventos.map((e) => e.id)))
+}
+
+// eventoDe convierte un trabajo de la consulta en el evento que habría mandado el flujo.
+export function eventoDe(t: Trabajo): EventoTrabajo {
+  return { id: t.id, estado: t.estado, etapa: etapaDe(t.estado), agente: t.solicitud?.agente ?? '', modelo: t.modelo_efectivo || t.modelo_enviado || '',
+    api: t.punto_acceso ?? '', origen: t.origen ?? '', intento: 1, codigo_error: t.codigo_error ?? '', creado: t.creado_en, actualizado: '' }
+}
+
+// claveEtapa es el texto de dónde va un tranvía; la llegada se nombra según cómo terminó.
+export function claveEtapa(tr: Tranvia): Clave {
+  if (tr.etapa !== 'llegada' || tr.estado === 'completado') return CLAVES_ETAPA[tr.etapa]
+  return tr.estado === 'cancelado' ? 'vivo.etapaCancelada' : 'vivo.etapaFallida'
 }
 
 export function posicion(tr: Tranvia): { tramo: Tramo; avance: number } {

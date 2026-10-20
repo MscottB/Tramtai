@@ -321,24 +321,50 @@ func (a *Almacen) Listar(ctx context.Context, instancia string, f FiltroTrabajos
 	return trabajos, filas.Err()
 }
 
+// LimiteCambios es cuántos trabajos trae como mucho cada lectura del flujo de eventos; quien lee pide la página
+// siguiente desde el último si llega llena. Es variable para que las pruebas lo bajen.
+var LimiteCambios = 500
+
+// condicionVivos son los trabajos de la instancia sin terminar y los terminados desde una fecha. La instancia va en
+// cada rama, y con otro parámetro (?6, el mismo valor) para que SQLite no la saque de factor común: así usa
+// trabajos_instancia_terminado en las dos ramas en vez de recorrer todo el historial de la instancia.
+const condicionVivos = "((instancia = ?1 AND terminado_en IS NULL) OR (instancia = ?6 AND terminado_en >= ?2))"
+
 // Vivos devuelve los trabajos de la instancia sin terminar y los terminados desde terminadosDesde, por orden de
-// cambio: es la foto con la que empieza el flujo de eventos de la instancia. punto vacío: los de todas las APIs.
-func (a *Almacen) Vivos(ctx context.Context, instancia, punto string, terminadosDesde time.Time) ([]nucleo.Trabajo, error) {
-	return a.porCambio(ctx, instancia, punto, "(terminado_en IS NULL OR terminado_en >= ?)", fecha(terminadosDesde))
+// cambio y a partir de los cambiados después de despues (cero: desde el principio): es la foto con la que empieza el
+// flujo de eventos de la instancia. punto vacío: los de todas las APIs.
+func (a *Almacen) Vivos(ctx context.Context, instancia, punto string, terminadosDesde, despues time.Time) ([]nucleo.Trabajo, error) {
+	return a.porCambio(ctx, instancia, punto, condicionVivos, terminadosDesde, despues)
 }
 
 // CambiadosDesde devuelve los trabajos de la instancia que cambiaron después de desde (estado, agente…), por orden de
-// cambio y como mucho 500: lo que el flujo de eventos envía tras cada aviso.
+// cambio y como mucho LimiteCambios: lo que el flujo de eventos envía tras cada aviso.
 func (a *Almacen) CambiadosDesde(ctx context.Context, instancia, punto string, desde time.Time) ([]nucleo.Trabajo, error) {
-	return a.porCambio(ctx, instancia, punto, "actualizado_en > ?", fecha(desde))
+	return a.porCambio(ctx, instancia, punto, "", time.Time{}, desde)
 }
 
-func (a *Almacen) porCambio(ctx context.Context, instancia, punto, condicion string, valor any) ([]nucleo.Trabajo, error) {
-	donde, args := "instancia = ? AND "+condicion, []any{instancia, valor}
-	if punto != "" {
-		donde, args = donde+" AND punto_acceso = ?", append(args, punto)
+// consultaPorCambio arma la lectura de los trabajos de la instancia cambiados después de despues, por orden de
+// cambio. condicion (con ?1 y ?6 la instancia y ?2 valor) reemplaza al filtro de instancia; vacía: toda la instancia.
+func consultaPorCambio(instancia, punto, condicion string, valor, despues time.Time) (string, []any) {
+	donde, args, orden := "instancia = ?1", []any{instancia, fecha(valor)}, "actualizado_en"
+	if condicion != "" {
+		// +actualizado_en: si no, SQLite prefiere el índice que ya viene ordenado y recorre toda la instancia.
+		donde, orden = condicion, "+actualizado_en"
 	}
-	filas, err := a.db.QueryContext(ctx, `SELECT `+columnas+` FROM trabajos WHERE `+donde+` ORDER BY actualizado_en, rowid LIMIT 500`, args...)
+	if !despues.IsZero() {
+		donde, args = donde+" AND actualizado_en > ?3", append(args, fecha(despues))
+	} else {
+		args = append(args, nil)
+	}
+	if punto != "" {
+		donde = donde + " AND punto_acceso = ?4"
+	}
+	return `SELECT ` + columnas + ` FROM trabajos WHERE ` + donde + ` ORDER BY ` + orden + `, rowid LIMIT ?5`, append(args, punto, LimiteCambios, instancia)
+}
+
+func (a *Almacen) porCambio(ctx context.Context, instancia, punto, condicion string, valor, despues time.Time) ([]nucleo.Trabajo, error) {
+	consulta, args := consultaPorCambio(instancia, punto, condicion, valor, despues)
+	filas, err := a.db.QueryContext(ctx, consulta, args...)
 	if err != nil {
 		return nil, err
 	}

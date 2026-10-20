@@ -1,9 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { aplicar, esperaReconexion, etapaDe, limpiar, posicion, visibles, type EventoTrabajo, type Tranvias } from './vivo.ts'
+import { aplicar, claveEtapa, esperaReconexion, etapaDe, eventoDe, limpiar, podar, posicion, reconciliar, visibles, type EventoTrabajo, type Tranvias } from './vivo.ts'
+import type { Trabajo } from './api/tipos.ts'
 
 const ev = (o: Partial<EventoTrabajo>): EventoTrabajo => ({ id: 'a', estado: 'en_cola', etapa: 'cola', agente: 'claude', modelo: 'claude/sonnet',
-  api: '', origen: 'probar', intento: 1, codigo_error: '', actualizado: '', ...o })
+  api: '', origen: 'probar', intento: 1, codigo_error: '', creado: '', actualizado: '', ...o })
 
 test('alta y cambio de etapa', () => {
   const t: Tranvias = new Map()
@@ -80,4 +81,48 @@ test('etapaDe agrupa los estados como el servicio', () => {
 
 test('esperas de reconexión', () => {
   assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 7].map(esperaReconexion), [1000, 2000, 4000, 8000, 16000, 30000, 30000, 30000])
+})
+
+test('desde es cuándo se aceptó la petición, no cuándo apareció en el mapa', () => {
+  const t: Tranvias = new Map()
+  aplicar(t, ev({ estado: 'ejecutando', etapa: 'ejecucion', creado: '2026-10-20T12:00:00Z' }), Date.parse('2026-10-20T12:02:00Z'), new Set())
+  assert.equal(t.get('a')!.desde, Date.parse('2026-10-20T12:00:00Z'))
+})
+
+test('podar quita los que la foto no trajo y no habían llegado', () => {
+  const t: Tranvias = new Map()
+  const borrados = new Set<string>()
+  aplicar(t, ev({ id: 'sigue', estado: 'ejecutando', etapa: 'ejecucion' }), 0, borrados)
+  aplicar(t, ev({ id: 'perdido', estado: 'ejecutando', etapa: 'ejecucion' }), 0, borrados)
+  aplicar(t, ev({ id: 'llegando', estado: 'completado', etapa: 'llegada' }), 0, borrados)
+  podar(t, new Set(['sigue']))
+  assert.deepEqual([...t.keys()].sort(), ['llegando', 'sigue'])
+})
+
+test('reconciliar con la consulta: el que termina llega, el que falta se va y los terminados nuevos no aparecen', () => {
+  const t: Tranvias = new Map()
+  const borrados = new Set<string>()
+  aplicar(t, ev({ id: 'termina', estado: 'ejecutando', etapa: 'ejecucion' }), 0, borrados)
+  aplicar(t, ev({ id: 'falta', estado: 'ejecutando', etapa: 'ejecucion' }), 0, borrados)
+  reconciliar(t, [ev({ id: 'termina', estado: 'completado', etapa: 'llegada' }), ev({ id: 'viejo', estado: 'completado', etapa: 'llegada' }),
+    ev({ id: 'nuevo', estado: 'en_cola', etapa: 'cola' })], 100, borrados)
+  assert.deepEqual([...t.keys()].sort(), ['nuevo', 'termina'])
+  assert.equal(t.get('termina')!.terminadoEn, 100)
+  limpiar(t, 2100, borrados)
+  assert.deepEqual([...t.keys()], ['nuevo'])
+})
+
+test('eventoDe convierte un trabajo de la consulta', () => {
+  const trabajo = { id: 'x', estado: 'fallido', solicitud: { agente: 'codex' }, modelo_efectivo: 'codex/gpt', punto_acceso: 'otra', origen: 'api',
+    codigo_error: 'error_agente', creado_en: '2026-10-20T12:00:00Z' } as unknown as Trabajo
+  assert.deepEqual(eventoDe(trabajo), { id: 'x', estado: 'fallido', etapa: 'llegada', agente: 'codex', modelo: 'codex/gpt', api: 'otra', origen: 'api',
+    intento: 1, codigo_error: 'error_agente', creado: '2026-10-20T12:00:00Z', actualizado: '' })
+})
+
+test('la llegada se nombra según cómo terminó', () => {
+  const t: Tranvias = new Map()
+  for (const estado of ['completado', 'fallido', 'interrumpido', 'cancelado']) aplicar(t, ev({ id: estado, estado, etapa: 'llegada' }), 0, new Set())
+  aplicar(t, ev({ id: 'va', estado: 'ejecutando', etapa: 'ejecucion' }), 0, new Set())
+  assert.deepEqual(['completado', 'fallido', 'interrumpido', 'cancelado', 'va'].map((id) => claveEtapa(t.get(id)!)),
+    ['vivo.etapaLlegada', 'vivo.etapaFallida', 'vivo.etapaFallida', 'vivo.etapaCancelada', 'vivo.etapaEjecucion'])
 })

@@ -22,3 +22,12 @@ test('el recorrido se puede pausar y elegir', () => {
   assert.match(html, /class="mapa-pausa"/)
   assert.equal((html.match(/class="mapa-punto"/g) ?? []).length, 4)
 })
+
+test('el recorrido no se anuncia solo y sus controles hablan en el idioma de la página', () => {
+  assert.match(html, /<p class="mapa-leyenda" aria-live="off">/, 'mientras rota solo, la leyenda no se anuncia cada 6,5 s')
+  for (const punto of html.match(/<button type="button" class="mapa-punto"[^>]*>[\s\S]*?<\/button>/g) ?? []) {
+    assert.doesNotMatch(punto, /aria-label/, 'el nombre del punto va en spans por idioma, no en los dos a la vez')
+    assert.match(punto, /<span lang="es" class="solo-lectores">Ejemplo \d<\/span><span lang="en" class="solo-lectores">Example \d<\/span>/)
+  }
+  assert.doesNotMatch(html, /class="mapa-pausa" aria-pressed/, 'la pausa cambia su texto: sin aria-pressed')
+})

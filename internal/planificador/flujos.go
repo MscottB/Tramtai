@@ -32,8 +32,8 @@ func (p *Planificador) ReservarFlujo() (liberar func(), ok bool) {
 }
 
 // Vivos son los trabajos de la instancia sin terminar y los terminados desde «desde» (ver Almacen.Vivos).
-func (p *Planificador) Vivos(ctx context.Context, punto string, desde time.Time) ([]nucleo.Trabajo, error) {
-	return p.almacen.Vivos(ctx, p.opc.Instancia, punto, desde)
+func (p *Planificador) Vivos(ctx context.Context, punto string, desde, despues time.Time) ([]nucleo.Trabajo, error) {
+	return p.almacen.Vivos(ctx, p.opc.Instancia, punto, desde, despues)
 }
 
 // CambiadosDesde son los trabajos de la instancia que cambiaron después de «desde» (ver Almacen.CambiadosDesde).

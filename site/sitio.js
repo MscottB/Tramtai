@@ -255,7 +255,8 @@
   var alto = document.querySelector('.mapa-alto');
   if (!datos || !caja || !ancho || !alto || !Element.prototype.animate) return;
   var ejemplos = JSON.parse(datos.textContent);
-  var quieto = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var movimiento = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var quieto = movimiento.matches;
   var ORIGENES = ['M 190 95 L 202 95 C 240 95 240 143 278 143 L 290 143', 'M 190 153 L 204 153 C 240 153 240 153 276 153 L 290 153',
     'M 190 211 L 202 211 C 240 211 240 163 278 163 L 290 163'];
   var LINEAS = ['M 460 133 L 472 133 C 515 133 515 37 558 37 L 570 37', 'M 460 143 L 472 143 C 515 143 515 95 558 95 L 570 95',
@@ -354,13 +355,15 @@
         return mover(i, segundo[i].centro, 100, 1800, 200).finished;
       }).catch(function () {});
     });
-    if (!quieto && !pausado) temporizador = setTimeout(function () { recorrer((actual + 1) % ejemplos.length); }, 6500);
+    if (!quieto && !pausado) temporizador = setTimeout(function () { anunciar(false); recorrer((actual + 1) % ejemplos.length); }, 6500);
   }
 
-  puntos.forEach(function (p, i) { p.addEventListener('click', function () { recorrer(i); }); });
+  // La leyenda se anuncia cuando la elige la persona, no cada vez que rota sola.
+  function anunciar(si) { leyenda.setAttribute('aria-live', si ? 'polite' : 'off'); }
+  puntos.forEach(function (p, i) { p.addEventListener('click', function () { anunciar(true); recorrer(i); }); });
   pausa.addEventListener('click', function () {
     pausado = !pausado;
-    pausa.setAttribute('aria-pressed', String(pausado));
+    anunciar(true);
     pausa.innerHTML = pausado ? '<span lang="es">Seguir</span><span lang="en">Play</span>' : '<span lang="es">Pausa</span><span lang="en">Pause</span>';
     recorrer(actual);
   });
@@ -368,6 +371,14 @@
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) parar();
     else recorrer(actual);
+  });
+  // «Reducir movimiento» se respeta también si cambia con la página abierta.
+  movimiento.addEventListener('change', function () {
+    quieto = movimiento.matches;
+    pausado = quieto;
+    pausa.hidden = quieto;
+    pausa.innerHTML = '<span lang="es">Pausa</span><span lang="en">Pause</span>';
+    recorrer(actual);
   });
   if (quieto) pausa.hidden = true;
   caja.hidden = false;

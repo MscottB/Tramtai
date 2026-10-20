@@ -1,6 +1,7 @@
 package persistencia
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -37,7 +38,7 @@ func TestVivosTraeEnCursoYRecientes(t *testing.T) {
 	avanzar(t, a, reciente.ID, nucleo.Fallido)
 	ahora = ahora.Add(3 * time.Second)
 
-	vivos, err := a.Vivos(ctx, "global", "", ahora.Add(-10*time.Second))
+	vivos, err := a.Vivos(ctx, "global", "", ahora.Add(-10*time.Second), time.Time{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +56,7 @@ func TestVivosFiltraPorPunto(t *testing.T) {
 	conB.PuntoAcceso = "b"
 	aceptar(t, a, conA, "")
 	aceptar(t, a, conB, "")
-	vivos, err := a.Vivos(ctx, "global", "a", time.Now().Add(-time.Minute))
+	vivos, err := a.Vivos(ctx, "global", "a", time.Now().Add(-time.Minute), time.Time{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,5 +107,40 @@ func TestCambiarAgenteActualiza(t *testing.T) {
 	}
 	if len(cambiados) != 1 || cambiados[0].Solicitud.Agente != "codex" {
 		t.Fatalf("el cambio de agente no cuenta como cambio: %+v", cambiados)
+	}
+}
+
+func TestVivosUsaElIndiceDeTerminados(t *testing.T) {
+	a := abrir(t)
+	consulta, args := consultaPorCambio("global", "", condicionVivos, time.Now(), time.Time{})
+	filas, err := a.db.QueryContext(ctx, "EXPLAIN QUERY PLAN "+consulta, args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer filas.Close()
+	plan := ""
+	for filas.Next() {
+		var id, padre, libre int
+		var detalle string
+		if err := filas.Scan(&id, &padre, &libre, &detalle); err != nil {
+			t.Fatal(err)
+		}
+		plan += detalle + "\n"
+	}
+	if !strings.Contains(plan, "trabajos_instancia_terminado") {
+		t.Fatalf("la foto recorre el historial de la instancia:\n%s", plan)
+	}
+}
+
+func TestVivosDespuesDe(t *testing.T) {
+	a := abrir(t)
+	uno := aceptar(t, a, trabajo("global", "uno"), "")
+	dos := aceptar(t, a, trabajo("global", "dos"), "")
+	vivos, err := a.Vivos(ctx, "global", "", time.Now(), uno.ActualizadoEn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(vivos) != 1 || vivos[0].ID != dos.ID {
+		t.Fatalf("después de uno solo queda dos: %v", ids(vivos))
 	}
 }
