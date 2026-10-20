@@ -12,6 +12,7 @@ import (
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
+	"tramtai/internal/herramientas"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
@@ -179,6 +180,9 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoServicioDetenido, idioma.T("el planificador no está en marcha"))
 	}
 	if err := solicitud.Validar(); err != nil {
+		return nucleo.Trabajo{}, false, err
+	}
+	if err := herramientas.Validar(solicitud); err != nil {
 		return nucleo.Trabajo{}, false, err
 	}
 	for _, e := range solicitud.Respaldo {

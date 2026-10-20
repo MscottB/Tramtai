@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"tramtai/internal/herramientas"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
@@ -45,33 +46,35 @@ type mensajeEntrada struct {
 	Output     json.RawMessage `json:"output"`
 }
 
-// mensajes traduce los mensajes de OpenAI o Anthropic al contrato interno. Las llamadas a herramientas anteriores y
-// sus resultados pasan a turnos de texto con el formato que el agente conoce (herramientas.go); los archivos se
-// devuelven aparte para guardarlos como cargas (guardarEnLinea).
+// mensajes traduce los mensajes de OpenAI o Anthropic al contrato interno. Las llamadas a herramientas anteriores
+// van en el mensaje del asistente y sus resultados como mensajes «herramienta» (internal/herramientas los escribe para
+// el agente); los archivos se devuelven aparte para guardarlos como cargas (guardarEnLinea).
 func mensajes(entrada []mensajeEntrada) ([]nucleo.Mensaje, []archivoEnLinea, error) {
 	var salida []nucleo.Mensaje
 	var archivos []archivoEnLinea
-	numero := 0                    // archivos de la petición, para documento-<n>
-	nombres := map[string]string{} // id de llamada → herramienta, para nombrar sus resultados
-	var pendientes []llamada       // function_call seguidos de responses: un único turno del asistente
+	numero := 0                     // archivos de la petición, para documento-<n>
+	var pendientes []nucleo.Llamada // function_call seguidos de responses: un único turno del asistente
 	cerrar := func() {
 		if len(pendientes) > 0 {
-			salida = append(salida, nucleo.Mensaje{Rol: "asistente", Contenido: sobreLlamadas("", pendientes)})
+			salida = append(salida, nucleo.Mensaje{Rol: "asistente", Llamadas: pendientes})
 			pendientes = nil
 		}
 	}
 	resultado := func(id string, contenido json.RawMessage) error {
 		texto, err := textoDe(contenido)
 		if err == nil {
-			salida = append(salida, nucleo.Mensaje{Rol: "usuario", Contenido: turnoResultado(nombres[id], id, texto, false)})
+			salida = append(salida, nucleo.Mensaje{Rol: "herramienta", IDLlamada: id, Contenido: texto})
 		}
 		return err
 	}
 	for indice, m := range entrada {
 		switch m.Type {
 		case "function_call":
-			nombres[m.CallID] = m.Name
-			pendientes = append(pendientes, llamada{ID: m.CallID, Nombre: m.Name, Argumentos: m.Arguments})
+			l, err := llamadaDe(m.CallID, m.Name, json.RawMessage(m.Arguments))
+			if err != nil {
+				return nil, nil, err
+			}
+			pendientes = append(pendientes, l)
 			continue
 		case "function_call_output":
 			cerrar()
@@ -94,7 +97,7 @@ func mensajes(entrada []mensajeEntrada) ([]nucleo.Mensaje, []archivoEnLinea, err
 		if err != nil {
 			return nil, nil, err
 		}
-		texto, llamadas, resultados, adjuntos, err := contenidoDe(m.Content, nombres, indice+1, &numero)
+		texto, llamadas, resultados, adjuntos, err := contenidoDe(m.Content, indice+1, &numero)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -105,16 +108,17 @@ func mensajes(entrada []mensajeEntrada) ([]nucleo.Mensaje, []archivoEnLinea, err
 			texto = strings.TrimSpace(texto + "\n[attached file: " + a.Nombre + "]")
 		}
 		for _, c := range m.ToolCalls {
-			nombres[c.ID] = c.Function.Name
-			llamadas = append(llamadas, llamada{ID: c.ID, Nombre: c.Function.Name, Argumentos: c.Function.Arguments})
+			l, err := llamadaDe(c.ID, c.Function.Name, json.RawMessage(c.Function.Arguments))
+			if err != nil {
+				return nil, nil, err
+			}
+			llamadas = append(llamadas, l)
 		}
-		if len(llamadas) > 0 {
-			texto = sobreLlamadas(texto, llamadas)
+		// Los resultados de Anthropic llegan en el mensaje del usuario, antes de su texto.
+		salida = append(salida, resultados...)
+		if texto != "" || len(llamadas) > 0 || len(resultados) == 0 {
+			salida = append(salida, nucleo.Mensaje{Rol: rol, Contenido: texto, Llamadas: llamadas})
 		}
-		if len(resultados) > 0 {
-			texto = strings.TrimSpace(strings.Join(append(resultados, texto), "\n\n"))
-		}
-		salida = append(salida, nucleo.Mensaje{Rol: rol, Contenido: texto})
 	}
 	cerrar()
 	return salida, archivos, nil
@@ -172,31 +176,31 @@ type funcionOpenAI struct {
 	} `json:"function"`
 }
 
-// herramientasOpenAI prepara tools, tool_choice y parallel_tool_calls de chat o responses.
-func herramientasOpenAI(sol *nucleo.SolicitudEjecucion, funciones []funcionOpenAI, eleccionCruda json.RawMessage, paralelas *bool) (*herramientas, error) {
-	lista := make([]herramienta, 0, len(funciones))
+// herramientasOpenAI traduce tools, tool_choice y parallel_tool_calls de chat o responses.
+func herramientasOpenAI(sol *nucleo.SolicitudEjecucion, funciones []funcionOpenAI, eleccionCruda json.RawMessage, paralelas *bool) error {
 	for _, f := range funciones {
 		if err := soloFunciones(f.Type, "function"); err != nil {
-			return nil, err
+			return err
 		}
-		h := herramienta{Nombre: f.Name, Descripcion: f.Description, Parametros: f.Parameters}
+		h := nucleo.Herramienta{Nombre: f.Name, Descripcion: f.Description, Parametros: f.Parameters}
 		if f.Function != nil {
-			h = herramienta{Nombre: f.Function.Name, Descripcion: f.Function.Description, Parametros: f.Function.Parameters}
+			h = nucleo.Herramienta{Nombre: f.Function.Name, Descripcion: f.Function.Description, Parametros: f.Function.Parameters}
 		}
-		lista = append(lista, h)
+		sol.Herramientas = append(sol.Herramientas, h)
 	}
-	e, err := eleccionOpenAI(eleccionCruda, paralelas)
+	e, err := eleccionOpenAI(eleccionCruda)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return prepararHerramientas(sol, lista, e)
+	sol.EleccionHerramienta, sol.LlamadasParalelas = e, paralelas
+	return nil
 }
 
 // llamadasChat da las llamadas como tool_calls; en streaming cada una lleva su índice.
-func llamadasChat(llamadas []llamada, conIndice bool) []any {
+func llamadasChat(llamadas []nucleo.Llamada, conIndice bool) []any {
 	lista := make([]any, len(llamadas))
 	for i, l := range llamadas {
-		c := map[string]any{"id": l.ID, "type": "function", "function": map[string]any{"name": l.Nombre, "arguments": l.Argumentos}}
+		c := map[string]any{"id": l.ID, "type": "function", "function": map[string]any{"name": l.Nombre, "arguments": string(l.Argumentos)}}
 		if conIndice {
 			c["index"] = i
 		}
@@ -250,9 +254,8 @@ func (s *Servidor) chatCompletions(w http.ResponseWriter, r *http.Request) {
 		}
 		err = formatoSalida(&sol, p.ResponseFormat.Type, esquema)
 	}
-	var h *herramientas
 	if err == nil {
-		h, err = herramientasOpenAI(&sol, p.Tools, p.ToolChoice, p.ParallelToolCalls)
+		err = herramientasOpenAI(&sol, p.Tools, p.ToolChoice, p.ParallelToolCalls)
 	}
 	if err != nil {
 		EscribirError(w, r, err)
@@ -278,7 +281,7 @@ func (s *Servidor) chatCompletions(w http.ResponseWriter, r *http.Request) {
 			EscribirError(w, r, errorDeTrabajo(final))
 			return
 		}
-		texto, llamadas, err := h.respuesta(final, "call_"+t.ID)
+		texto, llamadas, err := herramientas.Interpretar(final.Solicitud, final.Salida, "call_"+t.ID)
 		if err != nil {
 			EscribirError(w, r, err)
 			return
@@ -309,7 +312,7 @@ func (s *Servidor) chatCompletions(w http.ResponseWriter, r *http.Request) {
 	if trozo(map[string]any{"role": "assistant", "content": ""}, nil) != nil {
 		return
 	}
-	directo := enVivo(sol)
+	directo := enVivo(sol) && !herramientas.Activas(sol)
 	final, err := s.ejecutarFachada(r, t, func(texto string) error {
 		if !directo {
 			return nil
@@ -326,7 +329,7 @@ func (s *Servidor) chatCompletions(w http.ResponseWriter, r *http.Request) {
 		fallar(errorDeTrabajo(final))
 		return
 	}
-	texto, llamadas, err := h.respuesta(final, "call_"+t.ID)
+	texto, llamadas, err := herramientas.Interpretar(final.Solicitud, final.Salida, "call_"+t.ID)
 	if err != nil {
 		fallar(err)
 		return
@@ -388,15 +391,17 @@ func mensajeRespuesta(t nucleo.Trabajo, estado, texto string) map[string]any {
 	return map[string]any{"type": "message", "id": "msg_" + t.ID, "status": estado, "role": "assistant", "content": contenido}
 }
 
-func llamadaRespuesta(l llamada, estado string) map[string]any {
+func llamadaRespuesta(l nucleo.Llamada, estado string) map[string]any {
 	return map[string]any{"type": "function_call", "id": "fc_" + strings.TrimPrefix(l.ID, "call_"), "call_id": l.ID,
-		"name": l.Nombre, "arguments": l.Argumentos, "status": estado}
+		"name": l.Nombre, "arguments": string(l.Argumentos), "status": estado}
 }
 
 // conMensaje indica si la respuesta lleva un mensaje de texto: siempre, salvo cuando solo pide herramientas.
-func conMensaje(texto string, llamadas []llamada) bool { return texto != "" || len(llamadas) == 0 }
+func conMensaje(texto string, llamadas []nucleo.Llamada) bool {
+	return texto != "" || len(llamadas) == 0
+}
 
-func salidaRespuesta(t nucleo.Trabajo, texto string, llamadas []llamada) []any {
+func salidaRespuesta(t nucleo.Trabajo, texto string, llamadas []nucleo.Llamada) []any {
 	var salida []any
 	if conMensaje(texto, llamadas) {
 		salida = append(salida, mensajeRespuesta(t, "completed", texto))
@@ -439,9 +444,8 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 	if err == nil && p.Text != nil && p.Text.Format != nil {
 		err = formatoSalida(&sol, p.Text.Format.Type, p.Text.Format.Schema)
 	}
-	var h *herramientas
 	if err == nil {
-		h, err = herramientasOpenAI(&sol, p.Tools, p.ToolChoice, p.ParallelToolCalls)
+		err = herramientasOpenAI(&sol, p.Tools, p.ToolChoice, p.ParallelToolCalls)
 	}
 	if err != nil {
 		EscribirError(w, r, err)
@@ -466,7 +470,7 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 			EscribirError(w, r, errorDeTrabajo(final))
 			return
 		}
-		texto, llamadas, err := h.respuesta(final, "call_"+t.ID)
+		texto, llamadas, err := herramientas.Interpretar(final.Solicitud, final.Salida, "call_"+t.ID)
 		if err != nil {
 			EscribirError(w, r, err)
 			return
@@ -497,10 +501,10 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 		return evento("response.output_text.delta", map[string]any{"item_id": idMensaje, "output_index": 0, "content_index": 0, "delta": texto})
 	}
 	_ = evento("response.created", map[string]any{"response": objetoRespuesta(t, p.Model, "in_progress", nil)})
-	if h == nil {
+	if !herramientas.Activas(sol) {
 		abrirMensaje() // el texto llega en vivo; con herramientas no se sabe qué habrá hasta el final
 	}
-	directo := enVivo(sol)
+	directo := enVivo(sol) && !herramientas.Activas(sol)
 	final, err := s.ejecutarFachada(r, t, func(texto string) error {
 		if !directo {
 			return nil
@@ -525,14 +529,14 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 		fallar(errorDeTrabajo(final))
 		return
 	}
-	texto, llamadas, err := h.respuesta(final, "call_"+t.ID)
+	texto, llamadas, err := herramientas.Interpretar(final.Solicitud, final.Salida, "call_"+t.ID)
 	if err != nil {
 		fallar(err)
 		return
 	}
 	indice := 0
 	if conMensaje(texto, llamadas) {
-		if h != nil {
+		if herramientas.Activas(sol) {
 			abrirMensaje()
 		}
 		if !directo {
@@ -547,8 +551,8 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 		item := llamadaRespuesta(l, "in_progress")
 		item["arguments"] = ""
 		_ = evento("response.output_item.added", map[string]any{"output_index": indice, "item": item})
-		_ = evento("response.function_call_arguments.delta", map[string]any{"item_id": item["id"], "output_index": indice, "delta": l.Argumentos})
-		_ = evento("response.function_call_arguments.done", map[string]any{"item_id": item["id"], "output_index": indice, "arguments": l.Argumentos})
+		_ = evento("response.function_call_arguments.delta", map[string]any{"item_id": item["id"], "output_index": indice, "delta": string(l.Argumentos)})
+		_ = evento("response.function_call_arguments.done", map[string]any{"item_id": item["id"], "output_index": indice, "arguments": string(l.Argumentos)})
 		_ = evento("response.output_item.done", map[string]any{"output_index": indice, "item": llamadaRespuesta(l, "completed")})
 		indice++
 	}

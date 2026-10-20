@@ -46,12 +46,14 @@
   var copiar = '<span lang="es">Copiar</span><span lang="en">Copy</span>';
   var copiado = '<span lang="es">Copiado</span><span lang="en">Copied</span>';
   document.querySelectorAll('pre.codigo').forEach(function (pre) {
-    var texto = pre.textContent.trim();
     var boton = document.createElement('button');
     boton.type = 'button';
     boton.className = 'copiar';
     boton.innerHTML = copiar;
     boton.addEventListener('click', function () {
+      // El código que se ve ahora (un ejemplo cargado después), sin el texto del propio botón.
+      var codigo = pre.querySelector('code');
+      var texto = (codigo ? codigo.textContent : pre.textContent.replace(boton.textContent, '')).trim();
       navigator.clipboard.writeText(texto).then(function () {
         boton.innerHTML = copiado;
         setTimeout(function () { boton.innerHTML = copiar; }, 1500);
@@ -129,4 +131,48 @@
     enlazar(archivos);
     document.querySelectorAll('[data-version]').forEach(function (s) { s.textContent = ' · ' + String(release.tag_name).split('+')[0]; });
   }).catch(function () {});
+})();
+
+// Pestañas de lenguaje de la guía del desarrollador: todas cambian a la vez y se recuerda la elección. Cada panel carga
+// su ejemplo de ejemplos/ (los de docs/ejemplos, que el CI ejecuta); sin JavaScript queda el enlace a GitHub.
+(function () {
+  var grupos = document.querySelectorAll('[data-pestanas]');
+  if (!grupos.length) return;
+  function elegir(lenguaje, foco) {
+    grupos.forEach(function (g) {
+      var botones = g.querySelectorAll('[role="tab"]');
+      var hay = Array.prototype.some.call(botones, function (b) { return b.dataset.lenguaje === lenguaje; });
+      botones.forEach(function (b, i) {
+        var activo = hay ? b.dataset.lenguaje === lenguaje : i === 0;
+        b.setAttribute('aria-selected', String(activo));
+        b.tabIndex = activo ? 0 : -1;
+        document.getElementById(b.getAttribute('aria-controls')).hidden = !activo;
+        if (activo && foco === g) b.focus();
+      });
+    });
+    try { localStorage.setItem('tramtai.lenguaje', lenguaje); } catch (e) {}
+  }
+  grupos.forEach(function (g) {
+    var botones = Array.prototype.slice.call(g.querySelectorAll('[role="tab"]'));
+    botones.forEach(function (b, i) {
+      b.addEventListener('click', function () { elegir(b.dataset.lenguaje); });
+      b.addEventListener('keydown', function (e) {
+        var siguiente = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: botones.length - 1 }[e.key];
+        if (siguiente === undefined) return;
+        e.preventDefault();
+        elegir(botones[(siguiente + botones.length) % botones.length].dataset.lenguaje, g);
+      });
+    });
+  });
+  var guardado = null;
+  try { guardado = localStorage.getItem('tramtai.lenguaje'); } catch (e) {}
+  elegir(guardado || 'python'); // sin JavaScript se ven todos los paneles, cada uno con su enlace a GitHub
+  document.querySelectorAll('pre[data-ejemplo]').forEach(function (pre) {
+    fetch('ejemplos/' + pre.dataset.ejemplo).then(function (r) {
+      if (!r.ok) throw r;
+      return r.text();
+    }).then(function (texto) {
+      pre.querySelector('code').textContent = texto.replace(/\s+$/, '');
+    }).catch(function () {});
+  });
 })();

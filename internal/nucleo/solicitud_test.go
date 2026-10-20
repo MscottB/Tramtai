@@ -111,3 +111,90 @@ func TestProxyConCredencialesPasa(t *testing.T) {
 		}
 	}
 }
+
+func TestEleccionHerramientaJSON(t *testing.T) {
+	casos := map[string]EleccionHerramienta{
+		`"auto"`: {Modo: "auto"}, `"ninguna"`: {Modo: "ninguna"}, `"obligatoria"`: {Modo: "obligatoria"},
+		`{"nombre":"clima"}`: {Modo: "una", Nombre: "clima"},
+	}
+	for crudo, quiere := range casos {
+		var e EleccionHerramienta
+		if err := json.Unmarshal([]byte(crudo), &e); err != nil || e != quiere {
+			t.Fatalf("%s: %+v %v", crudo, e, err)
+		}
+		if vuelta, _ := json.Marshal(e); string(vuelta) != crudo {
+			t.Fatalf("ida y vuelta de %s: %s", crudo, vuelta)
+		}
+	}
+	for _, crudo := range []string{`"otra"`, `{"nombre":""}`, `3`} {
+		var e EleccionHerramienta
+		if json.Unmarshal([]byte(crudo), &e) == nil {
+			t.Fatalf("%s debía rechazarse", crudo)
+		}
+	}
+}
+
+func TestLlamadaArgumentosTextoUObjeto(t *testing.T) {
+	for _, crudo := range []string{`{"id":"a","nombre":"clima","argumentos":"{\"ciudad\": \"Santiago\"}"}`,
+		`{"id":"a","nombre":"clima","argumentos":{ "ciudad": "Santiago" }}`} {
+		var l Llamada
+		if err := json.Unmarshal([]byte(crudo), &l); err != nil || string(l.Argumentos) != `{"ciudad":"Santiago"}` {
+			t.Fatalf("%s: %s %v", crudo, l.Argumentos, err)
+		}
+	}
+	for _, crudo := range []string{`{"id":"a","nombre":"clima","argumentos":"[1]"}`, `{"id":"a","nombre":"clima","argumentos":"x"}`} {
+		var l Llamada
+		if json.Unmarshal([]byte(crudo), &l) == nil {
+			t.Fatalf("%s debía rechazarse", crudo)
+		}
+	}
+}
+
+func TestValidarMensajesDeHerramientas(t *testing.T) {
+	conversacion := func() SolicitudEjecucion {
+		s := solicitudValida()
+		s.Herramientas = []Herramienta{{Nombre: "clima"}}
+		s.Mensajes = append(s.Mensajes,
+			Mensaje{Rol: "asistente", Llamadas: []Llamada{{ID: "l0", Nombre: "clima", Argumentos: json.RawMessage(`{}`)}}},
+			Mensaje{Rol: "herramienta", IDLlamada: "l0", Contenido: "18 °C"})
+		return s
+	}
+	if err := conversacion().Validar(); err != nil {
+		t.Fatalf("una conversación con llamadas y su resultado es válida: %v", err)
+	}
+	s := conversacion()
+	s.Salida.Reintentos = 1
+	if err := s.Validar(); err != nil {
+		t.Fatalf("con herramientas, las correcciones no exigen formato json: %v", err)
+	}
+	casos := map[string]func(*SolicitudEjecucion){
+		"herramienta sin id_llamada":   func(s *SolicitudEjecucion) { s.Mensajes[2].IDLlamada = "" },
+		"llamadas en un usuario":       func(s *SolicitudEjecucion) { s.Mensajes[0].Llamadas = s.Mensajes[1].Llamadas },
+		"asistente vacío sin llamadas": func(s *SolicitudEjecucion) { s.Mensajes[1].Llamadas = nil },
+		"reintentos con ninguna":       func(s *SolicitudEjecucion) { s.EleccionHerramienta.Modo = "ninguna"; s.Salida.Reintentos = 1 },
+	}
+	for nombre, modificar := range casos {
+		s := conversacion()
+		modificar(&s)
+		if CodigoDe(s.Validar()) != CodigoSolicitudInvalida {
+			t.Errorf("%s: se esperaba solicitud_invalida", nombre)
+		}
+	}
+	// Una solicitud sin herramientas se guarda como antes: sin claves nuevas.
+	datos, _ := json.Marshal(solicitudValida())
+	for _, clave := range []string{"herramientas", "eleccion_herramienta", "llamadas", "id_llamada", "es_error"} {
+		if strings.Contains(string(datos), clave) {
+			t.Fatalf("clave nueva en una solicitud sin herramientas: %s", datos)
+		}
+	}
+}
+
+func TestResultadoDeHerramientaVacio(t *testing.T) {
+	s := solicitudValida()
+	s.Mensajes = append(s.Mensajes,
+		Mensaje{Rol: "asistente", Llamadas: []Llamada{{ID: "l0", Nombre: "clima", Argumentos: json.RawMessage(`{}`)}}},
+		Mensaje{Rol: "herramienta", IDLlamada: "l0"})
+	if err := s.Validar(); err != nil {
+		t.Fatalf("un resultado de herramienta puede venir vacío (OpenAI lo permite): %v", err)
+	}
+}

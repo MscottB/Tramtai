@@ -149,6 +149,15 @@
     </q-card>
 
     <q-card>
+      <q-item clickable tag="a" href="https://mscottb.github.io/Tramtai/desarrolladores.html" target="_blank" rel="noopener" class="q-py-md">
+        <q-item-section avatar><q-icon name="o_code" color="primary" size="24px" /></q-item-section>
+        <q-item-section>
+          <q-item-label class="text-weight-medium">{{ t('ayuda.desarrolladores') }}</q-item-label>
+          <q-item-label caption>{{ t('ayuda.desarrolladoresTexto') }}</q-item-label>
+        </q-item-section>
+        <q-item-section side><q-icon name="open_in_new" /></q-item-section>
+      </q-item>
+      <q-separator />
       <q-item clickable tag="a" href="https://github.com/MscottB/Tramtai/blob/main/docs/inicio.md" target="_blank" rel="noopener" class="q-py-md">
         <q-item-section avatar><q-icon name="o_menu_book" color="primary" size="24px" /></q-item-section>
         <q-item-section>
@@ -267,7 +276,7 @@ const problemasVistos = computed(() => problemas.value.filter((p) => coincide(p.
 
 const categorias = [
   { titulo: 'ayuda.catEmpezar', preguntas: [['ayuda.p22', 'ayuda.r22'], ['ayuda.p23', 'ayuda.r23'], ['ayuda.p20', 'ayuda.r20'], ['ayuda.p5', 'ayuda.r5'], ['ayuda.p1', 'ayuda.r1'], ['ayuda.p6', 'ayuda.r6'], ['ayuda.p9', 'ayuda.r9']] },
-  { titulo: 'ayuda.catApis', preguntas: [['ayuda.p11', 'ayuda.r11'], ['ayuda.p21', 'ayuda.r21'], ['ayuda.p4', 'ayuda.r4'], ['ayuda.p12', 'ayuda.r12'],
+  { titulo: 'ayuda.catApis', preguntas: [['ayuda.p11', 'ayuda.r11'], ['ayuda.p25', 'ayuda.r25'], ['ayuda.p21', 'ayuda.r21'], ['ayuda.p4', 'ayuda.r4'], ['ayuda.p12', 'ayuda.r12'],
     ['ayuda.p14', 'ayuda.r14'], ['ayuda.p15', 'ayuda.r15'], ['ayuda.p18', 'ayuda.r18'], ['ayuda.p19', 'ayuda.r19']] },
   { titulo: 'ayuda.catDatos', preguntas: [['ayuda.p2', 'ayuda.r2'], ['ayuda.p3', 'ayuda.r3'], ['ayuda.p13', 'ayuda.r13'], ['ayuda.p7', 'ayuda.r7']] },
   { titulo: 'ayuda.catApp', preguntas: [['ayuda.p8', 'ayuda.r8'], ['ayuda.p16', 'ayuda.r16'], ['ayuda.p17', 'ayuda.r17'], ['ayuda.p24', 'ayuda.r24'], ['ayuda.p10', 'ayuda.r10']] },

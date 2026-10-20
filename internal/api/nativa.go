@@ -19,6 +19,7 @@ import (
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
 	"tramtai/internal/documentos"
+	"tramtai/internal/herramientas"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
@@ -66,19 +67,64 @@ func (s *Servidor) obtenerTrabajo(w http.ResponseWriter, r *http.Request) {
 	EscribirJSON(w, http.StatusOK, s.conErrores(r.Context(), t))
 }
 
-// conErrores añade errores_salida, los problemas de la última validación, a un trabajo que falló por el esquema.
-func (s *Servidor) conErrores(ctx context.Context, t nucleo.Trabajo) any {
-	if t.CodigoError != nucleo.CodigoSalidaNoCumpleEsquema {
-		return t
+// vista es un trabajo como lo ve la API propia: con herramientas, la salida es el texto para el usuario y llamadas las
+// que pidió el agente; si falló por el esquema, errores_salida. Un trabajo sin herramientas ni errores se ve igual.
+type vista struct {
+	nucleo.Trabajo
+	Llamadas      []nucleo.Llamada   `json:"llamadas,omitempty"`
+	ErroresSalida []salidas.Problema `json:"errores_salida,omitempty"`
+	conSalida     bool               // con herramientas: salida va aunque esté vacía (el agente solo pidió llamadas)
+}
+
+// MarshalJSON escribe el trabajo tal cual y le suma llamadas, errores_salida y, con herramientas, salida aunque esté
+// vacía. Un trabajo sin nada de eso sale exactamente como antes.
+func (v vista) MarshalJSON() ([]byte, error) {
+	datos, err := json.Marshal(v.Trabajo)
+	if err != nil || (len(v.Llamadas) == 0 && len(v.ErroresSalida) == 0 && !v.conSalida) {
+		return datos, err
 	}
-	problemas, err := s.Planificador.ProblemasSalida(ctx, t.ID)
-	if err != nil || len(problemas) == 0 {
-		return t
+	var campos map[string]json.RawMessage
+	if err := json.Unmarshal(datos, &campos); err != nil {
+		return nil, err
 	}
-	return struct {
-		nucleo.Trabajo
-		ErroresSalida []salidas.Problema `json:"errores_salida"`
-	}{t, problemas}
+	extra := map[string]any{"salida": v.Salida}
+	if !v.conSalida && v.Salida == "" {
+		delete(extra, "salida")
+	}
+	if len(v.Llamadas) > 0 {
+		extra["llamadas"] = v.Llamadas
+	}
+	if len(v.ErroresSalida) > 0 {
+		extra["errores_salida"] = v.ErroresSalida
+	}
+	for clave, valor := range extra {
+		if campos[clave], err = json.Marshal(valor); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(campos)
+}
+
+// vistaTrabajo interpreta la salida de un trabajo con herramientas que terminó bien (ya validada al terminar).
+func vistaTrabajo(t nucleo.Trabajo) vista {
+	v := vista{Trabajo: t}
+	if t.Estado == nucleo.Completado && t.Disponibilidad != nucleo.SalidaExpirada && herramientas.Activas(t.Solicitud) {
+		if texto, llamadas, err := herramientas.Interpretar(t.Solicitud, t.Salida, "llamada_"+t.ID); err == nil {
+			v.Salida, v.Llamadas, v.conSalida = texto, llamadas, true
+		}
+	}
+	return v
+}
+
+// conErrores es la vista del trabajo con errores_salida, los problemas de la última validación, si falló por el esquema.
+func (s *Servidor) conErrores(ctx context.Context, t nucleo.Trabajo) vista {
+	v := vistaTrabajo(t)
+	if t.CodigoError == nucleo.CodigoSalidaNoCumpleEsquema {
+		if problemas, err := s.Planificador.ProblemasSalida(ctx, t.ID); err == nil {
+			v.ErroresSalida = problemas
+		}
+	}
+	return v
 }
 
 // validarEsquema compila un esquema sin ejecutar nada y explica por qué no vale, con la línea y la columna si no es
@@ -168,7 +214,7 @@ func (s *Servidor) salidaTrabajo(w http.ResponseWriter, r *http.Request) {
 			tipo = "text/markdown; charset=utf-8"
 		}
 		w.Header().Set("Content-Type", tipo)
-		_, _ = io.WriteString(w, t.Salida)
+		_, _ = io.WriteString(w, vistaTrabajo(t).Salida)
 	}
 }
 

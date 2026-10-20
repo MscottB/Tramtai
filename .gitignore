@@ -34,3 +34,6 @@ notas-*.txt
 
 # Binarios compilados a mano (go build en la carpeta de un paquete main): nunca van al repo.
 *.exe
+
+# Copia de docs/ejemplos que hace el workflow de la página (y la vista previa local)
+/site/ejemplos/

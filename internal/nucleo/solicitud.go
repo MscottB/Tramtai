@@ -1,9 +1,11 @@
 package nucleo
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"regexp"
 	"slices"
 	"strings"
@@ -15,6 +17,98 @@ import (
 type Mensaje struct {
 	Rol       string `json:"rol"`
 	Contenido string `json:"contenido"`
+	// Llamadas son las herramientas que pidió el agente en un turno «asistente» anterior.
+	Llamadas []Llamada `json:"llamadas,omitempty"`
+	// IDLlamada y EsError son de un turno «herramienta»: el resultado de esa llamada, y si falló.
+	IDLlamada string `json:"id_llamada,omitempty"`
+	EsError   bool   `json:"es_error,omitempty"`
+}
+
+// Herramienta es una función que ofrece la aplicación; Parametros es su JSON Schema (opcional).
+type Herramienta struct {
+	Nombre      string          `json:"nombre"`
+	Descripcion string          `json:"descripcion,omitempty"`
+	Parametros  json.RawMessage `json:"parametros,omitempty"`
+}
+
+// Llamada es una herramienta que pidió el agente, con sus argumentos como objeto JSON compacto.
+type Llamada struct {
+	ID         string          `json:"id"`
+	Nombre     string          `json:"nombre"`
+	Argumentos json.RawMessage `json:"argumentos"`
+}
+
+// UnmarshalJSON acepta los argumentos como objeto o, como los manda OpenAI, como texto con un objeto JSON.
+func (l *Llamada) UnmarshalJSON(datos []byte) error {
+	var crudo struct {
+		ID         string          `json:"id"`
+		Nombre     string          `json:"nombre"`
+		Argumentos json.RawMessage `json:"argumentos"`
+	}
+	if err := json.Unmarshal(datos, &crudo); err != nil {
+		return err
+	}
+	argumentos, err := ObjetoJSON(crudo.Argumentos)
+	if err != nil {
+		return NuevoError(CodigoSolicitudInvalida, idioma.Tf("los argumentos de %s no son un objeto JSON", crudo.Nombre))
+	}
+	*l = Llamada{ID: crudo.ID, Nombre: crudo.Nombre, Argumentos: json.RawMessage(argumentos)}
+	return nil
+}
+
+// ObjetoJSON acepta un objeto JSON o un texto que lo contiene (vacío equivale a {}) y lo devuelve compacto.
+func ObjetoJSON(crudo json.RawMessage) (string, error) {
+	var texto string
+	if json.Unmarshal(crudo, &texto) == nil {
+		crudo = json.RawMessage(texto)
+	}
+	if strings.TrimSpace(string(crudo)) == "" {
+		crudo = json.RawMessage("{}")
+	}
+	var objeto map[string]json.RawMessage
+	if err := json.Unmarshal(crudo, &objeto); err != nil || objeto == nil {
+		return "", errors.New("no es un objeto JSON")
+	}
+	var compacto bytes.Buffer
+	if err := json.Compact(&compacto, crudo); err != nil {
+		return "", err
+	}
+	return compacto.String(), nil
+}
+
+// EleccionHerramienta es qué puede hacer el agente con las herramientas: Modo auto (o vacío), ninguna, obligatoria o
+// una (la de Nombre). En JSON es "auto", "ninguna", "obligatoria" o {"nombre": "…"}.
+type EleccionHerramienta struct {
+	Modo   string
+	Nombre string
+}
+
+// MarshalJSON escribe la forma de la API.
+func (e EleccionHerramienta) MarshalJSON() ([]byte, error) {
+	if e.Modo == "una" {
+		return json.Marshal(map[string]string{"nombre": e.Nombre})
+	}
+	return json.Marshal(e.Modo)
+}
+
+// UnmarshalJSON lee la forma de la API.
+func (e *EleccionHerramienta) UnmarshalJSON(datos []byte) error {
+	var modo string
+	if json.Unmarshal(datos, &modo) == nil {
+		if modo != "auto" && modo != "ninguna" && modo != "obligatoria" {
+			return NuevoError(CodigoSolicitudInvalida, idioma.Tf("eleccion_herramienta desconocida %q (auto, ninguna, obligatoria o {\"nombre\": …})", modo))
+		}
+		*e = EleccionHerramienta{Modo: modo}
+		return nil
+	}
+	var una struct {
+		Nombre string `json:"nombre"`
+	}
+	if err := json.Unmarshal(datos, &una); err != nil || una.Nombre == "" {
+		return NuevoError(CodigoSolicitudInvalida, idioma.T("eleccion_herramienta debe ser auto, ninguna, obligatoria o {\"nombre\": …}"))
+	}
+	*e = EleccionHerramienta{Modo: "una", Nombre: una.Nombre}
+	return nil
 }
 
 // ConfigSalida describe el formato pedido por el consumidor.
@@ -59,6 +153,16 @@ type SolicitudEjecucion struct {
 	Cargas        []string        `json:"cargas,omitempty"`
 	Salida        ConfigSalida    `json:"salida"`
 	Ejecucion     ConfigEjecucion `json:"ejecucion"`
+	// Herramientas son las funciones que ofrece la aplicación (internal/herramientas las emula para el agente).
+	Herramientas        []Herramienta       `json:"herramientas,omitempty"`
+	EleccionHerramienta EleccionHerramienta `json:"eleccion_herramienta,omitzero"`
+	// LlamadasParalelas en false limita a una llamada por respuesta; nil equivale a true.
+	LlamadasParalelas *bool `json:"llamadas_paralelas,omitempty"`
+}
+
+// conHerramientas indica si el agente puede pedir herramientas (las hay y la elección no es «ninguna»).
+func (s SolicitudEjecucion) conHerramientas() bool {
+	return len(s.Herramientas) > 0 && s.EleccionHerramienta.Modo != "ninguna"
 }
 
 const (
@@ -74,7 +178,7 @@ const (
 var ReCarga = regexp.MustCompile(`^carga_[0-9a-f]{32}$`)
 
 var (
-	rolesValidos    = map[string]bool{"sistema": true, "usuario": true, "asistente": true}
+	rolesValidos    = map[string]bool{"sistema": true, "usuario": true, "asistente": true, "herramienta": true}
 	formatosValidos = map[string]bool{"texto": true, "markdown": true, "json": true}
 	modosContexto   = map[string]bool{"aislado": true, "consciente_proyecto": true}
 	// NivelesEsfuerzo, de menor a mayor.
@@ -108,7 +212,14 @@ func (s SolicitudEjecucion) Validar() error {
 		if !rolesValidos[m.Rol] {
 			return invalida(idioma.Tf("mensaje %d con rol desconocido %q", i, m.Rol))
 		}
-		if m.Contenido == "" {
+		if len(m.Llamadas) > 0 && m.Rol != "asistente" {
+			return invalida(idioma.Tf("mensaje %d: solo un mensaje del asistente lleva llamadas", i))
+		}
+		if m.Rol == "herramienta" && m.IDLlamada == "" {
+			return invalida(idioma.Tf("mensaje %d: un resultado de herramienta necesita id_llamada", i))
+		}
+		// Un turno del asistente que solo pidió herramientas no tiene texto.
+		if m.Contenido == "" && len(m.Llamadas) == 0 && m.Rol != "herramienta" {
 			return invalida(idioma.Tf("mensaje %d sin contenido", i))
 		}
 	}
@@ -127,7 +238,7 @@ func (s SolicitudEjecucion) Validar() error {
 	if s.Salida.Reintentos < 0 || s.Salida.Reintentos > MaximoReintentosSalida {
 		return invalida(idioma.Tf("salida.reintentos va de 0 a %d", MaximoReintentosSalida))
 	}
-	if s.Salida.Reintentos > 0 && s.Salida.Formato != "json" {
+	if s.Salida.Reintentos > 0 && s.Salida.Formato != "json" && !s.conHerramientas() {
 		return invalida(idioma.T("salida.reintentos exige formato json o un esquema"))
 	}
 	if len(s.Salida.Esquema) > 0 {

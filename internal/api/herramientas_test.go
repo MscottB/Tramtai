@@ -1,8 +1,10 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"tramtai/internal/adaptadores"
@@ -102,60 +104,94 @@ func TestHistorialConHerramientas(t *testing.T) {
 		{"role":"assistant","content":null,"tool_calls":[{"id":"call_1","type":"function","function":{"name":"tiempo","arguments":"{\"ciudad\":\"Lima\"}"}}]},
 		{"role":"tool","tool_call_id":"call_1","content":"18 grados"}]}`, &chat)
 	m, _, err := mensajes(chat.Messages)
-	if err != nil || len(m) != 3 || m[1].Rol != "asistente" || !strings.Contains(m[1].Contenido, `"tool_calls":[{"id":"call_1","name":"tiempo"`) ||
-		m[2].Rol != "usuario" || m[2].Contenido != "Tool result for tiempo (call call_1):\n18 grados" {
+	if err != nil || len(m) != 3 || m[1].Rol != "asistente" || len(m[1].Llamadas) != 1 || m[1].Llamadas[0].ID != "call_1" ||
+		string(m[1].Llamadas[0].Argumentos) != `{"ciudad":"Lima"}` || m[2].Rol != "herramienta" || m[2].IDLlamada != "call_1" || m[2].Contenido != "18 grados" {
 		t.Fatalf("chat: %v %#v", err, m)
 	}
-	// Anthropic: tool_use en el asistente y tool_result en el usuario.
+	// Anthropic: tool_use en el asistente y tool_result en el usuario, antes de su texto.
 	var anthropic peticionMensajes
 	decodificarEn(t, `{"messages":[{"role":"user","content":"tiempo en Lima"},
 		{"role":"assistant","content":[{"type":"text","text":"Lo miro."},{"type":"tool_use","id":"toolu_1","name":"tiempo","input":{"ciudad":"Lima"}}]},
 		{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_1","content":[{"type":"text","text":"18 grados"}]},{"type":"text","text":"¿Y mañana?"}]}]}`, &anthropic)
 	m, _, err = mensajes(anthropic.Messages)
-	if err != nil || len(m) != 3 || !strings.Contains(m[1].Contenido, `"content":"Lo miro."`) ||
-		m[2].Contenido != "Tool result for tiempo (call toolu_1):\n18 grados\n\n¿Y mañana?" {
+	if err != nil || len(m) != 4 || m[1].Contenido != "Lo miro." || len(m[1].Llamadas) != 1 ||
+		m[2].Rol != "herramienta" || m[2].IDLlamada != "toolu_1" || m[2].Contenido != "18 grados" || m[3].Rol != "usuario" || m[3].Contenido != "¿Y mañana?" {
 		t.Fatalf("anthropic: %v %#v", err, m)
 	}
 	// Responses: function_call y function_call_output.
 	var entrada []mensajeEntrada
 	decodificarEn(t, `[{"role":"user","content":"tiempo en Lima"},{"type":"function_call","call_id":"call_1","name":"tiempo","arguments":"{}"},
 		{"type":"function_call_output","call_id":"call_1","output":"18 grados"}]`, &entrada)
-	if m, _, err = mensajes(entrada); err != nil || len(m) != 3 || m[1].Rol != "asistente" || !strings.HasPrefix(m[2].Contenido, "Tool result for tiempo") {
+	if m, _, err = mensajes(entrada); err != nil || len(m) != 3 || m[1].Rol != "asistente" || len(m[1].Llamadas) != 1 || m[2].Rol != "herramienta" {
 		t.Fatalf("responses: %v %#v", err, m)
+	}
+	// Unos argumentos que no son un objeto JSON se rechazan.
+	decodificarEn(t, `{"messages":[{"role":"assistant","content":null,"tool_calls":[{"id":"c","type":"function","function":{"name":"tiempo","arguments":"[1]"}}]}]}`, &chat)
+	if _, _, err := mensajes(chat.Messages); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
+		t.Fatalf("argumentos que no son un objeto: %v", err)
 	}
 }
 
-func TestPrepararHerramientas(t *testing.T) {
-	lista := []herramienta{{Nombre: "a"}, {Nombre: "b", Parametros: []byte(`{"type":"object"}`)}}
-	sol := nucleo.SolicitudEjecucion{Instrucciones: "Sé breve."}
-	h, err := prepararHerramientas(&sol, lista, eleccion{Modo: "una", Nombre: "b", SoloUna: true})
-	if err != nil || h == nil || sol.Salida.Formato != "json" || !strings.Contains(string(sol.Salida.Esquema), `"enum":["b"]`) ||
-		!strings.HasPrefix(sol.Instrucciones, "Sé breve.\n\n") || !strings.Contains(sol.Instrucciones, "You must call the tool b.") {
-		t.Fatalf("una: %v %s %q", err, sol.Salida.Esquema, sol.Instrucciones)
+// secuencia responde, en orden, las salidas dadas (repite la última).
+type secuencia struct {
+	n       *atomic.Int32
+	salidas []string
+}
+
+func (s secuencia) Ejecutar(_ context.Context, _ nucleo.SolicitudEjecucion, _ func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	i := int(s.n.Add(1)) - 1
+	return adaptadores.Resultado{Salida: s.salidas[min(i, len(s.salidas)-1)]}, nil
+}
+
+func TestFachadaCorrigeArgumentosInvalidos(t *testing.T) {
+	var n atomic.Int32
+	agente := secuencia{n: &n, salidas: []string{
+		`{"content":"","tool_calls":[{"name":"tiempo","arguments":"{\"ciudad\": 7}"}]}`,
+		`{"content":"","tool_calls":[{"name":"tiempo","arguments":"{\"ciudad\": \"Lima\"}"}]}`}}
+	ts := servidorCon(t, simulado(agente), nil, &Punto{Nombre: "tienda", Contratos: map[string]bool{"openai": true}, ReintentosSalida: 1})
+	peticion := `{"model":"simulado","messages":[{"role":"user","content":"¿Qué tiempo hace en Lima?"}],"tools":[{"type":"function","function":` + herramientaTiempo + `}]}`
+	r, cuerpo := pedir(t, ts, "POST", "/openai/v1/chat/completions", peticion)
+	if r.StatusCode != 200 || !strings.Contains(cuerpo, `"tool_calls"`) || !strings.Contains(cuerpo, `Lima`) || n.Load() != 2 {
+		t.Fatalf("unos argumentos inválidos se corrigen con la receta antes de responder: %d %s (%d intentos)", r.StatusCode, cuerpo, n.Load())
 	}
-	if h, err := prepararHerramientas(&nucleo.SolicitudEjecucion{}, lista, eleccion{Modo: "ninguna"}); h != nil || err != nil {
-		t.Fatalf("none no debe pedir herramientas: %v %v", h, err)
-	}
-	casos := []struct {
-		lista []herramienta
-		e     eleccion
-		sol   nucleo.SolicitudEjecucion
-	}{
-		{[]herramienta{{Nombre: "a"}, {Nombre: "a"}}, eleccion{}, nucleo.SolicitudEjecucion{}},
-		{lista, eleccion{Modo: "una", Nombre: "c"}, nucleo.SolicitudEjecucion{}},
-		{nil, eleccion{Modo: "obligatoria"}, nucleo.SolicitudEjecucion{}},
-		{[]herramienta{{Nombre: "a", Parametros: []byte(`{"type":7}`)}}, eleccion{}, nucleo.SolicitudEjecucion{}},
-		{lista, eleccion{}, nucleo.SolicitudEjecucion{Salida: nucleo.ConfigSalida{Formato: "json"}}},
-	}
-	for i, c := range casos {
-		if _, err := prepararHerramientas(&c.sol, c.lista, c.e); err == nil {
-			t.Errorf("caso %d: se esperaba un error", i)
+}
+
+// datosDe devuelve los datos JSON de los eventos SSE de un tipo.
+func datosDe(t *testing.T, flujo, tipo string) []map[string]any {
+	t.Helper()
+	var lista []map[string]any
+	for _, bloque := range strings.Split(flujo, "\n\n") {
+		if !strings.Contains(bloque, "event: "+tipo+"\n") {
+			continue
+		}
+		for _, linea := range strings.Split(bloque, "\n") {
+			if datos, ok := strings.CutPrefix(linea, "data: "); ok {
+				lista = append(lista, decodificar(t, datos))
+			}
 		}
 	}
-	// Con parallel_tool_calls false solo pasa la primera llamada; los argumentos pueden llegar como objeto.
-	una := &herramientas{lista: lista, eleccion: eleccion{Modo: "auto", SoloUna: true}}
-	_, llamadas, err := una.interpretar(`{"content":"","tool_calls":[{"name":"a","arguments":"{}"},{"name":"b","arguments":{"x":1}}]}`, "call_x")
-	if err != nil || len(llamadas) != 1 || llamadas[0].ID != "call_x_0" {
-		t.Fatalf("solo una: %v %v", err, llamadas)
+	return lista
+}
+
+func TestStreamingDeHerramientasConArgumentosComoTexto(t *testing.T) {
+	ts := servidor(t, simulado(pideTiempo), nil)
+	anthropic := `{"model":"simulado","max_tokens":100,"stream":true,"messages":[{"role":"user","content":"tiempo en Lima"}],"tools":[` +
+		strings.Replace(herramientaTiempo, `"parameters"`, `"input_schema"`, 1) + `]}`
+	_, flujo := pedir(t, ts, "POST", "/anthropic/v1/messages", anthropic)
+	deltas := datosDe(t, flujo, "content_block_delta")
+	if len(deltas) == 0 {
+		t.Fatalf("sin deltas:\n%s", flujo)
+	}
+	if parcial, ok := deltas[len(deltas)-1]["delta"].(map[string]any)["partial_json"].(string); !ok || !strings.Contains(parcial, "Lima") {
+		t.Fatalf("partial_json debe ser texto con el JSON: %v", deltas[len(deltas)-1])
+	}
+	responses := `{"model":"simulado","stream":true,"input":"tiempo en Lima","tools":[{"type":"function",` + strings.TrimPrefix(herramientaTiempo, "{") + `]}`
+	_, flujo = pedir(t, ts, "POST", "/openai/v1/responses", responses)
+	argumentos := datosDe(t, flujo, "response.function_call_arguments.delta")
+	if len(argumentos) == 0 {
+		t.Fatalf("sin deltas de argumentos:\n%s", flujo)
+	}
+	if delta, ok := argumentos[0]["delta"].(string); !ok || !strings.Contains(delta, "Lima") {
+		t.Fatalf("delta debe ser texto con el JSON: %v", argumentos[0])
 	}
 }

@@ -30,3 +30,33 @@ test('la API propia sube el archivo a /cargas', () => {
   assert.match(curl, /\/api\/v1\/cargas/)
   assert.match(curl, /informe\.pdf/)
 })
+
+test('Go por la API propia sube, crea, sigue y lee el resultado', () => {
+  const go = codigo('go-nativa').codigo('k')
+  for (const parte of ['net/http', '/api/v1"', '"/cargas"', '"/trabajos"', 'Authorization', '/eventos', '/salida', 'informe.pdf']) {
+    assert.ok(go.includes(parte), parte)
+  }
+  // Sin archivos no hay paso de subida.
+  const sinArchivos = ejemplos({ url: 'http://x', modelo: 'claude/sonnet', contratos: ['nativa'], prueba: { archivos: [], solicitud: { mensajes: [{ rol: 'usuario', contenido: 'Hola' }] } } })
+    .find((e) => e.id === 'go-nativa')!.codigo('k')
+  assert.ok(!sinArchivos.includes('/cargas'))
+  assert.ok(!sinArchivos.includes('"bytes"'), 'sin archivos no importa bytes (no compilaría)')
+})
+
+test('el ejemplo de herramientas hace el ciclo completo por OpenAI', () => {
+  const lista = ejemplos({ url: 'http://127.0.0.1:17373', modelo: 'claude/haiku', contratos: ['openai'] })
+  const herramientas = lista.find((e) => e.id === 'python-herramientas')!.codigo('k')
+  for (const parte of ['tools=', 'tool_calls', '"role": "tool"', 'http://127.0.0.1:17373/openai/v1', 'api_key="k"', 'model="claude/haiku"']) {
+    assert.ok(herramientas.includes(parte), parte)
+  }
+  // Solo con OpenAI: una API que solo habla Anthropic no lo ofrece.
+  assert.equal(ejemplos({ url: 'http://x', modelo: 'm', contratos: ['anthropic'] }).find((e) => e.id === 'python-herramientas'), undefined)
+})
+
+test('Go por la API propia no se rompe con comillas invertidas ni %', () => {
+  const rara: Prueba = { archivos: ['a.pdf'], solicitud: { mensajes: [{ rol: 'usuario', contenido: 'usa `x` al 100%' }] } }
+  const go = ejemplos({ url: 'http://x', modelo: 'm', contratos: ['nativa'], prueba: rara }).find((e) => e.id === 'go-nativa')!.codigo('k')
+  assert.ok(!go.includes('Sprintf(solicitud'), 'no pasa el mensaje por un formato')
+  assert.ok(!/solicitud := `/.test(go), 'no usa un literal con comillas invertidas')
+  assert.ok(go.includes('usa `x` al 100%'), 'el mensaje llega intacto')
+})

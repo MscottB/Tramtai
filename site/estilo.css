@@ -255,6 +255,17 @@ footer .envoltura { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
 .doc ul, .doc ol { padding-left: 22px; }
 .doc li { margin: 4px 0; }
 .doc .codigo { margin-top: 0; position: relative; padding-top: 42px; }
+.pestanas { margin: 0 0 18px; }
+.pestanas-lista { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.pestanas-lista button { font: 600 .88rem var(--fuente); color: var(--texto-suave); background: transparent; border: 1px solid var(--borde); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.pestanas-lista button[aria-selected="true"] { color: var(--acento-texto); background: var(--acento); border-color: var(--acento); }
+.pestanas-lista button:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+.pestanas .codigo { margin-bottom: 0; }
+.pestanas .codigo a { color: var(--tablero-texto); }
+.ciclo { list-style: none; counter-reset: paso; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; padding: 0 !important; margin: 4px 0 22px !important; }
+.ciclo li { counter-increment: paso; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px 14px; margin: 0; font-size: .92rem; position: relative; }
+.ciclo li::before { content: counter(paso); display: block; font: 700 .8rem var(--titulo); color: var(--acento); margin-bottom: 4px; }
+@media (max-width: 760px) { .ciclo { grid-template-columns: 1fr; } }
 .doc :not(pre) > code { font: .88em var(--mono); background: var(--superficie-suave); border: 1px solid var(--borde); border-radius: 6px; padding: 2px 6px; overflow-wrap: anywhere; }
 .doc table { width: 100%; border-collapse: collapse; font-size: .93rem; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); overflow: hidden; display: block; overflow-x: auto; }
 .doc th, .doc td { text-align: left; padding: 10px 14px; border-top: 1px solid var(--borde); vertical-align: top; }

@@ -13,6 +13,7 @@ Cómo está construido Tramtai por dentro:
 | `internal/adaptadores` | Contrato con los agentes (`Adaptador`, `Ficha`, `Detectable`, `Resolvedor`, `ConAutenticacion`), el agente `Simulado` y lo común a todos: enmarcado de turnos, entorno sin claves ajenas, carpeta temporal, clasificación de errores y redacción de secretos. |
 | `internal/agentes` | Catálogo de agentes: cada uno en su módulo (`internal/agentes/claude`, `codex`, `copilot`, `gemini`, `antigravity`) con su adaptador y su ficha (nombre, color, capacidades, esfuerzo, autenticación, comando, si se permite en apps). El servicio, el planificador, la API (`GET /api/v1/agentes`) y la Web UI le preguntan en lugar de nombrar agentes. Cómo añadir uno: [nuevo-agente.md](equipo/nuevo-agente.md). |
 | `internal/documentos` | Cargas identificadas por SHA-256 (`carga_<hash>`) con vencimiento. Conversión a Markdown con markitdown 0.1.8 en un proceso supervisado con plazo y límite de salida. El conversor se localiza (configurado, paquete junto al ejecutable, preparado en la carpeta del usuario o del PATH) y se prepara con el `uv` que viene con Tramtai y un lock con hashes incrustado (`conversor/conversor.lock`), en un Python independiente sin venv; un único `Preparacion` por servicio lleva su estado y el planificador rechaza con 503 `conversor_no_disponible` lo que no se podría convertir. Los archivos de texto (txt, md, json, xml, csv, yaml…) pasan tal cual, validando que sean UTF-8. `Formatos()` es la única lista de extensiones admitidas: la usan `Cargas.Guardar` (que rechaza el resto al subir), `/limites`, la CLI y la terminal. Los ZIP no se admiten desde la v0.50.2. |
+| `internal/herramientas` | Herramientas (`tools`) emuladas para los agentes CLI, igual en las tres APIs: `Validar` al aceptar, `Preparar` (las funciones descritas en las instrucciones, el sobre JSON `{"content", "tool_calls"}` como esquema y la conversación con llamadas y resultados escrita como texto) al ejecutar, e `Interpretar` (texto y llamadas, con los argumentos validados contra el esquema de cada herramienta) al validar la salida y al responder. El agente nunca ejecuta nada. |
 | `internal/salidas` | Validación de la salida contra el JSON Schema del consumidor (`santhosh-tekuri/jsonschema`), con los `$ref` externos deshabilitados. |
 | `internal/api` | Servicio HTTP: valida Host, Origin y token; API nativa con SSE reanudable por `Last-Event-ID`; fachadas OpenAI y Anthropic con política de parámetros y su formato de errores. Detalle en [api.md](api.md). |
 | `internal/servicio` | Servicio único: instancias global y por proyecto con token, base de datos, cola y cargas propios; enrutado por token; administración con token de servicio; puntos de acceso con puerto o ruta `/p/<nombre>`, recarga sin reinicio y edición del YAML conservando comentarios; descriptor `servicio.json`. Las rutas `/ui/` de la Web UI están en una tabla (`rutasDeUI`) con el permiso de cada una: pública, con sesión o solo con una sesión local. Las reglas para guardar una API (respaldo que funcione, agentes permitidos en apps) se aplican solo aquí. |
@@ -68,6 +69,19 @@ El código tras el guion es aleatorio por petición (igual en los turnos `<<<tur
 `<<<fin archivo>>>` no cierra su bloque.
 
 Si una carga venció, el trabajo falla con `entrada_no_disponible`. Una conversión vacía o fallida falla con `conversion_fallida`; nunca se presenta como éxito.
+
+Con herramientas, la solicitud del cliente guarda `herramientas`, `eleccion_herramienta` y los mensajes con `llamadas` o
+de rol `herramienta`; cada paquete hace su parte:
+
+| Momento | Quién | Qué hace |
+|---|---|---|
+| Aceptar el trabajo | planificador (las tres APIs) | `herramientas.Validar`; error 400 antes de encolar |
+| Ejecutar | planificador | `herramientas.Preparar` arma lo que recibe el agente; el trabajo guarda la solicitud del cliente |
+| Validar la salida | planificador (`validarSalida`) | `herramientas.Interpretar`; si no cumple, el ciclo de correcciones y respaldo de siempre |
+| Leer el trabajo | API propia | `salida` = el texto y `llamadas` |
+| Responder | fachadas | las mismas llamadas como `tool_calls` (OpenAI) o `tool_use` (Anthropic) |
+
+Con herramientas no se guarda texto en vivo: sería el sobre interno; la respuesta llega al terminar.
 
 Con un esquema, se usa primero la salida estructurada nativa del agente (`--json-schema` y `structured_output` en Claude; `--output-schema` en Codex); GitHub Copilot, que no la tiene, lo recibe en las instrucciones. Después Tramtai valida el resultado. Si no cumple, el trabajo falla con `salida_no_cumple_esquema` y la salida solo se conserva con `conservar_salida_invalida`. Un esquema inválido se rechaza al aceptar el trabajo.
 

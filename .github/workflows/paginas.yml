@@ -5,7 +5,7 @@ name: Página
 on:
   push:
     branches: [main]
-    paths: ['site/**', '.github/workflows/paginas.yml']
+    paths: ['site/**', 'docs/ejemplos/**', '.github/workflows/paginas.yml']
   workflow_dispatch:
 
 permissions:
@@ -25,6 +25,12 @@ jobs:
       url: ${{ steps.despliegue.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
+      # La guía del desarrollador muestra los ejemplos que ejecuta el CI, sin copiarlos a mano.
+      - name: Ejemplos de la guía
+        run: |
+          mkdir -p site/ejemplos
+          cp -r docs/ejemplos/python docs/ejemplos/javascript docs/ejemplos/go docs/ejemplos/curl docs/ejemplos/muestra.txt site/ejemplos/
+          rm -rf site/ejemplos/javascript/node_modules
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

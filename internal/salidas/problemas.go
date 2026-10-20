@@ -48,6 +48,9 @@ func ProblemasDe(err error) []Problema {
 	return nil
 }
 
+// NoCumple es salida_no_cumple_esquema con esos problemas (al menos uno), como el error de Validar.
+func NoCumple(problemas []Problema) error { return errorSalida(problemas) }
+
 func errorSalida(problemas []Problema) *ErrorSalida {
 	mensaje := problemas[0].Texto
 	if len(problemas) > 1 {
