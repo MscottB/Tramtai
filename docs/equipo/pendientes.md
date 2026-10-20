@@ -44,7 +44,7 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | v0.50 | Archivos (`releases/v0.50-archivos/spec.md`): uv en todos los paquetes y markitdown preparado en la carpeta de Tramtai (solo la primera vez y con «Preparar archivos»), paquete del conversor para Windows sin red, aviso antes de enviar y 503 `conversor_no_disponible` al aceptar, archivos también por OpenAI y Anthropic (base64), «El recorrido de un archivo» en la Ayuda y «Cómo usarla» en lugar de «Descargar OpenAPI» | ✅ |
 | v0.50.1 | Comparación de las tres APIs con el porqué (Mis APIs y Ayuda), descargas del sitio con enlace directo por sistema y README corto | ✅ |
 | v0.50.2 | Archivos admitidos, claros: una sola lista (`documentos.Formatos`) en `/limites`, el selector de Probar, la CLI, la terminal y la Ayuda; lo no admitido se rechaza al subir; fuera el ZIP por seguridad | ✅ |
-| v0.51 | Herramientas (`tools`) explicadas para cualquier lenguaje, con ejemplos en Python, JavaScript, Go y curl, y guía del desarrollador | ⬜ |
+| v0.51 | Herramientas y guía del desarrollador (`releases/v0.51-herramientas/spec.md`): un solo motor (`internal/herramientas`) para las tres APIs, herramientas también en la API propia (`herramientas`, `llamadas`, rol `herramienta`), correcciones automáticas de llamadas inválidas también por OpenAI y Anthropic; guía del desarrollador en el sitio y en `docs/desarrolladores.md` con ejemplos en Python, JavaScript, Go y curl que el CI ejecuta (job «Ejemplos»); comprobado con Claude, Codex y GitHub Copilot | ✅ |
 | v0.52 | Ayuda renovada en la app y en la web: menos texto, con diagramas, ejemplos, búsqueda y capturas | ⬜ |
 | v0.53 | Diagramas vivos: en la web, el recorrido llega a los agentes con ejemplos; en la app, el mapa muestra el recorrido de un trabajo en curso | ⬜ |
 | v0.54 | La terminal a la par de la Web UI (Panel, consumo, Mis APIs completo, Probar, plantillas, Ajustes, Ayuda) y Tramtai solo terminal en Windows | ⬜ |
@@ -57,6 +57,7 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | — | Webhooks al terminar un trabajo y avisos de presupuesto (`presupuesto.aviso`, `presupuesto.agotado`) | ⬜ |
 | — | Comparar agentes en Probar | ⬜ |
 | — | Tramtai como servidor MCP | ⬜ |
+| — | Herramientas en Probar y guardadas en las recetas; texto en vivo mientras se usan herramientas (fuera de la v0.51) | ⬜ |
 | — | Cursor CLI | ⬜ |
 | — | SDK oficial de la API propia en Python y TypeScript (sobre `openapi.json`), en su propio repositorio | ⬜ |
 | — | Paquetes base y Pro (con la Pro/Team) | ⬜ |
