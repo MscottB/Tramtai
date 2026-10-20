@@ -1,6 +1,6 @@
 <template>
   <div class="pagina apilado">
-    <CabeceraPagina :titulo="t('menu.historial')" :descripcion="t('historial.subtitulo')">
+    <CabeceraPagina tema="historial" :titulo="t('menu.historial')" :descripcion="t('historial.subtitulo')">
       <template #acciones>
         <q-btn flat no-caps color="negative" icon="o_delete_sweep" :label="t('historial.vaciar')" :disable="!hayTerminados" @click="vaciar" />
         <q-btn flat no-caps color="primary" icon="o_refresh" :label="t('comun.actualizar')" :loading="cargando" @click="cargar()" />
@@ -73,6 +73,7 @@
           <q-banner v-if="detalle.codigo_error" rounded dense class="error-caja">
             <template #avatar><q-icon name="o_error" /></template>
             <b>{{ tituloError(detalle.codigo_error) }}</b><span v-if="detalle.mensaje_error">: {{ detalle.mensaje_error }}</span>
+            <template #action><BotonAyuda tema="problemas" :ancla="'e-' + detalle.codigo_error" que-hago /></template>
           </q-banner>
           <div>
             <div class="row items-center q-mb-xs">
@@ -118,6 +119,7 @@
 </template>
 
 <script setup lang="ts">
+import BotonAyuda from '../componentes/ayuda/BotonAyuda.vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import EstadoVacio from '../componentes/EstadoVacio.vue'

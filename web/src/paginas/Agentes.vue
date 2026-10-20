@@ -1,6 +1,6 @@
 <template>
   <div class="pagina apilado">
-    <CabeceraPagina :titulo="t('menu.agentes')" :descripcion="t('agentes.subtitulo')">
+    <CabeceraPagina tema="agentes" :titulo="t('menu.agentes')" :descripcion="t('agentes.subtitulo')">
       <template #acciones>
         <q-btn flat no-caps color="primary" icon="o_refresh" :label="t('agentes.recomprobar')" :loading="cargando" @click="cargar" />
       </template>

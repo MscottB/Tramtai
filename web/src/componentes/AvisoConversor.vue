@@ -5,6 +5,7 @@
       <div class="col text-body2">
         <div role="status">{{ textoConversor(conversor) }}</div>
         <div v-if="conversor.estado === 'error'" class="text-caption texto-suave q-mt-xs">{{ t('conversor.redEmpresa') }}</div>
+        <BotonAyuda tema="archivos" class="q-mt-xs" />
         <q-linear-progress v-if="conversor.estado === 'preparando'" :value="(conversor.progreso ?? 0) / 100" rounded class="q-mt-sm"
           :aria-label="t('conversor.progreso')" />
       </div>
@@ -18,6 +19,7 @@
 
 <script setup lang="ts">
 // AvisoConversor avisa, antes de enviar, de que falta el conversor de archivos (o se está preparando) y deja prepararlo.
+import BotonAyuda from './ayuda/BotonAyuda.vue'
 import { conversor, prepararConversor, textoConversor } from '../conversor'
 import { t } from '../i18n'
 

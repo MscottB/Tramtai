@@ -1,6 +1,6 @@
 <template>
   <div class="pagina apilado">
-    <CabeceraPagina :titulo="t('menu.conectar')" :descripcion="t('conectar.subtitulo')">
+    <CabeceraPagina tema="conectar" :titulo="t('menu.conectar')" :descripcion="t('conectar.subtitulo')">
       <template #acciones>
         <q-btn unelevated color="primary" icon="add" :label="t('puntos.nuevo')" no-caps @click="abrirNuevo" />
       </template>

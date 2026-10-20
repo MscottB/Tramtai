@@ -1,6 +1,6 @@
 <template>
   <div class="pagina apilado">
-    <CabeceraPagina :titulo="t('menu.inicio')">
+    <CabeceraPagina tema="inicio" :titulo="t('menu.inicio')">
       <template #descripcion>
         <div class="row items-center q-gutter-x-sm">
           <span>{{ t('inicio.direccion') }}</span>

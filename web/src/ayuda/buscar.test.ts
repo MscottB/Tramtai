@@ -31,6 +31,12 @@ test('por pregunta lleva a su ancla y dice dónde', () => {
   assert.equal(r.donde, '¿Puedo enviar imágenes?')
 })
 
+test('busca por palabras, en cualquier orden, y el guion bajo cuenta como espacio', () => {
+  assert.ok(buscar('cola llena', temas, es, te).some((r) => r.ancla === 'e-cola_llena'))
+  assert.ok(buscar('llena cola', temas, es, te).some((r) => r.ancla === 'e-cola_llena'))
+  assert.ok(buscar('clave   filtra', temas, es, te).some((r) => r.ancla === 'clave-filtrada'))
+})
+
 test('vacía o solo espacios no devuelve nada', () => {
   assert.deepEqual(buscar('   ', temas, es, te), [])
   assert.deepEqual(buscar('', temas, es, te), [])

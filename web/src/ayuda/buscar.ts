@@ -14,8 +14,10 @@ export interface Resultado {
 
 const MAXIMO = 30
 
+// normalizar deja minúsculas sin tildes y con un espacio entre palabras; el guion bajo de los códigos cuenta como
+// espacio, así «cola llena» encuentra cola_llena.
 export function normalizar(s: string): string {
-  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[\s_]+/g, ' ').trim()
 }
 
 // campos son los textos donde se busca, cada uno con su ancla, lo que se muestra y cuánto pesa.
@@ -48,13 +50,15 @@ function campos(tema: Tema, textos: Record<string, string>, tituloError: (c: str
 }
 
 export function buscar(consulta: string, temas: Tema[], textos: Record<string, string>, tituloError: (c: string) => string): Resultado[] {
-  const q = normalizar(consulta)
-  if (!q) return []
+  // Coincide un texto que tenga todas las palabras buscadas, en cualquier orden.
+  const palabras = normalizar(consulta).split(' ').filter(Boolean)
+  if (!palabras.length) return []
   // mejores guarda, por tema y ancla, el campo que más pesa de los que coinciden.
   const mejores = new Map<string, Resultado & { orden: number }>()
   temas.forEach((tema, orden) => {
     for (const c of campos(tema, textos, tituloError)) {
-      if (!normalizar(c.texto).includes(q)) continue
+      const texto = normalizar(c.texto)
+      if (!palabras.every((p) => texto.includes(p))) continue
       const clave = tema.id + '#' + c.ancla
       const previo = mejores.get(clave)
       if (!previo || c.peso > previo.puntos)

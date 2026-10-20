@@ -1,6 +1,6 @@
 <template>
   <div class="pagina apilado">
-    <CabeceraPagina :titulo="t('menu.configuracion')" :descripcion="t('config.subtitulo')" />
+    <CabeceraPagina tema="configuracion" :titulo="t('menu.configuracion')" :descripcion="t('config.subtitulo')" />
 
     <q-card>
       <q-card-section class="row items-center q-col-gutter-md">

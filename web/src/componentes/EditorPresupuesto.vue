@@ -1,6 +1,7 @@
 <template>
   <div>
     <div class="text-caption texto-suave">{{ t('presupuesto.editorTexto') }}</div>
+    <BotonAyuda tema="presupuestos" />
     <div v-for="periodo in periodos" :key="periodo" class="row q-col-gutter-sm q-mt-xs">
       <div class="col-12 text-body2">{{ nombrePeriodo[periodo]() }}</div>
       <div v-for="u in unidades" :key="u" class="col-12 col-sm-4">
@@ -13,6 +14,7 @@
 </template>
 
 <script setup lang="ts">
+import BotonAyuda from './ayuda/BotonAyuda.vue'
 import type { Limites, Presupuesto } from '../api/tipos'
 import { t } from '../i18n'
 

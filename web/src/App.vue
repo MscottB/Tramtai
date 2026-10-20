@@ -246,6 +246,7 @@
       </q-card>
     </q-dialog>
     <AcercaDe v-model="acercaAbierto" />
+    <PanelAyuda :pagina="seccion === 'ayuda' ? undefined : (seccion as Pagina)" @ir="ir" />
   </q-layout>
 </template>
 
@@ -270,6 +271,8 @@ import AgentesPagina from './paginas/Agentes.vue'
 import AyudaPagina from './paginas/Ayuda.vue'
 import { hashDe, leerHash } from './ayuda/ruta'
 import { temaPorId } from './ayuda/indice'
+import type { Pagina } from './ayuda/tipos'
+import PanelAyuda from './componentes/ayuda/PanelAyuda.vue'
 import AcercaDe from './componentes/AcercaDe.vue'
 import ListaNovedades from './componentes/ListaNovedades.vue'
 import NotasVersion from './componentes/NotasVersion.vue'
