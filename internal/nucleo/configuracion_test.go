@@ -88,6 +88,18 @@ func TestClavesRechazadas(t *testing.T) {
 	}
 }
 
+func TestClavesRetiradasDelZip(t *testing.T) {
+	// Desde la v0.50.2 no se admiten ZIP: una configuración que aún trae sus límites sigue cargando, y no se muestran.
+	if _, err := CargarCapa(escribir(t, "conversion:\n  maximo_archivos_zip: 7\n  profundidad_maxima_zip: 2\n"), OrigenGlobal); err != nil {
+		t.Fatalf("las claves retiradas se aceptan: %v", err)
+	}
+	for _, e := range Resolver().Efectiva() {
+		if e.Clave == "conversion.maximo_archivos_zip" || e.Clave == "conversion.profundidad_maxima_zip" {
+			t.Fatalf("una clave retirada no tiene valor predeterminado: %s", e.Clave)
+		}
+	}
+}
+
 func TestAplicarPredeterminados(t *testing.T) {
 	c := Resolver(cargar(t, "predeterminados:\n  agente: claude\n  perfil_modelo: equilibrado\n", OrigenGlobal))
 	explicita := c.AplicarPredeterminados(SolicitudEjecucion{Agente: "codex", Modelo: "m1", Mensajes: []Mensaje{{Rol: "usuario", Contenido: "x"}}})

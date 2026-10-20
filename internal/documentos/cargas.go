@@ -51,6 +51,9 @@ func AbrirCargas(dir string, vigencia time.Duration, maximoBytes, cuota int64) (
 // vacío para la instancia): el mismo contenido de la misma API da el mismo identificador y otra API no puede
 // citar ni pisar el suyo.
 func (c *Cargas) Guardar(nombre, punto string, r io.Reader) (Carga, error) {
+	if !ExtensionAdmitida(filepath.Ext(nombreSeguro(nombre))) {
+		return Carga{}, ErrFormato(nombreSeguro(nombre))
+	}
 	temporal, err := os.CreateTemp(c.dir, "subida-*")
 	if err != nil {
 		return Carga{}, err

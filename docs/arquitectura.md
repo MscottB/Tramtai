@@ -12,7 +12,7 @@ Cómo está construido Tramtai por dentro:
 | `internal/procesos` | Supervisión de procesos. En Windows crea el proceso suspendido, lo asigna a un Job Object con `KILL_ON_JOB_CLOSE` y lo reanuda; en Unix usa un grupo de procesos con SIGTERM y luego SIGKILL. Cancelar o agotar el tiempo termina el árbol completo; si no se confirma, devuelve `cancelacion_no_confirmada`. |
 | `internal/adaptadores` | Contrato con los agentes (`Adaptador`, `Ficha`, `Detectable`, `Resolvedor`, `ConAutenticacion`), el agente `Simulado` y lo común a todos: enmarcado de turnos, entorno sin claves ajenas, carpeta temporal, clasificación de errores y redacción de secretos. |
 | `internal/agentes` | Catálogo de agentes: cada uno en su módulo (`internal/agentes/claude`, `codex`, `copilot`, `gemini`, `antigravity`) con su adaptador y su ficha (nombre, color, capacidades, esfuerzo, autenticación, comando, si se permite en apps). El servicio, el planificador, la API (`GET /api/v1/agentes`) y la Web UI le preguntan en lugar de nombrar agentes. Cómo añadir uno: [nuevo-agente.md](equipo/nuevo-agente.md). |
-| `internal/documentos` | Cargas identificadas por SHA-256 (`carga_<hash>`) con vencimiento. Conversión a Markdown con markitdown 0.1.8 en un proceso supervisado con plazo y límite de salida. El conversor se localiza (configurado, paquete junto al ejecutable, preparado en la carpeta del usuario o del PATH) y se prepara con el `uv` que viene con Tramtai y un lock con hashes incrustado (`conversor/conversor.lock`), en un Python independiente sin venv; un único `Preparacion` por servicio lleva su estado y el planificador rechaza con 503 `conversor_no_disponible` lo que no se podría convertir. Los archivos de texto (txt, md, json, xml, csv, yaml…) pasan tal cual, validando que sean UTF-8. ZIP seguro con límites de archivos, tamaño descomprimido medido y profundidad, rechazando rutas con `..`, absolutas, con unidad o enlaces. |
+| `internal/documentos` | Cargas identificadas por SHA-256 (`carga_<hash>`) con vencimiento. Conversión a Markdown con markitdown 0.1.8 en un proceso supervisado con plazo y límite de salida. El conversor se localiza (configurado, paquete junto al ejecutable, preparado en la carpeta del usuario o del PATH) y se prepara con el `uv` que viene con Tramtai y un lock con hashes incrustado (`conversor/conversor.lock`), en un Python independiente sin venv; un único `Preparacion` por servicio lleva su estado y el planificador rechaza con 503 `conversor_no_disponible` lo que no se podría convertir. Los archivos de texto (txt, md, json, xml, csv, yaml…) pasan tal cual, validando que sean UTF-8. `Formatos()` es la única lista de extensiones admitidas: la usan `Cargas.Guardar` (que rechaza el resto al subir), `/limites`, la CLI y la terminal. Los ZIP no se admiten desde la v0.50.2. |
 | `internal/salidas` | Validación de la salida contra el JSON Schema del consumidor (`santhosh-tekuri/jsonschema`), con los `$ref` externos deshabilitados. |
 | `internal/api` | Servicio HTTP: valida Host, Origin y token; API nativa con SSE reanudable por `Last-Event-ID`; fachadas OpenAI y Anthropic con política de parámetros y su formato de errores. Detalle en [api.md](api.md). |
 | `internal/servicio` | Servicio único: instancias global y por proyecto con token, base de datos, cola y cargas propios; enrutado por token; administración con token de servicio; puntos de acceso con puerto o ruta `/p/<nombre>`, recarga sin reinicio y edición del YAML conservando comentarios; descriptor `servicio.json`. Las rutas `/ui/` de la Web UI están en una tabla (`rutasDeUI`) con el permiso de cada una: pública, con sesión o solo con una sesión local. Las reglas para guardar una API (respaldo que funcione, agentes permitidos en apps) se aplican solo aquí. |
@@ -59,7 +59,7 @@ Las conversaciones de varios turnos se enmarcan con el formato `tramtai-turnos-v
 Con cargas, el trabajo pasa por `preparando_entrada`, que tiene su propio límite de conversiones simultáneas (`concurrencia.maximo_conversiones_instancia`). Cada archivo se convierte por separado y se antepone al último mensaje del usuario en un bloque delimitado:
 
 ```
-<<<archivo-3f9a1c2e nombre="paquete.zip/acta.docx" sha256="…">>>
+<<<archivo-3f9a1c2e nombre="acta.docx" sha256="…">>>
 …Markdown…
 <<<fin archivo-3f9a1c2e>>>
 ```
@@ -67,7 +67,7 @@ Con cargas, el trabajo pasa por `preparando_entrada`, que tiene su propio límit
 El código tras el guion es aleatorio por petición (igual en los turnos `<<<turno-…>>>`): un documento que escriba
 `<<<fin archivo>>>` no cierra su bloque.
 
-Si una carga venció, el trabajo falla con `entrada_no_disponible`. Una conversión vacía o fallida falla con `conversion_fallida`; nunca se presenta como éxito. Un ZIP que supera los límites falla con `carga_invalida`.
+Si una carga venció, el trabajo falla con `entrada_no_disponible`. Una conversión vacía o fallida falla con `conversion_fallida`; nunca se presenta como éxito.
 
 Con un esquema, se usa primero la salida estructurada nativa del agente (`--json-schema` y `structured_output` en Claude; `--output-schema` en Codex); GitHub Copilot, que no la tiene, lo recibe en las instrucciones. Después Tramtai valida el resultado. Si no cumple, el trabajo falla con `salida_no_cumple_esquema` y la salida solo se conserva con `conservar_salida_invalida`. Un esquema inválido se rechaza al aceptar el trabajo.
 
@@ -83,8 +83,8 @@ intente manipular al modelo; sí que un modelo manipulado haga daño a través d
   y la configuración privada; queda fuera de las apps hasta que su canario pase con una clave de la Gemini API.
 - **Entrada:** delimitadores con código por petición; topes de mensajes (1.000), esquema (256 KB), cuerpo (16 MB) y
   la comprobación del contexto antes de llamar al CLI.
-- **Cargas y conversión:** identificadores por API, cuota por instancia, solo formatos anunciados, ZIP con límites de
-  archivos, tamaño, profundidad y rutas, Office comprobado antes de convertir, plazo por archivo y total, y tope de
+- **Cargas y conversión:** identificadores por API, cuota por instancia, solo formatos anunciados (el resto se rechaza
+  al subir), sin ZIP, Office comprobado antes de convertir, plazo por archivo y total, y tope de
   memoria para markitdown. El conversor se prepara con uv fijado por SHA-256 y dependencias con hashes
   (`--require-hashes`), sin tocar el PATH ni el registro y sin la configuración de uv del usuario.
 - **Procesos:** cada CLI en un grupo que se termina entero (Job Object en Windows), sin shell, con un tope de 8 MB por

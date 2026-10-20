@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -101,12 +100,11 @@ func (m *modelo) teclaEjecutar(k tea.KeyPressMsg) tea.Cmd {
 
 // comprobarConversor avisa, al dejar el campo de archivos, si alguno necesita el conversor y no está listo.
 func (m *modelo) comprobarConversor() tea.Cmd {
-	archivos := strings.FieldsFunc(m.archivos, func(r rune) bool { return r == ',' || r == ';' })
-	necesita := slices.ContainsFunc(archivos, func(ruta string) bool {
-		ruta = strings.Trim(strings.TrimSpace(ruta), `"`)
-		return documentos.NecesitaConversor(filepath.Base(ruta), ruta)
-	})
-	if !necesita || m.cli == nil {
+	archivos := rutasDe(m.archivos)
+	if err := documentos.AdmitirArchivos(archivos); err != nil {
+		return func() tea.Msg { return msgAviso{err: err} }
+	}
+	if !slices.ContainsFunc(archivos, documentos.NecesitaConversor) || m.cli == nil {
 		return nil
 	}
 	cli, inst := m.cli, m.inst
@@ -158,25 +156,25 @@ func (m *modelo) lanzar() tea.Cmd {
 		seleccion = m.modelos[m.iModelo]
 	}
 	sol := solicitudDesde(seleccion, m.mensaje)
-	archivos := strings.FieldsFunc(m.archivos, func(r rune) bool { return r == ',' || r == ';' })
+	archivos := rutasDe(m.archivos)
 	cli, inst := m.cli, m.inst
 	m.salida.Reset()
 	m.resumen, m.aviso, m.ocupado = "", "", idioma.T("enviando…")
 	return func() tea.Msg {
 		ctx, cancelar := conPlazo(10 * time.Minute)
 		defer cancelar()
-		// Sin conversor listo, un archivo que lo necesita se avisa antes de subir nada (ctrl+p lo prepara).
-		necesita := slices.ContainsFunc(archivos, func(ruta string) bool {
-			ruta = strings.Trim(strings.TrimSpace(ruta), `"`)
-			return documentos.NecesitaConversor(filepath.Base(ruta), ruta)
-		})
-		if necesita {
+		// Un formato no admitido, o un archivo que necesita el conversor sin conversor listo, se avisa antes de subir nada
+		// (ctrl+p prepara el conversor).
+		if err := documentos.AdmitirArchivos(archivos); err != nil {
+			return msgCreado{err: err}
+		}
+		if slices.ContainsFunc(archivos, documentos.NecesitaConversor) {
 			if e, err := cli.Conversor(ctx, inst); err == nil && e.Estado != "listo" {
 				return msgCreado{err: errors.New(idioma.Tf("el conversor de archivos no está listo (%s): ctrl+p lo prepara", e.Estado))}
 			}
 		}
 		for _, ruta := range archivos {
-			ruta, err := rutaPermitida(strings.Trim(strings.TrimSpace(ruta), `"`))
+			ruta, err := rutaPermitida(ruta)
 			if err != nil {
 				return msgCreado{err: err}
 			}
@@ -218,4 +216,15 @@ func (m *modelo) lanzar() tea.Cmd {
 		}()
 		return msgCreado{t: t, flujo: flujo, parar: parar}
 	}
+}
+
+// rutasDe separa el campo de archivos (por comas o punto y coma) y quita espacios y comillas de cada ruta.
+func rutasDe(campo string) []string {
+	var rutas []string
+	for _, ruta := range strings.FieldsFunc(campo, func(r rune) bool { return r == ',' || r == ';' }) {
+		if ruta = strings.Trim(strings.TrimSpace(ruta), `"`); ruta != "" {
+			rutas = append(rutas, ruta)
+		}
+	}
+	return rutas
 }

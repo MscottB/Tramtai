@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"maps"
 	"mime/multipart"
@@ -760,6 +761,17 @@ func TestCapacidadesLimites(t *testing.T) {
 			datos["mensajes"] != float64(1000) || datos["reserva_salida_tokens"] != float64(8192) || datos["texto_convertido_mb"] != float64(20) {
 			t.Fatalf("%s: %d %s", ruta, r.StatusCode, cuerpo)
 		}
+		// Los formatos admitidos son la misma lista que usa la conversión: la Web UI y las apps no la repiten.
+		texto, conversor := fmt.Sprint(datos["extensiones_texto"]), fmt.Sprint(datos["extensiones_conversor"])
+		if !strings.Contains(texto, ".txt") || !strings.Contains(conversor, ".pdf") || strings.Contains(texto+conversor, ".zip") {
+			t.Fatalf("%s: formatos %s %s", ruta, texto, conversor)
+		}
+	}
+	if r, cuerpo := pedir(t, ts, "GET", "/api/v1/capacidades", ""); r.StatusCode != 200 || strings.Contains(cuerpo, `"zip"`) {
+		t.Fatalf("capacidades sin ZIP: %s", cuerpo)
+	}
+	if r, cuerpo := pedir(t, ts, "POST", "/api/v1/cargas?nombre=paquete.zip", "PK"); r.StatusCode != 400 || !strings.Contains(cuerpo, "carga_invalida") {
+		t.Fatalf("un ZIP se rechaza al subirlo: %d %s", r.StatusCode, cuerpo)
 	}
 }
 

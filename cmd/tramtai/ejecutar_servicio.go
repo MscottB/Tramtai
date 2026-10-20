@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -47,7 +46,7 @@ func ejecutarEnServicio(cmd *cobra.Command, c *cliente.Cliente, s nucleo.Solicit
 	defer cancelar()
 	c.Origen = nucleo.DesdeCLI
 	inst := instanciaActual(ctx, c, "")
-	if slices.ContainsFunc(archivos, func(ruta string) bool { return documentos.NecesitaConversor(filepath.Base(ruta), ruta) }) {
+	if slices.ContainsFunc(archivos, func(ruta string) bool { return documentos.NecesitaConversor(ruta) }) {
 		if e, err := c.Conversor(ctx, inst); err == nil && e.Estado == "preparando" {
 			return nucleo.NuevoError(nucleo.CodigoConversorNoDisponible, idioma.T("el conversor de archivos se está preparando: vuelve a intentarlo en un momento"))
 		} else if err == nil && e.Estado != "listo" {

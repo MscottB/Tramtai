@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -48,7 +50,7 @@ func conversor(t *testing.T, modo string) *Conversor {
 	t.Helper()
 	t.Setenv("MARKITDOWN_FALSO", modo)
 	return &Conversor{Comando: os.Args[0], TiempoLimite: 30 * time.Second, MaximoSalida: 1 << 20,
-		Limites: Limites{MaximoArchivos: 5, MaximoBytes: 1 << 20, ProfundidadMaxima: 2}}
+		Limites: Limites{MaximoBytes: 1 << 20}}
 }
 
 func escribir(t *testing.T, nombre string, datos []byte) Entrada {
@@ -124,35 +126,41 @@ func TestConversionVaciaOFallidaSeInforma(t *testing.T) {
 	}
 }
 
-func TestZipSeExtraeYConviertePorSeparado(t *testing.T) {
-	datos := crearZip(t, map[string][]byte{"a.txt": []byte("hola"), "sub/b.docx": []byte("x"), "sub/": nil})
-	docs, err := conversor(t, "convertir").Convertir(context.Background(), []Entrada{escribir(t, "paquete.zip", datos)})
-	salida := docs.Texto
-	if err != nil {
-		t.Fatal(err)
+func TestZipYaNoSeAdmite(t *testing.T) {
+	datos := crearZip(t, map[string][]byte{"a.txt": []byte("hola")})
+	_, err := conversor(t, "convertir").Convertir(context.Background(), []Entrada{escribir(t, "paquete.zip", datos)})
+	if nucleo.CodigoDe(err) != nucleo.CodigoCargaInvalida || !strings.Contains(nucleo.MensajeDe(err), "descomprímelo") {
+		t.Fatalf("un ZIP se rechaza y se dice qué hacer: %v", err)
 	}
-	if !strings.Contains(salida, "nombre=\"paquete.zip/a.txt\"") || !strings.Contains(salida, "hola") ||
-		!strings.Contains(salida, "nombre=\"paquete.zip/sub/b.docx\"") || !strings.Contains(salida, "# .docx") {
-		t.Fatalf("salida %q", salida)
+	c, _ := AbrirCargas(t.TempDir(), time.Hour, 1<<20, 0)
+	if _, err := c.Guardar("paquete.zip", "", bytes.NewReader(datos)); nucleo.CodigoDe(err) != nucleo.CodigoCargaInvalida ||
+		!strings.Contains(nucleo.MensajeDe(err), "descomprímelo") {
+		t.Fatalf("un ZIP se rechaza al subirlo: %v", err)
 	}
 }
 
-func TestZipInseguroOExcesivo(t *testing.T) {
-	interno := crearZip(t, map[string][]byte{"x.txt": []byte("x")})
-	medio := crearZip(t, map[string][]byte{"interno.zip": interno})
-	casos := map[string][]byte{
-		"ruta con ..":      crearZip(t, map[string][]byte{"../fuera.txt": []byte("x")}),
-		"ruta absoluta":    crearZip(t, map[string][]byte{"/etc/x.txt": []byte("x")}),
-		"unidad":           crearZip(t, map[string][]byte{"C:/x.txt": []byte("x")}),
-		"demasiados":       crearZip(t, map[string][]byte{"1.txt": {'1'}, "2.txt": {'2'}, "3.txt": {'3'}, "4.txt": {'4'}, "5.txt": {'5'}, "6.txt": {'6'}}),
-		"demasiado grande": crearZip(t, map[string][]byte{"grande.txt": bytes.Repeat([]byte("a"), 2<<20)}),
-		"profundidad":      crearZip(t, map[string][]byte{"medio.zip": medio}),
+func TestAdmitirArchivos(t *testing.T) {
+	if err := AdmitirArchivos([]string{"informe.PDF", filepath.Join("notas", "a.md")}); err != nil {
+		t.Fatalf("formatos admitidos: %v", err)
 	}
-	for caso, datos := range casos {
-		_, err := conversor(t, "convertir").Convertir(context.Background(), []Entrada{escribir(t, "c.zip", datos)})
-		if nucleo.CodigoDe(err) != nucleo.CodigoCargaInvalida {
-			t.Errorf("%s: se esperaba carga_invalida: %v", caso, err)
+	err := AdmitirArchivos([]string{"a.txt", filepath.Join("carpeta", "paquete.zip"), "b.exe"})
+	if nucleo.CodigoDe(err) != nucleo.CodigoCargaInvalida || !strings.Contains(nucleo.MensajeDe(err), "paquete.zip: los ZIP") {
+		t.Fatalf("el primer archivo no admitido se avisa por su nombre, antes de subir nada: %v", err)
+	}
+}
+
+func TestFormatos(t *testing.T) {
+	texto, conversor := Formatos()
+	for _, lista := range [][]string{texto, conversor} {
+		if !sort.StringsAreSorted(lista) || slices.Contains(lista, ".zip") {
+			t.Fatalf("listas ordenadas y sin ZIP: %v", lista)
 		}
+	}
+	if !slices.Contains(texto, ".txt") || !slices.Contains(texto, ".csv") || !slices.Contains(conversor, ".pdf") || !slices.Contains(conversor, ".docx") {
+		t.Fatalf("faltan formatos: %v %v", texto, conversor)
+	}
+	if ExtensionAdmitida(".zip") || !ExtensionAdmitida(".PDF") || !ExtensionAdmitida(".md") {
+		t.Fatal("ExtensionAdmitida sigue a Formatos")
 	}
 }
 
@@ -172,8 +180,12 @@ func TestCargas(t *testing.T) {
 	if _, ruta, err := c.Obtener(a.ID); err != nil || filepath.Base(ruta) != a.ID {
 		t.Fatalf("obtener: %s %v", ruta, err)
 	}
-	if _, err := c.Guardar("grande.bin", "", strings.NewReader("12345678901")); nucleo.CodigoDe(err) != nucleo.CodigoCargaInvalida {
+	if _, err := c.Guardar("grande.txt", "", strings.NewReader("12345678901")); nucleo.CodigoDe(err) != nucleo.CodigoCargaInvalida {
 		t.Fatalf("una carga sobre el límite se rechaza: %v", err)
+	}
+	if _, err := c.Guardar("programa.exe", "", strings.NewReader("MZ")); nucleo.CodigoDe(err) != nucleo.CodigoCargaInvalida ||
+		!strings.Contains(nucleo.MensajeDe(err), "programa.exe") || !strings.Contains(nucleo.MensajeDe(err), "PDF") {
+		t.Fatalf("un formato no admitido se rechaza al subirlo, con la lista: %v", err)
 	}
 	for _, id := range []string{"carga_../../secreto", "carga_00000000000000000000000000000000"} {
 		if _, _, err := c.Obtener(id); nucleo.CodigoDe(err) != nucleo.CodigoEntradaNoDisponible {
@@ -250,18 +262,13 @@ func TestPurgarSinUsoRespetaLoRecienteYLoIlegible(t *testing.T) {
 }
 
 func TestConvertirDevuelvePartes(t *testing.T) {
-	var zipDatos bytes.Buffer
-	w := zip.NewWriter(&zipDatos)
-	f, _ := w.Create("interno.txt")
-	f.Write([]byte("dentro del zip"))
-	w.Close()
 	docs, err := conversor(t, "convertir").Convertir(context.Background(), []Entrada{
-		escribir(t, "uno.txt", []byte("hola")), escribir(t, "dos.txt", []byte("ñandú largo")), escribir(t, "paquete.zip", zipDatos.Bytes())})
+		escribir(t, "uno.txt", []byte("hola")), escribir(t, "dos.txt", []byte("ñandú largo"))})
 	if err != nil {
 		t.Fatal(err)
 	}
-	esperadas := []nucleo.ParteDocumento{{Nombre: "uno.txt", Caracteres: 4}, {Nombre: "dos.txt", Caracteres: 11}, {Nombre: "paquete.zip/interno.txt", Caracteres: 14}}
-	if !reflect.DeepEqual(docs.Partes, esperadas) || !strings.Contains(docs.Texto, "dentro del zip") {
+	esperadas := []nucleo.ParteDocumento{{Nombre: "uno.txt", Caracteres: 4}, {Nombre: "dos.txt", Caracteres: 11}}
+	if !reflect.DeepEqual(docs.Partes, esperadas) || !strings.Contains(docs.Texto, "ñandú largo") {
 		t.Fatalf("partes %+v", docs.Partes)
 	}
 }
@@ -308,7 +315,7 @@ func TestCargaPorAPI(t *testing.T) {
 		t.Fatalf("cada API tiene su identificador: %s %s", a.ID, b.ID)
 	}
 	// Resubir el mismo contenido con otro nombre no cambia el de la carga ya guardada.
-	if _, err := c.Guardar("trampa.zip", "tienda", strings.NewReader("contenido")); err != nil {
+	if _, err := c.Guardar("trampa.txt", "tienda", strings.NewReader("contenido")); err != nil {
 		t.Fatal(err)
 	}
 	if carga, _, err := c.Obtener(a.ID); err != nil || carga.Nombre != "informe.pdf" {

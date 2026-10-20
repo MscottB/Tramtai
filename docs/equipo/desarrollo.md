@@ -71,7 +71,7 @@ internal/planificador/ cola, concurrencia, cancelación, drenaje y recuperación
 internal/procesos/     supervisión de procesos (Job Objects / grupos Unix)
 internal/adaptadores/  Claude, Codex, Gemini API, Antigravity y agente simulado
 internal/credenciales/ claves de proveedor en el almacén del sistema (Windows, Llavero de macOS, Secret Service de Linux)
-internal/documentos/   cargas, conversión con markitdown, preparación del conversor y ZIP seguro
+internal/documentos/   cargas, formatos admitidos, conversión con markitdown y preparación del conversor
 internal/salidas/      validación JSON Schema
 internal/api/          HTTP: API nativa, SSE y fachadas OpenAI/Anthropic
 internal/servicio/     servicio único: instancias, puntos de acceso, Web UI y entrada local

@@ -39,6 +39,19 @@ API propia permite pedirlo distinto en cada petición. La `Idempotency-Key` la a
 En la app, **Mis APIs** muestra esta guía con las URL de cada API y ejemplos para copiar (curl, Python y Node, también
 de la API propia), y **Probar → Ver como código** da la prueba actual como petición.
 
+## Formatos admitidos
+
+| Formato | Extensiones | Qué hace Tramtai |
+|---|---|---|
+| PDF, Word, PowerPoint, Excel y HTML | `.pdf`, `.docx`, `.pptx`, `.xlsx`, `.html` y `.htm` | Los convierte a Markdown con markitdown |
+| Texto | `.txt`, `.md`, `.markdown`, `.json`, `.jsonl`, `.xml`, `.csv`, `.tsv`, `.yaml`, `.yml`, `.toml`, `.ini` y `.log` | Pasan tal cual (deben estar en UTF-8) |
+
+Cualquier otro formato se rechaza **al subirlo**, con 400 `carga_invalida` y la lista de lo que sí se admite. Los
+**ZIP no se admiten** desde la v0.50.2: descomprímelo y envía los archivos sueltos (hasta 20 por petición). Tampoco
+imágenes ni audio, ni Word, Excel o PowerPoint antiguos (`.doc`, `.xls`, `.ppt`). `GET /limites` (y `limites` en
+`/capacidades`) trae la lista en `extensiones_texto` y `extensiones_conversor`: es la misma que usa el servicio, así
+que una app puede filtrar antes de enviar.
+
 ## Seguridad
 
 - **Clave (token):** `Authorization: Bearer <clave>` o `x-api-key: <clave>`.
@@ -65,7 +78,7 @@ de la API propia), y **Probar → Ver como código** da la prueba actual como pe
 | `GET /trabajos/{id}` | Estado, error, modelo enviado y efectivo, uso, salida y `disponibilidad` (`disponible` o `expirada`). Si falló con `salida_no_cumple_esquema`, `errores_salida` lista los problemas de la última respuesta (`campo`, `problema` y `texto`; ver [Respuestas con forma](#respuestas-con-forma)). Tras la retención de metadatos (7 días) responde 404. |
 | `GET /trabajos/{id}/salida` | La salida con su tipo (`text/markdown`, `text/plain` o `application/json`). Si no ha terminado, 409 `trabajo_no_terminado`; si la retención ya la borró, 410 `resultado_expirado`. |
 | `GET /trabajos/{id}/eventos` | SSE con `id` monotónico: `estado`, `entrada` (antes de esperar al agente: lo que ocupa la entrada), `texto`, `aviso`, `intento` (al empezar cada intento, JSON con `agente`, `modelo`, `esfuerzo` y `del_agente`, y en una corrección `correccion` y `correcciones`; un cliente que no lo espera lo ignora) y `validacion` (los problemas de una respuesta que no cumplía el esquema). `Last-Event-ID` (o `?desde=`) reanuda tras ese evento. Envía latidos cada 15 s y termina con un evento `fin`. Si el resultado expiró, empieza con un evento `aviso`: solo quedan los eventos de estado, entrada e intento. |
-| `GET /limites` | Los topes de una petición: `cargas_por_peticion` (20), `carga_mb`, `texto_convertido_mb`, `cuota_cargas_mb`, `cuerpo_mb` (16), `esquema_kb` (256), `mensajes` (1.000) y `reserva_salida_tokens`. Es rápida; `/capacidades` trae el mismo bloque en `limites`. |
+| `GET /limites` | Los formatos admitidos (`extensiones_texto` y `extensiones_conversor`) y los topes de una petición: `cargas_por_peticion` (20), `carga_mb`, `texto_convertido_mb`, `cuota_cargas_mb`, `cuerpo_mb` (16), `esquema_kb` (256), `mensajes` (1.000) y `reserva_salida_tokens`. Es rápida; `/capacidades` trae el mismo bloque en `limites`. |
 | `GET /trabajos/{id}/registro` | Los pasos de la petición con su hora, sin el texto de la respuesta: `{"eventos":[{"numero","tipo","datos","creado_en"}]}` con los eventos `estado`, `entrada` (caracteres, tokens estimados y cada documento de mayor a menor), `intento` (en una corrección, con `correccion` y `correcciones`), `aviso` y `validacion` (los problemas de una respuesta que no cumplía el esquema). Mismos permisos que `GET /trabajos/{id}`. |
 | `POST /trabajos/{id}/cancelar` | Cancelación idempotente; responde 202 sin afirmar que ya terminó. |
 | `POST /trabajos/{id}/reintentar` | Crea un intento nuevo (`intento_de`) a partir de un trabajo terminado. Si sus entradas ya vencieron, 410 `entrada_no_disponible`. Con el cuerpo opcional `{"corregir": true}`, el intento nuevo pide al mismo agente que corrija la respuesta anterior; solo vale si falló con `salida_no_cumple_esquema` y conservó su salida (si no, 400 `correccion_no_disponible`). |
@@ -144,15 +157,15 @@ documentos de la petición, junto con tu mensaje. En el turno donde venía queda
 | OpenAI responses | Una parte `{"type": "input_file", "filename": "informe.pdf", "file_data": "data:application/pdf;base64,…"}` |
 | Anthropic | Un bloque `{"type": "document", "title": "Contrato", "source": {"type": "base64", "media_type": "application/pdf", "data": "…"}}`; también `source.type: "text"` |
 
-- **Formatos:** los de la API propia (texto, Markdown, JSON, XML, CSV, HTML, PDF, Word, PowerPoint, Excel y ZIP). Sin
-  nombre, el archivo se llama `documento-<n>` con la extensión de su tipo MIME.
+- **Formatos:** los de la API propia (ver [Formatos admitidos](#formatos-admitidos)). Sin nombre, el archivo se llama
+  `documento-<n>` con la extensión de su tipo MIME.
 - **Tamaño:** el cuerpo de la petición tiene un tope de 16 MB y el base64 ocupa un tercio más: caben unos **12 MB** de
   archivos en total. Para más, la API propia (`POST /cargas`, hasta `conversion.maximo_carga_mb` cada uno).
 - **El mismo archivo en varios turnos** se guarda y se convierte una sola vez.
 - **No se admiten:** `file_id` (Tramtai no tiene `/files`), `file_url` y `source.type: "url"` (no descarga URL), ni
   imágenes; responden 400 `parametro_no_soportado` con lo que hay que enviar en su lugar. Un base64 roto responde 400
   `solicitud_invalida` con el mensaje y la parte.
-- **Sin conversor listo**, un archivo que lo necesita (HTML, PDF, Office o un ZIP que los traiga) se rechaza al
+- **Sin conversor listo**, un archivo que lo necesita (HTML, PDF u Office) se rechaza al
   aceptar la petición con 503 `conversor_no_disponible`; mientras se prepara, con `Retry-After: 60`.
 
 ```python

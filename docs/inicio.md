@@ -106,7 +106,8 @@ tramtai ejecutar -f acta.docx -e compromisos.schema.json "Extrae los compromisos
 tramtai convertir informe.pdf     # muestra el texto que recibiría el agente, sin ejecutarlo
 ```
 
-- `-f` admite PDF, Word, PowerPoint, Excel, HTML, texto (txt, md, json, csv…) y ZIP, y se puede repetir.
+- `-f` admite PDF, Word, PowerPoint, Excel, HTML y texto (txt, md, json, csv…), y se puede repetir. Un formato que no
+  se admite se avisa antes de enviar nada; un ZIP, descomprímelo (lista completa en [la API](api.md#formatos-admitidos)).
 - `-e` recibe un JSON Schema: la respuesta será un JSON que lo cumpla, o el trabajo fallará con `salida_no_cumple_esquema` y el primer problema («Falta el campo `total`»). En Probar el esquema se arma con plantillas o campo a campo, y la respuesta que no cumple se corrige con un clic (o hasta 3 veces sola, con «Si la respuesta no cumple»).
 
 ### Modelos

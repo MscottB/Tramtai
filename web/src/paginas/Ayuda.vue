@@ -206,7 +206,7 @@ const recorridoArchivo = [
   { titulo: 'ayuda.a4', texto: 'ayuda.a4Texto', icono: 'o_smart_toy' },
   { titulo: 'ayuda.a5', texto: 'ayuda.a5Texto', icono: 'o_task_alt' },
 ] as const
-const notasArchivo = ['ayuda.archivosNota1', 'ayuda.archivosNota2', 'ayuda.archivosNota3'] as const
+const notasArchivo = ['ayuda.archivosNota0', 'ayuda.archivosNota1', 'ayuda.archivosNota2', 'ayuda.archivosNota3'] as const
 // ejemplosArchivo envían un PDF por cada API, con la dirección predeterminada y la clave por poner.
 const ejemplosArchivo = computed(() => ejemplos({ url: 'http://127.0.0.1:17373', modelo: 'perfil/rapido', contratos: ['nativa', 'openai', 'anthropic'],
   prueba: { archivos: ['informe.pdf'], solicitud: { mensajes: [{ rol: 'usuario', contenido: t('ejemplos.mensaje') }] } } }))

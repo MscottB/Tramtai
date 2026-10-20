@@ -443,7 +443,7 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 	respuesta := map[string]any{
 		"version":               version.Version,
 		"formato_serializacion": adaptadores.FormatoSerializacion,
-		"entradas":              []string{"texto", "markdown", "json", "xml", "csv", "html", "pdf", "docx", "pptx", "xlsx", "zip"},
+		"entradas":              []string{"texto", "markdown", "json", "xml", "csv", "html", "pdf", "docx", "pptx", "xlsx"},
 		"adaptadores":           lista,
 		"limites":               s.limites(),
 	}
@@ -453,9 +453,13 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 	EscribirJSON(w, http.StatusOK, respuesta)
 }
 
-// limites son los topes de una petición y de sus cargas, para que una app (y Probar) los conozca antes de enviar.
+// limites son los topes de una petición y de sus cargas, y los formatos admitidos, para que una app (y Probar) los
+// conozca antes de enviar.
 func (s *Servidor) limites() map[string]any {
+	texto, conversor := documentos.Formatos()
 	return map[string]any{
+		"extensiones_texto":     texto,
+		"extensiones_conversor": conversor,
 		"cargas_por_peticion":   nucleo.MaximoCargas,
 		"carga_mb":              s.Config.Limite("conversion.maximo_carga_mb"),
 		"texto_convertido_mb":   s.Config.Limite("conversion.maximo_salida_mb"),
