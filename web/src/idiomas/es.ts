@@ -581,6 +581,7 @@ const es = {
   // Errores del servicio, por código estable
   'error.solicitud_invalida': 'La petición no es válida',
   'error.configuracion_invalida': 'La configuración no es válida',
+  'error.limite_flujos': 'Hay demasiadas ventanas siguiendo esta instancia',
   'error.cola_llena': 'La cola está llena; inténtalo en un momento',
   'error.conflicto_idempotencia': 'Ya hay otra petición con esa clave de idempotencia',
   'error.no_encontrado': 'No se encontró',

@@ -71,6 +71,7 @@ func (s *Servidor) Rutas() http.Handler {
 	if contrato("nativa") {
 		mux.HandleFunc("POST /api/v1/trabajos", s.crearTrabajo)
 		mux.HandleFunc("GET /api/v1/trabajos", s.listarTrabajos)
+		mux.HandleFunc("GET /api/v1/eventos", s.eventosInstancia)
 		if s.Punto == nil { // un punto de acceso solo ve sus trabajos: no vacía el historial de la instancia
 			mux.HandleFunc("DELETE /api/v1/trabajos", s.eliminarTrabajos)
 		}

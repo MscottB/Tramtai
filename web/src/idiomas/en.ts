@@ -581,6 +581,7 @@ const en: Textos = {
   // Service errors, by stable code
   'error.solicitud_invalida': 'The request is not valid',
   'error.configuracion_invalida': 'The configuration is not valid',
+  'error.limite_flujos': 'Too many windows are following this instance',
   'error.cola_llena': 'The queue is full; try again shortly',
   'error.conflicto_idempotencia': 'Another request already uses that idempotency key',
   'error.no_encontrado': 'Not found',
