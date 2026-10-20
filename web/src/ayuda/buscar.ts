@@ -20,8 +20,9 @@ export function normalizar(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[\s_]+/g, ' ').trim()
 }
 
-// campos son los textos donde se busca, cada uno con su ancla, lo que se muestra y cuánto pesa.
-function campos(tema: Tema, textos: Record<string, string>, tituloError: (c: string) => string) {
+// campos son los textos donde se busca, cada uno con su ancla, lo que se muestra y cuánto pesa; el sitio arma con
+// ellos su índice de búsqueda.
+export function campos(tema: Tema, textos: Record<string, string>, tituloError: (c: string) => string) {
   const t = (k: string) => textos[k] ?? ''
   const titulo = t(tema.titulo)
   const lista: { ancla: string; donde: string; texto: string; peso: number }[] = [

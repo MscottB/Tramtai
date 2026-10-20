@@ -211,5 +211,10 @@ jobs:
       - run: npm run build # comprueba los tipos de los .vue con vue-tsc y compila
       # La Web UI compilada va en el repo (go build no necesita Node): tiene que ser la de web/src, o el release saldría
       # con la vieja. Las fuentes van con LF también en Windows (.gitattributes), así que el build es el mismo.
+      - name: La Ayuda del sitio coincide con los temas
+        run: |
+          npm run sitio
+          git diff --exit-code --stat -- ../site/ayuda ../site/ayuda.html || { echo "::error::genera la Ayuda del sitio (cd web; npm run sitio) y súbela"; exit 1; }
+          test -z "$(git status --porcelain -- ../site/ayuda)" || { echo "::error::hay archivos de la Ayuda sin subir: cd web; npm run sitio"; exit 1; }
       - name: La Web UI compilada coincide con web/src
         run: git diff --exit-code --stat -- ../internal/recursos/web || { echo "::error::compila la Web UI (cd web; npm run build) y sube internal/recursos/web"; exit 1; }

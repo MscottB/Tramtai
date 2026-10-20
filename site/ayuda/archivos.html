@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Archivos · Tramtai</title>
+<meta name="description" content="Tramtai convierte tus PDF, Word, Excel y otros documentos a texto antes de pasárselos al agente.">
+<meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../logo.png">
+<link rel="stylesheet" href="../estilo.css">
+<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t } catch (e) {}</script>
+</head>
+<body>
+<header class="barra">
+  <div class="envoltura">
+    <a class="marca" href="../index.html"><img src="../logo.png" alt="">Tramtai</a>
+    <nav aria-label="Secciones">
+      <a href="../index.html#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+      <a href="../index.html#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+      <a href="index.html" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+    </nav>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+    </a>
+    <div class="idioma" role="group" aria-label="Idioma / Language">
+      <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+      <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+    </div>
+    <div class="idioma tema" role="group" aria-label="Tema / Theme">
+      <button type="button" data-tema="sistema" aria-pressed="true" aria-label="Tema del sistema / System theme" title="Sistema / System">◐</button>
+      <button type="button" data-tema="claro" aria-pressed="false" aria-label="Tema claro / Light theme" title="Claro / Light">☀</button>
+      <button type="button" data-tema="oscuro" aria-pressed="false" aria-label="Tema oscuro / Dark theme" title="Oscuro / Dark">☾</button>
+    </div>
+    <a class="boton principal" href="../index.html#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+  </div>
+</header>
+
+<main class="envoltura ayuda-temas">
+<nav class="migas" aria-label="Ruta / Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Archivos</span><span lang="en">Files</span></nav>
+<article class="doc tema-ayuda">
+<header>
+  <h1><span lang="es">Archivos</span><span lang="en">Files</span></h1>
+  <p class="entradilla"><span lang="es">Tramtai convierte tus PDF, Word, Excel y otros documentos a texto antes de pasárselos al agente.</span><span lang="en">Tramtai turns your PDF, Word, Excel and other documents into text before handing them to the agent.</span></p>
+</header>
+
+<ol class="diagrama" style="--paradas: 5">
+  <li><strong>1. <span lang="es">Tu app lo manda</span><span lang="en">Your app sends it</span></strong><span><span lang="es">Por la API propia, subiéndolo a /cargas; por OpenAI o Anthropic, en base64 dentro del mensaje.</span><span lang="en">Through the native API, uploading it to /cargas; through OpenAI or Anthropic, in base64 inside the message.</span></span></li>
+  <li><strong>2. <span lang="es">Tramtai lo guarda</span><span lang="en">Tramtai keeps it</span></strong><span><span lang="es">Como una carga identificada por su contenido: el mismo archivo no se guarda dos veces.</span><span lang="en">As an upload identified by its content: the same file is never stored twice.</span></span></li>
+  <li><strong>3. <span lang="es">Lo convierte a texto</span><span lang="en">Turns it into text</span></strong><span><span lang="es">markitdown pasa PDF, Word, PowerPoint, Excel y HTML a Markdown; el texto va tal cual.</span><span lang="en">markitdown turns PDF, Word, PowerPoint, Excel and HTML into Markdown; text goes as is.</span></span></li>
+  <li><strong>4. <span lang="es">Se lo da al agente</span><span lang="en">Hands it to the agent</span></strong><span><span lang="es">Un bloque delimitado por archivo, junto con tu mensaje. El agente no lee tu disco.</span><span lang="en">One delimited block per file, with your message. The agent does not read your disk.</span></span></li>
+  <li><strong>5. <span lang="es">Recibes la respuesta</span><span lang="en">You get the answer</span></strong><span><span lang="es">Como cualquier otra petición, en el formato de la API que usaste.</span><span lang="en">Like any other request, in the format of the API you used.</span></span></li>
+</ol>
+
+<ol class="pasos">
+  <li><span lang="es">Por la API propia: sube cada archivo con POST /cargas y crea el trabajo citando sus cargas.</span><span lang="en">Native API: upload each file with POST /cargas and create the job citing its uploads.</span></li>
+  <li><span lang="es">Por OpenAI o Anthropic: pon el archivo en base64 dentro del mensaje (file, input_file o document).</span><span lang="en">OpenAI or Anthropic: put the file in base64 inside the message (file, input_file or document).</span></li>
+  <li><span lang="es">En Probar también puedes adjuntarlos para ver la respuesta antes.</span><span lang="en">In Try you can attach them too, to see the answer first.</span></li>
+</ol>
+
+<div class="pestanas" data-pestanas>
+  <div class="pestanas-lista" role="tablist" aria-label="Lenguaje / Language"><button type="button" role="tab" id="e2-curl-nativa" aria-controls="e2-curl-nativa-panel" aria-selected="true" tabindex="0" data-lenguaje="curl-nativa">curl · API propia</button><button type="button" role="tab" id="e2-python-nativa" aria-controls="e2-python-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="python-nativa">Python · API propia</button><button type="button" role="tab" id="e2-node-nativa" aria-controls="e2-node-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="node-nativa">Node · API propia</button><button type="button" role="tab" id="e2-go-nativa" aria-controls="e2-go-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="go-nativa">Go · API propia</button><button type="button" role="tab" id="e2-python" aria-controls="e2-python-panel" aria-selected="false" tabindex="-1" data-lenguaje="python">Python · OpenAI</button><button type="button" role="tab" id="e2-curl" aria-controls="e2-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl · OpenAI</button><button type="button" role="tab" id="e2-anthropic" aria-controls="e2-anthropic-panel" aria-selected="false" tabindex="-1" data-lenguaje="anthropic">Python · Anthropic</button></div>
+  <div role="tabpanel" id="e2-curl-nativa-panel" aria-labelledby="e2-curl-nativa">
+    <pre class="codigo" lang="es"><code># 1. Sube cada archivo y guarda su identificador (jq saca el campo de la respuesta JSON)
+CARGAS=&quot;&quot;
+for ARCHIVO in &#39;informe.pdf&#39;; do
+  ID=$(curl -s http://127.0.0.1:17373/api/v1/cargas -H &quot;Authorization: Bearer &lt;tu clave&gt;&quot; -F &quot;archivo=@\&quot;$ARCHIVO\&quot;&quot; | jq -r .identificador_carga)
+  CARGAS=&quot;$CARGAS${CARGAS:+,}\&quot;$ID\&quot;&quot;
+done
+
+# 2. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
+TRABAJO=$(curl -s http://127.0.0.1:17373/api/v1/trabajos -H &quot;Authorization: Bearer &lt;tu clave&gt;&quot; \
+  -H &quot;Content-Type: application/json&quot; -H &quot;Idempotency-Key: $(date +%s)&quot; \
+  -d &#39;{
+  &quot;mensajes&quot;: [
+    {
+      &quot;rol&quot;: &quot;usuario&quot;,
+      &quot;contenido&quot;: &quot;Resume el documento adjunto en una frase.&quot;
+    }
+  ],
+  &quot;cargas&quot;: [&#39;&quot;$CARGAS&quot;&#39;]
+}&#39; | jq -r .id)
+
+# 3. Síguelo en vivo hasta el evento «fin» (si lo cortas, el trabajo sigue y puedes volver con Last-Event-ID)
+curl -sN http://127.0.0.1:17373/api/v1/trabajos/$TRABAJO/eventos -H &quot;Authorization: Bearer &lt;tu clave&gt;&quot;
+
+# 4. Lee el resultado (con esquema, el JSON ya validado)
+curl -s http://127.0.0.1:17373/api/v1/trabajos/$TRABAJO/salida -H &quot;Authorization: Bearer &lt;tu clave&gt;&quot;</code></pre>
+    <pre class="codigo" lang="en"><code># 1. Upload each file and keep its identifier (jq pulls the field out of the JSON response)
+CARGAS=&quot;&quot;
+for ARCHIVO in &#39;informe.pdf&#39;; do
+  ID=$(curl -s http://127.0.0.1:17373/api/v1/cargas -H &quot;Authorization: Bearer &lt;your key&gt;&quot; -F &quot;archivo=@\&quot;$ARCHIVO\&quot;&quot; | jq -r .identificador_carga)
+  CARGAS=&quot;$CARGAS${CARGAS:+,}\&quot;$ID\&quot;&quot;
+done
+
+# 2. Create the job; repeating the Idempotency-Key returns the same job instead of a duplicate
+TRABAJO=$(curl -s http://127.0.0.1:17373/api/v1/trabajos -H &quot;Authorization: Bearer &lt;your key&gt;&quot; \
+  -H &quot;Content-Type: application/json&quot; -H &quot;Idempotency-Key: $(date +%s)&quot; \
+  -d &#39;{
+  &quot;mensajes&quot;: [
+    {
+      &quot;rol&quot;: &quot;usuario&quot;,
+      &quot;contenido&quot;: &quot;Summarize the attached document in one sentence.&quot;
+    }
+  ],
+  &quot;cargas&quot;: [&#39;&quot;$CARGAS&quot;&#39;]
+}&#39; | jq -r .id)
+
+# 3. Follow it live until the &quot;fin&quot; event (if you stop, the job keeps running and you can resume with Last-Event-ID)
+curl -sN http://127.0.0.1:17373/api/v1/trabajos/$TRABAJO/eventos -H &quot;Authorization: Bearer &lt;your key&gt;&quot;
+
+# 4. Read the result (with a schema, the JSON already validated)
+curl -s http://127.0.0.1:17373/api/v1/trabajos/$TRABAJO/salida -H &quot;Authorization: Bearer &lt;your key&gt;&quot;</code></pre>
+  </div>
+  <div role="tabpanel" id="e2-python-nativa-panel" aria-labelledby="e2-python-nativa">
+    <pre class="codigo" lang="es"><code>import json, sys, uuid
+import requests
+
+BASE = &quot;http://127.0.0.1:17373/api/v1&quot;
+CABECERAS = {&quot;Authorization&quot;: &quot;Bearer &lt;tu clave&gt;&quot;}
+
+# 1. Sube cada archivo y guarda su identificador
+cargas = []
+for nombre in [&quot;informe.pdf&quot;]:
+    with open(nombre, &quot;rb&quot;) as f:
+        r = requests.post(f&quot;{BASE}/cargas&quot;, headers=CABECERAS, files={&quot;archivo&quot;: f})
+    if not r.ok:
+        sys.exit(r.text)
+    cargas.append(r.json()[&quot;identificador_carga&quot;])
+
+# 2. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
+solicitud = {
+    &quot;mensajes&quot;: [
+        {
+            &quot;rol&quot;: &quot;usuario&quot;,
+            &quot;contenido&quot;: &quot;Resume el documento adjunto en una frase.&quot;,
+        },
+    ],
+    &quot;cargas&quot;: cargas,
+}
+r = requests.post(f&quot;{BASE}/trabajos&quot;, headers={**CABECERAS, &quot;Idempotency-Key&quot;: str(uuid.uuid4())}, json=solicitud)
+if not r.ok:
+    sys.exit(r.text)
+trabajo = r.json()[&quot;id&quot;]
+
+# 3. Síguelo en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
+fin, evento, datos = {}, &quot;&quot;, []
+with requests.get(f&quot;{BASE}/trabajos/{trabajo}/eventos&quot;, headers=CABECERAS, stream=True) as eventos:
+    for linea in (l.decode(&quot;utf-8&quot;) for l in eventos.iter_lines()):
+        if linea.startswith(&quot;event: &quot;):
+            evento = linea[7:]
+        elif linea.startswith(&quot;data: &quot;):
+            datos.append(linea[6:])
+        elif linea == &quot;&quot; and evento:
+            if evento == &quot;texto&quot;:
+                print(&quot;\n&quot;.join(datos), end=&quot;&quot;, flush=True)
+            elif evento == &quot;fin&quot;:
+                fin = json.loads(&quot;\n&quot;.join(datos))
+                break
+            evento, datos = &quot;&quot;, []
+if fin.get(&quot;estado&quot;) != &quot;completado&quot;:
+    sys.exit(f&quot;\n{fin}&quot;)
+
+# 4. Lee el resultado (con esquema, el JSON ya validado)
+print(&quot;\n&quot; + requests.get(f&quot;{BASE}/trabajos/{trabajo}/salida&quot;, headers=CABECERAS).content.decode(&quot;utf-8&quot;))</code></pre>
+    <pre class="codigo" lang="en"><code>import json, sys, uuid
+import requests
+
+BASE = &quot;http://127.0.0.1:17373/api/v1&quot;
+CABECERAS = {&quot;Authorization&quot;: &quot;Bearer &lt;your key&gt;&quot;}
+
+# 1. Upload each file and keep its identifier
+cargas = []
+for nombre in [&quot;informe.pdf&quot;]:
+    with open(nombre, &quot;rb&quot;) as f:
+        r = requests.post(f&quot;{BASE}/cargas&quot;, headers=CABECERAS, files={&quot;archivo&quot;: f})
+    if not r.ok:
+        sys.exit(r.text)
+    cargas.append(r.json()[&quot;identificador_carga&quot;])
+
+# 2. Create the job; repeating the Idempotency-Key returns the same job instead of a duplicate
+solicitud = {
+    &quot;mensajes&quot;: [
+        {
+            &quot;rol&quot;: &quot;usuario&quot;,
+            &quot;contenido&quot;: &quot;Summarize the attached document in one sentence.&quot;,
+        },
+    ],
+    &quot;cargas&quot;: cargas,
+}
+r = requests.post(f&quot;{BASE}/trabajos&quot;, headers={**CABECERAS, &quot;Idempotency-Key&quot;: str(uuid.uuid4())}, json=solicitud)
+if not r.ok:
+    sys.exit(r.text)
+trabajo = r.json()[&quot;id&quot;]
+
+# 3. Follow it live: each &quot;texto&quot; event carries a piece of the answer and &quot;fin&quot; ends the stream
+fin, evento, datos = {}, &quot;&quot;, []
+with requests.get(f&quot;{BASE}/trabajos/{trabajo}/eventos&quot;, headers=CABECERAS, stream=True) as eventos:
+    for linea in (l.decode(&quot;utf-8&quot;) for l in eventos.iter_lines()):
+        if linea.startswith(&quot;event: &quot;):
+            evento = linea[7:]
+        elif linea.startswith(&quot;data: &quot;):
+            datos.append(linea[6:])
+        elif linea == &quot;&quot; and evento:
+            if evento == &quot;texto&quot;:
+                print(&quot;\n&quot;.join(datos), end=&quot;&quot;, flush=True)
+            elif evento == &quot;fin&quot;:
+                fin = json.loads(&quot;\n&quot;.join(datos))
+                break
+            evento, datos = &quot;&quot;, []
+if fin.get(&quot;estado&quot;) != &quot;completado&quot;:
+    sys.exit(f&quot;\n{fin}&quot;)
+
+# 4. Read the result (with a schema, the JSON already validated)
+print(&quot;\n&quot; + requests.get(f&quot;{BASE}/trabajos/{trabajo}/salida&quot;, headers=CABECERAS).content.decode(&quot;utf-8&quot;))</code></pre>
+  </div>
+  <div role="tabpanel" id="e2-node-nativa-panel" aria-labelledby="e2-node-nativa">
+    <pre class="codigo" lang="es"><code>import { readFile } from &#39;node:fs/promises&#39;
+import { basename } from &#39;node:path&#39;
+import { randomUUID } from &#39;node:crypto&#39;
+
+const BASE = &#39;http://127.0.0.1:17373/api/v1&#39;
+const cabeceras = { Authorization: &#39;Bearer &lt;tu clave&gt;&#39; }
+async function pedir(ruta, opciones = {}) {
+  const r = await fetch(BASE + ruta, { ...opciones, headers: { ...cabeceras, ...opciones.headers } })
+  if (!r.ok) throw new Error(await r.text())
+  return r
+}
+
+// 1. Sube cada archivo y guarda su identificador
+const cargas = []
+for (const nombre of [&quot;informe.pdf&quot;]) {
+  const datos = new FormData()
+  datos.append(&#39;archivo&#39;, new Blob([await readFile(nombre)]), basename(nombre))
+  cargas.push((await (await pedir(&#39;/cargas&#39;, { method: &#39;POST&#39;, body: datos })).json()).identificador_carga)
+}
+
+// 2. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
+const solicitud = {
+  &quot;mensajes&quot;: [
+    {
+      &quot;rol&quot;: &quot;usuario&quot;,
+      &quot;contenido&quot;: &quot;Resume el documento adjunto en una frase.&quot;
+    }
+  ],
+  &quot;cargas&quot;: cargas
+}
+const { id } = await (await pedir(&#39;/trabajos&#39;, { method: &#39;POST&#39;, body: JSON.stringify(solicitud),
+  headers: { &#39;Content-Type&#39;: &#39;application/json&#39;, &#39;Idempotency-Key&#39;: randomUUID() } })).json()
+
+// 3. Síguelo en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
+const eventos = await pedir(`/trabajos/${id}/eventos`)
+const lector = new TextDecoder()
+let pendiente = &#39;&#39;, fin
+for await (const trozo of eventos.body) {
+  pendiente += lector.decode(trozo, { stream: true })
+  let corte
+  while ((corte = pendiente.indexOf(&#39;\n\n&#39;)) &gt;= 0) {
+    const bloque = pendiente.slice(0, corte).split(&#39;\n&#39;)
+    pendiente = pendiente.slice(corte + 2)
+    const evento = bloque.find((l) =&gt; l.startsWith(&#39;event: &#39;))?.slice(7)
+    const datos = bloque.filter((l) =&gt; l.startsWith(&#39;data: &#39;)).map((l) =&gt; l.slice(6)).join(&#39;\n&#39;)
+    if (evento === &#39;texto&#39;) process.stdout.write(datos)
+    if (evento === &#39;fin&#39;) fin = JSON.parse(datos)
+  }
+}
+if (fin?.estado !== &#39;completado&#39;) throw new Error(JSON.stringify(fin))
+
+// 4. Lee el resultado (con esquema, el JSON ya validado)
+console.log(&#39;\n&#39; + await (await pedir(`/trabajos/${id}/salida`)).text())</code></pre>
+    <pre class="codigo" lang="en"><code>import { readFile } from &#39;node:fs/promises&#39;
+import { basename } from &#39;node:path&#39;
+import { randomUUID } from &#39;node:crypto&#39;
+
+const BASE = &#39;http://127.0.0.1:17373/api/v1&#39;
+const cabeceras = { Authorization: &#39;Bearer &lt;your key&gt;&#39; }
+async function pedir(ruta, opciones = {}) {
+  const r = await fetch(BASE + ruta, { ...opciones, headers: { ...cabeceras, ...opciones.headers } })
+  if (!r.ok) throw new Error(await r.text())
+  return r
+}
+
+// 1. Upload each file and keep its identifier
+const cargas = []
+for (const nombre of [&quot;informe.pdf&quot;]) {
+  const datos = new FormData()
+  datos.append(&#39;archivo&#39;, new Blob([await readFile(nombre)]), basename(nombre))
+  cargas.push((await (await pedir(&#39;/cargas&#39;, { method: &#39;POST&#39;, body: datos })).json()).identificador_carga)
+}
+
+// 2. Create the job; repeating the Idempotency-Key returns the same job instead of a duplicate
+const solicitud = {
+  &quot;mensajes&quot;: [
+    {
+      &quot;rol&quot;: &quot;usuario&quot;,
+      &quot;contenido&quot;: &quot;Summarize the attached document in one sentence.&quot;
+    }
+  ],
+  &quot;cargas&quot;: cargas
+}
+const { id } = await (await pedir(&#39;/trabajos&#39;, { method: &#39;POST&#39;, body: JSON.stringify(solicitud),
+  headers: { &#39;Content-Type&#39;: &#39;application/json&#39;, &#39;Idempotency-Key&#39;: randomUUID() } })).json()
+
+// 3. Follow it live: each &quot;texto&quot; event carries a piece of the answer and &quot;fin&quot; ends the stream
+const eventos = await pedir(`/trabajos/${id}/eventos`)
+const lector = new TextDecoder()
+let pendiente = &#39;&#39;, fin
+for await (const trozo of eventos.body) {
+  pendiente += lector.decode(trozo, { stream: true })
+  let corte
+  while ((corte = pendiente.indexOf(&#39;\n\n&#39;)) &gt;= 0) {
+    const bloque = pendiente.slice(0, corte).split(&#39;\n&#39;)
+    pendiente = pendiente.slice(corte + 2)
+    const evento = bloque.find((l) =&gt; l.startsWith(&#39;event: &#39;))?.slice(7)
+    const datos = bloque.filter((l) =&gt; l.startsWith(&#39;data: &#39;)).map((l) =&gt; l.slice(6)).join(&#39;\n&#39;)
+    if (evento === &#39;texto&#39;) process.stdout.write(datos)
+    if (evento === &#39;fin&#39;) fin = JSON.parse(datos)
+  }
+}
+if (fin?.estado !== &#39;completado&#39;) throw new Error(JSON.stringify(fin))
+
+// 4. Read the result (with a schema, the JSON already validated)
+console.log(&#39;\n&#39; + await (await pedir(`/trabajos/${id}/salida`)).text())</code></pre>
+  </div>
+  <div role="tabpanel" id="e2-go-nativa-panel" aria-labelledby="e2-go-nativa">
+    <pre class="codigo" lang="es"><code>package main
+
+import (
+	&quot;bufio&quot;
+	&quot;bytes&quot;
+	&quot;encoding/json&quot;
+	&quot;fmt&quot;
+	&quot;io&quot;
+	&quot;log&quot;
+	&quot;mime/multipart&quot;
+	&quot;net/http&quot;
+	&quot;os&quot;
+	&quot;path/filepath&quot;
+	&quot;strings&quot;
+)
+
+const base = &quot;http://127.0.0.1:17373/api/v1&quot;
+
+// pedir hace una petición con la clave y falla si la respuesta no es 2xx.
+func pedir(metodo, ruta, tipo string, cuerpo io.Reader) *http.Response {
+	peticion, err := http.NewRequest(metodo, base+ruta, cuerpo)
+	if err != nil {
+		log.Fatal(err)
+	}
+	peticion.Header.Set(&quot;Authorization&quot;, &quot;Bearer &lt;tu clave&gt;&quot;)
+	if tipo != &quot;&quot; {
+		peticion.Header.Set(&quot;Content-Type&quot;, tipo)
+	}
+	respuesta, err := http.DefaultClient.Do(peticion)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if respuesta.StatusCode &gt;= 300 {
+		datos, _ := io.ReadAll(respuesta.Body)
+		log.Fatalf(&quot;%s: %s&quot;, respuesta.Status, datos)
+	}
+	return respuesta
+}
+
+func main() {
+	// 1. Sube cada archivo y guarda su identificador
+	var cargas []string
+	for _, nombre := range []string{&quot;informe.pdf&quot;} {
+		var cuerpo bytes.Buffer
+		formulario := multipart.NewWriter(&amp;cuerpo)
+		parte, _ := formulario.CreateFormFile(&quot;archivo&quot;, filepath.Base(nombre))
+		datos, err := os.ReadFile(nombre)
+		if err != nil {
+			log.Fatal(err)
+		}
+		parte.Write(datos)
+		formulario.Close()
+		var carga struct {
+			ID string `json:&quot;identificador_carga&quot;`
+		}
+		json.NewDecoder(pedir(&quot;POST&quot;, &quot;/cargas&quot;, formulario.FormDataContentType(), &amp;cuerpo).Body).Decode(&amp;carga)
+		cargas = append(cargas, carga.ID)
+	}
+
+	// 2. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
+	solicitud := &quot;{\&quot;mensajes\&quot;:[{\&quot;rol\&quot;:\&quot;usuario\&quot;,\&quot;contenido\&quot;:\&quot;Resume el documento adjunto en una frase.\&quot;}],\&quot;cargas\&quot;:\&quot;__CARGAS__\&quot;}&quot;
+	lista, _ := json.Marshal(cargas)
+	solicitud = strings.Replace(solicitud, &quot;\&quot;__CARGAS__\&quot;&quot;, string(lista), 1)
+	var trabajo struct {
+		ID string `json:&quot;id&quot;`
+	}
+	json.NewDecoder(pedir(&quot;POST&quot;, &quot;/trabajos&quot;, &quot;application/json&quot;, strings.NewReader(solicitud)).Body).Decode(&amp;trabajo)
+
+	// 3. Síguelo en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
+	eventos := bufio.NewScanner(pedir(&quot;GET&quot;, &quot;/trabajos/&quot;+trabajo.ID+&quot;/eventos&quot;, &quot;&quot;, nil).Body)
+	evento := &quot;&quot;
+	for eventos.Scan() {
+		linea := eventos.Text()
+		switch {
+		case strings.HasPrefix(linea, &quot;event: &quot;):
+			evento = linea[7:]
+		case strings.HasPrefix(linea, &quot;data: &quot;) &amp;&amp; evento == &quot;texto&quot;:
+			fmt.Print(linea[6:])
+		case strings.HasPrefix(linea, &quot;data: &quot;) &amp;&amp; evento == &quot;fin&quot;:
+			fmt.Println(&quot;\n&quot; + linea[6:])
+		}
+	}
+
+	// 4. Lee el resultado (con esquema, el JSON ya validado)
+	salida, _ := io.ReadAll(pedir(&quot;GET&quot;, &quot;/trabajos/&quot;+trabajo.ID+&quot;/salida&quot;, &quot;&quot;, nil).Body)
+	fmt.Println(string(salida))
+}</code></pre>
+    <pre class="codigo" lang="en"><code>package main
+
+import (
+	&quot;bufio&quot;
+	&quot;bytes&quot;
+	&quot;encoding/json&quot;
+	&quot;fmt&quot;
+	&quot;io&quot;
+	&quot;log&quot;
+	&quot;mime/multipart&quot;
+	&quot;net/http&quot;
+	&quot;os&quot;
+	&quot;path/filepath&quot;
+	&quot;strings&quot;
+)
+
+const base = &quot;http://127.0.0.1:17373/api/v1&quot;
+
+// pedir hace una petición con la clave y falla si la respuesta no es 2xx.
+func pedir(metodo, ruta, tipo string, cuerpo io.Reader) *http.Response {
+	peticion, err := http.NewRequest(metodo, base+ruta, cuerpo)
+	if err != nil {
+		log.Fatal(err)
+	}
+	peticion.Header.Set(&quot;Authorization&quot;, &quot;Bearer &lt;your key&gt;&quot;)
+	if tipo != &quot;&quot; {
+		peticion.Header.Set(&quot;Content-Type&quot;, tipo)
+	}
+	respuesta, err := http.DefaultClient.Do(peticion)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if respuesta.StatusCode &gt;= 300 {
+		datos, _ := io.ReadAll(respuesta.Body)
+		log.Fatalf(&quot;%s: %s&quot;, respuesta.Status, datos)
+	}
+	return respuesta
+}
+
+func main() {
+	// 1. Upload each file and keep its identifier
+	var cargas []string
+	for _, nombre := range []string{&quot;informe.pdf&quot;} {
+		var cuerpo bytes.Buffer
+		formulario := multipart.NewWriter(&amp;cuerpo)
+		parte, _ := formulario.CreateFormFile(&quot;archivo&quot;, filepath.Base(nombre))
+		datos, err := os.ReadFile(nombre)
+		if err != nil {
+			log.Fatal(err)
+		}
+		parte.Write(datos)
+		formulario.Close()
+		var carga struct {
+			ID string `json:&quot;identificador_carga&quot;`
+		}
+		json.NewDecoder(pedir(&quot;POST&quot;, &quot;/cargas&quot;, formulario.FormDataContentType(), &amp;cuerpo).Body).Decode(&amp;carga)
+		cargas = append(cargas, carga.ID)
+	}
+
+	// 2. Create the job; repeating the Idempotency-Key returns the same job instead of a duplicate
+	solicitud := &quot;{\&quot;mensajes\&quot;:[{\&quot;rol\&quot;:\&quot;usuario\&quot;,\&quot;contenido\&quot;:\&quot;Summarize the attached document in one sentence.\&quot;}],\&quot;cargas\&quot;:\&quot;__CARGAS__\&quot;}&quot;
+	lista, _ := json.Marshal(cargas)
+	solicitud = strings.Replace(solicitud, &quot;\&quot;__CARGAS__\&quot;&quot;, string(lista), 1)
+	var trabajo struct {
+		ID string `json:&quot;id&quot;`
+	}
+	json.NewDecoder(pedir(&quot;POST&quot;, &quot;/trabajos&quot;, &quot;application/json&quot;, strings.NewReader(solicitud)).Body).Decode(&amp;trabajo)
+
+	// 3. Follow it live: each &quot;texto&quot; event carries a piece of the answer and &quot;fin&quot; ends the stream
+	eventos := bufio.NewScanner(pedir(&quot;GET&quot;, &quot;/trabajos/&quot;+trabajo.ID+&quot;/eventos&quot;, &quot;&quot;, nil).Body)
+	evento := &quot;&quot;
+	for eventos.Scan() {
+		linea := eventos.Text()
+		switch {
+		case strings.HasPrefix(linea, &quot;event: &quot;):
+			evento = linea[7:]
+		case strings.HasPrefix(linea, &quot;data: &quot;) &amp;&amp; evento == &quot;texto&quot;:
+			fmt.Print(linea[6:])
+		case strings.HasPrefix(linea, &quot;data: &quot;) &amp;&amp; evento == &quot;fin&quot;:
+			fmt.Println(&quot;\n&quot; + linea[6:])
+		}
+	}
+
+	// 4. Read the result (with a schema, the JSON already validated)
+	salida, _ := io.ReadAll(pedir(&quot;GET&quot;, &quot;/trabajos/&quot;+trabajo.ID+&quot;/salida&quot;, &quot;&quot;, nil).Body)
+	fmt.Println(string(salida))
+}</code></pre>
+  </div>
+  <div role="tabpanel" id="e2-python-panel" aria-labelledby="e2-python">
+    <pre class="codigo" lang="es"><code>import base64
+from openai import OpenAI
+
+# archivo lee un archivo y lo deja como parte del mensaje, en base64 (Tramtai lo convierte a texto para el agente).
+def archivo(nombre, tipo):
+    with open(nombre, &quot;rb&quot;) as f:
+        return {&quot;type&quot;: &quot;file&quot;, &quot;file&quot;: {&quot;filename&quot;: nombre, &quot;file_data&quot;: f&quot;data:{tipo};base64,&quot; + base64.b64encode(f.read()).decode()}}
+
+cliente = OpenAI(base_url=&quot;http://127.0.0.1:17373/openai/v1&quot;, api_key=&quot;&lt;tu clave&gt;&quot;)
+r = cliente.chat.completions.create(
+    model=&quot;perfil/rapido&quot;,
+    messages=[
+        {
+            &quot;role&quot;: &quot;user&quot;,
+            &quot;content&quot;: [
+                {
+                    &quot;type&quot;: &quot;text&quot;,
+                    &quot;text&quot;: &quot;Resume el documento adjunto en una frase.&quot;,
+                },
+                archivo(&quot;informe.pdf&quot;, &quot;application/pdf&quot;),
+            ],
+        },
+    ],
+)
+print(r.choices[0].message.content)</code></pre>
+    <pre class="codigo" lang="en"><code>import base64
+from openai import OpenAI
+
+# archivo lee un archivo y lo deja como parte del mensaje, en base64 (Tramtai lo convierte a texto para el agente).
+def archivo(nombre, tipo):
+    with open(nombre, &quot;rb&quot;) as f:
+        return {&quot;type&quot;: &quot;file&quot;, &quot;file&quot;: {&quot;filename&quot;: nombre, &quot;file_data&quot;: f&quot;data:{tipo};base64,&quot; + base64.b64encode(f.read()).decode()}}
+
+cliente = OpenAI(base_url=&quot;http://127.0.0.1:17373/openai/v1&quot;, api_key=&quot;&lt;your key&gt;&quot;)
+r = cliente.chat.completions.create(
+    model=&quot;perfil/rapido&quot;,
+    messages=[
+        {
+            &quot;role&quot;: &quot;user&quot;,
+            &quot;content&quot;: [
+                {
+                    &quot;type&quot;: &quot;text&quot;,
+                    &quot;text&quot;: &quot;Summarize the attached document in one sentence.&quot;,
+                },
+                archivo(&quot;informe.pdf&quot;, &quot;application/pdf&quot;),
+            ],
+        },
+    ],
+)
+print(r.choices[0].message.content)</code></pre>
+  </div>
+  <div role="tabpanel" id="e2-curl-panel" aria-labelledby="e2-curl">
+    <pre class="codigo" lang="es"><code>{
+  printf &#39;%s&#39; &#39;{
+  &quot;model&quot;: &quot;perfil/rapido&quot;,
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: [
+        {
+          &quot;type&quot;: &quot;text&quot;,
+          &quot;text&quot;: &quot;Resume el documento adjunto en una frase.&quot;
+        },
+        &#39;
+  printf &#39;%s&#39; &#39;{&quot;type&quot;: &quot;file&quot;, &quot;file&quot;: {&quot;filename&quot;: &quot;informe.pdf&quot;, &quot;file_data&quot;: &quot;data:application/pdf;base64,&#39;
+  base64 &lt; &#39;informe.pdf&#39; | tr -d &#39;\n&#39;
+  printf &#39;%s&#39; &#39;&quot;}}&#39;
+  printf &#39;%s&#39; &#39;
+      ]
+    }
+  ]
+}&#39;
+} | curl http://127.0.0.1:17373/openai/v1/chat/completions \
+  -H &quot;Authorization: Bearer &lt;tu clave&gt;&quot; \
+  -H &quot;Content-Type: application/json&quot; --data-binary @-</code></pre>
+    <pre class="codigo" lang="en"><code>{
+  printf &#39;%s&#39; &#39;{
+  &quot;model&quot;: &quot;perfil/rapido&quot;,
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: [
+        {
+          &quot;type&quot;: &quot;text&quot;,
+          &quot;text&quot;: &quot;Summarize the attached document in one sentence.&quot;
+        },
+        &#39;
+  printf &#39;%s&#39; &#39;{&quot;type&quot;: &quot;file&quot;, &quot;file&quot;: {&quot;filename&quot;: &quot;informe.pdf&quot;, &quot;file_data&quot;: &quot;data:application/pdf;base64,&#39;
+  base64 &lt; &#39;informe.pdf&#39; | tr -d &#39;\n&#39;
+  printf &#39;%s&#39; &#39;&quot;}}&#39;
+  printf &#39;%s&#39; &#39;
+      ]
+    }
+  ]
+}&#39;
+} | curl http://127.0.0.1:17373/openai/v1/chat/completions \
+  -H &quot;Authorization: Bearer &lt;your key&gt;&quot; \
+  -H &quot;Content-Type: application/json&quot; --data-binary @-</code></pre>
+  </div>
+  <div role="tabpanel" id="e2-anthropic-panel" aria-labelledby="e2-anthropic">
+    <pre class="codigo" lang="es"><code>import base64
+import anthropic
+
+# documento lee un archivo y lo deja como bloque del mensaje, en base64 (Tramtai lo convierte a texto para el agente).
+def documento(nombre, tipo):
+    with open(nombre, &quot;rb&quot;) as f:
+        return {&quot;type&quot;: &quot;document&quot;, &quot;title&quot;: nombre, &quot;source&quot;: {&quot;type&quot;: &quot;base64&quot;, &quot;media_type&quot;: tipo, &quot;data&quot;: base64.b64encode(f.read()).decode()}}
+
+cliente = anthropic.Anthropic(base_url=&quot;http://127.0.0.1:17373/anthropic&quot;, api_key=&quot;&lt;tu clave&gt;&quot;)
+m = cliente.messages.create(
+    model=&quot;perfil/rapido&quot;,
+    max_tokens=1024,
+    messages=[
+        {
+            &quot;role&quot;: &quot;user&quot;,
+            &quot;content&quot;: [
+                {
+                    &quot;type&quot;: &quot;text&quot;,
+                    &quot;text&quot;: &quot;Resume el documento adjunto en una frase.&quot;,
+                },
+                documento(&quot;informe.pdf&quot;, &quot;application/pdf&quot;),
+            ],
+        },
+    ],
+)
+print(m.content[0].text)</code></pre>
+    <pre class="codigo" lang="en"><code>import base64
+import anthropic
+
+# documento lee un archivo y lo deja como bloque del mensaje, en base64 (Tramtai lo convierte a texto para el agente).
+def documento(nombre, tipo):
+    with open(nombre, &quot;rb&quot;) as f:
+        return {&quot;type&quot;: &quot;document&quot;, &quot;title&quot;: nombre, &quot;source&quot;: {&quot;type&quot;: &quot;base64&quot;, &quot;media_type&quot;: tipo, &quot;data&quot;: base64.b64encode(f.read()).decode()}}
+
+cliente = anthropic.Anthropic(base_url=&quot;http://127.0.0.1:17373/anthropic&quot;, api_key=&quot;&lt;your key&gt;&quot;)
+m = cliente.messages.create(
+    model=&quot;perfil/rapido&quot;,
+    max_tokens=1024,
+    messages=[
+        {
+            &quot;role&quot;: &quot;user&quot;,
+            &quot;content&quot;: [
+                {
+                    &quot;type&quot;: &quot;text&quot;,
+                    &quot;text&quot;: &quot;Summarize the attached document in one sentence.&quot;,
+                },
+                documento(&quot;informe.pdf&quot;, &quot;application/pdf&quot;),
+            ],
+        },
+    ],
+)
+print(m.content[0].text)</code></pre>
+  </div>
+</div>
+
+<p class="aviso"><span lang="es">Se convierten PDF, .docx, .pptx, .xlsx y HTML; van tal cual .txt, .md, .json, .jsonl, .csv, .tsv, .xml, .yaml, .toml, .ini y .log. Los ZIP no: envía los archivos sueltos.</span><span lang="en">PDF, .docx, .pptx, .xlsx and HTML are converted; .txt, .md, .json, .jsonl, .csv, .tsv, .xml, .yaml, .toml, .ini and .log go as is. No ZIP files: send the files on their own.</span></p>
+
+<p class="aviso"><span lang="es">Por la API propia, hasta 50 MB por archivo y 20 archivos por petición; por OpenAI y Anthropic, unos 12 MB en total, porque van en base64.</span><span lang="en">Through the native API, up to 50 MB per file and 20 files per request; through OpenAI and Anthropic, about 12 MB in total, since they go in base64.</span></p>
+
+<details id="imagenes"><summary><span lang="es">¿Puedo enviar imágenes?</span><span lang="en">Can I send images?</span></summary><p><span lang="es">Todavía no. Por OpenAI y Anthropic el archivo va dentro del mensaje: Tramtai no descarga URL ni usa file_id.</span><span lang="en">Not yet. Through OpenAI and Anthropic the file goes inside the message: Tramtai does not download URLs or use file_id.</span></p></details>
+<details id="por-tamano"><summary><span lang="es">¿Por qué se rechazó mi petición por tamaño?</span><span lang="en">Why was my request rejected for its size?</span></summary><p><span lang="es">Lo que recibiría el agente no cabe en el modelo. Envía menos páginas o divide el archivo; el registro dice cuál pesa más. No se gastan tokens.</span><span lang="en">What the agent would get does not fit the model. Send fewer pages or split the file; the log says which one weighs most. No tokens are spent.</span></p></details>
+<details id="falta-conversor"><summary><span lang="es">¿Qué hago si falta el conversor?</span><span lang="en">What if the converter is missing?</span></summary><p><span lang="es">Ajustes → Archivos → «Preparar archivos», o «tramtai conversor preparar». Si tu red bloquea la descarga, usa el paquete del conversor para Windows.</span><span lang="en">Settings → Files → &quot;Prepare files&quot;, or &quot;tramtai conversor preparar&quot;. If your network blocks the download, use the converter package for Windows.</span></p></details>
+<details id="sale-algo"><summary><span lang="es">¿Sale algo de mi equipo al convertir?</span><span lang="en">Does anything leave my computer when converting?</span></summary><p><span lang="es">No: markitdown corre en tu equipo. El texto convertido lo recibe el agente, como cualquier mensaje.</span><span lang="en">No: markitdown runs on your computer. The converted text goes to the agent, like any message.</span></p></details>
+
+<dl class="errores">
+  <div id="e-conversion_fallida"><dt><span lang="es">No se pudo convertir el archivo</span><span lang="en">The file could not be converted</span> <code>conversion_fallida</code></dt><dd><span lang="es">No se pudo convertir un archivo. Comprueba que no esté dañado ni protegido con contraseña y que su formato se admita.</span><span lang="en">A file could not be converted. Check that it is not damaged or password-protected and that its format is accepted.</span></dd></div>
+  <div id="e-conversor_no_disponible"><dt><span lang="es">Falta el conversor de archivos</span><span lang="en">The file converter is missing</span> <code>conversor_no_disponible</code></dt><dd><span lang="es">Falta el conversor de archivos: Ajustes → Archivos → «Preparar archivos». Si tu red bloquea la descarga, usa el paquete del conversor para Windows.</span><span lang="en">The file converter is missing: Settings → Files → &quot;Prepare files&quot;. If your network blocks the download, use the converter package for Windows.</span></dd></div>
+  <div id="e-entrada_demasiado_grande"><dt><span lang="es">La entrada no cabe en el modelo</span><span lang="en">The input does not fit in the model</span> <code>entrada_demasiado_grande</code></dt><dd><span lang="es">Los documentos no caben en el modelo. Envía menos páginas, divide el archivo o pon en el respaldo un modelo con más contexto.</span><span lang="en">The documents do not fit the model. Send fewer pages, split the file or put a model with more context in the fallback.</span></dd></div>
+</dl>
+<p class="aviso"><a href="../desarrolladores.html"><span lang="es">Guía del desarrollador</span><span lang="en">Developer guide</span></a>: <span lang="es">el ciclo completo en Python, JavaScript, Go y curl.</span><span lang="en">the full cycle in Python, JavaScript, Go and curl.</span></p>
+
+<h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
+<div class="tarjetas-temas">
+  <a class="tarjeta-tema" href="conectar.html"><strong><span lang="es">Conectar mi app</span><span lang="en">Connect my app</span></strong><span><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.</span><span lang="en">Change your OpenAI or Anthropic SDK’s base URL to Tramtai’s and pick the agent with model.</span></span></a>
+  <a class="tarjeta-tema" href="probar.html"><strong><span lang="es">Probar</span><span lang="en">Try</span></strong><span><span lang="es">Escribe un mensaje, elige agente, modelo y esfuerzo, y mira la respuesta antes de llevarla a tu app.</span><span lang="en">Type a message, pick agent, model and effort, and see the answer before taking it to your app.</span></span></a>
+  <a class="tarjeta-tema" href="json.html"><strong><span lang="es">Respuestas JSON</span><span lang="en">JSON answers</span></strong><span><span lang="es">Pide la respuesta con una forma fija (un esquema JSON) y Tramtai la valida antes de entregarla.</span><span lang="en">Ask for the answer in a fixed shape (a JSON schema) and Tramtai validates it before handing it over.</span></span></a>
+</div>
+</article>
+</main>
+
+<footer>
+  <div class="envoltura">
+    <span>© 2026 Michael Scott B. · Tramtai · <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a></span>
+    <span>
+      <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span>
+    </span>
+  </div>
+</footer>
+
+<script src="../sitio.js"></script>
+</body>
+</html>

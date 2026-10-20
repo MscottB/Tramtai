@@ -291,3 +291,36 @@ footer .envoltura { display: flex; flex-wrap: wrap; gap: 16px; justify-content: 
   .indice ol { display: flex; flex-wrap: wrap; gap: 4px 16px; border-left: 0; padding: 0; }
   .indice li::before { display: none; }
 }
+
+/* Ayuda por temas (site/ayuda/, generada desde web/src/ayuda): tarjetas, recorrido, pasos, errores y buscador. */
+.ayuda-temas { padding-top: 40px; padding-bottom: 72px; }
+.ayuda-temas .doc { max-width: 52em; }
+.tema-ayuda > * { margin-bottom: 18px; }
+.entradilla { font-size: 1.1rem; color: var(--texto-suave); }
+.migas { font-size: .9rem; color: var(--texto-suave); margin-bottom: 12px; }
+.migas a { color: var(--acento); }
+.tarjetas-temas { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin: 0 0 24px; }
+.tarjeta-tema { display: flex; flex-direction: column; gap: 6px; padding: 16px; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); color: var(--texto); text-decoration: none; }
+.tarjeta-tema:hover, .tarjeta-tema:focus-visible { border-color: var(--acento); }
+.tarjeta-tema span { color: var(--texto-suave); font-size: .93rem; }
+.diagrama { list-style: none; display: grid; grid-template-columns: repeat(var(--paradas, 5), minmax(0, 1fr)); gap: 12px; padding: 0 !important; }
+.diagrama li { position: relative; display: flex; flex-direction: column; gap: 4px; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px 14px; margin: 0; font-size: .92rem; }
+.diagrama li span { color: var(--texto-suave); }
+.diagrama li:not(:last-child)::after { content: '→'; position: absolute; right: -11px; top: 12px; color: var(--acento); font-weight: 700; }
+.diagrama-rama { color: var(--texto-suave); font-size: .92rem; }
+.pasos { counter-reset: paso; list-style: none; padding: 0 !important; display: grid; gap: 10px; }
+.pasos li { counter-increment: paso; display: flex; gap: 10px; align-items: flex-start; margin: 0; }
+.pasos li::before { content: counter(paso); flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--acento); color: var(--acento-texto); font: 700 .8rem var(--titulo); }
+.errores { margin: 0; }
+.errores > div { padding: 12px 0; border-top: 1px solid var(--borde); scroll-margin-top: 80px; }
+.errores dt { font-weight: 600; }
+.errores dd { margin: 4px 0 0; color: var(--texto-suave); }
+.tema-ayuda details { scroll-margin-top: 80px; }
+.buscar-ayuda input { width: 100%; font: inherit; padding: 12px 14px; border: 1px solid var(--borde); border-radius: var(--radio); background: var(--superficie); color: var(--texto); }
+.buscar-ayuda ol { list-style: none; padding: 0 !important; margin: 8px 0 0; }
+.buscar-ayuda li a { display: block; padding: 10px 4px; border-top: 1px solid var(--borde); color: var(--texto); text-decoration: none; }
+.buscar-ayuda li a span { display: block; color: var(--texto-suave); font-size: .88rem; }
+@media (max-width: 900px) {
+  .diagrama { grid-template-columns: 1fr; }
+  .diagrama li:not(:last-child)::after { content: '↓'; right: auto; left: 18px; top: auto; bottom: -16px; }
+}
