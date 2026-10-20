@@ -69,7 +69,18 @@ JSON, y van en cada petición: las recetas no las guardan.
 ### Qué agentes las atienden
 
 <!-- agentes-herramientas -->
-Por comprobar con los agentes reales (`go test -tags canario -run TestHerramientasConAgentesReales ./internal/api/`).
+Comprobado el 2026-10-20 con los agentes reales: el ciclo completo (pedir `clima`, recibir el resultado y responder)
+por cada URL.
+
+| Agente | Modelo probado | OpenAI | Anthropic | API propia |
+|---|---|---|---|---|
+| Claude Code | `haiku` | sí | sí | sí |
+| Codex | el predeterminado de su CLI | sí | sí | sí |
+| GitHub Copilot | `auto` (plan Free) | sí | sí | sí |
+| Gemini API | — | sin comprobar (falta clave) | | |
+
+Se repite con `go test -tags canario -run TestHerramientasConAgentesReales -v ./internal/api/` (salta los agentes que
+no estén instalados o sin sesión). Antigravity no se usa desde APIs.
 <!-- /agentes-herramientas -->
 
 ## Trabajos largos

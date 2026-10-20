@@ -61,6 +61,20 @@ go test -tags m0b -v -count=1 ./pruebas/m0b      # modos con clave de API, ver M
 
 Para probar el servicio con la suscripción sin tocar la configuración global, arráncalo con `TRAMTAI_ADAPTADORES__CLAUDE__AUTENTICACION=suscripcion` (y la de Codex) en el entorno.
 
+### Herramientas con los agentes reales
+
+`go test -tags canario -run TestHerramientasConAgentesReales -v -count=1 ./internal/api/` recorre el ciclo de
+herramientas por OpenAI, Anthropic y la API propia con cada agente instalado y con sesión o clave (Claude `haiku`,
+Codex, GitHub Copilot `auto` y Gemini si hay `GEMINI_API_KEY`); salta los que falten. Usa la cuota de tus suscripciones
+(Copilot Free gasta un crédito por petición). Su resultado es la tabla «Qué agentes las atienden» de
+[la guía del desarrollador](../desarrolladores.md).
+
+### Ejemplos de la guía
+
+`go test -tags ejemplos -run TestEjemplos -v ./internal/api/` ejecuta `docs/ejemplos` contra un agente simulado (el
+job «Ejemplos» del CI). En local necesita Python con `openai` y `requests` (`TRAMTAI_PYTHON` apunta a su intérprete),
+`npm install` en `docs/ejemplos/javascript` y, para curl, `sh`, `curl` y `jq`; lo que falte se salta fuera del CI.
+
 ## Estructura
 
 ```

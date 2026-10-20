@@ -188,10 +188,14 @@
           <li>Con herramientas, la respuesta llega completa al terminar, aunque pidas <code>stream</code>.</li>
           <li>No se combinan con una respuesta en JSON, y van en cada petición: las recetas no las guardan.</li>
         </ul>
+        <p>Comprobado el 2026-10-20 con los agentes reales, el ciclo completo por cada URL:</p>
         <table id="agentes-herramientas">
           <thead><tr><th>Agente</th><th>Modelo probado</th><th>OpenAI</th><th>Anthropic</th><th>API propia</th></tr></thead>
           <tbody data-agentes>
-            <tr><td colspan="5">Por comprobar con los agentes reales.</td></tr>
+            <tr><td>Claude Code</td><td>haiku</td><td>sí</td><td>sí</td><td>sí</td></tr>
+            <tr><td>Codex</td><td>el predeterminado de su CLI</td><td>sí</td><td>sí</td><td>sí</td></tr>
+            <tr><td>GitHub Copilot</td><td>auto (plan Free)</td><td>sí</td><td>sí</td><td>sí</td></tr>
+            <tr><td>Gemini API</td><td>—</td><td colspan="3">sin comprobar (falta clave)</td></tr>
           </tbody>
         </table>
       </div>
@@ -204,10 +208,14 @@
           <li>With tools, the answer arrives complete at the end, even if you ask for <code>stream</code>.</li>
           <li>They can't be combined with a JSON answer, and they go in every request: recipes don't store them.</li>
         </ul>
+        <p>Checked on 2026-10-20 with the real agents, the full cycle through each URL:</p>
         <table>
           <thead><tr><th>Agent</th><th>Model tested</th><th>OpenAI</th><th>Anthropic</th><th>Native API</th></tr></thead>
           <tbody data-agentes>
-            <tr><td colspan="5">To be checked with the real agents.</td></tr>
+            <tr><td>Claude Code</td><td>haiku</td><td>yes</td><td>yes</td><td>yes</td></tr>
+            <tr><td>Codex</td><td>its CLI default</td><td>yes</td><td>yes</td><td>yes</td></tr>
+            <tr><td>GitHub Copilot</td><td>auto (Free plan)</td><td>yes</td><td>yes</td><td>yes</td></tr>
+            <tr><td>Gemini API</td><td>—</td><td colspan="3">not checked (no key)</td></tr>
           </tbody>
         </table>
       </div>
