@@ -19,8 +19,9 @@ export type Bloque =
   // ejemplo es el código de un mensaje (con esos archivos) por cada contrato, como lo arma ejemplos().
   | { tipo: 'ejemplo'; contratos: string[]; archivos: string[] }
   | { tipo: 'tabla'; columnas: Clave[]; filas: { titulo: Clave; celdas: Clave[] }[] }
-  // id es el ancla de cada pregunta (la búsqueda y los enlaces llevan a ella); único en toda la Ayuda.
-  | { tipo: 'preguntas'; preguntas: { id: string; pregunta: Clave; respuesta: Clave }[] }
+  // id es el ancla de cada pregunta (la búsqueda y los enlaces llevan a ella); único en toda la Ayuda. tema enlaza la
+  // respuesta con el tema que la explica (los conceptos).
+  | { tipo: 'preguntas'; preguntas: { id: string; pregunta: Clave; respuesta: Clave; tema?: string }[] }
   | { tipo: 'errores'; codigos: string[] }
   | { tipo: 'nota'; texto: Clave }
   | { tipo: 'ir'; pagina: Pagina }

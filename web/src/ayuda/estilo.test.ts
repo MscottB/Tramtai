@@ -68,6 +68,28 @@ test('relacionados, errores e ids son válidos', () => {
   }
 })
 
-test('los relacionados existen (cuando están los 14 temas)', { skip: temas.length < 14 }, () => {
+test('están los 14 temas y sus relacionados existen', () => {
+  assert.equal(temas.length, 14)
   for (const tema of temas) for (const r of tema.relacionados) assert.ok(temaPorId(r), `${tema.id}: relacionado ${r} no existe`)
+})
+
+test('cada pregunta tiene un ancla única en toda la Ayuda y su tema existe', () => {
+  const anclas = temas.flatMap((t) => t.bloques.flatMap((b) => (b.tipo === 'preguntas' ? b.preguntas : [])))
+  const ids = anclas.map((p) => p.id)
+  assert.equal(new Set(ids).size, ids.length, `anclas repetidas: ${ids.filter((x, i) => ids.indexOf(x) !== i)}`)
+  for (const p of anclas) {
+    assert.match(p.id, /^[a-z][a-z0-9-]*$/)
+    assert.ok(!p.id.startsWith('e-'), `${p.id}: e- es de los errores`)
+    if (p.tema) assert.ok(temaPorId(p.tema), `${p.id}: el tema ${p.tema} no existe`)
+  }
+})
+
+test('cada error tiene título y una solución corta en los dos idiomas', () => {
+  assert.ok(problemas, 'falta temas/problemas.ts')
+  for (const [codigo, e] of Object.entries(problemas.ERRORES))
+    for (const [idioma, textos] of Object.entries(idiomas)) {
+      if (e.titulo) assert.ok(textos[e.titulo], `${codigo}: falta el título en ${idioma}`)
+      else assert.ok(textos['error.' + codigo], `${codigo}: no hay error.${codigo} en ${idioma}`)
+      assert.ok(textos[e.solucion] && textos[e.solucion].length <= 200, `${codigo}: solución en ${idioma}`)
+    }
 })
