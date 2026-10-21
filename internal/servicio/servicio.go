@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"net"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,9 +31,13 @@ import (
 
 // Opciones configura el servicio.
 type Opciones struct {
-	Datos     string                // directorio de datos del usuario
-	Config    *nucleo.Configuracion // configuración global (sin capas de proyecto)
-	Registro  map[string]adaptadores.Adaptador
+	Datos    string                // directorio de datos del usuario
+	Config   *nucleo.Configuracion // configuración global (sin capas de proyecto)
+	Registro map[string]adaptadores.Adaptador
+	// Conexiones dice qué agentes están desconectados; Nuevo la crea desde la configuración si falta.
+	Conexiones *adaptadores.Conexiones
+	// Salud recuerda los agentes cuya última petición falló por autenticación; Nuevo la crea si falta.
+	Salud     *adaptadores.Salud
 	Semaforos planificador.Semaforos // compartidos por todas las instancias
 	Host      string
 	Puerto    int
@@ -90,6 +96,7 @@ type Servicio struct {
 
 	muRecargar    sync.Mutex // una recarga a la vez: cada una lee la configuración y la aplica entera
 	mu            sync.RWMutex
+	muConfianza   sync.Mutex // proyectos_confiables se lee y se reescribe entero: una confianza a la vez
 	instancias    map[string]*Instancia
 	abriendo      map[string]*apertura // instancias que se están abriendo, fuera de mu
 	cerrado       bool                 // Cerrar ya empezó: no se publican instancias nuevas
@@ -97,9 +104,11 @@ type Servicio struct {
 	erroresPuntos []string
 	descriptor    bool
 
-	muSesiones sync.Mutex
-	sesiones   map[string]*sesion
-	codigos    map[string]codigoEntrada
+	unaVezRegistro sync.Once
+	espacios       *registro // todos los espacios conocidos; se carga al usarlo (registro())
+	muSesiones     sync.Mutex
+	sesiones       map[string]*sesion
+	codigos        map[string]codigoEntrada
 
 	detener    chan struct{}
 	detenerUna sync.Once
@@ -129,6 +138,12 @@ var abrirBase = persistencia.Abrir
 func Nuevo(opc Opciones) (*Servicio, error) {
 	if opc.Registros == nil {
 		opc.Registros = io.Discard
+	}
+	if opc.Salud == nil {
+		opc.Salud = adaptadores.NuevaSalud()
+	}
+	if opc.Conexiones == nil {
+		opc.Conexiones = adaptadores.NuevasConexiones(opc.Config, slices.Collect(maps.Keys(opc.Registro)))
 	}
 	token, err := LeerOCrearToken(filepath.Join(opc.Datos, "token-servicio"))
 	if err != nil {
@@ -211,7 +226,7 @@ func (s *Servicio) enrutar(w http.ResponseWriter, r *http.Request) {
 		api.EscribirError(w, r, err)
 		return
 	case inst == nil && admin:
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.T("indica una instancia activa en la cabecera Tramtai-Instancia")))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.T("indica un espacio activo en la cabecera Tramtai-Instancia")))
 		return
 	case inst == nil:
 		api.NoAutorizado(w, r)
@@ -252,13 +267,13 @@ func (s *Servicio) instanciaPara(r *http.Request, admin bool) (inst *Instancia, 
 		return nil, false, nil
 	}
 	if r.Method != http.MethodGet && r.Method != http.MethodHead && !csrfValido(r, ses) {
-		return nil, false, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, idioma.T("falta la cabecera X-CSRF-Token de la sesión"))
+		return nil, false, nucleo.NuevoError(nucleo.CodigoCSRFInvalido, idioma.T("falta la cabecera X-CSRF-Token de la sesión"))
 	}
 	s.mu.RLock()
 	inst = s.instancias[ses.instancia]
 	s.mu.RUnlock()
 	if inst == nil {
-		return nil, false, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("la instancia de la sesión (%s) no está activa", ses.instancia))
+		return nil, false, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("el espacio de la sesión (%s) no está activo", ses.instancia))
 	}
 	return inst, true, nil
 }

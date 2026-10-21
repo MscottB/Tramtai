@@ -53,7 +53,7 @@ const props = defineProps<{ tema: Tema; contexto: 'app' | 'panel'; paginaActual?
 defineEmits<{ ir: [destino: string] }>()
 
 const menu: Record<Pagina, Clave> = { inicio: 'menu.inicio', agentes: 'menu.agentes', ejecutar: 'menu.ejecutar', conectar: 'menu.conectar',
-  historial: 'menu.historial', configuracion: 'menu.configuracion' }
+  historial: 'menu.historial', espacios: 'menu.espacios', configuracion: 'menu.configuracion' }
 const bloques = computed(() => bloquesVisibles(props.tema, props.contexto, props.paginaActual))
 const relacionados = computed(() => props.tema.relacionados.map(temaPorId).filter((x): x is Tema => !!x))
 

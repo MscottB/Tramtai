@@ -15,6 +15,13 @@ Necesitas Tramtai en marcha con al menos un agente conectado, y la **URL** y la 
 nada más. Si necesitas trabajos largos que sigues, cancelas o reintentas, la API propia (`/api/v1`). La
 [comparación](api.md#qué-url-uso) dice qué permite cada una y por qué.
 
+**¿Qué clave uso?** La de una API propia de tu app (**Mis APIs → Nueva API**): con sus modelos y su presupuesto,
+y la regeneras sin tocar las demás. La **clave del espacio** es para ti y tus scripts. En la API, «instancia» es ese
+espacio de trabajo: el global o el de un proyecto.
+
+Desde la terminal, `tramtai espacios` lista los espacios, `tramtai espacio iniciar|detener|olvidar` los gestiona y
+`tramtai agentes desconectar|conectar <agente>` deja un agente fuera sin desinstalar su CLI.
+
 | Lenguaje | Instalar |
 |---|---|
 | Python | `pip install openai requests` |
@@ -78,9 +85,10 @@ por cada URL.
 | Codex | el predeterminado de su CLI | sí | sí | sí |
 | GitHub Copilot | `auto` (plan Free) | sí | sí | sí |
 | Gemini API | — | sin comprobar (falta clave) | | |
+| Antigravity | — | no se usa desde apps ni APIs | | |
 
 Se repite con `go test -tags canario -run TestHerramientasConAgentesReales -v ./internal/api/` (salta los agentes que
-no estén instalados o sin sesión). Antigravity no se usa desde APIs.
+no estén instalados o sin sesión).
 <!-- /agentes-herramientas -->
 
 ## Trabajos largos
@@ -99,12 +107,25 @@ envía la cabecera `Idempotency-Key`: la misma clave con la misma petición devu
 | 400 | `solicitud_invalida`, `parametro_no_soportado`, `carga_invalida` | Corrige la petición: el mensaje dice qué campo falla. |
 | 401 | `no_autorizado` | Revisa la clave (Mis APIs); si la regeneraste, la anterior ya no vale. |
 | 409 | `conflicto_idempotencia` | Esa `Idempotency-Key` ya se usó con otra petición: usa otra. |
+| 409 | `agente_desconectado` | El agente está desconectado en Tramtai: conéctalo en **Agentes** o con `tramtai agentes conectar <agente>`. |
 | 422 | `salida_no_cumple_esquema` | La respuesta o las llamadas no cumplían el esquema: pide correcciones o «Corregir». |
 | 429 | `cola_llena`, `presupuesto_agotado`, `limite_uso_proveedor` | Espera lo que diga `Retry-After` y reintenta. |
 | 502 | `error_agente`, `autenticacion_agente` | El agente falló o no tiene sesión: revisa **Agentes** en la app. |
 | 503 | `agente_no_disponible`, `conversor_no_disponible` | Algo no está listo; con `Retry-After`, reintenta después. |
 
-La lista completa de códigos está en la [referencia de la API](api.md).
+`GET /api/v1/agentes` y `GET /api/v1/capacidades` traen `desconectado` por agente (y `/capacidades`, `cuenta`: con qué
+cuenta inició sesión su CLI), así que tu app puede mirarlo antes de enviar. La lista completa de códigos está en la
+[referencia de la API](api.md).
+
+## Importar en Postman o generar un cliente
+
+`GET /api/v1/openapi.json` describe la API propia en OpenAPI 3.1, con la URL de tu espacio o de tu API. Postman,
+Insomnia o Bruno la importan tal cual («Import» → URL o archivo), y `openapi-generator` o `openapi-typescript` generan
+un cliente. En la app, la guía «¿Qué URL uso?» de Mis APIs (y el detalle de cada API) la descarga como archivo.
+
+```sh
+curl -s "$TRAMTAI_URL/api/v1/openapi.json" -H "Authorization: Bearer $TRAMTAI_CLAVE" -o tramtai-openapi.json
+```
 
 ## Límites
 

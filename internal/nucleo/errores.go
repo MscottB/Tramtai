@@ -31,16 +31,19 @@ const (
 	CodigoConversionFallida       CodigoError = "conversion_fallida"
 	CodigoNoAutorizado            CodigoError = "no_autorizado"
 	CodigoOrigenNoPermitido       CodigoError = "origen_no_permitido"
-	CodigoModeloAmbiguo           CodigoError = "modelo_ambiguo"
-	CodigoParametroNoSoportado    CodigoError = "parametro_no_soportado"
-	CodigoTrabajoNoTerminado      CodigoError = "trabajo_no_terminado"
-	CodigoTrabajoSinSalida        CodigoError = "trabajo_sin_salida"
-	CodigoErrorInterno            CodigoError = "error_interno"
-	CodigoModeloNoPermitido       CodigoError = "modelo_no_permitido"
-	CodigoResultadoExpirado       CodigoError = "resultado_expirado"
-	CodigoContextoNoPermitido     CodigoError = "contexto_no_permitido"
-	CodigoRutaNoPermitida         CodigoError = "ruta_no_permitida"
-	CodigoPresupuestoAgotado      CodigoError = "presupuesto_agotado"
+	// CodigoCSRFInvalido: la sesión de la Web UI no trae su X-CSRF-Token (o es de otra sesión: se cambió de espacio en
+	// otra pestaña).
+	CodigoCSRFInvalido         CodigoError = "csrf_invalido"
+	CodigoModeloAmbiguo        CodigoError = "modelo_ambiguo"
+	CodigoParametroNoSoportado CodigoError = "parametro_no_soportado"
+	CodigoTrabajoNoTerminado   CodigoError = "trabajo_no_terminado"
+	CodigoTrabajoSinSalida     CodigoError = "trabajo_sin_salida"
+	CodigoErrorInterno         CodigoError = "error_interno"
+	CodigoModeloNoPermitido    CodigoError = "modelo_no_permitido"
+	CodigoResultadoExpirado    CodigoError = "resultado_expirado"
+	CodigoContextoNoPermitido  CodigoError = "contexto_no_permitido"
+	CodigoRutaNoPermitida      CodigoError = "ruta_no_permitida"
+	CodigoPresupuestoAgotado   CodigoError = "presupuesto_agotado"
 	// CodigoEntradaDemasiadoGrande: tras convertir los documentos, la entrada no cabe en el contexto del modelo; no
 	// llegó al CLI (ni gasta cuota) y se prueba con el respaldo.
 	CodigoEntradaDemasiadoGrande CodigoError = "entrada_demasiado_grande"
@@ -50,6 +53,14 @@ const (
 	CodigoCorreccionNoDisponible CodigoError = "correccion_no_disponible"
 	// CodigoConversorNoDisponible: un archivo necesita el conversor (markitdown) y no hay ninguno listo.
 	CodigoConversorNoDisponible CodigoError = "conversor_no_disponible"
+	// CodigoConfianzaRequerida: la carpeta ya traía .tramtai/ y hay que decidir si se confía en ella antes de abrirla.
+	CodigoConfianzaRequerida CodigoError = "confianza_requerida"
+	// CodigoDentroDeProyecto: la carpeta elegida está dentro de otro proyecto; hay que elegir cuál abrir.
+	CodigoDentroDeProyecto CodigoError = "dentro_de_proyecto"
+	// CodigoEspacioDetenido: la CLI está dentro de un proyecto cuyo espacio está detenido (no se usa la global a escondidas).
+	CodigoEspacioDetenido CodigoError = "espacio_detenido"
+	// CodigoAgenteDesconectado: el agente está desconectado en Tramtai (Agentes → Conectar).
+	CodigoAgenteDesconectado CodigoError = "agente_desconectado"
 )
 
 // Error es el error propio de Tramtai: un código estable y un mensaje legible sin secretos.

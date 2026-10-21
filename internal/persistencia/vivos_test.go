@@ -133,14 +133,42 @@ func TestVivosUsaElIndiceDeTerminados(t *testing.T) {
 }
 
 func TestVivosDespuesDe(t *testing.T) {
-	a := abrir(t)
+	// Reloj fijo: en Windows dos trabajos seguidos pueden tener la misma hora y «después de uno» no los separaría.
+	ahora := time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)
+	a := relojFijo(t, &ahora)
 	uno := aceptar(t, a, trabajo("global", "uno"), "")
+	ahora = ahora.Add(time.Second)
 	dos := aceptar(t, a, trabajo("global", "dos"), "")
-	vivos, err := a.Vivos(ctx, "global", "", time.Now(), uno.ActualizadoEn)
+	vivos, err := a.Vivos(ctx, "global", "", ahora, uno.ActualizadoEn)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(vivos) != 1 || vivos[0].ID != dos.ID {
 		t.Fatalf("después de uno solo queda dos: %v", ids(vivos))
+	}
+}
+
+func TestContarOrigenDesde(t *testing.T) {
+	ahora := time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)
+	a := relojFijo(t, &ahora)
+	nuevo := func(origen, punto string) {
+		tr := trabajo("global", "hola")
+		tr.Origen, tr.PuntoAcceso = origen, punto
+		aceptar(t, a, tr, "")
+	}
+	ahora = ahora.Add(-48 * time.Hour)
+	for range 3 {
+		nuevo("app", "")
+	}
+	ahora = ahora.Add(47 * time.Hour)
+	for range 21 {
+		nuevo("app", "")
+	}
+	nuevo("app", "asistente")
+	nuevo("probar", "")
+	ahora = ahora.Add(time.Hour)
+	n, err := a.ContarOrigenDesde(ctx, "global", "app", true, ahora.Add(-24*time.Hour))
+	if err != nil || n != 21 {
+		t.Fatalf("peticiones de apps con la clave del espacio en 24 h: %d %v", n, err)
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"tramtai/internal/api"
 	"tramtai/internal/idioma"
@@ -19,6 +20,9 @@ import (
 type estadoConBase struct {
 	EstadoInstancia
 	Base string `json:"base"`
+	// AppConClave24h son las peticiones de apps que llegaron con la clave del espacio en las últimas 24 h: con muchas,
+	// la Web UI sugiere darles su propia API.
+	AppConClave24h int `json:"app_con_clave_24h"`
 }
 
 // rutaInstancia atiende lo que la Web UI necesita además de la API de la instancia: su estado y, con una sesión
@@ -27,7 +31,8 @@ type estadoConBase struct {
 func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *Instancia, privilegiada bool) bool {
 	ruta := r.URL.Path
 	if ruta == "/api/v1/instancia" && r.Method == http.MethodGet {
-		api.EscribirJSON(w, http.StatusOK, estadoConBase{inst.estado(r.Context()), s.Base()})
+		n, _ := inst.Planificador.ContarOrigenDesde(r.Context(), nucleo.DesdeApp, true, time.Now().Add(-24*time.Hour))
+		api.EscribirJSON(w, http.StatusOK, estadoConBase{inst.estado(r.Context()), s.Base(), n})
 		return true
 	}
 	if !strings.HasPrefix(ruta, "/api/v1/instancia/") && ruta != "/api/v1/puntos" && !strings.HasPrefix(ruta, "/api/v1/puntos/") {
@@ -55,6 +60,20 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 			entradas = append(entradas, EntradaConfiguracion{Clave: e.Clave, Valor: e.Valor, Origen: e.Origen.String()})
 		}
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"configuracion": entradas})
+	case ruta == "/api/v1/instancia/heredar" && r.Method == http.MethodPost:
+		// «Volver al de Global»: quita del local.yaml del proyecto un valor que la app deja cambiar por espacio.
+		var peticion struct {
+			Clave string `json:"clave"`
+		}
+		if err := api.LeerJSON(w, r, &peticion); err != nil {
+			api.EscribirError(w, r, err)
+			return true
+		}
+		if err := s.heredar(inst, peticion.Clave); err != nil {
+			api.EscribirError(w, r, err)
+			return true
+		}
+		w.WriteHeader(http.StatusNoContent)
 	case ruta == "/api/v1/instancia/predeterminado" && r.Method == http.MethodPost:
 		// esfuerzo es opcional: sin él no cambia; "" vuelve al del agente.
 		var peticion struct {
@@ -147,6 +166,28 @@ func (s *Servicio) puntosDe(instancia string) []EstadoPunto {
 	return lista
 }
 
+// heredables son los prefijos de las claves que la app deja tener propias en un proyecto y devolver a las de Global.
+var heredables = []string{"predeterminados.", "retencion.", "presupuesto."}
+
+// heredar quita clave del local.yaml de un proyecto y le vuelve a aplicar su configuración: vale la de Global.
+func (s *Servicio) heredar(inst *Instancia, clave string) error {
+	if inst.Ambito != "proyecto" {
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("solo un proyecto hereda valores del espacio global"))
+	}
+	if !slices.ContainsFunc(heredables, func(p string) bool { return strings.HasPrefix(clave, p) }) {
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("%s no se puede devolver al valor de Global desde aquí", clave))
+	}
+	if err := QuitarValor(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, clave); err != nil {
+		return err
+	}
+	c, err := nucleo.CargarConfiguracion(inst.Raiz)
+	if err != nil {
+		return err
+	}
+	inst.Config.Reemplazar(c)
+	return nil
+}
+
 // archivoPuntos es donde se guardan los puntos nuevos de la instancia: la configuración global para la global y
 // .tramtai/local.yaml para un proyecto (nunca la versionada).
 func archivoPuntos(inst *Instancia) (string, nucleo.Origen, error) {
@@ -226,7 +267,7 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 		}
 	}
 	if punto == nil {
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("punto de acceso no encontrado en esta instancia: %s", nombre)))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("punto de acceso no encontrado en este espacio: %s", nombre)))
 		return
 	}
 	switch {

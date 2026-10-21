@@ -1,0 +1,13 @@
+{
+  "name": "Tramtai",
+  "short_name": "Tramtai",
+  "description": "Tus agentes de IA, como una API local.",
+  "start_url": "./",
+  "display": "browser",
+  "background_color": "#eef2f1",
+  "theme_color": "#0b6e64",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

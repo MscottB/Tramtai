@@ -102,7 +102,7 @@ func porPaginas(desde time.Time, leer func(time.Time) ([]nucleo.Trabajo, error),
 func (s *Servidor) eventosInstancia(w http.ResponseWriter, r *http.Request) {
 	liberar, ok := s.Planificador.ReservarFlujo()
 	if !ok {
-		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoLimiteFlujos, idioma.T("hay demasiados flujos de eventos abiertos en esta instancia")))
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoLimiteFlujos, idioma.T("hay demasiados flujos de eventos abiertos en este espacio")))
 		return
 	}
 	defer liberar()

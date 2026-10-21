@@ -23,6 +23,21 @@ export interface Sesion {
   // almacen: dónde guarda este sistema las claves de proveedor, cifradas y fuera de Tramtai (vacío si no hay).
   almacen?: { disponible: boolean; nombre: string }
 }
+// EspacioUI es un espacio de trabajo en la página «Espacios»: también los detenidos y los que no encuentran su carpeta.
+export interface EspacioUI {
+  id: string
+  ambito: 'global' | 'proyecto'
+  ruta?: string
+  nombre: string
+  activo: boolean
+  ultimo_uso?: string
+  ultimo_error?: string
+  estado: 'activo' | 'detenido' | 'no_encontrado'
+  confiado: boolean
+  apis: number
+  peticiones: number
+  claves?: string[]
+}
 export interface Uso {
   tokens_entrada: number
   tokens_salida: number
@@ -102,6 +117,8 @@ export interface EstadoInstancia {
   perfil_predeterminado?: string
   trabajos: Record<string, number>
   base: string
+  // app_con_clave_24h: peticiones de apps con la clave del espacio en las últimas 24 h (para sugerir APIs propias).
+  app_con_clave_24h?: number
 }
 export interface EstadoPunto {
   nombre: string
@@ -227,6 +244,9 @@ export interface EntradaConfiguracion {
   origen: string
 }
 export interface Adaptador {
+  // cuenta: la de la suscripción, si el CLI la informa; desconectado: apagado en Agentes.
+  cuenta?: string
+  desconectado?: boolean
   agente: string
   version_detectada?: string
   autenticacion?: string

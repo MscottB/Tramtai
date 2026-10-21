@@ -3,81 +3,118 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ajustes y actualizaciones · Tramtai</title>
+<title data-en="Settings and updates · Tramtai">Ajustes y actualizaciones · Tramtai</title>
 <meta name="description" content="Arranque con el sistema, modelo predeterminado, archivos, historial y actualizaciones.">
+<link rel="canonical" href="https://mscottb.github.io/Tramtai/ayuda/ajustes.html">
+<meta property="og:url" content="https://mscottb.github.io/Tramtai/ayuda/ajustes.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tramtai">
+<meta property="og:title" content="Ajustes y actualizaciones · Tramtai">
+<meta property="og:description" content="Arranque con el sistema, modelo predeterminado, archivos, historial y actualizaciones.">
+<meta property="og:image" content="https://mscottb.github.io/Tramtai/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="es_ES">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="../logo.png">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="preload" href="../overpass.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../estilo.css">
-<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t } catch (e) {}</script>
+<script src="../sitio.js" defer></script>
+<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>
 </head>
 <body>
+<a class="saltar" href="#contenido"><span lang="es">Saltar al contenido</span><span lang="en">Skip to content</span></a>
 <header class="barra">
   <div class="envoltura">
-    <a class="marca" href="../index.html"><img src="../logo.png" alt="">Tramtai</a>
-    <nav aria-label="Secciones">
-      <a href="../index.html#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
-      <a href="../index.html#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
-      <a href="index.html" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+    <a class="marca" href="../"><img src="../favicon.svg" width="30" height="30" alt=""><span class="marca-texto">Tramtai</span></a>
+    <nav id="menu" aria-label="Secciones" data-aria-en="Sections">
+      <a href="../#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+      <a href="../#agentes"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
+      <a href="../#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+      <a href="../ayuda/" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
       <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
     </nav>
-    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub">
-      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
-    </a>
-    <div class="idioma" role="group" aria-label="Idioma / Language">
+    <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span lang="es" class="solo-lectores">Menú</span><span lang="en" class="solo-lectores">Menu</span></button>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
+    <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
       <button type="button" data-idioma="es" aria-pressed="true">ES</button>
       <button type="button" data-idioma="en" aria-pressed="false">EN</button>
     </div>
-    <div class="idioma tema" role="group" aria-label="Tema / Theme">
-      <button type="button" data-tema="sistema" aria-pressed="true" aria-label="Tema del sistema / System theme" title="Sistema / System">◐</button>
-      <button type="button" data-tema="claro" aria-pressed="false" aria-label="Tema claro / Light theme" title="Claro / Light">☀</button>
-      <button type="button" data-tema="oscuro" aria-pressed="false" aria-label="Tema oscuro / Dark theme" title="Oscuro / Dark">☾</button>
+    <div class="idioma tema" role="group" aria-label="Tema" data-aria-en="Theme">
+      <button type="button" data-tema="sistema" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span lang="es" class="solo-lectores">Tema del sistema</span><span lang="en" class="solo-lectores">System theme</span></button>
+      <button type="button" data-tema="claro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span lang="es" class="solo-lectores">Tema claro</span><span lang="en" class="solo-lectores">Light theme</span></button>
+      <button type="button" data-tema="oscuro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span lang="es" class="solo-lectores">Tema oscuro</span><span lang="en" class="solo-lectores">Dark theme</span></button>
     </div>
-    <a class="boton principal" href="../index.html#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+    <a class="boton principal" href="../#descargar" data-descarga><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span class="boton-texto"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
   </div>
 </header>
 
-<main class="envoltura ayuda-temas">
-<nav class="migas" aria-label="Ruta / Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Ajustes y actualizaciones</span><span lang="en">Settings and updates</span></nav>
+<main id="contenido" tabindex="-1" class="envoltura ayuda">
+<nav class="indice" aria-label="En esta página" data-aria-en="On this page">
+  <ol>
+    <li><a href="#s-pasos"><span lang="es">Paso a paso</span><span lang="en">Step by step</span></a></li>
+    <li><a href="#s-preguntas"><span lang="es">Preguntas</span><span lang="en">Questions</span></a></li>
+    <li><a href="#s-relacionados"><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></a></li>
+  </ol>
+</nav>
 <article class="doc tema-ayuda">
+<nav class="migas" aria-label="Ruta" data-aria-en="Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Ajustes y actualizaciones</span><span lang="en">Settings and updates</span> · <a href="index.html#buscar-ayuda"><span lang="es">Buscar</span><span lang="en">Search</span></a></nav>
 <header>
   <h1><span lang="es">Ajustes y actualizaciones</span><span lang="en">Settings and updates</span></h1>
   <p class="entradilla"><span lang="es">Arranque con el sistema, modelo predeterminado, archivos, historial y actualizaciones.</span><span lang="en">Start with the system, default model, files, history and updates.</span></p>
 </header>
 
+<section id="s-pasos"><h2><span lang="es">Paso a paso</span><span lang="en">Step by step</span></h2>
 <ol class="pasos">
   <li><span lang="es">Activa el arranque con el sistema: Tramtai se abre oculto en la bandeja al iniciar sesión.</span><span lang="en">Turn on start with the system: Tramtai opens hidden in the tray when you sign in.</span></li>
   <li><span lang="es">Elige el modelo y el esfuerzo que se usan cuando una petición no los dice.</span><span lang="en">Pick the model and effort used when a request does not say.</span></li>
   <li><span lang="es">En Historial decide cuánto se guardan las peticiones; en Archivos, prepara el conversor.</span><span lang="en">In History decide how long requests are kept; in Files, prepare the converter.</span></li>
 </ol>
 
-<figure class="captura"><img class="solo-claro" lang="es" src="capturas/actualizaciones.claro.es.webp" loading="lazy" alt="Las opciones de actualización en Ajustes"><img class="solo-claro" lang="en" src="capturas/actualizaciones.claro.en.webp" loading="lazy" alt="The update options in Settings"><img class="solo-oscuro" lang="es" src="capturas/actualizaciones.oscuro.es.webp" loading="lazy" alt="Las opciones de actualización en Ajustes"><img class="solo-oscuro" lang="en" src="capturas/actualizaciones.oscuro.en.webp" loading="lazy" alt="The update options in Settings"></figure>
+<figure class="captura"><img class="solo-claro" lang="es" src="capturas/actualizaciones.claro.es.webp" width="992" height="172" loading="lazy" alt="Las opciones de actualización en Ajustes"><img class="solo-claro" lang="en" src="capturas/actualizaciones.claro.en.webp" width="992" height="172" loading="lazy" alt="The update options in Settings"><img class="solo-oscuro" lang="es" src="capturas/actualizaciones.oscuro.es.webp" width="992" height="172" loading="lazy" alt="Las opciones de actualización en Ajustes"><img class="solo-oscuro" lang="en" src="capturas/actualizaciones.oscuro.en.webp" width="992" height="172" loading="lazy" alt="The update options in Settings"></figure>
+</section>
 
+<section id="s-preguntas"><h2><span lang="es">Preguntas</span><span lang="en">Questions</span></h2>
 <details id="al-actualizar"><summary><span lang="es">¿Qué pasa al actualizar?</span><span lang="en">What happens when I update?</span></summary><p><span lang="es">El aviso muestra lo que trae cada versión. Con el instalador de Windows se instala sola y la app se reabre con tus datos; en lo demás, el aviso trae el enlace.</span><span lang="en">The notice shows what each version brings. With the Windows installer it installs itself and the app reopens with your data; otherwise, the notice has the link.</span></p></details>
 <details id="actualizar-otros"><summary><span lang="es">¿Cómo actualizo sin el instalador de Windows?</span><span lang="en">How do I update without the Windows installer?</span></summary><p><span lang="es">Homebrew: «brew upgrade». El .dmg, .deb, .rpm y la portable: el paquete nuevo encima. En la terminal, «tramtai actualizar» («--comprobar» solo mira).</span><span lang="en">Homebrew: &quot;brew upgrade&quot;. The .dmg, .deb, .rpm and portable: the new package on top. In the terminal, &quot;tramtai actualizar&quot; (&quot;--comprobar&quot; only checks).</span></p></details>
 <details id="buscar-version"><summary><span lang="es">¿Puedo buscar una versión ahora?</span><span lang="en">Can I check for a version now?</span></summary><p><span lang="es">Sí: «Buscar actualización ahora» en Ajustes. Tramtai mira cada hora (solo la ficha pública de GitHub); se desactiva en Ajustes → Buscar actualizaciones.</span><span lang="en">Yes: &quot;Check for updates now&quot; in Settings. Tramtai checks every hour (only GitHub’s public page); turn it off in Settings → Check for updates.</span></p></details>
 <details id="que-version"><summary><span lang="es">¿Qué versión tengo?</span><span lang="en">Which version do I have?</span></summary><p><span lang="es">Abre «Acerca de Tramtai» en el menú lateral o en la bandeja; «Copiar datos para soporte» copia lo necesario sin claves.</span><span lang="en">Open &quot;About Tramtai&quot; in the side menu or the tray; &quot;Copy support data&quot; copies what is needed, without keys.</span></p></details>
 <details id="datos-ruta"><summary><span lang="es">¿Dónde se guardan mis datos?</span><span lang="en">Where is my data kept?</span></summary><p><span lang="es">Solo en este equipo: %APPDATA%\tramtai (Windows), ~/Library/Application Support/tramtai (macOS) o ~/.config/tramtai (Linux); la portable, en «datos-tramtai».</span><span lang="en">Only on this computer: %APPDATA%\tramtai (Windows), ~/Library/Application Support/tramtai (macOS) or ~/.config/tramtai (Linux); the portable, in &quot;datos-tramtai&quot;.</span></p></details>
 <details id="cuanto-se-guarda"><summary><span lang="es">¿Cuánto tiempo se guardan?</span><span lang="en">How long is it kept?</span></summary><p><span lang="es">Las respuestas, 24 horas; el resto del historial, 7 días, hasta 10 000 peticiones. Se cambia en Ajustes → Historial, donde también puedes borrarlo.</span><span lang="en">Answers, 24 hours; the rest of the history, 7 days, up to 10,000 requests. Change it in Settings → History, where you can also delete it.</span></p></details>
+<details id="dos-pestanas"><summary><span lang="es">¿Qué es «Este espacio» y qué «Todo Tramtai»?</span><span lang="en">What are “This workspace” and “All of Tramtai”?</span></summary><p><span lang="es">«Este espacio» guarda el modelo, el historial y los datos del espacio abierto; «Todo Tramtai», el puerto, el conversor, las actualizaciones y el arranque.</span><span lang="en">“This workspace” keeps the model, history and data of the open workspace; “All of Tramtai”, the port, converter, updates and startup.</span> <a href="espacios.html"><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span> →</a></p></details>
+</section>
 
-<h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
+<section id="s-relacionados"><h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
 <div class="tarjetas-temas">
   <a class="tarjeta-tema" href="empezar.html"><strong><span lang="es">Empezar</span><span lang="en">Get started</span></strong><span><span lang="es">Tramtai pone tus agentes de IA detrás de una API en tu equipo: instálalo, conecta un agente y prueba.</span><span lang="en">Tramtai puts your AI agents behind an API on your computer: install it, connect an agent and try it.</span></span></a>
   <a class="tarjeta-tema" href="historial.html"><strong><span lang="es">Historial</span><span lang="en">History</span></strong><span><span lang="es">Cada petición queda en el Historial con su respuesta, el agente que respondió y el registro de cada paso.</span><span lang="en">Every request stays in History with its answer, the agent that answered and the log of each step.</span></span></a>
   <a class="tarjeta-tema" href="archivos.html"><strong><span lang="es">Archivos</span><span lang="en">Files</span></strong><span><span lang="es">Tramtai convierte tus PDF, Word, Excel y otros documentos a texto antes de pasárselos al agente.</span><span lang="en">Tramtai turns your PDF, Word, Excel and other documents into text before handing them to the agent.</span></span></a>
 </div>
+</section>
 </article>
 </main>
 
 <footer>
   <div class="envoltura">
-    <span>© 2026 Michael Scott B. · Tramtai · <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a></span>
-    <span>
-      <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span>
-    </span>
+    <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
+      <a href="../#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+      <a href="../ayuda/empezar.html"><span lang="es">Empezar</span><span lang="en">Get started</span></a>
+      <a href="../ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+      <a href="https://github.com/MscottB/Tramtai">GitHub</a>
+      <a href="https://github.com/MscottB/Tramtai/releases"><span lang="es">Versiones</span><span lang="en">Releases</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md"><span lang="es">Licencia</span><span lang="en">License</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a>
+    </nav>
+    <p>© 2026 Michael Scott B. · <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span></p>
   </div>
 </footer>
-
-<script src="../sitio.js"></script>
 </body>
 </html>

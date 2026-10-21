@@ -120,7 +120,7 @@ func (s *Servidor) guardarEnLinea(archivos []archivoEnLinea, sol *nucleo.Solicit
 		return nil
 	}
 	if s.Cargas == nil {
-		return nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("esta instancia no admite cargas"))
+		return nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("este espacio no admite cargas"))
 	}
 	vistos := map[[32]byte]bool{}
 	var unicos []archivoEnLinea

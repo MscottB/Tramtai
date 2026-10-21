@@ -17,6 +17,14 @@
     </CabeceraPagina>
 
     <q-banner v-if="error" rounded class="error-caja">{{ error }}</q-banner>
+    <q-banner v-if="sugerirApiPropia(instancia?.app_con_clave_24h)" rounded class="aviso">
+      {{ t('claves.sugerencia', { n: instancia?.app_con_clave_24h ?? 0 }) }}
+      <template #action><q-btn flat no-caps color="primary" :label="t('claves.crearApi')" @click="$emit('ir', 'conectar')" /></template>
+    </q-banner>
+    <q-banner v-if="conProblemas.length" rounded class="aviso">
+      {{ conProblemas.length === 1 ? t('inicio.espaciosConProblemaUno', { nombre: conProblemas[0].nombre }) : t('inicio.espaciosConProblema', { n: conProblemas.length }) }}
+      <template #action><q-btn flat no-caps color="primary" :label="t('inicio.verEspacios')" @click="$emit('ir', 'espacios')" /></template>
+    </q-banner>
     <AvisoConversor v-if="conversor && conversor.estado !== 'preparando'" enlace-ajustes @ajustes="$emit('ir', 'configuracion')" />
 
     <section class="q-card" data-captura="inicio">
@@ -114,10 +122,11 @@ import { aplicar, eventoDe, visibles, type Tranvia } from '../vivo'
 import AvisoConversor from '../componentes/AvisoConversor.vue'
 import { cargarConversor, conversor } from '../conversor'
 import { api, avisar, cargarDiasHistorial, copiar, mensajeError } from '../api/cliente'
-import type { Adaptador, EstadoInstancia, EstadoPunto, Trabajo } from '../api/tipos'
+import type { Adaptador, EspacioUI, EstadoInstancia, EstadoPunto, Trabajo } from '../api/tipos'
 import { periodoHistorial, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, sesion, sistema } from '../estado'
 import { agenteListo, asegurarFichas, ordenarAgentes } from '../agentes'
 import { estadoInfo, haceCuanto, terminales, textoDe } from '../formato'
+import { sugerirApiPropia } from '../claves'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()
@@ -205,8 +214,12 @@ async function cargar() {
   }
 }
 
+// conProblemas son los espacios que no se pudieron abrir (carpeta movida, local.yaml con claves no aplicadas…).
+const conProblemas = ref<EspacioUI[]>([])
+
 let intervalo: number
 onMounted(() => {
+  if (sesion.value?.local) api.espacios().then((l) => (conProblemas.value = l.filter((e) => e.ultimo_error))).catch(() => {})
   cargarConversor()
   cargarDiasHistorial()
   cargar()
@@ -214,6 +227,11 @@ onMounted(() => {
   api.capacidades().then((c) => (adaptadores.value = c.adaptadores)).catch(() => (adaptadores.value = []))
   api.puntos().then((p) => (puntos.value = p)).catch(() => {})
   intervalo = window.setInterval(() => !document.hidden && cargar(), 5000)
+  comprobacion = window.setInterval(() => !document.hidden && api.capacidades().then((c) => (adaptadores.value = c.adaptadores)).catch(() => {}), 5 * 60_000)
 })
-onUnmounted(() => clearInterval(intervalo))
+let comprobacion = 0
+onUnmounted(() => {
+  clearInterval(intervalo)
+  clearInterval(comprobacion)
+})
 </script>

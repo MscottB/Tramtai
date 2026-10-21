@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-en="Workspaces · Tramtai">Espacios de trabajo · Tramtai</title>
+<meta name="description" content="La global y uno por proyecto, cada uno con su historial, sus APIs y sus ajustes.">
+<link rel="canonical" href="https://mscottb.github.io/Tramtai/ayuda/espacios.html">
+<meta property="og:url" content="https://mscottb.github.io/Tramtai/ayuda/espacios.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tramtai">
+<meta property="og:title" content="Espacios de trabajo · Tramtai">
+<meta property="og:description" content="La global y uno por proyecto, cada uno con su historial, sus APIs y sus ajustes.">
+<meta property="og:image" content="https://mscottb.github.io/Tramtai/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="es_ES">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="preload" href="../overpass.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../estilo.css">
+<script src="../sitio.js" defer></script>
+<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>
+</head>
+<body>
+<a class="saltar" href="#contenido"><span lang="es">Saltar al contenido</span><span lang="en">Skip to content</span></a>
+<header class="barra">
+  <div class="envoltura">
+    <a class="marca" href="../"><img src="../favicon.svg" width="30" height="30" alt=""><span class="marca-texto">Tramtai</span></a>
+    <nav id="menu" aria-label="Secciones" data-aria-en="Sections">
+      <a href="../#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+      <a href="../#agentes"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
+      <a href="../#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+      <a href="../ayuda/" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+    </nav>
+    <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span lang="es" class="solo-lectores">Menú</span><span lang="en" class="solo-lectores">Menu</span></button>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
+    <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
+      <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+      <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+    </div>
+    <div class="idioma tema" role="group" aria-label="Tema" data-aria-en="Theme">
+      <button type="button" data-tema="sistema" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span lang="es" class="solo-lectores">Tema del sistema</span><span lang="en" class="solo-lectores">System theme</span></button>
+      <button type="button" data-tema="claro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span lang="es" class="solo-lectores">Tema claro</span><span lang="en" class="solo-lectores">Light theme</span></button>
+      <button type="button" data-tema="oscuro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span lang="es" class="solo-lectores">Tema oscuro</span><span lang="en" class="solo-lectores">Dark theme</span></button>
+    </div>
+    <a class="boton principal" href="../#descargar" data-descarga><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span class="boton-texto"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
+  </div>
+</header>
+
+<main id="contenido" tabindex="-1" class="envoltura ayuda">
+<nav class="indice" aria-label="En esta página" data-aria-en="On this page">
+  <ol>
+    <li><a href="#s-diagrama"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a></li>
+    <li><a href="#s-pasos"><span lang="es">Paso a paso</span><span lang="en">Step by step</span></a></li>
+    <li><a href="#s-preguntas"><span lang="es">Preguntas</span><span lang="en">Questions</span></a></li>
+    <li><a href="#s-errores"><span lang="es">Si algo falla</span><span lang="en">If something fails</span></a></li>
+    <li><a href="#s-relacionados"><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></a></li>
+  </ol>
+</nav>
+<article class="doc tema-ayuda">
+<nav class="migas" aria-label="Ruta" data-aria-en="Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span> · <a href="index.html#buscar-ayuda"><span lang="es">Buscar</span><span lang="en">Search</span></a></nav>
+<header>
+  <h1><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></h1>
+  <p class="entradilla"><span lang="es">La global y uno por proyecto, cada uno con su historial, sus APIs y sus ajustes.</span><span lang="en">The global one and one per project, each with its own history, APIs and settings.</span></p>
+</header>
+
+<section id="s-diagrama"><h2><span lang="es">Cómo funciona</span><span lang="en">How it works</span></h2>
+<ol class="diagrama" style="--paradas: 3">
+  <li><strong>1. <span lang="es">Global</span><span lang="en">Global</span></strong><span><span lang="es">Para texto y archivos sueltos. Sus ajustes valen en los proyectos que no tienen los suyos.</span><span lang="en">For loose text and files. Its settings apply to projects that do not have their own.</span></span></li>
+  <li><strong>2. <span lang="es">Lo que se hereda</span><span lang="en">What is inherited</span></strong><span><span lang="es">Modelo, historial y presupuesto: lo que un proyecto no define lo toma de la global.</span><span lang="en">Model, history and budget: what a project does not define comes from the global one.</span></span></li>
+  <li><strong>3. <span lang="es">Un proyecto</span><span lang="en">A project</span></strong><span><span lang="es">Una carpeta con .tramtai/: su propio historial, sus APIs y sus ajustes.</span><span lang="en">A folder with .tramtai/: its own history, APIs and settings.</span></span></li>
+</ol>
+</section>
+
+<section id="s-pasos"><h2><span lang="es">Paso a paso</span><span lang="en">Step by step</span></h2>
+<ol class="pasos">
+  <li><span lang="es">Abre un proyecto desde el selector de arriba o desde Espacios. Si la carpeta no tenía .tramtai/, Tramtai la prepara y confía en ella.</span><span lang="en">Open a project from the selector at the top or from Workspaces. If the folder had no .tramtai/, Tramtai prepares it and trusts it.</span></li>
+  <li><span lang="es">Si ya traía .tramtai/ (un repositorio clonado), decide si confías: así su local.yaml puede usar claves de seguridad.</span><span lang="en">If it already had .tramtai/ (a cloned repository), decide whether you trust it: then its local.yaml can use security keys.</span></li>
+  <li><span lang="es">En Espacios ves todos, también los detenidos. Detén los que no uses y olvida los que ya no necesites.</span><span lang="en">In Workspaces you see all of them, stopped ones too. Stop the ones you do not use and forget the ones you no longer need.</span></li>
+</ol>
+
+<figure class="captura"><img class="solo-claro" lang="es" src="capturas/espacios.claro.es.webp" width="992" height="339" loading="lazy" alt="La página Espacios: la global y un proyecto, con su estado, su confianza, sus APIs y sus peticiones."><img class="solo-claro" lang="en" src="capturas/espacios.claro.en.webp" width="992" height="339" loading="lazy" alt="The Workspaces page: the global one and a project, with their status, trust, APIs and requests."><img class="solo-oscuro" lang="es" src="capturas/espacios.oscuro.es.webp" width="992" height="339" loading="lazy" alt="La página Espacios: la global y un proyecto, con su estado, su confianza, sus APIs y sus peticiones."><img class="solo-oscuro" lang="en" src="capturas/espacios.oscuro.en.webp" width="992" height="339" loading="lazy" alt="The Workspaces page: the global one and a project, with their status, trust, APIs and requests."></figure>
+</section>
+
+<section id="s-preguntas"><h2><span lang="es">Preguntas</span><span lang="en">Questions</span></h2>
+<details id="confiar"><summary><span lang="es">¿Qué significa confiar en una carpeta?</span><span lang="en">What does trusting a folder mean?</span></summary><p><span lang="es">Que su .tramtai/local.yaml puede usar claves de seguridad, como el programa de cada agente. La confianza se guarda en Tramtai, nunca en el repositorio.</span><span lang="en">That its .tramtai/local.yaml can use security keys, such as each agent’s program. Trust is stored in Tramtai, never in the repository.</span></p></details>
+<details id="mover"><summary><span lang="es">¿Puedo mover o renombrar un proyecto?</span><span lang="en">Can I move or rename a project?</span></summary><p><span lang="es">Sí. Su identificador queda en .tramtai/espacio: en la nueva ruta conserva historial, APIs y clave. Te vuelve a preguntar si confías, porque la confianza no viaja con la carpeta.</span><span lang="en">Yes. Its id stays in .tramtai/espacio: at its new path it keeps its history, APIs and key. It asks again whether you trust it: trust does not travel with the folder.</span></p></details>
+<details id="copiar-proyecto"><summary><span lang="es">¿Y si copio la carpeta?</span><span lang="en">And if I copy the folder?</span></summary><p><span lang="es">La copia es un espacio nuevo, con su propio historial y su propia clave; el original sigue como estaba.</span><span lang="en">The copy is a new workspace, with its own history and key; the original stays as it was.</span></p></details>
+<details id="olvidar"><summary><span lang="es">¿Qué borra «Olvidar»?</span><span lang="en">What does “Forget” delete?</span></summary><p><span lang="es">Su historial, sus archivos subidos y las claves de sus APIs en Tramtai. La carpeta del proyecto, con su .tramtai/, no se toca.</span><span lang="en">Its history, uploaded files and API keys in Tramtai. The project folder, with its .tramtai/, is not touched.</span></p></details>
+<details id="no-encontrado"><summary><span lang="es">¿Por qué un espacio sale «No encontrado»?</span><span lang="en">Why does a workspace show “Not found”?</span></summary><p><span lang="es">Su carpeta se movió o se borró. «Buscar la carpeta» lo reasocia sin perder nada (después, «Confiar» si usa claves de seguridad); «Olvidar», si ya no lo necesitas.</span><span lang="en">Its folder was moved or deleted. “Locate the folder” links it again without losing anything (then “Trust” if it uses security keys); “Forget” if you no longer need it.</span></p></details>
+<details id="heredar"><summary><span lang="es">¿Cómo sé si un ajuste es del proyecto o de la global?</span><span lang="en">How do I know whether a setting is the project’s or the global one?</span></summary><p><span lang="es">En Ajustes, cada uno dice «Propio» o «De Global». Los propios tienen «Volver al de Global», que quita el valor del local.yaml del proyecto.</span><span lang="en">In Settings each one says “Own” or “From Global”. Own ones have “Back to Global”, which removes the value from the project’s local.yaml.</span></p></details>
+<details id="espacios-terminal"><summary><span lang="es">¿Y desde la terminal?</span><span lang="en">And from the terminal?</span></summary><p><span lang="es">«tramtai espacios» los lista; «tramtai espacio iniciar», «detener» y «olvidar» hacen lo mismo que la página.</span><span lang="en">“tramtai espacios” lists them; “tramtai espacio iniciar”, “detener” and “olvidar” do the same as the page.</span></p></details>
+</section>
+
+<section id="s-errores"><h2><span lang="es">Si algo falla</span><span lang="en">If something fails</span></h2>
+<dl class="errores">
+  <div id="e-confianza_requerida"><dt><span lang="es">Hay que decidir si confías en esa carpeta</span><span lang="en">You need to decide whether you trust that folder</span> <code>confianza_requerida</code></dt><dd><span lang="es">La carpeta ya tenía configuración de Tramtai. Decide si confías en ella: si no, se abre sin sus APIs ni su presupuesto.</span><span lang="en">The folder already had a Tramtai configuration. Decide whether you trust it: if not, it opens without its APIs or budget.</span></dd></div>
+  <div id="e-espacio_detenido"><dt><span lang="es">El espacio de este proyecto está detenido</span><span lang="en">This project’s workspace is stopped</span> <code>espacio_detenido</code></dt><dd><span lang="es">Estás dentro de un proyecto detenido. Actívalo con tramtai espacio iniciar, o usa --global para mandar a la global.</span><span lang="en">You are inside a stopped project. Start it with tramtai espacio iniciar, or use --global to send to the global one.</span></dd></div>
+</dl>
+</section>
+
+<section id="s-relacionados"><h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
+<div class="tarjetas-temas">
+  <a class="tarjeta-tema" href="claves.html"><strong><span lang="es">Claves y APIs</span><span lang="en">Keys and APIs</span></strong><span><span lang="es">La clave del espacio y las APIs por aplicación: cuándo usar cada una y qué pasa al regenerarlas.</span><span lang="en">The workspace key and per-app APIs: when to use each one and what happens when you regenerate them.</span></span></a>
+  <a class="tarjeta-tema" href="ajustes.html"><strong><span lang="es">Ajustes y actualizaciones</span><span lang="en">Settings and updates</span></strong><span><span lang="es">Arranque con el sistema, modelo predeterminado, archivos, historial y actualizaciones.</span><span lang="en">Start with the system, default model, files, history and updates.</span></span></a>
+  <a class="tarjeta-tema" href="conceptos.html"><strong><span lang="es">Conceptos</span><span lang="en">Concepts</span></strong><span><span lang="es">Las palabras que usa Tramtai, en una línea cada una.</span><span lang="en">The words Tramtai uses, one line each.</span></span></a>
+</div>
+</section>
+</article>
+</main>
+
+<footer>
+  <div class="envoltura">
+    <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
+      <a href="../#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+      <a href="../ayuda/empezar.html"><span lang="es">Empezar</span><span lang="en">Get started</span></a>
+      <a href="../ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+      <a href="https://github.com/MscottB/Tramtai">GitHub</a>
+      <a href="https://github.com/MscottB/Tramtai/releases"><span lang="es">Versiones</span><span lang="en">Releases</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md"><span lang="es">Licencia</span><span lang="en">License</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a>
+    </nav>
+    <p>© 2026 Michael Scott B. · <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span></p>
+  </div>
+</footer>
+</body>
+</html>

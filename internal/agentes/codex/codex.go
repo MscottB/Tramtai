@@ -42,7 +42,31 @@ func (c Codex) Detectar(ctx context.Context) adaptadores.Estado {
 		return e
 	}
 	e.Ruta, e.Version = ruta, adaptadores.VersionDe(ctx, ruta)
+	if c.Autenticacion.Valor() == adaptadores.AutenticacionSuscripcion {
+		adaptadores.AplicarSesion(&e, c.ComprobarSesion(ctx), "Codex", "codex login")
+	}
 	return e
+}
+
+// ComprobarSesion implementa adaptadores.ComprobadorSesion con codex login status, que no envía ningún mensaje ni dice
+// la cuenta: «Logged in using ChatGPT» es la suscripción, «… an API key» una clave y «Not logged in», sin sesión.
+func (c Codex) ComprobarSesion(ctx context.Context) adaptadores.SesionCLI {
+	ruta, err := adaptadores.ResolverPrograma(c.Programa)
+	if err != nil {
+		return adaptadores.SesionCLI{Estado: adaptadores.SesionDesconocida}
+	}
+	salida, ok := adaptadores.SalidaEstado(ctx, ruta, "login", "status")
+	switch {
+	case !ok:
+		return adaptadores.SesionCLI{Estado: adaptadores.SesionDesconocida}
+	case strings.Contains(salida, "Not logged in"):
+		return adaptadores.SesionCLI{Estado: adaptadores.SesionSin}
+	case strings.Contains(salida, "API key"):
+		return adaptadores.SesionCLI{Estado: adaptadores.SesionUsaClave}
+	case strings.Contains(salida, "ChatGPT"):
+		return adaptadores.SesionCLI{Estado: adaptadores.SesionOK}
+	}
+	return adaptadores.SesionCLI{Estado: adaptadores.SesionDesconocida}
 }
 
 // Ejecutar implementa Adaptador.

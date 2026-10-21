@@ -55,7 +55,7 @@ que una app puede filtrar antes de enviar.
 ## Seguridad
 
 - **Clave (token):** `Authorization: Bearer <clave>` o `x-api-key: <clave>`.
-  - **Clave de la instancia** (la de la *API principal*): se ve en **Mis APIs → API principal** o con `tramtai global token` (o `tramtai proyecto token`). Se crea la primera vez en `datos/token-global` (archivo con permisos 0600 en la [carpeta de Tramtai](inicio.md#configuración)), o sale de la variable que indique `instancia_global.token_variable_entorno` (`TRAMTAI_TOKEN_GLOBAL`).
+  - **Clave del espacio de trabajo** (en la API, la de la *instancia*: global o de un proyecto): se ve en **Mis APIs → Clave del espacio** o con `tramtai global token` (o `tramtai proyecto token`). Es para ti y tus scripts; a cada aplicación dale su propia API. Si en 24 h llegan más de 20 peticiones de apps con la clave del espacio, Inicio y Mis APIs lo sugieren (`app_con_clave_24h` en `GET /api/v1/instancia`). Se crea la primera vez en `datos/token-global` (archivo con permisos 0600 en la [carpeta de Tramtai](inicio.md#configuración)), o sale de la variable que indique `instancia_global.token_variable_entorno` (`TRAMTAI_TOKEN_GLOBAL`).
   - **Clave de cada API por aplicación:** solo se muestra al crearla o regenerarla; Tramtai guarda únicamente su huella SHA-256. Ver [puntos de acceso](#puntos-de-acceso-y-administración).
   - Si se filtra alguna, ver [Si se filtra una clave](operacion.md#si-se-filtra-una-clave).
 - **Web UI:** no se abre con la clave de las aplicaciones (`POST /ui/sesion` con una clave responde 401). Se entra en el propio equipo con el mismo usuario del sistema o con el código de un solo uso de la app, la terminal o `tramtai abrir`; ver [arquitectura](arquitectura.md#interfaces).
@@ -89,7 +89,7 @@ que una app puede filtrar antes de enviar.
 | `POST /ejecutar` | Igual que `POST /trabajos`, pero espera el resultado: el trabajo final, con `errores_salida` si falló por el esquema. Envía `Location` antes de esperar; si se corta la conexión, el trabajo no se cancela. |
 | `POST /cargas` | Multipart con el campo `archivo`, o el binario en el cuerpo con `?nombre=`. Devuelve `identificador_carga`, `sha256`, `tamano_bytes` y `vence_en`. Un trabajo nuevo que cite una carga vencida se rechaza con 410; las cargas de un trabajo aceptado se conservan mientras se pueda reintentar. |
 | `GET /agentes` | La ficha de cada agente, al momento y sin comprobar los CLI: `agente`, `nombre`, `programa`, `codigo`, `color` (`claro`, `oscuro`), `orden`, `streaming`, `salida_estructurada`, `modelo_efectivo_informado`, `esfuerzos`, `autenticaciones`, `variables_clave`, `permitido_apps` y `url_instalacion`. Un agente sin ficha (de pruebas) va al final con su id. |
-| `GET /capacidades` | Por agente: streaming (`tokens` o `final`), salida estructurada, modelo efectivo, versión detectada, autenticación y términos. Incluye el formato de serialización. |
+| `GET /capacidades` | Por agente: streaming (`tokens` o `final`), salida estructurada, modelo efectivo, versión detectada, autenticación y términos, `desconectado` y, si su CLI lo dice, `cuenta` (con qué cuenta inició sesión). Incluye el formato de serialización. |
 | `GET /conversor` | Estado del conversor de archivos (markitdown): `estado` (`listo`, `preparando`, `falta` o `error`), `origen` (`configurado`, `paquete`, `preparado` o `sistema`), `version`, `etapa` y `progreso` mientras se prepara, `mensaje` del último error y `preparar_al_iniciar`. `/capacidades` lo trae en `conversor`. |
 | `POST /conversor/preparar` | Prepara el conversor en segundo plano (Python y markitdown en la carpeta de Tramtai, sin instalar nada en el sistema) y responde 202 con el estado; si ya se está preparando, devuelve ese estado. No existe en los puntos de acceso: una app no lanza una descarga de cientos de MB. |
 | `PUT /conversor/ajustes` | `{"preparar_al_iniciar": true}` o `false`: si el servicio lo prepara solo al iniciar cuando falta. No existe en los puntos de acceso. |
@@ -359,13 +359,13 @@ presupuesto:                     # el de la instancia (configuración global o l
   mensual: { peticiones: 10000 }
 ```
 
-La administración (`/api/v1/servicio`) y la API de cada instancia con `Tramtai-Instancia` se describen en [operacion.md](operacion.md).
+En la API, una *instancia* es un espacio de trabajo: el global o el de un proyecto. La administración (`/api/v1/servicio`) y la API de cada espacio con `Tramtai-Instancia` se describen en [operacion.md](operacion.md).
 
 `GET /api/v1/trabajos?limite=20` lista los trabajos recientes de la instancia, o los del punto de acceso si se llama desde uno; `&punto=<nombre>` filtra por un punto de acceso, `&grupo=<nombre>` por las APIs de ese grupo (según la configuración actual; un grupo sin APIs devuelve una lista vacía), `&origen=probar|terminal|cli|app` por origen y `&antes=<creado_en>` (RFC 3339) con `&antes_id=<id>` del último que ya se vio trae la página siguiente sin saltarse los creados en el mismo instante. Desde un punto de acceso, `grupo` y `origen` se ignoran. Cada trabajo indica su `origen`: `probar` (la sesión de la Web UI), `terminal` o `cli` (la clave de la instancia con el encabezado `X-Tramtai-Cliente`, que es solo una etiqueta y no da permisos), `app` (la clave sin ese encabezado) o `api` (un punto de acceso); vacío en los trabajos anteriores a v0.38.
 
 `GET /api/v1/instancia/retencion` devuelve `horas_resultado`, `horas_metadatos`, `max_trabajos` y `uso` (`trabajos` de la instancia y `bytes` de la base); `PUT` con esos tres números los guarda (en la configuración global para la instancia global, en `local.yaml` para un proyecto), los aplica al momento y purga. Fuera de rango responde 400 `solicitud_invalida` con el motivo. Ambos piden una sesión de la Web UI o el token de servicio, como `/api/v1/instancia/predeterminado`. Desde la Web UI, `GET /api/v1/puntos` incluye `uso` por punto (`peticiones`, `errores` y `ultima`, de lo que conserva la retención) y `presupuestos` (por punto con presupuesto: `diario` y `mensual` con `limites`, `consumo` y `reinicio`).
 
-### Claves de los puntos y de la instancia
+### Claves de los puntos y del espacio
 
 Estas rutas exigen una sesión de la Web UI o el token de servicio (con `Tramtai-Instancia`); la clave de las aplicaciones no sirve.
 
@@ -377,8 +377,10 @@ Estas rutas exigen una sesión de la Web UI o el token de servicio (con `Tramtai
 | `POST /api/v1/puntos/{nombre}/presupuesto/reiniciar` | Pone a cero el consumo del día y del mes en curso del punto (204). |
 | `GET /api/v1/instancia/presupuesto` | `{"presupuesto": {…}}` con el consumo y los límites de la instancia, o `{}` si no tiene. |
 | `POST /api/v1/instancia/presupuesto/reiniciar` | Pone a cero el consumo del día y del mes en curso de la instancia (204). |
-| `GET /api/v1/instancia/token` | La clave de la instancia, para mostrarla en *API principal* (Mis APIs). |
-| `POST /api/v1/instancia/token` | Regenera la clave de la instancia sin reiniciar y la devuelve. Si viene de una variable de entorno (`instancia_global.token_variable_entorno`), responde 400 `solicitud_invalida`: hay que cambiarla en la variable. |
+| `GET /api/v1/instancia` | El estado del espacio (`id`, `ambito`, `nombre`, `base`…) con `app_con_clave_24h`: las peticiones de apps que llegaron con la clave del espacio en las últimas 24 h. |
+| `POST /api/v1/instancia/heredar` | `{"clave": "predeterminados.modelo"}`: quita ese valor propio del `local.yaml` de un proyecto y vuelve a valer el de Global (204). Solo claves que empiezan por `predeterminados.`, `retencion.` o `presupuesto.`; otra responde 400 `solicitud_invalida`. |
+| `GET /api/v1/instancia/token` | La clave del espacio, para mostrarla en **Clave del espacio** (Mis APIs). |
+| `POST /api/v1/instancia/token` | Regenera la clave del espacio sin reiniciar y la devuelve. Si viene de una variable de entorno (`instancia_global.token_variable_entorno`), responde 400 `solicitud_invalida`: hay que cambiarla en la variable. |
 
 ## Límites de la entrada
 
@@ -405,9 +407,9 @@ API nativa: `{"error": {"codigo": "…", "mensaje": "…"}}`. Las fachadas usan 
 | HTTP | Códigos |
 |---|---|
 | 400 | `solicitud_invalida`, `parametro_no_soportado`, `modelo_ambiguo`, `modelo_no_permitido`, `modelo_no_disponible`, `modelo_no_configurado`, `carga_invalida`, `correccion_no_disponible`; en las fachadas también `entrada_demasiado_grande` (OpenAI: `context_length_exceeded`) |
-| 401 / 403 | `no_autorizado` / `origen_no_permitido`, `contexto_no_permitido` |
+| 401 / 403 | `no_autorizado` / `origen_no_permitido`, `contexto_no_permitido`, `csrf_invalido` (la sesión de la Web UI sin su `X-CSRF-Token`, o con el de otra: se cambió de espacio en otra pestaña) |
 | 404 | `no_encontrado` |
-| 409 | `conflicto_idempotencia`, `trabajo_no_terminado`, `trabajo_sin_salida` |
+| 409 | `conflicto_idempotencia`, `trabajo_no_terminado`, `trabajo_sin_salida`, `agente_desconectado` (el agente pedido está desconectado en Tramtai: **Agentes → Conectar**; el respaldo lo salta); en la Web UI, `confianza_requerida` y `dentro_de_proyecto` al abrir un proyecto |
 | 410 | `entrada_no_disponible`, `resultado_expirado` |
 | 422 | `salida_no_cumple_esquema`, `conversion_fallida` |
 | 429 | `cola_llena` y `presupuesto_agotado` (con `Retry-After`), `limite_uso_proveedor` |

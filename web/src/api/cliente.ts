@@ -5,16 +5,19 @@ import { idioma, idiomas, t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 import { compartida } from '../compartida'
 import { actualizacion, dialogoActualizar, diasHistorial, sesion } from '../estado'
-import type { Acerca, Adaptador, AjustesPunto, ConfigPunto, EntradaConfiguracion, EstadoActualizacion, EstadoConversor, EstadoInstancia, EstadoPresupuesto, EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Novedad, ProgresoActualizacion, Retencion, Sesion, Solicitud, Trabajo, UsoPunto } from './tipos'
+import type { Acerca, Adaptador, EspacioUI, AjustesPunto, ConfigPunto, EntradaConfiguracion, EstadoActualizacion, EstadoConversor, EstadoInstancia, EstadoPresupuesto, EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Novedad, ProgresoActualizacion, Retencion, Sesion, Solicitud, Trabajo, UsoPunto } from './tipos'
 
 // Campos declarados aparte (no en el constructor): node --test ejecuta este archivo quitando solo los tipos.
 export class ErrorApi extends Error {
   codigo: string
   estado: number
-  constructor(codigo: string, mensaje: string, estado: number) {
+  // datos es la respuesta entera: algunos errores traen más (las claves de una carpeta que pide confianza).
+  datos: Record<string, unknown>
+  constructor(codigo: string, mensaje: string, estado: number, datos: Record<string, unknown> = {}) {
     super(mensaje)
     this.codigo = codigo
     this.estado = estado
+    this.datos = datos
   }
 }
 
@@ -49,9 +52,21 @@ export async function pedir<T>(metodo: string, ruta: string, cuerpo?: unknown, p
       }
       return pedir<T>(metodo, ruta, cuerpo, plazo, true)
     }
-    throw new ErrorApi(datos?.error?.codigo ?? 'error', datos?.error?.mensaje ?? respuesta.statusText, respuesta.status)
+    // CSRF viejo: en otra pestaña se cambió de espacio y la cookie es otra. Se renueva la sesión una vez y no se repite
+    // la acción (iría a otro espacio): la página avisa y se recarga.
+    if (respuesta.status === 403 && datos?.error?.codigo === 'csrf_invalido' && metodo !== 'GET' && !reintento && sesion.value) {
+      await renovarSesion().catch(() => undefined)
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('tramtai:espacio-cambiado'))
+      throw new ErrorApi('espacio_cambiado', t('app.espacioCambiado'), 403, datos ?? {})
+    }
+    throw new ErrorApi(datos?.error?.codigo ?? 'error', datos?.error?.mensaje ?? respuesta.statusText, respuesta.status, datos ?? {})
   }
   return datos as T
+}
+
+// accionEspacio activa, detiene, confía, reasocia u olvida un espacio y devuelve la lista actualizada.
+function accionEspacio(accion: string, cuerpo: Record<string, unknown>) {
+  return pedir<{ espacios: EspacioUI[] }>('POST', `/ui/espacios/${accion}`, cuerpo).then((r) => r.espacios)
 }
 
 function recordar(s: Sesion): Sesion {
@@ -63,9 +78,20 @@ function recordar(s: Sesion): Sesion {
 export const api = {
   sesion: () => pedir<Sesion>('GET', '/ui/sesion').then(recordar),
   cambiarInstancia: (instancia: string) => pedir<Sesion>('POST', '/ui/sesion', { instancia }).then(recordar),
-  activarGlobal: () => pedir<Sesion>('POST', '/ui/instancias', { ambito: 'global' }).then(recordar),
-  // abrirProyecto activa el espacio de una carpeta; si aún no es un proyecto, el servicio crea su .tramtai/.
-  abrirProyecto: (raiz: string) => pedir<Sesion>('POST', '/ui/proyectos', { raiz }).then(recordar),
+  activarGlobal: () => pedir<Sesion>('POST', '/ui/instancias').then(recordar),
+  // abrirProyecto activa el espacio de una carpeta; si aún no es un proyecto, el servicio crea su .tramtai/ (y queda
+  // confiado). Si ya lo era, responde confianza_requerida (409) y se repite con confiar; dentro de otro proyecto,
+  // dentro_de_proyecto y se repite con crear_aqui.
+  abrirProyecto: (raiz: string, opciones: { confiar?: boolean; crear_aqui?: boolean } = {}) =>
+    pedir<Sesion>('POST', '/ui/proyectos', { raiz, ...opciones }).then(recordar),
+  // conectarAgente conecta o desconecta un agente en todos los espacios.
+  conectarAgente: (agente: string, conectado: boolean) => pedir<void>('POST', '/ui/agentes/conexion', { agente, conectado }),
+  espacios: () => pedir<{ espacios: EspacioUI[] }>('GET', '/ui/espacios').then((r) => r.espacios),
+  activarEspacio: (id: string) => accionEspacio('activar', { id }),
+  detenerEspacio: (id: string) => accionEspacio('detener', { id }),
+  confiarEspacio: (id: string, confiar: boolean) => accionEspacio('confiar', { id, confiar }),
+  ubicarEspacio: (id: string, ruta: string) => accionEspacio('ubicar', { id, ruta }),
+  olvidarEspacio: (id: string, nombre: string) => accionEspacio('olvidar', { id, nombre }),
   autoarranque: (activo: boolean) => pedir<Sesion>('POST', '/ui/autoarranque', { activo }).then(recordar),
   actualizacion: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion'),
   acerca: () => pedir<Acerca>('GET', '/ui/acerca'),
@@ -91,6 +117,8 @@ export const api = {
   claveInstancia: () => pedir<{ token: string; archivo: string }>('GET', '/api/v1/instancia/token'),
   // regenerarClaveInstancia cambia la clave que usan las aplicaciones; la anterior deja de valer al momento.
   regenerarClaveInstancia: () => pedir<{ token: string; archivo: string }>('POST', '/api/v1/instancia/token'),
+  // heredar quita un valor propio de un proyecto (de su local.yaml): vuelve a valer el de Global.
+  heredar: (clave: string) => pedir<void>('POST', '/api/v1/instancia/heredar', { clave }),
   configuracion: () =>
     pedir<{ configuracion: EntradaConfiguracion[] }>('GET', '/api/v1/instancia/configuracion').then((r) => r.configuracion),
   catalogo: () => pedir<{ modelos: Modelo[] }>('GET', '/api/v1/modelos').then((r) => r.modelos),

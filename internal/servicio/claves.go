@@ -102,6 +102,11 @@ func EliminarTokenPunto(datos, nombre string) {
 	_ = os.Remove(RutaTokenPunto(datos, nombre))
 }
 
+// EliminarTokenInstancia borra el token de una instancia, si existe (al olvidar el espacio).
+func EliminarTokenInstancia(datos, id string) {
+	_ = os.Remove(RutaTokenInstancia(datos, id))
+}
+
 // RutaTokenInstancia es el archivo del token de una instancia (el global conserva su ruta histórica).
 func RutaTokenInstancia(datos, id string) string {
 	if id == "global" {

@@ -14,7 +14,7 @@ import (
 
 func imprimirEstado(out io.Writer, e servicio.Estado) {
 	fmt.Fprintf(out, idioma.T("servicio activo en %s · %s · pid %d · desde %s\n"), e.Base, e.Version, e.PID, e.IniciadoEn.Format("02-01-2006 15:04"))
-	fmt.Fprintln(out, idioma.T("\ninstancias:"))
+	fmt.Fprintln(out, idioma.T("\nespacios:"))
 	if len(e.Instancias) == 0 {
 		fmt.Fprintln(out, idioma.T("  ninguna (tramtai global iniciar, o tramtai proyecto iniciar en un proyecto)"))
 	}

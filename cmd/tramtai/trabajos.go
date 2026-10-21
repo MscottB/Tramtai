@@ -10,30 +10,16 @@ import (
 	"tramtai/internal/cliente"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
-	"tramtai/internal/servicio"
 )
 
 func comandoTrabajos() *cobra.Command {
-	grupo := &cobra.Command{Use: "trabajos", Short: idioma.T("Trabajos de una instancia (la del proyecto actual si está activa; si no, la global)")}
+	grupo := &cobra.Command{Use: "trabajos", Short: idioma.T("Trabajos de un espacio (el del proyecto actual si está activo; si no, el global)")}
 	var instancia string
-	grupo.PersistentFlags().StringVarP(&instancia, "instancia", "i", "", idioma.T("identificador de la instancia"))
-	elegir := func(ctx context.Context, c *cliente.Cliente) string {
-		if instancia != "" {
-			return instancia
-		}
-		if raiz := raizProyecto(); raiz != "" {
-			if cfg, err := nucleo.CargarConfiguracion(raiz); err == nil {
-				id := servicio.IDProyecto(raiz, cfg)
-				if e, err := c.Estado(ctx); err == nil {
-					for _, i := range e.Instancias {
-						if i.ID == id {
-							return id
-						}
-					}
-				}
-			}
-		}
-		return "global"
+	grupo.PersistentFlags().StringVarP(&instancia, "instancia", "i", "", idioma.T("identificador del espacio"))
+	var global bool
+	grupo.PersistentFlags().BoolVar(&global, "global", false, idioma.T("usa el espacio global aunque estés dentro de un proyecto"))
+	elegir := func(ctx context.Context, c *cliente.Cliente) (string, error) {
+		return instanciaActual(ctx, c, instancia, global)
 	}
 	var limite int
 	listar := &cobra.Command{Use: "listar", Short: idioma.T("Lista los trabajos más recientes"),
@@ -44,13 +30,16 @@ func comandoTrabajos() *cobra.Command {
 			}
 			ctx, cancelar := contexto()
 			defer cancelar()
-			inst := elegir(ctx, c)
+			inst, err := elegir(ctx, c)
+			if err != nil {
+				return err
+			}
 			lista, err := c.Trabajos(ctx, inst, limite)
 			if err != nil {
 				return err
 			}
 			out := cmd.OutOrStdout()
-			fmt.Fprintf(out, idioma.T("instancia %s\n"), inst)
+			fmt.Fprintf(out, idioma.T("espacio %s\n"), inst)
 			for _, t := range lista {
 				fmt.Fprintf(out, "  %-32s %-12s %-28s %s\n", t.ID, t.Estado, modeloDe(t), t.CreadoEn.Local().Format("02-01 15:04:05"))
 			}
@@ -68,7 +57,11 @@ func comandoTrabajos() *cobra.Command {
 			}
 			ctx, cancelar := contexto()
 			defer cancelar()
-			t, err := c.Trabajo(ctx, elegir(ctx, c), args[0])
+			inst, err := elegir(ctx, c)
+			if err != nil {
+				return err
+			}
+			t, err := c.Trabajo(ctx, inst, args[0])
 			if err != nil {
 				return err
 			}
@@ -84,7 +77,11 @@ func comandoTrabajos() *cobra.Command {
 				}
 				ctx, cancelar := contexto()
 				defer cancelar()
-				t, err := c.Accion(ctx, elegir(ctx, c), args[0], nombre)
+				inst, err := elegir(ctx, c)
+				if err != nil {
+					return err
+				}
+				t, err := c.Accion(ctx, inst, args[0], nombre)
 				if err != nil {
 					return err
 				}
@@ -100,7 +97,11 @@ func comandoTrabajos() *cobra.Command {
 			}
 			ctx, cancelar := contexto()
 			defer cancelar()
-			if err := c.Eliminar(ctx, elegir(ctx, c), args[0]); err != nil {
+			inst, err := elegir(ctx, c)
+			if err != nil {
+				return err
+			}
+			if err := c.Eliminar(ctx, inst, args[0]); err != nil {
 				return err
 			}
 			fmt.Fprintln(cmd.OutOrStdout(), idioma.T("eliminado"))

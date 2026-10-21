@@ -65,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-// MapaRed dibuja la red de Tramtai como un mapa de tranvía: tus apps (la API principal y tus APIs) llegan a
+// MapaRed dibuja la red de Tramtai como un mapa de tranvía: tus apps (la clave del espacio y tus APIs) llegan a
 // Tramtai, que reparte cada petición por la línea de un agente. Las líneas sin servicio van punteadas.
 import { computed } from 'vue'
 import type { Adaptador, EstadoPunto } from '../api/tipos'
@@ -91,7 +91,7 @@ const alto = computed(() => filas.value * PASO + 16)
 const centro = computed(() => alto.value / 2)
 const y = (i: number, n: number) => centro.value + (i - (n - 1) / 2) * PASO
 
-// origenes: la API principal, una estación por grupo y las APIs sin grupo; como mucho MAX_APIS y «y N más».
+// origenes: la clave del espacio, una estación por grupo y las APIs sin grupo; como mucho MAX_APIS y «y N más».
 type Origen = { id: string; nombre: string; activo: boolean; principal: boolean; grupo?: string; detalle?: string }
 const origenes = computed(() => {
   const activa = (p: EstadoPunto) => p.error !== 'desactivado'
@@ -122,7 +122,7 @@ const lineas = computed(() => props.adaptadores.map((a, i) => ({
   i,
   nombre: nombreAgente(a.agente),
   listo: agenteListo(a),
-  estado: agenteListo(a) ? t('mapa.enServicio') : t('mapa.sinServicio'),
+  estado: a.desconectado ? t('mapa.desconectado') : agenteListo(a) ? t('mapa.enServicio') : t('mapa.sinServicio'),
   color: colorLinea(a.agente),
   y: y(i, props.adaptadores.length),
 })))
@@ -133,7 +133,7 @@ const descripcion = computed(() => t('mapa.descripcion', {
 }) + (enCurso.value === 1 ? ' ' + t('vivo.enCursoUno') : enCurso.value ? ' ' + t('vivo.enCurso', { n: enCurso.value }) : ''))
 
 // estacionDe es la estación de donde salió una petición: la de su API o su grupo; sin API (la principal, Probar, la
-// terminal o la CLI), la API principal.
+// terminal o la CLI), la clave del espacio.
 function estacionDe(tr: Tranvia) {
   const p = tr.api ? props.apis.find((x) => x.nombre === tr.api) : undefined
   const id = !p ? '-' : p.grupo ? 'g:' + p.grupo : p.nombre

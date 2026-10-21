@@ -56,6 +56,11 @@ type Opciones struct {
 	PermitidoEnApps func(agente string) bool
 	// TiempoConversion es el plazo total de la preparación de las cargas (conversion.tiempo_total_segundos).
 	TiempoConversion time.Duration
+	// Desconectado dice si un agente está desconectado (Agentes → Desconectar): no se acepta como principal y el
+	// respaldo lo salta. nil = todos conectados.
+	Desconectado func(agente string) bool
+	// Salud anota los agentes cuya petición falló por autenticación y los quita cuando una funciona (nil = no se anota).
+	Salud *adaptadores.Salud
 }
 
 // OpcionesDesde toma los límites de la configuración efectiva.
@@ -187,6 +192,10 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 	if err := herramientas.Validar(solicitud); err != nil {
 		return nucleo.Trabajo{}, false, err
 	}
+	if p.desconectado(solicitud.Agente) {
+		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoAgenteDesconectado,
+			idioma.Tf("el agente %s está desconectado: conéctalo en Agentes o elige otro", solicitud.Agente))
+	}
 	for _, e := range solicitud.Respaldo {
 		if agente, _, _ := nucleo.DividirRespaldo(e); p.adaptadores[agente] == nil {
 			return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("agente de respaldo no disponible: %s", agente))
@@ -194,7 +203,7 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 	}
 	if solicitud.ModoContexto == "consciente_proyecto" && p.opc.RaizConfiable == "" {
 		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoContextoNoPermitido,
-			idioma.T("consciente_proyecto solo se admite en la instancia de un proyecto incluido en proyectos_confiables de la configuración global"))
+			idioma.T("consciente_proyecto solo se admite en el espacio de un proyecto incluido en proyectos_confiables de la configuración global"))
 	}
 	if len(solicitud.Salida.Esquema) > 0 {
 		if err := salidas.Comprobar(solicitud.Salida.Esquema); err != nil {
@@ -436,6 +445,11 @@ func (p *Planificador) Listar(ctx context.Context, limite int, f persistencia.Fi
 }
 
 // Contar devuelve cuántos trabajos de la instancia hay en cada estado.
+// ContarOrigenDesde cuenta los trabajos de la instancia con ese origen desde desde (ver Almacen.ContarOrigenDesde).
+func (p *Planificador) ContarOrigenDesde(ctx context.Context, origen string, sinPunto bool, desde time.Time) (int, error) {
+	return p.almacen.ContarOrigenDesde(ctx, p.opc.Instancia, origen, sinPunto, desde)
+}
+
 func (p *Planificador) Contar(ctx context.Context) (map[nucleo.Estado]int, error) {
 	return p.almacen.Contar(ctx, p.opc.Instancia)
 }

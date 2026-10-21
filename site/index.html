@@ -3,66 +3,86 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tramtai · Tus agentes de IA como una API local</title>
-<meta name="description" content="Tramtai convierte Claude Code, Codex, GitHub Copilot CLI, Antigravity y la API de Gemini en una API local compatible con OpenAI y Anthropic, en tu propio equipo.">
+<title data-en="Tramtai · Your AI agents as a local API">Tramtai · Tus agentes de IA como una API local</title>
+<meta name="description" content="Tramtai convierte Claude Code, Codex, GitHub Copilot CLI y la Gemini API en una API local compatible con OpenAI y Anthropic, en tu propio equipo.">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Tramtai", "applicationCategory": "DeveloperApplication", "operatingSystem": "Windows 10, Windows 11, macOS 11+, Linux", "description": "Claude Code, Codex, GitHub Copilot CLI y la Gemini API como una API local compatible con OpenAI y Anthropic.", "url": "https://mscottb.github.io/Tramtai/", "downloadUrl": "https://github.com/MscottB/Tramtai/releases/latest", "license": "https://polyformproject.org/licenses/noncommercial/1.0.0/", "inLanguage": ["es", "en"], "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
+<!-- comun:cabeza -->
+<link rel="canonical" href="https://mscottb.github.io/Tramtai/">
+<meta property="og:url" content="https://mscottb.github.io/Tramtai/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tramtai">
 <meta property="og:title" content="Tramtai · Tus agentes de IA como una API local">
-<meta property="og:description" content="Claude Code, Codex, GitHub Copilot CLI, Antigravity y la API de Gemini como una API compatible con OpenAI y Anthropic, en tu equipo.">
-<meta property="og:image" content="logo.png">
+<meta property="og:description" content="Tramtai convierte Claude Code, Codex, GitHub Copilot CLI y la Gemini API en una API local compatible con OpenAI y Anthropic, en tu propio equipo.">
+<meta property="og:image" content="https://mscottb.github.io/Tramtai/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="es_ES">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="logo.png">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" href="overpass.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="estilo.css">
-<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t } catch (e) {}</script>
+<script src="sitio.js" defer></script>
+<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>
+<!-- /comun:cabeza -->
 </head>
 <body>
+<!-- comun:cabecera -->
+<a class="saltar" href="#contenido"><span lang="es">Saltar al contenido</span><span lang="en">Skip to content</span></a>
 <header class="barra">
   <div class="envoltura">
-    <a class="marca" href="#"><img src="logo.png" alt="">Tramtai</a>
-    <nav aria-label="Secciones">
+    <a class="marca" href="./"><img src="favicon.svg" width="30" height="30" alt=""><span class="marca-texto">Tramtai</span></a>
+    <nav id="menu" aria-label="Secciones" data-aria-en="Sections">
       <a href="#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
       <a href="#agentes"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
       <a href="#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
       <a href="ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
       <a href="desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
     </nav>
-    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub">
-      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
-    </a>
-    <div class="idioma" role="group" aria-label="Idioma / Language">
+    <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span lang="es" class="solo-lectores">Menú</span><span lang="en" class="solo-lectores">Menu</span></button>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
+    <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
       <button type="button" data-idioma="es" aria-pressed="true">ES</button>
       <button type="button" data-idioma="en" aria-pressed="false">EN</button>
     </div>
-    <div class="idioma tema" role="group" aria-label="Tema / Theme">
-      <button type="button" data-tema="sistema" aria-pressed="true" aria-label="Tema del sistema / System theme" title="Sistema / System">◐</button>
-      <button type="button" data-tema="claro" aria-pressed="false" aria-label="Tema claro / Light theme" title="Claro / Light">☀</button>
-      <button type="button" data-tema="oscuro" aria-pressed="false" aria-label="Tema oscuro / Dark theme" title="Oscuro / Dark">☾</button>
+    <div class="idioma tema" role="group" aria-label="Tema" data-aria-en="Theme">
+      <button type="button" data-tema="sistema" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span lang="es" class="solo-lectores">Tema del sistema</span><span lang="en" class="solo-lectores">System theme</span></button>
+      <button type="button" data-tema="claro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span lang="es" class="solo-lectores">Tema claro</span><span lang="en" class="solo-lectores">Light theme</span></button>
+      <button type="button" data-tema="oscuro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span lang="es" class="solo-lectores">Tema oscuro</span><span lang="en" class="solo-lectores">Dark theme</span></button>
     </div>
-    <a class="boton principal" href="#descargar" data-descarga><span lang="es">Descargar</span><span lang="en">Download</span></a>
+    <a class="boton principal" href="#descargar" data-descarga><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span class="boton-texto"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
   </div>
 </header>
+<!-- /comun:cabecera -->
 
-<main>
+<main id="contenido" tabindex="-1">
   <section class="portada">
     <div class="envoltura">
-      <span class="chapa"><span lang="es">Pasarela local para Windows, macOS y Linux</span><span lang="en">Local gateway for Windows, macOS and Linux</span></span>
+      <span class="chapa"><span lang="es">Puente local para Windows, macOS y Linux</span><span lang="en">Local bridge for Windows, macOS and Linux</span></span>
       <h1>
         <span lang="es">Tus agentes de IA, <em>como una API local</em>.</span>
         <span lang="en">Your AI agents, <em>as a local API</em>.</span>
       </h1>
       <p class="entrada">
-        <span lang="es">Tramtai convierte Claude Code, Codex, GitHub Copilot CLI, Antigravity y la API de Gemini en una API compatible con OpenAI y Anthropic que funciona en tu equipo. Conecta cualquier aplicación cambiando solo la URL.</span>
-        <span lang="en">Tramtai turns Claude Code, Codex, GitHub Copilot CLI, Antigravity and the Gemini API into an OpenAI- and Anthropic-compatible API that runs on your computer. Connect any app by changing just the URL.</span>
+        <span lang="es">Tramtai convierte Claude Code, Codex, GitHub Copilot CLI y la Gemini API en una API compatible con OpenAI y Anthropic que funciona en tu equipo. Conecta cualquier aplicación cambiando solo la URL. Antigravity también está, por ahora desde Probar y la CLI.</span>
+        <span lang="en">Tramtai turns Claude Code, Codex, GitHub Copilot CLI and the Gemini API into an OpenAI- and Anthropic-compatible API that runs on your computer. Connect any app by changing just the URL. Antigravity is there too, for now from Try and the CLI.</span>
       </p>
       <div class="acciones">
         <a class="boton principal" href="#descargar" data-descarga>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
           <span class="texto-descarga"><span lang="es">Descargar gratis</span><span lang="en">Download for free</span></span>
         </a>
-        <a class="boton secundario" href="ayuda/"><span lang="es">Cómo empezar</span><span lang="en">Get started</span></a>
+        <a class="boton secundario" href="ayuda/empezar.html"><span lang="es">Cómo empezar</span><span lang="en">Get started</span></a>
       </div>
       <p class="nota">
-        <span lang="es">Windows 10 y 11, macOS 11 o posterior y Linux · gratis para uso no comercial</span>
-        <span lang="en">Windows 10 and 11, macOS 11 or later and Linux · free for non-commercial use</span>
+        <span lang="es">Windows 10 y 11, macOS 11 o posterior y Linux · gratis para uso personal y no comercial</span>
+        <span lang="en">Windows 10 and 11, macOS 11 or later and Linux · free for personal and non-commercial use</span>
       </p>
 
       <div class="mapa" aria-hidden="true">
@@ -208,7 +228,7 @@
 cliente = OpenAI(base_url=<span class="s">"http://127.0.0.1:17373/openai/v1"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
 
 respuesta = cliente.chat.completions.create(
-    model=<span class="s">"claude/sonnet"</span>,
+    model=<span class="s">"claude/haiku"</span>,
     messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Resume este contrato en tres puntos"</span>}],
 )</pre>
 <pre class="codigo" id="codigo-mapa-2" hidden><span class="c"># 1. Sube el PDF · Upload the PDF</span>
@@ -246,24 +266,48 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
           <h2><span lang="es">Los agentes que ya pagas, <em>al servicio de tus apps</em>.</span><span lang="en">The agents you already pay for, <em>working for your apps</em>.</span></h2>
           <p class="suave"><span lang="es">Sin servidores intermedios ni cuentas nuevas: tu app habla con Tramtai como con OpenAI o Anthropic, y Tramtai con el agente que elijas.</span><span lang="en">No middle servers, no new accounts: your app talks to Tramtai as it would to OpenAI or Anthropic, and Tramtai talks to the agent you pick.</span></p>
         </div>
-        <div class="motivos">
-          <div>
-            <h3><span lang="es">Local</span><span lang="en">Local</span></h3>
-            <p><span lang="es">Escucha solo en tu equipo y no envía estadísticas a nadie.</span><span lang="en">Listens only on your computer and sends no statistics anywhere.</span></p>
+        <div class="franja">
+          <div class="franja-lado">
+            <h3><span lang="es">Sin Tramtai</span><span lang="en">Without Tramtai</span></h3>
+            <p><span lang="es">Una clave de pago por proveedor en cada app, cada SDK con su URL y la cuenta de cada uno por separado.</span><span lang="en">A paid key per provider in every app, each SDK with its own URL and a separate bill for each one.</span></p>
           </div>
-          <div>
-            <h3><span lang="es">Compatible</span><span lang="en">Compatible</span></h3>
-            <p><span lang="es">Rutas de OpenAI y Anthropic, con streaming y herramientas, más una API propia.</span><span lang="en">OpenAI and Anthropic routes, with streaming and tools, plus a native API.</span></p>
-          </div>
-          <div>
-            <h3><span lang="es">Sin cortes</span><span lang="en">No outages</span></h3>
-            <p><span lang="es">Si un agente llega a su límite, la petición sigue con el siguiente de tu lista.</span><span lang="en">If an agent hits its limit, the request moves on to the next one on your list.</span></p>
-          </div>
-          <div>
-            <h3><span lang="es">Bajo control</span><span lang="en">Under control</span></h3>
-            <p><span lang="es">Una clave y un presupuesto por aplicación, con aviso antes del límite.</span><span lang="en">One key and one budget per app, with a warning before the limit.</span></p>
+          <div class="franja-lado con">
+            <h3><span lang="es">Con Tramtai</span><span lang="en">With Tramtai</span></h3>
+            <p><span lang="es">Una sola URL local, en tu equipo, que usa los agentes que ya tienes.</span><span lang="en">One local URL, on your computer, that uses the agents you already have.</span></p>
           </div>
         </div>
+        <ul class="motivos">
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 15h2"/></svg>
+            <h3><span lang="es">Lo que ya pagas</span><span lang="en">What you already pay for</span></h3>
+            <p><span lang="es">Usa tu suscripción o tu clave de cada agente, y cambia de una a otra cuando quieras.</span><span lang="en">Use your subscription or your key for each agent, and switch between them whenever you like.</span></p>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+            <h3><span lang="es">Local</span><span lang="en">Local</span></h3>
+            <p><span lang="es">Escucha solo en tu equipo y no envía estadísticas a nadie.</span><span lang="en">Listens only on your computer and sends no statistics anywhere.</span></p>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0zM12 16v5"/></svg>
+            <h3><span lang="es">Compatible</span><span lang="en">Compatible</span></h3>
+            <p><span lang="es">Rutas de OpenAI y Anthropic y una API propia, con respuesta en vivo; herramientas en las tres.</span><span lang="en">OpenAI and Anthropic routes plus a native API, with live answers; tools in all three.</span></p>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h6l3-5h8M12 12l3 5h5M17 4l3 3-3 3M17 14l3 3-3 3"/></svg>
+            <h3><span lang="es">Sin cortes</span><span lang="en">No outages</span></h3>
+            <p><span lang="es">Si un agente llega a su límite, la petición sigue con el siguiente de tu lista.</span><span lang="en">If an agent hits its limit, the request moves on to the next one on your list.</span></p>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            <h3><span lang="es">Por proyecto</span><span lang="en">Per project</span></h3>
+            <p><span lang="es">Cada espacio de trabajo con su historial, sus claves y sus ajustes.</span><span lang="en">Each workspace with its own history, keys and settings.</span></p>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+            <h3><span lang="es">Bajo control</span><span lang="en">Under control</span></h3>
+            <p><span lang="es">Una API por app con su presupuesto, y el mapa en vivo de cada petición.</span><span lang="en">One API per app with its own budget, and a live map of every request.</span></p>
+          </li>
+        </ul>
       </div>
     </div>
   </section>
@@ -277,45 +321,56 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
       <article class="par">
         <div>
           <span class="etiqueta"><span lang="es">Inicio</span><span lang="en">Home</span></span>
-          <h3><span lang="es">Una línea por agente, con su estado</span><span lang="en">One line per agent, with its status</span></h3>
-          <p class="suave"><span lang="es">Ves de un vistazo qué apps llegan a Tramtai, qué agentes están en servicio y cómo van tus peticiones.</span><span lang="en">See at a glance which apps reach Tramtai, which agents are in service and how your requests are going.</span></p>
+          <h3><span lang="es">El mapa en vivo de tu red</span><span lang="en">A live map of your network</span></h3>
+          <p class="suave"><span lang="es">Cada petición viaja en vivo por la línea de su agente: ves qué apps llegan a Tramtai, qué agentes están en servicio y por dónde va cada una.</span><span lang="en">Every request travels live along its agent’s line: see which apps reach Tramtai, which agents are in service and where each request is.</span></p>
         </div>
         <figure class="captura">
-          <img class="solo-claro" src="capturas/inicio-claro.png" width="1440" height="900" loading="lazy" alt="Inicio: tus apps, Tramtai y una línea por agente con su estado" data-alt-en="Home: your apps, Tramtai and one line per agent with its status">
-          <img class="solo-oscuro" src="capturas/inicio-oscuro.png" width="1440" height="900" loading="lazy" alt="Inicio: tus apps, Tramtai y una línea por agente con su estado" data-alt-en="Home: your apps, Tramtai and one line per agent with its status">
+          <img class="solo-claro" src="capturas/inicio-claro-1440.webp" srcset="capturas/inicio-claro-960.webp 960w, capturas/inicio-claro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 660px" width="1440" height="900" loading="lazy" decoding="async" alt="Inicio: el mapa en vivo con tus apps, Tramtai y una línea por agente" data-alt-en="Home: the live map with your apps, Tramtai and one line per agent">
+          <img class="solo-oscuro" src="capturas/inicio-oscuro-1440.webp" srcset="capturas/inicio-oscuro-960.webp 960w, capturas/inicio-oscuro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 660px" width="1440" height="900" loading="lazy" decoding="async" alt="Inicio: el mapa en vivo con tus apps, Tramtai y una línea por agente" data-alt-en="Home: the live map with your apps, Tramtai and one line per agent">
         </figure>
       </article>
       <article class="par invertido">
+        <div>
+          <span class="etiqueta"><span lang="es">Espacios</span><span lang="en">Workspaces</span></span>
+          <h3><span lang="es">Un espacio por proyecto</span><span lang="en">One workspace per project</span></h3>
+          <p class="suave"><span lang="es">El espacio global y uno por cada proyecto, con su historial, sus APIs y sus ajustes. Actívalos o detenlos, y si mueves la carpeta de un proyecto, la vuelves a ubicar sin perder nada.</span><span lang="en">The global workspace and one per project, each with its history, APIs and settings. Start or stop them, and if you move a project’s folder, point Tramtai to it again without losing anything.</span></p>
+        </div>
+        <figure class="captura">
+          <img class="solo-claro" src="capturas/espacios-claro-1440.webp" srcset="capturas/espacios-claro-960.webp 960w, capturas/espacios-claro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 660px" width="1440" height="900" loading="lazy" decoding="async" alt="Espacios: el espacio global y los de cada proyecto, con su estado, sus APIs y sus peticiones" data-alt-en="Workspaces: the global workspace and one per project, with their status, APIs and requests">
+          <img class="solo-oscuro" src="capturas/espacios-oscuro-1440.webp" srcset="capturas/espacios-oscuro-960.webp 960w, capturas/espacios-oscuro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 660px" width="1440" height="900" loading="lazy" decoding="async" alt="Espacios: el espacio global y los de cada proyecto, con su estado, sus APIs y sus peticiones" data-alt-en="Workspaces: the global workspace and one per project, with their status, APIs and requests">
+        </figure>
+      </article>
+      <article class="par">
         <div>
           <span class="etiqueta"><span lang="es">Probar</span><span lang="en">Try</span></span>
           <h3><span lang="es">De la prueba al código en un clic</span><span lang="en">From test to code in one click</span></h3>
           <p class="suave"><span lang="es">Escribe instrucciones, elige agente y esfuerzo, prueba con tus archivos y copia la petición lista en curl, Python o Node. Si funciona, guárdala como API.</span><span lang="en">Write instructions, pick agent and effort, test with your files and copy the request ready in curl, Python or Node. If it works, save it as an API.</span></p>
         </div>
         <figure class="captura">
-          <img class="solo-claro" src="capturas/probar-claro.png" width="1440" height="900" loading="lazy" alt="Probar: la receta con instrucciones, agente, modelo y esfuerzo, lista para el primer mensaje" data-alt-en="Try: the recipe with instructions, agent, model and effort, ready for the first message">
-          <img class="solo-oscuro" src="capturas/probar-oscuro.png" width="1440" height="900" loading="lazy" alt="Probar: la receta con instrucciones, agente, modelo y esfuerzo, lista para el primer mensaje" data-alt-en="Try: the recipe with instructions, agent, model and effort, ready for the first message">
-        </figure>
-      </article>
-      <article class="par">
-        <div>
-          <span class="etiqueta"><span lang="es">Mis APIs</span><span lang="en">My APIs</span></span>
-          <h3><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></h3>
-          <p class="suave"><span lang="es">Cada app con su clave, sus modelos y su presupuesto. Búscalas, fíltralas y mira cómo conectar cada una.</span><span lang="en">Each app with its own key, models and budget. Search, filter and see how to connect each one.</span></p>
-        </div>
-        <figure class="captura">
-          <img class="solo-claro" src="capturas/mis-apis-claro.png" width="1440" height="900" loading="lazy" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas" data-alt-en="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
-          <img class="solo-oscuro" src="capturas/mis-apis-oscuro.png" width="1440" height="900" loading="lazy" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas" data-alt-en="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
+          <img class="solo-claro" src="capturas/probar-claro-1440.webp" srcset="capturas/probar-claro-960.webp 960w, capturas/probar-claro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 660px" width="1440" height="900" loading="lazy" decoding="async" alt="Probar: la receta con instrucciones, agente, modelo y esfuerzo, lista para el primer mensaje" data-alt-en="Try: the recipe with instructions, agent, model and effort, ready for the first message">
+          <img class="solo-oscuro" src="capturas/probar-oscuro-1440.webp" srcset="capturas/probar-oscuro-960.webp 960w, capturas/probar-oscuro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 660px" width="1440" height="900" loading="lazy" decoding="async" alt="Probar: la receta con instrucciones, agente, modelo y esfuerzo, lista para el primer mensaje" data-alt-en="Try: the recipe with instructions, agent, model and effort, ready for the first message">
         </figure>
       </article>
       <article class="par invertido">
         <div>
-          <span class="etiqueta"><span lang="es">Agentes</span><span lang="en">Agents</span></span>
-          <h3><span lang="es">Conecta cada agente a tu manera</span><span lang="en">Connect each agent your way</span></h3>
-          <p class="suave"><span lang="es">Con tu suscripción o con una clave guardada cifrada en el sistema. Tramtai te dice qué le falta a cada uno.</span><span lang="en">With your subscription or with a key stored encrypted in the system. Tramtai tells you what each one is missing.</span></p>
+          <span class="etiqueta"><span lang="es">Mis APIs</span><span lang="en">My APIs</span></span>
+          <h3><span lang="es">Cada app con su clave y su presupuesto</span><span lang="en">Each app with its own key and budget</span></h3>
+          <p class="suave"><span lang="es">Búscalas, fíltralas y mira cómo conectar cada una. La clave del espacio queda para ti y tus scripts.</span><span lang="en">Search, filter and see how to connect each one. The workspace key is for you and your scripts.</span></p>
         </div>
         <figure class="captura">
-          <img class="solo-claro" src="capturas/agentes-claro.png" width="1440" height="900" loading="lazy" alt="Agentes: una fila por agente con su versión, cómo está conectado y el filtro por estado" data-alt-en="Agents: one row per agent with its version, how it is connected and the status filter">
-          <img class="solo-oscuro" src="capturas/agentes-oscuro.png" width="1440" height="900" loading="lazy" alt="Agentes: una fila por agente con su versión, cómo está conectado y el filtro por estado" data-alt-en="Agents: one row per agent with its version, how it is connected and the status filter">
+          <img class="solo-claro" src="capturas/mis-apis-claro-1440.webp" srcset="capturas/mis-apis-claro-960.webp 960w, capturas/mis-apis-claro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 660px" width="1440" height="900" loading="lazy" decoding="async" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas" data-alt-en="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
+          <img class="solo-oscuro" src="capturas/mis-apis-oscuro-1440.webp" srcset="capturas/mis-apis-oscuro-960.webp 960w, capturas/mis-apis-oscuro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 660px" width="1440" height="900" loading="lazy" decoding="async" alt="Mis APIs en pestañas: tus APIs por grupo, con buscador, filtros por estado y agente, y páginas" data-alt-en="My APIs in tabs: your APIs by group, with search, status and agent filters, and pages">
+        </figure>
+      </article>
+      <article class="par">
+        <div>
+          <span class="etiqueta"><span lang="es">Agentes</span><span lang="en">Agents</span></span>
+          <h3><span lang="es">Conecta cada agente a tu manera</span><span lang="en">Connect each agent your way</span></h3>
+          <p class="suave"><span lang="es">Con tu suscripción o con una clave guardada cifrada en el sistema. Ves con qué cuenta entró cada CLI, Tramtai te avisa si la sesión cambió y puedes desconectar un agente cuando quieras.</span><span lang="en">With your subscription or with a key stored encrypted in the system. See which account each CLI is signed in with; Tramtai warns you if the session changed, and you can disconnect an agent whenever you like.</span></p>
+        </div>
+        <figure class="captura">
+          <img class="solo-claro" src="capturas/agentes-claro-1440.webp" srcset="capturas/agentes-claro-960.webp 960w, capturas/agentes-claro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 660px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes: una tarjeta por agente con su versión, la cuenta con la que está conectado y cómo cambiarlo o desconectarlo" data-alt-en="Agents: one card per agent with its version, the account it is signed in with and how to change or disconnect it">
+          <img class="solo-oscuro" src="capturas/agentes-oscuro-1440.webp" srcset="capturas/agentes-oscuro-960.webp 960w, capturas/agentes-oscuro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 660px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes: una tarjeta por agente con su versión, la cuenta con la que está conectado y cómo cambiarlo o desconectarlo" data-alt-en="Agents: one card per agent with its version, the account it is signed in with and how to change or disconnect it">
         </figure>
       </article>
     </div>
@@ -332,7 +387,7 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
         <article class="agente" style="--c: var(--claude)">
           <header><span class="sigla">CL</span><h3>Claude Code</h3></header>
           <p><span lang="es">Tu suscripción de Claude (uso personal) o una clave de API de Anthropic.</span><span lang="en">Your Claude subscription (personal use) or an Anthropic API key.</span></p>
-          <ul><li><span lang="es">Esfuerzo de bajo a máximo</span><span lang="en">Effort from low to maximum</span></li><li><span lang="es">Respuesta en vivo</span><span lang="en">Live answer</span></li></ul>
+          <ul><li><span lang="es">Esfuerzo de bajo a máximo</span><span lang="en">Effort from low to maximum</span></li><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live answer (streaming)</span></li></ul>
         </article>
         <article class="agente" style="--c: var(--codex)">
           <header><span class="sigla">CX</span><h3>Codex</h3></header>
@@ -342,20 +397,20 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
         <article class="agente" style="--c: var(--copilot)">
           <header><span class="sigla">GH</span><h3>GitHub Copilot CLI</h3></header>
           <p><span lang="es">Tu cuenta de GitHub Copilot (Free, Pro o de empresa) con <code>copilot login</code>, o un token de GitHub. Cada petición gasta créditos de tu plan.</span><span lang="en">Your GitHub Copilot account (Free, Pro or business) with <code>copilot login</code>, or a GitHub token. Every request uses credits from your plan.</span></p>
-          <ul><li><span lang="es">Muestra el modelo que eligió</span><span lang="en">Shows the model it picked</span></li><li><span lang="es">Respuesta en vivo</span><span lang="en">Live answer</span></li></ul>
+          <ul><li><span lang="es">Muestra el modelo que eligió</span><span lang="en">Shows the model it picked</span></li><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live answer (streaming)</span></li></ul>
         </article>
         <article class="agente" style="--c: var(--gemini)">
           <header><span class="sigla">GM</span><h3>Gemini API</h3></header>
           <p><span lang="es">Tu clave de la Gemini API, sin instalar ningún CLI.</span><span lang="en">Your Gemini API key, with no CLI to install.</span></p>
-          <ul><li><span lang="es">Respuesta en vivo</span><span lang="en">Live answer</span></li><li><span lang="es">Respuestas con esquema JSON</span><span lang="en">JSON schema answers</span></li></ul>
+          <ul><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live answer (streaming)</span></li><li><span lang="es">Respuestas con esquema JSON</span><span lang="en">JSON schema answers</span></li></ul>
         </article>
         <article class="agente" style="--c: var(--antigravity)">
           <header><span class="sigla">AG</span><h3>Antigravity</h3></header>
-          <p><span lang="es">El CLI de Google con tu clave de la Gemini API, sin herramientas: un hook las niega todas. Por ahora, desde Probar, la terminal y la CLI.</span><span lang="en">Google's CLI with your Gemini API key, without tools: a hook denies them all. For now, from Try, the terminal and the CLI.</span></p>
-          <ul><li><span lang="es">Esfuerzo de bajo a máximo</span><span lang="en">Effort from low to maximum</span></li><li><span lang="es">Respuesta en vivo</span><span lang="en">Live answer</span></li></ul>
+          <p><span lang="es">El CLI de Google con tu clave de la Gemini API, sin herramientas: no lee archivos ni ejecuta órdenes. Por ahora, solo desde Probar, la terminal y la CLI; todavía no desde tus apps.</span><span lang="en">Google’s CLI with your Gemini API key, without tools: it can’t read files or run commands. For now only from Try, the terminal and the CLI; not yet from your apps.</span></p>
+          <ul><li><span lang="es">Esfuerzo de bajo a máximo</span><span lang="en">Effort from low to maximum</span></li><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live answer (streaming)</span></li></ul>
         </article>
       </div>
-      <p class="nota-agentes suave"><span lang="es">Cada agente vive en su propio módulo y se comprueba con su CLI real antes de usarse desde tus apps: un mensaje hostil no le hace leer archivos, ejecutar órdenes ni salir a la red.</span><span lang="en">Each agent lives in its own module and is checked with its real CLI before your apps can use it: a hostile message can't make it read files, run commands or reach the network.</span></p>
+      <p class="nota-agentes suave"><span lang="es">Antes de que tus apps lo usen, cada agente se comprueba con su CLI real: un mensaje hostil no le hace leer archivos, ejecutar órdenes ni salir a la red.</span><span lang="en">Before your apps can use it, each agent is checked with its real CLI: a hostile message can’t make it read files, run commands or reach the network.</span></p>
     </div>
   </section>
 
@@ -364,71 +419,71 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
       <div class="cabeza centrada">
         <span class="etiqueta"><span lang="es">Funciones</span><span lang="en">Features</span></span>
         <h2><span lang="es">Una red con una línea por agente.</span><span lang="en">A network with one line per agent.</span></h2>
-        <p class="suave"><span lang="es">Cada petición viaja por la línea de su agente, y tú ves el recorrido completo: en cola, en ejecución y llegada.</span><span lang="en">Every request travels along its agent's line, and you see the whole journey: queued, running and arrived.</span></p>
+        <p class="suave"><span lang="es">Cada petición viaja por la línea de su agente, y tú lo ves en vivo: en cola, en ejecución y llegada.</span><span lang="en">Every request travels along its agent's line, and you watch it live: queued, running and arrived.</span></p>
       </div>
       <div class="rejilla">
-        <p class="grupo-funciones" role="heading" aria-level="3"><span lang="es">Conecta</span><span lang="en">Connect</span></p>
+        <h3 class="grupo-funciones"><span lang="es">Conecta</span><span lang="en">Connect</span></h3>
         <article class="tarjeta">
           <div class="linea"></div>
-          <h3><span lang="es">Compatible con tus SDK</span><span lang="en">Works with your SDKs</span></h3>
-          <p><span lang="es">Rutas compatibles con OpenAI (chat y responses) y Anthropic (messages), con streaming y herramientas (<code>tools</code>), más una API propia con eventos en vivo.</span><span lang="en">OpenAI-compatible (chat and responses) and Anthropic-compatible (messages) routes, with streaming and tool calling (<code>tools</code>), plus a native API with live events.</span></p>
+          <h4><span lang="es">Compatible con tus SDK</span><span lang="en">Works with your SDKs</span></h4>
+          <p><span lang="es">Rutas compatibles con OpenAI (chat y responses) y Anthropic (messages) con respuesta en vivo (streaming), más una API propia con eventos en vivo. Las tres admiten herramientas (<code>tools</code>).</span><span lang="en">OpenAI-compatible (chat and responses) and Anthropic-compatible (messages) routes with live answers (streaming), plus a native API with live events. All three support tool calling (<code>tools</code>).</span></p>
         </article>
         <article class="tarjeta">
           <div class="linea" style="background: var(--codex)"></div>
-          <h3><span lang="es">Desde donde prefieras</span><span lang="en">Use it your way</span></h3>
-          <p><span lang="es">App con icono en la bandeja, Web UI en español e inglés, terminal interactiva y CLI. Todas ven los mismos trabajos.</span><span lang="en">Tray app, Web UI in Spanish and English, interactive terminal and CLI. They all see the same jobs.</span></p>
+          <h4><span lang="es">Desde donde prefieras</span><span lang="en">Use it your way</span></h4>
+          <p><span lang="es">Icono en la bandeja, la app en tu navegador (en español e inglés), terminal interactiva y CLI. Todas ven los mismos trabajos.</span><span lang="en">Tray icon, the app in your browser (in Spanish and English), interactive terminal and CLI. They all see the same jobs.</span></p>
         </article>
         <article class="tarjeta">
           <div class="linea" style="background: var(--gemini)"></div>
-          <h3><span lang="es">Archivos de verdad</span><span lang="en">Real documents</span></h3>
+          <h4><span lang="es">Archivos de verdad</span><span lang="en">Real documents</span></h4>
           <p><span lang="es">Adjunta PDF, Word, Excel, PowerPoint, HTML o texto: Tramtai los convierte a texto antes de pasarlos al agente.</span><span lang="en">Attach PDF, Word, Excel, PowerPoint, HTML or text files: Tramtai turns them into text before handing them to the agent.</span></p>
         </article>
         <article class="tarjeta">
           <div class="linea" style="background: var(--copilot)"></div>
-          <h3><span lang="es">API propia con OpenAPI</span><span lang="en">Native API with OpenAPI</span></h3>
+          <h4><span lang="es">API propia con OpenAPI</span><span lang="en">Native API with OpenAPI</span></h4>
           <p><span lang="es">Con <code>/api/v1</code> sigues, cancelas y reintentas cada petición. Trae su especificación OpenAPI, y «Ver como código» te da la petición lista en curl, Python o Node.</span><span lang="en">With <code>/api/v1</code> you follow, cancel and retry every request. It ships its OpenAPI spec, and “View as code” gives you the request ready in curl, Python or Node.</span></p>
         </article>
-        <p class="grupo-funciones" role="heading" aria-level="3"><span lang="es">Controla</span><span lang="en">Control</span></p>
+        <h3 class="grupo-funciones"><span lang="es">Controla</span><span lang="en">Control</span></h3>
         <article class="tarjeta">
           <div class="linea" style="background: var(--claude)"></div>
-          <h3><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></h3>
+          <h4><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></h4>
           <p><span lang="es">Crea varias APIs con su propia clave, los modelos permitidos, instrucciones fijas y un presupuesto diario o mensual que corta al llegar al límite. Actívalas o detenlas sin reiniciar.</span><span lang="en">Create several APIs, each with its own key, allowed models, fixed instructions and a daily or monthly budget that cuts off at the limit. Turn them on or off without restarting.</span></p>
         </article>
         <article class="tarjeta">
           <div class="linea" style="background: var(--codex)"></div>
-          <h3><span lang="es">De la prueba a la API en un clic</span><span lang="en">From test to API in one click</span></h3>
-          <p><span lang="es">En Probar defines instrucciones, agente y esquema JSON, lo pruebas con tus archivos y lo guardas como API. Tu app envía el mensaje y recibe la respuesta con esa forma.</span><span lang="en">In Try you set instructions, agent and JSON schema, test it with your files and save it as an API. Your app sends the message and gets the answer in that shape.</span></p>
+          <h4><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></h4>
+          <p><span lang="es">Cada proyecto guarda sus datos aparte. Los Ajustes muestran qué viene de todo Tramtai, y una carpeta clonada pregunta antes de aplicar su configuración.</span><span lang="en">Each project keeps its data apart. Settings show what comes from all of Tramtai, and a cloned folder asks before applying its configuration.</span></p>
         </article>
         <article class="tarjeta">
           <div class="linea" style="background: var(--claude)"></div>
-          <h3><span lang="es">Modelo y esfuerzo a tu medida</span><span lang="en">Your model, your effort</span></h3>
+          <h4><span lang="es">Modelo y esfuerzo a tu medida</span><span lang="en">Your model, your effort</span></h4>
           <p><span lang="es">Elige modelo en cada petición y, en los agentes que lo admiten, cuánto razona: de bajo a máximo.</span><span lang="en">Pick the model per request and, with the agents that support it, how hard it reasons: from low to maximum.</span></p>
         </article>
         <article class="tarjeta">
           <div class="linea" style="background: var(--gemini)"></div>
-          <h3><span lang="es">Ayuda dentro de la app</span><span lang="en">Help inside the app</span></h3>
-          <p><span lang="es">Guías paso a paso, qué hacer ante cada error y un buscador, en español e inglés, sin salir de Tramtai.</span><span lang="en">Step-by-step guides, what to do about each error and a search box, in Spanish and English, without leaving Tramtai.</span></p>
+          <h4><span lang="es">Ayuda dentro de la app</span><span lang="en">Help inside the app</span></h4>
+          <p><span lang="es">Un «?» en cada página, qué hacer junto a cada error y un buscador, en español e inglés. La misma Ayuda está <a href="ayuda/">en esta web</a>.</span><span lang="en">A “?” on every page, what to do right next to each error and a search box, in Spanish and English. The same Help is <a href="ayuda/">on this website</a>.</span></p>
         </article>
-        <p class="grupo-funciones" role="heading" aria-level="3"><span lang="es">Protege</span><span lang="en">Protect</span></p>
+        <h3 class="grupo-funciones"><span lang="es">Protege</span><span lang="en">Protect</span></h3>
         <article class="tarjeta">
           <div class="linea" style="background: var(--antigravity)"></div>
-          <h3><span lang="es">Respaldo entre agentes</span><span lang="en">Agent fallback</span></h3>
+          <h4><span lang="es">Respaldo entre agentes</span><span lang="en">Agent fallback</span></h4>
           <p><span lang="es">Si un agente llega a su límite o falla antes de responder, la petición sigue con el siguiente de tu lista, sin que tu app lo note.</span><span lang="en">If an agent hits its limit or fails before answering, the request continues with the next one on your list, without your app noticing.</span></p>
         </article>
         <article class="tarjeta">
           <div class="linea"></div>
-          <h3><span lang="es">Respuestas con forma</span><span lang="en">Shaped responses</span></h3>
+          <h4><span lang="es">Respuestas con forma</span><span lang="en">Shaped responses</span></h4>
           <p><span lang="es">Elige una plantilla o arma los campos, sin escribir JSON Schema. Tramtai valida la respuesta, te dice qué campo falló y la corrige con un clic.</span><span lang="en">Pick a template or build the fields, without writing JSON Schema. Tramtai validates the response, tells you which field failed and corrects it with one click.</span></p>
         </article>
         <article class="tarjeta">
           <div class="linea" style="background: var(--antigravity)"></div>
-          <h3><span lang="es">Claves a salvo</span><span lang="en">Keys kept safe</span></h3>
+          <h4><span lang="es">Claves a salvo</span><span lang="en">Keys kept safe</span></h4>
           <p><span lang="es">Tus claves de proveedor quedan cifradas en el almacén del sistema, y las de tus APIs se ven una sola vez y se regeneran con un clic si se filtran.</span><span lang="en">Your provider keys stay encrypted in the system store, and your APIs' keys are shown only once and can be regenerated in one click if they leak.</span></p>
         </article>
         <article class="tarjeta">
           <div class="linea" style="background: var(--copilot)"></div>
-          <h3><span lang="es">Agentes con las manos atadas</span><span lang="en">Agents with their hands tied</span></h3>
-          <p><span lang="es">Los agentes no tienen terminal ni pueden escribir archivos o salir a la red (Claude, GitHub Copilot y Antigravity, sin herramientas; Codex, en solo lectura), trabajan en una carpeta temporal vacía y no reciben las claves de los demás.</span><span lang="en">Agents have no terminal and can't write files or reach the network (Claude, GitHub Copilot and Antigravity without tools; Codex read-only), work in an empty temporary folder and never get the other agents' keys.</span></p>
+          <h4><span lang="es">Agentes con las manos atadas</span><span lang="en">Agents with their hands tied</span></h4>
+          <p><span lang="es">Sin terminal, sin escribir archivos y sin salir a la red: cada agente trabaja en una carpeta temporal vacía y no recibe las claves de los demás. Codex, en solo lectura.</span><span lang="en">No terminal, no writing files and no network: each agent works in an empty temporary folder and never gets the other agents’ keys. Codex runs read-only.</span></p>
         </article>
       </div>
     </div>
@@ -452,19 +507,23 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
         <article class="tarjeta" data-sistema="macos">
           <div class="linea" style="background: var(--claude)"></div>
           <h3>macOS 11+</h3>
-          <p class="suave"><span lang="es">El <code>.dmg</code> sirve para Intel y Apple Silicon. Con Homebrew se instala sin el aviso de Gatekeeper:</span><span lang="en">The <code>.dmg</code> works on Intel and Apple Silicon. With Homebrew it installs without the Gatekeeper prompt:</span><br><code>brew tap mscottb/tramtai https://github.com/MscottB/Tramtai</code><br><code>brew install --cask tramtai</code></p>
+          <p class="suave"><span lang="es">El <code>.dmg</code> sirve para Intel y Apple Silicon. Con Homebrew se instala sin el aviso de Gatekeeper:</span><span lang="en">The <code>.dmg</code> works on Intel and Apple Silicon. With Homebrew it installs without the Gatekeeper prompt:</span></p>
+          <pre class="codigo"><code>brew tap mscottb/tramtai https://github.com/MscottB/Tramtai
+brew install --cask tramtai</code></pre>
           <a class="boton principal" href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="macos.dmg"><span lang="es">Descargar el .dmg</span><span lang="en">Download the .dmg</span></a>
           <p class="otras"><span lang="es">Solo CLI y servicio:</span><span lang="en">CLI and service only:</span> <a href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="macos-arm64.tar.gz">Apple Silicon</a> · <a href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="macos-amd64.tar.gz">Intel</a></p>
         </article>
         <article class="tarjeta" data-sistema="linux">
           <div class="linea" style="background: var(--gemini)"></div>
           <h3>Linux</h3>
-          <p class="suave"><span lang="es">Paquetes <code>.deb</code> y <code>.rpm</code> (x64 y ARM) con la app de escritorio. Si solo quieres la CLI y el servicio, también con Homebrew:</span><span lang="en"><code>.deb</code> and <code>.rpm</code> packages (x64 and ARM) with the desktop app. For just the CLI and the service, Homebrew works too:</span><br><code>brew install mscottb/tramtai/tramtai</code></p>
+          <p class="suave"><span lang="es">Paquetes <code>.deb</code> y <code>.rpm</code> (x64 y ARM) con la app de escritorio. Si solo quieres la CLI y el servicio, también con Homebrew:</span><span lang="en"><code>.deb</code> and <code>.rpm</code> packages (x64 and ARM) with the desktop app. For just the CLI and the service, Homebrew works too:</span></p>
+          <pre class="codigo"><code>brew install mscottb/tramtai/tramtai</code></pre>
           <a class="boton principal" href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="linux-amd64.deb" data-arm="linux-arm64.deb"><span lang="es">Descargar el .deb</span><span lang="en">Download the .deb</span> <span data-arq>(x64)</span></a>
           <p class="otras"><a href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="linux-amd64.rpm" data-arm="linux-arm64.rpm">.rpm <span data-arq>(x64)</span></a> · <span lang="es">otra arquitectura:</span><span lang="en">other architecture:</span> <a href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="linux-arm64.deb" data-arm="linux-amd64.deb">.deb <span data-arq-otra>(ARM)</span></a> · <a href="https://github.com/MscottB/Tramtai/releases/latest" data-archivo="linux-arm64.rpm" data-arm="linux-amd64.rpm">.rpm <span data-arq-otra>(ARM)</span></a></p>
         </article>
       </div>
-      <p class="suave todas"><a href="https://github.com/MscottB/Tramtai/releases/latest"><span lang="es">Todas las descargas</span><span lang="en">All downloads</span></a><span data-version></span> · <code>SHA256SUMS.txt</code></p>
+      <p class="suave todas"><a href="https://github.com/MscottB/Tramtai/releases/latest"><span lang="es">Todas las descargas</span><span lang="en">All downloads</span></a><span data-version> · v0.54.0</span> · <a href="https://github.com/MscottB/Tramtai/releases/latest/download/SHA256SUMS.txt"><code>SHA256SUMS.txt</code></a></p>
+      <p class="suave todas"><span lang="es">El conversor sin conexión solo hace falta si tu red bloquea la descarga de markitdown, que Tramtai usa para leer PDF, Word o Excel.</span><span lang="en">The offline converter is only needed if your network blocks the markitdown download, which Tramtai uses to read PDF, Word or Excel files.</span></p>
     </div>
   </section>
 
@@ -478,7 +537,8 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
         </div>
         <ul>
           <li><b><span lang="es">Red</span><span lang="en">Network</span></b><span><span lang="es">Escucha solo en <strong>127.0.0.1</strong> y cada API exige su propia clave.</span><span lang="en">Listens only on <strong>127.0.0.1</strong> and every API requires its own key.</span></span></li>
-          <li><b><span lang="es">Claves</span><span lang="en">Keys</span></b><span><span lang="es">Tus claves de API quedan <strong>cifradas en el almacén del sistema</strong> (Administrador de credenciales, Llavero de macOS o Secret Service de Linux), nunca en los archivos de Tramtai. La clave de cada API solo se ve al crearla y la Web UI no se abre con ella. Tramtai jamás lee las credenciales de los CLI: con GitHub Copilot solo anota qué cuenta inició sesión.</span><span lang="en">Your API keys are <strong>encrypted in the system store</strong> (Credential Manager, macOS Keychain or the Linux Secret Service), never in Tramtai's files. Each API's key is shown only when it's created, and it doesn't open the Web UI. Tramtai never reads the CLIs' credentials: with GitHub Copilot it only notes which account is signed in.</span></span></li>
+          <li><b><span lang="es">Claves</span><span lang="en">Keys</span></b><span><span lang="es">Tus claves de API quedan <strong>cifradas en el almacén del sistema</strong>, nunca en los archivos de Tramtai. La clave de cada API solo se ve al crearla y no sirve para abrir la app.</span><span lang="en">Your API keys are <strong>encrypted in the system store</strong>, never in Tramtai’s files. Each API’s key is shown only when it’s created and can’t open the app.</span></span></li>
+          <li><b><span lang="es">Sesiones</span><span lang="en">Sessions</span></b><span><span lang="es">Tramtai <strong>jamás lee las credenciales de los CLI</strong>: solo les pregunta con qué cuenta iniciaste sesión.</span><span lang="en">Tramtai <strong>never reads the CLIs’ credentials</strong>: it only asks them which account you signed in with.</span></span></li>
           <li><b><span lang="es">Datos</span><span lang="en">Data</span></b><span><span lang="es">Las respuestas <strong>caducan a las 24 horas</strong> y puedes vaciar el historial cuando quieras.</span><span lang="en">Responses <strong>expire after 24 hours</strong> and you can clear the history at any time.</span></span></li>
           <li><b><span lang="es">Telemetría</span><span lang="en">Telemetry</span></b><span><span lang="es"><strong>Ninguna.</strong> Tramtai no envía estadísticas de uso a nadie.</span><span lang="en"><strong>None.</strong> Tramtai sends no usage statistics anywhere.</span></span></li>
         </ul>
@@ -498,10 +558,15 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
           <h3><span lang="es">Descarga Tramtai</span><span lang="en">Download Tramtai</span></h3>
           <p><span lang="es">Para Windows, macOS y Linux. En unos minutos tienes tu primera API.</span><span lang="en">For Windows, macOS and Linux. Your first API is minutes away.</span></p>
         </a>
-        <a class="tarjeta" href="ayuda/">
+        <a class="tarjeta" href="ayuda/empezar.html">
           <div class="linea" style="background: var(--codex)"></div>
           <h3><span lang="es">Lee la ayuda</span><span lang="en">Read the help</span></h3>
           <p><span lang="es">Cómo conectar cada agente, apuntar tus apps y resolver los errores habituales.</span><span lang="en">How to connect each agent, point your apps and fix the usual errors.</span></p>
+        </a>
+        <a class="tarjeta" href="desarrolladores.html">
+          <div class="linea" style="background: var(--copilot)"></div>
+          <h3><span lang="es">Para desarrolladores</span><span lang="en">For developers</span></h3>
+          <p><span lang="es">Las rutas, los ejemplos en curl, Python y Node, y la especificación OpenAPI.</span><span lang="en">The routes, examples in curl, Python and Node, and the OpenAPI spec.</span></p>
         </a>
       </div>
       <p class="suave licencia">
@@ -512,16 +577,23 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
   </section>
 </main>
 
+<!-- comun:pie -->
 <footer>
   <div class="envoltura">
-    <span>© 2026 Michael Scott B. · Tramtai · <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a></span>
-    <span>
-      <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span>
-      <span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span>
-    </span>
+    <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
+      <a href="./#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+      <a href="ayuda/empezar.html"><span lang="es">Empezar</span><span lang="en">Get started</span></a>
+      <a href="ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+      <a href="https://github.com/MscottB/Tramtai">GitHub</a>
+      <a href="https://github.com/MscottB/Tramtai/releases"><span lang="es">Versiones</span><span lang="en">Releases</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md"><span lang="es">Licencia</span><span lang="en">License</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a>
+    </nav>
+    <p>© 2026 Michael Scott B. · <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span></p>
   </div>
 </footer>
+<!-- /comun:pie -->
 
-<script src="sitio.js"></script>
 </body>
 </html>

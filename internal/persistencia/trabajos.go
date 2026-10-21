@@ -55,7 +55,7 @@ func (a *Almacen) Aceptar(ctx context.Context, t nucleo.Trabajo, clave string, m
 		return t, false, err
 	}
 	if maximoActivos > 0 && activos >= maximoActivos {
-		return t, false, nucleo.NuevoError(nucleo.CodigoColaLlena, idioma.T("la cola de la instancia está llena"))
+		return t, false, nucleo.NuevoError(nucleo.CodigoColaLlena, idioma.T("la cola del espacio está llena"))
 	}
 	if err := a.comprobarPresupuesto(ctx, tx, t, ahora); err != nil {
 		return t, false, err
@@ -378,6 +378,18 @@ func (a *Almacen) porCambio(ctx context.Context, instancia, punto, condicion str
 		trabajos = append(trabajos, t)
 	}
 	return trabajos, filas.Err()
+}
+
+// ContarOrigenDesde cuenta los trabajos de la instancia con ese origen creados desde desde; sinPunto deja solo los que
+// llegaron con la clave de la instancia (sin API por aplicación): el aviso «dales su propia API» de Mis APIs.
+func (a *Almacen) ContarOrigenDesde(ctx context.Context, instancia, origen string, sinPunto bool, desde time.Time) (int, error) {
+	consulta := `SELECT COUNT(*) FROM trabajos WHERE instancia = ? AND origen = ? AND creado_en >= ?`
+	if sinPunto {
+		consulta += ` AND (punto_acceso IS NULL OR punto_acceso = '')`
+	}
+	var n int
+	err := a.db.QueryRowContext(ctx, consulta, instancia, origen, fecha(desde)).Scan(&n)
+	return n, err
 }
 
 // Contar devuelve cuántos trabajos de la instancia hay en cada estado.

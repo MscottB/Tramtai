@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"tramtai/internal/credenciales"
 	"tramtai/internal/idioma"
@@ -40,6 +42,8 @@ type Estado struct {
 	Problema      string
 	// ProblemaCodigo clasifica Problema para la Web UI sin depender del idioma del texto.
 	ProblemaCodigo string
+	// Cuenta es la cuenta de la suscripción, si el CLI la informa (solo se muestra en este equipo).
+	Cuenta string
 }
 
 // Códigos de ProblemaCodigo; vacío con Problema es otro problema que hay que revisar.
@@ -48,7 +52,61 @@ const (
 	ProblemaFaltaClave  = "falta_clave"
 	// ProblemaAviso es algo que conviene saber pero no impide usar el agente.
 	ProblemaAviso = "aviso"
+	// ProblemaUsaClave: el agente está en suscripción pero su CLI pasó a una clave de API.
+	ProblemaUsaClave = "usa_clave_api"
+	// ProblemaSesion: una petición real falló por autenticación y aún no volvió a funcionar.
+	ProblemaSesion = "sesion_no_responde"
 )
+
+// Estados de SesionCLI.
+const (
+	SesionOK          = "ok"
+	SesionSin         = "sin_sesion"
+	SesionUsaClave    = "usa_clave_api"
+	SesionDesconocida = "desconocido"
+)
+
+// SesionCLI es lo que sabe un CLI de su propia sesión: si hay, si es de la suscripción o de una clave de API, y la
+// cuenta si la informa.
+type SesionCLI struct {
+	Estado string
+	Cuenta string
+}
+
+// ComprobadorSesion lo cumplen los agentes con suscripción que saben comprobar su sesión sin gastar mensajes (su
+// comando de estado o su archivo de sesión; ver docs/equipo/m0-agentes.md).
+type ComprobadorSesion interface {
+	ComprobarSesion(ctx context.Context) SesionCLI
+}
+
+// SalidaEstado ejecuta un comando de estado del CLI (sin claves en el entorno y con 5 s como mucho) y devuelve lo que
+// escribió, también si terminó con error (codex login status sale con 1 sin sesión); ok es falso si no llegó a correr.
+func SalidaEstado(ctx context.Context, ruta string, args ...string) (salida string, ok bool) {
+	ctx, cancelar := context.WithTimeout(ctx, 5*time.Second)
+	defer cancelar()
+	cmd := exec.CommandContext(ctx, ruta, args...)
+	cmd.Env = EntornoLimpio(nil)
+	procesos.SinVentana(cmd)
+	datos, err := cmd.Output()
+	var salidaError *exec.ExitError
+	if err != nil && !errors.As(err, &salidaError) {
+		return "", false
+	}
+	return string(datos), ctx.Err() == nil
+}
+
+// AplicarSesion pasa a e lo que dijo ComprobarSesion: sin sesión es como una clave que falta (la tarjeta enseña cómo
+// iniciarla), con clave de API se avisa, y con sesión se anota la cuenta. cli es el nombre que ve el usuario.
+func AplicarSesion(e *Estado, s SesionCLI, cli, iniciar string) {
+	switch s.Estado {
+	case SesionSin:
+		e.Problema, e.ProblemaCodigo = idioma.Tf("%s no tiene sesión iniciada: inicia sesión con %s o pasa a clave de API", cli, iniciar), ProblemaFaltaClave
+	case SesionUsaClave:
+		e.Problema, e.ProblemaCodigo = idioma.Tf("%s usa ahora una clave de API, no tu suscripción", cli), ProblemaUsaClave
+	case SesionOK:
+		e.Cuenta = s.Cuenta
+	}
+}
 
 // Detectable lo implementan los adaptadores que pueden informar su estado sin consumir cuota.
 type Detectable interface {

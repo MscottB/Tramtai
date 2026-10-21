@@ -350,7 +350,7 @@ func (s *Servidor) ejecutarTrabajo(w http.ResponseWriter, r *http.Request) {
 // crearCarga acepta multipart (campo "archivo") o el binario en el cuerpo con ?nombre=.
 func (s *Servidor) crearCarga(w http.ResponseWriter, r *http.Request) {
 	if s.Cargas == nil {
-		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("esta instancia no admite cargas")))
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("este espacio no admite cargas")))
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, int64(s.Config.Limite("conversion.maximo_carga_mb"))<<20+1<<20)
@@ -418,6 +418,7 @@ func (s *Servidor) fichasAgentes(w http.ResponseWriter, _ *http.Request) {
 			"modelo_efectivo_informado": f.ModeloEfectivoInformado, "esfuerzos": noNulo(agentes.Niveles(f.Nombre)),
 			"autenticaciones": noNulo(f.Autenticaciones), "variables_clave": noNulo(f.VariablesClave),
 			"permitido_apps": agentes.PermitidoEnApps(s.Config, f.Nombre), "url_instalacion": f.URLInstalacion,
+			"desconectado": s.Conexiones.Desconectado(f.Nombre),
 		})
 	}
 	for _, f := range agentes.Todos() {
@@ -462,7 +463,7 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 		if !conocida {
 			f.Streaming = "final"
 		}
-		entrada := map[string]any{"agente": nombre, "capacidades": map[string]any{
+		entrada := map[string]any{"agente": nombre, "desconectado": s.Conexiones.Desconectado(nombre), "capacidades": map[string]any{
 			"texto": true, "streaming": f.Streaming, "salida_estructurada": f.SalidaEstructurada, "uso_tokens": "informado_por_cli",
 			"modelo_efectivo_informado": f.ModeloEfectivoInformado, "tool_calling_compatible": false, "imagenes": false, "sesiones_persistentes": false,
 		}}
@@ -479,6 +480,9 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 				e := d.Detectar(ctx)
 				cancelar()
 				entrada["version_detectada"], entrada["autenticacion"], entrada["terminos"] = e.Version, e.Autenticacion, e.Terminos
+				if e.Cuenta != "" {
+					entrada["cuenta"] = e.Cuenta
+				}
 				if e.Problema != "" {
 					entrada["problema"], entrada["problema_codigo"] = e.Problema, e.ProblemaCodigo
 				}
@@ -486,6 +490,14 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	esperar.Wait()
+	// Detección pasiva: si la última petición de un agente falló por autenticación y la detección no vio nada más
+	// grave, se avisa (también de los agentes que no saben comprobar su sesión).
+	for i, nombre := range nombres {
+		if codigo, _ := lista[i]["problema_codigo"].(string); s.Salud.SinRespuesta(nombre) && (lista[i]["problema"] == nil || codigo == adaptadores.ProblemaAviso) {
+			lista[i]["problema"] = idioma.T("la sesión del CLI no responde: la última petición falló por autenticación")
+			lista[i]["problema_codigo"] = adaptadores.ProblemaSesion
+		}
+	}
 	respuesta := map[string]any{
 		"version":               version.Version,
 		"formato_serializacion": adaptadores.FormatoSerializacion,

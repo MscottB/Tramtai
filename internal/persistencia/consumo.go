@@ -60,7 +60,7 @@ func (a *Almacen) comprobarPresupuesto(ctx context.Context, tx *sql.Tx, t nucleo
 			log.Printf("presupuesto de %s: no se pudo leer el consumo: %v", tope.Punto, err)
 			continue
 		}
-		ambito := idioma.T("de la instancia")
+		ambito := idioma.T("del espacio")
 		if tope.Punto != TodaLaInstancia {
 			ambito = idioma.Tf("de la API %s", tope.Punto)
 		}

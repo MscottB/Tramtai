@@ -21,6 +21,7 @@ export const ajustes: Tema = {
         { id: 'que-version', pregunta: 'ayuda.ajustes.pVersion', respuesta: 'ayuda.ajustes.rVersion' },
         { id: 'datos-ruta', pregunta: 'ayuda.ajustes.pDatos', respuesta: 'ayuda.ajustes.rDatos' },
         { id: 'cuanto-se-guarda', pregunta: 'ayuda.ajustes.pRetencion', respuesta: 'ayuda.ajustes.rRetencion' },
+        { id: 'dos-pestanas', pregunta: 'ayuda.ajustes.pPestanas', respuesta: 'ayuda.ajustes.rPestanas', tema: 'espacios' },
       ],
     },
     { tipo: 'ir', pagina: 'configuracion' },

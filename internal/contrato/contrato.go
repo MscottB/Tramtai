@@ -24,6 +24,26 @@ type EstadoInstancia struct {
 	Agente       string         `json:"agente_predeterminado"`
 	Perfil       string         `json:"perfil_predeterminado,omitempty"`
 	Trabajos     map[string]int `json:"trabajos"`
+	UltimoUso    time.Time      `json:"ultimo_uso,omitzero"`
+}
+
+// Espacio es un espacio de trabajo tal como lo ven la página «Espacios» y tramtai espacios: también los detenidos y
+// los que ya no encuentran su carpeta.
+type Espacio struct {
+	ID          string    `json:"id"`
+	Ambito      string    `json:"ambito"`
+	Ruta        string    `json:"ruta,omitempty"`
+	Nombre      string    `json:"nombre"`
+	Activo      bool      `json:"activo"`
+	UltimoUso   time.Time `json:"ultimo_uso,omitzero"`
+	UltimoError string    `json:"ultimo_error,omitempty"`
+	// Estado es activo, detenido o no_encontrado (falta la carpeta o su .tramtai/config.yaml).
+	Estado     string `json:"estado"`
+	Confiado   bool   `json:"confiado"`
+	APIs       int    `json:"apis"`
+	Peticiones int    `json:"peticiones"`
+	// Claves son las de seguridad que trae el local.yaml de un proyecto no confiado: se enseñan antes de confiar.
+	Claves []string `json:"claves,omitempty"`
 }
 
 // Estado es la vista del servicio que devuelve GET /api/v1/servicio.

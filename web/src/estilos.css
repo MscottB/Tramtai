@@ -53,11 +53,21 @@ body.body--dark {
   --sombra: none;
   --sombra-alta: 0 16px 40px rgba(0, 0, 0, 0.5);
   background: var(--fondo);
-  /* Quasar fija --q-primary en línea en body: el acento de noche se impone con !important. */
+  /* Quasar fija --q-primary y --q-negative en línea en body: los de noche se imponen con !important (el rojo de día
+     no llega a 4,5:1 sobre la superficie oscura). */
   --q-primary: #2dd4bf !important;
+  --q-negative: #f87171 !important;
 }
 body.body--dark .bg-primary.text-white {
   color: var(--acento-texto) !important;
+}
+body.body--dark .bg-negative.text-white {
+  color: #2a0606 !important;
+}
+/* El gris neutro de Quasar (#757575) no llega a 4,5:1 sobre la superficie oscura: chips de estado y acciones
+   secundarias como Desconectar usan el texto suave del tema. */
+body.body--dark .text-grey-7 {
+  color: var(--texto-suave) !important;
 }
 
 /* ---------- Base y superficies del navegador ---------- */

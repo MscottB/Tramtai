@@ -95,3 +95,28 @@ Sirven a la spec de agentes por módulos (`releases/v0.43-agentes-modulos/spec.m
   is already running»).
 - **Pendiente:** necesita proveedor (`hermes setup`, lo hace el usuario) y queda para el final, por decisión del
   usuario. Según su documentación, `hermes -z <texto>` da solo la respuesta final por stdout.
+
+## Sesión del CLI sin coste (v0.54, 2026-10-20)
+
+Cómo sabe Tramtai, sin enviar ningún mensaje, si el CLI de un agente con suscripción sigue con sesión, si pasó a una
+clave de API y qué cuenta usa (`releases/v0.54-espacios-de-trabajo/spec.md`, §3). Probado en Windows 11 con los CLI
+reales; las cuentas se anonimizan.
+
+- **Claude Code 2.1.288 — `claude auth status --json`** (también sin `--json`: es lo predeterminado). JSON con
+  `loggedIn`, `authMethod`, `email`, `orgName` y `subscriptionType`. Con sesión de la suscripción:
+  `{"loggedIn": true, "authMethod": "claude.ai", "email": "<correo>", "subscriptionType": "max", …}`. Sin sesión
+  (`CLAUDE_CONFIG_DIR` vacío): `{"loggedIn": false, "authMethod": "none", …}`. Con `ANTHROPIC_API_KEY` en el entorno
+  añade `"apiKeySource": "ANTHROPIC_API_KEY"`, pero Tramtai ejecuta los CLI con el entorno limpio. No gasta mensajes ni
+  red apreciable (lee su configuración). **Sesión sin coste:** sí — `loggedIn: false` → sin sesión; `authMethod` distinto
+  de `claude.ai` → usa clave de API; la cuenta es `email`.
+- **Codex CLI 0.160.0 — `codex login status`.** Texto: `Logged in using ChatGPT` (suscripción, salida 0), `Logged in using
+  an API key - sk-prueb***falsa` (clave, salida 0; probado con una clave falsa en un `CODEX_HOME` temporal) y `Not logged
+  in` (salida 1). No informa la cuenta (está en el token de `auth.json`, que Tramtai no lee). **Sesión sin coste:** sí,
+  sin cuenta.
+- **GitHub Copilot CLI 1.0.98 — `~/.copilot/config.json`** (o `$COPILOT_HOME`), que Tramtai ya leía para saber si hay
+  sesión. JSONC con `loggedInUsers: [{host, kind, login}]` y `lastLoggedInUser`; no guarda tokens. No tiene comando de
+  estado. **Sesión sin coste:** sí; la cuenta es `login`. No se puede saber si «pasó a clave»: con clave Tramtai usa
+  `COPILOT_GITHUB_TOKEN`, no la sesión del CLI.
+- **Antigravity CLI 1.4.2:** solo admite clave de API (`GEMINI_API_KEY`) en Tramtai; no hay sesión que comprobar.
+- **Para todos:** si una petición real falla por autenticación, el agente queda con «La sesión del CLI no responde» hasta
+  que otra funciona (detección pasiva).

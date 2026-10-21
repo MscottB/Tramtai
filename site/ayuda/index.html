@@ -3,48 +3,67 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ayuda · Tramtai</title>
+<title data-en="Help · Tramtai">Ayuda · Tramtai</title>
 <meta name="description" content="Ayuda de Tramtai: instalar, conectar agentes y apps, archivos, JSON, recetas, herramientas y errores.">
+<link rel="canonical" href="https://mscottb.github.io/Tramtai/ayuda/">
+<meta property="og:url" content="https://mscottb.github.io/Tramtai/ayuda/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tramtai">
+<meta property="og:title" content="Ayuda · Tramtai">
+<meta property="og:description" content="Ayuda de Tramtai: instalar, conectar agentes y apps, archivos, JSON, recetas, herramientas y errores.">
+<meta property="og:image" content="https://mscottb.github.io/Tramtai/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="es_ES">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="../logo.png">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="preload" href="../overpass.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../estilo.css">
-<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t } catch (e) {}</script>
+<script src="../sitio.js" defer></script>
+<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>
 </head>
 <body>
+<a class="saltar" href="#contenido"><span lang="es">Saltar al contenido</span><span lang="en">Skip to content</span></a>
 <header class="barra">
   <div class="envoltura">
-    <a class="marca" href="../index.html"><img src="../logo.png" alt="">Tramtai</a>
-    <nav aria-label="Secciones">
-      <a href="../index.html#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
-      <a href="../index.html#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
-      <a href="index.html" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+    <a class="marca" href="../"><img src="../favicon.svg" width="30" height="30" alt=""><span class="marca-texto">Tramtai</span></a>
+    <nav id="menu" aria-label="Secciones" data-aria-en="Sections">
+      <a href="../#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+      <a href="../#agentes"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
+      <a href="../#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+      <a href="../ayuda/" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
       <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
     </nav>
-    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub">
-      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
-    </a>
-    <div class="idioma" role="group" aria-label="Idioma / Language">
+    <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span lang="es" class="solo-lectores">Menú</span><span lang="en" class="solo-lectores">Menu</span></button>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
+    <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
       <button type="button" data-idioma="es" aria-pressed="true">ES</button>
       <button type="button" data-idioma="en" aria-pressed="false">EN</button>
     </div>
-    <div class="idioma tema" role="group" aria-label="Tema / Theme">
-      <button type="button" data-tema="sistema" aria-pressed="true" aria-label="Tema del sistema / System theme" title="Sistema / System">◐</button>
-      <button type="button" data-tema="claro" aria-pressed="false" aria-label="Tema claro / Light theme" title="Claro / Light">☀</button>
-      <button type="button" data-tema="oscuro" aria-pressed="false" aria-label="Tema oscuro / Dark theme" title="Oscuro / Dark">☾</button>
+    <div class="idioma tema" role="group" aria-label="Tema" data-aria-en="Theme">
+      <button type="button" data-tema="sistema" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span lang="es" class="solo-lectores">Tema del sistema</span><span lang="en" class="solo-lectores">System theme</span></button>
+      <button type="button" data-tema="claro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span lang="es" class="solo-lectores">Tema claro</span><span lang="en" class="solo-lectores">Light theme</span></button>
+      <button type="button" data-tema="oscuro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span lang="es" class="solo-lectores">Tema oscuro</span><span lang="en" class="solo-lectores">Dark theme</span></button>
     </div>
-    <a class="boton principal" href="../index.html#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+    <a class="boton principal" href="../#descargar" data-descarga><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span class="boton-texto"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
   </div>
 </header>
 
-<main class="envoltura ayuda-temas">
+<main id="contenido" tabindex="-1" class="envoltura ayuda-temas">
 <article class="doc tema-ayuda">
 <header>
   <h1><span lang="es">Ayuda</span><span lang="en">Help</span></h1>
   <p class="entradilla"><span lang="es">Qué hace Tramtai, cómo empezar, cada función y qué hacer si algo falla.</span><span lang="en">What Tramtai does, how to start, every feature and what to do if something fails.</span></p>
 </header>
 <div class="buscar-ayuda" hidden>
-  <input type="search" id="buscar-ayuda" placeholder="Buscar en la ayuda / Search help" aria-label="Buscar en la ayuda / Search help">
+  <input type="search" id="buscar-ayuda" placeholder="Buscar en la ayuda" data-placeholder-en="Search help" aria-label="Buscar en la ayuda" data-aria-en="Search help">
   <p id="cuenta-ayuda" class="solo-lectores" aria-live="polite"></p>
   <ol id="resultados-ayuda"></ol>
 </div>
@@ -59,6 +78,8 @@
   <a class="tarjeta-tema" href="herramientas.html"><strong><span lang="es">Herramientas</span><span lang="en">Tools</span></strong><span><span lang="es">Tu app ofrece funciones; el agente pide una con sus argumentos y tu app la ejecuta y le devuelve el resultado.</span><span lang="en">Your app offers functions; the agent asks for one with its arguments, and your app runs it and returns the result.</span></span></a>
   <a class="tarjeta-tema" href="presupuestos.html"><strong><span lang="es">Presupuestos</span><span lang="en">Budgets</span></strong><span><span lang="es">Pon límites por día o por mes a una API o a todo el espacio, en peticiones, tokens o dólares.</span><span lang="en">Set daily or monthly limits for an API or the whole workspace, in requests, tokens or dollars.</span></span></a>
   <a class="tarjeta-tema" href="historial.html"><strong><span lang="es">Historial</span><span lang="en">History</span></strong><span><span lang="es">Cada petición queda en el Historial con su respuesta, el agente que respondió y el registro de cada paso.</span><span lang="en">Every request stays in History with its answer, the agent that answered and the log of each step.</span></span></a>
+  <a class="tarjeta-tema" href="espacios.html"><strong><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></strong><span><span lang="es">La global y uno por proyecto, cada uno con su historial, sus APIs y sus ajustes.</span><span lang="en">The global one and one per project, each with its own history, APIs and settings.</span></span></a>
+  <a class="tarjeta-tema" href="claves.html"><strong><span lang="es">Claves y APIs</span><span lang="en">Keys and APIs</span></strong><span><span lang="es">La clave del espacio y las APIs por aplicación: cuándo usar cada una y qué pasa al regenerarlas.</span><span lang="en">The workspace key and per-app APIs: when to use each one and what happens when you regenerate them.</span></span></a>
   <a class="tarjeta-tema" href="ajustes.html"><strong><span lang="es">Ajustes y actualizaciones</span><span lang="en">Settings and updates</span></strong><span><span lang="es">Arranque con el sistema, modelo predeterminado, archivos, historial y actualizaciones.</span><span lang="en">Start with the system, default model, files, history and updates.</span></span></a>
   <a class="tarjeta-tema" href="problemas.html"><strong><span lang="es">Algo falló</span><span lang="en">Something failed</span></strong><span><span lang="es">Los errores más comunes, con el mismo título que ves en la app, y qué hacer con cada uno.</span><span lang="en">The most common errors, with the same title you see in the app, and what to do about each.</span></span></a>
   <a class="tarjeta-tema" href="conceptos.html"><strong><span lang="es">Conceptos</span><span lang="en">Concepts</span></strong><span><span lang="es">Las palabras que usa Tramtai, en una línea cada una.</span><span lang="en">The words Tramtai uses, one line each.</span></span></a>
@@ -74,13 +95,18 @@
 
 <footer>
   <div class="envoltura">
-    <span>© 2026 Michael Scott B. · Tramtai · <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a></span>
-    <span>
-      <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span>
-    </span>
+    <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
+      <a href="../#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+      <a href="../ayuda/empezar.html"><span lang="es">Empezar</span><span lang="en">Get started</span></a>
+      <a href="../ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+      <a href="https://github.com/MscottB/Tramtai">GitHub</a>
+      <a href="https://github.com/MscottB/Tramtai/releases"><span lang="es">Versiones</span><span lang="en">Releases</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md"><span lang="es">Licencia</span><span lang="en">License</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a>
+    </nav>
+    <p>© 2026 Michael Scott B. · <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span></p>
   </div>
 </footer>
-
-<script src="../sitio.js"></script>
 </body>
 </html>

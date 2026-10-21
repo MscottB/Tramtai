@@ -15,11 +15,11 @@ import (
 func (m *modelo) opcionesInicio() []opcion {
 	var ops []opcion
 	if m.o.Proyecto != "" {
-		ops = append(ops, opcion{idioma.T("Instancia del proyecto actual"), func() tea.Cmd { m.inst = m.o.IDProyecto; m.ir(pInstancia); return nil }})
+		ops = append(ops, opcion{idioma.T("Espacio del proyecto actual"), func() tea.Cmd { m.inst = m.o.IDProyecto; m.ir(pInstancia); return nil }})
 	}
 	return append(ops,
-		opcion{idioma.T("Instancia global"), func() tea.Cmd { m.inst = "global"; m.ir(pInstancia); return nil }},
-		opcion{idioma.T("Ver todas las instancias"), func() tea.Cmd { m.ir(pTodas); return m.cargarEstado() }},
+		opcion{idioma.T("Espacio global"), func() tea.Cmd { m.inst = "global"; m.ir(pInstancia); return nil }},
+		opcion{idioma.T("Ver todos los espacios"), func() tea.Cmd { m.ir(pTodas); return m.cargarEstado() }},
 		opcion{idioma.T("Estado del servicio"), func() tea.Cmd { m.ir(pServicio); return m.cargarEstado() }},
 		opcion{idioma.T("Salir"), m.salir},
 	)
@@ -28,7 +28,7 @@ func (m *modelo) opcionesInicio() []opcion {
 func (m *modelo) opcionesInstancia() []opcion {
 	volver := opcion{idioma.T("Volver"), func() tea.Cmd { m.ir(pInicio); return nil }}
 	if m.instancia(m.inst) == nil {
-		texto := idioma.T("Activar instancia")
+		texto := idioma.T("Activar el espacio")
 		if m.cli == nil {
 			texto += idioma.T(" (inicia el servicio en segundo plano)")
 		}
@@ -49,8 +49,8 @@ func (m *modelo) opcionesInstancia() []opcion {
 		}},
 		{idioma.T("Agentes y capacidades"), func() tea.Cmd { m.ir(pLineas); m.titulo = idioma.T("Agentes y capacidades"); return m.cargarAgentes() }},
 		{idioma.T("Abrir Web UI en el navegador"), m.abrirWeb},
-		{idioma.T("Desactivar instancia"), func() tea.Cmd {
-			return m.confirmar(idioma.Tf("¿Desactivar %s? Se cancela lo que esté en cola.", m.inst), m.desactivar(m.inst))
+		{idioma.T("Detener el espacio"), func() tea.Cmd {
+			return m.confirmar(idioma.Tf("¿Detener %s? Se cancela lo que esté en cola.", m.inst), m.desactivar(m.inst))
 		}},
 		volver,
 	}
@@ -74,7 +74,7 @@ func (m *modelo) activar() tea.Cmd {
 		ctx, cancelar := conPlazo(60 * time.Second)
 		defer cancelar()
 		_, err = cli.Activar(ctx, ambito, raiz)
-		return msgAviso{texto: idioma.T("instancia activa"), err: err}
+		return msgAviso{texto: idioma.T("espacio activo"), err: err}
 	}
 }
 
@@ -97,7 +97,7 @@ func (m *modelo) desactivar(id string) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancelar := conPlazo(60 * time.Second)
 		defer cancelar()
-		return msgAviso{texto: idioma.Tf("instancia %s desactivada", id), err: cli.Desactivar(ctx, id)}
+		return msgAviso{texto: idioma.Tf("espacio %s detenido", id), err: cli.Desactivar(ctx, id)}
 	}
 }
 
@@ -155,7 +155,7 @@ func (m *modelo) teclaTodas(tecla string) tea.Cmd {
 		m.inst = i.ID
 		m.ir(pInstancia)
 	case "d":
-		return m.confirmar(idioma.Tf("¿Desactivar %s? Se cancela lo que esté en cola.", i.ID), m.desactivar(i.ID))
+		return m.confirmar(idioma.Tf("¿Detener %s? Se cancela lo que esté en cola.", i.ID), m.desactivar(i.ID))
 	}
 	return nil
 }
@@ -174,7 +174,7 @@ func (m *modelo) teclaServicio(tecla string) tea.Cmd {
 	case "d":
 		if m.cli != nil {
 			cli := m.cli
-			return m.confirmar(idioma.T("¿Detener el servicio y todas sus instancias?"), func() tea.Msg {
+			return m.confirmar(idioma.T("¿Detener el servicio y todos sus espacios?"), func() tea.Msg {
 				ctx, cancelar := conPlazo(30 * time.Second)
 				defer cancelar()
 				err := cli.Detener(ctx)

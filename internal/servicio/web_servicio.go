@@ -1,6 +1,7 @@
 package servicio
 
 import (
+	"errors"
 	"net"
 	"net/http"
 	"strconv"
@@ -19,6 +20,7 @@ func (s *Servicio) activarGlobalUI(w http.ResponseWriter, r *http.Request, ses *
 	inst, err := s.ActivarGlobal()
 	if err == nil {
 		err = s.guardarActivas()
+		_ = s.actualizarDescriptor()
 	}
 	if err != nil {
 		api.EscribirError(w, r, err)
@@ -29,17 +31,32 @@ func (s *Servicio) activarGlobalUI(w http.ResponseWriter, r *http.Request, ses *
 
 func (s *Servicio) abrirProyectoUI(w http.ResponseWriter, r *http.Request, ses *sesion) {
 	var peticion struct {
-		Raiz string `json:"raiz"`
+		Raiz      string `json:"raiz"`
+		Confiar   *bool  `json:"confiar"`
+		CrearAqui bool   `json:"crear_aqui"`
 	}
 	if err := api.LeerJSON(w, r, &peticion); err != nil {
 		api.EscribirError(w, r, err)
 		return
 	}
-	inst, err := s.AbrirProyecto(peticion.Raiz)
+	inst, err := s.AbrirProyecto(peticion.Raiz, AbrirOpciones{Confiar: peticion.Confiar, CrearAqui: peticion.CrearAqui})
 	if err == nil {
 		err = s.guardarActivas()
+		_ = s.actualizarDescriptor()
 	}
-	if err != nil {
+	// Las dos preguntas llevan lo que la app enseña para decidir.
+	var confianza *ErrorConfianza
+	var dentro *ErrorDentroDeProyecto
+	switch {
+	case errors.As(err, &confianza):
+		api.EscribirJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"codigo": nucleo.CodigoConfianzaRequerida,
+			"mensaje": nucleo.MensajeDe(err)}, "claves": append([]string{}, confianza.Claves...), "movido": confianza.Movido})
+		return
+	case errors.As(err, &dentro):
+		api.EscribirJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"codigo": nucleo.CodigoDentroDeProyecto,
+			"mensaje": nucleo.MensajeDe(err)}, "proyecto": dentro.Proyecto})
+		return
+	case err != nil:
 		api.EscribirError(w, r, err)
 		return
 	}
@@ -82,6 +99,40 @@ func (s *Servicio) autenticacionUI(w http.ResponseWriter, r *http.Request, _ *se
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// conexionUI conecta o desconecta un agente: {agente, conectado}.
+func (s *Servicio) conexionUI(w http.ResponseWriter, r *http.Request, _ *sesion) {
+	var peticion struct {
+		Agente    string `json:"agente"`
+		Conectado bool   `json:"conectado"`
+	}
+	if err := api.LeerJSON(w, r, &peticion); err != nil {
+		api.EscribirError(w, r, err)
+		return
+	}
+	if err := s.Conectar(peticion.Agente, peticion.Conectado); err != nil {
+		api.EscribirError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Conectar conecta o desconecta un agente: lo guarda en la configuración global (adaptadores.<agente>.desconectado) y
+// vale al momento en todos los espacios.
+func (s *Servicio) Conectar(agente string, conectado bool) error {
+	if s.opc.Registro[agente] == nil {
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("no hay ningún agente %s", agente))
+	}
+	ruta, err := nucleo.RutaGlobal()
+	if err != nil {
+		return err
+	}
+	if err := FijarValor(ruta, nucleo.OrigenGlobal, "adaptadores."+agente+".desconectado", !conectado); err != nil {
+		return err
+	}
+	s.opc.Conexiones.Fijar(agente, !conectado)
+	return nil
 }
 
 func (s *Servicio) puertoUI(w http.ResponseWriter, r *http.Request, ses *sesion) {

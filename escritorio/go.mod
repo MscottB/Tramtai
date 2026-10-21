@@ -2,7 +2,7 @@ module tramtai/escritorio
 
 go 1.27
 
-toolchain go1.27.2
+toolchain go1.27.3
 
 require (
 	github.com/wailsapp/wails/v3 v3.0.0-beta.28

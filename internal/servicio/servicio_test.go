@@ -182,10 +182,15 @@ func TestPuntosDeAcceso(t *testing.T) {
 	}
 
 	// El punto del proyecto se abre al activar su instancia y se cierra al desactivarla. Un punto en local.yaml
-	// exige que la carpeta sea confiable en la configuración global.
-	if _, err := s.ActivarProyecto(proyecto); err == nil {
-		t.Fatal("un punto en local.yaml de un proyecto no confiable debe rechazarse")
+	// exige que la carpeta sea confiable en la configuración global: sin confianza el espacio se abre sin él.
+	sinConfianza, err := s.ActivarProyecto(proyecto)
+	if err != nil {
+		t.Fatal(err)
 	}
+	if p := s.puntos["del_proyecto"]; p != nil {
+		t.Fatalf("un punto en local.yaml de un proyecto no confiable no se abre: %+v", p)
+	}
+	s.Desactivar(sinConfianza.ID)
 	rutaGlobal = os.Getenv("TRAMTAI_CONFIG_GLOBAL")
 	previa, _ := os.ReadFile(rutaGlobal)
 	os.WriteFile(rutaGlobal, append(previa, []byte("proyectos_confiables: ['"+proyecto+"']\n")...), 0o600)
@@ -575,8 +580,8 @@ func TestRestaurarConInstanciasDanado(t *testing.T) {
 	if len(errores) != 1 || !strings.Contains(errores[0].Error(), "dañado") {
 		t.Fatalf("errores: %v", errores)
 	}
-	if _, err := os.Stat(ruta + ".dañado"); err != nil {
-		t.Fatalf("no se apartó el archivo dañado: %v", err)
+	if apartados, _ := filepath.Glob(ruta + ".dañado-*"); len(apartados) != 1 {
+		t.Fatalf("no se apartó el archivo dañado con su fecha: %v", apartados)
 	}
 	if _, activa := s.instancias["global"]; !activa {
 		t.Fatal("la instancia global debía abrirse")

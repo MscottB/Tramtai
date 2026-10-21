@@ -164,6 +164,25 @@ func (c *Cliente) Desactivar(ctx context.Context, id string) error {
 	return c.pedir(ctx, "DELETE", "/api/v1/servicio/instancias/"+url.PathEscape(id), "", nil, "", nil)
 }
 
+// ConectarAgente conecta o desconecta un agente en todos los espacios.
+func (c *Cliente) ConectarAgente(ctx context.Context, agente string, conectado bool) error {
+	return c.pedir(ctx, "POST", "/api/v1/servicio/agentes/"+url.PathEscape(agente)+"/conexion", "", cuerpoJSON(map[string]bool{"conectado": conectado}), "application/json", nil)
+}
+
+// Espacios devuelve todos los espacios de trabajo conocidos, también los detenidos.
+func (c *Cliente) Espacios(ctx context.Context) ([]contrato.Espacio, error) {
+	var r struct {
+		Espacios []contrato.Espacio `json:"espacios"`
+	}
+	err := c.pedir(ctx, "GET", "/api/v1/servicio/espacios", "", nil, "", &r)
+	return r.Espacios, err
+}
+
+// Olvidar borra un espacio y sus datos en Tramtai (nunca la carpeta del proyecto); nombre lo confirma.
+func (c *Cliente) Olvidar(ctx context.Context, id, nombre string) error {
+	return c.pedir(ctx, "DELETE", "/api/v1/servicio/espacios/"+url.PathEscape(id), "", cuerpoJSON(map[string]string{"nombre": nombre}), "application/json", nil)
+}
+
 // Configuracion devuelve la configuración efectiva de una instancia con el origen de cada valor.
 func (c *Cliente) Configuracion(ctx context.Context, id string) ([]contrato.EntradaConfiguracion, error) {
 	var r struct {

@@ -225,7 +225,7 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.detalle, m.scroll = msg.t, 0
 		m.pantalla = pDetalle
 	case msgModelos:
-		m.modelos = append([]string{idioma.T("(predeterminado de la instancia)")}, msg.lista...)
+		m.modelos = append([]string{idioma.T("(predeterminado del espacio)")}, msg.lista...)
 		if m.iModelo >= len(m.modelos) {
 			m.iModelo = 0
 		}

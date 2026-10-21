@@ -448,7 +448,7 @@ func (s *Servicio) abrirPunto(c candidato, huella, firma string) *puntoActivo {
 		p.err = "desactivado"
 		return p
 	case p.instancia == nil:
-		p.err = idioma.Tf("la instancia %s no está activa", c.cfg.Instancia)
+		p.err = idioma.Tf("el espacio %s no está activo", c.cfg.Instancia)
 		return p
 	}
 	inst := p.instancia
@@ -556,6 +556,31 @@ func FijarValor(ruta string, origen nucleo.Origen, clave string, valor any) erro
 	})
 }
 
+// QuitarValor borra una clave con puntos de un archivo YAML (si está), conservando el resto del archivo y sus
+// comentarios: «Volver al de Global» quita el valor propio del proyecto.
+func QuitarValor(ruta string, origen nucleo.Origen, clave string) error {
+	return editarYAML(ruta, origen, func(nodo *yaml.Node) error {
+		partes := strings.Split(clave, ".")
+		for i, parte := range partes {
+			if nodo.Kind != yaml.MappingNode {
+				return nil
+			}
+			for j := 0; j+1 < len(nodo.Content); j += 2 {
+				if nodo.Content[j].Value != parte {
+					continue
+				}
+				if i == len(partes)-1 {
+					nodo.Content = append(nodo.Content[:j], nodo.Content[j+2:]...)
+					return nil
+				}
+				nodo = nodo.Content[j+1]
+				break
+			}
+		}
+		return nil
+	})
+}
+
 // muYAML serializa leer → editar → guardar de los archivos de configuración dentro del proceso: dos ediciones a la vez
 // (dos pestañas de la Web UI, un ajuste y una API) no se pisan.
 var muYAML sync.Mutex
@@ -590,7 +615,7 @@ func editarYAML(ruta string, origen nucleo.Origen, editar func(raiz *yaml.Node) 
 	if err != nil {
 		return err
 	}
-	if _, err := nucleo.CargarCapaDe(salida, ruta, origen); err != nil {
+	if err := nucleo.ValidarCambio(original, salida, ruta, origen); err != nil {
 		return err
 	}
 	return escribirAtomico(ruta, salida, 0o600)

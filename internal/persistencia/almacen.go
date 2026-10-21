@@ -174,6 +174,19 @@ func rutaURI(ruta string) string {
 	return strings.NewReplacer("%", "%25", "?", "%3F", "#", "%23").Replace(filepath.ToSlash(ruta))
 }
 
+// ContarEn cuenta los trabajos de la base de ruta sin abrirla para escribir ni migrarla: la página «Espacios» lo
+// enseña también de los espacios detenidos.
+func ContarEn(ruta string) (int, error) {
+	db, err := sql.Open("sqlite", "file:"+rutaURI(ruta)+"?mode=ro&_pragma=busy_timeout(2000)")
+	if err != nil {
+		return 0, err
+	}
+	defer db.Close()
+	var n int
+	err = db.QueryRow(`SELECT COUNT(*) FROM trabajos`).Scan(&n)
+	return n, err
+}
+
 // Abrir abre o crea la base en WAL y aplica las migraciones pendientes.
 func Abrir(ruta string) (*Almacen, error) {
 	db, err := sql.Open("sqlite", "file:"+rutaURI(ruta)+"?_pragma=auto_vacuum(2)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)")

@@ -3,64 +3,98 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Conectar mi app · Tramtai</title>
+<title data-en="Connect my app · Tramtai">Conectar mi app · Tramtai</title>
 <meta name="description" content="Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.">
+<link rel="canonical" href="https://mscottb.github.io/Tramtai/ayuda/conectar.html">
+<meta property="og:url" content="https://mscottb.github.io/Tramtai/ayuda/conectar.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tramtai">
+<meta property="og:title" content="Conectar mi app · Tramtai">
+<meta property="og:description" content="Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.">
+<meta property="og:image" content="https://mscottb.github.io/Tramtai/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="es_ES">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0b6e64" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0a1116" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="../logo.png">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="preload" href="../overpass.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../estilo.css">
-<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t } catch (e) {}</script>
+<script src="../sitio.js" defer></script>
+<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
+document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>
 </head>
 <body>
+<a class="saltar" href="#contenido"><span lang="es">Saltar al contenido</span><span lang="en">Skip to content</span></a>
 <header class="barra">
   <div class="envoltura">
-    <a class="marca" href="../index.html"><img src="../logo.png" alt="">Tramtai</a>
-    <nav aria-label="Secciones">
-      <a href="../index.html#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
-      <a href="../index.html#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
-      <a href="index.html" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+    <a class="marca" href="../"><img src="../favicon.svg" width="30" height="30" alt=""><span class="marca-texto">Tramtai</span></a>
+    <nav id="menu" aria-label="Secciones" data-aria-en="Sections">
+      <a href="../#como"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a>
+      <a href="../#agentes"><span lang="es">Agentes</span><span lang="en">Agents</span></a>
+      <a href="../#funciones"><span lang="es">Funciones</span><span lang="en">Features</span></a>
+      <a href="../ayuda/" aria-current="page"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
       <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
     </nav>
-    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub">
-      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
-    </a>
-    <div class="idioma" role="group" aria-label="Idioma / Language">
+    <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span lang="es" class="solo-lectores">Menú</span><span lang="en" class="solo-lectores">Menu</span></button>
+    <a class="github" href="https://github.com/MscottB/Tramtai" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
+    <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
       <button type="button" data-idioma="es" aria-pressed="true">ES</button>
       <button type="button" data-idioma="en" aria-pressed="false">EN</button>
     </div>
-    <div class="idioma tema" role="group" aria-label="Tema / Theme">
-      <button type="button" data-tema="sistema" aria-pressed="true" aria-label="Tema del sistema / System theme" title="Sistema / System">◐</button>
-      <button type="button" data-tema="claro" aria-pressed="false" aria-label="Tema claro / Light theme" title="Claro / Light">☀</button>
-      <button type="button" data-tema="oscuro" aria-pressed="false" aria-label="Tema oscuro / Dark theme" title="Oscuro / Dark">☾</button>
+    <div class="idioma tema" role="group" aria-label="Tema" data-aria-en="Theme">
+      <button type="button" data-tema="sistema" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span lang="es" class="solo-lectores">Tema del sistema</span><span lang="en" class="solo-lectores">System theme</span></button>
+      <button type="button" data-tema="claro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span lang="es" class="solo-lectores">Tema claro</span><span lang="en" class="solo-lectores">Light theme</span></button>
+      <button type="button" data-tema="oscuro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span lang="es" class="solo-lectores">Tema oscuro</span><span lang="en" class="solo-lectores">Dark theme</span></button>
     </div>
-    <a class="boton principal" href="../index.html#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+    <a class="boton principal" href="../#descargar" data-descarga><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg><span class="boton-texto"><span lang="es">Descargar</span><span lang="en">Download</span></span></a>
   </div>
 </header>
 
-<main class="envoltura ayuda-temas">
-<nav class="migas" aria-label="Ruta / Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Conectar mi app</span><span lang="en">Connect my app</span></nav>
+<main id="contenido" tabindex="-1" class="envoltura ayuda">
+<nav class="indice" aria-label="En esta página" data-aria-en="On this page">
+  <ol>
+    <li><a href="#s-diagrama"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a></li>
+    <li><a href="#s-pasos"><span lang="es">Paso a paso</span><span lang="en">Step by step</span></a></li>
+    <li><a href="#s-ejemplo"><span lang="es">Ejemplo</span><span lang="en">Example</span></a></li>
+    <li><a href="#s-tabla"><span lang="es">De un vistazo</span><span lang="en">At a glance</span></a></li>
+    <li><a href="#s-preguntas"><span lang="es">Preguntas</span><span lang="en">Questions</span></a></li>
+    <li><a href="#s-relacionados"><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></a></li>
+  </ol>
+</nav>
 <article class="doc tema-ayuda">
+<nav class="migas" aria-label="Ruta" data-aria-en="Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Conectar mi app</span><span lang="en">Connect my app</span> · <a href="index.html#buscar-ayuda"><span lang="es">Buscar</span><span lang="en">Search</span></a></nav>
 <header>
   <h1><span lang="es">Conectar mi app</span><span lang="en">Connect my app</span></h1>
   <p class="entradilla"><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.</span><span lang="en">Change your OpenAI or Anthropic SDK’s base URL to Tramtai’s and pick the agent with model.</span></p>
 </header>
 
+<section id="s-diagrama"><h2><span lang="es">Cómo funciona</span><span lang="en">How it works</span></h2>
 <ol class="diagrama" style="--paradas: 4">
   <li><strong>1. <span lang="es">Tu app</span><span lang="en">Your app</span></strong><span><span lang="es">Con el SDK de OpenAI, el de Anthropic o la API propia.</span><span lang="en">With the OpenAI SDK, the Anthropic SDK or the native API.</span></span></li>
-  <li><strong>2. <span lang="es">URL y clave</span><span lang="en">URL and key</span></strong><span><span lang="es">Las de Mis APIs: la API principal o una API por aplicación.</span><span lang="en">The ones from My APIs: the Main API or one API per app.</span></span></li>
+  <li><strong>2. <span lang="es">URL y clave</span><span lang="en">URL and key</span></strong><span><span lang="es">Las de Mis APIs: la clave del espacio o una API por aplicación.</span><span lang="en">The ones from My APIs: the workspace key or one API per app.</span></span></li>
   <li><strong>3. <span lang="es">Tramtai</span><span lang="en">Tramtai</span></strong><span><span lang="es">Aplica la receta de esa API y pone la petición en la cola.</span><span lang="en">Applies that API’s recipe and puts the request in the queue.</span></span></li>
   <li><strong>4. <span lang="es">El agente</span><span lang="en">The agent</span></strong><span><span lang="es">El que diga model, por ejemplo claude/sonnet o perfil/rapido.</span><span lang="en">The one model names, for example claude/sonnet or perfil/rapido.</span></span></li>
 </ol>
+</section>
 
+<section id="s-pasos"><h2><span lang="es">Paso a paso</span><span lang="en">Step by step</span></h2>
 <ol class="pasos">
-  <li><span lang="es">En Mis APIs, pestaña «API principal», copia la URL para OpenAI (o Anthropic) y la clave.</span><span lang="en">In My APIs, &quot;Main API&quot; tab, copy the URL for OpenAI (or Anthropic) and the key.</span></li>
+  <li><span lang="es">En Mis APIs, pestaña «Clave del espacio», copia la URL para OpenAI (o Anthropic) y la clave.</span><span lang="en">In My APIs, &quot;Workspace key&quot; tab, copy the URL for OpenAI (or Anthropic) and the key.</span></li>
   <li><span lang="es">En tu app cambia la URL base (base_url) y la clave (api_key) por las de Tramtai.</span><span lang="en">In your app change the base URL (base_url) and the key (api_key) to Tramtai’s.</span></li>
   <li><span lang="es">En model pon agente y modelo, por ejemplo claude/sonnet, o un perfil como perfil/rapido.</span><span lang="en">In model put agent and model, for example claude/sonnet, or a profile like perfil/rapido.</span></li>
   <li><span lang="es">Envía una petición: aparece en el Historial con el agente que respondió.</span><span lang="en">Send a request: it shows up in History with the agent that answered.</span></li>
 </ol>
+</section>
 
+<section id="s-ejemplo"><h2><span lang="es">Ejemplo</span><span lang="en">Example</span></h2>
 <div class="pestanas" data-pestanas>
-  <div class="pestanas-lista" role="tablist" aria-label="Lenguaje / Language"><button type="button" role="tab" id="e2-curl-nativa" aria-controls="e2-curl-nativa-panel" aria-selected="true" tabindex="0" data-lenguaje="curl-nativa">curl · API propia</button><button type="button" role="tab" id="e2-python-nativa" aria-controls="e2-python-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="python-nativa">Python · API propia</button><button type="button" role="tab" id="e2-node-nativa" aria-controls="e2-node-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="node-nativa">Node · API propia</button><button type="button" role="tab" id="e2-go-nativa" aria-controls="e2-go-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="go-nativa">Go · API propia</button><button type="button" role="tab" id="e2-python" aria-controls="e2-python-panel" aria-selected="false" tabindex="-1" data-lenguaje="python">Python · OpenAI</button><button type="button" role="tab" id="e2-curl" aria-controls="e2-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl · OpenAI</button><button type="button" role="tab" id="e2-anthropic" aria-controls="e2-anthropic-panel" aria-selected="false" tabindex="-1" data-lenguaje="anthropic">Python · Anthropic</button></div>
+  <div class="pestanas-lista" role="tablist" aria-label="Lenguaje" data-aria-en="Language"><button type="button" role="tab" id="e2-curl-nativa" aria-controls="e2-curl-nativa-panel" aria-selected="true" tabindex="0" data-lenguaje="curl-nativa">curl · API propia</button><button type="button" role="tab" id="e2-python-nativa" aria-controls="e2-python-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="python-nativa">Python · API propia</button><button type="button" role="tab" id="e2-node-nativa" aria-controls="e2-node-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="node-nativa">Node · API propia</button><button type="button" role="tab" id="e2-go-nativa" aria-controls="e2-go-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="go-nativa">Go · API propia</button><button type="button" role="tab" id="e2-python" aria-controls="e2-python-panel" aria-selected="false" tabindex="-1" data-lenguaje="python">Python · OpenAI</button><button type="button" role="tab" id="e2-curl" aria-controls="e2-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl · OpenAI</button><button type="button" role="tab" id="e2-anthropic" aria-controls="e2-anthropic-panel" aria-selected="false" tabindex="-1" data-lenguaje="anthropic">Python · Anthropic</button></div>
   <div role="tabpanel" id="e2-curl-nativa-panel" aria-labelledby="e2-curl-nativa">
     <pre class="codigo" lang="es"><code># 1. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
 TRABAJO=$(curl -s http://127.0.0.1:17373/api/v1/trabajos -H &quot;Authorization: Bearer &lt;tu clave&gt;&quot; \
@@ -477,9 +511,11 @@ print(m.content[0].text)</code></pre>
   </div>
 </div>
 
-<figure class="captura"><img class="solo-claro" lang="es" src="capturas/mis-apis.claro.es.webp" loading="lazy" alt="Una API en Mis APIs, con su URL y sus acciones"><img class="solo-claro" lang="en" src="capturas/mis-apis.claro.en.webp" loading="lazy" alt="An API in My APIs, with its URL and actions"><img class="solo-oscuro" lang="es" src="capturas/mis-apis.oscuro.es.webp" loading="lazy" alt="Una API en Mis APIs, con su URL y sus acciones"><img class="solo-oscuro" lang="en" src="capturas/mis-apis.oscuro.en.webp" loading="lazy" alt="An API in My APIs, with its URL and actions"></figure>
+<figure class="captura"><img class="solo-claro" lang="es" src="capturas/mis-apis.claro.es.webp" width="992" height="578" loading="lazy" alt="Una API en Mis APIs, con su URL y sus acciones"><img class="solo-claro" lang="en" src="capturas/mis-apis.claro.en.webp" width="992" height="578" loading="lazy" alt="An API in My APIs, with its URL and actions"><img class="solo-oscuro" lang="es" src="capturas/mis-apis.oscuro.es.webp" width="992" height="578" loading="lazy" alt="Una API en Mis APIs, con su URL y sus acciones"><img class="solo-oscuro" lang="en" src="capturas/mis-apis.oscuro.en.webp" width="992" height="578" loading="lazy" alt="An API in My APIs, with its URL and actions"></figure>
+</section>
 
-<table>
+<section id="s-tabla"><h2><span lang="es">De un vistazo</span><span lang="en">At a glance</span></h2>
+<div class="tabla"><table>
   <thead><tr><th></th><th><span lang="es">OpenAI</span><span lang="en">OpenAI</span></th><th><span lang="es">Anthropic</span><span lang="en">Anthropic</span></th><th><span lang="es">API propia</span><span lang="en">Tramtai API</span></th></tr></thead>
   <tbody>
     <tr><th scope="row"><span lang="es">SDK oficial y herramientas existentes</span><span lang="en">Official SDK and existing tools</span></th><td><span lang="es">sí</span><span lang="en">yes</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td><td><span lang="es">no (HTTP y JSON)</span><span lang="en">no (HTTP and JSON)</span></td></tr>
@@ -492,38 +528,49 @@ print(m.content[0].text)</code></pre>
     <tr><th scope="row"><span lang="es">Registro de cada paso</span><span lang="en">Log of each step</span></th><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td></tr>
     <tr><th scope="row"><span lang="es">Consultar los límites antes de enviar</span><span lang="en">Check the limits before sending</span></th><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td></tr>
   </tbody>
-</table>
+</table></div>
 
 <p class="aviso"><span lang="es">Las URL de OpenAI y Anthropic imitan esos servicios para que sus SDK funcionen igual, así que no tienen campos para seguir o cancelar un trabajo. La receta vale en las tres.</span><span lang="en">The OpenAI and Anthropic URLs mimic those services so their SDKs work unchanged, so they have no fields to follow or cancel a job. The recipe applies to all three.</span></p>
 
 <p class="aviso"><span lang="es">Tramtai escucha solo en 127.0.0.1: tus apps deben correr en el mismo equipo.</span><span lang="en">Tramtai only listens on 127.0.0.1: your apps must run on the same computer.</span></p>
+</section>
 
+<section id="s-preguntas"><h2><span lang="es">Preguntas</span><span lang="en">Questions</span></h2>
 <details id="que-url"><summary><span lang="es">¿Qué URL uso?</span><span lang="en">Which URL do I use?</span></summary><p><span lang="es">La de OpenAI si tu app usa su SDK o deja cambiar la URL base (LangChain, n8n); la de Anthropic con su SDK; la API propia para trabajos largos o para cancelar.</span><span lang="en">OpenAI’s if your app uses its SDK or lets you change the base URL (LangChain, n8n); Anthropic’s with its SDK; the native API for long jobs or to cancel.</span></p></details>
 <details id="api-por-app"><summary><span lang="es">¿Para qué sirve una API por aplicación?</span><span lang="en">What is an API per app for?</span></summary><p><span lang="es">Cada app tiene su clave, sus modelos, instrucciones fijas y presupuesto, y solo ve sus trabajos. Se activan o detienen sin reiniciar.</span><span lang="en">Each app gets its key, its models, fixed instructions and budget, and only sees its own jobs. They turn on or off without restarting.</span></p></details>
 <details id="clave-nueva"><summary><span lang="es">¿Dónde está la clave de una API nueva?</span><span lang="en">Where is a new API’s key?</span></summary><p><span lang="es">Solo se muestra al crearla: cópiala entonces. Si la pierdes, «Regenerar la clave» te da otra.</span><span lang="en">It is shown only when created: copy it then. If you lose it, &quot;Regenerate the key&quot; gives you another.</span></p></details>
 <details id="prueba-a-api"><summary><span lang="es">¿Cómo convierto una prueba en una API?</span><span lang="en">How do I turn a test into an API?</span></summary><p><span lang="es">En Probar, «Guardar como API» te da URL y clave. Desde Mis APIs, «Abrir en Probar» la carga para cambiarla y «Actualizar» guarda.</span><span lang="en">In Try, &quot;Save as API&quot; gives you a URL and a key. From My APIs, &quot;Open in Try&quot; loads it to change it and &quot;Update&quot; saves it.</span></p></details>
 <details id="clave-filtrada"><summary><span lang="es">¿Qué hago si se filtra una clave?</span><span lang="en">What if a key leaks?</span></summary><p><span lang="es">En Mis APIs, «Regenerar la clave»: la anterior deja de valer al momento. Si es de un proveedor, revócala en su consola y guarda la nueva.</span><span lang="en">In My APIs, &quot;Regenerate the key&quot;: the old one stops working at once. If it is a provider’s, revoke it in their console and save the new one.</span></p></details>
 <details id="eventos-app"><summary><span lang="es">¿Mi app puede ver lo que pasa en vivo?</span><span lang="en">Can my app see what happens live?</span></summary><p><span lang="es">Sí: GET /api/v1/eventos (SSE) avisa cada cambio de etapa de las peticiones, sin su contenido. Con la clave de una API, solo las suyas.</span><span lang="en">Yes: GET /api/v1/eventos (SSE) reports every stage change of the requests, without their content. With an API’s key, only its own.</span></p></details>
-<p class="aviso"><a href="../desarrolladores.html"><span lang="es">Guía del desarrollador</span><span lang="en">Developer guide</span></a>: <span lang="es">el ciclo completo en Python, JavaScript, Go y curl.</span><span lang="en">the full cycle in Python, JavaScript, Go and curl.</span></p>
 
-<h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
+<p class="aviso"><a href="../desarrolladores.html"><span lang="es">Guía del desarrollador</span><span lang="en">Developer guide</span></a>: <span lang="es">el ciclo completo en Python, JavaScript, Go y curl.</span><span lang="en">the full cycle in Python, JavaScript, Go and curl.</span></p>
+</section>
+
+<section id="s-relacionados"><h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
 <div class="tarjetas-temas">
   <a class="tarjeta-tema" href="archivos.html"><strong><span lang="es">Archivos</span><span lang="en">Files</span></strong><span><span lang="es">Tramtai convierte tus PDF, Word, Excel y otros documentos a texto antes de pasárselos al agente.</span><span lang="en">Tramtai turns your PDF, Word, Excel and other documents into text before handing them to the agent.</span></span></a>
   <a class="tarjeta-tema" href="herramientas.html"><strong><span lang="es">Herramientas</span><span lang="en">Tools</span></strong><span><span lang="es">Tu app ofrece funciones; el agente pide una con sus argumentos y tu app la ejecuta y le devuelve el resultado.</span><span lang="en">Your app offers functions; the agent asks for one with its arguments, and your app runs it and returns the result.</span></span></a>
   <a class="tarjeta-tema" href="presupuestos.html"><strong><span lang="es">Presupuestos</span><span lang="en">Budgets</span></strong><span><span lang="es">Pon límites por día o por mes a una API o a todo el espacio, en peticiones, tokens o dólares.</span><span lang="en">Set daily or monthly limits for an API or the whole workspace, in requests, tokens or dollars.</span></span></a>
+  <a class="tarjeta-tema" href="claves.html"><strong><span lang="es">Claves y APIs</span><span lang="en">Keys and APIs</span></strong><span><span lang="es">La clave del espacio y las APIs por aplicación: cuándo usar cada una y qué pasa al regenerarlas.</span><span lang="en">The workspace key and per-app APIs: when to use each one and what happens when you regenerate them.</span></span></a>
 </div>
+</section>
 </article>
 </main>
 
 <footer>
   <div class="envoltura">
-    <span>© 2026 Michael Scott B. · Tramtai · <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a></span>
-    <span>
-      <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span>
-    </span>
+    <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
+      <a href="../#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
+      <a href="../ayuda/empezar.html"><span lang="es">Empezar</span><span lang="en">Get started</span></a>
+      <a href="../ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
+      <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
+      <a href="https://github.com/MscottB/Tramtai">GitHub</a>
+      <a href="https://github.com/MscottB/Tramtai/releases"><span lang="es">Versiones</span><span lang="en">Releases</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/LICENSE.md"><span lang="es">Licencia</span><span lang="en">License</span></a>
+      <a href="https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md"><span lang="es">Términos de uso</span><span lang="en">Terms of use</span></a>
+    </nav>
+    <p>© 2026 Michael Scott B. · <span lang="es">Claude, Codex, GitHub Copilot, Gemini y Antigravity son marcas de sus respectivos dueños. Tramtai no está afiliado a ellos.</span><span lang="en">Claude, Codex, GitHub Copilot, Gemini and Antigravity are trademarks of their respective owners. Tramtai is not affiliated with them.</span></p>
   </div>
 </footer>
-
-<script src="../sitio.js"></script>
 </body>
 </html>

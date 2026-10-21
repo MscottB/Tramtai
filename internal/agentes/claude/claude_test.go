@@ -200,3 +200,47 @@ func TestDetectarNoInstalado(t *testing.T) {
 		t.Fatalf("se esperaba no_instalado: %+v", e)
 	}
 }
+
+func enSuscripcion() Claude {
+	return Claude{Programa: os.Args[0], Autenticacion: adaptadores.NuevoModo(adaptadores.AutenticacionSuscripcion)}
+}
+
+func TestComprobarSesionOk(t *testing.T) {
+	falso(t, "auth-ok.json")
+	if s := enSuscripcion().ComprobarSesion(context.Background()); s.Estado != adaptadores.SesionOK || s.Cuenta != "persona@ejemplo.com" {
+		t.Fatalf("sesión de la suscripción: %+v", s)
+	}
+}
+
+func TestComprobarSesionSinSesion(t *testing.T) {
+	falso(t, "auth-sin.json")
+	if s := enSuscripcion().ComprobarSesion(context.Background()); s.Estado != adaptadores.SesionSin {
+		t.Fatalf("sin sesión: %+v", s)
+	}
+}
+
+func TestComprobarSesionUsaClave(t *testing.T) {
+	falso(t, "auth-clave.json")
+	if s := enSuscripcion().ComprobarSesion(context.Background()); s.Estado != adaptadores.SesionUsaClave {
+		t.Fatalf("con clave de API: %+v", s)
+	}
+}
+
+func TestComprobarSesionNoGastaMensajes(t *testing.T) {
+	archivo := falso(t, "auth-ok.json")
+	enSuscripcion().ComprobarSesion(context.Background())
+	if r := leerRegistro(t, archivo); strings.Join(r.Args, " ") != "auth status --json" || r.Entrada != "" {
+		t.Fatalf("solo se pregunta el estado: %q %q", r.Args, r.Entrada)
+	}
+}
+
+func TestDetectarSuscripcionSinSesion(t *testing.T) {
+	falso(t, "auth-sin.json")
+	if e := enSuscripcion().Detectar(context.Background()); e.ProblemaCodigo != adaptadores.ProblemaFaltaClave {
+		t.Fatalf("sin sesión, la tarjeta dice cómo iniciarla: %+v", e)
+	}
+	falso(t, "auth-ok.json")
+	if e := enSuscripcion().Detectar(context.Background()); e.Cuenta != "persona@ejemplo.com" {
+		t.Fatalf("con sesión, la cuenta: %+v", e)
+	}
+}

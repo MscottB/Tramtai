@@ -33,6 +33,8 @@ func main() {
 		comandoTerminal(),
 		comandoIniciar(),
 		comandoServicio(),
+		comandoEspacios(),
+		comandoEspacio(),
 		comandoInstancia("global"),
 		comandoInstancia("proyecto"),
 		comandoAcceso(),

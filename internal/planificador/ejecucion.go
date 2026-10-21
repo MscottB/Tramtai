@@ -136,7 +136,7 @@ func (p *Planificador) procesar(id string, esperando func()) {
 	}
 	// El principal y después el respaldo: se salta al siguiente solo si el intento falló antes de emitir texto,
 	// para no mezclar dos respuestas. El plazo en cola vale hasta el primer intento.
-	lista := candidatos(t)
+	lista, desconectados := p.conectados(candidatos(t))
 	var resultado adaptadores.Resultado
 	var elegido candidato    // el que respondió: las correcciones se le piden a él
 	var usoPrevio nucleo.Uso // lo que gastaron los intentos que fallaron: también cuenta para el presupuesto
@@ -160,6 +160,7 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		if err == nil {
 			resultado, elegido = res, c
 			resultado.Uso = sumarUso(resultado.Uso, usoPrevio)
+			p.opc.Salud.Exito(c.agente)
 			break
 		}
 		usoPrevio = sumarUso(usoPrevio, res.Uso)
@@ -167,9 +168,16 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		if codigo == "" {
 			codigo = nucleo.CodigoErrorAgente
 		}
+		if codigo == nucleo.CodigoAutenticacionAgente {
+			p.opc.Salud.Fallo(c.agente)
+		}
 		if !saltable(codigo) || huboTexto || i+1 == len(lista) {
 			// Si no cabía en ninguno y nada se ejecutó, la petición no cuenta para el presupuesto.
-			p.cambiar(id, estado, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err), Uso: &usoPrevio,
+			mensaje := nucleo.MensajeDe(err)
+			if len(desconectados) > 0 && saltable(codigo) && !huboTexto { // el respaldo que no se probó: se dice por qué
+				mensaje += idioma.Tf(" (respaldo desconectado: %s)", strings.Join(desconectados, ", "))
+			}
+			p.cambiar(id, estado, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: mensaje, Uso: &usoPrevio,
 				DevolverPeticion: codigo == nucleo.CodigoEntradaDemasiadoGrande && !ejecutado})
 			return
 		}
@@ -525,7 +533,7 @@ func (g *agrupador) vaciarConCerrojo() error {
 // preparar convierte las cargas respetando el límite de conversiones de la instancia.
 func (p *Planificador) preparar(ctx context.Context, cargas []string) (nucleo.Documentos, error) {
 	if p.opc.Preparador == nil {
-		return nucleo.Documentos{}, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("esta instancia no admite cargas"))
+		return nucleo.Documentos{}, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("este espacio no admite cargas"))
 	}
 	select {
 	case p.conversiones <- struct{}{}:

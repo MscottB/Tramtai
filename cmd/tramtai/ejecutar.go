@@ -25,7 +25,7 @@ import (
 )
 
 func comandoAgentes() *cobra.Command {
-	return &cobra.Command{Use: "agentes", Short: idioma.T("Diagnostica cada agente: versión, autenticación y términos (sin consumir cuota)"),
+	grupo := &cobra.Command{Use: "agentes", Short: idioma.T("Diagnostica cada agente: versión, autenticación y términos (sin consumir cuota)"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := cargarConfiguracion()
 			if err != nil {
@@ -52,9 +52,37 @@ func comandoAgentes() *cobra.Command {
 				if e.Problema != "" {
 					fmt.Fprintf(out, idioma.T("  problema:      %s\n"), e.Problema)
 				}
+				if c.Booleano("adaptadores." + nombre + ".desconectado") {
+					fmt.Fprintln(out, idioma.T("  desconectado:  sí (tramtai agentes conectar)"))
+				}
 			}
 			return nil
 		}}
+	// conectar y desconectar valen en todos los espacios y al momento (el servicio tiene que estar en marcha).
+	conexion := func(conectado bool) func(*cobra.Command, []string) error {
+		return func(cmd *cobra.Command, args []string) error {
+			c, err := conectar()
+			if err != nil {
+				return err
+			}
+			ctx, cancelar := contexto()
+			defer cancelar()
+			if err := c.ConectarAgente(ctx, args[0], conectado); err != nil {
+				return err
+			}
+			if conectado {
+				fmt.Fprintf(cmd.OutOrStdout(), idioma.T("%s conectado\n"), args[0])
+			} else {
+				fmt.Fprintf(cmd.OutOrStdout(), idioma.T("%s desconectado: no se usa ni como respaldo hasta que lo conectes\n"), args[0])
+			}
+			return nil
+		}
+	}
+	grupo.AddCommand(
+		&cobra.Command{Use: "desconectar <agente>", Short: idioma.T("Desconecta un agente sin desinstalar su CLI"), Args: cobra.ExactArgs(1), RunE: conexion(false)},
+		&cobra.Command{Use: "conectar <agente>", Short: idioma.T("Vuelve a conectar un agente desconectado"), Args: cobra.ExactArgs(1), RunE: conexion(true)},
+	)
+	return grupo
 }
 
 func comandoEjecutar() *cobra.Command {
@@ -64,7 +92,7 @@ func comandoEjecutar() *cobra.Command {
 	var directo bool
 	var perfilTrabajo, contexto string
 	cmd := &cobra.Command{Use: "ejecutar [texto]", Short: idioma.T("Ejecuta un trabajo con un agente y muestra la respuesta en vivo"),
-		Long: idioma.T("Ejecuta un trabajo y muestra la respuesta en vivo. Si el servicio está en marcha, el trabajo va a la instancia del\nproyecto actual (o a la global) y se ve también en la terminal interactiva y en la Web UI; si no, se ejecuta\ndirectamente. Sin texto, se lee de la entrada estándar. Ctrl+C cancela el trabajo."),
+		Long: idioma.T("Ejecuta un trabajo y muestra la respuesta en vivo. Si el servicio está en marcha, el trabajo va al espacio del\nproyecto actual (o al global) y se ve también en la terminal interactiva y en la Web UI; si no, se ejecuta\ndirectamente. Sin texto, se lee de la entrada estándar. Ctrl+C cancela el trabajo."),
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			texto := strings.Join(args, " ")
@@ -110,6 +138,7 @@ func comandoEjecutar() *cobra.Command {
 			return ejecutar(cmd, c, c.AplicarPredeterminados(s), archivos)
 		}}
 	f := cmd.Flags()
+	f.Bool("global", false, idioma.T("usa el espacio global aunque estés dentro de un proyecto"))
 	f.StringVarP(&agente, "agente", "a", "", idioma.Tf("agente: %s (predeterminados.agente)", enumerar(idsAgentes(), idioma.T("o"))))
 	f.StringVarP(&modelo, "modelo", "m", "", idioma.T("identificador o alias del modelo, por ejemplo haiku"))
 	f.StringVarP(&perfil, "perfil", "p", "", idioma.T("perfil de modelo: rapido, equilibrado, profundo (modelos.perfiles)"))

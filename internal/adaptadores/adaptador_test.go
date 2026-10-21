@@ -49,3 +49,37 @@ func TestModeloConcretoConPlazoYCompartido(t *testing.T) {
 		t.Fatalf("dos consultas a la vez lanzaron %d resoluciones", n)
 	}
 }
+
+func TestConexiones(t *testing.T) {
+	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"adaptadores.codex.desconectado": true}})
+	con := NuevasConexiones(c, []string{"claude", "codex"})
+	if !con.Desconectado("codex") || con.Desconectado("claude") {
+		t.Fatal("codex viene desconectado de la configuración")
+	}
+	con.Fijar("codex", false)
+	con.Fijar("claude", true)
+	if con.Desconectado("codex") || !con.Desconectado("claude") {
+		t.Fatal("Fijar cambia la conexión en marcha")
+	}
+	var nada *Conexiones
+	if nada.Desconectado("claude") {
+		t.Fatal("sin conexiones, todos conectados")
+	}
+}
+
+func TestSaludPasiva(t *testing.T) {
+	s := NuevaSalud()
+	s.Fallo("claude")
+	if !s.SinRespuesta("claude") || s.SinRespuesta("codex") {
+		t.Fatal("un fallo de autenticación deja al agente sin respuesta")
+	}
+	s.Exito("claude")
+	if s.SinRespuesta("claude") {
+		t.Fatal("una petición que funciona lo quita")
+	}
+	var nada *Salud
+	nada.Fallo("claude")
+	if nada.SinRespuesta("claude") {
+		t.Fatal("sin salud no se marca nada")
+	}
+}

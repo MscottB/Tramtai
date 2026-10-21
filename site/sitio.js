@@ -8,6 +8,20 @@
       if (!img.dataset.altEs) img.dataset.altEs = img.alt;
       img.alt = idioma === 'en' ? img.dataset.altEn : img.dataset.altEs;
     });
+    // Lo mismo con las etiquetas para lectores de pantalla, los placeholder y el título de la pestaña.
+    document.querySelectorAll('[data-aria-en]').forEach(function (e) {
+      if (!e.dataset.ariaEs) e.dataset.ariaEs = e.getAttribute('aria-label');
+      e.setAttribute('aria-label', idioma === 'en' ? e.dataset.ariaEn : e.dataset.ariaEs);
+    });
+    document.querySelectorAll('[data-placeholder-en]').forEach(function (e) {
+      if (!e.dataset.placeholderEs) e.dataset.placeholderEs = e.placeholder;
+      e.placeholder = idioma === 'en' ? e.dataset.placeholderEn : e.dataset.placeholderEs;
+    });
+    var titulo = document.querySelector('title[data-en]');
+    if (titulo) {
+      if (!titulo.dataset.es) titulo.dataset.es = titulo.textContent;
+      document.title = idioma === 'en' ? titulo.dataset.en : titulo.dataset.es;
+    }
     botones.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.idioma === idioma)); });
   }
   var guardado = null;
@@ -37,6 +51,26 @@
       aplicar(b.dataset.tema);
       try { localStorage.setItem('tramtai.tema', b.dataset.tema); } catch (e) {}
     });
+  });
+})();
+
+// Menú de la barra en pantallas medianas y pequeñas: se abre con su botón y se cierra al elegir, con Escape o fuera.
+(function () {
+  var barra = document.querySelector('.barra');
+  var boton = document.querySelector('.menu-boton');
+  if (!barra || !boton) return;
+  boton.hidden = false;
+  function abrir(si) {
+    barra.classList.toggle('abierta', si);
+    boton.setAttribute('aria-expanded', String(si));
+  }
+  boton.addEventListener('click', function () { abrir(boton.getAttribute('aria-expanded') !== 'true'); });
+  document.getElementById('menu').addEventListener('click', function (e) { if (e.target.closest('a')) abrir(false); });
+  document.addEventListener('click', function (e) { if (!barra.contains(e.target)) abrir(false); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || !barra.classList.contains('abierta')) return;
+    abrir(false);
+    boton.focus();
   });
 })();
 
@@ -138,6 +172,8 @@
 (function () {
   var grupos = document.querySelectorAll('[data-pestanas]');
   if (!grupos.length) return;
+  // La Ayuda tiene otros lenguajes que la guía: cada una recuerda el suyo.
+  var clave = document.querySelector('.tema-ayuda') ? 'tramtai.lenguaje-ayuda' : 'tramtai.lenguaje';
   function elegir(lenguaje, foco) {
     grupos.forEach(function (g) {
       var botones = g.querySelectorAll('[role="tab"]');
@@ -150,7 +186,7 @@
         if (activo && foco === g) b.focus();
       });
     });
-    try { localStorage.setItem('tramtai.lenguaje', lenguaje); } catch (e) {}
+    try { localStorage.setItem(clave, lenguaje); } catch (e) {}
   }
   grupos.forEach(function (g) {
     var botones = Array.prototype.slice.call(g.querySelectorAll('[role="tab"]'));
@@ -165,7 +201,7 @@
     });
   });
   var guardado = null;
-  try { guardado = localStorage.getItem('tramtai.lenguaje'); } catch (e) {}
+  try { guardado = localStorage.getItem(clave); } catch (e) {}
   elegir(guardado || 'python'); // sin JavaScript se ven todos los paneles, cada uno con su enlace a GitHub
   document.querySelectorAll('pre[data-ejemplo]').forEach(function (pre) {
     fetch('ejemplos/' + pre.dataset.ejemplo).then(function (r) {
@@ -235,6 +271,8 @@
     mostrar();
   }).catch(function () { caja.hidden = true; });
   campo.addEventListener('input', mostrar);
+  // Desde «Buscar» de cada tema se llega con el campo listo para escribir.
+  if (location.hash === '#buscar-ayuda') campo.focus();
   // Al cambiar de idioma, los resultados se rehacen en el nuevo.
   document.querySelectorAll('[data-idioma]').forEach(function (b) { b.addEventListener('click', function () { setTimeout(mostrar); }); });
 })();

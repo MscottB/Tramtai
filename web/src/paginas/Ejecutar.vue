@@ -175,6 +175,7 @@
 </template>
 
 <script setup lang="ts">
+import { recordarBorrador } from '../borrador'
 import BotonAyuda from '../componentes/ayuda/BotonAyuda.vue'
 import { ERRORES } from '../ayuda/temas/problemas'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
@@ -223,6 +224,7 @@ function nuevaPrueba() {
 }
 const archivos = ref<File[] | null>(null)
 const mensaje = ref('')
+recordarBorrador('tramtai.borradorProbar', mensaje)
 const perfil = ref('')
 const tiempo = ref('')
 const enviando = ref(false)
@@ -324,7 +326,7 @@ function solicitudDe(cargas: string[], esquema: Record<string, unknown> | undefi
 }
 
 // «Ver como código»: la prueba actual por la API propia y por OpenAI, con la URL de la API que se edita o la de la
-// API principal. Al editar una API, su receta la aplica la propia API: el código solo lleva el mensaje.
+// clave del espacio. Al editar una API, su receta la aplica la propia API: el código solo lleva el mensaje.
 const dialogoCodigo = ref(false)
 const ejemplosCodigo = ref<Ejemplo[]>([])
 async function verCodigo() {
