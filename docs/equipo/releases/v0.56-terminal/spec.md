@@ -209,6 +209,9 @@ Las rutas `/ui` no cambian, y una clave de aplicación sigue sin poder usar ning
 4. **La terminal clásica de Windows:** colores, tildes y redimensionado.
 5. **La terminal y la Web UI dicen cosas distintas:** tienen que coincidir los nombres, el consumo y los errores.
 
+**Pedido a mitad del release:** en el mapa de la portada, el tranvía pasa por debajo del cartel de Tramtai y no se ve
+mientras lo cruza; vale para el mapa ancho y para el estrecho del móvil. Lo comprueba `portada.test`.
+
 **Fuera de la v0.56:**
 - instalar sin la app de escritorio y el modo servidor (v0.57);
 - ratón en la terminal;

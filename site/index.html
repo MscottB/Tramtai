@@ -104,6 +104,8 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
           <text x="172" y="158" text-anchor="end" font-size="14" font-weight="500" fill="var(--texto)"><tspan lang="es">Tus scripts</tspan><tspan lang="en">Your scripts</tspan></text>
           <circle cx="190" cy="211" r="7" stroke-width="3" fill="var(--superficie)" stroke="var(--acento)"/>
           <text x="172" y="216" text-anchor="end" font-size="14" font-weight="500" fill="var(--texto)"><tspan lang="es">Tus automatizaciones</tspan><tspan lang="en">Your automations</tspan></text>
+          <!-- El tranvía va antes que la cápsula: al pasar por Tramtai queda debajo del cartel y no se ve. -->
+          <rect class="tranvia" x="-13" y="-7" width="26" height="14" rx="5" fill="var(--acento)"/>
           <!-- Tramtai es el intercambiador: la cápsula de borde grueso de los transbordos. -->
           <rect x="290" y="117" width="170" height="72" rx="36" stroke-width="5" fill="var(--superficie)" stroke="var(--texto)"/>
           <text x="375" y="150" text-anchor="middle" font-size="18" font-weight="800" fill="var(--texto)" style="font-family: var(--titulo)">Tramtai</text>
@@ -123,7 +125,6 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
           <circle cx="570" cy="269" r="9" stroke-width="3.5" fill="var(--antigravity)" stroke="var(--antigravity)"/>
           <text x="590" y="267" font-size="15" font-weight="650" fill="var(--texto)">Antigravity</text>
           <text x="590" y="285" font-size="12" fill="var(--texto-suave)">Google</text>
-          <rect class="tranvia" x="-13" y="-7" width="26" height="14" rx="5" fill="var(--acento)"/>
         </svg>
         <svg class="mapa-alto" viewBox="0 0 320 382">
           <line x1="18" y1="14" x2="18" y2="362" stroke-width="3" stroke="var(--borde-fuerte)"/>
@@ -133,6 +134,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
           <text x="36" y="57" font-size="14" font-weight="500" fill="var(--texto)"><tspan lang="es">Tus scripts</tspan><tspan lang="en">Your scripts</tspan></text>
           <circle cx="18" cy="90" r="6" stroke-width="3" fill="var(--superficie)" stroke="var(--acento)"/>
           <text x="36" y="95" font-size="14" font-weight="500" fill="var(--texto)"><tspan lang="es">Tus automatizaciones</tspan><tspan lang="en">Your automations</tspan></text>
+          <rect class="tranvia-alto" x="-11" y="-6" width="22" height="12" rx="5" fill="var(--acento)" opacity="0"/>
           <rect x="4" y="120" width="312" height="58" rx="29" stroke-width="4" fill="var(--superficie)" stroke="var(--texto)"/>
           <text x="160" y="146" text-anchor="middle" font-size="16" font-weight="800" fill="var(--texto)" style="font-family: var(--titulo)">Tramtai</text>
           <text x="160" y="164" text-anchor="middle" font-size="12" fill="var(--texto-suave)"><tspan lang="es">en tu equipo</tspan><tspan lang="en">on your computer</tspan></text>
@@ -156,7 +158,6 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
           <circle cx="52" cy="362" r="7" stroke-width="3" fill="var(--antigravity)" stroke="var(--antigravity)"/>
           <text x="70" y="367" font-size="15" font-weight="650" fill="var(--texto)">Antigravity</text>
           <text x="314" y="367" text-anchor="end" font-size="12" fill="var(--texto-suave)">Google</text>
-          <rect class="tranvia-alto" x="-11" y="-6" width="22" height="12" rx="5" fill="var(--acento)" opacity="0"/>
         </svg>
       </div>
       <!-- Los ejemplos del recorrido: el tranvía de cada uno llega a la estación de su agente (sitio.js). Sin JavaScript
