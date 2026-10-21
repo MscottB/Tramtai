@@ -18,6 +18,7 @@ import (
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
+	"tramtai/internal/tui/paginas/agentes"
 )
 
 // Opciones configura la terminal.
@@ -39,7 +40,9 @@ func Ejecutar(o Opciones) error {
 const anchoMinimo, altoMinimo = 60, 20
 
 // fabricas crea cada página por su clave del menú; las que aún no están enseñan «Próximamente».
-var fabricas = map[string]func(idioma string) pagina.Pagina{}
+var fabricas = map[string]func(idioma string) pagina.Pagina{
+	pagina.PaginaAgentes: agentes.Nueva,
+}
 
 type modelo struct {
 	o           Opciones

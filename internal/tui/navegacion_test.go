@@ -178,3 +178,10 @@ func TestVolver(t *testing.T) {
 		t.Fatalf("ir por el menú empieza una historia nueva: %s", m.actual)
 	}
 }
+
+func TestAgentesRegistrada(t *testing.T) {
+	m := nuevo(Opciones{})
+	if _, pendiente := m.pagina(pagina.PaginaAgentes).(*proximamente); pendiente {
+		t.Fatal("Agentes ya no es «Próximamente»")
+	}
+}
