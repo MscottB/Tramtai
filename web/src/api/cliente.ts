@@ -54,7 +54,7 @@ export async function pedir<T>(metodo: string, ruta: string, cuerpo?: unknown, p
     }
     // CSRF viejo: en otra pestaña se cambió de espacio y la cookie es otra. Se renueva la sesión una vez y no se repite
     // la acción (iría a otro espacio): la página avisa y se recarga.
-    if (respuesta.status === 403 && datos?.error?.codigo === 'origen_no_permitido' && metodo !== 'GET' && !reintento && sesion.value) {
+    if (respuesta.status === 403 && datos?.error?.codigo === 'csrf_invalido' && metodo !== 'GET' && !reintento && sesion.value) {
       await renovarSesion().catch(() => undefined)
       if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('tramtai:espacio-cambiado'))
       throw new ErrorApi('espacio_cambiado', t('app.espacioCambiado'), 403, datos ?? {})

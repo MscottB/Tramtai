@@ -107,7 +107,8 @@ async function hacer(e: EspacioUI, accion: Accion) {
         lista.value = ordenar(await api.detenerEspacio(e.id))
         break
       case 'confiar':
-        if ((await confirmar(t('espacios.confiarTitulo', { nombre: e.nombre }), t('espacios.confiarTexto'))) === undefined) return
+        if ((await confirmar(t('espacios.confiarTitulo', { nombre: e.nombre }), t('espacios.confiarTexto')
+          + (e.claves?.length ? ' ' + t('espacios.confiarClaves', { claves: e.claves.join(', ') }) : ''))) === undefined) return
         lista.value = ordenar(await api.confiarEspacio(e.id, true))
         break
       case 'dejarDeConfiar':

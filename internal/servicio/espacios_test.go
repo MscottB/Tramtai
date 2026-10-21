@@ -174,8 +174,8 @@ func TestRegistroDanado(t *testing.T) {
 	if len(errores) != 1 || !strings.Contains(errores[0].Error(), "dañado") {
 		t.Fatalf("errores: %v", errores)
 	}
-	if _, err := os.Stat(ruta + ".dañado"); err != nil {
-		t.Fatal("no se apartó el registro dañado")
+	if apartados, _ := filepath.Glob(ruta + ".dañado-*"); len(apartados) != 1 {
+		t.Fatalf("no se apartó el registro dañado con su fecha: %v", apartados)
 	}
 	if _, activa := s.instancias["global"]; !activa {
 		t.Fatal("la global debía abrirse")
@@ -382,6 +382,69 @@ func TestOlvidarPideNombre(t *testing.T) {
 	}
 	if err := s.Olvidar("global", "Global"); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
 		t.Fatalf("la global no se olvida: %v", err)
+	}
+}
+
+// Un espacios.json que existe pero no se puede leer (bloqueado, o una carpeta) no se toma por «no hay registro»: no se
+// migra instancias.json ni se reescribe el registro, y se avisa.
+func TestRegistroIlegibleNoSeReescribe(t *testing.T) {
+	s, _, proyecto := entorno(t, "", "", adaptadores.Simulado{})
+	os.MkdirAll(filepath.Join(s.opc.Datos, "espacios.json"), 0o700)
+	viejo := filepath.Join(s.opc.Datos, "instancias.json")
+	os.WriteFile(viejo, []byte(`{"global":true,"proyectos":[`+strconvQuote(proyecto)+`]}`), 0o600)
+	if errores := s.Restaurar(); len(errores) == 0 {
+		t.Fatal("debía avisar de que no pudo leer el registro")
+	}
+	if _, err := os.Stat(viejo); err != nil {
+		t.Fatal("no debía migrar (ni borrar) instancias.json")
+	}
+	if info, err := os.Stat(filepath.Join(s.opc.Datos, "espacios.json")); err != nil || !info.IsDir() {
+		t.Fatal("no debía reescribir el registro")
+	}
+}
+
+func strconvQuote(s string) string { b, _ := json.Marshal(s); return string(b) }
+
+// Confiar desde la página Espacios enseña antes las claves de seguridad que trae su local.yaml.
+func TestEspaciosMuestraLasClavesDeUnoNoConfiado(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	dir := t.TempDir()
+	conTramtai(t, dir, "comandos_agentes:\n  claude: otro.exe\n")
+	no := false
+	inst, err := s.AbrirProyecto(dir, AbrirOpciones{Confiar: &no})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range s.Espacios(context.Background()) {
+		if e.ID == inst.ID && strings.Join(e.Claves, ",") != "comandos_agentes" {
+			t.Fatalf("claves: %v", e.Claves)
+		}
+	}
+}
+
+// «Buscar» no asocia a un espacio una carpeta que ya es de otro.
+func TestUbicarRechazaLaCarpetaDeOtroEspacio(t *testing.T) {
+	s, _, proyecto := entorno(t, "", "", adaptadores.Simulado{})
+	os.MkdirAll(filepath.Join(s.opc.Datos, "instancias"), 0o700)
+	os.WriteFile(filepath.Join(s.opc.Datos, "instancias", "viejo_1234abcd.db"), nil, 0o600)
+	if _, err := s.ActivarProyecto(proyecto); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Ubicar("viejo_1234abcd", proyecto); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
+		t.Fatalf("debía rechazar una carpeta que ya es de otro espacio: %v", err)
+	}
+}
+
+// Un CSRF que no coincide tiene su propio código: la Web UI renueva la sesión solo por eso, no por un Origin ajeno.
+func TestCSRFInvalidoTieneSuCodigo(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	if _, err := s.ActivarGlobal(); err != nil {
+		t.Fatal(err)
+	}
+	n := abrirSesion(t, s, ts.URL)
+	n.csrf = "malo"
+	if r, cuerpo := n.pedir("POST", "/api/v1/instancia/heredar", `{"clave":"predeterminados.modelo"}`); r.StatusCode != 403 || !strings.Contains(cuerpo, "csrf_invalido") {
+		t.Fatalf("%d %s", r.StatusCode, cuerpo)
 	}
 }
 

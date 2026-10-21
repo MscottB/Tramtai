@@ -212,6 +212,7 @@ var estadosHTTP = map[nucleo.CodigoError]int{
 	nucleo.CodigoCorreccionNoDisponible: http.StatusBadRequest,
 	nucleo.CodigoNoAutorizado:           http.StatusUnauthorized,
 	nucleo.CodigoOrigenNoPermitido:      http.StatusForbidden,
+	nucleo.CodigoCSRFInvalido:           http.StatusForbidden,
 	nucleo.CodigoNoEncontrado:           http.StatusNotFound,
 	nucleo.CodigoConflictoIdempotencia:  http.StatusConflict,
 	nucleo.CodigoConfianzaRequerida:     http.StatusConflict,

@@ -47,6 +47,9 @@ func (s *Servicio) Espacios(ctx context.Context) []EspacioUI {
 		u.Confiado = e.Ambito == "global" || e.Ruta != "" && global != nil && global.ProyectoConfiable(e.Ruta)
 		if e.Ambito == "proyecto" && u.Estado != "no_encontrado" {
 			u.APIs += len(puntosLocales(e.Ruta))
+			if !u.Confiado {
+				u.Claves, _ = nucleo.ClavesAdministradas(filepath.Join(e.Ruta, ".tramtai", "local.yaml"))
+			}
 		}
 		u.Peticiones = s.peticionesDe(ctx, e.ID, inst)
 		lista = append(lista, u)
@@ -134,6 +137,11 @@ func (s *Servicio) Ubicar(id, ruta string) (*Instancia, error) {
 	}
 	if !esProyecto(ruta) {
 		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("%s no tiene .tramtai/config.yaml: elige la carpeta del proyecto", ruta))
+	}
+	for _, otro := range s.registro().lista() {
+		if otro.ID != id && otro.Ruta != "" && mismaCarpeta(otro.Ruta, ruta) {
+			return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("%s ya es la carpeta del espacio %s", ruta, otro.Nombre))
+		}
 	}
 	s.registro().cambiar(id, func(e *Espacio) { e.Ruta = ruta })
 	if err := escribirMarca(ruta, id); err != nil {

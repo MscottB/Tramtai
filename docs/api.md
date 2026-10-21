@@ -407,7 +407,7 @@ API nativa: `{"error": {"codigo": "…", "mensaje": "…"}}`. Las fachadas usan 
 | HTTP | Códigos |
 |---|---|
 | 400 | `solicitud_invalida`, `parametro_no_soportado`, `modelo_ambiguo`, `modelo_no_permitido`, `modelo_no_disponible`, `modelo_no_configurado`, `carga_invalida`, `correccion_no_disponible`; en las fachadas también `entrada_demasiado_grande` (OpenAI: `context_length_exceeded`) |
-| 401 / 403 | `no_autorizado` / `origen_no_permitido`, `contexto_no_permitido` |
+| 401 / 403 | `no_autorizado` / `origen_no_permitido`, `contexto_no_permitido`, `csrf_invalido` (la sesión de la Web UI sin su `X-CSRF-Token`, o con el de otra: se cambió de espacio en otra pestaña) |
 | 404 | `no_encontrado` |
 | 409 | `conflicto_idempotencia`, `trabajo_no_terminado`, `trabajo_sin_salida`, `agente_desconectado` (el agente pedido está desconectado en Tramtai: **Agentes → Conectar**; el respaldo lo salta); en la Web UI, `confianza_requerida` y `dentro_de_proyecto` al abrir un proyecto |
 | 410 | `entrada_no_disponible`, `resultado_expirado` |

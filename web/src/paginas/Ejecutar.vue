@@ -175,6 +175,7 @@
 </template>
 
 <script setup lang="ts">
+import { recordarBorrador } from '../borrador'
 import BotonAyuda from '../componentes/ayuda/BotonAyuda.vue'
 import { ERRORES } from '../ayuda/temas/problemas'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
@@ -223,6 +224,7 @@ function nuevaPrueba() {
 }
 const archivos = ref<File[] | null>(null)
 const mensaje = ref('')
+recordarBorrador('tramtai.borradorProbar', mensaje)
 const perfil = ref('')
 const tiempo = ref('')
 const enviando = ref(false)

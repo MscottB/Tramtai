@@ -267,7 +267,7 @@ func (s *Servicio) instanciaPara(r *http.Request, admin bool) (inst *Instancia, 
 		return nil, false, nil
 	}
 	if r.Method != http.MethodGet && r.Method != http.MethodHead && !csrfValido(r, ses) {
-		return nil, false, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, idioma.T("falta la cabecera X-CSRF-Token de la sesión"))
+		return nil, false, nucleo.NuevoError(nucleo.CodigoCSRFInvalido, idioma.T("falta la cabecera X-CSRF-Token de la sesión"))
 	}
 	s.mu.RLock()
 	inst = s.instancias[ses.instancia]

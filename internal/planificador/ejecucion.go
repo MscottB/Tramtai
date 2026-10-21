@@ -174,7 +174,7 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		if !saltable(codigo) || huboTexto || i+1 == len(lista) {
 			// Si no cabía en ninguno y nada se ejecutó, la petición no cuenta para el presupuesto.
 			mensaje := nucleo.MensajeDe(err)
-			if len(desconectados) > 0 { // el respaldo que no se probó: se dice por qué
+			if len(desconectados) > 0 && saltable(codigo) && !huboTexto { // el respaldo que no se probó: se dice por qué
 				mensaje += idioma.Tf(" (respaldo desconectado: %s)", strings.Join(desconectados, ", "))
 			}
 			p.cambiar(id, estado, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: mensaje, Uso: &usoPrevio,

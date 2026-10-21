@@ -36,6 +36,7 @@ export interface EspacioUI {
   confiado: boolean
   apis: number
   peticiones: number
+  claves?: string[]
 }
 export interface Uso {
   tokens_entrada: number

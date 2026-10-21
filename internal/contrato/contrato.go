@@ -42,6 +42,8 @@ type Espacio struct {
 	Confiado   bool   `json:"confiado"`
 	APIs       int    `json:"apis"`
 	Peticiones int    `json:"peticiones"`
+	// Claves son las de seguridad que trae el local.yaml de un proyecto no confiado: se enseñan antes de confiar.
+	Claves []string `json:"claves,omitempty"`
 }
 
 // Estado es la vista del servicio que devuelve GET /api/v1/servicio.

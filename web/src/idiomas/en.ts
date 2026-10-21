@@ -66,6 +66,7 @@ const en: Textos = {
   'espacios.detenerTitulo': 'Stop {nombre}?',
   'espacios.detenerTexto': 'Anything queued is cancelled. Its data and APIs stay: start it again whenever you want.',
   'espacios.confiarTitulo': 'Do you trust {nombre}?',
+  'espacios.confiarClaves': 'It brings these security keys: {claves}.',
   'espacios.confiarTexto': 'Its local.yaml will be able to use security keys, such as each agent\'s program. Only trust your own folders.',
   'espacios.buscarTitulo': 'Locate the folder of {nombre}',
   'espacios.buscarTexto': 'Type the full path of the project folder (the one with .tramtai). It keeps its history, APIs and key.',

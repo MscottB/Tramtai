@@ -31,10 +31,13 @@ type Espacio struct {
 // registro guarda en datos/espacios.json todos los espacios conocidos. Reemplaza a instancias.json (solo los activos),
 // que se migra la primera vez.
 type registro struct {
-	mu       sync.Mutex
-	ruta     string
-	espacios map[string]*Espacio
-	aviso    error // al cargar: el registro estaba dañado
+	mu        sync.Mutex
+	muGuardar sync.Mutex // la foto y la escritura van juntas: una foto vieja no se escribe después de una nueva
+	ruta      string
+	espacios  map[string]*Espacio
+	aviso     error // al cargar: el registro estaba dañado o no se pudo leer
+	// soloLectura: el registro existe pero no se pudo leer; no se reescribe, para no perder lo que guarda.
+	soloLectura bool
 }
 
 type archivoRegistro struct {
@@ -55,7 +58,9 @@ func (s *Servicio) registro() *registro {
 func cargarRegistro(datos string) *registro {
 	r := &registro{ruta: filepath.Join(datos, "espacios.json"), espacios: map[string]*Espacio{}}
 	migrado := false
-	if contenido, err := os.ReadFile(r.ruta); err == nil {
+	contenido, err := os.ReadFile(r.ruta)
+	switch {
+	case err == nil:
 		var a archivoRegistro
 		if err := json.Unmarshal(contenido, &a); err != nil {
 			r.aviso = apartarDanado(r.ruta, err, "espacios.json.dañado")
@@ -66,8 +71,12 @@ func cargarRegistro(datos string) *registro {
 				r.espacios[e.ID] = &e
 			}
 		}
-	} else {
+	case os.IsNotExist(err):
 		migrado = r.migrar(filepath.Join(datos, "instancias.json"))
+	default:
+		r.soloLectura = true
+		r.aviso = nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida,
+			idioma.Tf("%s no se pudo leer (%s): se abre solo el espacio global y no se reescribirá hasta reiniciar", r.ruta, err.Error()))
 	}
 	if _, ok := r.espacios["global"]; !ok {
 		// Sin registro previo (o dañado) la global se abre, como siempre.
@@ -115,6 +124,7 @@ func (r *registro) migrar(ruta string) bool {
 
 // apartarDanado renombra un registro ilegible (para poder mirarlo) y devuelve el aviso.
 func apartarDanado(ruta string, err error, apartado string) error {
+	apartado += time.Now().Format("-20060102-150405") // otra copia dañada después no pisa esta
 	texto := idioma.Tf("%s no se pudo leer (%s): se apartó como %s y se abre solo el espacio global", ruta, err.Error(), apartado)
 	if errApartar := os.Rename(ruta, filepath.Join(filepath.Dir(ruta), apartado)); errApartar != nil {
 		texto = idioma.Tf("%s no se pudo leer (%s) ni apartar (%s): se abre solo el espacio global y se reescribirá", ruta, err.Error(), errApartar.Error())
@@ -124,6 +134,11 @@ func apartarDanado(ruta string, err error, apartado string) error {
 
 // guardar escribe el registro de forma atómica. Quien lo llama no tiene r.mu.
 func (r *registro) guardar() error {
+	if r.soloLectura {
+		return nil
+	}
+	r.muGuardar.Lock()
+	defer r.muGuardar.Unlock()
 	return escribirJSONArchivo(r.ruta, archivoRegistro{Version: 1, Espacios: r.lista()})
 }
 
@@ -246,6 +261,16 @@ func nombreProyecto(raiz string, c *nucleo.Configuracion) string {
 		return nombre
 	}
 	return filepath.Base(raiz)
+}
+
+// mismaCarpeta compara dos rutas también por su forma real (sin nombres cortos como ADMINI~1 ni enlaces).
+func mismaCarpeta(a, b string) bool {
+	if MismaRuta(a, b) {
+		return true
+	}
+	ra, errA := filepath.EvalSymlinks(a)
+	rb, errB := filepath.EvalSymlinks(b)
+	return errA == nil && errB == nil && MismaRuta(ra, rb)
 }
 
 // MismaRuta compara dos rutas como lo hace IDProyecto: sin distinguir mayúsculas en Windows y macOS.

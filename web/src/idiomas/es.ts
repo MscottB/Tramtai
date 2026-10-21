@@ -65,6 +65,7 @@ const es = {
   'espacios.detenerTitulo': '¿Detener {nombre}?',
   'espacios.detenerTexto': 'Lo que está en cola se cancela. Sus datos y sus APIs se quedan: lo vuelves a activar cuando quieras.',
   'espacios.confiarTitulo': '¿Confías en {nombre}?',
+  'espacios.confiarClaves': 'Trae estas claves de seguridad: {claves}.',
   'espacios.confiarTexto': 'Su local.yaml podrá usar claves de seguridad, como el programa de cada agente. Confía solo en carpetas tuyas.',
   'espacios.buscarTitulo': 'Buscar la carpeta de {nombre}',
   'espacios.buscarTexto': 'Escribe la ruta completa de la carpeta del proyecto (la que tiene .tramtai). Conserva su historial, sus APIs y su clave.',

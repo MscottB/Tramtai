@@ -580,8 +580,8 @@ func TestRestaurarConInstanciasDanado(t *testing.T) {
 	if len(errores) != 1 || !strings.Contains(errores[0].Error(), "dañado") {
 		t.Fatalf("errores: %v", errores)
 	}
-	if _, err := os.Stat(ruta + ".dañado"); err != nil {
-		t.Fatalf("no se apartó el archivo dañado: %v", err)
+	if apartados, _ := filepath.Glob(ruta + ".dañado-*"); len(apartados) != 1 {
+		t.Fatalf("no se apartó el archivo dañado con su fecha: %v", apartados)
 	}
 	if _, activa := s.instancias["global"]; !activa {
 		t.Fatal("la instancia global debía abrirse")

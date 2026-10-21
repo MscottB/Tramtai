@@ -1465,6 +1465,17 @@ func TestRespaldoTodoDesconectado(t *testing.T) {
 	}
 }
 
+// La nota del respaldo desconectado solo va cuando ese respaldo se habría probado: con un error que no salta, no.
+func TestNotaRespaldoDesconectadoSoloSiSeHubieraProbado(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarDesconectados(t, alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoSolicitudInvalida)},
+		"codex": adaptadores.Simulado{Respuesta: "no"}}, "codex")
+	tr := esperar(t, alm, enviar(t, p, conRespaldo("codex")), nucleo.Fallido)
+	if strings.Contains(tr.MensajeError, "codex") {
+		t.Fatalf("no habría saltado al respaldo: %q", tr.MensajeError)
+	}
+}
+
 func TestSaludMarcaFalloAutenticacion(t *testing.T) {
 	alm := abrir(t)
 	salud := adaptadores.NuevaSalud()
