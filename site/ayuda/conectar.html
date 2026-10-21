@@ -47,13 +47,13 @@
 
 <ol class="diagrama" style="--paradas: 4">
   <li><strong>1. <span lang="es">Tu app</span><span lang="en">Your app</span></strong><span><span lang="es">Con el SDK de OpenAI, el de Anthropic o la API propia.</span><span lang="en">With the OpenAI SDK, the Anthropic SDK or the native API.</span></span></li>
-  <li><strong>2. <span lang="es">URL y clave</span><span lang="en">URL and key</span></strong><span><span lang="es">Las de Mis APIs: la API principal o una API por aplicación.</span><span lang="en">The ones from My APIs: the Main API or one API per app.</span></span></li>
+  <li><strong>2. <span lang="es">URL y clave</span><span lang="en">URL and key</span></strong><span><span lang="es">Las de Mis APIs: la clave del espacio o una API por aplicación.</span><span lang="en">The ones from My APIs: the workspace key or one API per app.</span></span></li>
   <li><strong>3. <span lang="es">Tramtai</span><span lang="en">Tramtai</span></strong><span><span lang="es">Aplica la receta de esa API y pone la petición en la cola.</span><span lang="en">Applies that API’s recipe and puts the request in the queue.</span></span></li>
   <li><strong>4. <span lang="es">El agente</span><span lang="en">The agent</span></strong><span><span lang="es">El que diga model, por ejemplo claude/sonnet o perfil/rapido.</span><span lang="en">The one model names, for example claude/sonnet or perfil/rapido.</span></span></li>
 </ol>
 
 <ol class="pasos">
-  <li><span lang="es">En Mis APIs, pestaña «API principal», copia la URL para OpenAI (o Anthropic) y la clave.</span><span lang="en">In My APIs, &quot;Main API&quot; tab, copy the URL for OpenAI (or Anthropic) and the key.</span></li>
+  <li><span lang="es">En Mis APIs, pestaña «Clave del espacio», copia la URL para OpenAI (o Anthropic) y la clave.</span><span lang="en">In My APIs, &quot;Workspace key&quot; tab, copy the URL for OpenAI (or Anthropic) and the key.</span></li>
   <li><span lang="es">En tu app cambia la URL base (base_url) y la clave (api_key) por las de Tramtai.</span><span lang="en">In your app change the base URL (base_url) and the key (api_key) to Tramtai’s.</span></li>
   <li><span lang="es">En model pon agente y modelo, por ejemplo claude/sonnet, o un perfil como perfil/rapido.</span><span lang="en">In model put agent and model, for example claude/sonnet, or a profile like perfil/rapido.</span></li>
   <li><span lang="es">Envía una petición: aparece en el Historial con el agente que respondió.</span><span lang="en">Send a request: it shows up in History with the agent that answered.</span></li>

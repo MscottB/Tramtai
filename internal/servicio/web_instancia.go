@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"tramtai/internal/api"
 	"tramtai/internal/idioma"
@@ -19,6 +20,9 @@ import (
 type estadoConBase struct {
 	EstadoInstancia
 	Base string `json:"base"`
+	// AppConClave24h son las peticiones de apps que llegaron con la clave del espacio en las últimas 24 h: con muchas,
+	// la Web UI sugiere darles su propia API.
+	AppConClave24h int `json:"app_con_clave_24h"`
 }
 
 // rutaInstancia atiende lo que la Web UI necesita además de la API de la instancia: su estado y, con una sesión
@@ -27,7 +31,8 @@ type estadoConBase struct {
 func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *Instancia, privilegiada bool) bool {
 	ruta := r.URL.Path
 	if ruta == "/api/v1/instancia" && r.Method == http.MethodGet {
-		api.EscribirJSON(w, http.StatusOK, estadoConBase{inst.estado(r.Context()), s.Base()})
+		n, _ := inst.Planificador.ContarOrigenDesde(r.Context(), nucleo.DesdeApp, true, time.Now().Add(-24*time.Hour))
+		api.EscribirJSON(w, http.StatusOK, estadoConBase{inst.estado(r.Context()), s.Base(), n})
 		return true
 	}
 	if !strings.HasPrefix(ruta, "/api/v1/instancia/") && ruta != "/api/v1/puntos" && !strings.HasPrefix(ruta, "/api/v1/puntos/") {

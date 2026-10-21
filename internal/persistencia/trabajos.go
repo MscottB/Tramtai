@@ -380,6 +380,18 @@ func (a *Almacen) porCambio(ctx context.Context, instancia, punto, condicion str
 	return trabajos, filas.Err()
 }
 
+// ContarOrigenDesde cuenta los trabajos de la instancia con ese origen creados desde desde; sinPunto deja solo los que
+// llegaron con la clave de la instancia (sin API por aplicación): el aviso «dales su propia API» de Mis APIs.
+func (a *Almacen) ContarOrigenDesde(ctx context.Context, instancia, origen string, sinPunto bool, desde time.Time) (int, error) {
+	consulta := `SELECT COUNT(*) FROM trabajos WHERE instancia = ? AND origen = ? AND creado_en >= ?`
+	if sinPunto {
+		consulta += ` AND (punto_acceso IS NULL OR punto_acceso = '')`
+	}
+	var n int
+	err := a.db.QueryRowContext(ctx, consulta, instancia, origen, fecha(desde)).Scan(&n)
+	return n, err
+}
+
 // Contar devuelve cuántos trabajos de la instancia hay en cada estado.
 func (a *Almacen) Contar(ctx context.Context, instancia string) (map[nucleo.Estado]int, error) {
 	filas, err := a.db.QueryContext(ctx, `SELECT estado, COUNT(*) FROM trabajos WHERE instancia = ? GROUP BY estado`, instancia)

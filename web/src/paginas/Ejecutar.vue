@@ -324,7 +324,7 @@ function solicitudDe(cargas: string[], esquema: Record<string, unknown> | undefi
 }
 
 // «Ver como código»: la prueba actual por la API propia y por OpenAI, con la URL de la API que se edita o la de la
-// API principal. Al editar una API, su receta la aplica la propia API: el código solo lleva el mensaje.
+// clave del espacio. Al editar una API, su receta la aplica la propia API: el código solo lleva el mensaje.
 const dialogoCodigo = ref(false)
 const ejemplosCodigo = ref<Ejemplo[]>([])
 async function verCodigo() {

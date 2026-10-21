@@ -85,3 +85,17 @@ func TestConexionUIPersiste(t *testing.T) {
 		t.Fatalf("un agente que no existe: %d", r.StatusCode)
 	}
 }
+
+func TestAppConClave24h(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	global, err := s.ActivarGlobal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r, c := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", global.token, hola); r.StatusCode != 200 {
+		t.Fatalf("petición: %d %s", r.StatusCode, c)
+	}
+	if _, c := pedir(t, ts.URL, "GET", "/api/v1/instancia", global.token, ""); !strings.Contains(c, `"app_con_clave_24h":1`) {
+		t.Fatalf("GET /api/v1/instancia: %s", c)
+	}
+}

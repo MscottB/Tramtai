@@ -7,10 +7,27 @@
     </CabeceraPagina>
 
 
+    <!-- Las dos clases de clave, en tres líneas: la del espacio y las de cada app. -->
+    <q-card flat bordered>
+      <q-card-section class="row q-col-gutter-md">
+        <div class="col-12 col-md-6 row no-wrap items-start">
+          <q-icon name="o_cable" size="24px" color="primary" class="q-mr-sm" />
+          <div><div class="text-weight-medium">{{ t('claves.espacioTitulo', { nombre: sesion?.nombre ?? '' }) }}</div>
+            <div class="text-caption texto-suave">{{ t('claves.espacioTexto') }}</div></div>
+        </div>
+        <div class="col-12 col-md-6 row no-wrap items-start">
+          <q-icon name="o_hub" size="24px" color="primary" class="q-mr-sm" />
+          <div><div class="text-weight-medium">{{ t('claves.appsTitulo') }}</div>
+            <div class="text-caption texto-suave">{{ t('claves.appsTexto') }}</div></div>
+        </div>
+      </q-card-section>
+    </q-card>
+    <q-banner v-if="sugerirApiPropia(appConClave)" rounded class="aviso">{{ t('claves.sugerencia', { n: appConClave }) }}</q-banner>
+
     <q-card data-captura="mis-apis">
       <q-tabs v-model="pestana" dense no-caps align="left" active-color="primary" indicator-color="primary" class="q-px-sm" :breakpoint="0">
         <q-tab name="apis" icon="o_hub" :label="t('puntos.pestana', { n: puntos.length })" />
-        <q-tab name="principal" icon="o_cable" :label="t('conectar.directa')" />
+        <q-tab name="principal" icon="o_cable" :label="t('conectar.directa', { nombre: sesion?.nombre ?? '' })" />
       </q-tabs>
       <q-separator />
       <q-tab-panels v-model="pestana" animated keep-alive>
@@ -21,7 +38,7 @@
         <q-tab-panel name="principal" class="q-pa-none">
       <q-card-section class="seccion">
         <div>
-          <div class="titulo-seccion">{{ t('conectar.directa') }}</div>
+          <div class="titulo-seccion">{{ t('conectar.directa', { nombre: sesion?.nombre ?? '' }) }}</div>
           <div class="texto-suave text-body2">{{ t('conectar.directaTexto') }}</div>
         </div>
       </q-card-section>
@@ -91,13 +108,16 @@ import ListaApis from '../componentes/accesos/ListaApis.vue'
 import { activo, contratos, guardar, leer } from '../componentes/accesos/comun'
 import { api, avisar, avisarError, copiar, cargarDiasHistorial } from '../api/cliente'
 import type { ConfigPunto, EstadoPresupuesto, EstadoPunto, Modelo, UsoPunto } from '../api/tipos'
-import { grupoInicial, origenHistorial, recetaInicial } from '../estado'
+import { grupoInicial, origenHistorial, recetaInicial, sesion } from '../estado'
+import { sugerirApiPropia } from '../claves'
 import { asegurarFichas, codigoLinea, nombreAgente, ordenAgentes, opcionModelo } from '../agentes'
 import { ejemplos as ejemplosDe } from '../ejemplos'
 import { t } from '../i18n'
 
 const $q = useQuasar()
 const base = ref(location.origin)
+// appConClave son las peticiones de apps con la clave del espacio en 24 h: con muchas se sugiere darles su propia API.
+const appConClave = ref(0)
 const clave = ref('')
 const verClave = ref(false)
 const catalogo = ref<Modelo[]>([])
@@ -134,7 +154,7 @@ function usarApiPropia() {
 }
 const filtroGrupo = ref<string | null>(null) // null: todos; '': sin grupo
 
-// pestana es la pestaña abierta: las APIs por aplicación o la API principal; se recuerda en este navegador.
+// pestana es la pestaña abierta: las APIs por aplicación o la clave del espacio; se recuerda en este navegador.
 const pestana = ref<'apis' | 'principal'>(leer('tramtai.pestanaApis', 'apis'))
 watch(pestana, (v) => guardar('tramtai.pestanaApis', v))
 // gruposLista son los grupos que muestra la lista con sus filtros; si aún no se abrió su pestaña, todos los grupos.
@@ -291,7 +311,10 @@ onMounted(async () => {
   }
   cargarPuntos()
   api.catalogo().then((m) => (catalogo.value = m)).catch(avisarError)
-  api.instancia().then((i) => (base.value = i.base)).catch(() => {})
+  api.instancia().then((i) => {
+    base.value = i.base
+    appConClave.value = i.app_con_clave_24h ?? 0
+  }).catch(() => {})
   api.claveInstancia().then((r) => (clave.value = r.token)).catch(avisarError)
 })
 </script>

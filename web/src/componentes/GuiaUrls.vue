@@ -26,7 +26,7 @@
 
 <script setup lang="ts">
 // GuiaUrls explica qué URL usar según lo que hace la app, con la URL de cada contrato que acepta la API y una tabla
-// de lo que permite cada uno (TablaApis). nombre es la API por aplicación (vacío: la API principal).
+// de lo que permite cada uno (TablaApis). nombre es la API por aplicación (vacío: la clave del espacio).
 import { computed, ref } from 'vue'
 import { api, avisarError, copiar } from '../api/cliente'
 import { t } from '../i18n'

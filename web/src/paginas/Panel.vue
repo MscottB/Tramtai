@@ -17,6 +17,10 @@
     </CabeceraPagina>
 
     <q-banner v-if="error" rounded class="error-caja">{{ error }}</q-banner>
+    <q-banner v-if="sugerirApiPropia(instancia?.app_con_clave_24h)" rounded class="aviso">
+      {{ t('claves.sugerencia', { n: instancia?.app_con_clave_24h ?? 0 }) }}
+      <template #action><q-btn flat no-caps color="primary" :label="t('claves.crearApi')" @click="$emit('ir', 'conectar')" /></template>
+    </q-banner>
     <q-banner v-if="conProblemas.length" rounded class="aviso">
       {{ conProblemas.length === 1 ? t('inicio.espaciosConProblemaUno', { nombre: conProblemas[0].nombre }) : t('inicio.espaciosConProblema', { n: conProblemas.length }) }}
       <template #action><q-btn flat no-caps color="primary" :label="t('inicio.verEspacios')" @click="$emit('ir', 'espacios')" /></template>
@@ -122,6 +126,7 @@ import type { Adaptador, EspacioUI, EstadoInstancia, EstadoPunto, Trabajo } from
 import { periodoHistorial, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, sesion, sistema } from '../estado'
 import { agenteListo, asegurarFichas, ordenarAgentes } from '../agentes'
 import { estadoInfo, haceCuanto, terminales, textoDe } from '../formato'
+import { sugerirApiPropia } from '../claves'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()

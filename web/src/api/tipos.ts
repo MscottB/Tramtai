@@ -116,6 +116,8 @@ export interface EstadoInstancia {
   perfil_predeterminado?: string
   trabajos: Record<string, number>
   base: string
+  // app_con_clave_24h: peticiones de apps con la clave del espacio en las últimas 24 h (para sugerir APIs propias).
+  app_con_clave_24h?: number
 }
 export interface EstadoPunto {
   nombre: string
