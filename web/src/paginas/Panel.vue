@@ -17,6 +17,10 @@
     </CabeceraPagina>
 
     <q-banner v-if="error" rounded class="error-caja">{{ error }}</q-banner>
+    <q-banner v-if="conProblemas.length" rounded class="aviso">
+      {{ conProblemas.length === 1 ? t('inicio.espaciosConProblemaUno', { nombre: conProblemas[0].nombre }) : t('inicio.espaciosConProblema', { n: conProblemas.length }) }}
+      <template #action><q-btn flat no-caps color="primary" :label="t('inicio.verEspacios')" @click="$emit('ir', 'espacios')" /></template>
+    </q-banner>
     <AvisoConversor v-if="conversor && conversor.estado !== 'preparando'" enlace-ajustes @ajustes="$emit('ir', 'configuracion')" />
 
     <section class="q-card" data-captura="inicio">
@@ -114,7 +118,7 @@ import { aplicar, eventoDe, visibles, type Tranvia } from '../vivo'
 import AvisoConversor from '../componentes/AvisoConversor.vue'
 import { cargarConversor, conversor } from '../conversor'
 import { api, avisar, cargarDiasHistorial, copiar, mensajeError } from '../api/cliente'
-import type { Adaptador, EstadoInstancia, EstadoPunto, Trabajo } from '../api/tipos'
+import type { Adaptador, EspacioUI, EstadoInstancia, EstadoPunto, Trabajo } from '../api/tipos'
 import { periodoHistorial, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, sesion, sistema } from '../estado'
 import { agenteListo, asegurarFichas, ordenarAgentes } from '../agentes'
 import { estadoInfo, haceCuanto, terminales, textoDe } from '../formato'
@@ -205,8 +209,12 @@ async function cargar() {
   }
 }
 
+// conProblemas son los espacios que no se pudieron abrir (carpeta movida, local.yaml con claves no aplicadas…).
+const conProblemas = ref<EspacioUI[]>([])
+
 let intervalo: number
 onMounted(() => {
+  if (sesion.value?.local) api.espacios().then((l) => (conProblemas.value = l.filter((e) => e.ultimo_error))).catch(() => {})
   cargarConversor()
   cargarDiasHistorial()
   cargar()

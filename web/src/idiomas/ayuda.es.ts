@@ -165,6 +165,8 @@ const ayudaEs = {
 
   // Tema: Ajustes y actualizaciones
   'ayuda.ajustes.titulo': 'Ajustes y actualizaciones',
+  'ayuda.espacios.titulo': 'Espacios de trabajo',
+  'ayuda.espacios.resumen': 'La global y uno por proyecto, cada uno con su historial, sus APIs y sus ajustes.',
   'ayuda.ajustes.resumen': 'Arranque con el sistema, modelo predeterminado, archivos, historial y actualizaciones.',
   'ayuda.ajustes.paso1': 'Activa el arranque con el sistema: Tramtai se abre oculto en la bandeja al iniciar sesión.',
   'ayuda.ajustes.paso2': 'Elige el modelo y el esfuerzo que se usan cuando una petición no los dice.',

@@ -167,6 +167,8 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
 
   // Topic: Settings and updates
   'ayuda.ajustes.titulo': 'Settings and updates',
+  'ayuda.espacios.titulo': 'Workspaces',
+  'ayuda.espacios.resumen': 'The global one and one per project, each with its own history, APIs and settings.',
   'ayuda.ajustes.resumen': 'Start with the system, default model, files, history and updates.',
   'ayuda.ajustes.paso1': 'Turn on start with the system: Tramtai opens hidden in the tray when you sign in.',
   'ayuda.ajustes.paso2': 'Pick the model and effort used when a request does not say.',

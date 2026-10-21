@@ -65,7 +65,7 @@ test('el script de la página de paso funciona tal cual sale en ayuda.html', () 
   }
 })
 
-test('el índice de búsqueda tiene los 14 temas en los dos idiomas', () => {
+test('el índice de búsqueda tiene los 15 temas en los dos idiomas', () => {
   const indice = JSON.parse(paginas.get('ayuda/indice.json')!)
-  for (const idioma of ['es', 'en']) assert.equal(new Set(indice[idioma].map((e: { t: string }) => e.t)).size, 14)
+  for (const idioma of ['es', 'en']) assert.equal(new Set(indice[idioma].map((e: { t: string }) => e.t)).size, 15)
 })

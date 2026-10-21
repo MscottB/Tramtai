@@ -33,6 +33,10 @@
                 <q-item-label caption>{{ t('proyecto.abrirDetalle') }}</q-item-label>
               </q-item-section>
             </q-item>
+            <q-item v-close-popup clickable @click="ir('espacios')">
+              <q-item-section avatar><q-icon name="o_workspaces" color="primary" /></q-item-section>
+              <q-item-section><q-item-label class="text-weight-medium">{{ t('app.gestionarEspacios') }}</q-item-label></q-item-section>
+            </q-item>
           </q-list>
         </q-btn-dropdown>
         <q-chip v-else-if="sesion.instancia" outline :icon="iconoInstancia(sesion.ambito)">{{ sesion.nombre || sesion.instancia }}</q-chip>
@@ -146,7 +150,7 @@
           <div class="text-body2 q-mt-xs">{{ t('app.comoIniciar') }}</div>
           <template #action><q-btn flat no-caps icon="o_refresh" :label="t('app.reintentar')" @click="comprobar" /></template>
         </q-banner>
-        <div v-if="!sesion.instancia" class="pagina">
+        <div v-if="!sesion.instancia && seccion !== 'espacios'" class="pagina">
           <q-card class="q-pa-lg text-center" style="max-width: 560px; margin: 48px auto">
             <q-icon name="power_settings_new" size="48px" color="primary" />
             <div class="titulo-seccion q-mt-md">{{ t('app.sinInstancia') }}</div>
@@ -154,10 +158,12 @@
             <q-btn unelevated color="primary" icon="play_arrow" :label="t('app.activarGlobal')" no-caps :loading="activando" @click="activarGlobal" />
             <div class="q-mt-sm">
               <q-btn flat no-caps color="primary" icon="o_create_new_folder" :label="t('proyecto.abrir')" @click="dialogoProyecto = true" />
+              <q-btn flat no-caps color="primary" icon="o_workspaces" :label="t('app.gestionarEspacios')" @click="ir('espacios')" />
             </div>
           </q-card>
         </div>
-        <component :is="actual.componente" v-else :key="sesion.instancia" v-bind="seccion === 'ayuda' ? { tema: ruta.tema } : {}" @ir="ir" />
+        <component :is="actual.componente" v-else :key="sesion.instancia" v-bind="seccion === 'ayuda' ? { tema: ruta.tema } : {}" @ir="ir"
+          @abrir-proyecto="dialogoProyecto = true" />
       </q-page>
     </q-page-container>
 
@@ -167,7 +173,7 @@
           <div id="titulo-proyecto" class="titulo-seccion">{{ t('proyecto.titulo') }}</div>
           <div class="texto-suave text-body2 q-mt-xs">{{ t('proyecto.texto') }}</div>
         </q-card-section>
-        <q-form @submit="abrirProyecto">
+        <q-form @submit="abrirProyecto()">
           <q-card-section class="q-pt-none">
             <div class="row no-wrap items-start q-gutter-x-sm">
               <q-input v-model="rutaProyecto" class="col" outlined dense autofocus :label="t('proyecto.ruta')" :hint="t('proyecto.rutaHint', { ejemplo: ejemploRuta })"
@@ -175,9 +181,30 @@
               <q-btn v-if="escritorio" outline no-caps color="primary" icon="o_folder_open" :label="t('proyecto.examinar')" style="height: 40px" @click="examinar" />
             </div>
           </q-card-section>
+          <!-- La carpeta ya traía .tramtai/ (un repositorio clonado): se enseña qué claves de seguridad trae antes de confiar. -->
+          <q-card-section v-if="confianza" class="q-pt-none">
+            <div class="aviso text-body2">
+              <div class="text-weight-medium">{{ t('proyecto.confiarTitulo') }}</div>
+              <div class="q-mt-xs">{{ confianza.length ? t('proyecto.confiarTexto') : t('proyecto.sinClaves') }}</div>
+              <div v-if="confianza.length" class="q-mt-xs row q-gutter-xs">
+                <q-chip v-for="c in confianza" :key="c" dense square class="codigo">{{ c }}</q-chip>
+              </div>
+            </div>
+          </q-card-section>
+          <q-card-section v-if="dentroDe" class="q-pt-none">
+            <div class="aviso text-body2">{{ t('proyecto.dentro', { proyecto: dentroDe }) }}</div>
+          </q-card-section>
           <q-card-actions align="right" class="q-pa-md">
             <q-btn v-close-popup flat no-caps :label="t('comun.cancelar')" />
-            <q-btn unelevated color="primary" no-caps type="submit" :label="t('proyecto.abrirBoton')" :loading="abriendoProyecto" />
+            <template v-if="confianza">
+              <q-btn outline color="primary" no-caps :label="t('proyecto.abrirSinConfiar')" :loading="abriendoProyecto" @click="abrirProyecto({ confiar: false })" />
+              <q-btn unelevated color="primary" no-caps :label="t('proyecto.confiarYAbrir')" :loading="abriendoProyecto" @click="abrirProyecto({ confiar: true })" />
+            </template>
+            <template v-else-if="dentroDe">
+              <q-btn outline color="primary" no-caps :label="t('proyecto.crearAqui')" :loading="abriendoProyecto" @click="abrirProyecto({ crear_aqui: true })" />
+              <q-btn unelevated color="primary" no-caps :label="t('proyecto.abrirEse')" :loading="abriendoProyecto" @click="abrirEse" />
+            </template>
+            <q-btn v-else unelevated color="primary" no-caps type="submit" :label="t('proyecto.abrirBoton')" :loading="abriendoProyecto" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -251,9 +278,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, onMounted, onUnmounted, provide, ref, watchEffect } from 'vue'
+import { computed, markRaw, onMounted, onUnmounted, provide, ref, watch, watchEffect } from 'vue'
 import { useQuasar } from 'quasar'
-import { api, avisar, avisarError, buscarActualizacionAhora, reiniciarYSeguir } from './api/cliente'
+import { api, avisar, avisarError, buscarActualizacionAhora, ErrorApi, reiniciarYSeguir } from './api/cliente'
 import { actualizacion, dialogoActualizar, sesion } from './estado'
 import { useActualizacion } from './composables/useActualizacion'
 import { useSesion } from './composables/useSesion'
@@ -268,6 +295,7 @@ import HistorialPagina from './paginas/Trabajos.vue'
 import ConectarPagina from './paginas/Accesos.vue'
 import ConfiguracionPagina from './paginas/Configuracion.vue'
 import AgentesPagina from './paginas/Agentes.vue'
+import EspaciosPagina from './paginas/Espacios.vue'
 import AyudaPagina from './paginas/Ayuda.vue'
 import { hashDe, leerHash } from './ayuda/ruta'
 import { temaPorId } from './ayuda/indice'
@@ -287,6 +315,7 @@ const principales = [
   { id: 'ejecutar', titulo: 'menu.ejecutar', detalle: 'menuDetalle.ejecutar', icono: 'o_chat', componente: markRaw(EjecutarPagina) },
   { id: 'conectar', titulo: 'menu.conectar', detalle: 'menuDetalle.conectar', icono: 'o_hub', componente: markRaw(ConectarPagina) },
   { id: 'historial', titulo: 'menu.historial', detalle: 'menuDetalle.historial', icono: 'o_history', componente: markRaw(HistorialPagina) },
+  { id: 'espacios', titulo: 'menu.espacios', detalle: 'menuDetalle.espacios', icono: 'o_workspaces', componente: markRaw(EspaciosPagina) },
   { id: 'configuracion', titulo: 'menu.configuracion', detalle: 'menuDetalle.configuracion', icono: 'o_settings', componente: markRaw(ConfiguracionPagina) },
 ] as const
 // Cada página principal es una de PAGINAS (ayuda/tipos.ts): la dirección #<id> y su tema de la Ayuda la conocen.
@@ -423,19 +452,36 @@ const abriendoProyecto = ref(false)
 // En macOS y Linux también vale ~/ para la carpeta personal.
 const ejemploRuta = /Windows/i.test(navigator.userAgent) ? 'C:\\Proyectos\\mi-app' : '~/proyectos/mi-app'
 
-async function abrirProyecto() {
+// confianza son las claves de seguridad de una carpeta que ya traía .tramtai/ (null: no se preguntó); dentroDe, el
+// proyecto que contiene la carpeta elegida. Cambiar la ruta borra las dos preguntas.
+const confianza = ref<string[] | null>(null)
+const dentroDe = ref('')
+watch(rutaProyecto, () => {
+  confianza.value = null
+  dentroDe.value = ''
+})
+
+async function abrirProyecto(opciones: { confiar?: boolean; crear_aqui?: boolean } = {}) {
   if (!rutaProyecto.value.trim()) return
   abriendoProyecto.value = true
   try {
-    const nueva = await api.abrirProyecto(rutaProyecto.value.trim())
+    const nueva = await api.abrirProyecto(rutaProyecto.value.trim(), opciones)
     dialogoProyecto.value = false
     rutaProyecto.value = ''
     avisar(t('proyecto.abierto', { nombre: nueva.nombre || nueva.instancia }))
   } catch (e) {
-    avisarError(e)
+    if (e instanceof ErrorApi && e.codigo === 'confianza_requerida') confianza.value = (e.datos.claves as string[] | undefined) ?? []
+    else if (e instanceof ErrorApi && e.codigo === 'dentro_de_proyecto') dentroDe.value = String(e.datos.proyecto ?? '')
+    else avisarError(e)
   } finally {
     abriendoProyecto.value = false
   }
+}
+
+// abrirEse abre el proyecto que contiene la carpeta elegida.
+function abrirEse() {
+  rutaProyecto.value = dentroDe.value
+  return abrirProyecto()
 }
 
 function examinar() {

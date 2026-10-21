@@ -69,8 +69,8 @@ test('relacionados, errores e ids son válidos', () => {
   }
 })
 
-test('están los 14 temas y sus relacionados existen', () => {
-  assert.equal(temas.length, 14)
+test('están los 15 temas y sus relacionados existen', () => {
+  assert.equal(temas.length, 15)
   for (const tema of temas) for (const r of tema.relacionados) assert.ok(temaPorId(r), `${tema.id}: relacionado ${r} no existe`)
 })
 

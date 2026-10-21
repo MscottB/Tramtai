@@ -4,7 +4,7 @@ import type { Clave } from '../idiomas/es'
 
 // PAGINAS son las páginas principales de la app (App.vue las usa con este tipo); cada una tiene un tema que abre su
 // botón ?.
-export const PAGINAS = ['inicio', 'agentes', 'ejecutar', 'conectar', 'historial', 'configuracion'] as const
+export const PAGINAS = ['inicio', 'agentes', 'ejecutar', 'conectar', 'historial', 'espacios', 'configuracion'] as const
 export type Pagina = (typeof PAGINAS)[number]
 
 export interface Parada {
