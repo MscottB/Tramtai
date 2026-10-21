@@ -941,6 +941,8 @@ const en: Textos = {
   'error.conversor_no_disponible': "The file converter is missing",
   'conversor.progreso': "Converter preparation progress",
   'conversor.preparandoNuevo': "A new one is being prepared: {etapa} ({progreso} %); this one is used meanwhile.",
+  'recorrido.finTitulo': "That is all for now",
+  'recorrido.finTexto': "History and Settings have their own tour behind their ? button. Open it when you get there.",
 }
 
 export default en

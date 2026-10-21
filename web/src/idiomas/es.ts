@@ -941,6 +941,8 @@ const es = {
   'error.conversor_no_disponible': "Falta el conversor de archivos",
   'conversor.progreso': "Progreso de la preparación del conversor",
   'conversor.preparandoNuevo': "Se está preparando uno nuevo: {etapa} ({progreso} %); mientras tanto se usa este.",
+  'recorrido.finTitulo': "Y esto es todo por ahora",
+  'recorrido.finTexto': "Historial y Ajustes tienen su recorrido en su ?. Ábrelo cuando llegues allí.",
 }
 
 export type Clave = keyof typeof es

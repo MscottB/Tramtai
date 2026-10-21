@@ -13,6 +13,15 @@ export interface Parada {
   nota?: Clave
 }
 
+// PasoRecorrido es un paso del recorrido guiado de una página: ancla es el data-recorrido del elemento que señala y
+// bienvenida lo incluye también en el recorrido de bienvenida.
+export interface PasoRecorrido {
+  ancla: string
+  titulo: Clave
+  texto: Clave
+  bienvenida?: boolean
+}
+
 export type Bloque =
   // ramas une dos paradas (índices desde 0) fuera de la línea principal, como el paso al respaldo.
   | { tipo: 'diagrama'; paradas: Parada[]; ramas?: { desde: number; hacia: number; etiqueta: Clave }[] }
@@ -28,6 +37,7 @@ export type Bloque =
   | { tipo: 'nota'; texto: Clave }
   | { tipo: 'ir'; pagina: Pagina }
   | { tipo: 'descargas' }
+  | { tipo: 'recorrido'; pasos: PasoRecorrido[] }
 
 export interface Tema {
   id: string
