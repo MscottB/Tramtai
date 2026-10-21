@@ -1,7 +1,7 @@
 // La parte del motor de los recorridos que no necesita navegador: qué elemento se señala y qué dice cada paso.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { aDriver, capturarEsc, elegirElemento } from './recorridoDom.ts'
+import { aDriver, capturarEsc, cerrarAlNavegar, elegirElemento, focoAlCerrar, OPCIONES_DRIVER } from './recorridoDom.ts'
 import type { PasoMostrado } from './recorrido.ts'
 
 // elemento falso con el tamaño que devolvería getBoundingClientRect().
@@ -50,6 +50,32 @@ test('capturarEsc: Esc es solo del recorrido; nadie de debajo (panel, diálogo) 
   ventana.dispatchEvent(tecla('keyup', 'Escape'))
   assert.equal(cierres, 1)
   assert.deepEqual(vistas, ['keyup', 'keyup'])
+})
+
+test('focoAlCerrar: vuelve a lo que abrió el recorrido si sigue en la página; si no, al «?» de la página', () => {
+  const ayuda = elemento(32, 32)
+  const boton = { isConnected: true } as unknown as Element
+  assert.equal(focoAlCerrar(boton, raiz({ 'app.ayuda': [ayuda] })), boton)
+  // el botón de la bienvenida, de «Haz el recorrido» o de la página de Ayuda ya no está: no se deja el foco en body
+  const quitado = { isConnected: false } as unknown as Element
+  assert.equal(focoAlCerrar(quitado, raiz({ 'app.ayuda': [ayuda] })), ayuda)
+  assert.equal(focoAlCerrar(null, raiz({ 'app.ayuda': [ayuda] })), ayuda)
+})
+
+test('OPCIONES_DRIVER: solo enseña, el elemento resaltado no se puede pulsar ni enfocar con Tab', () => {
+  assert.equal(OPCIONES_DRIVER.disableActiveInteraction, true)
+  assert.equal(OPCIONES_DRIVER.allowKeyboardControl, true)
+})
+
+test('cerrarAlNavegar: Atrás o Alt+← (popstate) cierra el recorrido; al soltarlo deja de escuchar', () => {
+  const ventana = new EventTarget()
+  let cierres = 0
+  const quitar = cerrarAlNavegar(ventana, () => cierres++)
+  ventana.dispatchEvent(new Event('popstate'))
+  assert.equal(cierres, 1)
+  quitar()
+  ventana.dispatchEvent(new Event('popstate'))
+  assert.equal(cierres, 1)
 })
 
 const paso: PasoMostrado = { pagina: 'inicio', ancla: 'inicio.mapa', titulo: 'comun.aceptar', texto: 'comun.cancelar' }

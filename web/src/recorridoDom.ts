@@ -32,6 +32,32 @@ export function capturarEsc(destino: Pick<EventTarget, 'addEventListener' | 'rem
   }
 }
 
+// focoAlCerrar es adónde vuelve el foco al acabar: a lo que abrió el recorrido si sigue en la página; si no (el botón de
+// la bienvenida, «Haz el recorrido» en Inicio, «Muéstrame» de la página de Ayuda), al «?» de la página en la que acaba.
+export function focoAlCerrar(volverA: Element | null, raiz: Pick<Document, 'querySelectorAll'>): Element | undefined {
+  return volverA?.isConnected ? volverA : elegirElemento('app.ayuda', raiz)
+}
+
+// cerrarAlNavegar cierra el recorrido si se navega por fuera de él (Atrás, Alt+←): el hueco señalaría una página que ya
+// no está. La navegación del recorrido usa pushState (ir de App.vue), que no lanza popstate. Devuelve cómo dejar de escuchar.
+export function cerrarAlNavegar(destino: Pick<EventTarget, 'addEventListener' | 'removeEventListener'>, cerrar: () => void): () => void {
+  destino.addEventListener('popstate', cerrar)
+  return () => destino.removeEventListener('popstate', cerrar)
+}
+
+// OPCIONES_DRIVER son las opciones fijas de driver.js. Solo enseña: disableActiveInteraction quita los clics al elemento
+// resaltado (Nueva API, Abrir un proyecto…) y, como driver.js deja fuera de su Tab los que no reciben clics, tampoco se
+// llega con el teclado al mensaje de Probar: escribir no cambia de paso ni Ctrl+Intro envía nada.
+export const OPCIONES_DRIVER = {
+  showProgress: true,
+  allowKeyboardControl: true,
+  disableActiveInteraction: true,
+  popoverClass: 'recorrido',
+  overlayOpacity: 0.6,
+  stagePadding: 6,
+  stageRadius: 10,
+} as const
+
 // aDriver es el paso tal como lo pinta driver.js; se llama al mostrar cada paso, así que sale en el idioma de ese momento.
 export function aDriver(paso: PasoMostrado, i: number, total: number, t: Traductor): DriveStep {
   return {

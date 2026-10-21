@@ -7,7 +7,7 @@ import 'driver.js/dist/driver.css'
 import type { Pagina } from '../ayuda/tipos'
 import { t } from '../i18n'
 import type { PasoMostrado } from '../recorrido'
-import { aDriver, capturarEsc, elegirElemento } from '../recorridoDom'
+import { aDriver, capturarEsc, cerrarAlNavegar, elegirElemento, focoAlCerrar, OPCIONES_DRIVER } from '../recorridoDom'
 
 const ESPERA_MS = 5000
 const CADA_MS = 100
@@ -28,19 +28,21 @@ export function useRecorrido(ir: (pagina: Pagina) => void, paginaActual: Readonl
   // turno es el último paso pedido: una espera vieja no muestra nada si mientras tanto se pulsó otra cosa.
   let turno = 0
   let soltarEsc: (() => void) | undefined
+  let soltarNavegar: (() => void) | undefined
 
   function terminar() {
     if (!activo.value) return
     activo.value = false
     soltarEsc?.()
-    soltarEsc = undefined
+    soltarNavegar?.()
+    soltarEsc = soltarNavegar = undefined
     turno++
     d = undefined
     const fin = alFin
     alFin = undefined
-    const foco = volverA as HTMLElement | null
+    const antes = volverA
     // después de driver.js, que al cerrar devuelve el foco a lo que lo tenía al empezar el último paso (su botón)
-    setTimeout(() => foco?.focus?.())
+    setTimeout(() => (focoAlCerrar(antes, document) as HTMLElement | undefined)?.focus?.())
     fin?.()
   }
 
@@ -93,14 +95,9 @@ export function useRecorrido(ir: (pagina: Pagina) => void, paginaActual: Readonl
     soltarEsc = capturarEsc(window, cerrar)
     const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches
     d = driver({
+      ...OPCIONES_DRIVER,
       animate: !quieto,
       smoothScroll: !quieto,
-      showProgress: true,
-      allowKeyboardControl: true,
-      popoverClass: 'recorrido',
-      overlayOpacity: 0.6,
-      stagePadding: 6,
-      stageRadius: 10,
       onNextClick: () => void mostrar((d?.getActiveIndex() ?? -1) + 1),
       onPrevClick: () => void mostrar((d?.getActiveIndex() ?? 1) - 1),
       // driver.js enfoca la ✕ (el primer botón); Intro debe avanzar, no cerrar
@@ -108,8 +105,9 @@ export function useRecorrido(ir: (pagina: Pagina) => void, paginaActual: Readonl
       // Esc, la ✕, el fondo y «Hecho» pasan por cerrar(): onDestroyed no llega si se cierra durante la primera animación
       onDestroyStarted: cerrar,
     })
+    soltarNavegar = cerrarAlNavegar(window, cerrar)
     void mostrar(0)
   }
 
-  return { empezar, activo }
+  return { empezar, cerrar, activo }
 }

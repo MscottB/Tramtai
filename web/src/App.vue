@@ -442,7 +442,9 @@ function tituloDe(id?: string) {
 watchEffect(() => (document.title = `${tituloDe(pagina.value)} · Tramtai`))
 
 // Una sola instancia del recorrido guiado: la usan la bienvenida y, después, el «Muéstrame en pantalla» de la Ayuda.
-const { empezar: hacerRecorrido, activo: recorridoActivo } = useRecorrido(ir, seccion)
+const { empezar: hacerRecorrido, cerrar: cerrarRecorrido, activo: recorridoActivo } = useRecorrido(ir, seccion)
+// Sin sesión (se perdió o se salió) la app enseña la entrada: el recorrido no tiene nada que señalar.
+watch(() => !sesion.value, (sinSesion) => sinSesion && cerrarRecorrido())
 
 // El «Muéstrame en pantalla» de un tema de página: cierra el panel, va a la página si no está en ella y enseña sus pasos.
 function mostrarEnPantalla(pagina: Pagina) {
