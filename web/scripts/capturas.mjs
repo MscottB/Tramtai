@@ -8,11 +8,12 @@
 import { execFileSync, spawn } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import en from '../src/idiomas/en.ts'
 import es from '../src/idiomas/es.ts'
-import { ANCLAS, BIENVENIDA, CAPTURAS, PORTADA, SIN_CAPTURA } from './capturas-lista.ts'
+import { ANCHO_AYUDA, ANCLAS, BIENVENIDA, CAPTURAS, PORTADA, SIN_CAPTURA, rutaPrivada } from './capturas-lista.ts'
 
 const raiz = fileURLToPath(new URL('../../', import.meta.url))
 const destinoAyuda = fileURLToPath(new URL('../src/ayuda/capturas/', import.meta.url))
@@ -28,6 +29,8 @@ const soloBienvenida = args.includes('--bienvenida')
 const destinoSitio = fileURLToPath(new URL('../../site/', import.meta.url))
 const modelo = process.env.TRAMTAI_CAPTURAS_MODELO || 'claude/haiku'
 const esperar = (ms) => new Promise((ok) => setTimeout(ok, ms))
+// Nada del equipo de quien saca las capturas se publica: rutas de su carpeta personal, la temporal o la del repositorio.
+const privada = rutaPrivada([homedir(), tmpdir(), raiz])
 if (solo && ![...CAPTURAS, ...ANCLAS].some((c) => c.id === solo)) {
   console.error(`no hay una captura «${solo}»: usa uno de ${[...CAPTURAS, ...ANCLAS].map((c) => c.id).join(', ')}`)
   process.exit(1)
@@ -135,9 +138,9 @@ try {
     await enviar('Emulation.setDeviceMetricsOverride', { width: ancho, height: alto, deviceScaleFactor: 1, mobile: false })
     await enviar('Page.navigate', { url: `${base}/?c=${++carga}` })
     await hasta(() => evaluar('document.readyState === "complete"'), 20, 'la carga')
-    // La bienvenida (se ofrece sola la primera vez en Inicio) no sale en las capturas: su fondo oscurecería la página.
     // La pestaña de Ajustes que dejó una captura no debe pasar a la siguiente: cada una trae la suya en `guardado`.
     await evaluar(`localStorage.removeItem('tramtai.pestanaAjustes')`)
+    // La bienvenida (se ofrece sola la primera vez en Inicio) no sale en las capturas: su fondo oscurecería la página.
     await evaluar(`localStorage.setItem('tramtai.tema', '${tema}'); localStorage.setItem('tramtai.idioma', '${idioma}'); localStorage.setItem('tramtai.bienvenida', 'descartada')`)
     for (const [clave, valor] of Object.entries(guardado)) await evaluar(`localStorage.setItem(${JSON.stringify(clave)}, ${JSON.stringify(JSON.stringify(valor))})`)
     await enviar('Page.navigate', { url: `${base}/?c=${++carga}#${pagina}` })
@@ -193,9 +196,12 @@ try {
         await sinBarra()
         await ocultarRuta()
         const r = await evaluar(`(() => { const e = document.querySelector('${selector}'); e.scrollIntoView({ block: 'start' });
-          const b = e.getBoundingClientRect(); return { x: b.left + scrollX, y: b.top + scrollY, w: b.width, h: Math.min(b.height, 720) } })()`)
+          const b = e.getBoundingClientRect(); return { x: b.left + scrollX, y: b.top + scrollY, w: b.width, h: Math.min(b.height, 720),
+            texto: e.innerText + ' ' + [...e.querySelectorAll('input, textarea')].map((c) => c.value).join(' ') } })()`)
+        if (privada.test(r.texto)) throw new Error(`${c.id}: la captura muestra una ruta real: ${r.texto.slice(0, 200)}`)
+        // Más ancha que la columna de la Ayuda del sitio, se saca reducida a ese ancho (ANCHO_AYUDA).
         const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80, captureBeyondViewport: true,
-          clip: { x: r.x, y: r.y, width: r.w, height: r.h, scale: 1 } })
+          clip: { x: r.x, y: r.y, width: r.w, height: r.h, scale: Math.min(1, ANCHO_AYUDA / r.w) } })
         writeFileSync(join(destinoAyuda, `${c.id}.${tema}.${idioma}.webp`), Buffer.from(data, 'base64'))
         console.log(`${c.id}.${tema}.${idioma}.webp`)
       }
@@ -233,17 +239,23 @@ try {
               const fijo = !!e.closest('.q-header, .q-dialog')
               if (fijo) scrollTo(0, 0); else e.scrollIntoView({ block: 'center', behavior: 'instant' })
               const c = ${cabecera} ? e.closest('.q-header, .cabecera-pagina') ?? e : e
-              const m = ${cabecera} ? 0 : 16
+              // Un panel de diálogo va pegado al borde de la ventana: solo el margen del anillo (2 px a 3 px del borde),
+              // para no meter en el recorte trozos de la página de detrás.
+              const m = ${cabecera} ? 0 : fijo ? 6 : 16
               const b = c.getBoundingClientRect()
               const x = Math.max(0, b.left + scrollX - m), y = Math.max(0, b.top + scrollY - m)
               const w = Math.min(document.documentElement.scrollWidth, b.right + scrollX + m) - x
               const h = Math.min(document.documentElement.scrollHeight, b.bottom + scrollY + m) - y
-              return { x, y, w, h: Math.min(h, 1000), texto: c.innerText }
+              // El texto de toda la zona recortada (también lo de detrás y los campos), no solo el del elemento.
+              const dentro = (t) => t.width > 0 && t.right + scrollX > x && t.left + scrollX < x + w && t.bottom + scrollY > y && t.top + scrollY < y + h
+              const textos = [], rango = document.createRange(), w2 = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+              while (w2.nextNode()) { rango.selectNodeContents(w2.currentNode); if (dentro(rango.getBoundingClientRect())) textos.push(w2.currentNode.nodeValue) }
+              for (const campo of document.querySelectorAll('input, textarea')) if (dentro(campo.getBoundingClientRect())) textos.push(campo.value)
+              return { x, y, w, h: Math.min(h, 1000), texto: textos.join(' ') }
             })()`)
-            // Nada del equipo de quien saca las capturas se publica (rutas de la carpeta de trabajo o del usuario).
-            if (/Administrator|Proyectos[\\/]Tramtai|capturas-\w{6}/i.test(r.texto)) throw new Error(`${a.ancla}: la captura muestra una ruta real: ${r.texto.slice(0, 200)}`)
+            if (privada.test(r.texto)) throw new Error(`${a.ancla}: la captura muestra una ruta real: ${r.texto.slice(0, 200)}`)
             const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80, captureBeyondViewport: true,
-              clip: { x: r.x, y: r.y, width: r.w, height: r.h, scale: 1 } })
+              clip: { x: r.x, y: r.y, width: r.w, height: r.h, scale: Math.min(1, ANCHO_AYUDA / r.w) } })
             writeFileSync(join(destinoAyuda, `${a.id}.${tema}.${idioma}.webp`), Buffer.from(data, 'base64'))
             console.log(`${a.id}.${tema}.${idioma}.webp`)
             await evaluar(`document.body.classList.remove('driver-active'); document.querySelectorAll('.driver-active-element').forEach((e) => e.classList.remove('driver-active-element'))`)
@@ -256,8 +268,8 @@ try {
       for (const tema of ['claro', 'oscuro']) {
         await abrir(p.pagina, tema, 'es', '.pagina', 1440, 900)
         await ocultarRuta()
-        // La misma pantalla de 1440 px, también reducida a 960 para los móviles (srcset).
-        for (const ancho of [1440, 960]) {
+        // La misma pantalla de 1440 px, también reducida a 960 (móviles) y a 640 (la columna de «Así se ve» en escritorio).
+        for (const ancho of [1440, 960, 640]) {
           const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80,
             clip: { x: 0, y: 0, width: 1440, height: 900, scale: ancho / 1440 } })
           writeFileSync(join(destinoPortada, `${p.nombre}-${tema}-${ancho}.webp`), Buffer.from(data, 'base64'))
@@ -284,9 +296,9 @@ try {
         if (paso.ancla) await hasta(() => evaluar(`!!document.querySelector('.driver-active-element')`), 10, `el resaltado de ${paso.ancla}`)
         await esperar(1000) // la ventana y el resaltado llegan con su animación, y los datos de la página con ella
         await ocultarRuta()
-        // Nada del equipo de quien saca las capturas se publica (rutas de la carpeta de trabajo o del usuario).
-        const visto = await evaluar('document.body.innerText')
-        if (/Administrator|Proyectos[\\/]Tramtai|capturas-\w{6}/i.test(visto)) throw new Error(`el paso ${i + 1} muestra una ruta real: ${visto.slice(0, 200)}`)
+        // Toda la pantalla sale en la captura: se mira todo su texto y el de sus campos.
+        const visto = await evaluar(`document.body.innerText + ' ' + [...document.querySelectorAll('input, textarea')].map((c) => c.value).join(' ')`)
+        if (privada.test(visto)) throw new Error(`el paso ${i + 1} muestra una ruta real: ${visto.slice(0, 200)}`)
         // La misma pantalla de 1440 px, también reducida a 960 para los móviles (srcset).
         for (const ancho of [1440, 960]) {
           const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80,

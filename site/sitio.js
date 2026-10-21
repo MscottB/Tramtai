@@ -283,6 +283,16 @@
   if (destino && destino.tagName === 'DETAILS') destino.open = true;
 })();
 
+// escribirLeyenda cambia el texto de la leyenda del tranvía o de la demo un momento después de fijar su aria-live
+// (anunciar): algunos lectores no anuncian el cambio que llega a la vez que el atributo.
+function escribirLeyenda(leyenda, partes) {
+  clearTimeout(leyenda.pendiente);
+  leyenda.pendiente = setTimeout(function () {
+    leyenda.innerHTML = '';
+    partes.forEach(function (p) { leyenda.appendChild(p); });
+  }, 100);
+}
+
 // Recorrido de la portada: el tranvía va de una app a Tramtai y sigue por la línea de un agente hasta su estación, con
 // cuatro ejemplos que se turnan (uno, el respaldo: Claude falla a mitad y sigue Codex). La leyenda y el código de
 // «Cómo funciona» cambian con cada uno. Pausa, puntos para elegir, y sin animación con «reducir movimiento».
@@ -341,7 +351,8 @@
     ];
   }
 
-  var actual = 0, pausado = quieto, temporizador = null, animaciones = [], iniciado = false;
+  // pausaManual es la pausa que eligió la persona: «reducir movimiento» no la pisa al volver a desactivarse.
+  var actual = 0, pausado = quieto, pausaManual = false, temporizador = null, animaciones = [], iniciado = false;
   var leyenda = caja.querySelector('.mapa-leyenda');
   var puntos = caja.querySelectorAll('.mapa-punto');
   var pausa = caja.querySelector('.mapa-pausa');
@@ -359,13 +370,12 @@
   }
   function mostrar(n) {
     var e = ejemplos[n];
-    leyenda.innerHTML = '';
-    [['es', ' de '], ['en', ' of ']].forEach(function (par) {
+    escribirLeyenda(leyenda, [['es', ' de '], ['en', ' of ']].map(function (par) {
       var s = document.createElement('span');
       s.lang = par[0];
       s.textContent = (n + 1) + par[1] + ejemplos.length + ' · ' + e[par[0]];
-      leyenda.appendChild(s);
-    });
+      return s;
+    }));
     puntos.forEach(function (p, i) { p.setAttribute('aria-pressed', String(i === n)); });
     ejemplos.forEach(function (x) { var pre = document.getElementById(x.codigo); if (pre) pre.hidden = x !== e; });
   }
@@ -411,6 +421,7 @@
   puntos.forEach(function (p, i) { p.addEventListener('click', function () { anunciar(true); recorrer(i); }); });
   pausa.addEventListener('click', function () {
     pausado = !pausado;
+    pausaManual = pausado;
     anunciar(true);
     pausa.innerHTML = pausado ? '<span lang="es">Seguir</span><span lang="en">Play</span>' : '<span lang="es">Pausa</span><span lang="en">Pause</span>';
     recorrer(actual);
@@ -423,9 +434,9 @@
   // «Reducir movimiento» se respeta también si cambia con la página abierta.
   movimiento.addEventListener('change', function () {
     quieto = movimiento.matches;
-    pausado = quieto;
+    pausado = quieto || pausaManual;
     pausa.hidden = quieto;
-    pausa.innerHTML = '<span lang="es">Pausa</span><span lang="en">Pause</span>';
+    pausa.innerHTML = pausado ? '<span lang="es">Seguir</span><span lang="en">Play</span>' : '<span lang="es">Pausa</span><span lang="en">Pause</span>';
     if (iniciado) recorrer(actual);
   });
   if (quieto) pausa.hidden = true;
@@ -457,25 +468,33 @@
   var pausa = caja.querySelector('.demo-pausa');
   var movimiento = window.matchMedia('(prefers-reduced-motion: reduce)');
   var CADA_MS = 6000;
-  var actual = 0, pausado = movimiento.matches, enPantalla = !('IntersectionObserver' in window), temporizador = null;
+  // pausaManual es la pausa que eligió la persona: «reducir movimiento» no la pisa al volver a desactivarse.
+  var actual = 0, pausado = movimiento.matches, pausaManual = false, enPantalla = !('IntersectionObserver' in window), temporizador = null;
 
   function mostrar(n) {
     actual = n;
     figuras.forEach(function (f, i) { f.hidden = i !== n; });
     puntos.forEach(function (p, i) { p.setAttribute('aria-pressed', String(i === n)); });
-    leyenda.innerHTML = '';
-    [['es', ' de '], ['en', ' of ']].forEach(function (par) {
+    escribirLeyenda(leyenda, [['es', ' de '], ['en', ' of ']].map(function (par) {
       var s = document.createElement('span');
       s.lang = par[0];
       s.textContent = (n + 1) + par[1] + figuras.length + ' · ' + lista.children[n].querySelector('[lang="' + par[0] + '"]').textContent;
-      leyenda.appendChild(s);
-    });
+      return s;
+    }));
+  }
+  // precargar trae la imagen del paso siguiente que se va a ver (la del tema y el idioma activos, no las cuatro), así no
+  // sale en blanco al avanzar: las de los pasos ocultos tienen carga diferida y no bajan hasta que se ven.
+  function precargar(n) {
+    var vista = [].filter.call(figuras[n].querySelectorAll('img'), function (i) { return i.offsetWidth > 0; })[0];
+    var siguiente = vista && figuras[(n + 1) % figuras.length].querySelector('img.' + vista.classList[0] + '[lang="' + vista.lang + '"]');
+    if (siguiente) siguiente.loading = 'eager';
   }
   // La leyenda se anuncia cuando la elige la persona, no cada vez que avanza sola.
   function anunciar(si) { leyenda.setAttribute('aria-live', si ? 'polite' : 'off'); }
   function programar() {
     clearTimeout(temporizador);
     if (pausado || !enPantalla || document.hidden) return;
+    precargar(actual);
     temporizador = setTimeout(function () {
       anunciar(false);
       mostrar((actual + 1) % figuras.length);
@@ -489,6 +508,7 @@
   puntos.forEach(function (p, i) { p.addEventListener('click', function () { anunciar(true); mostrar(i); programar(); }); });
   pausa.addEventListener('click', function () {
     pausado = !pausado;
+    pausaManual = pausado;
     rotulo();
     programar();
   });
@@ -501,8 +521,8 @@
   }
   // «Reducir movimiento» se respeta también si cambia con la página abierta.
   movimiento.addEventListener('change', function () {
-    pausado = movimiento.matches;
-    pausa.hidden = pausado;
+    pausado = movimiento.matches || pausaManual;
+    pausa.hidden = movimiento.matches;
     rotulo();
     programar();
   });

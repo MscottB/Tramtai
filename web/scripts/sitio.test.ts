@@ -95,11 +95,11 @@ test('la barra y el pie llevan a lo mismo en todas las páginas', () => {
 })
 
 // Lighthouse (SEO, «link-text») marca como genérico un enlace que solo dice «Empezar»: el pie dice a dónde lleva.
-test('el enlace del pie a empezar.html dice «Primeros pasos» / «First steps», no un «Empezar» suelto', () => {
+test('el enlace del pie a empezar.html dice «Primeros pasos» / «Getting started» (como la tarjeta de la app), no un «Empezar» suelto', () => {
   for (const [ruta, html] of todas) {
     const pie = html.match(/<footer>[\s\S]*?<\/footer>/)?.[0] ?? ''
     const enlace = pie.match(/<a href="[^"]*ayuda\/empezar\.html">([\s\S]*?)<\/a>/)?.[1] ?? ''
-    assert.equal(enlace, '<span lang="es">Primeros pasos</span><span lang="en">First steps</span>', ruta)
+    assert.equal(enlace, `<span lang="es">${es['inicio.primerosPasos']}</span><span lang="en">${en['inicio.primerosPasos']}</span>`, ruta)
   }
 })
 
@@ -174,12 +174,12 @@ test('cada tema de página enseña «Qué verás en pantalla»: un paso por cada
   for (const t of temas.filter((x) => x.paginaApp)) assert.match(paginas.get(`ayuda/${t.id}.html`)!, /<section id="s-recorrido">/, t.id)
 })
 
-test('la captura de un paso lleva su tamaño, carga diferida y el título del paso como texto alternativo; sin captura, sin <img>', () => {
+test('la captura de un paso lleva su tamaño, carga diferida y un texto alternativo que no repite el título a secas; sin captura, sin <img>', () => {
   const html = generar(conRecorrido).get('ayuda/empezar.html')!
   const imgs = html.match(/<img [^>]*recorrido-[^>]*>/g) ?? []
   assert.deepEqual(imgs, [
-    '<img class="solo-claro" lang="es" src="capturas/recorrido-inicio-mapa.claro.es.webp" width="640" height="300" loading="lazy" alt="El mapa en vivo" style="max-width: 640px">',
-    '<img class="solo-oscuro" lang="en" src="capturas/recorrido-inicio-mapa.oscuro.en.webp" width="640" height="300" loading="lazy" alt="The live map" style="max-width: 640px">',
+    '<img class="solo-claro" lang="es" src="capturas/recorrido-inicio-mapa.claro.es.webp" width="640" height="300" loading="lazy" alt="Captura de pantalla: El mapa en vivo" style="max-width: 640px">',
+    '<img class="solo-oscuro" lang="en" src="capturas/recorrido-inicio-mapa.oscuro.en.webp" width="640" height="300" loading="lazy" alt="Screenshot: The live map" style="max-width: 640px">',
   ])
   assert.ok(!paginas.get('ayuda/empezar.html')!.includes('recorrido-inicio-mapa'), 'sin capturas, el paso sale sin <img>')
 })

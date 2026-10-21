@@ -3,7 +3,6 @@
 // al día en las páginas escritas a mano (PAGINAS_FIJAS). Son funciones puras: sitio-ayuda.mjs les da los textos, los
 // ejemplos y las capturas y escribe los archivos.
 import type { Bloque, Tema } from '../src/ayuda/tipos'
-import type { Clave } from '../src/idiomas/es'
 import { bloquesVisibles, capturaDeAncla } from '../src/ayuda/vista'
 import { campos, normalizar } from '../src/ayuda/buscar'
 import { ERRORES } from '../src/ayuda/temas/problemas'
@@ -113,7 +112,7 @@ export function pie(rel: string): string {
   <div class="envoltura">
     <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
       <a href="${rel || './'}#descargar">${bilingue('Descargar', 'Download')}</a>
-      <a href="${rel}ayuda/empezar.html">${bilingue('Primeros pasos', 'First steps')}</a>
+      <a href="${rel}ayuda/empezar.html">${bilingue('Primeros pasos', 'Getting started')}</a>
       <a href="${rel}ayuda/">${bilingue('Ayuda', 'Help')}</a>
       <a href="${rel}desarrolladores.html">${bilingue('Desarrolladores', 'Developers')}</a>
       <a href="${REPO}">GitHub</a>
@@ -200,12 +199,12 @@ function tarjetas(f: Fuente, lista: Tema[]): string {
 }
 
 // imagenes son las cuatro variantes de una captura (claro/oscuro × es/en) que existen; el CSS deja ver la del tema y el
-// idioma activos. alt es la clave del texto alternativo; con aSuTamano la imagen no pasa de su ancho (los recortes
+// idioma activos. alt da el texto alternativo en cada idioma; con aSuTamano la imagen no pasa de su ancho (los recortes
 // pequeños de un paso no se estiran hasta llenar la columna, y su alto se reserva por el tamaño declarado).
-function imagenes(f: Fuente, id: string, alt: Clave, aSuTamano = false): string {
+function imagenes(f: Fuente, id: string, alt: (i: 'es' | 'en') => string, aSuTamano = false): string {
   return (['claro', 'oscuro'] as const).flatMap((c) => (['es', 'en'] as const).map((i) => {
     const archivo = `${id}.${c}.${i}.webp`
-    const texto = (i === 'es' ? f.es : f.en)[alt] ?? alt
+    const texto = alt(i)
     const m = f.capturas.get(archivo)
     return m ? `<img class="solo-${c}" lang="${i}" src="capturas/${archivo}" width="${m.ancho}" height="${m.alto}" loading="lazy" alt="${escapar(texto)}"${aSuTamano ? ` style="max-width: ${m.ancho}px"` : ''}>` : ''
   })).join('')
@@ -213,6 +212,7 @@ function imagenes(f: Fuente, id: string, alt: Clave, aSuTamano = false): string 
 
 function bloque(f: Fuente, tema: Tema, b: Bloque, n: number): string {
   const tx = (k: string) => bilingue(f.es[k] ?? k, f.en[k] ?? k)
+  const de = (i: 'es' | 'en', k: string) => (i === 'es' ? f.es : f.en)[k] ?? k
   switch (b.tipo) {
     case 'diagrama':
       return `<ol class="diagrama" style="--paradas: ${b.paradas.length}">${b.paradas.map((p, i) => `
@@ -221,13 +221,14 @@ function bloque(f: Fuente, tema: Tema, b: Bloque, n: number): string {
     case 'pasos':
       return `<ol class="pasos">${b.pasos.map((p) => `\n  <li>${tx(p)}</li>`).join('')}\n</ol>`
     case 'captura': {
-      const imgs = imagenes(f, b.id, b.alt)
+      const imgs = imagenes(f, b.id, (i) => de(i, b.alt))
       return imgs ? `<figure class="captura">${imgs}</figure>` : ''
     }
     case 'recorrido':
-      // Un paso sin captura (la demo no muestra su ancla, ver SIN_CAPTURA) sale solo con su texto.
+      // Un paso sin captura (la demo no muestra su ancla, ver SIN_CAPTURA) sale solo con su texto. El texto alternativo
+      // dice que es una captura del paso, sin repetir a secas el título que va justo encima.
       return `<ol class="pasos recorrido-pasos">${b.pasos.map((p) => {
-        const imgs = imagenes(f, capturaDeAncla(p.ancla), p.titulo, true)
+        const imgs = imagenes(f, capturaDeAncla(p.ancla), (i) => `${i === 'es' ? 'Captura de pantalla' : 'Screenshot'}: ${de(i, p.titulo)}`, true)
         return `\n  <li><div><strong>${tx(p.titulo)}</strong> ${tx(p.texto)}${imgs ? `<figure class="captura captura-paso">${imgs}</figure>` : ''}</div></li>`
       }).join('')}\n</ol>`
     case 'ejemplo': {

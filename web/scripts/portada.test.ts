@@ -35,7 +35,7 @@ test('el tranvía mide los caminos fuera de la página y no arranca hasta que el
   assert.match(tranvia, /try \{ l = p\.getTotalLength\(\); \} catch/, 'primero mide el path suelto, sin tocar el svg')
   assert.match(tranvia, /medidas\[d\]/, 'cada camino se mide una sola vez')
   assert.doesNotMatch(tranvia, /^\s*recorrer\(0\);\s*$/m, 'recorrer(0) no se llama al cargar')
-  assert.match(tranvia, /new IntersectionObserver[\s\S]*if \(!iniciado\) recorrer\(actual\)/, 'arranca al acercarse')
+  assert.match(tranvia, /new IntersectionObserver[\s\S]*if \(!iniciado\) recorrer\(actual\)[\s\S]*\{ rootMargin: '200px 0px' \}/, 'arranca a 200 px de la pantalla')
   assert.match(tranvia, /else if \(iniciado\) recorrer\(actual\)/, 'volver a la pestaña no arranca un tranvía que aún no se ve')
 })
 
@@ -72,8 +72,9 @@ test('las capturas son WebP con tamaño declarado, srcset y carga diferida', () 
   for (const img of imgs) {
     assert.match(img, /src="capturas\/[a-z-]+-(claro|oscuro)-1440\.webp"/)
     assert.match(img, /width="1440" height="900"/)
-    assert.match(img, /srcset="capturas\/[a-z-]+-(claro|oscuro)-960\.webp 960w, capturas\/[a-z-]+-(claro|oscuro)-1440\.webp 1440w"/)
-    assert.match(img, /sizes="/)
+    assert.match(img, /srcset="capturas\/[a-z-]+-(claro|oscuro)-640\.webp 640w, capturas\/[a-z-]+-(claro|oscuro)-960\.webp 960w, capturas\/[a-z-]+-(claro|oscuro)-1440\.webp 1440w"/)
+    // Las dos columnas de un par (1fr y 1.6fr en 1120 px) dejan la captura en 630 px: el navegador elige la de 640.
+    assert.match(img, /sizes="\(max-width: 900px\) 100vw, 630px"/)
     assert.match(img, /loading="lazy"/, 'ninguna está en la primera pantalla')
   }
 })
@@ -111,6 +112,28 @@ test('la lista de pasos de la demo usa los títulos reales del recorrido, en los
   const lista = demo.match(/<ol class="demo-lista">([\s\S]*?)<\/ol>/)?.[1] ?? ''
   const titulos = [...lista.matchAll(/<li><span lang="es">([^<]+)<\/span><span lang="en">([^<]+)<\/span><\/li>/g)].map((m) => [m[1], m[2]])
   assert.deepEqual(titulos, pasos.map((p) => [es[p.titulo], en[p.titulo]]))
+})
+
+const demoJs = js.slice(js.indexOf('// Demo del recorrido guiado'))
+
+test('la leyenda cambia un momento después de su aria-live, en el tranvía y en la demo', () => {
+  assert.match(js, /function escribirLeyenda\(leyenda, partes\) \{[\s\S]*?setTimeout/, 'el texto llega después del atributo')
+  for (const [nombre, parte] of [['tranvía', tranvia], ['demo', demoJs]]) {
+    assert.match(parte, /escribirLeyenda\(leyenda, /, nombre)
+    assert.doesNotMatch(parte, /leyenda\.innerHTML = ''/, `${nombre}: la leyenda no se cambia en el acto`)
+  }
+})
+
+test('«reducir movimiento» no pisa una pausa que eligió la persona', () => {
+  for (const [nombre, parte] of [['tranvía', tranvia], ['demo', demoJs]]) {
+    assert.match(parte, /pausaManual = pausado/, `${nombre}: la pausa de la persona se recuerda`)
+    assert.match(parte, /pausado = (quieto|movimiento\.matches) \|\| pausaManual/, `${nombre}: al volver el movimiento sigue en pausa`)
+  }
+})
+
+test('la demo precarga solo la imagen del paso siguiente que se va a ver', () => {
+  assert.match(demoJs, /function precargar\(n\)/)
+  assert.match(demoJs, /siguiente\.loading = 'eager'/)
 })
 
 test('la demo se puede pausar y elegir, sin anunciarse sola y con los controles en el idioma de la página', () => {
