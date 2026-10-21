@@ -165,7 +165,9 @@ depende del sitio: LCP, CLS, imágenes, recursos que bloquean el renderizado, ta
   `capturas.test.ts` exige las tres anchuras.
 - [M] [x] «image-delivery» en `ayuda/espacios` (12 KiB en escritorio y 14 KiB en móvil): las capturas de la Ayuda medían
   hasta 1024 px y se pintan como mucho a 736 (el ancho de la columna). `capturas.mjs` saca reducidas a ese ancho
-  (`ANCHO_AYUDA`) las que pasan de él, sin variantes nuevas; `capturas.test.ts` comprueba que ninguna lo supera.
+  (`ANCHO_AYUDA`) las que pasan de él, sin variantes nuevas; `capturas.test.ts` comprueba que ninguna lo supera. En la
+  medida de después, escritorio sale limpio; en móvil quedan unos 12 KiB (dos capturas de 736 px pintadas a unos 340):
+  quitarlos pide una variante pequeña de cada una de las 88 capturas de los pasos y de las de los temas, y no compensa.
 - [B] Caché y latencia del documento: dependen del servidor (GitHub Pages), no del sitio.
 - [B] `estilo.css` bloquea el renderizado (29 KB) y CSS y JS sin minificar (6-7 KB), y por eso también sale en
   «network-dependency-tree»: el sitio no tiene paso de compilación y no se añaden dependencias. En la 404 el bloqueo viene de pedir `estilo.css` con la URL absoluta de GitHub
