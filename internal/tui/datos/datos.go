@@ -6,6 +6,7 @@ package datos
 import (
 	_ "embed"
 	"encoding/json"
+	"strings"
 	"sync"
 )
 
@@ -77,6 +78,18 @@ func Ayuda(idioma string) []Tema { return ayuda()[lengua(idioma)] }
 
 // Plantillas son las plantillas de salida estructurada.
 func Plantillas(idioma string) []Plantilla { return plantillas()[lengua(idioma)] }
+
+// Textof es Texto con sus {marcadores} sustituidos: pares va de dos en dos, marcador (sin llaves) y valor.
+func Textof(idioma, clave string, pares ...string) string {
+	llaves := make([]string, len(pares))
+	for i, p := range pares {
+		if i%2 == 0 {
+			p = "{" + p + "}"
+		}
+		llaves[i] = p
+	}
+	return strings.NewReplacer(llaves...).Replace(Texto(idioma, clave))
+}
 
 // Texto es el nombre que la Web UI da a una clave (menu.* y los textos de la Ayuda de la interfaz); si no existe, la clave.
 func Texto(idioma, clave string) string {

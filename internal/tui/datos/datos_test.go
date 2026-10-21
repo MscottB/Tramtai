@@ -2,6 +2,7 @@ package datos
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -59,5 +60,14 @@ func TestTextosMenu(t *testing.T) {
 	}
 	if Texto("es", "no.existe") != "no.existe" {
 		t.Error("una clave desconocida vuelve tal cual")
+	}
+}
+
+func TestTextofRellenaLosMarcadores(t *testing.T) {
+	if got := Textof("es", "agentes.usaClave", "cli", "Claude Code"); strings.Contains(got, "{") || strings.Count(got, "Claude Code") != 2 {
+		t.Errorf("Textof no rellena todos los marcadores: %q", got)
+	}
+	if got := Textof("en", "agentes.filtroListos", "n", "3"); got != "Ready (3)" {
+		t.Errorf("Textof en: %q", got)
 	}
 }

@@ -119,6 +119,7 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	}
 	p.visor.Tamano(c.Ancho, max(c.Alto-2, 1))
 	p.cargado, p.sinServ, p.err, p.detalle, p.pend, p.ocupado = false, false, "", "", nil, false
+	p.modelos, p.errModel = map[string][]string{}, map[string]string{} // el catálogo es del espacio: el de antes no se ve
 	return p.comprobar()
 }
 
@@ -317,26 +318,28 @@ func (p *Pagina) alternarConexion(a adaptador) tea.Cmd {
 	if p.ocupado {
 		return nil
 	}
+	if estadoDe(a) == estNoInstalado { // sin CLI no hay nada que conectar ni desconectar
+		return comp.Aviso(idioma.T("Instala su CLI antes: no hay nada que conectar ni desconectar"), comp.Advertencia)
+	}
 	if a.Desconectado {
 		return p.conectar(a.Agente, true)
 	}
 	p.pend = &pendiente{agente: a.Agente, accion: accionDesconectar}
-	return comp.Confirmar(idioma.Tf("¿Desconectar %s?", nombre(a.Agente)) + "\n\n" +
-		idioma.T("No se usará en ningún espacio, ni como respaldo: las peticiones que lo pidan reciben agente_desconectado. Lo vuelves a conectar cuando quieras."))
+	return comp.Confirmar(p.tx("agentes.desconectarTitulo", "agente", nombre(a.Agente)) + "\n\n" + p.tx("agentes.desconectarTexto"))
 }
 
 func (p *Pagina) conectar(agente string, conectado bool) tea.Cmd {
-	exito := idioma.Tf("%s está desconectado", nombre(agente))
+	exito := p.tx("agentes.desconectado", "agente", nombre(agente))
 	if conectado {
-		exito = idioma.Tf("%s está conectado", nombre(agente))
+		exito = p.tx("agentes.conectado", "agente", nombre(agente))
 	}
 	return p.accion(exito, func(c pagina.Contexto) error { return c.Cli.ConectarAgente(c.Ctx, agente, conectado) })
 }
 
 func (p *Pagina) autenticar(agente, modo string) tea.Cmd {
-	exito := idioma.Tf("%s usa ahora la clave de API", nombre(agente))
+	exito := p.tx("agentes.claveActivada", "agente", nombre(agente))
 	if modo == "suscripcion" {
-		exito = idioma.Tf("%s usa ahora tu suscripción", nombre(agente))
+		exito = p.tx("agentes.suscripcionActivada", "agente", nombre(agente))
 	}
 	return p.accion(exito, func(c pagina.Contexto) error { return c.Cli.CambiarAutenticacion(c.Ctx, agente, modo) })
 }
@@ -374,10 +377,9 @@ func (p *Pagina) alternarAutenticacion(a adaptador) tea.Cmd {
 		return comp.Aviso(idioma.T("En su estado actual solo se puede usar la clave de API"), comp.Advertencia)
 	}
 	p.pend = &pendiente{agente: a.Agente, accion: accionSuscripcion}
-	return comp.Confirmar(idioma.Tf("Usar tu suscripción con %s", nom) + "\n\n" +
-		idioma.Tf("Tramtai usará la sesión de %s que ya tienes iniciada en este equipo. Según los términos del proveedor es solo para uso personal y local: no la compartas con otras personas.", programa(a.Agente)) + "\n\n" +
-		idioma.T("Los términos de cada proveedor pueden no permitir usar una suscripción personal de forma automatizada o para alimentar otras aplicaciones, y el proveedor podría limitar o suspender tu cuenta. Ese riesgo es tuyo. Para tus aplicaciones, lo recomendado es una clave de API. Más detalle en los términos de uso de Tramtai (github.com/MscottB/Tramtai/blob/main/TERMINOS.md).") + "\n\n" +
-		idioma.T("Pulsar s significa que entiendes el riesgo y aceptas los términos de uso."))
+	// Cabe en 60×20: el título, el riesgo y la aceptación. Lo demás, que es para uso personal en este equipo, está en el detalle.
+	return comp.Confirmar(p.tx("agentes.confirmarTitulo", "agente", nom) + "\n\n" + p.tx("agentes.riesgoSuscripcion") + "\n\n" +
+		idioma.T("Pulsa s para confirmar:") + " " + p.tx("agentes.aceptoRiesgo"))
 }
 
 // probar lleva a Probar con este agente; solo uno listo se puede probar.

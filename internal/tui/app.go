@@ -310,7 +310,7 @@ func (m *modelo) vista() string {
 	var cuerpo string
 	switch {
 	case m.pregunta != nil:
-		cuerpo = lipgloss.Place(ancho, alto, lipgloss.Center, lipgloss.Center, m.pregunta.Vista(e, min(ancho-2, 60)))
+		cuerpo = lipgloss.Place(ancho, alto, lipgloss.Center, lipgloss.Center, m.pregunta.Vista(e, min(ancho-2, 60), alto))
 	case m.selector != nil:
 		caja := lipgloss.NewStyle().Border(e.Borde).Padding(0, 1).Render(m.selector.Vista(min(ancho-6, 60), min(alto-2, 16)))
 		cuerpo = lipgloss.Place(ancho, alto, lipgloss.Center, lipgloss.Center, caja)

@@ -303,6 +303,7 @@ func TestAgentesIgnoraRespuestasViejas(t *testing.T) {
 }
 
 func TestAgentesEstados(t *testing.T) {
+	pe := Nueva("es").(*Pagina)
 	casos := []struct {
 		a        adaptador
 		quiere   estado
@@ -310,7 +311,8 @@ func TestAgentesEstados(t *testing.T) {
 	}{
 		{adaptador{Agente: "x"}, estListo, "Listo"},
 		{adaptador{Agente: "x", Problema: "p", ProblemaCodigo: "aviso"}, estListo, "Listo"},
-		{adaptador{Agente: "x", Desconectado: true, Problema: "p", ProblemaCodigo: "no_instalado"}, estDesconectado, "Desconectado"},
+		{adaptador{Agente: "x", Desconectado: true}, estDesconectado, "Desconectado"},
+		{adaptador{Agente: "x", Desconectado: true, Problema: "p", ProblemaCodigo: "no_instalado"}, estNoInstalado, "No instalado"},
 		{adaptador{Agente: "x", Problema: "p", ProblemaCodigo: "no_instalado"}, estNoInstalado, "No instalado"},
 		{adaptador{Agente: "x", Problema: "p", ProblemaCodigo: "falta_clave", Autenticacion: "clave_api"}, estFaltaClave, "Sin conectar"},
 		{adaptador{Agente: "x", Problema: "p", ProblemaCodigo: "falta_clave", Autenticacion: "suscripcion"}, estSinSesion, "Sin conectar"},
@@ -319,8 +321,8 @@ func TestAgentesEstados(t *testing.T) {
 		{adaptador{Agente: "x", Problema: "p"}, estRevisar, "Revisar"},
 	}
 	for _, c := range casos {
-		if got := estadoDe(c.a); got != c.quiere || etiqueta(got) != c.etiqueta {
-			t.Errorf("%+v: estado %d (%s), esperaba %d (%s)", c.a, got, etiqueta(got), c.quiere, c.etiqueta)
+		if got := estadoDe(c.a); got != c.quiere || pe.etiqueta(got) != c.etiqueta {
+			t.Errorf("%+v: estado %d (%s), esperaba %d (%s)", c.a, got, pe.etiqueta(got), c.quiere, c.etiqueta)
 		}
 	}
 }

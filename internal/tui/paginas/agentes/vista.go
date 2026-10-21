@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -11,6 +12,7 @@ import (
 	"tramtai/internal/adaptadores"
 	catalogo "tramtai/internal/agentes"
 	"tramtai/internal/idioma"
+	"tramtai/internal/tui/datos"
 )
 
 // estado es lo que enseña un agente: el mismo cálculo que estadoAgente de la Web UI (web/src/agentes.ts).
@@ -27,17 +29,18 @@ const (
 	estRevisar
 )
 
-// estadoDe clasifica un agente por su conexión y el código de su problema.
+// estadoDe clasifica un agente por su conexión y el código de su problema. Uno cuyo CLI ya no está es «no instalado»
+// aunque esté desconectado: la Web UI lo pone entre los que se pueden instalar.
 func estadoDe(a adaptador) estado {
 	switch {
+	case a.ProblemaCodigo == adaptadores.ProblemaNoInstalado:
+		return estNoInstalado
 	case a.Desconectado:
 		return estDesconectado
 	case a.Problema == "" || a.ProblemaCodigo == adaptadores.ProblemaAviso:
 		return estListo // un aviso, como el AGENTS.md de Codex, no impide usarlo
 	}
 	switch a.ProblemaCodigo {
-	case adaptadores.ProblemaNoInstalado:
-		return estNoInstalado
 	case adaptadores.ProblemaFaltaClave:
 		if a.Autenticacion == adaptadores.AutenticacionSuscripcion {
 			return estSinSesion
@@ -51,20 +54,25 @@ func estadoDe(a adaptador) estado {
 	return estRevisar
 }
 
+// tx es un texto de la Web UI (datos.Texto) en el idioma de la sesión, con sus {marcadores} rellenos.
+func (p *Pagina) tx(clave string, pares ...string) string {
+	return datos.Textof(p.lengua, clave, pares...)
+}
+
 // etiqueta es la del estado en la tarjeta de la Web UI (agente.listo, agente.faltaClave…): «Sin conectar» vale para el
 // que falta la clave y el que no tiene sesión, y «Revisar» para el resto de problemas.
-func etiqueta(e estado) string {
+func (p *Pagina) etiqueta(e estado) string {
 	switch e {
 	case estListo:
-		return idioma.T("Listo")
+		return p.tx("agente.listo")
 	case estDesconectado:
-		return idioma.T("Desconectado")
+		return p.tx("agente.desconectado")
 	case estNoInstalado:
-		return idioma.T("No instalado")
+		return p.tx("agente.noInstalado")
 	case estFaltaClave, estSinSesion:
-		return idioma.T("Sin conectar")
+		return p.tx("agente.faltaClave")
 	}
-	return idioma.T("Revisar")
+	return p.tx("agente.revisar")
 }
 
 // nombre es el nombre visible del agente (el de su ficha); el id si no tiene.
@@ -82,7 +90,8 @@ func codigo(agente string) string {
 	if f, ok := catalogo.Buscar(agente); ok && f.Codigo != "" {
 		return f.Codigo
 	}
-	return strings.ToUpper(string([]rune(agente)[:min(2, len([]rune(agente)))]))
+	letras := []rune(agente)
+	return strings.ToUpper(string(letras[:min(2, len(letras))]))
 }
 
 // ordenar pone primero los listos, luego los que falta conectar y al final los no instalados; dentro de cada grupo, el
@@ -115,11 +124,11 @@ func rellenar(texto string, ancho int) string {
 	return texto + strings.Repeat(" ", max(ancho-lipgloss.Width(texto), 0))
 }
 
-func autenticacion(a adaptador) string {
+func (p *Pagina) autenticacion(a adaptador) string {
 	if a.Autenticacion == adaptadores.AutenticacionSuscripcion {
-		return idioma.T("Suscripción (uso personal)")
+		return p.tx("agentes.suscripcion")
 	}
-	return idioma.T("Clave de API")
+	return p.tx("agentes.claveApi")
 }
 
 // fila es una línea de la lista: su código, su nombre, su estado y, si está listo, cómo está conectado.
@@ -135,13 +144,13 @@ func (p *Pagina) fila(a adaptador) string {
 	}
 	var resto []string
 	if est == estListo {
-		resto = append(resto, autenticacion(a))
+		resto = append(resto, p.autenticacion(a))
 	}
 	if a.Version != "" {
 		resto = append(resto, a.Version)
 	}
 	return rellenar(codigo(a.Agente), 3) + " " + rellenar(e.Recortar(nombre(a.Agente), 16), 16) + " " +
-		rellenar(icono+" "+etiqueta(est), 16) + strings.Join(resto, " "+e.Iconos.Separador+" ")
+		rellenar(icono+" "+p.etiqueta(est), 16) + strings.Join(resto, " "+e.Iconos.Separador+" ")
 }
 
 // Vista es el título, el resumen por estados y la lista; con un detalle abierto, el detalle.
@@ -152,7 +161,7 @@ func (p *Pagina) Vista() string {
 	}
 	if p.detalle != "" {
 		a, _ := p.elegido()
-		cabecera := e.Titulo.Render(e.Recortar(nombre(a.Agente), ancho)) + " " + e.Tenue.Render(e.Iconos.Separador+" "+etiqueta(estadoDe(a)))
+		cabecera := e.Titulo.Render(e.Recortar(nombre(a.Agente), ancho)) + " " + e.Tenue.Render(e.Iconos.Separador+" "+p.etiqueta(estadoDe(a)))
 		return cabecera + "\n\n" + p.visor.Vista()
 	}
 	lineas := []string{e.Titulo.Render(e.Recortar(p.Titulo(), ancho))}
@@ -163,7 +172,7 @@ func (p *Pagina) Vista() string {
 		return strings.Join(append(lineas, "", e.Tenue.Render(idioma.T("Cargando…"))), "\n")
 	}
 	if alto >= 12 {
-		lineas = append(lineas, e.Tenue.Render(e.Recortar(idioma.T("Los asistentes de IA que Tramtai usa para responder. Conecta al menos uno."), ancho)))
+		lineas = append(lineas, e.Tenue.Render(e.Recortar(p.tx("agentes.subtitulo"), ancho)))
 	}
 	if p.err != "" {
 		lineas = append(lineas, e.Error.Render(e.Recortar(p.err, ancho)))
@@ -191,15 +200,15 @@ func (p *Pagina) resumen() string {
 			conectar++
 		}
 	}
-	return strings.Join([]string{idioma.Tf("Listos (%d)", listos), idioma.Tf("Falta conectar (%d)", conectar), idioma.Tf("No instalados (%d)", instalar)},
-		" "+p.estilos.Iconos.Separador+" ")
+	return strings.Join([]string{p.tx("agentes.filtroListos", "n", strconv.Itoa(listos)), p.tx("agentes.filtroConectar", "n", strconv.Itoa(conectar)),
+		p.tx("agentes.filtroInstalar", "n", strconv.Itoa(instalar))}, " "+p.estilos.Iconos.Separador+" ")
 }
 
-func si(v bool) string {
+func (p *Pagina) si(v bool) string {
 	if v {
-		return idioma.T("Sí")
+		return p.tx("comun.si")
 	}
-	return idioma.T("No")
+	return p.tx("comun.no")
 }
 
 // textoDetalle es lo que se ve al abrir un agente: qué le pasa y qué hacer, sus datos técnicos, su catálogo de modelos
@@ -207,7 +216,6 @@ func si(v bool) string {
 func (p *Pagina) textoDetalle(a adaptador) string {
 	est := estadoDe(a)
 	cli := programa(a.Agente)
-	admite := catalogo.AdmiteSuscripcion(a.Agente)
 	var l []string
 	add := func(s ...string) { l = append(l, s...) }
 	if cli != nombre(a.Agente) {
@@ -215,59 +223,58 @@ func (p *Pagina) textoDetalle(a adaptador) string {
 	}
 	switch est {
 	case estDesconectado:
-		add(idioma.T("Desconectado: Tramtai no lo usa, ni como respaldo, hasta que lo vuelvas a conectar. Su CLI sigue instalado."))
+		add(p.tx("agentes.desconectadoTexto"))
 	case estListo:
 		if a.Autenticacion == adaptadores.AutenticacionSuscripcion {
-			add(idioma.T("Listo · usa tu suscripción"))
+			add(p.tx("agentes.listoSuscripcion"))
 			if a.Cuenta != "" {
-				add(idioma.Tf("Cuenta: %s", a.Cuenta))
+				add(p.tx("agentes.cuenta", "cuenta", a.Cuenta))
 			}
 		} else {
-			add(idioma.T("Listo · usa tu clave de API"))
+			add(p.tx("agentes.listoClave"))
 		}
 		if a.Problema != "" {
 			add(a.Problema)
 		}
 	case estFaltaClave:
-		if admite {
-			add(idioma.T("Elige cómo conectarlo: con tu suscripción (tecla a) o con una clave de API."))
-			add(idioma.Tf("Usa la sesión que ya tienes iniciada en %s. Solo para uso personal en este equipo, según los términos del proveedor.", cli))
+		if catalogo.AdmiteSuscripcion(a.Agente) {
+			add(idioma.T("Elige cómo conectarlo: con tu suscripción (tecla a) o con una clave de API."), p.tx("agentes.opcionSuscripcionTexto", "cli", cli),
+				idioma.T("Para la clave de API, ejecuta esto en una terminal (pide la clave sin mostrarla) y pulsa c para volver a comprobar:"))
 		} else {
-			add(idioma.T("Necesita una clave de API."))
+			add(idioma.T("Necesita una clave de API. Ejecuta esto en una terminal (pide la clave sin mostrarla) y pulsa c para volver a comprobar:"))
 		}
-		add(idioma.T("Con una clave de API: ejecuta esto en una terminal (pide la clave sin mostrarla) y pulsa c para volver a comprobar:"), "  "+comandoClave(a))
+		add("  " + comandoClave(a))
 	case estSinSesion:
 		add(a.Problema)
 	case estNoInstalado:
 		add(idioma.Tf("Instala su CLI y pulsa c para volver a comprobar. Si está en otra ruta, indícala en comandos_agentes.%s.", a.Agente))
 		if f, ok := catalogo.Buscar(a.Agente); ok && f.URLInstalacion != "" {
-			add(idioma.Tf("Cómo instalarlo: %s", f.URLInstalacion))
+			add(p.tx("agentes.comoInstalar") + ": " + f.URLInstalacion)
 		}
 	case estUsaClave:
-		add(idioma.Tf("%s usa ahora una clave de API, no tu suscripción. Deja de usar la suscripción aquí, o vuelve a iniciar sesión en %s.", cli, cli))
+		add(p.tx("agentes.usaClave", "cli", cli))
 	case estSesionNoResponde:
-		add(idioma.Tf("La sesión de %s no responde: la última petición falló por autenticación. Inicia sesión de nuevo en %s o deja de usar la suscripción.", cli, cli))
+		add(p.tx("agentes.sesionNoResponde", "cli", cli))
 	default:
 		add(a.Problema)
 	}
 	if est != estNoInstalado {
 		add("")
-		sinVersion := idioma.T("no detectada")
 		fila := func(k, v string) { add(k + ": " + v) }
-		fila(idioma.T("Versión"), cmp.Or(a.Version, sinVersion))
-		fila(idioma.T("Autenticación"), autenticacion(a))
-		enVivo := idioma.T("Al terminar")
+		fila(p.tx("agentes.version"), cmp.Or(a.Version, p.tx("agentes.sinVersion")))
+		fila(p.tx("agentes.autenticacion"), p.autenticacion(a))
+		enVivo := p.tx("agentes.alTerminar")
 		if a.Capacidades.Streaming == "tokens" {
-			enVivo = idioma.T("Por fragmentos")
+			enVivo = p.tx("agentes.fragmentos")
 		}
-		fila(idioma.T("Respuesta en vivo"), enVivo)
-		fila(idioma.T("Respuesta JSON con esquema"), si(a.Capacidades.SalidaEstructurada))
-		fila(idioma.T("Informa el modelo usado"), si(a.Capacidades.ModeloEfectivoInformado))
-		esfuerzos := idioma.T("No")
+		fila(p.tx("agentes.enVivo"), enVivo)
+		fila(p.tx("agentes.json"), p.si(a.Capacidades.SalidaEstructurada))
+		fila(p.tx("agentes.informaModelo"), p.si(a.Capacidades.ModeloEfectivoInformado))
+		esfuerzos := p.tx("comun.no")
 		if n := catalogo.Niveles(a.Agente); len(n) > 0 {
 			esfuerzos = strings.Join(n, " · ")
 		}
-		fila(idioma.T("Esfuerzo elegible"), esfuerzos)
+		fila(p.tx("agentes.esfuerzo"), esfuerzos)
 		fila(idioma.T("Modelos"), p.textoModelos(a.Agente))
 		if a.Terminos != "" {
 			add("", a.Terminos)
@@ -289,7 +296,7 @@ func (p *Pagina) textoModelos(agente string) string {
 	for _, id := range ids {
 		m := strings.TrimPrefix(id, agente+"/")
 		if id == agente {
-			m = idioma.T("predeterminado")
+			m = p.tx("agentes.predeterminadoCli")
 		}
 		nombres = append(nombres, m)
 	}

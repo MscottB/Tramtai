@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
@@ -183,5 +184,20 @@ func TestAgentesRegistrada(t *testing.T) {
 	m := nuevo(Opciones{})
 	if _, pendiente := m.pagina(pagina.PaginaAgentes).(*proximamente); pendiente {
 		t.Fatal("Agentes ya no es «Próximamente»")
+	}
+}
+
+// TestConfirmacionCabeEn60x20: una pregunta larga no se sale del área ni esconde el pie «s confirma · Esc cancela».
+func TestConfirmacionCabeEn60x20(t *testing.T) {
+	m := nuevo(Opciones{})
+	m.Update(tea.WindowSizeMsg{Width: 60, Height: 20})
+	largo := strings.TrimSpace(strings.Repeat("Una frase de la pregunta que ocupa su sitio en la caja y la hace crecer. ", 24))
+	m.pregunta = &comp.Confirmacion{Texto: largo}
+	v := m.vista()
+	if !strings.Contains(v, "s confirma · Esc cancela") {
+		t.Fatalf("el pie de la confirmación se ve a 60×20:\n%s", v)
+	}
+	if lipgloss.Height(v) != 20 || lipgloss.Width(v) > 60 {
+		t.Fatalf("la vista mide %dx%d:\n%s", lipgloss.Width(v), lipgloss.Height(v), v)
 	}
 }

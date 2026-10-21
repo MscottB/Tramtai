@@ -27,8 +27,23 @@ export interface Tema { id: string; titulo: string; pagina?: string; resumen: st
 
 export const URL_AYUDA = URL_SITIO + 'ayuda/'
 
-// CLAVES_TEXTOS son, además de las menu.*, los textos que la terminal toma de la Web UI: los de la Ayuda de la interfaz.
-export const CLAVES_TEXTOS: string[] = [...CLAVES_UI]
+// CLAVES_AGENTES son los textos de la página Agentes que la terminal repite tal cual (estados, etiquetas, detalles y
+// confirmaciones). Los {placeholders} se quedan como están: Go los rellena con datos.Textof.
+export const CLAVES_AGENTES: string[] = [
+  'agente.listo', 'agente.noInstalado', 'agente.faltaClave', 'agente.revisar', 'agente.desconectado',
+  'agentes.subtitulo', 'agentes.filtroListos', 'agentes.filtroConectar', 'agentes.filtroInstalar',
+  'agentes.suscripcion', 'agentes.claveApi', 'agentes.listoSuscripcion', 'agentes.listoClave', 'agentes.cuenta',
+  'agentes.opcionSuscripcionTexto', 'agentes.desconectadoTexto', 'agentes.desconectarTitulo', 'agentes.desconectarTexto',
+  'agentes.conectado', 'agentes.desconectado', 'agentes.suscripcionActivada', 'agentes.claveActivada',
+  'agentes.confirmarTitulo', 'agentes.riesgoSuscripcion', 'agentes.aceptoRiesgo', 'agentes.usaClave', 'agentes.sesionNoResponde',
+  'agentes.version', 'agentes.sinVersion', 'agentes.autenticacion', 'agentes.enVivo', 'agentes.fragmentos', 'agentes.alTerminar',
+  'agentes.json', 'agentes.informaModelo', 'agentes.esfuerzo', 'agentes.predeterminadoCli', 'agentes.comoInstalar',
+  'comun.si', 'comun.no',
+]
+
+// CLAVES_TEXTOS son, además de las menu.*, los textos que la terminal toma de la Web UI: los de la Ayuda de la interfaz y
+// los de Agentes.
+export const CLAVES_TEXTOS: string[] = [...CLAVES_UI, ...CLAVES_AGENTES]
 
 // plano deja un texto sin marcas: sin ** y con los <marcadores> entre corchetes.
 const plano = (s: string) => s.replace(/\*\*/g, '').replace(/<([^<>]*)>/g, '[$1]')
