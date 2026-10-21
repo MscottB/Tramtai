@@ -12,9 +12,10 @@ import { aDriver, elegirElemento } from '../recorridoDom'
 const ESPERA_MS = 5000
 const CADA_MS = 100
 
-// esperarAncla vuelve en cuanto el ancla se ve (las que salen con v-if al cargar datos) o a los 5 s.
-async function esperarAncla(ancla: string | undefined) {
-  for (let espera = 0; ancla && espera < ESPERA_MS && !elegirElemento(ancla, document); espera += CADA_MS)
+// esperarAncla vuelve en cuanto el ancla se ve (las que salen con v-if al cargar datos), a los 5 s o si deja de hacer
+// falta (vigente da falso: se pidió otro paso o se cerró el recorrido).
+async function esperarAncla(ancla: string, vigente: () => boolean) {
+  for (let espera = 0; espera < ESPERA_MS && vigente() && !elegirElemento(ancla, document); espera += CADA_MS)
     await new Promise((listo) => setTimeout(listo, CADA_MS))
 }
 
@@ -45,21 +46,32 @@ export function useRecorrido(ir: (pagina: Pagina) => void, paginaActual: Readonl
     terminar()
   }
 
-  async function mostrar(i: number) {
-    const mio = ++turno
-    const paso = pasos[i]
-    if (!paso) return cerrar()
-    if (paso.pagina !== paginaActual.value) {
-      ir(paso.pagina)
-      await nextTick()
-    }
-    await esperarAncla(paso.ancla)
-    if (mio !== turno || !d) return
+  function pintar(i: number) {
+    if (!d) return
     // driver.js muestra centrado el paso cuyo elemento no existe: así sale el paso sin ancla o sin nada visible.
     const elemento = (p: PasoMostrado) => () => elegirElemento(p.ancla, document) as Element
     d.setConfig({ ...d.getConfig(), steps: pasos.map((p, j) => ({ ...aDriver(p, j, pasos.length, t), element: elemento(p) })) })
     if (d.isActive()) d.moveTo(i)
     else d.drive(i)
+  }
+
+  async function mostrar(i: number) {
+    const mio = ++turno
+    const vigente = () => mio === turno
+    const paso = pasos[i]
+    if (!paso) return cerrar()
+    if (paso.pagina !== paginaActual.value) {
+      ir(paso.pagina)
+      await nextTick()
+      if (!vigente()) return
+    }
+    // El paso se pinta ya, centrado si su ancla aún no se ve: así no queda la ventana del paso anterior sobre el hueco
+    // de un elemento desmontado, y Siguiente avanza en vez de volver a empezar la espera. Si el ancla aparece en los 5 s
+    // siguientes, el paso pasa a señalarla.
+    pintar(i)
+    if (!paso.ancla || elegirElemento(paso.ancla, document)) return
+    await esperarAncla(paso.ancla, vigente)
+    if (vigente() && elegirElemento(paso.ancla, document)) pintar(i)
   }
 
   function empezar(lista: PasoMostrado[], alTerminar?: () => void) {
@@ -82,7 +94,8 @@ export function useRecorrido(ir: (pagina: Pagina) => void, paginaActual: Readonl
       onPrevClick: () => void mostrar((d?.getActiveIndex() ?? 1) - 1),
       // driver.js enfoca la ✕ (el primer botón); Intro debe avanzar, no cerrar
       onPopoverRender: (ventana) => queueMicrotask(() => ventana.nextButton.focus()),
-      onDestroyed: terminar,
+      // Esc, la ✕, el fondo y «Hecho» pasan por cerrar(): onDestroyed no llega si se cierra durante la primera animación
+      onDestroyStarted: cerrar,
     })
     void mostrar(0)
   }
