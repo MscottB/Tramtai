@@ -7,7 +7,7 @@
         <q-btn flat round dense icon="close" :aria-label="t('comun.cerrar')" @click="cerrarAyuda" />
       </div>
       <div class="texto-suave">{{ t(tema.resumen) }}</div>
-      <VistaTema :tema="tema" contexto="panel" sin-cabecera :pagina-actual="pagina" :ancla="panel.ancla" @ir="ir" />
+      <VistaTema :tema="tema" contexto="panel" sin-cabecera :pagina-actual="pagina" :ancla="panel.ancla" @ir="ir" @recorrido="mostrar" />
       <div><q-btn outline color="primary" no-caps icon-right="arrow_forward" :label="t('ayuda.ui.abrirEnAyuda')" @click="ir('ayuda/' + tema.id)" /></div>
     </div>
   </q-drawer>
@@ -24,8 +24,9 @@ import { cerrarAyuda, panel } from '../../ayuda/panel'
 import type { Pagina } from '../../ayuda/tipos'
 import VistaTema from './VistaTema.vue'
 
-defineProps<{ pagina?: Pagina }>()
-const emit = defineEmits<{ ir: [destino: string] }>()
+// recorridoActivo: con un recorrido en marcha Esc es suyo (lo cierra driver.js), no del panel ni del diálogo de debajo.
+const props = defineProps<{ pagina?: Pagina; recorridoActivo?: boolean }>()
+const emit = defineEmits<{ ir: [destino: string]; recorrido: [pagina: Pagina] }>()
 
 const $q = useQuasar()
 const ancho = computed(() => ($q.screen.width < 600 ? $q.screen.width : 420))
@@ -42,10 +43,16 @@ function ir(destino: string) {
   emit('ir', destino)
 }
 
+// mostrar cierra el panel antes de empezar el recorrido de la página, para que no quede encima de lo que se señala.
+function mostrar(pagina: Pagina) {
+  cerrarAyuda()
+  emit('recorrido', pagina)
+}
+
 // Esc cierra solo el panel: se atrapa antes que el diálogo que haya debajo (el detalle del Historial), que si no se
 // cerraría con la misma tecla. Quasar escucha keyup para Esc, así que se detienen las dos.
 function alTeclear(e: KeyboardEvent) {
-  if (e.key !== 'Escape' || !panel.abierto || document.querySelector('.q-menu')) return
+  if (e.key !== 'Escape' || !panel.abierto || props.recorridoActivo || document.querySelector('.q-menu')) return
   e.stopImmediatePropagation()
   if (e.type === 'keyup') cerrarAyuda()
 }

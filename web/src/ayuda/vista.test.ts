@@ -23,3 +23,8 @@ test('qué bloques se ven en la app, en el panel y en el sitio', () => {
   assert.deepEqual(bloquesVisibles(tema, 'panel', 'inicio').map((b) => b.tipo), ['nota', 'ir'])
   assert.deepEqual(bloquesVisibles(tema, 'sitio').map((b) => b.tipo), ['descargas', 'nota'])
 })
+
+test('el recorrido se ve en la app, en el panel y en el sitio', () => {
+  const conRecorrido: Tema = { ...tema, bloques: [{ tipo: 'recorrido', pasos: [{ ancla: 'a', titulo: 'ayuda.empezar.titulo', texto: 'ayuda.empezar.resumen' }] }] }
+  for (const contexto of ['app', 'panel', 'sitio'] as const) assert.deepEqual(bloquesVisibles(conRecorrido, contexto, 'agentes').map((b) => b.tipo), ['recorrido'], contexto)
+})

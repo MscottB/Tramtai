@@ -11,6 +11,7 @@ export function ofrecerBienvenida(o: {
   estado: 'hecha' | 'descartada' | null
   yaOfrecida: boolean
   otroDialogo: boolean // Novedades, Actualizar, Abrir proyecto o Acerca de: se espera a que se cierre, sin dar la bienvenida por ofrecida
+  recorridoActivo: boolean // un recorrido de página que cruza Inicio no deja la bienvenida encima: espera a que acabe
 }): boolean {
-  return o.sesion && o.pagina === 'inicio' && !o.entradaPorEnlace && o.estado === null && !o.yaOfrecida && !o.otroDialogo
+  return o.sesion && o.pagina === 'inicio' && !o.entradaPorEnlace && o.estado === null && !o.yaOfrecida && !o.otroDialogo && !o.recorridoActivo
 }

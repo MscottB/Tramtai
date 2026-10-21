@@ -35,5 +35,5 @@ export function temaPorId(id: string): Tema | undefined {
 export const CLAVES_UI: Clave[] = [
   'ayuda.subtitulo', 'ayuda.buscar', 'ayuda.sinResultados', 'ayuda.mostrarGuia', 'ayuda.desarrolladores', 'ayuda.desarrolladoresTexto',
   'ayuda.documentacion', 'ayuda.documentacionTexto', 'ayuda.ir', 'ayuda.ui.relacionados', 'ayuda.ui.abrirWeb', 'ayuda.abrirPanel',
-  'ayuda.ui.abrirEnAyuda', 'ayuda.ui.queHago', 'ayuda.ui.saberMas', 'ayuda.ui.resultados', 'ayuda.ui.resultadosUno',
+  'ayuda.ui.abrirEnAyuda', 'ayuda.ui.queHago', 'ayuda.ui.saberMas', 'ayuda.ui.recorridoTitulo', 'ayuda.ui.mostrar', 'ayuda.ui.resultados', 'ayuda.ui.resultadosUno',
 ]

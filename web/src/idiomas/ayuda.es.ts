@@ -438,6 +438,8 @@ const ayudaEs = {
   'ayuda.ui.abrirWeb': 'Abrir en la web',
   'ayuda.abrirPanel': 'Ayuda sobre esta página',
   'ayuda.ui.abrirEnAyuda': 'Abrir en la Ayuda',
+  'ayuda.ui.recorridoTitulo': 'Qué verás en pantalla',
+  'ayuda.ui.mostrar': 'Muéstrame en pantalla',
   'ayuda.ui.queHago': '¿Qué hago?',
   'ayuda.ui.saberMas': 'Saber más',
   'ayuda.problemas.error_agente': 'El agente falló al responder. Abre «Registro» para ver su mensaje; reintenta, o pon un respaldo en la receta para que siga otro agente.',

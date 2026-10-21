@@ -171,7 +171,7 @@
           </q-card>
         </div>
         <component :is="actual.componente" v-else :key="sesion.instancia" v-bind="seccion === 'ayuda' ? { tema: ruta.tema } : {}" @ir="ir"
-          @abrir-proyecto="dialogoProyecto = true" @recorrido="empezarBienvenida" />
+          @abrir-proyecto="dialogoProyecto = true" @recorrido="empezarBienvenida" @mostrar="mostrarEnPantalla" />
       </q-page>
     </q-page-container>
 
@@ -282,7 +282,7 @@
       </q-card>
     </q-dialog>
     <AcercaDe v-model="acercaAbierto" />
-    <PanelAyuda :pagina="seccion === 'ayuda' ? undefined : (seccion as Pagina)" @ir="ir" />
+    <PanelAyuda :pagina="seccion === 'ayuda' ? undefined : (seccion as Pagina)" :recorrido-activo="recorridoActivo" @ir="ir" @recorrido="mostrarEnPantalla" />
   </q-layout>
 </template>
 
@@ -292,7 +292,7 @@ import { useQuasar } from 'quasar'
 import { api, avisar, avisarError, buscarActualizacionAhora, ErrorApi, reiniciarYSeguir } from './api/cliente'
 import { actualizacion, bienvenida, dialogoActualizar, marcarBienvenida, sesion } from './estado'
 import { entradaPorEnlace, ofrecerBienvenida } from './bienvenida'
-import { pasosBienvenida } from './recorrido'
+import { pasosBienvenida, pasosDePagina } from './recorrido'
 import { useRecorrido } from './composables/useRecorrido'
 import { useActualizacion } from './composables/useActualizacion'
 import { useSesion } from './composables/useSesion'
@@ -442,7 +442,13 @@ function tituloDe(id?: string) {
 watchEffect(() => (document.title = `${tituloDe(pagina.value)} · Tramtai`))
 
 // Una sola instancia del recorrido guiado: la usan la bienvenida y, después, el «Muéstrame en pantalla» de la Ayuda.
-const { empezar: hacerRecorrido } = useRecorrido(ir, seccion)
+const { empezar: hacerRecorrido, activo: recorridoActivo } = useRecorrido(ir, seccion)
+
+// El «Muéstrame en pantalla» de un tema de página: cierra el panel, va a la página si no está en ella y enseña sus pasos.
+function mostrarEnPantalla(pagina: Pagina) {
+  cerrarAyuda()
+  hacerRecorrido(pasosDePagina(pagina))
+}
 
 // La bienvenida: empezarla (o repetirla desde Primeros pasos) la marca hecha, aunque se cierre a medias.
 function empezarBienvenida() {
@@ -529,8 +535,8 @@ function examinar() {
 const enlaceProfundo = entradaPorEnlace(location.hash)
 let bienvenidaOfrecida = false
 const otroDialogo = computed(() => dialogoNovedades.value || dialogoActualizar.value || dialogoProyecto.value || acercaAbierto.value)
-watch([() => !!sesion.value?.instancia, seccion, otroDialogo], ([conSesion, pag, ocupado]) => {
-  if (!ofrecerBienvenida({ sesion: conSesion, pagina: pag as Pagina, entradaPorEnlace: enlaceProfundo, estado: bienvenida.value, yaOfrecida: bienvenidaOfrecida, otroDialogo: ocupado })) return
+watch([() => !!sesion.value?.instancia, seccion, otroDialogo, recorridoActivo], ([conSesion, pag, ocupado, enMarcha]) => {
+  if (!ofrecerBienvenida({ sesion: conSesion, pagina: pag as Pagina, entradaPorEnlace: enlaceProfundo, estado: bienvenida.value, yaOfrecida: bienvenidaOfrecida, otroDialogo: ocupado, recorridoActivo: enMarcha })) return
   bienvenidaOfrecida = true
   let empezada = false
   $q.dialog({ title: t('bienvenida.titulo'), message: t('bienvenida.texto'),

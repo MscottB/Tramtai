@@ -31,7 +31,7 @@
     <template v-if="!texto">
       <q-card v-if="actual">
         <q-card-section>
-          <VistaTema :tema="actual" contexto="app" sin-cabecera :ancla="ancla" @ir="(d) => $emit('ir', d)" />
+          <VistaTema :tema="actual" contexto="app" sin-cabecera :ancla="ancla" @ir="(d) => $emit('ir', d)" @recorrido="(p) => $emit('mostrar', p)" />
         </q-card-section>
       </q-card>
       <TarjetasTemas v-else :temas="temas" @elegir="(id) => abrir(id)" />
@@ -71,9 +71,11 @@ import VistaTema from '../componentes/ayuda/VistaTema.vue'
 import { idioma, idiomas, t } from '../i18n'
 import { temas, temaPorId } from '../ayuda/indice'
 import { buscar } from '../ayuda/buscar'
+import type { Pagina } from '../ayuda/tipos'
 
 const props = defineProps<{ tema?: string }>()
-const emit = defineEmits<{ ir: [pagina: string] }>()
+// mostrar (y no recorrido, que en App.vue es la bienvenida de Primeros pasos) lleva a una página y empieza su recorrido.
+const emit = defineEmits<{ ir: [pagina: string]; mostrar: [pagina: Pagina] }>()
 
 const busqueda = ref<string | null>('')
 const texto = computed(() => (busqueda.value ?? '').trim())

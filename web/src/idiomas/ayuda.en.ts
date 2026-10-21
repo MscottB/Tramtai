@@ -440,6 +440,8 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.ui.abrirWeb': 'Open on the web',
   'ayuda.abrirPanel': 'Help for this page',
   'ayuda.ui.abrirEnAyuda': 'Open in Help',
+  'ayuda.ui.recorridoTitulo': 'What you will see on screen',
+  'ayuda.ui.mostrar': 'Show me on screen',
   'ayuda.ui.queHago': 'What do I do?',
   'ayuda.ui.saberMas': 'Learn more',
   'ayuda.problemas.error_agente': 'The agent failed while answering. Open "Log" to see its message; retry, or add a fallback to the recipe so another agent takes over.',
