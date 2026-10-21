@@ -201,9 +201,10 @@ func csrfValido(r *http.Request, ses *sesion) bool {
 type permisoUI int
 
 const (
-	publica   permisoUI = iota // la propia ruta decide (entrar, salir y consultar la sesión)
-	conSesion                  // cualquier sesión
-	soloLocal                  // una sesión local, desde este equipo y con su CSRF
+	publica          permisoUI = iota // la propia ruta decide (entrar, salir y consultar la sesión)
+	conSesion                         // cualquier sesión
+	soloLocal                         // una sesión local, desde este equipo y con su CSRF
+	soloLocalLectura                  // una sesión local, para consultar (sin CSRF: no cambia nada)
 )
 
 // rutaUI es una ruta de /ui/: método, ruta exacta, permiso y quién la atiende (ses es nil en las públicas).
@@ -224,6 +225,13 @@ var rutasDeUI = []rutaUI{
 	{http.MethodGet, "/ui/entrar", publica, (*Servicio).entrarUI},
 	{http.MethodPost, "/ui/instancias", soloLocal, (*Servicio).activarGlobalUI},
 	{http.MethodPost, "/ui/proyectos", soloLocal, (*Servicio).abrirProyectoUI},
+	// Espacios: la lista, y activar, detener, confiar, reasociar u olvidar uno (el id va en el cuerpo).
+	{http.MethodGet, "/ui/espacios", soloLocalLectura, (*Servicio).listarEspaciosUI},
+	{http.MethodPost, "/ui/espacios/activar", soloLocal, (*Servicio).accionEspacioUI},
+	{http.MethodPost, "/ui/espacios/detener", soloLocal, (*Servicio).accionEspacioUI},
+	{http.MethodPost, "/ui/espacios/confiar", soloLocal, (*Servicio).accionEspacioUI},
+	{http.MethodPost, "/ui/espacios/ubicar", soloLocal, (*Servicio).accionEspacioUI},
+	{http.MethodPost, "/ui/espacios/olvidar", soloLocal, (*Servicio).accionEspacioUI},
 	{http.MethodPost, "/ui/autoarranque", soloLocal, (*Servicio).autoarranqueUI},
 	{http.MethodPost, "/ui/autenticacion", soloLocal, (*Servicio).autenticacionUI},
 	{http.MethodPost, "/ui/servicio/puerto", soloLocal, (*Servicio).puertoUI},
@@ -252,7 +260,8 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		if ruta.permiso != publica {
 			_, ses = s.sesionDe(r)
 		}
-		if ruta.permiso == conSesion && ses == nil || ruta.permiso == soloLocal && (!s.sesionLocal(r, ses) || !csrfValido(r, ses)) {
+		if ruta.permiso == conSesion && ses == nil || ruta.permiso == soloLocal && (!s.sesionLocal(r, ses) || !csrfValido(r, ses)) ||
+			ruta.permiso == soloLocalLectura && !s.sesionLocal(r, ses) {
 			api.NoAutorizado(w, r)
 			return
 		}

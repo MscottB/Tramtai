@@ -20,6 +20,7 @@ func (s *Servicio) activarGlobalUI(w http.ResponseWriter, r *http.Request, ses *
 	inst, err := s.ActivarGlobal()
 	if err == nil {
 		err = s.guardarActivas()
+		_ = s.actualizarDescriptor()
 	}
 	if err != nil {
 		api.EscribirError(w, r, err)
@@ -41,6 +42,7 @@ func (s *Servicio) abrirProyectoUI(w http.ResponseWriter, r *http.Request, ses *
 	inst, err := s.AbrirProyecto(peticion.Raiz, AbrirOpciones{Confiar: peticion.Confiar, CrearAqui: peticion.CrearAqui})
 	if err == nil {
 		err = s.guardarActivas()
+		_ = s.actualizarDescriptor()
 	}
 	// Las dos preguntas llevan lo que la app enseña para decidir.
 	var confianza *ErrorConfianza

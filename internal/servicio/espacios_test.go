@@ -1,7 +1,9 @@
 package servicio
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -228,4 +230,209 @@ func copiarCarpeta(t *testing.T, origen, destino string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+// espacioDe busca un espacio en la lista que verá la Web UI.
+func espacioDe(t *testing.T, s *Servicio, id string) EspacioUI {
+	t.Helper()
+	for _, e := range s.Espacios(context.Background()) {
+		if e.ID == id {
+			return e
+		}
+	}
+	t.Fatalf("no está el espacio %s", id)
+	return EspacioUI{}
+}
+
+// proyectoConDatos abre un proyecto confiado con una petición en su historial y una API con su clave.
+func proyectoConDatos(t *testing.T, s *Servicio, base string) *Instancia {
+	t.Helper()
+	inst, err := s.AbrirProyecto(t.TempDir(), AbrirOpciones{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r, cuerpo := pedir(t, base, "POST", "/api/v1/ejecutar", inst.token, hola); r.StatusCode != 200 {
+		t.Fatalf("petición: %d %s", r.StatusCode, cuerpo)
+	}
+	err = EditarPuntos(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+		return append(lista, ConfigPunto{Nombre: "asistente"}), nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LeerOCrearToken(RutaTokenPunto(s.opc.Datos, "asistente")); err != nil {
+		t.Fatal(err)
+	}
+	return inst
+}
+
+func TestEspaciosListaEstados(t *testing.T) {
+	s, ts, proyecto := entorno(t, "", "", adaptadores.Simulado{})
+	if _, err := s.ActivarGlobal(); err != nil {
+		t.Fatal(err)
+	}
+	detenido := proyectoConDatos(t, s, ts.URL)
+	if err := s.DetenerEspacio(detenido.ID); err != nil {
+		t.Fatal(err)
+	}
+	borrado, err := s.ActivarProyecto(proyecto)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.DetenerEspacio(borrado.ID)
+	os.RemoveAll(proyecto)
+	if e := espacioDe(t, s, "global"); e.Estado != "activo" {
+		t.Fatalf("global: %+v", e)
+	}
+	if e := espacioDe(t, s, detenido.ID); e.Estado != "detenido" || e.APIs != 1 || e.Peticiones != 1 || !e.Confiado {
+		t.Fatalf("detenido: %+v", e)
+	}
+	if e := espacioDe(t, s, borrado.ID); e.Estado != "no_encontrado" {
+		t.Fatalf("borrado: %+v", e)
+	}
+}
+
+func TestDetenerYActivarPorId(t *testing.T) {
+	s, _, proyecto := entorno(t, "", "", adaptadores.Simulado{})
+	inst, err := s.ActivarProyecto(proyecto)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token := inst.token
+	if err := s.DetenerEspacio(inst.ID); err != nil {
+		t.Fatal(err)
+	}
+	if e, _ := s.registro().buscar(inst.ID); e.Activo || s.instancia(inst.ID) != nil {
+		t.Fatalf("debía quedar detenido: %+v", e)
+	}
+	otra, err := s.ActivarEspacio(inst.ID)
+	if err != nil || otra.token != token {
+		t.Fatalf("activar por id: %v", err)
+	}
+}
+
+func TestUbicarReasocia(t *testing.T) {
+	s, _, proyecto := entorno(t, "", "", adaptadores.Simulado{})
+	inst, err := s.ActivarProyecto(proyecto)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token := inst.token
+	s.DetenerEspacio(inst.ID)
+	nueva := filepath.Join(t.TempDir(), "Nueva")
+	copiarCarpeta(t, proyecto, nueva)
+	os.Remove(filepath.Join(nueva, ".tramtai", "espacio"))
+	os.RemoveAll(proyecto)
+	if _, err := s.Ubicar(inst.ID, t.TempDir()); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
+		t.Fatalf("una carpeta sin .tramtai no vale: %v", err)
+	}
+	otra, err := s.Ubicar(inst.ID, nueva)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if otra.ID != inst.ID || otra.token != token || leerMarca(nueva) != inst.ID {
+		t.Fatalf("debía conservar id y token: %s", otra.ID)
+	}
+}
+
+func TestOlvidarNoTocaLaCarpeta(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	inst := proyectoConDatos(t, s, ts.URL)
+	antes := archivosDe(t, inst.Raiz)
+	nombre := espacioDe(t, s, inst.ID).Nombre
+	if err := s.Olvidar(inst.ID, " "+strings.ToUpper(nombre)+" "); err != nil {
+		t.Fatal(err)
+	}
+	for _, ruta := range []string{filepath.Join(s.opc.Datos, "instancias", inst.ID+".db"), filepath.Join(s.opc.Datos, "cargas", inst.ID),
+		RutaTokenInstancia(s.opc.Datos, inst.ID), RutaTokenPunto(s.opc.Datos, "asistente")} {
+		if _, err := os.Stat(ruta); !os.IsNotExist(err) {
+			t.Errorf("debía borrarse %s", ruta)
+		}
+	}
+	if _, ok := s.registro().buscar(inst.ID); ok {
+		t.Error("debía salir del registro")
+	}
+	if despues := archivosDe(t, inst.Raiz); despues != antes {
+		t.Fatalf("la carpeta del proyecto cambió:\nantes %s\ndespués %s", antes, despues)
+	}
+}
+
+func TestOlvidarPideNombre(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	inst := proyectoConDatos(t, s, ts.URL)
+	if err := s.Olvidar(inst.ID, "otro"); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
+		t.Fatalf("nombre equivocado: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(s.opc.Datos, "instancias", inst.ID+".db")); err != nil {
+		t.Fatal("con el nombre equivocado no se borra nada")
+	}
+	if err := s.Olvidar("global", "Global"); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
+		t.Fatalf("la global no se olvida: %v", err)
+	}
+}
+
+func TestOlvidarSoloDentroDeDatos(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	for _, id := range []string{"../x", `C:\x`, "/x", "", "x/../../y"} {
+		if err := s.Olvidar(id, id); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
+			t.Errorf("id %q: %v", id, err)
+		}
+	}
+	if dentroDe(s.opc.Datos, filepath.Join(s.opc.Datos, "..", "fuera")) || !dentroDe(s.opc.Datos, filepath.Join(s.opc.Datos, "tokens", "x")) {
+		t.Fatal("dentroDe")
+	}
+}
+
+func TestRutasEspaciosUI(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	if _, err := s.ActivarGlobal(); err != nil {
+		t.Fatal(err)
+	}
+	inst := proyectoConDatos(t, s, ts.URL)
+	n := abrirSesion(t, s, ts.URL)
+	if r, cuerpo := n.pedir("GET", "/ui/espacios", ""); r.StatusCode != 200 || !strings.Contains(cuerpo, inst.ID) {
+		t.Fatalf("lista: %d %s", r.StatusCode, cuerpo)
+	}
+	cuerpo := `{"id":"` + inst.ID + `"}`
+	if r, _ := n.pedir("POST", "/ui/espacios/detener", cuerpo); r.StatusCode != 401 {
+		t.Fatalf("sin CSRF: %d", r.StatusCode)
+	}
+	if r, c := n.pedir("POST", "/ui/espacios/detener", cuerpo, "X-CSRF-Token", n.csrf); r.StatusCode != 200 || !strings.Contains(c, `"detenido"`) {
+		t.Fatalf("detener: %d %s", r.StatusCode, c)
+	}
+	nombre := espacioDe(t, s, inst.ID).Nombre
+	if r, c := n.pedir("POST", "/ui/espacios/olvidar", `{"id":"`+inst.ID+`","nombre":`+jsonTexto(nombre)+`}`, "X-CSRF-Token", n.csrf); r.StatusCode != 200 {
+		t.Fatalf("olvidar: %d %s", r.StatusCode, c)
+	}
+}
+
+func TestDescriptorTrasActivarDesdeUI(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	s.descriptor = true
+	if _, err := s.ActivarGlobal(); err != nil {
+		t.Fatal(err)
+	}
+	n := abrirSesion(t, s, ts.URL)
+	s.Desactivar("global")
+	if r, c := n.pedir("POST", "/ui/instancias", "", "X-CSRF-Token", n.csrf); r.StatusCode != 200 {
+		t.Fatalf("activar: %d %s", r.StatusCode, c)
+	}
+	datos, err := os.ReadFile(filepath.Join(s.opc.Datos, "servicio.json"))
+	if err != nil || !strings.Contains(string(datos), `"global"`) {
+		t.Fatalf("descriptor: %v %s", err, datos)
+	}
+}
+
+// archivosDe resume un árbol (rutas y tamaños) para ver si cambió.
+func archivosDe(t *testing.T, raiz string) string {
+	t.Helper()
+	var b strings.Builder
+	filepath.Walk(raiz, func(ruta string, info os.FileInfo, err error) error {
+		if err == nil {
+			rel, _ := filepath.Rel(raiz, ruta)
+			fmt.Fprintf(&b, "%s:%d;", rel, info.Size())
+		}
+		return nil
+	})
+	return b.String()
 }
