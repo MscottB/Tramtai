@@ -61,5 +61,8 @@ disco=paquete/disco
 mkdir -p "$disco"
 cp -R "$app" "$disco/"
 ln -s /Applications "$disco/Applications"
-hdiutil create -volname Tramtai -srcfolder "$disco" -ov -format UDZO "dist/Tramtai-$version-macos.dmg"
+# Con solo -srcfolder, hdiutil calcula el tamaño de la imagen y con la app universal a veces se queda corto («No space
+# left on device»): se le da el de la carpeta, con un 20 % más y 20 MB para el sistema de archivos.
+megas=$(du -sm "$disco" | cut -f1)
+hdiutil create -volname Tramtai -srcfolder "$disco" -size "$((megas + megas / 5 + 20))m" -ov -format UDZO "dist/Tramtai-$version-macos.dmg"
 ls -l dist
