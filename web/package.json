@@ -9,7 +9,8 @@
     "tipos": "vue-tsc --noEmit -p .",
     "test": "node --import ./pruebas.mjs --test \"src/**/*.test.ts\" \"scripts/**/*.test.ts\"",
     "capturas": "node --disable-warning=ExperimentalWarning --import ./pruebas.mjs scripts/capturas.mjs",
-    "sitio": "node --disable-warning=ExperimentalWarning --import ./pruebas.mjs scripts/sitio-ayuda.mjs",
+    "sitio": "node --disable-warning=ExperimentalWarning --import ./pruebas.mjs scripts/sitio-ayuda.mjs && node --disable-warning=ExperimentalWarning --import ./pruebas.mjs scripts/terminal-datos.mjs",
+    "ayuda-terminal": "node --disable-warning=ExperimentalWarning --import ./pruebas.mjs scripts/terminal-datos.mjs",
     "build": "vue-tsc --noEmit -p . && vite build"
   },
   "dependencies": {

@@ -211,12 +211,14 @@ jobs:
       - run: npm test # funciones puras (plantillas y editor de campos) con node --test
       - run: npm run build # comprueba los tipos de los .vue con vue-tsc y compila
       # La Ayuda del sitio (site/ayuda), la 404, el sitemap y la cabeza, la barra y el pie de la portada y la guía salen de
-      # web/scripts/sitio.ts y web/src/ayuda: lo guardado tiene que ser lo que sale de ahí.
+      # web/scripts/sitio.ts y web/src/ayuda: lo guardado tiene que ser lo que sale de ahí. Lo mismo vale para los datos
+      # que la terminal incrusta (internal/tui/datos: la Ayuda, las plantillas, los nombres del menú y los ejemplos), que
+      # salen de web/scripts/terminal-datos.ts y que npm run sitio también regenera.
       - name: El sitio generado coincide con sus fuentes
         run: |
           npm run sitio
-          git diff --exit-code --stat -- ../site || { echo "::error::genera el sitio (cd web; npm run sitio) y súbelo"; exit 1; }
-          test -z "$(git status --porcelain -- ../site)" || { echo "::error::hay archivos del sitio sin subir: cd web; npm run sitio"; exit 1; }
+          git diff --exit-code --stat -- ../site ../internal/tui/datos || { echo "::error::genera el sitio y los datos de la terminal (cd web; npm run sitio) y súbelos"; exit 1; }
+          test -z "$(git status --porcelain -- ../site ../internal/tui/datos)" || { echo "::error::hay archivos del sitio o de los datos de la terminal sin subir: cd web; npm run sitio"; exit 1; }
       # La Web UI compilada va en el repo (go build no necesita Node): tiene que ser la de web/src, o el release saldría
       # con la vieja. Las fuentes van con LF también en Windows (.gitattributes), así que el build es el mismo.
       - name: La Web UI compilada coincide con web/src
