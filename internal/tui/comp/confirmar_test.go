@@ -21,7 +21,10 @@ func TestConfirmarEsc(t *testing.T) {
 	if _, ok := cmd().(Cancelado); !listo || !ok {
 		t.Fatal("Esc cancela")
 	}
-	for _, k := range []string{"s", "y", "enter"} {
+	if listo, cmd := c.Update(tecla("enter")); listo || cmd != nil {
+		t.Fatal("Intro no confirma: borrar pide s o y")
+	}
+	for _, k := range []string{"s", "y", "S", "Y"} {
 		listo, cmd := c.Update(tecla(k))
 		if _, ok := cmd().(Confirmado); !listo || !ok {
 			t.Fatalf("%s confirma", k)

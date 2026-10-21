@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"tramtai/internal/tui/datos"
+	"tramtai/internal/tui/pagina"
 )
 
 type grupoMenu struct {
@@ -18,9 +19,9 @@ type grupoMenu struct {
 
 // gruposMenu son los de web/src/menu.ts, en su orden (TestMenuComoLaWeb lo comprueba). Las claves son las de la Web UI.
 var gruposMenu = []grupoMenu{
-	{"empezar", []string{"inicio", "agentes", "ejecutar"}},
-	{"conectar", []string{"conectar", "historial"}},
-	{"organizar", []string{"espacios", "configuracion"}},
+	{"empezar", []string{pagina.PaginaInicio, pagina.PaginaAgentes, pagina.PaginaEjecutar}},
+	{"conectar", []string{pagina.PaginaConectar, pagina.PaginaHistorial}},
+	{"organizar", []string{pagina.PaginaEspacios, pagina.PaginaConfiguracion}},
 }
 
 const (
@@ -35,7 +36,7 @@ func ordenMenu() []string {
 	for _, g := range gruposMenu {
 		r = append(r, g.Paginas...)
 	}
-	return append(r, "ayuda")
+	return append(r, pagina.PaginaAyuda)
 }
 
 // atajo es la página de una tecla del 1 al 7.
@@ -59,7 +60,7 @@ func (m *modelo) vistaMenu() string {
 		}
 		lineas = append(lineas, "")
 	}
-	return strings.Join(append(lineas, m.entradaMenu("ayuda", "?")), "\n")
+	return strings.Join(append(lineas, m.entradaMenu(pagina.PaginaAyuda, "?")), "\n")
 }
 
 func (m *modelo) entradaMenu(p, tecla string) string {
@@ -91,14 +92,14 @@ func (m *modelo) teclaMenu(tecla string) tea.Cmd {
 	case "down", "j":
 		m.cursorMenu = min(m.cursorMenu+1, len(orden)-1)
 	case "enter", "space":
-		return m.ir(orden[m.cursorMenu], nil)
+		return m.ir(orden[m.cursorMenu], nil, false)
 	case "esc", "tab":
 		m.enMenu = false
 	case "q":
 		return tea.Quit
 	default:
 		if p, ok := atajo(tecla); ok {
-			return m.ir(p, nil)
+			return m.ir(p, nil, false)
 		}
 	}
 	return nil

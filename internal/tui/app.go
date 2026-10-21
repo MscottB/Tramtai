@@ -5,6 +5,8 @@
 package tui
 
 import (
+	"context"
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -28,7 +30,9 @@ type Opciones struct {
 
 // Ejecutar abre la terminal hasta que el usuario sale.
 func Ejecutar(o Opciones) error {
-	_, err := tea.NewProgram(nuevo(o)).Run()
+	m := nuevo(o)
+	defer m.cerrar()
+	_, err := tea.NewProgram(m).Run()
 	return err
 }
 
@@ -43,15 +47,18 @@ type modelo struct {
 	estilos     *pagina.Estilos
 	ancho, alto int
 
-	cli        *cliente.Cliente
-	instancia  string
-	espacios   []contrato.Espacio
-	caido      error // el servicio no responde: se avisa y r reintenta
-	conectando bool
+	cli         *cliente.Cliente
+	instancia   string
+	espacios    []contrato.Espacio
+	caido       error // el servicio no responde: se avisa y r reintenta
+	conectando  bool  // la conexión inicial o un reintento con r: la cabecera lo dice
+	comprobando bool  // hay una comprobación en marcha (latido o r): no se lanza otra
 
 	paginas    map[string]pagina.Pagina
+	cancelar   map[string]context.CancelFunc // el Ctx de la última vez que se inició cada página
 	actual     string
-	enMenu     bool // el menú tiene el foco (y, plegado, se ve)
+	pila       []string // de dónde se vino con IrA o ?: Volver la recorre
+	enMenu     bool     // el menú tiene el foco (y, plegado, se ve)
 	cursorMenu int
 
 	selector *comp.Selector     // el cambio rápido de espacio
@@ -69,7 +76,8 @@ func idiomaDe() string {
 func nuevo(o Opciones) *modelo { return nuevoEn(o, idiomaDe()) }
 
 func nuevoEn(o Opciones, lengua string) *modelo {
-	return &modelo{o: o, idioma: lengua, estilos: nuevosEstilos(), ancho: 100, alto: 30, paginas: map[string]pagina.Pagina{}, actual: "inicio"}
+	return &modelo{o: o, idioma: lengua, estilos: nuevosEstilos(), ancho: 100, alto: 30, paginas: map[string]pagina.Pagina{},
+		cancelar: map[string]context.CancelFunc{}, actual: pagina.PaginaInicio}
 }
 
 // pagina es la de esa clave, creada la primera vez que se pide: así conserva su estado al ir y volver.
@@ -95,23 +103,57 @@ func (m *modelo) area() (ancho, alto int) {
 	return max(ancho, 0), max(m.alto-3, 0)
 }
 
-func (m *modelo) contexto() pagina.Contexto {
-	ancho, alto := m.area()
-	return pagina.Contexto{Cli: m.cli, Instancia: m.instancia, Idioma: m.idioma, Estilos: m.estilos, Ancho: ancho, Alto: alto, Proyecto: m.o.Proyecto}
-}
-
-// iniciar vuelve a iniciar la página actual y, si hay datos, se los pasa.
+// iniciar vuelve a iniciar la página actual, con un Ctx nuevo (el anterior se cancela) y, si hay datos, se los pasa.
 func (m *modelo) iniciar(extra any) tea.Cmd {
-	cmd := m.pagina(m.actual).Iniciar(m.contexto())
+	if cancelar := m.cancelar[m.actual]; cancelar != nil {
+		cancelar()
+	}
+	ctx, cancelar := context.WithCancel(context.Background())
+	m.cancelar[m.actual] = cancelar
+	ancho, alto := m.area()
+	cmd := m.pagina(m.actual).Iniciar(pagina.Contexto{Ctx: ctx, Cli: m.cli, Instancia: m.instancia, Idioma: m.idioma, Estilos: m.estilos,
+		Ancho: ancho, Alto: alto, Proyecto: m.o.Proyecto})
 	if extra == nil {
 		return cmd
 	}
 	return tea.Batch(cmd, m.aPagina(extra))
 }
 
-func (m *modelo) ir(clave string, extra any) tea.Cmd {
+// cerrar cancela el Ctx de todas las páginas: al cambiar de espacio y al salir.
+func (m *modelo) cerrar() {
+	for clave, cancelar := range m.cancelar {
+		cancelar()
+		delete(m.cancelar, clave)
+	}
+}
+
+// ir lleva a una página del menú. Con historia (IrA, ?), Volver regresa a la de ahora; por el menú y los atajos se
+// empieza una historia nueva. Una clave que no existe no hace nada.
+func (m *modelo) ir(clave string, extra any, historia bool) tea.Cmd {
+	if !slices.Contains(ordenMenu(), clave) {
+		return nil
+	}
+	switch {
+	case !historia:
+		m.pila = nil
+	case clave != m.actual:
+		m.pila = append(m.pila, m.actual)
+	}
 	m.actual, m.enMenu = clave, false
 	return m.iniciar(extra)
+}
+
+// volver regresa a la página anterior tal como estaba; solo se vuelve a iniciar si su Ctx se canceló (cambió el
+// espacio).
+func (m *modelo) volver() tea.Cmd {
+	if len(m.pila) == 0 {
+		return nil
+	}
+	m.actual, m.pila, m.enMenu = m.pila[len(m.pila)-1], m.pila[:len(m.pila)-1], false
+	if _, viva := m.cancelar[m.actual]; viva {
+		return nil
+	}
+	return m.iniciar(nil)
 }
 
 // aPagina da un mensaje solo a la página actual: las teclas, lo pegado y las respuestas de los componentes.
@@ -133,10 +175,10 @@ func (m *modelo) difundir(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-// Init pide el color del fondo, se conecta al servicio y empieza a comprobarlo cada poco.
+// Init pide el color del fondo y se conecta al servicio; el resultado programa el primer latido.
 func (m *modelo) Init() tea.Cmd {
-	m.conectando = true
-	return tea.Batch(tea.RequestBackgroundColor, m.conectar(false, true), latir())
+	m.conectando, m.comprobando = true, true
+	return tea.Batch(tea.RequestBackgroundColor, m.conectar(false, true, true))
 }
 
 // Update implementa tea.Model.
@@ -154,16 +196,23 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case msgConexion:
 		return m, m.conectado(msg)
 	case msgLatido:
-		return m, tea.Batch(m.conectar(false, false), latir())
+		if m.comprobando { // la comprobación en marcha ya traerá su resultado; la cadena sigue
+			return m, latir()
+		}
+		m.comprobando = true
+		return m, m.conectar(false, false, true)
 	case pagina.ErrorServicio:
 		if !m.conectando {
 			m.caido = msg.Err
 		}
 	case pagina.CambioEspacio:
 		m.instancia = msg.ID
-		return m, m.iniciar(nil)
+		m.cerrar()
+		return m, tea.Batch(m.difundir(msg), m.iniciar(nil))
 	case pagina.IrA:
-		return m, m.ir(msg.Pagina, msg.Datos)
+		return m, m.ir(msg.Pagina, msg.Datos, true)
+	case pagina.Volver:
+		return m, m.volver()
 	case comp.Pregunta:
 		m.pregunta = &comp.Confirmacion{Texto: msg.Texto}
 	case comp.Elegido:
@@ -188,12 +237,18 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // tecla reparte una tecla: primero lo que está abierto encima (la pregunta, el selector, el menú) y luego la página.
-// Las teclas comunes no se aplican mientras la página tiene un campo con el foco.
+// Las teclas comunes no se aplican mientras la página tiene un campo con el foco. Por debajo del tamaño mínimo no se
+// ve nada, así que solo valen q y Ctrl+C.
 func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 	t := k.String()
 	switch {
 	case t == "ctrl+c":
 		return tea.Quit
+	case m.ancho < anchoMinimo || m.alto < altoMinimo:
+		if t == "q" {
+			return tea.Quit
+		}
+		return nil
 	case m.pregunta != nil:
 		listo, cmd := m.pregunta.Update(k)
 		if listo {
@@ -218,15 +273,18 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 		m.abrirMenu()
 		return nil
 	case "?":
-		return m.ir("ayuda", pagina.ConAyuda{Pagina: p.Ayuda()})
+		return m.ir(pagina.PaginaAyuda, pagina.ConAyuda{Pagina: p.Ayuda()}, true)
 	case "r":
 		if m.caido != nil {
-			m.conectando = true
-			return m.conectar(true, true)
+			if m.comprobando {
+				return nil // un solo reintento a la vez: si no, r r arrancaría el servicio dos veces
+			}
+			m.conectando, m.comprobando = true, true
+			return m.conectar(true, true, false)
 		}
 	}
 	if clave, ok := atajo(t); ok {
-		return m.ir(clave, nil)
+		return m.ir(clave, nil, false)
 	}
 	return m.aPagina(k)
 }
@@ -286,12 +344,17 @@ type proximamente struct {
 	estilos *pagina.Estilos
 }
 
-func (p *proximamente) Titulo() string                          { return p.titulo }
-func (p *proximamente) Iniciar(pagina.Contexto) tea.Cmd         { return nil }
-func (p *proximamente) Update(tea.Msg) (pagina.Pagina, tea.Cmd) { return p, nil }
-func (p *proximamente) Teclas() []pagina.Tecla                  { return nil }
-func (p *proximamente) EnCampo() bool                           { return false }
-func (p *proximamente) Ayuda() string                           { return "" }
+func (p *proximamente) Titulo() string                  { return p.titulo }
+func (p *proximamente) Iniciar(pagina.Contexto) tea.Cmd { return nil }
+func (p *proximamente) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
+	if k, ok := msg.(tea.KeyPressMsg); ok && k.String() == "esc" {
+		return p, pagina.Atras
+	}
+	return p, nil
+}
+func (p *proximamente) Teclas() []pagina.Tecla { return nil }
+func (p *proximamente) EnCampo() bool          { return false }
+func (p *proximamente) Ayuda() string          { return "" }
 func (p *proximamente) Vista() string {
 	return p.estilos.Titulo.Render(p.titulo) + "\n\n" + p.estilos.Tenue.Render(idioma.T("Próximamente"))
 }

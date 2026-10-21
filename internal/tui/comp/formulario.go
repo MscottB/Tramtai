@@ -122,7 +122,7 @@ type (
 type Formulario struct {
 	// Validar devuelve los errores por id de campo; se llama al escribir y al enviar. Un error solo se enseña en un
 	// campo ya tocado o después de intentar enviar.
-	Validar func() map[string]string
+	Validar func(*Formulario) map[string]string
 
 	estilos   *pagina.Estilos
 	campos    []Campo
@@ -167,8 +167,9 @@ func (f *Formulario) Entero(id string) int {
 // Errores son los errores que se enseñan, por id de campo.
 func (f *Formulario) Errores() map[string]string { return f.errores }
 
-// EnCampo dice si el foco está en un campo donde se escribe: la página lo devuelve en su EnCampo.
-func (f *Formulario) EnCampo() bool { return f.foco < len(f.campos) && f.campos[f.foco].escribe() }
+// EnCampo es cierto en cualquier campo, también en una opción o un interruptor: mientras la página enseña el
+// formulario, devuelve esto en su EnCampo y así Tab, q y 1…7 son del formulario y no se escapan.
+func (f *Formulario) EnCampo() bool { return len(f.campos) > 0 }
 
 // Teclas son las del formulario, para el pie de la página.
 func (f *Formulario) Teclas() []pagina.Tecla {
@@ -190,7 +191,7 @@ func (f *Formulario) medir(ancho int) {
 func (f *Formulario) validar() {
 	todos := map[string]string{}
 	if f.Validar != nil {
-		maps.Copy(todos, f.Validar())
+		maps.Copy(todos, f.Validar(f))
 	}
 	f.errores = map[string]string{}
 	for id, e := range todos {

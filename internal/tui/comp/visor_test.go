@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -45,3 +46,16 @@ func TestVisorBusca(t *testing.T) {
 }
 
 func vista(v Visor) string { return ansi.Strip(v.Vista()) }
+
+// TestVisorCambiaDeTema: el fondo llega después de crear el visor; al pintar usa los estilos de ese momento.
+func TestVisorCambiaDeTema(t *testing.T) {
+	e := estilos()
+	v := NuevoVisor(e)
+	v.Tamano(40, 5)
+	v.Poner("una aguja")
+	v.Buscar("aguja")
+	e.Seleccion = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000"))
+	if !strings.Contains(v.Vista(), "38;2;255;0;0") {
+		t.Fatalf("el resaltado usa los estilos de ahora: %q", v.Vista())
+	}
+}

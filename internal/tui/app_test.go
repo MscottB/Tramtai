@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"image/color"
 	"os"
 	"regexp"
@@ -50,7 +51,7 @@ func correr(t *testing.T, m *modelo, cmd tea.Cmd) bool {
 	var msg tea.Msg
 	select {
 	case msg = <-hecho:
-	case <-time.After(10 * time.Second):
+	case <-time.After(2 * time.Second): // el plazo de un aviso (4 s) o el latido no se esperan
 		return false
 	}
 	switch msg := msg.(type) {
@@ -83,12 +84,15 @@ type paginaFalsa struct {
 	texto       string
 	iniciada    int
 	ancho, alto int
+	ctx         context.Context
+	instancia   string
+	cambios     int // los CambioEspacio que le llegan
 }
 
 func (p *paginaFalsa) Titulo() string { return "Configuración" }
 func (p *paginaFalsa) Iniciar(c pagina.Contexto) tea.Cmd {
 	p.iniciada++
-	p.ancho, p.alto = c.Ancho, c.Alto
+	p.ancho, p.alto, p.ctx, p.instancia = c.Ancho, c.Alto, c.Ctx, c.Instancia
 	return nil
 }
 func (p *paginaFalsa) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
@@ -97,6 +101,8 @@ func (p *paginaFalsa) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		p.texto += msg.Text
 	case tea.WindowSizeMsg:
 		p.ancho, p.alto = msg.Width, msg.Height
+	case pagina.CambioEspacio:
+		p.cambios++
 	}
 	return p, nil
 }
@@ -250,7 +256,7 @@ func TestServicioCaidoNoCierra(t *testing.T) {
 	cli, global, cerrar := prueba.Arrancar(t)
 	m := nuevo(Opciones{})
 	m.cli = cli
-	if correr(t, m, m.conectar(false, true)) || m.instancia != global || m.caido != nil {
+	if correr(t, m, m.conectar(false, true, false)) || m.instancia != global || m.caido != nil {
 		t.Fatalf("conecta con el espacio global: %q %v", m.instancia, m.caido)
 	}
 	aviso := idioma.T("El servicio no responde · r reintenta")
@@ -258,7 +264,7 @@ func TestServicioCaidoNoCierra(t *testing.T) {
 		t.Fatal("con el servicio en marcha no hay aviso")
 	}
 	cerrar()
-	if correr(t, m, m.conectar(false, false)) {
+	if correr(t, m, m.conectar(false, false, false)) {
 		t.Fatal("la comprobación no cierra la terminal")
 	}
 	if !strings.Contains(m.View().Content, aviso) {

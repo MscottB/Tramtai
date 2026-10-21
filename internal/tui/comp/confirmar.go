@@ -24,10 +24,11 @@ func Confirmar(pregunta string) tea.Cmd { return func() tea.Msg { return Pregunt
 // Confirmacion es la caja de la pregunta. La abre la app; mientras se ve, se queda con las teclas.
 type Confirmacion struct{ Texto string }
 
-// Update responde a una tecla: listo dice si la pregunta ya tiene respuesta, que llega con cmd.
+// Update responde a una tecla: listo dice si la pregunta ya tiene respuesta, que llega con cmd. Solo s o y confirman:
+// Intro no hace nada, para que un Intro de más no borre.
 func (c Confirmacion) Update(k tea.KeyPressMsg) (listo bool, cmd tea.Cmd) {
 	switch k.String() {
-	case "s", "S", "y", "Y", "enter":
+	case "s", "S", "y", "Y":
 		return true, func() tea.Msg { return Confirmado{} }
 	case "n", "N", "esc":
 		return true, func() tea.Msg { return Cancelado{} }

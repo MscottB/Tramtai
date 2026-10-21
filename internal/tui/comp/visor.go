@@ -12,16 +12,15 @@ import (
 // Visor enseña un texto largo con desplazamiento y búsqueda. Las teclas: ↑ ↓ RePág AvPág, g y G (principio y fin),
 // n y N (coincidencia siguiente y anterior).
 type Visor struct {
-	vp viewport.Model
+	vp      viewport.Model
+	estilos *pagina.Estilos
 }
 
 // NuevoVisor crea un visor vacío; las líneas largas se parten.
 func NuevoVisor(e *pagina.Estilos) Visor {
 	vp := viewport.New()
 	vp.SoftWrap = true
-	vp.HighlightStyle = e.Tenue.Reverse(true)
-	vp.SelectedHighlightStyle = e.Seleccion.Reverse(!e.Color)
-	return Visor{vp: vp}
+	return Visor{vp: vp, estilos: e}
 }
 
 // Tamano fija el ancho y el alto del visor.
@@ -71,5 +70,9 @@ func (v *Visor) Update(msg tea.Msg) bool {
 	return true
 }
 
-// Vista pinta lo que se ve del texto.
-func (v Visor) Vista() string { return v.vp.View() }
+// Vista pinta lo que se ve del texto, con los estilos de ahora: si el fondo llega después, cambia de tema.
+func (v Visor) Vista() string {
+	v.vp.HighlightStyle = v.estilos.Tenue.Reverse(true)
+	v.vp.SelectedHighlightStyle = v.estilos.Seleccion.Reverse(!v.estilos.Color)
+	return v.vp.View()
+}

@@ -17,7 +17,7 @@ func envia(cmd tea.Cmd) bool {
 
 func TestFormularioValida(t *testing.T) {
 	f := NuevoFormulario(estilos(), Texto("nombre", "Nombre", ""), Numero("puerto", "Puerto", ""), Interruptor("activa", "Activa", false), Opcion("modelo", "Modelo", []string{"rápido", "lento"}, "lento"))
-	f.Validar = func() map[string]string {
+	f.Validar = func(f *Formulario) map[string]string {
 		if f.Valor("nombre") == "" {
 			return map[string]string{"nombre": "Falta el nombre"}
 		}
@@ -42,8 +42,8 @@ func TestFormularioValida(t *testing.T) {
 		t.Fatalf("un número solo admite cifras: %q", f.Valor("puerto"))
 	}
 	f.Update(tecla("enter"))
-	if f.EnCampo() {
-		t.Fatal("Intro pasa al interruptor, que no es un campo de texto")
+	if !f.EnCampo() {
+		t.Fatal("en el interruptor el formulario sigue con el foco: Tab, q y 1…7 no se escapan")
 	}
 	f.Update(tecla("space"))
 	if !f.Marcado("activa") {
@@ -51,8 +51,8 @@ func TestFormularioValida(t *testing.T) {
 	}
 	f.Update(tecla("down"))
 	f.Update(tecla("left"))
-	if f.Valor("modelo") != "rápido" {
-		t.Fatalf("← cambia la opción: %q", f.Valor("modelo"))
+	if f.Valor("modelo") != "rápido" || !f.EnCampo() {
+		t.Fatalf("← cambia la opción, que también tiene el foco: %q", f.Valor("modelo"))
 	}
 	if !envia(f.Update(tecla("enter"))) {
 		t.Fatal("Intro en el último campo envía")

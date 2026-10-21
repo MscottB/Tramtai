@@ -22,12 +22,14 @@ const (
 )
 
 type (
-	// msgConexion es el resultado de comprobar el servicio; con reiniciar, la página actual se vuelve a iniciar.
+	// msgConexion es el resultado de comprobar el servicio; con reiniciar, la página actual se vuelve a iniciar; con
+	// latido, era la comprobación periódica y programa la siguiente.
 	msgConexion struct {
 		cli       *cliente.Cliente
 		espacios  []contrato.Espacio
 		err       error
 		reiniciar bool
+		latido    bool
 	}
 	msgLatido struct{}
 )
@@ -36,7 +38,8 @@ func latir() tea.Cmd { return tea.Tick(latido, func(time.Time) tea.Msg { return 
 
 // conectar comprueba el servicio leyendo sus espacios: con el cliente que ya hay y, si no responde, con el descriptor (se
 // pudo reiniciar en otro puerto o con otro token). Con arrancar y Opciones.Iniciar, si sigue sin responder, lo inicia.
-func (m *modelo) conectar(arrancar, reiniciar bool) tea.Cmd {
+// Quien la lanza pone comprobando; el resultado lo quita.
+func (m *modelo) conectar(arrancar, reiniciar, latido bool) tea.Cmd {
 	cli, datos, iniciar := m.cli, m.o.Datos, m.o.Iniciar
 	if !arrancar {
 		iniciar = nil
@@ -46,9 +49,9 @@ func (m *modelo) conectar(arrancar, reiniciar bool) tea.Cmd {
 			ctx, cancelar := context.WithTimeout(context.Background(), plazo)
 			defer cancelar()
 			espacios, err := c.Espacios(ctx)
-			return msgConexion{cli: c, espacios: espacios, err: err, reiniciar: reiniciar}
+			return msgConexion{cli: c, espacios: espacios, err: err, reiniciar: reiniciar, latido: latido}
 		}
-		r := msgConexion{cli: cli, err: cliente.ErrServicioInactivo, reiniciar: reiniciar}
+		r := msgConexion{cli: cli, err: cliente.ErrServicioInactivo, reiniciar: reiniciar, latido: latido}
 		if cli != nil {
 			if r = leer(cli); r.err == nil {
 				return r
@@ -72,27 +75,43 @@ func (m *modelo) conectar(arrancar, reiniciar bool) tea.Cmd {
 }
 
 // conectado guarda el resultado de conectar. La primera vez elige el espacio: el del proyecto, si está activo, o el
-// global.
+// global. Si el espacio activo dejó de estarlo (se detuvo desde la Web UI, por ejemplo), vuelve al global y avisa.
 func (m *modelo) conectado(r msgConexion) tea.Cmd {
-	m.conectando = false
+	m.conectando, m.comprobando = false, false
+	var cmds []tea.Cmd
+	if r.latido {
+		cmds = append(cmds, latir())
+	}
 	if r.err != nil {
 		m.caido = r.err
 	} else {
 		r.reiniciar = r.reiniciar || m.caido != nil || m.cli != r.cli // si vuelve, la página se recarga
 		m.cli, m.espacios, m.caido = r.cli, r.espacios, nil
-		if m.instancia == "" {
+		switch nombre, activo := m.espacioActivo(m.instancia); {
+		case m.instancia == "":
 			m.instancia = "global"
-			for _, e := range m.espacios {
-				if e.ID == m.o.IDProyecto && e.Activo {
-					m.instancia = e.ID
-				}
+			if _, ok := m.espacioActivo(m.o.IDProyecto); ok && m.o.IDProyecto != "" {
+				m.instancia = m.o.IDProyecto
 			}
+		case !activo && m.instancia != "global":
+			cambio := func() tea.Msg { return pagina.CambioEspacio{ID: "global"} }
+			return tea.Batch(append(cmds, cambio, comp.Aviso(idioma.Tf("el espacio %s se detuvo: vuelves al global", nombre), comp.Advertencia))...)
 		}
 	}
 	if r.reiniciar {
-		return m.iniciar(nil)
+		cmds = append(cmds, m.iniciar(nil))
 	}
-	return nil
+	return tea.Batch(cmds...)
+}
+
+// espacioActivo dice el nombre de un espacio (o su id, si no se conoce) y si está activo.
+func (m *modelo) espacioActivo(id string) (string, bool) {
+	for _, e := range m.espacios {
+		if e.ID == id {
+			return e.Nombre, e.Activo
+		}
+	}
+	return id, false
 }
 
 // elegirEspacio abre el cambio rápido de espacio (Ctrl+E) con los espacios activos.

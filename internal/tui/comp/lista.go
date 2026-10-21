@@ -19,6 +19,9 @@ import (
 type Lista[T any] struct {
 	// Fila pinta un elemento; si es nil, se pinta su texto.
 	Fila func(T) string
+	// Clave identifica un elemento, para que Poner deje la selección en el mismo aunque cambie de fila; si es nil,
+	// se usa el texto.
+	Clave func(T) string
 
 	estilos  *pagina.Estilos
 	texto    func(T) string
@@ -45,8 +48,30 @@ func NuevaLista[T any](e *pagina.Estilos, texto func(T) string) Lista[T] {
 	return Lista[T]{estilos: e, texto: texto, plegados: map[string]bool{}}
 }
 
-// Poner cambia los elementos; el cursor se queda en la misma fila, si sigue existiendo.
-func (l *Lista[T]) Poner(elems []T) { l.todos = elems; l.rehacer() }
+// Poner cambia los elementos. La selección sigue en el mismo elemento (por su Clave) o en la misma cabecera de grupo;
+// si ya no está, el cursor se queda en la misma fila, o en la última.
+func (l *Lista[T]) Poner(elems []T) {
+	clave := l.Clave
+	if clave == nil {
+		clave = l.texto
+	}
+	var antes func(fila[T]) bool
+	if l.cursor < len(l.filas) {
+		if f := l.filas[l.cursor]; f.cabecera {
+			antes = func(g fila[T]) bool { return g.cabecera && g.grupo == f.grupo }
+		} else {
+			k := clave(f.elem)
+			antes = func(g fila[T]) bool { return !g.cabecera && clave(g.elem) == k }
+		}
+	}
+	l.todos = elems
+	l.rehacer()
+	if antes != nil {
+		if i := slices.IndexFunc(l.filas, antes); i >= 0 {
+			l.cursor = i
+		}
+	}
+}
 
 // Buscar deja los elementos cuyo texto contiene el buscado, sin distinguir mayúsculas ni tildes.
 func (l *Lista[T]) Buscar(texto string) { l.buscar = normalizar(texto); l.rehacer() }

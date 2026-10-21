@@ -155,3 +155,24 @@ func TestListaDesplaza(t *testing.T) {
 		t.Fatalf("el cursor siempre se ve:\n%s", v)
 	}
 }
+
+func TestListaPonerConservaLaSeleccion(t *testing.T) {
+	l := NuevaLista(estilos(), func(a api) string { return a.nombre + " " + a.tipo })
+	l.Clave = func(a api) string { return a.nombre }
+	l.Poner(apis())
+	l.Update(tecla("down"))
+	l.Update(tecla("down"))
+	if a, _ := l.Seleccion(); a.nombre != "Soporte" {
+		t.Fatalf("selección: %v", a)
+	}
+	nuevas := append([]api{{"Nueva", "openai", true}}, apis()...)
+	nuevas[3].tipo = "anthropic" // cambia el texto, no la clave
+	l.Poner(nuevas)
+	if a, _ := l.Seleccion(); a.nombre != "Soporte" || a.tipo != "anthropic" {
+		t.Fatalf("al recargar, la selección sigue en el mismo elemento, no en la misma fila: %v", a)
+	}
+	l.Poner(apis()[:2])
+	if _, ok := l.Seleccion(); !ok {
+		t.Fatal("si el elemento ya no está, queda una selección válida")
+	}
+}
