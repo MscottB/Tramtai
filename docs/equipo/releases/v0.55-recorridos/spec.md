@@ -160,8 +160,8 @@ depende del sitio: LCP, CLS, imágenes, recursos que bloquean el renderizado, ta
 - [M] «image-delivery» en la portada de escritorio (ahorro estimado de 47 KiB): las capturas de «Así se ve» bajan como
   960 px y se pintan a 630. **Sin arreglo en la v0.55:** el atributo `sizes` ya estaba y es correcto (`(max-width: 900px)
   100vw, 660px`, y `1000px` en la demo, con prueba), así que el navegador ya elige la mejor de las dos; el ahorro pide
-  una tercera anchura (640 px) por captura, es decir, rehacer todas las capturas con `npm run capturas`. Queda como
-  pendiente para cuando se rehagan las capturas.
+  una tercera anchura (640 px) por captura, es decir, una variante más de cada captura (unos 47 KiB de ahorro en
+  escritorio, ninguno en móvil) a cambio de más archivos en el repositorio. No compensa: no se arregla.
 - [B] Caché y latencia del documento: dependen del servidor (GitHub Pages), no del sitio.
 - [B] `estilo.css` bloquea el renderizado (29 KB) y CSS y JS sin minificar (6-7 KB): el sitio no tiene paso de
   compilación y no se añaden dependencias. En la 404 el bloqueo viene de pedir `estilo.css` con la URL absoluta de GitHub
@@ -176,7 +176,9 @@ primera pantalla. Todas siguen con `loading="lazy"`: ni `eager` ni `fetchpriorit
 
 | Página | Móvil | Escritorio | LCP móvil |
 |---|---|---|---|
-| `index.html` | | | |
-| `desarrolladores.html` | | | |
-| `ayuda/espacios.html` | | | |
-| `404.html` | | | |
+| `index.html` | 99 / 100 / 100 / 100 | 100 / 100 / 100 / 100 | 2,0 s |
+| `desarrolladores.html` | 99 / 100 / 100 / 100 | 100 / 100 / 100 / 100 | 2,2 s |
+| `ayuda/espacios.html` | 100 / 100 / 100 / 100 | 100 / 100 / 100 / 100 | 1,8 s |
+| `404.html` | 99 / 100 / 100 / 63 | 100 / 100 / 100 / 63 | 1,9 s |
+
+TBT de la portada en móvil: de 250 ms a 0 ms; ningún reflow forzado. La 404 se queda en 63 de SEO por su `noindex`.
