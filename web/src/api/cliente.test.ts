@@ -56,3 +56,13 @@ test('sin sesión un 401 no se repite: llega el error del servicio', async () =>
   await assert.rejects(api.instancia(), { codigo: 'no_autorizado', message: 'Falta la sesión', estado: 401 })
   assert.equal(llamadas.length, 1)
 })
+
+test('un 403 de CSRF renueva una sola vez', async () => {
+  sesion.value = abierta('viejo')
+  const llamadas = simular((_, ruta) =>
+    ruta === '/ui/sesion' ? respuesta(200, abierta('nuevo')) : respuesta(403, { error: { codigo: 'origen_no_permitido', mensaje: 'CSRF' } }))
+  await assert.rejects(api.eliminar('a'), (e) => e instanceof ErrorApi && e.codigo === 'espacio_cambiado' && e.estado === 403)
+  assert.equal(llamadas.filter((l) => l.ruta === '/ui/sesion').length, 1, 'renueva la sesión una vez')
+  assert.equal(llamadas.filter((l) => l.metodo === 'DELETE').length, 1, 'no repite la acción: el espacio de la sesión cambió')
+  assert.equal(sesion.value?.csrf, 'nuevo')
+})

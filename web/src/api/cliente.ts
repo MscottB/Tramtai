@@ -52,6 +52,13 @@ export async function pedir<T>(metodo: string, ruta: string, cuerpo?: unknown, p
       }
       return pedir<T>(metodo, ruta, cuerpo, plazo, true)
     }
+    // CSRF viejo: en otra pestaña se cambió de espacio y la cookie es otra. Se renueva la sesión una vez y no se repite
+    // la acción (iría a otro espacio): la página avisa y se recarga.
+    if (respuesta.status === 403 && datos?.error?.codigo === 'origen_no_permitido' && metodo !== 'GET' && !reintento && sesion.value) {
+      await renovarSesion().catch(() => undefined)
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('tramtai:espacio-cambiado'))
+      throw new ErrorApi('espacio_cambiado', t('app.espacioCambiado'), 403, datos ?? {})
+    }
     throw new ErrorApi(datos?.error?.codigo ?? 'error', datos?.error?.mensaje ?? respuesta.statusText, respuesta.status, datos ?? {})
   }
   return datos as T
@@ -108,6 +115,8 @@ export const api = {
   claveInstancia: () => pedir<{ token: string; archivo: string }>('GET', '/api/v1/instancia/token'),
   // regenerarClaveInstancia cambia la clave que usan las aplicaciones; la anterior deja de valer al momento.
   regenerarClaveInstancia: () => pedir<{ token: string; archivo: string }>('POST', '/api/v1/instancia/token'),
+  // heredar quita un valor propio de un proyecto (de su local.yaml): vuelve a valer el de Global.
+  heredar: (clave: string) => pedir<void>('POST', '/api/v1/instancia/heredar', { clave }),
   configuracion: () =>
     pedir<{ configuracion: EntradaConfiguracion[] }>('GET', '/api/v1/instancia/configuracion').then((r) => r.configuracion),
   catalogo: () => pedir<{ modelos: Modelo[] }>('GET', '/api/v1/modelos').then((r) => r.modelos),

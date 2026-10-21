@@ -2,12 +2,21 @@
   <div class="pagina apilado">
     <CabeceraPagina tema="configuracion" :titulo="t('menu.configuracion')" :descripcion="t('config.subtitulo')" />
 
-    <q-card>
+    <q-tabs v-model="pestana" dense no-caps align="left" active-color="primary" indicator-color="primary" class="texto-suave">
+      <q-tab name="espacio" icon="o_folder_special" :label="t('config.pestanaEspacio', { nombre: sesion?.nombre ?? '' })" />
+      <q-tab name="tramtai" icon="o_settings" :label="t('config.pestanaTramtai')" />
+    </q-tabs>
+    <div v-show="pestana === 'espacio'" class="text-caption texto-suave">{{ sesion?.ambito === 'proyecto' ? t('config.avisoProyecto') : t('config.avisoGlobal') }}</div>
+    <div v-show="pestana === 'tramtai'" class="text-caption texto-suave">{{ t('config.avisoTramtai') }}</div>
+
+    <q-card v-show="pestana === 'espacio'">
       <q-card-section class="row items-center q-col-gutter-md">
         <div class="col-12 col-md">
           <div class="row items-start no-wrap">
             <div>
-              <div class="titulo-seccion">{{ t('predeterminado.titulo') }}</div>
+              <div class="titulo-seccion">{{ t('predeterminado.titulo') }}
+                <ProcedenciaValor :procedencia="procedenciaDe(clavesPredeterminado)" :ocupado="heredando" @volver="volverAGlobal(clavesPredeterminado)" />
+              </div>
               <div class="texto-suave text-body2 q-mt-xs">{{ t('predeterminado.texto') }}</div>
               <div v-if="sesion?.ambito === 'proyecto'" class="text-caption texto-suave q-mt-xs">{{ t('predeterminado.proyecto') }}</div>
             </div>
@@ -23,7 +32,7 @@
       </q-card-section>
     </q-card>
 
-    <q-card v-if="sesion?.servicio">
+    <q-card v-if="sesion?.servicio" v-show="pestana === 'tramtai'">
       <q-card-section class="row items-start q-col-gutter-md">
         <div class="col-12 col-md">
           <div class="row items-start no-wrap">
@@ -52,7 +61,7 @@
       </q-card-section>
     </q-card>
 
-    <q-card v-if="conversor" data-captura="conversor">
+    <q-card v-show="pestana === 'tramtai'" v-if="conversor" data-captura="conversor">
       <q-card-section class="row items-start no-wrap">
         <div class="col">
           <div class="titulo-seccion">{{ t('conversor.titulo') }}</div>
@@ -72,7 +81,7 @@
       </q-card-section>
     </q-card>
 
-    <q-card v-if="actualizacion" data-captura="actualizaciones">
+    <q-card v-show="pestana === 'tramtai'" v-if="actualizacion" data-captura="actualizaciones">
       <q-card-section class="row items-start no-wrap">
         <div class="col">
           <div class="titulo-seccion">{{ t('actualizacion.ajustesTitulo') }}</div>
@@ -90,7 +99,7 @@
     </q-card>
 
     <div class="row q-col-gutter-md">
-      <div v-if="sesion?.autoarranque !== undefined" class="col-12">
+      <div v-if="sesion?.autoarranque !== undefined" v-show="pestana === 'tramtai'" class="col-12">
         <q-card>
           <q-card-section class="row items-start no-wrap">
             <div class="col">
@@ -101,10 +110,12 @@
           </q-card-section>
         </q-card>
       </div>
-      <div class="col-12">
+      <div v-show="pestana === 'espacio'" class="col-12">
         <q-card>
           <q-card-section>
-            <div class="titulo-seccion">{{ t('historialAjustes.titulo') }}</div>
+            <div class="titulo-seccion">{{ t('historialAjustes.titulo') }}
+              <ProcedenciaValor :procedencia="procedenciaDe(clavesRetencion)" :ocupado="heredando" @volver="volverAGlobal(clavesRetencion)" />
+            </div>
             <div class="texto-suave text-body2 q-mt-xs">{{ t('historialAjustes.texto') }}</div>
           </q-card-section>
           <q-card-section class="row q-col-gutter-md q-pt-none">
@@ -124,7 +135,7 @@
           </q-card-actions>
         </q-card>
       </div>
-      <div class="col-12">
+      <div v-show="pestana === 'espacio'" class="col-12">
         <q-card>
           <q-card-section class="row items-start no-wrap q-pb-sm">
             <div class="col">
@@ -156,7 +167,7 @@
       </div>
     </div>
 
-    <q-card>
+    <q-card v-show="pestana === 'espacio'">
       <q-expansion-item icon="o_code" :label="t('config.valoresTecnicos')" :caption="t('config.valoresTexto')" header-class="q-py-md">
         <q-separator />
         <q-card-section class="row items-center q-col-gutter-md">
@@ -196,8 +207,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
+import ProcedenciaValor from '../componentes/ProcedenciaValor.vue'
+import { guardar, leer } from '../componentes/accesos/comun'
+import { heredable, procedencia, type Procedencia } from '../herencia'
 import { useQuasar } from 'quasar'
 import { api, avisar, avisarError, buscarActualizacionAhora, reiniciarYSeguir } from '../api/cliente'
 import type { EntradaConfiguracion, EstadoPunto, Modelo } from '../api/tipos'
@@ -212,6 +226,34 @@ import { cargarConversor, conversor, prepararConversor, preparando, textoConvers
 
 const $q = useQuasar()
 const entradas = ref<EntradaConfiguracion[]>([])
+// pestana separa lo de este espacio de lo de todo Tramtai; se recuerda entre visitas.
+const pestana = ref<'espacio' | 'tramtai'>(leer('tramtai.pestanaAjustes', 'espacio'))
+watch(pestana, (p) => guardar('tramtai.pestanaAjustes', p))
+
+// Herencia: en un proyecto cada ajuste dice si es propio o de Global, y los propios pueden volver al de Global.
+const clavesPredeterminado = ['predeterminados.agente', 'predeterminados.modelo', 'predeterminados.perfil_modelo', 'predeterminados.esfuerzo']
+const clavesRetencion = ['retencion.horas_resultado', 'retencion.horas_metadatos', 'retencion.max_trabajos']
+const ambito = computed(() => (sesion.value?.ambito === 'proyecto' ? 'proyecto' : 'global'))
+// procedenciaDe un grupo de claves: propio si alguna es propia, de Global si alguna viene de ahí.
+function procedenciaDe(claves: string[]): Procedencia | undefined {
+  const lista = claves.map((c) => procedencia(entradas.value, c, ambito.value))
+  return lista.includes('propio') ? 'propio' : lista.includes('global') ? 'global' : undefined
+}
+const heredando = ref(false)
+async function volverAGlobal(claves: string[]) {
+  heredando.value = true
+  try {
+    for (const clave of claves) if (heredable(clave) && procedencia(entradas.value, clave, ambito.value) === 'propio') await api.heredar(clave)
+    entradas.value = await api.configuracion()
+    catalogo.value = await api.catalogo()
+    await leerRetencion()
+    avisar(t('herencia.vuelto'))
+  } catch (e) {
+    avisarError(e)
+  } finally {
+    heredando.value = false
+  }
+}
 
 // Historial: plazos y tope de la retención; el registro se edita en días y se guarda en horas.
 const retencion = reactive({ horas_resultado: 24, max_trabajos: 10000 })
