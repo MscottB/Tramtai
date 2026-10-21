@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/cliente"
+	"tramtai/internal/contrato"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -19,24 +21,37 @@ import (
 	"tramtai/internal/version"
 )
 
-// instanciaActual elige la instancia del proyecto actual si está activa; si no, la global.
-func instanciaActual(ctx context.Context, c *cliente.Cliente, preferida string) string {
-	if preferida != "" {
-		return preferida
+// instanciaActual elige el espacio: el indicado (-i), la global si se pide (--global), el del proyecto actual si está
+// activo, o la global fuera de un proyecto. Dentro de un proyecto detenido es un error: no se usa la global sin decirlo.
+func instanciaActual(ctx context.Context, c *cliente.Cliente, preferida string, global bool) (string, error) {
+	if preferida != "" || global {
+		return elegirEspacio("", nil, preferida, global)
 	}
-	if raiz := raizProyecto(); raiz != "" {
-		if cfg, err := nucleo.CargarConfiguracion(raiz); err == nil {
-			id := servicio.IDProyecto(raiz, cfg)
-			if e, err := c.Estado(ctx); err == nil {
-				for _, i := range e.Instancias {
-					if i.ID == id {
-						return id
-					}
-				}
-			}
+	raiz := raizProyecto()
+	if raiz == "" {
+		return "global", nil
+	}
+	e, err := c.Estado(ctx)
+	if err != nil {
+		return "", err
+	}
+	return elegirEspacio(raiz, e.Instancias, "", false)
+}
+
+// elegirEspacio es la decisión de instanciaActual con el estado ya leído.
+func elegirEspacio(raiz string, activos []contrato.EstadoInstancia, preferida string, global bool) (string, error) {
+	switch {
+	case preferida != "":
+		return preferida, nil
+	case global || raiz == "":
+		return "global", nil
+	}
+	for _, i := range activos {
+		if i.Ambito == "proyecto" && servicio.MismaRuta(i.Raiz, raiz) {
+			return i.ID, nil
 		}
 	}
-	return "global"
+	return "", nucleo.NuevoError(nucleo.CodigoEspacioDetenido, idioma.Tf("el espacio %s está detenido: actívalo con tramtai espacio iniciar, o usa --global", filepath.Base(raiz)))
 }
 
 // ejecutarEnServicio envía el trabajo al servicio en marcha, de modo que el mismo trabajo se ve en la terminal
@@ -45,7 +60,11 @@ func ejecutarEnServicio(cmd *cobra.Command, c *cliente.Cliente, s nucleo.Solicit
 	ctx, cancelar := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancelar()
 	c.Origen = nucleo.DesdeCLI
-	inst := instanciaActual(ctx, c, "")
+	global, _ := cmd.Flags().GetBool("global")
+	inst, err := instanciaActual(ctx, c, "", global)
+	if err != nil {
+		return err
+	}
 	if slices.ContainsFunc(archivos, func(ruta string) bool { return documentos.NecesitaConversor(ruta) }) {
 		if e, err := c.Conversor(ctx, inst); err == nil && e.Estado == "preparando" {
 			return nucleo.NuevoError(nucleo.CodigoConversorNoDisponible, idioma.T("el conversor de archivos se está preparando: vuelve a intentarlo en un momento"))
@@ -65,7 +84,7 @@ func ejecutarEnServicio(cmd *cobra.Command, c *cliente.Cliente, s nucleo.Solicit
 		return err
 	}
 	errOut, out := cmd.ErrOrStderr(), cmd.OutOrStdout()
-	fmt.Fprintf(errOut, idioma.T("tramtai %s · %s · instancia %s · agente %s · modelo %s\n\n"), version.Texto(), t.ID, inst, t.Solicitud.Agente, vacio(t.ModeloEnviado))
+	fmt.Fprintf(errOut, idioma.T("tramtai %s · %s · espacio %s · agente %s · modelo %s\n\n"), version.Texto(), t.ID, inst, t.Solicitud.Agente, vacio(t.ModeloEnviado))
 
 	interrupcion, parar := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer parar()

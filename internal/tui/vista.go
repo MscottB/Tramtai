@@ -110,15 +110,15 @@ func (m *modelo) vistaInicio(b *strings.Builder) string {
 		b.WriteString(idioma.Tf("Servicio: %s\n", estilo(tenue, idioma.T("inactivo"))))
 	}
 	if m.o.Proyecto != "" {
-		fmt.Fprint(b, idioma.Tf("Instancia proyecto: %s\n", marcaActiva(m.instancia(m.o.IDProyecto) != nil)))
+		fmt.Fprint(b, idioma.Tf("Espacio del proyecto: %s\n", marcaActiva(m.instancia(m.o.IDProyecto) != nil)))
 	}
-	b.WriteString(idioma.Tf("Instancia global: %s\n", marcaActiva(m.instancia("global") != nil)))
+	b.WriteString(idioma.Tf("Espacio global: %s\n", marcaActiva(m.instancia("global") != nil)))
 	return idioma.T("↑↓ o número · Enter elegir · r actualizar · q salir")
 }
 
 func (m *modelo) vistaInstancia(b *strings.Builder) string {
 	inst := m.instancia(m.inst)
-	fmt.Fprintf(b, "%s  %s\n", estilo(negrita, idioma.Tf("Instancia %s", m.inst)), marcaActiva(inst != nil))
+	fmt.Fprintf(b, "%s  %s\n", estilo(negrita, idioma.Tf("Espacio %s", m.inst)), marcaActiva(inst != nil))
 	if inst != nil {
 		if inst.Raiz != "" {
 			b.WriteString(idioma.Tf("Raíz: %s\n", inst.Raiz))
@@ -287,7 +287,7 @@ func (m *modelo) vistaNuevoPunto(b *strings.Builder) string {
 }
 
 func (m *modelo) vistaTodas(b *strings.Builder) string {
-	b.WriteString(estilo(negrita, idioma.T("Todas las instancias")) + "\n\n")
+	b.WriteString(estilo(negrita, idioma.T("Todos los espacios")) + "\n\n")
 	if m.estado == nil || len(m.estado.Instancias) == 0 {
 		b.WriteString(estilo(tenue, idioma.T("ninguna activa")) + "\n")
 		return idioma.T("Esc volver")
@@ -315,7 +315,7 @@ func (m *modelo) vistaServicio(b *strings.Builder) string {
 	e := m.estado
 	b.WriteString(idioma.Tf("Servicio: %s en %s\n", estilo(verde, idioma.T("activo")), e.Base))
 	b.WriteString(idioma.Tf("Versión: %s · pid %d · desde %s\n", e.Version, e.PID, e.IniciadoEn.Local().Format("02-01-2006 15:04")))
-	b.WriteString(idioma.Tf("Instancias activas: %d\n\nPuntos de acceso:\n", len(e.Instancias)))
+	b.WriteString(idioma.Tf("Espacios activos: %d\n\nPuntos de acceso:\n", len(e.Instancias)))
 	if len(e.Puntos) == 0 {
 		b.WriteString(estilo(tenue, "  "+idioma.T("ninguno")) + "\n")
 	}

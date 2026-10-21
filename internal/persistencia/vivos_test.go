@@ -133,10 +133,13 @@ func TestVivosUsaElIndiceDeTerminados(t *testing.T) {
 }
 
 func TestVivosDespuesDe(t *testing.T) {
-	a := abrir(t)
+	// Reloj fijo: en Windows dos trabajos seguidos pueden tener la misma hora y «después de uno» no los separaría.
+	ahora := time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)
+	a := relojFijo(t, &ahora)
 	uno := aceptar(t, a, trabajo("global", "uno"), "")
+	ahora = ahora.Add(time.Second)
 	dos := aceptar(t, a, trabajo("global", "dos"), "")
-	vivos, err := a.Vivos(ctx, "global", "", time.Now(), uno.ActualizadoEn)
+	vivos, err := a.Vivos(ctx, "global", "", ahora, uno.ActualizadoEn)
 	if err != nil {
 		t.Fatal(err)
 	}

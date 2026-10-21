@@ -213,7 +213,7 @@ func (s *Servicio) enrutar(w http.ResponseWriter, r *http.Request) {
 		api.EscribirError(w, r, err)
 		return
 	case inst == nil && admin:
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.T("indica una instancia activa en la cabecera Tramtai-Instancia")))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.T("indica un espacio activo en la cabecera Tramtai-Instancia")))
 		return
 	case inst == nil:
 		api.NoAutorizado(w, r)
@@ -260,7 +260,7 @@ func (s *Servicio) instanciaPara(r *http.Request, admin bool) (inst *Instancia, 
 	inst = s.instancias[ses.instancia]
 	s.mu.RUnlock()
 	if inst == nil {
-		return nil, false, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("la instancia de la sesión (%s) no está activa", ses.instancia))
+		return nil, false, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("el espacio de la sesión (%s) no está activo", ses.instancia))
 	}
 	return inst, true, nil
 }

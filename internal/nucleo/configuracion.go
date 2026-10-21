@@ -61,7 +61,7 @@ const (
 var esquema = map[string]tipoValor{
 	"version":                                     tipoEntero,
 	"proyecto.nombre":                             tipoTexto,
-	"instancia.ambito":                            tipoTexto,
+	"instancia.ambito":                            tipoTexto, // obsoleta: no hace nada; se acepta para no romper configuraciones antiguas
 	"servicio.host":                               tipoTexto,
 	"servicio.puerto":                             tipoEntero,
 	"servicio.puerto_automatico":                  tipoBooleano,

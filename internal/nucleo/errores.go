@@ -54,6 +54,8 @@ const (
 	CodigoConfianzaRequerida CodigoError = "confianza_requerida"
 	// CodigoDentroDeProyecto: la carpeta elegida está dentro de otro proyecto; hay que elegir cuál abrir.
 	CodigoDentroDeProyecto CodigoError = "dentro_de_proyecto"
+	// CodigoEspacioDetenido: la CLI está dentro de un proyecto cuyo espacio está detenido (no se usa la global a escondidas).
+	CodigoEspacioDetenido CodigoError = "espacio_detenido"
 )
 
 // Error es el error propio de Tramtai: un código estable y un mensaje legible sin secretos.

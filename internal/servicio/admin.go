@@ -105,7 +105,7 @@ func (s *Servicio) adminConfiguracion(w http.ResponseWriter, r *http.Request) {
 	inst := s.instancias[r.PathValue("id")]
 	s.mu.RUnlock()
 	if inst == nil {
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.T("la instancia no está activa")))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.T("el espacio no está activo")))
 		return
 	}
 	entradas := []EntradaConfiguracion{}

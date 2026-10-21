@@ -55,7 +55,7 @@ func (a *Almacen) Aceptar(ctx context.Context, t nucleo.Trabajo, clave string, m
 		return t, false, err
 	}
 	if maximoActivos > 0 && activos >= maximoActivos {
-		return t, false, nucleo.NuevoError(nucleo.CodigoColaLlena, idioma.T("la cola de la instancia está llena"))
+		return t, false, nucleo.NuevoError(nucleo.CodigoColaLlena, idioma.T("la cola del espacio está llena"))
 	}
 	if err := a.comprobarPresupuesto(ctx, tx, t, ahora); err != nil {
 		return t, false, err

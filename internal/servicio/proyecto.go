@@ -103,10 +103,10 @@ func (s *Servicio) AbrirProyecto(raiz string, o AbrirOpciones) (*Instancia, erro
 		raiz = real
 	}
 	existente, esProyecto := nucleo.BuscarProyecto(raiz)
-	if esProyecto && !mismaRuta(existente, raiz) && !o.CrearAqui {
+	if esProyecto && !MismaRuta(existente, raiz) && !o.CrearAqui {
 		return nil, &ErrorDentroDeProyecto{Proyecto: existente}
 	}
-	if esProyecto && mismaRuta(existente, raiz) {
+	if esProyecto && MismaRuta(existente, raiz) {
 		raiz = existente
 		if g, err := nucleo.CargarConfiguracion(""); err == nil && !g.ProyectoConfiable(raiz) {
 			if o.Confiar == nil {
@@ -143,7 +143,7 @@ func (s *Servicio) FijarConfianza(raiz string, confiar bool) error {
 	}
 	lista := []string{}
 	for _, v := range g.Lista("proyectos_confiables") {
-		if texto, ok := v.(string); ok && !mismaRuta(texto, raiz) {
+		if texto, ok := v.(string); ok && !MismaRuta(texto, raiz) {
 			lista = append(lista, texto)
 		}
 	}
@@ -156,7 +156,7 @@ func (s *Servicio) FijarConfianza(raiz string, confiar bool) error {
 	var inst *Instancia
 	s.mu.RLock()
 	for _, i := range s.instancias {
-		if i.Ambito == "proyecto" && mismaRuta(i.Raiz, raiz) {
+		if i.Ambito == "proyecto" && MismaRuta(i.Raiz, raiz) {
 			inst = i
 		}
 	}

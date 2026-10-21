@@ -142,7 +142,7 @@ func seguirRegistro(cmd *cobra.Command, n int, seguir bool) error {
 }
 
 func comandoServicio() *cobra.Command {
-	grupo := &cobra.Command{Use: "servicio", Short: idioma.T("Servicio único: todas las instancias y puntos de acceso en un puerto")}
+	grupo := &cobra.Command{Use: "servicio", Short: idioma.T("Servicio único: todos los espacios y puntos de acceso en un puerto")}
 	var abrirAlIniciar, navegadorAlIniciar bool
 	var archivoRegistro string
 	var esperarCierre bool
@@ -172,13 +172,13 @@ func comandoServicio() *cobra.Command {
 	_ = iniciar.Flags().MarkHidden("registro") // lo usa el arranque en segundo plano
 	iniciar.Flags().BoolVar(&esperarCierre, "esperar-cierre", false, idioma.T("espera a que termine el servicio en marcha (reinicio)"))
 	_ = iniciar.Flags().MarkHidden("esperar-cierre")
-	detener := &cobra.Command{Use: "detener", Short: idioma.T("Detiene el servicio y todas sus instancias"),
+	detener := &cobra.Command{Use: "detener", Short: idioma.T("Detiene el servicio y todos sus espacios"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := conectar()
 			if err != nil {
 				return err
 			}
-			if !si && !confirmar(cmd, idioma.T("¿Detener el servicio y todas sus instancias?")) {
+			if !si && !confirmar(cmd, idioma.T("¿Detener el servicio y todos sus espacios?")) {
 				return nil
 			}
 			ctx, cancelar := contexto()
@@ -206,7 +206,7 @@ func comandoServicio() *cobra.Command {
 			return errors.New(idioma.T("el servicio no confirmó la detención"))
 		}}
 	detener.Flags().BoolVarP(&si, "si", "s", false, idioma.T("no pedir confirmación"))
-	estado := &cobra.Command{Use: "estado", Short: idioma.T("Muestra el servicio, sus instancias y sus puntos de acceso"),
+	estado := &cobra.Command{Use: "estado", Short: idioma.T("Muestra el servicio, sus espacios y sus puntos de acceso"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := conectar()
 			if errors.Is(err, cliente.ErrServicioInactivo) {
@@ -240,7 +240,7 @@ func comandoServicio() *cobra.Command {
 			imprimirPuntos(cmd.OutOrStdout(), puntos)
 			return nil
 		}}
-	token := &cobra.Command{Use: "token", Short: idioma.T("Muestra el token de la instancia global (igual que tramtai global token)"),
+	token := &cobra.Command{Use: "token", Short: idioma.T("Muestra el token del espacio global (igual que tramtai global token)"),
 		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, "global", false) }}
 	autoarranqueCmd := &cobra.Command{Use: "autoarranque [activar|desactivar]",
 		Short: idioma.T("Arranca Tramtai (la app de escritorio, oculta en la bandeja) al iniciar sesión en Windows"),
@@ -393,7 +393,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string) error {
 		return err
 	}
 	for _, err := range sv.Restaurar() {
-		fmt.Fprintln(salida, idioma.T("no se pudo restaurar una instancia:"), nucleo.MensajeDe(err))
+		fmt.Fprintln(salida, idioma.T("no se pudo restaurar un espacio:"), nucleo.MensajeDe(err))
 	}
 	// Sin WriteTimeout global: los flujos SSE duran lo que el trabajo; cada escritura lleva su propio plazo.
 	srv := &http.Server{Handler: sv, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 64 << 10,
@@ -457,5 +457,5 @@ func identificar(ambito string) (raiz, id string, c *nucleo.Configuracion, err e
 	if c, err = nucleo.CargarConfiguracion(raiz); err != nil {
 		return "", "", nil, err
 	}
-	return raiz, servicio.IDProyecto(raiz, c), c, nil
+	return raiz, servicio.IDDeCarpeta(raiz, c), c, nil
 }

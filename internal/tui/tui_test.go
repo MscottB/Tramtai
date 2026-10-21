@@ -50,7 +50,7 @@ func tecla(texto string) tea.KeyPressMsg {
 func TestNavegacionSinServicio(t *testing.T) {
 	m := nuevo(Opciones{Proyecto: "C:/repos/demo", IDProyecto: "demo_1234"})
 	vista := m.View().Content
-	for _, texto := range []string{"Instancia del proyecto actual", "Instancia global", "Servicio:", "inactivo"} {
+	for _, texto := range []string{"Espacio del proyecto actual", "Espacio global", "Servicio:", "inactivo"} {
 		if !strings.Contains(vista, texto) {
 			t.Fatalf("falta %q en el inicio:\n%s", texto, vista)
 		}
@@ -59,7 +59,7 @@ func TestNavegacionSinServicio(t *testing.T) {
 	if m.pantalla != pInstancia || m.inst != "global" {
 		t.Fatalf("debía abrir la instancia global: %v %s", m.pantalla, m.inst)
 	}
-	if vista := m.View().Content; !strings.Contains(vista, "Activar instancia (inicia el servicio") {
+	if vista := m.View().Content; !strings.Contains(vista, "Activar el espacio (inicia el servicio") {
 		t.Fatalf("sin servicio se ofrece activarla:\n%s", vista)
 	}
 	m.Update(tecla("esc"))

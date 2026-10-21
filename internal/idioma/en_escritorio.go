@@ -9,13 +9,13 @@ func init() {
 		"Ver las %d restantes en Mis APIs…":                                               "See the other %d in My APIs…",
 		"recién actualizada: muestra la ventana por delante de las demás":                 "just updated: shows the window in front of the others",
 		"Buscar actualizaciones":                                                          "Check for updates",
-		"raíz de un proyecto con .tramtai/config.yaml (por defecto, la instancia global)": "root of a project with .tramtai/config.yaml (default: the global workspace)",
+		"raíz de un proyecto con .tramtai/config.yaml (por defecto, el espacio global)":   "root of a project with .tramtai/config.yaml (default: the global workspace)",
 		"arranca solo en la bandeja, sin mostrar la ventana (arranque automático)":        "start only in the tray, without showing the window (automatic startup)",
 		"Pasarela local de agentes":                                                       "Local agent gateway",
 
 		// Avisos del sistema
-		"Se detienen todas las instancias y las aplicaciones conectadas dejarán de funcionar. Tramtai sigue en la bandeja para volver a iniciarlo. ¿Continuar?": "All workspaces stop and connected apps will stop working. Tramtai stays in the tray so you can start it again. Continue?",
-		"Al salir se detiene el servicio: las aplicaciones conectadas a tus APIs dejarán de funcionar hasta que vuelvas a abrir Tramtai. ¿Continuar?":           "Quitting stops the service: apps connected to your APIs will stop working until you open Tramtai again. Continue?",
+		"Se detienen todos los espacios y las aplicaciones conectadas dejarán de funcionar. Tramtai sigue en la bandeja para volver a iniciarlo. ¿Continuar?": "All workspaces stop and connected apps will stop working. Tramtai stays in the tray so you can start it again. Continue?",
+		"Al salir se detiene el servicio: las aplicaciones conectadas a tus APIs dejarán de funcionar hasta que vuelvas a abrir Tramtai. ¿Continuar?":         "Quitting stops the service: apps connected to your APIs will stop working until you open Tramtai again. Continue?",
 		"Cancelar":             "Cancel",
 		"Salir de Tramtai":     "Quit Tramtai",
 		"Salir y detener":      "Quit and stop",

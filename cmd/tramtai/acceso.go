@@ -34,7 +34,7 @@ func (o *opcionesPunto) registrar(cmd *cobra.Command) {
 	f.IntVar(&o.puerto, "puerto", 0, idioma.T("puerto propio (0 = ruta /p/<nombre> en el puerto del servicio)"))
 	f.StringVar(&o.instrucciones, "instrucciones", "", idioma.T("texto que se antepone a cada solicitud, por ejemplo \"Responde siempre en español\""))
 	f.StringVar(&o.grupo, "grupo", "", idioma.T("grupo para ordenar los puntos y activarlos o desactivarlos juntos"))
-	f.StringVar(&o.instancia, "instancia", "", idioma.T("instancia a la que pertenece (global, o la del proyecto con --local)"))
+	f.StringVar(&o.instancia, "instancia", "", idioma.T("espacio al que pertenece (global, o el del proyecto con --local)"))
 	f.StringVar(&o.agente, "agente", "", idioma.T("agente predeterminado del punto"))
 	f.StringVar(&o.modelo, "modelo", "", idioma.T("modelo predeterminado del punto"))
 	f.StringVar(&o.perfil, "perfil", "", idioma.T("perfil de modelo predeterminado del punto"))
@@ -280,7 +280,7 @@ func comandoAcceso() *cobra.Command {
 	token.Flags().BoolVar(&rotar, "rotar", false, idioma.T("genera un token nuevo; el anterior deja de valer"))
 	var instanciaPresupuesto string
 	reiniciar := &cobra.Command{Use: "reiniciar-presupuesto [nombre]", Args: cobra.MaximumNArgs(1),
-		Short: idioma.T("Pone a cero el consumo del día y del mes de un punto de acceso, o de la instancia sin nombre"),
+		Short: idioma.T("Pone a cero el consumo del día y del mes de un punto de acceso, o del espacio sin nombre"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			nombre := ""
 			if len(args) == 1 {
@@ -288,7 +288,7 @@ func comandoAcceso() *cobra.Command {
 			}
 			return reiniciarPresupuesto(cmd, instanciaPresupuesto, nombre)
 		}}
-	reiniciar.Flags().StringVar(&instanciaPresupuesto, "instancia", "", idioma.T("instancia cuyo presupuesto se reinicia (global por defecto)"))
+	reiniciar.Flags().StringVar(&instanciaPresupuesto, "instancia", "", idioma.T("espacio cuyo presupuesto se reinicia (el global por defecto)"))
 	grupo.AddCommand(listar, crear, editarCmd, activo("activar", true), activo("desactivar", false), eliminar, token, reiniciar)
 	return grupo
 }

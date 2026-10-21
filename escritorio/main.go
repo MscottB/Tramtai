@@ -56,11 +56,11 @@ var (
 	colorRojo  = color.RGBA{0xef, 0x44, 0x44, 0xff}
 )
 
-var textoDetener = idioma.T("Se detienen todas las instancias y las aplicaciones conectadas dejarán de funcionar. Tramtai sigue en la bandeja para volver a iniciarlo. ¿Continuar?")
+var textoDetener = idioma.T("Se detienen todos los espacios y las aplicaciones conectadas dejarán de funcionar. Tramtai sigue en la bandeja para volver a iniciarlo. ¿Continuar?")
 var textoSalir = idioma.T("Al salir se detiene el servicio: las aplicaciones conectadas a tus APIs dejarán de funcionar hasta que vuelvas a abrir Tramtai. ¿Continuar?")
 
 func main() {
-	proyecto := flag.String("proyecto", "", idioma.T("raíz de un proyecto con .tramtai/config.yaml (por defecto, la instancia global)"))
+	proyecto := flag.String("proyecto", "", idioma.T("raíz de un proyecto con .tramtai/config.yaml (por defecto, el espacio global)"))
 	oculto := flag.Bool("oculto", false, idioma.T("arranca solo en la bandeja, sin mostrar la ventana (arranque automático)"))
 	actualizado := flag.Bool("actualizado", false, idioma.T("recién actualizada: muestra la ventana por delante de las demás"))
 	flag.Parse()
@@ -542,15 +542,39 @@ func prepararSesion(proyecto string) (*sesionEscritorio, error) {
 	}
 	ctx, cancelar := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelar()
-	activacion, err := cli.Activar(ctx, ambito, proyecto)
-	if err != nil {
-		return nil, err
+	var activos []contrato.EstadoInstancia
+	if e, err := cli.Estado(ctx); err == nil {
+		activos = e.Instancias
 	}
-	url, err := cli.URLWeb(ctx, activacion.Instancia.ID)
+	activar, id := espacioAlAbrir(proyecto, activos)
+	if activar {
+		activacion, err := cli.Activar(ctx, ambito, proyecto)
+		if err != nil {
+			return nil, err
+		}
+		id = activacion.Instancia.ID
+	}
+	url, err := cli.URLWeb(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	return &sesionEscritorio{cli: cli, url: url}, nil
+}
+
+// espacioAlAbrir decide qué abre la ventana: el proyecto pedido (-proyecto), el espacio activo que se usó por última
+// vez (sin reactivar la global si se detuvo a propósito) o, si no hay ninguno activo, la global. activar indica que
+// hay que activarlo antes.
+func espacioAlAbrir(proyecto string, activos []contrato.EstadoInstancia) (activar bool, id string) {
+	if proyecto != "" || len(activos) == 0 {
+		return true, ""
+	}
+	elegido := activos[0]
+	for _, a := range activos[1:] {
+		if a.UltimoUso.After(elegido.UltimoUso) {
+			elegido = a
+		}
+	}
+	return false, elegido.ID
 }
 
 // buscarTramtai localiza el ejecutable del servicio: junto a esta aplicación o, salvo en la portable, en el PATH. La

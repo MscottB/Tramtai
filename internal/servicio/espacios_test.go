@@ -72,8 +72,8 @@ func TestIdFijoAlRenombrar(t *testing.T) {
 	if despues.ID != antes.ID {
 		t.Fatalf("renombrar cambió el id: %s → %s", antes.ID, despues.ID)
 	}
-	if leerMarca(proyecto) != antes.ID {
-		t.Fatalf("marca %q", leerMarca(proyecto))
+	if LeerMarca(proyecto) != antes.ID {
+		t.Fatalf("marca %q", LeerMarca(proyecto))
 	}
 }
 
@@ -96,7 +96,7 @@ func TestMoverConMarca(t *testing.T) {
 	if despues.ID != antes.ID || despues.token != token {
 		t.Fatalf("al mover debía conservar id y token: %s %s", antes.ID, despues.ID)
 	}
-	if e, _ := s.registro().buscar(antes.ID); !mismaRuta(e.Ruta, nueva) {
+	if e, _ := s.registro().buscar(antes.ID); !MismaRuta(e.Ruta, nueva) {
 		t.Fatalf("ruta del registro: %q", e.Ruta)
 	}
 }
@@ -116,8 +116,8 @@ func TestCopiaEsNueva(t *testing.T) {
 	if otra.ID == original.ID {
 		t.Fatal("una copia debía ser un espacio nuevo")
 	}
-	if leerMarca(copia) != otra.ID || leerMarca(proyecto) != original.ID {
-		t.Fatalf("marcas: copia %q original %q", leerMarca(copia), leerMarca(proyecto))
+	if LeerMarca(copia) != otra.ID || LeerMarca(proyecto) != original.ID {
+		t.Fatalf("marcas: copia %q original %q", LeerMarca(copia), LeerMarca(proyecto))
 	}
 }
 
@@ -135,8 +135,8 @@ func TestMarcaAjenaNoAdopta(t *testing.T) {
 			t.Fatal(err)
 		}
 		c, _ := nucleo.CargarConfiguracion(dir)
-		if inst.ID == marca || inst.ID != IDProyecto(dir, c) || leerMarca(dir) != inst.ID {
-			t.Fatalf("marca %q adoptada: id %s, marca ahora %q", marca, inst.ID, leerMarca(dir))
+		if inst.ID == marca || inst.ID != IDProyecto(dir, c) || LeerMarca(dir) != inst.ID {
+			t.Fatalf("marca %q adoptada: id %s, marca ahora %q", marca, inst.ID, LeerMarca(dir))
 		}
 	}
 }
@@ -330,7 +330,7 @@ func TestUbicarReasocia(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if otra.ID != inst.ID || otra.token != token || leerMarca(nueva) != inst.ID {
+	if otra.ID != inst.ID || otra.token != token || LeerMarca(nueva) != inst.ID {
 		t.Fatalf("debía conservar id y token: %s", otra.ID)
 	}
 }

@@ -197,16 +197,16 @@ func (s *Servicio) idDe(raiz string, c *nucleo.Configuracion) (string, error) {
 	r := s.registro()
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if marca := leerMarca(raiz); marca != "" && marca != "global" {
+	if marca := LeerMarca(raiz); marca != "" && marca != "global" {
 		if e, ok := r.espacios[marca]; ok && e.Ambito == "proyecto" {
-			if e.Ruta == "" || mismaRuta(e.Ruta, raiz) || !esProyecto(e.Ruta) {
+			if e.Ruta == "" || MismaRuta(e.Ruta, raiz) || !esProyecto(e.Ruta) {
 				e.Ruta = raiz
 				return marca, nil
 			}
 		}
 	}
 	for _, e := range r.espacios {
-		if e.Ambito == "proyecto" && e.Ruta != "" && mismaRuta(e.Ruta, raiz) {
+		if e.Ambito == "proyecto" && e.Ruta != "" && MismaRuta(e.Ruta, raiz) {
 			return e.ID, nil
 		}
 	}
@@ -229,8 +229,8 @@ func nombreProyecto(raiz string, c *nucleo.Configuracion) string {
 	return filepath.Base(raiz)
 }
 
-// mismaRuta compara dos rutas como lo hace IDProyecto: sin distinguir mayúsculas en Windows y macOS.
-func mismaRuta(a, b string) bool {
+// MismaRuta compara dos rutas como lo hace IDProyecto: sin distinguir mayúsculas en Windows y macOS.
+func MismaRuta(a, b string) bool {
 	a, b = filepath.Clean(a), filepath.Clean(b)
 	if runtime.GOOS != "linux" {
 		return strings.EqualFold(a, b)
@@ -243,8 +243,8 @@ func esProyecto(raiz string) bool {
 	return err == nil
 }
 
-// leerMarca devuelve el id guardado en .tramtai/espacio, o "" si no hay o no es un id.
-func leerMarca(raiz string) string {
+// LeerMarca devuelve el id guardado en .tramtai/espacio, o "" si no hay o no es un id.
+func LeerMarca(raiz string) string {
 	datos, err := os.ReadFile(filepath.Join(raiz, ".tramtai", "espacio"))
 	if err != nil {
 		return ""
@@ -259,7 +259,7 @@ func leerMarca(raiz string) string {
 // escribirMarca deja el id en .tramtai/espacio y se asegura de que el .gitignore de .tramtai no lo versione.
 func escribirMarca(raiz, id string) error {
 	dir := filepath.Join(raiz, ".tramtai")
-	if leerMarca(raiz) != id {
+	if LeerMarca(raiz) != id {
 		if err := os.WriteFile(filepath.Join(dir, "espacio"), []byte(id+"\n"), 0o644); err != nil {
 			return err
 		}
@@ -284,6 +284,15 @@ func escribirMarca(raiz, id string) error {
 		texto += "espacio\n"
 	}
 	return os.WriteFile(ignorar, []byte(texto), 0o644)
+}
+
+// IDDeCarpeta es el id del espacio de un proyecto visto desde fuera del servicio (CLI, terminal): el de su marca, o el
+// que tendría si aún no la tiene.
+func IDDeCarpeta(raiz string, c *nucleo.Configuracion) string {
+	if id := LeerMarca(raiz); id != "" && id != "global" {
+		return id
+	}
+	return IDProyecto(raiz, c)
 }
 
 // gitignoreProyecto es el .gitignore de .tramtai: lo propio de cada máquina no se versiona.

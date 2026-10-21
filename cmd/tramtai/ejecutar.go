@@ -64,7 +64,7 @@ func comandoEjecutar() *cobra.Command {
 	var directo bool
 	var perfilTrabajo, contexto string
 	cmd := &cobra.Command{Use: "ejecutar [texto]", Short: idioma.T("Ejecuta un trabajo con un agente y muestra la respuesta en vivo"),
-		Long: idioma.T("Ejecuta un trabajo y muestra la respuesta en vivo. Si el servicio está en marcha, el trabajo va a la instancia del\nproyecto actual (o a la global) y se ve también en la terminal interactiva y en la Web UI; si no, se ejecuta\ndirectamente. Sin texto, se lee de la entrada estándar. Ctrl+C cancela el trabajo."),
+		Long: idioma.T("Ejecuta un trabajo y muestra la respuesta en vivo. Si el servicio está en marcha, el trabajo va al espacio del\nproyecto actual (o al global) y se ve también en la terminal interactiva y en la Web UI; si no, se ejecuta\ndirectamente. Sin texto, se lee de la entrada estándar. Ctrl+C cancela el trabajo."),
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			texto := strings.Join(args, " ")
@@ -110,6 +110,7 @@ func comandoEjecutar() *cobra.Command {
 			return ejecutar(cmd, c, c.AplicarPredeterminados(s), archivos)
 		}}
 	f := cmd.Flags()
+	f.Bool("global", false, idioma.T("usa el espacio global aunque estés dentro de un proyecto"))
 	f.StringVarP(&agente, "agente", "a", "", idioma.Tf("agente: %s (predeterminados.agente)", enumerar(idsAgentes(), idioma.T("o"))))
 	f.StringVarP(&modelo, "modelo", "m", "", idioma.T("identificador o alias del modelo, por ejemplo haiku"))
 	f.StringVarP(&perfil, "perfil", "p", "", idioma.T("perfil de modelo: rapido, equilibrado, profundo (modelos.perfiles)"))

@@ -71,10 +71,10 @@ func rotarTokenInstancia(cmd *cobra.Command, datos, id string, c *nucleo.Configu
 
 // comandoInstancia crea los comandos de la instancia global o de la del proyecto actual.
 func comandoInstancia(ambito string) *cobra.Command {
-	corto := map[string]string{"global": idioma.T("Instancia global: texto y archivos sin repositorio"),
-		"proyecto": idioma.T("Instancia del proyecto actual (.tramtai/config.yaml)")}[ambito]
+	corto := map[string]string{"global": idioma.T("Espacio global: texto y archivos sin repositorio (también: tramtai espacio)"),
+		"proyecto": idioma.T("Espacio del proyecto actual, .tramtai/config.yaml (también: tramtai espacio)")}[ambito]
 	grupo := &cobra.Command{Use: ambito, Short: corto}
-	iniciar := &cobra.Command{Use: "iniciar", Short: idioma.T("Activa la instancia (inicia el servicio si hace falta)"),
+	iniciar := &cobra.Command{Use: "iniciar", Short: idioma.T("Activa el espacio (inicia el servicio si hace falta)"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			raiz, _, _, err := identificar(ambito)
 			if err != nil {
@@ -91,12 +91,12 @@ func comandoInstancia(ambito string) *cobra.Command {
 				return err
 			}
 			out := cmd.OutOrStdout()
-			fmt.Fprintf(out, idioma.T("instancia %s activa en %s\n"), a.Instancia.ID, c.Base)
+			fmt.Fprintf(out, idioma.T("espacio %s activo en %s\n"), a.Instancia.ID, c.Base)
 			fmt.Fprintf(out, "  token:              %s (tramtai %s token)\n", a.Instancia.ArchivoToken, ambito)
 			fmt.Fprintf(out, "  OpenAI base_url:    %s/openai/v1\n  Anthropic base_url: %s/anthropic\n", c.Base, c.Base)
 			return nil
 		}}
-	detener := &cobra.Command{Use: "detener", Short: idioma.T("Desactiva la instancia: vacía su cola sin afectar a las demás"),
+	detener := &cobra.Command{Use: "detener", Short: idioma.T("Detiene el espacio: vacía su cola sin afectar a los demás"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			_, id, _, err := identificar(ambito)
 			if err != nil {
@@ -111,10 +111,10 @@ func comandoInstancia(ambito string) *cobra.Command {
 			if err := c.Desactivar(ctx, id); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("instancia %s desactivada\n"), id)
+			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("espacio %s detenido\n"), id)
 			return nil
 		}}
-	estado := &cobra.Command{Use: "estado", Short: idioma.T("Muestra si la instancia está activa y sus trabajos"),
+	estado := &cobra.Command{Use: "estado", Short: idioma.T("Muestra si el espacio está activo y sus trabajos"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			raiz, id, _, err := identificar(ambito)
 			if err != nil {
@@ -123,7 +123,7 @@ func comandoInstancia(ambito string) *cobra.Command {
 			out := cmd.OutOrStdout()
 			c, err := conectar()
 			if err != nil {
-				fmt.Fprintf(out, idioma.T("instancia %s: inactiva (servicio detenido)\n"), id)
+				fmt.Fprintf(out, idioma.T("espacio %s: inactivo (servicio detenido)\n"), id)
 				return nil
 			}
 			ctx, cancelar := contexto()
@@ -134,19 +134,19 @@ func comandoInstancia(ambito string) *cobra.Command {
 			}
 			for _, i := range e.Instancias {
 				if i.ID == id {
-					fmt.Fprintf(out, idioma.T("instancia %s: activa en %s\n  %s\n  token: %s\n"), id, e.Base, resumenTrabajos(i.Trabajos), i.ArchivoToken)
+					fmt.Fprintf(out, idioma.T("espacio %s: activo en %s\n  %s\n  token: %s\n"), id, e.Base, resumenTrabajos(i.Trabajos), i.ArchivoToken)
 					return nil
 				}
 			}
-			fmt.Fprintf(out, idioma.T("instancia %s: inactiva%s (tramtai %s iniciar)\n"), id, map[bool]string{true: " · " + raiz}[raiz != ""], ambito)
+			fmt.Fprintf(out, idioma.T("espacio %s: inactivo%s (tramtai %s iniciar)\n"), id, map[bool]string{true: " · " + raiz}[raiz != ""], ambito)
 			return nil
 		}}
 	var rotarToken bool
-	token := &cobra.Command{Use: "token", Short: idioma.T("Muestra el token de la instancia para configurar clientes"),
+	token := &cobra.Command{Use: "token", Short: idioma.T("Muestra el token del espacio para configurar clientes"),
 		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, ambito, rotarToken) }}
 	token.Flags().BoolVar(&rotarToken, "rotar", false, idioma.T("genera un token nuevo; el anterior deja de valer"))
 	var enNavegador bool
-	abrirWeb := &cobra.Command{Use: "abrir", Short: idioma.T("Abre la instancia en la app de escritorio o, con --navegador, en el navegador"),
+	abrirWeb := &cobra.Command{Use: "abrir", Short: idioma.T("Abre el espacio en la app de escritorio o, con --navegador, en el navegador"),
 		RunE: func(cmd *cobra.Command, _ []string) error { return abrirWebUI(cmd, ambito, enNavegador) }}
 	abrirWeb.Flags().BoolVar(&enNavegador, "navegador", false, idioma.T("abre la Web UI en el navegador en lugar de la app de escritorio"))
 	grupo.AddCommand(iniciar, detener, estado, token, abrirWeb)

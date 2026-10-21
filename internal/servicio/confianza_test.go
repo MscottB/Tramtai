@@ -94,14 +94,14 @@ func TestAbrirDentroDeOtroProyecto(t *testing.T) {
 	_, err := s.AbrirProyecto(sub, AbrirOpciones{})
 	var ed *ErrorDentroDeProyecto
 	real, _ := filepath.EvalSymlinks(proyecto)
-	if !errors.As(err, &ed) || !mismaRuta(ed.Proyecto, real) || nucleo.CodigoDe(err) != nucleo.CodigoDentroDeProyecto {
+	if !errors.As(err, &ed) || !MismaRuta(ed.Proyecto, real) || nucleo.CodigoDe(err) != nucleo.CodigoDentroDeProyecto {
 		t.Fatalf("debía avisar de que está dentro de otro proyecto: %v", err)
 	}
 	inst, err := s.AbrirProyecto(sub, AbrirOpciones{CrearAqui: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if realSub, _ := filepath.EvalSymlinks(sub); !mismaRuta(inst.Raiz, realSub) || !esProyecto(sub) {
+	if realSub, _ := filepath.EvalSymlinks(sub); !MismaRuta(inst.Raiz, realSub) || !esProyecto(sub) {
 		t.Fatalf("con CrearAqui debía crear el proyecto en la subcarpeta: %s", inst.Raiz)
 	}
 }

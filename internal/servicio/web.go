@@ -85,6 +85,9 @@ func (s *Servicio) crearSesion(w http.ResponseWriter, instancia string, local bo
 	}
 	s.sesiones[id] = ses
 	s.muSesiones.Unlock()
+	if instancia != "" {
+		s.marcarUso(instancia) // una sesión nueva vuelve al último espacio usado
+	}
 	http.SetCookie(w, &http.Cookie{Name: s.nombreCookie(), Value: id, Path: "/", HttpOnly: true,
 		SameSite: http.SameSiteStrictMode, MaxAge: int(duracionSesion.Seconds())})
 	return ses
@@ -98,7 +101,7 @@ func (s *Servicio) CodigoSesion(instancia string) (string, error) {
 	_, activa := s.instancias[instancia]
 	s.mu.RUnlock()
 	if !activa {
-		return "", nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("la instancia %s no está activa", instancia))
+		return "", nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("el espacio %s no está activo", instancia))
 	}
 	codigo := aleatorio(16)
 	s.muSesiones.Lock()
@@ -134,22 +137,31 @@ func (s *Servicio) instancia(id string) *Instancia {
 	return s.instancias[id]
 }
 
-// instanciaPredeterminada es la global si está activa; si no, la primera por nombre ("" si no hay ninguna).
+// instanciaPredeterminada es el espacio activo que se usó por última vez; si ninguno se ha usado, la global si está
+// activa; si no, el primero por nombre ("" si no hay ninguno).
 func (s *Servicio) instanciaPredeterminada() string {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if s.instancias["global"] != nil {
-		return "global"
-	}
 	ids := make([]string, 0, len(s.instancias))
 	for id := range s.instancias {
 		ids = append(ids, id)
 	}
+	s.mu.RUnlock()
 	slices.Sort(ids)
-	if len(ids) == 0 {
-		return ""
+	elegido, ultimo := "", time.Time{}
+	for _, id := range ids {
+		if e, ok := s.registro().buscar(id); ok && e.UltimoUso.After(ultimo) {
+			elegido, ultimo = id, e.UltimoUso
+		}
 	}
-	return ids[0]
+	switch {
+	case elegido != "":
+		return elegido
+	case slices.Contains(ids, "global"):
+		return "global"
+	case len(ids) > 0:
+		return ids[0]
+	}
+	return ""
 }
 
 // responderSesion devuelve la sesión. Una sesión local ve además todas las instancias activas para cambiar entre
@@ -182,7 +194,7 @@ func (s *Servicio) responderSesion(w http.ResponseWriter, r *http.Request, ses *
 	}
 	inst := s.instancia(ses.instancia)
 	if inst == nil && !ses.local {
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("la instancia de la sesión (%s) no está activa", ses.instancia)))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("el espacio de la sesión (%s) no está activo", ses.instancia)))
 		return
 	}
 	if inst != nil {
@@ -300,7 +312,7 @@ func (s *Servicio) cambiarSesionUI(w http.ResponseWriter, r *http.Request, _ *se
 			return
 		}
 		if s.instancia(peticion.Instancia) == nil {
-			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("la instancia %s no está activa", peticion.Instancia)))
+			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("el espacio %s no está activo", peticion.Instancia)))
 			return
 		}
 		s.responderSesion(w, r, s.derivarSesion(w, peticion.Instancia, ses))

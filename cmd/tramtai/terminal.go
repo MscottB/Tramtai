@@ -35,7 +35,7 @@ func abrirTerminal() error {
 	}}
 	if raiz := raizProyecto(); raiz != "" {
 		if cfg, err := nucleo.CargarConfiguracion(raiz); err == nil {
-			o.Proyecto, o.IDProyecto = raiz, servicio.IDProyecto(raiz, cfg)
+			o.Proyecto, o.IDProyecto = raiz, servicio.IDDeCarpeta(raiz, cfg)
 		}
 	}
 	return tui.Ejecutar(o)

@@ -350,7 +350,7 @@ func (s *Servidor) ejecutarTrabajo(w http.ResponseWriter, r *http.Request) {
 // crearCarga acepta multipart (campo "archivo") o el binario en el cuerpo con ?nombre=.
 func (s *Servidor) crearCarga(w http.ResponseWriter, r *http.Request) {
 	if s.Cargas == nil {
-		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("esta instancia no admite cargas")))
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("este espacio no admite cargas")))
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, int64(s.Config.Limite("conversion.maximo_carga_mb"))<<20+1<<20)

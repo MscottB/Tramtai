@@ -82,7 +82,9 @@ func conectarConversor(cmd *cobra.Command) (*cliente.Cliente, string, context.Co
 		return nil, "", nil, nil, err
 	}
 	ctx, cancelar := context.WithTimeout(context.Background(), plazoConversor)
-	return c, instanciaActual(ctx, c, ""), ctx, cancelar, nil
+	// El conversor es el mismo para todos los espacios: basta con la global.
+	inst, _ := instanciaActual(ctx, c, "", true)
+	return c, inst, ctx, cancelar, nil
 }
 
 func mostrarConversor(out io.Writer, e contrato.EstadoConversor) {

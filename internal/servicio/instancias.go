@@ -265,7 +265,7 @@ func (s *Servicio) Desactivar(id string) error {
 	delete(s.instancias, id)
 	s.mu.Unlock()
 	if !activa {
-		return nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("la instancia %s no está activa", id))
+		return nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("el espacio %s no está activo", id))
 	}
 	s.Recargar()
 	inst.cerrar(true)

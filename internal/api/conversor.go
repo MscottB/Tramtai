@@ -11,7 +11,7 @@ import (
 // estadoConversor responde el estado del conversor de archivos al momento (para seguir una preparación).
 func (s *Servidor) estadoConversor(w http.ResponseWriter, r *http.Request) {
 	if s.Conversor == nil {
-		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.T("esta instancia no tiene conversor de archivos")))
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.T("este espacio no tiene conversor de archivos")))
 		return
 	}
 	EscribirJSON(w, http.StatusOK, s.Conversor.Estado())
@@ -20,7 +20,7 @@ func (s *Servidor) estadoConversor(w http.ResponseWriter, r *http.Request) {
 // prepararConversor lanza la preparación (o devuelve la que está en curso).
 func (s *Servidor) prepararConversor(w http.ResponseWriter, r *http.Request) {
 	if s.Conversor == nil {
-		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.T("esta instancia no tiene conversor de archivos")))
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.T("este espacio no tiene conversor de archivos")))
 		return
 	}
 	EscribirJSON(w, http.StatusAccepted, s.Conversor.Preparar())
@@ -36,7 +36,7 @@ func (s *Servidor) ajustesConversor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.FijarPrepararAlIniciar == nil || s.Conversor == nil {
-		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.T("esta instancia no tiene conversor de archivos")))
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.T("este espacio no tiene conversor de archivos")))
 		return
 	}
 	if err := s.FijarPrepararAlIniciar(*cuerpo.PrepararAlIniciar); err != nil {

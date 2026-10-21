@@ -525,7 +525,7 @@ func (g *agrupador) vaciarConCerrojo() error {
 // preparar convierte las cargas respetando el límite de conversiones de la instancia.
 func (p *Planificador) preparar(ctx context.Context, cargas []string) (nucleo.Documentos, error) {
 	if p.opc.Preparador == nil {
-		return nucleo.Documentos{}, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("esta instancia no admite cargas"))
+		return nucleo.Documentos{}, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("este espacio no admite cargas"))
 	}
 	select {
 	case p.conversiones <- struct{}{}:
