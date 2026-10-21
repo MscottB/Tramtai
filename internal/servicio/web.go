@@ -246,6 +246,7 @@ var rutasDeUI = []rutaUI{
 	{http.MethodPost, "/ui/espacios/olvidar", soloLocal, (*Servicio).accionEspacioUI},
 	{http.MethodPost, "/ui/autoarranque", soloLocal, (*Servicio).autoarranqueUI},
 	{http.MethodPost, "/ui/autenticacion", soloLocal, (*Servicio).autenticacionUI},
+	{http.MethodPost, "/ui/agentes/conexion", soloLocal, (*Servicio).conexionUI},
 	{http.MethodPost, "/ui/servicio/puerto", soloLocal, (*Servicio).puertoUI},
 	{http.MethodPost, "/ui/servicio/reiniciar", soloLocal, (*Servicio).reiniciarUI},
 	// Solo desde este equipo: detener corta también a las aplicaciones conectadas.

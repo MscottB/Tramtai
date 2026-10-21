@@ -56,6 +56,8 @@ const (
 	CodigoDentroDeProyecto CodigoError = "dentro_de_proyecto"
 	// CodigoEspacioDetenido: la CLI está dentro de un proyecto cuyo espacio está detenido (no se usa la global a escondidas).
 	CodigoEspacioDetenido CodigoError = "espacio_detenido"
+	// CodigoAgenteDesconectado: el agente está desconectado en Tramtai (Agentes → Conectar).
+	CodigoAgenteDesconectado CodigoError = "agente_desconectado"
 )
 
 // Error es el error propio de Tramtai: un código estable y un mensaje legible sin secretos.

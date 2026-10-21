@@ -136,7 +136,7 @@ func (p *Planificador) procesar(id string, esperando func()) {
 	}
 	// El principal y después el respaldo: se salta al siguiente solo si el intento falló antes de emitir texto,
 	// para no mezclar dos respuestas. El plazo en cola vale hasta el primer intento.
-	lista := candidatos(t)
+	lista, desconectados := p.conectados(candidatos(t))
 	var resultado adaptadores.Resultado
 	var elegido candidato    // el que respondió: las correcciones se le piden a él
 	var usoPrevio nucleo.Uso // lo que gastaron los intentos que fallaron: también cuenta para el presupuesto
@@ -169,7 +169,11 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		}
 		if !saltable(codigo) || huboTexto || i+1 == len(lista) {
 			// Si no cabía en ninguno y nada se ejecutó, la petición no cuenta para el presupuesto.
-			p.cambiar(id, estado, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err), Uso: &usoPrevio,
+			mensaje := nucleo.MensajeDe(err)
+			if len(desconectados) > 0 { // el respaldo que no se probó: se dice por qué
+				mensaje += idioma.Tf(" (respaldo desconectado: %s)", strings.Join(desconectados, ", "))
+			}
+			p.cambiar(id, estado, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: mensaje, Uso: &usoPrevio,
 				DevolverPeticion: codigo == nucleo.CodigoEntradaDemasiadoGrande && !ejecutado})
 			return
 		}

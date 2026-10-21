@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -1416,5 +1417,50 @@ func TestConversorAlAceptarYAlReintentar(t *testing.T) {
 	sinConversor = true
 	if _, err := p.Reintentar(ctx, id); nucleo.CodigoDe(err) != nucleo.CodigoConversorNoDisponible {
 		t.Fatalf("el reintento también lo comprueba: %v", err)
+	}
+}
+
+// iniciarDesconectados es iniciarVarios con los agentes de desconectados desconectados.
+func iniciarDesconectados(t *testing.T, alm *persistencia.Almacen, lista map[string]adaptadores.Adaptador, desconectados ...string) *Planificador {
+	t.Helper()
+	limites := map[string]int{}
+	for nombre := range lista {
+		limites[nombre] = 2
+	}
+	opc := opciones()
+	opc.Desconectado = func(agente string) bool { return slices.Contains(desconectados, agente) }
+	p := Nuevo(alm, lista, NuevosSemaforos(limites), opc)
+	if err := p.Iniciar(ctx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Detener)
+	return p
+}
+
+func TestPrincipalDesconectado(t *testing.T) {
+	p := iniciarDesconectados(t, abrir(t), map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}}, "simulado")
+	if _, _, err := p.Enviar(ctx, solicitud("hola"), ""); nucleo.CodigoDe(err) != nucleo.CodigoAgenteDesconectado {
+		t.Fatalf("un agente desconectado se rechaza al aceptar: %v", err)
+	}
+}
+
+func TestRespaldoSaltaDesconectado(t *testing.T) {
+	alm := abrir(t)
+	var n atomic.Int32
+	p := iniciarDesconectados(t, alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)},
+		"codex": adaptadores.Simulado{Respuesta: "no"}, "otro": primeroBien{&n}}, "codex")
+	tr := esperar(t, alm, enviar(t, p, conRespaldo("codex", "otro")), nucleo.Completado)
+	if tr.Salida != "ok" || tr.Solicitud.Agente != "otro" {
+		t.Fatalf("el respaldo desconectado se salta: %+v", tr)
+	}
+}
+
+func TestRespaldoTodoDesconectado(t *testing.T) {
+	alm := abrir(t)
+	p := iniciarDesconectados(t, alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)},
+		"codex": adaptadores.Simulado{Respuesta: "no"}}, "codex")
+	tr := esperar(t, alm, enviar(t, p, conRespaldo("codex")), nucleo.Fallido)
+	if tr.CodigoError != nucleo.CodigoLimiteUsoProveedor || !strings.Contains(tr.MensajeError, "codex") {
+		t.Fatalf("queda el error del principal y el aviso del respaldo desconectado: %s %q", tr.CodigoError, tr.MensajeError)
 	}
 }

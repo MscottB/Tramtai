@@ -164,6 +164,11 @@ func (c *Cliente) Desactivar(ctx context.Context, id string) error {
 	return c.pedir(ctx, "DELETE", "/api/v1/servicio/instancias/"+url.PathEscape(id), "", nil, "", nil)
 }
 
+// ConectarAgente conecta o desconecta un agente en todos los espacios.
+func (c *Cliente) ConectarAgente(ctx context.Context, agente string, conectado bool) error {
+	return c.pedir(ctx, "POST", "/api/v1/servicio/agentes/"+url.PathEscape(agente)+"/conexion", "", cuerpoJSON(map[string]bool{"conectado": conectado}), "application/json", nil)
+}
+
 // Espacios devuelve todos los espacios de trabajo conocidos, también los detenidos.
 func (c *Cliente) Espacios(ctx context.Context) ([]contrato.Espacio, error) {
 	var r struct {

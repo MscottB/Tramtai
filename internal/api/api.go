@@ -36,7 +36,9 @@ type Servidor struct {
 	Planificador *planificador.Planificador
 	Cargas       *documentos.Cargas
 	Registro     map[string]adaptadores.Adaptador
-	Config       *nucleo.Configuracion
+	// Conexiones dice qué agentes están desconectados; nil = todos conectados.
+	Conexiones *adaptadores.Conexiones
+	Config     *nucleo.Configuracion
 	// Punto es la política del punto de acceso que atiende este servidor.
 	Punto *Punto
 	// Token es el token de la instancia para Handler; vacío solo si servicio.requerir_token es false.
@@ -212,6 +214,7 @@ var estadosHTTP = map[nucleo.CodigoError]int{
 	nucleo.CodigoConflictoIdempotencia:  http.StatusConflict,
 	nucleo.CodigoConfianzaRequerida:     http.StatusConflict,
 	nucleo.CodigoDentroDeProyecto:       http.StatusConflict,
+	nucleo.CodigoAgenteDesconectado:     http.StatusConflict,
 	nucleo.CodigoTrabajoNoTerminado:     http.StatusConflict,
 	nucleo.CodigoTrabajoSinSalida:       http.StatusConflict,
 	nucleo.CodigoTransicionInvalida:     http.StatusConflict,

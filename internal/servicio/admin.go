@@ -18,6 +18,20 @@ func (s *Servicio) rutasAdmin() http.Handler {
 	mux.HandleFunc("DELETE /api/v1/servicio/instancias/{id}", s.adminDesactivar)
 	mux.HandleFunc("GET /api/v1/servicio/instancias/{id}/configuracion", s.adminConfiguracion)
 	mux.HandleFunc("POST /api/v1/servicio/sesiones", s.adminSesion)
+	mux.HandleFunc("POST /api/v1/servicio/agentes/{agente}/conexion", func(w http.ResponseWriter, r *http.Request) {
+		var peticion struct {
+			Conectado bool `json:"conectado"`
+		}
+		if err := api.LeerJSON(w, r, &peticion); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		if err := s.Conectar(r.PathValue("agente"), peticion.Conectado); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
 	mux.HandleFunc("GET /api/v1/servicio/espacios", func(w http.ResponseWriter, r *http.Request) {
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"espacios": s.Espacios(r.Context())})
 	})

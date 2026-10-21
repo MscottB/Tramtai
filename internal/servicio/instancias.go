@@ -156,6 +156,7 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuraci
 	}
 	opc := planificador.OpcionesDesde(c, id)
 	opc.Registros = s.opc.Registros
+	opc.Desconectado = s.opc.Conexiones.Desconectado
 	if c.ProyectoConfiable(raiz) {
 		opc.RaizConfiable = raiz
 	}
@@ -169,7 +170,7 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuraci
 		alm.Cerrar()
 		return nil, err
 	}
-	srv := &api.Servidor{Planificador: p, Cargas: cargas, Registro: s.opc.Registro, Config: c, Conversor: s.conversor,
+	srv := &api.Servidor{Planificador: p, Cargas: cargas, Registro: s.opc.Registro, Conexiones: s.opc.Conexiones, Config: c, Conversor: s.conversor,
 		FijarPrepararAlIniciar: s.fijarPrepararConversor,
 		PuntosDeGrupo: func(grupo string) []string {
 			var nombres []string

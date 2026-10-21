@@ -55,6 +55,25 @@ func candidatos(t nucleo.Trabajo) []candidato {
 	return lista
 }
 
+// desconectado indica si el agente está desconectado (Opciones.Desconectado).
+func (p *Planificador) desconectado(agente string) bool {
+	return p.opc.Desconectado != nil && p.opc.Desconectado(agente)
+}
+
+// conectados quita del respaldo los agentes desconectados (el principal se comprobó al aceptar) y devuelve cuáles quitó.
+func (p *Planificador) conectados(lista []candidato) ([]candidato, []string) {
+	salida := lista[:1:1]
+	var saltados []string
+	for _, c := range lista[1:] {
+		if p.desconectado(c.agente) {
+			saltados = append(saltados, c.agente)
+			continue
+		}
+		salida = append(salida, c)
+	}
+	return salida, saltados
+}
+
 // saltable indica los errores tras los que otro agente puede tener éxito: límite, credenciales, disponibilidad,
 // fallo del agente o tiempo agotado. La cancelación y un esquema no cumplido nunca saltan.
 func saltable(codigo nucleo.CodigoError) bool {

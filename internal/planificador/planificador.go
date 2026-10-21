@@ -56,6 +56,9 @@ type Opciones struct {
 	PermitidoEnApps func(agente string) bool
 	// TiempoConversion es el plazo total de la preparación de las cargas (conversion.tiempo_total_segundos).
 	TiempoConversion time.Duration
+	// Desconectado dice si un agente está desconectado (Agentes → Desconectar): no se acepta como principal y el
+	// respaldo lo salta. nil = todos conectados.
+	Desconectado func(agente string) bool
 }
 
 // OpcionesDesde toma los límites de la configuración efectiva.
@@ -186,6 +189,10 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 	}
 	if err := herramientas.Validar(solicitud); err != nil {
 		return nucleo.Trabajo{}, false, err
+	}
+	if p.desconectado(solicitud.Agente) {
+		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoAgenteDesconectado,
+			idioma.Tf("el agente %s está desconectado: conéctalo en Agentes o elige otro", solicitud.Agente))
 	}
 	for _, e := range solicitud.Respaldo {
 		if agente, _, _ := nucleo.DividirRespaldo(e); p.adaptadores[agente] == nil {

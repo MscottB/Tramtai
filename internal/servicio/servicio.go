@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"net"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,15 +31,17 @@ import (
 
 // Opciones configura el servicio.
 type Opciones struct {
-	Datos     string                // directorio de datos del usuario
-	Config    *nucleo.Configuracion // configuración global (sin capas de proyecto)
-	Registro  map[string]adaptadores.Adaptador
-	Semaforos planificador.Semaforos // compartidos por todas las instancias
-	Host      string
-	Puerto    int
-	Hosts     []string
-	Registros io.Writer // mensajes de operación; nil los descarta
-	Web       fs.FS     // Web UI compilada (internal/recursos); nil la desactiva
+	Datos    string                // directorio de datos del usuario
+	Config   *nucleo.Configuracion // configuración global (sin capas de proyecto)
+	Registro map[string]adaptadores.Adaptador
+	// Conexiones dice qué agentes están desconectados; Nuevo la crea desde la configuración si falta.
+	Conexiones *adaptadores.Conexiones
+	Semaforos  planificador.Semaforos // compartidos por todas las instancias
+	Host       string
+	Puerto     int
+	Hosts      []string
+	Registros  io.Writer // mensajes de operación; nil los descarta
+	Web        fs.FS     // Web UI compilada (internal/recursos); nil la desactiva
 	// PlazoDrenaje es lo que Drenar espera a los trabajos en curso antes de interrumpirlos.
 	PlazoDrenaje time.Duration
 	// EntradaLocal deja entrar en la Web UI sin token al mismo usuario del sistema (servicio.entrada_local).
@@ -131,6 +135,9 @@ var abrirBase = persistencia.Abrir
 func Nuevo(opc Opciones) (*Servicio, error) {
 	if opc.Registros == nil {
 		opc.Registros = io.Discard
+	}
+	if opc.Conexiones == nil {
+		opc.Conexiones = adaptadores.NuevasConexiones(opc.Config, slices.Collect(maps.Keys(opc.Registro)))
 	}
 	token, err := LeerOCrearToken(filepath.Join(opc.Datos, "token-servicio"))
 	if err != nil {

@@ -418,6 +418,7 @@ func (s *Servidor) fichasAgentes(w http.ResponseWriter, _ *http.Request) {
 			"modelo_efectivo_informado": f.ModeloEfectivoInformado, "esfuerzos": noNulo(agentes.Niveles(f.Nombre)),
 			"autenticaciones": noNulo(f.Autenticaciones), "variables_clave": noNulo(f.VariablesClave),
 			"permitido_apps": agentes.PermitidoEnApps(s.Config, f.Nombre), "url_instalacion": f.URLInstalacion,
+			"desconectado": s.Conexiones.Desconectado(f.Nombre),
 		})
 	}
 	for _, f := range agentes.Todos() {
@@ -462,7 +463,7 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 		if !conocida {
 			f.Streaming = "final"
 		}
-		entrada := map[string]any{"agente": nombre, "capacidades": map[string]any{
+		entrada := map[string]any{"agente": nombre, "desconectado": s.Conexiones.Desconectado(nombre), "capacidades": map[string]any{
 			"texto": true, "streaming": f.Streaming, "salida_estructurada": f.SalidaEstructurada, "uso_tokens": "informado_por_cli",
 			"modelo_efectivo_informado": f.ModeloEfectivoInformado, "tool_calling_compatible": false, "imagenes": false, "sesiones_persistentes": false,
 		}}

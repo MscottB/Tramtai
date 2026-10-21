@@ -101,6 +101,40 @@ func (s *Servicio) autenticacionUI(w http.ResponseWriter, r *http.Request, _ *se
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// conexionUI conecta o desconecta un agente: {agente, conectado}.
+func (s *Servicio) conexionUI(w http.ResponseWriter, r *http.Request, _ *sesion) {
+	var peticion struct {
+		Agente    string `json:"agente"`
+		Conectado bool   `json:"conectado"`
+	}
+	if err := api.LeerJSON(w, r, &peticion); err != nil {
+		api.EscribirError(w, r, err)
+		return
+	}
+	if err := s.Conectar(peticion.Agente, peticion.Conectado); err != nil {
+		api.EscribirError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Conectar conecta o desconecta un agente: lo guarda en la configuración global (adaptadores.<agente>.desconectado) y
+// vale al momento en todos los espacios.
+func (s *Servicio) Conectar(agente string, conectado bool) error {
+	if s.opc.Registro[agente] == nil {
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("no hay ningún agente %s", agente))
+	}
+	ruta, err := nucleo.RutaGlobal()
+	if err != nil {
+		return err
+	}
+	if err := FijarValor(ruta, nucleo.OrigenGlobal, "adaptadores."+agente+".desconectado", !conectado); err != nil {
+		return err
+	}
+	s.opc.Conexiones.Fijar(agente, !conectado)
+	return nil
+}
+
 func (s *Servicio) puertoUI(w http.ResponseWriter, r *http.Request, ses *sesion) {
 	var peticion struct {
 		Puerto     int  `json:"puerto"`

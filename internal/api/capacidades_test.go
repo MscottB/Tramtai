@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,5 +36,18 @@ func TestCapacidadesEnParalelo(t *testing.T) {
 	}
 	if len(nombres) != 3 || nombres[0] != "a" || nombres[1] != "b" || nombres[2] != "c" {
 		t.Fatalf("en orden alfabético: %v", nombres)
+	}
+}
+
+func TestCapacidadesInformaDesconectado(t *testing.T) {
+	s := nuevoServidor(t, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}}, nil, nil)
+	s.Conexiones = adaptadores.NuevasConexiones(nil, nil)
+	s.Conexiones.Fijar("simulado", true)
+	ts := httptest.NewServer(s.Handler())
+	t.Cleanup(ts.Close)
+	for _, ruta := range []string{"/api/v1/agentes", "/api/v1/capacidades"} {
+		if _, c := pedir(t, ts, "GET", ruta, ""); !strings.Contains(c, `"desconectado":true`) {
+			t.Errorf("%s no informa desconectado: %s", ruta, c)
+		}
 	}
 }

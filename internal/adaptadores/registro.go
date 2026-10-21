@@ -1,6 +1,7 @@
 package adaptadores
 
 import (
+	"maps"
 	"slices"
 	"sync/atomic"
 
@@ -43,6 +44,53 @@ func CambiarAutenticacion(registro map[string]Adaptador, agente, modo string) er
 	}
 	a.ModoAutenticacion().valor.Store(&modo)
 	return nil
+}
+
+// Conexiones dice qué agentes están desconectados (adaptadores.<agente>.desconectado): no se usan aunque su CLI esté
+// instalado. Se comparte entre todas las instancias y se cambia en marcha (Web UI → Agentes); nil = todos conectados.
+type Conexiones struct {
+	desconectados atomic.Pointer[map[string]bool]
+}
+
+// NuevasConexiones lee de la configuración qué agentes están desconectados (c nil: ninguno).
+func NuevasConexiones(c *nucleo.Configuracion, agentes []string) *Conexiones {
+	m := map[string]bool{}
+	for _, agente := range agentes {
+		if c != nil && c.Booleano("adaptadores."+agente+".desconectado") {
+			m[agente] = true
+		}
+	}
+	con := &Conexiones{}
+	con.desconectados.Store(&m)
+	return con
+}
+
+// Desconectado indica si el agente está desconectado.
+func (c *Conexiones) Desconectado(agente string) bool {
+	if c == nil {
+		return false
+	}
+	m := c.desconectados.Load()
+	return m != nil && (*m)[agente]
+}
+
+// Fijar conecta o desconecta un agente en marcha.
+func (c *Conexiones) Fijar(agente string, desconectado bool) {
+	for {
+		actual := c.desconectados.Load()
+		nuevo := map[string]bool{}
+		if actual != nil {
+			maps.Copy(nuevo, *actual)
+		}
+		if desconectado {
+			nuevo[agente] = true
+		} else {
+			delete(nuevo, agente)
+		}
+		if c.desconectados.CompareAndSwap(actual, &nuevo) {
+			return
+		}
+	}
 }
 
 // EsVariableCredencial indica si una variable de entorno es una clave de proveedor que se retira del entorno heredado.

@@ -57,3 +57,31 @@ func TestHeredarQuitaDeLocal(t *testing.T) {
 		t.Fatalf("la global no hereda de nadie: %d", c)
 	}
 }
+
+func TestConexionUIPersiste(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	global, err := s.ActivarGlobal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := abrirSesion(t, s, ts.URL)
+	if r, c := n.pedir("POST", "/ui/agentes/conexion", `{"agente":"simulado","conectado":false}`, "X-CSRF-Token", n.csrf); r.StatusCode != 204 {
+		t.Fatalf("desconectar: %d %s", r.StatusCode, c)
+	}
+	datos, _ := os.ReadFile(os.Getenv("TRAMTAI_CONFIG_GLOBAL"))
+	if !strings.Contains(string(datos), "desconectado: true") {
+		t.Fatalf("debía guardarse en la configuración global:\n%s", datos)
+	}
+	if r, c := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", global.token, hola); r.StatusCode != 409 || !strings.Contains(c, "agente_desconectado") {
+		t.Fatalf("una petición al agente desconectado: %d %s", r.StatusCode, c)
+	}
+	if r, _ := n.pedir("POST", "/ui/agentes/conexion", `{"agente":"simulado","conectado":true}`, "X-CSRF-Token", n.csrf); r.StatusCode != 204 {
+		t.Fatalf("conectar: %d", r.StatusCode)
+	}
+	if r, c := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", global.token, hola); r.StatusCode != 200 {
+		t.Fatalf("conectado de nuevo: %d %s", r.StatusCode, c)
+	}
+	if r, _ := n.pedir("POST", "/ui/agentes/conexion", `{"agente":"nadie","conectado":false}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 {
+		t.Fatalf("un agente que no existe: %d", r.StatusCode)
+	}
+}
