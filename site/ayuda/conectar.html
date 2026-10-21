@@ -61,6 +61,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
   <ol>
     <li><a href="#s-diagrama"><span lang="es">Cómo funciona</span><span lang="en">How it works</span></a></li>
     <li><a href="#s-pasos"><span lang="es">Paso a paso</span><span lang="en">Step by step</span></a></li>
+    <li><a href="#s-recorrido"><span lang="es">Qué verás en pantalla</span><span lang="en">What you will see on screen</span></a></li>
     <li><a href="#s-ejemplo"><span lang="es">Ejemplo</span><span lang="en">Example</span></a></li>
     <li><a href="#s-tabla"><span lang="es">De un vistazo</span><span lang="en">At a glance</span></a></li>
     <li><a href="#s-preguntas"><span lang="es">Preguntas</span><span lang="en">Questions</span></a></li>
@@ -92,10 +93,18 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 </ol>
 </section>
 
+<section id="s-recorrido"><h2><span lang="es">Qué verás en pantalla</span><span lang="en">What you will see on screen</span></h2>
+<ol class="pasos recorrido-pasos">
+  <li><div><strong><span lang="es">La clave del espacio</span><span lang="en">The workspace key</span></strong> <span lang="es">Cada espacio tiene una clave con acceso a cualquier agente y modelo: la usan la CLI, tus scripts y Probar. Tus apps van mejor con una API propia cada una.</span><span lang="en">Each workspace has a key with access to any agent and model: the CLI, your scripts and Try use it. Your apps are better off with an API of their own each.</span><figure class="captura captura-paso"><img class="solo-claro" lang="es" src="capturas/recorrido-conectar-clave-espacio.claro.es.webp" width="519" height="110" loading="lazy" alt="Captura de pantalla: La clave del espacio" style="max-width: 519px"><img class="solo-claro" lang="en" src="capturas/recorrido-conectar-clave-espacio.claro.en.webp" width="519" height="110" loading="lazy" alt="Screenshot: The workspace key" style="max-width: 519px"><img class="solo-oscuro" lang="es" src="capturas/recorrido-conectar-clave-espacio.oscuro.es.webp" width="519" height="110" loading="lazy" alt="Captura de pantalla: La clave del espacio" style="max-width: 519px"><img class="solo-oscuro" lang="en" src="capturas/recorrido-conectar-clave-espacio.oscuro.en.webp" width="519" height="110" loading="lazy" alt="Screenshot: The workspace key" style="max-width: 519px"></figure></div></li>
+  <li><div><strong><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></strong> <span lang="es">Con este botón creas una API para una app, con su dirección, su clave, sus modelos y su historial. Si una clave se filtra, revocas solo esa.</span><span lang="en">This button creates an API for an app, with its own address, key, models and history. If a key leaks, you revoke only that one.</span><figure class="captura captura-paso"><img class="solo-claro" lang="es" src="capturas/recorrido-conectar-nueva.claro.es.webp" width="166" height="68" loading="lazy" alt="Captura de pantalla: Una API por aplicación" style="max-width: 166px"><img class="solo-claro" lang="en" src="capturas/recorrido-conectar-nueva.claro.en.webp" width="154" height="68" loading="lazy" alt="Screenshot: One API per app" style="max-width: 154px"><img class="solo-oscuro" lang="es" src="capturas/recorrido-conectar-nueva.oscuro.es.webp" width="166" height="68" loading="lazy" alt="Captura de pantalla: Una API por aplicación" style="max-width: 166px"><img class="solo-oscuro" lang="en" src="capturas/recorrido-conectar-nueva.oscuro.en.webp" width="154" height="68" loading="lazy" alt="Screenshot: One API per app" style="max-width: 154px"></figure></div></li>
+  <li><div><strong><span lang="es">Tus APIs</span><span lang="en">Your APIs</span></strong> <span lang="es">Aquí ves las APIs que has creado. Ábrelas para copiar su dirección y su clave, ver su uso o cambiar sus ajustes.</span><span lang="en">Here you see the APIs you have created. Open one to copy its address and key, see its usage or change its settings.</span><figure class="captura captura-paso"><img class="solo-claro" lang="es" src="capturas/recorrido-conectar-apis.claro.es.webp" width="736" height="438" loading="lazy" alt="Captura de pantalla: Tus APIs" style="max-width: 736px"><img class="solo-claro" lang="en" src="capturas/recorrido-conectar-apis.claro.en.webp" width="736" height="438" loading="lazy" alt="Screenshot: Your APIs" style="max-width: 736px"><img class="solo-oscuro" lang="es" src="capturas/recorrido-conectar-apis.oscuro.es.webp" width="736" height="438" loading="lazy" alt="Captura de pantalla: Tus APIs" style="max-width: 736px"><img class="solo-oscuro" lang="en" src="capturas/recorrido-conectar-apis.oscuro.en.webp" width="736" height="438" loading="lazy" alt="Screenshot: Your APIs" style="max-width: 736px"></figure></div></li>
+</ol>
+</section>
+
 <section id="s-ejemplo"><h2><span lang="es">Ejemplo</span><span lang="en">Example</span></h2>
 <div class="pestanas" data-pestanas>
-  <div class="pestanas-lista" role="tablist" aria-label="Lenguaje" data-aria-en="Language"><button type="button" role="tab" id="e2-curl-nativa" aria-controls="e2-curl-nativa-panel" aria-selected="true" tabindex="0" data-lenguaje="curl-nativa">curl · API propia</button><button type="button" role="tab" id="e2-python-nativa" aria-controls="e2-python-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="python-nativa">Python · API propia</button><button type="button" role="tab" id="e2-node-nativa" aria-controls="e2-node-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="node-nativa">Node · API propia</button><button type="button" role="tab" id="e2-go-nativa" aria-controls="e2-go-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="go-nativa">Go · API propia</button><button type="button" role="tab" id="e2-python" aria-controls="e2-python-panel" aria-selected="false" tabindex="-1" data-lenguaje="python">Python · OpenAI</button><button type="button" role="tab" id="e2-curl" aria-controls="e2-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl · OpenAI</button><button type="button" role="tab" id="e2-anthropic" aria-controls="e2-anthropic-panel" aria-selected="false" tabindex="-1" data-lenguaje="anthropic">Python · Anthropic</button></div>
-  <div role="tabpanel" id="e2-curl-nativa-panel" aria-labelledby="e2-curl-nativa">
+  <div class="pestanas-lista" role="tablist" aria-label="Lenguaje" data-aria-en="Language"><button type="button" role="tab" id="e3-curl-nativa" aria-controls="e3-curl-nativa-panel" aria-selected="true" tabindex="0" data-lenguaje="curl-nativa">curl · API propia</button><button type="button" role="tab" id="e3-python-nativa" aria-controls="e3-python-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="python-nativa">Python · API propia</button><button type="button" role="tab" id="e3-node-nativa" aria-controls="e3-node-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="node-nativa">Node · API propia</button><button type="button" role="tab" id="e3-go-nativa" aria-controls="e3-go-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="go-nativa">Go · API propia</button><button type="button" role="tab" id="e3-python" aria-controls="e3-python-panel" aria-selected="false" tabindex="-1" data-lenguaje="python">Python · OpenAI</button><button type="button" role="tab" id="e3-curl" aria-controls="e3-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl · OpenAI</button><button type="button" role="tab" id="e3-anthropic" aria-controls="e3-anthropic-panel" aria-selected="false" tabindex="-1" data-lenguaje="anthropic">Python · Anthropic</button></div>
+  <div role="tabpanel" id="e3-curl-nativa-panel" aria-labelledby="e3-curl-nativa">
     <pre class="codigo" lang="es"><code># 1. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
 TRABAJO=$(curl -s http://127.0.0.1:17373/api/v1/trabajos -H &quot;Authorization: Bearer &lt;tu clave&gt;&quot; \
   -H &quot;Content-Type: application/json&quot; -H &quot;Idempotency-Key: $(date +%s)&quot; \
@@ -131,7 +140,7 @@ curl -sN http://127.0.0.1:17373/api/v1/trabajos/$TRABAJO/eventos -H &quot;Author
 # 3. Read the result (with a schema, the JSON already validated)
 curl -s http://127.0.0.1:17373/api/v1/trabajos/$TRABAJO/salida -H &quot;Authorization: Bearer &lt;your key&gt;&quot;</code></pre>
   </div>
-  <div role="tabpanel" id="e2-python-nativa-panel" aria-labelledby="e2-python-nativa">
+  <div role="tabpanel" id="e3-python-nativa-panel" aria-labelledby="e3-python-nativa">
     <pre class="codigo" lang="es"><code>import json, sys, uuid
 import requests
 
@@ -213,7 +222,7 @@ if fin.get(&quot;estado&quot;) != &quot;completado&quot;:
 # 3. Read the result (with a schema, the JSON already validated)
 print(&quot;\n&quot; + requests.get(f&quot;{BASE}/trabajos/{trabajo}/salida&quot;, headers=CABECERAS).content.decode(&quot;utf-8&quot;))</code></pre>
   </div>
-  <div role="tabpanel" id="e2-node-nativa-panel" aria-labelledby="e2-node-nativa">
+  <div role="tabpanel" id="e3-node-nativa-panel" aria-labelledby="e3-node-nativa">
     <pre class="codigo" lang="es"><code>import { randomUUID } from &#39;node:crypto&#39;
 
 const BASE = &#39;http://127.0.0.1:17373/api/v1&#39;
@@ -299,7 +308,7 @@ if (fin?.estado !== &#39;completado&#39;) throw new Error(JSON.stringify(fin))
 // 3. Read the result (with a schema, the JSON already validated)
 console.log(&#39;\n&#39; + await (await pedir(`/trabajos/${id}/salida`)).text())</code></pre>
   </div>
-  <div role="tabpanel" id="e2-go-nativa-panel" aria-labelledby="e2-go-nativa">
+  <div role="tabpanel" id="e3-go-nativa-panel" aria-labelledby="e3-go-nativa">
     <pre class="codigo" lang="es"><code>package main
 
 import (
@@ -425,7 +434,7 @@ func main() {
 	fmt.Println(string(salida))
 }</code></pre>
   </div>
-  <div role="tabpanel" id="e2-python-panel" aria-labelledby="e2-python">
+  <div role="tabpanel" id="e3-python-panel" aria-labelledby="e3-python">
     <pre class="codigo" lang="es"><code>from openai import OpenAI
 
 cliente = OpenAI(base_url=&quot;http://127.0.0.1:17373/openai/v1&quot;, api_key=&quot;&lt;tu clave&gt;&quot;)
@@ -453,7 +462,7 @@ r = cliente.chat.completions.create(
 )
 print(r.choices[0].message.content)</code></pre>
   </div>
-  <div role="tabpanel" id="e2-curl-panel" aria-labelledby="e2-curl">
+  <div role="tabpanel" id="e3-curl-panel" aria-labelledby="e3-curl">
     <pre class="codigo" lang="es"><code>curl http://127.0.0.1:17373/openai/v1/chat/completions \
   -H &quot;Authorization: Bearer &lt;tu clave&gt;&quot; \
   -H &quot;Content-Type: application/json&quot; \
@@ -479,7 +488,7 @@ print(r.choices[0].message.content)</code></pre>
   ]
 }&#39;</code></pre>
   </div>
-  <div role="tabpanel" id="e2-anthropic-panel" aria-labelledby="e2-anthropic">
+  <div role="tabpanel" id="e3-anthropic-panel" aria-labelledby="e3-anthropic">
     <pre class="codigo" lang="es"><code>import anthropic
 
 cliente = anthropic.Anthropic(base_url=&quot;http://127.0.0.1:17373/anthropic&quot;, api_key=&quot;&lt;tu clave&gt;&quot;)
@@ -511,7 +520,7 @@ print(m.content[0].text)</code></pre>
   </div>
 </div>
 
-<figure class="captura"><img class="solo-claro" lang="es" src="capturas/mis-apis.claro.es.webp" width="992" height="578" loading="lazy" alt="Una API en Mis APIs, con su URL y sus acciones"><img class="solo-claro" lang="en" src="capturas/mis-apis.claro.en.webp" width="992" height="578" loading="lazy" alt="An API in My APIs, with its URL and actions"><img class="solo-oscuro" lang="es" src="capturas/mis-apis.oscuro.es.webp" width="992" height="578" loading="lazy" alt="Una API en Mis APIs, con su URL y sus acciones"><img class="solo-oscuro" lang="en" src="capturas/mis-apis.oscuro.en.webp" width="992" height="578" loading="lazy" alt="An API in My APIs, with its URL and actions"></figure>
+<figure class="captura"><img class="solo-claro" lang="es" src="capturas/mis-apis.claro.es.webp" width="736" height="429" loading="lazy" alt="Una API en Mis APIs, con su URL y sus acciones"><img class="solo-claro" lang="en" src="capturas/mis-apis.claro.en.webp" width="736" height="429" loading="lazy" alt="An API in My APIs, with its URL and actions"><img class="solo-oscuro" lang="es" src="capturas/mis-apis.oscuro.es.webp" width="736" height="429" loading="lazy" alt="Una API en Mis APIs, con su URL y sus acciones"><img class="solo-oscuro" lang="en" src="capturas/mis-apis.oscuro.en.webp" width="736" height="429" loading="lazy" alt="An API in My APIs, with its URL and actions"></figure>
 </section>
 
 <section id="s-tabla"><h2><span lang="es">De un vistazo</span><span lang="en">At a glance</span></h2>
@@ -561,7 +570,7 @@ print(m.content[0].text)</code></pre>
   <div class="envoltura">
     <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
       <a href="../#descargar"><span lang="es">Descargar</span><span lang="en">Download</span></a>
-      <a href="../ayuda/empezar.html"><span lang="es">Empezar</span><span lang="en">Get started</span></a>
+      <a href="../ayuda/empezar.html"><span lang="es">Primeros pasos</span><span lang="en">Getting started</span></a>
       <a href="../ayuda/"><span lang="es">Ayuda</span><span lang="en">Help</span></a>
       <a href="../desarrolladores.html"><span lang="es">Desarrolladores</span><span lang="en">Developers</span></a>
       <a href="https://github.com/MscottB/Tramtai">GitHub</a>

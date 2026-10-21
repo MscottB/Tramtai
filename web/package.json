@@ -8,7 +8,7 @@
     "dev": "vite",
     "tipos": "vue-tsc --noEmit -p .",
     "test": "node --import ./pruebas.mjs --test \"src/**/*.test.ts\" \"scripts/**/*.test.ts\"",
-    "capturas": "node scripts/capturas.mjs",
+    "capturas": "node --disable-warning=ExperimentalWarning --import ./pruebas.mjs scripts/capturas.mjs",
     "sitio": "node --disable-warning=ExperimentalWarning --import ./pruebas.mjs scripts/sitio-ayuda.mjs",
     "build": "vue-tsc --noEmit -p . && vite build"
   },
@@ -16,6 +16,7 @@
     "@fontsource-variable/overpass": "^5.3.0",
     "@quasar/extras": "2.1.0",
     "dompurify": "3.4.17",
+    "driver.js": "1.9.0",
     "marked": "18.1.1",
     "quasar": "2.35.1",
     "vue": "3.5.43"

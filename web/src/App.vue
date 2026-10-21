@@ -12,7 +12,7 @@
           <span class="q-ml-sm marca gt-xs">Tramtai</span>
         </button>
         <q-space />
-        <q-btn-dropdown v-if="sesion.local && sesion.instancias?.length" flat no-caps :icon="iconoInstancia(sesion.ambito)"
+        <q-btn-dropdown v-if="sesion.local && sesion.instancias?.length" data-recorrido="app.espacio" flat no-caps :icon="iconoInstancia(sesion.ambito)"
           :label="$q.screen.gt.xs ? sesion.nombre || t('app.elegirInstancia') : undefined" :aria-label="t('app.cambiarInstancia')">
           <q-list style="min-width: 300px; max-width: 360px">
             <q-item-label header class="q-pb-xs">{{ t('app.instanciasActivas') }}</q-item-label>
@@ -39,7 +39,7 @@
             </q-item>
           </q-list>
         </q-btn-dropdown>
-        <q-chip v-else-if="sesion.instancia" outline :icon="iconoInstancia(sesion.ambito)">{{ sesion.nombre || sesion.instancia }}</q-chip>
+        <q-chip v-else-if="sesion.instancia" data-recorrido="app.espacio" outline :icon="iconoInstancia(sesion.ambito)">{{ sesion.nombre || sesion.instancia }}</q-chip>
         <q-btn v-if="actualizacion?.disponible" unelevated dense no-caps color="primary" icon="o_system_update_alt" class="q-ml-sm q-px-sm"
           :label="$q.screen.gt.xs ? t('actualizacion.boton') : undefined" :aria-label="t('actualizacion.titulo', { version: actualizacion.version })"
           @click="dialogoActualizar = true">
@@ -110,15 +110,23 @@
     <q-drawer v-model="menu" show-if-above bordered :width="256" :breakpoint="1023" class="cajon-app">
       <nav class="column full-height no-wrap" :aria-label="t('app.navegacion')">
         <!-- El menú es una línea de tranvía: cada sección es una estación y la actual se ilumina. -->
+        <!-- Tres grupos con título (empezar, conectar, organizar) sobre una sola línea continua. -->
         <ul class="nav-red">
-          <li v-for="p in principales" :key="p.id">
-            <button type="button" class="estacion" :class="{ 'estacion--activa': seccion === p.id }" :aria-current="seccion === p.id ? 'page' : undefined" @click="ir(p.id)">
-              <span class="estacion__punto" aria-hidden="true" />
-              <span class="column">
-                <span class="estacion__nombre">{{ t(p.titulo) }}</span>
-                <span class="estacion__detalle">{{ t(p.detalle) }}</span>
-              </span>
-            </button>
+          <li v-for="g in gruposMenu" :key="g.grupo" class="nav-grupo">
+            <div role="group" :aria-labelledby="`menu-grupo-${g.grupo}`">
+              <div :id="`menu-grupo-${g.grupo}`" class="nav-grupo__titulo">{{ t(g.titulo) }}</div>
+              <ul class="nav-grupo__lista">
+                <li v-for="p in g.paginas" :key="p.id">
+                  <button type="button" class="estacion" :class="{ 'estacion--activa': seccion === p.id }" :aria-current="seccion === p.id ? 'page' : undefined" @click="ir(p.id)">
+                    <span class="estacion__punto" aria-hidden="true" />
+                    <span class="column">
+                      <span class="estacion__nombre">{{ t(p.titulo) }}</span>
+                      <span class="estacion__detalle">{{ t(p.detalle) }}</span>
+                    </span>
+                  </button>
+                </li>
+              </ul>
+            </div>
           </li>
         </ul>
         <q-space />
@@ -163,7 +171,7 @@
           </q-card>
         </div>
         <component :is="actual.componente" v-else :key="sesion.instancia" v-bind="seccion === 'ayuda' ? { tema: ruta.tema } : {}" @ir="ir"
-          @abrir-proyecto="dialogoProyecto = true" />
+          @abrir-proyecto="dialogoProyecto = true" @recorrido="empezarBienvenida" @mostrar="mostrarEnPantalla" />
       </q-page>
     </q-page-container>
 
@@ -274,15 +282,18 @@
       </q-card>
     </q-dialog>
     <AcercaDe v-model="acercaAbierto" />
-    <PanelAyuda :pagina="seccion === 'ayuda' ? undefined : (seccion as Pagina)" @ir="ir" />
+    <PanelAyuda :pagina="seccion === 'ayuda' ? undefined : (seccion as Pagina)" :recorrido-activo="recorridoActivo" @ir="ir" @recorrido="mostrarEnPantalla" />
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, onMounted, onUnmounted, provide, ref, watch, watchEffect } from 'vue'
+import { computed, markRaw, onMounted, onUnmounted, provide, ref, watch, watchEffect, type Component } from 'vue'
 import { useQuasar } from 'quasar'
 import { api, avisar, avisarError, buscarActualizacionAhora, ErrorApi, reiniciarYSeguir } from './api/cliente'
-import { actualizacion, dialogoActualizar, sesion } from './estado'
+import { actualizacion, bienvenida, dialogoActualizar, marcarBienvenida, sesion } from './estado'
+import { alCerrarBienvenida, entradaPorEnlace, ofrecerBienvenida } from './bienvenida'
+import { pasosBienvenida, pasosDePagina } from './recorrido'
+import { useRecorrido } from './composables/useRecorrido'
 import { useActualizacion } from './composables/useActualizacion'
 import { useSesion } from './composables/useSesion'
 import { useSondeo } from './composables/useSondeo'
@@ -301,26 +312,33 @@ import AyudaPagina from './paginas/Ayuda.vue'
 import { hashDe, leerHash } from './ayuda/ruta'
 import { temaPorId } from './ayuda/indice'
 import type { Pagina } from './ayuda/tipos'
+import type { Clave } from './idiomas/es'
+import { GRUPOS_MENU } from './menu'
 import PanelAyuda from './componentes/ayuda/PanelAyuda.vue'
 import { cerrarAyuda } from './ayuda/panel'
 import AcercaDe from './componentes/AcercaDe.vue'
 import ListaNovedades from './componentes/ListaNovedades.vue'
 import NotasVersion from './componentes/NotasVersion.vue'
 
-// Orden del menú según el recorrido: conectar un agente, probarlo, conectar las apps y revisar lo ejecutado.
 const $q = useQuasar()
 
-const principales = [
-  { id: 'inicio', titulo: 'menu.inicio', detalle: 'menuDetalle.inicio', icono: 'o_home', componente: markRaw(InicioPagina) },
-  { id: 'agentes', titulo: 'menu.agentes', detalle: 'menuDetalle.agentes', icono: 'o_smart_toy', componente: markRaw(AgentesPagina) },
-  { id: 'ejecutar', titulo: 'menu.ejecutar', detalle: 'menuDetalle.ejecutar', icono: 'o_chat', componente: markRaw(EjecutarPagina) },
-  { id: 'conectar', titulo: 'menu.conectar', detalle: 'menuDetalle.conectar', icono: 'o_hub', componente: markRaw(ConectarPagina) },
-  { id: 'historial', titulo: 'menu.historial', detalle: 'menuDetalle.historial', icono: 'o_history', componente: markRaw(HistorialPagina) },
-  { id: 'espacios', titulo: 'menu.espacios', detalle: 'menuDetalle.espacios', icono: 'o_workspaces', componente: markRaw(EspaciosPagina) },
-  { id: 'configuracion', titulo: 'menu.configuracion', detalle: 'menuDetalle.configuracion', icono: 'o_settings', componente: markRaw(ConfiguracionPagina) },
-] as const
-// Cada página principal es una de PAGINAS (ayuda/tipos.ts): la dirección #<id> y su tema de la Ayuda la conocen.
-const _principalesConocidas: readonly Pagina[] = principales.map((p) => p.id)
+// Cada página principal es una de PAGINAS (ayuda/tipos.ts): el Record obliga a definirlas todas.
+const definidas: Record<Pagina, { titulo: Clave; detalle: Clave; icono: string; componente: Component }> = {
+  inicio: { titulo: 'menu.inicio', detalle: 'menuDetalle.inicio', icono: 'o_home', componente: markRaw(InicioPagina) },
+  agentes: { titulo: 'menu.agentes', detalle: 'menuDetalle.agentes', icono: 'o_smart_toy', componente: markRaw(AgentesPagina) },
+  ejecutar: { titulo: 'menu.ejecutar', detalle: 'menuDetalle.ejecutar', icono: 'o_chat', componente: markRaw(EjecutarPagina) },
+  conectar: { titulo: 'menu.conectar', detalle: 'menuDetalle.conectar', icono: 'o_hub', componente: markRaw(ConectarPagina) },
+  historial: { titulo: 'menu.historial', detalle: 'menuDetalle.historial', icono: 'o_history', componente: markRaw(HistorialPagina) },
+  espacios: { titulo: 'menu.espacios', detalle: 'menuDetalle.espacios', icono: 'o_workspaces', componente: markRaw(EspaciosPagina) },
+  configuracion: { titulo: 'menu.configuracion', detalle: 'menuDetalle.configuracion', icono: 'o_settings', componente: markRaw(ConfiguracionPagina) },
+}
+// El menú va por grupos (menu.ts), en el orden en que se usa la app.
+const gruposMenu = GRUPOS_MENU.map((g) => ({
+  grupo: g.grupo,
+  titulo: `menu.grupo.${g.grupo}` as const,
+  paginas: g.paginas.map((id) => ({ id, ...definidas[id] })),
+}))
+const principales = gruposMenu.flatMap((g) => g.paginas)
 const ayuda = { id: 'ayuda', titulo: 'menu.ayuda', detalle: 'menuDetalle.ayuda', icono: 'o_help_outline', componente: markRaw(AyudaPagina) } as const
 const paginas = [...principales, ayuda]
 
@@ -423,6 +441,23 @@ function tituloDe(id?: string) {
 
 watchEffect(() => (document.title = `${tituloDe(pagina.value)} · Tramtai`))
 
+// Una sola instancia del recorrido guiado: la usan la bienvenida y, después, el «Muéstrame en pantalla» de la Ayuda.
+const { empezar: hacerRecorrido, cerrar: cerrarRecorrido, activo: recorridoActivo } = useRecorrido(ir, seccion)
+// Sin sesión (se perdió o se salió) la app enseña la entrada: el recorrido no tiene nada que señalar.
+watch(() => !sesion.value, (sinSesion) => sinSesion && cerrarRecorrido())
+
+// El «Muéstrame en pantalla» de un tema de página: cierra el panel, va a la página si no está en ella y enseña sus pasos.
+function mostrarEnPantalla(pagina: Pagina) {
+  cerrarAyuda()
+  hacerRecorrido(pasosDePagina(pagina))
+}
+
+// La bienvenida: empezarla (o repetirla desde Primeros pasos) la marca hecha, aunque se cierre a medias.
+function empezarBienvenida() {
+  marcarBienvenida('hecha')
+  hacerRecorrido(pasosBienvenida())
+}
+
 function iconoInstancia(ambito?: string) {
   return ambito === 'proyecto' ? 'o_folder' : 'o_public'
 }
@@ -495,4 +530,27 @@ function examinar() {
   Object.assign(window, { tramtaiCarpeta: (ruta: string) => (rutaProyecto.value = ruta) })
   escritorio?.postMessage('tramtai:carpeta')
 }
+
+// Se ofrece una vez por carga, con la sesión abierta y en Inicio, y nunca si se entró por un enlace a otra página.
+// Si hay otro diálogo abierto (Novedades tras actualizar, por ejemplo) espera a que se cierre. Va al final del script porque
+// lee los diálogos de arriba al ejecutarse ya (immediate).
+const enlaceProfundo = entradaPorEnlace(location.hash)
+let bienvenidaOfrecida = false
+const otroDialogo = computed(() => dialogoNovedades.value || dialogoActualizar.value || dialogoProyecto.value || acercaAbierto.value)
+watch([() => !!sesion.value?.instancia, seccion, otroDialogo, recorridoActivo], ([conSesion, pag, ocupado, enMarcha]) => {
+  if (!ofrecerBienvenida({ sesion: conSesion, pagina: pag as Pagina, entradaPorEnlace: enlaceProfundo, estado: bienvenida.value, yaOfrecida: bienvenidaOfrecida, otroDialogo: ocupado, recorridoActivo: enMarcha })) return
+  bienvenidaOfrecida = true
+  let empezada = false
+  $q.dialog({ title: t('bienvenida.titulo'), message: t('bienvenida.texto'),
+    cancel: { flat: true, label: t('bienvenida.ahoraNo'), noCaps: true }, ok: { color: 'primary', label: t('bienvenida.empezar'), unelevated: true, noCaps: true } })
+    .onOk(() => {
+      empezada = true
+      empezarBienvenida()
+    })
+    // «Ahora no», Esc o clic fuera: no se vuelve a ofrecer
+    .onDismiss(() => {
+      const respuesta = alCerrarBienvenida(empezada)
+      if (respuesta) marcarBienvenida(respuesta)
+    })
+}, { immediate: true })
 </script>

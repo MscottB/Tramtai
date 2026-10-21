@@ -13,6 +13,7 @@
       <BloquePreguntas v-else-if="b.tipo === 'preguntas'" :bloque="b" :ancla="ancla" @tema="(id) => $emit('ir', 'ayuda/' + id)" />
       <BloqueErrores v-else-if="b.tipo === 'errores'" :bloque="b" :ancla="ancla" />
       <BloqueNota v-else-if="b.tipo === 'nota'" :bloque="b" />
+      <BloqueRecorrido v-else-if="b.tipo === 'recorrido' && tema.paginaApp" :bloque="b" @mostrar="$emit('recorrido', tema.paginaApp)" />
       <div v-else-if="b.tipo === 'ir'">
         <q-btn outline color="primary" no-caps icon-right="arrow_forward" :label="t('ayuda.ir', { pagina: t(menu[b.pagina]) })" @click="$emit('ir', b.pagina)" />
       </div>
@@ -47,10 +48,11 @@ import BloqueTabla from './BloqueTabla.vue'
 import BloquePreguntas from './BloquePreguntas.vue'
 import BloqueErrores from './BloqueErrores.vue'
 import BloqueNota from './BloqueNota.vue'
+import BloqueRecorrido from './BloqueRecorrido.vue'
 import TarjetasTemas from './TarjetasTemas.vue'
 
 const props = defineProps<{ tema: Tema; contexto: 'app' | 'panel'; paginaActual?: Pagina; ancla?: string; sinCabecera?: boolean }>()
-defineEmits<{ ir: [destino: string] }>()
+defineEmits<{ ir: [destino: string]; recorrido: [pagina: Pagina] }>()
 
 const menu: Record<Pagina, Clave> = { inicio: 'menu.inicio', agentes: 'menu.agentes', ejecutar: 'menu.ejecutar', conectar: 'menu.conectar',
   historial: 'menu.historial', espacios: 'menu.espacios', configuracion: 'menu.configuracion' }

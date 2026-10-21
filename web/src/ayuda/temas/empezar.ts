@@ -22,11 +22,21 @@ export const empezar: Tema = {
     },
     { tipo: 'descargas' },
     { tipo: 'pasos', pasos: ['ayuda.empezar.paso1', 'ayuda.empezar.paso2', 'ayuda.empezar.paso3', 'ayuda.empezar.paso4'] },
+    {
+      tipo: 'recorrido',
+      pasos: [
+        { ancla: 'inicio.mapa', titulo: 'ayuda.empezar.rec1Titulo', texto: 'ayuda.empezar.rec1Texto', bienvenida: true },
+        { ancla: 'inicio.primeros-pasos', titulo: 'ayuda.empezar.rec2Titulo', texto: 'ayuda.empezar.rec2Texto', bienvenida: true },
+        { ancla: 'app.espacio', titulo: 'ayuda.empezar.rec3Titulo', texto: 'ayuda.empezar.rec3Texto', bienvenida: true },
+        { ancla: 'app.ayuda', titulo: 'ayuda.empezar.rec4Titulo', texto: 'ayuda.empezar.rec4Texto', bienvenida: true },
+      ],
+    },
     { tipo: 'captura', id: 'inicio', alt: 'ayuda.empezar.captura' },
     { tipo: 'nota', texto: 'ayuda.empezar.nota' },
     {
       tipo: 'preguntas',
       preguntas: [
+        { id: 'repetir-recorrido', pregunta: 'ayuda.empezar.pRecorrido', respuesta: 'ayuda.empezar.rRecorrido' },
         { id: 'tranvias', pregunta: 'ayuda.empezar.pTranvias', respuesta: 'ayuda.empezar.rTranvias' },
         { id: 'entrar', pregunta: 'ayuda.empezar.pEntrar', respuesta: 'ayuda.empezar.rEntrar' },
         { id: 'en-marcha', pregunta: 'ayuda.empezar.pMarcha', respuesta: 'ayuda.empezar.rMarcha' },

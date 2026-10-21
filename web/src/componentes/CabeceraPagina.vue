@@ -7,7 +7,7 @@
       <div class="col-12 col-sm">
         <div class="row items-center no-wrap q-gutter-x-xs">
           <h1 class="titulo-pagina q-ma-none">{{ titulo }}</h1>
-          <q-btn v-if="tema" flat round dense size="sm" color="primary" icon="o_help_outline" :aria-label="t('ayuda.abrirPanel')"
+          <q-btn v-if="tema" data-recorrido="app.ayuda" flat round dense size="sm" color="primary" icon="o_help_outline" :aria-label="t('ayuda.abrirPanel')"
             @click="abrirAyuda(temaDe(tema)?.id ?? '')" />
         </div>
         <div v-if="descripcion || $slots.descripcion" class="texto-suave q-mt-xs"><slot name="descripcion">{{ descripcion }}</slot></div>

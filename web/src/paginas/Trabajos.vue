@@ -8,7 +8,7 @@
     </CabeceraPagina>
 
     <q-card data-captura="historial">
-      <q-card-section class="row items-center q-col-gutter-sm">
+      <q-card-section class="row items-center q-col-gutter-sm" data-recorrido="historial.filtros">
         <div class="col-12 col-md">
           <q-btn-toggle v-model="filtro" no-caps flat dense toggle-color="primary" class="segmentado inline-flex"
             :options="[{ label: t('historial.todos'), value: 'todos' }, { label: t('inicio.enCurso'), value: 'curso' }, { label: t('inicio.completados'), value: 'ok' }, { label: t('inicio.conError'), value: 'error' }]" />
@@ -23,7 +23,7 @@
         </div>
       </q-card-section>
       <q-separator />
-      <q-table :rows="filas" :columns="columnas" row-key="id" flat :loading="cargando && !trabajos.length"
+      <q-table data-recorrido="historial.lista" :rows="filas" :columns="columnas" row-key="id" flat :loading="cargando && !trabajos.length"
         :pagination="{ rowsPerPage: 25 }" :rows-per-page-options="[25, 50, 100]" :no-data-label="t('historial.sinFiltro')"
         table-class="fila-clicable" @row-click="(_e: Event, fila: Trabajo) => abrir(fila)">
         <template #no-data>
@@ -58,7 +58,7 @@
 
     <!-- allow-focus-outside: «¿Qué hago?» abre el panel de la Ayuda encima y el foco tiene que poder ir a él. -->
     <q-dialog v-model="dialogo" position="right" full-height allow-focus-outside>
-      <q-card v-if="detalle" class="column no-wrap hoja-detalle" style="width: 600px; max-width: 100vw">
+      <q-card v-if="detalle" data-recorrido="historial.detalle" class="column no-wrap hoja-detalle" style="width: 600px; max-width: 100vw">
         <q-card-section class="row items-center no-wrap q-gutter-x-sm">
           <span :class="estadoInfo(detalle.estado).clase"><q-icon :name="estadoInfo(detalle.estado).icono" size="14px" />{{ estadoInfo(detalle.estado).etiqueta }}</span>
           <div class="texto-suave text-caption">{{ fecha(detalle.creado_en) }}</div>

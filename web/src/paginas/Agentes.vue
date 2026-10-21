@@ -2,7 +2,7 @@
   <div class="pagina apilado">
     <CabeceraPagina tema="agentes" :titulo="t('menu.agentes')" :descripcion="t('agentes.subtitulo')">
       <template #acciones>
-        <q-btn flat no-caps color="primary" icon="o_refresh" :label="t('agentes.recomprobar')" :loading="cargando" @click="cargar" />
+        <q-btn data-recorrido="agentes.recomprobar" flat no-caps color="primary" icon="o_refresh" :label="t('agentes.recomprobar')" :loading="cargando" @click="cargar" />
       </template>
     </CabeceraPagina>
 
@@ -13,12 +13,12 @@
             <template #prepend><q-icon name="search" /></template>
           </q-input>
         </div>
-        <div class="col-12 col-sm-auto desplazable-x">
+        <div class="col-12 col-sm-auto desplazable-x" data-recorrido="agentes.conectar">
           <q-btn-toggle v-model="filtro" no-caps flat dense toggle-color="primary" class="segmentado inline-flex" :options="opcionesFiltro" />
         </div>
       </div>
 
-      <q-card v-if="filtro !== 'instalar'" data-captura="agente">
+      <q-card v-if="filtro !== 'instalar'" data-captura="agente" data-recorrido="agentes.tarjeta">
         <q-list separator>
           <q-expansion-item v-for="a in visibles" :key="a.agente" group="agentes" header-class="q-py-sm">
             <template #header>

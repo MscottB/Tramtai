@@ -10,7 +10,7 @@
               <div class="titulo-seccion">{{ t('ejecutar.receta') }}</div>
               <div class="texto-suave text-body2">{{ t('ejecutar.recetaTexto') }}</div>
             </div>
-            <q-btn flat dense no-caps color="primary" icon="o_code" :label="$q.screen.gt.xs ? t('codigo.boton') : undefined" :aria-label="t('codigo.boton')"
+            <q-btn data-recorrido="ejecutar.codigo" flat dense no-caps color="primary" icon="o_code" :label="$q.screen.gt.xs ? t('codigo.boton') : undefined" :aria-label="t('codigo.boton')"
               @click="verCodigo" />
           </q-card-section>
           <q-card-section v-if="editando" class="q-py-none">
@@ -20,14 +20,18 @@
               <template #action><q-btn flat dense no-caps color="primary" :label="t('ejecutar.dejarEditar')" @click="editando = ''" /></template>
             </q-banner>
           </q-card-section>
-          <q-card-section class="q-pt-sm">
+          <!-- el ancla del recorrido va en el selector de la receta, no en la tarjeta entera (mide más que la pantalla) -->
+          <q-card-section class="q-pt-sm" data-recorrido="ejecutar.receta">
             <EditorReceta v-model="receta" :catalogo="catalogo" plegar-opciones />
           </q-card-section>
           <q-separator />
           <q-card-section class="q-gutter-y-md">
             <div class="titulo-seccion">{{ t('ejecutar.mensajePrueba') }}</div>
-            <q-input v-model="mensaje" type="textarea" outlined :label="t('ejecutar.mensaje')" :placeholder="t('ejecutar.placeholder')"
-              :input-style="{ minHeight: '120px' }" autogrow @keydown.ctrl.enter="ejecutar" @keydown.meta.enter="ejecutar" />
+            <!-- el ancla va en un div: en el q-input caería en el <textarea> interno y no se resaltaría el campo entero -->
+            <div data-recorrido="ejecutar.mensaje">
+              <q-input v-model="mensaje" type="textarea" outlined :label="t('ejecutar.mensaje')" :placeholder="t('ejecutar.placeholder')"
+                :input-style="{ minHeight: '120px' }" autogrow @keydown.ctrl.enter="ejecutar" @keydown.meta.enter="ejecutar" />
+            </div>
 
             <q-file v-model="archivos" multiple append use-chips clearable outlined dense :label="t('ejecutar.adjuntar')" :accept="aceptar(limites)"
               :hint="limites ? t('ejecutar.adjuntarLimites', { n: limites.cargas_por_peticion, mb: limites.carga_mb, texto: limites.texto_convertido_mb }) : t('ejecutar.adjuntarHint')"

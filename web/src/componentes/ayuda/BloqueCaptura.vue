@@ -12,7 +12,7 @@ import { varianteCaptura } from '../../ayuda/vista'
 import type { Bloque } from '../../ayuda/tipos'
 
 const props = defineProps<{ bloque: Extract<Bloque, { tipo: 'captura' }> }>()
-const archivos = import.meta.glob('../../ayuda/capturas/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
+const archivos = import.meta.glob(['../../ayuda/capturas/*.webp', '!../../ayuda/capturas/recorrido-*.webp'], { eager: true, query: '?url', import: 'default' }) as Record<string, string>
 const $q = useQuasar()
 const url = computed(() => archivos['../../ayuda/capturas/' + varianteCaptura(props.bloque.id, $q.dark.isActive, idioma.value)])
 </script>

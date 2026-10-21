@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { t } from './i18n'
 import type { EstadoActualizacion, Sesion } from './api/tipos'
+import { leerBienvenida, type RespuestaBienvenida } from './bienvenida'
 
 // sesion es la sesión actual, compartida por todas las páginas.
 export const sesion = ref<Sesion | null>(null)
@@ -50,6 +51,25 @@ export function ocultarGuia(oculta: boolean) {
   try {
     if (oculta) localStorage.setItem(claveGuia, '1')
     else localStorage.removeItem(claveGuia)
+  } catch {
+    // no se recuerda, pero se aplica
+  }
+}
+
+// bienvenida: la bienvenida se ofrece una vez; empezarla o cerrarla a medias es 'hecha', «Ahora no» es 'descartada'.
+// Sin almacenamiento solo queda en memoria: se ofrece como mucho una vez por carga.
+const claveBienvenida = 'tramtai.bienvenida'
+export const bienvenida = ref<RespuestaBienvenida | null>(((): RespuestaBienvenida | null => {
+  try {
+    return leerBienvenida(localStorage.getItem(claveBienvenida))
+  } catch {
+    return null
+  }
+})())
+export function marcarBienvenida(valor: RespuestaBienvenida) {
+  bienvenida.value = valor
+  try {
+    localStorage.setItem(claveBienvenida, valor)
   } catch {
     // no se recuerda, pero se aplica
   }

@@ -19,6 +19,14 @@ export const espacios: Tema = {
       ],
     },
     { tipo: 'pasos', pasos: ['ayuda.espacios.paso1', 'ayuda.espacios.paso2', 'ayuda.espacios.paso3'] },
+    {
+      tipo: 'recorrido',
+      pasos: [
+        { ancla: 'espacios.lista', titulo: 'ayuda.espacios.rec1Titulo', texto: 'ayuda.espacios.rec1Texto', bienvenida: true },
+        { ancla: 'espacios.abrir', titulo: 'ayuda.espacios.rec2Titulo', texto: 'ayuda.espacios.rec2Texto', bienvenida: true },
+        { ancla: 'espacios.actualizar', titulo: 'ayuda.espacios.rec3Titulo', texto: 'ayuda.espacios.rec3Texto' },
+      ],
+    },
     { tipo: 'captura', id: 'espacios', alt: 'ayuda.espacios.captura' },
     {
       tipo: 'preguntas',

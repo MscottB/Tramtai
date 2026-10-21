@@ -63,13 +63,50 @@ desde los mismos datos.
   `web/scripts/sitio.ts` y, si tiene texto, en `buscar.ts` (`campos`).
 - **La regla del estilo es una prueba** (`estilo.test.ts`): resumen de una línea (140 caracteres), pasos, notas y
   respuestas de 200 como máximo, diagrama donde hay un recorrido, un tema por página de la app, anclas únicas y ningún
-  texto sin usar. `capturas.test.ts` exige las cuatro variantes de cada captura, ninguna huérfana y 3 MB en total.
+  texto sin usar. `capturas.test.ts` exige las cuatro variantes de cada captura, ninguna huérfana y 5 MB en total (las de los pasos de los recorridos, `recorrido-<ancla>`, incluidas).
 - **Sitio:** `cd web; npm run sitio` escribe `site/ayuda/` y la página de paso `site/ayuda.html`; el CI lo regenera y
   falla si lo guardado no coincide.
 - **Capturas:** `cd web; npm run build; npm run capturas` (o `-- --solo <id>`) compila Tramtai en `bin/`, la arranca
   portable en otro puerto con datos de ejemplo y saca cada zona `[data-captura="<id>"]` en claro y oscuro y en español e
-  inglés, más las de la portada. Necesita Edge o Chrome y un agente conectado (`TRAMTAI_CAPTURAS_MODELO`, por defecto
-  `claude/haiku`); se corre en el equipo de desarrollo cuando cambia una pantalla que sale en la Ayuda.
+  inglés, el elemento de cada paso de los recorridos con su anillo (`-- --recorridos` saca solo esas; una ancla que la demo no muestra va en `SIN_CAPTURA`, con su motivo) y las de la portada. Necesita Edge o Chrome y un agente conectado (`TRAMTAI_CAPTURAS_MODELO`, por defecto
+  `claude/haiku`); se corre en el equipo de desarrollo cuando cambia una pantalla que sale en la Ayuda. Las de la Ayuda
+  más anchas que su columna del sitio salen reducidas a `ANCHO_AYUDA` (736 px), y las de la portada a 640, 960 y 1440 px.
+  Si una captura muestra una ruta del equipo (la carpeta personal, la temporal o la del repositorio), el script se para
+  (`rutaPrivada` en `capturas-lista.ts`).
+- **Demo de la portada:** sale en la corrida completa y sola con `npm run capturas -- --bienvenida`; lanza la bienvenida de verdad (acepta la oferta de la primera
+  vez y pulsa «Siguiente») y saca una pantalla completa de 1440×900 por paso, con la ventana del recorrido encima, en
+  claro y oscuro y en español e inglés: `site/capturas/bienvenida-<n>-<claro|oscuro>-<es|en>-<960|1440>.webp` (`BIENVENIDA` en `capturas-lista.ts`, uno
+  por paso de `pasosBienvenida()`). Solo usa los datos de demostración y no pide nada a ningún agente; si cambia la
+  bienvenida o una pantalla que sale en ella, se rehace. `portada.test.ts` exige una figura por paso en `site/index.html`,
+  150 KB como máximo por imagen de 1440 y 6 MB en total; el carrusel es `.demo` en `sitio.js`.
+
+### Recorridos: cómo añadir un paso o un ancla
+
+Los recorridos guiados (driver.js) salen de la misma fuente que la Ayuda: el bloque `recorrido` de cada tema de
+página (`web/src/ayuda/temas/<id>.ts`). No hay otra lista de pasos que tocar.
+
+- **Un paso:** una línea en el bloque `recorrido` del tema de esa página, `{ ancla, titulo, texto, bienvenida? }`, con
+  `titulo` y `texto` como claves de `ayuda.es.ts` y `ayuda.en.ts` (`estilo.test.ts` limita el título a 60 caracteres y
+  el texto a 200). Cada página tiene de 3 a 5 pasos. Con `bienvenida: true` el paso entra también en la bienvenida, que
+  los toma en el orden del menú (Inicio, Agentes, Probar, Mis APIs, Espacios) más un cierre; hoy son 14 pasos y
+  `anclas.test.ts` fija su orden.
+- **Un ancla:** el atributo `data-recorrido="<pagina>.<nombre>"` en el elemento del `.vue` que señala el paso (minúsculas
+  y guiones; `app.<nombre>` para lo que está en todas las páginas, como el selector de espacio o el «?», que viven en
+  `App.vue` o `componentes/CabeceraPagina.vue`).
+- **`anclas.test.ts` lo comprueba:** que cada paso apunte a un `data-recorrido` que existe en el `.vue` de su página y
+  que no sobre ninguno (toda ancla de la interfaz tiene su paso). Si quitas o renombras un elemento, la prueba falla
+  hasta que el paso y el ancla vuelvan a coincidir.
+- **Ajustes:** tiene dos pestañas y la que no se ve esconde sus elementos. Si el ancla está en una de ellas, añádela a
+  `web/src/pestanasAjustes.ts`, que dice qué pestaña abrir antes de señalarla (tiene su prueba).
+- **El recorrido solo enseña:** no pulsa nada ni cambia datos. Si un elemento no está en pantalla, el paso sale
+  centrado; Esc lo cierra y las flechas pasan de paso. El elemento señalado no se puede pulsar mientras tanto, y Atrás
+  (o perder la sesión) cierra el recorrido. Lo único que hace solo es cambiar de página y, en Ajustes, abrir la pestaña
+  de un paso.
+- **La primera vez** se recuerda en `localStorage` (`tramtai.bienvenida`: `hecha` o `descartada`); no se ofrece si se
+  entró por un enlace profundo. Para que vuelva a ofrecerse, borra esa clave y recarga la app en Inicio; para hacerla
+  sin más, «Haz el recorrido de Tramtai» en Primeros pasos.
+- **Capturas del sitio:** un paso nuevo necesita su captura y, si entra en la bienvenida, también la demo de la portada;
+  cómo sacarlas está arriba, en **Capturas** y **Demo de la portada**.
 
 ## Probar
 

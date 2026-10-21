@@ -2,14 +2,14 @@
   <div class="pagina apilado">
     <CabeceraPagina tema="configuracion" :titulo="t('menu.configuracion')" :descripcion="t('config.subtitulo')" />
 
-    <q-tabs v-model="pestana" dense no-caps align="left" active-color="primary" indicator-color="primary" class="texto-suave">
+    <q-tabs v-model="pestana" data-recorrido="configuracion.pestanas" dense no-caps align="left" active-color="primary" indicator-color="primary" class="texto-suave">
       <q-tab name="espacio" icon="o_folder_special" :label="t('config.pestanaEspacio', { nombre: sesion?.nombre ?? '' })" />
       <q-tab name="tramtai" icon="o_settings" :label="t('config.pestanaTramtai')" />
     </q-tabs>
     <div v-show="pestana === 'espacio'" class="text-caption texto-suave">{{ sesion?.ambito === 'proyecto' ? t('config.avisoProyecto') : t('config.avisoGlobal') }}</div>
     <div v-show="pestana === 'tramtai'" class="text-caption texto-suave">{{ t('config.avisoTramtai') }}</div>
 
-    <q-card v-show="pestana === 'espacio'">
+    <q-card v-show="pestana === 'espacio'" data-recorrido="configuracion.modelo">
       <q-card-section class="row items-center q-col-gutter-md">
         <div class="col-12 col-md">
           <div class="row items-start no-wrap">
@@ -136,7 +136,7 @@
         </q-card>
       </div>
       <div v-show="pestana === 'espacio'" class="col-12">
-        <q-card>
+        <q-card data-recorrido="configuracion.datos">
           <q-card-section class="row items-start no-wrap q-pb-sm">
             <div class="col">
               <div class="titulo-seccion">{{ t('datos.titulo') }}</div>
@@ -207,7 +207,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { pestanaDeAncla } from '../pestanasAjustes'
+import { EVENTO_PASO } from '../recorridoDom'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import ProcedenciaValor from '../componentes/ProcedenciaValor.vue'
 import { guardar, leer } from '../componentes/accesos/comun'
@@ -229,6 +231,13 @@ const entradas = ref<EntradaConfiguracion[]>([])
 // pestana separa lo de este espacio de lo de todo Tramtai; se recuerda entre visitas.
 const pestana = ref<'espacio' | 'tramtai'>(leer('tramtai.pestanaAjustes', 'espacio'))
 watch(pestana, (p) => guardar('tramtai.pestanaAjustes', p))
+// El recorrido guiado avisa de cada ancla antes de buscarla: si está en la pestaña oculta, se abre esa.
+function alPasoDelRecorrido(e: Event) {
+  const destino = pestanaDeAncla((e as CustomEvent<{ ancla?: string }>).detail?.ancla)
+  if (destino) pestana.value = destino
+}
+onMounted(() => window.addEventListener(EVENTO_PASO, alPasoDelRecorrido))
+onUnmounted(() => window.removeEventListener(EVENTO_PASO, alPasoDelRecorrido))
 
 // Herencia: en un proyecto cada ajuste dice si es propio o de Global, y los propios pueden volver al de Global.
 const clavesPredeterminado = ['predeterminados.agente', 'predeterminados.modelo', 'predeterminados.perfil_modelo', 'predeterminados.esfuerzo']

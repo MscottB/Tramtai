@@ -8,22 +8,11 @@ import en from '../src/idiomas/en.ts'
 import { temas } from '../src/ayuda/indice.ts'
 import { ejemplos } from '../src/ejemplos.ts'
 import { PAGINAS_FIJAS, generar, rellenar } from './sitio.ts'
+import { medidas } from './capturas-lista.ts'
 
 const sitio = new URL('../../site/', import.meta.url)
 const origen = new URL('../src/ayuda/capturas/', import.meta.url)
 const capturas = existsSync(origen) ? readdirSync(origen).filter((a) => a.endsWith('.webp')) : []
-
-// medidas lee el ancho y el alto de la cabecera de un WebP (VP8X, VP8 con pérdida o VP8L sin pérdida).
-function medidas(b) {
-  const tipo = b.toString('ascii', 12, 16)
-  if (tipo === 'VP8X') return { ancho: 1 + b.readUIntLE(24, 3), alto: 1 + b.readUIntLE(27, 3) }
-  if (tipo === 'VP8 ') return { ancho: b.readUInt16LE(26) & 0x3fff, alto: b.readUInt16LE(28) & 0x3fff }
-  if (tipo === 'VP8L') {
-    const v = b.readUInt32LE(21)
-    return { ancho: 1 + (v & 0x3fff), alto: 1 + ((v >> 14) & 0x3fff) }
-  }
-  throw new Error('WebP desconocido: ' + tipo)
-}
 
 function ejemplosDe(b, lengua) {
   idioma.value = lengua

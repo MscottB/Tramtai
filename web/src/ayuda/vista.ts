@@ -8,6 +8,11 @@ export function varianteCaptura(id: string, oscuro: boolean, idioma: 'es' | 'en'
   return `${id}.${oscuro ? 'oscuro' : 'claro'}.${idioma}.webp`
 }
 
+// capturaDeAncla es el nombre (sin tema, idioma ni .webp) de la captura de un paso del recorrido: su ancla con guiones.
+export function capturaDeAncla(ancla: string): string {
+  return 'recorrido-' + ancla.replaceAll('.', '-')
+}
+
 export function altDiagrama(paradas: string[]): string {
   return paradas.map((p, i) => `${i + 1}. ${p}`).join(' → ')
 }

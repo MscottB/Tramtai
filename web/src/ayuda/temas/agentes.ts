@@ -19,6 +19,14 @@ export const agentes: Tema = {
       ],
     },
     { tipo: 'pasos', pasos: ['ayuda.agentes.paso1', 'ayuda.agentes.paso2', 'ayuda.agentes.paso3', 'ayuda.agentes.paso4'] },
+    {
+      tipo: 'recorrido',
+      pasos: [
+        { ancla: 'agentes.tarjeta', titulo: 'ayuda.agentes.rec1Titulo', texto: 'ayuda.agentes.rec1Texto', bienvenida: true },
+        { ancla: 'agentes.conectar', titulo: 'ayuda.agentes.rec2Titulo', texto: 'ayuda.agentes.rec2Texto', bienvenida: true },
+        { ancla: 'agentes.recomprobar', titulo: 'ayuda.agentes.rec3Titulo', texto: 'ayuda.agentes.rec3Texto' },
+      ],
+    },
     { tipo: 'captura', id: 'agente', alt: 'ayuda.agentes.captura' },
     {
       tipo: 'preguntas',

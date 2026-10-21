@@ -28,6 +28,8 @@ function cortas(b: Bloque): string[] {
       return b.preguntas.flatMap((p) => [p.pregunta, p.respuesta])
     case 'nota':
       return [b.texto]
+    case 'recorrido':
+      return b.pasos.flatMap((p) => [p.titulo, p.texto])
     default:
       return []
   }
@@ -49,6 +51,20 @@ test('pasos, notas, paradas y respuestas caben en 200 caracteres en los dos idio
           assert.ok(textos[clave], `${tema.id}: falta ${clave} en ${idioma}`)
           assert.ok(textos[clave].length <= 200, `${tema.id}: ${clave} en ${idioma} tiene ${textos[clave].length} caracteres`)
         }
+})
+
+test('los títulos de los pasos de un recorrido caben en 60 caracteres en los dos idiomas', () => {
+  const titulos = [
+    ...temas.flatMap((t) => t.bloques.flatMap((b) => (b.tipo === 'recorrido' ? b.pasos.map((p) => p.titulo) : []))),
+    'recorrido.finTitulo' as const,
+  ]
+  for (const clave of titulos)
+    for (const [idioma, textos] of Object.entries(idiomas))
+      assert.ok(textos[clave] && textos[clave].length <= 60, `${clave} en ${idioma} tiene ${textos[clave]?.length} caracteres`)
+})
+
+test('el texto del paso de cierre de la bienvenida cabe en 200 caracteres en los dos idiomas', () => {
+  for (const [idioma, textos] of Object.entries(idiomas)) assert.ok(textos['recorrido.finTexto'].length <= 200, `recorrido.finTexto en ${idioma}`)
 })
 
 test('un tema que explica un recorrido tiene su diagrama', () => {

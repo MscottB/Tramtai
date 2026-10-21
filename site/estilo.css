@@ -155,9 +155,10 @@ section { padding: 72px 0; }
 .motivos h3 { margin-bottom: 6px; color: var(--acento); }
 .motivos p { color: var(--texto-suave); font-size: .95rem; }
 
-/* Pares: texto y captura, alternando el lado */
+/* Pares: texto y captura, alternando el lado; la captura va siempre en la columna ancha (630 px, sizes del HTML) */
 .par { display: grid; grid-template-columns: 1fr 1.6fr; gap: 48px; align-items: center; margin-top: 56px; }
 .par:first-of-type { margin-top: 0; }
+.par.invertido { grid-template-columns: 1.6fr 1fr; }
 .par.invertido > div { order: 2; }
 .par h3 { font-size: 1.45rem; margin-bottom: 12px; }
 .codigo { margin: 40px 0 0; border: 1px solid var(--borde-tablero); background: var(--tablero); color: var(--tablero-texto); border-radius: var(--radio); padding: 22px 24px; overflow-x: auto; font: .9rem/1.7 var(--mono); }
@@ -216,7 +217,7 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
   .barra nav a:hover { background: var(--acento-suave); }
 }
 @media (max-width: 900px) {
-  .tablero, .como, .par, .conexiones .envoltura { grid-template-columns: 1fr; }
+  .tablero, .como, .par, .par.invertido, .conexiones .envoltura { grid-template-columns: 1fr; }
   .par.invertido > div { order: 0; }
   .par { gap: 20px; }
 }
@@ -325,6 +326,13 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
 .pasos { counter-reset: paso; list-style: none; padding: 0 !important; display: grid; gap: 10px; }
 .pasos li { counter-increment: paso; display: flex; gap: 10px; align-items: flex-start; margin: 0; }
 .pasos li::before { content: counter(paso); flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--acento); color: var(--acento-texto); font: 700 .8rem var(--titulo); }
+/* «Qué verás en pantalla»: cada paso con su captura debajo del texto (el ancho máximo de cada imagen va en su style, para
+   no estirar las pequeñas) y con el borde y la sombra de las demás capturas, que cambian con el tema por las variables
+   de :root. */
+.recorrido-pasos { gap: 24px; }
+.recorrido-pasos li > div { flex: 1; min-width: 0; }
+.recorrido-pasos strong { display: block; }
+.captura-paso { margin-top: 10px; }
 .errores { margin: 0; }
 .errores > div { padding: 12px 0; border-top: 1px solid var(--borde); scroll-margin-top: 80px; }
 .errores dt { font-weight: 600; }
@@ -351,3 +359,21 @@ html[lang="es"] .captura img[lang="en"], html[lang="en"] .captura img[lang="es"]
 .mapa-punto[aria-pressed="true"]::before { background: var(--acento); }
 .mapa-pausa { font: 600 .85rem var(--fuente); color: var(--texto); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 999px; padding: 4px 12px; min-height: 28px; cursor: pointer; }
 .mapa-punto:focus-visible, .mapa-pausa:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+
+/* Demo del recorrido guiado de la portada (sitio.js): una pantalla de la app por paso, con su leyenda, la pausa y un
+   punto por paso. Sin JavaScript se ve la primera y la lista de pasos. Cada imagen declara su tamaño: no hay saltos. */
+.demo { max-width: 1000px; margin: 0 auto; }
+.demo-paso img { background: var(--superficie-suave); }
+.demo-controles { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 16px; }
+.demo-controles[hidden] { display: none; }
+.demo-leyenda { margin: 0; min-height: 1.5em; font-size: .95rem; color: var(--texto-suave); text-align: center; }
+.demo-botones { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; }
+/* 14 puntos de 22 px a 24 px de distancia: caben en 343 px de ancho y cada uno se pulsa sin rozar a otro. */
+.demo-puntos { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; }
+.demo-punto { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
+.demo-punto::before { content: ''; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid var(--acento); }
+.demo-punto[aria-pressed="true"]::before { background: var(--acento); }
+.demo-pausa { font: 600 .85rem var(--fuente); color: var(--texto); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 999px; padding: 4px 12px; min-height: 28px; cursor: pointer; }
+.demo-punto:focus-visible, .demo-pausa:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+.demo-lista { margin: 24px 0 0; padding-left: 1.6em; columns: 2 16em; column-gap: 32px; color: var(--texto-suave); }
+.demo-lista li { break-inside: avoid; padding: 2px 0; }

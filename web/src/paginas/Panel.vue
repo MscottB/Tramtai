@@ -27,7 +27,7 @@
     </q-banner>
     <AvisoConversor v-if="conversor && conversor.estado !== 'preparando'" enlace-ajustes @ajustes="$emit('ir', 'configuracion')" />
 
-    <section class="q-card" data-captura="inicio">
+    <section class="q-card" data-captura="inicio" data-recorrido="inicio.mapa">
       <div class="seccion row items-end">
         <div class="col">
           <h2 class="titulo-seccion q-ma-none">{{ t('inicio.red') }}</h2>
@@ -44,15 +44,16 @@
       </div>
     </section>
 
-    <section v-if="!guiaOculta && !pasos.every((p) => p.hecho)" class="q-card">
+    <!-- La tarjeta siempre sale: con la guía oculta o completa solo queda la línea para repetir el recorrido. -->
+    <section class="q-card" data-recorrido="inicio.primeros-pasos">
       <div class="seccion row items-center no-wrap">
         <div class="col">
           <h2 class="titulo-seccion q-ma-none">{{ t('inicio.primerosPasos') }}</h2>
-          <div class="text-caption texto-suave q-mt-xs">{{ t('inicio.guiaProgreso', { hechos: pasos.filter((p) => p.hecho).length, total: pasos.length }) }}</div>
+          <div v-if="guiaVisible" class="text-caption texto-suave q-mt-xs">{{ t('inicio.guiaProgreso', { hechos: pasos.filter((p) => p.hecho).length, total: pasos.length }) }}</div>
         </div>
-        <q-btn flat dense no-caps icon="o_visibility_off" :label="t('inicio.ocultarGuia')" class="texto-suave" @click="ocultar" />
+        <q-btn v-if="guiaVisible" flat dense no-caps icon="o_visibility_off" :label="t('inicio.ocultarGuia')" class="texto-suave" @click="ocultar" />
       </div>
-      <ol class="ruta ruta--pasos q-ma-none q-px-md q-pt-sm q-pb-lg">
+      <ol v-if="guiaVisible" class="ruta ruta--pasos q-ma-none q-px-md q-pt-sm q-pb-lg">
         <li v-for="p in pasos" :key="p.pagina + p.titulo" class="ruta__parada" :class="{ 'ruta__parada--pasada': p.hecho }">
           <button type="button" class="paso-estacion" @click="$emit('ir', p.pagina)">
             <span class="ruta__punto" aria-hidden="true" />
@@ -61,6 +62,9 @@
           </button>
         </li>
       </ol>
+      <div class="q-px-md q-pb-md" :class="{ 'q-pt-sm': !guiaVisible }">
+        <q-btn flat dense no-caps color="primary" icon="o_tour" :label="t('bienvenida.repetir')" @click="emit('recorrido')" />
+      </div>
     </section>
 
     <section>
@@ -129,7 +133,7 @@ import { estadoInfo, haceCuanto, terminales, textoDe } from '../formato'
 import { sugerirApiPropia } from '../claves'
 import { t } from '../i18n'
 
-const emit = defineEmits<{ ir: [pagina: string] }>()
+const emit = defineEmits<{ ir: [pagina: string]; recorrido: [] }>()
 
 function ocultar() {
   ocultarGuia(true)
@@ -198,6 +202,7 @@ const pasos = computed(() => {
   }
   return lista
 })
+const guiaVisible = computed(() => !guiaOculta.value && !pasos.value.every((p) => p.hecho))
 
 // consultando evita encadenar consultas si el servicio tarda más que el intervalo.
 let consultando = false

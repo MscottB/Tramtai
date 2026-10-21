@@ -94,6 +94,15 @@ test('la barra y el pie llevan a lo mismo en todas las páginas', () => {
   }
 })
 
+// Lighthouse (SEO, «link-text») marca como genérico un enlace que solo dice «Empezar»: el pie dice a dónde lleva.
+test('el enlace del pie a empezar.html dice «Primeros pasos» / «Getting started» (como la tarjeta de la app), no un «Empezar» suelto', () => {
+  for (const [ruta, html] of todas) {
+    const pie = html.match(/<footer>[\s\S]*?<\/footer>/)?.[0] ?? ''
+    const enlace = pie.match(/<a href="[^"]*ayuda\/empezar\.html">([\s\S]*?)<\/a>/)?.[1] ?? ''
+    assert.equal(enlace, `<span lang="es">${es['inicio.primerosPasos']}</span><span lang="en">${en['inicio.primerosPasos']}</span>`, ruta)
+  }
+})
+
 test('cada página tiene «Saltar al contenido», canonical y Open Graph absolutos', () => {
   for (const [ruta, html] of todas) {
     if (ruta === '404.html') continue
@@ -148,6 +157,35 @@ test('las tablas no pierden su semántica y las capturas de la Ayuda declaran su
     for (const img of html.match(/<img [^>]*>/g) ?? []) assert.match(img, /width="\d+" height="\d+"/, `${ruta}: ${img.slice(0, 80)}`)
   }
   assert.ok([...paginas.values()].some((h) => h.includes('src="capturas/inicio.claro.es.webp" width="1280" height="720"')))
+})
+
+const medida = { ancho: 640, alto: 300 }
+const conRecorrido: Fuente = { ...fuente, capturas: new Map([['recorrido-inicio-mapa.claro.es.webp', medida], ['recorrido-inicio-mapa.oscuro.en.webp', medida]]) }
+
+test('cada tema de página enseña «Qué verás en pantalla»: un paso por cada paso del recorrido y «En esta página» lo cita', () => {
+  const html = generar(conRecorrido).get('ayuda/empezar.html')!
+  const seccion = html.match(/<section id="s-recorrido">([\s\S]*?)<\/section>/)?.[1] ?? ''
+  assert.match(seccion, /<h2><span lang="es">Qué verás en pantalla<\/span><span lang="en">What you will see on screen<\/span><\/h2>/)
+  const pasos = temas.find((t) => t.id === 'empezar')!.bloques.flatMap((b) => (b.tipo === 'recorrido' ? b.pasos : []))
+  const lista = seccion.match(/<ol class="pasos recorrido-pasos">([\s\S]*?)<\/ol>/)?.[1] ?? ''
+  assert.equal((lista.match(/<li>/g) ?? []).length, pasos.length)
+  for (const p of pasos) assert.ok(lista.includes(`<strong><span lang="es">${escapar(es[p.titulo])}</span>`), p.titulo)
+  assert.match(html, /<nav class="indice"[\s\S]*?href="#s-recorrido"[\s\S]*?<\/nav>/)
+  for (const t of temas.filter((x) => x.paginaApp)) assert.match(paginas.get(`ayuda/${t.id}.html`)!, /<section id="s-recorrido">/, t.id)
+})
+
+test('la captura de un paso lleva su tamaño, carga diferida y un texto alternativo que no repite el título a secas; sin captura, sin <img>', () => {
+  const html = generar(conRecorrido).get('ayuda/empezar.html')!
+  const imgs = html.match(/<img [^>]*recorrido-[^>]*>/g) ?? []
+  assert.deepEqual(imgs, [
+    '<img class="solo-claro" lang="es" src="capturas/recorrido-inicio-mapa.claro.es.webp" width="640" height="300" loading="lazy" alt="Captura de pantalla: El mapa en vivo" style="max-width: 640px">',
+    '<img class="solo-oscuro" lang="en" src="capturas/recorrido-inicio-mapa.oscuro.en.webp" width="640" height="300" loading="lazy" alt="Screenshot: The live map" style="max-width: 640px">',
+  ])
+  assert.ok(!paginas.get('ayuda/empezar.html')!.includes('recorrido-inicio-mapa'), 'sin capturas, el paso sale sin <img>')
+})
+
+test('en el sitio no hay botón «Muéstrame en pantalla»: no hay app', () => {
+  for (const [ruta, html] of paginas) assert.doesNotMatch(html, /Muéstrame en pantalla|Show me on screen/, ruta)
 })
 
 test('los temas largos tienen «En esta página» con un h2 por sección y el buscador a mano', () => {

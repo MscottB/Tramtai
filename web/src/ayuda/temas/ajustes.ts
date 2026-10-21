@@ -11,6 +11,14 @@ export const ajustes: Tema = {
   relacionados: ['empezar', 'historial', 'archivos'],
   bloques: [
     { tipo: 'pasos', pasos: ['ayuda.ajustes.paso1', 'ayuda.ajustes.paso2', 'ayuda.ajustes.paso3'] },
+    {
+      tipo: 'recorrido',
+      pasos: [
+        { ancla: 'configuracion.pestanas', titulo: 'ayuda.ajustes.rec1Titulo', texto: 'ayuda.ajustes.rec1Texto' },
+        { ancla: 'configuracion.modelo', titulo: 'ayuda.ajustes.rec2Titulo', texto: 'ayuda.ajustes.rec2Texto' },
+        { ancla: 'configuracion.datos', titulo: 'ayuda.ajustes.rec3Titulo', texto: 'ayuda.ajustes.rec3Texto' },
+      ],
+    },
     { tipo: 'captura', id: 'actualizaciones', alt: 'ayuda.ajustes.captura' },
     {
       tipo: 'preguntas',
