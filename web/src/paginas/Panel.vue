@@ -222,6 +222,11 @@ onMounted(() => {
   api.capacidades().then((c) => (adaptadores.value = c.adaptadores)).catch(() => (adaptadores.value = []))
   api.puntos().then((p) => (puntos.value = p)).catch(() => {})
   intervalo = window.setInterval(() => !document.hidden && cargar(), 5000)
+  comprobacion = window.setInterval(() => !document.hidden && api.capacidades().then((c) => (adaptadores.value = c.adaptadores)).catch(() => {}), 5 * 60_000)
 })
-onUnmounted(() => clearInterval(intervalo))
+let comprobacion = 0
+onUnmounted(() => {
+  clearInterval(intervalo)
+  clearInterval(comprobacion)
+})
 </script>

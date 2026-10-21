@@ -37,11 +37,19 @@
               </q-item-section>
             </template>
             <div class="q-px-md q-pb-md">
+        <!-- Desconectado: no se usa ni como respaldo hasta que se conecte -->
+        <template v-if="a.desconectado">
+          <div class="text-body2">{{ t('agentes.desconectadoTexto') }}</div>
+          <q-btn unelevated dense no-caps color="primary" icon="o_link" class="q-mt-md q-px-md" :label="t('agentes.conectar')"
+            :loading="cambiando === a.agente + ':conexion'" @click="conectar(a, true)" />
+        </template>
+
         <!-- Listo: cómo está conectado y, si su ficha admite las dos, la otra forma -->
-        <template v-if="listo(a)">
+        <template v-else-if="listo(a)">
           <div v-if="a.problema" class="aviso text-body2 q-mb-sm">{{ a.problema }}</div>
           <div class="metadatos">
             <span><q-icon :name="suscripcion(a) ? 'o_person' : 'o_key'" />{{ suscripcion(a) ? t('agentes.listoSuscripcion') : t('agentes.listoClave') }}</span>
+            <span v-if="suscripcion(a) && a.cuenta"><q-icon name="o_account_circle" />{{ t('agentes.cuenta', { cuenta: a.cuenta }) }}</span>
             <span v-if="esfuerzos[a.agente]?.length"><q-icon name="o_psychology" />{{ t('agentes.esfuerzo') }}: {{ esfuerzos[a.agente].map(nombreEsfuerzo).join(' · ') }}</span>
             <span v-if="contextos[a.agente]?.length"><q-icon name="o_memory" />{{ t('agentes.contexto') }}: {{ textoContextos(a.agente) }}</span>
           </div>
@@ -91,7 +99,15 @@
         <div v-else-if="tipo(a) === 'agente.noInstalado'" class="aviso text-body2">
           {{ t('agentes.instalarAntes') }} <span class="codigo">comandos_agentes.{{ a.agente }}</span>.
         </div>
-        <div v-else class="aviso text-body2">{{ a.problema }}</div>
+        <!-- El CLI pasó a una clave de API, la sesión no responde u otro problema: qué pasa y, con suscripción, la salida -->
+        <template v-else>
+          <div class="aviso text-body2">{{ estadoAgente(a) === 'usaClave' ? t('agentes.usaClave', { cli: cli(a) })
+            : estadoAgente(a) === 'sesionNoResponde' ? t('agentes.sesionNoResponde', { cli: cli(a) }) : a.problema }}</div>
+          <q-btn v-if="ofrecerDejarSuscripcion(a, puedeCambiar(a))" flat dense no-caps color="primary" class="q-mt-sm q-px-sm" :loading="cambiando === a.agente"
+            :label="t('agentes.dejarSuscripcion')" @click="cambiar(a, 'clave_api')" />
+        </template>
+        <q-btn v-if="!a.desconectado && sesion?.local" flat dense no-caps color="grey-7" icon="o_link_off" class="q-mt-sm q-px-sm"
+          :label="t('agentes.desconectar')" :loading="cambiando === a.agente + ':conexion'" @click="conectar(a, false)" />
       <q-expansion-item dense dense-toggle :label="t('agentes.detalles')" header-class="text-caption texto-suave q-px-none" class="q-mt-sm">
         <div class="q-pb-sm">
           <div class="ficha text-caption">
@@ -146,13 +162,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import { useQuasar } from 'quasar'
 import { api, avisar, avisarError, copiar } from '../api/cliente'
 import type { Adaptador } from '../api/tipos'
 import { modeloInicial, sesion } from '../estado'
-import { agenteListo, asegurarFichas, codigoLinea, fichaDe, nombreAgente, fijarDisponibilidad, ordenarAgentes } from '../agentes'
+import { agenteListo, asegurarFichas, cargarFichas, codigoLinea, estadoAgente, fichaDe, fijarDisponibilidad, nombreAgente, ofrecerDejarSuscripcion, ordenarAgentes } from '../agentes'
 import { nombreEsfuerzo, numero } from '../formato'
 import { t } from '../i18n'
 
@@ -253,6 +269,27 @@ function confirmarSuscripcion(a: Adaptador) {
     })
 }
 
+// conectar conecta o desconecta el agente en todos los espacios (al desconectar, pide confirmación).
+async function conectar(a: Adaptador, conectado: boolean) {
+  if (!conectado) {
+    const seguir = await new Promise<boolean>((resolver) => $q.dialog({ title: t('agentes.desconectarTitulo', { agente: nombreAgente(a.agente) }),
+      message: t('agentes.desconectarTexto'), cancel: { flat: true, noCaps: true, label: t('comun.cancelar') },
+      ok: { unelevated: true, noCaps: true, label: t('agentes.desconectar') } }).onOk(() => resolver(true)).onCancel(() => resolver(false)).onDismiss(() => resolver(false)))
+    if (!seguir) return
+  }
+  cambiando.value = a.agente + ':conexion'
+  try {
+    await api.conectarAgente(a.agente, conectado)
+    avisar(t(conectado ? 'agentes.conectado' : 'agentes.desconectado', { agente: nombreAgente(a.agente) }))
+    await cargar()
+    await cargarFichas()
+  } catch (e) {
+    avisarError(e)
+  } finally {
+    cambiando.value = ''
+  }
+}
+
 async function cambiar(a: Adaptador, modo: 'suscripcion' | 'clave_api') {
   cambiando.value = a.agente
   try {
@@ -266,7 +303,12 @@ async function cambiar(a: Adaptador, modo: 'suscripcion' | 'clave_api') {
   }
 }
 
+// Mientras la página está a la vista se vuelve a comprobar cada 5 minutos: si el CLI cerró sesión o cambió de cuenta,
+// se ve sin tocar nada.
+let comprobacion = 0
+onUnmounted(() => clearInterval(comprobacion))
 onMounted(() => {
+  comprobacion = window.setInterval(() => !document.hidden && cargar(), 5 * 60_000)
   asegurarFichas()
   cargar()
   api.catalogo().then((lista) => {

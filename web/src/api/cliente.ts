@@ -84,6 +84,8 @@ export const api = {
   // dentro_de_proyecto y se repite con crear_aqui.
   abrirProyecto: (raiz: string, opciones: { confiar?: boolean; crear_aqui?: boolean } = {}) =>
     pedir<Sesion>('POST', '/ui/proyectos', { raiz, ...opciones }).then(recordar),
+  // conectarAgente conecta o desconecta un agente en todos los espacios.
+  conectarAgente: (agente: string, conectado: boolean) => pedir<void>('POST', '/ui/agentes/conexion', { agente, conectado }),
   espacios: () => pedir<{ espacios: EspacioUI[] }>('GET', '/ui/espacios').then((r) => r.espacios),
   activarEspacio: (id: string) => accionEspacio('activar', { id }),
   detenerEspacio: (id: string) => accionEspacio('detener', { id }),

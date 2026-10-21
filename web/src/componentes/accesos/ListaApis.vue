@@ -81,6 +81,7 @@
           <q-icon name="o_notes" class="q-mr-xs q-mt-xs" /><span class="recortar-2">{{ f.p.instrucciones }}</span>
         </div>
         <div v-if="f.p.error && f.p.error !== 'desactivado'" class="text-caption text-negative">{{ f.p.error }}</div>
+        <div v-if="soloDesconectados(f.p)" class="text-caption text-warning">{{ t('puntos.soloDesconectados') }}</div>
       </div>
       <div class="fila-api__uso text-caption">
         <a v-if="uso[f.p.nombre]" href="#historial" class="enlace" @click.prevent.stop="emit('verPeticiones', f.p.nombre)">{{ textoUso(f.p.nombre) }}</a>
@@ -109,7 +110,7 @@ import EstadoVacio from '../EstadoVacio.vue'
 import { copiar } from '../../api/cliente'
 import type { EstadoPresupuesto, EstadoPunto, UsoPunto } from '../../api/tipos'
 import { periodoHistorial } from '../../estado'
-import { codigoLinea, etiquetaModelo, nombreAgente, ordenarAgentes, type OpcionModelo } from '../../agentes'
+import { codigoLinea, etiquetaModelo, nombreAgente, ordenarAgentes, soloDesconectados, type OpcionModelo } from '../../agentes'
 import { dividirRespaldo, idModeloDe as idModelo } from '../../recetas'
 import { haceCuanto, nombreEsfuerzo } from '../../formato'
 import { t } from '../../i18n'

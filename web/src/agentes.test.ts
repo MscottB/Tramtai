@@ -1,9 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { idioma, t } from './i18n.ts'
-import { agruparOpciones, esfuerzoPredeterminadoDe, esfuerzosDe, fichas, opcionEscrita, opcionModelo, ordenarAgentes, type FichaAgente } from './agentes.ts'
+import { agenteListo, agruparOpciones, esfuerzoPredeterminadoDe, estadoAgente, ofrecerDejarSuscripcion, soloDesconectados, esfuerzosDe, fichas, opcionEscrita, opcionModelo, ordenarAgentes, type FichaAgente } from './agentes.ts'
 import { numero } from './formato.ts'
-import type { Modelo } from './api/tipos.ts'
+import type { Adaptador, Modelo } from './api/tipos.ts'
 
 idioma.value = 'es'
 const ficha = (agente: string, nombre: string): FichaAgente => ({ agente, nombre, programa: agente, codigo: nombre.slice(0, 2).toUpperCase(),
@@ -70,4 +70,41 @@ test('esfuerzos del modelo elegido: uno escrito a mano tiene los de su agente, p
   assert.equal(esfuerzoPredeterminadoDe(catalogo, 'claude'), 'alto')
   assert.equal(esfuerzoPredeterminadoDe(catalogo, 'claude/escrito'), '')
   assert.equal(esfuerzoPredeterminadoDe(catalogo, null), 'medio')
+})
+
+const adaptador = (o: Partial<Adaptador>): Adaptador => ({ agente: 'claude', capacidades: { streaming: 'tokens', salida_estructurada: true, modelo_efectivo_informado: true }, ...o })
+
+test('estadoAgente según el problema, la autenticación y si está desconectado', () => {
+  assert.equal(estadoAgente(adaptador({})), 'listo')
+  assert.equal(estadoAgente(adaptador({ problema: 'x', problema_codigo: 'aviso' })), 'listo')
+  assert.equal(estadoAgente(adaptador({ problema: 'x', problema_codigo: 'no_instalado' })), 'noInstalado')
+  assert.equal(estadoAgente(adaptador({ problema: 'x', problema_codigo: 'falta_clave' })), 'faltaClave')
+  assert.equal(estadoAgente(adaptador({ problema: 'x', problema_codigo: 'falta_clave', autenticacion: 'suscripcion' })), 'sinSesion')
+  assert.equal(estadoAgente(adaptador({ problema: 'x', problema_codigo: 'usa_clave_api', autenticacion: 'suscripcion' })), 'usaClave')
+  assert.equal(estadoAgente(adaptador({ problema: 'x', problema_codigo: 'sesion_no_responde' })), 'sesionNoResponde')
+  assert.equal(estadoAgente(adaptador({ problema: 'x' })), 'revisar')
+  assert.equal(estadoAgente(adaptador({ desconectado: true, problema: 'x', problema_codigo: 'no_instalado' })), 'desconectado')
+})
+
+test('«Dejar de usar la suscripción» en cualquier estado si la ficha admite las dos', () => {
+  for (const problema_codigo of [undefined, 'falta_clave', 'usa_clave_api', 'sesion_no_responde', '']) {
+    const a = adaptador({ autenticacion: 'suscripcion', problema: problema_codigo === undefined ? undefined : 'algo', problema_codigo })
+    assert.equal(ofrecerDejarSuscripcion(a, true), true, String(problema_codigo))
+  }
+  assert.equal(ofrecerDejarSuscripcion(adaptador({ autenticacion: 'clave_api' }), true), false)
+  assert.equal(ofrecerDejarSuscripcion(adaptador({ autenticacion: 'suscripcion' }), false), false)
+})
+
+test('un agente desconectado no está listo', () => {
+  assert.equal(agenteListo(adaptador({ desconectado: true })), false)
+  assert.equal(agenteListo(adaptador({})), true)
+})
+
+test('una API que solo puede usar agentes desconectados', () => {
+  fichas.value = [{ ...ficha('claude', 'Claude'), desconectado: true }, ficha('codex', 'Codex')]
+  assert.equal(soloDesconectados({ nombre: 'a', agente: 'claude' }), true)
+  assert.equal(soloDesconectados({ nombre: 'a', agente: 'claude', respaldo: ['codex/m1'] }), false)
+  assert.equal(soloDesconectados({ nombre: 'a', modelos_permitidos: ['claude/haiku', 'claude/sonnet'] }), true)
+  assert.equal(soloDesconectados({ nombre: 'a' }), false, 'sin agente propio usa el predeterminado del espacio')
+  fichas.value = [ficha('claude', 'Claude'), ficha('codex', 'Codex')]
 })

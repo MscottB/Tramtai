@@ -4,7 +4,7 @@ import { t } from './i18n'
 import type { Clave } from './idiomas/es'
 import { api, pedir } from './api/cliente'
 import { numero } from './formato'
-import type { Adaptador, Modelo, Trabajo } from './api/tipos'
+import type { Adaptador, ConfigPunto, Modelo, Trabajo } from './api/tipos'
 
 const perfiles = ['rapido', 'equilibrado', 'profundo']
 
@@ -25,14 +25,48 @@ export interface FichaAgente {
   variables_clave: string[]
   permitido_apps: boolean
   url_instalacion: string
+  // desconectado: el usuario lo desconectó en Agentes (no se usa ni como respaldo).
+  desconectado?: boolean
 }
 
 // fichas son las de los agentes del servicio, en su orden; se cargan al abrir la sesión.
 export const fichas = ref<FichaAgente[]>([])
 export const fichaDe = (agente?: string) => fichas.value.find((f) => f.agente === agente)
 
-// agenteListo: se puede usar ya (un aviso, como el AGENTS.md de Codex, no lo impide).
-export const agenteListo = (a: Adaptador) => !a.problema || a.problema_codigo === 'aviso'
+// agenteListo: se puede usar ya (un aviso, como el AGENTS.md de Codex, no lo impide); uno desconectado no.
+export const agenteListo = (a: Adaptador) => !a.desconectado && (!a.problema || a.problema_codigo === 'aviso')
+
+// EstadoAgente es lo que enseña la tarjeta de un agente en Agentes.
+export type EstadoAgente = 'listo' | 'desconectado' | 'noInstalado' | 'faltaClave' | 'sinSesion' | 'usaClave' | 'sesionNoResponde' | 'revisar'
+
+// estadoAgente clasifica un agente por su conexión y el código de su problema (el texto llega en el idioma del
+// servicio). Con suscripción, «falta la clave» es que su CLI no tiene sesión.
+export function estadoAgente(a: Adaptador): EstadoAgente {
+  if (a.desconectado) return 'desconectado'
+  if (!a.problema || a.problema_codigo === 'aviso') return 'listo'
+  switch (a.problema_codigo) {
+    case 'no_instalado':
+      return 'noInstalado'
+    case 'falta_clave':
+      return a.autenticacion === 'suscripcion' ? 'sinSesion' : 'faltaClave'
+    case 'usa_clave_api':
+      return 'usaClave'
+    case 'sesion_no_responde':
+      return 'sesionNoResponde'
+  }
+  return 'revisar'
+}
+
+// ofrecerDejarSuscripcion: «Dejar de usar la suscripción» se ofrece en cualquier estado si el agente está en
+// suscripción y su ficha admite las dos formas.
+export const ofrecerDejarSuscripcion = (a: Adaptador, admiteLasDos: boolean) => admiteLasDos && a.autenticacion === 'suscripcion'
+
+// soloDesconectados: la API solo puede usar agentes desconectados (su agente, sus modelos permitidos y su respaldo);
+// una API sin agente propio usa el predeterminado del espacio y no cuenta.
+export function soloDesconectados(p: ConfigPunto): boolean {
+  const agentes = new Set([p.agente, ...(p.modelos_permitidos ?? []), ...(p.respaldo ?? [])].filter((x): x is string => !!x).map((x) => x.split(/[/+]/)[0]))
+  return agentes.size > 0 && [...agentes].every((a) => fichaDe(a)?.desconectado)
+}
 
 // asegurarFichas las vuelve a pedir si faltan (si falló la petición al abrir la sesión).
 export function asegurarFichas() {
@@ -140,8 +174,9 @@ export function opcionEscrita(valor: string): OpcionModelo {
 export const problemasAgentes = ref<Record<string, string>>({})
 let disponibilidad: Promise<void> | undefined
 export function fijarDisponibilidad(adaptadores: Adaptador[]) {
-  problemasAgentes.value = Object.fromEntries(adaptadores.filter((a) => a.problema && a.problema_codigo !== 'aviso').map((a) => [a.agente,
-    a.problema_codigo === 'no_instalado' ? t('modelo.noInstalado') : a.problema_codigo === 'falta_clave' ? t('modelo.faltaClave') : t('modelo.conProblema', { problema: a.problema ?? '' })]))
+  problemasAgentes.value = Object.fromEntries(adaptadores.filter((a) => !agenteListo(a)).map((a) => [a.agente,
+    a.desconectado ? t('modelo.desconectado') : a.problema_codigo === 'no_instalado' ? t('modelo.noInstalado')
+      : a.problema_codigo === 'falta_clave' ? t('modelo.faltaClave') : t('modelo.conProblema', { problema: a.problema ?? '' })]))
 }
 export function cargarDisponibilidad() {
   disponibilidad ??= api.capacidades().then((r) => fijarDisponibilidad(r.adaptadores)).catch(() => {

@@ -241,6 +241,9 @@ export interface EntradaConfiguracion {
   origen: string
 }
 export interface Adaptador {
+  // cuenta: la de la suscripción, si el CLI la informa; desconectado: apagado en Agentes.
+  cuenta?: string
+  desconectado?: boolean
   agente: string
   version_detectada?: string
   autenticacion?: string
