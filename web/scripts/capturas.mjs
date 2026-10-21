@@ -148,6 +148,10 @@ try {
     await pedir('/ui/sesion', { instancia: 'global' }, p.csrf)
   })()`)
 
+  // La ruta real del proyecto de ejemplo (la carpeta temporal de quien saca las capturas) no se publica.
+  const ocultarRuta = () => evaluar(`(() => { const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+    while (w.nextNode()) w.currentNode.nodeValue = w.currentNode.nodeValue.replaceAll(${JSON.stringify(ejemplo)}, 'C:\\\\Proyectos\\\\mi-app') })()`)
+
   mkdirSync(destinoAyuda, { recursive: true })
   for (const c of CAPTURAS.filter((x) => !solo || x.id === solo))
     for (const tema of ['claro', 'oscuro'])
@@ -155,8 +159,7 @@ try {
         const selector = `[data-captura="${c.id}"]`
         await abrir(c.pagina, tema, idioma, selector, 1280, 900, c.guardado)
         await sinBarra()
-        // La ruta real del proyecto de ejemplo (la carpeta temporal de quien saca las capturas) no se publica.
-        await evaluar(`document.querySelectorAll('[data-captura] .codigo').forEach((e) => (e.textContent = e.textContent.replace(${JSON.stringify(ejemplo)}, 'C:\\\\Proyectos\\\\mi-app')))`)
+        await ocultarRuta()
         const r = await evaluar(`(() => { const e = document.querySelector('${selector}'); e.scrollIntoView({ block: 'start' });
           const b = e.getBoundingClientRect(); return { x: b.left + scrollX, y: b.top + scrollY, w: b.width, h: Math.min(b.height, 720) } })()`)
         const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80, captureBeyondViewport: true,
@@ -169,9 +172,14 @@ try {
     for (const p of PORTADA)
       for (const tema of ['claro', 'oscuro']) {
         await abrir(p.pagina, tema, 'es', '.pagina', 1440, 900)
-        const { data } = await enviar('Page.captureScreenshot', { format: 'png' })
-        writeFileSync(join(destinoPortada, `${p.nombre}-${tema}.png`), Buffer.from(data, 'base64'))
-        console.log(`site/capturas/${p.nombre}-${tema}.png`)
+        await ocultarRuta()
+        // La misma pantalla de 1440 px, también reducida a 960 para los móviles (srcset).
+        for (const ancho of [1440, 960]) {
+          const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80,
+            clip: { x: 0, y: 0, width: 1440, height: 900, scale: ancho / 1440 } })
+          writeFileSync(join(destinoPortada, `${p.nombre}-${tema}-${ancho}.webp`), Buffer.from(data, 'base64'))
+          console.log(`site/capturas/${p.nombre}-${tema}-${ancho}.webp`)
+        }
       }
   await enviar('Browser.close').catch(() => {})
   cerrar()
