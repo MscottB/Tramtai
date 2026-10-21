@@ -306,13 +306,22 @@
   var trams = [ancho.querySelector('.tranvia'), alto.querySelector('.tranvia-alto')];
   trams.forEach(function (t) { t.style.animation = 'none'; t.style.opacity = '0'; });
 
-  // largo mide un camino con un path temporal dentro del svg.
+  // largo mide un camino con un path suelto, fuera de la página: meterlo en el svg obligaba al navegador a recalcular
+  // estilos y maquetar todo (reflow forzado). Si algún navegador no mide un path suelto, se mide dentro del svg.
+  // Cada camino se mide una sola vez.
+  var medidas = {};
   function largo(svg, d) {
+    if (medidas[d] !== undefined) return medidas[d];
     var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     p.setAttribute('d', d);
-    svg.appendChild(p);
-    var l = p.getTotalLength();
-    svg.removeChild(p);
+    var l = 0;
+    try { l = p.getTotalLength(); } catch (e) {}
+    if (!l) {
+      svg.appendChild(p);
+      l = p.getTotalLength();
+      svg.removeChild(p);
+    }
+    medidas[d] = l;
     return l;
   }
   // camino devuelve, para cada mapa, el recorrido de un origen a un agente y dónde están la entrada, el centro y la
@@ -332,7 +341,7 @@
     ];
   }
 
-  var actual = 0, pausado = quieto, temporizador = null, animaciones = [];
+  var actual = 0, pausado = quieto, temporizador = null, animaciones = [], iniciado = false;
   var leyenda = caja.querySelector('.mapa-leyenda');
   var puntos = caja.querySelectorAll('.mapa-punto');
   var pausa = caja.querySelector('.mapa-pausa');
@@ -362,6 +371,7 @@
   }
   // recorrer anima el ejemplo n en los dos mapas (uno se ve según el ancho) y programa el siguiente.
   function recorrer(n) {
+    iniciado = true;
     parar();
     actual = n;
     var e = ejemplos[n];
@@ -408,7 +418,7 @@
   // En una pestaña oculta no se anima ni se acumulan animaciones; al volver sigue donde iba.
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) parar();
-    else recorrer(actual);
+    else if (iniciado) recorrer(actual);
   });
   // «Reducir movimiento» se respeta también si cambia con la página abierta.
   movimiento.addEventListener('change', function () {
@@ -416,11 +426,20 @@
     pausado = quieto;
     pausa.hidden = quieto;
     pausa.innerHTML = '<span lang="es">Pausa</span><span lang="en">Pause</span>';
-    recorrer(actual);
+    if (iniciado) recorrer(actual);
   });
   if (quieto) pausa.hidden = true;
   caja.hidden = false;
-  recorrer(0);
+  mostrar(0);
+  // Medir los caminos y animar el tranvía espera a que el mapa esté cerca de la pantalla: no cuesta nada al cargar.
+  if ('IntersectionObserver' in window) {
+    var vigia = new IntersectionObserver(function (entradas) {
+      if (!entradas[entradas.length - 1].isIntersecting) return;
+      vigia.disconnect();
+      if (!iniciado) recorrer(actual);
+    }, { rootMargin: '200px 0px' });
+    vigia.observe(caja);
+  } else recorrer(0);
 })();
 
 // Demo del recorrido guiado: una pantalla de la app por paso de la bienvenida, un paso cada 6 s, con el mismo patrón que

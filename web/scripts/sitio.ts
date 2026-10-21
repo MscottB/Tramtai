@@ -113,7 +113,7 @@ export function pie(rel: string): string {
   <div class="envoltura">
     <nav class="pie-enlaces" aria-label="Pie de página" data-aria-en="Footer">
       <a href="${rel || './'}#descargar">${bilingue('Descargar', 'Download')}</a>
-      <a href="${rel}ayuda/empezar.html">${bilingue('Empezar', 'Get started')}</a>
+      <a href="${rel}ayuda/empezar.html">${bilingue('Primeros pasos', 'First steps')}</a>
       <a href="${rel}ayuda/">${bilingue('Ayuda', 'Help')}</a>
       <a href="${rel}desarrolladores.html">${bilingue('Desarrolladores', 'Developers')}</a>
       <a href="${REPO}">GitHub</a>

@@ -123,3 +123,60 @@ anexo A de esta spec.
 
 **Fuera de la v0.55:** recorridos en la terminal; recorridos que hagan acciones por la persona (pulsar, rellenar);
 estadísticas de uso de los recorridos (Tramtai no tiene telemetría).
+
+## Anexo A. Auditoría del sitio
+
+Auditoría del 2026-10-21 con Lighthouse 13 (Edge 155 sin interfaz, `npx lighthouse`, sin añadirlo a las dependencias) sobre
+`site/` servido en local (`localhost:8765`), en móvil (por defecto) y en escritorio (`--preset=desktop`). Lo que sale se
+arregla en el release; se marca la prioridad y la casilla (`[x]` arreglado; si no, el motivo).
+
+**Rendimiento en local no es rendimiento en GitHub Pages:** el servidor local no comprime, no pone caché y no tiene la
+latencia de una red real, así que el tiempo de respuesta, la caché y la compresión no se miden aquí. Cuentan lo que
+depende del sitio: LCP, CLS, imágenes, recursos que bloquean el renderizado, tamaños y trabajo del script.
+
+**Puntuaciones iniciales** (rendimiento / accesibilidad / buenas prácticas / SEO)
+
+| Página | Móvil | Escritorio | LCP móvil |
+|---|---|---|---|
+| `index.html` | 93 / 100 / 100 / 92 | 99 / 100 / 100 / 92 | 2,1 s |
+| `desarrolladores.html` | 99 / 100 / 100 / 92 | 100 / 100 / 100 / 92 | 2,2 s |
+| `ayuda/espacios.html` | 100 / 100 / 100 / 92 | 100 / 100 / 100 / 92 | 1,8 s |
+| `404.html` | 99 / 100 / 100 / 54 | 100 / 100 / 100 / 54 | 1,9 s |
+
+**SEO**
+- [A] [x] «link-text» en las 4 páginas: el enlace del pie a `ayuda/empezar.html` decía solo «Empezar», un texto genérico
+  para Lighthouse. Ahora «Primeros pasos» / «First steps» (como la tarjeta de la app), en `web/scripts/sitio.ts`, con su
+  prueba en `sitio.test.ts`.
+- [B] 404 con SEO 54 («is-crawlable»): lleva `noindex` a propósito. No se arregla.
+
+**Rendimiento**
+- [A] [x] Portada en móvil (93): sitio.js medía cada camino del tranvía metiendo un `<path>` en el svg
+  (`sitio.js:313`), un reflow forzado de toda la página al cargar (TBT 250 ms, 649 ms de arranque de sitio.js). Ahora los
+  caminos se miden con un path suelto, fuera de la página (con la medida dentro del svg solo como respaldo), una sola
+  vez cada uno, y el tranvía no mide ni anima nada hasta que el mapa está a 200 px de la pantalla (`IntersectionObserver`).
+  El comportamiento no cambia: pausa, puntos, «reducir movimiento» y `visibilitychange` funcionan igual (un cambio de
+  pestaña no arranca un tranvía que aún no se ha visto). La demo ya esperaba a verse para avanzar y no mide nada. Prueba en
+  `portada.test.ts`.
+- [M] «image-delivery» en la portada de escritorio (ahorro estimado de 47 KiB): las capturas de «Así se ve» bajan como
+  960 px y se pintan a 630. **Sin arreglo en la v0.55:** el atributo `sizes` ya estaba y es correcto (`(max-width: 900px)
+  100vw, 660px`, y `1000px` en la demo, con prueba), así que el navegador ya elige la mejor de las dos; el ahorro pide
+  una tercera anchura (640 px) por captura, es decir, rehacer todas las capturas con `npm run capturas`. Queda como
+  pendiente para cuando se rehagan las capturas.
+- [B] Caché y latencia del documento: dependen del servidor (GitHub Pages), no del sitio.
+- [B] `estilo.css` bloquea el renderizado (29 KB) y CSS y JS sin minificar (6-7 KB): el sitio no tiene paso de
+  compilación y no se añaden dependencias. En la 404 el bloqueo viene de pedir `estilo.css` con la URL absoluta de GitHub
+  Pages desde local; publicada es del mismo origen.
+- [B] CSS sin usar (11-20 KB): una sola hoja común a todas las páginas, a propósito.
+
+**Decisión de la carga de las capturas:** el LCP de la portada es texto (el párrafo de entrada en móvil, el titular en
+escritorio) y Lighthouse no pide «descubrir» ninguna imagen; ninguna captura de la demo ni de «Así se ve» está en la
+primera pantalla. Todas siguen con `loading="lazy"`: ni `eager` ni `fetchpriority="high"` mejorarían el LCP.
+
+**Puntuaciones finales** (rendimiento / accesibilidad / buenas prácticas / SEO)
+
+| Página | Móvil | Escritorio | LCP móvil |
+|---|---|---|---|
+| `index.html` | | | |
+| `desarrolladores.html` | | | |
+| `ayuda/espacios.html` | | | |
+| `404.html` | | | |

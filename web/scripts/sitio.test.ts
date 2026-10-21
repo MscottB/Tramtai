@@ -94,6 +94,15 @@ test('la barra y el pie llevan a lo mismo en todas las páginas', () => {
   }
 })
 
+// Lighthouse (SEO, «link-text») marca como genérico un enlace que solo dice «Empezar»: el pie dice a dónde lleva.
+test('el enlace del pie a empezar.html dice «Primeros pasos» / «First steps», no un «Empezar» suelto', () => {
+  for (const [ruta, html] of todas) {
+    const pie = html.match(/<footer>[\s\S]*?<\/footer>/)?.[0] ?? ''
+    const enlace = pie.match(/<a href="[^"]*ayuda\/empezar\.html">([\s\S]*?)<\/a>/)?.[1] ?? ''
+    assert.equal(enlace, '<span lang="es">Primeros pasos</span><span lang="en">First steps</span>', ruta)
+  }
+})
+
 test('cada página tiene «Saltar al contenido», canonical y Open Graph absolutos', () => {
   for (const [ruta, html] of todas) {
     if (ruta === '404.html') continue

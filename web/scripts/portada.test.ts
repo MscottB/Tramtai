@@ -25,6 +25,20 @@ test('la portada tiene cuatro ejemplos del recorrido, en los dos idiomas', () =>
   assert.ok(ejemplos.some((e) => e.agentes.length === 2), 'falta el ejemplo de respaldo')
 })
 
+// Lighthouse (rendimiento móvil de la portada): medir el tranvía metiendo un path en el svg forzaba un reflow de toda la
+// página al cargar. Ahora se mide fuera de la página y todo el trabajo espera a que el mapa se acerque a la pantalla.
+const js = readFileSync(new URL('../../site/sitio.js', import.meta.url), 'utf8')
+const tranvia = js.slice(js.indexOf('// Recorrido de la portada'), js.indexOf('// Demo del recorrido guiado'))
+
+test('el tranvía mide los caminos fuera de la página y no arranca hasta que el mapa está cerca', () => {
+  assert.ok(tranvia.length > 500, 'no se encuentra el recorrido del tranvía en sitio.js')
+  assert.match(tranvia, /try \{ l = p\.getTotalLength\(\); \} catch/, 'primero mide el path suelto, sin tocar el svg')
+  assert.match(tranvia, /medidas\[d\]/, 'cada camino se mide una sola vez')
+  assert.doesNotMatch(tranvia, /^\s*recorrer\(0\);\s*$/m, 'recorrer(0) no se llama al cargar')
+  assert.match(tranvia, /new IntersectionObserver[\s\S]*if \(!iniciado\) recorrer\(actual\)/, 'arranca al acercarse')
+  assert.match(tranvia, /else if \(iniciado\) recorrer\(actual\)/, 'volver a la pestaña no arranca un tranvía que aún no se ve')
+})
+
 test('el recorrido se puede pausar y elegir', () => {
   assert.match(html, /class="mapa-pausa"/)
   assert.equal((html.match(/class="mapa-punto"/g) ?? []).length, 4)
