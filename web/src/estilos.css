@@ -1444,8 +1444,10 @@ body.body--dark .tablero {
 .driver-popover.recorrido .driver-popover-arrow-side-bottom {
   border-bottom-color: var(--superficie);
 }
-/* El elemento señalado, con un borde del acento dentro del hueco que abre driver.js. */
+/* El elemento señalado, con un borde del acento dentro del hueco que abre driver.js. Lleva !important porque Quasar
+   quita el contorno a sus botones (.no-outline) y también ellos deben verse señalados; las capturas de la Ayuda del
+   sitio usan esta misma regla. */
 .driver-active .driver-active-element {
-  outline: 2px solid var(--acento);
-  outline-offset: 3px;
+  outline: 2px solid var(--acento) !important;
+  outline-offset: 3px !important;
 }

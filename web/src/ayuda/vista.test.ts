@@ -1,11 +1,16 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { altDiagrama, bloquesVisibles, varianteCaptura } from './vista.ts'
+import { altDiagrama, bloquesVisibles, capturaDeAncla, varianteCaptura } from './vista.ts'
 import type { Tema } from './tipos.ts'
 
 test('la captura sigue el tema y el idioma', () => {
   assert.equal(varianteCaptura('inicio', true, 'en'), 'inicio.oscuro.en.webp')
   assert.equal(varianteCaptura('inicio', false, 'es'), 'inicio.claro.es.webp')
+})
+
+test('la captura de un paso se llama como su ancla, con guiones', () => {
+  assert.equal(capturaDeAncla('inicio.mapa'), 'recorrido-inicio-mapa')
+  assert.equal(capturaDeAncla('conectar.clave-espacio'), 'recorrido-conectar-clave-espacio')
 })
 
 test('el texto alternativo del diagrama nombra las paradas en orden', () => {

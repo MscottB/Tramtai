@@ -8,7 +8,7 @@
     "dev": "vite",
     "tipos": "vue-tsc --noEmit -p .",
     "test": "node --import ./pruebas.mjs --test \"src/**/*.test.ts\" \"scripts/**/*.test.ts\"",
-    "capturas": "node scripts/capturas.mjs",
+    "capturas": "node --disable-warning=ExperimentalWarning --import ./pruebas.mjs scripts/capturas.mjs",
     "sitio": "node --disable-warning=ExperimentalWarning --import ./pruebas.mjs scripts/sitio-ayuda.mjs",
     "build": "vue-tsc --noEmit -p . && vite build"
   },

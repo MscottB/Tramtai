@@ -325,6 +325,13 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
 .pasos { counter-reset: paso; list-style: none; padding: 0 !important; display: grid; gap: 10px; }
 .pasos li { counter-increment: paso; display: flex; gap: 10px; align-items: flex-start; margin: 0; }
 .pasos li::before { content: counter(paso); flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--acento); color: var(--acento-texto); font: 700 .8rem var(--titulo); }
+/* «Qué verás en pantalla»: cada paso con su captura debajo del texto (el ancho máximo de cada imagen va en su style, para
+   no estirar las pequeñas) y con el borde y la sombra de las demás capturas, que cambian con el tema por las variables
+   de :root. */
+.recorrido-pasos { gap: 24px; }
+.recorrido-pasos li > div { flex: 1; min-width: 0; }
+.recorrido-pasos strong { display: block; }
+.captura-paso { margin-top: 10px; }
 .errores { margin: 0; }
 .errores > div { padding: 12px 0; border-top: 1px solid var(--borde); scroll-margin-top: 80px; }
 .errores dt { font-weight: 600; }

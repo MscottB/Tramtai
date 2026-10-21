@@ -3,7 +3,8 @@
 // al día en las páginas escritas a mano (PAGINAS_FIJAS). Son funciones puras: sitio-ayuda.mjs les da los textos, los
 // ejemplos y las capturas y escribe los archivos.
 import type { Bloque, Tema } from '../src/ayuda/tipos'
-import { bloquesVisibles } from '../src/ayuda/vista'
+import type { Clave } from '../src/idiomas/es'
+import { bloquesVisibles, capturaDeAncla } from '../src/ayuda/vista'
 import { campos, normalizar } from '../src/ayuda/buscar'
 import { ERRORES } from '../src/ayuda/temas/problemas'
 
@@ -198,6 +199,18 @@ function tarjetas(f: Fuente, lista: Tema[]): string {
 </div>`
 }
 
+// imagenes son las cuatro variantes de una captura (claro/oscuro × es/en) que existen; el CSS deja ver la del tema y el
+// idioma activos. alt es la clave del texto alternativo; con aSuTamano la imagen no pasa de su ancho (los recortes
+// pequeños de un paso no se estiran hasta llenar la columna, y su alto se reserva por el tamaño declarado).
+function imagenes(f: Fuente, id: string, alt: Clave, aSuTamano = false): string {
+  return (['claro', 'oscuro'] as const).flatMap((c) => (['es', 'en'] as const).map((i) => {
+    const archivo = `${id}.${c}.${i}.webp`
+    const texto = (i === 'es' ? f.es : f.en)[alt] ?? alt
+    const m = f.capturas.get(archivo)
+    return m ? `<img class="solo-${c}" lang="${i}" src="capturas/${archivo}" width="${m.ancho}" height="${m.alto}" loading="lazy" alt="${escapar(texto)}"${aSuTamano ? ` style="max-width: ${m.ancho}px"` : ''}>` : ''
+  })).join('')
+}
+
 function bloque(f: Fuente, tema: Tema, b: Bloque, n: number): string {
   const tx = (k: string) => bilingue(f.es[k] ?? k, f.en[k] ?? k)
   switch (b.tipo) {
@@ -208,14 +221,15 @@ function bloque(f: Fuente, tema: Tema, b: Bloque, n: number): string {
     case 'pasos':
       return `<ol class="pasos">${b.pasos.map((p) => `\n  <li>${tx(p)}</li>`).join('')}\n</ol>`
     case 'captura': {
-      const imgs = (['claro', 'oscuro'] as const).flatMap((c) => (['es', 'en'] as const).map((i) => {
-        const archivo = `${b.id}.${c}.${i}.webp`
-        const alt = (i === 'es' ? f.es : f.en)[b.alt] ?? b.alt
-        const m = f.capturas.get(archivo)
-        return m ? `<img class="solo-${c}" lang="${i}" src="capturas/${archivo}" width="${m.ancho}" height="${m.alto}" loading="lazy" alt="${escapar(alt)}">` : ''
-      })).join('')
+      const imgs = imagenes(f, b.id, b.alt)
       return imgs ? `<figure class="captura">${imgs}</figure>` : ''
     }
+    case 'recorrido':
+      // Un paso sin captura (la demo no muestra su ancla, ver SIN_CAPTURA) sale solo con su texto.
+      return `<ol class="pasos recorrido-pasos">${b.pasos.map((p) => {
+        const imgs = imagenes(f, capturaDeAncla(p.ancla), p.titulo, true)
+        return `\n  <li><div><strong>${tx(p.titulo)}</strong> ${tx(p.texto)}${imgs ? `<figure class="captura captura-paso">${imgs}</figure>` : ''}</div></li>`
+      }).join('')}\n</ol>`
     case 'ejemplo': {
       const porIdioma = { es: f.ejemplos(b, 'es'), en: f.ejemplos(b, 'en') }
       const id = (e: string) => `e${n}-${e}`
@@ -256,7 +270,7 @@ function bloque(f: Fuente, tema: Tema, b: Bloque, n: number): string {
 // SECCIONES son los bloques que abren una sección con su h2 (y su entrada en «En esta página»); los demás (capturas,
 // notas) van en la sección del bloque anterior.
 const SECCIONES: Partial<Record<Bloque['tipo'], [string, string]>> = {
-  diagrama: ['Cómo funciona', 'How it works'], pasos: ['Paso a paso', 'Step by step'], ejemplo: ['Ejemplo', 'Example'],
+  diagrama: ['Cómo funciona', 'How it works'], recorrido: ['Qué verás en pantalla', 'What you will see on screen'], pasos: ['Paso a paso', 'Step by step'], ejemplo: ['Ejemplo', 'Example'],
   tabla: ['De un vistazo', 'At a glance'], preguntas: ['Preguntas', 'Questions'], errores: ['Si algo falla', 'If something fails'],
 }
 

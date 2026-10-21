@@ -1,7 +1,8 @@
-// capturas saca las capturas de la Ayuda (web/src/ayuda/capturas, en claro y oscuro y en español e inglés) y las de la
-// portada (site/capturas) con una Tramtai compilada en una carpeta temporal, portable y en otro puerto, así no toca la
+// capturas saca las capturas de la Ayuda (web/src/ayuda/capturas, en claro y oscuro y en español e inglés), las de cada
+// paso de los recorridos guiados (recorrido-*, el elemento con el anillo del recorrido) y las de la portada
+// (site/capturas) con una Tramtai compilada en una carpeta temporal, portable y en otro puerto, así no toca la
 // instalación de quien lo corre. Se corre en el equipo de desarrollo, con un agente ya conectado (para el Historial):
-//   cd web; npm run build; npm run capturas            (o: npm run capturas -- --solo receta, o -- --sitio)
+//   cd web; npm run build; npm run capturas            (o: npm run capturas -- --solo receta, -- --recorridos o -- --sitio)
 // Usa Edge o Chrome sin ventana por su protocolo de depuración; TRAMTAI_NAVEGADOR elige otro ejecutable y
 // TRAMTAI_CAPTURAS_MODELO el modelo de las peticiones de ejemplo (claude/haiku por defecto).
 import { execFileSync, spawn } from 'node:child_process'
@@ -9,7 +10,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { createServer } from 'node:net'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { CAPTURAS, PORTADA } from './capturas-lista.ts'
+import { ANCLAS, CAPTURAS, PORTADA, SIN_CAPTURA } from './capturas-lista.ts'
 
 const raiz = fileURLToPath(new URL('../../', import.meta.url))
 const destinoAyuda = fileURLToPath(new URL('../src/ayuda/capturas/', import.meta.url))
@@ -18,11 +19,13 @@ const args = process.argv.slice(2)
 const solo = args.includes('--solo') ? args[args.indexOf('--solo') + 1] : ''
 // --sitio saca solo los iconos y la imagen para compartir del sitio (favicon.svg y og.html), sin capturas de la app.
 const soloSitio = args.includes('--sitio')
+// --recorridos saca solo las capturas de los pasos de los recorridos.
+const soloRecorridos = args.includes('--recorridos')
 const destinoSitio = fileURLToPath(new URL('../../site/', import.meta.url))
 const modelo = process.env.TRAMTAI_CAPTURAS_MODELO || 'claude/haiku'
 const esperar = (ms) => new Promise((ok) => setTimeout(ok, ms))
-if (solo && !CAPTURAS.some((c) => c.id === solo)) {
-  console.error(`no hay una captura «${solo}»: usa uno de ${CAPTURAS.map((c) => c.id).join(', ')}`)
+if (solo && ![...CAPTURAS, ...ANCLAS].some((c) => c.id === solo)) {
+  console.error(`no hay una captura «${solo}»: usa uno de ${[...CAPTURAS, ...ANCLAS].map((c) => c.id).join(', ')}`)
   process.exit(1)
 }
 
@@ -128,7 +131,8 @@ try {
     await enviar('Emulation.setDeviceMetricsOverride', { width: ancho, height: alto, deviceScaleFactor: 1, mobile: false })
     await enviar('Page.navigate', { url: `${base}/?c=${++carga}` })
     await hasta(() => evaluar('document.readyState === "complete"'), 20, 'la carga')
-    await evaluar(`localStorage.setItem('tramtai.tema', '${tema}'); localStorage.setItem('tramtai.idioma', '${idioma}')`)
+    // La bienvenida (se ofrece sola la primera vez en Inicio) no sale en las capturas: su fondo oscurecería la página.
+    await evaluar(`localStorage.setItem('tramtai.tema', '${tema}'); localStorage.setItem('tramtai.idioma', '${idioma}'); localStorage.setItem('tramtai.bienvenida', 'descartada')`)
     for (const [clave, valor] of Object.entries(guardado)) await evaluar(`localStorage.setItem(${JSON.stringify(clave)}, ${JSON.stringify(JSON.stringify(valor))})`)
     await enviar('Page.navigate', { url: `${base}/?c=${++carga}#${pagina}` })
     await hasta(() => evaluar(`!!document.querySelector('${selector}')`), 20, `${selector} en #${pagina}`)
@@ -137,10 +141,11 @@ try {
     await esperar(1000) // animaciones y datos que llegan después
   }
   // sinBarra oculta la barra superior fija, que taparía el recorte de un elemento.
-  const sinBarra = () => evaluar(`document.head.insertAdjacentHTML('beforeend', '<style>.q-header{display:none!important}</style>')`)
+  const sinBarra = (oculta = true) => evaluar(`(() => { let s = document.getElementById('sin-barra'); if (!s) { s = document.createElement('style'); s.id = 'sin-barra'; document.head.append(s) }
+    s.textContent = ${oculta ? "'.q-header{display:none!important}'" : "''"} })()`)
 
   // Los iconos del sitio salen de favicon.svg con fondo transparente, y la imagen para compartir de og.html.
-  if (!solo) {
+  if (!solo && !soloRecorridos) {
     const sacar = async (url, ancho, alto, archivo) => {
       await enviar('Emulation.setDeviceMetricsOverride', { width: ancho, height: alto, deviceScaleFactor: 1, mobile: false })
       await enviar('Page.navigate', { url: new URL(url, import.meta.url).href })
@@ -174,7 +179,7 @@ try {
     while (w.nextNode()) w.currentNode.nodeValue = w.currentNode.nodeValue.replaceAll(${JSON.stringify(ejemplo)}, 'C:\\\\Proyectos\\\\mi-app') })()`)
 
   mkdirSync(destinoAyuda, { recursive: true })
-  for (const c of CAPTURAS.filter((x) => !soloSitio && (!solo || x.id === solo)))
+  for (const c of CAPTURAS.filter((x) => !soloSitio && !soloRecorridos && (!solo || x.id === solo)))
     for (const tema of ['claro', 'oscuro'])
       for (const idioma of ['es', 'en']) {
         const selector = `[data-captura="${c.id}"]`
@@ -189,7 +194,58 @@ try {
         console.log(`${c.id}.${tema}.${idioma}.webp`)
       }
 
-  if (!solo && !soloSitio)
+  // Un recorrido señala un elemento con el anillo de driver.js (.driver-active-element, ver estilos.css): se carga cada
+  // página una vez por tema e idioma y se recorta cada ancla con 16 px de margen. Las de app.* (el selector de espacio
+  // y el «?», que viven en una cabecera) recortan esa cabecera entera, que es el contexto que las hace reconocibles.
+  // Una ancla que la demo no muestra no se inventa: se avisa y se apunta en SIN_CAPTURA, con el motivo.
+  const visible = (ancla) => `[...document.querySelectorAll('[data-recorrido="${ancla}"]')].find((e) => { const b = e.getBoundingClientRect(); return b.width > 0 && b.height > 0 })`
+  const ausentes = new Set()
+  const aSacar = ANCLAS.filter((a) => !soloSitio && (!solo || a.id === solo) && !(a.ancla in SIN_CAPTURA))
+  if (aSacar.length)
+    for (const tema of ['claro', 'oscuro'])
+      for (const idioma of ['es', 'en'])
+        for (const pagina of [...new Set(aSacar.map((a) => a.pagina))]) {
+          if (!aSacar.some((a) => a.pagina === pagina && !ausentes.has(a.ancla))) continue
+          await abrir(pagina, tema, idioma, '.pagina', 1280, 900)
+          // Las anclas que abren algo (preparar) van al final: lo abierto taparía a las demás.
+          for (const a of aSacar.filter((x) => x.pagina === pagina && !ausentes.has(x.ancla)).sort((x, y) => !!x.preparar - !!y.preparar)) {
+            const cabecera = a.ancla.startsWith('app.')
+            await sinBarra(!cabecera)
+            try {
+              if (a.preparar) await hasta(() => evaluar(a.preparar), 10, `preparar ${a.ancla}`)
+              await hasta(() => evaluar(`!!(${visible(a.ancla)})`), tema === 'claro' && idioma === 'es' ? 8 : 3, `${a.ancla} visible`)
+              await esperar(300) // el panel que se abre llega con su animación
+              await ocultarRuta()
+            } catch {
+              ausentes.add(a.ancla)
+              console.warn(`aviso: ${a.ancla} no se ve en la demo de #${pagina}; apúntala en SIN_CAPTURA si no hay forma de mostrarla`)
+              continue
+            }
+            const r = await evaluar(`(() => {
+              const e = ${visible(a.ancla)}
+              document.body.classList.add('driver-active'); e.classList.add('driver-active-element')
+              const fijo = !!e.closest('.q-header, .q-dialog')
+              if (fijo) scrollTo(0, 0); else e.scrollIntoView({ block: 'center', behavior: 'instant' })
+              const c = ${cabecera} ? e.closest('.q-header, .cabecera-pagina') ?? e : e
+              const m = ${cabecera} ? 0 : 16
+              const b = c.getBoundingClientRect()
+              const x = Math.max(0, b.left + scrollX - m), y = Math.max(0, b.top + scrollY - m)
+              const w = Math.min(document.documentElement.scrollWidth, b.right + scrollX + m) - x
+              const h = Math.min(document.documentElement.scrollHeight, b.bottom + scrollY + m) - y
+              return { x, y, w, h: Math.min(h, 1000), texto: c.innerText }
+            })()`)
+            // Nada del equipo de quien saca las capturas se publica (rutas de la carpeta de trabajo o del usuario).
+            if (/Administrator|Proyectos[\\/]Tramtai|capturas-\w{6}/i.test(r.texto)) throw new Error(`${a.ancla}: la captura muestra una ruta real: ${r.texto.slice(0, 200)}`)
+            const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80, captureBeyondViewport: true,
+              clip: { x: r.x, y: r.y, width: r.w, height: r.h, scale: 1 } })
+            writeFileSync(join(destinoAyuda, `${a.id}.${tema}.${idioma}.webp`), Buffer.from(data, 'base64'))
+            console.log(`${a.id}.${tema}.${idioma}.webp`)
+            await evaluar(`document.body.classList.remove('driver-active'); document.querySelectorAll('.driver-active-element').forEach((e) => e.classList.remove('driver-active-element'))`)
+          }
+        }
+  if (ausentes.size) console.warn(`SIN CAPTURA: ${[...ausentes].join(', ')}`)
+
+  if (!solo && !soloSitio && !soloRecorridos)
     for (const p of PORTADA)
       for (const tema of ['claro', 'oscuro']) {
         await abrir(p.pagina, tema, 'es', '.pagina', 1440, 900)
