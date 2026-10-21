@@ -120,8 +120,11 @@ test('EVENTO_PASO es el aviso que escucha Ajustes para abrir la pestaña del pas
 
 test('focoAlCerrar: vuelve a lo que abrió el recorrido si sigue en la página; si no, al «?» de la página', () => {
   const ayuda = elemento(32, 32)
-  const boton = { isConnected: true } as unknown as Element
+  const boton = Object.assign(elemento(120, 36), { isConnected: true })
   assert.equal(focoAlCerrar(boton, raiz({ 'app.ayuda': [ayuda] })), boton)
+  // «Muéstrame en pantalla» del panel «?»: sigue en el DOM, pero el panel se cerró y ya no se ve
+  const oculto = Object.assign(elemento(0, 0), { isConnected: true })
+  assert.equal(focoAlCerrar(oculto, raiz({ 'app.ayuda': [ayuda] })), ayuda)
   // el botón de la bienvenida, de «Haz el recorrido» o de la página de Ayuda ya no está: no se deja el foco en body
   const quitado = { isConnected: false } as unknown as Element
   assert.equal(focoAlCerrar(quitado, raiz({ 'app.ayuda': [ayuda] })), ayuda)

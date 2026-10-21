@@ -10,10 +10,12 @@ type Traductor = (clave: Clave, parametros?: Record<string, string | number>) =>
 // una oculta no debe ganar. Sin ancla o sin nada visible da undefined, y el paso sale centrado sin resaltar ningún hueco.
 export function elegirElemento(ancla: string | undefined, raiz: Pick<Document, 'querySelectorAll'>): Element | undefined {
   if (!ancla) return undefined
-  return [...raiz.querySelectorAll(`[data-recorrido="${ancla}"]`)].find((e) => {
-    const { width, height } = e.getBoundingClientRect()
-    return width > 0 && height > 0
-  })
+  return [...raiz.querySelectorAll(`[data-recorrido="${ancla}"]`)].find(seVe)
+}
+
+const seVe = (e: Element) => {
+  const { width, height } = e.getBoundingClientRect()
+  return width > 0 && height > 0
 }
 
 // capturarEsc deja Esc solo al recorrido mientras dura: en la fase de captura la detiene antes de que llegue al panel «?» o
@@ -58,10 +60,11 @@ export function botonConFoco(ventana: Botones, antes: Element | null, mismoPaso:
   return ventana.nextButton
 }
 
-// focoAlCerrar es adónde vuelve el foco al acabar: a lo que abrió el recorrido si sigue en la página; si no (el botón de
-// la bienvenida, «Haz el recorrido» en Inicio, «Muéstrame» de la página de Ayuda), al «?» de la página en la que acaba.
+// focoAlCerrar es adónde vuelve el foco al acabar: a lo que abrió el recorrido si sigue en la página y se ve; si no (el
+// botón de la bienvenida, «Haz el recorrido» en Inicio, «Muéstrame» de la página de Ayuda o del panel «?», que ya se
+// cerró), al «?» de la página en la que acaba.
 export function focoAlCerrar(volverA: Element | null, raiz: Pick<Document, 'querySelectorAll'>): Element | undefined {
-  return volverA?.isConnected ? volverA : elegirElemento('app.ayuda', raiz)
+  return volverA?.isConnected && seVe(volverA) ? volverA : elegirElemento('app.ayuda', raiz)
 }
 
 // cerrarAlNavegar cierra el recorrido si se navega por fuera de él (Atrás, Alt+←): el hueco señalaría una página que ya
