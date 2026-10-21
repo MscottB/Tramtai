@@ -38,7 +38,9 @@ type Servidor struct {
 	Registro     map[string]adaptadores.Adaptador
 	// Conexiones dice qué agentes están desconectados; nil = todos conectados.
 	Conexiones *adaptadores.Conexiones
-	Config     *nucleo.Configuracion
+	// Salud dice qué agentes tuvieron su última petición rechazada por autenticación.
+	Salud  *adaptadores.Salud
+	Config *nucleo.Configuracion
 	// Punto es la política del punto de acceso que atiende este servidor.
 	Punto *Punto
 	// Token es el token de la instancia para Handler; vacío solo si servicio.requerir_token es false.

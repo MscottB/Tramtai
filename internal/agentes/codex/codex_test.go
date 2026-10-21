@@ -190,3 +190,20 @@ func TestCodexErrores(t *testing.T) {
 		t.Fatalf("sin turn.completed: %v", err)
 	}
 }
+
+func codexSuscripcion() Codex {
+	return Codex{Programa: os.Args[0], Autenticacion: adaptadores.NuevoModo(adaptadores.AutenticacionSuscripcion)}
+}
+
+func TestComprobarSesionCodex(t *testing.T) {
+	for muestra, estado := range map[string]string{"login-chatgpt.txt": adaptadores.SesionOK, "login-clave.txt": adaptadores.SesionUsaClave,
+		"login-no.txt": adaptadores.SesionSin} {
+		archivo := falso(t, muestra)
+		if s := codexSuscripcion().ComprobarSesion(context.Background()); s.Estado != estado {
+			t.Errorf("%s: %+v", muestra, s)
+		}
+		if r := leerRegistro(t, archivo); strings.Join(r.Args, " ") != "login status" {
+			t.Errorf("solo se pregunta el estado: %q", r.Args)
+		}
+	}
+}

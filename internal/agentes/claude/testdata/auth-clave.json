@@ -1,0 +1,6 @@
+{
+  "loggedIn": true,
+  "authMethod": "console",
+  "apiProvider": "firstParty",
+  "email": "persona@ejemplo.com"
+}

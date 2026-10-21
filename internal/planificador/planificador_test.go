@@ -1464,3 +1464,27 @@ func TestRespaldoTodoDesconectado(t *testing.T) {
 		t.Fatalf("queda el error del principal y el aviso del respaldo desconectado: %s %q", tr.CodigoError, tr.MensajeError)
 	}
 }
+
+func TestSaludMarcaFalloAutenticacion(t *testing.T) {
+	alm := abrir(t)
+	salud := adaptadores.NuevaSalud()
+	opc := opciones()
+	opc.Salud = salud
+	p := Nuevo(alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoAutenticacionAgente)},
+		"otro": adaptadores.Simulado{Respuesta: "ok"}}, NuevosSemaforos(map[string]int{"simulado": 1, "otro": 1}), opc)
+	if err := p.Iniciar(ctx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Detener)
+	esperar(t, alm, enviar(t, p, solicitud("hola")), nucleo.Fallido)
+	if !salud.SinRespuesta("simulado") {
+		t.Fatal("un fallo de autenticación marca al agente")
+	}
+	salud.Fallo("otro")
+	s := solicitud("hola")
+	s.Agente = "otro"
+	esperar(t, alm, enviar(t, p, s), nucleo.Completado)
+	if salud.SinRespuesta("otro") {
+		t.Fatal("una petición que funciona quita la marca")
+	}
+}

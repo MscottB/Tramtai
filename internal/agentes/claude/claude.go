@@ -41,7 +41,35 @@ func (c Claude) Detectar(ctx context.Context) adaptadores.Estado {
 		return e
 	}
 	e.Ruta, e.Version = ruta, adaptadores.VersionDe(ctx, ruta)
+	if c.Autenticacion.Valor() == adaptadores.AutenticacionSuscripcion {
+		adaptadores.AplicarSesion(&e, c.ComprobarSesion(ctx), "Claude Code", "claude auth login")
+	}
 	return e
+}
+
+// ComprobarSesion implementa adaptadores.ComprobadorSesion con claude auth status --json, que lee su configuración y no
+// envía ningún mensaje: loggedIn falso es sin sesión y un authMethod distinto de claude.ai, una clave de API.
+func (c Claude) ComprobarSesion(ctx context.Context) adaptadores.SesionCLI {
+	ruta, err := adaptadores.ResolverPrograma(c.Programa)
+	if err != nil {
+		return adaptadores.SesionCLI{Estado: adaptadores.SesionDesconocida}
+	}
+	salida, ok := adaptadores.SalidaEstado(ctx, ruta, "auth", "status", "--json")
+	var estado struct {
+		LoggedIn   bool   `json:"loggedIn"`
+		AuthMethod string `json:"authMethod"`
+		Email      string `json:"email"`
+	}
+	if !ok || json.Unmarshal([]byte(salida), &estado) != nil {
+		return adaptadores.SesionCLI{Estado: adaptadores.SesionDesconocida}
+	}
+	switch {
+	case !estado.LoggedIn:
+		return adaptadores.SesionCLI{Estado: adaptadores.SesionSin}
+	case estado.AuthMethod != "claude.ai":
+		return adaptadores.SesionCLI{Estado: adaptadores.SesionUsaClave, Cuenta: estado.Email}
+	}
+	return adaptadores.SesionCLI{Estado: adaptadores.SesionOK, Cuenta: estado.Email}
 }
 
 // ResolverModelo implementa Resolvedor: Claude Code informa el modelo concreto en su evento system/init, antes de

@@ -59,6 +59,8 @@ type Opciones struct {
 	// Desconectado dice si un agente está desconectado (Agentes → Desconectar): no se acepta como principal y el
 	// respaldo lo salta. nil = todos conectados.
 	Desconectado func(agente string) bool
+	// Salud anota los agentes cuya petición falló por autenticación y los quita cuando una funciona (nil = no se anota).
+	Salud *adaptadores.Salud
 }
 
 // OpcionesDesde toma los límites de la configuración efectiva.

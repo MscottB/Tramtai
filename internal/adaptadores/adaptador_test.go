@@ -66,3 +66,20 @@ func TestConexiones(t *testing.T) {
 		t.Fatal("sin conexiones, todos conectados")
 	}
 }
+
+func TestSaludPasiva(t *testing.T) {
+	s := NuevaSalud()
+	s.Fallo("claude")
+	if !s.SinRespuesta("claude") || s.SinRespuesta("codex") {
+		t.Fatal("un fallo de autenticación deja al agente sin respuesta")
+	}
+	s.Exito("claude")
+	if s.SinRespuesta("claude") {
+		t.Fatal("una petición que funciona lo quita")
+	}
+	var nada *Salud
+	nada.Fallo("claude")
+	if nada.SinRespuesta("claude") {
+		t.Fatal("sin salud no se marca nada")
+	}
+}

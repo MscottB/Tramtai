@@ -51,3 +51,18 @@ func TestCapacidadesInformaDesconectado(t *testing.T) {
 		}
 	}
 }
+
+func TestCapacidadesSesionNoResponde(t *testing.T) {
+	s := nuevoServidor(t, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}}, nil, nil)
+	s.Salud = adaptadores.NuevaSalud()
+	s.Salud.Fallo("simulado")
+	ts := httptest.NewServer(s.Handler())
+	t.Cleanup(ts.Close)
+	if _, c := pedir(t, ts, "GET", "/api/v1/capacidades", ""); !strings.Contains(c, `"problema_codigo":"sesion_no_responde"`) {
+		t.Fatalf("debía avisar de que la sesión no responde: %s", c)
+	}
+	s.Salud.Exito("simulado")
+	if _, c := pedir(t, ts, "GET", "/api/v1/capacidades", ""); strings.Contains(c, "sesion_no_responde") {
+		t.Fatalf("tras una petición que funciona ya no: %s", c)
+	}
+}

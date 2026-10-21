@@ -316,3 +316,14 @@ func TestProgramaNativoEnWindows(t *testing.T) {
 		t.Fatal("sin el .exe nativo, el .cmd no se acepta")
 	}
 }
+
+func TestComprobarSesionCopilot(t *testing.T) {
+	sesionDeUsuario(t)
+	if s := suscripcion().ComprobarSesion(context.Background()); s.Estado != adaptadores.SesionOK || s.Cuenta != "usuario-prueba" {
+		t.Fatalf("con sesión: %+v", s)
+	}
+	t.Setenv("COPILOT_HOME", t.TempDir())
+	if s := suscripcion().ComprobarSesion(context.Background()); s.Estado != adaptadores.SesionSin {
+		t.Fatalf("sin sesión: %+v", s)
+	}
+}

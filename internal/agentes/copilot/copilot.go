@@ -38,6 +38,8 @@ func (c Copilot) Detectar(ctx context.Context) adaptadores.Estado {
 	if c.Autenticacion.Valor() == adaptadores.AutenticacionSuscripcion {
 		if _, err := sesion(); err != nil {
 			e.Problema, e.ProblemaCodigo = problemaSesion(err), adaptadores.ProblemaFaltaClave
+		} else {
+			e.Cuenta = c.ComprobarSesion(ctx).Cuenta
 		}
 	} else if adaptadores.ClaveEntorno(variableClave) == "" {
 		e.Problema, e.ProblemaCodigo = idioma.T("falta COPILOT_GITHUB_TOKEN"), adaptadores.ProblemaFaltaClave
@@ -162,6 +164,33 @@ func entorno(extra []string) []string {
 }
 
 var errSinSesion = errors.New("sin sesión de Copilot")
+
+// ComprobarSesion implementa adaptadores.ComprobadorSesion leyendo el config.json de Copilot (sin tokens ni mensajes):
+// la cuenta es el login del último usuario con sesión. No sabe si se pasó a clave: con clave Tramtai usa
+// COPILOT_GITHUB_TOKEN, no la sesión del CLI.
+func (c Copilot) ComprobarSesion(context.Context) adaptadores.SesionCLI {
+	datos, err := sesion()
+	switch {
+	case err != nil && sinSesion(err):
+		return adaptadores.SesionCLI{Estado: adaptadores.SesionSin}
+	case err != nil:
+		return adaptadores.SesionCLI{Estado: adaptadores.SesionDesconocida}
+	}
+	var config struct {
+		Usuarios []struct {
+			Login string `json:"login"`
+		} `json:"loggedInUsers"`
+		Ultimo struct {
+			Login string `json:"login"`
+		} `json:"lastLoggedInUser"`
+	}
+	_ = json.Unmarshal(datos, &config)
+	cuenta := config.Ultimo.Login
+	if cuenta == "" && len(config.Usuarios) > 0 {
+		cuenta = config.Usuarios[0].Login
+	}
+	return adaptadores.SesionCLI{Estado: adaptadores.SesionOK, Cuenta: cuenta}
+}
 
 // sinSesion distingue «no hay sesión» de un config.json que no se pudo leer o entender.
 func sinSesion(err error) bool { return errors.Is(err, errSinSesion) || errors.Is(err, fs.ErrNotExist) }

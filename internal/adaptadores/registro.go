@@ -3,6 +3,7 @@ package adaptadores
 import (
 	"maps"
 	"slices"
+	"sync"
 	"sync/atomic"
 
 	"tramtai/internal/idioma"
@@ -91,6 +92,36 @@ func (c *Conexiones) Fijar(agente string, desconectado bool) {
 			return
 		}
 	}
+}
+
+// Salud recuerda los agentes cuya última petición falló por autenticación (detección pasiva: sirve para todos, también
+// los que no saben comprobar su sesión). Se comparte entre todas las instancias; nil = no se recuerda nada.
+type Salud struct{ sinRespuesta sync.Map }
+
+// NuevaSalud crea una salud vacía.
+func NuevaSalud() *Salud { return &Salud{} }
+
+// Fallo anota que una petición del agente falló por autenticación.
+func (s *Salud) Fallo(agente string) {
+	if s != nil {
+		s.sinRespuesta.Store(agente, true)
+	}
+}
+
+// Exito anota que una petición del agente funcionó.
+func (s *Salud) Exito(agente string) {
+	if s != nil {
+		s.sinRespuesta.Delete(agente)
+	}
+}
+
+// SinRespuesta indica si la última petición del agente falló por autenticación.
+func (s *Salud) SinRespuesta(agente string) bool {
+	if s == nil {
+		return false
+	}
+	_, ok := s.sinRespuesta.Load(agente)
+	return ok
 }
 
 // EsVariableCredencial indica si una variable de entorno es una clave de proveedor que se retira del entorno heredado.

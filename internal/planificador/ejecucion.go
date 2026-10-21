@@ -160,12 +160,16 @@ func (p *Planificador) procesar(id string, esperando func()) {
 		if err == nil {
 			resultado, elegido = res, c
 			resultado.Uso = sumarUso(resultado.Uso, usoPrevio)
+			p.opc.Salud.Exito(c.agente)
 			break
 		}
 		usoPrevio = sumarUso(usoPrevio, res.Uso)
 		codigo := nucleo.CodigoDe(err)
 		if codigo == "" {
 			codigo = nucleo.CodigoErrorAgente
+		}
+		if codigo == nucleo.CodigoAutenticacionAgente {
+			p.opc.Salud.Fallo(c.agente)
 		}
 		if !saltable(codigo) || huboTexto || i+1 == len(lista) {
 			// Si no cabía en ninguno y nada se ejecutó, la petición no cuenta para el presupuesto.

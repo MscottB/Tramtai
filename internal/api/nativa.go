@@ -480,6 +480,9 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 				e := d.Detectar(ctx)
 				cancelar()
 				entrada["version_detectada"], entrada["autenticacion"], entrada["terminos"] = e.Version, e.Autenticacion, e.Terminos
+				if e.Cuenta != "" {
+					entrada["cuenta"] = e.Cuenta
+				}
 				if e.Problema != "" {
 					entrada["problema"], entrada["problema_codigo"] = e.Problema, e.ProblemaCodigo
 				}
@@ -487,6 +490,14 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	esperar.Wait()
+	// Detección pasiva: si la última petición de un agente falló por autenticación y la detección no vio nada más
+	// grave, se avisa (también de los agentes que no saben comprobar su sesión).
+	for i, nombre := range nombres {
+		if codigo, _ := lista[i]["problema_codigo"].(string); s.Salud.SinRespuesta(nombre) && (lista[i]["problema"] == nil || codigo == adaptadores.ProblemaAviso) {
+			lista[i]["problema"] = idioma.T("la sesión del CLI no responde: la última petición falló por autenticación")
+			lista[i]["problema_codigo"] = adaptadores.ProblemaSesion
+		}
+	}
 	respuesta := map[string]any{
 		"version":               version.Version,
 		"formato_serializacion": adaptadores.FormatoSerializacion,
