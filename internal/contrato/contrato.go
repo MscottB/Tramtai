@@ -24,6 +24,7 @@ type EstadoInstancia struct {
 	Agente       string         `json:"agente_predeterminado"`
 	Perfil       string         `json:"perfil_predeterminado,omitempty"`
 	Trabajos     map[string]int `json:"trabajos"`
+	UltimoUso    time.Time      `json:"ultimo_uso,omitzero"`
 }
 
 // Estado es la vista del servicio que devuelve GET /api/v1/servicio.

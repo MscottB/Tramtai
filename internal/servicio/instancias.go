@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"maps"
@@ -73,7 +72,19 @@ func (s *Servicio) ActivarProyecto(raiz string) (*Instancia, error) {
 	if err != nil {
 		return nil, err
 	}
-	return s.activar(IDProyecto(raiz, c), "proyecto", raiz, c)
+	id, err := s.idDe(raiz, c)
+	if err != nil {
+		return nil, err
+	}
+	inst, err := s.activar(id, "proyecto", raiz, c)
+	if err != nil {
+		return nil, err
+	}
+	if err := escribirMarca(raiz, id); err != nil {
+		fmt.Fprintf(s.opc.Registros, "no se pudo escribir la marca del espacio en %s: %s\n", raiz, err)
+	}
+	s.registro().poner(Espacio{ID: id, Ambito: "proyecto", Ruta: raiz, Nombre: nombreProyecto(raiz, c), Activo: true})
+	return inst, nil
 }
 
 // activar abre la instancia si no está activa. La base se abre (migraciones, huérfanos, recuperación) fuera de mu: así
@@ -279,53 +290,57 @@ func (i *Instancia) cerrar(vaciarCola bool) {
 	i.almacen.Cerrar()
 }
 
-// activas es la lista de instancias que se restauran al reiniciar el servicio.
+// activas es el formato de instancias.json, el registro anterior a la v0.54 (solo los activos); se migra al de espacios.
 type activas struct {
 	Global    bool     `json:"global"`
 	Proyectos []string `json:"proyectos"`
 }
 
+// guardarActivas anota en el registro qué espacios están activos (los que se restauran al reiniciar) y lo guarda.
 func (s *Servicio) guardarActivas() error {
 	s.mu.RLock()
-	a := activas{Proyectos: []string{}}
-	for _, inst := range s.instancias {
-		if inst.Ambito == "global" {
-			a.Global = true
-		} else {
-			a.Proyectos = append(a.Proyectos, inst.Raiz)
-		}
+	activos := map[string]bool{}
+	for id := range s.instancias {
+		activos[id] = true
 	}
 	s.mu.RUnlock()
-	sort.Strings(a.Proyectos)
-	return escribirJSONArchivo(filepath.Join(s.opc.Datos, "instancias.json"), a)
+	r := s.registro()
+	for _, e := range r.lista() {
+		r.cambiar(e.ID, func(e *Espacio) { e.Activo = activos[e.ID] })
+	}
+	return r.guardar()
 }
 
-// Restaurar activa las instancias que estaban activas (la global, si no hay registro previo) y devuelve los
-// errores de las que no pudieron abrirse, por ejemplo un proyecto movido.
+// Restaurar activa los espacios que estaban activos (la global, si no hay registro previo) y devuelve los errores de
+// los que no pudieron abrirse, por ejemplo un proyecto movido o borrado: ese queda detenido y con su error a la vista.
 func (s *Servicio) Restaurar() []error {
-	a := activas{Global: true}
-	ruta := filepath.Join(s.opc.Datos, "instancias.json")
+	r := s.registro()
 	var errores []error
-	if datos, err := os.ReadFile(ruta); err == nil {
-		if err := json.Unmarshal(datos, &a); err != nil {
-			// Dañado: se aparta (para poder mirarlo) y se abre la global, como sin registro previo.
-			a = activas{Global: true}
-			texto := idioma.Tf("%s no se pudo leer (%s): se apartó como instancias.json.dañado y se abre solo la instancia global", ruta, err.Error())
-			if errApartar := os.Rename(ruta, ruta+".dañado"); errApartar != nil {
-				texto = idioma.Tf("%s no se pudo leer (%s) ni apartar (%s): se abre solo la instancia global y se reescribirá", ruta, err.Error(), errApartar.Error())
-			}
-			errores = append(errores, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, texto))
-		}
+	if r.aviso != nil {
+		errores = append(errores, r.aviso)
 	}
-	if a.Global {
-		if _, err := s.ActivarGlobal(); err != nil {
-			errores = append(errores, err)
+	for _, e := range r.lista() {
+		if !e.Activo {
+			continue
 		}
+		var err error
+		switch {
+		case e.Ambito == "global":
+			_, err = s.ActivarGlobal()
+		case e.Ruta == "":
+			continue
+		default:
+			_, err = s.ActivarProyecto(e.Ruta)
+		}
+		texto := ""
+		if err != nil {
+			errores = append(errores, err)
+			texto = nucleo.MensajeDe(err)
+		}
+		r.cambiar(e.ID, func(e *Espacio) { e.UltimoError = texto })
 	}
-	for _, raiz := range a.Proyectos {
-		if _, err := s.ActivarProyecto(raiz); err != nil {
-			errores = append(errores, err)
-		}
+	if err := s.guardarActivas(); err != nil {
+		errores = append(errores, err)
 	}
 	return errores
 }
@@ -345,7 +360,16 @@ func (s *Servicio) Estado(ctx context.Context) Estado {
 	}
 	s.mu.RUnlock()
 	for _, inst := range instancias {
-		e.Instancias = append(e.Instancias, inst.estado(ctx))
+		ei := inst.estado(ctx)
+		if esp, ok := s.registro().buscar(inst.ID); ok {
+			ei.UltimoUso = esp.UltimoUso
+		}
+		e.Instancias = append(e.Instancias, ei)
+	}
+	for _, esp := range s.registro().lista() {
+		if esp.UltimoError != "" {
+			e.Errores = append(e.Errores, idioma.Tf("espacio %s: %s", esp.Nombre, esp.UltimoError))
+		}
 	}
 	sort.Slice(e.Instancias, func(i, j int) bool { return e.Instancias[i].ID < e.Instancias[j].ID })
 	return e

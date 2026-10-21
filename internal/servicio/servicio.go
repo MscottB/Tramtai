@@ -97,9 +97,11 @@ type Servicio struct {
 	erroresPuntos []string
 	descriptor    bool
 
-	muSesiones sync.Mutex
-	sesiones   map[string]*sesion
-	codigos    map[string]codigoEntrada
+	unaVezRegistro sync.Once
+	espacios       *registro // todos los espacios conocidos; se carga al usarlo (registro())
+	muSesiones     sync.Mutex
+	sesiones       map[string]*sesion
+	codigos        map[string]codigoEntrada
 
 	detener    chan struct{}
 	detenerUna sync.Once

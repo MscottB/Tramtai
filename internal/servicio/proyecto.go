@@ -34,7 +34,7 @@ func PrepararProyecto(dir string) error {
 		return err
 	}
 	ignorar := filepath.Join(dir, ".tramtai", ".gitignore")
-	if err := os.WriteFile(ignorar, []byte("# configuración propia de cada máquina\nlocal.yaml\n"), 0o644); err != nil {
+	if err := os.WriteFile(ignorar, []byte(gitignoreProyecto), 0o644); err != nil {
 		return err
 	}
 	// Un perfil de ejemplo con su esquema: tramtai ejecutar --perfil-trabajo resumen "…"
