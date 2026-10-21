@@ -64,6 +64,11 @@ body.body--dark .bg-primary.text-white {
 body.body--dark .bg-negative.text-white {
   color: #2a0606 !important;
 }
+/* El gris neutro de Quasar (#757575) no llega a 4,5:1 sobre la superficie oscura: chips de estado y acciones
+   secundarias como Desconectar usan el texto suave del tema. */
+body.body--dark .text-grey-7 {
+  color: var(--texto-suave) !important;
+}
 
 /* ---------- Base y superficies del navegador ---------- */
 body {
