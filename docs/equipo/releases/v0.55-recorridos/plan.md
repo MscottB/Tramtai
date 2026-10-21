@@ -250,6 +250,32 @@ con capturas recortadas que saca `capturas.mjs`.
 - [ ] **Step 2: Run** `npm test`, `npm run sitio` → PASS (sin cambios pendientes).
 - [ ] **Step 3: Commit** — `docs: recorridos guiados en la guía y la documentación`
 
+### Task 11: El menú por grupos (se ejecuta justo después de la Tarea 2)
+
+**Files:**
+- Create: `web/src/menu.ts`, `web/src/menu.test.ts`
+- Modify: `web/src/App.vue` (lista `principales` y su menú lateral), `web/src/idiomas/{es,en}.ts`, `web/src/recorrido.ts`
+
+**Interfaces:**
+- Produces:
+  - `const GRUPOS_MENU: { grupo: 'empezar' | 'conectar' | 'organizar'; paginas: Pagina[] }[]` =
+    `empezar: ['inicio', 'agentes', 'ejecutar']`, `conectar: ['conectar', 'historial']`,
+    `organizar: ['espacios', 'configuracion']`.
+  - `ordenMenu(): Pagina[]` — las páginas de `GRUPOS_MENU` en orden.
+  - Claves `menu.grupo.empezar|conectar|organizar` («Empezar» / «Get started», «Conectar» / «Connect», «Organizar» /
+    «Organize»).
+
+- [ ] **Step 1: Write the failing tests** `menu.test.ts`: cada página de `PAGINAS` sale exactamente una vez en
+  `ordenMenu()`; el orden es el de arriba; `ORDEN_BIENVENIDA` (de `recorrido.ts`) es una subsecuencia de `ordenMenu()`
+  (mismo orden relativo).
+- [ ] **Step 2: Run** `npm test` → FAIL.
+- [ ] **Step 3: Implement** `menu.ts`; `App.vue` arma `principales` en el orden de `ordenMenu()` y pinta el menú lateral
+  (también el del móvil) en tres grupos con su título, accesibles (`role="group"` con `aria-labelledby` al título del
+  grupo); la línea del menú (las paradas) sigue siendo una sola; la Ayuda queda abajo, aparte. Si hay atajos o algo que
+  dependa de la posición en el menú, sigue el orden nuevo.
+- [ ] **Step 4: Run** `npm test`, `npm run build` → PASS; navegador: escritorio y móvil, claro y oscuro.
+- [ ] **Step 5: Commit** — `feat(web): el menú por grupos, en el orden de uso`
+
 ### Task 10: Comprobación de punta a punta
 
 - [ ] **Step 1:** `go vet ./...`, `TRAMTAI_IDIOMA=es go test ./...`, `cd web; npm test; npm run build; npm run sitio`

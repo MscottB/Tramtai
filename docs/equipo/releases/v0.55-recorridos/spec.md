@@ -74,6 +74,15 @@ Decisiones del usuario:
   pantalla**, que hace el recorrido de esa página (el panel se cierra antes de empezar).
 - **La página de Ayuda** de la app enseña lo mismo; si el tema es de otra página, el botón lleva a ella y arranca allí.
 
+**El menú por grupos** (pedido del usuario a mitad de la v0.55): el menú lateral sigue el flujo de uso, en tres grupos
+con su título:
+- **Empezar:** Inicio, Agentes, Probar.
+- **Conectar:** Mis APIs, Historial.
+- **Organizar:** Espacios, Ajustes.
+
+La Ayuda sigue abajo, aparte. La bienvenida baja por el menú (Inicio → Agentes → Probar → Mis APIs → Espacios, sin
+Historial) y una prueba exige que su orden sea el del menú. El mismo orden vale en el menú del móvil.
+
 ## 3. Ayuda, sitio, demo, auditoría y documentación
 
 **Ayuda (app y sitio):**
