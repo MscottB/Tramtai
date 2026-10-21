@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.version.1.10.0.schema.json
+# Generado por scripts/paquetes.ps1 al publicar v0.54.0+21102026.
+PackageIdentifier: MscottB.Tramtai
+PackageVersion: 0.54.0
+DefaultLocale: es-ES
+ManifestType: version
+ManifestVersion: 1.10.0

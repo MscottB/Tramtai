@@ -1,29 +1,29 @@
-# Generado por scripts/paquetes.ps1 al publicar v0.53.0+20102026; no lo edites a mano.
+# Generado por scripts/paquetes.ps1 al publicar v0.54.0+21102026; no lo edites a mano.
 class Tramtai < Formula
   desc "Tus agentes de IA (Claude Code, Codex, la API de Gemini) como una API local compatible con OpenAI y Anthropic"
   homepage "https://mscottb.github.io/Tramtai/"
-  version "0.53.0"
+  version "0.54.0"
   license "PolyForm-Noncommercial-1.0.0"
 
   on_macos do
     on_arm do
-      url "https://github.com/MscottB/Tramtai/releases/download/v0.53.0%2B20102026/tramtai-v0.53.0%2B20102026-macos-arm64.tar.gz"
-      sha256 "307c8470fcfe964b0e8740746e01103fc744c8139d69d630f88d064e3a766dd2"
+      url "https://github.com/MscottB/Tramtai/releases/download/v0.54.0%2B21102026/tramtai-v0.54.0%2B21102026-macos-arm64.tar.gz"
+      sha256 "e92746b19d5b9b5f4b67632f60b40f09f9551d2b7fa6f341c4db29736e2f891a"
     end
     on_intel do
-      url "https://github.com/MscottB/Tramtai/releases/download/v0.53.0%2B20102026/tramtai-v0.53.0%2B20102026-macos-amd64.tar.gz"
-      sha256 "135219bcd14686b856c60f4c7808b25cf6fca085cf09e6696c58e349845f72cd"
+      url "https://github.com/MscottB/Tramtai/releases/download/v0.54.0%2B21102026/tramtai-v0.54.0%2B21102026-macos-amd64.tar.gz"
+      sha256 "8b28b62baf7d1e35d44f3d0ca4fe36c8ea373125e74c55d2502295e4fbdcfccc"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/MscottB/Tramtai/releases/download/v0.53.0%2B20102026/tramtai-v0.53.0%2B20102026-linux-arm64.tar.gz"
-      sha256 "85c4692bf7d2ff22f17e2390ad6a7f1ea0310d146c4c8206f2f4040a67be7849"
+      url "https://github.com/MscottB/Tramtai/releases/download/v0.54.0%2B21102026/tramtai-v0.54.0%2B21102026-linux-arm64.tar.gz"
+      sha256 "53543cbae86ad104e32d60e02861f0100226b36a25310e9d7769e112d466b20a"
     end
     on_intel do
-      url "https://github.com/MscottB/Tramtai/releases/download/v0.53.0%2B20102026/tramtai-v0.53.0%2B20102026-linux-amd64.tar.gz"
-      sha256 "73d27fb3f4e73aa7698ec6dace1f38e37576a06867e1f5e7750655cd57a204d7"
+      url "https://github.com/MscottB/Tramtai/releases/download/v0.54.0%2B21102026/tramtai-v0.54.0%2B21102026-linux-amd64.tar.gz"
+      sha256 "de8d3b99bf361bbce2b2461f26d1d2d759d94a8c0a8503edf0a08ed54588a270"
     end
   end
 
