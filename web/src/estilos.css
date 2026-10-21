@@ -346,11 +346,15 @@ input[type='number'] {
   margin: 0;
   list-style: none;
 }
+.nav-red {
+  --nav-titulo: 28px;
+}
+/* Una sola línea para los tres grupos: arranca en la primera parada, bajo el título del primer grupo. */
 .nav-red::before {
   content: '';
   position: absolute;
   left: 29px;
-  top: 34px;
+  top: calc(34px + var(--nav-titulo));
   bottom: 34px;
   width: 3px;
   border-radius: 2px;
@@ -415,6 +419,26 @@ input[type='number'] {
 }
 .nav-red--aparte::before {
   display: none;
+}
+/* El título de cada grupo se alinea con el texto de las estaciones, a la derecha de la línea. */
+.nav-grupo + .nav-grupo {
+  margin-top: 8px;
+}
+.nav-grupo__titulo {
+  display: flex;
+  align-items: flex-end;
+  height: var(--nav-titulo);
+  padding: 0 12px 4px 43px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texto-suave);
+}
+.nav-grupo__lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 /* ---------- Páginas ---------- */

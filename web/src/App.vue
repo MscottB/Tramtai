@@ -110,15 +110,23 @@
     <q-drawer v-model="menu" show-if-above bordered :width="256" :breakpoint="1023" class="cajon-app">
       <nav class="column full-height no-wrap" :aria-label="t('app.navegacion')">
         <!-- El menú es una línea de tranvía: cada sección es una estación y la actual se ilumina. -->
+        <!-- Tres grupos con título (empezar, conectar, organizar) sobre una sola línea continua. -->
         <ul class="nav-red">
-          <li v-for="p in principales" :key="p.id">
-            <button type="button" class="estacion" :class="{ 'estacion--activa': seccion === p.id }" :aria-current="seccion === p.id ? 'page' : undefined" @click="ir(p.id)">
-              <span class="estacion__punto" aria-hidden="true" />
-              <span class="column">
-                <span class="estacion__nombre">{{ t(p.titulo) }}</span>
-                <span class="estacion__detalle">{{ t(p.detalle) }}</span>
-              </span>
-            </button>
+          <li v-for="g in gruposMenu" :key="g.grupo" class="nav-grupo">
+            <div role="group" :aria-labelledby="`menu-grupo-${g.grupo}`">
+              <div :id="`menu-grupo-${g.grupo}`" class="nav-grupo__titulo">{{ t(g.titulo) }}</div>
+              <ul class="nav-grupo__lista">
+                <li v-for="p in g.paginas" :key="p.id">
+                  <button type="button" class="estacion" :class="{ 'estacion--activa': seccion === p.id }" :aria-current="seccion === p.id ? 'page' : undefined" @click="ir(p.id)">
+                    <span class="estacion__punto" aria-hidden="true" />
+                    <span class="column">
+                      <span class="estacion__nombre">{{ t(p.titulo) }}</span>
+                      <span class="estacion__detalle">{{ t(p.detalle) }}</span>
+                    </span>
+                  </button>
+                </li>
+              </ul>
+            </div>
           </li>
         </ul>
         <q-space />
@@ -279,7 +287,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, onMounted, onUnmounted, provide, ref, watch, watchEffect } from 'vue'
+import { computed, markRaw, onMounted, onUnmounted, provide, ref, watch, watchEffect, type Component } from 'vue'
 import { useQuasar } from 'quasar'
 import { api, avisar, avisarError, buscarActualizacionAhora, ErrorApi, reiniciarYSeguir } from './api/cliente'
 import { actualizacion, dialogoActualizar, sesion } from './estado'
@@ -301,26 +309,33 @@ import AyudaPagina from './paginas/Ayuda.vue'
 import { hashDe, leerHash } from './ayuda/ruta'
 import { temaPorId } from './ayuda/indice'
 import type { Pagina } from './ayuda/tipos'
+import type { Clave } from './idiomas/es'
+import { GRUPOS_MENU } from './menu'
 import PanelAyuda from './componentes/ayuda/PanelAyuda.vue'
 import { cerrarAyuda } from './ayuda/panel'
 import AcercaDe from './componentes/AcercaDe.vue'
 import ListaNovedades from './componentes/ListaNovedades.vue'
 import NotasVersion from './componentes/NotasVersion.vue'
 
-// Orden del menú según el recorrido: conectar un agente, probarlo, conectar las apps y revisar lo ejecutado.
 const $q = useQuasar()
 
-const principales = [
-  { id: 'inicio', titulo: 'menu.inicio', detalle: 'menuDetalle.inicio', icono: 'o_home', componente: markRaw(InicioPagina) },
-  { id: 'agentes', titulo: 'menu.agentes', detalle: 'menuDetalle.agentes', icono: 'o_smart_toy', componente: markRaw(AgentesPagina) },
-  { id: 'ejecutar', titulo: 'menu.ejecutar', detalle: 'menuDetalle.ejecutar', icono: 'o_chat', componente: markRaw(EjecutarPagina) },
-  { id: 'conectar', titulo: 'menu.conectar', detalle: 'menuDetalle.conectar', icono: 'o_hub', componente: markRaw(ConectarPagina) },
-  { id: 'historial', titulo: 'menu.historial', detalle: 'menuDetalle.historial', icono: 'o_history', componente: markRaw(HistorialPagina) },
-  { id: 'espacios', titulo: 'menu.espacios', detalle: 'menuDetalle.espacios', icono: 'o_workspaces', componente: markRaw(EspaciosPagina) },
-  { id: 'configuracion', titulo: 'menu.configuracion', detalle: 'menuDetalle.configuracion', icono: 'o_settings', componente: markRaw(ConfiguracionPagina) },
-] as const
-// Cada página principal es una de PAGINAS (ayuda/tipos.ts): la dirección #<id> y su tema de la Ayuda la conocen.
-const _principalesConocidas: readonly Pagina[] = principales.map((p) => p.id)
+// Cada página principal es una de PAGINAS (ayuda/tipos.ts): el Record obliga a definirlas todas.
+const definidas: Record<Pagina, { titulo: Clave; detalle: Clave; icono: string; componente: Component }> = {
+  inicio: { titulo: 'menu.inicio', detalle: 'menuDetalle.inicio', icono: 'o_home', componente: markRaw(InicioPagina) },
+  agentes: { titulo: 'menu.agentes', detalle: 'menuDetalle.agentes', icono: 'o_smart_toy', componente: markRaw(AgentesPagina) },
+  ejecutar: { titulo: 'menu.ejecutar', detalle: 'menuDetalle.ejecutar', icono: 'o_chat', componente: markRaw(EjecutarPagina) },
+  conectar: { titulo: 'menu.conectar', detalle: 'menuDetalle.conectar', icono: 'o_hub', componente: markRaw(ConectarPagina) },
+  historial: { titulo: 'menu.historial', detalle: 'menuDetalle.historial', icono: 'o_history', componente: markRaw(HistorialPagina) },
+  espacios: { titulo: 'menu.espacios', detalle: 'menuDetalle.espacios', icono: 'o_workspaces', componente: markRaw(EspaciosPagina) },
+  configuracion: { titulo: 'menu.configuracion', detalle: 'menuDetalle.configuracion', icono: 'o_settings', componente: markRaw(ConfiguracionPagina) },
+}
+// El menú va por grupos (menu.ts), en el orden en que se usa la app.
+const gruposMenu = GRUPOS_MENU.map((g) => ({
+  grupo: g.grupo,
+  titulo: `menu.grupo.${g.grupo}` as const,
+  paginas: g.paginas.map((id) => ({ id, ...definidas[id] })),
+}))
+const principales = gruposMenu.flatMap((g) => g.paginas)
 const ayuda = { id: 'ayuda', titulo: 'menu.ayuda', detalle: 'menuDetalle.ayuda', icono: 'o_help_outline', componente: markRaw(AyudaPagina) } as const
 const paginas = [...principales, ayuda]
 

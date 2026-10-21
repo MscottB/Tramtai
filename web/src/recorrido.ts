@@ -12,6 +12,7 @@ export interface PasoMostrado {
 }
 
 // ORDEN_BIENVENIDA es el orden de la bienvenida; Historial y Ajustes tienen su propio recorrido desde su ?.
+// Sigue el orden del menú (menu.ts: menu.test.ts comprueba que es una subsecuencia de ordenMenu()).
 export const ORDEN_BIENVENIDA: Pagina[] = ['inicio', 'agentes', 'ejecutar', 'conectar', 'espacios']
 
 function pasosDelTema(pagina: Pagina, temas: Tema[]): PasoRecorrido[] {
