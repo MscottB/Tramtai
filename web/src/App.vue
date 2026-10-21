@@ -450,25 +450,6 @@ function empezarBienvenida() {
   hacerRecorrido(pasosBienvenida())
 }
 
-// Se ofrece una vez por carga, con la sesión abierta y en Inicio, y nunca si se entró por un enlace a otra página.
-const enlaceProfundo = entradaPorEnlace(location.hash)
-let bienvenidaOfrecida = false
-watch([() => !!sesion.value?.instancia, seccion], ([conSesion, pag]) => {
-  if (!ofrecerBienvenida({ sesion: conSesion, pagina: pag as Pagina, entradaPorEnlace: enlaceProfundo, estado: bienvenida.value, yaOfrecida: bienvenidaOfrecida })) return
-  bienvenidaOfrecida = true
-  let empezada = false
-  $q.dialog({ title: t('bienvenida.titulo'), message: t('bienvenida.texto'),
-    cancel: { flat: true, label: t('bienvenida.ahoraNo'), noCaps: true }, ok: { color: 'primary', label: t('bienvenida.empezar'), unelevated: true, noCaps: true } })
-    .onOk(() => {
-      empezada = true
-      empezarBienvenida()
-    })
-    // «Ahora no», Esc o clic fuera: no se vuelve a ofrecer
-    .onDismiss(() => {
-      if (!empezada) marcarBienvenida('descartada')
-    })
-}, { immediate: true })
-
 function iconoInstancia(ambito?: string) {
   return ambito === 'proyecto' ? 'o_folder' : 'o_public'
 }
@@ -541,4 +522,26 @@ function examinar() {
   Object.assign(window, { tramtaiCarpeta: (ruta: string) => (rutaProyecto.value = ruta) })
   escritorio?.postMessage('tramtai:carpeta')
 }
+
+// Se ofrece una vez por carga, con la sesión abierta y en Inicio, y nunca si se entró por un enlace a otra página.
+// Si hay otro diálogo abierto (Novedades tras actualizar, por ejemplo) espera a que se cierre. Va al final del script porque
+// lee los diálogos de arriba al ejecutarse ya (immediate).
+const enlaceProfundo = entradaPorEnlace(location.hash)
+let bienvenidaOfrecida = false
+const otroDialogo = computed(() => dialogoNovedades.value || dialogoActualizar.value || dialogoProyecto.value || acercaAbierto.value)
+watch([() => !!sesion.value?.instancia, seccion, otroDialogo], ([conSesion, pag, ocupado]) => {
+  if (!ofrecerBienvenida({ sesion: conSesion, pagina: pag as Pagina, entradaPorEnlace: enlaceProfundo, estado: bienvenida.value, yaOfrecida: bienvenidaOfrecida, otroDialogo: ocupado })) return
+  bienvenidaOfrecida = true
+  let empezada = false
+  $q.dialog({ title: t('bienvenida.titulo'), message: t('bienvenida.texto'),
+    cancel: { flat: true, label: t('bienvenida.ahoraNo'), noCaps: true }, ok: { color: 'primary', label: t('bienvenida.empezar'), unelevated: true, noCaps: true } })
+    .onOk(() => {
+      empezada = true
+      empezarBienvenida()
+    })
+    // «Ahora no», Esc o clic fuera: no se vuelve a ofrecer
+    .onDismiss(() => {
+      if (!empezada) marcarBienvenida('descartada')
+    })
+}, { immediate: true })
 </script>

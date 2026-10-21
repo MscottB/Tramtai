@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { entradaPorEnlace, ofrecerBienvenida } from './bienvenida.ts'
 
-const limpio = { sesion: true, pagina: 'inicio', entradaPorEnlace: false, estado: null, yaOfrecida: false } as const
+const limpio = { sesion: true, pagina: 'inicio', entradaPorEnlace: false, estado: null, yaOfrecida: false, otroDialogo: false } as const
 
 test('ofrecerBienvenida: el caso limpio la ofrece', () => {
   assert.equal(ofrecerBienvenida(limpio), true)
@@ -16,6 +16,12 @@ test('ofrecerBienvenida: cada condición que falta la impide', () => {
   assert.equal(ofrecerBienvenida({ ...limpio, estado: 'hecha' }), false, 'ya hecha')
   assert.equal(ofrecerBienvenida({ ...limpio, estado: 'descartada' }), false, 'descartada')
   assert.equal(ofrecerBienvenida({ ...limpio, yaOfrecida: true }), false, 'ya ofrecida en esta carga')
+  assert.equal(ofrecerBienvenida({ ...limpio, otroDialogo: true }), false, 'otro diálogo abierto (Novedades, Actualizar…)')
+})
+
+test('ofrecerBienvenida: al cerrarse el otro diálogo se ofrece', () => {
+  assert.equal(ofrecerBienvenida({ ...limpio, otroDialogo: true }), false)
+  assert.equal(ofrecerBienvenida({ ...limpio, otroDialogo: false }), true)
 })
 
 test('entradaPorEnlace: solo un hash que no sea vacío ni #inicio es un enlace profundo', () => {

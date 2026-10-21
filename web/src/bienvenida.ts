@@ -10,6 +10,7 @@ export function ofrecerBienvenida(o: {
   entradaPorEnlace: boolean
   estado: 'hecha' | 'descartada' | null
   yaOfrecida: boolean
+  otroDialogo: boolean // Novedades, Actualizar, Abrir proyecto o Acerca de: se espera a que se cierre, sin dar la bienvenida por ofrecida
 }): boolean {
-  return o.sesion && o.pagina === 'inicio' && !o.entradaPorEnlace && o.estado === null && !o.yaOfrecida
+  return o.sesion && o.pagina === 'inicio' && !o.entradaPorEnlace && o.estado === null && !o.yaOfrecida && !o.otroDialogo
 }
