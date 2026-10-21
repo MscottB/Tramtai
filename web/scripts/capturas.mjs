@@ -1,7 +1,7 @@
 // capturas saca las capturas de la Ayuda (web/src/ayuda/capturas, en claro y oscuro y en español e inglés) y las de la
 // portada (site/capturas) con una Tramtai compilada en una carpeta temporal, portable y en otro puerto, así no toca la
 // instalación de quien lo corre. Se corre en el equipo de desarrollo, con un agente ya conectado (para el Historial):
-//   cd web; npm run build; npm run capturas            (o: npm run capturas -- --solo receta)
+//   cd web; npm run build; npm run capturas            (o: npm run capturas -- --solo receta, o -- --sitio)
 // Usa Edge o Chrome sin ventana por su protocolo de depuración; TRAMTAI_NAVEGADOR elige otro ejecutable y
 // TRAMTAI_CAPTURAS_MODELO el modelo de las peticiones de ejemplo (claude/haiku por defecto).
 import { execFileSync, spawn } from 'node:child_process'
@@ -16,6 +16,9 @@ const destinoAyuda = fileURLToPath(new URL('../src/ayuda/capturas/', import.meta
 const destinoPortada = fileURLToPath(new URL('../../site/capturas/', import.meta.url))
 const args = process.argv.slice(2)
 const solo = args.includes('--solo') ? args[args.indexOf('--solo') + 1] : ''
+// --sitio saca solo los iconos y la imagen para compartir del sitio (favicon.svg y og.html), sin capturas de la app.
+const soloSitio = args.includes('--sitio')
+const destinoSitio = fileURLToPath(new URL('../../site/', import.meta.url))
 const modelo = process.env.TRAMTAI_CAPTURAS_MODELO || 'claude/haiku'
 const esperar = (ms) => new Promise((ok) => setTimeout(ok, ms))
 if (solo && !CAPTURAS.some((c) => c.id === solo)) {
@@ -102,7 +105,7 @@ try {
   const cli = (...a) => execFileSync(exe, a, { cwd: temporal, stdio: 'pipe' })
   cli('acceso', 'crear', 'asistente-soporte', '--grupo', 'Soporte', '--presupuesto', 'diario.peticiones=50', '--presupuesto', 'mensual.tokens=200000')
   cli('acceso', 'crear', 'resumen-notas', '--grupo', 'Notas')
-  for (const texto of ['Resume en una línea: Tramtai pone agentes de IA detrás de una API.', 'Di «hola» en tres idiomas.']) {
+  for (const texto of soloSitio ? [] : ['Resume en una línea: Tramtai pone agentes de IA detrás de una API.', 'Di «hola» en tres idiomas.']) {
     try { cli('ejecutar', '-a', agente, '-m', modelo.split('/')[1] ?? '', texto) } catch { console.warn(`aviso: ${modelo} no respondió; el Historial mostrará el error`) }
   }
 
@@ -136,11 +139,29 @@ try {
   // sinBarra oculta la barra superior fija, que taparía el recorte de un elemento.
   const sinBarra = () => evaluar(`document.head.insertAdjacentHTML('beforeend', '<style>.q-header{display:none!important}</style>')`)
 
+  // Los iconos del sitio salen de favicon.svg con fondo transparente, y la imagen para compartir de og.html.
+  if (!solo) {
+    const sacar = async (url, ancho, alto, archivo) => {
+      await enviar('Emulation.setDeviceMetricsOverride', { width: ancho, height: alto, deviceScaleFactor: 1, mobile: false })
+      await enviar('Page.navigate', { url: new URL(url, import.meta.url).href })
+      await hasta(() => evaluar('document.readyState === "complete" && document.fonts.status === "loaded"'), 20, url)
+      await esperar(300)
+      const { data } = await enviar('Page.captureScreenshot', { format: 'png' })
+      writeFileSync(join(destinoSitio, archivo), Buffer.from(data, 'base64'))
+      console.log('site/' + archivo)
+    }
+    await enviar('Emulation.setDefaultBackgroundColorOverride', { color: { r: 0, g: 0, b: 0, a: 0 } })
+    await sacar('../../site/favicon.svg', 32, 32, 'favicon-32.png')
+    await sacar('../../site/favicon.svg', 180, 180, 'apple-touch-icon.png')
+    await enviar('Emulation.setDefaultBackgroundColorOverride', {})
+    await sacar('./og.html', 1200, 630, 'og.png')
+  }
+
   // Un proyecto de ejemplo para la captura de Espacios; la sesión vuelve a la global para las demás.
   const ejemplo = join(temporal, 'mi-app')
   mkdirSync(ejemplo, { recursive: true })
-  await abrir('inicio', 'claro', 'es', '.pagina', 1280, 900)
-  await evaluar(`(async () => {
+  if (!soloSitio) await abrir('inicio', 'claro', 'es', '.pagina', 1280, 900)
+  if (!soloSitio) await evaluar(`(async () => {
     const pedir = async (ruta, cuerpo, csrf) => (await fetch(ruta, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
       body: JSON.stringify(cuerpo) })).json()
     const s = await (await fetch('/ui/sesion')).json()
@@ -153,7 +174,7 @@ try {
     while (w.nextNode()) w.currentNode.nodeValue = w.currentNode.nodeValue.replaceAll(${JSON.stringify(ejemplo)}, 'C:\\\\Proyectos\\\\mi-app') })()`)
 
   mkdirSync(destinoAyuda, { recursive: true })
-  for (const c of CAPTURAS.filter((x) => !solo || x.id === solo))
+  for (const c of CAPTURAS.filter((x) => !soloSitio && (!solo || x.id === solo)))
     for (const tema of ['claro', 'oscuro'])
       for (const idioma of ['es', 'en']) {
         const selector = `[data-captura="${c.id}"]`
@@ -168,7 +189,7 @@ try {
         console.log(`${c.id}.${tema}.${idioma}.webp`)
       }
 
-  if (!solo)
+  if (!solo && !soloSitio)
     for (const p of PORTADA)
       for (const tema of ['claro', 'oscuro']) {
         await abrir(p.pagina, tema, 'es', '.pagina', 1440, 900)

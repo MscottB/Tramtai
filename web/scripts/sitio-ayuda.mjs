@@ -1,16 +1,29 @@
 // sitio-ayuda escribe la Ayuda del sitio (site/ayuda/ y site/ayuda.html) desde los temas de la app:
-// cd web; npm run sitio. El CI lo vuelve a correr y falla si lo guardado en el repo no coincide.
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+// cd web; npm run sitio. También escribe 404.html y sitemap.xml y pone al día la cabeza, la barra y el pie de la portada
+// y la guía. El CI lo vuelve a correr y falla si lo guardado en el repo no coincide.
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { idioma, t } from '../src/i18n.ts'
 import es from '../src/idiomas/es.ts'
 import en from '../src/idiomas/en.ts'
 import { temas } from '../src/ayuda/indice.ts'
 import { ejemplos } from '../src/ejemplos.ts'
-import { generar } from './sitio.ts'
+import { PAGINAS_FIJAS, generar, rellenar } from './sitio.ts'
 
 const sitio = new URL('../../site/', import.meta.url)
 const origen = new URL('../src/ayuda/capturas/', import.meta.url)
 const capturas = existsSync(origen) ? readdirSync(origen).filter((a) => a.endsWith('.webp')) : []
+
+// medidas lee el ancho y el alto de la cabecera de un WebP (VP8X, VP8 con pérdida o VP8L sin pérdida).
+function medidas(b) {
+  const tipo = b.toString('ascii', 12, 16)
+  if (tipo === 'VP8X') return { ancho: 1 + b.readUIntLE(24, 3), alto: 1 + b.readUIntLE(27, 3) }
+  if (tipo === 'VP8 ') return { ancho: b.readUInt16LE(26) & 0x3fff, alto: b.readUInt16LE(28) & 0x3fff }
+  if (tipo === 'VP8L') {
+    const v = b.readUInt32LE(21)
+    return { ancho: 1 + (v & 0x3fff), alto: 1 + ((v >> 14) & 0x3fff) }
+  }
+  throw new Error('WebP desconocido: ' + tipo)
+}
 
 function ejemplosDe(b, lengua) {
   idioma.value = lengua
@@ -19,7 +32,13 @@ function ejemplosDe(b, lengua) {
     .map((e) => ({ id: e.id, titulo: e.titulo(), codigo: e.codigo(t('codigo.tuClave')) }))
 }
 
-const archivos = generar({ temas, es, en, ejemplos: ejemplosDe, capturas: new Set(capturas) })
+const archivos = generar({ temas, es, en, ejemplos: ejemplosDe,
+  capturas: new Map(capturas.map((a) => [a, medidas(readFileSync(new URL(a, origen)))])) })
+// La portada y la guía son escritas a mano: solo se les ponen al día la cabeza, la barra y el pie.
+for (const p of PAGINAS_FIJAS) {
+  const ruta = new URL(p.archivo, sitio)
+  writeFileSync(ruta, rellenar(readFileSync(ruta, 'utf8'), p))
+}
 // Se borra lo generado antes, para que un tema o una captura que ya no existen no queden publicados.
 rmSync(new URL('ayuda/', sitio), { recursive: true, force: true })
 mkdirSync(new URL('ayuda/capturas/', sitio), { recursive: true })

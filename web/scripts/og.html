@@ -1,0 +1,27 @@
+<!doctype html>
+<!-- og es la imagen para compartir (site/og.png, 1200×630): la saca capturas.mjs. -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: 'Overpass Variable'; src: url('../../site/overpass.woff2') format('woff2'); font-weight: 100 900; }
+  html, body { margin: 0; width: 1200px; height: 630px; }
+  body { display: flex; flex-direction: column; justify-content: center; gap: 28px; padding: 0 96px; box-sizing: border-box;
+    background: radial-gradient(70% 90% at 85% 10%, rgba(45, 212, 191, .28), transparent 70%), #0a1116; color: #e5edf0;
+    font-family: 'Segoe UI', system-ui, sans-serif; }
+  .marca { display: flex; align-items: center; gap: 22px; font: 800 64px 'Overpass Variable', sans-serif; letter-spacing: -.02em; }
+  .marca img { width: 96px; height: 96px; }
+  h1 { margin: 0; font: 750 70px/1.08 'Overpass Variable', sans-serif; letter-spacing: -.025em; max-width: 15em; }
+  h1 em { font-style: normal; color: #2dd4bf; }
+  p { margin: 0; font-size: 30px; color: #93a5ac; }
+  .lineas { display: flex; gap: 14px; }
+  .lineas span { width: 64px; height: 10px; border-radius: 5px; }
+</style>
+</head>
+<body>
+  <div class="marca"><img src="../../site/favicon.svg" alt="">Tramtai</div>
+  <h1>Tus agentes de IA, <em>como una API local</em>.</h1>
+  <p>Claude Code · Codex · GitHub Copilot · Gemini API</p>
+  <div class="lineas"><span style="background:#f28a4f"></span><span style="background:#5b8def"></span><span style="background:#3fb950"></span><span style="background:#a78bfa"></span><span style="background:#f472b6"></span></div>
+</body>
+</html>
