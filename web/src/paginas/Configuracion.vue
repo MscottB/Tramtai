@@ -2,14 +2,14 @@
   <div class="pagina apilado">
     <CabeceraPagina tema="configuracion" :titulo="t('menu.configuracion')" :descripcion="t('config.subtitulo')" />
 
-    <q-tabs v-model="pestana" dense no-caps align="left" active-color="primary" indicator-color="primary" class="texto-suave">
+    <q-tabs v-model="pestana" data-recorrido="configuracion.pestanas" dense no-caps align="left" active-color="primary" indicator-color="primary" class="texto-suave">
       <q-tab name="espacio" icon="o_folder_special" :label="t('config.pestanaEspacio', { nombre: sesion?.nombre ?? '' })" />
       <q-tab name="tramtai" icon="o_settings" :label="t('config.pestanaTramtai')" />
     </q-tabs>
     <div v-show="pestana === 'espacio'" class="text-caption texto-suave">{{ sesion?.ambito === 'proyecto' ? t('config.avisoProyecto') : t('config.avisoGlobal') }}</div>
     <div v-show="pestana === 'tramtai'" class="text-caption texto-suave">{{ t('config.avisoTramtai') }}</div>
 
-    <q-card v-show="pestana === 'espacio'">
+    <q-card v-show="pestana === 'espacio'" data-recorrido="configuracion.modelo">
       <q-card-section class="row items-center q-col-gutter-md">
         <div class="col-12 col-md">
           <div class="row items-start no-wrap">
@@ -136,7 +136,7 @@
         </q-card>
       </div>
       <div v-show="pestana === 'espacio'" class="col-12">
-        <q-card>
+        <q-card data-recorrido="configuracion.datos">
           <q-card-section class="row items-start no-wrap q-pb-sm">
             <div class="col">
               <div class="titulo-seccion">{{ t('datos.titulo') }}</div>

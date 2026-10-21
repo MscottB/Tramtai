@@ -2,7 +2,7 @@
   <div class="pagina apilado">
     <CabeceraPagina tema="conectar" :titulo="t('menu.conectar')" :descripcion="t('conectar.subtitulo')">
       <template #acciones>
-        <q-btn unelevated color="primary" icon="add" :label="t('puntos.nuevo')" no-caps @click="abrirNuevo" />
+        <q-btn data-recorrido="conectar.nueva" unelevated color="primary" icon="add" :label="t('puntos.nuevo')" no-caps @click="abrirNuevo" />
       </template>
     </CabeceraPagina>
 
@@ -10,7 +10,7 @@
     <!-- Las dos clases de clave, en tres líneas: la del espacio y las de cada app. -->
     <q-card flat bordered>
       <q-card-section class="row q-col-gutter-md">
-        <div class="col-12 col-md-6 row no-wrap items-start">
+        <div class="col-12 col-md-6 row no-wrap items-start" data-recorrido="conectar.clave-espacio">
           <q-icon name="o_cable" size="24px" color="primary" class="q-mr-sm" />
           <div><div class="text-weight-medium">{{ t('claves.espacioTitulo', { nombre: sesion?.nombre ?? '' }) }}</div>
             <div class="text-caption texto-suave">{{ t('claves.espacioTexto') }}</div></div>
@@ -24,7 +24,7 @@
     </q-card>
     <q-banner v-if="sugerirApiPropia(appConClave)" rounded class="aviso">{{ t('claves.sugerencia', { n: appConClave }) }}</q-banner>
 
-    <q-card data-captura="mis-apis">
+    <q-card data-captura="mis-apis" data-recorrido="conectar.apis">
       <q-tabs v-model="pestana" dense no-caps align="left" active-color="primary" indicator-color="primary" class="q-px-sm" :breakpoint="0">
         <q-tab name="apis" icon="o_hub" :label="t('puntos.pestana', { n: puntos.length })" />
         <q-tab name="principal" icon="o_cable" :label="t('conectar.directa', { nombre: sesion?.nombre ?? '' })" />

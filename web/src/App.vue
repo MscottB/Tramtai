@@ -12,7 +12,7 @@
           <span class="q-ml-sm marca gt-xs">Tramtai</span>
         </button>
         <q-space />
-        <q-btn-dropdown v-if="sesion.local && sesion.instancias?.length" flat no-caps :icon="iconoInstancia(sesion.ambito)"
+        <q-btn-dropdown v-if="sesion.local && sesion.instancias?.length" data-recorrido="app.espacio" flat no-caps :icon="iconoInstancia(sesion.ambito)"
           :label="$q.screen.gt.xs ? sesion.nombre || t('app.elegirInstancia') : undefined" :aria-label="t('app.cambiarInstancia')">
           <q-list style="min-width: 300px; max-width: 360px">
             <q-item-label header class="q-pb-xs">{{ t('app.instanciasActivas') }}</q-item-label>
@@ -39,7 +39,7 @@
             </q-item>
           </q-list>
         </q-btn-dropdown>
-        <q-chip v-else-if="sesion.instancia" outline :icon="iconoInstancia(sesion.ambito)">{{ sesion.nombre || sesion.instancia }}</q-chip>
+        <q-chip v-else-if="sesion.instancia" data-recorrido="app.espacio" outline :icon="iconoInstancia(sesion.ambito)">{{ sesion.nombre || sesion.instancia }}</q-chip>
         <q-btn v-if="actualizacion?.disponible" unelevated dense no-caps color="primary" icon="o_system_update_alt" class="q-ml-sm q-px-sm"
           :label="$q.screen.gt.xs ? t('actualizacion.boton') : undefined" :aria-label="t('actualizacion.titulo', { version: actualizacion.version })"
           @click="dialogoActualizar = true">

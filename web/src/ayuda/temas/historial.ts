@@ -11,6 +11,14 @@ export const historial: Tema = {
   relacionados: ['problemas', 'probar', 'ajustes'],
   bloques: [
     { tipo: 'pasos', pasos: ['ayuda.historial.paso1', 'ayuda.historial.paso2', 'ayuda.historial.paso3'] },
+    {
+      tipo: 'recorrido',
+      pasos: [
+        { ancla: 'historial.filtros', titulo: 'ayuda.historial.rec1Titulo', texto: 'ayuda.historial.rec1Texto' },
+        { ancla: 'historial.lista', titulo: 'ayuda.historial.rec2Titulo', texto: 'ayuda.historial.rec2Texto' },
+        { ancla: 'historial.detalle', titulo: 'ayuda.historial.rec3Titulo', texto: 'ayuda.historial.rec3Texto' },
+      ],
+    },
     { tipo: 'captura', id: 'historial', alt: 'ayuda.historial.captura' },
     {
       tipo: 'preguntas',

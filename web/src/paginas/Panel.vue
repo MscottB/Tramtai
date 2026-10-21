@@ -27,7 +27,7 @@
     </q-banner>
     <AvisoConversor v-if="conversor && conversor.estado !== 'preparando'" enlace-ajustes @ajustes="$emit('ir', 'configuracion')" />
 
-    <section class="q-card" data-captura="inicio">
+    <section class="q-card" data-captura="inicio" data-recorrido="inicio.mapa">
       <div class="seccion row items-end">
         <div class="col">
           <h2 class="titulo-seccion q-ma-none">{{ t('inicio.red') }}</h2>
@@ -44,7 +44,7 @@
       </div>
     </section>
 
-    <section v-if="!guiaOculta && !pasos.every((p) => p.hecho)" class="q-card">
+    <section v-if="!guiaOculta && !pasos.every((p) => p.hecho)" class="q-card" data-recorrido="inicio.primeros-pasos">
       <div class="seccion row items-center no-wrap">
         <div class="col">
           <h2 class="titulo-seccion q-ma-none">{{ t('inicio.primerosPasos') }}</h2>

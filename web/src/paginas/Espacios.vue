@@ -2,12 +2,12 @@
   <div class="pagina apilado">
     <CabeceraPagina tema="espacios" :titulo="t('menu.espacios')" :descripcion="t('espacios.subtitulo')">
       <template #acciones>
-        <q-btn flat no-caps color="primary" icon="o_refresh" :label="t('espacios.actualizar')" :loading="cargando" @click="cargar" />
-        <q-btn unelevated no-caps color="primary" icon="o_create_new_folder" :label="t('proyecto.abrir')" @click="$emit('abrir-proyecto')" />
+        <q-btn data-recorrido="espacios.actualizar" flat no-caps color="primary" icon="o_refresh" :label="t('espacios.actualizar')" :loading="cargando" @click="cargar" />
+        <q-btn data-recorrido="espacios.abrir" unelevated no-caps color="primary" icon="o_create_new_folder" :label="t('proyecto.abrir')" @click="$emit('abrir-proyecto')" />
       </template>
     </CabeceraPagina>
 
-    <div v-if="lista" class="apilado" data-captura="espacios">
+    <div v-if="lista" class="apilado" data-captura="espacios" data-recorrido="espacios.lista">
       <q-card v-for="e in lista" :key="e.id" flat bordered>
         <q-card-section class="row items-start no-wrap q-gutter-x-md">
           <q-icon :name="e.ambito === 'global' ? 'o_public' : 'o_folder'" size="28px" :color="e.estado === 'activo' ? 'primary' : 'grey-6'" />

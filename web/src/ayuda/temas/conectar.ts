@@ -37,6 +37,14 @@ export const conectar: Tema = {
       ],
     },
     { tipo: 'pasos', pasos: ['ayuda.conectar.paso1', 'ayuda.conectar.paso2', 'ayuda.conectar.paso3', 'ayuda.conectar.paso4'] },
+    {
+      tipo: 'recorrido',
+      pasos: [
+        { ancla: 'conectar.clave-espacio', titulo: 'ayuda.conectar.rec1Titulo', texto: 'ayuda.conectar.rec1Texto', bienvenida: true },
+        { ancla: 'conectar.nueva', titulo: 'ayuda.conectar.rec2Titulo', texto: 'ayuda.conectar.rec2Texto', bienvenida: true },
+        { ancla: 'conectar.apis', titulo: 'ayuda.conectar.rec3Titulo', texto: 'ayuda.conectar.rec3Texto' },
+      ],
+    },
     { tipo: 'ejemplo', contratos: ['openai', 'anthropic', 'nativa'], archivos: [] },
     { tipo: 'captura', id: 'mis-apis', alt: 'ayuda.conectar.captura' },
     tablaApis,

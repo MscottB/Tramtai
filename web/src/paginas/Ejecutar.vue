@@ -4,13 +4,13 @@
 
     <div class="row q-col-gutter-lg">
       <div class="col-12 col-md-5">
-        <q-card data-captura="receta">
+        <q-card data-captura="receta" data-recorrido="ejecutar.receta">
           <q-card-section class="q-pb-sm row items-start no-wrap q-gutter-x-sm">
             <div class="col">
               <div class="titulo-seccion">{{ t('ejecutar.receta') }}</div>
               <div class="texto-suave text-body2">{{ t('ejecutar.recetaTexto') }}</div>
             </div>
-            <q-btn flat dense no-caps color="primary" icon="o_code" :label="$q.screen.gt.xs ? t('codigo.boton') : undefined" :aria-label="t('codigo.boton')"
+            <q-btn data-recorrido="ejecutar.codigo" flat dense no-caps color="primary" icon="o_code" :label="$q.screen.gt.xs ? t('codigo.boton') : undefined" :aria-label="t('codigo.boton')"
               @click="verCodigo" />
           </q-card-section>
           <q-card-section v-if="editando" class="q-py-none">
@@ -26,7 +26,7 @@
           <q-separator />
           <q-card-section class="q-gutter-y-md">
             <div class="titulo-seccion">{{ t('ejecutar.mensajePrueba') }}</div>
-            <q-input v-model="mensaje" type="textarea" outlined :label="t('ejecutar.mensaje')" :placeholder="t('ejecutar.placeholder')"
+            <q-input v-model="mensaje" data-recorrido="ejecutar.mensaje" type="textarea" outlined :label="t('ejecutar.mensaje')" :placeholder="t('ejecutar.placeholder')"
               :input-style="{ minHeight: '120px' }" autogrow @keydown.ctrl.enter="ejecutar" @keydown.meta.enter="ejecutar" />
 
             <q-file v-model="archivos" multiple append use-chips clearable outlined dense :label="t('ejecutar.adjuntar')" :accept="aceptar(limites)"
