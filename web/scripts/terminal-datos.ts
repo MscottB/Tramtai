@@ -51,6 +51,11 @@ function bloqueDe(b: BloqueWeb, tx: (k: string) => string, url: string): Bloque 
     case 'ejemplo':
     case 'ir':
     case 'descargas': return { tipo: 'web', url }
+    // Un tipo nuevo tiene que mapearse aquí: scripts/ no pasa por vue-tsc, así que el fallo es en tiempo de ejecución.
+    default: {
+      const nuevo: never = b
+      throw new Error(`tipo de bloque sin mapear: ${(nuevo as { tipo: string }).tipo}`)
+    }
   }
 }
 

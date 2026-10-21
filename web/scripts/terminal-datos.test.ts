@@ -48,6 +48,11 @@ test('capturas, diagramas, descargas y enlaces ir pasan a un bloque web con la U
   assert.equal(URL_AYUDA, 'https://mscottb.github.io/Tramtai/ayuda/')
 })
 
+test('un bloque que el generador no conoce lo hace fallar en lugar de salir como null', () => {
+  const nuevo = { ...temas[0], bloques: [{ tipo: 'nuevo' }] } as unknown as typeof temas[number]
+  assert.throws(() => ayudaDe([nuevo], es), /tipo de bloque sin mapear: nuevo/)
+})
+
 test('los errores llevan su título y qué hacer; las preguntas, pregunta y respuesta', () => {
   const problemas = ayuda.es.find((t) => t.id === 'problemas')!
   const errores = problemas.bloques.find((b) => b.tipo === 'errores')!
