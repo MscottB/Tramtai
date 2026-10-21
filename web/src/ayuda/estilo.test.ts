@@ -1,6 +1,7 @@
 // La regla del estilo de la Ayuda hecha prueba: textos cortos, diagrama donde hay un recorrido, un tema por página
 // de la app y cada clave escrita en los dos idiomas.
 import { test } from 'node:test'
+import { CODIGOS_ERROR } from './temas/problemas.ts'
 import assert from 'node:assert/strict'
 import es from '../idiomas/es.ts'
 import en from '../idiomas/en.ts'
@@ -69,8 +70,8 @@ test('relacionados, errores e ids son válidos', () => {
   }
 })
 
-test('están los 15 temas y sus relacionados existen', () => {
-  assert.equal(temas.length, 15)
+test('están los 16 temas y sus relacionados existen', () => {
+  assert.equal(temas.length, 16)
   for (const tema of temas) for (const r of tema.relacionados) assert.ok(temaPorId(r), `${tema.id}: relacionado ${r} no existe`)
 })
 
@@ -118,4 +119,8 @@ test('cada error tiene título y una solución corta en los dos idiomas', () => 
       else assert.ok(textos['error.' + codigo], `${codigo}: no hay error.${codigo} en ${idioma}`)
       assert.ok(textos[e.solucion] && textos[e.solucion].length <= 200, `${codigo}: solución en ${idioma}`)
     }
+})
+
+test('los errores de espacios y agentes tienen su respuesta', () => {
+  for (const codigo of ['agente_desconectado', 'confianza_requerida', 'espacio_detenido']) assert.ok(CODIGOS_ERROR.includes(codigo), codigo)
 })

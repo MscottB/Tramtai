@@ -25,7 +25,7 @@ export const conectar: Tema = {
   resumen: 'ayuda.conectar.resumen',
   paginaApp: 'conectar',
   conDiagrama: true,
-  relacionados: ['archivos', 'herramientas', 'presupuestos'],
+  relacionados: ['archivos', 'herramientas', 'presupuestos', 'claves'],
   bloques: [
     {
       tipo: 'diagrama',

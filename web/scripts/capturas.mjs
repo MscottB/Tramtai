@@ -121,11 +121,12 @@ try {
   const evaluar = async (expr) => (await enviar('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true })).result.value
   let carga = 0
   // abrir carga la página con ese tema e idioma (guardados en localStorage) y espera a que aparezca el selector.
-  async function abrir(pagina, tema, idioma, selector, ancho, alto) {
+  async function abrir(pagina, tema, idioma, selector, ancho, alto, guardado = {}) {
     await enviar('Emulation.setDeviceMetricsOverride', { width: ancho, height: alto, deviceScaleFactor: 1, mobile: false })
     await enviar('Page.navigate', { url: `${base}/?c=${++carga}` })
     await hasta(() => evaluar('document.readyState === "complete"'), 20, 'la carga')
     await evaluar(`localStorage.setItem('tramtai.tema', '${tema}'); localStorage.setItem('tramtai.idioma', '${idioma}')`)
+    for (const [clave, valor] of Object.entries(guardado)) await evaluar(`localStorage.setItem(${JSON.stringify(clave)}, ${JSON.stringify(JSON.stringify(valor))})`)
     await enviar('Page.navigate', { url: `${base}/?c=${++carga}#${pagina}` })
     await hasta(() => evaluar(`!!document.querySelector('${selector}')`), 20, `${selector} en #${pagina}`)
     // Hasta que no quede nada cargando dentro (esqueletos de Quasar).
@@ -135,13 +136,27 @@ try {
   // sinBarra oculta la barra superior fija, que taparía el recorte de un elemento.
   const sinBarra = () => evaluar(`document.head.insertAdjacentHTML('beforeend', '<style>.q-header{display:none!important}</style>')`)
 
+  // Un proyecto de ejemplo para la captura de Espacios; la sesión vuelve a la global para las demás.
+  const ejemplo = join(temporal, 'mi-app')
+  mkdirSync(ejemplo, { recursive: true })
+  await abrir('inicio', 'claro', 'es', '.pagina', 1280, 900)
+  await evaluar(`(async () => {
+    const pedir = async (ruta, cuerpo, csrf) => (await fetch(ruta, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+      body: JSON.stringify(cuerpo) })).json()
+    const s = await (await fetch('/ui/sesion')).json()
+    const p = await pedir('/ui/proyectos', { raiz: ${JSON.stringify(ejemplo)} }, s.csrf)
+    await pedir('/ui/sesion', { instancia: 'global' }, p.csrf)
+  })()`)
+
   mkdirSync(destinoAyuda, { recursive: true })
   for (const c of CAPTURAS.filter((x) => !solo || x.id === solo))
     for (const tema of ['claro', 'oscuro'])
       for (const idioma of ['es', 'en']) {
         const selector = `[data-captura="${c.id}"]`
-        await abrir(c.pagina, tema, idioma, selector, 1280, 900)
+        await abrir(c.pagina, tema, idioma, selector, 1280, 900, c.guardado)
         await sinBarra()
+        // La ruta real del proyecto de ejemplo (la carpeta temporal de quien saca las capturas) no se publica.
+        await evaluar(`document.querySelectorAll('[data-captura] .codigo').forEach((e) => (e.textContent = e.textContent.replace(${JSON.stringify(ejemplo)}, 'C:\\\\Proyectos\\\\mi-app')))`)
         const r = await evaluar(`(() => { const e = document.querySelector('${selector}'); e.scrollIntoView({ block: 'start' });
           const b = e.getBoundingClientRect(); return { x: b.left + scrollX, y: b.top + scrollY, w: b.width, h: Math.min(b.height, 720) } })()`)
         const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80, captureBeyondViewport: true,

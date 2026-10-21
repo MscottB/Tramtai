@@ -24,6 +24,9 @@ export const ERRORES: Record<string, { titulo?: Clave; solucion: Clave }> = {
   modelo_no_permitido: { solucion: 'ayuda.problemas.modelo_no_permitido' },
   modelo_no_configurado: { solucion: 'ayuda.problemas.modelo_no_configurado' },
   cuota_cargas_agotada: { solucion: 'ayuda.problemas.cuota_cargas_agotada' },
+  agente_desconectado: { solucion: 'ayuda.problemas.agente_desconectado' },
+  confianza_requerida: { solucion: 'ayuda.problemas.confianza_requerida' },
+  espacio_detenido: { solucion: 'ayuda.problemas.espacio_detenido' },
 }
 export const CODIGOS_ERROR: readonly string[] = Object.keys(ERRORES)
 
