@@ -68,6 +68,12 @@ export function useRecorrido(ir: (pagina: Pagina) => void, paginaActual: Readonl
     // El paso se pinta ya, centrado si su ancla aún no se ve: así no queda la ventana del paso anterior sobre el hueco
     // de un elemento desmontado, y Siguiente avanza en vez de volver a empezar la espera. Si el ancla aparece en los 5 s
     // siguientes, el paso pasa a señalarla.
+    // Antes de buscar el ancla, la página puede abrir la pestaña donde está (Ajustes); cambiar de pestaña no cambia datos.
+    if (paso.ancla) {
+      window.dispatchEvent(new CustomEvent('tramtai:recorrido-paso', { detail: { ancla: paso.ancla } }))
+      await nextTick()
+      if (!vigente()) return
+    }
     pintar(i)
     if (!paso.ancla || elegirElemento(paso.ancla, document)) return
     await esperarAncla(paso.ancla, vigente)

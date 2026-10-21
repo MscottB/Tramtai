@@ -207,7 +207,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { pestanaDeAncla } from '../pestanasAjustes'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import ProcedenciaValor from '../componentes/ProcedenciaValor.vue'
 import { guardar, leer } from '../componentes/accesos/comun'
@@ -229,6 +230,13 @@ const entradas = ref<EntradaConfiguracion[]>([])
 // pestana separa lo de este espacio de lo de todo Tramtai; se recuerda entre visitas.
 const pestana = ref<'espacio' | 'tramtai'>(leer('tramtai.pestanaAjustes', 'espacio'))
 watch(pestana, (p) => guardar('tramtai.pestanaAjustes', p))
+// El recorrido guiado avisa de cada ancla antes de buscarla: si está en la pestaña oculta, se abre esa.
+function alPasoDelRecorrido(e: Event) {
+  const destino = pestanaDeAncla((e as CustomEvent<{ ancla?: string }>).detail?.ancla)
+  if (destino) pestana.value = destino
+}
+onMounted(() => window.addEventListener('tramtai:recorrido-paso', alPasoDelRecorrido))
+onUnmounted(() => window.removeEventListener('tramtai:recorrido-paso', alPasoDelRecorrido))
 
 // Herencia: en un proyecto cada ajuste dice si es propio o de Global, y los propios pueden volver al de Global.
 const clavesPredeterminado = ['predeterminados.agente', 'predeterminados.modelo', 'predeterminados.perfil_modelo', 'predeterminados.esfuerzo']

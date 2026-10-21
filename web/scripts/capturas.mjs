@@ -136,6 +136,8 @@ try {
     await enviar('Page.navigate', { url: `${base}/?c=${++carga}` })
     await hasta(() => evaluar('document.readyState === "complete"'), 20, 'la carga')
     // La bienvenida (se ofrece sola la primera vez en Inicio) no sale en las capturas: su fondo oscurecería la página.
+    // La pestaña de Ajustes que dejó una captura no debe pasar a la siguiente: cada una trae la suya en `guardado`.
+    await evaluar(`localStorage.removeItem('tramtai.pestanaAjustes')`)
     await evaluar(`localStorage.setItem('tramtai.tema', '${tema}'); localStorage.setItem('tramtai.idioma', '${idioma}'); localStorage.setItem('tramtai.bienvenida', 'descartada')`)
     for (const [clave, valor] of Object.entries(guardado)) await evaluar(`localStorage.setItem(${JSON.stringify(clave)}, ${JSON.stringify(JSON.stringify(valor))})`)
     await enviar('Page.navigate', { url: `${base}/?c=${++carga}#${pagina}` })
