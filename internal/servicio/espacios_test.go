@@ -385,6 +385,51 @@ func TestOlvidarPideNombre(t *testing.T) {
 	}
 }
 
+// Una API de un local.yaml con un nombre que no es válido (con barras) no lleva a Olvidar fuera de datos/tokens.
+func TestOlvidarIgnoraNombresDeApiConBarras(t *testing.T) {
+	s, _, proyecto := entorno(t, "", "", adaptadores.Simulado{})
+	inst, err := s.ActivarProyecto(proyecto)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.FijarConfianza(inst.Raiz, true); err != nil {
+		t.Fatal(err)
+	}
+	otra := filepath.Join(s.opc.Datos, "instancias", "otro.db")
+	os.WriteFile(otra, []byte("x"), 0o600)
+	os.WriteFile(filepath.Join(proyecto, ".tramtai", "local.yaml"), []byte("puntos_acceso:\n  - nombre: x/../../instancias/otro.db\n"), 0o600)
+	if err := s.Olvidar(inst.ID, espacioDe(t, s, inst.ID).Nombre); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(otra); err != nil {
+		t.Fatalf("borró la base de otro espacio: %v", err)
+	}
+}
+
+// La CLI resuelve el espacio de una carpeta con la misma regla que el servicio: una marca copiada en otra carpeta
+// (una copia o un repositorio que la versiona) no es la de su proyecto mientras el original siga en su sitio.
+func TestIDDeCarpetaNoAdoptaLaMarcaDeOtro(t *testing.T) {
+	s, _, proyecto := entorno(t, "", "", adaptadores.Simulado{})
+	inst, err := s.ActivarProyecto(proyecto)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.registro().guardar(); err != nil {
+		t.Fatal(err)
+	}
+	copia := filepath.Join(t.TempDir(), "copia")
+	os.MkdirAll(filepath.Join(copia, ".tramtai"), 0o700)
+	os.WriteFile(filepath.Join(copia, ".tramtai", "config.yaml"), []byte("version: 1\nproyecto:\n  nombre: Demo App\n"), 0o600)
+	os.WriteFile(filepath.Join(copia, ".tramtai", "espacio"), []byte(inst.ID), 0o600)
+	c, _ := nucleo.CargarConfiguracion(copia)
+	if id := IDDeCarpeta(s.opc.Datos, copia, c); id == inst.ID {
+		t.Fatalf("la copia tomó el espacio del original %s", id)
+	}
+	if id := IDDeCarpeta(s.opc.Datos, inst.Raiz, inst.Config); id != inst.ID {
+		t.Fatalf("el original: %s, era %s", id, inst.ID)
+	}
+}
+
 func TestOlvidarSoloDentroDeDatos(t *testing.T) {
 	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
 	for _, id := range []string{"../x", `C:\x`, "/x", "", "x/../../y"} {

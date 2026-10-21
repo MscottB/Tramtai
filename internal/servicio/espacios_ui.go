@@ -167,8 +167,11 @@ func (s *Servicio) Olvidar(id, nombre string) error {
 	}
 	base := filepath.Join(s.opc.Datos, "instancias", id+".db")
 	rutas := []string{base, base + "-wal", base + "-shm", filepath.Join(s.opc.Datos, "cargas", id), RutaTokenInstancia(s.opc.Datos, id)}
+	tokens := filepath.Join(s.opc.Datos, "tokens")
 	for _, p := range s.apisDe(id, e.Ruta) {
-		rutas = append(rutas, RutaTokenPunto(s.opc.Datos, p))
+		if ruta := RutaTokenPunto(s.opc.Datos, p); contrato.NombrePuntoValido(p) && dentroDe(tokens, ruta) {
+			rutas = append(rutas, ruta)
+		}
 	}
 	for _, ruta := range rutas {
 		if dentroDe(s.opc.Datos, ruta) {

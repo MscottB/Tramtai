@@ -5,6 +5,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"sort"
 	"strconv"
@@ -159,6 +160,32 @@ func CargarCapa(ruta string, origen Origen) (Capa, error) {
 // Es estricta: guardar una clave de seguridad en un local.yaml no confiable es un error.
 func CargarCapaDe(datos []byte, ruta string, origen Origen) (Capa, error) {
 	return cargarCapa(datos, ruta, origen, true)
+}
+
+// ValidarCambio valida el contenido nuevo de ruta antes de guardarlo, como CargarCapaDe, salvo por las claves de
+// seguridad que ya estaban igual en antes: un local.yaml no confiado puede traerlas (se ignoran al aplicarlo), y
+// guardar otro ajuste no debe fallar por ellas. Añadir o cambiar una sigue siendo un error.
+func ValidarCambio(antes, despues []byte, ruta string, origen Origen) error {
+	_, err := cargarCapa(despues, ruta, origen, true)
+	if err == nil || !reflect.DeepEqual(administradas(antes), administradas(despues)) {
+		return err
+	}
+	_, err = cargarCapa(despues, ruta, origen, false)
+	return err
+}
+
+// administradas son los valores de las claves de seguridad de un YAML, aplanados.
+func administradas(datos []byte) map[string]any {
+	var crudo map[string]any
+	_ = yaml.Unmarshal(datos, &crudo)
+	valores := map[string]any{}
+	aplanar("", crudo, valores)
+	for clave := range valores {
+		if !esAdministrada(clave) {
+			delete(valores, clave)
+		}
+	}
+	return valores
 }
 
 func cargarCapa(datos []byte, ruta string, origen Origen, estricta bool) (Capa, error) {

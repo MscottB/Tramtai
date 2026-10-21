@@ -197,25 +197,33 @@ func (s *Servicio) idDe(raiz string, c *nucleo.Configuracion) (string, error) {
 	r := s.registro()
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	id, adoptar := idPara(r.espacios, raiz, c)
+	if adoptar {
+		r.espacios[id].Ruta = raiz
+	}
+	return id, nil
+}
+
+// idPara es la regla de idDe sobre los espacios conocidos; adoptar dice si la marca se adopta (su ruta pasa a raiz).
+func idPara(espacios map[string]*Espacio, raiz string, c *nucleo.Configuracion) (id string, adoptar bool) {
 	if marca := LeerMarca(raiz); marca != "" && marca != "global" {
-		if e, ok := r.espacios[marca]; ok && e.Ambito == "proyecto" {
+		if e, ok := espacios[marca]; ok && e.Ambito == "proyecto" {
 			if e.Ruta == "" || MismaRuta(e.Ruta, raiz) || !esProyecto(e.Ruta) {
-				e.Ruta = raiz
-				return marca, nil
+				return marca, true
 			}
 		}
 	}
-	for _, e := range r.espacios {
+	for _, e := range espacios {
 		if e.Ambito == "proyecto" && e.Ruta != "" && MismaRuta(e.Ruta, raiz) {
-			return e.ID, nil
+			return e.ID, false
 		}
 	}
 	base := IDProyecto(raiz, c)
-	id := base
+	id = base
 	for n := 2; ; n++ {
-		e, ocupado := r.espacios[id]
+		e, ocupado := espacios[id]
 		if !ocupado || e.Ruta == "" {
-			return id, nil
+			return id, false
 		}
 		id = fmt.Sprintf("%s-%d", base, n)
 	}
@@ -297,13 +305,21 @@ func escribirMarca(raiz, id string) error {
 	return os.WriteFile(ignorar, []byte(texto), 0o644)
 }
 
-// IDDeCarpeta es el id del espacio de un proyecto visto desde fuera del servicio (CLI, terminal): el de su marca, o el
-// que tendría si aún no la tiene.
-func IDDeCarpeta(raiz string, c *nucleo.Configuracion) string {
-	if id := LeerMarca(raiz); id != "" && id != "global" {
-		return id
+// IDDeCarpeta es el id del espacio de un proyecto visto desde fuera del servicio (CLI, terminal), con la misma regla
+// que el servicio sobre el registro de datos (solo lo lee): una marca copiada en otra carpeta no se adopta.
+func IDDeCarpeta(datos, raiz string, c *nucleo.Configuracion) string {
+	espacios := map[string]*Espacio{}
+	if contenido, err := os.ReadFile(filepath.Join(datos, "espacios.json")); err == nil {
+		var a archivoRegistro
+		if json.Unmarshal(contenido, &a) == nil {
+			for _, e := range a.Espacios {
+				e := e
+				espacios[e.ID] = &e
+			}
+		}
 	}
-	return IDProyecto(raiz, c)
+	id, _ := idPara(espacios, raiz, c)
+	return id
 }
 
 // gitignoreProyecto es el .gitignore de .tramtai: lo propio de cada máquina no se versiona.

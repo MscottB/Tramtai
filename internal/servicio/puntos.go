@@ -615,7 +615,7 @@ func editarYAML(ruta string, origen nucleo.Origen, editar func(raiz *yaml.Node) 
 	if err != nil {
 		return err
 	}
-	if _, err := nucleo.CargarCapaDe(salida, ruta, origen); err != nil {
+	if err := nucleo.ValidarCambio(original, salida, ruta, origen); err != nil {
 		return err
 	}
 	return escribirAtomico(ruta, salida, 0o600)

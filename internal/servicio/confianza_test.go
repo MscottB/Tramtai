@@ -155,6 +155,31 @@ func TestAbrirCarpetaConSoloLocalPreguntaYNoPisa(t *testing.T) {
 	}
 }
 
+// En un proyecto no confiado cuyo local.yaml trae claves de seguridad se pueden guardar los ajustes del espacio (esas
+// claves siguen ignoradas); lo que no se puede es añadir otra, como una API.
+func TestProyectoNoConfiadoGuardaSusAjustes(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	dir := t.TempDir()
+	conTramtai(t, dir, "comandos_agentes:\n  claude: otro.exe\n")
+	no := false
+	inst, err := s.AbrirProyecto(dir, AbrirOpciones{Confiar: &no})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.guardarValores(inst, map[string]any{"predeterminados.modelo": "m1"}); err != nil {
+		t.Fatalf("guardar el modelo del espacio: %v", err)
+	}
+	if err := s.heredar(inst, "predeterminados.modelo"); err != nil {
+		t.Fatalf("usar el de Global: %v", err)
+	}
+	err = EditarPuntos(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+		return append(lista, ConfigPunto{Nombre: "asistente"}), nil
+	})
+	if err == nil {
+		t.Fatal("en un proyecto no confiado no se pueden crear APIs")
+	}
+}
+
 // El aviso de las claves ignoradas sigue tras reiniciar el servicio.
 func TestAvisoDeClavesIgnoradasSobreviveAlReinicio(t *testing.T) {
 	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})

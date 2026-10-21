@@ -457,5 +457,11 @@ func identificar(ambito string) (raiz, id string, c *nucleo.Configuracion, err e
 	if c, err = nucleo.CargarConfiguracion(raiz); err != nil {
 		return "", "", nil, err
 	}
-	return raiz, servicio.IDDeCarpeta(raiz, c), c, nil
+	return raiz, idDeCarpeta(raiz, c), c, nil
+}
+
+// idDeCarpeta es el espacio de la carpeta raiz con la regla del servicio, sobre el registro de la carpeta de datos.
+func idDeCarpeta(raiz string, c *nucleo.Configuracion) string {
+	datos, _ := nucleo.DirDatos()
+	return servicio.IDDeCarpeta(datos, raiz, c)
 }

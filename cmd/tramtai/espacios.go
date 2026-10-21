@@ -11,7 +11,6 @@ import (
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
-	"tramtai/internal/servicio"
 )
 
 // comandoEspacios lista todos los espacios de trabajo, también los detenidos y los que no encuentran su carpeta.
@@ -70,7 +69,7 @@ func comandoEspacio() *cobra.Command {
 			if err != nil {
 				return "", "", "", err
 			}
-			return "proyecto", raiz, servicio.IDDeCarpeta(raiz, c), nil
+			return "proyecto", raiz, idDeCarpeta(raiz, c), nil
 		}
 		cli, err := conectar()
 		if err != nil {
