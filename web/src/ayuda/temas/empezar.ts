@@ -36,6 +36,7 @@ export const empezar: Tema = {
     {
       tipo: 'preguntas',
       preguntas: [
+        { id: 'repetir-recorrido', pregunta: 'ayuda.empezar.pRecorrido', respuesta: 'ayuda.empezar.rRecorrido' },
         { id: 'tranvias', pregunta: 'ayuda.empezar.pTranvias', respuesta: 'ayuda.empezar.rTranvias' },
         { id: 'entrar', pregunta: 'ayuda.empezar.pEntrar', respuesta: 'ayuda.empezar.rEntrar' },
         { id: 'en-marcha', pregunta: 'ayuda.empezar.pMarcha', respuesta: 'ayuda.empezar.rMarcha' },

@@ -77,6 +77,32 @@ desde los mismos datos.
   bienvenida o una pantalla que sale en ella, se rehace. `portada.test.ts` exige una figura por paso en `site/index.html`,
   150 KB como máximo por imagen de 1440 y 6 MB en total; el carrusel es `.demo` en `sitio.js`.
 
+### Recorridos: cómo añadir un paso o un ancla
+
+Los recorridos guiados (driver.js) salen de la misma fuente que la Ayuda: el bloque `recorrido` de cada tema de
+página (`web/src/ayuda/temas/<id>.ts`). No hay otra lista de pasos que tocar.
+
+- **Un paso:** una línea en el bloque `recorrido` del tema de esa página, `{ ancla, titulo, texto, bienvenida? }`, con
+  `titulo` y `texto` como claves de `ayuda.es.ts` y `ayuda.en.ts` (`estilo.test.ts` limita el título a 60 caracteres y
+  el texto a 200). Cada página tiene de 3 a 5 pasos. Con `bienvenida: true` el paso entra también en la bienvenida, que
+  los toma en el orden del menú (Inicio, Agentes, Probar, Mis APIs, Espacios) más un cierre; hoy son 14 pasos y
+  `anclas.test.ts` fija su orden.
+- **Un ancla:** el atributo `data-recorrido="<pagina>.<nombre>"` en el elemento del `.vue` que señala el paso (minúsculas
+  y guiones; `app.<nombre>` para lo que está en todas las páginas, como el selector de espacio o el «?», que viven en
+  `App.vue` o `componentes/CabeceraPagina.vue`).
+- **`anclas.test.ts` lo comprueba:** que cada paso apunte a un `data-recorrido` que existe en el `.vue` de su página y
+  que no sobre ninguno (toda ancla de la interfaz tiene su paso). Si quitas o renombras un elemento, la prueba falla
+  hasta que el paso y el ancla vuelvan a coincidir.
+- **Ajustes:** tiene dos pestañas y la que no se ve esconde sus elementos. Si el ancla está en una de ellas, añádela a
+  `web/src/pestanasAjustes.ts`, que dice qué pestaña abrir antes de señalarla (tiene su prueba).
+- **El recorrido solo enseña:** no pulsa nada ni cambia datos. Si un elemento no está en pantalla, el paso sale
+  centrado; Esc lo cierra y las flechas pasan de paso. Lo único que abre solo es la pestaña de Ajustes de un paso.
+- **La primera vez** se recuerda en `localStorage` (`tramtai.bienvenida`: `hecha` o `descartada`); no se ofrece si se
+  entró por un enlace profundo. Para verla de nuevo, borra esa clave o usa «Haz el recorrido de Tramtai» en Primeros pasos.
+- **Capturas del sitio:** un paso nuevo necesita su captura (`npm run capturas -- --recorridos`) y, si sale en la
+  bienvenida o en una pantalla que ella muestra, la demo de la portada (`-- --bienvenida`); `capturas.test.ts` exige que
+  estén todas.
+
 ## Probar
 
 ```powershell

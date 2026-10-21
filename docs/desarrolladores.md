@@ -19,6 +19,9 @@ nada más. Si necesitas trabajos largos que sigues, cancelas o reintentas, la AP
 y la regeneras sin tocar las demás. La **clave del espacio** es para ti y tus scripts. En la API, «instancia» es ese
 espacio de trabajo: el global o el de un proyecto.
 
+Si aún no conoces la app, [Aprende la app en 2 minutos](https://mscottb.github.io/Tramtai/#demo) la enseña en la portada, y
+en Tramtai el botón **?** de cada página tiene **Muéstrame en pantalla**. La API no cambia.
+
 Desde la terminal, `tramtai espacios` lista los espacios, `tramtai espacio iniciar|detener|olvidar` los gestiona y
 `tramtai agentes desconectar|conectar <agente>` deja un agente fuera sin desinstalar su CLI.
 
