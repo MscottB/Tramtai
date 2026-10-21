@@ -145,8 +145,8 @@ depende del sitio: LCP, CLS, imágenes, recursos que bloquean el renderizado, ta
 
 **SEO**
 - [A] [x] «link-text» en las 4 páginas: el enlace del pie a `ayuda/empezar.html` decía solo «Empezar», un texto genérico
-  para Lighthouse. Ahora «Primeros pasos» / «First steps» (como la tarjeta de la app), en `web/scripts/sitio.ts`, con su
-  prueba en `sitio.test.ts`.
+  para Lighthouse. Ahora «Primeros pasos» / «Getting started» (el mismo texto que la tarjeta de la app,
+  `inicio.primerosPasos`), en `web/scripts/sitio.ts`, con su prueba en `sitio.test.ts`.
 - [B] 404 con SEO 54 («is-crawlable»): lleva `noindex` a propósito. No se arregla.
 
 **Rendimiento**
@@ -157,14 +157,18 @@ depende del sitio: LCP, CLS, imágenes, recursos que bloquean el renderizado, ta
   El comportamiento no cambia: pausa, puntos, «reducir movimiento» y `visibilitychange` funcionan igual (un cambio de
   pestaña no arranca un tranvía que aún no se ha visto). La demo ya esperaba a verse para avanzar y no mide nada. Prueba en
   `portada.test.ts`.
-- [M] «image-delivery» en la portada de escritorio (ahorro estimado de 47 KiB): las capturas de «Así se ve» bajan como
-  960 px y se pintan a 630. **Sin arreglo en la v0.55:** el atributo `sizes` ya estaba y es correcto (`(max-width: 900px)
-  100vw, 660px`, y `1000px` en la demo, con prueba), así que el navegador ya elige la mejor de las dos; el ahorro pide
-  una tercera anchura (640 px) por captura, es decir, una variante más de cada captura (unos 47 KiB de ahorro en
-  escritorio, ninguno en móvil) a cambio de más archivos en el repositorio. No compensa: no se arregla.
+- [M] [x] «image-delivery» en la portada de escritorio (ahorro estimado de 47 KiB): las capturas de «Así se ve» bajaban
+  como 960 px y se pintaban a 630 (o a 394 en los pares invertidos, que dejaban la captura en la columna estrecha).
+  Ahora cada pantalla tiene también su variante de 640 px (`capturas.mjs`), los pares invertidos dejan la captura en la
+  columna ancha, como los demás (`estilo.css`), y `sizes` dice el ancho real, `(max-width: 900px) 100vw, 630px`, con el
+  navegador eligiendo la de 640 en escritorio. `portada.test.ts` fija el `srcset` y el valor de `sizes`, y
+  `capturas.test.ts` exige las tres anchuras.
+- [M] [x] «image-delivery» en `ayuda/espacios` (12 KiB en escritorio y 14 KiB en móvil): las capturas de la Ayuda medían
+  hasta 1024 px y se pintan como mucho a 736 (el ancho de la columna). `capturas.mjs` saca reducidas a ese ancho
+  (`ANCHO_AYUDA`) las que pasan de él, sin variantes nuevas; `capturas.test.ts` comprueba que ninguna lo supera.
 - [B] Caché y latencia del documento: dependen del servidor (GitHub Pages), no del sitio.
-- [B] `estilo.css` bloquea el renderizado (29 KB) y CSS y JS sin minificar (6-7 KB): el sitio no tiene paso de
-  compilación y no se añaden dependencias. En la 404 el bloqueo viene de pedir `estilo.css` con la URL absoluta de GitHub
+- [B] `estilo.css` bloquea el renderizado (29 KB) y CSS y JS sin minificar (6-7 KB), y por eso también sale en
+  «network-dependency-tree»: el sitio no tiene paso de compilación y no se añaden dependencias. En la 404 el bloqueo viene de pedir `estilo.css` con la URL absoluta de GitHub
   Pages desde local; publicada es del mismo origen.
 - [B] CSS sin usar (11-20 KB): una sola hoja común a todas las páginas, a propósito.
 

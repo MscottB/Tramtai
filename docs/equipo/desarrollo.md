@@ -69,10 +69,13 @@ desde los mismos datos.
 - **Capturas:** `cd web; npm run build; npm run capturas` (o `-- --solo <id>`) compila Tramtai en `bin/`, la arranca
   portable en otro puerto con datos de ejemplo y saca cada zona `[data-captura="<id>"]` en claro y oscuro y en español e
   inglés, el elemento de cada paso de los recorridos con su anillo (`-- --recorridos` saca solo esas; una ancla que la demo no muestra va en `SIN_CAPTURA`, con su motivo) y las de la portada. Necesita Edge o Chrome y un agente conectado (`TRAMTAI_CAPTURAS_MODELO`, por defecto
-  `claude/haiku`); se corre en el equipo de desarrollo cuando cambia una pantalla que sale en la Ayuda.
+  `claude/haiku`); se corre en el equipo de desarrollo cuando cambia una pantalla que sale en la Ayuda. Las de la Ayuda
+  más anchas que su columna del sitio salen reducidas a `ANCHO_AYUDA` (736 px), y las de la portada a 640, 960 y 1440 px.
+  Si una captura muestra una ruta del equipo (la carpeta personal, la temporal o la del repositorio), el script se para
+  (`rutaPrivada` en `capturas-lista.ts`).
 - **Demo de la portada:** sale en la corrida completa y sola con `npm run capturas -- --bienvenida`; lanza la bienvenida de verdad (acepta la oferta de la primera
   vez y pulsa «Siguiente») y saca una pantalla completa de 1440×900 por paso, con la ventana del recorrido encima, en
-  claro y oscuro: `site/capturas/bienvenida-<n>-<claro|oscuro>-<960|1440>.webp` (`BIENVENIDA` en `capturas-lista.ts`, uno
+  claro y oscuro y en español e inglés: `site/capturas/bienvenida-<n>-<claro|oscuro>-<es|en>-<960|1440>.webp` (`BIENVENIDA` en `capturas-lista.ts`, uno
   por paso de `pasosBienvenida()`). Solo usa los datos de demostración y no pide nada a ningún agente; si cambia la
   bienvenida o una pantalla que sale en ella, se rehace. `portada.test.ts` exige una figura por paso en `site/index.html`,
   150 KB como máximo por imagen de 1440 y 6 MB en total; el carrusel es `.demo` en `sitio.js`.
@@ -96,12 +99,14 @@ página (`web/src/ayuda/temas/<id>.ts`). No hay otra lista de pasos que tocar.
 - **Ajustes:** tiene dos pestañas y la que no se ve esconde sus elementos. Si el ancla está en una de ellas, añádela a
   `web/src/pestanasAjustes.ts`, que dice qué pestaña abrir antes de señalarla (tiene su prueba).
 - **El recorrido solo enseña:** no pulsa nada ni cambia datos. Si un elemento no está en pantalla, el paso sale
-  centrado; Esc lo cierra y las flechas pasan de paso. Lo único que abre solo es la pestaña de Ajustes de un paso.
+  centrado; Esc lo cierra y las flechas pasan de paso. El elemento señalado no se puede pulsar mientras tanto, y Atrás
+  (o perder la sesión) cierra el recorrido. Lo único que hace solo es cambiar de página y, en Ajustes, abrir la pestaña
+  de un paso.
 - **La primera vez** se recuerda en `localStorage` (`tramtai.bienvenida`: `hecha` o `descartada`); no se ofrece si se
-  entró por un enlace profundo. Para verla de nuevo, borra esa clave o usa «Haz el recorrido de Tramtai» en Primeros pasos.
-- **Capturas del sitio:** un paso nuevo necesita su captura (`npm run capturas -- --recorridos`) y, si sale en la
-  bienvenida o en una pantalla que ella muestra, la demo de la portada (`-- --bienvenida`); `capturas.test.ts` exige que
-  estén todas.
+  entró por un enlace profundo. Para que vuelva a ofrecerse, borra esa clave y recarga la app en Inicio; para hacerla
+  sin más, «Haz el recorrido de Tramtai» en Primeros pasos.
+- **Capturas del sitio:** un paso nuevo necesita su captura y, si entra en la bienvenida, también la demo de la portada;
+  cómo sacarlas está arriba, en **Capturas** y **Demo de la portada**.
 
 ## Probar
 
