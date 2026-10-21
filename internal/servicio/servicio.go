@@ -96,6 +96,7 @@ type Servicio struct {
 
 	muRecargar    sync.Mutex // una recarga a la vez: cada una lee la configuración y la aplica entera
 	mu            sync.RWMutex
+	muConfianza   sync.Mutex // proyectos_confiables se lee y se reescribe entero: una confianza a la vez
 	instancias    map[string]*Instancia
 	abriendo      map[string]*apertura // instancias que se están abriendo, fuera de mu
 	cerrado       bool                 // Cerrar ya empezó: no se publican instancias nuevas

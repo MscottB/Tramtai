@@ -229,6 +229,7 @@ func init() {
 		"%s no se pudo leer (%s) ni apartar (%s): se abre solo el espacio global y se reescribirá":                                          "%s could not be read (%s) or set aside (%s): only the global workspace is opened and it will be rewritten",
 		"%s no se pudo leer (%s): se apartó como %s y se abre solo el espacio global":                                                       "%s could not be read (%s): it was set aside as %s and only the global workspace is opened",
 		"agente no registrado: %s": "agent not registered: %s",
+		"%s parece el proyecto que estaba en %s: decide si confías en esta carpeta": "%s looks like the project that was at %s: decide whether you trust this folder",
 		"%s no tiene sesión iniciada: inicia sesión con %s o pasa a clave de API":   "%s has no session: sign in with %s or switch to an API key",
 		"%s usa ahora una clave de API, no tu suscripción":                          "%s now uses an API key, not your subscription",
 		"la sesión del CLI no responde: la última petición falló por autenticación": "the CLI session is not responding: the last request failed authentication",

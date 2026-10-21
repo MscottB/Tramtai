@@ -185,6 +185,7 @@
           <q-card-section v-if="confianza" class="q-pt-none">
             <div class="aviso text-body2">
               <div class="text-weight-medium">{{ t('proyecto.confiarTitulo') }}</div>
+              <div v-if="movidoDesde" class="q-mt-xs">{{ t('proyecto.movido', { ruta: movidoDesde }) }}</div>
               <div class="q-mt-xs">{{ confianza.length ? t('proyecto.confiarTexto') : t('proyecto.sinClaves') }}</div>
               <div v-if="confianza.length" class="q-mt-xs row q-gutter-xs">
                 <q-chip v-for="c in confianza" :key="c" dense square class="codigo">{{ c }}</q-chip>
@@ -453,11 +454,14 @@ const abriendoProyecto = ref(false)
 const ejemploRuta = /Windows/i.test(navigator.userAgent) ? 'C:\\Proyectos\\mi-app' : '~/proyectos/mi-app'
 
 // confianza son las claves de seguridad de una carpeta que ya traía .tramtai/ (null: no se preguntó); dentroDe, el
-// proyecto que contiene la carpeta elegida. Cambiar la ruta borra las dos preguntas.
+// proyecto que contiene la carpeta elegida; movidoDesde, dónde estaba si parece un proyecto movido (la confianza no
+// viaja sola). Cambiar la ruta borra las preguntas.
 const confianza = ref<string[] | null>(null)
+const movidoDesde = ref('')
 const dentroDe = ref('')
 watch(rutaProyecto, () => {
   confianza.value = null
+  movidoDesde.value = ''
   dentroDe.value = ''
 })
 
@@ -470,7 +474,10 @@ async function abrirProyecto(opciones: { confiar?: boolean; crear_aqui?: boolean
     rutaProyecto.value = ''
     avisar(t('proyecto.abierto', { nombre: nueva.nombre || nueva.instancia }))
   } catch (e) {
-    if (e instanceof ErrorApi && e.codigo === 'confianza_requerida') confianza.value = (e.datos.claves as string[] | undefined) ?? []
+    if (e instanceof ErrorApi && e.codigo === 'confianza_requerida') {
+      confianza.value = (e.datos.claves as string[] | undefined) ?? []
+      movidoDesde.value = String(e.datos.movido ?? '')
+    }
     else if (e instanceof ErrorApi && e.codigo === 'dentro_de_proyecto') dentroDe.value = String(e.datos.proyecto ?? '')
     else avisarError(e)
   } finally {

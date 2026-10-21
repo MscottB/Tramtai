@@ -135,11 +135,6 @@ func (s *Servicio) Ubicar(id, ruta string) (*Instancia, error) {
 	if !esProyecto(ruta) {
 		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("%s no tiene .tramtai/config.yaml: elige la carpeta del proyecto", ruta))
 	}
-	if e.Ruta != "" && !MismaRuta(e.Ruta, ruta) {
-		if err := s.moverConfianza(e.Ruta, ruta); err != nil {
-			return nil, err
-		}
-	}
 	s.registro().cambiar(id, func(e *Espacio) { e.Ruta = ruta })
 	if err := escribirMarca(ruta, id); err != nil {
 		return nil, err

@@ -344,12 +344,12 @@ func (s *Servicio) Restaurar() []error {
 		default:
 			_, err = s.ActivarProyecto(e.Ruta)
 		}
-		texto := ""
+		// Si se activó bien, ActivarProyecto ya dejó su aviso (las claves ignoradas) o ninguno.
 		if err != nil {
 			errores = append(errores, err)
-			texto = nucleo.MensajeDe(err)
+			texto := nucleo.MensajeDe(err)
+			r.cambiar(e.ID, func(e *Espacio) { e.UltimoError = texto })
 		}
-		r.cambiar(e.ID, func(e *Espacio) { e.UltimoError = texto })
 	}
 	if err := s.guardarActivas(); err != nil {
 		errores = append(errores, err)

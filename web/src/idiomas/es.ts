@@ -660,6 +660,7 @@ const es = {
   'proyecto.examinar': 'Examinar…',
   'proyecto.abrirBoton': 'Abrir',
   'proyecto.confiarTitulo': '¿Confías en esta carpeta?',
+  'proyecto.movido': 'Parece el proyecto que estaba en {ruta}. Si lo moviste tú, confía en ella: la confianza no viaja sola, porque un repositorio ajeno podría copiar su marca.',
   'proyecto.confiarTexto': 'Ya tiene configuración de Tramtai, por ejemplo de un repositorio clonado. Si confías, su local.yaml podrá usar estas claves de seguridad:',
   'proyecto.sinClaves': 'Ya tiene configuración de Tramtai, sin claves de seguridad. Si confías, podrá tener sus APIs y su presupuesto.',
   'proyecto.confiarYAbrir': 'Confiar y abrir',

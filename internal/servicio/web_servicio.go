@@ -50,7 +50,7 @@ func (s *Servicio) abrirProyectoUI(w http.ResponseWriter, r *http.Request, ses *
 	switch {
 	case errors.As(err, &confianza):
 		api.EscribirJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"codigo": nucleo.CodigoConfianzaRequerida,
-			"mensaje": nucleo.MensajeDe(err)}, "claves": append([]string{}, confianza.Claves...)})
+			"mensaje": nucleo.MensajeDe(err)}, "claves": append([]string{}, confianza.Claves...), "movido": confianza.Movido})
 		return
 	case errors.As(err, &dentro):
 		api.EscribirJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"codigo": nucleo.CodigoDentroDeProyecto,

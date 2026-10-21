@@ -1,7 +1,6 @@
 package servicio
 
 import (
-	"cmp"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -31,11 +30,10 @@ func PrepararProyecto(dir string) error {
 	if err := os.MkdirAll(filepath.Dir(ruta), 0o755); err != nil {
 		return err
 	}
-	if err := os.WriteFile(ruta, []byte(fmt.Sprintf(plantillaProyecto, filepath.Base(dir))), 0o644); err != nil {
+	if err := escribirSiFalta(ruta, fmt.Sprintf(plantillaProyecto, filepath.Base(dir))); err != nil {
 		return err
 	}
-	ignorar := filepath.Join(dir, ".tramtai", ".gitignore")
-	if err := os.WriteFile(ignorar, []byte(gitignoreProyecto), 0o644); err != nil {
+	if err := escribirSiFalta(filepath.Join(dir, ".tramtai", ".gitignore"), gitignoreProyecto); err != nil {
 		return err
 	}
 	// Un perfil de ejemplo con su esquema: tramtai ejecutar --perfil-trabajo resumen "…"
@@ -47,12 +45,28 @@ func PrepararProyecto(dir string) error {
 		if err := os.MkdirAll(filepath.Dir(destino), 0o755); err != nil {
 			return err
 		}
-		if err := os.WriteFile(destino, []byte(contenido), 0o644); err != nil {
+		if err := escribirSiFalta(destino, contenido); err != nil {
 			return err
 		}
 	}
 	_, err := nucleo.CargarCapa(ruta, nucleo.OrigenProyecto)
 	return err
+}
+
+// escribirSiFalta crea ruta con contenido solo si no existe: lo que una carpeta ya traía no se pisa.
+func escribirSiFalta(ruta, contenido string) error {
+	f, err := os.OpenFile(ruta, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if os.IsExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if _, err := f.WriteString(contenido); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
 }
 
 // AbrirOpciones son las respuestas a lo que pregunta AbrirProyecto: si se confía en una carpeta que ya traía .tramtai/
@@ -63,15 +77,21 @@ type AbrirOpciones struct {
 }
 
 // ErrorConfianza: la carpeta ya traía .tramtai/ (por ejemplo, un repositorio clonado) y no es confiable; Claves son
-// las de seguridad que encontró en su local.yaml, para enseñarlas antes de decidir.
+// las de seguridad que encontró en su local.yaml, para enseñarlas antes de decidir. Movido es dónde estaba antes, si
+// su marca es la de un proyecto registrado cuya carpeta ya no está: la confianza no viaja sola, porque una marca se
+// puede copiar en un repositorio ajeno.
 type ErrorConfianza struct {
 	Raiz   string
 	Claves []string
+	Movido string
 }
 
 func (e *ErrorConfianza) Error() string { return e.Unwrap().Error() }
 
 func (e *ErrorConfianza) Unwrap() error {
+	if e.Movido != "" {
+		return nucleo.NuevoError(nucleo.CodigoConfianzaRequerida, idioma.Tf("%s parece el proyecto que estaba en %s: decide si confías en esta carpeta", e.Raiz, e.Movido))
+	}
 	return nucleo.NuevoError(nucleo.CodigoConfianzaRequerida, idioma.Tf("%s ya tiene configuración de Tramtai: decide si confías en esta carpeta", e.Raiz))
 }
 
@@ -86,8 +106,9 @@ func (e *ErrorDentroDeProyecto) Unwrap() error {
 	return nucleo.NuevoError(nucleo.CodigoDentroDeProyecto, idioma.Tf("la carpeta está dentro del proyecto %s", e.Proyecto))
 }
 
-// AbrirProyecto activa el espacio del proyecto en raiz, una carpeta existente con ruta completa. Si no es un proyecto,
-// lo crea y queda confiado (Tramtai escribió todo su .tramtai/). Si ya traía .tramtai/ y no es confiable, pregunta
+// AbrirProyecto activa el espacio del proyecto en raiz, una carpeta existente con ruta completa. Si no tenía .tramtai/,
+// lo crea y queda confiado (Tramtai lo escribió entero). Si ya traía .tramtai/ (aunque le falte config.yaml) y no es
+// confiable, pregunta
 // (ErrorConfianza) salvo que o.Confiar lo responda. Si está dentro de otro proyecto, pregunta (ErrorDentroDeProyecto)
 // salvo o.CrearAqui.
 func (s *Servicio) AbrirProyecto(raiz string, o AbrirOpciones) (*Instancia, error) {
@@ -107,17 +128,17 @@ func (s *Servicio) AbrirProyecto(raiz string, o AbrirOpciones) (*Instancia, erro
 	if esProyecto && !MismaRuta(existente, raiz) && !o.CrearAqui {
 		return nil, &ErrorDentroDeProyecto{Proyecto: existente}
 	}
-	if esProyecto && MismaRuta(existente, raiz) {
+	nuevo := !esProyecto || !MismaRuta(existente, raiz)
+	if !nuevo {
 		raiz = existente
-		if vieja := s.rutaMovida(raiz); vieja != "" {
-			if err := s.moverConfianza(vieja, raiz); err != nil {
-				return nil, err
-			}
-		}
+	}
+	_, err = os.Stat(filepath.Join(raiz, ".tramtai"))
+	creada := os.IsNotExist(err)
+	if !creada {
 		if g, err := nucleo.CargarConfiguracion(""); err == nil && !g.ProyectoConfiable(raiz) {
 			if o.Confiar == nil {
 				claves, _ := nucleo.ClavesAdministradas(filepath.Join(raiz, ".tramtai", "local.yaml"))
-				return nil, &ErrorConfianza{Raiz: raiz, Claves: claves}
+				return nil, &ErrorConfianza{Raiz: raiz, Claves: claves, Movido: s.rutaMovida(raiz)}
 			}
 			if *o.Confiar {
 				if err := s.FijarConfianza(raiz, true); err != nil {
@@ -125,12 +146,15 @@ func (s *Servicio) AbrirProyecto(raiz string, o AbrirOpciones) (*Instancia, erro
 				}
 			}
 		}
-	} else {
+	}
+	if nuevo {
 		if err := PrepararProyecto(raiz); err != nil {
 			return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("no se pudo preparar el proyecto: %s", err.Error()))
 		}
-		if err := s.FijarConfianza(raiz, true); err != nil {
-			return nil, err
+		if creada {
+			if err := s.FijarConfianza(raiz, true); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return s.ActivarProyecto(raiz)
@@ -139,26 +163,8 @@ func (s *Servicio) AbrirProyecto(raiz string, o AbrirOpciones) (*Instancia, erro
 // FijarConfianza añade raiz a proyectos_confiables de la configuración global (o la quita) y, si su espacio está
 // activo, le aplica su configuración de nuevo: sus APIs y su presupuesto entran o salen sin reiniciar.
 func (s *Servicio) FijarConfianza(raiz string, confiar bool) error {
-	poner := ""
-	if confiar {
-		poner = raiz
-	}
-	return s.cambiarConfiables(raiz, poner)
-}
-
-// moverConfianza pasa la confianza de la ruta vieja de un proyecto movido a la nueva: es el mismo proyecto (su marca
-// lo dice). Si la vieja no era confiable, la nueva tampoco lo es.
-func (s *Servicio) moverConfianza(vieja, nueva string) error {
-	g, err := nucleo.CargarConfiguracion("")
-	if err != nil || !g.ProyectoConfiable(vieja) {
-		return err
-	}
-	return s.cambiarConfiables(vieja, nueva)
-}
-
-// cambiarConfiables quita una ruta de proyectos_confiables y pone otra (o ninguna, con ""), y aplica de nuevo la
-// configuración del espacio activo en la ruta afectada.
-func (s *Servicio) cambiarConfiables(quitar, poner string) error {
+	s.muConfianza.Lock()
+	defer s.muConfianza.Unlock()
 	ruta, err := nucleo.RutaGlobal()
 	if err != nil {
 		return err
@@ -169,14 +175,13 @@ func (s *Servicio) cambiarConfiables(quitar, poner string) error {
 	}
 	lista := []string{}
 	for _, v := range g.Lista("proyectos_confiables") {
-		if texto, ok := v.(string); ok && !MismaRuta(texto, quitar) && !MismaRuta(texto, poner) {
+		if texto, ok := v.(string); ok && !MismaRuta(texto, raiz) {
 			lista = append(lista, texto)
 		}
 	}
-	if poner != "" {
-		lista = append(lista, poner)
+	if confiar {
+		lista = append(lista, raiz)
 	}
-	raiz := cmp.Or(poner, quitar)
 	if err := FijarValor(ruta, nucleo.OrigenGlobal, "proyectos_confiables", lista); err != nil {
 		return err
 	}

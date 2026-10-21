@@ -87,9 +87,9 @@ func TestAbrirSinConfiarIgnoraClavesAdministradas(t *testing.T) {
 	}
 }
 
-// Un proyecto confiado que se mueve sigue siendo el mismo (su marca lo dice): la confianza va con él, por los dos
-// caminos (abrirlo en la ruta nueva o «Buscar»), y la ruta vieja deja de ser confiable.
-func TestMoverProyectoConfiadoConservaLaConfianza(t *testing.T) {
+// Un proyecto confiado que se mueve sigue siendo el mismo espacio (su marca lo dice), pero la confianza no viaja sola:
+// una marca se copia en un repositorio ajeno. Al abrirlo se pregunta diciendo de dónde viene; «Buscar» no confía.
+func TestMoverProyectoConfiadoPreguntaDeNuevo(t *testing.T) {
 	for _, camino := range []string{"abrir", "ubicar"} {
 		t.Run(camino, func(t *testing.T) {
 			s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
@@ -105,20 +105,76 @@ func TestMoverProyectoConfiadoConservaLaConfianza(t *testing.T) {
 				t.Fatal(err)
 			}
 			if camino == "abrir" {
-				inst, err = s.AbrirProyecto(b, AbrirOpciones{})
+				_, err = s.AbrirProyecto(b, AbrirOpciones{})
+				var ec *ErrorConfianza
+				if !errors.As(err, &ec) || !MismaRuta(ec.Movido, vieja) {
+					t.Fatalf("un proyecto movido debía preguntar, diciendo de dónde viene: %v", err)
+				}
+				si := true
+				inst, err = s.AbrirProyecto(b, AbrirOpciones{Confiar: &si})
 			} else {
 				inst, err = s.Ubicar(id, b)
 			}
 			if err != nil {
-				t.Fatalf("un proyecto confiado y movido no debía volver a pedir confianza: %v", err)
+				t.Fatal(err)
 			}
 			if real, _ := filepath.EvalSymlinks(b); !MismaRuta(inst.Raiz, real) {
 				t.Fatalf("el espacio sigue en %s y no en la carpeta nueva %s", inst.Raiz, real)
 			}
-			if inst.ID != id || !confiable(t, inst.Raiz) || confiable(t, vieja) {
-				t.Fatalf("id %s (era %s), confiable la nueva %v, la vieja %v", inst.ID, id, confiable(t, inst.Raiz), confiable(t, vieja))
+			if inst.ID != id || confiable(t, inst.Raiz) != (camino == "abrir") {
+				t.Fatalf("id %s (era %s), confiable %v", inst.ID, id, confiable(t, inst.Raiz))
 			}
 		})
+	}
+}
+
+// Una carpeta con .tramtai/local.yaml pero sin config.yaml no es «nueva»: Tramtai no creó su .tramtai/, así que
+// pregunta antes de confiar y no pisa lo que ya traía.
+func TestAbrirCarpetaConSoloLocalPreguntaYNoPisa(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, ".tramtai"), 0o700)
+	os.WriteFile(filepath.Join(dir, ".tramtai", "local.yaml"), []byte("comandos_agentes:\n  claude: malo.exe\n"), 0o600)
+	os.WriteFile(filepath.Join(dir, ".tramtai", ".gitignore"), []byte("propio\n"), 0o600)
+	_, err := s.AbrirProyecto(dir, AbrirOpciones{})
+	var ec *ErrorConfianza
+	if !errors.As(err, &ec) || strings.Join(ec.Claves, ",") != "comandos_agentes" {
+		t.Fatalf("debía pedir confianza: %v", err)
+	}
+	no := false
+	inst, err := s.AbrirProyecto(dir, AbrirOpciones{Confiar: &no})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if confiable(t, inst.Raiz) || inst.Config.Texto("comandos_agentes.claude") == "malo.exe" {
+		t.Fatal("no debía confiar ni aplicar sus claves")
+	}
+	// La marca se añade a su .gitignore (no se versiona), pero lo que traía se conserva.
+	if g, _ := os.ReadFile(filepath.Join(dir, ".tramtai", ".gitignore")); !strings.HasPrefix(string(g), "propio\n") {
+		t.Fatalf("pisó el .gitignore que ya traía: %q", g)
+	}
+}
+
+// El aviso de las claves ignoradas sigue tras reiniciar el servicio.
+func TestAvisoDeClavesIgnoradasSobreviveAlReinicio(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	dir := t.TempDir()
+	conTramtai(t, dir, "comandos_agentes:\n  claude: otro.exe\n")
+	no := false
+	inst, err := s.AbrirProyecto(dir, AbrirOpciones{Confiar: &no})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.guardarActivas()
+	s.Cerrar()
+	s2, err := Nuevo(s.opc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s2.Cerrar()
+	s2.Restaurar()
+	if e, _ := s2.registro().buscar(inst.ID); !strings.Contains(e.UltimoError, "local.yaml") {
+		t.Fatalf("tras reiniciar se perdió el aviso: %+v", e)
 	}
 }
 

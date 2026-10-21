@@ -660,6 +660,7 @@ const en: Textos = {
   'proyecto.examinar': 'Browse…',
   'proyecto.abrirBoton': 'Open',
   'proyecto.confiarTitulo': 'Do you trust this folder?',
+  'proyecto.movido': 'It looks like the project that was at {ruta}. If you moved it, trust it: trust does not travel on its own, because someone else’s repository could copy its mark.',
   'proyecto.confiarTexto': 'It already has a Tramtai configuration, for example from a cloned repository. If you trust it, its local.yaml can use these security keys:',
   'proyecto.sinClaves': 'It already has a Tramtai configuration, with no security keys. If you trust it, it can have its own APIs and budget.',
   'proyecto.confiarYAbrir': 'Trust and open',
