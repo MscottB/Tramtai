@@ -2,14 +2,18 @@ package cliente
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/contrato"
@@ -167,5 +171,412 @@ func TestEncabezadoDelCliente(t *testing.T) {
 	c.Estado(context.Background())
 	if len(recibido) != 2 || recibido[0] != "" || recibido[1] != "cli" {
 		t.Fatalf("sin origen no hay encabezado; con origen, su valor: %q", recibido)
+	}
+}
+
+// servicioDePrueba levanta un servicio real con el agente simulado y devuelve un cliente conectado a él.
+func servicioDePrueba(t *testing.T, global string) (*Cliente, string) {
+	t.Helper()
+	dir := t.TempDir()
+	rutaGlobal := filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(rutaGlobal, []byte("predeterminados:\n  agente: simulado\n"+global), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", rutaGlobal)
+	datos := filepath.Join(dir, "datos")
+	c, err := nucleo.CargarConfiguracion("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewUnstartedServer(nil)
+	s, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}},
+		Semaforos: planificador.NuevosSemaforos(nil), Host: "127.0.0.1", Puerto: ts.Listener.Addr().(*net.TCPAddr).Port, Hosts: []string{"127.0.0.1"},
+		RaizConversor: dir, UV: filepath.Join(dir, "no-existe-uv")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts.Config.Handler = s
+	ts.Start()
+	t.Cleanup(func() {
+		ts.Close()
+		s.Cerrar()
+	})
+	if err := s.EscribirDescriptor(); err != nil {
+		t.Fatal(err)
+	}
+	cli, err := Conectar(datos)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return cli, dir
+}
+
+var hola = nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "hola"}}}
+
+// terminado espera a que el trabajo acabe.
+func terminado(t *testing.T, cli *Cliente, inst, id string) {
+	t.Helper()
+	if err := cli.Eventos(context.Background(), inst, id, 0, func(int, string, string) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestClientePuntosConUso(t *testing.T) {
+	cli, _ := servicioDePrueba(t, "")
+	ctx := context.Background()
+	if _, err := cli.Activar(ctx, "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	_, token, err := cli.CrearPunto(ctx, "global", contrato.ConfigPunto{Nombre: "facturas", Agente: "simulado"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := cli.CambiarPunto(ctx, "global", "facturas", map[string]any{"presupuesto": map[string]any{"diario": map[string]any{"peticiones": 50}}}); err != nil {
+		t.Fatal(err)
+	}
+	// Una petición por la API de la aplicación: es el uso que cuenta la lista.
+	req, _ := http.NewRequest("POST", cli.Base+"/p/facturas/api/v1/trabajos", strings.NewReader(`{"mensajes":[{"rol":"usuario","contenido":"hola"}]}`))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	if resp, err := http.DefaultClient.Do(req); err != nil || resp.StatusCode >= 300 {
+		t.Fatalf("petición de la app: %v %v", resp, err)
+	}
+	lista, err := cli.Puntos(ctx, "global")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lista.Puntos) != 1 || lista.Puntos[0].Nombre != "facturas" {
+		t.Fatalf("puntos: %+v", lista.Puntos)
+	}
+	if uso := lista.Uso["facturas"]; uso.Peticiones != 1 || uso.Ultima == nil {
+		t.Fatalf("uso: %+v", lista.Uso)
+	}
+	if p, ok := lista.Presupuestos["facturas"]; !ok || p.Diario.Limites.Peticiones != 50 {
+		t.Fatalf("presupuestos: %+v", lista.Presupuestos)
+	}
+	if err := cli.ReiniciarPresupuesto(ctx, "global", "facturas"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestClienteCambiarPunto(t *testing.T) {
+	cli, _ := servicioDePrueba(t, "")
+	ctx := context.Background()
+	if _, err := cli.Activar(ctx, "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := cli.CrearPunto(ctx, "global", contrato.ConfigPunto{Nombre: "facturas", Agente: "simulado"}); err != nil {
+		t.Fatal(err)
+	}
+	p, err := cli.CambiarPunto(ctx, "global", "facturas", map[string]any{"instrucciones": "Sé breve.", "esfuerzo": "alto"})
+	if err != nil || p.Nombre != "facturas" || p.Instrucciones != "Sé breve." || p.Esfuerzo != "alto" {
+		t.Fatalf("cambiar: %+v %v", p, err)
+	}
+	// Un cambio parcial no toca lo demás.
+	p, err = cli.CambiarPunto(ctx, "global", "facturas", map[string]any{"activo": false})
+	if err != nil || p.Activo || p.Instrucciones != "Sé breve." || p.Esfuerzo != "alto" {
+		t.Fatalf("parcial: %+v %v", p, err)
+	}
+	if _, err := cli.CambiarPunto(ctx, "global", "facturas", map[string]any{"esfuerzo": "enorme"}); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
+		t.Fatalf("un esfuerzo desconocido no vale: %v", err)
+	}
+	if _, err := cli.CambiarPunto(ctx, "global", "no-existe", map[string]any{"activo": true}); nucleo.CodigoDe(err) != nucleo.CodigoNoEncontrado {
+		t.Fatalf("un punto que no existe: %v", err)
+	}
+}
+
+func TestClienteTrabajosFiltrados(t *testing.T) {
+	cli, _ := servicioDePrueba(t, "")
+	ctx := context.Background()
+	if _, err := cli.Activar(ctx, "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	for range 5 {
+		if _, err := cli.Crear(ctx, "global", hola); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cli.Origen = "terminal"
+	if _, err := cli.Crear(ctx, "global", hola); err != nil {
+		t.Fatal(err)
+	}
+	cli.Origen = ""
+
+	vistos := map[string]bool{}
+	f := FiltroTrabajos{Limite: 4}
+	var paginas []int
+	for {
+		pagina, err := cli.TrabajosFiltrados(ctx, "global", f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		paginas = append(paginas, len(pagina))
+		for _, tr := range pagina {
+			if vistos[tr.ID] {
+				t.Fatalf("%s sale en dos páginas", tr.ID)
+			}
+			vistos[tr.ID] = true
+		}
+		if len(pagina) < f.Limite {
+			break
+		}
+		ultimo := pagina[len(pagina)-1]
+		f.Antes, f.AntesID = ultimo.CreadoEn, ultimo.ID
+	}
+	if len(vistos) != 6 || !slices.Equal(paginas, []int{4, 2}) {
+		t.Fatalf("dos páginas con cursor, sin repetidos: %v %d", paginas, len(vistos))
+	}
+	delTerminal, err := cli.TrabajosFiltrados(ctx, "global", FiltroTrabajos{Origen: "terminal"})
+	if err != nil || len(delTerminal) != 1 {
+		t.Fatalf("filtro por origen: %d %v", len(delTerminal), err)
+	}
+	if _, err := cli.TrabajosFiltrados(ctx, "global", FiltroTrabajos{Origen: "otro"}); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
+		t.Fatalf("un origen desconocido no vale: %v", err)
+	}
+	if lista, err := cli.Trabajos(ctx, "global", 3); err != nil || len(lista) != 3 {
+		t.Fatalf("Trabajos sigue funcionando: %d %v", len(lista), err)
+	}
+}
+
+func TestClienteRegistro(t *testing.T) {
+	cli, _ := servicioDePrueba(t, "")
+	ctx := context.Background()
+	if _, err := cli.Activar(ctx, "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	tr, err := cli.Crear(ctx, "global", hola)
+	if err != nil {
+		t.Fatal(err)
+	}
+	terminado(t, cli, "global", tr.ID)
+	eventos, err := cli.Registro(ctx, "global", tr.ID)
+	if err != nil || len(eventos) == 0 || eventos[0].Numero == 0 || eventos[0].Tipo == "" || eventos[0].CreadoEn.IsZero() {
+		t.Fatalf("registro: %+v %v", eventos, err)
+	}
+	if _, err := cli.Registro(ctx, "global", "no-existe"); nucleo.CodigoDe(err) != nucleo.CodigoNoEncontrado {
+		t.Fatalf("un trabajo que no existe: %v", err)
+	}
+}
+
+func TestClienteVaciar(t *testing.T) {
+	cli, _ := servicioDePrueba(t, "")
+	ctx := context.Background()
+	if _, err := cli.Activar(ctx, "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		tr, err := cli.Crear(ctx, "global", hola)
+		if err != nil {
+			t.Fatal(err)
+		}
+		terminado(t, cli, "global", tr.ID)
+	}
+	if n, err := cli.VaciarTrabajos(ctx, "global"); err != nil || n != 2 {
+		t.Fatalf("vaciar: %d %v", n, err)
+	}
+	if lista, err := cli.Trabajos(ctx, "global", 10); err != nil || len(lista) != 0 {
+		t.Fatalf("debía quedar vacío: %d %v", len(lista), err)
+	}
+}
+
+func TestClienteHeredar(t *testing.T) {
+	cli, dir := servicioDePrueba(t, "")
+	ctx := context.Background()
+	proyecto := filepath.Join(dir, "mi-app")
+	os.MkdirAll(filepath.Join(proyecto, ".tramtai"), 0o700)
+	os.WriteFile(filepath.Join(proyecto, ".tramtai", "config.yaml"), []byte("version: 1\nproyecto:\n  nombre: Notas\n"), 0o600)
+	a, err := cli.Activar(ctx, "proyecto", proyecto)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := a.Instancia.ID
+	origen := func(clave string) string {
+		t.Helper()
+		cfg, err := cli.ConfiguracionInstancia(ctx, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, e := range cfg {
+			if e.Clave == clave {
+				return e.Origen
+			}
+		}
+		return "" // sin valor en ninguna capa, no sale
+	}
+	antes := origen("predeterminados.esfuerzo")
+	if err := cli.FijarPredeterminado(ctx, id, "simulado", "alto"); err != nil {
+		t.Fatal(err)
+	}
+	if o := origen("predeterminados.esfuerzo"); o == antes || !strings.Contains(strings.ToLower(o), "local") {
+		t.Fatalf("el esfuerzo propio del proyecto sale como local: %q (antes %q)", o, antes)
+	}
+	if err := cli.FijarPredeterminado(ctx, id, "agente-que-no-existe", ""); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
+		t.Fatalf("un agente desconocido no vale: %v", err)
+	}
+	if err := cli.Heredar(ctx, id, "predeterminados.esfuerzo"); err != nil {
+		t.Fatal(err)
+	}
+	if o := origen("predeterminados.esfuerzo"); o != antes {
+		t.Fatalf("volver al de Global: %q, antes %q", o, antes)
+	}
+	if err := cli.Heredar(ctx, id, "proyecto.nombre"); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
+		t.Fatalf("solo se heredan los valores que lo admiten: %v", err)
+	}
+
+	// La retención se lee y se fija por espacio, y se devuelve a la de Global igual.
+	r, err := cli.Retencion(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.HorasResultado, r.HorasMetadatos, r.MaxTrabajos = 12, 48, 100
+	if err := cli.FijarRetencion(ctx, id, r); err != nil {
+		t.Fatal(err)
+	}
+	if r2, err := cli.Retencion(ctx, id); err != nil || r2.HorasResultado != 12 || r2.HorasMetadatos != 48 || r2.MaxTrabajos != 100 {
+		t.Fatalf("retención: %+v %v", r2, err)
+	}
+	if err := cli.Heredar(ctx, id, "retencion.horas_resultado"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestClientePresupuestoYLimites(t *testing.T) {
+	cli, _ := servicioDePrueba(t, "presupuesto:\n  diario:\n    peticiones: 100\n")
+	ctx := context.Background()
+	if _, err := cli.Activar(ctx, "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	p, err := cli.PresupuestoInstancia(ctx, "global")
+	if err != nil || p.Diario.Limites.Peticiones != 100 {
+		t.Fatalf("presupuesto de la instancia: %+v %v", p, err)
+	}
+	if err := cli.ReiniciarPresupuestoInstancia(ctx, "global"); err != nil {
+		t.Fatal(err)
+	}
+	l, err := cli.Limites(ctx, "global")
+	if err != nil || l.CargasPorPeticion == 0 || l.Mensajes == 0 || len(l.ExtensionesTexto) == 0 {
+		t.Fatalf("límites: %+v %v", l, err)
+	}
+	if err := cli.AjustesConversor(ctx, "global", contrato.AjustesConversor{PrepararAlIniciar: true}); err != nil {
+		t.Fatal(err)
+	}
+	if e, err := cli.Conversor(ctx, "global"); err != nil || !e.PrepararAlIniciar {
+		t.Fatalf("conversor: %+v %v", e, err)
+	}
+}
+
+func TestClienteValidarEsquema(t *testing.T) {
+	cli, _ := servicioDePrueba(t, "")
+	ctx := context.Background()
+	if _, err := cli.Activar(ctx, "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	if problemas, err := cli.ValidarEsquema(ctx, "global", json.RawMessage(`{"type":"object"}`)); err != nil || len(problemas) != 0 {
+		t.Fatalf("esquema válido: %v %v", problemas, err)
+	}
+	if problemas, err := cli.ValidarEsquema(ctx, "global", json.RawMessage(`{"type":"nada"}`)); err != nil || len(problemas) == 0 || problemas[0] == "" {
+		t.Fatalf("esquema no válido: %v %v", problemas, err)
+	}
+	if problemas, err := cli.ValidarEsquema(ctx, "global", json.RawMessage(`"{ esto no es JSON"`)); err != nil || len(problemas) == 0 {
+		t.Fatalf("texto que no es JSON: %v %v", problemas, err)
+	}
+}
+
+func TestClienteEspaciosYProyectos(t *testing.T) {
+	cli, dir := servicioDePrueba(t, "")
+	ctx := context.Background()
+	clonado := filepath.Join(dir, "clonado")
+	os.MkdirAll(filepath.Join(clonado, ".tramtai"), 0o700)
+	os.WriteFile(filepath.Join(clonado, ".tramtai", "config.yaml"), []byte("version: 1\nproyecto:\n  nombre: Soporte\n"), 0o600)
+	os.WriteFile(filepath.Join(clonado, ".tramtai", "local.yaml"), []byte("comandos_agentes:\n  claude: otro.exe\n"), 0o600)
+
+	// Un proyecto con .tramtai/ que no creó la app pide confianza, con lo que hay que enseñar.
+	_, err := cli.AbrirProyecto(ctx, clonado, nil, false)
+	var pide *ErrorConfianza
+	if !errors.As(err, &pide) || nucleo.CodigoDe(err) != nucleo.CodigoConfianzaRequerida || !slices.Equal(pide.Claves, []string{"comandos_agentes"}) {
+		t.Fatalf("debía pedir confianza: %v", err)
+	}
+	si := true
+	e, err := cli.AbrirProyecto(ctx, clonado, &si, false)
+	if err != nil || e.Estado != "activo" || !e.Confiado || e.Nombre != "Soporte" {
+		t.Fatalf("abrir confiando: %+v %v", e, err)
+	}
+	if err := cli.Confiar(ctx, e.ID, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := cli.Confiar(ctx, "global", true); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
+		t.Fatalf("la global no se confía: %v", err)
+	}
+	dentro := filepath.Join(clonado, "sub")
+	os.MkdirAll(dentro, 0o700)
+	var enOtro *ErrorDentroDeProyecto
+	if _, err := cli.AbrirProyecto(ctx, dentro, nil, false); !errors.As(err, &enOtro) || enOtro.Proyecto == "" {
+		t.Fatalf("debía avisar de que está dentro de otro proyecto: %v", err)
+	}
+
+	if err := cli.DetenerEspacio(ctx, e.ID); err != nil {
+		t.Fatal(err)
+	}
+	if a, err := cli.ActivarEspacio(ctx, e.ID); err != nil || a.ID != e.ID || a.Estado != "activo" {
+		t.Fatalf("activar: %+v %v", a, err)
+	}
+	if _, err := cli.Ubicar(ctx, e.ID, t.TempDir()); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
+		t.Fatalf("una carpeta sin .tramtai no vale: %v", err)
+	}
+	if u, err := cli.Ubicar(ctx, e.ID, clonado); err != nil || u.ID != e.ID {
+		t.Fatalf("ubicar: %+v %v", u, err)
+	}
+	if err := cli.CambiarAutenticacion(ctx, "gemini", "suscripcion"); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
+		t.Fatalf("gemini no admite la suscripción: %v", err)
+	}
+}
+
+func TestClienteEventosInstancia(t *testing.T) {
+	cli, _ := servicioDePrueba(t, "")
+	if _, err := cli.Activar(context.Background(), "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancelar := context.WithCancel(context.Background())
+	defer cancelar()
+	tipos := make(chan string, 16)
+	fin := make(chan error, 1)
+	go func() {
+		fin <- cli.EventosInstancia(ctx, "global", func(tipo string, datos []byte) error {
+			if tipo == "trabajo" {
+				var e struct{ ID string }
+				if json.Unmarshal(datos, &e) != nil || e.ID == "" {
+					t.Errorf("el evento trabajo trae su id: %s", datos)
+				}
+			}
+			tipos <- tipo
+			return nil
+		})
+	}()
+	espera := func(quiero string) {
+		t.Helper()
+		for {
+			select {
+			case tipo := <-tipos:
+				if tipo == quiero {
+					return
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatalf("no llegó el evento %s", quiero)
+			}
+		}
+	}
+	espera("foto")
+	if _, err := cli.Crear(context.Background(), "global", hola); err != nil {
+		t.Fatal(err)
+	}
+	espera("trabajo")
+	cancelar()
+	select {
+	case err := <-fin:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("al cancelar el contexto termina con su error: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("el flujo no terminó al cancelar el contexto")
 	}
 }

@@ -39,28 +39,39 @@ func (s *Servicio) abrirProyectoUI(w http.ResponseWriter, r *http.Request, ses *
 		api.EscribirError(w, r, err)
 		return
 	}
-	inst, err := s.AbrirProyecto(peticion.Raiz, AbrirOpciones{Confiar: peticion.Confiar, CrearAqui: peticion.CrearAqui})
+	inst, err := s.abrirYGuardar(peticion.Raiz, AbrirOpciones{Confiar: peticion.Confiar, CrearAqui: peticion.CrearAqui})
+	if escribirErrorAbrir(w, r, err) {
+		return
+	}
+	s.responderSesion(w, r, s.derivarSesion(w, inst.ID, ses))
+}
+
+// abrirYGuardar abre el proyecto y deja guardados el registro y el descriptor.
+func (s *Servicio) abrirYGuardar(raiz string, o AbrirOpciones) (*Instancia, error) {
+	inst, err := s.AbrirProyecto(raiz, o)
 	if err == nil {
 		err = s.guardarActivas()
 		_ = s.actualizarDescriptor()
 	}
-	// Las dos preguntas llevan lo que la app enseña para decidir.
+	return inst, err
+}
+
+// escribirErrorAbrir responde al error de abrir un proyecto y dice si lo hizo (err no era nil). Las dos preguntas
+// (confianza y carpeta dentro de otro proyecto) son un 409 con lo que la app enseña para decidir.
+func escribirErrorAbrir(w http.ResponseWriter, r *http.Request, err error) bool {
 	var confianza *ErrorConfianza
 	var dentro *ErrorDentroDeProyecto
 	switch {
 	case errors.As(err, &confianza):
 		api.EscribirJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"codigo": nucleo.CodigoConfianzaRequerida,
 			"mensaje": nucleo.MensajeDe(err)}, "claves": append([]string{}, confianza.Claves...), "movido": confianza.Movido})
-		return
 	case errors.As(err, &dentro):
 		api.EscribirJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"codigo": nucleo.CodigoDentroDeProyecto,
 			"mensaje": nucleo.MensajeDe(err)}, "proyecto": dentro.Proyecto})
-		return
 	case err != nil:
 		api.EscribirError(w, r, err)
-		return
 	}
-	s.responderSesion(w, r, s.derivarSesion(w, inst.ID, ses))
+	return err != nil
 }
 
 func (s *Servicio) autoarranqueUI(w http.ResponseWriter, r *http.Request, ses *sesion) {

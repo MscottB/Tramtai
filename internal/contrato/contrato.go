@@ -172,6 +172,55 @@ type EstadoPunto struct {
 	Origen      string              `json:"origen"`
 }
 
+// UsoPunto resume las peticiones de un punto de acceso que conserva la retención.
+type UsoPunto struct {
+	Peticiones int        `json:"peticiones"`
+	Errores    int        `json:"errores"`
+	Ultima     *time.Time `json:"ultima,omitempty"`
+}
+
+// ListaPuntos es lo que devuelve GET /api/v1/puntos: los puntos de la instancia con su uso y el consumo de su
+// presupuesto (solo los que tienen presupuesto), por nombre.
+type ListaPuntos struct {
+	Puntos       []EstadoPunto                       `json:"puntos_acceso"`
+	Uso          map[string]UsoPunto                 `json:"uso"`
+	Presupuestos map[string]nucleo.EstadoPresupuesto `json:"presupuestos"`
+}
+
+// UsoHistorial es lo que ocupa el historial de una instancia: sus trabajos y el tamaño de su base.
+type UsoHistorial struct {
+	Trabajos int   `json:"trabajos"`
+	Bytes    int64 `json:"bytes"`
+}
+
+// Retencion son los plazos y el tope del historial de una instancia (GET y PUT /api/v1/instancia/retencion). Uso solo
+// se lee: al fijarla no se envía.
+type Retencion struct {
+	HorasResultado int          `json:"horas_resultado"`
+	HorasMetadatos int          `json:"horas_metadatos"`
+	MaxTrabajos    int          `json:"max_trabajos"`
+	Uso            UsoHistorial `json:"uso"`
+}
+
+// Limites son los topes de una petición y de las cargas (GET /api/v1/limites).
+type Limites struct {
+	ExtensionesTexto     []string `json:"extensiones_texto"`
+	ExtensionesConversor []string `json:"extensiones_conversor"`
+	CargasPorPeticion    int      `json:"cargas_por_peticion"`
+	CargaMB              int      `json:"carga_mb"`
+	TextoConvertidoMB    int      `json:"texto_convertido_mb"`
+	CuotaCargasMB        int      `json:"cuota_cargas_mb"`
+	CuerpoMB             int      `json:"cuerpo_mb"`
+	EsquemaKB            int      `json:"esquema_kb"`
+	Mensajes             int      `json:"mensajes"`
+	ReservaSalidaTokens  int      `json:"reserva_salida_tokens"`
+}
+
+// AjustesConversor es lo que se cambia del conversor de archivos (PUT /api/v1/conversor/ajustes).
+type AjustesConversor struct {
+	PrepararAlIniciar bool `json:"preparar_al_iniciar"`
+}
+
 // EstadoConversor es el del conversor de archivos (markitdown): listo, preparando, falta o error.
 type EstadoConversor struct {
 	Estado  string `json:"estado"`

@@ -13,6 +13,15 @@ type Uso struct {
 	CostoUSD      float64 `json:"costo_usd,omitempty"`
 }
 
+// EventoRegistro es un paso del registro de un trabajo (GET /api/v1/trabajos/{id}/registro): estados, intentos y
+// avisos, sin el texto de la respuesta.
+type EventoRegistro struct {
+	Numero   int       `json:"numero"`
+	Tipo     string    `json:"tipo"`
+	Datos    string    `json:"datos"`
+	CreadoEn time.Time `json:"creado_en"`
+}
+
 // Trabajo es la unidad de ejecución con su estado, tiempos y ámbito.
 type Trabajo struct {
 	ID           string             `json:"id"`
