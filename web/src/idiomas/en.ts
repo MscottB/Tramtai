@@ -136,6 +136,7 @@ const en: Textos = {
   'agente.noInstalado': 'Not installed',
   'agente.faltaClave': 'Not connected',
   'agente.revisar': 'Check',
+  'agente.desconectado': 'Disconnected',
   'trabajo.entradaEliminada': '(input deleted by retention)',
 
   // Home

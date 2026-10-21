@@ -221,6 +221,17 @@ func (s *Servicio) idDe(raiz string, c *nucleo.Configuracion) (string, error) {
 	}
 }
 
+// rutaMovida devuelve dónde estaba antes el proyecto de raiz si es uno registrado que se movió (su marca es la de un
+// espacio cuya carpeta ya no está), o "".
+func (s *Servicio) rutaMovida(raiz string) string {
+	marca := LeerMarca(raiz)
+	e, ok := s.registro().buscar(marca)
+	if !ok || e.Ambito != "proyecto" || e.Ruta == "" || MismaRuta(e.Ruta, raiz) || esProyecto(e.Ruta) {
+		return ""
+	}
+	return e.Ruta
+}
+
 // nombreProyecto es el nombre que se muestra de un proyecto: el de su configuración o el de su carpeta.
 func nombreProyecto(raiz string, c *nucleo.Configuracion) string {
 	if nombre := strings.TrimSpace(c.Texto("proyecto.nombre")); nombre != "" {

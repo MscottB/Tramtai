@@ -135,6 +135,7 @@ const es = {
   'agente.noInstalado': 'No instalado',
   'agente.faltaClave': 'Sin conectar',
   'agente.revisar': 'Revisar',
+  'agente.desconectado': 'Desconectado',
   'trabajo.entradaEliminada': '(entrada eliminada por la retención)',
 
   // Inicio

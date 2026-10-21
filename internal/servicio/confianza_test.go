@@ -87,6 +87,58 @@ func TestAbrirSinConfiarIgnoraClavesAdministradas(t *testing.T) {
 	}
 }
 
+// Un proyecto confiado que se mueve sigue siendo el mismo (su marca lo dice): la confianza va con él, por los dos
+// caminos (abrirlo en la ruta nueva o «Buscar»), y la ruta vieja deja de ser confiable.
+func TestMoverProyectoConfiadoConservaLaConfianza(t *testing.T) {
+	for _, camino := range []string{"abrir", "ubicar"} {
+		t.Run(camino, func(t *testing.T) {
+			s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+			base := t.TempDir()
+			a, b := filepath.Join(base, "a"), filepath.Join(base, "b")
+			os.MkdirAll(a, 0o700)
+			inst, err := s.AbrirProyecto(a, AbrirOpciones{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			id, vieja := inst.ID, inst.Raiz
+			if err := os.Rename(a, b); err != nil {
+				t.Fatal(err)
+			}
+			if camino == "abrir" {
+				inst, err = s.AbrirProyecto(b, AbrirOpciones{})
+			} else {
+				inst, err = s.Ubicar(id, b)
+			}
+			if err != nil {
+				t.Fatalf("un proyecto confiado y movido no debía volver a pedir confianza: %v", err)
+			}
+			if real, _ := filepath.EvalSymlinks(b); !MismaRuta(inst.Raiz, real) {
+				t.Fatalf("el espacio sigue en %s y no en la carpeta nueva %s", inst.Raiz, real)
+			}
+			if inst.ID != id || !confiable(t, inst.Raiz) || confiable(t, vieja) {
+				t.Fatalf("id %s (era %s), confiable la nueva %v, la vieja %v", inst.ID, id, confiable(t, inst.Raiz), confiable(t, vieja))
+			}
+		})
+	}
+}
+
+// Una carpeta movida que no era confiable sigue sin serlo.
+func TestMoverProyectoSinConfianzaSiguePreguntando(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	base := t.TempDir()
+	a, b := filepath.Join(base, "a"), filepath.Join(base, "b")
+	conTramtai(t, a, "comandos_agentes:\n  claude: otro.exe\n")
+	no := false
+	if _, err := s.AbrirProyecto(a, AbrirOpciones{Confiar: &no}); err != nil {
+		t.Fatal(err)
+	}
+	os.Rename(a, b)
+	var ec *ErrorConfianza
+	if _, err := s.AbrirProyecto(b, AbrirOpciones{}); !errors.As(err, &ec) {
+		t.Fatalf("debía seguir pidiendo confianza: %v", err)
+	}
+}
+
 func TestAbrirDentroDeOtroProyecto(t *testing.T) {
 	s, _, proyecto := entorno(t, "", "", adaptadores.Simulado{})
 	sub := filepath.Join(proyecto, "sub")

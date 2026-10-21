@@ -226,6 +226,7 @@ function resumen(a: Adaptador) {
 
 // tipo clasifica el problema por su código (el texto llega en el idioma del servicio) para mostrar la ayuda adecuada.
 function tipo(a: Adaptador) {
+  if (a.desconectado) return 'agente.desconectado' as const
   if (a.problema_codigo === 'no_instalado') return 'agente.noInstalado' as const
   if (a.problema_codigo === 'falta_clave') return 'agente.faltaClave' as const
   return 'agente.revisar' as const

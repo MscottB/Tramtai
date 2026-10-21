@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"crypto/subtle"
 	"net/http"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -126,7 +125,7 @@ type instanciaResumida struct {
 func resumir(inst *Instancia) instanciaResumida {
 	nombre := "Global"
 	if inst.Ambito == "proyecto" {
-		nombre = filepath.Base(inst.Raiz)
+		nombre = nombreProyecto(inst.Raiz, inst.Config)
 	}
 	return instanciaResumida{ID: inst.ID, Ambito: inst.Ambito, Raiz: inst.Raiz, Nombre: nombre}
 }

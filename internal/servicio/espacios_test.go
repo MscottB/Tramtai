@@ -77,6 +77,20 @@ func TestIdFijoAlRenombrar(t *testing.T) {
 	}
 }
 
+// El selector de espacios (la sesión) y la página Espacios dicen el mismo nombre: el de su configuración.
+func TestMismoNombreEnLaSesionYEnEspacios(t *testing.T) {
+	s, _, proyecto := entorno(t, "", "", adaptadores.Simulado{})
+	os.WriteFile(filepath.Join(proyecto, ".tramtai", "config.yaml"), []byte("version: 1\nproyecto:\n  nombre: Otro Nombre\n"), 0o600)
+	inst, err := s.ActivarProyecto(proyecto)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e, _ := s.registro().buscar(inst.ID)
+	if got := resumir(inst).Nombre; got != "Otro Nombre" || e.Nombre != got {
+		t.Fatalf("sesión %q, Espacios %q", got, e.Nombre)
+	}
+}
+
 func TestMoverConMarca(t *testing.T) {
 	s, _, proyecto := entorno(t, "", "", adaptadores.Simulado{})
 	antes, err := s.ActivarProyecto(proyecto)

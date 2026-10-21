@@ -76,6 +76,15 @@ func (s *Servicio) ActivarProyecto(raiz string) (*Instancia, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Un proyecto que se movió con su espacio en marcha se reabre en la carpeta nueva: el abierto apunta a la vieja.
+	s.mu.RLock()
+	abierta, activa := s.instancias[id]
+	s.mu.RUnlock()
+	if activa && !MismaRuta(abierta.Raiz, raiz) {
+		if err := s.Desactivar(id); err != nil {
+			return nil, err
+		}
+	}
 	inst, err := s.activar(id, "proyecto", raiz, c)
 	if err != nil {
 		return nil, err

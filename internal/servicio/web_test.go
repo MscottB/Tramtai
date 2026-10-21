@@ -334,7 +334,7 @@ func TestEntradaLocalSinToken(t *testing.T) {
 	r, cuerpo = n.pedir("GET", "/ui/sesion", "")
 	n.csrf = cuerpo[strings.Index(cuerpo, `"csrf":"`)+8:]
 	n.csrf = n.csrf[:strings.Index(n.csrf, `"`)]
-	if !strings.Contains(cuerpo, pry.ID) || !strings.Contains(cuerpo, `"nombre":"Mi Proyecto"`) {
+	if !strings.Contains(cuerpo, pry.ID) || !strings.Contains(cuerpo, `"nombre":"Demo App"`) {
 		t.Fatalf("la sesión local lista las instancias: %s", cuerpo)
 	}
 	if r, _ := n.pedir("POST", "/ui/sesion", `{"instancia":"`+pry.ID+`"}`); r.StatusCode != 401 {

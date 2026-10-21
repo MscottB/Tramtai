@@ -1,6 +1,7 @@
 package servicio
 
 import (
+	"cmp"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -108,6 +109,11 @@ func (s *Servicio) AbrirProyecto(raiz string, o AbrirOpciones) (*Instancia, erro
 	}
 	if esProyecto && MismaRuta(existente, raiz) {
 		raiz = existente
+		if vieja := s.rutaMovida(raiz); vieja != "" {
+			if err := s.moverConfianza(vieja, raiz); err != nil {
+				return nil, err
+			}
+		}
 		if g, err := nucleo.CargarConfiguracion(""); err == nil && !g.ProyectoConfiable(raiz) {
 			if o.Confiar == nil {
 				claves, _ := nucleo.ClavesAdministradas(filepath.Join(raiz, ".tramtai", "local.yaml"))
@@ -133,6 +139,26 @@ func (s *Servicio) AbrirProyecto(raiz string, o AbrirOpciones) (*Instancia, erro
 // FijarConfianza añade raiz a proyectos_confiables de la configuración global (o la quita) y, si su espacio está
 // activo, le aplica su configuración de nuevo: sus APIs y su presupuesto entran o salen sin reiniciar.
 func (s *Servicio) FijarConfianza(raiz string, confiar bool) error {
+	poner := ""
+	if confiar {
+		poner = raiz
+	}
+	return s.cambiarConfiables(raiz, poner)
+}
+
+// moverConfianza pasa la confianza de la ruta vieja de un proyecto movido a la nueva: es el mismo proyecto (su marca
+// lo dice). Si la vieja no era confiable, la nueva tampoco lo es.
+func (s *Servicio) moverConfianza(vieja, nueva string) error {
+	g, err := nucleo.CargarConfiguracion("")
+	if err != nil || !g.ProyectoConfiable(vieja) {
+		return err
+	}
+	return s.cambiarConfiables(vieja, nueva)
+}
+
+// cambiarConfiables quita una ruta de proyectos_confiables y pone otra (o ninguna, con ""), y aplica de nuevo la
+// configuración del espacio activo en la ruta afectada.
+func (s *Servicio) cambiarConfiables(quitar, poner string) error {
 	ruta, err := nucleo.RutaGlobal()
 	if err != nil {
 		return err
@@ -143,13 +169,14 @@ func (s *Servicio) FijarConfianza(raiz string, confiar bool) error {
 	}
 	lista := []string{}
 	for _, v := range g.Lista("proyectos_confiables") {
-		if texto, ok := v.(string); ok && !MismaRuta(texto, raiz) {
+		if texto, ok := v.(string); ok && !MismaRuta(texto, quitar) && !MismaRuta(texto, poner) {
 			lista = append(lista, texto)
 		}
 	}
-	if confiar {
-		lista = append(lista, raiz)
+	if poner != "" {
+		lista = append(lista, poner)
 	}
+	raiz := cmp.Or(poner, quitar)
 	if err := FijarValor(ruta, nucleo.OrigenGlobal, "proyectos_confiables", lista); err != nil {
 		return err
 	}
