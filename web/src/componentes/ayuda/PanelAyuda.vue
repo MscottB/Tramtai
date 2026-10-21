@@ -20,7 +20,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { t } from '../../i18n'
 import { temaPorId } from '../../ayuda/indice'
-import { cerrarAyuda, panel } from '../../ayuda/panel'
+import { cerrarAyuda, escDelPanel, panel } from '../../ayuda/panel'
 import type { Pagina } from '../../ayuda/tipos'
 import VistaTema from './VistaTema.vue'
 
@@ -52,7 +52,7 @@ function mostrar(pagina: Pagina) {
 // Esc cierra solo el panel: se atrapa antes que el diálogo que haya debajo (el detalle del Historial), que si no se
 // cerraría con la misma tecla. Quasar escucha keyup para Esc, así que se detienen las dos.
 function alTeclear(e: KeyboardEvent) {
-  if (e.key !== 'Escape' || !panel.abierto || props.recorridoActivo || document.querySelector('.q-menu')) return
+  if (!escDelPanel(e, panel.abierto, !!props.recorridoActivo, !!document.querySelector('.q-menu'))) return
   e.stopImmediatePropagation()
   if (e.type === 'keyup') cerrarAyuda()
 }

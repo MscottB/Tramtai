@@ -32,6 +32,32 @@ export function capturarEsc(destino: Pick<EventTarget, 'addEventListener' | 'rem
   }
 }
 
+// EVENTO_PASO avisa en window del ancla de cada paso antes de buscarla: Ajustes abre la pestaña donde está.
+export const EVENTO_PASO = 'tramtai:recorrido-paso'
+
+const ESPERA_MS = 5000
+const CADA_MS = 100
+const dormirMs = (ms: number) => new Promise<void>((listo) => setTimeout(listo, ms))
+
+// esperarAncla vuelve en cuanto el ancla se ve (las que salen con v-if al cargar datos), a los 5 s o en cuanto deja de
+// hacer falta (vigente da falso: se pidió otro paso o se cerró el recorrido), así no quedan esperas vivas.
+// No se usan waitForElement ni skipMissingElement de driver.js: el primero esconde la ventana mientras espera (queda el
+// hueco del paso anterior sobre una página que ya no está) y el segundo salta el paso en vez de mostrarlo centrado.
+export async function esperarAncla(hay: () => boolean, vigente: () => boolean, dormir = dormirMs): Promise<void> {
+  for (let espera = 0; espera < ESPERA_MS && vigente() && !hay(); espera += CADA_MS) await dormir(CADA_MS)
+}
+
+type Botones = { nextButton: HTMLElement; previousButton: HTMLElement; closeButton: HTMLElement }
+
+// botonConFoco es el botón que se enfoca al pintar la ventana (driver.js enfocaría la ✕, e Intro debe avanzar). driver.js
+// rehace la ventana en cada pintado: si es el mismo paso (su ancla apareció tarde), el foco vuelve al botón equivalente al
+// que lo tenía en vez de saltar a Siguiente.
+export function botonConFoco(ventana: Botones, antes: Element | null, mismoPaso: boolean): HTMLElement {
+  if (mismoPaso && antes?.classList.contains('driver-popover-prev-btn')) return ventana.previousButton
+  if (mismoPaso && antes?.classList.contains('driver-popover-close-btn')) return ventana.closeButton
+  return ventana.nextButton
+}
+
 // focoAlCerrar es adónde vuelve el foco al acabar: a lo que abrió el recorrido si sigue en la página; si no (el botón de
 // la bienvenida, «Haz el recorrido» en Inicio, «Muéstrame» de la página de Ayuda), al «?» de la página en la que acaba.
 export function focoAlCerrar(volverA: Element | null, raiz: Pick<Document, 'querySelectorAll'>): Element | undefined {

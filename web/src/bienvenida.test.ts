@@ -1,7 +1,7 @@
 // Cuándo se ofrece la bienvenida: solo con sesión, en Inicio, sin enlace profundo, sin respuesta guardada y una vez por carga.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { entradaPorEnlace, ofrecerBienvenida } from './bienvenida.ts'
+import { alCerrarBienvenida, entradaPorEnlace, leerBienvenida, ofrecerBienvenida } from './bienvenida.ts'
 
 const limpio = { sesion: true, pagina: 'inicio', entradaPorEnlace: false, estado: null, yaOfrecida: false, otroDialogo: false, recorridoActivo: false } as const
 
@@ -27,6 +27,17 @@ test('ofrecerBienvenida: con un recorrido en marcha no se ofrece, y al acabar s�
 test('ofrecerBienvenida: al cerrarse el otro diálogo se ofrece', () => {
   assert.equal(ofrecerBienvenida({ ...limpio, otroDialogo: true }), false)
   assert.equal(ofrecerBienvenida({ ...limpio, otroDialogo: false }), true)
+})
+
+test('leerBienvenida: solo «hecha» y «descartada» cuentan; cualquier otra cosa (o nada) la vuelve a ofrecer', () => {
+  assert.equal(leerBienvenida('hecha'), 'hecha')
+  assert.equal(leerBienvenida('descartada'), 'descartada')
+  for (const v of [null, '', 'HECHA', '1']) assert.equal(leerBienvenida(v), null, String(v))
+})
+
+test('alCerrarBienvenida: «Ahora no», Esc o clic fuera la descartan; tras «Empezar» ya quedó hecha', () => {
+  assert.equal(alCerrarBienvenida(false), 'descartada')
+  assert.equal(alCerrarBienvenida(true), undefined)
 })
 
 test('entradaPorEnlace: solo un hash que no sea vacío ni #inicio es un enlace profundo', () => {

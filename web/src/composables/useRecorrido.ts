@@ -7,17 +7,7 @@ import 'driver.js/dist/driver.css'
 import type { Pagina } from '../ayuda/tipos'
 import { t } from '../i18n'
 import type { PasoMostrado } from '../recorrido'
-import { aDriver, capturarEsc, cerrarAlNavegar, elegirElemento, focoAlCerrar, OPCIONES_DRIVER } from '../recorridoDom'
-
-const ESPERA_MS = 5000
-const CADA_MS = 100
-
-// esperarAncla vuelve en cuanto el ancla se ve (las que salen con v-if al cargar datos), a los 5 s o si deja de hacer
-// falta (vigente da falso: se pidió otro paso o se cerró el recorrido).
-async function esperarAncla(ancla: string, vigente: () => boolean) {
-  for (let espera = 0; espera < ESPERA_MS && vigente() && !elegirElemento(ancla, document); espera += CADA_MS)
-    await new Promise((listo) => setTimeout(listo, CADA_MS))
-}
+import { aDriver, botonConFoco, capturarEsc, cerrarAlNavegar, elegirElemento, esperarAncla, EVENTO_PASO, focoAlCerrar, OPCIONES_DRIVER } from '../recorridoDom'
 
 export function useRecorrido(ir: (pagina: Pagina) => void, paginaActual: Readonly<Ref<string>>) {
   const activo = ref(false)
@@ -29,6 +19,9 @@ export function useRecorrido(ir: (pagina: Pagina) => void, paginaActual: Readonl
   let turno = 0
   let soltarEsc: (() => void) | undefined
   let soltarNavegar: (() => void) | undefined
+  // Para el foco al pintar: qué lo tenía antes y si se repinta el mismo paso (su ancla apareció tarde).
+  let focoAntes: Element | null = null
+  let repinta = false
 
   function terminar() {
     if (!activo.value) return
@@ -53,9 +46,14 @@ export function useRecorrido(ir: (pagina: Pagina) => void, paginaActual: Readonl
 
   function pintar(i: number) {
     if (!d) return
-    // driver.js muestra centrado el paso cuyo elemento no existe: así sale el paso sin ancla o sin nada visible.
-    const elemento = (p: PasoMostrado) => () => elegirElemento(p.ancla, document) as Element
-    d.setConfig({ ...d.getConfig(), steps: pasos.map((p, j) => ({ ...aDriver(p, j, pasos.length, t), element: elemento(p) })) })
+    // driver.js muestra centrado el paso sin elemento: así sale el paso sin ancla o sin nada visible.
+    const steps = pasos.map((p, j) => {
+      const elemento = elegirElemento(p.ancla, document)
+      return elemento ? { ...aDriver(p, j, pasos.length, t), element: elemento } : aDriver(p, j, pasos.length, t)
+    })
+    d.setConfig({ ...d.getConfig(), steps })
+    repinta = d.isActive() && d.getActiveIndex() === i
+    focoAntes = document.activeElement
     if (d.isActive()) d.moveTo(i)
     else d.drive(i)
   }
@@ -75,14 +73,15 @@ export function useRecorrido(ir: (pagina: Pagina) => void, paginaActual: Readonl
     // siguientes, el paso pasa a señalarla.
     // Antes de buscar el ancla, la página puede abrir la pestaña donde está (Ajustes); cambiar de pestaña no cambia datos.
     if (paso.ancla) {
-      window.dispatchEvent(new CustomEvent('tramtai:recorrido-paso', { detail: { ancla: paso.ancla } }))
+      window.dispatchEvent(new CustomEvent(EVENTO_PASO, { detail: { ancla: paso.ancla } }))
       await nextTick()
       if (!vigente()) return
     }
     pintar(i)
-    if (!paso.ancla || elegirElemento(paso.ancla, document)) return
-    await esperarAncla(paso.ancla, vigente)
-    if (vigente() && elegirElemento(paso.ancla, document)) pintar(i)
+    const ancla = paso.ancla
+    if (!ancla || elegirElemento(ancla, document)) return
+    await esperarAncla(() => !!elegirElemento(ancla, document), vigente)
+    if (vigente() && elegirElemento(ancla, document)) pintar(i)
   }
 
   function empezar(lista: PasoMostrado[], alTerminar?: () => void) {
@@ -91,8 +90,6 @@ export function useRecorrido(ir: (pagina: Pagina) => void, paginaActual: Readonl
     alFin = alTerminar
     volverA = document.activeElement
     activo.value = true
-    // Esc es del recorrido, no del panel «?» ni del diálogo que haya debajo (Quasar los cierra con la misma tecla)
-    soltarEsc = capturarEsc(window, cerrar)
     const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches
     d = driver({
       ...OPCIONES_DRIVER,
@@ -100,11 +97,16 @@ export function useRecorrido(ir: (pagina: Pagina) => void, paginaActual: Readonl
       smoothScroll: !quieto,
       onNextClick: () => void mostrar((d?.getActiveIndex() ?? -1) + 1),
       onPrevClick: () => void mostrar((d?.getActiveIndex() ?? 1) - 1),
-      // driver.js enfoca la ✕ (el primer botón); Intro debe avanzar, no cerrar
-      onPopoverRender: (ventana) => queueMicrotask(() => ventana.nextButton.focus()),
+      onPopoverRender: (ventana) => {
+        const boton = botonConFoco(ventana, focoAntes, repinta)
+        queueMicrotask(() => boton.focus())
+      },
       // Esc, la ✕, el fondo y «Hecho» pasan por cerrar(): onDestroyed no llega si se cierra durante la primera animación
       onDestroyStarted: cerrar,
     })
+    // Después de driver(): si fallara, no queda nadie escuchando. Esc es del recorrido, no del panel «?» ni del diálogo
+    // que haya debajo (Quasar los cierra con la misma tecla).
+    soltarEsc = capturarEsc(window, cerrar)
     soltarNavegar = cerrarAlNavegar(window, cerrar)
     void mostrar(0)
   }

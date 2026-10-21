@@ -2,6 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { ORDEN_BIENVENIDA, pasosBienvenida, pasosDePagina } from './recorrido.ts'
+import { ordenMenu } from './menu.ts'
 import type { Pagina, PasoRecorrido, Tema } from './ayuda/tipos.ts'
 
 function tema(pagina: Pagina, pasos: PasoRecorrido[]): Tema {
@@ -40,6 +41,13 @@ test('pasosBienvenida sigue ORDEN_BIENVENIDA, solo toma los marcados y cierra co
   assert.ok(!pasos.some((p) => p.pagina === 'historial'), 'historial no está en la bienvenida')
 })
 
-test('ORDEN_BIENVENIDA no incluye historial ni ajustes', () => {
-  assert.deepEqual(ORDEN_BIENVENIDA, ['inicio', 'agentes', 'ejecutar', 'conectar', 'espacios'])
+test('ORDEN_BIENVENIDA baja por el menú, sin historial ni ajustes', () => {
+  // el menú en orden, sin las dos páginas que tienen su recorrido aparte: así cambia si se reordena el menú
+  assert.deepEqual(ORDEN_BIENVENIDA, ordenMenu().filter((p) => p !== 'historial' && p !== 'configuracion'))
+})
+
+test('pasosBienvenida sin pasos marcados solo trae el cierre', () => {
+  const sinMarcar = [tema('inicio', [paso('i1')]), tema('agentes', [paso('a1', false)])]
+  assert.deepEqual(pasosBienvenida(sinMarcar), [{ pagina: 'espacios', titulo: 'recorrido.finTitulo', texto: 'recorrido.finTexto' }])
+  assert.deepEqual(pasosBienvenida([]).length, 1)
 })

@@ -12,6 +12,12 @@ export function abrirAyuda(tema: string, ancla = ''): void {
   Object.assign(panel, { abierto: true, tema, ancla })
 }
 
+// escDelPanel: Esc cierra el panel abierto, salvo con un recorrido en marcha (la tecla es suya: el panel la escucha antes,
+// en la misma fase de captura, y si la detuviera el recorrido no se cerraría) o con un menú desplegado encima.
+export function escDelPanel(e: KeyboardEvent, abierto: boolean, recorridoActivo: boolean, menuAbierto: boolean): boolean {
+  return e.key === 'Escape' && abierto && !recorridoActivo && !menuAbierto
+}
+
 export function cerrarAyuda(): void {
   panel.abierto = false
   previo?.focus?.()

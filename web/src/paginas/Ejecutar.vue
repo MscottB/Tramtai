@@ -4,7 +4,7 @@
 
     <div class="row q-col-gutter-lg">
       <div class="col-12 col-md-5">
-        <q-card data-captura="receta" data-recorrido="ejecutar.receta">
+        <q-card data-captura="receta">
           <q-card-section class="q-pb-sm row items-start no-wrap q-gutter-x-sm">
             <div class="col">
               <div class="titulo-seccion">{{ t('ejecutar.receta') }}</div>
@@ -20,7 +20,8 @@
               <template #action><q-btn flat dense no-caps color="primary" :label="t('ejecutar.dejarEditar')" @click="editando = ''" /></template>
             </q-banner>
           </q-card-section>
-          <q-card-section class="q-pt-sm">
+          <!-- el ancla del recorrido va en el selector de la receta, no en la tarjeta entera (mide más que la pantalla) -->
+          <q-card-section class="q-pt-sm" data-recorrido="ejecutar.receta">
             <EditorReceta v-model="receta" :catalogo="catalogo" plegar-opciones />
           </q-card-section>
           <q-separator />

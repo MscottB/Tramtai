@@ -291,7 +291,7 @@ import { computed, markRaw, onMounted, onUnmounted, provide, ref, watch, watchEf
 import { useQuasar } from 'quasar'
 import { api, avisar, avisarError, buscarActualizacionAhora, ErrorApi, reiniciarYSeguir } from './api/cliente'
 import { actualizacion, bienvenida, dialogoActualizar, marcarBienvenida, sesion } from './estado'
-import { entradaPorEnlace, ofrecerBienvenida } from './bienvenida'
+import { alCerrarBienvenida, entradaPorEnlace, ofrecerBienvenida } from './bienvenida'
 import { pasosBienvenida, pasosDePagina } from './recorrido'
 import { useRecorrido } from './composables/useRecorrido'
 import { useActualizacion } from './composables/useActualizacion'
@@ -549,7 +549,8 @@ watch([() => !!sesion.value?.instancia, seccion, otroDialogo, recorridoActivo], 
     })
     // «Ahora no», Esc o clic fuera: no se vuelve a ofrecer
     .onDismiss(() => {
-      if (!empezada) marcarBienvenida('descartada')
+      const respuesta = alCerrarBienvenida(empezada)
+      if (respuesta) marcarBienvenida(respuesta)
     })
 }, { immediate: true })
 </script>

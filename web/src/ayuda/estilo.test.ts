@@ -61,6 +61,9 @@ test('los títulos de los pasos de un recorrido caben en 60 caracteres en los do
   for (const clave of titulos)
     for (const [idioma, textos] of Object.entries(idiomas))
       assert.ok(textos[clave] && textos[clave].length <= 60, `${clave} en ${idioma} tiene ${textos[clave]?.length} caracteres`)
+})
+
+test('el texto del paso de cierre de la bienvenida cabe en 200 caracteres en los dos idiomas', () => {
   for (const [idioma, textos] of Object.entries(idiomas)) assert.ok(textos['recorrido.finTexto'].length <= 200, `recorrido.finTexto en ${idioma}`)
 })
 

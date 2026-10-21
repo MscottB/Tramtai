@@ -341,13 +341,11 @@ input[type='number'] {
 }
 /* La línea: un trazo vertical continuo que pasa por cada estación del menú. */
 .nav-red {
+  --nav-titulo: 28px;
   position: relative;
   padding: 12px 10px;
   margin: 0;
   list-style: none;
-}
-.nav-red {
-  --nav-titulo: 28px;
 }
 /* Una sola línea para los tres grupos: arranca en la primera parada, bajo el título del primer grupo. */
 .nav-red::before {
