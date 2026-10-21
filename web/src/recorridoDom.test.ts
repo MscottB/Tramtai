@@ -129,6 +129,9 @@ test('focoAlCerrar: vuelve a lo que abrió el recorrido si sigue en la página; 
   const quitado = { isConnected: false } as unknown as Element
   assert.equal(focoAlCerrar(quitado, raiz({ 'app.ayuda': [ayuda] })), ayuda)
   assert.equal(focoAlCerrar(null, raiz({ 'app.ayuda': [ayuda] })), ayuda)
+  // Safari y Firefox de macOS no enfocan el botón al pulsarlo: lo que tenía el foco al empezar era body
+  const body = Object.assign(elemento(1280, 900), { isConnected: true, tagName: 'BODY' })
+  assert.equal(focoAlCerrar(body, raiz({ 'app.ayuda': [ayuda] })), ayuda)
 })
 
 test('OPCIONES_DRIVER: solo enseña, el elemento resaltado no se puede pulsar ni enfocar con Tab', () => {

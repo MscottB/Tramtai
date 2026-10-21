@@ -48,7 +48,7 @@ test('revisarAnclas: una excepción de SIN_CAPTURA no necesita capturas y no pue
 test('rutaPrivada: la carpeta personal, la temporal y la del repositorio, con / o \\; la ruta de ejemplo no', () => {
   const privada = rutaPrivada(['C:\\Users\\Ana', 'C:\\Users\\ANA~1\\AppData\\Local\\Temp', 'D:\\repos\\Tramtai', '/tmp'])
   for (const texto of ['C:\\Users\\Ana\\Documents', 'c:/users/ana/app', 'C:\\Users\\ANA~1\\AppData\\Local\\Temp\\x', 'D:\\repos\\Tramtai\\bin',
-    'bin\\capturas-a1B2c3'])
+    'bin\\capturas-a1B2c3', '"C:\\\\Users\\\\Ana\\\\Documents"'])
     assert.ok(privada.test(texto), texto)
   for (const texto of ['C:\\Proyectos\\mi-app', '~/proyectos/mi-app', 'C:\\Users', 'guardado en /tmp', 'needs no Ana rights'])
     assert.ok(!privada.test(texto), texto)

@@ -64,7 +64,8 @@ export function botonConFoco(ventana: Botones, antes: Element | null, mismoPaso:
 // botón de la bienvenida, «Haz el recorrido» en Inicio, «Muéstrame» de la página de Ayuda o del panel «?», que ya se
 // cerró), al «?» de la página en la que acaba.
 export function focoAlCerrar(volverA: Element | null, raiz: Pick<Document, 'querySelectorAll'>): Element | undefined {
-  return volverA?.isConnected && seVe(volverA) ? volverA : elegirElemento('app.ayuda', raiz)
+  // body no es un sitio al que volver: es lo que queda enfocado si el navegador no enfoca el botón al pulsarlo
+  return volverA?.isConnected && volverA.tagName !== 'BODY' && seVe(volverA) ? volverA : elegirElemento('app.ayuda', raiz)
 }
 
 // cerrarAlNavegar cierra el recorrido si se navega por fuera de él (Atrás, Alt+←): el hueco señalaría una página que ya

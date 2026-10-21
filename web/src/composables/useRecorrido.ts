@@ -35,7 +35,8 @@ export function useRecorrido(ir: (pagina: Pagina) => void, paginaActual: Readonl
     alFin = undefined
     const antes = volverA
     // después de driver.js, que al cerrar devuelve el foco a lo que lo tenía al empezar el último paso (su botón)
-    setTimeout(() => (focoAlCerrar(antes, document) as HTMLElement | undefined)?.focus?.())
+    // (si entretanto empezó otro recorrido, el foco es suyo)
+    setTimeout(() => { if (!activo.value) (focoAlCerrar(antes, document) as HTMLElement | undefined)?.focus?.() })
     fin?.()
   }
 

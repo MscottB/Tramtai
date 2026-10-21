@@ -60,7 +60,7 @@ export const ANCHO_AYUDA = 736
 export function rutaPrivada(rutas: string[]): RegExp {
   const escapar = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const niveles = (r: string) => r.split(/[\\/]+/).filter(Boolean)
-  const partes = rutas.filter((r) => niveles(r).length >= 2).map((r) => niveles(r).map(escapar).join('[\\\\/]'))
+  const partes = rutas.filter((r) => niveles(r).length >= 2).map((r) => niveles(r).map(escapar).join('[\\\\/]+'))
   return new RegExp([...partes, 'capturas-\\w{6}'].join('|'), 'i')
 }
 

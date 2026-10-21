@@ -268,6 +268,8 @@ try {
       for (const tema of ['claro', 'oscuro']) {
         await abrir(p.pagina, tema, 'es', '.pagina', 1440, 900)
         await ocultarRuta()
+        const vista = await evaluar(`document.body.innerText + ' ' + [...document.querySelectorAll('input, textarea')].map((c) => c.value).join(' ')`)
+        if (privada.test(vista)) throw new Error(`${p.nombre}: la captura muestra una ruta real: ${vista.slice(0, 200)}`)
         // La misma pantalla de 1440 px, también reducida a 960 (móviles) y a 640 (la columna de «Así se ve» en escritorio).
         for (const ancho of [1440, 960, 640]) {
           const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80,
