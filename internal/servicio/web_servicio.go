@@ -222,20 +222,11 @@ func (s *Servicio) guardarValores(inst *Instancia, valores map[string]any) error
 // fijarPuerto guarda servicio.puerto y servicio.puerto_automatico en la configuración global si el puerto está
 // libre (o es el que ya usa este servicio). Se aplica al reiniciar.
 func (s *Servicio) fijarPuerto(puerto int, automatico bool) error {
-	if puerto < 1024 || puerto > 65535 {
-		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("el puerto debe estar entre 1024 y 65535"))
-	}
-	if puerto != s.opc.Puerto && !PuertoLibre(s.opc.Host, puerto) {
-		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el puerto %d está ocupado por otro programa: elige otro", puerto))
-	}
 	ruta, err := nucleo.RutaGlobal()
 	if err != nil {
 		return err
 	}
-	if err := FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto", puerto); err != nil {
-		return err
-	}
-	if err := FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto_automatico", automatico); err != nil {
+	if err := FijarPuertoPropio(ruta, s.opc.Host, puerto, s.opc.Puerto, automatico); err != nil {
 		return err
 	}
 	s.mu.Lock()

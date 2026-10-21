@@ -129,19 +129,6 @@ func (m *modelo) prepararConversor() tea.Cmd {
 	}
 }
 
-// rutaPermitida aplica instancia_global.raices_permitidas con la configuración de la carpeta actual, como la CLI.
-func rutaPermitida(ruta string) (string, error) {
-	raiz := ""
-	if dir, err := os.Getwd(); err == nil {
-		raiz, _ = nucleo.BuscarProyecto(dir)
-	}
-	c, err := nucleo.CargarConfiguracion(raiz)
-	if err != nil {
-		return "", err
-	}
-	return c.RutaPermitida(ruta)
-}
-
 // lanzar sube los archivos, crea el trabajo y sigue sus eventos en vivo.
 func (m *modelo) lanzar() tea.Cmd {
 	if m.enCurso != "" || m.ocupado != "" { // ocupado: un envío que aún no ha vuelto (dos Enter seguidos)
@@ -173,8 +160,19 @@ func (m *modelo) lanzar() tea.Cmd {
 				return msgCreado{err: errors.New(idioma.Tf("el conversor de archivos no está listo (%s): ctrl+p lo prepara", e.Estado))}
 			}
 		}
+		var cfg *nucleo.Configuracion // instancia_global.raices_permitidas de la carpeta actual, como la CLI
+		if len(archivos) > 0 {
+			raiz := ""
+			if dir, err := os.Getwd(); err == nil {
+				raiz, _ = nucleo.BuscarProyecto(dir)
+			}
+			var err error
+			if cfg, err = nucleo.CargarConfiguracion(raiz); err != nil {
+				return msgCreado{err: err}
+			}
+		}
 		for _, ruta := range archivos {
-			ruta, err := rutaPermitida(ruta)
+			ruta, err := cfg.RutaPermitida(ruta)
 			if err != nil {
 				return msgCreado{err: err}
 			}

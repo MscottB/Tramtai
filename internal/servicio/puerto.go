@@ -21,6 +21,27 @@ func PuertoLibre(host string, puerto int) bool {
 	return true
 }
 
+// FijarPuerto guarda servicio.puerto y servicio.puerto_automatico en el archivo global si el puerto está en rango y
+// libre (en automático no se comprueba: el servicio buscará otro al iniciar). Se aplica al reiniciar. Es lo que usan
+// el servicio, la CLI y la terminal.
+func FijarPuerto(rutaGlobal, host string, puerto int, automatico bool) error {
+	return FijarPuertoPropio(rutaGlobal, host, puerto, 0, automatico)
+}
+
+// FijarPuertoPropio es FijarPuerto cuando ya hay un Tramtai escuchando en propio: ese puerto cuenta como libre.
+func FijarPuertoPropio(rutaGlobal, host string, puerto, propio int, automatico bool) error {
+	if puerto < 1024 || puerto > 65535 {
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("el puerto debe estar entre 1024 y 65535"))
+	}
+	if !automatico && puerto != propio && !PuertoLibre(host, puerto) {
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el puerto %d está ocupado por otro programa: elige otro", puerto))
+	}
+	if err := FijarValor(rutaGlobal, nucleo.OrigenGlobal, "servicio.puerto", puerto); err != nil {
+		return err
+	}
+	return FijarValor(rutaGlobal, nucleo.OrigenGlobal, "servicio.puerto_automatico", automatico)
+}
+
 // Escuchar abre host:puerto. Si está ocupado y automatico lo permite (servicio.puerto_automatico), prueba los
 // siguientes y, si tampoco, uno libre que elija el sistema. Devuelve el puerto que quedó abierto.
 func Escuchar(host string, puerto int, automatico bool) (net.Listener, int, error) {

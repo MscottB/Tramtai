@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -13,11 +12,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/cliente"
-	"tramtai/internal/contrato"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
-	"tramtai/internal/servicio"
 	"tramtai/internal/version"
 )
 
@@ -25,7 +22,7 @@ import (
 // activo, o la global fuera de un proyecto. Dentro de un proyecto detenido es un error: no se usa la global sin decirlo.
 func instanciaActual(ctx context.Context, c *cliente.Cliente, preferida string, global bool) (string, error) {
 	if preferida != "" || global {
-		return elegirEspacio("", nil, preferida, global)
+		return cliente.ElegirEspacio("", nil, preferida, global)
 	}
 	raiz := raizProyecto()
 	if raiz == "" {
@@ -35,23 +32,7 @@ func instanciaActual(ctx context.Context, c *cliente.Cliente, preferida string, 
 	if err != nil {
 		return "", err
 	}
-	return elegirEspacio(raiz, e.Instancias, "", false)
-}
-
-// elegirEspacio es la decisión de instanciaActual con el estado ya leído.
-func elegirEspacio(raiz string, activos []contrato.EstadoInstancia, preferida string, global bool) (string, error) {
-	switch {
-	case preferida != "":
-		return preferida, nil
-	case global || raiz == "":
-		return "global", nil
-	}
-	for _, i := range activos {
-		if i.Ambito == "proyecto" && servicio.MismaRuta(i.Raiz, raiz) {
-			return i.ID, nil
-		}
-	}
-	return "", nucleo.NuevoError(nucleo.CodigoEspacioDetenido, idioma.Tf("el espacio %s está detenido: actívalo con tramtai espacio iniciar, o usa --global", filepath.Base(raiz)))
+	return cliente.ElegirEspacio(raiz, e.Instancias, "", false)
 }
 
 // ejecutarEnServicio envía el trabajo al servicio en marcha, de modo que el mismo trabajo se ve en la terminal
