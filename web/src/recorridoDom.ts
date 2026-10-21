@@ -26,11 +26,13 @@ export function capturarEsc(destino: Pick<EventTarget, 'addEventListener' | 'rem
     e.stopImmediatePropagation()
     if (e.type === 'keyup') alEsc()
   }
-  destino.addEventListener('keydown', alTeclear, true)
-  destino.addEventListener('keyup', alTeclear, true)
+  // { capture: true } y no true: el EventTarget de Node 24 no quita con un booleano lo que se puso en captura
+  const captura = { capture: true }
+  destino.addEventListener('keydown', alTeclear, captura)
+  destino.addEventListener('keyup', alTeclear, captura)
   return () => {
-    destino.removeEventListener('keydown', alTeclear, true)
-    destino.removeEventListener('keyup', alTeclear, true)
+    destino.removeEventListener('keydown', alTeclear, captura)
+    destino.removeEventListener('keyup', alTeclear, captura)
   }
 }
 
