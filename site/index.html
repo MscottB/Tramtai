@@ -70,8 +70,8 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
         <span lang="en">Your AI agents, <em>as a local API</em>.</span>
       </h1>
       <p class="entrada">
-        <span lang="es">Tramtai convierte Claude Code, Codex, GitHub Copilot CLI y la Gemini API en una API compatible con OpenAI y Anthropic que funciona en tu equipo. Conecta cualquier aplicación cambiando solo la URL. Antigravity también está, por ahora desde Probar y la CLI.</span>
-        <span lang="en">Tramtai turns Claude Code, Codex, GitHub Copilot CLI and the Gemini API into an OpenAI- and Anthropic-compatible API that runs on your computer. Connect any app by changing just the URL. Antigravity is there too, for now from Try and the CLI.</span>
+        <span lang="es">Tramtai convierte Claude Code, Codex, GitHub Copilot CLI y la Gemini API en una API compatible con OpenAI y Anthropic que funciona en tu equipo. Conecta cualquier aplicación cambiando solo la URL. Antigravity también está, por ahora desde Probar y la CLI. Cada proyecto tiene su espacio, y un recorrido guiado te enseña la app en 2 minutos.</span>
+        <span lang="en">Tramtai turns Claude Code, Codex, GitHub Copilot CLI and the Gemini API into an OpenAI- and Anthropic-compatible API that runs on your computer. Connect any app by changing just the URL. Antigravity is there too, for now from Try and the CLI. Each project gets its own workspace, and a guided tour shows you the app in 2 minutes.</span>
       </p>
       <div class="acciones">
         <a class="boton principal" href="#descargar" data-descarga>
@@ -317,6 +317,7 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
       <div class="cabeza centrada">
         <span class="etiqueta"><span lang="es">Así se ve</span><span lang="en">How it looks</span></span>
         <h2><span lang="es">Tu red, a la vista.</span><span lang="en">Your network, at a glance.</span></h2>
+        <p class="suave"><span lang="es">Y para empezar, <a href="#demo">el recorrido guiado, paso a paso</a>.</span><span lang="en">And to get started, <a href="#demo">the guided tour, step by step</a>.</span></p>
       </div>
       <article class="par">
         <div>
@@ -373,6 +374,116 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
           <img class="solo-oscuro" src="capturas/agentes-oscuro-1440.webp" srcset="capturas/agentes-oscuro-960.webp 960w, capturas/agentes-oscuro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 660px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes: una tarjeta por agente con su versión, la cuenta con la que está conectado y cómo cambiarlo o desconectarlo" data-alt-en="Agents: one card per agent with its version, the account it is signed in with and how to change or disconnect it">
         </figure>
       </article>
+    </div>
+  </section>
+
+  <section id="demo" aria-labelledby="demo-titulo">
+    <div class="envoltura">
+      <div class="cabeza centrada">
+        <span class="etiqueta"><span lang="es">Recorrido guiado</span><span lang="en">Guided tour</span></span>
+        <h2 id="demo-titulo"><span lang="es">Aprende la app en 2 minutos.</span><span lang="en">Learn the app in 2 minutes.</span></h2>
+        <p class="suave"><span lang="es">La primera vez que abres Tramtai, un recorrido te lleva por Inicio, Agentes, Probar, Mis APIs y Espacios: te señala cada cosa y no toca nada. Así es, paso a paso. Lo repites cuando quieras con «Haz el recorrido de Tramtai».</span><span lang="en">The first time you open Tramtai, a tour walks you through Home, Agents, Try, My APIs and Workspaces: it points at each thing and changes nothing. Here it is, step by step. Repeat it any time with “Take the Tramtai tour”.</span></p>
+      </div>
+      <div class="demo">
+        <!-- Una pantalla completa de la app por paso, con el recorrido encima (sitio.js las turna). Sin JavaScript se ve la
+             primera y la lista de pasos. -->
+        <div class="demo-escena">
+      <figure class="captura demo-paso">
+        <img class="solo-claro" src="capturas/bienvenida-1-claro-1440.webp" srcset="capturas/bienvenida-1-claro-960.webp 960w, capturas/bienvenida-1-claro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 1 de 14: El mapa en vivo" data-alt-en="Tramtai’s welcome tour, step 1 of 14: The live map">
+        <img class="solo-oscuro" src="capturas/bienvenida-1-oscuro-1440.webp" srcset="capturas/bienvenida-1-oscuro-960.webp 960w, capturas/bienvenida-1-oscuro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 1 de 14: El mapa en vivo" data-alt-en="Tramtai’s welcome tour, step 1 of 14: The live map">
+      </figure>
+      <figure class="captura demo-paso" hidden>
+        <img class="solo-claro" src="capturas/bienvenida-2-claro-1440.webp" srcset="capturas/bienvenida-2-claro-960.webp 960w, capturas/bienvenida-2-claro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 2 de 14: Tus primeros pasos" data-alt-en="Tramtai’s welcome tour, step 2 of 14: Your first steps">
+        <img class="solo-oscuro" src="capturas/bienvenida-2-oscuro-1440.webp" srcset="capturas/bienvenida-2-oscuro-960.webp 960w, capturas/bienvenida-2-oscuro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 2 de 14: Tus primeros pasos" data-alt-en="Tramtai’s welcome tour, step 2 of 14: Your first steps">
+      </figure>
+      <figure class="captura demo-paso" hidden>
+        <img class="solo-claro" src="capturas/bienvenida-3-claro-1440.webp" srcset="capturas/bienvenida-3-claro-960.webp 960w, capturas/bienvenida-3-claro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 3 de 14: El espacio de trabajo" data-alt-en="Tramtai’s welcome tour, step 3 of 14: The workspace">
+        <img class="solo-oscuro" src="capturas/bienvenida-3-oscuro-1440.webp" srcset="capturas/bienvenida-3-oscuro-960.webp 960w, capturas/bienvenida-3-oscuro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 3 de 14: El espacio de trabajo" data-alt-en="Tramtai’s welcome tour, step 3 of 14: The workspace">
+      </figure>
+      <figure class="captura demo-paso" hidden>
+        <img class="solo-claro" src="capturas/bienvenida-4-claro-1440.webp" srcset="capturas/bienvenida-4-claro-960.webp 960w, capturas/bienvenida-4-claro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 4 de 14: La ayuda, a mano" data-alt-en="Tramtai’s welcome tour, step 4 of 14: Help at hand">
+        <img class="solo-oscuro" src="capturas/bienvenida-4-oscuro-1440.webp" srcset="capturas/bienvenida-4-oscuro-960.webp 960w, capturas/bienvenida-4-oscuro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 4 de 14: La ayuda, a mano" data-alt-en="Tramtai’s welcome tour, step 4 of 14: Help at hand">
+      </figure>
+      <figure class="captura demo-paso" hidden>
+        <img class="solo-claro" src="capturas/bienvenida-5-claro-1440.webp" srcset="capturas/bienvenida-5-claro-960.webp 960w, capturas/bienvenida-5-claro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 5 de 14: Tus agentes" data-alt-en="Tramtai’s welcome tour, step 5 of 14: Your agents">
+        <img class="solo-oscuro" src="capturas/bienvenida-5-oscuro-1440.webp" srcset="capturas/bienvenida-5-oscuro-960.webp 960w, capturas/bienvenida-5-oscuro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 5 de 14: Tus agentes" data-alt-en="Tramtai’s welcome tour, step 5 of 14: Your agents">
+      </figure>
+      <figure class="captura demo-paso" hidden>
+        <img class="solo-claro" src="capturas/bienvenida-6-claro-1440.webp" srcset="capturas/bienvenida-6-claro-960.webp 960w, capturas/bienvenida-6-claro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 6 de 14: Listos y por conectar" data-alt-en="Tramtai’s welcome tour, step 6 of 14: Ready and to connect">
+        <img class="solo-oscuro" src="capturas/bienvenida-6-oscuro-1440.webp" srcset="capturas/bienvenida-6-oscuro-960.webp 960w, capturas/bienvenida-6-oscuro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 6 de 14: Listos y por conectar" data-alt-en="Tramtai’s welcome tour, step 6 of 14: Ready and to connect">
+      </figure>
+      <figure class="captura demo-paso" hidden>
+        <img class="solo-claro" src="capturas/bienvenida-7-claro-1440.webp" srcset="capturas/bienvenida-7-claro-960.webp 960w, capturas/bienvenida-7-claro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 7 de 14: La receta" data-alt-en="Tramtai’s welcome tour, step 7 of 14: The recipe">
+        <img class="solo-oscuro" src="capturas/bienvenida-7-oscuro-1440.webp" srcset="capturas/bienvenida-7-oscuro-960.webp 960w, capturas/bienvenida-7-oscuro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 7 de 14: La receta" data-alt-en="Tramtai’s welcome tour, step 7 of 14: The recipe">
+      </figure>
+      <figure class="captura demo-paso" hidden>
+        <img class="solo-claro" src="capturas/bienvenida-8-claro-1440.webp" srcset="capturas/bienvenida-8-claro-960.webp 960w, capturas/bienvenida-8-claro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 8 de 14: El mensaje de prueba" data-alt-en="Tramtai’s welcome tour, step 8 of 14: The test message">
+        <img class="solo-oscuro" src="capturas/bienvenida-8-oscuro-1440.webp" srcset="capturas/bienvenida-8-oscuro-960.webp 960w, capturas/bienvenida-8-oscuro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 8 de 14: El mensaje de prueba" data-alt-en="Tramtai’s welcome tour, step 8 of 14: The test message">
+      </figure>
+      <figure class="captura demo-paso" hidden>
+        <img class="solo-claro" src="capturas/bienvenida-9-claro-1440.webp" srcset="capturas/bienvenida-9-claro-960.webp 960w, capturas/bienvenida-9-claro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 9 de 14: Ver como código" data-alt-en="Tramtai’s welcome tour, step 9 of 14: View as code">
+        <img class="solo-oscuro" src="capturas/bienvenida-9-oscuro-1440.webp" srcset="capturas/bienvenida-9-oscuro-960.webp 960w, capturas/bienvenida-9-oscuro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 9 de 14: Ver como código" data-alt-en="Tramtai’s welcome tour, step 9 of 14: View as code">
+      </figure>
+      <figure class="captura demo-paso" hidden>
+        <img class="solo-claro" src="capturas/bienvenida-10-claro-1440.webp" srcset="capturas/bienvenida-10-claro-960.webp 960w, capturas/bienvenida-10-claro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 10 de 14: La clave del espacio" data-alt-en="Tramtai’s welcome tour, step 10 of 14: The workspace key">
+        <img class="solo-oscuro" src="capturas/bienvenida-10-oscuro-1440.webp" srcset="capturas/bienvenida-10-oscuro-960.webp 960w, capturas/bienvenida-10-oscuro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 10 de 14: La clave del espacio" data-alt-en="Tramtai’s welcome tour, step 10 of 14: The workspace key">
+      </figure>
+      <figure class="captura demo-paso" hidden>
+        <img class="solo-claro" src="capturas/bienvenida-11-claro-1440.webp" srcset="capturas/bienvenida-11-claro-960.webp 960w, capturas/bienvenida-11-claro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 11 de 14: Una API por aplicación" data-alt-en="Tramtai’s welcome tour, step 11 of 14: One API per app">
+        <img class="solo-oscuro" src="capturas/bienvenida-11-oscuro-1440.webp" srcset="capturas/bienvenida-11-oscuro-960.webp 960w, capturas/bienvenida-11-oscuro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 11 de 14: Una API por aplicación" data-alt-en="Tramtai’s welcome tour, step 11 of 14: One API per app">
+      </figure>
+      <figure class="captura demo-paso" hidden>
+        <img class="solo-claro" src="capturas/bienvenida-12-claro-1440.webp" srcset="capturas/bienvenida-12-claro-960.webp 960w, capturas/bienvenida-12-claro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 12 de 14: Tus espacios" data-alt-en="Tramtai’s welcome tour, step 12 of 14: Your workspaces">
+        <img class="solo-oscuro" src="capturas/bienvenida-12-oscuro-1440.webp" srcset="capturas/bienvenida-12-oscuro-960.webp 960w, capturas/bienvenida-12-oscuro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 12 de 14: Tus espacios" data-alt-en="Tramtai’s welcome tour, step 12 of 14: Your workspaces">
+      </figure>
+      <figure class="captura demo-paso" hidden>
+        <img class="solo-claro" src="capturas/bienvenida-13-claro-1440.webp" srcset="capturas/bienvenida-13-claro-960.webp 960w, capturas/bienvenida-13-claro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 13 de 14: Abrir un proyecto" data-alt-en="Tramtai’s welcome tour, step 13 of 14: Open a project">
+        <img class="solo-oscuro" src="capturas/bienvenida-13-oscuro-1440.webp" srcset="capturas/bienvenida-13-oscuro-960.webp 960w, capturas/bienvenida-13-oscuro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 13 de 14: Abrir un proyecto" data-alt-en="Tramtai’s welcome tour, step 13 of 14: Open a project">
+      </figure>
+      <figure class="captura demo-paso" hidden>
+        <img class="solo-claro" src="capturas/bienvenida-14-claro-1440.webp" srcset="capturas/bienvenida-14-claro-960.webp 960w, capturas/bienvenida-14-claro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 14 de 14: Y esto es todo por ahora" data-alt-en="Tramtai’s welcome tour, step 14 of 14: That is all for now">
+        <img class="solo-oscuro" src="capturas/bienvenida-14-oscuro-1440.webp" srcset="capturas/bienvenida-14-oscuro-960.webp 960w, capturas/bienvenida-14-oscuro-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="La bienvenida de Tramtai, paso 14 de 14: Y esto es todo por ahora" data-alt-en="Tramtai’s welcome tour, step 14 of 14: That is all for now">
+      </figure>
+        </div>
+        <div class="demo-controles" hidden>
+          <p class="demo-leyenda" aria-live="off"></p>
+          <div class="demo-botones">
+            <button type="button" class="demo-pausa"><span lang="es">Pausa</span><span lang="en">Pause</span></button>
+            <div class="demo-puntos">
+              <button type="button" class="demo-punto" aria-pressed="true"><span lang="es" class="solo-lectores">Paso 1</span><span lang="en" class="solo-lectores">Step 1</span></button>
+              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 2</span><span lang="en" class="solo-lectores">Step 2</span></button>
+              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 3</span><span lang="en" class="solo-lectores">Step 3</span></button>
+              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 4</span><span lang="en" class="solo-lectores">Step 4</span></button>
+              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 5</span><span lang="en" class="solo-lectores">Step 5</span></button>
+              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 6</span><span lang="en" class="solo-lectores">Step 6</span></button>
+              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 7</span><span lang="en" class="solo-lectores">Step 7</span></button>
+              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 8</span><span lang="en" class="solo-lectores">Step 8</span></button>
+              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 9</span><span lang="en" class="solo-lectores">Step 9</span></button>
+              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 10</span><span lang="en" class="solo-lectores">Step 10</span></button>
+              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 11</span><span lang="en" class="solo-lectores">Step 11</span></button>
+              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 12</span><span lang="en" class="solo-lectores">Step 12</span></button>
+              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 13</span><span lang="en" class="solo-lectores">Step 13</span></button>
+              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 14</span><span lang="en" class="solo-lectores">Step 14</span></button>
+            </div>
+          </div>
+        </div>
+        <ol class="demo-lista">
+        <li><span lang="es">El mapa en vivo</span><span lang="en">The live map</span></li>
+        <li><span lang="es">Tus primeros pasos</span><span lang="en">Your first steps</span></li>
+        <li><span lang="es">El espacio de trabajo</span><span lang="en">The workspace</span></li>
+        <li><span lang="es">La ayuda, a mano</span><span lang="en">Help at hand</span></li>
+        <li><span lang="es">Tus agentes</span><span lang="en">Your agents</span></li>
+        <li><span lang="es">Listos y por conectar</span><span lang="en">Ready and to connect</span></li>
+        <li><span lang="es">La receta</span><span lang="en">The recipe</span></li>
+        <li><span lang="es">El mensaje de prueba</span><span lang="en">The test message</span></li>
+        <li><span lang="es">Ver como código</span><span lang="en">View as code</span></li>
+        <li><span lang="es">La clave del espacio</span><span lang="en">The workspace key</span></li>
+        <li><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></li>
+        <li><span lang="es">Tus espacios</span><span lang="en">Your workspaces</span></li>
+        <li><span lang="es">Abrir un proyecto</span><span lang="en">Open a project</span></li>
+        <li><span lang="es">Y esto es todo por ahora</span><span lang="en">That is all for now</span></li>
+        </ol>
+      </div>
     </div>
   </section>
 
@@ -445,19 +556,25 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
         </article>
         <h3 class="grupo-funciones"><span lang="es">Controla</span><span lang="en">Control</span></h3>
         <article class="tarjeta">
+          <div class="linea" style="background: var(--codex)"></div>
+          <h4><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></h4>
+          <p><span lang="es">El espacio global y uno por proyecto: cada uno guarda sus datos aparte. Los Ajustes muestran qué viene de todo Tramtai, y una carpeta clonada pregunta antes de aplicar su configuración.</span><span lang="en">The global workspace and one per project: each keeps its data apart. Settings show what comes from all of Tramtai, and a cloned folder asks before applying its configuration.</span></p>
+        </article>
+        <article class="tarjeta">
           <div class="linea" style="background: var(--claude)"></div>
           <h4><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></h4>
           <p><span lang="es">Crea varias APIs con su propia clave, los modelos permitidos, instrucciones fijas y un presupuesto diario o mensual que corta al llegar al límite. Actívalas o detenlas sin reiniciar.</span><span lang="en">Create several APIs, each with its own key, allowed models, fixed instructions and a daily or monthly budget that cuts off at the limit. Turn them on or off without restarting.</span></p>
         </article>
         <article class="tarjeta">
-          <div class="linea" style="background: var(--codex)"></div>
-          <h4><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></h4>
-          <p><span lang="es">Cada proyecto guarda sus datos aparte. Los Ajustes muestran qué viene de todo Tramtai, y una carpeta clonada pregunta antes de aplicar su configuración.</span><span lang="en">Each project keeps its data apart. Settings show what comes from all of Tramtai, and a cloned folder asks before applying its configuration.</span></p>
-        </article>
-        <article class="tarjeta">
           <div class="linea" style="background: var(--claude)"></div>
           <h4><span lang="es">Modelo y esfuerzo a tu medida</span><span lang="en">Your model, your effort</span></h4>
           <p><span lang="es">Elige modelo en cada petición y, en los agentes que lo admiten, cuánto razona: de bajo a máximo.</span><span lang="en">Pick the model per request and, with the agents that support it, how hard it reasons: from low to maximum.</span></p>
+        </article>
+        <h3 class="grupo-funciones"><span lang="es">Aprende</span><span lang="en">Learn</span></h3>
+        <article class="tarjeta">
+          <div class="linea"></div>
+          <h4><span lang="es">Aprende la app en 2 minutos</span><span lang="en">Learn the app in 2 minutes</span></h4>
+          <p><span lang="es">Un recorrido guiado te señala cada parte de la app, y se repite desde Primeros pasos o el «?». <a href="#demo">Míralo paso a paso</a>.</span><span lang="en">A guided tour points at each part of the app, and you can repeat it from Getting started or the “?”. <a href="#demo">See it step by step</a>.</span></p>
         </article>
         <article class="tarjeta">
           <div class="linea" style="background: var(--gemini)"></div>

@@ -422,3 +422,75 @@
   caja.hidden = false;
   recorrer(0);
 })();
+
+// Demo del recorrido guiado: una pantalla de la app por paso de la bienvenida, un paso cada 6 s, con el mismo patrón que
+// el recorrido del tranvía: pausa que cambia su texto, un punto con nombre por paso, la leyenda solo se anuncia cuando
+// elige la persona, quieta con «reducir movimiento» y sin avanzar con la pestaña oculta ni fuera de la pantalla. Sin
+// JavaScript se ven la primera imagen y la lista de pasos.
+(function () {
+  var caja = document.querySelector('.demo');
+  var controles = caja && caja.querySelector('.demo-controles');
+  if (!controles) return;
+  var figuras = caja.querySelectorAll('.demo-paso');
+  var lista = caja.querySelector('.demo-lista');
+  var puntos = caja.querySelectorAll('.demo-punto');
+  var leyenda = caja.querySelector('.demo-leyenda');
+  var pausa = caja.querySelector('.demo-pausa');
+  var movimiento = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var CADA_MS = 6000;
+  var actual = 0, pausado = movimiento.matches, enPantalla = !('IntersectionObserver' in window), temporizador = null;
+
+  function mostrar(n) {
+    actual = n;
+    figuras.forEach(function (f, i) { f.hidden = i !== n; });
+    puntos.forEach(function (p, i) { p.setAttribute('aria-pressed', String(i === n)); });
+    leyenda.innerHTML = '';
+    [['es', ' de '], ['en', ' of ']].forEach(function (par) {
+      var s = document.createElement('span');
+      s.lang = par[0];
+      s.textContent = (n + 1) + par[1] + figuras.length + ' · ' + lista.children[n].querySelector('[lang="' + par[0] + '"]').textContent;
+      leyenda.appendChild(s);
+    });
+  }
+  // La leyenda se anuncia cuando la elige la persona, no cada vez que avanza sola.
+  function anunciar(si) { leyenda.setAttribute('aria-live', si ? 'polite' : 'off'); }
+  function programar() {
+    clearTimeout(temporizador);
+    if (pausado || !enPantalla || document.hidden) return;
+    temporizador = setTimeout(function () {
+      anunciar(false);
+      mostrar((actual + 1) % figuras.length);
+      programar();
+    }, CADA_MS);
+  }
+  function rotulo() {
+    pausa.innerHTML = pausado ? '<span lang="es">Seguir</span><span lang="en">Play</span>' : '<span lang="es">Pausa</span><span lang="en">Pause</span>';
+  }
+
+  puntos.forEach(function (p, i) { p.addEventListener('click', function () { anunciar(true); mostrar(i); programar(); }); });
+  pausa.addEventListener('click', function () {
+    pausado = !pausado;
+    rotulo();
+    programar();
+  });
+  document.addEventListener('visibilitychange', programar);
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (entradas) {
+      enPantalla = entradas[entradas.length - 1].isIntersecting;
+      programar();
+    }, { threshold: 0.25 }).observe(caja);
+  }
+  // «Reducir movimiento» se respeta también si cambia con la página abierta.
+  movimiento.addEventListener('change', function () {
+    pausado = movimiento.matches;
+    pausa.hidden = pausado;
+    rotulo();
+    programar();
+  });
+  pausa.hidden = pausado;
+  rotulo();
+  lista.hidden = true;
+  controles.hidden = false;
+  mostrar(0);
+  programar();
+})();

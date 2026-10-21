@@ -1,8 +1,8 @@
 // capturas saca las capturas de la Ayuda (web/src/ayuda/capturas, en claro y oscuro y en español e inglés), las de cada
 // paso de los recorridos guiados (recorrido-*, el elemento con el anillo del recorrido) y las de la portada
-// (site/capturas) con una Tramtai compilada en una carpeta temporal, portable y en otro puerto, así no toca la
-// instalación de quien lo corre. Se corre en el equipo de desarrollo, con un agente ya conectado (para el Historial):
-//   cd web; npm run build; npm run capturas            (o: npm run capturas -- --solo receta, -- --recorridos o -- --sitio)
+// (site/capturas: las cinco pantallas y la demo de la bienvenida, paso a paso) con una Tramtai compilada en una
+// carpeta temporal, portable y en otro puerto, así no toca la instalación de quien lo corre. Se corre en el equipo de desarrollo, con un agente ya conectado (para el Historial):
+//   cd web; npm run build; npm run capturas            (o: npm run capturas -- --solo receta, -- --recorridos, -- --bienvenida o -- --sitio)
 // Usa Edge o Chrome sin ventana por su protocolo de depuración; TRAMTAI_NAVEGADOR elige otro ejecutable y
 // TRAMTAI_CAPTURAS_MODELO el modelo de las peticiones de ejemplo (claude/haiku por defecto).
 import { execFileSync, spawn } from 'node:child_process'
@@ -10,7 +10,8 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { createServer } from 'node:net'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { ANCLAS, CAPTURAS, PORTADA, SIN_CAPTURA } from './capturas-lista.ts'
+import es from '../src/idiomas/es.ts'
+import { ANCLAS, BIENVENIDA, CAPTURAS, PORTADA, SIN_CAPTURA } from './capturas-lista.ts'
 
 const raiz = fileURLToPath(new URL('../../', import.meta.url))
 const destinoAyuda = fileURLToPath(new URL('../src/ayuda/capturas/', import.meta.url))
@@ -21,6 +22,8 @@ const solo = args.includes('--solo') ? args[args.indexOf('--solo') + 1] : ''
 const soloSitio = args.includes('--sitio')
 // --recorridos saca solo las capturas de los pasos de los recorridos.
 const soloRecorridos = args.includes('--recorridos')
+// --bienvenida saca solo la demo de la portada: la bienvenida de verdad, una pantalla completa por paso (sin peticiones a ningún agente).
+const soloBienvenida = args.includes('--bienvenida')
 const destinoSitio = fileURLToPath(new URL('../../site/', import.meta.url))
 const modelo = process.env.TRAMTAI_CAPTURAS_MODELO || 'claude/haiku'
 const esperar = (ms) => new Promise((ok) => setTimeout(ok, ms))
@@ -108,7 +111,7 @@ try {
   const cli = (...a) => execFileSync(exe, a, { cwd: temporal, stdio: 'pipe' })
   cli('acceso', 'crear', 'asistente-soporte', '--grupo', 'Soporte', '--presupuesto', 'diario.peticiones=50', '--presupuesto', 'mensual.tokens=200000')
   cli('acceso', 'crear', 'resumen-notas', '--grupo', 'Notas')
-  for (const texto of soloSitio ? [] : ['Resume en una línea: Tramtai pone agentes de IA detrás de una API.', 'Di «hola» en tres idiomas.']) {
+  for (const texto of soloSitio || soloBienvenida ? [] : ['Resume en una línea: Tramtai pone agentes de IA detrás de una API.', 'Di «hola» en tres idiomas.']) {
     try { cli('ejecutar', '-a', agente, '-m', modelo.split('/')[1] ?? '', texto) } catch { console.warn(`aviso: ${modelo} no respondió; el Historial mostrará el error`) }
   }
 
@@ -145,7 +148,7 @@ try {
     s.textContent = ${oculta ? "'.q-header{display:none!important}'" : "''"} })()`)
 
   // Los iconos del sitio salen de favicon.svg con fondo transparente, y la imagen para compartir de og.html.
-  if (!solo && !soloRecorridos) {
+  if (!solo && !soloRecorridos && !soloBienvenida) {
     const sacar = async (url, ancho, alto, archivo) => {
       await enviar('Emulation.setDeviceMetricsOverride', { width: ancho, height: alto, deviceScaleFactor: 1, mobile: false })
       await enviar('Page.navigate', { url: new URL(url, import.meta.url).href })
@@ -179,7 +182,7 @@ try {
     while (w.nextNode()) w.currentNode.nodeValue = w.currentNode.nodeValue.replaceAll(${JSON.stringify(ejemplo)}, 'C:\\\\Proyectos\\\\mi-app') })()`)
 
   mkdirSync(destinoAyuda, { recursive: true })
-  for (const c of CAPTURAS.filter((x) => !soloSitio && !soloRecorridos && (!solo || x.id === solo)))
+  for (const c of CAPTURAS.filter((x) => !soloSitio && !soloRecorridos && !soloBienvenida && (!solo || x.id === solo)))
     for (const tema of ['claro', 'oscuro'])
       for (const idioma of ['es', 'en']) {
         const selector = `[data-captura="${c.id}"]`
@@ -200,7 +203,7 @@ try {
   // Una ancla que la demo no muestra no se inventa: se avisa y se apunta en SIN_CAPTURA, con el motivo.
   const visible = (ancla) => `[...document.querySelectorAll('[data-recorrido="${ancla}"]')].find((e) => { const b = e.getBoundingClientRect(); return b.width > 0 && b.height > 0 })`
   const ausentes = new Set()
-  const aSacar = ANCLAS.filter((a) => !soloSitio && (!solo || a.id === solo) && !(a.ancla in SIN_CAPTURA))
+  const aSacar = ANCLAS.filter((a) => !soloSitio && !soloBienvenida && (!solo || a.id === solo) && !(a.ancla in SIN_CAPTURA))
   if (aSacar.length)
     for (const tema of ['claro', 'oscuro'])
       for (const idioma of ['es', 'en'])
@@ -245,7 +248,7 @@ try {
         }
   if (ausentes.size) console.warn(`SIN CAPTURA: ${[...ausentes].join(', ')}`)
 
-  if (!solo && !soloSitio && !soloRecorridos)
+  if (!solo && !soloSitio && !soloRecorridos && !soloBienvenida)
     for (const p of PORTADA)
       for (const tema of ['claro', 'oscuro']) {
         await abrir(p.pagina, tema, 'es', '.pagina', 1440, 900)
@@ -258,6 +261,37 @@ try {
           console.log(`site/capturas/${p.nombre}-${tema}-${ancho}.webp`)
         }
       }
+  // La demo de la portada es la bienvenida de verdad: cada tema carga Inicio como la primera vez (sin la marca de
+  // bienvenida), acepta la oferta y, en cada paso, saca la pantalla completa con la ventana del recorrido encima; el
+  // «Siguiente» lo pulsa el script, como quien hace el recorrido. Los datos son los de demostración de arriba. Sale en la
+  // corrida completa y con --bienvenida.
+  if (soloBienvenida || (!solo && !soloSitio && !soloRecorridos))
+    for (const tema of ['claro', 'oscuro']) {
+      await abrir('inicio', tema, 'es', '.pagina', 1440, 900)
+      await evaluar(`localStorage.removeItem('tramtai.bienvenida')`)
+      await enviar('Page.navigate', { url: `${base}/?c=${++carga}#inicio` })
+      const empezar = `[...document.querySelectorAll('.q-dialog button')].find((b) => b.innerText.trim() === ${JSON.stringify(es['bienvenida.empezar'])})`
+      await hasta(() => evaluar(`!!(${empezar})`), 20, 'la oferta de la bienvenida')
+      await evaluar(`(${empezar}).click()`)
+      for (const [i, paso] of BIENVENIDA.entries()) {
+        const titulo = es[paso.titulo]
+        await hasta(() => evaluar(`document.querySelector('.driver-popover-title')?.innerText === ${JSON.stringify(titulo)}`), 20, `el paso ${i + 1} «${titulo}»`)
+        if (paso.ancla) await hasta(() => evaluar(`!!document.querySelector('.driver-active-element')`), 10, `el resaltado de ${paso.ancla}`)
+        await esperar(1000) // la ventana y el resaltado llegan con su animación, y los datos de la página con ella
+        await ocultarRuta()
+        // Nada del equipo de quien saca las capturas se publica (rutas de la carpeta de trabajo o del usuario).
+        const visto = await evaluar('document.body.innerText')
+        if (/Administrator|Proyectos[\\/]Tramtai|capturas-\w{6}/i.test(visto)) throw new Error(`el paso ${i + 1} muestra una ruta real: ${visto.slice(0, 200)}`)
+        // La misma pantalla de 1440 px, también reducida a 960 para los móviles (srcset).
+        for (const ancho of [1440, 960]) {
+          const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80,
+            clip: { x: 0, y: 0, width: 1440, height: 900, scale: ancho / 1440 } })
+          writeFileSync(join(destinoPortada, `bienvenida-${i + 1}-${tema}-${ancho}.webp`), Buffer.from(data, 'base64'))
+          console.log(`site/capturas/bienvenida-${i + 1}-${tema}-${ancho}.webp`)
+        }
+        if (i < BIENVENIDA.length - 1) await evaluar(`document.querySelector('.driver-popover-next-btn').click()`)
+      }
+    }
   await enviar('Browser.close').catch(() => {})
   cerrar()
 } finally {

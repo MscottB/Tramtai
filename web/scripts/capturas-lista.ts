@@ -1,5 +1,6 @@
 import { temas } from '../src/ayuda/indice.ts'
 import { capturaDeAncla } from '../src/ayuda/vista.ts'
+import { pasosBienvenida } from '../src/recorrido.ts'
 
 // CAPTURAS son las zonas de la app que muestra la Ayuda: cada una es el elemento [data-captura=<id>] de esa página.
 // PORTADA son las pantallas completas de la página del producto (site/capturas/<nombre>-<claro|oscuro>-<960|1440>.webp).
@@ -36,6 +37,10 @@ for (const tema of temas)
 // SIN_CAPTURA son las anclas que la demo no puede mostrar, con el motivo: su paso sale en el sitio sin imagen.
 // Primero se intenta que los datos de demostración la hagan visible; esto es el último recurso.
 export const SIN_CAPTURA: Record<string, string> = {}
+
+// BIENVENIDA son los pasos de la bienvenida, en su orden: la demo de la portada tiene una pantalla completa por paso
+// (site/capturas/bienvenida-<n>-<claro|oscuro>-<960|1440>.webp, n desde 1), con la ventana del recorrido encima.
+export const BIENVENIDA = pasosBienvenida()
 
 export const PORTADA: { nombre: string; pagina: string }[] = [
   { nombre: 'inicio', pagina: 'inicio' },
