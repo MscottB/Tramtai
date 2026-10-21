@@ -51,6 +51,14 @@ type Pagina interface {
 	Ayuda() string                    // la página de la Ayuda (el campo pagina de su tema): inicio, ejecutar…
 }
 
+// Ocultable la implementa una página con algo en vivo que solo debe correr mientras se ve (el flujo de Inicio). La app
+// llama a Ocultar al dejar la página (menú, atajos, IrA, ?) y a Mostrar al volver a ella con Volver sin iniciarla de nuevo.
+// Con el menú o IrA ya se llama a Iniciar, y con CambioEspacio también: entonces no hace falta Mostrar.
+type Ocultable interface {
+	Ocultar()
+	Mostrar() tea.Cmd
+}
+
 // Tecla es una entrada del pie: la tecla y lo que hace.
 type Tecla struct{ Tecla, Accion string }
 

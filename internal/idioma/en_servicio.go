@@ -96,6 +96,7 @@ func init() {
 		"el servicio no respondió; revisa %s":                                                                "the service did not respond; check %s",
 		"el servicio respondió %s":                                                                           "the service responded %s",
 		"eventos: el servicio respondió %s":                                                                  "events: the service responded %s",
+		"el flujo de eventos no dio señales":                                                                 "the event stream gave no signs of life",
 		"este sistema no tiene almacén de credenciales soportado; usa variables de entorno":                  "this system has no supported credential store; use environment variables",
 		"eso no parece una clave de API: sin espacios, comillas ni saltos de línea":                          "that does not look like an API key: no spaces, quotes or line breaks",
 		"Llavero de macOS":                                                                                   "macOS Keychain",

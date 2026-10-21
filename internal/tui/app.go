@@ -19,6 +19,7 @@ import (
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/paginas/agentes"
+	"tramtai/internal/tui/paginas/inicio"
 )
 
 // Opciones configura la terminal.
@@ -41,6 +42,7 @@ const anchoMinimo, altoMinimo = 60, 20
 
 // fabricas crea cada página por su clave del menú; las que aún no están enseñan «Próximamente».
 var fabricas = map[string]func(idioma string) pagina.Pagina{
+	pagina.PaginaInicio:  inicio.Nueva,
 	pagina.PaginaAgentes: agentes.Nueva,
 }
 
@@ -142,8 +144,18 @@ func (m *modelo) ir(clave string, extra any, historia bool) tea.Cmd {
 	case clave != m.actual:
 		m.pila = append(m.pila, m.actual)
 	}
+	if clave != m.actual {
+		m.ocultar()
+	}
 	m.actual, m.enMenu = clave, false
 	return m.iniciar(extra)
+}
+
+// ocultar avisa a la página actual, si lo quiere saber, de que deja de verse.
+func (m *modelo) ocultar() {
+	if o, ok := m.paginas[m.actual].(pagina.Ocultable); ok {
+		o.Ocultar()
+	}
 }
 
 // volver regresa a la página anterior tal como estaba; solo se vuelve a iniciar si su Ctx se canceló (cambió el
@@ -152,8 +164,12 @@ func (m *modelo) volver() tea.Cmd {
 	if len(m.pila) == 0 {
 		return nil
 	}
+	m.ocultar()
 	m.actual, m.pila, m.enMenu = m.pila[len(m.pila)-1], m.pila[:len(m.pila)-1], false
 	if _, viva := m.cancelar[m.actual]; viva {
+		if o, ok := m.pagina(m.actual).(pagina.Ocultable); ok {
+			return o.Mostrar()
+		}
 		return nil
 	}
 	return m.iniciar(nil)

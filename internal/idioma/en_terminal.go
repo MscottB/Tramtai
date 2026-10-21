@@ -50,5 +50,10 @@ func init() {
 		"Tiene que estar instalado y conectado para cambiar su autenticación": "It has to be installed and connected to change its authentication",
 		"En su estado actual solo se puede usar la clave de API":              "In its current state only the API key can be used",
 		"Este agente aún no está listo para probar":                           "This agent is not ready to try yet",
+
+		// Inicio: los textos, contadores y pasos salen de los de la Web UI; aquí solo lo propio de la terminal.
+		"desplaza": "scroll",
+		"Sin conexión en vivo · reconectando…": "No live connection · reconnecting…",
+		"Ver la Ayuda de %s":                   "See the %s Help",
 	})
 }

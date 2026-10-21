@@ -41,9 +41,23 @@ export const CLAVES_AGENTES: string[] = [
   'comun.si', 'comun.no',
 ]
 
-// CLAVES_TEXTOS son, además de las menu.*, los textos que la terminal toma de la Web UI: los de la Ayuda de la interfaz y
-// los de Agentes.
-export const CLAVES_TEXTOS: string[] = [...CLAVES_UI, ...CLAVES_AGENTES]
+// CLAVES_INICIO son los textos de la página Inicio que la terminal repite tal cual: la dirección, la red en vivo, los
+// contadores, Primeros pasos y los avisos. Los {placeholders} los rellena Go con datos.Textof.
+export const CLAVES_INICIO: string[] = [
+  'inicio.direccion', 'inicio.red', 'inicio.redTexto', 'inicio.detalles', 'inicio.primerosPasos', 'inicio.guiaProgreso',
+  'inicio.paso1', 'inicio.paso1Detalle', 'inicio.comprobando', 'inicio.paso2', 'inicio.paso2Detalle', 'inicio.paso3', 'inicio.paso3Detalle',
+  'inicio.paso4', 'inicio.paso4Detalle', 'inicio.todoListo', 'inicio.todoListoTexto',
+  'inicio.tablero', 'inicio.completados', 'inicio.completadosDetalle', 'inicio.enCurso', 'inicio.enCursoDetalle', 'inicio.conError', 'inicio.conErrorDetalle',
+  'inicio.espaciosConProblema', 'inicio.espaciosConProblemaUno', 'inicio.verEspacios', 'claves.sugerencia', 'claves.crearApi',
+  'conversor.falta', 'conversor.error', 'conversor.redEmpresa', 'conversor.preparar', 'conversor.irAjustes',
+  'comun.ultimoDia', 'comun.ultimosDias', 'mapa.descripcion', 'mapa.principal',
+  'vivo.etapaCola', 'vivo.etapaPreparacion', 'vivo.etapaEjecucion', 'vivo.etapaValidacion', 'vivo.etapaLlegada', 'vivo.etapaFallida', 'vivo.etapaCancelada',
+  'vivo.enCurso', 'vivo.enCursoUno', 'vivo.hace',
+]
+
+// CLAVES_TEXTOS son, además de las menu.*, los textos que la terminal toma de la Web UI: los de la Ayuda de la interfaz, los
+// de Agentes y los de Inicio.
+export const CLAVES_TEXTOS: string[] = [...CLAVES_UI, ...CLAVES_AGENTES, ...CLAVES_INICIO]
 
 // plano deja un texto sin marcas: sin ** y con los <marcadores> entre corchetes.
 const plano = (s: string) => s.replace(/\*\*/g, '').replace(/<([^<>]*)>/g, '[$1]')

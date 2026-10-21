@@ -180,6 +180,58 @@ func TestVolver(t *testing.T) {
 	}
 }
 
+// paginaOcultable cuenta los avisos de salir y volver, como la de Inicio con su flujo en vivo.
+type paginaOcultable struct {
+	paginaFalsa
+	ocultada, mostrada int
+}
+
+func (p *paginaOcultable) Ocultar()         { p.ocultada++ }
+func (p *paginaOcultable) Mostrar() tea.Cmd { p.mostrada++; return nil }
+
+// TestOcultableSeAvisaAlSalirYAlVolver: una página con algo en vivo se entera de que deja de verse (por el menú, un
+// atajo, IrA o ?) y de que vuelve sin iniciarse de nuevo (Volver). Si vuelve con Iniciar no hace falta Mostrar, y
+// cambiar de espacio estando en ella no la oculta.
+func TestOcultableSeAvisaAlSalirYAlVolver(t *testing.T) {
+	m := nuevo(Opciones{})
+	o := &paginaOcultable{}
+	m.paginas["inicio"] = o
+	m.iniciar(nil)
+	m.Update(tecla("3"))
+	if o.ocultada != 1 {
+		t.Fatalf("un atajo la oculta: %d", o.ocultada)
+	}
+	m.Update(tecla("1"))
+	if o.iniciada != 2 || o.mostrada != 0 {
+		t.Fatalf("por un atajo se inicia de nuevo, sin Mostrar: %d %d", o.iniciada, o.mostrada)
+	}
+	m.Update(tecla("?"))
+	if o.ocultada != 2 || m.actual != pagina.PaginaAyuda {
+		t.Fatalf("? la oculta: %d", o.ocultada)
+	}
+	m.Update(pagina.Volver{})
+	if m.actual != pagina.PaginaInicio || o.mostrada != 1 || o.iniciada != 2 {
+		t.Fatalf("Volver la muestra sin iniciarla: %s %d %d", m.actual, o.mostrada, o.iniciada)
+	}
+	m.Update(pagina.CambioEspacio{ID: "notas_1"})
+	if o.ocultada != 2 || o.iniciada != 3 {
+		t.Fatalf("cambiar de espacio no la oculta, la inicia: %d %d", o.ocultada, o.iniciada)
+	}
+	m.Update(pagina.IrA{Pagina: pagina.PaginaEjecutar})
+	m.Update(pagina.CambioEspacio{ID: "global"})
+	m.Update(pagina.Volver{}) // su Ctx se canceló al cambiar de espacio: Volver la inicia
+	if o.mostrada != 1 || o.iniciada != 4 {
+		t.Fatalf("si su contexto se canceló, Volver la inicia y no la muestra: %d %d", o.mostrada, o.iniciada)
+	}
+}
+
+func TestInicioRegistrada(t *testing.T) {
+	m := nuevo(Opciones{})
+	if _, pendiente := m.pagina(pagina.PaginaInicio).(*proximamente); pendiente {
+		t.Fatal("Inicio ya no es «Próximamente»")
+	}
+}
+
 func TestAgentesRegistrada(t *testing.T) {
 	m := nuevo(Opciones{})
 	if _, pendiente := m.pagina(pagina.PaginaAgentes).(*proximamente); pendiente {
