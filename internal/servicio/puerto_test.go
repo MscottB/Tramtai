@@ -37,8 +37,17 @@ func TestFijarPuerto(t *testing.T) {
 	if err := FijarPuertoPropio(ruta, "127.0.0.1", puerto, puerto, false); err != nil {
 		t.Fatalf("el puerto que ya usa Tramtai cuenta como libre: %v", err)
 	}
+	if err := FijarPuerto(ruta, "127.0.0.1", puerto, true); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
+		t.Fatalf("un puerto ocupado da error también en automático: %v", err)
+	}
+	libre, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	puerto = libre.Addr().(*net.TCPAddr).Port
+	libre.Close()
 	if err := FijarPuerto(ruta, "127.0.0.1", puerto, true); err != nil {
-		t.Fatalf("en automático no se comprueba: %v", err)
+		t.Fatalf("un puerto libre en automático: %v", err)
 	}
 	datos, err := os.ReadFile(ruta)
 	if err != nil {

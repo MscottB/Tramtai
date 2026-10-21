@@ -110,7 +110,7 @@ func TestMoverConMarca(t *testing.T) {
 	if despues.ID != antes.ID || despues.token != token {
 		t.Fatalf("al mover debía conservar id y token: %s %s", antes.ID, despues.ID)
 	}
-	if e, _ := s.registro().buscar(antes.ID); !MismaRuta(e.Ruta, nueva) {
+	if e, _ := s.registro().buscar(antes.ID); !nucleo.MismaRuta(e.Ruta, nueva) {
 		t.Fatalf("ruta del registro: %q", e.Ruta)
 	}
 }

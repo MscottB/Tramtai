@@ -6,7 +6,6 @@ import (
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
-	"tramtai/internal/servicio"
 )
 
 // ElegirEspacio decide el espacio con el estado del servicio ya leído: el preferido, la global si se pide o si no hay
@@ -20,7 +19,7 @@ func ElegirEspacio(raiz string, activos []contrato.EstadoInstancia, preferida st
 		return "global", nil
 	}
 	for _, i := range activos {
-		if i.Ambito == "proyecto" && servicio.MismaRuta(i.Raiz, raiz) {
+		if i.Ambito == "proyecto" && nucleo.MismaRuta(i.Raiz, raiz) {
 			return i.ID, nil
 		}
 	}

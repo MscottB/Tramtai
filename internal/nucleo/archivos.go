@@ -199,3 +199,12 @@ func (c *Configuracion) ProyectoConfiable(raiz string) bool {
 	}
 	return false
 }
+
+// MismaRuta compara dos rutas como lo hace IDProyecto: sin distinguir mayúsculas en Windows y macOS.
+func MismaRuta(a, b string) bool {
+	a, b = filepath.Clean(a), filepath.Clean(b)
+	if runtime.GOOS != "linux" {
+		return strings.EqualFold(a, b)
+	}
+	return a == b
+}
