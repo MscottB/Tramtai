@@ -50,6 +50,10 @@ const (
 	CodigoCorreccionNoDisponible CodigoError = "correccion_no_disponible"
 	// CodigoConversorNoDisponible: un archivo necesita el conversor (markitdown) y no hay ninguno listo.
 	CodigoConversorNoDisponible CodigoError = "conversor_no_disponible"
+	// CodigoConfianzaRequerida: la carpeta ya traía .tramtai/ y hay que decidir si se confía en ella antes de abrirla.
+	CodigoConfianzaRequerida CodigoError = "confianza_requerida"
+	// CodigoDentroDeProyecto: la carpeta elegida está dentro de otro proyecto; hay que elegir cuál abrir.
+	CodigoDentroDeProyecto CodigoError = "dentro_de_proyecto"
 )
 
 // Error es el error propio de Tramtai: un código estable y un mensaje legible sin secretos.

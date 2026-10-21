@@ -188,17 +188,43 @@ func TestLocalSoloConfiableDesdeGlobal(t *testing.T) {
 	if err := local("predeterminados:\n  modelo: m1\n"); err != nil {
 		t.Fatalf("las claves comunes valen sin confianza: %v", err)
 	}
-	for _, contenido := range []string{"comandos_agentes:\n  claude: x.exe\n", "conversion:\n  comando: x.exe\n", "proyectos_confiables: [.]\n"} {
-		if err := local(contenido); CodigoDe(err) != CodigoConfiguracionInvalida || !strings.Contains(err.Error(), "proyectos_confiables") {
-			t.Errorf("sin confianza global debe rechazarse %q: %v", contenido, err)
+	// Sin confianza, el proyecto se abre igual pero sus claves de seguridad no se aplican: quedan anotadas.
+	ignoradas := func(contenido string) []string {
+		os.WriteFile(filepath.Join(raiz, ".tramtai", "local.yaml"), []byte(contenido), 0o600)
+		c, err := CargarConfiguracion(raiz)
+		if err != nil {
+			t.Fatalf("%q: %v", contenido, err)
 		}
+		return c.Ignoradas()
+	}
+	for contenido, clave := range map[string]string{"comandos_agentes:\n  claude: x.exe\n": "comandos_agentes.claude",
+		"conversion:\n  comando: x.exe\n": "conversion.comando", "proyectos_confiables: [.]\n": "proyectos_confiables"} {
+		if got := ignoradas(contenido); len(got) != 1 || got[0] != clave {
+			t.Errorf("sin confianza global debe ignorarse %q: %v", contenido, got)
+		}
+	}
+	// Antes de guardar se valida estricto: escribir una clave de seguridad sin confianza es un error.
+	if _, err := CargarCapaDe([]byte("comandos_agentes:\n  claude: x.exe\n"), filepath.Join(raiz, ".tramtai", "local.yaml"), OrigenLocal); CodigoDe(err) != CodigoConfiguracionInvalida {
+		t.Errorf("guardar sin confianza debe rechazarse: %v", err)
 	}
 	os.WriteFile(global, []byte("proyectos_confiables: ['"+raiz+"']\n"), 0o600)
 	if err := local("comandos_agentes:\n  claude: x.exe\n"); err != nil {
 		t.Errorf("con la carpeta confiable en la global, local.yaml admite claves de seguridad: %v", err)
 	}
-	if err := local("proyectos_confiables: [.]\n"); err == nil {
-		t.Error("proyectos_confiables nunca se acepta en local.yaml")
+	if got := ignoradas("proyectos_confiables: [.]\n"); len(got) != 1 {
+		t.Error("proyectos_confiables nunca se aplica desde local.yaml")
+	}
+}
+
+func TestClavesAdministradas(t *testing.T) {
+	ruta := filepath.Join(t.TempDir(), "local.yaml")
+	os.WriteFile(ruta, []byte("comandos_agentes:\n  claude: x.exe\npuntos_acceso: []\npredeterminados:\n  agente: claude\n"), 0o600)
+	claves, err := ClavesAdministradas(ruta)
+	if err != nil || strings.Join(claves, ",") != "comandos_agentes,puntos_acceso" {
+		t.Fatalf("claves: %v %v", claves, err)
+	}
+	if claves, err := ClavesAdministradas(filepath.Join(t.TempDir(), "no.yaml")); err != nil || claves != nil {
+		t.Fatalf("sin archivo: %v %v", claves, err)
 	}
 }
 

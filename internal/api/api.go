@@ -210,6 +210,8 @@ var estadosHTTP = map[nucleo.CodigoError]int{
 	nucleo.CodigoOrigenNoPermitido:      http.StatusForbidden,
 	nucleo.CodigoNoEncontrado:           http.StatusNotFound,
 	nucleo.CodigoConflictoIdempotencia:  http.StatusConflict,
+	nucleo.CodigoConfianzaRequerida:     http.StatusConflict,
+	nucleo.CodigoDentroDeProyecto:       http.StatusConflict,
 	nucleo.CodigoTrabajoNoTerminado:     http.StatusConflict,
 	nucleo.CodigoTrabajoSinSalida:       http.StatusConflict,
 	nucleo.CodigoTransicionInvalida:     http.StatusConflict,

@@ -1,6 +1,7 @@
 package servicio
 
 import (
+	"errors"
 	"net"
 	"net/http"
 	"strconv"
@@ -29,17 +30,31 @@ func (s *Servicio) activarGlobalUI(w http.ResponseWriter, r *http.Request, ses *
 
 func (s *Servicio) abrirProyectoUI(w http.ResponseWriter, r *http.Request, ses *sesion) {
 	var peticion struct {
-		Raiz string `json:"raiz"`
+		Raiz      string `json:"raiz"`
+		Confiar   *bool  `json:"confiar"`
+		CrearAqui bool   `json:"crear_aqui"`
 	}
 	if err := api.LeerJSON(w, r, &peticion); err != nil {
 		api.EscribirError(w, r, err)
 		return
 	}
-	inst, err := s.AbrirProyecto(peticion.Raiz)
+	inst, err := s.AbrirProyecto(peticion.Raiz, AbrirOpciones{Confiar: peticion.Confiar, CrearAqui: peticion.CrearAqui})
 	if err == nil {
 		err = s.guardarActivas()
 	}
-	if err != nil {
+	// Las dos preguntas llevan lo que la app enseña para decidir.
+	var confianza *ErrorConfianza
+	var dentro *ErrorDentroDeProyecto
+	switch {
+	case errors.As(err, &confianza):
+		api.EscribirJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"codigo": nucleo.CodigoConfianzaRequerida,
+			"mensaje": nucleo.MensajeDe(err)}, "claves": append([]string{}, confianza.Claves...)})
+		return
+	case errors.As(err, &dentro):
+		api.EscribirJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"codigo": nucleo.CodigoDentroDeProyecto,
+			"mensaje": nucleo.MensajeDe(err)}, "proyecto": dentro.Proyecto})
+		return
+	case err != nil:
 		api.EscribirError(w, r, err)
 		return
 	}

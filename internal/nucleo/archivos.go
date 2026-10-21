@@ -70,6 +70,13 @@ func CargarConfiguracion(raiz string) (*Configuracion, error) {
 		return nil, err
 	}
 	c := Resolver(append(capas, entorno)...)
+	var ignoradas []string
+	for _, capa := range capas {
+		ignoradas = append(ignoradas, capa.Ignoradas...)
+	}
+	if len(ignoradas) > 0 {
+		c.ignoradas.Store(&ignoradas)
+	}
 	if raiz != "" {
 		tramtai := filepath.Join(raiz, ".tramtai")
 		c.perfiles = append(c.perfiles, carpetaPerfiles{dir: filepath.Join(tramtai, "profiles"), limite: tramtai})

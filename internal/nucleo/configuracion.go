@@ -137,9 +137,12 @@ type Capa struct {
 	Origen  Origen
 	Fuente  string
 	Valores map[string]any
+	// Ignoradas son las claves de seguridad de un local.yaml de una carpeta no confiable: al cargar no se aplican.
+	Ignoradas []string
 }
 
-// CargarCapa lee y valida un archivo YAML; si no existe devuelve una capa vacía.
+// CargarCapa lee y valida un archivo YAML; si no existe devuelve una capa vacía. Las claves de seguridad de un
+// local.yaml no confiable se ignoran (Ignoradas): el proyecto se abre igual, sin ellas.
 func CargarCapa(ruta string, origen Origen) (Capa, error) {
 	datos, err := os.ReadFile(ruta)
 	if os.IsNotExist(err) {
@@ -148,18 +151,54 @@ func CargarCapa(ruta string, origen Origen) (Capa, error) {
 	if err != nil {
 		return Capa{Origen: origen, Fuente: ruta, Valores: map[string]any{}}, errorConfiguracion(ruta, "", err.Error())
 	}
-	return CargarCapaDe(datos, ruta, origen)
+	return cargarCapa(datos, ruta, origen, false)
 }
 
 // CargarCapaDe valida el contenido YAML de ruta sin leerlo del disco: así se comprueba un cambio antes de guardarlo.
+// Es estricta: guardar una clave de seguridad en un local.yaml no confiable es un error.
 func CargarCapaDe(datos []byte, ruta string, origen Origen) (Capa, error) {
+	return cargarCapa(datos, ruta, origen, true)
+}
+
+func cargarCapa(datos []byte, ruta string, origen Origen, estricta bool) (Capa, error) {
 	capa := Capa{Origen: origen, Fuente: ruta, Valores: map[string]any{}}
 	var crudo map[string]any
 	if err := yaml.Unmarshal(datos, &crudo); err != nil {
 		return capa, errorConfiguracion(ruta, "", idioma.Tf("YAML no válido: %s", err.Error()))
 	}
 	aplanar("", crudo, capa.Valores)
-	return capa, capa.validar()
+	err := capa.validar(estricta)
+	return capa, err
+}
+
+// ClavesAdministradas devuelve las claves de seguridad (prefijosAdministrados) que define el YAML de ruta, ordenadas y
+// sin repetir: lo que la app enseña antes de confiar en una carpeta. Sin archivo, nil.
+func ClavesAdministradas(ruta string) ([]string, error) {
+	datos, err := os.ReadFile(ruta)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var crudo map[string]any
+	if err := yaml.Unmarshal(datos, &crudo); err != nil {
+		return nil, errorConfiguracion(ruta, "", idioma.Tf("YAML no válido: %s", err.Error()))
+	}
+	valores := map[string]any{}
+	aplanar("", crudo, valores)
+	vistas := map[string]bool{}
+	var claves []string
+	for clave := range valores {
+		for _, prefijo := range prefijosAdministrados {
+			if (clave == prefijo || strings.HasPrefix(clave, prefijo+".")) && !vistas[prefijo] {
+				vistas[prefijo] = true
+				claves = append(claves, prefijo)
+			}
+		}
+	}
+	sort.Strings(claves)
+	return claves, nil
 }
 
 // CapaEntorno lee variables TRAMTAI_<SECCION>__<CLAVE>, donde "__" separa niveles.
@@ -261,6 +300,8 @@ func Internos() Capa {
 type Configuracion struct {
 	// estado se reemplaza entero al cambiar un valor en marcha (Fijar): los lectores nunca ven uno a medias.
 	estado atomic.Pointer[estadoConfiguracion]
+	// ignoradas son las claves de seguridad de un local.yaml no confiable que no se aplicaron.
+	ignoradas atomic.Pointer[[]string]
 	// perfiles son las carpetas de perfiles de ejecución, de mayor a menor prioridad (AplicarPerfil).
 	perfiles []carpetaPerfiles
 }
@@ -304,6 +345,21 @@ func Resolver(capas ...Capa) *Configuracion {
 	c := &Configuracion{}
 	c.estado.Store(e)
 	return c
+}
+
+// Ignoradas devuelve las claves de seguridad del local.yaml que no se aplicaron porque la carpeta no es confiable.
+func (c *Configuracion) Ignoradas() []string {
+	if p := c.ignoradas.Load(); p != nil {
+		return *p
+	}
+	return nil
+}
+
+// Reemplazar pone en c los valores de otra (cargada de nuevo, por ejemplo al confiar en la carpeta): quien ya tenía
+// c ve los nuevos sin volver a abrir el espacio.
+func (c *Configuracion) Reemplazar(otra *Configuracion) {
+	c.estado.Store(otra.e())
+	c.ignoradas.Store(otra.ignoradas.Load())
 }
 
 // Texto devuelve un valor de texto, o "" si no existe.
@@ -443,7 +499,7 @@ func (c *Configuracion) AplicarPredeterminados(s SolicitudEjecucion) SolicitudEj
 	return s
 }
 
-func (c Capa) validar() error {
+func (c *Capa) validar(estricta bool) error {
 	claves := make([]string, 0, len(c.Valores))
 	for clave := range c.Valores {
 		claves = append(claves, clave)
@@ -462,16 +518,22 @@ func (c Capa) validar() error {
 		// el usuario ya confió en la carpeta desde la configuración global, y la confianza nunca se la da el propio proyecto.
 		if c.Origen == OrigenLocal && esAdministrada(clave) {
 			global, _ := RutaGlobal()
-			if clave == "proyectos_confiables" {
-				return errorConfiguracion(c.Fuente, clave, idioma.Tf("solo se admite en la configuración global (%s)", global))
-			}
 			if confiable < 0 {
 				confiable = 0
 				if g, err := CargarConfiguracion(""); err == nil && g.ProyectoConfiable(filepath.Dir(filepath.Dir(c.Fuente))) {
 					confiable = 1
 				}
 			}
-			if confiable == 0 {
+			if clave == "proyectos_confiables" || confiable == 0 {
+				if !estricta {
+					// Al cargar no se aplica, pero el proyecto se abre: quien lo abrió ve el aviso y decide si confía.
+					delete(c.Valores, clave)
+					c.Ignoradas = append(c.Ignoradas, clave)
+					continue
+				}
+				if clave == "proyectos_confiables" {
+					return errorConfiguracion(c.Fuente, clave, idioma.Tf("solo se admite en la configuración global (%s)", global))
+				}
 				return errorConfiguracion(c.Fuente, clave, idioma.Tf("clave de seguridad: en local.yaml solo se admite si la carpeta del proyecto figura en proyectos_confiables de la configuración global (%s); añádela allí", global))
 			}
 		}

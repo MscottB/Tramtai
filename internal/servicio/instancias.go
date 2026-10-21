@@ -84,6 +84,7 @@ func (s *Servicio) ActivarProyecto(raiz string) (*Instancia, error) {
 		fmt.Fprintf(s.opc.Registros, "no se pudo escribir la marca del espacio en %s: %s\n", raiz, err)
 	}
 	s.registro().poner(Espacio{ID: id, Ambito: "proyecto", Ruta: raiz, Nombre: nombreProyecto(raiz, c), Activo: true})
+	s.anotarIgnoradas(id, c)
 	return inst, nil
 }
 

@@ -54,9 +54,42 @@ func PrepararProyecto(dir string) error {
 	return err
 }
 
-// AbrirProyecto activa la instancia del proyecto en raiz, una carpeta existente con ruta completa. Si la carpeta (o
-// una superior) ya es un proyecto, usa ese; si no, la prepara antes.
-func (s *Servicio) AbrirProyecto(raiz string) (*Instancia, error) {
+// AbrirOpciones son las respuestas a lo que pregunta AbrirProyecto: si se confía en una carpeta que ya traía .tramtai/
+// (nil: aún no se preguntó) y si se crea un proyecto en una carpeta que está dentro de otro.
+type AbrirOpciones struct {
+	Confiar   *bool
+	CrearAqui bool
+}
+
+// ErrorConfianza: la carpeta ya traía .tramtai/ (por ejemplo, un repositorio clonado) y no es confiable; Claves son
+// las de seguridad que encontró en su local.yaml, para enseñarlas antes de decidir.
+type ErrorConfianza struct {
+	Raiz   string
+	Claves []string
+}
+
+func (e *ErrorConfianza) Error() string { return e.Unwrap().Error() }
+
+func (e *ErrorConfianza) Unwrap() error {
+	return nucleo.NuevoError(nucleo.CodigoConfianzaRequerida, idioma.Tf("%s ya tiene configuración de Tramtai: decide si confías en esta carpeta", e.Raiz))
+}
+
+// ErrorDentroDeProyecto: la carpeta elegida está dentro de otro proyecto (Proyecto); hay que elegir cuál abrir.
+type ErrorDentroDeProyecto struct {
+	Proyecto string
+}
+
+func (e *ErrorDentroDeProyecto) Error() string { return e.Unwrap().Error() }
+
+func (e *ErrorDentroDeProyecto) Unwrap() error {
+	return nucleo.NuevoError(nucleo.CodigoDentroDeProyecto, idioma.Tf("la carpeta está dentro del proyecto %s", e.Proyecto))
+}
+
+// AbrirProyecto activa el espacio del proyecto en raiz, una carpeta existente con ruta completa. Si no es un proyecto,
+// lo crea y queda confiado (Tramtai escribió todo su .tramtai/). Si ya traía .tramtai/ y no es confiable, pregunta
+// (ErrorConfianza) salvo que o.Confiar lo responda. Si está dentro de otro proyecto, pregunta (ErrorDentroDeProyecto)
+// salvo o.CrearAqui.
+func (s *Servicio) AbrirProyecto(raiz string, o AbrirOpciones) (*Instancia, error) {
 	raiz = nucleo.ExpandirCasa(strings.TrimSpace(raiz))
 	if !filepath.IsAbs(raiz) {
 		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("indica la ruta completa de la carpeta del proyecto"))
@@ -69,12 +102,85 @@ func (s *Servicio) AbrirProyecto(raiz string) (*Instancia, error) {
 	if real, err := filepath.EvalSymlinks(raiz); err == nil {
 		raiz = real
 	}
-	if existente, ok := nucleo.BuscarProyecto(raiz); ok {
+	existente, esProyecto := nucleo.BuscarProyecto(raiz)
+	if esProyecto && !mismaRuta(existente, raiz) && !o.CrearAqui {
+		return nil, &ErrorDentroDeProyecto{Proyecto: existente}
+	}
+	if esProyecto && mismaRuta(existente, raiz) {
 		raiz = existente
-	} else if err := PrepararProyecto(raiz); err != nil {
-		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("no se pudo preparar el proyecto: %s", err.Error()))
+		if g, err := nucleo.CargarConfiguracion(""); err == nil && !g.ProyectoConfiable(raiz) {
+			if o.Confiar == nil {
+				claves, _ := nucleo.ClavesAdministradas(filepath.Join(raiz, ".tramtai", "local.yaml"))
+				return nil, &ErrorConfianza{Raiz: raiz, Claves: claves}
+			}
+			if *o.Confiar {
+				if err := s.FijarConfianza(raiz, true); err != nil {
+					return nil, err
+				}
+			}
+		}
+	} else {
+		if err := PrepararProyecto(raiz); err != nil {
+			return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("no se pudo preparar el proyecto: %s", err.Error()))
+		}
+		if err := s.FijarConfianza(raiz, true); err != nil {
+			return nil, err
+		}
 	}
 	return s.ActivarProyecto(raiz)
+}
+
+// FijarConfianza añade raiz a proyectos_confiables de la configuración global (o la quita) y, si su espacio está
+// activo, le aplica su configuración de nuevo: sus APIs y su presupuesto entran o salen sin reiniciar.
+func (s *Servicio) FijarConfianza(raiz string, confiar bool) error {
+	ruta, err := nucleo.RutaGlobal()
+	if err != nil {
+		return err
+	}
+	g, err := nucleo.CargarConfiguracion("")
+	if err != nil {
+		return err
+	}
+	lista := []string{}
+	for _, v := range g.Lista("proyectos_confiables") {
+		if texto, ok := v.(string); ok && !mismaRuta(texto, raiz) {
+			lista = append(lista, texto)
+		}
+	}
+	if confiar {
+		lista = append(lista, raiz)
+	}
+	if err := FijarValor(ruta, nucleo.OrigenGlobal, "proyectos_confiables", lista); err != nil {
+		return err
+	}
+	var inst *Instancia
+	s.mu.RLock()
+	for _, i := range s.instancias {
+		if i.Ambito == "proyecto" && mismaRuta(i.Raiz, raiz) {
+			inst = i
+		}
+	}
+	s.mu.RUnlock()
+	if inst != nil {
+		c, err := nucleo.CargarConfiguracion(inst.Raiz)
+		if err != nil {
+			return err
+		}
+		inst.Config.Reemplazar(c)
+		s.anotarIgnoradas(inst.ID, c)
+		s.Recargar()
+	}
+	return nil
+}
+
+// anotarIgnoradas deja en el registro el aviso de las claves de seguridad que no se aplicaron (o lo quita).
+func (s *Servicio) anotarIgnoradas(id string, c *nucleo.Configuracion) {
+	texto := ""
+	if ignoradas := c.Ignoradas(); len(ignoradas) > 0 {
+		texto = idioma.Tf("local.yaml tiene claves que solo valen en carpetas confiables y no se aplicaron: %s", strings.Join(ignoradas, ", "))
+	}
+	s.registro().cambiar(id, func(e *Espacio) { e.UltimoError = texto })
+	_ = s.registro().guardar()
 }
 
 const perfilEjemplo = `nombre: resumen
