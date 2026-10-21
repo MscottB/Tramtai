@@ -154,7 +154,8 @@ jobs:
       - name: Compilar, empaquetar y abrir la app
         run: |
           (cd escritorio && go vet ./... && go test ./...)
-          sh scripts/macos/empaquetar.sh v0.0.0+ci arm64 # solo la arquitectura del runner; el release hace la universal
+          # La app universal, como el release: un .dmg que no cabe en su imagen falla aquí y no al publicar.
+          sh scripts/macos/empaquetar.sh v0.0.0+ci
           sh scripts/macos/probar-app.sh
 
   # Los ejemplos de la guía del desarrollador (docs/ejemplos) se ejecutan contra el servidor de la API con un agente
