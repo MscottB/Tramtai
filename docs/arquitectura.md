@@ -115,7 +115,7 @@ Las cuatro interfaces trabajan sobre el mismo servicio, así que un trabajo crea
 - **Web UI:** servida por el propio servicio en `http://127.0.0.1:17373`.
 - **Aplicación de escritorio:** `tramtai-escritorio`.
 
-La Web UI se enlaza a una instancia con una sesión:
+La Web UI se enlaza a una instancia (un espacio de trabajo: el global o el de un proyecto) con una sesión:
 
 - **Entrada sin clave en el propio equipo:** si la conexión llega por loopback desde un programa del mismo usuario del sistema (el navegador o la app de escritorio), la Web UI entra sola y puede cambiar entre instancias. En Windows se identifica al dueño de la conexión con la tabla TCP del sistema y el SID de su proceso; en Linux, con el uid de `/proc/net/tcp`; en macOS, con el `so_uid` de `net.inet.tcp.pcblist_n` (la tabla que lee `netstat`). Se comprueba una vez por conexión. No se aplica si la petición trae cabeceras de proxy (`Forwarded`, `X-Forwarded-For`, `X-Forwarded-Host`, `X-Real-Ip`, `Via`), ni con `servicio.permitir_remoto`, porque un proxy o túnel del mismo usuario reenviaría peticiones de otros equipos. Se desactiva con `servicio.entrada_local: false`.
 - **Código de un solo uso:** la otra forma de entrar. Lo piden `tramtai abrir`, la terminal interactiva o la app de escritorio con el token de servicio (un minuto de validez). Es lo que se usa cuando no se puede entrar directamente: otro usuario del equipo, `servicio.entrada_local: false` o un sistema donde no se identifica al dueño. Un código canjeado desde este equipo (loopback y sin cabeceras de proxy) abre una sesión local, como la entrada directa: solo el dueño del servicio puede pedirlo. Con el servicio expuesto en red, la Web UI remota solo se abre con un código de `tramtai abrir` hecho en el equipo del servicio, y esa sesión no es local.
@@ -131,8 +131,23 @@ La Web UI se enlaza a una instancia con una sesión:
 | Clave | Cómo se guarda |
 |---|---|
 | De cada punto de acceso | Solo su huella SHA-256 (`datos/tokens/acceso_<nombre>` contiene `sha256:…`), comparada en tiempo constante. Se muestra al crearla o regenerarla; las antiguas en claro se convierten solas a huella. Eliminar el punto borra su clave. |
-| De la instancia y token de servicio | En claro, en archivos con permisos 0600, porque la CLI y la app los leen. La de la instancia se regenera en marcha (`POST /api/v1/instancia/token`), sin reiniciar. |
+| Del espacio y token de servicio | En claro, en archivos con permisos 0600, porque la CLI y la app los leen. La del espacio se regenera en marcha (`POST /api/v1/instancia/token`), sin reiniciar. |
 | De los proveedores | Cifradas en el almacén del sistema: Administrador de credenciales (Windows), Llavero vía `/usr/bin/security` (macOS) o Secret Service vía `secret-tool` (Linux). Tramtai nunca las escribe en sus archivos. Se leen en cada petición, así que un cambio vale sin reiniciar; una variable de entorno con el mismo nombre tiene prioridad. |
+
+### Espacios y agentes
+
+- **Registro de espacios** (`datos/espacios.json`, `internal/servicio/espacios.go`): todos los espacios conocidos con un
+  id fijo, también los detenidos y los que perdieron su carpeta. El id de un proyecto se guarda en `.tramtai/espacio`
+  (la marca): al mover la carpeta se reconoce, y una copia no se adopta. Detalle en
+  [operación](operacion.md#espacios-de-trabajo).
+- **Confianza:** `local.yaml` solo puede tocar claves de seguridad si la carpeta está en `proyectos_confiables`; al
+  abrir una carpeta clonada, la Web UI pregunta (`confianza_requerida`) y, sin confianza, las ignora y lo avisa.
+- **Agentes desconectados:** `adaptadores.<agente>.desconectado` deja un agente fuera sin desinstalar su CLI; el
+  planificador rechaza sus peticiones con 409 `agente_desconectado` y el respaldo lo salta.
+- **Sesión del CLI:** cada adaptador con suscripción pregunta a su CLI con qué cuenta entró (`claude auth status`,
+  `codex login status`, la configuración de Copilot) sin leer sus credenciales; un fallo de autenticación en una
+  petición marca el agente como «la sesión no responde» hasta la siguiente que salga bien. Evidencia en
+  [m0-agentes](equipo/m0-agentes.md).
 
 ## Estados del trabajo
 

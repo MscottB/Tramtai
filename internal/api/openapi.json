@@ -177,7 +177,7 @@
         "responses": {
           "200": {
             "description": "Capacidades",
-            "content": { "application/json": { "schema": { "type": "object", "properties": { "adaptadores": { "type": "array", "items": { "type": "object" } }, "limites": { "$ref": "#/components/schemas/Limites" } } } } }
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "adaptadores": { "type": "array", "items": { "type": "object", "properties": { "agente": { "type": "string" }, "desconectado": { "type": "boolean", "description": "Desconectado en Tramtai: sus peticiones responden 409 agente_desconectado" }, "cuenta": { "type": "string", "description": "Con qué cuenta inició sesión su CLI, si lo dice" } } } }, "limites": { "$ref": "#/components/schemas/Limites" } } } } }
           },
           "default": { "$ref": "#/components/responses/Error" }
         }
@@ -303,7 +303,7 @@
           "error": {
             "type": "object",
             "required": ["codigo", "mensaje"],
-            "properties": { "codigo": { "type": "string", "examples": ["solicitud_invalida", "no_autorizado", "entrada_no_disponible", "presupuesto_agotado"] }, "mensaje": { "type": "string" } }
+            "properties": { "codigo": { "type": "string", "examples": ["solicitud_invalida", "no_autorizado", "entrada_no_disponible", "presupuesto_agotado", "agente_desconectado"] }, "mensaje": { "type": "string" } }
           }
         }
       },
@@ -460,7 +460,7 @@
       },
       "Agente": {
         "type": "object",
-        "properties": {
+        "properties": { "desconectado": { "type": "boolean", "description": "Desconectado en Tramtai (Agentes → Desconectar): sus peticiones responden 409 agente_desconectado y el respaldo lo salta" },
           "agente": { "type": "string", "description": "El id, el que va delante de agente/modelo" },
           "nombre": { "type": "string" },
           "programa": { "type": "string", "description": "El CLI o servicio que hay detrás" },

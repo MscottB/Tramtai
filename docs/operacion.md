@@ -97,7 +97,12 @@ tramtai global iniciar|detener|estado|token [--rotar]
 tramtai iniciar                    # crea .tramtai/config.yaml en el repositorio actual
 tramtai proyecto iniciar|detener|estado|token [--rotar]   # desde la carpeta del proyecto
 
-tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <instancia> para elegir otra
+tramtai espacios                   # los espacios de trabajo: activos, detenidos y no encontrados
+tramtai espacio iniciar|detener [carpeta|id]
+tramtai espacio olvidar <id>       # borra sus datos en Tramtai, nunca la carpeta del proyecto
+tramtai agentes desconectar|conectar <agente>   # deja un agente fuera sin desinstalar su CLI
+
+tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <espacio> para elegir otro; --global para la global
 ```
 
 - `proyecto iniciar` inicia el servicio si no está en marcha.
@@ -134,23 +139,35 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <instancia> 
 | Clave | Qué hacer |
 |---|---|
 | La de una API por aplicación | **Regenerar la clave** en Mis APIs, o `tramtai acceso token <nombre> --rotar`. La anterior deja de valer al momento. |
-| La de la instancia (la de la *API principal*) | **Regenerar la clave** en Mis APIs → API principal, o `tramtai global token --rotar` (`tramtai proyecto token --rotar` en un proyecto). Vale sin reiniciar; si sale de una variable de entorno, cámbiala allí. |
+| La del espacio | **Regenerar la clave** en Mis APIs → Clave del espacio, o `tramtai global token --rotar` (`tramtai proyecto token --rotar` en un proyecto). Vale sin reiniciar; si sale de una variable de entorno, cámbiala allí. |
 | La de un proveedor (Anthropic, OpenAI, Gemini) | Revócala en la consola del proveedor y guarda la nueva con `tramtai claves guardar NOMBRE`. |
 
 En los dos primeros casos, pon la clave nueva en las aplicaciones que usaban la anterior.
 
 **Si vuelves a una versión anterior** a la que guarda las claves de las APIs como huella: esa versión leería el archivo `sha256:…` como si fuera la clave. Al volver, regenera la clave de cada API (`tramtai acceso token <nombre> --rotar`).
 
-## Instancias
+## Espacios de trabajo
+
+Un espacio de trabajo (en la API, una *instancia*) tiene su historial, sus APIs, su clave y sus ajustes. Hay uno global
+y uno por cada proyecto que abras. La página **Espacios** de la app, `tramtai espacios` y `GET /api/v1/servicio/espacios`
+los listan todos: activos, detenidos y no encontrados.
 
 | | Global | Proyecto |
 |---|---|---|
 | Configuración | `config.yaml` de la [carpeta de Tramtai](inicio.md#configuración) | La global, más `.tramtai/config.yaml` (versionada) y `.tramtai/local.yaml` (de esta máquina) |
-| Identificador | `global` | `<nombre>_<hash de la ruta>`, por ejemplo `demo_app_1a2b3c4d` |
+| Identificador | `global` | `<nombre>_<hash de la ruta>` (por ejemplo `demo_app_1a2b3c4d`), fijado la primera vez y guardado en `.tramtai/espacio` |
 | Token | `datos/token-global` o la variable `TRAMTAI_TOKEN_GLOBAL` | `datos/tokens/<id>` |
 | Base de datos | `datos/instancias/global.db` | `datos/instancias/<id>.db` |
+| Registro | `datos/espacios.json`: todos los espacios con su ruta, su último uso y su último error (reemplaza a `instancias.json`, que se migra solo) | |
 
-Las rutas son relativas a la [carpeta de Tramtai](inicio.md#configuración). La clave de la instancia y el token de servicio quedan en claro en archivos con permisos 0600, porque la CLI y la app los leen; las claves de los puntos de acceso, en cambio, solo como huella.
+Las rutas son relativas a la [carpeta de Tramtai](inicio.md#configuración). La clave del espacio y el token de servicio quedan en claro en archivos con permisos 0600, porque la CLI y la app los leen; las claves de los puntos de acceso, en cambio, solo como huella.
+
+- **La marca** (`.tramtai/espacio`, fuera de git por el `.gitignore` de `.tramtai`) guarda el id del espacio: si mueves o renombras la carpeta, sigue siendo el mismo espacio con su historial. Una copia de la carpeta, en cambio, es un espacio nuevo.
+- **No encontrado:** si la carpeta de un proyecto ya no está donde estaba, el espacio queda «No encontrado»; con **Buscar** (o `POST /ui/espacios/ubicar`) se le indica la ruta nueva.
+- **Al abrir una carpeta que ya trae `.tramtai/`** (un repositorio clonado), la app pregunta si confías en ella (409 `confianza_requerida`). Confiar la añade a `proyectos_confiables`; sin confiar, las claves de seguridad de su `local.yaml` se ignoran y se avisa cuáles. Un proyecto que creas tú queda confiado. Si la carpeta está dentro de otro proyecto, la app pregunta cuál abrir (409 `dentro_de_proyecto`).
+- **Olvidar** un espacio borra su base de datos, su clave y su registro en Tramtai, nunca la carpeta del proyecto. Se confirma escribiendo su nombre; la global no se olvida.
+- **Ajustes** tiene dos pestañas, «Este espacio» y «Todo Tramtai»: cada valor dice si es propio del proyecto o viene de Global, y **Usar el de Global** lo devuelve (`POST /api/v1/instancia/heredar`).
+- La app, la terminal y la CLI vuelven al último espacio usado; la CLI no cae en la global si el espacio del proyecto está detenido (`espacio_detenido`), salvo con `--global`.
 
 La configuración versionada del proyecto no puede definir claves de seguridad: ni puertos, ni comandos, ni autenticación, ni puntos de acceso. `.tramtai/local.yaml` tampoco, salvo que la carpeta del proyecto figure en `proyectos_confiables` de la configuración global: un repositorio clonado puede traer un `local.yaml` (forzado con `git add -f`) y no debe poder cambiar qué programas ejecuta Tramtai. `proyectos_confiables` solo se admite en la configuración global.
 
@@ -248,7 +265,7 @@ tramtai acceso reiniciar-presupuesto tienda    # sin nombre, el de la instancia
   - **Orden:** por nombre, más usadas o última petición.
   - **Páginas:** de 20; una página que empieza en medio de un grupo repite su cabecera con «(continúa)».
   - **Grupos:** cada uno se pliega desde su cabecera y el navegador recuerda cuáles quedaron plegados.
-- **API principal:** la guía «¿Qué URL uso?», la clave, los modelos, los ejemplos y el presupuesto del espacio. En el mapa de **Inicio**, cada grupo es una estación («web · 3 APIs», con sus activas debajo) que abre Mis APIs filtrada por ese grupo.
+- **Clave del espacio:** la guía «¿Qué URL uso?», la clave, los modelos, los ejemplos y el presupuesto del espacio. Es para ti y tus scripts; cada app va mejor con su propia API, y Mis APIs lo sugiere si muchas peticiones de apps llegan con esta clave. En el mapa de **Inicio**, cada grupo es una estación («web · 3 APIs», con sus activas debajo) que abre Mis APIs filtrada por ese grupo.
 
 Cada API tiene un botón **Conectar** (también se abre pulsando su fila) con su detalle: las URL base según lo que acepta (OpenAI, Anthropic, API propia), la clave —que solo se ve al crearla o regenerarla; si no la tienes, **Regenerar la clave** muestra una nueva y la anterior deja de valer—, los ejemplos para copiar con su URL y su modelo, las acciones (ajustes, Probar, peticiones, activar o detener) y, aparte, **Eliminar la API**. Al crear una API se abre su detalle con la clave nueva.
 
@@ -277,11 +294,14 @@ El token de servicio (`datos/token-servicio`) habilita `/api/v1/servicio`:
 | `GET /api/v1/servicio` | Estado del servicio, sus instancias y sus puntos. |
 | `POST /api/v1/servicio/instancias` | Activar una instancia, con `{"ambito":"global"}` o `{"ambito":"proyecto","raiz":"…"}`. |
 | `DELETE /api/v1/servicio/instancias/{id}` | Desactivar una instancia. |
+| `GET /api/v1/servicio/espacios` | Todos los espacios del registro, también los detenidos y los no encontrados, con su estado, APIs y peticiones. |
+| `DELETE /api/v1/servicio/espacios/{id}` | Olvidar un espacio, con `{"nombre": "…"}` igual a su nombre: borra su base, su clave y su registro, nunca la carpeta del proyecto. |
+| `POST /api/v1/servicio/agentes/{agente}/conexion` | `{"conectado": false}` desconecta un agente sin desinstalar su CLI (`adaptadores.<agente>.desconectado`); `true` lo vuelve a conectar (204). |
 | `GET /api/v1/servicio/instancias/{id}/configuracion` | Ver su configuración efectiva. |
 | `POST /api/v1/servicio/recargar` | Aplicar los cambios de puntos de acceso. |
 | `POST /api/v1/servicio/detener` | Detener el servicio. |
 
-Con ese mismo token y la cabecera `Tramtai-Instancia: <id>`, la administración puede usar la API de cualquier instancia. El descriptor `datos/servicio.json` indica dónde escucha el servicio. Antes de usar el servicio, la CLI comprueba con `/healthz` que responde ese mismo servicio y no otro proceso que ocupe el puerto.
+Con ese mismo token y la cabecera `Tramtai-Instancia: <id>`, la administración puede usar la API de cualquier espacio. El descriptor `datos/servicio.json` indica dónde escucha el servicio. Antes de usar el servicio, la CLI comprueba con `/healthz` que responde ese mismo servicio y no otro proceso que ocupe el puerto.
 
 ## Versión portable
 

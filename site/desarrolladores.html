@@ -71,6 +71,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
       <li><a href="#trabajos"><span lang="es">Trabajos largos</span><span lang="en">Long jobs</span></a></li>
       <li><a href="#en-vivo"><span lang="es">Seguir lo que pasa</span><span lang="en">Follow what happens</span></a></li>
       <li><a href="#errores"><span lang="es">Errores y reintentos</span><span lang="en">Errors and retries</span></a></li>
+      <li><a href="#openapi"><span lang="es">Postman y clientes</span><span lang="en">Postman and clients</span></a></li>
       <li><a href="#limites"><span lang="es">Límites</span><span lang="en">Limits</span></a></li>
     </ol>
   </nav>
@@ -90,6 +91,8 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
       <div lang="es">
         <p>Necesitas Tramtai en marcha con al menos un agente conectado, y la <strong>URL</strong> y la <strong>clave</strong> de tu API (en la app, <strong>Mis APIs</strong>). Los ejemplos las leen de tres variables: <code>TRAMTAI_URL</code> (por defecto <code>http://127.0.0.1:17373</code>), <code>TRAMTAI_CLAVE</code> y <code>TRAMTAI_MODELO</code> (agente y modelo, por defecto <code>claude/haiku</code>).</p>
         <p><strong>¿Qué API uso?</strong> Si tu app ya usa el SDK de OpenAI o el de Anthropic, su URL (<code>/openai/v1</code> o <code>/anthropic</code>): no cambias nada más. Si necesitas trabajos largos que sigues, cancelas o reintentas, la API propia (<code>/api/v1</code>). <a href="ayuda/conectar.html">La ayuda compara las tres.</a></p>
+        <p><strong>¿Qué clave uso?</strong> La de una API propia de tu app (<strong>Mis APIs → Nueva API</strong>): con sus modelos y su presupuesto, y la regeneras sin tocar las demás. La <strong>clave del espacio</strong> es para ti y tus scripts. En la API, «instancia» es ese espacio de trabajo: el global o el de un proyecto.</p>
+        <p>Desde la terminal, <code>tramtai espacios</code> lista los espacios, <code>tramtai espacio iniciar|detener|olvidar</code> los gestiona y <code>tramtai agentes desconectar|conectar &lt;agente&gt;</code> deja un agente fuera sin desinstalar su CLI.</p>
         <ul>
           <li><strong>Python:</strong> <code>pip install openai requests</code></li>
           <li><strong>JavaScript (Node 20+):</strong> <code>npm install openai</code></li>
@@ -101,6 +104,8 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
       <div lang="en">
         <p>You need Tramtai running with at least one agent connected, plus your API's <strong>URL</strong> and <strong>key</strong> (in the app, <strong>My APIs</strong>). The examples read them from three variables: <code>TRAMTAI_URL</code> (default <code>http://127.0.0.1:17373</code>), <code>TRAMTAI_CLAVE</code> and <code>TRAMTAI_MODELO</code> (agent and model, default <code>claude/haiku</code>).</p>
         <p><strong>Which API?</strong> If your app already uses the OpenAI or Anthropic SDK, its URL (<code>/openai/v1</code> or <code>/anthropic</code>): nothing else changes. If you need long jobs you follow, cancel or retry, the native API (<code>/api/v1</code>). <a href="ayuda/conectar.html">Help compares all three.</a></p>
+        <p><strong>Which key do I use?</strong> Your app’s own API key (<strong>My APIs → New API</strong>): with its models and budget, and you can regenerate it without touching the others. The <strong>workspace key</strong> is for you and your scripts. In the API, “instance” means that workspace: the global one or a project’s.</p>
+        <p>From the terminal, <code>tramtai espacios</code> lists the workspaces, <code>tramtai espacio iniciar|detener|olvidar</code> manages them and <code>tramtai agentes desconectar|conectar &lt;agent&gt;</code> takes an agent out without uninstalling its CLI.</p>
         <ul>
           <li><strong>Python:</strong> <code>pip install openai requests</code></li>
           <li><strong>JavaScript (Node 20+):</strong> <code>npm install openai</code></li>
@@ -199,6 +204,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
   <pre class="codigo" role="tabpanel" id="p5-python-panel" aria-labelledby="p5-python" tabindex="0" data-ejemplo="python/herramientas_api_propia.py"><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/python/herramientas_api_propia.py">docs/ejemplos/python/herramientas_api_propia.py</a></code></pre>
   <pre class="codigo" role="tabpanel" id="p5-curl-panel" aria-labelledby="p5-curl" tabindex="0" data-ejemplo="curl/herramientas_api_propia.sh"><code><a href="https://github.com/MscottB/Tramtai/blob/main/docs/ejemplos/curl/herramientas_api_propia.sh">docs/ejemplos/curl/herramientas_api_propia.sh</a></code></pre>
 </div>
+      <span id="agentes-herramientas"></span>
       <div lang="es">
         <h3>Por la URL de Anthropic</h3>
         <p>Igual que con su SDK: <code>tools</code> con <code>input_schema</code>, bloques <code>tool_use</code> en la respuesta y <code>tool_result</code> en el mensaje siguiente.</p>
@@ -209,13 +215,14 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
           <li>No se combinan con una respuesta en JSON, y van en cada petición: las recetas no las guardan.</li>
         </ul>
         <p>Comprobado el 2026-10-20 con los agentes reales, el ciclo completo por cada URL:</p>
-        <div class="tabla"><table id="agentes-herramientas">
+        <div class="tabla"><table>
           <thead><tr><th>Agente</th><th>Modelo probado</th><th>OpenAI</th><th>Anthropic</th><th>API propia</th></tr></thead>
           <tbody data-agentes>
             <tr><td>Claude Code</td><td>haiku</td><td>sí</td><td>sí</td><td>sí</td></tr>
             <tr><td>Codex</td><td>el predeterminado de su CLI</td><td>sí</td><td>sí</td><td>sí</td></tr>
             <tr><td>GitHub Copilot</td><td>auto (plan Free)</td><td>sí</td><td>sí</td><td>sí</td></tr>
             <tr><td>Gemini API</td><td>—</td><td colspan="3">sin comprobar (falta clave)</td></tr>
+            <tr><td>Antigravity</td><td>—</td><td colspan="3">no se usa desde apps ni APIs</td></tr>
           </tbody>
         </table></div>
       </div>
@@ -236,6 +243,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
             <tr><td>Codex</td><td>its CLI default</td><td>yes</td><td>yes</td><td>yes</td></tr>
             <tr><td>GitHub Copilot</td><td>auto (Free plan)</td><td>yes</td><td>yes</td><td>yes</td></tr>
             <tr><td>Gemini API</td><td>—</td><td colspan="3">not checked (no key)</td></tr>
+            <tr><td>Antigravity</td><td>—</td><td colspan="3">not used from apps or APIs</td></tr>
           </tbody>
         </table></div>
       </div>
@@ -259,27 +267,40 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
     <section id="en-vivo">
       <h2><span lang="es">Seguir lo que pasa</span><span lang="en">Follow what happens</span></h2>
       <div lang="es">
-        <p><code>GET /api/v1/eventos</code> es un flujo SSE de toda la instancia: empieza con las peticiones en curso (y las terminadas hace menos de 10 s) y después avisa cada cambio de etapa (<code>cola</code>, <code>preparacion</code>, <code>ejecucion</code>, <code>validacion</code>, <code>llegada</code>) con el agente, el modelo y la API de origen; <code>intento</code> sube cuando el respaldo pasa a otro agente (contando desde que abriste el flujo). Un evento <code>foto</code> marca el fin de esa primera foto: lo que tenías y no vino ya terminó. Nunca trae el mensaje, la respuesta ni los archivos. Con la clave de una API por aplicación solo llegan las suyas. Sirve, por ejemplo, para un panel propio; es lo que usa el mapa de Inicio.</p>
+        <p><code>GET /api/v1/eventos</code> es un flujo SSE de todo el espacio de trabajo: empieza con las peticiones en curso (y las terminadas hace menos de 10 s) y después avisa cada cambio de etapa (<code>cola</code>, <code>preparacion</code>, <code>ejecucion</code>, <code>validacion</code>, <code>llegada</code>) con el agente, el modelo y la API de origen; <code>intento</code> sube cuando el respaldo pasa a otro agente (contando desde que abriste el flujo). Un evento <code>foto</code> marca el fin de esa primera foto: lo que tenías y no vino ya terminó. Nunca trae el mensaje, la respuesta ni los archivos. Con la clave de una API por aplicación solo llegan las suyas. Sirve, por ejemplo, para un panel propio; es lo que usa el mapa de Inicio.</p>
       </div>
       <div lang="en">
-        <p><code>GET /api/v1/eventos</code> is an SSE stream for the whole instance: it starts with the requests in progress (and those finished less than 10 s ago) and then reports every stage change (<code>cola</code>, <code>preparacion</code>, <code>ejecucion</code>, <code>validacion</code>, <code>llegada</code>) with the agent, model and source API; <code>intento</code> goes up when the fallback switches agent (counting from when you opened the stream). A <code>foto</code> event marks the end of that first snapshot: anything you had that did not come has finished. It never carries the message, the answer or the files. With a per-app API key, only that API’s requests arrive. Handy for your own dashboard; it is what the Home map uses.</p>
+        <p><code>GET /api/v1/eventos</code> is an SSE stream for the whole workspace: it starts with the requests in progress (and those finished less than 10 s ago) and then reports every stage change (<code>cola</code>, <code>preparacion</code>, <code>ejecucion</code>, <code>validacion</code>, <code>llegada</code>) with the agent, model and source API; <code>intento</code> goes up when the fallback switches agent (counting from when you opened the stream). A <code>foto</code> event marks the end of that first snapshot: anything you had that did not come has finished. It never carries the message, the answer or the files. With a per-app API key, only that API’s requests arrive. Handy for your own dashboard; it is what the Home map uses.</p>
       </div>
 <pre class="codigo"><code>curl -N "$TRAMTAI_URL/api/v1/eventos" -H "Authorization: Bearer $TRAMTAI_CLAVE"
 
 event: trabajo
-data: {"id":"trabajo_…","estado":"ejecutando","etapa":"ejecucion","agente":"claude","modelo":"claude/sonnet","api":"","origen":"app","intento":1,"codigo_error":"","creado":"…","actualizado":"…"}</code></pre>
+data: {"id":"trabajo_…","estado":"ejecutando","etapa":"ejecucion","agente":"claude","modelo":"claude/haiku","api":"","origen":"app","intento":1,"codigo_error":"","creado":"…","actualizado":"…"}</code></pre>
     </section>
 
     <section id="errores">
       <h2><span lang="es">Errores y reintentos</span><span lang="en">Errors and retries</span></h2>
       <div lang="es">
         <p>Los errores llegan en el formato de la API que usas, con un <code>code</code> estable. Para reintentar sin duplicar un trabajo, envía la cabecera <code>Idempotency-Key</code>: la misma clave con la misma petición devuelve el mismo trabajo (en las tres APIs).</p>
-        <div class="tabla"><table><thead><tr><th>HTTP</th><th>Código</th><th>Qué hacer</th></tr></thead><tbody><tr><td>400</td><td><code>solicitud_invalida, parametro_no_soportado, carga_invalida</code></td><td>Corrige la petición: el mensaje dice qué campo falla.</td></tr><tr><td>401</td><td><code>no_autorizado</code></td><td>Revisa la clave (Mis APIs); si la regeneraste, la anterior ya no vale.</td></tr><tr><td>409</td><td><code>conflicto_idempotencia</code></td><td>Esa Idempotency-Key ya se usó con otra petición: usa otra.</td></tr><tr><td>422</td><td><code>salida_no_cumple_esquema</code></td><td>La respuesta o las llamadas no cumplían el esquema: pide correcciones o «Corregir».</td></tr><tr><td>429</td><td><code>cola_llena, presupuesto_agotado, limite_uso_proveedor</code></td><td>Espera lo que diga Retry-After y reintenta.</td></tr><tr><td>502</td><td><code>error_agente, autenticacion_agente</code></td><td>El agente falló o no tiene sesión: revisa Agentes en la app.</td></tr><tr><td>503</td><td><code>agente_no_disponible, conversor_no_disponible</code></td><td>Algo no está listo; con Retry-After, reintenta después.</td></tr></tbody></table></div>
+        <div class="tabla"><table><thead><tr><th>HTTP</th><th>Código</th><th>Qué hacer</th></tr></thead><tbody><tr><td>400</td><td><code>solicitud_invalida, parametro_no_soportado, carga_invalida</code></td><td>Corrige la petición: el mensaje dice qué campo falla.</td></tr><tr><td>401</td><td><code>no_autorizado</code></td><td>Revisa la clave (Mis APIs); si la regeneraste, la anterior ya no vale.</td></tr><tr><td>409</td><td><code>conflicto_idempotencia</code></td><td>Esa Idempotency-Key ya se usó con otra petición: usa otra.</td></tr><tr><td>409</td><td><code>agente_desconectado</code></td><td>El agente está desconectado en Tramtai: conéctalo en Agentes o con <code>tramtai agentes conectar &lt;agente&gt;</code>.</td></tr><tr><td>422</td><td><code>salida_no_cumple_esquema</code></td><td>La respuesta o las llamadas no cumplían el esquema: pide correcciones o «Corregir».</td></tr><tr><td>429</td><td><code>cola_llena, presupuesto_agotado, limite_uso_proveedor</code></td><td>Espera lo que diga Retry-After y reintenta.</td></tr><tr><td>502</td><td><code>error_agente, autenticacion_agente</code></td><td>El agente falló o no tiene sesión: revisa Agentes en la app.</td></tr><tr><td>503</td><td><code>agente_no_disponible, conversor_no_disponible</code></td><td>Algo no está listo; con Retry-After, reintenta después.</td></tr></tbody></table></div>
       </div>
       <div lang="en">
         <p>Errors arrive in the format of the API you use, with a stable <code>code</code>. To retry without duplicating a job, send the <code>Idempotency-Key</code> header: the same key with the same request returns the same job (on all three APIs).</p>
-        <div class="tabla"><table><thead><tr><th>HTTP</th><th>Code</th><th>What to do</th></tr></thead><tbody><tr><td>400</td><td><code>solicitud_invalida, parametro_no_soportado, carga_invalida</code></td><td>Fix the request: the message says which field fails.</td></tr><tr><td>401</td><td><code>no_autorizado</code></td><td>Check the key (My APIs); if you regenerated it, the old one no longer works.</td></tr><tr><td>409</td><td><code>conflicto_idempotencia</code></td><td>That Idempotency-Key was used with another request: use a new one.</td></tr><tr><td>422</td><td><code>salida_no_cumple_esquema</code></td><td>The answer or the calls did not match the schema: ask for corrections or «Correct».</td></tr><tr><td>429</td><td><code>cola_llena, presupuesto_agotado, limite_uso_proveedor</code></td><td>Wait for Retry-After and retry.</td></tr><tr><td>502</td><td><code>error_agente, autenticacion_agente</code></td><td>The agent failed or has no session: check Agents in the app.</td></tr><tr><td>503</td><td><code>agente_no_disponible, conversor_no_disponible</code></td><td>Something is not ready; with Retry-After, retry later.</td></tr></tbody></table></div>
+        <div class="tabla"><table><thead><tr><th>HTTP</th><th>Code</th><th>What to do</th></tr></thead><tbody><tr><td>400</td><td><code>solicitud_invalida, parametro_no_soportado, carga_invalida</code></td><td>Fix the request: the message says which field fails.</td></tr><tr><td>401</td><td><code>no_autorizado</code></td><td>Check the key (My APIs); if you regenerated it, the old one no longer works.</td></tr><tr><td>409</td><td><code>conflicto_idempotencia</code></td><td>That Idempotency-Key was used with another request: use a new one.</td></tr><tr><td>409</td><td><code>agente_desconectado</code></td><td>The agent is disconnected in Tramtai: connect it in Agents or with <code>tramtai agentes conectar &lt;agent&gt;</code>.</td></tr><tr><td>422</td><td><code>salida_no_cumple_esquema</code></td><td>The answer or the calls did not match the schema: ask for corrections or “Correct”.</td></tr><tr><td>429</td><td><code>cola_llena, presupuesto_agotado, limite_uso_proveedor</code></td><td>Wait for Retry-After and retry.</td></tr><tr><td>502</td><td><code>error_agente, autenticacion_agente</code></td><td>The agent failed or has no session: check Agents in the app.</td></tr><tr><td>503</td><td><code>agente_no_disponible, conversor_no_disponible</code></td><td>Something is not ready; with Retry-After, retry later.</td></tr></tbody></table></div>
       </div>
+    </section>
+
+    <section id="openapi">
+      <h2><span lang="es">Importar en Postman o generar un cliente</span><span lang="en">Import into Postman or generate a client</span></h2>
+      <div lang="es">
+        <p><code>GET /api/v1/openapi.json</code> describe la API propia en OpenAPI 3.1, con la URL de tu espacio o de tu API. Postman, Insomnia o Bruno la importan tal cual («Import» → URL o archivo), y <code>openapi-generator</code> u <code>openapi-typescript</code> generan un cliente. En la app, la guía «¿Qué URL uso?» de <strong>Mis APIs</strong> (y el detalle de cada API) la descarga como archivo.</p>
+        <p><code>GET /api/v1/agentes</code> y <code>GET /api/v1/capacidades</code> traen <code>desconectado</code> por agente (y <code>/capacidades</code>, <code>cuenta</code>: con qué cuenta inició sesión su CLI), así que tu app puede mirarlo antes de enviar.</p>
+      </div>
+      <div lang="en">
+        <p><code>GET /api/v1/openapi.json</code> describes the native API in OpenAPI 3.1, with your workspace’s or your API’s URL. Postman, Insomnia or Bruno import it as is (“Import” → URL or file), and <code>openapi-generator</code> or <code>openapi-typescript</code> generate a client. In the app, the “Which URL do I use?” guide in <strong>My APIs</strong> (and each API’s detail) downloads it as a file.</p>
+        <p><code>GET /api/v1/agentes</code> and <code>GET /api/v1/capacidades</code> include <code>desconectado</code> per agent (and <code>/capacidades</code>, <code>cuenta</code>: which account its CLI is signed in with), so your app can check before sending.</p>
+      </div>
+<pre class="codigo"><code>curl -s "$TRAMTAI_URL/api/v1/openapi.json" -H "Authorization: Bearer $TRAMTAI_CLAVE" -o tramtai-openapi.json</code></pre>
     </section>
 
     <section id="limites">

@@ -133,7 +133,7 @@ tramtai convertir informe.pdf     # muestra el texto que recibiría el agente, s
 
 ```powershell
 tramtai iniciar     # en la carpeta de un repositorio: crea .tramtai/ con su configuración y un perfil de ejemplo
-tramtai abrir       # abre la instancia de ese proyecto
+tramtai abrir       # abre el espacio de ese proyecto
 ```
 
 - **Perfiles de trabajo:** `.tramtai/profiles/<nombre>.yaml` guarda instrucciones, formato y esquema reutilizables. Se usan con `--perfil-trabajo <nombre>`, o con `perfil` en la API.

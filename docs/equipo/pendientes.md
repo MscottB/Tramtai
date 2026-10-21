@@ -47,11 +47,13 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | v0.51 | Herramientas y guía del desarrollador (`releases/v0.51-herramientas/spec.md`): un solo motor (`internal/herramientas`) para las tres APIs, herramientas también en la API propia (`herramientas`, `llamadas`, rol `herramienta`), correcciones automáticas de llamadas inválidas también por OpenAI y Anthropic; guía del desarrollador en el sitio y en `docs/desarrolladores.md` con ejemplos en Python, JavaScript, Go y curl que el CI ejecuta (job «Ejemplos»); comprobado con Claude, Codex y GitHub Copilot | ✅ |
 | v0.52 | Ayuda renovada (`releases/v0.52-ayuda/spec.md`): una sola fuente de datos por temas (`web/src/ayuda`) para la app y el sitio (`site/ayuda/`, generado y comprobado en el CI), botón ? en cada página con su tema, «¿Qué hago?» en los errores, búsqueda por palabras, diagramas como datos, capturas con `npm run capturas` y la regla del estilo como prueba; regla del proyecto: cada función trae su Ayuda y su página del sitio | ✅ |
 | v0.53 | Diagramas vivos (`releases/v0.53-diagramas-vivos/spec.md`): flujo de eventos de la instancia (`GET /api/v1/eventos`), el mapa de Inicio con un tranvía por petición en curso (etapas, fallo, respaldo) y «Siguiendo» con su ruta en vivo; la portada con el recorrido hasta los agentes y cuatro ejemplos con pausa | ✅ |
-| v0.54 | Recorridos guiados con driver.js: «Muéstrame en pantalla» en el panel ? de cada página y una bienvenida la primera vez, desde los datos de la Ayuda | ⬜ |
-| v0.55 | La terminal a la par de la Web UI (Panel, consumo, Mis APIs completo, Probar, plantillas, Ajustes, Ayuda) y Tramtai solo terminal en Windows | ⬜ |
-| v0.56 | Configurar los clientes solos (Claude Code, Codex, Cline…), con copia de su configuración antes de tocarla | ⬜ |
-| v0.57 | Uso y diagnóstico: panel de uso con tendencias, alias que también fijan el esfuerzo y «Comprobar conexión» | ⬜ |
-| v0.58 | Actualización que vuelve a la versión anterior si la nueva no arranca | ⬜ |
+| v0.54 | Espacios de trabajo (`releases/v0.54-espacios-de-trabajo/spec.md`): registro con id fijo y marca en la carpeta, confianza al abrir un proyecto clonado, página Espacios, Ajustes en dos pestañas con herencia, el último espacio recordado y un solo nombre; agentes: dejar la suscripción, sesión del CLI a la vista y desconectar; «Clave del espacio»; sitio renovado (portada, «Por qué Tramtai», barra y pie comunes, metadatos) | ⬜ |
+| v0.55 | Recorridos guiados con driver.js: «Muéstrame en pantalla» en el panel ? de cada página y una bienvenida la primera vez, desde los datos de la Ayuda | ⬜ |
+| v0.56 | La terminal a la par de la Web UI (Panel, consumo, Mis APIs completo, Probar, plantillas, Ajustes, Ayuda) y Tramtai solo terminal en Windows | ⬜ |
+| v0.57 | Configurar los clientes solos (Claude Code, Codex, Cline…), con copia de su configuración antes de tocarla | ⬜ |
+| v0.58 | Uso y diagnóstico: panel de uso con tendencias, alias que también fijan el esfuerzo y «Comprobar conexión» | ⬜ |
+| v0.59 | Actualización que vuelve a la versión anterior si la nueva no arranca | ⬜ |
+| — | Exportar e importar APIs entre usuarios (un archivo con sus ajustes, sin claves). Ojo: compartir APIs en equipo es la base de la futura versión Pro de equipo; decidir qué queda en la gratuita antes de hacerlo | ⬜ |
 | — | OpenCode como agente nuevo (spec en `opencode.md`, rama `feat/opencode`; M0 hecha) | ⬜ |
 | — | Hermes Agent como agente nuevo (instalado; falta `hermes setup` del usuario y su M0) | ⬜ |
 | — | Proveedor compatible con Anthropic en el adaptador de Claude (DeepSeek, Kimi, GLM) | ⬜ |
