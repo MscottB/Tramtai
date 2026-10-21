@@ -1349,3 +1349,103 @@ body.body--dark .tablero {
     transition: none;
   }
 }
+
+/* Recorridos guiados (driver.js, useRecorrido): la ventana del paso con los colores de la app en claro y oscuro. La
+   clase «recorrido» (popoverClass) pesa más que driver.css; «reducir movimiento» ya quita su fundido (regla global). */
+.driver-popover.recorrido {
+  background: var(--superficie);
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-alta);
+  font-family: var(--fuente);
+  padding: 18px 20px 16px;
+  min-width: 260px;
+  max-width: min(360px, calc(100vw - 32px));
+}
+.driver-popover.recorrido .driver-popover-title {
+  font-family: var(--fuente-titulo);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+  padding-right: 36px;
+}
+.driver-popover.recorrido .driver-popover-description {
+  font-size: 14px;
+  line-height: 1.55;
+}
+.driver-popover.recorrido .driver-popover-footer {
+  gap: 12px;
+  margin-top: 16px;
+}
+.driver-popover.recorrido .driver-popover-progress-text {
+  color: var(--texto-suave);
+  font-size: 13px;
+}
+.driver-popover.recorrido .driver-popover-navigation-btns {
+  gap: 8px;
+}
+.driver-popover.recorrido .driver-popover-navigation-btns button + button {
+  margin-left: 0;
+}
+/* Botones de 40 px de alto como mínimo: cómodos con el dedo. */
+.driver-popover.recorrido .driver-popover-footer-btn {
+  min-height: 40px;
+  min-width: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio-control);
+  background: var(--superficie);
+  color: var(--acento);
+  font: 500 14px/1.2 var(--fuente);
+  text-shadow: none;
+}
+.driver-popover.recorrido .driver-popover-footer-btn:hover {
+  background: var(--acento-suave);
+}
+.driver-popover.recorrido .driver-popover-next-btn,
+.driver-popover.recorrido .driver-popover-next-btn:hover {
+  border-color: var(--acento);
+  background: var(--acento);
+  color: var(--acento-texto);
+}
+.driver-popover.recorrido .driver-popover-close-btn {
+  top: 6px;
+  right: 6px;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radio-control);
+  color: var(--texto-suave);
+  font-size: 22px;
+}
+.driver-popover.recorrido .driver-popover-close-btn:hover,
+.driver-popover.recorrido .driver-popover-close-btn:focus {
+  background: var(--neutro-suave);
+  color: var(--texto);
+}
+.driver-popover.recorrido .driver-popover-footer-btn:focus-visible,
+.driver-popover.recorrido .driver-popover-close-btn:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+/* La flecha: solo el lado que apunta al elemento lleva el color de la ventana. */
+.driver-popover.recorrido .driver-popover-arrow {
+  border-color: transparent;
+}
+.driver-popover.recorrido .driver-popover-arrow-side-left {
+  border-left-color: var(--superficie);
+}
+.driver-popover.recorrido .driver-popover-arrow-side-right {
+  border-right-color: var(--superficie);
+}
+.driver-popover.recorrido .driver-popover-arrow-side-top {
+  border-top-color: var(--superficie);
+}
+.driver-popover.recorrido .driver-popover-arrow-side-bottom {
+  border-bottom-color: var(--superficie);
+}
+/* El elemento señalado, con un borde del acento dentro del hueco que abre driver.js. */
+.driver-active .driver-active-element {
+  outline: 2px solid var(--acento);
+  outline-offset: 3px;
+}

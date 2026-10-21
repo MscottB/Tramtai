@@ -946,6 +946,11 @@ const es = {
   'conversor.preparandoNuevo': "Se está preparando uno nuevo: {etapa} ({progreso} %); mientras tanto se usa este.",
   'recorrido.finTitulo': "Y esto es todo por ahora",
   'recorrido.finTexto': "Historial y Ajustes tienen su recorrido en su ?. Ábrelo cuando llegues allí.",
+  'recorrido.siguiente': "Siguiente",
+  'recorrido.anterior': "Anterior",
+  'recorrido.cerrar': "Cerrar el recorrido",
+  'recorrido.hecho': "Hecho",
+  'recorrido.progreso': "{actual} de {total}",
 }
 
 export type Clave = keyof typeof es

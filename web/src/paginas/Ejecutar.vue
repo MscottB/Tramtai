@@ -26,8 +26,11 @@
           <q-separator />
           <q-card-section class="q-gutter-y-md">
             <div class="titulo-seccion">{{ t('ejecutar.mensajePrueba') }}</div>
-            <q-input v-model="mensaje" data-recorrido="ejecutar.mensaje" type="textarea" outlined :label="t('ejecutar.mensaje')" :placeholder="t('ejecutar.placeholder')"
-              :input-style="{ minHeight: '120px' }" autogrow @keydown.ctrl.enter="ejecutar" @keydown.meta.enter="ejecutar" />
+            <!-- el ancla va en un div: en el q-input caería en el <textarea> interno y no se resaltaría el campo entero -->
+            <div data-recorrido="ejecutar.mensaje">
+              <q-input v-model="mensaje" type="textarea" outlined :label="t('ejecutar.mensaje')" :placeholder="t('ejecutar.placeholder')"
+                :input-style="{ minHeight: '120px' }" autogrow @keydown.ctrl.enter="ejecutar" @keydown.meta.enter="ejecutar" />
+            </div>
 
             <q-file v-model="archivos" multiple append use-chips clearable outlined dense :label="t('ejecutar.adjuntar')" :accept="aceptar(limites)"
               :hint="limites ? t('ejecutar.adjuntarLimites', { n: limites.cargas_por_peticion, mb: limites.carga_mb, texto: limites.texto_convertido_mb }) : t('ejecutar.adjuntarHint')"

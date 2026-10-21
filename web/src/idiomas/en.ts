@@ -946,6 +946,11 @@ const en: Textos = {
   'conversor.preparandoNuevo': "A new one is being prepared: {etapa} ({progreso} %); this one is used meanwhile.",
   'recorrido.finTitulo': "That is all for now",
   'recorrido.finTexto': "History and Settings have their own tour behind their ? button. Open it when you get there.",
+  'recorrido.siguiente': "Next",
+  'recorrido.anterior': "Back",
+  'recorrido.cerrar': "Close the tour",
+  'recorrido.hecho': "Done",
+  'recorrido.progreso': "{actual} of {total}",
 }
 
 export default en
