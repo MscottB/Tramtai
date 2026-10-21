@@ -16,6 +16,22 @@ export function elegirElemento(ancla: string | undefined, raiz: Pick<Document, '
   })
 }
 
+// capturarEsc deja Esc solo al recorrido mientras dura: en la fase de captura la detiene antes de que llegue al panel «?» o
+// a un diálogo de debajo (Quasar los cierra con Esc desde window) y al soltarla llama a alEsc. Devuelve cómo dejar de capturar.
+export function capturarEsc(destino: Pick<EventTarget, 'addEventListener' | 'removeEventListener'>, alEsc: () => void): () => void {
+  const alTeclear = (e: Event) => {
+    if ((e as KeyboardEvent).key !== 'Escape') return
+    e.stopImmediatePropagation()
+    if (e.type === 'keyup') alEsc()
+  }
+  destino.addEventListener('keydown', alTeclear, true)
+  destino.addEventListener('keyup', alTeclear, true)
+  return () => {
+    destino.removeEventListener('keydown', alTeclear, true)
+    destino.removeEventListener('keyup', alTeclear, true)
+  }
+}
+
 // aDriver es el paso tal como lo pinta driver.js; se llama al mostrar cada paso, así que sale en el idioma de ese momento.
 export function aDriver(paso: PasoMostrado, i: number, total: number, t: Traductor): DriveStep {
   return {

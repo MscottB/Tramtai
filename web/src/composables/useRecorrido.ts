@@ -7,7 +7,7 @@ import 'driver.js/dist/driver.css'
 import type { Pagina } from '../ayuda/tipos'
 import { t } from '../i18n'
 import type { PasoMostrado } from '../recorrido'
-import { aDriver, elegirElemento } from '../recorridoDom'
+import { aDriver, capturarEsc, elegirElemento } from '../recorridoDom'
 
 const ESPERA_MS = 5000
 const CADA_MS = 100
@@ -27,10 +27,13 @@ export function useRecorrido(ir: (pagina: Pagina) => void, paginaActual: Readonl
   let volverA: Element | null = null
   // turno es el último paso pedido: una espera vieja no muestra nada si mientras tanto se pulsó otra cosa.
   let turno = 0
+  let soltarEsc: (() => void) | undefined
 
   function terminar() {
     if (!activo.value) return
     activo.value = false
+    soltarEsc?.()
+    soltarEsc = undefined
     turno++
     d = undefined
     const fin = alFin
@@ -86,6 +89,8 @@ export function useRecorrido(ir: (pagina: Pagina) => void, paginaActual: Readonl
     alFin = alTerminar
     volverA = document.activeElement
     activo.value = true
+    // Esc es del recorrido, no del panel «?» ni del diálogo que haya debajo (Quasar los cierra con la misma tecla)
+    soltarEsc = capturarEsc(window, cerrar)
     const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches
     d = driver({
       animate: !quieto,

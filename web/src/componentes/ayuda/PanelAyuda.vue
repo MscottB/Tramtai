@@ -24,7 +24,7 @@ import { cerrarAyuda, panel } from '../../ayuda/panel'
 import type { Pagina } from '../../ayuda/tipos'
 import VistaTema from './VistaTema.vue'
 
-// recorridoActivo: con un recorrido en marcha Esc es suyo (lo cierra driver.js), no del panel ni del diálogo de debajo.
+// recorridoActivo: con un recorrido en marcha Esc es suyo (useRecorrido la captura y la detiene), no del panel ni del diálogo de debajo.
 const props = defineProps<{ pagina?: Pagina; recorridoActivo?: boolean }>()
 const emit = defineEmits<{ ir: [destino: string]; recorrido: [pagina: Pagina] }>()
 

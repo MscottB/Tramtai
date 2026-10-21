@@ -1,7 +1,7 @@
 // La parte del motor de los recorridos que no necesita navegador: qué elemento se señala y qué dice cada paso.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { aDriver, elegirElemento } from './recorridoDom.ts'
+import { aDriver, capturarEsc, elegirElemento } from './recorridoDom.ts'
 import type { PasoMostrado } from './recorrido.ts'
 
 // elemento falso con el tamaño que devolvería getBoundingClientRect().
@@ -23,6 +23,33 @@ test('elegirElemento sin ancla, sin elemento o sin tamaño da undefined: el paso
   assert.equal(elegirElemento('inicio.mapa', raiz({})), undefined)
   assert.equal(elegirElemento('inicio.mapa', raiz({ 'inicio.mapa': [elemento(0, 0)] })), undefined)
   assert.equal(elegirElemento('inicio.mapa', raiz({ 'inicio.mapa': [elemento(120, 0)] })), undefined)
+})
+
+// tecla falsa: un Event con la tecla, que pasa por el mismo EventTarget que el window del navegador.
+const tecla = (tipo: 'keydown' | 'keyup', key: string) => Object.assign(new Event(tipo, { cancelable: true }), { key })
+
+test('capturarEsc: Esc es solo del recorrido; nadie de debajo (panel, diálogo) la recibe, y se cierra al soltarla', () => {
+  const ventana = new EventTarget()
+  const vistas: string[] = []
+  let cierres = 0
+  const quitar = capturarEsc(ventana, () => cierres++)
+  // lo que Quasar escucha en window para cerrar su panel o su diálogo, registrado después
+  ventana.addEventListener('keydown', (e) => vistas.push(e.type))
+  ventana.addEventListener('keyup', (e) => vistas.push(e.type))
+  ventana.dispatchEvent(tecla('keydown', 'Escape'))
+  assert.equal(cierres, 0) // al pulsar aún no se cierra
+  ventana.dispatchEvent(tecla('keyup', 'Escape'))
+  assert.equal(cierres, 1)
+  assert.deepEqual(vistas, [])
+  // las demás teclas pasan (las flechas son de driver.js)
+  ventana.dispatchEvent(tecla('keyup', 'ArrowRight'))
+  assert.deepEqual(vistas, ['keyup'])
+  assert.equal(cierres, 1)
+  // al terminar el recorrido se deja de capturar: Esc vuelve a ser del panel
+  quitar()
+  ventana.dispatchEvent(tecla('keyup', 'Escape'))
+  assert.equal(cierres, 1)
+  assert.deepEqual(vistas, ['keyup', 'keyup'])
 })
 
 const paso: PasoMostrado = { pagina: 'inicio', ancla: 'inicio.mapa', titulo: 'comun.aceptar', texto: 'comun.cancelar' }
