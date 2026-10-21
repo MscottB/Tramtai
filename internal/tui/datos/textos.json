@@ -117,7 +117,21 @@
     "vivo.etapaCancelada": "cancelada",
     "vivo.enCurso": "{n} peticiones en curso.",
     "vivo.enCursoUno": "1 petición en curso.",
-    "vivo.hace": "{s} s"
+    "vivo.hace": "{s} s",
+    "inicio.recientes": "Peticiones recientes",
+    "inicio.verHistorial": "Ver historial",
+    "inicio.sinTrabajos": "Todavía no hay peticiones. Prueba un agente desde Probar.",
+    "trabajo.entradaEliminada": "(entrada eliminada por la retención)",
+    "estado.en_cola": "En cola",
+    "estado.preparando_entrada": "Preparando archivos",
+    "estado.esperando_agente": "Esperando agente",
+    "estado.ejecutando": "Ejecutando",
+    "estado.validando_salida": "Validando",
+    "estado.cancelacion_solicitada": "Cancelando",
+    "estado.completado": "Completado",
+    "estado.fallido": "Falló",
+    "estado.cancelado": "Cancelado",
+    "estado.interrumpido": "Interrumpido"
   },
   "en": {
     "menu.inicio": "Home",
@@ -237,6 +251,20 @@
     "vivo.etapaCancelada": "cancelled",
     "vivo.enCurso": "{n} requests in progress.",
     "vivo.enCursoUno": "1 request in progress.",
-    "vivo.hace": "{s} s"
+    "vivo.hace": "{s} s",
+    "inicio.recientes": "Recent requests",
+    "inicio.verHistorial": "View history",
+    "inicio.sinTrabajos": "No requests yet. Try an agent from Try.",
+    "trabajo.entradaEliminada": "(input deleted by retention)",
+    "estado.en_cola": "Queued",
+    "estado.preparando_entrada": "Preparing files",
+    "estado.esperando_agente": "Waiting for agent",
+    "estado.ejecutando": "Running",
+    "estado.validando_salida": "Validating",
+    "estado.cancelacion_solicitada": "Cancelling",
+    "estado.completado": "Completed",
+    "estado.fallido": "Failed",
+    "estado.cancelado": "Cancelled",
+    "estado.interrumpido": "Interrupted"
   }
 }

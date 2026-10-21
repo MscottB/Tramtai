@@ -1,6 +1,7 @@
 package inicio
 
 import (
+	"cmp"
 	"slices"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 
 	catalogo "tramtai/internal/agentes"
 	"tramtai/internal/idioma"
+	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
 )
@@ -267,11 +269,78 @@ func (p *Pagina) lineas() []string {
 			if x.hecho {
 				icono, estilo = e.Iconos.Ok, e.Exito
 			}
-			l = append(l, e.Recortar(estilo.Render(icono+" "+x.titulo)+e.Tenue.Render(" "+e.Iconos.Separador+" "+p.tx("menu."+x.pagina)), ancho),
+			l = append(l, e.Recortar(estilo.Render(icono+" "+x.titulo)+e.Tenue.Render(" "+e.Iconos.Separador+" ")+e.Tecla.Render(Atajo(x.pagina))+e.Tenue.Render(" "+p.tx("menu."+x.pagina)), ancho),
 				"  "+e.Tenue.Render(e.Recortar(x.detalle, ancho-2)))
 		}
 	}
-	return append(l, p.accion(0, "a", p.a(idioma.Tf("Ver la Ayuda de %s", p.tituloAyuda()))))
+	l = append(l, p.accion(0, "a", p.a(idioma.Tf("Ver la Ayuda de %s", p.tituloAyuda()))))
+
+	// Peticiones recientes
+	l = append(l, "", e.Grupo.Render(p.tx("inicio.recientes")))
+	if len(p.recientes) == 0 {
+		l = append(l, envolver(p.tx("inicio.sinTrabajos"), ancho, 0, e.Tenue)...)
+	}
+	for _, j := range p.recientes {
+		l = append(l, p.reciente(j)...)
+	}
+	return append(l, p.accion(0, "h", p.tx("inicio.verHistorial")))
+}
+
+// Atajo es la tecla (1 a 7) que lleva a una página del menú; "" si no tiene. Debe coincidir con el menú de internal/tui.
+func Atajo(clave string) string {
+	n := slices.Index([]string{pagina.PaginaInicio, pagina.PaginaAgentes, pagina.PaginaEjecutar, pagina.PaginaConectar, pagina.PaginaHistorial,
+		pagina.PaginaEspacios, pagina.PaginaConfiguracion}, clave)
+	if n < 0 {
+		return ""
+	}
+	return strconv.Itoa(n + 1)
+}
+
+// hace es «hace 3 min»; pasada una semana, la fecha.
+func (p *Pagina) hace(t time.Time) string {
+	d := p.ahora().Sub(t)
+	switch {
+	case t.IsZero():
+		return "—"
+	case d < time.Minute:
+		return idioma.Tf("hace %d s", max(int(d/time.Second), 0))
+	case d < time.Hour:
+		return idioma.Tf("hace %d min", int(d/time.Minute))
+	case d < 24*time.Hour:
+		return idioma.Tf("hace %d h", int(d/time.Hour))
+	case d < 7*24*time.Hour:
+		return idioma.Tf("hace %d d", int(d/(24*time.Hour)))
+	}
+	return t.Local().Format("2006-01-02")
+}
+
+// reciente son las dos líneas de una petición reciente (Panel.vue): lo que se escribió, y debajo hace cuánto, el agente con
+// su modelo y cómo acabó.
+func (p *Pagina) reciente(j nucleo.Trabajo) []string {
+	e, ancho := p.estilos, max(p.c.Ancho, 1)
+	texto := p.tx("trabajo.entradaEliminada")
+	if n := len(j.Solicitud.Mensajes); n > 0 {
+		texto = strings.Join(strings.Fields(j.Solicitud.Mensajes[n-1].Contenido), " ")
+	} else if !j.EntradasEliminadas {
+		texto = ""
+	}
+	icono, estilo := e.Iconos.Activo, e.Acento
+	switch {
+	case !j.Estado.Terminal():
+	case j.Estado == nucleo.Completado:
+		icono, estilo = e.Iconos.Ok, e.Exito
+	case j.Estado == nucleo.Cancelado:
+		icono, estilo = e.Iconos.Inactivo, e.Tenue
+	default:
+		icono, estilo = e.Iconos.Fallo, e.Error
+	}
+	estado := string(j.Estado)
+	if t := p.tx("estado." + estado); t != "estado."+estado {
+		estado = t
+	}
+	partes := []string{p.hace(j.CreadoEn), strings.TrimSpace(catalogo.NombreVisible(j.Solicitud.Agente) + " " + cmp.Or(j.ModeloEfectivo, j.ModeloEnviado)), estado}
+	return []string{estilo.Render(icono) + " " + e.Recortar(texto, ancho-2),
+		"  " + e.Tenue.Render(e.Recortar(p.a(strings.Join(partes, " "+e.Iconos.Separador+" ")), ancho-2))}
 }
 
 // ventana es cuántas líneas del contenido caben: si hay que desplazar, la última fila se queda para el indicador.

@@ -54,6 +54,10 @@ func init() {
 		// Inicio: los textos, contadores y pasos salen de los de la Web UI; aquí solo lo propio de la terminal.
 		"desplaza": "scroll",
 		"Sin conexión en vivo · reconectando…": "No live connection · reconnecting…",
-		"Ver la Ayuda de %s":                   "See the %s Help",
+		"hace %d s":          "%d s ago",
+		"hace %d min":        "%d min ago",
+		"hace %d h":          "%d h ago",
+		"hace %d d":          "%d d ago",
+		"Ver la Ayuda de %s": "See the %s Help",
 	})
 }

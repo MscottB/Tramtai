@@ -2,6 +2,7 @@ package tui
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -13,6 +14,7 @@ import (
 	"tramtai/internal/idioma"
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/pagina"
+	"tramtai/internal/tui/paginas/inicio"
 )
 
 // paginaBorra pregunta antes de borrar con x y apunta si se confirmó.
@@ -222,6 +224,16 @@ func TestOcultableSeAvisaAlSalirYAlVolver(t *testing.T) {
 	m.Update(pagina.Volver{}) // su Ctx se canceló al cambiar de espacio: Volver la inicia
 	if o.mostrada != 1 || o.iniciada != 4 {
 		t.Fatalf("si su contexto se canceló, Volver la inicia y no la muestra: %d %d", o.mostrada, o.iniciada)
+	}
+}
+
+// TestAtajosDeInicioComoElMenu: el número que Inicio escribe junto a cada paso es el de la tecla que lleva a su página.
+func TestAtajosDeInicioComoElMenu(t *testing.T) {
+	for n := 1; n <= paginasConAtajo; n++ {
+		clave, _ := atajo(strconv.Itoa(n))
+		if got := inicio.Atajo(clave); got != strconv.Itoa(n) {
+			t.Errorf("%s: Inicio dice %q y la tecla es %d", clave, got, n)
+		}
 	}
 }
 

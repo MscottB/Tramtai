@@ -29,7 +29,9 @@ const (
 	// cortesSinFlujo son los cortes seguidos tras los que se consultan los trabajos cada 5 s, como la Web UI.
 	cortesSinFlujo = 3
 	cadaLimpieza   = 500 * time.Millisecond
-	cadaRefresco   = 5 * time.Second
+	// peticionesRecientes son las filas de «Peticiones recientes».
+	peticionesRecientes = 5
+	cadaRefresco        = 5 * time.Second
 )
 
 // origen es lo que cada mensaje propio lleva para saber si aún vale: el contexto y el espacio con que se pidió y la
@@ -79,6 +81,11 @@ type (
 		e   contrato.EstadoConversor
 		err error
 	}
+	msgRecientes struct {
+		origen
+		lista []nucleo.Trabajo
+		err   error
+	}
 	msgRetencion struct {
 		origen
 		horas int
@@ -124,6 +131,7 @@ type Pagina struct {
 	hayAgentes bool
 	puntos     []contrato.EstadoPunto
 	problemas  []contrato.Espacio
+	recientes  []nucleo.Trabajo // las últimas peticiones del espacio
 	conv       *contrato.EstadoConversor
 	dias       float64
 	autoDisp   bool // este sistema admite el arranque automático
@@ -172,7 +180,8 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 	if p.avisoConversor() {
 		teclas = append(teclas, pagina.Tecla{Tecla: "p", Accion: p.tx("conversor.preparar")})
 	}
-	return append(teclas, pagina.Tecla{Tecla: "g", Accion: p.tx("inicio.detalles")}, pagina.Tecla{Tecla: "a", Accion: p.tx("menu.grupo.empezar")})
+	return append(teclas, pagina.Tecla{Tecla: "g", Accion: p.tx("inicio.detalles")}, pagina.Tecla{Tecla: "h", Accion: p.tx("inicio.verHistorial")},
+		pagina.Tecla{Tecla: "a", Accion: p.tx("menu.grupo.empezar")})
 }
 
 // flechas es el dibujo de las teclas de desplazar; en ASCII (o antes de conocer los estilos, que es cuando la app puede
@@ -189,7 +198,7 @@ func (p *Pagina) tx(clave string, pares ...string) string {
 	return p.a(datos.Textof(p.lengua, clave, pares...))
 }
 
-var textoAscii = strings.NewReplacer("·", "-", "…", "...", "’", "'", "“", "\"", "”", "\"")
+var textoAscii = strings.NewReplacer("·", "-", "…", "...", "’", "'", "“", "\"", "”", "\"", "—", "-")
 
 // a deja un texto sin los caracteres de dibujo que usan los textos de la Web UI (· … ’) cuando la consola es ASCII.
 func (p *Pagina) a(texto string) string {
@@ -220,7 +229,7 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	p.gen++
 	p.visible = true
 	p.inst, p.cargado, p.sinServ, p.err = cliente.ResumenInstancia{}, false, false, ""
-	p.agentes, p.hayAgentes, p.puntos, p.problemas, p.conv = nil, false, nil, nil, nil
+	p.agentes, p.hayAgentes, p.puntos, p.problemas, p.conv, p.recientes = nil, false, nil, nil, nil, nil
 	p.autoDisp, p.autoActivo, p.desp = false, false, 0
 	p.red, p.borrados, p.enFoto, p.enVivo, p.fallos, p.ticActivo = tranvias{}, map[string]bool{}, nil, false, 0, false
 	if c.Cli == nil {
@@ -294,6 +303,10 @@ func (p *Pagina) cargar() tea.Cmd {
 		},
 		func() tea.Msg { r, err := c.Cli.Puntos(c.Ctx, c.Instancia); return msgPuntos{o, r.Puntos, err} },
 		func() tea.Msg { l, err := c.Cli.Espacios(c.Ctx); return msgEspacios{o, l, err} },
+		func() tea.Msg {
+			l, err := c.Cli.Trabajos(c.Ctx, c.Instancia, peticionesRecientes)
+			return msgRecientes{o, l, err}
+		},
 		func() tea.Msg { e, err := c.Cli.Conversor(c.Ctx, c.Instancia); return msgConversor{o, e, err} },
 		func() tea.Msg {
 			r, err := c.Cli.Retencion(c.Ctx, c.Instancia)
@@ -313,7 +326,11 @@ func (p *Pagina) refrescar() tea.Cmd {
 	if c.Cli == nil {
 		return nil
 	}
-	cmds := []tea.Cmd{func() tea.Msg { r, err := c.Cli.Instancia(c.Ctx, c.Instancia); return msgInstancia{o, r, err} }}
+	cmds := []tea.Cmd{func() tea.Msg { r, err := c.Cli.Instancia(c.Ctx, c.Instancia); return msgInstancia{o, r, err} },
+		func() tea.Msg {
+			l, err := c.Cli.Trabajos(c.Ctx, c.Instancia, peticionesRecientes)
+			return msgRecientes{o, l, err}
+		}}
 	if p.conv != nil && (p.conv.Estado == "preparando" || p.conv.Etapa != "") {
 		cmds = append(cmds, func() tea.Msg { e, err := c.Cli.Conversor(c.Ctx, c.Instancia); return msgConversor{o, e, err} })
 	}
@@ -506,6 +523,13 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 			}
 			p.conv = &m.e
 		}
+	case msgRecientes:
+		if p.vigente(m.origen) {
+			if m.err != nil {
+				return p, p.fallo(m.err, false)
+			}
+			p.recientes = m.lista[:min(len(m.lista), peticionesRecientes)]
+		}
 	case msgRetencion:
 		if p.vigente(m.origen) {
 			p.dias = float64(int(float64(m.horas)/24*10+0.5)) / 10
@@ -570,6 +594,8 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 		p.desp = 0
 	case "end":
 		p.desp = p.maxDesp()
+	case "h":
+		return ir(pagina.PaginaHistorial, nil)
 	case "g":
 		return ir(pagina.PaginaAgentes, nil)
 	case "a":

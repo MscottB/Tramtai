@@ -53,6 +53,9 @@ export const CLAVES_INICIO: string[] = [
   'comun.ultimoDia', 'comun.ultimosDias', 'mapa.descripcion', 'mapa.principal',
   'vivo.etapaCola', 'vivo.etapaPreparacion', 'vivo.etapaEjecucion', 'vivo.etapaValidacion', 'vivo.etapaLlegada', 'vivo.etapaFallida', 'vivo.etapaCancelada',
   'vivo.enCurso', 'vivo.enCursoUno', 'vivo.hace',
+  'inicio.recientes', 'inicio.verHistorial', 'inicio.sinTrabajos', 'trabajo.entradaEliminada',
+  'estado.en_cola', 'estado.preparando_entrada', 'estado.esperando_agente', 'estado.ejecutando', 'estado.validando_salida',
+  'estado.cancelacion_solicitada', 'estado.completado', 'estado.fallido', 'estado.cancelado', 'estado.interrumpido',
 ]
 
 // CLAVES_TEXTOS son, además de las menu.*, los textos que la terminal toma de la Web UI: los de la Ayuda de la interfaz, los

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -92,21 +93,39 @@ type reloj struct{ t time.Time }
 func (r *reloj) ahora() time.Time { return r.t }
 
 // nueva crea la página con el reloj controlado, las esperas instantáneas (apuntadas) y el arranque automático disponible.
-func nueva(lengua string) (*Pagina, *reloj, *[]time.Duration) {
+func nueva(lengua string) (*Pagina, *reloj, *apuntes) {
 	p := Nueva(lengua).(*Pagina)
 	r := &reloj{t: time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)}
-	var esperas []time.Duration
+	esperas := &apuntes{}
 	p.ahora = r.ahora
 	p.esperaPara = func(d time.Duration) <-chan time.Time {
 		if d != cadaLimpieza && d != cadaRefresco { // solo las esperas de la reconexión
-			esperas = append(esperas, d)
+			esperas.add(d)
 		}
 		c := make(chan time.Time, 1)
 		c <- time.Time{}
 		return c
 	}
 	p.autoarranque = func() (bool, bool) { return true, false }
-	return p, r, &esperas
+	return p, r, esperas
+}
+
+// apuntes guarda duraciones que apunta la goroutine del flujo y lee la prueba.
+type apuntes struct {
+	mu sync.Mutex
+	d  []time.Duration
+}
+
+func (a *apuntes) add(d time.Duration) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.d = append(a.d, d)
+}
+
+func (a *apuntes) lista() []time.Duration {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return slices.Clone(a.d)
 }
 
 func contexto(cli *cliente.Cliente, instancia string) pagina.Contexto {
@@ -244,16 +263,25 @@ func TestRedComoMucho12(t *testing.T) {
 
 // ensayo es un flujo falso: cada llamada ejecuta el siguiente guion.
 type ensayo struct {
+	mu       sync.Mutex // la goroutine del flujo escribe y la prueba lee
 	llamadas int
 	plazos   []time.Duration
 	guion    []func(ctx context.Context, alEvento func(string, []byte) error) error
 }
 
 func (e *ensayo) abrir(ctx context.Context, _ string, plazo time.Duration, alEvento func(string, []byte) error) error {
+	e.mu.Lock()
 	e.plazos = append(e.plazos, plazo)
 	paso := e.guion[min(e.llamadas, len(e.guion)-1)]
 	e.llamadas++
+	e.mu.Unlock()
 	return paso(ctx, alEvento)
+}
+
+func (e *ensayo) cuenta() (llamadas int, plazos []time.Duration) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.llamadas, slices.Clone(e.plazos)
 }
 
 func foto(alEvento func(string, []byte) error) { _ = alEvento("foto", []byte("{}")) }
@@ -280,16 +308,17 @@ func TestRedReconecta(t *testing.T) {
 	correr(p, p.Iniciar(contexto(cli, id)))
 	t.Cleanup(p.Ocultar)
 	hasta(t, p, func() bool { return len(p.red) == 1 && p.enVivo })
-	hasta(t, p, func() bool { return f.llamadas == 3 && p.enVivo && len(p.red) == 0 })
-	if !slices.Equal(*esperas, []time.Duration{time.Second, 2 * time.Second}) {
-		t.Fatalf("esperas %v", *esperas)
+	hasta(t, p, func() bool { n, _ := f.cuenta(); return n == 3 && p.enVivo && len(p.red) == 0 })
+	if !slices.Equal(esperas.lista(), []time.Duration{time.Second, 2 * time.Second}) {
+		t.Fatalf("esperas %v", esperas.lista())
 	}
 	if p.fallos != 0 {
 		t.Fatalf("la foto del flujo nuevo cuenta como recuperado: %d fallos", p.fallos)
 	}
-	for _, plazo := range f.plazos {
+	_, plazos := f.cuenta()
+	for _, plazo := range plazos {
 		if plazo != 45*time.Second {
-			t.Fatalf("el flujo se vigila a los 45 s: %v", f.plazos)
+			t.Fatalf("el flujo se vigila a los 45 s: %v", plazos)
 		}
 	}
 }
@@ -607,6 +636,11 @@ func TestCabeEn60x20(t *testing.T) {
 	p.Update(msgEspacios{origen: p.origenActual(), lista: []contrato.Espacio{{Nombre: "Notas con un nombre muy largo y tildes áéíóú", UltimoError: "x"}}})
 	p.Update(msgConversor{origen: p.origenActual(), e: contrato.EstadoConversor{Estado: "error", Mensaje: "sin red"}})
 	p.Update(msgAgentes{origen: p.origenActual(), lista: []adaptador{{Agente: "claude"}, {Agente: "codex", Desconectado: true}}})
+	var recientes []nucleo.Trabajo
+	for i := 0; i < 5; i++ {
+		recientes = append(recientes, trabajoDe(fmt.Sprint("r", i), "una pregunta bastante larga con tildes áéíóú que no cabe en una sola línea de sesenta columnas", "claude", "claude/modelo-con-nombre-largo", "completado", r.t))
+	}
+	p.Update(msgRecientes{origen: p.origenActual(), lista: recientes})
 	for i := 0; i < 14; i++ {
 		r.t = r.t.Add(time.Second)
 		p.evento(ev(con(fmt.Sprintf("t%02d", i), "validando_salida", "validacion"), func(e *evento) {
@@ -630,7 +664,7 @@ func TestCabeEn60x20(t *testing.T) {
 	}
 	p.Update(tecla("end"))
 	fin := p.Vista()
-	if !strings.Contains(fin, "Ver la Ayuda de Empezar") {
+	if !strings.Contains(fin, "Ver historial") {
 		t.Fatalf("End llega al final:\n%s", fin)
 	}
 	p.Update(tecla("home"))
@@ -660,6 +694,100 @@ func TestTextosComoLaWeb(t *testing.T) {
 		"Connect at least one agent", "1 of 1 agents ready", "Try an agent", "Connect your app", "running"} {
 		if !strings.Contains(v, quiere) && !strings.Contains(strings.ToLower(v), strings.ToLower(quiere)) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
+		}
+	}
+}
+
+// trabajoDe es un trabajo reciente de la prueba: lo que se escribió, el agente, el modelo, cómo acabó y hace cuánto.
+func trabajoDe(id, texto, agente, modelo, estado string, creado time.Time) nucleo.Trabajo {
+	j := nucleo.Trabajo{ID: id, Estado: nucleo.Estado(estado), ModeloEfectivo: modelo, CreadoEn: creado}
+	j.Solicitud.Agente = agente
+	j.Solicitud.Mensajes = []nucleo.Mensaje{{Rol: "usuario", Contenido: "antes"}, {Rol: "usuario", Contenido: texto}}
+	return j
+}
+
+// TestPeticionesRecientes: las 5 últimas, con lo que escribiste, el agente y el modelo, el estado y hace cuánto, como en
+// Panel.vue; h lleva al Historial.
+func TestPeticionesRecientes(t *testing.T) {
+	p, r, _, _ := abierta(t)
+	p.c.Alto = 60
+	if v := p.Vista(); !strings.Contains(v, "Peticiones recientes") || !strings.Contains(v, "Todavía no hay peticiones") {
+		t.Fatalf("vacío:\n%s", v)
+	}
+	var lista []nucleo.Trabajo
+	for i := 0; i < 7; i++ {
+		lista = append(lista, trabajoDe(fmt.Sprint("j", i), fmt.Sprintf("pregunta %d\ncon salto", i), "claude", "claude/sonnet", "completado", r.t.Add(-time.Duration(i+1)*time.Minute)))
+	}
+	lista[1].Estado = "fallido"
+	lista[2].Solicitud.Mensajes, lista[2].EntradasEliminadas = nil, true
+	lista[3].CreadoEn = r.t.Add(-30 * time.Second)
+	lista[4].CreadoEn = r.t.Add(-3 * time.Hour)
+	p.Update(msgRecientes{origen: p.origenActual(), lista: lista})
+	v := p.Vista()
+	for _, quiere := range []string{"pregunta 0 con salto", "Claude claude/sonnet", "hace 1 min", "Completado", "Falló", "(entrada eliminada por la retención)",
+		"hace 30 s", "hace 3 h", "Ver historial"} {
+		if !strings.Contains(v, quiere) {
+			t.Fatalf("falta %q:\n%s", quiere, v)
+		}
+	}
+	if strings.Contains(v, "pregunta 5") || strings.Contains(v, "pregunta 6") {
+		t.Fatalf("solo las 5 últimas:\n%s", v)
+	}
+	_, cmd := p.Update(tecla("h"))
+	if ir, ok := correr(p, cmd)[0].(pagina.IrA); !ok || ir.Pagina != pagina.PaginaHistorial {
+		t.Fatalf("h lleva al Historial: %v", ir)
+	}
+	// Los viejos de una semana se fechan.
+	lista[0].CreadoEn = r.t.Add(-10 * 24 * time.Hour)
+	p.Update(msgRecientes{origen: p.origenActual(), lista: lista[:1]})
+	if v := p.Vista(); !strings.Contains(v, r.t.Add(-10*24*time.Hour).Local().Format("2006-01-02")) {
+		t.Fatalf("más de una semana, la fecha:\n%s", v)
+	}
+}
+
+// TestPeticionesRecientesDelServicio: Iniciar las pide al servicio (las 5 últimas) y el refresco las pone al día.
+func TestPeticionesRecientesDelServicio(t *testing.T) {
+	cli, id := prueba.Servicio(t)
+	for i := 0; i < 6; i++ {
+		j, err := cli.Crear(context.Background(), id, nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: fmt.Sprint("mensaje número ", i)}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for limite := time.Now().Add(5 * time.Second); ; time.Sleep(10 * time.Millisecond) {
+			if g, err := cli.Trabajo(context.Background(), id, j.ID); err == nil && g.Estado.Terminal() {
+				break
+			}
+			if time.Now().After(limite) {
+				t.Fatal("el trabajo no terminó")
+			}
+		}
+	}
+	p, _, _ := nueva("es")
+	p.c.Alto = 60
+	correr(p, p.Iniciar(contexto(cli, id)))
+	t.Cleanup(p.Ocultar)
+	p.c.Alto = 60
+	if n := len(p.recientes); n != 5 {
+		t.Fatalf("pide 5: %d", n)
+	}
+	if v := p.Vista(); !strings.Contains(v, "mensaje número 5") || strings.Contains(v, "mensaje número 0") {
+		t.Fatalf("las más nuevas primero:\n%s", v)
+	}
+}
+
+// TestPasosConSuAtajo: cada paso dice con qué tecla (1 a 7) se va a su página, como el botón de la Web UI.
+func TestPasosConSuAtajo(t *testing.T) {
+	p, _, _, _ := abierta(t)
+	p.c.Alto = 60
+	v := p.Vista()
+	for _, quiere := range []string{"2 Agentes", "3 Probar", "4 Mis APIs", "7 Ajustes"} {
+		if !strings.Contains(v, quiere) {
+			t.Fatalf("falta %q:\n%s", quiere, v)
+		}
+	}
+	for clave, quiere := range map[string]string{"inicio": "1", "agentes": "2", "ejecutar": "3", "conectar": "4", "historial": "5", "espacios": "6", "configuracion": "7"} {
+		if Atajo(clave) != quiere {
+			t.Fatalf("el atajo de %s es %s, no %s", clave, quiere, Atajo(clave))
 		}
 	}
 }
