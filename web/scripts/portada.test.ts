@@ -76,15 +76,17 @@ test('la portada cuenta el mapa en vivo y no habla de la «API principal»', () 
 const carpeta = new URL('../../site/capturas/', import.meta.url)
 const figuras = demo.match(/<figure class="captura demo-paso"[\s\S]*?<\/figure>/g) ?? []
 
-test('la demo es una figura por paso de la bienvenida, cada una con su captura en claro y oscuro', () => {
+test('la demo es una figura por paso de la bienvenida, cada una con su captura en claro y oscuro y en los dos idiomas', () => {
   assert.ok(demo, 'falta <section id="demo">')
   assert.equal(figuras.length, pasos.length, 'una figura por paso')
   figuras.forEach((figura, i) => {
     const n = i + 1
-    for (const tema of ['claro', 'oscuro']) {
-      const base = `capturas/bienvenida-${n}-${tema}`
-      assert.match(figura, new RegExp(`<img class="solo-${tema}" src="${base}-1440\\.webp" srcset="${base}-960\\.webp 960w, ${base}-1440\\.webp 1440w" sizes="[^"]+" width="1440" height="900" loading="lazy" decoding="async" alt="[^"]+" data-alt-en="[^"]+">`), `paso ${n}, ${tema}`)
-    }
+    for (const tema of ['claro', 'oscuro'])
+      for (const idioma of ['es', 'en']) {
+        const base = `capturas/bienvenida-${n}-${tema}-${idioma}`
+        // Cada imagen lleva su idioma (lang) y su alt en ese idioma: el CSS oculta la del otro, como en la Ayuda.
+        assert.match(figura, new RegExp(`<img class="solo-${tema}" lang="${idioma}" src="${base}-1440\\.webp" srcset="${base}-960\\.webp 960w, ${base}-1440\\.webp 1440w" sizes="[^"]+" width="1440" height="900" loading="lazy" decoding="async" alt="[^"]+">`), `paso ${n}, ${tema}, ${idioma}`)
+      }
   })
   // La primera se ve; el resto espera su turno (sin JavaScript queda la primera y la lista de pasos).
   assert.doesNotMatch(figuras[0], /^<figure[^>]* hidden/)
@@ -114,14 +116,15 @@ test('las capturas de la demo existen y pesan poco: 150 KB cada una de 1440 y 6 
   let total = 0
   for (let n = 1; n <= pasos.length; n++)
     for (const tema of ['claro', 'oscuro'])
-      for (const ancho of [960, 1440]) {
-        const nombre = `bienvenida-${n}-${tema}-${ancho}.webp`
-        assert.ok(archivos.includes(nombre), nombre)
-        const peso = statSync(new URL(nombre, carpeta)).size
-        total += peso
-        if (ancho === 1440) assert.ok(peso <= 150 * 1024, `${nombre} pesa ${peso} bytes`)
-      }
-  assert.equal(archivos.length, pasos.length * 4, 'sobran capturas de la demo')
+      for (const idioma of ['es', 'en'])
+        for (const ancho of [960, 1440]) {
+          const nombre = `bienvenida-${n}-${tema}-${idioma}-${ancho}.webp`
+          assert.ok(archivos.includes(nombre), nombre)
+          const peso = statSync(new URL(nombre, carpeta)).size
+          total += peso
+          if (ancho === 1440) assert.ok(peso <= 150 * 1024, `${nombre} pesa ${peso} bytes`)
+        }
+  assert.equal(archivos.length, pasos.length * 8, 'sobran capturas de la demo')
   assert.ok(total <= 6 * 1024 * 1024, `la demo pesa ${total} bytes`)
 })
 

@@ -39,7 +39,7 @@ for (const tema of temas)
 export const SIN_CAPTURA: Record<string, string> = {}
 
 // BIENVENIDA son los pasos de la bienvenida, en su orden: la demo de la portada tiene una pantalla completa por paso
-// (site/capturas/bienvenida-<n>-<claro|oscuro>-<960|1440>.webp, n desde 1), con la ventana del recorrido encima.
+// (site/capturas/bienvenida-<n>-<claro|oscuro>-<es|en>-<960|1440>.webp, n desde 1), con la ventana del recorrido encima.
 export const BIENVENIDA = pasosBienvenida()
 
 export const PORTADA: { nombre: string; pagina: string }[] = [

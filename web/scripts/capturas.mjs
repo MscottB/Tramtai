@@ -10,6 +10,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { createServer } from 'node:net'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import en from '../src/idiomas/en.ts'
 import es from '../src/idiomas/es.ts'
 import { ANCLAS, BIENVENIDA, CAPTURAS, PORTADA, SIN_CAPTURA } from './capturas-lista.ts'
 
@@ -261,20 +262,22 @@ try {
           console.log(`site/capturas/${p.nombre}-${tema}-${ancho}.webp`)
         }
       }
-  // La demo de la portada es la bienvenida de verdad: cada tema carga Inicio como la primera vez (sin la marca de
+  // La demo de la portada es la bienvenida de verdad: cada tema e idioma cargan Inicio como la primera vez (sin la marca de
   // bienvenida), acepta la oferta y, en cada paso, saca la pantalla completa con la ventana del recorrido encima; el
   // «Siguiente» lo pulsa el script, como quien hace el recorrido. Los datos son los de demostración de arriba. Sale en la
   // corrida completa y con --bienvenida.
   if (soloBienvenida || (!solo && !soloSitio && !soloRecorridos))
-    for (const tema of ['claro', 'oscuro']) {
-      await abrir('inicio', tema, 'es', '.pagina', 1440, 900)
+    for (const tema of ['claro', 'oscuro'])
+     for (const idioma of ['es', 'en']) {
+      const textos = idioma === 'es' ? es : en
+      await abrir('inicio', tema, idioma, '.pagina', 1440, 900)
       await evaluar(`localStorage.removeItem('tramtai.bienvenida')`)
       await enviar('Page.navigate', { url: `${base}/?c=${++carga}#inicio` })
-      const empezar = `[...document.querySelectorAll('.q-dialog button')].find((b) => b.innerText.trim() === ${JSON.stringify(es['bienvenida.empezar'])})`
+      const empezar = `[...document.querySelectorAll('.q-dialog button')].find((b) => b.innerText.trim() === ${JSON.stringify(textos['bienvenida.empezar'])})`
       await hasta(() => evaluar(`!!(${empezar})`), 20, 'la oferta de la bienvenida')
       await evaluar(`(${empezar}).click()`)
       for (const [i, paso] of BIENVENIDA.entries()) {
-        const titulo = es[paso.titulo]
+        const titulo = textos[paso.titulo]
         await hasta(() => evaluar(`document.querySelector('.driver-popover-title')?.innerText === ${JSON.stringify(titulo)}`), 20, `el paso ${i + 1} «${titulo}»`)
         if (paso.ancla) await hasta(() => evaluar(`!!document.querySelector('.driver-active-element')`), 10, `el resaltado de ${paso.ancla}`)
         await esperar(1000) // la ventana y el resaltado llegan con su animación, y los datos de la página con ella
@@ -286,8 +289,8 @@ try {
         for (const ancho of [1440, 960]) {
           const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80,
             clip: { x: 0, y: 0, width: 1440, height: 900, scale: ancho / 1440 } })
-          writeFileSync(join(destinoPortada, `bienvenida-${i + 1}-${tema}-${ancho}.webp`), Buffer.from(data, 'base64'))
-          console.log(`site/capturas/bienvenida-${i + 1}-${tema}-${ancho}.webp`)
+          writeFileSync(join(destinoPortada, `bienvenida-${i + 1}-${tema}-${idioma}-${ancho}.webp`), Buffer.from(data, 'base64'))
+          console.log(`site/capturas/bienvenida-${i + 1}-${tema}-${idioma}-${ancho}.webp`)
         }
         if (i < BIENVENIDA.length - 1) await evaluar(`document.querySelector('.driver-popover-next-btn').click()`)
       }
