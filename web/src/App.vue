@@ -171,7 +171,7 @@
           </q-card>
         </div>
         <component :is="actual.componente" v-else :key="sesion.instancia" v-bind="seccion === 'ayuda' ? { tema: ruta.tema } : {}" @ir="ir"
-          @abrir-proyecto="dialogoProyecto = true" />
+          @abrir-proyecto="dialogoProyecto = true" @recorrido="empezarBienvenida" />
       </q-page>
     </q-page-container>
 
@@ -290,7 +290,10 @@
 import { computed, markRaw, onMounted, onUnmounted, provide, ref, watch, watchEffect, type Component } from 'vue'
 import { useQuasar } from 'quasar'
 import { api, avisar, avisarError, buscarActualizacionAhora, ErrorApi, reiniciarYSeguir } from './api/cliente'
-import { actualizacion, dialogoActualizar, sesion } from './estado'
+import { actualizacion, bienvenida, dialogoActualizar, marcarBienvenida, sesion } from './estado'
+import { entradaPorEnlace, ofrecerBienvenida } from './bienvenida'
+import { pasosBienvenida } from './recorrido'
+import { useRecorrido } from './composables/useRecorrido'
 import { useActualizacion } from './composables/useActualizacion'
 import { useSesion } from './composables/useSesion'
 import { useSondeo } from './composables/useSondeo'
@@ -437,6 +440,34 @@ function tituloDe(id?: string) {
 }
 
 watchEffect(() => (document.title = `${tituloDe(pagina.value)} · Tramtai`))
+
+// Una sola instancia del recorrido guiado: la usan la bienvenida y, después, el «Muéstrame en pantalla» de la Ayuda.
+const { empezar: hacerRecorrido } = useRecorrido(ir, seccion)
+
+// La bienvenida: empezarla (o repetirla desde Primeros pasos) la marca hecha, aunque se cierre a medias.
+function empezarBienvenida() {
+  marcarBienvenida('hecha')
+  hacerRecorrido(pasosBienvenida())
+}
+
+// Se ofrece una vez por carga, con la sesión abierta y en Inicio, y nunca si se entró por un enlace a otra página.
+const enlaceProfundo = entradaPorEnlace(location.hash)
+let bienvenidaOfrecida = false
+watch([() => !!sesion.value?.instancia, seccion], ([conSesion, pag]) => {
+  if (!ofrecerBienvenida({ sesion: conSesion, pagina: pag as Pagina, entradaPorEnlace: enlaceProfundo, estado: bienvenida.value, yaOfrecida: bienvenidaOfrecida })) return
+  bienvenidaOfrecida = true
+  let empezada = false
+  $q.dialog({ title: t('bienvenida.titulo'), message: t('bienvenida.texto'),
+    cancel: { flat: true, label: t('bienvenida.ahoraNo'), noCaps: true }, ok: { color: 'primary', label: t('bienvenida.empezar'), unelevated: true, noCaps: true } })
+    .onOk(() => {
+      empezada = true
+      empezarBienvenida()
+    })
+    // «Ahora no», Esc o clic fuera: no se vuelve a ofrecer
+    .onDismiss(() => {
+      if (!empezada) marcarBienvenida('descartada')
+    })
+}, { immediate: true })
 
 function iconoInstancia(ambito?: string) {
   return ambito === 'proyecto' ? 'o_folder' : 'o_public'

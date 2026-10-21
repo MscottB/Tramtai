@@ -54,3 +54,23 @@ export function ocultarGuia(oculta: boolean) {
     // no se recuerda, pero se aplica
   }
 }
+
+// bienvenida: la bienvenida se ofrece una vez; empezarla o cerrarla a medias es 'hecha', «Ahora no» es 'descartada'.
+// Sin almacenamiento solo queda en memoria: se ofrece como mucho una vez por carga.
+const claveBienvenida = 'tramtai.bienvenida'
+export const bienvenida = ref<'hecha' | 'descartada' | null>(((): 'hecha' | 'descartada' | null => {
+  try {
+    const v = localStorage.getItem(claveBienvenida)
+    return v === 'hecha' || v === 'descartada' ? v : null
+  } catch {
+    return null
+  }
+})())
+export function marcarBienvenida(valor: 'hecha' | 'descartada') {
+  bienvenida.value = valor
+  try {
+    localStorage.setItem(claveBienvenida, valor)
+  } catch {
+    // no se recuerda, pero se aplica
+  }
+}
