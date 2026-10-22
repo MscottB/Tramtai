@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"tramtai/internal/herramientas"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
@@ -260,4 +261,18 @@ func (s *Servidor) ejecutarFachada(r *http.Request, t nucleo.Trabajo, alTexto fu
 		return final, errDesconectado
 	}
 	return final, err
+}
+
+// resultadoFachada sigue el trabajo, comprueba que terminó bien e interpreta su salida; prefijo va delante del id del
+// trabajo en los ids de las llamadas. Con errDesconectado ya no hay a quién responder.
+func (s *Servidor) resultadoFachada(r *http.Request, t nucleo.Trabajo, prefijo string, alTexto func(string) error, latido func() error) (nucleo.Trabajo, string, []nucleo.Llamada, error) {
+	final, err := s.ejecutarFachada(r, t, alTexto, latido)
+	if err != nil {
+		return t, "", nil, err // la base no devolvió el trabajo: se informa con lo que se aceptó
+	}
+	if final.Estado != nucleo.Completado {
+		return final, "", nil, errorDeTrabajo(final)
+	}
+	texto, llamadas, err := herramientas.Interpretar(final.Solicitud, final.Salida, prefijo+t.ID)
+	return final, texto, llamadas, err
 }

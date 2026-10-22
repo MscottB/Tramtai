@@ -270,20 +270,11 @@ func (s *Servidor) chatCompletions(w http.ResponseWriter, r *http.Request) {
 	id, creado := "chatcmpl-"+t.ID, t.CreadoEn.Unix()
 
 	if !p.Stream {
-		final, err := s.ejecutarFachada(r, t, nil, nil)
+		final, texto, llamadas, err := s.resultadoFachada(r, t, "call_", nil, nil)
 		if err != nil {
 			if !errors.Is(err, errDesconectado) {
 				EscribirError(w, r, err)
 			}
-			return
-		}
-		if final.Estado != nucleo.Completado {
-			EscribirError(w, r, errorDeTrabajo(final))
-			return
-		}
-		texto, llamadas, err := herramientas.Interpretar(final.Solicitud, final.Salida, "call_"+t.ID)
-		if err != nil {
-			EscribirError(w, r, err)
 			return
 		}
 		mensaje, fin := map[string]any{"role": "assistant", "content": texto}, "stop"
@@ -313,7 +304,7 @@ func (s *Servidor) chatCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	directo := enVivo(sol) && !herramientas.Activas(sol)
-	final, err := s.ejecutarFachada(r, t, func(texto string) error {
+	final, texto, llamadas, err := s.resultadoFachada(r, t, "call_", func(texto string) error {
 		if !directo {
 			return nil
 		}
@@ -323,15 +314,6 @@ func (s *Servidor) chatCompletions(w http.ResponseWriter, r *http.Request) {
 		if !errors.Is(err, errDesconectado) {
 			fallar(err)
 		}
-		return
-	}
-	if final.Estado != nucleo.Completado {
-		fallar(errorDeTrabajo(final))
-		return
-	}
-	texto, llamadas, err := herramientas.Interpretar(final.Solicitud, final.Salida, "call_"+t.ID)
-	if err != nil {
-		fallar(err)
 		return
 	}
 	if !directo && texto != "" {
@@ -459,20 +441,11 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 	avisar(w, avisos)
 
 	if !p.Stream {
-		final, err := s.ejecutarFachada(r, t, nil, nil)
+		final, texto, llamadas, err := s.resultadoFachada(r, t, "call_", nil, nil)
 		if err != nil {
 			if !errors.Is(err, errDesconectado) {
 				EscribirError(w, r, err)
 			}
-			return
-		}
-		if final.Estado != nucleo.Completado {
-			EscribirError(w, r, errorDeTrabajo(final))
-			return
-		}
-		texto, llamadas, err := herramientas.Interpretar(final.Solicitud, final.Salida, "call_"+t.ID)
-		if err != nil {
-			EscribirError(w, r, err)
 			return
 		}
 		avisarUso(w, final)
@@ -505,15 +478,12 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 		abrirMensaje() // el texto llega en vivo; con herramientas no se sabe qué habrá hasta el final
 	}
 	directo := enVivo(sol) && !herramientas.Activas(sol)
-	final, err := s.ejecutarFachada(r, t, func(texto string) error {
+	final, texto, llamadas, err := s.resultadoFachada(r, t, "call_", func(texto string) error {
 		if !directo {
 			return nil
 		}
 		return delta(texto)
 	}, f.latido)
-	if err != nil && !errors.Is(err, errDesconectado) {
-		final = t // la base no devolvió el trabajo: se informa con lo que se aceptó
-	}
 	fallar := func(e error) {
 		fallo := objetoRespuesta(final, modeloRespuesta(p.Model, t, final), "failed", nil)
 		fallo["error"] = map[string]any{"code": nucleo.CodigoDe(e), "message": nucleo.MensajeDe(e)}
@@ -523,15 +493,6 @@ func (s *Servidor) respuestas(w http.ResponseWriter, r *http.Request) {
 		if !errors.Is(err, errDesconectado) {
 			fallar(err)
 		}
-		return
-	}
-	if final.Estado != nucleo.Completado {
-		fallar(errorDeTrabajo(final))
-		return
-	}
-	texto, llamadas, err := herramientas.Interpretar(final.Solicitud, final.Salida, "call_"+t.ID)
-	if err != nil {
-		fallar(err)
 		return
 	}
 	indice := 0
