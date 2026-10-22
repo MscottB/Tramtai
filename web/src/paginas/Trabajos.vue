@@ -9,7 +9,8 @@
 
     <q-card data-captura="historial">
       <q-card-section class="row items-center q-col-gutter-sm" data-recorrido="historial.filtros">
-        <div class="col-12 col-md">
+        <!-- Las cuatro opciones no caben a 360 px: una sola fila que se desplaza, como en Agentes. -->
+        <div class="col-12 col-md desplazable-x">
           <q-btn-toggle v-model="filtro" no-caps flat dense toggle-color="primary" class="segmentado inline-flex"
             :options="[{ label: t('historial.todos'), value: 'todos' }, { label: t('inicio.enCurso'), value: 'curso' }, { label: t('inicio.completados'), value: 'ok' }, { label: t('inicio.conError'), value: 'error' }]" />
         </div>
@@ -17,7 +18,7 @@
           <q-select v-model="origen" :options="origenes" emit-value map-options dense outlined :label="t('historial.origen')" />
         </div>
         <div class="col-12 col-sm-6 col-md-3">
-          <q-input v-model="busqueda" dense outlined clearable :placeholder="t('historial.buscar')" :aria-label="t('historial.buscar')" debounce="150">
+          <q-input v-model="busqueda" dense outlined clearable :placeholder="textoBuscar" :aria-label="textoBuscar" debounce="150">
             <template #prepend><q-icon name="search" /></template>
           </q-input>
         </div>
@@ -31,6 +32,7 @@
           <EstadoVacio v-if="error" role="alert" class="full-width" :titulo="t('comun.errorCarga')" :texto="error" :accion="t('comun.reintentar')"
             :cargando="cargando" @accion="cargar()" />
           <EstadoVacio v-else-if="!cargando" class="full-width" :titulo="hayFiltro ? t('historial.sinFiltro') : t('historial.vacio')"
+            :texto="hayFiltro && hayMas ? t('historial.sinFiltroMas') : undefined"
             :accion="hayFiltro ? t('historial.quitarFiltros') : t('historial.irProbar')" @accion="hayFiltro ? quitarFiltros() : emit('ir', 'ejecutar')" />
         </template>
         <template #body-cell-estado="props">
@@ -158,6 +160,9 @@ const busqueda = ref<string | null>('')
 // Llega una API por su nombre (Mis APIs) o un filtro ya armado («o:probar» desde Probar).
 const origen = ref(origenHistorial.value.includes(':') ? origenHistorial.value : origenHistorial.value ? 'p:' + origenHistorial.value : '')
 const hayFiltro = computed(() => filtro.value !== 'todos' || !!busqueda.value || !!origen.value)
+// La búsqueda y el filtro de estado miran solo las peticiones cargadas (el servicio aún no los admite): el buscador
+// dice cuántas son.
+const textoBuscar = computed(() => t('historial.buscar', { n: Math.max(trabajos.value.length, PAGINA) }))
 function quitarFiltros() {
   filtro.value = 'todos'
   busqueda.value = ''

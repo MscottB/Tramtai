@@ -221,9 +221,12 @@ a {
 .q-dialog__inner--right:has(> .hoja-detalle) {
   padding: 0;
 }
+/* dvh: en el móvil, 100vh incluye la barra del navegador y taparía las acciones del pie (Reintentar, Eliminar). */
 .q-dialog__inner--right > .hoja-detalle {
   height: 100vh;
+  height: 100dvh;
   max-height: 100vh;
+  max-height: 100dvh;
   border-radius: 0;
   border-width: 0 0 0 1px;
 }
@@ -249,11 +252,25 @@ input[type='number'] {
 /* Fila de una API en Mis APIs: insignia, datos, uso y acciones. */
 .fila-api {
   display: grid;
-  grid-template-columns: auto minmax(0, 1.3fr) minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1.3fr) minmax(0, 1fr);
   gap: 8px 16px;
   align-items: start;
   padding: 16px;
   border-top: 1px solid var(--borde);
+}
+/* El nombre abre el detalle también con el teclado (la fila entera, con el ratón). */
+.fila-api__nombre {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.fila-api__nombre:hover {
+  text-decoration: underline;
 }
 .fila-api__info {
   display: grid;
@@ -264,8 +281,7 @@ input[type='number'] {
   .fila-api {
     grid-template-columns: auto minmax(0, 1fr);
   }
-  .fila-api__uso,
-  .fila-api__acciones {
+  .fila-api__uso {
     grid-column: 2;
   }
 }

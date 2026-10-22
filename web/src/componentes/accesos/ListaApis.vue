@@ -3,7 +3,8 @@
     <h2 class="titulo-seccion">{{ t('puntos.titulo') }}</h2>
     <div class="texto-suave text-body2">{{ t('puntos.texto') }}</div>
   </q-card-section>
-  <q-card-section v-if="puntos.length > 1 || hayFiltro" class="row q-col-gutter-sm q-pt-none">
+  <!-- Los filtros, desde FILTROS_DESDE APIs: con pocas pesan más que la lista. -->
+  <q-card-section v-if="puntos.length >= FILTROS_DESDE || hayFiltro" class="row q-col-gutter-sm q-pt-none">
     <div class="col-12 col-md">
       <q-input v-model="busqueda" dense outlined clearable debounce="150" :placeholder="t('puntos.buscarApi')" :aria-label="t('puntos.buscarApi')">
         <template #prepend><q-icon name="search" /></template>
@@ -63,7 +64,7 @@
       <span class="linea__chapa linea__chapa--grande" :class="['linea--' + (f.p.agente ?? 'otro'), { 'linea__chapa--apagada': !activo(f.p) }]" aria-hidden="true">{{ f.p.agente ? codigoLinea(f.p.agente) : 'API' }}</span>
       <div class="fila-api__info">
         <div class="row items-center q-gutter-x-sm">
-          <span class="text-weight-medium">{{ f.p.nombre }}</span>
+          <button type="button" class="fila-api__nombre" @click.stop="emit('abrir', f.p)">{{ f.p.nombre }}</button>
           <span class="etiqueta" :class="!activo(f.p) ? 'etiqueta--neutro' : f.p.error ? 'etiqueta--error' : 'etiqueta--ok'">{{ activo(f.p) ? t('puntos.activo') : t('puntos.desactivado') }}</span>
           <span v-if="f.p.esquema" class="etiqueta etiqueta--info">{{ t('puntos.json') }}</span>
           <span v-if="f.p.esquema && f.p.reintentos_salida" class="etiqueta etiqueta--neutro">{{ t('puntos.correcciones', { n: f.p.reintentos_salida }) }}</span>
@@ -88,9 +89,6 @@
         <span v-else class="texto-suave">{{ t('puntos.sinUso') }}</span>
         <BarrasPresupuesto v-if="presupuestos[f.p.nombre]" :estado="presupuestos[f.p.nombre]" sin-boton />
       </div>
-      <div class="fila-api__acciones row items-center no-wrap q-gutter-x-xs">
-        <q-btn unelevated dense no-caps color="primary" icon="o_cable" class="q-px-sm" :label="t('puntos.conectar')" @click.stop="emit('abrir', f.p)" />
-      </div>
     </div>
     </template>
     <div v-if="totalPaginas > 1" class="row items-center justify-between q-px-md q-py-sm q-gutter-sm">
@@ -103,7 +101,10 @@
   <template v-else-if="!puntos.length">
     <div v-if="cargando" class="q-pa-md" role="status" :aria-label="t('comun.cargando')"><q-skeleton v-for="n in 3" :key="n" type="text" /></div>
     <EstadoVacio v-else-if="error" role="alert" :titulo="t('comun.errorCarga')" :texto="error" :accion="t('comun.reintentar')" @accion="emit('recargar')" />
-    <EstadoVacio v-else :titulo="t('puntos.vacio')" :accion="t('puntos.nuevo')" @accion="emit('nuevo')" />
+    <!-- Quien empieza busca la URL y la clave: el vacío lleva a la clave del espacio antes que a crear una API de más. -->
+    <EstadoVacio v-else :titulo="t('puntos.vacio')" :accion="t('puntos.verClave')" @accion="emit('verClave')">
+      <q-btn flat no-caps color="primary" icon="add" :label="t('puntos.nuevo')" @click="emit('nuevo')" />
+    </EstadoVacio>
   </template>
 </template>
 
@@ -124,10 +125,11 @@ import { activo, contratos, guardar, leer, nombreContrato } from './comun'
 // cargando y error son los de la lista de APIs (Accesos la pide); recargar la vuelve a pedir.
 const props = defineProps<{ puntos: EstadoPunto[]; uso: Record<string, UsoPunto>; presupuestos: Record<string, EstadoPresupuesto>; opciones: OpcionModelo[];
   ocupado: string; cargando?: boolean; error?: string }>()
-const emit = defineEmits<{ abrir: [p: EstadoPunto]; nuevo: []; recargar: []; activarGrupo: [grupo: string, valor: boolean]; verPeticiones: [nombre: string];
+const emit = defineEmits<{ abrir: [p: EstadoPunto]; nuevo: []; recargar: []; verClave: []; activarGrupo: [grupo: string, valor: boolean]; verPeticiones: [nombre: string];
   grupos: [nombres: string[]] }>()
 const filtroGrupo = defineModel<string | null>('filtroGrupo', { required: true }) // null: todos; '': sin grupo
 const $q = useQuasar()
+const FILTROS_DESDE = 8
 
 const busqueda = ref<string | null>('')
 const orden = ref<'nombre' | 'uso' | 'ultima'>(leer('tramtai.ordenApis', 'nombre'))

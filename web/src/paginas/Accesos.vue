@@ -31,7 +31,7 @@
       <q-tab-panels v-model="pestana" animated keep-alive>
         <q-tab-panel name="apis" class="q-pa-none">
           <ListaApis v-model:filtro-grupo="filtroGrupo" :puntos="puntos" :uso="uso" :presupuestos="presupuestos" :opciones="opciones" :ocupado="ocupado"
-            :cargando="cargandoPuntos" :error="errorPuntos" @recargar="cargarPuntos" @abrir="abrirDetalle" @nuevo="abrirNuevo" @activar-grupo="activarGrupo" @ver-peticiones="verPeticiones" @grupos="(g) => (gruposLista = g)" />
+            :cargando="cargandoPuntos" :error="errorPuntos" @recargar="cargarPuntos" @ver-clave="pestana = 'principal'" @abrir="abrirDetalle" @nuevo="abrirNuevo" @activar-grupo="activarGrupo" @ver-peticiones="verPeticiones" @grupos="(g) => (gruposLista = g)" />
         </q-tab-panel>
         <q-tab-panel name="principal" class="q-pa-none">
       <q-card-section class="seccion">
