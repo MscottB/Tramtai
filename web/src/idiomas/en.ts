@@ -943,7 +943,7 @@ const en: Textos = {
   'presupuesto.reiniciado': 'Usage reset',
   'presupuesto.espacio': 'Workspace budget',
   'presupuesto.espacioTexto': 'Counts every request in the workspace: your APIs, the workspace key and the Playground. The global one is counted in each workspace separately.',
-  // Conversor de archivos (markitdown)
+  // File converter (markitdown)
   'conversor.titulo': "Files",
   'conversor.texto': "To read PDF, Word, PowerPoint, Excel and HTML, Tramtai uses markitdown. It prepares it in its own folder: it installs nothing on the system and needs no administrator rights.",
   'conversor.listo': "Ready: markitdown {version}, {origen}.",

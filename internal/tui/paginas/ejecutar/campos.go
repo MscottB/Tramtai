@@ -12,7 +12,7 @@ import (
 	"tramtai/internal/tui/comp"
 )
 
-// El modo campos de «Respuesta con forma» (CamposEsquema.vue): cada campo son unas filas del formulario con la ruta en el
+// El modo campos de «Respuesta con forma»: cada campo son unas filas del formulario con la ruta en el
 // id («c0.nombre», «c0.1.tipo» para el segundo subcampo del primero). La estructura (cuántos campos, de qué tipo) vive en
 // p.campos y los valores en el formulario; cambiar un tipo o añadir y quitar campos rehace el formulario.
 
@@ -83,7 +83,7 @@ func cifra(n *float64) string {
 }
 
 // leerCampos saca los campos del formulario con la estructura que tienen. Un tipo o un elemento cambiado ya sale con lo que
-// necesita, como cambiarTipo de CamposEsquema.vue: un objeto, con un campo vacío; una lista, de textos.
+// necesita: un objeto, con un campo vacío; una lista, de textos.
 func (p *Pagina) leerCampos(estructura []campoEsquema, ruta string) []campoEsquema {
 	f := &p.form
 	campos := make([]campoEsquema, 0, len(estructura))
@@ -190,8 +190,7 @@ func (p *Pagina) anadirCampo() tea.Cmd {
 	return nil
 }
 
-// moverCampo (Alt+↑, Alt+↓) cambia el campo con el foco de sitio en su lista, como subir y bajar de CamposEsquema.vue; el
-// foco lo sigue. En el primero no sube y en el último no baja.
+// moverCampo (Alt+↑, Alt+↓) cambia el campo con el foco de sitio en su lista; el foco lo sigue. En el primero no sube y en el último no baja.
 func (p *Pagina) moverCampo(paso int) tea.Cmd {
 	ruta, ok := rutaCampo(p.form.Foco())
 	if !ok || !p.enCampos() {
@@ -208,8 +207,8 @@ func (p *Pagina) moverCampo(paso int) tea.Cmd {
 	return nil
 }
 
-// verEjemplo (v) enseña una respuesta de muestra con la forma del esquema, como «Ver un ejemplo de respuesta» de la Web
-// UI. Solo si los campos lo representan y alguno tiene nombre.
+// verEjemplo (v) enseña una respuesta de muestra con la forma del esquema («Ver un ejemplo de respuesta»).
+// Solo si los campos lo representan y alguno tiene nombre.
 func (p *Pagina) verEjemplo() tea.Cmd {
 	if c := p.camposConNombre(); len(c) > 0 {
 		p.muestra = sangrar([]byte(ejemploDe(c)))

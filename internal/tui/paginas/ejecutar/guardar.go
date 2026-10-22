@@ -23,7 +23,7 @@ type apiCreada struct{ nombre, url, clave, modelo string }
 
 var reNombreApi = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,39}$`)
 
-// verCodigo abre «Ver como código» con la prueba de ahora (verCodigo de Ejecutar.vue): la URL de la API que se edita o la
+// verCodigo abre «Ver como código» con la prueba de ahora: la URL de la API que se edita o la
 // del servicio, y la clave como marcador. Al editar una API su receta la aplica la propia API: el código solo lleva el
 // mensaje, el perfil y el tiempo.
 func (p *Pagina) verCodigo() tea.Cmd {
@@ -126,7 +126,7 @@ func (p *Pagina) guardarApi() tea.Cmd {
 	return nil
 }
 
-// crearApi crea la API con la receta tal como está (configDeReceta de recetas.ts); al crearla, Probar pasa a editarla.
+// crearApi crea la API con la receta tal como está; al crearla, Probar pasa a editarla.
 func (p *Pagina) crearApi() tea.Cmd {
 	d := p.leer()
 	esquema, _ := esquemaDe(d.esquema)
@@ -157,7 +157,7 @@ func (p *Pagina) crearApi() tea.Cmd {
 	}
 }
 
-// actualizarApi guarda la receta en la API que se edita (ajustesDeReceta de recetas.ts).
+// actualizarApi guarda la receta en la API que se edita.
 func (p *Pagina) actualizarApi(d datosForm, esquema json.RawMessage) tea.Cmd {
 	cambios := map[string]any{"instrucciones": d.instrucciones, "esfuerzo": d.esfuerzo, "modelo": d.modelo,
 		"forzar_modelo": d.forzar && d.modelo != "", "respaldo": append([]string{}, d.respaldo...), "esquema": nil, "reintentos_salida": 0}

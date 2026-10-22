@@ -37,7 +37,7 @@ type paso struct {
 	hecho                   bool
 }
 
-// pasos son los Primeros pasos que manda el servicio, ya calculados, con sus textos (los de Panel.vue).
+// pasos son los Primeros pasos que manda el servicio, ya calculados, con sus textos.
 func (p *Pagina) pasos() []paso {
 	lista := make([]paso, 0, len(p.losPasos))
 	for _, x := range p.losPasos {
@@ -273,7 +273,7 @@ func Atajo(clave string) string {
 	return strconv.Itoa(n + 1)
 }
 
-// reciente son las dos líneas de una petición reciente (Panel.vue): lo que se escribió, y debajo hace cuánto, el agente con
+// reciente son las dos líneas de una petición reciente: lo que se escribió, y debajo hace cuánto, el agente con
 // su modelo y cómo acabó.
 func (p *Pagina) reciente(j nucleo.Trabajo) []string {
 	e, ancho := p.estilos, max(p.c.Ancho, 1)

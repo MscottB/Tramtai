@@ -144,7 +144,7 @@ func (p *Pagina) Vista() string {
 	return strings.Join(lineas, "\n")
 }
 
-// Los filtros de la Web UI (opcionesFiltro de Agentes.vue), en su orden: todos, listos, falta conectar y no instalados.
+// Los filtros de la Web UI, en su orden: todos, listos, falta conectar y no instalados.
 var filtros = []struct {
 	clave string
 	deja  func(contrato.EstadoAgente) bool

@@ -13,7 +13,7 @@ import (
 // y de vuelta. Solo representa lo que genera (objetos con additionalProperties: false, hasta 3 niveles); con cualquier otra
 // cosa camposDe dice que no y el esquema se sigue editando en JSON, sin perder nada.
 
-// campoEsquema es un campo del editor (Campo de esquemaCampos.ts). Tipo es texto, numero, entero, si_no, fecha, opcion,
+// campoEsquema es un campo del editor. Tipo es texto, numero, entero, si_no, fecha, opcion,
 // lista u objeto; Elemento (en una lista) es texto, numero u objeto; Campos son los de un objeto o de una lista de objetos.
 type campoEsquema struct {
 	Nombre, Tipo, Descripcion string
@@ -28,7 +28,7 @@ const nivelesCampos = 3
 
 var tiposCampo = []string{"texto", "numero", "entero", "si_no", "fecha", "opcion", "lista", "objeto"}
 
-// ejemploDe es una respuesta de muestra con la forma de esos campos, compacta y en su orden (ejemploDe de esquemaCampos.ts):
+// ejemploDe es una respuesta de muestra con la forma de esos campos, compacta y en su orden:
 // la vista previa «Ver un ejemplo de respuesta». Como Object.fromEntries, un nombre repetido vale una vez con el último.
 func ejemploDe(campos []campoEsquema) string {
 	var nombres []string
@@ -46,7 +46,7 @@ func ejemploDe(campos []campoEsquema) string {
 	return "{" + strings.Join(partes, ",") + "}"
 }
 
-// valorEjemplo es el valor de muestra de un campo (valorDe de esquemaCampos.ts): un número dentro de los límites (el
+// valorEjemplo es el valor de muestra de un campo: un número dentro de los límites (el
 // mínimo, o 0 si cabe, o el máximo) y una lista con tantos elementos como pide su mínimo.
 func valorEjemplo(c campoEsquema) string {
 	numero := 0.0

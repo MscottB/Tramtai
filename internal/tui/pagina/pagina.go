@@ -83,7 +83,7 @@ type (
 	ConAgente   struct{ Agente string } // Probar con un agente
 	FiltroPunto struct{ Nombre string } // el historial de una API
 	// FiltroEstado abre el Historial con un filtro de estado del servicio (nucleo.Filtros: en_curso, completado o
-	// con_error), como filtroHistorial de la Web UI; "" o cualquier otro valor deja todas.
+	// con_error); "" o cualquier otro valor deja todas.
 	FiltroEstado struct{ Estado string }
 	// ConAyuda abre la Ayuda en el tema de una página (lo que devuelve su Ayuda()), con todas las teclas que valen en ella:
 	// las suyas y las comunes, también las que no cupieron en el pie.

@@ -435,7 +435,7 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.preguntas.rPuerto': 'Tramtai uses the next free one and says so; the app and CLI find it on their own, but your apps must use the new address. Set it in Settings.',
   'ayuda.preguntas.pDesinstalar': 'How do I uninstall it?',
   'ayuda.preguntas.rDesinstalar': 'Windows: Settings → Apps → Tramtai (it asks whether to delete your data). macOS: to the Trash or “brew uninstall --cask --zap tramtai”. Linux: apt or dnf remove tramtai.',
-  // Interfaz de la Ayuda y del panel
+  // Help and panel interface
   'ayuda.ui.relacionados': 'Related topics',
   'ayuda.ui.abrirWeb': 'Open on the web',
   'ayuda.abrirPanel': 'Help for this page',

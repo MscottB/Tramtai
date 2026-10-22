@@ -1,5 +1,5 @@
-// Package api expone el servicio por HTTP: la API nativa /api/v1 y las fachadas /openai/v1 y /anthropic/v1
-// . Valida Host, Origin y token antes de atender cualquier ruta.
+// Package api expone el servicio por HTTP: la API nativa /api/v1 y las fachadas /openai/v1 y /anthropic/v1.
+// Valida Host, Origin y token antes de atender cualquier ruta.
 package api
 
 import (

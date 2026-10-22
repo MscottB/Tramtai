@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	// tamPagina son las peticiones que se piden cada vez (PAGINA de la Web UI); el máximo que admite el servicio.
+	// tamPagina son las peticiones que se piden cada vez; el máximo que admite el servicio.
 	tamPagina = 200
 	// cadaSondeo es cada cuánto se vuelve a leer la lista mientras se ve (sin detalle abierto ni páginas extra), como la Web UI.
 	cadaSondeo = 5 * time.Second
@@ -552,8 +552,8 @@ func (p *Pagina) vivoVigente(m msgVivo) bool {
 	return p.vigente(m.Origen) && m.ID == p.abierto && m.Seq == p.nflujo
 }
 
-// alVivo aplica un evento del trabajo abierto, como los de Ejecutar.vue: el texto se suma a la respuesta, una corrección la
-// empieza de nuevo, el estado cambia y los demás avisos piden releer el registro. Devuelve lo que haya que pedir.
+// alVivo aplica un evento del trabajo abierto: el texto se suma a la respuesta, una corrección la empieza de
+// nuevo, el estado cambia y los demás avisos piden releer el registro. Devuelve lo que haya que pedir.
 func (p *Pagina) alVivo(m msgVivo) tea.Cmd {
 	switch m.Clase {
 	case "corte":
@@ -649,7 +649,7 @@ func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
 		if m.accion == accionCorregir {
 			aviso = idioma.T("Corrección enviada")
 		}
-		// El trabajo nuevo se sigue en Probar, como trabajoSeguido de la Web UI.
+		// El trabajo nuevo se sigue en Probar.
 		ir := pagina.IrA{Pagina: pagina.PaginaEjecutar, Datos: pagina.SeguirTrabajo{ID: m.t.ID}}
 		return tea.Batch(comp.Aviso(aviso, comp.Exito), func() tea.Msg { return ir }, p.cargar(true))
 	case accionCancelar:

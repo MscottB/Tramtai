@@ -185,7 +185,7 @@ func (p *Pagina) pista() string {
 	return ""
 }
 
-// formatos es la lista para leer: «DOCX, PDF, MD, TXT» (listaFormatos de conversor.ts).
+// formatos es la lista para leer: «DOCX, PDF, MD, TXT».
 func formatos(listas ...[]string) string {
 	var r []string
 	for _, l := range listas {

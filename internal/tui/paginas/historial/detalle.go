@@ -100,7 +100,7 @@ func fecha(t time.Time) string {
 	return t.Local().Format("2006-01-02 15:04:05")
 }
 
-// duracion es lo que tardó una petición (duracion de formato.ts).
+// duracion es lo que tardó una petición.
 func duracion(desde time.Time, hasta *time.Time) string {
 	if hasta == nil || desde.IsZero() {
 		return ""
@@ -218,7 +218,7 @@ type intento struct {
 }
 
 // esfuerzoUsado es el esfuerzo con que respondió la petición, según su último intento: el pedido o, si no se pidió, el del
-// agente con «(del agente)»; sin intentos registrados, el de la solicitud. «» si no hubo esfuerzo (esfuerzoUsado de formato.ts).
+// agente con «(del agente)»; sin intentos registrados, el de la solicitud. «» si no hubo esfuerzo.
 func (p *Pagina) esfuerzoUsado(t nucleo.Trabajo) string {
 	var ultimo *nucleo.EventoRegistro
 	for i := len(p.registro) - 1; i >= 0; i-- {
@@ -243,7 +243,7 @@ func (p *Pagina) esfuerzoUsado(t nucleo.Trabajo) string {
 	return p.nombreEsfuerzo(i.Esfuerzo)
 }
 
-// textoIntento resume un intento: el agente y modelo, la corrección, el esfuerzo y el contexto (textoIntento de RegistroTrabajo.vue).
+// textoIntento resume un intento: el agente y modelo, la corrección, el esfuerzo y el contexto.
 func (p *Pagina) textoIntento(datos string) string {
 	var i intento
 	if json.Unmarshal([]byte(datos), &i) != nil {

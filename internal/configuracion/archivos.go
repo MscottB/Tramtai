@@ -43,9 +43,10 @@ func BuscarProyecto(dir string) (string, bool) {
 	}
 }
 
-// CargarConfiguracion resuelve las capas de configuración (interna, global, proyecto, local y entorno). Con raíz vacía usa solo la global y el entorno
-// (instancia global); con la raíz de un proyecto añade su configuración versionada y la local. agentes es la capa
-// interna de los agentes (agentes.Internos()): sus comandos, su concurrencia y la autenticación de cada CLI.
+// CargarConfiguracion resuelve las capas de configuración (interna, global, proyecto, local y entorno). Con raíz vacía
+// usa solo la global y el entorno (instancia global); con la raíz de un proyecto añade su configuración versionada y la
+// local. agentes es la capa interna de los agentes (agentes.Internos()): sus comandos, su concurrencia y la
+// autenticación de cada CLI.
 func CargarConfiguracion(raiz string, agentes Capa) (*Configuracion, error) {
 	global, err := RutaGlobal()
 	if err != nil {

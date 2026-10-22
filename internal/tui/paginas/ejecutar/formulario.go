@@ -18,8 +18,8 @@ import (
 	"tramtai/internal/tui/datos"
 )
 
-// datosForm es lo que tiene el formulario: la receta (Receta de recetas.ts, con estructurada aparte del texto del esquema,
-// como en EditorReceta), el mensaje, los archivos y las opciones avanzadas.
+// datosForm es lo que tiene el formulario: la receta (con el esquema estructurado aparte de su texto), el
+// mensaje, los archivos y las opciones avanzadas.
 type datosForm struct {
 	instrucciones, modelo, esfuerzo   string
 	forzar, estructurada              bool
@@ -408,7 +408,7 @@ func (p *Pagina) validarEsquema(d datosForm) tea.Cmd {
 	}
 }
 
-// solicitudDe arma la petición de la receta y el mensaje tal como la envía Probar (solicitudDe de Ejecutar.vue).
+// solicitudDe arma la petición de la receta y el mensaje tal como la envía Probar.
 func solicitudDe(d datosForm, cargas []string, esquema json.RawMessage) nucleo.SolicitudEjecucion {
 	s := nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: d.mensaje}}, Cargas: cargas,
 		Instrucciones: strings.TrimSpace(d.instrucciones), Respaldo: d.respaldo, Perfil: strings.TrimSpace(d.perfil), Esfuerzo: d.esfuerzo}
@@ -450,7 +450,7 @@ func recetaDeSolicitud(s nucleo.SolicitudEjecucion) datosForm {
 	return d
 }
 
-// recetaDePunto es la receta guardada en una API (recetaDePunto de recetas.ts).
+// recetaDePunto es la receta guardada en una API.
 func recetaDePunto(e contrato.EstadoPunto) datosForm {
 	d := datosForm{instrucciones: e.Instrucciones, forzar: e.ForzarModelo, esfuerzo: e.Esfuerzo, respaldo: slices.Clone(e.Respaldo), reintentos: e.ReintentosSalida}
 	switch {
@@ -496,7 +496,7 @@ func (p *Pagina) cargarReceta(d datosForm, mensaje string) {
 const prefijoCorreccion = "Tu respuesta no cumple el formato pedido:"
 
 // mensajeDe es el último mensaje del usuario de una petición; "" si sus entradas ya se borraron. Una corrección añade la
-// respuesta y el pedido de corrección: se toma el mensaje de antes (mensajeDe de recetas.ts).
+// respuesta y el pedido de corrección: se toma el mensaje de antes.
 func mensajeDe(t nucleo.Trabajo) string {
 	m := t.Solicitud.Mensajes
 	fin := len(m)

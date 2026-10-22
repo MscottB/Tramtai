@@ -175,7 +175,7 @@ func (p *Pagina) tx(clave string, pares ...string) string {
 
 func (p *Pagina) a(texto string) string { return p.estilos.A(texto) }
 
-// sistema es el nombre del sistema operativo para el paso de arrancar con él, como `sistema` de la Web UI.
+// sistema es el nombre del sistema operativo para el paso de arrancar con él.
 func sistema() string {
 	switch runtime.GOOS {
 	case "windows":
@@ -484,7 +484,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 	return p, nil
 }
 
-// alFlujo aplica a la red lo que llega por el flujo, como useEventosInstancia de la Web UI.
+// alFlujo aplica a la red lo que llega por el flujo.
 func (p *Pagina) alFlujo(m msgRed) {
 	switch m.tipo {
 	case "abre":
@@ -561,12 +561,12 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 	return nil
 }
 
-// avisoConversor dice si el conversor de archivos falta o falló. Preparándose o listo no se avisa, como Panel.vue.
+// avisoConversor dice si el conversor de archivos falta o falló. Preparándose o listo no se avisa.
 func (p *Pagina) avisoConversor() bool {
 	return p.conv != nil && p.conv.Estado != "listo" && p.conv.Estado != "preparando"
 }
 
-// textoConversor es la frase del estado del conversor (textoConversor de la Web UI para los estados que se avisan).
+// textoConversor es la frase del estado del conversor para los estados que se avisan.
 func (p *Pagina) textoConversor() string {
 	if p.conv.Estado == "error" {
 		return p.tx("conversor.error", "mensaje", p.conv.Mensaje) + "\n" + p.tx("conversor.redEmpresa")
