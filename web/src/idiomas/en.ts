@@ -88,7 +88,7 @@ const en: Textos = {
   'espacios.olvidado': '{nombre} was forgotten',
   'menuDetalle.conectar': 'Connect your apps',
   'menuDetalle.agentes': 'Claude, Codex, GitHub Copilot…',
-  'menuDetalle.configuracion': 'Startup and data cleanup',
+  'menuDetalle.configuracion': 'Model, port, files, updates and data',
   'menuDetalle.ayuda': 'Getting started and FAQ',
 
   // App structure
@@ -436,7 +436,11 @@ const en: Textos = {
   'agentes.faltaAceptar': 'To use your subscription, tick that you understand the risk and accept the terms.',
   'agentes.suscripcionActivada': '{agente} now uses your subscription',
   'agentes.claveActivada': '{agente} now uses the API key',
-  'agentes.instalarAntes': 'Install its CLI and press “Check again”. If it is somewhere else, set it in',
+  'agentes.instalarAntes': 'Install its CLI and press “Check again”.',
+  'agentes.otraRuta': 'If it is somewhere else, write it in',
+  'agentes.otraRutaArchivo': 'in the global settings file: open it with any text editor, save it and check again.',
+  'agentes.archivoConfig': 'Global settings file',
+  'agentes.copiarRuta': 'Copy the file path',
   'agentes.detalles': 'Technical details',
   'agentes.version': 'Version',
   'agentes.sinVersion': 'not detected',
@@ -450,7 +454,8 @@ const en: Textos = {
   'agentes.informaModelo': 'Reports the model used',
 
   // Settings
-  'config.subtitulo': 'Make Tramtai start by itself, delete test data and, if you need them, the technical values.',
+  'config.subtitulo': 'The default model, the port, the file converter, updates, startup, history and test data.',
+  'config.comoGuarda': 'The model and the switches are saved when you change them; the port and the history, with their Save button.',
   'config.pestanaEspacio': 'This workspace: {nombre}',
   'config.pestanaTramtai': 'All of Tramtai',
   'config.avisoGlobal': 'Settings of the global workspace. What you change here also applies to projects without their own value.',
@@ -670,7 +675,7 @@ const en: Textos = {
   'inicio.tableroPeriodo': '{periodo}',
   'comun.ultimoDia': 'the last day',
   'comun.ultimosDias': 'the last {dias} days',
-  'historialAjustes.completa': 'Fill in all three values.',
+  'historialAjustes.rango': 'Enter a number between {min} and {max}.',
   'proyecto.abrir': 'Open a project…',
   'proyecto.abrirDetalle': 'Its own history, APIs and settings',
   'proyecto.titulo': 'Open a project',

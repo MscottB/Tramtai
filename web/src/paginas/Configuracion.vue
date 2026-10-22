@@ -6,8 +6,9 @@
       <q-tab name="espacio" icon="o_folder_special" :label="t('config.pestanaEspacio', { nombre: sesion?.nombre ?? '' })" />
       <q-tab name="tramtai" icon="o_settings" :label="t('config.pestanaTramtai')" />
     </q-tabs>
-    <div v-show="pestana === 'espacio'" class="text-caption texto-suave">{{ sesion?.ambito === 'proyecto' ? t('config.avisoProyecto') : t('config.avisoGlobal') }}</div>
-    <div v-show="pestana === 'tramtai'" class="text-caption texto-suave">{{ t('config.avisoTramtai') }}</div>
+    <div v-show="pestana === 'espacio'" class="text-caption texto-suave">{{ sesion?.ambito === 'proyecto' ? t('config.avisoProyecto') : t('config.avisoGlobal') }}
+      {{ t('config.comoGuarda') }}</div>
+    <div v-show="pestana === 'tramtai'" class="text-caption texto-suave">{{ t('config.avisoTramtai') }} {{ t('config.comoGuarda') }}</div>
 
     <q-card v-show="pestana === 'espacio'" data-recorrido="configuracion.modelo">
       <q-card-section class="row items-center q-col-gutter-md">
@@ -120,21 +121,27 @@
             </div>
             <div class="texto-suave text-body2 q-mt-xs">{{ t('historialAjustes.texto') }}</div>
           </q-card-section>
+          <!-- Los límites se comprueban en cada campo (los mismos que dicen sus ayudas), no solo al guardar en el servicio. -->
+          <q-form @submit="guardarRetencion">
           <q-card-section class="row q-col-gutter-md q-pt-none">
             <div class="col-12 col-sm-4">
-              <q-input v-model.number="retencion.horas_resultado" type="number" min="0" max="720" outlined dense :label="t('historialAjustes.respuestas')" :hint="t('historialAjustes.respuestasHint')" />
+              <q-input v-model.number="retencion.horas_resultado" type="number" min="0" max="720" outlined dense :label="t('historialAjustes.respuestas')" :hint="t('historialAjustes.respuestasHint')"
+                :rules="[enRango(0, 720, true)]" />
             </div>
             <div class="col-12 col-sm-4">
-              <q-input v-model.number="diasRegistro" type="number" min="0" max="90" step="any" outlined dense :label="t('historialAjustes.registro')" :hint="t('historialAjustes.registroHint')" />
+              <q-input v-model.number="diasRegistro" type="number" min="0" max="90" step="any" outlined dense :label="t('historialAjustes.registro')" :hint="t('historialAjustes.registroHint')"
+                :rules="[enRango(0, 90, false)]" />
             </div>
             <div class="col-12 col-sm-4">
-              <q-input v-model.number="retencion.max_trabajos" type="number" min="100" max="100000" outlined dense :label="t('historialAjustes.maximo')" :hint="t('historialAjustes.maximoHint')" />
+              <q-input v-model.number="retencion.max_trabajos" type="number" min="100" max="100000" outlined dense :label="t('historialAjustes.maximo')" :hint="t('historialAjustes.maximoHint')"
+                :rules="[enRango(100, 100000, true)]" />
             </div>
           </q-card-section>
           <q-card-actions class="q-px-md q-pb-md">
-            <q-btn unelevated color="primary" no-caps :label="t('comun.guardar')" :loading="guardandoRetencion" @click="guardarRetencion" />
+            <q-btn unelevated color="primary" no-caps type="submit" :label="t('comun.guardar')" :loading="guardandoRetencion" />
             <span v-if="usoHistorial" class="text-caption texto-suave q-ml-md">{{ t('historialAjustes.uso', usoHistorial) }}</span>
           </q-card-actions>
+          </q-form>
         </q-card>
       </div>
       <div v-show="pestana === 'espacio'" class="col-12">
@@ -216,6 +223,7 @@ import { EVENTO_PASO } from '../recorridoDom'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import ProcedenciaValor from '../componentes/ProcedenciaValor.vue'
 import EstadoVacio from '../componentes/EstadoVacio.vue'
+import { cargarRutaConfig, rutaConfig } from '../rutaConfig'
 import { guardar, leer } from '../componentes/accesos/comun'
 import { heredable, procedencia, type Procedencia } from '../herencia'
 import { useQuasar } from 'quasar'
@@ -223,7 +231,7 @@ import { api, avisar, avisarError, buscarActualizacionAhora, reiniciarYSeguir } 
 import type { EntradaConfiguracion, EstadoPunto, Modelo } from '../api/tipos'
 import { actualizacion, sesion, sistema } from '../estado'
 import { esfuerzoEspacio, esfuerzosDe, opcionModelo } from '../agentes'
-import { nombreEsfuerzo, terminales } from '../formato'
+import { enRango, nombreEsfuerzo, terminales } from '../formato'
 import { idioma, t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 import SelectorEsfuerzo from '../componentes/SelectorEsfuerzo.vue'
@@ -280,11 +288,6 @@ async function leerRetencion() {
   usoHistorial.value = { trabajos: r.uso.trabajos.toLocaleString(idioma.value), mb: (r.uso.bytes / 1048576).toLocaleString(idioma.value, { maximumFractionDigits: 1 }) }
 }
 async function guardarRetencion() {
-  const numeros = [retencion.horas_resultado, diasRegistro.value, retencion.max_trabajos]
-  if (numeros.some((v) => typeof v !== 'number' || Number.isNaN(v))) {
-    avisarError(new Error(t('historialAjustes.completa')))
-    return
-  }
   guardandoRetencion.value = true
   try {
     await api.fijarRetencion({ horas_resultado: retencion.horas_resultado, horas_metadatos: Math.round(diasRegistro.value * 24), max_trabajos: retencion.max_trabajos })
@@ -364,16 +367,11 @@ async function cambiarEsfuerzo(esfuerzo: string) {
   }
 }
 
-// configGlobal es la ruta del archivo global: la real que da el servicio a una sesión local (también la de una portable,
-// en datos-tramtai) o, si no, la habitual de cada sistema.
-const configHabitual = { Windows: '%APPDATA%\\tramtai\\config.yaml', macOS: '~/Library/Application Support/tramtai/config.yaml', Linux: '~/.config/tramtai/config.yaml' }[sistema]
-const rutaConfigReal = ref('')
-const configGlobal = computed(() => rutaConfigReal.value || configHabitual)
 // origenes: de dónde sale cada valor, con la etiqueta de la app (neutro, info o aviso) y su texto; el entorno va en aviso
 // porque no se cambia desde aquí.
 const origenes = computed(() => [
   { id: 'interno', nombre: t('origen.interno'), clase: 'neutro', detalle: t('origen.internoDetalle') },
-  { id: 'global', nombre: t('origen.global'), clase: 'info', detalle: configGlobal.value },
+  { id: 'global', nombre: t('origen.global'), clase: 'info', detalle: rutaConfig.value },
   { id: 'proyecto', nombre: t('origen.proyecto'), clase: 'info', detalle: t('origen.proyectoDetalle') },
   { id: 'local', nombre: t('origen.local'), clase: 'info', detalle: t('origen.localDetalle') },
   { id: 'entorno', nombre: t('origen.entorno'), clase: 'aviso', detalle: t('origen.entornoDetalle') },
@@ -488,7 +486,7 @@ async function cambiarAlIniciar(preparar: boolean) {
 
 onMounted(async () => {
   cargarConversor()
-  api.acerca().then((a) => (rutaConfigReal.value = a.rutas?.configuracion ?? '')).catch(() => {})
+  cargarRutaConfig()
   contar().catch(avisarError)
   leerRetencion().catch(avisarError)
   api.catalogo().then((m) => (catalogo.value = m)).catch(avisarError)

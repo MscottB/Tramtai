@@ -96,8 +96,10 @@
             :label="t('agentes.cambiarAClave')" @click="cambiar(a, 'clave_api')" />
         </template>
 
+        <!-- No instalado: qué hacer, y si el CLI está en otra ruta, en qué archivo se escribe y cómo abrirlo. -->
         <div v-else-if="tipo(a) === 'agente.noInstalado'" class="aviso text-body2">
-          {{ t('agentes.instalarAntes') }} <span class="codigo">comandos_agentes.{{ a.agente }}</span>.
+          {{ t('agentes.instalarAntes') }} {{ t('agentes.otraRuta') }} <span class="codigo">comandos_agentes.{{ a.agente }}</span> {{ t('agentes.otraRutaArchivo') }}
+          <div class="bloque-codigo q-mt-sm">{{ rutaConfig }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarRuta')" @click="copiar(rutaConfig)" /></div>
         </div>
         <!-- El CLI pasó a una clave de API, la sesión no responde u otro problema: qué pasa y, con suscripción, la salida -->
         <template v-else>
@@ -142,7 +144,7 @@
               </q-item-section>
               <q-item-section>
                 <q-item-label class="text-weight-medium">{{ nombreAgente(a.agente) }}</q-item-label>
-                <q-item-label caption>{{ t('agentes.instalarAntes') }} <span class="codigo">comandos_agentes.{{ a.agente }}</span>.</q-item-label>
+                <q-item-label caption>{{ t('agentes.instalarAntes') }} {{ t('agentes.otraRuta') }} <span class="codigo">comandos_agentes.{{ a.agente }}</span> {{ t('agentes.otraRutaArchivo') }}</q-item-label>
               </q-item-section>
               <q-item-section v-if="fichaDe(a.agente)?.url_instalacion" side>
                 <q-btn flat dense no-caps color="primary" icon-right="o_open_in_new" :label="t('agentes.comoInstalar')"
@@ -150,6 +152,10 @@
               </q-item-section>
             </q-item>
           </q-list>
+          <div class="q-px-md q-pb-md">
+            <div class="text-caption texto-suave q-mb-xs">{{ t('agentes.archivoConfig') }}</div>
+            <div class="bloque-codigo">{{ rutaConfig }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarRuta')" @click="copiar(rutaConfig)" /></div>
+          </div>
         </q-expansion-item>
       </q-card>
     </template>
@@ -175,6 +181,7 @@ import type { Adaptador } from '../api/tipos'
 import { modeloInicial, sesion } from '../estado'
 import { agenteListo, asegurarFichas, cargarFichas, codigoLinea, estadoAgente, fichaDe, fijarDisponibilidad, nombreAgente, ofrecerDejarSuscripcion, ordenarAgentes } from '../agentes'
 import { nombreEsfuerzo, numero } from '../formato'
+import { cargarRutaConfig, rutaConfig } from '../rutaConfig'
 import { t } from '../i18n'
 
 const $q = useQuasar()
@@ -325,6 +332,7 @@ onUnmounted(() => clearInterval(comprobacion))
 onMounted(() => {
   comprobacion = window.setInterval(() => !document.hidden && cargar(), 5 * 60_000)
   asegurarFichas()
+  cargarRutaConfig()
   cargar()
   api.catalogo().then((lista) => {
     for (const m of lista) if (m.agente && !m.modelo && !m.perfil) esfuerzos.value[m.agente] = m.esfuerzos ?? []

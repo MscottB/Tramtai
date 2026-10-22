@@ -89,7 +89,7 @@ const es = {
   'espacios.olvidado': 'Se olvidó {nombre}',
   'menuDetalle.conectar': 'Conecta tus aplicaciones',
   'menuDetalle.agentes': 'Claude, Codex, GitHub Copilot…',
-  'menuDetalle.configuracion': 'Arranque y borrado de datos',
+  'menuDetalle.configuracion': 'Modelo, puerto, archivos, actualizaciones y datos',
   'menuDetalle.ayuda': 'Cómo empezar y dudas',
 
   // Estructura de la aplicación
@@ -437,7 +437,11 @@ const es = {
   'agentes.faltaAceptar': 'Para usar tu suscripción tienes que marcar que entiendes el riesgo y aceptas los términos.',
   'agentes.suscripcionActivada': '{agente} usa ahora tu suscripción',
   'agentes.claveActivada': '{agente} usa ahora la clave de API',
-  'agentes.instalarAntes': 'Instala su CLI y pulsa «Volver a comprobar». Si está en otra ruta, indícala en',
+  'agentes.instalarAntes': 'Instala su CLI y pulsa «Volver a comprobar».',
+  'agentes.otraRuta': 'Si está en otra ruta, escríbela en',
+  'agentes.otraRutaArchivo': 'del archivo de configuración global: ábrelo con cualquier editor de texto, guárdalo y vuelve a comprobar.',
+  'agentes.archivoConfig': 'Archivo de configuración global',
+  'agentes.copiarRuta': 'Copiar la ruta del archivo',
   'agentes.detalles': 'Detalles técnicos',
   'agentes.version': 'Versión',
   'agentes.sinVersion': 'no detectada',
@@ -451,7 +455,8 @@ const es = {
   'agentes.informaModelo': 'Informa el modelo usado',
 
   // Ajustes
-  'config.subtitulo': 'Que Tramtai arranque solo, borrar datos de prueba y, si lo necesitas, los valores técnicos.',
+  'config.subtitulo': 'El modelo predeterminado, el puerto, el conversor de archivos, las actualizaciones, el arranque, el historial y los datos de prueba.',
+  'config.comoGuarda': 'El modelo y los interruptores se guardan al cambiarlos; el puerto y el historial, con su botón Guardar.',
   'config.pestanaEspacio': 'Este espacio: {nombre}',
   'config.pestanaTramtai': 'Todo Tramtai',
   'config.avisoGlobal': 'Ajustes del espacio global. Lo que cambies aquí vale también para los proyectos que no tengan su propio valor.',
@@ -672,7 +677,7 @@ const es = {
   'inicio.tableroPeriodo': '{periodo}',
   'comun.ultimoDia': 'el último día',
   'comun.ultimosDias': 'los últimos {dias} días',
-  'historialAjustes.completa': 'Completa los tres valores.',
+  'historialAjustes.rango': 'Escribe un número entre {min} y {max}.',
   'proyecto.abrir': 'Abrir un proyecto…',
   'proyecto.abrirDetalle': 'Su propio historial, APIs y ajustes',
   'proyecto.titulo': 'Abrir un proyecto',

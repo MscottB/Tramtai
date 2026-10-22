@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { idioma, t } from './i18n.ts'
-import { duracion, estadoInfo, fecha, haceCuanto } from './formato.ts'
+import { duracion, enRango, estadoInfo, fecha, haceCuanto } from './formato.ts'
 
 idioma.value = 'es'
 const hace = (segundos: number) => new Date(Date.now() - segundos * 1000).toISOString()
@@ -23,6 +23,18 @@ test('haceCuanto elige la unidad y pasada una semana da la fecha corta', () => {
   assert.equal(haceCuanto(hace(86400)), 'ayer')
   const antigua = hace(10 * 86400)
   assert.equal(haceCuanto(antigua), new Date(antigua).toLocaleDateString('es'))
+})
+
+test('enRango acepta números dentro de los límites (enteros si se piden) y si no da el mensaje con los límites', () => {
+  const horas = enRango(0, 720, true)
+  assert.equal(horas(0), true)
+  assert.equal(horas(720), true)
+  assert.equal(horas(721), 'Escribe un número entre 0 y 720.')
+  assert.equal(horas(1.5), 'Escribe un número entre 0 y 720.')
+  assert.equal(horas(Number.NaN), 'Escribe un número entre 0 y 720.')
+  assert.equal(horas(''), 'Escribe un número entre 0 y 720.')
+  assert.equal(enRango(0, 90, false)(1.25), true)
+  assert.equal(enRango(100, 100000, true)(50), `Escribe un número entre 100 y ${(100000).toLocaleString('es')}.`)
 })
 
 test('duracion en segundos con un decimal y, desde un minuto, en minutos y segundos', () => {

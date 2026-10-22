@@ -54,6 +54,11 @@ export function duracion(desde?: string, hasta?: string): string {
 // numero da un número con los separadores del idioma («200.000»).
 export const numero = (n: number) => n.toLocaleString(idioma.value)
 
+// enRango es la regla de un campo numérico (rules de Quasar): un número entre min y max, entero si se pide; si no, el
+// mensaje con los límites.
+export const enRango = (min: number, max: number, entero: boolean) => (v: unknown) =>
+  (typeof v === 'number' && v >= min && v <= max && (!entero || Number.isInteger(v))) || t('historialAjustes.rango', { min: numero(min), max: numero(max) })
+
 export function nombreEsfuerzo(nivel?: string): string {
   return nivel ? t(`esfuerzo.${nivel}` as Clave) : t('esfuerzo.agente')
 }
