@@ -1,8 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { sesion } from '../estado.ts'
-import { api, duracionAviso, ErrorApi, pasoError } from './cliente.ts'
+import { api, duracionAviso, ErrorApi, pasoError, textosAviso } from './cliente.ts'
+import { idioma } from '../i18n.ts'
 import es from '../idiomas/es.ts'
+import en from '../idiomas/en.ts'
 import type { Sesion } from './tipos.ts'
 
 test('un aviso dura al menos 4 s y más cuanto más largo es su texto, hasta 10 s', () => {
@@ -16,6 +18,22 @@ test('el paso siguiente de un error es la solución de la Ayuda, y nada si no la
   assert.equal(pasoError('agente_desconectado'), es['ayuda.problemas.agente_desconectado'])
   assert.equal(pasoError('codigo_que_no_existe'), '')
   assert.equal(pasoError(undefined), '')
+})
+
+// Revisión final web (I5, hallazgo 79): un código sin solución en la Ayuda trae el qué hacer en su texto error.*. El
+// aviso lo enseña en los dos idiomas: en español el mensaje es el del servicio, así que va debajo, y en inglés ya es
+// el mensaje y no se repite.
+test('el aviso de un error sin Ayuda enseña el qué hacer de error.* en español y en inglés, sin repetirlo', () => {
+  const e = new ErrorApi('no_encontrado', 'petición no encontrada: x', 404)
+  try {
+    idioma.value = 'es'
+    assert.deepEqual(textosAviso(e), { message: 'petición no encontrada: x', caption: es['error.no_encontrado'] })
+    assert.deepEqual(textosAviso(new Error('sin red')), { message: 'sin red', caption: undefined })
+    idioma.value = 'en'
+    assert.deepEqual(textosAviso(e), { message: en['error.no_encontrado'], caption: 'petición no encontrada: x' })
+  } finally {
+    idioma.value = 'es'
+  }
 })
 
 const abierta = (csrf: string): Sesion => ({ instancia: 'i', csrf, version: 'v0', local: true })

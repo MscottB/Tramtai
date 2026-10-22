@@ -55,8 +55,10 @@
         </div>
         <q-btn v-if="guiaVisible" flat dense no-caps icon="o_visibility_off" :label="t('inicio.ocultarGuia')" class="texto-suave" @click="ocultar" />
       </div>
-      <div v-if="guiaVisible && !pasosServicio" class="text-caption texto-suave q-px-md q-pt-sm">{{ t('inicio.comprobando') }}</div>
-      <ol v-if="guiaVisible" class="ruta ruta--pasos q-ma-none q-px-md q-pt-sm q-pb-lg">
+      <div v-if="guiaVisible && !pasosServicio && !errorPasos" class="text-caption texto-suave q-px-md q-pt-sm">{{ t('inicio.comprobando') }}</div>
+      <!-- Si no se pudieron comprobar, la guía no desaparece como si estuviera completa: dice qué pasó y deja reintentar. -->
+      <EstadoVacio v-if="guiaVisible && errorPasos" role="alert" :titulo="t('inicio.errorPasos')" :texto="errorPasos" :accion="t('comun.reintentar')" :cargando="comprobandoPasos" @accion="comprobar" />
+      <ol v-if="guiaVisible && pasos.length" class="ruta ruta--pasos q-ma-none q-px-md q-pt-sm q-pb-lg">
         <li v-for="p in pasos" :key="p.pagina + p.titulo" class="ruta__parada" :class="{ 'ruta__parada--pasada': p.hecho }">
           <button type="button" class="paso-estacion" @click="$emit('ir', p.pagina)">
             <span class="ruta__punto" aria-hidden="true" />
@@ -136,7 +138,7 @@ import { periodoHistorial, guiaOculta, ocultarGuia, sesion, sistema } from '../e
 import type { Destino } from '../navegacion'
 import { asegurarFichas, ordenarAgentes } from '../agentes'
 import { estadoInfo, haceCuanto, textoDe } from '../formato'
-import { conTexto } from '../pasos'
+import { conTexto, guiaVisible as mostrarGuia } from '../pasos'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [destino: Destino]; recorrido: [] }>()
@@ -196,7 +198,10 @@ const contadores = computed(() => [
 // pasosServicio son los Primeros pasos que calcula el servicio (llegan con la comprobación de los agentes).
 const pasosServicio = ref<Paso[]>()
 const pasos = computed(() => conTexto(pasosServicio.value ?? [], sistema))
-const guiaVisible = computed(() => !guiaOculta.value && (!pasosServicio.value || !pasos.value.every((p) => p.hecho)))
+const guiaVisible = computed(() => mostrarGuia(guiaOculta.value, pasosServicio.value))
+// errorPasos es por qué no llegaron los pasos; solo cuenta mientras no haya llegado ninguna lista.
+const errorPasos = ref('')
+const comprobandoPasos = ref(false)
 
 // consultando evita encadenar consultas si el servicio tarda más que el intervalo.
 let consultando = false
@@ -229,15 +234,17 @@ onMounted(() => {
   comprobacion = window.setInterval(() => !document.hidden && comprobar(), 5 * 60_000)
 })
 // comprobar pide los Primeros pasos y los agentes con que se calcularon (ejecuta cada CLI: tarda). Sin respuesta, los
-// agentes quedan vacíos y la guía sin pasos.
+// agentes quedan vacíos y, si nunca llegaron pasos, la guía enseña el error con Reintentar.
 function comprobar() {
+  comprobandoPasos.value = true
   api.pasos().then((r) => {
     adaptadores.value = r.adaptadores
     pasosServicio.value = r.pasos
-  }).catch(() => {
+    errorPasos.value = ''
+  }).catch((e) => {
     adaptadores.value ??= []
-    pasosServicio.value ??= []
-  })
+    if (!pasosServicio.value) errorPasos.value = mensajeError(e)
+  }).finally(() => (comprobandoPasos.value = false))
 }
 let comprobacion = 0
 onUnmounted(() => {

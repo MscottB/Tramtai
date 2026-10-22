@@ -164,6 +164,7 @@ const en: Textos = {
   'inicio.paso1': 'Connect at least one agent',
   'inicio.paso1Detalle': '{listos} of {total} agents ready',
   'inicio.comprobando': 'Checking…',
+  'inicio.errorPasos': 'Could not check your progress',
   'inicio.paso2': 'Try an agent',
   'inicio.paso2Detalle': 'Write a message and watch the response live',
   'inicio.paso3': 'Connect your app',

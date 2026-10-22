@@ -165,6 +165,7 @@ const es = {
   'inicio.paso1': 'Conecta al menos un agente',
   'inicio.paso1Detalle': '{listos} de {total} agentes listos',
   'inicio.comprobando': 'Comprobando…',
+  'inicio.errorPasos': 'No se pudo comprobar tu avance',
   'inicio.paso2': 'Prueba un agente',
   'inicio.paso2Detalle': 'Escribe un mensaje y mira la respuesta en vivo',
   'inicio.paso3': 'Conecta tu aplicación',
