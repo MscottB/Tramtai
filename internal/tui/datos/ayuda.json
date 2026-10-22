@@ -854,7 +854,7 @@
           "tipo": "pasos",
           "lineas": [
             "Abre un proyecto desde el selector de arriba o desde Espacios. Si la carpeta no tenía .tramtai/, Tramtai la prepara y confía en ella.",
-            "Si ya traía .tramtai/ (un repositorio clonado), decide si confías: así su local.yaml puede usar claves de seguridad.",
+            "Si ya traía .tramtai/ (un repositorio clonado), decide si confías: así su local.yaml puede usar ajustes de seguridad.",
             "En Espacios ves todos, también los detenidos. Detén los que no uses y olvida los que ya no necesites."
           ]
         },
@@ -885,7 +885,7 @@
           "pares": [
             [
               "¿Qué significa confiar en una carpeta?",
-              "Que su .tramtai/local.yaml puede usar claves de seguridad, como el programa de cada agente. La confianza se guarda en Tramtai, nunca en el repositorio."
+              "Que su .tramtai/local.yaml puede usar ajustes de seguridad, como el programa de cada agente. La confianza se guarda en Tramtai, nunca en el repositorio."
             ],
             [
               "¿Puedo mover o renombrar un proyecto?",
@@ -901,7 +901,7 @@
             ],
             [
               "¿Por qué un espacio sale «No encontrado»?",
-              "Su carpeta se movió o se borró. «Buscar la carpeta» lo reasocia sin perder nada (después, «Confiar» si usa claves de seguridad); «Olvidar», si ya no lo necesitas."
+              "Su carpeta se movió o se borró. «Buscar la carpeta» lo reasocia sin perder nada (después, «Confiar» si usa ajustes de seguridad); «Olvidar», si ya no lo necesitas."
             ],
             [
               "¿Cómo sé si un ajuste es del proyecto o de la global?",
@@ -2135,7 +2135,7 @@
           "tipo": "pasos",
           "lineas": [
             "Open a project from the selector at the top or from Workspaces. If the folder had no .tramtai/, Tramtai prepares it and trusts it.",
-            "If it already had .tramtai/ (a cloned repository), decide whether you trust it: then its local.yaml can use security keys.",
+            "If it already had .tramtai/ (a cloned repository), decide whether you trust it: then its local.yaml can use security settings.",
             "In Workspaces you see all of them, stopped ones too. Stop the ones you do not use and forget the ones you no longer need."
           ]
         },
@@ -2166,7 +2166,7 @@
           "pares": [
             [
               "What does trusting a folder mean?",
-              "That its .tramtai/local.yaml can use security keys, such as each agent’s program. Trust is stored in Tramtai, never in the repository."
+              "That its .tramtai/local.yaml can use security settings, such as each agent’s program. Trust is stored in Tramtai, never in the repository."
             ],
             [
               "Can I move or rename a project?",
@@ -2182,7 +2182,7 @@
             ],
             [
               "Why does a workspace show “Not found”?",
-              "Its folder was moved or deleted. “Locate the folder” links it again without losing anything (then “Trust” if it uses security keys); “Forget” if you no longer need it."
+              "Its folder was moved or deleted. “Locate the folder” links it again without losing anything (then “Trust” if it uses security settings); “Forget” if you no longer need it."
             ],
             [
               "How do I know whether a setting is the project’s or the global one?",

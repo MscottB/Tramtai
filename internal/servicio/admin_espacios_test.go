@@ -105,7 +105,7 @@ func TestAdminAbrirProyecto409Confianza(t *testing.T) {
 		Movido string
 	}
 	if err := json.Unmarshal([]byte(texto), &conflicto); err != nil || r.StatusCode != 409 || conflicto.Error.Codigo != string(nucleo.CodigoConfianzaRequerida) ||
-		conflicto.Error.Mensaje == "" || !slices.Equal(conflicto.Claves, []string{"comandos_agentes"}) {
+		conflicto.Error.Mensaje == "" || !slices.Equal(conflicto.Claves, []string{"el programa de cada agente"}) {
 		t.Fatalf("debía pedir confianza: %d %s", r.StatusCode, texto)
 	}
 	if confiable(t, dir) {

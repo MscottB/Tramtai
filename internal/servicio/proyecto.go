@@ -79,8 +79,8 @@ type AbrirOpciones struct {
 	CrearAqui bool
 }
 
-// ErrorConfianza: la carpeta ya traía .tramtai/ (por ejemplo, un repositorio clonado) y no es confiable; Claves son
-// las de seguridad de su local.yaml, para enseñarlas antes de decidir. Movido es dónde estaba antes si su marca es la de
+// ErrorConfianza: la carpeta ya traía .tramtai/ (por ejemplo, un repositorio clonado) y no es confiable; Claves dicen
+// qué controlan las de seguridad de su local.yaml, para enseñarlo antes de decidir. Movido es dónde estaba antes si su marca es la de
 // un proyecto registrado que ya no está: la confianza no viaja sola, porque una marca se puede copiar.
 type ErrorConfianza struct {
 	Raiz   string
@@ -139,7 +139,7 @@ func (s *Servicio) AbrirProyecto(raiz string, o AbrirOpciones) (*Instancia, erro
 		if g, err := configuracion.CargarConfiguracion("", agentes.Internos()); err == nil && !g.ProyectoConfiable(raiz) {
 			if o.Confiar == nil {
 				claves, _ := configuracion.ClavesAdministradas(filepath.Join(raiz, ".tramtai", "local.yaml"))
-				return nil, &ErrorConfianza{Raiz: raiz, Claves: claves, Movido: s.rutaMovida(raiz)}
+				return nil, &ErrorConfianza{Raiz: raiz, Claves: configuracion.DescribirAdministradas(claves), Movido: s.rutaMovida(raiz)}
 			}
 			if *o.Confiar {
 				if err := s.FijarConfianza(raiz, true); err != nil {
@@ -210,7 +210,7 @@ func (s *Servicio) FijarConfianza(raiz string, confiar bool) error {
 func (s *Servicio) anotarIgnoradas(id string, c *configuracion.Configuracion) {
 	texto := ""
 	if ignoradas := c.Ignoradas(); len(ignoradas) > 0 {
-		texto = idioma.Tf("local.yaml tiene claves que solo valen en carpetas confiables y no se aplicaron: %s", strings.Join(ignoradas, ", "))
+		texto = idioma.Tf("local.yaml trae ajustes de seguridad que solo se aplican en carpetas confiables; no se aplicaron: %s", strings.Join(configuracion.DescribirAdministradas(ignoradas), ", "))
 	}
 	s.registro().cambiar(id, func(e *Espacio) { e.UltimoError = texto })
 	_ = s.registro().guardar()

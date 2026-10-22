@@ -197,7 +197,7 @@
               <div v-if="movidoDesde" class="q-mt-xs">{{ t('proyecto.movido', { ruta: movidoDesde }) }}</div>
               <div class="q-mt-xs">{{ confianza.length ? t('proyecto.confiarTexto') : t('proyecto.sinClaves') }}</div>
               <div v-if="confianza.length" class="q-mt-xs row q-gutter-xs">
-                <q-chip v-for="c in confianza" :key="c" dense square class="codigo">{{ c }}</q-chip>
+                <q-chip v-for="c in confianza" :key="c" dense square>{{ c }}</q-chip>
               </div>
             </div>
           </q-card-section>

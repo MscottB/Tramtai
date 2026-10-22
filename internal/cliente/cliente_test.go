@@ -532,7 +532,7 @@ func TestClienteEspaciosYProyectos(t *testing.T) {
 	// Un proyecto con .tramtai/ que no creó la app pide confianza, con lo que hay que enseñar.
 	_, err := cli.AbrirProyecto(ctx, clonado, nil, false)
 	var pide *ErrorConfianza
-	if !errors.As(err, &pide) || nucleo.CodigoDe(err) != nucleo.CodigoConfianzaRequerida || !slices.Equal(pide.Claves, []string{"comandos_agentes"}) {
+	if !errors.As(err, &pide) || nucleo.CodigoDe(err) != nucleo.CodigoConfianzaRequerida || !slices.Equal(pide.Claves, []string{"el programa de cada agente"}) {
 		t.Fatalf("debía pedir confianza: %v", err)
 	}
 	si := true

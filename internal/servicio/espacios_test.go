@@ -419,7 +419,7 @@ func TestEspaciosMuestraLasClavesDeUnoNoConfiado(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, e := range s.Espacios(context.Background()) {
-		if e.ID == inst.ID && strings.Join(e.Claves, ",") != "comandos_agentes" {
+		if e.ID == inst.ID && strings.Join(e.Claves, ",") != "el programa de cada agente" {
 			t.Fatalf("claves: %v", e.Claves)
 		}
 	}

@@ -229,6 +229,19 @@ func TestClavesAdministradas(t *testing.T) {
 	}
 }
 
+// El usuario ve lo que controla cada clave de seguridad, no su nombre en el YAML; las subclaves cuentan una vez.
+func TestDescribirAdministradas(t *testing.T) {
+	got := DescribirAdministradas([]string{"comandos_agentes.claude", "comandos_agentes.codex", "puntos_acceso", "presupuesto.diario.usd"})
+	if want := "el programa de cada agente,las APIs de este espacio,el presupuesto"; strings.Join(got, ",") != want {
+		t.Fatalf("got %q, want %q", strings.Join(got, ","), want)
+	}
+	for _, prefijo := range prefijosAdministrados {
+		if nombre := DescribirAdministradas([]string{prefijo})[0]; strings.Contains(nombre, "_") || nombre == prefijo {
+			t.Errorf("%s no tiene nombre para el usuario: %q", prefijo, nombre)
+		}
+	}
+}
+
 func TestFijarYModeloPredeterminado(t *testing.T) {
 	c := Resolver(Capa{Origen: OrigenEntorno, Valores: map[string]any{"predeterminados.formato_salida": "texto"}})
 	c.Fijar(OrigenGlobal, map[string]any{"predeterminados.agente": "codex", "predeterminados.modelo": "gpt-x", "predeterminados.formato_salida": "json"})
