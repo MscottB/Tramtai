@@ -386,5 +386,6 @@ func init() {
 		"%s no es un proyecto de Tramtai (.tramtai/config.yaml)":       "%s is not a Tramtai project (.tramtai/config.yaml)",
 
 		"otro servicio de Tramtai ya usa la carpeta de datos %s: detenlo antes (tramtai servicio detener)": "another Tramtai service is already using the data folder %s: stop it first (tramtai servicio detener)",
+		"ya hay una actualización en curso": "an update is already in progress",
 	})
 }

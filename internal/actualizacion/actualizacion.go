@@ -84,7 +84,9 @@ func Ultima(ctx context.Context) (Version, error) {
 	v := armar(ficha.Etiqueta, ficha.Pagina, ficha.Notas)
 	for _, a := range ficha.Archivos {
 		switch {
-		case strings.HasSuffix(a.Nombre, sufijoInstalador):
+		// Solo el instalador con la etiqueta en el nombre: las sumas firmadas nombran así el de su versión, y así la
+		// firma ata el instalador a esta versión (el trío de una versión vieja subido a la última no vale).
+		case a.Nombre == "Tramtai-"+ficha.Etiqueta+sufijoInstalador:
 			v.nombreInstalador, v.urlInstalador = a.Nombre, a.URL
 		case a.Nombre == archivoSumas:
 			v.urlSumas = a.URL

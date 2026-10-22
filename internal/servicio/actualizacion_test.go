@@ -1,6 +1,7 @@
 package servicio
 
 import (
+	"context"
 	"io"
 	"os"
 	"strings"
@@ -149,4 +150,35 @@ func TestRutasCuentaAtras(t *testing.T) {
 		t.Errorf("en listo: %d", r.StatusCode)
 	}
 	esperarFase(t, s, "")
+}
+
+// Dos «Actualizar» a la vez (el escritorio, la bandeja, otra pestaña): solo uno consulta y descarga; el otro recibe
+// «ya en curso» sin ir a la red.
+func TestActualizarDosVecesALaVez(t *testing.T) {
+	var consultas atomic.Int32
+	soltar := make(chan struct{})
+	antes := ultimaVersion
+	ultimaVersion = func(context.Context) (actualizacion.Version, error) {
+		consultas.Add(1)
+		<-soltar
+		return actualizacion.Version{Etiqueta: "v0.0.1"}, nil // no es más nueva: el primero termina sin descargar
+	}
+	t.Cleanup(func() { ultimaVersion = antes })
+	s := &Servicio{opc: Opciones{Registros: io.Discard}}
+	primero := make(chan error, 1)
+	go func() { _, err := s.IniciarActualizacion(context.Background()); primero <- err }()
+	for consultas.Load() == 0 {
+		time.Sleep(time.Millisecond)
+	}
+	if _, err := s.IniciarActualizacion(context.Background()); err == nil || !strings.Contains(nucleo.MensajeDe(err), "en curso") {
+		t.Fatalf("la segunda petición tenía que recibir «ya en curso»: %v", err)
+	}
+	close(soltar)
+	<-primero
+	if n := consultas.Load(); n != 1 {
+		t.Fatalf("se consultó %d veces", n)
+	}
+	if p := s.progresoActualizacion(); p.Fase != "" {
+		t.Fatalf("sin versión nueva no queda nada en curso: %+v", p)
+	}
 }

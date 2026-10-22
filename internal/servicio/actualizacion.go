@@ -66,9 +66,11 @@ type ProgresoActualizacion struct {
 	Error     string     `json:"error,omitempty"`
 }
 
-// instalar y esperaInstalacion son variables para que las pruebas usen un instalador simulado y una espera corta.
+// instalar, ultimaVersion y esperaInstalacion son variables para que las pruebas usen un instalador y una versión
+// simulados y una espera corta.
 var (
 	instalar          = actualizacion.Instalar
+	ultimaVersion     = actualizacion.Ultima
 	esperaInstalacion = 10 * time.Second
 )
 
@@ -88,26 +90,42 @@ func (s *Servicio) fijarAvance(cambiar func(*ProgresoActualizacion)) {
 // IniciarActualizacion comprueba que hay una versión nueva que se puede instalar desde aquí y, en segundo plano, la
 // descarga, comprueba su suma SHA-256 y lanza su instalador en silencio; el avance se consulta con
 // progresoActualizacion. El instalador detiene este servicio (los trabajos en curso terminan dentro del plazo de
-// drenaje) y vuelve a abrir la app. Si ya hay una en curso, no empieza otra.
+// drenaje) y vuelve a abrir la app. Si ya hay una en curso, no empieza otra: responde «ya en curso».
 func (s *Servicio) IniciarActualizacion(ctx context.Context) (actualizacion.Version, error) {
-	if p := s.progresoActualizacion(); p.Fase != "" && p.Fase != "error" {
-		return actualizacion.Version{Etiqueta: p.Version}, nil
+	// Comprobar y ocupar van juntos, antes de ir a la red: dos peticiones a la vez no lanzan dos descargas.
+	s.muAvance.Lock()
+	if p := s.avance; p.Fase != "" && p.Fase != "error" {
+		s.muAvance.Unlock()
+		return actualizacion.Version{Etiqueta: p.Version}, nucleo.NuevoError(nucleo.CodigoTransicionInvalida, idioma.T("ya hay una actualización en curso"))
 	}
-	v, err := actualizacion.Ultima(ctx)
+	s.avance = ProgresoActualizacion{Fase: "descargando"}
+	s.muAvance.Unlock()
+	v, carpeta, err := versionParaInstalar(ctx)
 	if err != nil {
-		return v, nucleo.NuevoError(nucleo.CodigoErrorInterno, idioma.Tf("no se pudo consultar la última versión: %s", err))
+		s.fijarAvance(func(p *ProgresoActualizacion) { *p = ProgresoActualizacion{} })
+		return v, err
+	}
+	s.fijarAvance(func(p *ProgresoActualizacion) { p.Version = v.Etiqueta })
+	go s.actualizar(v, carpeta)
+	return v, nil
+}
+
+// versionParaInstalar devuelve la última versión y la carpeta de la instalación si hay una nueva que se puede
+// instalar desde aquí.
+func versionParaInstalar(ctx context.Context) (actualizacion.Version, string, error) {
+	v, err := ultimaVersion(ctx)
+	if err != nil {
+		return v, "", nucleo.NuevoError(nucleo.CodigoErrorInterno, idioma.Tf("no se pudo consultar la última versión: %s", err))
 	}
 	if !actualizacion.MasNueva(v.Etiqueta, version.Version) {
-		return v, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("ya tienes la última versión (%s)", version.Texto()))
+		return v, "", nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("ya tienes la última versión (%s)", version.Texto()))
 	}
 	carpeta, instalada := actualizacion.Instalada()
 	if !instalada || !v.TieneInstalador() {
-		return v, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida,
+		return v, "", nucleo.NuevoError(nucleo.CodigoSolicitudInvalida,
 			idioma.Tf("esta copia de Tramtai no se instaló con el instalador de Windows: descarga %s desde %s", v.Etiqueta, v.Pagina))
 	}
-	s.fijarAvance(func(p *ProgresoActualizacion) { *p = ProgresoActualizacion{Fase: "descargando", Version: v.Etiqueta} })
-	go s.actualizar(v, carpeta)
-	return v, nil
+	return v, carpeta, nil
 }
 
 func (s *Servicio) actualizar(v actualizacion.Version, carpeta string) {
