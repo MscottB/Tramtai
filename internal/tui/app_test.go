@@ -46,11 +46,17 @@ func tecla(texto string) tea.KeyPressMsg {
 	return tea.KeyPressMsg{Code: []rune(texto)[0], Text: texto}
 }
 
-// correr corre un Cmd de la terminal con el arnés de las páginas (prueba.App) hasta que todo se asienta, y dice si pidió
-// salir.
+// conducir lleva la terminal con el arnés de las páginas (prueba.App). Al acabar la prueba se cierra, como al salir:
+// lo que las páginas dejaron en marcha se corta.
+func conducir(t *testing.T, m *modelo) *prueba.App {
+	t.Cleanup(m.cerrar)
+	return prueba.ConducirApp(t, m)
+}
+
+// correr corre un Cmd de la terminal con el arnés hasta que todo se asienta, y dice si pidió salir.
 func correr(t *testing.T, m *modelo, cmd tea.Cmd) bool {
 	t.Helper()
-	return salio(prueba.ConducirApp(t, m).Correr(cmd))
+	return salio(conducir(t, m).Correr(cmd))
 }
 
 // salio dice si entre lo que salió de la terminal está tea.Quit.
@@ -278,7 +284,7 @@ func TestServicioCaidoNoCierra(t *testing.T) {
 	cli, global, cerrar := prueba.Arrancar(t)
 	m := nuevo(Opciones{})
 	m.cli = cli
-	a := prueba.ConducirApp(t, m)
+	a := conducir(t, m)
 	if salio(a.Correr(m.conectar(false, true, false))) || m.instancia != global || m.caido != nil {
 		t.Fatalf("conecta con el espacio global: %q %v", m.instancia, m.caido)
 	}
@@ -581,7 +587,7 @@ func TestCancelarSeVeEnElPie(t *testing.T) {
 		m := nuevoEn(Opciones{Datos: t.TempDir()}, "es")
 		m.cli, m.instancia = cli, id
 		m.Update(tea.WindowSizeMsg{Width: tam[0], Height: tam[1]})
-		a := prueba.ConducirApp(t, m)
+		a := conducir(t, m)
 		a.Correr(m.ir(pagina.PaginaEjecutar, pagina.SeguirTrabajo{ID: tr.ID}, true))
 		a.HastaVer("en vivo")
 		pie := func() string { l := strings.Split(ansi.Strip(a.Vista()), "\n"); return l[len(l)-1] }

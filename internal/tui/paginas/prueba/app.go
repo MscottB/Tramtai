@@ -279,18 +279,19 @@ func (a *App) Asentar() {
 	}
 }
 
-// ocupado son los estados de una goroutine que puede avanzar sola. Las demás esperan a otra (un canal, un select, un
-// cerrojo) o al reloj.
-var ocupado = []string{"running", "runnable", "syscall", "sleep", "preempted", "copystack"}
+// esperando son los estados de una goroutine que no avanza sola: espera a otra (un canal, un select, un cerrojo) o a
+// algo de fuera (la red, un temporizador). En cualquier otro (corre, duerme, está en una llamada al sistema o espera al
+// recolector de basura) avanzará sin que la prueba haga nada.
+var esperando = []string{"chan receive", "chan send", "select", "IO wait", "sync.", "semacquire", "finalizer wait", "coroutine"}
 
-// enMarcha es lo que puede avanzar solo: las pilas de las goroutines del proceso, sin la de la prueba, que corren,
-// duermen o están en una llamada al sistema, y lo escrito en una conexión con un servidor de prueba que el otro lado aún
-// no ha leído. Si no hay nada, nada cambia hasta que la prueba haga algo. runtime.Stack para el mundo, así que la foto
-// vale para todas las goroutines a la vez; lo que se lee o escribe mientras se toma la invalida.
+// enMarcha es lo que puede avanzar solo: las pilas de las goroutines del proceso, sin la de la prueba, que no están
+// esperando, y lo escrito en una conexión con un servidor de prueba que el otro lado aún no ha leído. Si no hay nada,
+// nada cambia hasta que la prueba haga algo. runtime.Stack para el mundo, así que la foto vale para todas las goroutines
+// a la vez; lo que se lee o escribe mientras se toma la invalida.
 func enMarcha() []string {
 	antes := cambios.Load()
-	if sinLeer() {
-		return []string{"una conexión con el servicio tiene datos sin leer"}
+	if conexion := sinLeer(); conexion != "" {
+		return []string{conexion}
 	}
 	pila := make([]byte, 1<<16)
 	for n := runtime.Stack(pila, true); ; n = runtime.Stack(pila, true) {
@@ -303,7 +304,7 @@ func enMarcha() []string {
 	var ocupadas []string
 	for _, g := range strings.Split(string(pila), "\n\n")[1:] { // la primera es la de la prueba
 		estado := g[strings.Index(g, "[")+1 : strings.Index(g, "]")]
-		if slices.ContainsFunc(ocupado, func(e string) bool { return strings.HasPrefix(estado, e) }) {
+		if !slices.ContainsFunc(esperando, func(e string) bool { return strings.HasPrefix(estado, e) }) {
 			ocupadas = append(ocupadas, g)
 		}
 	}
