@@ -432,7 +432,10 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 			return p, esperar(m.canal)
 		}
 	case msgVivo:
-		cmd := p.recibirVivo(m)
+		if !p.vivoVigente(m) { // uno viejo no vuelve a esperar: quedarían dos lectores sobre el canal nuevo
+			return p, nil
+		}
+		cmd := p.alVivo(m)
 		if p.canal == nil {
 			return p, cmd
 		}
@@ -665,10 +668,15 @@ func seguir(ctx context.Context, o origen, c pagina.Contexto, id string, seq int
 
 // recibirVivo aplica lo que llega del seguimiento en vivo si sigue valiendo: es del detalle y del seguimiento de ahora.
 func (p *Pagina) recibirVivo(m msgVivo) tea.Cmd {
-	if !p.vigente(m.origen) || m.id != p.abierto || m.seq != p.nflujo {
+	if !p.vivoVigente(m) {
 		return nil
 	}
 	return p.alVivo(m)
+}
+
+// vivoVigente dice si un mensaje del seguimiento es del detalle y del seguimiento de ahora.
+func (p *Pagina) vivoVigente(m msgVivo) bool {
+	return p.vigente(m.origen) && m.id == p.abierto && m.seq == p.nflujo
 }
 
 // alVivo aplica un evento del trabajo abierto, como los de Ejecutar.vue: el texto se suma a la respuesta, una corrección la

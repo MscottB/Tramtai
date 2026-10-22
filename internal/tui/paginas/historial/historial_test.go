@@ -943,6 +943,15 @@ func TestHistorialCorregir(t *testing.T) {
 	if len(lista) != 2 || p.abierto == "" || p.abierto == mala.ID {
 		t.Fatalf("es otra petición y la abre: %d %q", len(lista), p.abierto)
 	}
+	// Corregir no es reintentar: el trabajo nuevo lleva la conversación con el mensaje de corrección del planificador.
+	nuevo, err := cli.Trabajo(ctx, id, p.abierto)
+	if err != nil || len(nuevo.Solicitud.Mensajes) < 2 ||
+		!strings.HasPrefix(nuevo.Solicitud.Mensajes[len(nuevo.Solicitud.Mensajes)-1].Contenido, "Tu respuesta no cumple el formato pedido:") {
+		t.Fatalf("la corrección termina con el mensaje de corrección: %+v %v", nuevo.Solicitud.Mensajes, err)
+	}
+	if len(nuevo.Solicitud.Mensajes) <= len(mala.Solicitud.Mensajes) {
+		t.Fatalf("y añade mensajes a la solicitud: %d contra %d", len(nuevo.Solicitud.Mensajes), len(mala.Solicitud.Mensajes))
+	}
 	// Una completada no se corrige: avisa con el texto de la Web UI y no manda nada.
 	cli2, id2 := prueba.Servicio(t)
 	crear(t, cli2, id2, "bien")
@@ -1475,5 +1484,110 @@ func TestDetalleParteLasPalabras(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// conDetalle deja abierto el detalle de un trabajo en marcha con el seguimiento número 2, sin pedir nada al servicio.
+func conDetalle(t *testing.T) *Pagina {
+	t.Helper()
+	p := conTrabajos(t, trabajo("a", "uno", nucleo.Ejecutando))
+	tr := trabajo("a", "uno", nucleo.Ejecutando)
+	p.abierto, p.detalle, p.nflujo, p.nreg, p.ndet = "a", &tr, 2, 3, 4
+	return p
+}
+
+// TestRespuestasViejasDelDetalle: lo que llega del seguimiento en vivo, del registro o de una acción, con el seguimiento, la
+// consulta, el trabajo, el espacio o la versión de la página de antes, no se aplica.
+func TestRespuestasViejasDelDetalle(t *testing.T) {
+	texto := func(o origen, id string, seq int) msgVivo {
+		return msgVivo{origen: o, id: id, seq: seq, clase: "evento", tipo: "texto", datos: "x"}
+	}
+	p := conDetalle(t)
+	o := p.origenActual()
+	otroEspacio, otraGen := o, o
+	otroEspacio.instancia = "otro"
+	otraGen.gen--
+	for nombre, m := range map[string]msgVivo{"seguimiento viejo": texto(o, "a", 1), "otro trabajo": texto(o, "b", 2),
+		"otro espacio": texto(otroEspacio, "a", 2), "otra versión": texto(otraGen, "a", 2)} {
+		p.Update(m)
+		if p.vivoSalida != "" {
+			t.Fatalf("msgVivo de %s se aplicó: %q", nombre, p.vivoSalida)
+		}
+	}
+	p.Update(texto(o, "a", 2))
+	if p.vivoSalida != "x" {
+		t.Fatalf("el vigente sí: %q", p.vivoSalida)
+	}
+	// El fin de un seguimiento viejo no cambia el detalle.
+	final := trabajo("a", "uno", nucleo.Completado)
+	p.Update(msgVivo{origen: o, id: "a", seq: 1, clase: "fin", t: final})
+	if p.detalle.Estado != nucleo.Ejecutando {
+		t.Fatalf("un fin viejo cambió el detalle: %s", p.detalle.Estado)
+	}
+
+	// El registro.
+	reg := []nucleo.EventoRegistro{{Numero: 1, Tipo: "estado", Datos: "en_cola"}}
+	for nombre, m := range map[string]msgRegistro{"consulta vieja": {origen: o, n: 2, id: "a", lista: reg}, "otro trabajo": {origen: o, n: 3, id: "b", lista: reg},
+		"otro espacio": {origen: otroEspacio, n: 3, id: "a", lista: reg}, "otra versión": {origen: otraGen, n: 3, id: "a", lista: reg}} {
+		p.Update(m)
+		if p.registro != nil {
+			t.Fatalf("msgRegistro de %s se aplicó", nombre)
+		}
+	}
+	p.Update(msgRegistro{origen: o, n: 2, id: "a", err: errors.New("viejo")})
+	if p.errRegistro {
+		t.Fatal("un error viejo del registro no se enseña")
+	}
+	p.Update(msgRegistro{origen: o, n: 3, id: "a", lista: reg})
+	if len(p.registro) != 1 {
+		t.Fatal("el vigente sí")
+	}
+
+	// Una acción de otro espacio o de otra versión no suelta el ocupado ni cierra el detalle.
+	for nombre, oa := range map[string]origen{"otro espacio": otroEspacio, "otra versión": otraGen} {
+		p.ocupado = true
+		p.Update(msgAccion{origen: oa, accion: accionEliminar, id: "a"})
+		if p.abierto != "a" || !p.ocupado {
+			t.Fatalf("msgAccion de %s se aplicó", nombre)
+		}
+	}
+	p.Update(msgAccion{origen: o, accion: accionEliminar, id: "a"})
+	if p.abierto != "" || p.ocupado {
+		t.Fatal("la vigente sí cierra el detalle")
+	}
+	// Ni un detalle de otra versión.
+	p.Update(msgDetalle{origen: otraGen, n: p.ndet, t: trabajo("a", "uno", nucleo.Completado)})
+	if p.detalle != nil {
+		t.Fatal("un detalle de otra versión no se abre")
+	}
+}
+
+// TestVivoViejoNoRearmaLaLectura: un mensaje de un seguimiento ya cortado no vuelve a esperar sobre el canal nuevo: si no,
+// quedan dos lectores y el texto en vivo puede llegar desordenado.
+func TestVivoViejoNoRearmaLaLectura(t *testing.T) {
+	p := conDetalle(t)
+	p.canal = make(chan msgVivo) // el seguimiento de ahora
+	o := p.origenActual()
+	viejo := msgVivo{origen: o, id: "a", seq: 1, clase: "evento", tipo: "texto", datos: "x"}
+	if _, cmd := p.Update(viejo); cmd != nil {
+		t.Fatal("un mensaje del seguimiento viejo no espera sobre el canal nuevo")
+	}
+	otroTrabajo := msgVivo{origen: o, id: "b", seq: 2, clase: "evento", tipo: "texto", datos: "x"}
+	if _, cmd := p.Update(otroTrabajo); cmd != nil {
+		t.Fatal("ni uno de otro trabajo")
+	}
+	oculta := o
+	oculta.gen--
+	if _, cmd := p.Update(msgVivo{origen: oculta, id: "a", seq: 2, clase: "evento", tipo: "texto", datos: "x"}); cmd != nil {
+		t.Fatal("ni uno de otra versión de la página")
+	}
+	if _, cmd := p.Update(msgVivo{origen: o, id: "a", seq: 2, clase: "evento", tipo: "texto", datos: "x"}); cmd == nil {
+		t.Fatal("el del seguimiento de ahora sí sigue leyendo")
+	}
+	// Un msgFlujo viejo tampoco toma el canal.
+	p.cancelar = func() {}
+	p.canal = nil
+	if _, cmd := p.Update(msgFlujo{origen: o, id: "a", seq: 1, canal: make(chan msgVivo)}); cmd != nil || p.canal != nil {
+		t.Fatal("un flujo viejo no toma el canal")
 	}
 }
