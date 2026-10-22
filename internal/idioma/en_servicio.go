@@ -95,7 +95,7 @@ func init() {
 		"el servicio de Tramtai no está en marcha (tramtai servicio iniciar --segundo-plano)":                                  "the Tramtai service is not running (tramtai servicio iniciar --segundo-plano)",
 		"el servicio no respondió; revisa %s":                                                                                  "the service did not respond; check %s",
 		"hay un servicio de una versión anterior de Tramtai en marcha":                                                         "a service from an earlier version of Tramtai is running",
-		"no se pudo comprobar que sea de este usuario; detenlo con «tramtai servicio detener» de esa versión o termina ese proceso, y vuelve a intentarlo": "could not check that it belongs to this user; stop it with that version’s «tramtai servicio detener» or end that process, and try again",
+		"no se pudo comprobar que sea de este usuario; detenlo con «tramtai servicio detener» de esa versión o termina ese proceso, y vuelve a intentarlo": "could not check that it belongs to this user; stop it with that version’s “tramtai servicio detener” or end that process, and try again",
 		"el servicio de la versión anterior no confirmó la detención":                                                                                      "the service from the earlier version did not confirm that it stopped",
 		"el servicio respondió %s":                                                          "the service responded %s",
 		"eventos: el servicio respondió %s":                                                 "events: the service responded %s",
