@@ -149,7 +149,8 @@ func (p *Pagina) fila(a adaptador) string {
 	if a.Version != "" {
 		resto = append(resto, a.Version)
 	}
-	return rellenar(codigo(a.Agente), 3) + " " + rellenar(e.Recortar(nombre(a.Agente), 16), 16) + " " +
+	f, _ := catalogo.Buscar(a.Agente)
+	return rellenar(e.Linea(f.ColorClaro, f.ColorOscuro).Render(codigo(a.Agente)), 3) + " " + rellenar(e.Recortar(nombre(a.Agente), 16), 16) + " " +
 		rellenar(icono+" "+p.etiqueta(est), 16) + strings.Join(resto, " "+e.Iconos.Separador+" ")
 }
 

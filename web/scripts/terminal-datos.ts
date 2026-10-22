@@ -86,7 +86,7 @@ export const CLAVES_EJECUTAR: string[] = [
   'ejecutar.verTodo', 'ejecutar.sinRecientes', 'ejecutar.usarDeNuevo', 'ejecutar.sinAdjuntos', 'ejecutar.corregirTexto',
   'ejecutar.respuestaRecibida', 'ejecutar.guardarApi', 'ejecutar.actualizarApi', 'ejecutar.editando', 'ejecutar.dejarEditar',
   'ejecutar.guardarTexto', 'ejecutar.apiCreada', 'ejecutar.apiCreadaTexto', 'ejecutar.apiActualizada', 'ejecutar.avanzadasTexto',
-  'receta.opciones', 'receta.ejemplo', 'comun.opcionesAvanzadas',
+  'receta.opciones', 'receta.ejemplo', 'comun.opcionesAvanzadas', 'receta.instruccionesEjemplo', 'ejecutar.placeholder',
   'receta.instrucciones', 'receta.instruccionesHint', 'receta.modelo', 'receta.forzar', 'receta.respaldo', 'receta.respaldoHint',
   'receta.salidaEstructurada', 'receta.salidaEstructuradaTexto', 'receta.plantillaCorta', 'receta.plantillaReemplazar',
   'receta.plantillaReemplazarTexto', 'receta.esquema', 'receta.esquemaHint', 'receta.esquemaInvalido', 'receta.esquemaVacio',

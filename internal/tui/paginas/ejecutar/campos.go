@@ -36,7 +36,7 @@ func (p *Pagina) filasCampos(campos []campoEsquema, ruta string, nivel int) []co
 		filas = append(filas, comp.Texto(id+".nombre", et("campos.nombre"), c.Nombre),
 			p.opcion(id+".tipo", et("campos.tipo"), tipos, p.nombres("campos.tipo.", tipos), c.Tipo),
 			comp.Interruptor(id+".obligatorio", et("campos.obligatorio"), c.Obligatorio),
-			comp.Texto(id+".descripcion", et("campos.descripcion"), c.Descripcion))
+			comp.Texto(id+".descripcion", et("campos.descripcion"), c.Descripcion).Ejemplo(p.tx("campos.descripcionEjemplo")))
 		switch c.Tipo {
 		case "opcion":
 			filas = append(filas, comp.Texto(id+".opciones", et("campos.opciones"), strings.Join(c.Opciones, ", ")))

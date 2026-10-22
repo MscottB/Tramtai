@@ -78,6 +78,28 @@ func Interruptor(id, etiqueta string, valor bool) Campo {
 	return Campo{ID: id, Etiqueta: etiqueta, tipo: campoInterruptor, marcado: valor}
 }
 
+// Ejemplo pone el texto tenue que enseña un campo de texto vacío (el placeholder de la Web UI).
+func (c Campo) Ejemplo(texto string) Campo {
+	c.linea.Placeholder, c.area.Placeholder = texto, texto
+	return c
+}
+
+// marcar da a los campos de texto su marca de entrada (la barra vertical, en el acento con el foco) y el estilo del
+// ejemplo: así un campo vacío no se confunde con una etiqueta suelta, también sin color.
+func (c *Campo) marcar(e *pagina.Estilos) {
+	marca := e.Iconos.Vertical + " "
+	switch c.tipo {
+	case campoArea:
+		c.area.Prompt = marca
+		c.area.SetStyles(textarea.Styles{Focused: textarea.StyleState{Prompt: e.Acento, Placeholder: e.Tenue},
+			Blurred: textarea.StyleState{Prompt: e.Tenue, Placeholder: e.Tenue}})
+	case campoTexto, campoNumero:
+		c.linea.Prompt = marca
+		c.linea.SetStyles(textinput.Styles{Focused: textinput.StyleState{Prompt: e.Acento, Placeholder: e.Tenue},
+			Blurred: textinput.StyleState{Prompt: e.Tenue, Placeholder: e.Tenue}})
+	}
+}
+
 // Pliegue es la cabecera de unas opciones plegadas, como un q-expansion-item de la Web UI: Intro, espacio o ← → lo abren y
 // lo cierran. Sus campos se crean con Plegados y, con el pliegue cerrado, ni se ven ni reciben el foco.
 func Pliegue(id, etiqueta string, abierto bool) Campo {
@@ -164,6 +186,9 @@ type Formulario struct {
 // NuevoFormulario crea un formulario con el foco en el primer campo.
 func NuevoFormulario(e *pagina.Estilos, campos ...Campo) Formulario {
 	f := Formulario{estilos: e, campos: campos, tocados: map[string]bool{}}
+	for i := range f.campos {
+		f.campos[i].marcar(e)
+	}
 	f.medir(40)
 	if len(f.campos) > 0 {
 		f.campos[0].enfocar(true)
@@ -285,10 +310,10 @@ func (f *Formulario) medir(ancho int) {
 	f.ancho = max(ancho, 10)
 	for i := range f.campos {
 		switch c := &f.campos[i]; c.tipo {
-		case campoArea:
+		case campoArea: // el ancho del área cuenta su marca
 			c.area.SetWidth(f.ancho - 2)
-		case campoTexto, campoNumero:
-			c.linea.SetWidth(f.ancho - 3)
+		case campoTexto, campoNumero: // el sangrado (2), la marca (2) y el cursor (1)
+			c.linea.SetWidth(f.ancho - 5)
 		}
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 func envia(cmd tea.Cmd) bool {
@@ -114,6 +115,25 @@ func TestFormularioDesdeFuera(t *testing.T) {
 	f.Revalidar()
 	if !strings.Contains(f.Vista(), "lo dice el servicio") {
 		t.Fatal("Revalidar enseña un error que llega después")
+	}
+}
+
+// TestCamposComoCampos: sin color, un campo de texto o de varias líneas se distingue de una etiqueta suelta: lleva su
+// marca de entrada y, vacío, el ejemplo de la Web UI.
+func TestCamposComoCampos(t *testing.T) {
+	f := NuevoFormulario(estilos(), Texto("nombre", "Nombre", "").Ejemplo("mi-app"), Area("notas", "Notas", "").Ejemplo("Escribe aquí"))
+	lineas := strings.Split(f.Vista(), "\n")
+	if !strings.HasPrefix(lineas[1], "  │ ") || !strings.Contains(lineas[1], "mi-app") {
+		t.Fatalf("el campo de una línea tiene su marca y el ejemplo: %q", lineas[1])
+	}
+	if !strings.HasPrefix(lineas[4], "  │ ") || !strings.Contains(lineas[4], "Escribe aquí") || !strings.HasPrefix(lineas[5], "  │") {
+		t.Fatalf("el área tiene su marca en cada línea y el ejemplo:\n%s", f.Vista())
+	}
+	f.Update(tea.WindowSizeMsg{Width: 30})
+	for _, l := range strings.Split(f.Vista(), "\n") {
+		if w := lipgloss.Width(l); w > 30 {
+			t.Fatalf("con la marca cabe en el ancho: %d %q", w, l)
+		}
 	}
 }
 

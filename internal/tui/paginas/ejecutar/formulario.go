@@ -84,7 +84,7 @@ func (p *Pagina) armar(d datosForm, foco string) {
 	}
 	// Lo esencial arriba (instrucciones, modelo y esfuerzo) y lo demás en «Opciones de la receta», como Probar en la Web UI.
 	campos := []comp.Campo{
-		comp.Area("instrucciones", p.tx("receta.instrucciones"), d.instrucciones),
+		comp.Area("instrucciones", p.tx("receta.instrucciones"), d.instrucciones).Ejemplo(p.tx("receta.instruccionesEjemplo")),
 		p.opcion("modelo", p.tx("receta.modelo"), modelos, etiquetas, d.modelo),
 		p.opcion("esfuerzo", p.tx("esfuerzo.titulo"), esfuerzos, nombres, d.esfuerzo),
 		comp.Pliegue("opciones", p.tx("receta.opciones"), d.opciones),
@@ -114,7 +114,7 @@ func (p *Pagina) armar(d datosForm, foco string) {
 		p.modo, p.campos = d.modo, d.campos
 	}
 	campos = append(campos, comp.Plegados("opciones", plegados...)...)
-	campos = append(campos, comp.Area("mensaje", p.tx("ejecutar.mensaje"), d.mensaje), comp.Texto("archivos", p.tx("ejecutar.adjuntar"), d.archivos),
+	campos = append(campos, comp.Area("mensaje", p.tx("ejecutar.mensaje"), d.mensaje).Ejemplo(p.tx("ejecutar.placeholder")), comp.Texto("archivos", p.tx("ejecutar.adjuntar"), d.archivos),
 		comp.Pliegue("avanzadas", p.tx("comun.opcionesAvanzadas"), d.avanzadas))
 	campos = append(campos, comp.Plegados("avanzadas", comp.Texto("perfil", p.tx("ejecutar.perfilTrabajo"), d.perfil),
 		comp.Numero("tiempo", p.tx("ejecutar.tiempo")+" (s)", d.tiempo))...)

@@ -35,6 +35,19 @@ var (
 	IconosASCII   = Iconos{Cursor: ">", Abierto: "v", Cerrado: ">", Activo: "*", Inactivo: "o", Ok: "+", Fallo: "x", Separador: "-", Elipsis: "...", Vertical: "|"}
 )
 
+// Linea es el estilo de la línea de un agente (DESIGN.md: un color por agente, solo para identificarlo), con su color de
+// día y de noche; sin uno propio, el de linea-otro. Sin color es negrita: lo identifican las dos letras de su código.
+func (e *Estilos) Linea(claro, oscuro string) lipgloss.Style {
+	estilo := lipgloss.NewStyle().Bold(true)
+	if !e.Color {
+		return estilo
+	}
+	if claro == "" || oscuro == "" {
+		claro, oscuro = "#64748b", "#8a9aa8"
+	}
+	return estilo.Foreground(lipgloss.LightDark(e.Oscuro)(lipgloss.Color(claro), lipgloss.Color(oscuro)))
+}
+
 // Recortar deja texto (con o sin estilos) en ancho columnas, con la elipsis si no cabe. Mide con el ancho que se ve,
 // no con len.
 func (e *Estilos) Recortar(texto string, ancho int) string {

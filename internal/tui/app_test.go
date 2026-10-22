@@ -362,6 +362,29 @@ func TestTemaSegunElFondo(t *testing.T) {
 	}
 }
 
+// TestColoresDeDesign: los colores de la terminal son los tokens de docs/diseno/DESIGN.md, de día y de noche, y el acento
+// es el verde azulado de la marca.
+func TestColoresDeDesign(t *testing.T) {
+	texto, err := os.ReadFile("../../docs/diseno/DESIGN.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	design := map[string]string{}
+	for _, m := range regexp.MustCompile(`(?m)^  ([a-z-]+): "(#[0-9a-f]{6})"$`).FindAllStringSubmatch(string(texto), -1) {
+		design[m[1]] = m[2]
+	}
+	for nombre, valor := range tokens {
+		if design[nombre] != valor {
+			t.Errorf("%s: la terminal usa %s y DESIGN.md dice %q", nombre, valor, design[nombre])
+		}
+	}
+	t.Setenv("NO_COLOR", "")
+	m := nuevo(Opciones{})
+	if r, g, b, _ := m.estilos.Acento.GetForeground().RGBA(); r>>8 != 0x2d || g>>8 != 0xd4 || b>>8 != 0xbf {
+		t.Fatalf("de noche, el acento es acento-noche: %x %x %x", r>>8, g>>8, b>>8)
+	}
+}
+
 func TestAsciiConLaVariable(t *testing.T) {
 	t.Setenv("TRAMTAI_ASCII", "1")
 	m := nuevo(Opciones{})

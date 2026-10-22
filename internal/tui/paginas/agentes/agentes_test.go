@@ -74,6 +74,20 @@ func TestAgentesCarga(t *testing.T) {
 	}
 }
 
+// TestColorDeLinea: con color, las dos letras de cada agente van en el color de su línea (DESIGN.md: un color de línea por
+// agente); sin color quedan las dos letras.
+func TestColorDeLinea(t *testing.T) {
+	p, _, _ := abierta(t)
+	e := pagina.Estilos{Iconos: pagina.IconosUnicode, Color: true, Oscuro: true}
+	*p.estilos = e
+	if fila := p.fila(adaptador{Agente: "claude"}); !strings.Contains(fila, "\x1b[") || !strings.Contains(fila, "CL") {
+		t.Fatalf("el código va en su color: %q", fila)
+	}
+	if fila := p.fila(adaptador{Agente: "claude"}); !strings.Contains(fila, "242;138;79") {
+		t.Fatalf("de noche, linea-claude-noche (#f28a4f): %q", fila)
+	}
+}
+
 // TestFiltroDeAgentes: la línea de los estados es el filtro de la Web UI; ← → lo cambia y la lista enseña solo esos.
 func TestFiltroDeAgentes(t *testing.T) {
 	p, _, _ := abierta(t)
