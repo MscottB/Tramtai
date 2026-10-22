@@ -14,6 +14,7 @@ import (
 	"tramtai/internal/configuracion"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
+	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/vivo"
 )
 
@@ -29,7 +30,7 @@ func (p *Pagina) enviar() tea.Cmd {
 		return nil
 	}
 	if p.c.Cli == nil {
-		return sinServicio
+		return pagina.SinCliente
 	}
 	d := p.leer()
 	esquema, err := esquemaDe(d.esquema)
@@ -72,7 +73,7 @@ func (p *Pagina) enviar() tea.Cmd {
 // cargarTrabajo lee un trabajo para seguirlo; con receta, además pone su receta y su mensaje en el formulario.
 func (p *Pagina) cargarTrabajo(id string, receta bool) tea.Cmd {
 	if p.c.Cli == nil {
-		return sinServicio
+		return pagina.SinCliente
 	}
 	c, o := p.c, p.origen()
 	return func() tea.Msg {
@@ -200,7 +201,7 @@ func (p *Pagina) alVivo(m msgVivo) tea.Cmd {
 func (p *Pagina) cancelarTrabajo() tea.Cmd {
 	switch {
 	case p.c.Cli == nil:
-		return sinServicio
+		return pagina.SinCliente
 	case p.ocupado:
 		return nil
 	}
@@ -218,7 +219,7 @@ func (p *Pagina) corregir() tea.Cmd {
 	case p.final == nil || p.ocupado:
 		return nil
 	case p.c.Cli == nil:
-		return sinServicio
+		return pagina.SinCliente
 	case !p.final.Corregible:
 		return comp.Aviso(p.tx("error.correccion_no_disponible"), comp.Advertencia)
 	}

@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -195,7 +196,7 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	p.ajustar()
 	if c.Cli == nil {
 		p.sinServ = true
-		return func() tea.Msg { return pagina.ErrorServicio{Err: cliente.ErrServicioInactivo} }
+		return pagina.SinCliente
 	}
 	return tea.Batch(p.cargar(false), p.cargarPuntos(), p.armarSondeo())
 }
@@ -235,14 +236,8 @@ func (p *Pagina) origen() origen { return origen{p.c.Origen(p.gen)} }
 // vigente dice si una respuesta sigue valiendo (pagina.Origen.Vigente) y la página se ve.
 func (p *Pagina) vigente(o origen) bool { return o.Vigente(p.c, p.gen) && p.visible }
 
-// esperarA es un temporizador: pasado d manda lo que haga mensaje, salvo que el contexto de la página se cancele antes.
-func (p *Pagina) esperarA(d time.Duration, mensaje func(origen) tea.Msg) tea.Cmd {
-	o := p.origen()
-	return pagina.Tras(o.Ctx, d, p.esperaPara, func() tea.Msg { return mensaje(o) })
-}
-
 func (p *Pagina) armarSondeo() tea.Cmd {
-	return p.esperarA(cadaSondeo, func(o origen) tea.Msg { return msgSondeo{o} })
+	return pagina.Tras(p.origen(), cadaSondeo, p.esperaPara, func(o origen) tea.Msg { return msgSondeo{o} })
 }
 
 // filtroServidor son los filtros que atiende el servicio: el origen, el grupo o la API.
@@ -270,7 +265,7 @@ func (p *Pagina) filtroServidor() cliente.FiltroTrabajos {
 func (p *Pagina) cargar(segundoPlano bool) tea.Cmd {
 	c, o := p.c, p.origen()
 	if c.Cli == nil {
-		return func() tea.Msg { return pagina.ErrorServicio{Err: cliente.ErrServicioInactivo} }
+		return pagina.SinCliente
 	}
 	p.n++
 	n := p.n
@@ -458,7 +453,7 @@ func (p *Pagina) cerrarVivo() {
 func (p *Pagina) abrirDetalle(id string, nuevo bool) tea.Cmd {
 	c, o := p.c, p.origen()
 	if c.Cli == nil {
-		return func() tea.Msg { return pagina.ErrorServicio{Err: cliente.ErrServicioInactivo} }
+		return pagina.SinCliente
 	}
 	if nuevo || p.abierto != id {
 		p.detalle = nil
@@ -601,14 +596,14 @@ func (p *Pagina) pedirRegistro() tea.Cmd {
 		return nil
 	}
 	p.regPend = true
-	return p.esperarA(esperaRegistro, func(o origen) tea.Msg { return msgRegistroYa{o} })
+	return pagina.Tras(p.origen(), esperaRegistro, p.esperaPara, func(o origen) tea.Msg { return msgRegistroYa{o} })
 }
 
 // lanzar hace una acción en el servicio; al volver, alAccion la recoge. Mientras haya una en marcha no se lanza otra.
 func (p *Pagina) lanzar(hacer func(pagina.Contexto) msgAccion) tea.Cmd {
 	c, o := p.c, p.origen()
 	if c.Cli == nil {
-		return func() tea.Msg { return pagina.ErrorServicio{Err: cliente.ErrServicioInactivo} }
+		return pagina.SinCliente
 	}
 	if p.ocupado {
 		return nil
@@ -665,7 +660,7 @@ func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
 		}
 		return p.cargar(true)
 	case accionVaciar:
-		return tea.Batch(comp.Aviso(p.tx("historial.vaciado", "n", itoa(m.n)), comp.Exito), p.cargar(true))
+		return tea.Batch(comp.Aviso(p.tx("historial.vaciado", "n", strconv.Itoa(m.n)), comp.Exito), p.cargar(true))
 	}
 	return nil
 }

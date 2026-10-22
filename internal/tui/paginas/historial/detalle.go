@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/x/ansi"
-
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/vivo"
@@ -77,19 +75,10 @@ func (p *Pagina) rehacerVisor() {
 	default:
 		texto = p.textoRegistro(t)
 	}
-	p.visor.Poner(envolver(p.a(texto), p.c.Ancho))
+	p.visor.Poner(strings.Join(p.estilos.Envolver(p.a(texto), p.c.Ancho, 0), "\n")) // por palabras: el visor, si no, parte donde caiga
 	if p.pestana == pestanaRespuesta && p.sigue && p.enVivo() {
 		p.visorTecla("G")
 	}
-}
-
-// envolver parte cada línea del texto por palabras en líneas de como mucho ancho columnas: el visor, si no, parte donde caiga.
-func envolver(texto string, ancho int) string {
-	lineas := strings.Split(texto, "\n")
-	for i, l := range lineas {
-		lineas[i] = ansi.Wrap(l, max(ancho, 1), "")
-	}
-	return strings.Join(lineas, "\n")
 }
 
 // fecha es la fecha y hora locales de una petición.
@@ -255,7 +244,7 @@ func (p *Pagina) textoIntento(datos string) string {
 	}
 	partes := []string{agente}
 	if i.Correccion != 0 {
-		partes = append([]string{p.tx("registro.correccion", "n", itoa(i.Correccion), "de", itoa(cmp.Or(i.Correcciones, i.Correccion)))}, partes...)
+		partes = append([]string{p.tx("registro.correccion", "n", strconv.Itoa(i.Correccion), "de", strconv.Itoa(cmp.Or(i.Correcciones, i.Correccion)))}, partes...)
 	}
 	if i.Esfuerzo != "" {
 		nivel := strings.ToLower(p.nombreEsfuerzo(i.Esfuerzo))
@@ -301,7 +290,7 @@ func (p *Pagina) textoValidacion(datos string) string {
 	}
 	texto := p.tx("registro.validacion", "texto", v.Problemas[0].Texto)
 	if n := len(v.Problemas) - 1; n > 0 {
-		texto += " " + p.tx("registro.validacionMas", "n", itoa(n))
+		texto += " " + p.tx("registro.validacionMas", "n", strconv.Itoa(n))
 	}
 	return texto
 }

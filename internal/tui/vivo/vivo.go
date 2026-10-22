@@ -1,6 +1,6 @@
 // Package vivo es lo que comparten las páginas que siguen peticiones en vivo: Probar y el detalle del Historial siguen una
-// (el flujo de eventos con su reconexión) e Inicio lee el flujo del espacio con Esperar. Las tres pintan el estado igual
-// (icono, nombre, ruta y «hace cuánto»).
+// (el flujo de eventos con su reconexión) e Inicio sostiene el flujo del espacio con el mismo bucle (Mantener). Las tres
+// lo leen con Esperar y pintan el estado igual (icono, nombre, ruta y «hace cuánto»).
 package vivo
 
 import (
@@ -51,13 +51,13 @@ func Abrir[O any](ctx context.Context, o O, instancia, id string, seq int, event
 	}
 }
 
-// seguir mantiene abierto el flujo del trabajo. Al acabar (el cliente no entrega el evento fin) o cortarse, consulta el
-// trabajo: si terminó manda fin con él; si no, espera y reabre desde el último evento visto.
-func seguir[O any](ctx context.Context, o O, instancia, id string, seq int, eventos Eventos, trabajo Trabajo,
-	espera func(time.Duration) <-chan time.Time, canal chan<- Msg[O]) {
+// Mantener sostiene un flujo que se corta y se reabre, y cierra canal al terminar. Cada vuelta abre el flujo y lo lee hasta
+// que se corta; devuelve cuánto esperar antes de reabrirlo o, con seguir falso, que se acabó. enviar manda un mensaje
+// por canal y es falso si ctx se canceló. Lo usan el seguimiento de un trabajo y el flujo del espacio de Inicio.
+func Mantener[M any](ctx context.Context, canal chan<- M, espera func(time.Duration) <-chan time.Time,
+	vuelta func(intento int, enviar func(M) bool) (pausa time.Duration, seguir bool)) {
 	defer close(canal)
-	enviar := func(m Msg[O]) bool {
-		m.Origen, m.ID, m.Seq = o, id, seq
+	enviar := func(m M) bool {
 		select {
 		case canal <- m:
 			return true
@@ -65,37 +65,51 @@ func seguir[O any](ctx context.Context, o O, instancia, id string, seq int, even
 			return false
 		}
 	}
-	desde := 0
 	for intento := 0; ; intento++ {
-		if intento > 0 && !enviar(Msg[O]{Clase: "abre"}) { // vuelve a probar: si falla enseguida, llega otro corte
+		pausa, seguir := vuelta(intento, enviar)
+		if !seguir {
 			return
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-espera(pausa):
+		}
+	}
+}
+
+// seguir mantiene abierto el flujo del trabajo. Al acabar (el cliente no entrega el evento fin) o cortarse, consulta el
+// trabajo: si terminó manda fin con él; si no, espera y reabre desde el último evento visto.
+func seguir[O any](ctx context.Context, o O, instancia, id string, seq int, eventos Eventos, trabajo Trabajo,
+	espera func(time.Duration) <-chan time.Time, canal chan<- Msg[O]) {
+	desde := 0
+	Mantener(ctx, canal, espera, func(intento int, enviar func(Msg[O]) bool) (time.Duration, bool) {
+		mandar := func(m Msg[O]) bool {
+			m.Origen, m.ID, m.Seq = o, id, seq
+			return enviar(m)
+		}
+		if intento > 0 && !mandar(Msg[O]{Clase: "abre"}) { // vuelve a probar: si falla enseguida, llega otro corte
+			return 0, false
 		}
 		_ = eventos(ctx, instancia, id, desde, func(numero int, tipo, datos string) error {
 			if numero > 0 && numero <= desde { // tras reconectar, lo que ya había llegado
 				return nil
 			}
 			desde = max(desde, numero)
-			if !enviar(Msg[O]{Clase: "evento", Tipo: tipo, Datos: datos}) {
+			if !mandar(Msg[O]{Clase: "evento", Tipo: tipo, Datos: datos}) {
 				return ctx.Err()
 			}
 			return nil
 		})
 		if ctx.Err() != nil {
-			return
+			return 0, false
 		}
 		if t, err := trabajo(ctx, instancia, id); err == nil && t.Estado.Terminal() {
-			enviar(Msg[O]{Clase: "fin", T: t})
-			return
+			mandar(Msg[O]{Clase: "fin", T: t})
+			return 0, false
 		}
-		if !enviar(Msg[O]{Clase: "corte"}) {
-			return
-		}
-		select {
-		case <-ctx.Done():
-			return
-		case <-espera(EsperaCorte):
-		}
-	}
+		return EsperaCorte, mandar(Msg[O]{Clase: "corte"})
+	})
 }
 
 // Esperar lee el siguiente mensaje de un canal de seguimiento; con el canal cerrado, nada.

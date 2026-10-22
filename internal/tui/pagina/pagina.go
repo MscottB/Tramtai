@@ -124,18 +124,24 @@ func (o Origen) DelEspacio(c Contexto) bool {
 // Vigente dice si la respuesta sigue valiendo: es DelEspacio y de la versión gen de la página.
 func (o Origen) Vigente(c Contexto, gen int) bool { return o.DelEspacio(c) && o.Gen == gen }
 
-// Tras es un temporizador: pasado d (con espera, que las pruebas sustituyen) responde mensaje(), salvo que ctx se cancele
-// antes.
-func Tras(ctx context.Context, d time.Duration, espera func(time.Duration) <-chan time.Time, mensaje func() tea.Msg) tea.Cmd {
+// Fin se cierra cuando se cancela el Ctx con que se pidió.
+func (o Origen) Fin() <-chan struct{} { return o.Ctx.Done() }
+
+// Tras es un temporizador de una página: pasado d (con espera, que las pruebas sustituyen) responde mensaje(o), con el
+// origen de la página, salvo que su Ctx se cancele antes.
+func Tras[O interface{ Fin() <-chan struct{} }](o O, d time.Duration, espera func(time.Duration) <-chan time.Time, mensaje func(O) tea.Msg) tea.Cmd {
 	return func() tea.Msg {
 		select {
-		case <-ctx.Done():
+		case <-o.Fin():
 			return nil
 		case <-espera(d):
-			return mensaje()
+			return mensaje(o)
 		}
 	}
 }
+
+// SinCliente es el Cmd de lo que necesita el servicio cuando la página no tiene cliente: la app avisa y r reintenta.
+func SinCliente() tea.Msg { return ErrorServicio{Err: cliente.ErrServicioInactivo} }
 
 // SinServicio es el Cmd de ErrorServicio si err es de conexión (NoResponde); nil si es otro error, que la página enseña
 // con su mensaje.

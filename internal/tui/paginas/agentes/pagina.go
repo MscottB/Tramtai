@@ -4,14 +4,12 @@
 package agentes
 
 import (
-	"context"
 	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 
 	catalogo "tramtai/internal/agentes"
-	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -20,27 +18,26 @@ import (
 	"tramtai/internal/tui/pagina"
 )
 
+// origen es el pagina.Origen de los mensajes de Agentes: un tipo propio, para no confundirlos con los de otra página.
+type origen struct{ pagina.Origen }
+
 type (
-	// Mensajes propios: cada uno lleva el Ctx y la instancia con que se pidió, y se descarta si ya no valen.
 	msgAgentes struct {
-		ctx       context.Context
-		instancia string
-		n         int // qué comprobación es: solo vale la última
-		lista     []contrato.Adaptador
-		err       error
+		origen
+		n     int // qué comprobación es: solo vale la última
+		lista []contrato.Adaptador
+		err   error
 	}
 	msgModelos struct {
-		ctx       context.Context
-		instancia string
-		agente    string
-		ids       []string
-		err       error
+		origen
+		agente string
+		ids    []string
+		err    error
 	}
 	msgAccion struct {
-		ctx       context.Context
-		instancia string
-		exito     string // lo que se avisa si salió bien
-		err       error
+		origen
+		exito string // lo que se avisa si salió bien
+		err   error
 	}
 )
 
@@ -55,6 +52,7 @@ const (
 // Pagina es la página Agentes.
 type Pagina struct {
 	c        pagina.Contexto
+	gen      int
 	lengua   string
 	estilos  *pagina.Estilos
 	lista    comp.Lista[contrato.Adaptador]
@@ -94,6 +92,7 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 // Iniciar empieza de cero: «Cargando…» hasta que llegue la comprobación.
 func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	p.c, p.lengua = c, c.Idioma
+	p.gen++
 	if p.estilos != c.Estilos { // los mismos toda la sesión: la lista y el visor se crean una vez
 		p.estilos = c.Estilos
 		p.lista = comp.NuevaLista(c.Estilos, func(a contrato.Adaptador) string { return nombre(a.Agente) + " " + a.Agente })
@@ -112,20 +111,20 @@ func (p *Pagina) comprobar() tea.Cmd {
 	c := p.c
 	if c.Cli == nil {
 		p.cargando = false
-		return func() tea.Msg { return pagina.ErrorServicio{Err: cliente.ErrServicioInactivo} }
+		return pagina.SinCliente
 	}
 	p.n++
 	n := p.n
 	p.cargando, p.err = true, ""
+	o := p.origen()
 	return func() tea.Msg {
 		r, err := c.Cli.Capacidades(c.Ctx, c.Instancia)
-		return msgAgentes{ctx: c.Ctx, instancia: c.Instancia, n: n, lista: r.Adaptadores, err: err}
+		return msgAgentes{origen: o, n: n, lista: r.Adaptadores, err: err}
 	}
 }
 
-func (p *Pagina) vigente(ctx context.Context, instancia string) bool {
-	return pagina.Origen{Ctx: ctx, Instancia: instancia}.DelEspacio(p.c)
-}
+func (p *Pagina) origen() origen        { return origen{p.c.Origen(p.gen)} }
+func (p *Pagina) vigente(o origen) bool { return o.Vigente(p.c, p.gen) }
 
 func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 	switch m := msg.(type) {
@@ -133,7 +132,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		p.c.Ancho, p.c.Alto = m.Width, m.Height
 		p.visor.Tamano(m.Width, max(m.Height-2, 1))
 	case msgAgentes:
-		if !p.vigente(m.ctx, m.instancia) || m.n != p.n {
+		if !p.vigente(m.origen) || m.n != p.n {
 			return p, nil
 		}
 		p.cargando = false
@@ -149,7 +148,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		p.lista.Poner(p.agentes)
 		p.refrescar()
 	case msgModelos:
-		if !p.vigente(m.ctx, m.instancia) {
+		if !p.vigente(m.origen) {
 			return p, nil
 		}
 		if m.err != nil {
@@ -163,7 +162,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		}
 		p.refrescar()
 	case msgAccion:
-		if !p.vigente(m.ctx, m.instancia) {
+		if !m.DelEspacio(p.c) { // el cambio ya está hecho en el servicio: vale aunque la página se haya vuelto a iniciar
 			return p, nil
 		}
 		p.ocupado = false
@@ -260,7 +259,7 @@ func (p *Pagina) abrir(a contrato.Adaptador) tea.Cmd {
 	p.detalle = a.Agente
 	p.visor.Tamano(p.c.Ancho, max(p.c.Alto-2, 1))
 	p.refrescar()
-	c, agente := p.c, a.Agente
+	c, o, agente := p.c, p.origen(), a.Agente
 	if _, ya := p.modelos[agente]; ya || c.Cli == nil {
 		return nil
 	}
@@ -272,7 +271,7 @@ func (p *Pagina) abrir(a contrato.Adaptador) tea.Cmd {
 				suyos = append(suyos, id)
 			}
 		}
-		return msgModelos{ctx: c.Ctx, instancia: c.Instancia, agente: agente, ids: suyos, err: err}
+		return msgModelos{origen: o, agente: agente, ids: suyos, err: err}
 	}
 }
 
@@ -318,13 +317,13 @@ func (p *Pagina) autenticar(agente, modo string) tea.Cmd {
 
 // accion lanza un cambio en el servicio; al volver, la página avisa y vuelve a comprobar.
 func (p *Pagina) accion(exito string, hacer func(pagina.Contexto) error) tea.Cmd {
-	c := p.c
+	c, o := p.c, p.origen()
 	if c.Cli == nil {
-		return func() tea.Msg { return pagina.ErrorServicio{Err: cliente.ErrServicioInactivo} }
+		return pagina.SinCliente
 	}
 	p.ocupado = true
 	return func() tea.Msg {
-		return msgAccion{ctx: c.Ctx, instancia: c.Instancia, exito: exito, err: hacer(c)}
+		return msgAccion{origen: o, exito: exito, err: hacer(c)}
 	}
 }
 
