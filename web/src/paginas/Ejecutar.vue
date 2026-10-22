@@ -41,7 +41,7 @@
             <div v-if="listaFormatos(limites)" class="text-caption texto-suave q-mt-lg">{{ t('ejecutar.formatos', { lista: listaFormatos(limites) }) }}</div>
             <AvisoConversor v-if="avisoConversor" />
 
-            <q-expansion-item dense icon="o_tune" :label="t('comun.opcionesAvanzadas')" header-class="q-px-none text-body2 texto-suave" class="q-mt-sm">
+            <q-expansion-item v-model="avanzadas" dense icon="o_tune" :label="t('comun.opcionesAvanzadas')" header-class="q-px-none text-body2 texto-suave" class="q-mt-sm">
               <div class="q-gutter-y-md q-pt-sm">
                 <div class="text-caption texto-suave">{{ t('ejecutar.avanzadasTexto') }}</div>
                 <div class="row q-col-gutter-sm">
@@ -49,7 +49,7 @@
                     <q-input v-model="perfil" outlined dense :label="t('ejecutar.perfilTrabajo')" :hint="t('ejecutar.perfilHint')" />
                   </div>
                   <div class="col-5">
-                    <q-input v-model="tiempo" outlined dense inputmode="numeric" :label="t('ejecutar.tiempo')" suffix="s" :hint="t('ejecutar.tiempoHint')"
+                    <q-input ref="campoTiempo" v-model="tiempo" outlined dense inputmode="numeric" :label="t('ejecutar.tiempo')" suffix="s" :hint="t('ejecutar.tiempoHint')"
                       :rules="[(v: string) => !v || /^\d+$/.test(v) || t('ejecutar.soloNumeros')]" />
                   </div>
                 </div>
@@ -188,8 +188,8 @@
 import { recordarBorrador } from '../borrador'
 import BotonAyuda from '../componentes/ayuda/BotonAyuda.vue'
 import { ERRORES } from '../ayuda/temas/problemas'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useQuasar } from 'quasar'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { useQuasar, type QInput } from 'quasar'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import AvisoConversor from '../componentes/AvisoConversor.vue'
 import { aceptar, cargarConversor, conversor, listaFormatos, necesitaConversor } from '../conversor'
@@ -237,6 +237,8 @@ const mensaje = ref('')
 recordarBorrador('tramtai.borradorProbar', mensaje)
 const perfil = ref('')
 const tiempo = ref('')
+const avanzadas = ref(false)
+const campoTiempo = ref<QInput>()
 const enviando = ref(false)
 const trabajo = ref<Trabajo>()
 const final = ref<Trabajo>()
@@ -306,7 +308,14 @@ async function ejecutar() {
     avisarError(e)
     return
   }
-  if (tiempo.value && !/^\d+$/.test(tiempo.value)) return
+  // Un tiempo límite no válido no se envía en silencio: se abren las opciones avanzadas y el campo enseña su error.
+  if (tiempo.value && !/^\d+$/.test(tiempo.value)) {
+    avanzadas.value = true
+    await nextTick()
+    campoTiempo.value?.validate()
+    campoTiempo.value?.focus()
+    return
+  }
   enviando.value = true
   try {
     const cargas: string[] = []

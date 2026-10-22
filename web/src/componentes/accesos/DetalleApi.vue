@@ -1,8 +1,9 @@
 <template>
   <!-- Detalle de una API: cómo conectarla, sus acciones y la zona de peligro. Al cerrarse se olvida la clave
        mostrada: no queda en memoria de la página. -->
-  <q-dialog v-model="abierto" :maximized="$q.screen.lt.sm" aria-labelledby="titulo-detalle" @hide="claveVista = ''">
-    <q-card v-if="puntoDetalle" style="width: 760px; max-width: 96vw">
+  <!-- Con una clave recién creada o regenerada a la vista (solo se ve esta vez), un clic fuera no cierra y Esc pregunta. -->
+  <q-dialog v-model="abierto" :maximized="$q.screen.lt.sm" aria-labelledby="titulo-detalle" :persistent="!!claveVista" @hide="claveVista = ''">
+    <q-card v-if="puntoDetalle" style="width: 760px; max-width: 96vw" @keyup.esc="claveVista && escaparConAviso(true, () => (abierto = false), true)">
       <q-card-section class="row items-center no-wrap q-gutter-x-sm">
         <span class="linea__chapa linea__chapa--grande" :class="['linea--' + (puntoDetalle.agente ?? 'otro'), { 'linea__chapa--apagada': !activo(puntoDetalle) }]" aria-hidden="true">{{ puntoDetalle.agente ? codigoLinea(puntoDetalle.agente) : 'API' }}</span>
         <div class="col">
@@ -81,6 +82,7 @@ import { codigoLinea } from '../../agentes'
 import { idModeloDe as idModelo } from '../../recetas'
 import { ejemplos as ejemplosDe } from '../../ejemplos'
 import { t } from '../../i18n'
+import { escaparConAviso } from '../../cierre'
 import { activo } from './comun'
 
 // puntoDetalle es la API abierta; claveVista, su clave recién creada o regenerada (solo se ve esta vez).

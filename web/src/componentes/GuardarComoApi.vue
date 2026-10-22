@@ -1,6 +1,7 @@
 <template>
-  <q-dialog v-model="dialogoGuardar" aria-labelledby="titulo-guardar-api">
-    <q-card style="width: 520px; max-width: 95vw">
+  <!-- persistent: un clic fuera no cierra; Esc pregunta si ya hay un nombre o un grupo escritos. -->
+  <q-dialog v-model="dialogoGuardar" aria-labelledby="titulo-guardar-api" persistent>
+    <q-card style="width: 520px; max-width: 95vw" @keyup.esc="escaparConAviso(!!(nueva.nombre || nueva.grupo), () => (dialogoGuardar = false))">
       <q-card-section>
         <h2 id="titulo-guardar-api" class="titulo-seccion">{{ t('ejecutar.guardarApi') }}</h2>
         <div class="texto-suave text-body2">{{ t('ejecutar.guardarTexto') }}</div>
@@ -19,9 +20,10 @@
     </q-card>
   </q-dialog>
 
-  <!-- Al cerrarse se olvida la clave mostrada: no queda en memoria de la página. -->
-  <q-dialog v-model="dialogoCreada" aria-labelledby="titulo-api-creada" @hide="creada = undefined">
-    <q-card style="width: 640px; max-width: 95vw">
+  <!-- Al cerrarse se olvida la clave mostrada: no queda en memoria de la página. Por eso un clic fuera no lo cierra y
+       Esc pregunta antes: la clave solo se ve esta vez. -->
+  <q-dialog v-model="dialogoCreada" aria-labelledby="titulo-api-creada" persistent @hide="creada = undefined">
+    <q-card style="width: 640px; max-width: 95vw" @keyup.esc="escaparConAviso(true, () => (dialogoCreada = false), true)">
       <q-card-section>
         <h2 id="titulo-api-creada" class="titulo-seccion">{{ t('ejecutar.apiCreada', { nombre: creada?.nombre ?? '' }) }}</h2>
         <div class="texto-suave text-body2">{{ t('ejecutar.apiCreadaTexto') }}</div>
@@ -47,6 +49,7 @@ import { api, avisarError, copiar } from '../api/cliente'
 import type { EstadoPunto, Modelo } from '../api/tipos'
 import { configDeReceta, esquemaDeReceta, type Receta } from '../recetas'
 import { t } from '../i18n'
+import { escaparConAviso } from '../cierre'
 
 // creada avisa de la API nueva para que Probar pase a editarla.
 const props = defineProps<{ receta: Receta; catalogo: Modelo[] }>()

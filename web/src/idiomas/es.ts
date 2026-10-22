@@ -29,6 +29,7 @@ const es = {
   // Cerrar un diálogo con Esc cuando se perdería algo
   'cierre.titulo': '¿Cerrar sin guardar?',
   'cierre.texto': 'Se pierde lo que escribiste en este formulario.',
+  'cierre.claveTitulo': '¿Cerrar sin copiar la clave?',
   'cierre.clave': 'La clave no se vuelve a mostrar. Si no la copiaste, tendrás que regenerarla.',
   'cierre.seguir': 'Seguir aquí',
   'historial.vacio': 'Aún no hay peticiones',
@@ -579,7 +580,7 @@ const es = {
   'inicio.ocultarGuia': 'Ocultar guía',
   'inicio.guiaOculta': 'Guía oculta. Puedes volver a mostrarla desde Ayuda.',
   'bienvenida.titulo': '¿Te enseño Tramtai?',
-  'bienvenida.texto': 'Son unos 2 minutos: te enseño dónde está cada cosa. Puedes repetirlo cuando quieras desde Primeros pasos.',
+  'bienvenida.texto': 'Un recorrido corto por la pantalla: te enseño dónde está cada cosa y lo cierras cuando quieras. Puedes repetirlo cuando quieras desde Primeros pasos.',
   'bienvenida.empezar': 'Empezar',
   'bienvenida.ahoraNo': 'Ahora no',
   'bienvenida.repetir': 'Haz el recorrido de Tramtai',
