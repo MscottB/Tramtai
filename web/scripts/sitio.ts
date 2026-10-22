@@ -150,7 +150,7 @@ export function rellenar(html: string, l: Lugar): string {
   return html
 }
 
-// ANCLAS_VIEJAS lleva cada sección de la ayuda de una sola página (hasta la v0.51) a su tema.
+// ANCLAS_VIEJAS lleva cada sección de la ayuda de una sola página (ayuda anterior) a su tema.
 export const ANCLAS_VIEJAS: Record<string, string> = {
   instalar: 'empezar.html', agentes: 'agentes.html', terminos: 'agentes.html#terminos', aplicaciones: 'conectar.html',
   herramientas: 'herramientas.html', apis: 'conectar.html', recetas: 'recetas.html', archivos: 'archivos.html',

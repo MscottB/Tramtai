@@ -357,7 +357,7 @@ const seccion = computed(() => ruta.value.pagina)
 const actual = computed(() => paginas.find((p) => p.id === seccion.value) ?? paginas[0])
 const menu = ref(false)
 const origen = location.origin
-// Antes que los composables, como cuando todo iba en un solo onMounted: la URL se limpia antes de pedir la sesión.
+// Antes que los composables: la URL se limpia antes de pedir la sesión.
 onMounted(() => {
   history.replaceState({ i: base }, '', location.search ? location.pathname + location.hash : location.href)
   window.addEventListener('popstate', alNavegar)

@@ -1,4 +1,4 @@
-// Package ejecutar es la página Probar de la terminal, copiada de Ejecutar.vue: la receta (instrucciones, modelo, esfuerzo,
+// Package ejecutar es la página Probar de la terminal, a la par de Ejecutar.vue: la receta (instrucciones, modelo, esfuerzo,
 // forzar, respaldo y salida estructurada con sus plantillas), el mensaje y los archivos, la respuesta en vivo con cancelar,
 // corregir y copiar, «Ver como código», «Guardar como API», las pruebas recientes con «Usar de nuevo» y el borrador.
 package ejecutar

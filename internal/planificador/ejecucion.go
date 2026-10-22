@@ -376,7 +376,7 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 			continue
 		}
 		// Se avisa al despachador justo antes de la primera espera, no antes de preparar el intento: con la máquina
-		// cargada, el siguiente trabajo podía llegar antes a su select y adelantarse en el semáforo del agente.
+		// cargada, el siguiente trabajo puede llegar antes a su select y adelantarse en el semáforo del agente.
 		// shortcut: queda la ventana entre este aviso y entrar en el select, mucho menor que lo que tarda el
 		// siguiente trabajo en llegar a su espera (lee y escribe en la base); si no bastara, un turno por agente.
 		// El coste: el despachador no saca otro trabajo mientras este prepara el intento, incluida la consulta del
@@ -503,8 +503,8 @@ func (p *Planificador) cambiar(id string, de, hacia nucleo.Estado, cambio persis
 	return false
 }
 
-// agrupador junta los fragmentos de texto consecutivos antes de guardarlos: un evento por token costaba una
-// transacción y despertaba a todos los que siguen la instancia. Guarda lo acumulado a los 50 ms del primer
+// agrupador junta los fragmentos de texto consecutivos antes de guardarlos: un evento por token costaría una
+// transacción y despertaría a todos los que siguen la instancia. Guarda lo acumulado a los 50 ms del primer
 // fragmento o al llegar a 1 KiB, y siempre antes de cualquier otro evento, así que el orden no cambia.
 type agrupador struct {
 	guardar func(tipo, datos string) error

@@ -164,8 +164,8 @@ export function plantillasDe(plantillas: Plantilla[], porIdioma: Record<Idioma, 
   }))])) as Record<Idioma, { id: string; nombre: string; instrucciones: string; esquema: unknown }[]>
 }
 
-// entradaEjemplos es la prueba fija con la que se generan los ejemplos de «Ver como código»: la Tarea 8 la reproduce en Go
-// y compara su código con el de ejemplos.json (en español).
+// entradaEjemplos es la prueba fija con la que se generan los ejemplos de «Ver como código»: TestEjemplosComoLaWeb
+// (internal/tui/paginas/ejecutar/codigo_test.go) la reproduce en Go y compara su código con el de ejemplos.json.
 export function entradaEjemplos(extraer: Plantilla) {
   return { url: 'http://127.0.0.1:17373', clave: 'tramtai_clave_de_ejemplo', modelo: 'perfil/rapido',
     solicitud: { instrucciones: extraer.instrucciones('es'),

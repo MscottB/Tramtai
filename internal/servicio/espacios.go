@@ -30,8 +30,8 @@ type Espacio struct {
 	UltimoError string    `json:"ultimo_error,omitempty"`
 }
 
-// registro guarda en datos/espacios.json todos los espacios conocidos. Reemplaza a instancias.json (solo los activos),
-// que se migra la primera vez.
+// registro guarda en datos/espacios.json todos los espacios conocidos. Si queda un instancias.json (formato anterior,
+// solo los activos), se migra la primera vez.
 type registro struct {
 	mu        sync.Mutex
 	muGuardar sync.Mutex // la foto y la escritura van juntas: una foto vieja no se escribe después de una nueva
