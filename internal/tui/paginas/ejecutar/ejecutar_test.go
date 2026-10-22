@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -182,22 +180,27 @@ func TestRecetaEmpiezaArriba(t *testing.T) {
 func TestBorradorSobreviveReinicio(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	carpeta := t.TempDir()
-	a := abrir(t, contexto(t, cli, id, carpeta))
+	a, r := abrirConReloj(t, contexto(t, cli, id, carpeta))
 	escribir(t, a, tx("ejecutar.mensaje"), "a medias")
-	a.Hasta(func() bool {
-		datos, _ := os.ReadFile(filepath.Join(carpeta, archivoBorrador))
-		return strings.Contains(string(datos), "a medias")
-	})
+	r.Pasar(ejecutar.EsperaBorrador - time.Millisecond)
+	a.Asentar()
+	if _, hay := hayBorrador(carpeta); hay {
+		t.Fatal("el borrador espera a que se deje de escribir")
+	}
+	r.Pasar(time.Millisecond)
+	a.Asentar()
+	if d, _ := hayBorrador(carpeta); !strings.Contains(d, "a medias") {
+		t.Fatalf("pasada la espera, el borrador se guarda: %q", d)
+	}
 	ocultar(a)
 	otra := abrir(t, contexto(t, cli, id, carpeta))
 	if v := valor(t, otra, tx("ejecutar.mensaje")); v != "a medias" {
 		t.Fatalf("al volver a abrir, el mensaje es el del borrador: %q", v)
 	}
 	enviar(otra)
-	otra.Hasta(func() bool {
-		_, err := os.Stat(filepath.Join(carpeta, archivoBorrador))
-		return os.IsNotExist(err)
-	})
+	if _, hay := hayBorrador(carpeta); hay {
+		t.Fatal("enviar borra el borrador")
+	}
 	terminada(t, otra)
 }
 
@@ -501,7 +504,7 @@ func TestTextosComoLaWeb(t *testing.T) {
 	}
 	c := contexto(t, cli, id, "")
 	c.Idioma = "en"
-	en := prueba.Abrir(t, ejecutar.Nueva("en"), c)
+	en, _ := abrirConReloj(t, c)
 	if en.P.Titulo() != "Playground" {
 		t.Fatalf("el título es el del menú en inglés: %q", en.P.Titulo())
 	}

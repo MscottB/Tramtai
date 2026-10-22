@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -46,35 +45,16 @@ func tecla(texto string) tea.KeyPressMsg {
 	return tea.KeyPressMsg{Code: []rune(texto)[0], Text: texto}
 }
 
-// correr ejecuta un Cmd y lo que vaya saliendo de él, como haría Bubble Tea, y dice si pidió salir. Un temporizador
-// que no llega a tiempo se deja sin esperar.
+// correr corre un Cmd de la terminal con el arnés de las páginas (prueba.App) hasta que todo se asienta, y dice si pidió
+// salir.
 func correr(t *testing.T, m *modelo, cmd tea.Cmd) bool {
 	t.Helper()
-	if cmd == nil {
-		return false
-	}
-	hecho := make(chan tea.Msg, 1)
-	go func() { hecho <- cmd() }()
-	var msg tea.Msg
-	select {
-	case msg = <-hecho:
-	case <-time.After(2 * time.Second): // el plazo de un aviso (4 s) o el latido no se esperan
-		return false
-	}
-	switch msg := msg.(type) {
-	case nil:
-		return false
-	case tea.QuitMsg:
-		return true
-	case tea.BatchMsg:
-		salio := false
-		for _, c := range msg {
-			salio = correr(t, m, c) || salio
-		}
-		return salio
-	}
-	_, siguiente := m.Update(msg)
-	return correr(t, m, siguiente)
+	return salio(prueba.ConducirApp(t, m).Correr(cmd))
+}
+
+// salio dice si entre lo que salió de la terminal está tea.Quit.
+func salio(fuera []tea.Msg) bool {
+	return slices.ContainsFunc(fuera, func(m tea.Msg) bool { _, ok := m.(tea.QuitMsg); return ok })
 }
 
 func sale(cmd tea.Cmd) bool {
@@ -263,7 +243,8 @@ func TestServicioCaidoNoCierra(t *testing.T) {
 	cli, global, cerrar := prueba.Arrancar(t)
 	m := nuevo(Opciones{})
 	m.cli = cli
-	if correr(t, m, m.conectar(false, true, false)) || m.instancia != global || m.caido != nil {
+	a := prueba.ConducirApp(t, m)
+	if salio(a.Correr(m.conectar(false, true, false))) || m.instancia != global || m.caido != nil {
 		t.Fatalf("conecta con el espacio global: %q %v", m.instancia, m.caido)
 	}
 	aviso := idioma.T("El servicio no responde · r reintenta")
@@ -271,14 +252,14 @@ func TestServicioCaidoNoCierra(t *testing.T) {
 		t.Fatal("con el servicio en marcha no hay aviso")
 	}
 	cerrar()
-	if correr(t, m, m.conectar(false, false, false)) {
+	if salio(a.Correr(m.conectar(false, false, false))) {
 		t.Fatal("la comprobación no cierra la terminal")
 	}
 	if !strings.Contains(m.View().Content, aviso) {
 		t.Fatalf("avisa de que el servicio no responde:\n%s", m.View().Content)
 	}
 	_, cmd := m.Update(tecla("r"))
-	if cmd == nil || correr(t, m, cmd) {
+	if cmd == nil || salio(a.Correr(cmd)) {
 		t.Fatal("r reintenta y la terminal sigue")
 	}
 	if !strings.Contains(m.View().Content, aviso) || m.actual != "inicio" {

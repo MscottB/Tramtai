@@ -2,6 +2,10 @@ package prueba
 
 import (
 	"context"
+	"fmt"
+	"runtime"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -24,6 +28,7 @@ func TestTeclaConModificadores(t *testing.T) {
 type contador struct {
 	n, gen int
 	soltar chan struct{}
+	parar  atomic.Bool // corta el Cmd de «w», que trabaja sin parar
 }
 
 type sumado struct{ gen int }
@@ -52,6 +57,12 @@ func (c *contador) Update(m tea.Msg) (pagina.Pagina, tea.Cmd) {
 			return c, tea.Batch(comp.Aviso("hola", comp.Info), nil)
 		case "s":
 			return c, func() tea.Msg { <-c.soltar; return sumado{gen} }
+		case "w":
+			return c, func() tea.Msg {
+				for !c.parar.Load() {
+				}
+				return nil
+			}
 		case "g":
 			c.gen++
 		}
@@ -93,5 +104,38 @@ func TestAsentarEsperaAlQueTarda(t *testing.T) {
 	a := Abrir(t, &contador{}, pagina.Contexto{Ctx: context.Background()})
 	if a.Pulsar("l"); a.Vista() != "1" {
 		t.Fatalf("Pulsar volvió antes de la respuesta: %s", a.Vista())
+	}
+}
+
+// apuntaFallo es una prueba que apunta su fallo y para ahí, como t.Fatalf, sin dar por fallida la de verdad.
+type apuntaFallo struct {
+	testing.TB
+	fallo string
+}
+
+func (f *apuntaFallo) Helper() {}
+func (f *apuntaFallo) Fatalf(formato string, args ...any) {
+	f.fallo = fmt.Sprintf(formato, args...)
+	runtime.Goexit()
+}
+
+// TestAsentarFallaSiNoSeAsienta: si algo sigue en marcha al acabar el plazo, Asentar no vuelve como si nada: la prueba
+// falla y dice qué sigue en marcha.
+func TestAsentarFallaSiNoSeAsienta(t *testing.T) {
+	antes := plazo
+	plazo = 50 * time.Millisecond
+	t.Cleanup(func() { plazo = antes })
+	c := &contador{}
+	t.Cleanup(func() { c.parar.Store(true) })
+	f := &apuntaFallo{TB: t}
+	a := &App{t: f, P: c, llegan: make(chan tea.Msg, 1)}
+	hecho := make(chan struct{})
+	go func() {
+		defer close(hecho)
+		a.Pulsar("w")
+	}()
+	<-hecho
+	if !strings.Contains(f.fallo, "no se asienta") || !strings.Contains(f.fallo, "prueba.(*contador).Update") {
+		t.Fatalf("falla y dice qué sigue en marcha: %q", f.fallo)
 	}
 }

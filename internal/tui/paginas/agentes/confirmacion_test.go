@@ -1,4 +1,4 @@
-package agentes
+package agentes_test
 
 import (
 	"strings"
@@ -14,9 +14,11 @@ import (
 // TestAgentesConfirmacionDeSuscripcionCabe: la pregunta de pasar a la suscripción, con la caja de la app en 60×20, mide
 // lo que cabe y deja ver el riesgo, la aceptación y el pie.
 func TestAgentesConfirmacionDeSuscripcionCabe(t *testing.T) {
-	p, _, _ := conAgentes(t, map[string]adaptadores.Adaptador{"claude": detectado(adaptadores.Estado{Autenticacion: "clave_api"})})
-	_, cmd := p.Update(tecla("a"))
-	q := correr(p, cmd)[0].(comp.Pregunta)
+	a, _, _ := conAgentes(t, map[string]adaptadores.Adaptador{"claude": detectado(adaptadores.Estado{Autenticacion: "clave_api"})})
+	q, ok := pregunta(a.Pulsar("a"))
+	if !ok {
+		t.Fatal("pregunta antes de pasar a la suscripción")
+	}
 	c := comp.Confirmacion{Texto: q.Texto}
 	v := c.Vista(&pagina.Estilos{Iconos: pagina.IconosUnicode}, 58, 17) // el área de 60×20 con la caja de la app (ancho-2)
 	if h := lipgloss.Height(v); h > 17 {

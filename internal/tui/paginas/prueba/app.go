@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -23,64 +24,55 @@ import (
 // la página de uno en uno. Lo que es de la app (preguntas, avisos, IrA, Volver, ErrorServicio y lo que se copia) se guarda
 // en Fuera. Así una prueba solo toca la página por su interfaz: teclas, los mensajes de pagina y comp, y Vista().
 type App struct {
-	t       *testing.T
+	t       testing.TB
 	P       pagina.Pagina
+	modelo  tea.Model // con ConducirApp, la terminal entera en lugar de P
 	Fuera   []tea.Msg
 	llegan  chan tea.Msg
-	activos atomic.Int64
 	retener *[]tea.Cmd
 }
+
+// plazo es lo que se espera a que llegue lo esperado o se asiente la página antes de dar la prueba por fallida.
+var plazo = 10 * time.Second
 
 // Portapapeles es lo que la página manda copiar con OSC 52 (el mensaje de tea.SetClipboard no se exporta).
 type Portapapeles string
 
-// quieto es lo que se espera sin que llegue nada, con lo que queda solo esperando a algo de fuera, para dar la página
-// por asentada: un evento del flujo o un temporizador tienen ese margen para llegar.
-const quieto = 30 * time.Millisecond
-
-// enCurso son las peticiones HTTP de las pruebas que aún no se han leído enteras, sin los flujos de eventos, que no
-// acaban y se cuentan en flujos. El cliente usa el transporte predeterminado, que este paquete cambia por uno que las
-// cuenta. cambios sube con cada cuenta que cambia.
-var enCurso, flujos, cambios atomic.Int64
-
-func contar(cuenta *atomic.Int64, d int64) {
-	cuenta.Add(d)
-	cambios.Add(1)
-}
+// flujos son los flujos de eventos (SSE) abiertos: el transporte de las pruebas los cuenta hasta que se cierran.
+var flujos atomic.Int64
 
 // FlujosAbiertos son los flujos de eventos (SSE) que las páginas tienen abiertos ahora: el seguimiento en vivo de un
 // trabajo y el del espacio.
 func FlujosAbiertos() int { return int(flujos.Load()) }
 
-// El transporte se cambia al cargar el paquete, antes de que corra ninguna prueba que lo pueda estar usando.
-func init() { http.DefaultTransport = transporteContado{http.DefaultTransport} }
+// El transporte se cambia al cargar el paquete, antes de que corra ninguna prueba que lo pueda estar usando: cuenta lo
+// que va y viene por las conexiones con los servidores de prueba (red.go) y los flujos.
+func init() {
+	base := http.DefaultTransport.(*http.Transport).Clone()
+	base.DialContext = marcar
+	http.DefaultTransport = transporteContado{base}
+}
 
 type transporteContado struct{ base http.RoundTripper }
 
 func (t transporteContado) RoundTrip(r *http.Request) (*http.Response, error) {
-	cuenta := &enCurso
-	if strings.HasSuffix(r.URL.Path, "/eventos") {
-		cuenta = &flujos
-	}
-	contar(cuenta, 1)
 	res, err := t.base.RoundTrip(r)
-	if err != nil {
-		contar(cuenta, -1)
+	if err != nil || !strings.HasSuffix(r.URL.Path, "/eventos") {
 		return res, err
 	}
-	res.Body = &cuerpoContado{ReadCloser: res.Body, cuenta: cuenta}
+	flujos.Add(1)
+	res.Body = &cuerpoContado{ReadCloser: res.Body}
 	return res, nil
 }
 
-// cuerpoContado descuenta la petición al cerrarse su cuerpo: hasta entonces la respuesta aún se está leyendo.
+// cuerpoContado descuenta el flujo al cerrarse su cuerpo.
 type cuerpoContado struct {
 	io.ReadCloser
-	cuenta *atomic.Int64
-	una    sync.Once
+	una sync.Once
 }
 
 func (c *cuerpoContado) Close() error {
-	c.una.Do(func() { contar(c.cuenta, -1) })
+	c.una.Do(func() { flujos.Add(-1) })
 	return c.ReadCloser.Close()
 }
 
@@ -110,18 +102,29 @@ func Conducir(t *testing.T, p pagina.Pagina) *App {
 	return a
 }
 
+// ConducirApp lleva la terminal entera en lugar de una página: todo lo que llega es para ella, y en Fuera solo quedan
+// tea.Quit y lo que se copia.
+func ConducirApp(t *testing.T, m tea.Model) *App {
+	return &App{t: t, modelo: m, llegan: make(chan tea.Msg, 4096)}
+}
+
 // EsperarLlegada espera, sin entregarla, a que haya alguna respuesta lista para la página.
 func (a *App) EsperarLlegada() {
 	a.t.Helper()
-	for limite := time.Now().Add(10 * time.Second); len(a.llegan) == 0; time.Sleep(time.Millisecond) {
+	for limite := time.Now().Add(plazo); len(a.llegan) == 0; time.Sleep(time.Millisecond) {
 		if time.Now().After(limite) {
 			a.t.Fatalf("no llega nada:\n%s", a.Vista())
 		}
 	}
 }
 
-// Vista es lo que enseña la página.
-func (a *App) Vista() string { return a.P.Vista() }
+// Vista es lo que enseña la página, o la terminal.
+func (a *App) Vista() string {
+	if a.modelo != nil {
+		return a.modelo.View().Content
+	}
+	return a.P.Vista()
+}
 
 // Pulsar manda las teclas de una en una, como la terminal, y espera a que la página se asiente tras cada una. Devuelve
 // lo que salió hacia la app.
@@ -221,7 +224,7 @@ func (a *App) Soltar(cmds []tea.Cmd) []tea.Msg {
 // Hasta entrega lo que llegue hasta que se cumpla cond; si en 10 s no se cumple, la prueba falla con la vista.
 func (a *App) Hasta(cond func() bool) {
 	a.t.Helper()
-	limite := time.After(10 * time.Second)
+	limite := time.After(plazo)
 	for !cond() {
 		select {
 		case m := <-a.llegan:
@@ -247,45 +250,47 @@ func (a *App) HastaVer(textos ...string) {
 	})
 }
 
-// Asentar entrega lo que llegue hasta que no quede nada en marcha, o hasta que lo que quede solo espere a algo de fuera.
+// Asentar entrega lo que llegue hasta que la prueba quede quieta: nada por entregar y nada en el proceso que pueda
+// avanzar solo (enMarcha). Lo que queda esperando, espera a la prueba (que suelte un canal, haga pasar el Reloj o cierre
+// el servicio) o a un temporizador del servicio, como el que junta el texto en vivo: lo que trae ese se espera con
+// Hasta. Si en 10 s no se asienta, la prueba falla con la vista y lo que sigue en marcha.
 func (a *App) Asentar() {
-	limite := time.Now().Add(10 * time.Second)
-	for time.Now().Before(limite) {
+	a.t.Helper()
+	limite := time.Now().Add(plazo)
+	for {
 		select {
 		case m := <-a.llegan:
 			a.entregar(m)
 			continue
 		default:
 		}
-		if a.activos.Load() == 0 {
-			// Lo último que acabó ya dejó su mensaje (se envía antes de descontarse): se recoge y, si no hay, terminado.
-			select {
-			case m := <-a.llegan:
-				a.entregar(m)
-				continue
-			default:
-				return
-			}
+		ocupadas := enMarcha()
+		if len(ocupadas) == 0 && len(a.llegan) == 0 { // lo que llegó durante la foto se entrega en la vuelta siguiente
+			return
+		}
+		if time.Now().After(limite) {
+			a.t.Fatalf("no se asienta en %v:\n%s\n\nsigue en marcha:\n%s", plazo, a.Vista(), strings.Join(ocupadas, "\n\n"))
 		}
 		select {
 		case m := <-a.llegan:
 			a.entregar(m)
-		case <-time.After(quieto):
-			if soloEsperanFuera() {
-				return
-			}
+		case <-time.After(time.Millisecond):
 		}
 	}
 }
 
-// soloEsperanFuera dice si lo que queda en marcha solo espera a algo de fuera: ninguna petición al servicio a medias y
-// cada goroutine de un Cmd parada en un canal, un select o la red. Las demás (en marcha, durmiendo, leyendo un archivo,
-// esperando un cerrojo) van a responder solas, tarde lo que tarde. Si una petición empieza o acaba mientras se mira,
-// la foto no vale.
-func soloEsperanFuera() bool {
+// ocupado son los estados de una goroutine que puede avanzar sola. Las demás esperan a otra (un canal, un select, un
+// cerrojo) o al reloj.
+var ocupado = []string{"running", "runnable", "syscall", "sleep", "preempted", "copystack"}
+
+// enMarcha es lo que puede avanzar solo: las pilas de las goroutines del proceso, sin la de la prueba, que corren,
+// duermen o están en una llamada al sistema, y lo escrito en una conexión con un servidor de prueba que el otro lado aún
+// no ha leído. Si no hay nada, nada cambia hasta que la prueba haga algo. runtime.Stack para el mundo, así que la foto
+// vale para todas las goroutines a la vez; lo que se lee o escribe mientras se toma la invalida.
+func enMarcha() []string {
 	antes := cambios.Load()
-	if enCurso.Load() != 0 {
-		return false
+	if sinLeer() {
+		return []string{"una conexión con el servicio tiene datos sin leer"}
 	}
 	pila := make([]byte, 1<<16)
 	for n := runtime.Stack(pila, true); ; n = runtime.Stack(pila, true) {
@@ -295,21 +300,26 @@ func soloEsperanFuera() bool {
 		}
 		pila = make([]byte, 2*len(pila))
 	}
-	for _, g := range strings.Split(string(pila), "\n\n") {
-		if !strings.Contains(g, "prueba.(*App).correr.func1(") {
-			continue
-		}
+	var ocupadas []string
+	for _, g := range strings.Split(string(pila), "\n\n")[1:] { // la primera es la de la prueba
 		estado := g[strings.Index(g, "[")+1 : strings.Index(g, "]")]
-		if !strings.HasPrefix(estado, "chan receive") && !strings.HasPrefix(estado, "select") && !strings.HasPrefix(estado, "IO wait") {
-			return false
+		if slices.ContainsFunc(ocupado, func(e string) bool { return strings.HasPrefix(estado, e) }) {
+			ocupadas = append(ocupadas, g)
 		}
 	}
-	return cambios.Load() == antes
+	if len(ocupadas) == 0 && cambios.Load() != antes {
+		return []string{"una conexión con el servicio se movió durante la foto"}
+	}
+	return ocupadas
 }
 
 func (a *App) actualizar(m tea.Msg) {
-	p, cmd := a.P.Update(m)
-	a.P = p
+	var cmd tea.Cmd
+	if a.modelo != nil {
+		a.modelo, cmd = a.modelo.Update(m)
+	} else {
+		a.P, cmd = a.P.Update(m)
+	}
 	a.correr(cmd)
 }
 
@@ -321,12 +331,10 @@ func (a *App) correr(cmd tea.Cmd) {
 		*a.retener = append(*a.retener, cmd)
 		return
 	}
-	a.activos.Add(1)
 	go func() {
 		if m := cmd(); m != nil {
 			a.llegan <- m
 		}
-		a.activos.Add(-1)
 	}()
 }
 
@@ -337,7 +345,13 @@ func (a *App) entregar(m tea.Msg) {
 		for _, c := range m {
 			a.correr(c)
 		}
+	case tea.QuitMsg:
+		a.Fuera = append(a.Fuera, m)
 	case comp.Pregunta, comp.NuevoAviso, pagina.IrA, pagina.Volver, pagina.ErrorServicio:
+		if a.modelo != nil {
+			a.actualizar(m)
+			return
+		}
 		a.Fuera = append(a.Fuera, m)
 	default:
 		if fmt.Sprintf("%T", m) == "tea.setClipboardMsg" {

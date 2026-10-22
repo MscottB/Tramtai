@@ -136,7 +136,9 @@ Para probar el servicio con la suscripción sin tocar la configuración global, 
 Las pruebas de las páginas (`internal/tui/paginas/*`) son de caja negra (`package <página>_test`): la tocan por su
 interfaz, contra el servicio de `paginas/prueba`. `prueba.App` la lleva como la terminal (cada Cmd en su goroutine,
 `Pulsar`, `Escribir`, `Pegar`, `Entregar` y `Hasta`/`HastaVer` para lo que llega en vivo) y guarda en `Fuera` lo que es de
-la app (avisos, preguntas, `IrA`). Una respuesta a destiempo se fabrica por la vía de verdad: `Retener` guarda los Cmd que
+la app (avisos, preguntas, `IrA`). Cada paso vuelve cuando nada en el proceso puede avanzar solo (ni un Cmd, ni el
+servicio, ni datos sin leer en una conexión) y, si en 10 s no se asienta, la prueba falla. Toda página nueva se prueba
+con él, y la terminal entera también, con `prueba.ConducirApp`. Una respuesta a destiempo se fabrica por la vía de verdad: `Retener` guarda los Cmd que
 la página pide, la prueba cambia la versión, el espacio o el contexto, y `Soltar` los corre. `prueba.Reloj` es la hora de
 la página: el sondeo y las reconexiones esperan a `Pasar`. Lo único que una prueba cambia por dentro está en el
 `export_test.go` de la página: el reloj y de dónde lee los eventos. Dentro del paquete solo quedan las pruebas de

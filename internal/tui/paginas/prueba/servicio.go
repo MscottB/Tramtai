@@ -98,11 +98,13 @@ func arrancar(t *testing.T, agente adaptadores.Adaptador, ajustar func(*servicio
 		t.Fatal(err)
 	}
 	ts.Config.Handler = s
+	contarConexiones(ts)
 	ts.Start()
 	var una sync.Once
 	cerrar := func() {
 		una.Do(func() {
 			s.Cerrar()
+			ts.CloseClientConnections() // como un servicio que se cae: los flujos abiertos se cortan y Close no los espera
 			ts.Close()
 		})
 	}

@@ -3,6 +3,8 @@ package ejecutar_test
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -49,8 +51,29 @@ func contexto(t *testing.T, cli *cliente.Cliente, instancia, carpeta string) pag
 // abrir inicia Probar con ese contexto.
 func abrir(t *testing.T, c pagina.Contexto) *prueba.App {
 	t.Helper()
+	a, _ := abrirConReloj(t, c)
+	return a
+}
+
+// abrirConReloj inicia Probar con un reloj de prueba: el borrador y la reconexión esperan a que la prueba haga pasar
+// el tiempo.
+func abrirConReloj(t *testing.T, c pagina.Contexto) (*prueba.App, *prueba.Reloj) {
+	t.Helper()
 	enEspanol(t)
-	return prueba.Abrir(t, ejecutar.Nueva(c.Idioma), c)
+	r := prueba.NuevoReloj()
+	return prueba.Abrir(t, ejecutar.NuevaConReloj(c.Idioma, r.Ahora, r.Espera), c), r
+}
+
+// guardarBorrador hace pasar la espera del borrador y deja que se escriba.
+func guardarBorrador(a *prueba.App, r *prueba.Reloj) {
+	r.Pasar(ejecutar.EsperaBorrador)
+	a.Asentar()
+}
+
+// hayBorrador dice si el borrador está en la carpeta de datos, y qué mensaje guarda.
+func hayBorrador(carpeta string) (string, bool) {
+	datos, err := os.ReadFile(filepath.Join(carpeta, archivoBorrador))
+	return string(datos), err == nil
 }
 
 // abierta abre Probar contra el servicio, con una carpeta de datos propia.

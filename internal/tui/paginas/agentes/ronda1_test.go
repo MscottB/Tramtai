@@ -1,10 +1,9 @@
-package agentes
+package agentes_test
 
 import (
 	"context"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
@@ -25,7 +24,7 @@ func grabadora(t *testing.T, cli *cliente.Cliente) (*cliente.Cliente, func() []s
 	if err != nil {
 		t.Fatal(err)
 	}
-	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	url := prueba.Servidor(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "PUT" && r.URL.Path == "/api/v1/servicio/agentes/claude/autenticacion" {
 			b, _ := io.ReadAll(r.Body)
 			mu.Lock()
@@ -49,9 +48,8 @@ func grabadora(t *testing.T, cli *cliente.Cliente) (*cliente.Cliente, func() []s
 		w.WriteHeader(resp.StatusCode)
 		_, _ = io.Copy(w, resp.Body)
 	}))
-	t.Cleanup(proxy.Close)
 	copia := *cli
-	copia.Base = proxy.URL
+	copia.Base = url
 	return &copia, func() []string {
 		mu.Lock()
 		defer mu.Unlock()
@@ -62,38 +60,33 @@ func grabadora(t *testing.T, cli *cliente.Cliente) (*cliente.Cliente, func() []s
 // TestAgentesEnviaElModoCorrecto: pasar a la suscripción manda «suscripcion» solo tras confirmar, y pasar a la clave manda
 // «clave_api» directo.
 func TestAgentesEnviaElModoCorrecto(t *testing.T) {
-	// abrir abre la página con Claude, en el modo dado, detrás de una grabadora de lo que se envía.
-	abrir := func(modo string) (*Pagina, func() []string) {
+	// conGrabadora abre la página con Claude, en el modo dado, detrás de una grabadora de lo que se envía.
+	conGrabadora := func(modo string) (*prueba.App, func() []string) {
 		cli, id := prueba.ConAgentes(t, map[string]adaptadores.Adaptador{"claude": detectado(adaptadores.Estado{Autenticacion: modo})})
 		proxy, cuerpos := grabadora(t, cli)
-		p := Nueva("es").(*Pagina)
-		correr(p, p.Iniciar(contexto(proxy, id)))
-		return p, cuerpos
+		return abrir(t, contexto(t, proxy, id)), cuerpos
 	}
-	p, cuerpos := abrir("clave_api")
-	_, cmd := p.Update(tecla("a"))
-	if f := correr(p, cmd); len(f) != 1 {
+	a, cuerpos := conGrabadora("clave_api")
+	if f := a.Pulsar("a"); len(f) != 1 {
 		t.Fatalf("pregunta antes: %+v", f)
 	}
 	if n := len(cuerpos()); n != 0 {
 		t.Fatalf("sin confirmar no se manda nada: %v", cuerpos())
 	}
-	_, cmd = p.Update(comp.Confirmado{})
-	f := correr(p, cmd)
+	f := a.Entregar(comp.Confirmado{})
 	if got := cuerpos(); len(got) != 1 || got[0] != `{"modo":"suscripcion"}` {
 		t.Fatalf("tras confirmar manda suscripcion: %v", got)
 	}
-	if a, ok := aviso(f); !ok || a.Texto != "Claude usa ahora tu suscripción" {
+	if av, ok := aviso(f); !ok || av.Texto != "Claude usa ahora tu suscripción" {
 		t.Fatalf("avisa: %+v", f)
 	}
 
-	p, cuerpos = abrir("suscripcion")
-	_, cmd = p.Update(tecla("a"))
-	f = correr(p, cmd)
+	a, cuerpos = conGrabadora("suscripcion")
+	f = a.Pulsar("a")
 	if got := cuerpos(); len(got) != 1 || got[0] != `{"modo":"clave_api"}` {
 		t.Fatalf("pasar a la clave manda clave_api: %v", got)
 	}
-	if a, ok := aviso(f); !ok || a.Texto != "Claude usa ahora la clave de API" {
+	if av, ok := aviso(f); !ok || av.Texto != "Claude usa ahora la clave de API" {
 		t.Fatalf("avisa: %+v", f)
 	}
 }
@@ -101,44 +94,42 @@ func TestAgentesEnviaElModoCorrecto(t *testing.T) {
 // TestAgentesDesconectadoSinCLIEsNoInstalado: como en la Web UI, va al final, cuenta como no instalado, explica cómo
 // instalarlo y no se puede desconectar ni conectar.
 func TestAgentesDesconectadoSinCLIEsNoInstalado(t *testing.T) {
-	p, cli, id := conAgentes(t, map[string]adaptadores.Adaptador{"codex": sinCLI})
+	a, cli, _ := conAgentes(t, map[string]adaptadores.Adaptador{"codex": sinCLI})
 	if err := cli.ConectarAgente(context.Background(), "codex", false); err != nil {
 		t.Fatal(err)
 	}
-	correr(p, p.Iniciar(contexto(cli, id)))
-	v := p.Vista()
+	a.Pulsar("c") // vuelve a comprobar
+	v := a.Vista()
 	if strings.Index(v, "simulado") > strings.Index(v, "Codex") {
 		t.Fatalf("va al final:\n%s", v)
 	}
 	if !strings.Contains(v, "Listos (1) Falta conectar (0) No instalados (1)") {
 		t.Fatalf("cuenta como no instalado:\n%s", v)
 	}
-	p.Update(tecla("down"))
-	_, cmd := p.Update(tecla("d"))
-	f := correr(p, cmd)
+	a.Pulsar("down")
+	f := a.Pulsar("d")
 	if _, ok := aviso(f); !ok || len(f) != 1 {
 		t.Fatalf("d no desconecta ni conecta un no instalado: %+v", f)
 	}
-	if _, cmd := p.Update(comp.Confirmado{}); cmd != nil {
-		t.Fatal("no queda nada pendiente")
+	if f := a.Entregar(comp.Confirmado{}); len(f) != 0 {
+		t.Fatalf("no queda nada pendiente: %v", f)
 	}
-	p.Update(tecla("enter"))
-	if v := p.Vista(); !strings.Contains(v, "comandos_agentes.codex") || strings.Contains(v, "Desconectado:") {
+	a.Pulsar("enter")
+	if v := a.Vista(); !strings.Contains(v, "comandos_agentes.codex") || strings.Contains(v, "Desconectado:") {
 		t.Fatalf("el detalle explica cómo instalarlo:\n%s", v)
 	}
 }
 
 // TestAgentesCambioDeEspacioVaciaElCatalogo: el catálogo de modelos de un espacio no se ve en el siguiente.
 func TestAgentesCambioDeEspacioVaciaElCatalogo(t *testing.T) {
-	p, cli, id := abierta(t)
-	_, cmd := p.Update(tecla("enter"))
-	correr(p, cmd)
-	if v := p.Vista(); !strings.Contains(v, "Modelos: predeterminado") {
+	a, cli, id := abierta(t)
+	a.Pulsar("enter")
+	if v := a.Vista(); !strings.Contains(v, "Modelos: predeterminado") {
 		t.Fatalf("antes se ve el catálogo:\n%s", v)
 	}
-	correr(p, p.Iniciar(contexto(cli, id))) // la app vuelve a iniciar la página (otro espacio o el mismo)
-	p.Update(tecla("enter"))                // el catálogo se pide de nuevo; la petición aún no ha vuelto
-	if v := p.Vista(); !strings.Contains(v, "Modelos: Cargando…") {
+	a.Correr(a.P.Iniciar(contexto(t, cli, id))) // la app vuelve a iniciar la página (otro espacio o el mismo)
+	a.Retener(func() { a.Pulsar("enter") })     // el catálogo se pide de nuevo; la petición aún no ha vuelto
+	if v := a.Vista(); !strings.Contains(v, "Modelos: Cargando…") {
 		t.Fatalf("Iniciar vacía el catálogo: no se ve el de antes:\n%s", v)
 	}
 }
@@ -147,18 +138,17 @@ func TestAgentesCambioDeEspacioVaciaElCatalogo(t *testing.T) {
 // idioma de la sesión (aquí inglés, con el idioma del proceso en español).
 func TestAgentesTextosComoLaWeb(t *testing.T) {
 	cli, id := prueba.Servicio(t)
-	c := contexto(cli, id)
+	c := contexto(t, cli, id)
 	c.Idioma = "en"
-	p := Nueva("en").(*Pagina)
-	correr(p, p.Iniciar(c))
-	v := p.Vista()
+	a := abrir(t, c)
+	v := a.Vista()
 	for _, quiere := range []string{"Ready", "Ready (1)", "To connect (0)", "Not installed (0)", "API key"} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}
 	}
-	p.Update(tecla("enter"))
-	d := p.Vista()
+	a.Pulsar("enter")
+	d := a.Vista()
 	for _, quiere := range []string{"Ready · uses your API key", "Version: not detected", "Authentication: API key", "Live response: When finished",
 		"JSON response with schema: No", "Reports the model used: No", "Adjustable effort: No"} {
 		if !strings.Contains(d, quiere) {
