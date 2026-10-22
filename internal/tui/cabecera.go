@@ -187,7 +187,7 @@ func (m *modelo) vistaPie() string {
 	switch {
 	case m.pregunta != nil:
 	case m.selector != nil, m.enMenu:
-		teclas = []pagina.Tecla{{Tecla: idioma.T("Intro"), Accion: idioma.T("elige")}, {Tecla: "Esc", Accion: idioma.T("vuelve")}}
+		teclas = []pagina.Tecla{{Tecla: "Enter", Accion: idioma.T("elige")}, {Tecla: "Esc", Accion: idioma.T("vuelve")}}
 		if m.selector == nil { // en el selector, q filtra
 			fijas = comunes()[2:3]
 		}

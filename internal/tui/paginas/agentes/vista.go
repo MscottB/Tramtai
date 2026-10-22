@@ -281,7 +281,7 @@ func (p *Pagina) textoModelos(agente string) string {
 		nombres = append(nombres, m)
 	}
 	if len(nombres) == 0 {
-		return "—"
+		return idioma.T("Sin dato")
 	}
 	return strings.Join(nombres, " · ")
 }

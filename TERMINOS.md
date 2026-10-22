@@ -6,7 +6,7 @@ Tramtai es un programa gratuito que publica Michael Scott B. ([MscottB](https://
 
 ## 1. Qué es Tramtai
 
-Tramtai funciona en tu propio equipo y conecta tus aplicaciones con agentes de IA de terceros: Claude Code, Codex, GitHub Copilot CLI y Antigravity mediante sus programas oficiales, y la API de Gemini con tu propia clave. **Tramtai no es un proveedor de IA:** no tiene servidores, no vende acceso a ningún modelo y no forma parte de Anthropic, OpenAI, GitHub, Microsoft ni Google, que no lo respaldan.
+Tramtai funciona en tu propio equipo y conecta tus aplicaciones con agentes de IA de terceros: Claude Code, Codex, GitHub Copilot CLI y Antigravity mediante sus programas oficiales, y la Gemini API con tu propia clave. **Tramtai no es un proveedor de IA:** no tiene servidores, no vende acceso a ningún modelo y no forma parte de Anthropic, OpenAI, GitHub, Microsoft ni Google, que no lo respaldan.
 
 ## 2. Licencia
 

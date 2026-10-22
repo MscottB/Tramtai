@@ -4,12 +4,15 @@ package idioma
 // aquí: salen de los de la Web UI (internal/tui/datos).
 func init() {
 	agregar(map[string]string{
+		// Un valor que falta, en la terminal y en la CLI (como comun.sinDato en la Web UI)
+		"Sin dato": "No data",
+
 		// La app: tamaño, cabecera, estado y pie
 		"Agranda la ventana (mínimo 60×20)": "Enlarge the window (minimum 60×20)",
 		"Próximamente":                      "Coming soon",
 		"¿Cancelar la petición en marcha?":  "Cancel the running request?",
 		"Probar tiene una petición en marcha: seguirá en el servicio y la verás en el Historial.": "Playground has a running request: it will keep going in the service and you will see it in the History.",
-		"La API %s tiene cambios sin guardar en Probar (g los guarda).":                         "The API %s has unsaved changes in the Playground (g saves them).",
+		"La API %s tiene cambios sin guardar en Probar (g los guarda).":                           "The API %s has unsaved changes in the Playground (g saves them).",
 		"¿Salir de la terminal?":                     "Quit the terminal?",
 		"ver el error":                               "see the error",
 		"Esc cierra":                                 "Esc closes",
@@ -21,7 +24,6 @@ func init() {
 		"El servicio no responde · r reintenta":      "The service is not responding · r retries",
 		"Cambiar de espacio":                         "Switch workspace",
 		"el espacio %s se detuvo: vuelves al global": "workspace %s was stopped: back to the global one",
-		"Intro":   "Enter",
 		"elige":   "choose",
 		"vuelve":  "back",
 		"menú":    "menu",
@@ -65,8 +67,7 @@ func init() {
 		"hace %d h":          "%d h ago",
 		"hace %d d":          "%d d ago",
 		"Ver la Ayuda de %s": "See the %s Help",
-		"Red de Tramtai: 1 origen y %d de %d agentes en servicio.": "Tramtai network: 1 source and %d of %d agents in service.",
-		"Las apps siguen funcionando aunque cierres la terminal":   "Apps keep working even if you close the terminal",
+		"Las apps siguen funcionando aunque cierres la terminal": "Apps keep working even if you close the terminal",
 
 		// Historial: los filtros, el detalle, el registro y las confirmaciones salen de los textos de la Web UI; aquí solo lo
 		// propio de la terminal.
@@ -93,14 +94,14 @@ func init() {
 		"el conversor de archivos no está listo (%s): Ctrl+P lo prepara":                         "the file converter is not ready (%s): Ctrl+P prepares it",
 		"Preparando el conversor de archivos (%s)":                                               "Preparing the file converter (%s)",
 		"Escribe agente o agente/modelo (+esfuerzo), separados por comas: %s":                    "Write agent or agent/model (+effort), separated by commas: %s",
-		"← → elige la plantilla e Intro la aplica":                                               "← → chooses the template and Enter applies it",
-		"Intro salta de línea; Ctrl+Enter o Ctrl+S envía":                                        "Enter starts a new line; Ctrl+Enter or Ctrl+S sends",
+		"← → elige la plantilla y Enter la aplica":                                               "← → chooses the template and Enter applies it",
+		"Enter salta de línea; Ctrl+Enter o Ctrl+S envía":                                        "Enter starts a new line; Ctrl+Enter or Ctrl+S sends",
 		"Separa las rutas con comas; Tab completa la ruta.":                                      "Separate the paths with commas; Tab completes the path.",
 		"No se pudo guardar el borrador del mensaje: %v":                                         "The message draft could not be saved: %v",
 		"← → elige cómo se edita el esquema":                                                     "← → chooses how the schema is edited",
 		"Separa las opciones con comas":                                                          "Separate the options with commas",
 		"mueve el campo":                                                                         "move the field",
-		"Intro abre o pliega las opciones de la receta":                                          "Enter opens or folds the recipe options",
+		"Enter abre o pliega las opciones de la receta":                                          "Enter opens or folds the recipe options",
 		"n añade un campo detrás; x lo quita; Alt+↑↓ lo mueve; v enseña un ejemplo de respuesta": "n adds a field after this one; x removes it; Alt+↑↓ moves it; v shows a sample response",
 		"← → elige cómo se edita el esquema; n añade un campo; v enseña un ejemplo de respuesta": "← → chooses how the schema is edited; n adds a field; v shows a sample response",
 		"quita el campo": "remove the field",

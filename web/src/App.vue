@@ -234,7 +234,7 @@
         </q-card-section>
         <q-card-actions align="right" class="q-px-md q-pb-md">
           <q-btn flat no-caps color="primary" :label="t('actualizacion.verTodas')" href="https://github.com/MscottB/Tramtai/releases" target="_blank" rel="noopener" />
-          <q-btn v-close-popup unelevated no-caps color="primary" :label="t('comun.aceptar')" />
+          <q-btn v-close-popup unelevated no-caps color="primary" :label="t('comun.cerrar')" />
         </q-card-actions>
       </q-card>
     </q-dialog>

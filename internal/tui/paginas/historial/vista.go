@@ -51,7 +51,7 @@ func modeloDe(t nucleo.Trabajo) string {
 		partes = append(partes, m)
 	}
 	if len(partes) == 0 {
-		return "—"
+		return idioma.T("Sin dato")
 	}
 	return strings.Join(partes, " · ")
 }

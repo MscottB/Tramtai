@@ -318,7 +318,7 @@ func ejecutar(cmd *cobra.Command, c *configuracion.Configuracion, s nucleo.Solic
 
 func vacio(texto string) string {
 	if texto == "" {
-		return "—"
+		return idioma.T("Sin dato")
 	}
 	return texto
 }

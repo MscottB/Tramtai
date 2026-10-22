@@ -97,12 +97,21 @@ const descartadosEs: Regla[] = [
   { nombre: 'token → clave', re: /\btokens? (del|de la|de servicio|de la api|nuevo)\b|\b(el|un|su|tu) token\b/i },
   { nombre: 'trabajo → petición', re: /\btrabajos?\b(?<!espacios? de trabajos?)/i },
   { nombre: 'solicitud → petición', re: /\bsolicitud(es)?\b/i },
+  { nombre: 'coste → costo', re: /\bcostes?\b/i },
+  { nombre: 'Intro → Enter', re: /\bIntro\b/ },
+  { nombre: 'pasarela o puente → API local', re: /\b(pasarela|puente)\b/i },
+  { nombre: 'la API de Gemini → la Gemini API', re: /\bAPI de Gemini\b/ },
+  { nombre: 'asistente o programa de IA → agente', re: /\b(asistentes?|programas?) de IA\b/i },
+  { nombre: 'en proceso → en curso', re: /\ben proceso\b/i },
+  { nombre: 'bienvenida → recorrido guiado', re: /\brecorrido de bienvenida\b|\bLa bienvenida de Tramtai\b/i },
 ]
 const descartadosEn: Regla[] = [
   { nombre: 'instance → workspace', re: /\binstances?\b/i },
   { nombre: 'access point → API', re: /\baccess points?\b/i },
   { nombre: 'token → key', re: /\b(the|a|its|your|new|service|workspace) token\b/i },
   { nombre: 'job → request', re: /\bjobs?\b/i },
+  { nombre: 'gateway o bridge → local API', re: /\b(gateway|bridge)\b/i },
+  { nombre: 'welcome tour → guided tour', re: /\bwelcome tour\b/i },
 ]
 
 test('los textos usan espacio, API, clave y petición', () => {

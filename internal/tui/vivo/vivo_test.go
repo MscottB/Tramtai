@@ -98,7 +98,7 @@ func TestHace(t *testing.T) {
 	if got := Hace(ahora, ahora.Add(-30*24*time.Hour)); got != ahora.Add(-30*24*time.Hour).Local().Format("2006-01-02") {
 		t.Errorf("más de una semana es la fecha: %q", got)
 	}
-	if got := Hace(ahora, time.Time{}); got != "—" {
+	if got := Hace(ahora, time.Time{}); got != "Sin dato" {
 		t.Errorf("sin fecha: %q", got)
 	}
 }

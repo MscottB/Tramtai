@@ -75,7 +75,7 @@ func Hace(ahora, t time.Time) string {
 	d := ahora.Sub(t)
 	switch {
 	case t.IsZero():
-		return "—"
+		return idioma.T("Sin dato")
 	case d < time.Minute:
 		return idioma.Tf("hace %d s", max(int(d/time.Second), 0))
 	case d < time.Hour:

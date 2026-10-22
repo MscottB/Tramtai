@@ -896,9 +896,9 @@ func (p *Pagina) quitarFiltros() tea.Cmd {
 func (p *Pagina) Teclas() []pagina.Tecla {
 	switch {
 	case p.selector != nil:
-		return []pagina.Tecla{{Tecla: idioma.T("Intro"), Accion: idioma.T("elige")}, {Tecla: "Esc", Accion: idioma.T("cancela")}}
+		return []pagina.Tecla{{Tecla: "Enter", Accion: idioma.T("elige")}, {Tecla: "Esc", Accion: idioma.T("cancela")}}
 	case p.buscando:
-		return []pagina.Tecla{{Tecla: idioma.T("Intro"), Accion: idioma.T("aplica")}, {Tecla: "Esc", Accion: idioma.T("cancela")}}
+		return []pagina.Tecla{{Tecla: "Enter", Accion: idioma.T("aplica")}, {Tecla: "Esc", Accion: idioma.T("cancela")}}
 	case p.abierto != "":
 		teclas := []pagina.Tecla{{Tecla: "Esc", Accion: idioma.T("vuelve")}, {Tecla: p.flechasLado(), Accion: idioma.T("pestañas")}, {Tecla: "/", Accion: idioma.T("busca")}}
 		if t, ok := p.objetivo(); ok {
@@ -906,7 +906,7 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		}
 		return teclas
 	}
-	teclas := []pagina.Tecla{{Tecla: idioma.T("Intro"), Accion: idioma.T("detalles")}, {Tecla: "/", Accion: idioma.T("busca")},
+	teclas := []pagina.Tecla{{Tecla: "Enter", Accion: idioma.T("detalles")}, {Tecla: "/", Accion: idioma.T("busca")},
 		{Tecla: "e", Accion: p.tx("historial.estado")}, {Tecla: "f", Accion: p.tx("historial.origen")}}
 	if p.hayFiltro() {
 		teclas = append(teclas, pagina.Tecla{Tecla: "l", Accion: p.tx("historial.quitarFiltros")})

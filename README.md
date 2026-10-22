@@ -6,7 +6,7 @@
 
 **Tus agentes de IA, como una API local.**
 
-Tramtai convierte Claude Code, Codex, GitHub Copilot CLI y la API de Gemini en una API compatible con OpenAI y Anthropic que funciona en tu propio equipo.<br>
+Tramtai convierte Claude Code, Codex, GitHub Copilot CLI y la Gemini API en una API compatible con OpenAI y Anthropic que funciona en tu propio equipo.<br>
 Si tu app ya usa el SDK de OpenAI o el de Anthropic, solo cambias la URL base. Antigravity, por ahora, solo desde Probar, la terminal y la CLI.
 
 [![CI](https://github.com/MscottB/Tramtai/actions/workflows/ci.yml/badge.svg)](https://github.com/MscottB/Tramtai/actions/workflows/ci.yml)

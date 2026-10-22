@@ -457,8 +457,8 @@ func TestHistorialFiltroEstado(t *testing.T) {
 			t.Fatalf("FiltroEstado %q: %v, quería %v\n%s", c.estado, got, c.quiere, a.Vista())
 		}
 	}
-	// La tecla e recorre los estados como el selector de la Web UI: todas, en proceso, completadas y con error.
-	for _, quiere := range []string{"En proceso", "Completadas", "Con error", "Todas"} {
+	// La tecla e recorre los estados como el selector de la Web UI: todas, en curso, completadas y con error.
+	for _, quiere := range []string{"En curso", "Completadas", "Con error", "Todas"} {
 		a.Pulsar("e")
 		if v := a.Vista(); !strings.Contains(v, "Estado: "+quiere) {
 			t.Fatalf("e pasa a %q:\n%s", quiere, v)
@@ -882,7 +882,7 @@ func TestHistorialVaciar(t *testing.T) {
 		t.Fatalf("tres: %d", n)
 	}
 	q, ok := pregunta(a.Pulsar("V"))
-	if !ok || !strings.Contains(q.Texto, "Vaciar el historial") || !strings.Contains(q.Texto, "Las que están en proceso se conservan") {
+	if !ok || !strings.Contains(q.Texto, "Vaciar el historial") || !strings.Contains(q.Texto, "Las que están en curso se conservan") {
 		t.Fatalf("pregunta antes de borrar: %+v", q)
 	}
 	// Cancelar no borra nada.

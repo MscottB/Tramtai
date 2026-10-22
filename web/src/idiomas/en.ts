@@ -400,7 +400,7 @@ const en: Textos = {
   'contrato.nativa': 'Tramtai API',
 
   // Agents
-  'agentes.subtitulo': 'The AI assistants Tramtai uses to answer. Connect at least one.',
+  'agentes.subtitulo': 'The AI agents Tramtai uses to answer. Connect at least one.',
   'agentes.recomprobar': 'Check again',
   'agentes.buscar': 'Search agent',
   'agentes.sinResultados': 'No agent matches the filter.',
@@ -586,9 +586,9 @@ const en: Textos = {
   'inicio.guiaOculta': 'Guide hidden. You can show it again from Help.',
   'bienvenida.titulo': 'Want a tour of Tramtai?',
   'bienvenida.texto': 'A short tour of the screen: I will show you where everything is, and you can close it any time. You can repeat it any time from Getting started.',
-  'bienvenida.empezar': 'Start',
+  'bienvenida.empezar': 'Take the tour',
   'bienvenida.ahoraNo': 'Not now',
-  'bienvenida.repetir': 'Take the Tramtai tour',
+  'bienvenida.repetir': 'Take the guided tour',
   'escritorio.salirTitulo': 'Quit Tramtai',
   'escritorio.salirTexto': 'Quitting stops the service: apps connected to your APIs will stop working until you open Tramtai again.',
   'escritorio.noMostrar': 'Do not show this again',
@@ -650,6 +650,7 @@ const en: Textos = {
   'mapa.sinServicio': 'Not connected',
   'mapa.desconectado': 'Disconnected',
   'mapa.descripcion': 'Tramtai network: {apis} sources and {listos} of {total} agents in service.',
+  'mapa.descripcionUno': 'Tramtai network: 1 source and {listos} of {total} agents in service.',
   'vivo.tranvia': 'Request to {agente}, {etapa}',
   'vivo.etapaCola': 'queued',
   'vivo.etapaPreparacion': 'getting ready',

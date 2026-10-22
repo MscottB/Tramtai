@@ -238,7 +238,7 @@ export async function reiniciarYSeguir() {
     await esperar(500)
   }
   aviso()
-  Notify.create({ type: 'negative', message: t('app.reinicioFallido', { url }), position: 'top', timeout: 0, actions: [{ label: t('comun.aceptar'), color: 'white' }] })
+  Notify.create({ type: 'negative', message: t('app.reinicioFallido', { url }), position: 'top', timeout: 0, actions: [{ label: t('comun.cerrar'), color: 'white' }] })
 }
 
 // buscarActualizacionAhora consulta GitHub en el momento (Ajustes y la bandeja): si hay versión nueva abre su diálogo

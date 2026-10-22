@@ -87,7 +87,7 @@ func main() {
 	}
 	app := application.New(application.Options{
 		Name:        "Tramtai",
-		Description: idioma.T("Pasarela local de agentes"),
+		Description: idioma.T("Tus agentes de IA como una API local"),
 		Icon:        icono,
 		Windows:     application.WindowsOptions{WebviewUserDataPath: datosNavegador},
 		SingleInstance: &application.SingleInstanceOptions{

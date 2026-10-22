@@ -95,7 +95,7 @@ func envolver(texto string, ancho int) string {
 // fecha es la fecha y hora locales de una petición.
 func fecha(t time.Time) string {
 	if t.IsZero() {
-		return "—"
+		return idioma.T("Sin dato")
 	}
 	return t.Local().Format("2006-01-02 15:04:05")
 }
@@ -129,10 +129,10 @@ func (p *Pagina) banner(t nucleo.Trabajo) []string {
 // identificador).
 func (p *Pagina) textoMensaje(t nucleo.Trabajo) string {
 	l := p.banner(t)
-	l = append(l, cmp.Or(textoDe(t, p.lengua), "—"), "")
+	l = append(l, cmp.Or(textoDe(t, p.lengua), idioma.T("Sin dato")), "")
 	fila := func(clave, valor string) { l = append(l, p.tx(clave)+": "+valor) }
 	fila("historial.agenteModelo", modeloDe(t))
-	fila("historial.esfuerzo", cmp.Or(p.esfuerzoUsado(t), "—"))
+	fila("historial.esfuerzo", cmp.Or(p.esfuerzoUsado(t), idioma.T("Sin dato")))
 	fila("historial.origen", p.textoOrigen(t))
 	fila("historial.tokens", p.a(fmt.Sprintf("%d → %d", t.Uso.TokensEntrada, t.Uso.TokensSalida)))
 	if t.Uso.CostoUSD > 0 {

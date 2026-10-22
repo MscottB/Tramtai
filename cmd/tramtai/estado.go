@@ -45,7 +45,7 @@ func imprimirPuntos(out io.Writer, puntos []servicio.EstadoPunto) {
 		if p.Grupo != "" {
 			nombre += " (" + p.Grupo + ")"
 		}
-		fmt.Fprintf(out, "  %-18s %-40s %-24s %s\n", nombre, valorO(p.URL, "—"), "["+strings.Join(p.Contratos, ",")+"]", estado)
+		fmt.Fprintf(out, "  %-18s %-40s %-24s %s\n", nombre, valorO(p.URL, idioma.T("Sin dato")), "["+strings.Join(p.Contratos, ",")+"]", estado)
 		if p.Presupuesto != nil {
 			fmt.Fprintf(out, "  %-18s %s\n", "", textoPresupuesto(*p.Presupuesto))
 		}

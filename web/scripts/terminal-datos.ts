@@ -50,7 +50,7 @@ export const CLAVES_INICIO: string[] = [
   'inicio.tablero', 'inicio.completados', 'inicio.completadosDetalle', 'inicio.enCurso', 'inicio.enCursoDetalle', 'inicio.conError', 'inicio.conErrorDetalle',
   'inicio.espaciosConProblema', 'inicio.espaciosConProblemaUno', 'inicio.verEspacios', 'claves.sugerencia', 'claves.crearApi',
   'conversor.falta', 'conversor.error', 'conversor.redEmpresa', 'conversor.preparar', 'conversor.irAjustes',
-  'comun.ultimoDia', 'comun.ultimosDias', 'mapa.descripcion', 'mapa.principal',
+  'comun.ultimoDia', 'comun.ultimosDias', 'mapa.descripcion', 'mapa.descripcionUno', 'mapa.principal',
   'vivo.etapaCola', 'vivo.etapaPreparacion', 'vivo.etapaEjecucion', 'vivo.etapaValidacion', 'vivo.etapaLlegada', 'vivo.etapaFallida', 'vivo.etapaCancelada',
   'vivo.enCurso', 'vivo.enCursoUno', 'vivo.hace',
   'inicio.recientes', 'inicio.verHistorial', 'inicio.sinTrabajos', 'trabajo.entradaEliminada',

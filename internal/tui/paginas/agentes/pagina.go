@@ -87,7 +87,7 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		return []pagina.Tecla{{Tecla: "Esc", Accion: idioma.T("vuelve")}, {Tecla: "c", Accion: idioma.T("comprobar")},
 			{Tecla: "d", Accion: idioma.T("conexión")}, {Tecla: "a", Accion: idioma.T("autenticación")}, {Tecla: "p", Accion: p.tx("menu.ejecutar")}}
 	}
-	return []pagina.Tecla{{Tecla: idioma.T("Intro"), Accion: idioma.T("detalles")}, {Tecla: "← →", Accion: idioma.T("filtro")}, {Tecla: "c", Accion: idioma.T("comprobar")},
+	return []pagina.Tecla{{Tecla: "Enter", Accion: idioma.T("detalles")}, {Tecla: "← →", Accion: idioma.T("filtro")}, {Tecla: "c", Accion: idioma.T("comprobar")},
 		{Tecla: "d", Accion: idioma.T("conexión")}, {Tecla: "a", Accion: idioma.T("autenticación")}, {Tecla: "p", Accion: p.tx("menu.ejecutar")}}
 }
 

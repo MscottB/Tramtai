@@ -170,10 +170,11 @@ func (p *Pagina) lineas() []string {
 	l = append(l, e.Recortar(e.Tenue.Render(p.tx("inicio.direccion"))+" "+e.Acento.Render(p.inst.Base), ancho))
 	if p.hayAgentes {
 		listos := p.listos()
-		red := p.tx("mapa.descripcion", "apis", strconv.Itoa(p.origenes()), "listos", strconv.Itoa(listos), "total", strconv.Itoa(len(p.agentes)))
-		if p.origenes() == 1 { // la Web UI solo tiene el plural: «1 orígenes»
-			red = p.a(idioma.Tf("Red de Tramtai: 1 origen y %d de %d agentes en servicio.", listos, len(p.agentes)))
+		clave := "mapa.descripcion"
+		if p.origenes() == 1 {
+			clave = "mapa.descripcionUno"
 		}
+		red := p.tx(clave, "apis", strconv.Itoa(p.origenes()), "listos", strconv.Itoa(listos), "total", strconv.Itoa(len(p.agentes)))
 		l = append(l, e.Tenue.Render(e.Recortar(red, ancho)))
 	} else {
 		l = append(l, e.Tenue.Render(p.tx("inicio.comprobando")))

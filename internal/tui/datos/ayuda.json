@@ -46,7 +46,7 @@
               "Aquí ves en qué espacio estás. Cada espacio guarda sus propias peticiones y APIs; desde este selector pasas de uno a otro o abres un proyecto."
             ],
             [
-              "La ayuda, a mano",
+              "El botón ? de cada página",
               "Junto al título de cada página hay un botón ? que abre su ayuda en un panel, sin que salgas de donde estás."
             ]
           ]
@@ -66,7 +66,7 @@
           "tipo": "preguntas",
           "pares": [
             [
-              "¿Cómo repito el recorrido de bienvenida?",
+              "¿Cómo repito el recorrido guiado?",
               "En Inicio, pulsa «Haz el recorrido de Tramtai» en Primeros pasos. Esc lo cierra y las flechas pasan de paso. Solo enseña: no pulsa nada ni cambia tus datos."
             ],
             [
@@ -128,7 +128,7 @@
           "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html",
           "lineas": [
             "1. Suscripción o clave · Tu suscripción, para uso personal; una clave de API, para tus apps.",
-            "2. El agente · Claude Code, Codex, GitHub Copilot, la API de Gemini o Antigravity.",
+            "2. El agente · Claude Code, Codex, GitHub Copilot, la Gemini API o Antigravity.",
             "3. Modelo y esfuerzo · Se eligen con agente/modelo, por ejemplo claude/sonnet, y cuánto razona."
           ]
         },
@@ -168,7 +168,7 @@
           "pares": [
             [
               "¿Qué agentes puedo usar?",
-              "Claude Code, Codex, GitHub Copilot CLI, la API de Gemini y Antigravity. Los que no están instalados aparecen al final de Agentes, con su enlace."
+              "Claude Code, Codex, GitHub Copilot CLI, la Gemini API y Antigravity. Los que no están instalados aparecen al final de Agentes, con su enlace."
             ],
             [
               "¿Suscripción o clave de API?",
@@ -191,7 +191,7 @@
               "Sí: cada petición gasta créditos de tu plan (premium requests), y Tramtai lo avisa en el registro de la prueba."
             ],
             [
-              "¿Qué necesitan la API de Gemini y Antigravity?",
+              "¿Qué necesitan la Gemini API y Antigravity?",
               "Una clave de la Gemini API (GEMINI_API_KEY). No usan suscripción ni hace falta instalar Gemini CLI."
             ],
             [
@@ -321,7 +321,7 @@
           "pares": [
             [
               "La clave del espacio",
-              "Cada espacio tiene una clave con acceso a cualquier agente y modelo: la usan la CLI, tus scripts y Probar. Tus apps van mejor con una API propia cada una."
+              "Cada espacio tiene una clave con acceso a cualquier agente y modelo: la usan la CLI de Tramtai, tus scripts y Probar. Tus apps van mejor con una API propia cada una."
             ],
             [
               "Una API por aplicación",
@@ -804,8 +804,8 @@
           "tipo": "preguntas",
           "pares": [
             [
-              "¿Qué significan Completadas, En proceso y Con error?",
-              "Completadas recibieron respuesta; En proceso esperan o se están ejecutando; Con error fallaron o se interrumpieron."
+              "¿Qué significan Completadas, En curso y Con error?",
+              "Completadas recibieron respuesta; En curso esperan o se están ejecutando; Con error fallaron o se interrumpieron."
             ],
             [
               "¿Puedo seguir una petición en vivo?",
@@ -956,7 +956,7 @@
             ],
             [
               "Para qué",
-              "Probar, la CLI y tus scripts",
+              "Probar, la CLI de Tramtai y tus scripts",
               "Cada app real"
             ],
             [
@@ -1197,7 +1197,7 @@
           "pares": [
             [
               "Agente",
-              "El programa de IA que responde: Claude Code, Codex, GitHub Copilot, la API de Gemini o Antigravity. Se conecta en Agentes, con tu suscripción o una clave de API."
+              "La IA que responde: Claude Code, Codex, GitHub Copilot, la Gemini API o Antigravity. Se conecta en Agentes, con tu suscripción o una clave de API."
             ],
             [
               "Modelo",
@@ -1327,7 +1327,7 @@
               "Here you see which workspace you are in. Each one keeps its own requests and APIs; use this selector to switch or to open a project."
             ],
             [
-              "Help at hand",
+              "The ? button on every page",
               "Next to every page title there is a ? button that opens its help in a panel, without leaving where you are."
             ]
           ]
@@ -1347,7 +1347,7 @@
           "tipo": "preguntas",
           "pares": [
             [
-              "How do I repeat the welcome tour?",
+              "How do I repeat the guided tour?",
               "On Home, click “Take the Tramtai tour” in Getting started. Esc closes it and the arrow keys move between steps. It only shows: it clicks nothing and changes no data."
             ],
             [
@@ -2478,7 +2478,7 @@
           "pares": [
             [
               "Agent",
-              "The AI program that answers: Claude Code, Codex, GitHub Copilot, the Gemini API or Antigravity. Connect it in Agents, with your subscription or an API key."
+              "The AI that answers: Claude Code, Codex, GitHub Copilot, the Gemini API or Antigravity. Connect it in Agents, with your subscription or an API key."
             ],
             [
               "Model",
