@@ -3,7 +3,6 @@
 package cliente
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -16,7 +15,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -130,9 +128,20 @@ func (c *Cliente) pedir(ctx context.Context, metodo, ruta, instancia string, cue
 				Codigo  nucleo.CodigoError `json:"codigo"`
 				Mensaje string             `json:"mensaje"`
 			} `json:"error"`
+			// Lo que traen las dos preguntas de abrir un proyecto.
+			Claves   []string `json:"claves"`
+			Movido   string   `json:"movido"`
+			Proyecto string   `json:"proyecto"`
 		}
 		if json.NewDecoder(resp.Body).Decode(&e) == nil && e.Error.Codigo != "" {
-			return nucleo.NuevoError(e.Error.Codigo, e.Error.Mensaje)
+			err := nucleo.NuevoError(e.Error.Codigo, e.Error.Mensaje)
+			switch e.Error.Codigo {
+			case nucleo.CodigoConfianzaRequerida:
+				return &ErrorConfianza{Err: err, Claves: e.Claves, Movido: e.Movido}
+			case nucleo.CodigoDentroDeProyecto:
+				return &ErrorDentroDeProyecto{Err: err, Proyecto: e.Proyecto}
+			}
+			return err
 		}
 		return fmt.Errorf(idioma.T("el servicio respondió %s"), resp.Status)
 	}
@@ -181,6 +190,63 @@ func (c *Cliente) Espacios(ctx context.Context) ([]contrato.Espacio, error) {
 // Olvidar borra un espacio y sus datos en Tramtai (nunca la carpeta del proyecto); nombre lo confirma.
 func (c *Cliente) Olvidar(ctx context.Context, id, nombre string) error {
 	return c.pedir(ctx, "DELETE", "/api/v1/servicio/espacios/"+url.PathEscape(id), "", cuerpoJSON(map[string]string{"nombre": nombre}), "application/json", nil)
+}
+
+// ErrorConfianza es la pregunta de abrir un proyecto que ya traía .tramtai/: hay que decidir si se confía en él. Lleva
+// las claves de seguridad de su local.yaml y, si parece uno que estaba en otra carpeta, dónde estaba.
+type ErrorConfianza struct {
+	Err    *nucleo.Error
+	Claves []string
+	Movido string
+}
+
+func (e *ErrorConfianza) Error() string { return e.Err.Error() }
+func (e *ErrorConfianza) Unwrap() error { return e.Err }
+
+// ErrorDentroDeProyecto es la pregunta de abrir una carpeta que está dentro de otro proyecto (Proyecto): hay que
+// elegir cuál abrir.
+type ErrorDentroDeProyecto struct {
+	Err      *nucleo.Error
+	Proyecto string
+}
+
+func (e *ErrorDentroDeProyecto) Error() string { return e.Err.Error() }
+func (e *ErrorDentroDeProyecto) Unwrap() error { return e.Err }
+
+// ActivarEspacio vuelve a abrir un espacio detenido por su id.
+func (c *Cliente) ActivarEspacio(ctx context.Context, id string) (contrato.Espacio, error) {
+	var e contrato.Espacio
+	return e, c.pedir(ctx, "POST", "/api/v1/servicio/espacios/"+url.PathEscape(id)+"/activar", "", nil, "", &e)
+}
+
+// DetenerEspacio detiene un espacio; sus datos y su configuración se quedan.
+func (c *Cliente) DetenerEspacio(ctx context.Context, id string) error {
+	return c.pedir(ctx, "POST", "/api/v1/servicio/espacios/"+url.PathEscape(id)+"/detener", "", nil, "", nil)
+}
+
+// Confiar fija si se confía en el proyecto de un espacio: con confianza, su local.yaml puede traer las claves de
+// seguridad.
+func (c *Cliente) Confiar(ctx context.Context, id string, confiar bool) error {
+	return c.pedir(ctx, "POST", "/api/v1/servicio/espacios/"+url.PathEscape(id)+"/confianza", "", cuerpoJSON(map[string]bool{"confiar": confiar}), "application/json", nil)
+}
+
+// Ubicar asocia un espacio cuya carpeta no se encuentra con ruta y lo activa; conserva su id, su clave y su historial.
+func (c *Cliente) Ubicar(ctx context.Context, id, ruta string) (contrato.Espacio, error) {
+	var e contrato.Espacio
+	return e, c.pedir(ctx, "POST", "/api/v1/servicio/espacios/"+url.PathEscape(id)+"/ubicacion", "", cuerpoJSON(map[string]string{"ruta": ruta}), "application/json", &e)
+}
+
+// AbrirProyecto abre (y crea si falta) el proyecto de la carpeta raiz como un espacio activo. Si hay que decidir, el
+// error es un *ErrorConfianza (confiar nil) o un *ErrorDentroDeProyecto (crearAqui false).
+func (c *Cliente) AbrirProyecto(ctx context.Context, raiz string, confiar *bool, crearAqui bool) (contrato.Espacio, error) {
+	var e contrato.Espacio
+	cuerpo := cuerpoJSON(map[string]any{"raiz": raiz, "confiar": confiar, "crear_aqui": crearAqui})
+	return e, c.pedir(ctx, "POST", "/api/v1/servicio/proyectos", "", cuerpo, "application/json", &e)
+}
+
+// CambiarAutenticacion pasa un agente que admite la suscripción a suscripcion o clave_api, en todos los espacios.
+func (c *Cliente) CambiarAutenticacion(ctx context.Context, agente, modo string) error {
+	return c.pedir(ctx, "PUT", "/api/v1/servicio/agentes/"+url.PathEscape(agente)+"/autenticacion", "", cuerpoJSON(map[string]string{"modo": modo}), "application/json", nil)
 }
 
 // Configuracion devuelve la configuración efectiva de una instancia con el origen de cada valor.
@@ -325,15 +391,6 @@ func (c *Cliente) PrepararConversor(ctx context.Context, instancia string) (cont
 	return e, c.pedir(ctx, "POST", "/api/v1/conversor/preparar", instancia, nil, "", &e)
 }
 
-// Trabajos lista los trabajos recientes de una instancia.
-func (c *Cliente) Trabajos(ctx context.Context, instancia string, limite int) ([]nucleo.Trabajo, error) {
-	var r struct {
-		Trabajos []nucleo.Trabajo `json:"trabajos"`
-	}
-	err := c.pedir(ctx, "GET", "/api/v1/trabajos?limite="+strconv.Itoa(limite), instancia, nil, "", &r)
-	return r.Trabajos, err
-}
-
 // Trabajo devuelve un trabajo.
 func (c *Cliente) Trabajo(ctx context.Context, instancia, id string) (nucleo.Trabajo, error) {
 	var t nucleo.Trabajo
@@ -401,52 +458,6 @@ func (c *Cliente) SubirCarga(ctx context.Context, instancia, ruta string) (docum
 		escritor.CloseWithError(err)
 	}()
 	return carga, c.pedir(ctx, "POST", "/api/v1/cargas", instancia, lector, m.FormDataContentType(), &carga)
-}
-
-// Eventos sigue los eventos SSE de un trabajo desde el número desde hasta el evento fin.
-func (c *Cliente) Eventos(ctx context.Context, instancia, id string, desde int, alEvento func(numero int, tipo, datos string) error) error {
-	req, err := http.NewRequestWithContext(ctx, "GET", c.Base+"/api/v1/trabajos/"+url.PathEscape(id)+"/eventos", nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Authorization", "Bearer "+c.token)
-	req.Header.Set("Tramtai-Instancia", instancia)
-	if desde > 0 {
-		req.Header.Set("Last-Event-ID", strconv.Itoa(desde))
-	}
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf(idioma.T("eventos: el servicio respondió %s"), resp.Status)
-	}
-	lector := bufio.NewScanner(resp.Body)
-	lector.Buffer(make([]byte, 64<<10), 16<<20)
-	numero, tipo, datos := 0, "", []string{}
-	for lector.Scan() {
-		linea := lector.Text()
-		switch {
-		case linea == "":
-			if tipo == "fin" {
-				return nil
-			}
-			if len(datos) > 0 {
-				if err := alEvento(numero, tipo, strings.Join(datos, "\n")); err != nil {
-					return err
-				}
-			}
-			numero, tipo, datos = 0, "", nil
-		case strings.HasPrefix(linea, "id: "):
-			numero, _ = strconv.Atoi(linea[4:])
-		case strings.HasPrefix(linea, "event: "):
-			tipo = linea[7:]
-		case strings.HasPrefix(linea, "data: "):
-			datos = append(datos, linea[6:])
-		}
-	}
-	return lector.Err()
 }
 
 // URLWeb devuelve una URL de un solo uso (válida un minuto) que abre la Web UI de la instancia sin escribir su token.

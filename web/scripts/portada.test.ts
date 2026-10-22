@@ -25,6 +25,17 @@ test('la portada tiene cuatro ejemplos del recorrido, en los dos idiomas', () =>
   assert.ok(ejemplos.some((e) => e.agentes.length === 2), 'falta el ejemplo de respaldo')
 })
 
+test('el tranvía pasa por debajo del cartel de Tramtai (se dibuja antes que la cápsula), en los dos mapas', () => {
+  for (const [svg, tranvia] of [['mapa-ancho', 'tranvia'], ['mapa-alto', 'tranvia-alto']]) {
+    const dibujo = html.match(new RegExp(`<svg class="${svg}"[\\s\\S]*?</svg>`))?.[0] ?? ''
+    const tram = dibujo.indexOf(`class="${tranvia}"`)
+    const capsula = dibujo.search(/<rect [^>]*stroke="var\(--texto\)"/)
+    assert.ok(tram > 0 && capsula > 0, `${svg}: falta el tranvía o la cápsula`)
+    assert.equal(dibujo.split(`class="${tranvia}"`).length - 1, 1, `${svg}: un solo tranvía`)
+    assert.ok(tram < capsula, `${svg}: el tranvía se dibuja encima del cartel de Tramtai`)
+  }
+})
+
 // Lighthouse (rendimiento móvil de la portada): medir el tranvía metiendo un path en el svg forzaba un reflow de toda la
 // página al cargar. Ahora se mide fuera de la página y todo el trabajo espera a que el mapa se acerque a la pantalla.
 const js = readFileSync(new URL('../../site/sitio.js', import.meta.url), 'utf8')

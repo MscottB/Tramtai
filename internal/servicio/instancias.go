@@ -80,7 +80,7 @@ func (s *Servicio) ActivarProyecto(raiz string) (*Instancia, error) {
 	s.mu.RLock()
 	abierta, activa := s.instancias[id]
 	s.mu.RUnlock()
-	if activa && !MismaRuta(abierta.Raiz, raiz) {
+	if activa && !nucleo.MismaRuta(abierta.Raiz, raiz) {
 		if err := s.Desactivar(id); err != nil {
 			return nil, err
 		}

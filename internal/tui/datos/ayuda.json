@@ -1,0 +1,2564 @@
+{
+  "es": [
+    {
+      "id": "empezar",
+      "titulo": "Empezar",
+      "pagina": "inicio",
+      "resumen": "Tramtai pone tus agentes de IA detrás de una API en tu equipo: instálalo, conecta un agente y prueba.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/empezar.html",
+          "lineas": [
+            "1. Tu app · Envía la petición a una URL de Mis APIs, o la escribes en Probar.",
+            "2. La API · Comprueba la clave y el presupuesto y aplica la receta.",
+            "3. La cola · Convierte los archivos, mide si caben en el modelo y espera su turno.",
+            "4. El agente · Responde Claude Code, Codex, GitHub Copilot, Gemini o Antigravity. Si falla, sigue el respaldo.",
+            "5. La respuesta · Llega en vivo, se valida si hay esquema y queda en el Historial."
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/empezar.html"
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Instala Tramtai: instalador o portable en Windows, Homebrew o .dmg en macOS, .deb o .rpm en Linux.",
+            "En Agentes, conecta un agente con tu suscripción (uso personal) o con una clave de API.",
+            "En Probar, escribe un mensaje, elige agente y modelo y mira la respuesta en vivo.",
+            "En Mis APIs copia la URL y la clave y ponlas en tu app (tema «Conectar mi app»)."
+          ]
+        },
+        {
+          "tipo": "pantalla",
+          "pares": [
+            [
+              "El mapa en vivo",
+              "Aquí ves el mapa en vivo: tus apps, Tramtai y los agentes. Cada petición cruza el mapa como un tranvía y puedes pulsarlo para seguirla."
+            ],
+            [
+              "Tus primeros pasos",
+              "La guía que te lleva de conectar un agente a probarlo y a conectar tu app. Aunque la ocultes o la termines, aquí sigue la línea para repetir este recorrido."
+            ],
+            [
+              "El espacio de trabajo",
+              "Aquí ves en qué espacio estás. Cada espacio guarda sus propias peticiones y APIs; desde este selector pasas de uno a otro o abres un proyecto."
+            ],
+            [
+              "La ayuda, a mano",
+              "Junto al título de cada página hay un botón ? que abre su ayuda en un panel, sin que salgas de donde estás."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "La página Inicio de Tramtai con el estado del servicio y los agentes",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/empezar.html"
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Todo ocurre en tu equipo: Tramtai no tiene servidor propio ni ve tus datos, y los agentes de tus apps van sin herramientas que lean tus archivos o salgan a internet."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Cómo repito el recorrido de bienvenida?",
+              "En Inicio, pulsa «Haz el recorrido de Tramtai» en Primeros pasos. Esc lo cierra y las flechas pasan de paso. Solo enseña: no pulsa nada ni cambia tus datos."
+            ],
+            [
+              "¿Qué son los tranvías del mapa de Inicio?",
+              "Cada petición en curso: sale de su API, pasa por Tramtai y recorre la línea de su agente. Se pone roja si falla y cambia de línea si salta al respaldo."
+            ],
+            [
+              "¿Necesito una clave para entrar?",
+              "No. La app entra sola, y el navegador también si es de tu usuario; si no, «tramtai abrir» la abre ya dentro. Las claves de Mis APIs son solo para tus apps."
+            ],
+            [
+              "¿Cómo sé si sigue en marcha y cómo lo detengo?",
+              "Arriba a la derecha dice «En marcha» o «Sin conexión». Sigue en segundo plano aunque cierres la ventana; «tramtai servicio detener» lo detiene."
+            ],
+            [
+              "Windows dice «Windows protegió su PC»",
+              "Pulsa Más información → Ejecutar de todas formas. Aparece porque el instalador todavía no está firmado con un certificado de pago."
+            ],
+            [
+              "macOS no deja abrir la app",
+              "Con Homebrew no pasa. Con el .dmg: Ajustes del Sistema → Privacidad y seguridad → Abrir igualmente, o «xattr -dr com.apple.quarantine /Applications/Tramtai.app»."
+            ],
+            [
+              "¿Qué necesito en Linux?",
+              "El .deb o el .rpm (x64 y ARM) instalan solos GTK 4 y WebKitGTK 6.0. En GNOME, el icono de la bandeja necesita la extensión AppIndicator."
+            ],
+            [
+              "¿Cómo funciona la copia portable?",
+              "El .zip de Windows guarda todo en «datos-tramtai», a su lado, sin tocar la instalación. Para actualizarla, descomprime la nueva encima."
+            ],
+            [
+              "¿Cómo paso mis datos a la portable?",
+              "Con las dos cerradas, copia el contenido de %APPDATA%\\tramtai en «datos-tramtai». Las claves de los proveedores siguen en el almacén del sistema: en otro equipo, guárdalas de nuevo."
+            ],
+            [
+              "¿Puedo llevar la portable en un pendrive?",
+              "Sí, pero en un pendrive con FAT o exFAT la carpeta no se puede proteger: quien tenga el pendrive puede leer las claves de tus APIs."
+            ],
+            [
+              "¿Puedo usar solo la terminal?",
+              "Sí: «brew install mscottb/tramtai/tramtai» o el script instalar.sh dejan la CLI y el servicio; «tramtai abrir» lo inicia y abre la Web UI."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/empezar.html"
+        }
+      ]
+    },
+    {
+      "id": "agentes",
+      "titulo": "Agentes y modelos",
+      "pagina": "agentes",
+      "resumen": "Tramtai usa el CLI oficial de cada agente; lo conectas con tu suscripción o con una clave de API.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html",
+          "lineas": [
+            "1. Suscripción o clave · Tu suscripción, para uso personal; una clave de API, para tus apps.",
+            "2. El agente · Claude Code, Codex, GitHub Copilot, la API de Gemini o Antigravity.",
+            "3. Modelo y esfuerzo · Se eligen con agente/modelo, por ejemplo claude/sonnet, y cuánto razona."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Abre Agentes: cada uno dice si está listo o qué le falta, y cómo instalarlo si no está.",
+            "Con tu suscripción: inicia sesión en su CLI (por ejemplo, copilot login) y pulsa «Usar mi suscripción».",
+            "Con una clave: «tramtai claves guardar ANTHROPIC_API_KEY» la guarda cifrada y vale sin reiniciar.",
+            "En Ajustes elige el modelo y el esfuerzo que se usan cuando una petición no los dice."
+          ]
+        },
+        {
+          "tipo": "pantalla",
+          "pares": [
+            [
+              "Tus agentes",
+              "Aquí ves cada agente con su estado: listo para responder o lo que le falta. Ábrelo para ver cómo está conectado y sus detalles."
+            ],
+            [
+              "Listos y por conectar",
+              "Estos filtros separan los agentes listos de los que faltan por conectar o por instalar, cada grupo con su número. Cada agente se conecta con tu suscripción o con una clave de API."
+            ],
+            [
+              "Volver a comprobar",
+              "Si acabas de instalar un agente o de iniciar sesión en su CLI, pulsa aquí y Tramtai vuelve a mirar cómo está cada uno."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "Un agente en la página Agentes, con su estado y su modelo",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Qué agentes puedo usar?",
+              "Claude Code, Codex, GitHub Copilot CLI, la API de Gemini y Antigravity. Los que no están instalados aparecen al final de Agentes, con su enlace."
+            ],
+            [
+              "¿Suscripción o clave de API?",
+              "Es solo para uso personal: si la usas para otras apps, el proveedor podría limitar o suspender tu cuenta, y el riesgo es tuyo (Términos de uso). Para tus apps, una clave de API."
+            ],
+            [
+              "¿Dónde queda mi clave?",
+              "Cifrada en el almacén del sistema: Administrador de credenciales, Llavero de macOS o Secret Service de Linux. Nunca en los archivos de Tramtai."
+            ],
+            [
+              "¿Tramtai lee las credenciales de los CLI?",
+              "No. Cada CLI usa su propia sesión; Tramtai nunca las lee ni las copia."
+            ],
+            [
+              "¿Qué plan de GitHub Copilot necesito?",
+              "Cualquiera con GitHub Copilot CLI, también Free. copilot usa el modelo automático (el único en Free); con otros planes puedes pedir copilot/[modelo]."
+            ],
+            [
+              "¿GitHub Copilot gasta mi plan?",
+              "Sí: cada petición gasta créditos de tu plan (premium requests), y Tramtai lo avisa en el registro de la prueba."
+            ],
+            [
+              "¿Qué necesitan la API de Gemini y Antigravity?",
+              "Una clave de la Gemini API (GEMINI_API_KEY). No usan suscripción ni hace falta instalar Gemini CLI."
+            ],
+            [
+              "¿Dónde guarda las claves en Linux?",
+              "En el Secret Service, que necesita secret-tool (paquete libsecret-tools). La página Agentes te dice dónde queda la clave en tu sistema."
+            ],
+            [
+              "¿Por qué no puedo usar Antigravity en mis APIs?",
+              "Va sin herramientas, pero se habilita en APIs cuando pase su prueba con una clave de la Gemini API. Mientras, se usa desde Probar, la terminal y la CLI."
+            ],
+            [
+              "¿Cómo dejo de usar la suscripción?",
+              "En Agentes, «Dejar de usar la suscripción» (o «Usar clave de API en su lugar») está en la tarjeta del agente, también si muestra un error."
+            ],
+            [
+              "¿Qué pasa si cierro sesión o cambio de cuenta en el CLI?",
+              "Tramtai lo detecta al abrir Agentes y cada 5 minutos: avisa si no hay sesión o si pasó a clave, y muestra la cuenta cuando el CLI la informa."
+            ],
+            [
+              "¿Para qué sirve desconectar un agente?",
+              "Para que Tramtai no lo use, ni como respaldo, sin desinstalar su CLI. Las peticiones que lo pidan reciben agente_desconectado hasta que lo conectes."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html"
+        }
+      ]
+    },
+    {
+      "id": "probar",
+      "titulo": "Probar",
+      "pagina": "ejecutar",
+      "resumen": "Escribe un mensaje, elige agente, modelo y esfuerzo, y mira la respuesta antes de llevarla a tu app.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/probar.html",
+          "lineas": [
+            "1. Tu mensaje · Con archivos si quieres: PDF, Word, PowerPoint, Excel, HTML o texto.",
+            "2. El agente · El que elijas, con su modelo y esfuerzo; si falla, el respaldo.",
+            "3. La respuesta · En vivo, con formato o como texto, y su registro con tiempos."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Escribe el mensaje y, si quieres, adjunta archivos.",
+            "Elige agente, modelo y esfuerzo; si no eliges, se usan los predeterminados de Ajustes.",
+            "Mira la respuesta en vivo. «Registro» muestra cada paso y cuánto tardó.",
+            "Cuando funcione, «Guardar como API» la convierte en una API para tu app."
+          ]
+        },
+        {
+          "tipo": "pantalla",
+          "pares": [
+            [
+              "La receta",
+              "Aquí eliges agente y modelo y, si quieres, instrucciones, esfuerzo y respaldo. Es lo que define cómo responde una API cuando la guardas."
+            ],
+            [
+              "El mensaje de prueba",
+              "Aquí escribes el mensaje y lo envías con Ctrl + Enter. La respuesta aparece en vivo en el panel de respuesta."
+            ],
+            [
+              "Ver como código",
+              "Este botón convierte lo que has preparado en una petición lista para copiar y pegar en tu app."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "La receta de Probar: instrucciones, agente, modelo y esfuerzo",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/probar.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Cómo veo mi prueba como código?",
+              "Pulsa «Ver como código» en la receta: la petición en curl, Python, Node o Go, lista para tu app, con la clave como [tu clave]."
+            ],
+            [
+              "¿Dónde quedan mis pruebas?",
+              "En «Pruebas recientes», para abrirlas o usarlas de nuevo. El Historial guarda todas las peticiones."
+            ],
+            [
+              "¿Qué esfuerzo elijo?",
+              "Más esfuerzo da mejores respuestas difíciles, pero tarda más y gasta más tokens. Para lo simple basta con bajo o medio."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/probar.html"
+        }
+      ]
+    },
+    {
+      "id": "conectar",
+      "titulo": "Conectar mi app",
+      "pagina": "conectar",
+      "resumen": "Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/conectar.html",
+          "lineas": [
+            "1. Tu app · Con el SDK de OpenAI, el de Anthropic o la API propia.",
+            "2. URL y clave · Las de Mis APIs: la clave del espacio o una API por aplicación.",
+            "3. Tramtai · Aplica la receta de esa API y pone la petición en la cola.",
+            "4. El agente · El que diga model, por ejemplo claude/sonnet o perfil/rapido."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "En Mis APIs, pestaña «Clave del espacio», copia la URL para OpenAI (o Anthropic) y la clave.",
+            "En tu app cambia la URL base (base_url) y la clave (api_key) por las de Tramtai.",
+            "En model pon agente y modelo, por ejemplo claude/sonnet, o un perfil como perfil/rapido.",
+            "Envía una petición: aparece en el Historial con el agente que respondió."
+          ]
+        },
+        {
+          "tipo": "pantalla",
+          "pares": [
+            [
+              "La clave del espacio",
+              "Cada espacio tiene una clave con acceso a cualquier agente y modelo: la usan la CLI, tus scripts y Probar. Tus apps van mejor con una API propia cada una."
+            ],
+            [
+              "Una API por aplicación",
+              "Con este botón creas una API para una app, con su dirección, su clave, sus modelos y su historial. Si una clave se filtra, revocas solo esa."
+            ],
+            [
+              "Tus APIs",
+              "Aquí ves las APIs que has creado. Ábrelas para copiar su dirección y su clave, ver su uso o cambiar sus ajustes."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/conectar.html"
+        },
+        {
+          "tipo": "web",
+          "titulo": "Una API en Mis APIs, con su URL y sus acciones",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/conectar.html"
+        },
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "OpenAI",
+            "Anthropic",
+            "API propia"
+          ],
+          "filas": [
+            [
+              "SDK oficial y herramientas existentes",
+              "sí",
+              "sí",
+              "no (HTTP y JSON)"
+            ],
+            [
+              "Respuesta en vivo",
+              "sí",
+              "sí",
+              "sí, y se retoma tras un corte"
+            ],
+            [
+              "Respuesta JSON con esquema",
+              "sí (response_format)",
+              "no",
+              "sí (salida.esquema), con «Corregir»"
+            ],
+            [
+              "Enviar archivos",
+              "sí, en base64 dentro del mensaje (hasta ~12 MB)",
+              "sí, en base64 dentro del mensaje (hasta ~12 MB)",
+              "sí, hasta 50 MB cada uno"
+            ],
+            [
+              "Herramientas (tools)",
+              "sí",
+              "sí",
+              "sí"
+            ],
+            [
+              "Tareas largas: seguir, cancelar, reintentar",
+              "no",
+              "no",
+              "sí"
+            ],
+            [
+              "Respaldo y esfuerzo por petición",
+              "solo el esfuerzo",
+              "no",
+              "sí"
+            ],
+            [
+              "Registro de cada paso",
+              "no",
+              "no",
+              "sí"
+            ],
+            [
+              "Consultar los límites antes de enviar",
+              "no",
+              "no",
+              "sí"
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Las URL de OpenAI y Anthropic imitan esos servicios para que sus SDK funcionen igual, así que no tienen campos para seguir o cancelar un trabajo. La receta vale en las tres."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Tramtai escucha solo en 127.0.0.1: tus apps deben correr en el mismo equipo."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Qué URL uso?",
+              "La de OpenAI si tu app usa su SDK o deja cambiar la URL base (LangChain, n8n); la de Anthropic con su SDK; la API propia para trabajos largos o para cancelar."
+            ],
+            [
+              "¿Para qué sirve una API por aplicación?",
+              "Cada app tiene su clave, sus modelos, instrucciones fijas y presupuesto, y solo ve sus trabajos. Se activan o detienen sin reiniciar."
+            ],
+            [
+              "¿Dónde está la clave de una API nueva?",
+              "Solo se muestra al crearla: cópiala entonces. Si la pierdes, «Regenerar la clave» te da otra."
+            ],
+            [
+              "¿Cómo convierto una prueba en una API?",
+              "En Probar, «Guardar como API» te da URL y clave. Desde Mis APIs, «Abrir en Probar» la carga para cambiarla y «Actualizar» guarda."
+            ],
+            [
+              "¿Qué hago si se filtra una clave?",
+              "En Mis APIs, «Regenerar la clave»: la anterior deja de valer al momento. Si es de un proveedor, revócala en su consola y guarda la nueva."
+            ],
+            [
+              "¿Mi app puede ver lo que pasa en vivo?",
+              "Sí: GET /api/v1/eventos (SSE) avisa cada cambio de etapa de las peticiones, sin su contenido. Con la clave de una API, solo las suyas."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/conectar.html"
+        }
+      ]
+    },
+    {
+      "id": "archivos",
+      "titulo": "Archivos",
+      "resumen": "Tramtai convierte tus PDF, Word, Excel y otros documentos a texto antes de pasárselos al agente.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/archivos.html",
+          "lineas": [
+            "1. Tu app lo manda · Por la API propia, subiéndolo a /cargas; por OpenAI o Anthropic, en base64 dentro del mensaje.",
+            "2. Tramtai lo guarda · Como una carga identificada por su contenido: el mismo archivo no se guarda dos veces.",
+            "3. Lo convierte a texto · markitdown pasa PDF, Word, PowerPoint, Excel y HTML a Markdown; el texto va tal cual.",
+            "4. Se lo da al agente · Un bloque delimitado por archivo, junto con tu mensaje. El agente no lee tu disco.",
+            "5. Recibes la respuesta · Como cualquier otra petición, en el formato de la API que usaste."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Por la API propia: sube cada archivo con POST /cargas y crea el trabajo citando sus cargas.",
+            "Por OpenAI o Anthropic: pon el archivo en base64 dentro del mensaje (file, input_file o document).",
+            "En Probar también puedes adjuntarlos para ver la respuesta antes."
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/archivos.html"
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Se convierten PDF, .docx, .pptx, .xlsx y HTML; van tal cual .txt, .md, .markdown, .json, .jsonl, .csv, .tsv, .xml, .yaml, .yml, .toml, .ini y .log. Sin ZIP."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Por la API propia, hasta 50 MB por archivo y 20 por petición; convertidos, hasta 20 MB de texto. Por OpenAI y Anthropic, unos 12 MB en total. Detalle: /api/v1/limites."
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "El estado del conversor de archivos en Ajustes",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/archivos.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Puedo enviar imágenes?",
+              "Todavía no. Por OpenAI y Anthropic el archivo va dentro del mensaje: Tramtai no descarga URL ni usa file_id."
+            ],
+            [
+              "¿Por qué se rechazó mi petición por tamaño?",
+              "Lo que recibiría el agente no cabe en el modelo. Envía menos páginas o divide el archivo; el registro dice cuál pesa más. No se gastan tokens."
+            ],
+            [
+              "¿Qué hago si falta el conversor?",
+              "Ajustes → Archivos → «Preparar archivos», o «tramtai conversor preparar». Si tu red bloquea la descarga, usa el paquete del conversor para Windows."
+            ],
+            [
+              "¿Sale algo de mi equipo al convertir?",
+              "No: markitdown corre en tu equipo. El texto convertido lo recibe el agente, como cualquier mensaje."
+            ]
+          ]
+        },
+        {
+          "tipo": "errores",
+          "pares": [
+            [
+              "No se pudo convertir el archivo (conversion_fallida)",
+              "No se pudo convertir un archivo. Comprueba que no esté dañado ni protegido con contraseña y que su formato se admita."
+            ],
+            [
+              "Falta el conversor de archivos (conversor_no_disponible)",
+              "Falta el conversor de archivos: Ajustes → Archivos → «Preparar archivos». Si tu red bloquea la descarga, usa el paquete del conversor para Windows."
+            ],
+            [
+              "La entrada no cabe en el modelo (entrada_demasiado_grande)",
+              "Los documentos no caben en el modelo. Envía menos páginas, divide el archivo o pon en el respaldo un modelo con más contexto."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/archivos.html"
+        }
+      ]
+    },
+    {
+      "id": "json",
+      "titulo": "Respuestas JSON",
+      "resumen": "Pide la respuesta con una forma fija (un esquema JSON) y Tramtai la valida antes de entregarla.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/json.html",
+          "lineas": [
+            "1. El esquema · Los campos y su tipo, armados con plantillas o en JSON.",
+            "2. El agente · Responde siguiendo la forma pedida.",
+            "3. La validación · Tramtai comprueba cada campo, también los formatos: fecha, correo, URL…",
+            "4. La corrección · Si no cumple, puede pedir al mismo agente que la arregle, hasta 3 veces."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "En Probar, abre «Opciones de la receta» y activa «Respuesta con forma».",
+            "Elige una plantilla (extraer datos, clasificar, resumen, tareas…) o añade tus campos con su tipo y descripción.",
+            "Prueba: si no cumple, verás qué campo falló y el botón «Corregir».",
+            "En «Si la respuesta no cumple» pide hasta 3 correcciones automáticas; cada una es otra petición.",
+            "Pulsa «Guardar como API»: tu app recibirá siempre esa forma."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Por OpenAI el esquema va en response_format; por la API propia, en salida. Si la respuesta no cumple, llega 422 salida_no_cumple_esquema."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Se comprueban los formatos?",
+              "Sí: fecha, fecha y hora, correo, URL… Una fecha y hora sin zona horaria no cumple «date-time»."
+            ],
+            [
+              "¿Puedo escribir el esquema a mano?",
+              "Sí, en la pestaña JSON de «Respuesta con forma». Si falla siempre, simplifícalo o aclara la descripción de los campos."
+            ]
+          ]
+        },
+        {
+          "tipo": "errores",
+          "pares": [
+            [
+              "La respuesta no cumple el JSON Schema (salida_no_cumple_esquema)",
+              "La respuesta no tenía la forma pedida. En Probar verás qué campo falló; «Corregir» pide al agente que la arregle. Si falla siempre, simplifica el esquema."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/json.html"
+        }
+      ]
+    },
+    {
+      "id": "recetas",
+      "titulo": "Recetas y respaldo",
+      "resumen": "Una receta fija instrucciones, agente, modelo, esquema y respaldo, para que tu app solo envíe el mensaje.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/recetas.html",
+          "lineas": [
+            "1. La receta · Instrucciones, agente y modelo, esfuerzo, esquema y respaldo.",
+            "2. Agente principal · Responde si puede.",
+            "3. Respaldo · Hasta 3 agentes que siguen, en orden, si el principal falla antes de responder.",
+            "4. La respuesta · El Historial dice qué agente respondió.",
+            "2 → 3: Si falla antes de responder"
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "En Probar escribe las instrucciones, por ejemplo «Responde siempre en español».",
+            "Elige el agente principal y hasta 3 de respaldo, cada uno con su esfuerzo si quieres.",
+            "Prueba con un mensaje y tus archivos; cuando funcione, pulsa «Guardar como API»."
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "El editor de la receta en Probar",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/recetas.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Cómo hago que mi app responda en español?",
+              "Crea una API para esa app y escribe en sus instrucciones «Responde siempre en español». Se añaden a cada petición sin cambiar la app."
+            ],
+            [
+              "¿Qué pasa si un agente llega a su límite?",
+              "Si la receta tiene respaldo, sigue el siguiente agente. Si el agente ya había empezado a responder no se cambia, para no mezclar dos respuestas."
+            ],
+            [
+              "¿El tiempo límite cuenta por intento?",
+              "Sí: cada agente del respaldo tiene el tiempo límite completo."
+            ]
+          ]
+        },
+        {
+          "tipo": "errores",
+          "pares": [
+            [
+              "Se alcanzó el límite de uso del proveedor (limite_uso_proveedor)",
+              "Llegaste al límite de tu plan o de tu clave. Espera a que el proveedor lo reinicie o añade un respaldo a la receta."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/recetas.html"
+        }
+      ]
+    },
+    {
+      "id": "herramientas",
+      "titulo": "Herramientas",
+      "resumen": "Tu app ofrece funciones; el agente pide una con sus argumentos y tu app la ejecuta y le devuelve el resultado.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/herramientas.html",
+          "lineas": [
+            "1. Tu app ofrece · Las funciones, con un JSON Schema para sus argumentos.",
+            "2. El agente pide · Una llamada con argumentos ya validados. Nunca ejecuta nada.",
+            "3. Tu app ejecuta · La función, y le devuelve el resultado en el siguiente mensaje.",
+            "4. La respuesta · El agente responde usando ese resultado."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Pasa tus funciones en tools (OpenAI y Anthropic) o en herramientas (API propia).",
+            "Si el agente pide una, ejecútala en tu app con los argumentos que llegan.",
+            "Devuelve el resultado en el siguiente mensaje (rol tool o herramienta) y vuelve a llamar."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "tool_choice (auto, required, none o una función) y las llamadas en paralelo funcionan igual que en OpenAI y Anthropic."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Con herramientas, la respuesta llega completa al terminar, aunque pidas stream."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Dónde está el ejemplo completo?",
+              "En la guía del desarrollador: el ciclo completo en Python, JavaScript, Go y curl, por las tres URL."
+            ],
+            [
+              "¿El agente puede ejecutar algo en mi equipo?",
+              "No. Solo pide la llamada; ejecutarla o no lo decide tu app."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/herramientas.html"
+        }
+      ]
+    },
+    {
+      "id": "presupuestos",
+      "titulo": "Presupuestos",
+      "resumen": "Pon límites por día o por mes a una API o a todo el espacio, en peticiones, tokens o dólares.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/presupuestos.html",
+          "lineas": [
+            "1. Consumo · Cada petición suma peticiones, tokens y, si el agente lo informa, dólares.",
+            "2. Aviso al 80 % · La barra se pone amarilla.",
+            "3. Tope al 100 % · La app recibe un error 429 hasta que empieza el día o el mes siguiente."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Crea en Mis APIs una API para esa aplicación.",
+            "En sus ajustes, pon un presupuesto diario o mensual en peticiones, tokens o dólares.",
+            "Si hace falta, «Reiniciar consumo» la vuelve a abrir al momento."
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "Las barras de presupuesto de una API",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/presupuestos.html"
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "El límite en dólares solo suma el costo que informa el agente (hoy Claude). Para todo el espacio, añade «presupuesto» a la configuración global."
+          ]
+        },
+        {
+          "tipo": "errores",
+          "pares": [
+            [
+              "Se agotó el presupuesto (presupuesto_agotado)",
+              "Esa API o el espacio llegó a su límite (error 429). Espera al reinicio del día o del mes, o pulsa «Reiniciar consumo» en Mis APIs."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/presupuestos.html"
+        }
+      ]
+    },
+    {
+      "id": "historial",
+      "titulo": "Historial",
+      "pagina": "historial",
+      "resumen": "Cada petición queda en el Historial con su respuesta, el agente que respondió y el registro de cada paso.",
+      "bloques": [
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Filtra por estado, origen o grupo, o busca por texto.",
+            "Abre una petición para ver la respuesta y su «Registro», con cada paso y su hora.",
+            "Si falló, corrige la causa y pulsa «Reintentar»."
+          ]
+        },
+        {
+          "tipo": "pantalla",
+          "pares": [
+            [
+              "Filtros",
+              "Aquí filtras las peticiones por estado o por origen, o buscas por texto."
+            ],
+            [
+              "La lista de peticiones",
+              "Cada fila es una petición: su estado, el mensaje, el agente y el modelo, el origen y los tokens. Si aún no hay ninguna, saldrán aquí en cuanto envíes la primera."
+            ],
+            [
+              "El detalle",
+              "Al pulsar una fila se abre su detalle: el mensaje, la respuesta, el registro paso a paso y, si algo falló, qué hacer."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "La lista del Historial con sus filtros",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/historial.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Qué significan Completadas, En proceso y Con error?",
+              "Completadas recibieron respuesta; En proceso esperan o se están ejecutando; Con error fallaron o se interrumpieron."
+            ],
+            [
+              "¿Puedo seguir una petición en vivo?",
+              "Sí: pulsa su tranvía en el mapa de Inicio y verás su ruta (cola, preparación, ejecución, validación y llegada) mientras avanza."
+            ],
+            [
+              "¿Cómo veo cuánto tardó cada paso?",
+              "En «Registro», bajo la respuesta o en el detalle: cada paso con su hora y, arriba, cuánto duró cada etapa."
+            ],
+            [
+              "¿Cómo veo lo que procesa mientras desarrollo?",
+              "«tramtai servicio registro -f» muestra en vivo una línea por petición: agente, modelo, duración, tokens y la API de origen."
+            ],
+            [
+              "¿Puedo ver el servicio en primer plano?",
+              "Sí: detén el servicio y ejecuta «tramtai servicio iniciar --abrir»: corre con el registro a la vista, abre la app y Ctrl+C lo detiene."
+            ],
+            [
+              "¿Cómo borro los datos de prueba?",
+              "En Ajustes, «Borrar datos» elimina el historial y las APIs por aplicación. También puedes vaciar el Historial."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/historial.html"
+        }
+      ]
+    },
+    {
+      "id": "espacios",
+      "titulo": "Espacios de trabajo",
+      "pagina": "espacios",
+      "resumen": "La global y uno por proyecto, cada uno con su historial, sus APIs y sus ajustes.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/espacios.html",
+          "lineas": [
+            "1. Global · Para texto y archivos sueltos. Sus ajustes valen en los proyectos que no tienen los suyos.",
+            "2. Lo que se hereda · Modelo, historial y presupuesto: lo que un proyecto no define lo toma de la global.",
+            "3. Un proyecto · Una carpeta con .tramtai/: su propio historial, sus APIs y sus ajustes."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Abre un proyecto desde el selector de arriba o desde Espacios. Si la carpeta no tenía .tramtai/, Tramtai la prepara y confía en ella.",
+            "Si ya traía .tramtai/ (un repositorio clonado), decide si confías: así su local.yaml puede usar claves de seguridad.",
+            "En Espacios ves todos, también los detenidos. Detén los que no uses y olvida los que ya no necesites."
+          ]
+        },
+        {
+          "tipo": "pantalla",
+          "pares": [
+            [
+              "Tus espacios",
+              "Aquí ves todos los espacios, también los detenidos: su estado, su carpeta, cuántas APIs y peticiones tienen y lo que puedes hacer con cada uno."
+            ],
+            [
+              "Abrir un proyecto",
+              "Con este botón abres una carpeta como espacio de trabajo. Si no tenía .tramtai/, Tramtai la prepara por ti."
+            ],
+            [
+              "Actualizar la lista",
+              "Vuelve a cargar los espacios para ver al día el estado de cada uno."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "La página Espacios: la global y un proyecto, con su estado, su confianza, sus APIs y sus peticiones.",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/espacios.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Qué significa confiar en una carpeta?",
+              "Que su .tramtai/local.yaml puede usar claves de seguridad, como el programa de cada agente. La confianza se guarda en Tramtai, nunca en el repositorio."
+            ],
+            [
+              "¿Puedo mover o renombrar un proyecto?",
+              "Sí. Su identificador queda en .tramtai/espacio: en la nueva ruta conserva historial, APIs y clave. Te vuelve a preguntar si confías, porque la confianza no viaja con la carpeta."
+            ],
+            [
+              "¿Y si copio la carpeta?",
+              "La copia es un espacio nuevo, con su propio historial y su propia clave; el original sigue como estaba."
+            ],
+            [
+              "¿Qué borra «Olvidar»?",
+              "Su historial, sus archivos subidos y las claves de sus APIs en Tramtai. La carpeta del proyecto, con su .tramtai/, no se toca."
+            ],
+            [
+              "¿Por qué un espacio sale «No encontrado»?",
+              "Su carpeta se movió o se borró. «Buscar la carpeta» lo reasocia sin perder nada (después, «Confiar» si usa claves de seguridad); «Olvidar», si ya no lo necesitas."
+            ],
+            [
+              "¿Cómo sé si un ajuste es del proyecto o de la global?",
+              "En Ajustes, cada uno dice «Propio» o «De Global». Los propios tienen «Volver al de Global», que quita el valor del local.yaml del proyecto."
+            ],
+            [
+              "¿Y desde la terminal?",
+              "«tramtai espacios» los lista; «tramtai espacio iniciar», «detener» y «olvidar» hacen lo mismo que la página."
+            ]
+          ]
+        },
+        {
+          "tipo": "errores",
+          "pares": [
+            [
+              "Hay que decidir si confías en esa carpeta (confianza_requerida)",
+              "La carpeta ya tenía configuración de Tramtai. Decide si confías en ella: si no, se abre sin sus APIs ni su presupuesto."
+            ],
+            [
+              "El espacio de este proyecto está detenido (espacio_detenido)",
+              "Estás dentro de un proyecto detenido. Actívalo con tramtai espacio iniciar, o usa --global para mandar a la global."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/espacios.html"
+        }
+      ]
+    },
+    {
+      "id": "claves",
+      "titulo": "Claves y APIs",
+      "resumen": "La clave del espacio y las APIs por aplicación: cuándo usar cada una y qué pasa al regenerarlas.",
+      "bloques": [
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "Clave del espacio",
+            "API por aplicación"
+          ],
+          "filas": [
+            [
+              "Cuántas",
+              "Una por espacio",
+              "Las que quieras"
+            ],
+            [
+              "Qué puede usar",
+              "Cualquier agente y modelo",
+              "Lo que le configures"
+            ],
+            [
+              "Para qué",
+              "Probar, la CLI y tus scripts",
+              "Cada app real"
+            ],
+            [
+              "Al regenerarla",
+              "Dejan de conectar todas las apps que la usan",
+              "Solo esa app deja de conectar"
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Cada API por aplicación tiene su dirección, su presupuesto y su historial: si una se filtra, revocas solo esa."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Qué clave le doy a mi app?",
+              "Para probar, la del espacio. Para una app de verdad, créale su propia API en Mis APIs: la puedes limitar, medir y revocar sin tocar las demás."
+            ],
+            [
+              "¿Y si se filtra la clave del espacio?",
+              "Regenérala en Mis APIs, pestaña «Clave del espacio»: la anterior deja de valer al momento. Las APIs por aplicación no cambian."
+            ],
+            [
+              "¿Por qué me sugiere crear una API?",
+              "Porque más de 20 peticiones de apps llegaron con la clave del espacio en 24 h. Es solo una sugerencia: todo sigue funcionando igual."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/claves.html"
+        }
+      ]
+    },
+    {
+      "id": "ajustes",
+      "titulo": "Ajustes y actualizaciones",
+      "pagina": "configuracion",
+      "resumen": "Arranque con el sistema, modelo predeterminado, archivos, historial y actualizaciones.",
+      "bloques": [
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Activa el arranque con el sistema: Tramtai se abre oculto en la bandeja al iniciar sesión.",
+            "Elige el modelo y el esfuerzo que se usan cuando una petición no los dice.",
+            "En Historial decide cuánto se guardan las peticiones; en Archivos, prepara el conversor."
+          ]
+        },
+        {
+          "tipo": "pantalla",
+          "pares": [
+            [
+              "Dos grupos de ajustes",
+              "Las pestañas separan lo de este espacio (modelo, historial, datos) de lo de todo Tramtai (puerto, conversor, actualizaciones, arranque)."
+            ],
+            [
+              "Modelo predeterminado",
+              "Aquí eliges el modelo y el esfuerzo que se usan cuando una petición no dice cuál quiere."
+            ],
+            [
+              "Borrar datos",
+              "Aquí borras el historial o las APIs de este espacio. Antes te pide confirmar, y los ajustes no se tocan."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "Las opciones de actualización en Ajustes",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/ajustes.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Qué pasa al actualizar?",
+              "El aviso muestra lo que trae cada versión. Con el instalador de Windows se instala sola y la app se reabre con tus datos; en lo demás, el aviso trae el enlace."
+            ],
+            [
+              "¿Cómo actualizo sin el instalador de Windows?",
+              "Homebrew: «brew upgrade». El .dmg, .deb, .rpm y la portable: el paquete nuevo encima. En la terminal, «tramtai actualizar» («--comprobar» solo mira)."
+            ],
+            [
+              "¿Puedo buscar una versión ahora?",
+              "Sí: «Buscar actualización ahora» en Ajustes. Tramtai mira cada hora (solo la ficha pública de GitHub); se desactiva en Ajustes → Buscar actualizaciones."
+            ],
+            [
+              "¿Qué versión tengo?",
+              "Abre «Acerca de Tramtai» en el menú lateral o en la bandeja; «Copiar datos para soporte» copia lo necesario sin claves."
+            ],
+            [
+              "¿Dónde se guardan mis datos?",
+              "Solo en este equipo: %APPDATA%\\tramtai (Windows), ~/Library/Application Support/tramtai (macOS) o ~/.config/tramtai (Linux); la portable, en «datos-tramtai»."
+            ],
+            [
+              "¿Cuánto tiempo se guardan?",
+              "Las respuestas, 24 horas; el resto del historial, 7 días, hasta 10 000 peticiones. Se cambia en Ajustes → Historial, donde también puedes borrarlo."
+            ],
+            [
+              "¿Qué es «Este espacio» y qué «Todo Tramtai»?",
+              "«Este espacio» guarda el modelo, el historial y los datos del espacio abierto; «Todo Tramtai», el puerto, el conversor, las actualizaciones y el arranque."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/ajustes.html"
+        }
+      ]
+    },
+    {
+      "id": "problemas",
+      "titulo": "Algo falló",
+      "resumen": "Los errores más comunes, con el mismo título que ves en la app, y qué hacer con cada uno.",
+      "bloques": [
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Abre el Historial y pulsa la petición con error.",
+            "Busca su error aquí abajo: cada uno dice qué significa y qué hacer.",
+            "Abre «Registro» para ver con qué agente se intentó, los avisos y cuánto tardó.",
+            "Corrige la causa y pulsa «Reintentar»."
+          ]
+        },
+        {
+          "tipo": "errores",
+          "pares": [
+            [
+              "Sin conexión",
+              "El servicio no está en marcha. Abre la app o ejecuta «tramtai servicio iniciar»; con el arranque automático de Ajustes no vuelve a pasar."
+            ],
+            [
+              "Falta la clave o no es válida (no_autorizado)",
+              "Revisa la clave en tu app: la del espacio o la de esa API. Si la regeneraste, la anterior ya no vale."
+            ],
+            [
+              "El agente no tiene una sesión o clave válida (autenticacion_agente)",
+              "El agente no tiene sesión ni clave. En Agentes, inicia sesión en su CLI o guarda una clave de API."
+            ],
+            [
+              "El agente no está disponible (agente_no_disponible)",
+              "El CLI no está instalado o no se encuentra; Agentes dice cómo instalarlo. Antigravity, además, no se usa desde APIs."
+            ],
+            [
+              "Se alcanzó el límite de uso del proveedor (limite_uso_proveedor)",
+              "Llegaste al límite de tu plan o de tu clave. Espera a que el proveedor lo reinicie o añade un respaldo a la receta."
+            ],
+            [
+              "Ese modelo no está disponible (modelo_no_disponible)",
+              "Usa un modelo de la lista con el agente delante, por ejemplo claude/sonnet, o un perfil como perfil/rapido."
+            ],
+            [
+              "Hay un parámetro que no se admite (parametro_no_soportado)",
+              "Pediste algo que los agentes de terminal no pueden respetar (imágenes, n mayor que 1, stop…): quítalo. Uno desconocido se acepta con compatibilidad.modo_tolerante."
+            ],
+            [
+              "La entrada no cabe en el modelo (entrada_demasiado_grande)",
+              "Los documentos no caben en el modelo. Envía menos páginas, divide el archivo o pon en el respaldo un modelo con más contexto."
+            ],
+            [
+              "Se agotó el presupuesto (presupuesto_agotado)",
+              "Esa API o el espacio llegó a su límite (error 429). Espera al reinicio del día o del mes, o pulsa «Reiniciar consumo» en Mis APIs."
+            ],
+            [
+              "La respuesta no cumple el JSON Schema (salida_no_cumple_esquema)",
+              "La respuesta no tenía la forma pedida. En Probar verás qué campo falló; «Corregir» pide al agente que la arregle. Si falla siempre, simplifica el esquema."
+            ],
+            [
+              "Se agotó el tiempo límite (tiempo_ejecucion_agotado)",
+              "Tardó más que el tiempo límite. Súbelo en las opciones avanzadas de Probar o en la petición, o baja el esfuerzo."
+            ],
+            [
+              "La cola está llena; inténtalo en un momento (cola_llena)",
+              "Hay demasiadas peticiones a la vez. Reintenta en unos segundos: la respuesta trae Retry-After con la espera."
+            ],
+            [
+              "No se pudo convertir el archivo (conversion_fallida)",
+              "No se pudo convertir un archivo. Comprueba que no esté dañado ni protegido con contraseña y que su formato se admita."
+            ],
+            [
+              "Falta el conversor de archivos (conversor_no_disponible)",
+              "Falta el conversor de archivos: Ajustes → Archivos → «Preparar archivos». Si tu red bloquea la descarga, usa el paquete del conversor para Windows."
+            ],
+            [
+              "El agente devolvió un error (error_agente)",
+              "El agente falló al responder. Abre «Registro» para ver su mensaje; reintenta, o pon un respaldo en la receta para que siga otro agente."
+            ],
+            [
+              "No se entendió la respuesta del agente (error_protocolo_agente)",
+              "El CLI respondió algo que Tramtai no entiende; suele pasar tras actualizar el CLI. Actualiza Tramtai o prueba con otro agente."
+            ],
+            [
+              "Esperó demasiado en la cola (tiempo_cola_agotado)",
+              "La petición esperó demasiado su turno porque había muchas a la vez. Reintenta en un momento o envía menos peticiones juntas."
+            ],
+            [
+              "Esa API no permite ese modelo (modelo_no_permitido)",
+              "Esa API solo admite ciertos modelos. Usa uno de los suyos o añade ese modelo a sus permitidos en Mis APIs."
+            ],
+            [
+              "No hay un modelo configurado para ese perfil (modelo_no_configurado)",
+              "El perfil pedido (por ejemplo perfil/rapido) no tiene modelo para ese agente. Elige un modelo concreto, como claude/sonnet."
+            ],
+            [
+              "Se llenó el espacio para archivos (cuota_cargas_agotada)",
+              "Se llenó el espacio para archivos subidos. Espera a que venzan los anteriores o borra datos en Ajustes."
+            ],
+            [
+              "Ese agente está desconectado (agente_desconectado)",
+              "Ese agente está desconectado. Conéctalo en Agentes o elige otro modelo; el respaldo lo salta."
+            ],
+            [
+              "Hay que decidir si confías en esa carpeta (confianza_requerida)",
+              "La carpeta ya tenía configuración de Tramtai. Decide si confías en ella: si no, se abre sin sus APIs ni su presupuesto."
+            ],
+            [
+              "El espacio de este proyecto está detenido (espacio_detenido)",
+              "Estás dentro de un proyecto detenido. Actívalo con tramtai espacio iniciar, o usa --global para mandar a la global."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/problemas.html"
+        }
+      ]
+    },
+    {
+      "id": "conceptos",
+      "titulo": "Conceptos",
+      "resumen": "Las palabras que usa Tramtai, en una línea cada una.",
+      "bloques": [
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "Agente",
+              "El programa de IA que responde: Claude Code, Codex, GitHub Copilot, la API de Gemini o Antigravity. Se conecta en Agentes, con tu suscripción o una clave de API."
+            ],
+            [
+              "Modelo",
+              "El modelo que usa el agente (sonnet, opus, gpt-5.5…). Se escribe agente/modelo; la lista muestra la versión exacta que hay detrás."
+            ],
+            [
+              "Perfil",
+              "Un atajo como perfil/rapido o perfil/profundo que elige el modelo adecuado del agente predeterminado, sin escribir su nombre."
+            ],
+            [
+              "Esfuerzo",
+              "Cuánto razona el modelo antes de responder, de bajo a máximo. Más esfuerzo da mejores respuestas difíciles, pero tarda más y gasta más tokens. En Ajustes eliges el del modelo predeterminado."
+            ],
+            [
+              "Receta",
+              "Lo que define cómo responde una API: instrucciones, agente y modelo, esfuerzo, respaldo y esquema JSON. Se prueba en Probar."
+            ],
+            [
+              "Respaldo",
+              "Hasta 3 agentes de reserva que siguen la petición si el principal falla antes de empezar a responder."
+            ],
+            [
+              "Clave del espacio y APIs por aplicación",
+              "La principal sirve para todo con una sola clave. Una API por aplicación tiene su URL, su clave, su receta y su presupuesto."
+            ],
+            [
+              "Petición",
+              "Cada mensaje enviado a un agente, desde Probar, la terminal o una app. Queda en el Historial con su respuesta y su registro."
+            ],
+            [
+              "Respuesta con forma (esquema JSON)",
+              "La forma que debe tener la respuesta: sus campos y su tipo. Si la respuesta no la cumple, la petición falla o se pide una corrección, en vez de entregar algo inesperado."
+            ],
+            [
+              "Contexto",
+              "Cuánto texto acepta un modelo de una vez. Los documentos convertidos cuentan: si no caben, Tramtai lo dice antes de gastar tokens."
+            ],
+            [
+              "Espacio de trabajo",
+              "Dónde se guardan las peticiones y las APIs: el global, o uno por proyecto con su propio historial."
+            ],
+            [
+              "Presupuesto",
+              "Límites por día y por mes en peticiones, tokens o dólares, para una API o para todo el espacio."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "preguntas",
+      "titulo": "Preguntas frecuentes",
+      "resumen": "Lo que más se pregunta y no encaja en otro tema.",
+      "bloques": [
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "¿Las consultas quedan como chats en Claude Code, Codex o GitHub Copilot?",
+              "No. Tramtai ejecuta cada CLI sin guardar la sesión, así que tus chats no se llenan; el registro queda solo en el Historial de Tramtai."
+            ],
+            [
+              "¿Tramtai envía mis datos a algún servidor?",
+              "No tiene servidor propio. Tus mensajes solo van al proveedor del agente que elijas, como si usaras su CLI."
+            ],
+            [
+              "¿Puedo usarlo en mi empresa?",
+              "Es gratis para uso personal y no comercial (PolyForm Noncommercial 1.0.0). En una empresa o un producto comercial hace falta una licencia aparte: escríbeme."
+            ],
+            [
+              "¿Qué pasa si el puerto está ocupado?",
+              "Tramtai usa el siguiente libre y lo avisa; la app y la CLI lo encuentran solas, pero tus apps deben usar la nueva dirección. Se fija en Ajustes."
+            ],
+            [
+              "¿Cómo lo desinstalo?",
+              "Windows: Configuración → Aplicaciones → Tramtai (pregunta si borrar tus datos). macOS: a la Papelera o «brew uninstall --cask --zap tramtai». Linux: apt o dnf remove tramtai."
+            ]
+          ]
+        }
+      ]
+    }
+  ],
+  "en": [
+    {
+      "id": "empezar",
+      "titulo": "Get started",
+      "pagina": "inicio",
+      "resumen": "Tramtai puts your AI agents behind an API on your computer: install it, connect an agent and try it.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/empezar.html",
+          "lineas": [
+            "1. Your app · Sends the request to a URL from My APIs, or you type it in Try.",
+            "2. The API · Checks the key and the budget and applies the recipe.",
+            "3. The queue · Converts the files, checks that they fit the model and waits its turn.",
+            "4. The agent · Claude Code, Codex, GitHub Copilot, Gemini or Antigravity answers. If it fails, the fallback takes over.",
+            "5. The answer · Arrives live, is validated if there is a schema and stays in History."
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/empezar.html"
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Install Tramtai: installer or portable on Windows, Homebrew or .dmg on macOS, .deb or .rpm on Linux.",
+            "In Agents, connect an agent with your subscription (personal use) or with an API key.",
+            "In Try, type a message, pick agent and model and watch the answer live.",
+            "In My APIs copy the URL and the key and put them in your app (topic \"Connect my app\")."
+          ]
+        },
+        {
+          "tipo": "pantalla",
+          "pares": [
+            [
+              "The live map",
+              "Here is the live map: your apps, Tramtai and the agents. Each request crosses it as a tram, and you can click it to follow it."
+            ],
+            [
+              "Your first steps",
+              "The guide that takes you from connecting an agent to trying it and connecting your app. Even if you hide or finish it, the line to replay this tour stays here."
+            ],
+            [
+              "The workspace",
+              "Here you see which workspace you are in. Each one keeps its own requests and APIs; use this selector to switch or to open a project."
+            ],
+            [
+              "Help at hand",
+              "Next to every page title there is a ? button that opens its help in a panel, without leaving where you are."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "The Tramtai Home page with the service status and the agents",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/empezar.html"
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Everything happens on your computer: Tramtai has no server of its own and never sees your data, and your apps’ agents run without tools that read your files or go online."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "How do I repeat the welcome tour?",
+              "On Home, click \"Take the Tramtai tour\" in Getting started. Esc closes it and the arrow keys move between steps. It only shows: it clicks nothing and changes no data."
+            ],
+            [
+              "What are the trams on the Home map?",
+              "Each request in progress: it leaves its API, goes through Tramtai and runs along its agent’s line. It turns red if it fails and changes line if it falls back."
+            ],
+            [
+              "Do I need a key to get in?",
+              "No. The app signs in by itself, and so does the browser if it belongs to your user; if not, \"tramtai abrir\" opens it already signed in. My APIs keys are only for your apps."
+            ],
+            [
+              "How do I know it is running, and how do I stop it?",
+              "The top right says \"Running\" or \"Offline\". It keeps running in the background even if you close the window; \"tramtai servicio detener\" stops it."
+            ],
+            [
+              "Windows says \"Windows protected your PC\"",
+              "Click More info → Run anyway. It appears because the installer is not signed with a paid certificate yet."
+            ],
+            [
+              "macOS won’t open the app",
+              "Not with Homebrew. With the .dmg: System Settings → Privacy & Security → Open Anyway, or \"xattr -dr com.apple.quarantine /Applications/Tramtai.app\"."
+            ],
+            [
+              "What do I need on Linux?",
+              "The .deb or .rpm (x64 and ARM) install GTK 4 and WebKitGTK 6.0 on their own. On GNOME, the tray icon needs the AppIndicator extension."
+            ],
+            [
+              "How does the portable copy work?",
+              "The Windows .zip keeps everything in \"datos-tramtai\", next to it, without touching the installed copy. To update it, unzip the new one on top."
+            ],
+            [
+              "How do I move my data to the portable copy?",
+              "With both closed, copy the contents of %APPDATA%\\tramtai into \"datos-tramtai\". Provider keys stay in the system store: on another computer, save them again."
+            ],
+            [
+              "Can I carry the portable copy on a USB stick?",
+              "Yes, but on a FAT or exFAT stick the folder cannot be protected: whoever has the stick can read your APIs’ keys."
+            ],
+            [
+              "Can I use only the terminal?",
+              "Yes: \"brew install mscottb/tramtai/tramtai\" or the instalar.sh script install the CLI and the service; \"tramtai abrir\" starts it and opens the Web UI."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/empezar.html"
+        }
+      ]
+    },
+    {
+      "id": "agentes",
+      "titulo": "Agents and models",
+      "pagina": "agentes",
+      "resumen": "Tramtai uses each agent’s official CLI; you connect it with your subscription or an API key.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html",
+          "lineas": [
+            "1. Subscription or key · Your subscription, for personal use; an API key, for your apps.",
+            "2. The agent · Claude Code, Codex, GitHub Copilot, the Gemini API or Antigravity.",
+            "3. Model and effort · Picked with agent/model, for example claude/sonnet, plus how hard it reasons."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Open Agents: each one says whether it is ready or what it is missing, and how to install it.",
+            "With your subscription: sign in to its CLI (for example, copilot login) and click \"Use my subscription\".",
+            "With a key: \"tramtai claves guardar ANTHROPIC_API_KEY\" stores it encrypted and it works without restarting.",
+            "In Settings pick the model and effort used when a request does not say."
+          ]
+        },
+        {
+          "tipo": "pantalla",
+          "pares": [
+            [
+              "Your agents",
+              "Here you see each agent with its status: ready to answer or what it is missing. Open one to see how it is connected and its details."
+            ],
+            [
+              "Ready and to connect",
+              "These filters split the ready agents from the ones still to connect or install, each group with its count. Each agent connects with your subscription or with an API key."
+            ],
+            [
+              "Check again",
+              "If you just installed an agent or signed in to its CLI, click here and Tramtai checks how each one is doing again."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "An agent on the Agents page, with its status and model",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "Which agents can I use?",
+              "Claude Code, Codex, GitHub Copilot CLI, the Gemini API and Antigravity. The ones not installed appear at the end of Agents, with their link."
+            ],
+            [
+              "Subscription or API key?",
+              "It is for personal use only: if you use it for other apps, the provider could limit or suspend your account, and the risk is yours (Terms of use). For your apps, an API key."
+            ],
+            [
+              "Where is my key kept?",
+              "Encrypted in the system store: Credential Manager, macOS Keychain or the Linux Secret Service. Never in Tramtai’s files."
+            ],
+            [
+              "Does Tramtai read the CLIs’ credentials?",
+              "No. Each CLI uses its own session; Tramtai never reads or copies them."
+            ],
+            [
+              "Which GitHub Copilot plan do I need?",
+              "Any plan with GitHub Copilot CLI, Free included. copilot uses the automatic model (the only one on Free); on other plans you can ask for copilot/[model]."
+            ],
+            [
+              "Does GitHub Copilot use up my plan?",
+              "Yes: every request uses credits from your plan (premium requests), and Tramtai warns about it in the test log."
+            ],
+            [
+              "What do the Gemini API and Antigravity need?",
+              "A Gemini API key (GEMINI_API_KEY). They use no subscription and you do not need to install Gemini CLI."
+            ],
+            [
+              "Where are keys kept on Linux?",
+              "In the Secret Service, which needs secret-tool (libsecret-tools package). The Agents page tells you where the key lives on your system."
+            ],
+            [
+              "Why can’t I use Antigravity in my APIs?",
+              "It runs without tools, but it is enabled for APIs once it passes its test with a Gemini API key. Until then, use it from Try, the terminal and the CLI."
+            ],
+            [
+              "How do I stop using the subscription?",
+              "In Agents, “Stop using the subscription” (or “Use an API key instead”) is on the agent’s card, even when it shows an error."
+            ],
+            [
+              "What if I sign out or switch account in the CLI?",
+              "Tramtai notices when you open Agents and every 5 minutes: it warns if there is no session or it switched to a key, and shows the account when the CLI reports it."
+            ],
+            [
+              "What is disconnecting an agent for?",
+              "So Tramtai does not use it, not even as a fallback, without uninstalling its CLI. Requests that ask for it get agente_desconectado until you connect it."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html"
+        }
+      ]
+    },
+    {
+      "id": "probar",
+      "titulo": "Try",
+      "pagina": "ejecutar",
+      "resumen": "Type a message, pick agent, model and effort, and see the answer before taking it to your app.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/probar.html",
+          "lineas": [
+            "1. Your message · With files if you like: PDF, Word, PowerPoint, Excel, HTML or text.",
+            "2. The agent · The one you pick, with its model and effort; if it fails, the fallback.",
+            "3. The answer · Live, formatted or as plain text, with its timed log."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Type the message and, if you like, attach files.",
+            "Pick agent, model and effort; if you don’t, the defaults from Settings are used.",
+            "Watch the answer live. \"Log\" shows every step and how long it took.",
+            "When it works, \"Save as API\" turns it into an API for your app."
+          ]
+        },
+        {
+          "tipo": "pantalla",
+          "pares": [
+            [
+              "The recipe",
+              "Here you pick agent and model and, if you want, instructions, effort and fallback. It defines how an API answers once you save it."
+            ],
+            [
+              "The test message",
+              "Type the message here and send it with Ctrl + Enter. The answer shows up live in the answer panel."
+            ],
+            [
+              "View as code",
+              "This button turns what you set up into a request ready to copy and paste into your app."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "The recipe in Try: instructions, agent, model and effort",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/probar.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "How do I see my test as code?",
+              "Click \"View as code\" in the recipe: the request in curl, Python, Node or Go, ready for your app, with the key as [your key]."
+            ],
+            [
+              "Where are my tests kept?",
+              "In \"Recent tests\", to open them or use them again. History keeps every request."
+            ],
+            [
+              "Which effort should I pick?",
+              "More effort gives better answers to hard questions, but takes longer and uses more tokens. For simple things, low or medium is enough."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/probar.html"
+        }
+      ]
+    },
+    {
+      "id": "conectar",
+      "titulo": "Connect my app",
+      "pagina": "conectar",
+      "resumen": "Change your OpenAI or Anthropic SDK’s base URL to Tramtai’s and pick the agent with model.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/conectar.html",
+          "lineas": [
+            "1. Your app · With the OpenAI SDK, the Anthropic SDK or the native API.",
+            "2. URL and key · The ones from My APIs: the workspace key or one API per app.",
+            "3. Tramtai · Applies that API’s recipe and puts the request in the queue.",
+            "4. The agent · The one model names, for example claude/sonnet or perfil/rapido."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "In My APIs, \"Workspace key\" tab, copy the URL for OpenAI (or Anthropic) and the key.",
+            "In your app change the base URL (base_url) and the key (api_key) to Tramtai’s.",
+            "In model put agent and model, for example claude/sonnet, or a profile like perfil/rapido.",
+            "Send a request: it shows up in History with the agent that answered."
+          ]
+        },
+        {
+          "tipo": "pantalla",
+          "pares": [
+            [
+              "The workspace key",
+              "Each workspace has a key with access to any agent and model: the CLI, your scripts and Try use it. Your apps are better off with an API of their own each."
+            ],
+            [
+              "One API per app",
+              "This button creates an API for an app, with its own address, key, models and history. If a key leaks, you revoke only that one."
+            ],
+            [
+              "Your APIs",
+              "Here you see the APIs you have created. Open one to copy its address and key, see its usage or change its settings."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/conectar.html"
+        },
+        {
+          "tipo": "web",
+          "titulo": "An API in My APIs, with its URL and actions",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/conectar.html"
+        },
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "OpenAI",
+            "Anthropic",
+            "Tramtai API"
+          ],
+          "filas": [
+            [
+              "Official SDK and existing tools",
+              "yes",
+              "yes",
+              "no (HTTP and JSON)"
+            ],
+            [
+              "Live response",
+              "yes",
+              "yes",
+              "yes, and it resumes after a drop"
+            ],
+            [
+              "JSON response with a schema",
+              "yes (response_format)",
+              "no",
+              "yes (salida.esquema), with \"Correct\""
+            ],
+            [
+              "Send files",
+              "yes, in base64 inside the message (up to ~12 MB)",
+              "yes, in base64 inside the message (up to ~12 MB)",
+              "yes, up to 50 MB each"
+            ],
+            [
+              "Tool calling",
+              "yes",
+              "yes",
+              "yes"
+            ],
+            [
+              "Long jobs: follow, cancel, retry",
+              "no",
+              "no",
+              "yes"
+            ],
+            [
+              "Fallback and effort per request",
+              "effort only",
+              "no",
+              "yes"
+            ],
+            [
+              "Log of each step",
+              "no",
+              "no",
+              "yes"
+            ],
+            [
+              "Check the limits before sending",
+              "no",
+              "no",
+              "yes"
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "The OpenAI and Anthropic URLs mimic those services so their SDKs work unchanged, so they have no fields to follow or cancel a job. The recipe applies to all three."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Tramtai only listens on 127.0.0.1: your apps must run on the same computer."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "Which URL do I use?",
+              "OpenAI’s if your app uses its SDK or lets you change the base URL (LangChain, n8n); Anthropic’s with its SDK; the native API for long jobs or to cancel."
+            ],
+            [
+              "What is an API per app for?",
+              "Each app gets its key, its models, fixed instructions and budget, and only sees its own jobs. They turn on or off without restarting."
+            ],
+            [
+              "Where is a new API’s key?",
+              "It is shown only when created: copy it then. If you lose it, \"Regenerate the key\" gives you another."
+            ],
+            [
+              "How do I turn a test into an API?",
+              "In Try, \"Save as API\" gives you a URL and a key. From My APIs, \"Open in Try\" loads it to change it and \"Update\" saves it."
+            ],
+            [
+              "What if a key leaks?",
+              "In My APIs, \"Regenerate the key\": the old one stops working at once. If it is a provider’s, revoke it in their console and save the new one."
+            ],
+            [
+              "Can my app see what happens live?",
+              "Yes: GET /api/v1/eventos (SSE) reports every stage change of the requests, without their content. With an API’s key, only its own."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/conectar.html"
+        }
+      ]
+    },
+    {
+      "id": "archivos",
+      "titulo": "Files",
+      "resumen": "Tramtai turns your PDF, Word, Excel and other documents into text before handing them to the agent.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/archivos.html",
+          "lineas": [
+            "1. Your app sends it · Through the native API, uploading it to /cargas; through OpenAI or Anthropic, in base64 inside the message.",
+            "2. Tramtai keeps it · As an upload identified by its content: the same file is never stored twice.",
+            "3. Turns it into text · markitdown turns PDF, Word, PowerPoint, Excel and HTML into Markdown; text goes as is.",
+            "4. Hands it to the agent · One delimited block per file, with your message. The agent does not read your disk.",
+            "5. You get the answer · Like any other request, in the format of the API you used."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Native API: upload each file with POST /cargas and create the job citing its uploads.",
+            "OpenAI or Anthropic: put the file in base64 inside the message (file, input_file or document).",
+            "In Try you can attach them too, to see the answer first."
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/archivos.html"
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "PDF, .docx, .pptx, .xlsx and HTML are converted; .txt, .md, .markdown, .json, .jsonl, .csv, .tsv, .xml, .yaml, .yml, .toml, .ini and .log go as is. No ZIP."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Native API: up to 50 MB per file and 20 per request; converted, up to 20 MB of text. OpenAI and Anthropic: about 12 MB in total. Details: /api/v1/limites."
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "The file converter status in Settings",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/archivos.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "Can I send images?",
+              "Not yet. Through OpenAI and Anthropic the file goes inside the message: Tramtai does not download URLs or use file_id."
+            ],
+            [
+              "Why was my request rejected for its size?",
+              "What the agent would get does not fit the model. Send fewer pages or split the file; the log says which one weighs most. No tokens are spent."
+            ],
+            [
+              "What if the converter is missing?",
+              "Settings → Files → \"Prepare files\", or \"tramtai conversor preparar\". If your network blocks the download, use the converter package for Windows."
+            ],
+            [
+              "Does anything leave my computer when converting?",
+              "No: markitdown runs on your computer. The converted text goes to the agent, like any message."
+            ]
+          ]
+        },
+        {
+          "tipo": "errores",
+          "pares": [
+            [
+              "The file could not be converted (conversion_fallida)",
+              "A file could not be converted. Check that it is not damaged or password-protected and that its format is accepted."
+            ],
+            [
+              "The file converter is missing (conversor_no_disponible)",
+              "The file converter is missing: Settings → Files → \"Prepare files\". If your network blocks the download, use the converter package for Windows."
+            ],
+            [
+              "The input does not fit in the model (entrada_demasiado_grande)",
+              "The documents do not fit the model. Send fewer pages, split the file or put a model with more context in the fallback."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/archivos.html"
+        }
+      ]
+    },
+    {
+      "id": "json",
+      "titulo": "JSON answers",
+      "resumen": "Ask for the answer in a fixed shape (a JSON schema) and Tramtai validates it before handing it over.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/json.html",
+          "lineas": [
+            "1. The schema · The fields and their type, built from templates or in JSON.",
+            "2. The agent · Answers following the requested shape.",
+            "3. Validation · Tramtai checks every field, formats too: date, email, URL…",
+            "4. Correction · If it does not match, it can ask the same agent to fix it, up to 3 times."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "In Try, open \"Recipe options\" and turn on \"Shaped response\".",
+            "Pick a template (extract data, classify, summary, tasks…) or add your fields with their type and description.",
+            "Test it: if it does not match, you will see which field failed and the \"Correct\" button.",
+            "In \"If the response does not match\" ask for up to 3 automatic corrections; each one is another request.",
+            "Click \"Save as API\": your app will always get that shape."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Through OpenAI the schema goes in response_format; through the native API, in salida. If the answer does not match, you get 422 salida_no_cumple_esquema."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "Are formats checked?",
+              "Yes: date, date-time, email, URL… A date-time without a time zone does not match \"date-time\"."
+            ],
+            [
+              "Can I write the schema by hand?",
+              "Yes, in the JSON tab of \"Shaped response\". If it keeps failing, simplify it or clarify the fields’ descriptions."
+            ]
+          ]
+        },
+        {
+          "tipo": "errores",
+          "pares": [
+            [
+              "The response does not match the JSON Schema (salida_no_cumple_esquema)",
+              "The answer did not have the requested shape. Try shows which field failed; \"Correct\" asks the agent to fix it. If it keeps failing, simplify the schema."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/json.html"
+        }
+      ]
+    },
+    {
+      "id": "recetas",
+      "titulo": "Recipes and fallback",
+      "resumen": "A recipe fixes instructions, agent, model, schema and fallback, so your app only sends the message.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/recetas.html",
+          "lineas": [
+            "1. The recipe · Instructions, agent and model, effort, schema and fallback.",
+            "2. Main agent · Answers if it can.",
+            "3. Fallback · Up to 3 agents that take over, in order, if the main one fails before answering.",
+            "4. The answer · History says which agent answered.",
+            "2 → 3: If it fails before answering"
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "In Try write the instructions, for example \"Always answer in Spanish\".",
+            "Pick the main agent and up to 3 fallbacks, each with its own effort if you like.",
+            "Test it with a message and your files; when it works, click \"Save as API\"."
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "The recipe editor in Try",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/recetas.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "How do I make my app answer in a given language?",
+              "Create an API for that app and write in its instructions \"Always answer in Spanish\". They are added to every request without changing the app."
+            ],
+            [
+              "What if an agent hits its limit?",
+              "If the recipe has a fallback, the next agent takes over. If the agent had already started answering it is not switched, so two answers are never mixed."
+            ],
+            [
+              "Does the time limit count per attempt?",
+              "Yes: each fallback agent gets the full time limit."
+            ]
+          ]
+        },
+        {
+          "tipo": "errores",
+          "pares": [
+            [
+              "The provider usage limit was reached (limite_uso_proveedor)",
+              "You hit your plan’s or key’s limit. Wait for the provider to reset it or add a fallback to the recipe."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/recetas.html"
+        }
+      ]
+    },
+    {
+      "id": "herramientas",
+      "titulo": "Tools",
+      "resumen": "Your app offers functions; the agent asks for one with its arguments, and your app runs it and returns the result.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/herramientas.html",
+          "lineas": [
+            "1. Your app offers · The functions, with a JSON Schema for their arguments.",
+            "2. The agent asks · A call with arguments already validated. It never runs anything.",
+            "3. Your app runs it · The function, and returns the result in the next message.",
+            "4. The answer · The agent answers using that result."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Pass your functions in tools (OpenAI and Anthropic) or herramientas (native API).",
+            "If the agent asks for one, run it in your app with the arguments it sends.",
+            "Return the result in the next message (tool or herramienta role) and call again."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "tool_choice (auto, required, none or one function) and parallel calls work as in OpenAI and Anthropic."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "With tools, the answer arrives complete at the end, even if you ask for stream."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "Where is the full example?",
+              "In the developer guide: the whole cycle in Python, JavaScript, Go and curl, through all three URLs."
+            ],
+            [
+              "Can the agent run something on my computer?",
+              "No. It only asks for the call; whether to run it is up to your app."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/herramientas.html"
+        }
+      ]
+    },
+    {
+      "id": "presupuestos",
+      "titulo": "Budgets",
+      "resumen": "Set daily or monthly limits for an API or the whole workspace, in requests, tokens or dollars.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/presupuestos.html",
+          "lineas": [
+            "1. Usage · Every request adds requests, tokens and, if the agent reports it, dollars.",
+            "2. Warning at 80% · The bar turns yellow.",
+            "3. Cap at 100% · The app gets a 429 error until the next day or month starts."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Create an API for that app in My APIs.",
+            "In its settings, set a daily or monthly budget in requests, tokens or dollars.",
+            "If needed, \"Reset usage\" opens it again right away."
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "An API’s budget bars",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/presupuestos.html"
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "The dollar limit only adds up the cost the agent reports (Claude today). For the whole workspace, add \"presupuesto\" to the global settings."
+          ]
+        },
+        {
+          "tipo": "errores",
+          "pares": [
+            [
+              "The budget ran out (presupuesto_agotado)",
+              "That API or the workspace hit its limit (error 429). Wait for the day or month to reset, or click \"Reset usage\" in My APIs."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/presupuestos.html"
+        }
+      ]
+    },
+    {
+      "id": "historial",
+      "titulo": "History",
+      "pagina": "historial",
+      "resumen": "Every request stays in History with its answer, the agent that answered and the log of each step.",
+      "bloques": [
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Filter by status, origin or group, or search by text.",
+            "Open a request to see the answer and its \"Log\", with every step and its time.",
+            "If it failed, fix the cause and click \"Retry\"."
+          ]
+        },
+        {
+          "tipo": "pantalla",
+          "pares": [
+            [
+              "Filters",
+              "Here you filter requests by status or origin, or search by text."
+            ],
+            [
+              "The request list",
+              "Each row is a request: its status, the message, the agent and model, the origin and the tokens. If there are none yet, they show up here as soon as you send the first one."
+            ],
+            [
+              "The detail",
+              "Clicking a row opens its detail: the message, the answer, the step-by-step log and, if something failed, what to do."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "The History list with its filters",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/historial.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "What do Completed, In progress and With errors mean?",
+              "Completed got an answer; In progress are waiting or running; With errors failed or were interrupted."
+            ],
+            [
+              "Can I follow a request live?",
+              "Yes: click its tram on the Home map and you will see its route (queue, preparation, running, validation and arrival) as it moves."
+            ],
+            [
+              "How do I see how long each step took?",
+              "In \"Log\", under the answer or in the detail: every step with its time and, at the top, how long each stage took."
+            ],
+            [
+              "How do I watch what it processes while developing?",
+              "\"tramtai servicio registro -f\" shows one live line per request: agent, model, duration, tokens and the API it came from."
+            ],
+            [
+              "Can I run the service in the foreground?",
+              "Yes: stop the service and run \"tramtai servicio iniciar --abrir\": it runs with the log in view, opens the app and Ctrl+C stops it."
+            ],
+            [
+              "How do I delete test data?",
+              "In Settings, \"Delete data\" removes the history and the per-app APIs. You can also empty History."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/historial.html"
+        }
+      ]
+    },
+    {
+      "id": "espacios",
+      "titulo": "Workspaces",
+      "pagina": "espacios",
+      "resumen": "The global one and one per project, each with its own history, APIs and settings.",
+      "bloques": [
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/espacios.html",
+          "lineas": [
+            "1. Global · For loose text and files. Its settings apply to projects that do not have their own.",
+            "2. What is inherited · Model, history and budget: what a project does not define comes from the global one.",
+            "3. A project · A folder with .tramtai/: its own history, APIs and settings."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Open a project from the selector at the top or from Workspaces. If the folder had no .tramtai/, Tramtai prepares it and trusts it.",
+            "If it already had .tramtai/ (a cloned repository), decide whether you trust it: then its local.yaml can use security keys.",
+            "In Workspaces you see all of them, stopped ones too. Stop the ones you do not use and forget the ones you no longer need."
+          ]
+        },
+        {
+          "tipo": "pantalla",
+          "pares": [
+            [
+              "Your workspaces",
+              "Here you see all your workspaces, stopped ones too: their status, folder, how many APIs and requests they have and what you can do with each."
+            ],
+            [
+              "Open a project",
+              "This button opens a folder as a workspace. If it had no .tramtai/, Tramtai prepares it for you."
+            ],
+            [
+              "Refresh the list",
+              "Reloads the workspaces so you see the current state of each one."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "The Workspaces page: the global one and a project, with their status, trust, APIs and requests.",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/espacios.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "What does trusting a folder mean?",
+              "That its .tramtai/local.yaml can use security keys, such as each agent’s program. Trust is stored in Tramtai, never in the repository."
+            ],
+            [
+              "Can I move or rename a project?",
+              "Yes. Its id stays in .tramtai/espacio: at its new path it keeps its history, APIs and key. It asks again whether you trust it: trust does not travel with the folder."
+            ],
+            [
+              "And if I copy the folder?",
+              "The copy is a new workspace, with its own history and key; the original stays as it was."
+            ],
+            [
+              "What does “Forget” delete?",
+              "Its history, uploaded files and API keys in Tramtai. The project folder, with its .tramtai/, is not touched."
+            ],
+            [
+              "Why does a workspace show “Not found”?",
+              "Its folder was moved or deleted. “Locate the folder” links it again without losing anything (then “Trust” if it uses security keys); “Forget” if you no longer need it."
+            ],
+            [
+              "How do I know whether a setting is the project’s or the global one?",
+              "In Settings each one says “Own” or “From Global”. Own ones have “Back to Global”, which removes the value from the project’s local.yaml."
+            ],
+            [
+              "And from the terminal?",
+              "“tramtai espacios” lists them; “tramtai espacio iniciar”, “detener” and “olvidar” do the same as the page."
+            ]
+          ]
+        },
+        {
+          "tipo": "errores",
+          "pares": [
+            [
+              "You need to decide whether you trust that folder (confianza_requerida)",
+              "The folder already had a Tramtai configuration. Decide whether you trust it: if not, it opens without its APIs or budget."
+            ],
+            [
+              "This project’s workspace is stopped (espacio_detenido)",
+              "You are inside a stopped project. Start it with tramtai espacio iniciar, or use --global to send to the global one."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/espacios.html"
+        }
+      ]
+    },
+    {
+      "id": "claves",
+      "titulo": "Keys and APIs",
+      "resumen": "The workspace key and per-app APIs: when to use each one and what happens when you regenerate them.",
+      "bloques": [
+        {
+          "tipo": "tabla",
+          "lineas": [
+            "Workspace key",
+            "Per-app API"
+          ],
+          "filas": [
+            [
+              "How many",
+              "One per workspace",
+              "As many as you like"
+            ],
+            [
+              "What it can use",
+              "Any agent and model",
+              "What you configure"
+            ],
+            [
+              "What for",
+              "Trying things, the CLI and your scripts",
+              "Each real app"
+            ],
+            [
+              "When regenerated",
+              "Every app that uses it stops connecting",
+              "Only that app stops connecting"
+            ]
+          ]
+        },
+        {
+          "tipo": "texto",
+          "lineas": [
+            "Each per-app API has its own address, budget and history: if one leaks, you revoke only that one."
+          ]
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "Which key do I give my app?",
+              "To try things, the workspace one. For a real app, create its own API in My APIs: you can limit, measure and revoke it without touching the rest."
+            ],
+            [
+              "What if the workspace key leaks?",
+              "Regenerate it in My APIs, “Workspace key” tab: the old one stops working at once. Per-app APIs do not change."
+            ],
+            [
+              "Why does it suggest creating an API?",
+              "Because more than 20 app requests used the workspace key in 24 h. It is only a suggestion: everything keeps working the same."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/claves.html"
+        }
+      ]
+    },
+    {
+      "id": "ajustes",
+      "titulo": "Settings and updates",
+      "pagina": "configuracion",
+      "resumen": "Start with the system, default model, files, history and updates.",
+      "bloques": [
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Turn on start with the system: Tramtai opens hidden in the tray when you sign in.",
+            "Pick the model and effort used when a request does not say.",
+            "In History decide how long requests are kept; in Files, prepare the converter."
+          ]
+        },
+        {
+          "tipo": "pantalla",
+          "pares": [
+            [
+              "Two groups of settings",
+              "The tabs separate what belongs to this workspace (model, history, data) from what belongs to all of Tramtai (port, converter, updates, start with the system)."
+            ],
+            [
+              "Default model",
+              "Here you pick the model and effort used when a request does not say which one it wants."
+            ],
+            [
+              "Delete data",
+              "Here you delete this workspace’s history or APIs. It asks you to confirm first, and your settings are not touched."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "titulo": "The update options in Settings",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/ajustes.html"
+        },
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "What happens when I update?",
+              "The notice shows what each version brings. With the Windows installer it installs itself and the app reopens with your data; otherwise, the notice has the link."
+            ],
+            [
+              "How do I update without the Windows installer?",
+              "Homebrew: \"brew upgrade\". The .dmg, .deb, .rpm and portable: the new package on top. In the terminal, \"tramtai actualizar\" (\"--comprobar\" only checks)."
+            ],
+            [
+              "Can I check for a version now?",
+              "Yes: \"Check for updates now\" in Settings. Tramtai checks every hour (only GitHub’s public page); turn it off in Settings → Check for updates."
+            ],
+            [
+              "Which version do I have?",
+              "Open \"About Tramtai\" in the side menu or the tray; \"Copy support data\" copies what is needed, without keys."
+            ],
+            [
+              "Where is my data kept?",
+              "Only on this computer: %APPDATA%\\tramtai (Windows), ~/Library/Application Support/tramtai (macOS) or ~/.config/tramtai (Linux); the portable, in \"datos-tramtai\"."
+            ],
+            [
+              "How long is it kept?",
+              "Answers, 24 hours; the rest of the history, 7 days, up to 10,000 requests. Change it in Settings → History, where you can also delete it."
+            ],
+            [
+              "What are “This workspace” and “All of Tramtai”?",
+              "“This workspace” keeps the model, history and data of the open workspace; “All of Tramtai”, the port, converter, updates and startup."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/ajustes.html"
+        }
+      ]
+    },
+    {
+      "id": "problemas",
+      "titulo": "Something failed",
+      "resumen": "The most common errors, with the same title you see in the app, and what to do about each.",
+      "bloques": [
+        {
+          "tipo": "pasos",
+          "lineas": [
+            "Open History and click the request with the error.",
+            "Find its error below: each one says what it means and what to do.",
+            "Open \"Log\" to see which agent was tried, the warnings and how long it took.",
+            "Fix the cause and click \"Retry\"."
+          ]
+        },
+        {
+          "tipo": "errores",
+          "pares": [
+            [
+              "Offline",
+              "The service is not running. Open the app or run \"tramtai servicio iniciar\"; with start-up in Settings it won’t happen again."
+            ],
+            [
+              "The key is missing or not valid (no_autorizado)",
+              "Check the key in your app: the workspace one or that API’s. If you regenerated it, the old one no longer works."
+            ],
+            [
+              "The agent has no valid session or key (autenticacion_agente)",
+              "The agent has no session or key. In Agents, sign in to its CLI or save an API key."
+            ],
+            [
+              "The agent is not available (agente_no_disponible)",
+              "The CLI is not installed or cannot be found; Agents says how to install it. Antigravity also cannot be used from APIs."
+            ],
+            [
+              "The provider usage limit was reached (limite_uso_proveedor)",
+              "You hit your plan’s or key’s limit. Wait for the provider to reset it or add a fallback to the recipe."
+            ],
+            [
+              "That model is not available (modelo_no_disponible)",
+              "Use a model from the list with the agent in front, for example claude/sonnet, or a profile like perfil/rapido."
+            ],
+            [
+              "A parameter is not supported (parametro_no_soportado)",
+              "You asked for something terminal agents cannot honor (images, n above 1, stop…): remove it. Unknown ones are accepted with compatibilidad.modo_tolerante."
+            ],
+            [
+              "The input does not fit in the model (entrada_demasiado_grande)",
+              "The documents do not fit the model. Send fewer pages, split the file or put a model with more context in the fallback."
+            ],
+            [
+              "The budget ran out (presupuesto_agotado)",
+              "That API or the workspace hit its limit (error 429). Wait for the day or month to reset, or click \"Reset usage\" in My APIs."
+            ],
+            [
+              "The response does not match the JSON Schema (salida_no_cumple_esquema)",
+              "The answer did not have the requested shape. Try shows which field failed; \"Correct\" asks the agent to fix it. If it keeps failing, simplify the schema."
+            ],
+            [
+              "The time limit ran out (tiempo_ejecucion_agotado)",
+              "It took longer than the time limit. Raise it in Try’s advanced options or in the request, or lower the effort."
+            ],
+            [
+              "The queue is full; try again shortly (cola_llena)",
+              "Too many requests at once. Retry in a few seconds: the response carries Retry-After with the wait."
+            ],
+            [
+              "The file could not be converted (conversion_fallida)",
+              "A file could not be converted. Check that it is not damaged or password-protected and that its format is accepted."
+            ],
+            [
+              "The file converter is missing (conversor_no_disponible)",
+              "The file converter is missing: Settings → Files → \"Prepare files\". If your network blocks the download, use the converter package for Windows."
+            ],
+            [
+              "The agent returned an error (error_agente)",
+              "The agent failed while answering. Open \"Log\" to see its message; retry, or add a fallback to the recipe so another agent takes over."
+            ],
+            [
+              "The agent response could not be understood (error_protocolo_agente)",
+              "The CLI answered something Tramtai does not understand; it usually happens after updating the CLI. Update Tramtai or try another agent."
+            ],
+            [
+              "It waited too long in the queue (tiempo_cola_agotado)",
+              "The request waited too long for its turn because there were many at once. Retry in a moment or send fewer requests together."
+            ],
+            [
+              "That API does not allow that model (modelo_no_permitido)",
+              "That API only accepts certain models. Use one of its own or add that model to its allowed list in My APIs."
+            ],
+            [
+              "No model is configured for that profile (modelo_no_configurado)",
+              "The requested profile (for example perfil/rapido) has no model for that agent. Pick a specific model, like claude/sonnet."
+            ],
+            [
+              "The space for files is full (cuota_cargas_agotada)",
+              "The space for uploaded files is full. Wait for older ones to expire or delete data in Settings."
+            ],
+            [
+              "That agent is disconnected (agente_desconectado)",
+              "That agent is disconnected. Connect it in Agents or choose another model; the fallback skips it."
+            ],
+            [
+              "You need to decide whether you trust that folder (confianza_requerida)",
+              "The folder already had a Tramtai configuration. Decide whether you trust it: if not, it opens without its APIs or budget."
+            ],
+            [
+              "This project’s workspace is stopped (espacio_detenido)",
+              "You are inside a stopped project. Start it with tramtai espacio iniciar, or use --global to send to the global one."
+            ]
+          ]
+        },
+        {
+          "tipo": "web",
+          "url": "https://mscottb.github.io/Tramtai/ayuda/problemas.html"
+        }
+      ]
+    },
+    {
+      "id": "conceptos",
+      "titulo": "Concepts",
+      "resumen": "The words Tramtai uses, one line each.",
+      "bloques": [
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "Agent",
+              "The AI program that answers: Claude Code, Codex, GitHub Copilot, the Gemini API or Antigravity. Connect it in Agents, with your subscription or an API key."
+            ],
+            [
+              "Model",
+              "The model the agent uses (sonnet, opus, gpt-5.5…). It is written agent/model; the list shows the exact version behind it."
+            ],
+            [
+              "Profile",
+              "A shortcut like perfil/rapido or perfil/profundo that picks the right model of the default agent, without typing its name."
+            ],
+            [
+              "Effort",
+              "How hard the model reasons before answering, from low to max. More effort gives better answers to hard questions but takes longer and uses more tokens."
+            ],
+            [
+              "Recipe",
+              "What defines how an API answers: instructions, agent and model, effort, fallback and JSON schema. You test it in Try."
+            ],
+            [
+              "Fallback",
+              "Up to 3 backup agents that take over the request if the main one fails before it starts answering."
+            ],
+            [
+              "Workspace key and per-app APIs",
+              "The main one serves everything with a single key. A per-app API has its own URL, key, recipe and budget."
+            ],
+            [
+              "Request",
+              "Each message sent to an agent, from Try, the terminal or an app. It stays in the History with its answer and its log."
+            ],
+            [
+              "Shaped response (JSON schema)",
+              "The shape the answer must have: its fields and their type. If the answer does not match, the request fails or a correction is asked for, instead of delivering something unexpected."
+            ],
+            [
+              "Context",
+              "How much text a model accepts at once. Converted documents count: if they do not fit, Tramtai says so before spending tokens."
+            ],
+            [
+              "Workspace",
+              "Where requests and APIs are kept: the global one, or one per project with its own history."
+            ],
+            [
+              "Budget",
+              "Daily and monthly limits in requests, tokens or dollars, for one API or for the whole workspace."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "preguntas",
+      "titulo": "Frequently asked questions",
+      "resumen": "What people ask most that does not fit another topic.",
+      "bloques": [
+        {
+          "tipo": "preguntas",
+          "pares": [
+            [
+              "Do requests end up as chats in Claude Code, Codex or GitHub Copilot?",
+              "No. Tramtai runs each CLI without saving the session, so your chats don’t fill up; the record stays only in Tramtai’s History."
+            ],
+            [
+              "Does Tramtai send my data to a server?",
+              "It has no server of its own. Your messages only go to the provider of the agent you pick, as if you used its CLI."
+            ],
+            [
+              "Can I use it at my company?",
+              "It is free for personal, non-commercial use (PolyForm Noncommercial 1.0.0). A company or commercial product needs a separate license: write to me."
+            ],
+            [
+              "What if the port is busy?",
+              "Tramtai uses the next free one and says so; the app and CLI find it on their own, but your apps must use the new address. Set it in Settings."
+            ],
+            [
+              "How do I uninstall it?",
+              "Windows: Settings → Apps → Tramtai (it asks whether to delete your data). macOS: to the Trash or \"brew uninstall --cask --zap tramtai\". Linux: apt or dnf remove tramtai."
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

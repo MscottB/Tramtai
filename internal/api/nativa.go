@@ -267,15 +267,9 @@ func (s *Servidor) registroTrabajo(w http.ResponseWriter, r *http.Request) {
 		EscribirError(w, r, err)
 		return
 	}
-	type evento struct {
-		Numero   int       `json:"numero"`
-		Tipo     string    `json:"tipo"`
-		Datos    string    `json:"datos"`
-		CreadoEn time.Time `json:"creado_en"`
-	}
-	lista := []evento{}
+	lista := []nucleo.EventoRegistro{}
 	for _, e := range eventos {
-		lista = append(lista, evento{e.Numero, e.Tipo, e.Datos, e.CreadoEn.UTC()})
+		lista = append(lista, nucleo.EventoRegistro{Numero: e.Numero, Tipo: e.Tipo, Datos: e.Datos, CreadoEn: e.CreadoEn.UTC()})
 	}
 	EscribirJSON(w, http.StatusOK, map[string]any{"eventos": lista})
 }

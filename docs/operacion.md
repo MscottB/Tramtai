@@ -296,6 +296,12 @@ El token de servicio (`datos/token-servicio`) habilita `/api/v1/servicio`:
 | `DELETE /api/v1/servicio/instancias/{id}` | Desactivar una instancia. |
 | `GET /api/v1/servicio/espacios` | Todos los espacios del registro, también los detenidos y los no encontrados, con su estado, APIs y peticiones. |
 | `DELETE /api/v1/servicio/espacios/{id}` | Olvidar un espacio, con `{"nombre": "…"}` igual a su nombre: borra su base, su clave y su registro, nunca la carpeta del proyecto. |
+| `POST /api/v1/servicio/espacios/{id}/activar` | Vuelve a abrir un espacio detenido; responde el espacio (200). Un espacio que no existe, o sin su carpeta, da 404 `no_encontrado`. |
+| `POST /api/v1/servicio/espacios/{id}/detener` | Detiene el espacio (lo que estaba en cola se cancela); sus datos y su configuración se quedan (204). |
+| `POST /api/v1/servicio/espacios/{id}/confianza` | `{"confiar": true}` añade su proyecto a `proyectos_confiables`; `false` lo quita (204). Solo para el espacio de un proyecto con ruta: si no, 400 `solicitud_invalida`. |
+| `POST /api/v1/servicio/espacios/{id}/ubicacion` | `{"ruta": "…"}` asocia un espacio cuya carpeta no se encuentra con una carpeta que tenga `.tramtai/config.yaml`: conserva su id, su clave y su historial, y lo activa. Responde el espacio (200). |
+| `POST /api/v1/servicio/proyectos` | `{"raiz": "…", "confiar": true, "crear_aqui": false}` abre el proyecto (y lo crea si falta) como espacio activo; responde el espacio (200). Si hay que decidir responde 409: `confianza_requerida` con `claves` (las de seguridad de su `local.yaml`) y `movido` (dónde estaba, si parece uno movido), o `dentro_de_proyecto` con `proyecto`. Se repite con `confiar` o con `crear_aqui: true`. |
+| `PUT /api/v1/servicio/agentes/{agente}/autenticacion` | `{"modo": "suscripcion"}` o `{"modo": "clave_api"}` en un agente que admite la suscripción, al momento y en todos los espacios (204). |
 | `POST /api/v1/servicio/agentes/{agente}/conexion` | `{"conectado": false}` desconecta un agente sin desinstalar su CLI (`adaptadores.<agente>.desconectado`); `true` lo vuelve a conectar (204). |
 | `GET /api/v1/servicio/instancias/{id}/configuracion` | Ver su configuración efectiva. |
 | `POST /api/v1/servicio/recargar` | Aplicar los cambios de puntos de acceso. |

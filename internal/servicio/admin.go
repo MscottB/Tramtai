@@ -49,6 +49,71 @@ func (s *Servicio) rutasAdmin() http.Handler {
 		}
 		w.WriteHeader(http.StatusNoContent)
 	})
+	mux.HandleFunc("POST /api/v1/servicio/espacios/{id}/activar", func(w http.ResponseWriter, r *http.Request) {
+		inst, err := s.ActivarEspacio(r.PathValue("id"))
+		s.responderEspacio(w, r, inst, err)
+	})
+	mux.HandleFunc("POST /api/v1/servicio/espacios/{id}/detener", func(w http.ResponseWriter, r *http.Request) {
+		if err := s.DetenerEspacio(r.PathValue("id")); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	mux.HandleFunc("POST /api/v1/servicio/espacios/{id}/confianza", func(w http.ResponseWriter, r *http.Request) {
+		var peticion struct {
+			Confiar *bool `json:"confiar"`
+		}
+		if err := api.LeerJSON(w, r, &peticion); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		if err := s.confiarEspacio(r.PathValue("id"), peticion.Confiar); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	mux.HandleFunc("POST /api/v1/servicio/espacios/{id}/ubicacion", func(w http.ResponseWriter, r *http.Request) {
+		var peticion struct {
+			Ruta string `json:"ruta"`
+		}
+		if err := api.LeerJSON(w, r, &peticion); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		inst, err := s.Ubicar(r.PathValue("id"), peticion.Ruta)
+		s.responderEspacio(w, r, inst, err)
+	})
+	mux.HandleFunc("POST /api/v1/servicio/proyectos", func(w http.ResponseWriter, r *http.Request) {
+		var peticion struct {
+			Raiz      string `json:"raiz"`
+			Confiar   *bool  `json:"confiar"`
+			CrearAqui bool   `json:"crear_aqui"`
+		}
+		if err := api.LeerJSON(w, r, &peticion); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		inst, err := s.abrirYGuardar(peticion.Raiz, AbrirOpciones{Confiar: peticion.Confiar, CrearAqui: peticion.CrearAqui})
+		if !escribirErrorAbrir(w, r, err) {
+			s.responderEspacio(w, r, inst, nil)
+		}
+	})
+	mux.HandleFunc("PUT /api/v1/servicio/agentes/{agente}/autenticacion", func(w http.ResponseWriter, r *http.Request) {
+		var peticion struct {
+			Modo string `json:"modo"`
+		}
+		if err := api.LeerJSON(w, r, &peticion); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		if err := s.cambiarAutenticacion(r.PathValue("agente"), peticion.Modo); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
 	mux.HandleFunc("GET /api/v1/servicio/puntos", s.adminListarPuntos)
 	mux.HandleFunc("POST /api/v1/servicio/puntos", s.adminCrearPunto)
 	mux.HandleFunc("POST /api/v1/servicio/puntos/activo", s.adminActivarPuntos)
@@ -68,6 +133,21 @@ func (s *Servicio) rutasAdmin() http.Handler {
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ruta no encontrada: %s %s", r.Method, r.URL.Path)))
 	})
 	return mux
+}
+
+// responderEspacio responde con el espacio de inst tal como lo lista GET /espacios, o con el error.
+func (s *Servicio) responderEspacio(w http.ResponseWriter, r *http.Request, inst *Instancia, err error) {
+	if err != nil {
+		api.EscribirError(w, r, err)
+		return
+	}
+	for _, e := range s.Espacios(r.Context()) {
+		if e.ID == inst.ID {
+			api.EscribirJSON(w, http.StatusOK, e)
+			return
+		}
+	}
+	api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("no existe el espacio %s", inst.ID)))
 }
 
 func (s *Servicio) adminActivar(w http.ResponseWriter, r *http.Request) {

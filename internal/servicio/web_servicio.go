@@ -39,28 +39,39 @@ func (s *Servicio) abrirProyectoUI(w http.ResponseWriter, r *http.Request, ses *
 		api.EscribirError(w, r, err)
 		return
 	}
-	inst, err := s.AbrirProyecto(peticion.Raiz, AbrirOpciones{Confiar: peticion.Confiar, CrearAqui: peticion.CrearAqui})
+	inst, err := s.abrirYGuardar(peticion.Raiz, AbrirOpciones{Confiar: peticion.Confiar, CrearAqui: peticion.CrearAqui})
+	if escribirErrorAbrir(w, r, err) {
+		return
+	}
+	s.responderSesion(w, r, s.derivarSesion(w, inst.ID, ses))
+}
+
+// abrirYGuardar abre el proyecto y deja guardados el registro y el descriptor.
+func (s *Servicio) abrirYGuardar(raiz string, o AbrirOpciones) (*Instancia, error) {
+	inst, err := s.AbrirProyecto(raiz, o)
 	if err == nil {
 		err = s.guardarActivas()
 		_ = s.actualizarDescriptor()
 	}
-	// Las dos preguntas llevan lo que la app enseña para decidir.
+	return inst, err
+}
+
+// escribirErrorAbrir responde al error de abrir un proyecto y dice si lo hizo (err no era nil). Las dos preguntas
+// (confianza y carpeta dentro de otro proyecto) son un 409 con lo que la app enseña para decidir.
+func escribirErrorAbrir(w http.ResponseWriter, r *http.Request, err error) bool {
 	var confianza *ErrorConfianza
 	var dentro *ErrorDentroDeProyecto
 	switch {
 	case errors.As(err, &confianza):
 		api.EscribirJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"codigo": nucleo.CodigoConfianzaRequerida,
 			"mensaje": nucleo.MensajeDe(err)}, "claves": append([]string{}, confianza.Claves...), "movido": confianza.Movido})
-		return
 	case errors.As(err, &dentro):
 		api.EscribirJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"codigo": nucleo.CodigoDentroDeProyecto,
 			"mensaje": nucleo.MensajeDe(err)}, "proyecto": dentro.Proyecto})
-		return
 	case err != nil:
 		api.EscribirError(w, r, err)
-		return
 	}
-	s.responderSesion(w, r, s.derivarSesion(w, inst.ID, ses))
+	return err != nil
 }
 
 func (s *Servicio) autoarranqueUI(w http.ResponseWriter, r *http.Request, ses *sesion) {
@@ -222,20 +233,11 @@ func (s *Servicio) guardarValores(inst *Instancia, valores map[string]any) error
 // fijarPuerto guarda servicio.puerto y servicio.puerto_automatico en la configuración global si el puerto está
 // libre (o es el que ya usa este servicio). Se aplica al reiniciar.
 func (s *Servicio) fijarPuerto(puerto int, automatico bool) error {
-	if puerto < 1024 || puerto > 65535 {
-		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("el puerto debe estar entre 1024 y 65535"))
-	}
-	if puerto != s.opc.Puerto && !PuertoLibre(s.opc.Host, puerto) {
-		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el puerto %d está ocupado por otro programa: elige otro", puerto))
-	}
 	ruta, err := nucleo.RutaGlobal()
 	if err != nil {
 		return err
 	}
-	if err := FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto", puerto); err != nil {
-		return err
-	}
-	if err := FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto_automatico", automatico); err != nil {
+	if err := FijarPuertoPropio(ruta, s.opc.Host, puerto, s.opc.Puerto, automatico); err != nil {
 		return err
 	}
 	s.mu.Lock()

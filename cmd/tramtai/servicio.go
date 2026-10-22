@@ -292,21 +292,22 @@ func comandoServicio() *cobra.Command {
 			}
 			if len(args) == 1 {
 				puerto, err := strconv.Atoi(args[0])
-				if err != nil || puerto < 1024 || puerto > 65535 {
+				if err != nil {
 					return errors.New(idioma.T("el puerto debe ser un número entre 1024 y 65535"))
 				}
-				propio := errActivo == nil && strings.HasSuffix(activo.Base, ":"+args[0]) // el que ya usa Tramtai cuenta como libre
-				if !propio && !servicio.PuertoLibre(c.Texto("servicio.host"), puerto) {
-					return fmt.Errorf(idioma.T("el puerto %d está ocupado por otro programa: elige otro"), puerto)
+				propio := 0 // el que ya usa Tramtai cuenta como libre
+				if errActivo == nil && strings.HasSuffix(activo.Base, ":"+args[0]) {
+					propio = puerto
 				}
-				if err := servicio.FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto", puerto); err != nil {
+				automatico := c.Booleano("servicio.puerto_automatico")
+				if cmd.Flags().Changed("automatico") {
+					automatico = automaticoPuerto
+				}
+				if err := servicio.FijarPuertoPropio(ruta, c.Texto("servicio.host"), puerto, propio, automatico); err != nil {
 					return err
 				}
-			}
-			if cmd.Flags().Changed("automatico") {
-				if err := servicio.FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto_automatico", automaticoPuerto); err != nil {
-					return err
-				}
+			} else if err := servicio.FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto_automatico", automaticoPuerto); err != nil {
+				return err
 			}
 			fmt.Fprintln(out, idioma.Tf("guardado en %s; se aplica al reiniciar el servicio (tramtai servicio detener y tramtai abrir, o Reiniciar en la Web UI)", ruta))
 			return nil

@@ -219,6 +219,15 @@ func dentroDe(base, ruta string) bool {
 	return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel)
 }
 
+// confiarEspacio fija si se confía en el proyecto de un espacio; solo vale para el espacio de un proyecto con ruta.
+func (s *Servicio) confiarEspacio(id string, confiar *bool) error {
+	e, ok := s.registro().buscar(id)
+	if !ok || e.Ambito != "proyecto" || e.Ruta == "" || confiar == nil {
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("indica el espacio de un proyecto y si confías en él"))
+	}
+	return s.FijarConfianza(e.Ruta, *confiar)
+}
+
 // cambiaronEspacios guarda el registro y el descriptor tras activar, detener, reasociar u olvidar un espacio.
 func (s *Servicio) cambiaronEspacios() {
 	_ = s.guardarActivas()
@@ -249,13 +258,7 @@ func (s *Servicio) accionEspacioUI(w http.ResponseWriter, r *http.Request, _ *se
 	case "detener":
 		err = s.DetenerEspacio(peticion.ID)
 	case "confiar":
-		e, ok := s.registro().buscar(peticion.ID)
-		switch {
-		case !ok || e.Ambito != "proyecto" || e.Ruta == "" || peticion.Confiar == nil:
-			err = nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("indica el espacio de un proyecto y si confías en él"))
-		default:
-			err = s.FijarConfianza(e.Ruta, *peticion.Confiar)
-		}
+		err = s.confiarEspacio(peticion.ID, peticion.Confiar)
 	case "ubicar":
 		_, err = s.Ubicar(peticion.ID, peticion.Ruta)
 	case "olvidar":

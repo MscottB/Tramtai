@@ -1,0 +1,47 @@
+package cliente
+
+import (
+	"context"
+	"net/url"
+
+	"tramtai/internal/contrato"
+	"tramtai/internal/idioma"
+	"tramtai/internal/nucleo"
+)
+
+// Puntos lista los puntos de acceso de una instancia con su uso y el consumo de su presupuesto.
+func (c *Cliente) Puntos(ctx context.Context, instancia string) (contrato.ListaPuntos, error) {
+	var l contrato.ListaPuntos
+	return l, c.pedir(ctx, "GET", "/api/v1/puntos", instancia, nil, "", &l)
+}
+
+// CambiarPunto cambia solo lo que trae cambios (PATCH): activo, instrucciones, esfuerzo, modelo, forzar_modelo,
+// modelos_permitidos, esquema, respaldo, reintentos_salida y presupuesto. Devuelve el punto como queda.
+func (c *Cliente) CambiarPunto(ctx context.Context, instancia, nombre string, cambios map[string]any) (contrato.EstadoPunto, error) {
+	var r struct {
+		Puntos []contrato.EstadoPunto `json:"puntos_acceso"`
+	}
+	if err := c.pedir(ctx, "PATCH", "/api/v1/puntos/"+url.PathEscape(nombre), instancia, cuerpoJSON(cambios), "application/json", &r); err != nil {
+		return contrato.EstadoPunto{}, err
+	}
+	for _, p := range r.Puntos {
+		if p.Nombre == nombre {
+			return p, nil
+		}
+	}
+	return contrato.EstadoPunto{}, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("punto de acceso no encontrado en este espacio: %s", nombre))
+}
+
+// PresupuestoInstancia devuelve el consumo del día y del mes frente al presupuesto de la instancia; vacío si no tiene.
+func (c *Cliente) PresupuestoInstancia(ctx context.Context, instancia string) (nucleo.EstadoPresupuesto, error) {
+	var r struct {
+		Presupuesto nucleo.EstadoPresupuesto `json:"presupuesto"`
+	}
+	err := c.pedir(ctx, "GET", "/api/v1/instancia/presupuesto", instancia, nil, "", &r)
+	return r.Presupuesto, err
+}
+
+// ReiniciarPresupuestoInstancia pone a cero el consumo del día y del mes de la instancia.
+func (c *Cliente) ReiniciarPresupuestoInstancia(ctx context.Context, instancia string) error {
+	return c.ReiniciarPresupuesto(ctx, instancia, "")
+}

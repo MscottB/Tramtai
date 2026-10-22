@@ -107,7 +107,7 @@ func TestMoverProyectoConfiadoPreguntaDeNuevo(t *testing.T) {
 			if camino == "abrir" {
 				_, err = s.AbrirProyecto(b, AbrirOpciones{})
 				var ec *ErrorConfianza
-				if !errors.As(err, &ec) || !MismaRuta(ec.Movido, vieja) {
+				if !errors.As(err, &ec) || !nucleo.MismaRuta(ec.Movido, vieja) {
 					t.Fatalf("un proyecto movido debía preguntar, diciendo de dónde viene: %v", err)
 				}
 				si := true
@@ -118,7 +118,7 @@ func TestMoverProyectoConfiadoPreguntaDeNuevo(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if real, _ := filepath.EvalSymlinks(b); !MismaRuta(inst.Raiz, real) {
+			if real, _ := filepath.EvalSymlinks(b); !nucleo.MismaRuta(inst.Raiz, real) {
 				t.Fatalf("el espacio sigue en %s y no en la carpeta nueva %s", inst.Raiz, real)
 			}
 			if inst.ID != id || confiable(t, inst.Raiz) != (camino == "abrir") {
@@ -227,14 +227,14 @@ func TestAbrirDentroDeOtroProyecto(t *testing.T) {
 	_, err := s.AbrirProyecto(sub, AbrirOpciones{})
 	var ed *ErrorDentroDeProyecto
 	real, _ := filepath.EvalSymlinks(proyecto)
-	if !errors.As(err, &ed) || !MismaRuta(ed.Proyecto, real) || nucleo.CodigoDe(err) != nucleo.CodigoDentroDeProyecto {
+	if !errors.As(err, &ed) || !nucleo.MismaRuta(ed.Proyecto, real) || nucleo.CodigoDe(err) != nucleo.CodigoDentroDeProyecto {
 		t.Fatalf("debía avisar de que está dentro de otro proyecto: %v", err)
 	}
 	inst, err := s.AbrirProyecto(sub, AbrirOpciones{CrearAqui: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if realSub, _ := filepath.EvalSymlinks(sub); !MismaRuta(inst.Raiz, realSub) || !esProyecto(sub) {
+	if realSub, _ := filepath.EvalSymlinks(sub); !nucleo.MismaRuta(inst.Raiz, realSub) || !esProyecto(sub) {
 		t.Fatalf("con CrearAqui debía crear el proyecto en la subcarpeta: %s", inst.Raiz)
 	}
 }

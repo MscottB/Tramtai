@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -223,13 +222,13 @@ func (s *Servicio) idDe(raiz string, c *nucleo.Configuracion) (string, error) {
 func idPara(espacios map[string]*Espacio, raiz string, c *nucleo.Configuracion) (id string, adoptar bool) {
 	if marca := LeerMarca(raiz); marca != "" && marca != "global" {
 		if e, ok := espacios[marca]; ok && e.Ambito == "proyecto" {
-			if e.Ruta == "" || MismaRuta(e.Ruta, raiz) || !esProyecto(e.Ruta) {
+			if e.Ruta == "" || nucleo.MismaRuta(e.Ruta, raiz) || !esProyecto(e.Ruta) {
 				return marca, true
 			}
 		}
 	}
 	for _, e := range espacios {
-		if e.Ambito == "proyecto" && e.Ruta != "" && MismaRuta(e.Ruta, raiz) {
+		if e.Ambito == "proyecto" && e.Ruta != "" && nucleo.MismaRuta(e.Ruta, raiz) {
 			return e.ID, false
 		}
 	}
@@ -249,7 +248,7 @@ func idPara(espacios map[string]*Espacio, raiz string, c *nucleo.Configuracion) 
 func (s *Servicio) rutaMovida(raiz string) string {
 	marca := LeerMarca(raiz)
 	e, ok := s.registro().buscar(marca)
-	if !ok || e.Ambito != "proyecto" || e.Ruta == "" || MismaRuta(e.Ruta, raiz) || esProyecto(e.Ruta) {
+	if !ok || e.Ambito != "proyecto" || e.Ruta == "" || nucleo.MismaRuta(e.Ruta, raiz) || esProyecto(e.Ruta) {
 		return ""
 	}
 	return e.Ruta
@@ -265,21 +264,12 @@ func nombreProyecto(raiz string, c *nucleo.Configuracion) string {
 
 // mismaCarpeta compara dos rutas también por su forma real (sin nombres cortos como ADMINI~1 ni enlaces).
 func mismaCarpeta(a, b string) bool {
-	if MismaRuta(a, b) {
+	if nucleo.MismaRuta(a, b) {
 		return true
 	}
 	ra, errA := filepath.EvalSymlinks(a)
 	rb, errB := filepath.EvalSymlinks(b)
-	return errA == nil && errB == nil && MismaRuta(ra, rb)
-}
-
-// MismaRuta compara dos rutas como lo hace IDProyecto: sin distinguir mayúsculas en Windows y macOS.
-func MismaRuta(a, b string) bool {
-	a, b = filepath.Clean(a), filepath.Clean(b)
-	if runtime.GOOS != "linux" {
-		return strings.EqualFold(a, b)
-	}
-	return a == b
+	return errA == nil && errB == nil && nucleo.MismaRuta(ra, rb)
 }
 
 func esProyecto(raiz string) bool {
