@@ -358,6 +358,43 @@ func TestClienteRegistro(t *testing.T) {
 	}
 }
 
+// TestClienteCorregir: corregir es reintentar con {"corregir": true}; solo vale para un trabajo que no cumplía el esquema
+// y conservó su respuesta, y el nuevo es otro trabajo.
+func TestClienteCorregir(t *testing.T) {
+	cli, _ := servicioDePrueba(t, "")
+	ctx := context.Background()
+	if _, err := cli.Activar(ctx, "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	// El agente simulado devuelve el mensaje tal cual: {"total":"diez"} no cumple el esquema.
+	malo, err := cli.Crear(ctx, "global", nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: `{"total":"diez"}`}},
+		Salida: nucleo.ConfigSalida{Formato: "json", ConservarSalidaInvalida: true,
+			Esquema: json.RawMessage(`{"type":"object","required":["total"],"properties":{"total":{"type":"number"}}}`)}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	terminado(t, cli, "global", malo.ID)
+	if m, err := cli.Trabajo(ctx, "global", malo.ID); err != nil || m.CodigoError != nucleo.CodigoSalidaNoCumpleEsquema || m.Salida == "" {
+		t.Fatalf("no cumple el esquema y conserva la respuesta: %+v %v", m, err)
+	}
+	nuevo, err := cli.Corregir(ctx, "global", malo.ID)
+	if err != nil || nuevo.ID == "" || nuevo.ID == malo.ID {
+		t.Fatalf("corregir da otro trabajo: %+v %v", nuevo, err)
+	}
+	// Uno completado no se puede corregir: el servicio lo dice con su código.
+	bueno, err := cli.Crear(ctx, "global", hola)
+	if err != nil {
+		t.Fatal(err)
+	}
+	terminado(t, cli, "global", bueno.ID)
+	if _, err := cli.Corregir(ctx, "global", bueno.ID); nucleo.CodigoDe(err) != nucleo.CodigoCorreccionNoDisponible {
+		t.Fatalf("un trabajo sin fallo de esquema no se corrige: %v", err)
+	}
+	if _, err := cli.Corregir(ctx, "global", "no-existe"); nucleo.CodigoDe(err) != nucleo.CodigoNoEncontrado {
+		t.Fatalf("un trabajo que no existe: %v", err)
+	}
+}
+
 func TestClienteVaciar(t *testing.T) {
 	cli, _ := servicioDePrueba(t, "")
 	ctx := context.Background()

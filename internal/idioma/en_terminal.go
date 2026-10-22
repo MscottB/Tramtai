@@ -59,5 +59,16 @@ func init() {
 		"hace %d h":          "%d h ago",
 		"hace %d d":          "%d d ago",
 		"Ver la Ayuda de %s": "See the %s Help",
+
+		// Historial: los filtros, el detalle, el registro y las confirmaciones salen de los textos de la Web UI; aquí solo lo
+		// propio de la terminal.
+		"busca":                        "search",
+		"aplica":                       "apply",
+		"pestañas":                     "tabs",
+		"reconectando…":                "reconnecting…",
+		"en vivo":                      "live",
+		"Petición enviada de nuevo":    "Request sent again",
+		"Corrección enviada":           "Correction sent",
+		"No hay peticiones terminadas": "There are no finished requests",
 	})
 }

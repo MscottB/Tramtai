@@ -265,3 +265,10 @@ func TestConfirmacionCabeEn60x20(t *testing.T) {
 		t.Fatalf("la vista mide %dx%d:\n%s", lipgloss.Width(v), lipgloss.Height(v), v)
 	}
 }
+
+func TestHistorialRegistrada(t *testing.T) {
+	m := nuevo(Opciones{})
+	if _, pendiente := m.pagina(pagina.PaginaHistorial).(*proximamente); pendiente {
+		t.Fatal("Historial ya no es «Próximamente»")
+	}
+}

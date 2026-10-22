@@ -19,6 +19,7 @@ import (
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/paginas/agentes"
+	"tramtai/internal/tui/paginas/historial"
 	"tramtai/internal/tui/paginas/inicio"
 )
 
@@ -42,8 +43,9 @@ const anchoMinimo, altoMinimo = 60, 20
 
 // fabricas crea cada página por su clave del menú; las que aún no están enseñan «Próximamente».
 var fabricas = map[string]func(idioma string) pagina.Pagina{
-	pagina.PaginaInicio:  inicio.Nueva,
-	pagina.PaginaAgentes: agentes.Nueva,
+	pagina.PaginaInicio:    inicio.Nueva,
+	pagina.PaginaAgentes:   agentes.Nueva,
+	pagina.PaginaHistorial: historial.Nueva,
 }
 
 type modelo struct {

@@ -73,7 +73,10 @@ type (
 	ConPunto    struct{ Nombre string } // Probar con una API
 	ConAgente   struct{ Agente string } // Probar con un agente
 	FiltroPunto struct{ Nombre string } // el historial de una API
-	ConAyuda    struct{ Pagina string } // la Ayuda en el tema de una página (lo que devuelve su Ayuda())
+	// FiltroEstado abre el Historial con un estado: "ok" (completadas), "curso" (en proceso) o "error" (con error), como
+	// filtroHistorial de la Web UI; "" o cualquier otro valor deja todas.
+	FiltroEstado struct{ Estado string }
+	ConAyuda     struct{ Pagina string } // la Ayuda en el tema de una página (lo que devuelve su Ayuda())
 	// CambioEspacio cambia el espacio activo. La app cancela los Ctx de todas las páginas, se lo pasa a todas y vuelve
 	// a iniciar la actual; las demás se inician con el espacio nuevo al visitarlas.
 	CambioEspacio struct{ ID string }

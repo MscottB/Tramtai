@@ -857,3 +857,25 @@ func TestOcultarYMostrar(t *testing.T) {
 		t.Fatalf("Mostrar conserva lo cargado:\n%s", v)
 	}
 }
+
+// TestContadoresLlevanAlHistorial: cada contador abre el Historial con su estado (curso, ok o error), como los de Panel.vue,
+// y la fila dice con qué tecla.
+func TestContadoresLlevanAlHistorial(t *testing.T) {
+	p, _, _, _ := abierta(t)
+	v := p.Vista()
+	for _, quiere := range []string{"o Completadas", "e En proceso", "f Con error"} {
+		if !strings.Contains(v, quiere) {
+			t.Fatalf("la fila dice su tecla, falta %q:\n%s", quiere, v)
+		}
+	}
+	for tecla_, estado := range map[string]string{"o": "ok", "e": "curso", "f": "error"} {
+		_, cmd := p.Update(tecla(tecla_))
+		if cmd == nil {
+			t.Fatalf("%s no hace nada", tecla_)
+		}
+		ir, ok := cmd().(pagina.IrA)
+		if !ok || ir.Pagina != pagina.PaginaHistorial || ir.Datos != (pagina.FiltroEstado{Estado: estado}) {
+			t.Fatalf("%s lleva al Historial con el estado %q: %+v", tecla_, estado, ir)
+		}
+	}
+}

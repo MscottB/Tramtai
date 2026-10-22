@@ -409,6 +409,13 @@ func (c *Cliente) Accion(ctx context.Context, instancia, id, accion string) (nuc
 	return t, c.pedir(ctx, "POST", "/api/v1/trabajos/"+url.PathEscape(id)+"/"+accion, instancia, nil, "", &t)
 }
 
+// Corregir reintenta un trabajo que no cumplía el esquema pidiendo al mismo agente que corrija la respuesta que conservó
+// (reintentar con {"corregir": true}); es otro trabajo. Sin salida que corregir, el servicio responde correccion_no_disponible.
+func (c *Cliente) Corregir(ctx context.Context, instancia, id string) (nucleo.Trabajo, error) {
+	var t nucleo.Trabajo
+	return t, c.pedir(ctx, "POST", "/api/v1/trabajos/"+url.PathEscape(id)+"/reintentar", instancia, cuerpoJSON(map[string]bool{"corregir": true}), "application/json", &t)
+}
+
 // Eliminar borra un trabajo terminado.
 func (c *Cliente) Eliminar(ctx context.Context, instancia, id string) error {
 	return c.pedir(ctx, "DELETE", "/api/v1/trabajos/"+url.PathEscape(id), instancia, nil, "", nil)

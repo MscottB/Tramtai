@@ -163,15 +163,16 @@ func (p *Pagina) fila(tr tranvia) string {
 		rellenar(e.Recortar(p.tx(claveEtapa(tr)), 13), 13) + " " + e.Tenue.Render(p.tx("vivo.hace", "s", strconv.Itoa(segundos)))
 }
 
-// contador es una fila del tablero: el icono, el nombre, lo que cuenta y la cifra a la derecha.
-func (p *Pagina) contador(icono string, estilo lipgloss.Style, clave string, n int) string {
+// contador es una fila del tablero: el icono, la tecla que abre el Historial con ese estado, el nombre, lo que cuenta y la
+// cifra a la derecha.
+func (p *Pagina) contador(icono string, estilo lipgloss.Style, tecla, clave string, n int) string {
 	e, ancho := p.estilos, max(p.c.Ancho, 1)
 	cifra := strconv.Itoa(n)
-	nombre := e.Recortar(p.tx("inicio."+clave), 14)
+	nombre := e.Recortar(p.tx("inicio."+clave), 12)
 	libre := ancho - 2 - 15 - 1 - lipgloss.Width(cifra) - 1
 	detalle := e.Recortar(p.tx("inicio."+clave+"Detalle"), max(libre, 0))
 	hueco := max(ancho-2-15-lipgloss.Width(detalle)-lipgloss.Width(cifra), 1)
-	return estilo.Render(icono) + " " + rellenar(nombre, 14) + " " + e.Tenue.Render(detalle) + strings.Repeat(" ", hueco) + cifra
+	return estilo.Render(icono) + " " + e.Tecla.Render(tecla) + " " + rellenar(nombre, 12) + " " + e.Tenue.Render(detalle) + strings.Repeat(" ", hueco) + cifra
 }
 
 // lineas es todo lo que dice la página, de arriba abajo; Vista enseña la parte que cabe.
@@ -245,9 +246,9 @@ func (p *Pagina) lineas() []string {
 
 	// Contadores
 	l = append(l, "", e.Grupo.Render(p.tx("inicio.tablero"))+e.Tenue.Render(" "+e.Iconos.Separador+" "+p.periodo()),
-		p.contador(e.Iconos.Ok, e.Exito, "completados", p.total("completado")),
-		p.contador(e.Iconos.Activo, e.Acento, "enCurso", p.enProceso()),
-		p.contador(e.Iconos.Fallo, e.Error, "conError", p.total("fallido", "interrumpido")))
+		p.contador(e.Iconos.Ok, e.Exito, teclaCompletados, "completados", p.total("completado")),
+		p.contador(e.Iconos.Activo, e.Acento, teclaEnCurso, "enCurso", p.enProceso()),
+		p.contador(e.Iconos.Fallo, e.Error, teclaConError, "conError", p.total("fallido", "interrumpido")))
 
 	// Primeros pasos
 	pasos := p.pasos()

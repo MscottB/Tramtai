@@ -34,6 +34,13 @@ const (
 	cadaRefresco        = 5 * time.Second
 )
 
+// Las teclas de los contadores: cada una abre el Historial con ese estado (los filtros ok, curso y error de la Web UI).
+const (
+	teclaCompletados = "o"
+	teclaEnCurso     = "e"
+	teclaConError    = "f"
+)
+
 // origen es lo que cada mensaje propio lleva para saber si aún vale: el contexto y el espacio con que se pidió y la
 // versión de la página (cada Iniciar, Ocultar o Mostrar la cambia).
 type origen struct {
@@ -596,6 +603,12 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 		p.desp = p.maxDesp()
 	case "h":
 		return ir(pagina.PaginaHistorial, nil)
+	case teclaCompletados:
+		return ir(pagina.PaginaHistorial, pagina.FiltroEstado{Estado: "ok"})
+	case teclaEnCurso:
+		return ir(pagina.PaginaHistorial, pagina.FiltroEstado{Estado: "curso"})
+	case teclaConError:
+		return ir(pagina.PaginaHistorial, pagina.FiltroEstado{Estado: "error"})
 	case "g":
 		return ir(pagina.PaginaAgentes, nil)
 	case "a":

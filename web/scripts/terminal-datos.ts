@@ -58,9 +58,27 @@ export const CLAVES_INICIO: string[] = [
   'estado.cancelacion_solicitada', 'estado.completado', 'estado.fallido', 'estado.cancelado', 'estado.interrumpido',
 ]
 
-// CLAVES_TEXTOS son, además de las menu.*, los textos que la terminal toma de la Web UI: los de la Ayuda de la interfaz, los
-// de Agentes y los de Inicio.
-export const CLAVES_TEXTOS: string[] = [...CLAVES_UI, ...CLAVES_AGENTES, ...CLAVES_INICIO]
+// CLAVES_HISTORIAL son los textos del Historial que la terminal repite tal cual: filtros, orígenes, el detalle de una petición,
+// su registro, el esfuerzo, la ruta y las confirmaciones. Los títulos de error (error.*) entran todos, en textosDe. Los
+// {placeholders} los rellena Go con datos.Textof.
+export const CLAVES_HISTORIAL: string[] = [
+  'historial.todos', 'historial.sinFiltro', 'historial.vacio', 'historial.quitarFiltros', 'historial.irProbar', 'historial.estado',
+  'historial.solicitud', 'historial.agenteModelo', 'historial.api', 'historial.tokens', 'historial.expirada', 'historial.sinRespuesta',
+  'historial.todaviaEnCurso', 'historial.coste', 'historial.duracion', 'historial.identificador', 'historial.reintentar',
+  'historial.eliminarTitulo', 'historial.eliminarTexto', 'historial.vaciar', 'historial.vaciarTitulo', 'historial.vaciarTexto',
+  'historial.vaciado', 'historial.origen', 'historial.origenPrincipal', 'historial.todosOrigenes', 'historial.origenProbar',
+  'historial.origenTerminal', 'historial.origenCli', 'historial.origenApp', 'historial.grupo', 'historial.mostrando', 'historial.verMas',
+  'historial.esfuerzo',
+  'ejecutar.respuesta', 'ejecutar.corregir', 'comun.cancelar', 'comun.eliminar',
+  'ruta.cola', 'ruta.preparacion', 'ruta.ejecucion', 'ruta.validacion', 'ruta.llegada',
+  'registro.titulo', 'registro.noDisponible', 'registro.aviso', 'registro.delAgente', 'registro.entrada', 'registro.contexto',
+  'registro.correccion', 'registro.validacion', 'registro.validacionMas',
+  'esfuerzo.agente', 'esfuerzo.bajo', 'esfuerzo.medio', 'esfuerzo.alto', 'esfuerzo.muy_alto', 'esfuerzo.maximo', 'esfuerzo.delAgente',
+]
+
+// CLAVES_TEXTOS son, además de las menu.* y las error.*, los textos que la terminal toma de la Web UI: los de la Ayuda de la
+// interfaz, los de Agentes, los de Inicio y los del Historial.
+export const CLAVES_TEXTOS: string[] = [...CLAVES_UI, ...CLAVES_AGENTES, ...CLAVES_INICIO, ...CLAVES_HISTORIAL]
 
 // plano deja un texto sin marcas: sin ** y con los <marcadores> entre corchetes.
 const plano = (s: string) => s.replace(/\*\*/g, '').replace(/<([^<>]*)>/g, '[$1]')
@@ -101,9 +119,10 @@ export function ayudaDe(temas: TemaWeb[], textos: Textos): Tema[] {
   })
 }
 
-// textosDe trae los nombres que la terminal comparte con la Web UI (menu.*) y los de CLAVES_TEXTOS.
+// textosDe trae los nombres que la terminal comparte con la Web UI (menu.*), los títulos de error (error.*) y los de
+// CLAVES_TEXTOS.
 export function textosDe(porIdioma: Record<Idioma, Textos>): Record<Idioma, Textos> {
-  const claves = [...Object.keys(porIdioma.es).filter((k) => k.startsWith('menu.')), ...CLAVES_TEXTOS]
+  const claves = [...Object.keys(porIdioma.es).filter((k) => k.startsWith('menu.') || k.startsWith('error.')), ...CLAVES_TEXTOS]
   return Object.fromEntries(IDIOMAS.map((i) => [i, Object.fromEntries(claves.map((k) => [k, plano(porIdioma[i][k] ?? k)]))])) as Record<Idioma, Textos>
 }
 
