@@ -10,15 +10,13 @@
     <!-- Las dos clases de clave, en tres líneas: la del espacio y las de cada app. -->
     <q-card flat bordered>
       <q-card-section class="row q-col-gutter-md">
-        <div class="col-12 col-md-6 row no-wrap items-start" data-recorrido="conectar.clave-espacio">
-          <q-icon name="o_cable" size="24px" color="primary" class="q-mr-sm" />
-          <div><div class="text-weight-medium">{{ t('claves.espacioTitulo', { nombre: sesion?.nombre ?? '' }) }}</div>
-            <div class="text-caption texto-suave">{{ t('claves.espacioTexto') }}</div></div>
+        <div class="col-12 col-md-6" data-recorrido="conectar.clave-espacio">
+          <div class="text-weight-medium">{{ t('claves.espacioTitulo', { nombre: sesion?.nombre ?? '' }) }}</div>
+          <div class="text-caption texto-suave">{{ t('claves.espacioTexto') }}</div>
         </div>
-        <div class="col-12 col-md-6 row no-wrap items-start">
-          <q-icon name="o_hub" size="24px" color="primary" class="q-mr-sm" />
-          <div><div class="text-weight-medium">{{ t('claves.appsTitulo') }}</div>
-            <div class="text-caption texto-suave">{{ t('claves.appsTexto') }}</div></div>
+        <div class="col-12 col-md-6">
+          <div class="text-weight-medium">{{ t('claves.appsTitulo') }}</div>
+          <div class="text-caption texto-suave">{{ t('claves.appsTexto') }}</div>
         </div>
       </q-card-section>
     </q-card>
@@ -38,7 +36,7 @@
         <q-tab-panel name="principal" class="q-pa-none">
       <q-card-section class="seccion">
         <div>
-          <div class="titulo-seccion">{{ t('conectar.directa', { nombre: sesion?.nombre ?? '' }) }}</div>
+          <h2 class="titulo-seccion">{{ t('conectar.directa', { nombre: sesion?.nombre ?? '' }) }}</h2>
           <div class="texto-suave text-body2">{{ t('conectar.directaTexto') }}</div>
         </div>
       </q-card-section>
@@ -48,15 +46,15 @@
       <q-card-section class="row q-col-gutter-md q-pt-none">
         <div class="col-12 col-md-6">
           <div class="text-caption texto-suave q-mb-xs">{{ t('conectar.clave') }}</div>
-          <div class="bloque-codigo" style="padding-right: 112px">{{ clave ? (verClave ? clave : ocultar(clave)) : t('comun.cargando') }}
+          <div class="bloque-codigo bloque-codigo--dos">{{ clave ? (verClave ? clave : ocultar(clave)) : t('comun.cargando') }}
             <div class="boton-copiar row no-wrap">
               <q-btn flat dense round size="sm" :icon="verClave ? 'visibility_off' : 'visibility'" :aria-label="verClave ? t('conectar.ocultarClave') : t('conectar.mostrarClave')" @click="verClave = !verClave" />
               <q-btn flat dense round size="sm" icon="content_copy" :aria-label="t('conectar.copiarClave')" :disable="!clave" @click="copiar(clave, t('conectar.claveCopiada'))" />
-              <q-btn flat dense round size="sm" icon="o_autorenew" :aria-label="t('conectar.regenerarClave')" :disable="!clave" @click="regenerarClaveInstancia">
-                <q-tooltip>{{ t('conectar.regenerarClave') }}</q-tooltip>
-              </q-btn>
             </div>
           </div>
+          <!-- Regenerar invalida la clave en todas las apps: va aparte de Copiar, con su nombre escrito y en color de peligro. -->
+          <q-btn flat dense no-caps color="negative" icon="o_autorenew" class="q-mt-sm" :label="t('conectar.regenerarClave')" :disable="!clave"
+            @click="regenerarClaveInstancia" />
         </div>
       </q-card-section>
       <q-card-section class="q-pt-none">

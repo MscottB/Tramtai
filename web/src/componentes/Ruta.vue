@@ -1,12 +1,15 @@
 <template>
-  <ol class="ruta q-ma-none q-pa-none" :class="claseRuta" :aria-label="t('ruta.titulo')">
+  <!-- El tranvía va fuera de la lista: dentro de un <ol> solo caben estaciones (<li>). -->
+  <div class="ruta-marco" :class="claseRuta">
     <span v-if="!terminado" class="ruta__tranvia" :style="{ left: ((actual + 0.5) / 5) * 100 + '%' }" aria-hidden="true" />
-    <li v-for="(p, i) in paradas" :key="p" class="ruta__parada" :class="claseParada(i)"
-      :aria-current="i === actual ? 'step' : undefined">
-      <span class="ruta__punto" aria-hidden="true" />
-      <span>{{ p }}</span>
-    </li>
-  </ol>
+    <ol class="ruta q-ma-none q-pa-none" :aria-label="t('ruta.titulo')">
+      <li v-for="(p, i) in paradas" :key="p" class="ruta__parada" :class="claseParada(i)"
+        :aria-current="i === actual ? 'step' : undefined">
+        <span class="ruta__punto" aria-hidden="true" />
+        <span>{{ p }}</span>
+      </li>
+    </ol>
+  </div>
 </template>
 
 <script setup lang="ts">

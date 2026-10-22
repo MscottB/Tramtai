@@ -1,6 +1,6 @@
 <template>
   <q-card-section>
-    <div class="titulo-seccion">{{ t('puntos.titulo') }}</div>
+    <h2 class="titulo-seccion">{{ t('puntos.titulo') }}</h2>
     <div class="texto-suave text-body2">{{ t('puntos.texto') }}</div>
   </q-card-section>
   <q-card-section v-if="puntos.length > 1 || hayFiltro" class="row q-col-gutter-sm q-pt-none">
@@ -24,7 +24,7 @@
     <div class="col-12">
       <q-btn flat dense no-caps color="primary" :icon="masFiltros ? 'expand_less' : 'o_filter_list'" :aria-expanded="masFiltros"
         :label="filtrosExtra ? t('puntos.masFiltrosN', { n: filtrosExtra }) : t('puntos.masFiltros')" @click="masFiltros = !masFiltros" />
-      <q-btn v-if="hayFiltro" flat dense no-caps color="grey-8" icon="o_filter_alt_off" :label="t('puntos.limpiarFiltros')" class="q-ml-sm" @click="limpiarFiltros" />
+      <q-btn v-if="hayFiltro" flat dense no-caps color="neutro" icon="o_filter_alt_off" :label="t('puntos.limpiarFiltros')" class="q-ml-sm" @click="limpiarFiltros" />
     </div>
     <template v-if="masFiltros">
       <div class="col-12 col-sm-4">
@@ -54,7 +54,7 @@
           :aria-label="t('puntos.activarTodos')" :disable="f.g.activos === f.g.total" :loading="ocupado === f.g.nombre + ':1'" @click="emit('activarGrupo', f.g.nombre, true)">
           <q-tooltip v-if="$q.screen.xs">{{ t('puntos.activarTodos') }}</q-tooltip>
         </q-btn>
-        <q-btn flat dense no-caps size="sm" color="grey-8" icon="o_stop" :label="$q.screen.gt.xs ? t('puntos.desactivarTodos') : undefined"
+        <q-btn flat dense no-caps size="sm" color="neutro" icon="o_stop" :label="$q.screen.gt.xs ? t('puntos.desactivarTodos') : undefined"
           :aria-label="t('puntos.desactivarTodos')" :disable="f.g.activos === 0" :loading="ocupado === f.g.nombre + ':0'" @click="emit('activarGrupo', f.g.nombre, false)">
           <q-tooltip v-if="$q.screen.xs">{{ t('puntos.desactivarTodos') }}</q-tooltip>
         </q-btn>

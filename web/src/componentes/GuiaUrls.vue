@@ -12,7 +12,9 @@
             <a class="enlace text-caption q-mt-xs" href="https://mscottb.github.io/Tramtai/desarrolladores.html" target="_blank" rel="noopener">{{ t('guia.desarrolladores') }}</a>
             <div class="text-caption texto-suave q-mt-xs">
               {{ t('guia.avanzado') }}
-              <a href="#" class="enlace" :aria-busy="descargando" @click.prevent="descargarOpenapi">{{ t('guia.descargarOpenapi') }}</a>
+              <!-- Descarga un archivo: es un botón (responde a Espacio y no anuncia navegación), no un enlace a #. -->
+              <q-btn flat dense no-caps color="primary" class="q-px-xs" icon="o_download" :label="t('guia.descargarOpenapi')" :loading="descargando"
+                @click="descargarOpenapi" />
             </div>
           </template>
         </div>

@@ -2,7 +2,7 @@
   <q-dialog v-model="nuevo" aria-labelledby="titulo-nueva-api" allow-focus-outside>
     <q-card style="width: 600px; max-width: 95vw">
       <q-card-section>
-        <div id="titulo-nueva-api" class="titulo-seccion">{{ t('puntos.nuevo') }}</div>
+        <h2 id="titulo-nueva-api" class="titulo-seccion">{{ t('puntos.nuevo') }}</h2>
         <div class="texto-suave text-body2">{{ t('puntos.nuevoTexto') }}</div>
       </q-card-section>
       <q-form @submit="crear">
@@ -47,7 +47,7 @@
   <q-dialog v-model="dialogoInstrucciones" aria-labelledby="titulo-ajustes-api" allow-focus-outside>
     <q-card style="width: 560px; max-width: 95vw">
       <q-card-section>
-        <div id="titulo-ajustes-api" class="titulo-seccion">{{ t('puntos.ajustesDe', { nombre: editando }) }}</div>
+        <h2 id="titulo-ajustes-api" class="titulo-seccion">{{ t('puntos.ajustesDe', { nombre: editando }) }}</h2>
       </q-card-section>
       <q-card-section class="q-pt-none q-gutter-y-md">
         <EditorReceta v-model="ajustes.receta" :catalogo="catalogo" para-api />

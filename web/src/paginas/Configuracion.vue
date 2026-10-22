@@ -14,7 +14,8 @@
         <div class="col-12 col-md">
           <div class="row items-start no-wrap">
             <div>
-              <div class="titulo-seccion">{{ t('predeterminado.titulo') }}
+              <div class="row items-center">
+                <h2 class="titulo-seccion">{{ t('predeterminado.titulo') }}</h2>
                 <ProcedenciaValor :procedencia="procedenciaDe(clavesPredeterminado)" :ocupado="heredando" @volver="volverAGlobal(clavesPredeterminado)" />
               </div>
               <div class="texto-suave text-body2 q-mt-xs">{{ t('predeterminado.texto') }}</div>
@@ -37,7 +38,7 @@
         <div class="col-12 col-md">
           <div class="row items-start no-wrap">
             <div>
-              <div class="titulo-seccion">{{ t('puerto.titulo') }}</div>
+              <h2 class="titulo-seccion">{{ t('puerto.titulo') }}</h2>
               <div class="texto-suave text-body2 q-mt-xs">{{ t('puerto.texto') }}</div>
               <div class="text-caption q-mt-xs">{{ t('puerto.actual', { url: direccionActual }) }}</div>
               <div v-if="sesion.servicio.puerto !== sesion.servicio.puerto_configurado" class="aviso text-body2 q-mt-sm">
@@ -64,7 +65,7 @@
     <q-card v-show="pestana === 'tramtai'" v-if="conversor" data-captura="conversor">
       <q-card-section class="row items-start no-wrap">
         <div class="col">
-          <div class="titulo-seccion">{{ t('conversor.titulo') }}</div>
+          <h2 class="titulo-seccion">{{ t('conversor.titulo') }}</h2>
           <div class="texto-suave text-body2 q-mt-xs">{{ t('conversor.texto') }}</div>
           <div class="text-body2 q-mt-sm" role="status">{{ textoConversor(conversor) }}</div>
           <div v-if="conversor.estado === 'error'" class="text-caption texto-suave q-mt-xs">{{ t('conversor.redEmpresa') }}</div>
@@ -84,7 +85,7 @@
     <q-card v-show="pestana === 'tramtai'" v-if="actualizacion" data-captura="actualizaciones">
       <q-card-section class="row items-start no-wrap">
         <div class="col">
-          <div class="titulo-seccion">{{ t('actualizacion.ajustesTitulo') }}</div>
+          <h2 class="titulo-seccion">{{ t('actualizacion.ajustesTitulo') }}</h2>
           <div class="texto-suave text-body2 q-mt-xs">{{ t('actualizacion.ajustesTexto') }}</div>
           <div class="text-body2 q-mt-sm">{{ textoActualizacion }}</div>
           <div class="row items-center q-gutter-sm q-mt-xs">
@@ -103,7 +104,7 @@
         <q-card>
           <q-card-section class="row items-start no-wrap">
             <div class="col">
-              <div class="titulo-seccion">{{ t('arranque.titulo', { sistema }) }}</div>
+              <h2 class="titulo-seccion">{{ t('arranque.titulo', { sistema }) }}</h2>
               <div class="texto-suave text-body2 q-mt-xs">{{ t('arranque.texto', { sistema }) }}</div>
             </div>
             <q-toggle :model-value="sesion.autoarranque" :disable="cambiandoArranque" :aria-label="t('arranque.titulo', { sistema })" @update:model-value="cambiarArranque" />
@@ -113,7 +114,8 @@
       <div v-show="pestana === 'espacio'" class="col-12">
         <q-card>
           <q-card-section>
-            <div class="titulo-seccion">{{ t('historialAjustes.titulo') }}
+            <div class="row items-center">
+              <h2 class="titulo-seccion">{{ t('historialAjustes.titulo') }}</h2>
               <ProcedenciaValor :procedencia="procedenciaDe(clavesRetencion)" :ocupado="heredando" @volver="volverAGlobal(clavesRetencion)" />
             </div>
             <div class="texto-suave text-body2 q-mt-xs">{{ t('historialAjustes.texto') }}</div>
@@ -139,7 +141,7 @@
         <q-card data-recorrido="configuracion.datos">
           <q-card-section class="row items-start no-wrap q-pb-sm">
             <div class="col">
-              <div class="titulo-seccion">{{ t('datos.titulo') }}</div>
+              <h2 class="titulo-seccion">{{ t('datos.titulo') }}</h2>
               <div class="texto-suave text-body2 q-mt-xs">{{ t('datos.texto') }}</div>
             </div>
           </q-card-section>
@@ -171,12 +173,12 @@
       <q-expansion-item icon="o_code" :label="t('config.valoresTecnicos')" :caption="t('config.valoresTexto')" header-class="q-py-md">
         <q-separator />
         <q-card-section class="row items-center q-col-gutter-md">
+          <!-- Leyenda de orígenes: el significado de cada uno se lee sin ratón (antes vivía en un tooltip). -->
           <div class="col-12 col-md">
-            <div class="row q-gutter-xs">
-              <q-chip v-for="o in origenes" :key="o.id" dense outline :color="o.color">
-                {{ o.nombre }}<q-tooltip>{{ o.detalle }}</q-tooltip>
-              </q-chip>
-            </div>
+            <ul class="leyenda-origenes">
+              <li v-for="o in origenes" :key="o.id"><span :class="'etiqueta etiqueta--' + o.clase">{{ o.nombre }}</span>
+                <span class="text-caption texto-suave" :class="{ codigo: o.id === 'global' }">{{ o.detalle }}</span></li>
+            </ul>
           </div>
           <div class="col-12 col-md-4">
             <q-input v-model="filtro" dense outlined clearable debounce="150" :placeholder="t('config.buscar')" :aria-label="t('config.buscar')">
@@ -195,7 +197,7 @@
                 <q-item-label class="codigo" style="word-break: break-all">{{ valor(e.valor) }}</q-item-label>
               </q-item-section>
               <q-item-section side style="min-width: 90px">
-                <q-chip dense outline :color="origen(e.origen).color">{{ origen(e.origen).nombre }}</q-chip>
+                <span :class="'etiqueta etiqueta--' + origen(e.origen).clase">{{ origen(e.origen).nombre }}</span>
               </q-item-section>
             </q-item>
           </q-list>
@@ -365,14 +367,16 @@ async function cambiarEsfuerzo(esfuerzo: string) {
 const configHabitual = { Windows: '%APPDATA%\\tramtai\\config.yaml', macOS: '~/Library/Application Support/tramtai/config.yaml', Linux: '~/.config/tramtai/config.yaml' }[sistema]
 const rutaConfigReal = ref('')
 const configGlobal = computed(() => rutaConfigReal.value || configHabitual)
+// origenes: de dónde sale cada valor, con la etiqueta de la app (neutro, info o aviso) y su texto; el entorno va en aviso
+// porque no se cambia desde aquí.
 const origenes = computed(() => [
-  { id: 'interno', nombre: t('origen.interno'), color: 'grey-6', detalle: t('origen.internoDetalle') },
-  { id: 'global', nombre: t('origen.global'), color: 'primary', detalle: configGlobal.value },
-  { id: 'proyecto', nombre: t('origen.proyecto'), color: 'teal-8', detalle: t('origen.proyectoDetalle') },
-  { id: 'local', nombre: t('origen.local'), color: 'indigo-6', detalle: t('origen.localDetalle') },
-  { id: 'entorno', nombre: t('origen.entorno'), color: 'deep-orange-7', detalle: t('origen.entornoDetalle') },
+  { id: 'interno', nombre: t('origen.interno'), clase: 'neutro', detalle: t('origen.internoDetalle') },
+  { id: 'global', nombre: t('origen.global'), clase: 'info', detalle: configGlobal.value },
+  { id: 'proyecto', nombre: t('origen.proyecto'), clase: 'info', detalle: t('origen.proyectoDetalle') },
+  { id: 'local', nombre: t('origen.local'), clase: 'info', detalle: t('origen.localDetalle') },
+  { id: 'entorno', nombre: t('origen.entorno'), clase: 'aviso', detalle: t('origen.entornoDetalle') },
 ])
-const origen = (id: string) => origenes.value.find((o) => o.id === id) ?? { nombre: id, color: 'grey-6' }
+const origen = (id: string) => origenes.value.find((o) => o.id === id) ?? { nombre: id, clase: 'neutro' }
 
 const secciones: Record<string, Clave> = {
   servicio: 'seccion.servicio', predeterminados: 'seccion.predeterminados', modelos: 'seccion.modelos', adaptadores: 'seccion.agentes',

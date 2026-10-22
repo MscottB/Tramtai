@@ -2,7 +2,7 @@
   <q-dialog v-model="dialogoGuardar" aria-labelledby="titulo-guardar-api">
     <q-card style="width: 520px; max-width: 95vw">
       <q-card-section>
-        <div id="titulo-guardar-api" class="titulo-seccion">{{ t('ejecutar.guardarApi') }}</div>
+        <h2 id="titulo-guardar-api" class="titulo-seccion">{{ t('ejecutar.guardarApi') }}</h2>
         <div class="texto-suave text-body2">{{ t('ejecutar.guardarTexto') }}</div>
       </q-card-section>
       <q-form @submit="guardarComoApi">
@@ -23,7 +23,7 @@
   <q-dialog v-model="dialogoCreada" aria-labelledby="titulo-api-creada" @hide="creada = undefined">
     <q-card style="width: 640px; max-width: 95vw">
       <q-card-section>
-        <div id="titulo-api-creada" class="titulo-seccion">{{ t('ejecutar.apiCreada', { nombre: creada?.nombre ?? '' }) }}</div>
+        <h2 id="titulo-api-creada" class="titulo-seccion">{{ t('ejecutar.apiCreada', { nombre: creada?.nombre ?? '' }) }}</h2>
         <div class="texto-suave text-body2">{{ t('ejecutar.apiCreadaTexto') }}</div>
         <q-banner rounded dense class="aviso-caja q-mt-sm">
           <template #avatar><q-icon name="o_lock" color="warning" /></template>{{ t('puntos.claveUnaVez') }}

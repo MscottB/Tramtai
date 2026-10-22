@@ -3,7 +3,7 @@
     <q-card style="width: 760px; max-width: 96vw">
       <q-card-section class="row items-center no-wrap">
         <div class="col">
-          <div id="titulo-codigo" class="titulo-seccion">{{ t('codigo.titulo') }}</div>
+          <h2 id="titulo-codigo" class="titulo-seccion">{{ t('codigo.titulo') }}</h2>
           <div class="texto-suave text-body2">{{ t('codigo.texto') }}</div>
         </div>
         <q-btn v-close-popup flat round dense icon="close" :aria-label="t('comun.cerrar')" class="self-start" />

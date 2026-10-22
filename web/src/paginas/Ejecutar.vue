@@ -7,7 +7,7 @@
         <q-card data-captura="receta">
           <q-card-section class="q-pb-sm row items-start no-wrap q-gutter-x-sm">
             <div class="col">
-              <div class="titulo-seccion">{{ t('ejecutar.receta') }}</div>
+              <h2 class="titulo-seccion">{{ t('ejecutar.receta') }}</h2>
               <div class="texto-suave text-body2">{{ t('ejecutar.recetaTexto') }}</div>
             </div>
             <q-btn data-recorrido="ejecutar.codigo" flat dense no-caps color="primary" icon="o_code" :label="$q.screen.gt.xs ? t('codigo.boton') : undefined" :aria-label="t('codigo.boton')"
@@ -26,7 +26,7 @@
           </q-card-section>
           <q-separator />
           <q-card-section class="q-gutter-y-md">
-            <div class="titulo-seccion">{{ t('ejecutar.mensajePrueba') }}</div>
+            <h2 class="titulo-seccion">{{ t('ejecutar.mensajePrueba') }}</h2>
             <!-- el ancla va en un div: en el q-input caería en el <textarea> interno y no se resaltaría el campo entero -->
             <div data-recorrido="ejecutar.mensaje">
               <q-input v-model="mensaje" type="textarea" outlined :label="t('ejecutar.mensaje')" :placeholder="t('ejecutar.placeholder')"
@@ -70,7 +70,7 @@
         <!-- Las pruebas recientes van con la receta: «Usar de nuevo» la rellena. -->
         <q-card class="q-mt-md">
           <q-card-section class="row items-center no-wrap q-pb-sm">
-            <div class="titulo-seccion col">{{ t('ejecutar.recientes') }}</div>
+            <h2 class="titulo-seccion col">{{ t('ejecutar.recientes') }}</h2>
             <q-btn v-if="recientes.length" flat dense no-caps color="primary" icon-right="o_chevron_right" :label="t('ejecutar.verTodo')" @click="verTodo" />
           </q-card-section>
           <div v-if="!recientes.length" class="q-px-md q-pb-md text-body2 texto-suave">{{ t('ejecutar.sinRecientes') }}</div>
@@ -79,7 +79,7 @@
               <q-item-section>
                 <q-item-label lines="1">{{ mensajeDe(x) || t('trabajo.entradaEliminada') }}</q-item-label>
                 <q-item-label caption lines="1">
-                  <span :class="estadoInfo(x.estado).clase"><q-icon :name="estadoInfo(x.estado).icono" size="12px" />{{ estadoInfo(x.estado).etiqueta }}</span>
+                  <span :class="estadoInfo(x.estado).clase">{{ estadoInfo(x.estado).etiqueta }}</span>
                   {{ haceCuanto(x.creado_en) }} · {{ modeloDe(x) }}
                 </q-item-label>
               </q-item-section>
@@ -96,9 +96,9 @@
       <div class="col-12 col-md-7 respuesta-fija">
         <q-card class="column">
           <q-card-section class="row items-center no-wrap q-gutter-x-sm">
-            <div class="titulo-seccion">{{ t('ejecutar.respuesta') }}</div>
+            <h2 class="titulo-seccion">{{ t('ejecutar.respuesta') }}</h2>
             <q-space />
-            <span v-if="trabajo" :class="estadoInfo(estado).clase"><q-icon :name="estadoInfo(estado).icono" size="14px" />{{ estadoInfo(estado).etiqueta }}</span>
+            <span v-if="trabajo" :class="estadoInfo(estado).clase">{{ estadoInfo(estado).etiqueta }}</span>
             <q-btn v-if="salida" flat dense round icon="o_content_copy" :aria-label="t('ejecutar.copiarRespuesta')" @click="copiar(salida)">
               <q-tooltip>{{ t('comun.copiar') }}</q-tooltip>
             </q-btn>
@@ -115,7 +115,7 @@
               <div class="column q-gutter-sm q-mt-xs" style="max-width: 460px; margin-left: auto; margin-right: auto">
                 <div v-for="e in ejemplos" :key="e" class="paso text-left row items-center no-wrap" role="button" tabindex="0"
                   @click="mensaje = e" @keyup.enter="mensaje = e" @keydown.space.prevent="mensaje = e">
-                  <q-icon name="o_lightbulb" color="primary" size="18px" class="q-mr-sm" /><span class="text-body2" style="color: var(--texto)">{{ e }}</span>
+                  <span class="text-body2" style="color: var(--texto)">{{ e }}</span>
                 </div>
               </div>
             </div>
@@ -134,7 +134,7 @@
                   <li v-for="(p, i) in problemas" :key="i">{{ p.texto }}</li>
                 </ul>
                 <div v-if="puedeCorregir" class="row items-center q-gutter-sm q-mt-sm">
-                  <q-btn unelevated no-caps color="primary" icon="o_auto_fix_high" :label="t('ejecutar.corregir')" :loading="corrigiendo" @click="corregir" />
+                  <q-btn unelevated no-caps color="primary" icon="o_build" :label="t('ejecutar.corregir')" :loading="corrigiendo" @click="corregir" />
                   <span class="text-caption texto-suave col">{{ t('ejecutar.corregirTexto') }}</span>
                 </div>
                 <div v-if="final?.salida" class="text-caption texto-suave q-mt-md">{{ lineasMarcadas ? t('ejecutar.respuestaMarcada') : t('ejecutar.respuestaRecibida') }}</div>
@@ -162,7 +162,7 @@
             <q-separator />
             <q-card-section class="metadatos">
               <Linea :agente="final.solicitud.agente" :modelo="final.modelo_efectivo || final.modelo_enviado" />
-              <span v-if="esfuerzoFinal"><q-icon name="o_psychology" />{{ esfuerzoFinal }}</span>
+              <span v-if="esfuerzoFinal"><q-icon name="o_speed" />{{ esfuerzoFinal }}</span>
               <span><q-icon name="o_data_usage" />{{ final.uso.tokens_entrada }} → {{ final.uso.tokens_salida }} {{ t('comun.tokens') }}</span>
               <span v-if="final.uso.costo_usd"><q-icon name="o_payments" />US$ {{ final.uso.costo_usd.toFixed(4) }}</span>
               <span v-if="final.terminado_en"><q-icon name="o_timer" />{{ duracion(final.creado_en, final.terminado_en) }}</span>

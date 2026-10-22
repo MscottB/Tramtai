@@ -1,7 +1,6 @@
 <template>
   <q-select v-if="niveles.length" :model-value="modelValue" :options="opciones" emit-value map-options outlined dense
     :label="etiqueta ?? t('esfuerzo.titulo')" :hint="hint ?? t('esfuerzo.hint')" @update:model-value="(v: string) => emit('update:modelValue', v)">
-    <template #prepend><q-icon name="o_psychology" /></template>
     <template #option="scope">
       <q-item v-bind="scope.itemProps">
         <q-item-section>
@@ -12,7 +11,7 @@
     </template>
   </q-select>
   <div v-else class="text-caption texto-suave row items-center no-wrap">
-    <q-icon name="o_psychology" size="18px" class="q-mr-xs" />{{ t('esfuerzo.noAdmite') }}
+    {{ t('esfuerzo.noAdmite') }}
   </div>
 </template>
 

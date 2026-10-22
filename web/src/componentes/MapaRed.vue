@@ -22,11 +22,12 @@
     <text v-if="resto" :x="V_ANCHO - 14" :y="vHub - 6" text-anchor="end" font-size="12" font-weight="700">+{{ resto }}</text>
     <g v-for="v in vivos" :key="'vv' + v.tr.id" class="tranvia-vivo" role="button" tabindex="0" :aria-label="nombreTranvia(v.tr)"
       @click="emit('seguir', v.tr.id)" @keyup.enter="emit('seguir', v.tr.id)" @keydown.space.prevent="emit('seguir', v.tr.id)">
+      <rect class="tranvia-vivo__toque" x="-22" y="-22" width="44" height="44" :style="{ offsetPath: `path('${v.vCamino}')`, offsetDistance: v.distancia + '%' }" />
       <rect x="-12" y="-6" width="24" height="12" rx="5" :style="{ offsetPath: `path('${v.vCamino}')`, offsetDistance: v.distancia + '%', fill: v.color }" />
     </g>
   </svg>
   <div v-else style="overflow-x: auto">
-    <svg class="mapa-red" :viewBox="`0 0 ${ANCHO} ${alto}`" :style="{ minWidth: '620px' }" role="group" :aria-label="descripcion">
+    <svg class="mapa-red" :viewBox="`0 0 ${ANCHO} ${alto}`" :style="{ minWidth: '860px' }" role="group" :aria-label="descripcion">
       <!-- Tus apps → Tramtai -->
       <path v-for="o in origenes" :key="'p' + o.id" :d="tramo(X_ORIGEN, o.y, X_HUB, centro + paralela(o.i, origenes.length))" fill="none" stroke-width="3" stroke-linecap="round"
         :style="{ stroke: o.activo ? 'color-mix(in srgb, var(--acento) 55%, transparent)' : 'var(--borde-fuerte)' }" :stroke-dasharray="o.activo ? undefined : PUNTEADO" />
@@ -38,26 +39,27 @@
         <circle :cx="X_ORIGEN" :cy="o.y" r="7" stroke-width="3" :style="{ fill: 'var(--superficie)', stroke: o.activo ? 'var(--acento)' : 'var(--borde-fuerte)' }" />
         <text :x="X_ORIGEN - 18" :y="o.detalle ? o.y - 2 : o.y + 5" text-anchor="end" font-size="14" :font-weight="o.principal ? 600 : 500"
           :class="{ suave: !o.activo }">{{ o.nombre }}</text>
-        <text v-if="o.detalle" :x="X_ORIGEN - 18" :y="o.y + 15" text-anchor="end" font-size="12" class="suave">{{ o.detalle }}</text>
+        <text v-if="o.detalle" :x="X_ORIGEN - 18" :y="o.y + 15" text-anchor="end" font-size="13" class="suave">{{ o.detalle }}</text>
       </g>
 
       <!-- Tramtai es el intercambiador: la cápsula blanca de borde grueso de los transbordos. -->
       <g class="cursor-pointer" role="link" tabindex="0" @click="emit('ir', 'ejecutar')" @keyup.enter="emit('ir', 'ejecutar')">
         <rect :x="X_HUB" :y="centro - 36" :width="HUB_ANCHO" height="72" rx="36" stroke-width="5" :style="{ fill: 'var(--superficie)', stroke: 'var(--texto)' }" />
         <text :x="X_HUB + HUB_ANCHO / 2" :y="centro - 3" text-anchor="middle" font-size="18" font-weight="800">Tramtai</text>
-        <text :x="X_HUB + HUB_ANCHO / 2" :y="centro + 17" text-anchor="middle" font-size="12" class="suave">{{ direccion }}</text>
+        <text :x="X_HUB + HUB_ANCHO / 2" :y="centro + 17" text-anchor="middle" font-size="13" class="suave">{{ direccion }}</text>
       </g>
 
       <g v-for="a in lineas" :key="'a' + a.agente" class="cursor-pointer" role="link" tabindex="0" @click="emit('ir', 'agentes')" @keyup.enter="emit('ir', 'agentes')">
         <circle :cx="X_AGENTE" :cy="a.y" r="9" stroke-width="3.5" :style="{ fill: a.listo ? a.color : 'var(--superficie)', stroke: a.listo ? a.color : 'var(--borde-fuerte)' }" />
         <text :x="X_AGENTE + 20" :y="a.y - 2" font-size="15" font-weight="650">{{ a.nombre }}</text>
-        <text :x="X_AGENTE + 20" :y="a.y + 16" font-size="12" :style="{ fill: a.listo ? 'var(--ok)' : 'var(--aviso)' }">{{ a.estado }}</text>
+        <text :x="X_AGENTE + 20" :y="a.y + 16" font-size="13" :style="{ fill: a.listo ? 'var(--ok)' : 'var(--aviso)' }">{{ a.estado }}</text>
       </g>
 
       <!-- Las peticiones en curso: cada tranvía va de su estación a Tramtai y sigue por la línea de su agente. -->
       <text v-if="resto" :x="X_HUB + HUB_ANCHO - 14" :y="centro - 44" text-anchor="end" font-size="12" font-weight="700">+{{ resto }}</text>
       <g v-for="v in vivos" :key="'v' + v.tr.id" class="tranvia-vivo" role="button" tabindex="0" :aria-label="nombreTranvia(v.tr)"
         @click="emit('seguir', v.tr.id)" @keyup.enter="emit('seguir', v.tr.id)" @keydown.space.prevent="emit('seguir', v.tr.id)">
+        <rect class="tranvia-vivo__toque" x="-25" y="-25" width="50" height="50" :style="{ offsetPath: `path('${v.camino}')`, offsetDistance: v.distancia + '%' }" />
         <rect x="-13" y="-7" width="26" height="14" rx="5" :style="{ offsetPath: `path('${v.camino}')`, offsetDistance: v.distancia + '%', fill: v.color }" />
       </g>
     </svg>

@@ -32,7 +32,7 @@
               </q-item-section>
               <q-item-section side>
                 <span class="etiqueta" :class="listo(a) ? 'etiqueta--ok' : 'etiqueta--aviso'">
-                  <q-icon :name="listo(a) ? 'check' : 'priority_high'" size="14px" />{{ listo(a) ? t('agente.listo') : t(tipo(a)) }}
+                  {{ listo(a) ? t('agente.listo') : t(tipo(a)) }}
                 </span>
               </q-item-section>
             </template>
@@ -50,7 +50,7 @@
           <div class="metadatos">
             <span><q-icon :name="suscripcion(a) ? 'o_person' : 'o_key'" />{{ suscripcion(a) ? t('agentes.listoSuscripcion') : t('agentes.listoClave') }}</span>
             <span v-if="suscripcion(a) && a.cuenta"><q-icon name="o_account_circle" />{{ t('agentes.cuenta', { cuenta: a.cuenta }) }}</span>
-            <span v-if="esfuerzos[a.agente]?.length"><q-icon name="o_psychology" />{{ t('agentes.esfuerzo') }}: {{ esfuerzos[a.agente].map(nombreEsfuerzo).join(' · ') }}</span>
+            <span v-if="esfuerzos[a.agente]?.length"><q-icon name="o_speed" />{{ t('agentes.esfuerzo') }}: {{ esfuerzos[a.agente].map(nombreEsfuerzo).join(' · ') }}</span>
             <span v-if="contextos[a.agente]?.length"><q-icon name="o_memory" />{{ t('agentes.contexto') }}: {{ textoContextos(a.agente) }}</span>
           </div>
           <q-btn unelevated dense no-caps color="primary" icon="o_chat" class="q-mt-md q-mr-sm q-px-md" :label="t('agentes.probar')" @click="probar(a)" />
@@ -106,7 +106,7 @@
           <q-btn v-if="ofrecerDejarSuscripcion(a, puedeCambiar(a))" flat dense no-caps color="primary" class="q-mt-sm q-px-sm" :loading="cambiando === a.agente"
             :label="t('agentes.dejarSuscripcion')" @click="cambiar(a, 'clave_api')" />
         </template>
-        <q-btn v-if="!a.desconectado && sesion?.local" flat dense no-caps color="grey-7" icon="o_link_off" class="q-mt-sm q-px-sm"
+        <q-btn v-if="!a.desconectado && sesion?.local" flat dense no-caps color="neutro" icon="o_link_off" class="q-mt-sm q-px-sm"
           :label="t('agentes.desconectar')" :loading="cambiando === a.agente + ':conexion'" @click="conectar(a, false)" />
       <q-expansion-item dense dense-toggle :label="t('agentes.detalles')" header-class="text-caption texto-suave q-px-none" class="q-mt-sm">
         <div class="q-pb-sm">

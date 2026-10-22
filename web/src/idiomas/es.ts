@@ -21,6 +21,16 @@ const es = {
   'comun.crear': 'Crear',
   'comun.tokens': 'tokens',
   'comun.continuar': 'Continuar',
+  // Valor que falta en una ficha o una tabla (en lugar de una raya).
+  'comun.sinDato': 'Sin dato',
+  'comun.errorCarga': 'No se pudo cargar',
+  'comun.reintentar': 'Reintentar',
+  'app.saltar': 'Saltar al contenido',
+  // Cerrar un diálogo con Esc cuando se perdería algo
+  'cierre.titulo': '¿Cerrar sin guardar?',
+  'cierre.texto': 'Se pierde lo que escribiste en este formulario.',
+  'cierre.clave': 'La clave no se vuelve a mostrar. Si no la copiaste, tendrás que regenerarla.',
+  'cierre.seguir': 'Seguir aquí',
   'historial.vacio': 'Aún no hay peticiones',
   'historial.quitarFiltros': 'Quitar filtros',
   'historial.irProbar': 'Ir a Probar',

@@ -1,8 +1,15 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { sesion } from '../estado.ts'
-import { api, ErrorApi } from './cliente.ts'
+import { api, duracionAviso, ErrorApi } from './cliente.ts'
 import type { Sesion } from './tipos.ts'
+
+test('un aviso dura al menos 4 s y más cuanto más largo es su texto, hasta 10 s', () => {
+  assert.equal(duracionAviso('Copiado'), 4000)
+  assert.equal(duracionAviso('Clave regenerada: actualízala en tus aplicaciones'), 4000)
+  assert.ok(duracionAviso('x'.repeat(100)) > 4000)
+  assert.equal(duracionAviso('x'.repeat(1000)), 10000)
+})
 
 const abierta = (csrf: string): Sesion => ({ instancia: 'i', csrf, version: 'v0', local: true })
 const respuesta = (estado: number, cuerpo?: unknown) => new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), { status: estado })

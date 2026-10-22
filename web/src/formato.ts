@@ -5,35 +5,35 @@ import type { EventoRegistro, Trabajo } from './api/tipos'
 
 export const terminales = ['completado', 'fallido', 'cancelado', 'interrumpido']
 
-// estados da a cada estado un color y un icono; el nombre sale de las traducciones (estado.<estado>).
-const estados: Record<string, { color: string; icono: string }> = {
-  en_cola: { color: 'grey-7', icono: 'schedule' },
-  preparando_entrada: { color: 'info', icono: 'description' },
-  esperando_agente: { color: 'info', icono: 'hourglass_top' },
-  ejecutando: { color: 'primary', icono: 'autorenew' },
-  validando_salida: { color: 'primary', icono: 'rule' },
-  cancelacion_solicitada: { color: 'warning', icono: 'pending' },
-  completado: { color: 'positive', icono: 'check_circle' },
-  fallido: { color: 'negative', icono: 'error' },
-  cancelado: { color: 'grey-7', icono: 'block' },
-  interrumpido: { color: 'warning', icono: 'report' },
+// estados da a cada estado el color de su etiqueta (punto y texto, sin icono); el nombre sale de las traducciones.
+const estados: Record<string, 'neutro' | 'info' | 'aviso' | 'ok' | 'error'> = {
+  en_cola: 'neutro',
+  preparando_entrada: 'info',
+  esperando_agente: 'info',
+  ejecutando: 'info',
+  validando_salida: 'info',
+  cancelacion_solicitada: 'aviso',
+  completado: 'ok',
+  fallido: 'error',
+  cancelado: 'neutro',
+  interrumpido: 'aviso',
 }
-
-const clases: Record<string, string> = { positive: 'ok', negative: 'error', warning: 'aviso', info: 'info', primary: 'info' }
 
 export function estadoInfo(estado: string) {
-  const e = estados[estado] ?? { color: 'grey-7', icono: 'help' }
   const etiqueta = estados[estado] ? t(`estado.${estado}` as Clave) : estado
-  return { ...e, etiqueta, clase: 'etiqueta etiqueta--' + (clases[e.color] ?? 'neutro') }
+  return { etiqueta, clase: 'etiqueta etiqueta--' + (estados[estado] ?? 'neutro') }
 }
 
+// sinDato es el valor de un dato que falta, en el idioma de la Web UI: el único de esta capa.
+export const sinDato = () => t('comun.sinDato')
+
 export function fecha(texto?: string): string {
-  return texto ? new Date(texto).toLocaleString(idioma.value) : '—'
+  return texto ? new Date(texto).toLocaleString(idioma.value) : sinDato()
 }
 
 // haceCuanto da la fecha relativa ("hace 3 minutos"); más de una semana, la fecha corta.
 export function haceCuanto(texto?: string): string {
-  if (!texto) return '—'
+  if (!texto) return sinDato()
   const segundos = (new Date(texto).getTime() - Date.now()) / 1000
   const unidades: [Intl.RelativeTimeFormatUnit, number][] = [['second', 60], ['minute', 3600], ['hour', 86400], ['day', 604800]]
   let anterior = 1

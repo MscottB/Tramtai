@@ -1,6 +1,6 @@
 <template>
   <span v-if="procedencia" class="q-ml-sm">
-    <q-chip dense outline :color="procedencia === 'propio' ? 'primary' : 'grey-7'" :icon="procedencia === 'propio' ? 'o_folder' : 'o_public'">
+    <q-chip dense outline :color="procedencia === 'propio' ? 'primary' : 'neutro'" :icon="procedencia === 'propio' ? 'o_folder' : 'o_public'">
       {{ procedencia === 'propio' ? t('herencia.propio') : t('herencia.global') }}
       <q-tooltip>{{ procedencia === 'propio' ? t('herencia.propioTexto') : t('herencia.globalTexto') }}</q-tooltip>
     </q-chip>

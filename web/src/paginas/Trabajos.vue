@@ -32,7 +32,7 @@
         </template>
         <template #body-cell-estado="props">
           <q-td :props="props">
-            <span :class="estadoInfo(props.value).clase"><q-icon :name="estadoInfo(props.value).icono" size="14px" />{{ estadoInfo(props.value).etiqueta }}</span>
+            <span :class="estadoInfo(props.value).clase">{{ estadoInfo(props.value).etiqueta }}</span>
           </q-td>
         </template>
         <template #body-cell-modelo="props">
@@ -60,7 +60,7 @@
     <q-dialog v-model="dialogo" position="right" full-height allow-focus-outside>
       <q-card v-if="detalle" data-recorrido="historial.detalle" class="column no-wrap hoja-detalle" style="width: 600px; max-width: 100vw">
         <q-card-section class="row items-center no-wrap q-gutter-x-sm">
-          <span :class="estadoInfo(detalle.estado).clase"><q-icon :name="estadoInfo(detalle.estado).icono" size="14px" />{{ estadoInfo(detalle.estado).etiqueta }}</span>
+          <span :class="estadoInfo(detalle.estado).clase">{{ estadoInfo(detalle.estado).etiqueta }}</span>
           <div class="texto-suave text-caption">{{ fecha(detalle.creado_en) }}</div>
           <q-space />
           <q-btn v-close-popup flat round icon="close" :aria-label="t('comun.cerrar')" />
@@ -81,7 +81,7 @@
               <div class="text-weight-medium col">{{ t('historial.solicitud') }}</div>
               <q-btn v-if="textoDe(detalle)" flat dense round size="sm" icon="o_content_copy" :aria-label="t('historial.copiarSolicitud')" @click="copiar(textoDe(detalle))" />
             </div>
-            <div class="bloque-texto">{{ textoDe(detalle) || '—' }}</div>
+            <div class="bloque-texto">{{ textoDe(detalle) || sinDato() }}</div>
           </div>
           <div>
             <div class="row items-center q-mb-xs">
@@ -94,7 +94,7 @@
           </div>
           <div class="ficha text-body2">
             <div>{{ t('historial.agenteModelo') }}</div><div>{{ modeloDe(detalle) }}</div>
-            <div>{{ t('historial.esfuerzo') }}</div><div>{{ esfuerzoUsado(detalle, eventosDetalle) || '—' }}</div>
+            <div>{{ t('historial.esfuerzo') }}</div><div>{{ esfuerzoUsado(detalle, eventosDetalle) || sinDato() }}</div>
             <div>{{ t('historial.origen') }}</div><div>{{ textoOrigen(detalle) }}</div>
             <div>{{ t('historial.tokens') }}</div><div>{{ detalle.uso.tokens_entrada }} → {{ detalle.uso.tokens_salida }}</div>
             <template v-if="detalle.uso.costo_usd"><div>{{ t('historial.coste') }}</div><div>US$ {{ detalle.uso.costo_usd.toFixed(4) }}</div></template>
@@ -134,7 +134,7 @@ import { api, avisar, avisarError, copiar, tituloError } from '../api/cliente'
 import type { EstadoPunto, EventoRegistro, Trabajo } from '../api/tipos'
 import { filtroHistorial, origenHistorial, trabajoAbrir, trabajoSeguido } from '../estado'
 import { modeloDe } from '../agentes'
-import { duracion, estadoInfo, fecha, haceCuanto, esfuerzoUsado, terminales, textoDe } from '../formato'
+import { duracion, estadoInfo, fecha, haceCuanto, esfuerzoUsado, sinDato, terminales, textoDe } from '../formato'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()

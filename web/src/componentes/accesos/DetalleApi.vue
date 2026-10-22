@@ -6,7 +6,7 @@
       <q-card-section class="row items-center no-wrap q-gutter-x-sm">
         <span class="linea__chapa linea__chapa--grande" :class="['linea--' + (puntoDetalle.agente ?? 'otro'), { 'linea__chapa--apagada': !activo(puntoDetalle) }]" aria-hidden="true">{{ puntoDetalle.agente ? codigoLinea(puntoDetalle.agente) : 'API' }}</span>
         <div class="col">
-          <div id="titulo-detalle" class="titulo-seccion">{{ recienCreado ? t('puntos.listo') : puntoDetalle.nombre }}</div>
+          <h2 id="titulo-detalle" class="titulo-seccion">{{ recienCreado ? t('puntos.listo') : puntoDetalle.nombre }}</h2>
           <div class="row items-center q-gutter-x-sm text-caption texto-suave">
             <span class="etiqueta" :class="!activo(puntoDetalle) ? 'etiqueta--neutro' : puntoDetalle.error ? 'etiqueta--error' : 'etiqueta--ok'">{{ activo(puntoDetalle) ? t('puntos.activo') : t('puntos.desactivado') }}</span>
             <span v-if="puntoDetalle.grupo"><q-icon name="o_folder" /> {{ puntoDetalle.grupo }}</span>
