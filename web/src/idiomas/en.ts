@@ -551,6 +551,7 @@ const en: Textos = {
   'historial.origenApp': 'App (workspace key)',
   'historial.grupo': 'Group {nombre}',
   'historial.mostrando': 'Showing the {n} most recent',
+  'historial.mostrandoUno': 'Showing the most recent one',
   'historial.verMas': 'Show more',
   'historial.cancelar': 'Cancel the request',
   'historialAjustes.titulo': 'History',

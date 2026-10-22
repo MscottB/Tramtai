@@ -553,6 +553,7 @@ const es = {
   'historial.origenApp': 'App (clave del espacio)',
   'historial.grupo': 'Grupo {nombre}',
   'historial.mostrando': 'Mostrando las {n} más recientes',
+  'historial.mostrandoUno': 'Mostrando la más reciente',
   'historial.verMas': 'Ver más',
   'historial.cancelar': 'Cancelar la petición',
   'historialAjustes.titulo': 'Historial',
