@@ -5,6 +5,8 @@ package cliente
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -37,8 +39,8 @@ type Cliente struct {
 	http   *http.Client
 }
 
-// Conectar lee el descriptor y el token de servicio y comprueba con /healthz que responde ese mismo servicio,
-// no otro proceso que ocupe el puerto.
+// Conectar lee el descriptor y el token de servicio y comprueba con un reto en /healthz que responde un servicio que
+// conoce el token, no otro proceso que ocupe el puerto; el token no sale hasta entonces.
 func Conectar(datos string) (*Cliente, error) {
 	d, err := contrato.LeerDescriptor(datos)
 	if err != nil {
@@ -51,10 +53,12 @@ func Conectar(datos string) (*Cliente, error) {
 	c := &Cliente{Base: d.Base, Descriptor: d, token: strings.TrimSpace(string(token)), http: &http.Client{}}
 	ctx, cancelar := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancelar()
+	reto := rand.Text()
 	var salud struct {
-		Servicio string `json:"servicio"`
+		Prueba string `json:"prueba"`
 	}
-	if err := c.pedir(ctx, "GET", "/healthz", "", nil, "", &salud); err != nil || salud.Servicio != d.Identificador {
+	if err := c.pedir(ctx, "GET", "/healthz?reto="+reto, "", nil, "", &salud); err != nil ||
+		!hmac.Equal([]byte(salud.Prueba), []byte(contrato.PruebaIdentidad(c.token, reto))) {
 		return nil, ErrServicioInactivo
 	}
 	return c, nil
@@ -105,7 +109,7 @@ func (c *Cliente) pedir(ctx context.Context, metodo, ruta, instancia string, cue
 		return err
 	}
 	// /healthz es pública y es la que comprueba la identidad: el token no sale hacia quien ocupe el puerto.
-	if ruta != "/healthz" {
+	if !strings.HasPrefix(ruta, "/healthz") {
 		req.Header.Set("Authorization", "Bearer "+c.token)
 	}
 	if instancia != "" {

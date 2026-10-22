@@ -17,6 +17,7 @@ import (
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/api"
+	"tramtai/internal/contrato"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
 	"tramtai/internal/planificador"
@@ -608,5 +609,17 @@ func TestEscribirAtomicoConUnLector(t *testing.T) {
 	}
 	if datos, _ := os.ReadFile(ruta); string(datos) != "después\n" {
 		t.Fatalf("contenido: %q", datos)
+	}
+}
+
+// /healthz no expone el identificador del servicio y solo prueba la identidad con el reto: el HMAC del token de servicio.
+func TestSaludConReto(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	if _, cuerpo := pedir(t, ts.URL, "GET", "/healthz", "", ""); strings.Contains(cuerpo, s.ID) || strings.Contains(cuerpo, "prueba") {
+		t.Fatalf("sin reto no hay identificador ni prueba: %s", cuerpo)
+	}
+	_, cuerpo := pedir(t, ts.URL, "GET", "/healthz?reto=abc", "", "")
+	if !strings.Contains(cuerpo, `"prueba":"`+contrato.PruebaIdentidad(s.tokenAdmin, "abc")+`"`) || strings.Contains(cuerpo, s.ID) {
+		t.Fatalf("la prueba es el HMAC del token sobre el reto: %s", cuerpo)
 	}
 }

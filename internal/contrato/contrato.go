@@ -3,6 +3,9 @@
 package contrato
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -85,6 +88,15 @@ func LeerDescriptor(datos string) (Descriptor, error) {
 		return d, err
 	}
 	return d, json.Unmarshal(contenido, &d)
+}
+
+// PruebaIdentidad es lo que responde el servicio al reto de GET /healthz?reto=: el HMAC-SHA256 del token de servicio
+// sobre el reto. Solo quien conoce el token puede calcularla, así que el cliente comprueba al servicio antes de enviarle
+// el token.
+func PruebaIdentidad(token, reto string) string {
+	m := hmac.New(sha256.New, []byte(token))
+	m.Write([]byte("tramtai-healthz:" + reto))
+	return hex.EncodeToString(m.Sum(nil))
 }
 
 // ActivacionInstancia es la respuesta a la activación de una instancia.
