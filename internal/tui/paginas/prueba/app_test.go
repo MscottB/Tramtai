@@ -19,7 +19,7 @@ func TestTeclaConModificadores(t *testing.T) {
 	}
 }
 
-// contador es una página mínima: «a» pide sumar uno (un Cmd que tarda), «b» manda un aviso y «s» espera a que la prueba
+// contador es una página mínima: «a» pide sumar uno (un Cmd que tarda; «l», uno que tarda mucho), «b» manda un aviso y «s» espera a que la prueba
 // suelte su canal. Cada respuesta lleva la versión con que se pidió y una vieja no cuenta.
 type contador struct {
 	n, gen int
@@ -45,6 +45,9 @@ func (c *contador) Update(m tea.Msg) (pagina.Pagina, tea.Cmd) {
 		switch m.String() {
 		case "a":
 			return c, func() tea.Msg { time.Sleep(5 * time.Millisecond); return sumado{gen} }
+		case "l":
+			// lo que tarda un Cmd con la máquina cargada: más que cualquier espera fija del arnés
+			return c, func() tea.Msg { time.Sleep(100 * time.Millisecond); return sumado{gen} }
 		case "b":
 			return c, tea.Batch(comp.Aviso("hola", comp.Info), nil)
 		case "s":
@@ -82,5 +85,13 @@ func TestAppComoLaTerminal(t *testing.T) {
 	a.Soltar(viejos)
 	if a.Vista() != "3" {
 		t.Fatalf("la respuesta vieja se descarta: %s", a.Vista())
+	}
+}
+
+// Asentar espera a un Cmd que trabaja, tarde lo que tarde: solo deja de esperar a uno parado en algo de fuera.
+func TestAsentarEsperaAlQueTarda(t *testing.T) {
+	a := Abrir(t, &contador{}, pagina.Contexto{Ctx: context.Background()})
+	if a.Pulsar("l"); a.Vista() != "1" {
+		t.Fatalf("Pulsar volvió antes de la respuesta: %s", a.Vista())
 	}
 }
