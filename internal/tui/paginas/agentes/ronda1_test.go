@@ -1,6 +1,7 @@
 package agentes
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -8,6 +9,7 @@ import (
 	"sync"
 	"testing"
 
+	"tramtai/internal/adaptadores"
 	"tramtai/internal/cliente"
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/paginas/prueba"
@@ -60,13 +62,15 @@ func grabadora(t *testing.T, cli *cliente.Cliente) (*cliente.Cliente, func() []s
 // TestAgentesEnviaElModoCorrecto: pasar a la suscripción manda «suscripcion» solo tras confirmar, y pasar a la clave manda
 // «clave_api» directo.
 func TestAgentesEnviaElModoCorrecto(t *testing.T) {
-	cli, id := prueba.Servicio(t)
-	proxy, cuerpos := grabadora(t, cli)
-	p := Nueva("es").(*Pagina)
-	correr(p, p.Iniciar(contexto(proxy, id)))
-
-	p.agentes = []adaptador{{Agente: "claude", Autenticacion: "clave_api"}}
-	p.lista.Poner(p.agentes)
+	// abrir abre la página con Claude, en el modo dado, detrás de una grabadora de lo que se envía.
+	abrir := func(modo string) (*Pagina, func() []string) {
+		cli, id := prueba.ConAgentes(t, map[string]adaptadores.Adaptador{"claude": detectado(adaptadores.Estado{Autenticacion: modo})})
+		proxy, cuerpos := grabadora(t, cli)
+		p := Nueva("es").(*Pagina)
+		correr(p, p.Iniciar(contexto(proxy, id)))
+		return p, cuerpos
+	}
+	p, cuerpos := abrir("clave_api")
 	_, cmd := p.Update(tecla("a"))
 	if f := correr(p, cmd); len(f) != 1 {
 		t.Fatalf("pregunta antes: %+v", f)
@@ -83,11 +87,10 @@ func TestAgentesEnviaElModoCorrecto(t *testing.T) {
 		t.Fatalf("avisa: %+v", f)
 	}
 
-	p.agentes = []adaptador{{Agente: "claude", Autenticacion: "suscripcion"}}
-	p.lista.Poner(p.agentes)
+	p, cuerpos = abrir("suscripcion")
 	_, cmd = p.Update(tecla("a"))
 	f = correr(p, cmd)
-	if got := cuerpos(); len(got) != 2 || got[1] != `{"modo":"clave_api"}` {
+	if got := cuerpos(); len(got) != 1 || got[0] != `{"modo":"clave_api"}` {
 		t.Fatalf("pasar a la clave manda clave_api: %v", got)
 	}
 	if a, ok := aviso(f); !ok || a.Texto != "Claude usa ahora la clave de API" {
@@ -98,20 +101,26 @@ func TestAgentesEnviaElModoCorrecto(t *testing.T) {
 // TestAgentesDesconectadoSinCLIEsNoInstalado: como en la Web UI, va al final, cuenta como no instalado, explica cómo
 // instalarlo y no se puede desconectar ni conectar.
 func TestAgentesDesconectadoSinCLIEsNoInstalado(t *testing.T) {
-	p, _, _ := abierta(t)
-	p.agentes = ordenar([]adaptador{{Agente: "codex", Desconectado: true, Problema: "no está instalado", ProblemaCodigo: "no_instalado"}, {Agente: "simulado"}})
-	p.lista.Poner(p.agentes)
-	if p.agentes[0].Agente != "simulado" {
-		t.Fatalf("va al final: %+v", p.agentes)
+	p, cli, id := conAgentes(t, map[string]adaptadores.Adaptador{"codex": sinCLI})
+	if err := cli.ConectarAgente(context.Background(), "codex", false); err != nil {
+		t.Fatal(err)
 	}
-	if v := p.Vista(); !strings.Contains(v, "Listos (1) Falta conectar (0) No instalados (1)") {
+	correr(p, p.Iniciar(contexto(cli, id)))
+	v := p.Vista()
+	if strings.Index(v, "simulado") > strings.Index(v, "Codex") {
+		t.Fatalf("va al final:\n%s", v)
+	}
+	if !strings.Contains(v, "Listos (1) Falta conectar (0) No instalados (1)") {
 		t.Fatalf("cuenta como no instalado:\n%s", v)
 	}
-	p.lista.Update(tecla("j"))
+	p.Update(tecla("down"))
 	_, cmd := p.Update(tecla("d"))
 	f := correr(p, cmd)
-	if _, ok := aviso(f); !ok || len(f) != 1 || p.pend != nil || p.ocupado {
+	if _, ok := aviso(f); !ok || len(f) != 1 {
 		t.Fatalf("d no desconecta ni conecta un no instalado: %+v", f)
+	}
+	if _, cmd := p.Update(comp.Confirmado{}); cmd != nil {
+		t.Fatal("no queda nada pendiente")
 	}
 	p.Update(tecla("enter"))
 	if v := p.Vista(); !strings.Contains(v, "comandos_agentes.codex") || strings.Contains(v, "Desconectado:") {
@@ -127,13 +136,10 @@ func TestAgentesCambioDeEspacioVaciaElCatalogo(t *testing.T) {
 	if v := p.Vista(); !strings.Contains(v, "Modelos: predeterminado") {
 		t.Fatalf("antes se ve el catálogo:\n%s", v)
 	}
-	p.errModel["simulado"] = "error de antes"
-	p.Iniciar(contexto(cli, "otro-"+id)) // otro espacio: aún sin respuesta
-	if len(p.modelos) != 0 || len(p.errModel) != 0 {
-		t.Fatalf("Iniciar vacía el catálogo: %v %v", p.modelos, p.errModel)
-	}
-	if got := p.textoModelos("simulado"); got != "Cargando…" {
-		t.Fatalf("no se ve el de antes: %q", got)
+	correr(p, p.Iniciar(contexto(cli, id))) // la app vuelve a iniciar la página (otro espacio o el mismo)
+	p.Update(tecla("enter"))                // el catálogo se pide de nuevo; la petición aún no ha vuelto
+	if v := p.Vista(); !strings.Contains(v, "Modelos: Cargando…") {
+		t.Fatalf("Iniciar vacía el catálogo: no se ve el de antes:\n%s", v)
 	}
 }
 

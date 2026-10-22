@@ -63,7 +63,7 @@ func TestAtajosSinServicio(t *testing.T) {
 	if fuera := correr(p, cmd); !errorServicio(fuera) {
 		t.Errorf("abrir una API sin servicio: %v", fuera)
 	}
-	p.final = &nucleo.Trabajo{ID: "a", CodigoError: nucleo.CodigoSalidaNoCumpleEsquema, Salida: "x"}
+	p.final = &nucleo.Trabajo{ID: "a", Estado: nucleo.Fallido, CodigoError: nucleo.CodigoSalidaNoCumpleEsquema, Salida: "x", Corregible: true}
 	if fuera := pulsar(p, "o"); !errorServicio(fuera) {
 		t.Errorf("corregir sin servicio: %v", fuera)
 	}

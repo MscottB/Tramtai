@@ -390,7 +390,7 @@ func main() {
 		// También el tema y el DPI del sistema, porque cambian el color y el tamaño de los iconos.
 		masNueva := ""
 		if estadoServicio.Actualizacion != nil {
-			masNueva = estadoServicio.Actualizacion.Etiqueta
+			masNueva = estadoServicio.Actualizacion.Version
 		}
 		nueva := fmt.Sprint(conWindows, sinPreguntar, puntos, menuOscuro(), ladoIconoMenu(), masNueva)
 		if cli != nil {

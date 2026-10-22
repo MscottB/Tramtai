@@ -469,10 +469,16 @@ func (c *Cliente) Modelos(ctx context.Context, instancia string) ([]string, erro
 	return ids, nil
 }
 
-// Capacidades devuelve la matriz de capacidades de los agentes.
-func (c *Cliente) Capacidades(ctx context.Context, instancia string) (map[string]any, error) {
-	var r map[string]any
+// Capacidades devuelve los agentes con su estado, los formatos y los límites de la instancia.
+func (c *Cliente) Capacidades(ctx context.Context, instancia string) (contrato.Capacidades, error) {
+	var r contrato.Capacidades
 	return r, c.pedir(ctx, "GET", "/api/v1/capacidades", instancia, nil, "", &r)
+}
+
+// PrimerosPasos devuelve los Primeros pasos de Inicio, ya calculados, y los agentes que comprobó para ello.
+func (c *Cliente) PrimerosPasos(ctx context.Context, instancia string) (contrato.PrimerosPasos, error) {
+	var r contrato.PrimerosPasos
+	return r, c.pedir(ctx, "GET", "/api/v1/instancia/pasos", instancia, nil, "", &r)
 }
 
 // SubirCarga sube un archivo a la instancia.

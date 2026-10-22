@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"tramtai/internal/api"
-	"tramtai/internal/autoarranque"
 	"tramtai/internal/credenciales"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -187,8 +186,8 @@ func (s *Servicio) responderSesion(w http.ResponseWriter, r *http.Request, ses *
 		respuesta["servicio"] = map[string]any{"puerto": s.opc.Puerto, "puerto_configurado": cmp.Or(s.opc.PuertoConfigurado, s.opc.Puerto),
 			"puerto_automatico": s.opc.PuertoAutomatico, "reiniciable": s.opc.Reiniciar != nil}
 		s.mu.RUnlock()
-		if autoarranque.Disponible {
-			respuesta["autoarranque"], _ = autoarranque.Activo()
+		if disponible, activo := s.estadoAutoarranque(); disponible {
+			respuesta["autoarranque"] = activo
 		}
 	}
 	inst := s.instancia(ses.instancia)

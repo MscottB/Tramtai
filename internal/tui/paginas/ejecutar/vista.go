@@ -322,7 +322,7 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		if p.salida != "" {
 			teclas = append(teclas, pagina.Tecla{Tecla: "y", Accion: idioma.T("copia")})
 		}
-		if p.final != nil && puedeCorregir(*p.final) {
+		if p.final != nil && p.final.Corregible {
 			teclas = append(teclas, pagina.Tecla{Tecla: "o", Accion: p.tx("ejecutar.corregir")})
 		}
 		if p.final != nil {

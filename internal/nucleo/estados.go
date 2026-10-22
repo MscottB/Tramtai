@@ -38,6 +38,23 @@ func (e Estado) Terminal() bool {
 	return e == Completado || e == Fallido || e == Cancelado || e == Interrumpido
 }
 
+// Etapa agrupa los estados en las 5 paradas de la ruta de un trabajo: cola, preparacion, ejecucion, validacion y
+// llegada. Viaja en el JSON del trabajo y en el evento «trabajo»: la Web UI y la terminal solo la pintan.
+func (e Estado) Etapa() string {
+	switch e {
+	case EnCola:
+		return "cola"
+	case PreparandoEntrada, EsperandoAgente:
+		return "preparacion"
+	case Ejecutando, CancelacionSolicitada:
+		return "ejecucion"
+	case ValidandoSalida:
+		return "validacion"
+	default:
+		return "llegada"
+	}
+}
+
 // Valido indica si el estado pertenece al ciclo de vida.
 func (e Estado) Valido() bool {
 	_, activo := transiciones[e]

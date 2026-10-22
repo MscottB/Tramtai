@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 	"sync"
@@ -16,6 +17,7 @@ import (
 	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
 	"tramtai/internal/nucleo"
+	"tramtai/internal/servicio"
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
@@ -74,7 +76,7 @@ type reloj struct{ t time.Time }
 
 func (r *reloj) ahora() time.Time { return r.t }
 
-// nueva crea la página con el reloj controlado, las esperas instantáneas (apuntadas) y el arranque automático disponible.
+// nueva crea la página con el reloj controlado y las esperas instantáneas (apuntadas).
 func nueva(lengua string) (*Pagina, *reloj, *apuntes) {
 	p := Nueva(lengua).(*Pagina)
 	r := &reloj{t: time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)}
@@ -88,7 +90,6 @@ func nueva(lengua string) (*Pagina, *reloj, *apuntes) {
 		c <- time.Time{}
 		return c
 	}
-	p.autoarranque = func() (bool, bool) { return true, false }
 	return p, r, esperas
 }
 
@@ -130,7 +131,7 @@ func abierta(t *testing.T) (*Pagina, *reloj, *cliente.Cliente, string) {
 }
 
 // evento manda un evento «trabajo» a la página como si llegara del flujo.
-func (p *Pagina) evento(e evento) {
+func (p *Pagina) evento(e contrato.EventoTrabajo) {
 	p.Update(msgRed{origen: p.origen(), tipo: "trabajo", ev: e})
 }
 
@@ -224,10 +225,10 @@ func TestRedComoMucho12(t *testing.T) {
 	c := contexto(nil, "global")
 	c.Alto = 40
 	p.Iniciar(c)
-	p.Update(msgInstancia{origen: p.origen(), r: cliente.ResumenInstancia{Base: "http://127.0.0.1:1"}}) // sin servicio: se da por cargada
+	p.Update(msgInstancia{origen: p.origen(), r: contrato.ResumenInstancia{Base: "http://127.0.0.1:1"}}) // sin servicio: se da por cargada
 	for i := 0; i < 15; i++ {
 		r.t = r.t.Add(time.Second)
-		p.evento(ev(con(fmt.Sprintf("t%02d", i), "ejecutando", "ejecucion"), func(e *evento) { e.API = fmt.Sprintf("api%02d", i); e.Creado = r.t }))
+		p.evento(ev(con(fmt.Sprintf("t%02d", i), "ejecutando", "ejecucion"), func(e *contrato.EventoTrabajo) { e.API = fmt.Sprintf("api%02d", i); e.Creado = r.t }))
 	}
 	v := p.Vista()
 	filas := 0
@@ -385,14 +386,31 @@ func TestAvisoApiPropia(t *testing.T) {
 	if strings.Contains(p.Vista(), "con la clave del espacio") {
 		t.Fatalf("sin peticiones no hay aviso:\n%s", p.Vista())
 	}
-	p.Update(msgInstancia{origen: p.origen(), r: cliente.ResumenInstancia{Base: cli.Base, AppConClave24h: 20}})
+	clave, err := cli.RotarClave(context.Background(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// comoApp manda n peticiones como una app con la clave del espacio y vuelve a abrir Inicio.
+	comoApp := func(n int) {
+		for range n {
+			req, _ := http.NewRequest("POST", cli.Base+"/api/v1/ejecutar", strings.NewReader(`{"mensajes":[{"rol":"usuario","contenido":"hola"}]}`))
+			req.Header.Set("Authorization", "Bearer "+clave)
+			r, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			r.Body.Close()
+		}
+		correr(p, p.Iniciar(contexto(cli, id)))
+	}
+	comoApp(20)
 	if strings.Contains(p.Vista(), "con la clave del espacio") {
 		t.Fatal("20 no basta")
 	}
 	if _, cmd := p.Update(tecla("c")); cmd != nil {
 		t.Fatal("sin aviso, c no hace nada")
 	}
-	p.Update(msgInstancia{origen: p.origen(), r: cliente.ResumenInstancia{Base: cli.Base, AppConClave24h: 21}})
+	comoApp(1)
 	v := p.Vista()
 	for _, quiere := range []string{"21 peticiones de apps llegaron con la clave del espacio", "últimas 24 h", "Crear una API"} {
 		if !strings.Contains(v, quiere) {
@@ -403,7 +421,6 @@ func TestAvisoApiPropia(t *testing.T) {
 	if ir, ok := correr(p, cmd)[0].(pagina.IrA); !ok || ir.Pagina != pagina.PaginaConectar {
 		t.Fatalf("c lleva a Conectar: %v", ir)
 	}
-	_ = id
 }
 
 // TestAvisoEspaciosYConversor: los espacios con problema y el conversor que falta salen como avisos, con su tecla.
@@ -449,23 +466,49 @@ func TestAvisoEspaciosYConversor(t *testing.T) {
 	}
 }
 
+// pasosDe abre Inicio contra un servicio con Claude listo y Codex desconectado, una API y el arranque automático
+// del sistema como diga auto; con completada, también una petición hecha. Los pasos los calcula el servicio.
+func pasosDe(t *testing.T, auto func() (bool, bool), completada bool) *Pagina {
+	t.Helper()
+	cli, id := prueba.Ajustado(t, func(o *servicio.Opciones) {
+		o.Registro["claude"], o.Registro["codex"] = prueba.Detectado{}, prueba.Detectado{}
+		o.Autoarranque = auto
+	})
+	ctx := context.Background()
+	if err := cli.ConectarAgente(ctx, "codex", false); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := cli.CrearPunto(ctx, id, contrato.ConfigPunto{Nombre: "mi-app", Agente: "simulado"}); err != nil {
+		t.Fatal(err)
+	}
+	if completada {
+		j, err := cli.Crear(ctx, id, nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "hola"}}})
+		for limite := time.Now().Add(5 * time.Second); err == nil && j.Estado != nucleo.Completado && time.Now().Before(limite); {
+			j, err = cli.Trabajo(ctx, id, j.ID)
+		}
+		if err != nil || j.Estado != nucleo.Completado {
+			t.Fatalf("la petición no terminó: %v %s", err, j.Estado)
+		}
+	}
+	p, _, _ := nueva("es")
+	correr(p, p.Iniciar(contexto(cli, id)))
+	t.Cleanup(p.Ocultar)
+	p.Update(tecla("end"))
+	return p
+}
+
 // TestPrimerosPasos: los 4 pasos con su estado, y «Ver la Ayuda de Empezar» abre el tema que acompaña a Inicio.
 func TestPrimerosPasos(t *testing.T) {
-	p, _, _, _ := abierta(t)
-	p.Update(msgAgentes{origen: p.origen(), lista: []adaptador{{Agente: "claude"}, {Agente: "codex", Desconectado: true}}})
-	p.Update(msgPuntos{origen: p.origen(), lista: []contrato.EstadoPunto{{Nombre: "mi-app"}}})
-	p.Update(tecla("end"))
+	p := pasosDe(t, func() (bool, bool) { return true, false }, false)
 	v := p.Vista()
-	for _, quiere := range []string{"Primeros pasos", "✓ Conecta al menos un agente", "1 de 2 agentes listos", "○ Prueba un agente", "✓ Conecta tu aplicación",
+	for _, quiere := range []string{"Primeros pasos", "✓ Conecta al menos un agente", "2 de 3 agentes listos", "○ Prueba un agente", "✓ Conecta tu aplicación",
 		"○ Arranca Tramtai con " + sistema(), "aunque cierres la terminal", "2 de 4 pasos hechos"} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}
 	}
-	// Sin arranque automático en este sistema, son 3 pasos.
-	p.autoarranque = func() (bool, bool) { return false, false }
-	p.Update(msgAutoarranque{origen: p.origen(), disponible: false})
-	if v := p.Vista(); strings.Contains(v, "Arranca Tramtai") || !strings.Contains(v, "2 de 3 pasos hechos") {
+	// Sin arranque automático en este sistema, el servicio manda 3 pasos.
+	if v := pasosDe(t, func() (bool, bool) { return false, false }, false).Vista(); strings.Contains(v, "Arranca Tramtai") || !strings.Contains(v, "2 de 3 pasos hechos") {
 		t.Fatalf("tres pasos:\n%s", v)
 	}
 
@@ -489,9 +532,7 @@ func TestPrimerosPasos(t *testing.T) {
 	}
 
 	// Con todo hecho, la guía se pliega en «Todo listo».
-	p.Update(msgInstancia{origen: p.origen(), r: cliente.ResumenInstancia{Trabajos: map[string]int{"completado": 3}}})
-	p.Update(msgAgentes{origen: p.origen(), lista: []adaptador{{Agente: "claude"}}})
-	if v := p.Vista(); !strings.Contains(v, "Todo listo") || strings.Contains(v, "○") {
+	if v := pasosDe(t, func() (bool, bool) { return true, true }, true).Vista(); !strings.Contains(v, "Todo listo") || strings.Contains(v, "○") {
 		t.Fatalf("todo listo:\n%s", v)
 	}
 }
@@ -499,8 +540,8 @@ func TestPrimerosPasos(t *testing.T) {
 // TestContadores: los contadores salen de los trabajos del espacio, con los mismos nombres de la Web UI.
 func TestContadores(t *testing.T) {
 	p, _, cli, id := abierta(t)
-	p.Update(msgInstancia{origen: p.origen(), r: cliente.ResumenInstancia{Base: cli.Base,
-		Trabajos: map[string]int{"completado": 5, "fallido": 2, "interrumpido": 1, "ejecutando": 1, "en_cola": 2, "cancelado": 4}}})
+	p.Update(msgInstancia{origen: p.origen(), r: contrato.ResumenInstancia{Base: cli.Base,
+		EstadoInstancia: contrato.EstadoInstancia{Trabajos: map[string]int{"completado": 5, "fallido": 2, "interrumpido": 1, "ejecutando": 1, "en_cola": 2, "cancelado": 4}}}})
 	v := p.Vista()
 	for _, quiere := range []string{"Completadas", "respondidas correctamente", "5", "En proceso", "3", "Con error", "3", "los últimos 7 días"} {
 		if !strings.Contains(v, quiere) {
@@ -585,18 +626,18 @@ func TestServicioCaido(t *testing.T) {
 // descarta.
 func TestRespuestasViejas(t *testing.T) {
 	p, _, cli, id := abierta(t)
-	p.Update(msgInstancia{origen: p.origen(), r: cliente.ResumenInstancia{Base: cli.Base, Trabajos: map[string]int{"completado": 1}}})
+	p.Update(msgInstancia{origen: p.origen(), r: contrato.ResumenInstancia{Base: cli.Base, EstadoInstancia: contrato.EstadoInstancia{Trabajos: map[string]int{"completado": 1}}}})
 	vieja := p.origen()
 	vieja.Instancia = "otro-" + id
-	p.Update(msgInstancia{origen: vieja, r: cliente.ResumenInstancia{Trabajos: map[string]int{"completado": 99}}})
+	p.Update(msgInstancia{origen: vieja, r: contrato.ResumenInstancia{EstadoInstancia: contrato.EstadoInstancia{Trabajos: map[string]int{"completado": 99}}}})
 	ctx, cancelar := context.WithCancel(context.Background())
 	cancelar()
 	cancelada := p.origen()
 	cancelada.Ctx = ctx
-	p.Update(msgInstancia{origen: cancelada, r: cliente.ResumenInstancia{Trabajos: map[string]int{"completado": 98}}})
+	p.Update(msgInstancia{origen: cancelada, r: contrato.ResumenInstancia{EstadoInstancia: contrato.EstadoInstancia{Trabajos: map[string]int{"completado": 98}}}})
 	anterior := p.origen()
 	anterior.Gen--
-	p.Update(msgInstancia{origen: anterior, r: cliente.ResumenInstancia{Trabajos: map[string]int{"completado": 97}}})
+	p.Update(msgInstancia{origen: anterior, r: contrato.ResumenInstancia{EstadoInstancia: contrato.EstadoInstancia{Trabajos: map[string]int{"completado": 97}}}})
 	p.Update(msgRed{origen: vieja, tipo: "trabajo", ev: ev()})
 	if p.inst.Trabajos["completado"] != 1 || len(p.red) != 0 {
 		t.Fatalf("se descartan: %v %v", p.inst.Trabajos, p.red)
@@ -612,10 +653,11 @@ func TestRespuestasViejas(t *testing.T) {
 // ancho, también con tildes; desplazar llega hasta el final.
 func TestCabeEn60x20(t *testing.T) {
 	p, r, cli, _ := abierta(t)
-	p.Update(msgInstancia{origen: p.origen(), r: cliente.ResumenInstancia{Base: cli.Base, AppConClave24h: 50, Trabajos: map[string]int{"completado": 12345}}})
+	p.Update(msgInstancia{origen: p.origen(), r: contrato.ResumenInstancia{Base: cli.Base, AppConClave24h: 50, SugerirApiPropia: true, EstadoInstancia: contrato.EstadoInstancia{Trabajos: map[string]int{"completado": 12345}}}})
 	p.Update(msgEspacios{origen: p.origen(), lista: []contrato.Espacio{{Nombre: "Notas con un nombre muy largo y tildes áéíóú", UltimoError: "x"}}})
 	p.Update(msgConversor{origen: p.origen(), e: contrato.EstadoConversor{Estado: "error", Mensaje: "sin red"}})
-	p.Update(msgAgentes{origen: p.origen(), lista: []adaptador{{Agente: "claude"}, {Agente: "codex", Desconectado: true}}})
+	p.Update(msgPasos{origen: p.origen(), r: contrato.PrimerosPasos{Adaptadores: []contrato.Adaptador{{Agente: "claude", Estado: contrato.AgenteListo}, {Agente: "codex", Estado: contrato.AgenteDesconectado}},
+		Pasos: []contrato.Paso{{Pagina: "agentes", Hecho: true, Listos: 1, Total: 2}, {Pagina: "ejecutar"}, {Pagina: "conectar"}, {Pagina: "configuracion"}}}})
 	var recientes []nucleo.Trabajo
 	for i := 0; i < 5; i++ {
 		recientes = append(recientes, trabajoDe(fmt.Sprint("r", i), "una pregunta bastante larga con tildes áéíóú que no cabe en una sola línea de sesenta columnas", "claude", "claude/modelo-con-nombre-largo", "completado", r.t))
@@ -623,7 +665,7 @@ func TestCabeEn60x20(t *testing.T) {
 	p.Update(msgRecientes{origen: p.origen(), lista: recientes})
 	for i := 0; i < 14; i++ {
 		r.t = r.t.Add(time.Second)
-		p.evento(ev(con(fmt.Sprintf("t%02d", i), "validando_salida", "validacion"), func(e *evento) {
+		p.evento(ev(con(fmt.Sprintf("t%02d", i), "validando_salida", "validacion"), func(e *contrato.EventoTrabajo) {
 			e.API = "aplicación-ñandú-" + fmt.Sprint(i)
 			e.Agente = "claude"
 			e.Creado = r.t
@@ -776,9 +818,9 @@ func TestPasosConSuAtajo(t *testing.T) {
 func TestSoloAscii(t *testing.T) {
 	p, r, cli, _ := abierta(t)
 	p.estilos.Iconos, p.estilos.ASCII = pagina.IconosASCII, true
-	p.Update(msgInstancia{origen: p.origen(), r: cliente.ResumenInstancia{Base: cli.Base, AppConClave24h: 30, Trabajos: map[string]int{"completado": 1}}})
+	p.Update(msgInstancia{origen: p.origen(), r: contrato.ResumenInstancia{Base: cli.Base, AppConClave24h: 30, SugerirApiPropia: true, EstadoInstancia: contrato.EstadoInstancia{Trabajos: map[string]int{"completado": 1}}}})
 	for i, estado := range []string{"ejecutando", "completado", "fallido", "cancelado"} {
-		p.evento(ev(con(fmt.Sprint(i), estado, etapaDe(estado)), func(e *evento) { e.Creado = r.t }))
+		p.evento(ev(con(fmt.Sprint(i), estado, nucleo.Estado(estado).Etapa()), func(e *contrato.EventoTrabajo) { e.Creado = r.t }))
 	}
 	for _, desp := range []int{0, 99} {
 		p.desp = desp

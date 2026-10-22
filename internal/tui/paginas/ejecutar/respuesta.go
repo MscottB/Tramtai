@@ -210,11 +210,6 @@ func (p *Pagina) cancelarTrabajo() tea.Cmd {
 	}
 }
 
-// puedeCorregir: «Corregir» solo existe si la respuesta no cumplía el esquema y se conservó.
-func puedeCorregir(t nucleo.Trabajo) bool {
-	return t.CodigoError == nucleo.CodigoSalidaNoCumpleEsquema && t.Salida != ""
-}
-
 // corregir pide al mismo agente que corrija la respuesta (o): es otra petición, que se sigue en vivo.
 func (p *Pagina) corregir() tea.Cmd {
 	switch {
@@ -222,7 +217,7 @@ func (p *Pagina) corregir() tea.Cmd {
 		return nil
 	case p.c.Cli == nil:
 		return sinServicio
-	case !puedeCorregir(*p.final):
+	case !p.final.Corregible:
 		return comp.Aviso(p.tx("error.correccion_no_disponible"), comp.Advertencia)
 	}
 	p.ocupado = true
@@ -286,7 +281,7 @@ func (p *Pagina) textoRespuesta() string {
 			titulo += ": " + f.MensajeError
 		}
 		lineas = append(lineas, e.Error.Render(e.Iconos.Fallo+" "+titulo), "")
-		if puedeCorregir(*f) {
+		if f.Corregible {
 			lineas = append(lineas, e.Acento.Render("o "+p.tx("ejecutar.corregir"))+" "+e.Tenue.Render(p.tx("ejecutar.corregirTexto")), "",
 				e.Tenue.Render(p.tx("ejecutar.respuestaRecibida")))
 		}

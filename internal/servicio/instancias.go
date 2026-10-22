@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"tramtai/internal/actualizacion"
 	"tramtai/internal/api"
+	"tramtai/internal/contrato"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -194,7 +194,7 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuraci
 			return nombres
 		}}
 	inst := &Instancia{ID: id, Ambito: ambito, Raiz: raiz, Config: c, Planificador: p, Cargas: cargas,
-		ArchivoToken: archivo, token: token, almacen: alm, rutas: srv.Rutas()}
+		ArchivoToken: archivo, token: token, almacen: alm, api: srv, rutas: srv.Rutas()}
 	inst.iniciarPurga(s.opc.Registros)
 	return inst, nil
 }
@@ -361,9 +361,9 @@ func (s *Servicio) Restaurar() []error {
 
 // Estado devuelve el estado actual. Las bases se consultan sin s.mu: un Lock pendiente bloquearía todas las peticiones.
 func (s *Servicio) Estado(ctx context.Context) Estado {
-	var nueva *actualizacion.Version
+	var nueva *contrato.VersionNueva
 	if v, ok := s.versionNueva(context.Background(), false); ok {
-		nueva = &v
+		nueva = &contrato.VersionNueva{Version: v.Etiqueta, URL: v.Pagina, Notas: v.Notas}
 	}
 	s.mu.RLock()
 	e := Estado{Identificador: s.ID, Version: version.Texto(), PID: os.Getpid(), IniciadoEn: s.IniciadoEn, Base: s.Base(),

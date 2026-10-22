@@ -177,7 +177,7 @@
         "responses": {
           "200": {
             "description": "Capacidades",
-            "content": { "application/json": { "schema": { "type": "object", "properties": { "adaptadores": { "type": "array", "items": { "type": "object", "properties": { "agente": { "type": "string" }, "desconectado": { "type": "boolean", "description": "Desconectado en Tramtai: sus peticiones responden 409 agente_desconectado" }, "cuenta": { "type": "string", "description": "Con qué cuenta inició sesión su CLI, si lo dice" } } } }, "limites": { "$ref": "#/components/schemas/Limites" } } } } }
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "adaptadores": { "type": "array", "items": { "type": "object", "properties": { "agente": { "type": "string" }, "desconectado": { "type": "boolean", "description": "Desconectado en Tramtai: sus peticiones responden 409 agente_desconectado" }, "cuenta": { "type": "string", "description": "Con qué cuenta inició sesión su CLI, si lo dice" }, "estado": { "type": "string", "enum": ["listo", "desconectado", "no_instalado", "falta_clave", "sin_sesion", "usa_clave", "sesion_no_responde", "revisar"], "description": "Lo que concluye el servicio al comprobarlo; sin su CLI es no_instalado aunque esté desconectado" } } } }, "entradas": { "type": "array", "items": { "type": "string" }, "description": "Extensiones admitidas: las de texto y las del conversor" }, "limites": { "$ref": "#/components/schemas/Limites" } } } } }
           },
           "default": { "$ref": "#/components/responses/Error" }
         }
@@ -417,7 +417,9 @@
           "entradas_eliminadas": { "type": "boolean" },
           "creado_en": { "type": "string", "format": "date-time" },
           "actualizado_en": { "type": "string", "format": "date-time" },
-          "terminado_en": { "type": "string", "format": "date-time" }
+          "terminado_en": { "type": "string", "format": "date-time" },
+          "etapa": { "type": "string", "enum": ["cola", "preparacion", "ejecucion", "validacion", "llegada"], "description": "La parada de la ruta en que va" },
+          "corregible": { "type": "boolean", "description": "Si POST /trabajos/{id}/reintentar con corregir vale: no cumplía el esquema, conservó la respuesta y sus entradas" }
         }
       },
       "Carga": {

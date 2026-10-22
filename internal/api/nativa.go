@@ -18,6 +18,7 @@ import (
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
+	"tramtai/internal/contrato"
 	"tramtai/internal/documentos"
 	"tramtai/internal/herramientas"
 	"tramtai/internal/idioma"
@@ -442,14 +443,31 @@ func noNulo(v []string) []string {
 }
 
 func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
+	texto, conversor := documentos.Formatos()
+	respuesta := contrato.Capacidades{
+		Version:              version.Version,
+		FormatoSerializacion: adaptadores.FormatoSerializacion,
+		Entradas:             append(texto, conversor...),
+		Adaptadores:          s.Adaptadores(r.Context()),
+		Limites:              s.limites(),
+	}
+	if s.Conversor != nil {
+		e := s.Conversor.Estado()
+		respuesta.Conversor = &e
+	}
+	EscribirJSON(w, http.StatusOK, respuesta)
+}
+
+// Adaptadores comprueba todos los agentes (cada uno ejecuta su CLI y puede tardar) y les pone su estado; salen en
+// orden alfabético.
+func (s *Servidor) Adaptadores(ctx context.Context) []contrato.Adaptador {
 	nombres := make([]string, 0, len(s.Registro))
 	for nombre := range s.Registro {
 		nombres = append(nombres, nombre)
 	}
 	sort.Strings(nombres)
-	// Cada agente se detecta a la vez que los demás (cada Detectar ejecuta su CLI y puede tardar); cada uno escribe en
-	// su posición, así que la lista sale en orden alfabético.
-	lista := make([]map[string]any, len(nombres))
+	// Cada agente se detecta a la vez que los demás; cada uno escribe en su posición.
+	lista := make([]contrato.Adaptador, len(nombres))
 	var esperar sync.WaitGroup
 	for i, nombre := range nombres {
 		// Lo que garantiza cada agente sale de su ficha; uno sin ficha (simulado) no garantiza nada.
@@ -457,69 +475,84 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 		if !conocida {
 			f.Streaming = "final"
 		}
-		entrada := map[string]any{"agente": nombre, "desconectado": s.Conexiones.Desconectado(nombre), "capacidades": map[string]any{
-			"texto": true, "streaming": f.Streaming, "salida_estructurada": f.SalidaEstructurada, "uso_tokens": "informado_por_cli",
-			"modelo_efectivo_informado": f.ModeloEfectivoInformado, "tool_calling_compatible": false, "imagenes": false, "sesiones_persistentes": false,
+		entrada := &lista[i]
+		*entrada = contrato.Adaptador{Agente: nombre, Desconectado: s.Conexiones.Desconectado(nombre), Capacidades: contrato.CapacidadesAgente{
+			Texto: true, Streaming: f.Streaming, SalidaEstructurada: f.SalidaEstructurada, UsoTokens: "informado_por_cli",
+			ModeloEfectivoInformado: f.ModeloEfectivoInformado,
 		}}
-		lista[i] = entrada
 		if d, ok := s.Registro[nombre].(adaptadores.Detectable); ok {
 			esperar.Go(func() {
 				// Fuera de la goroutine de la petición, net/http no recupera un pánico: tiraría el servicio entero.
 				defer func() {
 					if v := recover(); v != nil {
-						entrada["problema"], entrada["problema_codigo"] = fmt.Sprint(v), adaptadores.ProblemaAviso
+						entrada.Problema, entrada.ProblemaCodigo = fmt.Sprint(v), adaptadores.ProblemaAviso
 					}
 				}()
-				ctx, cancelar := context.WithTimeout(r.Context(), 10*time.Second)
+				ctx, cancelar := context.WithTimeout(ctx, 10*time.Second)
 				e := d.Detectar(ctx)
 				cancelar()
-				entrada["version_detectada"], entrada["autenticacion"], entrada["terminos"] = e.Version, e.Autenticacion, e.Terminos
-				if e.Cuenta != "" {
-					entrada["cuenta"] = e.Cuenta
-				}
+				entrada.Version, entrada.Autenticacion, entrada.Terminos, entrada.Cuenta = e.Version, e.Autenticacion, e.Terminos, e.Cuenta
 				if e.Problema != "" {
-					entrada["problema"], entrada["problema_codigo"] = e.Problema, e.ProblemaCodigo
+					entrada.Problema, entrada.ProblemaCodigo = e.Problema, e.ProblemaCodigo
 				}
 			})
 		}
 	}
 	esperar.Wait()
-	// Detección pasiva: si la última petición de un agente falló por autenticación y la detección no vio nada más
-	// grave, se avisa (también de los agentes que no saben comprobar su sesión).
-	for i, nombre := range nombres {
-		if codigo, _ := lista[i]["problema_codigo"].(string); s.Salud.SinRespuesta(nombre) && (lista[i]["problema"] == nil || codigo == adaptadores.ProblemaAviso) {
-			lista[i]["problema"] = idioma.T("la sesión del CLI no responde: la última petición falló por autenticación")
-			lista[i]["problema_codigo"] = adaptadores.ProblemaSesion
+	for i := range lista {
+		a := &lista[i]
+		// Detección pasiva: si la última petición de un agente falló por autenticación y la detección no vio nada más
+		// grave, se avisa (también de los agentes que no saben comprobar su sesión).
+		if s.Salud.SinRespuesta(a.Agente) && (a.Problema == "" || a.ProblemaCodigo == adaptadores.ProblemaAviso) {
+			a.Problema = idioma.T("la sesión del CLI no responde: la última petición falló por autenticación")
+			a.ProblemaCodigo = adaptadores.ProblemaSesion
 		}
+		a.Estado = estadoAgente(*a)
 	}
-	respuesta := map[string]any{
-		"version":               version.Version,
-		"formato_serializacion": adaptadores.FormatoSerializacion,
-		"entradas":              []string{"texto", "markdown", "json", "xml", "csv", "html", "pdf", "docx", "pptx", "xlsx"},
-		"adaptadores":           lista,
-		"limites":               s.limites(),
+	return lista
+}
+
+// estadoAgente clasifica un agente por su conexión y el código de su problema. Es la única regla: la Web UI y la
+// terminal pintan lo que sale de aquí. Sin su CLI es «no instalado» aunque esté desconectado, porque lo primero es
+// instalarlo (docs/equipo/decisiones/001-estado-del-agente.md).
+func estadoAgente(a contrato.Adaptador) contrato.EstadoAgente {
+	switch {
+	case a.ProblemaCodigo == adaptadores.ProblemaNoInstalado:
+		return contrato.AgenteNoInstalado
+	case a.Desconectado:
+		return contrato.AgenteDesconectado
+	case a.Problema == "" || a.ProblemaCodigo == adaptadores.ProblemaAviso:
+		return contrato.AgenteListo // un aviso, como el AGENTS.md de Codex, no impide usarlo
 	}
-	if s.Conversor != nil {
-		respuesta["conversor"] = s.Conversor.Estado()
+	switch a.ProblemaCodigo {
+	case adaptadores.ProblemaFaltaClave:
+		if a.Autenticacion == adaptadores.AutenticacionSuscripcion {
+			return contrato.AgenteSinSesion
+		}
+		return contrato.AgenteFaltaClave
+	case adaptadores.ProblemaUsaClave:
+		return contrato.AgenteUsaClave
+	case adaptadores.ProblemaSesion:
+		return contrato.AgenteSesionNoResponde
 	}
-	EscribirJSON(w, http.StatusOK, respuesta)
+	return contrato.AgenteRevisar
 }
 
 // limites son los topes de una petición y de sus cargas, y los formatos admitidos, para que una app (y Probar) los
 // conozca antes de enviar.
-func (s *Servidor) limites() map[string]any {
+func (s *Servidor) limites() contrato.Limites {
 	texto, conversor := documentos.Formatos()
-	return map[string]any{
-		"extensiones_texto":     texto,
-		"extensiones_conversor": conversor,
-		"cargas_por_peticion":   nucleo.MaximoCargas,
-		"carga_mb":              s.Config.Limite("conversion.maximo_carga_mb"),
-		"texto_convertido_mb":   s.Config.Limite("conversion.maximo_salida_mb"),
-		"cuota_cargas_mb":       s.Config.Limite("conversion.cuota_cargas_mb"),
-		"cuerpo_mb":             maximoCuerpo >> 20,
-		"esquema_kb":            nucleo.MaximoEsquemaPeticion >> 10,
-		"mensajes":              nucleo.MaximoMensajes,
-		"reserva_salida_tokens": s.Config.Limite("limites.reserva_salida_tokens"),
+	return contrato.Limites{
+		ExtensionesTexto:     texto,
+		ExtensionesConversor: conversor,
+		CargasPorPeticion:    nucleo.MaximoCargas,
+		CargaMB:              s.Config.Limite("conversion.maximo_carga_mb"),
+		TextoConvertidoMB:    s.Config.Limite("conversion.maximo_salida_mb"),
+		CuotaCargasMB:        s.Config.Limite("conversion.cuota_cargas_mb"),
+		CuerpoMB:             maximoCuerpo >> 20,
+		EsquemaKB:            nucleo.MaximoEsquemaPeticion >> 10,
+		Mensajes:             nucleo.MaximoMensajes,
+		ReservaSalidaTokens:  s.Config.Limite("limites.reserva_salida_tokens"),
 	}
 }
 

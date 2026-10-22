@@ -10,19 +10,11 @@ import (
 	"time"
 
 	"tramtai/internal/api"
+	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
 )
-
-// estadoConBase es el estado de la instancia con la URL del servicio, para el panel de la Web UI.
-type estadoConBase struct {
-	EstadoInstancia
-	Base string `json:"base"`
-	// AppConClave24h son las peticiones de apps que llegaron con la clave del espacio en las últimas 24 h: con muchas,
-	// la Web UI sugiere darles su propia API.
-	AppConClave24h int `json:"app_con_clave_24h"`
-}
 
 // rutaInstancia atiende lo que la Web UI necesita además de la API de la instancia: su estado y, con una sesión
 // de la Web UI o el token de servicio (no con el token que usan las aplicaciones), su configuración efectiva y sus
@@ -31,7 +23,8 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 	ruta := r.URL.Path
 	if ruta == "/api/v1/instancia" && r.Method == http.MethodGet {
 		n, _ := inst.Planificador.ContarOrigenDesde(r.Context(), nucleo.DesdeApp, true, time.Now().Add(-24*time.Hour))
-		api.EscribirJSON(w, http.StatusOK, estadoConBase{inst.estado(r.Context()), s.Base(), n})
+		api.EscribirJSON(w, http.StatusOK, contrato.ResumenInstancia{EstadoInstancia: inst.estado(r.Context()), Base: s.Base(),
+			AppConClave24h: n, SugerirApiPropia: sugerirApiPropia(n)})
 		return true
 	}
 	if !strings.HasPrefix(ruta, "/api/v1/instancia/") && ruta != "/api/v1/puntos" && !strings.HasPrefix(ruta, "/api/v1/puntos/") {
@@ -42,6 +35,8 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 		return true
 	}
 	switch {
+	case ruta == "/api/v1/instancia/pasos" && r.Method == http.MethodGet:
+		api.EscribirJSON(w, http.StatusOK, s.primerosPasos(r.Context(), inst, mismoUsuarioLocal(r)))
 	case ruta == "/api/v1/instancia/token" && r.Method == http.MethodGet:
 		// Para mostrar en «Conectar» la clave que usan las aplicaciones; solo con sesión o token de servicio.
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"token": s.tokenDe(inst), "archivo": inst.ArchivoToken})

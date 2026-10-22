@@ -98,19 +98,6 @@ func crearHola(t *testing.T, ts *httptest.Server, cuerpo string) string {
 	return decodificar(t, c)["id"].(string)
 }
 
-func TestEtapaDe(t *testing.T) {
-	casos := map[nucleo.Estado]string{
-		nucleo.EnCola: "cola", nucleo.PreparandoEntrada: "preparacion", nucleo.EsperandoAgente: "preparacion",
-		nucleo.Ejecutando: "ejecucion", nucleo.CancelacionSolicitada: "ejecucion", nucleo.ValidandoSalida: "validacion",
-		nucleo.Completado: "llegada", nucleo.Fallido: "llegada", nucleo.Cancelado: "llegada", nucleo.Interrumpido: "llegada",
-	}
-	for estado, etapa := range casos {
-		if got := EtapaDe(estado); got != etapa {
-			t.Errorf("%s → %s, quería %s", estado, got, etapa)
-		}
-	}
-}
-
 func TestEventosFotoInicial(t *testing.T) {
 	ts := servidor(t, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}, "lento": adaptadores.Simulado{Demora: time.Minute}}, nil)
 	hecho := crearHola(t, ts, solicitudHola)

@@ -2,12 +2,14 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/contrato"
 )
 
 // lento es un agente simulado que tarda en detectarse, como un CLI que responde a --version.
@@ -64,5 +66,60 @@ func TestCapacidadesSesionNoResponde(t *testing.T) {
 	s.Salud.Exito("simulado")
 	if _, c := pedir(t, ts, "GET", "/api/v1/capacidades", ""); strings.Contains(c, "sesion_no_responde") {
 		t.Fatalf("tras una petición que funciona ya no: %s", c)
+	}
+}
+
+// sinCLI es un agente cuyo CLI ya no está.
+type sinCLI struct{ adaptadores.Simulado }
+
+func (sinCLI) Detectar(context.Context) adaptadores.Estado {
+	return adaptadores.Estado{Problema: "no está", ProblemaCodigo: adaptadores.ProblemaNoInstalado}
+}
+
+// La regla del estado de un agente vive en el servicio (docs/equipo/decisiones/001-estado-del-agente.md).
+func TestEstadoAgente(t *testing.T) {
+	falta := contrato.Adaptador{Problema: "x", ProblemaCodigo: adaptadores.ProblemaFaltaClave}
+	sinSesion := falta
+	sinSesion.Autenticacion = adaptadores.AutenticacionSuscripcion
+	casos := []struct {
+		nombre string
+		a      contrato.Adaptador
+		quiere contrato.EstadoAgente
+	}{
+		{"sin problema", contrato.Adaptador{}, contrato.AgenteListo},
+		{"un aviso no impide usarlo", contrato.Adaptador{Problema: "x", ProblemaCodigo: adaptadores.ProblemaAviso}, contrato.AgenteListo},
+		{"desconectado", contrato.Adaptador{Desconectado: true}, contrato.AgenteDesconectado},
+		{"desconectado y sin CLI: no instalado", contrato.Adaptador{Desconectado: true, Problema: "x", ProblemaCodigo: adaptadores.ProblemaNoInstalado}, contrato.AgenteNoInstalado},
+		{"falta la clave", falta, contrato.AgenteFaltaClave},
+		{"suscripción sin sesión", sinSesion, contrato.AgenteSinSesion},
+		{"usa clave", contrato.Adaptador{Problema: "x", ProblemaCodigo: adaptadores.ProblemaUsaClave}, contrato.AgenteUsaClave},
+		{"la sesión no responde", contrato.Adaptador{Problema: "x", ProblemaCodigo: adaptadores.ProblemaSesion}, contrato.AgenteSesionNoResponde},
+		{"otro problema", contrato.Adaptador{Problema: "x"}, contrato.AgenteRevisar},
+	}
+	for _, c := range casos {
+		if got := estadoAgente(c.a); got != c.quiere {
+			t.Errorf("%s: %s, quería %s", c.nombre, got, c.quiere)
+		}
+	}
+}
+
+// /capacidades manda el estado ya calculado: un agente desconectado cuyo CLI ya no está sale «no instalado».
+func TestCapacidadesMandaElEstado(t *testing.T) {
+	s := nuevoServidor(t, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}, "viejo": sinCLI{}}, nil, nil)
+	s.Conexiones = adaptadores.NuevasConexiones(nil, nil)
+	s.Conexiones.Fijar("viejo", true)
+	ts := httptest.NewServer(s.Handler())
+	t.Cleanup(ts.Close)
+	_, cuerpo := pedir(t, ts, "GET", "/api/v1/capacidades", "")
+	var c contrato.Capacidades
+	if err := json.Unmarshal([]byte(cuerpo), &c); err != nil {
+		t.Fatal(err)
+	}
+	estados := map[string]contrato.EstadoAgente{}
+	for _, a := range c.Adaptadores {
+		estados[a.Agente] = a.Estado
+	}
+	if estados["simulado"] != contrato.AgenteListo || estados["viejo"] != contrato.AgenteNoInstalado {
+		t.Fatalf("estados %v en %s", estados, cuerpo)
 	}
 }

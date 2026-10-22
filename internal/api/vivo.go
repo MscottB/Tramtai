@@ -5,42 +5,11 @@ import (
 	"net/http"
 	"time"
 
+	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
 )
-
-// EventoTrabajo es lo que el flujo de la instancia cuenta de cada trabajo: dónde va, nunca qué lleva (ni el mensaje,
-// ni la respuesta, ni los archivos).
-type EventoTrabajo struct {
-	ID          string    `json:"id"`
-	Estado      string    `json:"estado"`
-	Etapa       string    `json:"etapa"`
-	Agente      string    `json:"agente"`
-	Modelo      string    `json:"modelo"`
-	API         string    `json:"api"`
-	Origen      string    `json:"origen"`
-	Intento     int       `json:"intento"`
-	CodigoError string    `json:"codigo_error"`
-	Creado      time.Time `json:"creado"`
-	Actualizado time.Time `json:"actualizado"`
-}
-
-// EtapaDe agrupa los estados en las 5 paradas de la ruta de un trabajo (las mismas que Ruta.vue).
-func EtapaDe(e nucleo.Estado) string {
-	switch e {
-	case nucleo.EnCola:
-		return "cola"
-	case nucleo.PreparandoEntrada, nucleo.EsperandoAgente:
-		return "preparacion"
-	case nucleo.Ejecutando, nucleo.CancelacionSolicitada:
-		return "ejecucion"
-	case nucleo.ValidandoSalida:
-		return "validacion"
-	default:
-		return "llegada"
-	}
-}
 
 const (
 	// recientesVivos son los terminados que entran en la foto inicial: una petición corta alcanza a verse llegando.
@@ -123,7 +92,7 @@ func (s *Servidor) eventosInstancia(w http.ResponseWriter, r *http.Request) {
 		if conocido && v.estado == previo.estado && v.agente == previo.agente {
 			return nil
 		}
-		return f.json("trabajo", EventoTrabajo{ID: t.ID, Estado: v.estado, Etapa: EtapaDe(t.Estado), Agente: v.agente,
+		return f.json("trabajo", contrato.EventoTrabajo{ID: t.ID, Estado: v.estado, Etapa: t.Estado.Etapa(), Agente: v.agente,
 			Modelo: modeloDe(t), API: t.PuntoAcceso, Origen: t.Origen, Intento: v.intento, CodigoError: string(t.CodigoError),
 			Creado: t.CreadoEn, Actualizado: t.ActualizadoEn})
 	}

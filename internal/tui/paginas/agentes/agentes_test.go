@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"tramtai/internal/adaptadores"
 	"tramtai/internal/cliente"
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/pagina"
@@ -61,6 +62,21 @@ func abierta(t *testing.T) (*Pagina, *cliente.Cliente, string) {
 
 var aviso = prueba.Aviso
 
+// conAgentes abre la página contra un servicio con estos agentes además del simulado, ya comprobados: los estados los
+// calcula el servicio y la página los pinta.
+func conAgentes(t *testing.T, agentes map[string]adaptadores.Adaptador) (*Pagina, *cliente.Cliente, string) {
+	t.Helper()
+	cli, id := prueba.ConAgentes(t, agentes)
+	p := Nueva("es").(*Pagina)
+	correr(p, p.Iniciar(contexto(cli, id)))
+	return p, cli, id
+}
+
+// detectado es un agente que se detecta así; sinCLI, uno cuyo CLI no está.
+func detectado(e adaptadores.Estado) adaptadores.Adaptador { return prueba.Detectado{Estado: e} }
+
+var sinCLI = detectado(adaptadores.Estado{Problema: "no está instalado", ProblemaCodigo: adaptadores.ProblemaNoInstalado})
+
 func TestAgentesCarga(t *testing.T) {
 	p, _, _ := abierta(t)
 	v := p.Vista()
@@ -77,14 +93,14 @@ func TestAgentesCarga(t *testing.T) {
 // TestColorDeLinea: con color, las dos letras de cada agente van en el color de su línea (DESIGN.md: un color de línea por
 // agente); sin color quedan las dos letras.
 func TestColorDeLinea(t *testing.T) {
-	p, _, _ := abierta(t)
-	e := pagina.Estilos{Iconos: pagina.IconosUnicode, Color: true, Oscuro: true}
-	*p.estilos = e
-	if fila := p.fila(adaptador{Agente: "claude"}); !strings.Contains(fila, "\x1b[") || !strings.Contains(fila, "CL") {
-		t.Fatalf("el código va en su color: %q", fila)
-	}
-	if fila := p.fila(adaptador{Agente: "claude"}); !strings.Contains(fila, "242;138;79") {
-		t.Fatalf("de noche, linea-claude-noche (#f28a4f): %q", fila)
+	cli, id := prueba.ConAgentes(t, map[string]adaptadores.Adaptador{"claude": detectado(adaptadores.Estado{})})
+	c := contexto(cli, id)
+	c.Estilos = &pagina.Estilos{Iconos: pagina.IconosUnicode, Color: true, Oscuro: true}
+	p := Nueva("es").(*Pagina)
+	correr(p, p.Iniciar(c))
+	p.Update(tecla("down")) // la fila elegida va resaltada entera; Claude queda sin elegir
+	if v := p.Vista(); !strings.Contains(v, "CL") || !strings.Contains(v, "242;138;79") {
+		t.Fatalf("el código va en su color; de noche, linea-claude-noche (#f28a4f): %q", v)
 	}
 }
 
@@ -129,7 +145,7 @@ func TestAgentesDesconectar(t *testing.T) {
 	}
 	// Cancelar no toca nada.
 	p.Update(comp.Cancelado{})
-	if r, _ := cli.Capacidades(context.Background(), id); r["adaptadores"].([]any)[0].(map[string]any)["desconectado"] == true {
+	if r, _ := cli.Capacidades(context.Background(), id); r.Adaptadores[0].Desconectado {
 		t.Fatal("cancelar no desconecta")
 	}
 	// Confirmar desconecta en el servicio y la página lo ve al volver a comprobar.
@@ -141,7 +157,7 @@ func TestAgentesDesconectar(t *testing.T) {
 		t.Fatalf("avisa: %+v", fuera)
 	}
 	r, _ := cli.Capacidades(context.Background(), id)
-	if r["adaptadores"].([]any)[0].(map[string]any)["desconectado"] != true {
+	if !r.Adaptadores[0].Desconectado {
 		t.Fatal("el servicio lo tiene desconectado")
 	}
 	if v := p.Vista(); !strings.Contains(v, "Desconectado") || strings.Contains(v, "Listo ") {
@@ -166,48 +182,48 @@ func TestAgentesAutenticacionSoloSiAdmite(t *testing.T) {
 	if a, ok := aviso(fuera); !ok || !strings.Contains(a.Texto, "no admite la suscripción") || len(fuera) != 1 {
 		t.Fatalf("avisa que no admite: %+v", fuera)
 	}
-	if p.pend != nil || p.ocupado {
-		t.Fatal("no queda nada pendiente")
+	if _, cmd := p.Update(comp.Confirmado{}); cmd != nil {
+		t.Fatal("no queda nada pendiente que confirmar")
 	}
 
-	// Claude sí la admite: con clave de API y listo, pasar a la suscripción pide aceptar el riesgo.
-	claude := adaptador{Agente: "claude", Autenticacion: "clave_api"}
-	p.agentes = []adaptador{claude}
-	p.lista.Poner(p.agentes)
+	// Claude sí la admite: con clave de API y listo (va primero), pasar a la suscripción pide aceptar el riesgo y, al
+	// confirmar, lo pide al servicio.
+	p, _, _ = conAgentes(t, map[string]adaptadores.Adaptador{"claude": detectado(adaptadores.Estado{Autenticacion: "clave_api"})})
 	_, cmd = p.Update(tecla("a"))
 	fuera = correr(p, cmd)
 	q, ok := fuera[0].(comp.Pregunta)
 	if len(fuera) != 1 || !ok || !strings.Contains(q.Texto, "Ese riesgo es tuyo") || !strings.Contains(q.Texto, "Usar tu suscripción con Claude") {
 		t.Fatalf("pregunta con el riesgo: %+v", fuera)
 	}
-	if p.pend == nil || p.pend.accion != accionSuscripcion {
-		t.Fatal("recuerda qué iba a hacer")
+	_, cmd = p.Update(comp.Confirmado{})
+	if _, ok := aviso(correr(p, cmd)); !ok {
+		t.Fatal("recuerda qué iba a hacer: al confirmar lo hace y avisa")
 	}
 
 	// Con suscripción, pasar a la clave es directo, sin pregunta.
-	p.pend = nil
-	p.agentes = []adaptador{{Agente: "claude", Autenticacion: "suscripcion"}}
-	p.lista.Poner(p.agentes)
+	p, _, _ = conAgentes(t, map[string]adaptadores.Adaptador{"claude": detectado(adaptadores.Estado{Autenticacion: "suscripcion"})})
 	_, cmd = p.Update(tecla("a"))
-	if !p.ocupado {
-		t.Fatal("pasar a la clave sale directo")
-	}
-	fuera = correr(p, cmd) // el servicio de pruebas no tiene Claude: la respuesta es su error, tal cual
-	if a, ok := aviso(fuera); !ok || a.Tipo != comp.Fallo || a.Texto == "" {
-		t.Fatalf("el error del servicio se ve: %+v", fuera)
-	}
-	if p.ocupado {
-		t.Fatal("la respuesta libera la página")
+	fuera = correr(p, cmd)
+	if a, ok := aviso(fuera); !ok || len(fuera) != 1 || a.Texto == "" {
+		t.Fatalf("pasar a la clave sale directo y avisa: %+v", fuera)
 	}
 
 	// Sin instalar o desconectado, no se cambia aunque lo admita.
-	for _, a := range []adaptador{{Agente: "claude", Problema: "x", ProblemaCodigo: "no_instalado"}, {Agente: "claude", Desconectado: true}} {
-		p.agentes = []adaptador{a}
-		p.lista.Poner(p.agentes)
+	sinInstalar, _, _ := conAgentes(t, map[string]adaptadores.Adaptador{"claude": sinCLI})
+	desconectado, cli, id := conAgentes(t, map[string]adaptadores.Adaptador{"claude": detectado(adaptadores.Estado{Autenticacion: "clave_api"})})
+	if err := cli.ConectarAgente(context.Background(), "claude", false); err != nil {
+		t.Fatal(err)
+	}
+	correr(desconectado, desconectado.Iniciar(contexto(cli, id)))
+	for nombre, p := range map[string]*Pagina{"sin instalar": sinInstalar, "desconectado": desconectado} {
+		p.Update(tecla("down")) // el simulado, listo, va primero
 		_, cmd = p.Update(tecla("a"))
 		fuera = correr(p, cmd)
-		if _, ok := aviso(fuera); !ok || len(fuera) != 1 || p.ocupado || p.pend != nil {
-			t.Fatalf("%+v no se cambia: %+v", a, fuera)
+		if _, ok := aviso(fuera); !ok || len(fuera) != 1 {
+			t.Fatalf("%s no se cambia: %+v", nombre, fuera)
+		}
+		if _, cmd := p.Update(comp.Confirmado{}); cmd != nil {
+			t.Fatalf("%s: no queda nada pendiente", nombre)
 		}
 	}
 }
@@ -220,8 +236,8 @@ func TestAgentesProbarConEste(t *testing.T) {
 		t.Fatalf("p lleva a Probar con el agente: %+v", fuera)
 	}
 	// Uno que no está listo no se puede probar.
-	p.agentes = []adaptador{{Agente: "codex", Problema: "x", ProblemaCodigo: "no_instalado"}}
-	p.lista.Poner(p.agentes)
+	p, _, _ = conAgentes(t, map[string]adaptadores.Adaptador{"codex": sinCLI})
+	p.Update(tecla("down"))
 	_, cmd = p.Update(tecla("p"))
 	if _, ok := correr(p, cmd)[0].(comp.NuevoAviso); !ok {
 		t.Fatal("avisa que aún no está listo")
@@ -249,13 +265,12 @@ func TestAgentesDetalles(t *testing.T) {
 }
 
 func TestAgentesNoInstaladoExplicaComoInstalarlo(t *testing.T) {
-	p, _, _ := abierta(t)
-	p.agentes = ordenar([]adaptador{{Agente: "codex", Problema: "no está instalado", ProblemaCodigo: "no_instalado"}, {Agente: "claude"}})
-	p.lista.Poner(p.agentes)
-	if p.agentes[0].Agente != "claude" || !strings.Contains(p.Vista(), "No instalado") {
-		t.Fatalf("los no instalados van al final:\n%s", p.Vista())
+	p, _, _ := conAgentes(t, map[string]adaptadores.Adaptador{"codex": sinCLI, "claude": detectado(adaptadores.Estado{})})
+	if v := p.Vista(); strings.Index(v, "Claude") > strings.Index(v, "Codex") || !strings.Contains(v, "No instalado") {
+		t.Fatalf("los no instalados van al final:\n%s", v)
 	}
-	p.lista.Update(tecla("j"))
+	p.Update(tecla("down"))
+	p.Update(tecla("down"))
 	p.Update(tecla("enter"))
 	v := p.Vista()
 	if !strings.Contains(v, "comandos_agentes.codex") || !strings.Contains(v, "Cómo instalarlo: http") {
@@ -266,7 +281,7 @@ func TestAgentesNoInstaladoExplicaComoInstalarlo(t *testing.T) {
 func TestEscVuelve(t *testing.T) {
 	p, _, _ := abierta(t)
 	p.Update(tecla("enter"))
-	if _, cmd := p.Update(tecla("esc")); cmd != nil || p.detalle != "" {
+	if _, cmd := p.Update(tecla("esc")); cmd != nil || !strings.Contains(p.Vista(), "[Todos (1)]") {
 		t.Fatal("Esc cierra el detalle")
 	}
 	_, cmd := p.Update(tecla("esc"))
@@ -305,61 +320,52 @@ func TestAgentesIgnoraRespuestasViejas(t *testing.T) {
 	p := Nueva("es").(*Pagina)
 	cmd := p.Iniciar(c)
 	cancelar() // la app reinició la página o cambió de espacio
-	if f := correr(p, cmd); len(f) != 0 || p.cargado {
+	cargando := func() bool { return strings.Contains(p.Vista(), "Cargando…") }
+	if f := correr(p, cmd); len(f) != 0 || !cargando() {
 		t.Fatalf("una respuesta con el Ctx cancelado se descarta: %+v", f)
 	}
 	// Otra instancia: tampoco vale.
 	p = Nueva("es").(*Pagina)
 	cmd = p.Iniciar(contexto(cli, id))
-	p.c.Instancia = "otro"
-	if correr(p, cmd); p.cargado {
+	p.Iniciar(contexto(cli, "otro")) // la app cambió de espacio; su comprobación no se corre
+	if correr(p, cmd); !cargando() {
 		t.Fatal("una respuesta de otro espacio se descarta")
 	}
 	// De dos comprobaciones seguidas solo vale la última.
 	p = Nueva("es").(*Pagina)
 	primera := p.Iniciar(contexto(cli, id))
-	p.cargando = false
-	segunda := p.comprobar()
-	correr(p, primera)
-	if p.cargado {
+	segunda := p.Iniciar(contexto(cli, id))
+	if correr(p, primera); !cargando() {
 		t.Fatal("la primera ya es vieja")
 	}
-	correr(p, segunda)
-	if !p.cargado {
+	if correr(p, segunda); cargando() {
 		t.Fatal("la última sí")
 	}
 }
 
-func TestAgentesEstados(t *testing.T) {
-	pe := Nueva("es").(*Pagina)
-	casos := []struct {
-		a        adaptador
-		quiere   estado
-		etiqueta string
-	}{
-		{adaptador{Agente: "x"}, estListo, "Listo"},
-		{adaptador{Agente: "x", Problema: "p", ProblemaCodigo: "aviso"}, estListo, "Listo"},
-		{adaptador{Agente: "x", Desconectado: true}, estDesconectado, "Desconectado"},
-		{adaptador{Agente: "x", Desconectado: true, Problema: "p", ProblemaCodigo: "no_instalado"}, estNoInstalado, "No instalado"},
-		{adaptador{Agente: "x", Problema: "p", ProblemaCodigo: "no_instalado"}, estNoInstalado, "No instalado"},
-		{adaptador{Agente: "x", Problema: "p", ProblemaCodigo: "falta_clave", Autenticacion: "clave_api"}, estFaltaClave, "Sin conectar"},
-		{adaptador{Agente: "x", Problema: "p", ProblemaCodigo: "falta_clave", Autenticacion: "suscripcion"}, estSinSesion, "Sin conectar"},
-		{adaptador{Agente: "x", Problema: "p", ProblemaCodigo: "usa_clave_api"}, estUsaClave, "Revisar"},
-		{adaptador{Agente: "x", Problema: "p", ProblemaCodigo: "sesion_no_responde"}, estSesionNoResponde, "Revisar"},
-		{adaptador{Agente: "x", Problema: "p"}, estRevisar, "Revisar"},
+// TestAgentesPintaElEstadoDelServicio: la página no clasifica a los agentes; pinta la etiqueta del estado que llega.
+func TestAgentesPintaElEstadoDelServicio(t *testing.T) {
+	casos := map[adaptadores.Estado]string{
+		{}: "Listo",
+		{Problema: "p", ProblemaCodigo: adaptadores.ProblemaAviso}:                                    "Listo",
+		{Problema: "p", ProblemaCodigo: adaptadores.ProblemaNoInstalado}:                              "No instalado",
+		{Problema: "p", ProblemaCodigo: adaptadores.ProblemaFaltaClave, Autenticacion: "clave_api"}:   "Sin conectar",
+		{Problema: "p", ProblemaCodigo: adaptadores.ProblemaFaltaClave, Autenticacion: "suscripcion"}: "Sin conectar",
+		{Problema: "p", ProblemaCodigo: adaptadores.ProblemaUsaClave}:                                 "Revisar",
+		{Problema: "p"}: "Revisar",
 	}
-	for _, c := range casos {
-		if got := estadoDe(c.a); got != c.quiere || pe.etiqueta(got) != c.etiqueta {
-			t.Errorf("%+v: estado %d (%s), esperaba %d (%s)", c.a, got, pe.etiqueta(got), c.quiere, c.etiqueta)
+	for e, etiqueta := range casos {
+		p, _, _ := conAgentes(t, map[string]adaptadores.Adaptador{"claude": detectado(e)})
+		if v := p.Vista(); !strings.Contains(v, "Claude") || !strings.Contains(v, etiqueta) {
+			t.Errorf("%+v: falta %q:\n%s", e, etiqueta, v)
 		}
 	}
 }
 
 // TestAgentesCabe comprueba que la vista, también la del detalle, cabe en la ventana mínima y en una estrecha.
 func TestAgentesCabe(t *testing.T) {
-	p, _, _ := abierta(t)
-	p.agentes = ordenar([]adaptador{{Agente: "claude", Autenticacion: "suscripcion", Version: "2.1.0"}, {Agente: "codex", Problema: "Codex no está instalado", ProblemaCodigo: "no_instalado"}, {Agente: "simulado"}})
-	p.lista.Poner(p.agentes)
+	p, _, _ := conAgentes(t, map[string]adaptadores.Adaptador{"claude": detectado(adaptadores.Estado{Autenticacion: "suscripcion", Version: "2.1.0"}),
+		"codex": detectado(adaptadores.Estado{Problema: "Codex no está instalado", ProblemaCodigo: adaptadores.ProblemaNoInstalado})})
 	for _, tam := range [][2]int{{60, 17}, {40, 10}} {
 		p.Update(tea.WindowSizeMsg{Width: tam[0], Height: tam[1]})
 		comprobar := func(donde string) {

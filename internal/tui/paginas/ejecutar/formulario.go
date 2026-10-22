@@ -453,7 +453,7 @@ func recetaDeSolicitud(s nucleo.SolicitudEjecucion) datosForm {
 
 // recetaDePunto es la receta guardada en una API (recetaDePunto de recetas.ts).
 func recetaDePunto(e contrato.EstadoPunto) datosForm {
-	d := datosForm{instrucciones: e.Instrucciones, forzar: e.Forzar, esfuerzo: e.Esfuerzo, respaldo: slices.Clone(e.Respaldo), reintentos: e.ReintentosSalida}
+	d := datosForm{instrucciones: e.Instrucciones, forzar: e.ForzarModelo, esfuerzo: e.Esfuerzo, respaldo: slices.Clone(e.Respaldo), reintentos: e.ReintentosSalida}
 	switch {
 	case e.PerfilModelo != "":
 		d.modelo = "perfil/" + e.PerfilModelo

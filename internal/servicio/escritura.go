@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"tramtai/internal/contrato"
 	"tramtai/internal/version"
 )
 
@@ -29,14 +30,14 @@ func (s *Servicio) actualizarDescriptor() error {
 	}
 	d := Descriptor{Identificador: s.ID, PID: os.Getpid(), FirmaInicio: strconv.Itoa(os.Getpid()) + "@" + s.IniciadoEn.UTC().Format(time.RFC3339Nano),
 		IniciadoEn: s.IniciadoEn, Host: s.opc.Host, Puerto: s.opc.Puerto, Base: s.Base(), Version: version.Version,
-		Instancias: []string{}, Puntos: []map[string]any{}}
+		Instancias: []string{}, Puntos: []contrato.PuntoDescriptor{}}
 	for id := range s.instancias {
 		d.Instancias = append(d.Instancias, id)
 	}
 	sort.Strings(d.Instancias)
 	for _, p := range s.estadoPuntos() {
 		if p.Activo {
-			d.Puntos = append(d.Puntos, map[string]any{"nombre": p.Nombre, "url": p.URL})
+			d.Puntos = append(d.Puntos, contrato.PuntoDescriptor{Nombre: p.Nombre, URL: p.URL})
 		}
 	}
 	s.mu.RUnlock()

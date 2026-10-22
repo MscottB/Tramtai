@@ -57,6 +57,8 @@ type Opciones struct {
 	PuertoAutomatico  bool
 	// Reiniciar lanza un servicio nuevo que espera a que este termine; nil = sin reinicio desde la Web UI.
 	Reiniciar func() error
+	// Autoarranque dice si el sistema puede arrancar Tramtai al iniciar sesión y si lo hace; nil = el del sistema.
+	Autoarranque func() (disponible, activo bool)
 	// RaizConversor es la carpeta donde se prepara el conversor de archivos (documentos.RaizConversor; vacía: sin
 	// conversor en el servicio, como en las pruebas que no lo usan).
 	RaizConversor string
@@ -80,6 +82,7 @@ type Instancia struct {
 	ArchivoToken string
 	token        string
 	almacen      *persistencia.Almacen
+	api          *api.Servidor // comprueba los agentes para los Primeros pasos
 	rutas        http.Handler
 	pararPurga   context.CancelFunc
 	purgaParada  chan struct{}

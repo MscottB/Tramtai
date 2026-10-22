@@ -455,7 +455,7 @@ func (s *Servicio) estadoPuntos() []EstadoPunto {
 	for _, p := range s.puntos {
 		lista = append(lista, EstadoPunto{Nombre: p.cfg.Nombre, Grupo: p.cfg.Grupo, Instrucciones: p.cfg.Instrucciones, Instancia: p.cfg.Instancia, URL: p.url, Contratos: p.cfg.Contratos,
 			Agente: p.cfg.Agente, Modelo: p.cfg.Modelo, PerfilModelo: p.cfg.PerfilModelo, Esfuerzo: p.cfg.Esfuerzo,
-			Permitidos: p.cfg.ModelosPermitidos, Forzar: p.cfg.ForzarModelo, Esquema: p.cfg.Esquema, Respaldo: p.cfg.Respaldo, ReintentosSalida: p.cfg.ReintentosSalida, Presupuesto: p.cfg.Presupuesto,
+			ModelosPermitidos: p.cfg.ModelosPermitidos, ForzarModelo: p.cfg.ForzarModelo, Esquema: p.cfg.Esquema, Respaldo: p.cfg.Respaldo, ReintentosSalida: p.cfg.ReintentosSalida, Presupuesto: p.cfg.Presupuesto,
 			Activo: p.err == "", Error: p.err, Origen: p.origen})
 	}
 	sort.Slice(lista, func(i, j int) bool { return lista[i].Nombre < lista[j].Nombre })

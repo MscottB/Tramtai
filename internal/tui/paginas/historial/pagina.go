@@ -730,11 +730,6 @@ func (p *Pagina) objetivo() (nucleo.Trabajo, bool) {
 	return p.lista.Seleccion()
 }
 
-// puedeCorregir: «Corregir» solo existe para una petición que no cumplía el esquema y conservó su respuesta.
-func puedeCorregir(t nucleo.Trabajo) bool {
-	return t.CodigoError == nucleo.CodigoSalidaNoCumpleEsquema && t.Salida != ""
-}
-
 // hayTerminados dice si hay algo que vaciar (el botón de la Web UI se desactiva si no).
 func (p *Pagina) hayTerminados() bool {
 	return slices.ContainsFunc(p.trabajos, func(t nucleo.Trabajo) bool { return t.Estado.Terminal() })
@@ -884,7 +879,7 @@ func (p *Pagina) actuar(tecla string, t nucleo.Trabajo) tea.Cmd {
 			return p.accion(accionReintentar, t)
 		}
 	case "o":
-		if puedeCorregir(t) {
+		if t.Corregible {
 			return p.accion(accionCorregir, t)
 		}
 		return comp.Aviso(p.tx("error."+string(nucleo.CodigoCorreccionNoDisponible)), comp.Advertencia)
@@ -958,7 +953,7 @@ func (p *Pagina) teclasDe(t nucleo.Trabajo) []pagina.Tecla {
 		return []pagina.Tecla{{Tecla: "c", Accion: p.tx("comun.cancelar")}}
 	}
 	teclas := []pagina.Tecla{{Tecla: "t", Accion: p.tx("historial.reintentar")}}
-	if puedeCorregir(t) {
+	if t.Corregible {
 		teclas = append(teclas, pagina.Tecla{Tecla: "o", Accion: p.tx("ejecutar.corregir")})
 	}
 	return append(teclas, pagina.Tecla{Tecla: "x", Accion: p.tx("comun.eliminar")})

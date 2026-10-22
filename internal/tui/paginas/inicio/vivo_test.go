@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"tramtai/internal/api"
+	"tramtai/internal/contrato"
 	"tramtai/internal/nucleo"
 )
 
@@ -16,16 +16,16 @@ var t0 = time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)
 
 func en(ms int) time.Time { return t0.Add(time.Duration(ms) * time.Millisecond) }
 
-func ev(cambios ...func(*evento)) evento {
-	e := evento{ID: "a", Estado: "en_cola", Etapa: "cola", Agente: "claude", Modelo: "claude/sonnet", Origen: "probar", Intento: 1}
+func ev(cambios ...func(*contrato.EventoTrabajo)) contrato.EventoTrabajo {
+	e := contrato.EventoTrabajo{ID: "a", Estado: "en_cola", Etapa: "cola", Agente: "claude", Modelo: "claude/sonnet", Origen: "probar", Intento: 1}
 	for _, c := range cambios {
 		c(&e)
 	}
 	return e
 }
 
-func con(id, estado, etapa string) func(*evento) {
-	return func(e *evento) { e.ID, e.Estado, e.Etapa = id, estado, etapa }
+func con(id, estado, etapa string) func(*contrato.EventoTrabajo) {
+	return func(e *contrato.EventoTrabajo) { e.ID, e.Estado, e.Etapa = id, estado, etapa }
 }
 
 func claves(t tranvias) []string {
@@ -59,7 +59,7 @@ func TestVivoAltaYCambioDeEtapa(t *testing.T) {
 func TestVivoElRespaldoCambiaDeAgente(t *testing.T) {
 	m := tranvias{}
 	aplicar(m, ev(con("a", "ejecutando", "ejecucion")), en(0), nil)
-	aplicar(m, ev(con("a", "esperando_agente", "preparacion"), func(e *evento) { e.Agente, e.Intento = "codex", 2 }), en(10), nil)
+	aplicar(m, ev(con("a", "esperando_agente", "preparacion"), func(e *contrato.EventoTrabajo) { e.Agente, e.Intento = "codex", 2 }), en(10), nil)
 	if m["a"].Agente != "codex" || m["a"].Intento != 2 || m["a"].Etapa != "preparacion" {
 		t.Fatalf("%+v", m["a"])
 	}
@@ -68,7 +68,7 @@ func TestVivoElRespaldoCambiaDeAgente(t *testing.T) {
 func TestVivoUnFalloConservaSuEstado(t *testing.T) {
 	m := tranvias{}
 	aplicar(m, ev(con("a", "ejecutando", "ejecucion")), en(0), nil)
-	aplicar(m, ev(con("a", "fallido", "llegada"), func(e *evento) { e.CodigoError = "error_agente" }), en(10), nil)
+	aplicar(m, ev(con("a", "fallido", "llegada"), func(e *contrato.EventoTrabajo) { e.CodigoError = "error_agente" }), en(10), nil)
 	if m["a"].Estado != "fallido" || m["a"].CodigoError != "error_agente" || claveEtapa(m["a"]) != "vivo.etapaFallida" {
 		t.Fatalf("%+v", m["a"])
 	}
@@ -131,19 +131,6 @@ func TestVivoComoMucho12LosMasRecientesYElResto(t *testing.T) {
 	}
 }
 
-func TestVivoEtapaDeAgrupaLosEstadosComoElServicio(t *testing.T) {
-	casos := map[string]string{"en_cola": "cola", "preparando_entrada": "preparacion", "esperando_agente": "preparacion", "ejecutando": "ejecucion",
-		"cancelacion_solicitada": "ejecucion", "validando_salida": "validacion", "completado": "llegada", "fallido": "llegada", "cancelado": "llegada", "interrumpido": "llegada"}
-	for estado, quiere := range casos {
-		if got := etapaDe(estado); got != quiere {
-			t.Errorf("%s: %s, quiere %s", estado, got, quiere)
-		}
-		if servicio := api.EtapaDe(nucleo.Estado(estado)); servicio != quiere {
-			t.Errorf("%s: el servicio dice %s", estado, servicio)
-		}
-	}
-}
-
 func TestVivoEsperasDeReconexion(t *testing.T) {
 	var got []time.Duration
 	for i := 0; i < 8; i++ {
@@ -161,7 +148,7 @@ func TestVivoEsperasDeReconexion(t *testing.T) {
 func TestVivoDesdeEsCuandoSeAceptoLaPeticion(t *testing.T) {
 	m := tranvias{}
 	creado := time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)
-	aplicar(m, ev(con("a", "ejecutando", "ejecucion"), func(e *evento) { e.Creado = creado }), creado.Add(2*time.Minute), nil)
+	aplicar(m, ev(con("a", "ejecutando", "ejecucion"), func(e *contrato.EventoTrabajo) { e.Creado = creado }), creado.Add(2*time.Minute), nil)
 	if !m["a"].Desde.Equal(creado) {
 		t.Fatalf("desde %v", m["a"].Desde)
 	}
@@ -182,7 +169,7 @@ func TestVivoReconciliarElQueTerminaLlegaElQueFaltaSeVa(t *testing.T) {
 	m, borrados := tranvias{}, map[string]bool{}
 	aplicar(m, ev(con("termina", "ejecutando", "ejecucion")), en(0), borrados)
 	aplicar(m, ev(con("falta", "ejecutando", "ejecucion")), en(0), borrados)
-	reconciliar(m, []evento{ev(con("termina", "completado", "llegada")), ev(con("viejo", "completado", "llegada")), ev(con("nuevo", "en_cola", "cola"))}, en(100), borrados)
+	reconciliar(m, []contrato.EventoTrabajo{ev(con("termina", "completado", "llegada")), ev(con("viejo", "completado", "llegada")), ev(con("nuevo", "en_cola", "cola"))}, en(100), borrados)
 	if got := claves(m); !slices.Equal(got, []string{"nuevo", "termina"}) || !m["termina"].Terminado.Equal(en(100)) {
 		t.Fatalf("%v %+v", got, m["termina"])
 	}
@@ -196,7 +183,7 @@ func TestVivoEventoDeConvierteUnTrabajoDeLaConsulta(t *testing.T) {
 	creado := time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)
 	trabajo := nucleo.Trabajo{ID: "x", Estado: "fallido", ModeloEfectivo: "codex/gpt", PuntoAcceso: "otra", Origen: "api", CodigoError: "error_agente", CreadoEn: creado}
 	trabajo.Solicitud.Agente = "codex"
-	quiere := evento{ID: "x", Estado: "fallido", Etapa: "llegada", Agente: "codex", Modelo: "codex/gpt", API: "otra", Origen: "api", Intento: 1, CodigoError: "error_agente", Creado: creado}
+	quiere := contrato.EventoTrabajo{ID: "x", Estado: "fallido", Etapa: "llegada", Agente: "codex", Modelo: "codex/gpt", API: "otra", Origen: "api", Intento: 1, CodigoError: "error_agente", Creado: creado}
 	if got := eventoDe(trabajo); got != quiere {
 		t.Fatalf("%+v", got)
 	}

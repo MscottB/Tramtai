@@ -12,7 +12,6 @@ import (
 	"regexp"
 	"time"
 
-	"tramtai/internal/actualizacion"
 	"tramtai/internal/nucleo"
 )
 
@@ -60,21 +59,35 @@ type Estado struct {
 	Puntos        []EstadoPunto     `json:"puntos_acceso"`
 	Errores       []string          `json:"errores_configuracion,omitempty"`
 	// Actualizacion es la versión publicada más nueva que la actual, si la hay (la bandeja la ofrece).
-	Actualizacion *actualizacion.Version `json:"actualizacion,omitempty"`
+	Actualizacion *VersionNueva `json:"actualizacion,omitempty"`
+}
+
+// VersionNueva es una versión publicada: su número, su página y sus notas. Copia lo que los clientes muestran de
+// actualizacion.Version, para que un cliente no enlace el actualizador (red y firmas).
+type VersionNueva struct {
+	Version string `json:"version"`
+	URL     string `json:"url"`
+	Notas   string `json:"notas,omitempty"`
 }
 
 // Descriptor identifica el servicio en marcha.
 type Descriptor struct {
-	Identificador string           `json:"identificador_servicio"`
-	PID           int              `json:"pid"`
-	FirmaInicio   string           `json:"firma_inicio_proceso"`
-	IniciadoEn    time.Time        `json:"iniciado_en"`
-	Host          string           `json:"host"`
-	Puerto        int              `json:"puerto"`
-	Base          string           `json:"base"`
-	Version       string           `json:"version"`
-	Instancias    []string         `json:"instancias_activas"`
-	Puntos        []map[string]any `json:"puntos_acceso"`
+	Identificador string            `json:"identificador_servicio"`
+	PID           int               `json:"pid"`
+	FirmaInicio   string            `json:"firma_inicio_proceso"`
+	IniciadoEn    time.Time         `json:"iniciado_en"`
+	Host          string            `json:"host"`
+	Puerto        int               `json:"puerto"`
+	Base          string            `json:"base"`
+	Version       string            `json:"version"`
+	Instancias    []string          `json:"instancias_activas"`
+	Puntos        []PuntoDescriptor `json:"puntos_acceso"`
+}
+
+// PuntoDescriptor es un punto de acceso en el descriptor: su nombre y su URL.
+type PuntoDescriptor struct {
+	Nombre string `json:"nombre"`
+	URL    string `json:"url"`
 }
 
 // RutaDescriptor es el archivo del descriptor en el directorio de datos.
@@ -162,16 +175,16 @@ type EstadoPunto struct {
 	Nombre string `json:"nombre"`
 	Grupo  string `json:"grupo,omitempty"`
 	// Instrucciones del punto, para verlas y editarlas en la Web UI.
-	Instrucciones string   `json:"instrucciones,omitempty"`
-	Instancia     string   `json:"instancia"`
-	URL           string   `json:"url,omitempty"`
-	Contratos     []string `json:"contratos"`
-	Agente        string   `json:"agente,omitempty"`
-	Modelo        string   `json:"modelo,omitempty"`
-	PerfilModelo  string   `json:"perfil_modelo,omitempty"`
-	Esfuerzo      string   `json:"esfuerzo,omitempty"`
-	Permitidos    []string `json:"modelos_permitidos,omitempty"`
-	Forzar        bool     `json:"forzar_modelo,omitempty"`
+	Instrucciones     string   `json:"instrucciones,omitempty"`
+	Instancia         string   `json:"instancia"`
+	URL               string   `json:"url,omitempty"`
+	Contratos         []string `json:"contratos"`
+	Agente            string   `json:"agente,omitempty"`
+	Modelo            string   `json:"modelo,omitempty"`
+	PerfilModelo      string   `json:"perfil_modelo,omitempty"`
+	Esfuerzo          string   `json:"esfuerzo,omitempty"`
+	ModelosPermitidos []string `json:"modelos_permitidos,omitempty"`
+	ForzarModelo      bool     `json:"forzar_modelo,omitempty"`
 	// Esquema y Respaldo son la receta del punto, para mostrarla y abrirla en Probar.
 	Esquema  map[string]any `json:"esquema,omitempty"`
 	Respaldo []string       `json:"respaldo,omitempty"`
