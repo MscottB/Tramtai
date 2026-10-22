@@ -727,14 +727,6 @@ input[type='number'] {
   max-height: 62vh;
   overflow: auto;
 }
-.vacio {
-  text-align: center;
-  padding: 44px 16px;
-  color: var(--texto-suave);
-}
-.vacio .q-icon {
-  opacity: 0.45;
-}
 .fila-clicable {
   cursor: pointer;
 }

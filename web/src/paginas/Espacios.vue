@@ -7,7 +7,10 @@
       </template>
     </CabeceraPagina>
 
-    <div v-if="lista" class="apilado" data-captura="espacios" data-recorrido="espacios.lista">
+    <q-card v-if="lista && !lista.length">
+      <EstadoVacio :titulo="t('espacios.vacio')" :accion="t('proyecto.abrir')" @accion="$emit('abrir-proyecto')" />
+    </q-card>
+    <div v-else-if="lista" class="apilado" data-captura="espacios" data-recorrido="espacios.lista">
       <q-card v-for="e in lista" :key="e.id" flat bordered>
         <q-card-section>
           <div style="min-width: 0">
@@ -34,7 +37,11 @@
         </q-card-actions>
       </q-card>
     </div>
-    <q-skeleton v-else type="rect" height="160px" />
+    <!-- La primera carga falló: qué pasó y Reintentar, en lugar de un esqueleto que no termina. -->
+    <q-card v-else-if="error">
+      <EstadoVacio role="alert" :titulo="t('comun.errorCarga')" :texto="error" :accion="t('comun.reintentar')" :cargando="cargando" @accion="cargar" />
+    </q-card>
+    <q-skeleton v-else type="rect" height="160px" role="status" :aria-label="t('comun.cargando')" />
   </div>
 </template>
 
@@ -44,7 +51,8 @@
 import { onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
-import { api, avisar, avisarError } from '../api/cliente'
+import EstadoVacio from '../componentes/EstadoVacio.vue'
+import { api, avisar, avisarError, mensajeError } from '../api/cliente'
 import type { EspacioUI } from '../api/tipos'
 import { accionesDe, nombreConfirmado, ordenar, type Accion } from '../espacios'
 import { sesion } from '../estado'
@@ -56,6 +64,8 @@ const emit = defineEmits<{ ir: [pagina: string]; 'abrir-proyecto': [] }>()
 const $q = useQuasar()
 const lista = ref<EspacioUI[]>()
 const cargando = ref(false)
+// error es el de la primera carga (sin lista que enseñar); los de después solo avisan.
+const error = ref('')
 const ocupado = ref('')
 
 const textoEstado: Record<EspacioUI['estado'], Clave> = { activo: 'espacios.estadoActivo', detenido: 'espacios.estadoDetenido', no_encontrado: 'espacios.estadoNoEncontrado' }
@@ -72,8 +82,10 @@ async function cargar() {
   cargando.value = true
   try {
     lista.value = ordenar(await api.espacios())
+    error.value = ''
   } catch (e) {
-    avisarError(e)
+    if (lista.value) avisarError(e)
+    else error.value = mensajeError(e)
   } finally {
     cargando.value = false
   }

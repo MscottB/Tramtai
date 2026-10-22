@@ -57,6 +57,7 @@ const es = {
   'menuDetalle.espacios': 'La global y tus proyectos',
   'espacios.subtitulo': 'Cada espacio guarda sus peticiones, sus APIs y sus ajustes. Activa, detén, confía u olvida los que no uses.',
   'espacios.actualizar': 'Actualizar',
+  'espacios.vacio': 'Todavía no hay espacios: abre la carpeta de un proyecto o activa el global.',
   'espacios.estadoActivo': 'Activo',
   'espacios.estadoDetenido': 'Detenido',
   'espacios.estadoNoEncontrado': 'No encontrado',

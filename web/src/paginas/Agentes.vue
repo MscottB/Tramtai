@@ -125,12 +125,12 @@
             </div>
           </q-expansion-item>
         </q-list>
-        <div v-if="!visibles.length" class="q-pa-md texto-suave">{{ t('agentes.sinResultados') }}</div>
+        <EstadoVacio v-if="!visibles.length" :titulo="t('agentes.sinResultados')" :accion="hayFiltro ? t('historial.quitarFiltros') : undefined" @accion="quitarFiltros" />
       </q-card>
 
       <!-- Los que no están instalados van aparte, plegados: con muchos agentes no tapan a los que se usan. -->
       <q-card v-if="filtro === 'instalar' && !otros.length">
-        <div class="q-pa-md texto-suave">{{ t('agentes.sinResultados') }}</div>
+        <EstadoVacio :titulo="t('agentes.sinResultados')" :accion="t('historial.quitarFiltros')" @accion="quitarFiltros" />
       </q-card>
       <q-card v-if="otros.length && filtro !== 'listos' && filtro !== 'conectar'">
         <q-expansion-item :model-value="otrosAbierto" icon="o_download" header-class="text-weight-medium"
@@ -153,7 +153,11 @@
         </q-expansion-item>
       </q-card>
     </template>
-    <div v-else class="row q-col-gutter-md">
+    <!-- La primera comprobación falló: qué pasó y Reintentar, en lugar de un esqueleto que no termina. -->
+    <q-card v-else-if="error">
+      <EstadoVacio role="alert" :titulo="t('comun.errorCarga')" :texto="error" :accion="t('comun.reintentar')" :cargando="cargando" @accion="cargar" />
+    </q-card>
+    <div v-else class="row q-col-gutter-md" role="status" :aria-label="t('comun.cargando')">
       <div v-for="n in 4" :key="n" class="col-12 col-lg-6">
         <q-card class="q-pa-md"><q-skeleton type="text" width="40%" /><q-skeleton v-for="m in 3" :key="m" type="text" /></q-card>
       </div>
@@ -164,8 +168,9 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
+import EstadoVacio from '../componentes/EstadoVacio.vue'
 import { useQuasar } from 'quasar'
-import { api, avisar, avisarError, copiar } from '../api/cliente'
+import { api, avisar, avisarError, copiar, mensajeError } from '../api/cliente'
 import type { Adaptador } from '../api/tipos'
 import { modeloInicial, sesion } from '../estado'
 import { agenteListo, asegurarFichas, cargarFichas, codigoLinea, estadoAgente, fichaDe, fijarDisponibilidad, nombreAgente, ofrecerDejarSuscripcion, ordenarAgentes } from '../agentes'
@@ -187,6 +192,8 @@ const contextos = ref<Record<string, { nombre: string; tokens: number; origen: s
 const textoContextos = (agente: string) => (contextos.value[agente] ?? [])
   .map((c) => `${c.nombre} ${numero(c.tokens)}${c.origen === 'configurado' ? ' (' + t('agentes.configurado') + ')' : ''}`).join(' · ')
 const cargando = ref(false)
+// error es el de la primera comprobación (sin agentes que enseñar); los de después solo avisan.
+const error = ref('')
 const cambiando = ref('')
 
 const listo = agenteListo
@@ -196,6 +203,11 @@ const instalado = (a: Adaptador) => a.problema_codigo !== 'no_instalado'
 const busqueda = ref<string | null>('')
 const filtro = ref<'todos' | 'listos' | 'conectar' | 'instalar'>('todos')
 const otrosAbierto = ref(false)
+const hayFiltro = computed(() => !!busqueda.value || filtro.value !== 'todos')
+function quitarFiltros() {
+  busqueda.value = ''
+  filtro.value = 'todos'
+}
 watch(filtro, (f) => f === 'instalar' && (otrosAbierto.value = true))
 const coincide = (a: Adaptador) => {
   const texto = (busqueda.value ?? '').trim().toLowerCase()
@@ -250,8 +262,10 @@ async function cargar() {
   try {
     adaptadores.value = (await api.capacidades()).adaptadores
     fijarDisponibilidad(adaptadores.value)
+    error.value = ''
   } catch (e) {
-    avisarError(e)
+    if (adaptadores.value) avisarError(e)
+    else error.value = mensajeError(e)
   } finally {
     cargando.value = false
   }

@@ -71,9 +71,15 @@
         <q-card class="q-mt-md">
           <q-card-section class="row items-center no-wrap q-pb-sm">
             <h2 class="titulo-seccion col">{{ t('ejecutar.recientes') }}</h2>
-            <q-btn v-if="recientes.length" flat dense no-caps color="primary" icon-right="o_chevron_right" :label="t('ejecutar.verTodo')" @click="verTodo" />
+            <q-btn v-if="recientes?.length" flat dense no-caps color="primary" icon-right="o_chevron_right" :label="t('ejecutar.verTodo')" @click="verTodo" />
           </q-card-section>
-          <div v-if="!recientes.length" class="q-px-md q-pb-md text-body2 texto-suave">{{ t('ejecutar.sinRecientes') }}</div>
+          <!-- Cargando, error con Reintentar o vacío: «sin recientes» solo cuando la lista llegó y está vacía. -->
+          <div v-if="!recientes && !errorRecientes" class="q-px-md q-pb-md" role="status" :aria-label="t('comun.cargando')"><q-skeleton v-for="n in 2" :key="n" type="text" /></div>
+          <div v-else-if="!recientes" class="q-px-md q-pb-md row items-center q-gutter-sm" role="alert">
+            <span class="text-body2">{{ t('comun.errorCarga') }}: {{ errorRecientes }}</span>
+            <q-btn flat dense no-caps color="primary" icon="o_refresh" :label="t('comun.reintentar')" @click="cargarRecientes" />
+          </div>
+          <div v-else-if="!recientes.length" class="q-px-md q-pb-md text-body2 texto-suave">{{ t('ejecutar.sinRecientes') }}</div>
           <q-list v-else separator>
             <q-item v-for="x in recientes" :key="x.id" clickable :active="trabajo?.id === x.id" @click="seguir(x)">
               <q-item-section>
@@ -109,9 +115,9 @@
           </q-card-section>
           <q-separator />
           <q-card-section class="salida-caja col" style="min-height: 300px">
-            <div v-if="!trabajo" class="vacio">
+            <div v-if="!trabajo" class="text-center">
               <EstadoVacio :titulo="t('ejecutar.vacio')" />
-              <div class="q-mt-lg text-caption">{{ t('ejecutar.ejemplos') }}</div>
+              <div class="text-caption texto-suave">{{ t('ejecutar.ejemplos') }}</div>
               <div class="column q-gutter-sm q-mt-xs" style="max-width: 460px; margin-left: auto; margin-right: auto">
                 <div v-for="e in ejemplos" :key="e" class="paso text-left row items-center no-wrap" role="button" tabindex="0"
                   @click="mensaje = e" @keyup.enter="mensaje = e" @keydown.space.prevent="mensaje = e">
@@ -197,7 +203,7 @@ import GuardarComoApi from '../componentes/GuardarComoApi.vue'
 import VerComoCodigo from '../componentes/VerComoCodigo.vue'
 import { ejemplos as ejemplosDe, type Ejemplo } from '../ejemplos'
 import { marcarLineas } from '../esquemaCampos'
-import { api, avisar, avisarError, copiar, tituloError } from '../api/cliente'
+import { api, avisar, avisarError, copiar, mensajeError, tituloError } from '../api/cliente'
 import type { EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Solicitud, Trabajo } from '../api/tipos'
 import { modeloInicial, origenHistorial, recetaInicial, trabajoSeguido } from '../estado'
 import { modeloDe, esfuerzoEspacio } from '../agentes'
@@ -451,9 +457,15 @@ const lineasMarcadas = computed(() => marcarLineas(salida.value, problemas.value
 
 
 // recientes son las últimas pruebas lanzadas desde Probar (las de las APIs y la terminal están en el Historial).
-const recientes = ref<Trabajo[]>([])
+const recientes = ref<Trabajo[]>()
+const errorRecientes = ref('')
 async function cargarRecientes() {
-  recientes.value = await api.trabajos(10, { origen: 'probar' }).catch(() => recientes.value)
+  try {
+    recientes.value = await api.trabajos(10, { origen: 'probar' })
+    errorRecientes.value = ''
+  } catch (e) {
+    errorRecientes.value = mensajeError(e) // con una lista ya cargada se sigue viendo la anterior
+  }
 }
 function usarDeNuevo(x: Trabajo) {
   const texto = mensajeDe(x)

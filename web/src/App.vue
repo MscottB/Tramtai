@@ -163,15 +163,12 @@
           <template #action><q-btn flat no-caps icon="o_refresh" :label="t('app.reintentar')" @click="comprobar" /></template>
         </q-banner>
         <div v-if="!sesion.instancia && seccion !== 'espacios'" class="pagina">
-          <q-card class="q-pa-lg text-center" style="max-width: 560px; margin: 48px auto">
-            <q-icon name="power_settings_new" size="48px" color="primary" />
-            <h2 class="titulo-seccion q-mt-md">{{ t('app.sinInstancia') }}</h2>
-            <p class="texto-suave q-mt-sm">{{ t('app.sinInstanciaTexto') }}</p>
-            <q-btn unelevated color="primary" icon="play_arrow" :label="t('app.activarGlobal')" no-caps :loading="activando" @click="activarGlobal" />
-            <div class="q-mt-sm">
+          <!-- Sin espacio activo: el estado vacío común (vía sin servicio), no un icono grande. -->
+          <q-card style="max-width: 560px; margin: 48px auto">
+            <EstadoVacio :titulo="t('app.sinInstancia')" :texto="t('app.sinInstanciaTexto')" :accion="t('app.activarGlobal')" :cargando="activando" @accion="activarGlobal">
               <q-btn flat no-caps color="primary" icon="o_create_new_folder" :label="t('proyecto.abrir')" @click="dialogoProyecto = true" />
               <q-btn flat no-caps color="primary" icon="o_workspaces" :label="t('app.gestionarEspacios')" @click="ir('espacios')" />
-            </div>
+            </EstadoVacio>
           </q-card>
         </div>
         <component :is="actual.componente" v-else :key="sesion.instancia" v-bind="seccion === 'ayuda' ? { tema: ruta.tema } : {}" @ir="ir"
@@ -321,6 +318,7 @@ import { GRUPOS_MENU } from './menu'
 import PanelAyuda from './componentes/ayuda/PanelAyuda.vue'
 import { cerrarAyuda } from './ayuda/panel'
 import AcercaDe from './componentes/AcercaDe.vue'
+import EstadoVacio from './componentes/EstadoVacio.vue'
 import ListaNovedades from './componentes/ListaNovedades.vue'
 import NotasVersion from './componentes/NotasVersion.vue'
 

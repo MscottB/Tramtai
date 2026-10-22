@@ -6,13 +6,15 @@
     </svg>
     <div class="estado-vacio__titulo">{{ titulo }}</div>
     <div v-if="texto" class="texto-suave">{{ texto }}</div>
-    <q-btn v-if="accion" outline color="primary" no-caps class="q-mt-sm" :label="accion" @click="emit('accion')" />
+    <q-btn v-if="accion" outline color="primary" no-caps class="q-mt-sm" :label="accion" :loading="cargando" @click="emit('accion')" />
+    <div v-if="$slots.default" class="row justify-center q-gutter-sm q-mt-xs"><slot /></div>
   </div>
 </template>
 
 <script setup lang="ts">
 // EstadoVacio es el estado vacío común: una estación apagada al final de un tramo sin servicio, un titular que
-// invita a actuar y, si hace falta, la acción.
-defineProps<{ titulo: string; texto?: string; accion?: string }>()
+// invita a actuar y, si hace falta, la acción (y otras secundarias en la ranura). También es el estado de error de
+// una carga: la vía sin servicio, qué falló y «Reintentar».
+defineProps<{ titulo: string; texto?: string; accion?: string; cargando?: boolean }>()
 const emit = defineEmits<{ accion: [] }>()
 </script>

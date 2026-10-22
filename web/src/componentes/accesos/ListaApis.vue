@@ -98,8 +98,13 @@
       <q-pagination v-model="pagina" :max="totalPaginas" :max-pages="6" direction-links boundary-links dense color="primary" />
     </div>
   </template>
-  <div v-if="puntos.length && !grupos.length" class="q-pa-md texto-suave">{{ t('puntos.sinResultados') }}</div>
-  <EstadoVacio v-if="!puntos.length" :titulo="t('puntos.vacio')" :accion="t('puntos.nuevo')" @accion="emit('nuevo')" />
+  <EstadoVacio v-if="puntos.length && !grupos.length" :titulo="t('puntos.sinResultados')" :accion="t('puntos.limpiarFiltros')" @accion="limpiarFiltros" />
+  <!-- Sin APIs: mientras carga no se invita a crear la primera, y si la carga falló se dice y se ofrece Reintentar. -->
+  <template v-else-if="!puntos.length">
+    <div v-if="cargando" class="q-pa-md" role="status" :aria-label="t('comun.cargando')"><q-skeleton v-for="n in 3" :key="n" type="text" /></div>
+    <EstadoVacio v-else-if="error" role="alert" :titulo="t('comun.errorCarga')" :texto="error" :accion="t('comun.reintentar')" @accion="emit('recargar')" />
+    <EstadoVacio v-else :titulo="t('puntos.vacio')" :accion="t('puntos.nuevo')" @accion="emit('nuevo')" />
+  </template>
 </template>
 
 <script setup lang="ts">
@@ -116,9 +121,10 @@ import { haceCuanto, nombreEsfuerzo } from '../../formato'
 import { t } from '../../i18n'
 import { activo, contratos, guardar, leer, nombreContrato } from './comun'
 
+// cargando y error son los de la lista de APIs (Accesos la pide); recargar la vuelve a pedir.
 const props = defineProps<{ puntos: EstadoPunto[]; uso: Record<string, UsoPunto>; presupuestos: Record<string, EstadoPresupuesto>; opciones: OpcionModelo[];
-  ocupado: string }>()
-const emit = defineEmits<{ abrir: [p: EstadoPunto]; nuevo: []; activarGrupo: [grupo: string, valor: boolean]; verPeticiones: [nombre: string];
+  ocupado: string; cargando?: boolean; error?: string }>()
+const emit = defineEmits<{ abrir: [p: EstadoPunto]; nuevo: []; recargar: []; activarGrupo: [grupo: string, valor: boolean]; verPeticiones: [nombre: string];
   grupos: [nombres: string[]] }>()
 const filtroGrupo = defineModel<string | null>('filtroGrupo', { required: true }) // null: todos; '': sin grupo
 const $q = useQuasar()

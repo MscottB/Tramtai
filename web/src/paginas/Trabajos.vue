@@ -27,7 +27,10 @@
         :pagination="{ rowsPerPage: 25 }" :rows-per-page-options="[25, 50, 100]" :no-data-label="t('historial.sinFiltro')"
         table-class="fila-clicable" @row-click="(_e: Event, fila: Trabajo) => abrir(fila)">
         <template #no-data>
-          <EstadoVacio v-if="!cargando" class="full-width" :titulo="hayFiltro ? t('historial.sinFiltro') : t('historial.vacio')"
+          <!-- Si la carga falló no se invita a empezar: se dice qué pasó y se ofrece Reintentar. -->
+          <EstadoVacio v-if="error" role="alert" class="full-width" :titulo="t('comun.errorCarga')" :texto="error" :accion="t('comun.reintentar')"
+            :cargando="cargando" @accion="cargar()" />
+          <EstadoVacio v-else-if="!cargando" class="full-width" :titulo="hayFiltro ? t('historial.sinFiltro') : t('historial.vacio')"
             :accion="hayFiltro ? t('historial.quitarFiltros') : t('historial.irProbar')" @accion="hayFiltro ? quitarFiltros() : emit('ir', 'ejecutar')" />
         </template>
         <template #body-cell-estado="props">
@@ -130,7 +133,7 @@ import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
 import RegistroTrabajo from '../componentes/RegistroTrabajo.vue'
 import SalidaTrabajo from '../componentes/SalidaTrabajo.vue'
-import { api, avisar, avisarError, copiar, tituloError } from '../api/cliente'
+import { api, avisar, avisarError, copiar, mensajeError, tituloError } from '../api/cliente'
 import type { EstadoPunto, EventoRegistro, Trabajo } from '../api/tipos'
 import { filtroHistorial, origenHistorial, trabajoAbrir, trabajoSeguido } from '../estado'
 import { modeloDe } from '../agentes'
@@ -141,7 +144,10 @@ const emit = defineEmits<{ ir: [pagina: string] }>()
 const $q = useQuasar()
 const trabajos = ref<Trabajo[]>([])
 const hayTerminados = computed(() => trabajos.value.some((x) => terminales.includes(x.estado)))
-const cargando = ref(false)
+// cargando empieza en true: hasta la primera respuesta no se sabe si hay peticiones (ni se enseña el vacío).
+const cargando = ref(true)
+// error es el de la última carga sin peticiones que enseñar; con lista, el error solo avisa.
+const error = ref('')
 const dialogo = ref(false)
 const detalle = ref<Trabajo>()
 const eventosDetalle = ref<EventoRegistro[]>([])
@@ -216,9 +222,13 @@ async function cargar(segundoPlano = false) {
     if (n === pedidoLista) {
       trabajos.value = lista
       hayMas.value = lista.length === PAGINA
+      error.value = ''
     }
   } catch (e) {
-    if (n === pedidoLista && !segundoPlano) avisarError(e)
+    if (n === pedidoLista && !segundoPlano) {
+      if (trabajos.value.length) avisarError(e)
+      else error.value = mensajeError(e)
+    }
   } finally {
     enVuelo--
     if (n === pedidoLista) cargando.value = false

@@ -56,6 +56,7 @@ const en: Textos = {
   'menuDetalle.espacios': 'Global and your projects',
   'espacios.subtitulo': 'Each workspace keeps its own requests, APIs and settings. Start, stop, trust or forget the ones you do not use.',
   'espacios.actualizar': 'Refresh',
+  'espacios.vacio': 'No workspaces yet: open a project folder or start the global one.',
   'espacios.estadoActivo': 'Active',
   'espacios.estadoDetenido': 'Stopped',
   'espacios.estadoNoEncontrado': 'Not found',

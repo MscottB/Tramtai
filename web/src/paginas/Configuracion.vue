@@ -202,7 +202,8 @@
             </q-item>
           </q-list>
         </template>
-        <div v-if="!cargando && !grupos.length" class="vacio">{{ t('config.sinCoincidencias') }}</div>
+        <EstadoVacio v-if="!cargando && !grupos.length" :titulo="t('config.sinCoincidencias')" :accion="filtro ? t('historial.quitarFiltros') : undefined"
+          @accion="filtro = ''" />
       </q-expansion-item>
     </q-card>
   </div>
@@ -214,6 +215,7 @@ import { pestanaDeAncla } from '../pestanasAjustes'
 import { EVENTO_PASO } from '../recorridoDom'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import ProcedenciaValor from '../componentes/ProcedenciaValor.vue'
+import EstadoVacio from '../componentes/EstadoVacio.vue'
 import { guardar, leer } from '../componentes/accesos/comun'
 import { heredable, procedencia, type Procedencia } from '../herencia'
 import { useQuasar } from 'quasar'
