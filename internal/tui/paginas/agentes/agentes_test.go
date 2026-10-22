@@ -64,7 +64,7 @@ var aviso = prueba.Aviso
 func TestAgentesCarga(t *testing.T) {
 	p, _, _ := abierta(t)
 	v := p.Vista()
-	for _, quiere := range []string{"Agentes", "simulado", "Listo", "Listos (1)", "Falta conectar (0)"} {
+	for _, quiere := range []string{"simulado", "Listo", "Listos (1)", "Falta conectar (0)"} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}

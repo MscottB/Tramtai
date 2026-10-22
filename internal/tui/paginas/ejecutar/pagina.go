@@ -5,7 +5,6 @@ package ejecutar
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -32,13 +31,8 @@ const (
 	limiteRecientes = 10
 )
 
-// origen es lo que cada mensaje propio lleva para saber si aún vale: el contexto y el espacio con que se pidió y la versión
-// de la página (cada Iniciar, Ocultar o Mostrar la cambia).
-type origen struct {
-	ctx       context.Context
-	instancia string
-	gen       int
-}
+// origen es el pagina.Origen de los mensajes de Probar: un tipo propio, para no confundirlos con los de otra página.
+type origen struct{ pagina.Origen }
 
 type (
 	msgCatalogo struct {
@@ -167,30 +161,13 @@ func (p *Pagina) Ayuda() string  { return pagina.PaginaEjecutar }
 // EnCampo es verdadero mientras se escribe en el formulario o en «Guardar como API».
 func (p *Pagina) EnCampo() bool { return p.editando || p.guardar != nil }
 
-var textoAscii = strings.NewReplacer("·", "-", "…", "...", "’", "'", "“", "\"", "”", "\"", "—", "-", "→", "->", "«", "\"", "»", "\"")
-
-// tx es un texto de la Web UI (datos.Texto) con sus {marcadores} rellenos; en una consola ASCII, sin caracteres de dibujo.
 func (p *Pagina) tx(clave string, pares ...string) string {
-	return p.a(datos.Textof(p.lengua, clave, pares...))
+	return p.estilos.Tx(p.lengua, clave, pares...)
 }
-
-func (p *Pagina) a(texto string) string {
-	if p.estilos != nil && p.estilos.ASCII {
-		return textoAscii.Replace(texto)
-	}
-	return texto
-}
-
-func (p *Pagina) origen() origen { return origen{ctx: p.c.Ctx, instancia: p.c.Instancia, gen: p.gen} }
-
-// vigente dice si una respuesta sigue valiendo: su contexto no se canceló, es del mismo espacio y de esta versión.
-func (p *Pagina) vigente(o origen) bool { return p.delEspacio(o) && o.gen == p.gen }
-
-// delEspacio dice si una respuesta es del espacio de ahora con su contexto vivo, aunque la página se ocultara entretanto:
-// vale para lo que ya pasó en el servicio (una petición creada o cancelada).
-func (p *Pagina) delEspacio(o origen) bool {
-	return o.ctx != nil && o.ctx.Err() == nil && o.instancia == p.c.Instancia
-}
+func (p *Pagina) a(texto string) string    { return p.estilos.A(texto) }
+func (p *Pagina) origen() origen           { return origen{p.c.Origen(p.gen)} }
+func (p *Pagina) vigente(o origen) bool    { return o.Vigente(p.c, p.gen) }
+func (p *Pagina) delEspacio(o origen) bool { return o.DelEspacio(p.c) }
 
 // Pendiente dice, para la pregunta de salir de la terminal, si hay una petición en marcha (sigue en el servicio) o una API
 // abierta con cambios en la receta que aún no se guardaron con g.
@@ -299,9 +276,9 @@ func (p *Pagina) cargarLimites() tea.Cmd {
 
 // fallo reparte un error: de conexión es del servicio (lo avisa la app); el de la API, su mensaje tal cual, como aviso.
 func (p *Pagina) fallo(err error) tea.Cmd {
-	if pagina.NoResponde(err) {
+	if cmd := pagina.SinServicio(err); cmd != nil {
 		p.sinServ = true
-		return func() tea.Msg { return pagina.ErrorServicio{Err: err} }
+		return cmd
 	}
 	return comp.Aviso(nucleo.MensajeDe(err), comp.Fallo)
 }

@@ -32,7 +32,7 @@ func (p *Pagina) enVivo() bool {
 func (p *Pagina) vistaDetalle() string {
 	e, ancho := p.estilos, max(p.c.Ancho, 1)
 	if p.detalle == nil {
-		return e.Titulo.Render(e.Recortar(p.Titulo(), ancho)) + "\n\n" + e.Tenue.Render(p.a(idioma.T("Cargando…")))
+		return e.Tenue.Render(p.tx("comun.cargando"))
 	}
 	t := *p.detalle
 	icono, estilo := vivo.Icono(e, t.Estado)
@@ -319,7 +319,7 @@ func (p *Pagina) textoRegistro(t nucleo.Trabajo) string {
 	case p.errRegistro:
 		return p.tx("registro.noDisponible")
 	case p.registro == nil && p.cargaReg:
-		return p.a(idioma.T("Cargando…"))
+		return p.tx("comun.cargando")
 	}
 	var l []string
 	for i, ev := range p.registro {

@@ -37,7 +37,6 @@ func init() {
 		"siguiente campo":          "next field",
 		"envía":                    "sends",
 		"cancela":                  "cancels",
-		"Cargando…":                "Loading…",
 
 		// Agentes: los nombres, estados, etiquetas y confirmaciones salen de los textos de la Web UI (internal/tui/datos);
 		// aquí solo lo adaptado a teclas.
@@ -45,7 +44,6 @@ func init() {
 		"comprobar":     "check",
 		"conexión":      "connection",
 		"autenticación": "authentication",
-		"probar":        "try it",
 		"filtro":        "filter",
 		"Modelos":       "Models",
 		"Elige cómo conectarlo: con tu suscripción (tecla a) o con una clave de API.":                                              "Choose how to connect it: with your subscription (key a) or with an API key.",
@@ -67,6 +65,8 @@ func init() {
 		"hace %d h":          "%d h ago",
 		"hace %d d":          "%d d ago",
 		"Ver la Ayuda de %s": "See the %s Help",
+		"Red de Tramtai: 1 origen y %d de %d agentes en servicio.": "Tramtai network: 1 source and %d of %d agents in service.",
+		"Las apps siguen funcionando aunque cierres la terminal":   "Apps keep working even if you close the terminal",
 
 		// Historial: los filtros, el detalle, el registro y las confirmaciones salen de los textos de la Web UI; aquí solo lo
 		// propio de la terminal.

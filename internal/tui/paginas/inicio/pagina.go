@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"runtime"
-	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -42,13 +41,8 @@ const (
 	teclaConError    = "f"
 )
 
-// origen es lo que cada mensaje propio lleva para saber si aún vale: el contexto y el espacio con que se pidió y la
-// versión de la página (cada Iniciar, Ocultar o Mostrar la cambia).
-type origen struct {
-	ctx       context.Context
-	instancia string
-	gen       int
-}
+// origen es el pagina.Origen de los mensajes de Inicio: un tipo propio, para no confundirlos con los de otra página.
+type origen struct{ pagina.Origen }
 
 // adaptador y punto son lo poco que Inicio lee de /api/v1/capacidades y /api/v1/puntos.
 type adaptador struct {
@@ -203,18 +197,10 @@ func (p *Pagina) flechas() string {
 
 // tx es un texto de la Web UI (datos.Texto) en el idioma de la sesión, con sus {marcadores} rellenos.
 func (p *Pagina) tx(clave string, pares ...string) string {
-	return p.a(datos.Textof(p.lengua, clave, pares...))
+	return p.estilos.Tx(p.lengua, clave, pares...)
 }
 
-var textoAscii = strings.NewReplacer("·", "-", "…", "...", "’", "'", "“", "\"", "”", "\"", "—", "-")
-
-// a deja un texto sin los caracteres de dibujo que usan los textos de la Web UI (· … ’) cuando la consola es ASCII.
-func (p *Pagina) a(texto string) string {
-	if p.estilos != nil && p.estilos.ASCII {
-		return textoAscii.Replace(texto)
-	}
-	return texto
-}
+func (p *Pagina) a(texto string) string { return p.estilos.A(texto) }
 
 // sistema es el nombre del sistema operativo para el paso de arrancar con él, como `sistema` de la Web UI.
 func sistema() string {
@@ -275,25 +261,15 @@ func (p *Pagina) armarTic() tea.Cmd {
 	return p.esperarA(cadaLimpieza, func(o origen) tea.Msg { return msgTic{o} })
 }
 
-func (p *Pagina) origen() origen { return origen{ctx: p.c.Ctx, instancia: p.c.Instancia, gen: p.gen} }
+func (p *Pagina) origen() origen { return origen{p.c.Origen(p.gen)} }
 
-// vigente dice si una respuesta sigue valiendo: su contexto no se canceló, es del mismo espacio y de esta versión de la
-// página.
-func (p *Pagina) vigente(o origen) bool {
-	return o.ctx != nil && o.ctx.Err() == nil && o.instancia == p.c.Instancia && o.gen == p.gen && p.visible
-}
+// vigente dice si una respuesta sigue valiendo (pagina.Origen.Vigente) y la página se ve.
+func (p *Pagina) vigente(o origen) bool { return o.Vigente(p.c, p.gen) && p.visible }
 
 // esperarA es un temporizador: pasado d manda lo que haga mensaje, salvo que el contexto de la página se cancele antes.
 func (p *Pagina) esperarA(d time.Duration, mensaje func(origen) tea.Msg) tea.Cmd {
-	o, espera := p.origen(), p.esperaPara
-	return func() tea.Msg {
-		select {
-		case <-o.ctx.Done():
-			return nil
-		case <-espera(d):
-			return mensaje(o)
-		}
-	}
+	o := p.origen()
+	return pagina.Tras(o.Ctx, d, p.esperaPara, func() tea.Msg { return mensaje(o) })
 }
 
 // cargar pide todo lo que enseña la página, cada cosa por su lado: si una falla, las demás se ven.
@@ -434,9 +410,9 @@ func flujo(ctx context.Context, o origen, instancia string,
 
 // fallo reparte un error: de conexión es del servicio (lo avisa la app); el de la API, el mensaje tal cual.
 func (p *Pagina) fallo(err error, propio bool) tea.Cmd {
-	if pagina.NoResponde(err) {
+	if cmd := pagina.SinServicio(err); cmd != nil {
 		p.sinServ = true
-		return func() tea.Msg { return pagina.ErrorServicio{Err: err} }
+		return cmd
 	}
 	if propio {
 		p.err = nucleo.MensajeDe(err)

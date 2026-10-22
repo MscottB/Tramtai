@@ -33,7 +33,7 @@ func (p *Pagina) Vista() string {
 		p.caja.Tamano(max(p.c.Ancho, 1), max(p.c.Alto-2, 1))
 		texto = strings.Join([]string{e.Titulo.Render(p.tx("receta.ejemplo")), "", p.caja.Vista()}, "\n")
 	case !p.armado:
-		texto = e.Tenue.Render(p.a(idioma.T("Cargando…")))
+		texto = e.Tenue.Render(p.tx("comun.cargando"))
 	default:
 		cab := []string{p.pestanas()}
 		if p.api != "" {
@@ -246,7 +246,7 @@ func (p *Pagina) vistaRecientes(alto int) string {
 	e := p.estilos
 	switch {
 	case !p.cargadoRec:
-		return e.Tenue.Render(p.a(idioma.T("Cargando…")))
+		return e.Tenue.Render(p.tx("comun.cargando"))
 	case len(p.recientes.Visibles()) == 0:
 		return strings.Join(p.envolver(p.tx("ejecutar.sinRecientes"), alto), "\n")
 	}

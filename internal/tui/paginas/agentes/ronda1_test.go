@@ -146,7 +146,7 @@ func TestAgentesTextosComoLaWeb(t *testing.T) {
 	p := Nueva("en").(*Pagina)
 	correr(p, p.Iniciar(c))
 	v := p.Vista()
-	for _, quiere := range []string{"Agents", "Ready", "Ready (1)", "To connect (0)", "Not installed (0)", "API key"} {
+	for _, quiere := range []string{"Ready", "Ready (1)", "To connect (0)", "Not installed (0)", "API key"} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}

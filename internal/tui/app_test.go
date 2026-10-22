@@ -2,8 +2,14 @@ package tui
 
 import (
 	"context"
+	"encoding/json"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"image/color"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -359,6 +365,52 @@ func TestTemaSegunElFondo(t *testing.T) {
 	m.Update(tea.BackgroundColorMsg{Color: color.White})
 	if m.estilos.Oscuro || m.estilos != estilos {
 		t.Fatal("con fondo claro, tema claro, en los mismos Estilos que ya tienen las páginas")
+	}
+}
+
+// TestUnSoloCatalogo: un texto de la terminal vive en un solo catálogo. Lo que comparte con la Web UI sale de datos.Texto;
+// con idioma.T solo va lo propio de la terminal, así que ningún literal de idioma.T repite un texto de textos.json.
+func TestUnSoloCatalogo(t *testing.T) {
+	var textos map[string]map[string]string
+	bruto, err := os.ReadFile("datos/textos.json")
+	if err != nil || json.Unmarshal(bruto, &textos) != nil {
+		t.Fatalf("textos.json: %v", err)
+	}
+	web := map[string]string{}
+	for clave, texto := range textos["es"] {
+		web[texto] = clave
+	}
+	err = filepath.WalkDir(".", func(ruta string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(ruta, ".go") || strings.HasSuffix(ruta, "_test.go") {
+			return err
+		}
+		archivo, err := parser.ParseFile(token.NewFileSet(), ruta, nil, 0)
+		if err != nil {
+			return err
+		}
+		ast.Inspect(archivo, func(n ast.Node) bool {
+			llamada, ok := n.(*ast.CallExpr)
+			if !ok || len(llamada.Args) == 0 {
+				return true
+			}
+			sel, ok := llamada.Fun.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			if x, _ := sel.X.(*ast.Ident); x == nil || x.Name != "idioma" || (sel.Sel.Name != "T" && sel.Sel.Name != "Tf") {
+				return true
+			}
+			if lit, ok := llamada.Args[0].(*ast.BasicLit); ok {
+				if texto, _ := strconv.Unquote(lit.Value); web[texto] != "" {
+					t.Errorf("%s: %q ya es %s de la Web UI: usa datos.Texto", ruta, texto, web[texto])
+				}
+			}
+			return true
+		})
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

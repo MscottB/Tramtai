@@ -1,8 +1,12 @@
 package pagina
 
 import (
+	"strings"
+
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
+
+	"tramtai/internal/tui/datos"
 )
 
 // Estilos son los de la terminal; los rellena internal/tui según el fondo, NO_COLOR y TRAMTAI_ASCII. Con su valor cero
@@ -34,6 +38,28 @@ var (
 	IconosUnicode = Iconos{Cursor: "▸", Abierto: "▾", Cerrado: "▸", Activo: "●", Inactivo: "○", Ok: "✓", Fallo: "✗", Separador: "·", Elipsis: "…", Vertical: "│"}
 	IconosASCII   = Iconos{Cursor: ">", Abierto: "v", Cerrado: ">", Activo: "*", Inactivo: "o", Ok: "+", Fallo: "x", Separador: "-", Elipsis: "...", Vertical: "|"}
 )
+
+var textoAscii = strings.NewReplacer("·", "-", "…", "...", "’", "'", "“", "\"", "”", "\"", "—", "-", "→", "->", "«", "\"", "»", "\"",
+	"‹", "<", "›", ">")
+
+// A deja un texto sin los caracteres de dibujo que usan los textos de la Web UI (· … ’ « »…) cuando la consola es ASCII.
+// Vale con e nil: antes de Iniciar, la página aún no tiene estilos.
+func (e *Estilos) A(texto string) string {
+	if e != nil && e.ASCII {
+		return textoAscii.Replace(texto)
+	}
+	return texto
+}
+
+// Tx es un texto de la Web UI (datos.Textof) en esa lengua, con sus {marcadores} rellenos y pasado por A.
+func (e *Estilos) Tx(lengua, clave string, pares ...string) string {
+	return e.A(datos.Textof(lengua, clave, pares...))
+}
+
+// Rellenar completa texto con espacios hasta ancho columnas visibles: para alinear columnas.
+func Rellenar(texto string, ancho int) string {
+	return texto + strings.Repeat(" ", max(ancho-lipgloss.Width(texto), 0))
+}
 
 // Linea es el estilo de la línea de un agente (DESIGN.md: un color por agente, solo para identificarlo), con su color de
 // día y de noche; sin uno propio, el de linea-otro. Sin color es negrita: lo identifican las dos letras de su código.

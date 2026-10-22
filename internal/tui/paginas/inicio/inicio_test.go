@@ -129,20 +129,18 @@ func abierta(t *testing.T) (*Pagina, *reloj, *cliente.Cliente, string) {
 	return p, r, cli, id
 }
 
-// origen es lo que llevan los mensajes propios para saber si siguen valiendo.
-func (p *Pagina) origenActual() origen {
-	return origen{ctx: p.c.Ctx, instancia: p.c.Instancia, gen: p.gen}
-}
-
 // evento manda un evento «trabajo» a la página como si llegara del flujo.
 func (p *Pagina) evento(e evento) {
-	p.Update(msgRed{origen: p.origenActual(), tipo: "trabajo", ev: e})
+	p.Update(msgRed{origen: p.origen(), tipo: "trabajo", ev: e})
 }
 
 func TestInicioCarga(t *testing.T) {
 	p, _, cli, _ := abierta(t)
 	v := p.Vista()
-	for _, quiere := range []string{"Inicio", "Tus apps se conectan a " + cli.Base, "Primeros pasos", "Completadas", "En proceso", "Con error",
+	if strings.HasPrefix(v, "Inicio") {
+		t.Fatalf("el título ya está en la cabecera de la app:\n%s", v)
+	}
+	for _, quiere := range []string{"Tus apps se conectan a " + cli.Base, "Red de Tramtai: 1 origen y 1 de 1", "Primeros pasos", "Completadas", "En proceso", "Con error",
 		"1 de 1 agentes listos"} {
 		if !strings.Contains(v, quiere) {
 			// Los pasos están más abajo: se ven al desplazar.
@@ -187,12 +185,12 @@ func TestRedAparecenYSeVan(t *testing.T) {
 	}
 	// Llegó: sigue 2 s y luego se va.
 	r.t = r.t.Add(1999 * time.Millisecond)
-	p.Update(msgTic{origen: p.origenActual()})
+	p.Update(msgTic{origen: p.origen()})
 	if len(p.red) != 1 {
 		t.Fatalf("a los 1999 ms sigue: %v", p.red)
 	}
 	r.t = r.t.Add(time.Millisecond)
-	p.Update(msgTic{origen: p.origenActual()})
+	p.Update(msgTic{origen: p.origen()})
 	if len(p.red) != 0 || strings.Contains(p.Vista(), "simulado") {
 		t.Fatalf("a los 2 s se va: %v\n%s", p.red, p.Vista())
 	}
@@ -203,12 +201,12 @@ func TestRedAparecenYSeVan(t *testing.T) {
 	// Una que falla se queda 4 s.
 	p.evento(ev(con("f", "fallido", "llegada")))
 	r.t = r.t.Add(3999 * time.Millisecond)
-	p.Update(msgTic{origen: p.origenActual()})
+	p.Update(msgTic{origen: p.origen()})
 	if v := p.Vista(); !strings.Contains(v, "falló") {
 		t.Fatalf("a los 3999 ms se ve que falló:\n%s", v)
 	}
 	r.t = r.t.Add(time.Millisecond)
-	p.Update(msgTic{origen: p.origenActual()})
+	p.Update(msgTic{origen: p.origen()})
 	if len(p.red) != 0 {
 		t.Fatalf("a los 4 s se va: %v", p.red)
 	}
@@ -226,7 +224,7 @@ func TestRedComoMucho12(t *testing.T) {
 	c := contexto(nil, "global")
 	c.Alto = 40
 	p.Iniciar(c)
-	p.Update(msgInstancia{origen: p.origenActual(), r: cliente.ResumenInstancia{Base: "http://127.0.0.1:1"}}) // sin servicio: se da por cargada
+	p.Update(msgInstancia{origen: p.origen(), r: cliente.ResumenInstancia{Base: "http://127.0.0.1:1"}}) // sin servicio: se da por cargada
 	for i := 0; i < 15; i++ {
 		r.t = r.t.Add(time.Second)
 		p.evento(ev(con(fmt.Sprintf("t%02d", i), "ejecutando", "ejecucion"), func(e *evento) { e.API = fmt.Sprintf("api%02d", i); e.Creado = r.t }))
@@ -387,14 +385,14 @@ func TestAvisoApiPropia(t *testing.T) {
 	if strings.Contains(p.Vista(), "con la clave del espacio") {
 		t.Fatalf("sin peticiones no hay aviso:\n%s", p.Vista())
 	}
-	p.Update(msgInstancia{origen: p.origenActual(), r: cliente.ResumenInstancia{Base: cli.Base, AppConClave24h: 20}})
+	p.Update(msgInstancia{origen: p.origen(), r: cliente.ResumenInstancia{Base: cli.Base, AppConClave24h: 20}})
 	if strings.Contains(p.Vista(), "con la clave del espacio") {
 		t.Fatal("20 no basta")
 	}
 	if _, cmd := p.Update(tecla("c")); cmd != nil {
 		t.Fatal("sin aviso, c no hace nada")
 	}
-	p.Update(msgInstancia{origen: p.origenActual(), r: cliente.ResumenInstancia{Base: cli.Base, AppConClave24h: 21}})
+	p.Update(msgInstancia{origen: p.origen(), r: cliente.ResumenInstancia{Base: cli.Base, AppConClave24h: 21}})
 	v := p.Vista()
 	for _, quiere := range []string{"21 peticiones de apps llegaron con la clave del espacio", "últimas 24 h", "Crear una API"} {
 		if !strings.Contains(v, quiere) {
@@ -411,11 +409,11 @@ func TestAvisoApiPropia(t *testing.T) {
 // TestAvisoEspaciosYConversor: los espacios con problema y el conversor que falta salen como avisos, con su tecla.
 func TestAvisoEspaciosYConversor(t *testing.T) {
 	p, _, _, _ := abierta(t)
-	p.Update(msgEspacios{origen: p.origenActual(), lista: []contrato.Espacio{{ID: "a", Nombre: "Notas", UltimoError: "no se encuentra"}, {ID: "b", Nombre: "Soporte"}}})
+	p.Update(msgEspacios{origen: p.origen(), lista: []contrato.Espacio{{ID: "a", Nombre: "Notas", UltimoError: "no se encuentra"}, {ID: "b", Nombre: "Soporte"}}})
 	if v := p.Vista(); !strings.Contains(v, "El espacio Notas tiene un problema.") || !strings.Contains(v, "Ver espacios") {
 		t.Fatalf("un espacio:\n%s", v)
 	}
-	p.Update(msgEspacios{origen: p.origenActual(), lista: []contrato.Espacio{{Nombre: "Notas", UltimoError: "x"}, {Nombre: "Soporte", UltimoError: "y"}}})
+	p.Update(msgEspacios{origen: p.origen(), lista: []contrato.Espacio{{Nombre: "Notas", UltimoError: "x"}, {Nombre: "Soporte", UltimoError: "y"}}})
 	if v := p.Vista(); !strings.Contains(v, "2 espacios tienen un problema y no se abrieron.") {
 		t.Fatalf("varios:\n%s", v)
 	}
@@ -424,7 +422,7 @@ func TestAvisoEspaciosYConversor(t *testing.T) {
 		t.Fatalf("v lleva a Espacios: %v", ir)
 	}
 
-	p.Update(msgConversor{origen: p.origenActual(), e: contrato.EstadoConversor{Estado: "falta"}})
+	p.Update(msgConversor{origen: p.origen(), e: contrato.EstadoConversor{Estado: "falta"}})
 	v := p.Vista()
 	for _, quiere := range []string{"Falta el conversor de archivos", "Preparar archivos", "Ajustes"} {
 		if !strings.Contains(v, quiere) {
@@ -438,13 +436,13 @@ func TestAvisoEspaciosYConversor(t *testing.T) {
 	if _, cmd := p.Update(tecla("p")); cmd == nil {
 		t.Fatal("p prepara el conversor") // no se ejecuta: descargaría Python
 	}
-	p.Update(msgConversor{origen: p.origenActual(), e: contrato.EstadoConversor{Estado: "error", Mensaje: "sin red"}})
+	p.Update(msgConversor{origen: p.origen(), e: contrato.EstadoConversor{Estado: "error", Mensaje: "sin red"}})
 	if v := p.Vista(); !strings.Contains(v, "No se pudo preparar el conversor de archivos: sin red") || !strings.Contains(v, "Si la red de tu empresa") {
 		t.Fatalf("error:\n%s", v)
 	}
 	// Preparándose o listo: sin aviso, como la Web UI.
 	for _, estado := range []string{"preparando", "listo"} {
-		p.Update(msgConversor{origen: p.origenActual(), e: contrato.EstadoConversor{Estado: estado}})
+		p.Update(msgConversor{origen: p.origen(), e: contrato.EstadoConversor{Estado: estado}})
 		if strings.Contains(p.Vista(), "Preparar archivos") {
 			t.Fatalf("%s: sin aviso", estado)
 		}
@@ -454,19 +452,19 @@ func TestAvisoEspaciosYConversor(t *testing.T) {
 // TestPrimerosPasos: los 4 pasos con su estado, y «Ver la Ayuda de Empezar» abre el tema que acompaña a Inicio.
 func TestPrimerosPasos(t *testing.T) {
 	p, _, _, _ := abierta(t)
-	p.Update(msgAgentes{origen: p.origenActual(), lista: []adaptador{{Agente: "claude"}, {Agente: "codex", Desconectado: true}}})
-	p.Update(msgPuntos{origen: p.origenActual(), lista: []contrato.EstadoPunto{{Nombre: "mi-app"}}})
+	p.Update(msgAgentes{origen: p.origen(), lista: []adaptador{{Agente: "claude"}, {Agente: "codex", Desconectado: true}}})
+	p.Update(msgPuntos{origen: p.origen(), lista: []contrato.EstadoPunto{{Nombre: "mi-app"}}})
 	p.Update(tecla("end"))
 	v := p.Vista()
 	for _, quiere := range []string{"Primeros pasos", "✓ Conecta al menos un agente", "1 de 2 agentes listos", "○ Prueba un agente", "✓ Conecta tu aplicación",
-		"○ Arranca Tramtai con " + sistema(), "2 de 4 pasos hechos"} {
+		"○ Arranca Tramtai con " + sistema(), "aunque cierres la terminal", "2 de 4 pasos hechos"} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}
 	}
 	// Sin arranque automático en este sistema, son 3 pasos.
 	p.autoarranque = func() (bool, bool) { return false, false }
-	p.Update(msgAutoarranque{origen: p.origenActual(), disponible: false})
+	p.Update(msgAutoarranque{origen: p.origen(), disponible: false})
 	if v := p.Vista(); strings.Contains(v, "Arranca Tramtai") || !strings.Contains(v, "2 de 3 pasos hechos") {
 		t.Fatalf("tres pasos:\n%s", v)
 	}
@@ -491,8 +489,8 @@ func TestPrimerosPasos(t *testing.T) {
 	}
 
 	// Con todo hecho, la guía se pliega en «Todo listo».
-	p.Update(msgInstancia{origen: p.origenActual(), r: cliente.ResumenInstancia{Trabajos: map[string]int{"completado": 3}}})
-	p.Update(msgAgentes{origen: p.origenActual(), lista: []adaptador{{Agente: "claude"}}})
+	p.Update(msgInstancia{origen: p.origen(), r: cliente.ResumenInstancia{Trabajos: map[string]int{"completado": 3}}})
+	p.Update(msgAgentes{origen: p.origen(), lista: []adaptador{{Agente: "claude"}}})
 	if v := p.Vista(); !strings.Contains(v, "Todo listo") || strings.Contains(v, "○") {
 		t.Fatalf("todo listo:\n%s", v)
 	}
@@ -501,7 +499,7 @@ func TestPrimerosPasos(t *testing.T) {
 // TestContadores: los contadores salen de los trabajos del espacio, con los mismos nombres de la Web UI.
 func TestContadores(t *testing.T) {
 	p, _, cli, id := abierta(t)
-	p.Update(msgInstancia{origen: p.origenActual(), r: cliente.ResumenInstancia{Base: cli.Base,
+	p.Update(msgInstancia{origen: p.origen(), r: cliente.ResumenInstancia{Base: cli.Base,
 		Trabajos: map[string]int{"completado": 5, "fallido": 2, "interrumpido": 1, "ejecutando": 1, "en_cola": 2, "cancelado": 4}}})
 	v := p.Vista()
 	for _, quiere := range []string{"Completadas", "respondidas correctamente", "5", "En proceso", "3", "Con error", "3", "los últimos 7 días"} {
@@ -531,7 +529,7 @@ func TestContadores(t *testing.T) {
 	if v := p.Vista(); !strings.Contains(v, "Completadas") || !strings.Contains(v, " 1") {
 		t.Fatalf("suma uno:\n%s", v)
 	}
-	p.Update(msgRetencion{origen: p.origenActual(), horas: 24})
+	p.Update(msgRetencion{origen: p.origen(), horas: 24})
 	if v := p.Vista(); !strings.Contains(v, "el último día") {
 		t.Fatalf("el periodo sale de la retención:\n%s", v)
 	}
@@ -587,17 +585,17 @@ func TestServicioCaido(t *testing.T) {
 // descarta.
 func TestRespuestasViejas(t *testing.T) {
 	p, _, cli, id := abierta(t)
-	p.Update(msgInstancia{origen: p.origenActual(), r: cliente.ResumenInstancia{Base: cli.Base, Trabajos: map[string]int{"completado": 1}}})
-	vieja := p.origenActual()
-	vieja.instancia = "otro-" + id
+	p.Update(msgInstancia{origen: p.origen(), r: cliente.ResumenInstancia{Base: cli.Base, Trabajos: map[string]int{"completado": 1}}})
+	vieja := p.origen()
+	vieja.Instancia = "otro-" + id
 	p.Update(msgInstancia{origen: vieja, r: cliente.ResumenInstancia{Trabajos: map[string]int{"completado": 99}}})
 	ctx, cancelar := context.WithCancel(context.Background())
 	cancelar()
-	cancelada := p.origenActual()
-	cancelada.ctx = ctx
+	cancelada := p.origen()
+	cancelada.Ctx = ctx
 	p.Update(msgInstancia{origen: cancelada, r: cliente.ResumenInstancia{Trabajos: map[string]int{"completado": 98}}})
-	anterior := p.origenActual()
-	anterior.gen--
+	anterior := p.origen()
+	anterior.Gen--
 	p.Update(msgInstancia{origen: anterior, r: cliente.ResumenInstancia{Trabajos: map[string]int{"completado": 97}}})
 	p.Update(msgRed{origen: vieja, tipo: "trabajo", ev: ev()})
 	if p.inst.Trabajos["completado"] != 1 || len(p.red) != 0 {
@@ -614,15 +612,15 @@ func TestRespuestasViejas(t *testing.T) {
 // ancho, también con tildes; desplazar llega hasta el final.
 func TestCabeEn60x20(t *testing.T) {
 	p, r, cli, _ := abierta(t)
-	p.Update(msgInstancia{origen: p.origenActual(), r: cliente.ResumenInstancia{Base: cli.Base, AppConClave24h: 50, Trabajos: map[string]int{"completado": 12345}}})
-	p.Update(msgEspacios{origen: p.origenActual(), lista: []contrato.Espacio{{Nombre: "Notas con un nombre muy largo y tildes áéíóú", UltimoError: "x"}}})
-	p.Update(msgConversor{origen: p.origenActual(), e: contrato.EstadoConversor{Estado: "error", Mensaje: "sin red"}})
-	p.Update(msgAgentes{origen: p.origenActual(), lista: []adaptador{{Agente: "claude"}, {Agente: "codex", Desconectado: true}}})
+	p.Update(msgInstancia{origen: p.origen(), r: cliente.ResumenInstancia{Base: cli.Base, AppConClave24h: 50, Trabajos: map[string]int{"completado": 12345}}})
+	p.Update(msgEspacios{origen: p.origen(), lista: []contrato.Espacio{{Nombre: "Notas con un nombre muy largo y tildes áéíóú", UltimoError: "x"}}})
+	p.Update(msgConversor{origen: p.origen(), e: contrato.EstadoConversor{Estado: "error", Mensaje: "sin red"}})
+	p.Update(msgAgentes{origen: p.origen(), lista: []adaptador{{Agente: "claude"}, {Agente: "codex", Desconectado: true}}})
 	var recientes []nucleo.Trabajo
 	for i := 0; i < 5; i++ {
 		recientes = append(recientes, trabajoDe(fmt.Sprint("r", i), "una pregunta bastante larga con tildes áéíóú que no cabe en una sola línea de sesenta columnas", "claude", "claude/modelo-con-nombre-largo", "completado", r.t))
 	}
-	p.Update(msgRecientes{origen: p.origenActual(), lista: recientes})
+	p.Update(msgRecientes{origen: p.origen(), lista: recientes})
 	for i := 0; i < 14; i++ {
 		r.t = r.t.Add(time.Second)
 		p.evento(ev(con(fmt.Sprintf("t%02d", i), "validando_salida", "validacion"), func(e *evento) {
@@ -650,7 +648,7 @@ func TestCabeEn60x20(t *testing.T) {
 		t.Fatalf("End llega al final:\n%s", fin)
 	}
 	p.Update(tecla("home"))
-	if v := p.Vista(); !strings.HasPrefix(v, "Inicio") {
+	if v := p.Vista(); !strings.HasPrefix(v, "Tus apps se conectan") {
 		t.Fatalf("Home vuelve al principio:\n%s", v)
 	}
 	// Y la ventana puede cambiar a mitad sin perder el sitio ni salirse.
@@ -672,7 +670,7 @@ func TestTextosComoLaWeb(t *testing.T) {
 	t.Cleanup(p.Ocultar)
 	p.evento(ev(con("a", "ejecutando", "ejecucion")))
 	v := p.Vista()
-	for _, quiere := range []string{"Home", "Your apps connect to", "Your network", "Departures", "Completed", "In progress", "With errors", "Getting started",
+	for _, quiere := range []string{"Your apps connect to", "Your network", "Departures", "Completed", "In progress", "With errors", "Getting started",
 		"Connect at least one agent", "1 of 1 agents ready", "Try an agent", "Connect your app", "running"} {
 		if !strings.Contains(v, quiere) && !strings.Contains(strings.ToLower(v), strings.ToLower(quiere)) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
@@ -704,7 +702,7 @@ func TestPeticionesRecientes(t *testing.T) {
 	lista[2].Solicitud.Mensajes, lista[2].EntradasEliminadas = nil, true
 	lista[3].CreadoEn = r.t.Add(-30 * time.Second)
 	lista[4].CreadoEn = r.t.Add(-3 * time.Hour)
-	p.Update(msgRecientes{origen: p.origenActual(), lista: lista})
+	p.Update(msgRecientes{origen: p.origen(), lista: lista})
 	v := p.Vista()
 	for _, quiere := range []string{"pregunta 0 con salto", "Claude claude/sonnet", "hace 1 min", "Completado", "Falló", "(entrada eliminada por la retención)",
 		"hace 30 s", "hace 3 h", "Ver historial"} {
@@ -721,7 +719,7 @@ func TestPeticionesRecientes(t *testing.T) {
 	}
 	// Los viejos de una semana se fechan.
 	lista[0].CreadoEn = r.t.Add(-10 * 24 * time.Hour)
-	p.Update(msgRecientes{origen: p.origenActual(), lista: lista[:1]})
+	p.Update(msgRecientes{origen: p.origen(), lista: lista[:1]})
 	if v := p.Vista(); !strings.Contains(v, r.t.Add(-10*24*time.Hour).Local().Format("2006-01-02")) {
 		t.Fatalf("más de una semana, la fecha:\n%s", v)
 	}
@@ -778,7 +776,7 @@ func TestPasosConSuAtajo(t *testing.T) {
 func TestSoloAscii(t *testing.T) {
 	p, r, cli, _ := abierta(t)
 	p.estilos.Iconos, p.estilos.ASCII = pagina.IconosASCII, true
-	p.Update(msgInstancia{origen: p.origenActual(), r: cliente.ResumenInstancia{Base: cli.Base, AppConClave24h: 30, Trabajos: map[string]int{"completado": 1}}})
+	p.Update(msgInstancia{origen: p.origen(), r: cliente.ResumenInstancia{Base: cli.Base, AppConClave24h: 30, Trabajos: map[string]int{"completado": 1}}})
 	for i, estado := range []string{"ejecutando", "completado", "fallido", "cancelado"} {
 		p.evento(ev(con(fmt.Sprint(i), estado, etapaDe(estado)), func(e *evento) { e.Creado = r.t }))
 	}
@@ -821,7 +819,7 @@ func TestDesplaza(t *testing.T) {
 func TestOcultarYMostrar(t *testing.T) {
 	p, r, _, _ := abierta(t)
 	p.evento(ev(con("a", "ejecutando", "ejecucion")))
-	viejo := p.origenActual()
+	viejo := p.origen()
 	p.Ocultar()
 	if _, cmd := p.Update(msgTic{origen: viejo}); cmd != nil {
 		t.Fatal("un temporizador de antes de ocultar no se vuelve a armar")

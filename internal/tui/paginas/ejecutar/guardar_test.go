@@ -17,7 +17,7 @@ func TestGuardarComoApi(t *testing.T) {
 	p := abierta(t, cli, id)
 	escribir(p, "instrucciones", "Responde en una frase")
 	pulsar(p, "esc", "g")
-	if p.guardar == nil || !p.EnCampo() {
+	if !p.EnCampo() || !strings.Contains(p.Vista(), p.tx("ejecutar.guardarApi")) {
 		t.Fatal("g abre «Guardar como API»")
 	}
 	escribir2 := func(texto string) {
@@ -27,7 +27,7 @@ func TestGuardarComoApi(t *testing.T) {
 		}
 	}
 	escribir2("Mal Nombre")
-	if fuera := pulsar(p, "ctrl+s"); len(fuera) != 0 || p.guardar == nil {
+	if fuera := pulsar(p, "ctrl+s"); len(fuera) != 0 || !p.EnCampo() {
 		t.Fatalf("un nombre que no vale no se guarda: %v", fuera)
 	}
 	if v := p.Vista(); !strings.Contains(v, "Minúsculas, números") {
@@ -47,7 +47,7 @@ func TestGuardarComoApi(t *testing.T) {
 		t.Fatalf("la API lleva la receta: %+v", l.Puntos)
 	}
 	pulsar(p, "esc")
-	if p.creada != nil {
+	if strings.Contains(p.Vista(), "API mi-app lista") || strings.Contains(p.Vista(), "/openai/v1") {
 		t.Fatal("Esc cierra y olvida la clave")
 	}
 	if v := p.Vista(); !strings.Contains(v, "Editando la API mi-app") {
@@ -110,7 +110,7 @@ func TestCodigoComoLaPrueba(t *testing.T) {
 		t.Fatalf("y copia el código: %v", fuera)
 	}
 	pulsar(p, "esc")
-	if p.codigo != nil {
+	if strings.Contains(p.Vista(), "[Python") {
 		t.Fatal("Esc lo cierra")
 	}
 }

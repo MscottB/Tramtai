@@ -80,6 +80,9 @@ func hasta(t *testing.T, p *Pagina, cond func() bool) {
 	}
 }
 
+// pestana dice si la vista enseña esa pestaña como la elegida (su nombre entre corchetes).
+func pestana(p *Pagina, clave string) bool { return strings.Contains(p.Vista(), p.tx(clave)+"]") }
+
 func pulsar(p *Pagina, teclas ...string) []tea.Msg {
 	var fuera []tea.Msg
 	for _, k := range teclas {
@@ -160,7 +163,7 @@ func TestEnviarYCancelar(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatalf("el agente no recibió la petición: %v", fuera)
 	}
-	if p.pestana != pestRespuesta || p.trabajo == nil {
+	if !pestana(p, "ejecutar.respuesta") || p.trabajo == nil {
 		t.Fatal("enviar enseña la respuesta")
 	}
 	hasta(t, p, func() bool { return p.salida == "primera parte" })
@@ -257,7 +260,7 @@ func TestCorregirYCopiar(t *testing.T) {
 	}
 	// n deja la página lista para otra prueba con la misma receta.
 	pulsar(p, "n")
-	if p.trabajo != nil || p.form.Valor("mensaje") != "" || p.pestana != pestReceta || !p.form.Marcado("estructurada") {
+	if p.trabajo != nil || p.form.Valor("mensaje") != "" || !pestana(p, "ejecutar.receta") || !p.form.Marcado("estructurada") {
 		t.Fatalf("Nueva prueba vacía el mensaje y conserva la receta: %+v", p.leer())
 	}
 	if pulsar(p, "n"); p.form.Valor("esquema") == "" {
@@ -337,7 +340,7 @@ func TestSeguirTrabajo(t *testing.T) {
 	p := abierta(t, cli, id)
 	_, cmd := p.Update(pagina.SeguirTrabajo{ID: tr.ID})
 	correr(p, cmd)
-	if p.trabajo == nil || p.trabajo.ID != tr.ID || p.pestana != pestRespuesta {
+	if p.trabajo == nil || p.trabajo.ID != tr.ID || !pestana(p, "ejecutar.respuesta") {
 		t.Fatal("abre el trabajo en la respuesta")
 	}
 	if p.form.Valor("mensaje") != "esperar" || p.form.Valor("instrucciones") != "corto" || p.valorOpcion("modelo") != "simulado" {
@@ -370,7 +373,7 @@ func TestUsarDeNuevo(t *testing.T) {
 		t.Fatalf("solo las de la terminal:\n%s", v)
 	}
 	pulsar(p, "u")
-	if p.pestana != pestReceta || p.form.Valor("mensaje") != "otra vez" || p.form.Valor("respaldo") != "simulado" {
+	if !pestana(p, "ejecutar.receta") || p.form.Valor("mensaje") != "otra vez" || p.form.Valor("respaldo") != "simulado" {
 		t.Fatalf("u trae mensaje y receta: %+v", p.leer())
 	}
 	pulsar(p, "left", "enter")
@@ -435,7 +438,7 @@ func TestRespuestasViejas(t *testing.T) {
 	p := abierta(t, cli, id)
 	cancelado, cancelar := context.WithCancel(context.Background())
 	cancelar()
-	viejos := []origen{{ctx: p.c.Ctx, instancia: id, gen: p.gen - 1}, {ctx: p.c.Ctx, instancia: "otro", gen: p.gen}, {ctx: cancelado, instancia: id, gen: p.gen}}
+	viejos := []origen{{pagina.Origen{Ctx: p.c.Ctx, Instancia: id, Gen: p.gen - 1}}, {pagina.Origen{Ctx: p.c.Ctx, Instancia: "otro", Gen: p.gen}}, {pagina.Origen{Ctx: cancelado, Instancia: id, Gen: p.gen}}}
 	for _, o := range viejos {
 		p.Update(msgCreado{origen: o, t: nucleo.Trabajo{ID: "viejo", Estado: nucleo.Completado}})
 		p.Update(msgRecientes{origen: o, lista: []nucleo.Trabajo{{ID: "viejo"}, {ID: "otro"}}})

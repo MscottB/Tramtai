@@ -21,10 +21,6 @@ import (
 // terminales son los estados de un trabajo que ya acabó (web/src/formato.ts).
 var terminales = []string{"completado", "fallido", "cancelado", "interrumpido"}
 
-func rellenar(texto string, ancho int) string {
-	return texto + strings.Repeat(" ", max(ancho-lipgloss.Width(texto), 0))
-}
-
 // envolver parte un texto (con saltos de línea propios) en líneas de como mucho ancho columnas, con sangria espacios por
 // delante, y las pinta con el estilo.
 func envolver(texto string, ancho, sangria int, estilo lipgloss.Style) []string {
@@ -81,7 +77,7 @@ func (p *Pagina) pasos() []paso {
 		{p.tx("inicio.paso3"), p.tx("inicio.paso3Detalle"), pagina.PaginaConectar, len(p.puntos) > 0},
 	}
 	if p.autoDisp {
-		lista = append(lista, paso{p.tx("inicio.paso4", "sistema", sistema()), p.tx("inicio.paso4Detalle"), pagina.PaginaConfiguracion, p.autoActivo})
+		lista = append(lista, paso{p.tx("inicio.paso4", "sistema", sistema()), p.a(idioma.T("Las apps siguen funcionando aunque cierres la terminal")), pagina.PaginaConfiguracion, p.autoActivo})
 	}
 	return lista
 }
@@ -160,8 +156,8 @@ func (p *Pagina) fila(tr tranvia) string {
 		api = p.tx("mapa.principal")
 	}
 	agente := catalogo.NombreVisible(tr.Agente)
-	return estilo.Render(icono) + " " + rellenar(e.Recortar(api, 18), 18) + " " + rellenar(e.Recortar(agente, 14), 14) + " " +
-		rellenar(e.Recortar(p.tx(claveEtapa(tr)), 13), 13) + " " + e.Tenue.Render(p.tx("vivo.hace", "s", strconv.Itoa(segundos)))
+	return estilo.Render(icono) + " " + pagina.Rellenar(e.Recortar(api, 18), 18) + " " + pagina.Rellenar(e.Recortar(agente, 14), 14) + " " +
+		pagina.Rellenar(e.Recortar(p.tx(claveEtapa(tr)), 13), 13) + " " + e.Tenue.Render(p.tx("vivo.hace", "s", strconv.Itoa(segundos)))
 }
 
 // contador es una fila del tablero: el icono, la tecla que abre el Historial con ese estado, el nombre, lo que cuenta y la
@@ -173,18 +169,18 @@ func (p *Pagina) contador(icono string, estilo lipgloss.Style, tecla, clave stri
 	libre := ancho - 2 - 15 - 1 - lipgloss.Width(cifra) - 1
 	detalle := e.Recortar(p.tx("inicio."+clave+"Detalle"), max(libre, 0))
 	hueco := max(ancho-2-15-lipgloss.Width(detalle)-lipgloss.Width(cifra), 1)
-	return estilo.Render(icono) + " " + e.Tecla.Render(tecla) + " " + rellenar(nombre, 12) + " " + e.Tenue.Render(detalle) + strings.Repeat(" ", hueco) + cifra
+	return estilo.Render(icono) + " " + e.Tecla.Render(tecla) + " " + pagina.Rellenar(nombre, 12) + " " + e.Tenue.Render(detalle) + strings.Repeat(" ", hueco) + cifra
 }
 
 // lineas es todo lo que dice la página, de arriba abajo; Vista enseña la parte que cabe.
 func (p *Pagina) lineas() []string {
 	e, ancho := p.estilos, max(p.c.Ancho, 1)
-	l := []string{e.Titulo.Render(e.Recortar(p.Titulo(), ancho))}
+	var l []string // el título ya está en la cabecera de la app
 	switch {
 	case p.sinServ:
 		return append(l, "", e.Advertencia.Render(e.Recortar(p.a(idioma.T("El servicio no responde · r reintenta")), ancho)))
 	case !p.cargado && p.err == "":
-		return append(l, "", e.Tenue.Render(p.a(idioma.T("Cargando…"))))
+		return append(l, "", e.Tenue.Render(p.tx("comun.cargando")))
 	}
 	if p.err != "" {
 		l = append(l, envolver(p.err, ancho, 0, e.Error)...)
@@ -197,8 +193,11 @@ func (p *Pagina) lineas() []string {
 				listos++
 			}
 		}
-		l = append(l, e.Tenue.Render(e.Recortar(p.tx("mapa.descripcion", "apis", strconv.Itoa(p.origenes()), "listos", strconv.Itoa(listos),
-			"total", strconv.Itoa(len(p.agentes))), ancho)))
+		red := p.tx("mapa.descripcion", "apis", strconv.Itoa(p.origenes()), "listos", strconv.Itoa(listos), "total", strconv.Itoa(len(p.agentes)))
+		if p.origenes() == 1 { // la Web UI solo tiene el plural: «1 orígenes»
+			red = p.a(idioma.Tf("Red de Tramtai: 1 origen y %d de %d agentes en servicio.", listos, len(p.agentes)))
+		}
+		l = append(l, e.Tenue.Render(e.Recortar(red, ancho)))
 	} else {
 		l = append(l, e.Tenue.Render(p.tx("inicio.comprobando")))
 	}

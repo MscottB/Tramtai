@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"net/url"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -101,6 +102,49 @@ type (
 	// Volver lleva a la página anterior: de la Ayuda a la de antes, o tras un IrA a la de origen. Sin anterior, nada.
 	Volver struct{}
 )
+
+// Origen es lo que lleva cada respuesta de una página para saber si aún vale (las respuestas viejas se descartan): el Ctx y
+// el espacio con que se pidió y la versión de la página (cada Iniciar, Ocultar o Mostrar la cambia). Cada página lo envuelve
+// en su propio tipo, type origen struct{ pagina.Origen }, para que sus mensajes no se confundan con los de otra.
+type Origen struct {
+	Ctx       context.Context
+	Instancia string
+	Gen       int
+}
+
+// Origen es el de una petición que se hace ahora, en la versión gen de la página.
+func (c Contexto) Origen(gen int) Origen { return Origen{Ctx: c.Ctx, Instancia: c.Instancia, Gen: gen} }
+
+// DelEspacio dice si la respuesta es del espacio de c y su Ctx sigue vivo, aunque la página haya cambiado de versión:
+// vale para lo que ya pasó en el servicio (una petición creada o cancelada).
+func (o Origen) DelEspacio(c Contexto) bool {
+	return o.Ctx != nil && o.Ctx.Err() == nil && o.Instancia == c.Instancia
+}
+
+// Vigente dice si la respuesta sigue valiendo: es DelEspacio y de la versión gen de la página.
+func (o Origen) Vigente(c Contexto, gen int) bool { return o.DelEspacio(c) && o.Gen == gen }
+
+// Tras es un temporizador: pasado d (con espera, que las pruebas sustituyen) responde mensaje(), salvo que ctx se cancele
+// antes.
+func Tras(ctx context.Context, d time.Duration, espera func(time.Duration) <-chan time.Time, mensaje func() tea.Msg) tea.Cmd {
+	return func() tea.Msg {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-espera(d):
+			return mensaje()
+		}
+	}
+}
+
+// SinServicio es el Cmd de ErrorServicio si err es de conexión (NoResponde); nil si es otro error, que la página enseña
+// con su mensaje.
+func SinServicio(err error) tea.Cmd {
+	if !NoResponde(err) {
+		return nil
+	}
+	return func() tea.Msg { return ErrorServicio{Err: err} }
+}
 
 // Atras es el Cmd de Volver, para el Esc de una página que no tiene nada que cerrar.
 func Atras() tea.Msg { return Volver{} }

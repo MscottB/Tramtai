@@ -1,5 +1,6 @@
-// Package vivo es lo que comparten las páginas que siguen un trabajo en vivo (Probar y el detalle del Historial): el
-// seguimiento del flujo de eventos con su reconexión, y cómo se pinta el estado (icono, nombre, ruta y «hace cuánto»).
+// Package vivo es lo que comparten las páginas que siguen peticiones en vivo: Probar y el detalle del Historial siguen una
+// (el flujo de eventos con su reconexión) e Inicio lee el flujo del espacio con Esperar. Las tres pintan el estado igual
+// (icono, nombre, ruta y «hace cuánto»).
 package vivo
 
 import (
