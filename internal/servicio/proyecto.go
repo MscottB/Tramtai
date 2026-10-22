@@ -27,7 +27,7 @@ predeterminados:
 `
 
 // PrepararProyecto crea .tramtai/ en dir: la configuración versionada, su .gitignore (local.yaml no se versiona)
-// y un perfil de ejemplo con su esquema. Lo usan tramtai iniciar y la Web UI.
+// y un perfil de ejemplo con su esquema.
 func PrepararProyecto(dir string) error {
 	ruta := filepath.Join(dir, ".tramtai", "config.yaml")
 	if err := os.MkdirAll(filepath.Dir(ruta), 0o755); err != nil {

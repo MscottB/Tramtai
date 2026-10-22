@@ -1,5 +1,5 @@
 // Package cliente habla con el servicio en marcha: lo descubre por su descriptor, comprueba que responde el
-// mismo servicio y usa el token de servicio para administrar y operar las instancias. Lo usan la CLI y la TUI.
+// mismo servicio y usa el token de servicio para administrar y operar las instancias.
 package cliente
 
 import (

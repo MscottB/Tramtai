@@ -24,8 +24,7 @@ const (
 	AutenticacionSuscripcion = "suscripcion"
 )
 
-// FormatoSerializacion identifica el enmarcado de conversaciones de varios turnos;
-// se publicará en /api/v1/capacidades.
+// FormatoSerializacion identifica el enmarcado de conversaciones de varios turnos; se publica en /api/v1/capacidades.
 const FormatoSerializacion = "tramtai-turnos-v2"
 
 // variablesCredenciales se retiran del entorno heredado: cada CLI recibe solo la suya.

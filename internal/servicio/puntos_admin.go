@@ -13,7 +13,7 @@ import (
 	"tramtai/internal/nucleo"
 )
 
-// Rutas de /api/v1/servicio/puntos, solo con el token de servicio: las usa tramtai acceso. Trabajan sobre un archivo
+// Rutas de /api/v1/servicio/puntos, solo con el token de servicio. Trabajan sobre un archivo
 // (la configuración global o, con ?proyecto=<raíz>, su .tramtai/local.yaml) y no sobre las instancias en marcha, así
 // que también llegan a los puntos de una instancia inactiva o que no se pudieron abrir. Las reglas son las de la Web UI.
 

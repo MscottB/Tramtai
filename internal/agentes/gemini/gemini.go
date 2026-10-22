@@ -18,7 +18,7 @@ import (
 	"tramtai/internal/nucleo"
 )
 
-// baseGemini es la Gemini API pública (generativelanguage); Vertex AI queda fuera del MVP inicial.
+// baseGemini es la Gemini API pública (generativelanguage); Vertex AI no está soportado.
 const baseGemini = "https://generativelanguage.googleapis.com/v1beta"
 
 // modeloGeminiPredeterminado se usa si la solicitud no fija modelo ni perfil.

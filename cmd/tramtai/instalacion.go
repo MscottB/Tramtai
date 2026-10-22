@@ -9,7 +9,7 @@ import (
 	"tramtai/internal/instalacion"
 )
 
-// comandoInstalacion lo usa el instalador de Windows (scripts/instalador/tramtai.nsi); no aparece en la ayuda.
+// comandoInstalacion son las tareas del instalador de Windows (scripts/instalador/tramtai.nsi); no aparece en la ayuda.
 func comandoInstalacion() *cobra.Command {
 	cmd := &cobra.Command{Use: "instalacion", Short: idioma.T("Tareas del instalador de Windows"), Hidden: true}
 	for _, accion := range []string{"agregar-ruta", "quitar-ruta"} {

@@ -23,8 +23,7 @@ func PuertoLibre(host string, puerto int) bool {
 }
 
 // FijarPuerto guarda servicio.puerto y servicio.puerto_automatico en el archivo global si el puerto está en rango y
-// libre; automatico solo decide qué se escribe, no si se comprueba. Se aplica al reiniciar. Es lo que usan
-// el servicio, la CLI y la terminal.
+// libre; automatico solo decide qué se escribe, no si se comprueba. Se aplica al reiniciar.
 func FijarPuerto(rutaGlobal, host string, puerto int, automatico bool) error {
 	return FijarPuertoPropio(rutaGlobal, host, puerto, 0, automatico)
 }

@@ -162,7 +162,6 @@ func comandoConfiguracion() *cobra.Command {
 	return configuracion
 }
 
-// raizProyecto es la raíz del proyecto que contiene el directorio actual, o "" fuera de un proyecto.
 func comandoVersion() *cobra.Command {
 	var detalle bool
 	cmd := &cobra.Command{Use: "version", Short: idioma.T("Muestra la versión"), Args: cobra.NoArgs, Run: func(cmd *cobra.Command, _ []string) {
@@ -192,6 +191,7 @@ func comandoAbrir() *cobra.Command {
 	return abrir
 }
 
+// raizProyecto es la raíz del proyecto que contiene el directorio actual, o "" fuera de un proyecto.
 func raizProyecto() string {
 	dir, err := os.Getwd()
 	if err != nil {

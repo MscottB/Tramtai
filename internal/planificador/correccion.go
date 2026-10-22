@@ -63,8 +63,8 @@ type validacion struct {
 	Correccion int                `json:"correccion"`
 }
 
-// inicioCorreccion empieza el mensaje de una corrección. La Web UI lo reconoce para mostrar el mensaje original
-// (mensajeDe en web/src/api.ts): si cambia, cambiarlo también allí.
+// inicioCorreccion empieza el mensaje de una corrección. La Web UI (web/src/recetas.ts) y la terminal (paginas/ejecutar)
+// lo reconocen para mostrar el mensaje original; la prueba de recetas.test.ts compara la copia de la Web con esta.
 const inicioCorreccion = "Tu respuesta no cumple el formato pedido:"
 
 // errCorreccionDetenida: el servicio se detuvo mientras una corrección esperaba al agente. No se reencola (repetiría

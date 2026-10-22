@@ -244,8 +244,7 @@ func (i *Instancia) Purgar(ctx context.Context) error {
 	return PurgarBase(ctx, i.almacen, i.Cargas, i.Config, i.ID)
 }
 
-// PurgarBase aplica la retención de c a las instancias de una base y a sus cargas. La usan cada instancia del servicio
-// y tramtai ejecutar --directo, cuya base guarda una instancia por ejecución.
+// PurgarBase aplica la retención de c a las instancias de una base y a sus cargas. En la base de ejecutar --directo hay una instancia por ejecución.
 func PurgarBase(ctx context.Context, alm *persistencia.Almacen, cargas *documentos.Cargas, c *configuracion.Configuracion, instancias ...string) error {
 	resultado, metadatos, maximo, _ := nucleo.AjustarRetencion(c.Entero("retencion.horas_resultado"), c.Entero("retencion.horas_metadatos"),
 		c.Entero("retencion.max_trabajos"))

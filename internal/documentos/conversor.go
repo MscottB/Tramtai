@@ -164,7 +164,6 @@ func (t *tarea) archivo(ctx context.Context, e Entrada) error {
 	return nil
 }
 
-// leerTexto conserva el contenido tal cual; solo exige UTF-8 válido y quita la marca BOM.
 // ooxml comprueba, antes de entregarlo a markitdown, que un Word, PowerPoint o Excel (que son un ZIP) no se
 // descomprima en más de conversion.maximo_descomprimido_mb.
 // Si no se abre como ZIP, decide markitdown.
@@ -192,6 +191,7 @@ func (t *tarea) ooxml(e Entrada, extension string) error {
 	return nil
 }
 
+// leerTexto conserva el contenido tal cual; solo exige UTF-8 válido y quita la marca BOM.
 func leerTexto(e Entrada) (string, error) {
 	datos, err := os.ReadFile(e.Ruta)
 	if err != nil {

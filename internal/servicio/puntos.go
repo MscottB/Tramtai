@@ -122,8 +122,8 @@ func validarRespaldo(p ConfigPunto, existe func(agente string) bool) error {
 	return nil
 }
 
-// ValidarParaApps rechaza al guardar una API que use (como agente o en el respaldo) un agente que no se permite en apps
-// (adaptadores.<nombre>.permitir_apps): sus peticiones se rechazarían todas. La usan la Web UI y la terminal.
+// validarParaApps rechaza al guardar una API que use (como agente o en el respaldo) un agente que no se permite en apps
+// (adaptadores.<nombre>.permitir_apps): sus peticiones se rechazarían todas.
 func validarParaApps(p ConfigPunto) error {
 	c, _ := configuracion.CargarConfiguracion("", agentes.Internos()) // sin configuración, solo cuenta la ficha de cada agente
 	usados := []string{p.Agente}
@@ -144,7 +144,7 @@ func validarParaApps(p ConfigPunto) error {
 func (s *Servicio) existe(agente string) bool { return s.opc.Registro[agente] != nil }
 
 // validarPunto aplica las reglas para guardar una API: un respaldo con el que funcione y solo agentes habilitados para
-// apps. El formato lo comprueba NormalizarPunto. Las usan todas las rutas que guardan un punto.
+// apps. El formato lo comprueba NormalizarPunto.
 func validarPunto(p ConfigPunto, existe func(string) bool) error {
 	if err := validarRespaldo(p, existe); err != nil {
 		return err

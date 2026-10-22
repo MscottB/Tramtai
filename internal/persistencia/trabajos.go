@@ -451,8 +451,7 @@ func (a *Almacen) Contar(ctx context.Context, instancia string) (map[nucleo.Esta
 
 // Recuperar se ejecuta al arrancar: lo que tenía un agente en marcha pasa a interrumpido (nunca se relanza) y lo
 // que no lo tenía vuelve a en_cola, incluido un trabajo que esperaba al siguiente agente del respaldo.
-// shortcut: las entradas pueden viajar dentro de la solicitud y siempre están disponibles; con cargas
-// se verificarán sus hashes y, si falta alguna, el trabajo pasará a fallido con entrada_no_disponible.
+// shortcut: no comprueba las cargas que cita el trabajo ni sus hashes; si ya no existen, falla al preparar la entrada.
 func (a *Almacen) Recuperar(ctx context.Context, instancia string) (interrumpidos, reencolados int, err error) {
 	ids, err := a.ListarPorEstado(ctx, instancia, nucleo.PreparandoEntrada, nucleo.EsperandoAgente,
 		nucleo.Ejecutando, nucleo.ValidandoSalida, nucleo.CancelacionSolicitada)

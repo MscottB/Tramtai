@@ -445,12 +445,12 @@ func (p *Planificador) Listar(ctx context.Context, limite int, f persistencia.Fi
 	return p.almacen.Listar(ctx, p.opc.Instancia, f, limite)
 }
 
-// Contar devuelve cuántos trabajos de la instancia hay en cada estado.
 // ContarOrigenDesde cuenta los trabajos de la instancia con ese origen desde desde (ver Almacen.ContarOrigenDesde).
 func (p *Planificador) ContarOrigenDesde(ctx context.Context, origen string, sinPunto bool, desde time.Time) (int, error) {
 	return p.almacen.ContarOrigenDesde(ctx, p.opc.Instancia, origen, sinPunto, desde)
 }
 
+// Contar devuelve cuántos trabajos de la instancia hay en cada estado.
 func (p *Planificador) Contar(ctx context.Context) (map[nucleo.Estado]int, error) {
 	return p.almacen.Contar(ctx, p.opc.Instancia)
 }
