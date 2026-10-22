@@ -1051,6 +1051,27 @@ func TestListaConError(t *testing.T) {
 	}
 }
 
+// TestListaConErrorCabe: un error largo ocupa sus líneas y la lista se acorta lo que haga falta: la vista cabe en el área
+// de 60×20 y se ven la fila elegida, al final de la lista, y «Mostrando…».
+func TestListaConErrorCabe(t *testing.T) {
+	cli, id := prueba.Servicio(t)
+	crearVarias(t, cli, id, 30)
+	proxy, fallar := prueba.ConFallo(t, cli)
+	a := abierta(t, proxy, id)
+	a.Pulsar("end")
+	fallar(strings.Repeat("El servicio no pudo leer el historial de este espacio. ", 4))
+	a.Pulsar("r")
+	v := a.Vista()
+	if h := lipgloss.Height(v); h > 17 {
+		t.Fatalf("la vista mide %d filas y el área es de 17:\n%s", h, v)
+	}
+	for _, quiere := range []string{"de este espacio.", "▸", "petición-000", "Mostrando las 30 más recientes"} {
+		if !strings.Contains(v, quiere) {
+			t.Fatalf("falta %q:\n%s", quiere, v)
+		}
+	}
+}
+
 // TestHistorialSondeo: cada 5 s la lista se vuelve a leer, salvo con el detalle abierto o con páginas extra cargadas.
 func TestHistorialSondeo(t *testing.T) {
 	cli, id := prueba.Servicio(t)
@@ -1188,11 +1209,14 @@ func TestTextosComoLaWeb(t *testing.T) {
 	a, _ := abrir(t, c)
 	v := strings.Join(strings.Fields(a.Vista()), " ") // un texto largo ocupa varias líneas
 	for _, quiere := range []string{datos.Texto("en", "historial.estado") + ": " + datos.Texto("en", "historial.todos"),
-		datos.Texto("en", "historial.origen") + ": " + datos.Texto("en", "historial.todosOrigenes"), datos.Textof("en", "historial.mostrando", "n", "1"),
+		datos.Texto("en", "historial.origen") + ": " + datos.Texto("en", "historial.todosOrigenes"), "Showing the most recent one",
 		datos.Texto("en", "estado.completado")} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}
+	}
+	if plural := datos.Textof("en", "historial.mostrando", "n", "1"); strings.Contains(v, plural) {
+		t.Fatalf("con una, el singular: %q\n%s", plural, v)
 	}
 	a.Pulsar("enter")
 	v = a.Vista()
@@ -1208,8 +1232,15 @@ func TestTextosComoLaWeb(t *testing.T) {
 	if v := e.Vista(); !strings.Contains(v, "[Mensaje]") || !strings.Contains(v, "Respuesta") || !strings.Contains(v, "Registro") {
 		t.Fatalf("pestañas en español:\n%s", v)
 	}
-	// Y los pies, de los textos de la Web UI.
 	e.Pulsar("esc")
+	if v := e.Vista(); !strings.Contains(v, "Mostrando la más reciente") {
+		t.Fatalf("una, en singular:\n%s", v)
+	}
+	crear(t, cli, id, "otra")
+	if e.Pulsar("r"); !strings.Contains(e.Vista(), "Mostrando las 2 más recientes") {
+		t.Fatalf("dos, en plural:\n%s", e.Vista())
+	}
+	// Y los pies, de los textos de la Web UI.
 	pie := teclasPie(e)
 	for _, quiere := range []string{"e Estado", "f Origen", "t Reintentar", "x Eliminar", "V Vaciar historial"} {
 		if !slices.Contains(pie, quiere) {

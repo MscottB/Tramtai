@@ -1348,7 +1348,7 @@
           "pares": [
             [
               "How do I repeat the guided tour?",
-              "On Home, click “Take the Tramtai tour” in Getting started. Esc closes it and the arrow keys move between steps. It only shows: it clicks nothing and changes no data."
+              "On Home, click “Take the guided tour” in Getting started. Esc closes it and the arrow keys move between steps. It only shows: it clicks nothing and changes no data."
             ],
             [
               "What are the trams on the Home map?",
@@ -1872,7 +1872,7 @@
           "pares": [
             [
               "The response does not match the JSON Schema (salida_no_cumple_esquema)",
-              "The response did not have the requested shape. Try shows which field failed; “Correct” asks the agent to fix it. If it keeps failing, simplify the schema."
+              "The response did not have the requested shape. The Playground shows which field failed; “Correct” asks the agent to fix it. If it keeps failing, simplify the schema."
             ]
           ]
         },
@@ -2329,7 +2329,7 @@
             ],
             [
               "Which version do I have?",
-              "Open “About Tramtai” in the side menu or the tray; “Copy support data” copies what is needed, without keys."
+              "Open “About Tramtai” in the side menu or the tray; “Copy support details” copies what is needed, without keys."
             ],
             [
               "Where is my data kept?",
@@ -2406,7 +2406,7 @@
             ],
             [
               "The response does not match the JSON Schema (salida_no_cumple_esquema)",
-              "The response did not have the requested shape. Try shows which field failed; “Correct” asks the agent to fix it. If it keeps failing, simplify the schema."
+              "The response did not have the requested shape. The Playground shows which field failed; “Correct” asks the agent to fix it. If it keeps failing, simplify the schema."
             ],
             [
               "The time limit ran out (tiempo_ejecucion_agotado)",

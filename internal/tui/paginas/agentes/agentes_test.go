@@ -2,6 +2,7 @@ package agentes_test
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -328,6 +329,28 @@ func TestAgentesPintaElEstadoDelServicio(t *testing.T) {
 		if v := a.Vista(); !strings.Contains(v, "Claude") || !strings.Contains(v, etiqueta) {
 			t.Errorf("%+v: falta %q:\n%s", e, etiqueta, v)
 		}
+	}
+}
+
+// TestAgentesConErrorCabe: un error largo del servicio ocupa sus líneas y la lista se acorta lo que haga falta: la vista
+// cabe en el área de 60×20 y la fila elegida, al final de la lista, se ve.
+func TestAgentesConErrorCabe(t *testing.T) {
+	mas := map[string]adaptadores.Adaptador{}
+	for i := range 12 {
+		mas[fmt.Sprintf("agente%02d", i)] = detectado(adaptadores.Estado{})
+	}
+	cli, id := prueba.ConAgentes(t, mas)
+	proxy, fallar := prueba.ConFallo(t, cli)
+	a := abrir(t, contexto(t, proxy, id))
+	a.Pulsar("end")
+	fallar(strings.Repeat("El servicio no pudo comprobar los agentes de este espacio. ", 4))
+	a.Pulsar("c")
+	v := a.Vista()
+	if h := lipgloss.Height(v); h > 17 {
+		t.Fatalf("la vista mide %d filas y el área es de 17:\n%s", h, v)
+	}
+	if !strings.Contains(v, "de este espacio.") || !strings.Contains(v, "▸") {
+		t.Fatalf("se ven el error entero y la fila elegida:\n%s", v)
 	}
 }
 

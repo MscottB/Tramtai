@@ -181,17 +181,20 @@ func (p *Pagina) vistaLista() string {
 		return strings.Join(l, "\n")
 	}
 	var pie []string
-	if n := len(p.trabajos); n > 0 {
+	switch n := len(p.trabajos); {
+	case n == 1:
+		pie = append(pie, p.tx("historial.mostrandoUno"))
+	case n > 1:
 		pie = append(pie, p.tx("historial.mostrando", "n", itoa(n)))
 	}
 	if p.cargando || p.cargandoMas {
 		pie = append(pie, p.tx("comun.cargando"))
 	}
 	textoPie := ""
-	if len(pie) > 0 { // entero, en las líneas que ocupe: dice qué filtran el estado y la búsqueda
+	if len(pie) > 0 { // entero, en las líneas que ocupe
 		textoPie = e.Tenue.Width(ancho).Render(strings.Join(pie, " "+e.Iconos.Separador+" "))
 	}
-	hueco := max(alto-len(l)-min(len(pie), 1)*lipgloss.Height(textoPie), 1)
+	hueco := max(alto-lipgloss.Height(strings.Join(l, "\n"))-min(len(pie), 1)*lipgloss.Height(textoPie), 1) // el error ocupa sus líneas
 	if len(p.lista.Visibles()) == 0 {
 		l = append(l, p.vacio()...)
 	} else {
