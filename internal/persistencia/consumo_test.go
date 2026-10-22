@@ -104,8 +104,9 @@ func TestPresupuestoAgotadoEnAceptar(t *testing.T) {
 	aceptar(t, a, enPunto("otra"), "") // el tope es solo de facturas
 }
 
-// Si el contador del presupuesto falla, la petición se rechaza (los topes no pueden dejar de frenar en silencio) y queda
-// en el registro del servicio; también al terminar un trabajo, cuyo cambio se deshace.
+// Si el contador del presupuesto falla y la petición tiene topes, se rechaza al aceptarla: los topes no pueden dejar de
+// frenar en silencio. Sin topes se acepta. Al terminar, el cambio de estado se confirma siempre (el costo ya se gastó
+// y deshacerlo perdería la respuesta e impediría recuperar el espacio al arrancar). Cada fallo queda en el registro.
 func TestContadorRotoRechaza(t *testing.T) {
 	ahora := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
 	for nombre, topes := range map[string][]Tope{"sin topes": nil, "con tope": {{"facturas", nucleo.Presupuesto{Diario: nucleo.Limites{Peticiones: 5}}}}} {
@@ -113,19 +114,31 @@ func TestContadorRotoRechaza(t *testing.T) {
 			a := conPresupuesto(t, &ahora, topes...)
 			var registro strings.Builder
 			a.Registros = &registro
-			enCurso := aceptar(t, a, enPunto("facturas"), "")
+			terminado := aceptar(t, a, enPunto("facturas"), "")
+			enMarcha := aceptar(t, a, enPunto("facturas"), "")
+			for _, paso := range [][2]nucleo.Estado{{nucleo.EnCola, nucleo.PreparandoEntrada}, {nucleo.PreparandoEntrada, nucleo.EsperandoAgente}, {nucleo.EsperandoAgente, nucleo.Ejecutando}} {
+				if err := a.CambiarEstado(ctx, enMarcha.ID, paso[0], paso[1], Cambio{}); err != nil {
+					t.Fatal(err)
+				}
+			}
 			if _, err := a.db.Exec("DROP TABLE consumo"); err != nil {
 				t.Fatal(err)
 			}
 			tr := enPunto("facturas")
-			if _, _, err := a.Aceptar(ctx, tr, "", 0); err == nil {
-				t.Fatal("con el contador roto se aceptó la petición")
+			_, _, err := a.Aceptar(ctx, tr, "", 0)
+			if conTopes := len(topes) > 0; conTopes && err == nil {
+				t.Fatal("con topes y el contador roto se aceptó la petición")
+			} else if !conTopes && err != nil {
+				t.Fatalf("sin topes, el contador roto no rechaza: %v", err)
 			}
-			if _, err := a.Obtener(ctx, tr.ID); nucleo.CodigoDe(err) != nucleo.CodigoNoEncontrado {
-				t.Fatalf("el trabajo rechazado no debe guardarse: %v", err)
+			if _, errObtener := a.Obtener(ctx, tr.ID); (err != nil) != (nucleo.CodigoDe(errObtener) == nucleo.CodigoNoEncontrado) {
+				t.Fatalf("solo se guarda la petición aceptada: %v %v", err, errObtener)
 			}
-			if err := a.CambiarEstado(ctx, enCurso.ID, nucleo.EnCola, nucleo.Fallido, Cambio{}); err == nil {
-				t.Fatal("con el contador roto el trabajo terminó sin contar")
+			if err := a.CambiarEstado(ctx, terminado.ID, nucleo.EnCola, nucleo.Fallido, Cambio{}); err != nil {
+				t.Fatalf("con el contador roto el trabajo tiene que poder terminar: %v", err)
+			}
+			if interrumpidos, _, err := a.Recuperar(ctx, enMarcha.Instancia); err != nil || interrumpidos != 1 {
+				t.Fatalf("con el contador roto el espacio tiene que poder recuperarse: %d %v", interrumpidos, err)
 			}
 			if !strings.Contains(registro.String(), "presupuesto") {
 				t.Fatalf("el fallo tiene que quedar en el registro: %q", registro.String())

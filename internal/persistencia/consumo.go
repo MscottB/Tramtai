@@ -87,15 +87,15 @@ func (a *Almacen) comprobarPresupuesto(ctx context.Context, tx *sql.Tx, t nucleo
 }
 
 // sumarConsumo suma c en la fila del día de aceptación del trabajo y registra los cruces del 80 % y del 100 %. Si no
-// puede sumar, devuelve el error y quien llama deshace la transacción del trabajo; un aviso que no se guarda solo se
-// anota.
+// puede sumar, devuelve el error y quien llama decide: Aceptar rechaza la petición si tiene topes; al terminar,
+// CambiarEstado solo lo anota. Un aviso que no se guarda solo se anota.
 func (a *Almacen) sumarConsumo(ctx context.Context, tx *sql.Tx, instancia, punto string, aceptado, ahora time.Time, c nucleo.Consumo) error {
 	dia, _, _, _ := nucleo.Periodos(aceptado, a.Zona)
 	if _, err := tx.ExecContext(ctx, `INSERT INTO consumo (instancia, punto, dia, peticiones, terminados, tokens, usd) VALUES (?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (instancia, punto, dia) DO UPDATE SET peticiones = peticiones + excluded.peticiones,
 		terminados = terminados + excluded.terminados, tokens = tokens + excluded.tokens, usd = usd + excluded.usd`,
 		instancia, punto, dia, c.Peticiones, c.Terminados, c.Tokens, c.USD); err != nil {
-		return a.errContador(punto, err)
+		return err
 	}
 	claveDia, claveMes, _, _ := nucleo.Periodos(ahora, a.Zona)
 	for _, tope := range a.topes(instancia, punto) {
