@@ -19,7 +19,7 @@ nada más. Si necesitas trabajos largos que sigues, cancelas o reintentas, la AP
 y la regeneras sin tocar las demás. La **clave del espacio** es para ti y tus scripts. En la API, «instancia» es ese
 espacio de trabajo: el global o el de un proyecto.
 
-Si aún no conoces la app, [Aprende la app en 2 minutos](https://mscottb.github.io/Tramtai/#demo) la enseña en la portada, y
+Si aún no conoces la app, [el recorrido guiado](https://mscottb.github.io/Tramtai/#demo) la enseña en la portada, y
 en Tramtai el botón **?** de cada página tiene **Muéstrame en pantalla**. La API no cambia.
 
 Desde la terminal, `tramtai espacios` lista los espacios, `tramtai espacio iniciar|detener|olvidar` los gestiona y
@@ -87,8 +87,8 @@ por cada URL.
 | Claude Code | `haiku` | sí | sí | sí |
 | Codex | el predeterminado de su CLI | sí | sí | sí |
 | GitHub Copilot | `auto` (plan Free) | sí | sí | sí |
-| Gemini API | — | sin comprobar (falta clave) | | |
-| Antigravity | — | no se usa desde apps ni APIs | | |
+| Gemini API | ninguno | sin comprobar (falta clave) | | |
+| Antigravity | ninguno | no se usa desde apps ni APIs | | |
 
 Se repite con `go test -tags canario -run TestHerramientasConAgentesReales -v ./internal/api/` (salta los agentes que
 no estén instalados o sin sesión).

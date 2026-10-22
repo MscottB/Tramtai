@@ -92,8 +92,9 @@ intente manipular al modelo; sí que un modelo manipulado haga daño a través d
 
 - **Agentes:** Claude Code sin herramientas, sin configuración del usuario y con el mensaje por stdin; Codex en solo
   lectura, sin terminal ni búsqueda web, en una carpeta temporal y con el mensaje por stdin; GitHub Copilot sin herramientas ni
-  MCP, con un `COPILOT_HOME` privado y el mensaje por stdin; Gemini es HTTP. Las pruebas
-  canario lo comprueban con los CLI reales. Antigravity va sin herramientas por un hook, con el mensaje por stdin
+  MCP, con un `COPILOT_HOME` privado y el mensaje por stdin. Las pruebas canario (`pruebas/canario`) lo comprueban con
+  los CLI reales de Claude, Codex y Copilot: un mensaje les pide leer un archivo fuera de su carpeta, ejecutar una orden
+  y abrir una URL local, y no lo consiguen. Gemini es HTTP, sin herramientas, y no pasa por el canario. Antigravity va sin herramientas por un hook, con el mensaje por stdin
   y la configuración privada; queda fuera de las apps hasta que su canario pase con una clave de la Gemini API.
 - **Entrada:** delimitadores con código por petición; topes de mensajes (1.000), esquema (256 KB), cuerpo (16 MB) y
   la comprobación del contexto antes de llamar al CLI.
