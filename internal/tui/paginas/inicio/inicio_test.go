@@ -1,248 +1,104 @@
-package inicio
+package inicio_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 
+	"tramtai/internal/adaptadores"
 	"tramtai/internal/cliente"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/servicio"
-	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
+	"tramtai/internal/tui/paginas/inicio"
 	"tramtai/internal/tui/paginas/prueba"
 )
 
-var tecla = prueba.Tecla
+// Las pruebas de Inicio van por su interfaz: teclas, los mensajes de pagina y lo que enseña Vista(), contra el servicio de
+// prueba. El reloj es el de la prueba (prueba.Reloj) y, donde hace falta un flujo que se corta a voluntad, el flujo del
+// espacio es un guion de la prueba.
 
-// correr ejecuta un Cmd y alimenta a la página con lo que sale, como haría la app. Los mensajes del flujo y de los
-// temporizadores se le dan a la página pero no se vuelven a esperar (esperarían para siempre): las pruebas los leen de p.canal
-// o los mandan a mano. Devuelve los mensajes que son de la app.
-func correr(p *Pagina, cmd tea.Cmd) []tea.Msg {
-	var fuera []tea.Msg
-	cola := []tea.Cmd{cmd}
-	for len(cola) > 0 {
-		c := cola[0]
-		cola = cola[1:]
-		if c == nil {
-			continue
-		}
-		switch m := c().(type) {
-		case nil:
-		case tea.BatchMsg:
-			cola = append(cola, m...)
-		case comp.Pregunta, comp.NuevoAviso, pagina.IrA, pagina.Volver, pagina.ErrorServicio:
-			fuera = append(fuera, m)
-		case msgFlujo, msgRed, msgTic, msgRefresco:
-			p.Update(m)
-		default:
-			_, siguiente := p.Update(m)
-			cola = append(cola, siguiente)
-		}
-	}
-	return fuera
+var ctx = context.Background()
+
+// nueva crea Inicio con un reloj de prueba.
+func nueva(lengua string) (pagina.Pagina, *prueba.Reloj) {
+	r := prueba.NuevoReloj()
+	return inicio.NuevaConReloj(lengua, r.Ahora, r.Espera), r
 }
 
-// hasta lee el flujo de la página hasta que se cumpla la condición.
-func hasta(t *testing.T, p *Pagina, cond func() bool) {
+// abrir inicia Inicio con ese contexto (y ese flujo, si no es nil): arranca con «Cargando…» y espera lo del espacio.
+func abrir(t *testing.T, c pagina.Contexto, f *ensayo) (*prueba.App, *prueba.Reloj) {
 	t.Helper()
-	limite := time.After(5 * time.Second)
-	for !cond() {
-		select {
-		case m, ok := <-p.canal:
-			if !ok {
-				t.Fatal("el flujo se cerró antes de lo esperado")
-			}
-			p.Update(m)
-		case <-limite:
-			t.Fatalf("no llegó lo esperado:\n%s", p.Vista())
-		}
+	p, r := nueva(c.Idioma)
+	if f != nil {
+		inicio.ConFlujo(p, f.abrir)
 	}
-}
-
-// reloj es el reloj de la página en las pruebas.
-type reloj struct{ t time.Time }
-
-func (r *reloj) ahora() time.Time { return r.t }
-
-// nueva crea la página con el reloj controlado y las esperas instantáneas (apuntadas).
-func nueva(lengua string) (*Pagina, *reloj, *apuntes) {
-	p := Nueva(lengua).(*Pagina)
-	r := &reloj{t: time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)}
-	esperas := &apuntes{}
-	p.ahora = r.ahora
-	p.esperaPara = func(d time.Duration) <-chan time.Time {
-		if d != cadaLimpieza && d != cadaRefresco { // solo las esperas de la reconexión
-			esperas.add(d)
-		}
-		c := make(chan time.Time, 1)
-		c <- time.Time{}
-		return c
-	}
-	return p, r, esperas
-}
-
-// apuntes guarda duraciones que apunta la goroutine del flujo y lee la prueba.
-type apuntes struct {
-	mu sync.Mutex
-	d  []time.Duration
-}
-
-func (a *apuntes) add(d time.Duration) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	a.d = append(a.d, d)
-}
-
-func (a *apuntes) lista() []time.Duration {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return slices.Clone(a.d)
-}
-
-func contexto(cli *cliente.Cliente, instancia string) pagina.Contexto {
-	return pagina.Contexto{Ctx: context.Background(), Cli: cli, Instancia: instancia, Idioma: "es",
-		Estilos: &pagina.Estilos{Iconos: pagina.IconosUnicode}, Ancho: 60, Alto: 17}
-}
-
-// abierta inicia la página contra el servicio real y espera a que lleguen sus datos.
-func abierta(t *testing.T) (*Pagina, *reloj, *cliente.Cliente, string) {
-	t.Helper()
-	cli, id := prueba.Servicio(t)
-	p, r, _ := nueva("es")
-	cmd := p.Iniciar(contexto(cli, id))
-	if v := p.Vista(); !strings.Contains(v, "Cargando…") {
+	a := prueba.Conducir(t, p)
+	cmd := p.Iniciar(c)
+	if v := p.Vista(); c.Cli != nil && !strings.Contains(v, strings.TrimRight(datos.Texto(c.Idioma, "comun.cargando"), ".…")) {
 		t.Fatalf("arranca con «Cargando…»:\n%s", v)
 	}
-	correr(p, cmd)
-	t.Cleanup(p.Ocultar)
-	return p, r, cli, id
+	a.Correr(cmd)
+	return a, r
 }
 
-// evento manda un evento «trabajo» a la página como si llegara del flujo.
-func (p *Pagina) evento(e contrato.EventoTrabajo) {
-	p.Update(msgRed{origen: p.origen(), tipo: "trabajo", ev: e})
+// alto es el contexto de la prueba con ese alto.
+func alto(t *testing.T, cli *cliente.Cliente, id string, filas int) pagina.Contexto {
+	c := prueba.Contexto(t, cli, id)
+	c.Alto = filas
+	return c
 }
 
-func TestInicioCarga(t *testing.T) {
-	p, _, cli, _ := abierta(t)
-	v := p.Vista()
-	if strings.HasPrefix(v, "Inicio") {
-		t.Fatalf("el título ya está en la cabecera de la app:\n%s", v)
-	}
-	for _, quiere := range []string{"Tus apps se conectan a " + cli.Base, "Red de Tramtai: 1 origen y 1 de 1", "Primeros pasos", "Completadas", "En proceso", "Con error",
-		"1 de 1 agentes listos"} {
-		if !strings.Contains(v, quiere) {
-			// Los pasos están más abajo: se ven al desplazar.
-			p.Update(tecla("end"))
-			if !strings.Contains(p.Vista(), quiere) {
-				t.Fatalf("falta %q:\n%s", quiere, v)
-			}
-			p.Update(tecla("home"))
-		}
-	}
-	if p.Titulo() != "Inicio" || p.Ayuda() != "inicio" || p.EnCampo() {
-		t.Fatalf("título %q, ayuda %q", p.Titulo(), p.Ayuda())
-	}
-}
-
-// TestRedAparecenYSeVan: una petición aparece en la red con su API, su agente, su etapa y su tiempo, y las que terminan
-// se quedan 2 s (4 si fallan) y se van. El flujo es el del servicio real; el reloj, el de la prueba.
-func TestRedAparecenYSeVan(t *testing.T) {
+// abierta abre Inicio contra el servicio real, con su flujo.
+func abierta(t *testing.T) (*prueba.App, *prueba.Reloj, *cliente.Cliente, string) {
+	t.Helper()
 	cli, id := prueba.Servicio(t)
-	hola := nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "hola"}}}
-	if _, err := cli.Crear(context.Background(), id, hola); err != nil {
-		t.Fatal(err)
-	}
-	p, r, _ := nueva("es")
-	correr(p, p.Iniciar(contexto(cli, id)))
-	t.Cleanup(p.Ocultar)
-	hasta(t, p, func() bool { return p.enVivo && len(p.red) == 1 })
-	var tr tranvia
-	for _, x := range p.red {
-		tr = x
-	}
-	if tr.Agente != "simulado" || tr.Origen != nucleo.DesdeTerminal {
-		t.Fatalf("la fila trae el agente y de dónde salió: %+v", tr)
-	}
-	hasta(t, p, func() bool { return p.red[tr.ID].Etapa == "llegada" })
-	p.Update(tecla("down")) // sin efecto aquí: la vista cabe
-	v := p.Vista()
-	for _, quiere := range []string{"Clave del espacio", "simulado", "terminada", "0 s"} {
-		if !strings.Contains(v, quiere) {
-			t.Fatalf("falta %q:\n%s", quiere, v)
-		}
-	}
-	// Llegó: sigue 2 s y luego se va.
-	r.t = r.t.Add(1999 * time.Millisecond)
-	p.Update(msgTic{origen: p.origen()})
-	if len(p.red) != 1 {
-		t.Fatalf("a los 1999 ms sigue: %v", p.red)
-	}
-	r.t = r.t.Add(time.Millisecond)
-	p.Update(msgTic{origen: p.origen()})
-	if len(p.red) != 0 || strings.Contains(p.Vista(), "simulado") {
-		t.Fatalf("a los 2 s se va: %v\n%s", p.red, p.Vista())
-	}
-	if !p.borrados[tr.ID] {
-		t.Fatal("y no vuelve por un evento tardío")
-	}
-
-	// Una que falla se queda 4 s.
-	p.evento(ev(con("f", "fallido", "llegada")))
-	r.t = r.t.Add(3999 * time.Millisecond)
-	p.Update(msgTic{origen: p.origen()})
-	if v := p.Vista(); !strings.Contains(v, "falló") {
-		t.Fatalf("a los 3999 ms se ve que falló:\n%s", v)
-	}
-	r.t = r.t.Add(time.Millisecond)
-	p.Update(msgTic{origen: p.origen()})
-	if len(p.red) != 0 {
-		t.Fatalf("a los 4 s se va: %v", p.red)
-	}
-
-	// Una petición nueva del servicio aparece en vivo, con la API que la mandó.
-	if _, err := cli.Crear(context.Background(), id, hola); err != nil {
-		t.Fatal(err)
-	}
-	hasta(t, p, func() bool { return len(p.red) == 1 })
+	a, r := abrir(t, prueba.Contexto(t, cli, id), nil)
+	return a, r, cli, id
 }
 
-// TestRedComoMucho12: la red enseña como mucho 12 filas, las más recientes, y dice cuántas quedan fuera.
-func TestRedComoMucho12(t *testing.T) {
-	p, r, _ := nueva("es")
-	c := contexto(nil, "global")
-	c.Alto = 40
-	p.Iniciar(c)
-	p.Update(msgInstancia{origen: p.origen(), r: contrato.ResumenInstancia{Base: "http://127.0.0.1:1"}}) // sin servicio: se da por cargada
-	for i := 0; i < 15; i++ {
-		r.t = r.t.Add(time.Second)
-		p.evento(ev(con(fmt.Sprintf("t%02d", i), "ejecutando", "ejecucion"), func(e *contrato.EventoTrabajo) { e.API = fmt.Sprintf("api%02d", i); e.Creado = r.t }))
-	}
-	v := p.Vista()
-	filas := 0
-	for _, l := range strings.Split(v, "\n") {
-		if strings.Contains(l, "en ejecución") {
-			filas++
+// irA es el IrA entre lo que salió hacia la app.
+func irA(fuera []tea.Msg) (pagina.IrA, bool) {
+	for _, m := range fuera {
+		if ir, ok := m.(pagina.IrA); ok {
+			return ir, true
 		}
 	}
-	if filas != 12 || !strings.Contains(v, "+3") || !strings.Contains(v, "api14") || strings.Contains(v, "api02 ") || !strings.Contains(v, "15 peticiones en curso.") {
-		t.Fatalf("%d filas:\n%s", filas, v)
-	}
+	return pagina.IrA{}, false
 }
 
-// ensayo es un flujo falso: cada llamada ejecuta el siguiente guion.
+// destino es la página a la que lleva lo que salió hacia la app.
+func destino(fuera []tea.Msg) string {
+	ir, _ := irA(fuera)
+	return ir.Pagina
+}
+
+// sistema es el nombre del sistema operativo en el paso de arrancar con él.
+func sistema() string {
+	switch runtime.GOOS {
+	case "windows":
+		return "Windows"
+	case "darwin":
+		return "macOS"
+	}
+	return "Linux"
+}
+
+// ensayo es un flujo del espacio de mentira: cada vez que la página lo abre corre el siguiente paso del guion.
 type ensayo struct {
 	mu       sync.Mutex // la goroutine del flujo escribe y la prueba lee
 	llamadas int
@@ -267,34 +123,161 @@ func (e *ensayo) cuenta() (llamadas int, plazos []time.Duration) {
 
 func foto(alEvento func(string, []byte) error) { _ = alEvento("foto", []byte("{}")) }
 
+// trabajo es un evento «trabajo» del flujo.
+func trabajo(e contrato.EventoTrabajo) []byte {
+	datos, _ := json.Marshal(e)
+	return datos
+}
+
+// esperarFin espera hasta que se corte el contexto, como un flujo que sigue abierto.
+func esperarFin(ctx context.Context, _ func(string, []byte) error) error {
+	<-ctx.Done()
+	return ctx.Err()
+}
+
+// reconexiones son las esperas de la reconexión que ha pedido la página (sin la limpieza de la red ni el refresco).
+func reconexiones(r *prueba.Reloj) []time.Duration {
+	var l []time.Duration
+	for _, d := range r.Pedidas() {
+		if d != inicio.CadaLimpieza && d != inicio.CadaRefresco {
+			l = append(l, d)
+		}
+	}
+	return l
+}
+
+// pasarAlReconectar espera a que la página pida su espera de reconexión número n y la hace pasar.
+func pasarAlReconectar(t *testing.T, a *prueba.App, r *prueba.Reloj, n int) {
+	t.Helper()
+	a.Hasta(func() bool { return len(reconexiones(r)) >= n })
+	r.Pasar(reconexiones(r)[n-1])
+	a.Asentar()
+}
+
+func TestInicioCarga(t *testing.T) {
+	a, _, cli, _ := abierta(t)
+	for _, quiere := range []string{"Tus apps se conectan a " + cli.Base, "Red de Tramtai: 1 origen y 1 de 1", "Primeros pasos", "Completadas", "En proceso", "Con error",
+		"1 de 1 agentes listos"} {
+		if !strings.Contains(a.Vista(), quiere) {
+			// Los pasos están más abajo: se ven al desplazar.
+			a.Pulsar("end")
+			if !strings.Contains(a.Vista(), quiere) {
+				t.Fatalf("falta %q:\n%s", quiere, a.Vista())
+			}
+			a.Pulsar("home")
+		}
+	}
+	if strings.HasPrefix(a.Vista(), "Inicio") {
+		t.Fatalf("el título ya está en la cabecera de la app:\n%s", a.Vista())
+	}
+	if a.P.Titulo() != "Inicio" || a.P.Ayuda() != "inicio" || a.P.EnCampo() {
+		t.Fatalf("título %q, ayuda %q", a.P.Titulo(), a.P.Ayuda())
+	}
+}
+
+// TestRedAparecenYSeVan: una petición aparece en la red con su API, su agente, su etapa y su tiempo, y las que terminan
+// se quedan 2 s (4 si fallan) y se van. El flujo es el del servicio real; el reloj, el de la prueba.
+func TestRedAparecenYSeVan(t *testing.T) {
+	cli, id := prueba.ConAgentes(t, map[string]adaptadores.Adaptador{"roto": adaptadores.Simulado{Error: errors.New("falla")}})
+	hola := nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "hola"}}}
+	if _, err := cli.Crear(ctx, id, hola); err != nil {
+		t.Fatal(err)
+	}
+	a, r := abrir(t, prueba.Contexto(t, cli, id), nil)
+	a.HastaVer("terminada")
+	for _, quiere := range []string{"Clave del espacio", "simulado", "terminada", "0 s"} {
+		if !strings.Contains(a.Vista(), quiere) {
+			t.Fatalf("falta %q:\n%s", quiere, a.Vista())
+		}
+	}
+	// Llegó: sigue 2 s y luego se va.
+	r.Pasar(1999 * time.Millisecond)
+	if a.Asentar(); !strings.Contains(a.Vista(), "terminada") {
+		t.Fatalf("a los 1999 ms sigue:\n%s", a.Vista())
+	}
+	r.Pasar(inicio.CadaLimpieza)
+	if a.Asentar(); strings.Contains(a.Vista(), "terminada") {
+		t.Fatalf("pasados los 2 s se va:\n%s", a.Vista())
+	}
+	// Una que falla se queda 4 s.
+	if _, err := cli.Crear(ctx, id, nucleo.SolicitudEjecucion{Agente: "roto", Mensajes: hola.Mensajes}); err != nil {
+		t.Fatal(err)
+	}
+	a.HastaVer("falló")
+	r.Pasar(3999 * time.Millisecond)
+	if a.Asentar(); !strings.Contains(a.Vista(), "falló") {
+		t.Fatalf("a los 3999 ms se ve que falló:\n%s", a.Vista())
+	}
+	r.Pasar(inicio.CadaLimpieza)
+	if a.Asentar(); strings.Contains(a.Vista(), "falló") {
+		t.Fatalf("pasados los 4 s se va:\n%s", a.Vista())
+	}
+	// Una petición nueva del servicio aparece en vivo.
+	if _, err := cli.Crear(ctx, id, hola); err != nil {
+		t.Fatal(err)
+	}
+	a.HastaVer("terminada")
+}
+
+// TestRedComoMucho12: la red enseña como mucho 12 filas, las más recientes, y dice cuántas quedan fuera.
+func TestRedComoMucho12(t *testing.T) {
+	cli, id := prueba.Servicio(t)
+	f := &ensayo{guion: []func(context.Context, func(string, []byte) error) error{
+		func(ctx context.Context, al func(string, []byte) error) error {
+			for i := 0; i < 15; i++ {
+				_ = al("trabajo", trabajo(contrato.EventoTrabajo{ID: fmt.Sprintf("t%02d", i), Estado: "ejecutando", Etapa: "ejecucion", Agente: "claude",
+					API: fmt.Sprintf("api%02d", i), Creado: time.Now().Add(time.Duration(i) * time.Second)}))
+			}
+			foto(al)
+			return esperarFin(ctx, al)
+		},
+	}}
+	a, _ := abrir(t, alto(t, cli, id, 40), f)
+	a.HastaVer("api14")
+	v := a.Vista()
+	filas := 0
+	for _, l := range strings.Split(v, "\n") {
+		if strings.Contains(l, "en ejecución") {
+			filas++
+		}
+	}
+	if filas != 12 || !strings.Contains(v, "+3") || strings.Contains(v, "api02 ") || !strings.Contains(v, "15 peticiones en curso.") {
+		t.Fatalf("%d filas:\n%s", filas, v)
+	}
+}
+
 // TestRedReconecta: si el flujo se corta, la página vuelve a conectar con las esperas de vivo.ts (1 s, 2 s…), un flujo
 // mudo (ErrSinActividad) cuenta como cortado, y la foto del flujo nuevo quita lo que ya no existe.
 func TestRedReconecta(t *testing.T) {
 	cli, id := prueba.Servicio(t)
-	p, _, esperas := nueva("es")
 	f := &ensayo{guion: []func(context.Context, func(string, []byte) error) error{
 		func(_ context.Context, al func(string, []byte) error) error { // 1: manda uno y la foto, y se corta
-			_ = al("trabajo", []byte(`{"id":"a","estado":"ejecutando","etapa":"ejecucion","agente":"claude"}`))
+			_ = al("trabajo", []byte(`{"id":"a","estado":"ejecutando","etapa":"ejecucion","agente":"codex","api":"de-la-prueba"}`))
 			foto(al)
 			return errors.New("se cortó")
 		},
 		func(context.Context, func(string, []byte) error) error { return cliente.ErrSinActividad }, // 2: ni la foto
-		func(ctx context.Context, al func(string, []byte) error) error { // 3: vuelve, sin el trabajo a
+		func(_ context.Context, al func(string, []byte) error) error { // 3: vuelve, sin el trabajo a, y se corta otra vez
 			foto(al)
-			<-ctx.Done()
-			return ctx.Err()
+			return errors.New("se cortó")
+		},
+		func(ctx context.Context, al func(string, []byte) error) error { // 4: vuelve y sigue
+			foto(al)
+			return esperarFin(ctx, al)
 		},
 	}}
-	p.abrir = f.abrir
-	correr(p, p.Iniciar(contexto(cli, id)))
-	t.Cleanup(p.Ocultar)
-	hasta(t, p, func() bool { return len(p.red) == 1 && p.enVivo })
-	hasta(t, p, func() bool { n, _ := f.cuenta(); return n == 3 && p.enVivo && len(p.red) == 0 })
-	if !slices.Equal(esperas.lista(), []time.Duration{time.Second, 2 * time.Second}) {
-		t.Fatalf("esperas %v", esperas.lista())
-	}
-	if p.fallos != 0 {
-		t.Fatalf("la foto del flujo nuevo cuenta como recuperado: %d fallos", p.fallos)
+	a, r := abrir(t, prueba.Contexto(t, cli, id), f)
+	a.HastaVer("de-la-prueba", "Sin conexión en vivo")
+	pasarAlReconectar(t, a, r, 1)
+	pasarAlReconectar(t, a, r, 2)
+	pasarAlReconectar(t, a, r, 3) // tras una foto, la cuenta de cortes vuelve a empezar: otra vez 1 s
+	a.Hasta(func() bool {
+		n, _ := f.cuenta()
+		v := a.Vista()
+		return n == 4 && !strings.Contains(v, "Sin conexión en vivo") && !strings.Contains(v, "de-la-prueba")
+	})
+	if got := reconexiones(r); !slices.Equal(got, []time.Duration{time.Second, 2 * time.Second, time.Second}) {
+		t.Fatalf("esperas %v", got)
 	}
 	_, plazos := f.cuenta()
 	for _, plazo := range plazos {
@@ -308,173 +291,111 @@ func TestRedReconecta(t *testing.T) {
 // no sale en la consulta se va.
 func TestRedConsultaSinFlujo(t *testing.T) {
 	cli, id := prueba.Servicio(t)
-	p, _, _ := nueva("es")
 	f := &ensayo{guion: []func(context.Context, func(string, []byte) error) error{
+		func(_ context.Context, al func(string, []byte) error) error {
+			_ = al("trabajo", []byte(`{"id":"fantasma","estado":"ejecutando","etapa":"ejecucion","agente":"codex","api":"fantasma"}`))
+			return errors.New("sin flujo")
+		},
 		func(context.Context, func(string, []byte) error) error { return errors.New("sin flujo") },
 	}}
-	p.abrir = f.abrir
-	correr(p, p.Iniciar(contexto(cli, id)))
-	t.Cleanup(p.Ocultar)
-	hasta(t, p, func() bool { return p.fallos >= 3 })
-	if v := p.Vista(); !strings.Contains(v, "Sin conexión en vivo") {
-		t.Fatalf("avisa de que no hay flujo:\n%s", v)
+	a, r := abrir(t, prueba.Contexto(t, cli, id), f)
+	a.HastaVer("fantasma", "Sin conexión en vivo")
+	pasarAlReconectar(t, a, r, 1) // 1 s
+	pasarAlReconectar(t, a, r, 2) // 2 s: van 3 cortes
+	a.Hasta(func() bool { n, _ := f.cuenta(); return n == 3 && len(reconexiones(r)) == 3 })
+	if !strings.Contains(a.Vista(), "fantasma") {
+		t.Fatalf("sin consulta, la fila sigue:\n%s", a.Vista())
 	}
-	p.evento(ev(con("fantasma", "ejecutando", "ejecucion")))
-	correr(p, p.refrescar())
-	if len(p.red) != 0 {
-		t.Fatalf("la consulta no trae el trabajo fantasma: %v", p.red)
+	r.Pasar(2 * time.Second) // a los 5 s, el refresco consulta los trabajos
+	if a.Asentar(); strings.Contains(a.Vista(), "fantasma") || !strings.Contains(a.Vista(), "Sin conexión en vivo") {
+		t.Fatalf("la consulta no trae el trabajo fantasma:\n%s", a.Vista())
 	}
 }
 
 // TestRedSeCierraAlSalir: el flujo se cierra al salir de Inicio (Ocultar), al cancelarse el contexto de la página
-// (cambio de espacio, reinicio) y se vuelve a abrir al volver (Mostrar).
+// (cambio de espacio, reinicio) y se vuelve a abrir al volver (Mostrar); otro Iniciar cierra el de antes.
 func TestRedSeCierraAlSalir(t *testing.T) {
-	cli, id := prueba.Servicio(t)
-	p, _, _ := nueva("es")
-	ctx, cancelar := context.WithCancel(context.Background())
-	defer cancelar()
-	c := contexto(cli, id)
-	c.Ctx = ctx
-	correr(p, p.Iniciar(c))
-	hasta(t, p, func() bool { return p.enVivo })
-	cerrado := func(canal <-chan msgRed) {
+	abiertos := func(a *prueba.App, n int) {
 		t.Helper()
-		limite := time.After(5 * time.Second)
-		for {
-			select {
-			case _, ok := <-canal:
-				if !ok {
-					return
-				}
-			case <-limite:
-				t.Fatal("el flujo sigue abierto")
-			}
-		}
+		a.Hasta(func() bool { return prueba.FlujosAbiertos() == n })
 	}
-	primero := p.canal
-	p.Ocultar()
-	cerrado(primero)
-	if p.visible {
-		t.Fatal("oculta")
-	}
-
-	correr(p, p.Mostrar())
-	hasta(t, p, func() bool { return p.enVivo })
-	if p.canal == primero {
-		t.Fatal("al volver abre un flujo nuevo")
-	}
-	segundo := p.canal
+	cli, id := prueba.Servicio(t)
+	c := prueba.Contexto(t, cli, id)
+	vivo, cancelar := context.WithCancel(c.Ctx)
+	c.Ctx = vivo
+	a, _ := abrir(t, c, nil)
+	abiertos(a, 1)
+	a.P.(pagina.Ocultable).Ocultar()
+	abiertos(a, 0)
+	a.Correr(a.P.(pagina.Ocultable).Mostrar())
+	abiertos(a, 1)
 	cancelar() // el contexto de la página: cambió el espacio o se reinició
-	cerrado(segundo)
+	abiertos(a, 0)
 
 	// Otro Iniciar cancela el flujo de antes y abre el suyo.
 	cli2, id2 := prueba.Servicio(t)
-	p2, _, _ := nueva("es")
-	correr(p2, p2.Iniciar(contexto(cli2, id2)))
-	hasta(t, p2, func() bool { return p2.enVivo })
-	anterior := p2.canal
-	correr(p2, p2.Iniciar(contexto(cli2, id2)))
-	cerrado(anterior)
-	hasta(t, p2, func() bool { return p2.enVivo })
-	p2.Ocultar()
+	b, _ := abrir(t, prueba.Contexto(t, cli2, id2), nil)
+	abiertos(b, 1)
+	b.Correr(b.P.Iniciar(prueba.Contexto(t, cli2, id2)))
+	abiertos(b, 1)
+	b.P.(pagina.Ocultable).Ocultar()
+	abiertos(b, 0)
 }
 
 // TestAvisoApiPropia: con más de 20 peticiones de apps con la clave del espacio en 24 h se sugiere una API propia, y c
 // lleva a Conectar. Con 20 o menos no se dice nada.
 func TestAvisoApiPropia(t *testing.T) {
-	p, _, cli, id := abierta(t)
-	if strings.Contains(p.Vista(), "con la clave del espacio") {
-		t.Fatalf("sin peticiones no hay aviso:\n%s", p.Vista())
+	a, _, cli, id := abierta(t)
+	if strings.Contains(a.Vista(), "con la clave del espacio") {
+		t.Fatalf("sin peticiones no hay aviso:\n%s", a.Vista())
 	}
-	clave, err := cli.RotarClave(context.Background(), id)
+	clave, err := cli.RotarClave(ctx, id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// comoApp manda n peticiones como una app con la clave del espacio y vuelve a abrir Inicio.
-	comoApp := func(n int) {
-		for range n {
-			req, _ := http.NewRequest("POST", cli.Base+"/api/v1/ejecutar", strings.NewReader(`{"mensajes":[{"rol":"usuario","contenido":"hola"}]}`))
-			req.Header.Set("Authorization", "Bearer "+clave)
-			r, err := http.DefaultClient.Do(req)
-			if err != nil {
-				t.Fatal(err)
-			}
-			r.Body.Close()
-		}
-		correr(p, p.Iniciar(contexto(cli, id)))
-	}
-	comoApp(20)
-	if strings.Contains(p.Vista(), "con la clave del espacio") {
+	comoApp(t, cli, clave, 20)
+	a.Correr(a.P.Iniciar(prueba.Contexto(t, cli, id)))
+	if strings.Contains(a.Vista(), "con la clave del espacio") {
 		t.Fatal("20 no basta")
 	}
-	if _, cmd := p.Update(tecla("c")); cmd != nil {
+	if fuera := a.Pulsar("c"); len(fuera) != 0 {
 		t.Fatal("sin aviso, c no hace nada")
 	}
-	comoApp(1)
-	v := p.Vista()
+	comoApp(t, cli, clave, 1)
+	a.Correr(a.P.Iniciar(prueba.Contexto(t, cli, id)))
+	v := a.Vista()
 	for _, quiere := range []string{"21 peticiones de apps llegaron con la clave del espacio", "últimas 24 h", "Crear una API"} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}
 	}
-	_, cmd := p.Update(tecla("c"))
-	if ir, ok := correr(p, cmd)[0].(pagina.IrA); !ok || ir.Pagina != pagina.PaginaConectar {
-		t.Fatalf("c lleva a Conectar: %v", ir)
+	if d := destino((a.Pulsar("c"))); d != pagina.PaginaConectar {
+		t.Fatalf("c lleva a Conectar: %q", d)
 	}
 }
 
-// TestAvisoEspaciosYConversor: los espacios con problema y el conversor que falta salen como avisos, con su tecla.
-func TestAvisoEspaciosYConversor(t *testing.T) {
-	p, _, _, _ := abierta(t)
-	p.Update(msgEspacios{origen: p.origen(), lista: []contrato.Espacio{{ID: "a", Nombre: "Notas", UltimoError: "no se encuentra"}, {ID: "b", Nombre: "Soporte"}}})
-	if v := p.Vista(); !strings.Contains(v, "El espacio Notas tiene un problema.") || !strings.Contains(v, "Ver espacios") {
-		t.Fatalf("un espacio:\n%s", v)
-	}
-	p.Update(msgEspacios{origen: p.origen(), lista: []contrato.Espacio{{Nombre: "Notas", UltimoError: "x"}, {Nombre: "Soporte", UltimoError: "y"}}})
-	if v := p.Vista(); !strings.Contains(v, "2 espacios tienen un problema y no se abrieron.") {
-		t.Fatalf("varios:\n%s", v)
-	}
-	_, cmd := p.Update(tecla("v"))
-	if ir, ok := correr(p, cmd)[0].(pagina.IrA); !ok || ir.Pagina != pagina.PaginaEspacios {
-		t.Fatalf("v lleva a Espacios: %v", ir)
-	}
-
-	p.Update(msgConversor{origen: p.origen(), e: contrato.EstadoConversor{Estado: "falta"}})
-	v := p.Vista()
-	for _, quiere := range []string{"Falta el conversor de archivos", "Preparar archivos", "Ajustes"} {
-		if !strings.Contains(v, quiere) {
-			t.Fatalf("falta %q:\n%s", quiere, v)
+// comoApp manda n peticiones como una app con la clave del espacio.
+func comoApp(t *testing.T, cli *cliente.Cliente, clave string, n int) {
+	t.Helper()
+	for range n {
+		req, _ := http.NewRequest("POST", cli.Base+"/api/v1/ejecutar", strings.NewReader(`{"mensajes":[{"rol":"usuario","contenido":"hola"}]}`))
+		req.Header.Set("Authorization", "Bearer "+clave)
+		r, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
 		}
-	}
-	_, cmd = p.Update(tecla("s"))
-	if ir, ok := correr(p, cmd)[0].(pagina.IrA); !ok || ir.Pagina != pagina.PaginaConfiguracion {
-		t.Fatalf("s lleva a Ajustes: %v", ir)
-	}
-	if _, cmd := p.Update(tecla("p")); cmd == nil {
-		t.Fatal("p prepara el conversor") // no se ejecuta: descargaría Python
-	}
-	p.Update(msgConversor{origen: p.origen(), e: contrato.EstadoConversor{Estado: "error", Mensaje: "sin red"}})
-	if v := p.Vista(); !strings.Contains(v, "No se pudo preparar el conversor de archivos: sin red") || !strings.Contains(v, "Si la red de tu empresa") {
-		t.Fatalf("error:\n%s", v)
-	}
-	// Preparándose o listo: sin aviso, como la Web UI.
-	for _, estado := range []string{"preparando", "listo"} {
-		p.Update(msgConversor{origen: p.origen(), e: contrato.EstadoConversor{Estado: estado}})
-		if strings.Contains(p.Vista(), "Preparar archivos") {
-			t.Fatalf("%s: sin aviso", estado)
-		}
+		r.Body.Close()
 	}
 }
 
 // pasosDe abre Inicio contra un servicio con Claude listo y Codex desconectado, una API y el arranque automático
 // del sistema como diga auto; con completada, también una petición hecha. Los pasos los calcula el servicio.
-func pasosDe(t *testing.T, auto func() (bool, bool), completada bool) *Pagina {
+func pasosDe(t *testing.T, auto func() (bool, bool), completada bool) *prueba.App {
 	t.Helper()
 	cli, id := prueba.Ajustado(t, func(o *servicio.Opciones) {
 		o.Registro["claude"], o.Registro["codex"] = prueba.Detectado{}, prueba.Detectado{}
 		o.Autoarranque = auto
 	})
-	ctx := context.Background()
 	if err := cli.ConectarAgente(ctx, "codex", false); err != nil {
 		t.Fatal(err)
 	}
@@ -483,24 +404,22 @@ func pasosDe(t *testing.T, auto func() (bool, bool), completada bool) *Pagina {
 	}
 	if completada {
 		j, err := cli.Crear(ctx, id, nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "hola"}}})
-		for limite := time.Now().Add(5 * time.Second); err == nil && j.Estado != nucleo.Completado && time.Now().Before(limite); {
-			j, err = cli.Trabajo(ctx, id, j.ID)
+		if err == nil {
+			err = cli.Eventos(ctx, id, j.ID, 0, func(int, string, string) error { return nil })
 		}
-		if err != nil || j.Estado != nucleo.Completado {
-			t.Fatalf("la petición no terminó: %v %s", err, j.Estado)
+		if err != nil {
+			t.Fatalf("la petición no terminó: %v", err)
 		}
 	}
-	p, _, _ := nueva("es")
-	correr(p, p.Iniciar(contexto(cli, id)))
-	t.Cleanup(p.Ocultar)
-	p.Update(tecla("end"))
-	return p
+	a, _ := abrir(t, prueba.Contexto(t, cli, id), nil)
+	a.Pulsar("end")
+	return a
 }
 
 // TestPrimerosPasos: los 4 pasos con su estado, y «Ver la Ayuda de Empezar» abre el tema que acompaña a Inicio.
 func TestPrimerosPasos(t *testing.T) {
-	p := pasosDe(t, func() (bool, bool) { return true, false }, false)
-	v := p.Vista()
+	a := pasosDe(t, func() (bool, bool) { return true, false }, false)
+	v := a.Vista()
 	for _, quiere := range []string{"Primeros pasos", "✓ Conecta al menos un agente", "2 de 3 agentes listos", "○ Prueba un agente", "✓ Conecta tu aplicación",
 		"○ Arranca Tramtai con " + sistema(), "aunque cierres la terminal", "2 de 4 pasos hechos"} {
 		if !strings.Contains(v, quiere) {
@@ -511,205 +430,205 @@ func TestPrimerosPasos(t *testing.T) {
 	if v := pasosDe(t, func() (bool, bool) { return false, false }, false).Vista(); strings.Contains(v, "Arranca Tramtai") || !strings.Contains(v, "2 de 3 pasos hechos") {
 		t.Fatalf("tres pasos:\n%s", v)
 	}
-
 	tema := ""
 	for _, x := range datos.Ayuda("es") {
 		if x.ID == "empezar" {
 			tema = x.Pagina
 		}
 	}
-	if tema != "inicio" || !strings.Contains(p.Vista(), "Ver la Ayuda de Empezar") {
-		t.Fatalf("el tema empezar acompaña a %q:\n%s", tema, p.Vista())
+	if tema != "inicio" || !strings.Contains(a.Vista(), "Ver la Ayuda de Empezar") {
+		t.Fatalf("el tema empezar acompaña a %q:\n%s", tema, a.Vista())
 	}
-	_, cmd := p.Update(tecla("a"))
-	ir, ok := correr(p, cmd)[0].(pagina.IrA)
+	ir, ok := irA((a.Pulsar("a")))
 	if d, _ := ir.Datos.(pagina.ConAyuda); !ok || ir.Pagina != pagina.PaginaAyuda || d.Pagina != tema {
 		t.Fatalf("a abre la Ayuda de Empezar: %+v", ir)
 	}
-	_, cmd = p.Update(tecla("g"))
-	if ir, ok := correr(p, cmd)[0].(pagina.IrA); !ok || ir.Pagina != pagina.PaginaAgentes {
-		t.Fatalf("g lleva a Agentes: %v", ir)
+	if d := destino((a.Pulsar("g"))); d != pagina.PaginaAgentes {
+		t.Fatalf("g lleva a Agentes: %q", d)
 	}
-
 	// Con todo hecho, la guía se pliega en «Todo listo».
 	if v := pasosDe(t, func() (bool, bool) { return true, true }, true).Vista(); !strings.Contains(v, "Todo listo") || strings.Contains(v, "○") {
 		t.Fatalf("todo listo:\n%s", v)
 	}
 }
 
-// TestContadores: los contadores son los que agrupa el servicio (contadores del resumen), con los nombres de la Web UI.
+// lento es un agente que, mientras bloquear esté puesto, no termina de comprobarse hasta que la prueba lo suelta.
+type lento struct {
+	adaptadores.Simulado
+	bloquear *atomic.Bool
+	soltar   chan struct{}
+}
+
+func (l lento) Detectar(ctx context.Context) adaptadores.Estado {
+	if l.bloquear.Load() {
+		select {
+		case <-l.soltar:
+		case <-ctx.Done():
+		}
+	}
+	return adaptadores.Estado{}
+}
+
+// TestPrimerosPasosComprobando: mientras el servicio comprueba los agentes, la red y los Primeros pasos dicen
+// «Comprobando…»; al llegar la comprobación, sus pasos.
+func TestPrimerosPasosComprobando(t *testing.T) {
+	l := lento{bloquear: &atomic.Bool{}, soltar: make(chan struct{})}
+	cli, id := prueba.ConAgentes(t, map[string]adaptadores.Adaptador{"lento": l})
+	l.bloquear.Store(true)
+	t.Cleanup(func() { l.bloquear.Store(false) })
+	p, _ := nueva("es")
+	a := prueba.Conducir(t, p)
+	a.Lanzar(p.Iniciar(alto(t, cli, id, 60)))
+	a.HastaVer("Tus apps se conectan a")
+	if v := a.Vista(); strings.Count(v, "Comprobando…") != 2 {
+		t.Fatalf("la red y los pasos esperan a la comprobación:\n%s", v)
+	}
+	close(l.soltar)
+	a.HastaVer("Conecta al menos un agente")
+	if strings.Contains(a.Vista(), "Comprobando…") {
+		t.Fatalf("ya comprobados:\n%s", a.Vista())
+	}
+}
+
+// TestContadores: los contadores son los que agrupa el servicio (contadores del resumen), con los nombres de la Web UI; el
+// periodo sale de la retención del servicio.
 func TestContadores(t *testing.T) {
-	p, _, cli, id := abierta(t)
-	v := p.Vista()
+	a, r, cli, id := abierta(t)
+	v := a.Vista()
 	for _, quiere := range []string{"Completadas", "respondidas correctamente", "En proceso", "Con error", "los últimos 7 días"} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}
 	}
-	// Un trabajo hecho suma uno a las completadas.
-	if _, err := cli.Crear(context.Background(), id, nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "hola"}}}); err != nil {
+	// Un trabajo hecho suma uno a las completadas cuando la página se refresca.
+	j, err := cli.Crear(ctx, id, nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "hola"}}})
+	if err == nil {
+		err = cli.Eventos(ctx, id, j.ID, 0, func(int, string, string) error { return nil })
+	}
+	if err != nil {
 		t.Fatal(err)
 	}
-	limite := time.Now().Add(5 * time.Second)
-	for {
-		r, err := cli.Instancia(context.Background(), id)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if r.Trabajos["completado"] == 1 {
-			break
-		}
-		if time.Now().After(limite) {
-			t.Fatalf("el trabajo no terminó: %v", r.Trabajos)
-		}
-		time.Sleep(20 * time.Millisecond)
+	r.Pasar(inicio.CadaRefresco)
+	if a.Asentar(); !strings.Contains(a.Vista(), "Completadas") || !strings.Contains(a.Vista(), " 1") {
+		t.Fatalf("suma uno:\n%s", a.Vista())
 	}
-	correr(p, p.refrescar())
-	if v := p.Vista(); !strings.Contains(v, "Completadas") || !strings.Contains(v, " 1") {
-		t.Fatalf("suma uno:\n%s", v)
-	}
-	p.Update(msgRetencion{origen: p.origen(), horas: 24})
-	if v := p.Vista(); !strings.Contains(v, "el último día") {
-		t.Fatalf("el periodo sale de la retención:\n%s", v)
+	// Con la retención de un día, «el último día».
+	cli2, id2 := prueba.Ajustado(t, func(o *servicio.Opciones) {
+		o.Config.Fijar(configuracion.OrigenGlobal, map[string]any{"retencion.horas_metadatos": 24})
+	})
+	if b, _ := abrir(t, prueba.Contexto(t, cli2, id2), nil); !strings.Contains(b.Vista(), "el último día") {
+		t.Fatalf("el periodo sale de la retención:\n%s", b.Vista())
 	}
 }
 
 func TestEscVuelve(t *testing.T) {
-	p, _, _, _ := abierta(t)
-	_, cmd := p.Update(tecla("esc"))
-	if _, ok := cmd().(pagina.Volver); !ok {
-		t.Fatal("Esc sin nada abierto vuelve")
+	a, _, _, _ := abierta(t)
+	if fuera := a.Pulsar("esc"); len(fuera) != 1 || fuera[0] != (pagina.Volver{}) {
+		t.Fatalf("Esc sin nada abierto vuelve: %v", fuera)
 	}
 }
 
 // TestServicioCaido: sin cliente, o con el servicio parado a mitad, la página avisa y no se cierra.
 func TestServicioCaido(t *testing.T) {
-	p, _, _ := nueva("es")
-	fuera := correr(p, p.Iniciar(contexto(nil, "global")))
-	if len(fuera) != 1 {
-		t.Fatalf("sin cliente: %v", fuera)
+	a, _ := abrir(t, prueba.Contexto(t, nil, "global"), nil)
+	if len(a.Fuera) != 1 {
+		t.Fatalf("sin cliente: %v", a.Fuera)
 	}
-	if e, ok := fuera[0].(pagina.ErrorServicio); !ok || !errors.Is(e.Err, cliente.ErrServicioInactivo) {
-		t.Fatalf("sin cliente: %v", fuera[0])
+	if e, ok := a.Fuera[0].(pagina.ErrorServicio); !ok || !errors.Is(e.Err, cliente.ErrServicioInactivo) {
+		t.Fatalf("sin cliente: %v", a.Fuera[0])
 	}
-	if v := p.Vista(); !strings.Contains(v, "El servicio no responde · r reintenta") && !strings.Contains(v, "Cargando…") {
+	if v := a.Vista(); !strings.Contains(v, "El servicio no responde · r reintenta") && !strings.Contains(v, "Cargando…") {
 		t.Fatalf("sin cliente la página sigue:\n%s", v)
+	}
+	if a.P.(pagina.Ocultable).Ocultar(); a.P.(pagina.Ocultable).Mostrar() != nil {
+		t.Fatal("sin cliente, volver a Inicio no pide nada")
 	}
 
 	cli, id, cerrar := prueba.Arrancar(t)
-	q, _, _ := nueva("es")
-	q.abrir = func(ctx context.Context, _ string, _ time.Duration, _ func(string, []byte) error) error { // sin conexión real: cerrar el servicio no espera
-		<-ctx.Done()
-		return ctx.Err()
-	}
-	correr(q, q.Iniciar(contexto(cli, id)))
-	t.Cleanup(q.Ocultar)
+	f := &ensayo{guion: []func(context.Context, func(string, []byte) error) error{esperarFin}} // cerrar el servicio no espera al flujo
+	q, r := abrir(t, prueba.Contexto(t, cli, id), f)
 	cerrar()
-	fuera = correr(q, q.refrescar())
-	if len(fuera) == 0 {
+	r.Pasar(inicio.CadaRefresco)
+	if q.Asentar(); len(q.Fuera) == 0 {
 		t.Fatal("con el servicio parado, el refresco avisa")
 	}
-	if _, ok := fuera[0].(pagina.ErrorServicio); !ok {
-		t.Fatalf("%v", fuera[0])
+	if _, ok := q.Fuera[0].(pagina.ErrorServicio); !ok {
+		t.Fatalf("%v", q.Fuera[0])
 	}
 	if v := q.Vista(); !strings.Contains(v, "El servicio no responde · r reintenta") {
 		t.Fatalf("la página lo dice y sigue:\n%s", v)
 	}
-	if q.Titulo() != "Inicio" {
+	if q.P.Titulo() != "Inicio" {
 		t.Fatal("no se cerró")
 	}
 }
 
-// TestRespuestasViejas: una respuesta de otro espacio, de un contexto cancelado o de una versión anterior de la página se
-// descarta.
+// TestRespuestasViejas: lo que la página pidió y llega cuando ya es de otra versión de la página, de otro espacio o de un
+// contexto cancelado se descarta.
 func TestRespuestasViejas(t *testing.T) {
-	p, _, cli, id := abierta(t)
-	p.Update(msgInstancia{origen: p.origen(), r: contrato.ResumenInstancia{Base: cli.Base, Contadores: map[string]int{nucleo.FiltroCompletado: 1}}})
-	vieja := p.origen()
-	vieja.Instancia = "otro-" + id
-	p.Update(msgInstancia{origen: vieja, r: contrato.ResumenInstancia{Contadores: map[string]int{nucleo.FiltroCompletado: 99}}})
-	ctx, cancelar := context.WithCancel(context.Background())
-	cancelar()
-	cancelada := p.origen()
-	cancelada.Ctx = ctx
-	p.Update(msgInstancia{origen: cancelada, r: contrato.ResumenInstancia{Contadores: map[string]int{nucleo.FiltroCompletado: 98}}})
-	anterior := p.origen()
-	anterior.Gen--
-	p.Update(msgInstancia{origen: anterior, r: contrato.ResumenInstancia{Contadores: map[string]int{nucleo.FiltroCompletado: 97}}})
-	p.Update(msgRed{origen: vieja, tipo: "trabajo", ev: ev()})
-	if v := p.Vista(); strings.Contains(v, "97") || strings.Contains(v, "98") || strings.Contains(v, "99") || len(p.red) != 0 {
-		t.Fatalf("se descartan: %v\n%s", p.red, v)
-	}
-	p.Update(msgTrabajos{origen: cancelada})
-	// Y otros mensajes que no son suyos no le hacen nada.
-	if _, cmd := p.Update(comp.Cancelado{}); cmd != nil {
-		t.Fatal("ignora lo que no es suyo")
-	}
-}
-
-// TestCabeEn60x20: con todos los avisos, 12 filas y los pasos, la vista mide como mucho el área y nada se sale por el
-// ancho, también con tildes; desplazar llega hasta el final.
-func TestCabeEn60x20(t *testing.T) {
-	p, r, cli, _ := abierta(t)
-	p.Update(msgInstancia{origen: p.origen(), r: contrato.ResumenInstancia{Base: cli.Base, AppConClave24h: 50, SugerirApiPropia: true, Contadores: map[string]int{nucleo.FiltroCompletado: 12345}}})
-	p.Update(msgEspacios{origen: p.origen(), lista: []contrato.Espacio{{Nombre: "Notas con un nombre muy largo y tildes áéíóú", UltimoError: "x"}}})
-	p.Update(msgConversor{origen: p.origen(), e: contrato.EstadoConversor{Estado: "error", Mensaje: "sin red"}})
-	p.Update(msgPasos{origen: p.origen(), r: contrato.PrimerosPasos{Adaptadores: []contrato.Adaptador{{Agente: "claude", Estado: contrato.AgenteListo}, {Agente: "codex", Estado: contrato.AgenteDesconectado}},
-		Pasos: []contrato.Paso{{Pagina: "agentes", Hecho: true, Listos: 1, Total: 2}, {Pagina: "ejecutar"}, {Pagina: "conectar"}, {Pagina: "configuracion"}}}})
-	var recientes []nucleo.Trabajo
-	for i := 0; i < 5; i++ {
-		recientes = append(recientes, trabajoDe(fmt.Sprint("r", i), "una pregunta bastante larga con tildes áéíóú que no cabe en una sola línea de sesenta columnas", "claude", "claude/modelo-con-nombre-largo", "completado", r.t))
-	}
-	p.Update(msgRecientes{origen: p.origen(), lista: recientes})
-	for i := 0; i < 14; i++ {
-		r.t = r.t.Add(time.Second)
-		p.evento(ev(con(fmt.Sprintf("t%02d", i), "validando_salida", "validacion"), func(e *contrato.EventoTrabajo) {
-			e.API = "aplicación-ñandú-" + fmt.Sprint(i)
-			e.Agente = "claude"
-			e.Creado = r.t
-		}))
-	}
-	veces := 0
-	for ; veces < 40; veces++ {
-		v := p.Vista()
-		if h := lipgloss.Height(v); h > 17 {
-			t.Fatalf("mide %d filas y el área es de 17:\n%s", h, v)
+	cli, id := prueba.Servicio(t)
+	hecha := func() {
+		t.Helper()
+		j, err := cli.Crear(ctx, id, nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "otra"}}})
+		if err == nil {
+			err = cli.Eventos(ctx, id, j.ID, 0, func(int, string, string) error { return nil })
 		}
-		for _, l := range strings.Split(v, "\n") {
-			if w := lipgloss.Width(l); w > 60 {
-				t.Fatalf("la línea mide %d columnas y caben 60: %q", w, l)
-			}
+		if err != nil {
+			t.Fatal(err)
 		}
-		p.Update(tecla("pgdown"))
 	}
-	p.Update(tecla("end"))
-	fin := p.Vista()
-	if !strings.Contains(fin, "Ver historial") {
-		t.Fatalf("End llega al final:\n%s", fin)
-	}
-	p.Update(tecla("home"))
-	if v := p.Vista(); !strings.HasPrefix(v, "Tus apps se conectan") {
-		t.Fatalf("Home vuelve al principio:\n%s", v)
-	}
-	// Y la ventana puede cambiar a mitad sin perder el sitio ni salirse.
-	p.Update(tecla("down"))
-	p.Update(tea.WindowSizeMsg{Width: 78, Height: 30})
-	p.Update(tea.WindowSizeMsg{Width: 60, Height: 17})
-	if h := lipgloss.Height(p.Vista()); h > 17 {
-		t.Fatalf("tras redimensionar mide %d", h)
-	}
+	t.Run("otra versión", func(t *testing.T) {
+		// Un flujo callado: la petición nueva no llega por él, solo por la carga.
+		callado := &ensayo{guion: []func(context.Context, func(string, []byte) error) error{
+			func(ctx context.Context, al func(string, []byte) error) error { foto(al); return esperarFin(ctx, al) }}}
+		a, _ := abrir(t, alto(t, cli, id, 60), callado)
+		viejos := a.Retener(func() { a.Pulsar("r") }) // se pide antes de ocultar y responde con la petición nueva
+		a.P.(pagina.Ocultable).Ocultar()
+		a.Correr(a.P.(pagina.Ocultable).Mostrar())
+		hecha()
+		antes := a.Vista()
+		if fuera := a.Soltar(viejos); a.Vista() != antes || len(fuera) != 0 {
+			t.Fatalf("se descarta: %v\n%s\nantes:\n%s", fuera, a.Vista(), antes)
+		}
+	})
+	t.Run("otro espacio", func(t *testing.T) {
+		a, _ := abrir(t, alto(t, cli, id, 60), nil)
+		viejos := a.Retener(func() { a.Pulsar("r") })
+		a.Correr(a.P.Iniciar(alto(t, cli, "otro", 60)))
+		antes := a.Vista()
+		if fuera := a.Soltar(viejos); a.Vista() != antes || len(fuera) != 0 {
+			t.Fatalf("se descarta: %v\n%s\nantes:\n%s", fuera, a.Vista(), antes)
+		}
+	})
+	t.Run("contexto cancelado", func(t *testing.T) {
+		c := alto(t, cli, id, 60)
+		vivo, cancelar := context.WithCancel(c.Ctx)
+		c.Ctx = vivo
+		a, _ := abrir(t, c, nil)
+		viejos := a.Retener(func() { a.Pulsar("r") })
+		cancelar()
+		antes := a.Vista()
+		if fuera := a.Soltar(viejos); a.Vista() != antes || len(fuera) != 0 {
+			t.Fatalf("se descarta: %v\n%s\nantes:\n%s", fuera, a.Vista(), antes)
+		}
+	})
 }
 
 // TestTextosComoLaWeb: los nombres salen de los textos de la Web UI, en el idioma de la sesión.
 func TestTextosComoLaWeb(t *testing.T) {
 	cli, id := prueba.Servicio(t)
-	p, _, _ := nueva("en")
-	c := contexto(cli, id)
-	c.Idioma, c.Alto = "en", 40
-	correr(p, p.Iniciar(c))
-	t.Cleanup(p.Ocultar)
-	p.evento(ev(con("a", "ejecutando", "ejecucion")))
-	v := p.Vista()
+	f := &ensayo{guion: []func(context.Context, func(string, []byte) error) error{
+		func(ctx context.Context, al func(string, []byte) error) error {
+			_ = al("trabajo", []byte(`{"id":"a","estado":"ejecutando","etapa":"ejecucion","agente":"claude"}`))
+			foto(al)
+			return esperarFin(ctx, al)
+		},
+	}}
+	c := alto(t, cli, id, 40)
+	c.Idioma = "en"
+	a, _ := abrir(t, c, f)
+	a.HastaVer("running")
+	v := a.Vista()
 	for _, quiere := range []string{"Your apps connect to", "Your network", "Departures", "Completed", "In progress", "With errors", "Getting started",
 		"Connect at least one agent", "1 of 1 agents ready", "Try an agent", "Connect your app", "running"} {
 		if !strings.Contains(v, quiere) && !strings.Contains(strings.ToLower(v), strings.ToLower(quiere)) {
@@ -718,117 +637,77 @@ func TestTextosComoLaWeb(t *testing.T) {
 	}
 }
 
-// trabajoDe es un trabajo reciente de la prueba: lo que se escribió, el agente, el modelo, cómo acabó y hace cuánto.
-func trabajoDe(id, texto, agente, modelo, estado string, creado time.Time) nucleo.Trabajo {
-	j := nucleo.Trabajo{ID: id, Estado: nucleo.Estado(estado), ModeloEfectivo: modelo, CreadoEn: creado}
-	j.Solicitud.Agente = agente
-	j.Solicitud.Mensajes = []nucleo.Mensaje{{Rol: "usuario", Contenido: "antes"}, {Rol: "usuario", Contenido: texto}}
-	return j
-}
-
-// TestPeticionesRecientes: las 5 últimas, con lo que escribiste, el agente y el modelo, el estado y hace cuánto, como en
-// Panel.vue; h lleva al Historial.
-func TestPeticionesRecientes(t *testing.T) {
-	p, r, _, _ := abierta(t)
-	p.c.Alto = 60
-	if v := p.Vista(); !strings.Contains(v, "Peticiones recientes") || !strings.Contains(v, "Todavía no hay peticiones") {
-		t.Fatalf("vacío:\n%s", v)
-	}
-	var lista []nucleo.Trabajo
-	for i := 0; i < 7; i++ {
-		lista = append(lista, trabajoDe(fmt.Sprint("j", i), fmt.Sprintf("pregunta %d\ncon salto", i), "claude", "claude/sonnet", "completado", r.t.Add(-time.Duration(i+1)*time.Minute)))
-	}
-	lista[1].Estado = "fallido"
-	lista[2].Solicitud.Mensajes, lista[2].EntradasEliminadas = nil, true
-	lista[3].CreadoEn = r.t.Add(-30 * time.Second)
-	lista[4].CreadoEn = r.t.Add(-3 * time.Hour)
-	p.Update(msgRecientes{origen: p.origen(), lista: lista})
-	v := p.Vista()
-	for _, quiere := range []string{"pregunta 0 con salto", "Claude claude/sonnet", "hace 1 min", "Completado", "Falló", "(entrada eliminada por la retención)",
-		"hace 30 s", "hace 3 h", "Ver historial"} {
-		if !strings.Contains(v, quiere) {
-			t.Fatalf("falta %q:\n%s", quiere, v)
-		}
-	}
-	if strings.Contains(v, "pregunta 5") || strings.Contains(v, "pregunta 6") {
-		t.Fatalf("solo las 5 últimas:\n%s", v)
-	}
-	_, cmd := p.Update(tecla("h"))
-	if ir, ok := correr(p, cmd)[0].(pagina.IrA); !ok || ir.Pagina != pagina.PaginaHistorial {
-		t.Fatalf("h lleva al Historial: %v", ir)
-	}
-	// Los viejos de una semana se fechan.
-	lista[0].CreadoEn = r.t.Add(-10 * 24 * time.Hour)
-	p.Update(msgRecientes{origen: p.origen(), lista: lista[:1]})
-	if v := p.Vista(); !strings.Contains(v, r.t.Add(-10*24*time.Hour).Local().Format("2006-01-02")) {
-		t.Fatalf("más de una semana, la fecha:\n%s", v)
-	}
-}
-
-// TestPeticionesRecientesDelServicio: Iniciar las pide al servicio (las 5 últimas) y el refresco las pone al día.
+// TestPeticionesRecientesDelServicio: Iniciar las pide al servicio (las 5 últimas), las más nuevas primero.
 func TestPeticionesRecientesDelServicio(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	for i := 0; i < 6; i++ {
-		j, err := cli.Crear(context.Background(), id, nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: fmt.Sprint("mensaje número ", i)}}})
+		j, err := cli.Crear(ctx, id, nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: fmt.Sprint("mensaje número ", i)}}})
+		if err == nil {
+			err = cli.Eventos(ctx, id, j.ID, 0, func(int, string, string) error { return nil })
+		}
 		if err != nil {
 			t.Fatal(err)
 		}
-		for limite := time.Now().Add(5 * time.Second); ; time.Sleep(10 * time.Millisecond) {
-			if g, err := cli.Trabajo(context.Background(), id, j.ID); err == nil && g.Estado.Terminal() {
-				break
-			}
-			if time.Now().After(limite) {
-				t.Fatal("el trabajo no terminó")
-			}
-		}
 	}
-	p, _, _ := nueva("es")
-	p.c.Alto = 60
-	correr(p, p.Iniciar(contexto(cli, id)))
-	t.Cleanup(p.Ocultar)
-	p.c.Alto = 60
-	if n := len(p.recientes); n != 5 {
-		t.Fatalf("pide 5: %d", n)
+	a, _ := abrir(t, alto(t, cli, id, 60), nil)
+	v := a.Vista()
+	if n := strings.Count(v, "mensaje número "); n != 5 {
+		t.Fatalf("pide 5: %d\n%s", n, v)
 	}
-	if v := p.Vista(); !strings.Contains(v, "mensaje número 5") || strings.Contains(v, "mensaje número 0") {
+	if !strings.Contains(v, "mensaje número 5") || strings.Contains(v, "mensaje número 0") {
 		t.Fatalf("las más nuevas primero:\n%s", v)
 	}
 }
 
 // TestPasosConSuAtajo: cada paso dice con qué tecla (1 a 7) se va a su página, como el botón de la Web UI.
 func TestPasosConSuAtajo(t *testing.T) {
-	p, _, _, _ := abierta(t)
-	p.c.Alto = 60
-	v := p.Vista()
+	cli, id := prueba.Servicio(t)
+	a, _ := abrir(t, alto(t, cli, id, 60), nil)
+	v := a.Vista()
 	for _, quiere := range []string{"2 Agentes", "3 Probar", "4 Mis APIs", "7 Ajustes"} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}
 	}
 	for clave, quiere := range map[string]string{"inicio": "1", "agentes": "2", "ejecutar": "3", "conectar": "4", "historial": "5", "espacios": "6", "configuracion": "7"} {
-		if Atajo(clave) != quiere {
-			t.Fatalf("el atajo de %s es %s, no %s", clave, quiere, Atajo(clave))
+		if inicio.Atajo(clave) != quiere {
+			t.Fatalf("el atajo de %s es %s, no %s", clave, quiere, inicio.Atajo(clave))
 		}
 	}
 }
 
-// TestSoloAscii: con TRAMTAI_ASCII=1 (o una consola que no es UTF-8) la página no usa caracteres de dibujo.
+// TestSoloAscii: con TRAMTAI_ASCII=1 (o una consola que no es UTF-8) la página no usa caracteres de dibujo, ni con la
+// sugerencia de una API propia ni con la red llena de estados.
 func TestSoloAscii(t *testing.T) {
-	p, r, cli, _ := abierta(t)
-	p.estilos.Iconos, p.estilos.ASCII = pagina.IconosASCII, true
-	p.Update(msgInstancia{origen: p.origen(), r: contrato.ResumenInstancia{Base: cli.Base, AppConClave24h: 30, SugerirApiPropia: true, Contadores: map[string]int{nucleo.FiltroCompletado: 1}}})
-	for i, estado := range []string{"ejecutando", "completado", "fallido", "cancelado"} {
-		p.evento(ev(con(fmt.Sprint(i), estado, nucleo.Estado(estado).Etapa()), func(e *contrato.EventoTrabajo) { e.Creado = r.t }))
+	cli, id := prueba.Servicio(t)
+	clave, err := cli.RotarClave(ctx, id)
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, desp := range []int{0, 99} {
-		p.desp = desp
-		for _, c := range p.Vista() {
-			if c > 127 && !strings.ContainsRune("áéíóúüñÁÉÍÓÚÜÑ¿¡×", c) {
-				t.Fatalf("sale %q en ASCII:\n%s", c, p.Vista())
+	comoApp(t, cli, clave, 30)
+	f := &ensayo{guion: []func(context.Context, func(string, []byte) error) error{
+		func(ctx context.Context, al func(string, []byte) error) error {
+			for i, estado := range []string{"ejecutando", "completado", "fallido", "cancelado"} {
+				_ = al("trabajo", trabajo(contrato.EventoTrabajo{ID: fmt.Sprint(i), Estado: estado, Etapa: nucleo.Estado(estado).Etapa(), Agente: "claude",
+					Creado: time.Now()}))
+			}
+			foto(al)
+			return esperarFin(ctx, al)
+		},
+	}}
+	c := prueba.Contexto(t, cli, id)
+	c.Estilos = &pagina.Estilos{ASCII: true, Iconos: pagina.IconosASCII}
+	a, _ := abrir(t, c, f)
+	a.HastaVer("Crear una API")
+	for _, tecla := range []string{"home", "end"} {
+		a.Pulsar(tecla)
+		for _, r := range a.Vista() {
+			if r > 127 && !strings.ContainsRune("áéíóúüñÁÉÍÓÚÜÑ¿¡×", r) {
+				t.Fatalf("sale %q en ASCII:\n%s", r, a.Vista())
 			}
 		}
 	}
-	for _, t2 := range p.Teclas() {
+	for _, t2 := range a.P.Teclas() {
 		if strings.ContainsAny(t2.Tecla, "↑↓") {
 			t.Fatalf("la tecla %q no es ASCII", t2.Tecla)
 		}
@@ -836,44 +715,62 @@ func TestSoloAscii(t *testing.T) {
 }
 
 func TestDesplaza(t *testing.T) {
-	p, _, _, _ := abierta(t)
-	p.c.Alto = 6
-	p.Update(tecla("down"))
-	if p.desp != 1 {
-		t.Fatalf("↓ baja una línea: %d", p.desp)
+	cli, id := prueba.Servicio(t)
+	a, _ := abrir(t, alto(t, cli, id, 6), nil)
+	arriba := a.Vista()
+	segunda := strings.Split(arriba, "\n")[1]
+	if a.Pulsar("down"); strings.Split(a.Vista(), "\n")[0] != segunda {
+		t.Fatalf("↓ baja una línea: la primera es la que era segunda:\n%s", a.Vista())
 	}
-	p.Update(tecla("up"))
-	p.Update(tecla("up"))
-	if p.desp != 0 {
-		t.Fatalf("no sube más allá del principio: %d", p.desp)
+	if a.Pulsar("up", "up"); a.Vista() != arriba {
+		t.Fatalf("no sube más allá del principio:\n%s", a.Vista())
 	}
-	p.Update(tecla("end"))
-	fin := p.desp
-	p.Update(tecla("down"))
-	if p.desp != fin || fin == 0 {
-		t.Fatalf("no baja más allá del final: %d", p.desp)
+	a.Pulsar("end")
+	fin := a.Vista()
+	if a.Pulsar("down"); a.Vista() != fin || fin == arriba {
+		t.Fatalf("no baja más allá del final:\n%s", a.Vista())
 	}
 }
 
-// TestOcultarYMostrar: Ocultar suelta el flujo y los temporizadores (sus mensajes ya no valen) y Mostrar los recupera.
+// TestOcultarYMostrar: Ocultar suelta el flujo y los temporizadores (lo que llega de antes ya no vale ni se vuelve a armar)
+// y Mostrar los recupera.
 func TestOcultarYMostrar(t *testing.T) {
-	p, r, _, _ := abierta(t)
-	p.evento(ev(con("a", "ejecutando", "ejecucion")))
-	viejo := p.origen()
-	p.Ocultar()
-	if _, cmd := p.Update(msgTic{origen: viejo}); cmd != nil {
-		t.Fatal("un temporizador de antes de ocultar no se vuelve a armar")
+	cli, id := prueba.Servicio(t)
+	otro := make(chan struct{})
+	f := &ensayo{guion: []func(context.Context, func(string, []byte) error) error{
+		func(ctx context.Context, al func(string, []byte) error) error { // 1: una en marcha y, cuando la prueba diga, otra
+			_ = al("trabajo", []byte(`{"id":"a","estado":"ejecutando","etapa":"ejecucion","agente":"claude","api":"primera-api"}`))
+			foto(al)
+			select {
+			case <-otro:
+				_ = al("trabajo", []byte(`{"id":"b","estado":"ejecutando","etapa":"ejecucion","agente":"claude","api":"segunda-api"}`))
+			case <-ctx.Done():
+			}
+			return esperarFin(ctx, al)
+		},
+		func(ctx context.Context, al func(string, []byte) error) error { // 2: al volver, la foto sin ninguna
+			foto(al)
+			return esperarFin(ctx, al)
+		},
+	}}
+	a, r := abrir(t, prueba.Contexto(t, cli, id), f)
+	a.HastaVer("primera-api")
+	// El evento de b sale del flujo, pero la página se oculta antes de recibirlo.
+	close(otro)
+	a.EsperarLlegada()
+	a.P.(pagina.Ocultable).Ocultar()
+	if a.Asentar(); strings.Contains(a.Vista(), "segunda-api") {
+		t.Fatalf("el flujo de antes ya no vale:\n%s", a.Vista())
 	}
-	if _, cmd := p.Update(msgRed{origen: viejo, tipo: "trabajo", ev: ev(con("b", "ejecutando", "ejecucion"))}); cmd != nil || len(p.red) != 1 {
-		t.Fatal("el flujo de antes ya no vale")
+	// El temporizador de la limpieza vence con la página oculta: no se vuelve a armar.
+	pedidas := len(r.Pedidas())
+	r.Pasar(inicio.CadaLimpieza)
+	if a.Asentar(); len(r.Pedidas()) != pedidas {
+		t.Fatalf("un temporizador de antes de ocultar no se vuelve a armar: %v", r.Pedidas()[pedidas:])
 	}
-	r.t = r.t.Add(time.Minute)
-	correr(p, p.Mostrar())
-	hasta(t, p, func() bool { return p.enVivo })
-	if len(p.red) != 0 {
-		t.Fatalf("al volver, la foto pone la red al día: %v", p.red)
-	}
-	if v := p.Vista(); strings.Contains(v, "Cargando…") {
+	a.Correr(a.P.(pagina.Ocultable).Mostrar())
+	a.Hasta(func() bool { n, _ := f.cuenta(); return n == 2 && !strings.Contains(a.Vista(), "primera-api") })
+	if v := a.Vista(); strings.Contains(v, "Cargando…") {
 		t.Fatalf("Mostrar conserva lo cargado:\n%s", v)
 	}
 }
@@ -881,21 +778,17 @@ func TestOcultarYMostrar(t *testing.T) {
 // TestContadoresLlevanAlHistorial: cada contador abre el Historial con su estado (curso, ok o error), como los de Panel.vue,
 // y la fila dice con qué tecla.
 func TestContadoresLlevanAlHistorial(t *testing.T) {
-	p, _, _, _ := abierta(t)
-	v := p.Vista()
+	a, _, _, _ := abierta(t)
+	v := a.Vista()
 	for _, quiere := range []string{"o Completadas", "e En proceso", "f Con error"} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("la fila dice su tecla, falta %q:\n%s", quiere, v)
 		}
 	}
-	for tecla_, estado := range map[string]string{"o": nucleo.FiltroCompletado, "e": nucleo.FiltroEnCurso, "f": nucleo.FiltroConError} {
-		_, cmd := p.Update(tecla(tecla_))
-		if cmd == nil {
-			t.Fatalf("%s no hace nada", tecla_)
-		}
-		ir, ok := cmd().(pagina.IrA)
+	for tecla, estado := range map[string]string{"o": nucleo.FiltroCompletado, "e": nucleo.FiltroEnCurso, "f": nucleo.FiltroConError} {
+		ir, ok := irA((a.Pulsar(tecla)))
 		if !ok || ir.Pagina != pagina.PaginaHistorial || ir.Datos != (pagina.FiltroEstado{Estado: estado}) {
-			t.Fatalf("%s lleva al Historial con el estado %q: %+v", tecla_, estado, ir)
+			t.Fatalf("%s lleva al Historial con el estado %q: %+v", tecla, estado, ir)
 		}
 	}
 }

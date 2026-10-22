@@ -131,6 +131,17 @@ go test -tags m0b -v -count=1 ./pruebas/m0b      # modos con clave de API, ver M
 
 Para probar el servicio con la suscripción sin tocar la configuración global, arráncalo con `TRAMTAI_ADAPTADORES__CLAUDE__AUTENTICACION=suscripcion` (y la de Codex) en el entorno.
 
+### Las páginas de la terminal
+
+Las pruebas de las páginas (`internal/tui/paginas/*`) son de caja negra (`package <página>_test`): la tocan por su
+interfaz, contra el servicio de `paginas/prueba`. `prueba.App` la lleva como la terminal (cada Cmd en su goroutine,
+`Pulsar`, `Escribir`, `Pegar`, `Entregar` y `Hasta`/`HastaVer` para lo que llega en vivo) y guarda en `Fuera` lo que es de
+la app (avisos, preguntas, `IrA`). Una respuesta a destiempo se fabrica por la vía de verdad: `Retener` guarda los Cmd que
+la página pide, la prueba cambia la versión, el espacio o el contexto, y `Soltar` los corre. `prueba.Reloj` es la hora de
+la página: el sondeo y las reconexiones esperan a `Pasar`. Lo único que una prueba cambia por dentro está en el
+`export_test.go` de la página: el reloj y de dónde lee los eventos. Dentro del paquete solo quedan las pruebas de
+funciones puras y las que pintan estados que el servicio de prueba no da (un conversor con error de red, por ejemplo).
+
 ### Herramientas con los agentes reales
 
 `go test -tags canario -run TestHerramientasConAgentesReales -v -count=1 ./internal/api/` recorre el ciclo de

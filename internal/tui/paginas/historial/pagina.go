@@ -547,14 +547,6 @@ func (p *Pagina) abrirVivo(id string) tea.Cmd {
 	return vivo.Abrir(ctx, p.origen(), p.c.Instancia, id, p.nflujo, eventos, p.c.Cli.Trabajo, p.esperaPara)
 }
 
-// recibirVivo aplica lo que llega del seguimiento en vivo si sigue valiendo: es del detalle y del seguimiento de ahora.
-func (p *Pagina) recibirVivo(m msgVivo) tea.Cmd {
-	if !p.vivoVigente(m) {
-		return nil
-	}
-	return p.alVivo(m)
-}
-
 // vivoVigente dice si un mensaje del seguimiento es del detalle y del seguimiento de ahora.
 func (p *Pagina) vivoVigente(m msgVivo) bool {
 	return p.vigente(m.Origen) && m.ID == p.abierto && m.Seq == p.nflujo
