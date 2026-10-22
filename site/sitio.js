@@ -85,9 +85,10 @@
     boton.className = 'copiar';
     boton.innerHTML = copiar;
     boton.addEventListener('click', function () {
-      // El código que se ve ahora (un ejemplo cargado después), sin el texto del propio botón.
-      var codigo = pre.querySelector('code');
-      var texto = (codigo ? codigo.textContent : pre.textContent.replace(boton.textContent, '')).trim();
+      // El código que se ve ahora (un ejemplo cargado después), sin el propio botón ni los comentarios del otro idioma.
+      var copia = (pre.querySelector('code') || pre).cloneNode(true);
+      copia.querySelectorAll('.copiar, [lang]:not([lang="' + document.documentElement.lang + '"])').forEach(function (e) { e.remove(); });
+      var texto = copia.textContent.trim();
       navigator.clipboard.writeText(texto).then(function () {
         boton.innerHTML = copiado;
         setTimeout(function () { boton.innerHTML = copiar; }, 1500);
@@ -111,7 +112,8 @@
 })();
 
 // Descargas: enlaza cada botón con su archivo del último release (los nombres llevan la versión) y marca el sistema
-// del visitante. Sin JavaScript o si GitHub no responde, los enlaces siguen llevando a la página del release.
+// del visitante. Los archivos y la versión los escribe la publicación del sitio en #descargas (web/scripts/descargas.mjs):
+// ninguna visita consulta la API de GitHub. Sin JavaScript o sin esos datos, los enlaces llevan a la página del release.
 (function () {
   if (!document.querySelector('[data-archivo]')) return;
   var nombres = {
@@ -151,20 +153,9 @@
     }).catch(function () {});
   }
 
-  Promise.all([
-    arquitectura(),
-    fetch('https://api.github.com/repos/MscottB/Tramtai/releases/latest').then(function (r) { if (!r.ok) throw r; return r.json(); })
-  ]).then(function (res) {
-    var release = res[1];
-    var archivos = {};
-    (release.assets || []).forEach(function (f) {
-      document.querySelectorAll('[data-archivo]').forEach(function (a) {
-        if (f.name.slice(-a.dataset.archivo.length - 1) === '-' + a.dataset.archivo) archivos[a.dataset.archivo] = f.browser_download_url;
-      });
-    });
-    enlazar(archivos);
-    document.querySelectorAll('[data-version]').forEach(function (s) { s.textContent = ' · ' + String(release.tag_name).split('+')[0]; });
-  }).catch(function () {});
+  var datos = {};
+  try { datos = JSON.parse(document.getElementById('descargas').textContent); } catch (e) {}
+  arquitectura().then(function () { enlazar(datos.archivos || {}); });
 })();
 
 // Pestañas de lenguaje de la guía del desarrollador: todas cambian a la vez y se recuerda la elección. Cada panel carga
@@ -277,10 +268,14 @@
   document.querySelectorAll('[data-idioma]').forEach(function (b) { b.addEventListener('click', function () { setTimeout(mostrar); }); });
 })();
 
-// Al llegar a una pregunta de la Ayuda por su ancla (#terminos), se abre.
+// Al llegar a una pregunta de la Ayuda por su ancla (#terminos), también desde un enlace de la misma página, se abre.
 (function () {
-  var destino = location.hash && document.getElementById(location.hash.slice(1));
-  if (destino && destino.tagName === 'DETAILS') destino.open = true;
+  function abrir() {
+    var destino = location.hash && document.getElementById(location.hash.slice(1));
+    if (destino && destino.tagName === 'DETAILS') destino.open = true;
+  }
+  abrir();
+  window.addEventListener('hashchange', abrir);
 })();
 
 // escribirLeyenda cambia el texto de la leyenda del tranvía o de la demo un momento después de fijar su aria-live
@@ -314,7 +309,6 @@ function escribirLeyenda(leyenda, partes) {
   var ALTO_LINEA = [210, 248, 286, 324, 362];
   var ROJO = '#d64545';
   var trams = [ancho.querySelector('.tranvia'), alto.querySelector('.tranvia-alto')];
-  trams.forEach(function (t) { t.style.animation = 'none'; t.style.opacity = '0'; });
 
   // largo mide un camino con un path suelto, fuera de la página: meterlo en el svg obligaba al navegador a recalcular
   // estilos y maquetar todo (reflow forzado). Si algún navegador no mide un path suelto, se mide dentro del svg.

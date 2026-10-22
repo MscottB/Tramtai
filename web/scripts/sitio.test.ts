@@ -135,6 +135,27 @@ test('las etiquetas para lectores de pantalla van en el idioma de la página y l
   }
 })
 
+// Auditoría 001 (25, 26, 27): ninguna raya larga y ninguna promesa absoluta que el producto no cumple. Cada frase de la
+// lista se cambió por su versión con condición («por defecto», «si le das una lista de respaldo»…).
+const PROHIBIDAS = [/Sin cortes/, /No outages/, /Todo se queda en tu equipo/i, /Everything stays on your computer/i, /sin que tu app lo note/,
+  /without your app noticing/, /hostil/i, /hostile/i, /caducan a las 24 horas/, /expire after 24 hours/, /Escucha solo en/,
+  /Listens only on/, /(?<!by default, tramtai )only listens on/i, /en \d+ minutos/, /in \d+ minutes/, /unos minutos/, /minutes away/,
+  /jamás/, /no vuelve a pasar/, /won’t happen again/]
+
+test('el sitio no tiene rayas largas ni promesas absolutas', () => {
+  const textos = new Map([...todas, ['sitio.js', leer('sitio.js')], ['ayuda/indice.json', paginas.get('ayuda/indice.json')!]])
+  for (const [ruta, html] of textos) {
+    assert.ok(!html.includes('—'), `${ruta}: raya larga`)
+    for (const p of PROHIBIDAS) assert.ok(!p.test(html), `${ruta}: ${p}`)
+  }
+})
+
+test('Empezar avisa, junto al botón de descargar, del CLI del agente y del aviso de Windows', () => {
+  const html = paginas.get('ayuda/empezar.html')!
+  const tras = html.slice(html.indexOf('Descargar Tramtai'))
+  assert.match(tras.slice(0, 1500), /Antes necesitas el CLI de al menos un agente[\s\S]*Windows protegió su PC[\s\S]*href="#windows"/)
+})
+
 test('sitemap.xml lista la portada, la guía, la Ayuda y sus 16 temas', () => {
   const urls = [...paginas.get('sitemap.xml')!.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])
   for (const u of [URL_SITIO, URL_SITIO + 'desarrolladores.html', URL_SITIO + 'ayuda/', ...temas.map((t) => `${URL_SITIO}ayuda/${t.id}.html`)])

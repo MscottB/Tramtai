@@ -59,7 +59,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "Todo ocurre en tu equipo: Tramtai no tiene servidor propio ni ve tus datos, y los agentes de tus apps van sin herramientas que lean tus archivos o salgan a internet."
+            "Tramtai no tiene servidor propio: tus mensajes van al proveedor del agente. Por defecto, los agentes de tus apps trabajan en una carpeta temporal vacía, sin terminal ni web; Codex, en solo lectura."
           ]
         },
         {
@@ -415,7 +415,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "Tramtai escucha solo en 127.0.0.1: tus apps deben correr en el mismo equipo."
+            "Por defecto, Tramtai escucha solo en 127.0.0.1: tus apps deben correr en el mismo equipo."
           ]
         },
         {
@@ -1089,7 +1089,7 @@
           "pares": [
             [
               "Sin conexión",
-              "El servicio no está en marcha. Abre la app o ejecuta «tramtai servicio iniciar»; con el arranque automático de Ajustes no vuelve a pasar."
+              "El servicio no está en marcha. Abre la app o ejecuta «tramtai servicio iniciar». Con el arranque automático de Ajustes se inicia solo al entrar en tu sesión."
             ],
             [
               "Falta la clave o no es válida (no_autorizado)",
@@ -1340,7 +1340,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "Everything happens on your computer: Tramtai has no server of its own and never sees your data, and your apps’ agents run without tools that read your files or go online."
+            "Tramtai has no server of its own: your messages go to the agent’s provider. By default, your apps’ agents work in an empty temporary folder, with no terminal or web; Codex runs read-only."
           ]
         },
         {
@@ -1696,7 +1696,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "Tramtai only listens on 127.0.0.1: your apps must run on the same computer."
+            "By default, Tramtai only listens on 127.0.0.1: your apps must run on the same computer."
           ]
         },
         {
@@ -2370,7 +2370,7 @@
           "pares": [
             [
               "Offline",
-              "The service is not running. Open the app or run \"tramtai servicio iniciar\"; with start-up in Settings it won’t happen again."
+              "The service is not running. Open the app or run \"tramtai servicio iniciar\". With start-up in Settings it starts on its own when you sign in."
             ],
             [
               "The key is missing or not valid (no_autorizado)",
