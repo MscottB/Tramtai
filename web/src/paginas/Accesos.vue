@@ -110,7 +110,8 @@ import ListaApis from '../componentes/accesos/ListaApis.vue'
 import { activo, contratos, guardar, leer } from '../componentes/accesos/comun'
 import { api, avisar, avisarError, copiar, cargarDiasHistorial, mensajeError } from '../api/cliente'
 import type { ConfigPunto, EstadoPresupuesto, EstadoPunto, Modelo, UsoPunto } from '../api/tipos'
-import { grupoInicial, origenHistorial, recetaInicial, sesion } from '../estado'
+import { sesion } from '../estado'
+import type { Destino, IntencionDe } from '../navegacion'
 import { asegurarFichas, codigoLinea, nombreAgente, ordenAgentes, opcionModelo } from '../agentes'
 import { ejemplos as ejemplosDe } from '../ejemplos'
 import { t } from '../i18n'
@@ -186,11 +187,11 @@ const uso = ref<Record<string, UsoPunto>>({})
 // presupuestos es el consumo frente a los límites de cada API con presupuesto; presupuestoEspacio, el del espacio.
 const presupuestos = ref<Record<string, EstadoPresupuesto>>({})
 const presupuestoEspacio = ref<EstadoPresupuesto>()
-const emit = defineEmits<{ ir: [pagina: string] }>()
+const props = defineProps<{ intencion?: IntencionDe<'conectar'> }>()
+const emit = defineEmits<{ ir: [destino: Destino] }>()
 
 function verPeticiones(nombre: string) {
-  origenHistorial.value = nombre
-  emit('ir', 'historial')
+  emit('ir', { pagina: 'historial', origen: nombre })
 }
 
 // cargandoPuntos y errorPuntos: la lista no enseña «crea tu primera API» mientras carga ni si la carga falló.
@@ -270,8 +271,7 @@ function eliminar(nombre: string) {
 
 // abrirEnProbar lleva la receta de la API a Probar para probarla y actualizarla.
 function abrirEnProbar(nombre: string) {
-  recetaInicial.value = nombre
-  emit('ir', 'ejecutar')
+  emit('ir', { pagina: 'ejecutar', receta: nombre })
 }
 
 // reiniciarPresupuesto pone a cero el consumo del día y del mes de una API, o del espacio sin nombre.
@@ -321,10 +321,9 @@ function regenerarClave(p: EstadoPunto) {
 onMounted(async () => {
   asegurarFichas()
   cargarDiasHistorial()
-  if (grupoInicial.value) {
+  if (props.intencion?.grupo) {
     pestana.value = 'apis'
-    filtroGrupo.value = grupoInicial.value // llegó desde el mapa de Inicio
-    grupoInicial.value = ''
+    filtroGrupo.value = props.intencion.grupo // llegó desde el mapa de Inicio
   }
   cargarPuntos()
   api.catalogo().then((m) => (catalogo.value = m)).catch(avisarError)

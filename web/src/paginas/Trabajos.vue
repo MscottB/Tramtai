@@ -136,12 +136,13 @@ import RegistroTrabajo from '../componentes/RegistroTrabajo.vue'
 import SalidaTrabajo from '../componentes/SalidaTrabajo.vue'
 import { api, avisar, avisarError, copiar, mensajeError, tituloError } from '../api/cliente'
 import type { EstadoPunto, EventoRegistro, Trabajo } from '../api/tipos'
-import { filtroHistorial, origenHistorial, trabajoAbrir, trabajoSeguido } from '../estado'
+import type { Destino, IntencionDe } from '../navegacion'
 import { modeloDe } from '../agentes'
 import { duracion, estadoInfo, fecha, haceCuanto, esfuerzoUsado, sinDato, terminales, textoDe } from '../formato'
 import { t } from '../i18n'
 
-const emit = defineEmits<{ ir: [pagina: string] }>()
+const props = defineProps<{ intencion?: IntencionDe<'historial'> }>()
+const emit = defineEmits<{ ir: [destino: Destino] }>()
 const $q = useQuasar()
 const trabajos = ref<Trabajo[]>([])
 // Con un filtro puesto la lista no enseña todo el historial: Vaciar se ofrece y el servicio dice cuántas borró.
@@ -153,19 +154,18 @@ const error = ref('')
 const dialogo = ref(false)
 const detalle = ref<Trabajo>()
 const eventosDetalle = ref<EventoRegistro[]>([])
-const filtro = ref(filtroHistorial.value || 'todos')
-filtroHistorial.value = ''
+const filtro = ref(props.intencion?.filtro || 'todos')
 const busqueda = ref<string | null>('')
 // origen: '' todos; «o:probar» un origen, «g:web» un grupo o «p:tienda» una API (se filtra en el servicio).
 // Llega una API por su nombre (Mis APIs) o un filtro ya armado («o:probar» desde Probar).
-const origen = ref(origenHistorial.value.includes(':') ? origenHistorial.value : origenHistorial.value ? 'p:' + origenHistorial.value : '')
+const pedido = props.intencion?.origen ?? ''
+const origen = ref(pedido.includes(':') ? pedido : pedido ? 'p:' + pedido : '')
 const hayFiltro = computed(() => filtro.value !== 'todos' || !!busqueda.value || !!origen.value)
 function quitarFiltros() {
   filtro.value = 'todos'
   busqueda.value = ''
   origen.value = ''
 }
-origenHistorial.value = ''
 const apis = ref<EstadoPunto[]>([])
 const nombresOrigen: Record<string, 'historial.origenProbar' | 'historial.origenTerminal' | 'historial.origenCli' | 'historial.origenApp'> = {
   probar: 'historial.origenProbar', terminal: 'historial.origenTerminal', cli: 'historial.origenCli', app: 'historial.origenApp',
@@ -274,9 +274,8 @@ async function accion(nombre: 'cancelar' | 'reintentar') {
   try {
     const nuevo = await api.accion(detalle.value.id, nombre)
     if (nombre === 'reintentar') {
-      trabajoSeguido.value = nuevo.id
       dialogo.value = false
-      emit('ir', 'ejecutar')
+      emit('ir', { pagina: 'ejecutar', seguir: nuevo.id })
       return
     }
     detalle.value = await api.trabajo(detalle.value.id)
@@ -317,19 +316,16 @@ function vaciar() {
 
 function seguirEnVivo() {
   if (!detalle.value) return
-  trabajoSeguido.value = detalle.value.id
+  const id = detalle.value.id
   dialogo.value = false
-  emit('ir', 'ejecutar')
+  emit('ir', { pagina: 'ejecutar', seguir: id })
 }
 
 let intervalo: number
 onMounted(() => {
   cargar()
   api.puntos().then((l) => (apis.value = l)).catch(() => {})
-  if (trabajoAbrir.value) {
-    abrir({ id: trabajoAbrir.value } as Trabajo)
-    trabajoAbrir.value = ''
-  }
+  if (props.intencion?.abrir) abrir({ id: props.intencion.abrir } as Trabajo)
   // Con páginas extra cargadas (Ver más), el sondeo no recarga: la recarga solo trae la primera página.
   intervalo = window.setInterval(() => !dialogo.value && !document.hidden && !enVuelo && trabajos.value.length <= PAGINA && cargar(true), 5000)
 })

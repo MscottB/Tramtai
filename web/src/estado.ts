@@ -1,4 +1,5 @@
-// Estado compartido entre páginas: la sesión, el aviso de versión y lo que una página deja preparado para otra.
+// Estado compartido entre páginas: la sesión y el aviso de versión. Lo que una página le pasa a otra va en la
+// intención de «ir» (navegacion.ts).
 import { computed, ref } from 'vue'
 import { t } from './i18n'
 import type { EstadoActualizacion, Sesion } from './api/tipos'
@@ -20,23 +21,6 @@ export const diasHistorial = ref(7)
 // periodoHistorial es «los últimos N días» o «el último día», para los textos que dicen cuánto se cuenta.
 export const periodoHistorial = computed(() =>
   diasHistorial.value === 1 ? t('comun.ultimoDia') : t('comun.ultimosDias', { dias: diasHistorial.value }))
-
-// recetaInicial es el nombre de la API que Probar debe abrir para editarla (desde Mis APIs).
-export const recetaInicial = ref('')
-
-// trabajoSeguido es el trabajo que la página Ejecutar debe seguir en vivo al abrirse desde el historial.
-export const trabajoSeguido = ref('')
-// filtroHistorial abre el Historial con un filtro de estado del servicio (en_curso, completado o con_error) desde los
-// contadores de Inicio.
-export const filtroHistorial = ref('')
-// modeloInicial abre Probar con un agente o modelo ya elegido (desde Agentes).
-export const modeloInicial = ref('')
-// origenHistorial abre el Historial con las peticiones de una API (desde Mis APIs).
-export const origenHistorial = ref('')
-// grupoInicial abre Mis APIs filtrada por un grupo (desde el mapa de Inicio).
-export const grupoInicial = ref('')
-// trabajoAbrir abre el Historial con el detalle de una petición (desde Inicio).
-export const trabajoAbrir = ref('')
 
 // guiaOculta: la guía de inicio es opcional; ocultarla se recuerda en este navegador y se deshace desde Ayuda.
 const claveGuia = 'tramtai.guiaOculta'

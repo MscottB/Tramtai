@@ -205,19 +205,19 @@ import { ejemplos as ejemplosDe, type Ejemplo } from '../ejemplos'
 import { marcarLineas } from '../esquemaCampos'
 import { api, avisar, avisarError, copiar, mensajeError, tituloError } from '../api/cliente'
 import type { EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Solicitud, Trabajo } from '../api/tipos'
-import { modeloInicial, origenHistorial, recetaInicial, trabajoSeguido } from '../estado'
+import type { Destino, IntencionDe } from '../navegacion'
 import { modeloDe, esfuerzoEspacio } from '../agentes'
 import { ajustesDeReceta, aplicarModelo, esquemaDeReceta, mensajeDe, recetaDePunto, recetaDeSolicitud, recetaVacia, idModeloDe, type Receta } from '../recetas'
 import { duracion, esfuerzoUsado, estadoInfo, haceCuanto, terminales } from '../formato'
 import { t } from '../i18n'
 
-const emit = defineEmits<{ ir: [pagina: string] }>()
+const props = defineProps<{ intencion?: IntencionDe<'ejecutar'> }>()
+const emit = defineEmits<{ ir: [destino: Destino] }>()
 const $q = useQuasar()
 
 const catalogo = ref<Modelo[]>([])
 // receta es lo que define la API que se está probando; desde Agentes llega con un modelo ya elegido.
-const receta = ref<Receta>({ ...recetaVacia(), modelo: modeloInicial.value || null })
-modeloInicial.value = ''
+const receta = ref<Receta>({ ...recetaVacia(), modelo: props.intencion?.modelo || null })
 // editando es la API que se abrió desde Mis APIs: Guardar la actualiza en lugar de crear otra; apiEditada, cómo está
 // guardada (URL, contratos y modelo) para «Ver como código».
 const editando = ref('')
@@ -268,9 +268,8 @@ onMounted(async () => {
   cargarRecientes()
   api.limites().then((l) => (limites.value = l)).catch(() => {})
   catalogo.value = await api.catalogo().catch((e) => (avisarError(e), []))
-  if (recetaInicial.value) {
-    const nombre = recetaInicial.value
-    recetaInicial.value = ''
+  if (props.intencion?.receta) {
+    const nombre = props.intencion.receta
     try {
       const p = (await api.puntos()).find((x) => x.nombre === nombre)
       if (p) {
@@ -282,13 +281,11 @@ onMounted(async () => {
       avisarError(e)
     }
   }
-  if (trabajoSeguido.value) {
+  if (props.intencion?.seguir) {
     try {
-      seguir(await api.trabajo(trabajoSeguido.value))
+      seguir(await api.trabajo(props.intencion.seguir))
     } catch (e) {
       avisarError(e)
-    } finally {
-      trabajoSeguido.value = ''
     }
   }
 })
@@ -486,8 +483,7 @@ function usarDeNuevo(x: Trabajo) {
   if (x.solicitud.cargas?.length) avisar(t('ejecutar.sinAdjuntos'))
 }
 function verTodo() {
-  origenHistorial.value = 'o:probar'
-  emit('ir', 'historial')
+  emit('ir', { pagina: 'historial', origen: 'o:probar' })
 }
 
 async function cancelar() {

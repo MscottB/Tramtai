@@ -132,13 +132,14 @@ import AvisoConversor from '../componentes/AvisoConversor.vue'
 import { cargarConversor, conversor } from '../conversor'
 import { api, avisar, cargarDiasHistorial, copiar, mensajeError } from '../api/cliente'
 import type { Adaptador, EspacioUI, ResumenInstancia, EstadoPunto, Paso, Trabajo } from '../api/tipos'
-import { periodoHistorial, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, sesion, sistema } from '../estado'
+import { periodoHistorial, guiaOculta, ocultarGuia, sesion, sistema } from '../estado'
+import type { Destino } from '../navegacion'
 import { asegurarFichas, ordenarAgentes } from '../agentes'
 import { estadoInfo, haceCuanto, textoDe } from '../formato'
 import { conTexto } from '../pasos'
 import { t } from '../i18n'
 
-const emit = defineEmits<{ ir: [pagina: string]; recorrido: [] }>()
+const emit = defineEmits<{ ir: [destino: Destino]; recorrido: [] }>()
 
 function ocultar() {
   ocultarGuia(true)
@@ -146,13 +147,11 @@ function ocultar() {
 }
 
 function verPeticion(id: string) {
-  trabajoAbrir.value = id
-  emit('ir', 'historial')
+  emit('ir', { pagina: 'historial', abrir: id })
 }
 
 function verHistorial(filtro: string) {
-  filtroHistorial.value = filtro
-  emit('ir', 'historial')
+  emit('ir', { pagina: 'historial', filtro })
 }
 const instancia = ref<ResumenInstancia>()
 const recientes = ref<Trabajo[]>()

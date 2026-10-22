@@ -178,7 +178,8 @@ import EstadoVacio from '../componentes/EstadoVacio.vue'
 import { useQuasar } from 'quasar'
 import { api, avisar, avisarError, copiar, mensajeError } from '../api/cliente'
 import type { Adaptador } from '../api/tipos'
-import { modeloInicial, sesion } from '../estado'
+import { sesion } from '../estado'
+import type { Destino } from '../navegacion'
 import { agenteListo, asegurarFichas, cargarFichas, codigoLinea, fichaDe, fijarDisponibilidad, nombreAgente, ofrecerDejarSuscripcion, ordenarAgentes } from '../agentes'
 import { nombreEsfuerzo, numero } from '../formato'
 import { cargarRutaConfig, rutaConfig } from '../rutaConfig'
@@ -186,11 +187,10 @@ import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 
 const $q = useQuasar()
-const emit = defineEmits<{ ir: [pagina: string] }>()
+const emit = defineEmits<{ ir: [destino: Destino] }>()
 
 function probar(a: Adaptador) {
-  modeloInicial.value = a.agente
-  emit('ir', 'ejecutar')
+  emit('ir', { pagina: 'ejecutar', modelo: a.agente })
 }
 const adaptadores = ref<Adaptador[]>()
 // esfuerzos: los niveles que admite cada agente, según el catálogo de modelos.
