@@ -393,6 +393,6 @@ func init() {
 		"no se pudo guardar el estado de los espacios: %s":                  "the state of the workspaces could not be saved: %s",
 		"no se pudo contar el consumo del presupuesto: la petición se rechaza para no superar sus topes (revisa el registro del servicio)": "the budget usage could not be counted: the request is rejected so its limits are not exceeded (check the service log)",
 		"la clave de %s está dañada: bórrala para crear otra (las apps tendrán que usar la nueva)":                                         "the key in %s is damaged: delete it to create another (apps will have to use the new one)",
-		"la clave de la variable %s es demasiado corta: necesita al menos %d caracteres, como las que genera Tramtai":                      "the key in the variable %s is too short: it needs at least %d characters, like the ones Tramtai generates",
+		"la clave de la variable %s es demasiado corta: necesita al menos %d caracteres":                                                   "the key in the variable %s is too short: it needs at least %d characters",
 	})
 }

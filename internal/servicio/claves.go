@@ -52,9 +52,9 @@ func (s *Servicio) instanciaPorToken(token string) *Instancia {
 	return elegida
 }
 
-// largoToken es el largo de las claves que genera Tramtai ("tt_" y 32 bytes en hexadecimal): una clave que llega por
-// variable de entorno no puede ser más corta.
-const largoToken = len("tt_") + 2*32
+// largoMinimoEntorno es el largo mínimo de una clave que llega por variable de entorno: 32 caracteres (128 bits en
+// hexadecimal). No se exige el largo de las generadas para no romper a quien ya usa una de 64 en hexadecimal.
+const largoMinimoEntorno = 32
 
 // LeerOCrearToken lee el token del archivo o, si no existe, crea uno aleatorio (permisos 0600, fuera del repositorio).
 // Si existe pero no se puede leer o está truncado, da error: rotarlo en silencio dejaría a las apps con 401.
@@ -143,9 +143,9 @@ func TokenInstancia(datos, id string, c *nucleo.Configuracion) (valor, origen st
 	if id == "global" {
 		if variable := c.Texto("instancia_global.token_variable_entorno"); variable != "" {
 			if v := os.Getenv(variable); v != "" {
-				if len(v) < largoToken {
+				if len(v) < largoMinimoEntorno {
 					return "", "", nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf(
-						"la clave de la variable %s es demasiado corta: necesita al menos %d caracteres, como las que genera Tramtai", variable, largoToken))
+						"la clave de la variable %s es demasiado corta: necesita al menos %d caracteres", variable, largoMinimoEntorno))
 				}
 				return v, "variable " + variable, nil
 			}

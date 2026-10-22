@@ -29,7 +29,8 @@ func TestClaveIlegibleNoSeRota(t *testing.T) {
 	}
 }
 
-// La clave global que llega por variable de entorno exige la misma longitud que las que genera Tramtai.
+// La clave global que llega por variable de entorno exige un mínimo de 32 caracteres, sin romper a quien ya usa una de
+// 64 en hexadecimal.
 func TestClaveDeEntornoCorta(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("TRAMTAI_CONFIG_GLOBAL", filepath.Join(dir, "config.yaml"))
@@ -40,6 +41,11 @@ func TestClaveDeEntornoCorta(t *testing.T) {
 	t.Setenv("TRAMTAI_TOKEN_GLOBAL", "1234")
 	if _, _, err := TokenInstancia(dir, "global", c); err == nil || !strings.Contains(err.Error(), "TRAMTAI_TOKEN_GLOBAL") {
 		t.Fatalf("una clave corta por variable de entorno se rechaza con un mensaje claro: %v", err)
+	}
+	hex := strings.Repeat("a1", 32)
+	t.Setenv("TRAMTAI_TOKEN_GLOBAL", hex)
+	if valor, _, err := TokenInstancia(dir, "global", c); err != nil || valor != hex {
+		t.Fatalf("una clave de 64 caracteres en hexadecimal sigue valiendo: %q %v", valor, err)
 	}
 	generada, _ := RotarToken(filepath.Join(dir, "otra"))
 	t.Setenv("TRAMTAI_TOKEN_GLOBAL", generada)
