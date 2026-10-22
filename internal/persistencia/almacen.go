@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -125,6 +126,8 @@ type Almacen struct {
 	Topes func(instancia, punto string) []Tope
 	// Zona fija el día y el mes de los presupuestos (hora local del equipo).
 	Zona *time.Location
+	// Registros recibe los fallos del contador del presupuesto (el registro del servicio); nil los manda al log.
+	Registros io.Writer
 
 	muAviso sync.Mutex
 	aviso   chan struct{}

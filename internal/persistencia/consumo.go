@@ -3,6 +3,7 @@ package persistencia
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"slices"
 	"time"
@@ -50,15 +51,29 @@ func (a *Almacen) topes(instancia, punto string) []Tope {
 	return a.Topes(instancia, punto)
 }
 
-// comprobarPresupuesto rechaza el trabajo si agotaría algún tope que se le aplica. Un fallo al leer el consumo no
-// lo rechaza: un contador roto no debe tumbar la API.
+// anotar deja un fallo del contador en el registro del servicio (o en el log, sin él).
+func (a *Almacen) anotar(formato string, args ...any) {
+	if a.Registros == nil {
+		log.Printf(formato, args...)
+		return
+	}
+	fmt.Fprintf(a.Registros, formato+"\n", args...)
+}
+
+// errContador es el rechazo de una petición cuando no se puede contar su consumo: sin contador, los topes dejarían de
+// frenar sin que nadie lo vea, así que se falla cerrado.
+func (a *Almacen) errContador(punto string, err error) error {
+	a.anotar("presupuesto de %q: el contador falló, se rechaza la petición: %v", punto, err)
+	return nucleo.NuevoError(nucleo.CodigoErrorInterno, idioma.T("no se pudo contar el consumo del presupuesto: la petición se rechaza para no superar sus topes (revisa el registro del servicio)"))
+}
+
+// comprobarPresupuesto rechaza el trabajo si agotaría algún tope que se le aplica, o si no se puede leer su consumo.
 func (a *Almacen) comprobarPresupuesto(ctx context.Context, tx *sql.Tx, t nucleo.Trabajo, ahora time.Time) error {
 	var rechazo error
 	for _, tope := range a.topes(t.Instancia, t.PuntoAcceso) {
 		dia, mes, err := a.consumoEn(ctx, tx, t.Instancia, tope.Punto, ahora)
 		if err != nil {
-			log.Printf("presupuesto de %s: no se pudo leer el consumo: %v", tope.Punto, err)
-			continue
+			return a.errContador(tope.Punto, err)
 		}
 		ambito := idioma.T("del espacio")
 		if tope.Punto != TodaLaInstancia {
@@ -71,22 +86,22 @@ func (a *Almacen) comprobarPresupuesto(ctx context.Context, tx *sql.Tx, t nucleo
 	return rechazo
 }
 
-// sumarConsumo suma c en la fila del día de aceptación del trabajo y registra los cruces del 80 % y del 100 %.
-// Los errores se registran y no deshacen la transacción del trabajo.
-func (a *Almacen) sumarConsumo(ctx context.Context, tx *sql.Tx, instancia, punto string, aceptado, ahora time.Time, c nucleo.Consumo) {
+// sumarConsumo suma c en la fila del día de aceptación del trabajo y registra los cruces del 80 % y del 100 %. Si no
+// puede sumar, devuelve el error y quien llama deshace la transacción del trabajo; un aviso que no se guarda solo se
+// anota.
+func (a *Almacen) sumarConsumo(ctx context.Context, tx *sql.Tx, instancia, punto string, aceptado, ahora time.Time, c nucleo.Consumo) error {
 	dia, _, _, _ := nucleo.Periodos(aceptado, a.Zona)
 	if _, err := tx.ExecContext(ctx, `INSERT INTO consumo (instancia, punto, dia, peticiones, terminados, tokens, usd) VALUES (?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (instancia, punto, dia) DO UPDATE SET peticiones = peticiones + excluded.peticiones,
 		terminados = terminados + excluded.terminados, tokens = tokens + excluded.tokens, usd = usd + excluded.usd`,
 		instancia, punto, dia, c.Peticiones, c.Terminados, c.Tokens, c.USD); err != nil {
-		log.Printf("presupuesto: no se pudo sumar el consumo de %q: %v", punto, err)
-		return
+		return a.errContador(punto, err)
 	}
 	claveDia, claveMes, _, _ := nucleo.Periodos(ahora, a.Zona)
 	for _, tope := range a.topes(instancia, punto) {
 		dia, mes, err := a.consumoEn(ctx, tx, instancia, tope.Punto, ahora)
 		if err != nil {
-			log.Printf("presupuesto de %s: no se pudo leer el consumo: %v", tope.Punto, err)
+			a.anotar("presupuesto de %s: no se pudo leer el consumo para los avisos: %v", tope.Punto, err)
 			continue
 		}
 		for _, per := range []struct {
@@ -101,11 +116,12 @@ func (a *Almacen) sumarConsumo(ctx context.Context, tx *sql.Tx, instancia, punto
 				}
 				if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO avisos_presupuesto (instancia, punto, periodo, nivel, en) VALUES (?, ?, ?, ?, ?)`,
 					instancia, tope.Punto, per.periodo, nivel, fecha(ahora)); err != nil {
-					log.Printf("presupuesto de %s: no se pudo registrar el aviso: %v", tope.Punto, err)
+					a.anotar("presupuesto de %s: no se pudo registrar el aviso: %v", tope.Punto, err)
 				}
 			}
 		}
 	}
+	return nil
 }
 
 // ReiniciarConsumo borra el consumo y los avisos del día y del mes en curso de una API, o de toda la instancia con

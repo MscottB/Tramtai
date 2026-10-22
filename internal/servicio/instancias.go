@@ -145,6 +145,7 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuraci
 	if err != nil {
 		return nil, err
 	}
+	alm.Registros = s.opc.Registros
 	if alm.Compactada {
 		fmt.Fprintf(s.opc.Registros, "se compactó la base de %s: desde ahora devuelve al disco lo que libera la purga\n", id)
 	}

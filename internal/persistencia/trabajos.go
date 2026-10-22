@@ -72,7 +72,9 @@ func (a *Almacen) Aceptar(ctx context.Context, t nucleo.Trabajo, clave string, m
 	if err := agregarEvento(ctx, tx, t.ID, "estado", string(nucleo.EnCola), ahora); err != nil {
 		return t, false, err
 	}
-	a.sumarConsumo(ctx, tx, t.Instancia, t.PuntoAcceso, ahora, ahora, nucleo.Consumo{Peticiones: 1})
+	if err := a.sumarConsumo(ctx, tx, t.Instancia, t.PuntoAcceso, ahora, ahora, nucleo.Consumo{Peticiones: 1}); err != nil {
+		return t, false, err
+	}
 	if clave != "" {
 		if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO idempotencia (instancia, clave, huella, trabajo_id, vence_en) VALUES (?, ?, ?, ?, ?)`,
 			t.Instancia, clave, t.Huella, t.ID, sinVencimiento); err != nil {
@@ -148,7 +150,9 @@ func (a *Almacen) CambiarEstado(ctx context.Context, id string, de, hacia nucleo
 		if cambio.DevolverPeticion {
 			consumo.Peticiones, consumo.Terminados = -1, 0 // peticiones − terminados sigue siendo lo que está en curso
 		}
-		a.sumarConsumo(ctx, tx, instancia, punto, aceptado, ahora, consumo)
+		if err := a.sumarConsumo(ctx, tx, instancia, punto, aceptado, ahora, consumo); err != nil {
+			return err
+		}
 	}
 	return a.confirmar(tx)
 }
