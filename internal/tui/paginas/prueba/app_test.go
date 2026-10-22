@@ -3,6 +3,7 @@ package prueba
 import (
 	"context"
 	"fmt"
+	"net"
 	"runtime"
 	"strings"
 	"sync/atomic"
@@ -104,6 +105,24 @@ func TestAsentarEsperaAlQueTarda(t *testing.T) {
 	a := Abrir(t, &contador{}, pagina.Contexto{Ctx: context.Background()})
 	if a.Pulsar("l"); a.Vista() != "1" {
 		t.Fatalf("Pulsar volvió antes de la respuesta: %s", a.Vista())
+	}
+}
+
+// TestConexionOlvidadaNoResucita: una lectura que se cuenta después de que los dos lados se cerraron no deja la conexión
+// como si tuviera datos sin leer; y lo que un lado escribe cuenta hasta que el otro lo lee.
+func TestConexionOlvidadaNoResucita(t *testing.T) {
+	a, b := net.Pipe()
+	cli, srv := contada(a, "127.0.0.1:1", 0, &escucha{}), contada(b, "127.0.0.1:1", 1, &escucha{})
+	cli.anotar(func(p *par) { p.escrito[0] += 3 })
+	if sinLeer() == "" {
+		t.Fatal("lo escrito y no leído cuenta")
+	}
+	srv.anotar(func(p *par) { p.leido[1] += 3 })
+	cli.Close()
+	srv.Close()
+	cli.anotar(func(p *par) { p.leido[0] += 529 }) // una lectura que se anota tarde
+	if s := sinLeer(); s != "" {
+		t.Fatalf("una conexión cerrada no vuelve: %s", s)
 	}
 }
 

@@ -269,7 +269,8 @@ func (a *App) Asentar() {
 			return
 		}
 		if time.Now().After(limite) {
-			a.t.Fatalf("no se asienta en %v:\n%s\n\nsigue en marcha:\n%s", plazo, a.Vista(), strings.Join(ocupadas, "\n\n"))
+			a.t.Fatalf("no se asienta en %v:\n%s\n\nsigue en marcha:\n%s\n\nen las conexiones:\n%s", plazo, a.Vista(),
+				strings.Join(ocupadas, "\n\n"), strings.Join(conConexion(), "\n\n"))
 		}
 		select {
 		case m := <-a.llegan:
@@ -293,16 +294,8 @@ func enMarcha() []string {
 	if conexion := sinLeer(); conexion != "" {
 		return []string{conexion}
 	}
-	pila := make([]byte, 1<<16)
-	for n := runtime.Stack(pila, true); ; n = runtime.Stack(pila, true) {
-		if n < len(pila) {
-			pila = pila[:n]
-			break
-		}
-		pila = make([]byte, 2*len(pila))
-	}
 	var ocupadas []string
-	for _, g := range strings.Split(string(pila), "\n\n")[1:] { // la primera es la de la prueba
+	for _, g := range pilas() {
 		estado := g[strings.Index(g, "[")+1 : strings.Index(g, "]")]
 		if !slices.ContainsFunc(esperando, func(e string) bool { return strings.HasPrefix(estado, e) }) {
 			ocupadas = append(ocupadas, g)
@@ -312,6 +305,31 @@ func enMarcha() []string {
 		return []string{"una conexión con el servicio se movió durante la foto"}
 	}
 	return ocupadas
+}
+
+// pilas son las de todas las goroutines del proceso menos la de la prueba, con el mundo parado.
+func pilas() []string {
+	pila := make([]byte, 1<<16)
+	for n := runtime.Stack(pila, true); ; n = runtime.Stack(pila, true) {
+		if n < len(pila) {
+			pila = pila[:n]
+			break
+		}
+		pila = make([]byte, 2*len(pila))
+	}
+	return strings.Split(string(pila), "\n\n")[1:] // la primera es la de la prueba
+}
+
+// conConexion son las pilas de las goroutines que están leyendo o escribiendo en una conexión contada: para explicar un
+// fallo de Asentar por datos sin leer.
+func conConexion() []string {
+	var r []string
+	for _, g := range pilas() {
+		if strings.Contains(g, "prueba.(*conContada)") {
+			r = append(r, g)
+		}
+	}
+	return r
 }
 
 func (a *App) actualizar(m tea.Msg) {

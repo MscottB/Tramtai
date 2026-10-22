@@ -27,16 +27,31 @@ var (
 // par son los dos lados de una conexión, 0 el cliente y 1 el servidor, y el servidor al que llega.
 type par struct {
 	escrito, leido [2]int64
-	cerrado        [2]bool
+	cerrado, atado [2]bool
 	servidor       *escucha
 }
 
 type conContada struct {
 	net.Conn
-	clave    string
-	lado     int
-	servidor *escucha
-	una      sync.Once
+	clave string
+	lado  int
+	p     *par
+	una   sync.Once
+}
+
+// contada cuenta la conexión de un lado en su par: el que abrió el otro lado con la misma dirección o, si no lo hay (o es
+// de una conexión anterior que ya tenía este lado), uno nuevo. Cada lado se queda con su par: lo que anote después de que
+// se olvide no lo resucita.
+func contada(c net.Conn, clave string, lado int, servidor *escucha) *conContada {
+	muPares.Lock()
+	defer muPares.Unlock()
+	p := pares[clave]
+	if p == nil || p.atado[lado] {
+		p = &par{servidor: servidor}
+		pares[clave] = p
+	}
+	p.atado[lado] = true
+	return &conContada{Conn: c, clave: clave, lado: lado, p: p}
 }
 
 func (c *conContada) Read(b []byte) (int, error) {
@@ -62,13 +77,8 @@ func (c *conContada) Close() error {
 
 func (c *conContada) anotar(f func(*par)) {
 	muPares.Lock()
-	p := pares[c.clave]
-	if p == nil {
-		p = &par{servidor: c.servidor}
-		pares[c.clave] = p
-	}
-	f(p)
-	if p.cerrado[0] && p.cerrado[1] {
+	f(c.p)
+	if c.p.cerrado[0] && c.p.cerrado[1] && pares[c.clave] == c.p {
 		delete(pares, c.clave)
 	}
 	muPares.Unlock()
@@ -118,7 +128,7 @@ func marcar(ctx context.Context, red, direccion string) (net.Conn, error) {
 	if err != nil || !deUnaPrueba {
 		return c, err
 	}
-	return &conContada{Conn: c, clave: c.LocalAddr().String(), servidor: v.(*escucha)}, nil
+	return contada(c, c.LocalAddr().String(), 0, v.(*escucha)), nil
 }
 
 // escucha es la de un servidor de prueba, que cuenta sus conexiones.
@@ -132,7 +142,7 @@ func (e *escucha) Accept() (net.Conn, error) {
 	if err != nil {
 		return c, err
 	}
-	return &conContada{Conn: c, clave: c.RemoteAddr().String(), lado: 1, servidor: e}, nil
+	return contada(c, c.RemoteAddr().String(), 1, e), nil
 }
 
 func (e *escucha) Close() error {
