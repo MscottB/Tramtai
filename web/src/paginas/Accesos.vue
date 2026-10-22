@@ -25,7 +25,7 @@
     <q-card data-captura="mis-apis" data-recorrido="conectar.apis">
       <q-tabs v-model="pestana" dense no-caps align="left" active-color="primary" indicator-color="primary" class="q-px-sm" :breakpoint="0">
         <q-tab name="apis" icon="o_hub" :label="t('puntos.pestana', { n: puntos.length })" />
-        <q-tab name="principal" icon="o_cable" :label="t('conectar.directa', { nombre: sesion?.nombre ?? '' })" />
+        <q-tab name="principal" icon="o_cable" :label="$q.screen.xs ? t('puntos.principal') : t('conectar.directa', { nombre: sesion?.nombre ?? '' })" />
       </q-tabs>
       <q-separator />
       <q-tab-panels v-model="pestana" animated keep-alive>

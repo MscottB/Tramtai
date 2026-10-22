@@ -5,13 +5,14 @@
     <div class="row q-col-gutter-lg">
       <div class="col-12 col-md-5">
         <q-card data-captura="receta">
-          <q-card-section class="q-pb-sm row items-start no-wrap q-gutter-x-sm">
-            <div class="col">
-              <h2 class="titulo-seccion">{{ t('ejecutar.receta') }}</h2>
-              <div class="texto-suave text-body2">{{ t('ejecutar.recetaTexto') }}</div>
+          <!-- la descripción va debajo, a todo el ancho: junto al botón, en una columna estrecha se partía palabra a palabra -->
+          <q-card-section class="q-pb-sm">
+            <div class="row items-center no-wrap">
+              <h2 class="titulo-seccion col">{{ t('ejecutar.receta') }}</h2>
+              <q-btn data-recorrido="ejecutar.codigo" flat dense no-caps color="primary" class="q-ml-sm" icon="o_code" :label="$q.screen.gt.xs ? t('codigo.boton') : undefined" :aria-label="t('codigo.boton')"
+                @click="verCodigo" />
             </div>
-            <q-btn data-recorrido="ejecutar.codigo" flat dense no-caps color="primary" icon="o_code" :label="$q.screen.gt.xs ? t('codigo.boton') : undefined" :aria-label="t('codigo.boton')"
-              @click="verCodigo" />
+            <div class="texto-suave text-body2">{{ t('ejecutar.recetaTexto') }}</div>
           </q-card-section>
           <q-card-section v-if="editando" class="q-py-none">
             <q-banner rounded dense class="info-caja">

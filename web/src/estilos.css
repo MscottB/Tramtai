@@ -274,8 +274,10 @@ input[type='number'] {
 .fila-api__nombre:hover {
   text-decoration: underline;
 }
+/* La columna no crece con la URL: la URL se corta con elipsis y el botón de copiar queda dentro. */
 .fila-api__info {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 2px;
   min-width: 0;
 }
@@ -323,6 +325,9 @@ input[type='number'] {
 .marca-boton {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
   padding: 4px 6px;
   margin-left: -6px;
   border: 0;

@@ -154,14 +154,14 @@
           </q-card-section>
           <q-list dense>
             <q-item tag="label">
-              <q-item-section avatar><q-checkbox v-model="borrarHistorial" :disable="!terminados" /></q-item-section>
+              <q-item-section avatar><q-checkbox v-model="borrarHistorial" size="44px" :aria-label="t('datos.historial')" :disable="!terminados" /></q-item-section>
               <q-item-section>
                 <q-item-label>{{ t('datos.historial') }}</q-item-label>
                 <q-item-label caption>{{ t('datos.historialDetalle', { n: terminados }) }}</q-item-label>
               </q-item-section>
             </q-item>
             <q-item tag="label">
-              <q-item-section avatar><q-checkbox v-model="borrarPuntos" :disable="!puntos.length" /></q-item-section>
+              <q-item-section avatar><q-checkbox v-model="borrarPuntos" size="44px" :aria-label="t('datos.puntos')" :disable="!puntos.length" /></q-item-section>
               <q-item-section>
                 <q-item-label>{{ t('datos.puntos') }}</q-item-label>
                 <q-item-label caption>{{ t('datos.puntosDetalle', { n: puntos.length }) }}</q-item-label>
