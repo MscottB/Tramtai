@@ -412,7 +412,7 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.problemas.parametro_no_soportado': 'You asked for something terminal agents cannot honor (images, n above 1, stop…): remove it. Unknown ones are accepted with compatibilidad.modo_tolerante.',
   'ayuda.problemas.entrada_demasiado_grande': 'The documents do not fit the model. Send fewer pages, split the file or put a model with more context in the fallback.',
   'ayuda.problemas.presupuesto_agotado': 'That API or the workspace hit its limit (error 429). Wait for the day or month to reset, or click “Reset usage” in My APIs.',
-  'ayuda.problemas.salida_no_cumple_esquema': 'The response did not have the requested shape. Try shows which field failed; “Correct” asks the agent to fix it. If it keeps failing, simplify the schema.',
+  'ayuda.problemas.salida_no_cumple_esquema': 'The response did not have the requested shape. The Playground shows which field failed; “Correct” asks the agent to fix it. If it keeps failing, simplify the schema.',
   'ayuda.problemas.tiempo_ejecucion_agotado': 'It took longer than the time limit. Raise it in the Playground’s advanced options or in the request, or lower the effort.',
   'ayuda.problemas.cola_llena': 'Too many requests at once. Retry in a few seconds: the response carries Retry-After with the wait.',
   'ayuda.problemas.conversion_fallida': 'A file could not be converted. Check that it is not damaged or password-protected and that its format is accepted.',

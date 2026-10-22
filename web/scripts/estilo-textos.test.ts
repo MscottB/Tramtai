@@ -125,7 +125,9 @@ const ingles: Regla[] = [
   { nombre: 'comillas angulares → “ ”', re: /[«»]/ },
   { nombre: 'apóstrofo recto → ’', re: /[A-Za-z]'[A-Za-z]/ },
   { nombre: 'variante UK → US', re: /\bcancell(ed|ing)\b/i },
-  { nombre: 'Try como página → Playground', re: /^Try$|\b(in|from|to|and|In|From|Open in|Go to) Try\b/ },
+  // «Try» con mayúscula es la página salvo en los usos de verbo: «Try again», «Try it», «Try a/an», «Try another»,
+  // «Try the…» y «Try <code>…» (una orden). Así atrapa también «(Try offers» y «Try shows» al principio de frase.
+  { nombre: 'Try como página → Playground', re: /\bTry\b(?! (again|it|an?|another|the)\b| <code>)/ },
   { nombre: 'record → log', re: /\brecords?\b/i },
 ]
 const sinJson = (textos: Texto[]) => textos.map((x) => ({ ...x, texto: x.texto.replace(/`[^`]*`/g, ' ').replace(/\{[^{}]*\}/g, ' ') }))

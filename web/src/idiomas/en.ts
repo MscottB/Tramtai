@@ -852,7 +852,7 @@ const en: Textos = {
   'receta.ejemplo': 'See an example response',
   'receta.reintentos': 'If the response does not match',
   'receta.reintentosHint': 'Each correction is another request to the agent (with GitHub Copilot, for example, it uses credits).',
-  'receta.reintentos0': 'Do not correct (Try offers “Correct”)',
+  'receta.reintentos0': 'Do not correct (the Playground offers “Correct”)',
   'receta.reintentosN': 'Correct up to {n} times',
   'receta.reintentosNUno': 'Correct once',
   'campos.nombre': 'Name',
