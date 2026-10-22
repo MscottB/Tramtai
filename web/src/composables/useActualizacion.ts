@@ -4,6 +4,7 @@ import { api, avisarError } from '../api/cliente'
 import type { Novedad, ProgresoActualizacion } from '../api/tipos'
 import { actualizacion, dialogoActualizar, sesion } from '../estado'
 import { idioma, t } from '../i18n'
+import { abandonarSinFase } from '../actualizacion'
 
 export function useActualizacion() {
   let buscarActualizacion: number
@@ -69,15 +70,16 @@ export function useActualizacion() {
       progreso.value = { fase: 'descargando', version, recibidos: 0, total: 0 }
       clearInterval(seguirProgreso)
       let enVuelo = false // si el servicio va lento, no se acumulan consultas
+      let vistaFase = false, sinFase = 0
       seguirProgreso = window.setInterval(async () => {
         if (enVuelo) return
         enVuelo = true
         try {
           ahora.value = Date.now()
           const p = await api.progresoActualizacion()
-          if (p.fase) progreso.value = p
-          else if (progreso.value?.fase === 'listo') {
-            // Otra pestaña la canceló: no queda nada que esperar.
+          if (p.fase) { progreso.value = p; vistaFase = true; sinFase = 0 }
+          else if (abandonarSinFase(vistaFase, ++sinFase)) {
+            // Otra pestaña la canceló, o la consulta a la que esta se unió falló: no queda nada que esperar.
             clearInterval(seguirProgreso)
             progreso.value = null
             dialogoActualizar.value = false

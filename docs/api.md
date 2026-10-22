@@ -62,7 +62,7 @@ que una app puede filtrar antes de enviar.
 - **Host:** solo `127.0.0.1`, `localhost` y `::1`. Cualquier otro nombre en la cabecera `Host` se rechaza con 403 antes de autenticar (protección frente a DNS rebinding).
 - **Navegadores:** no hay CORS. Una petición con `Origin` de otro sitio se rechaza con 403.
 - **Acceso remoto:** está desactivado. Solo se permite con `servicio.permitir_remoto: true`, clave obligatoria y ningún agente en modo suscripción. Lo recomendado es un túnel SSH. La Web UI remota solo se abre con un código de `tramtai abrir` hecho en el equipo del servicio.
-- `/healthz` no exige clave y no expone datos.
+- `/healthz` no exige clave. Solo responde con el identificador del servicio a quien llama desde el mismo equipo, sin proxy y con el mismo usuario del sistema, que ya puede leerlo en `servicio.json`. Así la CLI de la v0.55 reconoce y detiene un servicio nuevo durante la actualización. El cliente nuevo comprueba la identidad con un reto (`/healthz?reto=`) antes de enviar la clave.
 - **Contenido hostil:** lo que manda una app (mensaje, instrucciones, documentos, esquema) no puede hacer que un agente
   lea archivos, ejecute órdenes o salga a la red: Claude Code y GitHub Copilot van sin herramientas y Codex en solo lectura, sin
   terminal ni búsqueda web (comprobado con [canarios](operacion.md#comprobar-el-aislamiento-de-los-agentes)).
