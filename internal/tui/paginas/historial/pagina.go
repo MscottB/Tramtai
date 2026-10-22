@@ -19,6 +19,7 @@ import (
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
+	"tramtai/internal/tui/vivo"
 )
 
 const (
@@ -28,8 +29,6 @@ const (
 	cadaSondeo = 5 * time.Second
 	// esperaRegistro junta los avisos seguidos de un mismo trabajo en una sola lectura del registro.
 	esperaRegistro = 200 * time.Millisecond
-	// esperaCorte es lo que se espera antes de reabrir el flujo en vivo de un trabajo si se corta.
-	esperaCorte = 2 * time.Second
 )
 
 // Los estados del filtro, en el orden del selector de la Web UI: todas, en proceso, completadas y con error.
@@ -101,23 +100,9 @@ type (
 		err        error
 	}
 	msgSondeo struct{ origen }
-	// msgFlujo es el seguimiento en vivo recién abierto; msgVivo, lo que llega por él.
-	msgFlujo struct {
-		origen
-		id    string
-		seq   int
-		canal <-chan msgVivo
-	}
-	// msgVivo es un evento del trabajo (clase "evento", con su tipo y datos), un corte del flujo ("corte"), el intento de
-	// reabrirlo tras un corte ("abre") o el final: el trabajo ya terminó ("fin", con t).
-	msgVivo struct {
-		origen
-		id, clase   string
-		seq         int // de qué seguimiento es: uno viejo (el detalle se reabrió) no vale
-		tipo, datos string
-		t           nucleo.Trabajo
-		err         error
-	}
+	// msgFlujo es el seguimiento en vivo recién abierto; msgVivo, lo que llega por él (con el origen del Historial).
+	msgFlujo = vivo.Flujo[origen]
+	msgVivo  = vivo.Msg[origen]
 )
 
 // pendiente es lo que la página va a hacer si el usuario confirma: eliminar un trabajo o vaciar el historial.
@@ -187,7 +172,7 @@ type Pagina struct {
 	// Lo que cambian las pruebas: el reloj, las esperas y el flujo de un trabajo.
 	ahora      func() time.Time
 	esperaPara func(time.Duration) <-chan time.Time
-	abrir      func(ctx context.Context, instancia, id string, desde int, alEvento func(numero int, tipo, datos string) error) error
+	abrir      vivo.Eventos
 }
 
 // Nueva crea la página; su título es el del menú de la Web UI.
@@ -427,9 +412,9 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 			return p, p.cargarRegistro()
 		}
 	case msgFlujo:
-		if p.vigente(m.origen) && m.id == p.abierto && m.seq == p.nflujo && p.cancelar != nil {
-			p.canal = m.canal
-			return p, esperar(m.canal)
+		if p.vigente(m.Origen) && m.ID == p.abierto && m.Seq == p.nflujo && p.cancelar != nil {
+			p.canal = m.Canal
+			return p, vivo.Esperar(m.Canal)
 		}
 	case msgVivo:
 		if !p.vivoVigente(m) { // uno viejo no vuelve a esperar: quedarían dos lectores sobre el canal nuevo
@@ -439,7 +424,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		if p.canal == nil {
 			return p, cmd
 		}
-		return p, tea.Batch(esperar(p.canal), cmd)
+		return p, tea.Batch(vivo.Esperar(p.canal), cmd)
 	case msgAccion:
 		return p, p.alAccion(m)
 	case comp.Confirmado:
@@ -496,16 +481,6 @@ func (p *Pagina) alLista(m msgLista) tea.Cmd {
 	p.hayMas = len(m.lista) == p.tam
 	p.lista.Poner(p.trabajos)
 	return nil
-}
-
-// esperar lee el siguiente mensaje del seguimiento en vivo; con el canal cerrado, nada.
-func esperar(canal <-chan msgVivo) tea.Cmd {
-	return func() tea.Msg {
-		if m, ok := <-canal; ok {
-			return m
-		}
-		return nil
-	}
 }
 
 // cerrarVivo corta el seguimiento en vivo (la goroutine termina y cierra su canal).
@@ -602,68 +577,13 @@ func (p *Pagina) abrirVivo(id string) tea.Cmd {
 	p.cerrarVivo()
 	p.vivoSalida = ""
 	p.nflujo++
-	seq := p.nflujo
 	ctx, cancelar := context.WithCancel(p.c.Ctx)
 	p.cancelar = cancelar
-	o, c, espera, abrir := p.origen(), p.c, p.esperaPara, p.abrir
-	if abrir == nil {
-		abrir = c.Cli.Eventos
+	eventos := p.abrir
+	if eventos == nil {
+		eventos = p.c.Cli.Eventos
 	}
-	return func() tea.Msg {
-		canal := make(chan msgVivo, 64)
-		go seguir(ctx, o, c, id, seq, abrir, espera, canal)
-		return msgFlujo{origen: o, id: id, seq: seq, canal: canal}
-	}
-}
-
-// seguir mantiene abierto el flujo SSE del trabajo. Cuando acaba (con el evento fin, que el cliente no entrega) o se corta,
-// consulta el trabajo: si terminó manda fin con él y se acaba; si no, espera y reabre desde el último evento visto.
-// Cierra el canal al terminar.
-func seguir(ctx context.Context, o origen, c pagina.Contexto, id string, seq int,
-	abrir func(context.Context, string, string, int, func(int, string, string) error) error,
-	espera func(time.Duration) <-chan time.Time, canal chan<- msgVivo) {
-	defer close(canal)
-	enviar := func(m msgVivo) bool {
-		m.origen, m.id, m.seq = o, id, seq
-		select {
-		case canal <- m:
-			return true
-		case <-ctx.Done():
-			return false
-		}
-	}
-	desde := 0
-	for intento := 0; ; intento++ {
-		if intento > 0 && !enviar(msgVivo{clase: "abre"}) { // vuelve a probar: si falla enseguida, llega otro corte
-			return
-		}
-		err := abrir(ctx, c.Instancia, id, desde, func(numero int, tipo, datos string) error {
-			desde = max(desde, numero)
-			if !enviar(msgVivo{clase: "evento", tipo: tipo, datos: datos}) {
-				return ctx.Err()
-			}
-			return nil
-		})
-		if ctx.Err() != nil {
-			return
-		}
-		t, errT := c.Cli.Trabajo(ctx, c.Instancia, id)
-		if errT == nil && t.Estado.Terminal() {
-			enviar(msgVivo{clase: "fin", t: t})
-			return
-		}
-		if err == nil {
-			err = errT
-		}
-		if !enviar(msgVivo{clase: "corte", err: err}) {
-			return
-		}
-		select {
-		case <-ctx.Done():
-			return
-		case <-espera(esperaCorte):
-		}
-	}
+	return vivo.Abrir(ctx, p.origen(), p.c.Instancia, id, p.nflujo, eventos, p.c.Cli.Trabajo, p.esperaPara)
 }
 
 // recibirVivo aplica lo que llega del seguimiento en vivo si sigue valiendo: es del detalle y del seguimiento de ahora.
@@ -676,13 +596,13 @@ func (p *Pagina) recibirVivo(m msgVivo) tea.Cmd {
 
 // vivoVigente dice si un mensaje del seguimiento es del detalle y del seguimiento de ahora.
 func (p *Pagina) vivoVigente(m msgVivo) bool {
-	return p.vigente(m.origen) && m.id == p.abierto && m.seq == p.nflujo
+	return p.vigente(m.Origen) && m.ID == p.abierto && m.Seq == p.nflujo
 }
 
 // alVivo aplica un evento del trabajo abierto, como los de Ejecutar.vue: el texto se suma a la respuesta, una corrección la
 // empieza de nuevo, el estado cambia y los demás avisos piden releer el registro. Devuelve lo que haya que pedir.
 func (p *Pagina) alVivo(m msgVivo) tea.Cmd {
-	switch m.clase {
+	switch m.Clase {
 	case "corte":
 		p.corte = true
 		return nil
@@ -690,7 +610,7 @@ func (p *Pagina) alVivo(m msgVivo) tea.Cmd {
 		p.corte = false
 		return nil
 	case "fin":
-		t := m.t
+		t := m.T
 		p.detalle = &t
 		p.vivoSalida = ""
 		p.cerrarVivo()
@@ -699,20 +619,20 @@ func (p *Pagina) alVivo(m msgVivo) tea.Cmd {
 	}
 	p.corte = false
 	var refresco tea.Cmd
-	switch m.tipo {
+	switch m.Tipo {
 	case "texto":
-		p.vivoSalida += m.datos
+		p.vivoSalida += m.Datos
 	case "intento":
 		var i struct {
 			Correccion int `json:"correccion"`
 		}
-		if json.Unmarshal([]byte(m.datos), &i) == nil && i.Correccion != 0 {
+		if json.Unmarshal([]byte(m.Datos), &i) == nil && i.Correccion != 0 {
 			p.vivoSalida = "" // una corrección vuelve a escribir la respuesta desde cero
 		}
 		refresco = p.pedirRegistro()
 	case "estado":
 		if p.detalle != nil {
-			p.detalle.Estado = nucleo.Estado(m.datos)
+			p.detalle.Estado = nucleo.Estado(m.Datos)
 		}
 		refresco = p.pedirRegistro()
 	case "aviso", "validacion":

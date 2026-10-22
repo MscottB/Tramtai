@@ -2,16 +2,15 @@ package ejecutar
 
 import (
 	"strings"
-	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
 	"tramtai/internal/cliente"
-	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/pagina"
+	"tramtai/internal/tui/vivo"
 )
 
 // cargarRecientes pide las últimas pruebas lanzadas desde la terminal (las de la Web UI y las APIs están en el Historial).
@@ -62,41 +61,23 @@ func (p *Pagina) usarDeNuevo(t nucleo.Trabajo) tea.Cmd {
 func (p *Pagina) filaReciente(t nucleo.Trabajo) string {
 	e := p.estilos
 	ancho := max(p.c.Ancho-2, 10)
-	icono, estilo := p.icono(t.Estado)
-	estado := e.Recortar(icono+" "+p.a(p.nombreEstado(t.Estado)), 14)
+	icono, estilo := vivo.Icono(e, t.Estado)
+	estado := e.Recortar(icono+" "+p.nombreEstado(t.Estado), 14)
 	estado += strings.Repeat(" ", max(14-lipgloss.Width(estado), 0))
-	cuando := p.hace(t.CreadoEn)
+	cuando := p.a(vivo.Hace(p.ahora(), t.CreadoEn))
 	texto := strings.Join(strings.Fields(mensajeDe(t)), " ")
 	if texto == "" {
 		texto = p.tx("trabajo.entradaEliminada")
 	}
 	resto := max(ancho-14-lipgloss.Width(cuando)-2, 1)
 	texto = e.Recortar(p.a(texto), resto)
-	return estilo(estado) + " " + texto + strings.Repeat(" ", max(resto-lipgloss.Width(texto), 0)) + " " + e.Tenue.Render(cuando)
-}
-
-// hace es «hace 3 min»; pasada una semana, la fecha.
-func (p *Pagina) hace(t time.Time) string {
-	d := p.ahora().Sub(t)
-	switch {
-	case t.IsZero():
-		return "-"
-	case d < time.Minute:
-		return idioma.Tf("hace %d s", max(int(d/time.Second), 0))
-	case d < time.Hour:
-		return idioma.Tf("hace %d min", int(d/time.Minute))
-	case d < 24*time.Hour:
-		return idioma.Tf("hace %d h", int(d/time.Hour))
-	case d < 7*24*time.Hour:
-		return idioma.Tf("hace %d d", int(d/(24*time.Hour)))
-	}
-	return t.Local().Format("2006-01-02")
+	return estilo.Render(estado) + " " + texto + strings.Repeat(" ", max(resto-lipgloss.Width(texto), 0)) + " " + e.Tenue.Render(cuando)
 }
 
 // cargarPunto lee la API que se abre en Probar para editarla (Abrir en Probar de Mis APIs).
 func (p *Pagina) cargarPunto(nombre string) tea.Cmd {
 	if p.c.Cli == nil {
-		return nil
+		return sinServicio
 	}
 	c, o := p.c, p.origen()
 	return func() tea.Msg {

@@ -15,7 +15,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"tramtai/internal/adaptadores"
 	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
 	"tramtai/internal/nucleo"
@@ -25,25 +24,7 @@ import (
 	"tramtai/internal/tui/paginas/prueba"
 )
 
-func tecla(texto string) tea.KeyPressMsg {
-	switch texto {
-	case "enter":
-		return tea.KeyPressMsg{Code: tea.KeyEnter}
-	case "esc":
-		return tea.KeyPressMsg{Code: tea.KeyEscape}
-	case "up":
-		return tea.KeyPressMsg{Code: tea.KeyUp}
-	case "down":
-		return tea.KeyPressMsg{Code: tea.KeyDown}
-	case "left":
-		return tea.KeyPressMsg{Code: tea.KeyLeft}
-	case "right":
-		return tea.KeyPressMsg{Code: tea.KeyRight}
-	case "backspace":
-		return tea.KeyPressMsg{Code: tea.KeyBackspace}
-	}
-	return tea.KeyPressMsg{Code: []rune(texto)[0], Text: texto}
-}
+var tecla = prueba.Tecla
 
 // correr ejecuta un Cmd y alimenta a la página con lo que sale, como haría la app. El sondeo se repite sin fin y el
 // seguimiento en vivo espera su canal para siempre: a esos no se les vuelve a esperar (las pruebas los mandan a mano o
@@ -193,69 +174,23 @@ func crearInvalida(t *testing.T, cli *cliente.Cliente, inst string) nucleo.Traba
 	return tr
 }
 
-// bloqueado es un agente que se queda esperando en las peticiones con el mensaje «esperar»: escribe un tramo cuando la
-// prueba suelta paso y otro cuando suelta fin. Las demás las contesta al momento con su mensaje. Así hay una petición en
-// marcha sin depender del reloj.
-type bloqueado struct {
-	entro, paso, fin chan struct{}
-	una, dos, tres   sync.Once
-}
-
-func nuevoBloqueado() *bloqueado {
-	return &bloqueado{entro: make(chan struct{}), paso: make(chan struct{}), fin: make(chan struct{})}
-}
-
-func (b *bloqueado) soltarPaso() { b.dos.Do(func() { close(b.paso) }) }
-func (b *bloqueado) soltarFin()  { b.tres.Do(func() { close(b.fin) }) }
-
-func (b *bloqueado) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
-	mensaje := s.Mensajes[len(s.Mensajes)-1].Contenido
-	if mensaje != "esperar" {
-		_ = emitir(adaptadores.Evento{Tipo: "texto", Datos: mensaje})
-		return adaptadores.Resultado{Salida: mensaje}, nil
-	}
-	b.una.Do(func() { close(b.entro) })
-	select {
-	case <-b.paso:
-	case <-ctx.Done():
-		return adaptadores.Resultado{}, ctx.Err()
-	}
-	_ = emitir(adaptadores.Evento{Tipo: "texto", Datos: "primera parte"})
-	select {
-	case <-b.fin:
-	case <-ctx.Done():
-		return adaptadores.Resultado{}, ctx.Err()
-	}
-	_ = emitir(adaptadores.Evento{Tipo: "texto", Datos: " segunda parte"})
-	return adaptadores.Resultado{Salida: "primera parte segunda parte"}, nil
-}
-
 // conBloqueado levanta el servicio con el agente bloqueado y manda una petición «esperar»: vuelve cuando el agente ya la tiene.
-func conBloqueado(t *testing.T) (*cliente.Cliente, string, *bloqueado, nucleo.Trabajo) {
+func conBloqueado(t *testing.T) (*cliente.Cliente, string, *prueba.Bloqueado, nucleo.Trabajo) {
 	t.Helper()
-	b := nuevoBloqueado()
-	cli, id, _ := prueba.ArrancarCon(t, b)
-	t.Cleanup(func() { b.soltarPaso(); b.soltarFin() })
+	cli, id, b := prueba.ConBloqueado(t)
 	tr, err := cli.Crear(ctx, id, nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "esperar"}}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	select {
-	case <-b.entro:
+	case <-b.Entro:
 	case <-time.After(5 * time.Second):
 		t.Fatal("el agente no recibió la petición")
 	}
 	return cli, id, b, tr
 }
 
-func aviso(fuera []tea.Msg) (comp.NuevoAviso, bool) {
-	for _, m := range fuera {
-		if a, ok := m.(comp.NuevoAviso); ok {
-			return a, true
-		}
-	}
-	return comp.NuevoAviso{}, false
-}
+var aviso = prueba.Aviso
 
 // seguido es el trabajo con que se va a Probar (reintentar y corregir lo siguen allí); "" si no se va.
 func seguido(fuera []tea.Msg) string {
@@ -701,7 +636,7 @@ func TestHistorialEnVivo(t *testing.T) {
 		t.Fatalf("aún no hay respuesta:\n%s", v)
 	}
 	// El primer tramo llega mientras sigue en marcha.
-	b.soltarPaso()
+	b.SoltarPaso()
 	hasta(t, p, func() bool { return strings.Contains(p.vivoSalida, "primera parte") })
 	v := p.Vista()
 	if !strings.Contains(v, "primera parte") || strings.Contains(v, "segunda") || !strings.Contains(v, "en vivo") {
@@ -711,7 +646,7 @@ func TestHistorialEnVivo(t *testing.T) {
 		t.Fatal("sigue en marcha")
 	}
 	// El resto, y el final: el detalle pasa a ser el del trabajo terminado.
-	b.soltarFin()
+	b.SoltarFin()
 	hasta(t, p, func() bool { return p.detalle.Estado == nucleo.Completado && p.canal == nil })
 	v = p.Vista()
 	if !strings.Contains(v, "primera parte segunda parte") || strings.Contains(v, "en vivo") || !strings.Contains(v, "✓ Completado") {
@@ -768,7 +703,7 @@ func TestHistorialEnVivoSeCorta(t *testing.T) {
 		t.Fatal("Ocultar corta el seguimiento")
 	}
 	// Una respuesta que llega con la página oculta no se aplica.
-	if _, cmd := p.Update(msgVivo{origen: p.origenActual(), id: p.abierto, seq: p.nflujo, clase: "evento", tipo: "texto", datos: "tarde"}); cmd != nil || p.vivoSalida != "" {
+	if _, cmd := p.Update(msgVivo{Origen: p.origenActual(), ID: p.abierto, Seq: p.nflujo, Clase: "evento", Tipo: "texto", Datos: "tarde"}); cmd != nil || p.vivoSalida != "" {
 		t.Fatalf("oculta, no hace caso: %q", p.vivoSalida)
 	}
 	// Mostrar reabre el seguimiento del mismo detalle, con su pestaña.
@@ -838,8 +773,8 @@ func TestHistorialEnVivoReconecta(t *testing.T) {
 		t.Fatalf("reabre desde el último evento visto: %v", desdes)
 	}
 	mu.Unlock()
-	b.soltarPaso()
-	b.soltarFin()
+	b.SoltarPaso()
+	b.SoltarFin()
 	hasta(t, p, func() bool { return p.detalle.Estado == nucleo.Completado })
 	if p.detalle.ID != tr.ID {
 		t.Fatal("es el mismo trabajo")
@@ -1019,8 +954,8 @@ func TestHistorialVaciar(t *testing.T) {
 	if _, ok := pregunta(fuera); ok {
 		t.Fatal("no pregunta por nada")
 	}
-	b.soltarPaso()
-	b.soltarFin()
+	b.SoltarPaso()
+	b.SoltarFin()
 }
 
 func TestEscVuelve(t *testing.T) {
@@ -1383,21 +1318,6 @@ func TestPasaEstado(t *testing.T) {
 	}
 }
 
-func TestHace(t *testing.T) {
-	p := nueva("es")
-	ahora := time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)
-	p.ahora = func() time.Time { return ahora }
-	casos := map[time.Duration]string{30 * time.Second: "hace 30 s", 5 * time.Minute: "hace 5 min", 3 * time.Hour: "hace 3 h", 48 * time.Hour: "hace 2 d"}
-	for d, quiere := range casos {
-		if got := p.hace(ahora.Add(-d)); got != quiere {
-			t.Errorf("hace(%v) = %q, quería %q", d, got, quiere)
-		}
-	}
-	if got := p.hace(ahora.Add(-30 * 24 * time.Hour)); got != ahora.Add(-30*24*time.Hour).Local().Format("2006-01-02") {
-		t.Errorf("más de una semana es la fecha: %q", got)
-	}
-}
-
 func TestNumeroYTiempo(t *testing.T) {
 	es, en := nueva("es"), nueva("en")
 	for n, quiere := range map[int][2]string{999: {"999", "999"}, 1000: {"1000", "1,000"}, 12345: {"12.345", "12,345"}, 1234567: {"1.234.567", "1,234,567"}} {
@@ -1451,29 +1371,6 @@ func TestRegistroComoLaWeb(t *testing.T) {
 	}
 }
 
-// TestFlujoDeUnTrabajoTerminado: si el flujo acaba sin fin porque el trabajo terminó mientras tanto, se manda el trabajo final.
-func TestSeguirTerminaConElTrabajo(t *testing.T) {
-	cli, id := prueba.Servicio(t)
-	tr := crear(t, cli, id, "ya terminó")
-	canal := make(chan msgVivo, 8)
-	c := contexto(cli, id)
-	abrir := func(ctx context.Context, inst, trabajoID string, desde int, al func(int, string, string) error) error {
-		_ = al(3, "estado", "completado")
-		return nil // el flujo se cierra sin decirlo
-	}
-	seguir(ctx, origen{ctx: ctx, instancia: id}, c, tr.ID, 1, abrir, func(time.Duration) <-chan time.Time { return nil }, canal)
-	var clases []string
-	for m := range canal {
-		clases = append(clases, m.clase)
-		if m.clase == "fin" && m.t.ID != tr.ID {
-			t.Fatalf("el fin lleva el trabajo: %+v", m.t)
-		}
-	}
-	if !slices.Equal(clases, []string{"evento", "fin"}) {
-		t.Fatalf("un evento y el fin: %v", clases)
-	}
-}
-
 // TestDetalleParteLasPalabras: el texto del detalle se parte por palabras al ancho de la página, y sigue al redimensionar.
 func TestDetalleParteLasPalabras(t *testing.T) {
 	p := conTrabajos(t, trabajo("a", strings.Repeat("palabra ", 40), nucleo.Completado))
@@ -1514,7 +1411,7 @@ func conDetalle(t *testing.T) *Pagina {
 // consulta, el trabajo, el espacio o la versión de la página de antes, no se aplica.
 func TestRespuestasViejasDelDetalle(t *testing.T) {
 	texto := func(o origen, id string, seq int) msgVivo {
-		return msgVivo{origen: o, id: id, seq: seq, clase: "evento", tipo: "texto", datos: "x"}
+		return msgVivo{Origen: o, ID: id, Seq: seq, Clase: "evento", Tipo: "texto", Datos: "x"}
 	}
 	p := conDetalle(t)
 	o := p.origenActual()
@@ -1534,7 +1431,7 @@ func TestRespuestasViejasDelDetalle(t *testing.T) {
 	}
 	// El fin de un seguimiento viejo no cambia el detalle.
 	final := trabajo("a", "uno", nucleo.Completado)
-	p.Update(msgVivo{origen: o, id: "a", seq: 1, clase: "fin", t: final})
+	p.Update(msgVivo{Origen: o, ID: "a", Seq: 1, Clase: "fin", T: final})
 	if p.detalle.Estado != nucleo.Ejecutando {
 		t.Fatalf("un fin viejo cambió el detalle: %s", p.detalle.Estado)
 	}
@@ -1582,26 +1479,26 @@ func TestVivoViejoNoRearmaLaLectura(t *testing.T) {
 	p := conDetalle(t)
 	p.canal = make(chan msgVivo) // el seguimiento de ahora
 	o := p.origenActual()
-	viejo := msgVivo{origen: o, id: "a", seq: 1, clase: "evento", tipo: "texto", datos: "x"}
+	viejo := msgVivo{Origen: o, ID: "a", Seq: 1, Clase: "evento", Tipo: "texto", Datos: "x"}
 	if _, cmd := p.Update(viejo); cmd != nil {
 		t.Fatal("un mensaje del seguimiento viejo no espera sobre el canal nuevo")
 	}
-	otroTrabajo := msgVivo{origen: o, id: "b", seq: 2, clase: "evento", tipo: "texto", datos: "x"}
+	otroTrabajo := msgVivo{Origen: o, ID: "b", Seq: 2, Clase: "evento", Tipo: "texto", Datos: "x"}
 	if _, cmd := p.Update(otroTrabajo); cmd != nil {
 		t.Fatal("ni uno de otro trabajo")
 	}
 	oculta := o
 	oculta.gen--
-	if _, cmd := p.Update(msgVivo{origen: oculta, id: "a", seq: 2, clase: "evento", tipo: "texto", datos: "x"}); cmd != nil {
+	if _, cmd := p.Update(msgVivo{Origen: oculta, ID: "a", Seq: 2, Clase: "evento", Tipo: "texto", Datos: "x"}); cmd != nil {
 		t.Fatal("ni uno de otra versión de la página")
 	}
-	if _, cmd := p.Update(msgVivo{origen: o, id: "a", seq: 2, clase: "evento", tipo: "texto", datos: "x"}); cmd == nil {
+	if _, cmd := p.Update(msgVivo{Origen: o, ID: "a", Seq: 2, Clase: "evento", Tipo: "texto", Datos: "x"}); cmd == nil {
 		t.Fatal("el del seguimiento de ahora sí sigue leyendo")
 	}
 	// Un msgFlujo viejo tampoco toma el canal.
 	p.cancelar = func() {}
 	p.canal = nil
-	if _, cmd := p.Update(msgFlujo{origen: o, id: "a", seq: 1, canal: make(chan msgVivo)}); cmd != nil || p.canal != nil {
+	if _, cmd := p.Update(msgFlujo{Origen: o, ID: "a", Seq: 1, Canal: make(chan msgVivo)}); cmd != nil || p.canal != nil {
 		t.Fatal("un flujo viejo no toma el canal")
 	}
 }

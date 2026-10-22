@@ -28,7 +28,7 @@ var reNombreApi = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,39}$`)
 // mensaje, el perfil y el tiempo.
 func (p *Pagina) verCodigo() tea.Cmd {
 	if p.c.Cli == nil {
-		return nil
+		return sinServicio
 	}
 	d := p.leer()
 	esquema, err := esquemaDe(d.esquema)
@@ -104,7 +104,7 @@ func (p *Pagina) teclaCodigo(t string) tea.Cmd {
 // guardarApi (g) actualiza la API que se edita con la receta o, si no se edita ninguna, abre «Guardar como API».
 func (p *Pagina) guardarApi() tea.Cmd {
 	if p.c.Cli == nil {
-		return nil
+		return sinServicio
 	}
 	d := p.leer()
 	esquema, err := esquemaDe(d.esquema)

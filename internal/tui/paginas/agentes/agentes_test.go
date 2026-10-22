@@ -14,15 +14,7 @@ import (
 	"tramtai/internal/tui/paginas/prueba"
 )
 
-func tecla(texto string) tea.KeyPressMsg {
-	switch texto {
-	case "enter":
-		return tea.KeyPressMsg{Code: tea.KeyEnter}
-	case "esc":
-		return tea.KeyPressMsg{Code: tea.KeyEscape}
-	}
-	return tea.KeyPressMsg{Code: []rune(texto)[0], Text: texto}
-}
+var tecla = prueba.Tecla
 
 // correr ejecuta un Cmd y alimenta a la página con lo que sale, como haría la app. Devuelve los mensajes que son de la
 // app: preguntas, avisos, IrA, Volver y ErrorServicio.
@@ -67,14 +59,7 @@ func abierta(t *testing.T) (*Pagina, *cliente.Cliente, string) {
 	return p, cli, id
 }
 
-func aviso(fuera []tea.Msg) (comp.NuevoAviso, bool) {
-	for _, m := range fuera {
-		if a, ok := m.(comp.NuevoAviso); ok {
-			return a, true
-		}
-	}
-	return comp.NuevoAviso{}, false
-}
+var aviso = prueba.Aviso
 
 func TestAgentesCarga(t *testing.T) {
 	p, _, _ := abierta(t)

@@ -22,25 +22,7 @@ import (
 	"tramtai/internal/tui/paginas/prueba"
 )
 
-func tecla(texto string) tea.KeyPressMsg {
-	switch texto {
-	case "enter":
-		return tea.KeyPressMsg{Code: tea.KeyEnter}
-	case "esc":
-		return tea.KeyPressMsg{Code: tea.KeyEscape}
-	case "up":
-		return tea.KeyPressMsg{Code: tea.KeyUp}
-	case "down":
-		return tea.KeyPressMsg{Code: tea.KeyDown}
-	case "pgdown":
-		return tea.KeyPressMsg{Code: tea.KeyPgDown}
-	case "end":
-		return tea.KeyPressMsg{Code: tea.KeyEnd}
-	case "home":
-		return tea.KeyPressMsg{Code: tea.KeyHome}
-	}
-	return tea.KeyPressMsg{Code: []rune(texto)[0], Text: texto}
-}
+var tecla = prueba.Tecla
 
 // correr ejecuta un Cmd y alimenta a la página con lo que sale, como haría la app. Los mensajes del flujo y de los
 // temporizadores se le dan a la página pero no se vuelven a esperar (esperarían para siempre): las pruebas los leen de p.canal

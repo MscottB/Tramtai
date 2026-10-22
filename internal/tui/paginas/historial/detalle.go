@@ -13,6 +13,7 @@ import (
 
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
+	"tramtai/internal/tui/vivo"
 )
 
 // Las pestañas del detalle: el mensaje (con la ficha), la respuesta y el registro.
@@ -34,50 +35,15 @@ func (p *Pagina) vistaDetalle() string {
 		return e.Titulo.Render(e.Recortar(p.Titulo(), ancho)) + "\n\n" + e.Tenue.Render(p.a(idioma.T("Cargando…")))
 	}
 	t := *p.detalle
-	icono, estilo := p.icono(t.Estado)
-	cab := estilo.Render(icono+" "+p.a(p.nombreEstado(t.Estado))) + e.Tenue.Render(" "+e.Iconos.Separador+" "+fecha(t.CreadoEn))
+	icono, estilo := vivo.Icono(e, t.Estado)
+	cab := estilo.Render(icono+" "+p.nombreEstado(t.Estado)) + e.Tenue.Render(" "+e.Iconos.Separador+" "+fecha(t.CreadoEn))
 	switch {
 	case p.enVivo() && p.corte:
 		cab += " " + e.Advertencia.Render(p.a(idioma.T("reconectando…")))
 	case p.enVivo():
 		cab += " " + e.Tenue.Render(e.Iconos.Separador) + " " + e.Acento.Render(e.Iconos.Activo+" "+idioma.T("en vivo"))
 	}
-	return strings.Join([]string{e.Recortar(cab, ancho), e.Recortar(p.ruta(t.Estado), ancho), e.Recortar(p.pestanas(), ancho), p.visor.Vista()}, "\n")
-}
-
-// posicionRuta es la parada de la ruta en que está cada estado (posicion de Ruta.vue).
-var posicionRuta = map[nucleo.Estado]int{nucleo.EnCola: 0, nucleo.PreparandoEntrada: 1, nucleo.EsperandoAgente: 1, nucleo.Ejecutando: 2,
-	nucleo.CancelacionSolicitada: 2, nucleo.ValidandoSalida: 3, nucleo.Completado: 4}
-
-// ruta dibuja la petición como un trayecto, como Ruta.vue: cola, preparación, ejecución, validación y llegada. La parada de
-// ahora va entre corchetes; al terminar, la llegada toma el resultado.
-func (p *Pagina) ruta(estado nucleo.Estado) string {
-	e := p.estilos
-	terminado := estado.Terminal()
-	llegada := p.tx("ruta.llegada")
-	if terminado && estado != nucleo.Completado {
-		llegada = p.nombreEstado(estado)
-	}
-	paradas := []string{p.tx("ruta.cola"), p.tx("ruta.preparacion"), p.tx("ruta.ejecucion"), p.tx("ruta.validacion"), llegada}
-	actual := posicionRuta[estado]
-	if terminado {
-		actual = 4
-	}
-	_, estiloFinal := p.icono(estado)
-	partes := make([]string, len(paradas))
-	for i, parada := range paradas {
-		switch {
-		case i == actual && terminado:
-			partes[i] = estiloFinal.Render("[" + parada + "]")
-		case i == actual:
-			partes[i] = e.Acento.Render("[" + parada + "]")
-		case i < actual:
-			partes[i] = e.Texto.Render(parada)
-		default:
-			partes[i] = e.Tenue.Render(parada)
-		}
-	}
-	return strings.Join(partes, e.Tenue.Render(" "+e.Iconos.Cerrado+" "))
+	return strings.Join([]string{e.Recortar(cab, ancho), e.Recortar(p.a(vivo.Ruta(e, p.lengua, t.Estado)), ancho), e.Recortar(p.pestanas(), ancho), p.visor.Vista()}, "\n")
 }
 
 // pestanas son los nombres de las pestañas, con la de ahora entre corchetes.

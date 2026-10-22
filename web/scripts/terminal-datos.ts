@@ -80,7 +80,7 @@ export const CLAVES_HISTORIAL: string[] = [
 // la respuesta, «Ver como código» (también los comentarios de sus ejemplos), «Guardar como API» y las pruebas recientes. Los
 // {placeholders} los rellena Go con datos.Textof.
 export const CLAVES_EJECUTAR: string[] = [
-  'ejecutar.receta', 'ejecutar.mensajePrueba', 'ejecutar.mensaje', 'ejecutar.adjuntar', 'ejecutar.adjuntarLimites', 'ejecutar.formatos',
+  'ejecutar.receta', 'ejecutar.mensaje', 'ejecutar.adjuntar', 'ejecutar.adjuntarLimites', 'ejecutar.formatos',
   'ejecutar.perfilTrabajo', 'ejecutar.perfilHint', 'ejecutar.tiempo', 'ejecutar.tiempoHint', 'ejecutar.enviar', 'ejecutar.vacio',
   'ejecutar.ejemplos', 'ejecutar.ejemplo1', 'ejecutar.ejemplo2', 'ejecutar.ejemplo3', 'ejecutar.nueva', 'ejecutar.recientes',
   'ejecutar.verTodo', 'ejecutar.sinRecientes', 'ejecutar.usarDeNuevo', 'ejecutar.sinAdjuntos', 'ejecutar.corregirTexto',
@@ -95,7 +95,14 @@ export const CLAVES_EJECUTAR: string[] = [
   'ejemplos.nativa', 'ejemplos.subir', 'ejemplos.jq', 'ejemplos.crear', 'ejemplos.seguir', 'ejemplos.seguirCurl', 'ejemplos.resultado',
   'ejemplos.mensaje', 'conectar.hola', 'conectar.urlOpenai', 'conectar.clave',
   'puntos.nombre', 'puntos.nombreHint', 'puntos.nombreRegla', 'puntos.grupo', 'puntos.grupoHint', 'puntos.claveUnaVez',
-  'comun.copiado', 'comun.crear', 'comun.hecho', 'comun.tokens', 'comun.opcionesAvanzadas',
+  'comun.tokens',
+  // El editor de campos de «Respuesta con forma» (CamposEsquema.vue).
+  'receta.modo', 'receta.modoCampos', 'receta.modoJson', 'receta.esquemaAvanzado',
+  'campos.nombre', 'campos.tipo', 'campos.quitar', 'campos.descripcion', 'campos.descripcionEjemplo', 'campos.obligatorio',
+  'campos.opciones', 'campos.elemento', 'campos.minimoElementos', 'campos.maximoElementos', 'campos.minimo', 'campos.maximo',
+  'campos.anadir', ...['texto', 'numero', 'entero', 'si_no', 'fecha', 'opcion', 'lista', 'objeto'].map((t) => 'campos.tipo.' + t),
+  ...['texto', 'numero', 'objeto'].map((e) => 'campos.elemento.' + e),
+  ...['sin_nombre', 'repetido', 'sin_opciones', 'rango', 'sin_campos'].map((p) => 'campos.problema.' + p),
 ]
 
 // CLAVES_TEXTOS son, además de las menu.* y las error.*, los textos que la terminal toma de la Web UI: los de la Ayuda de la

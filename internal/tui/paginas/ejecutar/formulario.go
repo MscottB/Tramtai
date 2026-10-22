@@ -2,10 +2,9 @@ package ejecutar
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"errors"
-	"os"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -14,12 +13,10 @@ import (
 
 	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
-	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/datos"
-	"tramtai/internal/tui/pagina"
 )
 
 // datosForm es lo que tiene el formulario: la receta (Receta de recetas.ts, con estructurada aparte del texto del esquema,
@@ -29,6 +26,8 @@ type datosForm struct {
 	forzar, estructurada              bool
 	respaldo                          []string
 	esquema                           string
+	modo                              string         // modoCampos o modoJSON
+	campos                            []campoEsquema // en modo campos, los campos (y esquema, lo que generan)
 	reintentos                        int
 	mensaje, archivos, perfil, tiempo string
 }
@@ -94,9 +93,16 @@ func (p *Pagina) armar(d datosForm, foco string) {
 		}
 		reintentos := []string{"0", "1", "2", "3"}
 		textos := []string{p.tx("receta.reintentos0"), p.tx("receta.reintentosNUno"), p.tx("receta.reintentosN", "n", "2"), p.tx("receta.reintentosN", "n", "3")}
-		campos = append(campos, p.opcion("plantilla", p.tx("receta.plantillaCorta"), ids, nombresP, ""),
-			comp.Area("esquema", p.tx("receta.esquema"), d.esquema),
-			p.opcion("reintentos", p.tx("receta.reintentos"), reintentos, textos, strconv.Itoa(d.reintentos)))
+		p.resolverModo(&d)
+		campos = append(campos, p.opcion("modo", p.tx("receta.modo"), []string{modoCampos, modoJSON}, []string{p.tx("receta.modoCampos"), p.tx("receta.modoJson")}, d.modo),
+			p.opcion("plantilla", p.tx("receta.plantillaCorta"), ids, nombresP, ""))
+		if d.modo == modoCampos {
+			campos = append(campos, p.filasCampos(d.campos, "c", 1)...)
+		} else {
+			campos = append(campos, comp.Area("esquema", p.tx("receta.esquema"), d.esquema))
+		}
+		campos = append(campos, p.opcion("reintentos", p.tx("receta.reintentos"), reintentos, textos, strconv.Itoa(d.reintentos)))
+		p.modo, p.campos = d.modo, d.campos
 	}
 	campos = append(campos, comp.Area("mensaje", p.tx("ejecutar.mensaje"), d.mensaje), comp.Texto("archivos", p.tx("ejecutar.adjuntar"), d.archivos),
 		comp.Texto("perfil", p.tx("ejecutar.perfilTrabajo"), d.perfil), comp.Numero("tiempo", p.tx("ejecutar.tiempo")+" (s)", d.tiempo))
@@ -107,17 +113,41 @@ func (p *Pagina) armar(d datosForm, foco string) {
 	p.armado = true
 }
 
+// resolverModo elige cómo se edita el esquema, como EditorReceta: el modo de antes (al principio, campos) si el editor de
+// campos lo representa; si no, JSON.
+func (p *Pagina) resolverModo(d *datosForm) {
+	if d.modo == "" {
+		d.modo = cmp.Or(p.modo, modoCampos)
+	}
+	if d.modo == modoCampos && d.campos == nil {
+		c, ok := camposDe(d.esquema)
+		if d.campos = c; !ok {
+			d.modo = modoJSON
+		}
+	}
+}
+
 // rearmar rehace el formulario con lo que tiene, sin mover el foco.
 func (p *Pagina) rearmar() { p.armar(p.leer(), p.form.Foco()) }
 
-// leer saca los datos del formulario.
-func (p *Pagina) leer() datosForm {
+// leerForm saca los valores del formulario tal cual.
+func (p *Pagina) leerForm() datosForm {
 	f := &p.form
 	r, _ := strconv.Atoi(p.valorOpcion("reintentos"))
 	return datosForm{instrucciones: f.Valor("instrucciones"), modelo: p.valorOpcion("modelo"), esfuerzo: p.valorOpcion("esfuerzo"),
 		forzar: f.Marcado("forzar"), estructurada: f.Marcado("estructurada"), respaldo: partir(f.Valor("respaldo")),
 		esquema: f.Valor("esquema"), reintentos: r, mensaje: f.Valor("mensaje"), archivos: f.Valor("archivos"),
-		perfil: f.Valor("perfil"), tiempo: f.Valor("tiempo")}
+		perfil: f.Valor("perfil"), tiempo: f.Valor("tiempo"), modo: p.valorOpcion("modo")}
+}
+
+// leer saca los datos del formulario; en modo campos, el esquema es el que generan.
+func (p *Pagina) leer() datosForm {
+	d := p.leerForm()
+	if d.estructurada && d.modo == modoCampos && p.modo == modoCampos {
+		d.campos = p.leerCampos(p.campos, "c")
+		d.esquema = sangrar([]byte(aEsquema(d.campos)))
+	}
+	return d
 }
 
 // partir separa el respaldo escrito: agente[/modelo][+esfuerzo], por comas o espacios.
@@ -185,7 +215,12 @@ func (p *Pagina) validar(f *comp.Formulario) map[string]string {
 	if strings.TrimSpace(f.Valor("mensaje")) == "" {
 		errores["mensaje"] = idioma.T("Escribe un mensaje")
 	}
-	if f.Marcado("estructurada") {
+	switch {
+	case f.Marcado("estructurada") && p.modo == modoCampos:
+		if problema := p.textoProblema(p.leerCampos(p.campos, "c")); problema != "" {
+			errores["modo"] = problema
+		}
+	case f.Marcado("estructurada"):
 		_, err := esquemaDe(f.Valor("esquema"))
 		switch {
 		case strings.TrimSpace(f.Valor("esquema")) == "":
@@ -247,12 +282,18 @@ func (p *Pagina) alForm(msg tea.Msg) tea.Cmd {
 		}
 		p.armar(d, ahora)
 	case d.estructurada != antes.estructurada:
-		d.esquema, d.reintentos = "", 0
+		d.esquema, d.campos, d.reintentos = "", nil, 0
 		if d.estructurada {
 			d.esquema = ejemploEsquema(p.lengua)
 		}
 		p.errEsquema = ""
 		p.armar(d, ahora)
+	case d.estructurada && d.modo != antes.modo:
+		cmds = append(cmds, p.cambiarModo(d, antes.esquema, ahora))
+	case d.estructurada && d.modo == modoCampos && forma(d.campos) != forma(p.campos):
+		p.armar(d, ahora)
+	case strings.HasSuffix(ahora, ".nombre") && reEspacios.MatchString(p.form.Valor(ahora)): // los nombres no llevan espacios
+		p.form.Poner(ahora, reEspacios.ReplaceAllString(p.form.Valor(ahora), "_"))
 	}
 	if d.esquema != antes.esquema && p.errEsquema != "" {
 		p.errEsquema = ""
@@ -265,14 +306,20 @@ func (p *Pagina) alForm(msg tea.Msg) tea.Cmd {
 		p.conversor = ""
 	}
 	if foco != ahora {
-		switch foco {
-		case "esquema":
-			cmds = append(cmds, p.validarEsquema(d))
-		case "archivos":
-			cmds = append(cmds, p.comprobarConversor(rutasDe(d.archivos)))
-		}
+		cmds = append(cmds, p.alSalir(foco, d))
 	}
 	return tea.Batch(append(cmds, cmd)...)
+}
+
+// alSalir comprueba con el servicio el campo que se deja (con Tab, ↑↓ o Esc): el esquema o los archivos.
+func (p *Pagina) alSalir(campo string, d datosForm) tea.Cmd {
+	switch campo {
+	case "esquema":
+		return p.validarEsquema(d)
+	case "archivos":
+		return p.comprobarConversor(rutasDe(d.archivos))
+	}
+	return nil
 }
 
 // teclaCampo es una tecla mientras se edita: Intro en la plantilla la aplica y Tab en los archivos completa la ruta; lo
@@ -300,14 +347,14 @@ func (p *Pagina) teclaCampo(k tea.KeyPressMsg) tea.Cmd {
 
 // usarPlantilla pone el esquema de la plantilla; si ya había uno propio, pregunta antes (usarPlantilla de EditorReceta).
 func (p *Pagina) usarPlantilla(id string) tea.Cmd {
-	actual := strings.TrimSpace(p.form.Valor("esquema"))
+	actual := strings.TrimSpace(p.leer().esquema)
 	if actual == "" || actual == strings.TrimSpace(ejemploEsquema(p.lengua)) {
 		p.ponerPlantilla(id)
 		return nil
 	}
 	for _, pl := range datos.Plantillas(p.lengua) {
 		if pl.ID == id {
-			p.pend = id
+			p.pend = func() { p.ponerPlantilla(id) }
 			return comp.Confirmar(p.tx("receta.plantillaReemplazar") + "\n\n" + p.tx("receta.plantillaReemplazarTexto", "nombre", pl.Nombre))
 		}
 	}
@@ -320,11 +367,13 @@ func (p *Pagina) ponerPlantilla(id string) {
 		if pl.ID != id {
 			continue
 		}
+		d := p.leer()
 		p.errEsquema = ""
-		p.form.Poner("esquema", sangrar(pl.Esquema))
-		if strings.TrimSpace(p.form.Valor("instrucciones")) == "" {
-			p.form.Poner("instrucciones", pl.Instrucciones)
+		d.esquema, d.campos, d.modo = sangrar(pl.Esquema), nil, modoCampos // como la Web UI, la plantilla se abre en campos
+		if strings.TrimSpace(d.instrucciones) == "" {
+			d.instrucciones = pl.Instrucciones
 		}
+		p.armar(d, p.form.Foco())
 	}
 }
 
@@ -339,111 +388,12 @@ func (p *Pagina) validarEsquema(d datosForm) tea.Cmd {
 	return func() tea.Msg {
 		raw, _ := json.Marshal(texto)
 		errores, err := c.Cli.ValidarEsquema(c.Ctx, c.Instancia, raw)
-		if err != nil {
-			return nil
-		}
-		m := msgEsquema{origen: o, texto: texto}
+		m := msgEsquema{origen: o, texto: texto, err: err}
 		if len(errores) > 0 {
 			m.error = errores[0]
 		}
 		return m
 	}
-}
-
-// rutasDe separa el campo de archivos (por comas o punto y coma) y quita espacios y comillas de cada ruta.
-func rutasDe(campo string) []string {
-	var rutas []string
-	for _, ruta := range strings.FieldsFunc(campo, func(r rune) bool { return r == ',' || r == ';' }) {
-		if ruta = strings.Trim(strings.TrimSpace(ruta), `"`); ruta != "" {
-			rutas = append(rutas, ruta)
-		}
-	}
-	return rutas
-}
-
-// revisarArchivos dice, antes de subir nada, si un archivo no se admite o necesita el conversor y no está listo.
-func revisarArchivos(c pagina.Contexto, rutas []string) error {
-	if err := documentos.AdmitirArchivos(rutas); err != nil {
-		return err
-	}
-	if !slices.ContainsFunc(rutas, documentos.NecesitaConversor) {
-		return nil
-	}
-	if e, err := c.Cli.Conversor(c.Ctx, c.Instancia); err == nil && e.Estado != "listo" {
-		return errors.New(idioma.Tf("el conversor de archivos no está listo (%s): Ctrl+P lo prepara", e.Estado))
-	}
-	return nil
-}
-
-// comprobarConversor avisa, al dejar el campo de archivos, de lo que impedirá enviarlos.
-func (p *Pagina) comprobarConversor(rutas []string) tea.Cmd {
-	if len(rutas) == 0 || p.c.Cli == nil {
-		return nil
-	}
-	c, o := p.c, p.origen()
-	return func() tea.Msg {
-		m := msgConversor{origen: o}
-		if err := revisarArchivos(c, rutas); err != nil {
-			m.aviso = nucleo.MensajeDe(err)
-		}
-		return m
-	}
-}
-
-// prepararConversor lanza la preparación del conversor de archivos en el servicio.
-func (p *Pagina) prepararConversor() tea.Cmd {
-	if p.c.Cli == nil {
-		return nil
-	}
-	c := p.c
-	return func() tea.Msg {
-		e, err := c.Cli.PrepararConversor(c.Ctx, c.Instancia)
-		if err != nil {
-			return comp.NuevoAviso{Texto: nucleo.MensajeDe(err), Tipo: comp.Fallo}
-		}
-		return comp.NuevoAviso{Texto: idioma.Tf("Preparando el conversor de archivos (%s)", e.Estado), Tipo: comp.Info}
-	}
-}
-
-// completar completa la última ruta del campo (tras la última coma) con lo que hay en disco: el nombre entero si solo hay
-// uno que empieza así (una carpeta, con su separador) o lo común a todos. Devuelve también los que encajan.
-func completar(campo string) (string, []string) {
-	corte := strings.LastIndexAny(campo, ",;") + 1
-	resto := campo[corte:]
-	ruta := strings.TrimLeft(resto, " ")
-	antes := campo[:corte] + resto[:len(resto)-len(ruta)]
-	dir, base := filepath.Split(ruta)
-	leer := dir
-	if leer == "" {
-		leer = "."
-	}
-	entradas, err := os.ReadDir(nucleo.ExpandirCasa(leer))
-	if err != nil {
-		return campo, nil
-	}
-	var candidatos []string
-	for _, e := range entradas {
-		if strings.HasPrefix(strings.ToLower(e.Name()), strings.ToLower(base)) {
-			nombre := e.Name()
-			if e.IsDir() {
-				nombre += string(filepath.Separator)
-			}
-			candidatos = append(candidatos, nombre)
-		}
-	}
-	if len(candidatos) == 0 {
-		return campo, nil
-	}
-	comun := candidatos[0]
-	for _, c := range candidatos[1:] {
-		for !strings.HasPrefix(c, comun) {
-			comun = comun[:len(comun)-1]
-		}
-	}
-	if len(comun) < len(base) {
-		return campo, candidatos
-	}
-	return antes + dir + comun, candidatos
 }
 
 // solicitudDe arma la petición de la receta y el mensaje tal como la envía Probar (solicitudDe de Ejecutar.vue).

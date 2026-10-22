@@ -5,15 +5,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"tramtai/internal/adaptadores"
 	"tramtai/internal/cliente"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
@@ -23,29 +22,7 @@ import (
 
 var ctx = context.Background()
 
-func tecla(texto string) tea.KeyPressMsg {
-	switch texto {
-	case "enter":
-		return tea.KeyPressMsg{Code: tea.KeyEnter}
-	case "esc":
-		return tea.KeyPressMsg{Code: tea.KeyEscape}
-	case "tab":
-		return tea.KeyPressMsg{Code: tea.KeyTab}
-	case "up":
-		return tea.KeyPressMsg{Code: tea.KeyUp}
-	case "down":
-		return tea.KeyPressMsg{Code: tea.KeyDown}
-	case "left":
-		return tea.KeyPressMsg{Code: tea.KeyLeft}
-	case "right":
-		return tea.KeyPressMsg{Code: tea.KeyRight}
-	case "ctrl+s":
-		return tea.KeyPressMsg{Code: 's', Mod: tea.ModCtrl}
-	case "space":
-		return tea.KeyPressMsg{Code: tea.KeySpace, Text: " "}
-	}
-	return tea.KeyPressMsg{Code: []rune(texto)[0], Text: texto}
-}
+var tecla = prueba.Tecla
 
 // portapapeles es lo que la página manda copiar con OSC 52 (el mensaje de tea.SetClipboard no se exporta).
 type portapapeles string
@@ -149,58 +126,17 @@ func abierta(t *testing.T, cli *cliente.Cliente, id string) *Pagina {
 	return p
 }
 
-func aviso(fuera []tea.Msg) (comp.NuevoAviso, bool) {
-	for _, m := range fuera {
-		if a, ok := m.(comp.NuevoAviso); ok {
-			return a, true
-		}
-	}
-	return comp.NuevoAviso{}, false
-}
+var aviso = prueba.Aviso
 
-// bloqueado es un agente que se queda esperando con el mensaje «esperar» hasta que la prueba lo suelta; los demás
-// mensajes los contesta al momento con su texto. Así hay una petición en marcha sin depender del reloj.
-type bloqueado struct {
-	entro, fin chan struct{}
-	una, dos   sync.Once
-	ultima     nucleo.SolicitudEjecucion
-	mu         sync.Mutex
-}
-
-func (b *bloqueado) soltar() { b.dos.Do(func() { close(b.fin) }) }
-
-func (b *bloqueado) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
-	b.mu.Lock()
-	b.ultima = s
-	b.mu.Unlock()
-	mensaje := s.Mensajes[len(s.Mensajes)-1].Contenido
-	if mensaje != "esperar" {
-		_ = emitir(adaptadores.Evento{Tipo: "texto", Datos: mensaje})
-		return adaptadores.Resultado{Salida: mensaje}, nil
-	}
-	b.una.Do(func() { close(b.entro) })
-	_ = emitir(adaptadores.Evento{Tipo: "texto", Datos: "primera parte"})
-	select {
-	case <-b.fin:
-	case <-ctx.Done():
-		return adaptadores.Resultado{}, ctx.Err()
-	}
-	return adaptadores.Resultado{Salida: "primera parte"}, nil
-}
-
-func conBloqueado(t *testing.T) (*cliente.Cliente, string, *bloqueado) {
+// conBloqueado levanta el servicio con el agente bloqueado de prueba, que con «esperar» escribe «primera parte» y espera
+// a que la prueba lo suelte (SoltarFin).
+func conBloqueado(t *testing.T) (*cliente.Cliente, string, *prueba.Bloqueado) {
 	t.Helper()
-	b := &bloqueado{entro: make(chan struct{}), fin: make(chan struct{})}
-	cli, id, _ := prueba.ArrancarCon(t, b)
-	t.Cleanup(b.soltar)
+	cli, id, b := prueba.ConBloqueado(t)
+	b.SoltarPaso()
 	return cli, id, b
 }
 
-// TestPegarVariasLineas: lo pegado (3 líneas, 5000 caracteres) entra entero en el mensaje, e Intro no lo envía.
-// TestPlantillaRellenaEsquema: con la salida estructurada, la plantilla pone su esquema y sus instrucciones; con un esquema
-// propio pregunta antes de cambiarlo.
-// TestEsquemaInvalidoAvisa: al salir del esquema lo comprueba el servicio y su error se ve bajo el campo; sin arreglarlo
-// no se envía.
 // TestEnviarYCancelar: Ctrl+S manda la receta como la Web UI y la respuesta llega en vivo; Esc la cancela.
 func TestEnviarYCancelar(t *testing.T) {
 	cli, id, b := conBloqueado(t)
@@ -219,7 +155,7 @@ func TestEnviarYCancelar(t *testing.T) {
 	}
 	fuera := pulsar(p, "ctrl+s")
 	select {
-	case <-b.entro:
+	case <-b.Entro:
 	case <-time.After(5 * time.Second):
 		t.Fatalf("el agente no recibió la petición: %v", fuera)
 	}
@@ -230,9 +166,7 @@ func TestEnviarYCancelar(t *testing.T) {
 	if v := p.Vista(); !strings.Contains(v, "primera parte") || !strings.Contains(v, "en vivo") {
 		t.Fatalf("la respuesta llega en vivo:\n%s", v)
 	}
-	b.mu.Lock()
-	s := b.ultima
-	b.mu.Unlock()
+	s := b.Ultima()
 	if s.Instrucciones != "breve" || len(s.Respaldo) != 1 || s.Ejecucion.TiempoLimiteSegundos != 60 ||
 		s.Salida.Formato != "json" || s.Salida.Reintentos != 2 || !s.Salida.ConservarSalidaInvalida || !strings.Contains(string(s.Salida.Esquema), "resumen") {
 		t.Fatalf("la solicitud lleva la receta como la Web UI: %+v", s)
@@ -267,6 +201,7 @@ func TestCorregirYCopiar(t *testing.T) {
 	p.form.Enfocar("estructurada")
 	p.editando = true
 	pulsar(p, "space", "esc")
+	aJSON(p)
 	p.form.Poner("esquema", `{"type":"object","required":["total"],"properties":{"total":{"type":"number"}}}`)
 	p.form.Poner("mensaje", `{"total":"diez"}`)
 	pulsar(p, "ctrl+s")
@@ -311,9 +246,6 @@ func TestCorregirYCopiar(t *testing.T) {
 	}
 }
 
-// TestGuardarComoApi: g pide el nombre, crea la API con la receta y enseña su clave una vez; después g la actualiza.
-// TestConPunto: abrir una API en Probar trae su receta y la edita.
-// TestCodigoComoLaPrueba: k enseña la prueba de ahora como código, con la URL del servicio y el marcador de la clave.
 // TestBorradorSobreviveReinicio: el mensaje se guarda al escribir y vuelve al abrir la terminal otra vez; se borra al enviar.
 func TestBorradorSobreviveReinicio(t *testing.T) {
 	enEspanol(t)
@@ -347,7 +279,7 @@ func TestSeguirTrabajo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	<-b.entro
+	<-b.Entro
 	p := abierta(t, cli, id)
 	_, cmd := p.Update(pagina.SeguirTrabajo{ID: tr.ID})
 	correr(p, cmd)
@@ -358,7 +290,7 @@ func TestSeguirTrabajo(t *testing.T) {
 		t.Fatalf("con su receta y su mensaje: %+v", p.leer())
 	}
 	hasta(t, p, func() bool { return p.salida == "primera parte" })
-	b.soltar()
+	b.SoltarFin()
 	hasta(t, p, func() bool { return p.final != nil && p.final.Estado == nucleo.Completado })
 }
 
@@ -397,10 +329,7 @@ func TestUsarDeNuevo(t *testing.T) {
 	}
 }
 
-// TestModeloYEsfuerzo: el modelo viene del catálogo y el esfuerzo ofrece los niveles de su agente; ConAgente lo elige.
-// TestAvisoConversorAlAdjuntar: al dejar el campo de archivos con un PDF y sin conversor listo se avisa, con la tecla
-// que lo prepara, y no se envía.
-// TestRutaNoPermitida: un archivo fuera de las raíces permitidas no se sube.
+// TestEscVuelve: fuera de un campo Esc vuelve; dentro, solo deja el campo.
 func TestEscVuelve(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	p := abierta(t, cli, id)
@@ -459,7 +388,7 @@ func TestRespuestasViejas(t *testing.T) {
 		p.Update(msgCatalogo{origen: o, lista: nil})
 		p.Update(msgEsquema{origen: o, texto: "", error: "viejo"})
 		p.Update(msgGuardado{origen: o, p: punto("vieja")})
-		p.Update(msgVivo{origen: o, clase: "evento", tipo: "texto", datos: "x"})
+		p.Update(msgVivo{Origen: o, Clase: "evento", Tipo: "texto", Datos: "x"})
 	}
 	if p.trabajo != nil || len(p.recientes.Visibles()) != 0 || len(p.catalogo) == 0 || p.errEsquema != "" || p.api != "" || p.salida != "" {
 		t.Fatalf("una respuesta vieja se aplicó: %+v", p)
@@ -472,7 +401,7 @@ func TestOcultarCortaElVivo(t *testing.T) {
 	p := abierta(t, cli, id)
 	p.form.Poner("mensaje", "esperar")
 	pulsar(p, "ctrl+s")
-	<-b.entro
+	<-b.Entro
 	hasta(t, p, func() bool { return p.salida != "" })
 	canal := p.canal
 	p.Ocultar()
@@ -485,45 +414,103 @@ func TestOcultarCortaElVivo(t *testing.T) {
 	if p.cancelar == nil || p.canal == nil {
 		t.Fatal("al volver, se reabre")
 	}
-	b.soltar()
+	b.SoltarFin()
 	hasta(t, p, func() bool { return p.final != nil })
 }
 
-// TestCabeEn60x20: cada pestaña, cada campo y lo que se abre encima cabe en el área de la página a 60×20.
+// TestCabeEn60x20: a 60×17 y a 60×20, con la salida estructurada activa en los dos modos (campos y JSON) y una plantilla
+// puesta, cada campo con el foco se ve: la línea del «▸» es la de su etiqueta y debajo caben su valor o las líneas de su
+// área. La respuesta, las recientes, el código y «Guardar como API» enseñan lo suyo.
 func TestCabeEn60x20(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	p := abierta(t, cli, id)
-	comprobar := func(que string) {
+	vista := func(que string) string {
 		t.Helper()
 		v := p.Vista()
 		if lipgloss.Height(v) > p.c.Alto || lipgloss.Width(v) > p.c.Ancho {
 			t.Fatalf("%s mide %dx%d en %dx%d:\n%s", que, lipgloss.Width(v), lipgloss.Height(v), p.c.Ancho, p.c.Alto, v)
 		}
+		return v
+	}
+	// enfocado pone el foco en el campo y comprueba que su etiqueta está en la línea del «▸» y que sus lineas de valor caben
+	// antes de la pista; si se da, que entre ellas está fin.
+	enfocado := func(id, etiqueta string, lineas int, fin string) {
+		t.Helper()
+		p.form.Enfocar(id)
+		if p.form.Foco() != id {
+			t.Fatalf("el campo %s existe y tiene el foco: %q", id, p.form.Foco())
+		}
+		l := strings.Split(vista(id), "\n")
+		i := slices.IndexFunc(l, func(s string) bool { return strings.Contains(s, "▸") })
+		if i < 0 || !strings.Contains(l[i], etiqueta) {
+			t.Fatalf("el «▸» está en la etiqueta de %s (%q):\n%s", id, etiqueta, strings.Join(l, "\n"))
+		}
+		ultima := len(l) - len(p.envolver(p.pista(), 3)) - 2 // la última línea del formulario: luego van la línea vacía y la pista
+		if i+lineas > ultima {
+			t.Fatalf("el valor de %s no cabe (etiqueta en %d, %d líneas, el formulario acaba en %d):\n%s", id, i, lineas, ultima, strings.Join(l, "\n"))
+		}
+		if fin != "" && !slices.ContainsFunc(l[i+1:i+1+lineas], func(s string) bool { return strings.Contains(s, fin) }) {
+			t.Fatalf("el área de %s enseña %q:\n%s", id, fin, strings.Join(l, "\n"))
+		}
+	}
+	comunes := func() {
+		t.Helper()
+		enfocado("instrucciones", p.tx("receta.instrucciones"), 6, "")
+		enfocado("modelo", p.tx("receta.modelo"), 1, "")
+		enfocado("esfuerzo", p.tx("esfuerzo.titulo"), 1, "")
+		enfocado("respaldo", p.tx("receta.respaldo"), 1, "")
+		enfocado("estructurada", p.tx("receta.salidaEstructurada"), 1, "[x]")
+		enfocado("modo", p.tx("receta.modo"), 1, "")
+		enfocado("plantilla", p.tx("receta.plantillaCorta"), 1, "")
+		enfocado("reintentos", p.tx("receta.reintentos"), 1, "")
+		enfocado("mensaje", p.tx("ejecutar.mensaje"), 6, "")
+		enfocado("archivos", p.tx("ejecutar.adjuntar"), 1, "")
+		enfocado("perfil", p.tx("ejecutar.perfilTrabajo"), 1, "")
+		enfocado("tiempo", p.tx("ejecutar.tiempo"), 1, "")
 	}
 	for _, alto := range []int{17, 20} {
 		p.Update(tea.WindowSizeMsg{Width: 60, Height: alto})
-		p.form.Enfocar("estructurada")
-		pulsar(p, "space")
-		pulsar(p, "esc")
-		for _, id := range []string{"instrucciones", "modelo", "esfuerzo", "respaldo", "estructurada", "plantilla", "esquema", "reintentos", "mensaje", "archivos", "perfil", "tiempo"} {
-			p.form.Enfocar(id)
-			comprobar(id)
-			if !strings.Contains(p.Vista(), "▸") {
-				t.Fatalf("el campo %s con el foco se ve:\n%s", id, p.Vista())
-			}
+		if !p.form.Marcado("estructurada") {
+			conEstructurada(p)
+			p.form.Enfocar("plantilla")
+			p.editando = true
+			pulsar(p, "enter", "esc") // «Extraer datos», sobre el esquema de ejemplo: no pregunta
 		}
-		p.form.Poner("mensaje", strings.Repeat("una línea larga de mensaje ", 40))
-		pulsar(p, "ctrl+s")
-		hasta(t, p, func() bool { return p.final != nil })
-		comprobar("respuesta")
-		pulsar(p, "right")
-		comprobar("recientes")
-		pulsar(p, "k")
-		comprobar("código")
-		pulsar(p, "esc", "g")
-		comprobar("guardar")
-		pulsar(p, "esc")
+		elegir(t, p, "modo", modoCampos)
+		if p.form.Valor("c0.nombre") != "nombre" || len(p.campos) != 3 {
+			t.Fatalf("la plantilla está en campos: %+v", p.campos)
+		}
+		comunes()
+		enfocado("c0.nombre", "1 · "+p.tx("campos.nombre"), 1, "nombre")
+		enfocado("c0.tipo", "1 · "+p.tx("campos.tipo"), 1, p.tx("campos.tipo.texto"))
+		enfocado("c2.descripcion", "3 · "+p.tx("campos.descripcion"), 1, "")
+		enfocado("c2.maximo", "3 · "+p.tx("campos.maximo"), 1, "")
+		elegir(t, p, "modo", modoJSON)
+		comunes()
+		if n := strings.Count(p.form.Valor("esquema"), "\n"); n < 8 {
+			t.Fatalf("el esquema de la plantilla ocupa más que el área: %d líneas", n)
+		}
+		enfocado("esquema", p.tx("receta.esquema"), 6, `"type": "object"`)
 	}
+	p.form.Poner("mensaje", strings.Repeat("una línea larga de mensaje ", 40))
+	pulsar(p, "ctrl+s")
+	hasta(t, p, func() bool { return p.final != nil })
+	if v := vista("respuesta"); !strings.Contains(v, p.nombreEstado(p.final.Estado)) || !strings.Contains(v, p.tx("ruta.cola")) {
+		t.Fatalf("la respuesta enseña el estado y la ruta:\n%s", v)
+	}
+	pulsar(p, "right")
+	if v := vista("recientes"); !strings.Contains(v, "una línea larga") {
+		t.Fatalf("las recientes enseñan la prueba:\n%s", v)
+	}
+	pulsar(p, "k")
+	if v := vista("código"); !strings.Contains(v, "[Python") || !strings.Contains(v, "import") {
+		t.Fatalf("«Ver como código» enseña Python:\n%s", v)
+	}
+	pulsar(p, "esc", "g")
+	if v := vista("guardar"); !strings.Contains(v, "▸ "+p.tx("puntos.nombre")) || !strings.Contains(v, "Por ejemplo: contabilidad") {
+		t.Fatalf("«Guardar como API» enseña el nombre y su pista:\n%s", v)
+	}
+	pulsar(p, "esc")
 }
 
 // TestTextosComoLaWeb: los nombres que se ven son los de la Web UI, también en inglés.

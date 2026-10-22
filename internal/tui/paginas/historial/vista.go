@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"strconv"
 	"strings"
-	"time"
 
 	"charm.land/lipgloss/v2"
 
@@ -12,6 +11,7 @@ import (
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/datos"
+	"tramtai/internal/tui/vivo"
 )
 
 // origenesConocidos y claveOrigen son los orígenes del filtro de la Web UI (nombresOrigen de Trabajos.vue) y sus textos.
@@ -60,13 +60,8 @@ func modeloDe(t nucleo.Trabajo) string {
 	return strings.Join(partes, " · ")
 }
 
-// nombreEstado es el nombre del estado en la Web UI (estado.<estado>); si no lo conoce, el estado tal cual.
-func (p *Pagina) nombreEstado(e nucleo.Estado) string {
-	if t := p.tx("estado." + string(e)); t != "estado."+string(e) {
-		return t
-	}
-	return string(e)
-}
+// nombreEstado es el de la Web UI, sin caracteres de dibujo en una consola ASCII.
+func (p *Pagina) nombreEstado(e nucleo.Estado) string { return p.a(vivo.NombreEstado(p.lengua, e)) }
 
 // etiquetaEstado es el del filtro de estado: los nombres del selector de Trabajos.vue.
 func (p *Pagina) etiquetaEstado() string {
@@ -117,47 +112,13 @@ func (p *Pagina) textoOrigen(t nucleo.Trabajo) string {
 	return p.tx("historial.origenPrincipal")
 }
 
-// icono es el dibujo del estado de una petición y su estilo.
-func (p *Pagina) icono(e nucleo.Estado) (string, lipgloss.Style) {
-	est := p.estilos
-	switch {
-	case !e.Terminal():
-		return est.Iconos.Activo, est.Acento
-	case e == nucleo.Completado:
-		return est.Iconos.Ok, est.Exito
-	case e == nucleo.Cancelado:
-		return est.Iconos.Inactivo, est.Tenue
-	case e == nucleo.Interrumpido:
-		return est.Iconos.Fallo, est.Advertencia
-	}
-	return est.Iconos.Fallo, est.Error
-}
-
-// hace es «hace 3 min»; pasada una semana, la fecha.
-func (p *Pagina) hace(t time.Time) string {
-	d := p.ahora().Sub(t)
-	switch {
-	case t.IsZero():
-		return "—"
-	case d < time.Minute:
-		return idioma.Tf("hace %d s", max(int(d/time.Second), 0))
-	case d < time.Hour:
-		return idioma.Tf("hace %d min", int(d/time.Minute))
-	case d < 24*time.Hour:
-		return idioma.Tf("hace %d h", int(d/time.Hour))
-	case d < 7*24*time.Hour:
-		return idioma.Tf("hace %d d", int(d/(24*time.Hour)))
-	}
-	return t.Local().Format("2006-01-02")
-}
-
 // fila es una línea de la lista: el estado, lo que se pidió, el agente y modelo (si cabe) y hace cuánto.
 func (p *Pagina) fila(t nucleo.Trabajo) string {
 	e := p.estilos
 	ancho := max(p.c.Ancho-2, 1) // la lista pone el cursor delante
-	icono, _ := p.icono(t.Estado)
-	estado := rellenar(e.Recortar(icono+" "+p.a(p.nombreEstado(t.Estado)), 14), 14)
-	cuando := aDerecha(p.hace(t.CreadoEn), 10)
+	icono, _ := vivo.Icono(e, t.Estado)
+	estado := rellenar(e.Recortar(icono+" "+p.nombreEstado(t.Estado), 14), 14)
+	cuando := aDerecha(p.a(vivo.Hace(p.ahora(), t.CreadoEn)), 10)
 	var modelo string
 	if ancho >= 90 {
 		modelo = rellenar(e.Recortar(modeloDe(t), 24), 24) + " "

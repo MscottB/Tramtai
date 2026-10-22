@@ -6,34 +6,19 @@ import (
 	"fmt"
 	"math"
 	"strings"
-	"time"
 
 	tea "charm.land/bubbletea/v2"
 
 	catalogo "tramtai/internal/agentes"
-	"tramtai/internal/cliente"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
-	"tramtai/internal/tui/pagina"
+	"tramtai/internal/tui/vivo"
 )
 
+// msgFlujo es el seguimiento en vivo recién abierto; msgVivo, lo que llega por él (con el origen de Probar).
 type (
-	// msgFlujo es el seguimiento en vivo recién abierto; msgVivo, lo que llega por él.
-	msgFlujo struct {
-		origen
-		id    string
-		seq   int
-		canal <-chan msgVivo
-	}
-	// msgVivo es un evento del trabajo (clase "evento"), un corte del flujo ("corte"), el intento de reabrirlo ("abre") o el
-	// final con el trabajo terminado ("fin").
-	msgVivo struct {
-		origen
-		id, clase   string
-		seq         int
-		tipo, datos string
-		t           nucleo.Trabajo
-	}
+	msgFlujo = vivo.Flujo[origen]
+	msgVivo  = vivo.Msg[origen]
 )
 
 // enviar sube los archivos y crea el trabajo; al volver, se sigue en vivo. Mientras haya uno en marcha no se envía otro.
@@ -42,7 +27,7 @@ func (p *Pagina) enviar() tea.Cmd {
 		return nil
 	}
 	if p.c.Cli == nil {
-		return func() tea.Msg { return pagina.ErrorServicio{Err: cliente.ErrServicioInactivo} }
+		return sinServicio
 	}
 	d := p.leer()
 	esquema, err := esquemaDe(d.esquema)
@@ -78,14 +63,14 @@ func (p *Pagina) enviar() tea.Cmd {
 			}
 		}
 		t, err := c.Cli.Crear(c.Ctx, c.Instancia, s)
-		return msgCreado{origen: o, t: t, err: err, enviado: true}
+		return msgCreado{origen: o, t: t, err: err, enviado: true, nuevo: true}
 	}
 }
 
 // cargarTrabajo lee un trabajo para seguirlo; con receta, además pone su receta y su mensaje en el formulario.
 func (p *Pagina) cargarTrabajo(id string, receta bool) tea.Cmd {
 	if p.c.Cli == nil {
-		return func() tea.Msg { return pagina.ErrorServicio{Err: cliente.ErrServicioInactivo} }
+		return sinServicio
 	}
 	c, o := p.c, p.origen()
 	return func() tea.Msg {
@@ -94,8 +79,10 @@ func (p *Pagina) cargarTrabajo(id string, receta bool) tea.Cmd {
 	}
 }
 
+// alCreado sigue el trabajo. Uno nuevo (enviado o corregido) vale aunque la página se ocultara mientras tanto: ya existe en
+// el servicio, y así no se pierde ni se manda otra vez.
 func (p *Pagina) alCreado(m msgCreado) tea.Cmd {
-	if !p.vigente(m.origen) {
+	if !p.vigente(m.origen) && !(m.nuevo && p.delEspacio(m.origen)) {
 		return nil
 	}
 	p.enviando, p.ocupado = false, false
@@ -112,7 +99,11 @@ func (p *Pagina) alCreado(m msgCreado) tea.Cmd {
 		p.api, p.punto = "", nil
 	}
 	p.editando = false
-	return tea.Batch(append(cmds, p.seguir(m.t), p.cargarRecientes())...)
+	cmds = append(cmds, p.seguir(m.t))
+	if p.visible { // al volver, Mostrar las carga
+		cmds = append(cmds, p.cargarRecientes())
+	}
+	return tea.Batch(cmds...)
 }
 
 // seguir enseña un trabajo en la pestaña Respuesta: terminado, tal como quedó; en marcha, en vivo.
@@ -125,6 +116,9 @@ func (p *Pagina) seguir(t nucleo.Trabajo) tea.Cmd {
 		return nil
 	}
 	p.rehacerRespuesta()
+	if !p.visible { // oculta no se sigue: Mostrar lo abre
+		return nil
+	}
 	return p.abrirVivo(t.ID)
 }
 
@@ -153,109 +147,45 @@ func (p *Pagina) cerrarVivo() {
 func (p *Pagina) abrirVivo(id string) tea.Cmd {
 	p.cerrarVivo()
 	p.nflujo++
-	seq := p.nflujo
 	ctx, cancelar := context.WithCancel(p.c.Ctx)
 	p.cancelar = cancelar
-	o, c, espera, abrir := p.origen(), p.c, p.esperaPara, p.abrir
-	if abrir == nil {
-		abrir = c.Cli.Eventos
+	eventos := p.abrir
+	if eventos == nil {
+		eventos = p.c.Cli.Eventos
 	}
-	return func() tea.Msg {
-		canal := make(chan msgVivo, 64)
-		go seguir(ctx, o, c, id, seq, abrir, espera, canal)
-		return msgFlujo{origen: o, id: id, seq: seq, canal: canal}
-	}
-}
-
-// seguir mantiene abierto el flujo SSE del trabajo. Al acabar (el cliente no entrega el evento fin) o cortarse, consulta
-// el trabajo: si terminó manda fin con él; si no, espera y reabre desde el último evento visto. Cierra el canal al terminar.
-func seguir(ctx context.Context, o origen, c pagina.Contexto, id string, seq int,
-	abrir func(context.Context, string, string, int, func(int, string, string) error) error,
-	espera func(time.Duration) <-chan time.Time, canal chan<- msgVivo) {
-	defer close(canal)
-	enviar := func(m msgVivo) bool {
-		m.origen, m.id, m.seq = o, id, seq
-		select {
-		case canal <- m:
-			return true
-		case <-ctx.Done():
-			return false
-		}
-	}
-	desde := 0
-	for intento := 0; ; intento++ {
-		if intento > 0 && !enviar(msgVivo{clase: "abre"}) {
-			return
-		}
-		_ = abrir(ctx, c.Instancia, id, desde, func(numero int, tipo, datos string) error {
-			if numero > 0 && numero <= desde { // tras reconectar, lo que ya había llegado
-				return nil
-			}
-			desde = max(desde, numero)
-			if !enviar(msgVivo{clase: "evento", tipo: tipo, datos: datos}) {
-				return ctx.Err()
-			}
-			return nil
-		})
-		if ctx.Err() != nil {
-			return
-		}
-		if t, err := c.Cli.Trabajo(ctx, c.Instancia, id); err == nil && t.Estado.Terminal() {
-			enviar(msgVivo{clase: "fin", t: t})
-			return
-		}
-		if !enviar(msgVivo{clase: "corte"}) {
-			return
-		}
-		select {
-		case <-ctx.Done():
-			return
-		case <-espera(esperaCorte):
-		}
-	}
-}
-
-// esperar lee el siguiente mensaje del seguimiento; con el canal cerrado, nada.
-func esperar(canal <-chan msgVivo) tea.Cmd {
-	return func() tea.Msg {
-		m, ok := <-canal
-		if !ok {
-			return nil
-		}
-		return m
-	}
+	return vivo.Abrir(ctx, p.origen(), p.c.Instancia, id, p.nflujo, eventos, p.c.Cli.Trabajo, p.esperaPara)
 }
 
 // vivoVigente dice si un mensaje del seguimiento es del trabajo y del seguimiento de ahora.
 func (p *Pagina) vivoVigente(m msgVivo) bool {
-	return p.vigente(m.origen) && p.trabajo != nil && m.id == p.trabajo.ID && m.seq == p.nflujo
+	return p.vigente(m.Origen) && p.trabajo != nil && m.ID == p.trabajo.ID && m.Seq == p.nflujo
 }
 
 // alVivo aplica un evento del trabajo, como los de Ejecutar.vue: el texto se suma, un aviso se enseña, una corrección
 // vuelve a escribir la respuesta desde cero y el estado cambia.
 func (p *Pagina) alVivo(m msgVivo) tea.Cmd {
-	switch m.clase {
+	switch m.Clase {
 	case "corte":
 		p.corte = true
 	case "abre":
 		p.corte = false
 	case "fin":
-		p.terminar(m.t)
+		p.terminar(m.T)
 		return p.cargarRecientes()
 	default:
 		p.corte = false
-		switch m.tipo {
+		switch m.Tipo {
 		case "texto":
-			p.salida += m.datos
+			p.salida += m.Datos
 		case "aviso":
-			p.avisos = append(p.avisos, m.datos)
+			p.avisos = append(p.avisos, m.Datos)
 		case "estado":
-			p.estado = nucleo.Estado(m.datos)
+			p.estado = nucleo.Estado(m.Datos)
 		case "intento":
 			var i struct {
 				Correccion int `json:"correccion"`
 			}
-			if json.Unmarshal([]byte(m.datos), &i) == nil && i.Correccion != 0 {
+			if json.Unmarshal([]byte(m.Datos), &i) == nil && i.Correccion != 0 {
 				p.salida = ""
 			}
 		}
@@ -266,7 +196,10 @@ func (p *Pagina) alVivo(m msgVivo) tea.Cmd {
 
 // cancelarTrabajo pide cancelar el trabajo en marcha (Esc).
 func (p *Pagina) cancelarTrabajo() tea.Cmd {
-	if p.ocupado || p.c.Cli == nil {
+	switch {
+	case p.c.Cli == nil:
+		return sinServicio
+	case p.ocupado:
 		return nil
 	}
 	p.ocupado = true
@@ -285,8 +218,10 @@ func puedeCorregir(t nucleo.Trabajo) bool {
 // corregir pide al mismo agente que corrija la respuesta (o): es otra petición, que se sigue en vivo.
 func (p *Pagina) corregir() tea.Cmd {
 	switch {
-	case p.final == nil || p.ocupado || p.c.Cli == nil:
+	case p.final == nil || p.ocupado:
 		return nil
+	case p.c.Cli == nil:
+		return sinServicio
 	case !puedeCorregir(*p.final):
 		return comp.Aviso(p.tx("error.correccion_no_disponible"), comp.Advertencia)
 	}
@@ -294,7 +229,7 @@ func (p *Pagina) corregir() tea.Cmd {
 	c, o, id := p.c, p.origen(), p.final.ID
 	return func() tea.Msg {
 		t, err := c.Cli.Corregir(c.Ctx, c.Instancia, id)
-		return msgCreado{origen: o, t: t, err: err}
+		return msgCreado{origen: o, t: t, err: err, nuevo: true}
 	}
 }
 
@@ -313,29 +248,8 @@ func (p *Pagina) nuevaPrueba() tea.Cmd {
 	return p.programarBorrador()
 }
 
-// icono es el del estado y su estilo, como en el Historial.
-func (p *Pagina) icono(e nucleo.Estado) (string, func(...string) string) {
-	est := p.estilos
-	switch {
-	case !e.Terminal():
-		return est.Iconos.Activo, est.Acento.Render
-	case e == nucleo.Completado:
-		return est.Iconos.Ok, est.Exito.Render
-	case e == nucleo.Cancelado:
-		return est.Iconos.Inactivo, est.Tenue.Render
-	case e == nucleo.Interrumpido:
-		return est.Iconos.Fallo, est.Advertencia.Render
-	}
-	return est.Iconos.Fallo, est.Error.Render
-}
-
-// nombreEstado es el de la Web UI (estado.<estado>); si no lo conoce, el estado tal cual.
-func (p *Pagina) nombreEstado(e nucleo.Estado) string {
-	if t := p.tx("estado." + string(e)); t != "estado."+string(e) {
-		return t
-	}
-	return string(e)
-}
+// nombreEstado es el de la Web UI, sin caracteres de dibujo en una consola ASCII.
+func (p *Pagina) nombreEstado(e nucleo.Estado) string { return p.a(vivo.NombreEstado(p.lengua, e)) }
 
 // rehacerRespuesta vuelve a escribir el texto de la respuesta; en vivo sigue el final mientras no se use el visor.
 func (p *Pagina) rehacerRespuesta() {

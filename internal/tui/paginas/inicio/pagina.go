@@ -20,6 +20,7 @@ import (
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
+	"tramtai/internal/tui/vivo"
 )
 
 const (
@@ -431,16 +432,6 @@ func flujo(ctx context.Context, o origen, instancia string,
 	}
 }
 
-// esperar lee el siguiente mensaje del flujo; con el canal cerrado, nada.
-func esperar(canal <-chan msgRed) tea.Cmd {
-	return func() tea.Msg {
-		if m, ok := <-canal; ok {
-			return m
-		}
-		return nil
-	}
-}
-
 // fallo reparte un error: de conexión es del servicio (lo avisa la app); el de la API, el mensaje tal cual.
 func (p *Pagina) fallo(err error, propio bool) tea.Cmd {
 	if pagina.NoResponde(err) {
@@ -460,7 +451,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 	case msgFlujo:
 		if p.vigente(m.origen) {
 			p.canal = m.canal
-			return p, esperar(m.canal)
+			return p, vivo.Esperar(m.canal)
 		}
 	case msgRed:
 		if !p.vigente(m.origen) {
@@ -470,7 +461,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		if p.canal == nil {
 			return p, nil
 		}
-		return p, tea.Batch(esperar(p.canal), p.armarTic())
+		return p, tea.Batch(vivo.Esperar(p.canal), p.armarTic())
 	case msgTic:
 		if !p.vigente(m.origen) {
 			return p, nil

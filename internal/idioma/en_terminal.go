@@ -88,5 +88,11 @@ func init() {
 		"← → elige la plantilla e Intro la aplica":                                  "← → chooses the template and Enter applies it",
 		"Intro salta de línea; Ctrl+Enter o Ctrl+S envía":                           "Enter starts a new line; Ctrl+Enter or Ctrl+S sends",
 		"Separa las rutas con comas; Tab completa la ruta.":                         "Separate the paths with commas; Tab completes the path.",
+		"No se pudo guardar el borrador del mensaje: %v":                            "The message draft could not be saved: %v",
+		"n añade un campo detrás; x lo quita":                                       "n adds a field after this one; x removes it",
+		"← → elige cómo se edita el esquema; n añade un campo":                      "← → chooses how the schema is edited; n adds a field",
+		"← → elige cómo se edita el esquema":                                        "← → chooses how the schema is edited",
+		"Separa las opciones con comas":                                             "Separate the options with commas",
+		"quita el campo":                                                            "remove the field",
 	})
 }

@@ -2,8 +2,12 @@ package ejecutar
 
 import (
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"tramtai/internal/idioma"
+	"tramtai/internal/tui/comp"
 
 	tea "charm.land/bubbletea/v2"
 )
@@ -29,20 +33,27 @@ func leerBorrador(carpeta string) string {
 	return b.Mensaje
 }
 
-// escribirBorrador guarda el mensaje; vacío, borra el archivo. Lo hace fuera de Update, como cualquier Cmd.
+// escribirBorrador guarda el mensaje; vacío, borra el archivo. Lo hace fuera de Update, como cualquier Cmd. Si no puede,
+// lo avisa: el mensaje no se recuperaría al volver a abrir la terminal.
 func escribirBorrador(carpeta, mensaje string) tea.Cmd {
 	if carpeta == "" {
 		return nil
 	}
 	ruta := filepath.Join(carpeta, archivoBorrador)
 	return func() tea.Msg {
+		var err error
 		if mensaje == "" {
-			_ = os.Remove(ruta)
-			return nil
+			if err = os.Remove(ruta); errors.Is(err, fs.ErrNotExist) { // no había borrador
+				err = nil
+			}
+		} else {
+			datos, _ := json.Marshal(borrador{Mensaje: mensaje})
+			if err = os.MkdirAll(carpeta, 0o700); err == nil {
+				err = os.WriteFile(ruta, datos, 0o600)
+			}
 		}
-		datos, _ := json.Marshal(borrador{Mensaje: mensaje})
-		if os.MkdirAll(carpeta, 0o700) == nil {
-			_ = os.WriteFile(ruta, datos, 0o600)
+		if err != nil {
+			return comp.NuevoAviso{Texto: idioma.Tf("No se pudo guardar el borrador del mensaje: %v", err), Tipo: comp.Advertencia}
 		}
 		return nil
 	}

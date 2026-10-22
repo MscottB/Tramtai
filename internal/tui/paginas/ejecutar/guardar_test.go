@@ -11,6 +11,7 @@ import (
 
 // Las pruebas de «Guardar como API», de abrir una API en Probar y de «Ver como código».
 
+// TestGuardarComoApi: g pide el nombre, crea la API con la receta y enseña su clave una vez; después g la actualiza.
 func TestGuardarComoApi(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	p := abierta(t, cli, id)
@@ -67,6 +68,7 @@ func TestGuardarComoApi(t *testing.T) {
 	}
 }
 
+// TestConPunto: abrir una API en Probar trae su receta y la edita.
 func TestConPunto(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	if _, _, err := cli.CrearPunto(ctx, id, contratoPunto()); err != nil {
@@ -80,6 +82,7 @@ func TestConPunto(t *testing.T) {
 	}
 }
 
+// TestCodigoComoLaPrueba: k enseña la prueba de ahora como código, con la URL del servicio y el marcador de la clave.
 func TestCodigoComoLaPrueba(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	p := abierta(t, cli, id)

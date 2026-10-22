@@ -4,10 +4,13 @@ import (
 	"strconv"
 	"strings"
 
+	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
 	"tramtai/internal/idioma"
-	"tramtai/internal/nucleo"
+	"tramtai/internal/tui/comp"
+	"tramtai/internal/tui/pagina"
+	"tramtai/internal/tui/vivo"
 )
 
 // Vista pinta lo abierto encima o la pestaña de ahora, en Ancho×Alto.
@@ -19,7 +22,9 @@ func (p *Pagina) Vista() string {
 	var texto string
 	switch {
 	case p.guardar != nil:
-		texto = strings.Join([]string{e.Titulo.Render(p.tx("ejecutar.guardarApi")), e.Tenue.Render(p.tx("ejecutar.guardarTexto")), "", p.guardar.Vista()}, "\n")
+		pista := map[string]string{"nombre": "puntos.nombreHint", "grupo": "puntos.grupoHint"}[p.guardar.Foco()]
+		texto = strings.Join(append([]string{e.Titulo.Render(p.tx("ejecutar.guardarApi")), e.Tenue.Render(p.tx("ejecutar.guardarTexto")), "",
+			p.guardar.Vista(), ""}, p.tenue(p.envolver(p.tx(pista), 2))...), "\n")
 	case p.codigo != nil:
 		texto = p.vistaCodigo()
 	case p.creada != nil:
@@ -60,7 +65,7 @@ func (p *Pagina) pestanas() string {
 	e := p.estilos
 	respuesta := p.tx("ejecutar.respuesta")
 	if p.trabajo != nil {
-		icono, _ := p.icono(p.estado)
+		icono, _ := vivo.Icono(e, p.estado)
 		respuesta = icono + " " + respuesta
 	}
 	nombres := []string{p.tx("ejecutar.receta"), respuesta, p.tx("ejecutar.recientes")}
@@ -77,7 +82,6 @@ func (p *Pagina) pestanas() string {
 
 // vistaReceta es el formulario desplazado para que el campo con el foco se vea, y debajo lo que explica ese campo.
 func (p *Pagina) vistaReceta(alto int) string {
-	e := p.estilos
 	pista := p.envolver(p.pista(), 3)
 	visible := max(alto-len(pista)-1, 3)
 	lineas := strings.Split(p.form.Vista(), "\n")
@@ -98,14 +102,22 @@ func (p *Pagina) vistaReceta(alto int) string {
 	for len(vista) < visible {
 		vista = append(vista, "")
 	}
-	for i, l := range pista {
-		pista[i] = e.Tenue.Render(l)
+	return strings.Join(append(append(vista, ""), p.tenue(pista)...), "\n")
+}
+
+// tenue pinta unas líneas con el estilo tenue.
+func (p *Pagina) tenue(lineas []string) []string {
+	for i, l := range lineas {
+		lineas[i] = p.estilos.Tenue.Render(l)
 	}
-	return strings.Join(append(append(vista, ""), pista...), "\n")
+	return lineas
 }
 
 // pista explica el campo con el foco, con los textos de la Web UI; en los archivos, los límites y el aviso del conversor.
 func (p *Pagina) pista() string {
+	if p.enCampos() {
+		return p.pistaCampos(p.form.Foco())
+	}
 	switch p.form.Foco() {
 	case "instrucciones":
 		return p.tx("receta.instruccionesHint")
@@ -126,7 +138,15 @@ func (p *Pagina) pista() string {
 	case "plantilla":
 		return idioma.T("← → elige la plantilla e Intro la aplica")
 	case "esquema":
+		if _, ok := camposDe(p.form.Valor("esquema")); !ok && esquemaValido(p.form.Valor("esquema")) {
+			return p.tx("receta.esquemaAvanzado") + " " + p.tx("receta.esquemaHint")
+		}
 		return p.tx("receta.esquemaHint")
+	case "modo":
+		if _, ok := camposDe(p.form.Valor("esquema")); !ok && esquemaValido(p.form.Valor("esquema")) {
+			return p.tx("receta.esquemaAvanzado")
+		}
+		return idioma.T("← → elige cómo se edita el esquema")
 	case "reintentos":
 		return p.tx("receta.reintentosHint")
 	case "mensaje":
@@ -193,52 +213,18 @@ func (p *Pagina) vistaRespuesta(alto int) string {
 	e := p.estilos
 	var cab []string
 	if p.trabajo != nil {
-		icono, estilo := p.icono(p.estado)
-		linea := estilo(icono + " " + p.nombreEstado(p.estado))
+		icono, estilo := vivo.Icono(e, p.estado)
+		linea := estilo.Render(icono + " " + p.nombreEstado(p.estado))
 		switch {
 		case p.activo() && p.corte:
 			linea += " " + e.Advertencia.Render(p.a(idioma.T("reconectando…")))
 		case p.activo() && p.cancelar != nil:
 			linea += " " + e.Tenue.Render(e.Iconos.Separador) + " " + e.Acento.Render(e.Iconos.Activo+" "+idioma.T("en vivo"))
 		}
-		cab = append(cab, linea, p.ruta())
+		cab = append(cab, linea, p.a(vivo.Ruta(e, p.lengua, p.estado)))
 	}
 	p.visor.Tamano(max(p.c.Ancho, 1), max(alto-len(cab), 1))
 	return strings.Join(append(cab, p.visor.Vista()), "\n")
-}
-
-// posicionRuta es la parada de la ruta en que está cada estado (posicion de Ruta.vue).
-var posicionRuta = map[nucleo.Estado]int{nucleo.EnCola: 0, nucleo.PreparandoEntrada: 1, nucleo.EsperandoAgente: 1, nucleo.Ejecutando: 2,
-	nucleo.CancelacionSolicitada: 2, nucleo.ValidandoSalida: 3, nucleo.Completado: 4}
-
-// ruta dibuja la petición como un trayecto, como Ruta.vue: la parada de ahora entre corchetes.
-func (p *Pagina) ruta() string {
-	e := p.estilos
-	terminado := p.estado.Terminal()
-	llegada := p.tx("ruta.llegada")
-	if terminado && p.estado != nucleo.Completado {
-		llegada = p.nombreEstado(p.estado)
-	}
-	paradas := []string{p.tx("ruta.cola"), p.tx("ruta.preparacion"), p.tx("ruta.ejecucion"), p.tx("ruta.validacion"), llegada}
-	actual := posicionRuta[p.estado]
-	if terminado {
-		actual = 4
-	}
-	_, final := p.icono(p.estado)
-	partes := make([]string, len(paradas))
-	for i, parada := range paradas {
-		switch {
-		case i == actual && terminado:
-			partes[i] = final("[" + parada + "]")
-		case i == actual:
-			partes[i] = e.Acento.Render("[" + parada + "]")
-		case i < actual:
-			partes[i] = e.Texto.Render(parada)
-		default:
-			partes[i] = e.Tenue.Render(parada)
-		}
-	}
-	return strings.Join(partes, e.Tenue.Render(" "+e.Iconos.Cerrado+" "))
 }
 
 // vistaRecientes es la lista de las pruebas recientes, o lo que dice la Web UI si aún no hay.
@@ -275,3 +261,66 @@ func (p *Pagina) vistaCodigo() string {
 }
 
 func itoa(n int) string { return strconv.Itoa(n) }
+
+// copiar pone un texto en el portapapeles con OSC 52. La terminal no dice si lo admite: el aviso lo explica.
+func copiar(texto string) tea.Cmd {
+	if strings.TrimSpace(texto) == "" {
+		return comp.Aviso(idioma.T("No hay nada que copiar"), comp.Advertencia)
+	}
+	return tea.Batch(tea.SetClipboard(texto), comp.Aviso(idioma.T("Copiado con OSC 52; si no llega al portapapeles, tu terminal no lo admite"), comp.Exito))
+}
+
+// Teclas son las del pie: las del formulario mientras se edita y, si no, las de la pestaña.
+func (p *Pagina) Teclas() []pagina.Tecla {
+	switch {
+	case p.guardar != nil:
+		return p.guardar.Teclas()
+	case p.codigo != nil:
+		return []pagina.Tecla{{Tecla: "← →", Accion: idioma.T("pestañas")}, {Tecla: "y", Accion: idioma.T("copia")}, {Tecla: "Esc", Accion: idioma.T("cierra")}}
+	case p.creada != nil:
+		return []pagina.Tecla{{Tecla: "y", Accion: idioma.T("copia la clave")}, {Tecla: "Esc", Accion: idioma.T("cierra")}}
+	case p.editando:
+		teclas := p.form.Teclas()
+		switch p.form.Foco() {
+		case "plantilla":
+			teclas = append(teclas, pagina.Tecla{Tecla: idioma.T("Intro"), Accion: idioma.T("aplica")})
+		case "archivos":
+			teclas = append(teclas, pagina.Tecla{Tecla: "Tab", Accion: idioma.T("completa")})
+		}
+		return teclas
+	}
+	teclas := []pagina.Tecla{{Tecla: "← →", Accion: idioma.T("pestañas")}}
+	switch p.pestana {
+	case pestReceta:
+		teclas = append(teclas, pagina.Tecla{Tecla: idioma.T("Intro"), Accion: idioma.T("edita")}, pagina.Tecla{Tecla: "↑↓", Accion: idioma.T("campo")})
+		if p.enCampos() {
+			teclas = append(teclas, pagina.Tecla{Tecla: "n", Accion: p.tx("campos.anadir")})
+		}
+		if _, ok := rutaCampo(p.form.Foco()); ok && p.enCampos() {
+			teclas = append(teclas, pagina.Tecla{Tecla: "x", Accion: idioma.T("quita el campo")})
+		}
+	case pestRespuesta:
+		if p.salida != "" {
+			teclas = append(teclas, pagina.Tecla{Tecla: "y", Accion: idioma.T("copia")})
+		}
+		if p.final != nil && puedeCorregir(*p.final) {
+			teclas = append(teclas, pagina.Tecla{Tecla: "o", Accion: p.tx("ejecutar.corregir")})
+		}
+		if p.final != nil {
+			teclas = append(teclas, pagina.Tecla{Tecla: "n", Accion: p.tx("ejecutar.nueva")})
+		}
+	case pestRecientes:
+		teclas = append(teclas, pagina.Tecla{Tecla: idioma.T("Intro"), Accion: idioma.T("ver")}, pagina.Tecla{Tecla: "u", Accion: p.tx("ejecutar.usarDeNuevo")},
+			pagina.Tecla{Tecla: "h", Accion: p.tx("ejecutar.verTodo")})
+	}
+	teclas = append(teclas, pagina.Tecla{Tecla: "Ctrl+S", Accion: p.tx("ejecutar.enviar")}, pagina.Tecla{Tecla: "k", Accion: p.tx("codigo.boton")})
+	if p.api != "" {
+		teclas = append(teclas, pagina.Tecla{Tecla: "g", Accion: p.tx("ejecutar.actualizarApi", "nombre", p.api)}, pagina.Tecla{Tecla: "d", Accion: p.tx("ejecutar.dejarEditar")})
+	} else {
+		teclas = append(teclas, pagina.Tecla{Tecla: "g", Accion: p.tx("ejecutar.guardarApi")})
+	}
+	if p.activo() {
+		return append(teclas, pagina.Tecla{Tecla: "Esc", Accion: p.tx("comun.cancelar")})
+	}
+	return append(teclas, pagina.Tecla{Tecla: "Esc", Accion: idioma.T("vuelve")})
+}

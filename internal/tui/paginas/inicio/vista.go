@@ -15,6 +15,7 @@ import (
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
+	"tramtai/internal/tui/vivo"
 )
 
 // terminales son los estados de un trabajo que ya acabó (web/src/formato.ts).
@@ -297,24 +298,6 @@ func Atajo(clave string) string {
 	return strconv.Itoa(n + 1)
 }
 
-// hace es «hace 3 min»; pasada una semana, la fecha.
-func (p *Pagina) hace(t time.Time) string {
-	d := p.ahora().Sub(t)
-	switch {
-	case t.IsZero():
-		return "—"
-	case d < time.Minute:
-		return idioma.Tf("hace %d s", max(int(d/time.Second), 0))
-	case d < time.Hour:
-		return idioma.Tf("hace %d min", int(d/time.Minute))
-	case d < 24*time.Hour:
-		return idioma.Tf("hace %d h", int(d/time.Hour))
-	case d < 7*24*time.Hour:
-		return idioma.Tf("hace %d d", int(d/(24*time.Hour)))
-	}
-	return t.Local().Format("2006-01-02")
-}
-
 // reciente son las dos líneas de una petición reciente (Panel.vue): lo que se escribió, y debajo hace cuánto, el agente con
 // su modelo y cómo acabó.
 func (p *Pagina) reciente(j nucleo.Trabajo) []string {
@@ -325,21 +308,9 @@ func (p *Pagina) reciente(j nucleo.Trabajo) []string {
 	} else if !j.EntradasEliminadas {
 		texto = ""
 	}
-	icono, estilo := e.Iconos.Activo, e.Acento
-	switch {
-	case !j.Estado.Terminal():
-	case j.Estado == nucleo.Completado:
-		icono, estilo = e.Iconos.Ok, e.Exito
-	case j.Estado == nucleo.Cancelado:
-		icono, estilo = e.Iconos.Inactivo, e.Tenue
-	default:
-		icono, estilo = e.Iconos.Fallo, e.Error
-	}
-	estado := string(j.Estado)
-	if t := p.tx("estado." + estado); t != "estado."+estado {
-		estado = t
-	}
-	partes := []string{p.hace(j.CreadoEn), strings.TrimSpace(catalogo.NombreVisible(j.Solicitud.Agente) + " " + cmp.Or(j.ModeloEfectivo, j.ModeloEnviado)), estado}
+	icono, estilo := vivo.Icono(e, j.Estado)
+	estado := vivo.NombreEstado(p.lengua, j.Estado)
+	partes := []string{vivo.Hace(p.ahora(), j.CreadoEn), strings.TrimSpace(catalogo.NombreVisible(j.Solicitud.Agente) + " " + cmp.Or(j.ModeloEfectivo, j.ModeloEnviado)), estado}
 	return []string{estilo.Render(icono) + " " + e.Recortar(texto, ancho-2),
 		"  " + e.Tenue.Render(e.Recortar(p.a(strings.Join(partes, " "+e.Iconos.Separador+" ")), ancho-2))}
 }
