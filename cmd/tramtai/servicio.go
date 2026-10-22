@@ -156,7 +156,7 @@ func comandoServicio() *cobra.Command {
 				if abrirAlIniciar {
 					go abrirCuandoResponda(cmd, navegadorAlIniciar)
 				}
-				return iniciarServicio(cmd, archivoRegistro)
+				return iniciarServicio(cmd, archivoRegistro, esperarCierre)
 			}
 			c, err := asegurarServicio(cmd)
 			if err != nil {
@@ -326,8 +326,9 @@ func comandoServicio() *cobra.Command {
 }
 
 // iniciarServicio arranca el servicio en primer plano con las instancias que estaban activas. Con archivo, el
-// registro va a ese archivo con rotación (segundo plano); sin él, a la terminal.
-func iniciarServicio(cmd *cobra.Command, archivo string) error {
+// registro va a ese archivo con rotación (segundo plano); sin él, a la terminal. En un reinicio (esperarCierre) espera
+// a que el servicio anterior suelte el cerrojo de la carpeta de datos.
+func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) error {
 	c, err := nucleo.CargarConfiguracion("")
 	if err != nil {
 		return err
@@ -360,6 +361,15 @@ func iniciarServicio(cmd *cobra.Command, archivo string) error {
 	if activo, err := cliente.Conectar(datos); err == nil {
 		return fmt.Errorf(idioma.T("el servicio ya está en marcha en %s"), activo.Base)
 	}
+	espera := time.Duration(0)
+	if esperarCierre {
+		espera = 30 * time.Second
+	}
+	soltar, err := servicio.TomarCerrojo(datos, espera)
+	if err != nil {
+		return err
+	}
+	defer soltar()
 	hosts := []string{"127.0.0.1", "localhost", "::1"}
 	if remoto {
 		hosts = append(hosts, strings.ToLower(host))

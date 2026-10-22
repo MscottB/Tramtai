@@ -384,5 +384,7 @@ func init() {
 		"el nombre del cuerpo (%s) no coincide con el de la ruta (%s)": "the name in the body (%s) does not match the one in the path (%s)",
 		"proyecto debe ser una ruta absoluta":                          "proyecto must be an absolute path",
 		"%s no es un proyecto de Tramtai (.tramtai/config.yaml)":       "%s is not a Tramtai project (.tramtai/config.yaml)",
+
+		"otro servicio de Tramtai ya usa la carpeta de datos %s: detenlo antes (tramtai servicio detener)": "another Tramtai service is already using the data folder %s: stop it first (tramtai servicio detener)",
 	})
 }

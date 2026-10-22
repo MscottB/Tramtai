@@ -167,9 +167,13 @@ func (s *Servicio) reiniciarUI(w http.ResponseWriter, r *http.Request, _ *sesion
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("este servicio no se puede reiniciar desde la Web UI")))
 		return
 	}
-	if err := s.opc.Reiniciar(); err != nil {
-		api.EscribirError(w, r, err)
-		return
+	// Un segundo «Reiniciar» (otra pestaña, la bandeja) no lanza otro proceso: responde lo mismo que el primero.
+	if s.reiniciando.CompareAndSwap(false, true) {
+		if err := s.opc.Reiniciar(); err != nil {
+			s.reiniciando.Store(false)
+			api.EscribirError(w, r, err)
+			return
+		}
 	}
 	s.mu.RLock()
 	puerto := puertoTrasReiniciar(s.opc.Host, s.opc.Puerto, s.opc.PuertoConfigurado)

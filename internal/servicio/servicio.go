@@ -110,8 +110,9 @@ type Servicio struct {
 	sesiones       map[string]*sesion
 	codigos        map[string]codigoEntrada
 
-	detener    chan struct{}
-	detenerUna sync.Once
+	detener     chan struct{}
+	detenerUna  sync.Once
+	reiniciando atomic.Bool // ya se lanzó el servicio que sustituye a este
 
 	actualizaciones actualizacion.Comprobador
 	muAvance        sync.Mutex
