@@ -152,7 +152,7 @@
               </div>
               <!-- Sin aria-live: un lector de pantalla leería cada fragmento según llega. Se anuncia solo el final. -->
               <div v-else :aria-busy="activo"><SalidaTrabajo :texto="salida" /></div>
-              <span class="solo-lector" role="status">{{ final ? estadoInfo(final.estado).etiqueta : '' }}</span>
+              <span class="solo-lectores" role="status">{{ final ? estadoInfo(final.estado).etiqueta : '' }}</span>
               <div v-if="activo && !salida" class="row items-center texto-suave q-gutter-x-sm">
                 <q-spinner-dots color="primary" size="24px" /><span>{{ estadoInfo(estado).etiqueta }}…</span>
               </div>
