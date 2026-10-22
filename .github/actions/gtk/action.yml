@@ -1,0 +1,25 @@
+name: GTK 4 y WebKitGTK 6.0
+description: >-
+  Instala GTK 4 y WebKitGTK 6.0 con los .deb en caché: el espejo de Ubuntu a veces tarda más de 20 minutos en
+  descargarlos. La clave lleva la imagen del runner, así que la caché se renueva sola cuando GitHub la actualiza.
+runs:
+  using: composite
+  steps:
+    - id: imagen
+      shell: bash
+      run: |
+        echo "prefijo=apt-gtk-$RUNNER_ARCH-$ImageOS-" >> "$GITHUB_OUTPUT"
+        echo "version=$ImageVersion" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@v6
+      with:
+        path: ~/apt-gtk
+        key: ${{ steps.imagen.outputs.prefijo }}${{ steps.imagen.outputs.version }}
+        restore-keys: ${{ steps.imagen.outputs.prefijo }}
+    - shell: bash
+      run: |
+        mkdir -p ~/apt-gtk/partial
+        sudo apt-get -o Acquire::Retries=3 update
+        sudo apt-get install -y --no-install-recommends -o Acquire::Retries=3 -o Dir::Cache::Archives="$HOME/apt-gtk" \
+          libgtk-4-dev libwebkitgtk-6.0-dev
+        # apt deja los .deb y su cerrojo como root: la caché se guarda con el usuario del runner.
+        sudo chown -R "$USER" ~/apt-gtk
