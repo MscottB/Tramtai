@@ -1163,6 +1163,7 @@ func TestCabeEn60x20(t *testing.T) {
 	crear(t, cli, id, "corta")
 	crearInvalida(t, cli, id)
 	for _, alto := range []int{17, 20} {
+		ancho := 60
 		p := nueva("es")
 		c := contexto(cli, id)
 		c.Alto = alto
@@ -1175,8 +1176,8 @@ func TestCabeEn60x20(t *testing.T) {
 				t.Fatalf("%s a 60×%d mide %d filas:\n%s", donde, alto, h, v)
 			}
 			for _, l := range strings.Split(v, "\n") {
-				if w := lipgloss.Width(l); w > 60 {
-					t.Fatalf("%s a 60×%d: la línea mide %d columnas: %q", donde, alto, w, l)
+				if w := lipgloss.Width(l); w > ancho {
+					t.Fatalf("%s a %d×%d: la línea mide %d columnas: %q", donde, ancho, alto, w, l)
 				}
 			}
 		}
@@ -1194,9 +1195,11 @@ func TestCabeEn60x20(t *testing.T) {
 		comprobar("búsqueda")
 		pulsar(p, "esc", "e")
 		comprobar("filtro")
-		p.Update(tea.WindowSizeMsg{Width: 78, Height: 30})
+		ancho = 78
+		p.Update(tea.WindowSizeMsg{Width: ancho, Height: 30})
 		comprobar("más grande")
-		p.Update(tea.WindowSizeMsg{Width: 60, Height: alto})
+		ancho = 60
+		p.Update(tea.WindowSizeMsg{Width: ancho, Height: alto})
 		comprobar("de vuelta")
 
 		// Las confirmaciones, que pinta la app con comp.Confirmacion.
@@ -1232,7 +1235,7 @@ func TestTextosComoLaWeb(t *testing.T) {
 	c.Idioma, c.Alto = "en", 30
 	correr(p, p.Iniciar(c))
 	t.Cleanup(p.Ocultar)
-	v := p.Vista()
+	v := strings.Join(strings.Fields(p.Vista()), " ") // un texto largo ocupa varias líneas
 	for _, quiere := range []string{datos.Texto("en", "menu.historial"), datos.Texto("en", "historial.estado") + ": " + datos.Texto("en", "historial.todos"),
 		datos.Texto("en", "historial.origen") + ": " + datos.Texto("en", "historial.todosOrigenes"), datos.Textof("en", "historial.mostrando", "n", "1"),
 		datos.Texto("en", "estado.completado")} {

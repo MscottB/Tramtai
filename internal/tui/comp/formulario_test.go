@@ -116,3 +116,40 @@ func TestFormularioDesdeFuera(t *testing.T) {
 		t.Fatal("Revalidar enseña un error que llega después")
 	}
 }
+
+// TestPliegue: los campos de un pliegue cerrado no se ven ni reciben el foco; Intro lo abre. Un error escondido o
+// Enfocar abren el pliegue.
+func TestPliegue(t *testing.T) {
+	campos := append([]Campo{Texto("nombre", "Nombre", ""), Pliegue("mas", "Opciones", false)},
+		Plegados("mas", Texto("grupo", "Grupo", ""), Numero("tiempo", "Tiempo", ""))...)
+	f := NuevoFormulario(estilos(), append(campos, Texto("fin", "Fin", ""))...)
+	if v := f.Vista(); strings.Contains(v, "Grupo") || !strings.Contains(v, "▸ Opciones") {
+		t.Fatalf("cerrado no enseña sus campos:\n%s", v)
+	}
+	f.Update(tecla("tab"))
+	f.Update(tecla("tab"))
+	if f.Foco() != "fin" {
+		t.Fatalf("Tab salta lo plegado: %s", f.Foco())
+	}
+	f.Update(tecla("up"))
+	f.Update(tecla("enter"))
+	if v := f.Vista(); !strings.Contains(v, "Grupo") || !strings.Contains(v, "▾ Opciones") || f.Foco() != "mas" {
+		t.Fatalf("Intro lo abre:\n%s", v)
+	}
+	if a, n := f.Posicion(); a != 2 || n != 5 {
+		t.Fatalf("la posición cuenta lo que se ve: %d/%d", a, n)
+	}
+	f.Update(tecla("enter"))
+	f.Validar = func(f *Formulario) map[string]string { return map[string]string{"tiempo": "Falta"} }
+	f.Update(tecla("ctrl+enter"))
+	if f.Foco() != "tiempo" || !f.Marcado("mas") {
+		t.Fatalf("un error escondido abre el pliegue: %s", f.Foco())
+	}
+	f.Update(tecla("up"))
+	f.Update(tecla("up"))
+	f.Update(tecla("space"))
+	f.Enfocar("grupo")
+	if f.Foco() != "grupo" || !f.Marcado("mas") {
+		t.Fatal("Enfocar abre el pliegue")
+	}
+}

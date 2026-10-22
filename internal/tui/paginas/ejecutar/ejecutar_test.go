@@ -265,6 +265,41 @@ func TestCorregirYCopiar(t *testing.T) {
 	}
 }
 
+// TestRecetaEmpiezaArriba: Probar abre la receta arriba, con lo esencial (instrucciones, modelo y esfuerzo) y las opciones
+// plegadas como en la Web UI; la posición del foco se ve. Intro abre el pliegue y una receta con opciones lo abre sola.
+func TestRecetaEmpiezaArriba(t *testing.T) {
+	cli, id := prueba.Servicio(t)
+	if _, _, err := cli.CrearPunto(ctx, id, contratoPunto()); err != nil {
+		t.Fatal(err)
+	}
+	p := abierta(t, cli, id)
+	v := p.Vista()
+	if lineas := strings.Split(v, "\n"); !strings.Contains(lineas[1], "Instrucciones") {
+		t.Fatalf("la receta empieza arriba:\n%s", v)
+	}
+	for _, quiere := range []string{"Opciones de la receta", "↑↓ 1/"} {
+		if !strings.Contains(v, quiere) {
+			t.Fatalf("falta %q:\n%s", quiere, v)
+		}
+	}
+	if strings.Contains(v, "Respaldo") || strings.Contains(v, "Respuesta con forma") {
+		t.Fatalf("lo avanzado va plegado:\n%s", v)
+	}
+	pulsar(p, "down", "down", "down", "enter")
+	if v := p.Vista(); !strings.Contains(v, "Respaldo") || p.EnCampo() {
+		t.Fatalf("Intro abre las opciones sin entrar a editar:\n%s", v)
+	}
+	pulsar(p, "enter")
+	if strings.Contains(p.Vista(), "Respaldo") {
+		t.Fatalf("Intro las vuelve a plegar:\n%s", p.Vista())
+	}
+	_, cmd := p.Update(pagina.ConPunto{Nombre: "notas"})
+	correr(p, cmd)
+	if p.form.Enfocar("opciones"); !strings.Contains(p.Vista(), "▾ Opciones de la receta") {
+		t.Fatalf("una receta con salida estructurada abre las opciones:\n%s", p.Vista())
+	}
+}
+
 // TestBorradorSobreviveReinicio: el mensaje se guarda al escribir y vuelve al abrir la terminal otra vez; se borra al enviar.
 func TestBorradorSobreviveReinicio(t *testing.T) {
 	enEspanol(t)
@@ -376,7 +411,7 @@ func TestServicioCaido(t *testing.T) {
 	} else if _, ok := fuera[0].(pagina.ErrorServicio); !ok {
 		t.Fatalf("con ErrorServicio: %v", fuera)
 	}
-	if v := p.Vista(); !strings.Contains(v, "Mensaje") {
+	if v := p.Vista(); !strings.Contains(v, "Instrucciones") {
 		t.Fatalf("el formulario se ve igual:\n%s", v)
 	}
 	cli, id, cerrar := prueba.Arrancar(t)

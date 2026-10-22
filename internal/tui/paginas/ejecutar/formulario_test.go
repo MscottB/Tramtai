@@ -198,7 +198,7 @@ func TestCompletarRuta(t *testing.T) {
 		t.Fatalf("Tab completa: %s %q", p.form.Foco(), p.form.Valor("archivos"))
 	}
 	pulsar(p, "tab")
-	if p.form.Foco() != "perfil" {
+	if p.form.Foco() != "avanzadas" {
 		t.Fatalf("ya completa, Tab pasa al siguiente: %s", p.form.Foco())
 	}
 }

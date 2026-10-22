@@ -9,6 +9,7 @@ import (
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"tramtai/internal/idioma"
 	"tramtai/internal/tui/pagina"
@@ -22,15 +23,17 @@ const (
 	campoOpcion
 	campoInterruptor
 	campoNumero
+	campoPliegue
 )
 
-// Campo es un campo de un Formulario; se crea con Texto, Area, Opcion, Interruptor o Numero.
+// Campo es un campo de un Formulario; se crea con Texto, Area, Opcion, Interruptor, Numero o Pliegue.
 type Campo struct {
 	ID, Etiqueta string
 	tipo         tipoCampo
 	opciones     []string
 	opcion       int
-	marcado      bool
+	marcado      bool // en un pliegue, abierto
+	en           string
 	linea        textinput.Model
 	area         textarea.Model
 }
@@ -61,6 +64,7 @@ func Area(id, etiqueta, valor string) Campo {
 	c.area.MaxContentHeight = 9999 // lo que cabe, en líneas ya partidas
 	c.area.SetHeight(6)
 	c.area.SetValue(valor)
+	c.area.MoveToBegin() // un texto que llega hecho (una receta, una plantilla) se ve desde el principio
 	return c
 }
 
@@ -72,6 +76,20 @@ func Opcion(id, etiqueta string, opciones []string, valor string) Campo {
 // Interruptor se marca y desmarca con espacio o ← →.
 func Interruptor(id, etiqueta string, valor bool) Campo {
 	return Campo{ID: id, Etiqueta: etiqueta, tipo: campoInterruptor, marcado: valor}
+}
+
+// Pliegue es la cabecera de unas opciones plegadas, como un q-expansion-item de la Web UI: Intro, espacio o ← → lo abren y
+// lo cierran. Sus campos se crean con Plegados y, con el pliegue cerrado, ni se ven ni reciben el foco.
+func Pliegue(id, etiqueta string, abierto bool) Campo {
+	return Campo{ID: id, Etiqueta: etiqueta, tipo: campoPliegue, marcado: abierto}
+}
+
+// Plegados mete esos campos en el pliegue de ese id.
+func Plegados(pliegue string, campos ...Campo) []Campo {
+	for i := range campos {
+		campos[i].en = pliegue
+	}
+	return campos
 }
 
 func (c *Campo) valor() string {
@@ -90,6 +108,15 @@ func (c *Campo) valor() string {
 		return ""
 	}
 	return c.linea.Value()
+}
+
+// filas es el alto de un área: lo que ocupa su texto partido al ancho, entre 2 y 6.
+func (c *Campo) filas() int {
+	n, ancho := 0, max(c.area.Width(), 1)
+	for _, l := range strings.Split(c.area.Value(), "\n") {
+		n += max((lipgloss.Width(l)+ancho-1)/ancho, 1)
+	}
+	return min(max(n, 2), 6)
 }
 
 func (c *Campo) escribe() bool {
@@ -156,7 +183,7 @@ func (f *Formulario) campo(id string) *Campo {
 // Valor es el texto de un campo; en una opción, la elegida; en un interruptor, "1" si está marcado.
 func (f *Formulario) Valor(id string) string { return f.campo(id).valor() }
 
-// Marcado dice si un interruptor está marcado.
+// Marcado dice si un interruptor está marcado o un pliegue abierto.
 func (f *Formulario) Marcado(id string) bool { return f.campo(id).marcado }
 
 // Entero es el valor de un campo Numero; 0 si está vacío.
@@ -176,14 +203,43 @@ func (f *Formulario) Foco() string {
 	return f.campos[f.foco].ID
 }
 
-// Enfocar pone el foco en el campo id; si no existe, no cambia.
+// Enfocar pone el foco en el campo id (y abre su pliegue si estaba cerrado); si no existe, no cambia.
 func (f *Formulario) Enfocar(id string) {
 	for i, c := range f.campos {
 		if c.ID == id {
-			f.mover(i - f.foco)
+			f.ir(i)
 			return
 		}
 	}
+}
+
+// visible dice si un campo se ve: no está en un pliegue o su pliegue está abierto.
+func (f *Formulario) visible(i int) bool {
+	return f.campos[i].en == "" || f.campo(f.campos[i].en).marcado
+}
+
+// ir pone el foco en el campo i, abriendo su pliegue.
+func (f *Formulario) ir(i int) {
+	if en := f.campos[i].en; en != "" {
+		f.campo(en).marcado = true
+	}
+	f.campos[f.foco].enfocar(false)
+	f.foco = i
+	f.campos[i].enfocar(true)
+}
+
+// Posicion es el número del campo con el foco entre los que se ven, y cuántos se ven: para el indicador «3/9».
+func (f *Formulario) Posicion() (int, int) {
+	n, actual := 0, 0
+	for i := range f.campos {
+		if f.visible(i) {
+			n++
+			if i == f.foco {
+				actual = n
+			}
+		}
+	}
+	return actual, n
 }
 
 // Poner cambia el valor de un campo desde fuera (una plantilla, una receta cargada): en una opción elige ese valor y en
@@ -196,6 +252,7 @@ func (f *Formulario) Poner(id, valor string) {
 	switch c.tipo {
 	case campoArea:
 		c.area.SetValue(valor)
+		c.area.MoveToBegin()
 	case campoTexto, campoNumero:
 		c.linea.SetValue(valor)
 	case campoOpcion:
@@ -249,10 +306,15 @@ func (f *Formulario) validar() {
 	}
 }
 
+// mover pasa al campo visible que está paso campos más allá (paso 1 o -1, dando la vuelta).
 func (f *Formulario) mover(paso int) {
-	f.campos[f.foco].enfocar(false)
-	f.foco = (f.foco + paso + len(f.campos)) % len(f.campos)
-	f.campos[f.foco].enfocar(true)
+	i := f.foco
+	for range f.campos {
+		if i = (i + paso + len(f.campos)) % len(f.campos); f.visible(i) {
+			break
+		}
+	}
+	f.ir(i)
 }
 
 func (f *Formulario) enviar() tea.Cmd {
@@ -263,7 +325,7 @@ func (f *Formulario) enviar() tea.Cmd {
 	}
 	for i, c := range f.campos {
 		if f.errores[c.ID] != "" {
-			f.mover(i - f.foco)
+			f.ir(i)
 			break
 		}
 	}
@@ -293,6 +355,9 @@ func (f *Formulario) Update(msg tea.Msg) tea.Cmd {
 			return nil
 		case tecla == "shift+tab" || (tecla == "up" && c.tipo != campoArea):
 			f.mover(-1)
+			return nil
+		case c.tipo == campoPliegue && (tecla == "enter" || tecla == "space" || tecla == " " || tecla == "left" || tecla == "right"):
+			c.marcado = !c.marcado
 			return nil
 		case tecla == "enter" && c.tipo != campoArea:
 			if f.foco == len(f.campos)-1 {
@@ -332,17 +397,35 @@ func (f *Formulario) Vista() string {
 	var b strings.Builder
 	for i := range f.campos {
 		c := &f.campos[i]
-		if i > 0 {
+		if !f.visible(i) {
+			continue
+		}
+		if b.Len() > 0 {
 			b.WriteString("\n\n")
 		}
-		etiqueta := "  " + e.Texto.Render(c.Etiqueta)
+		texto := c.Etiqueta
+		if c.tipo == campoPliegue {
+			marca := e.Iconos.Cerrado
+			if c.marcado {
+				marca = e.Iconos.Abierto
+			}
+			texto = marca + " " + c.Etiqueta
+		}
+		etiqueta := "  " + e.Texto.Render(texto)
 		if i == f.foco {
-			etiqueta = e.Acento.Render(e.Iconos.Cursor + " " + c.Etiqueta)
+			etiqueta = e.Acento.Render(e.Iconos.Cursor + " " + texto)
 			f.lineaFoco = strings.Count(b.String(), "\n")
 		}
-		b.WriteString(e.Recortar(etiqueta, f.ancho) + "\n")
+		b.WriteString(e.Recortar(etiqueta, f.ancho))
+		if c.tipo != campoPliegue {
+			b.WriteString("\n")
+		}
 		switch c.tipo {
+		case campoPliegue:
 		case campoArea:
+			if h := c.filas(); h != c.area.Height() { // crece con lo escrito, como el autogrow de la Web UI
+				c.area.SetHeight(h)
+			}
 			b.WriteString(sangrar(c.area.View(), "  "))
 		case campoOpcion:
 			izq, der := "‹ ", " ›"

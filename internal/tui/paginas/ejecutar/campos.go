@@ -190,6 +190,54 @@ func (p *Pagina) anadirCampo() tea.Cmd {
 	return nil
 }
 
+// moverCampo (Alt+↑, Alt+↓) cambia el campo con el foco de sitio en su lista, como subir y bajar de CamposEsquema.vue; el
+// foco lo sigue. En el primero no sube y en el último no baja.
+func (p *Pagina) moverCampo(paso int) tea.Cmd {
+	ruta, ok := rutaCampo(p.form.Foco())
+	if !ok || !p.enCampos() {
+		return nil
+	}
+	d := p.leer()
+	l, i := lista(&d.campos, ruta)
+	j := i + paso
+	if j < 0 || j >= len(*l) {
+		return nil
+	}
+	(*l)[i], (*l)[j] = (*l)[j], (*l)[i]
+	p.armar(d, padre(ruta)+strconv.Itoa(j)+strings.TrimPrefix(p.form.Foco(), ruta))
+	return nil
+}
+
+// verEjemplo (v) enseña una respuesta de muestra con la forma del esquema, como «Ver un ejemplo de respuesta» de la Web
+// UI. Solo si los campos lo representan y alguno tiene nombre.
+func (p *Pagina) verEjemplo() tea.Cmd {
+	if c := p.camposConNombre(); len(c) > 0 {
+		p.muestra = sangrar([]byte(ejemploDe(c)))
+		p.caja.Poner(p.muestra)
+	}
+	return nil
+}
+
+// camposConNombre son los campos de primer nivel con nombre del esquema de ahora (también escrito en JSON, si los campos
+// lo representan); nil sin salida estructurada.
+func (p *Pagina) camposConNombre() []campoEsquema {
+	d := p.leer()
+	if !d.estructurada {
+		return nil
+	}
+	campos, ok := d.campos, d.modo == modoCampos
+	if !ok {
+		campos, ok = camposDe(d.esquema)
+	}
+	var r []campoEsquema
+	for _, c := range campos {
+		if ok && c.Nombre != "" {
+			r = append(r, c)
+		}
+	}
+	return r
+}
+
 // pedirQuitar (x) pregunta antes de quitar el campo con el foco.
 func (p *Pagina) pedirQuitar() tea.Cmd {
 	ruta, ok := rutaCampo(p.form.Foco())
@@ -228,10 +276,10 @@ func (p *Pagina) textoProblema(campos []campoEsquema) string {
 
 // pistaCampos explica la fila del editor de campos con el foco, con el problema de los campos delante si lo hay.
 func (p *Pagina) pistaCampos(foco string) string {
-	pista := idioma.T("n añade un campo detrás; x lo quita")
+	pista := idioma.T("n añade un campo detrás; x lo quita; Alt+↑↓ lo mueve; v enseña un ejemplo de respuesta")
 	switch {
 	case foco == "modo":
-		pista = idioma.T("← → elige cómo se edita el esquema; n añade un campo")
+		pista = idioma.T("← → elige cómo se edita el esquema; n añade un campo; v enseña un ejemplo de respuesta")
 	case strings.HasSuffix(foco, ".descripcion"):
 		pista = p.tx("campos.descripcionEjemplo")
 	case strings.HasSuffix(foco, ".opciones"):

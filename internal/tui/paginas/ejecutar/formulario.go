@@ -30,6 +30,12 @@ type datosForm struct {
 	campos                            []campoEsquema // en modo campos, los campos (y esquema, lo que generan)
 	reintentos                        int
 	mensaje, archivos, perfil, tiempo string
+	opciones, avanzadas               bool // los pliegues «Opciones de la receta» y «Opciones avanzadas», abiertos
+}
+
+// conOpciones dice si la receta tiene algo en «Opciones de la receta»: entonces se abre, como conOpciones de EditorReceta.
+func conOpciones(d datosForm) bool {
+	return d.forzar || len(d.respaldo) > 0 || d.estructurada || d.reintentos > 0
 }
 
 // opcionesCampo son los valores de un campo de opción y lo que se ve de cada uno, en el mismo orden.
@@ -76,15 +82,18 @@ func (p *Pagina) armar(d datosForm, foco string) {
 	for _, n := range niveles {
 		esfuerzos, nombres = append(esfuerzos, n), append(nombres, p.tx("esfuerzo."+n))
 	}
+	// Lo esencial arriba (instrucciones, modelo y esfuerzo) y lo demás en «Opciones de la receta», como Probar en la Web UI.
 	campos := []comp.Campo{
 		comp.Area("instrucciones", p.tx("receta.instrucciones"), d.instrucciones),
 		p.opcion("modelo", p.tx("receta.modelo"), modelos, etiquetas, d.modelo),
 		p.opcion("esfuerzo", p.tx("esfuerzo.titulo"), esfuerzos, nombres, d.esfuerzo),
+		comp.Pliegue("opciones", p.tx("receta.opciones"), d.opciones),
 	}
+	var plegados []comp.Campo
 	if d.modelo != "" { // forzar solo vale con un modelo elegido
-		campos = append(campos, comp.Interruptor("forzar", p.tx("receta.forzar"), d.forzar))
+		plegados = append(plegados, comp.Interruptor("forzar", p.tx("receta.forzar"), d.forzar))
 	}
-	campos = append(campos, comp.Texto("respaldo", p.tx("receta.respaldo"), strings.Join(d.respaldo, ", ")),
+	plegados = append(plegados, comp.Texto("respaldo", p.tx("receta.respaldo"), strings.Join(d.respaldo, ", ")),
 		comp.Interruptor("estructurada", p.tx("receta.salidaEstructurada"), d.estructurada))
 	if d.estructurada {
 		var ids, nombresP []string
@@ -94,18 +103,21 @@ func (p *Pagina) armar(d datosForm, foco string) {
 		reintentos := []string{"0", "1", "2", "3"}
 		textos := []string{p.tx("receta.reintentos0"), p.tx("receta.reintentosNUno"), p.tx("receta.reintentosN", "n", "2"), p.tx("receta.reintentosN", "n", "3")}
 		p.resolverModo(&d)
-		campos = append(campos, p.opcion("modo", p.tx("receta.modo"), []string{modoCampos, modoJSON}, []string{p.tx("receta.modoCampos"), p.tx("receta.modoJson")}, d.modo),
+		plegados = append(plegados, p.opcion("modo", p.tx("receta.modo"), []string{modoCampos, modoJSON}, []string{p.tx("receta.modoCampos"), p.tx("receta.modoJson")}, d.modo),
 			p.opcion("plantilla", p.tx("receta.plantillaCorta"), ids, nombresP, ""))
 		if d.modo == modoCampos {
-			campos = append(campos, p.filasCampos(d.campos, "c", 1)...)
+			plegados = append(plegados, p.filasCampos(d.campos, "c", 1)...)
 		} else {
-			campos = append(campos, comp.Area("esquema", p.tx("receta.esquema"), d.esquema))
+			plegados = append(plegados, comp.Area("esquema", p.tx("receta.esquema"), d.esquema))
 		}
-		campos = append(campos, p.opcion("reintentos", p.tx("receta.reintentos"), reintentos, textos, strconv.Itoa(d.reintentos)))
+		plegados = append(plegados, p.opcion("reintentos", p.tx("receta.reintentos"), reintentos, textos, strconv.Itoa(d.reintentos)))
 		p.modo, p.campos = d.modo, d.campos
 	}
+	campos = append(campos, comp.Plegados("opciones", plegados...)...)
 	campos = append(campos, comp.Area("mensaje", p.tx("ejecutar.mensaje"), d.mensaje), comp.Texto("archivos", p.tx("ejecutar.adjuntar"), d.archivos),
-		comp.Texto("perfil", p.tx("ejecutar.perfilTrabajo"), d.perfil), comp.Numero("tiempo", p.tx("ejecutar.tiempo")+" (s)", d.tiempo))
+		comp.Pliegue("avanzadas", p.tx("comun.opcionesAvanzadas"), d.avanzadas))
+	campos = append(campos, comp.Plegados("avanzadas", comp.Texto("perfil", p.tx("ejecutar.perfilTrabajo"), d.perfil),
+		comp.Numero("tiempo", p.tx("ejecutar.tiempo")+" (s)", d.tiempo))...)
 	p.form = comp.NuevoFormulario(p.estilos, campos...)
 	p.form.Validar = p.validar
 	p.form.Update(tea.WindowSizeMsg{Width: max(p.c.Ancho, 10)})
@@ -137,7 +149,8 @@ func (p *Pagina) leerForm() datosForm {
 	return datosForm{instrucciones: f.Valor("instrucciones"), modelo: p.valorOpcion("modelo"), esfuerzo: p.valorOpcion("esfuerzo"),
 		forzar: f.Marcado("forzar"), estructurada: f.Marcado("estructurada"), respaldo: partir(f.Valor("respaldo")),
 		esquema: f.Valor("esquema"), reintentos: r, mensaje: f.Valor("mensaje"), archivos: f.Valor("archivos"),
-		perfil: f.Valor("perfil"), tiempo: f.Valor("tiempo"), modo: p.valorOpcion("modo")}
+		perfil: f.Valor("perfil"), tiempo: f.Valor("tiempo"), modo: p.valorOpcion("modo"), opciones: f.Marcado("opciones"),
+		avanzadas: f.Marcado("avanzadas")}
 }
 
 // leer saca los datos del formulario; en modo campos, el esquema es el que generan.
@@ -474,7 +487,8 @@ func mismaReceta(a, b datosForm) bool {
 // conservan, como en la Web UI.
 func (p *Pagina) cargarReceta(d datosForm, mensaje string) {
 	actual := p.leer()
-	d.mensaje, d.perfil, d.tiempo = mensaje, actual.perfil, actual.tiempo
+	d.mensaje, d.perfil, d.tiempo, d.avanzadas = mensaje, actual.perfil, actual.tiempo, actual.avanzadas
+	d.opciones = actual.opciones || conOpciones(d)
 	p.errEsquema, p.conversor = "", ""
 	p.armar(d, "mensaje")
 }

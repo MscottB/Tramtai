@@ -29,6 +29,9 @@ func (p *Pagina) Vista() string {
 		texto = p.vistaCodigo()
 	case p.creada != nil:
 		texto = strings.Join([]string{e.Titulo.Render(p.tx("ejecutar.apiCreada", "nombre", p.creada.nombre)), "", p.caja.Vista()}, "\n")
+	case p.muestra != "":
+		p.caja.Tamano(max(p.c.Ancho, 1), max(p.c.Alto-2, 1))
+		texto = strings.Join([]string{e.Titulo.Render(p.tx("receta.ejemplo")), "", p.caja.Vista()}, "\n")
 	case !p.armado:
 		texto = e.Tenue.Render(p.a(idioma.T("Cargando…")))
 	default:
@@ -80,7 +83,8 @@ func (p *Pagina) pestanas() string {
 	return strings.Join(partes, " ")
 }
 
-// vistaReceta es el formulario desplazado para que el campo con el foco se vea, y debajo lo que explica ese campo.
+// vistaReceta es el formulario desplazado para que el campo con el foco se vea, debajo dónde está el foco (como el «↑↓ 16/28»
+// de Inicio) y lo que explica ese campo.
 func (p *Pagina) vistaReceta(alto int) string {
 	pista := p.envolver(p.pista(), 3)
 	visible := max(alto-len(pista)-1, 3)
@@ -102,7 +106,13 @@ func (p *Pagina) vistaReceta(alto int) string {
 	for len(vista) < visible {
 		vista = append(vista, "")
 	}
-	return strings.Join(append(append(vista, ""), p.tenue(pista)...), "\n")
+	flechas, n, total := "↑↓", 0, 0
+	if p.estilos.ASCII {
+		flechas = "^v"
+	}
+	n, total = p.form.Posicion()
+	posicion := p.estilos.Tenue.Render(flechas + " " + itoa(n) + "/" + itoa(total))
+	return strings.Join(append(append(vista, posicion), p.tenue(pista)...), "\n")
 }
 
 // tenue pinta unas líneas con el estilo tenue.
@@ -119,6 +129,10 @@ func (p *Pagina) pista() string {
 		return p.pistaCampos(p.form.Foco())
 	}
 	switch p.form.Foco() {
+	case "opciones":
+		return idioma.T("Intro abre o pliega las opciones de la receta")
+	case "avanzadas":
+		return p.tx("ejecutar.avanzadasTexto")
 	case "instrucciones":
 		return p.tx("receta.instruccionesHint")
 	case "modelo":
@@ -279,6 +293,8 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		return []pagina.Tecla{{Tecla: "← →", Accion: idioma.T("pestañas")}, {Tecla: "y", Accion: idioma.T("copia")}, {Tecla: "Esc", Accion: idioma.T("cierra")}}
 	case p.creada != nil:
 		return []pagina.Tecla{{Tecla: "y", Accion: idioma.T("copia la clave")}, {Tecla: "Esc", Accion: idioma.T("cierra")}}
+	case p.muestra != "":
+		return []pagina.Tecla{{Tecla: "y", Accion: idioma.T("copia")}, {Tecla: "Esc", Accion: idioma.T("cierra")}}
 	case p.editando:
 		teclas := p.form.Teclas()
 		switch p.form.Foco() {
@@ -297,7 +313,10 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 			teclas = append(teclas, pagina.Tecla{Tecla: "n", Accion: p.tx("campos.anadir")})
 		}
 		if _, ok := rutaCampo(p.form.Foco()); ok && p.enCampos() {
-			teclas = append(teclas, pagina.Tecla{Tecla: "x", Accion: idioma.T("quita el campo")})
+			teclas = append(teclas, pagina.Tecla{Tecla: "x", Accion: idioma.T("quita el campo")}, pagina.Tecla{Tecla: "Alt+↑↓", Accion: idioma.T("mueve el campo")})
+		}
+		if len(p.camposConNombre()) > 0 {
+			teclas = append(teclas, pagina.Tecla{Tecla: "v", Accion: p.tx("receta.ejemplo")})
 		}
 	case pestRespuesta:
 		if p.salida != "" {

@@ -191,14 +191,18 @@ func (p *Pagina) vistaLista() string {
 	if p.cargando || p.cargandoMas {
 		pie = append(pie, p.a(idioma.T("Cargando…")))
 	}
-	hueco := max(alto-len(l)-min(len(pie), 1), 1)
+	textoPie := ""
+	if len(pie) > 0 { // entero, en las líneas que ocupe: dice qué filtran el estado y la búsqueda
+		textoPie = e.Tenue.Width(ancho).Render(strings.Join(pie, " "+e.Iconos.Separador+" "))
+	}
+	hueco := max(alto-len(l)-min(len(pie), 1)*lipgloss.Height(textoPie), 1)
 	if len(p.lista.Visibles()) == 0 {
 		l = append(l, p.vacio()...)
 	} else {
 		l = append(l, p.lista.Vista(ancho, hueco))
 	}
-	if len(pie) > 0 {
-		l = append(l, e.Tenue.Render(e.Recortar(strings.Join(pie, " "+e.Iconos.Separador+" "), ancho)))
+	if textoPie != "" {
+		l = append(l, textoPie)
 	}
 	return strings.Join(l, "\n")
 }

@@ -143,6 +143,7 @@ type Pagina struct {
 
 	// Lo que se abre encima: «Ver como código», «Guardar como API», la API recién creada y la plantilla por confirmar.
 	codigo  *vistaCodigo
+	muestra string // el ejemplo de respuesta que se enseña (v); "" cerrado
 	guardar *comp.Formulario
 	creada  *apiCreada
 	caja    comp.Visor
@@ -225,14 +226,14 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	p.visible, p.sinServ, p.editando = true, false, false
 	p.cerrarVivo()
 	if !p.armado {
-		p.armar(datosForm{mensaje: leerBorrador(c.Datos)}, "mensaje")
+		p.armar(datosForm{mensaje: leerBorrador(c.Datos)}, "instrucciones") // la receta se abre arriba, con lo esencial
 	}
 	if otro {
 		p.trabajo, p.final, p.salida, p.avisos, p.api, p.punto = nil, nil, "", nil, "", nil
 		p.catalogo, p.cargadoRec = nil, false
 		p.recientes.Poner(nil)
 	}
-	p.codigo, p.guardar, p.creada, p.pend, p.enviando, p.ocupado = nil, nil, nil, nil, false, false
+	p.codigo, p.guardar, p.creada, p.pend, p.enviando, p.ocupado, p.muestra = nil, nil, nil, nil, false, false, ""
 	p.ajustar()
 	if c.Cli == nil {
 		p.sinServ = true
@@ -443,6 +444,16 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 		return p.teclaCodigo(t)
 	case p.creada != nil:
 		return p.teclaCreada(t)
+	case p.muestra != "":
+		switch t {
+		case "esc", "v":
+			p.muestra = ""
+		case "y":
+			return copiar(p.muestra)
+		default:
+			p.caja.Update(k)
+		}
+		return nil
 	case p.editando:
 		return p.teclaCampo(k)
 	}
@@ -496,9 +507,16 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 	case pestReceta:
 		switch t {
 		case "enter", "e":
+			if f := p.form.Foco(); f == "opciones" || f == "avanzadas" { // un pliegue no se edita: Intro lo abre o lo pliega
+				return p.alForm(tea.KeyPressMsg{Code: tea.KeyEnter})
+			}
 			p.editando = true
 		case "x":
 			return p.pedirQuitar()
+		case "alt+up", "alt+down":
+			return p.moverCampo(map[string]int{"alt+up": -1, "alt+down": 1}[t])
+		case "v":
+			return p.verEjemplo()
 		case "up":
 			return p.alForm(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
 		case "down":

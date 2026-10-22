@@ -3,7 +3,9 @@ package ejecutar
 import (
 	"encoding/json"
 	"io"
+	"math"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -25,6 +27,87 @@ type campoEsquema struct {
 const nivelesCampos = 3
 
 var tiposCampo = []string{"texto", "numero", "entero", "si_no", "fecha", "opcion", "lista", "objeto"}
+
+// ejemploDe es una respuesta de muestra con la forma de esos campos, compacta y en su orden (ejemploDe de esquemaCampos.ts):
+// la vista previa «Ver un ejemplo de respuesta». Como Object.fromEntries, un nombre repetido vale una vez con el último.
+func ejemploDe(campos []campoEsquema) string {
+	var nombres []string
+	ultimo := map[string]campoEsquema{}
+	for _, c := range campos {
+		if _, visto := ultimo[c.Nombre]; !visto {
+			nombres = append(nombres, c.Nombre)
+		}
+		ultimo[c.Nombre] = c
+	}
+	partes := make([]string, len(nombres))
+	for i, n := range nombres {
+		partes[i] = jsonDe(n, "") + ":" + valorEjemplo(ultimo[n])
+	}
+	return "{" + strings.Join(partes, ",") + "}"
+}
+
+// valorEjemplo es el valor de muestra de un campo (valorDe de esquemaCampos.ts): un número dentro de los límites (el
+// mínimo, o 0 si cabe, o el máximo) y una lista con tantos elementos como pide su mínimo.
+func valorEjemplo(c campoEsquema) string {
+	numero := 0.0
+	switch {
+	case c.Minimo != nil:
+		numero = *c.Minimo
+	case c.Maximo != nil:
+		numero = min(0, *c.Maximo)
+	}
+	switch c.Tipo {
+	case "fecha":
+		return `"2026-01-31"`
+	case "numero":
+		return cifraJSON(numero)
+	case "entero":
+		if c.Minimo != nil {
+			return cifraJSON(math.Ceil(*c.Minimo))
+		}
+		return cifraJSON(math.Floor(numero))
+	case "si_no":
+		return "true"
+	case "opcion":
+		for _, o := range c.Opciones {
+			if strings.TrimSpace(o) != "" {
+				return jsonDe(o, "")
+			}
+		}
+		return `""`
+	case "objeto":
+		return ejemploDe(c.Campos)
+	case "lista":
+		elemento := `"…"`
+		switch c.Elemento {
+		case "objeto":
+			elemento = ejemploDe(c.Campos)
+		case "numero":
+			elemento = "0"
+		}
+		n := 1.0
+		if c.Minimo != nil {
+			n = max(*c.Minimo, 1)
+		}
+		if c.Maximo != nil {
+			n = min(n, *c.Maximo)
+		}
+		elementos := make([]string, int(max(n, 0)))
+		for i := range elementos {
+			elementos[i] = elemento
+		}
+		return "[" + strings.Join(elementos, ",") + "]"
+	}
+	return `"…"`
+}
+
+// cifraJSON escribe un número como JSON.stringify (sin «-0»).
+func cifraJSON(n float64) string {
+	if n == 0 {
+		n = 0
+	}
+	return strconv.FormatFloat(n, 'f', -1, 64)
+}
 
 func campoVacio() campoEsquema { return campoEsquema{Tipo: "texto", Obligatorio: true} }
 
@@ -290,7 +373,8 @@ func campoDe(nombre string, v any, obligatorio bool, nivel int) (campoEsquema, b
 		return c, p.solo("type", "description")
 	case "number", "integer":
 		c.Tipo = map[any]string{"number": "numero", "integer": "entero"}[tipo]
-		return c, p.solo("type", "minimum", "maximum", "description") && rango("minimum", "maximum")
+		ok := p.solo("type", "minimum", "maximum", "description") && rango("minimum", "maximum") // rango cambia c: antes del return
+		return c, ok
 	case "boolean":
 		c.Tipo = "si_no"
 		return c, p.solo("type", "description")

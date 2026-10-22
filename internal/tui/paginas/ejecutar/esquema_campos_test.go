@@ -30,6 +30,21 @@ var camposPrueba = []campoEsquema{
 	{Nombre: "lineas", Tipo: "lista", Elemento: "objeto", Obligatorio: true, Campos: []campoEsquema{{Nombre: "precio", Tipo: "numero", Obligatorio: true}}},
 }
 
+// TestEjemploComoLaWeb: ejemploDe da lo mismo que ejemploDe de esquemaCampos.ts: un número dentro de sus límites, el entero
+// redondeado hacia dentro, la primera opción con texto y tantos elementos como pide el mínimo.
+func TestEjemploComoLaWeb(t *testing.T) {
+	n := func(x float64) *float64 { return &x }
+	campos := []campoEsquema{{Nombre: "t", Tipo: "texto"}, {Nombre: "f", Tipo: "fecha"}, {Nombre: "total", Tipo: "numero", Minimo: n(5)},
+		{Nombre: "n", Tipo: "entero", Maximo: n(-3)}, {Nombre: "e", Tipo: "entero", Minimo: n(2.5)}, {Nombre: "s", Tipo: "si_no"},
+		{Nombre: "o", Tipo: "opcion", Opciones: []string{" ", "alta"}},
+		{Nombre: "l", Tipo: "lista", Elemento: "objeto", Minimo: n(2), Campos: []campoEsquema{{Nombre: "a", Tipo: "si_no"}}},
+		{Nombre: "v", Tipo: "lista", Elemento: "numero", Maximo: n(0)}, {Nombre: "x", Tipo: "objeto"}}
+	quiere := `{"t":"…","f":"2026-01-31","total":5,"n":-3,"e":3,"s":true,"o":"alta","l":[{"a":true},{"a":true}],"v":[],"x":{}}`
+	if got := ejemploDe(campos); got != quiere {
+		t.Fatalf("ejemplo:\n%s\n%s", got, quiere)
+	}
+}
+
 // TestCamposIdaYVuelta: de los campos al esquema y de vuelta, idéntico; el esquema tiene la forma de aEsquema.
 func TestCamposIdaYVuelta(t *testing.T) {
 	esquema := aEsquema(camposPrueba)
