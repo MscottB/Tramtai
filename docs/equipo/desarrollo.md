@@ -159,6 +159,7 @@ internal/documentos/   cargas, formatos admitidos, conversión con markitdown y 
 internal/salidas/      validación JSON Schema
 internal/api/          HTTP: API nativa, SSE y fachadas OpenAI/Anthropic
 internal/servicio/     servicio único: instancias, puntos de acceso, Web UI y entrada local
+internal/configuracion/ edición de config.yaml y local.yaml conservando comentarios, y escritura atómica
 internal/cliente/      cliente del servicio (CLI, terminal y escritorio)
 internal/tui/          terminal interactiva (Bubble Tea)
 internal/recursos/     Web UI compilada (go:embed)

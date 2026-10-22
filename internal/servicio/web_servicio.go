@@ -11,6 +11,7 @@ import (
 	"tramtai/internal/agentes"
 	"tramtai/internal/api"
 	"tramtai/internal/autoarranque"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
@@ -138,7 +139,7 @@ func (s *Servicio) Conectar(agente string, conectado bool) error {
 	if err != nil {
 		return err
 	}
-	if err := FijarValor(ruta, nucleo.OrigenGlobal, "adaptadores."+agente+".desconectado", !conectado); err != nil {
+	if err := configuracion.FijarValor(ruta, nucleo.OrigenGlobal, "adaptadores."+agente+".desconectado", !conectado); err != nil {
 		return err
 	}
 	s.opc.Conexiones.Fijar(agente, !conectado)
@@ -203,7 +204,7 @@ func (s *Servicio) cambiarAutenticacion(agente, modo string) error {
 	if err != nil {
 		return err
 	}
-	if err := FijarValor(ruta, nucleo.OrigenGlobal, "adaptadores."+agente+".autenticacion", modo); err != nil {
+	if err := configuracion.FijarValor(ruta, nucleo.OrigenGlobal, "adaptadores."+agente+".autenticacion", modo); err != nil {
 		return err
 	}
 	return adaptadores.CambiarAutenticacion(s.opc.Registro, agente, modo)
@@ -217,7 +218,7 @@ func (s *Servicio) guardarValores(inst *Instancia, valores map[string]any) error
 		return err
 	}
 	for clave, valor := range valores {
-		if err := FijarValor(ruta, origen, clave, valor); err != nil {
+		if err := configuracion.FijarValor(ruta, origen, clave, valor); err != nil {
 			return err
 		}
 	}
@@ -241,7 +242,7 @@ func (s *Servicio) fijarPuerto(puerto int, automatico bool) error {
 		return err
 	}
 	if puerto == 0 {
-		err = FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto_automatico", automatico)
+		err = configuracion.FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto_automatico", automatico)
 	} else {
 		err = FijarPuertoPropio(ruta, s.opc.Host, puerto, s.opc.Puerto, automatico)
 	}

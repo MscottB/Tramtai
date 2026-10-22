@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/nucleo"
 )
 
@@ -40,7 +41,7 @@ func TestAbrirCreaYConfia(t *testing.T) {
 	if !confiable(t, inst.Raiz) {
 		t.Fatal("un proyecto que crea la app debe quedar confiado")
 	}
-	err = EditarPuntos(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+	err = configuracion.EditarPuntos(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		return append(lista, ConfigPunto{Nombre: "asistente"}), nil
 	})
 	if err != nil {
@@ -172,7 +173,7 @@ func TestProyectoNoConfiadoGuardaSusAjustes(t *testing.T) {
 	if err := s.heredar(inst, "predeterminados.modelo"); err != nil {
 		t.Fatalf("usar el de Global: %v", err)
 	}
-	err = EditarPuntos(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+	err = configuracion.EditarPuntos(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		return append(lista, ConfigPunto{Nombre: "asistente"}), nil
 	})
 	if err == nil {

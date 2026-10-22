@@ -21,6 +21,7 @@ import (
 	"tramtai/internal/actualizacion"
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/api"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
@@ -179,7 +180,7 @@ func (s *Servicio) fijarPrepararConversor(preparar bool) error {
 	if err != nil {
 		return err
 	}
-	if err := FijarValor(ruta, nucleo.OrigenGlobal, "conversion.preparar_al_iniciar", preparar); err != nil {
+	if err := configuracion.FijarValor(ruta, nucleo.OrigenGlobal, "conversion.preparar_al_iniciar", preparar); err != nil {
 		return err
 	}
 	if s.conversor != nil {

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
@@ -182,7 +183,7 @@ func (s *Servicio) FijarConfianza(raiz string, confiar bool) error {
 	if confiar {
 		lista = append(lista, raiz)
 	}
-	if err := FijarValor(ruta, nucleo.OrigenGlobal, "proyectos_confiables", lista); err != nil {
+	if err := configuracion.FijarValor(ruta, nucleo.OrigenGlobal, "proyectos_confiables", lista); err != nil {
 		return err
 	}
 	var inst *Instancia

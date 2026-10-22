@@ -22,6 +22,7 @@ import (
 	"tramtai/internal/agentes"
 	"tramtai/internal/autoarranque"
 	"tramtai/internal/cliente"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -307,7 +308,7 @@ func comandoServicio() *cobra.Command {
 			case len(args) == 1:
 				err = servicio.FijarPuerto(ruta, c.Texto("servicio.host"), puerto, automatico)
 			default:
-				err = servicio.FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto_automatico", automatico)
+				err = configuracion.FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto_automatico", automatico)
 			}
 			if err != nil {
 				return err

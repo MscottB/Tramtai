@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"tramtai/internal/actualizacion"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/version"
@@ -48,7 +49,7 @@ func (s *Servicio) fijarBusqueda(buscar bool) error {
 	if err != nil {
 		return err
 	}
-	if err := FijarValor(ruta, nucleo.OrigenGlobal, "servicio.buscar_actualizaciones", buscar); err != nil {
+	if err := configuracion.FijarValor(ruta, nucleo.OrigenGlobal, "servicio.buscar_actualizaciones", buscar); err != nil {
 		return err
 	}
 	s.buscar.Store(buscar)

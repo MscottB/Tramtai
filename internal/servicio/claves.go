@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"tramtai/internal/api"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
@@ -87,7 +88,7 @@ func RotarToken(ruta string) (string, error) {
 // guardarSecreto escribe un token o su huella solo legible por el usuario, de forma atómica: quien lo lee a la vez (un
 // Recargar, la CLI) nunca ve un archivo a medias que tomaría por vacío y regeneraría.
 func guardarSecreto(ruta, valor string) error {
-	return escribirAtomico(ruta, []byte(valor+"\n"), 0o600)
+	return configuracion.EscribirAtomico(ruta, []byte(valor+"\n"), 0o600)
 }
 
 // RotarTokenPunto genera la clave nueva de un punto de acceso y guarda solo su huella: la clave se muestra una vez

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/nucleo"
 )
 
@@ -268,7 +269,7 @@ func proyectoConDatos(t *testing.T, s *Servicio, base string) *Instancia {
 	if r, cuerpo := pedir(t, base, "POST", "/api/v1/ejecutar", inst.token, hola); r.StatusCode != 200 {
 		t.Fatalf("petición: %d %s", r.StatusCode, cuerpo)
 	}
-	err = EditarPuntos(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+	err = configuracion.EditarPuntos(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		return append(lista, ConfigPunto{Nombre: "asistente"}), nil
 	})
 	if err != nil {

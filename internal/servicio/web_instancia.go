@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"tramtai/internal/api"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -172,7 +173,7 @@ func (s *Servicio) heredar(inst *Instancia, clave string) error {
 	if !slices.ContainsFunc(heredables, func(p string) bool { return strings.HasPrefix(clave, p) }) {
 		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("%s no se puede devolver al valor de Global desde aquí", clave))
 	}
-	if err := QuitarValor(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, clave); err != nil {
+	if err := configuracion.QuitarValor(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, clave); err != nil {
 		return err
 	}
 	c, err := nucleo.CargarConfiguracion(inst.Raiz)
@@ -215,7 +216,7 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 	if origen == nucleo.OrigenGlobal && inst.ID != "global" {
 		p.Instancia = inst.ID
 	}
-	if _, err := NormalizarPunto(p, inst.ID, s.opc.Puerto); err != nil {
+	if _, err := normalizarPunto(p, inst.ID, s.opc.Puerto); err != nil {
 		api.EscribirError(w, r, err)
 		return
 	}
@@ -223,7 +224,7 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 		api.EscribirError(w, r, err)
 		return
 	}
-	err = EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+	err = configuracion.EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		if slices.ContainsFunc(lista, func(c ConfigPunto) bool { return c.Nombre == p.Nombre }) {
 			return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el punto de acceso %s ya existe", p.Nombre))
 		}
@@ -285,7 +286,7 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 		s.cambiarPuntoUI(w, r, inst, punto)
 	case accion == "" && r.Method == http.MethodDelete:
 		// Archivo, clave y consumo antes de recargar (404 si ya no estaba); la CLI y la terminal también borran por aquí.
-		if err := s.EliminarPunto(punto.Origen, origenDeArchivo(punto.Origen), nombre); err != nil {
+		if err := s.eliminarPunto(punto.Origen, origenDeArchivo(punto.Origen), nombre); err != nil {
 			api.EscribirError(w, r, err)
 			return
 		}
@@ -364,7 +365,7 @@ func (s *Servicio) fijarRetencion(inst *Instancia, resultado, metadatos, maximo 
 
 // editarPunto aplica f al archivo del punto y recarga; si falla, responde con el error y devuelve false.
 func (s *Servicio) editarPunto(w http.ResponseWriter, r *http.Request, punto *EstadoPunto, f func([]ConfigPunto) ([]ConfigPunto, error)) bool {
-	if err := EditarPuntos(punto.Origen, origenDeArchivo(punto.Origen), f); err != nil {
+	if err := configuracion.EditarPuntos(punto.Origen, origenDeArchivo(punto.Origen), f); err != nil {
 		api.EscribirError(w, r, err)
 		return false
 	}
@@ -447,7 +448,7 @@ func (s *Servicio) cambiarPuntoUI(w http.ResponseWriter, r *http.Request, inst *
 			// La receta se valida antes de escribir: un cambio no válido deja la configuración como estaba. Solo si
 			// cambia, para no impedir desactivar un punto que ya tenía otro error.
 			if len(cambio.Esquema) > 0 || cambio.Respaldo != nil || cambio.Permitidos != nil || len(cambio.Presupuesto) > 0 || cambio.Reintentos != nil {
-				normalizado, err := NormalizarPunto(lista[i], inst.ID, s.opc.Puerto)
+				normalizado, err := normalizarPunto(lista[i], inst.ID, s.opc.Puerto)
 				if err != nil {
 					return nil, err
 				}

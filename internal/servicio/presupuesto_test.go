@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
 )
@@ -132,11 +133,11 @@ func TestPresupuestoInstanciaUI(t *testing.T) {
 
 func TestNormalizarPresupuestoNegativo(t *testing.T) {
 	p := ConfigPunto{Nombre: "x", Presupuesto: &nucleo.Presupuesto{Diario: nucleo.Limites{Tokens: -1}}}
-	if _, err := NormalizarPunto(p, "global", 17373); nucleo.CodigoDe(err) != nucleo.CodigoConfiguracionInvalida {
+	if _, err := normalizarPunto(p, "global", 17373); nucleo.CodigoDe(err) != nucleo.CodigoConfiguracionInvalida {
 		t.Fatalf("límite negativo: %v", err)
 	}
 	vacio := ConfigPunto{Nombre: "x", Presupuesto: &nucleo.Presupuesto{}}
-	if n, err := NormalizarPunto(vacio, "global", 17373); err != nil || n.Presupuesto != nil {
+	if n, err := normalizarPunto(vacio, "global", 17373); err != nil || n.Presupuesto != nil {
 		t.Fatalf("un presupuesto vacío se quita: %v %+v", err, n.Presupuesto)
 	}
 }
@@ -164,21 +165,21 @@ func TestRecrearAPINoHeredaConsumo(t *testing.T) {
 	// Como tramtai acceso eliminar y la terminal: EliminarPunto (archivo y clave) y después recargar.
 	rutaGlobal, _ := nucleo.RutaGlobal()
 	var anterior []ConfigPunto
-	if err := EditarPuntos(rutaGlobal, nucleo.OrigenGlobal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+	if err := configuracion.EditarPuntos(rutaGlobal, nucleo.OrigenGlobal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		anterior = slices.Clone(lista)
 		return lista, nil
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.EliminarPunto(rutaGlobal, nucleo.OrigenGlobal, "facturas"); err != nil {
+	if err := s.eliminarPunto(rutaGlobal, nucleo.OrigenGlobal, "facturas"); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.EliminarPunto(rutaGlobal, nucleo.OrigenGlobal, "facturas"); err == nil {
+	if err := s.eliminarPunto(rutaGlobal, nucleo.OrigenGlobal, "facturas"); err == nil {
 		t.Fatal("eliminar un punto que ya no existe debe dar error")
 	}
 	s.Recargar()
 	// Otra API con el mismo nombre empieza sin consumo.
-	if err := EditarPuntos(rutaGlobal, nucleo.OrigenGlobal, func([]ConfigPunto) ([]ConfigPunto, error) { return anterior, nil }); err != nil {
+	if err := configuracion.EditarPuntos(rutaGlobal, nucleo.OrigenGlobal, func([]ConfigPunto) ([]ConfigPunto, error) { return anterior, nil }); err != nil {
 		t.Fatal(err)
 	}
 	token, _ = RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "facturas"))

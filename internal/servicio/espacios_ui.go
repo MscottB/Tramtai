@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"tramtai/internal/api"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -27,7 +28,7 @@ func (s *Servicio) Espacios(ctx context.Context) []EspacioUI {
 	global, _ := nucleo.CargarConfiguracion("")
 	globales := map[string]int{} // APIs de la configuración global, por espacio
 	if global != nil {
-		if puntos, err := LeerPuntos(global.Lista("puntos_acceso")); err == nil {
+		if puntos, err := configuracion.LeerPuntos(global.Lista("puntos_acceso")); err == nil {
 			for _, p := range puntos {
 				globales[cmp.Or(p.Instancia, "global")]++
 			}
@@ -66,7 +67,7 @@ func puntosLocales(raiz string) []ConfigPunto {
 		return nil
 	}
 	lista, _ := capa.Valores["puntos_acceso"].([]any)
-	puntos, _ := LeerPuntos(lista)
+	puntos, _ := configuracion.LeerPuntos(lista)
 	return puntos
 }
 
@@ -216,7 +217,7 @@ func (s *Servicio) apisDe(id, raiz string) []string {
 		}
 	}
 	if global, err := nucleo.CargarConfiguracion(""); err == nil {
-		if puntos, err := LeerPuntos(global.Lista("puntos_acceso")); err == nil {
+		if puntos, err := configuracion.LeerPuntos(global.Lista("puntos_acceso")); err == nil {
 			for _, p := range puntos {
 				if p.Instancia == id {
 					nombres = append(nombres, p.Nombre)
