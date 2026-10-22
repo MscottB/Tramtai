@@ -1,4 +1,7 @@
-package nucleo
+// Package configuracion carga la configuración por capas (interna, global, proyecto, local y entorno) con su esquema
+// y edita los archivos YAML (config.yaml y local.yaml) conservando el resto del archivo y sus comentarios: cada cambio
+// se valida con el esquema antes de escribirse de forma atómica.
+package configuracion
 
 import (
 	"fmt"
@@ -15,6 +18,7 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	"tramtai/internal/idioma"
+	"tramtai/internal/nucleo"
 )
 
 // Origen identifica la capa de la que procede un valor: a mayor valor, mayor prioridad.
@@ -252,18 +256,8 @@ func CapaEntorno(entorno []string) (Capa, error) {
 	return capa, nil
 }
 
-// internosAgregados son los valores predeterminados que aportan otros paquetes (los de cada agente, desde su ficha):
-// nucleo no puede importarlos sin crear un ciclo.
-var internosAgregados = map[string]any{}
-
-// AgregarInternos añade valores predeterminados de diseño; no pisa los que ya define nucleo.
-func AgregarInternos(valores map[string]any) {
-	for clave, valor := range valores {
-		internosAgregados[clave] = valor
-	}
-}
-
-// Internos son los valores predeterminados de diseño (prioridad 1).
+// Internos son los valores predeterminados de diseño (prioridad 1). Los de cada agente no están aquí: los da
+// agentes.Internos() como otra capa interna, que quien carga la configuración pasa a CargarConfiguracion.
 func Internos() Capa {
 	valores := map[string]any{
 		"servicio.host":                               "127.0.0.1",
@@ -315,11 +309,6 @@ func Internos() Capa {
 		"conversion.maximo_carga_mb":                  50,
 		"conversion.maximo_salida_mb":                 20,
 		"conversion.maximo_descomprimido_mb":          200,
-	}
-	for clave, valor := range internosAgregados {
-		if _, propio := valores[clave]; !propio {
-			valores[clave] = valor
-		}
 	}
 	return Capa{Origen: OrigenInterno, Fuente: "interno", Valores: valores}
 }
@@ -499,7 +488,7 @@ func (c *Configuracion) Efectiva() []EntradaEfectiva {
 }
 
 // AplicarPredeterminados completa lo que la solicitud omite; sus campos explícitos prevalecen.
-func (c *Configuracion) AplicarPredeterminados(s SolicitudEjecucion) SolicitudEjecucion {
+func (c *Configuracion) AplicarPredeterminados(s nucleo.SolicitudEjecucion) nucleo.SolicitudEjecucion {
 	if s.Agente == "" {
 		s.Agente = c.Texto("predeterminados.agente")
 		// El modelo predeterminado va con su agente: si la solicitud eligió otro agente, usa el modelo de ese CLI.
@@ -507,7 +496,7 @@ func (c *Configuracion) AplicarPredeterminados(s SolicitudEjecucion) SolicitudEj
 			s.Modelo = c.Texto("predeterminados.modelo")
 			// Su esfuerzo también: solo cuando la petición no eligió agente, modelo ni perfil. Un valor escrito a mano
 			// que no es un nivel se ignora (el del agente) en lugar de rechazar todas las peticiones.
-			if e := c.Texto("predeterminados.esfuerzo"); s.Esfuerzo == "" && slices.Contains(NivelesEsfuerzo, e) {
+			if e := c.Texto("predeterminados.esfuerzo"); s.Esfuerzo == "" && slices.Contains(nucleo.NivelesEsfuerzo, e) {
 				s.Esfuerzo = e
 			}
 		}
@@ -548,7 +537,7 @@ func (c *Capa) validar(estricta bool) error {
 			global, _ := RutaGlobal()
 			if confiable < 0 {
 				confiable = 0
-				if g, err := CargarConfiguracion(""); err == nil && g.ProyectoConfiable(filepath.Dir(filepath.Dir(c.Fuente))) {
+				if g, err := CargarConfiguracion("", Capa{}); err == nil && g.ProyectoConfiable(filepath.Dir(filepath.Dir(c.Fuente))) {
 					confiable = 1
 				}
 			}
@@ -639,7 +628,7 @@ func limiteNoValido(valor any) bool {
 	case int:
 		return n < 0
 	case float64:
-		return !finitoNoNegativo(n)
+		return !nucleo.FinitoNoNegativo(n)
 	}
 	return false
 }
@@ -686,7 +675,7 @@ func convertir(tipo tipoValor, texto string) (any, error) {
 // errorConfiguracion indica archivo, propiedad y motivo sin revelar valores.
 func errorConfiguracion(fuente, clave, motivo string) error {
 	if clave == "" {
-		return NuevoError(CodigoConfiguracionInvalida, fuente+": "+motivo)
+		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, fuente+": "+motivo)
 	}
-	return NuevoError(CodigoConfiguracionInvalida, fmt.Sprintf("%s: %s: %s", fuente, clave, motivo))
+	return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, fmt.Sprintf("%s: %s: %s", fuente, clave, motivo))
 }

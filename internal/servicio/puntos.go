@@ -125,7 +125,7 @@ func validarRespaldo(p ConfigPunto, existe func(agente string) bool) error {
 // ValidarParaApps rechaza al guardar una API que use (como agente o en el respaldo) un agente que no se permite en apps
 // (adaptadores.<nombre>.permitir_apps): sus peticiones se rechazarían todas. La usan la Web UI y la terminal.
 func validarParaApps(p ConfigPunto) error {
-	c, _ := nucleo.CargarConfiguracion("") // sin configuración, solo cuenta la ficha de cada agente
+	c, _ := configuracion.CargarConfiguracion("", agentes.Internos()) // sin configuración, solo cuenta la ficha de cada agente
 	usados := []string{p.Agente}
 	for _, e := range p.Respaldo {
 		agente, _, _ := nucleo.DividirRespaldo(e)
@@ -155,7 +155,7 @@ func validarPunto(p ConfigPunto, existe func(string) bool) error {
 // eliminarPunto quita un punto de acceso del archivo y borra su clave y su consumo, antes de recargar: otro con el mismo
 // nombre no hereda ni la clave ni el presupuesto gastado. El consumo vive en la base de su espacio: si no está activo,
 // se queda.
-func (s *Servicio) eliminarPunto(ruta string, origen nucleo.Origen, nombre string) error {
+func (s *Servicio) eliminarPunto(ruta string, origen configuracion.Origen, nombre string) error {
 	err := configuracion.EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		i := slices.IndexFunc(lista, func(p ConfigPunto) bool { return p.Nombre == nombre })
 		if i < 0 {
@@ -262,8 +262,8 @@ func (s *Servicio) puntosDeseados() ([]candidato, []string) {
 			}
 		}
 	}
-	rutaGlobal, _ := nucleo.RutaGlobal()
-	if global, err := nucleo.CargarConfiguracion(""); err != nil {
+	rutaGlobal, _ := configuracion.RutaGlobal()
+	if global, err := configuracion.CargarConfiguracion("", agentes.Internos()); err != nil {
 		errores = append(errores, nucleo.MensajeDe(err))
 	} else {
 		agregar(global.Lista("puntos_acceso"), "global", rutaGlobal)
@@ -279,7 +279,7 @@ func (s *Servicio) puntosDeseados() ([]candidato, []string) {
 	sort.Slice(proyectos, func(i, j int) bool { return proyectos[i].ID < proyectos[j].ID })
 	for _, inst := range proyectos {
 		ruta := filepath.Join(inst.Raiz, ".tramtai", "local.yaml")
-		capa, err := nucleo.CargarCapa(ruta, nucleo.OrigenLocal)
+		capa, err := configuracion.CargarCapa(ruta, configuracion.OrigenLocal)
 		if err != nil {
 			errores = append(errores, nucleo.MensajeDe(err))
 			continue
@@ -384,10 +384,10 @@ func presupuestoInstancia(inst *Instancia) nucleo.Presupuesto {
 	if inst.Ambito == "proyecto" {
 		raiz = inst.Raiz
 	}
-	if c, err := nucleo.CargarConfiguracion(raiz); err == nil {
-		return nucleo.PresupuestoDe(c)
+	if c, err := configuracion.CargarConfiguracion(raiz, agentes.Internos()); err == nil {
+		return configuracion.PresupuestoDe(c)
 	}
-	return nucleo.PresupuestoDe(inst.Config)
+	return configuracion.PresupuestoDe(inst.Config)
 }
 
 func firmaPunto(cfg ConfigPunto, huella string) string {

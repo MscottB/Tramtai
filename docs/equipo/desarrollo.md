@@ -149,7 +149,8 @@ job «Ejemplos» del CI). En local necesita Python con `openai` y `requests` (`T
 
 ```
 cmd/tramtai/           CLI (Cobra); sin argumentos abre la terminal interactiva
-internal/nucleo/       estados, solicitud, errores, configuración por capas y perfiles
+internal/nucleo/       estados, solicitud, trabajo, errores y presupuestos
+internal/carpetas/     raíz del usuario (normal o portable), permisos de sus carpetas y comparación de rutas
 internal/persistencia/ SQLite (trabajos, eventos, idempotencia, retención)
 internal/planificador/ cola, concurrencia, cancelación, drenaje y recuperación
 internal/procesos/     supervisión de procesos (Job Objects / grupos Unix)
@@ -159,7 +160,7 @@ internal/documentos/   cargas, formatos admitidos, conversión con markitdown y 
 internal/salidas/      validación JSON Schema
 internal/api/          HTTP: API nativa, SSE y fachadas OpenAI/Anthropic
 internal/servicio/     servicio único: instancias, puntos de acceso, Web UI y entrada local
-internal/configuracion/ edición de config.yaml y local.yaml conservando comentarios, y escritura atómica
+internal/configuracion/ configuración por capas y perfiles; edición de config.yaml y local.yaml y escritura atómica
 internal/cliente/      cliente del servicio (CLI, terminal y escritorio)
 internal/tui/          terminal interactiva (Bubble Tea)
 internal/recursos/     Web UI compilada (go:embed)

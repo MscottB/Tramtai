@@ -12,7 +12,9 @@ import (
 	"testing"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes"
 	"tramtai/internal/cliente"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/planificador"
 	"tramtai/internal/servicio"
@@ -80,7 +82,7 @@ func arrancar(t *testing.T, agente adaptadores.Adaptador, ajustar func(*servicio
 	}
 	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
 	datos := filepath.Join(dir, "datos")
-	c, err := nucleo.CargarConfiguracion("")
+	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	if err != nil {
 		t.Fatal(err)
 	}

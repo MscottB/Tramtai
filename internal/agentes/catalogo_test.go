@@ -8,6 +8,7 @@ import (
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes/claude"
 	"tramtai/internal/agentes/gemini"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/credenciales"
 	"tramtai/internal/nucleo"
 )
@@ -42,14 +43,14 @@ func TestFichasCompletas(t *testing.T) {
 			t.Errorf("%s: el almacén no admite %s (credenciales.Nombres)", f.Nombre, f.VariablesClave[0])
 		}
 		// Admitir la suscripción en la ficha exige que el adaptador la cambie en marcha (ConAutenticacion).
-		if _, cambia := f.Crear(nucleo.Resolver()).(adaptadores.ConAutenticacion); cambia != slices.Contains(f.Autenticaciones, adaptadores.AutenticacionSuscripcion) {
+		if _, cambia := f.Crear(configuracion.Resolver(Internos())).(adaptadores.ConAutenticacion); cambia != slices.Contains(f.Autenticaciones, adaptadores.AutenticacionSuscripcion) {
 			t.Errorf("%s: la ficha dice suscripción=%v y el adaptador ConAutenticacion=%v", f.Nombre, !cambia, cambia)
 		}
 	}
 }
 
 func TestRegistroYValoresPredeterminados(t *testing.T) {
-	c := nucleo.Resolver()
+	c := configuracion.Resolver(Internos())
 	registro, limites := Registro(c)
 	for _, f := range Todos() {
 		if registro[f.Nombre] == nil || limites[f.Nombre] != f.Concurrencia {
@@ -58,6 +59,19 @@ func TestRegistroYValoresPredeterminados(t *testing.T) {
 		if f.Comando != "" && c.Texto("comandos_agentes."+f.Nombre) != f.Comando {
 			t.Errorf("%s: comando predeterminado %q", f.Nombre, c.Texto("comandos_agentes."+f.Nombre))
 		}
+	}
+}
+
+// La capa de los agentes no pisa los valores predeterminados de configuracion, que no saben de agentes.
+func TestInternosNoPisanLosDeConfiguracion(t *testing.T) {
+	propios := configuracion.Internos().Valores
+	for clave := range Internos().Valores {
+		if _, repetida := propios[clave]; repetida {
+			t.Errorf("%s está en las dos capas internas", clave)
+		}
+	}
+	if len(Internos().Valores) == 0 {
+		t.Fatal("la capa de los agentes está vacía")
 	}
 }
 
@@ -127,11 +141,11 @@ func TestSuscripcionYApps(t *testing.T) {
 	if !AdmiteSuscripcion("claude") || !AdmiteSuscripcion("codex") || !AdmiteSuscripcion("copilot") || AdmiteSuscripcion("gemini") || AdmiteSuscripcion("antigravity") {
 		t.Fatal("solo Claude, Codex y Copilot admiten la suscripción")
 	}
-	c := nucleo.Resolver()
+	c := configuracion.Resolver()
 	if PermitidoEnApps(c, "antigravity") || !PermitidoEnApps(c, "claude") || !PermitidoEnApps(c, "simulado") {
 		t.Fatal("Antigravity no se permite en apps; los demás sí")
 	}
-	c = nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"adaptadores.antigravity.permitir_apps": true}})
+	c = configuracion.Resolver(configuracion.Capa{Origen: configuracion.OrigenGlobal, Valores: map[string]any{"adaptadores.antigravity.permitir_apps": true}})
 	if !PermitidoEnApps(c, "antigravity") {
 		t.Fatal("permitir_apps habilita Antigravity")
 	}

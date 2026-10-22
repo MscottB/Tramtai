@@ -6,6 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
@@ -54,7 +55,7 @@ type Conexiones struct {
 }
 
 // NuevasConexiones lee de la configuración qué agentes están desconectados (c nil: ninguno).
-func NuevasConexiones(c *nucleo.Configuracion, agentes []string) *Conexiones {
+func NuevasConexiones(c *configuracion.Configuracion, agentes []string) *Conexiones {
 	m := map[string]bool{}
 	for _, agente := range agentes {
 		if c != nil && c.Booleano("adaptadores."+agente+".desconectado") {

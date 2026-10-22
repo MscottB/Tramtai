@@ -184,7 +184,7 @@ var (
 	// NivelesEsfuerzo, de menor a mayor.
 	NivelesEsfuerzo = []string{"bajo", "medio", "alto", "muy_alto", "maximo"}
 	// El modelo es una cadena validada por tamaño y formato técnico, no un enum cerrado.
-	reIdentificador = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,127}$`)
+	ReIdentificador = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,127}$`)
 	// reParte es un agente o un modelo sin barra: cada mitad de una entrada de respaldo.
 	reParte = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:@-]{0,127}$`)
 )
@@ -198,7 +198,7 @@ func (s SolicitudEjecucion) Validar() error {
 		return invalida(idioma.T("modelo y perfil_modelo son excluyentes"))
 	}
 	for campo, valor := range map[string]string{"agente": s.Agente, "modelo": s.Modelo, "perfil_modelo": s.PerfilModelo} {
-		if valor != "" && !reIdentificador.MatchString(valor) {
+		if valor != "" && !ReIdentificador.MatchString(valor) {
 			return invalida(idioma.Tf("%s con formato no válido", campo))
 		}
 	}

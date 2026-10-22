@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes"
 	"tramtai/internal/api"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
@@ -39,7 +40,7 @@ func entorno(t *testing.T, global, local string, agente adaptadores.Adaptador) (
 	if local != "" {
 		os.WriteFile(filepath.Join(proyecto, ".tramtai", "local.yaml"), []byte(local), 0o600)
 	}
-	c, err := nucleo.CargarConfiguracion("")
+	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,8 +167,8 @@ func TestPuntosDeAcceso(t *testing.T) {
 		t.Fatalf("puerto propio con modelo forzado: %d %s", r.StatusCode, cuerpo)
 	}
 	// Al cambiar el punto se reabre en el mismo puerto: el anterior lo libera antes.
-	rutaGlobal, _ := nucleo.RutaGlobal()
-	if err := configuracion.EditarPuntos(rutaGlobal, nucleo.OrigenGlobal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+	rutaGlobal, _ := configuracion.RutaGlobal()
+	if err := configuracion.EditarPuntos(rutaGlobal, configuracion.OrigenGlobal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		lista[1].Modelo = "m8"
 		return lista, nil
 	}); err != nil {
@@ -213,8 +214,8 @@ func TestRecargarSinTocarLosDemas(t *testing.T) {
 	s, ts, _ := entorno(t, "puntos_acceso:\n  - nombre: uno\n  - nombre: dos\n", "", adaptadores.Simulado{})
 	s.ActivarGlobal()
 	antes := s.puntos["uno"]
-	rutaGlobal, _ := nucleo.RutaGlobal()
-	if err := configuracion.EditarPuntos(rutaGlobal, nucleo.OrigenGlobal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+	rutaGlobal, _ := configuracion.RutaGlobal()
+	if err := configuracion.EditarPuntos(rutaGlobal, configuracion.OrigenGlobal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		falso := false
 		lista[1].Activo = &falso
 		return lista, nil

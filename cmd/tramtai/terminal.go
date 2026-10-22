@@ -5,7 +5,10 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"tramtai/internal/agentes"
+	"tramtai/internal/carpetas"
 	"tramtai/internal/cliente"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/servicio"
@@ -18,7 +21,7 @@ func comandoTerminal() *cobra.Command {
 }
 
 func abrirTerminal() error {
-	datos, err := nucleo.DirDatos()
+	datos, err := carpetas.DirDatos()
 	if err != nil {
 		return err
 	}
@@ -34,7 +37,7 @@ func abrirTerminal() error {
 		return c, err
 	}}
 	if raiz := raizProyecto(); raiz != "" {
-		if cfg, err := nucleo.CargarConfiguracion(raiz); err == nil {
+		if cfg, err := configuracion.CargarConfiguracion(raiz, agentes.Internos()); err == nil {
 			o.Proyecto, o.IDProyecto = raiz, servicio.IDDeCarpeta(datos, raiz, cfg)
 		}
 	}

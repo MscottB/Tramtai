@@ -2,7 +2,7 @@ package antigravity
 
 import (
 	"tramtai/internal/adaptadores"
-	"tramtai/internal/nucleo"
+	"tramtai/internal/configuracion"
 )
 
 // Ficha es la de Antigravity (agy) para el catálogo de agentes. Solo con la clave de la Gemini API. No se usa desde apps ni
@@ -15,7 +15,7 @@ var Ficha = adaptadores.Ficha{
 	VariablesClave:  []string{"GEMINI_API_KEY"},
 	Comando:         "agy", Concurrencia: 1,
 	URLInstalacion: "https://antigravity.google",
-	Crear: func(c *nucleo.Configuracion) adaptadores.Adaptador {
+	Crear: func(c *configuracion.Configuracion) adaptadores.Adaptador {
 		return Antigravity{Programa: c.Texto("comandos_agentes.antigravity"), Autenticacion: c.Texto("adaptadores.antigravity.autenticacion")}
 	},
 }

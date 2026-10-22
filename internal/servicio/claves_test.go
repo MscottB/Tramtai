@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"tramtai/internal/nucleo"
+	"tramtai/internal/agentes"
+	"tramtai/internal/configuracion"
 )
 
 // Una clave que existe pero no se puede usar (truncada, a medias) no se rota en silencio: las apps recibirían 401 sin
@@ -34,7 +34,7 @@ func TestClaveIlegibleNoSeRota(t *testing.T) {
 func TestClaveDeEntornoCorta(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("TRAMTAI_CONFIG_GLOBAL", filepath.Join(dir, "config.yaml"))
-	c, err := nucleo.CargarConfiguracion("")
+	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	if err != nil {
 		t.Fatal(err)
 	}

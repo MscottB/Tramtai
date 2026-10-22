@@ -9,7 +9,8 @@ import (
 	"time"
 
 	"tramtai/internal/adaptadores"
-	"tramtai/internal/nucleo"
+	"tramtai/internal/agentes"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/planificador"
 )
 
@@ -22,7 +23,7 @@ func servicioConversor(t *testing.T, preparar bool) (*Servicio, string) {
 	global := filepath.Join(dir, "config.yaml")
 	os.WriteFile(global, []byte("predeterminados:\n  agente: simulado\n"), 0o600)
 	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
-	c, err := nucleo.CargarConfiguracion("")
+	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -12,6 +12,9 @@ import (
 	"testing"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes"
+	"tramtai/internal/carpetas"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/nucleo"
 )
@@ -82,7 +85,7 @@ func TestAdminUbicar(t *testing.T) {
 	r, cuerpo := admin(t, s, ts.URL, "POST", ruta, `{"ruta":`+strconv.Quote(nueva)+`}`)
 	real, _ := filepath.EvalSymlinks(nueva) // el servicio guarda la ruta real
 	e := espacioRespondido(t, cuerpo)
-	if r.StatusCode != 200 || e.ID != inst.ID || e.Estado != "activo" || !nucleo.MismaRuta(e.Ruta, real) {
+	if r.StatusCode != 200 || e.ID != inst.ID || e.Estado != "activo" || !carpetas.MismaRuta(e.Ruta, real) {
 		t.Fatalf("ubicar: %d %s", r.StatusCode, cuerpo)
 	}
 	if LeerMarca(nueva) != inst.ID || !registroEnDisco(t, s)[inst.ID].Activo {
@@ -140,7 +143,7 @@ func TestAdminAutenticacion(t *testing.T) {
 	if r, cuerpo := admin(t, s, ts.URL, "PUT", ruta, `{"modo":"suscripcion"}`); r.StatusCode != 204 || modo.Valor() != adaptadores.AutenticacionSuscripcion {
 		t.Fatalf("suscripción: %d %s", r.StatusCode, cuerpo)
 	}
-	g, _ := nucleo.CargarConfiguracion("")
+	g, _ := configuracion.CargarConfiguracion("", agentes.Internos())
 	if g.Texto("adaptadores.claude.autenticacion") != adaptadores.AutenticacionSuscripcion {
 		t.Fatal("el modo se guarda en la configuración global")
 	}
@@ -213,7 +216,7 @@ func TestAdminPuerto(t *testing.T) {
 	if r, texto := admin(t, s, ts.URL, "PUT", "/api/v1/servicio/puerto", `{"puerto":0,"automatico":false}`); r.StatusCode != 204 {
 		t.Fatalf("solo el automático: %d %s", r.StatusCode, texto)
 	}
-	c, err := nucleo.CargarConfiguracion("")
+	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	if err != nil {
 		t.Fatal(err)
 	}

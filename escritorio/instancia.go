@@ -6,14 +6,13 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-
-	"tramtai/internal/nucleo"
+	"tramtai/internal/carpetas"
 )
 
 // carpetaCopia es la carpeta de esta copia: en la portable, la de su raíz (ya resuelta, sin nombres cortos ni enlaces),
 // para que la misma portable lanzada por otro camino no abra una segunda instancia sobre los mismos datos.
 func carpetaCopia(ejecutable, raiz string) string {
-	if raiz != "" && filepath.Base(raiz) == nucleo.CarpetaPortable {
+	if raiz != "" && filepath.Base(raiz) == carpetas.CarpetaPortable {
 		return filepath.Dir(raiz)
 	}
 	return filepath.Dir(ejecutable)

@@ -1,6 +1,6 @@
 package adaptadores
 
-import "tramtai/internal/nucleo"
+import "tramtai/internal/configuracion"
 
 // Ficha describe un agente para el catálogo (internal/agentes): cómo se llama y se ve, qué admite y cómo se crea.
 // Cada módulo de internal/agentes/<nombre> declara la suya; el resto del código pregunta al catálogo en lugar de
@@ -44,5 +44,5 @@ type Ficha struct {
 	// URLInstalacion es dónde se instala o se consigue su clave.
 	URLInstalacion string
 	// Crear construye el adaptador con la configuración efectiva.
-	Crear func(c *nucleo.Configuracion) Adaptador
+	Crear func(c *configuracion.Configuracion) Adaptador
 }

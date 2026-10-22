@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes"
+	"tramtai/internal/carpetas"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/nucleo"
 )
@@ -111,7 +113,7 @@ func TestMoverConMarca(t *testing.T) {
 	if despues.ID != antes.ID || despues.token != token {
 		t.Fatalf("al mover debía conservar id y token: %s %s", antes.ID, despues.ID)
 	}
-	if e, _ := s.registro().buscar(antes.ID); !nucleo.MismaRuta(e.Ruta, nueva) {
+	if e, _ := s.registro().buscar(antes.ID); !carpetas.MismaRuta(e.Ruta, nueva) {
 		t.Fatalf("ruta del registro: %q", e.Ruta)
 	}
 }
@@ -149,7 +151,7 @@ func TestMarcaAjenaNoAdopta(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		c, _ := nucleo.CargarConfiguracion(dir)
+		c, _ := configuracion.CargarConfiguracion(dir, agentes.Internos())
 		if inst.ID == marca || inst.ID != IDProyecto(dir, c) || LeerMarca(dir) != inst.ID {
 			t.Fatalf("marca %q adoptada: id %s, marca ahora %q", marca, inst.ID, LeerMarca(dir))
 		}
@@ -269,7 +271,7 @@ func proyectoConDatos(t *testing.T, s *Servicio, base string) *Instancia {
 	if r, cuerpo := pedir(t, base, "POST", "/api/v1/ejecutar", inst.token, hola); r.StatusCode != 200 {
 		t.Fatalf("petición: %d %s", r.StatusCode, cuerpo)
 	}
-	err = configuracion.EditarPuntos(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+	err = configuracion.EditarPuntos(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), configuracion.OrigenLocal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		return append(lista, ConfigPunto{Nombre: "asistente"}), nil
 	})
 	if err != nil {
@@ -485,7 +487,7 @@ func TestIDDeCarpetaNoAdoptaLaMarcaDeOtro(t *testing.T) {
 	os.MkdirAll(filepath.Join(copia, ".tramtai"), 0o700)
 	os.WriteFile(filepath.Join(copia, ".tramtai", "config.yaml"), []byte("version: 1\nproyecto:\n  nombre: Demo App\n"), 0o600)
 	os.WriteFile(filepath.Join(copia, ".tramtai", "espacio"), []byte(inst.ID), 0o600)
-	c, _ := nucleo.CargarConfiguracion(copia)
+	c, _ := configuracion.CargarConfiguracion(copia, agentes.Internos())
 	if id := IDDeCarpeta(s.opc.Datos, copia, c); id == inst.ID {
 		t.Fatalf("la copia tomó el espacio del original %s", id)
 	}

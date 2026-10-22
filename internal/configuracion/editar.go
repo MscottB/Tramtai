@@ -1,5 +1,3 @@
-// Package configuracion edita los archivos de configuración YAML (config.yaml y local.yaml) conservando el resto del
-// archivo y sus comentarios: cada cambio se valida con el esquema de nucleo antes de escribirse de forma atómica.
 package configuracion
 
 import (
@@ -36,7 +34,7 @@ func LeerPuntos(lista []any) ([]contrato.ConfigPunto, error) {
 
 // EditarPuntos modifica la lista puntos_acceso de un archivo YAML conservando el resto del archivo y sus
 // comentarios. Si el resultado no es una configuración válida, deja el archivo como estaba.
-func EditarPuntos(ruta string, origen nucleo.Origen, editar func([]contrato.ConfigPunto) ([]contrato.ConfigPunto, error)) error {
+func EditarPuntos(ruta string, origen Origen, editar func([]contrato.ConfigPunto) ([]contrato.ConfigPunto, error)) error {
 	return editarYAML(ruta, origen, func(raiz *yaml.Node) error {
 		indice := -1
 		var lista []any
@@ -74,7 +72,7 @@ func EditarPuntos(ruta string, origen nucleo.Origen, editar func([]contrato.Conf
 
 // FijarValor escribe una clave con puntos (adaptadores.claude.autenticacion) en un archivo YAML, creando los
 // mapas que falten y conservando el resto del archivo y sus comentarios.
-func FijarValor(ruta string, origen nucleo.Origen, clave string, valor any) error {
+func FijarValor(ruta string, origen Origen, clave string, valor any) error {
 	return editarYAML(ruta, origen, func(nodo *yaml.Node) error {
 		partes := strings.Split(clave, ".")
 		for i, parte := range partes {
@@ -107,7 +105,7 @@ func FijarValor(ruta string, origen nucleo.Origen, clave string, valor any) erro
 
 // QuitarValor borra una clave con puntos de un archivo YAML (si está), conservando el resto del archivo y sus
 // comentarios: «Volver al de Global» quita el valor propio del proyecto.
-func QuitarValor(ruta string, origen nucleo.Origen, clave string) error {
+func QuitarValor(ruta string, origen Origen, clave string) error {
 	return editarYAML(ruta, origen, func(nodo *yaml.Node) error {
 		partes := strings.Split(clave, ".")
 		for i, parte := range partes {
@@ -138,7 +136,7 @@ var muYAML sync.Mutex
 // editarYAML aplica editar a la raíz de un archivo YAML y lo guarda; si el resultado no es una configuración
 // válida, no toca el archivo. El resultado se valida antes de escribir y se escribe de forma atómica: quien lo lee a
 // la vez nunca ve un YAML a medias.
-func editarYAML(ruta string, origen nucleo.Origen, editar func(raiz *yaml.Node) error) error {
+func editarYAML(ruta string, origen Origen, editar func(raiz *yaml.Node) error) error {
 	muYAML.Lock()
 	defer muYAML.Unlock()
 	original, err := os.ReadFile(ruta)
@@ -165,7 +163,7 @@ func editarYAML(ruta string, origen nucleo.Origen, editar func(raiz *yaml.Node) 
 	if err != nil {
 		return err
 	}
-	if err := nucleo.ValidarCambio(original, salida, ruta, origen); err != nil {
+	if err := ValidarCambio(original, salida, ruta, origen); err != nil {
 		return err
 	}
 	return EscribirAtomico(ruta, salida, 0o600)

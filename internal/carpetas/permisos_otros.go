@@ -1,6 +1,6 @@
 //go:build !windows
 
-package nucleo
+package carpetas
 
 import "os"
 

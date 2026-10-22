@@ -140,7 +140,7 @@ func RutaTokenPunto(datos, nombre string) string {
 }
 
 // TokenInstancia devuelve el token de la instancia y su origen; el global puede venir de una variable de entorno.
-func TokenInstancia(datos, id string, c *nucleo.Configuracion) (valor, origen string, err error) {
+func TokenInstancia(datos, id string, c *configuracion.Configuracion) (valor, origen string, err error) {
 	if id == "global" {
 		if variable := c.Texto("instancia_global.token_variable_entorno"); variable != "" {
 			if v := os.Getenv(variable); v != "" {

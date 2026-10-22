@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"tramtai/internal/contrato"
-	"tramtai/internal/nucleo"
 )
 
 // Si falta un tramo intermedio de la clave, QuitarValor no toca nada: no puede borrar una clave de otro nivel que se
@@ -19,13 +18,13 @@ func TestQuitarValorSinTramoIntermedio(t *testing.T) {
 	ruta := filepath.Join(t.TempDir(), "local.yaml")
 	original := "retencion:\n  horas_resultado: 5\n"
 	os.WriteFile(ruta, []byte(original), 0o600)
-	if err := QuitarValor(ruta, nucleo.OrigenLocal, "servicio.retencion.horas_resultado"); err != nil {
+	if err := QuitarValor(ruta, OrigenLocal, "servicio.retencion.horas_resultado"); err != nil {
 		t.Fatal(err)
 	}
 	if datos, _ := os.ReadFile(ruta); !strings.Contains(string(datos), "horas_resultado: 5") {
 		t.Fatalf("se borró retencion.horas_resultado al quitar servicio.retencion.horas_resultado:\n%s", datos)
 	}
-	if err := QuitarValor(ruta, nucleo.OrigenLocal, "retencion.horas_resultado"); err != nil {
+	if err := QuitarValor(ruta, OrigenLocal, "retencion.horas_resultado"); err != nil {
 		t.Fatal(err)
 	}
 	if datos, _ := os.ReadFile(ruta); strings.Contains(string(datos), "horas_resultado") {
@@ -36,7 +35,7 @@ func TestQuitarValorSinTramoIntermedio(t *testing.T) {
 func TestEditarPuntosConservaComentarios(t *testing.T) {
 	ruta := filepath.Join(t.TempDir(), "config.yaml")
 	os.WriteFile(ruta, []byte("# mi configuración\nservicio:\n  puerto: 17373 # fijo\n"), 0o600)
-	err := EditarPuntos(ruta, nucleo.OrigenGlobal, func(l []contrato.ConfigPunto) ([]contrato.ConfigPunto, error) {
+	err := EditarPuntos(ruta, OrigenGlobal, func(l []contrato.ConfigPunto) ([]contrato.ConfigPunto, error) {
 		return append(l, contrato.ConfigPunto{Nombre: "nuevo", Puerto: 17401, Agente: "claude"}), nil
 	})
 	if err != nil {
@@ -46,7 +45,7 @@ func TestEditarPuntosConservaComentarios(t *testing.T) {
 	if !strings.Contains(string(datos), "# mi configuración") || !strings.Contains(string(datos), "# fijo") || !strings.Contains(string(datos), "puerto: 17401") {
 		t.Fatalf("archivo:\n%s", datos)
 	}
-	if err := EditarPuntos(ruta, nucleo.OrigenProyecto, func(l []contrato.ConfigPunto) ([]contrato.ConfigPunto, error) { return l, nil }); err == nil {
+	if err := EditarPuntos(ruta, OrigenProyecto, func(l []contrato.ConfigPunto) ([]contrato.ConfigPunto, error) { return l, nil }); err == nil {
 		t.Fatal("puntos_acceso en la configuración versionada debe rechazarse")
 	}
 	if datos2, _ := os.ReadFile(ruta); string(datos2) != string(datos) {
@@ -58,17 +57,17 @@ func TestFijarValor(t *testing.T) {
 	ruta := filepath.Join(t.TempDir(), "config.yaml")
 	os.WriteFile(ruta, []byte("# mi configuración\nadaptadores:\n  codex:\n    autenticacion: clave_api # comentario\n"), 0o600)
 	for _, agente := range []string{"claude", "codex"} {
-		if err := FijarValor(ruta, nucleo.OrigenGlobal, "adaptadores."+agente+".autenticacion", "suscripcion"); err != nil {
+		if err := FijarValor(ruta, OrigenGlobal, "adaptadores."+agente+".autenticacion", "suscripcion"); err != nil {
 			t.Fatal(err)
 		}
 	}
-	capa, err := nucleo.CargarCapa(ruta, nucleo.OrigenGlobal)
+	capa, err := CargarCapa(ruta, OrigenGlobal)
 	datos, _ := os.ReadFile(ruta)
 	if err != nil || capa.Valores["adaptadores.claude.autenticacion"] != "suscripcion" || capa.Valores["adaptadores.codex.autenticacion"] != "suscripcion" ||
 		!strings.Contains(string(datos), "# mi configuración") {
 		t.Fatalf("%v %v\n%s", err, capa.Valores, datos)
 	}
-	if err := FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto", "abc"); err == nil {
+	if err := FijarValor(ruta, OrigenGlobal, "servicio.puerto", "abc"); err == nil {
 		t.Fatal("un valor no válido debe rechazarse")
 	}
 	if datos2, _ := os.ReadFile(ruta); string(datos2) != string(datos) {
@@ -82,7 +81,7 @@ func TestEditarPuntosConcurrente(t *testing.T) {
 	var grupo sync.WaitGroup
 	for i := range 20 {
 		grupo.Go(func() {
-			err := EditarPuntos(ruta, nucleo.OrigenGlobal, func(l []contrato.ConfigPunto) ([]contrato.ConfigPunto, error) {
+			err := EditarPuntos(ruta, OrigenGlobal, func(l []contrato.ConfigPunto) ([]contrato.ConfigPunto, error) {
 				return append(l, contrato.ConfigPunto{Nombre: "p" + strconv.Itoa(i), Puerto: 17500 + i, Agente: "claude"}), nil
 			})
 			if err != nil {
@@ -91,7 +90,7 @@ func TestEditarPuntosConcurrente(t *testing.T) {
 		})
 	}
 	grupo.Wait()
-	capa, err := nucleo.CargarCapa(ruta, nucleo.OrigenGlobal)
+	capa, err := CargarCapa(ruta, OrigenGlobal)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +106,7 @@ func TestFijarValorInvalidoNoEscribe(t *testing.T) {
 	ruta := filepath.Join(dir, "config.yaml")
 	original := []byte("# mía\nservicio:\n  puerto: 17373\n")
 	os.WriteFile(ruta, original, 0o600)
-	if err := FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto", "no es un número"); err == nil {
+	if err := FijarValor(ruta, OrigenGlobal, "servicio.puerto", "no es un número"); err == nil {
 		t.Fatal("se aceptó un puerto que no es un número")
 	}
 	if datos, _ := os.ReadFile(ruta); string(datos) != string(original) {

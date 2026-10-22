@@ -30,7 +30,9 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/events"
 
 	"tramtai/internal/autoarranque"
+	"tramtai/internal/carpetas"
 	"tramtai/internal/cliente"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -69,18 +71,18 @@ func main() {
 	var recibir func(mensaje, origen string)
 	// La raíz se resuelve antes de crear la app: Wails cierra la app con su propio aviso si la carpeta del navegador no
 	// vale, y así el error de la portable (carpeta de solo lectura o temporal) se ve en la ventana, como los demás.
-	raizUsuario, errRaiz := nucleo.RaizUsuario()
+	raizUsuario, errRaiz := carpetas.RaizUsuario()
 	datosNavegador := "" // modo normal: el predeterminado de Wails
 	switch {
 	case errRaiz != nil:
 		// Una carpeta fija: la app solo enseña el error, y así no deja un perfil nuevo en %TEMP% en cada arranque.
 		datosNavegador = filepath.Join(os.TempDir(), "tramtai-navegador-error")
-	case nucleo.Portable():
+	case carpetas.Portable():
 		datosNavegador = filepath.Join(raizUsuario, "webview")
 	}
 	propio, _ := os.Executable()
 	nombre := "Tramtai"
-	if nucleo.Portable() {
+	if carpetas.Portable() {
 		nombre = idioma.T("Tramtai portable")
 	}
 	app := application.New(application.Options{
@@ -89,7 +91,7 @@ func main() {
 		Icon:        icono,
 		Windows:     application.WindowsOptions{WebviewUserDataPath: datosNavegador},
 		SingleInstance: &application.SingleInstanceOptions{
-			UniqueID: uniqueID(carpetaCopia(propio, raizUsuario), nucleo.Portable()),
+			UniqueID: uniqueID(carpetaCopia(propio, raizUsuario), carpetas.Portable()),
 			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
 				if ventana != nil {
 					ventana.Show()
@@ -269,7 +271,7 @@ func main() {
 			case accionReiniciar:
 				return func(*application.Context) {
 					ejecutable, err := buscarTramtai()
-					datos, errDatos := nucleo.DirDatos()
+					datos, errDatos := carpetas.DirDatos()
 					if err != nil || errDatos != nil {
 						return
 					}
@@ -315,7 +317,7 @@ func main() {
 	repasar = func() {
 		muMenu.Lock()
 		defer muMenu.Unlock()
-		datos, err := nucleo.DirDatos()
+		datos, err := carpetas.DirDatos()
 		if err != nil {
 			return
 		}
@@ -426,7 +428,7 @@ type preferencias struct {
 }
 
 func rutaPreferencias() (string, error) {
-	raiz, err := nucleo.RaizUsuario()
+	raiz, err := carpetas.RaizUsuario()
 	return filepath.Join(raiz, "escritorio.json"), err
 }
 
@@ -509,7 +511,7 @@ func codificar(img image.Image) []byte {
 // prepararSesion conecta con el servicio (o lo inicia), activa la instancia y obtiene una URL de entrada de un
 // solo uso: el token de la instancia nunca pasa por la ventana.
 func prepararSesion(proyecto string) (*sesionEscritorio, error) {
-	datos, err := nucleo.DirDatos()
+	datos, err := carpetas.DirDatos()
 	if err != nil {
 		return nil, err
 	}
@@ -527,7 +529,7 @@ func prepararSesion(proyecto string) (*sesionEscritorio, error) {
 	ambito := "global"
 	if proyecto != "" {
 		ambito = "proyecto"
-		if raiz, ok := nucleo.BuscarProyecto(proyecto); ok {
+		if raiz, ok := configuracion.BuscarProyecto(proyecto); ok {
 			proyecto = raiz
 		}
 	}
@@ -580,7 +582,7 @@ func buscarTramtai() (string, error) {
 			}
 		}
 	}
-	if nucleo.Portable() {
+	if carpetas.Portable() {
 		return "", errors.New(idioma.T("falta tramtai.exe junto a la aplicación portable: vuelve a descomprimir Tramtai"))
 	}
 	ruta, err := exec.LookPath(nombre)
@@ -593,7 +595,7 @@ func buscarTramtai() (string, error) {
 func paginaError(err error) string {
 	titulo, consejo := idioma.T("No se pudo conectar con el servicio de Tramtai"),
 		`<p>`+idioma.T("Prueba <code>tramtai servicio iniciar -d</code> en una terminal y vuelve a abrir la aplicación.")+`</p>`
-	if _, errRaiz := nucleo.RaizUsuario(); errRaiz != nil {
+	if _, errRaiz := carpetas.RaizUsuario(); errRaiz != nil {
 		// La carpeta de la copia no sirve (temporal, dentro del .zip o de solo lectura): el mensaje ya dice qué hacer.
 		titulo, consejo = idioma.T("Tramtai no puede usar esta carpeta"), ""
 	}

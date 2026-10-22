@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"tramtai/internal/agentes"
 	"tramtai/internal/api"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
@@ -173,10 +174,10 @@ func (s *Servicio) heredar(inst *Instancia, clave string) error {
 	if !slices.ContainsFunc(heredables, func(p string) bool { return strings.HasPrefix(clave, p) }) {
 		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("%s no se puede devolver al valor de Global desde aquí", clave))
 	}
-	if err := configuracion.QuitarValor(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, clave); err != nil {
+	if err := configuracion.QuitarValor(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), configuracion.OrigenLocal, clave); err != nil {
 		return err
 	}
-	c, err := nucleo.CargarConfiguracion(inst.Raiz)
+	c, err := configuracion.CargarConfiguracion(inst.Raiz, agentes.Internos())
 	if err != nil {
 		return err
 	}
@@ -186,19 +187,19 @@ func (s *Servicio) heredar(inst *Instancia, clave string) error {
 
 // archivoPuntos es donde se guardan los puntos nuevos de la instancia: la configuración global para la global y
 // .tramtai/local.yaml para un proyecto (nunca la versionada).
-func archivoPuntos(inst *Instancia) (string, nucleo.Origen, error) {
+func archivoPuntos(inst *Instancia) (string, configuracion.Origen, error) {
 	if inst.Ambito == "global" {
-		ruta, err := nucleo.RutaGlobal()
-		return ruta, nucleo.OrigenGlobal, err
+		ruta, err := configuracion.RutaGlobal()
+		return ruta, configuracion.OrigenGlobal, err
 	}
-	return filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, nil
+	return filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), configuracion.OrigenLocal, nil
 }
 
-func origenDeArchivo(ruta string) nucleo.Origen {
+func origenDeArchivo(ruta string) configuracion.Origen {
 	if strings.HasSuffix(filepath.ToSlash(ruta), ".tramtai/local.yaml") {
-		return nucleo.OrigenLocal
+		return configuracion.OrigenLocal
 	}
-	return nucleo.OrigenGlobal
+	return configuracion.OrigenGlobal
 }
 
 func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *Instancia) {
@@ -213,7 +214,7 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 		return
 	}
 	p.Instancia, p.Activo = "", nil
-	if origen == nucleo.OrigenGlobal && inst.ID != "global" {
+	if origen == configuracion.OrigenGlobal && inst.ID != "global" {
 		p.Instancia = inst.ID
 	}
 	if _, err := normalizarPunto(p, inst.ID, s.opc.Puerto); err != nil {

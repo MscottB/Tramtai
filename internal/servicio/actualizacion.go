@@ -45,11 +45,11 @@ func (s *Servicio) estadoActualizacion(ctx context.Context, ahora bool) map[stri
 
 // fijarBusqueda guarda servicio.buscar_actualizaciones en la configuración global y lo aplica sin reiniciar.
 func (s *Servicio) fijarBusqueda(buscar bool) error {
-	ruta, err := nucleo.RutaGlobal()
+	ruta, err := configuracion.RutaGlobal()
 	if err != nil {
 		return err
 	}
-	if err := configuracion.FijarValor(ruta, nucleo.OrigenGlobal, "servicio.buscar_actualizaciones", buscar); err != nil {
+	if err := configuracion.FijarValor(ruta, configuracion.OrigenGlobal, "servicio.buscar_actualizaciones", buscar); err != nil {
 		return err
 	}
 	s.buscar.Store(buscar)

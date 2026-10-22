@@ -18,11 +18,11 @@ import (
 // que también llegan a los puntos de una instancia inactiva o que no se pudieron abrir. Las reglas son las de la Web UI.
 
 // archivoAdmin es el archivo de puntos que pide la petición.
-func archivoAdmin(r *http.Request) (string, nucleo.Origen, error) {
+func archivoAdmin(r *http.Request) (string, configuracion.Origen, error) {
 	raiz := r.URL.Query().Get("proyecto")
 	if raiz == "" {
-		ruta, err := nucleo.RutaGlobal()
-		return ruta, nucleo.OrigenGlobal, err
+		ruta, err := configuracion.RutaGlobal()
+		return ruta, configuracion.OrigenGlobal, err
 	}
 	if !filepath.IsAbs(raiz) {
 		return "", 0, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("proyecto debe ser una ruta absoluta"))
@@ -30,15 +30,15 @@ func archivoAdmin(r *http.Request) (string, nucleo.Origen, error) {
 	if _, err := os.Stat(filepath.Join(raiz, ".tramtai", "config.yaml")); err != nil {
 		return "", 0, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("%s no es un proyecto de Tramtai (.tramtai/config.yaml)", raiz))
 	}
-	return filepath.Join(raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, nil
+	return filepath.Join(raiz, ".tramtai", "local.yaml"), configuracion.OrigenLocal, nil
 }
 
 // leerArchivoPuntos devuelve los puntos tal como están en el archivo (ninguno si no existe).
-func leerArchivoPuntos(ruta string, origen nucleo.Origen) ([]ConfigPunto, error) {
+func leerArchivoPuntos(ruta string, origen configuracion.Origen) ([]ConfigPunto, error) {
 	if _, err := os.Stat(ruta); os.IsNotExist(err) {
 		return nil, nil
 	}
-	capa, err := nucleo.CargarCapa(ruta, origen)
+	capa, err := configuracion.CargarCapa(ruta, origen)
 	if err != nil {
 		return nil, err
 	}

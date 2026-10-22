@@ -2,7 +2,7 @@ package gemini
 
 import (
 	"tramtai/internal/adaptadores"
-	"tramtai/internal/nucleo"
+	"tramtai/internal/configuracion"
 )
 
 // Ficha es la de la API de Gemini (sin CLI: Tramtai la llama directamente) para el catálogo de agentes.
@@ -14,5 +14,5 @@ var Ficha = adaptadores.Ficha{
 	VariablesClave:  []string{"GEMINI_API_KEY", "GOOGLE_API_KEY"},
 	Concurrencia:    2, PermitidoEnApps: true,
 	URLInstalacion: "https://aistudio.google.com/apikey",
-	Crear:          func(*nucleo.Configuracion) adaptadores.Adaptador { return Gemini{} },
+	Crear:          func(*configuracion.Configuracion) adaptadores.Adaptador { return Gemini{} },
 }

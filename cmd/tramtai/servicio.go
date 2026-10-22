@@ -21,6 +21,7 @@ import (
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
 	"tramtai/internal/autoarranque"
+	"tramtai/internal/carpetas"
 	"tramtai/internal/cliente"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/documentos"
@@ -38,7 +39,7 @@ func contexto() (context.Context, context.CancelFunc) {
 }
 
 func conectar() (*cliente.Cliente, error) {
-	datos, err := nucleo.DirDatos()
+	datos, err := carpetas.DirDatos()
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +48,7 @@ func conectar() (*cliente.Cliente, error) {
 
 // asegurarServicio conecta con el servicio o lo inicia en segundo plano.
 func asegurarServicio(cmd *cobra.Command) (*cliente.Cliente, error) {
-	datos, err := nucleo.DirDatos()
+	datos, err := carpetas.DirDatos()
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +73,7 @@ func confirmar(cmd *cobra.Command, pregunta string) bool {
 
 // esperarCierreServicio espera, como mucho dos minutos, a que el servicio en marcha termine (drena sus trabajos).
 func esperarCierreServicio() {
-	datos, err := nucleo.DirDatos()
+	datos, err := carpetas.DirDatos()
 	if err != nil {
 		return
 	}
@@ -86,7 +87,7 @@ func esperarCierreServicio() {
 
 // seguirRegistro muestra las últimas n líneas de servicio.log y, con seguir, lo que se añada hasta Ctrl+C.
 func seguirRegistro(cmd *cobra.Command, n int, seguir bool) error {
-	datos, err := nucleo.DirDatos()
+	datos, err := carpetas.DirDatos()
 	if err != nil {
 		return err
 	}
@@ -189,7 +190,7 @@ func comandoServicio() *cobra.Command {
 			}
 			// El servicio espera a los trabajos en curso hasta servicio.plazo_drenaje_segundos.
 			plazo := 30 * time.Second
-			if cfg, err := nucleo.CargarConfiguracion(""); err == nil {
+			if cfg, err := configuracion.CargarConfiguracion("", agentes.Internos()); err == nil {
 				plazo = time.Duration(cfg.Entero("servicio.plazo_drenaje_segundos")) * time.Second
 			}
 			inicio, avisado := time.Now(), false
@@ -274,7 +275,7 @@ func comandoServicio() *cobra.Command {
 	puertoCmd := &cobra.Command{Use: "puerto [número]", Short: idioma.T("Muestra o cambia el puerto del servicio; comprueba que esté libre y se aplica al reiniciar"),
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := nucleo.CargarConfiguracion("")
+			c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 			if err != nil {
 				return err
 			}
@@ -287,7 +288,7 @@ func comandoServicio() *cobra.Command {
 				}
 				return nil
 			}
-			ruta, err := nucleo.RutaGlobal()
+			ruta, err := configuracion.RutaGlobal()
 			if err != nil {
 				return err
 			}
@@ -308,7 +309,7 @@ func comandoServicio() *cobra.Command {
 			case len(args) == 1:
 				err = servicio.FijarPuerto(ruta, c.Texto("servicio.host"), puerto, automatico)
 			default:
-				err = configuracion.FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto_automatico", automatico)
+				err = configuracion.FijarValor(ruta, configuracion.OrigenGlobal, "servicio.puerto_automatico", automatico)
 			}
 			if err != nil {
 				return err
@@ -333,7 +334,7 @@ func comandoServicio() *cobra.Command {
 // registro va a ese archivo con rotación (segundo plano); sin él, a la terminal. En un reinicio (esperarCierre) espera
 // a que el servicio anterior suelte el cerrojo de la carpeta de datos.
 func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) error {
-	c, err := nucleo.CargarConfiguracion("")
+	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	if err != nil {
 		return err
 	}
@@ -358,7 +359,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 			}
 		}
 	}
-	datos, err := nucleo.DirDatos()
+	datos, err := carpetas.DirDatos()
 	if err != nil {
 		return err
 	}
@@ -460,23 +461,23 @@ func esLoopback(host string) bool {
 }
 
 // identificar devuelve la raíz, el identificador y la configuración de la instancia del ámbito.
-func identificar(ambito string) (raiz, id string, c *nucleo.Configuracion, err error) {
+func identificar(ambito string) (raiz, id string, c *configuracion.Configuracion, err error) {
 	if ambito == "global" {
-		c, err = nucleo.CargarConfiguracion("")
+		c, err = configuracion.CargarConfiguracion("", agentes.Internos())
 		return "", "global", c, err
 	}
 	if raiz = raizProyecto(); raiz == "" {
 		return "", "", nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida,
 			idioma.T("no hay .tramtai/config.yaml en este directorio ni en los superiores: ejecuta tramtai iniciar"))
 	}
-	if c, err = nucleo.CargarConfiguracion(raiz); err != nil {
+	if c, err = configuracion.CargarConfiguracion(raiz, agentes.Internos()); err != nil {
 		return "", "", nil, err
 	}
 	return raiz, idDeCarpeta(raiz, c), c, nil
 }
 
 // idDeCarpeta es el espacio de la carpeta raiz con la regla del servicio, sobre el registro de la carpeta de datos.
-func idDeCarpeta(raiz string, c *nucleo.Configuracion) string {
-	datos, _ := nucleo.DirDatos()
+func idDeCarpeta(raiz string, c *configuracion.Configuracion) string {
+	datos, _ := carpetas.DirDatos()
 	return servicio.IDDeCarpeta(datos, raiz, c)
 }

@@ -9,7 +9,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"tramtai/internal/agentes"
 	catalogo "tramtai/internal/agentes"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/vivo"
@@ -46,7 +48,7 @@ func (p *Pagina) enviar() tea.Cmd {
 			return msgCreado{origen: o, err: err}
 		}
 		if len(rutas) > 0 {
-			cfg, err := nucleo.CargarConfiguracion(c.Proyecto) // instancia_global.raices_permitidas, como la CLI
+			cfg, err := configuracion.CargarConfiguracion(c.Proyecto, agentes.Internos()) // instancia_global.raices_permitidas, como la CLI
 			if err != nil {
 				return msgCreado{origen: o, err: err}
 			}

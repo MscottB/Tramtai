@@ -1,4 +1,4 @@
-package nucleo
+package configuracion
 
 import (
 	"os"
@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"tramtai/internal/nucleo"
 )
 
 func escribir(t *testing.T, contenido string) string {
@@ -76,14 +77,14 @@ func TestClavesRechazadas(t *testing.T) {
 	for _, caso := range casos {
 		ruta := escribir(t, caso.contenido)
 		_, err := CargarCapa(ruta, caso.origen)
-		if CodigoDe(err) != CodigoConfiguracionInvalida || !strings.Contains(err.Error(), caso.mensaje) || !strings.Contains(err.Error(), ruta) {
+		if nucleo.CodigoDe(err) != nucleo.CodigoConfiguracionInvalida || !strings.Contains(err.Error(), caso.mensaje) || !strings.Contains(err.Error(), ruta) {
 			t.Errorf("%s: error inesperado %v", caso.nombre, err)
 		}
 	}
 	if capa, err := CargarCapa(filepath.Join(t.TempDir(), "no-existe.yaml"), OrigenGlobal); err != nil || len(capa.Valores) != 0 {
 		t.Errorf("un archivo inexistente debe dar una capa vacía: %v", err)
 	}
-	if _, err := CapaEntorno([]string{"TRAMTAI_NO__EXISTE=1"}); CodigoDe(err) != CodigoConfiguracionInvalida {
+	if _, err := CapaEntorno([]string{"TRAMTAI_NO__EXISTE=1"}); nucleo.CodigoDe(err) != nucleo.CodigoConfiguracionInvalida {
 		t.Errorf("una variable TRAMTAI_ desconocida debe rechazarse: %v", err)
 	}
 }
@@ -102,34 +103,34 @@ func TestClavesRetiradasDelZip(t *testing.T) {
 
 func TestAplicarPredeterminados(t *testing.T) {
 	c := Resolver(cargar(t, "predeterminados:\n  agente: claude\n  perfil_modelo: equilibrado\n", OrigenGlobal))
-	explicita := c.AplicarPredeterminados(SolicitudEjecucion{Agente: "codex", Modelo: "m1", Mensajes: []Mensaje{{Rol: "usuario", Contenido: "x"}}})
+	explicita := c.AplicarPredeterminados(nucleo.SolicitudEjecucion{Agente: "codex", Modelo: "m1", Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "x"}}})
 	if explicita.Agente != "codex" || explicita.PerfilModelo != "" || explicita.ModoContexto != "aislado" || explicita.Salida.Formato != "markdown" {
 		t.Errorf("los campos explícitos deben prevalecer y los vacíos completarse: %+v", explicita)
 	}
-	vacia := c.AplicarPredeterminados(SolicitudEjecucion{})
+	vacia := c.AplicarPredeterminados(nucleo.SolicitudEjecucion{})
 	if vacia.Agente != "claude" || vacia.PerfilModelo != "equilibrado" {
 		t.Errorf("los vacíos deben tomar los predeterminados: %+v", vacia)
 	}
 
 	// El esfuerzo predeterminado va con el agente predeterminado y no pisa uno elegido ni un valor inválido.
 	c = Resolver(cargar(t, "predeterminados:\n  agente: claude\n  esfuerzo: alto\n", OrigenGlobal))
-	if s := c.AplicarPredeterminados(SolicitudEjecucion{}); s.Esfuerzo != "alto" {
+	if s := c.AplicarPredeterminados(nucleo.SolicitudEjecucion{}); s.Esfuerzo != "alto" {
 		t.Errorf("sin agente ni esfuerzo, el del espacio: %q", s.Esfuerzo)
 	}
-	if s := c.AplicarPredeterminados(SolicitudEjecucion{Esfuerzo: "bajo"}); s.Esfuerzo != "bajo" {
+	if s := c.AplicarPredeterminados(nucleo.SolicitudEjecucion{Esfuerzo: "bajo"}); s.Esfuerzo != "bajo" {
 		t.Errorf("el esfuerzo elegido prevalece: %q", s.Esfuerzo)
 	}
-	if s := c.AplicarPredeterminados(SolicitudEjecucion{Agente: "codex"}); s.Esfuerzo != "" {
+	if s := c.AplicarPredeterminados(nucleo.SolicitudEjecucion{Agente: "codex"}); s.Esfuerzo != "" {
 		t.Errorf("con otro agente, el de su CLI: %q", s.Esfuerzo)
 	}
-	if s := c.AplicarPredeterminados(SolicitudEjecucion{PerfilModelo: "rapido"}); s.Esfuerzo != "" {
+	if s := c.AplicarPredeterminados(nucleo.SolicitudEjecucion{PerfilModelo: "rapido"}); s.Esfuerzo != "" {
 		t.Errorf("con un perfil elegido, el de su agente: %q", s.Esfuerzo)
 	}
-	if s := c.AplicarPredeterminados(SolicitudEjecucion{Modelo: "opus"}); s.Esfuerzo != "" {
+	if s := c.AplicarPredeterminados(nucleo.SolicitudEjecucion{Modelo: "opus"}); s.Esfuerzo != "" {
 		t.Errorf("con un modelo elegido, el de su agente: %q", s.Esfuerzo)
 	}
 	c = Resolver(cargar(t, "predeterminados:\n  esfuerzo: muchisimo\n", OrigenGlobal))
-	if s := c.AplicarPredeterminados(SolicitudEjecucion{}); s.Esfuerzo != "" {
+	if s := c.AplicarPredeterminados(nucleo.SolicitudEjecucion{}); s.Esfuerzo != "" {
 		t.Errorf("un nivel inválido se ignora: %q", s.Esfuerzo)
 	}
 }
@@ -146,17 +147,17 @@ func TestPerfilDeEjecucion(t *testing.T) {
 	os.WriteFile(filepath.Join(raiz, "fuera.json"), []byte(`{}`), 0o600)
 	os.WriteFile(filepath.Join(tramtai, "profiles", "raro.yaml"), []byte("desconocido: 1\n"), 0o600)
 	t.Setenv("TRAMTAI_CONFIG_GLOBAL", filepath.Join(t.TempDir(), "config.yaml"))
-	c, err := CargarConfiguracion(raiz)
+	c, err := CargarConfiguracion(raiz, Capa{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := c.AplicarPerfil(SolicitudEjecucion{Perfil: "resumen", Instrucciones: "Mías."})
+	s, err := c.AplicarPerfil(nucleo.SolicitudEjecucion{Perfil: "resumen", Instrucciones: "Mías."})
 	if err != nil || s.Instrucciones != "Mías." || s.Salida.Formato != "json" || string(s.Salida.Esquema) != `{"type":"object"}` || !s.Salida.ConservarSalidaInvalida {
 		t.Fatalf("perfil aplicado, con prioridad de la solicitud: %+v %v", s, err)
 	}
-	for nombre, codigo := range map[string]CodigoError{"escapa": CodigoConfiguracionInvalida, "raro": CodigoConfiguracionInvalida,
-		"no_existe": CodigoSolicitudInvalida, "../config": CodigoSolicitudInvalida} {
-		if _, err := c.AplicarPerfil(SolicitudEjecucion{Perfil: nombre}); CodigoDe(err) != codigo {
+	for nombre, codigo := range map[string]nucleo.CodigoError{"escapa": nucleo.CodigoConfiguracionInvalida, "raro": nucleo.CodigoConfiguracionInvalida,
+		"no_existe": nucleo.CodigoSolicitudInvalida, "../config": nucleo.CodigoSolicitudInvalida} {
+		if _, err := c.AplicarPerfil(nucleo.SolicitudEjecucion{Perfil: nombre}); nucleo.CodigoDe(err) != codigo {
 			t.Errorf("%s: se esperaba %s: %v", nombre, codigo, err)
 		}
 	}
@@ -182,7 +183,7 @@ func TestLocalSoloConfiableDesdeGlobal(t *testing.T) {
 	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
 	local := func(contenido string) error {
 		os.WriteFile(filepath.Join(raiz, ".tramtai", "local.yaml"), []byte(contenido), 0o600)
-		_, err := CargarConfiguracion(raiz)
+		_, err := CargarConfiguracion(raiz, Capa{})
 		return err
 	}
 	if err := local("predeterminados:\n  modelo: m1\n"); err != nil {
@@ -191,7 +192,7 @@ func TestLocalSoloConfiableDesdeGlobal(t *testing.T) {
 	// Sin confianza, el proyecto se abre igual pero sus claves de seguridad no se aplican: quedan anotadas.
 	ignoradas := func(contenido string) []string {
 		os.WriteFile(filepath.Join(raiz, ".tramtai", "local.yaml"), []byte(contenido), 0o600)
-		c, err := CargarConfiguracion(raiz)
+		c, err := CargarConfiguracion(raiz, Capa{})
 		if err != nil {
 			t.Fatalf("%q: %v", contenido, err)
 		}
@@ -204,7 +205,7 @@ func TestLocalSoloConfiableDesdeGlobal(t *testing.T) {
 		}
 	}
 	// Antes de guardar se valida estricto: escribir una clave de seguridad sin confianza es un error.
-	if _, err := CargarCapaDe([]byte("comandos_agentes:\n  claude: x.exe\n"), filepath.Join(raiz, ".tramtai", "local.yaml"), OrigenLocal); CodigoDe(err) != CodigoConfiguracionInvalida {
+	if _, err := CargarCapaDe([]byte("comandos_agentes:\n  claude: x.exe\n"), filepath.Join(raiz, ".tramtai", "local.yaml"), OrigenLocal); nucleo.CodigoDe(err) != nucleo.CodigoConfiguracionInvalida {
 		t.Errorf("guardar sin confianza debe rechazarse: %v", err)
 	}
 	os.WriteFile(global, []byte("proyectos_confiables: ['"+raiz+"']\n"), 0o600)
@@ -237,11 +238,11 @@ func TestFijarYModeloPredeterminado(t *testing.T) {
 	if c.Texto("predeterminados.formato_salida") != "texto" {
 		t.Fatal("una variable de entorno tiene más prioridad que la configuración global")
 	}
-	s := c.AplicarPredeterminados(SolicitudEjecucion{})
+	s := c.AplicarPredeterminados(nucleo.SolicitudEjecucion{})
 	if s.Agente != "codex" || s.Modelo != "gpt-x" {
 		t.Fatalf("sin agente ni modelo se usan los predeterminados: %s/%s", s.Agente, s.Modelo)
 	}
-	if s := c.AplicarPredeterminados(SolicitudEjecucion{Agente: "claude"}); s.Modelo != "" {
+	if s := c.AplicarPredeterminados(nucleo.SolicitudEjecucion{Agente: "claude"}); s.Modelo != "" {
 		t.Fatalf("con otro agente, el modelo predeterminado no se aplica: %s", s.Modelo)
 	}
 }

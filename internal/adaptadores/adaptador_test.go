@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"tramtai/internal/configuracion"
 	"tramtai/internal/nucleo"
 )
 
@@ -51,7 +52,7 @@ func TestModeloConcretoConPlazoYCompartido(t *testing.T) {
 }
 
 func TestConexiones(t *testing.T) {
-	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"adaptadores.codex.desconectado": true}})
+	c := configuracion.Resolver(configuracion.Capa{Origen: configuracion.OrigenGlobal, Valores: map[string]any{"adaptadores.codex.desconectado": true}})
 	con := NuevasConexiones(c, []string{"claude", "codex"})
 	if !con.Desconectado("codex") || con.Desconectado("claude") {
 		t.Fatal("codex viene desconectado de la configuración")

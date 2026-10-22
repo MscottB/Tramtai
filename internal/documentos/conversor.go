@@ -17,6 +17,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/procesos"
@@ -88,7 +89,7 @@ type Conversor struct {
 }
 
 // Desde crea el conversor con la configuración efectiva.
-func Desde(c *nucleo.Configuracion) *Conversor {
+func Desde(c *configuracion.Configuracion) *Conversor {
 	raiz, _ := RaizConversor()
 	return &Conversor{
 		Comando:      c.Texto("conversion.comando"),

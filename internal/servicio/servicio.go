@@ -33,8 +33,8 @@ import (
 
 // Opciones configura el servicio.
 type Opciones struct {
-	Datos    string                // directorio de datos del usuario
-	Config   *nucleo.Configuracion // configuración global (sin capas de proyecto)
+	Datos    string                       // directorio de datos del usuario
+	Config   *configuracion.Configuracion // configuración global (sin capas de proyecto)
 	Registro map[string]adaptadores.Adaptador
 	// Conexiones dice qué agentes están desconectados; Nuevo la crea desde la configuración si falta.
 	Conexiones *adaptadores.Conexiones
@@ -77,7 +77,7 @@ type Instancia struct {
 	ID           string
 	Ambito       string // global o proyecto
 	Raiz         string
-	Config       *nucleo.Configuracion
+	Config       *configuracion.Configuracion
 	Planificador *planificador.Planificador
 	Cargas       *documentos.Cargas
 	ArchivoToken string
@@ -176,11 +176,11 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 
 // fijarPrepararConversor guarda conversion.preparar_al_iniciar en la configuración global y lo muestra en el estado.
 func (s *Servicio) fijarPrepararConversor(preparar bool) error {
-	ruta, err := nucleo.RutaGlobal()
+	ruta, err := configuracion.RutaGlobal()
 	if err != nil {
 		return err
 	}
-	if err := configuracion.FijarValor(ruta, nucleo.OrigenGlobal, "conversion.preparar_al_iniciar", preparar); err != nil {
+	if err := configuracion.FijarValor(ruta, configuracion.OrigenGlobal, "conversion.preparar_al_iniciar", preparar); err != nil {
 		return err
 	}
 	if s.conversor != nil {

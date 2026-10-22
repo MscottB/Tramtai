@@ -163,23 +163,23 @@ func TestRecrearAPINoHeredaConsumo(t *testing.T) {
 		t.Fatalf("primera petición: %d", c)
 	}
 	// Como tramtai acceso eliminar y la terminal: EliminarPunto (archivo y clave) y después recargar.
-	rutaGlobal, _ := nucleo.RutaGlobal()
+	rutaGlobal, _ := configuracion.RutaGlobal()
 	var anterior []ConfigPunto
-	if err := configuracion.EditarPuntos(rutaGlobal, nucleo.OrigenGlobal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+	if err := configuracion.EditarPuntos(rutaGlobal, configuracion.OrigenGlobal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		anterior = slices.Clone(lista)
 		return lista, nil
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.eliminarPunto(rutaGlobal, nucleo.OrigenGlobal, "facturas"); err != nil {
+	if err := s.eliminarPunto(rutaGlobal, configuracion.OrigenGlobal, "facturas"); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.eliminarPunto(rutaGlobal, nucleo.OrigenGlobal, "facturas"); err == nil {
+	if err := s.eliminarPunto(rutaGlobal, configuracion.OrigenGlobal, "facturas"); err == nil {
 		t.Fatal("eliminar un punto que ya no existe debe dar error")
 	}
 	s.Recargar()
 	// Otra API con el mismo nombre empieza sin consumo.
-	if err := configuracion.EditarPuntos(rutaGlobal, nucleo.OrigenGlobal, func([]ConfigPunto) ([]ConfigPunto, error) { return anterior, nil }); err != nil {
+	if err := configuracion.EditarPuntos(rutaGlobal, configuracion.OrigenGlobal, func([]ConfigPunto) ([]ConfigPunto, error) { return anterior, nil }); err != nil {
 		t.Fatal(err)
 	}
 	token, _ = RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "facturas"))
@@ -195,7 +195,7 @@ func TestPresupuestoInstanciaSeAplicaAlRecargar(t *testing.T) {
 	if _, ok, _ := s.instancias["global"].Planificador.EstadoPresupuesto(context.Background(), persistencia.TodaLaInstancia); ok {
 		t.Fatal("sin presupuesto todavía")
 	}
-	rutaGlobal, _ := nucleo.RutaGlobal()
+	rutaGlobal, _ := configuracion.RutaGlobal()
 	actual, _ := os.ReadFile(rutaGlobal)
 	if err := os.WriteFile(rutaGlobal, append(actual, []byte("presupuesto:\n  diario:\n    peticiones: 3\n")...), 0o600); err != nil {
 		t.Fatal(err)

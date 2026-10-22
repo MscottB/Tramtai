@@ -5,8 +5,9 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"tramtai/internal/carpetas"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/credenciales"
-	"tramtai/internal/nucleo"
 	"tramtai/internal/version"
 )
 
@@ -15,11 +16,11 @@ import (
 func (s *Servicio) acerca(local bool) map[string]any {
 	commit, modificado := version.Commit()
 	datos := map[string]any{"version": version.Texto(), "commit": commit, "modificado": modificado, "go": runtime.Version(),
-		"portable": nucleo.Portable(),
+		"portable": carpetas.Portable(),
 		"sistema":  runtime.GOOS, "arquitectura": runtime.GOARCH, "almacen": credenciales.Almacen(),
 		"servicio": map[string]any{"direccion": s.Base(), "pid": os.Getpid(), "iniciado_en": s.IniciadoEn.UTC()}}
 	if local {
-		configuracion, _ := nucleo.RutaGlobal()
+		configuracion, _ := configuracion.RutaGlobal()
 		datos["rutas"] = map[string]string{"datos": s.opc.Datos, "configuracion": configuracion,
 			"registro": filepath.Join(s.opc.Datos, "servicio.log")}
 	}

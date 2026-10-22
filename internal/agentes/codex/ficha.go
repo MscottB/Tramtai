@@ -2,7 +2,7 @@ package codex
 
 import (
 	"tramtai/internal/adaptadores"
-	"tramtai/internal/nucleo"
+	"tramtai/internal/configuracion"
 )
 
 // valoresEsfuerzo son los de model_reasoning_effort de Codex, que llega a xhigh.
@@ -19,7 +19,7 @@ var Ficha = adaptadores.Ficha{
 	VariablesClave:  []string{"OPENAI_API_KEY", "CODEX_API_KEY"},
 	Comando:         "codex", Concurrencia: 1, PermitidoEnApps: true,
 	URLInstalacion: "https://developers.openai.com/codex/cli",
-	Crear: func(c *nucleo.Configuracion) adaptadores.Adaptador {
+	Crear: func(c *configuracion.Configuracion) adaptadores.Adaptador {
 		return Codex{Programa: c.Texto("comandos_agentes.codex"), Autenticacion: adaptadores.NuevoModo(c.Texto("adaptadores.codex.autenticacion"))}
 	},
 }

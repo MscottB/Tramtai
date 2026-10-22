@@ -10,7 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"tramtai/internal/carpetas"
 	"tramtai/internal/cliente"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -37,7 +39,7 @@ func mostrarTokenInstancia(cmd *cobra.Command, ambito string, rotar bool) error 
 	if err != nil {
 		return err
 	}
-	datos, err := nucleo.DirDatos()
+	datos, err := carpetas.DirDatos()
 	if err != nil {
 		return err
 	}
@@ -54,7 +56,7 @@ func mostrarTokenInstancia(cmd *cobra.Command, ambito string, rotar bool) error 
 
 // rotarTokenInstancia regenera la clave de la instancia: con el servicio en marcha vale al momento; si la instancia
 // no está activa se reescribe el archivo y valdrá al activarla.
-func rotarTokenInstancia(cmd *cobra.Command, datos, id string, c *nucleo.Configuracion) error {
+func rotarTokenInstancia(cmd *cobra.Command, datos, id string, c *configuracion.Configuracion) error {
 	if cli, err := cliente.Conectar(datos); err == nil {
 		ctx, cancelar := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancelar()

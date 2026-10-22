@@ -1,4 +1,5 @@
-// Package nucleo define los contratos internos de Tramtai: estados, trabajos, solicitudes y configuración.
+// Package nucleo define los contratos internos de Tramtai: estados, trabajos, solicitudes y errores. La configuración
+// está en internal/configuracion y las carpetas del usuario en internal/carpetas.
 package nucleo
 
 import "errors"

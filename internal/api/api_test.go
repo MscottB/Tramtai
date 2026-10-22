@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/documentos"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
@@ -60,7 +61,7 @@ func nuevoServidor(t *testing.T, registro map[string]adaptadores.Adaptador, ajus
 	}
 	valores := map[string]any{"predeterminados.agente": "simulado", "modelos.perfiles.rapido.simulado": "m1"}
 	maps.Copy(valores, ajustes)
-	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: valores})
+	c := configuracion.Resolver(configuracion.Capa{Origen: configuracion.OrigenGlobal, Valores: valores})
 	cargas, err := documentos.AbrirCargas(filepath.Join(dir, "cargas"), time.Hour, 1<<20, int64(c.Limite("conversion.cuota_cargas_mb"))<<20)
 	if err != nil {
 		t.Fatal(err)
@@ -74,7 +75,7 @@ func nuevoServidor(t *testing.T, registro map[string]adaptadores.Adaptador, ajus
 		limites[nombre] = 2
 	}
 	p := planificador.Nuevo(alm, registro, planificador.NuevosSemaforos(limites), opc)
-	p.FijarPresupuestos(map[string]nucleo.Presupuesto{persistencia.TodaLaInstancia: nucleo.PresupuestoDe(c)}) // como el servicio
+	p.FijarPresupuestos(map[string]nucleo.Presupuesto{persistencia.TodaLaInstancia: configuracion.PresupuestoDe(c)}) // como el servicio
 	if err := p.Iniciar(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -463,7 +464,7 @@ func TestMensajesAnthropic(t *testing.T) {
 }
 
 func TestInstruccionesDelPunto(t *testing.T) {
-	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
+	c := configuracion.Resolver(configuracion.Capa{Origen: configuracion.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
 	s := &Servidor{Config: c, Punto: &Punto{Nombre: "es", Instrucciones: "Responde siempre en español."}}
 	sol, err := s.ajustar(nucleo.SolicitudEjecucion{Instrucciones: "Sé breve.", Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}})
 	if err != nil || sol.Instrucciones != "Responde siempre en español.\n\nSé breve." {
@@ -475,7 +476,7 @@ func TestInstruccionesDelPunto(t *testing.T) {
 }
 
 func TestPuntoAplicaEsquemaYRespaldo(t *testing.T) {
-	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
+	c := configuracion.Resolver(configuracion.Capa{Origen: configuracion.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
 	s := &Servidor{Config: c, Punto: &Punto{Nombre: "r", Esquema: json.RawMessage(`{"type":"object"}`), Respaldo: []string{"otro"}, ReintentosSalida: 2}}
 	mensajes := []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}
 	sol, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: mensajes})
@@ -509,7 +510,7 @@ func TestFachadasInformanDelRespaldo(t *testing.T) {
 }
 
 func TestPuntoForzadoImponeSuRespaldo(t *testing.T) {
-	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
+	c := configuracion.Resolver(configuracion.Capa{Origen: configuracion.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
 	s := &Servidor{Config: c, Punto: &Punto{Nombre: "r", Agente: "simulado", ForzarModelo: true, Respaldo: []string{"otro"}}}
 	sol, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}, Respaldo: []string{"caro/opus"}})
 	if err != nil || !slices.Equal(sol.Respaldo, []string{"otro"}) {
@@ -518,7 +519,7 @@ func TestPuntoForzadoImponeSuRespaldo(t *testing.T) {
 }
 
 func TestPuntoRespaldoNoPermitido(t *testing.T) {
-	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
+	c := configuracion.Resolver(configuracion.Capa{Origen: configuracion.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
 	s := &Servidor{Config: c, Punto: &Punto{Nombre: "r", ModelosPermitidos: []string{"simulado"}, Respaldo: []string{"otro"}}}
 	if _, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}}); nucleo.CodigoDe(err) != nucleo.CodigoModeloNoPermitido {
 		t.Fatalf("un respaldo fuera de modelos_permitidos se rechaza: %v", err)
@@ -572,7 +573,7 @@ func TestEsfuerzo(t *testing.T) {
 		t.Fatalf("un reasoning_effort desconocido se rechaza: %d", r.StatusCode)
 	}
 	// El punto de acceso pone su esfuerzo si la solicitud no trae uno.
-	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
+	c := configuracion.Resolver(configuracion.Capa{Origen: configuracion.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
 	s := &Servidor{Config: c, Punto: &Punto{Nombre: "p", Esfuerzo: "alto"}}
 	mensajes := []nucleo.Mensaje{{Rol: "usuario", Contenido: "x"}}
 	if sol, _ := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: mensajes}); sol.Esfuerzo != "alto" {
@@ -723,7 +724,7 @@ func TestFachadasEntradaDemasiadoGrande(t *testing.T) {
 }
 
 func TestPuntoImponeModoContexto(t *testing.T) {
-	c := nucleo.Resolver(nucleo.Capa{Origen: nucleo.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
+	c := configuracion.Resolver(configuracion.Capa{Origen: configuracion.OrigenGlobal, Valores: map[string]any{"predeterminados.agente": "simulado"}})
 	hola := []nucleo.Mensaje{{Rol: "usuario", Contenido: "Hi"}}
 	s := &Servidor{Config: c, Punto: &Punto{Nombre: "r"}}
 	if sol, err := s.ajustar(nucleo.SolicitudEjecucion{Mensajes: hola}); err != nil || sol.ModoContexto != "aislado" {

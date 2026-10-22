@@ -12,6 +12,7 @@ import (
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/herramientas"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -64,7 +65,7 @@ type Opciones struct {
 }
 
 // OpcionesDesde toma los límites de la configuración efectiva.
-func OpcionesDesde(c *nucleo.Configuracion, instancia string) Opciones {
+func OpcionesDesde(c *configuracion.Configuracion, instancia string) Opciones {
 	return Opciones{
 		Instancia:                  instancia,
 		MaximoCola:                 c.Entero("concurrencia.maximo_tamano_cola"),

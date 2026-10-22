@@ -1,4 +1,6 @@
-package nucleo
+// Package carpetas sabe dónde guarda Tramtai lo del usuario (la carpeta del sistema o, en modo portable, junto al
+// ejecutable), protege esas carpetas para que solo las use el usuario y compara rutas como lo hace cada sistema.
+package carpetas
 
 import (
 	"errors"
@@ -9,6 +11,7 @@ import (
 	"sync"
 
 	"tramtai/internal/idioma"
+	"tramtai/internal/nucleo"
 )
 
 // ArchivoPortable, junto al ejecutable, pone a Tramtai en modo portable: todo lo del usuario va a CarpetaPortable, al
@@ -35,11 +38,11 @@ func raizDe(ejecutable string) (raiz string, portable bool, err error) {
 	if real, err := filepath.EvalSymlinks(temporal); err == nil {
 		temporal = real // en Windows, la temporal suele venir con nombres cortos (ADMINI~1)
 	}
-	enTemporal := dentroDe(temporal, carpeta)
+	enTemporal := Dentro(temporal, carpeta)
 	// El Explorador, al abrir un .exe de dentro de un .zip sin descomprimirlo, lo extrae solo a %TEMP%\Temp1_….zip\, a
 	// veces sin portable.txt: esa copia no debe ponerse a escribir en ninguna parte.
 	if enTemporal && strings.HasSuffix(strings.ToLower(filepath.Base(carpeta)), ".zip") {
-		return "", false, NuevoError(CodigoConfiguracionInvalida, idioma.T(
+		return "", false, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.T(
 			"Tramtai se está ejecutando desde dentro del .zip: descomprímelo en una carpeta donde puedas escribir"))
 	}
 	info, err := os.Stat(filepath.Join(carpeta, ArchivoPortable))
@@ -51,20 +54,20 @@ func raizDe(ejecutable string) (raiz string, portable bool, err error) {
 		}
 		return filepath.Join(dir, "tramtai"), false, nil
 	case err != nil: // portable.txt existe pero no se puede leer: no se cae en la carpeta del sistema
-		return "", true, NuevoError(CodigoConfiguracionInvalida, idioma.Tf(
+		return "", true, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf(
 			"no se pudo leer %s (%s): descomprime Tramtai en una carpeta donde puedas escribir", ArchivoPortable, err.Error()))
 	}
 	raiz = filepath.Join(carpeta, CarpetaPortable)
 	if enTemporal {
-		return raiz, true, NuevoError(CodigoConfiguracionInvalida, idioma.Tf(
+		return raiz, true, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf(
 			"Tramtai está en una carpeta temporal (%s), que se borrará con sus datos: descomprime Tramtai en una carpeta donde puedas escribir", carpeta))
 	}
 	if err := os.MkdirAll(raiz, 0o700); err != nil {
-		return raiz, true, NuevoError(CodigoConfiguracionInvalida, idioma.Tf(
+		return raiz, true, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf(
 			"no se pudo crear %s (%s): descomprime Tramtai en una carpeta donde puedas escribir", raiz, err.Error()))
 	}
 	if err := protegerCarpeta(raiz); err != nil {
-		return raiz, true, NuevoError(CodigoConfiguracionInvalida, idioma.Tf(
+		return raiz, true, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf(
 			"no se pudieron poner los permisos de %s (%s): descomprime Tramtai en una carpeta tuya", raiz, err.Error()))
 	}
 	return raiz, true, nil

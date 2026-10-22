@@ -1,4 +1,4 @@
-package nucleo
+package configuracion
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	"tramtai/internal/idioma"
+	"tramtai/internal/nucleo"
 )
 
 // Perfil es un perfil de ejecución explícito: un archivo <nombre>.yaml en .tramtai/profiles/ del
@@ -41,12 +42,12 @@ const maximoEsquema = 1 << 20
 
 // AplicarPerfil completa la solicitud con el perfil que pide; los campos explícitos de la solicitud prevalecen
 // . El perfil del proyecto tiene prioridad sobre uno global con el mismo nombre.
-func (c *Configuracion) AplicarPerfil(s SolicitudEjecucion) (SolicitudEjecucion, error) {
+func (c *Configuracion) AplicarPerfil(s nucleo.SolicitudEjecucion) (nucleo.SolicitudEjecucion, error) {
 	if s.Perfil == "" {
 		return s, nil
 	}
-	if !reIdentificador.MatchString(s.Perfil) || strings.ContainsAny(s.Perfil, "/\\:") || strings.Contains(s.Perfil, "..") {
-		return s, NuevoError(CodigoSolicitudInvalida, idioma.T("perfil con formato no válido"))
+	if !nucleo.ReIdentificador.MatchString(s.Perfil) || strings.ContainsAny(s.Perfil, "/\\:") || strings.Contains(s.Perfil, "..") {
+		return s, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("perfil con formato no válido"))
 	}
 	p, carpeta, err := c.buscarPerfil(s.Perfil)
 	if err != nil {
@@ -97,15 +98,15 @@ func (c *Configuracion) buscarPerfil(nombre string) (Perfil, carpetaPerfiles, er
 		}
 		return p, carpeta, nil
 	}
-	return Perfil{}, carpetaPerfiles{}, NuevoError(CodigoSolicitudInvalida, idioma.Tf("no existe el perfil %s (profiles/%s.yaml)", nombre, nombre))
+	return Perfil{}, carpetaPerfiles{}, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("no existe el perfil %s (profiles/%s.yaml)", nombre, nombre))
 }
 
 // leerEsquema lee el esquema del perfil sin salir de su carpeta de configuración (ni con ../ ni con enlaces).
 func leerEsquema(carpeta carpetaPerfiles, relativa string) (json.RawMessage, error) {
-	fuera := NuevoError(CodigoConfiguracionInvalida, idioma.Tf("el esquema %s queda fuera de la carpeta de configuración", relativa))
+	fuera := nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("el esquema %s queda fuera de la carpeta de configuración", relativa))
 	ruta, err := filepath.EvalSymlinks(filepath.Join(carpeta.dir, relativa))
 	if err != nil {
-		return nil, NuevoError(CodigoConfiguracionInvalida, idioma.Tf("no se encontró el esquema %s", relativa))
+		return nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("no se encontró el esquema %s", relativa))
 	}
 	limite, err := filepath.EvalSymlinks(carpeta.limite)
 	if err != nil {
@@ -116,11 +117,11 @@ func leerEsquema(carpeta carpetaPerfiles, relativa string) (json.RawMessage, err
 	}
 	info, err := os.Stat(ruta)
 	if err != nil || info.Size() > maximoEsquema {
-		return nil, NuevoError(CodigoConfiguracionInvalida, idioma.Tf("el esquema %s no se puede leer o supera 1 MB", relativa))
+		return nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("el esquema %s no se puede leer o supera 1 MB", relativa))
 	}
 	datos, err := os.ReadFile(ruta)
 	if err != nil || !json.Valid(datos) {
-		return nil, NuevoError(CodigoConfiguracionInvalida, idioma.Tf("el esquema %s no es JSON válido", relativa))
+		return nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("el esquema %s no es JSON válido", relativa))
 	}
 	return datos, nil
 }
