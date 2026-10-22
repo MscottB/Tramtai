@@ -100,7 +100,7 @@ func comandoEspacio() *cobra.Command {
 			}
 			ctx, cancelar := contexto()
 			defer cancelar()
-			a, err := c.Activar(ctx, ambito, raiz)
+			a, err := activarEspacio(ctx, cmd, c, ambito, raiz)
 			if err != nil {
 				return err
 			}

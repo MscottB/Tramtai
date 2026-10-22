@@ -57,7 +57,10 @@ func (a Antigravity) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, 
 	if err := a.autenticacion(); err != nil {
 		return adaptadores.Resultado{}, err
 	}
-	clave := adaptadores.ClaveEntorno("GEMINI_API_KEY")
+	clave, err := adaptadores.ClaveAlmacen("GEMINI_API_KEY")
+	if err != nil {
+		return adaptadores.Resultado{}, err
+	}
 	if clave == "" {
 		return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente, idioma.T("falta GEMINI_API_KEY (tramtai claves guardar GEMINI_API_KEY)"))
 	}

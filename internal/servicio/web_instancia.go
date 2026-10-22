@@ -3,7 +3,6 @@ package servicio
 import (
 	"bytes"
 	"encoding/json"
-	"log"
 	"net/http"
 	"path/filepath"
 	"slices"
@@ -245,7 +244,7 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 		return
 	}
 	s.Recargar()
-	_ = s.actualizarDescriptor()
+	_ = s.persistirEstado() // anotado; el punto ya está en su archivo
 	for _, e := range s.puntosDe(inst.ID) {
 		if e.Nombre == p.Nombre {
 			api.EscribirJSON(w, http.StatusCreated, map[string]any{"punto_acceso": e, "token": token})
@@ -289,16 +288,13 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 	case accion == "" && r.Method == http.MethodPatch:
 		s.cambiarPuntoUI(w, r, inst, punto)
 	case accion == "" && r.Method == http.MethodDelete:
-		// Archivo y clave antes de recargar (404 si ya no estaba); la CLI y la terminal también borran por aquí.
-		if err := EliminarPunto(s.opc.Datos, punto.Origen, origenDeArchivo(punto.Origen), nombre); err != nil {
+		// Archivo, clave y consumo antes de recargar (404 si ya no estaba); la CLI y la terminal también borran por aquí.
+		if err := s.EliminarPunto(punto.Origen, origenDeArchivo(punto.Origen), nombre); err != nil {
 			api.EscribirError(w, r, err)
 			return
 		}
 		s.Recargar()
-		_ = s.actualizarDescriptor()
-		if err := inst.Planificador.EliminarConsumo(r.Context(), nombre); err != nil {
-			log.Printf("punto de acceso %s: no se pudo borrar su consumo: %v", nombre, err)
-		}
+		_ = s.persistirEstado() // anotado; el punto ya está en su archivo
 		w.WriteHeader(http.StatusNoContent)
 	default:
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ruta no encontrada: %s %s", r.Method, r.URL.Path)))
@@ -377,7 +373,7 @@ func (s *Servicio) editarPunto(w http.ResponseWriter, r *http.Request, punto *Es
 		return false
 	}
 	s.Recargar()
-	_ = s.actualizarDescriptor()
+	_ = s.persistirEstado() // anotado; el punto ya está en su archivo
 	return true
 }
 

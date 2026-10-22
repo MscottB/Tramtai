@@ -87,7 +87,7 @@ func abrirInterfaz(cmd *cobra.Command, c *cliente.Cliente, ambito, raiz string, 
 	}
 	ctx, cancelar := contexto()
 	defer cancelar()
-	a, err := c.Activar(ctx, ambito, raiz)
+	a, err := activarEspacio(ctx, cmd, c, ambito, raiz)
 	if err != nil {
 		return err
 	}

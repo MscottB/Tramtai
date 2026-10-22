@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/netip"
+	"os"
 	"runtime"
 	"strings"
 	"testing"
@@ -118,23 +119,24 @@ func TestListarPorGrupoYOrigen(t *testing.T) {
 	}
 }
 
-func TestConsumoDeAPIAusenteSeBorra(t *testing.T) {
+// Solo eliminar una API borra su consumo: una que falta en la configuración y cuya clave se borró a mano (tokens/)
+// conserva el suyo, porque perderlo dejaría superar su presupuesto.
+func TestConsumoDeAPIAusenteSeConserva(t *testing.T) {
 	s, _, _ := entorno(t, puntosOrigen, "", adaptadores.Simulado{})
 	global, _ := s.ActivarGlobal()
-	RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "errata"))        // errata no está en el YAML, pero su clave sigue: se conserva
-	for _, punto := range []string{"tienda", "vieja", "errata"} { // vieja ya no está en la configuración ni tiene clave
+	for _, punto := range []string{"tienda", "vieja"} { // vieja ya no está en la configuración ni tiene clave
 		tr := nucleo.Trabajo{ID: nucleo.NuevoID(), Instancia: global.ID, PuntoAcceso: punto,
 			Solicitud: nucleo.SolicitudEjecucion{Agente: "simulado", Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "hola"}}}}
 		if _, _, err := global.almacen.Aceptar(context.Background(), tr, "", 0); err != nil {
 			t.Fatal(err)
 		}
 	}
+	os.Remove(RutaTokenPunto(s.opc.Datos, "tienda")) // tokens/ tocado a mano: tienda sigue configurada
 	s.Recargar()
-	dia, _, _ := global.almacen.Consumo(context.Background(), global.ID, "vieja")
+	vieja, _, _ := global.almacen.Consumo(context.Background(), global.ID, "vieja")
 	tienda, _, _ := global.almacen.Consumo(context.Background(), global.ID, "tienda")
-	errata, _, _ := global.almacen.Consumo(context.Background(), global.ID, "errata")
-	if dia.Peticiones != 0 || tienda.Peticiones != 1 || errata.Peticiones != 1 {
-		t.Fatalf("se borra el consumo de la API ausente y no el de las demás: vieja %+v, tienda %+v", dia, tienda)
+	if vieja.Peticiones != 1 || tienda.Peticiones != 1 {
+		t.Fatalf("recargar no borra consumo: vieja %+v, tienda %+v", vieja, tienda)
 	}
 }
 

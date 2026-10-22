@@ -1,6 +1,7 @@
 package servicio
 
 import (
+	"cmp"
 	"errors"
 	"net"
 	"net/http"
@@ -19,8 +20,7 @@ import (
 func (s *Servicio) activarGlobalUI(w http.ResponseWriter, r *http.Request, ses *sesion) {
 	inst, err := s.ActivarGlobal()
 	if err == nil {
-		err = s.guardarActivas()
-		_ = s.actualizarDescriptor()
+		err = s.persistirEstado()
 	}
 	if err != nil {
 		api.EscribirError(w, r, err)
@@ -50,8 +50,7 @@ func (s *Servicio) abrirProyectoUI(w http.ResponseWriter, r *http.Request, ses *
 func (s *Servicio) abrirYGuardar(raiz string, o AbrirOpciones) (*Instancia, error) {
 	inst, err := s.AbrirProyecto(raiz, o)
 	if err == nil {
-		err = s.guardarActivas()
-		_ = s.actualizarDescriptor()
+		err = s.persistirEstado()
 	}
 	return inst, err
 }
@@ -235,17 +234,22 @@ func (s *Servicio) guardarValores(inst *Instancia, valores map[string]any) error
 }
 
 // fijarPuerto guarda servicio.puerto y servicio.puerto_automatico en la configuración global si el puerto está
-// libre (o es el que ya usa este servicio). Se aplica al reiniciar.
+// libre (o es el que ya usa este servicio); con puerto 0 solo cambia el automático. Se aplica al reiniciar.
 func (s *Servicio) fijarPuerto(puerto int, automatico bool) error {
 	ruta, err := nucleo.RutaGlobal()
 	if err != nil {
 		return err
 	}
-	if err := FijarPuertoPropio(ruta, s.opc.Host, puerto, s.opc.Puerto, automatico); err != nil {
+	if puerto == 0 {
+		err = FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto_automatico", automatico)
+	} else {
+		err = FijarPuertoPropio(ruta, s.opc.Host, puerto, s.opc.Puerto, automatico)
+	}
+	if err != nil {
 		return err
 	}
 	s.mu.Lock()
-	s.opc.PuertoConfigurado, s.opc.PuertoAutomatico = puerto, automatico
+	s.opc.PuertoConfigurado, s.opc.PuertoAutomatico = cmp.Or(puerto, s.opc.PuertoConfigurado), automatico
 	s.mu.Unlock()
 	return nil
 }

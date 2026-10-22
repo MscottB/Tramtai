@@ -86,7 +86,11 @@ func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir
 	switch c.Autenticacion.Valor() {
 	case adaptadores.AutenticacionSuscripcion:
 	case adaptadores.AutenticacionClaveAPI, "":
-		if clave = adaptadores.ClaveEntorno("CODEX_API_KEY", "OPENAI_API_KEY"); clave == "" {
+		var err error
+		if clave, err = adaptadores.ClaveAlmacen("CODEX_API_KEY", "OPENAI_API_KEY"); err != nil {
+			return adaptadores.Resultado{}, err
+		}
+		if clave == "" {
 			return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente,
 				idioma.T("falta CODEX_API_KEY u OPENAI_API_KEY; o configura adaptadores.codex.autenticacion: suscripcion para uso personal local"))
 		}

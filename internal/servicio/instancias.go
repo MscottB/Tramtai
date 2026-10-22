@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -367,6 +368,9 @@ func (s *Servicio) Estado(ctx context.Context) Estado {
 	s.mu.RLock()
 	e := Estado{Identificador: s.ID, Version: version.Texto(), PID: os.Getpid(), IniciadoEn: s.IniciadoEn, Base: s.Base(),
 		Instancias: []EstadoInstancia{}, Puntos: s.estadoPuntos(), Errores: s.erroresPuntos, Actualizacion: nueva}
+	if s.errorEstado != "" {
+		e.Errores = append(slices.Clone(e.Errores), s.errorEstado)
+	}
 	instancias := make([]*Instancia, 0, len(s.instancias))
 	for _, inst := range s.instancias {
 		instancias = append(instancias, inst)

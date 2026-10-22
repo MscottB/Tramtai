@@ -223,7 +223,8 @@ func compactable(db *sql.DB) bool {
 	}
 	db.Exec("VACUUM")
 	db.Exec("PRAGMA wal_checkpoint(TRUNCATE)") // el VACUUM deja un WAL del tamaño de la base hasta el cierre
-	return true
+	// Solo el VACUUM aplica el modo: si falló (disco lleno), la base sigue igual y se reintenta en la próxima apertura.
+	return db.QueryRow("PRAGMA auto_vacuum").Scan(&modo) == nil && modo == 2
 }
 
 func migrar(db *sql.DB) error {

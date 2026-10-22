@@ -52,6 +52,9 @@ func Almacen() string { return idioma.T("Administrador de credenciales de Window
 
 // Guardar crea o sustituye la clave.
 func Guardar(nombre, valor string) error {
+	if err := admitir(nombre); err != nil {
+		return err
+	}
 	if err := valorValido(valor); err != nil {
 		return err
 	}
@@ -87,6 +90,9 @@ func Leer(nombre string) (string, error) {
 
 // Borrar elimina la clave; no es un error si no existía.
 func Borrar(nombre string) error {
+	if err := admitir(nombre); err != nil {
+		return err
+	}
 	destino, _ := windows.UTF16PtrFromString(objetivo(nombre))
 	if r, _, err := credDelete.Call(uintptr(unsafe.Pointer(destino)), credTypeGeneric, 0); r == 0 && !errors.Is(err, errorNoEncontrada) {
 		return err

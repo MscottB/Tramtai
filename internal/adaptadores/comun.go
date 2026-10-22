@@ -203,19 +203,32 @@ func EntornoLimpio(propios []string, extra ...string) []string {
 }
 
 // ClaveEntorno devuelve la primera clave definida: la variable de entorno tiene prioridad y, si falta, se busca en el
-// almacén de credenciales del sistema (tramtai claves guardar).
+// almacén de credenciales del sistema (tramtai claves guardar). Un almacén que no responde cuenta como sin clave;
+// al ejecutar, ClaveAlmacen dice por qué.
 func ClaveEntorno(nombres ...string) string {
+	clave, _ := ClaveAlmacen(nombres...)
+	return clave
+}
+
+// ClaveAlmacen es ClaveEntorno con el fallo del almacén: si no hay clave porque el almacén no responde, el trabajo lo
+// dice en lugar de «falta la clave».
+func ClaveAlmacen(nombres ...string) (string, error) {
 	for _, nombre := range nombres {
 		if valor := os.Getenv(nombre); valor != "" {
-			return valor
+			return valor, nil
 		}
 	}
+	var fallo error
 	for _, nombre := range nombres {
-		if valor, err := credenciales.Leer(nombre); err == nil && valor != "" {
-			return valor
+		valor, err := credenciales.Leer(nombre)
+		if err != nil && fallo == nil {
+			fallo = nucleo.NuevoError(nucleo.CodigoErrorInterno, idioma.Tf("%s no respondió al leer %s: %s", credenciales.Almacen(), nombre, err.Error()))
+		}
+		if err == nil && valor != "" {
+			return valor, nil
 		}
 	}
-	return ""
+	return "", fallo
 }
 
 // ResolverPrograma localiza el ejecutable. Rechaza los envoltorios .cmd/.bat: pasarían los argumentos por

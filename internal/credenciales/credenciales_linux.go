@@ -28,6 +28,9 @@ func Almacen() string { return idioma.T("Secret Service (secret-tool)") }
 
 // Guardar crea o sustituye la clave; secret-tool la lee de la entrada estándar.
 func Guardar(nombre, valor string) error {
+	if err := admitir(nombre); err != nil {
+		return err
+	}
 	if err := valorValido(valor); err != nil {
 		return err
 	}
@@ -55,6 +58,9 @@ func Leer(nombre string) (string, error) {
 
 // Borrar elimina la clave; no es un error si no existía.
 func Borrar(nombre string) error {
+	if err := admitir(nombre); err != nil {
+		return err
+	}
 	if !Disponible() {
 		return errSinSecretTool
 	}

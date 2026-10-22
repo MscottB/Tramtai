@@ -103,6 +103,7 @@ type Servicio struct {
 	cerrado       bool                 // Cerrar ya empezó: no se publican instancias nuevas
 	puntos        map[string]*puntoActivo
 	erroresPuntos []string
+	errorEstado   string // el último fallo al guardar el registro de espacios o el descriptor (persistirEstado)
 	descriptor    bool
 
 	unaVezRegistro sync.Once

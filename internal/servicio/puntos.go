@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"os"
@@ -173,10 +174,10 @@ func validarPunto(p ConfigPunto, existe func(string) bool) error {
 	return validarParaApps(p)
 }
 
-// EliminarPunto quita un punto de acceso del archivo y después borra su clave, antes de recargar: así el servicio sabe al
-// recargar que se eliminó (y no que una errata lo invalidó), y otro con el mismo nombre no hereda ni la clave ni el
-// consumo de su presupuesto.
-func EliminarPunto(datos, ruta string, origen nucleo.Origen, nombre string) error {
+// EliminarPunto quita un punto de acceso del archivo y borra su clave y su consumo, antes de recargar: otro con el mismo
+// nombre no hereda ni la clave ni el presupuesto gastado. El consumo vive en la base de su espacio: si no está activo,
+// se queda.
+func (s *Servicio) EliminarPunto(ruta string, origen nucleo.Origen, nombre string) error {
 	err := EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		i := slices.IndexFunc(lista, func(p ConfigPunto) bool { return p.Nombre == nombre })
 		if i < 0 {
@@ -184,10 +185,19 @@ func EliminarPunto(datos, ruta string, origen nucleo.Origen, nombre string) erro
 		}
 		return slices.Delete(lista, i, i+1), nil
 	})
-	if err == nil {
-		EliminarTokenPunto(datos, nombre)
+	if err != nil {
+		return err
 	}
-	return err
+	EliminarTokenPunto(s.opc.Datos, nombre)
+	s.mu.RLock()
+	p := s.puntos[nombre]
+	s.mu.RUnlock()
+	if p != nil && p.instancia != nil {
+		if err := p.instancia.Planificador.EliminarConsumo(context.Background(), nombre); err != nil {
+			fmt.Fprintf(s.opc.Registros, "punto de acceso %s: no se pudo borrar su consumo: %v\n", nombre, err)
+		}
+	}
+	return nil
 }
 
 func politicaDe(p ConfigPunto) *api.Punto {
@@ -303,7 +313,9 @@ func (s *Servicio) puntosDeseados() ([]candidato, []string) {
 }
 
 // Recargar aplica la configuración de puntos de acceso sin reiniciar: abre los nuevos, cierra los retirados y
-// deja intactos los que no cambiaron, sin afectar a los trabajos en curso.
+// deja intactos los que no cambiaron, sin afectar a los trabajos en curso. Leer las claves y la configuración y abrir
+// los oyentes va fuera de s.mu: un Recargar lento no frena las peticiones de los demás espacios. muRecargar excluye a
+// otro Recargar, el único que cambia s.puntos (salvo Cerrar).
 func (s *Servicio) Recargar() []EstadoPunto {
 	s.muRecargar.Lock()
 	deseados, errores := s.puntosDeseados()
@@ -314,7 +326,9 @@ func (s *Servicio) Recargar() []EstadoPunto {
 			p.cerrar()
 		}
 	}()
-	s.mu.Lock()
+	s.mu.RLock()
+	actuales, instancias := maps.Clone(s.puntos), maps.Clone(s.instancias)
+	s.mu.RUnlock()
 	nuevos := map[string]*puntoActivo{}
 	for _, c := range deseados {
 		huella, err := LeerHuellaPunto(RutaTokenPunto(s.opc.Datos, c.cfg.Nombre))
@@ -323,8 +337,8 @@ func (s *Servicio) Recargar() []EstadoPunto {
 			continue
 		}
 		firma := firmaPunto(c.cfg, huella)
-		actual := s.puntos[c.cfg.Nombre]
-		if actual != nil && actual.firma == firma && actual.err == "" && actual.instancia == s.instancias[c.cfg.Instancia] {
+		inst, actual := instancias[c.cfg.Instancia], actuales[c.cfg.Nombre]
+		if actual != nil && actual.firma == firma && actual.err == "" && actual.instancia == inst {
 			nuevos[c.cfg.Nombre] = actual
 			continue
 		}
@@ -332,27 +346,17 @@ func (s *Servicio) Recargar() []EstadoPunto {
 			actual.soltar() // libera el puerto por si el punto nuevo usa el mismo
 			retirados = append(retirados, actual)
 		}
-		nuevos[c.cfg.Nombre] = s.abrirPunto(c, huella, firma)
+		nuevos[c.cfg.Nombre] = s.abrirPunto(c, huella, firma, inst)
 	}
-	type eliminado struct {
-		inst   *Instancia
-		nombre string
-	}
-	var eliminados []eliminado
-	for nombre, actual := range s.puntos {
+	// Un punto que sale de la configuración se cierra; su consumo se queda. Solo eliminarlo (EliminarPunto) lo borra:
+	// que falte su clave (tokens/ borrado a mano) no lo da por eliminado.
+	for nombre, actual := range actuales {
 		if _, sigue := nuevos[nombre]; !sigue {
 			retirados = append(retirados, actual)
-			// Un punto que sale de la configuración sin clave se eliminó (la UI y la CLI la borran antes de recargar): su
-			// consumo deja de ser suyo para que otro con el mismo nombre no lo herede. Con la clave aún en su sitio
-			// (una errata en el YAML lo invalidó) se conserva.
-			if _, err := os.Stat(RutaTokenPunto(s.opc.Datos, nombre)); os.IsNotExist(err) && actual.instancia != nil &&
-				s.instancias[actual.instancia.ID] == actual.instancia {
-				eliminados = append(eliminados, eliminado{actual.instancia, nombre})
-			}
 		}
 	}
-	s.puntos, s.erroresPuntos = nuevos, errores
 	limites := map[string]map[string]int{}
+	presupuestos := map[string]map[string]nucleo.Presupuesto{}
 	for _, c := range deseados {
 		if c.cfg.Ejecucion != nil && c.cfg.Ejecucion.MaximoTrabajos > 0 {
 			if limites[c.cfg.Instancia] == nil {
@@ -360,9 +364,6 @@ func (s *Servicio) Recargar() []EstadoPunto {
 			}
 			limites[c.cfg.Instancia][c.cfg.Nombre] = c.cfg.Ejecucion.MaximoTrabajos
 		}
-	}
-	presupuestos := map[string]map[string]nucleo.Presupuesto{}
-	for _, c := range deseados {
 		if c.cfg.Presupuesto != nil {
 			if presupuestos[c.cfg.Instancia] == nil {
 				presupuestos[c.cfg.Instancia] = map[string]nucleo.Presupuesto{}
@@ -370,7 +371,7 @@ func (s *Servicio) Recargar() []EstadoPunto {
 			presupuestos[c.cfg.Instancia][c.cfg.Nombre] = *c.cfg.Presupuesto
 		}
 	}
-	for id, inst := range s.instancias {
+	for id, inst := range instancias {
 		inst.Planificador.LimitarPuntos(limites[id])
 		m := presupuestos[id]
 		if m == nil {
@@ -379,40 +380,17 @@ func (s *Servicio) Recargar() []EstadoPunto {
 		m[persistencia.TodaLaInstancia] = presupuestoInstancia(inst)
 		inst.Planificador.FijarPresupuestos(m)
 	}
+	s.mu.Lock()
+	if s.cerrado { // Cerrar ya se llevó los puntos: los que se abrieron aquí se cierran también
+		s.mu.Unlock()
+		for _, p := range nuevos {
+			retirados = append(retirados, p)
+		}
+		return nil
+	}
+	s.puntos, s.erroresPuntos = nuevos, errores
 	estado := s.estadoPuntos()
-	instancias := make([]*Instancia, 0, len(s.instancias))
-	for _, inst := range s.instancias {
-		instancias = append(instancias, inst)
-	}
-	deseadosPor := map[string]map[string]bool{}
-	for _, c := range deseados {
-		if deseadosPor[c.cfg.Instancia] == nil {
-			deseadosPor[c.cfg.Instancia] = map[string]bool{}
-		}
-		deseadosPor[c.cfg.Instancia][c.cfg.Nombre] = true
-	}
 	s.mu.Unlock()
-	// Una API que se eliminó con el servicio detenido no pasó por el bucle de arriba: si tiene consumo, no está en
-	// la configuración y ya no tiene clave, su consumo tampoco es de nadie.
-	for _, inst := range instancias {
-		puntos, err := inst.Planificador.PuntosConConsumo(context.Background())
-		if err != nil {
-			continue
-		}
-		for _, nombre := range puntos {
-			if _, sigue := deseadosPor[inst.ID][nombre]; sigue {
-				continue
-			}
-			if _, err := os.Stat(RutaTokenPunto(s.opc.Datos, nombre)); os.IsNotExist(err) {
-				eliminados = append(eliminados, eliminado{inst, nombre})
-			}
-		}
-	}
-	for _, e := range eliminados {
-		if err := e.inst.Planificador.EliminarConsumo(context.Background(), e.nombre); err != nil {
-			fmt.Fprintf(s.opc.Registros, "punto de acceso %s: no se pudo borrar su consumo: %v\n", e.nombre, err)
-		}
-	}
 	for _, p := range estado {
 		if p.Error != "" && p.Error != "desactivado" {
 			fmt.Fprintf(s.opc.Registros, "punto de acceso %s: %s\n", p.Nombre, p.Error)
@@ -440,9 +418,9 @@ func firmaPunto(cfg ConfigPunto, huella string) string {
 }
 
 // abrirPunto prepara el punto; si tiene puerto propio y está ocupado no se activa ni se elige otro. huella es la de
-// su clave: el servicio nunca conoce la clave de un punto. Se llama con s.mu tomado.
-func (s *Servicio) abrirPunto(c candidato, huella, firma string) *puntoActivo {
-	p := &puntoActivo{cfg: c.cfg, origen: c.origen, firma: firma, instancia: s.instancias[c.cfg.Instancia]}
+// su clave: el servicio nunca conoce la clave de un punto. inst es el espacio del punto (nil si no está activo).
+func (s *Servicio) abrirPunto(c candidato, huella, firma string, inst *Instancia) *puntoActivo {
+	p := &puntoActivo{cfg: c.cfg, origen: c.origen, firma: firma, instancia: inst}
 	switch {
 	case !c.cfg.EstaActivo():
 		p.err = "desactivado"
@@ -451,7 +429,6 @@ func (s *Servicio) abrirPunto(c candidato, huella, firma string) *puntoActivo {
 		p.err = idioma.Tf("el espacio %s no está activo", c.cfg.Instancia)
 		return p
 	}
-	inst := p.instancia
 	srv := &api.Servidor{Planificador: inst.Planificador, Cargas: inst.Cargas, Registro: s.opc.Registro, Config: inst.Config, Punto: politicaDe(c.cfg),
 		Conversor: s.conversor}
 	handler := api.Proteger(s.opc.Hosts, func(r *http.Request) bool { return api.HuellaValida(r, huella) }, srv.Rutas())
@@ -565,17 +542,18 @@ func QuitarValor(ruta string, origen nucleo.Origen, clave string) error {
 			if nodo.Kind != yaml.MappingNode {
 				return nil
 			}
-			for j := 0; j+1 < len(nodo.Content); j += 2 {
-				if nodo.Content[j].Value != parte {
-					continue
-				}
-				if i == len(partes)-1 {
-					nodo.Content = append(nodo.Content[:j], nodo.Content[j+2:]...)
-					return nil
-				}
-				nodo = nodo.Content[j+1]
-				break
+			j := 0
+			for j+1 < len(nodo.Content) && nodo.Content[j].Value != parte {
+				j += 2
 			}
+			if j+1 >= len(nodo.Content) {
+				return nil // falta este tramo: la clave no está
+			}
+			if i == len(partes)-1 {
+				nodo.Content = append(nodo.Content[:j], nodo.Content[j+2:]...)
+				return nil
+			}
+			nodo = nodo.Content[j+1]
 		}
 		return nil
 	})

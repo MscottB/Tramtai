@@ -682,6 +682,19 @@ func TestClienteInstancia(t *testing.T) {
 	}
 }
 
+// Lanzar otra vez no borra lo que explicaba el fallo del arranque anterior: pasa a servicio-salida.log.1.
+func TestLanzarConservaElFalloAnterior(t *testing.T) {
+	datos := t.TempDir()
+	ruta := filepath.Join(datos, "servicio-salida.log")
+	os.WriteFile(ruta, []byte("fallo del arranque anterior\n"), 0o600)
+	if err := Lanzar(os.Args[0], datos, "-test.run=^$"); err != nil {
+		t.Fatal(err)
+	}
+	if anterior, _ := os.ReadFile(ruta + ".1"); !strings.Contains(string(anterior), "fallo del arranque anterior") {
+		t.Fatalf("se perdió el registro del fallo anterior: %q", anterior)
+	}
+}
+
 // Un impostor que ocupa el puerto y conoce el identificador del descriptor (es público) no recibe el token: no puede
 // responder al reto sin conocerlo.
 func TestImpostorNoRecibeElToken(t *testing.T) {

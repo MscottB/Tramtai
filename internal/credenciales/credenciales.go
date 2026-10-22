@@ -20,6 +20,15 @@ func Admitido(nombre string) bool { return slices.Contains(Nombres, nombre) }
 
 func objetivo(nombre string) string { return "tramtai/" + nombre }
 
+// admitir rechaza un nombre que no está en Nombres: Guardar y Borrar nunca tocan otra entrada del almacén, sea cual sea
+// quien los llame.
+func admitir(nombre string) error {
+	if !Admitido(nombre) {
+		return errors.New(idioma.T("clave no admitida"))
+	}
+	return nil
+}
+
 // claveAusente indica que la herramienta del almacén terminó con su código de «no existe» sin explicar ningún error:
 // si escribe algo por stderr (por ejemplo, que no hay sesión de D-Bus) es que el almacén no responde.
 func claveAusente(codigo, codigoAusente int, salida, errores string) bool {
