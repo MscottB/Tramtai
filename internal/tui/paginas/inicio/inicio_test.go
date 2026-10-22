@@ -421,7 +421,7 @@ func TestPrimerosPasos(t *testing.T) {
 	a := pasosDe(t, func() (bool, bool) { return true, false }, false)
 	v := a.Vista()
 	for _, quiere := range []string{"Primeros pasos", "✓ Conecta al menos un agente", "2 de 3 agentes listos", "○ Prueba un agente", "✓ Conecta tu aplicación",
-		"○ Arranca Tramtai con " + sistema(), "aunque cierres la terminal", "2 de 4 pasos hechos"} {
+		"○ Arranca Tramtai con " + sistema(), "Tus apps funcionan al encender el equipo", "2 de 4 pasos hechos"} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}

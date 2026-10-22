@@ -29,6 +29,8 @@ type Estilos struct {
 
 	Borde  lipgloss.Border
 	Iconos Iconos
+	// LineaOtra es el color de día y de noche de la línea de un agente sin color propio (linea-otro de DESIGN.md).
+	LineaOtra [2]string
 }
 
 // Iconos son los caracteres de dibujo; con TRAMTAI_ASCII=1, o si la consola no es UTF-8, son ASCII.
@@ -116,7 +118,7 @@ func (e *Estilos) Linea(claro, oscuro string) lipgloss.Style {
 		return estilo
 	}
 	if claro == "" || oscuro == "" {
-		claro, oscuro = "#64748b", "#8a9aa8"
+		claro, oscuro = e.LineaOtra[0], e.LineaOtra[1]
 	}
 	return estilo.Foreground(lipgloss.LightDark(e.Oscuro)(lipgloss.Color(claro), lipgloss.Color(oscuro)))
 }

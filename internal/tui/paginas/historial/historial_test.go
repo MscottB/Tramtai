@@ -481,7 +481,7 @@ func TestHistorialBusqueda(t *testing.T) {
 	crear(t, cli, id, "Factura de Soporte")
 	crear(t, cli, id, "Notas de reunión")
 	otra := crear(t, cli, id, "Otra cosa")
-	a := abierta(t, cli, id)
+	a, r := abrir(t, prueba.Contexto(t, cli, id))
 	ves := func(quiere ...string) {
 		t.Helper()
 		v := a.Vista()
@@ -495,19 +495,34 @@ func TestHistorialBusqueda(t *testing.T) {
 	if !a.P.EnCampo() {
 		t.Fatal("con la búsqueda abierta las letras son suyas")
 	}
+	// Como la Web UI, pide la lista 300 ms después de la última tecla, no con cada una.
+	buscada := func() {
+		t.Helper()
+		r.Pasar(299 * time.Millisecond)
+		a.Asentar()
+		r.Pasar(time.Millisecond)
+		a.Asentar()
+	}
 	for _, c := range "REUNION" { // el servicio busca sin tildes ni mayúsculas
 		a.Pulsar(string(c))
 	}
+	r.Pasar(299 * time.Millisecond)
+	a.Asentar()
+	ves("Factura de Soporte", "Notas de reunión", "Otra cosa")
+	r.Pasar(time.Millisecond)
+	a.Asentar()
 	ves("Notas de reunión")
 	if v := a.Vista(); !strings.Contains(v, "/ REUNION_") {
 		t.Fatalf("la barra enseña lo que se escribe:\n%s", v)
 	}
 	a.Pulsar("backspace", "backspace", "backspace", "backspace", "backspace", "backspace", "backspace")
+	buscada()
 	ves("Factura de Soporte", "Notas de reunión", "Otra cosa")
 	// También por identificador.
 	for _, c := range otra.ID[len(otra.ID)-6:] {
 		a.Pulsar(string(c))
 	}
+	buscada()
 	ves("Otra cosa")
 	// Intro la deja puesta y la barra la recuerda; Esc de una nueva vuelve a lo de antes.
 	a.Pulsar("enter")
@@ -519,6 +534,7 @@ func TestHistorialBusqueda(t *testing.T) {
 	// Lo pegado entra entero, con los saltos de línea como espacios.
 	a.Pulsar("/", "backspace", "backspace", "backspace", "backspace", "backspace", "backspace")
 	a.Pegar("Factura\nde Soporte")
+	buscada()
 	ves("Factura de Soporte")
 	a.Pulsar("esc", "l")
 	ves("Factura de Soporte", "Notas de reunión", "Otra cosa")
@@ -783,7 +799,17 @@ func TestHistorialCancelar(t *testing.T) {
 	if fuera := a.Pulsar("x"); len(fuera) != 0 {
 		t.Fatalf("x no borra una en marcha: %v", fuera)
 	}
-	a.Pulsar("enter", "c")
+	// c pregunta antes, como en Probar; n no la cancela y s sí.
+	q, ok := pregunta(a.Pulsar("enter", "c"))
+	if !ok || q.Texto != "¿Cancelar la petición en marcha?" {
+		t.Fatalf("c pregunta antes de cancelar, como Probar: %+v", q)
+	}
+	a.Entregar(comp.Cancelado{})
+	if t2, _ := cli.Trabajo(ctx, id, tr.ID); t2.Estado.Terminal() {
+		t.Fatalf("sin confirmar no se cancela: %s", t2.Estado)
+	}
+	a.Pulsar("c")
+	a.Entregar(comp.Confirmado{})
 	if v := a.Vista(); !strings.Contains(v, "Cancelación solicitada") && !strings.Contains(v, "Cancelado") {
 		t.Fatalf("el detalle toma el estado que devuelve el servicio:\n%s", v)
 	}
@@ -1036,6 +1062,8 @@ func TestListaConError(t *testing.T) {
 	a, r := abrir(t, prueba.Contexto(t, cli, id))
 	a.Pulsar("/")
 	a.Pegar(strings.Repeat("x", 201)) // el servicio admite hasta 200 caracteres
+	r.Pasar(300 * time.Millisecond)   // la búsqueda se pide al dejar de escribir
+	a.Asentar()
 	if v := a.Vista(); !strings.Contains(v, "200") || !strings.Contains(v, "uno") {
 		t.Fatalf("el mensaje del servicio sin traducir, y lo cargado se conserva:\n%s", v)
 	}

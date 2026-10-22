@@ -46,7 +46,7 @@ func (p *Pagina) pasos() []paso {
 		case pagina.PaginaConectar:
 			lista = append(lista, paso{p.tx("inicio.paso3"), p.tx("inicio.paso3Detalle"), x.Pagina, x.Hecho})
 		case pagina.PaginaConfiguracion:
-			lista = append(lista, paso{p.tx("inicio.paso4", "sistema", sistema()), p.a(idioma.T("Las apps siguen funcionando aunque cierres la terminal")), x.Pagina, x.Hecho})
+			lista = append(lista, paso{p.tx("inicio.paso4", "sistema", sistema()), p.a(idioma.T("Tus apps funcionan al encender el equipo")), x.Pagina, x.Hecho})
 		}
 	}
 	return lista

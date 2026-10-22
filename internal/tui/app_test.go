@@ -81,6 +81,7 @@ type paginaFalsa struct {
 	ctx         context.Context
 	instancia   string
 	cambios     int // los CambioEspacio que le llegan
+	avisos      int // los NuevoAviso que le llegan: no debería ninguno, son de la app
 }
 
 func (p *paginaFalsa) Titulo() string { return "Configuración" }
@@ -97,6 +98,8 @@ func (p *paginaFalsa) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		p.ancho, p.alto = msg.Width, msg.Height
 	case pagina.CambioEspacio:
 		p.cambios++
+	case comp.NuevoAviso:
+		p.avisos++
 	}
 	return p, nil
 }
@@ -542,6 +545,52 @@ func TestErrorSeQuedaYSeVeEntero(t *testing.T) {
 	m.Update(tecla("!"))
 	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "segunda línea del detalle") {
 		t.Fatalf("! vuelve a enseñar el último error:\n%s", v)
+	}
+}
+
+// TestAvisoNoLlegaALasPaginas: un aviso es de la app; tampoco un fallo, que no caduca, se reparte a las páginas.
+func TestAvisoNoLlegaALasPaginas(t *testing.T) {
+	m := nuevo(Opciones{})
+	falsa := &paginaFalsa{}
+	m.paginas[pagina.PaginaInicio] = falsa
+	m.Update(comp.NuevoAviso{Texto: "guardado", Tipo: comp.Exito})
+	m.Update(comp.NuevoAviso{Texto: "no se pudo leer el archivo", Tipo: comp.Fallo})
+	if falsa.avisos != 0 {
+		t.Fatalf("a la página le llegaron %d avisos", falsa.avisos)
+	}
+}
+
+// paginaTeclas tiene más teclas de las que caben en la Ayuda a 60×20.
+type paginaTeclas struct{ paginaFalsa }
+
+func (p *paginaTeclas) Teclas() []pagina.Tecla {
+	var teclas []pagina.Tecla
+	for i := range 20 {
+		teclas = append(teclas, pagina.Tecla{Tecla: string(rune('a' + i)), Accion: "acción " + strconv.Itoa(i)})
+	}
+	return teclas
+}
+
+// TestAyudaConTodasLasTeclas: a 60×20, la Ayuda de una página con muchas teclas se desplaza hasta la última, la de la app;
+// y la que abre la página por su cuenta (a en Inicio) también trae todas, las suyas y las comunes.
+func TestAyudaConTodasLasTeclas(t *testing.T) {
+	m := nuevo(Opciones{})
+	m.Update(tea.WindowSizeMsg{Width: 60, Height: 20})
+	m.paginas[pagina.PaginaInicio] = &paginaTeclas{}
+	m.Update(tecla("?"))
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "acción 0") {
+		t.Fatalf("la Ayuda empieza por las teclas de la página:\n%s", v)
+	}
+	m.Update(tea.KeyPressMsg{Code: tea.KeyEnd})
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "Ctrl+E  espacio") {
+		t.Fatalf("se desplaza hasta la última:\n%s", v)
+	}
+	m = nuevo(Opciones{})
+	m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
+	m.paginas[pagina.PaginaInicio] = &paginaTeclas{}
+	m.Update(pagina.IrA{Pagina: pagina.PaginaAyuda, Datos: pagina.ConAyuda{Pagina: pagina.PaginaInicio}})
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "acción 19") || !strings.Contains(v, "Ctrl+E  espacio") {
+		t.Fatalf("la Ayuda que pide la página trae sus teclas y las comunes:\n%s", v)
 	}
 }
 

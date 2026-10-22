@@ -70,6 +70,10 @@ func TestEnviarYCancelar(t *testing.T) {
 	if tr := ultimo(t, cli, id); tr.Estado.Terminal() {
 		t.Fatalf("Esc no la cancela: %s", tr.Estado)
 	}
+	// Como en la terminal: la app la oculta al volver y la muestra al entrar otra vez, y el seguimiento sigue.
+	ocultar(a)
+	mostrar(a)
+	a.HastaVer("en vivo")
 	if _, ok := pregunta(a.Pulsar("c")); !ok {
 		t.Fatal("c pregunta antes de cancelar")
 	}
@@ -86,6 +90,27 @@ func TestEnviarYCancelar(t *testing.T) {
 	a.Pulsar("right")
 	if n := strings.Count(a.Vista(), "esperar"); !pestana(a, "ejecutar.recientes") || n != 1 {
 		t.Fatalf("y queda en las recientes (%d):\n%s", n, a.Vista())
+	}
+}
+
+// TestCancelarYaTerminada: si la petición termina con la pregunta de cancelar abierta, confirmar ya no manda nada.
+func TestCancelarYaTerminada(t *testing.T) {
+	cli, id, b := conBloqueado(t)
+	proxy, fallar := prueba.ConFallo(t, cli)
+	a := abierta(t, proxy, id)
+	poner(t, a, tx("ejecutar.mensaje"), "esperar")
+	enviar(a)
+	a.HastaVer("primera parte", "en vivo")
+	if _, ok := pregunta(a.Pulsar("c")); !ok {
+		t.Fatal("c pregunta antes de cancelar")
+	}
+	b.SoltarFin()
+	if e := terminada(t, a); e != nucleo.Completado {
+		t.Fatalf("termina sola: %s", e)
+	}
+	fallar("no se puede cancelar una petición terminada") // lo que se mande ahora al servicio fallaría con este aviso
+	if fuera := a.Entregar(comp.Confirmado{}); len(fuera) != 0 {
+		t.Fatalf("ya terminada, confirmar no manda nada: %v", fuera)
 	}
 }
 

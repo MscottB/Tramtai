@@ -9,7 +9,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"tramtai/internal/agentes"
 	catalogo "tramtai/internal/agentes"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/nucleo"
@@ -49,7 +48,7 @@ func (p *Pagina) enviar() tea.Cmd {
 			return msgCreado{origen: o, err: err}
 		}
 		if len(rutas) > 0 {
-			cfg, err := configuracion.CargarConfiguracion(c.Proyecto, agentes.Internos()) // instancia_global.raices_permitidas, como la CLI
+			cfg, err := configuracion.CargarConfiguracion(c.Proyecto, catalogo.Internos()) // instancia_global.raices_permitidas, como la CLI
 			if err != nil {
 				return msgCreado{origen: o, err: err}
 			}
@@ -197,13 +196,14 @@ func (p *Pagina) alVivo(m msgVivo) tea.Cmd {
 	return nil
 }
 
-// cancelarTrabajo pide cancelar el trabajo en marcha (c, tras confirmar).
+// cancelarTrabajo pide cancelar el trabajo en marcha (c, tras confirmar). Si terminó mientras se preguntaba, ya no hay
+// nada que cancelar.
 func (p *Pagina) cancelarTrabajo() tea.Cmd {
 	switch {
+	case !p.cancelable(), p.ocupado:
+		return nil
 	case p.c.Cli == nil:
 		return pagina.SinCliente
-	case p.ocupado:
-		return nil
 	}
 	p.ocupado = true
 	c, o, id := p.c, p.origen(), p.trabajo.ID

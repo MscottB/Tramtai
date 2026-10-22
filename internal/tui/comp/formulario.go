@@ -9,7 +9,7 @@ import (
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"tramtai/internal/idioma"
 	"tramtai/internal/tui/pagina"
@@ -132,13 +132,19 @@ func (c *Campo) valor() string {
 	return c.linea.Value()
 }
 
-// filas es el alto de un área: lo que ocupa su texto partido al ancho, entre 2 y 6.
-func (c *Campo) filas() int {
+// ajustarAlto da a un área el alto de su texto partido por palabras a su ancho, como lo parte ella, entre 2 y 6 filas:
+// crece con lo escrito, como el autogrow de la Web UI. Se llama al cambiar el texto o el ancho; Vista solo pinta.
+func (c *Campo) ajustarAlto() {
+	if c.tipo != campoArea {
+		return
+	}
 	n, ancho := 0, max(c.area.Width(), 1)
 	for _, l := range strings.Split(c.area.Value(), "\n") {
-		n += max((lipgloss.Width(l)+ancho-1)/ancho, 1)
+		n += strings.Count(ansi.Wrap(l, ancho, ""), "\n") + 1
 	}
-	return min(max(n, 2), 6)
+	if h := min(max(n, 2), 6); h != c.area.Height() {
+		c.area.SetHeight(h)
+	}
 }
 
 func (c *Campo) escribe() bool {
@@ -278,6 +284,7 @@ func (f *Formulario) Poner(id, valor string) {
 	case campoArea:
 		c.area.SetValue(valor)
 		c.area.MoveToBegin()
+		c.ajustarAlto()
 	case campoTexto, campoNumero:
 		c.linea.SetValue(valor)
 	case campoOpcion:
@@ -312,6 +319,7 @@ func (f *Formulario) medir(ancho int) {
 		switch c := &f.campos[i]; c.tipo {
 		case campoArea: // el ancho del área cuenta su marca
 			c.area.SetWidth(f.ancho - 2)
+			c.ajustarAlto()
 		case campoTexto, campoNumero: // el sangrado (2), la marca (2) y el cursor (1)
 			c.linea.SetWidth(f.ancho - 5)
 		}
@@ -402,7 +410,9 @@ func (f *Formulario) Update(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	switch c.tipo {
 	case campoArea:
+		c.area.SetHeight(c.area.MaxHeight) // con el alto entero, lo escrito no desplaza el texto hacia arriba si aún cabe
 		c.area, cmd = c.area.Update(msg)
+		c.ajustarAlto()
 	case campoTexto, campoNumero:
 		if p, ok := msg.(tea.PasteMsg); ok && c.tipo == campoNumero && strings.Trim(p.Content, "0123456789") != "" {
 			return nil
@@ -448,9 +458,6 @@ func (f *Formulario) Vista() string {
 		switch c.tipo {
 		case campoPliegue:
 		case campoArea:
-			if h := c.filas(); h != c.area.Height() { // crece con lo escrito, como el autogrow de la Web UI
-				c.area.SetHeight(h)
-			}
 			b.WriteString(sangrar(c.area.View(), "  "))
 		case campoOpcion:
 			izq, der := "‹ ", " ›"
