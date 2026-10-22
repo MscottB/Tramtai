@@ -126,6 +126,24 @@ func TestConexionOlvidadaNoResucita(t *testing.T) {
 	}
 }
 
+// TestQuieta: una goroutine que espera a leer de la red o a un canal no avanza sola; una que escribe en la red y espera a
+// que el sistema confirme el envío, o que duerme, sí.
+func TestQuieta(t *testing.T) {
+	casos := map[string]bool{
+		"goroutine 7 [IO wait]:\nnet.(*netFD).Read(0x1)\nnet.(*conn).Read(0x1)":   true,
+		"goroutine 7 [IO wait]:\nnet.(*netFD).accept(0x1)":                        true,
+		"goroutine 7 [IO wait]:\nnet.(*netFD).Write(0x1)\nnet.(*conn).Write(0x1)": false,
+		"goroutine 7 [chan receive, 2 minutes]:\nmain.f()":                        true,
+		"goroutine 7 [sleep]:\ntime.Sleep(0x1)":                                   false,
+		"goroutine 7 [GC assist wait]:\nmain.f()":                                 false,
+	}
+	for pila, quiere := range casos {
+		if quieta(pila) != quiere {
+			t.Errorf("quieta(%q) debía ser %v", pila, quiere)
+		}
+	}
+}
+
 // apuntaFallo es una prueba que apunta su fallo y para ahí, como t.Fatalf, sin dar por fallida la de verdad.
 type apuntaFallo struct {
 	testing.TB

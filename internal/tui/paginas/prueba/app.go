@@ -281,9 +281,20 @@ func (a *App) Asentar() {
 }
 
 // esperando son los estados de una goroutine que no avanza sola: espera a otra (un canal, un select, un cerrojo) o a
-// algo de fuera (la red, un temporizador). En cualquier otro (corre, duerme, está en una llamada al sistema o espera al
+// un temporizador; la red va aparte, en quieta. En cualquier otro (corre, duerme, está en una llamada al sistema o espera al
 // recolector de basura) avanzará sin que la prueba haga nada.
-var esperando = []string{"chan receive", "chan send", "select", "IO wait", "sync.", "semacquire", "finalizer wait", "coroutine"}
+var esperando = []string{"chan receive", "chan send", "select", "sync.", "semacquire", "finalizer wait", "coroutine"}
+
+// quieta dice si la goroutine de la pila g no avanza sola. «IO wait» solo cuenta si espera a que llegue algo de la red
+// (una lectura o una conexión nueva); lo que llega por una conexión con el servicio ya lo cuenta sinLeer. Una escritura
+// a medias también espera en «IO wait» (en Windows, a que el sistema confirme el envío), pero termina sola.
+func quieta(g string) bool {
+	estado := g[strings.Index(g, "[")+1 : strings.Index(g, "]")]
+	if strings.HasPrefix(estado, "IO wait") {
+		return strings.Contains(g, "net.(*netFD).Read(") || strings.Contains(g, "net.(*netFD).accept(")
+	}
+	return slices.ContainsFunc(esperando, func(e string) bool { return strings.HasPrefix(estado, e) })
+}
 
 // enMarcha es lo que puede avanzar solo: las pilas de las goroutines del proceso, sin la de la prueba, que no están
 // esperando, y lo escrito en una conexión con un servidor de prueba que el otro lado aún no ha leído. Si no hay nada,
@@ -296,8 +307,7 @@ func enMarcha() []string {
 	}
 	var ocupadas []string
 	for _, g := range pilas() {
-		estado := g[strings.Index(g, "[")+1 : strings.Index(g, "]")]
-		if !slices.ContainsFunc(esperando, func(e string) bool { return strings.HasPrefix(estado, e) }) {
+		if !quieta(g) {
 			ocupadas = append(ocupadas, g)
 		}
 	}
