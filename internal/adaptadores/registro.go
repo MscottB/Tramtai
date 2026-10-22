@@ -22,7 +22,6 @@ func NuevoModo(valor string) *Modo {
 	return m
 }
 
-// Valor devuelve el modo actual.
 func (m *Modo) Valor() string {
 	if m == nil {
 		return AutenticacionClaveAPI
@@ -67,7 +66,6 @@ func NuevasConexiones(c *configuracion.Configuracion, agentes []string) *Conexio
 	return con
 }
 
-// Desconectado indica si el agente está desconectado.
 func (c *Conexiones) Desconectado(agente string) bool {
 	if c == nil {
 		return false
@@ -76,7 +74,6 @@ func (c *Conexiones) Desconectado(agente string) bool {
 	return m != nil && (*m)[agente]
 }
 
-// Fijar conecta o desconecta un agente en marcha.
 func (c *Conexiones) Fijar(agente string, desconectado bool) {
 	for {
 		actual := c.desconectados.Load()
@@ -99,7 +96,6 @@ func (c *Conexiones) Fijar(agente string, desconectado bool) {
 // los que no saben comprobar su sesión). Se comparte entre todas las instancias; nil = no se recuerda nada.
 type Salud struct{ sinRespuesta sync.Map }
 
-// NuevaSalud crea una salud vacía.
 func NuevaSalud() *Salud { return &Salud{} }
 
 // Fallo anota que una petición del agente falló por autenticación.
@@ -109,7 +105,6 @@ func (s *Salud) Fallo(agente string) {
 	}
 }
 
-// Exito anota que una petición del agente funcionó.
 func (s *Salud) Exito(agente string) {
 	if s != nil {
 		s.sinRespuesta.Delete(agente)

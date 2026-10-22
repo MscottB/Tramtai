@@ -106,7 +106,7 @@ type Pagina struct {
 	trabajos    []nucleo.Trabajo // los cargados, del más nuevo al más viejo
 	puntos      []contrato.EstadoPunto
 	cargado     bool
-	sinServ     bool // el servicio no responde
+	sinServ     bool
 	err         string
 	cargando    bool // hay una lista pedida que se espera (no el sondeo)
 	cargandoMas bool

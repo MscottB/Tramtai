@@ -110,9 +110,8 @@ func direccionProc(texto string) (netip.AddrPort, bool) {
 	return netip.AddrPortFrom(direccion.Unmap(), uint16(p)), true
 }
 
-// Tipos y posiciones de los elementos de net.inet.tcp.pcblist_n en macOS (xnu, bsd/netinet/in_pcb.h y
-// sys/socketvar.h). Esas estructuras se declaran con #pragma pack(4): los enteros de 64 bits van alineados a 4 bytes,
-// no a 8 (comprobado con una conexión real en el CI de macOS, TestMismoUsuarioDarwin).
+// Tipos y posiciones de los elementos de net.inet.tcp.pcblist_n en macOS (xnu, bsd/netinet/in_pcb.h y sys/socketvar.h).
+// Se declaran con #pragma pack(4): los enteros de 64 bits van alineados a 4 bytes, no a 8 (TestMismoUsuarioDarwin).
 const (
 	xsoSocket    = 0x001
 	xsoInpcb     = 0x010
@@ -128,10 +127,9 @@ const (
 	largoXsocketN = 68
 )
 
-// uidDePcblist busca la conexión en la salida de net.inet.tcp.pcblist_n de macOS, la que lee netstat: una cabecera
-// xinpgen y, por cada conexión, elementos {largo, tipo, …} alineados a 8 bytes; primero xinpcb_n con los puertos
-// (orden de red) y las direcciones, y después xsocket_n con el uid de su dueño (so_uid). Todo en el orden del
-// procesador, little endian en Intel y Apple Silicon.
+// uidDePcblist busca la conexión en la salida de net.inet.tcp.pcblist_n de macOS (la que lee netstat): una cabecera
+// xinpgen y, por cada conexión, elementos {largo, tipo, …} alineados a 8 bytes: xinpcb_n con puertos y direcciones, y
+// después xsocket_n con el uid de su dueño. Todo en el orden del procesador (little endian).
 func uidDePcblist(datos []byte, cliente, servidor netip.AddrPort) (int, bool) {
 	le := binary.LittleEndian
 	if len(datos) < largoXinpgen {

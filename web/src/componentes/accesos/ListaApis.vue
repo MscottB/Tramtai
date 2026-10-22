@@ -149,11 +149,8 @@ const comparar = (a: EstadoPunto, b: EstadoPunto) => {
   if (orden.value === 'ultima') return (props.uso[b.nombre]?.ultima ?? '').localeCompare(props.uso[a.nombre]?.ultima ?? '') || a.nombre.localeCompare(b.nombre)
   return a.nombre.localeCompare(b.nombre)
 }
-// grupos ordena los puntos por grupo (los que no tienen, al final), aplica el buscador, el grupo elegido y el orden;
-// activos y total cuentan el grupo entero, porque activar o detener todas actúa sobre todo el grupo.
-// Filtros: el buscador (nombre, grupo, modelo e instrucciones), el grupo, el estado y el agente, y en «Más filtros» lo
-// que acepta (contrato), lo que tiene configurado (características, todas a la vez) y si tiene peticiones; pasa dice si
-// una API los cumple todos.
+// Filtros: buscador (nombre, grupo, modelo e instrucciones), grupo, estado y agente; en «Más filtros», contrato,
+// características (todas a la vez) y si tiene peticiones.
 const filtroEstado = ref<'todas' | 'activas' | 'detenidas' | 'error'>('todas')
 const filtroAgente = ref<string | null>(null)
 const filtroContrato = ref<string | null>(null)
@@ -180,6 +177,7 @@ const caracteristicas: Record<string, (p: EstadoPunto) => boolean> = {
   forzado: (p) => !!p.forzar_modelo,
   restringida: (p) => !!p.modelos_permitidos?.length,
 }
+// pasa dice si una API cumple todos los filtros.
 function pasa(p: EstadoPunto) {
   const texto = (busqueda.value ?? '').trim().toLowerCase()
   const estado = !activo(p) ? 'detenidas' : p.error ? 'error' : 'activas'
@@ -209,6 +207,8 @@ const opcionesAgente = computed(() => [
   ...ordenarAgentes([...new Set(props.puntos.map((p) => p.agente ?? ''))].map((agente) => ({ agente })))
     .map(({ agente }) => ({ label: agente ? nombreAgente(agente) : t('puntos.agentePredeterminado'), value: agente })),
 ])
+// grupos ordena los puntos por grupo (los que no tienen, al final), con los filtros y el orden; activos y total cuentan
+// el grupo entero, porque activar o detener todas actúa sobre todo el grupo.
 const grupos = computed(() => {
   const mapa = new Map<string, EstadoPunto[]>()
   for (const p of props.puntos) mapa.set(p.grupo ?? '', [...(mapa.get(p.grupo ?? '') ?? []), p])

@@ -30,7 +30,7 @@ type Gemini struct {
 	Cliente *http.Client // nil = http.DefaultClient
 }
 
-// Detectar implementa Detectable sin consumir cuota.
+// Detectar no consume cuota.
 func (g Gemini) Detectar(context.Context) adaptadores.Estado {
 	e := adaptadores.Estado{Agente: "gemini", Autenticacion: adaptadores.AutenticacionClaveAPI, Ruta: g.base(),
 		Terminos: idioma.T("términos de la Gemini API de Google (clave de API propia)")}
@@ -47,7 +47,7 @@ func (g Gemini) base() string {
 	return baseGemini
 }
 
-// Ejecutar implementa Adaptador con streamGenerateContent (SSE): el texto llega por fragmentos.
+// Ejecutar usa streamGenerateContent (SSE): el texto llega por fragmentos.
 func (g Gemini) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
 	clave, err := adaptadores.ClaveAlmacen("GEMINI_API_KEY", "GOOGLE_API_KEY")
 	if err != nil {
@@ -250,7 +250,7 @@ type contextoGuardado struct {
 // plazoContextoGemini acota la consulta: un servidor lento no deja un trabajo esperando ni el catálogo colgado.
 var plazoContextoGemini = 5 * time.Second
 
-// Contexto implementa Contextual con models.get de la API de Gemini (inputTokenLimit). Un fallo también se guarda,
+// Contexto consulta models.get de la API de Gemini (inputTokenLimit). Un fallo también se guarda,
 // 5 minutos, para no repetir la consulta en cada intento ni en cada carga del catálogo.
 func (g Gemini) Contexto(ctx context.Context, modelo string) (int, error) {
 	modelo = cmp.Or(strings.TrimPrefix(modelo, "models/"), modeloGeminiPredeterminado)

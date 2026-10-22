@@ -189,7 +189,6 @@ func (s *Servicio) fijarPrepararConversor(preparar bool) error {
 	return nil
 }
 
-// ServeHTTP implementa http.Handler.
 func (s *Servicio) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.handler.ServeHTTP(w, r) }
 
 // Base es la URL del puerto principal.

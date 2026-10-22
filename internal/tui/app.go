@@ -205,7 +205,6 @@ func (m *modelo) Init() tea.Cmd {
 	return tea.Batch(tea.RequestBackgroundColor, m.conectar(false, true, true))
 }
 
-// Update implementa tea.Model.
 func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if cmd := m.avisos.Update(msg); cmd != nil {
 		return m, cmd
@@ -346,7 +345,6 @@ func (m *modelo) salir() tea.Cmd {
 	return nil
 }
 
-// View implementa tea.Model.
 func (m *modelo) View() tea.View {
 	v := tea.NewView(m.vista())
 	v.AltScreen = true

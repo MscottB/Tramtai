@@ -80,9 +80,8 @@ type AbrirOpciones struct {
 }
 
 // ErrorConfianza: la carpeta ya traía .tramtai/ (por ejemplo, un repositorio clonado) y no es confiable; Claves son
-// las de seguridad que encontró en su local.yaml, para enseñarlas antes de decidir. Movido es dónde estaba antes, si
-// su marca es la de un proyecto registrado cuya carpeta ya no está: la confianza no viaja sola, porque una marca se
-// puede copiar en un repositorio ajeno.
+// las de seguridad de su local.yaml, para enseñarlas antes de decidir. Movido es dónde estaba antes si su marca es la de
+// un proyecto registrado que ya no está: la confianza no viaja sola, porque una marca se puede copiar.
 type ErrorConfianza struct {
 	Raiz   string
 	Claves []string
@@ -111,9 +110,8 @@ func (e *ErrorDentroDeProyecto) Unwrap() error {
 
 // AbrirProyecto activa el espacio del proyecto en raiz, una carpeta existente con ruta completa. Si no tenía .tramtai/,
 // lo crea y queda confiado (Tramtai lo escribió entero). Si ya traía .tramtai/ (aunque le falte config.yaml) y no es
-// confiable, pregunta
-// (ErrorConfianza) salvo que o.Confiar lo responda. Si está dentro de otro proyecto, pregunta (ErrorDentroDeProyecto)
-// salvo o.CrearAqui.
+// confiable, pregunta (ErrorConfianza) salvo que o.Confiar lo responda. Si está dentro de otro proyecto, pregunta
+// (ErrorDentroDeProyecto) salvo que o.CrearAqui.
 func (s *Servicio) AbrirProyecto(raiz string, o AbrirOpciones) (*Instancia, error) {
 	raiz = carpetas.ExpandirCasa(strings.TrimSpace(raiz))
 	if !filepath.IsAbs(raiz) {

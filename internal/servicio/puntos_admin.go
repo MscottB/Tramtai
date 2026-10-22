@@ -104,7 +104,6 @@ func (s *Servicio) adminCrearPunto(w http.ResponseWriter, r *http.Request) {
 	}
 	var token string
 	if err == nil {
-		// Clave nueva siempre (aunque quedara una de otro punto con el mismo nombre).
 		token, err = RotarTokenPunto(RutaTokenPunto(s.opc.Datos, p.Nombre))
 	}
 	if err != nil {
@@ -219,7 +218,7 @@ func (s *Servicio) adminEliminarPunto(w http.ResponseWriter, r *http.Request) {
 	s.guardadoAdmin(w, ruta, nil)
 }
 
-// adminRotarToken regenera la clave del punto; solo se guarda su huella, así que es la única vez que se ve.
+// adminRotarToken regenera la clave del punto (ver RotarTokenPunto).
 func (s *Servicio) adminRotarToken(w http.ResponseWriter, r *http.Request) {
 	nombre := r.PathValue("nombre")
 	if !NombrePuntoValido(nombre) {

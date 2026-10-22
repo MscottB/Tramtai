@@ -89,7 +89,6 @@ type Simulado struct {
 	Error     error
 }
 
-// Ejecutar implementa Adaptador.
 func (s Simulado) Ejecutar(ctx context.Context, solicitud nucleo.SolicitudEjecucion, emitir func(Evento) error) (Resultado, error) {
 	select {
 	case <-time.After(s.Demora):

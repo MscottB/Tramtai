@@ -23,9 +23,8 @@ import (
 )
 
 // despachar saca los trabajos de la cola en orden y procesa cada uno en su goroutine: un trabajo que espera
-// a su agente o a su punto de acceso no impide empezar a otro listo. Los semáforos limitan cuántos se ejecutan.
-// Antes de sacar el siguiente espera a que el anterior llegue a su espera: así cada semáforo, que atiende por
-// orden de llegada, conserva el orden de la cola.
+// a su agente o a su punto de acceso no impide empezar a otro listo. Antes de sacar el siguiente espera a que el
+// anterior llegue a su espera: así cada semáforo, que atiende por orden de llegada, conserva el orden de la cola.
 func (p *Planificador) despachar() {
 	defer p.grupo.Done()
 	for {
@@ -375,13 +374,9 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 		if semaforo == nil {
 			continue
 		}
-		// Se avisa al despachador justo antes de la primera espera, no antes de preparar el intento: con la máquina
-		// cargada, el siguiente trabajo puede llegar antes a su select y adelantarse en el semáforo del agente.
-		// shortcut: queda la ventana entre este aviso y entrar en el select, mucho menor que lo que tarda el
-		// siguiente trabajo en llegar a su espera (lee y escribe en la base); si no bastara, un turno por agente.
-		// El coste: el despachador no saca otro trabajo mientras este prepara el intento, incluida la consulta del
-		// contexto del modelo (hasta 5 s con Gemini la primera vez; luego queda en caché un día). Si eso frenara a
-		// otros agentes, el turno por agente también lo resuelve.
+		// Se avisa al despachador justo antes de la primera espera, no antes de preparar el intento: así el siguiente
+		// trabajo no se adelanta en el semáforo del agente. shortcut: queda una ventana entre el aviso y el select; si
+		// no bastara, un turno por agente.
 		esperando()
 		select {
 		case semaforo <- struct{}{}:

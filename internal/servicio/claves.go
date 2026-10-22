@@ -92,7 +92,8 @@ func guardarSecreto(ruta, valor string) error {
 }
 
 // RotarTokenPunto genera la clave nueva de un punto de acceso y guarda solo su huella: la clave se muestra una vez
-// y no se puede recuperar; la anterior deja de valer al recargar.
+// y no se puede recuperar; la anterior deja de valer al recargar. Es siempre nueva, aunque quedara una de otro punto con
+// el mismo nombre.
 func RotarTokenPunto(ruta string) (string, error) {
 	token := "tt_" + aleatorio(32)
 	return token, guardarSecreto(ruta, api.HuellaToken(token))

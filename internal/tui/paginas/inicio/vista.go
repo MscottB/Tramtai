@@ -180,7 +180,6 @@ func (p *Pagina) lineas() []string {
 		l = append(l, e.Tenue.Render(p.tx("inicio.comprobando")))
 	}
 
-	// Avisos
 	if p.inst.SugerirApiPropia {
 		l = append(l, "")
 		l = append(l, p.aviso(p.tx("claves.sugerencia", "n", strconv.Itoa(p.inst.AppConClave24h)), "c", p.tx("claves.crearApi"))...)
@@ -198,7 +197,6 @@ func (p *Pagina) lineas() []string {
 		l = append(l, p.aviso(p.textoConversor(), "p", p.tx("conversor.preparar"), "s", p.tx("conversor.irAjustes"))...)
 	}
 
-	// La red en vivo
 	l = append(l, "")
 	filas, resto := visibles(p.red, maximoVisibles)
 	cabecera := e.Grupo.Render(p.tx("inicio.red"))
@@ -222,13 +220,11 @@ func (p *Pagina) lineas() []string {
 	}
 	l = append(l, p.accion(0, "g", p.tx("inicio.detalles")))
 
-	// Contadores
 	l = append(l, "", e.Grupo.Render(p.tx("inicio.tablero"))+e.Tenue.Render(" "+e.Iconos.Separador+" "+p.periodo()),
 		p.contador(e.Iconos.Ok, e.Exito, teclaCompletados, "completados", p.inst.Contadores[nucleo.FiltroCompletado]),
 		p.contador(e.Iconos.Activo, e.Acento, teclaEnCurso, "enCurso", p.inst.Contadores[nucleo.FiltroEnCurso]),
 		p.contador(e.Iconos.Fallo, e.Error, teclaConError, "conError", p.inst.Contadores[nucleo.FiltroConError]))
 
-	// Primeros pasos
 	pasos := p.pasos()
 	hechos := 0
 	for _, x := range pasos {
@@ -257,7 +253,6 @@ func (p *Pagina) lineas() []string {
 	}
 	l = append(l, p.accion(0, "a", p.a(idioma.Tf("Ver la Ayuda de %s", p.tituloAyuda()))))
 
-	// Peticiones recientes
 	l = append(l, "", e.Grupo.Render(p.tx("inicio.recientes")))
 	if len(p.recientes) == 0 {
 		l = append(l, envolver(p.tx("inicio.sinTrabajos"), ancho, 0, e.Tenue)...)

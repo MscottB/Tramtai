@@ -104,11 +104,11 @@ type Pagina struct {
 	estilos *pagina.Estilos
 	gen     int
 	visible bool
-	desp    int // la primera línea que se ve
+	desp    int
 
 	inst       contrato.ResumenInstancia
 	cargado    bool
-	sinServ    bool // el servicio no responde
+	sinServ    bool
 	err        string
 	agentes    []contrato.Adaptador
 	hayAgentes bool // ya llegaron los Primeros pasos con sus agentes

@@ -4,11 +4,9 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// protegerCarpeta deja la carpeta solo para el usuario actual y SYSTEM, sin heredar permisos de la carpeta de encima:
-// una portable en C:\Tramtai heredaría «Usuarios autenticados: Modificar», y dentro está el token que administra el
-// servicio. Solo se aplica si la carpeta aún no está protegida (al crearla, o una datos-tramtai copiada a mano): aplicar
-// una DACL la propaga a todo lo de dentro, y eso no debe pasar en cada arranque. En un volumen sin ACL (FAT o exFAT de
-// un pendrive) no hay nada que poner y no es un error.
+// protegerCarpeta deja la carpeta solo para el usuario actual y SYSTEM, sin heredar permisos de la de encima: dentro está
+// el token que administra el servicio. Solo se aplica si aún no está protegida, porque una DACL se propaga a todo lo de
+// dentro. En un volumen sin ACL (FAT o exFAT) no hay nada que poner y no es un error.
 func protegerCarpeta(ruta string) error {
 	if actual, err := windows.GetNamedSecurityInfo(ruta, windows.SE_FILE_OBJECT, windows.DACL_SECURITY_INFORMATION); err == nil {
 		if control, _, err := actual.Control(); err == nil && control&windows.SE_DACL_PROTECTED != 0 {

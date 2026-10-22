@@ -209,7 +209,7 @@ func comandoAcceso() *cobra.Command {
 				return err
 			}
 			guardado(cmd, g)
-			// La clave se genera y se muestra ahora, una sola vez: solo se guarda su huella.
+			// La clave se muestra ahora, una sola vez (ver servicio.RotarTokenPunto).
 			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("clave nueva de %s (guárdala: no se volverá a mostrar):\n%s\n"), p.Nombre, g.Token)
 			return nil
 		})}

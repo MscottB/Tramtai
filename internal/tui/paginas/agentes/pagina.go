@@ -63,7 +63,7 @@ type Pagina struct {
 	n        int  // la última comprobación pedida
 	cargando bool // hay una comprobación en marcha
 	cargado  bool // ya hay una lista que enseñar
-	sinServ  bool // el servicio no responde
+	sinServ  bool
 	err      string
 	ocupado  bool // hay un cambio en marcha: no se lanza otro
 	pend     *pendiente

@@ -19,11 +19,11 @@ type Estilos struct {
 	Texto       lipgloss.Style
 	Tenue       lipgloss.Style // lo secundario: detalles, ayudas, vacíos
 	Acento      lipgloss.Style // lo que se quiere destacar: el nombre de la app, enlaces, la etiqueta con el foco
-	Seleccion   lipgloss.Style // la fila elegida
+	Seleccion   lipgloss.Style
 	Exito       lipgloss.Style
 	Advertencia lipgloss.Style
 	Error       lipgloss.Style
-	Tecla       lipgloss.Style // la tecla en el pie
+	Tecla       lipgloss.Style
 	Grupo       lipgloss.Style // la cabecera de un grupo en el menú y en las listas
 
 	Borde  lipgloss.Border
