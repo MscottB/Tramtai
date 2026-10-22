@@ -84,7 +84,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
   <li><strong>2. <span lang="es">Tramtai lo guarda</span><span lang="en">Tramtai keeps it</span></strong><span><span lang="es">Como una carga identificada por su contenido: el mismo archivo no se guarda dos veces.</span><span lang="en">As an upload identified by its content: the same file is never stored twice.</span></span></li>
   <li><strong>3. <span lang="es">Lo convierte a texto</span><span lang="en">Turns it into text</span></strong><span><span lang="es">markitdown pasa PDF, Word, PowerPoint, Excel y HTML a Markdown; el texto va tal cual.</span><span lang="en">markitdown turns PDF, Word, PowerPoint, Excel and HTML into Markdown; text goes as is.</span></span></li>
   <li><strong>4. <span lang="es">Se lo da al agente</span><span lang="en">Hands it to the agent</span></strong><span><span lang="es">Un bloque delimitado por archivo, junto con tu mensaje. El agente no lee tu disco.</span><span lang="en">One delimited block per file, with your message. The agent does not read your disk.</span></span></li>
-  <li><strong>5. <span lang="es">Recibes la respuesta</span><span lang="en">You get the answer</span></strong><span><span lang="es">Como cualquier otra petición, en el formato de la API que usaste.</span><span lang="en">Like any other request, in the format of the API you used.</span></span></li>
+  <li><strong>5. <span lang="es">Recibes la respuesta</span><span lang="en">You get the response</span></strong><span><span lang="es">Como cualquier otra petición, en el formato de la API que usaste.</span><span lang="en">Like any other request, in the format of the API you used.</span></span></li>
 </ol>
 </section>
 
@@ -92,7 +92,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 <ol class="pasos">
   <li><span lang="es">Por la API propia: sube cada archivo con POST /cargas y crea la petición citando sus cargas.</span><span lang="en">Native API: upload each file with POST /cargas and create the request citing its uploads.</span></li>
   <li><span lang="es">Por OpenAI o Anthropic: pon el archivo en base64 dentro del mensaje (file, input_file o document).</span><span lang="en">OpenAI or Anthropic: put the file in base64 inside the message (file, input_file or document).</span></li>
-  <li><span lang="es">En Probar también puedes adjuntarlos para ver la respuesta antes.</span><span lang="en">In Try you can attach them too, to see the answer first.</span></li>
+  <li><span lang="es">En Probar también puedes adjuntarlos para ver la respuesta antes.</span><span lang="en">In the Playground you can attach them too, to see the response first.</span></li>
 </ol>
 </section>
 
@@ -232,7 +232,7 @@ if not r.ok:
     sys.exit(r.text)
 trabajo = r.json()[&quot;id&quot;]
 
-# 3. Follow it live: each &quot;texto&quot; event carries a piece of the answer and &quot;fin&quot; ends the stream
+# 3. Follow it live: each “texto” event carries a piece of the response and “fin” ends the stream
 fin, evento, datos = {}, &quot;&quot;, []
 with requests.get(f&quot;{BASE}/trabajos/{trabajo}/eventos&quot;, headers=CABECERAS, stream=True) as eventos:
     for linea in (l.decode(&quot;utf-8&quot;) for l in eventos.iter_lines()):
@@ -340,7 +340,7 @@ const solicitud = {
 const { id } = await (await pedir(&#39;/trabajos&#39;, { method: &#39;POST&#39;, body: JSON.stringify(solicitud),
   headers: { &#39;Content-Type&#39;: &#39;application/json&#39;, &#39;Idempotency-Key&#39;: randomUUID() } })).json()
 
-// 3. Follow it live: each &quot;texto&quot; event carries a piece of the answer and &quot;fin&quot; ends the stream
+// 3. Follow it live: each “texto” event carries a piece of the response and “fin” ends the stream
 const eventos = await pedir(`/trabajos/${id}/eventos`)
 const lector = new TextDecoder()
 let pendiente = &#39;&#39;, fin
@@ -517,7 +517,7 @@ func main() {
 	}
 	json.NewDecoder(pedir(&quot;POST&quot;, &quot;/trabajos&quot;, &quot;application/json&quot;, strings.NewReader(solicitud)).Body).Decode(&amp;trabajo)
 
-	// 3. Follow it live: each &quot;texto&quot; event carries a piece of the answer and &quot;fin&quot; ends the stream
+	// 3. Follow it live: each “texto” event carries a piece of the response and “fin” ends the stream
 	eventos := bufio.NewScanner(pedir(&quot;GET&quot;, &quot;/trabajos/&quot;+trabajo.ID+&quot;/eventos&quot;, &quot;&quot;, nil).Body)
 	evento := &quot;&quot;
 	for eventos.Scan() {
@@ -703,14 +703,14 @@ print(m.content[0].text)</code></pre>
 <section id="s-preguntas"><h2><span lang="es">Preguntas</span><span lang="en">Questions</span></h2>
 <details id="imagenes"><summary><span lang="es">¿Puedo enviar imágenes?</span><span lang="en">Can I send images?</span></summary><p><span lang="es">Todavía no. Por OpenAI y Anthropic el archivo va dentro del mensaje: Tramtai no descarga URL ni usa file_id.</span><span lang="en">Not yet. Through OpenAI and Anthropic the file goes inside the message: Tramtai does not download URLs or use file_id.</span></p></details>
 <details id="por-tamano"><summary><span lang="es">¿Por qué se rechazó mi petición por tamaño?</span><span lang="en">Why was my request rejected for its size?</span></summary><p><span lang="es">Lo que recibiría el agente no cabe en el modelo. Envía menos páginas o divide el archivo; el registro dice cuál pesa más. No se gastan tokens.</span><span lang="en">What the agent would get does not fit the model. Send fewer pages or split the file; the log says which one weighs most. No tokens are spent.</span></p></details>
-<details id="falta-conversor"><summary><span lang="es">¿Qué hago si falta el conversor?</span><span lang="en">What if the converter is missing?</span></summary><p><span lang="es">Ajustes → Archivos → «Preparar archivos», o «tramtai conversor preparar». Si tu red bloquea la descarga, usa el paquete del conversor para Windows.</span><span lang="en">Settings → Files → &quot;Prepare files&quot;, or &quot;tramtai conversor preparar&quot;. If your network blocks the download, use the converter package for Windows.</span></p></details>
+<details id="falta-conversor"><summary><span lang="es">¿Qué hago si falta el conversor?</span><span lang="en">What if the converter is missing?</span></summary><p><span lang="es">Ajustes → Archivos → «Preparar archivos», o «tramtai conversor preparar». Si tu red bloquea la descarga, usa el paquete del conversor para Windows.</span><span lang="en">Settings → Files → “Prepare files”, or “tramtai conversor preparar”. If your network blocks the download, use the converter package for Windows.</span></p></details>
 <details id="sale-algo"><summary><span lang="es">¿Sale algo de mi equipo al convertir?</span><span lang="en">Does anything leave my computer when converting?</span></summary><p><span lang="es">No: markitdown corre en tu equipo. El texto convertido lo recibe el agente, como cualquier mensaje.</span><span lang="en">No: markitdown runs on your computer. The converted text goes to the agent, like any message.</span></p></details>
 </section>
 
 <section id="s-errores"><h2><span lang="es">Si algo falla</span><span lang="en">If something fails</span></h2>
 <dl class="errores">
   <div id="e-conversion_fallida"><dt><span lang="es">No se pudo convertir el archivo</span><span lang="en">The file could not be converted</span> <code>conversion_fallida</code></dt><dd><span lang="es">No se pudo convertir un archivo. Comprueba que no esté dañado ni protegido con contraseña y que su formato se admita.</span><span lang="en">A file could not be converted. Check that it is not damaged or password-protected and that its format is accepted.</span></dd></div>
-  <div id="e-conversor_no_disponible"><dt><span lang="es">Falta el conversor de archivos</span><span lang="en">The file converter is missing</span> <code>conversor_no_disponible</code></dt><dd><span lang="es">Falta el conversor de archivos: Ajustes → Archivos → «Preparar archivos». Si tu red bloquea la descarga, usa el paquete del conversor para Windows.</span><span lang="en">The file converter is missing: Settings → Files → &quot;Prepare files&quot;. If your network blocks the download, use the converter package for Windows.</span></dd></div>
+  <div id="e-conversor_no_disponible"><dt><span lang="es">Falta el conversor de archivos</span><span lang="en">The file converter is missing</span> <code>conversor_no_disponible</code></dt><dd><span lang="es">Falta el conversor de archivos: Ajustes → Archivos → «Preparar archivos». Si tu red bloquea la descarga, usa el paquete del conversor para Windows.</span><span lang="en">The file converter is missing: Settings → Files → “Prepare files”. If your network blocks the download, use the converter package for Windows.</span></dd></div>
   <div id="e-entrada_demasiado_grande"><dt><span lang="es">La entrada no cabe en el modelo</span><span lang="en">The input does not fit in the model</span> <code>entrada_demasiado_grande</code></dt><dd><span lang="es">Los documentos no caben en el modelo. Envía menos páginas, divide el archivo o pon en el respaldo un modelo con más contexto.</span><span lang="en">The documents do not fit the model. Send fewer pages, split the file or put a model with more context in the fallback.</span></dd></div>
 </dl>
 
@@ -720,8 +720,8 @@ print(m.content[0].text)</code></pre>
 <section id="s-relacionados"><h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
 <div class="tarjetas-temas">
   <a class="tarjeta-tema" href="conectar.html"><strong><span lang="es">Conectar mi app</span><span lang="en">Connect my app</span></strong><span><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.</span><span lang="en">Change your OpenAI or Anthropic SDK’s base URL to Tramtai’s and pick the agent with model.</span></span></a>
-  <a class="tarjeta-tema" href="probar.html"><strong><span lang="es">Probar</span><span lang="en">Try</span></strong><span><span lang="es">Escribe un mensaje, elige agente, modelo y esfuerzo, y mira la respuesta antes de llevarla a tu app.</span><span lang="en">Type a message, pick agent, model and effort, and see the answer before taking it to your app.</span></span></a>
-  <a class="tarjeta-tema" href="json.html"><strong><span lang="es">Respuestas JSON</span><span lang="en">JSON answers</span></strong><span><span lang="es">Pide la respuesta con una forma fija (un esquema JSON) y Tramtai la valida antes de entregarla.</span><span lang="en">Ask for the answer in a fixed shape (a JSON schema) and Tramtai validates it before handing it over.</span></span></a>
+  <a class="tarjeta-tema" href="probar.html"><strong><span lang="es">Probar</span><span lang="en">Playground</span></strong><span><span lang="es">Escribe un mensaje, elige agente, modelo y esfuerzo, y mira la respuesta antes de llevarla a tu app.</span><span lang="en">Type a message, pick agent, model and effort, and see the response before taking it to your app.</span></span></a>
+  <a class="tarjeta-tema" href="json.html"><strong><span lang="es">Respuestas JSON</span><span lang="en">JSON responses</span></strong><span><span lang="es">Pide la respuesta con una forma fija (un esquema JSON) y Tramtai la valida antes de entregarla.</span><span lang="en">Ask for the response in a fixed shape (a JSON schema) and Tramtai validates it before handing it over.</span></span></a>
 </div>
 </section>
 </article>

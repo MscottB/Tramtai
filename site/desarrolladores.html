@@ -106,7 +106,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
         <p>Todos los ejemplos están en <a href="https://github.com/MscottB/Tramtai/tree/main/docs/ejemplos">docs/ejemplos</a> y el CI los ejecuta en cada cambio.</p>
       </div>
       <div lang="en">
-        <p>You need Tramtai running with at least one agent connected, plus your API's <strong>URL</strong> and <strong>key</strong> (in the app, <strong>My APIs</strong>). The examples read them from three variables: <code>TRAMTAI_URL</code> (default <code>http://127.0.0.1:17373</code>), <code>TRAMTAI_CLAVE</code> and <code>TRAMTAI_MODELO</code> (agent and model, default <code>claude/haiku</code>).</p>
+        <p>You need Tramtai running with at least one agent connected, plus your API’s <strong>URL</strong> and <strong>key</strong> (in the app, <strong>My APIs</strong>). The examples read them from three variables: <code>TRAMTAI_URL</code> (default <code>http://127.0.0.1:17373</code>), <code>TRAMTAI_CLAVE</code> and <code>TRAMTAI_MODELO</code> (agent and model, default <code>claude/haiku</code>).</p>
         <p><strong>Which API?</strong> If your app already uses the OpenAI or Anthropic SDK, its URL (<code>/openai/v1</code> or <code>/anthropic</code>): nothing else changes. If you need long requests you follow, cancel or retry, the native API (<code>/api/v1</code>). <a href="ayuda/conectar.html">Help compares all three.</a></p>
         <p><strong>Which key do I use?</strong> Your app’s own API key (<strong>My APIs → New API</strong>): with its models and budget, and you can regenerate it without touching the others. The <strong>workspace key</strong> is for you and your scripts. In the native API, the <code>/api/v1/instancia</code> routes refer to that workspace: the global one or a project’s.</p>
         <p>If you do not know the app yet, <a href="./#demo">the guided tour</a> shows it on the home page, and in Tramtai the <strong>?</strong> button on every page has <strong>Show me on screen</strong>. The API does not change.</p>
@@ -236,9 +236,9 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
         <p>Just like with its SDK: <code>tools</code> with <code>input_schema</code>, <code>tool_use</code> blocks in the answer and <code>tool_result</code> in the next message.</p>
         <h3>Good to know</h3>
         <ul>
-          <li>Arguments arrive <strong>validated</strong> against each tool's JSON Schema; if the agent gets them wrong, Tramtai asks it to fix them (with the request's or the recipe's corrections) before answering.</li>
+          <li>Arguments arrive <strong>validated</strong> against each tool’s JSON Schema; if the agent gets them wrong, Tramtai asks it to fix them (with the request’s or the recipe’s corrections) before answering.</li>
           <li>With tools, the answer arrives complete at the end, even if you ask for <code>stream</code>.</li>
-          <li>They can't be combined with a JSON answer, and they go in every request: recipes don't store them.</li>
+          <li>They can’t be combined with a JSON answer, and they go in every request: recipes don’t store them.</li>
         </ul>
         <p>Checked on 2026-10-20 with the real agents, the full cycle through each URL:</p>
         <div class="tabla"><table>
@@ -314,7 +314,7 @@ data: {"id":"trabajo_…","estado":"ejecutando","etapa":"ejecucion","agente":"cl
         <p><code>GET /api/v1/limites</code> da los topes de una petición (archivos, tamaños, mensajes) y los formatos admitidos, para que tu app los conozca antes de enviar.</p>
       </div>
       <div lang="en">
-        <p><code>GET /api/v1/limites</code> gives a request's caps (files, sizes, messages) and the accepted formats, so your app knows them before sending.</p>
+        <p><code>GET /api/v1/limites</code> gives a request’s caps (files, sizes, messages) and the accepted formats, so your app knows them before sending.</p>
       </div>
 <div class="pestanas" data-pestanas>
   <div class="pestanas-lista" role="tablist" aria-label="Lenguaje" data-aria-en="Language"><button type="button" role="tab" id="p7-curl" aria-controls="p7-curl-panel" aria-selected="true" tabindex="0" data-lenguaje="curl">curl</button></div>

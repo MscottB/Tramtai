@@ -74,12 +74,15 @@ function fallos(textos: Texto[], reglas: Regla[]) {
   return r
 }
 
+// sinFallos enseña la lista entera: assert.deepEqual la recorta cuando es larga.
+const sinFallos = (lista: string[]) => assert.ok(lista.length === 0, [`${lista.length} fallos:`, ...lista].join('\n'))
+
 // Las palabras huecas de antislop R-16, en los dos idiomas.
 const huecas: Regla[] = [
   { nombre: 'palabra hueca (R-16)', re: /\b(ai[- ]powered|next[- ]generation|revolutionary|seamless(ly)?|cutting[- ]edge|intelligent|ultimate|powerful|effortless(ly)?)\b/i },
   { nombre: 'palabra hueca (R-16)', re: /(impulsad[oa]s? por (la )?ia|de nueva generación|revolucionari[oa]s?|sin fisuras|de vanguardia|inteligentes?\b|\bpotentes?\b|sin esfuerzo)/i },
 ]
-const raya: Regla = { nombre: 'raya larga', re: /—/ }
+const raya: Regla = { nombre: 'raya larga', re: /\u2014/ }
 
 // tecnico quita lo que no se traduce: código entre acentos graves, órdenes de la CLI (tramtai …, en minúsculas) y
 // nombres con _, -, / o punto (claves de configuración, cabeceras, rutas, archivos).
@@ -103,10 +106,26 @@ const descartadosEn: Regla[] = [
 ]
 
 test('los textos usan espacio, API, clave y petición', () => {
-  assert.deepEqual([...fallos(sinTecnico(textosEs), descartadosEs), ...fallos(sinTecnico(textosEn), descartadosEn)], [])
+  sinFallos([...fallos(sinTecnico(textosEs), descartadosEs), ...fallos(sinTecnico(textosEn), descartadosEn)])
+})
+
+// El inglés: un solo estilo de comillas (curvas), la variante de Estados Unidos, «Playground» como nombre de la página
+// Probar («Try» solo como verbo) y «log» para el registro. Las {llaves} de JSON y el código no cuentan.
+const ingles: Regla[] = [
+  { nombre: 'comillas rectas → “ ”', re: /"[^"]*"/ },
+  { nombre: 'comillas angulares → “ ”', re: /[«»]/ },
+  { nombre: 'apóstrofo recto → ’', re: /[A-Za-z]'[A-Za-z]/ },
+  { nombre: 'variante UK → US', re: /\bcancell(ed|ing)\b/i },
+  { nombre: 'Try como página → Playground', re: /^Try$|\b(in|from|to|and|In|From|Open in|Go to) Try\b/ },
+  { nombre: 'record → log', re: /\brecords?\b/i },
+]
+const sinJson = (textos: Texto[]) => textos.map((x) => ({ ...x, texto: x.texto.replace(/`[^`]*`/g, ' ').replace(/\{[^{}]*\}/g, ' ') }))
+
+test('el inglés usa comillas curvas, la variante de EE. UU. y los nombres del glosario', () => {
+  sinFallos(fallos(sinJson(textosEn), ingles))
 })
 
 test('ningún texto de producto lleva la raya larga ni palabras huecas', () => {
   assert.ok(go.es.length > 500 && web.es.length >= 20 && web.en.length > 100, 'no se leyeron los catálogos o el sitio')
-  assert.deepEqual(fallos([...textosEs, ...textosEn], [raya, ...huecas]), [])
+  sinFallos(fallos([...textosEs, ...textosEn], [raya, ...huecas]))
 })

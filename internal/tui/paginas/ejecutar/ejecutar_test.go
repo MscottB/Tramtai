@@ -502,10 +502,10 @@ func TestTextosComoLaWeb(t *testing.T) {
 	c := contexto(t, cli, id, "")
 	c.Idioma = "en"
 	en := prueba.Abrir(t, ejecutar.Nueva("en"), c)
-	if en.P.Titulo() != "Try" {
+	if en.P.Titulo() != "Playground" {
 		t.Fatalf("el título es el del menú en inglés: %q", en.P.Titulo())
 	}
-	if v := en.Vista(); !strings.Contains(v, "Recipe") || !strings.Contains(v, "Answer") {
+	if v := en.Vista(); !strings.Contains(v, "Recipe") || !strings.Contains(v, "Response") {
 		t.Fatalf("en inglés:\n%s", v)
 	}
 }

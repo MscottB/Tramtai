@@ -11,7 +11,7 @@ func init() {
 		"estado: %s\n":       "status: %s\n",
 		"origen: %s\n":       "source: %s\n",
 		"último error: %s\n": "last error: %s\n",
-		"prepáralo con «tramtai conversor preparar» o en la Web UI, en Ajustes → Archivos":                                                                               "prepare it with \"tramtai conversor preparar\" or in the Web UI, in Settings → Files",
+		"prepáralo con «tramtai conversor preparar» o en la Web UI, en Ajustes → Archivos":                                                                               "prepare it with “tramtai conversor preparar” or in the Web UI, in Settings → Files",
 		"Tramtai expone %s como una API local.\n\n  tramtai          terminal interactiva\n  tramtai abrir    Web UI en el navegador (inicia el servicio si hace falta)": "Tramtai exposes %s as a local API.\n\n  tramtai          interactive terminal\n  tramtai abrir    Web UI in the browser (starts the service if needed)",
 		"agente: %s (predeterminados.agente)": "agent: %s (predeterminados.agente)",
 		"y":                                   "and",
@@ -31,7 +31,7 @@ func init() {
 		"%s ya existe": "%s already exists",
 		"creado %s\nsiguiente: tramtai proyecto iniciar\n": "created %s\nnext: tramtai proyecto iniciar\n",
 		"Tareas del instalador de Windows":                 "Windows installer tasks",
-		"Añade o quita la carpeta del PATH del usuario":    "Adds the folder to or removes it from the user's PATH",
+		"Añade o quita la carpeta del PATH del usuario":    "Adds the folder to or removes it from the user’s PATH",
 
 		// tramtai configuracion
 		"Valida y muestra la configuración efectiva":                       "Validates and shows the effective configuration",
@@ -44,8 +44,8 @@ func init() {
 		"la clave no tiene valor: %s":                                      "the key has no value: %s",
 
 		// tramtai claves
-		"Guarda las claves de API en el almacén cifrado del sistema (no en archivos ni variables de entorno)": "Stores API keys in the system's encrypted store (not in files or environment variables)",
-		"Guarda las claves de API de los proveedores en el almacén cifrado del sistema (Administrador de credenciales\nen Windows, Llavero en macOS, Secret Service en Linux); Tramtai nunca las escribe en sus archivos. Una variable\nde entorno con el mismo nombre tiene prioridad. Claves admitidas: %s.\nEl servicio usa la clave nueva desde la siguiente petición, sin reiniciar.": "Stores the providers' API keys in the system's encrypted store (Credential Manager on\nWindows, Keychain on macOS, Secret Service on Linux); Tramtai never writes them to its files. An environment\nvariable with the same name takes precedence. Supported keys: %s.\nThe service uses the new key from the next request, without restarting.",
+		"Guarda las claves de API en el almacén cifrado del sistema (no en archivos ni variables de entorno)": "Stores API keys in the system’s encrypted store (not in files or environment variables)",
+		"Guarda las claves de API de los proveedores en el almacén cifrado del sistema (Administrador de credenciales\nen Windows, Llavero en macOS, Secret Service en Linux); Tramtai nunca las escribe en sus archivos. Una variable\nde entorno con el mismo nombre tiene prioridad. Claves admitidas: %s.\nEl servicio usa la clave nueva desde la siguiente petición, sin reiniciar.": "Stores the providers' API keys in the system’s encrypted store (Credential Manager on\nWindows, Keychain on macOS, Secret Service on Linux); Tramtai never writes them to its files. An environment\nvariable with the same name takes precedence. Supported keys: %s.\nThe service uses the new key from the next request, without restarting.",
 		"clave no admitida %q; usa una de %s":                                 "unsupported key %q; use one of %s",
 		"Pide la clave sin mostrarla y la guarda":                             "Asks for the key without showing it and stores it",
 		"%s (no se muestra): ":                                                "%s (hidden): ",
@@ -102,19 +102,19 @@ func init() {
 
 		// tramtai acceso
 		"APIs por aplicación, cada una con su puerto o ruta, su clave y sus modelos":             "Per-app APIs, each with its own port or path, key and models",
-		"usa .tramtai/local.yaml del proyecto actual en lugar de la configuración global":     "uses the current project's .tramtai/local.yaml instead of the global configuration",
+		"usa .tramtai/local.yaml del proyecto actual en lugar de la configuración global":     "uses the current project’s .tramtai/local.yaml instead of the global configuration",
 		"--local exige estar en un proyecto (.tramtai/config.yaml)":                           "--local must be used inside a project (.tramtai/config.yaml)",
 		"puerto propio (0 = ruta /p/<nombre> en el puerto del servicio)":                      "its own port (0 = path /p/<name> on the service port)",
 		"texto que se antepone a cada petición, por ejemplo «Responde siempre en español»": "text added at the start of every request, for example “Always answer in Spanish”",
 		"grupo para ordenar las APIs y activarlas o detenerlas juntas":                   "group to sort the APIs and start or stop them together",
-		"espacio al que pertenece (global, o el del proyecto con --local)":                    "workspace it belongs to (global, or the project's with --local)",
+		"espacio al que pertenece (global, o el del proyecto con --local)":                    "workspace it belongs to (global, or the project’s with --local)",
 		"agente predeterminado de la API":                                                     "default agent of the API",
 		"modelo predeterminado de la API":                                                     "default model of the API",
 		"perfil de modelo predeterminado de la API":                                           "default model profile of the API",
 		"API habilitadas: nativa, openai, anthropic (todas por defecto)":                      "enabled API formats: nativa, openai, anthropic (all by default)",
 		"modelos permitidos: agente, agente/modelo o perfil/nombre":                           "allowed models: agent, agent/model or profile/name",
 		"alias de modelos, por ejemplo gpt-4o-mini=claude/haiku":                              "model aliases, for example gpt-4o-mini=claude/haiku",
-		"ignora el modelo que pide la petición y usa el de la API":                                 "ignores the model in the request and uses the API's",
+		"ignora el modelo que pide la petición y usa el de la API":                                 "ignores the model in the request and uses the API’s",
 		"modo de contexto de la API":                                                          "context mode of the API",
 		"formato de salida de la API":                                                         "output format of the API",
 		"tiempo límite en segundos de la API":                                                 "time limit in seconds of the API",
