@@ -11,7 +11,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -169,7 +168,7 @@ func partir(texto string) []string {
 }
 
 // entrada es la del catálogo elegida (o la predeterminada); un id escrito a mano cae en su agente (entradaCatalogo).
-func (p *Pagina) entrada(sel string) (m cliente.ModeloCatalogo, ok bool) {
+func (p *Pagina) entrada(sel string) (m contrato.Modelo, ok bool) {
 	for _, x := range p.catalogo {
 		if (sel == "" && x.Predeterminado) || (sel != "" && x.ID == sel) {
 			return x, true

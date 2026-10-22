@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { idioma, t } from './i18n.ts'
-import { agenteListo, agruparOpciones, chapaDe, contraste, esfuerzoPredeterminadoDe, estadoAgente, modeloDe, ofrecerDejarSuscripcion, soloDesconectados, esfuerzosDe, fichas, opcionEscrita, opcionModelo, ordenarAgentes, type FichaAgente } from './agentes.ts'
+import { agenteListo, agruparOpciones, chapaDe, contraste, esfuerzoPredeterminadoDe, fijarDisponibilidad, modeloDe, problemasAgentes, ofrecerDejarSuscripcion, soloDesconectados, esfuerzosDe, fichas, opcionEscrita, opcionModelo, ordenarAgentes, type FichaAgente } from './agentes.ts'
 import { numero } from './formato.ts'
 import type { Adaptador, Modelo, Trabajo } from './api/tipos.ts'
 
@@ -72,18 +72,16 @@ test('esfuerzos del modelo elegido: uno escrito a mano tiene los de su agente, p
   assert.equal(esfuerzoPredeterminadoDe(catalogo, null), 'medio')
 })
 
-const adaptador = (o: Partial<Adaptador>): Adaptador => ({ agente: 'claude', capacidades: { streaming: 'tokens', salida_estructurada: true, modelo_efectivo_informado: true }, ...o })
+const adaptador = (o: Partial<Adaptador>): Adaptador => ({ agente: 'claude', estado: 'listo', desconectado: false, capacidades: { texto: true, streaming: 'tokens',
+  salida_estructurada: true, uso_tokens: 'informado_por_cli', modelo_efectivo_informado: true, tool_calling_compatible: false, imagenes: false,
+  sesiones_persistentes: false }, ...o })
 
-test('estadoAgente según el problema, la autenticación y si está desconectado', () => {
-  assert.equal(estadoAgente(adaptador({})), 'listo')
-  assert.equal(estadoAgente(adaptador({ problema: 'x', problema_codigo: 'aviso' })), 'listo')
-  assert.equal(estadoAgente(adaptador({ problema: 'x', problema_codigo: 'no_instalado' })), 'noInstalado')
-  assert.equal(estadoAgente(adaptador({ problema: 'x', problema_codigo: 'falta_clave' })), 'faltaClave')
-  assert.equal(estadoAgente(adaptador({ problema: 'x', problema_codigo: 'falta_clave', autenticacion: 'suscripcion' })), 'sinSesion')
-  assert.equal(estadoAgente(adaptador({ problema: 'x', problema_codigo: 'usa_clave_api', autenticacion: 'suscripcion' })), 'usaClave')
-  assert.equal(estadoAgente(adaptador({ problema: 'x', problema_codigo: 'sesion_no_responde' })), 'sesionNoResponde')
-  assert.equal(estadoAgente(adaptador({ problema: 'x' })), 'revisar')
-  assert.equal(estadoAgente(adaptador({ desconectado: true, problema: 'x', problema_codigo: 'no_instalado' })), 'desconectado')
+// El estado lo calcula el servicio (api.estadoAgente): la Web UI pinta el que llega, sin volver a deducirlo.
+test('fijarDisponibilidad dice por qué no se puede usar cada agente según el estado que manda el servicio', () => {
+  fijarDisponibilidad([adaptador({ agente: 'a' }), adaptador({ agente: 'b', estado: 'no_instalado', desconectado: true, problema: 'x', problema_codigo: 'no_instalado' }),
+    adaptador({ agente: 'c', estado: 'desconectado', desconectado: true }), adaptador({ agente: 'd', estado: 'sin_sesion', problema: 'x' }),
+    adaptador({ agente: 'e', estado: 'revisar', problema: 'roto' })])
+  assert.deepEqual(problemasAgentes.value, { b: t('modelo.noInstalado'), c: t('modelo.desconectado'), d: t('modelo.faltaClave'), e: t('modelo.conProblema', { problema: 'roto' }) })
 })
 
 test('«Dejar de usar la suscripción» en cualquier estado si la ficha admite las dos', () => {
@@ -95,9 +93,10 @@ test('«Dejar de usar la suscripción» en cualquier estado si la ficha admite l
   assert.equal(ofrecerDejarSuscripcion(adaptador({ autenticacion: 'suscripcion' }), false), false)
 })
 
-test('un agente desconectado no está listo', () => {
-  assert.equal(agenteListo(adaptador({ desconectado: true })), false)
+test('agenteListo pinta el estado del servicio', () => {
+  assert.equal(agenteListo(adaptador({ estado: 'desconectado', desconectado: true })), false)
   assert.equal(agenteListo(adaptador({})), true)
+  assert.equal(agenteListo(adaptador({ problema: 'un aviso', problema_codigo: 'aviso' })), true, 'no lo vuelve a deducir del problema')
 })
 
 test('una API que solo puede usar agentes desconectados', () => {

@@ -5,7 +5,7 @@ import { idioma, idiomas, t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 import { compartida } from '../compartida'
 import { actualizacion, dialogoActualizar, diasHistorial, sesion } from '../estado'
-import type { Acerca, Adaptador, EspacioUI, AjustesPunto, ConfigPunto, EntradaConfiguracion, EstadoActualizacion, EstadoConversor, EstadoInstancia, EstadoPresupuesto, EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Novedad, ProgresoActualizacion, Retencion, Sesion, Solicitud, Trabajo, UsoPunto } from './tipos'
+import type { Acerca, Capacidades, PrimerosPasos, EspacioUI, AjustesPunto, ConfigPunto, EntradaConfiguracion, EstadoActualizacion, EstadoConversor, ResumenInstancia, EstadoPresupuesto, EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Novedad, ProgresoActualizacion, Retencion, Sesion, Solicitud, Trabajo, UsoPunto } from './tipos'
 
 // Campos declarados aparte (no en el constructor): node --test ejecuta este archivo quitando solo los tipos.
 export class ErrorApi extends Error {
@@ -113,7 +113,7 @@ export const api = {
   detenerServicio: () => pedir<unknown>('POST', '/ui/servicio/detener'),
   fijarPuerto: (puerto: number, automatico: boolean) => pedir<Sesion>('POST', '/ui/servicio/puerto', { puerto, automatico }).then(recordar),
   reiniciarServicio: () => pedir<{ url: string }>('POST', '/ui/servicio/reiniciar'),
-  instancia: () => pedir<EstadoInstancia>('GET', '/api/v1/instancia'),
+  instancia: () => pedir<ResumenInstancia>('GET', '/api/v1/instancia'),
   claveInstancia: () => pedir<{ token: string; archivo: string }>('GET', '/api/v1/instancia/token'),
   // regenerarClaveInstancia cambia la clave que usan las aplicaciones; la anterior deja de valer al momento.
   regenerarClaveInstancia: () => pedir<{ token: string; archivo: string }>('POST', '/api/v1/instancia/token'),
@@ -126,7 +126,9 @@ export const api = {
   // vacío solo cambia el esfuerzo (en un proyecto no fija el modelo heredado).
   fijarPredeterminado: (modelo: string, esfuerzo?: string) => pedir<void>('POST', '/api/v1/instancia/predeterminado', { modelo, esfuerzo }),
   // capacidades comprueba cada agente con hasta 10 s por agente: lleva un plazo mayor.
-  capacidades: () => pedir<{ adaptadores: Adaptador[]; entradas?: string[] }>('GET', '/api/v1/capacidades', undefined, 60000),
+  capacidades: () => pedir<Capacidades>('GET', '/api/v1/capacidades', undefined, 60000),
+  // pasos son los Primeros pasos de Inicio, ya calculados, con los agentes que comprobó (tarda como capacidades).
+  pasos: () => pedir<PrimerosPasos>('GET', '/api/v1/instancia/pasos', undefined, 60000),
   // trabajos lista los más recientes; filtro acota por API, grupo, origen o fecha (antes, para la página siguiente).
   trabajos: (limite = 50, filtro: { punto?: string; grupo?: string; origen?: string; antes?: string; antes_id?: string } = {}) => {
     const q = new URLSearchParams({ limite: String(limite) })

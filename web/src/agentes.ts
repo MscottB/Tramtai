@@ -33,29 +33,8 @@ export interface FichaAgente {
 export const fichas = ref<FichaAgente[]>([])
 export const fichaDe = (agente?: string) => fichas.value.find((f) => f.agente === agente)
 
-// agenteListo: se puede usar ya (un aviso, como el AGENTS.md de Codex, no lo impide); uno desconectado no.
-export const agenteListo = (a: Adaptador) => !a.desconectado && (!a.problema || a.problema_codigo === 'aviso')
-
-// EstadoAgente es lo que enseña la tarjeta de un agente en Agentes.
-export type EstadoAgente = 'listo' | 'desconectado' | 'noInstalado' | 'faltaClave' | 'sinSesion' | 'usaClave' | 'sesionNoResponde' | 'revisar'
-
-// estadoAgente clasifica un agente por su conexión y el código de su problema (el texto llega en el idioma del
-// servicio). Con suscripción, «falta la clave» es que su CLI no tiene sesión.
-export function estadoAgente(a: Adaptador): EstadoAgente {
-  if (a.desconectado) return 'desconectado'
-  if (!a.problema || a.problema_codigo === 'aviso') return 'listo'
-  switch (a.problema_codigo) {
-    case 'no_instalado':
-      return 'noInstalado'
-    case 'falta_clave':
-      return a.autenticacion === 'suscripcion' ? 'sinSesion' : 'faltaClave'
-    case 'usa_clave_api':
-      return 'usaClave'
-    case 'sesion_no_responde':
-      return 'sesionNoResponde'
-  }
-  return 'revisar'
-}
+// agenteListo: el servicio lo da por listo (su estado lo calcula él; aquí solo se pinta).
+export const agenteListo = (a: Adaptador) => a.estado === 'listo'
 
 // ofrecerDejarSuscripcion: «Dejar de usar la suscripción» se ofrece en cualquier estado si el agente está en
 // suscripción y su ficha admite las dos formas.
@@ -215,8 +194,8 @@ export const problemasAgentes = ref<Record<string, string>>({})
 let disponibilidad: Promise<void> | undefined
 export function fijarDisponibilidad(adaptadores: Adaptador[]) {
   problemasAgentes.value = Object.fromEntries(adaptadores.filter((a) => !agenteListo(a)).map((a) => [a.agente,
-    a.desconectado ? t('modelo.desconectado') : a.problema_codigo === 'no_instalado' ? t('modelo.noInstalado')
-      : a.problema_codigo === 'falta_clave' ? t('modelo.faltaClave') : t('modelo.conProblema', { problema: a.problema ?? '' })]))
+    a.estado === 'desconectado' ? t('modelo.desconectado') : a.estado === 'no_instalado' ? t('modelo.noInstalado')
+      : a.estado === 'falta_clave' || a.estado === 'sin_sesion' ? t('modelo.faltaClave') : t('modelo.conProblema', { problema: a.problema ?? '' })]))
 }
 export function cargarDisponibilidad() {
   disponibilidad ??= api.capacidades().then((r) => fijarDisponibilidad(r.adaptadores)).catch(() => {

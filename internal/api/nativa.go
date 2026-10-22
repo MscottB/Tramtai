@@ -68,9 +68,9 @@ func (s *Servidor) obtenerTrabajo(w http.ResponseWriter, r *http.Request) {
 	EscribirJSON(w, http.StatusOK, s.conErrores(r.Context(), t))
 }
 
-// vista es un trabajo como lo ve la API propia: con herramientas, la salida es el texto para el usuario y llamadas las
+// VistaTrabajo es un trabajo como lo ve la API propia: con herramientas, la salida es el texto para el usuario y llamadas las
 // que pidió el agente; si falló por el esquema, errores_salida. Un trabajo sin herramientas ni errores se ve igual.
-type vista struct {
+type VistaTrabajo struct {
 	nucleo.Trabajo
 	Llamadas      []nucleo.Llamada   `json:"llamadas,omitempty"`
 	ErroresSalida []salidas.Problema `json:"errores_salida,omitempty"`
@@ -79,7 +79,7 @@ type vista struct {
 
 // MarshalJSON escribe el trabajo tal cual y le suma llamadas, errores_salida y, con herramientas, salida aunque esté
 // vacía. Un trabajo sin nada de eso sale exactamente como antes.
-func (v vista) MarshalJSON() ([]byte, error) {
+func (v VistaTrabajo) MarshalJSON() ([]byte, error) {
 	datos, err := json.Marshal(v.Trabajo)
 	if err != nil || (len(v.Llamadas) == 0 && len(v.ErroresSalida) == 0 && !v.conSalida) {
 		return datos, err
@@ -107,8 +107,8 @@ func (v vista) MarshalJSON() ([]byte, error) {
 }
 
 // vistaTrabajo interpreta la salida de un trabajo con herramientas que terminó bien (ya validada al terminar).
-func vistaTrabajo(t nucleo.Trabajo) vista {
-	v := vista{Trabajo: t}
+func vistaTrabajo(t nucleo.Trabajo) VistaTrabajo {
+	v := VistaTrabajo{Trabajo: t}
 	if t.Estado == nucleo.Completado && t.Disponibilidad != nucleo.SalidaExpirada && herramientas.Activas(t.Solicitud) {
 		if texto, llamadas, err := herramientas.Interpretar(t.Solicitud, t.Salida, "llamada_"+t.ID); err == nil {
 			v.Salida, v.Llamadas, v.conSalida = texto, llamadas, true
@@ -118,7 +118,7 @@ func vistaTrabajo(t nucleo.Trabajo) vista {
 }
 
 // conErrores es la vista del trabajo con errores_salida, los problemas de la última validación, si falló por el esquema.
-func (s *Servidor) conErrores(ctx context.Context, t nucleo.Trabajo) vista {
+func (s *Servidor) conErrores(ctx context.Context, t nucleo.Trabajo) VistaTrabajo {
 	v := vistaTrabajo(t)
 	if t.CodigoError == nucleo.CodigoSalidaNoCumpleEsquema {
 		if problemas, err := s.Planificador.ProblemasSalida(ctx, t.ID); err == nil {
@@ -556,31 +556,6 @@ func (s *Servidor) limites() contrato.Limites {
 	}
 }
 
-// modelo es una entrada del catálogo informativo.
-type modelo struct {
-	ID     string `json:"id"`
-	Agente string `json:"agente,omitempty"`
-	Modelo string `json:"modelo,omitempty"`
-	Perfil string `json:"perfil,omitempty"`
-	Origen string `json:"origen"`
-	// Solo en /api/v1/modelos: el agente/modelo al que lleva un perfil, la versión real que informó el agente la
-	// última vez (por ejemplo claude-sonnet-5-5 para "sonnet") y si es el modelo predeterminado de la instancia.
-	Resuelto       string `json:"resuelto,omitempty"`
-	Version        string `json:"version,omitempty"`
-	Predeterminado bool   `json:"predeterminado,omitempty"`
-	// Esfuerzos son los niveles de esfuerzo que admite su agente; vacío si no se puede elegir.
-	Esfuerzos []string `json:"esfuerzos,omitempty"`
-	// EsfuerzoPredeterminado es el nivel que usa el agente si no se elige; vacío si no se conoce con certeza.
-	EsfuerzoPredeterminado string `json:"esfuerzo_predeterminado,omitempty"`
-	// ContextoTokens es el contexto conocido del modelo (configurado o informado por el agente) y ContextoOrigen de
-	// dónde sale; sin dato, no se comprueba si una entrada cabe.
-	ContextoTokens int    `json:"contexto_tokens,omitempty"`
-	ContextoOrigen string `json:"contexto_origen,omitempty"`
-	// EsfuerzoEspacio, solo en el modelo predeterminado, es el esfuerzo que el espacio usa con él
-	// (predeterminados.esfuerzo); vacío, el de su agente.
-	EsfuerzoEspacio string `json:"esfuerzo_espacio,omitempty"`
-}
-
 // predeterminado es el identificador del catálogo que se usa cuando la solicitud no indica agente ni modelo.
 func (s *Servidor) predeterminado() string {
 	agente, modelo, perfil := s.Config.Texto("predeterminados.agente"), s.Config.Texto("predeterminados.modelo"), s.Config.Texto("predeterminados.perfil_modelo")
@@ -595,7 +570,7 @@ func (s *Servidor) predeterminado() string {
 
 // modelosConcretos pregunta a los agentes que saben decirlo (Claude) qué modelo concreto usarán para cada alias y
 // para su predeterminado, en paralelo y con un plazo; lo que no llegue a tiempo queda en caché para la próxima vez.
-func (s *Servidor) modelosConcretos(ctx context.Context, lista []modelo, destinos [][2]string) map[string]string {
+func (s *Servidor) modelosConcretos(ctx context.Context, lista []contrato.Modelo, destinos [][2]string) map[string]string {
 	ctx, cancelar := context.WithTimeout(ctx, 10*time.Second)
 	defer cancelar()
 	var mu sync.Mutex
@@ -631,30 +606,30 @@ func (s *Servidor) modelosConcretos(ctx context.Context, lista []modelo, destino
 // catalogo lista cada agente (con el modelo predeterminado de su CLI), los modelos configurados en los perfiles
 // como agente/modelo, los perfiles como perfil/nombre y las versiones concretas que informaron los agentes
 // (efectivos, de ModelosEfectivos) como agente/version, para poder pedir una en concreto.
-func (s *Servidor) catalogo(efectivos map[string]string) []modelo {
-	var lista []modelo
+func (s *Servidor) catalogo(efectivos map[string]string) []contrato.Modelo {
+	var lista []contrato.Modelo
 	for agente := range s.Registro {
-		lista = append(lista, modelo{ID: agente, Agente: agente, Origen: "predeterminado_del_cli"})
+		lista = append(lista, contrato.Modelo{ID: agente, Agente: agente, Origen: "predeterminado_del_cli"})
 	}
 	vistos := map[string]bool{}
 	for perfil, porAgente := range s.Config.Perfiles() {
-		lista = append(lista, modelo{ID: "perfil/" + perfil, Perfil: perfil, Origen: "configurado"})
+		lista = append(lista, contrato.Modelo{ID: "perfil/" + perfil, Perfil: perfil, Origen: "configurado"})
 		for agente, m := range porAgente {
 			if _, existe := s.Registro[agente]; existe && !vistos[agente+"/"+m] {
 				vistos[agente+"/"+m] = true
-				lista = append(lista, modelo{ID: agente + "/" + m, Agente: agente, Modelo: m, Origen: "configurado"})
+				lista = append(lista, contrato.Modelo{ID: agente + "/" + m, Agente: agente, Modelo: m, Origen: "configurado"})
 			}
 		}
 	}
 	if agente, m, _ := strings.Cut(s.predeterminado(), "/"); m != "" && agente != "perfil" && !vistos[agente+"/"+m] {
 		vistos[agente+"/"+m] = true
-		lista = append(lista, modelo{ID: agente + "/" + m, Agente: agente, Modelo: m, Origen: "configurado"})
+		lista = append(lista, contrato.Modelo{ID: agente + "/" + m, Agente: agente, Modelo: m, Origen: "configurado"})
 	}
 	for clave, version := range efectivos {
 		agente, _, _ := strings.Cut(clave, "/")
 		if _, existe := s.Registro[agente]; existe && !vistos[agente+"/"+version] {
 			vistos[agente+"/"+version] = true
-			lista = append(lista, modelo{ID: agente + "/" + version, Agente: agente, Modelo: version, Origen: "visto"})
+			lista = append(lista, contrato.Modelo{ID: agente + "/" + version, Agente: agente, Modelo: version, Origen: "visto"})
 		}
 	}
 	sort.Slice(lista, func(i, j int) bool { return lista[i].ID < lista[j].ID })

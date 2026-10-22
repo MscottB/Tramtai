@@ -66,7 +66,7 @@ type Capacidades struct {
 type EventoTrabajo struct {
 	ID          string    `json:"id"`
 	Estado      string    `json:"estado"`
-	Etapa       string    `json:"etapa"` // cola, preparacion, ejecucion, validacion o llegada (nucleo.Estado.Etapa)
+	Etapa       string    `json:"etapa" ts:"'cola' | 'preparacion' | 'ejecucion' | 'validacion' | 'llegada'"` // cola, preparacion, ejecucion, validacion o llegada (nucleo.Estado.Etapa)
 	Agente      string    `json:"agente"`
 	Modelo      string    `json:"modelo"`
 	API         string    `json:"api"`
@@ -101,4 +101,29 @@ type Paso struct {
 type PrimerosPasos struct {
 	Pasos       []Paso      `json:"pasos"`
 	Adaptadores []Adaptador `json:"adaptadores"`
+}
+
+// Modelo es una entrada del catálogo informativo (GET /api/v1/modelos).
+type Modelo struct {
+	ID     string `json:"id"`
+	Agente string `json:"agente,omitempty"`
+	Modelo string `json:"modelo,omitempty"`
+	Perfil string `json:"perfil,omitempty"`
+	Origen string `json:"origen"`
+	// Solo en /api/v1/modelos: el agente/modelo al que lleva un perfil, la versión real que informó el agente la
+	// última vez (por ejemplo claude-sonnet-5-5 para "sonnet") y si es el modelo predeterminado de la instancia.
+	Resuelto       string `json:"resuelto,omitempty"`
+	Version        string `json:"version,omitempty"`
+	Predeterminado bool   `json:"predeterminado,omitempty"`
+	// Esfuerzos son los niveles de esfuerzo que admite su agente; vacío si no se puede elegir.
+	Esfuerzos []string `json:"esfuerzos,omitempty"`
+	// EsfuerzoPredeterminado es el nivel que usa el agente si no se elige; vacío si no se conoce con certeza.
+	EsfuerzoPredeterminado string `json:"esfuerzo_predeterminado,omitempty"`
+	// ContextoTokens es el contexto conocido del modelo (configurado o informado por el agente) y ContextoOrigen de
+	// dónde sale; sin dato, no se comprueba si una entrada cabe.
+	ContextoTokens int    `json:"contexto_tokens,omitempty"`
+	ContextoOrigen string `json:"contexto_origen,omitempty"`
+	// EsfuerzoEspacio, solo en el modelo predeterminado, es el esfuerzo que el espacio usa con él
+	// (predeterminados.esfuerzo); vacío, el de su agente.
+	EsfuerzoEspacio string `json:"esfuerzo_espacio,omitempty"`
 }

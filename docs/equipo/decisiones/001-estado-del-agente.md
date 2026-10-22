@@ -25,3 +25,5 @@ instalado» y la Web UI «desconectado» (auditoría 001, hallazgos 92 y 100).
 
 - Una regla nueva o un estado nuevo se cambia en un solo sitio, en Go, con su prueba en el servicio.
 - La terminal necesita un servicio de la misma versión: no es un problema, porque van en el mismo ejecutable.
+- Los tipos TypeScript de estas respuestas se generan desde Go (`internal/contrato/gents`), así que un campo nuevo llega
+  a la Web UI sin escribirlo dos veces.

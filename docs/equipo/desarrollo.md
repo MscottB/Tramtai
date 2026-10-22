@@ -34,6 +34,14 @@ npm run build    # comprueba los tipos (vue-tsc, también los .vue) y compila en
 
 La compilación de la Web UI se versiona para que `go build` no necesite Node.
 
+**Tipos de la API.** Los tipos TypeScript de lo que el servicio envía y recibe (`web/src/api/tipos.gen.ts`) se
+generan desde los structs de Go con `go generate ./internal/contrato` (`internal/contrato/gents`); `web/src/api/tipos.ts`
+los reexporta y solo escribe a mano los de las rutas `/ui` de la sesión. Si cambias un tipo del contrato, regenera y sube
+el archivo: una prueba de Go y el CI fallan si no está al día. Lo que no se deduce de Go (una unión de literales) se dice
+con la etiqueta `ts:"…"` del campo. Lo derivado (el estado de un agente, la etapa y si se puede corregir una petición,
+los Primeros pasos) lo calcula el servicio y la Web UI y la terminal solo lo pintan
+([ADR 001](decisiones/001-estado-del-agente.md)).
+
 **Dependencias.** `web/.npmrc` protege las instalaciones:
 
 - `min-release-age=7`: npm no instala versiones publicadas hace menos de 7 días, la ventana en que suelen detectarse y retirarse los paquetes comprometidos. Para una corrección urgente: `npm install --min-release-age=0 …`.

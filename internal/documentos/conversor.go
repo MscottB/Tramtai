@@ -58,10 +58,9 @@ func ErrFormato(nombre string) error {
 		return nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.Tf(
 			"%s: los ZIP no se admiten; descomprímelo y envía los archivos sueltos (hasta %d por petición)", nombre, nucleo.MaximoCargas))
 	}
-	texto, _ := Formatos()
-	return nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.Tf(
-		"%s: formato no admitido. Se admiten PDF, Word (.docx), PowerPoint (.pptx), Excel (.xlsx), HTML y texto (%s)",
-		nombre, strings.Join(texto, ", ")))
+	texto, conversor := Formatos()
+	return nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.Tf("%s: formato no admitido. Se admiten documentos (%s) y texto (%s)",
+		nombre, strings.Join(conversor, ", "), strings.Join(texto, ", ")))
 }
 
 // Entrada es un archivo que hay que preparar para el agente.

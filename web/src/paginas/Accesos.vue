@@ -20,7 +20,7 @@
         </div>
       </q-card-section>
     </q-card>
-    <q-banner v-if="sugerirApiPropia(appConClave)" rounded class="aviso">{{ t('claves.sugerencia', { n: appConClave }) }}</q-banner>
+    <q-banner v-if="sugerirApi" rounded class="aviso">{{ t('claves.sugerencia', { n: appConClave }) }}</q-banner>
 
     <q-card data-captura="mis-apis" data-recorrido="conectar.apis">
       <q-tabs v-model="pestana" dense no-caps align="left" active-color="primary" indicator-color="primary" class="q-px-sm" :breakpoint="0">
@@ -111,15 +111,16 @@ import { activo, contratos, guardar, leer } from '../componentes/accesos/comun'
 import { api, avisar, avisarError, copiar, cargarDiasHistorial, mensajeError } from '../api/cliente'
 import type { ConfigPunto, EstadoPresupuesto, EstadoPunto, Modelo, UsoPunto } from '../api/tipos'
 import { grupoInicial, origenHistorial, recetaInicial, sesion } from '../estado'
-import { sugerirApiPropia } from '../claves'
 import { asegurarFichas, codigoLinea, nombreAgente, ordenAgentes, opcionModelo } from '../agentes'
 import { ejemplos as ejemplosDe } from '../ejemplos'
 import { t } from '../i18n'
 
 const $q = useQuasar()
 const base = ref(location.origin)
-// appConClave son las peticiones de apps con la clave del espacio en 24 h: con muchas se sugiere darles su propia API.
+// appConClave son las peticiones de apps con la clave del espacio en 24 h; sugerirApi, si el servicio aconseja darles su
+// propia API.
 const appConClave = ref(0)
+const sugerirApi = ref(false)
 const clave = ref('')
 const errorClave = ref('')
 const verClave = ref(false)
@@ -329,7 +330,8 @@ onMounted(async () => {
   api.catalogo().then((m) => (catalogo.value = m)).catch(avisarError)
   api.instancia().then((i) => {
     base.value = i.base
-    appConClave.value = i.app_con_clave_24h ?? 0
+    appConClave.value = i.app_con_clave_24h
+    sugerirApi.value = i.sugerir_api_propia
   }).catch(() => {})
   cargarClave()
 })

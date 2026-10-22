@@ -38,6 +38,17 @@ func TestSePuedeCorregir(t *testing.T) {
 	}
 }
 
+// Un evento de estado del registro lleva la etapa de ese estado; los demás eventos no llevan etapa.
+func TestEventoRegistroJSONLlevaLaEtapa(t *testing.T) {
+	for ev, quiere := range map[EventoRegistro]string{{Tipo: "estado", Datos: "esperando_agente"}: "preparacion", {Tipo: "aviso", Datos: "en_cola"}: ""} {
+		datos, _ := json.Marshal(ev)
+		var leido EventoRegistro
+		if err := json.Unmarshal(datos, &leido); err != nil || leido.Etapa != quiere {
+			t.Errorf("%s: %v %q", datos, err, leido.Etapa)
+		}
+	}
+}
+
 // El JSON de un trabajo lleva su etapa y si se puede corregir: los clientes los pintan sin calcularlos.
 func TestTrabajoJSONLlevaLoDerivado(t *testing.T) {
 	datos, err := json.Marshal(Trabajo{Estado: Fallido, CodigoError: CodigoSalidaNoCumpleEsquema, Salida: "x"})

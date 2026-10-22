@@ -1,6 +1,10 @@
 package nucleo
 
-import "tramtai/internal/idioma"
+import (
+	"slices"
+
+	"tramtai/internal/idioma"
+)
 
 // Estado es el estado del ciclo de vida de un trabajo.
 type Estado string
@@ -33,10 +37,11 @@ var transiciones = map[Estado][]Estado{
 	CancelacionSolicitada: {Cancelado, Fallido, Interrumpido},
 }
 
+// Terminales son los estados finales; la Web UI recibe la lista generada (internal/contrato/gents).
+var Terminales = []Estado{Completado, Fallido, Cancelado, Interrumpido}
+
 // Terminal indica si el estado es final: ningún estado terminal vuelve a uno activo.
-func (e Estado) Terminal() bool {
-	return e == Completado || e == Fallido || e == Cancelado || e == Interrumpido
-}
+func (e Estado) Terminal() bool { return slices.Contains(Terminales, e) }
 
 // Etapa agrupa los estados en las 5 paradas de la ruta de un trabajo: cola, preparacion, ejecucion, validacion y
 // llegada. Viaja en el JSON del trabajo y en el evento «trabajo»: la Web UI y la terminal solo la pintan.

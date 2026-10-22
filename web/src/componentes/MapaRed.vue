@@ -124,7 +124,7 @@ const lineas = computed(() => props.adaptadores.map((a, i) => ({
   i,
   nombre: nombreAgente(a.agente),
   listo: agenteListo(a),
-  estado: a.desconectado ? t('mapa.desconectado') : agenteListo(a) ? t('mapa.enServicio') : t('mapa.sinServicio'),
+  estado: a.estado === 'desconectado' ? t('mapa.desconectado') : agenteListo(a) ? t('mapa.enServicio') : t('mapa.sinServicio'),
   color: colorLinea(a.agente),
   y: y(i, props.adaptadores.length),
 })))

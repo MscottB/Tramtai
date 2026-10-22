@@ -35,7 +35,7 @@ type Herramienta struct {
 type Llamada struct {
 	ID         string          `json:"id"`
 	Nombre     string          `json:"nombre"`
-	Argumentos json.RawMessage `json:"argumentos"`
+	Argumentos json.RawMessage `json:"argumentos" ts:"Record<string, unknown>"`
 }
 
 // UnmarshalJSON acepta los argumentos como objeto o, como los manda OpenAI, como texto con un objeto JSON.

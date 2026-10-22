@@ -15,6 +15,8 @@ import (
 	"tramtai/internal/nucleo"
 )
 
+//go:generate go run ./gents
+
 var reNombrePunto = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,39}$`)
 
 // EstadoInstancia resume una instancia para la CLI y la TUI.
@@ -33,14 +35,14 @@ type EstadoInstancia struct {
 // los que ya no encuentran su carpeta.
 type Espacio struct {
 	ID          string    `json:"id"`
-	Ambito      string    `json:"ambito"`
+	Ambito      string    `json:"ambito" ts:"'global' | 'proyecto'"`
 	Ruta        string    `json:"ruta,omitempty"`
 	Nombre      string    `json:"nombre"`
 	Activo      bool      `json:"activo"`
 	UltimoUso   time.Time `json:"ultimo_uso,omitzero"`
 	UltimoError string    `json:"ultimo_error,omitempty"`
 	// Estado es activo, detenido o no_encontrado (falta la carpeta o su .tramtai/config.yaml).
-	Estado     string `json:"estado"`
+	Estado     string `json:"estado" ts:"'activo' | 'detenido' | 'no_encontrado'"`
 	Confiado   bool   `json:"confiado"`
 	APIs       int    `json:"apis"`
 	Peticiones int    `json:"peticiones"`
@@ -248,10 +250,10 @@ type AjustesConversor struct {
 
 // EstadoConversor es el del conversor de archivos (markitdown): listo, preparando, falta o error.
 type EstadoConversor struct {
-	Estado  string `json:"estado"`
-	Origen  string `json:"origen,omitempty"`  // configurado, paquete, preparado o sistema
+	Estado  string `json:"estado" ts:"'listo' | 'preparando' | 'falta' | 'error'"`
+	Origen  string `json:"origen,omitempty" ts:"'configurado' | 'paquete' | 'preparado' | 'sistema'"`
 	Version string `json:"version,omitempty"` // la de markitdown, si la conoce Tramtai
-	Etapa   string `json:"etapa,omitempty"`   // python, paquetes o comprobacion
+	Etapa   string `json:"etapa,omitempty" ts:"'python' | 'paquetes' | 'comprobacion'"`
 	// Progreso aproximado de la preparación, de 0 a 100.
 	Progreso int `json:"progreso,omitempty"`
 	// Mensaje es el error de la última preparación, legible.

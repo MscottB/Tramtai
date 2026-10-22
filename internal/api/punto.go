@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"tramtai/internal/contrato"
 	"tramtai/internal/herramientas"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -203,7 +204,7 @@ func (s *Servidor) listarTrabajos(w http.ResponseWriter, r *http.Request) {
 		EscribirError(w, r, err)
 		return
 	}
-	vistas := make([]vista, len(lista))
+	vistas := make([]VistaTrabajo, len(lista))
 	for i, t := range lista {
 		vistas[i] = vistaTrabajo(t)
 	}
@@ -211,11 +212,11 @@ func (s *Servidor) listarTrabajos(w http.ResponseWriter, r *http.Request) {
 }
 
 // filtrarCatalogo deja en un punto de acceso solo los modelos permitidos y añade sus alias.
-func (s *Servidor) filtrarCatalogo(lista []modelo) []modelo {
+func (s *Servidor) filtrarCatalogo(lista []contrato.Modelo) []contrato.Modelo {
 	if s.Punto == nil {
 		return lista
 	}
-	var salida []modelo
+	var salida []contrato.Modelo
 	for _, m := range lista {
 		sol := nucleo.SolicitudEjecucion{Agente: m.Agente, Modelo: m.Modelo, PerfilModelo: m.Perfil}
 		if len(s.Punto.ModelosPermitidos) == 0 || permitido(s.Punto.ModelosPermitidos, sol) {
@@ -223,7 +224,7 @@ func (s *Servidor) filtrarCatalogo(lista []modelo) []modelo {
 		}
 	}
 	for alias, destino := range s.Punto.Alias {
-		salida = append(salida, modelo{ID: alias, Origen: "alias:" + destino})
+		salida = append(salida, contrato.Modelo{ID: alias, Origen: "alias:" + destino})
 	}
 	sort.Slice(salida, func(i, j int) bool { return salida[i].ID < salida[j].ID })
 	return salida

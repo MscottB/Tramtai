@@ -1350,7 +1350,10 @@ func TestRegistroComoLaWeb(t *testing.T) {
 	p.estilos = &pagina.Estilos{Iconos: pagina.IconosUnicode}
 	inicio := time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)
 	ev := func(n int, tipo, datos string, ms int) nucleo.EventoRegistro {
-		return nucleo.EventoRegistro{Numero: n, Tipo: tipo, Datos: datos, CreadoEn: inicio.Add(time.Duration(ms) * time.Millisecond)}
+		e := nucleo.EventoRegistro{Numero: n, Tipo: tipo, Datos: datos, CreadoEn: inicio.Add(time.Duration(ms) * time.Millisecond)}
+		bruto, _ := json.Marshal(e) // como llega del servicio: con la etapa de su estado
+		_ = json.Unmarshal(bruto, &e)
+		return e
 	}
 	p.registro = []nucleo.EventoRegistro{
 		ev(1, "estado", "en_cola", 0), ev(2, "entrada", `{"tokens_estimados":200000,"documentos":[{"nombre":"notas.pdf","tokens_estimados":150000}]}`, 10),

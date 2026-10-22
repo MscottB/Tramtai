@@ -354,8 +354,8 @@ func (p *Pagina) etapas() string {
 	}
 	suma := map[string]time.Duration{}
 	for i := 0; i+1 < len(estados); i++ {
-		if e := nucleo.Estado(estados[i].Datos); e.Valido() && !e.Terminal() { // la llegada no dura
-			suma[e.Etapa()] += estados[i+1].CreadoEn.Sub(estados[i].CreadoEn)
+		if etapa := estados[i].Etapa; etapa != "" && etapa != "llegada" { // la llegada no dura
+			suma[etapa] += estados[i+1].CreadoEn.Sub(estados[i].CreadoEn)
 		}
 	}
 	var partes []string

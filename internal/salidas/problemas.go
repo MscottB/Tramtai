@@ -26,7 +26,7 @@ const (
 // (tareas[2].fecha); vacío, la respuesta entera.
 type Problema struct {
 	Campo    string `json:"campo"`
-	Problema string `json:"problema"` // falta, tipo, valor_no_permitido, sobra, formato, tamaño u otro
+	Problema string `json:"problema" ts:"'falta' | 'tipo' | 'valor_no_permitido' | 'sobra' | 'formato' | 'tamaño' | 'otro'"`
 	Texto    string `json:"texto"`
 }
 

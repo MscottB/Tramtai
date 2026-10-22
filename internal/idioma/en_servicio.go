@@ -141,7 +141,7 @@ func init() {
 		"la petición supera 16 MB: por esta API caben unos 12 MB de archivos en base64; para más, súbelos a /api/v1/cargas de la API propia": "the request exceeds 16 MB: this API fits about 12 MB of base64 files; for more, upload them to /api/v1/cargas of the Tramtai API",
 		"no hay conversor de archivos: prepáralo en Ajustes → Archivos o con «tramtai conversor preparar»":                                   "no file converter: prepare it in Settings → Files or with \"tramtai conversor preparar\"",
 		"%s: los ZIP no se admiten; descomprímelo y envía los archivos sueltos (hasta %d por petición)":                                      "%s: ZIP files are not accepted; unzip it and send the files one by one (up to %d per request)",
-		"%s: formato no admitido. Se admiten PDF, Word (.docx), PowerPoint (.pptx), Excel (.xlsx), HTML y texto (%s)":                        "%s: format not supported. Accepted: PDF, Word (.docx), PowerPoint (.pptx), Excel (.xlsx), HTML and text (%s)",
+		"%s: formato no admitido. Se admiten documentos (%s) y texto (%s)":                                                                   "%s: format not supported. Accepted: documents (%s) and text (%s)",
 		"%s está fuera de instancia_global.raices_permitidas":                                                                                "%s is outside instancia_global.raices_permitidas",
 		"YAML no válido: %s": "invalid YAML: %s",
 		"clave desconocida":  "unknown key",

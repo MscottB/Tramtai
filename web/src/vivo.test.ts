@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { aplicar, claveEtapa, esperaReconexion, etapaDe, eventoDe, limpiar, podar, posicion, reconciliar, visibles, type EventoTrabajo, type Tranvias } from './vivo.ts'
+import { aplicar, claveEtapa, esperaReconexion, eventoDe, limpiar, podar, posicion, reconciliar, visibles, type EventoTrabajo, type Tranvias } from './vivo.ts'
 import type { Trabajo } from './api/tipos.ts'
 
 const ev = (o: Partial<EventoTrabajo>): EventoTrabajo => ({ id: 'a', estado: 'en_cola', etapa: 'cola', agente: 'claude', modelo: 'claude/sonnet',
@@ -73,12 +73,6 @@ test('como mucho 12 visibles, los más recientes, y el resto', () => {
   assert.ok(!lista.some((x) => x.id === 't0'))
 })
 
-test('etapaDe agrupa los estados como el servicio', () => {
-  const casos: Record<string, string> = { en_cola: 'cola', preparando_entrada: 'preparacion', esperando_agente: 'preparacion', ejecutando: 'ejecucion',
-    cancelacion_solicitada: 'ejecucion', validando_salida: 'validacion', completado: 'llegada', fallido: 'llegada', cancelado: 'llegada', interrumpido: 'llegada' }
-  for (const [estado, etapa] of Object.entries(casos)) assert.equal(etapaDe(estado), etapa, estado)
-})
-
 test('esperas de reconexión', () => {
   assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 7].map(esperaReconexion), [1000, 2000, 4000, 8000, 16000, 30000, 30000, 30000])
 })
@@ -112,8 +106,8 @@ test('reconciliar con la consulta: el que termina llega, el que falta se va y lo
   assert.deepEqual([...t.keys()], ['nuevo'])
 })
 
-test('eventoDe convierte un trabajo de la consulta', () => {
-  const trabajo = { id: 'x', estado: 'fallido', solicitud: { agente: 'codex' }, modelo_efectivo: 'codex/gpt', punto_acceso: 'otra', origen: 'api',
+test('eventoDe convierte un trabajo de la consulta, con la etapa que manda el servicio', () => {
+  const trabajo = { id: 'x', estado: 'fallido', etapa: 'llegada', solicitud: { agente: 'codex' }, modelo_efectivo: 'codex/gpt', punto_acceso: 'otra', origen: 'api',
     codigo_error: 'error_agente', creado_en: '2026-10-20T12:00:00Z' } as unknown as Trabajo
   assert.deepEqual(eventoDe(trabajo), { id: 'x', estado: 'fallido', etapa: 'llegada', agente: 'codex', modelo: 'codex/gpt', api: 'otra', origen: 'api',
     intento: 1, codigo_error: 'error_agente', creado: '2026-10-20T12:00:00Z', actualizado: '' })

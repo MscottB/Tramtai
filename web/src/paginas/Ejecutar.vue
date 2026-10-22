@@ -446,9 +446,9 @@ async function terminar(id: string) {
 }
 
 // problemas explica por qué la respuesta no cumplía el esquema; «Corregir» la pide de nuevo al mismo agente con esos
-// problemas, como un intento nuevo (solo si el trabajo conservó la respuesta).
+// problemas, como un intento nuevo, cuando el servicio dice que se puede (corregible).
 const problemas = computed(() => (final.value?.codigo_error === 'salida_no_cumple_esquema' ? final.value.errores_salida ?? [] : []))
-const puedeCorregir = computed(() => problemas.value.length > 0 && !!final.value?.salida)
+const puedeCorregir = computed(() => !!final.value?.corregible) // lo decide el servicio
 const corrigiendo = ref(false)
 async function corregir() {
   if (!final.value) return

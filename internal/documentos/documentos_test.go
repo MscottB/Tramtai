@@ -184,7 +184,7 @@ func TestCargas(t *testing.T) {
 		t.Fatalf("una carga sobre el límite se rechaza: %v", err)
 	}
 	if _, err := c.Guardar("programa.exe", "", strings.NewReader("MZ")); nucleo.CodigoDe(err) != nucleo.CodigoCargaInvalida ||
-		!strings.Contains(nucleo.MensajeDe(err), "programa.exe") || !strings.Contains(nucleo.MensajeDe(err), "PDF") {
+		!strings.Contains(nucleo.MensajeDe(err), "programa.exe") || !strings.Contains(nucleo.MensajeDe(err), ".pdf, .pptx") {
 		t.Fatalf("un formato no admitido se rechaza al subirlo, con la lista: %v", err)
 	}
 	for _, id := range []string{"carga_../../secreto", "carga_00000000000000000000000000000000"} {
