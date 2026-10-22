@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"tramtai/internal/carpetas"
 )
 
@@ -69,6 +70,9 @@ func Activar(escritorio string) error {
 	if err := os.MkdirAll(filepath.Dir(lista[0]), 0o755); err != nil {
 		return err
 	}
+	if !esPortable() {
+		apartarAjeno(lista[0], filepath.Join(filepath.Dir(lista[0]), nombrePortable))
+	}
 	if err := os.WriteFile(lista[0], []byte(contenido(escritorio, filepath.Base(lista[0]))), 0o644); err != nil {
 		return err
 	}
@@ -78,6 +82,24 @@ func Activar(escritorio string) error {
 		}
 	}
 	return nil
+}
+
+// apartarAjeno pasa a destino (el nombre de la portable) el archivo de la instalada que no es de esta copia: lo dejó una
+// portable anterior a la 0.48 y activar la instalada no debe quitarle el arranque. En macOS cambia también su Label, que
+// es el nombre del archivo. No pisa un destino que ya existe.
+func apartarAjeno(ruta, destino string) {
+	if propio, err := deEstaCopia(ruta); err != nil || propio {
+		return
+	}
+	datos, err := os.ReadFile(ruta)
+	if err != nil {
+		return // no hay archivo
+	}
+	if _, err := os.Stat(destino); !errors.Is(err, fs.ErrNotExist) {
+		return
+	}
+	etiqueta := func(n string) string { return "<string>" + strings.TrimSuffix(n, ".plist") + "</string>" }
+	_ = os.WriteFile(destino, []byte(strings.Replace(string(datos), etiqueta(filepath.Base(ruta)), etiqueta(filepath.Base(destino)), 1)), 0o644)
 }
 
 // Desactivar quita el registro de esta copia (nunca el de otra); no es un error si no existía.

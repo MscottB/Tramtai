@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/url"
+	"strings"
 	"testing"
 
 	"tramtai/internal/adaptadores"
@@ -42,5 +43,12 @@ func TestListarTrabajosPorEstadoYTexto(t *testing.T) {
 	}
 	if r, _ := pedir(t, ts, "GET", "/api/v1/trabajos?estado=terminados", ""); r.StatusCode != 400 {
 		t.Fatalf("un filtro desconocido: %d", r.StatusCode)
+	}
+	// El tope de texto son 200 caracteres, no bytes: con tildes también se admiten 200 (hallazgo 42).
+	if r, cuerpo := pedir(t, ts, "GET", "/api/v1/trabajos?texto="+url.QueryEscape(strings.Repeat("á", 200)), ""); r.StatusCode != 200 {
+		t.Fatalf("200 caracteres con tilde: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, _ := pedir(t, ts, "GET", "/api/v1/trabajos?texto="+url.QueryEscape(strings.Repeat("a", 201)), ""); r.StatusCode != 400 {
+		t.Fatalf("201 caracteres: %d", r.StatusCode)
 	}
 }

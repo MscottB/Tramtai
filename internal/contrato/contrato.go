@@ -107,11 +107,11 @@ func LeerDescriptor(datos string) (Descriptor, error) {
 }
 
 // PruebaIdentidad es lo que responde el servicio al reto de GET /healthz?reto=: el HMAC-SHA256 del token de servicio
-// sobre el reto. Solo quien conoce el token puede calcularla, así que el cliente comprueba al servicio antes de enviarle
-// el token.
-func PruebaIdentidad(token, reto string) string {
+// sobre su dirección base y el reto. Solo quien conoce el token puede calcularla, así que el cliente comprueba al
+// servicio antes de enviarle el token; con la base, un proceso en otro puerto no puede reenviar el reto al servicio real.
+func PruebaIdentidad(token, base, reto string) string {
 	m := hmac.New(sha256.New, []byte(token))
-	m.Write([]byte("tramtai-healthz:" + reto))
+	m.Write([]byte("tramtai-healthz:" + base + ":" + reto))
 	return hex.EncodeToString(m.Sum(nil))
 }
 

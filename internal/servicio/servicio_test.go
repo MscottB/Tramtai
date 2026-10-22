@@ -381,6 +381,36 @@ func conBase(t *testing.T, f func(string) (*persistencia.Almacen, error)) {
 	t.Cleanup(func() { abrirBase = anterior })
 }
 
+// Recargar lee las claves de las APIs fuera de s.mu: mientras espera una lectura lenta, el servicio sigue atendiendo
+// (hallazgo 12).
+func TestRecargarNoBloqueaElServicio(t *testing.T) {
+	s, _, _ := entorno(t, puntosOrigen, "", adaptadores.Simulado{})
+	if _, err := s.ActivarGlobal(); err != nil {
+		t.Fatal(err)
+	}
+	dentro, soltar := make(chan struct{}), make(chan struct{})
+	var una sync.Once
+	anterior := leerHuellaPunto
+	leerHuellaPunto = func(ruta string) (string, error) {
+		una.Do(func() { close(dentro); <-soltar })
+		return anterior(ruta)
+	}
+	t.Cleanup(func() { leerHuellaPunto = anterior })
+	hecho := make(chan struct{})
+	go func() { s.Recargar(); close(hecho) }()
+	<-dentro
+	respondio := make(chan struct{})
+	go func() { s.instancia("global"); close(respondio) }()
+	select {
+	case <-respondio:
+	case <-time.After(5 * time.Second):
+		close(soltar)
+		t.Fatal("con Recargar leyendo una clave, el servicio dejó de atender")
+	}
+	close(soltar)
+	<-hecho
+}
+
 // Activar la misma instancia a la vez abre su base una sola vez y todos reciben la misma.
 func TestActivarALaVez(t *testing.T) {
 	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
@@ -496,7 +526,7 @@ func TestSaludConReto(t *testing.T) {
 		t.Fatalf("sin reto no hay prueba: %s", cuerpo)
 	}
 	_, cuerpo := pedir(t, ts.URL, "GET", "/healthz?reto=abc", "", "")
-	if !strings.Contains(cuerpo, `"prueba":"`+contrato.PruebaIdentidad(s.tokenAdmin, "abc")+`"`) {
+	if !strings.Contains(cuerpo, `"prueba":"`+contrato.PruebaIdentidad(s.tokenAdmin, s.Base(), "abc")+`"`) {
 		t.Fatalf("la prueba es el HMAC del token sobre el reto: %s", cuerpo)
 	}
 }

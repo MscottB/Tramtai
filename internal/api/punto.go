@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"tramtai/internal/contrato"
 	"tramtai/internal/herramientas"
@@ -177,7 +178,7 @@ func (s *Servidor) listarTrabajos(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if f.Texto = strings.TrimSpace(q.Get("texto")); len(f.Texto) > 200 { // ?texto=: busca en el mensaje y en el id
+	if f.Texto = strings.TrimSpace(q.Get("texto")); utf8.RuneCountInString(f.Texto) > 200 { // ?texto=: busca en el mensaje y en el id
 		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("texto admite hasta 200 caracteres")))
 		return
 	}

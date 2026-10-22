@@ -105,14 +105,15 @@ func (s *Servicio) ActivarProyecto(raiz string) (*Instancia, error) {
 // no se detienen las peticiones de las demás instancias, y quien pida la misma a la vez espera y recibe la misma.
 func (s *Servicio) activar(id, ambito, raiz string, c *configuracion.Configuracion) (*Instancia, error) {
 	s.mu.Lock()
-	if inst, activa := s.instancias[id]; activa {
-		s.mu.Unlock()
-		return inst, nil
-	}
+	// Primero lo que está en curso: con un Olvidar en marcha, la instancia aún activa está a punto de cerrarse.
 	if a, enCurso := s.abriendo[id]; enCurso {
 		s.mu.Unlock()
 		<-a.listo
 		return a.inst, a.err
+	}
+	if inst, activa := s.instancias[id]; activa {
+		s.mu.Unlock()
+		return inst, nil
 	}
 	a := &apertura{listo: make(chan struct{})}
 	s.abriendo[id] = a

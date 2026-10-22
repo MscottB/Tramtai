@@ -74,7 +74,7 @@ func Conectar(datos string) (*Cliente, error) {
 		return nil, ErrServicioInactivo
 	}
 	switch {
-	case hmac.Equal([]byte(s.Prueba), []byte(contrato.PruebaIdentidad(c.token, reto))):
+	case hmac.Equal([]byte(s.Prueba), []byte(contrato.PruebaIdentidad(c.token, c.Base, reto))):
 		return c, nil
 	case s.Prueba == "" && s.Servicio != "" && s.Servicio == c.Descriptor.Identificador:
 		return nil, ErrServicioAnterior

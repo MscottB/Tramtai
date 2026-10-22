@@ -17,7 +17,8 @@ const Disponible = true
 const claveRun = `Software\Microsoft\Windows\CurrentVersion\Run`
 
 // Valores de la clave Run: uno para la instalada y otro para la portable, así que activar una no toca la otra. Las
-// portables anteriores a la 0.48 usaban el de la instalada: en la portable también se reconoce, y al activarla se mueve al suyo.
+// portables anteriores a la 0.48 usaban el de la instalada: en la portable también se reconoce, y al activarla se
+// mueve al suyo.
 // Las pruebas usan otros nombres para no tocar los reales.
 var (
 	nombreValor    = "Tramtai"

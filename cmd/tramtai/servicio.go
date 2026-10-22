@@ -75,13 +75,17 @@ func confirmar(cmd *cobra.Command, pregunta string) bool {
 	return strings.HasPrefix(linea, "s") || strings.HasPrefix(linea, "y")
 }
 
-// esperarCierreServicio espera, como mucho dos minutos, a que el servicio en marcha termine (drena sus trabajos).
+// esperaReinicio es lo que el servicio nuevo de un reinicio espera al anterior: su plazo de drenaje más un margen
+// para cerrar. Con menos, un drenaje largo dejaría al nuevo sin cerrojo y al usuario sin servicio.
+func esperaReinicio() time.Duration { return cliente.PlazoDrenaje() + time.Minute }
+
+// esperarCierreServicio espera, como mucho esperaReinicio, a que el servicio en marcha termine (drena sus trabajos).
 func esperarCierreServicio() {
 	datos, err := carpetas.DirDatos()
 	if err != nil {
 		return
 	}
-	for range 600 {
+	for limite := time.Now().Add(esperaReinicio()); time.Now().Before(limite); {
 		if _, err := cliente.Conectar(datos); err != nil && !errors.Is(err, cliente.ErrServicioAnterior) {
 			return
 		}
@@ -207,10 +211,7 @@ func comandoServicio() *cobra.Command {
 				return err
 			}
 			// El servicio espera a los trabajos en curso hasta servicio.plazo_drenaje_segundos.
-			plazo := 30 * time.Second
-			if cfg, err := configuracion.CargarConfiguracion("", agentes.Internos()); err == nil {
-				plazo = time.Duration(cfg.Entero("servicio.plazo_drenaje_segundos")) * time.Second
-			}
+			plazo := cliente.PlazoDrenaje()
 			inicio, avisado := time.Now(), false
 			for time.Since(inicio) < plazo+15*time.Second {
 				if _, err := conectar(); err != nil {
@@ -393,7 +394,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	}
 	espera := time.Duration(0)
 	if esperarCierre {
-		espera = 30 * time.Second
+		espera = esperaReinicio()
 	}
 	soltar, err := servicio.TomarCerrojo(datos, espera)
 	if err != nil {

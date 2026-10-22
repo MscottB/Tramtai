@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -690,7 +691,20 @@ func TestClienteInstancia(t *testing.T) {
 
 // Lanzar otra vez no borra lo que explicaba el fallo del arranque anterior: pasa a servicio-salida.log.1.
 func TestLanzarConservaElFalloAnterior(t *testing.T) {
-	datos := t.TempDir()
+	// El hijo desacoplado sigue con servicio-salida.log abierto un momento y no se puede esperar (Lanzar lo suelta):
+	// una carpeta propia con limpieza tolerante, para que un Windows cargado no haga fallar el borrado de t.TempDir.
+	datos, err := os.MkdirTemp("", "tramtai-lanzar-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		for range 50 {
+			if os.RemoveAll(datos) == nil {
+				return
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	})
 	ruta := filepath.Join(datos, "servicio-salida.log")
 	os.WriteFile(ruta, []byte("fallo del arranque anterior\n"), 0o600)
 	if err := Lanzar(os.Args[0], datos, "-test.run=^$"); err != nil {
@@ -800,5 +814,40 @@ func TestDetenerElServicioAnterior(t *testing.T) {
 	}
 	if _, err := Conectar(datos); !errors.Is(err, ErrServicioInactivo) {
 		t.Fatalf("tras detenerlo no queda servicio: %v", err)
+	}
+}
+
+// Un proceso que ocupa el puerto del descriptor y reenvía el reto al servicio real (que escucha en otro) no pasa: la
+// prueba ata la dirección a la que el cliente preguntó.
+func TestReenviarElRetoNoBasta(t *testing.T) {
+	real, dir := servicioDePrueba(t, "")
+	datos := filepath.Join(dir, "datos")
+	reenvio := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp, err := http.Get(real.Base + r.URL.RequestURI())
+		if err != nil {
+			http.Error(w, err.Error(), 502)
+			return
+		}
+		defer resp.Body.Close()
+		w.Header().Set("Content-Type", "application/json")
+		io.Copy(w, resp.Body)
+	}))
+	defer reenvio.Close()
+	d := real.Descriptor
+	d.Base = reenvio.URL
+	contenido, _ := json.Marshal(d)
+	os.WriteFile(contrato.RutaDescriptor(datos), contenido, 0o600)
+	if _, err := Conectar(datos); !errors.Is(err, ErrServicioInactivo) {
+		t.Fatalf("el reenvío del reto pasó la comprobación: %v", err)
+	}
+}
+
+// PlazoDrenaje sale de servicio.plazo_drenaje_segundos de la configuración global.
+func TestPlazoDrenajeDeLaConfiguracion(t *testing.T) {
+	ruta := filepath.Join(t.TempDir(), "config.yaml")
+	os.WriteFile(ruta, []byte("servicio:\n  plazo_drenaje_segundos: 300\n"), 0o600)
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", ruta)
+	if p := PlazoDrenaje(); p != 300*time.Second {
+		t.Fatalf("plazo: %s", p)
 	}
 }

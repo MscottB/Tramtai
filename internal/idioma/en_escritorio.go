@@ -17,6 +17,8 @@ func init() {
 		"Se detienen todos los espacios y las aplicaciones conectadas dejarán de funcionar. Tramtai sigue en la bandeja para volver a iniciarlo. ¿Continuar?": "All workspaces stop and connected apps will stop working. Tramtai stays in the tray so you can start it again. Continue?",
 		"Al salir se detiene el servicio: las aplicaciones conectadas a tus APIs dejarán de funcionar hasta que vuelvas a abrir Tramtai. ¿Continuar?":         "Quitting stops the service: apps connected to your APIs will stop working until you open Tramtai again. Continue?",
 		"Cancelar":             "Cancel",
+		"Abrir el proyecto":    "Open the project",
+		"Confiar y abrir":      "Trust and open",
 		"Salir de Tramtai":     "Quit Tramtai",
 		"Salir y detener":      "Quit and stop",
 		"Detener el servicio":  "Stop the service",

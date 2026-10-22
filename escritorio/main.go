@@ -167,6 +167,18 @@ func main() {
 		pregunta.AddButton(idioma.T("Cancelar")).SetAsDefault()
 		pregunta.Show()
 	}
+	// -proyecto sobre una carpeta que pide confianza: se pregunta con un aviso del sistema cuando la app ya arrancó.
+	if texto, ok := confiarAlAbrir(*proyecto, err); ok {
+		app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
+			go preguntar(idioma.T("Abrir el proyecto"), texto, idioma.T("Confiar y abrir"), func() {
+				if nueva, err := confiarYAbrir(*proyecto); err != nil {
+					ventana.SetHTML(paginaError(err))
+				} else {
+					cargar(nueva)
+				}
+			})
+		})
+	}
 	detener := func(cli *cliente.Cliente) {
 		ctx, cancelar := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancelar()
@@ -553,6 +565,38 @@ func prepararSesion(proyecto string) (*sesionEscritorio, error) {
 		return nil, err
 	}
 	return &sesionEscritorio{cli: cli, url: url}, nil
+}
+
+// confiarAlAbrir dice si el fallo al abrir -proyecto es la pregunta de confianza (una carpeta que ya traía .tramtai/ o
+// que estaba en otra ruta) y devuelve el texto con el que se pregunta, el mismo que en la CLI.
+func confiarAlAbrir(proyecto string, err error) (string, bool) {
+	var pregunta *cliente.ErrorConfianza
+	if proyecto == "" || !errors.As(err, &pregunta) {
+		return "", false
+	}
+	return pregunta.Error() + idioma.T(". ¿Confías en esta carpeta?"), true
+}
+
+// confiarYAbrir confía en el proyecto de la carpeta proyecto y vuelve a preparar la sesión de la ventana.
+func confiarYAbrir(proyecto string) (*sesionEscritorio, error) {
+	datos, err := carpetas.DirDatos()
+	if err != nil {
+		return nil, err
+	}
+	cli, err := cliente.Conectar(datos)
+	if err != nil {
+		return nil, err
+	}
+	if raiz, ok := configuracion.BuscarProyecto(proyecto); ok {
+		proyecto = raiz
+	}
+	ctx, cancelar := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancelar()
+	si := true
+	if _, err := cli.AbrirProyecto(ctx, proyecto, &si, false); err != nil {
+		return nil, err
+	}
+	return prepararSesion(proyecto)
 }
 
 // espacioAlAbrir decide qué abre la ventana: el proyecto pedido (-proyecto), el espacio activo que se usó por última
