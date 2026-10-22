@@ -204,9 +204,9 @@ func (s *Servidor) salidaTrabajo(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		EscribirError(w, r, err)
 	case !t.Estado.Terminal():
-		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, idioma.Tf("el trabajo está en %s", t.Estado)))
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, idioma.Tf("la petición está en %s", t.Estado)))
 	case t.Disponibilidad == nucleo.SalidaExpirada:
-		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoResultadoExpirado, idioma.T("el resultado expiró por la retención (retencion.horas_resultado); vuelve a ejecutar la solicitud")))
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoResultadoExpirado, idioma.T("la respuesta caducó y se borró (retencion.horas_resultado): vuelve a enviar la petición")))
 	case t.Estado != nucleo.Completado:
 		EscribirError(w, r, errorDeTrabajo(t))
 	default:

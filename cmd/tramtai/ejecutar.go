@@ -93,8 +93,8 @@ func comandoEjecutar() *cobra.Command {
 	var tiempo int
 	var directo bool
 	var perfilTrabajo, contexto string
-	cmd := &cobra.Command{Use: "ejecutar [texto]", Short: idioma.T("Ejecuta un trabajo con un agente y muestra la respuesta en vivo"),
-		Long: idioma.T("Ejecuta un trabajo y muestra la respuesta en vivo. Si el servicio está en marcha, el trabajo va al espacio del\nproyecto actual (o al global) y se ve también en la terminal interactiva y en la Web UI; si no, se ejecuta\ndirectamente. Sin texto, se lee de la entrada estándar. Ctrl+C cancela el trabajo."),
+	cmd := &cobra.Command{Use: "ejecutar [texto]", Short: idioma.T("Envía una petición a un agente y muestra la respuesta en vivo"),
+		Long: idioma.T("Envía una petición y muestra la respuesta en vivo. Si el servicio está en marcha, la petición va al espacio del\nproyecto actual (o al global) y se ve también en la terminal interactiva y en la Web UI; si no, se ejecuta\ndirectamente. Sin texto, se lee de la entrada estándar. Ctrl+C cancela la petición."),
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			texto := strings.Join(args, " ")

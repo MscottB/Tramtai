@@ -57,7 +57,7 @@ func (s *Servicio) guardadoAdmin(w http.ResponseWriter, ruta string, extra map[s
 }
 
 func noEstaEnArchivo(nombre string) error {
-	return nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("no existe el punto de acceso %s en este archivo", nombre))
+	return nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("no existe la API %s en este archivo", nombre))
 }
 
 // validarGuardado aplica las reglas para guardar un punto: el formato y que funcione (respaldo, agentes para apps).
@@ -97,7 +97,7 @@ func (s *Servicio) adminCrearPunto(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		err = configuracion.EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 			if slices.ContainsFunc(lista, func(c ConfigPunto) bool { return c.Nombre == p.Nombre }) {
-				return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el punto de acceso %s ya existe: usa tramtai acceso editar", p.Nombre))
+				return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("la API %s ya existe: usa tramtai acceso editar", p.Nombre))
 			}
 			return append(lista, p), nil
 		})
@@ -185,7 +185,7 @@ func (s *Servicio) adminActivarPuntos(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 				if n == 0 {
-					return nil, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ningún punto de acceso del grupo %s en este archivo", peticion.Grupo))
+					return nil, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ninguna API del grupo %s en este archivo", peticion.Grupo))
 				}
 				return lista, nil
 			}

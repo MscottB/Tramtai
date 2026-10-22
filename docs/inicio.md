@@ -110,7 +110,7 @@ tramtai convertir informe.pdf     # muestra el texto que recibiría el agente, s
 
 - `-f` admite PDF, Word, PowerPoint, Excel, HTML y texto (txt, md, json, csv…), y se puede repetir. Un formato que no
   se admite se avisa antes de enviar nada; un ZIP, descomprímelo (lista completa en [la API](api.md#formatos-admitidos)).
-- `-e` recibe un JSON Schema: la respuesta será un JSON que lo cumpla, o el trabajo fallará con `salida_no_cumple_esquema` y el primer problema («Falta el campo `total`»). En Probar el esquema se arma con plantillas o campo a campo, y la respuesta que no cumple se corrige con un clic (o hasta 3 veces sola, con «Si la respuesta no cumple»).
+- `-e` recibe un JSON Schema: la respuesta será un JSON que lo cumpla, o la petición fallará con `salida_no_cumple_esquema` y el primer problema («Falta el campo `total`»). En Probar el esquema se arma con plantillas o campo a campo, y la respuesta que no cumple se corrige con un clic (o hasta 3 veces sola, con «Si la respuesta no cumple»).
 
 ### Modelos
 
@@ -127,7 +127,7 @@ tramtai convertir informe.pdf     # muestra el texto que recibiría el agente, s
         codex: <modelo>
   ```
 
-- Si un perfil no tiene modelo para el agente, el trabajo se rechaza: Tramtai nunca cambia el modelo en silencio.
+- Si un perfil no tiene modelo para el agente, la petición se rechaza: Tramtai nunca cambia el modelo en silencio.
 - **Modelo predeterminado:** el que se usa cuando una aplicación no elige agente ni modelo. Se cambia en **Ajustes → Modelo predeterminado** (al momento, sin reiniciar) o con `predeterminados.agente` y `predeterminados.modelo` (o `predeterminados.perfil_modelo`) en la configuración. En un proyecto se guarda en su `.tramtai/local.yaml`. Debajo se elige su **esfuerzo** (`predeterminados.esfuerzo`): se usa con el modelo predeterminado cuando la petición tampoco elige esfuerzo; con otro agente, modelo o perfil, cada CLI usa el suyo. Si el modelo nuevo no admite ese esfuerzo, vuelve al del agente.
 - **Versión real:** los selectores muestran bajo cada alias (`sonnet`, `haiku`…) la versión que informó el agente la última vez que se usó, por ejemplo `claude-haiku-4-5-20251001`. Codex no informa el modelo efectivo; GitHub Copilot sí, también el que elige el automático.
 
@@ -138,7 +138,7 @@ tramtai iniciar     # en la carpeta de un repositorio: crea .tramtai/ con su con
 tramtai abrir       # abre el espacio de ese proyecto
 ```
 
-- **Perfiles de trabajo:** `.tramtai/profiles/<nombre>.yaml` guarda instrucciones, formato y esquema reutilizables. Se usan con `--perfil-trabajo <nombre>`, o con `perfil` en la API.
+- **Perfiles de ejecución:** `.tramtai/profiles/<nombre>.yaml` guarda instrucciones, formato y esquema reutilizables. Se usan con `--perfil-trabajo <nombre>`, o con `perfil` en la API.
 - **Modo consciente del proyecto:** el agente trabaja en la carpeta del proyecto y lee sus reglas (`CLAUDE.md`, `AGENTS.md`). Solo se permite en proyectos que declares confiables en la configuración global (`config.yaml`, ver [configuración](#configuración)):
 
   ```yaml
@@ -146,7 +146,7 @@ tramtai abrir       # abre el espacio de ese proyecto
     - C:\ruta\al\proyecto
   ```
 
-  `proyectos_confiables` solo se lee de la configuración global: un proyecto no puede declararse confiable a sí mismo. Por eso un `.tramtai/local.yaml` con claves de seguridad (comandos de los agentes, `conversion.comando`, puntos de acceso, `servicio`, `adaptadores`…) solo se acepta si la carpeta del proyecto figura en esa lista; si no, Tramtai rechaza la configuración e indica que la añadas. Las demás claves, como el modelo predeterminado del proyecto, valen siempre.
+  `proyectos_confiables` solo se lee de la configuración global: un proyecto no puede declararse confiable a sí mismo. Por eso un `.tramtai/local.yaml` con claves de seguridad (comandos de los agentes, `conversion.comando`, APIs, `servicio`, `adaptadores`…) solo se acepta si la carpeta del proyecto figura en esa lista; si no, Tramtai rechaza la configuración e indica que la añadas. Las demás claves, como el modelo predeterminado del proyecto, valen siempre.
 
   Se pide con `tramtai ejecutar --contexto consciente_proyecto "…"`.
 

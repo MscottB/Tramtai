@@ -258,7 +258,7 @@ func (s SolicitudEjecucion) Validar() error {
 		}
 	}
 	if len(s.Mensajes) == 0 && s.Instrucciones == "" && len(s.Cargas) == 0 {
-		return invalida(idioma.T("la solicitud no tiene mensajes, instrucciones ni cargas"))
+		return invalida(idioma.T("la petición no tiene mensajes, instrucciones ni archivos"))
 	}
 	if t := s.Ejecucion.TiempoLimiteSegundos; t < 0 || t > maximoTiempoLimiteSegundos {
 		return invalida(idioma.T("tiempo_limite_segundos fuera de rango"))

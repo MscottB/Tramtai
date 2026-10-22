@@ -48,7 +48,7 @@ func (a *Almacen) Aceptar(ctx context.Context, t nucleo.Trabajo, clave string, m
 			existente, err := obtener(ctx, tx, id)
 			return existente, true, err
 		case err == nil:
-			return t, false, nucleo.NuevoError(nucleo.CodigoConflictoIdempotencia, idioma.T("la clave de idempotencia ya se usó con otra solicitud"))
+			return t, false, nucleo.NuevoError(nucleo.CodigoConflictoIdempotencia, idioma.T("la clave de idempotencia ya se usó con otra petición"))
 		case !errors.Is(err, sql.ErrNoRows):
 			return t, false, err
 		}
@@ -128,7 +128,7 @@ func (a *Almacen) CambiarEstado(ctx context.Context, id string, de, hacia nucleo
 		if _, err := obtener(ctx, tx, id); err != nil {
 			return err
 		}
-		return nucleo.NuevoError(nucleo.CodigoTransicionInvalida, idioma.Tf("el trabajo %s ya no está en %s", id, de))
+		return nucleo.NuevoError(nucleo.CodigoTransicionInvalida, idioma.Tf("la petición %s ya no está en %s", id, de))
 	}
 	if err := agregarEvento(ctx, tx, id, "estado", string(hacia), ahora); err != nil {
 		return err
@@ -177,7 +177,7 @@ func (a *Almacen) Eliminar(ctx context.Context, id string) error {
 		if _, err := obtener(ctx, tx, id); err != nil {
 			return err
 		}
-		return nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, idioma.T("solo se elimina un trabajo terminado; cancélalo antes"))
+		return nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, idioma.T("solo se elimina una petición terminada; cancélala antes"))
 	}
 	for _, consulta := range []string{`DELETE FROM eventos WHERE trabajo_id = ?`, `DELETE FROM idempotencia WHERE trabajo_id = ?`} {
 		if _, err := tx.ExecContext(ctx, consulta, id); err != nil {
@@ -240,7 +240,7 @@ func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado, 
 		return err
 	}
 	if n, err := r.RowsAffected(); err == nil && n == 0 {
-		return nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
+		return nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("petición no encontrada: %s", id))
 	}
 	a.avisar()
 	return nil
@@ -256,7 +256,7 @@ func (a *Almacen) Estado(ctx context.Context, id string) (string, nucleo.Estado,
 	var instancia, estado string
 	err := a.db.QueryRowContext(ctx, `SELECT instancia, estado FROM trabajos WHERE id = ?`, id).Scan(&instancia, &estado)
 	if errors.Is(err, sql.ErrNoRows) {
-		return "", "", nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
+		return "", "", nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("petición no encontrada: %s", id))
 	}
 	return instancia, nucleo.Estado(estado), err
 }
@@ -519,7 +519,7 @@ func (a *Almacen) CargasEnUso(ctx context.Context, instancia string) (map[string
 func obtener(ctx context.Context, c consultor, id string) (nucleo.Trabajo, error) {
 	t, err := escanear(c.QueryRowContext(ctx, `SELECT `+columnas+` FROM trabajos WHERE id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
-		return t, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
+		return t, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("petición no encontrada: %s", id))
 	}
 	return t, err
 }

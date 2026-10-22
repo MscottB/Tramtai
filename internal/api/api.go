@@ -157,7 +157,7 @@ func Proteger(hosts []string, autorizar func(*http.Request) bool, siguiente http
 // NoAutorizado responde 401 con el formato del contrato de la ruta.
 func NoAutorizado(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("WWW-Authenticate", "Bearer")
-	EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado, idioma.T("falta la clave (token) o no es válida: envíala como «Authorization: Bearer <clave>»; la clave está en Mis APIs de la Web UI")))
+	EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado, idioma.T("falta la clave o no es válida: envíala en la cabecera «Authorization: Bearer <clave>»; está en Mis APIs de la Web UI")))
 }
 
 func hostPermitido(hosts []string, host string) bool {
@@ -303,7 +303,7 @@ func errorDeTrabajo(t nucleo.Trabajo) error {
 	if t.CodigoError != "" {
 		return nucleo.NuevoError(t.CodigoError, t.MensajeError)
 	}
-	return nucleo.NuevoError(nucleo.CodigoTrabajoSinSalida, idioma.Tf("el trabajo terminó como %s", t.Estado))
+	return nucleo.NuevoError(nucleo.CodigoTrabajoSinSalida, idioma.Tf("la petición terminó como %s", t.Estado))
 }
 
 // EscribirJSON responde con un cuerpo JSON.

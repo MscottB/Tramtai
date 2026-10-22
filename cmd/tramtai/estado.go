@@ -25,7 +25,7 @@ func imprimirEstado(out io.Writer, e servicio.Estado) {
 		}
 		fmt.Fprintf(out, "  %-28s token: %s\n", "", i.ArchivoToken)
 	}
-	fmt.Fprintln(out, idioma.T("\npuntos de acceso:"))
+	fmt.Fprintln(out, idioma.T("\nAPIs:"))
 	imprimirPuntos(out, e.Puntos)
 	for _, err := range e.Errores {
 		fmt.Fprintln(out, idioma.Tf("configuración: %s", err))
@@ -78,7 +78,7 @@ func textoPresupuesto(p nucleo.Presupuesto) string {
 
 func resumenTrabajos(conteo map[string]int) string {
 	if len(conteo) == 0 {
-		return idioma.T("sin trabajos")
+		return idioma.T("sin peticiones")
 	}
 	estados := make([]string, 0, len(conteo))
 	for estado, n := range conteo {

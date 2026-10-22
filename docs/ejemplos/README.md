@@ -8,7 +8,7 @@ Todos leen tres variables:
 | Variable | Qué es | Por defecto |
 |---|---|---|
 | `TRAMTAI_URL` | La URL de tu API (Mis APIs) | `http://127.0.0.1:17373` |
-| `TRAMTAI_CLAVE` | Su clave | — |
+| `TRAMTAI_CLAVE` | Su clave | Ninguno: es obligatoria |
 | `TRAMTAI_MODELO` | Agente y modelo | `claude/haiku` |
 
 - **Python:** `pip install -r python/requirements.txt` (todas las dependencias fijadas, generadas desde

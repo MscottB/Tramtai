@@ -1,6 +1,8 @@
 # Arquitectura
 
-Cómo está construido Tramtai por dentro:
+Cómo está construido Tramtai por dentro. Aquí se usan los nombres del código: una *instancia* es lo que la app llama
+espacio, un *trabajo* es una petición, un *punto de acceso* es una API por aplicación y su *token* es la clave. La
+correspondencia completa está en el [glosario](GLOSARIO.md).
 
 ## Paquetes
 
@@ -41,7 +43,7 @@ Cómo está construido Tramtai por dentro:
 | Streaming | por tokens (`text_delta`) | solo el mensaje final | por tokens (`assistant.message_delta`) |
 | Modelo efectivo | sí (`modelUsage`) | no: queda como no verificable | sí, también el que elige `auto` (`session.auto_mode_resolved`) |
 | Esfuerzo | `--effort`, hasta máximo | `model_reasoning_effort`, hasta muy alto | `--reasoning-effort`, hasta máximo; no con `auto` |
-| Uso | tokens y coste en USD | tokens | tokens (`--usage-output-file`) y un aviso con los créditos del plan |
+| Uso | tokens y costo en USD | tokens | tokens (`--usage-output-file`) y un aviso con los créditos del plan |
 
 Además hay dos adaptadores de Google, probados con un servidor y un CLI simulados:
 

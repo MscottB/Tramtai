@@ -29,7 +29,7 @@ func (c *Cliente) CambiarPunto(ctx context.Context, instancia, nombre string, ca
 			return p, nil
 		}
 	}
-	return contrato.EstadoPunto{}, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("punto de acceso no encontrado en este espacio: %s", nombre))
+	return contrato.EstadoPunto{}, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("API no encontrada en este espacio: %s", nombre))
 }
 
 // PresupuestoInstancia devuelve el consumo del día y del mes frente al presupuesto de la instancia; vacío si no tiene.

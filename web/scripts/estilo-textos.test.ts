@@ -81,6 +81,31 @@ const huecas: Regla[] = [
 ]
 const raya: Regla = { nombre: 'raya larga', re: /—/ }
 
+// tecnico quita lo que no se traduce: código entre acentos graves, órdenes de la CLI (tramtai …, en minúsculas) y
+// nombres con _, -, / o punto (claves de configuración, cabeceras, rutas, archivos).
+const tecnico = (t: string) =>
+  t.replace(/`[^`]*`/g, ' ').replace(/\btramtai(?: [a-z][a-z-]*)+/g, ' ').replace(/[\w.]*[_/][\w./-]*|\b\w+(?:-\w+)+/g, ' ')
+const sinTecnico = (textos: Texto[]) => textos.map((x) => ({ ...x, texto: tecnico(x.texto) }))
+
+// Los términos que el glosario descarta para el usuario.
+const descartadosEs: Regla[] = [
+  { nombre: 'instancia → espacio', re: /\binstancias?\b/i },
+  { nombre: 'punto de acceso → API', re: /\bpuntos? de acceso\b/i },
+  { nombre: 'token → clave', re: /\btokens? (del|de la|de servicio|de la api|nuevo)\b|\b(el|un|su|tu) token\b/i },
+  { nombre: 'trabajo → petición', re: /\btrabajos?\b(?<!espacios? de trabajos?)/i },
+  { nombre: 'solicitud → petición', re: /\bsolicitud(es)?\b/i },
+]
+const descartadosEn: Regla[] = [
+  { nombre: 'instance → workspace', re: /\binstances?\b/i },
+  { nombre: 'access point → API', re: /\baccess points?\b/i },
+  { nombre: 'token → key', re: /\b(the|a|its|your|new|service|workspace) token\b/i },
+  { nombre: 'job → request', re: /\bjobs?\b/i },
+]
+
+test('los textos usan espacio, API, clave y petición', () => {
+  assert.deepEqual([...fallos(sinTecnico(textosEs), descartadosEs), ...fallos(sinTecnico(textosEn), descartadosEn)], [])
+})
+
 test('ningún texto de producto lleva la raya larga ni palabras huecas', () => {
   assert.ok(go.es.length > 500 && web.es.length >= 20 && web.en.length > 100, 'no se leyeron los catálogos o el sitio')
   assert.deepEqual(fallos([...textosEs, ...textosEn], [raya, ...huecas]), [])

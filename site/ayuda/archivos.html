@@ -90,7 +90,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 
 <section id="s-pasos"><h2><span lang="es">Paso a paso</span><span lang="en">Step by step</span></h2>
 <ol class="pasos">
-  <li><span lang="es">Por la API propia: sube cada archivo con POST /cargas y crea el trabajo citando sus cargas.</span><span lang="en">Native API: upload each file with POST /cargas and create the job citing its uploads.</span></li>
+  <li><span lang="es">Por la API propia: sube cada archivo con POST /cargas y crea la petición citando sus cargas.</span><span lang="en">Native API: upload each file with POST /cargas and create the request citing its uploads.</span></li>
   <li><span lang="es">Por OpenAI o Anthropic: pon el archivo en base64 dentro del mensaje (file, input_file o document).</span><span lang="en">OpenAI or Anthropic: put the file in base64 inside the message (file, input_file or document).</span></li>
   <li><span lang="es">En Probar también puedes adjuntarlos para ver la respuesta antes.</span><span lang="en">In Try you can attach them too, to see the answer first.</span></li>
 </ol>
@@ -107,7 +107,7 @@ for ARCHIVO in &#39;informe.pdf&#39;; do
   CARGAS=&quot;$CARGAS${CARGAS:+,}\&quot;$ID\&quot;&quot;
 done
 
-# 2. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
+# 2. Crea la petición; repetir la Idempotency-Key devuelve la misma petición en lugar de duplicarla
 TRABAJO=$(curl -s http://127.0.0.1:17373/api/v1/trabajos -H &quot;Authorization: Bearer &lt;tu clave&gt;&quot; \
   -H &quot;Content-Type: application/json&quot; -H &quot;Idempotency-Key: $(date +%s)&quot; \
   -d &#39;{
@@ -120,7 +120,7 @@ TRABAJO=$(curl -s http://127.0.0.1:17373/api/v1/trabajos -H &quot;Authorization:
   &quot;cargas&quot;: [&#39;&quot;$CARGAS&quot;&#39;]
 }&#39; | jq -r .id)
 
-# 3. Síguelo en vivo hasta el evento «fin» (si lo cortas, el trabajo sigue y puedes volver con Last-Event-ID)
+# 3. Síguela en vivo hasta el evento «fin» (si la cortas, la petición sigue y puedes volver con Last-Event-ID)
 curl -sN http://127.0.0.1:17373/api/v1/trabajos/$TRABAJO/eventos -H &quot;Authorization: Bearer &lt;tu clave&gt;&quot;
 
 # 4. Lee el resultado (con esquema, el JSON ya validado)
@@ -132,7 +132,7 @@ for ARCHIVO in &#39;informe.pdf&#39;; do
   CARGAS=&quot;$CARGAS${CARGAS:+,}\&quot;$ID\&quot;&quot;
 done
 
-# 2. Create the job; repeating the Idempotency-Key returns the same job instead of a duplicate
+# 2. Create the request; repeating the Idempotency-Key returns the same request instead of a duplicate
 TRABAJO=$(curl -s http://127.0.0.1:17373/api/v1/trabajos -H &quot;Authorization: Bearer &lt;your key&gt;&quot; \
   -H &quot;Content-Type: application/json&quot; -H &quot;Idempotency-Key: $(date +%s)&quot; \
   -d &#39;{
@@ -145,7 +145,7 @@ TRABAJO=$(curl -s http://127.0.0.1:17373/api/v1/trabajos -H &quot;Authorization:
   &quot;cargas&quot;: [&#39;&quot;$CARGAS&quot;&#39;]
 }&#39; | jq -r .id)
 
-# 3. Follow it live until the &quot;fin&quot; event (if you stop, the job keeps running and you can resume with Last-Event-ID)
+# 3. Follow it live until the “fin” event (if you stop, the request keeps running and you can resume with Last-Event-ID)
 curl -sN http://127.0.0.1:17373/api/v1/trabajos/$TRABAJO/eventos -H &quot;Authorization: Bearer &lt;your key&gt;&quot;
 
 # 4. Read the result (with a schema, the JSON already validated)
@@ -167,7 +167,7 @@ for nombre in [&quot;informe.pdf&quot;]:
         sys.exit(r.text)
     cargas.append(r.json()[&quot;identificador_carga&quot;])
 
-# 2. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
+# 2. Crea la petición; repetir la Idempotency-Key devuelve la misma petición en lugar de duplicarla
 solicitud = {
     &quot;mensajes&quot;: [
         {
@@ -182,7 +182,7 @@ if not r.ok:
     sys.exit(r.text)
 trabajo = r.json()[&quot;id&quot;]
 
-# 3. Síguelo en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
+# 3. Síguela en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
 fin, evento, datos = {}, &quot;&quot;, []
 with requests.get(f&quot;{BASE}/trabajos/{trabajo}/eventos&quot;, headers=CABECERAS, stream=True) as eventos:
     for linea in (l.decode(&quot;utf-8&quot;) for l in eventos.iter_lines()):
@@ -217,7 +217,7 @@ for nombre in [&quot;informe.pdf&quot;]:
         sys.exit(r.text)
     cargas.append(r.json()[&quot;identificador_carga&quot;])
 
-# 2. Create the job; repeating the Idempotency-Key returns the same job instead of a duplicate
+# 2. Create the request; repeating the Idempotency-Key returns the same request instead of a duplicate
 solicitud = {
     &quot;mensajes&quot;: [
         {
@@ -274,7 +274,7 @@ for (const nombre of [&quot;informe.pdf&quot;]) {
   cargas.push((await (await pedir(&#39;/cargas&#39;, { method: &#39;POST&#39;, body: datos })).json()).identificador_carga)
 }
 
-// 2. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
+// 2. Crea la petición; repetir la Idempotency-Key devuelve la misma petición en lugar de duplicarla
 const solicitud = {
   &quot;mensajes&quot;: [
     {
@@ -287,7 +287,7 @@ const solicitud = {
 const { id } = await (await pedir(&#39;/trabajos&#39;, { method: &#39;POST&#39;, body: JSON.stringify(solicitud),
   headers: { &#39;Content-Type&#39;: &#39;application/json&#39;, &#39;Idempotency-Key&#39;: randomUUID() } })).json()
 
-// 3. Síguelo en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
+// 3. Síguela en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
 const eventos = await pedir(`/trabajos/${id}/eventos`)
 const lector = new TextDecoder()
 let pendiente = &#39;&#39;, fin
@@ -327,7 +327,7 @@ for (const nombre of [&quot;informe.pdf&quot;]) {
   cargas.push((await (await pedir(&#39;/cargas&#39;, { method: &#39;POST&#39;, body: datos })).json()).identificador_carga)
 }
 
-// 2. Create the job; repeating the Idempotency-Key returns the same job instead of a duplicate
+// 2. Create the request; repeating the Idempotency-Key returns the same request instead of a duplicate
 const solicitud = {
   &quot;mensajes&quot;: [
     {
@@ -421,7 +421,7 @@ func main() {
 		cargas = append(cargas, carga.ID)
 	}
 
-	// 2. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
+	// 2. Crea la petición; repetir la Idempotency-Key devuelve la misma petición en lugar de duplicarla
 	solicitud := &quot;{\&quot;mensajes\&quot;:[{\&quot;rol\&quot;:\&quot;usuario\&quot;,\&quot;contenido\&quot;:\&quot;Resume el documento adjunto en una frase.\&quot;}],\&quot;cargas\&quot;:\&quot;__CARGAS__\&quot;}&quot;
 	lista, _ := json.Marshal(cargas)
 	solicitud = strings.Replace(solicitud, &quot;\&quot;__CARGAS__\&quot;&quot;, string(lista), 1)
@@ -430,7 +430,7 @@ func main() {
 	}
 	json.NewDecoder(pedir(&quot;POST&quot;, &quot;/trabajos&quot;, &quot;application/json&quot;, strings.NewReader(solicitud)).Body).Decode(&amp;trabajo)
 
-	// 3. Síguelo en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
+	// 3. Síguela en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
 	eventos := bufio.NewScanner(pedir(&quot;GET&quot;, &quot;/trabajos/&quot;+trabajo.ID+&quot;/eventos&quot;, &quot;&quot;, nil).Body)
 	evento := &quot;&quot;
 	for eventos.Scan() {
@@ -508,7 +508,7 @@ func main() {
 		cargas = append(cargas, carga.ID)
 	}
 
-	// 2. Create the job; repeating the Idempotency-Key returns the same job instead of a duplicate
+	// 2. Create the request; repeating the Idempotency-Key returns the same request instead of a duplicate
 	solicitud := &quot;{\&quot;mensajes\&quot;:[{\&quot;rol\&quot;:\&quot;usuario\&quot;,\&quot;contenido\&quot;:\&quot;Summarize the attached document in one sentence.\&quot;}],\&quot;cargas\&quot;:\&quot;__CARGAS__\&quot;}&quot;
 	lista, _ := json.Marshal(cargas)
 	solicitud = strings.Replace(solicitud, &quot;\&quot;__CARGAS__\&quot;&quot;, string(lista), 1)

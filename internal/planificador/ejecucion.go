@@ -490,7 +490,7 @@ func (p *Planificador) cambiar(id string, de, hacia nucleo.Estado, cambio persis
 			cierre = nucleo.Fallido
 		}
 		if hacia != cierre && nucleo.ValidarTransicion(de, cierre) == nil {
-			fallo := persistencia.Cambio{Codigo: nucleo.CodigoErrorInterno, Mensaje: idioma.T("no se pudo guardar el estado del trabajo")}
+			fallo := persistencia.Cambio{Codigo: nucleo.CodigoErrorInterno, Mensaje: idioma.T("no se pudo guardar el estado de la petición")}
 			if err := p.almacen.CambiarEstado(fondo, id, de, cierre, fallo); err != nil {
 				p.anotar("%s tampoco se pudo cerrar: %v", id, err)
 			}

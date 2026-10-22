@@ -109,7 +109,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 <div class="pestanas" data-pestanas>
   <div class="pestanas-lista" role="tablist" aria-label="Lenguaje" data-aria-en="Language"><button type="button" role="tab" id="e3-curl-nativa" aria-controls="e3-curl-nativa-panel" aria-selected="true" tabindex="0" data-lenguaje="curl-nativa">curl · API propia</button><button type="button" role="tab" id="e3-python-nativa" aria-controls="e3-python-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="python-nativa">Python · API propia</button><button type="button" role="tab" id="e3-node-nativa" aria-controls="e3-node-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="node-nativa">Node · API propia</button><button type="button" role="tab" id="e3-go-nativa" aria-controls="e3-go-nativa-panel" aria-selected="false" tabindex="-1" data-lenguaje="go-nativa">Go · API propia</button><button type="button" role="tab" id="e3-python" aria-controls="e3-python-panel" aria-selected="false" tabindex="-1" data-lenguaje="python">Python · OpenAI</button><button type="button" role="tab" id="e3-curl" aria-controls="e3-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl · OpenAI</button><button type="button" role="tab" id="e3-anthropic" aria-controls="e3-anthropic-panel" aria-selected="false" tabindex="-1" data-lenguaje="anthropic">Python · Anthropic</button></div>
   <div role="tabpanel" id="e3-curl-nativa-panel" aria-labelledby="e3-curl-nativa">
-    <pre class="codigo" lang="es"><code># 1. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
+    <pre class="codigo" lang="es"><code># 1. Crea la petición; repetir la Idempotency-Key devuelve la misma petición en lugar de duplicarla
 TRABAJO=$(curl -s http://127.0.0.1:17373/api/v1/trabajos -H &quot;Authorization: Bearer &lt;tu clave&gt;&quot; \
   -H &quot;Content-Type: application/json&quot; -H &quot;Idempotency-Key: $(date +%s)&quot; \
   -d &#39;{
@@ -121,12 +121,12 @@ TRABAJO=$(curl -s http://127.0.0.1:17373/api/v1/trabajos -H &quot;Authorization:
   ]
 }&#39; | jq -r .id)
 
-# 2. Síguelo en vivo hasta el evento «fin» (si lo cortas, el trabajo sigue y puedes volver con Last-Event-ID)
+# 2. Síguela en vivo hasta el evento «fin» (si la cortas, la petición sigue y puedes volver con Last-Event-ID)
 curl -sN http://127.0.0.1:17373/api/v1/trabajos/$TRABAJO/eventos -H &quot;Authorization: Bearer &lt;tu clave&gt;&quot;
 
 # 3. Lee el resultado (con esquema, el JSON ya validado)
 curl -s http://127.0.0.1:17373/api/v1/trabajos/$TRABAJO/salida -H &quot;Authorization: Bearer &lt;tu clave&gt;&quot;</code></pre>
-    <pre class="codigo" lang="en"><code># 1. Create the job; repeating the Idempotency-Key returns the same job instead of a duplicate
+    <pre class="codigo" lang="en"><code># 1. Create the request; repeating the Idempotency-Key returns the same request instead of a duplicate
 TRABAJO=$(curl -s http://127.0.0.1:17373/api/v1/trabajos -H &quot;Authorization: Bearer &lt;your key&gt;&quot; \
   -H &quot;Content-Type: application/json&quot; -H &quot;Idempotency-Key: $(date +%s)&quot; \
   -d &#39;{
@@ -138,7 +138,7 @@ TRABAJO=$(curl -s http://127.0.0.1:17373/api/v1/trabajos -H &quot;Authorization:
   ]
 }&#39; | jq -r .id)
 
-# 2. Follow it live until the &quot;fin&quot; event (if you stop, the job keeps running and you can resume with Last-Event-ID)
+# 2. Follow it live until the “fin” event (if you stop, the request keeps running and you can resume with Last-Event-ID)
 curl -sN http://127.0.0.1:17373/api/v1/trabajos/$TRABAJO/eventos -H &quot;Authorization: Bearer &lt;your key&gt;&quot;
 
 # 3. Read the result (with a schema, the JSON already validated)
@@ -151,7 +151,7 @@ import requests
 BASE = &quot;http://127.0.0.1:17373/api/v1&quot;
 CABECERAS = {&quot;Authorization&quot;: &quot;Bearer &lt;tu clave&gt;&quot;}
 
-# 1. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
+# 1. Crea la petición; repetir la Idempotency-Key devuelve la misma petición en lugar de duplicarla
 solicitud = {
     &quot;mensajes&quot;: [
         {
@@ -165,7 +165,7 @@ if not r.ok:
     sys.exit(r.text)
 trabajo = r.json()[&quot;id&quot;]
 
-# 2. Síguelo en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
+# 2. Síguela en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
 fin, evento, datos = {}, &quot;&quot;, []
 with requests.get(f&quot;{BASE}/trabajos/{trabajo}/eventos&quot;, headers=CABECERAS, stream=True) as eventos:
     for linea in (l.decode(&quot;utf-8&quot;) for l in eventos.iter_lines()):
@@ -191,7 +191,7 @@ import requests
 BASE = &quot;http://127.0.0.1:17373/api/v1&quot;
 CABECERAS = {&quot;Authorization&quot;: &quot;Bearer &lt;your key&gt;&quot;}
 
-# 1. Create the job; repeating the Idempotency-Key returns the same job instead of a duplicate
+# 1. Create the request; repeating the Idempotency-Key returns the same request instead of a duplicate
 solicitud = {
     &quot;mensajes&quot;: [
         {
@@ -237,7 +237,7 @@ async function pedir(ruta, opciones = {}) {
   return r
 }
 
-// 1. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
+// 1. Crea la petición; repetir la Idempotency-Key devuelve la misma petición en lugar de duplicarla
 const solicitud = {
   &quot;mensajes&quot;: [
     {
@@ -249,7 +249,7 @@ const solicitud = {
 const { id } = await (await pedir(&#39;/trabajos&#39;, { method: &#39;POST&#39;, body: JSON.stringify(solicitud),
   headers: { &#39;Content-Type&#39;: &#39;application/json&#39;, &#39;Idempotency-Key&#39;: randomUUID() } })).json()
 
-// 2. Síguelo en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
+// 2. Síguela en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
 const eventos = await pedir(`/trabajos/${id}/eventos`)
 const lector = new TextDecoder()
 let pendiente = &#39;&#39;, fin
@@ -279,7 +279,7 @@ async function pedir(ruta, opciones = {}) {
   return r
 }
 
-// 1. Create the job; repeating the Idempotency-Key returns the same job instead of a duplicate
+// 1. Create the request; repeating the Idempotency-Key returns the same request instead of a duplicate
 const solicitud = {
   &quot;mensajes&quot;: [
     {
@@ -349,14 +349,14 @@ func pedir(metodo, ruta, tipo string, cuerpo io.Reader) *http.Response {
 }
 
 func main() {
-	// 1. Crea el trabajo; repetir la Idempotency-Key devuelve el mismo trabajo en lugar de duplicarlo
+	// 1. Crea la petición; repetir la Idempotency-Key devuelve la misma petición en lugar de duplicarla
 	solicitud := &quot;{\&quot;mensajes\&quot;:[{\&quot;rol\&quot;:\&quot;usuario\&quot;,\&quot;contenido\&quot;:\&quot;Resume el documento adjunto en una frase.\&quot;}]}&quot;
 	var trabajo struct {
 		ID string `json:&quot;id&quot;`
 	}
 	json.NewDecoder(pedir(&quot;POST&quot;, &quot;/trabajos&quot;, &quot;application/json&quot;, strings.NewReader(solicitud)).Body).Decode(&amp;trabajo)
 
-	// 2. Síguelo en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
+	// 2. Síguela en vivo: cada evento «texto» trae un trozo de la respuesta y «fin» cierra el flujo
 	eventos := bufio.NewScanner(pedir(&quot;GET&quot;, &quot;/trabajos/&quot;+trabajo.ID+&quot;/eventos&quot;, &quot;&quot;, nil).Body)
 	evento := &quot;&quot;
 	for eventos.Scan() {
@@ -411,7 +411,7 @@ func pedir(metodo, ruta, tipo string, cuerpo io.Reader) *http.Response {
 }
 
 func main() {
-	// 1. Create the job; repeating the Idempotency-Key returns the same job instead of a duplicate
+	// 1. Create the request; repeating the Idempotency-Key returns the same request instead of a duplicate
 	solicitud := &quot;{\&quot;mensajes\&quot;:[{\&quot;rol\&quot;:\&quot;usuario\&quot;,\&quot;contenido\&quot;:\&quot;Summarize the attached document in one sentence.\&quot;}]}&quot;
 	var trabajo struct {
 		ID string `json:&quot;id&quot;`
@@ -536,21 +536,21 @@ print(m.content[0].text)</code></pre>
     <tr><th scope="row"><span lang="es">Respuesta JSON con esquema</span><span lang="en">JSON response with a schema</span></th><td><span lang="es">sí (response_format)</span><span lang="en">yes (response_format)</span></td><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">sí (salida.esquema), con «Corregir»</span><span lang="en">yes (salida.esquema), with &quot;Correct&quot;</span></td></tr>
     <tr><th scope="row"><span lang="es">Enviar archivos</span><span lang="en">Send files</span></th><td><span lang="es">sí, en base64 dentro del mensaje (hasta ~12 MB)</span><span lang="en">yes, in base64 inside the message (up to ~12 MB)</span></td><td><span lang="es">sí, en base64 dentro del mensaje (hasta ~12 MB)</span><span lang="en">yes, in base64 inside the message (up to ~12 MB)</span></td><td><span lang="es">sí, hasta 50 MB cada uno</span><span lang="en">yes, up to 50 MB each</span></td></tr>
     <tr><th scope="row"><span lang="es">Herramientas (tools)</span><span lang="en">Tool calling</span></th><td><span lang="es">sí</span><span lang="en">yes</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td></tr>
-    <tr><th scope="row"><span lang="es">Tareas largas: seguir, cancelar, reintentar</span><span lang="en">Long jobs: follow, cancel, retry</span></th><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td></tr>
+    <tr><th scope="row"><span lang="es">Peticiones largas: seguir, cancelar, reintentar</span><span lang="en">Long requests: follow, cancel, retry</span></th><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td></tr>
     <tr><th scope="row"><span lang="es">Respaldo y esfuerzo por petición</span><span lang="en">Fallback and effort per request</span></th><td><span lang="es">solo el esfuerzo</span><span lang="en">effort only</span></td><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td></tr>
     <tr><th scope="row"><span lang="es">Registro de cada paso</span><span lang="en">Log of each step</span></th><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td></tr>
     <tr><th scope="row"><span lang="es">Consultar los límites antes de enviar</span><span lang="en">Check the limits before sending</span></th><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">no</span><span lang="en">no</span></td><td><span lang="es">sí</span><span lang="en">yes</span></td></tr>
   </tbody>
 </table></div>
 
-<p class="aviso"><span lang="es">Las URL de OpenAI y Anthropic imitan esos servicios para que sus SDK funcionen igual, así que no tienen campos para seguir o cancelar un trabajo. La receta vale en las tres.</span><span lang="en">The OpenAI and Anthropic URLs mimic those services so their SDKs work unchanged, so they have no fields to follow or cancel a job. The recipe applies to all three.</span></p>
+<p class="aviso"><span lang="es">Las URL de OpenAI y Anthropic imitan esos servicios para que sus SDK funcionen igual, así que no tienen campos para seguir o cancelar una petición. La receta vale en las tres.</span><span lang="en">The OpenAI and Anthropic URLs mimic those services so their SDKs work unchanged, so they have no fields to follow or cancel a request. The recipe applies to all three.</span></p>
 
 <p class="aviso"><span lang="es">Por defecto, Tramtai escucha solo en 127.0.0.1: tus apps deben correr en el mismo equipo.</span><span lang="en">By default, Tramtai only listens on 127.0.0.1: your apps must run on the same computer.</span></p>
 </section>
 
 <section id="s-preguntas"><h2><span lang="es">Preguntas</span><span lang="en">Questions</span></h2>
-<details id="que-url"><summary><span lang="es">¿Qué URL uso?</span><span lang="en">Which URL do I use?</span></summary><p><span lang="es">La de OpenAI si tu app usa su SDK o deja cambiar la URL base (LangChain, n8n); la de Anthropic con su SDK; la API propia para trabajos largos o para cancelar.</span><span lang="en">OpenAI’s if your app uses its SDK or lets you change the base URL (LangChain, n8n); Anthropic’s with its SDK; the native API for long jobs or to cancel.</span></p></details>
-<details id="api-por-app"><summary><span lang="es">¿Para qué sirve una API por aplicación?</span><span lang="en">What is an API per app for?</span></summary><p><span lang="es">Cada app tiene su clave, sus modelos, instrucciones fijas y presupuesto, y solo ve sus trabajos. Se activan o detienen sin reiniciar.</span><span lang="en">Each app gets its key, its models, fixed instructions and budget, and only sees its own jobs. They turn on or off without restarting.</span></p></details>
+<details id="que-url"><summary><span lang="es">¿Qué URL uso?</span><span lang="en">Which URL do I use?</span></summary><p><span lang="es">La de OpenAI si tu app usa su SDK o deja cambiar la URL base (LangChain, n8n); la de Anthropic con su SDK; la API propia para peticiones largas o para cancelar.</span><span lang="en">OpenAI’s if your app uses its SDK or lets you change the base URL (LangChain, n8n); Anthropic’s with its SDK; the native API for long requests or to cancel.</span></p></details>
+<details id="api-por-app"><summary><span lang="es">¿Para qué sirve una API por aplicación?</span><span lang="en">What is an API per app for?</span></summary><p><span lang="es">Cada app tiene su clave, sus modelos, instrucciones fijas y presupuesto, y solo ve sus peticiones. Se activan o detienen sin reiniciar.</span><span lang="en">Each app gets its key, its models, fixed instructions and budget, and only sees its own requests. They start or stop without restarting.</span></p></details>
 <details id="clave-nueva"><summary><span lang="es">¿Dónde está la clave de una API nueva?</span><span lang="en">Where is a new API’s key?</span></summary><p><span lang="es">Solo se muestra al crearla: cópiala entonces. Si la pierdes, «Regenerar la clave» te da otra.</span><span lang="en">It is shown only when created: copy it then. If you lose it, &quot;Regenerate the key&quot; gives you another.</span></p></details>
 <details id="prueba-a-api"><summary><span lang="es">¿Cómo convierto una prueba en una API?</span><span lang="en">How do I turn a test into an API?</span></summary><p><span lang="es">En Probar, «Guardar como API» te da URL y clave. Desde Mis APIs, «Abrir en Probar» la carga para cambiarla y «Actualizar» guarda.</span><span lang="en">In Try, &quot;Save as API&quot; gives you a URL and a key. From My APIs, &quot;Open in Try&quot; loads it to change it and &quot;Update&quot; saves it.</span></p></details>
 <details id="clave-filtrada"><summary><span lang="es">¿Qué hago si se filtra una clave?</span><span lang="en">What if a key leaks?</span></summary><p><span lang="es">En Mis APIs, «Regenerar la clave»: la anterior deja de valer al momento. Si es de un proveedor, revócala en su consola y guarda la nueva.</span><span lang="en">In My APIs, &quot;Regenerate the key&quot;: the old one stops working at once. If it is a provider’s, revoke it in their console and save the new one.</span></p></details>

@@ -360,7 +360,7 @@ func (p *Planificador) Cancelar(ctx context.Context, id string) (nucleo.Trabajo,
 func (p *Planificador) Obtener(ctx context.Context, id string) (nucleo.Trabajo, error) {
 	t, err := p.almacen.Obtener(ctx, id)
 	if err == nil && t.Instancia != p.opc.Instancia {
-		return nucleo.Trabajo{}, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
+		return nucleo.Trabajo{}, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("petición no encontrada: %s", id))
 	}
 	return t, err
 }
@@ -373,7 +373,7 @@ func (p *Planificador) Avisos() <-chan struct{} { return p.almacen.Avisos() }
 func (p *Planificador) Eventos(ctx context.Context, id string, desde int) ([]persistencia.Evento, nucleo.Estado, error) {
 	instancia, estado, err := p.almacen.Estado(ctx, id)
 	if err == nil && instancia != p.opc.Instancia {
-		err = nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
+		err = nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("petición no encontrada: %s", id))
 	}
 	if err != nil {
 		return nil, "", err
@@ -386,7 +386,7 @@ func (p *Planificador) Eventos(ctx context.Context, id string, desde int) ([]per
 func (p *Planificador) Registro(ctx context.Context, id string) ([]persistencia.Evento, error) {
 	instancia, _, err := p.almacen.Estado(ctx, id)
 	if err == nil && instancia != p.opc.Instancia {
-		err = nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
+		err = nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("petición no encontrada: %s", id))
 	}
 	if err != nil {
 		return nil, err
@@ -402,10 +402,10 @@ func (p *Planificador) Reintentar(ctx context.Context, id string) (nucleo.Trabaj
 		return anterior, err
 	}
 	if !anterior.Estado.Terminal() {
-		return anterior, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, idioma.T("solo se reintenta un trabajo terminado"))
+		return anterior, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, idioma.T("solo se reintenta una petición terminada"))
 	}
 	if anterior.EntradasEliminadas {
-		return anterior, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("las entradas del trabajo ya vencieron o se eliminaron al terminar; vuelve a enviarlas"))
+		return anterior, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("los archivos de la petición ya vencieron o se borraron al terminar: vuelve a enviarlos"))
 	}
 	// El reintento es el mismo pedido otra vez: conserva su API y su origen.
 	t, _, err := p.aceptar(nucleo.ConOrigenPeticion(ctx, anterior.Origen), anterior.Solicitud, "", anterior.ID, anterior.PuntoAcceso)

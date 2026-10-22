@@ -24,7 +24,7 @@ Si tu app ya usa el SDK de OpenAI o el de Anthropic, solo cambias la URL base. A
 
 ## Qué ofrece
 
-- **Compatible con lo que ya usas:** los SDK de OpenAI y Anthropic, con respuesta en vivo y herramientas (`tools`), y una API propia para trabajos largos.
+- **Compatible con lo que ya usas:** los SDK de OpenAI y Anthropic, con respuesta en vivo y herramientas (`tools`), y una API propia para peticiones largas.
 - **Agente y modelo en cada petición:** `claude/sonnet`, `codex`, `copilot`, `gemini/…` o un perfil, con respaldo a otro agente si el primero falla.
 - **Archivos y respuestas con forma:** PDF, Word, Excel o PowerPoint como entrada y JSON validado como salida, sin escribir JSON Schema.
 - **Una API por aplicación,** con su clave, sus modelos, sus instrucciones y su presupuesto.

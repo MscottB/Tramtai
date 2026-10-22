@@ -34,7 +34,7 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 		return false
 	}
 	if !privilegiada {
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado, idioma.T("requiere una sesión de la Web UI o el token de servicio")))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado, idioma.T("requiere una sesión de la Web UI o la clave del servicio")))
 		return true
 	}
 	switch {
@@ -227,7 +227,7 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 	}
 	err = configuracion.EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		if slices.ContainsFunc(lista, func(c ConfigPunto) bool { return c.Nombre == p.Nombre }) {
-			return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el punto de acceso %s ya existe", p.Nombre))
+			return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("la API %s ya existe", p.Nombre))
 		}
 		return append(lista, p), nil
 	})
@@ -264,7 +264,7 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 		}
 	}
 	if punto == nil {
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("punto de acceso no encontrado en este espacio: %s", nombre)))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("API no encontrada en este espacio: %s", nombre)))
 		return
 	}
 	switch {
