@@ -24,6 +24,7 @@ type Contexto struct {
 	Estilos     *Estilos         // los mismos durante toda la sesión: cambian por dentro si cambia el fondo
 	Ancho, Alto int              // el área de la página, sin cabecera, menú ni pie
 	Proyecto    string           // raíz del proyecto desde el que se abrió la terminal; vacía fuera de uno
+	Datos       string           // la carpeta de datos de Tramtai (Opciones.Datos): ahí guarda Probar su borrador
 }
 
 // Claves de las páginas: las de la Web UI. IrA con otra clave no hace nada.
@@ -77,6 +78,9 @@ type (
 	// filtroHistorial de la Web UI; "" o cualquier otro valor deja todas.
 	FiltroEstado struct{ Estado string }
 	ConAyuda     struct{ Pagina string } // la Ayuda en el tema de una página (lo que devuelve su Ayuda())
+	// SeguirTrabajo abre Probar con ese trabajo (su receta y su mensaje) y lo sigue en vivo, como trabajoSeguido de la
+	// Web UI: así llegan a Probar el reintento y la corrección del Historial.
+	SeguirTrabajo struct{ ID string }
 	// CambioEspacio cambia el espacio activo. La app cancela los Ctx de todas las páginas, se lo pasa a todas y vuelve
 	// a iniciar la actual; las demás se inician con el espacio nuevo al visitarlas.
 	CambioEspacio struct{ ID string }

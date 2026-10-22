@@ -19,6 +19,7 @@ import (
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/paginas/agentes"
+	"tramtai/internal/tui/paginas/ejecutar"
 	"tramtai/internal/tui/paginas/historial"
 	"tramtai/internal/tui/paginas/inicio"
 )
@@ -45,6 +46,7 @@ const anchoMinimo, altoMinimo = 60, 20
 var fabricas = map[string]func(idioma string) pagina.Pagina{
 	pagina.PaginaInicio:    inicio.Nueva,
 	pagina.PaginaAgentes:   agentes.Nueva,
+	pagina.PaginaEjecutar:  ejecutar.Nueva,
 	pagina.PaginaHistorial: historial.Nueva,
 }
 
@@ -119,7 +121,7 @@ func (m *modelo) iniciar(extra any) tea.Cmd {
 	m.cancelar[m.actual] = cancelar
 	ancho, alto := m.area()
 	cmd := m.pagina(m.actual).Iniciar(pagina.Contexto{Ctx: ctx, Cli: m.cli, Instancia: m.instancia, Idioma: m.idioma, Estilos: m.estilos,
-		Ancho: ancho, Alto: alto, Proyecto: m.o.Proyecto})
+		Ancho: ancho, Alto: alto, Proyecto: m.o.Proyecto, Datos: m.o.Datos})
 	if extra == nil {
 		return cmd
 	}

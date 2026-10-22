@@ -84,3 +84,35 @@ func TestAreaCtrlEnter(t *testing.T) {
 		t.Fatal("Ctrl+Enter envía")
 	}
 }
+
+// TestFormularioDesdeFuera: la página mueve el foco, pone valores (una plantilla, una receta) y sabe dónde está el campo.
+func TestFormularioDesdeFuera(t *testing.T) {
+	f := NuevoFormulario(estilos(), Area("notas", "Notas", ""), Opcion("modelo", "Modelo", []string{"a", "b"}, "a"), Interruptor("si", "Sí", false), Texto("nombre", "Nombre", ""))
+	f.Enfocar("nombre")
+	if f.Foco() != "nombre" {
+		t.Fatalf("Enfocar mueve el foco: %s", f.Foco())
+	}
+	f.Enfocar("no-existe")
+	if f.Foco() != "nombre" {
+		t.Fatal("un campo que no existe no lo mueve")
+	}
+	f.Poner("notas", "uno\ndos")
+	f.Poner("modelo", "b")
+	f.Poner("si", "1")
+	f.Poner("no-existe", "x")
+	if f.Valor("notas") != "uno\ndos" || f.Valor("modelo") != "b" || !f.Marcado("si") {
+		t.Fatalf("Poner cambia los valores: %q %q %v", f.Valor("notas"), f.Valor("modelo"), f.Marcado("si"))
+	}
+	f.Vista()
+	if f.LineaFoco() == 0 {
+		t.Fatal("el último campo no está en la primera línea")
+	}
+	errorDeFuera := ""
+	f.Validar = func(*Formulario) map[string]string { return map[string]string{"nombre": errorDeFuera} }
+	errorDeFuera = "lo dice el servicio"
+	f.Update(tecla("x"))
+	f.Revalidar()
+	if !strings.Contains(f.Vista(), "lo dice el servicio") {
+		t.Fatal("Revalidar enseña un error que llega después")
+	}
+}

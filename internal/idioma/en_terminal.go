@@ -70,5 +70,23 @@ func init() {
 		"Petición enviada de nuevo":    "Request sent again",
 		"Corrección enviada":           "Correction sent",
 		"No hay peticiones terminadas": "There are no finished requests",
+
+		// Probar: la receta, el mensaje y la respuesta salen de los textos de la Web UI; aquí solo lo propio de la terminal.
+		"edita":                  "edit",
+		"campo":                  "field",
+		"ver":                    "view",
+		"copia":                  "copy",
+		"copia la clave":         "copy the key",
+		"cierra":                 "close",
+		"completa":               "complete",
+		"Escribe un mensaje":     "Write a message",
+		"No hay nada que copiar": "There is nothing to copy",
+		"Copiado con OSC 52; si no llega al portapapeles, tu terminal no lo admite": "Copied with OSC 52; if it does not reach the clipboard, your terminal does not support it",
+		"el conversor de archivos no está listo (%s): Ctrl+P lo prepara":            "the file converter is not ready (%s): Ctrl+P prepares it",
+		"Preparando el conversor de archivos (%s)":                                  "Preparing the file converter (%s)",
+		"Escribe agente o agente/modelo (+esfuerzo), separados por comas: %s":       "Write agent or agent/model (+effort), separated by commas: %s",
+		"← → elige la plantilla e Intro la aplica":                                  "← → chooses the template and Enter applies it",
+		"Intro salta de línea; Ctrl+Enter o Ctrl+S envía":                           "Enter starts a new line; Ctrl+Enter or Ctrl+S sends",
+		"Separa las rutas con comas; Tab completa la ruta.":                         "Separate the paths with commas; Tab completes the path.",
 	})
 }

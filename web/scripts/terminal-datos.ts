@@ -76,9 +76,31 @@ export const CLAVES_HISTORIAL: string[] = [
   'esfuerzo.agente', 'esfuerzo.bajo', 'esfuerzo.medio', 'esfuerzo.alto', 'esfuerzo.muy_alto', 'esfuerzo.maximo', 'esfuerzo.delAgente',
 ]
 
+// CLAVES_EJECUTAR son los textos de Probar que la terminal repite tal cual: la receta, el mensaje y los archivos, el esfuerzo,
+// la respuesta, «Ver como código» (también los comentarios de sus ejemplos), «Guardar como API» y las pruebas recientes. Los
+// {placeholders} los rellena Go con datos.Textof.
+export const CLAVES_EJECUTAR: string[] = [
+  'ejecutar.receta', 'ejecutar.mensajePrueba', 'ejecutar.mensaje', 'ejecutar.adjuntar', 'ejecutar.adjuntarLimites', 'ejecutar.formatos',
+  'ejecutar.perfilTrabajo', 'ejecutar.perfilHint', 'ejecutar.tiempo', 'ejecutar.tiempoHint', 'ejecutar.enviar', 'ejecutar.vacio',
+  'ejecutar.ejemplos', 'ejecutar.ejemplo1', 'ejecutar.ejemplo2', 'ejecutar.ejemplo3', 'ejecutar.nueva', 'ejecutar.recientes',
+  'ejecutar.verTodo', 'ejecutar.sinRecientes', 'ejecutar.usarDeNuevo', 'ejecutar.sinAdjuntos', 'ejecutar.corregirTexto',
+  'ejecutar.respuestaRecibida', 'ejecutar.guardarApi', 'ejecutar.actualizarApi', 'ejecutar.editando', 'ejecutar.dejarEditar',
+  'ejecutar.guardarTexto', 'ejecutar.apiCreada', 'ejecutar.apiCreadaTexto', 'ejecutar.apiActualizada',
+  'receta.instrucciones', 'receta.instruccionesHint', 'receta.modelo', 'receta.forzar', 'receta.respaldo', 'receta.respaldoHint',
+  'receta.salidaEstructurada', 'receta.salidaEstructuradaTexto', 'receta.plantillaCorta', 'receta.plantillaReemplazar',
+  'receta.plantillaReemplazarTexto', 'receta.esquema', 'receta.esquemaHint', 'receta.esquemaInvalido', 'receta.esquemaVacio',
+  'receta.reintentos', 'receta.reintentosHint', 'receta.reintentos0', 'receta.reintentosN', 'receta.reintentosNUno',
+  'esfuerzo.titulo', 'esfuerzo.hint', 'esfuerzo.agenteCon', 'esfuerzo.espacioCon', 'esfuerzo.noAdmite', 'modelo.esPredeterminado',
+  'codigo.boton', 'codigo.titulo', 'codigo.texto', 'codigo.tuClave', 'codigo.recetaEnApi',
+  'ejemplos.nativa', 'ejemplos.subir', 'ejemplos.jq', 'ejemplos.crear', 'ejemplos.seguir', 'ejemplos.seguirCurl', 'ejemplos.resultado',
+  'ejemplos.mensaje', 'conectar.hola', 'conectar.urlOpenai', 'conectar.clave',
+  'puntos.nombre', 'puntos.nombreHint', 'puntos.nombreRegla', 'puntos.grupo', 'puntos.grupoHint', 'puntos.claveUnaVez',
+  'comun.copiado', 'comun.crear', 'comun.hecho', 'comun.tokens', 'comun.opcionesAvanzadas',
+]
+
 // CLAVES_TEXTOS son, además de las menu.* y las error.*, los textos que la terminal toma de la Web UI: los de la Ayuda de la
-// interfaz, los de Agentes, los de Inicio y los del Historial.
-export const CLAVES_TEXTOS: string[] = [...CLAVES_UI, ...CLAVES_AGENTES, ...CLAVES_INICIO, ...CLAVES_HISTORIAL]
+// interfaz, los de Agentes, los de Inicio, los del Historial y los de Probar.
+export const CLAVES_TEXTOS: string[] = [...CLAVES_UI, ...CLAVES_AGENTES, ...CLAVES_INICIO, ...CLAVES_HISTORIAL, ...CLAVES_EJECUTAR]
 
 // plano deja un texto sin marcas: sin ** y con los <marcadores> entre corchetes.
 const plano = (s: string) => s.replace(/\*\*/g, '').replace(/<([^<>]*)>/g, '[$1]')

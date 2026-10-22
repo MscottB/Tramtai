@@ -257,6 +257,18 @@ func aviso(fuera []tea.Msg) (comp.NuevoAviso, bool) {
 	return comp.NuevoAviso{}, false
 }
 
+// seguido es el trabajo con que se va a Probar (reintentar y corregir lo siguen allí); "" si no se va.
+func seguido(fuera []tea.Msg) string {
+	for _, m := range fuera {
+		if ir, ok := m.(pagina.IrA); ok && ir.Pagina == pagina.PaginaEjecutar {
+			if s, ok := ir.Datos.(pagina.SeguirTrabajo); ok {
+				return s.ID
+			}
+		}
+	}
+	return ""
+}
+
 func pregunta(fuera []tea.Msg) (comp.Pregunta, bool) {
 	for _, m := range fuera {
 		if q, ok := m.(comp.Pregunta); ok {
@@ -846,8 +858,9 @@ func TestHistorialReintentar(t *testing.T) {
 	if err != nil || len(lista) != 2 {
 		t.Fatalf("el servicio tiene otro trabajo: %d %v", len(lista), err)
 	}
-	if p.abierto == "" || p.abierto == original.ID {
-		t.Fatalf("abre el trabajo nuevo para verlo: %q", p.abierto)
+	nuevo := seguido(fuera)
+	if nuevo == "" || nuevo == original.ID || lista[0].ID != nuevo {
+		t.Fatalf("lleva a Probar con el trabajo nuevo, como la Web UI: %v", fuera)
 	}
 	if len(ids(p)) != 2 {
 		t.Fatalf("y la lista lo trae: %v", ids(p))
@@ -940,11 +953,12 @@ func TestHistorialCorregir(t *testing.T) {
 		t.Fatalf("avisa: %+v", fuera)
 	}
 	lista, _ := cli.Trabajos(ctx, id, 10)
-	if len(lista) != 2 || p.abierto == "" || p.abierto == mala.ID {
-		t.Fatalf("es otra petición y la abre: %d %q", len(lista), p.abierto)
+	id3 := seguido(fuera)
+	if len(lista) != 2 || id3 == "" || id3 == mala.ID {
+		t.Fatalf("es otra petición y la sigue en Probar: %d %v", len(lista), fuera)
 	}
 	// Corregir no es reintentar: el trabajo nuevo lleva la conversación con el mensaje de corrección del planificador.
-	nuevo, err := cli.Trabajo(ctx, id, p.abierto)
+	nuevo, err := cli.Trabajo(ctx, id, id3)
 	if err != nil || len(nuevo.Solicitud.Mensajes) < 2 ||
 		!strings.HasPrefix(nuevo.Solicitud.Mensajes[len(nuevo.Solicitud.Mensajes)-1].Contenido, "Tu respuesta no cumple el formato pedido:") {
 		t.Fatalf("la corrección termina con el mensaje de corrección: %+v %v", nuevo.Solicitud.Mensajes, err)

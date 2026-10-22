@@ -748,7 +748,7 @@ func (p *Pagina) lanzar(hacer func(pagina.Contexto) msgAccion) tea.Cmd {
 	}
 }
 
-// accion reintenta, corrige o cancela un trabajo. Reintentar y corregir crean otro, que se abre en vivo.
+// accion reintenta, corrige o cancela un trabajo. Reintentar y corregir crean otro, que se sigue en Probar.
 func (p *Pagina) accion(nombre string, t nucleo.Trabajo) tea.Cmd {
 	return p.lanzar(func(c pagina.Contexto) msgAccion {
 		var nuevo nucleo.Trabajo
@@ -776,7 +776,9 @@ func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
 		if m.accion == accionCorregir {
 			aviso = idioma.T("Corrección enviada")
 		}
-		return tea.Batch(comp.Aviso(aviso, comp.Exito), p.abrirDetalle(m.t.ID, true), p.cargar(true))
+		// El trabajo nuevo se sigue en Probar, como trabajoSeguido de la Web UI.
+		ir := pagina.IrA{Pagina: pagina.PaginaEjecutar, Datos: pagina.SeguirTrabajo{ID: m.t.ID}}
+		return tea.Batch(comp.Aviso(aviso, comp.Exito), func() tea.Msg { return ir }, p.cargar(true))
 	case accionCancelar:
 		if p.detalle != nil && p.detalle.ID == m.id {
 			t := m.t

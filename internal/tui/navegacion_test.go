@@ -266,6 +266,13 @@ func TestConfirmacionCabeEn60x20(t *testing.T) {
 	}
 }
 
+func TestEjecutarRegistrada(t *testing.T) {
+	m := nuevo(Opciones{})
+	if _, pendiente := m.pagina(pagina.PaginaEjecutar).(*proximamente); pendiente {
+		t.Fatal("Probar ya no es «Próximamente»")
+	}
+}
+
 func TestHistorialRegistrada(t *testing.T) {
 	m := nuevo(Opciones{})
 	if _, pendiente := m.pagina(pagina.PaginaHistorial).(*proximamente); pendiente {
