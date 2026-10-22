@@ -104,7 +104,7 @@ func TestAgentesDesconectadoSinCLIEsNoInstalado(t *testing.T) {
 	if p.agentes[0].Agente != "simulado" {
 		t.Fatalf("va al final: %+v", p.agentes)
 	}
-	if v := p.Vista(); !strings.Contains(v, "Listos (1) · Falta conectar (0) · No instalados (1)") {
+	if v := p.Vista(); !strings.Contains(v, "Listos (1) Falta conectar (0) No instalados (1)") {
 		t.Fatalf("cuenta como no instalado:\n%s", v)
 	}
 	p.lista.Update(tecla("j"))

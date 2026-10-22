@@ -189,7 +189,7 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		teclas = append(teclas, pagina.Tecla{Tecla: "p", Accion: p.tx("conversor.preparar")})
 	}
 	return append(teclas, pagina.Tecla{Tecla: "g", Accion: p.tx("inicio.detalles")}, pagina.Tecla{Tecla: "h", Accion: p.tx("inicio.verHistorial")},
-		pagina.Tecla{Tecla: "a", Accion: p.tx("menu.grupo.empezar")})
+		pagina.Tecla{Tecla: "a", Accion: p.tx("menu.ayuda")})
 }
 
 // flechas es el dibujo de las teclas de desplazar; en ASCII (o antes de conocer los estilos, que es cuando la app puede

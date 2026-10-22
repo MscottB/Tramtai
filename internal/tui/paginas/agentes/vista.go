@@ -178,7 +178,7 @@ func (p *Pagina) Vista() string {
 		lineas = append(lineas, e.Error.Render(e.Recortar(p.err, ancho)))
 	}
 	if p.cargado {
-		lineas = append(lineas, e.Tenue.Render(e.Recortar(p.resumen(), ancho)), "")
+		lineas = append(lineas, e.Recortar(p.resumen(), ancho), "")
 		if p.cargando {
 			lineas[len(lineas)-1] = e.Tenue.Render(idioma.T("Cargando…"))
 		}
@@ -187,21 +187,42 @@ func (p *Pagina) Vista() string {
 	return strings.Join(lineas, "\n")
 }
 
-// resumen cuenta los agentes por estado, con las etiquetas de los filtros de la Web UI.
+// Los filtros de la Web UI (opcionesFiltro de Agentes.vue), en su orden: todos, listos, falta conectar y no instalados.
+var filtros = []struct {
+	clave string
+	deja  func(estado) bool
+}{
+	{"agentes.filtroTodos", func(estado) bool { return true }},
+	{"agentes.filtroListos", func(e estado) bool { return e == estListo }},
+	{"agentes.filtroConectar", func(e estado) bool { return e != estListo && e != estNoInstalado }},
+	{"agentes.filtroInstalar", func(e estado) bool { return e == estNoInstalado }},
+}
+
+// resumen son los filtros con cuántos agentes deja cada uno; el elegido va entre corchetes, como las pestañas.
 func (p *Pagina) resumen() string {
-	var listos, conectar, instalar int
-	for _, a := range p.agentes {
-		switch est := estadoDe(a); {
-		case est == estListo:
-			listos++
-		case est == estNoInstalado:
-			instalar++
-		default:
-			conectar++
+	partes := make([]string, len(filtros))
+	for i, f := range filtros {
+		n := 0
+		for _, a := range p.agentes {
+			if f.deja(estadoDe(a)) {
+				n++
+			}
+		}
+		texto := p.tx(f.clave, "n", strconv.Itoa(n))
+		if i == p.filtro {
+			partes[i] = p.estilos.Titulo.Render("[" + texto + "]")
+		} else {
+			partes[i] = p.estilos.Tenue.Render(texto)
 		}
 	}
-	return strings.Join([]string{p.tx("agentes.filtroListos", "n", strconv.Itoa(listos)), p.tx("agentes.filtroConectar", "n", strconv.Itoa(conectar)),
-		p.tx("agentes.filtroInstalar", "n", strconv.Itoa(instalar))}, " "+p.estilos.Iconos.Separador+" ")
+	return strings.Join(partes, " ")
+}
+
+// filtrar cambia de filtro (paso 1 o -1, dando la vuelta) y deja en la lista solo esos agentes.
+func (p *Pagina) filtrar(paso int) {
+	p.filtro = (p.filtro + paso + len(filtros)) % len(filtros)
+	deja := filtros[p.filtro].deja
+	p.lista.Filtrar(func(a adaptador) bool { return deja(estadoDe(a)) })
 }
 
 func (p *Pagina) si(v bool) string {

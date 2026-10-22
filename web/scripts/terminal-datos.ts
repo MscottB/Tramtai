@@ -31,7 +31,7 @@ export const URL_AYUDA = URL_SITIO + 'ayuda/'
 // confirmaciones). Los {placeholders} se quedan como están: Go los rellena con datos.Textof.
 export const CLAVES_AGENTES: string[] = [
   'agente.listo', 'agente.noInstalado', 'agente.faltaClave', 'agente.revisar', 'agente.desconectado',
-  'agentes.subtitulo', 'agentes.filtroListos', 'agentes.filtroConectar', 'agentes.filtroInstalar',
+  'agentes.subtitulo', 'agentes.filtroTodos', 'agentes.filtroListos', 'agentes.filtroConectar', 'agentes.filtroInstalar',
   'agentes.suscripcion', 'agentes.claveApi', 'agentes.listoSuscripcion', 'agentes.listoClave', 'agentes.cuenta',
   'agentes.opcionSuscripcionTexto', 'agentes.desconectadoTexto', 'agentes.desconectarTitulo', 'agentes.desconectarTexto',
   'agentes.conectado', 'agentes.desconectado', 'agentes.suscripcionActivada', 'agentes.claveActivada',

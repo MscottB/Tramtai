@@ -482,7 +482,7 @@ func TestPrimerosPasos(t *testing.T) {
 	}
 	_, cmd := p.Update(tecla("a"))
 	ir, ok := correr(p, cmd)[0].(pagina.IrA)
-	if !ok || ir.Pagina != pagina.PaginaAyuda || ir.Datos != (pagina.ConAyuda{Pagina: tema}) {
+	if d, _ := ir.Datos.(pagina.ConAyuda); !ok || ir.Pagina != pagina.PaginaAyuda || d.Pagina != tema {
 		t.Fatalf("a abre la Ayuda de Empezar: %+v", ir)
 	}
 	_, cmd = p.Update(tecla("g"))

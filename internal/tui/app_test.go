@@ -384,3 +384,29 @@ func TestCambioEspacioReiniciaLaPagina(t *testing.T) {
 		t.Fatal("ErrorServicio de una página enseña el aviso de la app")
 	}
 }
+
+// TestTeclasComunesSiempreSeVen: a 60×20 y a 80×24, fuera de un campo, el pie de cada página enseña «Tab menú», «? ayuda»
+// y «q salir» aunque las teclas de la página no quepan; ? abre la lista entera de las teclas de la página.
+func TestTeclasComunesSiempreSeVen(t *testing.T) {
+	for _, tam := range [][2]int{{60, 20}, {80, 24}} {
+		for _, clave := range []string{pagina.PaginaInicio, pagina.PaginaAgentes, pagina.PaginaEjecutar, pagina.PaginaHistorial} {
+			m := nuevoEn(Opciones{Datos: t.TempDir()}, "es")
+			m.Update(tea.WindowSizeMsg{Width: tam[0], Height: tam[1]})
+			correr(t, m, m.ir(clave, nil, false))
+			lineas := strings.Split(ansi.Strip(m.View().Content), "\n")
+			pie := lineas[len(lineas)-1]
+			for _, quiere := range []string{"Tab menú", "? ayuda", "q salir"} {
+				if !strings.Contains(pie, quiere) {
+					t.Errorf("%s a %dx%d: el pie enseña %q: %q", clave, tam[0], tam[1], quiere, pie)
+				}
+			}
+		}
+	}
+	m := nuevoEn(Opciones{Datos: t.TempDir()}, "es")
+	m.Update(tea.WindowSizeMsg{Width: 60, Height: 20})
+	m.paginas[pagina.PaginaInicio] = &paginaFalsa{}
+	m.Update(tecla("?"))
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "a       anota") || !strings.Contains(v, "Ctrl+E  espacio") {
+		t.Fatalf("? enseña todas las teclas de la página y las comunes:\n%s", v)
+	}
+}

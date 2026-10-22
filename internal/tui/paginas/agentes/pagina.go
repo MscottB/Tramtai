@@ -85,6 +85,7 @@ type Pagina struct {
 	ocupado  bool // hay un cambio en marcha: no se lanza otro
 	pend     *pendiente
 	detalle  string // el agente del detalle abierto, "" si no hay
+	filtro   int    // el de filtros: 0 todos
 	modelos  map[string][]string
 	errModel map[string]string
 }
@@ -103,7 +104,7 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		return []pagina.Tecla{{Tecla: "Esc", Accion: idioma.T("vuelve")}, {Tecla: "c", Accion: idioma.T("comprobar")},
 			{Tecla: "d", Accion: idioma.T("conexión")}, {Tecla: "a", Accion: idioma.T("autenticación")}, {Tecla: "p", Accion: idioma.T("probar")}}
 	}
-	return []pagina.Tecla{{Tecla: idioma.T("Intro"), Accion: idioma.T("detalles")}, {Tecla: "c", Accion: idioma.T("comprobar")},
+	return []pagina.Tecla{{Tecla: idioma.T("Intro"), Accion: idioma.T("detalles")}, {Tecla: "← →", Accion: idioma.T("filtro")}, {Tecla: "c", Accion: idioma.T("comprobar")},
 		{Tecla: "d", Accion: idioma.T("conexión")}, {Tecla: "a", Accion: idioma.T("autenticación")}, {Tecla: "p", Accion: idioma.T("probar")}}
 }
 
@@ -258,6 +259,11 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 	case "p":
 		if hay {
 			return p.probar(a)
+		}
+	case "left", "right":
+		if p.detalle == "" && p.cargado {
+			p.filtrar(map[string]int{"left": -1, "right": 1}[t])
+			return nil
 		}
 	}
 	if p.detalle != "" {

@@ -77,7 +77,12 @@ type (
 	// FiltroEstado abre el Historial con un estado: "ok" (completadas), "curso" (en proceso) o "error" (con error), como
 	// filtroHistorial de la Web UI; "" o cualquier otro valor deja todas.
 	FiltroEstado struct{ Estado string }
-	ConAyuda     struct{ Pagina string } // la Ayuda en el tema de una página (lo que devuelve su Ayuda())
+	// ConAyuda abre la Ayuda en el tema de una página (lo que devuelve su Ayuda()), con todas las teclas que valen en ella:
+	// las suyas y las comunes, también las que no cupieron en el pie.
+	ConAyuda struct {
+		Pagina string
+		Teclas []Tecla
+	}
 	// SeguirTrabajo abre Probar con ese trabajo (su receta y su mensaje) y lo sigue en vivo, como trabajoSeguido de la
 	// Web UI: así llegan a Probar el reintento y la corrección del Historial.
 	SeguirTrabajo struct{ ID string }

@@ -74,6 +74,35 @@ func TestAgentesCarga(t *testing.T) {
 	}
 }
 
+// TestFiltroDeAgentes: la línea de los estados es el filtro de la Web UI; ← → lo cambia y la lista enseña solo esos.
+func TestFiltroDeAgentes(t *testing.T) {
+	p, _, _ := abierta(t)
+	if v := p.Vista(); !strings.Contains(v, "[Todos (1)]") {
+		t.Fatalf("empieza con todos:\n%s", v)
+	}
+	p.Update(tecla("right"))
+	if v := p.Vista(); !strings.Contains(v, "[Listos (1)]") || !strings.Contains(v, "simulado") {
+		t.Fatalf("→ deja los listos:\n%s", v)
+	}
+	p.Update(tecla("right"))
+	if v := p.Vista(); !strings.Contains(v, "[Falta conectar (0)]") || strings.Contains(v, "simulado") {
+		t.Fatalf("→ deja los que falta conectar:\n%s", v)
+	}
+	p.Update(tecla("left"))
+	p.Update(tecla("left"))
+	p.Update(tecla("left"))
+	if v := p.Vista(); !strings.Contains(v, "[No instalados (0)]") {
+		t.Fatalf("← da la vuelta:\n%s", v)
+	}
+	var pie []string
+	for _, k := range p.Teclas() {
+		pie = append(pie, k.Tecla+" "+k.Accion)
+	}
+	if !strings.Contains(strings.Join(pie, " · "), "← → filtro") {
+		t.Fatalf("el pie dice cómo se filtra: %v", pie)
+	}
+}
+
 func TestAgentesDesconectar(t *testing.T) {
 	p, cli, id := abierta(t)
 	_, cmd := p.Update(tecla("d"))

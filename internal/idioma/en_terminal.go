@@ -7,6 +7,7 @@ func init() {
 		// La app: tamaño, cabecera, estado y pie
 		"Agranda la ventana (mínimo 60×20)":          "Enlarge the window (minimum 60×20)",
 		"Próximamente":                               "Coming soon",
+		"Teclas":                                     "Keys",
 		"conectando…":                                "connecting…",
 		"sin servicio":                               "no service",
 		"servicio en marcha":                         "service running",
@@ -39,6 +40,7 @@ func init() {
 		"conexión":      "connection",
 		"autenticación": "authentication",
 		"probar":        "try it",
+		"filtro":        "filter",
 		"Modelos":       "Models",
 		"Elige cómo conectarlo: con tu suscripción (tecla a) o con una clave de API.":                                              "Choose how to connect it: with your subscription (key a) or with an API key.",
 		"Para la clave de API, ejecuta esto en una terminal (pide la clave sin mostrarla) y pulsa c para volver a comprobar:":      "For the API key, run this in a terminal (it asks for the key without showing it) and press c to check again:",

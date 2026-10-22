@@ -296,7 +296,7 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 		m.abrirMenu()
 		return nil
 	case "?":
-		return m.ir(pagina.PaginaAyuda, pagina.ConAyuda{Pagina: p.Ayuda()}, true)
+		return m.ir(pagina.PaginaAyuda, pagina.ConAyuda{Pagina: p.Ayuda(), Teclas: slices.Concat(p.Teclas(), comunes())}, true)
 	case "r":
 		if m.caido != nil {
 			if m.comprobando {
@@ -361,23 +361,44 @@ func (m *modelo) encajar(texto string, ancho, alto int) string {
 	return strings.Join(lineas, "\n")
 }
 
-// proximamente ocupa el sitio de una página que aún no está hecha.
+// proximamente ocupa el sitio de una página que aún no está hecha. En la Ayuda enseña las teclas de la página de la que
+// se vino (ConAyuda), para que ? siempre las diga todas.
 type proximamente struct {
 	titulo  string
 	estilos *pagina.Estilos
+	teclas  []pagina.Tecla
 }
 
 func (p *proximamente) Titulo() string                  { return p.titulo }
 func (p *proximamente) Iniciar(pagina.Contexto) tea.Cmd { return nil }
 func (p *proximamente) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
-	if k, ok := msg.(tea.KeyPressMsg); ok && k.String() == "esc" {
-		return p, pagina.Atras
+	switch msg := msg.(type) {
+	case pagina.ConAyuda:
+		p.teclas = msg.Teclas
+	case tea.KeyPressMsg:
+		if msg.String() == "esc" {
+			return p, pagina.Atras
+		}
 	}
 	return p, nil
 }
-func (p *proximamente) Teclas() []pagina.Tecla { return nil }
-func (p *proximamente) EnCampo() bool          { return false }
-func (p *proximamente) Ayuda() string          { return "" }
+func (p *proximamente) Teclas() []pagina.Tecla {
+	return []pagina.Tecla{{Tecla: "Esc", Accion: idioma.T("vuelve")}}
+}
+func (p *proximamente) EnCampo() bool { return false }
+func (p *proximamente) Ayuda() string { return "" }
 func (p *proximamente) Vista() string {
-	return p.estilos.Titulo.Render(p.titulo) + "\n\n" + p.estilos.Tenue.Render(idioma.T("Próximamente"))
+	e := p.estilos
+	lineas := []string{e.Tenue.Render(idioma.T("Próximamente"))}
+	if len(p.teclas) > 0 {
+		ancho := 0
+		for _, t := range p.teclas {
+			ancho = max(ancho, lipgloss.Width(t.Tecla))
+		}
+		lineas = append(lineas, "", e.Titulo.Render(idioma.T("Teclas")))
+		for _, t := range p.teclas {
+			lineas = append(lineas, e.Tecla.Render(t.Tecla)+strings.Repeat(" ", ancho-lipgloss.Width(t.Tecla)+2)+t.Accion)
+		}
+	}
+	return strings.Join(lineas, "\n")
 }
