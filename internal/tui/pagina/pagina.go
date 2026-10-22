@@ -60,6 +60,13 @@ type Ocultable interface {
 	Mostrar() tea.Cmd
 }
 
+// Pendiente la implementa una página que puede tener algo que el usuario perdería de vista al salir de la terminal (una
+// petición en marcha, una API con cambios sin guardar). Pendiente lo dice en una frase; "" si no hay nada. Con alguna
+// frase, q pregunta antes de salir.
+type Pendiente interface {
+	Pendiente() string
+}
+
 // Tecla es una entrada del pie: la tecla y lo que hace.
 type Tecla struct{ Tecla, Accion string }
 

@@ -53,14 +53,20 @@ func TestGuardarComoApi(t *testing.T) {
 	if v := p.Vista(); !strings.Contains(v, "Editando la API mi-app") {
 		t.Fatalf("dice qué API se edita:\n%s", v)
 	}
+	if p.Pendiente() != "" {
+		t.Fatalf("recién guardada no hay cambios: %q", p.Pendiente())
+	}
 	p.form.Poner("instrucciones", "Responde en dos frases")
+	if !strings.Contains(p.Pendiente(), "La API mi-app tiene cambios sin guardar") {
+		t.Fatalf("salir avisa de los cambios sin guardar: %q", p.Pendiente())
+	}
 	fuera := pulsar(p, "g")
 	if a, ok := aviso(fuera); !ok || a.Texto != "API mi-app actualizada" {
 		t.Fatalf("g actualiza la API: %v", fuera)
 	}
 	l, _ = cli.Puntos(ctx, id)
-	if l.Puntos[0].Instrucciones != "Responde en dos frases" {
-		t.Fatalf("con la receta nueva: %q", l.Puntos[0].Instrucciones)
+	if l.Puntos[0].Instrucciones != "Responde en dos frases" || p.Pendiente() != "" {
+		t.Fatalf("con la receta nueva, y ya sin cambios: %q %q", l.Puntos[0].Instrucciones, p.Pendiente())
 	}
 	pulsar(p, "d")
 	if p.api != "" {

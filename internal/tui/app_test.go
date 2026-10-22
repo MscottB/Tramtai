@@ -16,6 +16,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"tramtai/internal/idioma"
+	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/paginas/prueba"
@@ -382,6 +383,68 @@ func TestCambioEspacioReiniciaLaPagina(t *testing.T) {
 	m.Update(pagina.ErrorServicio{Err: os.ErrDeadlineExceeded})
 	if !strings.Contains(m.View().Content, idioma.T("El servicio no responde · r reintenta")) {
 		t.Fatal("ErrorServicio de una página enseña el aviso de la app")
+	}
+}
+
+// paginaOcupada tiene algo que se perdería al salir.
+type paginaOcupada struct {
+	paginaFalsa
+	motivo string
+}
+
+func (p *paginaOcupada) Pendiente() string { return p.motivo }
+
+// TestSalirPreguntaSiHayAlgoEnMarcha: q sale sin preguntar si nada se pierde; con una petición en marcha o cambios sin
+// guardar, pregunta y dice qué, y solo s sale.
+func TestSalirPreguntaSiHayAlgoEnMarcha(t *testing.T) {
+	m := nuevo(Opciones{})
+	m.Update(tea.WindowSizeMsg{Width: 60, Height: 20})
+	o := &paginaOcupada{motivo: "Probar tiene una petición en marcha"}
+	m.paginas[pagina.PaginaInicio] = o
+	if _, cmd := m.Update(tecla("q")); sale(cmd) {
+		t.Fatal("con algo en marcha, q pregunta")
+	}
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "Probar tiene una petición en marcha") {
+		t.Fatalf("la pregunta dice qué se pierde:\n%s", v)
+	}
+	if _, cmd := m.Update(tecla("n")); sale(cmd) || m.pregunta != nil {
+		t.Fatal("n no sale y cierra la pregunta")
+	}
+	m.Update(tecla("q"))
+	if _, cmd := m.Update(tecla("s")); !sale(cmd) {
+		t.Fatal("s sale")
+	}
+	o.motivo = ""
+	if _, cmd := m.Update(tecla("q")); !sale(cmd) {
+		t.Fatal("sin nada en marcha, q sale directamente")
+	}
+}
+
+// TestErrorSeQuedaYSeVeEntero: un error no se va solo; ! lo enseña entero, aunque tenga varias líneas, y la siguiente
+// tecla lo quita de la línea de estado.
+func TestErrorSeQuedaYSeVeEntero(t *testing.T) {
+	m := nuevo(Opciones{})
+	m.Update(tea.WindowSizeMsg{Width: 60, Height: 20})
+	falsa := &paginaFalsa{}
+	m.paginas[pagina.PaginaInicio] = falsa
+	largo := "El servicio rechazó la petición porque el esquema no es válido en la línea 3\ny esta es la segunda línea del detalle"
+	m.Update(comp.NuevoAviso{Texto: largo, Tipo: comp.Fallo})
+	v := ansi.Strip(m.View().Content)
+	if !strings.Contains(v, "El servicio rechazó") || !strings.Contains(v, "! ver el error") {
+		t.Fatalf("el error se ve y el pie dice cómo leerlo entero:\n%s", v)
+	}
+	m.Update(tecla("!"))
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "segunda línea del detalle") {
+		t.Fatalf("! lo enseña entero:\n%s", v)
+	}
+	m.Update(tecla("esc"))
+	m.Update(tecla("a"))
+	if v := ansi.Strip(m.View().Content); strings.Contains(v, "El servicio rechazó") || falsa.texto != "a" {
+		t.Fatalf("la caja se cierra, la tecla siguiente llega a la página y el error deja la línea:\n%s", v)
+	}
+	m.Update(tecla("!"))
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "segunda línea del detalle") {
+		t.Fatalf("! vuelve a enseñar el último error:\n%s", v)
 	}
 }
 

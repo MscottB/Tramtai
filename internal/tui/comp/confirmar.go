@@ -25,6 +25,8 @@ func Confirmar(pregunta string) tea.Cmd { return func() tea.Msg { return Pregunt
 // en el alto que hay, el texto se desplaza con ↑↓, RePág, AvPág, Inicio y Fin, y el pie se ve siempre.
 type Confirmacion struct {
 	Texto string
+	// Leer la convierte en una caja que solo se lee (un error entero): Esc, Intro o q la cierran, sin respuesta.
+	Leer bool
 
 	desp, max int // la primera línea que se ve y hasta dónde se puede bajar (lo fija Vista)
 }
@@ -32,11 +34,17 @@ type Confirmacion struct {
 // Update responde a una tecla: listo dice si la pregunta ya tiene respuesta, que llega con cmd. Solo s o y confirman:
 // Intro no hace nada, para que un Intro de más no borre. Las teclas de desplazamiento mueven el texto.
 func (c *Confirmacion) Update(k tea.KeyPressMsg) (listo bool, cmd tea.Cmd) {
-	switch k.String() {
-	case "s", "S", "y", "Y":
+	t := k.String()
+	switch {
+	case c.Leer && (t == "esc" || t == "enter" || t == "q"):
+		return true, nil
+	case c.Leer:
+	case t == "s" || t == "S" || t == "y" || t == "Y":
 		return true, func() tea.Msg { return Confirmado{} }
-	case "n", "N", "esc":
+	case t == "n" || t == "N" || t == "esc":
 		return true, func() tea.Msg { return Cancelado{} }
+	}
+	switch t {
 	case "up", "k":
 		c.desp--
 	case "down", "j":
@@ -63,6 +71,9 @@ func (c *Confirmacion) Vista(e *pagina.Estilos, ancho, alto int) string {
 	c.max = max(len(lineas)-filas, 0)
 	c.desp = min(max(c.desp, 0), c.max)
 	pie := idioma.T("s confirma · Esc cancela")
+	if c.Leer {
+		pie = idioma.T("Esc cierra")
+	}
 	if c.max > 0 {
 		pie = idioma.T("↑↓ desplaza") + " " + e.Iconos.Separador + " " + pie
 	}

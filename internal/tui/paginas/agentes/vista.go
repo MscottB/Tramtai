@@ -175,7 +175,7 @@ func (p *Pagina) Vista() string {
 		lineas = append(lineas, e.Tenue.Render(e.Recortar(p.tx("agentes.subtitulo"), ancho)))
 	}
 	if p.err != "" {
-		lineas = append(lineas, e.Error.Render(e.Recortar(p.err, ancho)))
+		lineas = append(lineas, e.Error.Width(ancho).Render(p.err)) // entero, en las líneas que ocupe
 	}
 	if p.cargado {
 		lineas = append(lineas, e.Recortar(p.resumen(), ancho), "")

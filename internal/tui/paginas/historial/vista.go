@@ -178,7 +178,7 @@ func (p *Pagina) vistaLista() string {
 		return strings.Join(append(l, "", e.Tenue.Render(p.a(idioma.T("Cargando…")))), "\n")
 	}
 	if p.err != "" {
-		l = append(l, e.Error.Render(e.Recortar(p.err, ancho)))
+		l = append(l, e.Error.Width(ancho).Render(p.err)) // entero, en las líneas que ocupe
 	}
 	l = append(l, p.barra())
 	if !p.cargado {

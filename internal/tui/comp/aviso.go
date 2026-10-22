@@ -1,6 +1,7 @@
 package comp
 
 import (
+	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -26,17 +27,19 @@ type NuevoAviso struct {
 	Tipo  TipoAviso
 }
 
-// Aviso enseña un texto corto en la línea de estado; se borra solo a los 4 s.
+// Aviso enseña un texto corto en la línea de estado. Se borra solo a los 4 s, salvo un Fallo: ese se queda hasta la
+// siguiente tecla, y la app lo enseña entero si se pide.
 func Aviso(texto string, tipo TipoAviso) tea.Cmd {
 	return func() tea.Msg { return NuevoAviso{Texto: texto, Tipo: tipo} }
 }
 
 type caducado struct{ n int }
 
-// Avisos guarda el aviso que se ve. Lo usa la app; las páginas solo llaman a Aviso.
+// Avisos guarda el aviso que se ve y el último error. Lo usa la app; las páginas solo llaman a Aviso.
 type Avisos struct {
 	actual NuevoAviso
-	n      int // cuenta los avisos: el plazo de uno viejo no borra uno nuevo
+	ultimo string // el último fallo, entero, aunque ya no se vea
+	n      int    // cuenta los avisos: el plazo de uno viejo no borra uno nuevo
 }
 
 // Update atiende NuevoAviso y su plazo.
@@ -45,6 +48,10 @@ func (a *Avisos) Update(msg tea.Msg) tea.Cmd {
 	case NuevoAviso:
 		a.actual = msg
 		a.n++
+		if msg.Tipo == Fallo {
+			a.ultimo = msg.Texto
+			return nil
+		}
 		n := a.n
 		return tea.Tick(duracionAviso, func(time.Time) tea.Msg { return caducado{n: n} })
 	case caducado:
@@ -55,18 +62,33 @@ func (a *Avisos) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// Vista pinta el aviso, o nada si no hay.
+// HayError dice si la línea de estado enseña un fallo.
+func (a *Avisos) HayError() bool { return a.actual.Tipo == Fallo && a.actual.Texto != "" }
+
+// Descartar quita de la línea de estado el fallo que se ve (la app lo llama con cada tecla); los demás avisos siguen
+// hasta su plazo.
+func (a *Avisos) Descartar() {
+	if a.HayError() {
+		a.actual = NuevoAviso{}
+	}
+}
+
+// Ultimo es el último fallo, entero; "" si no hubo.
+func (a *Avisos) Ultimo() string { return a.ultimo }
+
+// Vista pinta el aviso en una línea, o nada si no hay.
 func (a *Avisos) Vista(e *pagina.Estilos) string {
-	if a.actual.Texto == "" {
+	texto := strings.Join(strings.Fields(a.actual.Texto), " ")
+	if texto == "" {
 		return ""
 	}
 	switch a.actual.Tipo {
 	case Exito:
-		return e.Exito.Render(e.Iconos.Ok + " " + a.actual.Texto)
+		return e.Exito.Render(e.Iconos.Ok + " " + texto)
 	case Advertencia:
-		return e.Advertencia.Render(a.actual.Texto)
+		return e.Advertencia.Render(texto)
 	case Fallo:
-		return e.Error.Render(e.Iconos.Fallo + " " + a.actual.Texto)
+		return e.Error.Render(e.Iconos.Fallo + " " + texto)
 	}
-	return e.Texto.Render(a.actual.Texto)
+	return e.Texto.Render(texto)
 }

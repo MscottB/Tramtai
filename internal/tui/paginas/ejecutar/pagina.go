@@ -12,6 +12,7 @@ import (
 
 	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/datos"
@@ -145,7 +146,7 @@ type Pagina struct {
 	guardar *comp.Formulario
 	creada  *apiCreada
 	caja    comp.Visor
-	pend    func() // lo que se hace si se confirma la pregunta abierta (otra plantilla, quitar un campo)
+	pend    func() tea.Cmd // lo que se hace si se confirma la pregunta abierta (otra plantilla, quitar un campo, cancelar)
 
 	nborrador int
 
@@ -188,6 +189,18 @@ func (p *Pagina) vigente(o origen) bool { return p.delEspacio(o) && o.gen == p.g
 // vale para lo que ya pasó en el servicio (una petición creada o cancelada).
 func (p *Pagina) delEspacio(o origen) bool {
 	return o.ctx != nil && o.ctx.Err() == nil && o.instancia == p.c.Instancia
+}
+
+// Pendiente dice, para la pregunta de salir de la terminal, si hay una petición en marcha (sigue en el servicio) o una API
+// abierta con cambios en la receta que aún no se guardaron con g.
+func (p *Pagina) Pendiente() string {
+	switch {
+	case p.activo() || p.enviando:
+		return idioma.T("Probar tiene una petición en marcha: seguirá en el servicio y la verás en el Historial.")
+	case p.api != "" && p.punto != nil && p.armado && !mismaReceta(recetaDePunto(*p.punto), p.leer()):
+		return idioma.Tf("La API %s tiene cambios sin guardar en Probar (g la actualiza).", p.api)
+	}
+	return ""
 }
 
 // sinServicio es lo que responde un atajo que necesita el servicio cuando no hay cliente: la app lo avisa.
@@ -398,7 +411,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 	case comp.Confirmado:
 		if hacer := p.pend; hacer != nil {
 			p.pend = nil
-			hacer()
+			return p, hacer()
 		}
 	case tea.PasteMsg:
 		return p, p.pegar(m)
@@ -440,11 +453,13 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 			p.pestana = pestReceta // el campo con el error se ve
 		}
 		return cmd
-	case "esc":
-		if p.activo() && p.estado != nucleo.CancelacionSolicitada {
-			return p.cancelarTrabajo()
-		}
+	case "esc": // vuelve aunque haya una petición en marcha: sigue en el servicio y c la cancela
 		return pagina.Atras
+	case "c":
+		if p.activo() && p.estado != nucleo.CancelacionSolicitada {
+			p.pend = p.cancelarTrabajo
+			return comp.Confirmar(idioma.T("¿Cancelar la petición en marcha?"))
+		}
 	case "left", "right":
 		p.pestana = (p.pestana + map[string]int{"left": 2, "right": 1}[t]) % 3
 		p.rehacerRespuesta()

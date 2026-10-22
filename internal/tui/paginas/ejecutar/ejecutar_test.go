@@ -137,7 +137,8 @@ func conBloqueado(t *testing.T) (*cliente.Cliente, string, *prueba.Bloqueado) {
 	return cli, id, b
 }
 
-// TestEnviarYCancelar: Ctrl+S manda la receta como la Web UI y la respuesta llega en vivo; Esc la cancela.
+// TestEnviarYCancelar: Ctrl+S manda la receta como la Web UI y la respuesta llega en vivo; Esc vuelve sin cancelarla y c
+// la cancela tras confirmar.
 func TestEnviarYCancelar(t *testing.T) {
 	cli, id, b := conBloqueado(t)
 	p := abierta(t, cli, id)
@@ -178,10 +179,28 @@ func TestEnviarYCancelar(t *testing.T) {
 	if fuera := pulsar(p, "ctrl+s"); len(fuera) != 0 || p.enviando {
 		t.Fatal("con una en marcha no se envía otra")
 	}
-	pulsar(p, "esc")
+	if !strings.Contains(p.Pendiente(), "petición en marcha") {
+		t.Fatalf("salir de la terminal avisa de la petición en marcha: %q", p.Pendiente())
+	}
+	// Esc vuelve y la petición sigue; c la cancela, después de confirmar.
+	if fuera := pulsar(p, "esc"); len(fuera) != 1 || fuera[0] != (pagina.Volver{}) {
+		t.Fatalf("en marcha, Esc vuelve: %v", fuera)
+	}
+	if tr, _ := cli.Trabajo(ctx, id, p.trabajo.ID); tr.Estado.Terminal() {
+		t.Fatalf("Esc no la cancela: %s", tr.Estado)
+	}
+	fuera = pulsar(p, "c")
+	if len(fuera) != 1 {
+		t.Fatalf("c pregunta antes de cancelar: %v", fuera)
+	}
+	if _, ok := fuera[0].(comp.Pregunta); !ok {
+		t.Fatalf("c pregunta antes de cancelar: %v", fuera)
+	}
+	_, cmd := p.Update(comp.Confirmado{})
+	correr(p, cmd)
 	hasta(t, p, func() bool { return p.final != nil })
-	if p.final.Estado != nucleo.Cancelado {
-		t.Fatalf("Esc la cancela: %s", p.final.Estado)
+	if p.final.Estado != nucleo.Cancelado || p.Pendiente() != "" {
+		t.Fatalf("c la cancela y ya no hay nada en marcha: %s %q", p.final.Estado, p.Pendiente())
 	}
 	if fuera := pulsar(p, "esc"); len(fuera) != 1 || fuera[0] != (pagina.Volver{}) {
 		t.Fatalf("terminada, Esc vuelve: %v", fuera)

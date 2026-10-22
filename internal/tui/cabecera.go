@@ -198,6 +198,9 @@ func (m *modelo) vistaPie() string {
 			teclas, fijas = append(teclas, comunes()[3]), comunes()[:3]
 		}
 	}
+	if m.avisos.HayError() && m.pregunta == nil {
+		teclas = append([]pagina.Tecla{{Tecla: "!", Accion: idioma.T("ver el error")}}, teclas...)
+	}
 	sep := e.Tenue.Render(" " + e.Iconos.Separador + " ")
 	der := m.teclasPie(fijas, sep)
 	izq := e.Recortar(m.teclasPie(teclas, sep), max(m.ancho-lipgloss.Width(der)-lipgloss.Width(sep), 0))

@@ -354,7 +354,7 @@ func (p *Pagina) usarPlantilla(id string) tea.Cmd {
 	}
 	for _, pl := range datos.Plantillas(p.lengua) {
 		if pl.ID == id {
-			p.pend = func() { p.ponerPlantilla(id) }
+			p.pend = func() tea.Cmd { p.ponerPlantilla(id); return nil }
 			return comp.Confirmar(p.tx("receta.plantillaReemplazar") + "\n\n" + p.tx("receta.plantillaReemplazarTexto", "nombre", pl.Nombre))
 		}
 	}
@@ -454,6 +454,20 @@ func recetaDePunto(e contrato.EstadoPunto) datosForm {
 		d.esquema, d.estructurada = sangrar(raw), true
 	}
 	return d
+}
+
+// mismaReceta dice si dos recetas guardarían lo mismo en una API: el esquema se compara sin espacios.
+func mismaReceta(a, b datosForm) bool {
+	compacto := func(texto string) string {
+		var buf bytes.Buffer
+		if json.Compact(&buf, []byte(texto)) != nil {
+			return strings.TrimSpace(texto)
+		}
+		return buf.String()
+	}
+	return strings.TrimSpace(a.instrucciones) == strings.TrimSpace(b.instrucciones) && a.modelo == b.modelo && a.esfuerzo == b.esfuerzo &&
+		a.forzar == b.forzar && slices.Equal(a.respaldo, b.respaldo) && a.estructurada == b.estructurada &&
+		compacto(a.esquema) == compacto(b.esquema) && a.reintentos == b.reintentos
 }
 
 // cargarReceta pone una receta y un mensaje en el formulario; los archivos no se recuperan y las opciones avanzadas se

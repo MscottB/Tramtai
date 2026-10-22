@@ -320,7 +320,7 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		teclas = append(teclas, pagina.Tecla{Tecla: "g", Accion: p.tx("ejecutar.guardarApi")})
 	}
 	if p.activo() {
-		return append(teclas, pagina.Tecla{Tecla: "Esc", Accion: p.tx("comun.cancelar")})
+		teclas = append(teclas, pagina.Tecla{Tecla: "c", Accion: p.tx("comun.cancelar")})
 	}
 	return append(teclas, pagina.Tecla{Tecla: "Esc", Accion: idioma.T("vuelve")})
 }

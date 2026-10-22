@@ -200,7 +200,7 @@ func (p *Pagina) pedirQuitar() tea.Cmd {
 	if nombre == "" {
 		nombre = numeroCampo(ruta)
 	}
-	p.pend = func() { p.quitarCampo(ruta) }
+	p.pend = func() tea.Cmd { p.quitarCampo(ruta); return nil }
 	return comp.Confirmar(p.tx("campos.quitar", "campo", nombre))
 }
 
