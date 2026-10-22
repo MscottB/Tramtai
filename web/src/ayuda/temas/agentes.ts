@@ -3,7 +3,7 @@ import type { Tema } from '../tipos'
 // agentes explica cómo se conecta cada agente (suscripción o clave) y cómo se eligen modelo y esfuerzo.
 export const agentes: Tema = {
   id: 'agentes',
-  icono: 'o_smart_toy',
+  icono: 'o_route',
   titulo: 'ayuda.agentes.titulo',
   resumen: 'ayuda.agentes.resumen',
   paginaApp: 'agentes',
@@ -14,7 +14,7 @@ export const agentes: Tema = {
       tipo: 'diagrama',
       paradas: [
         { icono: 'o_key', titulo: 'ayuda.agentes.d1', nota: 'ayuda.agentes.d1Nota' },
-        { icono: 'o_smart_toy', titulo: 'ayuda.agentes.d2', nota: 'ayuda.agentes.d2Nota' },
+        { icono: 'o_route', titulo: 'ayuda.agentes.d2', nota: 'ayuda.agentes.d2Nota' },
         { icono: 'o_memory', titulo: 'ayuda.agentes.d3', nota: 'ayuda.agentes.d3Nota' },
       ],
     },

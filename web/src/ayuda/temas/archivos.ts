@@ -15,7 +15,7 @@ export const archivos: Tema = {
         { icono: 'o_upload_file', titulo: 'ayuda.archivos.d1', nota: 'ayuda.archivos.d1Nota' },
         { icono: 'o_inventory_2', titulo: 'ayuda.archivos.d2', nota: 'ayuda.archivos.d2Nota' },
         { icono: 'o_transform', titulo: 'ayuda.archivos.d3', nota: 'ayuda.archivos.d3Nota' },
-        { icono: 'o_smart_toy', titulo: 'ayuda.archivos.d4', nota: 'ayuda.archivos.d4Nota' },
+        { icono: 'o_route', titulo: 'ayuda.archivos.d4', nota: 'ayuda.archivos.d4Nota' },
         { icono: 'o_task_alt', titulo: 'ayuda.archivos.d5', nota: 'ayuda.archivos.d5Nota' },
       ],
     },

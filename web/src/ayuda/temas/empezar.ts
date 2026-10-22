@@ -16,7 +16,7 @@ export const empezar: Tema = {
         { icono: 'o_apps', titulo: 'ayuda.empezar.d1', nota: 'ayuda.empezar.d1Nota' },
         { icono: 'o_vpn_key', titulo: 'ayuda.empezar.d2', nota: 'ayuda.empezar.d2Nota' },
         { icono: 'o_hourglass_top', titulo: 'ayuda.empezar.d3', nota: 'ayuda.empezar.d3Nota' },
-        { icono: 'o_smart_toy', titulo: 'ayuda.empezar.d4', nota: 'ayuda.empezar.d4Nota' },
+        { icono: 'o_route', titulo: 'ayuda.empezar.d4', nota: 'ayuda.empezar.d4Nota' },
         { icono: 'o_task_alt', titulo: 'ayuda.empezar.d5', nota: 'ayuda.empezar.d5Nota' },
       ],
     },

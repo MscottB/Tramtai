@@ -283,7 +283,7 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.ajustes.pBuscar': 'Can I check for a version now?',
   'ayuda.ajustes.rBuscar': 'Yes: “Check for updates now” in Settings. Tramtai checks every hour (only GitHub’s public page); turn it off in Settings → Check for updates.',
   'ayuda.ajustes.pVersion': 'Which version do I have?',
-  'ayuda.ajustes.rVersion': 'Open “About Tramtai” in the side menu or the tray; “Copy support data” copies what is needed, without keys.',
+  'ayuda.ajustes.rVersion': 'Open “About Tramtai” in the side menu or the tray; “Copy support details” copies what is needed, without keys.',
   'ayuda.ajustes.pDatos': 'Where is my data kept?',
   'ayuda.ajustes.rDatos': 'Only on this computer: %APPDATA%\\tramtai (Windows), ~/Library/Application Support/tramtai (macOS) or ~/.config/tramtai (Linux); the portable, in “datos-tramtai”.',
   // Topic: Files
@@ -467,7 +467,7 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.ui.resultados': '{n} results',
   'ayuda.ui.resultadosUno': '1 result',
   'ayuda.empezar.pRecorrido': 'How do I repeat the guided tour?',
-  'ayuda.empezar.rRecorrido': 'On Home, click “Take the Tramtai tour” in Getting started. Esc closes it and the arrow keys move between steps. It only shows: it clicks nothing and changes no data.',
+  'ayuda.empezar.rRecorrido': 'On Home, click “Take the guided tour” in Getting started. Esc closes it and the arrow keys move between steps. It only shows: it clicks nothing and changes no data.',
   'ayuda.empezar.pTranvias': 'What are the trams on the Home map?',
   'ayuda.empezar.rTranvias': 'Each request in progress: it leaves its API, goes through Tramtai and runs along its agent’s line. It turns red if it fails and changes line if it falls back.',
   'ayuda.historial.pSeguir': 'Can I follow a request live?',

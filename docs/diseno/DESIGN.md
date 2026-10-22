@@ -297,7 +297,7 @@ La geometría propia del mundo: trazos de vía de 3 px (menú, trayecto, origen 
 
 ### Navigation
 - **Style:** el cajón lateral es una línea vertical de 3 px en borde fuerte que pasa por cada estación. Cada entrada tiene punto con aro de 15 px, nombre (0.9rem/600) y detalle (0.75rem, tinta suave), 52 px de alto mínimo.
-- **Grupos:** tres grupos en el orden de uso (Empezar, Conectar, Organizar, en `web/src/menu.ts`) sobre una sola línea continua; el título de cada grupo va a la derecha de la línea, alineado con los nombres, en 0.78rem/600 y tinta suave, sin mayúsculas.
+- **Grupos:** tres grupos en el orden de uso (Empezar, Usar y Organizar; en inglés, Get started, Use y Organize; en `web/src/menu.ts`) sobre una sola línea continua; el título de cada grupo va a la derecha de la línea, alineado con los nombres, en 0.78rem/600 y tinta suave, sin mayúsculas.
 - **Teclado:** «Saltar al contenido» es lo primero al tabular; al cambiar de página el foco pasa al `<main>` de la página (salvo durante un recorrido guiado).
 - **Hover:** velo neutro de fondo y el aro se oscurece a tinta suave.
 - **Activa:** velo del acento, nombre en acento, punto relleno con halo y escala 1.05.

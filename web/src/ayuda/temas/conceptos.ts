@@ -3,7 +3,7 @@ import type { Tema } from '../tipos'
 // conceptos es el glosario: una definición corta por palabra, con el tema que la explica.
 export const conceptos: Tema = {
   id: 'conceptos',
-  icono: 'o_lightbulb',
+  icono: 'o_menu_book',
   titulo: 'ayuda.conceptos.titulo',
   resumen: 'ayuda.conceptos.resumen',
   conDiagrama: false,

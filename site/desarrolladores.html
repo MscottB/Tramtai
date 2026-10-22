@@ -70,7 +70,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
       <li><a href="#empezar"><span lang="es">Empezar</span><span lang="en">Get started</span></a></li>
       <li><a href="#primer-mensaje"><span lang="es">Tu primer mensaje</span><span lang="en">Your first message</span></a></li>
       <li><a href="#archivos"><span lang="es">Archivos</span><span lang="en">Files</span></a></li>
-      <li><a href="#json"><span lang="es">Respuestas en JSON</span><span lang="en">JSON answers</span></a></li>
+      <li><a href="#json"><span lang="es">Respuestas en JSON</span><span lang="en">JSON responses</span></a></li>
       <li><a href="#herramientas"><span lang="es">Herramientas</span><span lang="en">Tool calling</span></a></li>
       <li><a href="#trabajos"><span lang="es">Peticiones largas</span><span lang="en">Long requests</span></a></li>
       <li><a href="#en-vivo"><span lang="es">Seguir lo que pasa</span><span lang="en">Follow what happens</span></a></li>
@@ -127,7 +127,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
         <p>Por la URL compatible con OpenAI y con la respuesta en vivo. El campo <code>model</code> elige agente y modelo.</p>
       </div>
       <div lang="en">
-        <p>Through the OpenAI-compatible URL, with the answer streamed live. The <code>model</code> field picks agent and model.</p>
+        <p>Through the OpenAI-compatible URL, with the response streamed live. The <code>model</code> field picks agent and model.</p>
       </div>
 <div class="pestanas" data-pestanas>
   <div class="pestanas-lista" role="tablist" aria-label="Lenguaje" data-aria-en="Language"><button type="button" role="tab" id="p1-python" aria-controls="p1-python-panel" aria-selected="true" tabindex="0" data-lenguaje="python">Python</button><button type="button" role="tab" id="p1-javascript" aria-controls="p1-javascript-panel" aria-selected="false" tabindex="-1" data-lenguaje="javascript">JavaScript</button><button type="button" role="tab" id="p1-go" aria-controls="p1-go-panel" aria-selected="false" tabindex="-1" data-lenguaje="go">Go</button><button type="button" role="tab" id="p1-curl" aria-controls="p1-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl</button></div>
@@ -156,12 +156,12 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
     </section>
 
     <section id="json">
-      <h2><span lang="es">Respuestas en JSON</span><span lang="en">JSON answers</span></h2>
+      <h2><span lang="es">Respuestas en JSON</span><span lang="en">JSON responses</span></h2>
       <div lang="es">
         <p>Pide la respuesta con un JSON Schema: Tramtai la valida antes de devolverla y, si no cumple, puede pedir al agente que la corrija.</p>
       </div>
       <div lang="en">
-        <p>Ask for the answer with a JSON Schema: Tramtai validates it before returning it and, if it does not match, can ask the agent to fix it.</p>
+        <p>Ask for the response with a JSON Schema: Tramtai validates it before returning it and, if it does not match, can ask the agent to fix it.</p>
       </div>
 <div class="pestanas" data-pestanas>
   <div class="pestanas-lista" role="tablist" aria-label="Lenguaje" data-aria-en="Language"><button type="button" role="tab" id="p3-python" aria-controls="p3-python-panel" aria-selected="true" tabindex="0" data-lenguaje="python">Python</button><button type="button" role="tab" id="p3-javascript" aria-controls="p3-javascript-panel" aria-selected="false" tabindex="-1" data-lenguaje="javascript">JavaScript</button><button type="button" role="tab" id="p3-go" aria-controls="p3-go-panel" aria-selected="false" tabindex="-1" data-lenguaje="go">Go</button><button type="button" role="tab" id="p3-curl" aria-controls="p3-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl</button></div>
@@ -233,12 +233,12 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
       </div>
       <div lang="en">
         <h3>Through the Anthropic URL</h3>
-        <p>Just like with its SDK: <code>tools</code> with <code>input_schema</code>, <code>tool_use</code> blocks in the answer and <code>tool_result</code> in the next message.</p>
+        <p>Just like with its SDK: <code>tools</code> with <code>input_schema</code>, <code>tool_use</code> blocks in the response and <code>tool_result</code> in the next message.</p>
         <h3>Good to know</h3>
         <ul>
           <li>Arguments arrive <strong>validated</strong> against each tool’s JSON Schema; if the agent gets them wrong, Tramtai asks it to fix them (with the request’s or the recipe’s corrections) before answering.</li>
-          <li>With tools, the answer arrives complete at the end, even if you ask for <code>stream</code>.</li>
-          <li>They can’t be combined with a JSON answer, and they go in every request: recipes don’t store them.</li>
+          <li>With tools, the response arrives complete at the end, even if you ask for <code>stream</code>.</li>
+          <li>They can’t be combined with a JSON response, and they go in every request: recipes don’t store them.</li>
         </ul>
         <p>Checked on 2026-10-20 with the real agents, the full cycle through each URL:</p>
         <div class="tabla"><table>
@@ -275,7 +275,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
         <p><code>GET /api/v1/eventos</code> es un flujo SSE de todo el espacio de trabajo: empieza con las peticiones en curso (y las terminadas hace menos de 10 s) y después avisa cada cambio de etapa (<code>cola</code>, <code>preparacion</code>, <code>ejecucion</code>, <code>validacion</code>, <code>llegada</code>) con el agente, el modelo y la API de origen; <code>intento</code> sube cuando el respaldo pasa a otro agente (contando desde que abriste el flujo). Un evento <code>foto</code> marca el fin de esa primera foto: lo que tenías y no vino ya terminó. Nunca trae el mensaje, la respuesta ni los archivos. Con la clave de una API por aplicación solo llegan las suyas. Sirve, por ejemplo, para un panel propio; es lo que usa el mapa de Inicio.</p>
       </div>
       <div lang="en">
-        <p><code>GET /api/v1/eventos</code> is an SSE stream for the whole workspace: it starts with the requests in progress (and those finished less than 10 s ago) and then reports every stage change (<code>cola</code>, <code>preparacion</code>, <code>ejecucion</code>, <code>validacion</code>, <code>llegada</code>) with the agent, model and source API; <code>intento</code> goes up when the fallback switches agent (counting from when you opened the stream). A <code>foto</code> event marks the end of that first snapshot: anything you had that did not come has finished. It never carries the message, the answer or the files. With a per-app API key, only that API’s requests arrive. Handy for your own dashboard; it is what the Home map uses.</p>
+        <p><code>GET /api/v1/eventos</code> is an SSE stream for the whole workspace: it starts with the requests in progress (and those finished less than 10 s ago) and then reports every stage change (<code>cola</code>, <code>preparacion</code>, <code>ejecucion</code>, <code>validacion</code>, <code>llegada</code>) with the agent, model and source API; <code>intento</code> goes up when the fallback switches agent (counting from when you opened the stream). A <code>foto</code> event marks the end of that first snapshot: anything you had that did not come has finished. It never carries the message, the response or the files. With a per-app API key, only that API’s requests arrive. Handy for your own dashboard; it is what the Home map uses.</p>
       </div>
 <pre class="codigo"><code>curl -N "$TRAMTAI_URL/api/v1/eventos" -H "Authorization: Bearer $TRAMTAI_CLAVE"
 
@@ -291,7 +291,7 @@ data: {"id":"trabajo_…","estado":"ejecutando","etapa":"ejecucion","agente":"cl
       </div>
       <div lang="en">
         <p>Errors arrive in the format of the API you use, with a stable <code>code</code>. To retry without duplicating a request, send the <code>Idempotency-Key</code> header: the same key with the same request returns that same request instead of a new one (on all three APIs).</p>
-        <div class="tabla"><table><thead><tr><th>HTTP</th><th>Code</th><th>What to do</th></tr></thead><tbody><tr><td>400</td><td><code>solicitud_invalida, parametro_no_soportado, carga_invalida</code></td><td>Fix the request: the message says which field fails.</td></tr><tr><td>401</td><td><code>no_autorizado</code></td><td>Check the key (My APIs); if you regenerated it, the old one no longer works.</td></tr><tr><td>409</td><td><code>conflicto_idempotencia</code></td><td>That Idempotency-Key was used with another request: use a new one.</td></tr><tr><td>409</td><td><code>agente_desconectado</code></td><td>The agent is disconnected in Tramtai: connect it in Agents or with <code>tramtai agentes conectar &lt;agent&gt;</code>.</td></tr><tr><td>422</td><td><code>salida_no_cumple_esquema</code></td><td>The answer or the calls did not match the schema: ask for corrections or “Correct”.</td></tr><tr><td>429</td><td><code>cola_llena, presupuesto_agotado, limite_uso_proveedor</code></td><td>Wait for Retry-After and retry.</td></tr><tr><td>502</td><td><code>error_agente, autenticacion_agente</code></td><td>The agent failed or has no session: check Agents in the app.</td></tr><tr><td>503</td><td><code>agente_no_disponible, conversor_no_disponible</code></td><td>Something is not ready; with Retry-After, retry later.</td></tr></tbody></table></div>
+        <div class="tabla"><table><thead><tr><th>HTTP</th><th>Code</th><th>What to do</th></tr></thead><tbody><tr><td>400</td><td><code>solicitud_invalida, parametro_no_soportado, carga_invalida</code></td><td>Fix the request: the message says which field fails.</td></tr><tr><td>401</td><td><code>no_autorizado</code></td><td>Check the key (My APIs); if you regenerated it, the old one no longer works.</td></tr><tr><td>409</td><td><code>conflicto_idempotencia</code></td><td>That Idempotency-Key was used with another request: use a new one.</td></tr><tr><td>409</td><td><code>agente_desconectado</code></td><td>The agent is disconnected in Tramtai: connect it in Agents or with <code>tramtai agentes conectar &lt;agent&gt;</code>.</td></tr><tr><td>422</td><td><code>salida_no_cumple_esquema</code></td><td>The response or the calls did not match the schema: ask for corrections or “Correct”.</td></tr><tr><td>429</td><td><code>cola_llena, presupuesto_agotado, limite_uso_proveedor</code></td><td>Wait for Retry-After and retry.</td></tr><tr><td>502</td><td><code>error_agente, autenticacion_agente</code></td><td>The agent failed or has no session: check Agents in the app.</td></tr><tr><td>503</td><td><code>agente_no_disponible, conversor_no_disponible</code></td><td>Something is not ready; with Retry-After, retry later.</td></tr></tbody></table></div>
       </div>
     </section>
 

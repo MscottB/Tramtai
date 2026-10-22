@@ -13,7 +13,7 @@ export const herramientas: Tema = {
       tipo: 'diagrama',
       paradas: [
         { icono: 'o_apps', titulo: 'ayuda.herramientas.d1', nota: 'ayuda.herramientas.d1Nota' },
-        { icono: 'o_smart_toy', titulo: 'ayuda.herramientas.d2', nota: 'ayuda.herramientas.d2Nota' },
+        { icono: 'o_route', titulo: 'ayuda.herramientas.d2', nota: 'ayuda.herramientas.d2Nota' },
         { icono: 'o_play_circle', titulo: 'ayuda.herramientas.d3', nota: 'ayuda.herramientas.d3Nota' },
         { icono: 'o_task_alt', titulo: 'ayuda.herramientas.d4', nota: 'ayuda.herramientas.d4Nota' },
       ],

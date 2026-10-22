@@ -71,7 +71,7 @@ section[id] { scroll-margin-top: 72px; }
 .github svg { width: 22px; height: 22px; }
 /* ES/EN y tema: control segmentado. Sin overflow: hidden, para que el foco no quede recortado. */
 .idioma { display: inline-flex; border: 1px solid var(--borde-control); border-radius: 10px; }
-.idioma button { border: 0; background: none; color: var(--texto-suave); font: 600 .8rem var(--fuente); padding: 0 10px; min-height: 42px; min-width: 36px; cursor: pointer; }
+.idioma button { border: 0; background: none; color: var(--texto-suave); font: 600 .8rem var(--fuente); padding: 0 10px; min-height: 44px; min-width: 36px; cursor: pointer; }
 .idioma button:first-child { border-radius: 9px 0 0 9px; }
 .idioma button:last-child { border-radius: 0 9px 9px 0; }
 .idioma button:focus-visible { position: relative; z-index: 1; }

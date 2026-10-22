@@ -14,7 +14,7 @@ export const probar: Tema = {
       tipo: 'diagrama',
       paradas: [
         { icono: 'o_edit_note', titulo: 'ayuda.probar.d1', nota: 'ayuda.probar.d1Nota' },
-        { icono: 'o_smart_toy', titulo: 'ayuda.probar.d2', nota: 'ayuda.probar.d2Nota' },
+        { icono: 'o_route', titulo: 'ayuda.probar.d2', nota: 'ayuda.probar.d2Nota' },
         { icono: 'o_task_alt', titulo: 'ayuda.probar.d3', nota: 'ayuda.probar.d3Nota' },
       ],
     },

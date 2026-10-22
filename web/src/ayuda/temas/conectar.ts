@@ -33,7 +33,7 @@ export const conectar: Tema = {
         { icono: 'o_apps', titulo: 'ayuda.conectar.d1', nota: 'ayuda.conectar.d1Nota' },
         { icono: 'o_link', titulo: 'ayuda.conectar.d2', nota: 'ayuda.conectar.d2Nota' },
         { icono: 'o_hub', titulo: 'ayuda.conectar.d3', nota: 'ayuda.conectar.d3Nota' },
-        { icono: 'o_smart_toy', titulo: 'ayuda.conectar.d4', nota: 'ayuda.conectar.d4Nota' },
+        { icono: 'o_route', titulo: 'ayuda.conectar.d4', nota: 'ayuda.conectar.d4Nota' },
       ],
     },
     { tipo: 'pasos', pasos: ['ayuda.conectar.paso1', 'ayuda.conectar.paso2', 'ayuda.conectar.paso3', 'ayuda.conectar.paso4'] },

@@ -111,7 +111,8 @@ test('mayúsculas espaciadas solo en la cabecera del tablero (35) y ámbar solo 
 test('cada control de la barra, del mapa y de la demo mide 44 px y la barra no tapa las secciones (23, 62)', () => {
   for (const clase of ['.github', '.menu-boton', '.mapa-punto', '.demo-punto'])
     assert.match(css, new RegExp(`\\${clase} \\{[^}]*width: 44px; height: 44px`), clase)
-  for (const clase of ['.boton', '.copiar', '.mapa-pausa', '.demo-pausa', '.pestanas-lista button'])
+  // .idioma button es ES/EN y tema: 44 de alto el botón, no el grupo con su borde (revisión final web, M13).
+  for (const clase of ['.boton', '.copiar', '.mapa-pausa', '.demo-pausa', '.pestanas-lista button', '.idioma button'])
     assert.match(css, new RegExp(`${clase.replace('.', '\\.')} \\{[^}]*min-height: 44px`), clase)
   assert.match(css, /section\[id\] \{ scroll-margin-top: 72px; \}/)
 })

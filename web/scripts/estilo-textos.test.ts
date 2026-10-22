@@ -1,6 +1,7 @@
 // Las reglas de escritura de docs/GLOSARIO.md hechas prueba, sobre todo texto de producto: la Web UI (es.ts y en.ts,
 // que incluyen la Ayuda), los catálogos de la CLI, el servicio, la terminal y la app de escritorio (en_*.go) y el sitio
-// publicado (site/, también la Ayuda generada). Los comentarios de código y docs/equipo quedan fuera.
+// publicado (site/, también la Ayuda generada), más README.md y docs/*.md (raya, palabras huecas y términos). Los
+// comentarios de código, docs/equipo y GLOSARIO.md quedan fuera.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
@@ -41,6 +42,28 @@ const quitarEtiquetas = (html: string) =>
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
 
+// separarIngles saca entero cada elemento con lang="en", aunque lleve dentro otro del mismo nombre (una expresión no
+// codiciosa lo cortaría en el primer cierre y el resto del inglés acabaría en el español). Los elementos vacíos (img)
+// no tienen texto y se quedan.
+function separarIngles(html: string) {
+  const en: string[] = []
+  let resto = ''
+  let desde = 0
+  const apertura = /<(\w+)\b[^>]*\blang="en"[^>]*>/g
+  for (let m = apertura.exec(html); m; m = apertura.exec(html)) {
+    const etiqueta = new RegExp(`<(/?)${m[1]}\\b[^>]*>`, 'g')
+    etiqueta.lastIndex = apertura.lastIndex
+    let nivel = 1
+    let e: RegExpExecArray | null = null
+    while (nivel && (e = etiqueta.exec(html))) nivel += e[1] ? -1 : 1
+    if (nivel || !e) continue
+    resto += html.slice(desde, m.index) + ' '
+    en.push(html.slice(apertura.lastIndex, e.index))
+    desde = apertura.lastIndex = e.index + e[0].length
+  }
+  return { en, resto: resto + html.slice(desde) }
+}
+
 // sitio separa el texto de cada página publicada por idioma: lo marcado con lang="en" o data-en es inglés; lo demás,
 // español.
 function sitio() {
@@ -48,15 +71,19 @@ function sitio() {
   const paginas = ['site/index.html', 'site/desarrolladores.html', 'site/404.html',
     ...readdirSync(new URL('site/ayuda/', raiz)).filter((a) => a.endsWith('.html')).map((a) => 'site/ayuda/' + a)]
   for (const ruta of paginas) {
-    const html = leer(ruta).replace(/<(script|style|pre|code)\b[\s\S]*?<\/\1>/g, ' ')
-    const ingles = /<(\w+)\b[^>]*\blang="en"[^>]*>([\s\S]*?)<\/\1>/g
-    for (const m of html.matchAll(ingles)) r.en.push({ donde: ruta, texto: quitarEtiquetas(m[2]) })
-    for (const m of html.matchAll(/\bdata-en="([^"]*)"/g)) r.en.push({ donde: ruta, texto: m[1] })
-    const espanol = html.replace(ingles, ' ').replace(/\bdata-en="[^"]*"/g, ' ').replace(/<head>[\s\S]*?<\/head>/, ' ')
+    const { en, resto } = separarIngles(leer(ruta).replace(/<(script|style|pre|code)\b[\s\S]*?<\/\1>/g, ' '))
+    for (const x of en) r.en.push({ donde: ruta, texto: quitarEtiquetas(x) })
+    for (const m of resto.matchAll(/\bdata-en="([^"]*)"/g)) r.en.push({ donde: ruta, texto: m[1] })
+    const espanol = resto.replace(/\bdata-en="[^"]*"/g, ' ').replace(/<head>[\s\S]*?<\/head>/, ' ')
     r.es.push({ donde: ruta, texto: quitarEtiquetas(espanol) })
   }
   return r
 }
+
+// documentos son README.md y docs/*.md: texto que lee el usuario, en español. GLOSARIO.md queda fuera (cita lo que no
+// se usa) y docs/equipo también (es del equipo). Sin bloques de código.
+const documentos: Texto[] = ['README.md', ...readdirSync(new URL('docs/', raiz)).filter((a) => a.endsWith('.md') && a !== 'GLOSARIO.md').map((a) => 'docs/' + a)]
+  .map((ruta) => ({ donde: ruta, texto: leer(ruta).replace(/```[\s\S]*?```/g, ' ') }))
 
 const go = catalogos()
 const web = sitio()
@@ -129,6 +156,10 @@ const ingles: Regla[] = [
   // «Try the…» y «Try <code>…» (una orden). Así atrapa también «(Try offers» y «Try shows» al principio de frase.
   { nombre: 'Try como página → Playground', re: /\bTry\b(?! (again|it|an?|another|the)\b| <code>)/ },
   { nombre: 'record → log', re: /\brecords?\b/i },
+  // El diálogo del sistema (Gatekeeper, permisos) sí es un «prompt».
+  { nombre: 'prompt → message', re: /(?<!Gatekeeper |permission )\bprompts?\b/i },
+  // «Answer» solo como verbo: con un determinante o un adjetivo delante es el sustantivo, y se dice «response».
+  { nombre: 'answer (sustantivo) → response', re: /\b(the|an|its|your|their|this|each|every|live|first|final|full|short|schema|JSON) answers?\b/i },
 ]
 const sinJson = (textos: Texto[]) => textos.map((x) => ({ ...x, texto: x.texto.replace(/`[^`]*`/g, ' ').replace(/\{[^{}]*\}/g, ' ') }))
 
@@ -136,7 +167,25 @@ test('el inglés usa comillas curvas, la variante de EE. UU. y los nombres del g
   sinFallos(fallos(sinJson(textosEn), ingles))
 })
 
+// El español cita con comillas angulares; las rectas solo valen en código y JSON, que no cuentan.
+test('el español no usa comillas rectas', () => {
+  sinFallos(fallos(sinJson(textosEs), [{ nombre: 'comillas rectas → « »', re: /"[^"]*"/ }]))
+})
+
 test('ningún texto de producto lleva la raya larga ni palabras huecas', () => {
   assert.ok(go.es.length > 500 && web.es.length >= 20 && web.en.length > 100, 'no se leyeron los catálogos o el sitio')
   sinFallos(fallos([...textosEs, ...textosEn], [raya, ...huecas]))
+})
+
+test('separarIngles saca entero un bloque inglés con etiquetas del mismo nombre dentro', () => {
+  const { en, resto } = separarIngles('<p><span lang="es">Hola</span><span lang="en">Hi <span>you</span> there</span> fin</p><img lang="en" alt="x">')
+  assert.deepEqual(en, ['Hi <span>you</span> there'])
+  assert.ok(!resto.includes('there') && resto.includes('Hola') && resto.includes('fin'))
+})
+
+test('README y docs no llevan la raya larga, palabras huecas ni términos descartados', () => {
+  assert.ok(documentos.length >= 6, 'no se leyeron README ni docs')
+  // arquitectura.md usa a propósito los nombres del código (instancia, trabajo, punto de acceso) y lo dice al empezar.
+  const deUsuario = documentos.filter((d) => d.donde !== 'docs/arquitectura.md')
+  sinFallos([...fallos(documentos, [raya, ...huecas]), ...fallos(sinTecnico(deUsuario), descartadosEs)])
 })
