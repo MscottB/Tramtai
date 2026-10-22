@@ -62,11 +62,11 @@ func (p *Pagina) nombreEstado(e nucleo.Estado) string { return p.a(vivo.NombreEs
 // etiquetaEstado es el del filtro de estado: los nombres del selector de Trabajos.vue.
 func (p *Pagina) etiquetaEstado() string {
 	switch p.estado {
-	case estCurso:
+	case nucleo.FiltroEnCurso:
 		return p.tx("inicio.enCurso")
-	case estOk:
+	case nucleo.FiltroCompletado:
 		return p.tx("inicio.completados")
-	case estError:
+	case nucleo.FiltroConError:
 		return p.tx("inicio.conError")
 	}
 	return p.tx("historial.todos")

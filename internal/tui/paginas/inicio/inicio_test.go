@@ -537,18 +537,16 @@ func TestPrimerosPasos(t *testing.T) {
 	}
 }
 
-// TestContadores: los contadores salen de los trabajos del espacio, con los mismos nombres de la Web UI.
+// TestContadores: los contadores son los que agrupa el servicio (contadores del resumen), con los nombres de la Web UI.
 func TestContadores(t *testing.T) {
 	p, _, cli, id := abierta(t)
-	p.Update(msgInstancia{origen: p.origen(), r: contrato.ResumenInstancia{Base: cli.Base,
-		EstadoInstancia: contrato.EstadoInstancia{Trabajos: map[string]int{"completado": 5, "fallido": 2, "interrumpido": 1, "ejecutando": 1, "en_cola": 2, "cancelado": 4}}}})
 	v := p.Vista()
-	for _, quiere := range []string{"Completadas", "respondidas correctamente", "5", "En proceso", "3", "Con error", "3", "los últimos 7 días"} {
+	for _, quiere := range []string{"Completadas", "respondidas correctamente", "En proceso", "Con error", "los últimos 7 días"} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}
 	}
-	// Y con el servicio real: un trabajo hecho suma uno.
+	// Un trabajo hecho suma uno a las completadas.
 	if _, err := cli.Crear(context.Background(), id, nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "hola"}}}); err != nil {
 		t.Fatal(err)
 	}
@@ -626,21 +624,21 @@ func TestServicioCaido(t *testing.T) {
 // descarta.
 func TestRespuestasViejas(t *testing.T) {
 	p, _, cli, id := abierta(t)
-	p.Update(msgInstancia{origen: p.origen(), r: contrato.ResumenInstancia{Base: cli.Base, EstadoInstancia: contrato.EstadoInstancia{Trabajos: map[string]int{"completado": 1}}}})
+	p.Update(msgInstancia{origen: p.origen(), r: contrato.ResumenInstancia{Base: cli.Base, Contadores: map[string]int{nucleo.FiltroCompletado: 1}}})
 	vieja := p.origen()
 	vieja.Instancia = "otro-" + id
-	p.Update(msgInstancia{origen: vieja, r: contrato.ResumenInstancia{EstadoInstancia: contrato.EstadoInstancia{Trabajos: map[string]int{"completado": 99}}}})
+	p.Update(msgInstancia{origen: vieja, r: contrato.ResumenInstancia{Contadores: map[string]int{nucleo.FiltroCompletado: 99}}})
 	ctx, cancelar := context.WithCancel(context.Background())
 	cancelar()
 	cancelada := p.origen()
 	cancelada.Ctx = ctx
-	p.Update(msgInstancia{origen: cancelada, r: contrato.ResumenInstancia{EstadoInstancia: contrato.EstadoInstancia{Trabajos: map[string]int{"completado": 98}}}})
+	p.Update(msgInstancia{origen: cancelada, r: contrato.ResumenInstancia{Contadores: map[string]int{nucleo.FiltroCompletado: 98}}})
 	anterior := p.origen()
 	anterior.Gen--
-	p.Update(msgInstancia{origen: anterior, r: contrato.ResumenInstancia{EstadoInstancia: contrato.EstadoInstancia{Trabajos: map[string]int{"completado": 97}}}})
+	p.Update(msgInstancia{origen: anterior, r: contrato.ResumenInstancia{Contadores: map[string]int{nucleo.FiltroCompletado: 97}}})
 	p.Update(msgRed{origen: vieja, tipo: "trabajo", ev: ev()})
-	if p.inst.Trabajos["completado"] != 1 || len(p.red) != 0 {
-		t.Fatalf("se descartan: %v %v", p.inst.Trabajos, p.red)
+	if v := p.Vista(); strings.Contains(v, "97") || strings.Contains(v, "98") || strings.Contains(v, "99") || len(p.red) != 0 {
+		t.Fatalf("se descartan: %v\n%s", p.red, v)
 	}
 	p.Update(msgTrabajos{origen: cancelada})
 	// Y otros mensajes que no son suyos no le hacen nada.
@@ -653,7 +651,7 @@ func TestRespuestasViejas(t *testing.T) {
 // ancho, también con tildes; desplazar llega hasta el final.
 func TestCabeEn60x20(t *testing.T) {
 	p, r, cli, _ := abierta(t)
-	p.Update(msgInstancia{origen: p.origen(), r: contrato.ResumenInstancia{Base: cli.Base, AppConClave24h: 50, SugerirApiPropia: true, EstadoInstancia: contrato.EstadoInstancia{Trabajos: map[string]int{"completado": 12345}}}})
+	p.Update(msgInstancia{origen: p.origen(), r: contrato.ResumenInstancia{Base: cli.Base, AppConClave24h: 50, SugerirApiPropia: true, Contadores: map[string]int{nucleo.FiltroCompletado: 12345}}})
 	p.Update(msgEspacios{origen: p.origen(), lista: []contrato.Espacio{{Nombre: "Notas con un nombre muy largo y tildes áéíóú", UltimoError: "x"}}})
 	p.Update(msgConversor{origen: p.origen(), e: contrato.EstadoConversor{Estado: "error", Mensaje: "sin red"}})
 	p.Update(msgPasos{origen: p.origen(), r: contrato.PrimerosPasos{Adaptadores: []contrato.Adaptador{{Agente: "claude", Estado: contrato.AgenteListo}, {Agente: "codex", Estado: contrato.AgenteDesconectado}},
@@ -818,7 +816,7 @@ func TestPasosConSuAtajo(t *testing.T) {
 func TestSoloAscii(t *testing.T) {
 	p, r, cli, _ := abierta(t)
 	p.estilos.Iconos, p.estilos.ASCII = pagina.IconosASCII, true
-	p.Update(msgInstancia{origen: p.origen(), r: contrato.ResumenInstancia{Base: cli.Base, AppConClave24h: 30, SugerirApiPropia: true, EstadoInstancia: contrato.EstadoInstancia{Trabajos: map[string]int{"completado": 1}}}})
+	p.Update(msgInstancia{origen: p.origen(), r: contrato.ResumenInstancia{Base: cli.Base, AppConClave24h: 30, SugerirApiPropia: true, Contadores: map[string]int{nucleo.FiltroCompletado: 1}}})
 	for i, estado := range []string{"ejecutando", "completado", "fallido", "cancelado"} {
 		p.evento(ev(con(fmt.Sprint(i), estado, nucleo.Estado(estado).Etapa()), func(e *contrato.EventoTrabajo) { e.Creado = r.t }))
 	}
@@ -890,7 +888,7 @@ func TestContadoresLlevanAlHistorial(t *testing.T) {
 			t.Fatalf("la fila dice su tecla, falta %q:\n%s", quiere, v)
 		}
 	}
-	for tecla_, estado := range map[string]string{"o": "ok", "e": "curso", "f": "error"} {
+	for tecla_, estado := range map[string]string{"o": nucleo.FiltroCompletado, "e": nucleo.FiltroEnCurso, "f": nucleo.FiltroConError} {
 		_, cmd := p.Update(tecla(tecla_))
 		if cmd == nil {
 			t.Fatalf("%s no hace nada", tecla_)

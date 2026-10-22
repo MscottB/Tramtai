@@ -129,8 +129,9 @@ export const api = {
   capacidades: () => pedir<Capacidades>('GET', '/api/v1/capacidades', undefined, 60000),
   // pasos son los Primeros pasos de Inicio, ya calculados, con los agentes que comprobó (tarda como capacidades).
   pasos: () => pedir<PrimerosPasos>('GET', '/api/v1/instancia/pasos', undefined, 60000),
-  // trabajos lista los más recientes; filtro acota por API, grupo, origen o fecha (antes, para la página siguiente).
-  trabajos: (limite = 50, filtro: { punto?: string; grupo?: string; origen?: string; antes?: string; antes_id?: string } = {}) => {
+  // trabajos lista los más recientes; filtro acota por API, grupo, origen, estado (en_curso, completado o con_error), texto
+  // o fecha (antes, para la página siguiente). Todo lo filtra el servicio.
+  trabajos: (limite = 50, filtro: { punto?: string; grupo?: string; origen?: string; estado?: string; texto?: string; antes?: string; antes_id?: string } = {}) => {
     const q = new URLSearchParams({ limite: String(limite) })
     for (const [clave, valor] of Object.entries(filtro)) if (valor) q.set(clave, valor)
     return pedir<{ trabajos: Trabajo[] }>('GET', '/api/v1/trabajos?' + q).then((r) => r.trabajos)

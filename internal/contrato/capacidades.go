@@ -85,6 +85,8 @@ type ResumenInstancia struct {
 	AppConClave24h int    `json:"app_con_clave_24h"`
 	// SugerirApiPropia: con muchas de esas peticiones conviene dar a esas apps su propia API.
 	SugerirApiPropia bool `json:"sugerir_api_propia"`
+	// Contadores son los trabajos de cada filtro de estado del Historial (en_curso, completado y con_error).
+	Contadores map[string]int `json:"contadores"`
 }
 
 // Paso es uno de los Primeros pasos de Inicio: la página que lo resuelve y si ya está hecho.

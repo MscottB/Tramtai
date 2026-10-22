@@ -528,11 +528,11 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 	case "h":
 		return ir(pagina.PaginaHistorial, nil)
 	case teclaCompletados:
-		return ir(pagina.PaginaHistorial, pagina.FiltroEstado{Estado: "ok"})
+		return ir(pagina.PaginaHistorial, pagina.FiltroEstado{Estado: nucleo.FiltroCompletado})
 	case teclaEnCurso:
-		return ir(pagina.PaginaHistorial, pagina.FiltroEstado{Estado: "curso"})
+		return ir(pagina.PaginaHistorial, pagina.FiltroEstado{Estado: nucleo.FiltroEnCurso})
 	case teclaConError:
-		return ir(pagina.PaginaHistorial, pagina.FiltroEstado{Estado: "error"})
+		return ir(pagina.PaginaHistorial, pagina.FiltroEstado{Estado: nucleo.FiltroConError})
 	case "g":
 		return ir(pagina.PaginaAgentes, nil)
 	case "a":

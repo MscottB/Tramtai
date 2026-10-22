@@ -43,6 +43,33 @@ var Terminales = []Estado{Completado, Fallido, Cancelado, Interrumpido}
 // Terminal indica si el estado es final: ningún estado terminal vuelve a uno activo.
 func (e Estado) Terminal() bool { return slices.Contains(Terminales, e) }
 
+// estados son todos, en el orden del ciclo de vida.
+var estados = []Estado{EnCola, PreparandoEntrada, EsperandoAgente, Ejecutando, ValidandoSalida, CancelacionSolicitada,
+	Completado, Fallido, Cancelado, Interrumpido}
+
+// Los filtros agrupan los estados como el filtro del Historial y los contadores de Inicio: en curso es todo lo que no
+// terminó, completadas solo completado y con error fallido e interrumpido; los cancelados solo salen sin filtro.
+const (
+	FiltroEnCurso    = "en_curso"
+	FiltroCompletado = "completado"
+	FiltroConError   = "con_error"
+)
+
+// Filtros son los filtros de estado, en el orden del selector.
+var Filtros = []string{FiltroEnCurso, FiltroCompletado, FiltroConError}
+
+// EstadosDe son los estados de un filtro (nil si no es uno de Filtros).
+func EstadosDe(filtro string) []Estado {
+	var lista []Estado
+	for _, e := range estados {
+		if filtro == FiltroEnCurso && !e.Terminal() || filtro == FiltroCompletado && e == Completado ||
+			filtro == FiltroConError && (e == Fallido || e == Interrumpido) {
+			lista = append(lista, e)
+		}
+	}
+	return lista
+}
+
 // Etapa agrupa los estados en las 5 paradas de la ruta de un trabajo: cola, preparacion, ejecucion, validacion y
 // llegada. Viaja en el JSON del trabajo y en el evento «trabajo»: la Web UI y la terminal solo la pintan.
 func (e Estado) Etapa() string {

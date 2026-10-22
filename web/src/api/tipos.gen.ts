@@ -93,6 +93,7 @@ export interface ResumenInstancia {
   base: string
   app_con_clave_24h: number
   sugerir_api_propia: boolean
+  contadores: Record<string, number>
 }
 
 export interface EspacioUI {

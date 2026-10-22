@@ -134,7 +134,7 @@ import { api, avisar, cargarDiasHistorial, copiar, mensajeError } from '../api/c
 import type { Adaptador, EspacioUI, ResumenInstancia, EstadoPunto, Paso, Trabajo } from '../api/tipos'
 import { periodoHistorial, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, sesion, sistema } from '../estado'
 import { asegurarFichas, ordenarAgentes } from '../agentes'
-import { estadoInfo, haceCuanto, terminales, textoDe } from '../formato'
+import { estadoInfo, haceCuanto, textoDe } from '../formato'
 import { conTexto } from '../pasos'
 import { t } from '../i18n'
 
@@ -186,12 +186,12 @@ function traerFinal(previo: Tranvia) {
 }
 const error = ref('')
 
-const total = (estados: string[]) => estados.reduce((n, e) => n + (instancia.value?.trabajos[e] ?? 0), 0)
+// cuenta son los trabajos de un filtro del Historial; los agrupa el servicio.
+const cuenta = (filtro: string) => instancia.value?.contadores[filtro] ?? 0
 const contadores = computed(() => [
-  { titulo: t('inicio.completados'), detalle: t('inicio.completadosDetalle'), filtro: 'ok', valor: total(['completado']), tipo: 'ok' },
-  { titulo: t('inicio.enCurso'), detalle: t('inicio.enCursoDetalle'), filtro: 'curso',
-    valor: total(Object.keys(instancia.value?.trabajos ?? {}).filter((e) => !terminales.includes(e))), tipo: 'curso' },
-  { titulo: t('inicio.conError'), detalle: t('inicio.conErrorDetalle'), filtro: 'error', valor: total(['fallido', 'interrumpido']), tipo: 'error' },
+  { titulo: t('inicio.completados'), detalle: t('inicio.completadosDetalle'), filtro: 'completado', valor: cuenta('completado'), tipo: 'ok' },
+  { titulo: t('inicio.enCurso'), detalle: t('inicio.enCursoDetalle'), filtro: 'en_curso', valor: cuenta('en_curso'), tipo: 'curso' },
+  { titulo: t('inicio.conError'), detalle: t('inicio.conErrorDetalle'), filtro: 'con_error', valor: cuenta('con_error'), tipo: 'error' },
 ])
 
 // pasosServicio son los Primeros pasos que calcula el servicio (llegan con la comprobación de los agentes).

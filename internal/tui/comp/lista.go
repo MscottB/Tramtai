@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"tramtai/internal/idioma"
+	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/pagina"
 )
 
@@ -75,7 +76,7 @@ func (l *Lista[T]) Poner(elems []T) {
 }
 
 // Buscar deja los elementos cuyo texto contiene el buscado, sin distinguir mayúsculas ni tildes.
-func (l *Lista[T]) Buscar(texto string) { l.buscar = normalizar(texto); l.rehacer() }
+func (l *Lista[T]) Buscar(texto string) { l.buscar = nucleo.Plegar(texto); l.rehacer() }
 
 // Filtrar deja los elementos para los que f es cierta; nil los deja todos.
 func (l *Lista[T]) Filtrar(f func(T) bool) { l.filtro = f; l.rehacer() }
@@ -109,7 +110,7 @@ func (l Lista[T]) Visibles() []T {
 func (l *Lista[T]) rehacer() {
 	var quedan []T
 	for _, e := range l.todos {
-		if (l.filtro == nil || l.filtro(e)) && strings.Contains(normalizar(l.texto(e)), l.buscar) {
+		if (l.filtro == nil || l.filtro(e)) && strings.Contains(nucleo.Plegar(l.texto(e)), l.buscar) {
 			quedan = append(quedan, e)
 		}
 	}
@@ -230,8 +231,3 @@ func (l *Lista[T]) Vista(ancho, alto int) string {
 	}
 	return strings.Join(lineas, "\n")
 }
-
-var sinTildes = strings.NewReplacer("á", "a", "é", "e", "í", "i", "ó", "o", "ú", "u", "ü", "u", "ñ", "n")
-
-// normalizar pasa a minúsculas y quita las tildes, para buscar como se escribe.
-func normalizar(s string) string { return sinTildes.Replace(strings.ToLower(s)) }

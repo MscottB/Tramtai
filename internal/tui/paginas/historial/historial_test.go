@@ -15,6 +15,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"tramtai/internal/adaptadores"
 	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
 	"tramtai/internal/nucleo"
@@ -428,103 +429,134 @@ func TestHistorialFiltroPunto(t *testing.T) {
 	}
 }
 
+// conEstados levanta el servicio con un agente que falla y otro que tarda, y deja una petición completada («uno»), una
+// fallida («dos»), una en curso («tres») y una cancelada («cuatro»). Los filtros los aplica el servicio.
+func conEstados(t *testing.T) *Pagina {
+	t.Helper()
+	cli, id := prueba.ConAgentes(t, map[string]adaptadores.Adaptador{"roto": adaptadores.Simulado{Error: errors.New("falla")},
+		"lento": adaptadores.Simulado{Demora: time.Minute}})
+	crear(t, cli, id, "uno")
+	dos, err := cli.Crear(ctx, id, nucleo.SolicitudEjecucion{Agente: "roto", Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "dos"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	terminar(t, cli, id, dos.ID)
+	for _, texto := range []string{"tres", "cuatro"} {
+		j, err := cli.Crear(ctx, id, nucleo.SolicitudEjecucion{Agente: "lento", Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: texto}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if texto == "cuatro" {
+			if _, err := cli.Accion(ctx, id, j.ID, "cancelar"); err != nil {
+				t.Fatal(err)
+			}
+			terminar(t, cli, id, j.ID)
+		}
+	}
+	p := abierta(t, cli, id)
+	p.c.Alto = 30
+	return p
+}
+
+// textos son las peticiones que enseña la lista, por su texto.
+func textos(p *Pagina) []string {
+	var salida []string
+	v := p.Vista()
+	for _, x := range []string{"uno", "dos", "tres", "cuatro"} {
+		if strings.Contains(v, " "+x) {
+			salida = append(salida, x)
+		}
+	}
+	return salida
+}
+
 func TestHistorialFiltroEstado(t *testing.T) {
-	p := conTrabajos(t,
-		trabajo("a", "uno", nucleo.Completado), trabajo("b", "dos", nucleo.Fallido), trabajo("c", "tres", nucleo.Ejecutando),
-		trabajo("d", "cuatro", nucleo.Cancelado), trabajo("e", "cinco", nucleo.Interrumpido), trabajo("f", "seis", nucleo.EnCola),
-		trabajo("g", "siete", nucleo.ValidandoSalida), trabajo("h", "ocho", nucleo.CancelacionSolicitada))
+	p := conEstados(t)
 	casos := []struct {
 		estado string
 		quiere []string
 	}{
-		{"ok", []string{"a"}},
-		{"curso", []string{"c", "f", "g", "h"}},
-		{"error", []string{"b", "e"}},
-		{"todos", []string{"a", "b", "c", "d", "e", "f", "g", "h"}},
-		{"nada", []string{"a", "b", "c", "d", "e", "f", "g", "h"}},
-		{"", []string{"a", "b", "c", "d", "e", "f", "g", "h"}},
+		{nucleo.FiltroCompletado, []string{"uno"}},
+		{nucleo.FiltroEnCurso, []string{"tres"}},
+		{nucleo.FiltroConError, []string{"dos"}},
+		{"todos", []string{"uno", "dos", "tres", "cuatro"}},
+		{"nada", []string{"uno", "dos", "tres", "cuatro"}},
+		{"", []string{"uno", "dos", "tres", "cuatro"}},
 	}
 	for _, c := range casos {
-		p.Update(pagina.FiltroEstado{Estado: c.estado})
-		got := ids(p)
-		slices.Sort(got)
-		if !slices.Equal(got, c.quiere) {
-			t.Fatalf("FiltroEstado %q: %v, quería %v", c.estado, got, c.quiere)
+		_, cmd := p.Update(pagina.FiltroEstado{Estado: c.estado})
+		correr(p, cmd)
+		if got := textos(p); !slices.Equal(got, c.quiere) { // los cancelados solo salen en «Todas»
+			t.Fatalf("FiltroEstado %q: %v, quería %v\n%s", c.estado, got, c.quiere, p.Vista())
 		}
 	}
 	// La tecla e recorre los estados como el selector de la Web UI: todas, en proceso, completadas y con error.
-	p.Update(pagina.FiltroEstado{Estado: "todos"})
 	for _, quiere := range []string{"En proceso", "Completadas", "Con error", "Todas"} {
 		pulsar(p, "e")
 		if v := p.Vista(); !strings.Contains(v, "Estado: "+quiere) {
 			t.Fatalf("e pasa a %q:\n%s", quiere, v)
 		}
 	}
-	// Los cancelados solo salen en «Todas».
-	for _, estado := range []string{"curso", "ok", "error"} {
-		p.Update(pagina.FiltroEstado{Estado: estado})
-		if slices.Contains(ids(p), "d") {
-			t.Fatalf("un cancelado no entra en %q", estado)
-		}
-	}
 	// Con el estado puesto, un filtro que no deja nada dice que es del filtro, y l lo quita.
-	p.Update(pagina.FiltroEstado{Estado: "ok"})
-	p.Update(msgLista{origen: p.origen(), n: p.n, lista: []nucleo.Trabajo{trabajo("z", "uno", nucleo.Fallido)}})
+	_, cmd := p.Update(pagina.FiltroEstado{Estado: nucleo.FiltroCompletado})
+	correr(p, cmd)
+	pulsar(p, "/", "d", "o", "s", "enter")
 	if v := p.Vista(); !strings.Contains(v, "No hay peticiones con este filtro") {
 		t.Fatalf("vacío por el filtro:\n%s", v)
 	}
 	pulsar(p, "l")
-	if got := ids(p); !slices.Equal(got, []string{"z"}) {
+	if got := textos(p); len(got) != 4 {
 		t.Fatalf("l deja todas: %v", got)
 	}
 }
 
 func TestHistorialBusqueda(t *testing.T) {
-	p := conTrabajos(t, trabajo("trabajo_aaa", "Factura de Soporte", nucleo.Completado), trabajo("trabajo_bbb", "Notas de reunión", nucleo.Completado),
-		trabajo("trabajo_ccc", "Otra cosa", nucleo.Fallido))
+	cli, id := prueba.Servicio(t)
+	crear(t, cli, id, "Factura de Soporte")
+	crear(t, cli, id, "Notas de reunión")
+	otra := crear(t, cli, id, "Otra cosa")
+	p := abierta(t, cli, id)
+	ves := func(quiere ...string) {
+		t.Helper()
+		v := p.Vista()
+		for _, x := range []string{"Factura de Soporte", "Notas de reunión", "Otra cosa"} {
+			if strings.Contains(v, x) != slices.Contains(quiere, x) {
+				t.Fatalf("quería %v:\n%s", quiere, v)
+			}
+		}
+	}
 	pulsar(p, "/")
 	if !p.EnCampo() {
 		t.Fatal("con la búsqueda abierta las letras son suyas")
 	}
-	for _, c := range "reunion" { // sin tilde también encuentra «reunión»
+	for _, c := range "REUNION" { // el servicio busca sin tildes ni mayúsculas
 		pulsar(p, string(c))
 	}
-	if got := ids(p); !slices.Equal(got, []string{"trabajo_bbb"}) {
-		t.Fatalf("filtra al escribir: %v", got)
-	}
-	if v := p.Vista(); !strings.Contains(v, "/ reunion_") {
+	ves("Notas de reunión")
+	if v := p.Vista(); !strings.Contains(v, "/ REUNION_") {
 		t.Fatalf("la barra enseña lo que se escribe:\n%s", v)
 	}
 	pulsar(p, "backspace", "backspace", "backspace", "backspace", "backspace", "backspace", "backspace")
-	if len(ids(p)) != 3 {
-		t.Fatalf("sin texto salen todas: %v", ids(p))
-	}
+	ves("Factura de Soporte", "Notas de reunión", "Otra cosa")
 	// También por identificador.
-	for _, c := range "ccc" {
+	for _, c := range otra.ID[len(otra.ID)-6:] {
 		pulsar(p, string(c))
 	}
-	if got := ids(p); !slices.Equal(got, []string{"trabajo_ccc"}) {
-		t.Fatalf("busca por identificador: %v", got)
-	}
+	ves("Otra cosa")
 	// Intro la deja puesta y la barra la recuerda; Esc de una nueva vuelve a lo de antes.
 	pulsar(p, "enter")
-	if p.EnCampo() || !strings.Contains(p.Vista(), "/ ccc") {
+	if p.EnCampo() || !strings.Contains(p.Vista(), "/ "+otra.ID[len(otra.ID)-6:]) {
 		t.Fatalf("Intro deja la búsqueda:\n%s", p.Vista())
 	}
 	pulsar(p, "/", "x", "esc")
-	if p.EnCampo() || !strings.Contains(p.Vista(), "/ ccc") || !slices.Equal(ids(p), []string{"trabajo_ccc"}) {
-		t.Fatalf("Esc vuelve a la búsqueda de antes: %v\n%s", ids(p), p.Vista())
-	}
+	ves("Otra cosa")
 	// Lo pegado entra entero, con los saltos de línea como espacios.
-	pulsar(p, "/")
-	p.Update(tea.PasteMsg{Content: "Factura\nde Soporte"})
-	if got := ids(p); p.entrada != "cccFactura de Soporte" || len(got) != 0 {
-		t.Fatalf("pegar: %q %v", p.entrada, got)
-	}
+	pulsar(p, "/", "backspace", "backspace", "backspace", "backspace", "backspace", "backspace")
+	_, cmd := p.Update(tea.PasteMsg{Content: "Factura\nde Soporte"})
+	correr(p, cmd)
+	ves("Factura de Soporte")
 	pulsar(p, "esc", "l")
-	if len(ids(p)) != 3 {
-		t.Fatalf("l quita la búsqueda: %v", ids(p))
-	}
+	ves("Factura de Soporte", "Notas de reunión", "Otra cosa")
 }
 
 func TestHistorialDetalle(t *testing.T) {
@@ -1017,9 +1049,15 @@ func TestServicioCaido(t *testing.T) {
 	if v := p.Vista(); !strings.Contains(v, "El servicio no responde") {
 		t.Fatalf("la página lo dice y sigue:\n%s", v)
 	}
-	// Las demás teclas siguen respondiendo, y las acciones avisan sin cerrar nada.
-	if fuera := pulsar(p, "e", "l", "esc"); len(fuera) != 1 {
+	// Las demás teclas siguen respondiendo: cambiar el filtro lo pide al servicio y avisa de que no responde, y Esc vuelve.
+	fuera = pulsar(p, "e", "l", "esc")
+	if len(fuera) != 3 || fuera[2] != (pagina.Volver{}) {
 		t.Fatalf("la página sigue viva: %v", fuera)
+	}
+	for _, m := range fuera[:2] {
+		if _, ok := m.(pagina.ErrorServicio); !ok {
+			t.Fatalf("el filtro sin servicio avisa: %v", m)
+		}
 	}
 	crear2 := nueva("es")
 	cli3, id3, cerrar3 := prueba.Arrancar(t)
@@ -1216,8 +1254,7 @@ func TestCabeEn60x20(t *testing.T) {
 		for _, tecla := range []string{"V", "x"} {
 			p.Update(tea.WindowSizeMsg{Width: 60, Height: alto})
 			p.Update(comp.Cancelado{})
-			p.quitarFiltros()
-			p.lista.Poner(p.trabajos)
+			correr(p, p.quitarFiltros()) // vuelve a pedir la lista entera
 			fuera := pulsar(p, tecla)
 			q, ok := pregunta(fuera)
 			if !ok {
@@ -1309,24 +1346,6 @@ func TestSoloAscii(t *testing.T) {
 	for _, k := range p.Teclas() {
 		if strings.ContainsAny(k.Tecla, "←→") {
 			t.Fatalf("la tecla %q no es ASCII", k.Tecla)
-		}
-	}
-}
-
-func TestPasaEstado(t *testing.T) {
-	todos := []nucleo.Estado{nucleo.EnCola, nucleo.PreparandoEntrada, nucleo.EsperandoAgente, nucleo.Ejecutando, nucleo.ValidandoSalida,
-		nucleo.CancelacionSolicitada, nucleo.Completado, nucleo.Fallido, nucleo.Cancelado, nucleo.Interrumpido}
-	quiere := map[string][]nucleo.Estado{
-		"todos": todos,
-		"curso": todos[:6],
-		"ok":    {nucleo.Completado},
-		"error": {nucleo.Fallido, nucleo.Interrumpido},
-	}
-	for filtro, estados := range quiere {
-		for _, e := range todos {
-			if pasa := pasaEstado(filtro, e); pasa != slices.Contains(estados, e) {
-				t.Errorf("pasaEstado(%q, %s) = %v", filtro, e, pasa)
-			}
 		}
 	}
 }

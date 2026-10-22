@@ -31,26 +31,6 @@ func envolver(texto string, ancho, sangria int, estilo lipgloss.Style) []string 
 	return lineas
 }
 
-// total suma los trabajos de esos estados.
-func (p *Pagina) total(estados ...string) int {
-	n := 0
-	for _, e := range estados {
-		n += p.inst.Trabajos[e]
-	}
-	return n
-}
-
-// enProceso son los trabajos que no han terminado, sea cual sea su estado.
-func (p *Pagina) enProceso() int {
-	n := 0
-	for estado, cuantos := range p.inst.Trabajos {
-		if !nucleo.Estado(estado).Terminal() {
-			n += cuantos
-		}
-	}
-	return n
-}
-
 // paso es uno de Primeros pasos: su título y detalle, si está hecho y la página de la terminal a la que lleva.
 type paso struct {
 	titulo, detalle, pagina string
@@ -243,9 +223,9 @@ func (p *Pagina) lineas() []string {
 
 	// Contadores
 	l = append(l, "", e.Grupo.Render(p.tx("inicio.tablero"))+e.Tenue.Render(" "+e.Iconos.Separador+" "+p.periodo()),
-		p.contador(e.Iconos.Ok, e.Exito, teclaCompletados, "completados", p.total("completado")),
-		p.contador(e.Iconos.Activo, e.Acento, teclaEnCurso, "enCurso", p.enProceso()),
-		p.contador(e.Iconos.Fallo, e.Error, teclaConError, "conError", p.total("fallido", "interrumpido")))
+		p.contador(e.Iconos.Ok, e.Exito, teclaCompletados, "completados", p.inst.Contadores[nucleo.FiltroCompletado]),
+		p.contador(e.Iconos.Activo, e.Acento, teclaEnCurso, "enCurso", p.inst.Contadores[nucleo.FiltroEnCurso]),
+		p.contador(e.Iconos.Fallo, e.Error, teclaConError, "conError", p.inst.Contadores[nucleo.FiltroConError]))
 
 	// Primeros pasos
 	pasos := p.pasos()

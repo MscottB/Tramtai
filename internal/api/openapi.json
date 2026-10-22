@@ -28,6 +28,8 @@
           { "name": "punto", "in": "query", "schema": { "type": "string" } },
           { "name": "grupo", "in": "query", "schema": { "type": "string" } },
           { "name": "origen", "in": "query", "schema": { "type": "string", "enum": ["probar", "terminal", "cli", "app"] } },
+          { "name": "estado", "in": "query", "description": "en_curso: los que no terminaron; completado; con_error: fallido e interrumpido", "schema": { "type": "string", "enum": ["en_curso", "completado", "con_error"] } },
+          { "name": "texto", "in": "query", "description": "Busca en el último mensaje y en el id, sin mayúsculas ni tildes", "schema": { "type": "string", "maxLength": 200 } },
           { "name": "antes", "in": "query", "description": "creado_en (RFC 3339) del último trabajo visto", "schema": { "type": "string", "format": "date-time" } },
           { "name": "antes_id", "in": "query", "schema": { "type": "string" } }
         ],

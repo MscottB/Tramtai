@@ -16,6 +16,8 @@ type FiltroTrabajos struct {
 	Punto  string
 	Grupo  string
 	Origen string // probar, terminal, cli o app
+	Estado string // en_curso, completado o con_error (nucleo.Filtros)
+	Texto  string // busca en el mensaje y en el id
 	Antes  time.Time
 	// AntesID solo vale junto a Antes.
 	AntesID string
@@ -27,7 +29,7 @@ func (c *Cliente) TrabajosFiltrados(ctx context.Context, instancia string, f Fil
 	if f.Limite > 0 {
 		q.Set("limite", strconv.Itoa(f.Limite))
 	}
-	for clave, valor := range map[string]string{"punto": f.Punto, "grupo": f.Grupo, "origen": f.Origen} {
+	for clave, valor := range map[string]string{"punto": f.Punto, "grupo": f.Grupo, "origen": f.Origen, "estado": f.Estado, "texto": f.Texto} {
 		if valor != "" {
 			q.Set(clave, valor)
 		}

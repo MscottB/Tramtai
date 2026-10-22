@@ -171,7 +171,17 @@ func (s *Servidor) listarTrabajos(w http.ResponseWriter, r *http.Request) {
 	}
 	q := r.URL.Query()
 	f := persistencia.FiltroTrabajos{Punto: q.Get("punto")} // ?punto=nombre: solo las peticiones de ese punto de acceso
-	if antes := q.Get("antes"); antes != "" {               // ?antes=: la página siguiente, por fecha de creación
+	if estado := q.Get("estado"); estado != "" {            // ?estado=en_curso|completado|con_error: los filtros del Historial
+		if f.Estados = nucleo.EstadosDe(estado); f.Estados == nil {
+			EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("estado debe ser en_curso, completado o con_error")))
+			return
+		}
+	}
+	if f.Texto = strings.TrimSpace(q.Get("texto")); len(f.Texto) > 200 { // ?texto=: busca en el mensaje y en el id
+		EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("texto admite hasta 200 caracteres")))
+		return
+	}
+	if antes := q.Get("antes"); antes != "" { // ?antes=: la página siguiente, por fecha de creación
 		t, err := time.Parse(time.RFC3339Nano, antes)
 		if err != nil {
 			EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("antes debe ser una fecha RFC 3339")))

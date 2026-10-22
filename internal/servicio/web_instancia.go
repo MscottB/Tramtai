@@ -23,8 +23,9 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 	ruta := r.URL.Path
 	if ruta == "/api/v1/instancia" && r.Method == http.MethodGet {
 		n, _ := inst.Planificador.ContarOrigenDesde(r.Context(), nucleo.DesdeApp, true, time.Now().Add(-24*time.Hour))
-		api.EscribirJSON(w, http.StatusOK, contrato.ResumenInstancia{EstadoInstancia: inst.estado(r.Context()), Base: s.Base(),
-			AppConClave24h: n, SugerirApiPropia: sugerirApiPropia(n)})
+		e := inst.estado(r.Context())
+		api.EscribirJSON(w, http.StatusOK, contrato.ResumenInstancia{EstadoInstancia: e, Base: s.Base(),
+			AppConClave24h: n, SugerirApiPropia: sugerirApiPropia(n), Contadores: contadores(e.Trabajos)})
 		return true
 	}
 	if !strings.HasPrefix(ruta, "/api/v1/instancia/") && ruta != "/api/v1/puntos" && !strings.HasPrefix(ruta, "/api/v1/puntos/") {

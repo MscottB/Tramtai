@@ -2,6 +2,7 @@ package nucleo
 
 import (
 	"encoding/json"
+	"slices"
 	"testing"
 )
 
@@ -14,6 +15,22 @@ func TestEtapa(t *testing.T) {
 	for estado, etapa := range casos {
 		if got := estado.Etapa(); got != etapa {
 			t.Errorf("%s → %s, quería %s", estado, got, etapa)
+		}
+	}
+}
+
+// Los filtros del Historial y los contadores de Inicio agrupan los estados igual: en curso lo que no terminó,
+// completadas y con error (fallido e interrumpido); los cancelados no entran en ninguno.
+func TestFiltrosDeEstado(t *testing.T) {
+	quiere := map[string][]Estado{
+		FiltroEnCurso:    {EnCola, PreparandoEntrada, EsperandoAgente, Ejecutando, ValidandoSalida, CancelacionSolicitada},
+		FiltroCompletado: {Completado},
+		FiltroConError:   {Fallido, Interrumpido},
+		"otro":           nil,
+	}
+	for filtro, estados := range quiere {
+		if got := EstadosDe(filtro); !slices.Equal(got, estados) {
+			t.Errorf("%s: %v, quería %v", filtro, got, estados)
 		}
 	}
 }

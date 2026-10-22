@@ -5,6 +5,7 @@ import (
 
 	"tramtai/internal/autoarranque"
 	"tramtai/internal/contrato"
+	"tramtai/internal/nucleo"
 )
 
 // Lo derivado lo calcula el servicio (docs/equipo/decisiones/001-estado-del-agente.md): la Web UI y la terminal pintan
@@ -15,6 +16,18 @@ import (
 const umbralApiPropia = 20
 
 func sugerirApiPropia(peticiones int) bool { return peticiones > umbralApiPropia }
+
+// contadores suma los trabajos por estado en los filtros del Historial (nucleo.Filtros).
+func contadores(porEstado map[string]int) map[string]int {
+	salida := map[string]int{}
+	for _, filtro := range nucleo.Filtros {
+		salida[filtro] = 0
+		for _, e := range nucleo.EstadosDe(filtro) {
+			salida[filtro] += porEstado[string(e)]
+		}
+	}
+	return salida
+}
 
 // estadoAutoarranque dice si este sistema puede arrancar Tramtai al iniciar sesión y si lo hace (Opciones.Autoarranque
 // lo cambia).

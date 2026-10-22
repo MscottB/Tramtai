@@ -2,6 +2,7 @@ package servicio
 
 import (
 	"encoding/json"
+	"maps"
 	"sync/atomic"
 	"testing"
 
@@ -25,6 +26,26 @@ func TestSugerirApiPropia(t *testing.T) {
 	var r contrato.ResumenInstancia
 	if err := json.Unmarshal([]byte(cuerpo), &r); err != nil || r.ID != "global" || r.SugerirApiPropia || r.Base == "" {
 		t.Fatalf("%v %s", err, cuerpo)
+	}
+}
+
+// Los contadores de Inicio agrupan los trabajos con los filtros del Historial: los calcula el servicio.
+func TestContadoresDelResumen(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	global, err := s.ActivarGlobal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r, c := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", global.token, hola); r.StatusCode != 200 {
+		t.Fatalf("petición: %d %s", r.StatusCode, c)
+	}
+	_, cuerpo := pedir(t, ts.URL, "GET", "/api/v1/instancia", global.token, "")
+	var r contrato.ResumenInstancia
+	if err := json.Unmarshal([]byte(cuerpo), &r); err != nil {
+		t.Fatal(err)
+	}
+	if quiere := map[string]int{"en_curso": 0, "completado": 1, "con_error": 0}; !maps.Equal(r.Contadores, quiere) {
+		t.Fatalf("contadores %v, quería %v", r.Contadores, quiere)
 	}
 }
 
