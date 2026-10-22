@@ -260,17 +260,18 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // tecla reparte una tecla: primero lo que está abierto encima (la pregunta, el selector, el menú) y luego la página.
-// Las teclas comunes no se aplican mientras la página tiene un campo con el foco. Por debajo del tamaño mínimo no se
-// ve nada, así que solo valen q y Ctrl+C. Cualquier tecla quita el error de la línea de estado; ! lo enseña entero.
+// Las teclas comunes no se aplican mientras la página tiene un campo con el foco. Por debajo del tamaño mínimo solo se
+// ven el aviso y la pregunta abierta, así que solo valen ella, q y Ctrl+C. Con la pregunta de salir abierta, otra q sale.
+// Cualquier tecla quita el error de la línea de estado; ! lo enseña entero.
 func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 	t := k.String()
 	if m.pregunta == nil {
 		m.avisos.Descartar()
 	}
 	switch {
-	case t == "ctrl+c":
+	case t == "ctrl+c", t == "q" && m.saliendo:
 		return tea.Quit
-	case m.ancho < anchoMinimo || m.alto < altoMinimo:
+	case m.pregunta == nil && (m.ancho < anchoMinimo || m.alto < altoMinimo):
 		if t == "q" {
 			return m.salir()
 		}
@@ -352,12 +353,16 @@ func (m *modelo) View() tea.View {
 }
 
 // vista es la cabecera, el cuerpo (menú y página), la línea de estado y el pie, en exactamente ancho×alto. Por debajo
-// del tamaño mínimo es solo el aviso.
+// del tamaño mínimo es el aviso y, si hay una pregunta abierta, la pregunta: lo que se responde siempre se ve.
 func (m *modelo) vista() string {
-	if m.ancho < anchoMinimo || m.alto < altoMinimo {
-		return idioma.T("Agranda la ventana (mínimo 60×20)")
-	}
 	e := m.estilos
+	if m.ancho < anchoMinimo || m.alto < altoMinimo {
+		aviso := idioma.T("Agranda la ventana (mínimo 60×20)")
+		if m.pregunta == nil {
+			return aviso
+		}
+		return m.encajar(aviso+"\n"+m.pregunta.Vista(e, m.ancho, m.alto-1), m.ancho, m.alto)
+	}
 	ancho, alto := m.area()
 	var cuerpo string
 	switch {

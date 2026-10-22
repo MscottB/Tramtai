@@ -194,12 +194,12 @@ func (m *modelo) vistaPie() string {
 	default:
 		p := m.pagina(m.actual)
 		teclas = p.Teclas()
-		if !p.EnCampo() {
+		if !p.EnCampo() { // en un campo, ! se escribe: no abre el error
 			teclas, fijas = append(teclas, comunes()[3]), comunes()[:3]
+			if m.avisos.HayError() {
+				teclas = append([]pagina.Tecla{{Tecla: "!", Accion: idioma.T("ver el error")}}, teclas...)
+			}
 		}
-	}
-	if m.avisos.HayError() && m.pregunta == nil {
-		teclas = append([]pagina.Tecla{{Tecla: "!", Accion: idioma.T("ver el error")}}, teclas...)
 	}
 	sep := e.Tenue.Render(" " + e.Iconos.Separador + " ")
 	der := m.teclasPie(fijas, sep)

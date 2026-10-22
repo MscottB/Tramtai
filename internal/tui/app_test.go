@@ -21,6 +21,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"tramtai/internal/idioma"
+	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
@@ -192,6 +193,40 @@ func TestTamanoMinimo(t *testing.T) {
 	m.Update(tea.WindowSizeMsg{Width: 60, Height: 20})
 	if vista := m.View().Content; strings.Contains(vista, aviso) || !strings.Contains(vista, m.pagina("inicio").Titulo()) {
 		t.Fatalf("60×20 ya cabe:\n%s", vista)
+	}
+}
+
+// TestTamanoMinimoConAlgoPendiente: con la ventana pequeña y algo que se perdería, q pregunta y la pregunta se ve; Esc
+// sigue en la terminal, s sale y, con la pregunta abierta, otra q también: nunca queda en un bucle.
+func TestTamanoMinimoConAlgoPendiente(t *testing.T) {
+	aviso := idioma.T("Agranda la ventana (mínimo 60×20)")
+	for _, tam := range [][2]int{{59, 20}, {60, 12}, {40, 10}} {
+		m := nuevo(Opciones{})
+		m.Update(tea.WindowSizeMsg{Width: tam[0], Height: tam[1]})
+		m.paginas[pagina.PaginaInicio] = &paginaOcupada{motivo: "Probar tiene una petición en marcha"}
+		if _, cmd := m.Update(tecla("q")); sale(cmd) {
+			t.Fatalf("%v: con algo en marcha, q pregunta", tam)
+		}
+		v := ansi.Strip(m.View().Content)
+		for _, quiere := range []string{aviso, "Probar tiene una", "s confirma"} {
+			if !strings.Contains(v, quiere) {
+				t.Fatalf("%v: la pregunta se ve con la ventana pequeña; falta %q:\n%s", tam, quiere, v)
+			}
+		}
+		if lineas := strings.Split(v, "\n"); len(lineas) > tam[1] || lipgloss.Width(v) > tam[0] {
+			t.Fatalf("%v: cabe en la ventana:\n%s", tam, v)
+		}
+		if _, cmd := m.Update(tecla("esc")); sale(cmd) || m.pregunta != nil {
+			t.Fatalf("%v: Esc cierra la pregunta y sigue en la terminal", tam)
+		}
+		m.Update(tecla("q"))
+		if _, cmd := m.Update(tecla("s")); !sale(cmd) {
+			t.Fatalf("%v: s sale", tam)
+		}
+		m.Update(tecla("q"))
+		if _, cmd := m.Update(tecla("q")); !sale(cmd) {
+			t.Fatalf("%v: con la pregunta de salir abierta, otra q sale", tam)
+		}
 	}
 }
 
@@ -501,6 +536,67 @@ func TestErrorSeQuedaYSeVeEntero(t *testing.T) {
 	m.Update(tecla("!"))
 	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "segunda línea del detalle") {
 		t.Fatalf("! vuelve a enseñar el último error:\n%s", v)
+	}
+}
+
+// TestExclamacionSoloDondeFunciona: el pie solo anuncia «! ver el error» donde ! lo abre. En un campo ! es una letra
+// más, y en el menú no abre nada.
+func TestExclamacionSoloDondeFunciona(t *testing.T) {
+	m := nuevo(Opciones{})
+	m.Update(tea.WindowSizeMsg{Width: 60, Height: 20})
+	falsa := &paginaFalsa{campo: true}
+	m.paginas[pagina.PaginaInicio] = falsa
+	m.Update(comp.NuevoAviso{Texto: "no se pudo leer el archivo", Tipo: comp.Fallo})
+	pie := func() string { l := strings.Split(ansi.Strip(m.View().Content), "\n"); return l[len(l)-1] }
+	if strings.Contains(pie(), "!") {
+		t.Fatalf("en un campo el pie no anuncia !: %q", pie())
+	}
+	m.Update(tecla("!"))
+	if m.pregunta != nil || falsa.texto != "!" {
+		t.Fatalf("en un campo, ! se escribe: %q", falsa.texto)
+	}
+	falsa.campo = false
+	m.Update(comp.NuevoAviso{Texto: "no se pudo leer el archivo", Tipo: comp.Fallo})
+	if !strings.Contains(pie(), "! ver el error") {
+		t.Fatalf("fuera de un campo, sí: %q", pie())
+	}
+	m.Update(tecla("tab"))
+	m.Update(comp.NuevoAviso{Texto: "no se pudo leer el archivo", Tipo: comp.Fallo})
+	if strings.Contains(pie(), "!") {
+		t.Fatalf("en el menú, no: %q", pie())
+	}
+}
+
+// TestCancelarSeVeEnElPie: con una petición en marcha, «c Cancelar la petición» es lo primero del pie de Probar y se ve a
+// 60×20 y a 80×24, en la respuesta y en la receta; c pregunta antes de cancelar.
+func TestCancelarSeVeEnElPie(t *testing.T) {
+	cli, id, b := prueba.ConBloqueado(t)
+	tr, err := cli.Crear(context.Background(), id, nucleo.SolicitudEjecucion{Agente: "simulado",
+		Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "esperar"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-b.Entro
+	for _, tam := range [][2]int{{60, 20}, {80, 24}} {
+		m := nuevoEn(Opciones{Datos: t.TempDir()}, "es")
+		m.cli, m.instancia = cli, id
+		m.Update(tea.WindowSizeMsg{Width: tam[0], Height: tam[1]})
+		a := prueba.ConducirApp(t, m)
+		a.Correr(m.ir(pagina.PaginaEjecutar, pagina.SeguirTrabajo{ID: tr.ID}, true))
+		a.HastaVer("en vivo")
+		pie := func() string { l := strings.Split(ansi.Strip(a.Vista()), "\n"); return l[len(l)-1] }
+		if !strings.HasPrefix(pie(), "c Cancelar la petición") {
+			t.Fatalf("%v: en la respuesta, el pie empieza por c: %q", tam, pie())
+		}
+		a.Pulsar("left")
+		if !strings.HasPrefix(pie(), "c Cancelar la petición") {
+			t.Fatalf("%v: en la receta, también: %q", tam, pie())
+		}
+		a.Pulsar("c")
+		if v := ansi.Strip(a.Vista()); !strings.Contains(v, "¿Cancelar la petición en marcha?") {
+			t.Fatalf("%v: c pregunta antes de cancelar:\n%s", tam, v)
+		}
+		a.Pulsar("esc")
 	}
 }
 

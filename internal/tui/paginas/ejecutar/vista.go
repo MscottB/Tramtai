@@ -305,7 +305,11 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		}
 		return teclas
 	}
-	teclas := []pagina.Tecla{{Tecla: "← →", Accion: idioma.T("pestañas")}}
+	var teclas []pagina.Tecla
+	if p.cancelable() { // la primera: es la única forma de pararla y el pie se corta
+		teclas = append(teclas, pagina.Tecla{Tecla: "c", Accion: p.tx("historial.cancelar")})
+	}
+	teclas = append(teclas, pagina.Tecla{Tecla: "← →", Accion: idioma.T("pestañas")})
 	switch p.pestana {
 	case pestReceta:
 		teclas = append(teclas, pagina.Tecla{Tecla: "Enter", Accion: idioma.T("edita")}, pagina.Tecla{Tecla: "↑↓", Accion: idioma.T("campo")})
@@ -337,9 +341,6 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		teclas = append(teclas, pagina.Tecla{Tecla: "g", Accion: p.tx("ejecutar.actualizarApi", "nombre", p.api)}, pagina.Tecla{Tecla: "d", Accion: p.tx("ejecutar.dejarEditar")})
 	} else {
 		teclas = append(teclas, pagina.Tecla{Tecla: "g", Accion: p.tx("ejecutar.guardarApi")})
-	}
-	if p.activo() {
-		teclas = append(teclas, pagina.Tecla{Tecla: "c", Accion: p.tx("historial.cancelar")})
 	}
 	return append(teclas, pagina.Tecla{Tecla: "Esc", Accion: idioma.T("vuelve")})
 }
