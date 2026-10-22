@@ -331,13 +331,16 @@ func TestHistorialVerMasSinRepetir(t *testing.T) {
 		t.Fatalf("m sin más páginas no hace nada: %v", ids(p))
 	}
 	// Una página que llega tarde, de un filtro viejo, no se suma a la lista de ahora.
-	viejo := p.n
-	p.hayMas, p.enVuelo = true, 0
-	p.verMas()
-	p.Update(pagina.FiltroPunto{Nombre: "p:no-existe"})
-	p.Update(msgLista{origen: p.origen(), n: viejo, mas: true, lista: []nucleo.Trabajo{trabajo("zz", "vieja", nucleo.Completado)}})
-	if slices.Contains(ids(p), "zz") || p.cargandoMas {
-		t.Fatalf("la página del filtro viejo no se suma: %v", ids(p))
+	q := nueva("es")
+	q.tam = 3
+	t.Cleanup(q.Ocultar)
+	correr(q, q.Iniciar(contexto(cli, id)))
+	_, tarde := q.Update(tecla("m")) // pide la segunda página; aún no vuelve
+	_, cmd := q.Update(pagina.FiltroPunto{Nombre: "p:no-existe"})
+	correr(q, cmd)
+	correr(q, tarde)
+	if got := ids(q); len(got) != 0 || strings.Contains(q.Vista(), "Cargando") {
+		t.Fatalf("la página del filtro viejo no se suma: %v\n%s", got, q.Vista())
 	}
 }
 
