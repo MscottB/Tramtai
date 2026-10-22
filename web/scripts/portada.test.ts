@@ -146,6 +146,25 @@ test('la franja compara sin Tramtai y con Tramtai', () => {
   for (const t of ['Sin Tramtai', 'Con Tramtai', 'Without Tramtai', 'With Tramtai']) assert.ok(franja.includes(t), `falta «${t}»`)
 })
 
+// Revisión final web (I1, hallazgo 26): el titular vale para los tres agentes (Codex lee archivos: sí tiene
+// herramientas) y la nota dice cuándo se pasó el canario (docs/equipo/m0-agentes.md).
+test('la tarjeta del aislamiento no contradice a Codex y la nota de Agentes fecha el canario', () => {
+  assert.doesNotMatch(html, /Agentes sin herramientas|Agents without tools/)
+  const nota = html.match(/<p class="nota-agentes[\s\S]*?<\/p>/)?.[0] ?? ''
+  assert.match(nota, /<span lang="es">[^<]*el 2026-10-18[^<]*<\/span>/)
+  assert.match(nota, /<span lang="en">[^<]*on 2026-10-18[^<]*<\/span>/)
+})
+
+// Revisión final web (I3, hallazgo 64): las capturas se sacan de una Tramtai de prueba; la portada lo dice y aclara el
+// puerto, porque los ejemplos de código usan el de por defecto.
+test('«Así se ve» dice que las capturas tienen datos de ejemplo y aclara su puerto frente al de los ejemplos', () => {
+  const nota = asi.match(/<p class="nota-capturas[\s\S]*?<\/p>/)?.[0] ?? ''
+  assert.match(nota, /datos de ejemplo/)
+  assert.match(nota, /sample data/)
+  for (const [, puerto] of html.matchAll(/127\.0\.0\.1:(\d+)/g)) assert.equal(puerto, '17373', 'los ejemplos usan el puerto por defecto')
+  assert.match(nota, /17373/)
+})
+
 test('las capturas son WebP con tamaño declarado, srcset y carga diferida', () => {
   const imgs = (asi.match(/<img [^>]*src="capturas\/[^>]*>/g) ?? [])
   assert.equal(imgs.length, 10, 'cinco pantallas, en claro y oscuro')

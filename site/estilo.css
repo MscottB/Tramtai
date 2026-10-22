@@ -190,7 +190,7 @@ section { padding: 72px 0; }
 .agente p { color: var(--texto-suave); font-size: .92rem; margin: 0 0 10px; }
 .agente ul { margin: 0; padding-left: 18px; color: var(--texto-suave); font-size: .86rem; }
 .agente code { font: .82rem var(--mono); }
-.nota-agentes { margin: 20px 0 0; font-size: .92rem; max-width: 52em; }
+.nota-agentes, .nota-capturas { margin: 20px 0 0; font-size: .92rem; max-width: 52em; }
 .tarjeta { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 22px; }
 .tarjeta h3, .tarjeta h4 { margin-bottom: 8px; }
 .tarjeta p { color: var(--texto-suave); font-size: .95rem; }

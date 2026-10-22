@@ -1,6 +1,8 @@
 // capturas saca las capturas de la Ayuda (web/src/ayuda/capturas: claro y oscuro, español e inglés), las de cada paso de
 // los recorridos guiados (recorrido-*) y las de la portada (site/capturas: las cinco pantallas y la demo de la
-// bienvenida) con una Tramtai compilada en una carpeta temporal, portable y en otro puerto: no toca la instalación de
+// bienvenida) con una Tramtai compilada en una carpeta temporal y portable, en el 17373 (el puerto por defecto, el de los
+// ejemplos de código) si está libre y si no en otro (la nota-capturas de site/index.html dice el puerto que se ve en
+// ellas: cámbiala si cambia): no toca la instalación de
 // quien lo corre. Se corre en el equipo de desarrollo, con un agente ya conectado (para el Historial):
 //   cd web; npm run build; npm run capturas
 //   (o: npm run capturas -- --solo receta, -- --recorridos, -- --bienvenida o -- --sitio)
@@ -101,7 +103,7 @@ process.on('SIGINT', () => {
 try {
   console.log('Compilando Tramtai…')
   execFileSync('go', ['build', '-o', exe, './cmd/tramtai'], { cwd: raiz, stdio: 'inherit' })
-  const puerto = await puertoLibre(17388)
+  const puerto = await puertoLibre(17373)
   const [agente] = modelo.split('/')
   writeFileSync(join(temporal, 'portable.txt'), '')
   mkdirSync(join(temporal, 'datos-tramtai'), { recursive: true })

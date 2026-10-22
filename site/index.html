@@ -344,6 +344,7 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
           <img class="solo-oscuro" src="capturas/agentes-oscuro-1440.webp" srcset="capturas/agentes-oscuro-640.webp 640w, capturas/agentes-oscuro-960.webp 960w, capturas/agentes-oscuro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes: una tarjeta por agente con su versión, la cuenta con la que está conectado y cómo cambiarlo o desconectarlo" data-alt-en="Agents: one card per agent with its version, the account it is signed in with and how to change or disconnect it">
         </figure>
       </article>
+      <p class="nota-capturas suave"><span lang="es">Las capturas de esta página son de una Tramtai de prueba, con datos de ejemplo y en el puerto 17388. La tuya escucha en el 17373 si no lo cambias.</span><span lang="en">The screenshots on this page come from a test copy of Tramtai, with sample data and on port 17388. Yours listens on 17373 unless you change it.</span></p>
     </div>
   </section>
 
@@ -518,7 +519,7 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
           <ul><li><span lang="es">Esfuerzo de bajo a máximo</span><span lang="en">Effort from low to maximum</span></li><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live answer (streaming)</span></li></ul>
         </article>
       </div>
-      <p class="nota-agentes suave"><span lang="es">Claude Code, Codex y GitHub Copilot llegan a tus apps porque pasaron una prueba con su CLI real: un mensaje les pide leer un archivo fuera de su carpeta, ejecutar una orden y abrir una dirección web, y la prueba comprueba que no lo consiguen. La Gemini API no tiene herramientas: Tramtai la llama por HTTP.</span><span lang="en">Claude Code, Codex and GitHub Copilot reach your apps because they passed a test with their real CLI: a message asks them to read a file outside their folder, run a command and open a web address, and the test checks that they can’t. The Gemini API has no tools: Tramtai calls it over HTTP.</span></p>
+      <p class="nota-agentes suave"><span lang="es">Claude Code, Codex y GitHub Copilot llegan a tus apps porque pasaron una prueba con su CLI real, hecha por última vez el 2026-10-18 en Windows: un mensaje les pide leer un archivo fuera de su carpeta, ejecutar una orden y abrir una dirección web, y la prueba comprueba que no lo consiguen. La Gemini API no tiene herramientas: Tramtai la llama por HTTP.</span><span lang="en">Claude Code, Codex and GitHub Copilot reach your apps because they passed a test with their real CLI, last run on 2026-10-18 on Windows: a message asks them to read a file outside their folder, run a command and open a web address, and the test checks that they can’t. The Gemini API has no tools: Tramtai calls it over HTTP.</span></p>
     </div>
   </section>
 
@@ -565,7 +566,7 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
           <p><span lang="es">Tus claves de proveedor quedan cifradas en el almacén del sistema, y las de tus APIs se ven una sola vez y se regeneran con un clic si se filtran.</span><span lang="en">Your provider keys stay encrypted in the system store, and your APIs' keys are shown only once and can be regenerated in one click if they leak.</span></p>
         </article>
         <article class="tarjeta">
-          <h4><span lang="es">Agentes sin herramientas</span><span lang="en">Agents without tools</span></h4>
+          <h4><span lang="es">Sin terminal ni web</span><span lang="en">No terminal, no web</span></h4>
           <p><span lang="es">Claude Code y GitHub Copilot van sin herramientas; Codex, en solo lectura y sin terminal ni búsqueda web. Por defecto cada uno trabaja en una carpeta temporal vacía y no recibe las claves de los demás.</span><span lang="en">Claude Code and GitHub Copilot run without tools; Codex runs read-only, with no terminal or web search. By default each one works in an empty temporary folder and never gets the other agents’ keys.</span></p>
         </article>
         <h3 class="grupo-funciones"><span lang="es">Usa</span><span lang="en">Use</span></h3>
