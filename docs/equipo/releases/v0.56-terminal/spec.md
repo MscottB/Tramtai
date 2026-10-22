@@ -212,7 +212,18 @@ Las rutas `/ui` no cambian, y una clave de aplicación sigue sin poder usar ning
 **Pedido a mitad del release:** en el mapa de la portada, el tranvía pasa por debajo del cartel de Tramtai y no se ve
 mientras lo cruza; vale para el mapa ancho y para el estrecho del móvil. Lo comprueba `portada.test`.
 
+**Cambio de alcance (2026-10-22, decidido con el usuario):**
+- **Lo que trae la v0.56:**
+  - las 8 páginas de la terminal (Tareas 1 a 12);
+  - los arreglos de la auditoría 001 (`anti-slop/audit-001-2026-10-22.md`);
+  - la documentación (Tarea 15);
+  - la comprobación de punta a punta (Tarea 16).
+- **«Solo el servicio» (Tarea 13) pasa a la v0.57.** Arrancar sin ventana ni bandeja forma parte del modo servidor. Hasta entonces, Ajustes y la Ayuda solo hablan de «La app en la bandeja».
+- **Las capturas de la terminal en la portada (Tarea 14) pasan a la v0.57.** La portada presenta la terminal con texto.
+- **La Tarea 15 deja fuera** «Solo el servicio» y las capturas nuevas.
+
 **Fuera de la v0.56:**
-- instalar sin la app de escritorio y el modo servidor (v0.57);
+- instalar sin la app de escritorio, el modo servidor y «Solo el servicio» (v0.57);
+- las capturas de la terminal en la portada (v0.57);
 - ratón en la terminal;
 - capturas, diagramas y recorridos dentro de la terminal.

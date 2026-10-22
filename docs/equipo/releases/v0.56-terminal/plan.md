@@ -498,6 +498,8 @@ Reglas comunes a todas:
 
 ### Tarea 13: Arranque «Solo el servicio»
 
+> **Pasa a la v0.57** (decisión del usuario, 2026-10-22; ver «Cambio de alcance» en la spec). No se hace en la v0.56.
+
 **Archivos:**
 - Modificar `internal/autoarranque/{autoarranque.go, autoarranque_windows.go, autoarranque_darwin.go,
   autoarranque_linux.go, autoarranque_otros.go}` y sus pruebas.
@@ -540,6 +542,9 @@ Reglas comunes a todas:
 
 ### Tarea 14: Capturas de la terminal
 
+> **Pasa a la v0.57** (decisión del usuario, 2026-10-22). Al rehacer las capturas, ajusta la nota de la portada sobre
+> el puerto de las capturas (17388) frente al valor por defecto (17373).
+
 **Archivos:**
 - Crear `internal/tui/captura/main.go`, un programa que se ejecuta con `go run ./internal/tui/captura <página> <tema>
   <idioma> <ancho> <alto>`:
@@ -565,6 +570,9 @@ Reglas comunes a todas:
 - [ ] **Paso 5.** Commit: `feat(sitio): capturas de la terminal`.
 
 ### Tarea 15: Ayuda, web y documentación
+
+> **Alcance reducido** (2026-10-22): no lleva «Solo el servicio» (Tarea 13) ni las capturas de la Tarea 14. Sí lleva lo
+> que cambió con la auditoría 001: el glosario, los términos Espacio, API y Petición, y Playground.
 
 **Archivos:**
 - `web/src/ayuda/temas/*.ts` y `idiomas/ayuda.{es,en}.ts`:
