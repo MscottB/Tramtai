@@ -435,7 +435,7 @@
             ],
             [
               "¿Cómo convierto una prueba en una API?",
-              "En Probar, «Guardar como API» te da URL y clave. Desde Mis APIs, «Abrir en Probar» la carga para cambiarla y «Actualizar» guarda."
+              "En Probar, «Guardar como API» te da URL y clave. Desde Mis APIs, «Abrir en Probar» la carga para cambiarla y «Guardar cambios» la guarda."
             ],
             [
               "¿Qué hago si se filtra una clave?",
@@ -870,7 +870,7 @@
               "Con este botón abres una carpeta como espacio de trabajo. Si no tenía .tramtai/, Tramtai la prepara por ti."
             ],
             [
-              "Actualizar la lista",
+              "Refrescar la lista",
               "Vuelve a cargar los espacios para ver al día el estado de cada uno."
             ]
           ]
@@ -1716,7 +1716,7 @@
             ],
             [
               "How do I turn a test into an API?",
-              "In Try, \"Save as API\" gives you a URL and a key. From My APIs, \"Open in Try\" loads it to change it and \"Update\" saves it."
+              "In the Playground, “Save as API” gives you a URL and a key. From My APIs, “Open in the Playground” loads it to change it and “Save changes” saves it."
             ],
             [
               "What if a key leaks?",

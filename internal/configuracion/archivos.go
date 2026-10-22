@@ -123,7 +123,7 @@ func (c *Configuracion) RutaPermitida(ruta string) (string, error) {
 			return real, nil
 		}
 	}
-	return "", nucleo.NuevoError(nucleo.CodigoRutaNoPermitida, idioma.Tf("%s está fuera de instancia_global.raices_permitidas", ruta))
+	return "", nucleo.NuevoError(nucleo.CodigoRutaNoPermitida, idioma.Tf("%s está fuera de las carpetas desde las que se pueden enviar archivos: muévelo a una de ellas", ruta))
 }
 
 // ProyectoConfiable indica si la raíz figura en proyectos_confiables. Solo la configuración global (o el entorno)

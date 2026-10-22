@@ -77,7 +77,7 @@
         <q-card-section class="col scroll q-gutter-y-lg">
           <q-banner v-if="detalle.codigo_error" rounded dense class="error-caja">
             <template #avatar><q-icon name="o_error" /></template>
-            <b>{{ tituloError(detalle.codigo_error) }}</b><span v-if="detalle.mensaje_error">: {{ detalle.mensaje_error }}</span>
+            <b>{{ tituloError(detalle.codigo_error) }}</b><div v-if="detalle.mensaje_error">{{ detalle.mensaje_error }}</div>
             <template v-if="detalle.codigo_error in ERRORES" #action><BotonAyuda tema="problemas" :ancla="'e-' + detalle.codigo_error" que-hago /></template>
           </q-banner>
           <div>
@@ -113,7 +113,7 @@
           <q-btn v-if="terminales.includes(detalle.estado)" flat color="negative" icon="o_delete" :label="t('comun.eliminar')" no-caps @click="eliminar" />
           <q-space />
           <template v-if="!terminales.includes(detalle.estado)">
-            <q-btn flat color="negative" icon="o_stop_circle" :label="t('comun.cancelar')" no-caps @click="accion('cancelar')" />
+            <q-btn flat color="negative" icon="o_stop_circle" :label="t('historial.cancelar')" no-caps @click="accion('cancelar')" />
             <q-btn unelevated color="primary" icon="o_visibility" :label="t('historial.verEnVivo')" no-caps @click="seguirEnVivo" />
           </template>
           <q-btn v-else unelevated color="primary" icon="o_replay" :label="t('historial.reintentar')" no-caps @click="accion('reintentar')" />

@@ -25,7 +25,7 @@ Descarga `Tramtai-…-instalador-windows-x64.exe` desde [Releases](https://githu
 
 - Se instala solo para tu usuario, en `%LOCALAPPDATA%\Programs\Tramtai`, sin permisos de administrador.
 - Opciones: el comando `tramtai` en la terminal (añade la carpeta a tu PATH), iniciar con Windows y un acceso directo en el escritorio.
-- Para actualizar no hace falta descargar nada a mano: cuando hay una versión nueva, la app lo avisa y **Actualizar ahora** la instala (también `tramtai actualizar`). Ver [actualizaciones](operacion.md#actualizaciones).
+- Para actualizar no hace falta descargar nada a mano: cuando hay una versión nueva, la app lo avisa y **Instalar ahora** la instala (también `tramtai actualizar`). Ver [actualizaciones](operacion.md#actualizaciones).
 - Se desinstala desde *Configuración → Aplicaciones*; al final pregunta si borrar también tus datos (`%APPDATA%\tramtai`).
 - Para comprobar la descarga, la suma SHA-256 de cada archivo está en `SHA256SUMS.txt` del mismo release.
 

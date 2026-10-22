@@ -171,7 +171,7 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.conectar.pClave': 'Where is a new API’s key?',
   'ayuda.conectar.rClave': 'It is shown only when created: copy it then. If you lose it, "Regenerate the key" gives you another.',
   'ayuda.conectar.pPruebaApi': 'How do I turn a test into an API?',
-  'ayuda.conectar.rPruebaApi': 'In Try, "Save as API" gives you a URL and a key. From My APIs, "Open in Try" loads it to change it and "Update" saves it.',
+  'ayuda.conectar.rPruebaApi': 'In the Playground, “Save as API” gives you a URL and a key. From My APIs, “Open in the Playground” loads it to change it and “Save changes” saves it.',
   'ayuda.conectar.pFiltrada': 'What if a key leaks?',
   'ayuda.conectar.rFiltrada': 'In My APIs, "Regenerate the key": the old one stops working at once. If it is a provider’s, revoke it in their console and save the new one.',
 

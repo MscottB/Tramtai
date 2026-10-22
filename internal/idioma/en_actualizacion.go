@@ -31,6 +31,6 @@ func init() {
 		"solo comprueba si hay una versión nueva, sin instalarla":                    "only checks for a new version, without installing it",
 		"Acerca de Tramtai": "About Tramtai",
 		"Acerca de Tramtai · hay una versión nueva: %s": "About Tramtai · new version available: %s",
-		"Actualizar a %s…":                              "Update to %s…",
+		"Instalar la versión %s…":                              "Install version %s…",
 	})
 }

@@ -4,6 +4,7 @@ import { Notify } from 'quasar'
 import { idioma, idiomas, t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 import { compartida } from '../compartida'
+import { ERRORES } from '../ayuda/temas/problemas'
 import { actualizacion, dialogoActualizar, diasHistorial, sesion } from '../estado'
 import type { Acerca, Capacidades, PrimerosPasos, EspacioUI, AjustesPunto, ConfigPunto, EntradaConfiguracion, EstadoActualizacion, EstadoConversor, ResumenInstancia, EstadoPresupuesto, EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Novedad, ProgresoActualizacion, Retencion, Sesion, Solicitud, Trabajo, UsoPunto } from './tipos'
 
@@ -189,11 +190,18 @@ export function mensajeError(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
 }
 
+// pasoError es qué hacer ante un código de error: la solución que da la Ayuda (la de «¿Qué hago?»), o nada.
+export function pasoError(codigo?: string): string {
+  const e = codigo ? ERRORES[codigo] : undefined
+  return e ? t(e.solucion) : ''
+}
+
 export function avisarError(e: unknown) {
   const mensaje = mensajeError(e)
-  // En otro idioma, el detalle original va debajo para no perderlo.
-  const detalle = e instanceof Error && e.message !== mensaje ? e.message : undefined
-  Notify.create({ type: 'negative', message: mensaje, caption: detalle, position: 'top' })
+  // En otro idioma, el detalle original va debajo para no perderlo; después, qué hacer.
+  const detalle = e instanceof Error && e.message !== mensaje ? e.message : ''
+  const paso = pasoError(e instanceof ErrorApi ? e.codigo : undefined)
+  Notify.create({ type: 'negative', message: mensaje, caption: [detalle, paso].filter(Boolean).join(' ') || undefined, position: 'top' })
 }
 
 // duracionAviso da tiempo a leer un aviso: unos 60 ms por letra, entre 4 y 10 s.

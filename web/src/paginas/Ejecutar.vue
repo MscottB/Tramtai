@@ -60,7 +60,7 @@
           <q-card-actions class="q-pa-md">
             <span class="text-caption texto-suave gt-xs">{{ t('ejecutar.atajo') }}</span>
             <q-space />
-            <q-btn v-if="activo" flat color="negative" icon="o_stop_circle" :label="t('comun.cancelar')" no-caps @click="cancelar" />
+            <q-btn v-if="activo" flat color="negative" icon="o_stop_circle" :label="t('historial.cancelar')" no-caps @click="cancelar" />
             <q-btn v-if="editando" outline color="primary" icon="o_save" :label="t('ejecutar.actualizarApi', { nombre: editando })" no-caps
               :loading="guardando" @click="actualizarApi" />
             <q-btn v-else outline color="primary" icon="o_hub" :label="t('ejecutar.guardarApi')" no-caps @click="guardarApi?.abrirGuardar()" />
@@ -131,7 +131,7 @@
               </q-banner>
               <q-banner v-if="final?.codigo_error" rounded dense class="error-caja q-mb-md">
                 <template #avatar><q-icon name="o_error" /></template>
-                <b>{{ tituloError(final.codigo_error) }}</b><span v-if="final.mensaje_error && !problemas.length">: {{ final.mensaje_error }}</span>
+                <b>{{ tituloError(final.codigo_error) }}</b><div v-if="final.mensaje_error && !problemas.length">{{ final.mensaje_error }}</div>
                 <template v-if="final.codigo_error in ERRORES" #action><BotonAyuda tema="problemas" :ancla="'e-' + final.codigo_error" que-hago /></template>
               </q-banner>
               <!-- La respuesta no cumplía la forma pedida: qué falló, la respuesta tal como llegó y «Corregir». -->

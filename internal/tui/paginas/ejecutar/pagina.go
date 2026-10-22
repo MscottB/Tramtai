@@ -176,7 +176,7 @@ func (p *Pagina) Pendiente() string {
 	case p.activo() || p.enviando:
 		return idioma.T("Probar tiene una petición en marcha: seguirá en el servicio y la verás en el Historial.")
 	case p.api != "" && p.punto != nil && p.armado && !mismaReceta(recetaDePunto(*p.punto), p.leer()):
-		return idioma.Tf("La API %s tiene cambios sin guardar en Probar (g la actualiza).", p.api)
+		return idioma.Tf("La API %s tiene cambios sin guardar en Probar (g los guarda).", p.api)
 	}
 	return ""
 }

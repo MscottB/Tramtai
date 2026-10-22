@@ -137,12 +137,12 @@ func (s *Servidor) conPresupuesto(siguiente http.Handler) http.Handler {
 func Proteger(hosts []string, autorizar func(*http.Request) bool, siguiente http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !hostPermitido(hosts, r.Host) {
-			EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, idioma.T("cabecera Host no permitida")))
+			EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, idioma.T("cabecera Host no permitida: llama al servicio por 127.0.0.1 o localhost")))
 			return
 		}
 		if origen := r.Header.Get("Origin"); origen != "" {
 			if u, err := url.Parse(origen); err != nil || u.Host != r.Host {
-				EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, idioma.T("origen no permitido")))
+				EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, idioma.T("origen no permitido: abre la Web UI desde la app de Tramtai o con «tramtai abrir»")))
 				return
 			}
 		}
@@ -247,7 +247,7 @@ func EscribirError(w http.ResponseWriter, r *http.Request, err error) {
 	codigo, mensaje := nucleo.CodigoDe(err), nucleo.MensajeDe(err)
 	if codigo == "" {
 		log.Printf("error interno en %s %s: %v", r.Method, r.URL.Path, err)
-		codigo, mensaje = nucleo.CodigoErrorInterno, idioma.T("error interno del servicio")
+		codigo, mensaje = nucleo.CodigoErrorInterno, idioma.T("error interno del servicio: vuelve a intentarlo y, si se repite, mira el registro con «tramtai servicio registro»")
 	}
 	estado, conocido := estadosHTTP[codigo]
 	if !conocido {

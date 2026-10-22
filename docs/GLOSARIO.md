@@ -53,7 +53,7 @@ Un verbo por acción y una acción por verbo.
 | petición en marcha | Cancelar la petición | Cancel the request | «Cancelar» a secas: es el botón de cerrar un diálogo |
 | petición terminada | Reintentar, Corregir, Eliminar | Retry, Correct, Delete | |
 | lista o página | Refrescar | Refresh | Actualizar |
-| versión nueva de Tramtai | Instalar la versión nueva | Install the new version | Actualizar (como botón) |
+| versión nueva de Tramtai | Instalar la versión nueva | Install the update | Actualizar (como botón) |
 | cambios de una API desde Probar | Guardar cambios en {API} | Save changes to {API} | Actualizar {API} |
 | diálogo | Cancelar | Cancel | |
 

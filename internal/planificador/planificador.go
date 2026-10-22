@@ -185,7 +185,7 @@ func (p *Planificador) EnviarPorPunto(ctx context.Context, solicitud nucleo.Soli
 // aceptar registra el trabajo; intentoDe vincula un reintento explícito con el trabajo anterior.
 func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEjecucion, clave, intentoDe, punto string) (nucleo.Trabajo, bool, error) {
 	if p.ctx == nil || p.ctx.Err() != nil {
-		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoServicioDetenido, idioma.T("el planificador no está en marcha"))
+		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoServicioDetenido, idioma.T("el servicio todavía no está listo: vuelve a intentarlo en un momento"))
 	}
 	if err := solicitud.Validar(); err != nil {
 		return nucleo.Trabajo{}, false, err
@@ -258,7 +258,7 @@ func (p *Planificador) permitidoParaOrigen(t nucleo.Trabajo) error {
 	}
 	for _, c := range candidatos(t) {
 		if !permitido(c.agente) {
-			return nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf("%s no está habilitado para aplicaciones: todavía no ha pasado su prueba de seguridad (canario). Úsalo desde Probar o la terminal", agentes.NombreVisible(c.agente)))
+			return nucleo.NuevoError(nucleo.CodigoAgenteNoDisponible, idioma.Tf("%s no está habilitado para aplicaciones: todavía no ha pasado su prueba de seguridad. Úsalo desde Probar o la terminal", agentes.NombreVisible(c.agente)))
 		}
 	}
 	return nil

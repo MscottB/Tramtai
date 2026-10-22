@@ -182,7 +182,7 @@ func init() {
 		"  ninguno (tramtai acceso crear <nombre>)": "  none (tramtai acceso crear <name>)",
 		"activo":       "active",
 		"sin peticiones": "no requests",
-		"servicio.host %s no es loopback: activa servicio.permitir_remoto (mejor, usa un túnel SSH)":                     "servicio.host %s is not loopback: turn on servicio.permitir_remoto (better, use an SSH tunnel)",
+		"servicio.host %s no es una dirección de este equipo: para abrir el servicio a otros equipos activa servicio.permitir_remoto (mejor, usa un túnel SSH)":                     "servicio.host %s is not an address of this computer: to open the service to other computers turn on servicio.permitir_remoto (better, use an SSH tunnel)",
 		"el acceso remoto no se permite con %s en modo suscripción":                                                      "remote access is not allowed with %s in subscription mode",
 		"el servicio ya está en marcha en %s":                                                                            "the service is already running at %s",
 		"el puerto %d está ocupado: Tramtai usa el %d (para fijar otro: Ajustes o «tramtai servicio puerto <número>»)\n": "port %d is in use: Tramtai uses %d (to set another one: Settings or “tramtai servicio puerto <number>”)\n",

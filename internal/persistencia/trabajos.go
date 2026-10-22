@@ -468,7 +468,7 @@ func (a *Almacen) Recuperar(ctx context.Context, instancia string) (interrumpido
 			err = a.CambiarEstado(ctx, id, t.Estado, nucleo.EnCola, Cambio{})
 			reencolados++
 		} else {
-			err = a.CambiarEstado(ctx, id, t.Estado, nucleo.Interrumpido, Cambio{Mensaje: idioma.T("el servicio se reinició sin poder confirmar la ejecución")})
+			err = a.CambiarEstado(ctx, id, t.Estado, nucleo.Interrumpido, Cambio{Mensaje: idioma.T("el servicio se reinició sin poder confirmar la ejecución: vuelve a enviar la petición")})
 			interrumpidos++
 		}
 		if err != nil {

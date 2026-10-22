@@ -926,7 +926,7 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 // teclasDe son las acciones que ofrece un trabajo según su estado.
 func (p *Pagina) teclasDe(t nucleo.Trabajo) []pagina.Tecla {
 	if !t.Estado.Terminal() {
-		return []pagina.Tecla{{Tecla: "c", Accion: p.tx("comun.cancelar")}}
+		return []pagina.Tecla{{Tecla: "c", Accion: p.tx("historial.cancelar")}}
 	}
 	teclas := []pagina.Tecla{{Tecla: "t", Accion: p.tx("historial.reintentar")}}
 	if t.Corregible {

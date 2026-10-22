@@ -129,7 +129,7 @@ func TestCorregirYCopiar(t *testing.T) {
 	if e := terminada(t, a); e != nucleo.Completado {
 		t.Fatalf("se completa: %s", e)
 	}
-	if a, ok := aviso(a.Pulsar("o")); !ok || a.Texto != "Esta petición no se puede corregir" {
+	if a, ok := aviso(a.Pulsar("o")); !ok || a.Texto != "Esta petición no se puede corregir: vuelve a enviarla" {
 		t.Fatalf("avisa con el texto de la Web UI: %+v", a)
 	}
 	// n deja la página lista para otra prueba con la misma receta.

@@ -351,7 +351,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	remoto := !esLoopback(host)
 	if remoto {
 		if !c.Booleano("servicio.permitir_remoto") {
-			return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("servicio.host %s no es loopback: activa servicio.permitir_remoto (mejor, usa un túnel SSH)", host))
+			return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("servicio.host %s no es una dirección de este equipo: para abrir el servicio a otros equipos activa servicio.permitir_remoto (mejor, usa un túnel SSH)", host))
 		}
 		for _, f := range agentes.Todos() {
 			if agente := f.Nombre; agentes.AdmiteSuscripcion(agente) && c.Texto("adaptadores."+agente+".autenticacion") == adaptadores.AutenticacionSuscripcion {

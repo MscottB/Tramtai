@@ -275,14 +275,12 @@ func (p *Pagina) textoRespuesta() string {
 		lineas = append(lineas, e.Advertencia.Render("! "+a))
 	}
 	if f := p.final; f != nil && f.CodigoError != "" {
-		titulo := p.tx("error." + string(f.CodigoError))
-		if titulo == "error."+string(f.CodigoError) {
-			titulo = string(f.CodigoError)
+		aviso := e.AvisoError(p.lengua, f.CodigoError, f.MensajeError)
+		lineas = append(lineas, e.Error.Render(e.Iconos.Fallo+" "+aviso[0]))
+		for _, linea := range aviso[1:] {
+			lineas = append(lineas, e.Tenue.Render("  "+linea))
 		}
-		if f.MensajeError != "" {
-			titulo += ": " + f.MensajeError
-		}
-		lineas = append(lineas, e.Error.Render(e.Iconos.Fallo+" "+titulo), "")
+		lineas = append(lineas, "")
 		if f.Corregible {
 			lineas = append(lineas, e.Acento.Render("o "+p.tx("ejecutar.corregir"))+" "+e.Tenue.Render(p.tx("ejecutar.corregirTexto")), "",
 				e.Tenue.Render(p.tx("ejecutar.respuestaRecibida")))

@@ -69,7 +69,7 @@ export const CLAVES_HISTORIAL: string[] = [
   'historial.vaciado', 'historial.origen', 'historial.origenPrincipal', 'historial.todosOrigenes', 'historial.origenProbar',
   'historial.origenTerminal', 'historial.origenCli', 'historial.origenApp', 'historial.grupo', 'historial.mostrando', 'historial.verMas',
   'historial.esfuerzo',
-  'ejecutar.respuesta', 'ejecutar.corregir', 'comun.cancelar', 'comun.eliminar',
+  'ejecutar.respuesta', 'ejecutar.corregir', 'historial.cancelar', 'comun.eliminar',
   'ruta.cola', 'ruta.preparacion', 'ruta.ejecucion', 'ruta.validacion', 'ruta.llegada',
   'registro.titulo', 'registro.noDisponible', 'registro.aviso', 'registro.delAgente', 'registro.entrada', 'registro.contexto',
   'registro.correccion', 'registro.validacion', 'registro.validacionMas',
@@ -149,10 +149,11 @@ export function ayudaDe(temas: TemaWeb[], textos: Textos): Tema[] {
   })
 }
 
-// textosDe trae los nombres que la terminal comparte con la Web UI (menu.*), los títulos de error (error.*) y los de
-// CLAVES_TEXTOS.
+// textosDe trae los nombres que la terminal comparte con la Web UI (menu.*), los títulos de error (error.*) con la
+// solución de la Ayuda de cada uno (qué hacer) y los de CLAVES_TEXTOS.
 export function textosDe(porIdioma: Record<Idioma, Textos>): Record<Idioma, Textos> {
-  const claves = [...Object.keys(porIdioma.es).filter((k) => k.startsWith('menu.') || k.startsWith('error.')), ...CLAVES_TEXTOS]
+  const claves = [...Object.keys(porIdioma.es).filter((k) => k.startsWith('menu.') || k.startsWith('error.')),
+    ...Object.values(ERRORES).map((e) => e.solucion), ...CLAVES_TEXTOS]
   return Object.fromEntries(IDIOMAS.map((i) => [i, Object.fromEntries(claves.map((k) => [k, plano(porIdioma[i][k] ?? k)]))])) as Record<Idioma, Textos>
 }
 

@@ -470,7 +470,7 @@ func (p *Planificador) cerrarDetenido(id string, desde nucleo.Estado) {
 	case desde == nucleo.EsperandoAgente || desde == nucleo.PreparandoEntrada:
 		p.cambiar(id, desde, nucleo.EnCola, persistencia.Cambio{}) // nunca lanzó el agente: se reencola al reiniciar
 	default:
-		p.cambiar(id, desde, nucleo.Interrumpido, persistencia.Cambio{Mensaje: idioma.T("el servicio se detuvo durante la ejecución (sin plazo de drenaje o agotado)")})
+		p.cambiar(id, desde, nucleo.Interrumpido, persistencia.Cambio{Mensaje: idioma.T("el servicio se detuvo antes de que terminara la petición: vuelve a enviarla")})
 	}
 }
 
@@ -490,7 +490,7 @@ func (p *Planificador) cambiar(id string, de, hacia nucleo.Estado, cambio persis
 			cierre = nucleo.Fallido
 		}
 		if hacia != cierre && nucleo.ValidarTransicion(de, cierre) == nil {
-			fallo := persistencia.Cambio{Codigo: nucleo.CodigoErrorInterno, Mensaje: idioma.T("no se pudo guardar el estado de la petición")}
+			fallo := persistencia.Cambio{Codigo: nucleo.CodigoErrorInterno, Mensaje: idioma.T("no se pudo guardar el estado de la petición: mira el registro del servicio")}
 			if err := p.almacen.CambiarEstado(fondo, id, de, cierre, fallo); err != nil {
 				p.anotar("%s tampoco se pudo cerrar: %v", id, err)
 			}

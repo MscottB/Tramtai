@@ -112,19 +112,17 @@ func duracion(desde time.Time, hasta *time.Time) string {
 	return fmt.Sprintf("%d min %d s", int(s/60), int(math.Round(math.Mod(s, 60))))
 }
 
-// banner es el error de la petición: el título de su código (o el código, si no lo conoce) y el mensaje del servicio.
+// banner es el error de la petición: el título de su código y, debajo, el mensaje del servicio y qué hacer.
 func (p *Pagina) banner(t nucleo.Trabajo) []string {
 	if t.CodigoError == "" {
 		return nil
 	}
-	titulo := p.tx("error." + string(t.CodigoError))
-	if titulo == "error."+string(t.CodigoError) {
-		titulo = string(t.CodigoError)
+	aviso := p.estilos.AvisoError(p.lengua, t.CodigoError, t.MensajeError)
+	l := []string{p.estilos.Iconos.Fallo + " " + aviso[0]}
+	for _, linea := range aviso[1:] {
+		l = append(l, "  "+linea)
 	}
-	if t.MensajeError != "" {
-		titulo += ": " + t.MensajeError
-	}
-	return []string{p.estilos.Iconos.Fallo + " " + titulo, ""}
+	return append(l, "")
 }
 
 // textoMensaje es lo que se pidió y la ficha de la petición (agente y modelo, esfuerzo, origen, tokens, coste, duración e

@@ -169,7 +169,7 @@ const ayudaEs = {
   'ayuda.conectar.pClave': '¿Dónde está la clave de una API nueva?',
   'ayuda.conectar.rClave': 'Solo se muestra al crearla: cópiala entonces. Si la pierdes, «Regenerar la clave» te da otra.',
   'ayuda.conectar.pPruebaApi': '¿Cómo convierto una prueba en una API?',
-  'ayuda.conectar.rPruebaApi': 'En Probar, «Guardar como API» te da URL y clave. Desde Mis APIs, «Abrir en Probar» la carga para cambiarla y «Actualizar» guarda.',
+  'ayuda.conectar.rPruebaApi': 'En Probar, «Guardar como API» te da URL y clave. Desde Mis APIs, «Abrir en Probar» la carga para cambiarla y «Guardar cambios» la guarda.',
   'ayuda.conectar.pFiltrada': '¿Qué hago si se filtra una clave?',
   'ayuda.conectar.rFiltrada': 'En Mis APIs, «Regenerar la clave»: la anterior deja de valer al momento. Si es de un proveedor, revócala en su consola y guarda la nueva.',
 
@@ -213,7 +213,7 @@ const ayudaEs = {
   'ayuda.espacios.rec1Texto': 'Aquí ves todos los espacios, también los detenidos: su estado, su carpeta, cuántas APIs y peticiones tienen y lo que puedes hacer con cada uno.',
   'ayuda.espacios.rec2Titulo': 'Abrir un proyecto',
   'ayuda.espacios.rec2Texto': 'Con este botón abres una carpeta como espacio de trabajo. Si no tenía .tramtai/, Tramtai la prepara por ti.',
-  'ayuda.espacios.rec3Titulo': 'Actualizar la lista',
+  'ayuda.espacios.rec3Titulo': 'Refrescar la lista',
   'ayuda.espacios.rec3Texto': 'Vuelve a cargar los espacios para ver al día el estado de cada uno.',
   'ayuda.espacios.pConfiar': '¿Qué significa confiar en una carpeta?',
   'ayuda.espacios.rConfiar': 'Que su .tramtai/local.yaml puede usar claves de seguridad, como el programa de cada agente. La confianza se guarda en Tramtai, nunca en el repositorio.',
