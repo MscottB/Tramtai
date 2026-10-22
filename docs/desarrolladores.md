@@ -3,7 +3,8 @@
 Todo lo que necesitas para usar Tramtai desde tu código. Cada tema tiene ejemplos que funcionan tal cual en Python,
 JavaScript, Go y curl, en [docs/ejemplos](ejemplos); el CI los ejecuta en cada cambio. La misma guía, con el código a
 la vista, está en la [página del producto](https://mscottb.github.io/Tramtai/desarrolladores.html). Todas las rutas y
-opciones están en la [referencia de la API](api.md).
+opciones están en la [referencia de la API](api.md), y los nombres que usan la app y esta guía (espacio, API, clave,
+petición), con su equivalente técnico, en el [glosario](GLOSARIO.md).
 
 ## Empezar
 
