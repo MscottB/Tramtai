@@ -1,7 +1,7 @@
 <template>
   <!-- persistent: un clic fuera no tira la receta a medias; Esc pregunta antes si hay algo escrito (escaparConAviso). -->
   <q-dialog v-model="nuevo" aria-labelledby="titulo-nueva-api" allow-focus-outside persistent>
-    <q-card style="width: 600px; max-width: 95vw" @keyup.esc="escaparConAviso(JSON.stringify(formulario) !== inicialNuevo, () => (nuevo = false))">
+    <q-card style="width: 600px; max-width: 95vw" @keyup.esc="escaparConAviso($event, JSON.stringify(formulario) !== inicialNuevo, () => (nuevo = false))">
       <q-card-section>
         <h2 id="titulo-nueva-api" class="titulo-seccion">{{ t('puntos.nuevo') }}</h2>
         <div class="texto-suave text-body2">{{ t('puntos.nuevoTexto') }}</div>
@@ -46,7 +46,7 @@
   </q-dialog>
 
   <q-dialog v-model="dialogoInstrucciones" aria-labelledby="titulo-ajustes-api" allow-focus-outside persistent>
-    <q-card style="width: 560px; max-width: 95vw" @keyup.esc="escaparConAviso(JSON.stringify(ajustes) !== inicialAjustes, () => (dialogoInstrucciones = false))">
+    <q-card style="width: 560px; max-width: 95vw" @keyup.esc="escaparConAviso($event, JSON.stringify(ajustes) !== inicialAjustes, () => (dialogoInstrucciones = false))">
       <q-card-section>
         <h2 id="titulo-ajustes-api" class="titulo-seccion">{{ t('puntos.ajustesDe', { nombre: editando }) }}</h2>
       </q-card-section>

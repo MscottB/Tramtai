@@ -3,7 +3,7 @@
        mostrada: no queda en memoria de la página. -->
   <!-- Con una clave recién creada o regenerada a la vista (solo se ve esta vez), un clic fuera no cierra y Esc pregunta. -->
   <q-dialog v-model="abierto" :maximized="$q.screen.lt.sm" aria-labelledby="titulo-detalle" :persistent="!!claveVista" @hide="claveVista = ''">
-    <q-card v-if="puntoDetalle" style="width: 760px; max-width: 96vw" @keyup.esc="claveVista && escaparConAviso(true, () => (abierto = false), true)">
+    <q-card v-if="puntoDetalle" style="width: 760px; max-width: 96vw" @keyup.esc="claveVista && escaparConAviso($event, true, () => (abierto = false), true)">
       <q-card-section class="row items-center no-wrap q-gutter-x-sm">
         <span class="linea__chapa linea__chapa--grande" :class="['linea--' + (puntoDetalle.agente ?? 'otro'), { 'linea__chapa--apagada': !activo(puntoDetalle) }]" aria-hidden="true">{{ puntoDetalle.agente ? codigoLinea(puntoDetalle.agente) : 'API' }}</span>
         <div class="col">
