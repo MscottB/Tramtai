@@ -1,6 +1,6 @@
 //go:build darwin
 
-package servicio
+package procesos
 
 import (
 	"bytes"
@@ -40,7 +40,7 @@ func comprobarDueno(t *testing.T, direccion string) {
 	defer conexion.Close()
 	cliente := netip.MustParseAddrPort(conexion.LocalAddr().String())
 	servidor := netip.MustParseAddrPort(oyente.Addr().String())
-	if mismoUsuario(cliente, servidor) {
+	if MismoUsuario(cliente, servidor) {
 		return
 	}
 	datos, err := unix.SysctlRaw("net.inet.tcp.pcblist_n")

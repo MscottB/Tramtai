@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -491,11 +492,30 @@ func TestRestaurarConInstanciasDanado(t *testing.T) {
 // /healthz no expone el identificador del servicio y solo prueba la identidad con el reto: el HMAC del token de servicio.
 func TestSaludConReto(t *testing.T) {
 	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
-	if _, cuerpo := pedir(t, ts.URL, "GET", "/healthz", "", ""); strings.Contains(cuerpo, s.ID) || strings.Contains(cuerpo, "prueba") {
-		t.Fatalf("sin reto no hay identificador ni prueba: %s", cuerpo)
+	if _, cuerpo := pedir(t, ts.URL, "GET", "/healthz", "", ""); strings.Contains(cuerpo, "prueba") {
+		t.Fatalf("sin reto no hay prueba: %s", cuerpo)
 	}
 	_, cuerpo := pedir(t, ts.URL, "GET", "/healthz?reto=abc", "", "")
-	if !strings.Contains(cuerpo, `"prueba":"`+contrato.PruebaIdentidad(s.tokenAdmin, "abc")+`"`) || strings.Contains(cuerpo, s.ID) {
+	if !strings.Contains(cuerpo, `"prueba":"`+contrato.PruebaIdentidad(s.tokenAdmin, "abc")+`"`) {
 		t.Fatalf("la prueba es el HMAC del token sobre el reto: %s", cuerpo)
+	}
+}
+
+// La CLI de la versión anterior (0.55) reconoce al servicio por el identificador en /healthz, sin reto: se lo da solo
+// al mismo usuario del sistema, que ya puede leerlo en servicio.json. A otro usuario o a otro equipo, no (hallazgo 2).
+func TestSaludParaLaCLIAnterior(t *testing.T) {
+	if runtime.GOOS != "windows" && runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+		t.Skip("sin identificación del dueño de la conexión en este sistema")
+	}
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	if _, cuerpo := pedir(t, ts.URL, "GET", "/healthz", "", ""); !strings.Contains(cuerpo, `"servicio":"`+s.ID+`"`) {
+		t.Fatalf("el mismo usuario recibe el identificador: %s", cuerpo)
+	}
+	r := httptest.NewRequest("GET", "/healthz", nil)
+	r.Host, r.RemoteAddr = "127.0.0.1", "203.0.113.5:4000"
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, r)
+	if w.Code != 200 || strings.Contains(w.Body.String(), s.ID) {
+		t.Fatalf("desde otro equipo no hay identificador: %d %s", w.Code, w.Body)
 	}
 }

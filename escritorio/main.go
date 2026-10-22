@@ -516,7 +516,8 @@ func prepararSesion(proyecto string) (*sesionEscritorio, error) {
 		return nil, err
 	}
 	cli, err := cliente.Conectar(datos)
-	if errors.Is(err, cliente.ErrServicioInactivo) {
+	// El de una versión anterior (tras actualizar) lo detiene IniciarEnSegundoPlano antes de lanzar el nuevo.
+	if errors.Is(err, cliente.ErrServicioInactivo) || errors.Is(err, cliente.ErrServicioAnterior) {
 		ejecutable, errBuscar := buscarTramtai()
 		if errBuscar != nil {
 			return nil, errBuscar

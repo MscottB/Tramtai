@@ -13,6 +13,8 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/http/httptrace"
+	"net/netip"
 	"net/url"
 	"os"
 	"os/exec"
@@ -20,14 +22,31 @@ import (
 	"strings"
 	"time"
 
+	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
+	"tramtai/internal/procesos"
 )
 
 // ErrServicioInactivo indica que no hay un servicio de Tramtai en marcha para este usuario.
 var ErrServicioInactivo = errors.New(idioma.T("el servicio de Tramtai no está en marcha (tramtai servicio iniciar --segundo-plano)"))
+
+// ErrServicioAnterior indica que responde el servicio de una versión anterior de Tramtai (la 0.55 o previa), que no
+// prueba su identidad con el reto: no se le manda el token ni se lanza otro servicio sobre los mismos datos, porque
+// no toma el cerrojo de la carpeta de datos. DetenerAnterior lo detiene.
+var ErrServicioAnterior = errors.New(idioma.T("hay un servicio de una versión anterior de Tramtai en marcha"))
+
+// duenoPropio dice si el extremo local de una conexión es de un proceso de este usuario; las pruebas lo sustituyen.
+var duenoPropio = procesos.MismoUsuario
+
+// salud es la respuesta de /healthz: la prueba del reto y, en un servicio anterior a la 0.56 (o hacia el mismo usuario,
+// para la CLI de esa versión), el identificador del servicio.
+type salud struct {
+	Prueba   string `json:"prueba"`
+	Servicio string `json:"servicio"`
+}
 
 // Cliente es una conexión al servicio.
 type Cliente struct {
@@ -40,8 +59,31 @@ type Cliente struct {
 }
 
 // Conectar lee el descriptor y el token de servicio y comprueba con un reto en /healthz que responde un servicio que
-// conoce el token, no otro proceso que ocupe el puerto; el token no sale hasta entonces.
+// conoce el token, no otro proceso que ocupe el puerto; el token no sale hasta entonces. Si responde, sin reto, el
+// servicio del descriptor, es el de una versión anterior: ErrServicioAnterior.
 func Conectar(datos string) (*Cliente, error) {
+	c, err := clienteDe(datos)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancelar := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancelar()
+	reto := rand.Text()
+	var s salud
+	if err := c.pedir(ctx, "GET", "/healthz?reto="+reto, "", nil, "", &s); err != nil {
+		return nil, ErrServicioInactivo
+	}
+	switch {
+	case hmac.Equal([]byte(s.Prueba), []byte(contrato.PruebaIdentidad(c.token, reto))):
+		return c, nil
+	case s.Prueba == "" && s.Servicio != "" && s.Servicio == c.Descriptor.Identificador:
+		return nil, ErrServicioAnterior
+	}
+	return nil, ErrServicioInactivo
+}
+
+// clienteDe prepara un cliente con el descriptor y el token de servicio, sin comprobar quién responde.
+func clienteDe(datos string) (*Cliente, error) {
 	d, err := contrato.LeerDescriptor(datos)
 	if err != nil {
 		return nil, ErrServicioInactivo
@@ -50,18 +92,64 @@ func Conectar(datos string) (*Cliente, error) {
 	if err != nil {
 		return nil, ErrServicioInactivo
 	}
-	c := &Cliente{Base: d.Base, Descriptor: d, token: strings.TrimSpace(string(token)), http: &http.Client{}}
-	ctx, cancelar := context.WithTimeout(context.Background(), 2*time.Second)
+	return &Cliente{Base: d.Base, Descriptor: d, token: strings.TrimSpace(string(token)), http: &http.Client{}}, nil
+}
+
+// DetenerAnterior detiene el servicio de una versión anterior que responde en el puerto del descriptor y espera a que
+// termine, como «tramtai servicio detener» de esa versión: deja terminar las peticiones en curso hasta su plazo de
+// drenaje. Ese servicio no prueba que conoce el token, así que el token solo sale si el proceso que escucha en el
+// puerto es de este mismo usuario del sistema; si no se puede comprobar, el error dice cómo detenerlo a mano.
+func DetenerAnterior(datos string) error {
+	c, err := clienteDe(datos)
+	if err != nil {
+		return err
+	}
+	ctx, cancelar := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelar()
-	reto := rand.Text()
-	var salud struct {
-		Prueba string `json:"prueba"`
+	responde, propio := c.anterior(ctx)
+	if !responde {
+		return nil // ya no está
 	}
-	if err := c.pedir(ctx, "GET", "/healthz?reto="+reto, "", nil, "", &salud); err != nil ||
-		!hmac.Equal([]byte(salud.Prueba), []byte(contrato.PruebaIdentidad(c.token, reto))) {
-		return nil, ErrServicioInactivo
+	if !propio {
+		return fmt.Errorf("%w (PID %d): %s", ErrServicioAnterior, c.Descriptor.PID,
+			idioma.T("no se pudo comprobar que sea de este usuario; detenlo con «tramtai servicio detener» de esa versión o termina ese proceso, y vuelve a intentarlo"))
 	}
-	return c, nil
+	if err := c.Detener(ctx); err != nil {
+		return err
+	}
+	for limite := time.Now().Add(PlazoDrenaje() + 15*time.Second); time.Now().Before(limite); {
+		if responde, _ := c.anterior(ctx); !responde {
+			return nil
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	return errors.New(idioma.T("el servicio de la versión anterior no confirmó la detención"))
+}
+
+// anterior consulta /healthz como la versión anterior: responde dice que en el puerto está, sin reto, el servicio del
+// descriptor; propio, que el proceso que escucha es de este usuario, comprobado sobre la misma conexión.
+func (c *Cliente) anterior(ctx context.Context) (responde, propio bool) {
+	ctx, cancelar := context.WithTimeout(ctx, 2*time.Second)
+	defer cancelar()
+	traza := &httptrace.ClientTrace{GotConn: func(i httptrace.GotConnInfo) {
+		local, err1 := netip.ParseAddrPort(i.Conn.LocalAddr().String())
+		remoto, err2 := netip.ParseAddrPort(i.Conn.RemoteAddr().String())
+		// El extremo del servidor: su dirección local es la remota de esta conexión.
+		propio = err1 == nil && err2 == nil && duenoPropio(netip.AddrPortFrom(remoto.Addr().Unmap(), remoto.Port()),
+			netip.AddrPortFrom(local.Addr().Unmap(), local.Port()))
+	}}
+	var s salud
+	err := c.pedir(httptrace.WithClientTrace(ctx, traza), "GET", "/healthz", "", nil, "", &s)
+	return err == nil && s.Prueba == "" && s.Servicio != "" && s.Servicio == c.Descriptor.Identificador, propio
+}
+
+// PlazoDrenaje es servicio.plazo_drenaje_segundos de la configuración global: lo que el servicio espera a las
+// peticiones en curso al detenerse (30 s si no se puede leer).
+func PlazoDrenaje() time.Duration {
+	if c, err := configuracion.CargarConfiguracion("", configuracion.Capa{Origen: configuracion.OrigenInterno}); err == nil {
+		return time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second
+	}
+	return 30 * time.Second
 }
 
 // Lanzar inicia "<ejecutable> <args>" desacoplado de la terminal, sin esperar. Su salida va a
@@ -91,8 +179,15 @@ func Lanzar(ejecutable, datos string, args ...string) error {
 }
 
 // IniciarEnSegundoPlano lanza "<ejecutable> servicio iniciar" desacoplado de la terminal y espera a que responda.
-// El servicio escribe su registro en servicio.log, con tamaño máximo y copias.
+// El servicio escribe su registro en servicio.log, con tamaño máximo y copias. Si responde el servicio de una versión
+// anterior (tras actualizar), primero lo detiene: no toma el cerrojo de la carpeta de datos y el nuevo arrancaría
+// sobre sus peticiones.
 func IniciarEnSegundoPlano(ejecutable, datos string) (*Cliente, error) {
+	if _, err := Conectar(datos); errors.Is(err, ErrServicioAnterior) {
+		if err := DetenerAnterior(datos); err != nil {
+			return nil, err
+		}
+	}
 	rutaRegistro := filepath.Join(datos, "servicio.log")
 	if err := Lanzar(ejecutable, datos, "servicio", "iniciar", "--registro", rutaRegistro); err != nil {
 		return nil, err

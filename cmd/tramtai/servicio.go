@@ -52,12 +52,16 @@ func asegurarServicio(cmd *cobra.Command) (*cliente.Cliente, error) {
 	if err != nil {
 		return nil, err
 	}
-	if c, err := cliente.Conectar(datos); err == nil {
+	c, err := cliente.Conectar(datos)
+	if err == nil {
 		return c, nil
 	}
-	ejecutable, err := os.Executable()
-	if err != nil {
-		return nil, err
+	ejecutable, errEjecutable := os.Executable()
+	if errEjecutable != nil {
+		return nil, errEjecutable
+	}
+	if errors.Is(err, cliente.ErrServicioAnterior) {
+		fmt.Fprintln(cmd.ErrOrStderr(), idioma.T("deteniendo el servicio de la versión anterior (deja terminar las peticiones en curso)…"))
 	}
 	fmt.Fprintln(cmd.ErrOrStderr(), idioma.T("iniciando el servicio en segundo plano…"))
 	return cliente.IniciarEnSegundoPlano(ejecutable, datos)
@@ -78,7 +82,7 @@ func esperarCierreServicio() {
 		return
 	}
 	for range 600 {
-		if _, err := cliente.Conectar(datos); err != nil {
+		if _, err := cliente.Conectar(datos); err != nil && !errors.Is(err, cliente.ErrServicioAnterior) {
 			return
 		}
 		time.Sleep(200 * time.Millisecond)
@@ -177,6 +181,20 @@ func comandoServicio() *cobra.Command {
 	detener := &cobra.Command{Use: "detener", Short: idioma.T("Detiene el servicio y todos sus espacios"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := conectar()
+			if errors.Is(err, cliente.ErrServicioAnterior) { // tras actualizar, también el de la versión anterior
+				if !si && !confirmar(cmd, idioma.T("¿Detener el servicio y todos sus espacios?")) {
+					return nil
+				}
+				datos, err := carpetas.DirDatos()
+				if err == nil {
+					err = cliente.DetenerAnterior(datos)
+				}
+				if err != nil {
+					return err
+				}
+				fmt.Fprintln(cmd.OutOrStdout(), idioma.T("servicio detenido"))
+				return nil
+			}
 			if err != nil {
 				return err
 			}
@@ -363,8 +381,15 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	if err != nil {
 		return err
 	}
-	if activo, err := cliente.Conectar(datos); err == nil {
+	activo, err := cliente.Conectar(datos)
+	if err == nil {
 		return fmt.Errorf(idioma.T("el servicio ya está en marcha en %s"), activo.Base)
+	}
+	if errors.Is(err, cliente.ErrServicioAnterior) { // no toma el cerrojo: se detiene antes de abrir sus datos
+		fmt.Fprintln(salida, idioma.T("deteniendo el servicio de la versión anterior (deja terminar las peticiones en curso)…"))
+		if err := cliente.DetenerAnterior(datos); err != nil {
+			return err
+		}
 	}
 	espera := time.Duration(0)
 	if esperarCierre {

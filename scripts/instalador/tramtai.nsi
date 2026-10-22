@@ -217,6 +217,17 @@ FunctionEnd
     nsExec::Exec '"${CLI}" instalacion cerrar "$INSTDIR" tramtai-escritorio.exe'
     Pop $3
   ${EndIf}
+  ; Al actualizar, primero la CLI de la instalación anterior: habla el protocolo de su servicio y lo detiene drenando.
+  ; Después la nueva, que detiene también un servicio de otra copia (y el de una versión anterior, si es de este
+  ; usuario). Cerrar el proceso más abajo queda como último recurso.
+  ${If} "${CLI}" != "$INSTDIR\tramtai.exe"
+  ${AndIf} ${FileExists} "$INSTDIR\tramtai.exe"
+    nsExec::Exec '"$INSTDIR\tramtai.exe" servicio detener --si'
+    Pop $3
+    ${If} $3 == 0
+      StrCpy $servicio 1
+    ${EndIf}
+  ${EndIf}
   nsExec::Exec '"${CLI}" servicio detener --si'
   Pop $3
   ${If} $3 == 0

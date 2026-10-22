@@ -205,8 +205,13 @@ func (s *Servicio) enrutar(w http.ResponseWriter, r *http.Request) {
 	ruta := r.URL.Path
 	switch {
 	case ruta == "/healthz":
-		// Sin el identificador, que está en el descriptor: el cliente prueba la identidad con el reto (contrato.PruebaIdentidad).
+		// El cliente prueba la identidad con el reto (contrato.PruebaIdentidad). El identificador solo lo usa la CLI de
+		// la versión anterior para reconocer y detener este servicio: va solo al mismo usuario, que ya lo lee en
+		// servicio.json, para que otro no lo aprenda y se haga pasar por el servicio ante esa CLI (hallazgo 2).
 		salud := map[string]any{"estado": "ok", "version": version.Version}
+		if mismoUsuarioLocal(r) {
+			salud["servicio"] = s.ID
+		}
 		if reto := r.URL.Query().Get("reto"); reto != "" && len(reto) <= 128 {
 			salud["prueba"] = contrato.PruebaIdentidad(s.tokenAdmin, reto)
 		}

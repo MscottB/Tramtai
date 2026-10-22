@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"sync/atomic"
@@ -21,6 +24,7 @@ import (
 	"tramtai/internal/contrato"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/planificador"
+	"tramtai/internal/procesos"
 	"tramtai/internal/servicio"
 )
 
@@ -720,5 +724,81 @@ func TestImpostorNoRecibeElToken(t *testing.T) {
 	}
 	if conToken.Load() {
 		t.Fatal("el token de servicio salió hacia el impostor")
+	}
+}
+
+// servicioAnterior simula un servicio 0.55 con la forma exacta de su /healthz (sin reto ni prueba) y su ruta de
+// detener. Devuelve la carpeta de datos, si llegó el token y si se pidió detener.
+func servicioAnterior(t *testing.T) (datos string, conToken, detenido *atomic.Bool) {
+	datos = t.TempDir()
+	const id = "servicio_anterior"
+	conToken, detenido = &atomic.Bool{}, &atomic.Bool{}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "" {
+			conToken.Store(true)
+		}
+		switch {
+		case r.URL.Path == "/healthz" && !detenido.Load():
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintf(w, `{"estado":"ok","servicio":%q,"version":"0.55.0+21102026"}`+"\n", id)
+		case r.Method == "POST" && r.URL.Path == "/api/v1/servicio/detener" && r.Header.Get("Authorization") == "Bearer "+strings.Repeat("s", 43):
+			detenido.Store(true)
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(ts.Close)
+	d, _ := json.Marshal(contrato.Descriptor{Identificador: id, PID: 4242, Base: ts.URL})
+	os.WriteFile(contrato.RutaDescriptor(datos), d, 0o600)
+	os.WriteFile(filepath.Join(datos, "token-servicio"), []byte(strings.Repeat("s", 43)), 0o600)
+	return datos, conToken, detenido
+}
+
+// Un servicio de la versión anterior no es un impostor ni un servicio inactivo: Conectar lo distingue y no le manda
+// el token, porque no puede probar que lo conoce.
+func TestConectarDistingueElServicioAnterior(t *testing.T) {
+	datos, conToken, _ := servicioAnterior(t)
+	if _, err := Conectar(datos); !errors.Is(err, ErrServicioAnterior) {
+		t.Fatalf("esperaba ErrServicioAnterior: %v", err)
+	}
+	if conToken.Load() {
+		t.Fatal("el token salió hacia un servicio que no probó su identidad")
+	}
+}
+
+// Si no se puede comprobar que el servicio anterior es de este usuario, no se le manda el token, no se lanza otro
+// servicio sobre los mismos datos y el error dice cómo detenerlo a mano.
+func TestNoLanzaOtroServicioSobreElAnterior(t *testing.T) {
+	datos, conToken, detenido := servicioAnterior(t)
+	duenoPropio = func(netip.AddrPort, netip.AddrPort) bool { return false }
+	t.Cleanup(func() { duenoPropio = procesos.MismoUsuario })
+	_, err := IniciarEnSegundoPlano(os.Args[0], datos)
+	if !errors.Is(err, ErrServicioAnterior) || !strings.Contains(err.Error(), "4242") {
+		t.Fatalf("esperaba ErrServicioAnterior con el PID: %v", err)
+	}
+	if conToken.Load() || detenido.Load() {
+		t.Fatal("sin comprobar al dueño no se manda el token")
+	}
+	if _, err := os.Stat(filepath.Join(datos, "servicio-salida.log")); err == nil {
+		t.Fatal("se lanzó un segundo servicio sobre los mismos datos")
+	}
+}
+
+// Con el servicio anterior del mismo usuario, DetenerAnterior le pide detenerse con su protocolo y espera a que deje
+// de responder (drena sus trabajos).
+func TestDetenerElServicioAnterior(t *testing.T) {
+	if runtime.GOOS != "windows" && runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+		t.Skip("sin identificación del dueño de la conexión en este sistema")
+	}
+	datos, _, detenido := servicioAnterior(t)
+	if err := DetenerAnterior(datos); err != nil {
+		t.Fatal(err)
+	}
+	if !detenido.Load() {
+		t.Fatal("no se pidió detener el servicio anterior")
+	}
+	if _, err := Conectar(datos); !errors.Is(err, ErrServicioInactivo) {
+		t.Fatalf("tras detenerlo no queda servicio: %v", err)
 	}
 }
