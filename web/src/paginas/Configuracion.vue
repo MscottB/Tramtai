@@ -279,13 +279,13 @@ async function volverAGlobal(claves: string[]) {
 // Historial: plazos y tope de la retención; el registro se edita en días y se guarda en horas.
 const retencion = reactive({ horas_resultado: 24, max_trabajos: 10000 })
 const diasRegistro = ref(7)
-const usoHistorial = ref<{ peticiones: string; mb: string }>()
+const usoHistorial = ref<{ n: number; peticiones: string; mb: string }>()
 const guardandoRetencion = ref(false)
 async function leerRetencion() {
   const r = await api.retencion()
   Object.assign(retencion, { horas_resultado: r.horas_resultado, max_trabajos: r.max_trabajos })
   diasRegistro.value = Math.round((r.horas_metadatos / 24) * 100) / 100 // 30 h son 1,25 días; al guardar vuelven a 30 h
-  usoHistorial.value = { peticiones: r.uso.trabajos.toLocaleString(idioma.value), mb: (r.uso.bytes / 1048576).toLocaleString(idioma.value, { maximumFractionDigits: 1 }) }
+  usoHistorial.value = { n: r.uso.trabajos, peticiones: r.uso.trabajos.toLocaleString(idioma.value), mb: (r.uso.bytes / 1048576).toLocaleString(idioma.value, { maximumFractionDigits: 1 }) }
 }
 async function guardarRetencion() {
   guardandoRetencion.value = true

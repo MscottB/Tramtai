@@ -565,6 +565,7 @@ const en: Textos = {
   'historialAjustes.maximo': 'Maximum requests kept',
   'historialAjustes.maximoHint': 'Between 100 and 100,000; beyond it the oldest are deleted.',
   'historialAjustes.uso': 'Now: {peticiones} requests · {mb} MB',
+  'historialAjustes.usoUno': 'Now: 1 request · {mb} MB',
   'historialAjustes.guardado': 'History saved',
   'puntos.usoErrores': '{n} with errors',
   'puntos.usoUltima': 'last {cuando}',

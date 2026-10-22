@@ -567,6 +567,7 @@ const es = {
   'historialAjustes.maximo': 'Máximo de peticiones guardadas',
   'historialAjustes.maximoHint': 'Entre 100 y 100 000; al pasarlo se borran las más antiguas.',
   'historialAjustes.uso': 'Ahora: {peticiones} peticiones · {mb} MB',
+  'historialAjustes.usoUno': 'Ahora: 1 petición · {mb} MB',
   'historialAjustes.guardado': 'Historial guardado',
   'puntos.usoErrores': '{n} con error',
   'puntos.usoUltima': 'última {cuando}',
