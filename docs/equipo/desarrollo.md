@@ -34,6 +34,10 @@ npm run build    # comprueba los tipos (vue-tsc, también los .vue) y compila en
 
 La compilación de la Web UI se versiona para que `go build` no necesite Node.
 
+**Entorno.** Se trabaja con Node 26, la misma versión que el CI, que toma siempre su último parche (`check-latest`). En
+Linux, el CI guarda en caché los paquetes de GTK 4 y WebKitGTK 6.0 por arquitectura (`.github/actions/gtk`), con
+reintentos de apt, y cada job tiene un tope de tiempo.
+
 **Tipos de la API.** Los tipos TypeScript de lo que el servicio envía y recibe (`web/src/api/tipos.gen.ts`) se
 generan desde los structs de Go con `go generate ./internal/contrato` (`internal/contrato/gents`); `web/src/api/tipos.ts`
 los reexporta y solo escribe a mano los de las rutas `/ui` de la sesión. Si cambias un tipo del contrato, regenera y sube
@@ -60,6 +64,11 @@ La CLI, la terminal interactiva, la app de escritorio y los mensajes de error de
 página del sitio al día y el código con buenas prácticas (archivos acotados, nombres claros, pruebas, sin duplicar).
 Va en la spec y el plan de cada release, no para después.
 
+**Regla de la terminal:** cada función nueva llega también a la terminal (`tramtai terminal`), con los mismos nombres y
+textos que la Web UI, su tecla en el pie y su línea «En la terminal: …» en el tema de Ayuda. Si algo no cabe en texto
+(una captura, un diagrama), la terminal lleva a la web; nunca se queda sin decir cómo se hace. Cómo añadir una página
+está en [Terminal: cómo añadir una página](#terminal-cómo-añadir-una-página).
+
 La Ayuda es **una sola fuente** en `web/src/ayuda/`: cada tema (`temas/<id>.ts`) es una lista de bloques de tipos
 fijos (`diagrama`, `pasos`, `captura`, `ejemplo`, `tabla`, `preguntas`, `errores`, `nota`, `ir`, `descargas`, en
 `tipos.ts`) y sus textos van por clave en `idiomas/ayuda.es.ts` y `ayuda.en.ts`. La app los dibuja con
@@ -67,8 +76,12 @@ fijos (`diagrama`, `pasos`, `captura`, `ejemplo`, `tabla`, `preguntas`, `errores
 desde los mismos datos.
 
 - **Añadir un tema:** su archivo en `temas/`, su lugar en `indice.ts` (y `paginaApp` si es el de una página) y sus
-  textos en los dos idiomas. **Añadir un tipo de bloque:** en `tipos.ts`, su componente `Bloque<Tipo>.vue`, su HTML en
-  `web/scripts/sitio.ts` y, si tiene texto, en `buscar.ts` (`campos`).
+  textos en los dos idiomas, también su línea `terminal` («En la terminal: …», con sus teclas). **Añadir un tipo de
+  bloque:** en `tipos.ts`, su componente `Bloque<Tipo>.vue`, su HTML en `web/scripts/sitio.ts`, su forma para la
+  terminal en `web/scripts/terminal-datos.ts` (`bloqueDe`) y en `internal/tui/paginas/ayuda/vista.go`, y, si tiene texto,
+  en `buscar.ts` (`campos`) y en `campos` de `internal/tui/paginas/ayuda/pagina.go`.
+- **Una sección con título:** un bloque `pasos` con `titulo` abre su propia sección (en el sitio, su h2 con el id
+  `s-<última parte de la clave>`), como «Solo con la terminal» en Empezar.
 - **La regla del estilo es una prueba** (`estilo.test.ts`): resumen de una línea (140 caracteres), pasos, notas y
   respuestas de 200 como máximo, diagrama donde hay un recorrido, un tema por página de la app, anclas únicas y ningún
   texto sin usar. `capturas.test.ts` exige las cuatro variantes de cada captura, ninguna huérfana y 5 MB en total (las de los pasos de los recorridos, `recorrido-<ancla>`, incluidas).
@@ -143,6 +156,32 @@ la página pide, la prueba cambia la versión, el espacio o el contexto, y `Solt
 la página: el sondeo y las reconexiones esperan a `Pasar`. Lo único que una prueba cambia por dentro está en el
 `export_test.go` de la página: el reloj y de dónde lee los eventos. Dentro del paquete solo quedan las pruebas de
 funciones puras y las que pintan estados que el servicio de prueba no da (un conversor con error de red, por ejemplo).
+
+### Terminal: cómo añadir una página
+
+Cada página vive en `internal/tui/paginas/<página>` y no importa `internal/tui` ni otras páginas: habla con la app por
+los mensajes de `internal/tui/pagina` (`IrA`, `Volver`, `CambioEspacio`, `ErrorServicio`…).
+
+1. **La interfaz `pagina.Pagina`:** `Titulo`, `Iniciar(pagina.Contexto)` (carga sus datos con `Contexto.Cli`, el
+   cliente con la clave de servicio, y nunca por `/ui/*`), `Update`, `Vista` (como mucho `Ancho`×`Alto`), `Teclas` (las
+   del pie, además de las comunes), `EnCampo` (con un campo enfocado no valen las teclas comunes ni la `q`) y `Ayuda`
+   (el `paginaApp` de su tema). Si tiene algo en vivo, `pagina.Ocultable`; si se puede perder algo al salir,
+   `pagina.Pendiente`. Cada respuesta lleva su `pagina.Origen` y se descarta si ya no es `Vigente`.
+2. **Registrarla:** su clave en `internal/tui/pagina` (la de la Web UI), su `Nueva` en `fabricas` de
+   `internal/tui/app.go` y su lugar en `gruposMenu` de `internal/tui/menu.go`, en el orden de `web/src/menu.ts`
+   (`TestTodasRegistradas` y `TestMenuComoLaWeb` lo comprueban).
+3. **Los textos:**
+   - los que también tiene la Web UI se toman de ella con `datos.Texto` y `datos.Textof`: la clave va en su lista
+     `CLAVES_<PÁGINA>` de `web/scripts/terminal-datos.ts` y `npm run sitio` regenera `internal/tui/datos`;
+   - los propios de la terminal van con `idioma.T`/`Tf` y un literal, y su inglés en
+     `internal/idioma/en_terminal.go` (`TestCobertura`).
+4. **La Ayuda:** la línea `terminal` del tema de la página dice cómo se hace allí, con sus teclas; el `?` la abre con
+   todas las teclas de la página.
+5. **Las pruebas** (caja negra, `package <página>_test`): `cli, inst := prueba.Servicio(t)` levanta el servicio real en
+   `httptest`; `a := prueba.Abrir(t, pagina.Nueva("es"), prueba.Contexto(t, cli, inst))` la abre y espera su carga
+   (`a.EsperarCarga()` si algo llega más tarde); `a.Pulsar`, `a.Escribir`, `a.Pegar` y `a.HastaVer("…")` la recorren.
+   Prueba también la ventana de 60×20, el servicio caído a mitad (avisa y `r` reintenta, nada se cierra) y
+   `TRAMTAI_ASCII=1`.
 
 ### Herramientas con los agentes reales
 

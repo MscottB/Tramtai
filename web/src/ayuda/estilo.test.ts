@@ -19,7 +19,7 @@ function cortas(b: Bloque): string[] {
     case 'diagrama':
       return [...b.paradas.flatMap((p) => [p.titulo, ...(p.nota ? [p.nota] : [])]), ...(b.ramas ?? []).map((r) => r.etiqueta)]
     case 'pasos':
-      return b.pasos
+      return [...(b.titulo ? [b.titulo] : []), ...b.pasos]
     case 'captura':
       return [b.alt]
     case 'tabla':
@@ -55,6 +55,18 @@ test('cada tema dice cómo se hace en la terminal, en una línea corta y en los 
     }
 })
 
+// v0.56: Empezar dice cómo usar Tramtai solo con la terminal, en su propia sección y con los dos comandos.
+test('Empezar tiene la sección «Solo con la terminal» con el servicio en segundo plano y tramtai terminal', () => {
+  const seccion = temaPorId('empezar')?.bloques.find((b) => b.tipo === 'pasos' && b.titulo)
+  assert.ok(seccion?.tipo === 'pasos' && seccion.titulo, 'falta la sección')
+  assert.equal(es[seccion.titulo], 'Solo con la terminal')
+  assert.equal(en[seccion.titulo], 'Terminal only')
+  for (const textos of [es, en] as Record<string, string>[]) {
+    const pasos = seccion.pasos.map((p) => textos[p]).join(' ')
+    for (const orden of ['tramtai servicio iniciar -d', 'tramtai terminal', 'SSH', 'NO_COLOR', 'TRAMTAI_ASCII']) assert.ok(pasos.includes(orden), orden)
+  }
+})
+
 test('pasos, notas, paradas y respuestas caben en 200 caracteres en los dos idiomas', () => {
   for (const tema of temas)
     for (const bloque of tema.bloques)
@@ -65,9 +77,10 @@ test('pasos, notas, paradas y respuestas caben en 200 caracteres en los dos idio
         }
 })
 
-test('los títulos de los pasos de un recorrido caben en 60 caracteres en los dos idiomas', () => {
+test('los títulos de los pasos de un recorrido y de las secciones de pasos caben en 60 caracteres en los dos idiomas', () => {
   const titulos = [
     ...temas.flatMap((t) => t.bloques.flatMap((b) => (b.tipo === 'recorrido' ? b.pasos.map((p) => p.titulo) : []))),
+    ...temas.flatMap((t) => t.bloques.flatMap((b) => (b.tipo === 'pasos' && b.titulo ? [b.titulo] : []))),
     'recorrido.finTitulo' as const,
   ]
   for (const clave of titulos)

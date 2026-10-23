@@ -6,7 +6,7 @@
       "pagina": "inicio",
       "resumen": "Tramtai pone tus agentes de IA detrás de una API en tu equipo: instálalo, conecta un agente y prueba.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/empezar.html",
-      "terminal": "En la terminal: del 1 al 7 vas a cada página; ? abre la ayuda de la que tienes delante y Esc vuelve. Ctrl+E cambia de espacio y q sale.",
+      "terminal": "En la terminal: Tab abre el menú y del 1 al 7 vas a cada página; ? abre la ayuda de la que tienes delante y Esc vuelve. Ctrl+E cambia de espacio y q sale.",
       "bloques": [
         {
           "tipo": "web",
@@ -30,6 +30,16 @@
             "En Agentes, conecta un agente con tu suscripción (uso personal) o con una clave de API.",
             "En Probar, escribe un mensaje, elige agente y modelo y mira la respuesta en vivo.",
             "En Mis APIs copia la URL y la clave y ponlas en tu app (tema «Conectar mi app»)."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "titulo": "Solo con la terminal",
+          "lineas": [
+            "Inicia el servicio en segundo plano con «tramtai servicio iniciar -d»: atiende a tus apps sin abrir la app, aunque cierres la terminal.",
+            "Abre «tramtai terminal» (o «tramtai» a secas): tiene las mismas páginas que la app, de Inicio a la Ayuda. Si el servicio no está en marcha, r lo inicia.",
+            "Tab abre el menú y del 1 al 7 vas a cada página. ? abre su ayuda, Esc vuelve y q sale. En Probar, c cancela la petición en curso.",
+            "Por SSH al equipo donde corre Tramtai, «tramtai terminal» funciona igual. Necesita al menos 60×20; con NO_COLOR va sin color y con TRAMTAI_ASCII=1, sin caracteres de dibujo."
           ]
         },
         {
@@ -83,7 +93,7 @@
             ],
             [
               "¿Puedo usar solo la terminal?",
-              "Sí: «brew install mscottb/tramtai/tramtai» o el script instalar.sh dejan la CLI y el servicio; «tramtai abrir» lo inicia y abre la Web UI."
+              "Sí: mira «Solo con la terminal», más arriba. Sin la app de escritorio, «brew install mscottb/tramtai/tramtai» o el script instalar.sh dejan la CLI y el servicio."
             ]
           ]
         },
@@ -192,7 +202,7 @@
       "pagina": "ejecutar",
       "resumen": "Escribe un mensaje, elige agente, modelo y esfuerzo, y mira la respuesta antes de llevarla a tu app.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/probar.html",
-      "terminal": "En la terminal: 3 abre Probar. Enter edita un campo de la receta, Ctrl+S envía el mensaje, k enseña el código y g guarda la prueba como API.",
+      "terminal": "En la terminal: 3 abre Probar. Enter edita un campo de la receta, Ctrl+S envía el mensaje y c cancela la petición; k enseña el código y g guarda la prueba como API.",
       "bloques": [
         {
           "tipo": "web",
@@ -725,7 +735,7 @@
         {
           "tipo": "pasos",
           "lineas": [
-            "Filtra por estado, origen o grupo, o busca por texto.",
+            "Filtra por estado, origen o grupo, o busca por texto en todo el historial.",
             "Abre una petición para ver la respuesta y su «Registro», con cada paso y su hora.",
             "Si falló, corrige la causa y pulsa «Reintentar»."
           ]
@@ -971,6 +981,10 @@
               "Solo en este equipo: %APPDATA%\\tramtai (Windows), ~/Library/Application Support/tramtai (macOS) o ~/.config/tramtai (Linux); la portable, en «datos-tramtai»."
             ],
             [
+              "¿Puedo volver a una versión anterior?",
+              "Si ya abriste la v0.56, la v0.55 o una anterior no abre tus espacios: dice que la base de datos no es compatible. No se borra nada; con la v0.56 o una posterior todo sigue ahí."
+            ],
+            [
               "¿Cuánto tiempo se guardan?",
               "Las respuestas, 24 horas; el resto del historial, 7 días, hasta 10 000 peticiones. Se cambia en Ajustes → Historial, donde también puedes borrarlo."
             ],
@@ -1209,7 +1223,7 @@
       "pagina": "inicio",
       "resumen": "Tramtai puts your AI agents behind an API on your computer: install it, connect an agent and try it.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/empezar.html",
-      "terminal": "In the terminal: 1 to 7 go to each page; ? opens the help for the page in front of you and Esc goes back. Ctrl+E switches workspace and q quits.",
+      "terminal": "In the terminal: Tab opens the menu and 1 to 7 go to each page; ? opens the help for the page in front of you and Esc goes back. Ctrl+E switches workspace and q quits.",
       "bloques": [
         {
           "tipo": "web",
@@ -1233,6 +1247,16 @@
             "In Agents, connect an agent with your subscription (personal use) or with an API key.",
             "In the Playground, type a message, pick agent and model and watch the response live.",
             "In My APIs copy the URL and the key and put them in your app (topic “Connect my app”)."
+          ]
+        },
+        {
+          "tipo": "pasos",
+          "titulo": "Terminal only",
+          "lineas": [
+            "Start the service in the background with “tramtai servicio iniciar -d”: it serves your apps without opening the app, even after you close the terminal.",
+            "Open “tramtai terminal” (or just “tramtai”): it has the same pages as the app, from Home to Help. If the service is not running, r starts it.",
+            "Tab opens the menu and 1 to 7 go to each page. ? opens its help, Esc goes back and q quits. In the Playground, c cancels the running request.",
+            "Over SSH to the computer where Tramtai runs, “tramtai terminal” works the same. It needs at least 60×20; NO_COLOR turns color off and TRAMTAI_ASCII=1 drops the box-drawing characters."
           ]
         },
         {
@@ -1286,7 +1310,7 @@
             ],
             [
               "Can I use only the terminal?",
-              "Yes: “brew install mscottb/tramtai/tramtai” or the instalar.sh script install the CLI and the service; “tramtai abrir” starts it and opens the Web UI."
+              "Yes: see “Terminal only” above. Without the desktop app, “brew install mscottb/tramtai/tramtai” or the instalar.sh script install the CLI and the service."
             ]
           ]
         },
@@ -1395,7 +1419,7 @@
       "pagina": "ejecutar",
       "resumen": "Type a message, pick agent, model and effort, and see the response before taking it to your app.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/probar.html",
-      "terminal": "In the terminal: 3 opens the Playground. Enter edits a recipe field, Ctrl+S sends the message, k shows the code and g saves the test as an API.",
+      "terminal": "In the terminal: 3 opens the Playground. Enter edits a recipe field, Ctrl+S sends the message and c cancels the request; k shows the code and g saves the test as an API.",
       "bloques": [
         {
           "tipo": "web",
@@ -1928,7 +1952,7 @@
         {
           "tipo": "pasos",
           "lineas": [
-            "Filter by status, origin or group, or search by text.",
+            "Filter by status, origin or group, or search by text across the whole history.",
             "Open a request to see the response and its “Log”, with every step and its time.",
             "If it failed, fix the cause and click “Retry”."
           ]
@@ -2172,6 +2196,10 @@
             [
               "Where is my data kept?",
               "Only on this computer: %APPDATA%\\tramtai (Windows), ~/Library/Application Support/tramtai (macOS) or ~/.config/tramtai (Linux); the portable, in “datos-tramtai”."
+            ],
+            [
+              "Can I go back to an earlier version?",
+              "Once you’ve run v0.56, v0.55 or earlier won’t open your workspaces: it says the database isn’t supported. Nothing is deleted; with v0.56 or later everything is still there."
             ],
             [
               "How long is it kept?",

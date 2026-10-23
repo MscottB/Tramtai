@@ -136,3 +136,39 @@ curl -s "$TRAMTAI_URL/api/v1/openapi.json" -H "Authorization: Bearer $TRAMTAI_CL
 
 `GET /api/v1/limites` da los topes de una petición (archivos, tamaños, mensajes) y los formatos admitidos, para que tu
 app los conozca antes de enviar. Ejemplo: [curl](ejemplos/curl/limites.sh).
+
+## Administrar desde la terminal
+
+`tramtai terminal` (o `tramtai` a secas) tiene las mismas páginas que la app: Inicio, Agentes, Probar, Mis APIs,
+Historial, Espacios, Ajustes (con las novedades y Acerca de) y Ayuda. Habla con el servicio por su API de
+administración, así que no necesita la app abierta. En un servidor o en otro equipo, entra por SSH al equipo donde corre
+Tramtai y ábrela allí: el servicio sigue escuchando solo en `127.0.0.1`.
+
+```sh
+ssh tu-usuario@tu-equipo
+tramtai servicio iniciar -d   # el servicio en segundo plano, sin la app
+tramtai terminal
+```
+
+| Tecla | Qué hace |
+|---|---|
+| Tab | Abre el menú (por debajo de 100 columnas está plegado). |
+| 1 a 7 | Va a esa página del menú. |
+| ? | La Ayuda de la página, con todas sus teclas. |
+| / | Busca: en Mis APIs, el Historial, Ajustes y la Ayuda. |
+| Esc | Vuelve o cierra. |
+| Ctrl+E | Cambia de espacio. |
+| r | Si el servicio no responde, reintenta (y lo inicia si está detenido). |
+| c | Cancela la petición en curso, en Probar y en el Historial. |
+| ! | Enseña entero el último error, o cómo detener a mano el servicio de la versión anterior. |
+| u | Abre las novedades de la versión nueva, si la hay. En Probar, sobre una prueba reciente, es «Usar de nuevo». |
+| q | Sale; si hay algo en marcha o sin guardar, pregunta antes. |
+
+Lo que borra pide confirmación con `s` (`y` en inglés); Enter no confirma. Necesita una ventana de 60×20 como mínimo.
+Con `NO_COLOR` va sin color, con `TRAMTAI_ASCII=1` sin caracteres de dibujo y con `TRAMTAI_IDIOMA=en` en inglés. La
+[guía de operación](operacion.md#la-terminal-interactiva) tiene el resto.
+
+**In English.** `tramtai terminal` has the app’s pages (Home to Help) and doesn’t need the app open; over SSH, open it
+on the computer where Tramtai runs. Tab opens the menu, 1 to 7 go to each page, `?` opens the page’s Help, Esc goes
+back, `r` retries when the service doesn’t respond and `q` quits; in the Playground, `c` cancels a running request. The
+[product page](https://mscottb.github.io/Tramtai/desarrolladores.html#terminal) has this section in English.

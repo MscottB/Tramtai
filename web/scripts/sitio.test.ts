@@ -74,6 +74,21 @@ const leer = (archivo: string) => readFileSync(new URL('../../site/' + archivo, 
 const fijas = new Map(PAGINAS_FIJAS.map((p) => [p.archivo, leer(p.archivo)]))
 const todas = new Map([...fijas, ...[...paginas].filter(([r]) => r.endsWith('.html') && r !== 'ayuda.html')])
 
+// Un #ancla interno lleva a un id que existe en su página: así no se rompe sin avisar el de la portada a
+// ayuda/empezar.html#s-soloterminal, que sale de la clave de la sección (sitio.ts).
+test('cada #ancla interno de la portada, la guía y la Ayuda lleva a un id que existe', () => {
+  for (const [ruta, html] of todas)
+    for (const [, href, ancla] of html.matchAll(/href="([^"#]*)#([^"]+)"/g)) {
+      if (/^(https?:|mailto:)/.test(href)) continue
+      const base = ruta.includes('/') ? 'ayuda/' : ''
+      const destino = href ? new URL(href, 'http://x/' + base).pathname.slice(1) : ruta
+      const pagina = todas.get(!destino || destino.endsWith('/') ? destino + 'index.html' : destino)
+      assert.ok(pagina, `${ruta}: ${href}#${ancla} lleva a una página que no se comprueba`)
+      assert.ok(pagina.includes(`id="${ancla}"`), `${ruta}: falta id="${ancla}" en ${destino || ruta}`)
+    }
+  assert.match(todas.get('ayuda/empezar.html')!, /<section id="s-soloterminal"><h2><span lang="es">Solo con la terminal<\/span><span lang="en">Terminal only<\/span><\/h2>/)
+})
+
 test('la portada y la guía tienen al día la cabeza, la barra y el pie de sitio.ts', () => {
   for (const p of PAGINAS_FIJAS) assert.equal(rellenar(fijas.get(p.archivo)!, p), fijas.get(p.archivo), `${p.archivo}: cd web; npm run sitio`)
 })

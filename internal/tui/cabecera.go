@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strings"
 	"time"
@@ -64,6 +65,8 @@ func (m *modelo) conectar(arrancar, reiniciar, latido bool) tea.Cmd {
 			if r2 := leer(c); r2.err == nil {
 				return r2
 			}
+		} else if errors.Is(err, cliente.ErrServicioAnterior) {
+			r.err = err // no es que no responda: la línea de estado dice que r lo detiene
 		}
 		if iniciar != nil {
 			c, err := iniciar()
@@ -183,11 +186,19 @@ func (m *modelo) vistaEstado() string {
 	switch {
 	case m.caido != nil && m.conectando:
 		return e.Tenue.Render(idioma.T("Conectando con el servicio…"))
+	case m.caido == cliente.ErrServicioAnterior:
+		return e.Error.Render(idioma.T("Sigue en marcha el servicio de una versión anterior · r lo detiene y arranca el nuevo"))
+	case m.anterior():
+		return e.Error.Render(idioma.T("No se pudo detener el servicio de la versión anterior · ! dice cómo"))
 	case m.caido != nil:
 		return e.Error.Render(idioma.T("El servicio no responde · r reintenta"))
 	}
 	return m.avisos.Vista(e)
 }
+
+// anterior dice si el servicio que responde es el de una versión anterior (sin detener todavía o porque no se pudo):
+// ! enseña su mensaje entero, que dice cómo detenerlo a mano.
+func (m *modelo) anterior() bool { return errors.Is(m.caido, cliente.ErrServicioAnterior) }
 
 // comunes son las teclas de la app fuera de un campo: las tres primeras se ven siempre en el pie; Ctrl+E, si cabe.
 func comunes() []pagina.Tecla {
@@ -212,7 +223,7 @@ func (m *modelo) vistaPie() string {
 		teclas = p.Teclas()
 		if !p.EnCampo() { // en un campo, ! se escribe: no abre el error
 			teclas, fijas = append(teclas, comunes()[3]), comunes()[:3]
-			if m.avisos.HayError() {
+			if m.avisos.HayError() || m.anterior() {
 				teclas = append([]pagina.Tecla{{Tecla: "!", Accion: idioma.T("ver el error")}}, teclas...)
 			}
 		}

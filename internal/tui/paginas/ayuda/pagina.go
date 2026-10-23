@@ -240,6 +240,9 @@ func campos(t datos.Tema) []campo {
 	for _, b := range t.Bloques {
 		switch b.Tipo {
 		case "pasos", "texto", "web":
+			if b.Tipo == "pasos" && b.Titulo != "" { // el título de una sección de pasos, como en buscar.ts
+				c = append(c, campo{b.Titulo, 2})
+			}
 			for _, l := range b.Lineas {
 				c = append(c, campo{l, 1})
 			}

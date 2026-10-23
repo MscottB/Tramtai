@@ -38,7 +38,10 @@ export function campos(tema: Tema, textos: Record<string, string>, tituloError: 
     { ancla: '', donde: titulo, texto: t(tema.resumen), peso: 1 },
   ]
   for (const b of tema.bloques) {
-    if (b.tipo === 'pasos') for (const p of b.pasos) lista.push({ ancla: '', donde: titulo, texto: t(p), peso: 1 })
+    if (b.tipo === 'pasos') {
+      if (b.titulo) lista.push({ ancla: '', donde: titulo, texto: t(b.titulo), peso: 2 })
+      for (const p of b.pasos) lista.push({ ancla: '', donde: titulo, texto: t(p), peso: 1 })
+    }
     if (b.tipo === 'nota') lista.push({ ancla: '', donde: titulo, texto: t(b.texto), peso: 1 })
     if (b.tipo === 'tabla')
       for (const f of b.filas) lista.push({ ancla: '', donde: titulo, texto: [f.titulo, ...f.celdas].map(t).join(' '), peso: 1 })

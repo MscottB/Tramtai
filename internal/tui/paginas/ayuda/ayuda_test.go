@@ -291,6 +291,9 @@ func TestSinTextosDeLaWebUI(t *testing.T) {
 					}
 				}
 			case "pasos":
+				if !strings.Contains(v, compacto(b.Titulo)) { // la sección con título («Solo con la terminal»)
+					t.Errorf("%s: falta el título %q", tm.ID, b.Titulo)
+				}
 				for _, l := range b.Lineas {
 					if !strings.Contains(v, compacto(l)) {
 						t.Errorf("%s: falta el paso %q", tm.ID, l)

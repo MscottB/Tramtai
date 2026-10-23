@@ -262,6 +262,21 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
     </div>
   </section>
 
+  <section id="terminal">
+    <div class="envoltura">
+      <div class="cabeza">
+        <h2><span lang="es">Todo desde la terminal.</span><span lang="en">Everything from the terminal.</span></h2>
+        <p class="suave"><span lang="es">Nuevo en la v0.56: <code>tramtai terminal</code> tiene las mismas ocho páginas que la app, de Inicio a la Ayuda. Sirve sin abrir la app y por SSH al equipo donde corre Tramtai.</span><span lang="en">New in v0.56: <code>tramtai terminal</code> has the same eight pages as the app, from Home to Help. It works without opening the app and over SSH to the computer where Tramtai runs.</span></p>
+        <p class="suave"><span lang="es">Tab abre el menú, del 1 al 7 vas a cada página, <code>?</code> abre la Ayuda de la página y Esc vuelve. Necesita una ventana de 60×20 como mínimo, y con <code>NO_COLOR</code> va sin color. Paso a paso, en <a href="ayuda/empezar.html#s-soloterminal">Solo con la terminal</a>.</span><span lang="en">Tab opens the menu, 1 to 7 go to each page, <code>?</code> opens the page’s Help and Esc goes back. It needs a window of at least 60×20, and with <code>NO_COLOR</code> it runs without color. Step by step, in <a href="ayuda/empezar.html#s-soloterminal">Terminal only</a>.</span></p>
+      </div>
+<pre class="codigo"><span class="c" lang="es"># El servicio en segundo plano, sin abrir la app</span><span class="c" lang="en"># The service in the background, without the app</span>
+tramtai servicio iniciar -d
+
+<span class="c" lang="es"># Las ocho páginas, con el teclado; q sale</span><span class="c" lang="en"># The eight pages, from the keyboard; q quits</span>
+tramtai terminal</pre>
+    </div>
+  </section>
+
   <section>
     <div class="envoltura">
       <div class="destacado">
@@ -571,8 +586,8 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
         </article>
         <h3 class="grupo-funciones"><span lang="es">Usa</span><span lang="en">Use</span></h3>
         <article class="tarjeta">
-          <h4><span lang="es">Desde donde prefieras</span><span lang="en">From wherever you like</span></h4>
-          <p><span lang="es">Icono en la bandeja, la app en tu navegador (en español e inglés), terminal interactiva y CLI. Todas ven las mismas peticiones.</span><span lang="en">Tray icon, the app in your browser (in Spanish and English), interactive terminal and CLI. They all see the same requests.</span></p>
+          <h4><span lang="es">La terminal, a la par de la app</span><span lang="en">The terminal, on par with the app</span></h4>
+          <p><span lang="es">Las ocho páginas de la app en <a href="#terminal"><code>tramtai terminal</code></a>, con el teclado, sin abrir la app y por SSH. La bandeja, la app en tu navegador (en español e inglés), la terminal y la CLI ven las mismas peticiones.</span><span lang="en">The app’s eight pages in <a href="#terminal"><code>tramtai terminal</code></a>, all from the keyboard, without the app open and over SSH. The tray, the app in your browser (in Spanish and English), the terminal and the CLI all see the same requests.</span></p>
         </article>
         <article class="tarjeta">
           <h4><span lang="es">Adjunta PDF, Word y Excel</span><span lang="en">Attach PDF, Word and Excel</span></h4>
