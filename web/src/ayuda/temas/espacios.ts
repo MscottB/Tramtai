@@ -6,6 +6,7 @@ export const espacios: Tema = {
   icono: 'o_workspaces',
   titulo: 'ayuda.espacios.titulo',
   resumen: 'ayuda.espacios.resumen',
+  terminal: 'ayuda.espacios.terminal',
   paginaApp: 'espacios',
   conDiagrama: true,
   relacionados: ['claves', 'ajustes', 'conceptos'],

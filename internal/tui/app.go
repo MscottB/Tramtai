@@ -16,9 +16,9 @@ import (
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/tui/comp"
-	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/paginas/agentes"
+	"tramtai/internal/tui/paginas/ayuda"
 	"tramtai/internal/tui/paginas/conectar"
 	"tramtai/internal/tui/paginas/configuracion"
 	"tramtai/internal/tui/paginas/ejecutar"
@@ -45,7 +45,7 @@ func Ejecutar(o Opciones) error {
 
 const anchoMinimo, altoMinimo = 60, 20
 
-// fabricas crea cada página por su clave del menú; las que aún no están enseñan «Próximamente».
+// fabricas crea cada página por su clave del menú (TestTodasRegistradas comprueba que estén todas).
 var fabricas = map[string]func(idioma string) pagina.Pagina{
 	pagina.PaginaInicio:        inicio.Nueva,
 	pagina.PaginaAgentes:       agentes.Nueva,
@@ -54,6 +54,7 @@ var fabricas = map[string]func(idioma string) pagina.Pagina{
 	pagina.PaginaHistorial:     historial.Nueva,
 	pagina.PaginaEspacios:      espacios.Nueva,
 	pagina.PaginaConfiguracion: configuracion.Nueva,
+	pagina.PaginaAyuda:         ayuda.Nueva,
 }
 
 type modelo struct {
@@ -104,11 +105,7 @@ func nuevoEn(o Opciones, lengua string) *modelo {
 func (m *modelo) pagina(clave string) pagina.Pagina {
 	p, ok := m.paginas[clave]
 	if !ok {
-		if f := fabricas[clave]; f != nil {
-			p = f(m.idioma)
-		} else {
-			p = &proximamente{titulo: datos.Texto(m.idioma, "menu."+clave), estilos: m.estilos, visor: comp.NuevoVisor(m.estilos)}
-		}
+		p = fabricas[clave](m.idioma)
 		m.paginas[clave] = p
 	}
 	return p
@@ -438,58 +435,4 @@ func (m *modelo) encajar(texto string, ancho, alto int) string {
 // teclasDe son todas las teclas que valen en una página: las suyas y las comunes, también las que no caben en el pie.
 func (m *modelo) teclasDe(p pagina.Pagina) []pagina.Tecla {
 	return slices.Concat(p.Teclas(), comunes())
-}
-
-// proximamente ocupa el sitio de una página que aún no está hecha. En la Ayuda enseña las teclas de la página de la que
-// se vino (ConAyuda), para que ? siempre las diga todas; si no caben, se desplazan.
-type proximamente struct {
-	titulo  string
-	estilos *pagina.Estilos
-	teclas  []pagina.Tecla
-	visor   comp.Visor
-}
-
-func (p *proximamente) Titulo() string { return p.titulo }
-func (p *proximamente) Iniciar(c pagina.Contexto) tea.Cmd {
-	p.visor.Tamano(c.Ancho, c.Alto)
-	p.poner()
-	return nil
-}
-func (p *proximamente) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
-	switch msg := msg.(type) {
-	case pagina.ConAyuda:
-		p.teclas = msg.Teclas
-		p.poner()
-	case tea.WindowSizeMsg:
-		p.visor.Tamano(msg.Width, msg.Height)
-	case tea.KeyPressMsg:
-		if msg.String() == "esc" {
-			return p, pagina.Atras
-		}
-		p.visor.Update(msg)
-	}
-	return p, nil
-}
-func (p *proximamente) Teclas() []pagina.Tecla {
-	return []pagina.Tecla{{Tecla: "Esc", Accion: idioma.T("vuelve")}, {Tecla: "↑↓", Accion: idioma.T("desplaza")}}
-}
-func (p *proximamente) EnCampo() bool { return false }
-func (p *proximamente) Ayuda() string { return "" }
-func (p *proximamente) Vista() string { return p.visor.Vista() }
-
-// poner escribe en el visor el aviso y, si se vino con ?, las teclas.
-func (p *proximamente) poner() {
-	e := p.estilos
-	lineas := []string{e.Tenue.Render(idioma.T("Próximamente"))}
-	if len(p.teclas) > 0 {
-		ancho := 0
-		for _, t := range p.teclas {
-			ancho = max(ancho, lipgloss.Width(t.Tecla))
-		}
-		lineas = append(lineas, "", e.Titulo.Render(idioma.T("Teclas")))
-		for _, t := range p.teclas {
-			lineas = append(lineas, e.Tecla.Render(t.Tecla)+strings.Repeat(" ", ancho-lipgloss.Width(t.Tecla)+2)+t.Accion)
-		}
-	}
-	p.visor.Poner(strings.Join(lineas, "\n"))
 }

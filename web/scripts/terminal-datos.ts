@@ -23,7 +23,8 @@ export interface Bloque {
   pares?: [string, string][]
   url?: string
 }
-export interface Tema { id: string; titulo: string; pagina?: string; resumen: string; bloques: Bloque[] }
+// url es la del tema en el sitio («Ver en la web») y terminal, la línea «En la terminal: …» con sus teclas.
+export interface Tema { id: string; titulo: string; pagina?: string; resumen: string; url: string; terminal: string; bloques: Bloque[] }
 
 export const URL_AYUDA = URL_SITIO + 'ayuda/'
 
@@ -226,8 +227,8 @@ export function ayudaDe(temas: TemaWeb[], textos: Textos): Tema[] {
   const tx = (k: string) => plano(textos[k] ?? k)
   return temas.map((t) => {
     const url = `${URL_AYUDA}${t.id}.html`
-    return { id: t.id, titulo: tx(t.titulo), ...(t.paginaApp ? { pagina: t.paginaApp } : {}), resumen: tx(t.resumen),
-      bloques: t.bloques.map((b) => bloqueDe(b, tx, url)) }
+    return { id: t.id, titulo: tx(t.titulo), ...(t.paginaApp ? { pagina: t.paginaApp } : {}), resumen: tx(t.resumen), url,
+      terminal: tx(t.terminal), bloques: t.bloques.map((b) => bloqueDe(b, tx, url)) }
   })
 }
 

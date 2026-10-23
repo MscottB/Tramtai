@@ -6,6 +6,7 @@ export const conceptos: Tema = {
   icono: 'o_menu_book',
   titulo: 'ayuda.conceptos.titulo',
   resumen: 'ayuda.conceptos.resumen',
+  terminal: 'ayuda.conceptos.terminal',
   conDiagrama: false,
   relacionados: ['empezar', 'agentes', 'recetas'],
   bloques: [

@@ -44,6 +44,9 @@ export interface Tema {
   icono: string
   titulo: Clave
   resumen: Clave
+  // terminal dice cómo se hace en la terminal, con sus teclas («En la terminal: …»). Solo lo enseña la Ayuda de la
+  // terminal, donde no valen el botón ? ni el panel de la Web UI.
+  terminal: Clave
   paginaApp?: Pagina
   conDiagrama: boolean
   relacionados: string[]

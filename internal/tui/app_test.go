@@ -571,8 +571,9 @@ func (p *paginaTeclas) Teclas() []pagina.Tecla {
 	return teclas
 }
 
-// TestAyudaConTodasLasTeclas: a 60×20, la Ayuda de una página con muchas teclas se desplaza hasta la última, la de la app;
-// y la que abre la página por su cuenta (a en Inicio) también trae todas, las suyas y las comunes.
+// TestAyudaConTodasLasTeclas: a 60×20, la Ayuda de una página con muchas teclas las enseña al empezar su tema y se
+// desplaza hasta la última, la de la app; y la que abre la página por su cuenta (a en Inicio) también trae todas, las
+// suyas y las comunes.
 func TestAyudaConTodasLasTeclas(t *testing.T) {
 	m := nuevo(Opciones{})
 	m.Update(tea.WindowSizeMsg{Width: 60, Height: 20})
@@ -581,7 +582,12 @@ func TestAyudaConTodasLasTeclas(t *testing.T) {
 	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "acción 0") {
 		t.Fatalf("la Ayuda empieza por las teclas de la página:\n%s", v)
 	}
-	m.Update(tea.KeyPressMsg{Code: tea.KeyEnd})
+	for range 40 {
+		if strings.Contains(ansi.Strip(m.View().Content), "Ctrl+E  espacio") {
+			break
+		}
+		m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
+	}
 	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "Ctrl+E  espacio") {
 		t.Fatalf("se desplaza hasta la última:\n%s", v)
 	}

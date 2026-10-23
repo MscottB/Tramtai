@@ -5,6 +5,8 @@
       "titulo": "Empezar",
       "pagina": "inicio",
       "resumen": "Tramtai pone tus agentes de IA detrás de una API en tu equipo: instálalo, conecta un agente y prueba.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/empezar.html",
+      "terminal": "En la terminal: del 1 al 7 vas a cada página; ? abre la ayuda de la que tienes delante y Esc vuelve. Ctrl+E cambia de espacio y q sale.",
       "bloques": [
         {
           "tipo": "web",
@@ -122,6 +124,8 @@
       "titulo": "Agentes y modelos",
       "pagina": "agentes",
       "resumen": "Tramtai usa el CLI oficial de cada agente; lo conectas con tu suscripción o con una clave de API.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html",
+      "terminal": "En la terminal: 2 abre Agentes. Enter enseña los detalles de un agente, c lo vuelve a comprobar, d lo conecta o desconecta y a cambia entre suscripción y clave.",
       "bloques": [
         {
           "tipo": "web",
@@ -227,6 +231,8 @@
       "titulo": "Probar",
       "pagina": "ejecutar",
       "resumen": "Escribe un mensaje, elige agente, modelo y esfuerzo, y mira la respuesta antes de llevarla a tu app.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/probar.html",
+      "terminal": "En la terminal: 3 abre Probar. Enter edita un campo de la receta, Ctrl+S envía el mensaje, k enseña el código y g guarda la prueba como API.",
       "bloques": [
         {
           "tipo": "web",
@@ -296,6 +302,8 @@
       "titulo": "Conectar mi app",
       "pagina": "conectar",
       "resumen": "Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/conectar.html",
+      "terminal": "En la terminal: 4 abre Mis APIs. n crea una API y Enter abre sus detalles, donde la tecla y copia su URL; ← → pasa a la clave del espacio.",
       "bloques": [
         {
           "tipo": "web",
@@ -457,6 +465,8 @@
       "id": "archivos",
       "titulo": "Archivos",
       "resumen": "Tramtai convierte tus PDF, Word, Excel y otros documentos a texto antes de pasárselos al agente.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/archivos.html",
+      "terminal": "En la terminal: en Probar (3), escribe la ruta en el campo de archivos de la receta; Tab la completa. En Ajustes (7), p prepara el conversor.",
       "bloques": [
         {
           "tipo": "web",
@@ -546,6 +556,8 @@
       "id": "json",
       "titulo": "Respuestas JSON",
       "resumen": "Pide la respuesta con una forma fija (un esquema JSON) y Tramtai la valida antes de entregarla.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/json.html",
+      "terminal": "En la terminal: en «Respuesta con forma (JSON)» de Probar (3), n añade un campo y v enseña un ejemplo de respuesta; si no cumple, o pide la corrección.",
       "bloques": [
         {
           "tipo": "web",
@@ -605,6 +617,8 @@
       "id": "recetas",
       "titulo": "Recetas y respaldo",
       "resumen": "Una receta fija instrucciones, agente, modelo, esquema y respaldo, para que tu app solo envíe el mensaje.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/recetas.html",
+      "terminal": "En la terminal: en Probar (3), Enter edita las instrucciones, el agente y el respaldo de la receta, y g la guarda como API. En Mis APIs (4), e la cambia.",
       "bloques": [
         {
           "tipo": "web",
@@ -666,6 +680,8 @@
       "id": "herramientas",
       "titulo": "Herramientas",
       "resumen": "Tu app ofrece funciones; el agente pide una con sus argumentos y tu app la ejecuta y le devuelve el resultado.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/herramientas.html",
+      "terminal": "En la terminal: no hay nada que ajustar, porque tu app ofrece las herramientas en cada petición. Prueba el ciclo desde tu app con el ejemplo de la guía del desarrollador.",
       "bloques": [
         {
           "tipo": "web",
@@ -720,6 +736,8 @@
       "id": "presupuestos",
       "titulo": "Presupuestos",
       "resumen": "Pon límites por día o por mes a una API o a todo el espacio, en peticiones, tokens o dólares.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/presupuestos.html",
+      "terminal": "En la terminal: en Mis APIs (4), e cambia el presupuesto de una API y R reinicia su consumo; en la clave del espacio, R reinicia el del espacio.",
       "bloques": [
         {
           "tipo": "web",
@@ -769,6 +787,8 @@
       "titulo": "Historial",
       "pagina": "historial",
       "resumen": "Cada petición queda en el Historial con su respuesta, el agente que respondió y el registro de cada paso.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/historial.html",
+      "terminal": "En la terminal: 5 abre el Historial. / busca, e filtra por estado y f por origen. Enter abre una petición, ← → pasa por su mensaje, respuesta y registro, y t la reintenta.",
       "bloques": [
         {
           "tipo": "pasos",
@@ -840,6 +860,8 @@
       "titulo": "Espacios de trabajo",
       "pagina": "espacios",
       "resumen": "La global y uno por proyecto, cada uno con su historial, sus APIs y sus ajustes.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/espacios.html",
+      "terminal": "En la terminal: 6 abre Espacios y Ctrl+E cambia de espacio desde cualquier página. n abre un proyecto; el pie dice qué tecla activa, detiene u olvida el elegido.",
       "bloques": [
         {
           "tipo": "web",
@@ -936,6 +958,8 @@
       "id": "claves",
       "titulo": "Claves y APIs",
       "resumen": "La clave del espacio y las APIs por aplicación: cuándo usar cada una y qué pasa al regenerarlas.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/claves.html",
+      "terminal": "En la terminal: en Mis APIs (4), Enter abre una API y la tecla y copia su URL. ← → pasa a la clave del espacio: v la enseña, la tecla y la copia y t la regenera.",
       "bloques": [
         {
           "tipo": "tabla",
@@ -1000,6 +1024,8 @@
       "titulo": "Ajustes y actualizaciones",
       "pagina": "configuracion",
       "resumen": "Arranque con el sistema, modelo predeterminado, archivos, historial y actualizaciones.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/ajustes.html",
+      "terminal": "En la terminal: 7 abre Ajustes. ← → pasa de este espacio a todo Tramtai, ↑↓ elige la sección y el pie dice qué tecla la cambia.",
       "bloques": [
         {
           "tipo": "pasos",
@@ -1074,6 +1100,8 @@
       "id": "problemas",
       "titulo": "Algo falló",
       "resumen": "Los errores más comunes, con el mismo título que ves en la app, y qué hacer con cada uno.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/problemas.html",
+      "terminal": "En la terminal: el error se queda en la línea de estado y ! lo enseña entero. En el Historial (5), Enter abre la petición con su registro y t la reintenta.",
       "bloques": [
         {
           "tipo": "pasos",
@@ -1191,6 +1219,8 @@
       "id": "conceptos",
       "titulo": "Conceptos",
       "resumen": "Las palabras que usa Tramtai, en una línea cada una.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/conceptos.html",
+      "terminal": "En la terminal: / busca una palabra en toda la Ayuda, sin importar tildes ni mayúsculas.",
       "bloques": [
         {
           "tipo": "preguntas",
@@ -1251,6 +1281,8 @@
       "id": "preguntas",
       "titulo": "Preguntas frecuentes",
       "resumen": "Lo que más se pregunta y no encaja en otro tema.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/preguntas.html",
+      "terminal": "En la terminal: / busca en toda la Ayuda, y w abre el tema en la web o, si no hay navegador, enseña su dirección para copiarla.",
       "bloques": [
         {
           "tipo": "preguntas",
@@ -1286,6 +1318,8 @@
       "titulo": "Get started",
       "pagina": "inicio",
       "resumen": "Tramtai puts your AI agents behind an API on your computer: install it, connect an agent and try it.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/empezar.html",
+      "terminal": "In the terminal: 1 to 7 go to each page; ? opens the help for the page in front of you and Esc goes back. Ctrl+E switches workspace and q quits.",
       "bloques": [
         {
           "tipo": "web",
@@ -1403,6 +1437,8 @@
       "titulo": "Agents and models",
       "pagina": "agentes",
       "resumen": "Tramtai uses each agent’s official CLI; you connect it with your subscription or an API key.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html",
+      "terminal": "In the terminal: 2 opens Agents. Enter shows an agent’s details, c checks it again, d connects or disconnects it and a switches between subscription and key.",
       "bloques": [
         {
           "tipo": "web",
@@ -1508,6 +1544,8 @@
       "titulo": "Playground",
       "pagina": "ejecutar",
       "resumen": "Type a message, pick agent, model and effort, and see the response before taking it to your app.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/probar.html",
+      "terminal": "In the terminal: 3 opens the Playground. Enter edits a recipe field, Ctrl+S sends the message, k shows the code and g saves the test as an API.",
       "bloques": [
         {
           "tipo": "web",
@@ -1577,6 +1615,8 @@
       "titulo": "Connect my app",
       "pagina": "conectar",
       "resumen": "Change your OpenAI or Anthropic SDK’s base URL to Tramtai’s and pick the agent with model.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/conectar.html",
+      "terminal": "In the terminal: 4 opens My APIs. n creates an API and Enter opens its details, where the y key copies its URL; ← → goes to the workspace key.",
       "bloques": [
         {
           "tipo": "web",
@@ -1738,6 +1778,8 @@
       "id": "archivos",
       "titulo": "Files",
       "resumen": "Tramtai turns your PDF, Word, Excel and other documents into text before handing them to the agent.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/archivos.html",
+      "terminal": "In the terminal: in the Playground (3), type the path in the recipe’s files field; Tab completes it. In Settings (7), p prepares the converter.",
       "bloques": [
         {
           "tipo": "web",
@@ -1827,6 +1869,8 @@
       "id": "json",
       "titulo": "JSON responses",
       "resumen": "Ask for the response in a fixed shape (a JSON schema) and Tramtai validates it before handing it over.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/json.html",
+      "terminal": "In the terminal: under “Shaped response (JSON)” in the Playground (3), n adds a field and v shows a sample response; if it does not match, o asks for a correction.",
       "bloques": [
         {
           "tipo": "web",
@@ -1886,6 +1930,8 @@
       "id": "recetas",
       "titulo": "Recipes and fallback",
       "resumen": "A recipe fixes instructions, agent, model, schema and fallback, so your app only sends the message.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/recetas.html",
+      "terminal": "In the terminal: in the Playground (3), Enter edits the recipe’s instructions, agent and fallback, and g saves it as an API. In My APIs (4), e changes it.",
       "bloques": [
         {
           "tipo": "web",
@@ -1947,6 +1993,8 @@
       "id": "herramientas",
       "titulo": "Tools",
       "resumen": "Your app offers functions; the agent asks for one with its arguments, and your app runs it and returns the result.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/herramientas.html",
+      "terminal": "In the terminal: there is nothing to set up, because your app offers the tools in each request. Try the cycle from your app with the example in the developer guide.",
       "bloques": [
         {
           "tipo": "web",
@@ -2001,6 +2049,8 @@
       "id": "presupuestos",
       "titulo": "Budgets",
       "resumen": "Set daily or monthly limits for an API or the whole workspace, in requests, tokens or dollars.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/presupuestos.html",
+      "terminal": "In the terminal: in My APIs (4), e changes an API’s budget and R resets its usage; on the workspace key, R resets the workspace’s.",
       "bloques": [
         {
           "tipo": "web",
@@ -2050,6 +2100,8 @@
       "titulo": "History",
       "pagina": "historial",
       "resumen": "Every request stays in History with its response, the agent that answered and the log of each step.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/historial.html",
+      "terminal": "In the terminal: 5 opens History. / searches, e filters by status and f by source. Enter opens a request, ← → moves through its message, response and log, and t retries it.",
       "bloques": [
         {
           "tipo": "pasos",
@@ -2121,6 +2173,8 @@
       "titulo": "Workspaces",
       "pagina": "espacios",
       "resumen": "The global one and one per project, each with its own history, APIs and settings.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/espacios.html",
+      "terminal": "In the terminal: 6 opens Workspaces and Ctrl+E switches workspace from any page. n opens a project; the footer shows which key starts, stops or forgets the selected one.",
       "bloques": [
         {
           "tipo": "web",
@@ -2217,6 +2271,8 @@
       "id": "claves",
       "titulo": "Keys and APIs",
       "resumen": "The workspace key and per-app APIs: when to use each one and what happens when you regenerate them.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/claves.html",
+      "terminal": "In the terminal: in My APIs (4), Enter opens an API and the y key copies its URL. ← → goes to the workspace key: v shows it, y copies it and t regenerates it.",
       "bloques": [
         {
           "tipo": "tabla",
@@ -2281,6 +2337,8 @@
       "titulo": "Settings and updates",
       "pagina": "configuracion",
       "resumen": "Launch at sign-in, default model, files, history and updates.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/ajustes.html",
+      "terminal": "In the terminal: 7 opens Settings. ← → switches between this workspace and all of Tramtai, ↑↓ picks the section and the footer shows which key changes it.",
       "bloques": [
         {
           "tipo": "pasos",
@@ -2355,6 +2413,8 @@
       "id": "problemas",
       "titulo": "Something failed",
       "resumen": "The most common errors, with the same title you see in the app, and what to do about each.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/problemas.html",
+      "terminal": "In the terminal: the error stays on the status line and ! shows it in full. In History (5), Enter opens the request with its log and t retries it.",
       "bloques": [
         {
           "tipo": "pasos",
@@ -2472,6 +2532,8 @@
       "id": "conceptos",
       "titulo": "Concepts",
       "resumen": "The words Tramtai uses, one line each.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/conceptos.html",
+      "terminal": "In the terminal: / searches for a word across the whole Help, ignoring accents and case.",
       "bloques": [
         {
           "tipo": "preguntas",
@@ -2532,6 +2594,8 @@
       "id": "preguntas",
       "titulo": "Frequently asked questions",
       "resumen": "What people ask most that does not fit another topic.",
+      "url": "https://mscottb.github.io/Tramtai/ayuda/preguntas.html",
+      "terminal": "In the terminal: / searches the whole Help, and w opens the topic on the web or, if there is no browser, shows its address to copy.",
       "bloques": [
         {
           "tipo": "preguntas",

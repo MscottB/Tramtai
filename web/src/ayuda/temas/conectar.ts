@@ -23,6 +23,7 @@ export const conectar: Tema = {
   icono: 'o_hub',
   titulo: 'ayuda.conectar.titulo',
   resumen: 'ayuda.conectar.resumen',
+  terminal: 'ayuda.conectar.terminal',
   paginaApp: 'conectar',
   conDiagrama: true,
   relacionados: ['archivos', 'herramientas', 'presupuestos', 'claves'],

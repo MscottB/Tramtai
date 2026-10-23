@@ -6,6 +6,7 @@ export const empezar: Tema = {
   icono: 'o_flag',
   titulo: 'ayuda.empezar.titulo',
   resumen: 'ayuda.empezar.resumen',
+  terminal: 'ayuda.empezar.terminal',
   paginaApp: 'inicio',
   conDiagrama: true,
   relacionados: ['agentes', 'probar', 'conectar'],

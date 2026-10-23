@@ -6,6 +6,7 @@ export const historial: Tema = {
   icono: 'o_history',
   titulo: 'ayuda.historial.titulo',
   resumen: 'ayuda.historial.resumen',
+  terminal: 'ayuda.historial.terminal',
   paginaApp: 'historial',
   conDiagrama: false,
   relacionados: ['problemas', 'probar', 'ajustes'],

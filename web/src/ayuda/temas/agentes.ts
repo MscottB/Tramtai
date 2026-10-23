@@ -6,6 +6,7 @@ export const agentes: Tema = {
   icono: 'o_route',
   titulo: 'ayuda.agentes.titulo',
   resumen: 'ayuda.agentes.resumen',
+  terminal: 'ayuda.agentes.terminal',
   paginaApp: 'agentes',
   conDiagrama: true,
   relacionados: ['probar', 'empezar', 'conceptos'],

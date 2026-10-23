@@ -49,6 +49,16 @@ test('capturas, diagramas, descargas y enlaces ir pasan a un bloque web con la U
   assert.equal(URL_AYUDA, 'https://mscottb.github.io/Tramtai/ayuda/')
 })
 
+test('cada tema lleva su URL en el sitio y la línea «En la terminal» de su fuente, en los dos idiomas', () => {
+  for (const [lengua, textos, inicio] of [['es', es, 'En la terminal:'], ['en', en, 'In the terminal:']] as const)
+    temas.forEach((fuenteTema, i) => {
+      const t = ayuda[lengua][i]
+      assert.equal(t.url, `${URL_AYUDA}${t.id}.html`)
+      assert.equal(t.terminal, (textos as Record<string, string>)[fuenteTema.terminal], `${lengua}: ${t.id}`)
+      assert.ok(t.terminal.startsWith(inicio), `${lengua}: ${t.id}: ${t.terminal}`)
+    })
+})
+
 test('un bloque que el generador no conoce lo hace fallar en lugar de salir como null', () => {
   const nuevo = { ...temas[0], bloques: [{ tipo: 'nuevo' }] } as unknown as typeof temas[number]
   assert.throws(() => ayudaDe([nuevo], es), /tipo de bloque sin mapear: nuevo/)

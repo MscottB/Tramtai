@@ -6,6 +6,7 @@ export const probar: Tema = {
   icono: 'o_chat',
   titulo: 'ayuda.probar.titulo',
   resumen: 'ayuda.probar.resumen',
+  terminal: 'ayuda.probar.terminal',
   paginaApp: 'ejecutar',
   conDiagrama: true,
   relacionados: ['recetas', 'json', 'archivos'],

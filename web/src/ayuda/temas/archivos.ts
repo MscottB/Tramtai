@@ -6,6 +6,7 @@ export const archivos: Tema = {
   icono: 'o_description',
   titulo: 'ayuda.archivos.titulo',
   resumen: 'ayuda.archivos.resumen',
+  terminal: 'ayuda.archivos.terminal',
   conDiagrama: true,
   relacionados: ['conectar', 'probar', 'json'],
   bloques: [

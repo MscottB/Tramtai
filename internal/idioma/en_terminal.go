@@ -9,7 +9,6 @@ func init() {
 
 		// La app: tamaño, cabecera, estado y pie
 		"Agranda la ventana (mínimo 60×20)": "Enlarge the window (minimum 60×20)",
-		"Próximamente":                      "Coming soon",
 		"¿Cancelar la petición en marcha?":  "Cancel the running request?",
 		"Probar tiene una petición en marcha: seguirá en el servicio y la verás en el Historial.": "Playground has a running request: it will keep going in the service and you will see it in the History.",
 		"La API %s tiene cambios sin guardar en Probar (g los guarda).":                           "The API %s has unsaved changes in the Playground (g saves them).",
@@ -129,5 +128,12 @@ func init() {
 		"¿Cancelar la actualización?":                                    "Cancel the update?",
 		"La descarga se borra y Tramtai sigue como está.":                "The download is deleted and Tramtai stays as it is.",
 		"El servicio se reinicia; la terminal se vuelve a conectar sola": "The service is restarting; the terminal reconnects on its own",
+
+		// La Ayuda: los temas salen de los de la Web UI; aquí solo lo propio de la terminal.
+		"Ver en la web":           "See on the web",
+		"copia la dirección":      "copy the address",
+		"quita la búsqueda":       "clear the search",
+		"Abierto en el navegador": "Opened in the browser",
+		"No se pudo abrir el navegador; la tecla y copia la dirección:": "Could not open the browser; the y key copies the address:",
 	})
 }

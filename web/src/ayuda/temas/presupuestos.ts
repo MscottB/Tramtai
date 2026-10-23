@@ -6,6 +6,7 @@ export const presupuestos: Tema = {
   icono: 'o_savings',
   titulo: 'ayuda.presupuestos.titulo',
   resumen: 'ayuda.presupuestos.resumen',
+  terminal: 'ayuda.presupuestos.terminal',
   conDiagrama: true,
   relacionados: ['conectar', 'historial', 'conceptos'],
   bloques: [

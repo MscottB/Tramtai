@@ -22,13 +22,16 @@ type Bloque struct {
 	URL    string      `json:"url,omitempty"`
 }
 
-// Tema es un tema de la Ayuda; Pagina es la página de la app a la que acompaña (inicio, ejecutar…), si tiene una.
+// Tema es un tema de la Ayuda; Pagina es la página de la app a la que acompaña (inicio, ejecutar…), si tiene una. URL lleva
+// al tema en el sitio y Terminal es la línea «En la terminal: …», con sus teclas.
 type Tema struct {
-	ID      string   `json:"id"`
-	Titulo  string   `json:"titulo"`
-	Pagina  string   `json:"pagina,omitempty"`
-	Resumen string   `json:"resumen"`
-	Bloques []Bloque `json:"bloques"`
+	ID       string   `json:"id"`
+	Titulo   string   `json:"titulo"`
+	Pagina   string   `json:"pagina,omitempty"`
+	Resumen  string   `json:"resumen"`
+	URL      string   `json:"url"`
+	Terminal string   `json:"terminal"`
+	Bloques  []Bloque `json:"bloques"`
 }
 
 // Plantilla es una de «Respuesta con forma»; Esquema es el JSON Schema, tal como lo arma la Web UI.
