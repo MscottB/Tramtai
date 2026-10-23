@@ -528,14 +528,14 @@ func TestActualizarSigueElAvance(t *testing.T) {
 	a.Pulsar("u")
 	a.HastaVer(tx("actualizacion.comoInstala")[:30])
 	x.poner(contrato.ProgresoActualizacion{Fase: "descargando", Version: "v99.0.0", Recibidos: 524288, Total: 1048576})
+	visto := len(reloj.Pedidas())
 	a.Pulsar("i")
 	a.HastaVer(tx("actualizacion.progresoTitulo", "version", "v99.0.0"))
-	reloj.Pasar(400 * time.Millisecond)
+	tic(a, reloj, &visto)
 	a.HastaVer(tx("actualizacion.descargando", "recibido", "0,5", "total", "1,0", "porcentaje", "50"))
-	a.Asentar() // la consulta siguiente ya espera al reloj
-	cuando := reloj.Ahora().Add(10 * time.Second)
+	cuando := reloj.Ahora().Add(10*time.Second + 400*time.Millisecond) // a 10 s cuando llegue la consulta siguiente
 	x.poner(contrato.ProgresoActualizacion{Fase: "listo", Version: "v99.0.0", InstalaEn: &cuando})
-	reloj.Pasar(400 * time.Millisecond)
+	tic(a, reloj, &visto)
 	a.HastaVer(tx("actualizacion.reiniciaraEn", "n", "10"))
 	q, ok := pregunta(a.Pulsar("c"))
 	if !ok || !strings.Contains(q.Texto, tx("comun.cancelar")) {
@@ -552,6 +552,15 @@ func TestActualizarSigueElAvance(t *testing.T) {
 	}
 }
 
+// tic hace pasar una consulta del avance (400 ms) cuando la página ya pidió su espera siguiente: así ningún paso del
+// reloj llega antes de que la página lo espere. visto son las esperas ya pedidas.
+func tic(a *prueba.App, reloj *prueba.Reloj, visto *int) {
+	a.Hasta(func() bool { return len(reloj.Pedidas()) > *visto })
+	*visto = len(reloj.Pedidas())
+	reloj.Pasar(400 * time.Millisecond)
+	a.Asentar()
+}
+
 // TestActualizacionQueFallaDejaDeEsperar: unida a una actualización que falla en el servicio, el avance llega sin fase; a
 // las 75 consultas (30 s) deja de esperar, como la Web UI. Tras ver una fase, al momento.
 func TestActualizacionQueFallaDejaDeEsperar(t *testing.T) {
@@ -559,27 +568,115 @@ func TestActualizacionQueFallaDejaDeEsperar(t *testing.T) {
 	reloj := prueba.NuevoReloj()
 	a := prueba.Abrir(t, configuracion.NuevaConReloj("es", reloj.Ahora, reloj.Espera), contexto(t, cli, id))
 	todoTramtai(t, a)
+	visto := len(reloj.Pedidas())
 	a.Pulsar("u", "i")
 	titulo := tx("actualizacion.progresoTitulo", "version", "v99.0.0")
 	a.HastaVer(titulo)
 	for range 74 {
-		reloj.Pasar(400 * time.Millisecond)
-		a.Asentar()
+		tic(a, reloj, &visto)
 	}
+	a.Hasta(func() bool { return len(reloj.Pedidas()) > visto }) // la consulta 75 ya espera
 	if !strings.Contains(a.Vista(), titulo) {
 		t.Fatalf("antes de 30 s sigue esperando:\n%s", a.Vista())
 	}
-	reloj.Pasar(400 * time.Millisecond)
+	tic(a, reloj, &visto)
 	a.Hasta(func() bool { return !strings.Contains(a.Vista(), titulo) })
 
 	x.poner(contrato.ProgresoActualizacion{Fase: "descargando", Version: "v99.0.0", Recibidos: 104858})
 	a.Pulsar("u", "i")
-	reloj.Pasar(400 * time.Millisecond)
+	tic(a, reloj, &visto)
 	a.HastaVer(tx("actualizacion.descargandoSinTotal", "recibido", "0,1"))
-	a.Asentar() // la consulta siguiente ya espera al reloj
 	x.poner(contrato.ProgresoActualizacion{})
-	reloj.Pasar(400 * time.Millisecond)
+	tic(a, reloj, &visto)
 	a.Hasta(func() bool { return !strings.Contains(a.Vista(), titulo) })
+}
+
+// TestUEnLasVistasAbiertas: con una versión nueva, u abre sus novedades también desde Acerca de y los valores técnicos,
+// como dice la cabecera; durante el avance de una actualización no hace nada (la cuenta atrás sigue a la vista y no se
+// vuelve a pedir).
+func TestUEnLasVistasAbiertas(t *testing.T) {
+	titulo := tx("actualizacion.titulo", "version", "v99.0.0")
+	cli, id := conVersion(t)
+	a := abierta(t, cli, id)
+	ir(t, a, tx("config.valoresTecnicos"))
+	a.Pulsar("enter", "u")
+	a.HastaVer(titulo)
+	a.Pulsar("esc")
+	todoTramtai(t, a)
+	ir(t, a, tx("acerca.titulo"))
+	a.Pulsar("enter", "u")
+	a.HastaVer(titulo)
+
+	cli2, id2, x := conActualizable(t)
+	reloj := prueba.NuevoReloj()
+	b := prueba.Abrir(t, configuracion.NuevaConReloj("es", reloj.Ahora, reloj.Espera), contexto(t, cli2, id2))
+	cuando := reloj.Ahora().Add(10 * time.Second)
+	x.poner(contrato.ProgresoActualizacion{Fase: "listo", Version: "v99.0.0", InstalaEn: &cuando})
+	visto := len(reloj.Pedidas())
+	b.Pulsar("u", "i")
+	tic(b, reloj, &visto)
+	b.HastaVer(tx("actualizacion.reiniciaraEn", "n", "10"))
+	if f := b.Pulsar("u"); len(f) != 0 || !strings.Contains(b.Vista(), tx("actualizacion.reiniciaraEn", "n", "10")) || x.pedidas != 1 {
+		t.Fatalf("u en el avance no hace nada: %v (pedidas %d)\n%s", f, x.pedidas, b.Vista())
+	}
+}
+
+// TestTrasReiniciarSeRelee: tras pedir el reinicio, la página espera a que responda el servicio nuevo (otro proceso) y
+// vuelve a leer sus ajustes: R deja de ofrecerse y no quedan datos viejos. Mientras no responde, sigue esperando.
+func TestTrasReiniciarSeRelee(t *testing.T) {
+	var fase atomic.Int32 // 0 el de antes, 1 reiniciándose (no responde), 2 el nuevo
+	cli, id := prueba.Ajustado(t, func(o *servicio.Opciones) { o.Reiniciar = func() error { fase.Store(1); return nil } })
+	destino, _ := url.Parse(cli.Base)
+	pasar := httputil.NewSingleHostReverseProxy(destino)
+	base := prueba.Servidor(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch f := fase.Load(); {
+		case f == 1 && r.URL.Path != "/api/v1/servicio/reiniciar":
+			w.WriteHeader(http.StatusBadGateway)
+		case f == 2 && r.URL.Path == "/api/v1/servicio/acerca":
+			json.NewEncoder(w).Encode(contrato.Acerca{Version: "v0.56.0", Servicio: contrato.ServicioAcerca{PID: -1}})
+		case f == 2 && r.URL.Path == "/api/v1/servicio/ajustes":
+			json.NewEncoder(w).Encode(contrato.AjustesServicio{Puerto: 18000, PuertoConfigurado: 18000, Reiniciable: true})
+		default:
+			pasar.ServeHTTP(w, r)
+		}
+	}))
+	copia := *cli
+	copia.Base = base
+	libre, _ := net.Listen("tcp", "127.0.0.1:0")
+	puerto := strconv.Itoa(libre.Addr().(*net.TCPAddr).Port)
+	libre.Close()
+	reloj := prueba.NuevoReloj()
+	a := prueba.Abrir(t, configuracion.NuevaConReloj("es", reloj.Ahora, reloj.Espera), contexto(t, &copia, id))
+	todoTramtai(t, a)
+	ir(t, a, tx("puerto.titulo"))
+	a.Pulsar("e")
+	vaciar(a)
+	a.Escribir(puerto)
+	desde := len(a.Fuera)
+	a.Pulsar("ctrl+s")
+	a.Hasta(func() bool { _, ok := pregunta(a.Fuera[desde:]); return ok })
+	visto := len(reloj.Pedidas())
+	hastaAviso(a, func() { a.Entregar(comp.Confirmado{}) })
+	conR := func() bool {
+		return slices.ContainsFunc(a.P.Teclas(), func(k pagina.Tecla) bool { return k.Tecla == "R" })
+	}
+	esperarYPasar := func() { // cuando la página ya espera la pregunta siguiente
+		a.Hasta(func() bool { return len(reloj.Pedidas()) > visto })
+		visto = len(reloj.Pedidas())
+		reloj.Pasar(time.Second)
+		a.Asentar()
+	}
+	for range 3 { // el servicio no responde: sigue esperando, sin avisar de nada
+		desde = len(a.Fuera)
+		esperarYPasar()
+		if len(a.Fuera[desde:]) != 0 || !conR() {
+			t.Fatalf("mientras se reinicia, espera: %v", a.Fuera[desde:])
+		}
+	}
+	fase.Store(2)
+	esperarYPasar()
+	a.Hasta(func() bool { return !conR() })
+	a.HastaVer(tx("puerto.actual", "url", copia.Base))
 }
 
 // TestValoresTecnicos: Intro abre la configuración efectiva con el origen de cada valor; / filtra por clave o valor.

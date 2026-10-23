@@ -90,7 +90,6 @@ func TestAdminAjustesYActualizaciones(t *testing.T) {
 	if c := leer("GET", "/api/v1/servicio/actualizacion/novedades?desde=v0.1.0", "", &n); c != 200 || n.Versiones == nil || len(n.Versiones) != 0 {
 		t.Fatalf("novedades sin búsqueda: %d %+v", c, n)
 	}
-
 }
 
 // rutasAjustes son las de administración que usa Ajustes de la terminal, con su método y un cuerpo válido.

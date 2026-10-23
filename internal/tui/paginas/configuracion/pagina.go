@@ -270,6 +270,10 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		return p, p.alAccion(m)
 	case msgConversor:
 		return p, p.alConversor(m)
+	case msgTrasReinicio:
+		return p, p.alTrasReinicio(m)
+	case msgReiniciado:
+		return p, p.alReiniciado(m)
 	case msgSondeoConversor:
 		if p.vigente(m.origen) && p.sondeando {
 			return p, p.leerConversor()
@@ -336,7 +340,9 @@ func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
 		p.form = nil
 	}
 	cmds := []tea.Cmd{comp.Aviso(m.aviso, comp.Exito)}
-	if !m.reinicio {
+	if m.reinicio {
+		cmds = append(cmds, p.esperarReinicio(0))
+	} else {
 		cmds = append(cmds, p.cargar())
 	}
 	if m.preguntar != "" {
@@ -368,6 +374,55 @@ func (p *Pagina) reiniciar() tea.Cmd {
 		_, err := c.Cli.Reiniciar(c.Ctx)
 		return msgAccion{origen: o, aviso: aviso, reinicio: true, err: err}
 	}
+}
+
+// Tras pedir el reinicio, cada cadaReinicio se pregunta al servicio quién es (Acerca de) hasta que responde otro proceso,
+// como mucho intentosReinicio veces; entonces se vuelven a leer los ajustes. Si el puerto cambió, la app se reconecta
+// con el descriptor nuevo y vuelve a iniciar la página, y este seguimiento deja de valer.
+const (
+	cadaReinicio     = time.Second
+	intentosReinicio = 30
+)
+
+type (
+	msgTrasReinicio struct {
+		origen
+		intento int
+	}
+	msgReiniciado struct {
+		origen
+		intento int
+		nuevo   bool
+	}
+)
+
+func (p *Pagina) esperarReinicio(intento int) tea.Cmd {
+	return pagina.Tras(p.origen(), cadaReinicio, p.espera, func(o origen) tea.Msg { return msgTrasReinicio{origen: o, intento: intento} })
+}
+
+// alTrasReinicio pregunta quién responde; un error es que el servicio aún no está (sin aviso: se espera).
+func (p *Pagina) alTrasReinicio(m msgTrasReinicio) tea.Cmd {
+	if !p.vigente(m.origen) {
+		return nil
+	}
+	c, antes := p.c, p.acerca
+	return func() tea.Msg {
+		a, err := c.Cli.Acerca(c.Ctx)
+		nuevo := err == nil && (antes == nil || a.Servicio.PID != antes.Servicio.PID || !a.Servicio.IniciadoEn.Equal(antes.Servicio.IniciadoEn))
+		return msgReiniciado{origen: m.origen, intento: m.intento, nuevo: nuevo}
+	}
+}
+
+func (p *Pagina) alReiniciado(m msgReiniciado) tea.Cmd {
+	switch {
+	case !p.vigente(m.origen):
+		return nil
+	case m.nuevo:
+		return p.cargar()
+	case m.intento+1 < intentosReinicio:
+		return p.esperarReinicio(m.intento + 1)
+	}
+	return nil
 }
 
 // accion lanza un cambio en el servicio; al volver avisa y vuelve a cargar. form es el formulario del que viene.
@@ -818,6 +873,8 @@ func (p *Pagina) teclaAbierta(t string, k tea.KeyPressMsg) tea.Cmd {
 		return nil
 	case t == "c" && p.abierta == vistaAcerca:
 		return p.copiarSoporte()
+	case t == "u" && (p.abierta == vistaAcerca || p.abierta == vistaValores) && p.act != nil && p.act.Disponible:
+		return p.abrirNovedades() // como dice la cabecera; en el avance no, que corre la cuenta atrás
 	case p.abierta == vistaNovedades || p.abierta == vistaProgreso:
 		if cmd, ok := p.teclaActualizacion(t); ok {
 			return cmd
@@ -906,10 +963,15 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		return []pagina.Tecla{{Tecla: "Ctrl+S", Accion: envia}, {Tecla: "Tab", Accion: idioma.T("siguiente campo")}, {Tecla: "Esc", Accion: idioma.T("cancela")}}
 	case p.buscando:
 		return []pagina.Tecla{{Tecla: "Enter", Accion: idioma.T("aplica")}, {Tecla: "Esc", Accion: idioma.T("cancela")}}
-	case p.abierta == vistaValores:
-		return []pagina.Tecla{{Tecla: "/", Accion: idioma.T("busca")}, {Tecla: "↑↓", Accion: idioma.T("desplaza")}, {Tecla: "Esc", Accion: idioma.T("vuelve")}}
-	case p.abierta == vistaAcerca:
-		return []pagina.Tecla{{Tecla: "c", Accion: p.tx("acerca.copiar")}, {Tecla: "↑↓", Accion: idioma.T("desplaza")}, {Tecla: "Esc", Accion: idioma.T("vuelve")}}
+	case p.abierta == vistaValores || p.abierta == vistaAcerca:
+		teclas := []pagina.Tecla{{Tecla: "/", Accion: idioma.T("busca")}}
+		if p.abierta == vistaAcerca {
+			teclas = []pagina.Tecla{{Tecla: "c", Accion: p.tx("acerca.copiar")}}
+		}
+		if p.act != nil && p.act.Disponible {
+			teclas = append(teclas, pagina.Tecla{Tecla: "u", Accion: p.tx("actualizacion.boton")})
+		}
+		return append(teclas, pagina.Tecla{Tecla: "↑↓", Accion: idioma.T("desplaza")}, pagina.Tecla{Tecla: "Esc", Accion: idioma.T("vuelve")})
 	case p.abierta != "":
 		return append(p.teclasActualizacion(), pagina.Tecla{Tecla: "↑↓", Accion: idioma.T("desplaza")}, pagina.Tecla{Tecla: "Esc", Accion: idioma.T("vuelve")})
 	case !p.cargado:
