@@ -1,6 +1,8 @@
 package pagina
 
 import (
+	"math"
+	"strconv"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -87,6 +89,16 @@ func (e *Estilos) Preambulo(lengua string, ancho int, sinServicio, cargando bool
 		return "\n" + e.Tenue.Render(e.Tx(lengua, "comun.cargando")), true
 	}
 	return "", false
+}
+
+// Periodo es lo que dura el historial con esas horas de retención, como periodoHistorial de la Web UI: «el último día» o
+// «los últimos N días», con N redondeado a un decimal.
+func (e *Estilos) Periodo(lengua string, horas int) string {
+	dias := math.Round(float64(horas)/24*10) / 10
+	if dias == 1 {
+		return e.Tx(lengua, "comun.ultimoDia")
+	}
+	return e.Tx(lengua, "comun.ultimosDias", "dias", strconv.FormatFloat(dias, 'f', -1, 64))
 }
 
 // Envolver parte el texto por palabras, cada párrafo por su lado, en líneas de como mucho ancho columnas. Con n mayor que

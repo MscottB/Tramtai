@@ -106,9 +106,38 @@ export const CLAVES_EJECUTAR: string[] = [
   ...['sin_nombre', 'repetido', 'sin_opciones', 'rango', 'sin_campos'].map((p) => 'campos.problema.' + p),
 ]
 
+// CLAVES_APIS son los textos de Mis APIs que la terminal repite tal cual: las pestañas, la lista con sus filtros, el detalle
+// de una API, su formulario, la clave del espacio, el presupuesto y los avisos al cerrar. Los {placeholders} los rellena Go
+// con datos.Textof.
+export const CLAVES_APIS: string[] = [
+  'conectar.subtitulo', 'conectar.directa', 'conectar.directaTexto', 'conectar.urlAnthropic', 'conectar.apiPropia',
+  'conectar.mostrarClave', 'conectar.ocultarClave', 'conectar.regenerarClave', 'conectar.regenerarTitulo', 'conectar.regenerarTexto',
+  'conectar.claveRegenerada', 'conectar.modeloAntes', 'conectar.modeloDespues', 'conectar.perfiles', 'guia.titulo',
+  'comun.errorCarga', 'comun.reintentar', 'modelo.esPredeterminado', 'modelo.libreRegla', 'puntos.permitidosHint',
+  'puntos.filtroCaracteristicas', 'puntos.carJson', 'puntos.carRespaldo', 'puntos.carPresupuesto', 'puntos.carInstrucciones',
+  'puntos.carForzado', 'puntos.carRestringida',
+  'puntos.pestana', 'puntos.principal', 'puntos.activo', 'puntos.desactivado', 'puntos.sinGrupo', 'puntos.vacio', 'puntos.verClave',
+  'puntos.nuevo', 'puntos.nuevoTexto', 'puntos.sinResultados', 'puntos.limpiarFiltros', 'puntos.buscarApi',
+  'puntos.filtroGrupo', 'puntos.todosGrupos', 'puntos.filtroEstado', 'puntos.estadoTodas', 'puntos.estadoActivas',
+  'puntos.estadoDetenidas', 'puntos.estadoError', 'puntos.filtroAgente', 'puntos.agentesTodos', 'puntos.agentePredeterminado',
+  'puntos.filtroContrato', 'puntos.contratosTodos', 'puntos.filtroUso', 'puntos.usoTodas', 'puntos.usoCon', 'puntos.usoSin',
+  'puntos.orden', 'puntos.ordenNombre', 'puntos.ordenUso', 'puntos.ordenUltima',
+  'puntos.uso', 'puntos.usoUno', 'puntos.usoErrores', 'puntos.usoUltima', 'puntos.sinUso',
+  'puntos.listo', 'puntos.conectar', 'puntos.conectarTexto', 'puntos.claveOculta', 'puntos.activaParaConectar',
+  'puntos.regenerarClave', 'puntos.regenerarTitulo', 'puntos.regenerarTexto', 'puntos.ajustes', 'puntos.ajustesDe',
+  'puntos.ajustesGuardados', 'puntos.abrirProbar', 'puntos.verPeticiones', 'puntos.accionActivar', 'puntos.accionDesactivar',
+  'puntos.eliminarTitulo', 'puntos.eliminarTexto', 'puntos.direccion', 'puntos.ruta', 'puntos.puertoPropio', 'puntos.puerto',
+  'puntos.puertoRegla', 'puntos.compatibilidad', 'puntos.permitidos', 'puntos.alias', 'puntos.aliasInvalido', 'contrato.nativa',
+  'presupuesto.diario', 'presupuesto.mensual', 'presupuesto.peticiones', 'presupuesto.tokens', 'presupuesto.usd',
+  'presupuesto.reinicios', 'presupuesto.reiniciar', 'presupuesto.reiniciarTitulo', 'presupuesto.reiniciarTexto',
+  'presupuesto.reiniciarEspacio', 'presupuesto.reiniciarEspacioTexto', 'presupuesto.reiniciado', 'presupuesto.espacio',
+  'presupuesto.espacioTexto', 'presupuesto.editorTexto',
+  'cierre.titulo', 'cierre.texto', 'cierre.claveTitulo', 'cierre.clave',
+]
+
 // CLAVES_TEXTOS son, además de las menu.* y las error.*, los textos que la terminal toma de la Web UI: los de la Ayuda de la
-// interfaz, los de Agentes, los de Inicio, los del Historial y los de Probar.
-export const CLAVES_TEXTOS: string[] = [...CLAVES_UI, ...CLAVES_AGENTES, ...CLAVES_INICIO, ...CLAVES_HISTORIAL, ...CLAVES_EJECUTAR]
+// interfaz, los de Agentes, los de Inicio, los del Historial, los de Probar y los de Mis APIs.
+export const CLAVES_TEXTOS: string[] = [...CLAVES_UI, ...CLAVES_AGENTES, ...CLAVES_INICIO, ...CLAVES_HISTORIAL, ...CLAVES_EJECUTAR, ...CLAVES_APIS]
 
 // plano deja un texto sin marcas: sin ** y con los <marcadores> entre corchetes.
 const plano = (s: string) => s.replace(/\*\*/g, '').replace(/<([^<>]*)>/g, '[$1]')

@@ -4,10 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	tea "charm.land/bubbletea/v2"
-
 	"tramtai/internal/idioma"
-	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/vivo"
 )
@@ -253,14 +250,6 @@ func (p *Pagina) vistaCodigo() string {
 	lineas = append(lineas, strings.Join(partes, " "))
 	p.caja.Tamano(max(p.c.Ancho, 1), max(p.c.Alto-len(lineas), 1))
 	return strings.Join(append(lineas, p.caja.Vista()), "\n")
-}
-
-// copiar pone un texto en el portapapeles con OSC 52. La terminal no dice si lo admite: el aviso lo explica.
-func copiar(texto string) tea.Cmd {
-	if strings.TrimSpace(texto) == "" {
-		return comp.Aviso(idioma.T("No hay nada que copiar"), comp.Advertencia)
-	}
-	return tea.Batch(tea.SetClipboard(texto), comp.Aviso(idioma.T("Copiado con OSC 52; si no llega al portapapeles, tu terminal no lo admite"), comp.Exito))
 }
 
 // Teclas son las del pie: las del formulario mientras se edita y, si no, las de la pestaña.
