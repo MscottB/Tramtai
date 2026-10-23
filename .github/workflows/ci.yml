@@ -22,9 +22,12 @@ concurrency:
 env:
   TRAMTAI_IDIOMA: es
 
+# Cada job tiene un tope (timeout-minutes): un espejo o una descarga colgados fallan pronto en vez de gastar las 6 h que
+# GitHub deja por defecto. Los topes doblan de sobra lo que tarda cada job hoy.
 jobs:
   go:
     name: Go (${{ matrix.os }})
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -78,6 +81,7 @@ jobs:
   # el lock sirve y que scripts/uv.sh y uv.ps1 descargan lo esperado.
   conversor:
     name: Conversor (${{ matrix.os }})
+    timeout-minutes: 35 # la prueba real tiene su propio tope de 25 min
     strategy:
       fail-fast: false
       matrix:
@@ -119,6 +123,7 @@ jobs:
 
   escritorio-linux:
     name: App de escritorio (Linux)
+    timeout-minutes: 45 # con la caché de GTK vacía y el espejo de Ubuntu lento, la descarga puede tardar 25 min
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -129,7 +134,7 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: '**/go.sum' # también los módulos de la app de escritorio
       - name: GTK 4 y WebKitGTK 6.0
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev libwebkitgtk-6.0-dev
+        uses: ./.github/actions/gtk
       - name: Compilar y probar
         working-directory: escritorio
         run: |
@@ -140,8 +145,25 @@ jobs:
           sh scripts/linux/empaquetar.sh v0.0.0+ci amd64
           sh scripts/linux/probar-paquete.sh
 
+  # Publicar se lanza desde una etiqueta, que solo ve la caché de main: aquí se dejan en ella los paquetes de GTK de sus
+  # dos runners (el CI usa otra imagen de Ubuntu).
+  gtk-para-publicar:
+    name: GTK en caché para Publicar (${{ matrix.runner }})
+    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 45
+    strategy:
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/gtk
+
   escritorio-macos:
     name: App de escritorio (macOS)
+    timeout-minutes: 25
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
@@ -162,6 +184,7 @@ jobs:
   # simulado: si uno se rompe, se sabe antes de publicar. Python con el uv fijado (scripts/uv.txt), Node 24 y Go del repo.
   ejemplos:
     name: Ejemplos
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -190,6 +213,7 @@ jobs:
 
   web:
     name: Web UI
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     defaults:
       run:

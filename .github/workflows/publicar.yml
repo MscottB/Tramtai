@@ -14,9 +14,11 @@ permissions:
 env:
   TRAMTAI_IDIOMA: es # las pruebas comparan textos en español; el runner está en inglés
 
+# Cada job tiene un tope (timeout-minutes), como en el CI: algo colgado falla pronto en vez de esperar 6 h.
 jobs:
   unix:
     name: Linux y macOS
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -55,6 +57,7 @@ jobs:
 
   linux-app:
     name: App de escritorio (Linux ${{ matrix.arq }})
+    timeout-minutes: 45 # si la caché de GTK no está, el espejo de Ubuntu puede tardar 25 min
     strategy:
       matrix:
         include:
@@ -69,8 +72,8 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: '**/go.sum' # también los módulos de la app de escritorio
-      - name: GTK 4 y WebKitGTK 6.0
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev libwebkitgtk-6.0-dev
+      - name: GTK 4 y WebKitGTK 6.0 # la caché la deja el CI en main (job gtk-para-publicar)
+        uses: ./.github/actions/gtk
       - name: Compilar y empaquetar (.deb y .rpm)
         run: sh scripts/linux/empaquetar.sh "$GITHUB_REF_NAME" ${{ matrix.arq }}
       - name: Comprobar el paquete (instalar y arrancar sin pantalla)
@@ -83,6 +86,7 @@ jobs:
 
   macos-app:
     name: App de escritorio (macOS)
+    timeout-minutes: 30
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
@@ -104,6 +108,7 @@ jobs:
 
   windows:
     name: Windows (instalador y portable)
+    timeout-minutes: 30
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
@@ -184,6 +189,7 @@ jobs:
   # prepara con el uv y el lock de la versión y se comprueba sin red antes de comprimirlo.
   conversor:
     name: Paquete del conversor (Windows)
+    timeout-minutes: 30
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
@@ -244,6 +250,7 @@ jobs:
   publicar:
     name: Publicar el release
     needs: [ci, unix, linux-app, macos-app, windows, conversor]
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -289,6 +296,7 @@ jobs:
   # (solo por PR): este commit sube con la deploy key PAQUETES_DEPLOY_KEY, la única excepción de la regla.
   paquetes:
     needs: publicar
+    timeout-minutes: 30
     runs-on: macos-latest
     permissions:
       contents: read
@@ -342,6 +350,7 @@ jobs:
   # y SHA-256, y el token solo llega al paso que lo usa.
   winget:
     needs: paquetes
+    timeout-minutes: 15
     runs-on: windows-latest
     env:
       HAY_TOKEN: ${{ secrets.WINGET_TOKEN != '' }}
