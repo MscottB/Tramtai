@@ -113,6 +113,29 @@ func TestCorreccionAlRespaldoQueRespondio(t *testing.T) {
 	}
 }
 
+// Corregir a mano una respuesta del respaldo sigue con el respaldo y conserva su intento.
+func TestCorregirConservaElIntento(t *testing.T) {
+	alm := abrir(t)
+	respaldo := nuevoEnOrden(`{}`, `{"total":1}`)
+	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
+		"simulado": adaptadores.Simulado{Error: nucleo.NuevoError(nucleo.CodigoLimiteUsoProveedor, "límite")},
+		"respaldo": respaldo,
+	}, 2)
+	s := conEsquema(0)
+	s.Respaldo = []string{"respaldo"}
+	tr := esperar(t, alm, enviar(t, p, s), nucleo.Fallido)
+	if tr.Intento != 2 || tr.Solicitud.Agente != "respaldo" {
+		t.Fatalf("falló el esquema en el respaldo, intento 2: %+v", tr)
+	}
+	nuevo, err := p.Corregir(ctx, tr.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if final := esperar(t, alm, nuevo.ID, nucleo.Completado); final.Intento != 2 || final.Solicitud.Agente != "respaldo" || len(respaldo.llamadas()) != 2 {
+		t.Fatalf("la corrección conserva el intento del respaldo: %+v", final)
+	}
+}
+
 // Un error del agente durante la corrección cierra con ese error, el uso de los dos intentos y el modelo que respondió.
 func TestErrorDelAgenteEnLaCorreccion(t *testing.T) {
 	alm := abrir(t)

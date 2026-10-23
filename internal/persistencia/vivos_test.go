@@ -110,9 +110,10 @@ func TestCambiarAgenteActualiza(t *testing.T) {
 	}
 }
 
-func TestVivosUsaElIndiceDeTerminados(t *testing.T) {
-	a := abrir(t)
-	consulta, args := consultaPorCambio("global", "", condicionVivos, time.Now(), Cursor{})
+// planDe es el plan de consulta de SQLite para una lectura del flujo de eventos.
+func planDe(t *testing.T, a *Almacen, condicion string, despues Cursor) string {
+	t.Helper()
+	consulta, args := consultaPorCambio("global", "", condicion, time.Now(), despues)
 	filas, err := a.db.QueryContext(ctx, "EXPLAIN QUERY PLAN "+consulta, args...)
 	if err != nil {
 		t.Fatal(err)
@@ -127,8 +128,19 @@ func TestVivosUsaElIndiceDeTerminados(t *testing.T) {
 		}
 		plan += detalle + "\n"
 	}
-	if !strings.Contains(plan, "trabajos_instancia_terminado") {
-		t.Fatalf("la foto recorre el historial de la instancia:\n%s", plan)
+	return plan
+}
+
+func TestVivosUsaElIndiceDeTerminados(t *testing.T) {
+	a := abrir(t)
+	for _, c := range []Cursor{{}, {En: time.Now()}, {En: time.Now(), ID: "trabajo_x"}} {
+		if plan := planDe(t, a, condicionVivos, c); !strings.Contains(plan, "trabajos_instancia_terminado") {
+			t.Fatalf("la foto recorre el historial de la instancia (cursor %+v):\n%s", c, plan)
+		}
+	}
+	// La relectura tras un aviso, con el cursor de una página llena, sigue buscando por hora en el índice.
+	if plan := planDe(t, a, "", Cursor{En: time.Now(), ID: "trabajo_x"}); !strings.Contains(plan, "trabajos_instancia_actualizado") {
+		t.Fatalf("los cambiados recorren la instancia:\n%s", plan)
 	}
 }
 
@@ -156,17 +168,36 @@ func TestVivosPorPaginasConLaMismaHora(t *testing.T) {
 	t.Cleanup(func() { LimiteCambios = antes })
 	ahora := time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)
 	a := relojFijo(t, &ahora)
+	ahora = ahora.Add(-time.Second)
+	anterior := aceptar(t, a, trabajo("global", "antes"), "")
+	ahora = ahora.Add(time.Second)
 	creados := map[string]bool{}
 	for range 5 {
 		creados[aceptar(t, a, trabajo("global", "hola"), "").ID] = true
 	}
+	// La foto empieza sin cursor; la relectura tras un aviso, tras una hora y, de la segunda página en adelante, con ID.
+	vivos := porPaginas(t, Cursor{}, func(c Cursor) ([]nucleo.Trabajo, error) { return a.Vivos(ctx, "global", "", ahora, c) })
+	if len(vivos) != 6 || !vivos[anterior.ID] {
+		t.Fatalf("con páginas de 2 la foto trae los 6: %d", len(vivos))
+	}
+	cambiados := porPaginas(t, Cursor{En: ahora.Add(-time.Millisecond)}, func(c Cursor) ([]nucleo.Trabajo, error) {
+		return a.CambiadosDesde(ctx, "global", "", c)
+	})
+	if len(cambiados) != len(creados) || cambiados[anterior.ID] {
+		t.Fatalf("con páginas de 2 los cambiados son los 5 de la misma hora: %d", len(cambiados))
+	}
+}
+
+// porPaginas lee desde desde y sigue tras el último de cada página llena, como el flujo de eventos; falla si un
+// trabajo se repite.
+func porPaginas(t *testing.T, desde Cursor, leer func(Cursor) ([]nucleo.Trabajo, error)) map[string]bool {
+	t.Helper()
 	vistos := map[string]bool{}
-	despues := Cursor{}
 	for paginas := 0; ; paginas++ {
-		if paginas > 5 {
+		if paginas > 10 {
 			t.Fatalf("las páginas no acaban: %v", vistos)
 		}
-		pagina, err := a.Vivos(ctx, "global", "", ahora, despues)
+		pagina, err := leer(desde)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -177,12 +208,9 @@ func TestVivosPorPaginasConLaMismaHora(t *testing.T) {
 			vistos[tr.ID] = true
 		}
 		if len(pagina) < LimiteCambios {
-			break
+			return vistos
 		}
-		despues = Tras(pagina[len(pagina)-1])
-	}
-	if len(vistos) != len(creados) {
-		t.Fatalf("con páginas de 2 deben llegar los 5: %d", len(vistos))
+		desde = Tras(pagina[len(pagina)-1])
 	}
 }
 

@@ -412,7 +412,9 @@ func consultaPorCambio(instancia, punto, condicion string, valor time.Time, desp
 	case despues.ID == "":
 		donde, args = donde+" AND actualizado_en > ?3", append(args, fecha(despues.En))
 	default:
-		donde, args = donde+" AND (actualizado_en > ?3 OR (actualizado_en = ?3 AND id > ?7))", append(args, fecha(despues.En))
+		// Equivale a (actualizado_en, id) > (?3, ?7). Escrito como «>= y desempate» y no como «> o (= e id >)», SQLite
+		// sigue usando en la foto el índice de terminados en vez de recorrer por hora todo lo cambiado desde el cursor.
+		donde, args = donde+" AND actualizado_en >= ?3 AND (actualizado_en > ?3 OR id > ?7)", append(args, fecha(despues.En))
 	}
 	if punto != "" {
 		donde = donde + " AND punto_acceso = ?4"
