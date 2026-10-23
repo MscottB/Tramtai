@@ -38,7 +38,8 @@ jobs:
           rm -rf site/ejemplos/javascript/node_modules
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 26
+          check-latest: true
       # La versión y el enlace de cada descarga se escriben aquí, una vez, y no en cada visita a la API de GitHub. Sin
       # release (o si gh falla) la portada sale sin versión y sus botones llevan a la página del release.
       - name: Versión y descargas del último release

@@ -189,7 +189,7 @@ jobs:
           sh scripts/macos/probar-app.sh
 
   # Los ejemplos de la guía del desarrollador (docs/ejemplos) se ejecutan contra el servidor de la API con un agente
-  # simulado: si uno se rompe, se sabe antes de publicar. Python con el uv fijado (scripts/uv.txt), Node 24 y Go del repo.
+  # simulado: si uno se rompe, se sabe antes de publicar. Python con el uv fijado (scripts/uv.txt), Node 26 y Go del repo.
   ejemplos:
     name: Ejemplos
     timeout-minutes: 15
@@ -204,7 +204,8 @@ jobs:
           cache-dependency-path: '**/go.sum'
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 26
+          check-latest: true # el último parche de la 26, también los de seguridad, aunque la imagen del runner traiga otro
           cache: npm
           cache-dependency-path: docs/ejemplos/javascript/package-lock.json
       - name: Python con openai y requests (uv fijado)
@@ -232,7 +233,8 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 26 # la misma versión que en local: un fallo que solo sale en el CI cuesta más
+          check-latest: true
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
