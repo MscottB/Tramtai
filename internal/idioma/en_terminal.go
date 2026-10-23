@@ -125,8 +125,9 @@ func init() {
 		"desactiva":                          "turn off",
 		"Elige qué borrar":                   "Choose what to delete",
 		"se aplica al reiniciar el servicio": "it applies when the service restarts",
-		"Respuestas %d h · registro %s días · máximo %s":  "Responses %d h · log %s days · up to %s",
-		"¿Cancelar la actualización?":                     "Cancel the update?",
-		"La descarga se borra y Tramtai sigue como está.": "The download is deleted and Tramtai stays as it is.",
+		"Respuestas %d h · registro %s días · máximo %s":                 "Responses %d h · log %s days · up to %s",
+		"¿Cancelar la actualización?":                                    "Cancel the update?",
+		"La descarga se borra y Tramtai sigue como está.":                "The download is deleted and Tramtai stays as it is.",
+		"El servicio se reinicia; la terminal se vuelve a conectar sola": "The service is restarting; the terminal reconnects on its own",
 	})
 }

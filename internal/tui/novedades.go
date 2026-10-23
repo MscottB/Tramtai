@@ -13,9 +13,10 @@ import (
 	"tramtai/internal/tui/pagina"
 )
 
-// Novedades: al conectar, y después cada 15 minutos como la Web UI, la terminal pregunta en segundo plano al servicio si
-// hay una versión nueva (lo comprueba su actualizacion.Comprobador, como mucho una vez por hora). Si la hay, la cabecera
-// lo avisa y u abre sus novedades en Ajustes, donde se instala.
+// Novedades: al conectar, al volver el servicio (o al ser otro, tras reiniciarlo) y cada 15 minutos como la Web UI, la
+// terminal pregunta en segundo plano al servicio si hay una versión nueva (lo comprueba su actualizacion.Comprobador,
+// como mucho una vez por hora). Lo que sabe Ajustes («Buscar ahora», activar o desactivar la búsqueda) llega con
+// pagina.EstadoActualizacion. Si hay versión nueva, la cabecera lo avisa y u abre sus novedades en Ajustes.
 
 // latidosNovedades son los latidos (de 10 s) entre una pregunta y la siguiente: 15 minutos.
 const latidosNovedades = 90
@@ -49,9 +50,10 @@ func (m *modelo) avisoNovedad(libre int) string {
 	return ""
 }
 
-// teclaNovedad: con una versión nueva, u lleva a sus novedades, salvo en una página que use la u para otra cosa.
+// teclaNovedad: con una versión nueva, u lleva a sus novedades, salvo en una página que use la u para otra cosa. En Ajustes
+// la u siempre es suya (abre las novedades donde se esté): iniciarla de nuevo perdería el avance de una actualización.
 func (m *modelo) teclaNovedad(p pagina.Pagina) (tea.Cmd, bool) {
-	if !m.novedad.Disponible || slices.ContainsFunc(p.Teclas(), func(t pagina.Tecla) bool { return t.Tecla == "u" }) {
+	if !m.novedad.Disponible || m.actual == pagina.PaginaConfiguracion || slices.ContainsFunc(p.Teclas(), func(t pagina.Tecla) bool { return t.Tecla == "u" }) {
 		return nil, false
 	}
 	return m.ir(pagina.PaginaConfiguracion, pagina.ConNovedades{}, true), true

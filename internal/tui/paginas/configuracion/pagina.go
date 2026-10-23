@@ -47,11 +47,14 @@ type (
 		ahora bool
 		err   error
 	}
-	// msgAccion es la respuesta de un cambio en el servicio: el aviso si salió bien y, si venía de un formulario, cuál.
+	// msgAccion es la respuesta de un cambio en el servicio: el aviso si salió bien y, si venía de un formulario, cuál;
+	// preguntar es lo que se pregunta después (reiniciar tras cambiar el puerto) y reinicio, que el servicio se va: no se
+	// recarga, la app se vuelve a conectar con el nuevo.
 	msgAccion struct {
 		origen
-		aviso, form string
-		err         error
+		aviso, form, preguntar string
+		reinicio               bool
+		err                    error
 	}
 	msgConversor struct {
 		origen
@@ -332,11 +335,48 @@ func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
 	if p.form != nil && p.form.id == m.form {
 		p.form = nil
 	}
-	return tea.Batch(comp.Aviso(m.aviso, comp.Exito), p.cargar())
+	cmds := []tea.Cmd{comp.Aviso(m.aviso, comp.Exito)}
+	if !m.reinicio {
+		cmds = append(cmds, p.cargar())
+	}
+	if m.preguntar != "" {
+		p.pend = "reiniciar"
+		cmds = append(cmds, comp.Confirmar(m.preguntar))
+	}
+	return tea.Batch(cmds...)
+}
+
+// reiniciable dice si el puerto guardado no es el que se usa y el servicio se puede reiniciar desde aquí para aplicarlo.
+func (p *Pagina) reiniciable() bool {
+	return p.ajustes.Reiniciable && p.ajustes.PuertoConfigurado != p.ajustes.Puerto
+}
+
+// preguntaReiniciar es la de la Web UI tras guardar el puerto.
+func (p *Pagina) preguntaReiniciar(puerto int) string {
+	return p.tx("puerto.reiniciarTitulo") + "\n\n" + p.tx("puerto.reiniciarTexto", "puerto", strconv.Itoa(puerto))
+}
+
+// reiniciar pide al servicio que se reinicie con el puerto nuevo, como reiniciarYSeguir de la Web UI: la terminal se
+// vuelve a conectar con el servicio nuevo por su descriptor.
+func (p *Pagina) reiniciar() tea.Cmd {
+	c, o := p.c, p.origen()
+	if c.Cli == nil {
+		return pagina.SinCliente
+	}
+	aviso := idioma.T("El servicio se reinicia; la terminal se vuelve a conectar sola")
+	return func() tea.Msg {
+		_, err := c.Cli.Reiniciar(c.Ctx)
+		return msgAccion{origen: o, aviso: aviso, reinicio: true, err: err}
+	}
 }
 
 // accion lanza un cambio en el servicio; al volver avisa y vuelve a cargar. form es el formulario del que viene.
 func (p *Pagina) accion(aviso, form string, hacer func(c pagina.Contexto) error) tea.Cmd {
+	return p.accionYPreguntar(aviso, form, "", hacer)
+}
+
+// accionYPreguntar es accion y, si sale bien, la pregunta (reiniciar tras cambiar el puerto).
+func (p *Pagina) accionYPreguntar(aviso, form, preguntar string, hacer func(c pagina.Contexto) error) tea.Cmd {
 	c, o := p.c, p.origen()
 	if c.Cli == nil {
 		return pagina.SinCliente
@@ -345,7 +385,9 @@ func (p *Pagina) accion(aviso, form string, hacer func(c pagina.Contexto) error)
 		return nil
 	}
 	p.ocupado = true
-	return func() tea.Msg { return msgAccion{origen: o, aviso: aviso, form: form, err: hacer(c)} }
+	return func() tea.Msg {
+		return msgAccion{origen: o, aviso: aviso, form: form, preguntar: preguntar, err: hacer(c)}
+	}
 }
 
 // procedencia de una clave en un proyecto, como herencia.ts: propio si la define el proyecto o su local.yaml; de Global si
@@ -558,11 +600,14 @@ func (p *Pagina) enviar() tea.Cmd {
 		})
 	case secPuerto:
 		puerto, automatico := f.Entero("puerto"), f.Marcado("automatico")
-		aviso := p.tx("puerto.guardado")
-		if puerto != p.ajustes.Puerto {
+		aviso, preguntar := p.tx("puerto.guardado"), ""
+		switch {
+		case puerto != p.ajustes.Puerto && p.ajustes.Reiniciable: // como la Web UI: se ofrece reiniciar ahora
+			preguntar = p.preguntaReiniciar(puerto)
+		case puerto != p.ajustes.Puerto:
 			aviso += " · " + idioma.T("se aplica al reiniciar el servicio")
 		}
-		return p.accion(aviso, secPuerto, func(c pagina.Contexto) error { return c.Cli.FijarPuerto(c.Ctx, puerto, automatico) })
+		return p.accionYPreguntar(aviso, secPuerto, preguntar, func(c pagina.Contexto) error { return c.Cli.FijarPuerto(c.Ctx, puerto, automatico) })
 	case secDatos:
 		p.borrar.historial = f.Marcado("historial") && p.terminados > 0
 		p.borrar.puntos = nil
@@ -616,6 +661,8 @@ func (p *Pagina) confirmado() tea.Cmd {
 		})
 	case "cancelar":
 		return p.decidir(false)
+	case "reiniciar":
+		return p.reiniciar()
 	}
 	return nil
 }
@@ -702,6 +749,9 @@ func (p *Pagina) teclaSeccion(sec, t string) tea.Cmd {
 		return p.heredar(clavesRetencion)
 	case (sec == secHistorial || sec == secPuerto) && t == "e", sec == secDatos && t == "x":
 		p.abrirForm(sec)
+	case sec == secPuerto && t == "R" && p.reiniciable():
+		p.pend = "reiniciar"
+		return comp.Confirmar(p.preguntaReiniciar(p.ajustes.PuertoConfigurado))
 	case sec == secValores && t == "enter":
 		p.abierta, p.filtro = vistaValores, ""
 	case sec == secConversor && t == "p" && puedePreparar(p.conversor):
@@ -887,6 +937,9 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		poner("Enter", idioma.T("ver"))
 	case secPuerto:
 		poner("e", idioma.T("edita"))
+		if p.reiniciable() {
+			poner("R", p.tx("puerto.reiniciarAhora"))
+		}
 	case secConversor:
 		if puedePreparar(p.conversor) {
 			poner("p", p.tx(map[bool]string{true: "conversor.prepararDeNuevo", false: "conversor.preparar"}[p.conversor.Estado == "listo"]))

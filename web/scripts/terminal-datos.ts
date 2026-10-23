@@ -168,6 +168,7 @@ export const CLAVES_AJUSTES: string[] = [
   'datos.titulo', 'datos.texto', 'datos.historial', 'datos.historialDetalle', 'datos.historialDetalleUno', 'datos.puntos',
   'datos.puntosDetalle', 'datos.puntosDetalleUno', 'datos.boton', 'datos.confirmar', 'datos.hecho',
   'puerto.titulo', 'puerto.texto', 'puerto.actual', 'puerto.distinto', 'puerto.campo', 'puerto.regla', 'puerto.automatico', 'puerto.guardado',
+  'puerto.reiniciarTitulo', 'puerto.reiniciarTexto', 'puerto.reiniciarAhora',
   'conversor.titulo', 'conversor.texto', 'conversor.listo', 'conversor.listoSinVersion', 'conversor.ultimoError', 'conversor.preparando',
   'conversor.prepararDeNuevo', 'conversor.alIniciar', 'conversor.preparandoNuevo',
   ...['python', 'paquetes', 'comprobacion'].map((e) => 'conversor.etapa.' + e),

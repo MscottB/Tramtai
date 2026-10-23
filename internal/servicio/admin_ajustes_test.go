@@ -91,11 +91,65 @@ func TestAdminAjustesYActualizaciones(t *testing.T) {
 		t.Fatalf("novedades sin búsqueda: %d %+v", c, n)
 	}
 
-	// Todo esto es de la administración: con la clave de una app, no.
+}
+
+// rutasAjustes son las de administración que usa Ajustes de la terminal, con su método y un cuerpo válido.
+var rutasAjustes = []struct{ metodo, ruta, cuerpo string }{
+	{"GET", "/api/v1/servicio/ajustes", ""}, {"PUT", "/api/v1/servicio/autoarranque", `{"activo":true}`},
+	{"GET", "/api/v1/servicio/actualizacion", ""}, {"GET", "/api/v1/servicio/actualizacion?ahora=1", ""},
+	{"PUT", "/api/v1/servicio/actualizacion", `{"buscar":true}`}, {"POST", "/api/v1/servicio/actualizar", ""},
+	{"POST", "/api/v1/servicio/actualizar/instalar", ""}, {"POST", "/api/v1/servicio/actualizar/cancelar", ""},
+	{"GET", "/api/v1/servicio/actualizacion/progreso", ""}, {"GET", "/api/v1/servicio/actualizacion/novedades?desde=v0.1.0", ""},
+	{"GET", "/api/v1/servicio/acerca", ""}, {"POST", "/api/v1/servicio/reiniciar", ""},
+}
+
+// Todas las rutas de Ajustes son solo de la administración: ni sin clave, ni con la clave de una app, ni con una sesión de
+// la Web UI (aunque lleve su CSRF) entran, y nada cambia.
+func TestAdminAjustesSoloConLaClaveDelServicio(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	cambios := 0
+	s.opc.CambiarAutoarranque = func(bool) error { cambios++; return nil }
+	s.opc.Reiniciar = func() error { cambios++; return nil }
+	s.opc.ConsultarVersion = func(context.Context) (actualizacion.Version, error) { cambios++; return actualizacion.Version{}, nil }
+	s.actualizaciones.Consultar = s.opc.ConsultarVersion
 	inst, _ := s.ActivarGlobal()
-	for _, ruta := range []string{"/api/v1/servicio/ajustes", "/api/v1/servicio/actualizacion", "/api/v1/servicio/acerca"} {
-		if r, _ := pedir(t, ts.URL, "GET", ruta, inst.token, ""); r.StatusCode != 401 {
-			t.Fatalf("%s con la clave de la app: %d", ruta, r.StatusCode)
+	web := abrirSesion(t, s, ts.URL)
+	for _, c := range rutasAjustes {
+		for quien, token := range map[string]string{"sin clave": "", "con la clave de la app": inst.token} {
+			if r, _ := pedir(t, ts.URL, c.metodo, c.ruta, token, c.cuerpo); r.StatusCode != 401 {
+				t.Errorf("%s %s %s: %d", c.metodo, c.ruta, quien, r.StatusCode)
+			}
 		}
+		if r, _ := web.pedir(c.metodo, c.ruta, c.cuerpo, "X-CSRF-Token", web.csrf); r.StatusCode != 401 {
+			t.Errorf("%s %s con la sesión de la Web UI: %d", c.metodo, c.ruta, r.StatusCode)
+		}
+	}
+	if cambios != 0 || s.buscar.Load() {
+		t.Fatalf("una petición rechazada no cambia nada: %d %v", cambios, s.buscar.Load())
+	}
+}
+
+// «Reiniciar ahora» tras cambiar el puerto, como en la Web UI: la administración pide el servicio nuevo una vez (un segundo
+// reinicio responde lo mismo) y dice dónde escuchará; sin reinicio posible, 400.
+func TestAdminReiniciar(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	if r, texto := admin(t, s, ts.URL, "POST", "/api/v1/servicio/reiniciar", ""); r.StatusCode != 400 {
+		t.Fatalf("sin reinicio posible: %d %s", r.StatusCode, texto)
+	}
+	pedidos := 0
+	s.opc.Reiniciar = func() error { pedidos++; return nil }
+	for range 2 {
+		r, texto := admin(t, s, ts.URL, "POST", "/api/v1/servicio/reiniciar", "")
+		if r.StatusCode != 202 || !strings.Contains(texto, `"url":"http://127.0.0.1:`) {
+			t.Fatalf("reiniciar: %d %s", r.StatusCode, texto)
+		}
+	}
+	if pedidos != 1 {
+		t.Fatalf("el servicio nuevo se pide una vez: %d", pedidos)
+	}
+	select {
+	case <-s.Detenido():
+	default:
+		t.Fatal("este servicio se detiene para dejar sitio al nuevo")
 	}
 }

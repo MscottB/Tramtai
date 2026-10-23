@@ -3,6 +3,7 @@ package configuracion_test
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -10,8 +11,10 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -22,6 +25,7 @@ import (
 	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
 	"tramtai/internal/nucleo"
+	"tramtai/internal/servicio"
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
@@ -392,18 +396,82 @@ func TestAjustesNovedades(t *testing.T) {
 	b.HastaVer(tx("actualizacion.titulo", "version", "v99.0.0"))
 }
 
+// estadoDifundido es el último estado de las actualizaciones que la página dio a la app (para la cabecera).
+func estadoDifundido(fuera []tea.Msg) (contrato.EstadoActualizacion, bool) {
+	for i := len(fuera) - 1; i >= 0; i-- {
+		if e, ok := fuera[i].(pagina.EstadoActualizacion); ok {
+			return e.Estado, true
+		}
+	}
+	return contrato.EstadoActualizacion{}, false
+}
+
 // TestBuscarAhora: b consulta en el momento aunque la búsqueda esté apagada y, si hay una versión nueva, abre sus novedades.
+// Lo que sabe la página llega a la app, también al activar o desactivar la búsqueda: la cabecera no se queda atrás.
 func TestBuscarAhora(t *testing.T) {
 	cli, id := conVersion(t)
 	if _, err := cli.BuscarActualizaciones(context.Background(), false); err != nil {
 		t.Fatal(err)
 	}
 	a := abierta(t, cli, id)
+	if e, ok := estadoDifundido(a.Fuera); !ok || e.Buscar || e.Disponible {
+		t.Fatalf("al cargar, la app sabe que la búsqueda está apagada: %+v %v", e, ok)
+	}
 	todoTramtai(t, a)
 	ir(t, a, tx("actualizacion.ajustesTitulo"))
 	a.HastaVer(tx("actualizacion.desactivada", "actual", "")[:20])
 	a.Pulsar("b")
 	a.HastaVer(tx("actualizacion.titulo", "version", "v99.0.0"))
+	if e, _ := estadoDifundido(a.Fuera); !e.Disponible || e.Version != "v99.0.0" {
+		t.Fatalf("buscar ahora llega a la app: %+v", e)
+	}
+	a.Pulsar("esc", "space")
+	a.Hasta(func() bool { e, _ := estadoDifundido(a.Fuera); return e.Buscar })
+	a.Pulsar("space")
+	a.Hasta(func() bool { e, _ := estadoDifundido(a.Fuera); return !e.Buscar })
+}
+
+// TestReiniciarTrasElPuerto: con un servicio que se puede reiniciar, guardar otro puerto pregunta si se reinicia ahora,
+// como la Web UI; cancelar no reinicia, y R lo vuelve a ofrecer mientras el puerto configurado no es el que se usa.
+// Confirmado, se pide el reinicio al servicio (el de la prueba solo lo apunta).
+func TestReiniciarTrasElPuerto(t *testing.T) {
+	var pedidos atomic.Int32
+	cli, id := prueba.Ajustado(t, func(o *servicio.Opciones) { o.Reiniciar = func() error { pedidos.Add(1); return nil } })
+	libre, _ := net.Listen("tcp", "127.0.0.1:0")
+	puerto := strconv.Itoa(libre.Addr().(*net.TCPAddr).Port)
+	libre.Close()
+	a := abierta(t, cli, id)
+	todoTramtai(t, a)
+	ir(t, a, tx("puerto.titulo"))
+	if slices.ContainsFunc(a.P.Teclas(), func(k pagina.Tecla) bool { return k.Tecla == "R" }) {
+		t.Fatal("con el puerto de siempre no hay nada que reiniciar")
+	}
+	a.Pulsar("e")
+	vaciar(a)
+	a.Escribir(puerto)
+	var q comp.Pregunta
+	desde := len(a.Fuera)
+	a.Pulsar("ctrl+s")
+	a.Hasta(func() bool { var ok bool; q, ok = pregunta(a.Fuera[desde:]); return ok })
+	if !strings.Contains(q.Texto, tx("puerto.reiniciarTitulo")) || !strings.Contains(q.Texto, tx("puerto.reiniciarTexto", "puerto", puerto)) {
+		t.Fatalf("pregunta si se reinicia: %+v", q)
+	}
+	a.Entregar(comp.Cancelado{})
+	if pedidos.Load() != 0 {
+		t.Fatal("cancelar no reinicia")
+	}
+	a.Hasta(func() bool {
+		return slices.ContainsFunc(a.P.Teclas(), func(k pagina.Tecla) bool { return k.Tecla == "R" && k.Accion == tx("puerto.reiniciarAhora") })
+	})
+	if _, ok := pregunta(a.Pulsar("R")); !ok {
+		t.Fatal("R pregunta antes de reiniciar")
+	}
+	if av := hastaAviso(a, func() { a.Entregar(comp.Confirmado{}) }); av.Tipo != comp.Exito {
+		t.Fatalf("avisa de que se reinicia: %+v", av)
+	}
+	if pedidos.Load() != 1 {
+		t.Fatalf("se pide el reinicio una vez: %d", pedidos.Load())
+	}
 }
 
 // actualizable pone delante del servicio un servidor que hace instalable la versión nueva y sirve el avance que le dé la

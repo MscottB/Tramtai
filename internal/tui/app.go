@@ -233,6 +233,8 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err == nil {
 			m.novedad = msg.estado
 		}
+	case pagina.EstadoActualizacion:
+		m.novedad = msg.Estado
 	case msgLatido:
 		if m.comprobando { // la comprobación en marcha ya traerá su resultado; la cadena sigue
 			return m, latir()

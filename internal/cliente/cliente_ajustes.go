@@ -74,6 +74,15 @@ func (c *Cliente) Novedades(ctx context.Context, desde, hasta string) ([]contrat
 	return r.Versiones, err
 }
 
+// Reiniciar reinicia el servicio para aplicar el puerto (si AjustesServicio dice que es reiniciable) y devuelve la dirección
+// en la que escuchará el nuevo; el descriptor de la carpeta de datos lleva a él.
+func (c *Cliente) Reiniciar(ctx context.Context) (string, error) {
+	var r struct {
+		URL string `json:"url"`
+	}
+	return r.URL, c.pedir(ctx, "POST", "/api/v1/servicio/reiniciar", "", nil, "", &r)
+}
+
 // Acerca devuelve los datos de «Acerca de Tramtai», con las carpetas de este equipo.
 func (c *Cliente) Acerca(ctx context.Context) (contrato.Acerca, error) {
 	var a contrato.Acerca

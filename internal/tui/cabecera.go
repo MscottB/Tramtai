@@ -92,7 +92,7 @@ func (m *modelo) conectado(r msgConexion) tea.Cmd {
 		if r.latido {
 			m.latidos++
 		}
-		if !m.preguntada || (r.latido && m.latidos%latidosNovedades == 0) {
+		if !m.preguntada || r.reiniciar || (r.latido && m.latidos%latidosNovedades == 0) { // r.reiniciar: el servicio volvió o es otro
 			m.preguntada = true
 			cmds = append(cmds, novedad(r.cli))
 		}

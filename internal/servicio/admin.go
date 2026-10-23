@@ -167,6 +167,8 @@ func (s *Servicio) rutasAdmin() http.Handler {
 	mux.HandleFunc("POST /api/v1/servicio/actualizar/cancelar", sinSesion((*Servicio).decidirInstalacionUI))
 	mux.HandleFunc("GET /api/v1/servicio/actualizacion/progreso", sinSesion((*Servicio).progresoUI))
 	mux.HandleFunc("GET /api/v1/servicio/actualizacion/novedades", sinSesion((*Servicio).novedadesUI))
+	// «Reiniciar ahora» tras cambiar el puerto: lanza el servicio nuevo y responde dónde escuchará (202).
+	mux.HandleFunc("POST /api/v1/servicio/reiniciar", sinSesion((*Servicio).reiniciarUI))
 	mux.HandleFunc("GET /api/v1/servicio/acerca", func(w http.ResponseWriter, _ *http.Request) {
 		api.EscribirJSON(w, http.StatusOK, s.acerca(true))
 	})

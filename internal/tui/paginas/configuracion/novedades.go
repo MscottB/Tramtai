@@ -93,16 +93,17 @@ func (p *Pagina) alActualizacion(m msgActualizacion) tea.Cmd {
 		return comp.Aviso(nucleo.MensajeDe(m.err), comp.Fallo)
 	}
 	p.act = &m.e
+	difundir := func() tea.Msg { return pagina.EstadoActualizacion{Estado: m.e} } // para la cabecera
 	switch {
 	case (m.ahora || p.upd.quiere) && m.e.Disponible:
 		p.upd.quiere = false
-		return p.abrirNovedades()
+		return tea.Batch(difundir, p.abrirNovedades())
 	case !m.ahora:
-		return nil
+		return difundir
 	case m.e.Fallo:
-		return comp.Aviso(p.tx("actualizacion.falloConsulta"), comp.Advertencia)
+		return tea.Batch(difundir, comp.Aviso(p.tx("actualizacion.falloConsulta"), comp.Advertencia))
 	}
-	return comp.Aviso(p.tx("actualizacion.alDia", "actual", m.e.Actual), comp.Info)
+	return tea.Batch(difundir, comp.Aviso(p.tx("actualizacion.alDia", "actual", m.e.Actual), comp.Info))
 }
 
 // instalar empieza la actualización en el servicio (o se une a la que está en curso) y enseña su avance al momento.
