@@ -13,6 +13,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"tramtai/internal/tui/comp"
+	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
 )
 
@@ -105,6 +106,46 @@ func TestAsentarEsperaAlQueTarda(t *testing.T) {
 	a := Abrir(t, &contador{}, pagina.Contexto{Ctx: context.Background()})
 	if a.Pulsar("l"); a.Vista() != "1" {
 		t.Fatalf("Pulsar volvió antes de la respuesta: %s", a.Vista())
+	}
+}
+
+// cargador enseña «Cargando…» hasta que llega su primera respuesta, que espera a un temporizador que el arnés no ve: lo
+// que pasa con un temporizador del servicio o una espera de E/S que la foto de las goroutines da por quieta.
+type cargador struct{ listo bool }
+
+type cargado struct{}
+
+func (c *cargador) Titulo() string         { return "cargador" }
+func (c *cargador) Teclas() []pagina.Tecla { return nil }
+func (c *cargador) EnCampo() bool          { return false }
+func (c *cargador) Ayuda() string          { return "" }
+func (c *cargador) Iniciar(pagina.Contexto) tea.Cmd {
+	return func() tea.Msg {
+		soltar := make(chan struct{})
+		time.AfterFunc(50*time.Millisecond, func() { close(soltar) })
+		<-soltar
+		return cargado{}
+	}
+}
+func (c *cargador) Vista() string {
+	if !c.listo {
+		return datos.Texto("es", "comun.cargando")
+	}
+	return "listo"
+}
+func (c *cargador) Update(m tea.Msg) (pagina.Pagina, tea.Cmd) {
+	if _, ok := m.(cargado); ok {
+		c.listo = true
+	}
+	return c, nil
+}
+
+// Abrir no vuelve con la página en «Cargando…» mientras su carga sigue en camino, aunque lo que espera parezca quieto:
+// si no, la prueba mira la vista antes de que lleguen los datos (lo que hacía fallar de vez en cuando a Historial y
+// Agentes con la máquina cargada).
+func TestAbrirEsperaLaCargaInicial(t *testing.T) {
+	if a := Abrir(t, &cargador{}, pagina.Contexto{Ctx: context.Background()}); a.Vista() != "listo" {
+		t.Fatalf("Abrir volvió con la página cargando: %s", a.Vista())
 	}
 }
 

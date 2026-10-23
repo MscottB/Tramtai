@@ -49,6 +49,7 @@ func abrir(t *testing.T, c pagina.Contexto) (*prueba.App, *prueba.Reloj) {
 		t.Fatalf("arranca con «Cargando…»:\n%s", v)
 	}
 	a.Correr(cmd)
+	a.EsperarCarga()
 	return a, r
 }
 
@@ -281,6 +282,7 @@ func TestHistorialVerMasSinRepetir(t *testing.T) {
 		t.Fatalf("dice cuántas muestra:\n%s", v)
 	}
 	a.Pulsar("m")
+	a.HastaVer("Mostrando las 400 más recientes") // la página siguiente la trae el servicio: se espera a verla
 	if got := lista(); !slices.Equal(got, esperado[:400]) {
 		t.Fatalf("la segunda página sigue a la primera sin repetir: %d", len(got))
 	}
@@ -288,6 +290,7 @@ func TestHistorialVerMasSinRepetir(t *testing.T) {
 		t.Fatal("una página llena puede tener más")
 	}
 	a.Pulsar("m")
+	a.HastaVer(fmt.Sprintf("Mostrando las %d más recientes", total))
 	if got := lista(); !slices.Equal(got, esperado) {
 		t.Fatalf("las %d, una vez cada una: %d", total, len(got))
 	}

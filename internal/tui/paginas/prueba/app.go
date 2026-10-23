@@ -17,6 +17,7 @@ import (
 
 	"tramtai/internal/cliente"
 	"tramtai/internal/tui/comp"
+	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
 )
 
@@ -30,10 +31,15 @@ type App struct {
 	Fuera   []tea.Msg
 	llegan  chan tea.Msg
 	retener *[]tea.Cmd
+	// pendientes son los Cmd que corren y aún no han devuelto nada (un flujo en vivo no vuelve nunca).
+	pendientes atomic.Int64
 }
 
 // plazo es lo que se espera a que llegue lo esperado o se asiente la página antes de dar la prueba por fallida.
 var plazo = 10 * time.Second
+
+// cargandoTexto es lo que enseña una página mientras llegan sus datos (pagina.Preambulo), en el idioma de las pruebas.
+var cargandoTexto = datos.Texto("es", "comun.cargando")
 
 // Portapapeles es lo que la página manda copiar con OSC 52 (el mensaje de tea.SetClipboard no se exporta).
 type Portapapeles string
@@ -85,12 +91,26 @@ func Contexto(t *testing.T, cli *cliente.Cliente, instancia string) pagina.Conte
 		Estilos: &pagina.Estilos{Iconos: pagina.IconosUnicode}, Ancho: 60, Alto: 17}
 }
 
-// Abrir inicia la página con c y espera a que se asiente, como al entrar en ella.
+// Abrir inicia la página con c y espera a que se asiente y a su carga inicial, como al entrar en ella. Para ver la
+// página mientras carga está Conducir.
 func Abrir(t *testing.T, p pagina.Pagina, c pagina.Contexto) *App {
 	t.Helper()
 	a := Conducir(t, p)
 	a.Correr(p.Iniciar(c))
+	a.EsperarCarga()
 	return a
+}
+
+// EsperarCarga espera, si la página sigue en «Cargando…» con un Cmd suyo aún sin volver, a que llegue esa carga: lo que
+// la trae puede parecer quieto en la foto de Asentar (un temporizador del servicio, una espera de E/S) y con la máquina
+// cargada la prueba miraría antes de tiempo. Sin Cmd pendiente (servicio caído, respuesta vieja descartada) no espera.
+func (a *App) EsperarCarga() {
+	a.t.Helper()
+	// Un Cmd encola su respuesta antes de dejar de estar pendiente: sin pendientes y con la cola vacía no llega nada más.
+	a.Hasta(func() bool {
+		return a.pendientes.Load() == 0 && len(a.llegan) == 0 || !strings.Contains(a.Vista(), cargandoTexto)
+	})
+	a.Asentar() // lo que pida la página al recibir su carga
 }
 
 // Conducir lleva una página que la prueba inicia por su cuenta (para ver cómo queda antes de que lleguen sus datos).
@@ -360,10 +380,13 @@ func (a *App) correr(cmd tea.Cmd) {
 		*a.retener = append(*a.retener, cmd)
 		return
 	}
+	a.pendientes.Add(1)
 	go func() {
-		if m := cmd(); m != nil {
-			a.llegan <- m
+		m := cmd()
+		if m != nil {
+			a.llegan <- m // se encola antes de dejar de estar pendiente: Asentar nunca ve el hueco
 		}
+		a.pendientes.Add(-1)
 	}()
 }
 

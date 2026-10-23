@@ -53,6 +53,7 @@ func abrir(t *testing.T, c pagina.Contexto, f *ensayo) (*prueba.App, *prueba.Rel
 		t.Fatalf("arranca con «Cargando…»:\n%s", v)
 	}
 	a.Correr(cmd)
+	a.EsperarCarga()
 	return a, r
 }
 

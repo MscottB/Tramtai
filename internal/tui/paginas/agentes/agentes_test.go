@@ -41,6 +41,7 @@ func abierta(t *testing.T) (*prueba.App, *cliente.Cliente, string) {
 		t.Fatalf("arranca con «Cargando…»:\n%s", v)
 	}
 	a.Correr(cmd)
+	a.EsperarCarga()
 	return a, cli, id
 }
 
