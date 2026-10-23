@@ -29,6 +29,7 @@ Si tu app ya usa el SDK de OpenAI o el de Anthropic, solo cambias la URL base. A
 - **Archivos y respuestas con forma:** PDF, Word, Excel o PowerPoint como entrada y JSON validado como salida, sin escribir JSON Schema.
 - **Una API por aplicación,** con su clave, sus modelos, sus instrucciones y su presupuesto.
 - **Tu suscripción o tu clave de API,** en la app de escritorio, la Web UI, la terminal o la CLI, en español e inglés.
+- **Todo desde la terminal:** `tramtai terminal` tiene las mismas páginas que la app, de Inicio a la Ayuda, y sirve sin abrir la app y por SSH.
 - **Local y privado:** por defecto escucha solo en `127.0.0.1`, sin telemetría, y las claves quedan cifradas en el almacén del sistema.
 
 ## Empezar
@@ -48,12 +49,23 @@ print(r.choices[0].message.content)
 Con el SDK de Anthropic, la URL es `http://127.0.0.1:17373/anthropic`. **Mis APIs → ¿Qué URL uso?** compara las tres
 APIs y trae ejemplos para copiar.
 
+**Solo con la terminal** (sin la app, también por SSH al equipo donde corre Tramtai):
+
+```sh
+tramtai servicio iniciar -d   # el servicio en segundo plano
+tramtai terminal              # las mismas páginas que la app
+```
+
+Tab abre el menú, del 1 al 7 vas a cada página, `?` abre la ayuda de la página, `/` busca, Esc vuelve, `c` cancela la
+petición en curso, `r` reintenta si el servicio no responde y `q` sale. Necesita una ventana de 60×20 como mínimo; con
+`NO_COLOR` va sin color y con `TRAMTAI_ASCII=1`, sin caracteres de dibujo.
+
 ## Documentación
 
 | Guía | Contenido |
 |---|---|
 | [Primeros pasos](docs/inicio.md) | Instalar en cada sistema (también portable, Homebrew y solo CLI), agentes, archivos y modelos |
-| [Operación](docs/operacion.md) | Servicio, APIs por aplicación, actualizaciones, arranque con el sistema y retención |
+| [Operación](docs/operacion.md) | Servicio, la terminal y sus teclas, APIs por aplicación, actualizaciones, arranque con el sistema y retención |
 | [Desarrolladores](docs/desarrolladores.md) | Conectar tu app: primer mensaje, archivos, JSON, herramientas y errores, con ejemplos en Python, JavaScript, Go y curl |
 | [API](docs/api.md) | Las tres APIs, sus rutas, opciones y errores |
 | [Arquitectura](docs/arquitectura.md) | Cómo funciona por dentro: agentes, aislamiento y seguridad |
@@ -83,6 +95,9 @@ URL. Antigravity, for now, only from the Playground, the terminal and the CLI.
 - **Agent and model per request,** with fallback to another agent if the first one fails.
 - **Files in, shaped JSON out:** PDF, Word, Excel or PowerPoint as input, validated JSON as output.
 - **One API per app,** with its own key, models, instructions and budget.
+- **Everything from the terminal:** `tramtai terminal` has the same pages as the app, from Home to Help, without
+  opening the app and over SSH (`tramtai servicio iniciar -d` starts the service in the background). Tab opens the
+  menu, 1 to 7 go to each page, `?` opens the page’s Help, Esc goes back and `q` quits.
 - **Local and private:** listens only on `127.0.0.1` by default, no telemetry, keys encrypted in the system store.
 
 [**Download**](https://mscottb.github.io/Tramtai/#descargar) for Windows, macOS or Linux, connect an agent in *Agents*

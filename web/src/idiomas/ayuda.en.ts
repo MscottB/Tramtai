@@ -76,7 +76,12 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.empezar.pPortable': 'How does the portable copy work?',
   'ayuda.empezar.rPortable': 'The Windows .zip keeps everything in “datos-tramtai”, next to it, without touching the installed copy. To update it, unzip the new one on top.',
   'ayuda.empezar.pTerminal': 'Can I use only the terminal?',
-  'ayuda.empezar.rTerminal': 'Yes: “brew install mscottb/tramtai/tramtai” or the instalar.sh script install the CLI and the service; “tramtai abrir” starts it and opens the Web UI.',
+  'ayuda.empezar.rTerminal': 'Yes: see “Terminal only” above. Without the desktop app, “brew install mscottb/tramtai/tramtai” or the instalar.sh script install the CLI and the service.',
+  'ayuda.empezar.soloTerminal': 'Terminal only',
+  'ayuda.empezar.soloTerminal1': 'Start the service in the background with “tramtai servicio iniciar -d”: it serves your apps without opening the app, even after you close the terminal.',
+  'ayuda.empezar.soloTerminal2': 'Open “tramtai terminal” (or just “tramtai”): it has the same pages as the app, from Home to Help. If the service is not running, r starts it.',
+  'ayuda.empezar.soloTerminal3': 'Tab opens the menu and 1 to 7 go to each page. ? opens its help, / searches, Esc goes back, c cancels the running request and q quits.',
+  'ayuda.empezar.soloTerminal4': 'Over SSH to the computer where Tramtai runs, “tramtai terminal” works the same. It needs at least 60×20; NO_COLOR turns color off and TRAMTAI_ASCII=1 drops the drawing characters.',
 
   // Topic: Agents and models
   'ayuda.agentes.titulo': 'Agents and models',
@@ -178,7 +183,7 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   // Topic: History
   'ayuda.historial.titulo': 'History',
   'ayuda.historial.resumen': 'Every request stays in History with its response, the agent that answered and the log of each step.',
-  'ayuda.historial.paso1': 'Filter by status, origin or group, or search by text.',
+  'ayuda.historial.paso1': 'Filter by status, origin or group, or search by text across the whole history.',
   'ayuda.historial.paso2': 'Open a request to see the response and its “Log”, with every step and its time.',
   'ayuda.historial.paso3': 'If it failed, fix the cause and click “Retry”.',
   'ayuda.historial.captura': 'The History list with its filters',
@@ -286,6 +291,8 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.ajustes.rVersion': 'Open “About Tramtai” in the side menu or the tray; “Copy support details” copies what is needed, without keys.',
   'ayuda.ajustes.pDatos': 'Where is my data kept?',
   'ayuda.ajustes.rDatos': 'Only on this computer: %APPDATA%\\tramtai (Windows), ~/Library/Application Support/tramtai (macOS) or ~/.config/tramtai (Linux); the portable, in “datos-tramtai”.',
+  'ayuda.ajustes.pVolver': 'Can I go back to an earlier version?',
+  'ayuda.ajustes.rVolver': 'After v0.56, v0.55 or earlier won’t open your workspaces: it says the database isn’t supported. Nothing is deleted; with v0.56 or later everything is still there.',
   // Topic: Files
   'ayuda.archivos.titulo': 'Files',
   'ayuda.archivos.resumen': 'Tramtai turns your PDF, Word, Excel and other documents into text before handing them to the agent.',
@@ -481,9 +488,9 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.ajustes.rVersion.terminal': 'In Settings (7), open “About Tramtai” on the “All of Tramtai” tab; c copies the support details, without keys.',
   'ayuda.sinResultados.terminal': 'Nothing matches “{texto}”. Try another word, or press w to search the Help on the website.',
   // In the terminal: how each topic is done there, with its keys. Only the terminal Help shows it.
-  'ayuda.empezar.terminal': 'In the terminal: 1 to 7 go to each page; ? opens the help for the page in front of you and Esc goes back. Ctrl+E switches workspace and q quits.',
+  'ayuda.empezar.terminal': 'In the terminal: Tab opens the menu and 1 to 7 go to each page; ? opens the help for the page in front of you and Esc goes back. Ctrl+E switches workspace and q quits.',
   'ayuda.agentes.terminal': 'In the terminal: 2 opens Agents. Enter shows an agent’s details, c checks it again, d connects or disconnects it and a switches between subscription and key.',
-  'ayuda.probar.terminal': 'In the terminal: 3 opens the Playground. Enter edits a recipe field, Ctrl+S sends the message, k shows the code and g saves the test as an API.',
+  'ayuda.probar.terminal': 'In the terminal: 3 opens the Playground. Enter edits a recipe field, Ctrl+S sends the message and c cancels the request; k shows the code and g saves the test as an API.',
   'ayuda.conectar.terminal': 'In the terminal: 4 opens My APIs. n creates an API and Enter opens its details, where the y key copies its URL; ← → goes to the workspace key.',
   'ayuda.archivos.terminal': 'In the terminal: in the Playground (3), type the path in the recipe’s files field; Tab completes it. In Settings (7), p prepares the converter.',
   'ayuda.json.terminal': 'In the terminal: under “Shaped response (JSON)” in the Playground (3), n adds a field and v shows a sample response; if it does not match, o asks for a correction.',

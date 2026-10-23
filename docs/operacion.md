@@ -8,22 +8,35 @@ Tramtai funciona como **un único servicio por usuario** (un proceso y un puerto
 tramtai            # sin argumentos abre la terminal interactiva (o: tramtai terminal)
 ```
 
-Tiene el mismo menú que la Web UI, con los mismos nombres y textos: **Inicio**, **Agentes** y **Probar** (grupo
-Empezar), **Mis APIs** e **Historial** (grupo Usar), **Espacios** y **Ajustes** (grupo Organizar) y **Ayuda**. Las
-páginas Mis APIs, Espacios, Ajustes y Ayuda todavía dicen «Próximamente»: mientras tanto, usa la Web UI o la CLI.
+Tiene las mismas páginas que la Web UI, con los mismos nombres y textos: **Inicio** (con la red en vivo), **Agentes** y
+**Probar** (grupo Empezar), **Mis APIs** e **Historial** (grupo Usar), **Espacios** y **Ajustes** (grupo Organizar,
+con las novedades y Acerca de) y **Ayuda**, generada de la misma fuente que la de la app y la web, con su búsqueda y
+sin conexión. Lo que no cabe en texto (capturas, diagramas, el recorrido guiado) queda en «Ver en la web» (`w`).
 
 | Tecla | Qué hace |
 |---|---|
 | Tab | Abre el menú (por debajo de 100 columnas está plegado). |
 | 1 a 7 | Va a esa página del menú. |
 | ? | La ayuda de la página, con todas sus teclas. |
-| Ctrl+E | Cambia de espacio. |
-| ! | Enseña entero el último error. |
+| / | Busca en la lista o en la Ayuda. |
 | Esc | Vuelve o cierra. En Probar, una petición en marcha sigue en el servicio: `c` la cancela. |
-| q | Sale de la terminal (pregunta si hay una petición en marcha). |
+| Ctrl+E | Cambia de espacio. |
+| r | Si el servicio no responde, reintenta; si está detenido, lo inicia en segundo plano. |
+| c | Cancela la petición en curso (Probar y el detalle del Historial). |
+| ! | Enseña entero el último error. |
+| u | Con una versión nueva, abre sus novedades en Ajustes para instalarla. |
+| q | Sale de la terminal (pregunta si hay una petición en marcha o cambios sin guardar). Dentro de un campo es una letra. |
 
-El pie de cada página dice sus teclas. Las acciones que afectan a otros (cancelar una petición, vaciar el historial,
-desconectar un agente) piden confirmación con `s`; Enter no confirma.
+El pie de cada página dice sus teclas. Las acciones que borran o no tienen vuelta atrás (cancelar una petición, vaciar
+el historial, desconectar un agente) piden confirmación con `s` (`y` en inglés); Enter no confirma.
+
+- **Solo con la terminal:** `tramtai servicio iniciar -d` deja el servicio en segundo plano sin abrir la app, y
+  `tramtai terminal` lo administra entero. Sirve también por SSH: entra al equipo donde corre Tramtai y ábrela allí.
+- **Si el servicio se detiene:** ninguna página se cierra; la línea de estado dice «El servicio no responde · r
+  reintenta» y se sigue donde estabas.
+- **Tamaño y aspecto:** necesita 60×20 como mínimo (si no, dice «Agranda la ventana (mínimo 60×20)»). El tema claro u
+  oscuro sale del fondo de la terminal; con `NO_COLOR` va sin color y con `TRAMTAI_ASCII=1` (o en una consola que no
+  es UTF-8) usa caracteres ASCII en lugar de los de dibujo.
 
 ## Web UI y aplicación de escritorio
 
@@ -75,6 +88,7 @@ Cada hora, el servicio pregunta a GitHub cuál es la última versión publicada 
 - Si instalas una versión a mano con Tramtai abierto (sea la instalada, la portable o una copia compilada), el instalador te avisa, cierra la app, detiene el servicio cuando terminan las peticiones en curso y, al acabar, vuelve a abrir lo que estaba abierto.
 - Tras actualizar, la Web UI muestra una vez las novedades de cada versión desde la última que viste en ese navegador (hasta 10, la más nueva abierta), con el enlace a todas las versiones. Si la búsqueda de actualizaciones está desactivada, o GitHub no responde, solo dice la versión nueva y ofrece el enlace.
 - El instalador descargado no puede borrarse mientras se ejecuta: el servicio, al arrancar, y cada descarga nueva borran las carpetas `tramtai-actualizacion*` del temporal con más de 10 minutos, así que no se acumulan.
+- **Desde la v0.55 con el servicio en marcha:** al abrir la versión nueva, la CLI, la terminal o la app reconocen el servicio de la v0.55, lo detienen dejando terminar las peticiones en curso y arrancan el nuevo, con tus datos. Si el proceso que escucha no es de tu usuario, no lo tocan y dicen cómo detenerlo a mano. Si después vuelves a la v0.55, no abre tus espacios (la base pasa a la versión 10), pero no se borra nada: con la v0.56 o una posterior siguen ahí.
 - Desde la terminal: `tramtai actualizar` hace lo mismo (pide confirmación; `--si` la omite) y `tramtai actualizar --comprobar` solo informa.
 - Solo se actualiza sola una copia instalada con el instalador de Windows; una compilada a mano o en Linux y macOS muestra el aviso con el enlace de descarga.
 - Se desactiva en **Ajustes → Buscar actualizaciones** o con `servicio.buscar_actualizaciones: false`; `tramtai actualizar` sigue funcionando porque lo pides tú.
@@ -122,7 +136,7 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # las peticiones;
   - En primer plano, un segundo Ctrl+C corta la espera.
 - **Resultados:** se conservan 24 horas (`retencion.horas_resultado`); después la salida responde 410 y se borra lo que escribió el usuario. El registro de la petición dura 7 días (`retencion.horas_metadatos`). Ver [arquitectura](arquitectura.md#retención-cierre-y-recuperación).
 - **Límites del historial:** como mucho se guardan 10 000 peticiones terminadas por espacio (`retencion.max_trabajos`, de 100 a 100 000); en cada purga se borran las más antiguas que pasen del tope. Las respuestas se guardan de 0 a 720 horas (0 no las guarda) y el registro de 0 a 90 días (admite decimales: 1,5 días son 36 horas), nunca menos que las respuestas. Si varias peticiones terminaron en el mismo instante del corte, el tope puede conservar unas pocas de más. Un valor fuera de rango en `config.yaml` se ajusta al límite y deja un aviso en el registro del servicio. Tras cada purga la base devuelve al disco el espacio liberado; una base anterior se convierte una sola vez al actualizar, y el registro del servicio lo dice («se compactó la base de …»). Los tres valores se cambian en **Ajustes → Historial**, que también muestra cuántas peticiones hay y cuánto ocupa la base.
-- **Origen:** cada petición guarda de dónde llegó: Probar (la Web UI), la terminal, la CLI, una aplicación con la clave principal o una API. El Historial lo muestra y filtra por origen, por grupo de APIs o por API, y trae las peticiones de 200 en 200 con **Ver más**.
+- **Origen:** cada petición guarda de dónde llegó: Probar (la Web UI), la terminal, la CLI, una aplicación con la clave principal o una API. El Historial lo muestra y filtra por origen, por grupo de APIs o por API, y trae las peticiones de 200 en 200 con **Ver más**. El filtro de estado y la búsqueda por texto los hace el servicio, en todo el historial del espacio y no solo en lo cargado; la búsqueda mira el último mensaje y el id, sin distinguir mayúsculas ni tildes.
 
 ## Claves de API
 
@@ -310,6 +324,10 @@ La clave de servicio (`datos/token-servicio`) habilita `/api/v1/servicio`:
 | `PUT /api/v1/servicio/agentes/{agente}/autenticacion` | `{"modo": "suscripcion"}` o `{"modo": "clave_api"}` en un agente que admite la suscripción, al momento y en todos los espacios (204). |
 | `POST /api/v1/servicio/agentes/{agente}/conexion` | `{"conectado": false}` desconecta un agente sin desinstalar su CLI (`adaptadores.<agente>.desconectado`); `true` lo vuelve a conectar (204). |
 | `GET /api/v1/servicio/instancias/{id}/configuracion` | Ver su configuración efectiva. |
+| `POST /api/v1/servicio/sesiones` | `{"instancia": "…"}` da una URL de un solo uso que abre la Web UI de ese espacio ya dentro (`tramtai abrir`). |
+| `GET`, `POST /api/v1/servicio/puntos`; `PUT`, `DELETE …/puntos/{nombre}` | Las APIs por aplicación del archivo de configuración (`tramtai acceso`): listar, crear (la clave nueva solo se ve esa vez), guardar y eliminar. |
+| `POST /api/v1/servicio/puntos/activo` | `{"nombres": […]}` o `{"grupo": "…"}`, con `"activo"`: activa o detiene varias APIs de una vez. |
+| `POST /api/v1/servicio/puntos/{nombre}/token` | Regenera la clave de esa API y la responde. |
 | `PUT /api/v1/servicio/puerto` | Guardar `servicio.puerto` y `servicio.puerto_automatico` (`{"puerto": 18000, "automatico": true}`; con `puerto` 0 solo cambia el automático). Se aplica al reiniciar. |
 | `GET /api/v1/servicio/ajustes` | El puerto en uso, el configurado, si busca otro libre, si se reinicia desde la app y el arranque con el sistema (`autoarranque`, solo si el sistema lo admite). |
 | `PUT /api/v1/servicio/autoarranque` | `{"activo": true}` hace que la app arranque, en la bandeja, al iniciar sesión; `false` lo quita (204). |
@@ -322,7 +340,7 @@ La clave de servicio (`datos/token-servicio`) habilita `/api/v1/servicio`:
 | `POST /api/v1/servicio/recargar` | Aplicar los cambios de las APIs. |
 | `POST /api/v1/servicio/detener` | Detener el servicio. |
 
-Con esa misma clave y la cabecera `Tramtai-Instancia: <id>`, la administración puede usar la API de cualquier espacio. El descriptor `datos/servicio.json` indica dónde escucha el servicio. Antes de enviarle la clave, la CLI comprueba que quien responde lo conoce: manda un reto aleatorio a `/healthz?reto=<reto>` y el servicio contesta con el HMAC-SHA256 de la clave sobre su dirección y ese reto. Otro proceso que ocupe el puerto no puede contestar, aunque conozca el identificador del descriptor. Un solo servicio usa cada carpeta de datos: al arrancar toma el cerrojo `datos/servicio.lock`, y un segundo servicio sobre la misma carpeta no arranca. El servicio de una versión anterior no contesta el reto ni toma el cerrojo: tras actualizar, la CLI y la app de escritorio lo detienen, dejando terminar las peticiones en curso, y arrancan el nuevo. Solo le mandan la clave si el proceso que escucha en el puerto es del mismo usuario del sistema; si no se puede comprobar, piden detenerlo a mano.
+Con esa misma clave y la cabecera `Tramtai-Instancia: <id>`, la administración puede usar la API de cualquier espacio. El descriptor `datos/servicio.json` indica dónde escucha el servicio. Antes de enviarle la clave, la CLI comprueba que quien responde lo conoce: manda un reto aleatorio a `/healthz?reto=<reto>` y el servicio contesta con el HMAC-SHA256 de la clave sobre su dirección y ese reto. Otro proceso que ocupe el puerto no puede contestar, aunque conozca el identificador del descriptor. Un solo servicio usa cada carpeta de datos: al arrancar toma el cerrojo `datos/servicio.lock`, y un segundo servicio sobre la misma carpeta no arranca. El servicio de una versión anterior no contesta el reto ni toma el cerrojo: tras actualizar, la CLI, la terminal y la app de escritorio lo detienen, dejando terminar las peticiones en curso, y arrancan el nuevo. Solo le mandan la clave si el proceso que escucha en el puerto es del mismo usuario del sistema; si no se puede comprobar, piden detenerlo a mano.
 
 ## Versión portable
 

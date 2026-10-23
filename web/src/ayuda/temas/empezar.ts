@@ -24,6 +24,11 @@ export const empezar: Tema = {
     { tipo: 'descargas' },
     { tipo: 'pasos', pasos: ['ayuda.empezar.paso1', 'ayuda.empezar.paso2', 'ayuda.empezar.paso3', 'ayuda.empezar.paso4'] },
     {
+      tipo: 'pasos',
+      titulo: 'ayuda.empezar.soloTerminal',
+      pasos: ['ayuda.empezar.soloTerminal1', 'ayuda.empezar.soloTerminal2', 'ayuda.empezar.soloTerminal3', 'ayuda.empezar.soloTerminal4'],
+    },
+    {
       tipo: 'recorrido',
       pasos: [
         { ancla: 'inicio.mapa', titulo: 'ayuda.empezar.rec1Titulo', texto: 'ayuda.empezar.rec1Texto', bienvenida: true },

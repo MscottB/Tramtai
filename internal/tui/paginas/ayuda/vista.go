@@ -145,6 +145,9 @@ func (p *Pagina) bloque(b datos.Bloque) []string {
 			r = append(r, p.parrafo(e.Texto, "", x)...)
 		}
 	case "pasos":
+		if b.Titulo != "" {
+			r = append(r, p.parrafo(e.Titulo, "", b.Titulo)...)
+		}
 		for i, x := range b.Lineas {
 			r = append(r, p.parrafo(e.Texto, strconv.Itoa(i+1)+". ", x)...)
 		}

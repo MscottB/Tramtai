@@ -294,8 +294,11 @@ function paginaTema(f: Fuente, tema: Tema): string {
   const relacionados = tema.relacionados.map((r) => f.temas.find((t) => t.id === r)).filter((t): t is Tema => !!t)
   const secciones: { id: string; titulo: [string, string]; partes: string[] }[] = [{ id: '', titulo: ['', ''], partes: [] }]
   bloquesVisibles(tema, 'sitio').forEach((b, i) => {
-    const titulo = SECCIONES[b.tipo]
-    if (titulo && !secciones.some((s) => s.id === 's-' + b.tipo)) secciones.push({ id: 's-' + b.tipo, titulo, partes: [] })
+    // Unos pasos con titulo abren su propia sección, con ese título y el id de su clave (s-soloTerminal → s-soloterminal).
+    const propio = b.tipo === 'pasos' ? b.titulo : undefined
+    const titulo: [string, string] | undefined = propio ? [f.es[propio] ?? propio, f.en[propio] ?? propio] : SECCIONES[b.tipo]
+    const id = propio ? 's-' + propio.split('.').pop()!.toLowerCase() : 's-' + b.tipo
+    if (titulo && !secciones.some((s) => s.id === id)) secciones.push({ id, titulo, partes: [] })
     const html = bloque(f, tema, b, i)
     if (html) secciones[secciones.length - 1].partes.push(html)
   })

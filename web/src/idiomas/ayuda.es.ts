@@ -74,7 +74,12 @@ const ayudaEs = {
   'ayuda.empezar.pPortable': '¿Cómo funciona la copia portable?',
   'ayuda.empezar.rPortable': 'El .zip de Windows guarda todo en «datos-tramtai», a su lado, sin tocar la instalación. Para actualizarla, descomprime la nueva encima.',
   'ayuda.empezar.pTerminal': '¿Puedo usar solo la terminal?',
-  'ayuda.empezar.rTerminal': 'Sí: «brew install mscottb/tramtai/tramtai» o el script instalar.sh dejan la CLI y el servicio; «tramtai abrir» lo inicia y abre la Web UI.',
+  'ayuda.empezar.rTerminal': 'Sí: mira «Solo con la terminal», más arriba. Sin la app de escritorio, «brew install mscottb/tramtai/tramtai» o el script instalar.sh dejan la CLI y el servicio.',
+  'ayuda.empezar.soloTerminal': 'Solo con la terminal',
+  'ayuda.empezar.soloTerminal1': 'Inicia el servicio en segundo plano con «tramtai servicio iniciar -d»: atiende a tus apps sin abrir la app, aunque cierres la terminal.',
+  'ayuda.empezar.soloTerminal2': 'Abre «tramtai terminal» (o «tramtai» a secas): tiene las mismas páginas que la app, de Inicio a la Ayuda. Si el servicio no está en marcha, r lo inicia.',
+  'ayuda.empezar.soloTerminal3': 'Tab abre el menú y del 1 al 7 vas a cada página. ? abre su ayuda, / busca, Esc vuelve, c cancela la petición en curso y q sale.',
+  'ayuda.empezar.soloTerminal4': 'Por SSH al equipo donde corre Tramtai, «tramtai terminal» funciona igual. Necesita al menos 60×20; con NO_COLOR va sin color y con TRAMTAI_ASCII=1, sin caracteres de dibujo.',
 
   // Tema: Agentes y modelos
   'ayuda.agentes.titulo': 'Agentes y modelos',
@@ -176,7 +181,7 @@ const ayudaEs = {
   // Tema: Historial
   'ayuda.historial.titulo': 'Historial',
   'ayuda.historial.resumen': 'Cada petición queda en el Historial con su respuesta, el agente que respondió y el registro de cada paso.',
-  'ayuda.historial.paso1': 'Filtra por estado, origen o grupo, o busca por texto.',
+  'ayuda.historial.paso1': 'Filtra por estado, origen o grupo, o busca por texto en todo el historial.',
   'ayuda.historial.paso2': 'Abre una petición para ver la respuesta y su «Registro», con cada paso y su hora.',
   'ayuda.historial.paso3': 'Si falló, corrige la causa y pulsa «Reintentar».',
   'ayuda.historial.captura': 'La lista del Historial con sus filtros',
@@ -284,6 +289,8 @@ const ayudaEs = {
   'ayuda.ajustes.rVersion': 'Abre «Acerca de Tramtai» en el menú lateral o en la bandeja; «Copiar datos para soporte» copia lo necesario sin claves.',
   'ayuda.ajustes.pDatos': '¿Dónde se guardan mis datos?',
   'ayuda.ajustes.rDatos': 'Solo en este equipo: %APPDATA%\\tramtai (Windows), ~/Library/Application Support/tramtai (macOS) o ~/.config/tramtai (Linux); la portable, en «datos-tramtai».',
+  'ayuda.ajustes.pVolver': '¿Puedo volver a una versión anterior?',
+  'ayuda.ajustes.rVolver': 'Tras la v0.56, la v0.55 o una anterior no abre tus espacios: dice que la base de datos no es compatible. No se borra nada; con la v0.56 o una posterior todo sigue ahí.',
   // Tema: Archivos
   'ayuda.archivos.titulo': 'Archivos',
   'ayuda.archivos.resumen': 'Tramtai convierte tus PDF, Word, Excel y otros documentos a texto antes de pasárselos al agente.',
@@ -479,9 +486,9 @@ const ayudaEs = {
   'ayuda.ajustes.rVersion.terminal': 'En Ajustes (7), abre «Acerca de Tramtai» en la pestaña «Todo Tramtai»; c copia los datos para soporte, sin claves.',
   'ayuda.sinResultados.terminal': 'Nada coincide con «{texto}». Prueba con otra palabra, o pulsa w para buscar en la Ayuda del sitio.',
   // En la terminal: cómo se hace cada tema allí, con sus teclas. Solo lo enseña la Ayuda de la terminal.
-  'ayuda.empezar.terminal': 'En la terminal: del 1 al 7 vas a cada página; ? abre la ayuda de la que tienes delante y Esc vuelve. Ctrl+E cambia de espacio y q sale.',
+  'ayuda.empezar.terminal': 'En la terminal: Tab abre el menú y del 1 al 7 vas a cada página; ? abre la ayuda de la que tienes delante y Esc vuelve. Ctrl+E cambia de espacio y q sale.',
   'ayuda.agentes.terminal': 'En la terminal: 2 abre Agentes. Enter enseña los detalles de un agente, c lo vuelve a comprobar, d lo conecta o desconecta y a cambia entre suscripción y clave.',
-  'ayuda.probar.terminal': 'En la terminal: 3 abre Probar. Enter edita un campo de la receta, Ctrl+S envía el mensaje, k enseña el código y g guarda la prueba como API.',
+  'ayuda.probar.terminal': 'En la terminal: 3 abre Probar. Enter edita un campo de la receta, Ctrl+S envía el mensaje y c cancela la petición; k enseña el código y g guarda la prueba como API.',
   'ayuda.conectar.terminal': 'En la terminal: 4 abre Mis APIs. n crea una API y Enter abre sus detalles, donde la tecla y copia su URL; ← → pasa a la clave del espacio.',
   'ayuda.archivos.terminal': 'En la terminal: en Probar (3), escribe la ruta en el campo de archivos de la receta; Tab la completa. En Ajustes (7), p prepara el conversor.',
   'ayuda.json.terminal': 'En la terminal: en «Respuesta con forma (JSON)» de Probar (3), n añade un campo y v enseña un ejemplo de respuesta; si no cumple, o pide la corrección.',

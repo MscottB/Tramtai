@@ -204,7 +204,7 @@ const paraTerminal = (textos: Textos, k: string) => plano(textos[k + '.terminal'
 function bloqueDe(b: BloqueWeb, tx: (k: string) => string, url: string): Bloque {
   switch (b.tipo) {
     case 'nota': return { tipo: 'texto', lineas: [tx(b.texto)] }
-    case 'pasos': return { tipo: 'pasos', lineas: b.pasos.map(tx) }
+    case 'pasos': return { tipo: 'pasos', ...(b.titulo ? { titulo: tx(b.titulo) } : {}), lineas: b.pasos.map(tx) }
     case 'tabla': return { tipo: 'tabla', lineas: b.columnas.map(tx), filas: b.filas.map((f) => [tx(f.titulo), ...f.celdas.map(tx)]) }
     case 'preguntas': return { tipo: 'preguntas', pares: b.preguntas.filter((p) => !p.soloWeb).map((p) => [tx(p.pregunta), tx(p.respuesta)]) }
     case 'errores':

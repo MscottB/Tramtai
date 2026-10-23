@@ -25,7 +25,8 @@ export interface PasoRecorrido {
 export type Bloque =
   // ramas une dos paradas (índices desde 0) fuera de la línea principal, como el paso al respaldo.
   | { tipo: 'diagrama'; paradas: Parada[]; ramas?: { desde: number; hacia: number; etiqueta: Clave }[] }
-  | { tipo: 'pasos'; pasos: Clave[] }
+  // titulo abre una sección propia con esos pasos (en el sitio, su h2), como «Solo con la terminal» en Empezar.
+  | { tipo: 'pasos'; pasos: Clave[]; titulo?: Clave }
   | { tipo: 'captura'; id: string; alt: Clave }
   // ejemplo es el código de un mensaje (con esos archivos) por cada contrato, como lo arma ejemplos().
   | { tipo: 'ejemplo'; contratos: string[]; archivos: string[] }

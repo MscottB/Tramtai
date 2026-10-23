@@ -29,6 +29,7 @@ export const ajustes: Tema = {
         { id: 'buscar-version', pregunta: 'ayuda.ajustes.pBuscar', respuesta: 'ayuda.ajustes.rBuscar' },
         { id: 'que-version', pregunta: 'ayuda.ajustes.pVersion', respuesta: 'ayuda.ajustes.rVersion' },
         { id: 'datos-ruta', pregunta: 'ayuda.ajustes.pDatos', respuesta: 'ayuda.ajustes.rDatos' },
+        { id: 'volver-version', pregunta: 'ayuda.ajustes.pVolver', respuesta: 'ayuda.ajustes.rVolver' },
         { id: 'cuanto-se-guarda', pregunta: 'ayuda.ajustes.pRetencion', respuesta: 'ayuda.ajustes.rRetencion' },
         { id: 'dos-pestanas', pregunta: 'ayuda.ajustes.pPestanas', respuesta: 'ayuda.ajustes.rPestanas', tema: 'espacios' },
       ],

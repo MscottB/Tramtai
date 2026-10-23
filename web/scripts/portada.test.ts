@@ -275,6 +275,28 @@ test('la portada enseña el recorrido guiado y deja Espacios a la vista', () => 
   assert.match(funciones, /Controla<\/span><span lang="en">Control<\/span><\/h3>\s*<article class="tarjeta">\s*<h4><span lang="es">Espacios de trabajo<\/span>/, 'Espacios abre el grupo Controla')
 })
 
+// v0.56: la portada presenta la terminal con texto (sus capturas llegan en la v0.57).
+test('la novedad «Todo desde la terminal» dice cómo usarla y lleva a su Ayuda, en los dos idiomas', () => {
+  const terminal = seccion('terminal')
+  assert.ok(terminal, 'falta <section id="terminal">')
+  for (const t of ['Todo desde la terminal.', 'Everything from the terminal.', 'Nuevo en la v0.56', 'New in v0.56', 'SSH', '60×20'])
+    assert.ok(terminal.includes(t), `falta «${t}»`)
+  const codigo = terminal.match(/<pre class="codigo">[\s\S]*?<\/pre>/)?.[0] ?? ''
+  assert.match(codigo, /^tramtai servicio iniciar -d$/m)
+  assert.match(codigo, /^tramtai terminal<\/pre>$/m)
+  for (const c of codigo.match(/<span class="c"[^>]*>/g) ?? []) assert.match(c, /lang="(es|en)"/)
+  assert.match(terminal, /href="ayuda\/empezar\.html#s-soloterminal"/)
+  assert.doesNotMatch(terminal, /<img /, 'sin capturas de la terminal hasta la v0.57')
+})
+
+test('Funciones tiene la tarjeta de la terminal, que lleva a la novedad', () => {
+  const tarjeta = seccion('funciones').match(/<article class="tarjeta">\s*<h4><span lang="es">La terminal, a la par de la app<\/span>[\s\S]*?<\/article>/)?.[0] ?? ''
+  assert.ok(tarjeta, 'falta la tarjeta')
+  assert.match(tarjeta, /<span lang="en">The terminal, on par with the app<\/span>/)
+  assert.match(tarjeta, /href="#terminal"/)
+  assert.match(tarjeta, /SSH/)
+})
+
 test('Funciones son cuatro grupos de tres tarjetas en tres columnas, sin huecos (54)', () => {
   const grupos = seccion('funciones').split('<h3 class="grupo-funciones">').slice(1)
   assert.equal(grupos.length, 4)
