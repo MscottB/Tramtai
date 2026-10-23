@@ -23,7 +23,8 @@ import (
 )
 
 // App lleva una página como la terminal: cada Cmd corre en su goroutine, como en Bubble Tea, y lo que devuelve le llega a
-// la página de uno en uno. Lo que es de la app (preguntas, avisos, IrA, Volver, ErrorServicio y lo que se copia) se guarda
+// la página de uno en uno. Lo que es de la app (preguntas, avisos, IrA, Volver, ErrorServicio, el estado de las
+// actualizaciones y lo que se copia) se guarda
 // en Fuera. Así una prueba solo toca la página por su interfaz: teclas, los mensajes de pagina y comp, y Vista().
 type App struct {
 	t       testing.TB
@@ -430,7 +431,7 @@ func (a *App) entregar(m tea.Msg) {
 		}
 	case tea.QuitMsg:
 		a.Fuera = append(a.Fuera, m)
-	case comp.Pregunta, comp.NuevoAviso, pagina.IrA, pagina.Volver, pagina.ErrorServicio:
+	case comp.Pregunta, comp.NuevoAviso, pagina.IrA, pagina.Volver, pagina.ErrorServicio, pagina.EstadoActualizacion:
 		if a.modelo != nil {
 			a.actualizar(m)
 			return

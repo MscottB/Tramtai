@@ -89,6 +89,13 @@ func (m *modelo) conectado(r msgConexion) tea.Cmd {
 	} else {
 		r.reiniciar = r.reiniciar || m.caido != nil || m.cli != r.cli // si vuelve, la página se recarga
 		m.cli, m.espacios, m.caido = r.cli, r.espacios, nil
+		if r.latido {
+			m.latidos++
+		}
+		if !m.preguntada || r.reiniciar || (r.latido && m.latidos%latidosNovedades == 0) { // r.reiniciar: el servicio volvió o es otro
+			m.preguntada = true
+			cmds = append(cmds, novedad(r.cli))
+		}
 		if r.cambios != m.cambios && !slices.ContainsFunc(r.espacios, func(e contrato.Espacio) bool { return e.ID == m.instancia }) {
 			m.comprobando = true // leyó la lista antes de cambiar a un espacio que no trae: se vuelve a leer
 			cmds = append(cmds, m.conectar(false, false, false))
@@ -163,6 +170,9 @@ func (m *modelo) vistaCabecera() string {
 		der = e.Texto.Render(nombre) + " " + e.Tenue.Render(e.Iconos.Separador) + " " + estado
 	}
 	libre := m.ancho - lipgloss.Width(izq) - 2
+	if aviso := m.avisoNovedad(libre - lipgloss.Width(der) - 2); aviso != "" { // solo si cabe entero: lo demás no se corta
+		der = aviso + "  " + der
+	}
 	der = e.Recortar(der, libre)
 	return izq + strings.Repeat(" ", max(m.ancho-lipgloss.Width(izq)-lipgloss.Width(der), 1)) + der
 }

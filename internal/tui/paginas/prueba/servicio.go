@@ -9,8 +9,10 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"testing"
 
+	"tramtai/internal/actualizacion"
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
 	"tramtai/internal/cliente"
@@ -18,6 +20,7 @@ import (
 	"tramtai/internal/nucleo"
 	"tramtai/internal/planificador"
 	"tramtai/internal/servicio"
+	"tramtai/internal/version"
 )
 
 // Servicio levanta el servicio real en memoria (httptest), con una configuración global temporal y el agente simulado,
@@ -73,6 +76,23 @@ func SinConversor(t *testing.T) (*cliente.Cliente, string) {
 	return cli, id
 }
 
+// ConVersion es Servicio con la búsqueda de actualizaciones activada y v como la última versión publicada (y como sus
+// novedades), siendo la actual la v0.56.0: nada va a GitHub y esta copia no se instaló con el instalador, así que
+// actualizar nunca descarga.
+func ConVersion(t *testing.T, v actualizacion.Version) (*cliente.Cliente, string) {
+	t.Helper()
+	antes := version.Version
+	version.Version = "v0.56.0" // una compilación «dev» nunca se da por desactualizada
+	t.Cleanup(func() { version.Version = antes })
+	return Ajustado(t, func(o *servicio.Opciones) {
+		o.BuscarActualizaciones = true
+		o.ConsultarVersion = func(context.Context) (actualizacion.Version, error) { return v, nil }
+		o.Novedades = func(context.Context, string, string) ([]actualizacion.Version, error) {
+			return []actualizacion.Version{v}, nil
+		}
+	})
+}
+
 func arrancar(t *testing.T, agente adaptadores.Adaptador, ajustar func(*servicio.Opciones)) (*cliente.Cliente, string, func()) {
 	t.Helper()
 	dir := t.TempDir()
@@ -87,9 +107,11 @@ func arrancar(t *testing.T, agente adaptadores.Adaptador, ajustar func(*servicio
 		t.Fatal(err)
 	}
 	ts := httptest.NewUnstartedServer(nil)
+	var auto atomic.Bool // como un sistema que lo admite, apagado; cambiarlo no toca el arranque del equipo
 	opc := servicio.Opciones{Datos: datos, Config: c, Registro: map[string]adaptadores.Adaptador{"simulado": agente},
 		Semaforos: planificador.NuevosSemaforos(nil), Host: "127.0.0.1", Puerto: ts.Listener.Addr().(*net.TCPAddr).Port, Hosts: []string{"127.0.0.1"},
-		Autoarranque: func() (bool, bool) { return true, false }} // como un sistema que lo admite, apagado
+		Autoarranque:        func() (bool, bool) { return true, auto.Load() },
+		CambiarAutoarranque: func(activo bool) error { auto.Store(activo); return nil }}
 	if ajustar != nil {
 		ajustar(&opc)
 	}

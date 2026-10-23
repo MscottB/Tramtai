@@ -4,20 +4,21 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"tramtai/internal/actualizacion"
 	"tramtai/internal/api"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
-	"tramtai/internal/version"
 )
 
-// Rutas de /ui/ de las actualizaciones y de Acerca de (rutasDeUI).
+// Rutas de /ui/ de las actualizaciones y de Acerca de (rutasDeUI). La administración (rutasAdmin) las atiende igual, sin
+// sesión, para la terminal.
 
-// actualizacionUI consulta el estado de las actualizaciones (GET) o activa o desactiva su búsqueda (POST).
+// actualizacionUI consulta el estado de las actualizaciones (GET) o activa o desactiva su búsqueda (POST o PUT).
 func (s *Servicio) actualizacionUI(w http.ResponseWriter, r *http.Request, _ *sesion) {
-	if r.Method == http.MethodPost {
+	if r.Method != http.MethodGet {
 		var peticion struct {
 			Buscar bool `json:"buscar"`
 		}
@@ -46,9 +47,9 @@ func (s *Servicio) actualizarUI(w http.ResponseWriter, r *http.Request, _ *sesio
 	api.EscribirJSON(w, http.StatusAccepted, map[string]any{"version": v.Etiqueta})
 }
 
-// decidirInstalacionUI instala ya (/ui/actualizar/instalar) o cancela la cuenta atrás (/ui/actualizar/cancelar).
+// decidirInstalacionUI instala ya (…/actualizar/instalar) o cancela la cuenta atrás (…/actualizar/cancelar).
 func (s *Servicio) decidirInstalacionUI(w http.ResponseWriter, r *http.Request, _ *sesion) {
-	if err := s.decidirInstalacion(r.URL.Path == "/ui/actualizar/instalar"); err != nil {
+	if err := s.decidirInstalacion(strings.HasSuffix(r.URL.Path, "/instalar")); err != nil {
 		api.EscribirJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"codigo": nucleo.CodigoDe(err), "mensaje": nucleo.MensajeDe(err)}})
 		return
 	}
@@ -73,11 +74,7 @@ func (s *Servicio) novedadesUI(w http.ResponseWriter, r *http.Request, _ *sesion
 	ctx, cancelar := context.WithTimeout(r.Context(), 8*time.Second)
 	defer cancelar()
 	// hasta (opcional) es la versión nueva, para leer antes de actualizar lo que trae cada una que se salta.
-	hasta := r.URL.Query().Get("hasta")
-	if hasta == "" {
-		hasta = version.Texto()
-	}
-	versiones, err := actualizacion.Novedades(ctx, r.URL.Query().Get("desde"), hasta)
+	versiones, err := s.novedades(ctx, r.URL.Query().Get("desde"), r.URL.Query().Get("hasta"))
 	if err != nil {
 		fmt.Fprintf(s.opc.Registros, "novedades: %v\n", err) // el detalle (red, proxy) queda aquí, no en la respuesta
 		api.EscribirJSON(w, http.StatusBadGateway, map[string]any{"error": map[string]any{"codigo": "github_no_disponible", "mensaje": idioma.T("GitHub no está disponible")}})

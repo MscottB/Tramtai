@@ -491,13 +491,17 @@ func TestClienteHeredar(t *testing.T) {
 		return "" // sin valor en ninguna capa, no sale
 	}
 	antes := origen("predeterminados.esfuerzo")
-	if err := cli.FijarPredeterminado(ctx, id, "simulado", "alto"); err != nil {
+	if err := cli.FijarPredeterminado(ctx, id, "simulado", new("alto")); err != nil {
 		t.Fatal(err)
 	}
 	if o := origen("predeterminados.esfuerzo"); o == antes || !strings.Contains(strings.ToLower(o), "local") {
 		t.Fatalf("el esfuerzo propio del proyecto sale como local: %q (antes %q)", o, antes)
 	}
-	if err := cli.FijarPredeterminado(ctx, id, "agente-que-no-existe", ""); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
+	// Sin esfuerzo (nil), cambiar el modelo no toca el que ya tiene, como la Web UI.
+	if err := cli.FijarPredeterminado(ctx, id, "simulado", nil); err != nil || !strings.Contains(strings.ToLower(origen("predeterminados.esfuerzo")), "local") {
+		t.Fatalf("el esfuerzo se queda: %v", err)
+	}
+	if err := cli.FijarPredeterminado(ctx, id, "agente-que-no-existe", nil); nucleo.CodigoDe(err) != nucleo.CodigoSolicitudInvalida {
 		t.Fatalf("un agente desconocido no vale: %v", err)
 	}
 	if err := cli.Heredar(ctx, id, "predeterminados.esfuerzo"); err != nil {

@@ -148,7 +148,8 @@ func TestEspacioDetenidoVuelveAlGlobal(t *testing.T) {
 	falsa := &paginaFalsa{}
 	m.paginas["inicio"] = falsa
 	m.instancia = "notas_1"
-	cmd := m.conectado(msgConexion{cli: &cliente.Cliente{}, espacios: []contrato.Espacio{{ID: "global", Nombre: "Global", Activo: true}, {ID: "notas_1", Nombre: "Notas", Activo: false}}})
+	m.cli, m.preguntada = &cliente.Cliente{}, true // el cliente no lleva a ningún servicio: no se pregunta por las novedades
+	cmd := m.conectado(msgConexion{cli: m.cli, espacios: []contrato.Espacio{{ID: "global", Nombre: "Global", Activo: true}, {ID: "notas_1", Nombre: "Notas", Activo: false}}})
 	correr(t, m, cmd)
 	if m.instancia != "global" || falsa.instancia != "global" {
 		t.Fatalf("vuelve al global: %q %q", m.instancia, falsa.instancia)

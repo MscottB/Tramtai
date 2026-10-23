@@ -47,7 +47,6 @@ func init() {
 		"conexión":      "connection",
 		"autenticación": "authentication",
 		"filtro":        "filter",
-		"Modelos":       "Models",
 		"Elige cómo conectarlo: con tu suscripción (tecla a) o con una clave de API.":                                              "Choose how to connect it: with your subscription (key a) or with an API key.",
 		"Para la clave de API, ejecuta esto en una terminal (pide la clave sin mostrarla) y pulsa c para volver a comprobar:":      "For the API key, run this in a terminal (it asks for the key without showing it) and press c to check again:",
 		"Necesita una clave de API. Ejecuta esto en una terminal (pide la clave sin mostrarla) y pulsa c para volver a comprobar:": "Needs an API key. Run this in a terminal (it asks for the key without showing it) and press c to check again:",
@@ -119,5 +118,16 @@ func init() {
 		// Espacios
 		"Nombre del espacio":    "Workspace name",
 		"Escribe «%s» tal cual": "Type “%s” exactly",
+
+		// Ajustes: las pestañas, las secciones y las novedades salen de los textos de la Web UI; aquí solo lo propio de la
+		// terminal.
+		"activa":                             "turn on",
+		"desactiva":                          "turn off",
+		"Elige qué borrar":                   "Choose what to delete",
+		"se aplica al reiniciar el servicio": "it applies when the service restarts",
+		"Respuestas %d h · registro %s días · máximo %s":                 "Responses %d h · log %s days · up to %s",
+		"¿Cancelar la actualización?":                                    "Cancel the update?",
+		"La descarga se borra y Tramtai sigue como está.":                "The download is deleted and Tramtai stays as it is.",
+		"El servicio se reinicia; la terminal se vuelve a conectar sola": "The service is restarting; the terminal reconnects on its own",
 	})
 }

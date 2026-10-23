@@ -12,6 +12,7 @@ import (
 	"tramtai/internal/api"
 	"tramtai/internal/autoarranque"
 	"tramtai/internal/configuracion"
+	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
@@ -82,18 +83,42 @@ func (s *Servicio) autoarranqueUI(w http.ResponseWriter, r *http.Request, ses *s
 		api.EscribirError(w, r, err)
 		return
 	}
+	if err := s.fijarAutoarranque(peticion.Activo); err != nil {
+		api.EscribirError(w, r, err)
+		return
+	}
+	s.responderSesion(w, r, ses)
+}
+
+// fijarAutoarranque activa o desactiva que la app arranque, en la bandeja, al iniciar sesión (Opciones.CambiarAutoarranque
+// lo cambia).
+func (s *Servicio) fijarAutoarranque(activo bool) error {
+	if s.opc.CambiarAutoarranque != nil {
+		return s.opc.CambiarAutoarranque(activo)
+	}
 	err := autoarranque.Desactivar()
-	if peticion.Activo {
+	if activo {
 		var escritorio string
 		if escritorio, err = autoarranque.Escritorio(); err == nil {
 			err = autoarranque.Activar(escritorio)
 		}
 	}
 	if err != nil {
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, err.Error()))
-		return
+		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, err.Error())
 	}
-	s.responderSesion(w, r, ses)
+	return nil
+}
+
+// ajustesServicio son el puerto y el arranque con el sistema, para Ajustes en la terminal.
+func (s *Servicio) ajustesServicio() contrato.AjustesServicio {
+	s.mu.RLock()
+	a := contrato.AjustesServicio{Puerto: s.opc.Puerto, PuertoConfigurado: cmp.Or(s.opc.PuertoConfigurado, s.opc.Puerto),
+		PuertoAutomatico: s.opc.PuertoAutomatico, Reiniciable: s.opc.Reiniciar != nil}
+	s.mu.RUnlock()
+	if disponible, activo := s.estadoAutoarranque(); disponible {
+		a.Autoarranque = &activo
+	}
+	return a
 }
 
 func (s *Servicio) autenticacionUI(w http.ResponseWriter, r *http.Request, _ *sesion) {

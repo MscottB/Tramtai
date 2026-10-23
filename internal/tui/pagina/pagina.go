@@ -11,6 +11,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"tramtai/internal/cliente"
+	"tramtai/internal/contrato"
 )
 
 // Contexto es lo que una página recibe en Iniciar. La app lo vuelve a dar al entrar en la página, al cambiar de espacio
@@ -91,6 +92,11 @@ type (
 		Pagina string
 		Teclas []Tecla
 	}
+	// ConNovedades abre Ajustes en las novedades de la versión nueva, para instalarla: la u del aviso de la cabecera.
+	ConNovedades struct{}
+	// EstadoActualizacion es lo último que Ajustes sabe de las actualizaciones («Buscar ahora», activar o desactivar la
+	// búsqueda): la app lo copia para el aviso de la cabecera, como el estado compartido de la Web UI.
+	EstadoActualizacion struct{ Estado contrato.EstadoActualizacion }
 	// SeguirTrabajo abre Probar con ese trabajo (su receta y su mensaje) y lo sigue en vivo, como trabajoSeguido de la
 	// Web UI: así llegan a Probar el reintento y la corrección del Historial.
 	SeguirTrabajo struct{ ID string }

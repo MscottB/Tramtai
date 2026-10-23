@@ -254,7 +254,7 @@ func (p *Pagina) textoDetalle(a contrato.Adaptador) string {
 			esfuerzos = strings.Join(n, " · ")
 		}
 		fila(p.tx("agentes.esfuerzo"), esfuerzos)
-		fila(idioma.T("Modelos"), p.textoModelos(a.Agente))
+		fila(p.tx("seccion.modelos"), p.textoModelos(a.Agente))
 		if a.Terminos != "" {
 			add("", a.Terminos)
 		}
