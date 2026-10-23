@@ -346,7 +346,7 @@ func barras(lengua string, e nucleo.EstadoPresupuesto) []barra {
 // numero es como lo escribe la Web UI: los USD con dos decimales y $ delante; el resto como toLocaleString (pagina.Numero).
 func numero(lengua string, n float64, usd bool) string {
 	if usd {
-		return "$" + strconv.FormatFloat(n, 'f', 2, 64)
+		return "$" + pagina.Decimal(lengua, n, 2)
 	}
 	return pagina.Numero(lengua, int(math.Round(n)))
 }

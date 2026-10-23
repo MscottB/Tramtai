@@ -16,6 +16,7 @@
 import { computed } from 'vue'
 import type { EstadoPresupuesto } from '../api/tipos'
 import { idioma, t } from '../i18n'
+import { decimal, numero } from '../formato'
 
 // BarrasPresupuesto muestra una barra por límite definido: verde, amarilla desde el 80 % y roja al 100 %.
 // sinBoton quita «Reiniciar consumo» cuando ya está en otro sitio (el menú de la API).
@@ -24,7 +25,7 @@ const emit = defineEmits<{ reiniciar: [] }>()
 
 // Los periodos reinician a medianoche: basta la fecha.
 const dia = (texto: string) => new Date(texto).toLocaleDateString(idioma.value)
-const numero = (n: number, usd: boolean) => (usd ? '$' + n.toFixed(2) : n.toLocaleString())
+const cifra = (n: number, usd: boolean) => (usd ? '$' + decimal(n, 2) : numero(n))
 const barras = computed(() => {
   const lista = []
   for (const periodo of ['diario', 'mensual'] as const) {
@@ -37,7 +38,7 @@ const barras = computed(() => {
         clave: periodo + unidad,
         titulo: (periodo === 'diario' ? t('presupuesto.diario') : t('presupuesto.mensual')) + ' · ' +
           ({ peticiones: t('presupuesto.peticiones'), tokens: t('presupuesto.tokens'), usd: t('presupuesto.usd') })[unidad],
-        texto: numero(usado, unidad === 'usd') + ' / ' + numero(limite, unidad === 'usd'),
+        texto: cifra(usado, unidad === 'usd') + ' / ' + cifra(limite, unidad === 'usd'),
         fraccion: usado / limite,
       })
     }

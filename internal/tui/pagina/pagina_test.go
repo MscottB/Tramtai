@@ -60,6 +60,20 @@ func TestNumero(t *testing.T) {
 	}
 }
 
+// TestDecimal: como toLocaleString con esos decimales: coma en español, punto en inglés y los miles de Numero.
+func TestDecimal(t *testing.T) {
+	casos := []struct {
+		x      float64
+		d      int
+		es, en string
+	}{{0.0069, 4, "0,0069", "0.0069"}, {13.25, 1, "13,3", "13.3"}, {2, 2, "2,00", "2.00"}, {12345.5, 1, "12.345,5", "12,345.5"}}
+	for _, c := range casos {
+		if es, en := Decimal("es", c.x, c.d), Decimal("en", c.x, c.d); es != c.es || en != c.en {
+			t.Errorf("Decimal(%v, %d) = %q y %q", c.x, c.d, es, en)
+		}
+	}
+}
+
 func TestNoResponde(t *testing.T) {
 	casos := []struct {
 		err      error

@@ -171,7 +171,7 @@
               <Linea :agente="final.solicitud.agente" :modelo="final.modelo_efectivo || final.modelo_enviado" />
               <span v-if="esfuerzoFinal"><q-icon name="o_speed" />{{ esfuerzoFinal }}</span>
               <span><q-icon name="o_data_usage" />{{ final.uso.tokens_entrada }} → {{ final.uso.tokens_salida }} {{ t('comun.tokens') }}</span>
-              <span v-if="final.uso.costo_usd"><q-icon name="o_payments" />US$ {{ final.uso.costo_usd.toFixed(4) }}</span>
+              <span v-if="final.uso.costo_usd"><q-icon name="o_payments" />{{ costo(final.uso.costo_usd) }}</span>
               <span v-if="final.terminado_en"><q-icon name="o_timer" />{{ duracion(final.creado_en, final.terminado_en) }}</span>
             </q-card-section>
           </template>
@@ -209,7 +209,7 @@ import type { EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Solicitud, T
 import type { Destino, IntencionDe } from '../navegacion'
 import { modeloDe, esfuerzoEspacio } from '../agentes'
 import { ajustesDeReceta, aplicarModelo, esquemaDeReceta, mensajeDe, recetaDePunto, recetaDeSolicitud, recetaVacia, idModeloDe, type Receta } from '../recetas'
-import { duracion, esfuerzoUsado, estadoInfo, haceCuanto, terminales } from '../formato'
+import { costo, duracion, esfuerzoUsado, estadoInfo, haceCuanto, terminales } from '../formato'
 import { t } from '../i18n'
 
 const props = defineProps<{ intencion?: IntencionDe<'ejecutar'> }>()

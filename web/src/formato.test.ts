@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { idioma, t } from './i18n.ts'
-import { duracion, enRango, estadoInfo, fecha, haceCuanto, registroCubre } from './formato.ts'
+import { costo, decimal, duracion, enRango, estadoInfo, fecha, haceCuanto, registroCubre } from './formato.ts'
 
 idioma.value = 'es'
 const hace = (segundos: number) => new Date(Date.now() - segundos * 1000).toISOString()
@@ -51,8 +51,21 @@ test('registroCubre pide que el registro dure al menos lo que las respuestas', (
 test('duracion en segundos con un decimal y, desde un minuto, en minutos y segundos', () => {
   assert.equal(duracion('2026-01-01T00:00:00Z'), '')
   assert.equal(duracion(undefined, '2026-01-01T00:00:00Z'), '')
-  assert.equal(duracion('2026-01-01T00:00:00Z', '2026-01-01T00:00:12.340Z'), '12.3 s')
+  assert.equal(duracion('2026-01-01T00:00:00Z', '2026-01-01T00:00:12.340Z'), '12,3 s')
   assert.equal(duracion('2026-01-01T00:00:00Z', '2026-01-01T00:02:05Z'), '2 min 5 s')
+  idioma.value = 'en'
+  assert.equal(duracion('2026-01-01T00:00:00Z', '2026-01-01T00:00:12.340Z'), '12.3 s')
+  idioma.value = 'es'
+})
+
+// v0.56, Tarea 16: el coste lleva la coma decimal en español, como la duración y el registro.
+test('costo y decimal escriben los decimales del idioma', () => {
+  assert.equal(costo(0.0069), 'US$ 0,0069')
+  assert.equal(decimal(2, 2), '2,00')
+  idioma.value = 'en'
+  assert.equal(costo(0.0069), 'US$ 0.0069')
+  assert.equal(decimal(12345.5, 1), '12,345.5')
+  idioma.value = 'es'
 })
 
 test('estadoInfo da nombre y clase (punto y texto); un estado desconocido se ve tal cual', () => {

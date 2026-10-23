@@ -122,6 +122,26 @@ func Numero(lengua string, n int) string {
 	return s
 }
 
+// Decimal escribe un número con esos decimales como toLocaleString de la Web UI: coma decimal en español, punto en
+// inglés, y los miles de Numero («12.345,5»).
+func Decimal(lengua string, x float64, decimales int) string {
+	escala := math.Pow10(decimales)
+	x = math.Round(x*escala) / escala // los empates hacia arriba, como Intl (FormatFloat los lleva al par)
+	entero, fraccion, _ := strings.Cut(strconv.FormatFloat(x, 'f', decimales, 64), ".")
+	n, _ := strconv.Atoi(entero)
+	s := Numero(lengua, n)
+	if strings.HasPrefix(entero, "-") && n == 0 {
+		s = "-" + s
+	}
+	if fraccion == "" {
+		return s
+	}
+	if lengua == "en" {
+		return s + "." + fraccion
+	}
+	return s + "," + fraccion
+}
+
 // Envolver parte el texto por palabras, cada párrafo por su lado, en líneas de como mucho ancho columnas. Con n mayor que
 // cero, en como mucho n líneas: lo que no cabe se corta con la elipsis en la última.
 func (e *Estilos) Envolver(texto string, ancho, n int) []string {
