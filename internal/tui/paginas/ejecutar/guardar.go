@@ -93,7 +93,7 @@ func (p *Pagina) teclaCodigo(t string) tea.Cmd {
 		v.i = (v.i + map[string]int{"left": len(v.ejemplos) - 1, "right": 1}[t]) % len(v.ejemplos)
 		p.ponerCodigo()
 	case "y":
-		return copiar(v.ejemplos[v.i].Codigo)
+		return comp.Copiar(v.ejemplos[v.i].Codigo)
 	default:
 		if t != "k" && t != "j" {
 			p.caja.Update(teclaDe(t))
@@ -207,7 +207,7 @@ func (p *Pagina) teclaCreada(t string) tea.Cmd {
 		p.creada = nil // la clave no se queda en la memoria de la página
 		p.caja.Poner("")
 	case "y":
-		return copiar(p.creada.clave)
+		return comp.Copiar(p.creada.clave)
 	default:
 		p.caja.Update(teclaDe(t))
 	}

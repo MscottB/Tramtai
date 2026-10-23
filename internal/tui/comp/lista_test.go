@@ -176,3 +176,26 @@ func TestListaPonerConservaLaSeleccion(t *testing.T) {
 		t.Fatal("si el elemento ya no está, queda una selección válida")
 	}
 }
+
+// TestListaGrupoDelCursor: Grupo dice el grupo de la fila del cursor, en su cabecera y en sus elementos; sin grupos, nada.
+func TestListaGrupoDelCursor(t *testing.T) {
+	l := NuevaLista(estilos(), func(a api) string { return a.nombre })
+	l.Poner(apis())
+	if _, ok := l.Grupo(); ok {
+		t.Fatal("sin grupos no hay grupo")
+	}
+	l.Agrupar(func(a api) string { return a.tipo })
+	if g, ok := l.Grupo(); !ok || g != "openai" {
+		t.Fatalf("en la cabecera: %q %v", g, ok)
+	}
+	for range 3 {
+		l.Update(tecla("down"))
+	}
+	if g, ok := l.Grupo(); !ok || g != "anthropic" {
+		t.Fatalf("en la cabecera de anthropic: %q %v", g, ok)
+	}
+	l.Update(tecla("down"))
+	if g, _ := l.Grupo(); g != "anthropic" {
+		t.Fatalf("en un elemento, el de su grupo: %q", g)
+	}
+}

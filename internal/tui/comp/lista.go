@@ -96,6 +96,14 @@ func (l Lista[T]) Seleccion() (T, bool) {
 	return cero, false
 }
 
+// Grupo es el grupo de la fila del cursor, sea su cabecera o uno de sus elementos; sin grupos o sin filas, no hay.
+func (l Lista[T]) Grupo() (string, bool) {
+	if l.grupo == nil || l.cursor >= len(l.filas) {
+		return "", false
+	}
+	return l.filas[l.cursor].grupo, true
+}
+
 // Visibles son los elementos que se ven, en orden: los que pasan la búsqueda y el filtro, sin los de grupos plegados.
 func (l Lista[T]) Visibles() []T {
 	var r []T

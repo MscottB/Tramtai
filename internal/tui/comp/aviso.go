@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/tui/pagina"
 )
 
@@ -31,6 +32,14 @@ type NuevoAviso struct {
 // siguiente tecla, y la app lo enseña entero si se pide.
 func Aviso(texto string, tipo TipoAviso) tea.Cmd {
 	return func() tea.Msg { return NuevoAviso{Texto: texto, Tipo: tipo} }
+}
+
+// Copiar pone un texto en el portapapeles con OSC 52. La terminal no dice si lo admite: el aviso lo explica.
+func Copiar(texto string) tea.Cmd {
+	if strings.TrimSpace(texto) == "" {
+		return Aviso(idioma.T("No hay nada que copiar"), Advertencia)
+	}
+	return tea.Batch(tea.SetClipboard(texto), Aviso(idioma.T("Copiado con OSC 52; si no llega al portapapeles, tu terminal no lo admite"), Exito))
 }
 
 type caducado struct{ n int }

@@ -105,5 +105,11 @@ func init() {
 		"n añade un campo detrás; x lo quita; Alt+↑↓ lo mueve; v enseña un ejemplo de respuesta": "n adds a field after this one; x removes it; Alt+↑↓ moves it; v shows a sample response",
 		"← → elige cómo se edita el esquema; n añade un campo; v enseña un ejemplo de respuesta": "← → chooses how the schema is edited; n adds a field; v shows a sample response",
 		"quita el campo": "remove the field",
+
+		// Mis APIs
+		"filtros":                             "filters",
+		"Filtros y orden":                     "Filters and order",
+		"activa o detiene el grupo":           "start or stop the group",
+		"Escribe un número, por ejemplo 2.50": "Type a number, for example 2.50",
 	})
 }

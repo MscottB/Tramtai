@@ -423,7 +423,7 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 		case "esc", "v":
 			p.muestra = ""
 		case "y":
-			return copiar(p.muestra)
+			return comp.Copiar(p.muestra)
 		default:
 			p.caja.Update(k)
 		}
@@ -457,7 +457,7 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 		p.api, p.punto = "", nil
 		return nil
 	case "y":
-		return copiar(p.salida)
+		return comp.Copiar(p.salida)
 	case "o":
 		return p.corregir()
 	case "n":

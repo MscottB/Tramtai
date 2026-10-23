@@ -77,12 +77,7 @@ func (p *Pagina) origenes() int {
 }
 
 // periodo es «los últimos N días» o «el último día», lo que dura el historial.
-func (p *Pagina) periodo() string {
-	if p.dias == 1 {
-		return p.tx("comun.ultimoDia")
-	}
-	return p.tx("comun.ultimosDias", "dias", strconv.FormatFloat(p.dias, 'f', -1, 64))
-}
+func (p *Pagina) periodo() string { return p.estilos.Periodo(p.lengua, p.horas) }
 
 // tituloAyuda es el del tema de la Ayuda que acompaña a Inicio («Empezar»).
 func (p *Pagina) tituloAyuda() string {

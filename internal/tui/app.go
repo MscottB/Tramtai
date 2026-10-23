@@ -19,6 +19,7 @@ import (
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/paginas/agentes"
+	"tramtai/internal/tui/paginas/conectar"
 	"tramtai/internal/tui/paginas/ejecutar"
 	"tramtai/internal/tui/paginas/historial"
 	"tramtai/internal/tui/paginas/inicio"
@@ -47,6 +48,7 @@ var fabricas = map[string]func(idioma string) pagina.Pagina{
 	pagina.PaginaInicio:    inicio.Nueva,
 	pagina.PaginaAgentes:   agentes.Nueva,
 	pagina.PaginaEjecutar:  ejecutar.Nueva,
+	pagina.PaginaConectar:  conectar.Nueva,
 	pagina.PaginaHistorial: historial.Nueva,
 }
 

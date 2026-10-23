@@ -292,6 +292,49 @@ func TestClienteCambiarPunto(t *testing.T) {
 	}
 }
 
+// TestClienteAjustarPunto: los ajustes de una API se mandan enteros, así que lo vacío vuelve a lo del espacio y un
+// presupuesto nil lo quita, sin tocar lo que no son ajustes.
+func TestClienteAjustarPunto(t *testing.T) {
+	cli, _ := servicioDePrueba(t, "")
+	ctx := context.Background()
+	if _, err := cli.Activar(ctx, "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := cli.CrearPunto(ctx, "global", contrato.ConfigPunto{Nombre: "facturas", Agente: "simulado", Grupo: "web"}); err != nil {
+		t.Fatal(err)
+	}
+	p, err := cli.AjustarPunto(ctx, "global", "facturas", AjustesPunto{Instrucciones: "Sé breve.", Esfuerzo: "alto",
+		ModelosPermitidos: []string{"simulado"}, Presupuesto: &nucleo.Presupuesto{Diario: nucleo.Limites{Peticiones: 50}}})
+	if err != nil || p.Instrucciones != "Sé breve." || p.Esfuerzo != "alto" || len(p.ModelosPermitidos) != 1 || p.Presupuesto == nil ||
+		p.Presupuesto.Diario.Peticiones != 50 || p.Grupo != "web" {
+		t.Fatalf("ajustar: %+v %v", p, err)
+	}
+	p, err = cli.AjustarPunto(ctx, "global", "facturas", AjustesPunto{})
+	if err != nil || p.Instrucciones != "" || p.Esfuerzo != "" || len(p.ModelosPermitidos) != 0 || p.Presupuesto != nil {
+		t.Fatalf("vacío quita los ajustes: %+v %v", p, err)
+	}
+}
+
+// TestClienteClaveInstancia: la clave del espacio se lee con el token de servicio y es la que vale tras regenerarla.
+func TestClienteClaveInstancia(t *testing.T) {
+	cli, _ := servicioDePrueba(t, "")
+	ctx := context.Background()
+	if _, err := cli.Activar(ctx, "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	antes, err := cli.ClaveInstancia(ctx, "global")
+	if err != nil || !strings.HasPrefix(antes, "tt_") {
+		t.Fatalf("clave: %q %v", antes, err)
+	}
+	nueva, err := cli.RotarClave(ctx, "global")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ahora, err := cli.ClaveInstancia(ctx, "global"); err != nil || ahora != nueva || ahora == antes {
+		t.Fatalf("tras regenerar: %q (nueva %q, antes %q) %v", ahora, nueva, antes, err)
+	}
+}
+
 func TestClienteTrabajosFiltrados(t *testing.T) {
 	cli, _ := servicioDePrueba(t, "")
 	ctx := context.Background()

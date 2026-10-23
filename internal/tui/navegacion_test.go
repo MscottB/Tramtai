@@ -273,6 +273,13 @@ func TestEjecutarRegistrada(t *testing.T) {
 	}
 }
 
+func TestConectarRegistrada(t *testing.T) {
+	m := nuevo(Opciones{})
+	if _, pendiente := m.pagina(pagina.PaginaConectar).(*proximamente); pendiente {
+		t.Fatal("Mis APIs ya no es «Próximamente»")
+	}
+}
+
 func TestHistorialRegistrada(t *testing.T) {
 	m := nuevo(Opciones{})
 	if _, pendiente := m.pagina(pagina.PaginaHistorial).(*proximamente); pendiente {

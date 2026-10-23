@@ -116,7 +116,7 @@ type Pagina struct {
 	problemas  []contrato.Espacio
 	recientes  []nucleo.Trabajo // las últimas peticiones del espacio
 	conv       *contrato.EstadoConversor
-	dias       float64
+	horas      int // lo que dura el historial (retención de metadatos)
 
 	// La red en vivo.
 	red       tranvias
@@ -136,7 +136,7 @@ type Pagina struct {
 
 // Nueva crea la página; su título es el del menú de la Web UI.
 func Nueva(lengua string) pagina.Pagina {
-	return &Pagina{lengua: lengua, dias: 7, ahora: time.Now, esperaPara: time.After}
+	return &Pagina{lengua: lengua, horas: 7 * 24, ahora: time.Now, esperaPara: time.After}
 }
 
 func (p *Pagina) Titulo() string { return datos.Texto(p.lengua, "menu.inicio") }
@@ -452,7 +452,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		}
 	case msgRetencion:
 		if p.vigente(m.origen) {
-			p.dias = float64(int(float64(m.horas)/24*10+0.5)) / 10
+			p.horas = m.horas
 		}
 	case msgTrabajos:
 		if p.vigente(m.origen) && m.err == nil {
