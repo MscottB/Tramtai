@@ -309,6 +309,13 @@ La clave de servicio (`datos/token-servicio`) habilita `/api/v1/servicio`:
 | `POST /api/v1/servicio/agentes/{agente}/conexion` | `{"conectado": false}` desconecta un agente sin desinstalar su CLI (`adaptadores.<agente>.desconectado`); `true` lo vuelve a conectar (204). |
 | `GET /api/v1/servicio/instancias/{id}/configuracion` | Ver su configuración efectiva. |
 | `PUT /api/v1/servicio/puerto` | Guardar `servicio.puerto` y `servicio.puerto_automatico` (`{"puerto": 18000, "automatico": true}`; con `puerto` 0 solo cambia el automático). Se aplica al reiniciar. |
+| `GET /api/v1/servicio/ajustes` | El puerto en uso, el configurado, si busca otro libre, si se reinicia desde la app y el arranque con el sistema (`autoarranque`, solo si el sistema lo admite). |
+| `PUT /api/v1/servicio/autoarranque` | `{"activo": true}` hace que la app arranque, en la bandeja, al iniciar sesión; `false` lo quita (204). |
+| `GET /api/v1/servicio/actualizacion` | El estado de las actualizaciones: la versión actual, si hay otra y si se instala desde aquí. Con `?ahora=1` consulta GitHub en el momento. `PUT` con `{"buscar": false}` desactiva la búsqueda automática. |
+| `POST /api/v1/servicio/actualizar` | Descarga, comprueba e instala la versión nueva en segundo plano (o se une a la que está en curso); responde su `version` (202). El avance, en `GET /api/v1/servicio/actualizacion/progreso`. |
+| `POST /api/v1/servicio/actualizar/instalar` y `/cancelar` | En la cuenta atrás antes de instalar: instala ya o cancela y borra la descarga (204); fuera de ella, 409. |
+| `GET /api/v1/servicio/actualizacion/novedades` | Lo que trae cada versión después de `desde` y hasta `hasta` (sin `hasta`, la instalada). |
+| `GET /api/v1/servicio/acerca` | Los datos de Acerca de: versión, compilación, sistema, servicio y carpetas. |
 | `POST /api/v1/servicio/recargar` | Aplicar los cambios de las APIs. |
 | `POST /api/v1/servicio/detener` | Detener el servicio. |
 

@@ -1,0 +1,101 @@
+package servicio
+
+import (
+	"context"
+	"encoding/json"
+	"strings"
+	"testing"
+
+	"tramtai/internal/actualizacion"
+	"tramtai/internal/adaptadores"
+	"tramtai/internal/contrato"
+	"tramtai/internal/version"
+)
+
+// La terminal llega a Ajustes por la administración, con el token de servicio: el puerto y el arranque con el sistema,
+// las actualizaciones (consultar, buscar ahora, activar la búsqueda, actualizar y decidir la instalación) y Acerca de.
+// Nada va a GitHub ni cambia el arranque del equipo: la versión y el arranque son los de la prueba.
+func TestAdminAjustesYActualizaciones(t *testing.T) {
+	antes := version.Version
+	version.Version = "v0.56.0" // una compilación «dev» nunca se da por desactualizada
+	t.Cleanup(func() { version.Version = antes })
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	activo := false
+	s.opc.Autoarranque = func() (bool, bool) { return true, activo }
+	s.opc.CambiarAutoarranque = func(a bool) error { activo = a; return nil }
+	consultas := 0
+	nueva := func(context.Context) (actualizacion.Version, error) {
+		consultas++
+		return actualizacion.Version{Etiqueta: "v99.0.0", Pagina: "https://github.com/MscottB/Tramtai/releases/tag/v99.0.0", Notas: "Novedades:\n- Algo"}, nil
+	}
+	s.opc.ConsultarVersion, s.actualizaciones.Consultar = nueva, nueva
+	leer := func(metodo, ruta, cuerpo string, destino any) int {
+		t.Helper()
+		r, texto := admin(t, s, ts.URL, metodo, ruta, cuerpo)
+		if destino != nil && r.StatusCode < 300 {
+			if err := json.Unmarshal([]byte(texto), destino); err != nil {
+				t.Fatalf("%s %s: %s", metodo, ruta, texto)
+			}
+		}
+		return r.StatusCode
+	}
+
+	var a contrato.AjustesServicio
+	if c := leer("GET", "/api/v1/servicio/ajustes", "", &a); c != 200 || a.Puerto != s.opc.Puerto || a.PuertoConfigurado != s.opc.Puerto || a.Autoarranque == nil || *a.Autoarranque {
+		t.Fatalf("ajustes: %d %+v", c, a)
+	}
+	if c := leer("PUT", "/api/v1/servicio/autoarranque", `{"activo":true}`, nil); c != 204 || !activo {
+		t.Fatalf("activar el arranque: %d %v", c, activo)
+	}
+	if leer("GET", "/api/v1/servicio/ajustes", "", &a); a.Autoarranque == nil || !*a.Autoarranque {
+		t.Fatalf("el arranque se ve activo: %+v", a)
+	}
+
+	var e contrato.EstadoActualizacion
+	if c := leer("GET", "/api/v1/servicio/actualizacion", "", &e); c != 200 || e.Actual != version.Version || e.Buscar || e.Disponible || consultas != 0 {
+		t.Fatalf("sin búsqueda no se consulta: %d %+v (%d)", c, e, consultas)
+	}
+	if leer("GET", "/api/v1/servicio/actualizacion?ahora=1", "", &e); !e.Disponible || e.Version != "v99.0.0" || e.Notas == "" || e.Comprobado.IsZero() || consultas != 1 {
+		t.Fatalf("buscar ahora consulta aunque esté desactivada: %+v (%d)", e, consultas)
+	}
+	if leer("PUT", "/api/v1/servicio/actualizacion", `{"buscar":true}`, &e); !e.Buscar || !s.buscar.Load() {
+		t.Fatalf("activar la búsqueda: %+v", e)
+	}
+
+	// Esta copia no se instaló con el instalador: actualizar responde por qué, sin descargar nada.
+	r, texto := admin(t, s, ts.URL, "POST", "/api/v1/servicio/actualizar", "")
+	if r.StatusCode != 400 || !strings.Contains(texto, "v99.0.0") {
+		t.Fatalf("actualizar sin instalador: %d %s", r.StatusCode, texto)
+	}
+	var p contrato.ProgresoActualizacion
+	if c := leer("GET", "/api/v1/servicio/actualizacion/progreso", "", &p); c != 200 || p.Fase != "" {
+		t.Fatalf("sin actualización en curso: %d %+v", c, p)
+	}
+	for _, ruta := range []string{"/api/v1/servicio/actualizar/instalar", "/api/v1/servicio/actualizar/cancelar"} {
+		if r, texto := admin(t, s, ts.URL, "POST", ruta, ""); r.StatusCode != 409 || !strings.Contains(texto, "solicitud_invalida") {
+			t.Fatalf("%s fuera de la cuenta atrás: %d %s", ruta, r.StatusCode, texto)
+		}
+	}
+
+	var acerca contrato.Acerca
+	if c := leer("GET", "/api/v1/servicio/acerca", "", &acerca); c != 200 || acerca.Version != version.Texto() || acerca.Servicio.PID == 0 || acerca.Rutas == nil || acerca.Rutas.Datos == "" {
+		t.Fatalf("acerca: %d %+v", c, acerca)
+	}
+
+	// Sin búsqueda, las novedades no hablan con GitHub.
+	s.buscar.Store(false)
+	var n struct {
+		Versiones []contrato.VersionNueva `json:"versiones"`
+	}
+	if c := leer("GET", "/api/v1/servicio/actualizacion/novedades?desde=v0.1.0", "", &n); c != 200 || n.Versiones == nil || len(n.Versiones) != 0 {
+		t.Fatalf("novedades sin búsqueda: %d %+v", c, n)
+	}
+
+	// Todo esto es de la administración: con la clave de una app, no.
+	inst, _ := s.ActivarGlobal()
+	for _, ruta := range []string{"/api/v1/servicio/ajustes", "/api/v1/servicio/actualizacion", "/api/v1/servicio/acerca"} {
+		if r, _ := pedir(t, ts.URL, "GET", ruta, inst.token, ""); r.StatusCode != 401 {
+			t.Fatalf("%s con la clave de la app: %d", ruta, r.StatusCode)
+		}
+	}
+}

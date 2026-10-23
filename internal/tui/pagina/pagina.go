@@ -91,6 +91,8 @@ type (
 		Pagina string
 		Teclas []Tecla
 	}
+	// ConNovedades abre Ajustes en las novedades de la versión nueva, para instalarla: la u del aviso de la cabecera.
+	ConNovedades struct{}
 	// SeguirTrabajo abre Probar con ese trabajo (su receta y su mensaje) y lo sigue en vivo, como trabajoSeguido de la
 	// Web UI: así llegan a Probar el reintento y la corrección del Historial.
 	SeguirTrabajo struct{ ID string }

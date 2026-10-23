@@ -20,6 +20,7 @@ import (
 	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/paginas/agentes"
 	"tramtai/internal/tui/paginas/conectar"
+	"tramtai/internal/tui/paginas/configuracion"
 	"tramtai/internal/tui/paginas/ejecutar"
 	"tramtai/internal/tui/paginas/espacios"
 	"tramtai/internal/tui/paginas/historial"
@@ -46,12 +47,13 @@ const anchoMinimo, altoMinimo = 60, 20
 
 // fabricas crea cada página por su clave del menú; las que aún no están enseñan «Próximamente».
 var fabricas = map[string]func(idioma string) pagina.Pagina{
-	pagina.PaginaInicio:    inicio.Nueva,
-	pagina.PaginaAgentes:   agentes.Nueva,
-	pagina.PaginaEjecutar:  ejecutar.Nueva,
-	pagina.PaginaConectar:  conectar.Nueva,
-	pagina.PaginaHistorial: historial.Nueva,
-	pagina.PaginaEspacios:  espacios.Nueva,
+	pagina.PaginaInicio:        inicio.Nueva,
+	pagina.PaginaAgentes:       agentes.Nueva,
+	pagina.PaginaEjecutar:      ejecutar.Nueva,
+	pagina.PaginaConectar:      conectar.Nueva,
+	pagina.PaginaHistorial:     historial.Nueva,
+	pagina.PaginaEspacios:      espacios.Nueva,
+	pagina.PaginaConfiguracion: configuracion.Nueva,
 }
 
 type modelo struct {
@@ -63,10 +65,13 @@ type modelo struct {
 	cli         *cliente.Cliente
 	instancia   string
 	espacios    []contrato.Espacio
-	caido       error // el servicio no responde: se avisa y r reintenta
-	conectando  bool  // la conexión inicial o un reintento con r: la cabecera lo dice
-	comprobando bool  // hay una comprobación en marcha (latido o r): no se lanza otra
-	cambios     int   // cuántas veces cambió el espacio: una comprobación de antes del último cambio no lo deshace
+	caido       error                        // el servicio no responde: se avisa y r reintenta
+	conectando  bool                         // la conexión inicial o un reintento con r: la cabecera lo dice
+	comprobando bool                         // hay una comprobación en marcha (latido o r): no se lanza otra
+	cambios     int                          // cuántas veces cambió el espacio: una comprobación de antes del último cambio no lo deshace
+	novedad     contrato.EstadoActualizacion // lo último que dijo el servicio de las actualizaciones (novedades.go)
+	preguntada  bool                         // ya se preguntó por ellas
+	latidos     int                          // latidos con el servicio en marcha: cada latidosNovedades se vuelve a preguntar
 
 	paginas    map[string]pagina.Pagina
 	cancelar   map[string]context.CancelFunc // el Ctx de la última vez que se inició cada página
@@ -224,6 +229,10 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		rellenar(m.estilos, msg.IsDark())
 	case msgConexion:
 		return m, m.conectado(msg)
+	case msgNovedad:
+		if msg.err == nil {
+			m.novedad = msg.estado
+		}
 	case msgLatido:
 		if m.comprobando { // la comprobación en marcha ya traerá su resultado; la cadena sigue
 			return m, latir()
@@ -346,6 +355,11 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 	}
 	if clave, ok := atajo(t); ok {
 		return m.ir(clave, nil, false)
+	}
+	if t == "u" {
+		if cmd, ok := m.teclaNovedad(p); ok {
+			return cmd
+		}
 	}
 	return m.aPagina(k)
 }

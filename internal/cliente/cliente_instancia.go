@@ -28,10 +28,10 @@ func (c *Cliente) Heredar(ctx context.Context, instancia, clave string) error {
 }
 
 // FijarPredeterminado guarda el modelo que se usa cuando la solicitud no indica agente ni modelo (agente,
-// agente/modelo o perfil/nombre) y su esfuerzo. Con modelo vacío solo cambia el esfuerzo; con esfuerzo vacío vuelve
-// al del agente.
-func (c *Cliente) FijarPredeterminado(ctx context.Context, instancia, modelo, esfuerzo string) error {
-	cuerpo := cuerpoJSON(map[string]string{"modelo": modelo, "esfuerzo": esfuerzo})
+// agente/modelo o perfil/nombre) y su esfuerzo. Con modelo vacío solo cambia el esfuerzo; con esfuerzo nil no lo toca
+// y con "" vuelve al del agente.
+func (c *Cliente) FijarPredeterminado(ctx context.Context, instancia, modelo string, esfuerzo *string) error {
+	cuerpo := cuerpoJSON(map[string]any{"modelo": modelo, "esfuerzo": esfuerzo})
 	return c.pedir(ctx, "POST", "/api/v1/instancia/predeterminado", instancia, cuerpo, "application/json", nil)
 }
 

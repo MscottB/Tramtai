@@ -138,6 +138,38 @@ func (s *Servicio) rutasAdmin() http.Handler {
 		}
 		w.WriteHeader(http.StatusNoContent)
 	})
+	// Ajustes en la terminal: el puerto y el arranque con el sistema, las actualizaciones y Acerca de, con las mismas
+	// respuestas que /ui/ (quien tiene el token de servicio es el dueño del equipo: ve también las rutas).
+	mux.HandleFunc("GET /api/v1/servicio/ajustes", func(w http.ResponseWriter, _ *http.Request) {
+		api.EscribirJSON(w, http.StatusOK, s.ajustesServicio())
+	})
+	mux.HandleFunc("PUT /api/v1/servicio/autoarranque", func(w http.ResponseWriter, r *http.Request) {
+		var peticion struct {
+			Activo bool `json:"activo"`
+		}
+		if err := api.LeerJSON(w, r, &peticion); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		if err := s.fijarAutoarranque(peticion.Activo); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	sinSesion := func(atender func(*Servicio, http.ResponseWriter, *http.Request, *sesion)) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) { atender(s, w, r, nil) }
+	}
+	mux.HandleFunc("GET /api/v1/servicio/actualizacion", sinSesion((*Servicio).actualizacionUI))
+	mux.HandleFunc("PUT /api/v1/servicio/actualizacion", sinSesion((*Servicio).actualizacionUI))
+	mux.HandleFunc("POST /api/v1/servicio/actualizar", sinSesion((*Servicio).actualizarUI))
+	mux.HandleFunc("POST /api/v1/servicio/actualizar/instalar", sinSesion((*Servicio).decidirInstalacionUI))
+	mux.HandleFunc("POST /api/v1/servicio/actualizar/cancelar", sinSesion((*Servicio).decidirInstalacionUI))
+	mux.HandleFunc("GET /api/v1/servicio/actualizacion/progreso", sinSesion((*Servicio).progresoUI))
+	mux.HandleFunc("GET /api/v1/servicio/actualizacion/novedades", sinSesion((*Servicio).novedadesUI))
+	mux.HandleFunc("GET /api/v1/servicio/acerca", func(w http.ResponseWriter, _ *http.Request) {
+		api.EscribirJSON(w, http.StatusOK, s.acerca(true))
+	})
 	mux.HandleFunc("POST /api/v1/servicio/recargar", func(w http.ResponseWriter, _ *http.Request) {
 		puntos := s.Recargar()
 		_ = s.persistirEstado() // anotado; los puntos ya están en su archivo

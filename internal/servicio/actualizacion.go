@@ -9,6 +9,7 @@ import (
 
 	"tramtai/internal/actualizacion"
 	"tramtai/internal/configuracion"
+	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/version"
@@ -23,9 +24,9 @@ func (s *Servicio) versionNueva(ctx context.Context, esperar bool) (actualizacio
 	return s.actualizaciones.Disponible(ctx, esperar)
 }
 
-// estadoActualizacion es lo que muestra la Web UI: la versión actual, si hay otra nueva y si se instala desde aquí.
-// Con ahora consulta GitHub en el momento («Buscar ahora»), aunque la búsqueda automática esté desactivada.
-func (s *Servicio) estadoActualizacion(ctx context.Context, ahora bool) map[string]any {
+// estadoActualizacion es lo que muestran la Web UI y la terminal: la versión actual, si hay otra nueva y si se instala
+// desde aquí. Con ahora consulta GitHub en el momento («Buscar ahora»), aunque la búsqueda automática esté desactivada.
+func (s *Servicio) estadoActualizacion(ctx context.Context, ahora bool) contrato.EstadoActualizacion {
 	var v actualizacion.Version
 	var nueva bool
 	if ahora {
@@ -35,12 +36,20 @@ func (s *Servicio) estadoActualizacion(ctx context.Context, ahora bool) map[stri
 		v, nueva = s.versionNueva(ctx, true)
 	}
 	_, instalada := actualizacion.Instalada()
-	estado := map[string]any{"actual": version.Version, "buscar": s.buscar.Load(), "disponible": nueva,
-		"version": v.Etiqueta, "url": v.Pagina, "notas": v.Notas, "instalable": nueva && instalada && v.TieneInstalador()}
-	if hecha, fallo := s.actualizaciones.Comprobado(); !hecha.IsZero() {
-		estado["comprobado"], estado["fallo"] = hecha.UTC().Format(time.RFC3339), fallo
+	hecha, fallo := s.actualizaciones.Comprobado()
+	return contrato.EstadoActualizacion{Actual: version.Version, Buscar: s.buscar.Load(), Disponible: nueva, Version: v.Etiqueta,
+		URL: v.Pagina, Notas: v.Notas, Instalable: nueva && instalada && v.TieneInstalador(), Comprobado: hecha.UTC(), Fallo: fallo}
+}
+
+// novedades es lo que trajo cada versión después de desde y hasta hasta (sin hasta, la instalada).
+func (s *Servicio) novedades(ctx context.Context, desde, hasta string) ([]actualizacion.Version, error) {
+	if hasta == "" {
+		hasta = version.Texto()
 	}
-	return estado
+	if s.opc.Novedades != nil {
+		return s.opc.Novedades(ctx, desde, hasta)
+	}
+	return actualizacion.Novedades(ctx, desde, hasta)
 }
 
 // fijarBusqueda guarda servicio.buscar_actualizaciones en la configuración global y lo aplica sin reiniciar.
@@ -56,16 +65,8 @@ func (s *Servicio) fijarBusqueda(buscar bool) error {
 	return nil
 }
 
-// ProgresoActualizacion es lo que ve la Web UI mientras se actualiza: la fase (descargando, verificando, listo,
-// instalando o error), los bytes descargados y el total; en listo, cuándo instalará.
-type ProgresoActualizacion struct {
-	Fase      string     `json:"fase"`
-	Version   string     `json:"version"`
-	Recibidos int64      `json:"recibidos"`
-	Total     int64      `json:"total"`
-	InstalaEn *time.Time `json:"instala_en,omitempty"`
-	Error     string     `json:"error,omitempty"`
-}
+// ProgresoActualizacion es lo que ven la Web UI y la terminal mientras se actualiza.
+type ProgresoActualizacion = contrato.ProgresoActualizacion
 
 // instalar, ultimaVersion y esperaInstalacion son variables para que las pruebas usen un instalador y una versión
 // simulados y una espera corta.
@@ -102,7 +103,11 @@ func (s *Servicio) IniciarActualizacion(ctx context.Context) (actualizacion.Vers
 	}
 	s.avance = ProgresoActualizacion{Fase: "descargando"}
 	s.muAvance.Unlock()
-	v, carpeta, err := versionParaInstalar(ctx)
+	consultar := ultimaVersion
+	if s.opc.ConsultarVersion != nil {
+		consultar = s.opc.ConsultarVersion
+	}
+	v, carpeta, err := versionParaInstalar(ctx, consultar)
 	if err != nil {
 		s.fijarAvance(func(p *ProgresoActualizacion) { *p = ProgresoActualizacion{} })
 		return v, err
@@ -114,8 +119,8 @@ func (s *Servicio) IniciarActualizacion(ctx context.Context) (actualizacion.Vers
 
 // versionParaInstalar devuelve la última versión y la carpeta de la instalación si hay una nueva que se puede
 // instalar desde aquí.
-func versionParaInstalar(ctx context.Context) (actualizacion.Version, string, error) {
-	v, err := ultimaVersion(ctx)
+func versionParaInstalar(ctx context.Context, consultar func(context.Context) (actualizacion.Version, error)) (actualizacion.Version, string, error) {
+	v, err := consultar(ctx)
 	if err != nil {
 		return v, "", nucleo.NuevoError(nucleo.CodigoErrorInterno, idioma.Tf("no se pudo consultar la última versión: %s", err))
 	}

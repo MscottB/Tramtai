@@ -151,10 +151,45 @@ export const CLAVES_ESPACIOS: string[] = [
   'proyecto.abrirSinConfiar', 'proyecto.dentro', 'proyecto.abrirEse', 'proyecto.crearAqui', 'proyecto.abierto',
 ]
 
+// CLAVES_AJUSTES son los textos de Ajustes que la terminal repite tal cual: las pestañas, la herencia, el modelo
+// predeterminado, el historial, borrar datos, los valores técnicos, el puerto, el conversor, el arranque, las
+// actualizaciones con sus novedades y su avance, y Acerca de. Los {placeholders} los rellena Go con datos.Textof.
+export const CLAVES_AJUSTES: string[] = [
+  'config.pestanaEspacio', 'config.pestanaTramtai', 'config.avisoGlobal', 'config.avisoProyecto', 'config.avisoTramtai',
+  'config.valoresTecnicos', 'config.valoresTexto', 'config.buscar', 'config.sinCoincidencias',
+  'herencia.propio', 'herencia.global', 'herencia.volver', 'herencia.vuelto',
+  ...['interno', 'global', 'proyecto', 'local', 'entorno'].map((o) => 'origen.' + o),
+  'origen.internoDetalle', 'origen.proyectoDetalle', 'origen.localDetalle', 'origen.entornoDetalle',
+  ...['servicio', 'predeterminados', 'modelos', 'agentes', 'concurrencia', 'retencion', 'archivos', 'compatibilidad', 'otros'].map((s) => 'seccion.' + s),
+  'predeterminado.titulo', 'predeterminado.texto', 'predeterminado.proyecto', 'predeterminado.guardado', 'predeterminado.esfuerzoGuardado',
+  'historialAjustes.titulo', 'historialAjustes.texto', 'historialAjustes.respuestas', 'historialAjustes.respuestasHint',
+  'historialAjustes.registro', 'historialAjustes.registroHint', 'historialAjustes.registroMenor', 'historialAjustes.maximo',
+  'historialAjustes.maximoHint', 'historialAjustes.uso', 'historialAjustes.usoUno', 'historialAjustes.guardado', 'historialAjustes.rango',
+  'datos.titulo', 'datos.texto', 'datos.historial', 'datos.historialDetalle', 'datos.historialDetalleUno', 'datos.puntos',
+  'datos.puntosDetalle', 'datos.puntosDetalleUno', 'datos.boton', 'datos.confirmar', 'datos.hecho',
+  'puerto.titulo', 'puerto.texto', 'puerto.actual', 'puerto.distinto', 'puerto.campo', 'puerto.regla', 'puerto.automatico', 'puerto.guardado',
+  'conversor.titulo', 'conversor.texto', 'conversor.listo', 'conversor.listoSinVersion', 'conversor.ultimoError', 'conversor.preparando',
+  'conversor.prepararDeNuevo', 'conversor.alIniciar', 'conversor.preparandoNuevo',
+  ...['python', 'paquetes', 'comprobacion'].map((e) => 'conversor.etapa.' + e),
+  ...['preparado', 'paquete', 'sistema', 'configurado'].map((o) => 'conversor.origen.' + o),
+  'arranque.titulo', 'arranque.texto', 'arranque.activado', 'arranque.desactivado',
+  'actualizacion.boton', 'actualizacion.titulo', 'actualizacion.detalle', 'actualizacion.comoInstala', 'actualizacion.manual',
+  'actualizacion.novedadesTitulo', 'actualizacion.novedadesVarias', 'actualizacion.novedadesRecientes', 'actualizacion.instalar',
+  'actualizacion.ajustesTitulo', 'actualizacion.ajustesTexto', 'actualizacion.alDia', 'actualizacion.hayNueva', 'actualizacion.buscarAhora',
+  'actualizacion.progresoTitulo', 'actualizacion.descargando', 'actualizacion.descargandoSinTotal', 'actualizacion.verificando',
+  'actualizacion.instalando', 'actualizacion.reiniciaraEn', 'actualizacion.reiniciarAhora', 'actualizacion.cerrara', 'actualizacion.fallo',
+  'actualizacion.reintentar', 'actualizacion.comprobado', 'actualizacion.falloConsulta', 'actualizacion.desactivada',
+  'acerca.titulo', 'acerca.sinComprobar', 'acerca.desarrollado', 'acerca.alDia', 'acerca.hayNueva', 'acerca.sinBuscar', 'acerca.sitio',
+  'acerca.repositorio', 'acerca.problema', 'acerca.licencia', 'acerca.terminos', 'acerca.detalles', 'acerca.sinDatos', 'acerca.version',
+  'acerca.portable', 'acerca.commit', 'acerca.modificado', 'acerca.sistema', 'acerca.servicio', 'acerca.desde', 'acerca.claves',
+  'acerca.datos', 'acerca.configuracion', 'acerca.registro', 'acerca.copiar', 'acerca.copiarTexto',
+  'comun.guardar', 'comun.cancelar',
+]
+
 // CLAVES_TEXTOS son, además de las menu.* y las error.*, los textos que la terminal toma de la Web UI: los de la Ayuda de la
-// interfaz, los de Agentes, los de Inicio, los del Historial, los de Probar, los de Mis APIs y los de Espacios.
+// interfaz, los de Agentes, los de Inicio, los del Historial, los de Probar, los de Mis APIs, los de Espacios y los de Ajustes.
 export const CLAVES_TEXTOS: string[] = [...CLAVES_UI, ...CLAVES_AGENTES, ...CLAVES_INICIO, ...CLAVES_HISTORIAL, ...CLAVES_EJECUTAR, ...CLAVES_APIS,
-  ...CLAVES_ESPACIOS]
+  ...CLAVES_ESPACIOS, ...CLAVES_AJUSTES]
 
 // plano deja un texto sin marcas: sin ** y con los <marcadores> entre corchetes.
 const plano = (s: string) => s.replace(/\*\*/g, '').replace(/<([^<>]*)>/g, '[$1]')

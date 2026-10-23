@@ -60,6 +60,12 @@ type Opciones struct {
 	Reiniciar func() error
 	// Autoarranque dice si el sistema puede arrancar Tramtai al iniciar sesión y si lo hace; nil = el del sistema.
 	Autoarranque func() (disponible, activo bool)
+	// CambiarAutoarranque lo activa o lo desactiva; nil = el del sistema. Las pruebas no tocan el arranque del equipo.
+	CambiarAutoarranque func(activo bool) error
+	// ConsultarVersion y Novedades leen la última versión publicada y lo que trae cada una; nil = GitHub
+	// (actualizacion.Ultima y actualizacion.Novedades). Las pruebas no van a la red.
+	ConsultarVersion func(context.Context) (actualizacion.Version, error)
+	Novedades        func(ctx context.Context, desde, hasta string) ([]actualizacion.Version, error)
 	// RaizConversor es la carpeta donde se prepara el conversor de archivos (documentos.RaizConversor; vacía: sin
 	// conversor en el servicio, como en las pruebas que no lo usan).
 	RaizConversor string
@@ -165,6 +171,7 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 		instancias: map[string]*Instancia{}, abriendo: map[string]*apertura{}, puntos: map[string]*puntoActivo{}, detener: make(chan struct{}),
 		sesiones: map[string]*sesion{}, codigos: map[string]codigoEntrada{}}
 	s.buscar.Store(opc.BuscarActualizaciones)
+	s.actualizaciones.Consultar = opc.ConsultarVersion
 	s.fondo.Go(func() { actualizacion.LimpiarDescargas(time.Now().Add(-10 * time.Minute)) }) // los instaladores que dejó la versión anterior
 	s.admin = s.rutasAdmin()
 	s.handler = api.Proteger(opc.Hosts, nil, http.HandlerFunc(s.enrutar))
