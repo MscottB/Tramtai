@@ -161,8 +161,9 @@ func Nueva(lengua string) pagina.Pagina { return &Pagina{lengua: lengua, ahora: 
 func (p *Pagina) Titulo() string { return datos.Texto(p.lengua, "menu.espacios") }
 func (p *Pagina) Ayuda() string  { return pagina.PaginaEspacios }
 
-// EnCampo es verdadero con un diálogo abierto: las letras son de su campo o de su pregunta.
-func (p *Pagina) EnCampo() bool { return p.dlg != nil }
+// EnCampo es verdadero con un diálogo con su campo a la vista: las letras son del campo. En la pregunta del servicio no
+// hay texto que perder, así que las teclas comunes valen (sus respuestas, c y a, no son comunes).
+func (p *Pagina) EnCampo() bool { return p.dlg != nil && !p.dlg.decidiendo() }
 
 func (p *Pagina) tx(clave string, pares ...string) string {
 	return p.estilos.Tx(p.lengua, clave, pares...)
@@ -274,7 +275,8 @@ func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
 	if suyo {
 		p.dlg = nil
 	}
-	cmds := []tea.Cmd{p.cargar()}
+	// La app relee los espacios (la cabecera y Ctrl+E), como api.sesion() tras cada acción en la Web UI.
+	cmds := []tea.Cmd{p.cargar(), func() tea.Msg { return pagina.EspaciosCambiados{} }}
 	switch {
 	case m.accion == accProyecto: // como la Web UI: el proyecto abierto pasa a ser el espacio de la terminal
 		cmds = append(cmds, comp.Aviso(p.tx("proyecto.abierto", "nombre", cmp.Or(m.e.Nombre, m.e.ID)), comp.Exito), cambiar(m.e.ID))
@@ -314,8 +316,8 @@ func sinEspacio(err error) (contrato.Espacio, error) { return contrato.Espacio{}
 // hacer es la acción de una tecla sobre el espacio: lo que tiene efecto pregunta antes, como la Web UI.
 func (p *Pagina) hacer(e contrato.Espacio, acc string) tea.Cmd {
 	switch acc {
-	case accAbrir: // como Abrir de la Web UI: cambia de espacio y lleva a Inicio
-		return tea.Batch(cambiar(e.ID), func() tea.Msg { return pagina.IrA{Pagina: pagina.PaginaInicio} })
+	case accAbrir: // como Abrir de la Web UI: cambia de espacio y después lleva a Inicio, que ya arranca en el nuevo
+		return tea.Sequence(cambiar(e.ID), func() tea.Msg { return pagina.IrA{Pagina: pagina.PaginaInicio} })
 	case accActivar:
 		return p.accion(acc, e, func(c pagina.Contexto) (contrato.Espacio, error) { return c.Cli.ActivarEspacio(c.Ctx, e.ID) })
 	case accDetener:

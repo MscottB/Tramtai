@@ -325,17 +325,53 @@ func TestCambioEspacioRecargaPaginas(t *testing.T) {
 	})
 }
 
-// TestComprobacionViejaNoDeshaceElCambio: una comprobación que leyó los espacios antes de cambiar a uno recién abierto no
-// lo da por detenido ni vuelve al global.
+// TestComprobacionViejaNoDeshaceElCambio: con un latido en marcha al cambiar a un espacio recién abierto, su resultado (que
+// leyó los espacios antes) no lo da por detenido ni vuelve al global, y la app vuelve a comprobar: la cabecera lo nombra.
 func TestComprobacionViejaNoDeshaceElCambio(t *testing.T) {
+	cli, _ := prueba.Servicio(t)
+	dir := filepath.Join(t.TempDir(), "notas")
+	os.MkdirAll(dir, 0o700)
+	e, err := cli.AbrirProyecto(context.Background(), dir, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	m := nuevo(Opciones{})
 	m.paginas["inicio"] = &paginaFalsa{}
-	m.instancia = "global"
-	vieja := msgConexion{cli: &cliente.Cliente{}, espacios: []contrato.Espacio{{ID: "global", Nombre: "Global", Activo: true}}, cambios: m.cambios}
-	m.Update(pagina.CambioEspacio{ID: "notas_1"})
+	m.cli, m.instancia, m.comprobando = cli, "global", true // el latido está en camino
+	vieja := msgConexion{cli: cli, espacios: []contrato.Espacio{{ID: "global", Nombre: "Global", Activo: true}}, cambios: m.cambios}
+	m.Update(pagina.CambioEspacio{ID: e.ID})
 	correr(t, m, m.conectado(vieja))
-	if m.instancia != "notas_1" {
-		t.Fatalf("sigue en el espacio nuevo: %q", m.instancia)
+	if m.instancia != e.ID || m.nombreEspacio() != e.Nombre {
+		t.Fatalf("sigue en el espacio nuevo y lo nombra: %q %q", m.instancia, m.nombreEspacio())
+	}
+}
+
+// TestEspaciosCambiadosReleeLaLista: tras un cambio en la página Espacios, la app relee los espacios al momento (como
+// api.sesion() en la Web UI): Ctrl+E ya no ofrece el que se detuvo.
+func TestEspaciosCambiadosReleeLaLista(t *testing.T) {
+	cli, _ := prueba.Servicio(t)
+	dir := filepath.Join(t.TempDir(), "notas")
+	os.MkdirAll(dir, 0o700)
+	e, err := cli.AbrirProyecto(context.Background(), dir, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := nuevo(Opciones{})
+	m.cli, m.instancia = cli, "global"
+	m.espacios, _ = cli.Espacios(context.Background())
+	if err := cli.DetenerEspacio(context.Background(), e.ID); err != nil {
+		t.Fatal(err)
+	}
+	_, cmd := m.Update(pagina.EspaciosCambiados{})
+	if cmd == nil || !m.comprobando {
+		t.Fatal("relee los espacios")
+	}
+	if _, otro := m.Update(pagina.EspaciosCambiados{}); otro != nil {
+		t.Fatal("con una comprobación en marcha, no lanza otra")
+	}
+	correr(t, m, cmd)
+	if _, activo := m.espacioActivo(e.ID); activo || m.comprobando {
+		t.Fatalf("la lista ya sabe que se detuvo: %+v", m.espacios)
 	}
 }
 

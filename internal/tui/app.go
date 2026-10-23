@@ -244,6 +244,11 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, m.conectar(false, false, false))
 		}
 		return m, tea.Batch(cmds...)
+	case pagina.EspaciosCambiados:
+		if m.cli != nil && !m.comprobando {
+			m.comprobando = true
+			return m, m.conectar(false, false, false)
+		}
 	case pagina.IrA:
 		if d, ok := msg.Datos.(pagina.ConAyuda); ok && d.Teclas == nil { // la página no sabe las teclas comunes
 			d.Teclas = m.teclasDe(m.pagina(m.actual))

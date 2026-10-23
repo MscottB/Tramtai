@@ -225,8 +225,8 @@ func TestEspaciosAbrirConConfianza(t *testing.T) {
 	a.Pulsar("tab") // sin completar, «sop» no existe y no habría pregunta
 	a.Pulsar("enter")
 	a.HastaVer(tx("proyecto.confiarTitulo"), "el programa de cada agente", tx("proyecto.confiarYAbrir"), tx("proyecto.abrirSinConfiar"))
-	if _, ok := espacio(t, cli, "Soporte"); ok {
-		t.Fatal("sin decidir, no se abre")
+	if _, ok := espacio(t, cli, "Soporte"); ok || a.P.EnCampo() {
+		t.Fatalf("sin decidir, no se abre; sin campo de texto, las teclas comunes valen (EnCampo %v)", a.P.EnCampo())
 	}
 	if av := hastaAviso(a, func() { a.Pulsar("c") }); av.Texto != tx("proyecto.abierto", "nombre", "Soporte") || av.Tipo != comp.Exito {
 		t.Fatalf("avisa de que se abrió: %+v", av)
@@ -357,8 +357,29 @@ func TestEspaciosAbrirOtro(t *testing.T) {
 	var cambio []tea.Msg
 	cmds := a.Retener(func() { a.Pulsar("enter") })
 	cambio = a.Recoger(cmds)
-	if !slices.Contains(cambio, tea.Msg(pagina.CambioEspacio{ID: e.ID})) || !slices.Contains(cambio, tea.Msg(pagina.IrA{Pagina: pagina.PaginaInicio})) {
-		t.Fatalf("cambia de espacio y va a Inicio: %v", cambio)
+	i, j := slices.Index(cambio, tea.Msg(pagina.CambioEspacio{ID: e.ID})), slices.Index(cambio, tea.Msg(pagina.IrA{Pagina: pagina.PaginaInicio}))
+	if i < 0 || j < i {
+		t.Fatalf("cambia de espacio y después va a Inicio: %v", cambio)
+	}
+}
+
+// TestEspaciosAvisaALaApp: tras un cambio con éxito, la página pide a la app que relea los espacios, como api.sesion() en la
+// Web UI.
+func TestEspaciosAvisaALaApp(t *testing.T) {
+	cli, id := prueba.Servicio(t)
+	e, _ := proyecto(t, cli, "Notas")
+	if err := cli.DetenerEspacio(context.Background(), e.ID); err != nil {
+		t.Fatal(err)
+	}
+	a := abierta(t, cli, id)
+	elegir(t, a, e.Nombre)
+	respuesta := a.Recoger(a.Retener(func() { a.Pulsar("a") }))
+	if len(respuesta) != 1 {
+		t.Fatalf("activar responde una vez: %v", respuesta)
+	}
+	tras := a.Recoger(a.Retener(func() { a.Entregar(respuesta[0]) }))
+	if !slices.Contains(tras, tea.Msg(pagina.EspaciosCambiados{})) {
+		t.Fatalf("pide a la app que relea los espacios: %v", tras)
 	}
 }
 

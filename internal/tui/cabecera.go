@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"time"
 
@@ -88,6 +89,10 @@ func (m *modelo) conectado(r msgConexion) tea.Cmd {
 	} else {
 		r.reiniciar = r.reiniciar || m.caido != nil || m.cli != r.cli // si vuelve, la página se recarga
 		m.cli, m.espacios, m.caido = r.cli, r.espacios, nil
+		if r.cambios != m.cambios && !slices.ContainsFunc(r.espacios, func(e contrato.Espacio) bool { return e.ID == m.instancia }) {
+			m.comprobando = true // leyó la lista antes de cambiar a un espacio que no trae: se vuelve a leer
+			cmds = append(cmds, m.conectar(false, false, false))
+		}
 		switch nombre, activo := m.espacioActivo(m.instancia); {
 		case m.instancia == "":
 			m.instancia = "global"
