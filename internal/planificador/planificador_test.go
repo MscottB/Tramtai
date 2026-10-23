@@ -1327,6 +1327,38 @@ func TestSalidaRedactadaConLosSecretosDeLasOpciones(t *testing.T) {
 	}
 }
 
+// conLlaveroColgado inicia un planificador cuyo almacén de claves no responde hasta que acaba la prueba.
+func conLlaveroColgado(t *testing.T) (*persistencia.Almacen, *Planificador) {
+	alm := abrir(t)
+	liberar := make(chan struct{})
+	opc := opciones()
+	opc.Secretos = func() []string { <-liberar; return nil }
+	p := iniciar(t, alm, adaptadores.Simulado{}, 1, opc)
+	t.Cleanup(func() { close(liberar) }) // antes que Detener, que sin el arreglo esperaría al almacén
+	return alm, p
+}
+
+// Cancelar no espera a un almacén de claves colgado.
+func TestCancelarConElLlaveroColgado(t *testing.T) {
+	alm, p := conLlaveroColgado(t)
+	id := enviar(t, p, solicitud("hola"))
+	esperar(t, alm, id, nucleo.Ejecutando)
+	if _, err := p.Cancelar(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	esperar(t, alm, id, nucleo.Cancelado)
+}
+
+// El plazo de la petición también corta la espera del almacén de claves.
+func TestPlazoConElLlaveroColgado(t *testing.T) {
+	alm, p := conLlaveroColgado(t)
+	s := solicitud("hola")
+	s.Ejecucion.TiempoLimiteSegundos = 1
+	if tr := esperar(t, alm, enviar(t, p, s), nucleo.Fallido); tr.CodigoError != nucleo.CodigoTiempoEjecucionAgotado {
+		t.Fatalf("fuera de plazo: %+v", tr)
+	}
+}
+
 func TestLineaRegistroEscapada(t *testing.T) {
 	alm := abrir(t)
 	var registro bytes.Buffer
