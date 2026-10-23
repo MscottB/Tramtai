@@ -24,7 +24,9 @@ import (
 )
 
 // Las pruebas de Probar van por su interfaz: teclas, los mensajes de pagina y comp, y lo que enseña Vista(). Lo que la
-// página manda al servicio se lee en el servicio.
+// página manda al servicio se lee en el servicio. Lo que trae el servicio tras una tecla (el trabajo creado, las
+// recientes, el error del esquema, el aviso de una acción) se espera con Hasta, HastaVer o HastaSalir antes de mirarlo
+// (regla 20): Asentar no ve los temporizadores del servicio ni todas las esperas de E/S.
 
 var ctx = context.Background()
 

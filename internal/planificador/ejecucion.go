@@ -424,21 +424,23 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 	}
 	// Si el agente escribe una clave de proveedor (lo empujó un contenido hostil), se tapa antes de guardarla o enviarla.
 	// shortcut: una clave partida entre dos fragmentos de texto solo se tapa en la salida final, no en los eventos.
-	secretos := adaptadores.Secretos()
+	secretos, err := p.secretos(ctxEjecucion) // si se corta, no se lanza el agente: el switch final cierra el intento
 	agrupador := &agrupador{guardar: func(tipo, datos string) error {
 		return p.almacen.AgregarEvento(fondo, id, tipo, adaptadores.Redactar(datos, secretos))
 	}}
 	var texto atomic.Bool                               // algunos adaptadores emiten desde la goroutine que lee la salida del CLI
 	sinTextoEnVivo := herramientas.Activas(t.Solicitud) // el texto sería el sobre interno: la respuesta llega al terminar
-	resultado, err = p.adaptadores[c.agente].Ejecutar(ctxEjecucion, solicitud, func(e adaptadores.Evento) error {
-		if e.Tipo == "texto" && e.Datos != "" {
-			texto.Store(true)
-		}
-		if e.Tipo == "texto" && sinTextoEnVivo {
-			return nil
-		}
-		return agrupador.emitir(e)
-	})
+	if err == nil {
+		resultado, err = p.adaptadores[c.agente].Ejecutar(ctxEjecucion, solicitud, func(e adaptadores.Evento) error {
+			if e.Tipo == "texto" && e.Datos != "" {
+				texto.Store(true)
+			}
+			if e.Tipo == "texto" && sinTextoEnVivo {
+				return nil
+			}
+			return agrupador.emitir(e)
+		})
+	}
 	if resultado.ContextoTokens > 0 && resultado.ModeloEfectivo != "" {
 		_ = p.almacen.GuardarContexto(fondo, c.agente, resultado.ModeloEfectivo, resultado.ContextoTokens)
 	}
@@ -453,6 +455,20 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 		return resultado, huboTexto, false, nucleo.NuevoError(nucleo.CodigoTiempoEjecucionAgotado, idioma.T("se superó el tiempo límite de ejecución"))
 	}
 	return resultado, huboTexto, false, err
+}
+
+// secretos lee las claves que se tapan sin retener el intento: una cancelación o el plazo de la petición dejan de
+// esperar al almacén. shortcut: el proceso del almacén no se mata, termina solo con su plazo de 15 s
+// (credenciales.ejecutar); pasarle el contexto pediría Leer con contexto en cada sistema.
+func (p *Planificador) secretos(ctx context.Context) ([]string, error) {
+	lista := make(chan []string, 1)
+	go func() { lista <- p.opc.Secretos() }()
+	select {
+	case s := <-lista:
+		return s, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 // cerrarDetenido finaliza un trabajo cuyo contexto se canceló, por petición del usuario o por cierre del servicio.

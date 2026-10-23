@@ -73,7 +73,7 @@ func TestAgentesEnviaElModoCorrecto(t *testing.T) {
 	if n := len(cuerpos()); n != 0 {
 		t.Fatalf("sin confirmar no se manda nada: %v", cuerpos())
 	}
-	f := a.Entregar(comp.Confirmado{})
+	f := a.HastaSalir(func() { a.Entregar(comp.Confirmado{}) }, prueba.HayAviso)
 	if got := cuerpos(); len(got) != 1 || got[0] != `{"modo":"suscripcion"}` {
 		t.Fatalf("tras confirmar manda suscripcion: %v", got)
 	}
@@ -82,7 +82,7 @@ func TestAgentesEnviaElModoCorrecto(t *testing.T) {
 	}
 
 	a, cuerpos = conGrabadora("suscripcion")
-	f = a.Pulsar("a")
+	f = a.HastaSalir(func() { a.Pulsar("a") }, prueba.HayAviso)
 	if got := cuerpos(); len(got) != 1 || got[0] != `{"modo":"clave_api"}` {
 		t.Fatalf("pasar a la clave manda clave_api: %v", got)
 	}
@@ -99,6 +99,7 @@ func TestAgentesDesconectadoSinCLIEsNoInstalado(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.Pulsar("c") // vuelve a comprobar
+	a.HastaVer("Listos (1) Falta conectar (0) No instalados (1)")
 	v := a.Vista()
 	if strings.Index(v, "simulado") > strings.Index(v, "Codex") {
 		t.Fatalf("va al final:\n%s", v)
@@ -124,10 +125,12 @@ func TestAgentesDesconectadoSinCLIEsNoInstalado(t *testing.T) {
 func TestAgentesCambioDeEspacioVaciaElCatalogo(t *testing.T) {
 	a, cli, id := abierta(t)
 	a.Pulsar("enter")
+	a.HastaVer("Modelos: predeterminado")
 	if v := a.Vista(); !strings.Contains(v, "Modelos: predeterminado") {
 		t.Fatalf("antes se ve el catálogo:\n%s", v)
 	}
 	a.Correr(a.P.Iniciar(contexto(t, cli, id))) // la app vuelve a iniciar la página (otro espacio o el mismo)
+	a.EsperarCarga()                            // la lista, para que Intro tenga un agente que abrir
 	a.Retener(func() { a.Pulsar("enter") })     // el catálogo se pide de nuevo; la petición aún no ha vuelto
 	if v := a.Vista(); !strings.Contains(v, "Modelos: Cargando…") {
 		t.Fatalf("Iniciar vacía el catálogo: no se ve el de antes:\n%s", v)

@@ -160,6 +160,7 @@ func TestRecetaAvanzadaEnJSON(t *testing.T) {
 	}
 	a := abierta(t, cli, id)
 	a.Entregar(pagina.SeguirTrabajo{ID: tr.ID})
+	a.Hasta(func() bool { return pestana(a, "ejecutar.respuesta") }) // el trabajo, con su receta, lo trae el servicio
 	a.Pulsar("left")
 	if valor(t, a, tx("receta.modo")) != tx("receta.modoJson") || !strings.Contains(valor(t, a, tx("receta.esquema")), `"a"`) {
 		t.Fatalf("se abre en JSON:\n%s", a.Vista())

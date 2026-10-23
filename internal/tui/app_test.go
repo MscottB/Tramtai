@@ -288,7 +288,10 @@ func TestServicioCaidoNoCierra(t *testing.T) {
 	m := nuevo(Opciones{})
 	m.cli = cli
 	a := conducir(t, m)
-	if salio(a.Correr(m.conectar(false, true, false))) || m.instancia != global || m.caido != nil {
+	// Lo que contesta el servicio a la comprobación se espera antes de mirarlo (regla 20).
+	fuera := a.Correr(m.conectar(false, true, false))
+	a.Hasta(func() bool { return m.instancia == global && m.caido == nil })
+	if salio(fuera) || m.instancia != global || m.caido != nil {
 		t.Fatalf("conecta con el espacio global: %q %v", m.instancia, m.caido)
 	}
 	aviso := idioma.T("El servicio no responde · r reintenta")
@@ -299,6 +302,7 @@ func TestServicioCaidoNoCierra(t *testing.T) {
 	if salio(a.Correr(m.conectar(false, false, false))) {
 		t.Fatal("la comprobación no cierra la terminal")
 	}
+	a.HastaVer(aviso)
 	if !strings.Contains(m.View().Content, aviso) {
 		t.Fatalf("avisa de que el servicio no responde:\n%s", m.View().Content)
 	}

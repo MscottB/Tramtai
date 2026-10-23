@@ -18,7 +18,9 @@ import (
 )
 
 // Las pruebas de Agentes van por su interfaz, con el arnés de las páginas (prueba.App): teclas, los mensajes de pagina y
-// comp, y lo que enseña Vista(). Lo que la página cambia en el servicio se lee en el servicio.
+// comp, y lo que enseña Vista(). Lo que la página cambia en el servicio se lee en el servicio. Lo que trae el servicio tras
+// una tecla (la comprobación, el catálogo, el aviso de una acción) se espera con Hasta, HastaVer o HastaSalir antes de
+// mirarlo (regla 20): Asentar no ve los temporizadores del servicio ni todas las esperas de E/S.
 
 var (
 	aviso    = prueba.Aviso
@@ -137,7 +139,7 @@ func TestAgentesDesconectar(t *testing.T) {
 	}
 	// Confirmar desconecta en el servicio y la página lo ve al volver a comprobar.
 	a.Pulsar("d")
-	fuera = a.Entregar(comp.Confirmado{})
+	fuera = a.HastaSalir(func() { a.Entregar(comp.Confirmado{}) }, prueba.HayAviso)
 	if av, ok := aviso(fuera); !ok || av.Texto != "simulado está desconectado" || av.Tipo != comp.Exito {
 		t.Fatalf("avisa: %+v", fuera)
 	}
@@ -145,14 +147,19 @@ func TestAgentesDesconectar(t *testing.T) {
 	if !r.Adaptadores[0].Desconectado {
 		t.Fatal("el servicio lo tiene desconectado")
 	}
+	a.Hasta(func() bool {
+		v := a.Vista()
+		return strings.Contains(v, "Desconectado") && !strings.Contains(v, "Listo ")
+	})
 	if v := a.Vista(); !strings.Contains(v, "Desconectado") || strings.Contains(v, "Listo ") {
 		t.Fatalf("la lista dice Desconectado:\n%s", v)
 	}
 	// Conectar no pide confirmación.
-	fuera = a.Pulsar("d")
+	fuera = a.HastaSalir(func() { a.Pulsar("d") }, prueba.HayAviso)
 	if av, ok := aviso(fuera); !ok || av.Texto != "simulado está conectado" {
 		t.Fatalf("conecta sin preguntar: %+v", fuera)
 	}
+	a.HastaVer("Listo")
 	if v := a.Vista(); !strings.Contains(v, "Listo") {
 		t.Fatalf("vuelve a Listo:\n%s", v)
 	}
@@ -177,13 +184,13 @@ func TestAgentesAutenticacionSoloSiAdmite(t *testing.T) {
 	if len(fuera) != 1 || !ok || !strings.Contains(q.Texto, "Ese riesgo es tuyo") || !strings.Contains(q.Texto, "Usar tu suscripción con Claude") {
 		t.Fatalf("pregunta con el riesgo: %+v", fuera)
 	}
-	if _, ok := aviso(a.Entregar(comp.Confirmado{})); !ok {
+	if _, ok := aviso(a.HastaSalir(func() { a.Entregar(comp.Confirmado{}) }, prueba.HayAviso)); !ok {
 		t.Fatal("recuerda qué iba a hacer: al confirmar lo hace y avisa")
 	}
 
 	// Con suscripción, pasar a la clave es directo, sin pregunta.
 	a, _, _ = conAgentes(t, map[string]adaptadores.Adaptador{"claude": detectado(adaptadores.Estado{Autenticacion: "suscripcion"})})
-	fuera = a.Pulsar("a")
+	fuera = a.HastaSalir(func() { a.Pulsar("a") }, prueba.HayAviso)
 	if av, ok := aviso(fuera); !ok || len(fuera) != 1 || av.Texto == "" {
 		t.Fatalf("pasar a la clave sale directo y avisa: %+v", fuera)
 	}
@@ -195,6 +202,7 @@ func TestAgentesAutenticacionSoloSiAdmite(t *testing.T) {
 		t.Fatal(err)
 	}
 	desconectado.Pulsar("c") // vuelve a comprobar
+	desconectado.HastaVer("Desconectado")
 	for nombre, a := range map[string]*prueba.App{"sin instalar": sinInstalar, "desconectado": desconectado} {
 		a.Pulsar("down") // el simulado, listo, va primero
 		fuera = a.Pulsar("a")
@@ -228,8 +236,10 @@ func TestAgentesDetalles(t *testing.T) {
 		t.Fatalf("detalle con el catálogo pendiente:\n%s", v)
 	}
 	a.Soltar(catalogo)
+	enDetalle := []string{"Listo · usa tu clave de API", "Modelos: predeterminado", "Respuesta en vivo: Al terminar", "Respuesta JSON con esquema: No"}
+	a.HastaVer(enDetalle...)
 	v := a.Vista()
-	for _, quiere := range []string{"Listo · usa tu clave de API", "Modelos: predeterminado", "Respuesta en vivo: Al terminar", "Respuesta JSON con esquema: No"} {
+	for _, quiere := range enDetalle {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}
@@ -271,7 +281,7 @@ func TestAgentesServicioCaido(t *testing.T) {
 	cli, id, cerrar := prueba.Arrancar(t)
 	a := abrir(t, contexto(t, cli, id))
 	cerrar()
-	f := a.Pulsar("r")
+	f := a.HastaSalir(func() { a.Pulsar("r") }, func(f []tea.Msg) bool { return len(f) != 0 })
 	if len(f) != 1 {
 		t.Fatalf("con el servicio cerrado: ErrorServicio, y la página no se cierra: %+v", f)
 	}
@@ -309,7 +319,9 @@ func TestAgentesIgnoraRespuestasViejas(t *testing.T) {
 	if a.Correr(primera); !cargando() {
 		t.Fatal("la primera ya es vieja")
 	}
-	if a.Correr(segunda); cargando() {
+	a.Correr(segunda)
+	a.Hasta(func() bool { return !cargando() })
+	if cargando() {
 		t.Fatal("la última sí")
 	}
 }
@@ -346,6 +358,7 @@ func TestAgentesConErrorCabe(t *testing.T) {
 	a.Pulsar("end")
 	fallar(strings.Repeat("El servicio no pudo comprobar los agentes de este espacio. ", 4))
 	a.Pulsar("c")
+	a.HastaVer("de este espacio.")
 	v := a.Vista()
 	if h := lipgloss.Height(v); h > 17 {
 		t.Fatalf("la vista mide %d filas y el área es de 17:\n%s", h, v)

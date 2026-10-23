@@ -48,7 +48,7 @@ func entorno(t *testing.T, global, local string, agente adaptadores.Adaptador) (
 	ts := httptest.NewUnstartedServer(nil)
 	puerto := ts.Listener.Addr().(*net.TCPAddr).Port
 	s, err := Nuevo(Opciones{Datos: filepath.Join(dir, "datos"), Config: c, Registro: map[string]adaptadores.Adaptador{"simulado": agente},
-		Semaforos: planificador.NuevosSemaforos(map[string]int{"simulado": 2}), Host: "127.0.0.1", Puerto: puerto, Hosts: []string{"127.0.0.1", "localhost", "::1"}})
+		Secretos: func() []string { return nil }, Semaforos: planificador.NuevosSemaforos(map[string]int{"simulado": 2}), Host: "127.0.0.1", Puerto: puerto, Hosts: []string{"127.0.0.1", "localhost", "::1"}})
 	if err != nil {
 		t.Fatal(err)
 	}

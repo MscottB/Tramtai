@@ -205,6 +205,16 @@ func cerrado(t *testing.T, a *prueba.App) {
 	a.Hasta(func() bool { return prueba.FlujosAbiertos() == 0 })
 }
 
+// Lo que trae el servicio tras una tecla (una lista, un detalle, el aviso de una acción) se espera con Hasta, HastaVer o
+// HastaSalir antes de mirarlo (regla 20): Asentar no ve los temporizadores del servicio ni todas las esperas de E/S.
+
+// verDetalle abre el detalle de la fila elegida y espera a que llegue: hasta entonces sus pestañas y acciones no responden.
+func verDetalle(t *testing.T, a *prueba.App) {
+	t.Helper()
+	a.Pulsar("enter")
+	a.Hasta(func() bool { return enPestana(a, "historial.solicitud") })
+}
+
 func TestHistorialCarga(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	for _, texto := range []string{"primera", "segunda", "tercera"} {
@@ -244,6 +254,7 @@ func TestHistorialSinPeticiones(t *testing.T) {
 	}
 	// Con un filtro el vacío es otro y se ofrece quitarlo.
 	a.Pulsar("e")
+	a.HastaVer("No hay peticiones con este filtro", "l Quitar filtros")
 	v = a.Vista()
 	if !strings.Contains(v, "No hay peticiones con este filtro") || !strings.Contains(v, "l Quitar filtros") {
 		t.Fatalf("vacío con filtro:\n%s", v)
@@ -252,6 +263,7 @@ func TestHistorialSinPeticiones(t *testing.T) {
 		t.Fatalf("p solo vale sin filtros: %v", fuera)
 	}
 	a.Pulsar("l")
+	a.HastaVer("Estado: Todas", "Aún no hay peticiones")
 	if v := a.Vista(); !strings.Contains(v, "Estado: Todas") || !strings.Contains(v, "Aún no hay peticiones") {
 		t.Fatalf("l quita los filtros:\n%s", v)
 	}
@@ -308,6 +320,11 @@ func TestHistorialVerMasSinRepetir(t *testing.T) {
 	b, _ := abrir(t, alto(t, cli, id, 600))
 	tarde := b.Retener(func() { b.Pulsar("m") }) // pide la segunda página; aún no vuelve
 	b.Entregar(pagina.FiltroPunto{Nombre: "p:no-existe"})
+	sinFilas := func() bool {
+		v := b.Vista()
+		return !strings.Contains(v, "petición-") && !strings.Contains(v, "Cargando")
+	}
+	b.Hasta(sinFilas) // la lista del filtro nuevo, antes de que llegue la vieja
 	b.Soltar(tarde)
 	if v := b.Vista(); strings.Contains(v, "petición-") || strings.Contains(v, "Cargando") {
 		t.Fatalf("la página del filtro viejo no se suma:\n%s", v)
@@ -381,8 +398,16 @@ func TestHistorialFiltroPunto(t *testing.T) {
 	if v := a.Vista(); cuantas(a, textos...) != 1 || !strings.Contains(v, "desde la terminal") || !strings.Contains(v, "Origen: Terminal") {
 		t.Fatalf("solo el origen terminal:\n%s", v)
 	}
-	// El selector: los cuatro orígenes, el grupo y las APIs.
-	a.Pulsar("f")
+	// El selector: los cuatro orígenes, el grupo y las APIs. Las APIs llegan aparte de la lista y el selector se arma con
+	// las que hay al abrirlo: si aún no han llegado, se cierra y se vuelve a abrir hasta verlas.
+	a.Hasta(func() bool {
+		if a.Pulsar("f"); strings.Contains(a.Vista(), "API tienda") {
+			return true
+		}
+		a.Pulsar("esc")
+		return false
+	})
+	a.HastaVer("API mi-app", "API otra", "API tienda", "Grupo web")
 	if !a.P.EnCampo() {
 		t.Fatal("con el selector abierto las letras son suyas")
 	}
@@ -476,6 +501,7 @@ func TestHistorialFiltroEstado(t *testing.T) {
 	}
 	for _, c := range casos {
 		a.Entregar(pagina.FiltroEstado{Estado: c.estado})
+		a.Hasta(func() bool { return slices.Equal(textos(a), c.quiere) })
 		if got := textos(a); !slices.Equal(got, c.quiere) { // los cancelados solo salen en «Todas»
 			t.Fatalf("FiltroEstado %q: %v, quería %v\n%s", c.estado, got, c.quiere, a.Vista())
 		}
@@ -490,10 +516,12 @@ func TestHistorialFiltroEstado(t *testing.T) {
 	// Con el estado puesto, un filtro que no deja nada dice que es del filtro, y l lo quita.
 	a.Entregar(pagina.FiltroEstado{Estado: nucleo.FiltroCompletado})
 	a.Pulsar("/", "d", "o", "s", "enter")
+	a.HastaVer("No hay peticiones con este filtro")
 	if v := a.Vista(); !strings.Contains(v, "No hay peticiones con este filtro") {
 		t.Fatalf("vacío por el filtro:\n%s", v)
 	}
 	a.Pulsar("l")
+	a.Hasta(func() bool { return len(textos(a)) == 4 })
 	if got := textos(a); len(got) != 4 {
 		t.Fatalf("l deja todas: %v", got)
 	}
@@ -507,11 +535,18 @@ func TestHistorialBusqueda(t *testing.T) {
 	a, r := abrir(t, prueba.Contexto(t, cli, id))
 	ves := func(quiere ...string) {
 		t.Helper()
-		v := a.Vista()
-		for _, x := range []string{"Factura de Soporte", "Notas de reunión", "Otra cosa"} {
-			if strings.Contains(v, x) != slices.Contains(quiere, x) {
-				t.Fatalf("quería %v:\n%s", quiere, v)
+		son := func() bool {
+			v := a.Vista()
+			for _, x := range []string{"Factura de Soporte", "Notas de reunión", "Otra cosa"} {
+				if strings.Contains(v, x) != slices.Contains(quiere, x) {
+					return false
+				}
 			}
+			return true
+		}
+		a.Hasta(son) // la lista buscada la trae el servicio
+		if !son() {
+			t.Fatalf("quería %v:\n%s", quiere, a.Vista())
 		}
 	}
 	a.Pulsar("/")
@@ -568,9 +603,11 @@ func TestHistorialDetalle(t *testing.T) {
 	crear(t, cli, id, "hola mundo")
 	a := abierta(t, cli, id)
 	a.Pulsar("enter")
+	enDetalle := []string{"✓ Completado", "En cola ▸ Preparación ▸ Ejecución ▸ Validación ▸ [Llegada]", "[Mensaje]", "Respuesta", "Registro",
+		"hola mundo", "Agente y modelo: ", "Origen: Terminal", "Tokens: 0 → 0", "Duración: ", "Identificador: trabajo_"}
+	a.HastaVer(enDetalle...)
 	v := a.Vista()
-	for _, quiere := range []string{"✓ Completado", "En cola ▸ Preparación ▸ Ejecución ▸ Validación ▸ [Llegada]", "[Mensaje]", "Respuesta", "Registro",
-		"hola mundo", "Agente y modelo: ", "Origen: Terminal", "Tokens: 0 → 0", "Duración: ", "Identificador: trabajo_"} {
+	for _, quiere := range enDetalle {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q en el detalle:\n%s", quiere, v)
 		}
@@ -585,6 +622,7 @@ func TestHistorialDetalle(t *testing.T) {
 	}
 	// El registro: la hora de cada paso, con el resumen de lo que duró cada etapa.
 	a.Pulsar("right")
+	a.HastaVer("[Registro]", "En cola", "Ejecutando", "Completado", " +", "simulado") // el registro llega aparte del detalle
 	v = a.Vista()
 	for _, quiere := range []string{"[Registro]", "En cola", "Ejecutando", "Completado", " +"} {
 		if !strings.Contains(v, quiere) {
@@ -617,7 +655,8 @@ func TestHistorialDetalle(t *testing.T) {
 		t.Fatal("Esc sin nada abierto vuelve")
 	}
 	// Buscar en el visor.
-	a.Pulsar("enter", "/")
+	verDetalle(t, a)
+	a.Pulsar("/")
 	if !a.P.EnCampo() {
 		t.Fatal("la búsqueda del detalle tiene el foco")
 	}
@@ -636,6 +675,7 @@ func TestHistorialDetalleConError(t *testing.T) {
 		t.Fatalf("la fila dice cómo acabó:\n%s", v)
 	}
 	a.Pulsar("enter")
+	a.HastaVer("✗ La respuesta no cumple el JSON Schema", "[Falló]")
 	v := a.Vista()
 	if !strings.Contains(v, "✗ La respuesta no cumple el JSON Schema") || strings.Contains(v, "Schema: ") || !strings.Contains(v, "[Falló]") {
 		t.Fatalf("el título del código y debajo el mensaje del servicio, tal cual:\n%s", v)
@@ -661,6 +701,7 @@ func TestHistorialEnVivo(t *testing.T) {
 		t.Fatalf("la lista tiene la petición en marcha:\n%s", v)
 	}
 	a.Pulsar("enter")
+	a.Hasta(func() bool { return enVivo(a) && strings.Contains(a.Vista(), "●") && prueba.FlujosAbiertos() == 1 })
 	if v := a.Vista(); !enVivo(a) || !strings.Contains(v, "●") || prueba.FlujosAbiertos() != 1 {
 		t.Fatalf("abre el detalle y sigue en vivo:\n%s", v)
 	}
@@ -683,6 +724,7 @@ func TestHistorialEnVivo(t *testing.T) {
 	}
 	// El registro ya lo tiene completo.
 	a.Pulsar("right")
+	a.HastaVer("Ejecutando", "Validando", "Completado")
 	if v := a.Vista(); !strings.Contains(v, "Ejecutando") || !strings.Contains(v, "Validando") || !strings.Contains(v, "Completado") {
 		t.Fatalf("el registro del trabajo terminado:\n%s", v)
 	}
@@ -701,6 +743,7 @@ func TestHistorialEnVivoSeCorta(t *testing.T) {
 	cli, id, b, _ := conBloqueado(t)
 	a := abierta(t, cli, id)
 	a.Pulsar("enter")
+	a.Hasta(func() bool { return prueba.FlujosAbiertos() == 1 })
 	if prueba.FlujosAbiertos() != 1 {
 		t.Fatal("en vivo")
 	}
@@ -710,7 +753,8 @@ func TestHistorialEnVivoSeCorta(t *testing.T) {
 		t.Fatal("Esc corta el seguimiento")
 	}
 	// El primer tramo sale cuando la página ya va a ocultarse: llega a destiempo y no se aplica.
-	a.Pulsar("enter", "right")
+	verDetalle(t, a)
+	a.Pulsar("right")
 	b.SoltarPaso()
 	a.EsperarLlegada()
 	a.P.(pagina.Ocultable).Ocultar()
@@ -738,6 +782,7 @@ func TestHistorialEnVivoSeCorta(t *testing.T) {
 	c.Ctx = vivo
 	a2, _ := abrir(t, c)
 	a2.Pulsar("enter")
+	a2.Hasta(func() bool { return prueba.FlujosAbiertos() == 1 })
 	if prueba.FlujosAbiertos() != 1 {
 		t.Fatal("en vivo")
 	}
@@ -764,7 +809,8 @@ func TestHistorialEnVivoReconecta(t *testing.T) {
 		return cli.Eventos(ctx, inst, trabajoID, desde, al)
 	})
 	a := prueba.Abrir(t, p, prueba.Contexto(t, cli, id))
-	a.Pulsar("enter", "right")
+	verDetalle(t, a)
+	a.Pulsar("right")
 	a.HastaVer("uno ", "reconectando…")
 	r.Pasar(2 * time.Second) // la espera tras el corte
 	a.Hasta(func() bool {
@@ -786,7 +832,7 @@ func TestHistorialReintentar(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	original := crear(t, cli, id, "otra vez")
 	a := abierta(t, cli, id)
-	fuera := a.Pulsar("t")
+	fuera := a.HastaSalir(func() { a.Pulsar("t") }, func(f []tea.Msg) bool { return prueba.HayAviso(f) && seguido(f) != "" })
 	if av, ok := aviso(fuera); !ok || av.Texto != "Petición enviada de nuevo" || av.Tipo != comp.Exito {
 		t.Fatalf("avisa: %+v", fuera)
 	}
@@ -798,6 +844,7 @@ func TestHistorialReintentar(t *testing.T) {
 	if nuevo == "" || nuevo == original.ID || lista[0].ID != nuevo {
 		t.Fatalf("lleva a Probar con el trabajo nuevo, como la Web UI: %v", fuera)
 	}
+	a.Hasta(func() bool { return cuantas(a, "otra vez") == 2 })
 	if n := cuantas(a, "otra vez"); n != 2 {
 		t.Fatalf("y la lista lo trae: %d", n)
 	}
@@ -823,7 +870,8 @@ func TestHistorialCancelar(t *testing.T) {
 		t.Fatalf("x no borra una en marcha: %v", fuera)
 	}
 	// c pregunta antes, como en Probar; n no la cancela y s sí.
-	q, ok := pregunta(a.Pulsar("enter", "c"))
+	verDetalle(t, a)
+	q, ok := pregunta(a.Pulsar("c"))
 	if !ok || q.Texto != "¿Cancelar la petición en marcha?" {
 		t.Fatalf("c pregunta antes de cancelar, como Probar: %+v", q)
 	}
@@ -833,6 +881,10 @@ func TestHistorialCancelar(t *testing.T) {
 	}
 	a.Pulsar("c")
 	a.Entregar(comp.Confirmado{})
+	a.Hasta(func() bool {
+		v := a.Vista()
+		return strings.Contains(v, "Cancelación solicitada") || strings.Contains(v, "Cancelado")
+	})
 	if v := a.Vista(); !strings.Contains(v, "Cancelación solicitada") && !strings.Contains(v, "Cancelado") {
 		t.Fatalf("el detalle toma el estado que devuelve el servicio:\n%s", v)
 	}
@@ -859,27 +911,37 @@ func TestHistorialEliminar(t *testing.T) {
 	// Confirmar borra la de la fila elegida (la más nueva).
 	a.Pulsar("x")
 	a.Entregar(comp.Confirmado{})
+	a.Hasta(func() bool { l, _ := cli.Trabajos(ctx, id, 10); return len(l) == 1 && l[0].ID != borrar.ID })
 	lista, _ := cli.Trabajos(ctx, id, 10)
 	if len(lista) != 1 || lista[0].ID == borrar.ID {
 		t.Fatalf("borró la elegida: %v", lista)
 	}
+	a.Hasta(func() bool { return cuantas(a, "se queda", "se borra") == 1 && strings.Contains(a.Vista(), "se queda") })
 	if v := a.Vista(); cuantas(a, "se queda", "se borra") != 1 || !strings.Contains(v, "se queda") {
 		t.Fatalf("la lista se pone al día:\n%s", v)
 	}
 	// Una que ya no está en el servicio: el error de la API al reintentarla sale como aviso.
 	ida := crear(t, cli, id, "ya borrada")
 	a.Pulsar("r")
+	a.HastaVer("ya borrada")
 	if err := cli.Eliminar(ctx, id, ida.ID); err != nil {
 		t.Fatal(err)
 	}
-	a.Pulsar("up", "up")                                              // la fila de la más nueva
-	if av, ok := aviso(a.Pulsar("t")); !ok || av.Tipo != comp.Fallo { // reintentarla
+	a.Pulsar("up", "up") // la fila de la más nueva
+	// Reintentarla.
+	if av, ok := aviso(a.HastaSalir(func() { a.Pulsar("t") }, prueba.HayAviso)); !ok || av.Tipo != comp.Fallo {
 		t.Fatalf("avisa del error del servicio: %+v", av)
 	}
 	a.Pulsar("r")
+	a.Hasta(func() bool { return cuantas(a, "ya borrada") == 0 })
 	// Desde el detalle: borra la abierta y lo cierra.
-	a.Pulsar("enter", "x")
+	verDetalle(t, a)
+	a.Pulsar("x")
 	a.Entregar(comp.Confirmado{})
+	a.Hasta(func() bool {
+		l, _ := cli.Trabajos(ctx, id, 10)
+		return !enPestana(a, "historial.solicitud") && cuantas(a, "se queda") == 0 && len(l) == 0
+	})
 	if l, _ := cli.Trabajos(ctx, id, 10); enPestana(a, "historial.solicitud") || cuantas(a, "se queda") != 0 || len(l) != 0 {
 		t.Fatalf("borra la abierta, cierra el detalle y la lista queda vacía:\n%s", a.Vista())
 	}
@@ -889,8 +951,8 @@ func TestHistorialCorregir(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	mala := crearInvalida(t, cli, id)
 	a := abierta(t, cli, id)
-	a.Pulsar("enter")
-	fuera := a.Pulsar("o")
+	verDetalle(t, a)
+	fuera := a.HastaSalir(func() { a.Pulsar("o") }, func(f []tea.Msg) bool { return prueba.HayAviso(f) && seguido(f) != "" })
 	if av, ok := aviso(fuera); !ok || av.Texto != "Corrección enviada" || av.Tipo != comp.Exito {
 		t.Fatalf("avisa: %+v", fuera)
 	}
@@ -912,7 +974,8 @@ func TestHistorialCorregir(t *testing.T) {
 	cli2, id2 := prueba.Servicio(t)
 	crear(t, cli2, id2, "bien")
 	a2 := abierta(t, cli2, id2)
-	fuera = a2.Pulsar("enter", "o")
+	verDetalle(t, a2)
+	fuera = a2.Pulsar("o")
 	if av, ok := aviso(fuera); !ok || av.Texto != "Esta petición no se puede corregir: vuelve a enviarla" || av.Tipo != comp.Advertencia {
 		t.Fatalf("avisa: %+v", fuera)
 	}
@@ -942,10 +1005,11 @@ func TestHistorialVaciar(t *testing.T) {
 	}
 	// Confirmar borra las terminadas y conserva la que sigue en marcha.
 	a.Pulsar("V")
-	fuera := a.Entregar(comp.Confirmado{})
+	fuera := a.HastaSalir(func() { a.Entregar(comp.Confirmado{}) }, prueba.HayAviso)
 	if av, ok := aviso(fuera); !ok || av.Texto != "Peticiones eliminadas: 2" || av.Tipo != comp.Exito {
 		t.Fatalf("avisa de cuántas: %+v", fuera)
 	}
+	a.Hasta(func() bool { return cuantas(a, todas...) == 1 && strings.Contains(a.Vista(), "esperar") })
 	if v := a.Vista(); cuantas(a, todas...) != 1 || !strings.Contains(v, "esperar") {
 		t.Fatalf("solo queda la que sigue en marcha:\n%s", v)
 	}
@@ -1001,7 +1065,7 @@ func TestServicioCaido(t *testing.T) {
 	crear(t, cli, id, "antes de la caída")
 	a = abierta(t, cli, id)
 	cerrar()
-	fuera := a.Pulsar("r")
+	fuera := a.HastaSalir(func() { a.Pulsar("r") }, errorServicio)
 	if len(fuera) == 0 {
 		t.Fatal("r sin servicio avisa a la app")
 	}
@@ -1012,7 +1076,11 @@ func TestServicioCaido(t *testing.T) {
 		t.Fatalf("la página lo dice y sigue:\n%s", v)
 	}
 	// Las demás teclas siguen respondiendo: cambiar el filtro lo pide al servicio y avisa de que no responde, y Esc vuelve.
-	fuera = a.Pulsar("e", "l", "esc")
+	desde := len(a.Fuera) // cada aviso, antes de la tecla siguiente
+	a.HastaSalir(func() { a.Pulsar("e") }, errorServicio)
+	a.HastaSalir(func() { a.Pulsar("l") }, errorServicio)
+	a.Pulsar("esc")
+	fuera = a.Fuera[desde:]
 	if len(fuera) != 3 || fuera[2] != (pagina.Volver{}) || !errorServicio(fuera[:1]) || !errorServicio(fuera[1:2]) {
 		t.Fatalf("la página sigue viva y el filtro sin servicio avisa: %v", fuera)
 	}
@@ -1020,7 +1088,7 @@ func TestServicioCaido(t *testing.T) {
 	crear(t, cli3, id3, "hay uno")
 	b := abierta(t, cli3, id3)
 	cerrar3()
-	if fuera := b.Pulsar("enter"); !errorServicio(fuera) || enPestana(b, "historial.solicitud") {
+	if fuera := b.HastaSalir(func() { b.Pulsar("enter") }, errorServicio); !errorServicio(fuera) || enPestana(b, "historial.solicitud") {
 		t.Fatalf("abrir el detalle sin servicio avisa y no deja un detalle a medias: %v\n%s", fuera, b.Vista())
 	}
 }
@@ -1055,6 +1123,7 @@ func TestRespuestasViejas(t *testing.T) {
 		a := abierta(t, cli, id)
 		viejos := pedir(a)
 		a.Correr(a.P.Iniciar(prueba.Contexto(t, cli, "otro")))
+		a.EsperarCarga() // lo que contesta el otro espacio, antes de mirar
 		antes := a.Vista()
 		sinAplicar(t, a, antes, a.Soltar(viejos))
 	})
@@ -1072,6 +1141,7 @@ func TestRespuestasViejas(t *testing.T) {
 		a := abierta(t, cli, id)
 		vieja := a.Retener(func() { a.Pulsar("r") }) // la lista de antes del filtro
 		a.Entregar(pagina.FiltroPunto{Nombre: "p:no-existe"})
+		a.HastaVer("No hay peticiones con este filtro") // la lista del filtro, antes de mirar
 		antes := a.Vista()
 		sinAplicar(t, a, antes, a.Soltar(vieja))
 	})
@@ -1087,6 +1157,7 @@ func TestListaConError(t *testing.T) {
 	a.Pegar(strings.Repeat("x", 201)) // el servicio admite hasta 200 caracteres
 	r.Pasar(300 * time.Millisecond)   // la búsqueda se pide al dejar de escribir
 	a.Asentar()
+	a.HastaVer("200", "uno")
 	if v := a.Vista(); !strings.Contains(v, "200") || !strings.Contains(v, "uno") {
 		t.Fatalf("el mensaje del servicio sin traducir, y lo cargado se conserva:\n%s", v)
 	}
@@ -1097,7 +1168,7 @@ func TestListaConError(t *testing.T) {
 	if v := a.Vista(); len(a.Fuera) != 0 || strings.Contains(v, "El servicio no responde") {
 		t.Fatalf("el sondeo no avisa de un error: %v\n%s", a.Fuera, v)
 	}
-	if fuera := a.Pulsar("r"); !errorServicio(fuera) {
+	if fuera := a.HastaSalir(func() { a.Pulsar("r") }, errorServicio); !errorServicio(fuera) {
 		t.Fatalf("de conexión, al pedirla: %v", fuera)
 	}
 }
@@ -1112,6 +1183,7 @@ func TestListaConErrorCabe(t *testing.T) {
 	a.Pulsar("end")
 	fallar(strings.Repeat("El servicio no pudo leer el historial de este espacio. ", 4))
 	a.Pulsar("r")
+	a.HastaVer("de este espacio.")
 	v := a.Vista()
 	if h := lipgloss.Height(v); h > 17 {
 		t.Fatalf("la vista mide %d filas y el área es de 17:\n%s", h, v)
@@ -1134,7 +1206,9 @@ func TestHistorialSondeo(t *testing.T) {
 		r.Pasar(5 * time.Second)
 		a.Asentar()
 	}
-	if sondear(); cuantas(a, "primera", "segunda") != 2 {
+	sondear()
+	a.Hasta(func() bool { return cuantas(a, "primera", "segunda") == 2 })
+	if cuantas(a, "primera", "segunda") != 2 {
 		t.Fatalf("el sondeo trae lo nuevo:\n%s", a.Vista())
 	}
 	// Con el detalle abierto no recarga.
@@ -1145,7 +1219,9 @@ func TestHistorialSondeo(t *testing.T) {
 	if cuantas(a, "tercera") != 0 {
 		t.Fatalf("con el detalle abierto el sondeo no recarga:\n%s", a.Vista())
 	}
-	if sondear(); cuantas(a, "primera", "segunda", "tercera") != 3 {
+	sondear()
+	a.Hasta(func() bool { return cuantas(a, "primera", "segunda", "tercera") == 3 })
+	if cuantas(a, "primera", "segunda", "tercera") != 3 {
 		t.Fatalf("al cerrarlo vuelve a leer:\n%s", a.Vista())
 	}
 }
@@ -1156,6 +1232,7 @@ func TestHistorialSondeoConMasPaginas(t *testing.T) {
 	crearVarias(t, cli, id, 201)
 	a, r := abrir(t, alto(t, cli, id, 300))
 	a.Pulsar("m")
+	a.HastaVer("Mostrando las 201 más recientes") // la página extra ya está cargada
 	crear(t, cli, id, "petición-nueva")
 	r.Pasar(5 * time.Second)
 	a.Asentar()
@@ -1172,15 +1249,25 @@ func TestHistorialOcultarYMostrar(t *testing.T) {
 	a.P.(pagina.Ocultable).Ocultar()
 	crear(t, cli, id, "dos")
 	a.Correr(a.P.(pagina.Ocultable).Mostrar())
-	if v := a.Vista(); cuantas(a, " uno", " dos") != 0 || !strings.Contains(v, "/ u") || strings.Contains(v, "Estado: Todas") { // el filtro de estado y el texto se conservan
+	conservados := func() bool {
+		v := a.Vista()
+		return cuantas(a, " uno", " dos") == 0 && strings.Contains(v, "/ u") && !strings.Contains(v, "Estado: Todas")
+	}
+	a.Hasta(conservados)
+	if v := a.Vista(); !conservados() { // el filtro de estado y el texto se conservan
 		t.Fatalf("Mostrar conserva los filtros:\n%s", v)
 	}
 	a.Pulsar("e", "e", "e") // todas
+	a.Hasta(func() bool { return cuantas(a, " uno", " dos") == 1 && strings.Contains(a.Vista(), "uno") })
 	if cuantas(a, " uno", " dos") != 1 || !strings.Contains(a.Vista(), "uno") {
 		t.Fatalf("Mostrar la pone al día (y solo «uno» contiene la u):\n%s", a.Vista())
 	}
 	// Iniciar sí empieza de cero.
 	a.Correr(a.P.Iniciar(prueba.Contexto(t, cli, id)))
+	a.Hasta(func() bool {
+		v := a.Vista()
+		return strings.Contains(v, "Estado: Todas") && !strings.Contains(v, "/ u") && cuantas(a, " uno", " dos") == 2
+	})
 	if v := a.Vista(); !strings.Contains(v, "Estado: Todas") || strings.Contains(v, "/ u") || cuantas(a, " uno", " dos") != 2 {
 		t.Fatalf("Iniciar quita los filtros:\n%s", v)
 	}
@@ -1211,7 +1298,8 @@ func TestCabeEn60x20(t *testing.T) {
 			}
 		}
 		comprobar("lista")
-		a.Pulsar("down", "down", "enter")
+		a.Pulsar("down", "down")
+		verDetalle(t, a)
 		for range 3 {
 			comprobar("detalle")
 			a.Pulsar("right")
@@ -1233,6 +1321,7 @@ func TestCabeEn60x20(t *testing.T) {
 		// Las confirmaciones, que pinta la app con comp.Confirmacion.
 		for _, tecla := range []string{"V", "x"} {
 			a.Pulsar("l") // vuelve a pedir la lista entera
+			a.HastaVer("corta")
 			q, ok := pregunta(a.Pulsar(tecla))
 			if !ok {
 				t.Fatalf("%s pregunta", tecla)
@@ -1270,6 +1359,7 @@ func TestTextosComoLaWeb(t *testing.T) {
 		t.Fatalf("con una, el singular: %q\n%s", plural, v)
 	}
 	a.Pulsar("enter")
+	a.HastaVer("[" + datos.Texto("en", "historial.solicitud") + "]")
 	v = a.Vista()
 	for _, quiere := range []string{"[" + datos.Texto("en", "historial.solicitud") + "]", datos.Texto("en", "ejecutar.respuesta"), datos.Texto("en", "registro.titulo"),
 		datos.Texto("en", "ruta.cola"), datos.Texto("en", "historial.agenteModelo") + ": ", datos.Texto("en", "historial.identificador") + ": "} {
@@ -1280,6 +1370,7 @@ func TestTextosComoLaWeb(t *testing.T) {
 	// En español, los de la Web UI en español.
 	e := abierta(t, cli, id)
 	e.Pulsar("enter")
+	e.HastaVer("[Mensaje]", "Respuesta", "Registro")
 	if v := e.Vista(); !strings.Contains(v, "[Mensaje]") || !strings.Contains(v, "Respuesta") || !strings.Contains(v, "Registro") {
 		t.Fatalf("pestañas en español:\n%s", v)
 	}
@@ -1288,7 +1379,9 @@ func TestTextosComoLaWeb(t *testing.T) {
 		t.Fatalf("una, en singular:\n%s", v)
 	}
 	crear(t, cli, id, "otra")
-	if e.Pulsar("r"); !strings.Contains(e.Vista(), "Mostrando las 2 más recientes") {
+	e.Pulsar("r")
+	e.HastaVer("Mostrando las 2 más recientes")
+	if !strings.Contains(e.Vista(), "Mostrando las 2 más recientes") {
 		t.Fatalf("dos, en plural:\n%s", e.Vista())
 	}
 	// Y los pies, de los textos de la Web UI.
@@ -1317,7 +1410,7 @@ func TestSoloAscii(t *testing.T) {
 		}
 	}
 	sinDibujo("lista")
-	a.Pulsar("enter")
+	verDetalle(t, a)
 	for range 3 {
 		sinDibujo("detalle")
 		a.Pulsar("right")
@@ -1334,7 +1427,7 @@ func TestDetalleParteLasPalabras(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	crear(t, cli, id, strings.Repeat("palabra ", 40))
 	a := abierta(t, cli, id)
-	a.Pulsar("enter")
+	verDetalle(t, a)
 	for _, ancho := range []int{60, 40, 60} {
 		a.Entregar(tea.WindowSizeMsg{Width: ancho, Height: 17})
 		lineas := strings.Split(a.Vista(), "\n")
@@ -1377,7 +1470,8 @@ func TestRespuestasViejasDelDetalle(t *testing.T) {
 	vivo := a.Recoger(lector) // el primer mensaje del seguimiento, que no se entrega
 	// Se cierra el detalle y se abre otra vez: lo de antes ya no vale.
 	a.Pulsar("esc")
-	a.Pulsar("enter", "right")
+	verDetalle(t, a)
+	a.Pulsar("right")
 	b.SoltarPaso()
 	a.HastaVer("primera parte")
 	antes := a.Vista()
