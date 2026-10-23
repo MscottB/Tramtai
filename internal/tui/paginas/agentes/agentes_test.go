@@ -96,6 +96,32 @@ func TestColorDeLinea(t *testing.T) {
 	}
 }
 
+// TestColorDelEstado: como la etiqueta de la Web UI (etiqueta--ok / etiqueta--aviso), el estado del listo va en el color
+// de éxito y el de los demás en el de aviso.
+func TestColorDelEstado(t *testing.T) {
+	casos := map[string]struct {
+		estado adaptadores.Estado
+		color  string
+		bajar  bool // la fila elegida va resaltada entera: Claude tiene que quedar sin elegir
+	}{
+		"listo":        {adaptadores.Estado{}, "0;255;0", true},
+		"sin conectar": {adaptadores.Estado{Problema: "p", ProblemaCodigo: adaptadores.ProblemaFaltaClave}, "255;255;0", false},
+	}
+	for nombre, caso := range casos {
+		cli, id := prueba.ConAgentes(t, map[string]adaptadores.Adaptador{"claude": detectado(caso.estado)})
+		c := contexto(t, cli, id)
+		c.Estilos = &pagina.Estilos{Iconos: pagina.IconosUnicode, Color: true, Oscuro: true,
+			Exito: lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff00")), Advertencia: lipgloss.NewStyle().Foreground(lipgloss.Color("#ffff00"))}
+		a := abrir(t, c)
+		if caso.bajar {
+			a.Pulsar("down")
+		}
+		if v := a.Vista(); !strings.Contains(v, caso.color) {
+			t.Errorf("%s: el estado va en %s: %q", nombre, caso.color, v)
+		}
+	}
+}
+
 // TestFiltroDeAgentes: la línea de los estados es el filtro de la Web UI; ← → lo cambia y la lista enseña solo esos.
 func TestFiltroDeAgentes(t *testing.T) {
 	a, _, _ := abierta(t)

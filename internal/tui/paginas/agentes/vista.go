@@ -93,10 +93,10 @@ func (p *Pagina) autenticacion(a contrato.Adaptador) string {
 func (p *Pagina) fila(a contrato.Adaptador) string {
 	e := p.estilos
 	est := a.Estado
-	icono := "!"
+	icono, tono := "!", e.Advertencia // como la etiqueta de la Web UI: etiqueta--ok o etiqueta--aviso
 	switch est {
 	case contrato.AgenteListo:
-		icono = e.Iconos.Ok
+		icono, tono = e.Iconos.Ok, e.Exito
 	case contrato.AgenteDesconectado, contrato.AgenteNoInstalado:
 		icono = e.Iconos.Inactivo
 	}
@@ -109,7 +109,7 @@ func (p *Pagina) fila(a contrato.Adaptador) string {
 	}
 	f, _ := catalogo.Buscar(a.Agente)
 	return pagina.Rellenar(e.Linea(f.ColorClaro, f.ColorOscuro).Render(codigo(a.Agente)), 3) + " " + pagina.Rellenar(e.Recortar(nombre(a.Agente), 16), 16) + " " +
-		pagina.Rellenar(icono+" "+p.etiqueta(est), 16) + strings.Join(resto, " "+e.Iconos.Separador+" ")
+		pagina.Rellenar(tono.Render(icono+" "+p.etiqueta(est)), 16) + strings.Join(resto, " "+e.Iconos.Separador+" ")
 }
 
 // Vista es el título, el resumen por estados y la lista; con un detalle abierto, el detalle.
