@@ -82,7 +82,7 @@ export function reconciliar(t: Tranvias, eventos: EventoTrabajo[], ahora: number
 // eventoDe convierte un trabajo de la consulta en el evento que habría mandado el flujo.
 export function eventoDe(t: Trabajo): EventoTrabajo {
   return { id: t.id, estado: t.estado, etapa: t.etapa, agente: t.solicitud?.agente ?? '', modelo: t.modelo_efectivo || t.modelo_enviado || '',
-    api: t.punto_acceso ?? '', origen: t.origen ?? '', intento: 1, codigo_error: t.codigo_error ?? '', creado: t.creado_en, actualizado: '' }
+    api: t.punto_acceso ?? '', origen: t.origen ?? '', intento: t.intento, codigo_error: t.codigo_error ?? '', creado: t.creado_en, actualizado: '' }
 }
 
 // claveEtapa es el texto de dónde va un tranvía; la llegada se nombra según cómo terminó.

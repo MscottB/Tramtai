@@ -150,6 +150,8 @@ En los dos primeros casos, pon la clave nueva en las aplicaciones que usaban la 
 
 **Si vuelves a una versión anterior** a la que guarda las claves de las APIs como huella: esa versión leería el archivo `sha256:…` como si fuera la clave. Al volver, regenera la clave de cada API (`tramtai acceso token <nombre> --rotar`).
 
+**Si vuelves a la v0.55 o anterior desde la v0.56:** la v0.56 sube la base de cada espacio a la versión 10, que guarda el `intento` de cada petición. Una versión anterior no abre esa base («versión de base de datos 10 no soportada por este ejecutable»). No se pierde nada: el historial sigue intacto y la página Espacios todavía lo cuenta. Para recuperar el espacio, vuelve a instalar la v0.56 o una posterior, o restaura la copia de la carpeta de Tramtai que hiciste antes de actualizar. Las peticiones de antes de la migración quedan con intento 1, aunque ya hubieran pasado al respaldo, y un reintento de una de ellas también empieza en 1.
+
 ## Espacios de trabajo
 
 Un espacio de trabajo (en la API propia, las rutas `/api/v1/instancia`) tiene su historial, sus APIs, su clave y sus ajustes. Hay uno global

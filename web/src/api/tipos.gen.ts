@@ -10,6 +10,7 @@ export interface Trabajo {
   solicitud: Solicitud
   salida?: string
   intento_de?: string
+  intento: number
   punto_acceso?: string
   origen?: string
   modelo_enviado?: string

@@ -68,9 +68,9 @@ func (a *Almacen) Aceptar(ctx context.Context, t nucleo.Trabajo, clave string, m
 	if err != nil {
 		return t, false, err
 	}
-	t.Estado, t.CreadoEn, t.ActualizadoEn = nucleo.EnCola, ahora, ahora
-	if _, err := tx.ExecContext(ctx, `INSERT INTO trabajos (id, instancia, estado, solicitud, huella, intento_de, modelo_enviado, punto_acceso, origen, creado_en, actualizado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		t.ID, t.Instancia, string(t.Estado), string(solicitud), t.Huella, t.IntentoDe, t.ModeloEnviado, t.PuntoAcceso, t.Origen, fecha(ahora), fecha(ahora)); err != nil {
+	t.Estado, t.CreadoEn, t.ActualizadoEn, t.Intento = nucleo.EnCola, ahora, ahora, max(t.Intento, 1)
+	if _, err := tx.ExecContext(ctx, `INSERT INTO trabajos (id, instancia, estado, solicitud, huella, intento_de, modelo_enviado, punto_acceso, origen, intento, creado_en, actualizado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		t.ID, t.Instancia, string(t.Estado), string(solicitud), t.Huella, t.IntentoDe, t.ModeloEnviado, t.PuntoAcceso, t.Origen, t.Intento, fecha(ahora), fecha(ahora)); err != nil {
 		return t, false, err
 	}
 	if err := agregarEvento(ctx, tx, t.ID, "estado", string(nucleo.EnCola), ahora); err != nil {
@@ -225,6 +225,7 @@ func (a *Almacen) RegistrarProceso(ctx context.Context, id string, pid int, firm
 // CambiarAgente apunta el trabajo al agente de respaldo que lo ejecuta ahora, con su modelo (el del principal o su
 // perfil no valen para otro agente, también al reintentar) y el respaldo que queda tras él, para que un trabajo
 // reencolado o reintentado no vuelva a probar los que ya fallaron; con el esfuerzo propio de ese respaldo, si lo tiene.
+// El intento sube 1: así quien lee el trabajo después sabe por qué agente de la cadena va sin haber visto el salto.
 // La huella no cambia.
 func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado, esfuerzo string, restante []string) error {
 	lista, err := json.Marshal(restante)
@@ -240,7 +241,7 @@ func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado, 
 		sinEsfuerzo, conEsfuerzo, args = "", ", '$.esfuerzo', ?", append(args, esfuerzo)
 	}
 	r, err := a.db.ExecContext(ctx, `UPDATE trabajos SET solicitud = json_set(json_remove(solicitud, '$.perfil_modelo'`+sinEsfuerzo+`), '$.agente', ?, '$.modelo', ?,
-		'$.respaldo', json(?)`+conEsfuerzo+`), modelo_enviado = ?, actualizado_en = ? WHERE id = ?`, append(args, modeloEnviado, fecha(a.reloj()), id)...)
+		'$.respaldo', json(?)`+conEsfuerzo+`), modelo_enviado = ?, intento = intento + 1, actualizado_en = ? WHERE id = ?`, append(args, modeloEnviado, fecha(a.reloj()), id)...)
 	if err != nil {
 		return err
 	}
@@ -368,44 +369,60 @@ func (a *Almacen) Listar(ctx context.Context, instancia string, f FiltroTrabajos
 // siguiente desde el último si llega llena. Es variable para que las pruebas lo bajen.
 var LimiteCambios = 500
 
+// Cursor dice dónde sigue una lectura del flujo de eventos, en el orden (actualizado_en, id): tras el trabajo ID que
+// cambió en En. Con ID, los que comparten esa hora (frecuente en Windows, donde el reloj tiene poca resolución) siguen
+// en la página siguiente sin perderse ni repetirse; sin ID, la lectura sigue tras la hora.
+type Cursor struct {
+	En time.Time
+	ID string
+}
+
+// Tras es el cursor que sigue después del trabajo t.
+func Tras(t nucleo.Trabajo) Cursor { return Cursor{En: t.ActualizadoEn, ID: t.ID} }
+
 // condicionVivos son los trabajos de la instancia sin terminar y los terminados desde una fecha. La instancia va en
 // cada rama, y con otro parámetro (?6, el mismo valor) para que SQLite no la saque de factor común: así usa
 // trabajos_instancia_terminado en las dos ramas en vez de recorrer todo el historial de la instancia.
 const condicionVivos = "((instancia = ?1 AND terminado_en IS NULL) OR (instancia = ?6 AND terminado_en >= ?2))"
 
 // Vivos devuelve los trabajos de la instancia sin terminar y los terminados desde terminadosDesde, por orden de
-// cambio y a partir de los cambiados después de despues (cero: desde el principio): es la foto con la que empieza el
-// flujo de eventos de la instancia. punto vacío: los de todas las APIs.
-func (a *Almacen) Vivos(ctx context.Context, instancia, punto string, terminadosDesde, despues time.Time) ([]nucleo.Trabajo, error) {
+// cambio y a partir de despues (cero: desde el principio): es la foto con la que empieza el flujo de eventos de la
+// instancia. punto vacío: los de todas las APIs.
+func (a *Almacen) Vivos(ctx context.Context, instancia, punto string, terminadosDesde time.Time, despues Cursor) ([]nucleo.Trabajo, error) {
 	return a.porCambio(ctx, instancia, punto, condicionVivos, terminadosDesde, despues)
 }
 
 // CambiadosDesde devuelve los trabajos de la instancia que cambiaron después de desde (estado, agente…), por orden de
 // cambio y como mucho LimiteCambios: lo que el flujo de eventos envía tras cada aviso.
-func (a *Almacen) CambiadosDesde(ctx context.Context, instancia, punto string, desde time.Time) ([]nucleo.Trabajo, error) {
+func (a *Almacen) CambiadosDesde(ctx context.Context, instancia, punto string, desde Cursor) ([]nucleo.Trabajo, error) {
 	return a.porCambio(ctx, instancia, punto, "", time.Time{}, desde)
 }
 
 // consultaPorCambio arma la lectura de los trabajos de la instancia cambiados después de despues, por orden de
 // cambio. condicion (con ?1 y ?6 la instancia y ?2 valor) reemplaza al filtro de instancia; vacía: toda la instancia.
-func consultaPorCambio(instancia, punto, condicion string, valor, despues time.Time) (string, []any) {
+func consultaPorCambio(instancia, punto, condicion string, valor time.Time, despues Cursor) (string, []any) {
 	donde, args, orden := "instancia = ?1", []any{instancia, fecha(valor)}, "actualizado_en"
 	if condicion != "" {
 		// +actualizado_en: si no, SQLite prefiere el índice que ya viene ordenado y recorre toda la instancia.
 		donde, orden = condicion, "+actualizado_en"
 	}
-	if !despues.IsZero() {
-		donde, args = donde+" AND actualizado_en > ?3", append(args, fecha(despues))
-	} else {
+	switch {
+	case despues.En.IsZero():
 		args = append(args, nil)
+	case despues.ID == "":
+		donde, args = donde+" AND actualizado_en > ?3", append(args, fecha(despues.En))
+	default:
+		// Equivale a (actualizado_en, id) > (?3, ?7). Escrito como «>= y desempate» y no como «> o (= e id >)», SQLite
+		// sigue usando en la foto el índice de terminados en vez de recorrer por hora todo lo cambiado desde el cursor.
+		donde, args = donde+" AND actualizado_en >= ?3 AND (actualizado_en > ?3 OR id > ?7)", append(args, fecha(despues.En))
 	}
 	if punto != "" {
 		donde = donde + " AND punto_acceso = ?4"
 	}
-	return `SELECT ` + columnas + ` FROM trabajos WHERE ` + donde + ` ORDER BY ` + orden + `, rowid LIMIT ?5`, append(args, punto, LimiteCambios, instancia)
+	return `SELECT ` + columnas + ` FROM trabajos WHERE ` + donde + ` ORDER BY ` + orden + `, id LIMIT ?5`, append(args, punto, LimiteCambios, instancia, despues.ID)
 }
 
-func (a *Almacen) porCambio(ctx context.Context, instancia, punto, condicion string, valor, despues time.Time) ([]nucleo.Trabajo, error) {
+func (a *Almacen) porCambio(ctx context.Context, instancia, punto, condicion string, valor time.Time, despues Cursor) ([]nucleo.Trabajo, error) {
 	consulta, args := consultaPorCambio(instancia, punto, condicion, valor, despues)
 	filas, err := a.db.QueryContext(ctx, consulta, args...)
 	if err != nil {
@@ -536,7 +553,7 @@ func escanear(fila interface{ Scan(...any) error }) (nucleo.Trabajo, error) {
 	var vencido bool
 	err := fila.Scan(&t.ID, &t.Instancia, &estado,
 		&codigo, &t.MensajeError, &solicitud, &t.Huella, &t.Salida, &t.IntentoDe, &creado, &actualizado, &terminado,
-		&t.ModeloEnviado, &t.ModeloEfectivo, &t.Uso.TokensEntrada, &t.Uso.TokensSalida, &t.Uso.CostoUSD, &t.PuntoAcceso, &vencido, &t.EntradasEliminadas, &t.PID, &t.FirmaProceso, &t.Origen)
+		&t.ModeloEnviado, &t.ModeloEfectivo, &t.Uso.TokensEntrada, &t.Uso.TokensSalida, &t.Uso.CostoUSD, &t.PuntoAcceso, &vencido, &t.EntradasEliminadas, &t.PID, &t.FirmaProceso, &t.Origen, &t.Intento)
 	if err != nil {
 		return t, err
 	}
