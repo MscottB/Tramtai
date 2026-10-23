@@ -78,7 +78,7 @@ const ayudaEs = {
   'ayuda.empezar.soloTerminal': 'Solo con la terminal',
   'ayuda.empezar.soloTerminal1': 'Inicia el servicio en segundo plano con «tramtai servicio iniciar -d»: atiende a tus apps sin abrir la app, aunque cierres la terminal.',
   'ayuda.empezar.soloTerminal2': 'Abre «tramtai terminal» (o «tramtai» a secas): tiene las mismas páginas que la app, de Inicio a la Ayuda. Si el servicio no está en marcha, r lo inicia.',
-  'ayuda.empezar.soloTerminal3': 'Tab abre el menú y del 1 al 7 vas a cada página. ? abre su ayuda, / busca, Esc vuelve, c cancela la petición en curso y q sale.',
+  'ayuda.empezar.soloTerminal3': 'Tab abre el menú y del 1 al 7 vas a cada página. ? abre su ayuda, Esc vuelve y q sale. En Probar, c cancela la petición en curso.',
   'ayuda.empezar.soloTerminal4': 'Por SSH al equipo donde corre Tramtai, «tramtai terminal» funciona igual. Necesita al menos 60×20; con NO_COLOR va sin color y con TRAMTAI_ASCII=1, sin caracteres de dibujo.',
 
   // Tema: Agentes y modelos
@@ -290,7 +290,7 @@ const ayudaEs = {
   'ayuda.ajustes.pDatos': '¿Dónde se guardan mis datos?',
   'ayuda.ajustes.rDatos': 'Solo en este equipo: %APPDATA%\\tramtai (Windows), ~/Library/Application Support/tramtai (macOS) o ~/.config/tramtai (Linux); la portable, en «datos-tramtai».',
   'ayuda.ajustes.pVolver': '¿Puedo volver a una versión anterior?',
-  'ayuda.ajustes.rVolver': 'Tras la v0.56, la v0.55 o una anterior no abre tus espacios: dice que la base de datos no es compatible. No se borra nada; con la v0.56 o una posterior todo sigue ahí.',
+  'ayuda.ajustes.rVolver': 'Si ya abriste la v0.56, la v0.55 o una anterior no abre tus espacios: dice que la base de datos no es compatible. No se borra nada; con la v0.56 o una posterior todo sigue ahí.',
   // Tema: Archivos
   'ayuda.archivos.titulo': 'Archivos',
   'ayuda.archivos.resumen': 'Tramtai convierte tus PDF, Word, Excel y otros documentos a texto antes de pasárselos al agente.',

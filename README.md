@@ -56,8 +56,8 @@ tramtai servicio iniciar -d   # el servicio en segundo plano
 tramtai terminal              # las mismas páginas que la app
 ```
 
-Tab abre el menú, del 1 al 7 vas a cada página, `?` abre la ayuda de la página, `/` busca, Esc vuelve, `c` cancela la
-petición en curso, `r` reintenta si el servicio no responde y `q` sale. Necesita una ventana de 60×20 como mínimo; con
+Tab abre el menú, del 1 al 7 vas a cada página, `?` abre la ayuda de la página, Esc vuelve, `r` reintenta si el servicio
+no responde y `q` sale. En Probar, `c` cancela la petición en curso. Necesita una ventana de 60×20 como mínimo; con
 `NO_COLOR` va sin color y con `TRAMTAI_ASCII=1`, sin caracteres de dibujo.
 
 ## Documentación
@@ -95,8 +95,8 @@ URL. Antigravity, for now, only from the Playground, the terminal and the CLI.
 - **Agent and model per request,** with fallback to another agent if the first one fails.
 - **Files in, shaped JSON out:** PDF, Word, Excel or PowerPoint as input, validated JSON as output.
 - **One API per app,** with its own key, models, instructions and budget.
-- **Everything from the terminal:** `tramtai terminal` has the same pages as the app, from Home to Help, without
-  opening the app and over SSH (`tramtai servicio iniciar -d` starts the service in the background). Tab opens the
+- **Everything from the terminal:** `tramtai terminal` has the same pages as the app, from Home to Help, and works
+  without the app open, also over SSH (`tramtai servicio iniciar -d` starts the service in the background). Tab opens the
   menu, 1 to 7 go to each page, `?` opens the page’s Help, Esc goes back and `q` quits.
 - **Local and private:** listens only on `127.0.0.1` by default, no telemetry, keys encrypted in the system store.
 

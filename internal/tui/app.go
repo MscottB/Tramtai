@@ -239,7 +239,7 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.comprobando = true
 		return m, m.conectar(false, false, true)
 	case pagina.ErrorServicio:
-		if !m.conectando {
+		if !m.conectando && !m.anterior() { // un «no responde» de la página no tapa cómo detener el servicio anterior
 			m.caido = msg.Err
 		}
 	case pagina.CambioEspacio:
@@ -334,7 +334,11 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 	case "q":
 		return m.salir()
 	case "!":
-		if ultimo := m.avisos.Ultimo(); ultimo != "" {
+		ultimo := m.avisos.Ultimo()
+		if m.anterior() {
+			ultimo = m.caido.Error() // dice cómo detener a mano el servicio de la versión anterior
+		}
+		if ultimo != "" {
 			m.pregunta = &comp.Confirmacion{Texto: ultimo, Leer: true}
 			return nil
 		}

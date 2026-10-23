@@ -155,13 +155,13 @@ tramtai terminal
 | Tab | Abre el menú (por debajo de 100 columnas está plegado). |
 | 1 a 7 | Va a esa página del menú. |
 | ? | La Ayuda de la página, con todas sus teclas. |
-| / | Busca en la lista o en la Ayuda. |
+| / | Busca: en Mis APIs, el Historial, Ajustes y la Ayuda. |
 | Esc | Vuelve o cierra. |
 | Ctrl+E | Cambia de espacio. |
 | r | Si el servicio no responde, reintenta (y lo inicia si está detenido). |
 | c | Cancela la petición en curso, en Probar y en el Historial. |
-| ! | Enseña entero el último error. |
-| u | Abre las novedades de la versión nueva, si la hay. |
+| ! | Enseña entero el último error, o cómo detener a mano el servicio de la versión anterior. |
+| u | Abre las novedades de la versión nueva, si la hay. En Probar, sobre una prueba reciente, es «Usar de nuevo». |
 | q | Sale; si hay algo en marcha o sin guardar, pregunta antes. |
 
 Lo que borra pide confirmación con `s` (`y` en inglés); Enter no confirma. Necesita una ventana de 60×20 como mínimo.
@@ -170,5 +170,5 @@ Con `NO_COLOR` va sin color, con `TRAMTAI_ASCII=1` sin caracteres de dibujo y co
 
 **In English.** `tramtai terminal` has the app’s pages (Home to Help) and doesn’t need the app open; over SSH, open it
 on the computer where Tramtai runs. Tab opens the menu, 1 to 7 go to each page, `?` opens the page’s Help, Esc goes
-back, `r` retries when the service doesn’t respond, `c` cancels a running request and `q` quits. The
+back, `r` retries when the service doesn’t respond and `q` quits; in the Playground, `c` cancels a running request. The
 [product page](https://mscottb.github.io/Tramtai/desarrolladores.html#terminal) has this section in English.

@@ -80,8 +80,8 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.empezar.soloTerminal': 'Terminal only',
   'ayuda.empezar.soloTerminal1': 'Start the service in the background with “tramtai servicio iniciar -d”: it serves your apps without opening the app, even after you close the terminal.',
   'ayuda.empezar.soloTerminal2': 'Open “tramtai terminal” (or just “tramtai”): it has the same pages as the app, from Home to Help. If the service is not running, r starts it.',
-  'ayuda.empezar.soloTerminal3': 'Tab opens the menu and 1 to 7 go to each page. ? opens its help, / searches, Esc goes back, c cancels the running request and q quits.',
-  'ayuda.empezar.soloTerminal4': 'Over SSH to the computer where Tramtai runs, “tramtai terminal” works the same. It needs at least 60×20; NO_COLOR turns color off and TRAMTAI_ASCII=1 drops the drawing characters.',
+  'ayuda.empezar.soloTerminal3': 'Tab opens the menu and 1 to 7 go to each page. ? opens its help, Esc goes back and q quits. In the Playground, c cancels the running request.',
+  'ayuda.empezar.soloTerminal4': 'Over SSH to the computer where Tramtai runs, “tramtai terminal” works the same. It needs at least 60×20; NO_COLOR turns color off and TRAMTAI_ASCII=1 drops the box-drawing characters.',
 
   // Topic: Agents and models
   'ayuda.agentes.titulo': 'Agents and models',
@@ -292,7 +292,7 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.ajustes.pDatos': 'Where is my data kept?',
   'ayuda.ajustes.rDatos': 'Only on this computer: %APPDATA%\\tramtai (Windows), ~/Library/Application Support/tramtai (macOS) or ~/.config/tramtai (Linux); the portable, in “datos-tramtai”.',
   'ayuda.ajustes.pVolver': 'Can I go back to an earlier version?',
-  'ayuda.ajustes.rVolver': 'After v0.56, v0.55 or earlier won’t open your workspaces: it says the database isn’t supported. Nothing is deleted; with v0.56 or later everything is still there.',
+  'ayuda.ajustes.rVolver': 'Once you’ve run v0.56, v0.55 or earlier won’t open your workspaces: it says the database isn’t supported. Nothing is deleted; with v0.56 or later everything is still there.',
   // Topic: Files
   'ayuda.archivos.titulo': 'Files',
   'ayuda.archivos.resumen': 'Tramtai turns your PDF, Word, Excel and other documents into text before handing them to the agent.',

@@ -18,17 +18,17 @@ sin conexión. Lo que no cabe en texto (capturas, diagramas, el recorrido guiado
 | Tab | Abre el menú (por debajo de 100 columnas está plegado). |
 | 1 a 7 | Va a esa página del menú. |
 | ? | La ayuda de la página, con todas sus teclas. |
-| / | Busca en la lista o en la Ayuda. |
+| / | Busca: en Mis APIs, el Historial, Ajustes y la Ayuda. |
 | Esc | Vuelve o cierra. En Probar, una petición en marcha sigue en el servicio: `c` la cancela. |
 | Ctrl+E | Cambia de espacio. |
-| r | Si el servicio no responde, reintenta; si está detenido, lo inicia en segundo plano. |
+| r | Si el servicio no responde, reintenta; si está detenido, lo inicia en segundo plano, y si sigue el de la v0.55, lo detiene y arranca el nuevo. |
 | c | Cancela la petición en curso (Probar y el detalle del Historial). |
-| ! | Enseña entero el último error. |
-| u | Con una versión nueva, abre sus novedades en Ajustes para instalarla. |
+| ! | Enseña entero el último error, o cómo detener a mano el servicio de la versión anterior. |
+| u | Con una versión nueva, abre sus novedades en Ajustes para instalarla. En Probar, sobre una prueba reciente, es «Usar de nuevo». |
 | q | Sale de la terminal (pregunta si hay una petición en marcha o cambios sin guardar). Dentro de un campo es una letra. |
 
-El pie de cada página dice sus teclas. Las acciones que borran o no tienen vuelta atrás (cancelar una petición, vaciar
-el historial, desconectar un agente) piden confirmación con `s` (`y` en inglés); Enter no confirma.
+El pie de cada página dice sus teclas. Las acciones que borran, cancelan o desconectan (eliminar o cancelar una petición,
+vaciar el historial, desconectar un agente) piden confirmación con `s` (`y` en inglés); Enter no confirma.
 
 - **Solo con la terminal:** `tramtai servicio iniciar -d` deja el servicio en segundo plano sin abrir la app, y
   `tramtai terminal` lo administra entero. Sirve también por SSH: entra al equipo donde corre Tramtai y ábrela allí.
@@ -88,7 +88,7 @@ Cada hora, el servicio pregunta a GitHub cuál es la última versión publicada 
 - Si instalas una versión a mano con Tramtai abierto (sea la instalada, la portable o una copia compilada), el instalador te avisa, cierra la app, detiene el servicio cuando terminan las peticiones en curso y, al acabar, vuelve a abrir lo que estaba abierto.
 - Tras actualizar, la Web UI muestra una vez las novedades de cada versión desde la última que viste en ese navegador (hasta 10, la más nueva abierta), con el enlace a todas las versiones. Si la búsqueda de actualizaciones está desactivada, o GitHub no responde, solo dice la versión nueva y ofrece el enlace.
 - El instalador descargado no puede borrarse mientras se ejecuta: el servicio, al arrancar, y cada descarga nueva borran las carpetas `tramtai-actualizacion*` del temporal con más de 10 minutos, así que no se acumulan.
-- **Desde la v0.55 con el servicio en marcha:** al abrir la versión nueva, la CLI, la terminal o la app reconocen el servicio de la v0.55, lo detienen dejando terminar las peticiones en curso y arrancan el nuevo, con tus datos. Si el proceso que escucha no es de tu usuario, no lo tocan y dicen cómo detenerlo a mano. Si después vuelves a la v0.55, no abre tus espacios (la base pasa a la versión 10), pero no se borra nada: con la v0.56 o una posterior siguen ahí.
+- **Desde la v0.55 con el servicio en marcha:** al abrir la versión nueva, la CLI y la app reconocen el servicio de la v0.55, lo detienen dejando terminar las peticiones en curso y arrancan el nuevo, con tus datos. La terminal lo dice en su línea de estado y lo hace al pulsar `r`. Si el proceso que escucha no es de tu usuario, no lo tocan y dicen cómo detenerlo a mano (en la terminal, con `!`). Si después vuelves a la v0.55, no abre tus espacios (la base pasa a la versión 10), pero no se borra nada: con la v0.56 o una posterior siguen ahí.
 - Desde la terminal: `tramtai actualizar` hace lo mismo (pide confirmación; `--si` la omite) y `tramtai actualizar --comprobar` solo informa.
 - Solo se actualiza sola una copia instalada con el instalador de Windows; una compilada a mano o en Linux y macOS muestra el aviso con el enlace de descarga.
 - Se desactiva en **Ajustes → Buscar actualizaciones** o con `servicio.buscar_actualizaciones: false`; `tramtai actualizar` sigue funcionando porque lo pides tú.
@@ -340,7 +340,7 @@ La clave de servicio (`datos/token-servicio`) habilita `/api/v1/servicio`:
 | `POST /api/v1/servicio/recargar` | Aplicar los cambios de las APIs. |
 | `POST /api/v1/servicio/detener` | Detener el servicio. |
 
-Con esa misma clave y la cabecera `Tramtai-Instancia: <id>`, la administración puede usar la API de cualquier espacio. El descriptor `datos/servicio.json` indica dónde escucha el servicio. Antes de enviarle la clave, la CLI comprueba que quien responde lo conoce: manda un reto aleatorio a `/healthz?reto=<reto>` y el servicio contesta con el HMAC-SHA256 de la clave sobre su dirección y ese reto. Otro proceso que ocupe el puerto no puede contestar, aunque conozca el identificador del descriptor. Un solo servicio usa cada carpeta de datos: al arrancar toma el cerrojo `datos/servicio.lock`, y un segundo servicio sobre la misma carpeta no arranca. El servicio de una versión anterior no contesta el reto ni toma el cerrojo: tras actualizar, la CLI, la terminal y la app de escritorio lo detienen, dejando terminar las peticiones en curso, y arrancan el nuevo. Solo le mandan la clave si el proceso que escucha en el puerto es del mismo usuario del sistema; si no se puede comprobar, piden detenerlo a mano.
+Con esa misma clave y la cabecera `Tramtai-Instancia: <id>`, la administración puede usar la API de cualquier espacio. El descriptor `datos/servicio.json` indica dónde escucha el servicio. Antes de enviarle la clave, la CLI comprueba que quien responde lo conoce: manda un reto aleatorio a `/healthz?reto=<reto>` y el servicio contesta con el HMAC-SHA256 de la clave sobre su dirección y ese reto. Otro proceso que ocupe el puerto no puede contestar, aunque conozca el identificador del descriptor. Un solo servicio usa cada carpeta de datos: al arrancar toma el cerrojo `datos/servicio.lock`, y un segundo servicio sobre la misma carpeta no arranca. El servicio de una versión anterior no contesta el reto ni toma el cerrojo: tras actualizar, la CLI, la app de escritorio y la terminal (al pulsar `r`) lo detienen, dejando terminar las peticiones en curso, y arrancan el nuevo. Solo le mandan la clave si el proceso que escucha en el puerto es del mismo usuario del sistema; si no se puede comprobar, piden detenerlo a mano.
 
 ## Versión portable
 
