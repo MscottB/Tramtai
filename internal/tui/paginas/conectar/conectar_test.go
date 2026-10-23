@@ -83,6 +83,20 @@ func hastaServicio(t *testing.T, a *prueba.App, cli *cliente.Cliente, id, nombre
 	a.Hasta(func() bool { return cond(punto(t, cli, id, nombre)) })
 }
 
+// hastaAviso hace la acción y espera, entregando a la página lo que llegue, al primer aviso que sale tras ella: lo trae
+// la respuesta del servicio, que no se da por llegada con solo asentar la página.
+func hastaAviso(a *prueba.App, accion func()) comp.NuevoAviso {
+	desde := len(a.Fuera)
+	accion()
+	var av comp.NuevoAviso
+	a.Hasta(func() bool {
+		var ok bool
+		av, ok = aviso(a.Fuera[desde:])
+		return ok
+	})
+	return av
+}
+
 func pregunta(fuera []tea.Msg) (comp.Pregunta, bool) {
 	for _, m := range fuera {
 		if q, ok := m.(comp.Pregunta); ok {
@@ -279,8 +293,8 @@ func TestApisFiltrosYGrupos(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.Pulsar("home")
-	if _, ok := aviso(a.Pulsar("g")); !ok {
-		t.Fatal("el fallo se avisa")
+	if av := hastaAviso(a, func() { a.Pulsar("g") }); av.Tipo != comp.Fallo {
+		t.Fatalf("el fallo se avisa: %+v", av)
 	}
 	a.Hasta(func() bool { return !strings.Contains(a.Vista(), "otra") })
 }
@@ -295,7 +309,7 @@ func TestEditarPresupuesto(t *testing.T) {
 	if v := a.Vista(); !strings.Contains(v, "Ajustes de mi-app") || !strings.Contains(v, "breve.") || !strings.Contains(v, "‹ simulado ›") {
 		t.Fatalf("e abre los ajustes con lo que tiene:\n%s", v)
 	}
-	a.Pulsar("tab", "tab", "tab", "tab", "tab") // instrucciones, modelo, forzar, esfuerzo y permitidos
+	a.Pulsar("tab", "tab", "tab", "tab", "tab", "tab") // instrucciones, modelo, escrito a mano, forzar, esfuerzo y permitidos
 	a.Escribir("50")
 	a.Pulsar("tab", "tab")
 	a.Escribir("2,5")
@@ -309,7 +323,7 @@ func TestEditarPresupuesto(t *testing.T) {
 	}
 
 	// Un USD que no es un número no se envía.
-	a.Pulsar("e", "tab", "tab", "tab", "tab", "tab", "tab", "tab")
+	a.Pulsar("e", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab")
 	a.Escribir("x")
 	a.Pulsar("ctrl+s")
 	if !a.P.EnCampo() {
@@ -319,7 +333,7 @@ func TestEditarPresupuesto(t *testing.T) {
 	a.Entregar(comp.Confirmado{}) // cerrar sin guardar
 
 	// Vaciarlo lo quita.
-	a.Pulsar("e", "tab", "tab", "tab", "tab", "tab", "backspace", "backspace", "tab", "tab")
+	a.Pulsar("e", "tab", "tab", "tab", "tab", "tab", "tab", "backspace", "backspace", "tab", "tab")
 	for range 3 {
 		a.Pulsar("backspace")
 	}
@@ -378,7 +392,7 @@ func TestConsumoComoLaWeb(t *testing.T) {
 	if !ok || !strings.Contains(q.Texto, "Reiniciar el consumo de mi-app") {
 		t.Fatalf("R pregunta: %+v", q)
 	}
-	if av, ok := aviso(a.Entregar(comp.Confirmado{})); !ok || av.Texto != "Consumo reiniciado" {
+	if av := hastaAviso(a, func() { a.Entregar(comp.Confirmado{}) }); av.Texto != "Consumo reiniciado" {
 		t.Fatalf("avisa: %+v", av)
 	}
 	a.HastaVer("0 / 10")
@@ -441,7 +455,7 @@ func TestClaveDelEspacio(t *testing.T) {
 	if !ok || !strings.Contains(q.Texto, "¿Regenerar la clave de Tramtai?") {
 		t.Fatalf("t pregunta: %+v", q)
 	}
-	if av, ok := aviso(a.Entregar(comp.Confirmado{})); !ok || !strings.Contains(av.Texto, "Clave regenerada") {
+	if av := hastaAviso(a, func() { a.Entregar(comp.Confirmado{}) }); !strings.Contains(av.Texto, "Clave regenerada") {
 		t.Fatalf("avisa: %+v", av)
 	}
 	nueva, _ := cli.ClaveInstancia(context.Background(), id)
@@ -454,7 +468,7 @@ func TestClaveDelEspacio(t *testing.T) {
 	if !ok || !strings.Contains(q.Texto, "Reiniciar el consumo del espacio") {
 		t.Fatalf("R pregunta: %+v", q)
 	}
-	if av, ok := aviso(a.Entregar(comp.Confirmado{})); !ok || av.Texto != "Consumo reiniciado" {
+	if av := hastaAviso(a, func() { a.Entregar(comp.Confirmado{}) }); av.Texto != "Consumo reiniciado" {
 		t.Fatalf("avisa: %+v", av)
 	}
 	a.HastaVer("0 / 4")
@@ -504,17 +518,20 @@ func TestIrAProbarYAlHistorial(t *testing.T) {
 }
 
 func TestServicioCaido(t *testing.T) {
-	sin := prueba.Conducir(t, conectar.Nueva("es"))
-	if f := sin.Correr(sin.P.Iniciar(contexto(t, nil, "global"))); len(f) != 1 {
-		t.Fatalf("sin cliente: ErrorServicio: %+v", f)
+	// hastaError espera a que salga hacia la app un ErrorServicio de conexión.
+	hastaError := func(a *prueba.App) {
+		a.Hasta(func() bool {
+			return slices.ContainsFunc(a.Fuera, func(m tea.Msg) bool { e, ok := m.(pagina.ErrorServicio); return ok && pagina.NoResponde(e.Err) })
+		})
 	}
+	sin := prueba.Conducir(t, conectar.Nueva("es"))
+	sin.Correr(sin.P.Iniciar(contexto(t, nil, "global")))
+	hastaError(sin) // sin cliente
 	cli, id, cerrar := prueba.Arrancar(t)
 	a := abierta(t, cli, id)
 	cerrar()
-	f := a.Pulsar("r")
-	if len(f) != 1 {
-		t.Fatalf("con el servicio cerrado: ErrorServicio, y la página no se cierra: %+v", f)
-	}
+	a.Pulsar("r")
+	hastaError(a) // con el servicio cerrado, y la página no se cierra
 	a.HastaVer("El servicio no responde · r reintenta")
 }
 
@@ -550,7 +567,7 @@ func TestErrorDeCarga(t *testing.T) {
 	a.Pulsar("r")
 	a.HastaVer("mi-app")
 	fallar("otra vez no")
-	if av, ok := aviso(a.Pulsar("r")); !ok || av.Texto != "otra vez no" || av.Tipo != comp.Fallo {
+	if av := hastaAviso(a, func() { a.Pulsar("r") }); av.Texto != "otra vez no" || av.Tipo != comp.Fallo {
 		t.Fatalf("un aviso de fallo: %+v", av)
 	}
 	if v := a.Vista(); !strings.Contains(v, "mi-app") {

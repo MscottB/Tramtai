@@ -113,7 +113,7 @@ export const CLAVES_APIS: string[] = [
   'conectar.subtitulo', 'conectar.directa', 'conectar.directaTexto', 'conectar.urlAnthropic', 'conectar.apiPropia',
   'conectar.mostrarClave', 'conectar.ocultarClave', 'conectar.regenerarClave', 'conectar.regenerarTitulo', 'conectar.regenerarTexto',
   'conectar.claveRegenerada', 'conectar.modeloAntes', 'conectar.modeloDespues', 'conectar.perfiles', 'guia.titulo',
-  'comun.errorCarga', 'comun.reintentar', 'modelo.esPredeterminado',
+  'comun.errorCarga', 'comun.reintentar', 'modelo.esPredeterminado', 'modelo.libreRegla', 'puntos.permitidosHint',
   'puntos.filtroCaracteristicas', 'puntos.carJson', 'puntos.carRespaldo', 'puntos.carPresupuesto', 'puntos.carInstrucciones',
   'puntos.carForzado', 'puntos.carRestringida',
   'puntos.pestana', 'puntos.principal', 'puntos.activo', 'puntos.desactivado', 'puntos.sinGrupo', 'puntos.vacio', 'puntos.verClave',

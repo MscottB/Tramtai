@@ -272,7 +272,8 @@ type grupoModelo struct {
 }
 
 // gruposModelo agrupa los valores de model como gruposModelo de la Web UI: primero los perfiles y luego cada agente en el
-// orden de sus fichas (los que no tienen, al final y por nombre), cada uno con sus ids agente/modelo.
+// orden de sus fichas y, al final y por nombre, los registrados sin ficha (el mismo orden que da el servicio a la Web UI
+// en /api/v1/agentes), cada uno con sus ids agente/modelo.
 func (p *Pagina) gruposModelo() []grupoModelo {
 	var orden []string
 	for _, f := range catalogo.Todos() {

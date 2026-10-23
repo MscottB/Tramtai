@@ -310,24 +310,33 @@ func (p *Pagina) opcionesEsfuerzo() []opcion {
 // abrirForm abre el formulario de una API nueva (x nil) o los ajustes de x, como FormularioApi de la Web UI: la receta
 // (instrucciones, modelo y esfuerzo), los modelos permitidos y el presupuesto; al crear, también el nombre, el grupo y, en
 // las opciones avanzadas, la dirección, la compatibilidad y los alias.
-func (p *Pagina) abrirForm(x *contrato.EstadoPunto) {
+func (p *Pagina) abrirForm(x *contrato.EstadoPunto) tea.Cmd {
 	var v contrato.EstadoPunto
 	if x != nil {
 		v = *x
 	}
-	ops := map[string][]opcion{"esfuerzo": p.opcionesEsfuerzo(), "modelo": p.opcionesModelo(idModelo(v))}
-	receta := []comp.Campo{
-		comp.Area("instrucciones", p.tx("receta.instrucciones"), v.Instrucciones),
-		comp.Opcion("modelo", p.tx("receta.modelo"), etiquetas(ops["modelo"]), etiquetaDe(ops["modelo"], idModelo(v))),
-		comp.Interruptor("forzar", p.tx("receta.forzar"), v.ForzarModelo),
-		comp.Opcion("esfuerzo", p.tx("esfuerzo.titulo"), etiquetas(ops["esfuerzo"]), etiquetaDe(ops["esfuerzo"], v.Esfuerzo)),
+	ops := map[string][]opcion{"esfuerzo": p.opcionesEsfuerzo()}
+	receta := []comp.Campo{comp.Area("instrucciones", p.tx("receta.instrucciones"), v.Instrucciones)}
+	var aviso tea.Cmd
+	if len(p.catalogo) > 0 { // del catálogo o escrito a mano, como SelectorModelo con opcionEscrita
+		ops["modelo"] = p.opcionesModelo(idModelo(v))
+		receta = append(receta, comp.Opcion("modelo", p.tx("receta.modelo"), etiquetas(ops["modelo"]), etiquetaDe(ops["modelo"], idModelo(v))),
+			comp.Texto("escrito", idioma.T("O escribe agente/modelo"), "").Ejemplo("claude/sonnet"))
+	} else { // sin catálogo, texto libre: el servicio lo valida al guardar
+		receta = append(receta, comp.Texto("modelo", p.tx("receta.modelo"), idModelo(v)).Ejemplo("perfil/rapido"))
+		aviso = comp.Aviso(idioma.T("El catálogo de modelos está vacío: escribe el modelo a mano."), comp.Advertencia)
+		if p.errCat != "" {
+			aviso = comp.Aviso(idioma.Tf("No llegó el catálogo de modelos (%s): escribe el modelo a mano; r lo vuelve a pedir.", p.errCat), comp.Advertencia)
+		}
 	}
-	permitidos := comp.Texto("permitidos", p.tx("puntos.permitidos"), strings.Join(v.ModelosPermitidos, ", "))
+	receta = append(receta, comp.Interruptor("forzar", p.tx("receta.forzar"), v.ForzarModelo),
+		comp.Opcion("esfuerzo", p.tx("esfuerzo.titulo"), etiquetas(ops["esfuerzo"]), etiquetaDe(ops["esfuerzo"], v.Esfuerzo)))
+	permitidos := comp.Texto("permitidos", p.tx("puntos.permitidos"), strings.Join(v.ModelosPermitidos, ", ")).Ejemplo(p.tx("puntos.permitidosHint"))
 	if x != nil {
 		campos := append(append(receta, permitidos), p.camposPresupuesto(v.Presupuesto)...)
 		p.form = nuevoFormulario(p, modoAjustes, v.Nombre, ops, campos...)
 		p.form.f.Validar = p.validar
-		return
+		return aviso
 	}
 	ops["direccion"] = []opcion{{p.tx("puntos.ruta"), "ruta"}, {p.tx("puntos.puertoPropio"), "puerto"}}
 	campos := append([]comp.Campo{comp.Texto("nombre", p.tx("puntos.nombre"), "").Ejemplo(p.tx("puntos.nombreHint")),
@@ -342,6 +351,26 @@ func (p *Pagina) abrirForm(x *contrato.EstadoPunto) {
 	campos = append(append(campos, comp.Pliegue("avanzadas", p.tx("comun.opcionesAvanzadas"), false)), comp.Plegados("avanzadas", avanzadas...)...)
 	p.form = nuevoFormulario(p, modoNueva, "", ops, campos...)
 	p.form.f.Validar = p.validar
+	return aviso
+}
+
+// modelo es el de la receta: el escrito a mano, si lo hay, gana a la opción elegida.
+func (f *formulario) modelo() string {
+	if e := strings.TrimSpace(f.f.Valor("escrito")); e != "" {
+		return e
+	}
+	return strings.TrimSpace(f.valor("modelo"))
+}
+
+// agentesDelCatalogo son los agentes que conoce el catálogo, para validar un modelo escrito a mano.
+func (p *Pagina) agentesDelCatalogo() []string {
+	var r []string
+	for _, m := range p.catalogo {
+		if m.Agente != "" && !slices.Contains(r, m.Agente) {
+			r = append(r, m.Agente)
+		}
+	}
+	return r
 }
 
 // alias lee los alias de modelo, uno por línea (nombre=agente/modelo); con una línea mal escrita, la devuelve.
@@ -365,6 +394,13 @@ func (p *Pagina) validar(f *comp.Formulario) map[string]string {
 	for _, id := range []string{"du", "mu"} {
 		if _, ok := usd(f.Valor(id)); !ok {
 			errores[id] = idioma.T("Escribe un número, por ejemplo 2.50")
+		}
+	}
+	// Escrito a mano: un perfil o un agente que el catálogo conoce, como opcionEscrita de la Web UI.
+	if e := strings.TrimSpace(f.Valor("escrito")); e != "" && len(p.catalogo) > 0 {
+		agente, _, _ := strings.Cut(e, "/")
+		if conocidos := p.agentesDelCatalogo(); !strings.HasPrefix(e, "perfil/") && !slices.Contains(conocidos, agente) {
+			errores["escrito"] = p.tx("modelo.libreRegla", "agentes", strings.Join(conocidos, ", "))
 		}
 	}
 	if p.form == nil || p.form.modo != modoNueva {
@@ -392,7 +428,7 @@ func lista(texto string) []string {
 // enviar manda el formulario: crea la API, guarda sus ajustes o aplica los filtros.
 func (p *Pagina) enviar() tea.Cmd {
 	f := p.form
-	modelo := strings.TrimSpace(f.valor("modelo"))
+	modelo := f.modelo()
 	switch f.modo {
 	case modoFiltros:
 		p.filtros.tiene = nil

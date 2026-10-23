@@ -28,17 +28,18 @@ type (
 	// el resumen del espacio, su nombre, lo que dura el historial, el catálogo y la clave del espacio.
 	msgCarga struct {
 		origen
-		n        int
-		completa bool
-		lista    contrato.ListaPuntos
-		espacio  *nucleo.EstadoPresupuesto
-		resumen  *contrato.ResumenInstancia
-		nombre   string
-		horas    int
-		catalogo []contrato.Modelo
-		clave    string
-		errClave error
-		err      error
+		n           int
+		completa    bool
+		lista       contrato.ListaPuntos
+		espacio     *nucleo.EstadoPresupuesto
+		resumen     *contrato.ResumenInstancia
+		nombre      string
+		horas       int
+		catalogo    []contrato.Modelo
+		errCatalogo error
+		clave       string
+		errClave    error
+		err         error
 	}
 	// msgAccion es la respuesta de un cambio en el servicio. abrir, si no es nil, es la API cuyo detalle se abre (con su
 	// clave recién creada o regenerada); claveEspacio, la clave del espacio regenerada.
@@ -94,11 +95,13 @@ type Pagina struct {
 	nombre   string // el del espacio
 	horas    int
 	catalogo []contrato.Modelo
+	errCat   string // por qué no llegó el catálogo: el formulario lo avisa y deja escribir el modelo
 	clave    string // la del espacio
 	errClave string
 	verClave bool
 
-	n        int // la última carga pedida: solo vale su respuesta
+	n        int  // la última carga pedida: solo vale su respuesta
+	completa bool // falta una carga completa: hasta que llegue, toda carga es completa (una parcial no la pisa)
 	cargado  bool
 	sinServ  bool
 	err      string
@@ -158,7 +161,7 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	}
 	p.datos, p.espacio, p.resumen, p.nombre, p.clave, p.errClave, p.verClave = contrato.ListaPuntos{}, nucleo.EstadoPresupuesto{}, contrato.ResumenInstancia{}, "", "", "", false
 	p.cargado, p.sinServ, p.err, p.pestana, p.ocupado, p.pend = false, false, "", pestanaApis, false, nil
-	p.filtros, p.buscando, p.entrada = sinFiltros, false, ""
+	p.filtros, p.buscando, p.entrada, p.catalogo, p.errCat = sinFiltros, false, "", nil, ""
 	p.cerrarDetalle()
 	p.form = nil
 	p.aplicarFiltros()
@@ -179,6 +182,8 @@ func (p *Pagina) cargar(completa bool) tea.Cmd {
 		return pagina.SinCliente
 	}
 	p.n++
+	completa = completa || p.completa
+	p.completa = completa
 	m := msgCarga{origen: p.origen(), n: p.n, completa: completa}
 	return func() tea.Msg {
 		m.lista, m.err = c.Cli.Puntos(c.Ctx, c.Instancia)
@@ -191,9 +196,7 @@ func (p *Pagina) cargar(completa bool) tea.Cmd {
 		if !completa {
 			return m
 		}
-		if l, err := c.Cli.Catalogo(c.Ctx, c.Instancia); err == nil {
-			m.catalogo = l
-		}
+		m.catalogo, m.errCatalogo = c.Cli.Catalogo(c.Ctx, c.Instancia)
 		if r, err := c.Cli.Instancia(c.Ctx, c.Instancia); err == nil {
 			m.resumen = &r
 		}
@@ -272,10 +275,11 @@ func (p *Pagina) alCargar(m msgCarga) tea.Cmd {
 	if m.nombre != "" {
 		p.nombre = m.nombre
 	}
-	if m.catalogo != nil {
-		p.catalogo = m.catalogo
-	}
 	if m.completa {
+		p.completa, p.catalogo, p.errCat = false, m.catalogo, ""
+		if m.errCatalogo != nil {
+			p.errCat = nucleo.MensajeDe(m.errCatalogo)
+		}
 		p.clave, p.errClave = m.clave, ""
 		if m.errClave != nil {
 			p.errClave = nucleo.MensajeDe(m.errClave)
@@ -466,7 +470,7 @@ func (p *Pagina) teclaLista(t string, k tea.KeyPressMsg) tea.Cmd {
 	switch t {
 	case "n":
 		if p.cargado {
-			p.abrirForm(nil)
+			return p.abrirForm(nil)
 		}
 	case "/":
 		if p.cargado {
@@ -490,7 +494,7 @@ func (p *Pagina) teclaLista(t string, k tea.KeyPressMsg) tea.Cmd {
 		p.lista.Update(k)
 	case "e":
 		if hay {
-			p.abrirForm(&x)
+			return p.abrirForm(&x)
 		}
 	case "a":
 		if hay {
@@ -532,7 +536,7 @@ func (p *Pagina) teclaDetalle(t string, k tea.KeyPressMsg) tea.Cmd {
 	case "a":
 		return p.activar(x)
 	case "e":
-		p.abrirForm(&x)
+		return p.abrirForm(&x)
 	case "R":
 		if _, ok := p.datos.Presupuestos[x.Nombre]; ok {
 			return p.preguntar(accReiniciar, x.Nombre, p.tx("presupuesto.reiniciarTitulo", "nombre", x.Nombre), p.tx("presupuesto.reiniciarTexto"))
