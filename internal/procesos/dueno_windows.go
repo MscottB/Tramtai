@@ -1,6 +1,6 @@
 //go:build windows
 
-package servicio
+package procesos
 
 import (
 	"net/netip"
@@ -31,9 +31,10 @@ type filaTCP6 struct {
 
 func puertoRed(p uint32) uint16 { return uint16(p&0xff)<<8 | uint16(p>>8&0xff) }
 
-// mismoUsuario busca el proceso que abrió la conexión y compara su usuario (SID) con el del servicio.
-func mismoUsuario(cliente, servidor netip.AddrPort) bool {
-	pid, ok := pidDeConexion(cliente, servidor)
+// MismoUsuario indica si el extremo local de la conexión TCP local→remoto es de un proceso del mismo usuario del
+// sistema que este: busca ese proceso y compara su usuario (SID).
+func MismoUsuario(local, remoto netip.AddrPort) bool {
+	pid, ok := pidDeConexion(local, remoto)
 	if !ok {
 		return false
 	}

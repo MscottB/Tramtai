@@ -3,6 +3,7 @@ package pagina
 import (
 	"context"
 	"net/url"
+	"slices"
 	"syscall"
 	"testing"
 
@@ -21,6 +22,17 @@ func TestAvisoError(t *testing.T) {
 	}
 	if l := e.AvisoError("en", "codigo_nuevo", ""); len(l) != 1 || l[0] != "codigo_nuevo" {
 		t.Errorf("un código sin texto se enseña tal cual, sin mensaje ni paso: %q", l)
+	}
+}
+
+// TestEnvolver: por palabras y cada párrafo por su lado; con un máximo de líneas, la última lleva lo que no cabe, cortado.
+func TestEnvolver(t *testing.T) {
+	e := &Estilos{Iconos: IconosUnicode}
+	if l := e.Envolver("uno dos tres\ncuatro", 7, 0); !slices.Equal(l, []string{"uno dos", "tres", "cuatro"}) {
+		t.Fatalf("por palabras y por párrafos: %q", l)
+	}
+	if l := e.Envolver("uno dos tres cuatro", 7, 2); !slices.Equal(l, []string{"uno dos", "tres c…"}) {
+		t.Fatalf("en dos líneas, la última cortada: %q", l)
 	}
 }
 

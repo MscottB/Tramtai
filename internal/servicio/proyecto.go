@@ -80,8 +80,8 @@ type AbrirOpciones struct {
 }
 
 // ErrorConfianza: la carpeta ya traía .tramtai/ (por ejemplo, un repositorio clonado) y no es confiable; Claves dicen
-// qué controlan las de seguridad de su local.yaml, para enseñarlo antes de decidir. Movido es dónde estaba antes si su marca es la de
-// un proyecto registrado que ya no está: la confianza no viaja sola, porque una marca se puede copiar.
+// qué controlan las de seguridad de su local.yaml, para enseñarlo antes de decidir. Movido es dónde estaba antes si su
+// marca es la de un proyecto registrado que ya no está: la confianza no viaja sola, porque una marca se puede copiar.
 type ErrorConfianza struct {
 	Raiz   string
 	Claves []string

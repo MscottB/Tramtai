@@ -77,7 +77,7 @@ func (p *Pagina) filaReciente(t nucleo.Trabajo) string {
 // cargarPunto lee la API que se abre en Probar para editarla (Abrir en Probar de Mis APIs).
 func (p *Pagina) cargarPunto(nombre string) tea.Cmd {
 	if p.c.Cli == nil {
-		return sinServicio
+		return pagina.SinCliente
 	}
 	c, o := p.c, p.origen()
 	return func() tea.Msg {

@@ -67,7 +67,7 @@ func init() {
 		"hace %d h":          "%d h ago",
 		"hace %d d":          "%d d ago",
 		"Ver la Ayuda de %s": "See the %s Help",
-		"Las apps siguen funcionando aunque cierres la terminal": "Apps keep working even if you close the terminal",
+		"Tus apps funcionan al encender el equipo": "Your apps work as soon as the computer starts",
 
 		// Historial: los filtros, el detalle, el registro y las confirmaciones salen de los textos de la Web UI; aquí solo lo
 		// propio de la terminal.

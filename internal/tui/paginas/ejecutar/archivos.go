@@ -66,7 +66,7 @@ func (p *Pagina) comprobarConversor(rutas []string) tea.Cmd {
 // prepararConversor lanza la preparación del conversor de archivos en el servicio.
 func (p *Pagina) prepararConversor() tea.Cmd {
 	if p.c.Cli == nil {
-		return sinServicio
+		return pagina.SinCliente
 	}
 	c := p.c
 	return func() tea.Msg {

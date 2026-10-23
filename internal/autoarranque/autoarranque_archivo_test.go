@@ -105,6 +105,37 @@ func TestInstaladaYPortableNoSePisan(t *testing.T) {
 	}
 }
 
+// Activar la instalada no pisa el arranque que una portable anterior dejó con el nombre de la instalada: pasa al nombre
+// de la portable y esa portable lo sigue reconociendo como suyo (hallazgo 19).
+func TestInstaladaApartaLaPortableAnterior(t *testing.T) {
+	carpeta := t.TempDir()
+	t.Setenv("HOME", carpeta)
+	t.Setenv("XDG_CONFIG_HOME", carpeta)
+	antes := [2]string{nombreArchivo, nombrePortable}
+	nombreArchivo, nombrePortable = "prueba-aparta-"+nombreArchivo, "prueba-aparta-"+nombrePortable
+	anterior, portableAnterior := propia, esPortable
+	t.Cleanup(func() {
+		nombreArchivo, nombrePortable, propia, esPortable = antes[0], antes[1], anterior, portableAnterior
+	})
+	const usb, instalada = "/media/usb/tramtai/tramtai-escritorio", "/opt/instalada/tramtai-escritorio"
+	esPortable = func() bool { return false }
+	propia = func() (string, error) { return instalada, nil }
+	lista, _ := rutas()
+	os.MkdirAll(filepath.Dir(lista[0]), 0o755)
+	os.WriteFile(lista[0], []byte(contenido(usb, nombreArchivo)), 0o644)
+	if err := Activar(instalada); err != nil {
+		t.Fatal(err)
+	}
+	if activo, err := Activo(); err != nil || !activo {
+		t.Fatalf("la instalada quedó activa: %v %v", activo, err)
+	}
+	esPortable = func() bool { return true }
+	propia = func() (string, error) { return usb, nil }
+	if activo, err := Activo(); err != nil || !activo {
+		t.Fatalf("la portable anterior perdió su arranque: %v %v", activo, err)
+	}
+}
+
 // El arranque de otra copia no cuenta como activo ni se borra.
 func TestActivoSoloDeEstaCopia(t *testing.T) {
 	carpeta := t.TempDir()

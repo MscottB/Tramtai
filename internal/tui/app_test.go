@@ -15,13 +15,13 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"tramtai/internal/idioma"
+	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
@@ -46,35 +46,22 @@ func tecla(texto string) tea.KeyPressMsg {
 	return tea.KeyPressMsg{Code: []rune(texto)[0], Text: texto}
 }
 
-// correr ejecuta un Cmd y lo que vaya saliendo de él, como haría Bubble Tea, y dice si pidió salir. Un temporizador
-// que no llega a tiempo se deja sin esperar.
+// conducir lleva la terminal con el arnés de las páginas (prueba.App). Al acabar la prueba se cierra, como al salir:
+// lo que las páginas dejaron en marcha se corta.
+func conducir(t *testing.T, m *modelo) *prueba.App {
+	t.Cleanup(m.cerrar)
+	return prueba.ConducirApp(t, m)
+}
+
+// correr corre un Cmd de la terminal con el arnés hasta que todo se asienta, y dice si pidió salir.
 func correr(t *testing.T, m *modelo, cmd tea.Cmd) bool {
 	t.Helper()
-	if cmd == nil {
-		return false
-	}
-	hecho := make(chan tea.Msg, 1)
-	go func() { hecho <- cmd() }()
-	var msg tea.Msg
-	select {
-	case msg = <-hecho:
-	case <-time.After(2 * time.Second): // el plazo de un aviso (4 s) o el latido no se esperan
-		return false
-	}
-	switch msg := msg.(type) {
-	case nil:
-		return false
-	case tea.QuitMsg:
-		return true
-	case tea.BatchMsg:
-		salio := false
-		for _, c := range msg {
-			salio = correr(t, m, c) || salio
-		}
-		return salio
-	}
-	_, siguiente := m.Update(msg)
-	return correr(t, m, siguiente)
+	return salio(conducir(t, m).Correr(cmd))
+}
+
+// salio dice si entre lo que salió de la terminal está tea.Quit.
+func salio(fuera []tea.Msg) bool {
+	return slices.ContainsFunc(fuera, func(m tea.Msg) bool { _, ok := m.(tea.QuitMsg); return ok })
 }
 
 func sale(cmd tea.Cmd) bool {
@@ -94,6 +81,7 @@ type paginaFalsa struct {
 	ctx         context.Context
 	instancia   string
 	cambios     int // los CambioEspacio que le llegan
+	avisos      int // los NuevoAviso que le llegan: no debería ninguno, son de la app
 }
 
 func (p *paginaFalsa) Titulo() string { return "Configuración" }
@@ -110,6 +98,8 @@ func (p *paginaFalsa) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		p.ancho, p.alto = msg.Width, msg.Height
 	case pagina.CambioEspacio:
 		p.cambios++
+	case comp.NuevoAviso:
+		p.avisos++
 	}
 	return p, nil
 }
@@ -215,6 +205,40 @@ func TestTamanoMinimo(t *testing.T) {
 	}
 }
 
+// TestTamanoMinimoConAlgoPendiente: con la ventana pequeña y algo que se perdería, q pregunta y la pregunta se ve; Esc
+// sigue en la terminal, s sale y, con la pregunta abierta, otra q también: nunca queda en un bucle.
+func TestTamanoMinimoConAlgoPendiente(t *testing.T) {
+	aviso := idioma.T("Agranda la ventana (mínimo 60×20)")
+	for _, tam := range [][2]int{{59, 20}, {60, 12}, {40, 10}} {
+		m := nuevo(Opciones{})
+		m.Update(tea.WindowSizeMsg{Width: tam[0], Height: tam[1]})
+		m.paginas[pagina.PaginaInicio] = &paginaOcupada{motivo: "Probar tiene una petición en marcha"}
+		if _, cmd := m.Update(tecla("q")); sale(cmd) {
+			t.Fatalf("%v: con algo en marcha, q pregunta", tam)
+		}
+		v := ansi.Strip(m.View().Content)
+		for _, quiere := range []string{aviso, "Probar tiene una", "s confirma"} {
+			if !strings.Contains(v, quiere) {
+				t.Fatalf("%v: la pregunta se ve con la ventana pequeña; falta %q:\n%s", tam, quiere, v)
+			}
+		}
+		if lineas := strings.Split(v, "\n"); len(lineas) > tam[1] || lipgloss.Width(v) > tam[0] {
+			t.Fatalf("%v: cabe en la ventana:\n%s", tam, v)
+		}
+		if _, cmd := m.Update(tecla("esc")); sale(cmd) || m.pregunta != nil {
+			t.Fatalf("%v: Esc cierra la pregunta y sigue en la terminal", tam)
+		}
+		m.Update(tecla("q"))
+		if _, cmd := m.Update(tecla("s")); !sale(cmd) {
+			t.Fatalf("%v: s sale", tam)
+		}
+		m.Update(tecla("q"))
+		if _, cmd := m.Update(tecla("q")); !sale(cmd) {
+			t.Fatalf("%v: con la pregunta de salir abierta, otra q sale", tam)
+		}
+	}
+}
+
 func TestRedimensionarConservaEstado(t *testing.T) {
 	m := nuevo(Opciones{})
 	falsa := &paginaFalsa{}
@@ -263,7 +287,8 @@ func TestServicioCaidoNoCierra(t *testing.T) {
 	cli, global, cerrar := prueba.Arrancar(t)
 	m := nuevo(Opciones{})
 	m.cli = cli
-	if correr(t, m, m.conectar(false, true, false)) || m.instancia != global || m.caido != nil {
+	a := conducir(t, m)
+	if salio(a.Correr(m.conectar(false, true, false))) || m.instancia != global || m.caido != nil {
 		t.Fatalf("conecta con el espacio global: %q %v", m.instancia, m.caido)
 	}
 	aviso := idioma.T("El servicio no responde · r reintenta")
@@ -271,14 +296,14 @@ func TestServicioCaidoNoCierra(t *testing.T) {
 		t.Fatal("con el servicio en marcha no hay aviso")
 	}
 	cerrar()
-	if correr(t, m, m.conectar(false, false, false)) {
+	if salio(a.Correr(m.conectar(false, false, false))) {
 		t.Fatal("la comprobación no cierra la terminal")
 	}
 	if !strings.Contains(m.View().Content, aviso) {
 		t.Fatalf("avisa de que el servicio no responde:\n%s", m.View().Content)
 	}
 	_, cmd := m.Update(tecla("r"))
-	if cmd == nil || correr(t, m, cmd) {
+	if cmd == nil || salio(a.Correr(cmd)) {
 		t.Fatal("r reintenta y la terminal sigue")
 	}
 	if !strings.Contains(m.View().Content, aviso) || m.actual != "inicio" {
@@ -520,6 +545,113 @@ func TestErrorSeQuedaYSeVeEntero(t *testing.T) {
 	m.Update(tecla("!"))
 	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "segunda línea del detalle") {
 		t.Fatalf("! vuelve a enseñar el último error:\n%s", v)
+	}
+}
+
+// TestAvisoNoLlegaALasPaginas: un aviso es de la app; tampoco un fallo, que no caduca, se reparte a las páginas.
+func TestAvisoNoLlegaALasPaginas(t *testing.T) {
+	m := nuevo(Opciones{})
+	falsa := &paginaFalsa{}
+	m.paginas[pagina.PaginaInicio] = falsa
+	m.Update(comp.NuevoAviso{Texto: "guardado", Tipo: comp.Exito})
+	m.Update(comp.NuevoAviso{Texto: "no se pudo leer el archivo", Tipo: comp.Fallo})
+	if falsa.avisos != 0 {
+		t.Fatalf("a la página le llegaron %d avisos", falsa.avisos)
+	}
+}
+
+// paginaTeclas tiene más teclas de las que caben en la Ayuda a 60×20.
+type paginaTeclas struct{ paginaFalsa }
+
+func (p *paginaTeclas) Teclas() []pagina.Tecla {
+	var teclas []pagina.Tecla
+	for i := range 20 {
+		teclas = append(teclas, pagina.Tecla{Tecla: string(rune('a' + i)), Accion: "acción " + strconv.Itoa(i)})
+	}
+	return teclas
+}
+
+// TestAyudaConTodasLasTeclas: a 60×20, la Ayuda de una página con muchas teclas se desplaza hasta la última, la de la app;
+// y la que abre la página por su cuenta (a en Inicio) también trae todas, las suyas y las comunes.
+func TestAyudaConTodasLasTeclas(t *testing.T) {
+	m := nuevo(Opciones{})
+	m.Update(tea.WindowSizeMsg{Width: 60, Height: 20})
+	m.paginas[pagina.PaginaInicio] = &paginaTeclas{}
+	m.Update(tecla("?"))
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "acción 0") {
+		t.Fatalf("la Ayuda empieza por las teclas de la página:\n%s", v)
+	}
+	m.Update(tea.KeyPressMsg{Code: tea.KeyEnd})
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "Ctrl+E  espacio") {
+		t.Fatalf("se desplaza hasta la última:\n%s", v)
+	}
+	m = nuevo(Opciones{})
+	m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
+	m.paginas[pagina.PaginaInicio] = &paginaTeclas{}
+	m.Update(pagina.IrA{Pagina: pagina.PaginaAyuda, Datos: pagina.ConAyuda{Pagina: pagina.PaginaInicio}})
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "acción 19") || !strings.Contains(v, "Ctrl+E  espacio") {
+		t.Fatalf("la Ayuda que pide la página trae sus teclas y las comunes:\n%s", v)
+	}
+}
+
+// TestExclamacionSoloDondeFunciona: el pie solo anuncia «! ver el error» donde ! lo abre. En un campo ! es una letra
+// más, y en el menú no abre nada.
+func TestExclamacionSoloDondeFunciona(t *testing.T) {
+	m := nuevo(Opciones{})
+	m.Update(tea.WindowSizeMsg{Width: 60, Height: 20})
+	falsa := &paginaFalsa{campo: true}
+	m.paginas[pagina.PaginaInicio] = falsa
+	m.Update(comp.NuevoAviso{Texto: "no se pudo leer el archivo", Tipo: comp.Fallo})
+	pie := func() string { l := strings.Split(ansi.Strip(m.View().Content), "\n"); return l[len(l)-1] }
+	if strings.Contains(pie(), "!") {
+		t.Fatalf("en un campo el pie no anuncia !: %q", pie())
+	}
+	m.Update(tecla("!"))
+	if m.pregunta != nil || falsa.texto != "!" {
+		t.Fatalf("en un campo, ! se escribe: %q", falsa.texto)
+	}
+	falsa.campo = false
+	m.Update(comp.NuevoAviso{Texto: "no se pudo leer el archivo", Tipo: comp.Fallo})
+	if !strings.Contains(pie(), "! ver el error") {
+		t.Fatalf("fuera de un campo, sí: %q", pie())
+	}
+	m.Update(tecla("tab"))
+	m.Update(comp.NuevoAviso{Texto: "no se pudo leer el archivo", Tipo: comp.Fallo})
+	if strings.Contains(pie(), "!") {
+		t.Fatalf("en el menú, no: %q", pie())
+	}
+}
+
+// TestCancelarSeVeEnElPie: con una petición en marcha, «c Cancelar la petición» es lo primero del pie de Probar y se ve a
+// 60×20 y a 80×24, en la respuesta y en la receta; c pregunta antes de cancelar.
+func TestCancelarSeVeEnElPie(t *testing.T) {
+	cli, id, b := prueba.ConBloqueado(t)
+	tr, err := cli.Crear(context.Background(), id, nucleo.SolicitudEjecucion{Agente: "simulado",
+		Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "esperar"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-b.Entro
+	for _, tam := range [][2]int{{60, 20}, {80, 24}} {
+		m := nuevoEn(Opciones{Datos: t.TempDir()}, "es")
+		m.cli, m.instancia = cli, id
+		m.Update(tea.WindowSizeMsg{Width: tam[0], Height: tam[1]})
+		a := conducir(t, m)
+		a.Correr(m.ir(pagina.PaginaEjecutar, pagina.SeguirTrabajo{ID: tr.ID}, true))
+		a.HastaVer("en vivo")
+		pie := func() string { l := strings.Split(ansi.Strip(a.Vista()), "\n"); return l[len(l)-1] }
+		if !strings.HasPrefix(pie(), "c Cancelar la petición") {
+			t.Fatalf("%v: en la respuesta, el pie empieza por c: %q", tam, pie())
+		}
+		a.Pulsar("left")
+		if !strings.HasPrefix(pie(), "c Cancelar la petición") {
+			t.Fatalf("%v: en la receta, también: %q", tam, pie())
+		}
+		a.Pulsar("c")
+		if v := ansi.Strip(a.Vista()); !strings.Contains(v, "¿Cancelar la petición en marcha?") {
+			t.Fatalf("%v: c pregunta antes de cancelar:\n%s", tam, v)
+		}
+		a.Pulsar("esc")
 	}
 }
 

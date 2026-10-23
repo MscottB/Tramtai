@@ -11,7 +11,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -198,9 +197,9 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	if c.Cli == nil {
 		p.cerrarRed()
 		p.sinServ = true
-		return func() tea.Msg { return pagina.ErrorServicio{Err: cliente.ErrServicioInactivo} }
+		return pagina.SinCliente
 	}
-	return tea.Batch(p.cargar(), p.abrirRed(), p.esperarA(cadaRefresco, func(o origen) tea.Msg { return msgRefresco{o} }))
+	return tea.Batch(p.cargar(), p.abrirRed(), p.armarRefresco())
 }
 
 // Ocultar suelta el flujo y los temporizadores: Inicio no gasta nada mientras no se ve (la Web UI lo cierra al salir).
@@ -217,7 +216,7 @@ func (p *Pagina) Mostrar() tea.Cmd {
 	if p.c.Cli == nil {
 		return nil
 	}
-	return tea.Batch(p.cargar(), p.abrirRed(), p.esperarA(cadaRefresco, func(o origen) tea.Msg { return msgRefresco{o} }))
+	return tea.Batch(p.cargar(), p.abrirRed(), p.armarRefresco())
 }
 
 // armarTic arranca el temporizador que borra las filas que terminaron y repinta su tiempo; solo corre mientras haya filas, así
@@ -227,7 +226,7 @@ func (p *Pagina) armarTic() tea.Cmd {
 		return nil
 	}
 	p.ticActivo = true
-	return p.esperarA(cadaLimpieza, func(o origen) tea.Msg { return msgTic{o} })
+	return pagina.Tras(p.origen(), cadaLimpieza, p.esperaPara, func(o origen) tea.Msg { return msgTic{o} })
 }
 
 func (p *Pagina) origen() origen { return origen{p.c.Origen(p.gen)} }
@@ -235,10 +234,9 @@ func (p *Pagina) origen() origen { return origen{p.c.Origen(p.gen)} }
 // vigente dice si una respuesta sigue valiendo (pagina.Origen.Vigente) y la página se ve.
 func (p *Pagina) vigente(o origen) bool { return o.Vigente(p.c, p.gen) && p.visible }
 
-// esperarA es un temporizador: pasado d manda lo que haga mensaje, salvo que el contexto de la página se cancele antes.
-func (p *Pagina) esperarA(d time.Duration, mensaje func(origen) tea.Msg) tea.Cmd {
-	o := p.origen()
-	return pagina.Tras(o.Ctx, d, p.esperaPara, func() tea.Msg { return mensaje(o) })
+// armarRefresco programa el siguiente refresco de los contadores.
+func (p *Pagina) armarRefresco() tea.Cmd {
+	return pagina.Tras(p.origen(), cadaRefresco, p.esperaPara, func(o origen) tea.Msg { return msgRefresco{o} })
 }
 
 // cargar pide todo lo que enseña la página, cada cosa por su lado: si una falla, las demás se ven.
@@ -321,20 +319,14 @@ func (p *Pagina) abrirRed() tea.Cmd {
 func flujo(ctx context.Context, o origen, instancia string,
 	abrir func(context.Context, string, time.Duration, func(string, []byte) error) error,
 	espera func(time.Duration) <-chan time.Time, canal chan<- msgRed) {
-	defer close(canal)
-	enviar := func(m msgRed) bool {
-		m.origen = o
-		select {
-		case canal <- m:
-			return true
-		case <-ctx.Done():
-			return false
-		}
-	}
 	fallos := 0
-	for {
-		if !enviar(msgRed{tipo: "abre"}) {
-			return
+	vivo.Mantener(ctx, canal, espera, func(_ int, enviar func(msgRed) bool) (time.Duration, bool) {
+		mandar := func(m msgRed) bool {
+			m.origen = o
+			return enviar(m)
+		}
+		if !mandar(msgRed{tipo: "abre"}) {
+			return 0, false
 		}
 		abrir(ctx, instancia, sinNovedades, func(tipo string, datos []byte) error {
 			switch tipo {
@@ -343,30 +335,23 @@ func flujo(ctx context.Context, o origen, instancia string,
 				if json.Unmarshal(datos, &e) != nil {
 					return nil
 				}
-				if !enviar(msgRed{tipo: tipo, ev: e}) {
+				if !mandar(msgRed{tipo: tipo, ev: e}) {
 					return ctx.Err()
 				}
 			case "foto":
 				fallos = 0
-				if !enviar(msgRed{tipo: tipo}) {
+				if !mandar(msgRed{tipo: tipo}) {
 					return ctx.Err()
 				}
 			}
 			return nil
 		})
 		if ctx.Err() != nil {
-			return
+			return 0, false
 		}
 		fallos++
-		if !enviar(msgRed{tipo: "corte", fallos: fallos}) {
-			return
-		}
-		select {
-		case <-ctx.Done():
-			return
-		case <-espera(esperaReconexion(fallos - 1)):
-		}
-	}
+		return esperaReconexion(fallos - 1), mandar(msgRed{tipo: "corte", fallos: fallos})
+	})
 }
 
 // fallo reparte un error: de conexión es del servicio (lo avisa la app); el de la API, el mensaje tal cual.
@@ -410,7 +395,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		if !p.vigente(m.origen) {
 			return p, nil
 		}
-		siguiente := p.esperarA(cadaRefresco, func(o origen) tea.Msg { return msgRefresco{o} })
+		siguiente := p.armarRefresco()
 		if p.sinServ { // la app reinicia la página cuando el servicio vuelve
 			return p, siguiente
 		}

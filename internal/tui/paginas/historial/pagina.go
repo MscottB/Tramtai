@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -29,6 +30,8 @@ const (
 	cadaSondeo = 5 * time.Second
 	// esperaRegistro junta los avisos seguidos de un mismo trabajo en una sola lectura del registro.
 	esperaRegistro = 200 * time.Millisecond
+	// esperaBusqueda es lo que se espera tras la última tecla de la búsqueda para pedir la lista, como la Web UI.
+	esperaBusqueda = 300 * time.Millisecond
 )
 
 // estTodos es el filtro de estado sin filtro; los demás son los del servicio (nucleo.Filtros), que filtra él.
@@ -77,12 +80,17 @@ type (
 		err        error
 	}
 	msgSondeo struct{ origen }
+	// msgBuscar llega pasada esperaBusqueda desde la tecla n de la búsqueda: solo vale la de la última.
+	msgBuscar struct {
+		origen
+		n int
+	}
 	// msgFlujo es el seguimiento en vivo recién abierto; msgVivo, lo que llega por él (con el origen del Historial).
 	msgFlujo = vivo.Flujo[origen]
 	msgVivo  = vivo.Msg[origen]
 )
 
-// pendiente es lo que la página va a hacer si el usuario confirma: eliminar un trabajo o vaciar el historial.
+// pendiente es lo que la página va a hacer si el usuario confirma: cancelar o eliminar un trabajo, o vaciar el historial.
 type pendiente struct{ accion, id string }
 
 const (
@@ -122,6 +130,7 @@ type Pagina struct {
 	busqueda string
 	buscando bool
 	entrada  string // lo que se escribe en la búsqueda abierta
+	nbusq    int    // la última tecla de la búsqueda: solo su espera pide la lista
 	antes    string // la búsqueda de antes de abrirla, para Esc
 	enVisor  bool   // la búsqueda abierta es la del detalle, no la de la lista
 
@@ -195,7 +204,7 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	p.ajustar()
 	if c.Cli == nil {
 		p.sinServ = true
-		return func() tea.Msg { return pagina.ErrorServicio{Err: cliente.ErrServicioInactivo} }
+		return pagina.SinCliente
 	}
 	return tea.Batch(p.cargar(false), p.cargarPuntos(), p.armarSondeo())
 }
@@ -235,14 +244,8 @@ func (p *Pagina) origen() origen { return origen{p.c.Origen(p.gen)} }
 // vigente dice si una respuesta sigue valiendo (pagina.Origen.Vigente) y la página se ve.
 func (p *Pagina) vigente(o origen) bool { return o.Vigente(p.c, p.gen) && p.visible }
 
-// esperarA es un temporizador: pasado d manda lo que haga mensaje, salvo que el contexto de la página se cancele antes.
-func (p *Pagina) esperarA(d time.Duration, mensaje func(origen) tea.Msg) tea.Cmd {
-	o := p.origen()
-	return pagina.Tras(o.Ctx, d, p.esperaPara, func() tea.Msg { return mensaje(o) })
-}
-
 func (p *Pagina) armarSondeo() tea.Cmd {
-	return p.esperarA(cadaSondeo, func(o origen) tea.Msg { return msgSondeo{o} })
+	return pagina.Tras(p.origen(), cadaSondeo, p.esperaPara, func(o origen) tea.Msg { return msgSondeo{o} })
 }
 
 // filtroServidor son los filtros que atiende el servicio: el origen, el grupo o la API.
@@ -270,7 +273,7 @@ func (p *Pagina) filtroServidor() cliente.FiltroTrabajos {
 func (p *Pagina) cargar(segundoPlano bool) tea.Cmd {
 	c, o := p.c, p.origen()
 	if c.Cli == nil {
-		return func() tea.Msg { return pagina.ErrorServicio{Err: cliente.ErrServicioInactivo} }
+		return pagina.SinCliente
 	}
 	p.n++
 	n := p.n
@@ -357,6 +360,10 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 			return p, siguiente
 		}
 		return p, tea.Batch(p.cargar(true), siguiente)
+	case msgBuscar:
+		if p.vigente(m.origen) && m.n == p.nbusq && p.buscando {
+			return p, p.buscar()
+		}
 	case msgLista:
 		return p, p.alLista(m)
 	case msgPuntos:
@@ -458,7 +465,7 @@ func (p *Pagina) cerrarVivo() {
 func (p *Pagina) abrirDetalle(id string, nuevo bool) tea.Cmd {
 	c, o := p.c, p.origen()
 	if c.Cli == nil {
-		return func() tea.Msg { return pagina.ErrorServicio{Err: cliente.ErrServicioInactivo} }
+		return pagina.SinCliente
 	}
 	if nuevo || p.abierto != id {
 		p.detalle = nil
@@ -601,14 +608,14 @@ func (p *Pagina) pedirRegistro() tea.Cmd {
 		return nil
 	}
 	p.regPend = true
-	return p.esperarA(esperaRegistro, func(o origen) tea.Msg { return msgRegistroYa{o} })
+	return pagina.Tras(p.origen(), esperaRegistro, p.esperaPara, func(o origen) tea.Msg { return msgRegistroYa{o} })
 }
 
 // lanzar hace una acción en el servicio; al volver, alAccion la recoge. Mientras haya una en marcha no se lanza otra.
 func (p *Pagina) lanzar(hacer func(pagina.Contexto) msgAccion) tea.Cmd {
 	c, o := p.c, p.origen()
 	if c.Cli == nil {
-		return func() tea.Msg { return pagina.ErrorServicio{Err: cliente.ErrServicioInactivo} }
+		return pagina.SinCliente
 	}
 	if p.ocupado {
 		return nil
@@ -665,12 +672,12 @@ func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
 		}
 		return p.cargar(true)
 	case accionVaciar:
-		return tea.Batch(comp.Aviso(p.tx("historial.vaciado", "n", itoa(m.n)), comp.Exito), p.cargar(true))
+		return tea.Batch(comp.Aviso(p.tx("historial.vaciado", "n", strconv.Itoa(m.n)), comp.Exito), p.cargar(true))
 	}
 	return nil
 }
 
-// confirmado hace lo que se había preguntado: eliminar un trabajo o vaciar el historial.
+// confirmado hace lo que se había preguntado: cancelar o eliminar un trabajo, o vaciar el historial.
 func (p *Pagina) confirmado() tea.Cmd {
 	pend := p.pend
 	p.pend = nil
@@ -678,6 +685,11 @@ func (p *Pagina) confirmado() tea.Cmd {
 		return nil
 	}
 	switch pend.accion {
+	case accionCancelar:
+		if t, ok := p.conocido(pend.id); ok && t.Estado.Terminal() { // terminó mientras se preguntaba
+			return nil
+		}
+		return p.accion(accionCancelar, nucleo.Trabajo{ID: pend.id})
 	case accionEliminar:
 		return p.lanzar(func(c pagina.Contexto) msgAccion {
 			return msgAccion{accion: accionEliminar, id: pend.id, err: c.Cli.Eliminar(c.Ctx, c.Instancia, pend.id)}
@@ -689,6 +701,18 @@ func (p *Pagina) confirmado() tea.Cmd {
 		})
 	}
 	return nil
+}
+
+// conocido es lo último que la página sabe de un trabajo: el del detalle o el de la lista.
+func (p *Pagina) conocido(id string) (nucleo.Trabajo, bool) {
+	if p.detalle != nil && p.detalle.ID == id {
+		return *p.detalle, true
+	}
+	i := slices.IndexFunc(p.trabajos, func(t nucleo.Trabajo) bool { return t.ID == id })
+	if i < 0 {
+		return nucleo.Trabajo{}, false
+	}
+	return p.trabajos[i], true
 }
 
 // objetivo es el trabajo sobre el que actúan t, o, c y x: el del detalle abierto o, en la lista, el del cursor.
@@ -711,10 +735,21 @@ func (p *Pagina) hayTerminados() bool {
 	return p.hayFiltro() || slices.ContainsFunc(p.trabajos, func(t nucleo.Trabajo) bool { return t.Estado.Terminal() })
 }
 
-// aplicarEntrada aplica lo escrito en la búsqueda abierta: la de la lista pide al servicio la lista con ese texto al
-// escribir; la del detalle, al pulsar Intro.
+// aplicarEntrada aplica lo escrito en la búsqueda abierta: la de la lista pide al servicio la lista con ese texto
+// esperaBusqueda después de la última tecla; la del detalle, al pulsar Intro.
 func (p *Pagina) aplicarEntrada() tea.Cmd {
-	if p.enVisor || p.busqueda == p.entrada {
+	if p.enVisor {
+		return nil
+	}
+	p.nbusq++
+	n := p.nbusq
+	return pagina.Tras(p.origen(), esperaBusqueda, p.esperaPara, func(o origen) tea.Msg { return msgBuscar{o, n} })
+}
+
+// buscar pide la lista con lo escrito, si cambió.
+func (p *Pagina) buscar() tea.Cmd {
+	p.nbusq++ // una espera en camino ya no vale
+	if p.busqueda == p.entrada {
 		return nil
 	}
 	p.busqueda = p.entrada
@@ -726,6 +761,7 @@ func (p *Pagina) teclaBusqueda(k tea.KeyPressMsg) tea.Cmd {
 	switch k.String() {
 	case "esc":
 		p.buscando = false
+		p.nbusq++
 		if !p.enVisor && p.busqueda != p.antes {
 			p.busqueda = p.antes
 			return p.cargar(false)
@@ -734,7 +770,9 @@ func (p *Pagina) teclaBusqueda(k tea.KeyPressMsg) tea.Cmd {
 		p.buscando = false
 		if p.enVisor {
 			p.visor.Buscar(p.entrada)
+			return nil
 		}
+		return p.buscar()
 	case "backspace":
 		r := []rune(p.entrada)
 		p.entrada = string(r[:max(len(r)-1, 0)])
@@ -862,8 +900,9 @@ func (p *Pagina) actuar(tecla string, t nucleo.Trabajo) tea.Cmd {
 		}
 		return comp.Aviso(p.tx("error."+string(nucleo.CodigoCorreccionNoDisponible)), comp.Advertencia)
 	case "c":
-		if !terminado {
-			return p.accion(accionCancelar, t)
+		if !terminado { // como en Probar, se pregunta antes
+			p.pend = &pendiente{accion: accionCancelar, id: t.ID}
+			return comp.Confirmar(idioma.T("¿Cancelar la petición en marcha?"))
 		}
 	case "x":
 		if terminado {

@@ -155,13 +155,15 @@ func (g *generador) campos(t reflect.Type, parcial bool) []string {
 		if nombre == "" {
 			nombre = f.Name
 		}
-		opcional := parcial || strings.Contains(opciones, "omitempty") || strings.Contains(opciones, "omitzero") || f.Type.Kind() == reflect.Pointer
+		opcional := parcial || strings.Contains(opciones, "omitempty") || strings.Contains(opciones, "omitzero")
 		tipo := f.Tag.Get("ts")
 		if tipo == "" {
 			tipo = g.tipo(f.Type)
 		}
 		if opcional {
 			nombre += "?"
+		} else if f.Type.Kind() == reflect.Pointer {
+			tipo += " | null" // sin omitempty, un puntero nil sale como null
 		}
 		lineas = append(lineas, nombre+": "+tipo)
 	}
@@ -181,6 +183,9 @@ func (g *generador) tipo(t reflect.Type) string {
 		return "string"
 	case reflect.TypeFor[json.RawMessage]():
 		return "unknown"
+	}
+	if err := sinMarshalerPropio(t); t.Kind() != reflect.Pointer && err != nil {
+		log.Fatal(err)
 	}
 	switch t.Kind() {
 	case reflect.Pointer:
@@ -218,6 +223,24 @@ func (g *generador) tipo(t reflect.Type) string {
 	}
 	log.Fatalf("gents no sabe escribir %s", t)
 	return ""
+}
+
+// sinMarshalerPropio da error si el JSON de t no sale de sus campos (tiene MarshalJSON propio) y el generador no lo
+// sabe: ni está en literales ni es una raíz, cuyos campos describen ya lo que envía su MarshalJSON.
+func sinMarshalerPropio(t reflect.Type) error {
+	marshaler := reflect.TypeFor[json.Marshaler]()
+	if !t.Implements(marshaler) && !reflect.PointerTo(t).Implements(marshaler) {
+		return nil
+	}
+	if _, ok := literales[t]; ok {
+		return nil
+	}
+	for _, r := range raices {
+		if reflect.TypeOf(r.valor) == t {
+			return nil
+		}
+	}
+	return fmt.Errorf("%s tiene MarshalJSON propio: añádelo a literales con su tipo de TypeScript", t)
 }
 
 func main() {

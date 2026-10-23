@@ -5,8 +5,9 @@ import es from '../src/idiomas/es.ts'
 import en from '../src/idiomas/en.ts'
 import { temas } from '../src/ayuda/indice.ts'
 import { plantillas } from '../src/plantillas.ts'
-import { aEsquema } from '../src/esquemaCampos.ts'
-import { ayudaDe, CLAVES_AGENTES, CLAVES_EJECUTAR, CLAVES_HISTORIAL, CLAVES_INICIO, generar, textosDe, plantillasDe, URL_AYUDA, type Tema } from './terminal-datos.ts'
+import { aEsquema, ejemploDe } from '../src/esquemaCampos.ts'
+import { ayudaDe, CLAVES_AGENTES, CLAVES_EJECUTAR, CLAVES_HISTORIAL, CLAVES_INICIO, ejemplosDeCampos, generar, textosDe, plantillasDe, URL_AYUDA,
+  type Tema } from './terminal-datos.ts'
 
 const fuente = { temas, plantillas, es, en, ejemplos: () => [{ id: 'curl-nativa', codigo: 'a' }, { id: 'python-nativa', codigo: 'b' },
   { id: 'node-nativa', codigo: 'c' }, { id: 'go-nativa', codigo: 'd' }, { id: 'python', codigo: 'e' }] }
@@ -148,9 +149,16 @@ test('las plantillas salen con su nombre, instrucciones y el esquema de esquemaC
   })
 })
 
-test('generar escribe los cuatro archivos con LF y los ejemplos curl, python y node', () => {
+test('las muestras de respuesta salen de ejemploDe, con los límites de cada tipo y las plantillas', () => {
+  const { casos } = ejemplosDeCampos(plantillas)
+  assert.equal(casos.length, 1 + plantillas.length)
+  assert.equal(casos[0].ejemplo, '{"t":"…","f":"2026-01-31","total":5,"n":-3,"e":3,"s":true,"o":"alta","l":[{"a":true},{"a":true}],"v":[],"x":{}}')
+  for (const c of casos) assert.equal(c.ejemplo, JSON.stringify(ejemploDe(c.campos)))
+})
+
+test('generar escribe los cinco archivos con LF y los ejemplos curl, python y node', () => {
   const archivos = generar(fuente)
-  assert.deepEqual([...archivos.keys()], ['ayuda.json', 'plantillas.json', 'textos.json', 'testdata/ejemplos.json'])
+  assert.deepEqual([...archivos.keys()], ['ayuda.json', 'plantillas.json', 'textos.json', 'testdata/ejemplos.json', 'testdata/ejemplos-campos.json'])
   for (const texto of archivos.values()) assert.ok(texto.endsWith('}\n') && !texto.includes('\r'))
   const ejemplos = JSON.parse(archivos.get('testdata/ejemplos.json')!)
   assert.deepEqual(ejemplos.ejemplos, [{ id: 'curl', codigo: 'a' }, { id: 'python', codigo: 'b' }, { id: 'node', codigo: 'c' }])

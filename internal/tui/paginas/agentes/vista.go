@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"charm.land/lipgloss/v2"
+
 	"tramtai/internal/adaptadores"
 	catalogo "tramtai/internal/agentes"
 	"tramtai/internal/contrato"
@@ -121,13 +123,10 @@ func (p *Pagina) Vista() string {
 		cabecera := e.Titulo.Render(e.Recortar(nombre(a.Agente), ancho)) + " " + e.Tenue.Render(e.Iconos.Separador+" "+p.etiqueta(a.Estado))
 		return cabecera + "\n\n" + p.visor.Vista()
 	}
-	var lineas []string // el título ya está en la cabecera de la app
-	switch {
-	case p.sinServ:
-		return strings.Join(append(lineas, "", e.Advertencia.Render(e.Recortar(idioma.T("El servicio no responde · r reintenta"), ancho))), "\n")
-	case !p.cargado && p.err == "":
-		return strings.Join(append(lineas, "", e.Tenue.Render(p.tx("comun.cargando"))), "\n")
+	if v, ok := e.Preambulo(p.lengua, ancho, p.sinServ, !p.cargado && p.err == ""); ok {
+		return v
 	}
+	var lineas []string // el título ya está en la cabecera de la app
 	if alto >= 12 {
 		lineas = append(lineas, e.Tenue.Render(e.Recortar(p.tx("agentes.subtitulo"), ancho)))
 	}
@@ -139,7 +138,7 @@ func (p *Pagina) Vista() string {
 		if p.cargando {
 			lineas[len(lineas)-1] = e.Tenue.Render(p.tx("comun.cargando"))
 		}
-		lineas = append(lineas, p.lista.Vista(ancho, max(alto-len(lineas), 1)))
+		lineas = append(lineas, p.lista.Vista(ancho, max(alto-lipgloss.Height(strings.Join(lineas, "\n")), 1))) // el error ocupa sus líneas
 	}
 	return strings.Join(lineas, "\n")
 }

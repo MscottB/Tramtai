@@ -104,7 +104,7 @@ func normalizarPunto(p ConfigPunto, instancia string, puertoServicio int) (Confi
 }
 
 // validarRespaldo rechaza un respaldo con el que toda petición fallaría: un agente que no existe o una entrada fuera de
-// modelos_permitidos. NormalizarPunto solo ve el formato; existe pregunta al registro del servicio.
+// modelos_permitidos. normalizarPunto solo ve el formato; existe pregunta al registro del servicio.
 func validarRespaldo(p ConfigPunto, existe func(agente string) bool) error {
 	for _, e := range p.Respaldo {
 		agente, _, _ := nucleo.DividirRespaldo(e)
@@ -144,7 +144,7 @@ func validarParaApps(p ConfigPunto) error {
 func (s *Servicio) existe(agente string) bool { return s.opc.Registro[agente] != nil }
 
 // validarPunto aplica las reglas para guardar una API: un respaldo con el que funcione y solo agentes habilitados para
-// apps. El formato lo comprueba NormalizarPunto.
+// apps. El formato lo comprueba normalizarPunto.
 func validarPunto(p ConfigPunto, existe func(string) bool) error {
 	if err := validarRespaldo(p, existe); err != nil {
 		return err
@@ -188,7 +188,7 @@ func politicaDe(p ConfigPunto) *api.Punto {
 		pol.ModoContexto, pol.FormatoSalida, pol.TiempoLimite = e.ModoContexto, e.FormatoSalida, e.TiempoLimiteSegundos
 	}
 	if len(p.Esquema) > 0 {
-		pol.Esquema, _ = json.Marshal(p.Esquema) // ya validado en NormalizarPunto
+		pol.Esquema, _ = json.Marshal(p.Esquema) // ya validado en normalizarPunto
 	}
 	pol.Respaldo, pol.ReintentosSalida = p.Respaldo, p.ReintentosSalida
 	return pol
@@ -290,6 +290,9 @@ func (s *Servicio) puntosDeseados() ([]candidato, []string) {
 	return salida, errores
 }
 
+// leerHuellaPunto es LeerHuellaPunto; las pruebas la sustituyen para simular una lectura lenta.
+var leerHuellaPunto = LeerHuellaPunto
+
 // Recargar aplica la configuración de puntos de acceso sin reiniciar: abre los nuevos, cierra los retirados y
 // deja intactos los que no cambiaron, sin afectar a los trabajos en curso. Leer las claves y la configuración y abrir
 // los oyentes va fuera de s.mu: un Recargar lento no frena las peticiones de los demás espacios. muRecargar excluye a
@@ -309,7 +312,7 @@ func (s *Servicio) Recargar() []EstadoPunto {
 	s.mu.RUnlock()
 	nuevos := map[string]*puntoActivo{}
 	for _, c := range deseados {
-		huella, err := LeerHuellaPunto(RutaTokenPunto(s.opc.Datos, c.cfg.Nombre))
+		huella, err := leerHuellaPunto(RutaTokenPunto(s.opc.Datos, c.cfg.Nombre))
 		if err != nil {
 			errores = append(errores, err.Error())
 			continue

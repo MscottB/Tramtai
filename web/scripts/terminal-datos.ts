@@ -6,7 +6,7 @@ import type { Bloque as BloqueWeb, Tema as TemaWeb } from '../src/ayuda/tipos'
 import type { Plantilla } from '../src/plantillas'
 import { CLAVES_UI } from '../src/ayuda/indice'
 import { ERRORES } from '../src/ayuda/temas/problemas'
-import { aEsquema } from '../src/esquemaCampos'
+import { aEsquema, ejemploDe, type Campo } from '../src/esquemaCampos'
 import { URL_SITIO } from './sitio'
 
 type Textos = Record<string, string>
@@ -67,8 +67,8 @@ export const CLAVES_HISTORIAL: string[] = [
   'historial.todaviaEnCurso', 'historial.coste', 'historial.duracion', 'historial.identificador', 'historial.reintentar',
   'historial.eliminarTitulo', 'historial.eliminarTexto', 'historial.vaciar', 'historial.vaciarTitulo', 'historial.vaciarTexto',
   'historial.vaciado', 'historial.origen', 'historial.origenPrincipal', 'historial.todosOrigenes', 'historial.origenProbar',
-  'historial.origenTerminal', 'historial.origenCli', 'historial.origenApp', 'historial.grupo', 'historial.mostrando', 'historial.verMas',
-  'historial.esfuerzo',
+  'historial.origenTerminal', 'historial.origenCli', 'historial.origenApp', 'historial.grupo', 'historial.mostrando', 'historial.mostrandoUno',
+  'historial.verMas', 'historial.esfuerzo',
   'ejecutar.respuesta', 'ejecutar.corregir', 'historial.cancelar', 'comun.eliminar',
   'ruta.cola', 'ruta.preparacion', 'ruta.ejecucion', 'ruta.validacion', 'ruta.llegada',
   'registro.titulo', 'registro.noDisponible', 'registro.aviso', 'registro.delAgente', 'registro.entrada', 'registro.contexto',
@@ -186,6 +186,29 @@ export interface Fuente {
   ejemplos: (entrada: Entrada) => { id: string; codigo: string }[]
 }
 
+// CAMPOS_EJEMPLO son los límites de cada tipo para «Ver un ejemplo de respuesta»: números con mínimo o solo máximo, el
+// entero con mínimo decimal, la opción vacía, listas con mínimo o máximo 0 y el objeto vacío. Con los campos de las
+// plantillas, TestEjemploComoLaWeb (internal/tui/paginas/ejecutar) los pasa por ejemploDe en Go y compara con la Web UI.
+export const CAMPOS_EJEMPLO: Campo[] = [
+  { nombre: 't', tipo: 'texto', obligatorio: true, descripcion: '' },
+  { nombre: 'f', tipo: 'fecha', obligatorio: true, descripcion: '' },
+  { nombre: 'total', tipo: 'numero', obligatorio: true, descripcion: '', minimo: 5 },
+  { nombre: 'n', tipo: 'entero', obligatorio: true, descripcion: '', maximo: -3 },
+  { nombre: 'e', tipo: 'entero', obligatorio: true, descripcion: '', minimo: 2.5 },
+  { nombre: 's', tipo: 'si_no', obligatorio: true, descripcion: '' },
+  { nombre: 'o', tipo: 'opcion', obligatorio: true, descripcion: '', opciones: [' ', 'alta'] },
+  { nombre: 'l', tipo: 'lista', obligatorio: true, descripcion: '', elemento: 'objeto', minimo: 2,
+    campos: [{ nombre: 'a', tipo: 'si_no', obligatorio: true, descripcion: '' }] },
+  { nombre: 'v', tipo: 'lista', obligatorio: true, descripcion: '', elemento: 'numero', maximo: 0 },
+  { nombre: 'x', tipo: 'objeto', obligatorio: true, descripcion: '' },
+]
+
+// ejemplosDeCampos son los casos de TestEjemploComoLaWeb: los campos y la muestra que da la Web UI, en JSON compacto.
+export function ejemplosDeCampos(plantillas: Plantilla[]) {
+  const casos = [CAMPOS_EJEMPLO, ...plantillas.map((p) => p.campos('es'))]
+  return { casos: casos.map((campos) => ({ campos, ejemplo: JSON.stringify(ejemploDe(campos)) })) }
+}
+
 const json = (v: unknown) => JSON.stringify(v, null, 2) + '\n'
 
 // generar devuelve cada archivo por su ruta relativa a internal/tui/datos/.
@@ -205,5 +228,6 @@ export function generar(f: Fuente): Map<string, string> {
     ['plantillas.json', json(plantillasDe(f.plantillas, textos))],
     ['textos.json', json(textosDe(textos))],
     ['testdata/ejemplos.json', json({ entrada, ejemplos })],
+    ['testdata/ejemplos-campos.json', json(ejemplosDeCampos(f.plantillas))],
   ])
 }

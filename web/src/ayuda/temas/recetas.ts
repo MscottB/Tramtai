@@ -13,7 +13,7 @@ export const recetas: Tema = {
       tipo: 'diagrama',
       paradas: [
         { icono: 'o_receipt_long', titulo: 'ayuda.recetas.d1', nota: 'ayuda.recetas.d1Nota' },
-        { icono: 'o_smart_toy', titulo: 'ayuda.recetas.d2', nota: 'ayuda.recetas.d2Nota' },
+        { icono: 'o_route', titulo: 'ayuda.recetas.d2', nota: 'ayuda.recetas.d2Nota' },
         { icono: 'o_alt_route', titulo: 'ayuda.recetas.d3', nota: 'ayuda.recetas.d3Nota' },
         { icono: 'o_task_alt', titulo: 'ayuda.recetas.d4', nota: 'ayuda.recetas.d4Nota' },
       ],

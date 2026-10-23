@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -72,6 +70,10 @@ func TestEnviarYCancelar(t *testing.T) {
 	if tr := ultimo(t, cli, id); tr.Estado.Terminal() {
 		t.Fatalf("Esc no la cancela: %s", tr.Estado)
 	}
+	// Como en la terminal: la app la oculta al volver y la muestra al entrar otra vez, y el seguimiento sigue.
+	ocultar(a)
+	mostrar(a)
+	a.HastaVer("en vivo")
 	if _, ok := pregunta(a.Pulsar("c")); !ok {
 		t.Fatal("c pregunta antes de cancelar")
 	}
@@ -88,6 +90,27 @@ func TestEnviarYCancelar(t *testing.T) {
 	a.Pulsar("right")
 	if n := strings.Count(a.Vista(), "esperar"); !pestana(a, "ejecutar.recientes") || n != 1 {
 		t.Fatalf("y queda en las recientes (%d):\n%s", n, a.Vista())
+	}
+}
+
+// TestCancelarYaTerminada: si la petición termina con la pregunta de cancelar abierta, confirmar ya no manda nada.
+func TestCancelarYaTerminada(t *testing.T) {
+	cli, id, b := conBloqueado(t)
+	proxy, fallar := prueba.ConFallo(t, cli)
+	a := abierta(t, proxy, id)
+	poner(t, a, tx("ejecutar.mensaje"), "esperar")
+	enviar(a)
+	a.HastaVer("primera parte", "en vivo")
+	if _, ok := pregunta(a.Pulsar("c")); !ok {
+		t.Fatal("c pregunta antes de cancelar")
+	}
+	b.SoltarFin()
+	if e := terminada(t, a); e != nucleo.Completado {
+		t.Fatalf("termina sola: %s", e)
+	}
+	fallar("no se puede cancelar una petición terminada") // lo que se mande ahora al servicio fallaría con este aviso
+	if fuera := a.Entregar(comp.Confirmado{}); len(fuera) != 0 {
+		t.Fatalf("ya terminada, confirmar no manda nada: %v", fuera)
 	}
 }
 
@@ -182,22 +205,27 @@ func TestRecetaEmpiezaArriba(t *testing.T) {
 func TestBorradorSobreviveReinicio(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	carpeta := t.TempDir()
-	a := abrir(t, contexto(t, cli, id, carpeta))
+	a, r := abrirConReloj(t, contexto(t, cli, id, carpeta))
 	escribir(t, a, tx("ejecutar.mensaje"), "a medias")
-	a.Hasta(func() bool {
-		datos, _ := os.ReadFile(filepath.Join(carpeta, archivoBorrador))
-		return strings.Contains(string(datos), "a medias")
-	})
+	r.Pasar(ejecutar.EsperaBorrador - time.Millisecond)
+	a.Asentar()
+	if _, hay := hayBorrador(carpeta); hay {
+		t.Fatal("el borrador espera a que se deje de escribir")
+	}
+	r.Pasar(time.Millisecond)
+	a.Asentar()
+	if d, _ := hayBorrador(carpeta); !strings.Contains(d, "a medias") {
+		t.Fatalf("pasada la espera, el borrador se guarda: %q", d)
+	}
 	ocultar(a)
 	otra := abrir(t, contexto(t, cli, id, carpeta))
 	if v := valor(t, otra, tx("ejecutar.mensaje")); v != "a medias" {
 		t.Fatalf("al volver a abrir, el mensaje es el del borrador: %q", v)
 	}
 	enviar(otra)
-	otra.Hasta(func() bool {
-		_, err := os.Stat(filepath.Join(carpeta, archivoBorrador))
-		return os.IsNotExist(err)
-	})
+	if _, hay := hayBorrador(carpeta); hay {
+		t.Fatal("enviar borra el borrador")
+	}
 	terminada(t, otra)
 }
 
@@ -501,7 +529,7 @@ func TestTextosComoLaWeb(t *testing.T) {
 	}
 	c := contexto(t, cli, id, "")
 	c.Idioma = "en"
-	en := prueba.Abrir(t, ejecutar.Nueva("en"), c)
+	en, _ := abrirConReloj(t, c)
 	if en.P.Titulo() != "Playground" {
 		t.Fatalf("el título es el del menú en inglés: %q", en.P.Titulo())
 	}

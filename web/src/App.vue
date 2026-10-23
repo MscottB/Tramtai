@@ -421,6 +421,9 @@ const pila = ref<string[]>([])
 
 // intencion es lo que la página de origen le pasó a la que se muestra; cualquier otra navegación la deja vacía.
 const intencion = ref<Intencion | null>(null)
+// Al cambiar de espacio la página se vuelve a montar (:key): la intención era del espacio anterior y se descarta, para
+// no reabrir una petición o seguir una que en este espacio no existe.
+watch(() => sesion.value?.instancia, () => (intencion.value = null))
 function ir(destino: Destino) {
   const { id, intencion: datos } = destinoDe(destino)
   if (id === pagina.value) return

@@ -1,0 +1,265 @@
+{
+  "casos": [
+    {
+      "campos": [
+        {
+          "nombre": "t",
+          "tipo": "texto",
+          "obligatorio": true,
+          "descripcion": ""
+        },
+        {
+          "nombre": "f",
+          "tipo": "fecha",
+          "obligatorio": true,
+          "descripcion": ""
+        },
+        {
+          "nombre": "total",
+          "tipo": "numero",
+          "obligatorio": true,
+          "descripcion": "",
+          "minimo": 5
+        },
+        {
+          "nombre": "n",
+          "tipo": "entero",
+          "obligatorio": true,
+          "descripcion": "",
+          "maximo": -3
+        },
+        {
+          "nombre": "e",
+          "tipo": "entero",
+          "obligatorio": true,
+          "descripcion": "",
+          "minimo": 2.5
+        },
+        {
+          "nombre": "s",
+          "tipo": "si_no",
+          "obligatorio": true,
+          "descripcion": ""
+        },
+        {
+          "nombre": "o",
+          "tipo": "opcion",
+          "obligatorio": true,
+          "descripcion": "",
+          "opciones": [
+            " ",
+            "alta"
+          ]
+        },
+        {
+          "nombre": "l",
+          "tipo": "lista",
+          "obligatorio": true,
+          "descripcion": "",
+          "elemento": "objeto",
+          "minimo": 2,
+          "campos": [
+            {
+              "nombre": "a",
+              "tipo": "si_no",
+              "obligatorio": true,
+              "descripcion": ""
+            }
+          ]
+        },
+        {
+          "nombre": "v",
+          "tipo": "lista",
+          "obligatorio": true,
+          "descripcion": "",
+          "elemento": "numero",
+          "maximo": 0
+        },
+        {
+          "nombre": "x",
+          "tipo": "objeto",
+          "obligatorio": true,
+          "descripcion": ""
+        }
+      ],
+      "ejemplo": "{\"t\":\"…\",\"f\":\"2026-01-31\",\"total\":5,\"n\":-3,\"e\":3,\"s\":true,\"o\":\"alta\",\"l\":[{\"a\":true},{\"a\":true}],\"v\":[],\"x\":{}}"
+    },
+    {
+      "campos": [
+        {
+          "nombre": "nombre",
+          "tipo": "texto",
+          "obligatorio": true,
+          "descripcion": "Nombre de la persona o empresa"
+        },
+        {
+          "nombre": "fecha",
+          "tipo": "fecha",
+          "obligatorio": false,
+          "descripcion": "Fecha del documento (AAAA-MM-DD)"
+        },
+        {
+          "nombre": "total",
+          "tipo": "numero",
+          "obligatorio": false,
+          "descripcion": "Importe total, sin símbolo de moneda"
+        }
+      ],
+      "ejemplo": "{\"nombre\":\"…\",\"fecha\":\"2026-01-31\",\"total\":0}"
+    },
+    {
+      "campos": [
+        {
+          "nombre": "categoria",
+          "tipo": "opcion",
+          "obligatorio": true,
+          "descripcion": "La categoría que mejor encaja",
+          "opciones": [
+            "consulta",
+            "queja",
+            "otro"
+          ]
+        },
+        {
+          "nombre": "confianza",
+          "tipo": "numero",
+          "obligatorio": true,
+          "minimo": 0,
+          "maximo": 1,
+          "descripcion": "De 0 a 1"
+        },
+        {
+          "nombre": "motivo",
+          "tipo": "texto",
+          "obligatorio": true,
+          "descripcion": "Por qué esa categoría, en una frase"
+        }
+      ],
+      "ejemplo": "{\"categoria\":\"consulta\",\"confianza\":0,\"motivo\":\"…\"}"
+    },
+    {
+      "campos": [
+        {
+          "nombre": "resumen",
+          "tipo": "texto",
+          "obligatorio": true,
+          "descripcion": "Resumen en dos o tres frases"
+        },
+        {
+          "nombre": "puntos",
+          "tipo": "lista",
+          "elemento": "texto",
+          "obligatorio": true,
+          "descripcion": "Las ideas clave",
+          "minimo": 3,
+          "maximo": 7
+        }
+      ],
+      "ejemplo": "{\"resumen\":\"…\",\"puntos\":[\"…\",\"…\",\"…\"]}"
+    },
+    {
+      "campos": [
+        {
+          "nombre": "sentimiento",
+          "tipo": "opcion",
+          "obligatorio": true,
+          "descripcion": "",
+          "opciones": [
+            "positivo",
+            "neutral",
+            "negativo"
+          ]
+        },
+        {
+          "nombre": "motivo",
+          "tipo": "texto",
+          "obligatorio": true,
+          "descripcion": "Qué lo indica, en una frase"
+        }
+      ],
+      "ejemplo": "{\"sentimiento\":\"positivo\",\"motivo\":\"…\"}"
+    },
+    {
+      "campos": [
+        {
+          "nombre": "respuesta",
+          "tipo": "si_no",
+          "obligatorio": true,
+          "descripcion": "true para sí, false para no"
+        },
+        {
+          "nombre": "motivo",
+          "tipo": "texto",
+          "obligatorio": true,
+          "descripcion": "Por qué, en una frase"
+        }
+      ],
+      "ejemplo": "{\"respuesta\":true,\"motivo\":\"…\"}"
+    },
+    {
+      "campos": [
+        {
+          "nombre": "tareas",
+          "tipo": "lista",
+          "elemento": "objeto",
+          "obligatorio": true,
+          "descripcion": "Cada tarea que aparece en el texto",
+          "campos": [
+            {
+              "nombre": "tarea",
+              "tipo": "texto",
+              "obligatorio": true,
+              "descripcion": "Qué hay que hacer"
+            },
+            {
+              "nombre": "responsable",
+              "tipo": "texto",
+              "obligatorio": false,
+              "descripcion": "Quién la hace, si se dice"
+            },
+            {
+              "nombre": "fecha",
+              "tipo": "fecha",
+              "obligatorio": false,
+              "descripcion": "Fecha límite, si se dice"
+            }
+          ]
+        }
+      ],
+      "ejemplo": "{\"tareas\":[{\"tarea\":\"…\",\"responsable\":\"…\",\"fecha\":\"2026-01-31\"}]}"
+    },
+    {
+      "campos": [
+        {
+          "nombre": "personas",
+          "tipo": "lista",
+          "elemento": "texto",
+          "obligatorio": true,
+          "descripcion": ""
+        },
+        {
+          "nombre": "organizaciones",
+          "tipo": "lista",
+          "elemento": "texto",
+          "obligatorio": true,
+          "descripcion": ""
+        },
+        {
+          "nombre": "lugares",
+          "tipo": "lista",
+          "elemento": "texto",
+          "obligatorio": true,
+          "descripcion": ""
+        },
+        {
+          "nombre": "fechas",
+          "tipo": "lista",
+          "elemento": "texto",
+          "obligatorio": true,
+          "descripcion": ""
+        }
+      ],
+      "ejemplo": "{\"personas\":[\"…\"],\"organizaciones\":[\"…\"],\"lugares\":[\"…\"],\"fechas\":[\"…\"]}"
+    }
+  ]
+}

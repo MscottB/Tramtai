@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -380,6 +381,36 @@ func conBase(t *testing.T, f func(string) (*persistencia.Almacen, error)) {
 	t.Cleanup(func() { abrirBase = anterior })
 }
 
+// Recargar lee las claves de las APIs fuera de s.mu: mientras espera una lectura lenta, el servicio sigue atendiendo
+// (hallazgo 12).
+func TestRecargarNoBloqueaElServicio(t *testing.T) {
+	s, _, _ := entorno(t, puntosOrigen, "", adaptadores.Simulado{})
+	if _, err := s.ActivarGlobal(); err != nil {
+		t.Fatal(err)
+	}
+	dentro, soltar := make(chan struct{}), make(chan struct{})
+	var una sync.Once
+	anterior := leerHuellaPunto
+	leerHuellaPunto = func(ruta string) (string, error) {
+		una.Do(func() { close(dentro); <-soltar })
+		return anterior(ruta)
+	}
+	t.Cleanup(func() { leerHuellaPunto = anterior })
+	hecho := make(chan struct{})
+	go func() { s.Recargar(); close(hecho) }()
+	<-dentro
+	respondio := make(chan struct{})
+	go func() { s.instancia("global"); close(respondio) }()
+	select {
+	case <-respondio:
+	case <-time.After(5 * time.Second):
+		close(soltar)
+		t.Fatal("con Recargar leyendo una clave, el servicio dejó de atender")
+	}
+	close(soltar)
+	<-hecho
+}
+
 // Activar la misma instancia a la vez abre su base una sola vez y todos reciben la misma.
 func TestActivarALaVez(t *testing.T) {
 	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
@@ -491,11 +522,30 @@ func TestRestaurarConInstanciasDanado(t *testing.T) {
 // /healthz no expone el identificador del servicio y solo prueba la identidad con el reto: el HMAC del token de servicio.
 func TestSaludConReto(t *testing.T) {
 	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
-	if _, cuerpo := pedir(t, ts.URL, "GET", "/healthz", "", ""); strings.Contains(cuerpo, s.ID) || strings.Contains(cuerpo, "prueba") {
-		t.Fatalf("sin reto no hay identificador ni prueba: %s", cuerpo)
+	if _, cuerpo := pedir(t, ts.URL, "GET", "/healthz", "", ""); strings.Contains(cuerpo, "prueba") {
+		t.Fatalf("sin reto no hay prueba: %s", cuerpo)
 	}
 	_, cuerpo := pedir(t, ts.URL, "GET", "/healthz?reto=abc", "", "")
-	if !strings.Contains(cuerpo, `"prueba":"`+contrato.PruebaIdentidad(s.tokenAdmin, "abc")+`"`) || strings.Contains(cuerpo, s.ID) {
+	if !strings.Contains(cuerpo, `"prueba":"`+contrato.PruebaIdentidad(s.tokenAdmin, s.Base(), "abc")+`"`) {
 		t.Fatalf("la prueba es el HMAC del token sobre el reto: %s", cuerpo)
+	}
+}
+
+// La CLI de la versión anterior (0.55) reconoce al servicio por el identificador en /healthz, sin reto: se lo da solo
+// al mismo usuario del sistema, que ya puede leerlo en servicio.json. A otro usuario o a otro equipo, no (hallazgo 2).
+func TestSaludParaLaCLIAnterior(t *testing.T) {
+	if runtime.GOOS != "windows" && runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+		t.Skip("sin identificación del dueño de la conexión en este sistema")
+	}
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	if _, cuerpo := pedir(t, ts.URL, "GET", "/healthz", "", ""); !strings.Contains(cuerpo, `"servicio":"`+s.ID+`"`) {
+		t.Fatalf("el mismo usuario recibe el identificador: %s", cuerpo)
+	}
+	r := httptest.NewRequest("GET", "/healthz", nil)
+	r.Host, r.RemoteAddr = "127.0.0.1", "203.0.113.5:4000"
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, r)
+	if w.Code != 200 || strings.Contains(w.Body.String(), s.ID) {
+		t.Fatalf("desde otro equipo no hay identificador: %d %s", w.Code, w.Body)
 	}
 }

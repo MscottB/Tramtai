@@ -18,7 +18,7 @@
           <q-select v-model="origen" :options="origenes" emit-value map-options dense outlined :label="t('historial.origen')" />
         </div>
         <div class="col-12 col-sm-6 col-md-3">
-          <q-input v-model="busqueda" dense outlined clearable :placeholder="t('historial.buscar')" :aria-label="t('historial.buscar')" debounce="300">
+          <q-input v-model="busqueda" dense outlined clearable maxlength="200" :placeholder="t('historial.buscar')" :aria-label="t('historial.buscar')" debounce="300">
             <template #prepend><q-icon name="search" /></template>
           </q-input>
         </div>
@@ -139,6 +139,7 @@ import type { EstadoPunto, EventoRegistro, Trabajo } from '../api/tipos'
 import type { Destino, IntencionDe } from '../navegacion'
 import { modeloDe } from '../agentes'
 import { duracion, estadoInfo, fecha, haceCuanto, esfuerzoUsado, sinDato, terminales, textoDe } from '../formato'
+import { historialVivo } from '../historialVivo'
 import { t } from '../i18n'
 
 const props = defineProps<{ intencion?: IntencionDe<'historial'> }>()
@@ -323,57 +324,30 @@ function seguirEnVivo() {
   emit('ir', { pagina: 'ejecutar', seguir: id })
 }
 
-// La lista se pone al día cuando el flujo de la instancia (GET /api/v1/eventos) cuenta un cambio: una petición por
-// cambio, no una cada 5 s. Con la pestaña oculta el flujo se cierra (no ocupa un cupo) y al volver su foto pone la
-// lista al día. Si el servicio rechaza el flujo (sin cupo), se consulta cada 5 s.
-let fuente: EventSource | undefined
-let intervalo: number | undefined
-let pendiente = false
-let primeraFoto = true
-// alCambiar recarga, o lo deja pendiente si hay una consulta en vuelo (podría traer la lista de antes del cambio).
-// Con páginas extra cargadas (Ver más) no recarga: la recarga solo trae la primera página.
-function alCambiar() {
-  if (trabajos.value.length > PAGINA) return
-  if (enVuelo) pendiente = true
-  else cargar(true)
-}
-function ponerAlDia() {
-  if (!pendiente || enVuelo) return
-  pendiente = false
-  alCambiar()
-}
-function seguir() {
-  if (fuente || document.hidden) return
-  let enFoto = true // los eventos de la foto son lo que ya se cargó
-  const f = (fuente = new EventSource('/api/v1/eventos'))
-  f.addEventListener('trabajo', () => enFoto || alCambiar())
-  f.addEventListener('foto', () => {
-    enFoto = false
-    if (!primeraFoto) alCambiar()
-    primeraFoto = false
-  })
-  f.onerror = () => {
-    if (f.readyState !== EventSource.CLOSED) return // se reconecta solo y su foto pone la lista al día
-    fuente = undefined
-    primeraFoto = false
-    intervalo ??= window.setInterval(() => !document.hidden && !enVuelo && trabajos.value.length <= PAGINA && cargar(true), 5000)
-  }
-}
+// vivo pone la lista al día con el flujo del espacio, o con un sondeo de 5 s si el servicio lo rechaza (historialVivo.ts).
+const vivo = historialVivo({
+  abrir: () => new EventSource('/api/v1/eventos'),
+  recargar: () => cargar(true),
+  enVuelo: () => enVuelo,
+  paginasExtra: () => trabajos.value.length > PAGINA,
+  oculta: () => document.hidden,
+  cadaCinco: (f) => window.setInterval(f, 5000),
+  parar: (id) => clearInterval(id),
+})
+const ponerAlDia = () => vivo.ponerAlDia()
 function alCambiarVisibilidad() {
-  if (!document.hidden) return seguir()
-  fuente?.close()
-  fuente = undefined
+  if (document.hidden) vivo.ocultar()
+  else vivo.seguir()
 }
 onMounted(() => {
   cargar()
   api.puntos().then((l) => (apis.value = l)).catch(() => {})
   if (props.intencion?.abrir) abrir({ id: props.intencion.abrir } as Trabajo)
-  seguir()
+  vivo.seguir()
   document.addEventListener('visibilitychange', alCambiarVisibilidad)
 })
 onUnmounted(() => {
-  fuente?.close()
-  clearInterval(intervalo)
+  vivo.cerrar()
   document.removeEventListener('visibilitychange', alCambiarVisibilidad)
 })
 </script>

@@ -6,6 +6,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/datos"
 )
@@ -28,6 +29,8 @@ type Estilos struct {
 
 	Borde  lipgloss.Border
 	Iconos Iconos
+	// LineaOtra es el color de día y de noche de la línea de un agente sin color propio (linea-otro de DESIGN.md).
+	LineaOtra [2]string
 }
 
 // Iconos son los caracteres de dibujo; con TRAMTAI_ASCII=1, o si la consola no es UTF-8, son ASCII.
@@ -74,6 +77,34 @@ func (e *Estilos) AvisoError(lengua string, codigo nucleo.CodigoError, mensaje s
 	return l
 }
 
+// Preambulo es lo que enseña una página en lugar de lo suyo: el aviso con el servicio caído o «Cargando…» mientras llega.
+// Con ok falso, la página ya puede enseñar lo suyo.
+func (e *Estilos) Preambulo(lengua string, ancho int, sinServicio, cargando bool) (texto string, ok bool) {
+	switch {
+	case sinServicio:
+		return "\n" + e.Advertencia.Render(e.Recortar(e.A(idioma.T("El servicio no responde · r reintenta")), ancho)), true
+	case cargando:
+		return "\n" + e.Tenue.Render(e.Tx(lengua, "comun.cargando")), true
+	}
+	return "", false
+}
+
+// Envolver parte el texto por palabras, cada párrafo por su lado, en líneas de como mucho ancho columnas. Con n mayor que
+// cero, en como mucho n líneas: lo que no cabe se corta con la elipsis en la última.
+func (e *Estilos) Envolver(texto string, ancho, n int) []string {
+	var lineas []string
+	for _, parrafo := range strings.Split(texto, "\n") {
+		for _, l := range strings.Split(ansi.Wrap(parrafo, max(ancho, 1), ""), "\n") {
+			lineas = append(lineas, strings.TrimRight(l, " "))
+		}
+	}
+	if n > 0 && len(lineas) > n {
+		lineas[n-1] = e.Recortar(strings.Join(lineas[n-1:], " "), ancho)
+		lineas = lineas[:n]
+	}
+	return lineas
+}
+
 // Rellenar completa texto con espacios hasta ancho columnas visibles: para alinear columnas.
 func Rellenar(texto string, ancho int) string {
 	return texto + strings.Repeat(" ", max(ancho-lipgloss.Width(texto), 0))
@@ -87,7 +118,7 @@ func (e *Estilos) Linea(claro, oscuro string) lipgloss.Style {
 		return estilo
 	}
 	if claro == "" || oscuro == "" {
-		claro, oscuro = "#64748b", "#8a9aa8"
+		claro, oscuro = e.LineaOtra[0], e.LineaOtra[1]
 	}
 	return estilo.Foreground(lipgloss.LightDark(e.Oscuro)(lipgloss.Color(claro), lipgloss.Color(oscuro)))
 }

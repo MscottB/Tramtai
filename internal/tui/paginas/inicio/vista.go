@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"charm.land/lipgloss/v2"
-	"github.com/charmbracelet/x/ansi"
 
 	catalogo "tramtai/internal/agentes"
 	"tramtai/internal/contrato"
@@ -21,12 +20,10 @@ import (
 
 // envolver parte un texto (con saltos de línea propios) en líneas de como mucho ancho columnas, con sangria espacios por
 // delante, y las pinta con el estilo.
-func envolver(texto string, ancho, sangria int, estilo lipgloss.Style) []string {
-	var lineas []string
-	for _, parrafo := range strings.Split(texto, "\n") {
-		for _, l := range strings.Split(ansi.Wrap(parrafo, max(ancho-sangria, 1), ""), "\n") {
-			lineas = append(lineas, strings.Repeat(" ", sangria)+estilo.Render(strings.TrimRight(l, " ")))
-		}
+func (p *Pagina) envolver(texto string, ancho, sangria int, estilo lipgloss.Style) []string {
+	lineas := p.estilos.Envolver(texto, ancho-sangria, 0)
+	for i, l := range lineas {
+		lineas[i] = strings.Repeat(" ", sangria) + estilo.Render(l)
 	}
 	return lineas
 }
@@ -49,7 +46,7 @@ func (p *Pagina) pasos() []paso {
 		case pagina.PaginaConectar:
 			lista = append(lista, paso{p.tx("inicio.paso3"), p.tx("inicio.paso3Detalle"), x.Pagina, x.Hecho})
 		case pagina.PaginaConfiguracion:
-			lista = append(lista, paso{p.tx("inicio.paso4", "sistema", sistema()), p.a(idioma.T("Las apps siguen funcionando aunque cierres la terminal")), x.Pagina, x.Hecho})
+			lista = append(lista, paso{p.tx("inicio.paso4", "sistema", sistema()), p.a(idioma.T("Tus apps funcionan al encender el equipo")), x.Pagina, x.Hecho})
 		}
 	}
 	return lista
@@ -110,7 +107,7 @@ func (p *Pagina) accion(sangria int, pares ...string) string {
 // aviso es un aviso con sus acciones: el texto en advertencia y debajo lo que se puede hacer.
 func (p *Pagina) aviso(texto string, acciones ...string) []string {
 	e := p.estilos
-	lineas := envolver(texto, p.c.Ancho, 2, e.Advertencia)
+	lineas := p.envolver(texto, p.c.Ancho, 2, e.Advertencia)
 	lineas[0] = e.Advertencia.Render("!") + " " + strings.TrimLeft(lineas[0], " ")
 	return append(lineas, p.accion(2, acciones...))
 }
@@ -157,15 +154,12 @@ func (p *Pagina) contador(icono string, estilo lipgloss.Style, tecla, clave stri
 // lineas es todo lo que dice la página, de arriba abajo; Vista enseña la parte que cabe.
 func (p *Pagina) lineas() []string {
 	e, ancho := p.estilos, max(p.c.Ancho, 1)
-	var l []string // el título ya está en la cabecera de la app
-	switch {
-	case p.sinServ:
-		return append(l, "", e.Advertencia.Render(e.Recortar(p.a(idioma.T("El servicio no responde · r reintenta")), ancho)))
-	case !p.cargado && p.err == "":
-		return append(l, "", e.Tenue.Render(p.tx("comun.cargando")))
+	if v, ok := e.Preambulo(p.lengua, ancho, p.sinServ, !p.cargado && p.err == ""); ok {
+		return strings.Split(v, "\n")
 	}
+	var l []string // el título ya está en la cabecera de la app
 	if p.err != "" {
-		l = append(l, envolver(p.err, ancho, 0, e.Error)...)
+		l = append(l, p.envolver(p.err, ancho, 0, e.Error)...)
 	}
 	l = append(l, e.Recortar(e.Tenue.Render(p.tx("inicio.direccion"))+" "+e.Acento.Render(p.inst.Base), ancho))
 	if p.hayAgentes {
@@ -207,7 +201,7 @@ func (p *Pagina) lineas() []string {
 	}
 	l = append(l, cabecera)
 	if len(filas) == 0 {
-		l = append(l, envolver(p.tx("inicio.redTexto"), ancho, 0, e.Tenue)...)
+		l = append(l, p.envolver(p.tx("inicio.redTexto"), ancho, 0, e.Tenue)...)
 	}
 	for _, tr := range filas {
 		l = append(l, e.Recortar(p.fila(tr), ancho))
@@ -238,7 +232,7 @@ func (p *Pagina) lineas() []string {
 		l = append(l, e.Grupo.Render(p.tx("inicio.primerosPasos")), e.Tenue.Render(e.Recortar(p.tx("inicio.comprobando"), ancho)))
 	case hechos == len(pasos):
 		l = append(l, e.Grupo.Render(p.tx("inicio.primerosPasos")), e.Exito.Render(e.Iconos.Ok+" "+p.tx("inicio.todoListo")))
-		l = append(l, envolver(p.tx("inicio.todoListoTexto"), ancho, 2, e.Tenue)...)
+		l = append(l, p.envolver(p.tx("inicio.todoListoTexto"), ancho, 2, e.Tenue)...)
 	default:
 		l = append(l, e.Grupo.Render(p.tx("inicio.primerosPasos"))+e.Tenue.Render(" "+e.Iconos.Separador+" "+
 			p.tx("inicio.guiaProgreso", "hechos", strconv.Itoa(hechos), "total", strconv.Itoa(len(pasos)))))
@@ -255,7 +249,7 @@ func (p *Pagina) lineas() []string {
 
 	l = append(l, "", e.Grupo.Render(p.tx("inicio.recientes")))
 	if len(p.recientes) == 0 {
-		l = append(l, envolver(p.tx("inicio.sinTrabajos"), ancho, 0, e.Tenue)...)
+		l = append(l, p.envolver(p.tx("inicio.sinTrabajos"), ancho, 0, e.Tenue)...)
 	}
 	for _, j := range p.recientes {
 		l = append(l, p.reciente(j)...)

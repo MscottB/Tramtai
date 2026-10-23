@@ -21,8 +21,6 @@ var origenesConocidos = []string{"probar", "terminal", "cli", "app"}
 var claveOrigen = map[string]string{"probar": "historial.origenProbar", "terminal": "historial.origenTerminal",
 	"cli": "historial.origenCli", "app": "historial.origenApp"}
 
-func itoa(n int) string { return strconv.Itoa(n) }
-
 // aDerecha alinea el texto a la derecha en ancho columnas visibles.
 func aDerecha(texto string, ancho int) string {
 	return strings.Repeat(" ", max(ancho-lipgloss.Width(texto), 0)) + texto
@@ -166,13 +164,10 @@ func (p *Pagina) Vista() string {
 
 func (p *Pagina) vistaLista() string {
 	e, ancho, alto := p.estilos, max(p.c.Ancho, 1), max(p.c.Alto, 1)
-	var l []string // el título ya está en la cabecera de la app
-	switch {
-	case p.sinServ:
-		return strings.Join(append(l, "", e.Advertencia.Render(e.Recortar(p.a(idioma.T("El servicio no responde · r reintenta")), ancho))), "\n")
-	case !p.cargado && p.err == "":
-		return strings.Join(append(l, "", e.Tenue.Render(p.tx("comun.cargando"))), "\n")
+	if v, ok := e.Preambulo(p.lengua, ancho, p.sinServ, !p.cargado && p.err == ""); ok {
+		return v
 	}
+	var l []string // el título ya está en la cabecera de la app
 	if p.err != "" {
 		l = append(l, e.Error.Width(ancho).Render(p.err)) // entero, en las líneas que ocupe
 	}
@@ -181,17 +176,20 @@ func (p *Pagina) vistaLista() string {
 		return strings.Join(l, "\n")
 	}
 	var pie []string
-	if n := len(p.trabajos); n > 0 {
-		pie = append(pie, p.tx("historial.mostrando", "n", itoa(n)))
+	switch n := len(p.trabajos); {
+	case n == 1:
+		pie = append(pie, p.tx("historial.mostrandoUno"))
+	case n > 1:
+		pie = append(pie, p.tx("historial.mostrando", "n", strconv.Itoa(n)))
 	}
 	if p.cargando || p.cargandoMas {
 		pie = append(pie, p.tx("comun.cargando"))
 	}
 	textoPie := ""
-	if len(pie) > 0 { // entero, en las líneas que ocupe: dice qué filtran el estado y la búsqueda
+	if len(pie) > 0 { // entero, en las líneas que ocupe
 		textoPie = e.Tenue.Width(ancho).Render(strings.Join(pie, " "+e.Iconos.Separador+" "))
 	}
-	hueco := max(alto-len(l)-min(len(pie), 1)*lipgloss.Height(textoPie), 1)
+	hueco := max(alto-lipgloss.Height(strings.Join(l, "\n"))-min(len(pie), 1)*lipgloss.Height(textoPie), 1) // el error ocupa sus líneas
 	if len(p.lista.Visibles()) == 0 {
 		l = append(l, p.vacio()...)
 	} else {

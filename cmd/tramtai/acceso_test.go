@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -203,5 +204,16 @@ func TestAccesoFueraDeLasInstancias(t *testing.T) {
 	}
 	if guardado, _ := os.ReadFile(ruta); strings.Contains(string(guardado), "rota") || strings.Contains(string(guardado), "de-otro") {
 		t.Fatalf("quedaron en el archivo:\n%s", guardado)
+	}
+}
+
+// Al reiniciar, el servicio nuevo espera al anterior lo que este puede tardar en drenar, más un margen: con un plazo
+// de drenaje largo no se rinde antes de tiempo y deja al usuario sin servicio.
+func TestEsperaDelReinicioCubreElDrenaje(t *testing.T) {
+	ruta := filepath.Join(t.TempDir(), "config.yaml")
+	os.WriteFile(ruta, []byte("servicio:\n  plazo_drenaje_segundos: 300\n"), 0o600)
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", ruta)
+	if e := esperaReinicio(); e <= 300*time.Second {
+		t.Fatalf("la espera (%s) no cubre el drenaje", e)
 	}
 }

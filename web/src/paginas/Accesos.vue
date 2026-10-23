@@ -205,7 +205,8 @@ async function cargarPuntos() {
     uso.value = r.uso ?? {}
     presupuestos.value = r.presupuestos ?? {}
     errorPuntos.value = ''
-    presupuestoEspacio.value = await api.presupuestoInstancia()
+    // El presupuesto del espacio va aparte: si falla, la lista que sí llegó no se tapa con «No se pudo cargar».
+    presupuestoEspacio.value = await api.presupuestoInstancia().catch(() => presupuestoEspacio.value)
   } catch (e) {
     if (puntos.value.length) avisarError(e)
     else errorPuntos.value = mensajeError(e)

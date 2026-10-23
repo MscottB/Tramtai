@@ -170,8 +170,8 @@ func TestActualizarDosVecesALaVez(t *testing.T) {
 	for consultas.Load() == 0 {
 		time.Sleep(time.Millisecond)
 	}
-	if _, err := s.IniciarActualizacion(context.Background()); err == nil || !strings.Contains(nucleo.MensajeDe(err), "en curso") {
-		t.Fatalf("la segunda petición tenía que recibir «ya en curso»: %v", err)
+	if _, err := s.IniciarActualizacion(context.Background()); err != nil {
+		t.Fatalf("la segunda petición se une a la que está en curso, sin error: %v", err)
 	}
 	close(soltar)
 	<-primero
@@ -180,5 +180,14 @@ func TestActualizarDosVecesALaVez(t *testing.T) {
 	}
 	if p := s.progresoActualizacion(); p.Fase != "" {
 		t.Fatalf("sin versión nueva no queda nada en curso: %+v", p)
+	}
+	// Con la descarga ya en marcha (o en la cuenta atrás de listo, al recargar la página), devuelve su versión y la deja
+	// como está: la Web UI sigue el mismo progreso.
+	s.avance = ProgresoActualizacion{Fase: "listo", Version: "v9.9.9"}
+	if v, err := s.IniciarActualizacion(context.Background()); err != nil || v.Etiqueta != "v9.9.9" {
+		t.Fatalf("tenía que devolver la versión en curso: %+v %v", v, err)
+	}
+	if p := s.progresoActualizacion(); p.Fase != "listo" || consultas.Load() != 1 {
+		t.Fatalf("unirse no cambia el progreso ni vuelve a consultar: %+v %d", p, consultas.Load())
 	}
 }

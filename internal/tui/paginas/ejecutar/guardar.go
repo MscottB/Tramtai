@@ -10,6 +10,7 @@ import (
 	"tramtai/internal/contrato"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
+	"tramtai/internal/tui/pagina"
 )
 
 // vistaCodigo es «Ver como código» abierto: los ejemplos y el elegido.
@@ -28,7 +29,7 @@ var reNombreApi = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,39}$`)
 // mensaje, el perfil y el tiempo.
 func (p *Pagina) verCodigo() tea.Cmd {
 	if p.c.Cli == nil {
-		return sinServicio
+		return pagina.SinCliente
 	}
 	d := p.leer()
 	esquema, err := esquemaDe(d.esquema)
@@ -104,7 +105,7 @@ func (p *Pagina) teclaCodigo(t string) tea.Cmd {
 // guardarApi (g) actualiza la API que se edita con la receta o, si no se edita ninguna, abre «Guardar como API».
 func (p *Pagina) guardarApi() tea.Cmd {
 	if p.c.Cli == nil {
-		return sinServicio
+		return pagina.SinCliente
 	}
 	d := p.leer()
 	esquema, err := esquemaDe(d.esquema)

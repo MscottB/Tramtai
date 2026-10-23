@@ -77,7 +77,10 @@ func (a *Almacen) Aceptar(ctx context.Context, t nucleo.Trabajo, clave string, m
 		return t, false, err
 	}
 	if err := a.sumarConsumo(ctx, tx, t.Instancia, t.PuntoAcceso, ahora, ahora, nucleo.Consumo{Peticiones: 1}); err != nil {
-		return t, false, err
+		if len(a.topes(t.Instancia, t.PuntoAcceso)) > 0 { // con topes, sin contador dejarían de frenar
+			return t, false, a.errContador(t.PuntoAcceso, err)
+		}
+		a.anotar("presupuesto de %q: el contador falló; la petición se acepta porque no tiene topes: %v", t.PuntoAcceso, err)
 	}
 	if clave != "" {
 		if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO idempotencia (instancia, clave, huella, trabajo_id, vence_en) VALUES (?, ?, ?, ?, ?)`,
@@ -154,8 +157,10 @@ func (a *Almacen) CambiarEstado(ctx context.Context, id string, de, hacia nucleo
 		if cambio.DevolverPeticion {
 			consumo.Peticiones, consumo.Terminados = -1, 0 // peticiones − terminados sigue siendo lo que está en curso
 		}
+		// El costo ya se gastó: deshacer el cambio no protege el presupuesto, perdería la respuesta y haría fallar la
+		// recuperación al arrancar. Solo se anota.
 		if err := a.sumarConsumo(ctx, tx, instancia, punto, aceptado, ahora, consumo); err != nil {
-			return err
+			a.anotar("presupuesto de %q: no se pudo contar el consumo de la petición %s al terminar: %v", punto, id, err)
 		}
 	}
 	return a.confirmar(tx)

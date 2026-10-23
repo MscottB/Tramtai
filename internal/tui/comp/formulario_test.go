@@ -86,6 +86,23 @@ func TestAreaCtrlEnter(t *testing.T) {
 	}
 }
 
+// TestAreaCreceComoParte: el área crece con las líneas en que la parte el propio campo, por palabras; pintarla no cambia
+// nada, así que dos vistas seguidas son iguales.
+func TestAreaCreceComoParte(t *testing.T) {
+	f := NuevoFormulario(estilos(), Area("mensaje", "Mensaje", ""))
+	f.Update(tea.WindowSizeMsg{Width: 12})            // el texto del área tiene 8 columnas
+	f.Update(tea.PasteMsg{Content: "aaaa bbbb cccc"}) // 14 letras: por letras caben en 2 líneas, por palabras son 3
+	v := f.Vista()
+	for _, palabra := range []string{"aaaa", "bbbb", "cccc"} {
+		if !strings.Contains(v, palabra) {
+			t.Fatalf("las tres líneas se ven; falta %q:\n%s", palabra, v)
+		}
+	}
+	if f.Vista() != v {
+		t.Fatal("pintar no cambia el formulario")
+	}
+}
+
 // TestFormularioDesdeFuera: la página mueve el foco, pone valores (una plantilla, una receta) y sabe dónde está el campo.
 func TestFormularioDesdeFuera(t *testing.T) {
 	f := NuevoFormulario(estilos(), Area("notas", "Notas", ""), Opcion("modelo", "Modelo", []string{"a", "b"}, "a"), Interruptor("si", "Sí", false), Texto("nombre", "Nombre", ""))

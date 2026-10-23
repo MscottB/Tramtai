@@ -30,3 +30,7 @@ export function conTexto(pasos: Paso[], sistema: string): PasoConTexto[] {
     return x ? [{ ...x, hecho: p.hecho, pagina: p.pagina }] : []
   })
 }
+
+// guiaVisible dice si Inicio enseña la guía: solo se esconde si la ocultaste o si llegaron pasos y están todos hechos.
+// Sin lista (cargando o con error) sigue a la vista, para que un fallo no parezca una guía completa.
+export const guiaVisible = (oculta: boolean, pasos?: Paso[]) => !oculta && !(pasos?.length && pasos.every((p) => p.hecho))

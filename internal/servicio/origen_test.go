@@ -12,6 +12,7 @@ import (
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
 	"tramtai/internal/nucleo"
+	"tramtai/internal/procesos"
 )
 
 const puntosOrigen = `puntos_acceso:
@@ -57,7 +58,7 @@ func TestOrigenSegunAutenticacion(t *testing.T) {
 		}
 	}
 	// Desde otro equipo (o tras un proxy) la etiqueta no vale: es una aplicación, también para el bloqueo de Antigravity.
-	if !mismoUsuario(netip.MustParseAddrPort("127.0.0.1:1"), netip.MustParseAddrPort("127.0.0.1:2")) && runtime.GOOS != "windows" && runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+	if !procesos.MismoUsuario(netip.MustParseAddrPort("127.0.0.1:1"), netip.MustParseAddrPort("127.0.0.1:2")) && runtime.GOOS != "windows" && runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
 		t.Log("sin identificación del dueño de la conexión: no se comprueba la etiqueta remota")
 	} else if _, cuerpo := pedir(t, ts.URL, "POST", "/api/v1/trabajos", global.token, hola, "X-Tramtai-Cliente", "cli", "X-Forwarded-For", "203.0.113.5"); origenDe(t, cuerpo) != "app" {
 		t.Errorf("la etiqueta cli tras un proxy: %q", origenDe(t, cuerpo))

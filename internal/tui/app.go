@@ -97,7 +97,7 @@ func (m *modelo) pagina(clave string) pagina.Pagina {
 		if f := fabricas[clave]; f != nil {
 			p = f(m.idioma)
 		} else {
-			p = &proximamente{titulo: datos.Texto(m.idioma, "menu."+clave), estilos: m.estilos}
+			p = &proximamente{titulo: datos.Texto(m.idioma, "menu."+clave), estilos: m.estilos, visor: comp.NuevoVisor(m.estilos)}
 		}
 		m.paginas[clave] = p
 	}
@@ -214,6 +214,7 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.ancho, m.alto = msg.Width, msg.Height
 		ancho, alto := m.area()
 		return m, m.difundir(tea.WindowSizeMsg{Width: ancho, Height: alto})
+	case comp.NuevoAviso: // un Fallo no caduca: avisos.Update no devuelve nada, pero sigue siendo de la app
 	case tea.BackgroundColorMsg:
 		rellenar(m.estilos, msg.IsDark())
 	case msgConexion:
@@ -233,6 +234,10 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.cerrar()
 		return m, tea.Batch(m.difundir(msg), m.iniciar(nil))
 	case pagina.IrA:
+		if d, ok := msg.Datos.(pagina.ConAyuda); ok && d.Teclas == nil { // la página no sabe las teclas comunes
+			d.Teclas = m.teclasDe(m.pagina(m.actual))
+			msg.Datos = d
+		}
 		return m, m.ir(msg.Pagina, msg.Datos, true)
 	case pagina.Volver:
 		return m, m.volver()
@@ -260,17 +265,18 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // tecla reparte una tecla: primero lo que está abierto encima (la pregunta, el selector, el menú) y luego la página.
-// Las teclas comunes no se aplican mientras la página tiene un campo con el foco. Por debajo del tamaño mínimo no se
-// ve nada, así que solo valen q y Ctrl+C. Cualquier tecla quita el error de la línea de estado; ! lo enseña entero.
+// Las teclas comunes no se aplican mientras la página tiene un campo con el foco. Por debajo del tamaño mínimo solo se
+// ven el aviso y la pregunta abierta, así que solo valen ella, q y Ctrl+C. Con la pregunta de salir abierta, otra q sale.
+// Cualquier tecla quita el error de la línea de estado; ! lo enseña entero.
 func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 	t := k.String()
 	if m.pregunta == nil {
 		m.avisos.Descartar()
 	}
 	switch {
-	case t == "ctrl+c":
+	case t == "ctrl+c", t == "q" && m.saliendo:
 		return tea.Quit
-	case m.ancho < anchoMinimo || m.alto < altoMinimo:
+	case m.pregunta == nil && (m.ancho < anchoMinimo || m.alto < altoMinimo):
 		if t == "q" {
 			return m.salir()
 		}
@@ -312,7 +318,7 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 		m.abrirMenu()
 		return nil
 	case "?":
-		return m.ir(pagina.PaginaAyuda, pagina.ConAyuda{Pagina: p.Ayuda(), Teclas: slices.Concat(p.Teclas(), comunes())}, true)
+		return m.ir(pagina.PaginaAyuda, pagina.ConAyuda{Pagina: p.Ayuda(), Teclas: m.teclasDe(p)}, true)
 	case "r":
 		if m.caido != nil {
 			if m.comprobando {
@@ -352,12 +358,16 @@ func (m *modelo) View() tea.View {
 }
 
 // vista es la cabecera, el cuerpo (menú y página), la línea de estado y el pie, en exactamente ancho×alto. Por debajo
-// del tamaño mínimo es solo el aviso.
+// del tamaño mínimo es el aviso y, si hay una pregunta abierta, la pregunta: lo que se responde siempre se ve.
 func (m *modelo) vista() string {
-	if m.ancho < anchoMinimo || m.alto < altoMinimo {
-		return idioma.T("Agranda la ventana (mínimo 60×20)")
-	}
 	e := m.estilos
+	if m.ancho < anchoMinimo || m.alto < altoMinimo {
+		aviso := idioma.T("Agranda la ventana (mínimo 60×20)")
+		if m.pregunta == nil {
+			return aviso
+		}
+		return m.encajar(aviso+"\n"+m.pregunta.Vista(e, m.ancho, m.alto-1), m.ancho, m.alto)
+	}
 	ancho, alto := m.area()
 	var cuerpo string
 	switch {
@@ -393,33 +403,50 @@ func (m *modelo) encajar(texto string, ancho, alto int) string {
 	return strings.Join(lineas, "\n")
 }
 
+// teclasDe son todas las teclas que valen en una página: las suyas y las comunes, también las que no caben en el pie.
+func (m *modelo) teclasDe(p pagina.Pagina) []pagina.Tecla {
+	return slices.Concat(p.Teclas(), comunes())
+}
+
 // proximamente ocupa el sitio de una página que aún no está hecha. En la Ayuda enseña las teclas de la página de la que
-// se vino (ConAyuda), para que ? siempre las diga todas.
+// se vino (ConAyuda), para que ? siempre las diga todas; si no caben, se desplazan.
 type proximamente struct {
 	titulo  string
 	estilos *pagina.Estilos
 	teclas  []pagina.Tecla
+	visor   comp.Visor
 }
 
-func (p *proximamente) Titulo() string                  { return p.titulo }
-func (p *proximamente) Iniciar(pagina.Contexto) tea.Cmd { return nil }
+func (p *proximamente) Titulo() string { return p.titulo }
+func (p *proximamente) Iniciar(c pagina.Contexto) tea.Cmd {
+	p.visor.Tamano(c.Ancho, c.Alto)
+	p.poner()
+	return nil
+}
 func (p *proximamente) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 	switch msg := msg.(type) {
 	case pagina.ConAyuda:
 		p.teclas = msg.Teclas
+		p.poner()
+	case tea.WindowSizeMsg:
+		p.visor.Tamano(msg.Width, msg.Height)
 	case tea.KeyPressMsg:
 		if msg.String() == "esc" {
 			return p, pagina.Atras
 		}
+		p.visor.Update(msg)
 	}
 	return p, nil
 }
 func (p *proximamente) Teclas() []pagina.Tecla {
-	return []pagina.Tecla{{Tecla: "Esc", Accion: idioma.T("vuelve")}}
+	return []pagina.Tecla{{Tecla: "Esc", Accion: idioma.T("vuelve")}, {Tecla: "↑↓", Accion: idioma.T("desplaza")}}
 }
 func (p *proximamente) EnCampo() bool { return false }
 func (p *proximamente) Ayuda() string { return "" }
-func (p *proximamente) Vista() string {
+func (p *proximamente) Vista() string { return p.visor.Vista() }
+
+// poner escribe en el visor el aviso y, si se vino con ?, las teclas.
+func (p *proximamente) poner() {
 	e := p.estilos
 	lineas := []string{e.Tenue.Render(idioma.T("Próximamente"))}
 	if len(p.teclas) > 0 {
@@ -432,5 +459,5 @@ func (p *proximamente) Vista() string {
 			lineas = append(lineas, e.Tecla.Render(t.Tecla)+strings.Repeat(" ", ancho-lipgloss.Width(t.Tecla)+2)+t.Accion)
 		}
 	}
-	return strings.Join(lineas, "\n")
+	p.visor.Poner(strings.Join(lineas, "\n"))
 }

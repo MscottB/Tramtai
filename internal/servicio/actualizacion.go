@@ -91,13 +91,14 @@ func (s *Servicio) fijarAvance(cambiar func(*ProgresoActualizacion)) {
 // IniciarActualizacion comprueba que hay una versión nueva que se puede instalar desde aquí y, en segundo plano, la
 // descarga, comprueba su suma SHA-256 y lanza su instalador en silencio; el avance se consulta con
 // progresoActualizacion. El instalador detiene este servicio (los trabajos en curso terminan dentro del plazo de
-// drenaje) y vuelve a abrir la app. Si ya hay una en curso, no empieza otra: responde «ya en curso».
+// drenaje) y vuelve a abrir la app. Si ya hay una en curso, no empieza otra: se une a ella y devuelve su versión,
+// para que otra pestaña (o la misma tras recargar) siga el mismo progreso.
 func (s *Servicio) IniciarActualizacion(ctx context.Context) (actualizacion.Version, error) {
 	// Comprobar y ocupar van juntos, antes de ir a la red: dos peticiones a la vez no lanzan dos descargas.
 	s.muAvance.Lock()
 	if p := s.avance; p.Fase != "" && p.Fase != "error" {
 		s.muAvance.Unlock()
-		return actualizacion.Version{Etiqueta: p.Version}, nucleo.NuevoError(nucleo.CodigoTransicionInvalida, idioma.T("ya hay una actualización en curso"))
+		return actualizacion.Version{Etiqueta: p.Version}, nil
 	}
 	s.avance = ProgresoActualizacion{Fase: "descargando"}
 	s.muAvance.Unlock()

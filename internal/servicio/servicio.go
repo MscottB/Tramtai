@@ -152,9 +152,14 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 	if opc.Conexiones == nil {
 		opc.Conexiones = adaptadores.NuevasConexiones(opc.Config, slices.Collect(maps.Keys(opc.Registro)))
 	}
-	token, err := LeerOCrearToken(filepath.Join(opc.Datos, "token-servicio"))
+	rutaToken := filepath.Join(opc.Datos, "token-servicio")
+	token, err := LeerOCrearToken(rutaToken)
 	if err != nil {
-		return nil, err
+		// Ninguna app usa la clave de servicio (los clientes la releen en cada conexión): se crea otra en vez de no arrancar.
+		fmt.Fprintf(opc.Registros, "la clave de servicio (%s) no se pudo leer y se crea otra: %v\n", rutaToken, err)
+		if token, err = RotarToken(rutaToken); err != nil {
+			return nil, err
+		}
 	}
 	s := &Servicio{opc: opc, ID: "servicio_" + aleatorio(8), IniciadoEn: time.Now(), tokenAdmin: token,
 		instancias: map[string]*Instancia{}, abriendo: map[string]*apertura{}, puntos: map[string]*puntoActivo{}, detener: make(chan struct{}),
@@ -205,10 +210,15 @@ func (s *Servicio) enrutar(w http.ResponseWriter, r *http.Request) {
 	ruta := r.URL.Path
 	switch {
 	case ruta == "/healthz":
-		// Sin el identificador, que está en el descriptor: el cliente prueba la identidad con el reto (contrato.PruebaIdentidad).
+		// El cliente prueba la identidad con el reto (contrato.PruebaIdentidad). El identificador solo lo usa la CLI de
+		// la versión anterior para reconocer y detener este servicio: va solo al mismo usuario, que ya lo lee en
+		// servicio.json, para que otro no lo aprenda y se haga pasar por el servicio ante esa CLI (hallazgo 2).
 		salud := map[string]any{"estado": "ok", "version": version.Version}
+		if mismoUsuarioLocal(r) {
+			salud["servicio"] = s.ID
+		}
 		if reto := r.URL.Query().Get("reto"); reto != "" && len(reto) <= 128 {
-			salud["prueba"] = contrato.PruebaIdentidad(s.tokenAdmin, reto)
+			salud["prueba"] = contrato.PruebaIdentidad(s.tokenAdmin, s.Base(), reto)
 		}
 		api.EscribirJSON(w, http.StatusOK, salud)
 		return

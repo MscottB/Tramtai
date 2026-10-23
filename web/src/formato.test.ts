@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { idioma, t } from './i18n.ts'
-import { duracion, enRango, estadoInfo, fecha, haceCuanto } from './formato.ts'
+import { duracion, enRango, estadoInfo, fecha, haceCuanto, registroCubre } from './formato.ts'
 
 idioma.value = 'es'
 const hace = (segundos: number) => new Date(Date.now() - segundos * 1000).toISOString()
@@ -35,6 +35,17 @@ test('enRango acepta números dentro de los límites (enteros si se piden) y si 
   assert.equal(horas(''), 'Escribe un número entre 0 y 720.')
   assert.equal(enRango(0, 90, false)(1.25), true)
   assert.equal(enRango(100, 100000, true)(50), `Escribe un número entre 100 y ${(100000).toLocaleString('es')}.`)
+})
+
+// Revisión final web (M1, hallazgo 44): la regla «nunca menos que las respuestas» del servicio (ValidarRetencion), en el
+// campo de días del registro. Los días se guardan redondeados a horas, igual que al guardar.
+test('registroCubre pide que el registro dure al menos lo que las respuestas', () => {
+  const regla = registroCubre(() => 48)
+  assert.equal(regla(2), true)
+  assert.equal(regla(3), true)
+  assert.equal(regla(1.99), true, '47,76 h se guardan como 48 h')
+  assert.equal(regla(1), 'El registro no puede durar menos que las respuestas (48 h).')
+  assert.equal(registroCubre(() => 0)(0), true)
 })
 
 test('duracion en segundos con un decimal y, desde un minuto, en minutos y segundos', () => {

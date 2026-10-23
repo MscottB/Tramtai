@@ -49,6 +49,7 @@ func abrir(t *testing.T, c pagina.Contexto) (*prueba.App, *prueba.Reloj) {
 		t.Fatalf("arranca con «Cargando…»:\n%s", v)
 	}
 	a.Correr(cmd)
+	a.EsperarCarga()
 	return a, r
 }
 
@@ -281,6 +282,7 @@ func TestHistorialVerMasSinRepetir(t *testing.T) {
 		t.Fatalf("dice cuántas muestra:\n%s", v)
 	}
 	a.Pulsar("m")
+	a.HastaVer("Mostrando las 400 más recientes") // la página siguiente la trae el servicio: se espera a verla
 	if got := lista(); !slices.Equal(got, esperado[:400]) {
 		t.Fatalf("la segunda página sigue a la primera sin repetir: %d", len(got))
 	}
@@ -288,6 +290,7 @@ func TestHistorialVerMasSinRepetir(t *testing.T) {
 		t.Fatal("una página llena puede tener más")
 	}
 	a.Pulsar("m")
+	a.HastaVer(fmt.Sprintf("Mostrando las %d más recientes", total))
 	if got := lista(); !slices.Equal(got, esperado) {
 		t.Fatalf("las %d, una vez cada una: %d", total, len(got))
 	}
@@ -481,7 +484,7 @@ func TestHistorialBusqueda(t *testing.T) {
 	crear(t, cli, id, "Factura de Soporte")
 	crear(t, cli, id, "Notas de reunión")
 	otra := crear(t, cli, id, "Otra cosa")
-	a := abierta(t, cli, id)
+	a, r := abrir(t, prueba.Contexto(t, cli, id))
 	ves := func(quiere ...string) {
 		t.Helper()
 		v := a.Vista()
@@ -495,19 +498,34 @@ func TestHistorialBusqueda(t *testing.T) {
 	if !a.P.EnCampo() {
 		t.Fatal("con la búsqueda abierta las letras son suyas")
 	}
+	// Como la Web UI, pide la lista 300 ms después de la última tecla, no con cada una.
+	buscada := func() {
+		t.Helper()
+		r.Pasar(299 * time.Millisecond)
+		a.Asentar()
+		r.Pasar(time.Millisecond)
+		a.Asentar()
+	}
 	for _, c := range "REUNION" { // el servicio busca sin tildes ni mayúsculas
 		a.Pulsar(string(c))
 	}
+	r.Pasar(299 * time.Millisecond)
+	a.Asentar()
+	ves("Factura de Soporte", "Notas de reunión", "Otra cosa")
+	r.Pasar(time.Millisecond)
+	a.Asentar()
 	ves("Notas de reunión")
 	if v := a.Vista(); !strings.Contains(v, "/ REUNION_") {
 		t.Fatalf("la barra enseña lo que se escribe:\n%s", v)
 	}
 	a.Pulsar("backspace", "backspace", "backspace", "backspace", "backspace", "backspace", "backspace")
+	buscada()
 	ves("Factura de Soporte", "Notas de reunión", "Otra cosa")
 	// También por identificador.
 	for _, c := range otra.ID[len(otra.ID)-6:] {
 		a.Pulsar(string(c))
 	}
+	buscada()
 	ves("Otra cosa")
 	// Intro la deja puesta y la barra la recuerda; Esc de una nueva vuelve a lo de antes.
 	a.Pulsar("enter")
@@ -519,6 +537,7 @@ func TestHistorialBusqueda(t *testing.T) {
 	// Lo pegado entra entero, con los saltos de línea como espacios.
 	a.Pulsar("/", "backspace", "backspace", "backspace", "backspace", "backspace", "backspace")
 	a.Pegar("Factura\nde Soporte")
+	buscada()
 	ves("Factura de Soporte")
 	a.Pulsar("esc", "l")
 	ves("Factura de Soporte", "Notas de reunión", "Otra cosa")
@@ -783,7 +802,17 @@ func TestHistorialCancelar(t *testing.T) {
 	if fuera := a.Pulsar("x"); len(fuera) != 0 {
 		t.Fatalf("x no borra una en marcha: %v", fuera)
 	}
-	a.Pulsar("enter", "c")
+	// c pregunta antes, como en Probar; n no la cancela y s sí.
+	q, ok := pregunta(a.Pulsar("enter", "c"))
+	if !ok || q.Texto != "¿Cancelar la petición en marcha?" {
+		t.Fatalf("c pregunta antes de cancelar, como Probar: %+v", q)
+	}
+	a.Entregar(comp.Cancelado{})
+	if t2, _ := cli.Trabajo(ctx, id, tr.ID); t2.Estado.Terminal() {
+		t.Fatalf("sin confirmar no se cancela: %s", t2.Estado)
+	}
+	a.Pulsar("c")
+	a.Entregar(comp.Confirmado{})
 	if v := a.Vista(); !strings.Contains(v, "Cancelación solicitada") && !strings.Contains(v, "Cancelado") {
 		t.Fatalf("el detalle toma el estado que devuelve el servicio:\n%s", v)
 	}
@@ -1036,6 +1065,8 @@ func TestListaConError(t *testing.T) {
 	a, r := abrir(t, prueba.Contexto(t, cli, id))
 	a.Pulsar("/")
 	a.Pegar(strings.Repeat("x", 201)) // el servicio admite hasta 200 caracteres
+	r.Pasar(300 * time.Millisecond)   // la búsqueda se pide al dejar de escribir
+	a.Asentar()
 	if v := a.Vista(); !strings.Contains(v, "200") || !strings.Contains(v, "uno") {
 		t.Fatalf("el mensaje del servicio sin traducir, y lo cargado se conserva:\n%s", v)
 	}
@@ -1048,6 +1079,27 @@ func TestListaConError(t *testing.T) {
 	}
 	if fuera := a.Pulsar("r"); !errorServicio(fuera) {
 		t.Fatalf("de conexión, al pedirla: %v", fuera)
+	}
+}
+
+// TestListaConErrorCabe: un error largo ocupa sus líneas y la lista se acorta lo que haga falta: la vista cabe en el área
+// de 60×20 y se ven la fila elegida, al final de la lista, y «Mostrando…».
+func TestListaConErrorCabe(t *testing.T) {
+	cli, id := prueba.Servicio(t)
+	crearVarias(t, cli, id, 30)
+	proxy, fallar := prueba.ConFallo(t, cli)
+	a := abierta(t, proxy, id)
+	a.Pulsar("end")
+	fallar(strings.Repeat("El servicio no pudo leer el historial de este espacio. ", 4))
+	a.Pulsar("r")
+	v := a.Vista()
+	if h := lipgloss.Height(v); h > 17 {
+		t.Fatalf("la vista mide %d filas y el área es de 17:\n%s", h, v)
+	}
+	for _, quiere := range []string{"de este espacio.", "▸", "petición-000", "Mostrando las 30 más recientes"} {
+		if !strings.Contains(v, quiere) {
+			t.Fatalf("falta %q:\n%s", quiere, v)
+		}
 	}
 }
 
@@ -1188,11 +1240,14 @@ func TestTextosComoLaWeb(t *testing.T) {
 	a, _ := abrir(t, c)
 	v := strings.Join(strings.Fields(a.Vista()), " ") // un texto largo ocupa varias líneas
 	for _, quiere := range []string{datos.Texto("en", "historial.estado") + ": " + datos.Texto("en", "historial.todos"),
-		datos.Texto("en", "historial.origen") + ": " + datos.Texto("en", "historial.todosOrigenes"), datos.Textof("en", "historial.mostrando", "n", "1"),
+		datos.Texto("en", "historial.origen") + ": " + datos.Texto("en", "historial.todosOrigenes"), "Showing the most recent one",
 		datos.Texto("en", "estado.completado")} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}
+	}
+	if plural := datos.Textof("en", "historial.mostrando", "n", "1"); strings.Contains(v, plural) {
+		t.Fatalf("con una, el singular: %q\n%s", plural, v)
 	}
 	a.Pulsar("enter")
 	v = a.Vista()
@@ -1208,8 +1263,15 @@ func TestTextosComoLaWeb(t *testing.T) {
 	if v := e.Vista(); !strings.Contains(v, "[Mensaje]") || !strings.Contains(v, "Respuesta") || !strings.Contains(v, "Registro") {
 		t.Fatalf("pestañas en español:\n%s", v)
 	}
-	// Y los pies, de los textos de la Web UI.
 	e.Pulsar("esc")
+	if v := e.Vista(); !strings.Contains(v, "Mostrando la más reciente") {
+		t.Fatalf("una, en singular:\n%s", v)
+	}
+	crear(t, cli, id, "otra")
+	if e.Pulsar("r"); !strings.Contains(e.Vista(), "Mostrando las 2 más recientes") {
+		t.Fatalf("dos, en plural:\n%s", e.Vista())
+	}
+	// Y los pies, de los textos de la Web UI.
 	pie := teclasPie(e)
 	for _, quiere := range []string{"e Estado", "f Origen", "t Reintentar", "x Eliminar", "V Vaciar historial"} {
 		if !slices.Contains(pie, quiere) {

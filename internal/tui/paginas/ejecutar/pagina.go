@@ -9,7 +9,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -181,11 +180,9 @@ func (p *Pagina) Pendiente() string {
 	return ""
 }
 
-// sinServicio es lo que responde un atajo que necesita el servicio cuando no hay cliente: la app lo avisa.
-func sinServicio() tea.Msg { return pagina.ErrorServicio{Err: cliente.ErrServicioInactivo} }
-
-// activo dice si el trabajo que se ve sigue en marcha.
-func (p *Pagina) activo() bool { return p.trabajo != nil && p.final == nil && !p.estado.Terminal() }
+// activo dice si el trabajo que se ve sigue en marcha; cancelable, si además aún no se pidió cancelarlo.
+func (p *Pagina) activo() bool     { return p.trabajo != nil && p.final == nil && !p.estado.Terminal() }
+func (p *Pagina) cancelable() bool { return p.activo() && p.estado != nucleo.CancelacionSolicitada }
 
 // Iniciar carga el catálogo, los límites y las pruebas recientes. La receta y el mensaje se conservan entre visitas (al
 // crearse, el mensaje es el del borrador); un cambio de espacio olvida el trabajo que se seguía y la API que se editaba.
@@ -214,7 +211,7 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	p.ajustar()
 	if c.Cli == nil {
 		p.sinServ = true
-		return sinServicio
+		return pagina.SinCliente
 	}
 	cmds := []tea.Cmd{p.cargarCatalogo(), p.cargarLimites(), p.cargarRecientes()}
 	if p.activo() {
@@ -444,7 +441,7 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 	case "esc": // vuelve aunque haya una petición en marcha: sigue en el servicio y c la cancela
 		return pagina.Atras
 	case "c":
-		if p.activo() && p.estado != nucleo.CancelacionSolicitada {
+		if p.cancelable() {
 			p.pend = p.cancelarTrabajo
 			return comp.Confirmar(idioma.T("¿Cancelar la petición en marcha?"))
 		}
@@ -474,7 +471,7 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 		}
 	case "r":
 		if p.c.Cli == nil {
-			return sinServicio
+			return pagina.SinCliente
 		}
 		return tea.Batch(p.cargarCatalogo(), p.cargarLimites(), p.cargarRecientes())
 	case "ctrl+p":

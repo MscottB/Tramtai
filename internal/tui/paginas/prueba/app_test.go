@@ -2,12 +2,18 @@ package prueba
 
 import (
 	"context"
+	"fmt"
+	"net"
+	"runtime"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 
 	"tramtai/internal/tui/comp"
+	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
 )
 
@@ -24,6 +30,7 @@ func TestTeclaConModificadores(t *testing.T) {
 type contador struct {
 	n, gen int
 	soltar chan struct{}
+	parar  atomic.Bool // corta el Cmd de «w», que trabaja sin parar
 }
 
 type sumado struct{ gen int }
@@ -52,6 +59,12 @@ func (c *contador) Update(m tea.Msg) (pagina.Pagina, tea.Cmd) {
 			return c, tea.Batch(comp.Aviso("hola", comp.Info), nil)
 		case "s":
 			return c, func() tea.Msg { <-c.soltar; return sumado{gen} }
+		case "w":
+			return c, func() tea.Msg {
+				for !c.parar.Load() {
+				}
+				return nil
+			}
 		case "g":
 			c.gen++
 		}
@@ -93,5 +106,114 @@ func TestAsentarEsperaAlQueTarda(t *testing.T) {
 	a := Abrir(t, &contador{}, pagina.Contexto{Ctx: context.Background()})
 	if a.Pulsar("l"); a.Vista() != "1" {
 		t.Fatalf("Pulsar volvió antes de la respuesta: %s", a.Vista())
+	}
+}
+
+// cargador enseña «Cargando…» hasta que llega su primera respuesta, que espera a un temporizador que el arnés no ve: lo
+// que pasa con un temporizador del servicio o una espera de E/S que la foto de las goroutines da por quieta.
+type cargador struct{ listo bool }
+
+type cargado struct{}
+
+func (c *cargador) Titulo() string         { return "cargador" }
+func (c *cargador) Teclas() []pagina.Tecla { return nil }
+func (c *cargador) EnCampo() bool          { return false }
+func (c *cargador) Ayuda() string          { return "" }
+func (c *cargador) Iniciar(pagina.Contexto) tea.Cmd {
+	return func() tea.Msg {
+		soltar := make(chan struct{})
+		time.AfterFunc(50*time.Millisecond, func() { close(soltar) })
+		<-soltar
+		return cargado{}
+	}
+}
+func (c *cargador) Vista() string {
+	if !c.listo {
+		return datos.Texto("es", "comun.cargando")
+	}
+	return "listo"
+}
+func (c *cargador) Update(m tea.Msg) (pagina.Pagina, tea.Cmd) {
+	if _, ok := m.(cargado); ok {
+		c.listo = true
+	}
+	return c, nil
+}
+
+// Abrir no vuelve con la página en «Cargando…» mientras su carga sigue en camino, aunque lo que espera parezca quieto:
+// si no, la prueba mira la vista antes de que lleguen los datos (lo que hacía fallar de vez en cuando a Historial y
+// Agentes con la máquina cargada).
+func TestAbrirEsperaLaCargaInicial(t *testing.T) {
+	if a := Abrir(t, &cargador{}, pagina.Contexto{Ctx: context.Background()}); a.Vista() != "listo" {
+		t.Fatalf("Abrir volvió con la página cargando: %s", a.Vista())
+	}
+}
+
+// TestConexionOlvidadaNoResucita: una lectura que se cuenta después de que los dos lados se cerraron no deja la conexión
+// como si tuviera datos sin leer; y lo que un lado escribe cuenta hasta que el otro lo lee.
+func TestConexionOlvidadaNoResucita(t *testing.T) {
+	a, b := net.Pipe()
+	cli, srv := contada(a, "127.0.0.1:1", 0, &escucha{}), contada(b, "127.0.0.1:1", 1, &escucha{})
+	cli.anotar(func(p *par) { p.escrito[0] += 3 })
+	if sinLeer() == "" {
+		t.Fatal("lo escrito y no leído cuenta")
+	}
+	srv.anotar(func(p *par) { p.leido[1] += 3 })
+	cli.Close()
+	srv.Close()
+	cli.anotar(func(p *par) { p.leido[0] += 529 }) // una lectura que se anota tarde
+	if s := sinLeer(); s != "" {
+		t.Fatalf("una conexión cerrada no vuelve: %s", s)
+	}
+}
+
+// TestQuieta: una goroutine que espera a leer de la red o a un canal no avanza sola; una que escribe en la red y espera a
+// que el sistema confirme el envío, o que duerme, sí.
+func TestQuieta(t *testing.T) {
+	casos := map[string]bool{
+		"goroutine 7 [IO wait]:\nnet.(*netFD).Read(0x1)\nnet.(*conn).Read(0x1)":   true,
+		"goroutine 7 [IO wait]:\nnet.(*netFD).accept(0x1)":                        true,
+		"goroutine 7 [IO wait]:\nnet.(*netFD).Write(0x1)\nnet.(*conn).Write(0x1)": false,
+		"goroutine 7 [chan receive, 2 minutes]:\nmain.f()":                        true,
+		"goroutine 7 [sleep]:\ntime.Sleep(0x1)":                                   false,
+		"goroutine 7 [GC assist wait]:\nmain.f()":                                 false,
+	}
+	for pila, quiere := range casos {
+		if quieta(pila) != quiere {
+			t.Errorf("quieta(%q) debía ser %v", pila, quiere)
+		}
+	}
+}
+
+// apuntaFallo es una prueba que apunta su fallo y para ahí, como t.Fatalf, sin dar por fallida la de verdad.
+type apuntaFallo struct {
+	testing.TB
+	fallo string
+}
+
+func (f *apuntaFallo) Helper() {}
+func (f *apuntaFallo) Fatalf(formato string, args ...any) {
+	f.fallo = fmt.Sprintf(formato, args...)
+	runtime.Goexit()
+}
+
+// TestAsentarFallaSiNoSeAsienta: si algo sigue en marcha al acabar el plazo, Asentar no vuelve como si nada: la prueba
+// falla y dice qué sigue en marcha.
+func TestAsentarFallaSiNoSeAsienta(t *testing.T) {
+	antes := plazo
+	plazo = 50 * time.Millisecond
+	t.Cleanup(func() { plazo = antes })
+	c := &contador{}
+	t.Cleanup(func() { c.parar.Store(true) })
+	f := &apuntaFallo{TB: t}
+	a := &App{t: f, P: c, llegan: make(chan tea.Msg, 1)}
+	hecho := make(chan struct{})
+	go func() {
+		defer close(hecho)
+		a.Pulsar("w")
+	}()
+	<-hecho
+	if !strings.Contains(f.fallo, "no se asienta") || !strings.Contains(f.fallo, "prueba.(*contador).Update") {
+		t.Fatalf("falla y dice qué sigue en marcha: %q", f.fallo)
 	}
 }

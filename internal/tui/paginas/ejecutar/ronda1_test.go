@@ -41,12 +41,12 @@ func TestErroresNoSeTragan(t *testing.T) {
 	archivo := filepath.Join(t.TempDir(), "no-es-carpeta")
 	os.WriteFile(archivo, nil, 0o600)
 	cli2, id2 := prueba.Servicio(t)
-	b := abrir(t, contexto(t, cli2, id2, archivo))
+	b, r := abrirConReloj(t, contexto(t, cli2, id2, archivo))
 	escribir(t, b, tx("ejecutar.mensaje"), "a medias")
-	b.Hasta(func() bool {
-		av, ok := aviso(b.Fuera)
-		return ok && av.Tipo == comp.Advertencia && strings.Contains(av.Texto, "borrador")
-	})
+	guardarBorrador(b, r)
+	if av, ok := aviso(b.Fuera); !ok || av.Tipo != comp.Advertencia || !strings.Contains(av.Texto, "borrador") {
+		t.Fatalf("avisa de que el borrador no se pudo guardar: %v", b.Fuera)
+	}
 }
 
 // TestAtajosSinServicio: sin cliente, cada atajo que habla con el servicio avisa a la app, como enviar.
@@ -123,9 +123,12 @@ func TestEsquemaAlSalirConEsc(t *testing.T) {
 func TestNavegarMientrasSeEnvia(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	carpeta := t.TempDir()
-	a := abrir(t, contexto(t, cli, id, carpeta))
+	a, r := abrirConReloj(t, contexto(t, cli, id, carpeta))
 	escribir(t, a, tx("ejecutar.mensaje"), "hola")
-	a.Hasta(func() bool { _, err := os.Stat(filepath.Join(carpeta, archivoBorrador)); return err == nil })
+	guardarBorrador(a, r)
+	if _, hay := hayBorrador(carpeta); !hay {
+		t.Fatal("el borrador se guarda")
+	}
 	// enCamino deja el envío pedido al servicio sin que haya respondido: devuelve la petición retenida.
 	enCamino := func() []tea.Cmd {
 		enviado := a.Recoger(a.Retener(func() { enviar(a) })) // el formulario da el Enviado
@@ -141,7 +144,9 @@ func TestNavegarMientrasSeEnvia(t *testing.T) {
 	if n := cuantos(t, cli, id); n != 1 || !pestana(a, "ejecutar.respuesta") {
 		t.Fatalf("la petición creada se enseña, una sola: %d", n)
 	}
-	a.Hasta(func() bool { _, err := os.Stat(filepath.Join(carpeta, archivoBorrador)); return os.IsNotExist(err) })
+	if _, hay := hayBorrador(carpeta); hay {
+		t.Fatal("la petición creada borra el borrador")
+	}
 	terminada(t, a)
 
 	// Con la página oculta cuando llega, se recuerda sin seguirla; al volver se sigue.

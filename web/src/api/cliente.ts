@@ -196,12 +196,20 @@ export function pasoError(codigo?: string): string {
   return e ? t(e.solucion) : ''
 }
 
-export function avisarError(e: unknown) {
+// textosAviso son el mensaje y la línea de debajo del aviso de un error. Sin Vue ni Quasar, para poder probarlo.
+export function textosAviso(e: unknown): { message: string; caption?: string } {
   const mensaje = mensajeError(e)
   // En otro idioma, el detalle original va debajo para no perderlo; después, qué hacer.
   const detalle = e instanceof Error && e.message !== mensaje ? e.message : ''
-  const paso = pasoError(e instanceof ErrorApi ? e.codigo : undefined)
-  Notify.create({ type: 'negative', message: mensaje, caption: [detalle, paso].filter(Boolean).join(' ') || undefined, position: 'top' })
+  const codigo = e instanceof ErrorApi ? e.codigo : undefined
+  // Sin solución en la Ayuda, el qué hacer está en el texto del código; en inglés ya es el mensaje y no se repite.
+  const titulo = tituloError(codigo)
+  const paso = pasoError(codigo) || (titulo !== (codigo ?? '') && titulo !== mensaje ? titulo : '')
+  return { message: mensaje, caption: [detalle, paso].filter(Boolean).join(' ') || undefined }
+}
+
+export function avisarError(e: unknown) {
+  Notify.create({ type: 'negative', ...textosAviso(e), position: 'top' })
 }
 
 // duracionAviso da tiempo a leer un aviso: unos 60 ms por letra, entre 4 y 10 s.

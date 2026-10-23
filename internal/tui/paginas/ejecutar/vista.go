@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 
 	"tramtai/internal/idioma"
 	"tramtai/internal/tui/comp"
@@ -111,7 +110,7 @@ func (p *Pagina) vistaReceta(alto int) string {
 		flechas = "^v"
 	}
 	n, total = p.form.Posicion()
-	posicion := p.estilos.Tenue.Render(flechas + " " + itoa(n) + "/" + itoa(total))
+	posicion := p.estilos.Tenue.Render(flechas + " " + strconv.Itoa(n) + "/" + strconv.Itoa(total))
 	return strings.Join(append(append(vista, posicion), p.tenue(pista)...), "\n")
 }
 
@@ -168,7 +167,7 @@ func (p *Pagina) pista() string {
 	case "archivos":
 		partes := []string{idioma.T("Separa las rutas con comas; Tab completa la ruta.")}
 		if l := p.limites; l != nil {
-			partes = append(partes, p.tx("ejecutar.adjuntarLimites", "n", itoa(l.CargasPorPeticion), "mb", itoa(l.CargaMB), "texto", itoa(l.TextoConvertidoMB)))
+			partes = append(partes, p.tx("ejecutar.adjuntarLimites", "n", strconv.Itoa(l.CargasPorPeticion), "mb", strconv.Itoa(l.CargaMB), "texto", strconv.Itoa(l.TextoConvertidoMB)))
 			if f := formatos(l.ExtensionesConversor, l.ExtensionesTexto); f != "" {
 				partes = append(partes, p.tx("ejecutar.formatos", "lista", f))
 			}
@@ -201,25 +200,7 @@ func (p *Pagina) envolver(texto string, n int) []string {
 	if texto == "" {
 		return nil
 	}
-	ancho := max(p.c.Ancho, 10)
-	var lineas []string
-	linea := ""
-	for _, palabra := range strings.Fields(p.a(texto)) {
-		switch {
-		case linea == "":
-			linea = palabra
-		case lipgloss.Width(linea)+1+lipgloss.Width(palabra) <= ancho:
-			linea += " " + palabra
-		default:
-			lineas, linea = append(lineas, linea), palabra
-		}
-	}
-	lineas = append(lineas, linea)
-	if len(lineas) > n { // lo que no cabe se corta con la elipsis en la última línea
-		lineas[n-1] = p.estilos.Recortar(strings.Join(lineas[n-1:], " "), ancho)
-		lineas = lineas[:n]
-	}
-	return lineas
+	return p.estilos.Envolver(p.a(texto), max(p.c.Ancho, 10), n)
 }
 
 // vistaRespuesta es el estado del trabajo, su ruta y el texto de la respuesta.
@@ -274,8 +255,6 @@ func (p *Pagina) vistaCodigo() string {
 	return strings.Join(append(lineas, p.caja.Vista()), "\n")
 }
 
-func itoa(n int) string { return strconv.Itoa(n) }
-
 // copiar pone un texto en el portapapeles con OSC 52. La terminal no dice si lo admite: el aviso lo explica.
 func copiar(texto string) tea.Cmd {
 	if strings.TrimSpace(texto) == "" {
@@ -305,7 +284,11 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		}
 		return teclas
 	}
-	teclas := []pagina.Tecla{{Tecla: "← →", Accion: idioma.T("pestañas")}}
+	var teclas []pagina.Tecla
+	if p.cancelable() { // la primera: es la única forma de pararla y el pie se corta
+		teclas = append(teclas, pagina.Tecla{Tecla: "c", Accion: p.tx("historial.cancelar")})
+	}
+	teclas = append(teclas, pagina.Tecla{Tecla: "← →", Accion: idioma.T("pestañas")})
 	switch p.pestana {
 	case pestReceta:
 		teclas = append(teclas, pagina.Tecla{Tecla: "Enter", Accion: idioma.T("edita")}, pagina.Tecla{Tecla: "↑↓", Accion: idioma.T("campo")})
@@ -337,9 +320,6 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		teclas = append(teclas, pagina.Tecla{Tecla: "g", Accion: p.tx("ejecutar.actualizarApi", "nombre", p.api)}, pagina.Tecla{Tecla: "d", Accion: p.tx("ejecutar.dejarEditar")})
 	} else {
 		teclas = append(teclas, pagina.Tecla{Tecla: "g", Accion: p.tx("ejecutar.guardarApi")})
-	}
-	if p.activo() {
-		teclas = append(teclas, pagina.Tecla{Tecla: "c", Accion: p.tx("historial.cancelar")})
 	}
 	return append(teclas, pagina.Tecla{Tecla: "Esc", Accion: idioma.T("vuelve")})
 }

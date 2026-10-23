@@ -111,7 +111,8 @@ test('mayúsculas espaciadas solo en la cabecera del tablero (35) y ámbar solo 
 test('cada control de la barra, del mapa y de la demo mide 44 px y la barra no tapa las secciones (23, 62)', () => {
   for (const clase of ['.github', '.menu-boton', '.mapa-punto', '.demo-punto'])
     assert.match(css, new RegExp(`\\${clase} \\{[^}]*width: 44px; height: 44px`), clase)
-  for (const clase of ['.boton', '.copiar', '.mapa-pausa', '.demo-pausa', '.pestanas-lista button'])
+  // .idioma button es ES/EN y tema: 44 de alto el botón, no el grupo con su borde (revisión final web, M13).
+  for (const clase of ['.boton', '.copiar', '.mapa-pausa', '.demo-pausa', '.pestanas-lista button', '.idioma button'])
     assert.match(css, new RegExp(`${clase.replace('.', '\\.')} \\{[^}]*min-height: 44px`), clase)
   assert.match(css, /section\[id\] \{ scroll-margin-top: 72px; \}/)
 })
@@ -144,6 +145,25 @@ test('los comentarios del código salen en el idioma de la página y Copiar copi
 test('la franja compara sin Tramtai y con Tramtai', () => {
   const franja = html.match(/<div class="franja">([\s\S]*?)<\/div>\s*<\/div>/)?.[1] ?? ''
   for (const t of ['Sin Tramtai', 'Con Tramtai', 'Without Tramtai', 'With Tramtai']) assert.ok(franja.includes(t), `falta «${t}»`)
+})
+
+// Revisión final web (I1, hallazgo 26): el titular vale para los tres agentes (Codex lee archivos: sí tiene
+// herramientas) y la nota dice cuándo se pasó el canario (docs/equipo/m0-agentes.md).
+test('la tarjeta del aislamiento no contradice a Codex y la nota de Agentes fecha el canario', () => {
+  assert.doesNotMatch(html, /Agentes sin herramientas|Agents without tools/)
+  const nota = html.match(/<p class="nota-agentes[\s\S]*?<\/p>/)?.[0] ?? ''
+  assert.match(nota, /<span lang="es">[^<]*el 2026-10-18[^<]*<\/span>/)
+  assert.match(nota, /<span lang="en">[^<]*on 2026-10-18[^<]*<\/span>/)
+})
+
+// Revisión final web (I3, hallazgo 64): las capturas se sacan de una Tramtai de prueba; la portada lo dice y aclara el
+// puerto, porque los ejemplos de código usan el de por defecto.
+test('«Así se ve» dice que las capturas tienen datos de ejemplo y aclara su puerto frente al de los ejemplos', () => {
+  const nota = asi.match(/<p class="nota-capturas[\s\S]*?<\/p>/)?.[0] ?? ''
+  assert.match(nota, /datos de ejemplo/)
+  assert.match(nota, /sample data/)
+  for (const [, puerto] of html.matchAll(/127\.0\.0\.1:(\d+)/g)) assert.equal(puerto, '17373', 'los ejemplos usan el puerto por defecto')
+  assert.match(nota, /17373/)
 })
 
 test('las capturas son WebP con tamaño declarado, srcset y carga diferida', () => {

@@ -13,7 +13,7 @@ export const json: Tema = {
       tipo: 'diagrama',
       paradas: [
         { icono: 'o_schema', titulo: 'ayuda.json.d1', nota: 'ayuda.json.d1Nota' },
-        { icono: 'o_smart_toy', titulo: 'ayuda.json.d2', nota: 'ayuda.json.d2Nota' },
+        { icono: 'o_route', titulo: 'ayuda.json.d2', nota: 'ayuda.json.d2Nota' },
         { icono: 'o_rule', titulo: 'ayuda.json.d3', nota: 'ayuda.json.d3Nota' },
         { icono: 'o_build', titulo: 'ayuda.json.d4', nota: 'ayuda.json.d4Nota' },
       ],

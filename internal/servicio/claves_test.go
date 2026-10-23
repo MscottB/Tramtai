@@ -29,6 +29,31 @@ func TestClaveIlegibleNoSeRota(t *testing.T) {
 	}
 }
 
+// La clave de servicio no la usa ninguna app (los clientes la releen en cada conexión): si está dañada, el servicio crea
+// otra y lo anota en lugar de no arrancar. Las claves de los espacios y de las APIs siguen dando error.
+func TestClaveDeServicioDanadaSeRota(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", filepath.Join(dir, "config.yaml"))
+	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ruta := filepath.Join(dir, "token-servicio")
+	os.WriteFile(ruta, []byte("corta\n"), 0o600)
+	var registro strings.Builder
+	s, err := Nuevo(Opciones{Datos: dir, Config: c, Registros: &registro})
+	if err != nil {
+		t.Fatalf("el servicio no arrancó por una clave de servicio dañada: %v", err)
+	}
+	t.Cleanup(s.Cerrar)
+	if datos, _ := os.ReadFile(ruta); strings.TrimSpace(string(datos)) != s.tokenAdmin || len(s.tokenAdmin) < 32 {
+		t.Fatalf("la clave nueva no se guardó: %q", datos)
+	}
+	if !strings.Contains(registro.String(), "token-servicio") {
+		t.Fatalf("el cambio tiene que quedar en el registro: %q", registro.String())
+	}
+}
+
 // La clave global que llega por variable de entorno exige un mínimo de 32 caracteres, sin romper a quien ya usa una de
 // 64 en hexadecimal.
 func TestClaveDeEntornoCorta(t *testing.T) {

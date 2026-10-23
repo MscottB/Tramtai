@@ -176,7 +176,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
           <button type="button" class="mapa-pausa"><span lang="es">Pausa</span><span lang="en">Pause</span></button>
         </div>
       </div>
-      <script type="application/json" id="ejemplos-mapa">[{"origen": 0, "agentes": [0], "pausaCentro": false, "codigo": "codigo-mapa-1", "es": "Tu app con el SDK de OpenAI → Claude: «Resume este contrato en tres puntos»", "en": "Your app with the OpenAI SDK → Claude: “Summarize this contract in three points”"}, {"origen": 1, "agentes": [1], "pausaCentro": true, "codigo": "codigo-mapa-2", "es": "Un PDF por la API propia → Codex, con respuesta JSON (Tramtai lo convierte a texto)", "en": "A PDF through the native API → Codex, with a JSON answer (Tramtai turns it into text)"}, {"origen": 2, "agentes": [2], "pausaCentro": false, "codigo": "codigo-mapa-3", "es": "El SDK de Anthropic → GitHub Copilot: «Traduce este texto al inglés»", "en": "The Anthropic SDK → GitHub Copilot: “Translate this text into English”"}, {"origen": 0, "agentes": [0, 1], "pausaCentro": false, "codigo": "codigo-mapa-4", "es": "Respaldo: Claude llegó a su límite y la petición sigue con Codex", "en": "Fallback: Claude hit its limit and the request continues with Codex"}]</script>
+      <script type="application/json" id="ejemplos-mapa">[{"origen": 0, "agentes": [0], "pausaCentro": false, "codigo": "codigo-mapa-1", "es": "Tu app con el SDK de OpenAI → Claude: «Resume este contrato en tres puntos»", "en": "Your app with the OpenAI SDK → Claude: “Summarize this contract in three points”"}, {"origen": 1, "agentes": [1], "pausaCentro": true, "codigo": "codigo-mapa-2", "es": "Un PDF por la API propia → Codex, con respuesta JSON (Tramtai lo convierte a texto)", "en": "A PDF through the native API → Codex, with a JSON response (Tramtai turns it into text)"}, {"origen": 2, "agentes": [2], "pausaCentro": false, "codigo": "codigo-mapa-3", "es": "El SDK de Anthropic → GitHub Copilot: «Traduce este texto al inglés»", "en": "The Anthropic SDK → GitHub Copilot: “Translate this text into English”"}, {"origen": 0, "agentes": [0, 1], "pausaCentro": false, "codigo": "codigo-mapa-4", "es": "Respaldo: Claude llegó a su límite y la petición sigue con Codex", "en": "Fallback: Claude hit its limit and the request continues with Codex"}]</script>
     </div>
   </section>
 
@@ -344,6 +344,7 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
           <img class="solo-oscuro" src="capturas/agentes-oscuro-1440.webp" srcset="capturas/agentes-oscuro-640.webp 640w, capturas/agentes-oscuro-960.webp 960w, capturas/agentes-oscuro-1440.webp 1440w" sizes="(max-width: 900px) 100vw, 630px" width="1440" height="900" loading="lazy" decoding="async" alt="Agentes: una tarjeta por agente con su versión, la cuenta con la que está conectado y cómo cambiarlo o desconectarlo" data-alt-en="Agents: one card per agent with its version, the account it is signed in with and how to change or disconnect it">
         </figure>
       </article>
+      <p class="nota-capturas suave"><span lang="es">Las capturas de esta página son de una Tramtai de prueba, con datos de ejemplo y en el puerto 17388. La tuya escucha en el 17373 si no lo cambias.</span><span lang="en">The screenshots on this page come from a test copy of Tramtai, with sample data and on port 17388. Yours listens on 17373 unless you change it.</span></p>
     </div>
   </section>
 
@@ -351,7 +352,7 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
     <div class="envoltura">
       <div class="cabeza centrada">
         <h2 id="demo-titulo"><span lang="es">Aprende la app con un recorrido guiado.</span><span lang="en">Learn the app with a guided tour.</span></h2>
-        <p class="suave"><span lang="es">La primera vez que abres Tramtai, un recorrido te lleva por Inicio, Agentes, Probar, Mis APIs y Espacios: te señala cada cosa y no toca nada. Así es, paso a paso. Lo repites cuando quieras con «Haz el recorrido de Tramtai».</span><span lang="en">The first time you open Tramtai, a tour walks you through Home, Agents, Playground, My APIs and Workspaces: it points at each thing and changes nothing. Here it is, step by step. Repeat it any time with “Take the Tramtai tour”.</span></p>
+        <p class="suave"><span lang="es">La primera vez que abres Tramtai, un recorrido te lleva por Inicio, Agentes, Probar, Mis APIs y Espacios: te señala cada cosa y no toca nada. Así es, paso a paso. Lo repites cuando quieras con «Haz el recorrido de Tramtai».</span><span lang="en">The first time you open Tramtai, a tour walks you through Home, Agents, Playground, My APIs and Workspaces: it points at each thing and changes nothing. Here it is, step by step. Repeat it any time with “Take the guided tour”.</span></p>
       </div>
       <div class="demo">
         <!-- Una pantalla completa de la app por paso, con el recorrido encima (sitio.js las turna). Sin JavaScript se ve la
@@ -494,31 +495,31 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
         <article class="agente" style="--c: var(--claude)">
           <header><span class="sigla">CL</span><h3>Claude Code</h3></header>
           <p><span lang="es">Tu suscripción de Claude (uso personal) o una clave de API de Anthropic.</span><span lang="en">Your Claude subscription (personal use) or an Anthropic API key.</span></p>
-          <ul><li><span lang="es">Esfuerzo de bajo a máximo</span><span lang="en">Effort from low to maximum</span></li><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live answer (streaming)</span></li></ul>
+          <ul><li><span lang="es">Esfuerzo de bajo a máximo</span><span lang="en">Effort from low to maximum</span></li><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live response (streaming)</span></li></ul>
         </article>
         <article class="agente" style="--c: var(--codex)">
           <header><span class="sigla">CX</span><h3>Codex</h3></header>
           <p><span lang="es">Tu cuenta de ChatGPT (uso personal) o una clave de API de OpenAI.</span><span lang="en">Your ChatGPT account (personal use) or an OpenAI API key.</span></p>
-          <ul><li><span lang="es">Esfuerzo de bajo a muy alto</span><span lang="en">Effort from low to very high</span></li><li><span lang="es">Respuestas con esquema JSON</span><span lang="en">JSON schema answers</span></li></ul>
+          <ul><li><span lang="es">Esfuerzo de bajo a muy alto</span><span lang="en">Effort from low to very high</span></li><li><span lang="es">Respuestas con esquema JSON</span><span lang="en">JSON schema responses</span></li></ul>
         </article>
         <article class="agente" style="--c: var(--copilot)">
           <header><span class="sigla">GH</span><h3>GitHub Copilot CLI</h3></header>
           <p><span lang="es">Tu cuenta de GitHub Copilot (Free, Pro o de empresa) con <code>copilot login</code>, o una clave de GitHub. Cada petición gasta créditos de tu plan.</span><span lang="en">Your GitHub Copilot account (Free, Pro or business) with <code>copilot login</code>, or a GitHub key. Every request uses credits from your plan.</span></p>
-          <ul><li><span lang="es">Muestra el modelo que eligió</span><span lang="en">Shows the model it picked</span></li><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live answer (streaming)</span></li></ul>
+          <ul><li><span lang="es">Muestra el modelo que eligió</span><span lang="en">Shows the model it picked</span></li><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live response (streaming)</span></li></ul>
         </article>
         <article class="agente" style="--c: var(--gemini)">
           <header><span class="sigla">GM</span><h3>Gemini API</h3></header>
           <p><span lang="es">Tu clave de la Gemini API, sin instalar ningún CLI.</span><span lang="en">Your Gemini API key, with no CLI to install.</span></p>
-          <ul><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live answer (streaming)</span></li><li><span lang="es">Respuestas con esquema JSON</span><span lang="en">JSON schema answers</span></li></ul>
+          <ul><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live response (streaming)</span></li><li><span lang="es">Respuestas con esquema JSON</span><span lang="en">JSON schema responses</span></li></ul>
         </article>
         <article class="agente sin-apps">
           <header><span class="sigla">AG</span><h3>Antigravity</h3></header>
           <span class="solo"><span lang="es">Todavía no desde tus apps</span><span lang="en">Not from your apps yet</span></span>
           <p><span lang="es">El CLI de Google con tu clave de la Gemini API, sin herramientas. Por ahora se usa desde Probar, la terminal y la CLI; llegará a tus apps cuando pase la prueba de abajo.</span><span lang="en">Google’s CLI with your Gemini API key, without tools. For now you use it from the Playground, the terminal and the CLI; it will reach your apps once it passes the test below.</span></p>
-          <ul><li><span lang="es">Esfuerzo de bajo a máximo</span><span lang="en">Effort from low to maximum</span></li><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live answer (streaming)</span></li></ul>
+          <ul><li><span lang="es">Esfuerzo de bajo a máximo</span><span lang="en">Effort from low to maximum</span></li><li><span lang="es">Respuesta en vivo (streaming)</span><span lang="en">Live response (streaming)</span></li></ul>
         </article>
       </div>
-      <p class="nota-agentes suave"><span lang="es">Claude Code, Codex y GitHub Copilot llegan a tus apps porque pasaron una prueba con su CLI real: un mensaje les pide leer un archivo fuera de su carpeta, ejecutar una orden y abrir una dirección web, y la prueba comprueba que no lo consiguen. La Gemini API no tiene herramientas: Tramtai la llama por HTTP.</span><span lang="en">Claude Code, Codex and GitHub Copilot reach your apps because they passed a test with their real CLI: a message asks them to read a file outside their folder, run a command and open a web address, and the test checks that they can’t. The Gemini API has no tools: Tramtai calls it over HTTP.</span></p>
+      <p class="nota-agentes suave"><span lang="es">Claude Code, Codex y GitHub Copilot llegan a tus apps porque pasaron una prueba con su CLI real, hecha por última vez el 2026-10-18 en Windows: un mensaje les pide leer un archivo fuera de su carpeta, ejecutar una orden y abrir una dirección web, y la prueba comprueba que no lo consiguen. La Gemini API no tiene herramientas: Tramtai la llama por HTTP.</span><span lang="en">Claude Code, Codex and GitHub Copilot reach your apps because they passed a test with their real CLI, last run on 2026-10-18 on Windows: a message asks them to read a file outside their folder, run a command and open a web address, and the test checks that they can’t. The Gemini API has no tools: Tramtai calls it over HTTP.</span></p>
     </div>
   </section>
 
@@ -532,7 +533,7 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
         <h3 class="grupo-funciones"><span lang="es">Conecta</span><span lang="en">Connect</span></h3>
         <article class="tarjeta">
           <h4><span lang="es">Compatible con tus SDK</span><span lang="en">Works with your SDKs</span></h4>
-          <p><span lang="es">Rutas compatibles con OpenAI (chat y responses) y Anthropic (messages) con respuesta en vivo (streaming), más una API propia con eventos en vivo. Las tres admiten herramientas (<code>tools</code>).</span><span lang="en">OpenAI-compatible (chat and responses) and Anthropic-compatible (messages) routes with live answers (streaming), plus a native API with live events. All three support tool calling (<code>tools</code>).</span></p>
+          <p><span lang="es">Rutas compatibles con OpenAI (chat y responses) y Anthropic (messages) con respuesta en vivo (streaming), más una API propia con eventos en vivo. Las tres admiten herramientas (<code>tools</code>).</span><span lang="en">OpenAI-compatible (chat and responses) and Anthropic-compatible (messages) routes with live responses (streaming), plus a native API with live events. All three support tool calling (<code>tools</code>).</span></p>
         </article>
         <article class="tarjeta">
           <h4><span lang="es">API propia con OpenAPI</span><span lang="en">Native API with OpenAPI</span></h4>
@@ -565,7 +566,7 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
           <p><span lang="es">Tus claves de proveedor quedan cifradas en el almacén del sistema, y las de tus APIs se ven una sola vez y se regeneran con un clic si se filtran.</span><span lang="en">Your provider keys stay encrypted in the system store, and your APIs' keys are shown only once and can be regenerated in one click if they leak.</span></p>
         </article>
         <article class="tarjeta">
-          <h4><span lang="es">Agentes sin herramientas</span><span lang="en">Agents without tools</span></h4>
+          <h4><span lang="es">Sin terminal ni web</span><span lang="en">No terminal, no web</span></h4>
           <p><span lang="es">Claude Code y GitHub Copilot van sin herramientas; Codex, en solo lectura y sin terminal ni búsqueda web. Por defecto cada uno trabaja en una carpeta temporal vacía y no recibe las claves de los demás.</span><span lang="en">Claude Code and GitHub Copilot run without tools; Codex runs read-only, with no terminal or web search. By default each one works in an empty temporary folder and never gets the other agents’ keys.</span></p>
         </article>
         <h3 class="grupo-funciones"><span lang="es">Usa</span><span lang="en">Use</span></h3>

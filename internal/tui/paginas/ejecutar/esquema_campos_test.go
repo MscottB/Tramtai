@@ -31,17 +31,29 @@ var camposPrueba = []campoEsquema{
 }
 
 // TestEjemploComoLaWeb: ejemploDe da lo mismo que ejemploDe de esquemaCampos.ts: un número dentro de sus límites, el entero
-// redondeado hacia dentro, la primera opción con texto y tantos elementos como pide el mínimo.
+// redondeado hacia dentro, la primera opción con texto y tantos elementos como pide el mínimo. Los casos y lo que da la Web
+// UI los escribe npm run sitio (terminal-datos.ts) en testdata/ejemplos-campos.json.
 func TestEjemploComoLaWeb(t *testing.T) {
-	n := func(x float64) *float64 { return &x }
-	campos := []campoEsquema{{Nombre: "t", Tipo: "texto"}, {Nombre: "f", Tipo: "fecha"}, {Nombre: "total", Tipo: "numero", Minimo: n(5)},
-		{Nombre: "n", Tipo: "entero", Maximo: n(-3)}, {Nombre: "e", Tipo: "entero", Minimo: n(2.5)}, {Nombre: "s", Tipo: "si_no"},
-		{Nombre: "o", Tipo: "opcion", Opciones: []string{" ", "alta"}},
-		{Nombre: "l", Tipo: "lista", Elemento: "objeto", Minimo: n(2), Campos: []campoEsquema{{Nombre: "a", Tipo: "si_no"}}},
-		{Nombre: "v", Tipo: "lista", Elemento: "numero", Maximo: n(0)}, {Nombre: "x", Tipo: "objeto"}}
-	quiere := `{"t":"…","f":"2026-01-31","total":5,"n":-3,"e":3,"s":true,"o":"alta","l":[{"a":true},{"a":true}],"v":[],"x":{}}`
-	if got := ejemploDe(campos); got != quiere {
-		t.Fatalf("ejemplo:\n%s\n%s", got, quiere)
+	datos, err := os.ReadFile("../../datos/testdata/ejemplos-campos.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var f struct {
+		Casos []struct {
+			Campos  []campoEsquema
+			Ejemplo string
+		}
+	}
+	if err := json.Unmarshal(datos, &f); err != nil {
+		t.Fatal(err)
+	}
+	if len(f.Casos) < 2 {
+		t.Fatalf("faltan los casos de la Web UI: %d", len(f.Casos))
+	}
+	for _, c := range f.Casos {
+		if got := ejemploDe(c.Campos); got != c.Ejemplo {
+			t.Errorf("ejemplo:\n  Go:  %s\n  Web: %s", got, c.Ejemplo)
+		}
 	}
 }
 

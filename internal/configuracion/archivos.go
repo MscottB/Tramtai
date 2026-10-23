@@ -128,7 +128,8 @@ func (c *Configuracion) RutaPermitida(ruta string) (string, error) {
 }
 
 // ProyectoConfiable indica si la raíz figura en proyectos_confiables. Solo la configuración global (o el entorno)
-// puede declararlo: la versionada y local.yaml lo rechazan, así que un repositorio clonado nunca se marca confiable a sí mismo.
+// puede declararlo: la versionada y local.yaml lo rechazan, así que un repositorio clonado nunca se marca confiable a
+// sí mismo.
 func (c *Configuracion) ProyectoConfiable(raiz string) bool {
 	if raiz == "" {
 		return false

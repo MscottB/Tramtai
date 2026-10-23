@@ -130,7 +130,7 @@
             </div>
             <div class="col-12 col-sm-4">
               <q-input v-model.number="diasRegistro" type="number" min="0" max="90" step="any" outlined dense :label="t('historialAjustes.registro')" :hint="t('historialAjustes.registroHint')"
-                :rules="[enRango(0, 90, false)]" />
+                :rules="[enRango(0, 90, false), registroCubre(() => retencion.horas_resultado)]" />
             </div>
             <div class="col-12 col-sm-4">
               <q-input v-model.number="retencion.max_trabajos" type="number" min="100" max="100000" outlined dense :label="t('historialAjustes.maximo')" :hint="t('historialAjustes.maximoHint')"
@@ -231,7 +231,7 @@ import { api, avisar, avisarError, buscarActualizacionAhora, reiniciarYSeguir } 
 import type { EntradaConfiguracion, EstadoPunto, Modelo } from '../api/tipos'
 import { actualizacion, sesion, sistema } from '../estado'
 import { esfuerzoEspacio, esfuerzosDe, opcionModelo } from '../agentes'
-import { enRango, nombreEsfuerzo, terminales } from '../formato'
+import { enRango, nombreEsfuerzo, registroCubre, terminales } from '../formato'
 import { idioma, t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 import SelectorEsfuerzo from '../componentes/SelectorEsfuerzo.vue'

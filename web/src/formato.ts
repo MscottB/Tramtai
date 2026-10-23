@@ -61,6 +61,11 @@ export const numero = (n: number) => n.toLocaleString(idioma.value)
 export const enRango = (min: number, max: number, entero: boolean) => (v: unknown) =>
   (typeof v === 'number' && v >= min && v <= max && (!entero || Number.isInteger(v))) || t('historialAjustes.rango', { min: numero(min), max: numero(max) })
 
+// registroCubre es la regla del campo de días del registro: dura al menos lo que las respuestas (en horas), como exige el
+// servicio. Los días se redondean a horas igual que al guardar.
+export const registroCubre = (horasRespuestas: () => number) => (dias: unknown) =>
+  typeof dias !== 'number' || Math.round(dias * 24) >= horasRespuestas() || t('historialAjustes.registroMenor', { horas: horasRespuestas() })
+
 export function nombreEsfuerzo(nivel?: string): string {
   return nivel ? t(`esfuerzo.${nivel}` as Clave) : t('esfuerzo.agente')
 }

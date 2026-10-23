@@ -140,3 +140,17 @@ test('cada error tiene título y una solución corta en los dos idiomas', () => 
 test('los errores de espacios y agentes tienen su respuesta', () => {
   for (const codigo of ['agente_desconectado', 'confianza_requerida', 'espacio_detenido']) assert.ok(CODIGOS_ERROR.includes(codigo), codigo)
 })
+
+// Revisión final web (M7): la Ayuda cita los botones con su texto exacto, en los dos idiomas.
+test('la Ayuda nombra los botones del recorrido y de soporte con el texto que tienen en la app', () => {
+  const cita = { es: (x: string) => `«${x}»`, en: (x: string) => `“${x}”` }
+  for (const [idioma, textos] of Object.entries(idiomas) as ['es' | 'en', Record<string, string>][]) {
+    assert.ok(textos['ayuda.empezar.rRecorrido'].includes(cita[idioma](textos['bienvenida.repetir'])), `${idioma}: recorrido`)
+    assert.ok(textos['ayuda.ajustes.rVersion'].includes(cita[idioma](textos['acerca.copiar'])), `${idioma}: soporte`)
+  }
+})
+
+// Revisión final web (M8, hallazgo 36): DESIGN.md prohíbe robots, cerebros, destellos y bombillas para decir «IA».
+test('la Ayuda no usa iconos de robot, cerebro, destello ni bombilla', () => {
+  for (const tema of temas) assert.doesNotMatch(JSON.stringify(tema), /o_smart_toy|o_lightbulb|o_psychology|o_auto_awesome/, tema.id)
+})

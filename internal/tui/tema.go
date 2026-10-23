@@ -16,6 +16,7 @@ var tokens = map[string]string{
 	"ok": "#166534", "ok-noche": "#4ade80",
 	"error": "#b42525", "error-noche": "#f87171",
 	"aviso": "#854d0e", "aviso-noche": "#fbbf24",
+	"linea-otro": "#64748b", "linea-otro-noche": "#8a9aa8",
 }
 
 // nuevosEstilos son los de arranque: tema oscuro hasta que la terminal diga de qué color es su fondo.
@@ -62,4 +63,5 @@ func rellenar(e *pagina.Estilos, oscuro bool) {
 	e.Error = token("error").Bold(true)
 	e.Tecla = acento.Bold(true)
 	e.Grupo = tenue.Bold(true)
+	e.LineaOtra = [2]string{tokens["linea-otro"], tokens["linea-otro-noche"]}
 }
