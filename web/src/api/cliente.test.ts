@@ -1,7 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { sesion } from '../estado.ts'
+<<<<<<< HEAD
 import { api, duracionAviso, ErrorApi, pasoError, textosAviso } from './cliente.ts'
+=======
+import { api, duracionAviso, ErrorApi, pasoError } from './cliente.ts'
+>>>>>>> v0.56/5-textos
 import { idioma } from '../i18n.ts'
 import es from '../idiomas/es.ts'
 import en from '../idiomas/en.ts'
@@ -15,6 +19,7 @@ test('un aviso dura al menos 4 s y más cuanto más largo es su texto, hasta 10 
 })
 
 test('el paso siguiente de un error es la solución de la Ayuda, y nada si no la tiene', () => {
+  idioma.value = 'es' // el idioma inicial sale del sistema, y el runner del CI está en inglés
   assert.equal(pasoError('agente_desconectado'), es['ayuda.problemas.agente_desconectado'])
   assert.equal(pasoError('codigo_que_no_existe'), '')
   assert.equal(pasoError(undefined), '')
