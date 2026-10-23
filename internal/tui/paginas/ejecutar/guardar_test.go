@@ -17,7 +17,7 @@ func TestGuardarComoApi(t *testing.T) {
 	p := abierta(t, cli, id)
 	escribir(p, "instrucciones", "Responde en una frase")
 	pulsar(p, "esc", "g")
-	if p.guardar == nil || !p.EnCampo() {
+	if !p.EnCampo() || !strings.Contains(p.Vista(), p.tx("ejecutar.guardarApi")) {
 		t.Fatal("g abre «Guardar como API»")
 	}
 	escribir2 := func(texto string) {
@@ -27,7 +27,7 @@ func TestGuardarComoApi(t *testing.T) {
 		}
 	}
 	escribir2("Mal Nombre")
-	if fuera := pulsar(p, "ctrl+s"); len(fuera) != 0 || p.guardar == nil {
+	if fuera := pulsar(p, "ctrl+s"); len(fuera) != 0 || !p.EnCampo() {
 		t.Fatalf("un nombre que no vale no se guarda: %v", fuera)
 	}
 	if v := p.Vista(); !strings.Contains(v, "Minúsculas, números") {
@@ -47,20 +47,26 @@ func TestGuardarComoApi(t *testing.T) {
 		t.Fatalf("la API lleva la receta: %+v", l.Puntos)
 	}
 	pulsar(p, "esc")
-	if p.creada != nil {
+	if strings.Contains(p.Vista(), "API mi-app lista") || strings.Contains(p.Vista(), "/openai/v1") {
 		t.Fatal("Esc cierra y olvida la clave")
 	}
 	if v := p.Vista(); !strings.Contains(v, "Editando la API mi-app") {
 		t.Fatalf("dice qué API se edita:\n%s", v)
 	}
+	if p.Pendiente() != "" {
+		t.Fatalf("recién guardada no hay cambios: %q", p.Pendiente())
+	}
 	p.form.Poner("instrucciones", "Responde en dos frases")
+	if !strings.Contains(p.Pendiente(), "La API mi-app tiene cambios sin guardar") {
+		t.Fatalf("salir avisa de los cambios sin guardar: %q", p.Pendiente())
+	}
 	fuera := pulsar(p, "g")
 	if a, ok := aviso(fuera); !ok || a.Texto != "API mi-app actualizada" {
 		t.Fatalf("g actualiza la API: %v", fuera)
 	}
 	l, _ = cli.Puntos(ctx, id)
-	if l.Puntos[0].Instrucciones != "Responde en dos frases" {
-		t.Fatalf("con la receta nueva: %q", l.Puntos[0].Instrucciones)
+	if l.Puntos[0].Instrucciones != "Responde en dos frases" || p.Pendiente() != "" {
+		t.Fatalf("con la receta nueva, y ya sin cambios: %q %q", l.Puntos[0].Instrucciones, p.Pendiente())
 	}
 	pulsar(p, "d")
 	if p.api != "" {
@@ -104,7 +110,7 @@ func TestCodigoComoLaPrueba(t *testing.T) {
 		t.Fatalf("y copia el código: %v", fuera)
 	}
 	pulsar(p, "esc")
-	if p.codigo != nil {
+	if strings.Contains(p.Vista(), "[Python") {
 		t.Fatal("Esc lo cierra")
 	}
 }

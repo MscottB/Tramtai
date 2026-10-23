@@ -32,7 +32,7 @@
               </q-item-section>
               <q-item-section side>
                 <span class="etiqueta" :class="listo(a) ? 'etiqueta--ok' : 'etiqueta--aviso'">
-                  <q-icon :name="listo(a) ? 'check' : 'priority_high'" size="14px" />{{ listo(a) ? t('agente.listo') : t(tipo(a)) }}
+                  {{ listo(a) ? t('agente.listo') : t(tipo(a)) }}
                 </span>
               </q-item-section>
             </template>
@@ -50,7 +50,7 @@
           <div class="metadatos">
             <span><q-icon :name="suscripcion(a) ? 'o_person' : 'o_key'" />{{ suscripcion(a) ? t('agentes.listoSuscripcion') : t('agentes.listoClave') }}</span>
             <span v-if="suscripcion(a) && a.cuenta"><q-icon name="o_account_circle" />{{ t('agentes.cuenta', { cuenta: a.cuenta }) }}</span>
-            <span v-if="esfuerzos[a.agente]?.length"><q-icon name="o_psychology" />{{ t('agentes.esfuerzo') }}: {{ esfuerzos[a.agente].map(nombreEsfuerzo).join(' · ') }}</span>
+            <span v-if="esfuerzos[a.agente]?.length"><q-icon name="o_speed" />{{ t('agentes.esfuerzo') }}: {{ esfuerzos[a.agente].map(nombreEsfuerzo).join(' · ') }}</span>
             <span v-if="contextos[a.agente]?.length"><q-icon name="o_memory" />{{ t('agentes.contexto') }}: {{ textoContextos(a.agente) }}</span>
           </div>
           <q-btn unelevated dense no-caps color="primary" icon="o_chat" class="q-mt-md q-mr-sm q-px-md" :label="t('agentes.probar')" @click="probar(a)" />
@@ -96,8 +96,10 @@
             :label="t('agentes.cambiarAClave')" @click="cambiar(a, 'clave_api')" />
         </template>
 
+        <!-- No instalado: qué hacer, y si el CLI está en otra ruta, en qué archivo se escribe y cómo abrirlo. -->
         <div v-else-if="tipo(a) === 'agente.noInstalado'" class="aviso text-body2">
-          {{ t('agentes.instalarAntes') }} <span class="codigo">comandos_agentes.{{ a.agente }}</span>.
+          {{ t('agentes.instalarAntes') }} {{ t('agentes.otraRuta') }} <span class="codigo">comandos_agentes.{{ a.agente }}</span> {{ t('agentes.otraRutaArchivo') }}
+          <div class="bloque-codigo q-mt-sm">{{ rutaConfig }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarRuta')" @click="copiar(rutaConfig)" /></div>
         </div>
         <!-- El CLI pasó a una clave de API, la sesión no responde u otro problema: qué pasa y, con suscripción, la salida -->
         <template v-else>
@@ -106,7 +108,7 @@
           <q-btn v-if="ofrecerDejarSuscripcion(a, puedeCambiar(a))" flat dense no-caps color="primary" class="q-mt-sm q-px-sm" :loading="cambiando === a.agente"
             :label="t('agentes.dejarSuscripcion')" @click="cambiar(a, 'clave_api')" />
         </template>
-        <q-btn v-if="!a.desconectado && sesion?.local" flat dense no-caps color="grey-7" icon="o_link_off" class="q-mt-sm q-px-sm"
+        <q-btn v-if="!a.desconectado && sesion?.local" flat dense no-caps color="neutro" icon="o_link_off" class="q-mt-sm q-px-sm"
           :label="t('agentes.desconectar')" :loading="cambiando === a.agente + ':conexion'" @click="conectar(a, false)" />
       <q-expansion-item dense dense-toggle :label="t('agentes.detalles')" header-class="text-caption texto-suave q-px-none" class="q-mt-sm">
         <div class="q-pb-sm">
@@ -125,12 +127,12 @@
             </div>
           </q-expansion-item>
         </q-list>
-        <div v-if="!visibles.length" class="q-pa-md texto-suave">{{ t('agentes.sinResultados') }}</div>
+        <EstadoVacio v-if="!visibles.length" :titulo="t('agentes.sinResultados')" :accion="hayFiltro ? t('historial.quitarFiltros') : undefined" @accion="quitarFiltros" />
       </q-card>
 
       <!-- Los que no están instalados van aparte, plegados: con muchos agentes no tapan a los que se usan. -->
       <q-card v-if="filtro === 'instalar' && !otros.length">
-        <div class="q-pa-md texto-suave">{{ t('agentes.sinResultados') }}</div>
+        <EstadoVacio :titulo="t('agentes.sinResultados')" :accion="t('historial.quitarFiltros')" @accion="quitarFiltros" />
       </q-card>
       <q-card v-if="otros.length && filtro !== 'listos' && filtro !== 'conectar'">
         <q-expansion-item :model-value="otrosAbierto" icon="o_download" header-class="text-weight-medium"
@@ -142,7 +144,7 @@
               </q-item-section>
               <q-item-section>
                 <q-item-label class="text-weight-medium">{{ nombreAgente(a.agente) }}</q-item-label>
-                <q-item-label caption>{{ t('agentes.instalarAntes') }} <span class="codigo">comandos_agentes.{{ a.agente }}</span>.</q-item-label>
+                <q-item-label caption>{{ t('agentes.instalarAntes') }} {{ t('agentes.otraRuta') }} <span class="codigo">comandos_agentes.{{ a.agente }}</span> {{ t('agentes.otraRutaArchivo') }}</q-item-label>
               </q-item-section>
               <q-item-section v-if="fichaDe(a.agente)?.url_instalacion" side>
                 <q-btn flat dense no-caps color="primary" icon-right="o_open_in_new" :label="t('agentes.comoInstalar')"
@@ -150,10 +152,18 @@
               </q-item-section>
             </q-item>
           </q-list>
+          <div class="q-px-md q-pb-md">
+            <div class="text-caption texto-suave q-mb-xs">{{ t('agentes.archivoConfig') }}</div>
+            <div class="bloque-codigo">{{ rutaConfig }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarRuta')" @click="copiar(rutaConfig)" /></div>
+          </div>
         </q-expansion-item>
       </q-card>
     </template>
-    <div v-else class="row q-col-gutter-md">
+    <!-- La primera comprobación falló: qué pasó y Reintentar, en lugar de un esqueleto que no termina. -->
+    <q-card v-else-if="error">
+      <EstadoVacio role="alert" :titulo="t('comun.errorCarga')" :texto="error" :accion="t('comun.reintentar')" :cargando="cargando" @accion="cargar" />
+    </q-card>
+    <div v-else class="row q-col-gutter-md" role="status" :aria-label="t('comun.cargando')">
       <div v-for="n in 4" :key="n" class="col-12 col-lg-6">
         <q-card class="q-pa-md"><q-skeleton type="text" width="40%" /><q-skeleton v-for="m in 3" :key="m" type="text" /></q-card>
       </div>
@@ -164,12 +174,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
+import EstadoVacio from '../componentes/EstadoVacio.vue'
 import { useQuasar } from 'quasar'
-import { api, avisar, avisarError, copiar } from '../api/cliente'
+import { api, avisar, avisarError, copiar, mensajeError } from '../api/cliente'
 import type { Adaptador } from '../api/tipos'
 import { modeloInicial, sesion } from '../estado'
 import { agenteListo, asegurarFichas, cargarFichas, codigoLinea, estadoAgente, fichaDe, fijarDisponibilidad, nombreAgente, ofrecerDejarSuscripcion, ordenarAgentes } from '../agentes'
 import { nombreEsfuerzo, numero } from '../formato'
+import { cargarRutaConfig, rutaConfig } from '../rutaConfig'
 import { t } from '../i18n'
 
 const $q = useQuasar()
@@ -187,6 +199,8 @@ const contextos = ref<Record<string, { nombre: string; tokens: number; origen: s
 const textoContextos = (agente: string) => (contextos.value[agente] ?? [])
   .map((c) => `${c.nombre} ${numero(c.tokens)}${c.origen === 'configurado' ? ' (' + t('agentes.configurado') + ')' : ''}`).join(' · ')
 const cargando = ref(false)
+// error es el de la primera comprobación (sin agentes que enseñar); los de después solo avisan.
+const error = ref('')
 const cambiando = ref('')
 
 const listo = agenteListo
@@ -196,6 +210,11 @@ const instalado = (a: Adaptador) => a.problema_codigo !== 'no_instalado'
 const busqueda = ref<string | null>('')
 const filtro = ref<'todos' | 'listos' | 'conectar' | 'instalar'>('todos')
 const otrosAbierto = ref(false)
+const hayFiltro = computed(() => !!busqueda.value || filtro.value !== 'todos')
+function quitarFiltros() {
+  busqueda.value = ''
+  filtro.value = 'todos'
+}
 watch(filtro, (f) => f === 'instalar' && (otrosAbierto.value = true))
 const coincide = (a: Adaptador) => {
   const texto = (busqueda.value ?? '').trim().toLowerCase()
@@ -250,8 +269,10 @@ async function cargar() {
   try {
     adaptadores.value = (await api.capacidades()).adaptadores
     fijarDisponibilidad(adaptadores.value)
+    error.value = ''
   } catch (e) {
-    avisarError(e)
+    if (adaptadores.value) avisarError(e)
+    else error.value = mensajeError(e)
   } finally {
     cargando.value = false
   }
@@ -311,6 +332,7 @@ onUnmounted(() => clearInterval(comprobacion))
 onMounted(() => {
   comprobacion = window.setInterval(() => !document.hidden && cargar(), 5 * 60_000)
   asegurarFichas()
+  cargarRutaConfig()
   cargar()
   api.catalogo().then((lista) => {
     for (const m of lista) if (m.agente && !m.modelo && !m.perfil) esfuerzos.value[m.agente] = m.esfuerzos ?? []

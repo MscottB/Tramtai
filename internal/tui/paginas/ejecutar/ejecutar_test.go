@@ -80,6 +80,9 @@ func hasta(t *testing.T, p *Pagina, cond func() bool) {
 	}
 }
 
+// pestana dice si la vista enseña esa pestaña como la elegida (su nombre entre corchetes).
+func pestana(p *Pagina, clave string) bool { return strings.Contains(p.Vista(), p.tx(clave)+"]") }
+
 func pulsar(p *Pagina, teclas ...string) []tea.Msg {
 	var fuera []tea.Msg
 	for _, k := range teclas {
@@ -137,7 +140,8 @@ func conBloqueado(t *testing.T) (*cliente.Cliente, string, *prueba.Bloqueado) {
 	return cli, id, b
 }
 
-// TestEnviarYCancelar: Ctrl+S manda la receta como la Web UI y la respuesta llega en vivo; Esc la cancela.
+// TestEnviarYCancelar: Ctrl+S manda la receta como la Web UI y la respuesta llega en vivo; Esc vuelve sin cancelarla y c
+// la cancela tras confirmar.
 func TestEnviarYCancelar(t *testing.T) {
 	cli, id, b := conBloqueado(t)
 	p := abierta(t, cli, id)
@@ -159,7 +163,7 @@ func TestEnviarYCancelar(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatalf("el agente no recibió la petición: %v", fuera)
 	}
-	if p.pestana != pestRespuesta || p.trabajo == nil {
+	if !pestana(p, "ejecutar.respuesta") || p.trabajo == nil {
 		t.Fatal("enviar enseña la respuesta")
 	}
 	hasta(t, p, func() bool { return p.salida == "primera parte" })
@@ -178,10 +182,28 @@ func TestEnviarYCancelar(t *testing.T) {
 	if fuera := pulsar(p, "ctrl+s"); len(fuera) != 0 || p.enviando {
 		t.Fatal("con una en marcha no se envía otra")
 	}
-	pulsar(p, "esc")
+	if !strings.Contains(p.Pendiente(), "petición en marcha") {
+		t.Fatalf("salir de la terminal avisa de la petición en marcha: %q", p.Pendiente())
+	}
+	// Esc vuelve y la petición sigue; c la cancela, después de confirmar.
+	if fuera := pulsar(p, "esc"); len(fuera) != 1 || fuera[0] != (pagina.Volver{}) {
+		t.Fatalf("en marcha, Esc vuelve: %v", fuera)
+	}
+	if tr, _ := cli.Trabajo(ctx, id, p.trabajo.ID); tr.Estado.Terminal() {
+		t.Fatalf("Esc no la cancela: %s", tr.Estado)
+	}
+	fuera = pulsar(p, "c")
+	if len(fuera) != 1 {
+		t.Fatalf("c pregunta antes de cancelar: %v", fuera)
+	}
+	if _, ok := fuera[0].(comp.Pregunta); !ok {
+		t.Fatalf("c pregunta antes de cancelar: %v", fuera)
+	}
+	_, cmd := p.Update(comp.Confirmado{})
+	correr(p, cmd)
 	hasta(t, p, func() bool { return p.final != nil })
-	if p.final.Estado != nucleo.Cancelado {
-		t.Fatalf("Esc la cancela: %s", p.final.Estado)
+	if p.final.Estado != nucleo.Cancelado || p.Pendiente() != "" {
+		t.Fatalf("c la cancela y ya no hay nada en marcha: %s %q", p.final.Estado, p.Pendiente())
 	}
 	if fuera := pulsar(p, "esc"); len(fuera) != 1 || fuera[0] != (pagina.Volver{}) {
 		t.Fatalf("terminada, Esc vuelve: %v", fuera)
@@ -238,11 +260,46 @@ func TestCorregirYCopiar(t *testing.T) {
 	}
 	// n deja la página lista para otra prueba con la misma receta.
 	pulsar(p, "n")
-	if p.trabajo != nil || p.form.Valor("mensaje") != "" || p.pestana != pestReceta || !p.form.Marcado("estructurada") {
+	if p.trabajo != nil || p.form.Valor("mensaje") != "" || !pestana(p, "ejecutar.receta") || !p.form.Marcado("estructurada") {
 		t.Fatalf("Nueva prueba vacía el mensaje y conserva la receta: %+v", p.leer())
 	}
 	if pulsar(p, "n"); p.form.Valor("esquema") == "" {
 		t.Fatal("sin respuesta, n no hace nada")
+	}
+}
+
+// TestRecetaEmpiezaArriba: Probar abre la receta arriba, con lo esencial (instrucciones, modelo y esfuerzo) y las opciones
+// plegadas como en la Web UI; la posición del foco se ve. Intro abre el pliegue y una receta con opciones lo abre sola.
+func TestRecetaEmpiezaArriba(t *testing.T) {
+	cli, id := prueba.Servicio(t)
+	if _, _, err := cli.CrearPunto(ctx, id, contratoPunto()); err != nil {
+		t.Fatal(err)
+	}
+	p := abierta(t, cli, id)
+	v := p.Vista()
+	if lineas := strings.Split(v, "\n"); !strings.Contains(lineas[1], "Instrucciones") {
+		t.Fatalf("la receta empieza arriba:\n%s", v)
+	}
+	for _, quiere := range []string{"Opciones de la receta", "↑↓ 1/"} {
+		if !strings.Contains(v, quiere) {
+			t.Fatalf("falta %q:\n%s", quiere, v)
+		}
+	}
+	if strings.Contains(v, "Respaldo") || strings.Contains(v, "Respuesta con forma") {
+		t.Fatalf("lo avanzado va plegado:\n%s", v)
+	}
+	pulsar(p, "down", "down", "down", "enter")
+	if v := p.Vista(); !strings.Contains(v, "Respaldo") || p.EnCampo() {
+		t.Fatalf("Intro abre las opciones sin entrar a editar:\n%s", v)
+	}
+	pulsar(p, "enter")
+	if strings.Contains(p.Vista(), "Respaldo") {
+		t.Fatalf("Intro las vuelve a plegar:\n%s", p.Vista())
+	}
+	_, cmd := p.Update(pagina.ConPunto{Nombre: "notas"})
+	correr(p, cmd)
+	if p.form.Enfocar("opciones"); !strings.Contains(p.Vista(), "▾ Opciones de la receta") {
+		t.Fatalf("una receta con salida estructurada abre las opciones:\n%s", p.Vista())
 	}
 }
 
@@ -283,7 +340,7 @@ func TestSeguirTrabajo(t *testing.T) {
 	p := abierta(t, cli, id)
 	_, cmd := p.Update(pagina.SeguirTrabajo{ID: tr.ID})
 	correr(p, cmd)
-	if p.trabajo == nil || p.trabajo.ID != tr.ID || p.pestana != pestRespuesta {
+	if p.trabajo == nil || p.trabajo.ID != tr.ID || !pestana(p, "ejecutar.respuesta") {
 		t.Fatal("abre el trabajo en la respuesta")
 	}
 	if p.form.Valor("mensaje") != "esperar" || p.form.Valor("instrucciones") != "corto" || p.valorOpcion("modelo") != "simulado" {
@@ -316,7 +373,7 @@ func TestUsarDeNuevo(t *testing.T) {
 		t.Fatalf("solo las de la terminal:\n%s", v)
 	}
 	pulsar(p, "u")
-	if p.pestana != pestReceta || p.form.Valor("mensaje") != "otra vez" || p.form.Valor("respaldo") != "simulado" {
+	if !pestana(p, "ejecutar.receta") || p.form.Valor("mensaje") != "otra vez" || p.form.Valor("respaldo") != "simulado" {
 		t.Fatalf("u trae mensaje y receta: %+v", p.leer())
 	}
 	pulsar(p, "left", "enter")
@@ -357,7 +414,7 @@ func TestServicioCaido(t *testing.T) {
 	} else if _, ok := fuera[0].(pagina.ErrorServicio); !ok {
 		t.Fatalf("con ErrorServicio: %v", fuera)
 	}
-	if v := p.Vista(); !strings.Contains(v, "Mensaje") {
+	if v := p.Vista(); !strings.Contains(v, "Instrucciones") {
 		t.Fatalf("el formulario se ve igual:\n%s", v)
 	}
 	cli, id, cerrar := prueba.Arrancar(t)
@@ -381,7 +438,7 @@ func TestRespuestasViejas(t *testing.T) {
 	p := abierta(t, cli, id)
 	cancelado, cancelar := context.WithCancel(context.Background())
 	cancelar()
-	viejos := []origen{{ctx: p.c.Ctx, instancia: id, gen: p.gen - 1}, {ctx: p.c.Ctx, instancia: "otro", gen: p.gen}, {ctx: cancelado, instancia: id, gen: p.gen}}
+	viejos := []origen{{pagina.Origen{Ctx: p.c.Ctx, Instancia: id, Gen: p.gen - 1}}, {pagina.Origen{Ctx: p.c.Ctx, Instancia: "otro", Gen: p.gen}}, {pagina.Origen{Ctx: cancelado, Instancia: id, Gen: p.gen}}}
 	for _, o := range viejos {
 		p.Update(msgCreado{origen: o, t: nucleo.Trabajo{ID: "viejo", Estado: nucleo.Completado}})
 		p.Update(msgRecientes{origen: o, lista: []nucleo.Trabajo{{ID: "viejo"}, {ID: "otro"}}})

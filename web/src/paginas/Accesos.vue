@@ -10,15 +10,13 @@
     <!-- Las dos clases de clave, en tres líneas: la del espacio y las de cada app. -->
     <q-card flat bordered>
       <q-card-section class="row q-col-gutter-md">
-        <div class="col-12 col-md-6 row no-wrap items-start" data-recorrido="conectar.clave-espacio">
-          <q-icon name="o_cable" size="24px" color="primary" class="q-mr-sm" />
-          <div><div class="text-weight-medium">{{ t('claves.espacioTitulo', { nombre: sesion?.nombre ?? '' }) }}</div>
-            <div class="text-caption texto-suave">{{ t('claves.espacioTexto') }}</div></div>
+        <div class="col-12 col-md-6" data-recorrido="conectar.clave-espacio">
+          <div class="text-weight-medium">{{ t('claves.espacioTitulo', { nombre: sesion?.nombre ?? '' }) }}</div>
+          <div class="text-caption texto-suave">{{ t('claves.espacioTexto') }}</div>
         </div>
-        <div class="col-12 col-md-6 row no-wrap items-start">
-          <q-icon name="o_hub" size="24px" color="primary" class="q-mr-sm" />
-          <div><div class="text-weight-medium">{{ t('claves.appsTitulo') }}</div>
-            <div class="text-caption texto-suave">{{ t('claves.appsTexto') }}</div></div>
+        <div class="col-12 col-md-6">
+          <div class="text-weight-medium">{{ t('claves.appsTitulo') }}</div>
+          <div class="text-caption texto-suave">{{ t('claves.appsTexto') }}</div>
         </div>
       </q-card-section>
     </q-card>
@@ -33,12 +31,12 @@
       <q-tab-panels v-model="pestana" animated keep-alive>
         <q-tab-panel name="apis" class="q-pa-none">
           <ListaApis v-model:filtro-grupo="filtroGrupo" :puntos="puntos" :uso="uso" :presupuestos="presupuestos" :opciones="opciones" :ocupado="ocupado"
-            @abrir="abrirDetalle" @nuevo="abrirNuevo" @activar-grupo="activarGrupo" @ver-peticiones="verPeticiones" @grupos="(g) => (gruposLista = g)" />
+            :cargando="cargandoPuntos" :error="errorPuntos" @recargar="cargarPuntos" @ver-clave="pestana = 'principal'" @abrir="abrirDetalle" @nuevo="abrirNuevo" @activar-grupo="activarGrupo" @ver-peticiones="verPeticiones" @grupos="(g) => (gruposLista = g)" />
         </q-tab-panel>
         <q-tab-panel name="principal" class="q-pa-none">
       <q-card-section class="seccion">
         <div>
-          <div class="titulo-seccion">{{ t('conectar.directa', { nombre: sesion?.nombre ?? '' }) }}</div>
+          <h2 class="titulo-seccion">{{ t('conectar.directa', { nombre: sesion?.nombre ?? '' }) }}</h2>
           <div class="texto-suave text-body2">{{ t('conectar.directaTexto') }}</div>
         </div>
       </q-card-section>
@@ -48,15 +46,19 @@
       <q-card-section class="row q-col-gutter-md q-pt-none">
         <div class="col-12 col-md-6">
           <div class="text-caption texto-suave q-mb-xs">{{ t('conectar.clave') }}</div>
-          <div class="bloque-codigo" style="padding-right: 112px">{{ clave ? (verClave ? clave : ocultar(clave)) : t('comun.cargando') }}
+          <div v-if="errorClave && !clave" class="row items-center q-gutter-sm" role="alert">
+            <span class="text-body2">{{ t('comun.errorCarga') }}: {{ errorClave }}</span>
+            <q-btn flat dense no-caps color="primary" icon="o_refresh" :label="t('comun.reintentar')" @click="cargarClave" />
+          </div>
+          <div v-else class="bloque-codigo bloque-codigo--dos">{{ clave ? (verClave ? clave : ocultar(clave)) : t('comun.cargando') }}
             <div class="boton-copiar row no-wrap">
               <q-btn flat dense round size="sm" :icon="verClave ? 'visibility_off' : 'visibility'" :aria-label="verClave ? t('conectar.ocultarClave') : t('conectar.mostrarClave')" @click="verClave = !verClave" />
               <q-btn flat dense round size="sm" icon="content_copy" :aria-label="t('conectar.copiarClave')" :disable="!clave" @click="copiar(clave, t('conectar.claveCopiada'))" />
-              <q-btn flat dense round size="sm" icon="o_autorenew" :aria-label="t('conectar.regenerarClave')" :disable="!clave" @click="regenerarClaveInstancia">
-                <q-tooltip>{{ t('conectar.regenerarClave') }}</q-tooltip>
-              </q-btn>
             </div>
           </div>
+          <!-- Regenerar invalida la clave en todas las apps: va aparte de Copiar, con su nombre escrito y en color de peligro. -->
+          <q-btn v-if="clave" flat dense no-caps color="negative" icon="o_autorenew" class="q-mt-sm" :label="t('conectar.regenerarClave')"
+            @click="regenerarClaveInstancia" />
         </div>
       </q-card-section>
       <q-card-section class="q-pt-none">
@@ -106,7 +108,7 @@ import DetalleApi from '../componentes/accesos/DetalleApi.vue'
 import FormularioApi from '../componentes/accesos/FormularioApi.vue'
 import ListaApis from '../componentes/accesos/ListaApis.vue'
 import { activo, contratos, guardar, leer } from '../componentes/accesos/comun'
-import { api, avisar, avisarError, copiar, cargarDiasHistorial } from '../api/cliente'
+import { api, avisar, avisarError, copiar, cargarDiasHistorial, mensajeError } from '../api/cliente'
 import type { ConfigPunto, EstadoPresupuesto, EstadoPunto, Modelo, UsoPunto } from '../api/tipos'
 import { grupoInicial, origenHistorial, recetaInicial, sesion } from '../estado'
 import { sugerirApiPropia } from '../claves'
@@ -119,6 +121,7 @@ const base = ref(location.origin)
 // appConClave son las peticiones de apps con la clave del espacio en 24 h: con muchas se sugiere darles su propia API.
 const appConClave = ref(0)
 const clave = ref('')
+const errorClave = ref('')
 const verClave = ref(false)
 const catalogo = ref<Modelo[]>([])
 const ids = computed(() => catalogo.value.map((m) => m.id))
@@ -189,16 +192,29 @@ function verPeticiones(nombre: string) {
   emit('ir', 'historial')
 }
 
+// cargandoPuntos y errorPuntos: la lista no enseña «crea tu primera API» mientras carga ni si la carga falló.
+const cargandoPuntos = ref(true)
+const errorPuntos = ref('')
 async function cargarPuntos() {
+  cargandoPuntos.value = true
   try {
     const r = await api.puntosConUso()
     puntos.value = r.puntos_acceso
     uso.value = r.uso ?? {}
     presupuestos.value = r.presupuestos ?? {}
+    errorPuntos.value = ''
     presupuestoEspacio.value = await api.presupuestoInstancia()
   } catch (e) {
-    avisarError(e)
+    if (puntos.value.length) avisarError(e)
+    else errorPuntos.value = mensajeError(e)
+  } finally {
+    cargandoPuntos.value = false
   }
+}
+
+function cargarClave() {
+  errorClave.value = ''
+  api.claveInstancia().then((r) => (clave.value = r.token)).catch((e) => (errorClave.value = mensajeError(e)))
 }
 
 function abrirNuevo() {
@@ -315,6 +331,6 @@ onMounted(async () => {
     base.value = i.base
     appConClave.value = i.app_con_clave_24h ?? 0
   }).catch(() => {})
-  api.claveInstancia().then((r) => (clave.value = r.token)).catch(avisarError)
+  cargarClave()
 })
 </script>

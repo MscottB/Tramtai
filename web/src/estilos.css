@@ -7,17 +7,20 @@
   --superficie-suave: #f4f7f6;
   --borde: #dce3e2;
   --borde-fuerte: #c2cccb;
+  /* Contorno de campos y del control segmentado: 3:1 sobre la superficie (el borde fuerte da 1,6:1). */
+  --borde-campo: #7d8d90;
   --texto: #0f1b1e;
   --texto-suave: #55666a;
   --acento: #0b6e64;
   --acento-texto: #ffffff;
   --acento-suave: rgba(11, 110, 100, 0.09);
   --codigo-fondo: rgba(11, 110, 100, 0.05);
-  --ok: #15803d;
-  --ok-suave: rgba(21, 128, 61, 0.1);
-  --error: #c42b2b;
-  --error-suave: rgba(196, 43, 43, 0.09);
-  --aviso: #a16207;
+  /* ok, error y aviso llegan a 4,5:1 sobre su velo también encima del fondo del andén. */
+  --ok: #166534;
+  --ok-suave: rgba(22, 101, 52, 0.1);
+  --error: #b42525;
+  --error-suave: rgba(180, 37, 37, 0.09);
+  --aviso: #854d0e;
   --aviso-suave: rgba(202, 138, 4, 0.13);
   --neutro-suave: rgba(85, 102, 106, 0.1);
   --linea-otro: #64748b;
@@ -36,6 +39,7 @@ body.body--dark {
   --superficie-suave: #15222a;
   --borde: #1f2f38;
   --borde-fuerte: #2d404b;
+  --borde-campo: #667b85;
   --texto: #e5edf0;
   --texto-suave: #93a5ac;
   --acento: #2dd4bf;
@@ -53,21 +57,33 @@ body.body--dark {
   --sombra: none;
   --sombra-alta: 0 16px 40px rgba(0, 0, 0, 0.5);
   background: var(--fondo);
-  /* Quasar fija --q-primary y --q-negative en línea en body: los de noche se imponen con !important (el rojo de día
-     no llega a 4,5:1 sobre la superficie oscura). */
-  --q-primary: #2dd4bf !important;
-  --q-negative: #f87171 !important;
+}
+/* Los colores de Quasar (color="primary", avisos, barras de progreso) salen de los tokens, así cambian con el tema.
+   Se declaran en body y no en :root: es body quien cambia los tokens de noche. main.ts ya no le pasa colores a Quasar. */
+body {
+  --q-primary: var(--acento);
+  --q-positive: var(--ok);
+  --q-negative: var(--error);
+  --q-warning: var(--aviso);
+  --q-info: var(--acento);
+}
+/* El neutro de la app (color="neutro"), en lugar de los grises de Quasar: acciones secundarias como Desconectar. */
+.text-neutro {
+  color: var(--texto-suave) !important;
+}
+.bg-neutro {
+  background: var(--texto-suave) !important;
+}
+/* Texto sobre los fondos de estado (botones y avisos): blanco de día; de noche, los fondos son claros y va tinta. */
+.bg-warning.text-dark {
+  color: #ffffff !important;
+}
+body.body--dark :is(.bg-positive, .bg-negative, .bg-info, .bg-neutro).text-white,
+body.body--dark .bg-warning.text-dark {
+  color: #0a1116 !important;
 }
 body.body--dark .bg-primary.text-white {
   color: var(--acento-texto) !important;
-}
-body.body--dark .bg-negative.text-white {
-  color: #2a0606 !important;
-}
-/* El gris neutro de Quasar (#757575) no llega a 4,5:1 sobre la superficie oscura: chips de estado y acciones
-   secundarias como Desconectar usan el texto suave del tema. */
-body.body--dark .text-grey-7 {
-  color: var(--texto-suave) !important;
 }
 
 /* ---------- Base y superficies del navegador ---------- */
@@ -88,9 +104,28 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--borde-fuerte) transparent;
 }
+/* Foco del teclado: contorno de 2 px del acento (6,1:1 sobre la superficie de día y 9,3:1 de noche). Quasar quita el
+   contorno a sus controles (.no-outline con !important, o outline: 0 en su clase) y deja un velo al 15 % que no llega a
+   1,3:1: la segunda regla gana a las dos en botones, casillas, radios, interruptores, pestañas, filas de lista, chips y
+   la cruz de borrar de los campos. Lo que solo recibe el foco por código (tabindex="-1": menús, diálogos, el contenido
+   de la página) no lleva contorno. */
 :focus-visible {
   outline: 2px solid var(--acento);
   outline-offset: 2px;
+}
+.no-outline:focus-visible:not([tabindex='-1']),
+.q-focusable:focus-visible:not([tabindex='-1']),
+.q-field__focusable-action:focus-visible {
+  outline: 2px solid var(--acento) !important;
+  outline-offset: 2px;
+}
+/* En listas, pestañas, fichas y el control segmentado el contorno va por dentro: sus contenedores recortan lo que
+   sobresale (overflow) y el anillo se perdería en tres de sus lados. */
+.q-item:focus-visible,
+.q-tab:focus-visible,
+.segmentado .q-btn:focus-visible,
+.ficha :focus-visible {
+  outline-offset: -2px !important;
 }
 a {
   text-underline-offset: 3px;
@@ -115,11 +150,13 @@ a {
 .q-dialog .q-card {
   box-shadow: var(--sombra-alta);
 }
+/* z-index: los menús (idioma y tema de la cabecera) van por encima del panel de la Ayuda, que se usa abierto con ellos. */
 .q-menu {
   background: var(--superficie);
   border: 1px solid var(--borde);
   border-radius: var(--radio);
   box-shadow: var(--sombra-alta);
+  z-index: 6200;
 }
 .q-btn {
   border-radius: var(--radio-control);
@@ -137,7 +174,7 @@ a {
   border-radius: var(--radio-control);
 }
 .q-field--outlined .q-field__control:before {
-  border-color: var(--borde-fuerte);
+  border-color: var(--borde-campo);
 }
 .q-field--outlined.q-field--highlighted .q-field__control:after {
   border-width: 1.5px;
@@ -186,9 +223,12 @@ a {
 .q-dialog__inner--right:has(> .hoja-detalle) {
   padding: 0;
 }
+/* dvh: en el móvil, 100vh incluye la barra del navegador y taparía las acciones del pie (Reintentar, Eliminar). */
 .q-dialog__inner--right > .hoja-detalle {
   height: 100vh;
+  height: 100dvh;
   max-height: 100vh;
+  max-height: 100dvh;
   border-radius: 0;
   border-width: 0 0 0 1px;
 }
@@ -214,11 +254,25 @@ input[type='number'] {
 /* Fila de una API en Mis APIs: insignia, datos, uso y acciones. */
 .fila-api {
   display: grid;
-  grid-template-columns: auto minmax(0, 1.3fr) minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1.3fr) minmax(0, 1fr);
   gap: 8px 16px;
   align-items: start;
   padding: 16px;
   border-top: 1px solid var(--borde);
+}
+/* El nombre abre el detalle también con el teclado (la fila entera, con el ratón). */
+.fila-api__nombre {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.fila-api__nombre:hover {
+  text-decoration: underline;
 }
 .fila-api__info {
   display: grid;
@@ -229,8 +283,7 @@ input[type='number'] {
   .fila-api {
     grid-template-columns: auto minmax(0, 1fr);
   }
-  .fila-api__uso,
-  .fila-api__acciones {
+  .fila-api__uso {
     grid-column: 2;
   }
 }
@@ -427,10 +480,8 @@ input[type='number'] {
   align-items: flex-end;
   height: var(--nav-titulo);
   padding: 0 12px 4px 43px;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.78rem;
+  font-weight: 600;
   color: var(--texto-suave);
 }
 .nav-grupo__lista {
@@ -452,12 +503,38 @@ input[type='number'] {
   line-height: 1.2;
   text-wrap: balance;
 }
+/* Va en un h2 (los lectores de pantalla saltan de sección en sección): sin el margen ni el tamaño de Quasar. */
 .titulo-seccion {
+  margin: 0;
   font-family: var(--fuente-titulo);
   line-height: 1.3;
   font-size: 1.0625rem;
   font-weight: 650;
   letter-spacing: -0.008em;
+}
+/* «Saltar al contenido»: el primer elemento al tabular; solo se ve con el foco. */
+.saltar {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 7000;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: var(--radio-control);
+  background: var(--acento);
+  color: var(--acento-texto);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transform: translateY(-200%);
+}
+.saltar:focus-visible {
+  transform: none;
+}
+/* El contenido recibe el foco por código al cambiar de página (para que el teclado y el lector empiecen en él): no es
+   un control, así que no lleva el anillo. */
+#contenido:focus {
+  outline: none;
 }
 .texto-suave {
   color: var(--texto-suave);
@@ -498,6 +575,34 @@ input[type='number'] {
   position: absolute;
   top: 6px;
   right: 6px;
+}
+/* Clave con dos botones (ver y copiar) en la esquina. */
+.bloque-codigo--dos {
+  padding-right: 76px;
+}
+
+/* Con el dedo (pantalla táctil), cada botón compacto ocupa al menos 44 × 44 px. El icono no crece: solo el área que se
+   puede pulsar, y en los bloques de código el botón se pega a la esquina para no salirse. */
+@media (pointer: coarse) {
+  .q-btn--dense {
+    min-height: 44px;
+  }
+  .q-btn--round,
+  .q-btn--dense.q-btn--round {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .bloque-codigo {
+    padding-right: 52px;
+    min-height: 46px;
+  }
+  .bloque-codigo--dos {
+    padding-right: 96px;
+  }
+  .bloque-codigo .boton-copiar {
+    top: 1px;
+    right: 1px;
+  }
 }
 .bloque-codigo.sin-ajuste {
   white-space: pre;
@@ -640,14 +745,6 @@ input[type='number'] {
   max-height: 62vh;
   overflow: auto;
 }
-.vacio {
-  text-align: center;
-  padding: 44px 16px;
-  color: var(--texto-suave);
-}
-.vacio .q-icon {
-  opacity: 0.45;
-}
 .fila-clicable {
   cursor: pointer;
 }
@@ -680,12 +777,14 @@ div:first-child > .cabecera-grupo {
 .tarjeta-clicable:hover {
   border-color: var(--borde-fuerte);
 }
+/* Un enlace dentro del texto va subrayado: el acento y el texto suave están a 1,1:1 y el color solo no lo distingue. */
 .enlace {
   color: var(--acento);
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
 }
 .enlace:hover {
-  text-decoration: underline;
+  text-decoration-thickness: 2px;
 }
 .cifra {
   font-family: var(--fuente-titulo);
@@ -703,7 +802,9 @@ div:first-child > .cabecera-grupo {
   gap: 8px;
   min-width: 0;
 }
-/* Distintivo de línea, como el número de un tranvía: fondo del color de la línea y código en negrita. */
+/* Distintivo de línea, como el número de un tranvía: fondo del color de la línea y código en negrita. El fondo y el
+   texto de cada chapa los calcula pintarLineas (agentes.ts) para que lleguen a 4,5:1 con cualquier color de ficha;
+   sin ficha, la línea gris y blanco de día (4,8:1) o tinta de noche. */
 .linea__chapa {
   flex: none;
   display: inline-flex;
@@ -713,8 +814,8 @@ div:first-child > .cabecera-grupo {
   height: 18px;
   padding: 0 5px;
   border-radius: 5px;
-  background: var(--c, var(--linea-otro));
-  color: #ffffff;
+  background: var(--c-chapa, var(--c, var(--linea-otro)));
+  color: var(--c-chapa-texto, #ffffff);
   font-family: var(--fuente-titulo);
   font-weight: 800;
   font-size: 0.68rem;
@@ -722,7 +823,7 @@ div:first-child > .cabecera-grupo {
   line-height: 1;
 }
 body.body--dark .linea__chapa {
-  color: #0a1116;
+  color: var(--c-chapa-texto, #0a1116);
 }
 .linea__chapa--grande {
   min-width: 38px;
@@ -780,8 +881,9 @@ body.body--dark .linea__chapa {
   border-radius: 50%;
   background: currentColor;
 }
-.etiqueta .q-icon {
-  display: none;
+.etiqueta--neutro {
+  background: var(--neutro-suave);
+  color: var(--texto-suave);
 }
 .etiqueta--ok {
   background: var(--ok-suave);
@@ -801,8 +903,12 @@ body.body--dark .linea__chapa {
 }
 
 /* ---------- Trayecto de una petición: estaciones unidas por la línea ---------- */
-.ruta {
+/* El marco lleva el tranvía y el color del resultado; las estaciones van en la lista de dentro, sin nada más en ella. */
+.ruta-marco {
   --c: var(--acento);
+  position: relative;
+}
+.ruta {
   position: relative;
   display: grid;
   grid-auto-flow: column;
@@ -829,9 +935,8 @@ body.body--dark .linea__chapa {
   background: var(--borde-fuerte);
   transition: background-color 0.3s ease;
 }
-/* La primera estación no tiene tramo anterior. first-of-type, no first-child: mientras la petición avanza, el
-   tranvía (un span) va antes de las estaciones y la primera dejaría de ser first-child. */
-.ruta__parada:first-of-type::before {
+/* La primera estación no tiene tramo anterior. */
+.ruta__parada:first-child::before {
   display: none;
 }
 .ruta__punto {
@@ -949,6 +1054,12 @@ body.body--dark .tablero {
 .tablero__fila:hover {
   background: rgba(255, 255, 255, 0.05);
 }
+/* El tablero recorta lo que sobresale (overflow, por las esquinas): el foco va por dentro y en turquesa, que sobre la
+   tinta del tablero da 9,6:1 (el acento de día solo llega a 2,9:1). */
+.tablero__fila:focus-visible {
+  outline-color: #2dd4bf;
+  outline-offset: -3px;
+}
 .tablero__punto {
   width: 10px;
   height: 10px;
@@ -1034,9 +1145,24 @@ body.body--dark .tablero {
   overflow-wrap: anywhere;
 }
 
+/* Leyenda de orígenes de Ajustes: cada etiqueta con lo que significa, una por línea. */
+.leyenda-origenes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.leyenda-origenes li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+}
+
 /* Selector de filtros o pestañas como un control segmentado. */
 .segmentado {
-  border: 1px solid var(--borde);
+  border: 1px solid var(--borde-campo);
   border-radius: 10px;
   padding: 3px;
   background: var(--superficie-suave);
@@ -1174,8 +1300,8 @@ body.body--dark .tablero {
   white-space: nowrap;
 }
 
-/* Texto solo para lectores de pantalla (el estado final de un trabajo, por ejemplo). */
-.solo-lector {
+/* Texto solo para lectores de pantalla (el estado final de un trabajo, los resultados de la Ayuda). */
+.solo-lectores {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -1212,18 +1338,6 @@ body.body--dark .tablero {
   align-items: center;
   gap: 4px;
   color: var(--texto-suave);
-}
-@media (max-width: 899px) {
-  .diagrama {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .diagrama__parada:not(:last-child)::after {
-    content: '↓';
-    right: auto;
-    left: 18px;
-    top: auto;
-    bottom: -15px;
-  }
 }
 .pasos-guia {
   list-style: none;
@@ -1301,10 +1415,8 @@ body.body--dark .tablero {
 .q-drawer:has(.panel-ayuda) {
   z-index: 6100;
 }
-.q-menu {
-  z-index: 6200;
-}
-/* El recorrido se apila según el ancho de la vista del tema (en el panel es estrecha aunque la ventana sea ancha). */
+/* El recorrido se apila según el ancho de la vista del tema (en el panel es estrecha aunque la ventana sea ancha); todo
+   diagrama vive en una vista de tema, así que basta esta consulta de contenedor. */
 .vista-tema {
   container-type: inline-size;
 }
@@ -1320,16 +1432,9 @@ body.body--dark .tablero {
     bottom: -15px;
   }
 }
-.solo-lectores {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
 
-/* Mapa vivo: los tranvías de las peticiones en curso avanzan por su camino; con «reducir movimiento», saltan. */
+/* Mapa vivo: los tranvías de las peticiones en curso avanzan por su camino; con «reducir movimiento», saltan (lo
+   quita la regla global de prefers-reduced-motion). */
 .tranvia-vivo {
   cursor: pointer;
 }
@@ -1342,10 +1447,11 @@ body.body--dark .tablero {
   stroke: var(--texto);
   stroke-width: 3;
 }
-@media (prefers-reduced-motion: reduce) {
-  .tranvia-vivo rect {
-    transition: none;
-  }
+/* Área para pulsar el tranvía con el dedo (44 px o más en pantalla), invisible y sin borde. */
+.tranvia-vivo .tranvia-vivo__toque,
+.tranvia-vivo:focus-visible .tranvia-vivo__toque {
+  fill: transparent;
+  stroke: none;
 }
 
 /* Recorridos guiados (driver.js, useRecorrido): la ventana del paso con los colores de la app en claro y oscuro. La

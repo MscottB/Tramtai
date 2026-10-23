@@ -173,25 +173,47 @@ func (m *modelo) vistaEstado() string {
 	return m.avisos.Vista(e)
 }
 
-// vistaPie son las teclas de lo que tiene el foco y, si no hay un campo, las comunes.
+// comunes son las teclas de la app fuera de un campo: las tres primeras se ven siempre en el pie; Ctrl+E, si cabe.
+func comunes() []pagina.Tecla {
+	return []pagina.Tecla{{Tecla: "Tab", Accion: idioma.T("menú")}, {Tecla: "?", Accion: idioma.T("ayuda")}, {Tecla: "q", Accion: idioma.T("salir")},
+		{Tecla: "Ctrl+E", Accion: idioma.T("espacio")}}
+}
+
+// vistaPie son las teclas de lo que tiene el foco. Fuera de un campo, «Tab menú · ? ayuda · q salir» van a la derecha y
+// se ven a cualquier ancho; las de la página ocupan lo que queda y, si no caben, ? las enseña todas.
 func (m *modelo) vistaPie() string {
 	e := m.estilos
-	var teclas []pagina.Tecla
+	var teclas, fijas []pagina.Tecla
 	switch {
 	case m.pregunta != nil:
 	case m.selector != nil, m.enMenu:
 		teclas = []pagina.Tecla{{Tecla: idioma.T("Intro"), Accion: idioma.T("elige")}, {Tecla: "Esc", Accion: idioma.T("vuelve")}}
+		if m.selector == nil { // en el selector, q filtra
+			fijas = comunes()[2:3]
+		}
 	default:
 		p := m.pagina(m.actual)
 		teclas = p.Teclas()
 		if !p.EnCampo() {
-			teclas = append(teclas, pagina.Tecla{Tecla: "Tab", Accion: idioma.T("menú")}, pagina.Tecla{Tecla: "?", Accion: idioma.T("ayuda")},
-				pagina.Tecla{Tecla: "Ctrl+E", Accion: idioma.T("espacio")}, pagina.Tecla{Tecla: "q", Accion: idioma.T("salir")})
+			teclas, fijas = append(teclas, comunes()[3]), comunes()[:3]
 		}
 	}
-	var partes []string
-	for _, t := range teclas {
-		partes = append(partes, e.Tecla.Render(t.Tecla)+" "+e.Tenue.Render(t.Accion))
+	if m.avisos.HayError() && m.pregunta == nil {
+		teclas = append([]pagina.Tecla{{Tecla: "!", Accion: idioma.T("ver el error")}}, teclas...)
 	}
-	return e.Recortar(strings.Join(partes, e.Tenue.Render(" "+e.Iconos.Separador+" ")), m.ancho)
+	sep := e.Tenue.Render(" " + e.Iconos.Separador + " ")
+	der := m.teclasPie(fijas, sep)
+	izq := e.Recortar(m.teclasPie(teclas, sep), max(m.ancho-lipgloss.Width(der)-lipgloss.Width(sep), 0))
+	if der == "" || izq == "" {
+		return e.Recortar(izq+der, m.ancho)
+	}
+	return izq + strings.Repeat(" ", max(m.ancho-lipgloss.Width(izq)-lipgloss.Width(der), 1)) + der
+}
+
+func (m *modelo) teclasPie(teclas []pagina.Tecla, sep string) string {
+	partes := make([]string, len(teclas))
+	for i, t := range teclas {
+		partes[i] = m.estilos.Tecla.Render(t.Tecla) + " " + m.estilos.Tenue.Render(t.Accion)
+	}
+	return strings.Join(partes, sep)
 }

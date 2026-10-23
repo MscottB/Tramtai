@@ -48,7 +48,7 @@ func leerArchivoPuntos(ruta string, origen nucleo.Origen) ([]ConfigPunto, error)
 // guardadoAdmin recarga y responde con el archivo y los puntos del servicio, como tras recargar.
 func (s *Servicio) guardadoAdmin(w http.ResponseWriter, ruta string, extra map[string]any) {
 	respuesta := map[string]any{"archivo": ruta, "puntos_acceso": s.Recargar()}
-	_ = s.actualizarDescriptor()
+	_ = s.persistirEstado() // anotado; los puntos ya están en su archivo
 	for clave, valor := range extra {
 		respuesta[clave] = valor
 	}
@@ -205,12 +205,11 @@ func (s *Servicio) adminActivarPuntos(w http.ResponseWriter, r *http.Request) {
 	s.guardadoAdmin(w, ruta, nil)
 }
 
-// adminEliminarPunto quita el punto del archivo y después su clave: al recargar, el servicio sabe que se eliminó y su
-// consumo deja de contar.
+// adminEliminarPunto quita el punto del archivo con su clave y su consumo.
 func (s *Servicio) adminEliminarPunto(w http.ResponseWriter, r *http.Request) {
 	ruta, origen, err := archivoAdmin(r)
 	if err == nil {
-		err = EliminarPunto(s.opc.Datos, ruta, origen, r.PathValue("nombre"))
+		err = s.EliminarPunto(ruta, origen, r.PathValue("nombre"))
 	}
 	if err != nil {
 		api.EscribirError(w, r, err)

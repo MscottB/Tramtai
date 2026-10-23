@@ -104,7 +104,7 @@ func TestAgentesDesconectadoSinCLIEsNoInstalado(t *testing.T) {
 	if p.agentes[0].Agente != "simulado" {
 		t.Fatalf("va al final: %+v", p.agentes)
 	}
-	if v := p.Vista(); !strings.Contains(v, "Listos (1) · Falta conectar (0) · No instalados (1)") {
+	if v := p.Vista(); !strings.Contains(v, "Listos (1) Falta conectar (0) No instalados (1)") {
 		t.Fatalf("cuenta como no instalado:\n%s", v)
 	}
 	p.lista.Update(tecla("j"))
@@ -146,7 +146,7 @@ func TestAgentesTextosComoLaWeb(t *testing.T) {
 	p := Nueva("en").(*Pagina)
 	correr(p, p.Iniciar(c))
 	v := p.Vista()
-	for _, quiere := range []string{"Agents", "Ready", "Ready (1)", "To connect (0)", "Not installed (0)", "API key"} {
+	for _, quiere := range []string{"Ready", "Ready (1)", "To connect (0)", "Not installed (0)", "API key"} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}

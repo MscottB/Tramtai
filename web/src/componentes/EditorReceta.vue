@@ -23,7 +23,7 @@
       <SelectorEsfuerzo v-if="r.niveles.length" :model-value="r.esfuerzo" :niveles="esfuerzoPrincipal ? ['agente', ...r.niveles] : r.niveles" :etiqueta="t('receta.esfuerzoDe', { agente: r.nombre })"
         :vacio="vacioRespaldo(r.base, r.niveles)" hint="" @update:model-value="(v: string) => esfuerzoRespaldo(i, v)" />
       <div v-else class="text-caption texto-suave row items-center no-wrap">
-        <q-icon name="o_psychology" size="18px" class="q-mr-xs" />{{ t('receta.respaldoSinEsfuerzo', { agente: r.nombre }) }}
+        {{ t('receta.respaldoSinEsfuerzo', { agente: r.nombre }) }}
       </div>
     </div>
     <div>
@@ -34,7 +34,7 @@
       <div class="row items-center no-wrap justify-between">
         <q-btn-toggle v-model="modo" dense flat no-caps toggle-color="primary" :aria-label="t('receta.modo')"
           :options="[{ label: t('receta.modoCampos'), value: 'campos', disable: !camposDelEsquema }, { label: t('receta.modoJson'), value: 'json' }]" />
-        <q-btn-dropdown flat dense no-caps color="primary" icon="o_auto_awesome" :label="t('receta.plantillaCorta')" :aria-label="t('receta.plantilla')">
+        <q-btn-dropdown flat dense no-caps color="primary" icon="o_description" :label="t('receta.plantillaCorta')" :aria-label="t('receta.plantilla')">
           <q-list style="max-width: 340px">
             <q-item v-for="p in plantillas" :key="p.id" v-close-popup clickable @click="usarPlantilla(p)">
               <q-item-section>

@@ -137,10 +137,8 @@ const analizadas = computed(() => {
   gap: 8px;
   margin-bottom: 10px;
   font-family: var(--fuente-titulo);
-  font-size: 0.74rem;
+  font-size: 0.82rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--texto-suave);
 }
 .notas__chapa {

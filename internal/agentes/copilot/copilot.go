@@ -87,7 +87,11 @@ func (c Copilot) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emit
 			return adaptadores.Resultado{}, err
 		}
 	case adaptadores.AutenticacionClaveAPI, "":
-		if clave = adaptadores.ClaveEntorno(variableClave); clave == "" {
+		var err error
+		if clave, err = adaptadores.ClaveAlmacen(variableClave); err != nil {
+			return adaptadores.Resultado{}, err
+		}
+		if clave == "" {
 			return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente,
 				idioma.T("falta COPILOT_GITHUB_TOKEN; o configura adaptadores.copilot.autenticacion: suscripcion para usar la sesión de copilot login"))
 		}

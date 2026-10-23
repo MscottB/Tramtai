@@ -96,7 +96,7 @@ func (m *modelo) teclaMenu(tecla string) tea.Cmd {
 	case "esc", "tab":
 		m.enMenu = false
 	case "q":
-		return tea.Quit
+		return m.salir()
 	default:
 		if p, ok := atajo(tecla); ok {
 			return m.ir(p, nil, false)

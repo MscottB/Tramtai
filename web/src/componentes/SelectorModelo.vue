@@ -2,7 +2,7 @@
   <q-select :model-value="modelValue" :options="filtradas" emit-value map-options outlined dense options-dense use-input input-debounce="0"
     :multiple="multiple" :max-values="maximo" :hint="hint ?? t('modelo.libreHint')" :error="!!aviso" :error-message="aviso" @filter="filtrar" @new-value="nuevo"
     @update:model-value="(v: string | string[] | null) => emit('update:modelValue', v)">
-    <template #prepend><q-icon :name="icono ?? 'o_smart_toy'" /></template>
+    <template v-if="icono" #prepend><q-icon :name="icono" /></template>
     <template #selected-item="scope">
       <q-chip v-if="multiple" removable dense :tabindex="scope.tabindex" class="q-ml-none" @remove="scope.removeAtIndex(scope.index)">
         {{ scope.opt.label }}<span v-if="scope.opt.version" class="texto-suave q-ml-xs">{{ scope.opt.version }}</span>
@@ -24,7 +24,7 @@
         </q-item-section>
         <q-item-section side class="row no-wrap items-center q-gutter-x-xs">
           <span v-if="scope.opt.predeterminado" class="etiqueta etiqueta--info">{{ t('modelo.esPredeterminado') }}</span>
-          <q-icon v-if="scope.opt.esfuerzos.length" name="o_psychology" size="16px" :aria-label="t('esfuerzo.elegible')"><q-tooltip>{{ t('esfuerzo.elegible') }}</q-tooltip></q-icon>
+          <span v-if="scope.opt.esfuerzos.length" class="etiqueta" :title="t('esfuerzo.elegible')">{{ t('esfuerzo.titulo') }}</span>
         </q-item-section>
       </q-item>
     </template>

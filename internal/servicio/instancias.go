@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -145,6 +146,7 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuraci
 	if err != nil {
 		return nil, err
 	}
+	alm.Registros = s.opc.Registros
 	if alm.Compactada {
 		fmt.Fprintf(s.opc.Registros, "se compactó la base de %s: desde ahora devuelve al disco lo que libera la purga\n", id)
 	}
@@ -366,6 +368,9 @@ func (s *Servicio) Estado(ctx context.Context) Estado {
 	s.mu.RLock()
 	e := Estado{Identificador: s.ID, Version: version.Texto(), PID: os.Getpid(), IniciadoEn: s.IniciadoEn, Base: s.Base(),
 		Instancias: []EstadoInstancia{}, Puntos: s.estadoPuntos(), Errores: s.erroresPuntos, Actualizacion: nueva}
+	if s.errorEstado != "" {
+		e.Errores = append(slices.Clone(e.Errores), s.errorEstado)
+	}
 	instancias := make([]*Instancia, 0, len(s.instancias))
 	for _, inst := range s.instancias {
 		instancias = append(instancias, inst)

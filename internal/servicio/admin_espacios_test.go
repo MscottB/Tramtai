@@ -2,6 +2,7 @@ package servicio
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -196,5 +197,53 @@ func TestRutasAdminRechazanClaveDeApp(t *testing.T) {
 	}
 	if s.instancia(inst.ID) == nil {
 		t.Fatal("una petición rechazada no cambia nada")
+	}
+}
+
+// Con el servicio en marcha, la CLI cambia el puerto a través de él (un solo proceso escribe config.yaml); puerto 0 solo
+// cambia el automático.
+func TestAdminPuerto(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	libre, _ := net.Listen("tcp", "127.0.0.1:0")
+	puerto := libre.Addr().(*net.TCPAddr).Port
+	libre.Close()
+	if r, texto := admin(t, s, ts.URL, "PUT", "/api/v1/servicio/puerto", `{"puerto":`+strconv.Itoa(puerto)+`,"automatico":true}`); r.StatusCode != 204 {
+		t.Fatalf("puerto: %d %s", r.StatusCode, texto)
+	}
+	if r, texto := admin(t, s, ts.URL, "PUT", "/api/v1/servicio/puerto", `{"puerto":0,"automatico":false}`); r.StatusCode != 204 {
+		t.Fatalf("solo el automático: %d %s", r.StatusCode, texto)
+	}
+	c, err := nucleo.CargarConfiguracion("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Entero("servicio.puerto") != puerto || c.Booleano("servicio.puerto_automatico") {
+		t.Fatalf("config.yaml: puerto %d, automático %v", c.Entero("servicio.puerto"), c.Booleano("servicio.puerto_automatico"))
+	}
+}
+
+// Activar un proyecto por la administración (tramtai proyecto iniciar, el escritorio con -proyecto) no adopta en silencio
+// la marca de un espacio cuya carpeta ya no está: pregunta como AbrirProyecto, diciendo de dónde viene.
+func TestAdminActivarMovidoPregunta(t *testing.T) {
+	s, ts, proyecto := entorno(t, "", "", adaptadores.Simulado{})
+	antes, err := s.ActivarProyecto(proyecto)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Desactivar(antes.ID)
+	nueva := filepath.Join(filepath.Dir(proyecto), "Clonado")
+	if err := os.Rename(proyecto, nueva); err != nil {
+		t.Fatal(err)
+	}
+	cuerpo := `{"ambito":"proyecto","raiz":` + strconv.Quote(nueva) + `}`
+	if r, texto := admin(t, s, ts.URL, "POST", "/api/v1/servicio/instancias", cuerpo); r.StatusCode != 409 ||
+		!strings.Contains(texto, string(nucleo.CodigoConfianzaRequerida)) || !strings.Contains(texto, `"movido"`) {
+		t.Fatalf("la marca de otro espacio se adoptó sin preguntar: %d %s", r.StatusCode, texto)
+	}
+	if err := s.FijarConfianza(nueva, true); err != nil {
+		t.Fatal(err)
+	}
+	if r, texto := admin(t, s, ts.URL, "POST", "/api/v1/servicio/instancias", cuerpo); r.StatusCode != 200 || !strings.Contains(texto, antes.ID) {
+		t.Fatalf("con confianza se reabre el mismo espacio: %d %s", r.StatusCode, texto)
 	}
 }

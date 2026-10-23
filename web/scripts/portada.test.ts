@@ -64,12 +64,81 @@ test('el recorrido no se anuncia solo y sus controles hablan en el idioma de la 
   assert.doesNotMatch(html, /class="mapa-pausa" aria-pressed/, 'la pausa cambia su texto: sin aria-pressed')
 })
 
-const motivos = html.match(/<ul class="motivos">([\s\S]*?)<\/ul>/)?.[1] ?? ''
+test('«Por qué Tramtai» es la franja, sin motivos con iconos que repitan Funciones (auditoría 001, 53)', () => {
+  assert.doesNotMatch(html, /class="motivos"/)
+})
 
-test('«Por qué Tramtai» son seis motivos concretos, cada uno con su icono', () => {
-  const titulos = [...motivos.matchAll(/<h3><span lang="es">([^<]+)<\/span><span lang="en">[^<]+<\/span><\/h3>/g)].map((m) => m[1])
-  assert.deepEqual(titulos, ['Lo que ya pagas', 'Local', 'Compatible', 'Sin cortes', 'Por proyecto', 'Bajo control'])
-  assert.equal((motivos.match(/<svg /g) ?? []).length, 6)
+const css = readFileSync(new URL('../../site/estilo.css', import.meta.url), 'utf8')
+const COLORES_LINEA = /var\(--(claude|codex|copilot|gemini|antigravity)\)/
+
+test('el color de cada agente solo marca a su agente: mapa, fichas y tarjetas de Agentes (52)', () => {
+  assert.doesNotMatch(html, /class="linea"/)
+  const sinAgentes = html.replace(/<div class="mapa"[\s\S]*?<\/svg>\s*<\/div>/, '').replace(/<section class="conexiones">[\s\S]*?<\/section>/, '')
+    .replace(/<section id="agentes">[\s\S]*?<\/section>/, '')
+  assert.doesNotMatch(sinAgentes, COLORES_LINEA)
+})
+
+test('Antigravity va como vía muerta en el mapa y el titular cuenta cuatro agentes desde las apps (28)', () => {
+  const mapa = html.match(/<div class="mapa"[\s\S]*?<\/svg>\s*<svg class="mapa-alto"[\s\S]*?<\/svg>/)?.[0] ?? ''
+  assert.doesNotMatch(mapa, /var\(--antigravity\)/, 'sin línea de color continua')
+  assert.equal((mapa.match(/stroke-dasharray/g) ?? []).length, 2, 'punteada en los dos mapas')
+  assert.match(mapa, /fuera de tus apps/)
+  assert.match(seccion('agentes'), /Cinco agentes; cuatro desde tus apps\./)
+  assert.match(seccion('agentes'), /<article class="agente sin-apps">/)
+})
+
+test('el hero tiene un titular, dos frases y ninguna pastilla, rejilla ni brillo de fondo (56, 57, 59)', () => {
+  const portada = html.match(/<section class="portada">[\s\S]*?<div class="mapa"/)?.[0] ?? ''
+  assert.doesNotMatch(portada, /class="chapa"/)
+  const entrada = (html.match(/<p class="entrada">\s*<span lang="es">([^<]*)<\/span>/)?.[1] ?? '').split('. ')
+  assert.equal(entrada.length, 2, entrada.join(' | '))
+  assert.doesNotMatch(css, /\.portada::before|repeating-linear-gradient|radial-gradient/)
+})
+
+test('las secciones no abren todas igual: sin etiqueta sobre el h2 y no todas centradas (35, 55)', () => {
+  assert.doesNotMatch(html, /<div class="cabeza[^"]*">\s*<span class="etiqueta"/)
+  const aperturas = [...html.matchAll(/<div class="cabeza( centrada)?">/g)]
+  assert.ok(aperturas.filter((a) => !a[1]).length >= 3, 'al menos tres a la izquierda')
+  assert.ok(aperturas.filter((a) => a[1]).length >= 1)
+})
+
+test('mayúsculas espaciadas solo en la cabecera del tablero (35) y ámbar solo para cifras (33)', () => {
+  const reglas = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)].filter(([, , cuerpo]) => /text-transform:\s*uppercase/.test(cuerpo)).map(([, s]) => s.trim())
+  assert.deepEqual(reglas, ['.tablero-cabecera'])
+  assert.doesNotMatch(css + html, /--cifra|#ffcf5c/)
+})
+
+test('cada control de la barra, del mapa y de la demo mide 44 px y la barra no tapa las secciones (23, 62)', () => {
+  for (const clase of ['.github', '.menu-boton', '.mapa-punto', '.demo-punto'])
+    assert.match(css, new RegExp(`\\${clase} \\{[^}]*width: 44px; height: 44px`), clase)
+  for (const clase of ['.boton', '.copiar', '.mapa-pausa', '.demo-pausa', '.pestanas-lista button'])
+    assert.match(css, new RegExp(`${clase.replace('.', '\\.')} \\{[^}]*min-height: 44px`), clase)
+  assert.match(css, /section\[id\] \{ scroll-margin-top: 72px; \}/)
+})
+
+test('el foco se ve: sin recortes en ES/EN y en verde claro dentro del código (20)', () => {
+  assert.doesNotMatch(css, /\.idioma \{[^}]*overflow: hidden/)
+  assert.match(css, /\.codigo :focus-visible \{ outline-color: var\(--tablero-clave\); \}/)
+  assert.doesNotMatch(css, /:focus-visible \{[^}]*border-radius/)
+})
+
+test('sin JavaScript el menú se ve y el mapa queda quieto; el paso del cursor no levanta nada (60, 61)', () => {
+  assert.match(css, /html\.js \.menu-panel \{ display: none;/)
+  assert.doesNotMatch(css, /@keyframes/)
+  assert.doesNotMatch(css, /translateY/)
+})
+
+test('junto a Descargar se avisa del CLI del agente y del aviso de Windows (58)', () => {
+  const descargar = seccion('descargar')
+  assert.match(descargar, /Antes necesitas el CLI de al menos un agente/)
+  assert.match(descargar, /Windows protegió su PC/)
+  assert.match(descargar, /Windows protected your PC/)
+})
+
+test('los comentarios del código salen en el idioma de la página y Copiar copia solo ese (59)', () => {
+  for (const pre of html.match(/<pre class="codigo" id="codigo-mapa-\d"[\s\S]*?<\/pre>/g) ?? [])
+    for (const c of pre.match(/<span class="c"[^>]*>/g) ?? []) assert.match(c, /lang="(es|en)"/, pre.slice(0, 60))
+  assert.match(js, /\[lang\]:not\(\[lang="' \+ document\.documentElement\.lang \+ '"\]\)/)
 })
 
 test('la franja compara sin Tramtai y con Tramtai', () => {
@@ -176,14 +245,19 @@ test('las capturas de la demo existen y pesan poco: 150 KB cada una de 1440 y 6 
   assert.ok(total <= 6 * 1024 * 1024, `la demo pesa ${total} bytes`)
 })
 
-test('la portada estrena el recorrido guiado y deja Espacios a la vista', () => {
+test('la portada enseña el recorrido guiado y deja Espacios a la vista', () => {
   const funciones = seccion('funciones')
-  assert.match(funciones, /Aprende la app en 2 minutos/)
-  assert.match(funciones, /Learn the app in 2 minutes/)
+  assert.match(funciones, /Recorrido y Ayuda/)
+  assert.match(funciones, /Tour and Help/)
   assert.match(funciones, /href="#demo"/, 'Funciones lleva a la demo')
   assert.match(asi, /href="#demo"/, '«Así se ve» enlaza la demo')
-  const entrada = html.match(/<p class="entrada">([\s\S]*?)<\/p>/)?.[1] ?? ''
-  assert.match(entrada, /espacio/i)
-  assert.match(entrada, /workspace/i)
-  assert.match(funciones, /Controla<\/span><span lang="en">Control<\/span><\/h3>\s*<article class="tarjeta">\s*<div class="linea"[^>]*><\/div>\s*<h4><span lang="es">Espacios de trabajo<\/span>/, 'Espacios abre el grupo Controla')
+  assert.match(asi, /Un espacio por proyecto/)
+  assert.match(funciones, /Controla<\/span><span lang="en">Control<\/span><\/h3>\s*<article class="tarjeta">\s*<h4><span lang="es">Espacios de trabajo<\/span>/, 'Espacios abre el grupo Controla')
+})
+
+test('Funciones son cuatro grupos de tres tarjetas en tres columnas, sin huecos (54)', () => {
+  const grupos = seccion('funciones').split('<h3 class="grupo-funciones">').slice(1)
+  assert.equal(grupos.length, 4)
+  for (const g of grupos) assert.equal((g.match(/<article class="tarjeta">/g) ?? []).length, 3)
+  assert.match(css, /\.rejilla \{ display: grid; grid-template-columns: repeat\(3, 1fr\)/)
 })

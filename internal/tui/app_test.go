@@ -2,8 +2,14 @@ package tui
 
 import (
 	"context"
+	"encoding/json"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"image/color"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -16,6 +22,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"tramtai/internal/idioma"
+	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/paginas/prueba"
@@ -361,6 +368,75 @@ func TestTemaSegunElFondo(t *testing.T) {
 	}
 }
 
+// TestUnSoloCatalogo: un texto de la terminal vive en un solo catálogo. Lo que comparte con la Web UI sale de datos.Texto;
+// con idioma.T solo va lo propio de la terminal, así que ningún literal de idioma.T repite un texto de textos.json.
+func TestUnSoloCatalogo(t *testing.T) {
+	var textos map[string]map[string]string
+	bruto, err := os.ReadFile("datos/textos.json")
+	if err != nil || json.Unmarshal(bruto, &textos) != nil {
+		t.Fatalf("textos.json: %v", err)
+	}
+	web := map[string]string{}
+	for clave, texto := range textos["es"] {
+		web[texto] = clave
+	}
+	err = filepath.WalkDir(".", func(ruta string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(ruta, ".go") || strings.HasSuffix(ruta, "_test.go") {
+			return err
+		}
+		archivo, err := parser.ParseFile(token.NewFileSet(), ruta, nil, 0)
+		if err != nil {
+			return err
+		}
+		ast.Inspect(archivo, func(n ast.Node) bool {
+			llamada, ok := n.(*ast.CallExpr)
+			if !ok || len(llamada.Args) == 0 {
+				return true
+			}
+			sel, ok := llamada.Fun.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			if x, _ := sel.X.(*ast.Ident); x == nil || x.Name != "idioma" || (sel.Sel.Name != "T" && sel.Sel.Name != "Tf") {
+				return true
+			}
+			if lit, ok := llamada.Args[0].(*ast.BasicLit); ok {
+				if texto, _ := strconv.Unquote(lit.Value); web[texto] != "" {
+					t.Errorf("%s: %q ya es %s de la Web UI: usa datos.Texto", ruta, texto, web[texto])
+				}
+			}
+			return true
+		})
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestColoresDeDesign: los colores de la terminal son los tokens de docs/diseno/DESIGN.md, de día y de noche, y el acento
+// es el verde azulado de la marca.
+func TestColoresDeDesign(t *testing.T) {
+	texto, err := os.ReadFile("../../docs/diseno/DESIGN.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	design := map[string]string{}
+	for _, m := range regexp.MustCompile(`(?m)^  ([a-z-]+): "(#[0-9a-f]{6})"$`).FindAllStringSubmatch(string(texto), -1) {
+		design[m[1]] = m[2]
+	}
+	for nombre, valor := range tokens {
+		if design[nombre] != valor {
+			t.Errorf("%s: la terminal usa %s y DESIGN.md dice %q", nombre, valor, design[nombre])
+		}
+	}
+	t.Setenv("NO_COLOR", "")
+	m := nuevo(Opciones{})
+	if r, g, b, _ := m.estilos.Acento.GetForeground().RGBA(); r>>8 != 0x2d || g>>8 != 0xd4 || b>>8 != 0xbf {
+		t.Fatalf("de noche, el acento es acento-noche: %x %x %x", r>>8, g>>8, b>>8)
+	}
+}
+
 func TestAsciiConLaVariable(t *testing.T) {
 	t.Setenv("TRAMTAI_ASCII", "1")
 	m := nuevo(Opciones{})
@@ -382,5 +458,93 @@ func TestCambioEspacioReiniciaLaPagina(t *testing.T) {
 	m.Update(pagina.ErrorServicio{Err: os.ErrDeadlineExceeded})
 	if !strings.Contains(m.View().Content, idioma.T("El servicio no responde · r reintenta")) {
 		t.Fatal("ErrorServicio de una página enseña el aviso de la app")
+	}
+}
+
+// paginaOcupada tiene algo que se perdería al salir.
+type paginaOcupada struct {
+	paginaFalsa
+	motivo string
+}
+
+func (p *paginaOcupada) Pendiente() string { return p.motivo }
+
+// TestSalirPreguntaSiHayAlgoEnMarcha: q sale sin preguntar si nada se pierde; con una petición en marcha o cambios sin
+// guardar, pregunta y dice qué, y solo s sale.
+func TestSalirPreguntaSiHayAlgoEnMarcha(t *testing.T) {
+	m := nuevo(Opciones{})
+	m.Update(tea.WindowSizeMsg{Width: 60, Height: 20})
+	o := &paginaOcupada{motivo: "Probar tiene una petición en marcha"}
+	m.paginas[pagina.PaginaInicio] = o
+	if _, cmd := m.Update(tecla("q")); sale(cmd) {
+		t.Fatal("con algo en marcha, q pregunta")
+	}
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "Probar tiene una petición en marcha") {
+		t.Fatalf("la pregunta dice qué se pierde:\n%s", v)
+	}
+	if _, cmd := m.Update(tecla("n")); sale(cmd) || m.pregunta != nil {
+		t.Fatal("n no sale y cierra la pregunta")
+	}
+	m.Update(tecla("q"))
+	if _, cmd := m.Update(tecla("s")); !sale(cmd) {
+		t.Fatal("s sale")
+	}
+	o.motivo = ""
+	if _, cmd := m.Update(tecla("q")); !sale(cmd) {
+		t.Fatal("sin nada en marcha, q sale directamente")
+	}
+}
+
+// TestErrorSeQuedaYSeVeEntero: un error no se va solo; ! lo enseña entero, aunque tenga varias líneas, y la siguiente
+// tecla lo quita de la línea de estado.
+func TestErrorSeQuedaYSeVeEntero(t *testing.T) {
+	m := nuevo(Opciones{})
+	m.Update(tea.WindowSizeMsg{Width: 60, Height: 20})
+	falsa := &paginaFalsa{}
+	m.paginas[pagina.PaginaInicio] = falsa
+	largo := "El servicio rechazó la petición porque el esquema no es válido en la línea 3\ny esta es la segunda línea del detalle"
+	m.Update(comp.NuevoAviso{Texto: largo, Tipo: comp.Fallo})
+	v := ansi.Strip(m.View().Content)
+	if !strings.Contains(v, "El servicio rechazó") || !strings.Contains(v, "! ver el error") {
+		t.Fatalf("el error se ve y el pie dice cómo leerlo entero:\n%s", v)
+	}
+	m.Update(tecla("!"))
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "segunda línea del detalle") {
+		t.Fatalf("! lo enseña entero:\n%s", v)
+	}
+	m.Update(tecla("esc"))
+	m.Update(tecla("a"))
+	if v := ansi.Strip(m.View().Content); strings.Contains(v, "El servicio rechazó") || falsa.texto != "a" {
+		t.Fatalf("la caja se cierra, la tecla siguiente llega a la página y el error deja la línea:\n%s", v)
+	}
+	m.Update(tecla("!"))
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "segunda línea del detalle") {
+		t.Fatalf("! vuelve a enseñar el último error:\n%s", v)
+	}
+}
+
+// TestTeclasComunesSiempreSeVen: a 60×20 y a 80×24, fuera de un campo, el pie de cada página enseña «Tab menú», «? ayuda»
+// y «q salir» aunque las teclas de la página no quepan; ? abre la lista entera de las teclas de la página.
+func TestTeclasComunesSiempreSeVen(t *testing.T) {
+	for _, tam := range [][2]int{{60, 20}, {80, 24}} {
+		for _, clave := range []string{pagina.PaginaInicio, pagina.PaginaAgentes, pagina.PaginaEjecutar, pagina.PaginaHistorial} {
+			m := nuevoEn(Opciones{Datos: t.TempDir()}, "es")
+			m.Update(tea.WindowSizeMsg{Width: tam[0], Height: tam[1]})
+			correr(t, m, m.ir(clave, nil, false))
+			lineas := strings.Split(ansi.Strip(m.View().Content), "\n")
+			pie := lineas[len(lineas)-1]
+			for _, quiere := range []string{"Tab menú", "? ayuda", "q salir"} {
+				if !strings.Contains(pie, quiere) {
+					t.Errorf("%s a %dx%d: el pie enseña %q: %q", clave, tam[0], tam[1], quiere, pie)
+				}
+			}
+		}
+	}
+	m := nuevoEn(Opciones{Datos: t.TempDir()}, "es")
+	m.Update(tea.WindowSizeMsg{Width: 60, Height: 20})
+	m.paginas[pagina.PaginaInicio] = &paginaFalsa{}
+	m.Update(tecla("?"))
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "a       anota") || !strings.Contains(v, "Ctrl+E  espacio") {
+		t.Fatalf("? enseña todas las teclas de la página y las comunes:\n%s", v)
 	}
 }

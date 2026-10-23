@@ -33,8 +33,9 @@ export const PAGINAS_FIJAS: (Lugar & { archivo: string })[] = [
   { archivo: 'desarrolladores.html', rel: '', ruta: 'desarrolladores.html', actual: 'desarrolladores' },
 ]
 
-// PRIMERO aplica el tema y el idioma guardados antes de pintar (sitio.js hace el resto con defer).
-const PRIMERO = `<script>try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
+// PRIMERO aplica el tema y el idioma guardados antes de pintar (sitio.js hace el resto con defer). La clase js deja al
+// CSS esconder el menú tras su botón solo si hay JavaScript que lo abra.
+const PRIMERO = `<script>document.documentElement.classList.add('js'); try { var t = localStorage.getItem('tramtai.tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; var i = localStorage.getItem('tramtai.idioma') } catch (e) {}
 document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.language || 'es').slice(0, 2) === 'es' ? 'es' : 'en'</script>`
 
 // cabeza es lo común del <head>: metadatos para buscadores y para compartir, iconos, estilos y scripts.
@@ -72,8 +73,9 @@ const ICONO_TEMA = {
 const svg = (d: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
 const soloLectores = (es: string, en: string) => `<span lang="es" class="solo-lectores">${es}</span><span lang="en" class="solo-lectores">${en}</span>`
 
-// cabecera es el enlace para saltar al contenido y la barra: las mismas cinco secciones, el menú para pantallas medianas
-// y pequeñas, idioma, tema y Descargar. Desde la portada, sus secciones son anclas de la misma página.
+// cabecera es el enlace para saltar al contenido y la barra: las mismas cinco secciones, idioma, tema y Descargar. En
+// pantallas medianas y pequeñas las secciones, el idioma y el tema van juntos en el panel del menú (#menu), así cada
+// control cabe con 44 px. Desde la portada, sus secciones son anclas de la misma página.
 export function cabecera(rel: string, actual: Actual): string {
   const raiz = actual === 'inicio' ? '' : rel || './'
   const marca = (a: Actual) => (a === actual ? ' aria-current="page"' : '')
@@ -83,24 +85,28 @@ export function cabecera(rel: string, actual: Actual): string {
 <header class="barra">
   <div class="envoltura">
     <a class="marca" href="${rel || './'}"><img src="${rel}favicon.svg" width="30" height="30" alt=""><span class="marca-texto">Tramtai</span></a>
-    <nav id="menu" aria-label="Secciones" data-aria-en="Sections">
-      <a href="${raiz}#como">${bilingue('Cómo funciona', 'How it works')}</a>
-      <a href="${raiz}#agentes">${bilingue('Agentes', 'Agents')}</a>
-      <a href="${raiz}#funciones">${bilingue('Funciones', 'Features')}</a>
-      <a href="${rel}ayuda/"${marca('ayuda')}>${bilingue('Ayuda', 'Help')}</a>
-      <a href="${rel}desarrolladores.html"${marca('desarrolladores')}>${bilingue('Desarrolladores', 'Developers')}</a>
-    </nav>
     <button type="button" class="menu-boton" aria-expanded="false" aria-controls="menu" hidden>${svg('<path d="M4 7h16M4 12h16M4 17h16"/>')}${soloLectores('Menú', 'Menu')}</button>
+    <div id="menu" class="menu-panel">
+      <nav aria-label="Secciones" data-aria-en="Sections">
+        <a href="${raiz}#como">${bilingue('Cómo funciona', 'How it works')}</a>
+        <a href="${raiz}#agentes">${bilingue('Agentes', 'Agents')}</a>
+        <a href="${raiz}#funciones">${bilingue('Funciones', 'Features')}</a>
+        <a href="${rel}ayuda/"${marca('ayuda')}>${bilingue('Ayuda', 'Help')}</a>
+        <a href="${rel}desarrolladores.html"${marca('desarrolladores')}>${bilingue('Desarrolladores', 'Developers')}</a>
+      </nav>
+      <div class="preferencias">
+        <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
+          <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+          <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+        </div>
+        <div class="idioma tema" role="group" aria-label="Tema" data-aria-en="Theme">
+          ${tema('sistema', 'Tema del sistema', 'System theme')}
+          ${tema('claro', 'Tema claro', 'Light theme')}
+          ${tema('oscuro', 'Tema oscuro', 'Dark theme')}
+        </div>
+      </div>
+    </div>
     <a class="github" href="${REPO}" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="${GITHUB}"/></svg></a>
-    <div class="idioma" role="group" aria-label="Idioma" data-aria-en="Language">
-      <button type="button" data-idioma="es" aria-pressed="true">ES</button>
-      <button type="button" data-idioma="en" aria-pressed="false">EN</button>
-    </div>
-    <div class="idioma tema" role="group" aria-label="Tema" data-aria-en="Theme">
-      ${tema('sistema', 'Tema del sistema', 'System theme')}
-      ${tema('claro', 'Tema claro', 'Light theme')}
-      ${tema('oscuro', 'Tema oscuro', 'Dark theme')}
-    </div>
     <a class="boton principal" href="${raiz}#descargar" data-descarga>${svg('<path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/>')}<span class="boton-texto">${bilingue('Descargar', 'Download')}</span></a>
   </div>
 </header>`
@@ -166,6 +172,12 @@ function bilingue(es: string, en: string): string {
 }
 
 const GUIA = new Set(['conectar', 'herramientas', 'archivos'])
+
+// AVISO_DESCARGA es lo que hay que saber antes de descargar; la portada repite lo mismo bajo Descargar.
+export const AVISO_DESCARGA = {
+  es: 'Antes necesitas el CLI de al menos un agente (Claude Code, Codex o GitHub Copilot CLI) o una clave de la Gemini API. En Windows puede salir «Windows protegió su PC», porque el instalador aún no está firmado.',
+  en: 'You first need the CLI of at least one agent (Claude Code, Codex or GitHub Copilot CLI) or a Gemini API key. On Windows you may see “Windows protected your PC”, because the installer is not signed yet.',
+}
 
 // pagina es el armazón de cada página generada; clase es la del <main> (con índice lateral, «ayuda»).
 function pagina(l: Lugar, titulo: [string, string], descripcion: string, cuerpo: string, clase = 'ayuda-temas'): string {
@@ -262,7 +274,9 @@ function bloque(f: Fuente, tema: Tema, b: Bloque, n: number): string {
     case 'nota':
       return `<p class="aviso">${tx(b.texto)}</p>`
     case 'descargas':
-      return `<p><a class="boton principal" href="../index.html#descargar">${bilingue('Descargar Tramtai', 'Download Tramtai')}</a></p>`
+      // Lo que frena el primer arranque va junto al botón, no solo en las preguntas de más abajo.
+      return `<p><a class="boton principal" href="../index.html#descargar">${bilingue('Descargar Tramtai', 'Download Tramtai')}</a></p>
+<p class="aviso">${bilingue(AVISO_DESCARGA.es, AVISO_DESCARGA.en)} <a href="#windows">${bilingue('Qué hacer con el aviso de Windows', 'What to do about the Windows warning')}</a></p>`
     default:
       return ''
   }

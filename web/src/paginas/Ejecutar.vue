@@ -7,7 +7,7 @@
         <q-card data-captura="receta">
           <q-card-section class="q-pb-sm row items-start no-wrap q-gutter-x-sm">
             <div class="col">
-              <div class="titulo-seccion">{{ t('ejecutar.receta') }}</div>
+              <h2 class="titulo-seccion">{{ t('ejecutar.receta') }}</h2>
               <div class="texto-suave text-body2">{{ t('ejecutar.recetaTexto') }}</div>
             </div>
             <q-btn data-recorrido="ejecutar.codigo" flat dense no-caps color="primary" icon="o_code" :label="$q.screen.gt.xs ? t('codigo.boton') : undefined" :aria-label="t('codigo.boton')"
@@ -26,7 +26,7 @@
           </q-card-section>
           <q-separator />
           <q-card-section class="q-gutter-y-md">
-            <div class="titulo-seccion">{{ t('ejecutar.mensajePrueba') }}</div>
+            <h2 class="titulo-seccion">{{ t('ejecutar.mensajePrueba') }}</h2>
             <!-- el ancla va en un div: en el q-input caería en el <textarea> interno y no se resaltaría el campo entero -->
             <div data-recorrido="ejecutar.mensaje">
               <q-input v-model="mensaje" type="textarea" outlined :label="t('ejecutar.mensaje')" :placeholder="t('ejecutar.placeholder')"
@@ -41,7 +41,7 @@
             <div v-if="listaFormatos(limites)" class="text-caption texto-suave q-mt-lg">{{ t('ejecutar.formatos', { lista: listaFormatos(limites) }) }}</div>
             <AvisoConversor v-if="avisoConversor" />
 
-            <q-expansion-item dense icon="o_tune" :label="t('comun.opcionesAvanzadas')" header-class="q-px-none text-body2 texto-suave" class="q-mt-sm">
+            <q-expansion-item v-model="avanzadas" dense icon="o_tune" :label="t('comun.opcionesAvanzadas')" header-class="q-px-none text-body2 texto-suave" class="q-mt-sm">
               <div class="q-gutter-y-md q-pt-sm">
                 <div class="text-caption texto-suave">{{ t('ejecutar.avanzadasTexto') }}</div>
                 <div class="row q-col-gutter-sm">
@@ -49,7 +49,7 @@
                     <q-input v-model="perfil" outlined dense :label="t('ejecutar.perfilTrabajo')" :hint="t('ejecutar.perfilHint')" />
                   </div>
                   <div class="col-5">
-                    <q-input v-model="tiempo" outlined dense inputmode="numeric" :label="t('ejecutar.tiempo')" suffix="s" :hint="t('ejecutar.tiempoHint')"
+                    <q-input ref="campoTiempo" v-model="tiempo" outlined dense inputmode="numeric" :label="t('ejecutar.tiempo')" suffix="s" :hint="t('ejecutar.tiempoHint')"
                       :rules="[(v: string) => !v || /^\d+$/.test(v) || t('ejecutar.soloNumeros')]" />
                   </div>
                 </div>
@@ -70,16 +70,22 @@
         <!-- Las pruebas recientes van con la receta: «Usar de nuevo» la rellena. -->
         <q-card class="q-mt-md">
           <q-card-section class="row items-center no-wrap q-pb-sm">
-            <div class="titulo-seccion col">{{ t('ejecutar.recientes') }}</div>
-            <q-btn v-if="recientes.length" flat dense no-caps color="primary" icon-right="o_chevron_right" :label="t('ejecutar.verTodo')" @click="verTodo" />
+            <h2 class="titulo-seccion col">{{ t('ejecutar.recientes') }}</h2>
+            <q-btn v-if="recientes?.length" flat dense no-caps color="primary" icon-right="o_chevron_right" :label="t('ejecutar.verTodo')" @click="verTodo" />
           </q-card-section>
-          <div v-if="!recientes.length" class="q-px-md q-pb-md text-body2 texto-suave">{{ t('ejecutar.sinRecientes') }}</div>
+          <!-- Cargando, error con Reintentar o vacío: «sin recientes» solo cuando la lista llegó y está vacía. -->
+          <div v-if="!recientes && !errorRecientes" class="q-px-md q-pb-md" role="status" :aria-label="t('comun.cargando')"><q-skeleton v-for="n in 2" :key="n" type="text" /></div>
+          <div v-else-if="!recientes" class="q-px-md q-pb-md row items-center q-gutter-sm" role="alert">
+            <span class="text-body2">{{ t('comun.errorCarga') }}: {{ errorRecientes }}</span>
+            <q-btn flat dense no-caps color="primary" icon="o_refresh" :label="t('comun.reintentar')" @click="cargarRecientes" />
+          </div>
+          <div v-else-if="!recientes.length" class="q-px-md q-pb-md text-body2 texto-suave">{{ t('ejecutar.sinRecientes') }}</div>
           <q-list v-else separator>
             <q-item v-for="x in recientes" :key="x.id" clickable :active="trabajo?.id === x.id" @click="seguir(x)">
               <q-item-section>
                 <q-item-label lines="1">{{ mensajeDe(x) || t('trabajo.entradaEliminada') }}</q-item-label>
                 <q-item-label caption lines="1">
-                  <span :class="estadoInfo(x.estado).clase"><q-icon :name="estadoInfo(x.estado).icono" size="12px" />{{ estadoInfo(x.estado).etiqueta }}</span>
+                  <span :class="estadoInfo(x.estado).clase">{{ estadoInfo(x.estado).etiqueta }}</span>
                   {{ haceCuanto(x.creado_en) }} · {{ modeloDe(x) }}
                 </q-item-label>
               </q-item-section>
@@ -96,9 +102,9 @@
       <div class="col-12 col-md-7 respuesta-fija">
         <q-card class="column">
           <q-card-section class="row items-center no-wrap q-gutter-x-sm">
-            <div class="titulo-seccion">{{ t('ejecutar.respuesta') }}</div>
+            <h2 class="titulo-seccion">{{ t('ejecutar.respuesta') }}</h2>
             <q-space />
-            <span v-if="trabajo" :class="estadoInfo(estado).clase"><q-icon :name="estadoInfo(estado).icono" size="14px" />{{ estadoInfo(estado).etiqueta }}</span>
+            <span v-if="trabajo" :class="estadoInfo(estado).clase">{{ estadoInfo(estado).etiqueta }}</span>
             <q-btn v-if="salida" flat dense round icon="o_content_copy" :aria-label="t('ejecutar.copiarRespuesta')" @click="copiar(salida)">
               <q-tooltip>{{ t('comun.copiar') }}</q-tooltip>
             </q-btn>
@@ -109,13 +115,13 @@
           </q-card-section>
           <q-separator />
           <q-card-section class="salida-caja col" style="min-height: 300px">
-            <div v-if="!trabajo" class="vacio">
+            <div v-if="!trabajo" class="text-center">
               <EstadoVacio :titulo="t('ejecutar.vacio')" />
-              <div class="q-mt-lg text-caption">{{ t('ejecutar.ejemplos') }}</div>
+              <div class="text-caption texto-suave">{{ t('ejecutar.ejemplos') }}</div>
               <div class="column q-gutter-sm q-mt-xs" style="max-width: 460px; margin-left: auto; margin-right: auto">
                 <div v-for="e in ejemplos" :key="e" class="paso text-left row items-center no-wrap" role="button" tabindex="0"
                   @click="mensaje = e" @keyup.enter="mensaje = e" @keydown.space.prevent="mensaje = e">
-                  <q-icon name="o_lightbulb" color="primary" size="18px" class="q-mr-sm" /><span class="text-body2" style="color: var(--texto)">{{ e }}</span>
+                  <span class="text-body2" style="color: var(--texto)">{{ e }}</span>
                 </div>
               </div>
             </div>
@@ -134,7 +140,7 @@
                   <li v-for="(p, i) in problemas" :key="i">{{ p.texto }}</li>
                 </ul>
                 <div v-if="puedeCorregir" class="row items-center q-gutter-sm q-mt-sm">
-                  <q-btn unelevated no-caps color="primary" icon="o_auto_fix_high" :label="t('ejecutar.corregir')" :loading="corrigiendo" @click="corregir" />
+                  <q-btn unelevated no-caps color="primary" icon="o_build" :label="t('ejecutar.corregir')" :loading="corrigiendo" @click="corregir" />
                   <span class="text-caption texto-suave col">{{ t('ejecutar.corregirTexto') }}</span>
                 </div>
                 <div v-if="final?.salida" class="text-caption texto-suave q-mt-md">{{ lineasMarcadas ? t('ejecutar.respuestaMarcada') : t('ejecutar.respuestaRecibida') }}</div>
@@ -146,7 +152,7 @@
               </div>
               <!-- Sin aria-live: un lector de pantalla leería cada fragmento según llega. Se anuncia solo el final. -->
               <div v-else :aria-busy="activo"><SalidaTrabajo :texto="salida" /></div>
-              <span class="solo-lector" role="status">{{ final ? estadoInfo(final.estado).etiqueta : '' }}</span>
+              <span class="solo-lectores" role="status">{{ final ? estadoInfo(final.estado).etiqueta : '' }}</span>
               <div v-if="activo && !salida" class="row items-center texto-suave q-gutter-x-sm">
                 <q-spinner-dots color="primary" size="24px" /><span>{{ estadoInfo(estado).etiqueta }}…</span>
               </div>
@@ -162,7 +168,7 @@
             <q-separator />
             <q-card-section class="metadatos">
               <Linea :agente="final.solicitud.agente" :modelo="final.modelo_efectivo || final.modelo_enviado" />
-              <span v-if="esfuerzoFinal"><q-icon name="o_psychology" />{{ esfuerzoFinal }}</span>
+              <span v-if="esfuerzoFinal"><q-icon name="o_speed" />{{ esfuerzoFinal }}</span>
               <span><q-icon name="o_data_usage" />{{ final.uso.tokens_entrada }} → {{ final.uso.tokens_salida }} {{ t('comun.tokens') }}</span>
               <span v-if="final.uso.costo_usd"><q-icon name="o_payments" />US$ {{ final.uso.costo_usd.toFixed(4) }}</span>
               <span v-if="final.terminado_en"><q-icon name="o_timer" />{{ duracion(final.creado_en, final.terminado_en) }}</span>
@@ -182,8 +188,8 @@
 import { recordarBorrador } from '../borrador'
 import BotonAyuda from '../componentes/ayuda/BotonAyuda.vue'
 import { ERRORES } from '../ayuda/temas/problemas'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useQuasar } from 'quasar'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { useQuasar, type QInput } from 'quasar'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import AvisoConversor from '../componentes/AvisoConversor.vue'
 import { aceptar, cargarConversor, conversor, listaFormatos, necesitaConversor } from '../conversor'
@@ -197,7 +203,7 @@ import GuardarComoApi from '../componentes/GuardarComoApi.vue'
 import VerComoCodigo from '../componentes/VerComoCodigo.vue'
 import { ejemplos as ejemplosDe, type Ejemplo } from '../ejemplos'
 import { marcarLineas } from '../esquemaCampos'
-import { api, avisar, avisarError, copiar, tituloError } from '../api/cliente'
+import { api, avisar, avisarError, copiar, mensajeError, tituloError } from '../api/cliente'
 import type { EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Solicitud, Trabajo } from '../api/tipos'
 import { modeloInicial, origenHistorial, recetaInicial, trabajoSeguido } from '../estado'
 import { modeloDe, esfuerzoEspacio } from '../agentes'
@@ -231,6 +237,8 @@ const mensaje = ref('')
 recordarBorrador('tramtai.borradorProbar', mensaje)
 const perfil = ref('')
 const tiempo = ref('')
+const avanzadas = ref(false)
+const campoTiempo = ref<QInput>()
 const enviando = ref(false)
 const trabajo = ref<Trabajo>()
 const final = ref<Trabajo>()
@@ -300,7 +308,14 @@ async function ejecutar() {
     avisarError(e)
     return
   }
-  if (tiempo.value && !/^\d+$/.test(tiempo.value)) return
+  // Un tiempo límite no válido no se envía en silencio: se abren las opciones avanzadas y el campo enseña su error.
+  if (tiempo.value && !/^\d+$/.test(tiempo.value)) {
+    avanzadas.value = true
+    await nextTick()
+    campoTiempo.value?.validate()
+    campoTiempo.value?.focus()
+    return
+  }
   enviando.value = true
   try {
     const cargas: string[] = []
@@ -451,9 +466,15 @@ const lineasMarcadas = computed(() => marcarLineas(salida.value, problemas.value
 
 
 // recientes son las últimas pruebas lanzadas desde Probar (las de las APIs y la terminal están en el Historial).
-const recientes = ref<Trabajo[]>([])
+const recientes = ref<Trabajo[]>()
+const errorRecientes = ref('')
 async function cargarRecientes() {
-  recientes.value = await api.trabajos(10, { origen: 'probar' }).catch(() => recientes.value)
+  try {
+    recientes.value = await api.trabajos(10, { origen: 'probar' })
+    errorRecientes.value = ''
+  } catch (e) {
+    errorRecientes.value = mensajeError(e) // con una lista ya cargada se sigue viendo la anterior
+  }
 }
 function usarDeNuevo(x: Trabajo) {
   const texto = mensajeDe(x)

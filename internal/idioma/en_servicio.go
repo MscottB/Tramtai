@@ -384,5 +384,15 @@ func init() {
 		"el nombre del cuerpo (%s) no coincide con el de la ruta (%s)": "the name in the body (%s) does not match the one in the path (%s)",
 		"proyecto debe ser una ruta absoluta":                          "proyecto must be an absolute path",
 		"%s no es un proyecto de Tramtai (.tramtai/config.yaml)":       "%s is not a Tramtai project (.tramtai/config.yaml)",
+
+		"otro servicio de Tramtai ya usa la carpeta de datos %s: detenlo antes (tramtai servicio detener)": "another Tramtai service is already using the data folder %s: stop it first (tramtai servicio detener)",
+		"ya hay una actualización en curso":                                 "an update is already in progress",
+		"%s no respondió al leer %s: %s":                                    "%s did not respond when reading %s: %s",
+		"el espacio %s se estaba olvidando":                                 "the workspace %s was being forgotten",
+		"el espacio %s se está abriendo: vuelve a intentarlo en un momento": "the workspace %s is opening: try again in a moment",
+		"no se pudo guardar el estado de los espacios: %s":                  "the state of the workspaces could not be saved: %s",
+		"no se pudo contar el consumo del presupuesto: la petición se rechaza para no superar sus topes (revisa el registro del servicio)": "the budget usage could not be counted: the request is rejected so its limits are not exceeded (check the service log)",
+		"la clave de %s está dañada: bórrala para crear otra (las apps tendrán que usar la nueva)":                                         "the key in %s is damaged: delete it to create another (apps will have to use the new one)",
+		"la clave de la variable %s es demasiado corta: necesita al menos %d caracteres":                                                   "the key in the variable %s is too short: it needs at least %d characters",
 	})
 }

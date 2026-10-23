@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
+
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/paginas/prueba"
@@ -106,6 +108,44 @@ func TestModoCampos(t *testing.T) {
 	tr, _ := cli.Trabajo(ctx, id, p.final.ID)
 	if tr.Estado != nucleo.Completado || string(tr.Solicitud.Salida.Esquema) != compacto(t, p.leer().esquema) {
 		t.Fatalf("se envía el esquema de los campos: %s %s", tr.Estado, tr.Solicitud.Salida.Esquema)
+	}
+}
+
+// TestSubirBajarYEjemplo: como los botones de CamposEsquema.vue en Probar, Alt+↑ y Alt+↓ mueven el campo en su lista (y
+// el esquema sigue ese orden); v enseña el ejemplo de respuesta de EditorReceta.
+func TestSubirBajarYEjemplo(t *testing.T) {
+	cli, id := prueba.Servicio(t)
+	p := abierta(t, cli, id)
+	conEstructurada(p)
+	p.form.Enfocar("c0.nombre")
+	pulsar(p, "n")
+	escribir(p, "c1.nombre", "total")
+	pulsar(p, "esc")
+	elegir(t, p, "c1.tipo", "numero")
+	p.form.Enfocar("c1.tipo")
+	subir, bajar := tea.KeyPressMsg{Code: tea.KeyUp, Mod: tea.ModAlt}, tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModAlt}
+	p.Update(subir)
+	if p.form.Valor("c0.nombre") != "total" || p.form.Valor("c1.nombre") != "resumen" || p.form.Foco() != "c0.tipo" {
+		t.Fatalf("Alt+↑ sube el campo y el foco lo sigue: %q %q %s", p.form.Valor("c0.nombre"), p.form.Valor("c1.nombre"), p.form.Foco())
+	}
+	if e := compacto(t, p.leer().esquema); !strings.HasPrefix(e, `{"type":"object","properties":{"total":`) {
+		t.Fatalf("el esquema sigue el orden de los campos: %s", e)
+	}
+	p.Update(subir)
+	if p.form.Valor("c0.nombre") != "total" {
+		t.Fatal("el primero no sube más")
+	}
+	p.Update(bajar)
+	if p.form.Valor("c1.nombre") != "total" || p.form.Foco() != "c1.tipo" {
+		t.Fatalf("Alt+↓ lo baja: %s", p.form.Foco())
+	}
+	pulsar(p, "v")
+	if v := p.Vista(); !strings.Contains(v, "Ver un ejemplo de respuesta") || !strings.Contains(v, `"resumen": "…"`) || !strings.Contains(v, `"total": 0`) {
+		t.Fatalf("v enseña el ejemplo de respuesta:\n%s", v)
+	}
+	pulsar(p, "esc")
+	if strings.Contains(p.Vista(), "Ver un ejemplo de respuesta") {
+		t.Fatal("Esc lo cierra")
 	}
 }
 

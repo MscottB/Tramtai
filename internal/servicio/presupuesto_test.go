@@ -170,10 +170,10 @@ func TestRecrearAPINoHeredaConsumo(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := EliminarPunto(s.opc.Datos, rutaGlobal, nucleo.OrigenGlobal, "facturas"); err != nil {
+	if err := s.EliminarPunto(rutaGlobal, nucleo.OrigenGlobal, "facturas"); err != nil {
 		t.Fatal(err)
 	}
-	if err := EliminarPunto(s.opc.Datos, rutaGlobal, nucleo.OrigenGlobal, "facturas"); err == nil {
+	if err := s.EliminarPunto(rutaGlobal, nucleo.OrigenGlobal, "facturas"); err == nil {
 		t.Fatal("eliminar un punto que ya no existe debe dar error")
 	}
 	s.Recargar()

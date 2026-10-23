@@ -1,9 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { idioma, t } from './i18n.ts'
-import { agenteListo, agruparOpciones, esfuerzoPredeterminadoDe, estadoAgente, ofrecerDejarSuscripcion, soloDesconectados, esfuerzosDe, fichas, opcionEscrita, opcionModelo, ordenarAgentes, type FichaAgente } from './agentes.ts'
+import { agenteListo, agruparOpciones, chapaDe, contraste, esfuerzoPredeterminadoDe, estadoAgente, modeloDe, ofrecerDejarSuscripcion, soloDesconectados, esfuerzosDe, fichas, opcionEscrita, opcionModelo, ordenarAgentes, type FichaAgente } from './agentes.ts'
 import { numero } from './formato.ts'
-import type { Adaptador, Modelo } from './api/tipos.ts'
+import type { Adaptador, Modelo, Trabajo } from './api/tipos.ts'
 
 idioma.value = 'es'
 const ficha = (agente: string, nombre: string): FichaAgente => ({ agente, nombre, programa: agente, codigo: nombre.slice(0, 2).toUpperCase(),
@@ -106,5 +106,25 @@ test('una API que solo puede usar agentes desconectados', () => {
   assert.equal(soloDesconectados({ nombre: 'a', agente: 'claude', respaldo: ['codex/m1'] }), false)
   assert.equal(soloDesconectados({ nombre: 'a', modelos_permitidos: ['claude/haiku', 'claude/sonnet'] }), true)
   assert.equal(soloDesconectados({ nombre: 'a' }), false, 'sin agente propio usa el predeterminado del espacio')
+  // Un perfil no es un agente llamado «perfil»: se resuelve en el servicio y no cuenta.
+  assert.equal(soloDesconectados({ nombre: 'a', agente: 'claude', modelos_permitidos: ['perfil/rapido'] }), true)
   fichas.value = [ficha('claude', 'Claude'), ficha('codex', 'Codex')]
+})
+
+test('chapaDe da a la chapa de cada línea un texto que llega a 4,5:1, aunque el color de la ficha no lo permita', () => {
+  for (const color of ['#c4561d', '#2563eb', '#7c3aed', '#db2777', '#1f883d', '#64748b', '#f28a4f', '#5b8def', '#a78bfa', '#f472b6', '#3fb950', '#ffff00', '#808080']) {
+    const { fondo, texto } = chapaDe(color)
+    assert.ok(contraste(fondo, texto) >= 4.5, `${color}: ${fondo} con ${texto} da ${contraste(fondo, texto).toFixed(2)}`)
+  }
+  assert.deepEqual(chapaDe('#2563eb'), { fondo: '#2563eb', texto: '#ffffff' }, 'si ya llega, el color de la ficha no cambia')
+  assert.equal(chapaDe('#f28a4f').texto, '#0a1116', 'sobre un color claro, texto oscuro')
+  assert.notEqual(chapaDe('#c4561d').fondo, '#c4561d', 'el naranja de Claude se oscurece lo justo para el texto blanco')
+})
+
+test('modeloDe sin agente ni modelo da «Sin dato»; con uno de los dos, solo ese', () => {
+  const trabajo = (agente?: string, modelo?: string) => ({ solicitud: { agente }, modelo_enviado: modelo }) as unknown as Trabajo
+  assert.equal(modeloDe(trabajo()), t('comun.sinDato'))
+  assert.equal(modeloDe(trabajo('claude')), 'Claude')
+  assert.equal(modeloDe(trabajo(undefined, 'sonnet')), 'sonnet')
+  assert.equal(modeloDe(trabajo('claude', 'sonnet')), 'Claude · sonnet')
 })

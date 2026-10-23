@@ -7,12 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	"charm.land/lipgloss/v2"
-
 	"tramtai/internal/adaptadores"
 	catalogo "tramtai/internal/agentes"
 	"tramtai/internal/idioma"
-	"tramtai/internal/tui/datos"
+	"tramtai/internal/tui/pagina"
 )
 
 // estado es lo que enseña un agente: el mismo cálculo que estadoAgente de la Web UI (web/src/agentes.ts).
@@ -56,7 +54,7 @@ func estadoDe(a adaptador) estado {
 
 // tx es un texto de la Web UI (datos.Texto) en el idioma de la sesión, con sus {marcadores} rellenos.
 func (p *Pagina) tx(clave string, pares ...string) string {
-	return datos.Textof(p.lengua, clave, pares...)
+	return p.estilos.Tx(p.lengua, clave, pares...)
 }
 
 // etiqueta es la del estado en la tarjeta de la Web UI (agente.listo, agente.faltaClave…): «Sin conectar» vale para el
@@ -120,10 +118,6 @@ func ordenar(lista []adaptador) []adaptador {
 	return lista
 }
 
-func rellenar(texto string, ancho int) string {
-	return texto + strings.Repeat(" ", max(ancho-lipgloss.Width(texto), 0))
-}
-
 func (p *Pagina) autenticacion(a adaptador) string {
 	if a.Autenticacion == adaptadores.AutenticacionSuscripcion {
 		return p.tx("agentes.suscripcion")
@@ -149,8 +143,9 @@ func (p *Pagina) fila(a adaptador) string {
 	if a.Version != "" {
 		resto = append(resto, a.Version)
 	}
-	return rellenar(codigo(a.Agente), 3) + " " + rellenar(e.Recortar(nombre(a.Agente), 16), 16) + " " +
-		rellenar(icono+" "+p.etiqueta(est), 16) + strings.Join(resto, " "+e.Iconos.Separador+" ")
+	f, _ := catalogo.Buscar(a.Agente)
+	return pagina.Rellenar(e.Linea(f.ColorClaro, f.ColorOscuro).Render(codigo(a.Agente)), 3) + " " + pagina.Rellenar(e.Recortar(nombre(a.Agente), 16), 16) + " " +
+		pagina.Rellenar(icono+" "+p.etiqueta(est), 16) + strings.Join(resto, " "+e.Iconos.Separador+" ")
 }
 
 // Vista es el título, el resumen por estados y la lista; con un detalle abierto, el detalle.
@@ -164,44 +159,65 @@ func (p *Pagina) Vista() string {
 		cabecera := e.Titulo.Render(e.Recortar(nombre(a.Agente), ancho)) + " " + e.Tenue.Render(e.Iconos.Separador+" "+p.etiqueta(estadoDe(a)))
 		return cabecera + "\n\n" + p.visor.Vista()
 	}
-	lineas := []string{e.Titulo.Render(e.Recortar(p.Titulo(), ancho))}
+	var lineas []string // el título ya está en la cabecera de la app
 	switch {
 	case p.sinServ:
 		return strings.Join(append(lineas, "", e.Advertencia.Render(e.Recortar(idioma.T("El servicio no responde · r reintenta"), ancho))), "\n")
 	case !p.cargado && p.err == "":
-		return strings.Join(append(lineas, "", e.Tenue.Render(idioma.T("Cargando…"))), "\n")
+		return strings.Join(append(lineas, "", e.Tenue.Render(p.tx("comun.cargando"))), "\n")
 	}
 	if alto >= 12 {
 		lineas = append(lineas, e.Tenue.Render(e.Recortar(p.tx("agentes.subtitulo"), ancho)))
 	}
 	if p.err != "" {
-		lineas = append(lineas, e.Error.Render(e.Recortar(p.err, ancho)))
+		lineas = append(lineas, e.Error.Width(ancho).Render(p.err)) // entero, en las líneas que ocupe
 	}
 	if p.cargado {
-		lineas = append(lineas, e.Tenue.Render(e.Recortar(p.resumen(), ancho)), "")
+		lineas = append(lineas, e.Recortar(p.resumen(), ancho), "")
 		if p.cargando {
-			lineas[len(lineas)-1] = e.Tenue.Render(idioma.T("Cargando…"))
+			lineas[len(lineas)-1] = e.Tenue.Render(p.tx("comun.cargando"))
 		}
 		lineas = append(lineas, p.lista.Vista(ancho, max(alto-len(lineas), 1)))
 	}
 	return strings.Join(lineas, "\n")
 }
 
-// resumen cuenta los agentes por estado, con las etiquetas de los filtros de la Web UI.
+// Los filtros de la Web UI (opcionesFiltro de Agentes.vue), en su orden: todos, listos, falta conectar y no instalados.
+var filtros = []struct {
+	clave string
+	deja  func(estado) bool
+}{
+	{"agentes.filtroTodos", func(estado) bool { return true }},
+	{"agentes.filtroListos", func(e estado) bool { return e == estListo }},
+	{"agentes.filtroConectar", func(e estado) bool { return e != estListo && e != estNoInstalado }},
+	{"agentes.filtroInstalar", func(e estado) bool { return e == estNoInstalado }},
+}
+
+// resumen son los filtros con cuántos agentes deja cada uno; el elegido va entre corchetes, como las pestañas.
 func (p *Pagina) resumen() string {
-	var listos, conectar, instalar int
-	for _, a := range p.agentes {
-		switch est := estadoDe(a); {
-		case est == estListo:
-			listos++
-		case est == estNoInstalado:
-			instalar++
-		default:
-			conectar++
+	partes := make([]string, len(filtros))
+	for i, f := range filtros {
+		n := 0
+		for _, a := range p.agentes {
+			if f.deja(estadoDe(a)) {
+				n++
+			}
+		}
+		texto := p.tx(f.clave, "n", strconv.Itoa(n))
+		if i == p.filtro {
+			partes[i] = p.estilos.Titulo.Render("[" + texto + "]")
+		} else {
+			partes[i] = p.estilos.Tenue.Render(texto)
 		}
 	}
-	return strings.Join([]string{p.tx("agentes.filtroListos", "n", strconv.Itoa(listos)), p.tx("agentes.filtroConectar", "n", strconv.Itoa(conectar)),
-		p.tx("agentes.filtroInstalar", "n", strconv.Itoa(instalar))}, " "+p.estilos.Iconos.Separador+" ")
+	return strings.Join(partes, " ")
+}
+
+// filtrar cambia de filtro (paso 1 o -1, dando la vuelta) y deja en la lista solo esos agentes.
+func (p *Pagina) filtrar(paso int) {
+	p.filtro = (p.filtro + paso + len(filtros)) % len(filtros)
+	deja := filtros[p.filtro].deja
+	p.lista.Filtrar(func(a adaptador) bool { return deja(estadoDe(a)) })
 }
 
 func (p *Pagina) si(v bool) string {
@@ -290,7 +306,7 @@ func (p *Pagina) textoModelos(agente string) string {
 	}
 	ids, ya := p.modelos[agente]
 	if !ya {
-		return idioma.T("Cargando…")
+		return p.tx("comun.cargando")
 	}
 	var nombres []string
 	for _, id := range ids {

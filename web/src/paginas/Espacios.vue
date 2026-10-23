@@ -7,17 +7,20 @@
       </template>
     </CabeceraPagina>
 
-    <div v-if="lista" class="apilado" data-captura="espacios" data-recorrido="espacios.lista">
+    <q-card v-if="lista && !lista.length">
+      <EstadoVacio :titulo="t('espacios.vacio')" :accion="t('proyecto.abrir')" @accion="$emit('abrir-proyecto')" />
+    </q-card>
+    <div v-else-if="lista" class="apilado" data-captura="espacios" data-recorrido="espacios.lista">
       <q-card v-for="e in lista" :key="e.id" flat bordered>
-        <q-card-section class="row items-start no-wrap q-gutter-x-md">
-          <q-icon :name="e.ambito === 'global' ? 'o_public' : 'o_folder'" size="28px" :color="e.estado === 'activo' ? 'primary' : 'grey-6'" />
-          <div class="col" style="min-width: 0">
-            <div class="row items-center q-gutter-x-sm">
+        <q-card-section>
+          <div style="min-width: 0">
+            <!-- Estados como el resto de la app: punto y texto (.etiqueta), sin insignias de Quasar ni icono de cabecera. -->
+            <div class="row items-center q-gutter-x-sm q-gutter-y-xs">
               <span class="text-weight-medium">{{ e.nombre }}</span>
-              <q-badge :color="colorEstado[e.estado]" :label="t(textoEstado[e.estado])" />
-              <q-badge v-if="e.ambito === 'proyecto' && e.estado !== 'no_encontrado'" outline :color="e.confiado ? 'positive' : 'warning'"
-                :label="e.confiado ? t('espacios.confiado') : t('espacios.sinConfiar')" />
-              <q-badge v-if="e.id === sesion?.instancia" outline color="primary" :label="t('espacios.actual')" />
+              <span :class="'etiqueta etiqueta--' + claseEstado[e.estado]">{{ t(textoEstado[e.estado]) }}</span>
+              <span v-if="e.ambito === 'proyecto' && e.estado !== 'no_encontrado'" class="etiqueta" :class="e.confiado ? 'etiqueta--ok' : 'etiqueta--aviso'">
+                {{ e.confiado ? t('espacios.confiado') : t('espacios.sinConfiar') }}</span>
+              <span v-if="e.id === sesion?.instancia" class="etiqueta etiqueta--info">{{ t('espacios.actual') }}</span>
             </div>
             <div class="text-caption texto-suave ellipsis q-mt-xs" :class="{ codigo: e.ruta }">{{ e.ruta || t('app.sinProyecto') }}</div>
             <div class="metadatos q-mt-xs">
@@ -34,7 +37,11 @@
         </q-card-actions>
       </q-card>
     </div>
-    <q-skeleton v-else type="rect" height="160px" />
+    <!-- La primera carga falló: qué pasó y Reintentar, en lugar de un esqueleto que no termina. -->
+    <q-card v-else-if="error">
+      <EstadoVacio role="alert" :titulo="t('comun.errorCarga')" :texto="error" :accion="t('comun.reintentar')" :cargando="cargando" @accion="cargar" />
+    </q-card>
+    <q-skeleton v-else type="rect" height="160px" role="status" :aria-label="t('comun.cargando')" />
   </div>
 </template>
 
@@ -44,7 +51,8 @@
 import { onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
-import { api, avisar, avisarError } from '../api/cliente'
+import EstadoVacio from '../componentes/EstadoVacio.vue'
+import { api, avisar, avisarError, mensajeError } from '../api/cliente'
 import type { EspacioUI } from '../api/tipos'
 import { accionesDe, nombreConfirmado, ordenar, type Accion } from '../espacios'
 import { sesion } from '../estado'
@@ -56,10 +64,12 @@ const emit = defineEmits<{ ir: [pagina: string]; 'abrir-proyecto': [] }>()
 const $q = useQuasar()
 const lista = ref<EspacioUI[]>()
 const cargando = ref(false)
+// error es el de la primera carga (sin lista que enseñar); los de después solo avisan.
+const error = ref('')
 const ocupado = ref('')
 
 const textoEstado: Record<EspacioUI['estado'], Clave> = { activo: 'espacios.estadoActivo', detenido: 'espacios.estadoDetenido', no_encontrado: 'espacios.estadoNoEncontrado' }
-const colorEstado: Record<EspacioUI['estado'], string> = { activo: 'positive', detenido: 'grey-7', no_encontrado: 'negative' }
+const claseEstado: Record<EspacioUI['estado'], string> = { activo: 'ok', detenido: 'neutro', no_encontrado: 'error' }
 const textoAccion: Record<Accion, Clave> = { abrir: 'espacios.abrir', detener: 'espacios.detener', activar: 'espacios.activar',
   buscar: 'espacios.buscar', olvidar: 'espacios.olvidar', confiar: 'espacios.confiar', dejarDeConfiar: 'espacios.dejarDeConfiar' }
 
@@ -72,8 +82,10 @@ async function cargar() {
   cargando.value = true
   try {
     lista.value = ordenar(await api.espacios())
+    error.value = ''
   } catch (e) {
-    avisarError(e)
+    if (lista.value) avisarError(e)
+    else error.value = mensajeError(e)
   } finally {
     cargando.value = false
   }

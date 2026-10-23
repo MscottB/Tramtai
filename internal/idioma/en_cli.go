@@ -216,5 +216,7 @@ func init() {
 		"no existe el punto de acceso %s en el servicio":                                                         "access point %s does not exist in the service",
 		"presupuesto no válido %q: usa diario|mensual.peticiones|tokens|usd=valor":                               "invalid budget %q: use diario|mensual.peticiones|tokens|usd=value",
 		"presupuesto:": "budget:",
+
+		". ¿Confías en esta carpeta?": ". Do you trust this folder?",
 	})
 }

@@ -681,3 +681,42 @@ func TestClienteInstancia(t *testing.T) {
 		t.Fatalf("resumen: %+v %v", r, err)
 	}
 }
+
+// Lanzar otra vez no borra lo que explicaba el fallo del arranque anterior: pasa a servicio-salida.log.1.
+func TestLanzarConservaElFalloAnterior(t *testing.T) {
+	datos := t.TempDir()
+	ruta := filepath.Join(datos, "servicio-salida.log")
+	os.WriteFile(ruta, []byte("fallo del arranque anterior\n"), 0o600)
+	if err := Lanzar(os.Args[0], datos, "-test.run=^$"); err != nil {
+		t.Fatal(err)
+	}
+	if anterior, _ := os.ReadFile(ruta + ".1"); !strings.Contains(string(anterior), "fallo del arranque anterior") {
+		t.Fatalf("se perdió el registro del fallo anterior: %q", anterior)
+	}
+}
+
+// Un impostor que ocupa el puerto y conoce el identificador del descriptor (es público) no recibe el token: no puede
+// responder al reto sin conocerlo.
+func TestImpostorNoRecibeElToken(t *testing.T) {
+	datos := t.TempDir()
+	const id = "servicio_conocido"
+	var conToken atomic.Bool
+	impostor := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "" {
+			conToken.Store(true)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"estado": "ok", "servicio": id, "prueba": strings.Repeat("0", 64)})
+	}))
+	defer impostor.Close()
+	d, _ := json.Marshal(contrato.Descriptor{Identificador: id, Base: impostor.URL})
+	os.WriteFile(contrato.RutaDescriptor(datos), d, 0o600)
+	os.WriteFile(filepath.Join(datos, "token-servicio"), []byte(strings.Repeat("s", 43)), 0o600)
+
+	if _, err := Conectar(datos); !errors.Is(err, ErrServicioInactivo) {
+		t.Fatalf("el impostor pasó la comprobación: %v", err)
+	}
+	if conToken.Load() {
+		t.Fatal("el token de servicio salió hacia el impostor")
+	}
+}

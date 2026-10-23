@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { t } from './i18n'
 import type { Clave } from './idiomas/es'
 import { api, pedir } from './api/cliente'
-import { numero } from './formato'
+import { numero, sinDato } from './formato'
 import type { Adaptador, ConfigPunto, Modelo, Trabajo } from './api/tipos'
 
 const perfiles = ['rapido', 'equilibrado', 'profundo']
@@ -64,7 +64,9 @@ export const ofrecerDejarSuscripcion = (a: Adaptador, admiteLasDos: boolean) => 
 // soloDesconectados: la API solo puede usar agentes desconectados (su agente, sus modelos permitidos y su respaldo);
 // una API sin agente propio usa el predeterminado del espacio y no cuenta.
 export function soloDesconectados(p: ConfigPunto): boolean {
-  const agentes = new Set([p.agente, ...(p.modelos_permitidos ?? []), ...(p.respaldo ?? [])].filter((x): x is string => !!x).map((x) => x.split(/[/+]/)[0]))
+  // Un perfil («perfil/rapido») no es un agente: lo resuelve el servicio y no cuenta.
+  const agentes = new Set([p.agente, ...(p.modelos_permitidos ?? []), ...(p.respaldo ?? [])]
+    .filter((x): x is string => !!x && !x.startsWith('perfil/')).map((x) => x.split(/[/+]/)[0]))
   return agentes.size > 0 && [...agentes].every((a) => fichaDe(a)?.desconectado)
 }
 
@@ -82,12 +84,50 @@ export async function cargarFichas() {
   }
 }
 
-// pintarLineas da a cada agente su color (--linea-<id> en cada tema y la clase .linea--<id>), para que uno nuevo tenga
-// el suyo sin tocar los estilos. Solo se aceptan ids y colores con forma conocida: el texto va a una hoja de estilos.
+// luminancia relativa de un color #rrggbb, con la fórmula de WCAG 2.x.
+function luminancia(color: string) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+// contraste entre dos colores #rrggbb (de 1 a 21).
+export function contraste(a: string, b: string) {
+  const [claro, oscuro] = [luminancia(a), luminancia(b)].sort((x, y) => y - x)
+  return (claro + 0.05) / (oscuro + 0.05)
+}
+
+// mezclar acerca el color a otro en la proporción peso (0 a 1).
+function mezclar(color: string, hacia: string, peso: number) {
+  return '#' + [1, 3, 5].map((i) => {
+    const [a, b] = [color, hacia].map((c) => parseInt(c.slice(i, i + 2), 16))
+    return Math.round(a + (b - a) * peso).toString(16).padStart(2, '0')
+  }).join('')
+}
+
+const BLANCO = '#ffffff'
+const TINTA = '#0a1116'
+
+// chapaDe da el fondo y el texto de la chapa de una línea: el texto que más contrasta con el color de la ficha y, si
+// aun así no llega a 4,5:1 (el naranja de Claude con blanco), el color oscurecido o aclarado lo justo.
+export function chapaDe(color: string) {
+  const texto = contraste(color, BLANCO) >= contraste(color, TINTA) ? BLANCO : TINTA
+  let fondo = color
+  for (let paso = 1; contraste(fondo, texto) < 4.5 && paso <= 20; paso++) fondo = mezclar(color, texto === BLANCO ? '#000000' : BLANCO, paso * 0.05)
+  return { fondo, texto }
+}
+
+// pintarLineas da a cada agente su color (--linea-<id> en cada tema y la clase .linea--<id>) y el de su chapa, para que
+// uno nuevo tenga el suyo sin tocar los estilos. Solo se aceptan ids y colores con forma conocida: el texto va a una
+// hoja de estilos.
 function pintarLineas(lista: FichaAgente[]) {
-  const color = (c: string) => (/^#[0-9a-f]{6}$/i.test(c) ? c : 'var(--linea-otro)')
-  const reglas = lista.filter((f) => /^[a-z0-9_-]+$/.test(f.agente)).map((f) => `:root{--linea-${f.agente}:${color(f.color.claro)}}` +
-    `body.body--dark{--linea-${f.agente}:${color(f.color.oscuro)}}.linea--${f.agente}{--c:var(--linea-${f.agente})}`)
+  const tema = (id: string, c: string) => {
+    if (!/^#[0-9a-f]{6}$/i.test(c)) return `--linea-${id}:var(--linea-otro)`
+    const chapa = chapaDe(c)
+    return `--linea-${id}:${c};--chapa-${id}:${chapa.fondo};--chapa-texto-${id}:${chapa.texto}`
+  }
+  const reglas = lista.filter((f) => /^[a-z0-9_-]+$/.test(f.agente)).map((f) => `:root{${tema(f.agente, f.color.claro)}}` +
+    `body.body--dark{${tema(f.agente, f.color.oscuro)}}` +
+    `.linea--${f.agente}{--c:var(--linea-${f.agente});--c-chapa:var(--chapa-${f.agente},var(--c));--c-chapa-texto:var(--chapa-texto-${f.agente})}`)
   let estilo = document.getElementById('tramtai-lineas')
   if (!estilo) {
     estilo = document.createElement('style')
@@ -116,7 +156,7 @@ export function ordenarAgentes<T extends { agente: string }>(lista: T[]): T[] {
 }
 
 export function nombreAgente(agente?: string): string {
-  return agente ? (fichaDe(agente)?.nombre ?? agente) : '—'
+  return agente ? (fichaDe(agente)?.nombre ?? agente) : sinDato()
 }
 
 // etiquetaModelo da el nombre legible de agente o agente/modelo: "Claude · sonnet".
@@ -225,6 +265,6 @@ function entradaCatalogo(catalogo: Modelo[], seleccion: string | null): Modelo |
 }
 
 export function modeloDe(trabajo: Trabajo): string {
-  const modelo = trabajo.modelo_efectivo || trabajo.modelo_enviado
-  return [nombreAgente(trabajo.solicitud.agente), modelo].filter((x) => x && x !== '—').join(' · ') || '—'
+  const agente = trabajo.solicitud.agente
+  return [agente && nombreAgente(agente), trabajo.modelo_efectivo || trabajo.modelo_enviado].filter(Boolean).join(' · ') || sinDato()
 }

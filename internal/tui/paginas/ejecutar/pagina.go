@@ -5,13 +5,13 @@ package ejecutar
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 
 	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
+	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/datos"
@@ -31,13 +31,8 @@ const (
 	limiteRecientes = 10
 )
 
-// origen es lo que cada mensaje propio lleva para saber si aún vale: el contexto y el espacio con que se pidió y la versión
-// de la página (cada Iniciar, Ocultar o Mostrar la cambia).
-type origen struct {
-	ctx       context.Context
-	instancia string
-	gen       int
-}
+// origen es el pagina.Origen de los mensajes de Probar: un tipo propio, para no confundirlos con los de otra página.
+type origen struct{ pagina.Origen }
 
 type (
 	msgCatalogo struct {
@@ -142,10 +137,11 @@ type Pagina struct {
 
 	// Lo que se abre encima: «Ver como código», «Guardar como API», la API recién creada y la plantilla por confirmar.
 	codigo  *vistaCodigo
+	muestra string // el ejemplo de respuesta que se enseña (v); "" cerrado
 	guardar *comp.Formulario
 	creada  *apiCreada
 	caja    comp.Visor
-	pend    func() // lo que se hace si se confirma la pregunta abierta (otra plantilla, quitar un campo)
+	pend    func() tea.Cmd // lo que se hace si se confirma la pregunta abierta (otra plantilla, quitar un campo, cancelar)
 
 	nborrador int
 
@@ -165,29 +161,24 @@ func (p *Pagina) Ayuda() string  { return pagina.PaginaEjecutar }
 // EnCampo es verdadero mientras se escribe en el formulario o en «Guardar como API».
 func (p *Pagina) EnCampo() bool { return p.editando || p.guardar != nil }
 
-var textoAscii = strings.NewReplacer("·", "-", "…", "...", "’", "'", "“", "\"", "”", "\"", "—", "-", "→", "->", "«", "\"", "»", "\"")
-
-// tx es un texto de la Web UI (datos.Texto) con sus {marcadores} rellenos; en una consola ASCII, sin caracteres de dibujo.
 func (p *Pagina) tx(clave string, pares ...string) string {
-	return p.a(datos.Textof(p.lengua, clave, pares...))
+	return p.estilos.Tx(p.lengua, clave, pares...)
 }
+func (p *Pagina) a(texto string) string    { return p.estilos.A(texto) }
+func (p *Pagina) origen() origen           { return origen{p.c.Origen(p.gen)} }
+func (p *Pagina) vigente(o origen) bool    { return o.Vigente(p.c, p.gen) }
+func (p *Pagina) delEspacio(o origen) bool { return o.DelEspacio(p.c) }
 
-func (p *Pagina) a(texto string) string {
-	if p.estilos != nil && p.estilos.ASCII {
-		return textoAscii.Replace(texto)
+// Pendiente dice, para la pregunta de salir de la terminal, si hay una petición en marcha (sigue en el servicio) o una API
+// abierta con cambios en la receta que aún no se guardaron con g.
+func (p *Pagina) Pendiente() string {
+	switch {
+	case p.activo() || p.enviando:
+		return idioma.T("Probar tiene una petición en marcha: seguirá en el servicio y la verás en el Historial.")
+	case p.api != "" && p.punto != nil && p.armado && !mismaReceta(recetaDePunto(*p.punto), p.leer()):
+		return idioma.Tf("La API %s tiene cambios sin guardar en Probar (g la actualiza).", p.api)
 	}
-	return texto
-}
-
-func (p *Pagina) origen() origen { return origen{ctx: p.c.Ctx, instancia: p.c.Instancia, gen: p.gen} }
-
-// vigente dice si una respuesta sigue valiendo: su contexto no se canceló, es del mismo espacio y de esta versión.
-func (p *Pagina) vigente(o origen) bool { return p.delEspacio(o) && o.gen == p.gen }
-
-// delEspacio dice si una respuesta es del espacio de ahora con su contexto vivo, aunque la página se ocultara entretanto:
-// vale para lo que ya pasó en el servicio (una petición creada o cancelada).
-func (p *Pagina) delEspacio(o origen) bool {
-	return o.ctx != nil && o.ctx.Err() == nil && o.instancia == p.c.Instancia
+	return ""
 }
 
 // sinServicio es lo que responde un atajo que necesita el servicio cuando no hay cliente: la app lo avisa.
@@ -212,14 +203,14 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	p.visible, p.sinServ, p.editando = true, false, false
 	p.cerrarVivo()
 	if !p.armado {
-		p.armar(datosForm{mensaje: leerBorrador(c.Datos)}, "mensaje")
+		p.armar(datosForm{mensaje: leerBorrador(c.Datos)}, "instrucciones") // la receta se abre arriba, con lo esencial
 	}
 	if otro {
 		p.trabajo, p.final, p.salida, p.avisos, p.api, p.punto = nil, nil, "", nil, "", nil
 		p.catalogo, p.cargadoRec = nil, false
 		p.recientes.Poner(nil)
 	}
-	p.codigo, p.guardar, p.creada, p.pend, p.enviando, p.ocupado = nil, nil, nil, nil, false, false
+	p.codigo, p.guardar, p.creada, p.pend, p.enviando, p.ocupado, p.muestra = nil, nil, nil, nil, false, false, ""
 	p.ajustar()
 	if c.Cli == nil {
 		p.sinServ = true
@@ -285,9 +276,9 @@ func (p *Pagina) cargarLimites() tea.Cmd {
 
 // fallo reparte un error: de conexión es del servicio (lo avisa la app); el de la API, su mensaje tal cual, como aviso.
 func (p *Pagina) fallo(err error) tea.Cmd {
-	if pagina.NoResponde(err) {
+	if cmd := pagina.SinServicio(err); cmd != nil {
 		p.sinServ = true
-		return func() tea.Msg { return pagina.ErrorServicio{Err: err} }
+		return cmd
 	}
 	return comp.Aviso(nucleo.MensajeDe(err), comp.Fallo)
 }
@@ -398,7 +389,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 	case comp.Confirmado:
 		if hacer := p.pend; hacer != nil {
 			p.pend = nil
-			hacer()
+			return p, hacer()
 		}
 	case tea.PasteMsg:
 		return p, p.pegar(m)
@@ -430,6 +421,16 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 		return p.teclaCodigo(t)
 	case p.creada != nil:
 		return p.teclaCreada(t)
+	case p.muestra != "":
+		switch t {
+		case "esc", "v":
+			p.muestra = ""
+		case "y":
+			return copiar(p.muestra)
+		default:
+			p.caja.Update(k)
+		}
+		return nil
 	case p.editando:
 		return p.teclaCampo(k)
 	}
@@ -440,11 +441,13 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 			p.pestana = pestReceta // el campo con el error se ve
 		}
 		return cmd
-	case "esc":
-		if p.activo() && p.estado != nucleo.CancelacionSolicitada {
-			return p.cancelarTrabajo()
-		}
+	case "esc": // vuelve aunque haya una petición en marcha: sigue en el servicio y c la cancela
 		return pagina.Atras
+	case "c":
+		if p.activo() && p.estado != nucleo.CancelacionSolicitada {
+			p.pend = p.cancelarTrabajo
+			return comp.Confirmar(idioma.T("¿Cancelar la petición en marcha?"))
+		}
 	case "left", "right":
 		p.pestana = (p.pestana + map[string]int{"left": 2, "right": 1}[t]) % 3
 		p.rehacerRespuesta()
@@ -481,9 +484,16 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 	case pestReceta:
 		switch t {
 		case "enter", "e":
+			if f := p.form.Foco(); f == "opciones" || f == "avanzadas" { // un pliegue no se edita: Intro lo abre o lo pliega
+				return p.alForm(tea.KeyPressMsg{Code: tea.KeyEnter})
+			}
 			p.editando = true
 		case "x":
 			return p.pedirQuitar()
+		case "alt+up", "alt+down":
+			return p.moverCampo(map[string]int{"alt+up": -1, "alt+down": 1}[t])
+		case "v":
+			return p.verEjemplo()
 		case "up":
 			return p.alForm(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
 		case "down":

@@ -3,6 +3,8 @@ package servicio
 import (
 	"cmp"
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -108,8 +110,7 @@ func (s *Servicio) ActivarEspacio(id string) (*Instancia, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.cambiaronEspacios()
-	return inst, nil
+	return inst, s.persistirEstado()
 }
 
 // DetenerEspacio detiene un espacio (lo que estaba en cola se cancela); sus datos y su configuración se quedan.
@@ -117,8 +118,7 @@ func (s *Servicio) DetenerEspacio(id string) error {
 	if err := s.Desactivar(id); err != nil {
 		return err
 	}
-	s.cambiaronEspacios()
-	return nil
+	return s.persistirEstado()
 }
 
 // Ubicar asocia un espacio cuya carpeta no se encuentra (movida antes de la v0.54, o a mano) con ruta, que tiene que
@@ -151,8 +151,7 @@ func (s *Servicio) Ubicar(id, ruta string) (*Instancia, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.cambiaronEspacios()
-	return inst, nil
+	return inst, s.persistirEstado()
 }
 
 // Olvidar borra un espacio y sus datos en Tramtai (base, cargas, su token y los de sus APIs) después de confirmar su
@@ -168,6 +167,22 @@ func (s *Servicio) Olvidar(id, nombre string) error {
 	if !strings.EqualFold(strings.TrimSpace(nombre), e.Nombre) {
 		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("escribe el nombre del espacio para confirmar que quieres olvidarlo"))
 	}
+	// Mientras se olvida, el id ocupa su sitio en abriendo: quien lo active a la vez espera y recibe un error, y no
+	// queda una instancia abierta sobre archivos borrados.
+	olvido := &apertura{listo: make(chan struct{}), err: nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("el espacio %s se estaba olvidando", id))}
+	s.mu.Lock()
+	if _, enCurso := s.abriendo[id]; enCurso {
+		s.mu.Unlock()
+		return nucleo.NuevoError(nucleo.CodigoTransicionInvalida, idioma.Tf("el espacio %s se está abriendo: vuelve a intentarlo en un momento", e.Nombre))
+	}
+	s.abriendo[id] = olvido
+	s.mu.Unlock()
+	defer func() {
+		s.mu.Lock()
+		delete(s.abriendo, id)
+		s.mu.Unlock()
+		close(olvido.listo)
+	}()
 	if s.instancia(id) != nil {
 		if err := s.Desactivar(id); err != nil {
 			return err
@@ -189,8 +204,7 @@ func (s *Servicio) Olvidar(id, nombre string) error {
 		}
 	}
 	s.registro().quitar(id)
-	s.cambiaronEspacios()
-	return nil
+	return s.persistirEstado()
 }
 
 // apisDe son los nombres de las APIs del espacio: las de su local.yaml y las de la global marcadas con su id.
@@ -228,10 +242,23 @@ func (s *Servicio) confiarEspacio(id string, confiar *bool) error {
 	return s.FijarConfianza(e.Ruta, *confiar)
 }
 
-// cambiaronEspacios guarda el registro y el descriptor tras activar, detener, reasociar u olvidar un espacio.
-func (s *Servicio) cambiaronEspacios() {
-	_ = s.guardarActivas()
-	_ = s.actualizarDescriptor()
+// persistirEstado guarda el registro de espacios y el descriptor tras un cambio. Si no puede (disco lleno, el renombrado
+// agotado en Windows), lo anota en el registro del servicio y en los errores del estado y lo devuelve: la acción del
+// usuario no responde que salió bien, porque al reiniciar volvería a estar como antes.
+func (s *Servicio) persistirEstado() error {
+	err := errors.Join(s.guardarActivas(), s.actualizarDescriptor())
+	texto := ""
+	switch r := s.registro(); {
+	case err != nil:
+		texto = idioma.Tf("no se pudo guardar el estado de los espacios: %s", err.Error())
+		fmt.Fprintln(s.opc.Registros, texto)
+	case r.soloLectura && r.aviso != nil: // no se reescribe a propósito (no se pudo leer), pero que se vea
+		texto = nucleo.MensajeDe(r.aviso)
+	}
+	s.mu.Lock()
+	s.errorEstado = texto
+	s.mu.Unlock()
+	return err
 }
 
 func (s *Servicio) listarEspaciosUI(w http.ResponseWriter, r *http.Request, _ *sesion) {

@@ -1,8 +1,9 @@
 <template>
-  <q-dialog v-model="nuevo" aria-labelledby="titulo-nueva-api" allow-focus-outside>
-    <q-card style="width: 600px; max-width: 95vw">
+  <!-- persistent: un clic fuera no tira la receta a medias; Esc pregunta antes si hay algo escrito (escaparConAviso). -->
+  <q-dialog v-model="nuevo" aria-labelledby="titulo-nueva-api" allow-focus-outside persistent>
+    <q-card style="width: 600px; max-width: 95vw" @keyup.esc="escaparConAviso(JSON.stringify(formulario) !== inicialNuevo, () => (nuevo = false))">
       <q-card-section>
-        <div id="titulo-nueva-api" class="titulo-seccion">{{ t('puntos.nuevo') }}</div>
+        <h2 id="titulo-nueva-api" class="titulo-seccion">{{ t('puntos.nuevo') }}</h2>
         <div class="texto-suave text-body2">{{ t('puntos.nuevoTexto') }}</div>
       </q-card-section>
       <q-form @submit="crear">
@@ -44,10 +45,10 @@
     </q-card>
   </q-dialog>
 
-  <q-dialog v-model="dialogoInstrucciones" aria-labelledby="titulo-ajustes-api" allow-focus-outside>
-    <q-card style="width: 560px; max-width: 95vw">
+  <q-dialog v-model="dialogoInstrucciones" aria-labelledby="titulo-ajustes-api" allow-focus-outside persistent>
+    <q-card style="width: 560px; max-width: 95vw" @keyup.esc="escaparConAviso(JSON.stringify(ajustes) !== inicialAjustes, () => (dialogoInstrucciones = false))">
       <q-card-section>
-        <div id="titulo-ajustes-api" class="titulo-seccion">{{ t('puntos.ajustesDe', { nombre: editando }) }}</div>
+        <h2 id="titulo-ajustes-api" class="titulo-seccion">{{ t('puntos.ajustesDe', { nombre: editando }) }}</h2>
       </q-card-section>
       <q-card-section class="q-pt-none q-gutter-y-md">
         <EditorReceta v-model="ajustes.receta" :catalogo="catalogo" para-api />
@@ -72,6 +73,7 @@ import type { ConfigPunto, EstadoPunto, Modelo, Presupuesto } from '../../api/ti
 import type { OpcionModelo } from '../../agentes'
 import { ajustesDeReceta, configDeReceta, presupuestoLimpio, recetaDePunto, recetaVacia } from '../../recetas'
 import { t } from '../../i18n'
+import { escaparConAviso } from '../../cierre'
 import { contratos, nombreContrato } from './comun'
 
 // grupos son las sugerencias del campo Grupo; recargar vuelve a pedir las APIs antes de seguir (creada abre el detalle).
@@ -91,8 +93,13 @@ function filtrarGrupos(texto: string, actualizar: (f: () => void) => void) {
   })
 }
 
+// inicialNuevo e inicialAjustes son el formulario al abrirlo: si cambió, Esc pregunta antes de cerrar.
+const inicialNuevo = ref('')
+const inicialAjustes = ref('')
+
 function abrirNuevo() {
   Object.assign(formulario, vacio())
+  inicialNuevo.value = JSON.stringify(formulario)
   nuevo.value = true
 }
 
@@ -137,6 +144,7 @@ function abrirAjustes(p: EstadoPunto) {
   editando.value = p.nombre
   Object.assign(ajustes, { receta: recetaDePunto(p), permitidos: [...(p.modelos_permitidos ?? [])],
     presupuesto: JSON.parse(JSON.stringify(p.presupuesto ?? {})) as Presupuesto })
+  inicialAjustes.value = JSON.stringify(ajustes)
   dialogoInstrucciones.value = true
 }
 

@@ -71,7 +71,8 @@ type modelo struct {
 	cursorMenu int
 
 	selector *comp.Selector     // el cambio rápido de espacio
-	pregunta *comp.Confirmacion // la confirmación que pidió la página
+	pregunta *comp.Confirmacion // la confirmación que pidió la página, la de salir o el último error entero
+	saliendo bool               // la pregunta abierta es la de salir: s cierra la terminal
 	avisos   comp.Avisos
 }
 
@@ -237,7 +238,7 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case pagina.Volver:
 		return m, m.volver()
 	case comp.Pregunta:
-		m.pregunta = &comp.Confirmacion{Texto: msg.Texto}
+		m.pregunta, m.saliendo = &comp.Confirmacion{Texto: msg.Texto}, false
 	case comp.Elegido:
 		if m.selector == nil {
 			return m, m.aPagina(msg)
@@ -261,21 +262,32 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // tecla reparte una tecla: primero lo que está abierto encima (la pregunta, el selector, el menú) y luego la página.
 // Las teclas comunes no se aplican mientras la página tiene un campo con el foco. Por debajo del tamaño mínimo no se
-// ve nada, así que solo valen q y Ctrl+C.
+// ve nada, así que solo valen q y Ctrl+C. Cualquier tecla quita el error de la línea de estado; ! lo enseña entero.
 func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 	t := k.String()
+	if m.pregunta == nil {
+		m.avisos.Descartar()
+	}
 	switch {
 	case t == "ctrl+c":
 		return tea.Quit
 	case m.ancho < anchoMinimo || m.alto < altoMinimo:
 		if t == "q" {
-			return tea.Quit
+			return m.salir()
 		}
 		return nil
 	case m.pregunta != nil:
 		listo, cmd := m.pregunta.Update(k)
-		if listo {
-			m.pregunta = nil
+		if !listo {
+			return nil
+		}
+		m.pregunta = nil
+		if m.saliendo {
+			m.saliendo = false
+			if _, si := cmd().(comp.Confirmado); si {
+				return tea.Quit
+			}
+			return nil
 		}
 		return cmd
 	case m.selector != nil:
@@ -291,12 +303,17 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 	}
 	switch t {
 	case "q":
-		return tea.Quit
+		return m.salir()
+	case "!":
+		if ultimo := m.avisos.Ultimo(); ultimo != "" {
+			m.pregunta = &comp.Confirmacion{Texto: ultimo, Leer: true}
+			return nil
+		}
 	case "tab":
 		m.abrirMenu()
 		return nil
 	case "?":
-		return m.ir(pagina.PaginaAyuda, pagina.ConAyuda{Pagina: p.Ayuda()}, true)
+		return m.ir(pagina.PaginaAyuda, pagina.ConAyuda{Pagina: p.Ayuda(), Teclas: slices.Concat(p.Teclas(), comunes())}, true)
 	case "r":
 		if m.caido != nil {
 			if m.comprobando {
@@ -310,6 +327,23 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 		return m.ir(clave, nil, false)
 	}
 	return m.aPagina(k)
+}
+
+// salir cierra la terminal; si una página tiene algo en marcha o sin guardar (pagina.Pendiente), antes pregunta y dice qué.
+func (m *modelo) salir() tea.Cmd {
+	var motivos []string
+	for _, clave := range ordenMenu() {
+		if p, ok := m.paginas[clave].(pagina.Pendiente); ok {
+			if motivo := p.Pendiente(); motivo != "" {
+				motivos = append(motivos, motivo)
+			}
+		}
+	}
+	if len(motivos) == 0 {
+		return tea.Quit
+	}
+	m.pregunta, m.saliendo = &comp.Confirmacion{Texto: idioma.T("¿Salir de la terminal?") + "\n\n" + strings.Join(motivos, "\n")}, true
+	return nil
 }
 
 // View implementa tea.Model.
@@ -361,23 +395,44 @@ func (m *modelo) encajar(texto string, ancho, alto int) string {
 	return strings.Join(lineas, "\n")
 }
 
-// proximamente ocupa el sitio de una página que aún no está hecha.
+// proximamente ocupa el sitio de una página que aún no está hecha. En la Ayuda enseña las teclas de la página de la que
+// se vino (ConAyuda), para que ? siempre las diga todas.
 type proximamente struct {
 	titulo  string
 	estilos *pagina.Estilos
+	teclas  []pagina.Tecla
 }
 
 func (p *proximamente) Titulo() string                  { return p.titulo }
 func (p *proximamente) Iniciar(pagina.Contexto) tea.Cmd { return nil }
 func (p *proximamente) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
-	if k, ok := msg.(tea.KeyPressMsg); ok && k.String() == "esc" {
-		return p, pagina.Atras
+	switch msg := msg.(type) {
+	case pagina.ConAyuda:
+		p.teclas = msg.Teclas
+	case tea.KeyPressMsg:
+		if msg.String() == "esc" {
+			return p, pagina.Atras
+		}
 	}
 	return p, nil
 }
-func (p *proximamente) Teclas() []pagina.Tecla { return nil }
-func (p *proximamente) EnCampo() bool          { return false }
-func (p *proximamente) Ayuda() string          { return "" }
+func (p *proximamente) Teclas() []pagina.Tecla {
+	return []pagina.Tecla{{Tecla: "Esc", Accion: idioma.T("vuelve")}}
+}
+func (p *proximamente) EnCampo() bool { return false }
+func (p *proximamente) Ayuda() string { return "" }
 func (p *proximamente) Vista() string {
-	return p.estilos.Titulo.Render(p.titulo) + "\n\n" + p.estilos.Tenue.Render(idioma.T("Próximamente"))
+	e := p.estilos
+	lineas := []string{e.Tenue.Render(idioma.T("Próximamente"))}
+	if len(p.teclas) > 0 {
+		ancho := 0
+		for _, t := range p.teclas {
+			ancho = max(ancho, lipgloss.Width(t.Tecla))
+		}
+		lineas = append(lineas, "", e.Titulo.Render(idioma.T("Teclas")))
+		for _, t := range p.teclas {
+			lineas = append(lineas, e.Tecla.Render(t.Tecla)+strings.Repeat(" ", ancho-lipgloss.Width(t.Tecla)+2)+t.Accion)
+		}
+	}
+	return strings.Join(lineas, "\n")
 }

@@ -84,7 +84,10 @@ func (c Claude) ResolverModelo(ctx context.Context, modelo string) (string, erro
 		"--tools", "", "--no-session-persistence", "--disable-slash-commands"}
 	var extra []string
 	if c.Autenticacion.Valor() != adaptadores.AutenticacionSuscripcion {
-		clave := adaptadores.ClaveEntorno("ANTHROPIC_API_KEY")
+		clave, err := adaptadores.ClaveAlmacen("ANTHROPIC_API_KEY")
+		if err != nil {
+			return "", err
+		}
 		if clave == "" {
 			return "", nucleo.NuevoError(nucleo.CodigoAutenticacionAgente, idioma.T("falta ANTHROPIC_API_KEY"))
 		}
@@ -130,7 +133,11 @@ func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 	switch c.Autenticacion.Valor() {
 	case adaptadores.AutenticacionSuscripcion:
 	case adaptadores.AutenticacionClaveAPI, "":
-		if clave = adaptadores.ClaveEntorno("ANTHROPIC_API_KEY"); clave == "" {
+		var err error
+		if clave, err = adaptadores.ClaveAlmacen("ANTHROPIC_API_KEY"); err != nil {
+			return adaptadores.Resultado{}, err
+		}
+		if clave == "" {
 			return adaptadores.Resultado{}, nucleo.NuevoError(nucleo.CodigoAutenticacionAgente,
 				idioma.T("falta ANTHROPIC_API_KEY; o configura adaptadores.claude.autenticacion: suscripcion para uso personal local"))
 		}

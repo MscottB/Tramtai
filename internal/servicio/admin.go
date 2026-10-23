@@ -120,9 +120,25 @@ func (s *Servicio) rutasAdmin() http.Handler {
 	mux.HandleFunc("PUT /api/v1/servicio/puntos/{nombre}", s.adminGuardarPunto)
 	mux.HandleFunc("DELETE /api/v1/servicio/puntos/{nombre}", s.adminEliminarPunto)
 	mux.HandleFunc("POST /api/v1/servicio/puntos/{nombre}/token", s.adminRotarToken)
+	// El puerto se cambia aquí con el servicio en marcha: así la CLI no edita config.yaml a la vez que el servicio.
+	mux.HandleFunc("PUT /api/v1/servicio/puerto", func(w http.ResponseWriter, r *http.Request) {
+		var peticion struct {
+			Puerto     int  `json:"puerto"`
+			Automatico bool `json:"automatico"`
+		}
+		if err := api.LeerJSON(w, r, &peticion); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		if err := s.fijarPuerto(peticion.Puerto, peticion.Automatico); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
 	mux.HandleFunc("POST /api/v1/servicio/recargar", func(w http.ResponseWriter, _ *http.Request) {
 		puntos := s.Recargar()
-		_ = s.actualizarDescriptor()
+		_ = s.persistirEstado() // anotado; los puntos ya están en su archivo
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"puntos_acceso": puntos})
 	})
 	mux.HandleFunc("POST /api/v1/servicio/detener", func(w http.ResponseWriter, _ *http.Request) {
@@ -165,19 +181,24 @@ func (s *Servicio) adminActivar(w http.ResponseWriter, r *http.Request) {
 	case "global":
 		inst, err = s.ActivarGlobal()
 	case "proyecto":
-		inst, err = s.ActivarProyecto(peticion.Raiz)
+		// Adoptar la marca de un espacio cuya carpeta ya no está (un repositorio clonado puede traerla) pide la misma
+		// confirmación que AbrirProyecto: confiar en la carpeta.
+		g, errGlobal := nucleo.CargarConfiguracion("")
+		if movido := s.rutaMovida(peticion.Raiz); movido != "" && (errGlobal != nil || !g.ProyectoConfiable(peticion.Raiz)) {
+			err = &ErrorConfianza{Raiz: peticion.Raiz, Movido: movido}
+		} else {
+			inst, err = s.ActivarProyecto(peticion.Raiz)
+		}
 	default:
 		err = nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("ámbito desconocido %q: usa global o proyecto", peticion.Ambito))
 	}
-	if err != nil {
+	if escribirErrorAbrir(w, r, err) {
+		return
+	}
+	if err := s.persistirEstado(); err != nil {
 		api.EscribirError(w, r, err)
 		return
 	}
-	if err := s.guardarActivas(); err != nil {
-		api.EscribirError(w, r, err)
-		return
-	}
-	_ = s.actualizarDescriptor()
 	api.EscribirJSON(w, http.StatusOK, ActivacionInstancia{Instancia: inst.estado(r.Context()), Token: s.tokenDe(inst)})
 }
 
@@ -186,11 +207,10 @@ func (s *Servicio) adminDesactivar(w http.ResponseWriter, r *http.Request) {
 		api.EscribirError(w, r, err)
 		return
 	}
-	if err := s.guardarActivas(); err != nil {
+	if err := s.persistirEstado(); err != nil {
 		api.EscribirError(w, r, err)
 		return
 	}
-	_ = s.actualizarDescriptor()
 	w.WriteHeader(http.StatusNoContent)
 }
 

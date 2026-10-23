@@ -1,9 +1,12 @@
 <template>
-  <div v-if="cargando" class="fullscreen flex flex-center">
+  <div v-if="cargando" class="fullscreen flex flex-center" role="status" :aria-label="t('comun.cargando')">
     <q-spinner size="44px" color="primary" />
   </div>
   <EntrarPagina v-else-if="!sesion" :aviso="avisoEntrada" />
   <q-layout v-else view="hHh Lpr fFf">
+    <!-- Con el teclado, el primer Tab ofrece saltarse la cabecera y el menú. Es un botón y no un enlace a #contenido:
+         el hash es la página que se muestra. -->
+    <button type="button" class="saltar" @click="enfocarContenido">{{ t('app.saltar') }}</button>
     <q-header class="cabecera-app">
       <q-toolbar class="q-px-md" style="min-height: 60px">
         <q-btn flat dense round icon="menu" :aria-label="t('app.abrirMenu')" class="lt-md q-mr-sm" @click="menu = !menu" />
@@ -151,7 +154,8 @@
     </q-drawer>
 
     <q-page-container>
-      <q-page class="q-pa-md q-pa-lg-lg">
+      <!-- q-page ya es el <main>: recibe el foco al cambiar de página (ir) y desde «Saltar al contenido». -->
+      <q-page id="contenido" tabindex="-1" class="q-pa-md q-pa-lg-lg" :aria-label="tituloDe(pagina)">
         <q-banner v-if="!conectado" rounded class="error-caja q-mb-md pagina">
           <template #avatar><q-icon name="o_cloud_off" /></template>
           <div class="text-weight-medium">{{ t('app.sinConexionTexto') }}</div>
@@ -159,15 +163,12 @@
           <template #action><q-btn flat no-caps icon="o_refresh" :label="t('app.reintentar')" @click="comprobar" /></template>
         </q-banner>
         <div v-if="!sesion.instancia && seccion !== 'espacios'" class="pagina">
-          <q-card class="q-pa-lg text-center" style="max-width: 560px; margin: 48px auto">
-            <q-icon name="power_settings_new" size="48px" color="primary" />
-            <div class="titulo-seccion q-mt-md">{{ t('app.sinInstancia') }}</div>
-            <p class="texto-suave q-mt-sm">{{ t('app.sinInstanciaTexto') }}</p>
-            <q-btn unelevated color="primary" icon="play_arrow" :label="t('app.activarGlobal')" no-caps :loading="activando" @click="activarGlobal" />
-            <div class="q-mt-sm">
+          <!-- Sin espacio activo: el estado vacío común (vía sin servicio), no un icono grande. -->
+          <q-card style="max-width: 560px; margin: 48px auto">
+            <EstadoVacio :titulo="t('app.sinInstancia')" :texto="t('app.sinInstanciaTexto')" :accion="t('app.activarGlobal')" :cargando="activando" @accion="activarGlobal">
               <q-btn flat no-caps color="primary" icon="o_create_new_folder" :label="t('proyecto.abrir')" @click="dialogoProyecto = true" />
               <q-btn flat no-caps color="primary" icon="o_workspaces" :label="t('app.gestionarEspacios')" @click="ir('espacios')" />
-            </div>
+            </EstadoVacio>
           </q-card>
         </div>
         <component :is="actual.componente" v-else :key="sesion.instancia" v-bind="seccion === 'ayuda' ? { tema: ruta.tema } : {}" @ir="ir"
@@ -178,7 +179,7 @@
     <q-dialog v-model="dialogoProyecto" aria-labelledby="titulo-proyecto">
       <q-card style="width: 560px; max-width: 95vw">
         <q-card-section>
-          <div id="titulo-proyecto" class="titulo-seccion">{{ t('proyecto.titulo') }}</div>
+          <h2 id="titulo-proyecto" class="titulo-seccion">{{ t('proyecto.titulo') }}</h2>
           <div class="texto-suave text-body2 q-mt-xs">{{ t('proyecto.texto') }}</div>
         </q-card-section>
         <q-form @submit="abrirProyecto()">
@@ -222,7 +223,7 @@
     <q-dialog v-model="dialogoNovedades" aria-labelledby="titulo-novedades">
       <q-card style="width: 540px; max-width: 94vw">
         <q-card-section>
-          <div id="titulo-novedades" class="titulo-seccion">{{ t('actualizacion.hecha', { version: sesion?.version }) }}</div>
+          <h2 id="titulo-novedades" class="titulo-seccion">{{ t('actualizacion.hecha', { version: sesion?.version }) }}</h2>
           <div v-if="cargandoNovedades" class="row justify-center q-pa-lg" role="status" :aria-label="t('comun.cargando')"><q-spinner size="32px" color="primary" /></div>
           <p v-else-if="!novedades.length" class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.sinNotas') }}</p>
           <template v-else-if="novedades.length === 1">
@@ -241,7 +242,7 @@
     <q-dialog v-model="dialogoActualizar" aria-labelledby="titulo-actualizar" :persistent="!!progreso && progreso.fase !== 'error' && progreso.fase !== 'listo'">
       <q-card v-if="progreso" style="width: 540px; max-width: 94vw">
         <q-card-section>
-          <div id="titulo-actualizar" class="titulo-seccion">{{ t('actualizacion.progresoTitulo', { version: progreso.version }) }}</div>
+          <h2 id="titulo-actualizar" class="titulo-seccion">{{ t('actualizacion.progresoTitulo', { version: progreso.version }) }}</h2>
           <q-linear-progress class="q-mt-md" size="10px" rounded :value="fraccion" :indeterminate="indeterminado"
             :color="progreso.fase === 'error' ? 'negative' : 'primary'" />
           <p class="q-mt-sm q-mb-none" role="status" aria-live="polite">{{ textoProgreso }}</p>
@@ -258,7 +259,7 @@
       </q-card>
       <q-card v-else-if="actualizacion" style="width: 540px; max-width: 94vw">
         <q-card-section>
-          <div id="titulo-actualizar" class="titulo-seccion">{{ t('actualizacion.titulo', { version: actualizacion.version }) }}</div>
+          <h2 id="titulo-actualizar" class="titulo-seccion">{{ t('actualizacion.titulo', { version: actualizacion.version }) }}</h2>
           <p class="texto-suave q-mt-sm q-mb-none">{{ t('actualizacion.detalle', { actual: actualizacion.actual }) }}</p>
           <template v-if="novedadesNueva.length > 1">
             <div class="text-caption texto-suave q-mt-md">{{ t(novedadesNueva.length >= 10 ? 'actualizacion.novedadesRecientes' : 'actualizacion.novedadesVarias', { n: novedadesNueva.length }) }}</div>
@@ -287,7 +288,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, onMounted, onUnmounted, provide, ref, watch, watchEffect, type Component } from 'vue'
+import { computed, markRaw, nextTick, onMounted, onUnmounted, provide, ref, watch, watchEffect, type Component } from 'vue'
 import { useQuasar } from 'quasar'
 import { api, avisar, avisarError, buscarActualizacionAhora, ErrorApi, reiniciarYSeguir } from './api/cliente'
 import { actualizacion, bienvenida, dialogoActualizar, marcarBienvenida, sesion } from './estado'
@@ -317,6 +318,7 @@ import { GRUPOS_MENU } from './menu'
 import PanelAyuda from './componentes/ayuda/PanelAyuda.vue'
 import { cerrarAyuda } from './ayuda/panel'
 import AcercaDe from './componentes/AcercaDe.vue'
+import EstadoVacio from './componentes/EstadoVacio.vue'
 import ListaNovedades from './componentes/ListaNovedades.vue'
 import NotasVersion from './componentes/NotasVersion.vue'
 
@@ -325,7 +327,7 @@ const $q = useQuasar()
 // Cada página principal es una de PAGINAS (ayuda/tipos.ts): el Record obliga a definirlas todas.
 const definidas: Record<Pagina, { titulo: Clave; detalle: Clave; icono: string; componente: Component }> = {
   inicio: { titulo: 'menu.inicio', detalle: 'menuDetalle.inicio', icono: 'o_home', componente: markRaw(InicioPagina) },
-  agentes: { titulo: 'menu.agentes', detalle: 'menuDetalle.agentes', icono: 'o_smart_toy', componente: markRaw(AgentesPagina) },
+  agentes: { titulo: 'menu.agentes', detalle: 'menuDetalle.agentes', icono: 'o_route', componente: markRaw(AgentesPagina) },
   ejecutar: { titulo: 'menu.ejecutar', detalle: 'menuDetalle.ejecutar', icono: 'o_chat', componente: markRaw(EjecutarPagina) },
   conectar: { titulo: 'menu.conectar', detalle: 'menuDetalle.conectar', icono: 'o_hub', componente: markRaw(ConectarPagina) },
   historial: { titulo: 'menu.historial', detalle: 'menuDetalle.historial', icono: 'o_history', componente: markRaw(HistorialPagina) },
@@ -423,6 +425,12 @@ function ir(id: string) {
   pagina.value = id
   history.pushState({ i: base + pila.value.length }, '', '#' + id)
   window.scrollTo({ top: 0 })
+  // El foco pasa a la página nueva (el lector anuncia su nombre); durante un recorrido guiado lo lleva driver.js.
+  if (!recorridoActivo.value) nextTick(enfocarContenido)
+}
+
+function enfocarContenido() {
+  document.getElementById('contenido')?.focus({ preventScroll: true })
 }
 
 function volver() {

@@ -21,6 +21,7 @@ import (
 	"tramtai/internal/actualizacion"
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/api"
+	"tramtai/internal/contrato"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -102,6 +103,7 @@ type Servicio struct {
 	cerrado       bool                 // Cerrar ya empezó: no se publican instancias nuevas
 	puntos        map[string]*puntoActivo
 	erroresPuntos []string
+	errorEstado   string // el último fallo al guardar el registro de espacios o el descriptor (persistirEstado)
 	descriptor    bool
 
 	unaVezRegistro sync.Once
@@ -110,8 +112,9 @@ type Servicio struct {
 	sesiones       map[string]*sesion
 	codigos        map[string]codigoEntrada
 
-	detener    chan struct{}
-	detenerUna sync.Once
+	detener     chan struct{}
+	detenerUna  sync.Once
+	reiniciando atomic.Bool // ya se lanzó el servicio que sustituye a este
 
 	actualizaciones actualizacion.Comprobador
 	muAvance        sync.Mutex
@@ -199,7 +202,12 @@ func (s *Servicio) enrutar(w http.ResponseWriter, r *http.Request) {
 	ruta := r.URL.Path
 	switch {
 	case ruta == "/healthz":
-		api.EscribirJSON(w, http.StatusOK, map[string]any{"estado": "ok", "servicio": s.ID, "version": version.Version})
+		// Sin el identificador, que está en el descriptor: el cliente prueba la identidad con el reto (contrato.PruebaIdentidad).
+		salud := map[string]any{"estado": "ok", "version": version.Version}
+		if reto := r.URL.Query().Get("reto"); reto != "" && len(reto) <= 128 {
+			salud["prueba"] = contrato.PruebaIdentidad(s.tokenAdmin, reto)
+		}
+		api.EscribirJSON(w, http.StatusOK, salud)
 		return
 	case strings.HasPrefix(ruta, "/p/"):
 		s.enrutarPunto(w, r)

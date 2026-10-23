@@ -68,7 +68,9 @@ func TestAtajosSinServicio(t *testing.T) {
 		t.Errorf("corregir sin servicio: %v", fuera)
 	}
 	p.final, p.trabajo, p.estado = nil, &nucleo.Trabajo{ID: "a", Estado: nucleo.Ejecutando}, nucleo.Ejecutando
-	if fuera := pulsar(p, "esc"); !errorServicio(fuera) {
+	pulsar(p, "c")
+	_, cmd = p.Update(comp.Confirmado{})
+	if fuera := correr(p, cmd); !errorServicio(fuera) {
 		t.Errorf("cancelar sin servicio: %v", fuera)
 	}
 }

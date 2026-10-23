@@ -54,12 +54,14 @@ func TestComprobadorNoRepiteLaConsulta(t *testing.T) {
 	}
 }
 
-// Firmas de la versión falsa: la buena, la de otro par, ninguna o unas sumas cambiadas después de firmar.
+// Firmas de la versión falsa: la buena, la de otro par, ninguna, unas sumas cambiadas después de firmar o el trío
+// (instalador, sumas y firma, todo válido) de una versión vieja subido a la última.
 const (
 	firmaValida = iota
 	firmaDeOtro
 	sinFirma
 	sumasCambiadas
+	versionVieja
 )
 
 // servidor publica una versión falsa con su instalador, sus sumas y su firma (con un par de la prueba, que pasa a ser
@@ -68,7 +70,10 @@ func servidor(t *testing.T, alterado bool, firma int) {
 	t.Helper()
 	contenido := []byte("instalador de prueba")
 	suma := sha256.Sum256(contenido)
-	const nombre = "Tramtai-v0.26.0+2-instalador-windows-x64.exe"
+	nombre := "Tramtai-v0.26.0+2-instalador-windows-x64.exe"
+	if firma == versionVieja {
+		nombre = "Tramtai-v0.20.0+1-instalador-windows-x64.exe"
+	}
 	sumas := fmt.Sprintf("%s  %s\n", hex.EncodeToString(suma[:]), nombre)
 	publica, privada, _ := ed25519.GenerateKey(nil)
 	_, otra, _ := ed25519.GenerateKey(nil)
@@ -185,6 +190,22 @@ func TestDescargarExigeLaFirma(t *testing.T) {
 	}
 	if _, err := Descargar(context.Background(), v, t.TempDir(), nil); err == nil {
 		t.Fatal("se descargó una versión sin firma")
+	}
+}
+
+// La firma vale para las sumas de una versión, que nombran su instalador con la etiqueta: el trío de una versión vieja
+// subido a la última no se instala.
+func TestVersionViejaNoSeInstala(t *testing.T) {
+	servidor(t, false, versionVieja)
+	v, err := Ultima(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.TieneInstalador() {
+		t.Fatalf("el instalador de otra versión se dio por bueno: %+v", v)
+	}
+	if _, err := Descargar(context.Background(), v, t.TempDir(), nil); err == nil {
+		t.Fatal("se descargó el instalador de una versión vieja")
 	}
 }
 

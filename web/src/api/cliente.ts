@@ -193,14 +193,17 @@ export function avisarError(e: unknown) {
   Notify.create({ type: 'negative', message: mensaje, caption: detalle, position: 'top' })
 }
 
+// duracionAviso da tiempo a leer un aviso: unos 60 ms por letra, entre 4 y 10 s.
+export const duracionAviso = (texto: string) => Math.min(10000, Math.max(4000, texto.length * 60))
+
 export function avisar(mensaje: string) {
-  Notify.create({ type: 'positive', message: mensaje, position: 'top', timeout: 2000 })
+  Notify.create({ type: 'positive', message: mensaje, position: 'top', timeout: duracionAviso(mensaje) })
 }
 
 export async function copiar(texto: string, que = t('comun.copiado')) {
   try {
     await navigator.clipboard.writeText(texto)
-    Notify.create({ message: que, icon: 'content_copy', timeout: 1200, position: 'top' })
+    Notify.create({ message: que, icon: 'content_copy', timeout: duracionAviso(que), position: 'top' })
   } catch {
     Notify.create({ type: 'warning', message: t('comun.noCopiado'), position: 'top' })
   }

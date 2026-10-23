@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,14 +52,30 @@ func (s *Servicio) instanciaPorToken(token string) *Instancia {
 	return elegida
 }
 
-// LeerOCrearToken lee el token del archivo o crea uno aleatorio (permisos 0600, fuera del repositorio).
+// largoMinimoEntorno es el largo mínimo de una clave que llega por variable de entorno: 32 caracteres (128 bits en
+// hexadecimal). No se exige el largo de las generadas para no romper a quien ya usa una de 64 en hexadecimal.
+const largoMinimoEntorno = 32
+
+// LeerOCrearToken lee el token del archivo o, si no existe, crea uno aleatorio (permisos 0600, fuera del repositorio).
+// Si existe pero no se puede leer o está truncado, da error: rotarlo en silencio dejaría a las apps con 401.
 func LeerOCrearToken(ruta string) (string, error) {
-	if datos, err := os.ReadFile(ruta); err == nil {
-		if token := strings.TrimSpace(string(datos)); len(token) >= 32 {
-			return token, nil
-		}
+	contenido, err := leerSecreto(ruta)
+	if errors.Is(err, fs.ErrNotExist) {
+		return RotarToken(ruta)
 	}
-	return RotarToken(ruta)
+	return contenido, err
+}
+
+// leerSecreto lee un token o su huella; uno de menos de 32 caracteres es un archivo dañado, no una clave.
+func leerSecreto(ruta string) (string, error) {
+	datos, err := os.ReadFile(ruta)
+	if err != nil {
+		return "", err
+	}
+	if contenido := strings.TrimSpace(string(datos)); len(contenido) >= 32 {
+		return contenido, nil
+	}
+	return "", nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("la clave de %s está dañada: bórrala para crear otra (las apps tendrán que usar la nueva)", ruta))
 }
 
 // RotarToken genera un token nuevo y lo guarda; el anterior deja de valer al recargar.
@@ -81,20 +99,20 @@ func RotarTokenPunto(ruta string) (string, error) {
 
 // LeerHuellaPunto devuelve la huella de la clave de un punto. Un archivo antiguo con la clave en claro se convierte
 // a huella y las aplicaciones siguen funcionando; sin archivo se crea una clave que nadie conoce, así que hay que
-// regenerarla para usar el punto.
+// regenerarla para usar el punto. Un archivo que no se puede leer o está truncado da error y no se toca.
 func LeerHuellaPunto(ruta string) (string, error) {
-	if datos, err := os.ReadFile(ruta); err == nil {
-		contenido := strings.TrimSpace(string(datos))
-		if strings.HasPrefix(contenido, api.PrefijoHuella) {
-			return contenido, nil
-		}
-		if len(contenido) >= 32 {
-			huella := api.HuellaToken(contenido)
-			return huella, guardarSecreto(ruta, huella)
-		}
+	contenido, err := leerSecreto(ruta)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		token, err := RotarTokenPunto(ruta)
+		return api.HuellaToken(token), err
+	case err != nil:
+		return "", err
+	case strings.HasPrefix(contenido, api.PrefijoHuella):
+		return contenido, nil
 	}
-	token, err := RotarTokenPunto(ruta)
-	return api.HuellaToken(token), err
+	huella := api.HuellaToken(contenido)
+	return huella, guardarSecreto(ruta, huella)
 }
 
 // EliminarTokenPunto borra la clave de un punto eliminado: otro con el mismo nombre no hereda la anterior.
@@ -125,6 +143,10 @@ func TokenInstancia(datos, id string, c *nucleo.Configuracion) (valor, origen st
 	if id == "global" {
 		if variable := c.Texto("instancia_global.token_variable_entorno"); variable != "" {
 			if v := os.Getenv(variable); v != "" {
+				if len(v) < largoMinimoEntorno {
+					return "", "", nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf(
+						"la clave de la variable %s es demasiado corta: necesita al menos %d caracteres", variable, largoMinimoEntorno))
+				}
 				return v, "variable " + variable, nil
 			}
 		}

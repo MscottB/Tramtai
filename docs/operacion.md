@@ -292,7 +292,7 @@ El token de servicio (`datos/token-servicio`) habilita `/api/v1/servicio`:
 | Ruta | Para qué |
 |---|---|
 | `GET /api/v1/servicio` | Estado del servicio, sus instancias y sus puntos. |
-| `POST /api/v1/servicio/instancias` | Activar una instancia, con `{"ambito":"global"}` o `{"ambito":"proyecto","raiz":"…"}`. |
+| `POST /api/v1/servicio/instancias` | Activar una instancia, con `{"ambito":"global"}` o `{"ambito":"proyecto","raiz":"…"}`. Si la carpeta trae la marca de un espacio cuya carpeta ya no está y no es confiable, responde 409 `confianza_requerida` con `movido`: se confía en ella (`/proyectos` con `confiar`) antes de quedarse con ese espacio. |
 | `DELETE /api/v1/servicio/instancias/{id}` | Desactivar una instancia. |
 | `GET /api/v1/servicio/espacios` | Todos los espacios del registro, también los detenidos y los no encontrados, con su estado, APIs y peticiones. |
 | `DELETE /api/v1/servicio/espacios/{id}` | Olvidar un espacio, con `{"nombre": "…"}` igual a su nombre: borra su base, su clave y su registro, nunca la carpeta del proyecto. |
@@ -304,10 +304,11 @@ El token de servicio (`datos/token-servicio`) habilita `/api/v1/servicio`:
 | `PUT /api/v1/servicio/agentes/{agente}/autenticacion` | `{"modo": "suscripcion"}` o `{"modo": "clave_api"}` en un agente que admite la suscripción, al momento y en todos los espacios (204). |
 | `POST /api/v1/servicio/agentes/{agente}/conexion` | `{"conectado": false}` desconecta un agente sin desinstalar su CLI (`adaptadores.<agente>.desconectado`); `true` lo vuelve a conectar (204). |
 | `GET /api/v1/servicio/instancias/{id}/configuracion` | Ver su configuración efectiva. |
+| `PUT /api/v1/servicio/puerto` | Guardar `servicio.puerto` y `servicio.puerto_automatico` (`{"puerto": 18000, "automatico": true}`; con `puerto` 0 solo cambia el automático). Se aplica al reiniciar. |
 | `POST /api/v1/servicio/recargar` | Aplicar los cambios de puntos de acceso. |
 | `POST /api/v1/servicio/detener` | Detener el servicio. |
 
-Con ese mismo token y la cabecera `Tramtai-Instancia: <id>`, la administración puede usar la API de cualquier espacio. El descriptor `datos/servicio.json` indica dónde escucha el servicio. Antes de usar el servicio, la CLI comprueba con `/healthz` que responde ese mismo servicio y no otro proceso que ocupe el puerto.
+Con ese mismo token y la cabecera `Tramtai-Instancia: <id>`, la administración puede usar la API de cualquier espacio. El descriptor `datos/servicio.json` indica dónde escucha el servicio. Antes de enviarle el token, la CLI comprueba que quien responde lo conoce: manda un reto aleatorio a `/healthz?reto=<reto>` y el servicio contesta con el HMAC-SHA256 del token sobre ese reto. Otro proceso que ocupe el puerto no puede contestar, aunque conozca el identificador del descriptor. Un solo servicio usa cada carpeta de datos: al arrancar toma el cerrojo `datos/servicio.lock`, y un segundo servicio sobre la misma carpeta no arranca.
 
 ## Versión portable
 

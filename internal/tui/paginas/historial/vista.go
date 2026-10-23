@@ -11,6 +11,7 @@ import (
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/datos"
+	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/vivo"
 )
 
@@ -21,11 +22,6 @@ var claveOrigen = map[string]string{"probar": "historial.origenProbar", "termina
 	"cli": "historial.origenCli", "app": "historial.origenApp"}
 
 func itoa(n int) string { return strconv.Itoa(n) }
-
-// rellenar completa con espacios hasta ancho columnas visibles.
-func rellenar(texto string, ancho int) string {
-	return texto + strings.Repeat(" ", max(ancho-lipgloss.Width(texto), 0))
-}
 
 // aDerecha alinea el texto a la derecha en ancho columnas visibles.
 func aDerecha(texto string, ancho int) string {
@@ -117,15 +113,15 @@ func (p *Pagina) fila(t nucleo.Trabajo) string {
 	e := p.estilos
 	ancho := max(p.c.Ancho-2, 1) // la lista pone el cursor delante
 	icono, _ := vivo.Icono(e, t.Estado)
-	estado := rellenar(e.Recortar(icono+" "+p.nombreEstado(t.Estado), 14), 14)
+	estado := pagina.Rellenar(e.Recortar(icono+" "+p.nombreEstado(t.Estado), 14), 14)
 	cuando := aDerecha(p.a(vivo.Hace(p.ahora(), t.CreadoEn)), 10)
 	var modelo string
 	if ancho >= 90 {
-		modelo = rellenar(e.Recortar(modeloDe(t), 24), 24) + " "
+		modelo = pagina.Rellenar(e.Recortar(modeloDe(t), 24), 24) + " "
 	}
 	libre := max(ancho-lipgloss.Width(estado)-1-lipgloss.Width(modelo)-lipgloss.Width(cuando)-1, 4)
 	texto := strings.Join(strings.Fields(textoDe(t, p.lengua)), " ")
-	return p.a(estado + " " + rellenar(e.Recortar(texto, libre), libre) + " " + modelo + cuando)
+	return p.a(estado + " " + pagina.Rellenar(e.Recortar(texto, libre), libre) + " " + modelo + cuando)
 }
 
 // barra es la línea de los filtros: el estado y el origen de ahora y, si hay, el texto buscado; con la búsqueda abierta, lo
@@ -170,15 +166,15 @@ func (p *Pagina) Vista() string {
 
 func (p *Pagina) vistaLista() string {
 	e, ancho, alto := p.estilos, max(p.c.Ancho, 1), max(p.c.Alto, 1)
-	l := []string{e.Titulo.Render(e.Recortar(p.Titulo(), ancho))}
+	var l []string // el título ya está en la cabecera de la app
 	switch {
 	case p.sinServ:
 		return strings.Join(append(l, "", e.Advertencia.Render(e.Recortar(p.a(idioma.T("El servicio no responde · r reintenta")), ancho))), "\n")
 	case !p.cargado && p.err == "":
-		return strings.Join(append(l, "", e.Tenue.Render(p.a(idioma.T("Cargando…")))), "\n")
+		return strings.Join(append(l, "", e.Tenue.Render(p.tx("comun.cargando"))), "\n")
 	}
 	if p.err != "" {
-		l = append(l, e.Error.Render(e.Recortar(p.err, ancho)))
+		l = append(l, e.Error.Width(ancho).Render(p.err)) // entero, en las líneas que ocupe
 	}
 	l = append(l, p.barra())
 	if !p.cargado {
@@ -189,16 +185,20 @@ func (p *Pagina) vistaLista() string {
 		pie = append(pie, p.tx("historial.mostrando", "n", itoa(n)))
 	}
 	if p.cargando || p.cargandoMas {
-		pie = append(pie, p.a(idioma.T("Cargando…")))
+		pie = append(pie, p.tx("comun.cargando"))
 	}
-	hueco := max(alto-len(l)-min(len(pie), 1), 1)
+	textoPie := ""
+	if len(pie) > 0 { // entero, en las líneas que ocupe: dice qué filtran el estado y la búsqueda
+		textoPie = e.Tenue.Width(ancho).Render(strings.Join(pie, " "+e.Iconos.Separador+" "))
+	}
+	hueco := max(alto-len(l)-min(len(pie), 1)*lipgloss.Height(textoPie), 1)
 	if len(p.lista.Visibles()) == 0 {
 		l = append(l, p.vacio()...)
 	} else {
 		l = append(l, p.lista.Vista(ancho, hueco))
 	}
-	if len(pie) > 0 {
-		l = append(l, e.Tenue.Render(e.Recortar(strings.Join(pie, " "+e.Iconos.Separador+" "), ancho)))
+	if textoPie != "" {
+		l = append(l, textoPie)
 	}
 	return strings.Join(l, "\n")
 }

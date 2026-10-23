@@ -10,13 +10,15 @@ colors:
   superficie-suave: "#f4f7f6"
   borde: "#dce3e2"
   borde-fuerte: "#c2cccb"
+  borde-campo: "#7d8d90"
   texto: "#0f1b1e"
   texto-suave: "#55666a"
-  ok: "#15803d"
-  error: "#c42b2b"
-  aviso: "#a16207"
+  ok: "#166534"
+  error: "#b42525"
+  aviso: "#854d0e"
   linea-claude: "#c4561d"
   linea-codex: "#2563eb"
+  linea-copilot: "#1f883d"
   linea-gemini: "#7c3aed"
   linea-antigravity: "#db2777"
   linea-otro: "#64748b"
@@ -28,6 +30,7 @@ colors:
   superficie-suave-noche: "#15222a"
   borde-noche: "#1f2f38"
   borde-fuerte-noche: "#2d404b"
+  borde-campo-noche: "#667b85"
   texto-noche: "#e5edf0"
   texto-suave-noche: "#93a5ac"
   ok-noche: "#4ade80"
@@ -35,6 +38,7 @@ colors:
   aviso-noche: "#fbbf24"
   linea-claude-noche: "#f28a4f"
   linea-codex-noche: "#5b8def"
+  linea-copilot-noche: "#3fb950"
   linea-gemini-noche: "#a78bfa"
   linea-antigravity-noche: "#f472b6"
   linea-otro-noche: "#8a9aa8"
@@ -123,6 +127,7 @@ components:
   input-outlined:
     backgroundColor: "transparent"
     textColor: "{colors.texto}"
+    borderColor: "{colors.borde-campo}"
     rounded: "{rounded.control}"
   estacion:
     backgroundColor: "transparent"
@@ -172,6 +177,8 @@ De día es un andén gris frío con superficies blancas y tinta profunda; de noc
 
 El sistema rechaza el panel SaaS de tarjetas iguales con un icono dentro de un recuadro tintado: cuando algo necesita marca visual, lleva la barra o el punto de su línea, no un icono decorativo.
 
+**Dial:** `Dial app: ENERGY 2 / RHYTHM 2 / MOTION 2` y `Dial sitio: ENERGY 2 / RHYTHM 2 / MOTION 2` (motivos en «Excepciones»).
+
 **Key Characteristics:**
 - Navegación lateral como una línea vertical continua con estaciones; la actual se rellena del acento.
 - Un color de línea por agente, reservado para identificar a ese agente.
@@ -188,7 +195,9 @@ Un acento verde azulado de marca sobre neutros fríos, más una paleta de línea
 - **Velo de acento** (`rgba(11,110,100,0.09)` / noche `rgba(45,212,191,0.11)`): fondo de la estación activa y de la etiqueta informativa.
 
 ### Secondary
-- **Líneas de agente**: Claude naranja (linea-claude), Codex azul (linea-codex), Gemini violeta (linea-gemini), Antigravity magenta (linea-antigravity), gris pizarra para cualquier otro (linea-otro). Cada una tiene variante de noche más clara. Aparecen como barra de 16×4 px junto al nombre, barra vertical de 5×36 px en listas de agentes, trazo y estación final del mapa.
+- **Líneas de agente**: Claude naranja (linea-claude), Codex azul (linea-codex), GitHub Copilot verde (linea-copilot), Gemini violeta (linea-gemini), Antigravity magenta (linea-antigravity), gris pizarra para cualquier otro (linea-otro). Cada una tiene variante de noche más clara. Aparecen como chapa con el código del agente, barra junto al nombre, trazo y estación final del mapa.
+- **Origen de los colores de línea**: no están en `estilos.css`. Cada agente trae los suyos en su ficha (`GET /api/v1/agentes`, `color.claro` y `color.oscuro`) y `pintarLineas` (`web/src/agentes.ts`) crea `--linea-<id>` en cada tema y la clase `.linea--<id>`; así un agente nuevo tiene su color sin tocar los estilos. Los valores de arriba son los de las fichas de hoy.
+- **Chapa de línea**: el texto de la chapa (blanco o tinta) y su fondo los calcula `chapaDe` para llegar a 4,5:1 con cualquier color de ficha; si ninguno llega, el fondo se oscurece o aclara lo justo (el naranja de Claude de día pasa de `#c4561d` a `#ba521c` solo en la chapa).
 
 ### Tertiary
 - **Ámbar de tablero** (tablero-cifra): solo para las cifras del tablero de salidas.
@@ -199,8 +208,10 @@ Un acento verde azulado de marca sobre neutros fríos, más una paleta de línea
 - **Superficie** (superficie / superficie-noche): tarjetas, menús, diálogos.
 - **Superficie suave** (superficie-suave / superficie-suave-noche): hover de filas, columna de etiquetas de la ficha, control segmentado, bloques de texto.
 - **Borde** (borde) y **Borde fuerte** (borde-fuerte): separadores y contornos; el borde fuerte es además el color de la vía sin servicio (trazos del menú, del trayecto y líneas punteadas del mapa).
+- **Borde de campo** (borde-campo / borde-campo-noche): contorno de los campos y del control segmentado, a 3:1 sobre la superficie (el borde fuerte solo llega a 1,6:1).
 - **Tinta** (texto) y **Tinta suave** (texto-suave): texto principal y secundario.
-- **Estados**: ok, error y aviso, cada uno con su velo al 9-13 % para el fondo de etiquetas y cajas.
+- **Estados**: ok, error y aviso, cada uno con su velo al 9-13 % para el fondo de etiquetas y cajas; los tres llegan a 4,5:1 sobre su velo también encima del fondo del andén.
+- **Colores de Quasar**: `primary`, `positive`, `negative`, `warning` e `info` no se fijan en `main.ts`: `estilos.css` los toma de los tokens en `body` (acento, ok, error, aviso y acento), así cambian de noche. No se usan los grises ni los matices de la paleta de Quasar (`grey-7`, `teal-8`…); el neutro es `color="neutro"` (tinta suave).
 
 ### Named Rules
 **The Una Línea, Un Color Rule.** Los colores de línea identifican agentes y nada más. No se usan para estados, decoración ni categorías ajenas a un agente.
@@ -230,7 +241,7 @@ Un acento verde azulado de marca sobre neutros fríos, más una paleta de línea
 ### Named Rules
 **The Cifras Tabulares Rule.** Toda cifra (tablas, metadatos, versiones, números de paso, tablero) usa `font-variant-numeric: tabular-nums`.
 
-**The Mayúsculas Solo en el Tablero Rule.** Las mayúsculas espaciadas pertenecen a la cabecera del tablero de salidas. Ningún otro título, etiqueta o sección las usa.
+**The Mayúsculas Solo en el Tablero Rule.** Las mayúsculas espaciadas pertenecen a la cabecera del tablero de salidas (en la Web, `.tablero__cabecera`; en el sitio, `.tablero-cabecera` del tablero de Privacidad). Ningún otro título, etiqueta o sección las usa: ni los títulos de grupo del menú ni los de las notas de versión, ni las etiquetas del sitio.
 
 ## Layout
 
@@ -238,7 +249,9 @@ Estructura de aplicación con cabecera fija de 60 px (fondo del andén al 86 % c
 
 La primera vista de Inicio es la cabecera de página con la dirección del servicio, el mapa de red a todo el ancho, el tablero de salidas y la lista de trayectos recientes. El detalle de un elemento se abre como hoja lateral derecha a toda la altura, pegada al borde, sin radio.
 
-Responsive (punto de corte 600 px): el mapa de red pasa de horizontal (apps → Tramtai → agentes, con giros de 45°) a un único eje vertical; el tablero oculta su columna de detalle; la guía de pasos se apila en filas. Por debajo de 600 px, el mapa horizontal nunca se encoge más de 620 px: se desplaza.
+Responsive (punto de corte 600 px): el mapa de red pasa de horizontal (apps → Tramtai → agentes, con giros de 45°) a un único eje vertical; el tablero oculta su columna de detalle; la guía de pasos se apila en filas. Por encima de 600 px, el mapa horizontal nunca se encoge por debajo de 860 px: se desplaza dentro de su tarjeta, para que su texto más pequeño no baje de unos 11 px.
+
+Con el dedo (`pointer: coarse`), todo botón compacto ocupa al menos 44 × 44 px; el icono no crece, solo el área que se pulsa. Los tranvías del mapa llevan un área transparente para pulsarlos.
 
 ## Elevation & Depth
 
@@ -254,9 +267,9 @@ Híbrido plano: la profundidad la dan los bordes y el tono de superficie, con so
 
 ## Shapes
 
-Esquinas suaves y escalonadas por tamaño: 12 px para tarjetas, menús, notificaciones y tablero; 10 px para cajas internas (código, avisos, fichas, opciones, segmentado, estaciones del menú); 8 px para controles (botones, campos, elementos de lista); 6 px para tooltips y la dirección del servicio; píldora completa para etiquetas de estado y el indicador del servicio. Los botones redondos son círculos.
+Esquinas suaves y escalonadas por tamaño: 12 px para tarjetas, menús, notificaciones y tablero; 10 px para cajas internas (código, avisos, fichas, opciones, segmentado, estaciones del menú); 8 px para controles (botones, campos, elementos de lista); 6 px para tooltips y la dirección del servicio; píldora completa para etiquetas de estado y el indicador del servicio. Los botones redondos son círculos. El sitio usa la misma escala: 12 (tarjetas, mapa, tablero, destacado), 10 (código, cajas internas, control segmentado) y 8 (botones, campos, pestañas).
 
-La geometría propia del mundo: trazos de vía de 3 px (menú, trayecto, origen del mapa) y 4 px (líneas de agente) con extremos redondeados; estaciones de 15 px con aro de 3 px; giros a 45° entre tramos rectos en el mapa; barras de línea de 16×4 px con radio de 2 px.
+La geometría propia del mundo: trazos de vía de 3 px (menú, trayecto, origen del mapa) y 4 px (líneas de agente) con extremos redondeados; estaciones de 15 px con aro de 3 px; giros a 45° entre tramos rectos en el mapa; chapas de línea de 18 px de alto (28 px la grande) con radio de 5 px.
 
 ## Components
 
@@ -265,11 +278,11 @@ La geometría propia del mundo: trazos de vía de 3 px (menú, trayecto, origen 
 - **Primary:** acento sólido, texto blanco de día y texto oscuro de noche; peso 600, sin mayúsculas, con un brillo interior de 1 px y una sombra de 1-2 px.
 - **Outline:** contorno del acento sobre transparente, para la acción secundaria junto a la principal (Mis APIs junto a Probar).
 - **Flat:** acciones terciarias y de cabecera; en diálogos de confirmación, la opción secundaria va en tinta suave para que destaque la principal.
-- **Hover / Focus:** el de Quasar; foco con contorno de 2 px del acento separado 2 px.
+- **Hover / Focus:** hover, el de Quasar; foco con contorno de 2 px del acento separado 2 px en todos los controles, también los de Quasar (una regla global de `:focus-visible` gana a su `.no-outline`). Donde el contenedor recorta lo que sobresale (listas, pestañas, fichas, control segmentado, tablero) el contorno va por dentro; en el tablero, en turquesa (9,4:1 sobre la tinta).
 
 ### Chips (etiquetas de estado)
-- **Style:** píldora con velo del estado, punto de 6 px en `currentColor` y texto 0.78rem/600. Nunca muestran icono.
-- **State:** neutra, ok, aviso, error e info; la info (en proceso) late su punto cada 1.6 s.
+- **Style:** píldora con velo del estado, punto de 6 px en `currentColor` y texto 0.78rem/600. Nunca muestran icono (las plantillas no se lo pasan).
+- **State:** neutra, ok, aviso, error e info. El punto no late (ver «Excepciones»). Las insignias y chips de color de Quasar no se usan para estados: Espacios, Ajustes y Mis APIs usan `.etiqueta`.
 
 ### Cards / Containers
 - **Corner Style:** 12 px.
@@ -279,27 +292,29 @@ La geometría propia del mundo: trazos de vía de 3 px (menú, trayecto, origen 
 - **Internal Padding:** cabecera de sección 18/20/14 px, separada del contenido por un separador de borde.
 
 ### Inputs / Fields
-- **Style:** campos con contorno de Quasar, 8 px de radio, trazo en borde fuerte; los numéricos sin flechas.
+- **Style:** campos con contorno de Quasar, 8 px de radio, trazo en borde de campo (3:1); los numéricos sin flechas. Un valor fuera de rango se dice en el propio campo (`rules`), no solo en un aviso.
 - **Focus:** el trazo pasa al acento a 1.5 px.
 
 ### Navigation
 - **Style:** el cajón lateral es una línea vertical de 3 px en borde fuerte que pasa por cada estación. Cada entrada tiene punto con aro de 15 px, nombre (0.9rem/600) y detalle (0.75rem, tinta suave), 52 px de alto mínimo.
+- **Grupos:** tres grupos en el orden de uso (Empezar, Conectar, Organizar, en `web/src/menu.ts`) sobre una sola línea continua; el título de cada grupo va a la derecha de la línea, alineado con los nombres, en 0.78rem/600 y tinta suave, sin mayúsculas.
+- **Teclado:** «Saltar al contenido» es lo primero al tabular; al cambiar de página el foco pasa al `<main>` de la página (salvo durante un recorrido guiado).
 - **Hover:** velo neutro de fondo y el aro se oscurece a tinta suave.
 - **Activa:** velo del acento, nombre en acento, punto relleno con halo y escala 1.05.
-- **Aparte:** Ayuda vive abajo, fuera de la línea, con icono en lugar de estación.
+- **Aparte:** Ayuda y Acerca de viven abajo, fuera de la línea, con icono en lugar de estación.
 - **Móvil:** el cajón se abre desde el botón de menú por debajo de 1024 px.
 
 ### Mapa de red (firma)
 SVG a todo el ancho en Inicio: tus apps a la izquierda como estaciones con aro, Tramtai al centro como un bloque del acento (radio 16 px) con su dirección, y los agentes a la derecha unidos por su línea de color de 4 px. Los tramos van rectos, giran a 45° y salen en paralelo, separados 7 px. Lo que no está en servicio va punteado en borde fuerte con la estación vacía y su estado en aviso. Cada grupo es un enlace enfocable.
 
 ### Trayecto (firma)
-Cinco estaciones en fila unidas por una vía de 3 px: cola, preparación, ejecución, validación, llegada. Las pasadas se rellenan, la actual late con halo cada 1.4 s, y al terminar toda la vía toma el color del resultado (ok, error o tinta suave si se canceló). La misma pieza sirve para la guía de inicio, donde las estaciones pendientes llevan aro del acento y las hechas se rellenan de ok.
+Cinco estaciones en fila unidas por una vía de 3 px: cola, preparación, ejecución, validación, llegada. Las pasadas se rellenan, la actual lleva un halo fijo y el tranvía se desliza hasta ella al cambiar de etapa, y al terminar toda la vía toma el color del resultado (ok, error o tinta suave si se canceló). El tranvía va fuera de la lista de estaciones (en el marco), para que el `<ol>` solo tenga estaciones. La misma pieza sirve para la guía de inicio, donde las estaciones pendientes llevan aro del acento y las hechas se rellenan de ok.
 
 ### Tablero de salidas (firma)
 Banda de tinta con radio de 12 px, una fila por estado: punto de 10 px, nombre (650), detalle en tinta clara, cifra ámbar en Overpass 1.6rem tabular y chevron. Cabecera en mayúsculas espaciadas. Es oscuro en ambos modos; de noche se oscurece más y gana un borde.
 
 ### Línea de agente
-Barra de 16×4 px del color del agente, nombre en 600 y modelo en tinta suave recortado con elipsis.
+Chapa del color del agente con su código (texto a 4,5:1, ver «Chapa de línea»), nombre en 600 y modelo en tinta suave recortado con elipsis.
 
 ### Ficha
 Rejilla de dos columnas con borde de 1 px y radio de 10 px: etiqueta en tinta suave sobre superficie suave, valor alineado a la derecha.
@@ -310,7 +325,7 @@ Filtros como un control segmentado de 10 px con 3 px de relleno sobre superficie
 ## Do's and Don'ts
 
 ### Do:
-- **Do** identificar cada agente con su color de línea (barra de 16×4 px, barra vertical de 5×36 px o trazo de 4 px).
+- **Do** identificar cada agente con su color de línea (chapa con su código, estación o trazo de 4 px).
 - **Do** escribir cada estado como punto más palabra, con el velo del estado de fondo.
 - **Do** dibujar progresos y secuencias como estaciones unidas por una vía de 3 px.
 - **Do** usar Overpass para títulos de página, títulos de sección, cifras y textos del mapa, y cifras tabulares en todo número.
@@ -327,8 +342,21 @@ Filtros como un control segmentado de 10 px con 3 px de relleno sobre superficie
 ## Piezas comunes (rediseño de octubre de 2026)
 
 - **Cabecera de página** (`CabeceraPagina`): «← Volver a {página}» encima del título cuando hay de dónde volver (un paso atrás), título, una línea de descripción y las acciones a la derecha; en pantallas estrechas, debajo. El logo y el nombre de la barra superior llevan siempre a Inicio.
-- **Estado vacío** (`EstadoVacio`): una estación apagada al final de un tramo punteado, un titular que invita a actuar y, si hace falta, un botón. Nunca un icono de aviso para un vacío.
-- **Menú de acciones** (`MenuAcciones`): «⋯» con icono y texto en cada acción; las destructivas al final y en color de error. La acción principal de una fila va visible a su lado (por ejemplo, Ajustes en Mis APIs).
+- **Estado vacío** (`EstadoVacio`): una estación apagada al final de un tramo punteado, un titular que invita a actuar y, si hace falta, un botón (y acciones secundarias en su ranura). Nunca un icono de aviso para un vacío. Es también el estado de error de una carga: qué falló y «Reintentar». Mientras carga, esqueleto; el vacío solo sale cuando la carga terminó bien. Con un filtro que no encuentra nada, la acción es «Quitar filtros».
+- **Menú de acciones** (`MenuAcciones`): «⋯» con icono y texto en cada acción; las destructivas al final y en color de error. La acción principal de una fila va visible a su lado (por ejemplo, Copiar la URL en Mis APIs, donde el nombre abre el detalle). Una acción destructiva nunca va pegada a Copiar: Regenerar la clave va aparte, con su nombre y en color de error.
+- **Diálogos que no pierden nada**: los que tienen un formulario o enseñan una clave que solo se ve una vez son `persistent` (un clic fuera no los cierra) y con Esc preguntan antes de cerrar (`escaparConAviso`).
+- **Avisos**: duran según su texto, al menos 4 s (`duracionAviso`).
 - **Ayudas bajo los campos**: 0,78 rem con interlineado 1,45 y como mucho una línea.
-- **Orden de los agentes**: Claude, Codex, Gemini API, Antigravity en toda la interfaz (`ordenAgentes`).
-- **Página del producto**: selector de tema Sistema, Claro u Oscuro junto al de idioma; las capturas siguen el tema efectivo.
+- **Orden de los agentes**: Claude, Codex, GitHub Copilot, Gemini API, Antigravity en toda la interfaz (`ordenAgentes`, según el `orden` de cada ficha).
+- **Valor vacío**: «Sin dato» (`sinDato`, traducido), nunca una raya.
+- **Iconos**: un icono acompaña a un texto y tiene que ver con él; nada de destellos, varitas, robots ni cerebros para decir «IA». Plantilla usa `o_description`, Corregir `o_build` y el esfuerzo `o_speed`; los selectores y las ideas de Probar no llevan icono.
+- **Página del producto**: selector de tema Sistema, Claro u Oscuro junto al de idioma; las capturas siguen el tema efectivo. Hasta 1100 px, las secciones, el idioma y el tema van en el panel del menú.
+
+## Excepciones (con su motivo)
+
+- **Sin pulso.** La etiqueta «en proceso» y la estación actual del trayecto no laten (la versión anterior de este documento lo pedía). Motivo: un pulso sin fin compite con el contenido y no añade información (antislop R-19); el estado ya lo dicen la palabra, el halo fijo y el tranvía, que solo se mueve cuando cambia la etapa.
+- **Dial de la app: ENERGY 2 / RHYTHM 2 / MOTION 2.** Herramienta de operador, densidad equilibrada; el único movimiento es el tranvía (trayecto y mapa vivo), que avanza cuando cambia la etapa de una petición y salta con «reducir movimiento».
+- **Dial del sitio: ENERGY 2 / RHYTHM 2 / MOTION 2.** MOTION 2: el tranvía del mapa y la demo del recorrido se mueven solos porque enseñan el recorrido de una petición y la app; tienen pausa, quedan quietos con «reducir movimiento» y se paran fuera de la pantalla. RHYTHM 2: las secciones abren a la izquierda o centradas, sin etiqueta sobre el h2.
+- **Controles de 44 px en el sitio.** ES/EN y tema miden 44 de alto y, solo con ratón en escritorio, 36 de ancho, porque a 1101 px la barra no cabe con 44. Con puntero táctil o en el panel del menú, 44 × 44.
+- **Vía muerta en el sitio.** Va en `--borde-control` (3:1 con el fondo) en lugar de borde fuerte (1,6:1 de noche), porque en la portada Antigravity tiene que verse aunque esté sin servicio.
+- **Chapa de Claude.** De día su fondo es `#ba521c` y no el `#c4561d` de su línea: con texto blanco el color de la ficha da 4,47:1 y no llega a 4,5:1. El resto de su línea (mapa, barras) conserva el color de la ficha.

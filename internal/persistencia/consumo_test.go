@@ -2,6 +2,7 @@ package persistencia
 
 import (
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -101,6 +102,36 @@ func TestPresupuestoAgotadoEnAceptar(t *testing.T) {
 		t.Fatalf("el trabajo rechazado no debe guardarse: %v", err)
 	}
 	aceptar(t, a, enPunto("otra"), "") // el tope es solo de facturas
+}
+
+// Si el contador del presupuesto falla, la petición se rechaza (los topes no pueden dejar de frenar en silencio) y queda
+// en el registro del servicio; también al terminar un trabajo, cuyo cambio se deshace.
+func TestContadorRotoRechaza(t *testing.T) {
+	ahora := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
+	for nombre, topes := range map[string][]Tope{"sin topes": nil, "con tope": {{"facturas", nucleo.Presupuesto{Diario: nucleo.Limites{Peticiones: 5}}}}} {
+		t.Run(nombre, func(t *testing.T) {
+			a := conPresupuesto(t, &ahora, topes...)
+			var registro strings.Builder
+			a.Registros = &registro
+			enCurso := aceptar(t, a, enPunto("facturas"), "")
+			if _, err := a.db.Exec("DROP TABLE consumo"); err != nil {
+				t.Fatal(err)
+			}
+			tr := enPunto("facturas")
+			if _, _, err := a.Aceptar(ctx, tr, "", 0); err == nil {
+				t.Fatal("con el contador roto se aceptó la petición")
+			}
+			if _, err := a.Obtener(ctx, tr.ID); nucleo.CodigoDe(err) != nucleo.CodigoNoEncontrado {
+				t.Fatalf("el trabajo rechazado no debe guardarse: %v", err)
+			}
+			if err := a.CambiarEstado(ctx, enCurso.ID, nucleo.EnCola, nucleo.Fallido, Cambio{}); err == nil {
+				t.Fatal("con el contador roto el trabajo terminó sin contar")
+			}
+			if !strings.Contains(registro.String(), "presupuesto") {
+				t.Fatalf("el fallo tiene que quedar en el registro: %q", registro.String())
+			}
+		})
+	}
 }
 
 func TestPresupuestoIdempotencia(t *testing.T) {

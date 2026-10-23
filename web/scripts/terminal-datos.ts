@@ -31,14 +31,14 @@ export const URL_AYUDA = URL_SITIO + 'ayuda/'
 // confirmaciones). Los {placeholders} se quedan como están: Go los rellena con datos.Textof.
 export const CLAVES_AGENTES: string[] = [
   'agente.listo', 'agente.noInstalado', 'agente.faltaClave', 'agente.revisar', 'agente.desconectado',
-  'agentes.subtitulo', 'agentes.filtroListos', 'agentes.filtroConectar', 'agentes.filtroInstalar',
+  'agentes.subtitulo', 'agentes.filtroTodos', 'agentes.filtroListos', 'agentes.filtroConectar', 'agentes.filtroInstalar',
   'agentes.suscripcion', 'agentes.claveApi', 'agentes.listoSuscripcion', 'agentes.listoClave', 'agentes.cuenta',
   'agentes.opcionSuscripcionTexto', 'agentes.desconectadoTexto', 'agentes.desconectarTitulo', 'agentes.desconectarTexto',
   'agentes.conectado', 'agentes.desconectado', 'agentes.suscripcionActivada', 'agentes.claveActivada',
   'agentes.confirmarTitulo', 'agentes.riesgoSuscripcion', 'agentes.aceptoRiesgo', 'agentes.usaClave', 'agentes.sesionNoResponde',
   'agentes.version', 'agentes.sinVersion', 'agentes.autenticacion', 'agentes.enVivo', 'agentes.fragmentos', 'agentes.alTerminar',
   'agentes.json', 'agentes.informaModelo', 'agentes.esfuerzo', 'agentes.predeterminadoCli', 'agentes.comoInstalar',
-  'comun.si', 'comun.no',
+  'comun.si', 'comun.no', 'comun.cargando',
 ]
 
 // CLAVES_INICIO son los textos de la página Inicio que la terminal repite tal cual: la dirección, la red en vivo, los
@@ -46,7 +46,7 @@ export const CLAVES_AGENTES: string[] = [
 export const CLAVES_INICIO: string[] = [
   'inicio.direccion', 'inicio.red', 'inicio.redTexto', 'inicio.detalles', 'inicio.primerosPasos', 'inicio.guiaProgreso',
   'inicio.paso1', 'inicio.paso1Detalle', 'inicio.comprobando', 'inicio.paso2', 'inicio.paso2Detalle', 'inicio.paso3', 'inicio.paso3Detalle',
-  'inicio.paso4', 'inicio.paso4Detalle', 'inicio.todoListo', 'inicio.todoListoTexto',
+  'inicio.paso4', 'inicio.todoListo', 'inicio.todoListoTexto',
   'inicio.tablero', 'inicio.completados', 'inicio.completadosDetalle', 'inicio.enCurso', 'inicio.enCursoDetalle', 'inicio.conError', 'inicio.conErrorDetalle',
   'inicio.espaciosConProblema', 'inicio.espaciosConProblemaUno', 'inicio.verEspacios', 'claves.sugerencia', 'claves.crearApi',
   'conversor.falta', 'conversor.error', 'conversor.redEmpresa', 'conversor.preparar', 'conversor.irAjustes',
@@ -85,7 +85,8 @@ export const CLAVES_EJECUTAR: string[] = [
   'ejecutar.ejemplos', 'ejecutar.ejemplo1', 'ejecutar.ejemplo2', 'ejecutar.ejemplo3', 'ejecutar.nueva', 'ejecutar.recientes',
   'ejecutar.verTodo', 'ejecutar.sinRecientes', 'ejecutar.usarDeNuevo', 'ejecutar.sinAdjuntos', 'ejecutar.corregirTexto',
   'ejecutar.respuestaRecibida', 'ejecutar.guardarApi', 'ejecutar.actualizarApi', 'ejecutar.editando', 'ejecutar.dejarEditar',
-  'ejecutar.guardarTexto', 'ejecutar.apiCreada', 'ejecutar.apiCreadaTexto', 'ejecutar.apiActualizada',
+  'ejecutar.guardarTexto', 'ejecutar.apiCreada', 'ejecutar.apiCreadaTexto', 'ejecutar.apiActualizada', 'ejecutar.avanzadasTexto',
+  'receta.opciones', 'receta.ejemplo', 'comun.opcionesAvanzadas', 'receta.instruccionesEjemplo', 'ejecutar.placeholder',
   'receta.instrucciones', 'receta.instruccionesHint', 'receta.modelo', 'receta.forzar', 'receta.respaldo', 'receta.respaldoHint',
   'receta.salidaEstructurada', 'receta.salidaEstructuradaTexto', 'receta.plantillaCorta', 'receta.plantillaReemplazar',
   'receta.plantillaReemplazarTexto', 'receta.esquema', 'receta.esquemaHint', 'receta.esquemaInvalido', 'receta.esquemaVacio',

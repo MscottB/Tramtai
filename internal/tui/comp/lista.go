@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"tramtai/internal/idioma"
 	"tramtai/internal/tui/pagina"
@@ -223,7 +224,7 @@ func (l *Lista[T]) Vista(ancho, alto int) string {
 		}
 		linea := e.Recortar(marca+texto, ancho)
 		if i == l.cursor {
-			linea = e.Seleccion.Render(linea)
+			linea = e.Seleccion.Render(ansi.Strip(linea)) // sin los colores de dentro: su reinicio cortaría el fondo de la fila
 		}
 		lineas = append(lineas, linea)
 	}

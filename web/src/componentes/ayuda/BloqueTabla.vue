@@ -1,7 +1,7 @@
 <template>
   <div class="desplazable-x">
     <table class="tabla-ayuda text-body2">
-      <thead><tr><th /><th v-for="c in bloque.columnas" :key="c">{{ t(c) }}</th></tr></thead>
+      <thead><tr><td /><th v-for="c in bloque.columnas" :key="c">{{ t(c) }}</th></tr></thead>
       <tbody>
         <tr v-for="f in bloque.filas" :key="f.titulo"><th scope="row">{{ t(f.titulo) }}</th><td v-for="(c, i) in f.celdas" :key="i">{{ t(c) }}</td></tr>
       </tbody>

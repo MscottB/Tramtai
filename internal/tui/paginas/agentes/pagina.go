@@ -85,6 +85,7 @@ type Pagina struct {
 	ocupado  bool // hay un cambio en marcha: no se lanza otro
 	pend     *pendiente
 	detalle  string // el agente del detalle abierto, "" si no hay
+	filtro   int    // el de filtros: 0 todos
 	modelos  map[string][]string
 	errModel map[string]string
 }
@@ -101,10 +102,10 @@ func (p *Pagina) EnCampo() bool  { return false }
 func (p *Pagina) Teclas() []pagina.Tecla {
 	if p.detalle != "" {
 		return []pagina.Tecla{{Tecla: "Esc", Accion: idioma.T("vuelve")}, {Tecla: "c", Accion: idioma.T("comprobar")},
-			{Tecla: "d", Accion: idioma.T("conexión")}, {Tecla: "a", Accion: idioma.T("autenticación")}, {Tecla: "p", Accion: idioma.T("probar")}}
+			{Tecla: "d", Accion: idioma.T("conexión")}, {Tecla: "a", Accion: idioma.T("autenticación")}, {Tecla: "p", Accion: p.tx("menu.ejecutar")}}
 	}
-	return []pagina.Tecla{{Tecla: idioma.T("Intro"), Accion: idioma.T("detalles")}, {Tecla: "c", Accion: idioma.T("comprobar")},
-		{Tecla: "d", Accion: idioma.T("conexión")}, {Tecla: "a", Accion: idioma.T("autenticación")}, {Tecla: "p", Accion: idioma.T("probar")}}
+	return []pagina.Tecla{{Tecla: idioma.T("Intro"), Accion: idioma.T("detalles")}, {Tecla: "← →", Accion: idioma.T("filtro")}, {Tecla: "c", Accion: idioma.T("comprobar")},
+		{Tecla: "d", Accion: idioma.T("conexión")}, {Tecla: "a", Accion: idioma.T("autenticación")}, {Tecla: "p", Accion: p.tx("menu.ejecutar")}}
 }
 
 // Iniciar empieza de cero: «Cargando…» hasta que llegue la comprobación.
@@ -149,15 +150,7 @@ func leer(r map[string]any) []adaptador {
 }
 
 func (p *Pagina) vigente(ctx context.Context, instancia string) bool {
-	return ctx != nil && ctx.Err() == nil && instancia == p.c.Instancia
-}
-
-// fallo reparte un error: de conexión es del servicio (lo avisa la app); el de la API, el mensaje tal cual.
-func fallo(err error) (tea.Cmd, bool) {
-	if pagina.NoResponde(err) {
-		return func() tea.Msg { return pagina.ErrorServicio{Err: err} }, true
-	}
-	return nil, false
+	return pagina.Origen{Ctx: ctx, Instancia: instancia}.DelEspacio(p.c)
 }
 
 func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
@@ -171,7 +164,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		}
 		p.cargando = false
 		if m.err != nil {
-			if cmd, ok := fallo(m.err); ok {
+			if cmd := pagina.SinServicio(m.err); cmd != nil {
 				p.sinServ = true
 				return p, cmd
 			}
@@ -186,7 +179,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 			return p, nil
 		}
 		if m.err != nil {
-			if cmd, ok := fallo(m.err); ok {
+			if cmd := pagina.SinServicio(m.err); cmd != nil {
 				return p, cmd
 			}
 			p.errModel[m.agente] = nucleo.MensajeDe(m.err)
@@ -201,7 +194,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		}
 		p.ocupado = false
 		if m.err != nil {
-			if cmd, ok := fallo(m.err); ok {
+			if cmd := pagina.SinServicio(m.err); cmd != nil {
 				return p, cmd
 			}
 			return p, comp.Aviso(nucleo.MensajeDe(m.err), comp.Fallo)
@@ -258,6 +251,11 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 	case "p":
 		if hay {
 			return p.probar(a)
+		}
+	case "left", "right":
+		if p.detalle == "" && p.cargado {
+			p.filtrar(map[string]int{"left": -1, "right": 1}[t])
+			return nil
 		}
 	}
 	if p.detalle != "" {

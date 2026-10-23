@@ -11,10 +11,26 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/cliente"
+	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/servicio"
 )
+
+// activarEspacio activa el espacio. Si la carpeta parece un proyecto que estaba en otra (trae la marca de un espacio
+// cuya carpeta ya no está), pregunta si se confía en ella antes de quedarse con su historial y su clave.
+func activarEspacio(ctx context.Context, cmd *cobra.Command, c *cliente.Cliente, ambito, raiz string) (contrato.ActivacionInstancia, error) {
+	a, err := c.Activar(ctx, ambito, raiz)
+	var pregunta *cliente.ErrorConfianza
+	if !errors.As(err, &pregunta) || !confirmar(cmd, pregunta.Error()+idioma.T(". ¿Confías en esta carpeta?")) {
+		return a, err
+	}
+	si := true
+	if _, err := c.AbrirProyecto(ctx, raiz, &si, false); err != nil {
+		return a, err
+	}
+	return c.Activar(ctx, ambito, raiz)
+}
 
 func mostrarTokenInstancia(cmd *cobra.Command, ambito string, rotar bool) error {
 	_, id, c, err := identificar(ambito)
@@ -86,7 +102,7 @@ func comandoInstancia(ambito string) *cobra.Command {
 			}
 			ctx, cancelar := contexto()
 			defer cancelar()
-			a, err := c.Activar(ctx, ambito, raiz)
+			a, err := activarEspacio(ctx, cmd, c, ambito, raiz)
 			if err != nil {
 				return err
 			}

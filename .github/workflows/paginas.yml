@@ -5,7 +5,11 @@ name: Página
 on:
   push:
     branches: [main]
-    paths: ['site/**', 'docs/ejemplos/**', '.github/workflows/paginas.yml']
+    paths: ['site/**', 'docs/ejemplos/**', 'web/scripts/descargas.mjs', '.github/workflows/paginas.yml']
+  # Tras cada release se vuelve a publicar: la portada lleva la versión y los enlaces del release nuevo.
+  workflow_run:
+    workflows: [Publicar]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -19,6 +23,7 @@ concurrency:
 
 jobs:
   publicar:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -31,6 +36,18 @@ jobs:
           mkdir -p site/ejemplos
           cp -r docs/ejemplos/python docs/ejemplos/javascript docs/ejemplos/go docs/ejemplos/curl docs/ejemplos/muestra.txt site/ejemplos/
           rm -rf site/ejemplos/javascript/node_modules
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      # La versión y el enlace de cada descarga se escriben aquí, una vez, y no en cada visita a la API de GitHub. Sin
+      # release (o si gh falla) la portada sale sin versión y sus botones llevan a la página del release.
+      - name: Versión y descargas del último release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view --repo "$GITHUB_REPOSITORY" --json tagName,assets > "$RUNNER_TEMP/release.json"; then
+            node web/scripts/descargas.mjs "$RUNNER_TEMP/release.json" site/index.html
+          fi
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

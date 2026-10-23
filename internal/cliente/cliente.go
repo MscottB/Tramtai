@@ -5,6 +5,8 @@ package cliente
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -37,8 +39,8 @@ type Cliente struct {
 	http   *http.Client
 }
 
-// Conectar lee el descriptor y el token de servicio y comprueba con /healthz que responde ese mismo servicio,
-// no otro proceso que ocupe el puerto.
+// Conectar lee el descriptor y el token de servicio y comprueba con un reto en /healthz que responde un servicio que
+// conoce el token, no otro proceso que ocupe el puerto; el token no sale hasta entonces.
 func Conectar(datos string) (*Cliente, error) {
 	d, err := contrato.LeerDescriptor(datos)
 	if err != nil {
@@ -51,22 +53,29 @@ func Conectar(datos string) (*Cliente, error) {
 	c := &Cliente{Base: d.Base, Descriptor: d, token: strings.TrimSpace(string(token)), http: &http.Client{}}
 	ctx, cancelar := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancelar()
+	reto := rand.Text()
 	var salud struct {
-		Servicio string `json:"servicio"`
+		Prueba string `json:"prueba"`
 	}
-	if err := c.pedir(ctx, "GET", "/healthz", "", nil, "", &salud); err != nil || salud.Servicio != d.Identificador {
+	if err := c.pedir(ctx, "GET", "/healthz?reto="+reto, "", nil, "", &salud); err != nil ||
+		!hmac.Equal([]byte(salud.Prueba), []byte(contrato.PruebaIdentidad(c.token, reto))) {
 		return nil, ErrServicioInactivo
 	}
 	return c, nil
 }
 
 // Lanzar inicia "<ejecutable> <args>" desacoplado de la terminal, sin esperar. Su salida va a
-// servicio-salida.log, que se vacía en cada arranque y solo recoge un fallo grave.
+// servicio-salida.log, que solo recoge un fallo grave; el del arranque anterior pasa a servicio-salida.log.1, para que
+// reintentar no borre lo que lo explicaba.
 func Lanzar(ejecutable, datos string, args ...string) error {
 	if err := os.MkdirAll(datos, 0o700); err != nil {
 		return err
 	}
-	registro, err := os.OpenFile(filepath.Join(datos, "servicio-salida.log"), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+	ruta := filepath.Join(datos, "servicio-salida.log")
+	if info, err := os.Stat(ruta); err == nil && info.Size() > 0 {
+		_ = os.Rename(ruta, ruta+".1") // si no se puede (otro proceso lo tiene abierto), se vacía como antes
+	}
+	registro, err := os.OpenFile(ruta, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
 		return err
 	}
@@ -105,7 +114,7 @@ func (c *Cliente) pedir(ctx context.Context, metodo, ruta, instancia string, cue
 		return err
 	}
 	// /healthz es pública y es la que comprueba la identidad: el token no sale hacia quien ocupe el puerto.
-	if ruta != "/healthz" {
+	if !strings.HasPrefix(ruta, "/healthz") {
 		req.Header.Set("Authorization", "Bearer "+c.token)
 	}
 	if instancia != "" {
@@ -372,6 +381,12 @@ func (c *Cliente) RotarTokenEnArchivo(ctx context.Context, nombre string) (strin
 	var g GuardadoEnArchivo
 	err := c.pedir(ctx, "POST", rutaArchivo("/"+url.PathEscape(nombre)+"/token", ""), "", nil, "", &g)
 	return g.Token, err
+}
+
+// FijarPuerto guarda servicio.puerto (0 lo deja como está) y servicio.puerto_automatico a través del servicio en
+// marcha; se aplica al reiniciar.
+func (c *Cliente) FijarPuerto(ctx context.Context, puerto int, automatico bool) error {
+	return c.pedir(ctx, "PUT", "/api/v1/servicio/puerto", "", cuerpoJSON(map[string]any{"puerto": puerto, "automatico": automatico}), "application/json", nil)
 }
 
 // Detener pide al servicio que se detenga con todas sus instancias.

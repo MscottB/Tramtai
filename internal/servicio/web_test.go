@@ -400,6 +400,18 @@ func TestEntradaLocalSinToken(t *testing.T) {
 		t.Fatalf("un puerto libre se guarda: %d %s", r.StatusCode, cuerpo)
 	}
 
+	// Reiniciar dos veces (dos pestañas, la bandeja) lanza un solo servicio nuevo.
+	var lanzados int
+	s.opc.Reiniciar = func() error { lanzados++; return nil }
+	for range 2 {
+		if r, cuerpo := n.pedir("POST", "/ui/servicio/reiniciar", "", "X-CSRF-Token", n.csrf); r.StatusCode != 202 {
+			t.Fatalf("reiniciar: %d %s", r.StatusCode, cuerpo)
+		}
+	}
+	if lanzados != 1 {
+		t.Fatalf("Reiniciar lanzó %d procesos", lanzados)
+	}
+
 	// Detener el servicio desde la Web UI: solo con sesión local y CSRF.
 	if r, _ := n.pedir("POST", "/ui/servicio/detener", ""); r.StatusCode != 401 {
 		t.Fatalf("detener exige el CSRF: %d", r.StatusCode)

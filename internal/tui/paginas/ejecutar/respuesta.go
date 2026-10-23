@@ -194,7 +194,7 @@ func (p *Pagina) alVivo(m msgVivo) tea.Cmd {
 	return nil
 }
 
-// cancelarTrabajo pide cancelar el trabajo en marcha (Esc).
+// cancelarTrabajo pide cancelar el trabajo en marcha (c, tras confirmar).
 func (p *Pagina) cancelarTrabajo() tea.Cmd {
 	switch {
 	case p.c.Cli == nil:

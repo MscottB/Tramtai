@@ -8,21 +8,26 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
-// nombreArchivo es el LaunchAgent del usuario; las pruebas usan otro para no tocar el real.
-var nombreArchivo = "com.mscottb.tramtai.plist"
+// Los LaunchAgents del usuario de la instalada y de la portable; las pruebas usan otros para no tocar los reales.
+var (
+	nombreArchivo  = "com.mscottb.tramtai.plist"
+	nombrePortable = "com.mscottb.tramtai.portable.plist"
+)
 
-func archivo() (string, error) {
+func carpeta() (string, error) {
 	casa, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(casa, "Library", "LaunchAgents", nombreArchivo), nil
+	return filepath.Join(casa, "Library", "LaunchAgents"), nil
 }
 
-// contenido es un LaunchAgent de launchd que abre la app oculta, en la barra de menús, al iniciar sesión.
-func contenido(escritorio string) string {
+// contenido es un LaunchAgent de launchd que abre la app oculta, en la barra de menús, al iniciar sesión. Su Label es
+// el nombre del archivo: launchd no carga dos con la misma, y la instalada y la portable pueden estar las dos activas.
+func contenido(escritorio, nombre string) string {
 	var ruta bytes.Buffer
 	_ = xml.EscapeText(&ruta, []byte(escritorio))
 	return fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
@@ -30,7 +35,7 @@ func contenido(escritorio string) string {
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>com.mscottb.tramtai</string>
+	<string>%s</string>
 	<key>ProgramArguments</key>
 	<array>
 		<string>%s</string>
@@ -40,5 +45,5 @@ func contenido(escritorio string) string {
 	<true/>
 </dict>
 </plist>
-`, ruta.String())
+`, strings.TrimSuffix(nombre, ".plist"), ruta.String())
 }

@@ -16,7 +16,9 @@
       </template>
     </CabeceraPagina>
 
-    <q-banner v-if="error" rounded class="error-caja">{{ error }}</q-banner>
+    <q-banner v-if="error" rounded class="error-caja" role="alert">{{ error }}
+      <template #action><q-btn flat no-caps icon="o_refresh" :label="t('comun.reintentar')" @click="cargar" /></template>
+    </q-banner>
     <q-banner v-if="sugerirApiPropia(instancia?.app_con_clave_24h)" rounded class="aviso">
       {{ t('claves.sugerencia', { n: instancia?.app_con_clave_24h ?? 0 }) }}
       <template #action><q-btn flat no-caps color="primary" :label="t('claves.crearApi')" @click="$emit('ir', 'conectar')" /></template>
@@ -92,7 +94,9 @@
         <q-btn flat dense no-caps color="primary" :label="t('inicio.verHistorial')" @click="$emit('ir', 'historial')" />
       </div>
       <q-separator />
-      <q-list v-if="recientes.length" separator>
+      <!-- Hasta la primera respuesta no se sabe si hay peticiones: ni lista ni vacío (si falla, lo dice el aviso de arriba). -->
+      <div v-if="!recientes" class="q-pa-md" role="status" :aria-label="t('comun.cargando')"><q-skeleton v-for="n in 3" :key="n" type="text" /></div>
+      <q-list v-else-if="recientes.length" separator>
         <q-item v-for="trabajo in recientes" :key="trabajo.id" clickable class="q-py-sm" @click="verPeticion(trabajo.id)">
           <q-item-section style="max-width: 120px" class="gt-xs">
             <q-item-label caption class="tabular">{{ haceCuanto(trabajo.creado_en) }}</q-item-label>
@@ -150,7 +154,7 @@ function verHistorial(filtro: string) {
   emit('ir', 'historial')
 }
 const instancia = ref<EstadoInstancia>()
-const recientes = ref<Trabajo[]>([])
+const recientes = ref<Trabajo[]>()
 const adaptadores = ref<Adaptador[]>()
 const puntos = ref<EstadoPunto[]>([])
 

@@ -2,7 +2,10 @@
 
 package credenciales
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 // Se ejecuta en el CI de macOS y Linux; se salta donde no hay llavero utilizable (sin secret-tool o sin sesión).
 func TestGuardarLeerBorrarUnix(t *testing.T) {
@@ -10,6 +13,9 @@ func TestGuardarLeerBorrarUnix(t *testing.T) {
 		t.Skipf("%s no está disponible aquí", Almacen())
 	}
 	const nombre = "PRUEBA_TRAMTAI_NO_USAR"
+	antes := Nombres // una entrada propia de la prueba, nunca una clave real: se admite solo mientras dura
+	Nombres = append(slices.Clone(Nombres), nombre)
+	t.Cleanup(func() { Nombres = antes })
 	t.Cleanup(func() { _ = Borrar(nombre) })
 	if err := Guardar(nombre, "valor-de-prueba_123"); err != nil {
 		t.Skipf("%s no se puede usar aquí: %v", Almacen(), err)

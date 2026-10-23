@@ -9,19 +9,22 @@ import (
 	"strings"
 )
 
-// nombreArchivo es la entrada de ~/.config/autostart; las pruebas usan otra para no tocar la real.
-var nombreArchivo = "tramtai.desktop"
+// Las entradas de ~/.config/autostart de la instalada y de la portable; las pruebas usan otras para no tocar las reales.
+var (
+	nombreArchivo  = "tramtai.desktop"
+	nombrePortable = "tramtai-portable.desktop"
+)
 
-func archivo() (string, error) {
+func carpeta() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "autostart", nombreArchivo), nil
+	return filepath.Join(dir, "autostart"), nil
 }
 
 // contenido sigue la especificación de arranque automático de freedesktop (GNOME, KDE, Xfce y otros escritorios).
-func contenido(escritorio string) string {
+func contenido(escritorio, _ string) string {
 	return fmt.Sprintf(`[Desktop Entry]
 Type=Application
 Name=Tramtai

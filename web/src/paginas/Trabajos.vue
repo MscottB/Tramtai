@@ -9,7 +9,8 @@
 
     <q-card data-captura="historial">
       <q-card-section class="row items-center q-col-gutter-sm" data-recorrido="historial.filtros">
-        <div class="col-12 col-md">
+        <!-- Las cuatro opciones no caben a 360 px: una sola fila que se desplaza, como en Agentes. -->
+        <div class="col-12 col-md desplazable-x">
           <q-btn-toggle v-model="filtro" no-caps flat dense toggle-color="primary" class="segmentado inline-flex"
             :options="[{ label: t('historial.todos'), value: 'todos' }, { label: t('inicio.enCurso'), value: 'curso' }, { label: t('inicio.completados'), value: 'ok' }, { label: t('inicio.conError'), value: 'error' }]" />
         </div>
@@ -17,7 +18,7 @@
           <q-select v-model="origen" :options="origenes" emit-value map-options dense outlined :label="t('historial.origen')" />
         </div>
         <div class="col-12 col-sm-6 col-md-3">
-          <q-input v-model="busqueda" dense outlined clearable :placeholder="t('historial.buscar')" :aria-label="t('historial.buscar')" debounce="150">
+          <q-input v-model="busqueda" dense outlined clearable :placeholder="textoBuscar" :aria-label="textoBuscar" debounce="150">
             <template #prepend><q-icon name="search" /></template>
           </q-input>
         </div>
@@ -27,12 +28,16 @@
         :pagination="{ rowsPerPage: 25 }" :rows-per-page-options="[25, 50, 100]" :no-data-label="t('historial.sinFiltro')"
         table-class="fila-clicable" @row-click="(_e: Event, fila: Trabajo) => abrir(fila)">
         <template #no-data>
-          <EstadoVacio v-if="!cargando" class="full-width" :titulo="hayFiltro ? t('historial.sinFiltro') : t('historial.vacio')"
+          <!-- Si la carga falló no se invita a empezar: se dice qué pasó y se ofrece Reintentar. -->
+          <EstadoVacio v-if="error" role="alert" class="full-width" :titulo="t('comun.errorCarga')" :texto="error" :accion="t('comun.reintentar')"
+            :cargando="cargando" @accion="cargar()" />
+          <EstadoVacio v-else-if="!cargando" class="full-width" :titulo="hayFiltro ? t('historial.sinFiltro') : t('historial.vacio')"
+            :texto="hayFiltro && hayMas ? t('historial.sinFiltroMas') : undefined"
             :accion="hayFiltro ? t('historial.quitarFiltros') : t('historial.irProbar')" @accion="hayFiltro ? quitarFiltros() : emit('ir', 'ejecutar')" />
         </template>
         <template #body-cell-estado="props">
           <q-td :props="props">
-            <span :class="estadoInfo(props.value).clase"><q-icon :name="estadoInfo(props.value).icono" size="14px" />{{ estadoInfo(props.value).etiqueta }}</span>
+            <span :class="estadoInfo(props.value).clase">{{ estadoInfo(props.value).etiqueta }}</span>
           </q-td>
         </template>
         <template #body-cell-modelo="props">
@@ -60,7 +65,7 @@
     <q-dialog v-model="dialogo" position="right" full-height allow-focus-outside>
       <q-card v-if="detalle" data-recorrido="historial.detalle" class="column no-wrap hoja-detalle" style="width: 600px; max-width: 100vw">
         <q-card-section class="row items-center no-wrap q-gutter-x-sm">
-          <span :class="estadoInfo(detalle.estado).clase"><q-icon :name="estadoInfo(detalle.estado).icono" size="14px" />{{ estadoInfo(detalle.estado).etiqueta }}</span>
+          <span :class="estadoInfo(detalle.estado).clase">{{ estadoInfo(detalle.estado).etiqueta }}</span>
           <div class="texto-suave text-caption">{{ fecha(detalle.creado_en) }}</div>
           <q-space />
           <q-btn v-close-popup flat round icon="close" :aria-label="t('comun.cerrar')" />
@@ -81,7 +86,7 @@
               <div class="text-weight-medium col">{{ t('historial.solicitud') }}</div>
               <q-btn v-if="textoDe(detalle)" flat dense round size="sm" icon="o_content_copy" :aria-label="t('historial.copiarSolicitud')" @click="copiar(textoDe(detalle))" />
             </div>
-            <div class="bloque-texto">{{ textoDe(detalle) || '—' }}</div>
+            <div class="bloque-texto">{{ textoDe(detalle) || sinDato() }}</div>
           </div>
           <div>
             <div class="row items-center q-mb-xs">
@@ -94,7 +99,7 @@
           </div>
           <div class="ficha text-body2">
             <div>{{ t('historial.agenteModelo') }}</div><div>{{ modeloDe(detalle) }}</div>
-            <div>{{ t('historial.esfuerzo') }}</div><div>{{ esfuerzoUsado(detalle, eventosDetalle) || '—' }}</div>
+            <div>{{ t('historial.esfuerzo') }}</div><div>{{ esfuerzoUsado(detalle, eventosDetalle) || sinDato() }}</div>
             <div>{{ t('historial.origen') }}</div><div>{{ textoOrigen(detalle) }}</div>
             <div>{{ t('historial.tokens') }}</div><div>{{ detalle.uso.tokens_entrada }} → {{ detalle.uso.tokens_salida }}</div>
             <template v-if="detalle.uso.costo_usd"><div>{{ t('historial.coste') }}</div><div>US$ {{ detalle.uso.costo_usd.toFixed(4) }}</div></template>
@@ -130,18 +135,21 @@ import Linea from '../componentes/Linea.vue'
 import Ruta from '../componentes/Ruta.vue'
 import RegistroTrabajo from '../componentes/RegistroTrabajo.vue'
 import SalidaTrabajo from '../componentes/SalidaTrabajo.vue'
-import { api, avisar, avisarError, copiar, tituloError } from '../api/cliente'
+import { api, avisar, avisarError, copiar, mensajeError, tituloError } from '../api/cliente'
 import type { EstadoPunto, EventoRegistro, Trabajo } from '../api/tipos'
 import { filtroHistorial, origenHistorial, trabajoAbrir, trabajoSeguido } from '../estado'
 import { modeloDe } from '../agentes'
-import { duracion, estadoInfo, fecha, haceCuanto, esfuerzoUsado, terminales, textoDe } from '../formato'
+import { duracion, estadoInfo, fecha, haceCuanto, esfuerzoUsado, sinDato, terminales, textoDe } from '../formato'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ ir: [pagina: string] }>()
 const $q = useQuasar()
 const trabajos = ref<Trabajo[]>([])
 const hayTerminados = computed(() => trabajos.value.some((x) => terminales.includes(x.estado)))
-const cargando = ref(false)
+// cargando empieza en true: hasta la primera respuesta no se sabe si hay peticiones (ni se enseña el vacío).
+const cargando = ref(true)
+// error es el de la última carga sin peticiones que enseñar; con lista, el error solo avisa.
+const error = ref('')
 const dialogo = ref(false)
 const detalle = ref<Trabajo>()
 const eventosDetalle = ref<EventoRegistro[]>([])
@@ -152,6 +160,9 @@ const busqueda = ref<string | null>('')
 // Llega una API por su nombre (Mis APIs) o un filtro ya armado («o:probar» desde Probar).
 const origen = ref(origenHistorial.value.includes(':') ? origenHistorial.value : origenHistorial.value ? 'p:' + origenHistorial.value : '')
 const hayFiltro = computed(() => filtro.value !== 'todos' || !!busqueda.value || !!origen.value)
+// La búsqueda y el filtro de estado miran solo las peticiones cargadas (el servicio aún no los admite): el buscador
+// dice cuántas son.
+const textoBuscar = computed(() => t('historial.buscar', { n: Math.max(trabajos.value.length, PAGINA) }))
 function quitarFiltros() {
   filtro.value = 'todos'
   busqueda.value = ''
@@ -216,9 +227,13 @@ async function cargar(segundoPlano = false) {
     if (n === pedidoLista) {
       trabajos.value = lista
       hayMas.value = lista.length === PAGINA
+      error.value = ''
     }
   } catch (e) {
-    if (n === pedidoLista && !segundoPlano) avisarError(e)
+    if (n === pedidoLista && !segundoPlano) {
+      if (trabajos.value.length) avisarError(e)
+      else error.value = mensajeError(e)
+    }
   } finally {
     enVuelo--
     if (n === pedidoLista) cargando.value = false

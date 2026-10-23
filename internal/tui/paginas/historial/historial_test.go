@@ -111,8 +111,18 @@ func abierta(t *testing.T, cli *cliente.Cliente, id string) *Pagina {
 	return p
 }
 
-func (p *Pagina) origenActual() origen {
-	return origen{ctx: p.c.Ctx, instancia: p.c.Instancia, gen: p.gen}
+// teclasPie son las teclas de la página como se leen en el pie: «m Ver más».
+func teclasPie(p *Pagina) []string {
+	var r []string
+	for _, k := range p.Teclas() {
+		r = append(r, k.Tecla+" "+k.Accion)
+	}
+	return r
+}
+
+// enPestana dice si la vista enseña el detalle con esa pestaña elegida (su nombre entre corchetes).
+func enPestana(p *Pagina, clave string) bool {
+	return strings.Contains(p.Vista(), "["+datos.Texto("es", clave)+"]")
 }
 
 // conTrabajos inicia la página y le da una lista hecha a mano, sin pedirla al servicio.
@@ -122,7 +132,7 @@ func conTrabajos(t *testing.T, lista ...nucleo.Trabajo) *Pagina {
 	p := nueva("es")
 	p.Iniciar(contexto(cli, id)) // su carga no se corre: la lista es la de la prueba
 	t.Cleanup(p.Ocultar)
-	p.Update(msgLista{origen: p.origenActual(), n: p.n, lista: lista})
+	p.Update(msgLista{origen: p.origen(), n: p.n, lista: lista})
 	return p
 }
 
@@ -220,7 +230,7 @@ func TestHistorialCarga(t *testing.T) {
 	}
 	p := abierta(t, cli, id)
 	v := p.Vista()
-	for _, quiere := range []string{"Historial", "Estado: Todas", "Origen: Todos los orígenes", "Completado", "tercera", "primera", "Mostrando las 3 más recientes", "hace "} {
+	for _, quiere := range []string{"Estado: Todas", "Origen: Todos los orígenes", "Completado", "tercera", "primera", "Mostrando las 3 más recientes", "hace "} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}
@@ -285,8 +295,8 @@ func TestHistorialVerMasSinRepetir(t *testing.T) {
 	p.tam = 3
 	t.Cleanup(p.Ocultar)
 	correr(p, p.Iniciar(contexto(cli, id)))
-	if len(ids(p)) != 3 || !p.hayMas {
-		t.Fatalf("la primera página trae 3 y hay más: %v %v", ids(p), p.hayMas)
+	if len(ids(p)) != 3 || !slices.Contains(teclasPie(p), "m Ver más") {
+		t.Fatalf("la primera página trae 3 y hay más: %v %v", ids(p), teclasPie(p))
 	}
 	if v := p.Vista(); !strings.Contains(v, "Mostrando las 3 más recientes") || !strings.Contains(p.tx("historial.verMas"), "Ver más") {
 		t.Fatalf("dice cuántas muestra:\n%s", v)
@@ -302,14 +312,14 @@ func TestHistorialVerMasSinRepetir(t *testing.T) {
 	if got := ids(p); len(got) != 6 || !slices.Equal(got, esperado[:6]) {
 		t.Fatalf("la segunda página sigue a la primera sin repetir: %v\nquería %v", got, esperado[:6])
 	}
-	if !p.hayMas {
+	if !slices.Contains(teclasPie(p), "m Ver más") {
 		t.Fatal("una página llena puede tener más")
 	}
 	pulsar(p, "m")
 	if got := ids(p); !slices.Equal(got, esperado) {
 		t.Fatalf("las 7, una vez cada una: %v\nquería %v", got, esperado)
 	}
-	if p.hayMas {
+	if slices.Contains(teclasPie(p), "m Ver más") {
 		t.Fatal("una página corta es la última")
 	}
 	if v := p.Vista(); !strings.Contains(v, "Mostrando las 7 más recientes") {
@@ -324,7 +334,7 @@ func TestHistorialVerMasSinRepetir(t *testing.T) {
 	p.hayMas, p.enVuelo = true, 0
 	p.verMas()
 	p.Update(pagina.FiltroPunto{Nombre: "p:no-existe"})
-	p.Update(msgLista{origen: p.origenActual(), n: viejo, mas: true, lista: []nucleo.Trabajo{trabajo("zz", "vieja", nucleo.Completado)}})
+	p.Update(msgLista{origen: p.origen(), n: viejo, mas: true, lista: []nucleo.Trabajo{trabajo("zz", "vieja", nucleo.Completado)}})
 	if slices.Contains(ids(p), "zz") || p.cargandoMas {
 		t.Fatalf("la página del filtro viejo no se suma: %v", ids(p))
 	}
@@ -459,7 +469,7 @@ func TestHistorialFiltroEstado(t *testing.T) {
 	}
 	// Con el estado puesto, un filtro que no deja nada dice que es del filtro, y l lo quita.
 	p.Update(pagina.FiltroEstado{Estado: "ok"})
-	p.Update(msgLista{origen: p.origenActual(), n: p.n, lista: []nucleo.Trabajo{trabajo("z", "uno", nucleo.Fallido)}})
+	p.Update(msgLista{origen: p.origen(), n: p.n, lista: []nucleo.Trabajo{trabajo("z", "uno", nucleo.Fallido)}})
 	if v := p.Vista(); !strings.Contains(v, "No hay peticiones con este filtro") {
 		t.Fatalf("vacío por el filtro:\n%s", v)
 	}
@@ -498,12 +508,12 @@ func TestHistorialBusqueda(t *testing.T) {
 	}
 	// Intro la deja puesta y la barra la recuerda; Esc de una nueva vuelve a lo de antes.
 	pulsar(p, "enter")
-	if p.EnCampo() || p.busqueda != "ccc" || !strings.Contains(p.Vista(), "/ ccc") {
-		t.Fatalf("Intro deja la búsqueda: %q\n%s", p.busqueda, p.Vista())
+	if p.EnCampo() || !strings.Contains(p.Vista(), "/ ccc") {
+		t.Fatalf("Intro deja la búsqueda:\n%s", p.Vista())
 	}
 	pulsar(p, "/", "x", "esc")
-	if p.EnCampo() || p.busqueda != "ccc" || !slices.Equal(ids(p), []string{"trabajo_ccc"}) {
-		t.Fatalf("Esc vuelve a la búsqueda de antes: %q %v", p.busqueda, ids(p))
+	if p.EnCampo() || !strings.Contains(p.Vista(), "/ ccc") || !slices.Equal(ids(p), []string{"trabajo_ccc"}) {
+		t.Fatalf("Esc vuelve a la búsqueda de antes: %v\n%s", ids(p), p.Vista())
 	}
 	// Lo pegado entra entero, con los saltos de línea como espacios.
 	pulsar(p, "/")
@@ -549,12 +559,12 @@ func TestHistorialDetalle(t *testing.T) {
 		t.Fatalf("el intento dice con qué agente:\n%s", v)
 	}
 	pulsar(p, "right") // no pasa de la última
-	if p.pestana != pestanaRegistro {
-		t.Fatalf("la última pestaña es la del registro: %d", p.pestana)
+	if !enPestana(p, "registro.titulo") {
+		t.Fatalf("la última pestaña es la del registro:\n%s", p.Vista())
 	}
 	pulsar(p, "left", "left", "left")
-	if p.pestana != pestanaMensaje {
-		t.Fatalf("← vuelve al mensaje: %d", p.pestana)
+	if !enPestana(p, "historial.solicitud") {
+		t.Fatalf("← vuelve al mensaje:\n%s", p.Vista())
 	}
 	// El pie del detalle.
 	var pie []string
@@ -567,8 +577,8 @@ func TestHistorialDetalle(t *testing.T) {
 		}
 	}
 	// Esc cierra el detalle y, sin nada abierto, vuelve.
-	if fuera := pulsar(p, "esc"); len(fuera) != 0 || p.abierto != "" {
-		t.Fatalf("Esc cierra el detalle: %v %q", fuera, p.abierto)
+	if fuera := pulsar(p, "esc"); len(fuera) != 0 || enPestana(p, "historial.solicitud") {
+		t.Fatalf("Esc cierra el detalle: %v\n%s", fuera, p.Vista())
 	}
 	if _, ok := pulsar(p, "esc")[0].(pagina.Volver); !ok {
 		t.Fatal("Esc sin nada abierto vuelve")
@@ -703,7 +713,7 @@ func TestHistorialEnVivoSeCorta(t *testing.T) {
 		t.Fatal("Ocultar corta el seguimiento")
 	}
 	// Una respuesta que llega con la página oculta no se aplica.
-	if _, cmd := p.Update(msgVivo{Origen: p.origenActual(), ID: p.abierto, Seq: p.nflujo, Clase: "evento", Tipo: "texto", Datos: "tarde"}); cmd != nil || p.vivoSalida != "" {
+	if _, cmd := p.Update(msgVivo{Origen: p.origen(), ID: p.abierto, Seq: p.nflujo, Clase: "evento", Tipo: "texto", Datos: "tarde"}); cmd != nil || p.vivoSalida != "" {
 		t.Fatalf("oculta, no hace caso: %q", p.vivoSalida)
 	}
 	// Mostrar reabre el seguimiento del mismo detalle, con su pestaña.
@@ -713,8 +723,8 @@ func TestHistorialEnVivoSeCorta(t *testing.T) {
 		t.Fatalf("Mostrar reabre el seguimiento: %v %v", p.detalle, p.canal)
 	}
 	tercero := p.canal
-	if p.pestana != pestanaRespuesta {
-		t.Fatalf("conserva la pestaña: %d", p.pestana)
+	if !enPestana(p, "ejecutar.respuesta") {
+		t.Fatalf("conserva la pestaña:\n%s", p.Vista())
 	}
 	// El contexto de la página (cambio de espacio, reinicio) también lo corta.
 	cerrarCtx, cancelar := context.WithCancel(context.Background())
@@ -733,8 +743,8 @@ func TestHistorialEnVivoSeCorta(t *testing.T) {
 	// Otro Iniciar cancela el seguimiento de antes.
 	correr(p, p.Iniciar(contexto(cli, id)))
 	cerrado(t, tercero)
-	if p.abierto != "" || p.detalle != nil {
-		t.Fatal("Iniciar empieza de cero, sin detalle")
+	if strings.Contains(p.Vista(), "["+datos.Texto("es", "historial.solicitud")+"]") || strings.Contains(p.Vista(), "["+datos.Texto("es", "ejecutar.respuesta")+"]") {
+		t.Fatalf("Iniciar empieza de cero, sin detalle:\n%s", p.Vista())
 	}
 }
 
@@ -873,8 +883,8 @@ func TestHistorialEliminar(t *testing.T) {
 	}
 	_, cmd = p.Update(comp.Confirmado{})
 	correr(p, cmd)
-	if p.abierto != "" || len(ids(p)) != 0 {
-		t.Fatalf("cierra el detalle y la lista queda vacía: %q %v", p.abierto, ids(p))
+	if enPestana(p, "historial.solicitud") || len(ids(p)) != 0 {
+		t.Fatalf("cierra el detalle y la lista queda vacía: %v\n%s", ids(p), p.Vista())
 	}
 }
 
@@ -1031,19 +1041,19 @@ func TestServicioCaido(t *testing.T) {
 func TestRespuestasViejas(t *testing.T) {
 	p := conTrabajos(t, trabajo("a", "uno", nucleo.Completado))
 	nuevaLista := []nucleo.Trabajo{trabajo("n", "nueva", nucleo.Completado)}
-	o := p.origenActual()
+	o := p.origen()
 
 	otro := o
-	otro.instancia = "otro"
+	otro.Instancia = "otro"
 	p.Update(msgLista{origen: otro, n: p.n, lista: nuevaLista})
 	cancelado, cancelar := context.WithCancel(context.Background())
 	cancelar()
 	viejoCtx := o
-	viejoCtx.ctx = cancelado
+	viejoCtx.Ctx = cancelado
 	p.Update(msgLista{origen: viejoCtx, n: p.n, lista: nuevaLista})
 	p.Update(msgLista{origen: o, n: p.n - 1, lista: nuevaLista})
 	viejaGen := o
-	viejaGen.gen--
+	viejaGen.Gen--
 	p.Update(msgLista{origen: viejaGen, n: p.n, lista: nuevaLista})
 	if got := ids(p); !slices.Equal(got, []string{"a"}) {
 		t.Fatalf("ninguna de las viejas se aplica: %v", got)
@@ -1060,28 +1070,28 @@ func TestRespuestasViejas(t *testing.T) {
 	}
 	// Ni un error de una consulta vieja se enseña.
 	p.Update(msgLista{origen: o, n: p.n - 1, err: errors.New("viejo")})
-	if p.err != "" {
-		t.Fatalf("error viejo: %q", p.err)
+	if strings.Contains(p.Vista(), "viejo") {
+		t.Fatalf("error viejo:\n%s", p.Vista())
 	}
 }
 
-// TestRespuestaDeLaListaConError: el error de la API se ve tal cual en la página; el de conexión es del servicio.
+// TestListaConError: el error de la API se ve tal cual en la página; el de conexión es del servicio.
 func TestListaConError(t *testing.T) {
 	p := conTrabajos(t, trabajo("a", "uno", nucleo.Completado))
-	cmd := p.alLista(msgLista{origen: p.origenActual(), n: p.n, err: nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "limite debe estar entre 1 y 200")})
-	if cmd != nil || p.err != "limite debe estar entre 1 y 200" {
-		t.Fatalf("el mensaje del servicio sin traducir: %q", p.err)
+	cmd := p.alLista(msgLista{origen: p.origen(), n: p.n, err: nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, "limite debe estar entre 1 y 200")})
+	if cmd != nil || !strings.Contains(p.Vista(), "limite debe estar entre 1 y 200") {
+		t.Fatalf("el mensaje del servicio sin traducir:\n%s", p.Vista())
 	}
 	if v := p.Vista(); !strings.Contains(v, "limite debe estar entre 1 y 200") || !strings.Contains(v, "uno") {
 		t.Fatalf("lo cargado se conserva y el error se ve:\n%s", v)
 	}
-	cmd = p.alLista(msgLista{origen: p.origenActual(), n: p.n, err: cliente.ErrServicioInactivo})
+	cmd = p.alLista(msgLista{origen: p.origen(), n: p.n, err: cliente.ErrServicioInactivo})
 	if e, ok := cmd().(pagina.ErrorServicio); !ok || !errors.Is(e.Err, cliente.ErrServicioInactivo) {
 		t.Fatalf("de conexión: %v", cmd())
 	}
 	// En segundo plano (el sondeo) un error no se enseña.
 	p2 := conTrabajos(t, trabajo("a", "uno", nucleo.Completado))
-	if cmd := p2.alLista(msgLista{origen: p2.origenActual(), n: p2.n, segundoPlano: true, err: errors.New("x")}); cmd != nil || p2.err != "" {
+	if cmd := p2.alLista(msgLista{origen: p2.origen(), n: p2.n, segundoPlano: true, err: errors.New("x")}); cmd != nil || p2.err != "" {
 		t.Fatalf("sondeo: %q", p2.err)
 	}
 }
@@ -1094,7 +1104,7 @@ func TestHistorialSondeo(t *testing.T) {
 	crear(t, cli, id, "segunda")
 	sondear := func() {
 		t.Helper()
-		_, cmd := p.Update(msgSondeo{p.origenActual()})
+		_, cmd := p.Update(msgSondeo{p.origen()})
 		lote, ok := cmd().(tea.BatchMsg) // la lectura y el siguiente sondeo
 		if !ok {
 			t.Fatalf("sondeo sin lectura: %T", cmd())
@@ -1111,7 +1121,7 @@ func TestHistorialSondeo(t *testing.T) {
 	// Con el detalle abierto no recarga.
 	pulsar(p, "enter")
 	crear(t, cli, id, "tercera")
-	_, cmd := p.Update(msgSondeo{p.origenActual()})
+	_, cmd := p.Update(msgSondeo{p.origen()})
 	if _, lote := cmd().(tea.BatchMsg); lote {
 		t.Fatal("con el detalle abierto el sondeo solo se vuelve a armar")
 	}
@@ -1123,7 +1133,7 @@ func TestHistorialSondeo(t *testing.T) {
 	// Con páginas extra cargadas tampoco: la recarga solo trae la primera.
 	p.tam = 2
 	p.hayMas = true
-	_, cmd = p.Update(msgSondeo{p.origenActual()})
+	_, cmd = p.Update(msgSondeo{p.origen()})
 	if _, lote := cmd().(tea.BatchMsg); lote {
 		t.Fatal("con más de una página el sondeo no recarga")
 	}
@@ -1141,8 +1151,8 @@ func TestHistorialOcultarYMostrar(t *testing.T) {
 	}
 	crear(t, cli, id, "dos")
 	correr(p, p.Mostrar())
-	if len(ids(p)) != 0 || p.estado != estCurso || p.busqueda != "u" { // el filtro de estado y el texto se conservan
-		t.Fatalf("Mostrar conserva los filtros: %v %q %q", ids(p), p.estado, p.busqueda)
+	if v := p.Vista(); len(ids(p)) != 0 || !strings.Contains(v, "/ u") || strings.Contains(v, "Estado: Todas") { // el filtro de estado y el texto se conservan
+		t.Fatalf("Mostrar conserva los filtros: %v\n%s", ids(p), v)
 	}
 	pulsar(p, "e", "e", "e") // todas
 	if len(ids(p)) != 1 || !strings.Contains(p.Vista(), "uno") {
@@ -1163,6 +1173,7 @@ func TestCabeEn60x20(t *testing.T) {
 	crear(t, cli, id, "corta")
 	crearInvalida(t, cli, id)
 	for _, alto := range []int{17, 20} {
+		ancho := 60
 		p := nueva("es")
 		c := contexto(cli, id)
 		c.Alto = alto
@@ -1175,8 +1186,8 @@ func TestCabeEn60x20(t *testing.T) {
 				t.Fatalf("%s a 60×%d mide %d filas:\n%s", donde, alto, h, v)
 			}
 			for _, l := range strings.Split(v, "\n") {
-				if w := lipgloss.Width(l); w > 60 {
-					t.Fatalf("%s a 60×%d: la línea mide %d columnas: %q", donde, alto, w, l)
+				if w := lipgloss.Width(l); w > ancho {
+					t.Fatalf("%s a %d×%d: la línea mide %d columnas: %q", donde, ancho, alto, w, l)
 				}
 			}
 		}
@@ -1194,9 +1205,11 @@ func TestCabeEn60x20(t *testing.T) {
 		comprobar("búsqueda")
 		pulsar(p, "esc", "e")
 		comprobar("filtro")
-		p.Update(tea.WindowSizeMsg{Width: 78, Height: 30})
+		ancho = 78
+		p.Update(tea.WindowSizeMsg{Width: ancho, Height: 30})
 		comprobar("más grande")
-		p.Update(tea.WindowSizeMsg{Width: 60, Height: alto})
+		ancho = 60
+		p.Update(tea.WindowSizeMsg{Width: ancho, Height: alto})
 		comprobar("de vuelta")
 
 		// Las confirmaciones, que pinta la app con comp.Confirmacion.
@@ -1232,8 +1245,8 @@ func TestTextosComoLaWeb(t *testing.T) {
 	c.Idioma, c.Alto = "en", 30
 	correr(p, p.Iniciar(c))
 	t.Cleanup(p.Ocultar)
-	v := p.Vista()
-	for _, quiere := range []string{datos.Texto("en", "menu.historial"), datos.Texto("en", "historial.estado") + ": " + datos.Texto("en", "historial.todos"),
+	v := strings.Join(strings.Fields(p.Vista()), " ") // un texto largo ocupa varias líneas
+	for _, quiere := range []string{datos.Texto("en", "historial.estado") + ": " + datos.Texto("en", "historial.todos"),
 		datos.Texto("en", "historial.origen") + ": " + datos.Texto("en", "historial.todosOrigenes"), datos.Textof("en", "historial.mostrando", "n", "1"),
 		datos.Texto("en", "estado.completado")} {
 		if !strings.Contains(v, quiere) {
@@ -1376,7 +1389,7 @@ func TestDetalleParteLasPalabras(t *testing.T) {
 	p := conTrabajos(t, trabajo("a", strings.Repeat("palabra ", 40), nucleo.Completado))
 	t.Cleanup(p.Ocultar)
 	pulsar(p, "enter")
-	p.Update(msgDetalle{origen: p.origenActual(), n: p.ndet, t: trabajo("a", strings.Repeat("palabra ", 40), nucleo.Completado)})
+	p.Update(msgDetalle{origen: p.origen(), n: p.ndet, t: trabajo("a", strings.Repeat("palabra ", 40), nucleo.Completado)})
 	for _, ancho := range []int{60, 40, 60} {
 		p.Update(tea.WindowSizeMsg{Width: ancho, Height: 17})
 		lineas := strings.Split(p.Vista(), "\n")
@@ -1414,10 +1427,10 @@ func TestRespuestasViejasDelDetalle(t *testing.T) {
 		return msgVivo{Origen: o, ID: id, Seq: seq, Clase: "evento", Tipo: "texto", Datos: "x"}
 	}
 	p := conDetalle(t)
-	o := p.origenActual()
+	o := p.origen()
 	otroEspacio, otraGen := o, o
-	otroEspacio.instancia = "otro"
-	otraGen.gen--
+	otroEspacio.Instancia = "otro"
+	otraGen.Gen--
 	for nombre, m := range map[string]msgVivo{"seguimiento viejo": texto(o, "a", 1), "otro trabajo": texto(o, "b", 2),
 		"otro espacio": texto(otroEspacio, "a", 2), "otra versión": texto(otraGen, "a", 2)} {
 		p.Update(m)
@@ -1478,7 +1491,7 @@ func TestRespuestasViejasDelDetalle(t *testing.T) {
 func TestVivoViejoNoRearmaLaLectura(t *testing.T) {
 	p := conDetalle(t)
 	p.canal = make(chan msgVivo) // el seguimiento de ahora
-	o := p.origenActual()
+	o := p.origen()
 	viejo := msgVivo{Origen: o, ID: "a", Seq: 1, Clase: "evento", Tipo: "texto", Datos: "x"}
 	if _, cmd := p.Update(viejo); cmd != nil {
 		t.Fatal("un mensaje del seguimiento viejo no espera sobre el canal nuevo")
@@ -1488,7 +1501,7 @@ func TestVivoViejoNoRearmaLaLectura(t *testing.T) {
 		t.Fatal("ni uno de otro trabajo")
 	}
 	oculta := o
-	oculta.gen--
+	oculta.Gen--
 	if _, cmd := p.Update(msgVivo{Origen: oculta, ID: "a", Seq: 2, Clase: "evento", Tipo: "texto", Datos: "x"}); cmd != nil {
 		t.Fatal("ni uno de otra versión de la página")
 	}

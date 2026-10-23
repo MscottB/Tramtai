@@ -57,11 +57,7 @@ func pasaEstado(filtro string, e nucleo.Estado) bool {
 
 // origen es lo que cada mensaje propio lleva para saber si aún vale: el contexto y el espacio con que se pidió y la versión de
 // la página (cada Iniciar, Ocultar o Mostrar la cambia).
-type origen struct {
-	ctx       context.Context
-	instancia string
-	gen       int
-}
+type origen struct{ pagina.Origen }
 
 type (
 	// msgLista es una página de la lista: la primera (n es el número de la consulta; solo vale la última) o, con mas, la
@@ -188,18 +184,9 @@ func (p *Pagina) EnCampo() bool { return p.buscando || p.selector != nil }
 
 // tx es un texto de la Web UI (datos.Texto) en el idioma de la sesión, con sus {marcadores} rellenos.
 func (p *Pagina) tx(clave string, pares ...string) string {
-	return p.a(datos.Textof(p.lengua, clave, pares...))
+	return p.estilos.Tx(p.lengua, clave, pares...)
 }
-
-var textoAscii = strings.NewReplacer("·", "-", "…", "...", "’", "'", "“", "\"", "”", "\"", "—", "-", "→", "->", "‹", "<", "›", ">")
-
-// a deja un texto sin los caracteres de dibujo que usan los textos de la Web UI cuando la consola es ASCII.
-func (p *Pagina) a(texto string) string {
-	if p.estilos != nil && p.estilos.ASCII {
-		return textoAscii.Replace(texto)
-	}
-	return texto
-}
+func (p *Pagina) a(texto string) string { return p.estilos.A(texto) }
 
 func (p *Pagina) ascii() bool { return p.estilos != nil && p.estilos.ASCII }
 
@@ -264,24 +251,15 @@ func (p *Pagina) ajustar() {
 	}
 }
 
-func (p *Pagina) origen() origen { return origen{ctx: p.c.Ctx, instancia: p.c.Instancia, gen: p.gen} }
+func (p *Pagina) origen() origen { return origen{p.c.Origen(p.gen)} }
 
-// vigente dice si una respuesta sigue valiendo: su contexto no se canceló, es del mismo espacio y de esta versión de la página.
-func (p *Pagina) vigente(o origen) bool {
-	return o.ctx != nil && o.ctx.Err() == nil && o.instancia == p.c.Instancia && o.gen == p.gen && p.visible
-}
+// vigente dice si una respuesta sigue valiendo (pagina.Origen.Vigente) y la página se ve.
+func (p *Pagina) vigente(o origen) bool { return o.Vigente(p.c, p.gen) && p.visible }
 
 // esperarA es un temporizador: pasado d manda lo que haga mensaje, salvo que el contexto de la página se cancele antes.
 func (p *Pagina) esperarA(d time.Duration, mensaje func(origen) tea.Msg) tea.Cmd {
-	o, espera := p.origen(), p.esperaPara
-	return func() tea.Msg {
-		select {
-		case <-o.ctx.Done():
-			return nil
-		case <-espera(d):
-			return mensaje(o)
-		}
-	}
+	o := p.origen()
+	return pagina.Tras(o.Ctx, d, p.esperaPara, func() tea.Msg { return mensaje(o) })
 }
 
 func (p *Pagina) armarSondeo() tea.Cmd {
@@ -356,9 +334,9 @@ func (p *Pagina) cargarPuntos() tea.Cmd {
 // fallo reparte un error: de conexión es del servicio (lo avisa la app); el de la API, el mensaje tal cual, en la página
 // (la carga de la lista) o como aviso (una acción).
 func (p *Pagina) fallo(err error, aviso bool) tea.Cmd {
-	if pagina.NoResponde(err) {
+	if cmd := pagina.SinServicio(err); cmd != nil {
 		p.sinServ = true
-		return func() tea.Msg { return pagina.ErrorServicio{Err: err} }
+		return cmd
 	}
 	if aviso {
 		return comp.Aviso(nucleo.MensajeDe(err), comp.Fallo)

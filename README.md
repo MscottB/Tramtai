@@ -6,8 +6,8 @@
 
 **Tus agentes de IA, como una API local.**
 
-Tramtai convierte Claude Code, Codex, GitHub Copilot CLI, Antigravity y la API de Gemini en una API compatible con OpenAI y Anthropic que funciona en tu propio equipo.<br>
-Cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
+Tramtai convierte Claude Code, Codex, GitHub Copilot CLI y la API de Gemini en una API compatible con OpenAI y Anthropic que funciona en tu propio equipo.<br>
+Si tu app ya usa el SDK de OpenAI o el de Anthropic, solo cambias la URL base. Antigravity, por ahora, solo desde Probar, la terminal y la CLI.
 
 [![CI](https://github.com/MscottB/Tramtai/actions/workflows/ci.yml/badge.svg)](https://github.com/MscottB/Tramtai/actions/workflows/ci.yml)
 [![Versión](https://img.shields.io/github/v/release/MscottB/Tramtai?label=versi%C3%B3n&color=0b6e64)](https://github.com/MscottB/Tramtai/releases/latest)
@@ -29,7 +29,7 @@ Cualquier aplicación o SDK puede usarlos cambiando solo la URL base.
 - **Archivos y respuestas con forma:** PDF, Word, Excel o PowerPoint como entrada y JSON validado como salida, sin escribir JSON Schema.
 - **Una API por aplicación,** con su clave, sus modelos, sus instrucciones y su presupuesto.
 - **Tu suscripción o tu clave de API,** en la app de escritorio, la Web UI, la terminal o la CLI, en español e inglés.
-- **Local y privado:** escucha solo en `127.0.0.1`, sin telemetría, y las claves quedan cifradas en el almacén del sistema.
+- **Local y privado:** por defecto escucha solo en `127.0.0.1`, sin telemetría, y las claves quedan cifradas en el almacén del sistema.
 
 ## Empezar
 
@@ -75,14 +75,15 @@ Antigravity son marcas de sus respectivos dueños.
 
 ## English
 
-**Tramtai turns Claude Code, Codex, GitHub Copilot CLI, Antigravity and the Gemini API into an OpenAI- and
-Anthropic-compatible API that runs on your own computer.** Any app or SDK can use them by changing just the base URL.
+**Tramtai turns Claude Code, Codex, GitHub Copilot CLI and the Gemini API into an OpenAI- and Anthropic-compatible
+API that runs on your own computer.** If your app already uses the OpenAI or Anthropic SDK, you only change the base
+URL. Antigravity, for now, only from the Playground, the terminal and the CLI.
 
 - **Compatible:** the OpenAI and Anthropic SDKs with streaming and tools, plus a native API for long jobs.
 - **Agent and model per request,** with fallback to another agent if the first one fails.
 - **Files in, shaped JSON out:** PDF, Word, Excel or PowerPoint as input, validated JSON as output.
 - **One API per app,** with its own key, models, instructions and budget.
-- **Local and private:** listens only on `127.0.0.1`, no telemetry, keys encrypted in the system store.
+- **Local and private:** listens only on `127.0.0.1` by default, no telemetry, keys encrypted in the system store.
 
 [**Download**](https://mscottb.github.io/Tramtai/#descargar) for Windows, macOS or Linux, connect an agent in *Agents*
 and copy the URL and key from *My APIs* into your app. The app, Web UI, terminal and CLI are in English and Spanish;

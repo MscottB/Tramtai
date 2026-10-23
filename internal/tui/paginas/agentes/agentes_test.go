@@ -64,13 +64,56 @@ var aviso = prueba.Aviso
 func TestAgentesCarga(t *testing.T) {
 	p, _, _ := abierta(t)
 	v := p.Vista()
-	for _, quiere := range []string{"Agentes", "simulado", "Listo", "Listos (1)", "Falta conectar (0)"} {
+	for _, quiere := range []string{"simulado", "Listo", "Listos (1)", "Falta conectar (0)"} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}
 	}
 	if p.Titulo() != "Agentes" || p.Ayuda() != "agentes" || p.EnCampo() {
 		t.Fatalf("título %q, ayuda %q", p.Titulo(), p.Ayuda())
+	}
+}
+
+// TestColorDeLinea: con color, las dos letras de cada agente van en el color de su línea (DESIGN.md: un color de línea por
+// agente); sin color quedan las dos letras.
+func TestColorDeLinea(t *testing.T) {
+	p, _, _ := abierta(t)
+	e := pagina.Estilos{Iconos: pagina.IconosUnicode, Color: true, Oscuro: true}
+	*p.estilos = e
+	if fila := p.fila(adaptador{Agente: "claude"}); !strings.Contains(fila, "\x1b[") || !strings.Contains(fila, "CL") {
+		t.Fatalf("el código va en su color: %q", fila)
+	}
+	if fila := p.fila(adaptador{Agente: "claude"}); !strings.Contains(fila, "242;138;79") {
+		t.Fatalf("de noche, linea-claude-noche (#f28a4f): %q", fila)
+	}
+}
+
+// TestFiltroDeAgentes: la línea de los estados es el filtro de la Web UI; ← → lo cambia y la lista enseña solo esos.
+func TestFiltroDeAgentes(t *testing.T) {
+	p, _, _ := abierta(t)
+	if v := p.Vista(); !strings.Contains(v, "[Todos (1)]") {
+		t.Fatalf("empieza con todos:\n%s", v)
+	}
+	p.Update(tecla("right"))
+	if v := p.Vista(); !strings.Contains(v, "[Listos (1)]") || !strings.Contains(v, "simulado") {
+		t.Fatalf("→ deja los listos:\n%s", v)
+	}
+	p.Update(tecla("right"))
+	if v := p.Vista(); !strings.Contains(v, "[Falta conectar (0)]") || strings.Contains(v, "simulado") {
+		t.Fatalf("→ deja los que falta conectar:\n%s", v)
+	}
+	p.Update(tecla("left"))
+	p.Update(tecla("left"))
+	p.Update(tecla("left"))
+	if v := p.Vista(); !strings.Contains(v, "[No instalados (0)]") {
+		t.Fatalf("← da la vuelta:\n%s", v)
+	}
+	var pie []string
+	for _, k := range p.Teclas() {
+		pie = append(pie, k.Tecla+" "+k.Accion)
+	}
+	if !strings.Contains(strings.Join(pie, " · "), "← → filtro") {
+		t.Fatalf("el pie dice cómo se filtra: %v", pie)
 	}
 }
 
