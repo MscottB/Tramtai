@@ -354,15 +354,30 @@ func TestHistorialFiltroPunto(t *testing.T) {
 	if n := cuantas(a, textos...); n != 3 {
 		t.Fatalf("sin filtro salen las 3: %d", n)
 	}
+	// Cada filtro lo aplica el servicio: se espera a ver su lista antes de comprobarla (regla 20).
+	esperar := func(n int, quiere ...string) {
+		t.Helper()
+		a.Hasta(func() bool {
+			v := a.Vista()
+			for _, q := range quiere {
+				if !strings.Contains(v, q) {
+					return false
+				}
+			}
+			return cuantas(a, textos...) == n
+		})
+	}
 	// IrA{historial, FiltroPunto{«tienda»}}: llega después de Iniciar y filtra por la API.
 	a.Correr(a.P.Iniciar(alto(t, cli, id, 30)))
 	a.Entregar(pagina.FiltroPunto{Nombre: "tienda"})
+	esperar(1, "de la tienda", "Origen: API tienda")
 	v := a.Vista()
 	if cuantas(a, textos...) != 1 || !strings.Contains(v, "de la tienda") || !strings.Contains(v, "Origen: API tienda") {
 		t.Fatalf("solo la API tienda, y la barra dice el origen:\n%s", v)
 	}
 	// Un filtro ya armado.
 	a.Entregar(pagina.FiltroPunto{Nombre: "o:terminal"})
+	esperar(1, "desde la terminal", "Origen: Terminal")
 	if v := a.Vista(); cuantas(a, textos...) != 1 || !strings.Contains(v, "desde la terminal") || !strings.Contains(v, "Origen: Terminal") {
 		t.Fatalf("solo el origen terminal:\n%s", v)
 	}
@@ -382,6 +397,7 @@ func TestHistorialFiltroPunto(t *testing.T) {
 	if a.P.EnCampo() {
 		t.Fatal("Intro cierra el selector")
 	}
+	esperar(1, "de la otra", "Origen: Grupo web")
 	if v := a.Vista(); cuantas(a, textos...) != 1 || !strings.Contains(v, "de la otra") || !strings.Contains(v, "Origen: Grupo web") {
 		t.Fatalf("el grupo web:\n%s", v)
 	}
@@ -391,12 +407,16 @@ func TestHistorialFiltroPunto(t *testing.T) {
 		t.Fatalf("Esc cierra el selector y conserva el filtro:\n%s", a.Vista())
 	}
 	a.Pulsar("l")
+	esperar(3, "Origen: Todos los orígenes")
 	if cuantas(a, textos...) != 3 || !strings.Contains(a.Vista(), "Origen: Todos los orígenes") {
 		t.Fatalf("l quita los filtros:\n%s", a.Vista())
 	}
 	// El detalle de una petición de una API dice la API y su grupo.
 	a.Entregar(pagina.FiltroPunto{Nombre: "otra"})
-	if a.Pulsar("enter"); !strings.Contains(a.Vista(), "Origen: API otra · web") {
+	esperar(1, "de la otra", "Origen: API otra")
+	a.Pulsar("enter")
+	a.HastaVer("Origen: API otra · web")
+	if !strings.Contains(a.Vista(), "Origen: API otra · web") {
 		t.Fatalf("el origen con el grupo:\n%s", a.Vista())
 	}
 }

@@ -410,6 +410,7 @@
           "salida": { "type": "string", "description": "Con herramientas, solo el texto para el usuario" },
           "llamadas": { "type": "array", "description": "Con herramientas, en un trabajo completado: las que pidió el agente", "items": { "$ref": "#/components/schemas/Llamada" } },
           "intento_de": { "type": "string" },
+          "intento": { "type": "integer", "minimum": 1, "description": "Agente de la cadena de respaldo que lleva la petición: 1 el principal, sube 1 en cada salto; un reintento lo conserva" },
           "punto_acceso": { "type": "string" },
           "origen": { "type": "string" },
           "modelo_enviado": { "type": "string" },
@@ -446,7 +447,7 @@
           "modelo": { "type": "string" },
           "api": { "type": "string", "description": "API por aplicación que lo envió; vacía, la principal" },
           "origen": { "type": "string" },
-          "intento": { "type": "integer", "minimum": 1, "description": "Agentes que probó desde que se abrió el flujo: sube cada vez que el respaldo pasa a otro" },
+          "intento": { "type": "integer", "minimum": 1, "description": "El intento guardado de la petición (el de Trabajo): 1 el agente principal, sube 1 en cada salto al respaldo; llega igual aunque el flujo se abra después del salto" },
           "codigo_error": { "type": "string" },
           "creado": { "type": "string", "format": "date-time", "description": "Cuándo se aceptó la petición" },
           "actualizado": { "type": "string", "format": "date-time" }

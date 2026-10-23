@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"tramtai/internal/nucleo"
+	"tramtai/internal/persistencia"
 )
 
 // MaximoFlujos son los flujos de eventos de la instancia abiertos a la vez (GET /api/v1/eventos): cada uno lee la
@@ -32,11 +33,11 @@ func (p *Planificador) ReservarFlujo() (liberar func(), ok bool) {
 }
 
 // Vivos son los trabajos de la instancia sin terminar y los terminados desde «desde» (ver Almacen.Vivos).
-func (p *Planificador) Vivos(ctx context.Context, punto string, desde, despues time.Time) ([]nucleo.Trabajo, error) {
+func (p *Planificador) Vivos(ctx context.Context, punto string, desde time.Time, despues persistencia.Cursor) ([]nucleo.Trabajo, error) {
 	return p.almacen.Vivos(ctx, p.opc.Instancia, punto, desde, despues)
 }
 
 // CambiadosDesde son los trabajos de la instancia que cambiaron después de «desde» (ver Almacen.CambiadosDesde).
-func (p *Planificador) CambiadosDesde(ctx context.Context, punto string, desde time.Time) ([]nucleo.Trabajo, error) {
+func (p *Planificador) CambiadosDesde(ctx context.Context, punto string, desde persistencia.Cursor) ([]nucleo.Trabajo, error) {
 	return p.almacen.CambiadosDesde(ctx, p.opc.Instancia, punto, desde)
 }

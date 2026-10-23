@@ -46,6 +46,9 @@ type Trabajo struct {
 	Huella       string             `json:"-"`
 	Salida       string             `json:"salida,omitempty"`
 	IntentoDe    string             `json:"intento_de,omitempty"`
+	// Intento es el agente de la cadena de respaldo que lleva la petición: 1 el principal, y sube 1 en cada salto. Lo
+	// guarda el servicio (no viene en la solicitud) y un reintento lo conserva.
+	Intento int `json:"intento"`
 	// PuntoAcceso es el punto de acceso que creó el trabajo (uso por aplicación).
 	PuntoAcceso string `json:"punto_acceso,omitempty"`
 	// Origen es de dónde llegó la petición (DesdeProbar, DesdeCLI…); vacío en los trabajos anteriores.

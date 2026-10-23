@@ -21,7 +21,7 @@ const (
 	margenCambios = 50 * time.Millisecond
 )
 
-// visto es lo último que un flujo envió de un trabajo; intento cuenta los agentes que probó desde que se abrió el flujo.
+// visto es lo último que un flujo envió de un trabajo; el intento es el guardado, no se deduce de los cambios vistos.
 type visto struct {
 	estado, agente string
 	intento        int
@@ -40,14 +40,13 @@ func olvidar(vistos map[string]visto, antes time.Time) {
 }
 
 // leerCambios lee los trabajos cambiados después de desde; es variable para que las pruebas cuenten las lecturas.
-var leerCambios = func(s *Servidor, ctx context.Context, punto string, desde time.Time) ([]nucleo.Trabajo, error) {
+var leerCambios = func(s *Servidor, ctx context.Context, punto string, desde persistencia.Cursor) ([]nucleo.Trabajo, error) {
 	return s.Planificador.CambiadosDesde(ctx, punto, desde)
 }
 
-// porPaginas envía lo que lee desde desde y, mientras las páginas lleguen llenas, sigue desde el último.
-// shortcut: si otro trabajo comparte al nanosegundo la hora del último de una página llena se salta hasta su próximo
-// cambio; si alguna vez pasa, paginar también por rowid.
-func porPaginas(desde time.Time, leer func(time.Time) ([]nucleo.Trabajo, error), enviar func(nucleo.Trabajo) error) error {
+// porPaginas envía lo que lee desde desde y, mientras las páginas lleguen llenas, sigue tras el último (por hora e id:
+// los que comparten su hora no se pierden).
+func porPaginas(desde persistencia.Cursor, leer func(persistencia.Cursor) ([]nucleo.Trabajo, error), enviar func(nucleo.Trabajo) error) error {
 	for {
 		pagina, err := leer(desde)
 		if err != nil {
@@ -61,7 +60,7 @@ func porPaginas(desde time.Time, leer func(time.Time) ([]nucleo.Trabajo, error),
 		if len(pagina) < persistencia.LimiteCambios {
 			return nil
 		}
-		desde = pagina[len(pagina)-1].ActualizadoEn
+		desde = persistencia.Tras(pagina[len(pagina)-1])
 	}
 }
 
@@ -84,12 +83,9 @@ func (s *Servidor) eventosInstancia(w http.ResponseWriter, r *http.Request) {
 	vistos := map[string]visto{}
 	enviar := func(t nucleo.Trabajo) error {
 		previo, conocido := vistos[t.ID]
-		v := visto{estado: string(t.Estado), agente: t.Solicitud.Agente, intento: max(previo.intento, 1), terminado: t.Estado.Terminal(), cambio: t.ActualizadoEn}
-		if conocido && previo.agente != v.agente {
-			v.intento = previo.intento + 1
-		}
+		v := visto{estado: string(t.Estado), agente: t.Solicitud.Agente, intento: t.Intento, terminado: t.Estado.Terminal(), cambio: t.ActualizadoEn}
 		vistos[t.ID] = v
-		if conocido && v.estado == previo.estado && v.agente == previo.agente {
+		if conocido && v.estado == previo.estado && v.agente == previo.agente && v.intento == previo.intento {
 			return nil
 		}
 		return f.json("trabajo", contrato.EventoTrabajo{ID: t.ID, Estado: v.estado, Etapa: t.Estado.Etapa(), Agente: v.agente,
@@ -100,7 +96,7 @@ func (s *Servidor) eventosInstancia(w http.ResponseWriter, r *http.Request) {
 	aviso := s.Planificador.Avisos() // antes de la foto: un cambio entre la lectura y la espera no se pierde
 	ultimo := time.Now().UTC()
 	terminadosDesde := ultimo.Add(-recientesVivos)
-	err := porPaginas(time.Time{}, func(despues time.Time) ([]nucleo.Trabajo, error) {
+	err := porPaginas(persistencia.Cursor{}, func(despues persistencia.Cursor) ([]nucleo.Trabajo, error) {
 		return s.Planificador.Vivos(ctx, punto, terminadosDesde, despues)
 	}, enviar)
 	if err != nil || f.json("foto", struct{}{}) != nil {
@@ -120,7 +116,7 @@ func (s *Servidor) eventosInstancia(w http.ResponseWriter, r *http.Request) {
 		aviso = s.Planificador.Avisos()
 		desde := ultimo
 		ultimo = time.Now().UTC()
-		err := porPaginas(desde.Add(-margenCambios), func(d time.Time) ([]nucleo.Trabajo, error) {
+		err := porPaginas(persistencia.Cursor{En: desde.Add(-margenCambios)}, func(d persistencia.Cursor) ([]nucleo.Trabajo, error) {
 			return leerCambios(s, ctx, punto, d)
 		}, enviar)
 		if err != nil {

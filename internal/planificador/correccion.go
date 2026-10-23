@@ -35,7 +35,7 @@ func (p *Planificador) Corregir(ctx context.Context, id string) (nucleo.Trabajo,
 	}
 	solicitud := conCorreccion(anterior.Solicitud, anterior.Salida, problemas, anterior.MensajeError)
 	solicitud.Salida.Reintentos = 0 // la corrección manual es una sola
-	t, _, err := p.aceptar(nucleo.ConOrigenPeticion(ctx, anterior.Origen), solicitud, "", anterior.ID, anterior.PuntoAcceso)
+	t, _, err := p.aceptar(nucleo.ConOrigenPeticion(ctx, anterior.Origen), solicitud, "", anterior, anterior.PuntoAcceso)
 	return t, err
 }
 

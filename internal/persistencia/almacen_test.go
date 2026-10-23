@@ -218,6 +218,38 @@ func TestMigracionV1AV2ConservaTrabajos(t *testing.T) {
 	}
 }
 
+func TestMigracionV9AV10IntentoUno(t *testing.T) {
+	ruta := filepath.Join(t.TempDir(), "instancia.db")
+	a, err := Abrir(ruta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Recrea una base v9, sin la columna intento, con un trabajo.
+	for _, tabla := range []string{"trabajos", "eventos", "idempotencia", "consumo", "avisos_presupuesto", "modelos_vistos"} {
+		a.db.Exec("DROP TABLE " + tabla)
+	}
+	for _, m := range migraciones[:9] {
+		if _, err := a.db.Exec(m); err != nil {
+			t.Fatal(err)
+		}
+	}
+	a.db.Exec("PRAGMA user_version = 9")
+	if _, err := a.db.Exec(`INSERT INTO trabajos (id, instancia, estado, solicitud, huella, creado_en, actualizado_en)
+		VALUES ('trabajo_v9', 'global', 'completado', '{"agente":"simulado"}', 'h', '2026-10-12T00:00:00.000000000Z', '2026-10-12T00:00:00.000000000Z')`); err != nil {
+		t.Fatal(err)
+	}
+	a.Cerrar()
+
+	b, err := Abrir(ruta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cerrar()
+	if tr, err := b.Obtener(ctx, "trabajo_v9"); err != nil || tr.Estado != nucleo.Completado || tr.Solicitud.Agente != "simulado" || tr.Intento != 1 {
+		t.Fatalf("el trabajo v9 se conserva con intento 1: %+v %v", tr, err)
+	}
+}
+
 func TestUsoYModeloSeGuardan(t *testing.T) {
 	a := abrir(t)
 	tr := trabajo("global", "x")
@@ -434,6 +466,30 @@ func TestCambiarAgente(t *testing.T) {
 	}
 	if nucleo.CodigoDe(a.CambiarAgente(ctx, "trabajo_inexistente", "x", "", "", nil)) != nucleo.CodigoNoEncontrado {
 		t.Fatal("un trabajo inexistente debe dar no_encontrado")
+	}
+}
+
+// El intento empieza en 1, sube con cada salto de agente y se mantiene al reencolar.
+func TestCambiarAgenteSubeIntento(t *testing.T) {
+	a := abrir(t)
+	tr := aceptar(t, a, trabajo("global", "hola"), "")
+	if c, _ := a.Obtener(ctx, tr.ID); c.Intento != 1 || tr.Intento != 1 {
+		t.Fatalf("al aceptar, intento 1: %d %d", c.Intento, tr.Intento)
+	}
+	avanzar(t, a, tr.ID, nucleo.EsperandoAgente)
+	for quiere := 2; quiere <= 3; quiere++ {
+		if err := a.CambiarAgente(ctx, tr.ID, "otro", "", "", nil); err != nil {
+			t.Fatal(err)
+		}
+		if c, _ := a.Obtener(ctx, tr.ID); c.Intento != quiere {
+			t.Fatalf("tras el salto, intento %d: %d", quiere, c.Intento)
+		}
+	}
+	if _, _, err := a.Recuperar(ctx, "global"); err != nil {
+		t.Fatal(err)
+	}
+	if c, _ := a.Obtener(ctx, tr.ID); c.Estado != nucleo.EnCola || c.Intento != 3 {
+		t.Fatalf("reencolado, conserva el intento: %s %d", c.Estado, c.Intento)
 	}
 }
 
