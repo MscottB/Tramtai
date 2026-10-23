@@ -2,16 +2,19 @@ package tui
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/pagina"
+	"tramtai/internal/tui/paginas/inicio"
 )
 
 // paginaBorra pregunta antes de borrar con x y apunta si se confirmó.
@@ -176,5 +179,103 @@ func TestVolver(t *testing.T) {
 	m.Update(pagina.Volver{})
 	if m.actual != pagina.PaginaInicio {
 		t.Fatalf("ir por el menú empieza una historia nueva: %s", m.actual)
+	}
+}
+
+// paginaOcultable cuenta los avisos de salir y volver, como la de Inicio con su flujo en vivo.
+type paginaOcultable struct {
+	paginaFalsa
+	ocultada, mostrada int
+}
+
+func (p *paginaOcultable) Ocultar()         { p.ocultada++ }
+func (p *paginaOcultable) Mostrar() tea.Cmd { p.mostrada++; return nil }
+
+// TestOcultableSeAvisaAlSalirYAlVolver: una página con algo en vivo se entera de que deja de verse (por el menú, un
+// atajo, IrA o ?) y de que vuelve sin iniciarse de nuevo (Volver). Si vuelve con Iniciar no hace falta Mostrar, y
+// cambiar de espacio estando en ella no la oculta.
+func TestOcultableSeAvisaAlSalirYAlVolver(t *testing.T) {
+	m := nuevo(Opciones{})
+	o := &paginaOcultable{}
+	m.paginas["inicio"] = o
+	m.iniciar(nil)
+	m.Update(tecla("3"))
+	if o.ocultada != 1 {
+		t.Fatalf("un atajo la oculta: %d", o.ocultada)
+	}
+	m.Update(tecla("1"))
+	if o.iniciada != 2 || o.mostrada != 0 {
+		t.Fatalf("por un atajo se inicia de nuevo, sin Mostrar: %d %d", o.iniciada, o.mostrada)
+	}
+	m.Update(tecla("?"))
+	if o.ocultada != 2 || m.actual != pagina.PaginaAyuda {
+		t.Fatalf("? la oculta: %d", o.ocultada)
+	}
+	m.Update(pagina.Volver{})
+	if m.actual != pagina.PaginaInicio || o.mostrada != 1 || o.iniciada != 2 {
+		t.Fatalf("Volver la muestra sin iniciarla: %s %d %d", m.actual, o.mostrada, o.iniciada)
+	}
+	m.Update(pagina.CambioEspacio{ID: "notas_1"})
+	if o.ocultada != 2 || o.iniciada != 3 {
+		t.Fatalf("cambiar de espacio no la oculta, la inicia: %d %d", o.ocultada, o.iniciada)
+	}
+	m.Update(pagina.IrA{Pagina: pagina.PaginaEjecutar})
+	m.Update(pagina.CambioEspacio{ID: "global"})
+	m.Update(pagina.Volver{}) // su Ctx se canceló al cambiar de espacio: Volver la inicia
+	if o.mostrada != 1 || o.iniciada != 4 {
+		t.Fatalf("si su contexto se canceló, Volver la inicia y no la muestra: %d %d", o.mostrada, o.iniciada)
+	}
+}
+
+// TestAtajosDeInicioComoElMenu: el número que Inicio escribe junto a cada paso es el de la tecla que lleva a su página.
+func TestAtajosDeInicioComoElMenu(t *testing.T) {
+	for n := 1; n <= paginasConAtajo; n++ {
+		clave, _ := atajo(strconv.Itoa(n))
+		if got := inicio.Atajo(clave); got != strconv.Itoa(n) {
+			t.Errorf("%s: Inicio dice %q y la tecla es %d", clave, got, n)
+		}
+	}
+}
+
+func TestInicioRegistrada(t *testing.T) {
+	m := nuevo(Opciones{})
+	if _, pendiente := m.pagina(pagina.PaginaInicio).(*proximamente); pendiente {
+		t.Fatal("Inicio ya no es «Próximamente»")
+	}
+}
+
+func TestAgentesRegistrada(t *testing.T) {
+	m := nuevo(Opciones{})
+	if _, pendiente := m.pagina(pagina.PaginaAgentes).(*proximamente); pendiente {
+		t.Fatal("Agentes ya no es «Próximamente»")
+	}
+}
+
+// TestConfirmacionCabeEn60x20: una pregunta larga no se sale del área ni esconde el pie «s confirma · Esc cancela».
+func TestConfirmacionCabeEn60x20(t *testing.T) {
+	m := nuevo(Opciones{})
+	m.Update(tea.WindowSizeMsg{Width: 60, Height: 20})
+	largo := strings.TrimSpace(strings.Repeat("Una frase de la pregunta que ocupa su sitio en la caja y la hace crecer. ", 24))
+	m.pregunta = &comp.Confirmacion{Texto: largo}
+	v := m.vista()
+	if !strings.Contains(v, "s confirma · Esc cancela") {
+		t.Fatalf("el pie de la confirmación se ve a 60×20:\n%s", v)
+	}
+	if lipgloss.Height(v) != 20 || lipgloss.Width(v) > 60 {
+		t.Fatalf("la vista mide %dx%d:\n%s", lipgloss.Width(v), lipgloss.Height(v), v)
+	}
+}
+
+func TestEjecutarRegistrada(t *testing.T) {
+	m := nuevo(Opciones{})
+	if _, pendiente := m.pagina(pagina.PaginaEjecutar).(*proximamente); pendiente {
+		t.Fatal("Probar ya no es «Próximamente»")
+	}
+}
+
+func TestHistorialRegistrada(t *testing.T) {
+	m := nuevo(Opciones{})
+	if _, pendiente := m.pagina(pagina.PaginaHistorial).(*proximamente); pendiente {
+		t.Fatal("Historial ya no es «Próximamente»")
 	}
 }

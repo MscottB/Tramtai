@@ -6,7 +6,7 @@ import en from '../src/idiomas/en.ts'
 import { temas } from '../src/ayuda/indice.ts'
 import { plantillas } from '../src/plantillas.ts'
 import { aEsquema } from '../src/esquemaCampos.ts'
-import { ayudaDe, generar, textosDe, plantillasDe, URL_AYUDA, type Tema } from './terminal-datos.ts'
+import { ayudaDe, CLAVES_AGENTES, CLAVES_EJECUTAR, CLAVES_HISTORIAL, CLAVES_INICIO, generar, textosDe, plantillasDe, URL_AYUDA, type Tema } from './terminal-datos.ts'
 
 const fuente = { temas, plantillas, es, en, ejemplos: () => [{ id: 'curl-nativa', codigo: 'a' }, { id: 'python-nativa', codigo: 'b' },
   { id: 'node-nativa', codigo: 'c' }, { id: 'go-nativa', codigo: 'd' }, { id: 'python', codigo: 'e' }] }
@@ -72,6 +72,62 @@ test('textos trae todas las menu.* y la Ayuda de la interfaz', () => {
   }
   assert.equal(textos.es['menu.inicio'], 'Inicio')
   assert.equal(textos.es['menu.grupo.empezar'], 'Empezar')
+})
+
+test('los textos de Agentes existen en los dos idiomas y salen tal cual', () => {
+  const textos = textosDe({ es, en })
+  for (const [lengua, fuenteTextos] of [['es', es], ['en', en]] as const) {
+    for (const k of CLAVES_AGENTES) {
+      const origen = (fuenteTextos as Record<string, string>)[k]
+      assert.ok(origen, `${lengua}: falta ${k}`)
+      assert.equal(textos[lengua][k], origen.replace(/\*\*/g, '').replace(/<([^<>]*)>/g, '[$1]'), `${lengua}: ${k}`)
+    }
+  }
+  assert.equal(textos.en['agente.listo'], 'Ready')
+  assert.match(textos.es['agentes.usaClave'], /\{cli\}/)
+})
+
+test('los textos de Inicio existen en los dos idiomas y salen tal cual', () => {
+  const textos = textosDe({ es, en })
+  for (const [lengua, fuenteTextos] of [['es', es], ['en', en]] as const) {
+    for (const k of CLAVES_INICIO) {
+      const origen = (fuenteTextos as Record<string, string>)[k]
+      assert.ok(origen, `${lengua}: falta ${k}`)
+      assert.equal(textos[lengua][k], origen.replace(/\*\*/g, '').replace(/<([^<>]*)>/g, '[$1]'), `${lengua}: ${k}`)
+    }
+  }
+  assert.equal(textos.es['inicio.paso1'], 'Conecta al menos un agente')
+  assert.match(textos.es['inicio.paso4'], /\{sistema\}/)
+})
+
+test('los textos del Historial y los títulos de error existen en los dos idiomas y salen tal cual', () => {
+  const textos = textosDe({ es, en })
+  for (const [lengua, fuenteTextos] of [['es', es], ['en', en]] as const) {
+    const origen = fuenteTextos as Record<string, string>
+    for (const k of CLAVES_HISTORIAL) {
+      assert.ok(origen[k], `${lengua}: falta ${k}`)
+      assert.equal(textos[lengua][k], origen[k].replace(/\*\*/g, '').replace(/<([^<>]*)>/g, '[$1]'), `${lengua}: ${k}`)
+    }
+    const errores = Object.keys(origen).filter((k) => k.startsWith('error.'))
+    assert.ok(errores.length >= 40)
+    for (const k of errores) assert.equal(textos[lengua][k], origen[k], `${lengua}: ${k}`)
+  }
+  assert.equal(textos.es['historial.solicitud'], 'Mensaje')
+  assert.equal(textos.es['error.correccion_no_disponible'], 'Esta petición no se puede corregir')
+  assert.match(textos.es['historial.vaciado'], /\{n\}/)
+})
+
+test('los textos de Probar existen en los dos idiomas y salen tal cual', () => {
+  const textos = textosDe({ es, en })
+  for (const [lengua, fuenteTextos] of [['es', es], ['en', en]] as const) {
+    const origen = fuenteTextos as Record<string, string>
+    for (const k of CLAVES_EJECUTAR) {
+      assert.ok(origen[k], `${lengua}: falta ${k}`)
+      assert.equal(textos[lengua][k], origen[k].replace(/\*\*/g, '').replace(/<([^<>]*)>/g, '[$1]'), `${lengua}: ${k}`)
+    }
+  }
+  assert.equal(textos.es['codigo.tuClave'], '[tu clave]')
+  assert.match(textos.es['ejecutar.adjuntarLimites'], /\{n\}.*\{mb\}.*\{texto\}/)
 })
 
 test('las plantillas salen con su nombre, instrucciones y el esquema de esquemaCampos', () => {

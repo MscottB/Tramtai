@@ -358,6 +358,43 @@ func TestClienteRegistro(t *testing.T) {
 	}
 }
 
+// TestClienteCorregir: corregir es reintentar con {"corregir": true}; solo vale para un trabajo que no cumplía el esquema
+// y conservó su respuesta, y el nuevo es otro trabajo.
+func TestClienteCorregir(t *testing.T) {
+	cli, _ := servicioDePrueba(t, "")
+	ctx := context.Background()
+	if _, err := cli.Activar(ctx, "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	// El agente simulado devuelve el mensaje tal cual: {"total":"diez"} no cumple el esquema.
+	malo, err := cli.Crear(ctx, "global", nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: `{"total":"diez"}`}},
+		Salida: nucleo.ConfigSalida{Formato: "json", ConservarSalidaInvalida: true,
+			Esquema: json.RawMessage(`{"type":"object","required":["total"],"properties":{"total":{"type":"number"}}}`)}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	terminado(t, cli, "global", malo.ID)
+	if m, err := cli.Trabajo(ctx, "global", malo.ID); err != nil || m.CodigoError != nucleo.CodigoSalidaNoCumpleEsquema || m.Salida == "" {
+		t.Fatalf("no cumple el esquema y conserva la respuesta: %+v %v", m, err)
+	}
+	nuevo, err := cli.Corregir(ctx, "global", malo.ID)
+	if err != nil || nuevo.ID == "" || nuevo.ID == malo.ID {
+		t.Fatalf("corregir da otro trabajo: %+v %v", nuevo, err)
+	}
+	// Uno completado no se puede corregir: el servicio lo dice con su código.
+	bueno, err := cli.Crear(ctx, "global", hola)
+	if err != nil {
+		t.Fatal(err)
+	}
+	terminado(t, cli, "global", bueno.ID)
+	if _, err := cli.Corregir(ctx, "global", bueno.ID); nucleo.CodigoDe(err) != nucleo.CodigoCorreccionNoDisponible {
+		t.Fatalf("un trabajo sin fallo de esquema no se corrige: %v", err)
+	}
+	if _, err := cli.Corregir(ctx, "global", "no-existe"); nucleo.CodigoDe(err) != nucleo.CodigoNoEncontrado {
+		t.Fatalf("un trabajo que no existe: %v", err)
+	}
+}
+
 func TestClienteVaciar(t *testing.T) {
 	cli, _ := servicioDePrueba(t, "")
 	ctx := context.Background()
@@ -578,5 +615,69 @@ func TestClienteEventosInstancia(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("el flujo no terminó al cancelar el contexto")
+	}
+}
+
+// flujoDePrueba es un servidor que abre un flujo SSE, manda lo que diga mandar y se queda abierto hasta que el cliente
+// se vaya.
+func flujoDePrueba(t *testing.T, mandar func(w http.ResponseWriter, f http.Flusher, r *http.Request)) *Cliente {
+	t.Helper()
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		f := w.(http.Flusher)
+		w.WriteHeader(http.StatusOK)
+		f.Flush()
+		mandar(w, f, r)
+		<-r.Context().Done()
+	}))
+	t.Cleanup(ts.Close)
+	return &Cliente{Base: ts.URL, token: "t", http: &http.Client{}}
+}
+
+// TestEventosInstanciaSinActividad: un flujo que se queda mudo más del plazo se da por muerto (ErrSinActividad) aunque
+// el contexto siga vivo; con latidos (comentarios) sigue hasta que se cancele.
+func TestEventosInstanciaSinActividad(t *testing.T) {
+	mudo := flujoDePrueba(t, func(w http.ResponseWriter, f http.Flusher, _ *http.Request) {
+		_, _ = w.Write([]byte("event: foto\ndata: {}\n\n"))
+		f.Flush()
+	})
+	var tipos []string
+	err := mudo.EventosInstanciaVigilado(context.Background(), "global", 150*time.Millisecond, func(tipo string, _ []byte) error {
+		tipos = append(tipos, tipo)
+		return nil
+	})
+	if !errors.Is(err, ErrSinActividad) || !slices.Equal(tipos, []string{"foto"}) {
+		t.Fatalf("mudo: err %v, eventos %v", err, tipos)
+	}
+
+	latidos := flujoDePrueba(t, func(w http.ResponseWriter, f http.Flusher, r *http.Request) {
+		for r.Context().Err() == nil {
+			_, _ = w.Write([]byte(": latido\n\n"))
+			f.Flush()
+			time.Sleep(40 * time.Millisecond)
+		}
+	})
+	ctx, cancelar := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancelar()
+	if err := latidos.EventosInstanciaVigilado(ctx, "global", 150*time.Millisecond, func(string, []byte) error { return nil }); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("con latidos solo termina el contexto: %v", err)
+	}
+
+	// Sin plazo (EventosInstancia) no se vigila nada.
+	ctx2, cancelar2 := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	defer cancelar2()
+	if err := mudo.EventosInstancia(ctx2, "global", func(string, []byte) error { return nil }); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("sin vigilancia: %v", err)
+	}
+}
+
+func TestClienteInstancia(t *testing.T) {
+	cli, _ := servicioDePrueba(t, "")
+	if _, err := cli.Activar(context.Background(), "global", ""); err != nil {
+		t.Fatal(err)
+	}
+	r, err := cli.Instancia(context.Background(), "global")
+	if err != nil || r.Base != cli.Base || r.Trabajos == nil || r.AppConClave24h != 0 {
+		t.Fatalf("resumen: %+v %v", r, err)
 	}
 }

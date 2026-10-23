@@ -18,6 +18,10 @@ import (
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
+	"tramtai/internal/tui/paginas/agentes"
+	"tramtai/internal/tui/paginas/ejecutar"
+	"tramtai/internal/tui/paginas/historial"
+	"tramtai/internal/tui/paginas/inicio"
 )
 
 // Opciones configura la terminal.
@@ -39,7 +43,12 @@ func Ejecutar(o Opciones) error {
 const anchoMinimo, altoMinimo = 60, 20
 
 // fabricas crea cada página por su clave del menú; las que aún no están enseñan «Próximamente».
-var fabricas = map[string]func(idioma string) pagina.Pagina{}
+var fabricas = map[string]func(idioma string) pagina.Pagina{
+	pagina.PaginaInicio:    inicio.Nueva,
+	pagina.PaginaAgentes:   agentes.Nueva,
+	pagina.PaginaEjecutar:  ejecutar.Nueva,
+	pagina.PaginaHistorial: historial.Nueva,
+}
 
 type modelo struct {
 	o           Opciones
@@ -112,7 +121,7 @@ func (m *modelo) iniciar(extra any) tea.Cmd {
 	m.cancelar[m.actual] = cancelar
 	ancho, alto := m.area()
 	cmd := m.pagina(m.actual).Iniciar(pagina.Contexto{Ctx: ctx, Cli: m.cli, Instancia: m.instancia, Idioma: m.idioma, Estilos: m.estilos,
-		Ancho: ancho, Alto: alto, Proyecto: m.o.Proyecto})
+		Ancho: ancho, Alto: alto, Proyecto: m.o.Proyecto, Datos: m.o.Datos})
 	if extra == nil {
 		return cmd
 	}
@@ -139,8 +148,18 @@ func (m *modelo) ir(clave string, extra any, historia bool) tea.Cmd {
 	case clave != m.actual:
 		m.pila = append(m.pila, m.actual)
 	}
+	if clave != m.actual {
+		m.ocultar()
+	}
 	m.actual, m.enMenu = clave, false
 	return m.iniciar(extra)
+}
+
+// ocultar avisa a la página actual, si lo quiere saber, de que deja de verse.
+func (m *modelo) ocultar() {
+	if o, ok := m.paginas[m.actual].(pagina.Ocultable); ok {
+		o.Ocultar()
+	}
 }
 
 // volver regresa a la página anterior tal como estaba; solo se vuelve a iniciar si su Ctx se canceló (cambió el
@@ -149,8 +168,12 @@ func (m *modelo) volver() tea.Cmd {
 	if len(m.pila) == 0 {
 		return nil
 	}
+	m.ocultar()
 	m.actual, m.pila, m.enMenu = m.pila[len(m.pila)-1], m.pila[:len(m.pila)-1], false
 	if _, viva := m.cancelar[m.actual]; viva {
+		if o, ok := m.pagina(m.actual).(pagina.Ocultable); ok {
+			return o.Mostrar()
+		}
 		return nil
 	}
 	return m.iniciar(nil)
@@ -307,7 +330,7 @@ func (m *modelo) vista() string {
 	var cuerpo string
 	switch {
 	case m.pregunta != nil:
-		cuerpo = lipgloss.Place(ancho, alto, lipgloss.Center, lipgloss.Center, m.pregunta.Vista(e, min(ancho-2, 60)))
+		cuerpo = lipgloss.Place(ancho, alto, lipgloss.Center, lipgloss.Center, m.pregunta.Vista(e, min(ancho-2, 60), alto))
 	case m.selector != nil:
 		caja := lipgloss.NewStyle().Border(e.Borde).Padding(0, 1).Render(m.selector.Vista(min(ancho-6, 60), min(alto-2, 16)))
 		cuerpo = lipgloss.Place(ancho, alto, lipgloss.Center, lipgloss.Center, caja)

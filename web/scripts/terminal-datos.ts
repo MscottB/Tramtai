@@ -27,8 +27,87 @@ export interface Tema { id: string; titulo: string; pagina?: string; resumen: st
 
 export const URL_AYUDA = URL_SITIO + 'ayuda/'
 
-// CLAVES_TEXTOS son, además de las menu.*, los textos que la terminal toma de la Web UI: los de la Ayuda de la interfaz.
-export const CLAVES_TEXTOS: string[] = [...CLAVES_UI]
+// CLAVES_AGENTES son los textos de la página Agentes que la terminal repite tal cual (estados, etiquetas, detalles y
+// confirmaciones). Los {placeholders} se quedan como están: Go los rellena con datos.Textof.
+export const CLAVES_AGENTES: string[] = [
+  'agente.listo', 'agente.noInstalado', 'agente.faltaClave', 'agente.revisar', 'agente.desconectado',
+  'agentes.subtitulo', 'agentes.filtroListos', 'agentes.filtroConectar', 'agentes.filtroInstalar',
+  'agentes.suscripcion', 'agentes.claveApi', 'agentes.listoSuscripcion', 'agentes.listoClave', 'agentes.cuenta',
+  'agentes.opcionSuscripcionTexto', 'agentes.desconectadoTexto', 'agentes.desconectarTitulo', 'agentes.desconectarTexto',
+  'agentes.conectado', 'agentes.desconectado', 'agentes.suscripcionActivada', 'agentes.claveActivada',
+  'agentes.confirmarTitulo', 'agentes.riesgoSuscripcion', 'agentes.aceptoRiesgo', 'agentes.usaClave', 'agentes.sesionNoResponde',
+  'agentes.version', 'agentes.sinVersion', 'agentes.autenticacion', 'agentes.enVivo', 'agentes.fragmentos', 'agentes.alTerminar',
+  'agentes.json', 'agentes.informaModelo', 'agentes.esfuerzo', 'agentes.predeterminadoCli', 'agentes.comoInstalar',
+  'comun.si', 'comun.no',
+]
+
+// CLAVES_INICIO son los textos de la página Inicio que la terminal repite tal cual: la dirección, la red en vivo, los
+// contadores, Primeros pasos y los avisos. Los {placeholders} los rellena Go con datos.Textof.
+export const CLAVES_INICIO: string[] = [
+  'inicio.direccion', 'inicio.red', 'inicio.redTexto', 'inicio.detalles', 'inicio.primerosPasos', 'inicio.guiaProgreso',
+  'inicio.paso1', 'inicio.paso1Detalle', 'inicio.comprobando', 'inicio.paso2', 'inicio.paso2Detalle', 'inicio.paso3', 'inicio.paso3Detalle',
+  'inicio.paso4', 'inicio.paso4Detalle', 'inicio.todoListo', 'inicio.todoListoTexto',
+  'inicio.tablero', 'inicio.completados', 'inicio.completadosDetalle', 'inicio.enCurso', 'inicio.enCursoDetalle', 'inicio.conError', 'inicio.conErrorDetalle',
+  'inicio.espaciosConProblema', 'inicio.espaciosConProblemaUno', 'inicio.verEspacios', 'claves.sugerencia', 'claves.crearApi',
+  'conversor.falta', 'conversor.error', 'conversor.redEmpresa', 'conversor.preparar', 'conversor.irAjustes',
+  'comun.ultimoDia', 'comun.ultimosDias', 'mapa.descripcion', 'mapa.principal',
+  'vivo.etapaCola', 'vivo.etapaPreparacion', 'vivo.etapaEjecucion', 'vivo.etapaValidacion', 'vivo.etapaLlegada', 'vivo.etapaFallida', 'vivo.etapaCancelada',
+  'vivo.enCurso', 'vivo.enCursoUno', 'vivo.hace',
+  'inicio.recientes', 'inicio.verHistorial', 'inicio.sinTrabajos', 'trabajo.entradaEliminada',
+  'estado.en_cola', 'estado.preparando_entrada', 'estado.esperando_agente', 'estado.ejecutando', 'estado.validando_salida',
+  'estado.cancelacion_solicitada', 'estado.completado', 'estado.fallido', 'estado.cancelado', 'estado.interrumpido',
+]
+
+// CLAVES_HISTORIAL son los textos del Historial que la terminal repite tal cual: filtros, orígenes, el detalle de una petición,
+// su registro, el esfuerzo, la ruta y las confirmaciones. Los títulos de error (error.*) entran todos, en textosDe. Los
+// {placeholders} los rellena Go con datos.Textof.
+export const CLAVES_HISTORIAL: string[] = [
+  'historial.todos', 'historial.sinFiltro', 'historial.vacio', 'historial.quitarFiltros', 'historial.irProbar', 'historial.estado',
+  'historial.solicitud', 'historial.agenteModelo', 'historial.api', 'historial.tokens', 'historial.expirada', 'historial.sinRespuesta',
+  'historial.todaviaEnCurso', 'historial.coste', 'historial.duracion', 'historial.identificador', 'historial.reintentar',
+  'historial.eliminarTitulo', 'historial.eliminarTexto', 'historial.vaciar', 'historial.vaciarTitulo', 'historial.vaciarTexto',
+  'historial.vaciado', 'historial.origen', 'historial.origenPrincipal', 'historial.todosOrigenes', 'historial.origenProbar',
+  'historial.origenTerminal', 'historial.origenCli', 'historial.origenApp', 'historial.grupo', 'historial.mostrando', 'historial.verMas',
+  'historial.esfuerzo',
+  'ejecutar.respuesta', 'ejecutar.corregir', 'comun.cancelar', 'comun.eliminar',
+  'ruta.cola', 'ruta.preparacion', 'ruta.ejecucion', 'ruta.validacion', 'ruta.llegada',
+  'registro.titulo', 'registro.noDisponible', 'registro.aviso', 'registro.delAgente', 'registro.entrada', 'registro.contexto',
+  'registro.correccion', 'registro.validacion', 'registro.validacionMas',
+  'esfuerzo.agente', 'esfuerzo.bajo', 'esfuerzo.medio', 'esfuerzo.alto', 'esfuerzo.muy_alto', 'esfuerzo.maximo', 'esfuerzo.delAgente',
+]
+
+// CLAVES_EJECUTAR son los textos de Probar que la terminal repite tal cual: la receta, el mensaje y los archivos, el esfuerzo,
+// la respuesta, «Ver como código» (también los comentarios de sus ejemplos), «Guardar como API» y las pruebas recientes. Los
+// {placeholders} los rellena Go con datos.Textof.
+export const CLAVES_EJECUTAR: string[] = [
+  'ejecutar.receta', 'ejecutar.mensaje', 'ejecutar.adjuntar', 'ejecutar.adjuntarLimites', 'ejecutar.formatos',
+  'ejecutar.perfilTrabajo', 'ejecutar.perfilHint', 'ejecutar.tiempo', 'ejecutar.tiempoHint', 'ejecutar.enviar', 'ejecutar.vacio',
+  'ejecutar.ejemplos', 'ejecutar.ejemplo1', 'ejecutar.ejemplo2', 'ejecutar.ejemplo3', 'ejecutar.nueva', 'ejecutar.recientes',
+  'ejecutar.verTodo', 'ejecutar.sinRecientes', 'ejecutar.usarDeNuevo', 'ejecutar.sinAdjuntos', 'ejecutar.corregirTexto',
+  'ejecutar.respuestaRecibida', 'ejecutar.guardarApi', 'ejecutar.actualizarApi', 'ejecutar.editando', 'ejecutar.dejarEditar',
+  'ejecutar.guardarTexto', 'ejecutar.apiCreada', 'ejecutar.apiCreadaTexto', 'ejecutar.apiActualizada',
+  'receta.instrucciones', 'receta.instruccionesHint', 'receta.modelo', 'receta.forzar', 'receta.respaldo', 'receta.respaldoHint',
+  'receta.salidaEstructurada', 'receta.salidaEstructuradaTexto', 'receta.plantillaCorta', 'receta.plantillaReemplazar',
+  'receta.plantillaReemplazarTexto', 'receta.esquema', 'receta.esquemaHint', 'receta.esquemaInvalido', 'receta.esquemaVacio',
+  'receta.reintentos', 'receta.reintentosHint', 'receta.reintentos0', 'receta.reintentosN', 'receta.reintentosNUno',
+  'esfuerzo.titulo', 'esfuerzo.hint', 'esfuerzo.agenteCon', 'esfuerzo.espacioCon', 'esfuerzo.noAdmite', 'modelo.esPredeterminado',
+  'codigo.boton', 'codigo.titulo', 'codigo.texto', 'codigo.tuClave', 'codigo.recetaEnApi',
+  'ejemplos.nativa', 'ejemplos.subir', 'ejemplos.jq', 'ejemplos.crear', 'ejemplos.seguir', 'ejemplos.seguirCurl', 'ejemplos.resultado',
+  'ejemplos.mensaje', 'conectar.hola', 'conectar.urlOpenai', 'conectar.clave',
+  'puntos.nombre', 'puntos.nombreHint', 'puntos.nombreRegla', 'puntos.grupo', 'puntos.grupoHint', 'puntos.claveUnaVez',
+  'comun.tokens',
+  // El editor de campos de «Respuesta con forma» (CamposEsquema.vue).
+  'receta.modo', 'receta.modoCampos', 'receta.modoJson', 'receta.esquemaAvanzado',
+  'campos.nombre', 'campos.tipo', 'campos.quitar', 'campos.descripcion', 'campos.descripcionEjemplo', 'campos.obligatorio',
+  'campos.opciones', 'campos.elemento', 'campos.minimoElementos', 'campos.maximoElementos', 'campos.minimo', 'campos.maximo',
+  'campos.anadir', ...['texto', 'numero', 'entero', 'si_no', 'fecha', 'opcion', 'lista', 'objeto'].map((t) => 'campos.tipo.' + t),
+  ...['texto', 'numero', 'objeto'].map((e) => 'campos.elemento.' + e),
+  ...['sin_nombre', 'repetido', 'sin_opciones', 'rango', 'sin_campos'].map((p) => 'campos.problema.' + p),
+]
+
+// CLAVES_TEXTOS son, además de las menu.* y las error.*, los textos que la terminal toma de la Web UI: los de la Ayuda de la
+// interfaz, los de Agentes, los de Inicio, los del Historial y los de Probar.
+export const CLAVES_TEXTOS: string[] = [...CLAVES_UI, ...CLAVES_AGENTES, ...CLAVES_INICIO, ...CLAVES_HISTORIAL, ...CLAVES_EJECUTAR]
 
 // plano deja un texto sin marcas: sin ** y con los <marcadores> entre corchetes.
 const plano = (s: string) => s.replace(/\*\*/g, '').replace(/<([^<>]*)>/g, '[$1]')
@@ -69,9 +148,10 @@ export function ayudaDe(temas: TemaWeb[], textos: Textos): Tema[] {
   })
 }
 
-// textosDe trae los nombres que la terminal comparte con la Web UI (menu.*) y los de CLAVES_TEXTOS.
+// textosDe trae los nombres que la terminal comparte con la Web UI (menu.*), los títulos de error (error.*) y los de
+// CLAVES_TEXTOS.
 export function textosDe(porIdioma: Record<Idioma, Textos>): Record<Idioma, Textos> {
-  const claves = [...Object.keys(porIdioma.es).filter((k) => k.startsWith('menu.')), ...CLAVES_TEXTOS]
+  const claves = [...Object.keys(porIdioma.es).filter((k) => k.startsWith('menu.') || k.startsWith('error.')), ...CLAVES_TEXTOS]
   return Object.fromEntries(IDIOMAS.map((i) => [i, Object.fromEntries(claves.map((k) => [k, plano(porIdioma[i][k] ?? k)]))])) as Record<Idioma, Textos>
 }
 

@@ -131,6 +131,7 @@ type Formulario struct {
 	tocados   map[string]bool
 	intentado bool
 	ancho     int
+	lineaFoco int // la línea de la etiqueta con el foco en la última Vista
 }
 
 // NuevoFormulario crea un formulario con el foco en el primer campo.
@@ -166,6 +167,53 @@ func (f *Formulario) Entero(id string) int {
 
 // Errores son los errores que se enseñan, por id de campo.
 func (f *Formulario) Errores() map[string]string { return f.errores }
+
+// Foco es el id del campo con el foco; "" sin campos.
+func (f *Formulario) Foco() string {
+	if len(f.campos) == 0 {
+		return ""
+	}
+	return f.campos[f.foco].ID
+}
+
+// Enfocar pone el foco en el campo id; si no existe, no cambia.
+func (f *Formulario) Enfocar(id string) {
+	for i, c := range f.campos {
+		if c.ID == id {
+			f.mover(i - f.foco)
+			return
+		}
+	}
+}
+
+// Poner cambia el valor de un campo desde fuera (una plantilla, una receta cargada): en una opción elige ese valor y en
+// un interruptor lo marca con "1". No cuenta como tocado.
+func (f *Formulario) Poner(id, valor string) {
+	c := f.campo(id)
+	if c.ID != id || id == "" {
+		return
+	}
+	switch c.tipo {
+	case campoArea:
+		c.area.SetValue(valor)
+	case campoTexto, campoNumero:
+		c.linea.SetValue(valor)
+	case campoOpcion:
+		if i := slices.Index(c.opciones, valor); i >= 0 {
+			c.opcion = i
+		}
+	case campoInterruptor:
+		c.marcado = valor != ""
+	}
+	f.validar()
+}
+
+// Revalidar vuelve a llamar a Validar: para un error que llega después de escribir (el que da el servicio).
+func (f *Formulario) Revalidar() { f.validar() }
+
+// LineaFoco es la línea en que la última Vista pintó la etiqueta del campo con el foco: la página que desplaza el
+// formulario la mantiene a la vista.
+func (f *Formulario) LineaFoco() int { return f.lineaFoco }
 
 // EnCampo es cierto en cualquier campo, también en una opción o un interruptor: mientras la página enseña el
 // formulario, devuelve esto en su EnCampo y así Tab, q y 1…7 son del formulario y no se escapan.
@@ -290,6 +338,7 @@ func (f *Formulario) Vista() string {
 		etiqueta := "  " + e.Texto.Render(c.Etiqueta)
 		if i == f.foco {
 			etiqueta = e.Acento.Render(e.Iconos.Cursor + " " + c.Etiqueta)
+			f.lineaFoco = strings.Count(b.String(), "\n")
 		}
 		b.WriteString(e.Recortar(etiqueta, f.ancho) + "\n")
 		switch c.tipo {
