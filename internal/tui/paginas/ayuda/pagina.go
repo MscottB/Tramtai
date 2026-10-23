@@ -45,7 +45,8 @@ type Pagina struct {
 	entrada  string // lo que se escribe en la búsqueda
 	antes    string // la búsqueda de antes de abrirla: Esc la devuelve
 	busqueda string // la búsqueda que filtra la lista
-	url      string // sin navegador: la dirección del tema, para copiarla
+	url      string // tras w, la dirección que se quiso abrir, para copiarla: en Linux sin escritorio puede no abrirse sin error
+	fallo    bool   // no se pudo abrir el navegador
 }
 
 // Nueva crea la página; su título es el del menú de la Web UI.
@@ -64,10 +65,25 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 			{Tecla: "/", Accion: idioma.T("busca")}, {Tecla: "w", Accion: idioma.T("Ver en la web")}, {Tecla: "y", Accion: idioma.T("copia la dirección")}}
 	}
 	teclas := []pagina.Tecla{{Tecla: "Enter", Accion: idioma.T("ver")}, {Tecla: "/", Accion: idioma.T("busca")}}
+	if p.destino() != "" {
+		teclas = append(teclas, pagina.Tecla{Tecla: "w", Accion: idioma.T("Ver en la web")}, pagina.Tecla{Tecla: "y", Accion: idioma.T("copia la dirección")})
+	}
 	if strings.TrimSpace(p.busqueda) != "" {
 		teclas = append(teclas, pagina.Tecla{Tecla: "Esc", Accion: idioma.T("quita la búsqueda")})
 	}
 	return teclas
+}
+
+// destino es la dirección que abren w e y: la del tema abierto o, en una búsqueda sin resultados, la de la Ayuda del
+// sitio, que tiene su buscador. En la lista con resultados no hay.
+func (p *Pagina) destino() string {
+	switch {
+	case p.abierto != nil:
+		return p.abierto.URL
+	case len(p.temas) > 0 && len(p.lista.Visibles()) == 0:
+		return strings.TrimSuffix(p.temas[0].URL, p.temas[0].ID+".html")
+	}
+	return ""
 }
 
 // Iniciar empieza en la lista de temas, sin búsqueda. Los datos van en el binario: no hay nada que cargar.
@@ -97,16 +113,14 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 			p.abrirTema(p.temas[i], false)
 		}
 	case msgWeb:
-		if p.abierto == nil || p.abierto.URL != m.url { // ya se ve otro tema
+		if p.destino() != m.url { // ya se ve otra cosa
 			return p, nil
 		}
-		if m.err != nil {
-			p.url = m.url
-			p.poner()
-			return p, nil
-		}
-		p.url = ""
+		p.url, p.fallo = m.url, m.err != nil
 		p.poner()
+		if m.err != nil {
+			return p, nil
+		}
 		return p, comp.Aviso(idioma.T("Abierto en el navegador"), comp.Info)
 	case tea.KeyPressMsg:
 		return p, p.tecla(m)
@@ -117,6 +131,15 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 // tecla atiende una tecla: la búsqueda abierta, el tema abierto o la lista. Esc cierra lo abierto y, sin nada, vuelve.
 func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 	t := k.String()
+	if url := p.destino(); !p.buscando && url != "" {
+		switch t {
+		case "w":
+			abrirURL := abrir
+			return func() tea.Msg { return msgWeb{url: url, err: abrirURL(url)} }
+		case "y":
+			return comp.Copiar(url)
+		}
+	}
 	switch {
 	case p.buscando:
 		p.teclaBusqueda(k)
@@ -130,11 +153,6 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 		case "/":
 			p.abierto, p.url = nil, ""
 			p.abrirBusqueda()
-		case "w":
-			url, abrirURL := p.abierto.URL, abrir
-			return func() tea.Msg { return msgWeb{url: url, err: abrirURL(url)} }
-		case "y":
-			return comp.Copiar(p.abierto.URL)
 		default:
 			p.visor.Update(k)
 		}
@@ -241,7 +259,7 @@ func campos(t datos.Tema) []campo {
 // buscar deja en la lista los temas con algún texto que tenga todas las palabras buscadas (por su raíz), en cualquier
 // orden, como la Web UI; primero los que coinciden en lo que más pesa y, a igual peso, en el orden de la Ayuda.
 func (p *Pagina) buscar(consulta string) {
-	p.busqueda = consulta
+	p.busqueda, p.url = consulta, ""
 	palabras := strings.Fields(normalizar(consulta))
 	if len(palabras) == 0 {
 		p.poblar(p.temas)

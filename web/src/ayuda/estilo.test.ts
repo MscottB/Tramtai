@@ -126,6 +126,8 @@ test('ningún texto de la Ayuda queda sin usar', () => {
     usadas.add(e.solucion)
     if (e.titulo) usadas.add(e.titulo)
   }
+  // La variante .terminal de un texto usado la usa la Ayuda de la terminal (web/scripts/terminal-datos.ts).
+  for (const k of [...usadas]) usadas.add(k + '.terminal')
   assert.deepEqual(Object.keys(ayudaEs).filter((k) => !usadas.has(k)), [])
 })
 

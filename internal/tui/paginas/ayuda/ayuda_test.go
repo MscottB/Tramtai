@@ -153,8 +153,35 @@ func TestAyudaVerEnLaWebSinNavegador(t *testing.T) {
 	if _, ok := prueba.Aviso(f); !ok {
 		t.Fatalf("avisa de que lo abrió: %+v", f)
 	}
-	if v := vista(a); strings.Contains(v, url) {
-		t.Fatalf("con navegador ya no hace falta la URL:\n%s", v)
+	// En Linux sin escritorio xdg-open arranca y falla después sin decir nada: la URL sigue a la vista.
+	if v := vista(a); !strings.Contains(v, url) {
+		t.Fatalf("la URL sigue a la vista por si no se abrió:\n%s", v)
+	}
+}
+
+// TestSinResultadosVerEnLaWeb: sin resultados, la terminal dice qué hacer de verdad: w abre la Ayuda del sitio, con su
+// buscador, o enseña su dirección.
+func TestSinResultadosVerEnLaWeb(t *testing.T) {
+	a := abierta(t, "es")
+	a.Pulsar("/")
+	a.Escribir("xyzzy")
+	a.Pulsar("enter")
+	if v := compacto(vista(a)); !strings.Contains(v, "w") || strings.Contains(v, compacto("mira la documentación completa")) {
+		t.Fatalf("dice qué tecla usar en la terminal:\n%s", vista(a))
+	}
+	a.Pulsar("w")
+	if v := vista(a); !strings.Contains(v, "https://mscottb.github.io/Tramtai/ayuda/") {
+		t.Fatalf("sin navegador, enseña la dirección de la Ayuda del sitio:\n%s", v)
+	}
+}
+
+// TestBusquedaLargaSeDesplaza: con una búsqueda más ancha que la ventana se ve lo último escrito y el cursor.
+func TestBusquedaLargaSeDesplaza(t *testing.T) {
+	a := abierta(t, "es")
+	a.Pulsar("/")
+	a.Escribir(strings.Repeat("palabra ", 10) + "final")
+	if l := primeraLinea(a); !strings.HasSuffix(l, "final_") || lipgloss.Width(l) > 60 {
+		t.Fatalf("se ve el final con el cursor: %q", l)
 	}
 }
 

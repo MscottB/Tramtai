@@ -474,6 +474,12 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.historial.rSeguir': 'Yes: click its tram on the Home map and you will see its route (queue, preparation, running, validation and arrival) as it moves.',
   'ayuda.conectar.pEventos': 'Can my app see what happens live?',
   'ayuda.conectar.rEventos': 'Yes: GET /api/v1/eventos (SSE) reports every stage change of the requests, without their content. With an API’s key, only its own.',
+  // .terminal variants: what the terminal Help says instead of the Web UI text (finding 69).
+  'ayuda.empezar.rMarcha.terminal': 'The terminal header says “service running” or “no service”. It keeps running in the background even if you close the terminal; “tramtai servicio detener” stops it.',
+  'ayuda.historial.rSeguir.terminal': 'Yes: on Home (1) each request in progress has its row with its stage, and in History (5) Enter opens it and the response arrives live.',
+  'ayuda.espacios.paso1.terminal': 'Open a project with n in Workspaces (6); Ctrl+E switches between workspaces. If the folder had no .tramtai/, Tramtai prepares it and trusts it.',
+  'ayuda.ajustes.rVersion.terminal': 'In Settings (7), open “About Tramtai” on the “All of Tramtai” tab; c copies the support details, without keys.',
+  'ayuda.sinResultados.terminal': 'Nothing matches “{texto}”. Try another word, or press w to search the Help on the website.',
   // In the terminal: how each topic is done there, with its keys. Only the terminal Help shows it.
   'ayuda.empezar.terminal': 'In the terminal: 1 to 7 go to each page; ? opens the help for the page in front of you and Esc goes back. Ctrl+E switches workspace and q quits.',
   'ayuda.agentes.terminal': 'In the terminal: 2 opens Agents. Enter shows an agent’s details, c checks it again, d connects or disconnects it and a switches between subscription and key.',

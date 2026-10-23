@@ -472,6 +472,12 @@ const ayudaEs = {
   'ayuda.historial.rSeguir': 'Sí: pulsa su tranvía en el mapa de Inicio y verás su ruta (cola, preparación, ejecución, validación y llegada) mientras avanza.',
   'ayuda.conectar.pEventos': '¿Mi app puede ver lo que pasa en vivo?',
   'ayuda.conectar.rEventos': 'Sí: GET /api/v1/eventos (SSE) avisa cada cambio de etapa de las peticiones, sin su contenido. Con la clave de una API, solo las suyas.',
+  // Variantes .terminal: lo que la Ayuda de la terminal dice en lugar del texto de la Web UI (hallazgo 69).
+  'ayuda.empezar.rMarcha.terminal': 'La cabecera de la terminal dice «servicio en marcha» o «sin servicio». Sigue en segundo plano aunque cierres la terminal; «tramtai servicio detener» lo detiene.',
+  'ayuda.historial.rSeguir.terminal': 'Sí: en Inicio (1) cada petición en curso tiene su fila con su etapa, y en el Historial (5) Enter la abre y la respuesta llega en vivo.',
+  'ayuda.espacios.paso1.terminal': 'Abre un proyecto con n en Espacios (6); Ctrl+E pasa de un espacio a otro. Si la carpeta no tenía .tramtai/, Tramtai la prepara y confía en ella.',
+  'ayuda.ajustes.rVersion.terminal': 'En Ajustes (7), abre «Acerca de Tramtai» en la pestaña «Todo Tramtai»; c copia los datos para soporte, sin claves.',
+  'ayuda.sinResultados.terminal': 'Nada coincide con «{texto}». Prueba con otra palabra, o pulsa w para buscar en la Ayuda del sitio.',
   // En la terminal: cómo se hace cada tema allí, con sus teclas. Solo lo enseña la Ayuda de la terminal.
   'ayuda.empezar.terminal': 'En la terminal: del 1 al 7 vas a cada página; ? abre la ayuda de la que tienes delante y Esc vuelve. Ctrl+E cambia de espacio y q sale.',
   'ayuda.agentes.terminal': 'En la terminal: 2 abre Agentes. Enter enseña los detalles de un agente, c lo vuelve a comprobar, d lo conecta o desconecta y a cambia entre suscripción y clave.',

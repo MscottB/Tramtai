@@ -12,7 +12,8 @@ import (
 
 // Bloque es una parte de un tema. Tipo es texto, pasos, tabla, preguntas, errores, pantalla o web. Todo es texto plano:
 // Lineas son los párrafos o pasos (en tabla, sus columnas), Filas las de una tabla (título y celdas) y Pares (título o
-// pregunta, texto o respuesta) los de errores, preguntas y pantalla. URL, en web, lleva al tema en el sitio.
+// pregunta, texto o respuesta) los de errores y preguntas; pantalla es el recorrido de la Web UI, sin sus textos. URL, en
+// web, lleva al tema en el sitio. Los textos son los de la terminal: la variante <clave>.terminal de la fuente si la hay.
 type Bloque struct {
 	Tipo   string      `json:"tipo"`
 	Titulo string      `json:"titulo,omitempty"`

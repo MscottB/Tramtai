@@ -31,8 +31,10 @@ export type Bloque =
   | { tipo: 'ejemplo'; contratos: string[]; archivos: string[] }
   | { tipo: 'tabla'; columnas: Clave[]; filas: { titulo: Clave; celdas: Clave[] }[] }
   // id es el ancla de cada pregunta (la búsqueda y los enlaces llevan a ella); único en toda la Ayuda. tema enlaza la
-  // respuesta con el tema que la explica (los conceptos).
-  | { tipo: 'preguntas'; preguntas: { id: string; pregunta: Clave; respuesta: Clave; tema?: string }[] }
+  // respuesta con el tema que la explica (los conceptos). soloWeb deja la pregunta fuera de la Ayuda de la terminal,
+  // donde no se puede hacer lo que dice (el recorrido guiado, el mapa de Inicio). Un texto con otra forma en la terminal
+  // lleva su variante <clave>.terminal en el catálogo.
+  | { tipo: 'preguntas'; preguntas: { id: string; pregunta: Clave; respuesta: Clave; tema?: string; soloWeb?: true }[] }
   | { tipo: 'errores'; codigos: string[] }
   | { tipo: 'nota'; texto: Clave }
   | { tipo: 'ir'; pagina: Pagina }

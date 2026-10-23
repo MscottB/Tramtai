@@ -30,14 +30,35 @@ test('la Ayuda es texto plano: ninguna cadena lleva < ni **', () => {
   for (const idioma of ['es', 'en'] as const) for (const s of cadenas(ayuda[idioma])) assert.doesNotMatch(s, /<|\*\*/, s)
 })
 
-test('el tema de Ejecutar trae su recorrido como bloque pantalla', () => {
+test('el recorrido pasa como bloque pantalla sin sus textos, que describen la pantalla de la Web UI', () => {
   const tema = temas.find((t) => t.paginaApp === 'ejecutar')!
-  const recorrido = tema.bloques.find((b) => b.tipo === 'recorrido')!
-  for (const [lengua, textos] of [['es', es], ['en', en]] as const) {
+  for (const lengua of ['es', 'en'] as const) {
     const t = ayuda[lengua].find((x) => x.id === tema.id) as Tema
     assert.equal(t.pagina, 'ejecutar')
-    const pantalla = t.bloques.find((b) => b.tipo === 'pantalla')!
-    assert.deepEqual(pantalla.pares, recorrido.pasos.map((p) => [textos[p.titulo], textos[p.texto]]))
+    assert.deepEqual(t.bloques.find((b) => b.tipo === 'pantalla'), { tipo: 'pantalla' })
+  }
+})
+
+// FRASES_SOLO_WEB son las que solo valen en la Web UI (hallazgo 69); la misma lista que internal/tui/datos/datos_test.go.
+const FRASES_SOLO_WEB = ['Haz el recorrido', 'tranvía', 'mapa de Inicio', 'menú lateral', 'botón \\?', '\\b(el|un) panel\\b',
+  'sin abrir ninguna terminal', 'selector de arriba', 'arriba a la derecha',
+  'Take the guided tour', '\\btrams?\\b', 'Home map', 'side menu', '\\? button', '\\b(the|a) panel\\b', 'without opening a terminal',
+  'selector at the top', 'top right']
+
+test('ninguna frase que solo vale en la Web UI llega a la terminal', () => {
+  const archivos = generar(fuente)
+  for (const nombre of ['ayuda.json', 'textos.json'])
+    for (const f of FRASES_SOLO_WEB) assert.doesNotMatch(archivos.get(nombre)!, new RegExp(f, 'i'), `${nombre}: ${f}`)
+})
+
+test('la terminal usa la variante .terminal de un texto y deja fuera las preguntas soloWeb', () => {
+  for (const [lengua, textos] of [['es', es], ['en', en]] as const) {
+    const t = textos as Record<string, string>
+    const empezar = ayuda[lengua].find((x) => x.id === 'empezar')!
+    const preguntas = empezar.bloques.find((b) => b.tipo === 'preguntas')!.pares!
+    assert.ok(preguntas.some(([, r]) => r === t['ayuda.empezar.rMarcha.terminal']), lengua)
+    assert.ok(!preguntas.some(([p]) => p === t['ayuda.empezar.pRecorrido']), lengua)
+    assert.equal(textosDe({ es, en })[lengua]['arranque.texto'], t['arranque.texto.terminal'].replace(/\*\*/g, ''))
   }
 })
 

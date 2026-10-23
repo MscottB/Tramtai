@@ -495,6 +495,9 @@ const es = {
   'arranque.titulo': 'Arranque con {sistema}',
   'arranque.texto':
     'Tramtai se inicia oculto en la bandeja al entrar en {sistema}, así la Web UI y tus aplicaciones funcionan sin abrir ninguna terminal.',
+  // Lo que dice Ajustes en la terminal (web/scripts/terminal-datos.ts usa la variante .terminal).
+  'arranque.texto.terminal':
+    'Tramtai se inicia oculto en la bandeja al entrar en {sistema}: el servicio queda en marcha para la terminal, la Web UI y tus aplicaciones.',
   'arranque.activado': 'Tramtai arrancará al iniciar sesión en {sistema}',
   'arranque.desactivado': 'Arranque automático desactivado',
   'datos.titulo': 'Borrar datos',

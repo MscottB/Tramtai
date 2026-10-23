@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"tramtai/internal/idioma"
 	"tramtai/internal/tui/comp"
@@ -25,10 +26,10 @@ func (p *Pagina) Vista() string {
 	}
 	if len(p.lista.Visibles()) == 0 {
 		lineas := []string{p.barra()}
-		for _, l := range e.Envolver(p.tx("ayuda.sinResultados", "texto", strings.TrimSpace(p.busqueda)), ancho, max(p.c.Alto-1, 1)) {
+		for _, l := range e.Envolver(p.tx("ayuda.sinResultados", "texto", strings.TrimSpace(p.busqueda)), ancho, max(p.c.Alto-1-len(p.abajo()), 1)) {
 			lineas = append(lineas, e.Tenue.Render(l))
 		}
-		return strings.Join(lineas, "\n")
+		return strings.Join(append(lineas, p.abajo()...), "\n")
 	}
 	return p.barra() + "\n" + p.lista.Vista(ancho, max(p.c.Alto-1, 1))
 }
@@ -41,7 +42,12 @@ func (p *Pagina) barra() string {
 	case p.buscando && p.entrada == "":
 		return e.Recortar(e.Acento.Render("/ ")+e.Tenue.Render(p.tx("ayuda.buscar")), ancho)
 	case p.buscando:
-		return e.Acento.Render(e.Recortar("/ "+p.entrada+"_", ancho))
+		// Más ancha que la ventana, se ve el final: lo último escrito y el cursor.
+		texto := "/ " + p.entrada + "_"
+		if sobra := lipgloss.Width(texto) - ancho; sobra > 0 {
+			texto = ansi.TruncateLeft(texto, sobra+lipgloss.Width(e.Iconos.Elipsis), e.Iconos.Elipsis)
+		}
+		return e.Acento.Render(texto)
 	case busqueda != "":
 		n := len(p.lista.Visibles())
 		resultados := p.tx("ayuda.ui.resultados", "n", strconv.Itoa(n))
@@ -58,14 +64,18 @@ func (p *Pagina) fila(t datos.Tema) string {
 	return p.a(t.Titulo) + "  " + p.estilos.Tenue.Render(p.a(t.Resumen))
 }
 
-// abajo es, si no se pudo abrir el navegador, la dirección del tema para copiarla.
+// abajo es, tras w, la dirección que se quiso abrir, para copiarla: también si el navegador dijo que sí, porque en Linux
+// sin escritorio xdg-open arranca y falla después sin decir nada.
 func (p *Pagina) abajo() []string {
 	if p.url == "" {
 		return nil
 	}
 	e := p.estilos
-	return append(p.parrafo(e.Advertencia, "", idioma.T("No se pudo abrir el navegador; la tecla y copia la dirección:")),
-		p.parrafo(e.Acento, "", p.url)...)
+	aviso := idioma.T("Si no se abrió el navegador, la tecla y copia la dirección:")
+	if p.fallo {
+		aviso = idioma.T("No se pudo abrir el navegador; la tecla y copia la dirección:")
+	}
+	return append(p.parrafo(e.Advertencia, "", aviso), p.parrafo(e.Acento, "", p.url)...)
 }
 
 // poner escribe el tema abierto en el visor, al ancho de ahora, y le deja el alto que no ocupa la dirección.

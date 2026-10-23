@@ -33,25 +33,7 @@
           ]
         },
         {
-          "tipo": "pantalla",
-          "pares": [
-            [
-              "El mapa en vivo",
-              "Aquí ves el mapa en vivo: tus apps, Tramtai y los agentes. Cada petición cruza el mapa como un tranvía y puedes pulsarlo para seguirla."
-            ],
-            [
-              "Tus primeros pasos",
-              "La guía que te lleva de conectar un agente a probarlo y a conectar tu app. Aunque la ocultes o la termines, aquí sigue la línea para repetir este recorrido."
-            ],
-            [
-              "El espacio de trabajo",
-              "Aquí ves en qué espacio estás. Cada espacio guarda sus propias peticiones y APIs; desde este selector pasas de uno a otro o abres un proyecto."
-            ],
-            [
-              "El botón ? de cada página",
-              "Junto al título de cada página hay un botón ? que abre su ayuda en un panel, sin que salgas de donde estás."
-            ]
-          ]
+          "tipo": "pantalla"
         },
         {
           "tipo": "web",
@@ -68,20 +50,12 @@
           "tipo": "preguntas",
           "pares": [
             [
-              "¿Cómo repito el recorrido guiado?",
-              "En Inicio, pulsa «Haz el recorrido de Tramtai» en Primeros pasos. Esc lo cierra y las flechas pasan de paso. Solo enseña: no pulsa nada ni cambia tus datos."
-            ],
-            [
-              "¿Qué son los tranvías del mapa de Inicio?",
-              "Cada petición en curso: sale de su API, pasa por Tramtai y recorre la línea de su agente. Se pone roja si falla y cambia de línea si salta al respaldo."
-            ],
-            [
               "¿Necesito una clave para entrar?",
               "No. La app entra sola, y el navegador también si es de tu usuario; si no, «tramtai abrir» la abre ya dentro. Las claves de Mis APIs son solo para tus apps."
             ],
             [
               "¿Cómo sé si sigue en marcha y cómo lo detengo?",
-              "Arriba a la derecha dice «En marcha» o «Sin conexión». Sigue en segundo plano aunque cierres la ventana; «tramtai servicio detener» lo detiene."
+              "La cabecera de la terminal dice «servicio en marcha» o «sin servicio». Sigue en segundo plano aunque cierres la terminal; «tramtai servicio detener» lo detiene."
             ],
             [
               "Windows dice «Windows protegió su PC»",
@@ -146,21 +120,7 @@
           ]
         },
         {
-          "tipo": "pantalla",
-          "pares": [
-            [
-              "Tus agentes",
-              "Aquí ves cada agente con su estado: listo para responder o lo que le falta. Ábrelo para ver cómo está conectado y sus detalles."
-            ],
-            [
-              "Listos y por conectar",
-              "Estos filtros separan los agentes listos de los que faltan por conectar o por instalar, cada grupo con su número. Cada agente se conecta con tu suscripción o con una clave de API."
-            ],
-            [
-              "Volver a comprobar",
-              "Si acabas de instalar un agente o de iniciar sesión en su CLI, pulsa aquí y Tramtai vuelve a mirar cómo está cada uno."
-            ]
-          ]
+          "tipo": "pantalla"
         },
         {
           "tipo": "web",
@@ -253,21 +213,7 @@
           ]
         },
         {
-          "tipo": "pantalla",
-          "pares": [
-            [
-              "La receta",
-              "Aquí eliges agente y modelo y, si quieres, instrucciones, esfuerzo y respaldo. Es lo que define cómo responde una API cuando la guardas."
-            ],
-            [
-              "El mensaje de prueba",
-              "Aquí escribes el mensaje y lo envías con Ctrl + Enter. La respuesta aparece en vivo en el panel de respuesta."
-            ],
-            [
-              "Ver como código",
-              "Este botón convierte lo que has preparado en una petición lista para copiar y pegar en tu app."
-            ]
-          ]
+          "tipo": "pantalla"
         },
         {
           "tipo": "web",
@@ -325,21 +271,7 @@
           ]
         },
         {
-          "tipo": "pantalla",
-          "pares": [
-            [
-              "La clave del espacio",
-              "Cada espacio tiene una clave con acceso a cualquier agente y modelo: la usan la CLI de Tramtai, tus scripts y Probar. Tus apps van mejor con una API propia cada una."
-            ],
-            [
-              "Una API por aplicación",
-              "Con este botón creas una API para una app, con su dirección, su clave, sus modelos y su historial. Si una clave se filtra, revocas solo esa."
-            ],
-            [
-              "Tus APIs",
-              "Aquí ves las APIs que has creado. Ábrelas para copiar su dirección y su clave, ver su uso o cambiar sus ajustes."
-            ]
-          ]
+          "tipo": "pantalla"
         },
         {
           "tipo": "web",
@@ -799,21 +731,7 @@
           ]
         },
         {
-          "tipo": "pantalla",
-          "pares": [
-            [
-              "Filtros",
-              "Aquí filtras las peticiones por estado o por origen, o buscas por texto."
-            ],
-            [
-              "La lista de peticiones",
-              "Cada fila es una petición: su estado, el mensaje, el agente y el modelo, el origen y los tokens. Si aún no hay ninguna, saldrán aquí en cuanto envíes la primera."
-            ],
-            [
-              "El detalle",
-              "Al pulsar una fila se abre su detalle: el mensaje, la respuesta, el registro paso a paso y, si algo falló, qué hacer."
-            ]
-          ]
+          "tipo": "pantalla"
         },
         {
           "tipo": "web",
@@ -829,7 +747,7 @@
             ],
             [
               "¿Puedo seguir una petición en vivo?",
-              "Sí: pulsa su tranvía en el mapa de Inicio y verás su ruta (cola, preparación, ejecución, validación y llegada) mientras avanza."
+              "Sí: en Inicio (1) cada petición en curso tiene su fila con su etapa, y en el Historial (5) Enter la abre y la respuesta llega en vivo."
             ],
             [
               "¿Cómo veo cuánto tardó cada paso?",
@@ -875,27 +793,13 @@
         {
           "tipo": "pasos",
           "lineas": [
-            "Abre un proyecto desde el selector de arriba o desde Espacios. Si la carpeta no tenía .tramtai/, Tramtai la prepara y confía en ella.",
+            "Abre un proyecto con n en Espacios (6); Ctrl+E pasa de un espacio a otro. Si la carpeta no tenía .tramtai/, Tramtai la prepara y confía en ella.",
             "Si ya traía .tramtai/ (un repositorio clonado), decide si confías: así su local.yaml puede usar ajustes de seguridad.",
             "En Espacios ves todos, también los detenidos. Detén los que no uses y olvida los que ya no necesites."
           ]
         },
         {
-          "tipo": "pantalla",
-          "pares": [
-            [
-              "Tus espacios",
-              "Aquí ves todos los espacios, también los detenidos: su estado, su carpeta, cuántas APIs y peticiones tienen y lo que puedes hacer con cada uno."
-            ],
-            [
-              "Abrir un proyecto",
-              "Con este botón abres una carpeta como espacio de trabajo. Si no tenía .tramtai/, Tramtai la prepara por ti."
-            ],
-            [
-              "Refrescar la lista",
-              "Vuelve a cargar los espacios para ver al día el estado de cada uno."
-            ]
-          ]
+          "tipo": "pantalla"
         },
         {
           "tipo": "web",
@@ -1036,21 +940,7 @@
           ]
         },
         {
-          "tipo": "pantalla",
-          "pares": [
-            [
-              "Dos grupos de ajustes",
-              "Las pestañas separan lo de este espacio (modelo, historial, datos) de lo de todo Tramtai (puerto, conversor, actualizaciones, arranque)."
-            ],
-            [
-              "Modelo predeterminado",
-              "Aquí eliges el modelo y el esfuerzo que se usan cuando una petición no dice cuál quiere."
-            ],
-            [
-              "Borrar datos",
-              "Aquí borras el historial o las APIs de este espacio. Antes te pide confirmar, y los ajustes no se tocan."
-            ]
-          ]
+          "tipo": "pantalla"
         },
         {
           "tipo": "web",
@@ -1074,7 +964,7 @@
             ],
             [
               "¿Qué versión tengo?",
-              "Abre «Acerca de Tramtai» en el menú lateral o en la bandeja; «Copiar datos para soporte» copia lo necesario sin claves."
+              "En Ajustes (7), abre «Acerca de Tramtai» en la pestaña «Todo Tramtai»; c copia los datos para soporte, sin claves."
             ],
             [
               "¿Dónde se guardan mis datos?",
@@ -1346,25 +1236,7 @@
           ]
         },
         {
-          "tipo": "pantalla",
-          "pares": [
-            [
-              "The live map",
-              "Here is the live map: your apps, Tramtai and the agents. Each request crosses it as a tram, and you can click it to follow it."
-            ],
-            [
-              "Your first steps",
-              "The guide that takes you from connecting an agent to trying it and connecting your app. Even if you hide or finish it, the line to replay this tour stays here."
-            ],
-            [
-              "The workspace",
-              "Here you see which workspace you are in. Each one keeps its own requests and APIs; use this selector to switch or to open a project."
-            ],
-            [
-              "The ? button on every page",
-              "Next to every page title there is a ? button that opens its help in a panel, without leaving where you are."
-            ]
-          ]
+          "tipo": "pantalla"
         },
         {
           "tipo": "web",
@@ -1381,20 +1253,12 @@
           "tipo": "preguntas",
           "pares": [
             [
-              "How do I repeat the guided tour?",
-              "On Home, click “Take the guided tour” in Getting started. Esc closes it and the arrow keys move between steps. It only shows: it clicks nothing and changes no data."
-            ],
-            [
-              "What are the trams on the Home map?",
-              "Each request in progress: it leaves its API, goes through Tramtai and runs along its agent’s line. It turns red if it fails and changes line if it falls back."
-            ],
-            [
               "Do I need a key to get in?",
               "No. The app signs in by itself, and so does the browser if it belongs to your user; if not, “tramtai abrir” opens it already signed in. My APIs keys are only for your apps."
             ],
             [
               "How do I know it is running, and how do I stop it?",
-              "The top right says “Running” or “Offline”. It keeps running in the background even if you close the window; “tramtai servicio detener” stops it."
+              "The terminal header says “service running” or “no service”. It keeps running in the background even if you close the terminal; “tramtai servicio detener” stops it."
             ],
             [
               "Windows says “Windows protected your PC”",
@@ -1459,21 +1323,7 @@
           ]
         },
         {
-          "tipo": "pantalla",
-          "pares": [
-            [
-              "Your agents",
-              "Here you see each agent with its status: ready to answer or what it is missing. Open one to see how it is connected and its details."
-            ],
-            [
-              "Ready and to connect",
-              "These filters split the ready agents from the ones still to connect or install, each group with its count. Each agent connects with your subscription or with an API key."
-            ],
-            [
-              "Check again",
-              "If you just installed an agent or signed in to its CLI, click here and Tramtai checks how each one is doing again."
-            ]
-          ]
+          "tipo": "pantalla"
         },
         {
           "tipo": "web",
@@ -1566,21 +1416,7 @@
           ]
         },
         {
-          "tipo": "pantalla",
-          "pares": [
-            [
-              "The recipe",
-              "Here you pick agent and model and, if you want, instructions, effort and fallback. It defines how an API answers once you save it."
-            ],
-            [
-              "The test message",
-              "Type the message here and send it with Ctrl + Enter. The response shows up live in the response panel."
-            ],
-            [
-              "View as code",
-              "This button turns what you set up into a request ready to copy and paste into your app."
-            ]
-          ]
+          "tipo": "pantalla"
         },
         {
           "tipo": "web",
@@ -1638,21 +1474,7 @@
           ]
         },
         {
-          "tipo": "pantalla",
-          "pares": [
-            [
-              "The workspace key",
-              "Each workspace has a key with access to any agent and model: the CLI, your scripts and the Playground use it. Your apps are better off with an API of their own each."
-            ],
-            [
-              "One API per app",
-              "This button creates an API for an app, with its own address, key, models and history. If a key leaks, you revoke only that one."
-            ],
-            [
-              "Your APIs",
-              "Here you see the APIs you have created. Open one to copy its address and key, see its usage or change its settings."
-            ]
-          ]
+          "tipo": "pantalla"
         },
         {
           "tipo": "web",
@@ -2112,21 +1934,7 @@
           ]
         },
         {
-          "tipo": "pantalla",
-          "pares": [
-            [
-              "Filters",
-              "Here you filter requests by status or origin, or search by text."
-            ],
-            [
-              "The request list",
-              "Each row is a request: its status, the message, the agent and model, the origin and the tokens. If there are none yet, they show up here as soon as you send the first one."
-            ],
-            [
-              "The detail",
-              "Clicking a row opens its detail: the message, the response, the step-by-step log and, if something failed, what to do."
-            ]
-          ]
+          "tipo": "pantalla"
         },
         {
           "tipo": "web",
@@ -2142,7 +1950,7 @@
             ],
             [
               "Can I follow a request live?",
-              "Yes: click its tram on the Home map and you will see its route (queue, preparation, running, validation and arrival) as it moves."
+              "Yes: on Home (1) each request in progress has its row with its stage, and in History (5) Enter opens it and the response arrives live."
             ],
             [
               "How do I see how long each step took?",
@@ -2188,27 +1996,13 @@
         {
           "tipo": "pasos",
           "lineas": [
-            "Open a project from the selector at the top or from Workspaces. If the folder had no .tramtai/, Tramtai prepares it and trusts it.",
+            "Open a project with n in Workspaces (6); Ctrl+E switches between workspaces. If the folder had no .tramtai/, Tramtai prepares it and trusts it.",
             "If it already had .tramtai/ (a cloned repository), decide whether you trust it: then its local.yaml can use security settings.",
             "In Workspaces you see all of them, stopped ones too. Stop the ones you do not use and forget the ones you no longer need."
           ]
         },
         {
-          "tipo": "pantalla",
-          "pares": [
-            [
-              "Your workspaces",
-              "Here you see all your workspaces, stopped ones too: their status, folder, how many APIs and requests they have and what you can do with each."
-            ],
-            [
-              "Open a project",
-              "This button opens a folder as a workspace. If it had no .tramtai/, Tramtai prepares it for you."
-            ],
-            [
-              "Refresh the list",
-              "Reloads the workspaces so you see the current state of each one."
-            ]
-          ]
+          "tipo": "pantalla"
         },
         {
           "tipo": "web",
@@ -2349,21 +2143,7 @@
           ]
         },
         {
-          "tipo": "pantalla",
-          "pares": [
-            [
-              "Two groups of settings",
-              "The tabs separate what belongs to this workspace (model, history, data) from what belongs to all of Tramtai (port, converter, updates, start with the system)."
-            ],
-            [
-              "Default model",
-              "Here you pick the model and effort used when a request does not say which one it wants."
-            ],
-            [
-              "Delete data",
-              "Here you delete this workspace’s history or APIs. It asks you to confirm first, and your settings are not touched."
-            ]
-          ]
+          "tipo": "pantalla"
         },
         {
           "tipo": "web",
@@ -2387,7 +2167,7 @@
             ],
             [
               "Which version do I have?",
-              "Open “About Tramtai” in the side menu or the tray; “Copy support details” copies what is needed, without keys."
+              "In Settings (7), open “About Tramtai” on the “All of Tramtai” tab; c copies the support details, without keys."
             ],
             [
               "Where is my data kept?",
