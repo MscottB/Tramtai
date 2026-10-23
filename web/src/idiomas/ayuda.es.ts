@@ -466,7 +466,7 @@ const ayudaEs = {
   'ayuda.agentes.pLinux': '¿Dónde guarda las claves en Linux?',
   'ayuda.agentes.rLinux': 'En el Secret Service, que necesita secret-tool (paquete libsecret-tools). La página Agentes te dice dónde queda la clave en tu sistema.',
   'ayuda.ajustes.pRetencion': '¿Cuánto tiempo se guardan?',
-  'ayuda.ajustes.rRetencion': 'Las respuestas, 24 horas; el resto del historial, 7 días, hasta 10 000 peticiones. Se cambia en Ajustes → Historial, donde también puedes borrarlo.',
+  'ayuda.ajustes.rRetencion': 'Las respuestas, 24 horas; el resto del historial, 7 días, hasta 10.000 peticiones. Se cambia en Ajustes → Historial, donde también puedes borrarlo.',
   'ayuda.historial.pPrimerPlano': '¿Puedo ver el servicio en primer plano?',
   'ayuda.historial.rPrimerPlano': 'Sí: detén el servicio y ejecuta «tramtai servicio iniciar --abrir»: corre con el registro a la vista, abre la app y Ctrl+C lo detiene.',
   'ayuda.ui.resultados': '{n} resultados',
