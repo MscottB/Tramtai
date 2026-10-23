@@ -3,12 +3,14 @@ package conectar
 import (
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"charm.land/lipgloss/v2"
 
+	catalogo "tramtai/internal/agentes"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -103,7 +105,34 @@ func (p *Pagina) fila(x contrato.EstadoPunto) string {
 	case x.Error != "":
 		icono, estilo = e.Iconos.Fallo, e.Error
 	}
-	return pagina.Rellenar(e.Recortar(x.Nombre, 20), 20) + " " + estilo.Render(pagina.Rellenar(icono+" "+est, 11)) + " " + e.Tenue.Render(p.textoUso(x.Nombre))
+	fila := pagina.Rellenar(e.Recortar(x.Nombre, 20), 20) + " " + estilo.Render(pagina.Rellenar(icono+" "+est, 11)) + " "
+	if pr, ok := p.datos.Presupuestos[x.Nombre]; ok { // la barra corta de su límite más usado, como las de la Web UI en la fila
+		mas := 0.0
+		for _, b := range barras(p.lengua, pr) {
+			mas = max(mas, b.fraccion)
+		}
+		fila += p.barra(mas, 8) + " " + strconv.Itoa(int(math.Floor(100*mas+1e-9))) + " % "
+	}
+	return fila + e.Tenue.Render(p.textoUso(x.Nombre))
+}
+
+// barra dibuja la fracción usada en ancho columnas: verde, amarilla desde el 80 % y roja al 100 %, como la Web UI; sin
+// color se lee por lo lleno.
+func (p *Pagina) barra(fraccion float64, ancho int) string {
+	e := p.estilos
+	lleno, vacio := "█", "░"
+	if e.ASCII {
+		lleno, vacio = "#", "-"
+	}
+	n := int(math.Round(min(fraccion, 1) * float64(ancho)))
+	estilo := e.Exito
+	switch {
+	case fraccion >= 1:
+		estilo = e.Error
+	case fraccion >= 0.8:
+		estilo = e.Advertencia
+	}
+	return estilo.Render(strings.Repeat(lleno, n)) + e.Tenue.Render(strings.Repeat(vacio, ancho-n))
 }
 
 // textoUso son las peticiones de la API que conserva el historial, como en la Web UI: cuántas, cuántas con error y la última.
@@ -212,6 +241,12 @@ func (p *Pagina) textoClave() string {
 	l := []string{e.Titulo.Render(strings.TrimSpace(p.tx("conectar.directa", "nombre", p.nombre))), p.tx("conectar.directaTexto"), "",
 		e.Titulo.Render(p.tx("guia.titulo"))}
 	l = append(l, p.urls(base, contratos)...)
+	if grupos := p.gruposModelo(); len(grupos) > 0 { // qué poner en model, como los chips de la Web UI
+		l = append(l, "", e.Tenue.Render(p.tx("conectar.modeloAntes")+" model "+p.tx("conectar.modeloDespues")))
+		for _, g := range grupos {
+			l = append(l, e.Tenue.Render(g.titulo+":")+" "+strings.Join(g.ids, "  "))
+		}
+	}
 	l = append(l, "", e.Tenue.Render(p.tx("conectar.clave")))
 	switch {
 	case p.clave == "" && p.errClave != "":
@@ -228,6 +263,47 @@ func (p *Pagina) textoClave() string {
 		l = append(l, p.lineasBarras(p.espacio)...)
 	}
 	return e.A(strings.Join(l, "\n"))
+}
+
+// grupoModelo son los ids del catálogo de un grupo: los perfiles o los de un agente.
+type grupoModelo struct {
+	titulo string
+	ids    []string
+}
+
+// gruposModelo agrupa los valores de model como gruposModelo de la Web UI: primero los perfiles y luego cada agente en el
+// orden de sus fichas (los que no tienen, al final y por nombre), cada uno con sus ids agente/modelo.
+func (p *Pagina) gruposModelo() []grupoModelo {
+	var orden []string
+	for _, f := range catalogo.Todos() {
+		orden = append(orden, f.Nombre)
+	}
+	var otros []string
+	for _, m := range p.catalogo {
+		if m.Agente != "" && !slices.Contains(orden, m.Agente) && !slices.Contains(otros, m.Agente) {
+			otros = append(otros, m.Agente)
+		}
+	}
+	slices.Sort(otros)
+	de := func(prefijo string) []string {
+		var ids []string
+		for _, m := range p.catalogo {
+			if strings.HasPrefix(m.ID, prefijo) {
+				ids = append(ids, m.ID)
+			}
+		}
+		return ids
+	}
+	var r []grupoModelo
+	if ids := de("perfil/"); len(ids) > 0 {
+		r = append(r, grupoModelo{p.tx("conectar.perfiles"), ids})
+	}
+	for _, a := range append(orden, otros...) {
+		if ids := de(a + "/"); len(ids) > 0 {
+			r = append(r, grupoModelo{catalogo.NombreVisible(a), ids})
+		}
+	}
+	return r
 }
 
 // conLimites dice si el presupuesto tiene algún límite: sin ninguno, el espacio no tiene presupuesto.
@@ -304,23 +380,10 @@ func fecha(lengua string, t time.Time) string {
 func (p *Pagina) lineasBarras(est nucleo.EstadoPresupuesto) []string {
 	e := p.estilos
 	ancho := max(min(p.c.Ancho, 40), 10)
-	lleno, vacio := "█", "░"
-	if e.ASCII {
-		lleno, vacio = "#", "-"
-	}
 	var l []string
 	for _, b := range barras(p.lengua, est) {
 		titulo := e.Recortar(b.titulo, max(ancho-lipgloss.Width(b.texto)-1, 1))
-		l = append(l, pagina.Rellenar(titulo, ancho-lipgloss.Width(b.texto))+b.texto)
-		n := int(math.Round(min(b.fraccion, 1) * float64(ancho)))
-		estilo := e.Exito
-		switch {
-		case b.fraccion >= 1:
-			estilo = e.Error
-		case b.fraccion >= 0.8:
-			estilo = e.Advertencia
-		}
-		l = append(l, estilo.Render(strings.Repeat(lleno, n))+e.Tenue.Render(strings.Repeat(vacio, ancho-n)))
+		l = append(l, pagina.Rellenar(titulo, ancho-lipgloss.Width(b.texto))+b.texto, p.barra(b.fraccion, ancho))
 	}
 	return append(l, e.Tenue.Render(p.tx("presupuesto.reinicios", "dia", fecha(p.lengua, est.Diario.Reinicio), "mes", fecha(p.lengua, est.Mensual.Reinicio))))
 }
@@ -339,6 +402,11 @@ func (p *Pagina) vistaForm() string {
 	cab := []string{e.Titulo.Render(e.Recortar(titulo, p.c.Ancho))}
 	if texto != "" && p.c.Alto >= 14 {
 		cab = append(cab, e.Tenue.Render(e.Recortar(texto, p.c.Ancho)))
+	}
+	if f.modo != modoFiltros && p.c.Alto >= 12 { // la receta entera no cabe aquí: dónde se edita lo demás
+		for _, l := range e.Envolver(e.A(idioma.T("El respaldo, la respuesta con forma y las correcciones se editan en Probar: p desde el detalle.")), p.c.Ancho, 2) {
+			cab = append(cab, e.Tenue.Render(l))
+		}
 	}
 	cab = append(cab, "")
 	cuerpo := strings.Split(f.f.Vista(), "\n")

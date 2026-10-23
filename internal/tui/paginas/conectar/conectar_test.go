@@ -25,7 +25,8 @@ import (
 )
 
 // Las pruebas de Mis APIs van por su interfaz, con el arnés de las páginas (prueba.App): teclas, los mensajes de pagina y
-// comp, y lo que enseña Vista(). Lo que la página cambia en el servicio se lee en el servicio.
+// comp, y lo que enseña Vista(). Lo que trae el servicio tras una tecla se espera con HastaVer o Hasta antes de mirarlo, y
+// lo que la página cambia en el servicio se lee en el servicio.
 
 var (
 	aviso    = prueba.Aviso
@@ -36,8 +37,13 @@ var (
 // abierta inicia la página contra ese servicio: arranca con «Cargando…» y espera la lista.
 func abierta(t *testing.T, cli *cliente.Cliente, id string) *prueba.App {
 	t.Helper()
+	return abiertaCon(t, contexto(t, cli, id))
+}
+
+func abiertaCon(t *testing.T, c pagina.Contexto) *prueba.App {
+	t.Helper()
 	a := prueba.Conducir(t, conectar.Nueva("es"))
-	cmd := a.P.Iniciar(contexto(t, cli, id))
+	cmd := a.P.Iniciar(c)
 	if v := a.Vista(); !strings.Contains(v, "Cargando…") {
 		t.Fatalf("arranca con «Cargando…»:\n%s", v)
 	}
@@ -71,6 +77,12 @@ func punto(t *testing.T, cli *cliente.Cliente, id, nombre string) (contrato.Esta
 	return l.Puntos[i], true
 }
 
+// hastaServicio espera, entregando a la página lo que llegue, a que la API cumpla cond en el servicio.
+func hastaServicio(t *testing.T, a *prueba.App, cli *cliente.Cliente, id, nombre string, cond func(contrato.EstadoPunto, bool) bool) {
+	t.Helper()
+	a.Hasta(func() bool { return cond(punto(t, cli, id, nombre)) })
+}
+
 func pregunta(fuera []tea.Msg) (comp.Pregunta, bool) {
 	for _, m := range fuera {
 		if q, ok := m.(comp.Pregunta); ok {
@@ -89,12 +101,12 @@ func copiado(fuera []tea.Msg) string {
 	return ""
 }
 
-// TestApisPorElServicio: crear, ver la clave una sola vez, copiarla, activar y detener, regenerar la clave y eliminar,
-// todo contra el servicio, como el TestAccesosPorElServicio de la terminal antigua.
+// TestApisPorElServicio: crear (con un modelo del catálogo), ver la clave una sola vez, copiarla, activar y detener,
+// regenerar la clave y eliminar, todo contra el servicio, como el TestAccesosPorElServicio de la terminal antigua.
 func TestApisPorElServicio(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	a := abierta(t, cli, id)
-	a.Entregar(tea.WindowSizeMsg{Width: 90, Height: 30}) // la clave mide más de 60 columnas: así cabe en una línea
+	a.Entregar(tea.WindowSizeMsg{Width: 90, Height: 40}) // la clave mide más de 60 columnas: así cabe en una línea
 	if v := a.Vista(); !strings.Contains(v, "Todavía no hay APIs por aplicación") || !strings.Contains(v, "Nueva API") {
 		t.Fatalf("sin APIs, el vacío de la Web UI:\n%s", v)
 	}
@@ -102,10 +114,10 @@ func TestApisPorElServicio(t *testing.T) {
 		t.Fatalf("título %q, ayuda %q", a.P.Titulo(), a.P.Ayuda())
 	}
 
-	// Crear: n abre el formulario, el nombre se valida y Ctrl+S la crea.
+	// Crear: n abre el formulario, el nombre se valida, el modelo se elige del catálogo y Ctrl+S la crea.
 	a.Pulsar("n")
-	if !a.P.EnCampo() || !strings.Contains(a.Vista(), "Nombre") {
-		t.Fatalf("n abre el formulario:\n%s", a.Vista())
+	if v := a.Vista(); !a.P.EnCampo() || !strings.Contains(v, "Nombre") || !strings.Contains(v, "se editan en Probar") {
+		t.Fatalf("n abre el formulario, que dice dónde se edita el resto de la receta:\n%s", v)
 	}
 	a.Escribir("Mi App")
 	a.Pulsar("ctrl+s")
@@ -116,14 +128,22 @@ func TestApisPorElServicio(t *testing.T) {
 		a.Pulsar("backspace")
 	}
 	a.Escribir("mi-app")
-	a.Pulsar("ctrl+s")
-	v := a.Vista()
-	clave := reClave.FindString(v)
-	if !strings.Contains(v, "API lista") || clave == "" || !strings.Contains(v, "Copia la clave ahora") {
-		t.Fatalf("al crearla se abre el detalle con la clave, que solo se ve esta vez:\n%s", v)
+	a.Pulsar("tab", "tab", "tab") // grupo, instrucciones y modelo
+	if v := a.Vista(); !strings.Contains(v, "‹ Predeterminado (simulado) ›") {
+		t.Fatalf("el modelo es una opción del catálogo, con el predeterminado del espacio primero:\n%s", v)
 	}
-	if _, ok := punto(t, cli, id, "mi-app"); !ok {
-		t.Fatal("la API está en el servicio")
+	a.Pulsar("right")
+	if v := a.Vista(); !strings.Contains(v, "‹ perfil/equilibrado ›") {
+		t.Fatalf("→ elige el siguiente del catálogo:\n%s", v)
+	}
+	a.Pulsar("ctrl+s")
+	a.HastaVer("API lista", "Copia la clave ahora")
+	clave := reClave.FindString(a.Vista())
+	if clave == "" {
+		t.Fatalf("al crearla se abre el detalle con la clave, que solo se ve esta vez:\n%s", a.Vista())
+	}
+	if p, ok := punto(t, cli, id, "mi-app"); !ok || p.PerfilModelo != "equilibrado" {
+		t.Fatalf("la API está en el servicio, con el perfil elegido: %+v", p)
 	}
 	if c := copiado(a.Pulsar("y")); c != clave {
 		t.Fatalf("y copia la clave: %q", c)
@@ -153,16 +173,11 @@ func TestApisPorElServicio(t *testing.T) {
 		t.Fatalf("sin clave a la vista, el detalle lo explica:\n%s", v)
 	}
 	a.Pulsar("a")
-	if p, _ := punto(t, cli, id, "mi-app"); p.Activo {
-		t.Fatal("a la detiene en el servicio")
-	}
-	if v := a.Vista(); !strings.Contains(v, "Detenida") {
-		t.Fatalf("el detalle dice Detenida:\n%s", v)
-	}
+	a.HastaVer("Detenida")
+	hastaServicio(t, a, cli, id, "mi-app", func(p contrato.EstadoPunto, _ bool) bool { return !p.Activo })
 	a.Pulsar("a")
-	if p, _ := punto(t, cli, id, "mi-app"); !p.Activo {
-		t.Fatal("a la vuelve a activar")
-	}
+	a.HastaVer("Activa")
+	hastaServicio(t, a, cli, id, "mi-app", func(p contrato.EstadoPunto, _ bool) bool { return p.Activo })
 
 	// Regenerar la clave: pregunta y enseña la nueva una vez.
 	q, ok = pregunta(a.Pulsar("t"))
@@ -170,9 +185,7 @@ func TestApisPorElServicio(t *testing.T) {
 		t.Fatalf("t pregunta antes de regenerar: %+v", q)
 	}
 	a.Entregar(comp.Confirmado{})
-	if nueva := reClave.FindString(a.Vista()); nueva == "" || nueva == clave {
-		t.Fatalf("la clave nueva se ve: %q (antes %q)\n%s", nueva, clave, a.Vista())
-	}
+	a.Hasta(func() bool { n := reClave.FindString(a.Vista()); return n != "" && n != clave })
 
 	// Eliminar: pregunta, recuerda cuál y cierra el detalle.
 	q, ok = pregunta(a.Pulsar("x"))
@@ -180,19 +193,17 @@ func TestApisPorElServicio(t *testing.T) {
 		t.Fatalf("x pregunta antes de eliminar: %+v", q)
 	}
 	a.Entregar(comp.Confirmado{})
+	a.HastaVer("Todavía no hay APIs por aplicación")
 	if _, ok := punto(t, cli, id, "mi-app"); ok {
 		t.Fatal("la API ya no está en el servicio")
 	}
-	if v := a.Vista(); !strings.Contains(v, "Todavía no hay APIs por aplicación") {
-		t.Fatalf("vuelve a la lista vacía:\n%s", v)
-	}
 }
 
-// TestApisFiltrosYGrupos: los grupos plegables de la Web UI (los sin grupo al final), la búsqueda, los filtros de grupo y
-// estado, quitar filtros y g, que activa o detiene el grupo entero.
+// TestApisFiltrosYGrupos: los grupos plegables de la Web UI (los sin grupo al final), la búsqueda, los filtros de grupo,
+// estado y «Tiene», quitar filtros y g, que activa o detiene el grupo entero.
 func TestApisFiltrosYGrupos(t *testing.T) {
 	cli, id := prueba.Servicio(t)
-	crear(t, cli, id, contrato.ConfigPunto{Nombre: "mi-app", Grupo: "web"})
+	crear(t, cli, id, contrato.ConfigPunto{Nombre: "mi-app", Grupo: "web", Instrucciones: "Sé breve."})
 	crear(t, cli, id, contrato.ConfigPunto{Nombre: "otra", Grupo: "web"})
 	crear(t, cli, id, contrato.ConfigPunto{Nombre: "notas"})
 	if err := cli.ActivarPunto(context.Background(), id, "notas", false); err != nil {
@@ -236,32 +247,52 @@ func TestApisFiltrosYGrupos(t *testing.T) {
 	}
 	a.Pulsar("l")
 
+	// «Tiene»: las seis características de la Web UI; Instrucciones deja la que las tiene.
+	a.Pulsar("f")
+	if v := a.Vista(); !strings.Contains(v, "Tiene: Respuesta JSON") {
+		t.Fatalf("el formulario trae las características:\n%s", v)
+	}
+	a.Pulsar("tab", "tab", "tab", "tab", "tab", "tab") // estado, contrato, JSON, respaldo, presupuesto, instrucciones
+	a.Pulsar("space", "ctrl+s")
+	if v := a.Vista(); !strings.Contains(v, "mi-app") || strings.Contains(v, "otra") || !strings.Contains(v, "Tiene: Instrucciones") {
+		t.Fatalf("el filtro «Tiene» deja las que tienen instrucciones:\n%s", v)
+	}
+	a.Pulsar("l")
+
 	// g en la cabecera de web: todas activas, así que las detiene; otra vez, las activa.
 	a.Pulsar("home", "g")
 	for _, n := range []string{"mi-app", "otra"} {
-		if p, _ := punto(t, cli, id, n); p.Activo {
-			t.Fatalf("g detiene %s", n)
-		}
+		hastaServicio(t, a, cli, id, n, func(p contrato.EstadoPunto, _ bool) bool { return !p.Activo })
 	}
+	a.HastaVer("otra                 ○ Detenida")
 	if p, _ := punto(t, cli, id, "notas"); p.Activo {
 		t.Fatal("g no toca otros grupos")
 	}
 	a.Pulsar("down", "g") // desde una de sus APIs también vale
 	for _, n := range []string{"mi-app", "otra"} {
-		if p, _ := punto(t, cli, id, n); !p.Activo {
-			t.Fatalf("g activa %s", n)
-		}
+		hastaServicio(t, a, cli, id, n, func(p contrato.EstadoPunto, _ bool) bool { return p.Activo })
 	}
+	a.HastaVer("otra                 ● Activa")
+
+	// Si g falla a medias (otra ya no existe), avisa y la lista se recarga igual: otra desaparece.
+	if err := cli.EliminarPunto(context.Background(), id, "otra"); err != nil {
+		t.Fatal(err)
+	}
+	a.Pulsar("home")
+	if _, ok := aviso(a.Pulsar("g")); !ok {
+		t.Fatal("el fallo se avisa")
+	}
+	a.Hasta(func() bool { return !strings.Contains(a.Vista(), "otra") })
 }
 
-// TestEditarPresupuesto: e abre los ajustes de la API; el presupuesto del día y del mes se guarda con CambiarPunto y,
+// TestEditarPresupuesto: e abre los ajustes de la API; el presupuesto del día y del mes se guarda con AjustarPunto y,
 // vacío, se quita.
 func TestEditarPresupuesto(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	crear(t, cli, id, contrato.ConfigPunto{Nombre: "mi-app", Instrucciones: "Sé breve."})
 	a := abierta(t, cli, id)
 	a.Pulsar("e")
-	if v := a.Vista(); !strings.Contains(v, "Ajustes de mi-app") || !strings.Contains(v, "breve.") {
+	if v := a.Vista(); !strings.Contains(v, "Ajustes de mi-app") || !strings.Contains(v, "breve.") || !strings.Contains(v, "‹ simulado ›") {
 		t.Fatalf("e abre los ajustes con lo que tiene:\n%s", v)
 	}
 	a.Pulsar("tab", "tab", "tab", "tab", "tab") // instrucciones, modelo, forzar, esfuerzo y permitidos
@@ -269,12 +300,12 @@ func TestEditarPresupuesto(t *testing.T) {
 	a.Pulsar("tab", "tab")
 	a.Escribir("2,5")
 	a.Pulsar("ctrl+s")
-	p, _ := punto(t, cli, id, "mi-app")
-	if p.Presupuesto == nil || p.Presupuesto.Diario.Peticiones != 50 || p.Presupuesto.Diario.USD != 2.5 || p.Instrucciones != "Sé breve." {
-		t.Fatalf("el presupuesto se guarda y lo demás sigue: %+v", p)
-	}
-	if a.P.EnCampo() {
-		t.Fatal("al guardar se cierra el formulario")
+	hastaServicio(t, a, cli, id, "mi-app", func(p contrato.EstadoPunto, _ bool) bool {
+		return p.Presupuesto != nil && p.Presupuesto.Diario.Peticiones == 50 && p.Presupuesto.Diario.USD == 2.5
+	})
+	a.Hasta(func() bool { return !a.P.EnCampo() })
+	if p, _ := punto(t, cli, id, "mi-app"); p.Instrucciones != "Sé breve." || p.Agente != "simulado" {
+		t.Fatalf("lo demás sigue: %+v", p)
 	}
 
 	// Un USD que no es un número no se envía.
@@ -293,14 +324,12 @@ func TestEditarPresupuesto(t *testing.T) {
 		a.Pulsar("backspace")
 	}
 	a.Pulsar("ctrl+s")
-	if p, _ := punto(t, cli, id, "mi-app"); p.Presupuesto != nil {
-		t.Fatalf("vacío se quita: %+v", p.Presupuesto)
-	}
+	hastaServicio(t, a, cli, id, "mi-app", func(p contrato.EstadoPunto, _ bool) bool { return p.Presupuesto == nil })
 }
 
 // TestConsumoComoLaWeb: las barras del consumo salen de los mismos campos de /api/v1/puntos y con las mismas cuentas que
 // BarrasPresupuesto.vue: una barra por límite definido (día y mes; peticiones, tokens y USD), «usado / límite» y la
-// fracción usada.
+// fracción usada. Cada fila de la lista lleva la barra corta de su límite más usado.
 func TestConsumoComoLaWeb(t *testing.T) {
 	e := nucleo.EstadoPresupuesto{
 		Diario: nucleo.EstadoPeriodo{Limites: nucleo.Limites{Peticiones: 10, USD: 2},
@@ -336,15 +365,11 @@ func TestConsumoComoLaWeb(t *testing.T) {
 		r.Body.Close()
 	}
 	a := abierta(t, cli, id)
-	a.Entregar(tea.WindowSizeMsg{Width: 60, Height: 40})
+	a.Entregar(tea.WindowSizeMsg{Width: 70, Height: 40})
+	a.HastaVer("██░░░░░░ 20 %", "2 peticiones en")
 	a.Pulsar("enter")
-	v := a.Vista()
-	for _, s := range []string{"Diario · Peticiones", "2 / 10", "Mensual · USD", "$0.00 / $2.00", "Se reinicia el día", "2 peticiones en"} {
-		if !strings.Contains(v, s) {
-			t.Fatalf("falta %q en el detalle:\n%s", s, v)
-		}
-	}
-	if strings.Contains(v, "Diario · Tokens") {
+	a.HastaVer("Diario · Peticiones", "2 / 10", "Mensual · USD", "$0.00 / $2.00", "Se reinicia el día")
+	if v := a.Vista(); strings.Contains(v, "Diario · Tokens") {
 		t.Fatalf("sin límite no hay barra:\n%s", v)
 	}
 
@@ -356,9 +381,7 @@ func TestConsumoComoLaWeb(t *testing.T) {
 	if av, ok := aviso(a.Entregar(comp.Confirmado{})); !ok || av.Texto != "Consumo reiniciado" {
 		t.Fatalf("avisa: %+v", av)
 	}
-	if v := a.Vista(); !strings.Contains(v, "0 / 10") {
-		t.Fatalf("el consumo queda a cero:\n%s", v)
-	}
+	a.HastaVer("0 / 10")
 }
 
 // conPresupuestoDelEspacio es el servicio de las pruebas con un presupuesto mensual de 4 peticiones en el espacio.
@@ -377,12 +400,13 @@ func conPresupuestoDelEspacio(t *testing.T) (*cliente.Cliente, string) {
 	})
 }
 
-// TestClaveDelEspacio: la segunda pestaña, como en la Web UI: las URL del espacio, la clave oculta que se ve con v, se
-// copia con y y se regenera con t (con pregunta), y el presupuesto del espacio con su reinicio.
+// TestClaveDelEspacio: la segunda pestaña, como en la Web UI: las URL del espacio, qué poner en model (los ids del
+// catálogo agrupados), la clave oculta que se ve con v, se copia con y y se regenera con t (con pregunta), y el
+// presupuesto del espacio con su reinicio.
 func TestClaveDelEspacio(t *testing.T) {
 	cli, id := conPresupuestoDelEspacio(t)
 	a := abierta(t, cli, id)
-	a.Entregar(tea.WindowSizeMsg{Width: 70, Height: 40})
+	a.Entregar(tea.WindowSizeMsg{Width: 70, Height: 60})
 	clave, err := cli.ClaveInstancia(context.Background(), id)
 	if err != nil {
 		t.Fatal(err)
@@ -394,6 +418,11 @@ func TestClaveDelEspacio(t *testing.T) {
 	v := a.Vista()
 	if !strings.Contains(v, clave[:6]+"•••") || strings.Contains(v, clave) || !strings.Contains(v, "/openai/v1") || !strings.Contains(v, "/anthropic") {
 		t.Fatalf("las URL y la clave oculta:\n%s", v)
+	}
+	for _, s := range []string{"Modelo: el campo model elige agente y modelo", "Perfiles", "perfil/equilibrado", "perfil/rapido"} {
+		if !strings.Contains(v, s) {
+			t.Fatalf("falta %q de los modelos:\n%s", s, v)
+		}
 	}
 	a.Pulsar("v")
 	if !strings.Contains(a.Vista(), clave) {
@@ -416,9 +445,10 @@ func TestClaveDelEspacio(t *testing.T) {
 		t.Fatalf("avisa: %+v", av)
 	}
 	nueva, _ := cli.ClaveInstancia(context.Background(), id)
-	if nueva == clave || !strings.Contains(a.Vista(), nueva) {
-		t.Fatalf("se ve la clave nueva %q:\n%s", nueva, a.Vista())
+	if nueva == clave {
+		t.Fatal("la clave cambia en el servicio")
 	}
+	a.HastaVer(nueva)
 
 	q, ok = pregunta(a.Pulsar("R"))
 	if !ok || !strings.Contains(q.Texto, "Reiniciar el consumo del espacio") {
@@ -427,6 +457,7 @@ func TestClaveDelEspacio(t *testing.T) {
 	if av, ok := aviso(a.Entregar(comp.Confirmado{})); !ok || av.Texto != "Consumo reiniciado" {
 		t.Fatalf("avisa: %+v", av)
 	}
+	a.HastaVer("0 / 4")
 	a.Pulsar("left")
 	if v := a.Vista(); !strings.Contains(v, "Todavía no hay APIs") {
 		t.Fatalf("← vuelve a las APIs:\n%s", v)
@@ -484,26 +515,85 @@ func TestServicioCaido(t *testing.T) {
 	if len(f) != 1 {
 		t.Fatalf("con el servicio cerrado: ErrorServicio, y la página no se cierra: %+v", f)
 	}
-	if v := a.Vista(); !strings.Contains(v, "El servicio no responde · r reintenta") {
-		t.Fatalf("la página lo dice:\n%s", v)
-	}
+	a.HastaVer("El servicio no responde · r reintenta")
 }
 
-// TestErrorDeCarga: si la lista no llega, se dice con el mensaje del servicio y r reintenta, sin invitar a crear la primera.
+// TestErrorDeCarga: si la lista no llega, se dice con el mensaje del servicio y r reintenta, sin invitar a crear la
+// primera: en la primera carga y también al recargar una lista vacía. Con APIs a la vista, el error va en un aviso y la
+// lista no se tapa.
 func TestErrorDeCarga(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	proxy, fallar := prueba.ConFallo(t, cli)
 	fallar("la configuración no se pudo leer")
 	a := abierta(t, proxy, id)
-	v := a.Vista()
-	if !strings.Contains(v, "No se pudo cargar: la configuración no se pudo leer") || strings.Contains(v, "Todavía no hay APIs") {
+	if v := a.Vista(); !strings.Contains(v, "No se pudo cargar: la configuración no se pudo leer") || !strings.Contains(v, "r Reintentar") ||
+		strings.Contains(v, "Todavía no hay APIs") {
 		t.Fatalf("el error de carga:\n%s", v)
 	}
 	fallar("")
 	a.Pulsar("r")
-	if v := a.Vista(); !strings.Contains(v, "Todavía no hay APIs") {
-		t.Fatalf("r reintenta:\n%s", v)
+	a.HastaVer("Todavía no hay APIs")
+
+	// Cargó vacía y la recarga falla: el error no se pierde.
+	fallar("el servicio no pudo leer las APIs")
+	a.Pulsar("r")
+	a.HastaVer("No se pudo cargar: el servicio no pudo leer las APIs", "r Reintentar")
+	if v := a.Vista(); strings.Contains(v, "Todavía no hay APIs") {
+		t.Fatalf("no invita a crear la primera:\n%s", v)
 	}
+	fallar("")
+	a.Pulsar("r")
+	a.HastaVer("Todavía no hay APIs")
+
+	// Con APIs, un fallo al recargar es un aviso y la lista sigue.
+	crear(t, cli, id, contrato.ConfigPunto{Nombre: "mi-app"})
+	a.Pulsar("r")
+	a.HastaVer("mi-app")
+	fallar("otra vez no")
+	if av, ok := aviso(a.Pulsar("r")); !ok || av.Texto != "otra vez no" || av.Tipo != comp.Fallo {
+		t.Fatalf("un aviso de fallo: %+v", av)
+	}
+	if v := a.Vista(); !strings.Contains(v, "mi-app") {
+		t.Fatalf("la lista sigue:\n%s", v)
+	}
+}
+
+// TestRespuestasViejas: una carga pedida antes de volver a iniciar la página se descarta, aunque llegue después; un cambio
+// ya hecho en el servicio en el mismo espacio sí se aplica, aunque la página se haya vuelto a iniciar.
+func TestRespuestasViejas(t *testing.T) {
+	cli, id := prueba.Servicio(t)
+	crear(t, cli, id, contrato.ConfigPunto{Nombre: "mi-app"})
+	a := abierta(t, cli, id)
+
+	vieja := a.Recoger(a.Retener(func() { a.Pulsar("r") })) // la carga de antes, con solo mi-app
+	crear(t, cli, id, contrato.ConfigPunto{Nombre: "otra"})
+	a.Correr(a.P.Iniciar(contexto(t, cli, id)))
+	a.HastaVer("otra")
+	if len(vieja) != 1 {
+		t.Fatalf("la carga vieja trae un mensaje: %v", vieja)
+	}
+	a.Entregar(vieja[0])
+	if v := a.Vista(); !strings.Contains(v, "otra") || !strings.Contains(v, "APIs por aplicación (2)") {
+		t.Fatalf("la carga vieja se descarta:\n%s", v)
+	}
+
+	// Una carga de otro espacio tampoco vale.
+	otro := a.Recoger(a.Retener(func() { a.Pulsar("r") }))
+	c := contexto(t, cli, id)
+	c.Instancia = "otro"
+	a.P.Iniciar(c) // la app cambió de espacio; su carga no se corre
+	a.Entregar(otro[0])
+	if v := a.Vista(); !strings.Contains(v, "Cargando…") {
+		t.Fatalf("la carga de otro espacio se descarta:\n%s", v)
+	}
+
+	// Un cambio retenido del mismo espacio se aplica tras volver a iniciar.
+	a = abierta(t, cli, id)
+	accion := a.Retener(func() { a.Pulsar("a") }) // detener mi-app, la primera
+	a.Correr(a.P.Iniciar(contexto(t, cli, id)))
+	a.Soltar(accion)
+	hastaServicio(t, a, cli, id, "mi-app", func(p contrato.EstadoPunto, _ bool) bool { return !p.Activo })
+	a.HastaVer("mi-app               ○ Detenida")
 }
 
 // TestCabe: la lista, el detalle, el formulario, los filtros y la clave del espacio caben en el área de 60×20, también con

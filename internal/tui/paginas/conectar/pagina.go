@@ -24,16 +24,18 @@ import (
 type origen struct{ pagina.Origen }
 
 type (
-	// msgCarga trae todo lo de la página: las APIs con su uso y su consumo y, si llegan, el presupuesto y el resumen del
-	// espacio, su nombre, lo que dura el historial y la clave del espacio.
+	// msgCarga trae las APIs con su uso y su consumo y, si llega, el presupuesto del espacio. La carga completa trae además
+	// el resumen del espacio, su nombre, lo que dura el historial, el catálogo y la clave del espacio.
 	msgCarga struct {
 		origen
 		n        int
+		completa bool
 		lista    contrato.ListaPuntos
 		espacio  *nucleo.EstadoPresupuesto
 		resumen  *contrato.ResumenInstancia
 		nombre   string
 		horas    int
+		catalogo []contrato.Modelo
 		clave    string
 		errClave error
 		err      error
@@ -91,6 +93,7 @@ type Pagina struct {
 	resumen  contrato.ResumenInstancia
 	nombre   string // el del espacio
 	horas    int
+	catalogo []contrato.Modelo
 	clave    string // la del espacio
 	errClave string
 	verClave bool
@@ -159,21 +162,24 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	p.cerrarDetalle()
 	p.form = nil
 	p.aplicarFiltros()
-	return p.cargar()
+	return p.cargar(true)
 }
 
 func (p *Pagina) origen() origen        { return origen{p.c.Origen(p.gen)} }
 func (p *Pagina) vigente(o origen) bool { return o.Vigente(p.c, p.gen) }
 
-// cargar pide todo a la vez. Sin la lista no hay página; lo demás, si falla, se queda como estaba (la clave dice su error).
-func (p *Pagina) cargar() tea.Cmd {
+// cargar pide la lista y el presupuesto del espacio, como cargarPuntos de la Web UI tras cada cambio. La carga completa (al
+// entrar y con r) pide además lo que no cambia con las acciones: el resumen y el nombre del espacio, lo que dura el
+// historial, el catálogo y la clave. Sin la lista no hay página; lo demás, si falla, se queda como estaba (la clave dice
+// su error).
+func (p *Pagina) cargar(completa bool) tea.Cmd {
 	c := p.c
 	if c.Cli == nil {
 		p.sinServ = true
 		return pagina.SinCliente
 	}
 	p.n++
-	m := msgCarga{origen: p.origen(), n: p.n}
+	m := msgCarga{origen: p.origen(), n: p.n, completa: completa}
 	return func() tea.Msg {
 		m.lista, m.err = c.Cli.Puntos(c.Ctx, c.Instancia)
 		if m.err != nil {
@@ -181,6 +187,12 @@ func (p *Pagina) cargar() tea.Cmd {
 		}
 		if e, err := c.Cli.PresupuestoInstancia(c.Ctx, c.Instancia); err == nil {
 			m.espacio = &e
+		}
+		if !completa {
+			return m
+		}
+		if l, err := c.Cli.Catalogo(c.Ctx, c.Instancia); err == nil {
+			m.catalogo = l
 		}
 		if r, err := c.Cli.Instancia(c.Ctx, c.Instancia); err == nil {
 			m.resumen = &r
@@ -243,7 +255,8 @@ func (p *Pagina) alCargar(m msgCarga) tea.Cmd {
 		if p.cargado && len(p.datos.Puntos) > 0 { // la lista que ya se ve no se tapa: el error va en un aviso
 			return comp.Aviso(nucleo.MensajeDe(m.err), comp.Fallo)
 		}
-		p.err = nucleo.MensajeDe(m.err)
+		// Sin APIs a la vista, el error ocupa su sitio con «Reintentar», como la Web UI: no se pierde tras el vacío.
+		p.cargado, p.err = false, nucleo.MensajeDe(m.err)
 		return nil
 	}
 	p.sinServ, p.cargado, p.err, p.datos = false, true, "", m.lista
@@ -259,9 +272,14 @@ func (p *Pagina) alCargar(m msgCarga) tea.Cmd {
 	if m.nombre != "" {
 		p.nombre = m.nombre
 	}
-	p.clave, p.errClave = m.clave, ""
-	if m.errClave != nil {
-		p.errClave = nucleo.MensajeDe(m.errClave)
+	if m.catalogo != nil {
+		p.catalogo = m.catalogo
+	}
+	if m.completa {
+		p.clave, p.errClave = m.clave, ""
+		if m.errClave != nil {
+			p.errClave = nucleo.MensajeDe(m.errClave)
+		}
 	}
 	p.aplicarFiltros()
 	if p.detalle != "" { // la API abierta ya no está (borrada desde otro sitio): el detalle se cierra
@@ -283,7 +301,8 @@ func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
 		if cmd := pagina.SinServicio(m.err); cmd != nil {
 			return cmd
 		}
-		return comp.Aviso(nucleo.MensajeDe(m.err), comp.Fallo)
+		// Recarga igual: un cambio de varias peticiones (g) pudo quedarse a medias, como activarGrupo en su finally.
+		return tea.Batch(comp.Aviso(nucleo.MensajeDe(m.err), comp.Fallo), p.cargar(false))
 	}
 	if m.cerrarForm {
 		p.form = nil
@@ -299,7 +318,7 @@ func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
 	if m.claveEspacio != "" {
 		p.clave, p.errClave, p.verClave = m.claveEspacio, "", true
 	}
-	cmds := []tea.Cmd{p.cargar()}
+	cmds := []tea.Cmd{p.cargar(false)}
 	if m.exito != "" {
 		cmds = append(cmds, comp.Aviso(m.exito, comp.Exito))
 	}
@@ -348,9 +367,13 @@ func (p *Pagina) confirmado() tea.Cmd {
 			m.abrir = &abrir{punto: x, clave: clave}
 			return err
 		})
-	case accReiniciar, accReiniciarEspacio:
+	case accReiniciar:
 		return p.accion(p.tx("presupuesto.reiniciado"), func(c pagina.Contexto, m *msgAccion) error {
 			return c.Cli.ReiniciarPresupuesto(c.Ctx, c.Instancia, nombre)
+		})
+	case accReiniciarEspacio:
+		return p.accion(p.tx("presupuesto.reiniciado"), func(c pagina.Contexto, m *msgAccion) error {
+			return c.Cli.ReiniciarPresupuestoInstancia(c.Ctx, c.Instancia)
 		})
 	case accRegenerarEspacio:
 		return p.accion(p.tx("conectar.claveRegenerada"), func(c pagina.Contexto, m *msgAccion) error {
@@ -424,7 +447,7 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 	case "esc":
 		return pagina.Atras
 	case "r":
-		return p.cargar()
+		return p.cargar(true)
 	case "left", "right":
 		if p.cargado {
 			p.pestana = map[string]int{"left": pestanaApis, "right": pestanaClave}[t]
@@ -498,7 +521,7 @@ func (p *Pagina) teclaDetalle(t string, k tea.KeyPressMsg) tea.Cmd {
 		}
 		p.cerrarDetalle()
 	case "r":
-		return p.cargar()
+		return p.cargar(true)
 	case "y":
 		if p.claveVista != "" {
 			return comp.Copiar(p.claveVista)

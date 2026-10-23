@@ -112,7 +112,10 @@ export const CLAVES_EJECUTAR: string[] = [
 export const CLAVES_APIS: string[] = [
   'conectar.subtitulo', 'conectar.directa', 'conectar.directaTexto', 'conectar.urlAnthropic', 'conectar.apiPropia',
   'conectar.mostrarClave', 'conectar.ocultarClave', 'conectar.regenerarClave', 'conectar.regenerarTitulo', 'conectar.regenerarTexto',
-  'conectar.claveRegenerada', 'guia.titulo', 'comun.errorCarga', 'comun.reintentar',
+  'conectar.claveRegenerada', 'conectar.modeloAntes', 'conectar.modeloDespues', 'conectar.perfiles', 'guia.titulo',
+  'comun.errorCarga', 'comun.reintentar', 'modelo.esPredeterminado',
+  'puntos.filtroCaracteristicas', 'puntos.carJson', 'puntos.carRespaldo', 'puntos.carPresupuesto', 'puntos.carInstrucciones',
+  'puntos.carForzado', 'puntos.carRestringida',
   'puntos.pestana', 'puntos.principal', 'puntos.activo', 'puntos.desactivado', 'puntos.sinGrupo', 'puntos.vacio', 'puntos.verClave',
   'puntos.nuevo', 'puntos.nuevoTexto', 'puntos.sinResultados', 'puntos.limpiarFiltros', 'puntos.buscarApi',
   'puntos.filtroGrupo', 'puntos.todosGrupos', 'puntos.filtroEstado', 'puntos.estadoTodas', 'puntos.estadoActivas',

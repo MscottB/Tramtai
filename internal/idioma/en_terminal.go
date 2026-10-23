@@ -111,5 +111,6 @@ func init() {
 		"Filtros y orden":                     "Filters and order",
 		"activa o detiene el grupo":           "start or stop the group",
 		"Escribe un número, por ejemplo 2.50": "Type a number, for example 2.50",
+		"El respaldo, la respuesta con forma y las correcciones se editan en Probar: p desde el detalle.": "The fallback, the shaped response and the corrections are edited in the Playground: p from the details.",
 	})
 }

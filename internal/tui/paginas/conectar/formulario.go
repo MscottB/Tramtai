@@ -19,9 +19,13 @@ import (
 	"tramtai/internal/tui/comp"
 )
 
-// filtros son los de la lista de la Web UI: la búsqueda, el grupo, el estado, el agente, el contrato, si tiene peticiones
-// y el orden. En grupo y agente, todos es «sin filtro» ("" es «sin grupo» y «el predeterminado»).
-type filtros struct{ busqueda, grupo, estado, agente, contrato, uso, orden string }
+// filtros son los de la lista de la Web UI: la búsqueda, el grupo, el estado, el agente, el contrato, lo que tienen (todo a
+// la vez), si tienen peticiones y el orden. En grupo y agente, todos es «sin filtro» ("" es «sin grupo» y «el
+// predeterminado»).
+type filtros struct {
+	busqueda, grupo, estado, agente, contrato, uso, orden string
+	tiene                                                 []string
+}
 
 const todos = "\x00"
 
@@ -29,7 +33,33 @@ var sinFiltros = filtros{grupo: todos, estado: "todas", agente: todos, uso: "tod
 
 // hay dice si algún filtro deja fuera APIs; el orden no cuenta.
 func (f filtros) hay() bool {
-	return f.busqueda != "" || f.grupo != todos || f.estado != "todas" || f.agente != todos || f.contrato != "" || f.uso != "todas"
+	return f.busqueda != "" || f.grupo != todos || f.estado != "todas" || f.agente != todos || f.contrato != "" || f.uso != "todas" ||
+		len(f.tiene) > 0
+}
+
+// caracteristicas son las del filtro «Tiene» de la Web UI, en su orden, con su texto.
+var caracteristicas = []struct{ id, clave string }{{"json", "puntos.carJson"}, {"respaldo", "puntos.carRespaldo"},
+	{"presupuesto", "puntos.carPresupuesto"}, {"instrucciones", "puntos.carInstrucciones"}, {"forzado", "puntos.carForzado"},
+	{"restringida", "puntos.carRestringida"}}
+
+// tiene dice si la API tiene esa característica, como caracteristicas en ListaApis.vue.
+func (p *Pagina) tiene(x contrato.EstadoPunto, c string) bool {
+	switch c {
+	case "json":
+		return len(x.Esquema) > 0
+	case "respaldo":
+		return len(x.Respaldo) > 0
+	case "presupuesto":
+		_, ok := p.datos.Presupuestos[x.Nombre]
+		return ok
+	case "instrucciones":
+		return strings.TrimSpace(x.Instrucciones) != ""
+	case "forzado":
+		return x.ForzarModelo
+	case "restringida":
+		return len(x.ModelosPermitidos) > 0
+	}
+	return false
 }
 
 // contratos son los de la Web UI, en su orden.
@@ -61,6 +91,7 @@ func (p *Pagina) pasa(x contrato.EstadoPunto) bool {
 	f := p.filtros
 	return (f.grupo == todos || x.Grupo == f.grupo) && (f.estado == "todas" || f.estado == estado(x)) &&
 		(f.agente == todos || x.Agente == f.agente) && (f.contrato == "" || slices.Contains(x.Contratos, f.contrato)) &&
+		!slices.ContainsFunc(f.tiene, func(c string) bool { return !p.tiene(x, c) }) &&
 		(f.uso == "todas" || (f.uso == "con") == (p.datos.Uso[x.Nombre].Peticiones > 0))
 }
 
@@ -252,6 +283,22 @@ func (f *formulario) presupuesto() *nucleo.Presupuesto {
 	return &pr
 }
 
+// opcionesModelo son las del modelo de la receta, como SelectorModelo y el modelo de Probar: el predeterminado del espacio
+// (vacío) y los ids del catálogo; el de la API, si el catálogo no lo trae, también.
+func (p *Pagina) opcionesModelo(actual string) []opcion {
+	ops := []opcion{{p.tx("modelo.esPredeterminado"), ""}}
+	for _, m := range p.catalogo {
+		if m.Predeterminado {
+			ops[0].etiqueta += " (" + m.ID + ")"
+		}
+		ops = append(ops, opcion{m.ID, m.ID})
+	}
+	if actual != "" && etiquetaDe(ops, actual) == "" {
+		ops = append(ops, opcion{actual, actual})
+	}
+	return ops
+}
+
 func (p *Pagina) opcionesEsfuerzo() []opcion {
 	ops := []opcion{{p.tx("esfuerzo.agente"), ""}}
 	for _, n := range nucleo.NivelesEsfuerzo {
@@ -268,10 +315,10 @@ func (p *Pagina) abrirForm(x *contrato.EstadoPunto) {
 	if x != nil {
 		v = *x
 	}
-	ops := map[string][]opcion{"esfuerzo": p.opcionesEsfuerzo()}
+	ops := map[string][]opcion{"esfuerzo": p.opcionesEsfuerzo(), "modelo": p.opcionesModelo(idModelo(v))}
 	receta := []comp.Campo{
 		comp.Area("instrucciones", p.tx("receta.instrucciones"), v.Instrucciones),
-		comp.Texto("modelo", p.tx("receta.modelo"), idModelo(v)).Ejemplo("perfil/rapido"),
+		comp.Opcion("modelo", p.tx("receta.modelo"), etiquetas(ops["modelo"]), etiquetaDe(ops["modelo"], idModelo(v))),
 		comp.Interruptor("forzar", p.tx("receta.forzar"), v.ForzarModelo),
 		comp.Opcion("esfuerzo", p.tx("esfuerzo.titulo"), etiquetas(ops["esfuerzo"]), etiquetaDe(ops["esfuerzo"], v.Esfuerzo)),
 	}
@@ -348,6 +395,12 @@ func (p *Pagina) enviar() tea.Cmd {
 	modelo := strings.TrimSpace(f.valor("modelo"))
 	switch f.modo {
 	case modoFiltros:
+		p.filtros.tiene = nil
+		for _, c := range caracteristicas {
+			if f.f.Marcado("tiene:" + c.id) {
+				p.filtros.tiene = append(p.filtros.tiene, c.id)
+			}
+		}
 		for _, id := range []string{"grupo", "estado", "agente", "contrato", "uso", "orden"} {
 			if _, ok := f.opciones[id]; !ok {
 				continue
@@ -444,6 +497,9 @@ func (p *Pagina) abrirFiltros() {
 		o = append(o, opcion{p.nombreContrato(c), c})
 	}
 	poner("contrato", "puntos.filtroContrato", o, f.contrato)
+	for _, c := range caracteristicas {
+		campos = append(campos, comp.Interruptor("tiene:"+c.id, p.tx("puntos.filtroCaracteristicas")+": "+p.tx(c.clave), slices.Contains(f.tiene, c.id)))
+	}
 	poner("uso", "puntos.filtroUso", p.opcionesUso(), f.uso)
 	poner("orden", "puntos.orden", []opcion{{p.tx("puntos.ordenNombre"), "nombre"}, {p.tx("puntos.ordenUso"), "uso"},
 		{p.tx("puntos.ordenUltima"), "ultima"}}, f.orden)
@@ -486,6 +542,15 @@ func (p *Pagina) resumenFiltros() string {
 	}
 	if f.contrato != "" {
 		poner("puntos.filtroContrato", p.nombreContrato(f.contrato))
+	}
+	if len(f.tiene) > 0 {
+		var nombres []string
+		for _, c := range caracteristicas {
+			if slices.Contains(f.tiene, c.id) {
+				nombres = append(nombres, p.tx(c.clave))
+			}
+		}
+		poner("puntos.filtroCaracteristicas", strings.Join(nombres, ", "))
 	}
 	if f.uso != "todas" {
 		poner("puntos.filtroUso", etiquetaDe(p.opcionesUso(), f.uso))
