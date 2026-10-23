@@ -47,6 +47,36 @@ func TestVisorBusca(t *testing.T) {
 
 func vista(v Visor) string { return ansi.Strip(v.Vista()) }
 
+// TestVisorDicePorDondeVa: como Inicio y Probar, si el texto no cabe, la última fila dice por dónde va (↑↓ visto/total),
+// sin pasarse del alto; si cabe, no hay fila de más.
+func TestVisorDicePorDondeVa(t *testing.T) {
+	var lineas []string
+	for i := range 20 {
+		lineas = append(lineas, fmt.Sprintf("línea %d", i))
+	}
+	v := NuevoVisor(estilos())
+	v.Tamano(40, 5)
+	v.Poner(strings.Join(lineas, "\n"))
+	lineasDe := func() []string {
+		l := strings.Split(vista(v), "\n")
+		for i := range l {
+			l[i] = strings.TrimRight(l[i], " ")
+		}
+		return l
+	}
+	if l := lineasDe(); len(l) != 5 || l[4] != "↑↓ 4/20" || l[3] != "línea 3" {
+		t.Fatalf("cuatro líneas y la posición:\n%s", vista(v))
+	}
+	v.Update(tecla("G"))
+	if l := lineasDe(); l[3] != "línea 19" || l[4] != "↑↓ 20/20" {
+		t.Fatalf("al final se ve la última línea:\n%s", vista(v))
+	}
+	v.Poner("corto")
+	if strings.Contains(vista(v), "↑↓") {
+		t.Fatalf("si cabe no hay posición:\n%q", vista(v))
+	}
+}
+
 // TestVisorCambiaDeTema: el fondo llega después de crear el visor; al pintar usa los estilos de ese momento.
 func TestVisorCambiaDeTema(t *testing.T) {
 	e := estilos()
