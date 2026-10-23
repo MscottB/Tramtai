@@ -149,9 +149,14 @@ func TestAvisoEspaciosYConversor(t *testing.T) {
 	if _, cmd := p.Update(tecla("p")); cmd == nil {
 		t.Fatal("p prepara el conversor") // no se ejecuta: descargaría Python
 	}
-	p.Update(msgConversor{origen: p.origen(), e: contrato.EstadoConversor{Estado: "error", Mensaje: "sin red"}})
+	p.Update(msgConversor{origen: p.origen(), e: contrato.EstadoConversor{Estado: "error", Mensaje: "sin red", Paquete: true}})
 	if v := p.Vista(); !strings.Contains(v, "No se pudo preparar el conversor de archivos: sin red") || !strings.Contains(v, "Si la red de tu empresa") {
 		t.Fatalf("error:\n%s", v)
+	}
+	// Sin paquete del conversor para este sistema (solo lo hay para Windows x64), no se ofrece.
+	p.Update(msgConversor{origen: p.origen(), e: contrato.EstadoConversor{Estado: "error", Mensaje: "sin red"}})
+	if v := p.Vista(); !strings.Contains(v, "sin red") || strings.Contains(v, "Si la red de tu empresa") {
+		t.Fatalf("error sin paquete:\n%s", v)
 	}
 	// Preparándose o listo: sin aviso, como la Web UI.
 	for _, estado := range []string{"preparando", "listo"} {

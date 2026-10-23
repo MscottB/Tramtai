@@ -260,4 +260,7 @@ type EstadoConversor struct {
 	// Mensaje es el error de la última preparación, legible.
 	Mensaje           string `json:"mensaje,omitempty"`
 	PrepararAlIniciar bool   `json:"preparar_al_iniciar"`
+	// Paquete dice si hay paquete del conversor para el sistema del servicio (solo se publica para Windows x64): solo
+	// entonces se ofrece, tras un error, para cuando la red de la empresa bloquea la descarga.
+	Paquete bool `json:"paquete,omitempty"`
 }

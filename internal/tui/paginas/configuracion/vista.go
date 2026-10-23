@@ -139,7 +139,7 @@ func (p *Pagina) bloqueDe(sec string) bloque {
 	case secConversor:
 		c := p.conversor
 		b := bloque{titulo: p.tx("conversor.titulo"), texto: p.tx("conversor.texto"), lineas: []string{p.textoConversor(*c)}}
-		if c.Estado == "error" {
+		if c.Estado == "error" && c.Paquete {
 			b.lineas = append(b.lineas, e.Tenue.Render(p.tx("conversor.redEmpresa")))
 		}
 		b.lineas = append(b.lineas, casilla(c.PrepararAlIniciar)+" "+p.tx("conversor.alIniciar"))
