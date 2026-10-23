@@ -29,12 +29,12 @@ func TestErroresNoSeTragan(t *testing.T) {
 	poner(t, a, tx("receta.esquema"), `{"type":"object"}`)
 	editar(t, a, tx("receta.esquema"))
 	cerrar()
-	if fuera := a.Pulsar("esc"); !errorServicio(fuera) {
+	if fuera := a.HastaSalir(func() { a.Pulsar("esc") }, errorServicio); !errorServicio(fuera) {
 		t.Fatalf("validar el esquema sin servicio avisa: %v", fuera)
 	}
 	editar(t, a, tx("ejecutar.adjuntar"))
 	a.Pegar(pdf)
-	if fuera := a.Pulsar("tab"); !errorServicio(fuera) {
+	if fuera := a.HastaSalir(func() { a.Pulsar("tab") }, errorServicio); !errorServicio(fuera) {
 		t.Fatalf("mirar el conversor sin servicio avisa: %v", fuera)
 	}
 	// Una carpeta de datos que es un archivo: el borrador no se puede guardar.
@@ -44,6 +44,7 @@ func TestErroresNoSeTragan(t *testing.T) {
 	b, r := abrirConReloj(t, contexto(t, cli2, id2, archivo))
 	escribir(t, b, tx("ejecutar.mensaje"), "a medias")
 	guardarBorrador(b, r)
+	b.Hasta(func() bool { return prueba.HayAviso(b.Fuera) })
 	if av, ok := aviso(b.Fuera); !ok || av.Tipo != comp.Advertencia || !strings.Contains(av.Texto, "borrador") {
 		t.Fatalf("avisa de que el borrador no se pudo guardar: %v", b.Fuera)
 	}
@@ -113,6 +114,7 @@ func TestEsquemaAlSalirConEsc(t *testing.T) {
 	vaciar(a)
 	a.Escribir(`{"type":"object","properties":{"x":{"type":"nada"}}}`)
 	a.Pulsar("esc")
+	a.HastaVer("properties.x.type")
 	if enfocar(t, a, tx("receta.esquema")); a.P.EnCampo() || !strings.Contains(a.Vista(), "properties.x.type") {
 		t.Fatalf("Esc deja el campo y el servicio dice qué está mal:\n%s", a.Vista())
 	}
@@ -141,9 +143,11 @@ func TestNavegarMientrasSeEnvia(t *testing.T) {
 		t.Fatalf("con el envío en camino no se manda otro: %v", fuera)
 	}
 	a.Soltar(envio)
+	a.Hasta(func() bool { return cuantos(t, cli, id) == 1 && pestana(a, "ejecutar.respuesta") })
 	if n := cuantos(t, cli, id); n != 1 || !pestana(a, "ejecutar.respuesta") {
 		t.Fatalf("la petición creada se enseña, una sola: %d", n)
 	}
+	a.Hasta(func() bool { _, hay := hayBorrador(carpeta); return !hay })
 	if _, hay := hayBorrador(carpeta); hay {
 		t.Fatal("la petición creada borra el borrador")
 	}
@@ -160,6 +164,7 @@ func TestNavegarMientrasSeEnvia(t *testing.T) {
 	ocultar(c)
 	c.Soltar(envio)
 	<-b.Entro
+	c.Hasta(func() bool { return pestana(c, "ejecutar.respuesta") && !strings.Contains(c.Vista(), "en vivo") })
 	if v := c.Vista(); !pestana(c, "ejecutar.respuesta") || strings.Contains(v, "en vivo") {
 		t.Fatalf("oculta, la recuerda sin abrir el seguimiento:\n%s", v)
 	}

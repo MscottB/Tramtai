@@ -53,8 +53,19 @@ func abrir(t *testing.T, c pagina.Contexto, f *ensayo) (*prueba.App, *prueba.Rel
 		t.Fatalf("arranca con «Cargando…»:\n%s", v)
 	}
 	a.Correr(cmd)
-	a.EsperarCarga()
+	cargada(a, c)
 	return a, r
+}
+
+// cargada espera a lo del espacio y a la comprobación de los agentes, que llega aparte con los Primeros pasos: hasta
+// entonces la red y los pasos dicen «Comprobando…». Lo demás que trae el servicio tras una tecla se espera con Hasta o
+// HastaVer antes de mirarlo (regla 20): Asentar no ve los temporizadores del servicio ni todas las esperas de E/S.
+func cargada(a *prueba.App, c pagina.Contexto) {
+	a.EsperarCarga()
+	if c.Cli != nil {
+		comprobando := strings.TrimRight(datos.Texto(c.Idioma, "inicio.comprobando"), ".…")
+		a.Hasta(func() bool { return !strings.Contains(a.Vista(), comprobando) })
+	}
 }
 
 // alto es el contexto de la prueba con ese alto.
@@ -308,7 +319,12 @@ func TestRedConsultaSinFlujo(t *testing.T) {
 		t.Fatalf("sin consulta, la fila sigue:\n%s", a.Vista())
 	}
 	r.Pasar(2 * time.Second) // a los 5 s, el refresco consulta los trabajos
-	if a.Asentar(); strings.Contains(a.Vista(), "fantasma") || !strings.Contains(a.Vista(), "Sin conexión en vivo") {
+	a.Asentar()
+	a.Hasta(func() bool {
+		v := a.Vista()
+		return !strings.Contains(v, "fantasma") && strings.Contains(v, "Sin conexión en vivo")
+	})
+	if strings.Contains(a.Vista(), "fantasma") || !strings.Contains(a.Vista(), "Sin conexión en vivo") {
 		t.Fatalf("la consulta no trae el trabajo fantasma:\n%s", a.Vista())
 	}
 }
@@ -356,6 +372,7 @@ func TestAvisoApiPropia(t *testing.T) {
 	}
 	comoApp(t, cli, clave, 20)
 	a.Correr(a.P.Iniciar(prueba.Contexto(t, cli, id)))
+	cargada(a, prueba.Contexto(t, cli, id))
 	if strings.Contains(a.Vista(), "con la clave del espacio") {
 		t.Fatal("20 no basta")
 	}
@@ -364,6 +381,7 @@ func TestAvisoApiPropia(t *testing.T) {
 	}
 	comoApp(t, cli, clave, 1)
 	a.Correr(a.P.Iniciar(prueba.Contexto(t, cli, id)))
+	a.HastaVer("21 peticiones de apps llegaron con la clave del espacio", "últimas 24 h", "Crear una API")
 	v := a.Vista()
 	for _, quiere := range []string{"21 peticiones de apps llegaron con la clave del espacio", "últimas 24 h", "Crear una API"} {
 		if !strings.Contains(v, quiere) {
@@ -510,14 +528,18 @@ func TestContadores(t *testing.T) {
 		t.Fatal(err)
 	}
 	r.Pasar(inicio.CadaRefresco)
-	if a.Asentar(); !strings.Contains(a.Vista(), "Completadas") || !strings.Contains(a.Vista(), " 1") {
+	a.Asentar()
+	a.HastaVer("Completadas", " 1")
+	if !strings.Contains(a.Vista(), "Completadas") || !strings.Contains(a.Vista(), " 1") {
 		t.Fatalf("suma uno:\n%s", a.Vista())
 	}
 	// Con la retención de un día, «el último día».
 	cli2, id2 := prueba.Ajustado(t, func(o *servicio.Opciones) {
 		o.Config.Fijar(configuracion.OrigenGlobal, map[string]any{"retencion.horas_metadatos": 24})
 	})
-	if b, _ := abrir(t, prueba.Contexto(t, cli2, id2), nil); !strings.Contains(b.Vista(), "el último día") {
+	b, _ := abrir(t, prueba.Contexto(t, cli2, id2), nil)
+	b.HastaVer("el último día") // la retención llega aparte de la carga
+	if !strings.Contains(b.Vista(), "el último día") {
 		t.Fatalf("el periodo sale de la retención:\n%s", b.Vista())
 	}
 }
@@ -550,7 +572,9 @@ func TestServicioCaido(t *testing.T) {
 	q, r := abrir(t, prueba.Contexto(t, cli, id), f)
 	cerrar()
 	r.Pasar(inicio.CadaRefresco)
-	if q.Asentar(); len(q.Fuera) == 0 {
+	q.Asentar()
+	q.Hasta(func() bool { return len(q.Fuera) != 0 })
+	if len(q.Fuera) == 0 {
 		t.Fatal("con el servicio parado, el refresco avisa")
 	}
 	if _, ok := q.Fuera[0].(pagina.ErrorServicio); !ok {
@@ -568,9 +592,9 @@ func TestServicioCaido(t *testing.T) {
 // contexto cancelado se descarta.
 func TestRespuestasViejas(t *testing.T) {
 	cli, id := prueba.Servicio(t)
-	hecha := func() {
+	hecha := func(texto string) {
 		t.Helper()
-		j, err := cli.Crear(ctx, id, nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "otra"}}})
+		j, err := cli.Crear(ctx, id, nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: texto}}})
 		if err == nil {
 			err = cli.Eventos(ctx, id, j.ID, 0, func(int, string, string) error { return nil })
 		}
@@ -585,8 +609,19 @@ func TestRespuestasViejas(t *testing.T) {
 		a, _ := abrir(t, alto(t, cli, id, 60), callado)
 		viejos := a.Retener(func() { a.Pulsar("r") }) // se pide antes de ocultar y responde con la petición nueva
 		a.P.(pagina.Ocultable).Ocultar()
+		// Lo vigente cambia algo que se ve: Mostrar trae una petición hecha antes, con su cuenta, y se espera a verla. Así
+		// nada de Mostrar llega después de «antes» y no hace falta esperar a que no pase nada.
+		hecha("previa")
 		a.Correr(a.P.(pagina.Ocultable).Mostrar())
-		hecha()
+		a.Hasta(func() bool {
+			for _, l := range strings.Split(a.Vista(), "\n") {
+				if strings.Contains(l, "Completadas") && strings.HasSuffix(strings.TrimSpace(l), " 1") {
+					return strings.Contains(a.Vista(), "previa")
+				}
+			}
+			return false
+		})
+		hecha("otra")
 		antes := a.Vista()
 		if fuera := a.Soltar(viejos); a.Vista() != antes || len(fuera) != 0 {
 			t.Fatalf("se descarta: %v\n%s\nantes:\n%s", fuera, a.Vista(), antes)
@@ -596,6 +631,7 @@ func TestRespuestasViejas(t *testing.T) {
 		a, _ := abrir(t, alto(t, cli, id, 60), nil)
 		viejos := a.Retener(func() { a.Pulsar("r") })
 		a.Correr(a.P.Iniciar(alto(t, cli, "otro", 60)))
+		cargada(a, alto(t, cli, "otro", 60)) // lo que contesta el otro espacio, antes de mirar
 		antes := a.Vista()
 		if fuera := a.Soltar(viejos); a.Vista() != antes || len(fuera) != 0 {
 			t.Fatalf("se descarta: %v\n%s\nantes:\n%s", fuera, a.Vista(), antes)
@@ -628,10 +664,19 @@ func TestTextosComoLaWeb(t *testing.T) {
 	c := alto(t, cli, id, 40)
 	c.Idioma = "en"
 	a, _ := abrir(t, c, f)
-	a.HastaVer("running")
+	textos := []string{"Your apps connect to", "Your network", "Departures", "Completed", "In progress", "With errors", "Getting started",
+		"Connect at least one agent", "1 of 1 agents ready", "Try an agent", "Connect your app", "running"}
+	a.Hasta(func() bool {
+		v := strings.ToLower(a.Vista())
+		for _, quiere := range textos {
+			if !strings.Contains(v, strings.ToLower(quiere)) {
+				return false
+			}
+		}
+		return true
+	})
 	v := a.Vista()
-	for _, quiere := range []string{"Your apps connect to", "Your network", "Departures", "Completed", "In progress", "With errors", "Getting started",
-		"Connect at least one agent", "1 of 1 agents ready", "Try an agent", "Connect your app", "running"} {
+	for _, quiere := range textos {
 		if !strings.Contains(v, quiere) && !strings.Contains(strings.ToLower(v), strings.ToLower(quiere)) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}
@@ -651,6 +696,7 @@ func TestPeticionesRecientesDelServicio(t *testing.T) {
 		}
 	}
 	a, _ := abrir(t, alto(t, cli, id, 60), nil)
+	a.Hasta(func() bool { return strings.Count(a.Vista(), "mensaje número ") == 5 }) // las recientes llegan aparte de la carga
 	v := a.Vista()
 	if n := strings.Count(v, "mensaje número "); n != 5 {
 		t.Fatalf("pide 5: %d\n%s", n, v)

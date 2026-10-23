@@ -30,6 +30,10 @@ func TestGuardarComoApi(t *testing.T) {
 	a.Pulsar("end", "ctrl+u")
 	a.Escribir("mi-app")
 	a.Pulsar("ctrl+s")
+	a.Hasta(func() bool {
+		v := a.Vista()
+		return !a.P.EnCampo() && strings.Contains(v, tx("ejecutar.apiCreada", "nombre", "mi-app")) && strings.Contains(v, "/openai/v1")
+	})
 	if v := a.Vista(); a.P.EnCampo() || !strings.Contains(v, tx("ejecutar.apiCreada", "nombre", "mi-app")) || !strings.Contains(v, "/openai/v1") {
 		t.Fatalf("crea la API y enseña su URL:\n%s", v)
 	}
@@ -55,7 +59,7 @@ func TestGuardarComoApi(t *testing.T) {
 	if !strings.Contains(pendiente(a), "La API mi-app tiene cambios sin guardar") {
 		t.Fatalf("salir avisa de los cambios sin guardar: %q", pendiente(a))
 	}
-	fuera := a.Pulsar("g")
+	fuera := a.HastaSalir(func() { a.Pulsar("g") }, prueba.HayAviso)
 	if av, ok := aviso(fuera); !ok || av.Texto != "Cambios guardados en mi-app" {
 		t.Fatalf("g actualiza la API: %v", fuera)
 	}
@@ -77,6 +81,7 @@ func TestConPunto(t *testing.T) {
 	}
 	a := abierta(t, cli, id)
 	a.Entregar(pagina.ConPunto{Nombre: "notas"})
+	a.HastaVer("Editando la API notas")
 	if !strings.Contains(a.Vista(), "Editando la API notas") || valor(t, a, tx("receta.instrucciones")) != "Resume" ||
 		!marcado(t, a, tx("receta.salidaEstructurada")) || valor(t, a, tx("receta.modelo")) != "simulado" {
 		t.Fatalf("trae la receta de la API:\n%s", a.Vista())
@@ -89,6 +94,7 @@ func TestCodigoComoLaPrueba(t *testing.T) {
 	a := abierta(t, cli, id)
 	poner(t, a, tx("ejecutar.mensaje"), "Hola desde la prueba")
 	a.Pulsar("k")
+	a.HastaVer("[Python", "curl", "JavaScript")
 	v := a.Vista()
 	if !strings.Contains(v, "[Python") || !strings.Contains(v, "curl") || !strings.Contains(v, "JavaScript") {
 		t.Fatalf("k abre «Ver como código» con curl, Python y JavaScript, Python primero:\n%s", v)

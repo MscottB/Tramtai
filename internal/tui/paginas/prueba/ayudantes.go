@@ -54,6 +54,9 @@ func Aviso(fuera []tea.Msg) (comp.NuevoAviso, bool) {
 	return comp.NuevoAviso{}, false
 }
 
+// HayAviso dice si entre lo que una página manda a la app hay un aviso: la condición de HastaSalir más común.
+func HayAviso(fuera []tea.Msg) bool { _, ok := Aviso(fuera); return ok }
+
 // Bloqueado es un agente que, con el mensaje «esperar», avisa en Entro, espera a SoltarPaso, escribe «primera parte»,
 // espera a SoltarFin y escribe « segunda parte»; los demás mensajes los contesta al momento con su texto. Así hay una
 // petición en marcha sin depender del reloj. Ultima es la última solicitud que recibió.

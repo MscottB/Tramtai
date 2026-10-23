@@ -166,8 +166,16 @@ func (c *cargador) Vista() string {
 	return "listo"
 }
 func (c *cargador) Update(m tea.Msg) (pagina.Pagina, tea.Cmd) {
-	if _, ok := m.(cargado); ok {
+	switch m.(type) {
+	case cargado:
 		c.listo = true
+	case tea.KeyPressMsg: // avisa cuando «contesta el servicio», tras un temporizador que el arnés no ve
+		return c, func() tea.Msg {
+			soltar := make(chan struct{})
+			time.AfterFunc(50*time.Millisecond, func() { close(soltar) })
+			<-soltar
+			return comp.Aviso("hecho", comp.Exito)()
+		}
 	}
 	return c, nil
 }
@@ -178,6 +186,16 @@ func (c *cargador) Update(m tea.Msg) (pagina.Pagina, tea.Cmd) {
 func TestAbrirEsperaLaCargaInicial(t *testing.T) {
 	if a := Abrir(t, &cargador{}, pagina.Contexto{Ctx: context.Background()}); a.Vista() != "listo" {
 		t.Fatalf("Abrir volvió con la página cargando: %s", a.Vista())
+	}
+}
+
+// HastaSalir espera al aviso que la página manda cuando le contesta el servicio, aunque lo que lo trae parezca quieto.
+func TestHastaSalirEsperaLoQueSale(t *testing.T) {
+	a := Abrir(t, &cargador{}, pagina.Contexto{Ctx: context.Background()})
+	a.Fuera = append(a.Fuera, comp.NuevoAviso{Texto: "de antes"}) // lo que salió antes de la acción no cuenta
+	fuera := a.HastaSalir(func() { a.Pulsar("a") }, HayAviso)
+	if av, ok := Aviso(fuera); !ok || av.Texto != "hecho" || len(fuera) != 1 {
+		t.Fatalf("devuelve lo que salió tras la acción: %v", fuera)
 	}
 }
 
