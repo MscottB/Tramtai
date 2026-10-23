@@ -67,6 +67,7 @@ func nuevoServidor(t *testing.T, registro map[string]adaptadores.Adaptador, ajus
 		t.Fatal(err)
 	}
 	opc := planificador.OpcionesDesde(c, "global")
+	opc.Secretos = func() []string { return nil } // sin el llavero del equipo: en macOS, un proceso por clave y por intento
 	conversor := documentos.Desde(c)
 	conversor.Raiz = dir // el conversor que haya preparado el usuario de este equipo no cuenta en las pruebas
 	opc.Preparador = documentos.Preparador{Cargas: cargas, Conversor: conversor}

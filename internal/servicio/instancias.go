@@ -173,6 +173,7 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *configuracion.Conf
 	opc.Registros = s.opc.Registros
 	opc.Desconectado = s.opc.Conexiones.Desconectado
 	opc.Salud = s.opc.Salud
+	opc.Secretos = s.opc.Secretos
 	if c.ProyectoConfiable(raiz) {
 		opc.RaizConfiable = raiz
 	}

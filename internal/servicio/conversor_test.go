@@ -28,7 +28,7 @@ func servicioConversor(t *testing.T, preparar bool) (*Servicio, string) {
 		t.Fatal(err)
 	}
 	s, err := Nuevo(Opciones{Datos: filepath.Join(dir, "datos"), Config: c, Registro: map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}},
-		Semaforos: planificador.NuevosSemaforos(nil), Host: "127.0.0.1", Hosts: []string{"127.0.0.1"},
+		Secretos: func() []string { return nil }, Semaforos: planificador.NuevosSemaforos(nil), Host: "127.0.0.1", Hosts: []string{"127.0.0.1"},
 		RaizConversor: dir, PrepararConversor: preparar, UV: filepath.Join(dir, "no-existe-uv")})
 	if err != nil {
 		t.Fatal(err)
