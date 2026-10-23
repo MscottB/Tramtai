@@ -424,7 +424,7 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 	}
 	// Si el agente escribe una clave de proveedor (lo empujó un contenido hostil), se tapa antes de guardarla o enviarla.
 	// shortcut: una clave partida entre dos fragmentos de texto solo se tapa en la salida final, no en los eventos.
-	secretos := adaptadores.Secretos()
+	secretos := p.opc.Secretos()
 	agrupador := &agrupador{guardar: func(tipo, datos string) error {
 		return p.almacen.AgregarEvento(fondo, id, tipo, adaptadores.Redactar(datos, secretos))
 	}}

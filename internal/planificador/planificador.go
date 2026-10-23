@@ -62,6 +62,10 @@ type Opciones struct {
 	Desconectado func(agente string) bool
 	// Salud anota los agentes cuya petición falló por autenticación y los quita cuando una funciona (nil = no se anota).
 	Salud *adaptadores.Salud
+	// Secretos da las claves que se tapan en lo que escribe el agente; se piden en cada intento, así que una clave
+	// guardada mientras el servicio corre también se tapa. nil = adaptadores.Secretos (el entorno y el almacén del
+	// sistema, que en macOS y Linux lanza un proceso por clave).
+	Secretos func() []string
 }
 
 // OpcionesDesde toma los límites de la configuración efectiva.
@@ -126,6 +130,9 @@ type Planificador struct {
 // Nuevo crea un planificador; hay que llamar a Iniciar antes de enviar trabajos.
 func Nuevo(almacen *persistencia.Almacen, registro map[string]adaptadores.Adaptador, semaforos Semaforos, opc Opciones) *Planificador {
 	opc.MaximoCola, opc.MaximoTrabajos = max(opc.MaximoCola, 1), max(opc.MaximoTrabajos, 1)
+	if opc.Secretos == nil {
+		opc.Secretos = adaptadores.Secretos
+	}
 	p := &Planificador{opc: opc, almacen: almacen, adaptadores: registro, semaforos: semaforos,
 		conversiones: make(chan struct{}, max(opc.MaximoConversiones, 1)), ranuras: make(chan struct{}, opc.MaximoTrabajos),
 		cancelaciones: map[string]context.CancelFunc{}}
