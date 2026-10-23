@@ -8,12 +8,15 @@ import (
 	"testing"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes"
+	"tramtai/internal/carpetas"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/nucleo"
 )
 
 func confiable(t *testing.T, raiz string) bool {
 	t.Helper()
-	g, err := nucleo.CargarConfiguracion("")
+	g, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +43,7 @@ func TestAbrirCreaYConfia(t *testing.T) {
 	if !confiable(t, inst.Raiz) {
 		t.Fatal("un proyecto que crea la app debe quedar confiado")
 	}
-	err = EditarPuntos(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+	err = configuracion.EditarPuntos(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), configuracion.OrigenLocal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		return append(lista, ConfigPunto{Nombre: "asistente"}), nil
 	})
 	if err != nil {
@@ -107,7 +110,7 @@ func TestMoverProyectoConfiadoPreguntaDeNuevo(t *testing.T) {
 			if camino == "abrir" {
 				_, err = s.AbrirProyecto(b, AbrirOpciones{})
 				var ec *ErrorConfianza
-				if !errors.As(err, &ec) || !nucleo.MismaRuta(ec.Movido, vieja) {
+				if !errors.As(err, &ec) || !carpetas.MismaRuta(ec.Movido, vieja) {
 					t.Fatalf("un proyecto movido debía preguntar, diciendo de dónde viene: %v", err)
 				}
 				si := true
@@ -118,7 +121,7 @@ func TestMoverProyectoConfiadoPreguntaDeNuevo(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if real, _ := filepath.EvalSymlinks(b); !nucleo.MismaRuta(inst.Raiz, real) {
+			if real, _ := filepath.EvalSymlinks(b); !carpetas.MismaRuta(inst.Raiz, real) {
 				t.Fatalf("el espacio sigue en %s y no en la carpeta nueva %s", inst.Raiz, real)
 			}
 			if inst.ID != id || confiable(t, inst.Raiz) != (camino == "abrir") {
@@ -172,7 +175,7 @@ func TestProyectoNoConfiadoGuardaSusAjustes(t *testing.T) {
 	if err := s.heredar(inst, "predeterminados.modelo"); err != nil {
 		t.Fatalf("usar el de Global: %v", err)
 	}
-	err = EditarPuntos(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+	err = configuracion.EditarPuntos(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), configuracion.OrigenLocal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		return append(lista, ConfigPunto{Nombre: "asistente"}), nil
 	})
 	if err == nil {
@@ -227,14 +230,14 @@ func TestAbrirDentroDeOtroProyecto(t *testing.T) {
 	_, err := s.AbrirProyecto(sub, AbrirOpciones{})
 	var ed *ErrorDentroDeProyecto
 	real, _ := filepath.EvalSymlinks(proyecto)
-	if !errors.As(err, &ed) || !nucleo.MismaRuta(ed.Proyecto, real) || nucleo.CodigoDe(err) != nucleo.CodigoDentroDeProyecto {
+	if !errors.As(err, &ed) || !carpetas.MismaRuta(ed.Proyecto, real) || nucleo.CodigoDe(err) != nucleo.CodigoDentroDeProyecto {
 		t.Fatalf("debía avisar de que está dentro de otro proyecto: %v", err)
 	}
 	inst, err := s.AbrirProyecto(sub, AbrirOpciones{CrearAqui: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if realSub, _ := filepath.EvalSymlinks(sub); !nucleo.MismaRuta(inst.Raiz, realSub) || !esProyecto(sub) {
+	if realSub, _ := filepath.EvalSymlinks(sub); !carpetas.MismaRuta(inst.Raiz, realSub) || !esProyecto(sub) {
 		t.Fatalf("con CrearAqui debía crear el proyecto en la subcarpeta: %s", inst.Raiz)
 	}
 }

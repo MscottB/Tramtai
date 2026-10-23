@@ -7,17 +7,9 @@ import (
 	"tramtai/internal/contrato"
 )
 
-// ResumenInstancia es lo que cuenta GET /api/v1/instancia para el Inicio: la dirección del servicio, los trabajos por
-// estado y las peticiones de apps con la clave del espacio en las últimas 24 h.
-type ResumenInstancia struct {
-	Base           string         `json:"base"`
-	Trabajos       map[string]int `json:"trabajos"`
-	AppConClave24h int            `json:"app_con_clave_24h"`
-}
-
 // Instancia devuelve el resumen de la instancia.
-func (c *Cliente) Instancia(ctx context.Context, instancia string) (ResumenInstancia, error) {
-	var r ResumenInstancia
+func (c *Cliente) Instancia(ctx context.Context, instancia string) (contrato.ResumenInstancia, error) {
+	var r contrato.ResumenInstancia
 	return r, c.pedir(ctx, "GET", "/api/v1/instancia", instancia, nil, "", &r)
 }
 

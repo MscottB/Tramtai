@@ -3,7 +3,9 @@ package servicio
 import (
 	"net/http"
 
+	"tramtai/internal/agentes"
 	"tramtai/internal/api"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
@@ -183,7 +185,7 @@ func (s *Servicio) adminActivar(w http.ResponseWriter, r *http.Request) {
 	case "proyecto":
 		// Adoptar la marca de un espacio cuya carpeta ya no está (un repositorio clonado puede traerla) pide la misma
 		// confirmación que AbrirProyecto: confiar en la carpeta.
-		g, errGlobal := nucleo.CargarConfiguracion("")
+		g, errGlobal := configuracion.CargarConfiguracion("", agentes.Internos())
 		if movido := s.rutaMovida(peticion.Raiz); movido != "" && (errGlobal != nil || !g.ProyectoConfiable(peticion.Raiz)) {
 			err = &ErrorConfianza{Raiz: peticion.Raiz, Movido: movido}
 		} else {

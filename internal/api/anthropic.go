@@ -124,20 +124,11 @@ func (s *Servidor) mensajesAnthropic(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !p.Stream {
-		final, err := s.ejecutarFachada(r, t, nil, nil)
+		final, texto, llamadas, err := s.resultadoFachada(r, t, "toolu_", nil, nil)
 		if err != nil {
 			if !errors.Is(err, errDesconectado) {
 				EscribirError(w, r, err)
 			}
-			return
-		}
-		if final.Estado != nucleo.Completado {
-			EscribirError(w, r, errorDeTrabajo(final))
-			return
-		}
-		texto, llamadas, err := herramientas.Interpretar(final.Solicitud, final.Salida, "toolu_"+t.ID)
-		if err != nil {
-			EscribirError(w, r, err)
 			return
 		}
 		avisarUso(w, final)
@@ -162,7 +153,7 @@ func (s *Servidor) mensajesAnthropic(w http.ResponseWriter, r *http.Request) {
 	delta := func(texto string) error {
 		return evento("content_block_delta", map[string]any{"index": 0, "delta": map[string]any{"type": "text_delta", "text": texto}})
 	}
-	final, err := s.ejecutarFachada(r, t, func(texto string) error {
+	final, texto, llamadas, err := s.resultadoFachada(r, t, "toolu_", func(texto string) error {
 		if !directo {
 			return nil
 		}
@@ -175,15 +166,6 @@ func (s *Servidor) mensajesAnthropic(w http.ResponseWriter, r *http.Request) {
 		if !errors.Is(err, errDesconectado) {
 			fallar(err)
 		}
-		return
-	}
-	if final.Estado != nucleo.Completado {
-		fallar(errorDeTrabajo(final))
-		return
-	}
-	texto, llamadas, err := herramientas.Interpretar(final.Solicitud, final.Salida, "toolu_"+t.ID)
-	if err != nil {
-		fallar(err)
 		return
 	}
 	indice := 0

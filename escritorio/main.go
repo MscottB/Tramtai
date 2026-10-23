@@ -30,7 +30,9 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/events"
 
 	"tramtai/internal/autoarranque"
+	"tramtai/internal/carpetas"
 	"tramtai/internal/cliente"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -69,18 +71,18 @@ func main() {
 	var recibir func(mensaje, origen string)
 	// La raíz se resuelve antes de crear la app: Wails cierra la app con su propio aviso si la carpeta del navegador no
 	// vale, y así el error de la portable (carpeta de solo lectura o temporal) se ve en la ventana, como los demás.
-	raizUsuario, errRaiz := nucleo.RaizUsuario()
+	raizUsuario, errRaiz := carpetas.RaizUsuario()
 	datosNavegador := "" // modo normal: el predeterminado de Wails
 	switch {
 	case errRaiz != nil:
 		// Una carpeta fija: la app solo enseña el error, y así no deja un perfil nuevo en %TEMP% en cada arranque.
 		datosNavegador = filepath.Join(os.TempDir(), "tramtai-navegador-error")
-	case nucleo.Portable():
+	case carpetas.Portable():
 		datosNavegador = filepath.Join(raizUsuario, "webview")
 	}
 	propio, _ := os.Executable()
 	nombre := "Tramtai"
-	if nucleo.Portable() {
+	if carpetas.Portable() {
 		nombre = idioma.T("Tramtai portable")
 	}
 	app := application.New(application.Options{
@@ -89,7 +91,7 @@ func main() {
 		Icon:        icono,
 		Windows:     application.WindowsOptions{WebviewUserDataPath: datosNavegador},
 		SingleInstance: &application.SingleInstanceOptions{
-			UniqueID: uniqueID(carpetaCopia(propio, raizUsuario), nucleo.Portable()),
+			UniqueID: uniqueID(carpetaCopia(propio, raizUsuario), carpetas.Portable()),
 			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
 				if ventana != nil {
 					ventana.Show()
@@ -206,67 +208,41 @@ func main() {
 	bandeja.OnClick(mostrar)
 	var repasar func()
 
-	construir := func(cli *cliente.Cliente, puntos []contrato.EstadoPunto, proyectos map[string]string, conWindows, sinPreguntar bool, nueva string) *application.Menu {
+	// construir pinta en Wails las entradas que calcula entradasMenu y conecta cada acción.
+	construir := func(cli *cliente.Cliente, e estadoMenu) *application.Menu {
 		lado, oscuro := ladoIconoMenu(), menuOscuro()
 		verde, rojo := circulo(colorVerde, lado), circulo(colorRojo, lado)
-		icono := func(nombre string) []byte { return iconoMenu(nombre, lado, oscuro) }
-		menu := app.NewMenu()
-		if cli == nil {
-			menu.Add(idioma.T("Servicio detenido")).SetBitmap(rojo).OnClick(func(*application.Context) { mostrar() })
-		} else {
-			menu.Add(idioma.Tf("Servicio en marcha · %s", strings.TrimPrefix(cli.Base, "http://"))).SetBitmap(verde).OnClick(func(*application.Context) { mostrar() })
-		}
-		// «Acerca de» (donde se ve la versión), y si hay una más nueva (la opción para instalarla va justo debajo).
-		acercaDe := func(*application.Context) {
-			mostrar()
-			ventana.ExecJS("window.tramtaiAcercaDe && window.tramtaiAcercaDe()")
-		}
-		if nueva != "" {
-			menu.Add(idioma.Tf("Acerca de Tramtai · hay una versión nueva: %s", nueva)).OnClick(acercaDe)
-		} else {
-			menu.Add(idioma.T("Acerca de Tramtai")).OnClick(acercaDe)
-		}
-		menu.AddSeparator()
-		menu.Add(idioma.T("Abrir Tramtai")).SetBitmap(icono("abrir")).OnClick(func(*application.Context) { mostrar() })
-		if nueva != "" {
-			// La ventana pide confirmación y muestra el avance con el mismo diálogo que la Web UI.
-			menu.Add(idioma.Tf("Actualizar a %s…", nueva)).SetBitmap(icono("reiniciar")).OnClick(func(*application.Context) {
-				mostrar()
-				ventana.ExecJS("window.tramtaiActualizar && window.tramtaiActualizar()")
-			})
-		} else if cli != nil {
-			// Consulta GitHub en el momento; la ventana muestra el resultado o el diálogo de la versión nueva.
-			menu.Add(idioma.T("Buscar actualizaciones")).SetBitmap(icono("reiniciar")).OnClick(func(*application.Context) {
-				mostrar()
-				ventana.ExecJS("window.tramtaiBuscarActualizaciones && window.tramtaiBuscarActualizaciones()")
-			})
-		}
-		if cli != nil {
-			activas := 0
-			for _, p := range puntos {
-				if p.Activo {
-					activas++
-				}
+		bitmap := func(nombre string) []byte {
+			switch nombre {
+			case "verde":
+				return verde
+			case "rojo":
+				return rojo
 			}
-			apis := menu.AddSubmenu(idioma.Tf("Mis APIs (%d de %d activas)", activas, len(puntos)))
-			visibles, resto := menuApis(puntos, maximoApisMenu)
-			for _, p := range visibles {
-				habilitada := p.Error != "desactivado"
-				etiqueta := p.Nombre
-				for _, extra := range []string{p.Grupo, proyectos[p.Instancia]} {
-					if extra != "" {
-						etiqueta += " · " + extra
-					}
+			return iconoMenu(nombre, lado, oscuro)
+		}
+		alPulsar := func(n entrada) func(*application.Context) {
+			switch n.accion {
+			case accionMostrar:
+				return func(*application.Context) { mostrar() }
+			case accionAcercaDe:
+				return func(*application.Context) {
+					mostrar()
+					ventana.ExecJS("window.tramtaiAcercaDe && window.tramtaiAcercaDe()")
 				}
-				if habilitada && !p.Activo {
-					etiqueta += idioma.T(" (con error)")
+			case accionActualizar:
+				return func(*application.Context) {
+					mostrar()
+					ventana.ExecJS("window.tramtaiActualizar && window.tramtaiActualizar()")
 				}
-				circ := rojo
-				if p.Activo {
-					circ = verde
+			case accionBuscarActualizaciones:
+				return func(*application.Context) {
+					mostrar()
+					ventana.ExecJS("window.tramtaiBuscarActualizaciones && window.tramtaiBuscarActualizaciones()")
 				}
-				// Clic: desactivarla si está habilitada, activarla si no. Se guarda y se aplica sin reiniciar.
-				apis.Add(etiqueta).SetBitmap(circ).OnClick(func(*application.Context) {
+			case accionAlternarApi:
+				p, habilitada := n.punto, n.habilitada
+				return func(*application.Context) {
 					ctx, cancelar := context.WithTimeout(context.Background(), 10*time.Second)
 					defer cancelar()
 					if err := cli.ActivarPunto(ctx, p.Instancia, p.Nombre, !habilitada); err != nil {
@@ -276,72 +252,59 @@ func main() {
 						ventana.ExecJS("window.tramtaiAviso && window.tramtaiAviso(" + string(texto) + ")")
 					}
 					repasar()
-				})
-			}
-			if resto > 0 {
-				apis.Add(idioma.Tf("Ver las %d restantes en Mis APIs…", resto)).OnClick(func(*application.Context) { irA("conectar") })
-			}
-			if len(puntos) > 0 {
-				apis.AddSeparator()
-				apis.Add(idioma.T("Gestionar en Mis APIs")).SetBitmap(icono("apis")).OnClick(func(*application.Context) { irA("conectar") })
-			} else {
-				apis.Add(idioma.T("Crear una API…")).SetBitmap(icono("apis")).OnClick(func(*application.Context) { irA("conectar") })
-			}
-			menu.Add(idioma.T("Copiar la dirección para tus apps")).SetBitmap(icono("copiar")).OnClick(func(*application.Context) { app.Clipboard.SetText(cli.Base) })
-		}
-		menu.AddSeparator()
-		if cli == nil {
-			menu.Add(idioma.T("Iniciar el servicio")).SetBitmap(icono("iniciar")).OnClick(func(*application.Context) {
-				// Si ya está en marcha solo vuelve a entrar; si no, lo inicia en segundo plano.
-				if nueva, err := prepararSesion(*proyecto); err != nil {
-					ventana.SetHTML(paginaError(err))
-					mostrar()
-				} else {
-					cargar(nueva)
 				}
-				repasar()
-			})
-		} else {
-			menu.Add(idioma.T("Reiniciar el servicio")).SetBitmap(icono("reiniciar")).OnClick(func(*application.Context) {
-				ejecutable, err := buscarTramtai()
-				datos, errDatos := nucleo.DirDatos()
-				if err != nil || errDatos != nil {
-					return
-				}
-				// Igual que desde la Web UI: el nuevo proceso espera a que este termine sus trabajos y usa el puerto
-				// configurado; el repaso vuelve a entrar cuando responde.
-				if cliente.Lanzar(ejecutable, datos, "servicio", "iniciar", "--esperar-cierre", "--registro", filepath.Join(datos, "servicio.log")) == nil {
-					detener(cli)
-				}
-			})
-			menu.Add(idioma.T("Detener el servicio…")).SetBitmap(icono("detener")).OnClick(func(*application.Context) { avisar("detener") })
-		}
-		// El arranque con el sistema también se cambia en Ajustes; el repaso mantiene la marca al día.
-		if autoarranque.Disponible {
-			etiqueta := idioma.T("Iniciar con Windows")
-			if runtime.GOOS != "windows" {
-				etiqueta = idioma.T("Iniciar al entrar en la sesión")
-			}
-			menu.AddCheckbox(etiqueta, conWindows).OnClick(func(c *application.Context) {
-				if propio, err := os.Executable(); err == nil {
-					if c.IsChecked() {
-						_ = autoarranque.Activar(propio)
+			case accionIrMisApis:
+				return func(*application.Context) { irA("conectar") }
+			case accionCopiarDireccion:
+				return func(*application.Context) { app.Clipboard.SetText(cli.Base) }
+			case accionIniciar:
+				return func(*application.Context) {
+					// Si ya está en marcha solo vuelve a entrar; si no, lo inicia en segundo plano.
+					if nueva, err := prepararSesion(*proyecto); err != nil {
+						ventana.SetHTML(paginaError(err))
+						mostrar()
 					} else {
-						_ = autoarranque.Desactivar()
+						cargar(nueva)
+					}
+					repasar()
+				}
+			case accionReiniciar:
+				return func(*application.Context) {
+					ejecutable, err := buscarTramtai()
+					datos, errDatos := carpetas.DirDatos()
+					if err != nil || errDatos != nil {
+						return
+					}
+					// Igual que desde la Web UI: el nuevo proceso espera a que este termine sus trabajos y usa el puerto
+					// configurado; el repaso vuelve a entrar cuando responde.
+					if cliente.Lanzar(ejecutable, datos, "servicio", "iniciar", "--esperar-cierre", "--registro", filepath.Join(datos, "servicio.log")) == nil {
+						detener(cli)
 					}
 				}
-				repasar()
-			})
+			case accionAvisarDetener:
+				return func(*application.Context) { avisar("detener") }
+			case accionAutoarranque:
+				return func(c *application.Context) {
+					if propio, err := os.Executable(); err == nil {
+						if c.IsChecked() {
+							_ = autoarranque.Activar(propio)
+						} else {
+							_ = autoarranque.Desactivar()
+						}
+					}
+					repasar()
+				}
+			case accionSalir:
+				return func(*application.Context) { app.Quit() }
+			case accionDetenerYSalir:
+				return func(*application.Context) { detenerYSalir(cli) }
+			case accionAvisarSalir:
+				return func(*application.Context) { avisar("salir") }
+			}
+			return nil
 		}
-		menu.AddSeparator()
-		switch {
-		case cli == nil:
-			menu.Add(idioma.T("Salir")).SetBitmap(icono("salir")).OnClick(func(*application.Context) { app.Quit() })
-		case sinPreguntar:
-			menu.Add(idioma.T("Salir y detener el servicio")).SetBitmap(icono("salir")).OnClick(func(*application.Context) { detenerYSalir(cli) })
-		default:
-			menu.Add(idioma.T("Salir y detener el servicio…")).SetBitmap(icono("salir")).OnClick(func(*application.Context) { avisar("salir") })
-		}
+		menu := app.NewMenu()
+		pintarMenu(menu, entradasMenu(e), bitmap, alPulsar)
 		return menu
 	}
 
@@ -354,7 +317,7 @@ func main() {
 	repasar = func() {
 		muMenu.Lock()
 		defer muMenu.Unlock()
-		datos, err := nucleo.DirDatos()
+		datos, err := carpetas.DirDatos()
 		if err != nil {
 			return
 		}
@@ -390,7 +353,7 @@ func main() {
 		// También el tema y el DPI del sistema, porque cambian el color y el tamaño de los iconos.
 		masNueva := ""
 		if estadoServicio.Actualizacion != nil {
-			masNueva = estadoServicio.Actualizacion.Etiqueta
+			masNueva = estadoServicio.Actualizacion.Version
 		}
 		nueva := fmt.Sprint(conWindows, sinPreguntar, puntos, menuOscuro(), ladoIconoMenu(), masNueva)
 		if cli != nil {
@@ -406,7 +369,12 @@ func main() {
 		}
 		bandeja.SetTooltip(nombre + " · " + estado)
 		anterior := menuActual
-		menuActual = construir(cli, puntos, proyectos, conWindows, sinPreguntar, masNueva)
+		base := ""
+		if cli != nil {
+			base = cli.Base
+		}
+		menuActual = construir(cli, estadoMenu{base: base, puntos: puntos, proyectos: proyectos, conWindows: conWindows,
+			sinPreguntar: sinPreguntar, nueva: masNueva, autoarranque: autoarranque.Disponible, windows: runtime.GOOS == "windows"})
 		bandeja.SetMenu(menuActual)
 		if anterior != nil {
 			anterior.Clear() // suelta los elementos del menú anterior del registro global de Wails
@@ -424,6 +392,31 @@ func main() {
 	}
 }
 
+// pintarMenu añade a menu las entradas, con su icono y la acción que les da alPulsar.
+func pintarMenu(menu *application.Menu, entradas []entrada, bitmap func(string) []byte, alPulsar func(entrada) func(*application.Context)) {
+	for _, n := range entradas {
+		var elemento *application.MenuItem
+		switch {
+		case n.separador:
+			menu.AddSeparator()
+			continue
+		case n.submenu != nil:
+			pintarMenu(menu.AddSubmenu(n.texto), n.submenu, bitmap, alPulsar)
+			continue
+		case n.casilla:
+			elemento = menu.AddCheckbox(n.texto, n.marcada)
+		default:
+			elemento = menu.Add(n.texto)
+		}
+		if n.icono != "" {
+			elemento.SetBitmap(bitmap(n.icono))
+		}
+		if f := alPulsar(n); f != nil {
+			elemento.OnClick(f)
+		}
+	}
+}
+
 type sesionEscritorio struct {
 	cli *cliente.Cliente
 	url string
@@ -435,7 +428,7 @@ type preferencias struct {
 }
 
 func rutaPreferencias() (string, error) {
-	raiz, err := nucleo.RaizUsuario()
+	raiz, err := carpetas.RaizUsuario()
 	return filepath.Join(raiz, "escritorio.json"), err
 }
 
@@ -518,7 +511,7 @@ func codificar(img image.Image) []byte {
 // prepararSesion conecta con el servicio (o lo inicia), activa la instancia y obtiene una URL de entrada de un
 // solo uso: el token de la instancia nunca pasa por la ventana.
 func prepararSesion(proyecto string) (*sesionEscritorio, error) {
-	datos, err := nucleo.DirDatos()
+	datos, err := carpetas.DirDatos()
 	if err != nil {
 		return nil, err
 	}
@@ -536,7 +529,7 @@ func prepararSesion(proyecto string) (*sesionEscritorio, error) {
 	ambito := "global"
 	if proyecto != "" {
 		ambito = "proyecto"
-		if raiz, ok := nucleo.BuscarProyecto(proyecto); ok {
+		if raiz, ok := configuracion.BuscarProyecto(proyecto); ok {
 			proyecto = raiz
 		}
 	}
@@ -589,7 +582,7 @@ func buscarTramtai() (string, error) {
 			}
 		}
 	}
-	if nucleo.Portable() {
+	if carpetas.Portable() {
 		return "", errors.New(idioma.T("falta tramtai.exe junto a la aplicación portable: vuelve a descomprimir Tramtai"))
 	}
 	ruta, err := exec.LookPath(nombre)
@@ -602,7 +595,7 @@ func buscarTramtai() (string, error) {
 func paginaError(err error) string {
 	titulo, consejo := idioma.T("No se pudo conectar con el servicio de Tramtai"),
 		`<p>`+idioma.T("Prueba <code>tramtai servicio iniciar -d</code> en una terminal y vuelve a abrir la aplicación.")+`</p>`
-	if _, errRaiz := nucleo.RaizUsuario(); errRaiz != nil {
+	if _, errRaiz := carpetas.RaizUsuario(); errRaiz != nil {
 		// La carpeta de la copia no sirve (temporal, dentro del .zip o de solo lectura): el mensaje ya dice qué hacer.
 		titulo, consejo = idioma.T("Tramtai no puede usar esta carpeta"), ""
 	}

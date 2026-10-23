@@ -18,6 +18,7 @@ import (
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
+	"tramtai/internal/contrato"
 	"tramtai/internal/documentos"
 	"tramtai/internal/herramientas"
 	"tramtai/internal/idioma"
@@ -67,9 +68,9 @@ func (s *Servidor) obtenerTrabajo(w http.ResponseWriter, r *http.Request) {
 	EscribirJSON(w, http.StatusOK, s.conErrores(r.Context(), t))
 }
 
-// vista es un trabajo como lo ve la API propia: con herramientas, la salida es el texto para el usuario y llamadas las
+// VistaTrabajo es un trabajo como lo ve la API propia: con herramientas, la salida es el texto para el usuario y llamadas las
 // que pidió el agente; si falló por el esquema, errores_salida. Un trabajo sin herramientas ni errores se ve igual.
-type vista struct {
+type VistaTrabajo struct {
 	nucleo.Trabajo
 	Llamadas      []nucleo.Llamada   `json:"llamadas,omitempty"`
 	ErroresSalida []salidas.Problema `json:"errores_salida,omitempty"`
@@ -78,7 +79,7 @@ type vista struct {
 
 // MarshalJSON escribe el trabajo tal cual y le suma llamadas, errores_salida y, con herramientas, salida aunque esté
 // vacía. Un trabajo sin nada de eso sale exactamente como antes.
-func (v vista) MarshalJSON() ([]byte, error) {
+func (v VistaTrabajo) MarshalJSON() ([]byte, error) {
 	datos, err := json.Marshal(v.Trabajo)
 	if err != nil || (len(v.Llamadas) == 0 && len(v.ErroresSalida) == 0 && !v.conSalida) {
 		return datos, err
@@ -106,8 +107,8 @@ func (v vista) MarshalJSON() ([]byte, error) {
 }
 
 // vistaTrabajo interpreta la salida de un trabajo con herramientas que terminó bien (ya validada al terminar).
-func vistaTrabajo(t nucleo.Trabajo) vista {
-	v := vista{Trabajo: t}
+func vistaTrabajo(t nucleo.Trabajo) VistaTrabajo {
+	v := VistaTrabajo{Trabajo: t}
 	if t.Estado == nucleo.Completado && t.Disponibilidad != nucleo.SalidaExpirada && herramientas.Activas(t.Solicitud) {
 		if texto, llamadas, err := herramientas.Interpretar(t.Solicitud, t.Salida, "llamada_"+t.ID); err == nil {
 			v.Salida, v.Llamadas, v.conSalida = texto, llamadas, true
@@ -117,7 +118,7 @@ func vistaTrabajo(t nucleo.Trabajo) vista {
 }
 
 // conErrores es la vista del trabajo con errores_salida, los problemas de la última validación, si falló por el esquema.
-func (s *Servidor) conErrores(ctx context.Context, t nucleo.Trabajo) vista {
+func (s *Servidor) conErrores(ctx context.Context, t nucleo.Trabajo) VistaTrabajo {
 	v := vistaTrabajo(t)
 	if t.CodigoError == nucleo.CodigoSalidaNoCumpleEsquema {
 		if problemas, err := s.Planificador.ProblemasSalida(ctx, t.ID); err == nil {
@@ -442,14 +443,31 @@ func noNulo(v []string) []string {
 }
 
 func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
+	texto, conversor := documentos.Formatos()
+	respuesta := contrato.Capacidades{
+		Version:              version.Version,
+		FormatoSerializacion: adaptadores.FormatoSerializacion,
+		Entradas:             append(texto, conversor...),
+		Adaptadores:          s.Adaptadores(r.Context()),
+		Limites:              s.limites(),
+	}
+	if s.Conversor != nil {
+		e := s.Conversor.Estado()
+		respuesta.Conversor = &e
+	}
+	EscribirJSON(w, http.StatusOK, respuesta)
+}
+
+// Adaptadores comprueba todos los agentes (cada uno ejecuta su CLI y puede tardar) y les pone su estado; salen en
+// orden alfabético.
+func (s *Servidor) Adaptadores(ctx context.Context) []contrato.Adaptador {
 	nombres := make([]string, 0, len(s.Registro))
 	for nombre := range s.Registro {
 		nombres = append(nombres, nombre)
 	}
 	sort.Strings(nombres)
-	// Cada agente se detecta a la vez que los demás (cada Detectar ejecuta su CLI y puede tardar); cada uno escribe en
-	// su posición, así que la lista sale en orden alfabético.
-	lista := make([]map[string]any, len(nombres))
+	// Cada agente se detecta a la vez que los demás; cada uno escribe en su posición.
+	lista := make([]contrato.Adaptador, len(nombres))
 	var esperar sync.WaitGroup
 	for i, nombre := range nombres {
 		// Lo que garantiza cada agente sale de su ficha; uno sin ficha (simulado) no garantiza nada.
@@ -457,95 +475,85 @@ func (s *Servidor) capacidades(w http.ResponseWriter, r *http.Request) {
 		if !conocida {
 			f.Streaming = "final"
 		}
-		entrada := map[string]any{"agente": nombre, "desconectado": s.Conexiones.Desconectado(nombre), "capacidades": map[string]any{
-			"texto": true, "streaming": f.Streaming, "salida_estructurada": f.SalidaEstructurada, "uso_tokens": "informado_por_cli",
-			"modelo_efectivo_informado": f.ModeloEfectivoInformado, "tool_calling_compatible": false, "imagenes": false, "sesiones_persistentes": false,
+		entrada := &lista[i]
+		*entrada = contrato.Adaptador{Agente: nombre, Desconectado: s.Conexiones.Desconectado(nombre), Capacidades: contrato.CapacidadesAgente{
+			Texto: true, Streaming: f.Streaming, SalidaEstructurada: f.SalidaEstructurada, UsoTokens: "informado_por_cli",
+			ModeloEfectivoInformado: f.ModeloEfectivoInformado,
 		}}
-		lista[i] = entrada
 		if d, ok := s.Registro[nombre].(adaptadores.Detectable); ok {
 			esperar.Go(func() {
 				// Fuera de la goroutine de la petición, net/http no recupera un pánico: tiraría el servicio entero.
 				defer func() {
 					if v := recover(); v != nil {
-						entrada["problema"], entrada["problema_codigo"] = fmt.Sprint(v), adaptadores.ProblemaAviso
+						entrada.Problema, entrada.ProblemaCodigo = fmt.Sprint(v), adaptadores.ProblemaAviso
 					}
 				}()
-				ctx, cancelar := context.WithTimeout(r.Context(), 10*time.Second)
+				ctx, cancelar := context.WithTimeout(ctx, 10*time.Second)
 				e := d.Detectar(ctx)
 				cancelar()
-				entrada["version_detectada"], entrada["autenticacion"], entrada["terminos"] = e.Version, e.Autenticacion, e.Terminos
-				if e.Cuenta != "" {
-					entrada["cuenta"] = e.Cuenta
-				}
+				entrada.Version, entrada.Autenticacion, entrada.Terminos, entrada.Cuenta = e.Version, e.Autenticacion, e.Terminos, e.Cuenta
 				if e.Problema != "" {
-					entrada["problema"], entrada["problema_codigo"] = e.Problema, e.ProblemaCodigo
+					entrada.Problema, entrada.ProblemaCodigo = e.Problema, e.ProblemaCodigo
 				}
 			})
 		}
 	}
 	esperar.Wait()
-	// Detección pasiva: si la última petición de un agente falló por autenticación y la detección no vio nada más
-	// grave, se avisa (también de los agentes que no saben comprobar su sesión).
-	for i, nombre := range nombres {
-		if codigo, _ := lista[i]["problema_codigo"].(string); s.Salud.SinRespuesta(nombre) && (lista[i]["problema"] == nil || codigo == adaptadores.ProblemaAviso) {
-			lista[i]["problema"] = idioma.T("la sesión del CLI no responde: la última petición falló por autenticación")
-			lista[i]["problema_codigo"] = adaptadores.ProblemaSesion
+	for i := range lista {
+		a := &lista[i]
+		// Detección pasiva: si la última petición de un agente falló por autenticación y la detección no vio nada más
+		// grave, se avisa (también de los agentes que no saben comprobar su sesión).
+		if s.Salud.SinRespuesta(a.Agente) && (a.Problema == "" || a.ProblemaCodigo == adaptadores.ProblemaAviso) {
+			a.Problema = idioma.T("la sesión del CLI no responde: la última petición falló por autenticación")
+			a.ProblemaCodigo = adaptadores.ProblemaSesion
 		}
+		a.Estado = estadoAgente(*a)
 	}
-	respuesta := map[string]any{
-		"version":               version.Version,
-		"formato_serializacion": adaptadores.FormatoSerializacion,
-		"entradas":              []string{"texto", "markdown", "json", "xml", "csv", "html", "pdf", "docx", "pptx", "xlsx"},
-		"adaptadores":           lista,
-		"limites":               s.limites(),
+	return lista
+}
+
+// estadoAgente clasifica un agente por su conexión y el código de su problema. Es la única regla: la Web UI y la
+// terminal pintan lo que sale de aquí. Sin su CLI es «no instalado» aunque esté desconectado, porque lo primero es
+// instalarlo (docs/equipo/decisiones/001-estado-del-agente.md).
+func estadoAgente(a contrato.Adaptador) contrato.EstadoAgente {
+	switch {
+	case a.ProblemaCodigo == adaptadores.ProblemaNoInstalado:
+		return contrato.AgenteNoInstalado
+	case a.Desconectado:
+		return contrato.AgenteDesconectado
+	case a.Problema == "" || a.ProblemaCodigo == adaptadores.ProblemaAviso:
+		return contrato.AgenteListo // un aviso, como el AGENTS.md de Codex, no impide usarlo
 	}
-	if s.Conversor != nil {
-		respuesta["conversor"] = s.Conversor.Estado()
+	switch a.ProblemaCodigo {
+	case adaptadores.ProblemaFaltaClave:
+		if a.Autenticacion == adaptadores.AutenticacionSuscripcion {
+			return contrato.AgenteSinSesion
+		}
+		return contrato.AgenteFaltaClave
+	case adaptadores.ProblemaUsaClave:
+		return contrato.AgenteUsaClave
+	case adaptadores.ProblemaSesion:
+		return contrato.AgenteSesionNoResponde
 	}
-	EscribirJSON(w, http.StatusOK, respuesta)
+	return contrato.AgenteRevisar
 }
 
 // limites son los topes de una petición y de sus cargas, y los formatos admitidos, para que una app (y Probar) los
 // conozca antes de enviar.
-func (s *Servidor) limites() map[string]any {
+func (s *Servidor) limites() contrato.Limites {
 	texto, conversor := documentos.Formatos()
-	return map[string]any{
-		"extensiones_texto":     texto,
-		"extensiones_conversor": conversor,
-		"cargas_por_peticion":   nucleo.MaximoCargas,
-		"carga_mb":              s.Config.Limite("conversion.maximo_carga_mb"),
-		"texto_convertido_mb":   s.Config.Limite("conversion.maximo_salida_mb"),
-		"cuota_cargas_mb":       s.Config.Limite("conversion.cuota_cargas_mb"),
-		"cuerpo_mb":             maximoCuerpo >> 20,
-		"esquema_kb":            nucleo.MaximoEsquemaPeticion >> 10,
-		"mensajes":              nucleo.MaximoMensajes,
-		"reserva_salida_tokens": s.Config.Limite("limites.reserva_salida_tokens"),
+	return contrato.Limites{
+		ExtensionesTexto:     texto,
+		ExtensionesConversor: conversor,
+		CargasPorPeticion:    nucleo.MaximoCargas,
+		CargaMB:              s.Config.Limite("conversion.maximo_carga_mb"),
+		TextoConvertidoMB:    s.Config.Limite("conversion.maximo_salida_mb"),
+		CuotaCargasMB:        s.Config.Limite("conversion.cuota_cargas_mb"),
+		CuerpoMB:             maximoCuerpo >> 20,
+		EsquemaKB:            nucleo.MaximoEsquemaPeticion >> 10,
+		Mensajes:             nucleo.MaximoMensajes,
+		ReservaSalidaTokens:  s.Config.Limite("limites.reserva_salida_tokens"),
 	}
-}
-
-// modelo es una entrada del catálogo informativo.
-type modelo struct {
-	ID     string `json:"id"`
-	Agente string `json:"agente,omitempty"`
-	Modelo string `json:"modelo,omitempty"`
-	Perfil string `json:"perfil,omitempty"`
-	Origen string `json:"origen"`
-	// Solo en /api/v1/modelos: el agente/modelo al que lleva un perfil, la versión real que informó el agente la
-	// última vez (por ejemplo claude-sonnet-5-5 para "sonnet") y si es el modelo predeterminado de la instancia.
-	Resuelto       string `json:"resuelto,omitempty"`
-	Version        string `json:"version,omitempty"`
-	Predeterminado bool   `json:"predeterminado,omitempty"`
-	// Esfuerzos son los niveles de esfuerzo que admite su agente; vacío si no se puede elegir.
-	Esfuerzos []string `json:"esfuerzos,omitempty"`
-	// EsfuerzoPredeterminado es el nivel que usa el agente si no se elige; vacío si no se conoce con certeza.
-	EsfuerzoPredeterminado string `json:"esfuerzo_predeterminado,omitempty"`
-	// ContextoTokens es el contexto conocido del modelo (configurado o informado por el agente) y ContextoOrigen de
-	// dónde sale; sin dato, no se comprueba si una entrada cabe.
-	ContextoTokens int    `json:"contexto_tokens,omitempty"`
-	ContextoOrigen string `json:"contexto_origen,omitempty"`
-	// EsfuerzoEspacio, solo en el modelo predeterminado, es el esfuerzo que el espacio usa con él
-	// (predeterminados.esfuerzo); vacío, el de su agente.
-	EsfuerzoEspacio string `json:"esfuerzo_espacio,omitempty"`
 }
 
 // predeterminado es el identificador del catálogo que se usa cuando la solicitud no indica agente ni modelo.
@@ -562,7 +570,7 @@ func (s *Servidor) predeterminado() string {
 
 // modelosConcretos pregunta a los agentes que saben decirlo (Claude) qué modelo concreto usarán para cada alias y
 // para su predeterminado, en paralelo y con un plazo; lo que no llegue a tiempo queda en caché para la próxima vez.
-func (s *Servidor) modelosConcretos(ctx context.Context, lista []modelo, destinos [][2]string) map[string]string {
+func (s *Servidor) modelosConcretos(ctx context.Context, lista []contrato.Modelo, destinos [][2]string) map[string]string {
 	ctx, cancelar := context.WithTimeout(ctx, 10*time.Second)
 	defer cancelar()
 	var mu sync.Mutex
@@ -598,30 +606,30 @@ func (s *Servidor) modelosConcretos(ctx context.Context, lista []modelo, destino
 // catalogo lista cada agente (con el modelo predeterminado de su CLI), los modelos configurados en los perfiles
 // como agente/modelo, los perfiles como perfil/nombre y las versiones concretas que informaron los agentes
 // (efectivos, de ModelosEfectivos) como agente/version, para poder pedir una en concreto.
-func (s *Servidor) catalogo(efectivos map[string]string) []modelo {
-	var lista []modelo
+func (s *Servidor) catalogo(efectivos map[string]string) []contrato.Modelo {
+	var lista []contrato.Modelo
 	for agente := range s.Registro {
-		lista = append(lista, modelo{ID: agente, Agente: agente, Origen: "predeterminado_del_cli"})
+		lista = append(lista, contrato.Modelo{ID: agente, Agente: agente, Origen: "predeterminado_del_cli"})
 	}
 	vistos := map[string]bool{}
 	for perfil, porAgente := range s.Config.Perfiles() {
-		lista = append(lista, modelo{ID: "perfil/" + perfil, Perfil: perfil, Origen: "configurado"})
+		lista = append(lista, contrato.Modelo{ID: "perfil/" + perfil, Perfil: perfil, Origen: "configurado"})
 		for agente, m := range porAgente {
 			if _, existe := s.Registro[agente]; existe && !vistos[agente+"/"+m] {
 				vistos[agente+"/"+m] = true
-				lista = append(lista, modelo{ID: agente + "/" + m, Agente: agente, Modelo: m, Origen: "configurado"})
+				lista = append(lista, contrato.Modelo{ID: agente + "/" + m, Agente: agente, Modelo: m, Origen: "configurado"})
 			}
 		}
 	}
 	if agente, m, _ := strings.Cut(s.predeterminado(), "/"); m != "" && agente != "perfil" && !vistos[agente+"/"+m] {
 		vistos[agente+"/"+m] = true
-		lista = append(lista, modelo{ID: agente + "/" + m, Agente: agente, Modelo: m, Origen: "configurado"})
+		lista = append(lista, contrato.Modelo{ID: agente + "/" + m, Agente: agente, Modelo: m, Origen: "configurado"})
 	}
 	for clave, version := range efectivos {
 		agente, _, _ := strings.Cut(clave, "/")
 		if _, existe := s.Registro[agente]; existe && !vistos[agente+"/"+version] {
 			vistos[agente+"/"+version] = true
-			lista = append(lista, modelo{ID: agente + "/" + version, Agente: agente, Modelo: version, Origen: "visto"})
+			lista = append(lista, contrato.Modelo{ID: agente + "/" + version, Agente: agente, Modelo: version, Origen: "visto"})
 		}
 	}
 	sort.Slice(lista, func(i, j int) bool { return lista[i].ID < lista[j].ID })

@@ -12,7 +12,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes"
 	"tramtai/internal/cliente"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/documentos"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/planificador"
@@ -29,7 +31,7 @@ func servicioConConversor(t *testing.T) {
 	os.WriteFile(global, []byte("predeterminados:\n  agente: simulado\n"), 0o600)
 	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
 	datos := filepath.Join(dir, "datos")
-	c, err := nucleo.CargarConfiguracion("")
+	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"tramtai/internal/adaptadores"
-	"tramtai/internal/nucleo"
+	"tramtai/internal/configuracion"
 )
 
 // navegador es un cliente con cookies que no sigue redirecciones, como un navegador visto desde las pruebas.
@@ -136,7 +136,7 @@ func TestWebUI(t *testing.T) {
 	if r.StatusCode != 201 || !strings.Contains(cuerpo, `"token":"tt_`) || !strings.Contains(cuerpo, "/p/desde_ui") || !strings.Contains(cuerpo, `"grupo":"pruebas"`) {
 		t.Fatalf("crear punto: %d %s", r.StatusCode, cuerpo)
 	}
-	rutaGlobal, _ := nucleo.RutaGlobal()
+	rutaGlobal, _ := configuracion.RutaGlobal()
 	if datos, _ := os.ReadFile(rutaGlobal); !strings.Contains(string(datos), "desde_ui") {
 		t.Fatalf("el punto debía guardarse en la configuración global:\n%s", datos)
 	}

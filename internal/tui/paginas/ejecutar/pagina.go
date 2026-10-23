@@ -37,7 +37,7 @@ type origen struct{ pagina.Origen }
 type (
 	msgCatalogo struct {
 		origen
-		lista []cliente.ModeloCatalogo
+		lista []contrato.Modelo
 		err   error
 	}
 	msgLimites struct {
@@ -110,7 +110,7 @@ type Pagina struct {
 	editando   bool // el foco está dentro de un campo: las teclas son del formulario
 	desplaz    int  // la primera línea del formulario que se ve
 	pestana    int
-	catalogo   []cliente.ModeloCatalogo
+	catalogo   []contrato.Modelo
 	limites    *contrato.Limites
 	errEsquema string // lo que dijo el servicio del esquema de ahora
 	conversor  string // el aviso del conversor para los archivos de ahora

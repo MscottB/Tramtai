@@ -171,7 +171,7 @@
             </EstadoVacio>
           </q-card>
         </div>
-        <component :is="actual.componente" v-else :key="sesion.instancia" v-bind="seccion === 'ayuda' ? { tema: ruta.tema } : {}" @ir="ir"
+        <component :is="actual.componente" v-else :key="sesion.instancia" v-bind="seccion === 'ayuda' ? { tema: ruta.tema } : intencionPara(seccion, intencion)" @ir="ir"
           @abrir-proyecto="dialogoProyecto = true" @recorrido="empezarBienvenida" @mostrar="mostrarEnPantalla" />
       </q-page>
     </q-page-container>
@@ -311,6 +311,7 @@ import AgentesPagina from './paginas/Agentes.vue'
 import EspaciosPagina from './paginas/Espacios.vue'
 import AyudaPagina from './paginas/Ayuda.vue'
 import { hashDe, leerHash } from './ayuda/ruta'
+import { destinoDe, intencionPara, type Destino, type Intencion } from './navegacion'
 import { temaPorId } from './ayuda/indice'
 import type { Pagina } from './ayuda/tipos'
 import type { Clave } from './idiomas/es'
@@ -418,8 +419,12 @@ onUnmounted(() => window.removeEventListener('popstate', alNavegar))
 // pila son las páginas anteriores, para el botón Volver; también funcionan el atrás del navegador y Alt+←.
 const pila = ref<string[]>([])
 
-function ir(id: string) {
+// intencion es lo que la página de origen le pasó a la que se muestra; cualquier otra navegación la deja vacía.
+const intencion = ref<Intencion | null>(null)
+function ir(destino: Destino) {
+  const { id, intencion: datos } = destinoDe(destino)
   if (id === pagina.value) return
+  intencion.value = datos
   cerrarAyuda()
   pila.value.push(pagina.value)
   pagina.value = id
@@ -483,6 +488,7 @@ function alNavegar() {
   } else if (relativa < pila.value.length) pila.value.length = relativa // atrás
   else pila.value.push(pagina.value) // adelante
   cerrarAyuda()
+  intencion.value = null
   pagina.value = nueva
 }
 

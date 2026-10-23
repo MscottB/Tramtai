@@ -13,39 +13,35 @@ import (
 	"tramtai/internal/tui/comp"
 )
 
-// Tecla es la pulsación de una tecla por su nombre (enter, esc, tab, flechas, ctrl+s, space…) o de una letra.
+// teclasConNombre son las teclas que se escriben por su nombre.
+var teclasConNombre = map[string]rune{"enter": tea.KeyEnter, "esc": tea.KeyEscape, "tab": tea.KeyTab, "up": tea.KeyUp,
+	"down": tea.KeyDown, "left": tea.KeyLeft, "right": tea.KeyRight, "pgdown": tea.KeyPgDown, "pgup": tea.KeyPgUp,
+	"home": tea.KeyHome, "end": tea.KeyEnd, "backspace": tea.KeyBackspace, "delete": tea.KeyDelete, "space": tea.KeySpace}
+
+// Tecla es la pulsación de una tecla por su nombre (enter, esc, tab, flechas, space…) o de una letra, con los
+// modificadores delante: ctrl+s, alt+up, shift+tab, ctrl+end.
 func Tecla(texto string) tea.KeyPressMsg {
-	switch texto {
-	case "enter":
-		return tea.KeyPressMsg{Code: tea.KeyEnter}
-	case "esc":
-		return tea.KeyPressMsg{Code: tea.KeyEscape}
-	case "tab":
-		return tea.KeyPressMsg{Code: tea.KeyTab}
-	case "up":
-		return tea.KeyPressMsg{Code: tea.KeyUp}
-	case "down":
-		return tea.KeyPressMsg{Code: tea.KeyDown}
-	case "left":
-		return tea.KeyPressMsg{Code: tea.KeyLeft}
-	case "right":
-		return tea.KeyPressMsg{Code: tea.KeyRight}
-	case "pgdown":
-		return tea.KeyPressMsg{Code: tea.KeyPgDown}
-	case "home":
-		return tea.KeyPressMsg{Code: tea.KeyHome}
-	case "end":
-		return tea.KeyPressMsg{Code: tea.KeyEnd}
-	case "backspace":
-		return tea.KeyPressMsg{Code: tea.KeyBackspace}
-	case "space":
-		return tea.KeyPressMsg{Code: tea.KeySpace, Text: " "}
-	case "ctrl+s":
-		return tea.KeyPressMsg{Code: 's', Mod: tea.ModCtrl}
-	case "ctrl+p":
-		return tea.KeyPressMsg{Code: 'p', Mod: tea.ModCtrl}
+	var mod tea.KeyMod
+	for _, m := range []struct {
+		prefijo string
+		mod     tea.KeyMod
+	}{{"ctrl+", tea.ModCtrl}, {"alt+", tea.ModAlt}, {"shift+", tea.ModShift}} {
+		if len(texto) > len(m.prefijo) && texto[:len(m.prefijo)] == m.prefijo {
+			texto, mod = texto[len(m.prefijo):], mod|m.mod
+		}
 	}
-	return tea.KeyPressMsg{Code: []rune(texto)[0], Text: texto}
+	if code, ok := teclasConNombre[texto]; ok {
+		k := tea.KeyPressMsg{Code: code, Mod: mod}
+		if texto == "space" && mod == 0 {
+			k.Text = " "
+		}
+		return k
+	}
+	k := tea.KeyPressMsg{Code: []rune(texto)[0], Mod: mod}
+	if mod == 0 {
+		k.Text = texto
+	}
+	return k
 }
 
 // Aviso es el primer aviso entre lo que una página manda a la app.

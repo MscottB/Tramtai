@@ -32,13 +32,13 @@
               </q-item-section>
               <q-item-section side>
                 <span class="etiqueta" :class="listo(a) ? 'etiqueta--ok' : 'etiqueta--aviso'">
-                  {{ listo(a) ? t('agente.listo') : t(tipo(a)) }}
+                  {{ t(etiquetas[a.estado]) }}
                 </span>
               </q-item-section>
             </template>
             <div class="q-px-md q-pb-md">
         <!-- Desconectado: no se usa ni como respaldo hasta que se conecte -->
-        <template v-if="a.desconectado">
+        <template v-if="a.estado === 'desconectado'">
           <div class="text-body2">{{ t('agentes.desconectadoTexto') }}</div>
           <q-btn unelevated dense no-caps color="primary" icon="o_link" class="q-mt-md q-px-md" :label="t('agentes.conectar')"
             :loading="cambiando === a.agente + ':conexion'" @click="conectar(a, true)" />
@@ -60,7 +60,7 @@
         </template>
 
         <!-- Falta conectarlo: las dos opciones, lado a lado -->
-        <template v-else-if="tipo(a) === 'agente.faltaClave' && !suscripcion(a)">
+        <template v-else-if="a.estado === 'falta_clave'">
           <template v-if="puedeCambiar(a)">
             <div class="text-weight-medium q-mb-sm">{{ t('agentes.elegir') }}</div>
             <div class="row q-col-gutter-sm">
@@ -90,21 +90,21 @@
         </template>
 
         <!-- Con suscripción y sin sesión: cómo iniciarla o, si se prefiere, la clave -->
-        <template v-else-if="tipo(a) === 'agente.faltaClave'">
+        <template v-else-if="a.estado === 'sin_sesion'">
           <div class="aviso text-body2">{{ a.problema }}</div>
           <q-btn v-if="puedeCambiar(a)" flat dense no-caps color="primary" class="q-mt-sm q-px-sm" :loading="cambiando === a.agente"
             :label="t('agentes.cambiarAClave')" @click="cambiar(a, 'clave_api')" />
         </template>
 
         <!-- No instalado: qué hacer, y si el CLI está en otra ruta, en qué archivo se escribe y cómo abrirlo. -->
-        <div v-else-if="tipo(a) === 'agente.noInstalado'" class="aviso text-body2">
+        <div v-else-if="a.estado === 'no_instalado'" class="aviso text-body2">
           {{ t('agentes.instalarAntes') }} {{ t('agentes.otraRuta') }} <span class="codigo">comandos_agentes.{{ a.agente }}</span> {{ t('agentes.otraRutaArchivo') }}
           <div class="bloque-codigo q-mt-sm">{{ rutaConfig }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarRuta')" @click="copiar(rutaConfig)" /></div>
         </div>
         <!-- El CLI pasó a una clave de API, la sesión no responde u otro problema: qué pasa y, con suscripción, la salida -->
         <template v-else>
-          <div class="aviso text-body2">{{ estadoAgente(a) === 'usaClave' ? t('agentes.usaClave', { cli: cli(a) })
-            : estadoAgente(a) === 'sesionNoResponde' ? t('agentes.sesionNoResponde', { cli: cli(a) }) : a.problema }}</div>
+          <div class="aviso text-body2">{{ a.estado === 'usa_clave' ? t('agentes.usaClave', { cli: cli(a) })
+            : a.estado === 'sesion_no_responde' ? t('agentes.sesionNoResponde', { cli: cli(a) }) : a.problema }}</div>
           <q-btn v-if="ofrecerDejarSuscripcion(a, puedeCambiar(a))" flat dense no-caps color="primary" class="q-mt-sm q-px-sm" :loading="cambiando === a.agente"
             :label="t('agentes.dejarSuscripcion')" @click="cambiar(a, 'clave_api')" />
         </template>
@@ -178,18 +178,19 @@ import EstadoVacio from '../componentes/EstadoVacio.vue'
 import { useQuasar } from 'quasar'
 import { api, avisar, avisarError, copiar, mensajeError } from '../api/cliente'
 import type { Adaptador } from '../api/tipos'
-import { modeloInicial, sesion } from '../estado'
-import { agenteListo, asegurarFichas, cargarFichas, codigoLinea, estadoAgente, fichaDe, fijarDisponibilidad, nombreAgente, ofrecerDejarSuscripcion, ordenarAgentes } from '../agentes'
+import { sesion } from '../estado'
+import type { Destino } from '../navegacion'
+import { agenteListo, asegurarFichas, cargarFichas, codigoLinea, fichaDe, fijarDisponibilidad, nombreAgente, ofrecerDejarSuscripcion, ordenarAgentes } from '../agentes'
 import { nombreEsfuerzo, numero } from '../formato'
 import { cargarRutaConfig, rutaConfig } from '../rutaConfig'
 import { t } from '../i18n'
+import type { Clave } from '../idiomas/es'
 
 const $q = useQuasar()
-const emit = defineEmits<{ ir: [pagina: string] }>()
+const emit = defineEmits<{ ir: [destino: Destino] }>()
 
 function probar(a: Adaptador) {
-  modeloInicial.value = a.agente
-  emit('ir', 'ejecutar')
+  emit('ir', { pagina: 'ejecutar', modelo: a.agente })
 }
 const adaptadores = ref<Adaptador[]>()
 // esfuerzos: los niveles que admite cada agente, según el catálogo de modelos.
@@ -204,7 +205,7 @@ const error = ref('')
 const cambiando = ref('')
 
 const listo = agenteListo
-const instalado = (a: Adaptador) => a.problema_codigo !== 'no_instalado'
+const instalado = (a: Adaptador) => a.estado !== 'no_instalado'
 // Lista para crecer: buscador, filtro por estado con su número y los no instalados aparte. Primero los listos, luego los
 // que falta conectar, en el orden de sus fichas.
 const busqueda = ref<string | null>('')
@@ -243,13 +244,10 @@ function resumen(a: Adaptador) {
     contextos.value[a.agente]?.length ? t('agentes.contexto') + ': ' + textoContextos(a.agente) : ''].filter(Boolean).join(' · ')
 }
 
-// tipo clasifica el problema por su código (el texto llega en el idioma del servicio) para mostrar la ayuda adecuada.
-function tipo(a: Adaptador) {
-  if (a.desconectado) return 'agente.desconectado' as const
-  if (a.problema_codigo === 'no_instalado') return 'agente.noInstalado' as const
-  if (a.problema_codigo === 'falta_clave') return 'agente.faltaClave' as const
-  return 'agente.revisar' as const
-}
+// etiquetas son las del estado que manda el servicio: «Sin conectar» vale para el que falta la clave y el que no tiene
+// sesión, y «Revisar» para el resto de problemas.
+const etiquetas: Record<Adaptador['estado'], Clave> = { listo: 'agente.listo', desconectado: 'agente.desconectado', no_instalado: 'agente.noInstalado',
+  falta_clave: 'agente.faltaClave', sin_sesion: 'agente.faltaClave', usa_clave: 'agente.revisar', sesion_no_responde: 'agente.revisar', revisar: 'agente.revisar' }
 const suscripcion = (a: Adaptador) => a.autenticacion === 'suscripcion'
 // La suscripción la admiten los agentes cuya ficha la incluye, y solo se cambia desde una sesión de este mismo equipo.
 const puedeCambiar = (a: Adaptador) => !!fichaDe(a.agente)?.autenticaciones.includes('suscripcion') && !!sesion.value?.local

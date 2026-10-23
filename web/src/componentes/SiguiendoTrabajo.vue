@@ -27,12 +27,12 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import Ruta from './Ruta.vue'
 import { nombreAgente } from '../agentes'
-import { trabajoAbrir } from '../estado'
+import type { Destino } from '../navegacion'
 import { t } from '../i18n'
 import { claveEtapa, type Tranvia } from '../vivo'
 
 const props = defineProps<{ tranvia?: Tranvia }>()
-const emit = defineEmits<{ dejar: []; ir: [pagina: string] }>()
+const emit = defineEmits<{ dejar: []; ir: [destino: Destino] }>()
 
 const ahora = ref(Date.now())
 let reloj: number
@@ -42,7 +42,6 @@ const segundos = computed(() => (props.tranvia ? Math.max(0, Math.round(((props.
 
 function verHistorial() {
   if (!props.tranvia) return
-  trabajoAbrir.value = props.tranvia.id
-  emit('ir', 'historial')
+  emit('ir', { pagina: 'historial', abrir: props.tranvia.id })
 }
 </script>

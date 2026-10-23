@@ -2,7 +2,7 @@ package claude
 
 import (
 	"tramtai/internal/adaptadores"
-	"tramtai/internal/nucleo"
+	"tramtai/internal/configuracion"
 )
 
 // valoresEsfuerzo son los de --effort de Claude Code, que llega a max.
@@ -18,7 +18,7 @@ var Ficha = adaptadores.Ficha{
 	VariablesClave:  []string{"ANTHROPIC_API_KEY"},
 	Comando:         "claude", Concurrencia: 1, PermitidoEnApps: true,
 	URLInstalacion: "https://docs.anthropic.com/claude-code",
-	Crear: func(c *nucleo.Configuracion) adaptadores.Adaptador {
+	Crear: func(c *configuracion.Configuracion) adaptadores.Adaptador {
 		return Claude{Programa: c.Texto("comandos_agentes.claude"), Autenticacion: adaptadores.NuevoModo(c.Texto("adaptadores.claude.autenticacion"))}
 	},
 }

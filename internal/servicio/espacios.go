@@ -11,6 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"tramtai/internal/agentes"
+	"tramtai/internal/carpetas"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
@@ -106,9 +109,9 @@ func (r *registro) migrar(ruta string) bool {
 		return false
 	}
 	r.espacios["global"] = &Espacio{ID: "global", Ambito: "global", Activo: a.Global}
-	global, _ := nucleo.CargarConfiguracion("")
+	global, _ := configuracion.CargarConfiguracion("", agentes.Internos())
 	for _, raiz := range a.Proyectos {
-		c, err := nucleo.CargarConfiguracion(raiz)
+		c, err := configuracion.CargarConfiguracion(raiz, agentes.Internos())
 		if err != nil {
 			c = global // la carpeta ya no está: el id sale del nombre de la carpeta, como hacía IDProyecto
 		}
@@ -207,7 +210,7 @@ func (s *Servicio) marcarUso(id string) {
 // idDe resuelve el id de la carpeta raiz: el de su marca si es de un proyecto registrado (y la carpeta se movió, o
 // es la misma), el del espacio registrado con esa ruta, o uno nuevo. Una marca ajena (global, un id que no está, o
 // el de un proyecto que sigue en su sitio: una copia) no se adopta.
-func (s *Servicio) idDe(raiz string, c *nucleo.Configuracion) (string, error) {
+func (s *Servicio) idDe(raiz string, c *configuracion.Configuracion) (string, error) {
 	r := s.registro()
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -219,16 +222,16 @@ func (s *Servicio) idDe(raiz string, c *nucleo.Configuracion) (string, error) {
 }
 
 // idPara es la regla de idDe sobre los espacios conocidos; adoptar dice si la marca se adopta (su ruta pasa a raiz).
-func idPara(espacios map[string]*Espacio, raiz string, c *nucleo.Configuracion) (id string, adoptar bool) {
+func idPara(espacios map[string]*Espacio, raiz string, c *configuracion.Configuracion) (id string, adoptar bool) {
 	if marca := LeerMarca(raiz); marca != "" && marca != "global" {
 		if e, ok := espacios[marca]; ok && e.Ambito == "proyecto" {
-			if e.Ruta == "" || nucleo.MismaRuta(e.Ruta, raiz) || !esProyecto(e.Ruta) {
+			if e.Ruta == "" || carpetas.MismaRuta(e.Ruta, raiz) || !esProyecto(e.Ruta) {
 				return marca, true
 			}
 		}
 	}
 	for _, e := range espacios {
-		if e.Ambito == "proyecto" && e.Ruta != "" && nucleo.MismaRuta(e.Ruta, raiz) {
+		if e.Ambito == "proyecto" && e.Ruta != "" && carpetas.MismaRuta(e.Ruta, raiz) {
 			return e.ID, false
 		}
 	}
@@ -248,14 +251,14 @@ func idPara(espacios map[string]*Espacio, raiz string, c *nucleo.Configuracion) 
 func (s *Servicio) rutaMovida(raiz string) string {
 	marca := LeerMarca(raiz)
 	e, ok := s.registro().buscar(marca)
-	if !ok || e.Ambito != "proyecto" || e.Ruta == "" || nucleo.MismaRuta(e.Ruta, raiz) || esProyecto(e.Ruta) {
+	if !ok || e.Ambito != "proyecto" || e.Ruta == "" || carpetas.MismaRuta(e.Ruta, raiz) || esProyecto(e.Ruta) {
 		return ""
 	}
 	return e.Ruta
 }
 
 // nombreProyecto es el nombre que se muestra de un proyecto: el de su configuración o el de su carpeta.
-func nombreProyecto(raiz string, c *nucleo.Configuracion) string {
+func nombreProyecto(raiz string, c *configuracion.Configuracion) string {
 	if nombre := strings.TrimSpace(c.Texto("proyecto.nombre")); nombre != "" {
 		return nombre
 	}
@@ -264,12 +267,12 @@ func nombreProyecto(raiz string, c *nucleo.Configuracion) string {
 
 // mismaCarpeta compara dos rutas también por su forma real (sin nombres cortos como ADMINI~1 ni enlaces).
 func mismaCarpeta(a, b string) bool {
-	if nucleo.MismaRuta(a, b) {
+	if carpetas.MismaRuta(a, b) {
 		return true
 	}
 	ra, errA := filepath.EvalSymlinks(a)
 	rb, errB := filepath.EvalSymlinks(b)
-	return errA == nil && errB == nil && nucleo.MismaRuta(ra, rb)
+	return errA == nil && errB == nil && carpetas.MismaRuta(ra, rb)
 }
 
 func esProyecto(raiz string) bool {
@@ -322,7 +325,7 @@ func escribirMarca(raiz, id string) error {
 
 // IDDeCarpeta es el id del espacio de un proyecto visto desde fuera del servicio (CLI, terminal), con la misma regla
 // que el servicio sobre el registro de datos (solo lo lee): una marca copiada en otra carpeta no se adopta.
-func IDDeCarpeta(datos, raiz string, c *nucleo.Configuracion) string {
+func IDDeCarpeta(datos, raiz string, c *configuracion.Configuracion) string {
 	espacios := map[string]*Espacio{}
 	if contenido, err := os.ReadFile(filepath.Join(datos, "espacios.json")); err == nil {
 		var a archivoRegistro

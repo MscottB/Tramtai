@@ -3,6 +3,7 @@ package cliente
 import (
 	"path/filepath"
 
+	"tramtai/internal/carpetas"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -19,7 +20,7 @@ func ElegirEspacio(raiz string, activos []contrato.EstadoInstancia, preferida st
 		return "global", nil
 	}
 	for _, i := range activos {
-		if i.Ambito == "proyecto" && nucleo.MismaRuta(i.Raiz, raiz) {
+		if i.Ambito == "proyecto" && carpetas.MismaRuta(i.Raiz, raiz) {
 			return i.ID, nil
 		}
 	}

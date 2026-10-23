@@ -21,6 +21,7 @@ import (
 	"tramtai/internal/actualizacion"
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/api"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
@@ -32,8 +33,8 @@ import (
 
 // Opciones configura el servicio.
 type Opciones struct {
-	Datos    string                // directorio de datos del usuario
-	Config   *nucleo.Configuracion // configuración global (sin capas de proyecto)
+	Datos    string                       // directorio de datos del usuario
+	Config   *configuracion.Configuracion // configuración global (sin capas de proyecto)
 	Registro map[string]adaptadores.Adaptador
 	// Conexiones dice qué agentes están desconectados; Nuevo la crea desde la configuración si falta.
 	Conexiones *adaptadores.Conexiones
@@ -57,6 +58,8 @@ type Opciones struct {
 	PuertoAutomatico  bool
 	// Reiniciar lanza un servicio nuevo que espera a que este termine; nil = sin reinicio desde la Web UI.
 	Reiniciar func() error
+	// Autoarranque dice si el sistema puede arrancar Tramtai al iniciar sesión y si lo hace; nil = el del sistema.
+	Autoarranque func() (disponible, activo bool)
 	// RaizConversor es la carpeta donde se prepara el conversor de archivos (documentos.RaizConversor; vacía: sin
 	// conversor en el servicio, como en las pruebas que no lo usan).
 	RaizConversor string
@@ -74,12 +77,13 @@ type Instancia struct {
 	ID           string
 	Ambito       string // global o proyecto
 	Raiz         string
-	Config       *nucleo.Configuracion
+	Config       *configuracion.Configuracion
 	Planificador *planificador.Planificador
 	Cargas       *documentos.Cargas
 	ArchivoToken string
 	token        string
 	almacen      *persistencia.Almacen
+	api          *api.Servidor // comprueba los agentes para los Primeros pasos
 	rutas        http.Handler
 	pararPurga   context.CancelFunc
 	purgaParada  chan struct{}
@@ -172,11 +176,11 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 
 // fijarPrepararConversor guarda conversion.preparar_al_iniciar en la configuración global y lo muestra en el estado.
 func (s *Servicio) fijarPrepararConversor(preparar bool) error {
-	ruta, err := nucleo.RutaGlobal()
+	ruta, err := configuracion.RutaGlobal()
 	if err != nil {
 		return err
 	}
-	if err := FijarValor(ruta, nucleo.OrigenGlobal, "conversion.preparar_al_iniciar", preparar); err != nil {
+	if err := configuracion.FijarValor(ruta, configuracion.OrigenGlobal, "conversion.preparar_al_iniciar", preparar); err != nil {
 		return err
 	}
 	if s.conversor != nil {

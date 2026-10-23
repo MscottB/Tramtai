@@ -27,15 +27,15 @@ func (p Presupuesto) Vacio() bool { return p == Presupuesto{} }
 // Validar rechaza los valores negativos.
 func (p Presupuesto) Validar() error {
 	for _, l := range []Limites{p.Diario, p.Mensual} {
-		if l.Peticiones < 0 || l.Tokens < 0 || !finitoNoNegativo(l.USD) {
+		if l.Peticiones < 0 || l.Tokens < 0 || !FinitoNoNegativo(l.USD) {
 			return NuevoError(CodigoConfiguracionInvalida, idioma.T("los límites del presupuesto no pueden ser negativos"))
 		}
 	}
 	return nil
 }
 
-// finitoNoNegativo rechaza también NaN e infinito: un límite así nunca se alcanzaría y rompería el JSON del estado.
-func finitoNoNegativo(v float64) bool { return v >= 0 && !math.IsInf(v, 1) }
+// FinitoNoNegativo rechaza también NaN e infinito: un límite así nunca se alcanzaría y rompería el JSON del estado.
+func FinitoNoNegativo(v float64) bool { return v >= 0 && !math.IsInf(v, 1) }
 
 // Consumo es lo gastado en un periodo: peticiones aceptadas, trabajos terminados y lo que informaron.
 type Consumo struct {
@@ -142,13 +142,4 @@ type EstadoPeriodo struct {
 type EstadoPresupuesto struct {
 	Diario  EstadoPeriodo `json:"diario"`
 	Mensual EstadoPeriodo `json:"mensual"`
-}
-
-// PresupuestoDe lee el presupuesto de la instancia de la configuración efectiva.
-func PresupuestoDe(c *Configuracion) Presupuesto {
-	limites := func(periodo string) Limites {
-		return Limites{Peticiones: c.Entero("presupuesto." + periodo + ".peticiones"), Tokens: c.Entero("presupuesto." + periodo + ".tokens"),
-			USD: c.Decimal("presupuesto." + periodo + ".usd")}
-	}
-	return Presupuesto{Diario: limites("diario"), Mensual: limites("mensual")}
 }

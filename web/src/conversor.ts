@@ -3,11 +3,9 @@
 import { ref } from 'vue'
 import { api, avisarError } from './api/cliente'
 import type { EstadoConversor } from './api/tipos'
+import { extensionesConversor } from './api/tipos.gen'
 import { t } from './i18n'
 import type { Clave } from './idiomas/es'
-
-// convertibles son las extensiones que pasan por markitdown.
-const convertibles = ['.html', '.htm', '.pdf', '.docx', '.pptx', '.xlsx']
 
 // Formatos son las extensiones que admite el servicio (/api/v1/limites).
 type Formatos = { extensiones_texto?: string[]; extensiones_conversor?: string[] }
@@ -21,7 +19,7 @@ export const listaFormatos = (f?: Formatos) => extensiones(f).map((e) => e.slice
 
 export function necesitaConversor(nombre: string): boolean {
   const punto = nombre.lastIndexOf('.')
-  return punto >= 0 && convertibles.includes(nombre.slice(punto).toLowerCase())
+  return punto >= 0 && extensionesConversor.includes(nombre.slice(punto).toLowerCase())
 }
 
 // conversor es null mientras no se sabe, o si el servicio no tiene conversor (entonces no se avisa de nada).

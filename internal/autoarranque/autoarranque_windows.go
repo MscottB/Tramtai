@@ -6,10 +6,9 @@ import (
 	"errors"
 	"os"
 	"strings"
+	"tramtai/internal/carpetas"
 
 	"golang.org/x/sys/windows/registry"
-
-	"tramtai/internal/nucleo"
 )
 
 // Disponible indica si este sistema admite el arranque automático.
@@ -23,7 +22,7 @@ const claveRun = `Software\Microsoft\Windows\CurrentVersion\Run`
 var (
 	nombreValor    = "Tramtai"
 	nombrePortable = "Tramtai portable"
-	esPortable     = nucleo.Portable
+	esPortable     = carpetas.Portable
 )
 
 // nombres son los valores que pueden ser de esta copia, el propio primero.

@@ -1,4 +1,4 @@
-package ejecutar
+package ejecutar_test
 
 import (
 	"encoding/json"
@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	tea "charm.land/bubbletea/v2"
 
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
@@ -20,35 +18,27 @@ import (
 // TestPegarVariasLineas: lo pegado (3 líneas, 5000 caracteres) entra entero en el mensaje, e Intro no lo envía.
 func TestPegarVariasLineas(t *testing.T) {
 	cli, id := prueba.Servicio(t)
-	p := abierta(t, cli, id)
+	a := abierta(t, cli, id)
 	linea := strings.Repeat("x", 1666)
 	texto := linea + "\n" + linea + "\n" + linea
 	if len([]rune(texto)) != 5000 {
 		t.Fatalf("la prueba pega 5000 caracteres: %d", len(texto))
 	}
-	p.form.Enfocar("mensaje")
-	_, cmd := p.Update(tea.PasteMsg{Content: texto})
-	correr(p, cmd)
-	if got := p.form.Valor("mensaje"); got != texto {
-		t.Fatalf("lo pegado entra entero: %d caracteres, %d líneas", len(got), strings.Count(got, "\n")+1)
-	}
-	if !p.EnCampo() {
+	enfocar(t, a, tx("ejecutar.mensaje"))
+	a.Pegar(texto)
+	if !a.P.EnCampo() {
 		t.Fatal("pegar empieza a editar el campo")
 	}
-	pulsar(p, "enter")
-	if p.trabajo != nil || p.enviando {
-		t.Fatal("Intro en el mensaje salta de línea, no envía")
+	a.Pulsar("enter")
+	if n := cuantos(t, cli, id); n != 0 || pestana(a, "ejecutar.respuesta") {
+		t.Fatalf("Intro en el mensaje salta de línea, no envía: %d", n)
 	}
-	if got := p.form.Valor("mensaje"); strings.Count(got, "\n") != 3 {
-		t.Fatalf("Intro añade una línea: %d", strings.Count(got, "\n"))
+	enviar(a)
+	if e := terminada(t, a); e != nucleo.Completado || !strings.Contains(a.Vista(), linea[:50]) {
+		t.Fatalf("Ctrl+S lo envía: %s", e)
 	}
-	if lista, _ := cli.Trabajos(ctx, id, 10); len(lista) != 0 {
-		t.Fatalf("no se mandó nada: %d", len(lista))
-	}
-	pulsar(p, "ctrl+s")
-	hasta(t, p, func() bool { return p.final != nil })
-	if p.final.Estado != nucleo.Completado || !strings.HasPrefix(p.salida, linea) {
-		t.Fatalf("Ctrl+S lo envía: %+v", p.final.Estado)
+	if m := ultimo(t, cli, id).Solicitud.Mensajes[0].Contenido; m != texto+"\n" {
+		t.Fatalf("lo pegado entra entero e Intro añade una línea: %d caracteres, %d líneas", len(m), strings.Count(m, "\n")+1)
 	}
 }
 
@@ -56,44 +46,50 @@ func TestPegarVariasLineas(t *testing.T) {
 // propio pregunta antes de cambiarlo.
 func TestPlantillaRellenaEsquema(t *testing.T) {
 	cli, id := prueba.Servicio(t)
-	p := abierta(t, cli, id)
-	p.form.Enfocar("estructurada")
-	p.editando = true
-	pulsar(p, "space")
-	if !p.form.Marcado("estructurada") || !strings.Contains(p.leer().esquema, `"resumen"`) {
-		t.Fatalf("activar la salida estructurada pone el esquema de ejemplo: %q", p.leer().esquema)
+	a := abierta(t, cli, id)
+	poner(t, a, tx("ejecutar.mensaje"), "hola")
+	abrirPliegue(t, a, "receta.opciones")
+	editar(t, a, tx("receta.salidaEstructurada"))
+	a.Pulsar("space")
+	if !marcado(t, a, tx("receta.salidaEstructurada")) || valor(t, a, campo("1", "nombre")) != "resumen" {
+		t.Fatalf("activar la salida estructurada pone el esquema de ejemplo:\n%s", a.Vista())
 	}
-	p.form.Enfocar("plantilla")
-	if fuera := pulsar(p, "enter"); len(fuera) != 0 {
+	a.Pulsar("esc")
+	editar(t, a, tx("receta.plantillaCorta"))
+	if fuera := a.Pulsar("enter"); len(fuera) != 0 {
 		t.Fatalf("sobre el esquema de ejemplo no pregunta: %v", fuera)
 	}
-	esquema := p.leer().esquema
-	if !strings.Contains(esquema, `"nombre"`) || !strings.Contains(esquema, `"format": "date"`) || !strings.Contains(esquema, "\n  ") {
-		t.Fatalf("pone el esquema de «Extraer datos», con sangría:\n%s", esquema)
+	if !strings.Contains(a.Vista(), tx("campos.tipo.fecha")) || valor(t, a, campo("1", "nombre")) != "nombre" {
+		t.Fatalf("pone el esquema de «Extraer datos», en campos:\n%s", a.Vista())
 	}
-	if !strings.HasPrefix(p.form.Valor("instrucciones"), "Extrae del texto") {
-		t.Fatalf("y sus instrucciones, que estaban vacías: %q", p.form.Valor("instrucciones"))
+	if v := valor(t, a, tx("receta.instrucciones")); !strings.HasPrefix(v, "Extrae del texto") {
+		t.Fatalf("y sus instrucciones, que estaban vacías: %q", v)
 	}
 	// Otra plantilla sobre un esquema propio: pregunta; cancelar lo deja y confirmar lo cambia.
-	pulsar(p, "right")
-	fuera := pulsar(p, "enter")
-	if len(fuera) != 1 {
-		t.Fatalf("pregunta antes de cambiar el esquema: %v", fuera)
+	editar(t, a, campo("1", "nombre"))
+	a.Escribir("_propio")
+	editar(t, a, tx("receta.plantillaCorta"))
+	a.Pulsar("right")
+	q, ok := pregunta(a.Pulsar("enter"))
+	if !ok || !strings.Contains(q.Texto, "Cambiar el esquema") {
+		t.Fatalf("pregunta antes de cambiar el esquema, con la pregunta de la Web UI: %+v", q)
 	}
-	if q := fuera[0].(comp.Pregunta); !strings.Contains(q.Texto, "Cambiar el esquema") {
-		t.Fatalf("la pregunta de la Web UI: %q", q.Texto)
-	}
-	p.Update(comp.Cancelado{})
-	if p.leer().esquema != esquema || !p.EnCampo() {
+	a.Entregar(comp.Cancelado{})
+	if valor(t, a, campo("1", "nombre")) != "nombre_propio" || !a.P.EnCampo() {
 		t.Fatal("cancelar deja el esquema y sigue editando")
 	}
-	pulsar(p, "enter")
-	p.Update(comp.Confirmado{})
-	if p.leer().esquema == esquema || !strings.Contains(p.leer().esquema, `"categoria"`) {
-		t.Fatalf("confirmar pone la otra plantilla:\n%s", p.leer().esquema)
+	a.Pulsar("enter")
+	a.Entregar(comp.Confirmado{})
+	if valor(t, a, campo("1", "nombre")) == "nombre_propio" || !strings.Contains(a.Vista(), "categoria") {
+		t.Fatalf("confirmar pone la otra plantilla:\n%s", a.Vista())
 	}
-	if !strings.HasPrefix(p.form.Valor("instrucciones"), "Extrae del texto") {
-		t.Fatal("las instrucciones propias no se tocan")
+	if v := valor(t, a, tx("receta.instrucciones")); !strings.HasPrefix(v, "Extrae del texto") {
+		t.Fatalf("las instrucciones propias no se tocan: %q", v)
+	}
+	// En JSON, el esquema de la plantilla va con sangría.
+	aJSON(t, a)
+	if !strings.Contains(a.Vista(), `"type": "object"`) || !strings.Contains(esquemaEnviado(t, a, cli, id), `"categoria"`) {
+		t.Fatalf("en JSON, con sangría:\n%s", a.Vista())
 	}
 }
 
@@ -101,105 +97,98 @@ func TestPlantillaRellenaEsquema(t *testing.T) {
 // no se envía.
 func TestEsquemaInvalidoAvisa(t *testing.T) {
 	cli, id := prueba.Servicio(t)
-	p := abierta(t, cli, id)
-	escribir(p, "mensaje", "hola")
-	p.form.Enfocar("estructurada")
-	pulsar(p, "space")
-	aJSON(p)
-	p.form.Enfocar("esquema")
-	p.form.Poner("esquema", "")
-	escribir(p, "esquema", `{"type":"object","properties":{"x":{"type":"nada"}}}`)
-	if p.errEsquema != "" {
+	a := abierta(t, cli, id)
+	poner(t, a, tx("ejecutar.mensaje"), "hola")
+	conEstructurada(t, a)
+	aJSON(t, a)
+	editar(t, a, tx("receta.esquema"))
+	vaciar(a)
+	a.Escribir(`{"type":"object","properties":{"x":{"type":"nada"}}}`)
+	if strings.Contains(a.Vista(), "properties.x.type") {
 		t.Fatal("mientras se escribe no se pregunta al servicio")
 	}
-	pulsar(p, "tab")
-	if p.errEsquema == "" {
-		t.Fatal("al salir del campo, el servicio dice qué está mal")
+	a.Pulsar("tab")
+	if enfocar(t, a, tx("receta.esquema")); !strings.Contains(a.Vista(), "properties.x.type") {
+		t.Fatalf("al salir del campo, el servicio dice qué está mal, bajo el campo:\n%s", a.Vista())
 	}
-	p.form.Enfocar("esquema")
-	if v := p.Vista(); !strings.Contains(v, p.errEsquema[:20]) {
-		t.Fatalf("el error se ve bajo el campo (%q):\n%s", p.errEsquema, v)
-	}
-	pulsar(p, "esc", "ctrl+s")
-	if p.trabajo != nil || p.enviando {
-		t.Fatal("con el esquema mal no se envía")
-	}
-	if p.form.Foco() != "esquema" {
-		t.Fatalf("enseña el campo con el error: %s", p.form.Foco())
+	if enviar(a); cuantos(t, cli, id) != 0 || foco(a) != tx("receta.esquema") {
+		t.Fatalf("con el esquema mal no se envía y se enseña el campo con el error: %s", foco(a))
 	}
 	// Un JSON roto también: el servicio da la línea; escribir otra cosa quita el error viejo.
-	p.form.Poner("esquema", "")
-	escribir(p, "esquema", "{")
-	pulsar(p, "tab")
-	if p.errEsquema == "" {
-		t.Fatal("un JSON roto también se avisa")
+	poner(t, a, tx("receta.esquema"), "{")
+	if enfocar(t, a, tx("receta.esquema")); !strings.Contains(a.Vista(), "línea") {
+		t.Fatalf("un JSON roto también se avisa:\n%s", a.Vista())
 	}
-	p.form.Enfocar("esquema")
-	escribir(p, "esquema", "}")
-	if p.errEsquema != "" {
-		t.Fatal("al cambiar el esquema, el error del servicio se olvida")
+	editar(t, a, tx("receta.esquema"))
+	a.Escribir("}")
+	if strings.Contains(a.Vista(), "línea") {
+		t.Fatalf("al cambiar el esquema, el error del servicio se olvida:\n%s", a.Vista())
 	}
 }
 
 // TestModeloYEsfuerzo: el modelo viene del catálogo y el esfuerzo ofrece los niveles de su agente; ConAgente lo elige.
 func TestModeloYEsfuerzo(t *testing.T) {
 	cli, id := prueba.Servicio(t)
-	p := abierta(t, cli, id)
-	if len(p.catalogo) == 0 || !strings.Contains(p.opciones["modelo"].etiquetas[0], "Predeterminado") {
-		t.Fatalf("el catálogo da los modelos: %+v", p.opciones["modelo"])
+	a := abierta(t, cli, id)
+	if v := valor(t, a, tx("receta.modelo")); !strings.Contains(v, "Predeterminado") {
+		t.Fatalf("el catálogo da los modelos: %q", v)
 	}
-	_, cmd := p.Update(pagina.ConAgente{Agente: "simulado"})
-	correr(p, cmd)
-	if p.valorOpcion("modelo") != "simulado" || p.form.Foco() != "mensaje" {
-		t.Fatalf("Probar con un agente lo deja elegido: %q", p.valorOpcion("modelo"))
+	a.Entregar(pagina.ConAgente{Agente: "simulado"})
+	if valor(t, a, tx("receta.modelo")) != "simulado" || foco(a) != tx("ejecutar.mensaje") {
+		t.Fatalf("Probar con un agente lo deja elegido:\n%s", a.Vista())
 	}
-	p.form.Enfocar("forzar")
-	if p.form.Foco() != "forzar" {
+	if abrirPliegue(t, a, "receta.opciones"); !strings.Contains(a.Vista(), tx("receta.forzar")) {
 		t.Fatal("con modelo se ofrece forzar")
 	}
-	p.form.Enfocar("modelo")
-	p.editando = true
-	for i := 0; i < 20 && p.valorOpcion("modelo") != ""; i++ {
-		pulsar(p, "left")
+	editar(t, a, tx("receta.modelo"))
+	for i := 0; i < 20 && !strings.Contains(valor(t, a, tx("receta.modelo")), "Predeterminado"); i++ {
+		a.Pulsar("left")
 	}
-	if p.valorOpcion("modelo") != "" || p.form.Foco() != "modelo" {
-		t.Fatalf("← vuelve al predeterminado y el foco sigue en el modelo: %q %s", p.valorOpcion("modelo"), p.form.Foco())
+	if !strings.Contains(valor(t, a, tx("receta.modelo")), "Predeterminado") || foco(a) != tx("receta.modelo") {
+		t.Fatalf("← vuelve al predeterminado y el foco sigue en el modelo:\n%s", a.Vista())
 	}
-	p.form.Enfocar("forzar")
-	if p.form.Foco() == "forzar" {
+	if a.Pulsar("esc"); strings.Contains(a.Vista(), tx("receta.forzar")) {
 		t.Fatal("sin modelo no hay forzar")
 	}
 }
 
+// TestCompletarRuta: Tab en el campo de archivos completa la última ruta con lo que hay en disco, en lugar de pasar al
+// siguiente campo: el único que encaja, lo común a varios (y los enseña) o una carpeta con su separador.
 func TestCompletarRuta(t *testing.T) {
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "informe.txt"), nil, 0o600)
 	os.WriteFile(filepath.Join(dir, "indice.md"), nil, 0o600)
 	os.Mkdir(filepath.Join(dir, "notas"), 0o700)
 	base := dir + string(filepath.Separator)
-	if got, c := completar("a.txt, " + base + "inf"); got != "a.txt, "+base+"informe.txt" || len(c) != 1 {
-		t.Fatalf("completa el único que encaja: %q %v", got, c)
+	cli, id := prueba.Servicio(t)
+	a := abierta(t, cli, id)
+	archivos := tx("ejecutar.adjuntar")
+	completa := func(escrito string) ([]string, string) {
+		t.Helper()
+		editar(t, a, archivos)
+		vaciar(a)
+		a.Pegar(escrito)
+		var avisos []string
+		if av, ok := aviso(a.Pulsar("tab")); ok {
+			avisos = strings.Fields(av.Texto)
+		}
+		return avisos, valor(t, a, archivos)
 	}
-	if got, c := completar(base + "i"); got != base+"in" || len(c) != 2 {
-		t.Fatalf("con varios, lo común: %q %v", got, c)
+	if c, got := completa("a.txt, " + base + "inf"); got != "a.txt, "+base+"informe.txt" || len(c) != 0 || foco(a) != archivos {
+		t.Fatalf("completa el único que encaja y sigue en el campo: %q %v %s", got, c, foco(a))
 	}
-	if got, _ := completar(base + "no"); got != base+"notas"+string(filepath.Separator) {
+	a.Pulsar("tab")
+	if foco(a) != tx("comun.opcionesAvanzadas") {
+		t.Fatalf("ya completa, Tab pasa al siguiente: %s", foco(a))
+	}
+	if c, got := completa(base + "i"); got != base+"in" || len(c) != 2 {
+		t.Fatalf("con varios, lo común, y los enseña: %q %v", got, c)
+	}
+	if _, got := completa(base + "no"); got != base+"notas"+string(filepath.Separator) {
 		t.Fatalf("una carpeta lleva su separador: %q", got)
 	}
-	if got, c := completar(base + "zz"); got != base+"zz" || c != nil {
-		t.Fatalf("sin coincidencias no cambia: %q %v", got, c)
-	}
-	// Tab en el campo de archivos completa en lugar de pasar al siguiente.
-	cli, id := prueba.Servicio(t)
-	p := abierta(t, cli, id)
-	escribir(p, "archivos", base+"inf")
-	pulsar(p, "tab")
-	if p.form.Foco() != "archivos" || p.form.Valor("archivos") != base+"informe.txt" {
-		t.Fatalf("Tab completa: %s %q", p.form.Foco(), p.form.Valor("archivos"))
-	}
-	pulsar(p, "tab")
-	if p.form.Foco() != "avanzadas" {
-		t.Fatalf("ya completa, Tab pasa al siguiente: %s", p.form.Foco())
+	if _, got := completa(base + "zz"); got != base+"zz" || foco(a) != tx("comun.opcionesAvanzadas") {
+		t.Fatalf("sin coincidencias no cambia y Tab pasa al siguiente: %q %s", got, foco(a))
 	}
 }
 
@@ -208,25 +197,27 @@ func TestCompletarRuta(t *testing.T) {
 func TestAvisoConversorAlAdjuntar(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 	cli, id := prueba.SinConversor(t)
-	p := abierta(t, cli, id)
+	a := abierta(t, cli, id)
 	pdf := filepath.Join(t.TempDir(), "informe.pdf")
 	os.WriteFile(pdf, []byte("%PDF"), 0o600)
-	p.form.Poner("mensaje", "resume")
-	escribir(p, "archivos", pdf)
-	fuera := pulsar(p, "tab")
-	if a, ok := aviso(fuera); !ok || !strings.Contains(a.Texto, "Ctrl+P") {
+	poner(t, a, tx("ejecutar.mensaje"), "resume")
+	editar(t, a, tx("ejecutar.adjuntar"))
+	a.Pegar(pdf)
+	fuera := a.Pulsar("tab")
+	if av, ok := aviso(fuera); !ok || !strings.Contains(av.Texto, "Ctrl+P") {
 		t.Fatalf("al dejar el campo avisa con la tecla que lo prepara: %v", fuera)
 	}
-	p.form.Enfocar("archivos")
-	if v := p.Vista(); !strings.Contains(v, "Ctrl+P") {
-		t.Fatalf("el aviso se ve junto al campo:\n%s", v)
+	if enfocar(t, a, tx("ejecutar.adjuntar")); !strings.Contains(a.Vista(), "Ctrl+P") {
+		t.Fatalf("el aviso se ve junto al campo:\n%s", a.Vista())
 	}
-	if a, ok := aviso(pulsar(p, "ctrl+s")); !ok || !strings.Contains(a.Texto, "Ctrl+P") || p.trabajo != nil {
-		t.Fatalf("no se envía sin conversor: %+v", a)
+	if av, ok := aviso(enviar(a)); !ok || !strings.Contains(av.Texto, "Ctrl+P") || cuantos(t, cli, id) != 0 {
+		t.Fatalf("no se envía sin conversor: %+v", av)
 	}
-	escribir(p, "archivos", ".zip")
-	if a, ok := aviso(pulsar(p, "tab")); !ok || !strings.Contains(a.Texto, "ZIP") {
-		t.Fatalf("un formato que no se admite se avisa: %+v", a)
+	editar(t, a, tx("ejecutar.adjuntar"))
+	a.Pulsar("end")
+	a.Escribir(".zip")
+	if av, ok := aviso(a.Pulsar("tab")); !ok || !strings.Contains(av.Texto, "ZIP") {
+		t.Fatalf("un formato que no se admite se avisa: %+v", av)
 	}
 }
 
@@ -238,11 +229,11 @@ func TestRutaNoPermitida(t *testing.T) {
 	os.WriteFile(global, []byte("predeterminados:\n  agente: simulado\ninstancia_global:\n  raices_permitidas: ["+jsonTexto(permitida)+"]\n"), 0o600)
 	fuera := filepath.Join(t.TempDir(), "nota.txt")
 	os.WriteFile(fuera, []byte("hola"), 0o600)
-	p := abierta(t, cli, id)
-	p.form.Poner("mensaje", "lee")
-	p.form.Poner("archivos", fuera)
-	if a, ok := aviso(pulsar(p, "ctrl+s")); !ok || p.trabajo != nil || !strings.Contains(a.Texto, "raices_permitidas") {
-		t.Fatalf("la ruta se comprueba antes de subir: %+v", a)
+	a := abierta(t, cli, id)
+	poner(t, a, tx("ejecutar.mensaje"), "lee")
+	poner(t, a, tx("ejecutar.adjuntar"), fuera)
+	if av, ok := aviso(enviar(a)); !ok || cuantos(t, cli, id) != 0 || !strings.Contains(av.Texto, "raices_permitidas") {
+		t.Fatalf("la ruta se comprueba antes de subir: %+v", av)
 	}
 }
 

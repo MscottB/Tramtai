@@ -9,20 +9,14 @@ import (
 	"strings"
 	"time"
 
+	"tramtai/internal/agentes"
 	"tramtai/internal/api"
+	"tramtai/internal/configuracion"
+	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
 )
-
-// estadoConBase es el estado de la instancia con la URL del servicio, para el panel de la Web UI.
-type estadoConBase struct {
-	EstadoInstancia
-	Base string `json:"base"`
-	// AppConClave24h son las peticiones de apps que llegaron con la clave del espacio en las últimas 24 h: con muchas,
-	// la Web UI sugiere darles su propia API.
-	AppConClave24h int `json:"app_con_clave_24h"`
-}
 
 // rutaInstancia atiende lo que la Web UI necesita además de la API de la instancia: su estado y, con una sesión
 // de la Web UI o el token de servicio (no con el token que usan las aplicaciones), su configuración efectiva y sus
@@ -31,7 +25,9 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 	ruta := r.URL.Path
 	if ruta == "/api/v1/instancia" && r.Method == http.MethodGet {
 		n, _ := inst.Planificador.ContarOrigenDesde(r.Context(), nucleo.DesdeApp, true, time.Now().Add(-24*time.Hour))
-		api.EscribirJSON(w, http.StatusOK, estadoConBase{inst.estado(r.Context()), s.Base(), n})
+		e := inst.estado(r.Context())
+		api.EscribirJSON(w, http.StatusOK, contrato.ResumenInstancia{EstadoInstancia: e, Base: s.Base(),
+			AppConClave24h: n, SugerirApiPropia: sugerirApiPropia(n), Contadores: contadores(e.Trabajos)})
 		return true
 	}
 	if !strings.HasPrefix(ruta, "/api/v1/instancia/") && ruta != "/api/v1/puntos" && !strings.HasPrefix(ruta, "/api/v1/puntos/") {
@@ -42,6 +38,8 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 		return true
 	}
 	switch {
+	case ruta == "/api/v1/instancia/pasos" && r.Method == http.MethodGet:
+		api.EscribirJSON(w, http.StatusOK, s.primerosPasos(r.Context(), inst, mismoUsuarioLocal(r)))
 	case ruta == "/api/v1/instancia/token" && r.Method == http.MethodGet:
 		// Para mostrar en «Conectar» la clave que usan las aplicaciones; solo con sesión o token de servicio.
 		api.EscribirJSON(w, http.StatusOK, map[string]any{"token": s.tokenDe(inst), "archivo": inst.ArchivoToken})
@@ -176,10 +174,10 @@ func (s *Servicio) heredar(inst *Instancia, clave string) error {
 	if !slices.ContainsFunc(heredables, func(p string) bool { return strings.HasPrefix(clave, p) }) {
 		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("%s no se puede devolver al valor de Global desde aquí", clave))
 	}
-	if err := QuitarValor(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, clave); err != nil {
+	if err := configuracion.QuitarValor(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), configuracion.OrigenLocal, clave); err != nil {
 		return err
 	}
-	c, err := nucleo.CargarConfiguracion(inst.Raiz)
+	c, err := configuracion.CargarConfiguracion(inst.Raiz, agentes.Internos())
 	if err != nil {
 		return err
 	}
@@ -189,19 +187,19 @@ func (s *Servicio) heredar(inst *Instancia, clave string) error {
 
 // archivoPuntos es donde se guardan los puntos nuevos de la instancia: la configuración global para la global y
 // .tramtai/local.yaml para un proyecto (nunca la versionada).
-func archivoPuntos(inst *Instancia) (string, nucleo.Origen, error) {
+func archivoPuntos(inst *Instancia) (string, configuracion.Origen, error) {
 	if inst.Ambito == "global" {
-		ruta, err := nucleo.RutaGlobal()
-		return ruta, nucleo.OrigenGlobal, err
+		ruta, err := configuracion.RutaGlobal()
+		return ruta, configuracion.OrigenGlobal, err
 	}
-	return filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, nil
+	return filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), configuracion.OrigenLocal, nil
 }
 
-func origenDeArchivo(ruta string) nucleo.Origen {
+func origenDeArchivo(ruta string) configuracion.Origen {
 	if strings.HasSuffix(filepath.ToSlash(ruta), ".tramtai/local.yaml") {
-		return nucleo.OrigenLocal
+		return configuracion.OrigenLocal
 	}
-	return nucleo.OrigenGlobal
+	return configuracion.OrigenGlobal
 }
 
 func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *Instancia) {
@@ -216,10 +214,10 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 		return
 	}
 	p.Instancia, p.Activo = "", nil
-	if origen == nucleo.OrigenGlobal && inst.ID != "global" {
+	if origen == configuracion.OrigenGlobal && inst.ID != "global" {
 		p.Instancia = inst.ID
 	}
-	if _, err := NormalizarPunto(p, inst.ID, s.opc.Puerto); err != nil {
+	if _, err := normalizarPunto(p, inst.ID, s.opc.Puerto); err != nil {
 		api.EscribirError(w, r, err)
 		return
 	}
@@ -227,7 +225,7 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 		api.EscribirError(w, r, err)
 		return
 	}
-	err = EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+	err = configuracion.EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		if slices.ContainsFunc(lista, func(c ConfigPunto) bool { return c.Nombre == p.Nombre }) {
 			return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el punto de acceso %s ya existe", p.Nombre))
 		}
@@ -289,7 +287,7 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 		s.cambiarPuntoUI(w, r, inst, punto)
 	case accion == "" && r.Method == http.MethodDelete:
 		// Archivo, clave y consumo antes de recargar (404 si ya no estaba); la CLI y la terminal también borran por aquí.
-		if err := s.EliminarPunto(punto.Origen, origenDeArchivo(punto.Origen), nombre); err != nil {
+		if err := s.eliminarPunto(punto.Origen, origenDeArchivo(punto.Origen), nombre); err != nil {
 			api.EscribirError(w, r, err)
 			return
 		}
@@ -368,7 +366,7 @@ func (s *Servicio) fijarRetencion(inst *Instancia, resultado, metadatos, maximo 
 
 // editarPunto aplica f al archivo del punto y recarga; si falla, responde con el error y devuelve false.
 func (s *Servicio) editarPunto(w http.ResponseWriter, r *http.Request, punto *EstadoPunto, f func([]ConfigPunto) ([]ConfigPunto, error)) bool {
-	if err := EditarPuntos(punto.Origen, origenDeArchivo(punto.Origen), f); err != nil {
+	if err := configuracion.EditarPuntos(punto.Origen, origenDeArchivo(punto.Origen), f); err != nil {
 		api.EscribirError(w, r, err)
 		return false
 	}
@@ -451,7 +449,7 @@ func (s *Servicio) cambiarPuntoUI(w http.ResponseWriter, r *http.Request, inst *
 			// La receta se valida antes de escribir: un cambio no válido deja la configuración como estaba. Solo si
 			// cambia, para no impedir desactivar un punto que ya tenía otro error.
 			if len(cambio.Esquema) > 0 || cambio.Respaldo != nil || cambio.Permitidos != nil || len(cambio.Presupuesto) > 0 || cambio.Reintentos != nil {
-				normalizado, err := NormalizarPunto(lista[i], inst.ID, s.opc.Puerto)
+				normalizado, err := normalizarPunto(lista[i], inst.ID, s.opc.Puerto)
 				if err != nil {
 					return nil, err
 				}

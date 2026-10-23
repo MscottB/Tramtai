@@ -12,13 +12,13 @@
         <!-- Las cuatro opciones no caben a 360 px: una sola fila que se desplaza, como en Agentes. -->
         <div class="col-12 col-md desplazable-x">
           <q-btn-toggle v-model="filtro" no-caps flat dense toggle-color="primary" class="segmentado inline-flex"
-            :options="[{ label: t('historial.todos'), value: 'todos' }, { label: t('inicio.enCurso'), value: 'curso' }, { label: t('inicio.completados'), value: 'ok' }, { label: t('inicio.conError'), value: 'error' }]" />
+            :options="[{ label: t('historial.todos'), value: 'todos' }, { label: t('inicio.enCurso'), value: 'en_curso' }, { label: t('inicio.completados'), value: 'completado' }, { label: t('inicio.conError'), value: 'con_error' }]" />
         </div>
         <div class="col-12 col-sm-6 col-md-3">
           <q-select v-model="origen" :options="origenes" emit-value map-options dense outlined :label="t('historial.origen')" />
         </div>
         <div class="col-12 col-sm-6 col-md-3">
-          <q-input v-model="busqueda" dense outlined clearable :placeholder="textoBuscar" :aria-label="textoBuscar" debounce="150">
+          <q-input v-model="busqueda" dense outlined clearable :placeholder="t('historial.buscar')" :aria-label="t('historial.buscar')" debounce="300">
             <template #prepend><q-icon name="search" /></template>
           </q-input>
         </div>
@@ -32,7 +32,6 @@
           <EstadoVacio v-if="error" role="alert" class="full-width" :titulo="t('comun.errorCarga')" :texto="error" :accion="t('comun.reintentar')"
             :cargando="cargando" @accion="cargar()" />
           <EstadoVacio v-else-if="!cargando" class="full-width" :titulo="hayFiltro ? t('historial.sinFiltro') : t('historial.vacio')"
-            :texto="hayFiltro && hayMas ? t('historial.sinFiltroMas') : undefined"
             :accion="hayFiltro ? t('historial.quitarFiltros') : t('historial.irProbar')" @accion="hayFiltro ? quitarFiltros() : emit('ir', 'ejecutar')" />
         </template>
         <template #body-cell-estado="props">
@@ -137,15 +136,17 @@ import RegistroTrabajo from '../componentes/RegistroTrabajo.vue'
 import SalidaTrabajo from '../componentes/SalidaTrabajo.vue'
 import { api, avisar, avisarError, copiar, mensajeError, tituloError } from '../api/cliente'
 import type { EstadoPunto, EventoRegistro, Trabajo } from '../api/tipos'
-import { filtroHistorial, origenHistorial, trabajoAbrir, trabajoSeguido } from '../estado'
+import type { Destino, IntencionDe } from '../navegacion'
 import { modeloDe } from '../agentes'
 import { duracion, estadoInfo, fecha, haceCuanto, esfuerzoUsado, sinDato, terminales, textoDe } from '../formato'
 import { t } from '../i18n'
 
-const emit = defineEmits<{ ir: [pagina: string] }>()
+const props = defineProps<{ intencion?: IntencionDe<'historial'> }>()
+const emit = defineEmits<{ ir: [destino: Destino] }>()
 const $q = useQuasar()
 const trabajos = ref<Trabajo[]>([])
-const hayTerminados = computed(() => trabajos.value.some((x) => terminales.includes(x.estado)))
+// Con un filtro puesto la lista no enseña todo el historial: Vaciar se ofrece y el servicio dice cuántas borró.
+const hayTerminados = computed(() => hayFiltro.value || trabajos.value.some((x) => terminales.includes(x.estado)))
 // cargando empieza en true: hasta la primera respuesta no se sabe si hay peticiones (ni se enseña el vacío).
 const cargando = ref(true)
 // error es el de la última carga sin peticiones que enseñar; con lista, el error solo avisa.
@@ -153,22 +154,18 @@ const error = ref('')
 const dialogo = ref(false)
 const detalle = ref<Trabajo>()
 const eventosDetalle = ref<EventoRegistro[]>([])
-const filtro = ref(filtroHistorial.value || 'todos')
-filtroHistorial.value = ''
+const filtro = ref(props.intencion?.filtro || 'todos')
 const busqueda = ref<string | null>('')
 // origen: '' todos; «o:probar» un origen, «g:web» un grupo o «p:tienda» una API (se filtra en el servicio).
 // Llega una API por su nombre (Mis APIs) o un filtro ya armado («o:probar» desde Probar).
-const origen = ref(origenHistorial.value.includes(':') ? origenHistorial.value : origenHistorial.value ? 'p:' + origenHistorial.value : '')
+const pedido = props.intencion?.origen ?? ''
+const origen = ref(pedido.includes(':') ? pedido : pedido ? 'p:' + pedido : '')
 const hayFiltro = computed(() => filtro.value !== 'todos' || !!busqueda.value || !!origen.value)
-// La búsqueda y el filtro de estado miran solo las peticiones cargadas (el servicio aún no los admite): el buscador
-// dice cuántas son.
-const textoBuscar = computed(() => t('historial.buscar', { n: Math.max(trabajos.value.length, PAGINA) }))
 function quitarFiltros() {
   filtro.value = 'todos'
   busqueda.value = ''
   origen.value = ''
 }
-origenHistorial.value = ''
 const apis = ref<EstadoPunto[]>([])
 const nombresOrigen: Record<string, 'historial.origenProbar' | 'historial.origenTerminal' | 'historial.origenCli' | 'historial.origenApp'> = {
   probar: 'historial.origenProbar', terminal: 'historial.origenTerminal', cli: 'historial.origenCli', app: 'historial.origenApp',
@@ -187,11 +184,13 @@ function textoOrigen(x: Trabajo) {
   }
   return x.origen && nombresOrigen[x.origen] ? t(nombresOrigen[x.origen]) : t('historial.origenPrincipal')
 }
+// filtroDe es lo que se pide al servicio: el origen, el estado y el texto; los filtra él en todo el historial.
 function filtroDe(valor: string) {
   const [tipo, nombre] = [valor.slice(0, 2), valor.slice(2)]
-  return tipo === 'o:' ? { origen: nombre } : tipo === 'g:' ? { grupo: nombre } : tipo === 'p:' ? { punto: nombre } : {}
+  const deOrigen = tipo === 'o:' ? { origen: nombre } : tipo === 'g:' ? { grupo: nombre } : tipo === 'p:' ? { punto: nombre } : {}
+  return { ...deOrigen, estado: filtro.value === 'todos' ? undefined : filtro.value, texto: (busqueda.value ?? '').trim() || undefined }
 }
-watch(origen, () => cargar())
+watch([origen, filtro, busqueda], () => cargar())
 
 const columnas = computed<QTableColumn<Trabajo>[]>(() => [
   { name: 'estado', label: t('historial.estado'), field: 'estado', align: 'left' },
@@ -202,14 +201,8 @@ const columnas = computed<QTableColumn<Trabajo>[]>(() => [
   { name: 'cuando', label: t('historial.cuando'), field: 'creado_en', align: 'right' },
 ])
 
-const filas = computed(() => {
-  const texto = (busqueda.value ?? '').toLowerCase().trim()
-  return trabajos.value.filter((x) => {
-    const terminado = terminales.includes(x.estado)
-    const pasa = { todos: true, curso: !terminado, ok: x.estado === 'completado', error: ['fallido', 'interrumpido'].includes(x.estado) }[filtro.value]
-    return pasa && (!texto || textoDe(x).toLowerCase().includes(texto) || x.id.includes(texto))
-  })
-})
+// filas son las que manda el servicio, ya filtradas.
+const filas = computed(() => trabajos.value)
 
 // pedidoLista y pedidoDetalle numeran las consultas: solo se aplica la respuesta de la última, para que una
 // lenta (otro origen, otra fila) no pise a la más reciente. enVuelo evita encadenar consultas en segundo plano.
@@ -281,9 +274,8 @@ async function accion(nombre: 'cancelar' | 'reintentar') {
   try {
     const nuevo = await api.accion(detalle.value.id, nombre)
     if (nombre === 'reintentar') {
-      trabajoSeguido.value = nuevo.id
       dialogo.value = false
-      emit('ir', 'ejecutar')
+      emit('ir', { pagina: 'ejecutar', seguir: nuevo.id })
       return
     }
     detalle.value = await api.trabajo(detalle.value.id)
@@ -324,19 +316,16 @@ function vaciar() {
 
 function seguirEnVivo() {
   if (!detalle.value) return
-  trabajoSeguido.value = detalle.value.id
+  const id = detalle.value.id
   dialogo.value = false
-  emit('ir', 'ejecutar')
+  emit('ir', { pagina: 'ejecutar', seguir: id })
 }
 
 let intervalo: number
 onMounted(() => {
   cargar()
   api.puntos().then((l) => (apis.value = l)).catch(() => {})
-  if (trabajoAbrir.value) {
-    abrir({ id: trabajoAbrir.value } as Trabajo)
-    trabajoAbrir.value = ''
-  }
+  if (props.intencion?.abrir) abrir({ id: props.intencion.abrir } as Trabajo)
   // Con páginas extra cargadas (Ver más), el sondeo no recarga: la recarga solo trae la primera página.
   intervalo = window.setInterval(() => !dialogo.value && !document.hidden && !enVuelo && trabajos.value.length <= PAGINA && cargar(true), 5000)
 })

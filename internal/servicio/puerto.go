@@ -4,6 +4,7 @@ import (
 	"net"
 	"strconv"
 
+	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
@@ -36,10 +37,10 @@ func FijarPuertoPropio(rutaGlobal, host string, puerto, propio int, automatico b
 	if puerto != propio && !PuertoLibre(host, puerto) {
 		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el puerto %d está ocupado por otro programa: elige otro", puerto))
 	}
-	if err := FijarValor(rutaGlobal, nucleo.OrigenGlobal, "servicio.puerto", puerto); err != nil {
+	if err := configuracion.FijarValor(rutaGlobal, configuracion.OrigenGlobal, "servicio.puerto", puerto); err != nil {
 		return err
 	}
-	return FijarValor(rutaGlobal, nucleo.OrigenGlobal, "servicio.puerto_automatico", automatico)
+	return configuracion.FijarValor(rutaGlobal, configuracion.OrigenGlobal, "servicio.puerto_automatico", automatico)
 }
 
 // Escuchar abre host:puerto. Si está ocupado y automatico lo permite (servicio.puerto_automatico), prueba los

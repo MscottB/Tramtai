@@ -308,10 +308,6 @@ func (p *Pagina) textoValidacion(datos string) string {
 	return texto
 }
 
-// etapaDe agrupa los estados en las etapas del resumen del registro (etapaDe de RegistroTrabajo.vue).
-var etapaDe = map[nucleo.Estado]string{nucleo.EnCola: "cola", nucleo.PreparandoEntrada: "preparacion", nucleo.EsperandoAgente: "preparacion",
-	nucleo.Ejecutando: "ejecucion", nucleo.CancelacionSolicitada: "ejecucion", nucleo.ValidandoSalida: "validacion"}
-
 // textoRegistro es la hora de cada paso de la petición (estados con su intento, avisos, entrada y validación) y, arriba,
 // cuánto duró cada etapa.
 func (p *Pagina) textoRegistro(t nucleo.Trabajo) string {
@@ -358,7 +354,7 @@ func (p *Pagina) etapas() string {
 	}
 	suma := map[string]time.Duration{}
 	for i := 0; i+1 < len(estados); i++ {
-		if etapa, ok := etapaDe[nucleo.Estado(estados[i].Datos)]; ok {
+		if etapa := estados[i].Etapa; etapa != "" && etapa != "llegada" { // la llegada no dura
 			suma[etapa] += estados[i+1].CreadoEn.Sub(estados[i].CreadoEn)
 		}
 	}

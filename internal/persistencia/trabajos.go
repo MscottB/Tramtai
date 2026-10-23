@@ -3,10 +3,14 @@ package persistencia
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"strings"
+	"sync"
 	"time"
+
+	"modernc.org/sqlite"
 
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -288,7 +292,26 @@ type FiltroTrabajos struct {
 	Origen  string
 	Antes   time.Time // solo los creados antes, para pedir la página siguiente
 	AntesID string    // con Antes: el último que ya se vio; los empatados en creado_en siguen por orden de llegada
+	Estados []nucleo.Estado
+	// Texto busca en el último mensaje de la petición y en su id, sin distinguir mayúsculas (las de ASCII).
+	Texto string
 }
+
+// registrarPlegar da a SQLite tramtai_plegar(texto), nucleo.Plegar, para buscar sin mayúsculas ni tildes en la base.
+var registrarPlegar = sync.OnceValue(func() error {
+	return sqlite.RegisterDeterministicScalarFunction("tramtai_plegar", 1, func(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
+		switch v := args[0].(type) {
+		case string:
+			return nucleo.Plegar(v), nil
+		case []byte:
+			return nucleo.Plegar(string(v)), nil
+		}
+		return args[0], nil // NULL (sin mensajes, porque la retención los borró) sigue siendo NULL
+	})
+})
+
+// comodines escapa % y _ (y la barra que los escapa) para buscarlos tal cual con LIKE … ESCAPE '\'.
+var comodines = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
 
 func (a *Almacen) Listar(ctx context.Context, instancia string, f FiltroTrabajos, limite int) ([]nucleo.Trabajo, error) {
 	donde, args := "instancia = ?", []any{instancia}
@@ -303,6 +326,17 @@ func (a *Almacen) Listar(ctx context.Context, instancia string, f FiltroTrabajos
 	}
 	if f.Origen != "" {
 		donde, args = donde+" AND origen = ?", append(args, f.Origen)
+	}
+	if len(f.Estados) > 0 {
+		donde += " AND estado IN (?" + strings.Repeat(", ?", len(f.Estados)-1) + ")"
+		for _, e := range f.Estados {
+			args = append(args, string(e))
+		}
+	}
+	if f.Texto != "" {
+		patron := "%" + comodines.Replace(nucleo.Plegar(f.Texto)) + "%"
+		donde += ` AND (id LIKE ? ESCAPE '\' OR tramtai_plegar(json_extract(solicitud, '$.mensajes[#-1].contenido')) LIKE ? ESCAPE '\')`
+		args = append(args, patron, patron)
 	}
 	if !f.Antes.IsZero() && f.AntesID != "" {
 		donde, args = donde+" AND (creado_en < ? OR (creado_en = ? AND rowid < (SELECT rowid FROM trabajos WHERE id = ?)))", append(args, fecha(f.Antes), fecha(f.Antes), f.AntesID)

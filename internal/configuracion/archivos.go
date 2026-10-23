@@ -1,13 +1,12 @@
-package nucleo
+package configuracion
 
 import (
 	"os"
 	"path/filepath"
-	"regexp"
-	"runtime"
 	"strings"
-
+	"tramtai/internal/carpetas"
 	"tramtai/internal/idioma"
+	"tramtai/internal/nucleo"
 )
 
 // RutaGlobal es el archivo de configuración global del usuario, en RaizUsuario; TRAMTAI_CONFIG_GLOBAL lo sustituye
@@ -16,7 +15,7 @@ func RutaGlobal() (string, error) {
 	if ruta := os.Getenv("TRAMTAI_CONFIG_GLOBAL"); ruta != "" {
 		return ruta, nil
 	}
-	raiz, err := RaizUsuario()
+	raiz, err := carpetas.RaizUsuario()
 	if err != nil {
 		return "", err
 	}
@@ -45,8 +44,9 @@ func BuscarProyecto(dir string) (string, bool) {
 }
 
 // CargarConfiguracion resuelve las capas de configuración (interna, global, proyecto, local y entorno). Con raíz vacía usa solo la global y el entorno
-// (instancia global); con la raíz de un proyecto añade su configuración versionada y la local.
-func CargarConfiguracion(raiz string) (*Configuracion, error) {
+// (instancia global); con la raíz de un proyecto añade su configuración versionada y la local. agentes es la capa
+// interna de los agentes (agentes.Internos()): sus comandos, su concurrencia y la autenticación de cada CLI.
+func CargarConfiguracion(raiz string, agentes Capa) (*Configuracion, error) {
 	global, err := RutaGlobal()
 	if err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func CargarConfiguracion(raiz string) (*Configuracion, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := Resolver(append(capas, entorno)...)
+	c := Resolver(append(capas, entorno, agentes)...)
 	var ignoradas []string
 	for _, capa := range capas {
 		ignoradas = append(ignoradas, capa.Ignoradas...)
@@ -85,59 +85,17 @@ func CargarConfiguracion(raiz string) (*Configuracion, error) {
 	return c, nil
 }
 
-// VariableSecreta indica si el nombre de una variable de entorno parece guardar un secreto (claves, tokens,
-// contraseñas, credenciales): los programas externos que lanza Tramtai no la heredan.
-func VariableSecreta(nombre string) bool {
-	nombre = strings.ToUpper(nombre)
-	for _, marca := range []string{"API_KEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL", "PRIVATE", "CLAVE", "PASSPHRASE"} {
-		if strings.Contains(nombre, marca) {
-			return true
-		}
-	}
-	for _, final := range []string{"_KEY", "_PASS", "_PWD"} {
-		if strings.HasSuffix(nombre, final) {
-			return true
-		}
-	}
-	return nombre == "SSH_AUTH_SOCK"
-}
-
-// credencialEnURL es una URL con usuario y contraseña (postgres://u:p@h, http://u:p@proxy).
-var credencialEnURL = regexp.MustCompile(`://[^/@\s:]+:[^/@\s]+@`)
-
-// EntornoSecreto dice si un par «NOMBRE=valor» del entorno no debe llegar a un programa externo: por su nombre
-// (VariableSecreta) o porque su valor es una URL con credenciales.
-func EntornoSecreto(par string) bool {
-	nombre, valor, _ := strings.Cut(par, "=")
-	// Un proxy con usuario y clave sí pasa: los CLI lo necesitan para llegar a su proveedor y no tienen herramientas
-	// con que filtrarlo.
-	proxy := strings.HasSuffix(strings.ToUpper(nombre), "_PROXY")
-	return VariableSecreta(nombre) || (!proxy && credencialEnURL.MatchString(valor))
-}
-
 // Lista devuelve un valor de tipo lista, o nil si no existe.
 func (c *Configuracion) Lista(clave string) []any {
 	v, _ := c.e().valores[clave].([]any)
 	return v
 }
 
-// ExpandirCasa cambia un ~ inicial por la carpeta personal, como hace la terminal en macOS y Linux.
-func ExpandirCasa(ruta string) string {
-	if ruta != "~" && !strings.HasPrefix(ruta, "~/") && !strings.HasPrefix(ruta, `~\`) {
-		return ruta
-	}
-	casa, err := os.UserHomeDir()
-	if err != nil {
-		return ruta
-	}
-	return filepath.Join(casa, ruta[1:])
-}
-
 // RutaPermitida resuelve un archivo local que la CLI o la terminal van a enviar y devuelve su ruta real si está
 // dentro de instancia_global.raices_permitidas. Sin raíces configuradas no hay límite. Como se resuelven los
 // enlaces, un enlace dentro de una raíz que apunte fuera de ella se rechaza.
 func (c *Configuracion) RutaPermitida(ruta string) (string, error) {
-	abs, err := filepath.Abs(ExpandirCasa(ruta))
+	abs, err := filepath.Abs(carpetas.ExpandirCasa(ruta))
 	if err != nil {
 		return "", err
 	}
@@ -154,27 +112,18 @@ func (c *Configuracion) RutaPermitida(ruta string) (string, error) {
 		if texto == "" {
 			continue
 		}
-		raiz, err := filepath.Abs(ExpandirCasa(texto))
+		raiz, err := filepath.Abs(carpetas.ExpandirCasa(texto))
 		if err != nil {
 			continue
 		}
 		if r, err := filepath.EvalSymlinks(raiz); err == nil {
 			raiz = r
 		}
-		if dentroDe(raiz, real) {
+		if carpetas.Dentro(raiz, real) {
 			return real, nil
 		}
 	}
-	return "", NuevoError(CodigoRutaNoPermitida, idioma.Tf("%s está fuera de instancia_global.raices_permitidas", ruta))
-}
-
-// dentroDe indica si ruta es raiz o está debajo de ella; fuera de Linux las mayúsculas no cuentan.
-func dentroDe(raiz, ruta string) bool {
-	if runtime.GOOS != "linux" {
-		raiz, ruta = strings.ToLower(raiz), strings.ToLower(ruta)
-	}
-	rel, err := filepath.Rel(raiz, ruta)
-	return err == nil && !filepath.IsAbs(rel) && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+	return "", nucleo.NuevoError(nucleo.CodigoRutaNoPermitida, idioma.Tf("%s está fuera de instancia_global.raices_permitidas", ruta))
 }
 
 // ProyectoConfiable indica si la raíz figura en proyectos_confiables. Solo la configuración global (o el entorno)
@@ -198,13 +147,4 @@ func (c *Configuracion) ProyectoConfiable(raiz string) bool {
 		}
 	}
 	return false
-}
-
-// MismaRuta compara dos rutas como lo hace IDProyecto: sin distinguir mayúsculas en Windows y macOS.
-func MismaRuta(a, b string) bool {
-	a, b = filepath.Clean(a), filepath.Clean(b)
-	if runtime.GOOS != "linux" {
-		return strings.EqualFold(a, b)
-	}
-	return a == b
 }

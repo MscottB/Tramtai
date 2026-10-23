@@ -19,14 +19,14 @@ func (p *Planificador) Corregir(ctx context.Context, id string) (nucleo.Trabajo,
 	if err != nil {
 		return anterior, err
 	}
-	if !anterior.Estado.Terminal() {
+	switch {
+	case anterior.SePuedeCorregir():
+	case !anterior.Estado.Terminal():
 		return anterior, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, idioma.T("solo se reintenta un trabajo terminado"))
-	}
-	if anterior.CodigoError != nucleo.CodigoSalidaNoCumpleEsquema || anterior.Salida == "" {
+	case anterior.CodigoError != nucleo.CodigoSalidaNoCumpleEsquema || anterior.Salida == "":
 		return anterior, nucleo.NuevoError(nucleo.CodigoCorreccionNoDisponible,
 			idioma.T("solo se corrige un trabajo que falló porque la respuesta no cumplía el formato y que conservó esa respuesta (conservar_salida_invalida)"))
-	}
-	if anterior.EntradasEliminadas {
+	default: // la regla de SePuedeCorregir que queda: las entradas ya no están
 		return anterior, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("las entradas del trabajo ya vencieron o se eliminaron al terminar; vuelve a enviarlas"))
 	}
 	problemas, err := p.ProblemasSalida(ctx, id)

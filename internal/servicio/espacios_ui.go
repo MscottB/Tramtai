@@ -11,7 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"tramtai/internal/agentes"
 	"tramtai/internal/api"
+	"tramtai/internal/carpetas"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -24,10 +27,10 @@ type EspacioUI = contrato.Espacio
 // Espacios devuelve todos los espacios conocidos con su estado, si son confiables y cuántas APIs y peticiones tienen
 // (también los detenidos: sus APIs salen de su configuración y sus peticiones, de su base sin abrirla).
 func (s *Servicio) Espacios(ctx context.Context) []EspacioUI {
-	global, _ := nucleo.CargarConfiguracion("")
+	global, _ := configuracion.CargarConfiguracion("", agentes.Internos())
 	globales := map[string]int{} // APIs de la configuración global, por espacio
 	if global != nil {
-		if puntos, err := LeerPuntos(global.Lista("puntos_acceso")); err == nil {
+		if puntos, err := configuracion.LeerPuntos(global.Lista("puntos_acceso")); err == nil {
 			for _, p := range puntos {
 				globales[cmp.Or(p.Instancia, "global")]++
 			}
@@ -50,7 +53,7 @@ func (s *Servicio) Espacios(ctx context.Context) []EspacioUI {
 		if e.Ambito == "proyecto" && u.Estado != "no_encontrado" {
 			u.APIs += len(puntosLocales(e.Ruta))
 			if !u.Confiado {
-				u.Claves, _ = nucleo.ClavesAdministradas(filepath.Join(e.Ruta, ".tramtai", "local.yaml"))
+				u.Claves, _ = configuracion.ClavesAdministradas(filepath.Join(e.Ruta, ".tramtai", "local.yaml"))
 			}
 		}
 		u.Peticiones = s.peticionesDe(ctx, e.ID, inst)
@@ -61,12 +64,12 @@ func (s *Servicio) Espacios(ctx context.Context) []EspacioUI {
 
 // puntosLocales son las APIs del local.yaml de un proyecto (las de uno no confiable no cuentan: no se abren).
 func puntosLocales(raiz string) []ConfigPunto {
-	capa, err := nucleo.CargarCapa(filepath.Join(raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal)
+	capa, err := configuracion.CargarCapa(filepath.Join(raiz, ".tramtai", "local.yaml"), configuracion.OrigenLocal)
 	if err != nil {
 		return nil
 	}
 	lista, _ := capa.Valores["puntos_acceso"].([]any)
-	puntos, _ := LeerPuntos(lista)
+	puntos, _ := configuracion.LeerPuntos(lista)
 	return puntos
 }
 
@@ -128,7 +131,7 @@ func (s *Servicio) Ubicar(id, ruta string) (*Instancia, error) {
 	if !ok || e.Ambito != "proyecto" {
 		return nil, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("no existe el espacio %s", id))
 	}
-	ruta = nucleo.ExpandirCasa(strings.TrimSpace(ruta))
+	ruta = carpetas.ExpandirCasa(strings.TrimSpace(ruta))
 	if !filepath.IsAbs(ruta) {
 		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("indica la ruta completa de la carpeta del proyecto"))
 	}
@@ -215,8 +218,8 @@ func (s *Servicio) apisDe(id, raiz string) []string {
 			nombres = append(nombres, p.Nombre)
 		}
 	}
-	if global, err := nucleo.CargarConfiguracion(""); err == nil {
-		if puntos, err := LeerPuntos(global.Lista("puntos_acceso")); err == nil {
+	if global, err := configuracion.CargarConfiguracion("", agentes.Internos()); err == nil {
+		if puntos, err := configuracion.LeerPuntos(global.Lista("puntos_acceso")); err == nil {
 			for _, p := range puntos {
 				if p.Instancia == id {
 					nombres = append(nombres, p.Nombre)

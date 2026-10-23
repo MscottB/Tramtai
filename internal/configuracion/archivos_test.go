@@ -1,9 +1,10 @@
-package nucleo
+package configuracion
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
+	"tramtai/internal/nucleo"
 )
 
 func TestRutaPermitida(t *testing.T) {
@@ -31,10 +32,10 @@ func TestRutaPermitida(t *testing.T) {
 		t.Fatalf("archivo dentro de la raíz rechazado: %v", err)
 	}
 	// raiz-otra empieza igual que raiz pero no está debajo de ella.
-	if _, err := c.RutaPermitida(fuera); CodigoDe(err) != CodigoRutaNoPermitida {
+	if _, err := c.RutaPermitida(fuera); nucleo.CodigoDe(err) != nucleo.CodigoRutaNoPermitida {
 		t.Fatalf("archivo fuera de la raíz: se esperaba ruta_no_permitida, llegó %v", err)
 	}
-	if _, err := c.RutaPermitida(filepath.Join(raiz, "..", "raiz-otra", "b.txt")); CodigoDe(err) != CodigoRutaNoPermitida {
+	if _, err := c.RutaPermitida(filepath.Join(raiz, "..", "raiz-otra", "b.txt")); nucleo.CodigoDe(err) != nucleo.CodigoRutaNoPermitida {
 		t.Fatalf("ruta con .. que sale de la raíz aceptada: %v", err)
 	}
 	if _, err := c.RutaPermitida(filepath.Join(raiz, "no-existe.txt")); err == nil {
@@ -46,7 +47,7 @@ func TestRutaPermitida(t *testing.T) {
 	if err := os.Symlink(fuera, enlace); err != nil {
 		t.Skip("este sistema no permite crear enlaces simbólicos sin permisos:", err)
 	}
-	if _, err := c.RutaPermitida(enlace); CodigoDe(err) != CodigoRutaNoPermitida {
+	if _, err := c.RutaPermitida(enlace); nucleo.CodigoDe(err) != nucleo.CodigoRutaNoPermitida {
 		t.Fatalf("enlace que escapa de la raíz aceptado: %v", err)
 	}
 }

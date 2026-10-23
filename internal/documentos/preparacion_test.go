@@ -13,8 +13,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"tramtai/internal/nucleo"
+	"tramtai/internal/carpetas"
 )
 
 // uvFalso hace de uv: «python install» deja en --install-dir un Python falso (una copia de este binario, que con
@@ -312,7 +311,7 @@ func TestRaizConversor(t *testing.T) {
 		t.Setenv("LOCALAPPDATA", d)
 		quiere = filepath.Join(d, "tramtai")
 	case "darwin":
-		quiere, _ = nucleo.RaizUsuario()
+		quiere, _ = carpetas.RaizUsuario()
 	default:
 		d := t.TempDir()
 		t.Setenv("XDG_DATA_HOME", d)

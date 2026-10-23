@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/planificador"
@@ -35,7 +37,7 @@ func TestClienteContraServicio(t *testing.T) {
 	if _, err := Conectar(datos); err != ErrServicioInactivo {
 		t.Fatalf("sin descriptor el servicio está inactivo: %v", err)
 	}
-	c, _ := nucleo.CargarConfiguracion("")
+	c, _ := configuracion.CargarConfiguracion("", agentes.Internos())
 	ts := httptest.NewUnstartedServer(nil)
 	s, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{}},
 		Semaforos: planificador.NuevosSemaforos(nil), Host: "127.0.0.1", Puerto: ts.Listener.Addr().(*net.TCPAddr).Port, Hosts: []string{"127.0.0.1"}})
@@ -184,7 +186,7 @@ func servicioDePrueba(t *testing.T, global string) (*Cliente, string) {
 	}
 	t.Setenv("TRAMTAI_CONFIG_GLOBAL", rutaGlobal)
 	datos := filepath.Join(dir, "datos")
-	c, err := nucleo.CargarConfiguracion("")
+	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -15,6 +15,8 @@ import (
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
+	"tramtai/internal/carpetas"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -191,8 +193,8 @@ func archivosSinConversor(conversor *documentos.Conversor, archivos []string) er
 	return nil
 }
 
-func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEjecucion, archivos []string) error {
-	datos, err := nucleo.DirDatos()
+func ejecutar(cmd *cobra.Command, c *configuracion.Configuracion, s nucleo.SolicitudEjecucion, archivos []string) error {
+	datos, err := carpetas.DirDatos()
 	if err != nil {
 		return err
 	}
@@ -239,7 +241,7 @@ func ejecutar(cmd *cobra.Command, c *nucleo.Configuracion, s nucleo.SolicitudEje
 	opc := planificador.OpcionesDesde(c, "cli-"+nucleo.NuevoID()[len("trabajo_"):])
 	opc.Preparador = documentos.Preparador{Cargas: cargas, Conversor: conversor}
 	if dir, err := os.Getwd(); err == nil {
-		if raiz, ok := nucleo.BuscarProyecto(dir); ok && c.ProyectoConfiable(raiz) {
+		if raiz, ok := configuracion.BuscarProyecto(dir); ok && c.ProyectoConfiable(raiz) {
 			opc.RaizConfiable = raiz
 		}
 	}

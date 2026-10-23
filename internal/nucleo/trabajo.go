@@ -3,6 +3,7 @@ package nucleo
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"time"
 )
 
@@ -20,6 +21,18 @@ type EventoRegistro struct {
 	Tipo     string    `json:"tipo"`
 	Datos    string    `json:"datos"`
 	CreadoEn time.Time `json:"creado_en"`
+	// Etapa, en un evento de estado, es la de ese estado: solo viaja en el JSON (la calcula MarshalJSON).
+	Etapa string `json:"etapa,omitempty" ts:"'cola' | 'preparacion' | 'ejecucion' | 'validacion' | 'llegada'"`
+}
+
+// MarshalJSON escribe el evento con la etapa de su estado, calculada aquí.
+func (e EventoRegistro) MarshalJSON() ([]byte, error) {
+	type plano EventoRegistro // sin métodos: no vuelve a llamar a MarshalJSON
+	p := plano(e)
+	if p.Etapa = ""; e.Tipo == "estado" {
+		p.Etapa = Estado(e.Datos).Etapa()
+	}
+	return json.Marshal(p)
 }
 
 // Trabajo es la unidad de ejecución con su estado, tiempos y ámbito.
@@ -53,6 +66,24 @@ type Trabajo struct {
 	CreadoEn           time.Time  `json:"creado_en"`
 	ActualizadoEn      time.Time  `json:"actualizado_en"`
 	TerminadoEn        *time.Time `json:"terminado_en,omitempty"`
+	// Etapa y Corregible solo viajan en el JSON: MarshalJSON los calcula (Estado.Etapa y SePuedeCorregir) para que
+	// la Web UI y la terminal los pinten sin calcularlos. Dentro del servicio se usan los métodos.
+	Etapa      string `json:"etapa" ts:"'cola' | 'preparacion' | 'ejecucion' | 'validacion' | 'llegada'"`
+	Corregible bool   `json:"corregible"`
+}
+
+// SePuedeCorregir dice si «Corregir» vale: el trabajo terminó porque la respuesta no cumplía el esquema, conservó esa
+// respuesta y sus entradas siguen ahí.
+func (t Trabajo) SePuedeCorregir() bool {
+	return t.Estado.Terminal() && t.CodigoError == CodigoSalidaNoCumpleEsquema && t.Salida != "" && !t.EntradasEliminadas
+}
+
+// MarshalJSON escribe el trabajo con su etapa y si se puede corregir, calculados aquí.
+func (t Trabajo) MarshalJSON() ([]byte, error) {
+	type plano Trabajo // sin métodos: no vuelve a llamar a MarshalJSON
+	p := plano(t)
+	p.Etapa, p.Corregible = t.Estado.Etapa(), t.SePuedeCorregir()
+	return json.Marshal(p)
 }
 
 // Disponibilidad de la salida de un trabajo terminado.

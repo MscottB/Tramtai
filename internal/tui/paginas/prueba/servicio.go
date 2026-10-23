@@ -2,6 +2,8 @@
 package prueba
 
 import (
+	"context"
+	"maps"
 	"net"
 	"net/http/httptest"
 	"os"
@@ -10,7 +12,9 @@ import (
 	"testing"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes"
 	"tramtai/internal/cliente"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/planificador"
 	"tramtai/internal/servicio"
@@ -37,6 +41,28 @@ func ArrancarCon(t *testing.T, agente adaptadores.Adaptador) (*cliente.Cliente, 
 	return arrancar(t, agente, nil)
 }
 
+// ConAgentes es Servicio con más agentes junto al simulado, por su nombre: así una página ve los estados que calcula
+// el servicio (sin CLI, sin clave, con suscripción…) sin fabricarlos.
+func ConAgentes(t *testing.T, agentes map[string]adaptadores.Adaptador) (*cliente.Cliente, string) {
+	t.Helper()
+	return Ajustado(t, func(o *servicio.Opciones) { maps.Copy(o.Registro, agentes) })
+}
+
+// Ajustado es Servicio con sus opciones cambiadas: más agentes, el arranque automático del sistema…
+func Ajustado(t *testing.T, ajustar func(*servicio.Opciones)) (*cliente.Cliente, string) {
+	t.Helper()
+	cli, id, _ := arrancar(t, adaptadores.Simulado{}, ajustar)
+	return cli, id
+}
+
+// Detectado es un agente simulado que se detecta como se le diga.
+type Detectado struct {
+	adaptadores.Simulado
+	Estado adaptadores.Estado
+}
+
+func (d Detectado) Detectar(context.Context) adaptadores.Estado { return d.Estado }
+
 // SinConversor es Servicio con un conversor de archivos que no está listo (uv no existe): para el aviso al adjuntar un PDF.
 func SinConversor(t *testing.T) (*cliente.Cliente, string) {
 	t.Helper()
@@ -56,13 +82,14 @@ func arrancar(t *testing.T, agente adaptadores.Adaptador, ajustar func(*servicio
 	}
 	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
 	datos := filepath.Join(dir, "datos")
-	c, err := nucleo.CargarConfiguracion("")
+	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	if err != nil {
 		t.Fatal(err)
 	}
 	ts := httptest.NewUnstartedServer(nil)
 	opc := servicio.Opciones{Datos: datos, Config: c, Registro: map[string]adaptadores.Adaptador{"simulado": agente},
-		Semaforos: planificador.NuevosSemaforos(nil), Host: "127.0.0.1", Puerto: ts.Listener.Addr().(*net.TCPAddr).Port, Hosts: []string{"127.0.0.1"}}
+		Semaforos: planificador.NuevosSemaforos(nil), Host: "127.0.0.1", Puerto: ts.Listener.Addr().(*net.TCPAddr).Port, Hosts: []string{"127.0.0.1"},
+		Autoarranque: func() (bool, bool) { return true, false }} // como un sistema que lo admite, apagado
 	if ajustar != nil {
 		ajustar(&opc)
 	}

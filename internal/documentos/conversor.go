@@ -17,6 +17,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/procesos"
@@ -58,10 +59,9 @@ func ErrFormato(nombre string) error {
 		return nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.Tf(
 			"%s: los ZIP no se admiten; descomprímelo y envía los archivos sueltos (hasta %d por petición)", nombre, nucleo.MaximoCargas))
 	}
-	texto, _ := Formatos()
-	return nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.Tf(
-		"%s: formato no admitido. Se admiten PDF, Word (.docx), PowerPoint (.pptx), Excel (.xlsx), HTML y texto (%s)",
-		nombre, strings.Join(texto, ", ")))
+	texto, conversor := Formatos()
+	return nucleo.NuevoError(nucleo.CodigoCargaInvalida, idioma.Tf("%s: formato no admitido. Se admiten documentos (%s) y texto (%s)",
+		nombre, strings.Join(conversor, ", "), strings.Join(texto, ", ")))
 }
 
 // Entrada es un archivo que hay que preparar para el agente.
@@ -89,7 +89,7 @@ type Conversor struct {
 }
 
 // Desde crea el conversor con la configuración efectiva.
-func Desde(c *nucleo.Configuracion) *Conversor {
+func Desde(c *configuracion.Configuracion) *Conversor {
 	raiz, _ := RaizConversor()
 	return &Conversor{
 		Comando:      c.Texto("conversion.comando"),

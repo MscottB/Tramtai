@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
+	"tramtai/internal/carpetas"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
-	"tramtai/internal/nucleo"
 	"tramtai/internal/procesos"
 )
 
@@ -34,14 +34,14 @@ const htmlComprobacion = "<html><body><p>Tramtai comprueba</p></body></html>"
 // (%LOCALAPPDATA%\tramtai en Windows, para no llenar un perfil móvil con ~300 MB de Python; $XDG_DATA_HOME o
 // ~/.local/share/tramtai en Linux, fuera de ~/.config) y la de Tramtai en macOS.
 func RaizConversor() (string, error) {
-	if nucleo.Portable() || runtime.GOOS == "darwin" {
-		return nucleo.RaizUsuario()
+	if carpetas.Portable() || runtime.GOOS == "darwin" {
+		return carpetas.RaizUsuario()
 	}
 	if runtime.GOOS == "windows" {
 		if local := os.Getenv("LOCALAPPDATA"); local != "" {
 			return filepath.Join(local, "tramtai"), nil
 		}
-		return nucleo.RaizUsuario()
+		return carpetas.RaizUsuario()
 	}
 	if datos := os.Getenv("XDG_DATA_HOME"); datos != "" {
 		return filepath.Join(datos, "tramtai"), nil

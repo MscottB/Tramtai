@@ -15,8 +15,11 @@ import (
 	"strings"
 	"time"
 
-	"tramtai/internal/actualizacion"
+	"tramtai/internal/agentes"
 	"tramtai/internal/api"
+	"tramtai/internal/carpetas"
+	"tramtai/internal/configuracion"
+	"tramtai/internal/contrato"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -26,7 +29,7 @@ import (
 )
 
 // IDProyecto deriva un identificador estable del nombre del proyecto y de su ruta.
-func IDProyecto(raiz string, c *nucleo.Configuracion) string {
+func IDProyecto(raiz string, c *configuracion.Configuracion) string {
 	nombre := c.Texto("proyecto.nombre")
 	if nombre == "" {
 		nombre = filepath.Base(raiz)
@@ -69,7 +72,7 @@ func (s *Servicio) ActivarProyecto(raiz string) (*Instancia, error) {
 	if _, err := os.Stat(filepath.Join(raiz, ".tramtai", "config.yaml")); err != nil {
 		return nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("%s no tiene .tramtai/config.yaml: ejecuta tramtai iniciar en el proyecto", raiz))
 	}
-	c, err := nucleo.CargarConfiguracion(raiz)
+	c, err := configuracion.CargarConfiguracion(raiz, agentes.Internos())
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +84,7 @@ func (s *Servicio) ActivarProyecto(raiz string) (*Instancia, error) {
 	s.mu.RLock()
 	abierta, activa := s.instancias[id]
 	s.mu.RUnlock()
-	if activa && !nucleo.MismaRuta(abierta.Raiz, raiz) {
+	if activa && !carpetas.MismaRuta(abierta.Raiz, raiz) {
 		if err := s.Desactivar(id); err != nil {
 			return nil, err
 		}
@@ -100,7 +103,7 @@ func (s *Servicio) ActivarProyecto(raiz string) (*Instancia, error) {
 
 // activar abre la instancia si no está activa. La base se abre (migraciones, huérfanos, recuperación) fuera de mu: así
 // no se detienen las peticiones de las demás instancias, y quien pida la misma a la vez espera y recibe la misma.
-func (s *Servicio) activar(id, ambito, raiz string, c *nucleo.Configuracion) (*Instancia, error) {
+func (s *Servicio) activar(id, ambito, raiz string, c *configuracion.Configuracion) (*Instancia, error) {
 	s.mu.Lock()
 	if inst, activa := s.instancias[id]; activa {
 		s.mu.Unlock()
@@ -138,7 +141,7 @@ func (s *Servicio) activar(id, ambito, raiz string, c *nucleo.Configuracion) (*I
 	return a.inst, nil
 }
 
-func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuracion) (*Instancia, error) {
+func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *configuracion.Configuracion) (*Instancia, error) {
 	if err := os.MkdirAll(filepath.Join(s.opc.Datos, "instancias"), 0o700); err != nil {
 		return nil, err
 	}
@@ -194,7 +197,7 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *nucleo.Configuraci
 			return nombres
 		}}
 	inst := &Instancia{ID: id, Ambito: ambito, Raiz: raiz, Config: c, Planificador: p, Cargas: cargas,
-		ArchivoToken: archivo, token: token, almacen: alm, rutas: srv.Rutas()}
+		ArchivoToken: archivo, token: token, almacen: alm, api: srv, rutas: srv.Rutas()}
 	inst.iniciarPurga(s.opc.Registros)
 	return inst, nil
 }
@@ -243,7 +246,7 @@ func (i *Instancia) Purgar(ctx context.Context) error {
 
 // PurgarBase aplica la retención de c a las instancias de una base y a sus cargas. La usan cada instancia del servicio
 // y tramtai ejecutar --directo, cuya base guarda una instancia por ejecución.
-func PurgarBase(ctx context.Context, alm *persistencia.Almacen, cargas *documentos.Cargas, c *nucleo.Configuracion, instancias ...string) error {
+func PurgarBase(ctx context.Context, alm *persistencia.Almacen, cargas *documentos.Cargas, c *configuracion.Configuracion, instancias ...string) error {
 	resultado, metadatos, maximo, _ := nucleo.AjustarRetencion(c.Entero("retencion.horas_resultado"), c.Entero("retencion.horas_metadatos"),
 		c.Entero("retencion.max_trabajos"))
 	r := persistencia.Retencion{Resultado: time.Duration(resultado) * time.Hour, Metadatos: time.Duration(metadatos) * time.Hour,
@@ -361,9 +364,9 @@ func (s *Servicio) Restaurar() []error {
 
 // Estado devuelve el estado actual. Las bases se consultan sin s.mu: un Lock pendiente bloquearía todas las peticiones.
 func (s *Servicio) Estado(ctx context.Context) Estado {
-	var nueva *actualizacion.Version
+	var nueva *contrato.VersionNueva
 	if v, ok := s.versionNueva(context.Background(), false); ok {
-		nueva = &v
+		nueva = &contrato.VersionNueva{Version: v.Etiqueta, URL: v.Pagina, Notas: v.Notas}
 	}
 	s.mu.RLock()
 	e := Estado{Identificador: s.ID, Version: version.Texto(), PID: os.Getpid(), IniciadoEn: s.IniciadoEn, Base: s.Base(),

@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/agentes"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/version"
@@ -196,13 +197,13 @@ func raizProyecto() string {
 	if err != nil {
 		return ""
 	}
-	raiz, _ := nucleo.BuscarProyecto(dir)
+	raiz, _ := configuracion.BuscarProyecto(dir)
 	return raiz
 }
 
 // cargarConfiguracion resuelve las capas de configuración para el proyecto actual (o solo la global).
-func cargarConfiguracion() (*nucleo.Configuracion, error) {
-	return nucleo.CargarConfiguracion(raizProyecto())
+func cargarConfiguracion() (*configuracion.Configuracion, error) {
+	return configuracion.CargarConfiguracion(raizProyecto(), agentes.Internos())
 }
 
 // programasAgentes son los programas que hay detrás de cada agente del catálogo, en su orden: la ayuda los nombra a

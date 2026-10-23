@@ -1,4 +1,4 @@
-package ejecutar
+package ejecutar_test
 
 import (
 	"os"
@@ -7,70 +7,82 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	tea "charm.land/bubbletea/v2"
-
-	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/paginas/prueba"
+
+	tea "charm.land/bubbletea/v2"
 )
 
 // Las pruebas de la primera ronda de arreglos: errores que no se tragan, atajos sin servicio, rutas con tildes, el esquema
 // al salir con Esc, navegar mientras se envía y las pistas de «Guardar como API».
 
-func errorServicio(fuera []tea.Msg) bool {
-	for _, m := range fuera {
-		if _, ok := m.(pagina.ErrorServicio); ok {
-			return true
-		}
-	}
-	return false
-}
-
 // TestErroresNoSeTragan: si el servicio no responde al validar el esquema o al mirar el conversor, se avisa; si el borrador
 // no se puede guardar, también.
 func TestErroresNoSeTragan(t *testing.T) {
 	cli, id, cerrar := prueba.Arrancar(t)
-	p := abierta(t, cli, id)
+	a := abierta(t, cli, id)
 	pdf := filepath.Join(t.TempDir(), "informe.pdf")
 	os.WriteFile(pdf, []byte("%PDF"), 0o600)
+	conEstructurada(t, a)
+	aJSON(t, a)
+	poner(t, a, tx("receta.esquema"), `{"type":"object"}`)
+	editar(t, a, tx("receta.esquema"))
 	cerrar()
-	if fuera := correr(p, p.validarEsquema(datosForm{estructurada: true, esquema: `{"type":"object"}`})); !errorServicio(fuera) {
+	if fuera := a.Pulsar("esc"); !errorServicio(fuera) {
 		t.Fatalf("validar el esquema sin servicio avisa: %v", fuera)
 	}
-	if fuera := correr(p, p.comprobarConversor([]string{pdf})); !errorServicio(fuera) {
+	editar(t, a, tx("ejecutar.adjuntar"))
+	a.Pegar(pdf)
+	if fuera := a.Pulsar("tab"); !errorServicio(fuera) {
 		t.Fatalf("mirar el conversor sin servicio avisa: %v", fuera)
 	}
+	// Una carpeta de datos que es un archivo: el borrador no se puede guardar.
 	archivo := filepath.Join(t.TempDir(), "no-es-carpeta")
 	os.WriteFile(archivo, nil, 0o600)
-	m := escribirBorrador(archivo, "a medias")()
-	if a, ok := m.(comp.NuevoAviso); !ok || a.Tipo != comp.Advertencia || !strings.Contains(a.Texto, "borrador") {
-		t.Fatalf("si el borrador no se guarda, avisa: %#v", m)
-	}
+	cli2, id2 := prueba.Servicio(t)
+	b := abrir(t, contexto(t, cli2, id2, archivo))
+	escribir(t, b, tx("ejecutar.mensaje"), "a medias")
+	b.Hasta(func() bool {
+		av, ok := aviso(b.Fuera)
+		return ok && av.Tipo == comp.Advertencia && strings.Contains(av.Texto, "borrador")
+	})
 }
 
 // TestAtajosSinServicio: sin cliente, cada atajo que habla con el servicio avisa a la app, como enviar.
 func TestAtajosSinServicio(t *testing.T) {
-	enEspanol(t)
-	p := nueva()
-	correr(p, p.Iniciar(contexto(nil, "global", "")))
+	a := abrir(t, contexto(t, nil, "global", ""))
 	for _, k := range []string{"k", "g", "ctrl+p"} {
-		if fuera := pulsar(p, k); !errorServicio(fuera) {
+		if fuera := a.Pulsar(k); !errorServicio(fuera) {
 			t.Errorf("%s sin servicio: %v", k, fuera)
 		}
 	}
-	_, cmd := p.Update(pagina.ConPunto{Nombre: "mi-app"})
-	if fuera := correr(p, cmd); !errorServicio(fuera) {
+	if fuera := a.Entregar(pagina.ConPunto{Nombre: "mi-app"}); !errorServicio(fuera) {
 		t.Errorf("abrir una API sin servicio: %v", fuera)
 	}
-	p.final = &nucleo.Trabajo{ID: "a", CodigoError: nucleo.CodigoSalidaNoCumpleEsquema, Salida: "x"}
-	if fuera := pulsar(p, "o"); !errorServicio(fuera) {
+	// Una respuesta que se puede corregir y, después, el servicio que deja de estar: corregir avisa.
+	cli, id := prueba.Servicio(t)
+	b := abierta(t, cli, id)
+	conEstructurada(t, b)
+	aJSON(t, b)
+	poner(t, b, tx("receta.esquema"), `{"type":"object","required":["total"],"properties":{"total":{"type":"number"}}}`)
+	poner(t, b, tx("ejecutar.mensaje"), "no es JSON")
+	enviar(b)
+	terminada(t, b)
+	b.Correr(b.P.Iniciar(contexto(t, nil, id, "")))
+	if fuera := b.Pulsar("o"); !errorServicio(fuera) {
 		t.Errorf("corregir sin servicio: %v", fuera)
 	}
-	p.final, p.trabajo, p.estado = nil, &nucleo.Trabajo{ID: "a", Estado: nucleo.Ejecutando}, nucleo.Ejecutando
-	pulsar(p, "c")
-	_, cmd = p.Update(comp.Confirmado{})
-	if fuera := correr(p, cmd); !errorServicio(fuera) {
+	// Una petición en marcha y, después, sin servicio: cancelarla avisa.
+	cli3, id3, bloq := conBloqueado(t)
+	c := abierta(t, cli3, id3)
+	poner(t, c, tx("ejecutar.mensaje"), "esperar")
+	enviar(c)
+	<-bloq.Entro
+	c.HastaVer("primera parte")
+	c.Correr(c.P.Iniciar(contexto(t, nil, id3, "")))
+	c.Pulsar("c")
+	if fuera := c.Entregar(comp.Confirmado{}); !errorServicio(fuera) {
 		t.Errorf("cancelar sin servicio: %v", fuera)
 	}
 }
@@ -81,95 +93,87 @@ func TestCompletarConTildes(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "más.txt"), nil, 0o600)
 	os.WriteFile(filepath.Join(dir, "mís.txt"), nil, 0o600)
 	base := dir + string(filepath.Separator)
-	got, candidatos := completar(base + "m")
-	if got != base+"m" || len(candidatos) != 2 || !utf8.ValidString(got) {
-		t.Fatalf("lo común sin partir caracteres: %q %v", got, candidatos)
+	cli, id := prueba.Servicio(t)
+	a := abierta(t, cli, id)
+	editar(t, a, tx("ejecutar.adjuntar"))
+	a.Pegar(base + "m")
+	av, ok := aviso(a.Pulsar("tab"))
+	if got := valor(t, a, tx("ejecutar.adjuntar")); !ok || got != base+"m" || len(strings.Fields(av.Texto)) != 2 || !utf8.ValidString(got) {
+		t.Fatalf("lo común sin partir caracteres: %q %+v", got, av)
 	}
-}
-
-// aJSON pasa el esquema a JSON, si la receta tiene el modo campos.
-func aJSON(p *Pagina) {
-	p.form.Enfocar("modo")
-	if p.form.Foco() == "modo" {
-		p.editando = true
-		pulsar(p, "right", "esc")
-	}
-}
-
-// conEstructurada activa la salida estructurada.
-func conEstructurada(p *Pagina) {
-	p.form.Enfocar("estructurada")
-	p.editando = true
-	pulsar(p, "space", "esc")
 }
 
 // TestEsquemaAlSalirConEsc: dejar el esquema con Esc también lo comprueba con el servicio.
 func TestEsquemaAlSalirConEsc(t *testing.T) {
 	cli, id := prueba.Servicio(t)
-	p := abierta(t, cli, id)
-	conEstructurada(p)
-	aJSON(p)
-	p.form.Poner("esquema", "")
-	escribir(p, "esquema", `{"type":"object","properties":{"x":{"type":"nada"}}}`)
-	pulsar(p, "esc")
-	if p.EnCampo() || p.errEsquema == "" {
-		t.Fatalf("Esc deja el campo y el servicio dice qué está mal: %q", p.errEsquema)
+	a := abierta(t, cli, id)
+	conEstructurada(t, a)
+	aJSON(t, a)
+	editar(t, a, tx("receta.esquema"))
+	vaciar(a)
+	a.Escribir(`{"type":"object","properties":{"x":{"type":"nada"}}}`)
+	a.Pulsar("esc")
+	if enfocar(t, a, tx("receta.esquema")); a.P.EnCampo() || !strings.Contains(a.Vista(), "properties.x.type") {
+		t.Fatalf("Esc deja el campo y el servicio dice qué está mal:\n%s", a.Vista())
 	}
 }
 
 // TestNavegarMientrasSeEnvia: si se deja la página con el envío en camino, el trabajo creado no se pierde, no se puede
 // mandar otra vez y el borrador se borra; con la página oculta no se abre el seguimiento en vivo.
 func TestNavegarMientrasSeEnvia(t *testing.T) {
-	enEspanol(t)
 	cli, id := prueba.Servicio(t)
 	carpeta := t.TempDir()
-	p := nueva()
-	correr(p, p.Iniciar(contexto(cli, id, carpeta)))
-	t.Cleanup(p.Ocultar)
-	escribir(p, "mensaje", "hola")
-	pulsar(p, "esc")
-	envio := p.enviar()
-	p.Ocultar()
-	correr(p, p.Mostrar())
-	pulsar(p, "ctrl+s")
-	correr(p, envio)
-	if lista, _ := cli.Trabajos(ctx, id, 10); len(lista) != 1 {
-		t.Fatalf("una sola petición: %d", len(lista))
+	a := abrir(t, contexto(t, cli, id, carpeta))
+	escribir(t, a, tx("ejecutar.mensaje"), "hola")
+	a.Hasta(func() bool { _, err := os.Stat(filepath.Join(carpeta, archivoBorrador)); return err == nil })
+	// enCamino deja el envío pedido al servicio sin que haya respondido: devuelve la petición retenida.
+	enCamino := func() []tea.Cmd {
+		enviado := a.Recoger(a.Retener(func() { enviar(a) })) // el formulario da el Enviado
+		return a.Retener(func() { a.Entregar(enviado[0]) })   // y la página pide crear el trabajo
 	}
-	if p.trabajo == nil {
-		t.Fatal("la petición creada se enseña")
+	envio := enCamino()
+	ocultar(a)
+	mostrar(a)
+	if fuera := enviar(a); len(fuera) != 0 || cuantos(t, cli, id) != 0 {
+		t.Fatalf("con el envío en camino no se manda otro: %v", fuera)
 	}
-	if _, err := os.Stat(filepath.Join(carpeta, archivoBorrador)); !os.IsNotExist(err) {
-		t.Fatalf("el borrador se borra: %v", err)
+	a.Soltar(envio)
+	if n := cuantos(t, cli, id); n != 1 || !pestana(a, "ejecutar.respuesta") {
+		t.Fatalf("la petición creada se enseña, una sola: %d", n)
 	}
-	hasta(t, p, func() bool { return p.final != nil })
+	a.Hasta(func() bool { _, err := os.Stat(filepath.Join(carpeta, archivoBorrador)); return os.IsNotExist(err) })
+	terminada(t, a)
 
 	// Con la página oculta cuando llega, se recuerda sin seguirla; al volver se sigue.
-	pulsar(p, "n")
-	escribir(p, "mensaje", "otra")
-	pulsar(p, "esc")
-	envio = p.enviar()
-	p.Ocultar()
-	correr(p, envio)
-	if p.trabajo == nil || p.cancelar != nil {
-		t.Fatalf("oculta, la recuerda sin abrir el seguimiento: %v %v", p.trabajo, p.cancelar != nil)
+	cli2, id2, b := conBloqueado(t)
+	c := abierta(t, cli2, id2)
+	poner(t, c, tx("ejecutar.mensaje"), "esperar")
+	envio = func() []tea.Cmd {
+		enviado := c.Recoger(c.Retener(func() { enviar(c) }))
+		return c.Retener(func() { c.Entregar(enviado[0]) })
+	}()
+	ocultar(c)
+	c.Soltar(envio)
+	<-b.Entro
+	if v := c.Vista(); !pestana(c, "ejecutar.respuesta") || strings.Contains(v, "en vivo") {
+		t.Fatalf("oculta, la recuerda sin abrir el seguimiento:\n%s", v)
 	}
-	correr(p, p.Mostrar())
-	if p.activo() && p.cancelar == nil {
-		t.Fatal("al volver se sigue en vivo")
-	}
+	mostrar(c)
+	c.HastaVer("en vivo")
+	b.SoltarFin()
+	terminada(t, c)
 }
 
 // TestGuardarConPistas: «Guardar como API» explica el nombre y el grupo, como GuardarComoApi.vue.
 func TestGuardarConPistas(t *testing.T) {
 	cli, id := prueba.Servicio(t)
-	p := abierta(t, cli, id)
-	pulsar(p, "g")
-	if v := p.Vista(); !strings.Contains(v, "Por ejemplo: contabilidad") {
+	a := abierta(t, cli, id)
+	a.Pulsar("g")
+	if v := a.Vista(); !strings.Contains(v, "Por ejemplo: contabilidad") {
 		t.Fatalf("la pista del nombre:\n%s", v)
 	}
-	pulsar(p, "tab")
-	if v := p.Vista(); !strings.Contains(v, "Para ordenarlas") {
+	a.Pulsar("tab")
+	if v := a.Vista(); !strings.Contains(v, "Para ordenarlas") {
 		t.Fatalf("la pista del grupo:\n%s", v)
 	}
 }

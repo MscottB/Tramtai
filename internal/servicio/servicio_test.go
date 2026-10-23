@@ -16,7 +16,9 @@ import (
 	"time"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/agentes"
 	"tramtai/internal/api"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/persistencia"
@@ -38,7 +40,7 @@ func entorno(t *testing.T, global, local string, agente adaptadores.Adaptador) (
 	if local != "" {
 		os.WriteFile(filepath.Join(proyecto, ".tramtai", "local.yaml"), []byte(local), 0o600)
 	}
-	c, err := nucleo.CargarConfiguracion("")
+	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,8 +167,8 @@ func TestPuntosDeAcceso(t *testing.T) {
 		t.Fatalf("puerto propio con modelo forzado: %d %s", r.StatusCode, cuerpo)
 	}
 	// Al cambiar el punto se reabre en el mismo puerto: el anterior lo libera antes.
-	rutaGlobal, _ := nucleo.RutaGlobal()
-	if err := EditarPuntos(rutaGlobal, nucleo.OrigenGlobal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+	rutaGlobal, _ := configuracion.RutaGlobal()
+	if err := configuracion.EditarPuntos(rutaGlobal, configuracion.OrigenGlobal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		lista[1].Modelo = "m8"
 		return lista, nil
 	}); err != nil {
@@ -212,8 +214,8 @@ func TestRecargarSinTocarLosDemas(t *testing.T) {
 	s, ts, _ := entorno(t, "puntos_acceso:\n  - nombre: uno\n  - nombre: dos\n", "", adaptadores.Simulado{})
 	s.ActivarGlobal()
 	antes := s.puntos["uno"]
-	rutaGlobal, _ := nucleo.RutaGlobal()
-	if err := EditarPuntos(rutaGlobal, nucleo.OrigenGlobal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+	rutaGlobal, _ := configuracion.RutaGlobal()
+	if err := configuracion.EditarPuntos(rutaGlobal, configuracion.OrigenGlobal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		falso := false
 		lista[1].Activo = &falso
 		return lista, nil
@@ -247,49 +249,6 @@ func TestDesactivarVaciaLaCola(t *testing.T) {
 	defer alm.Cerrar()
 	if tr, _ := alm.Obtener(t.Context(), id); tr.Estado != nucleo.Cancelado {
 		t.Fatalf("el trabajo en cola debía cancelarse: %s", tr.Estado)
-	}
-}
-
-func TestEditarPuntosConservaComentarios(t *testing.T) {
-	ruta := filepath.Join(t.TempDir(), "config.yaml")
-	os.WriteFile(ruta, []byte("# mi configuración\nservicio:\n  puerto: 17373 # fijo\n"), 0o600)
-	err := EditarPuntos(ruta, nucleo.OrigenGlobal, func(l []ConfigPunto) ([]ConfigPunto, error) {
-		return append(l, ConfigPunto{Nombre: "nuevo", Puerto: 17401, Agente: "claude"}), nil
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	datos, _ := os.ReadFile(ruta)
-	if !strings.Contains(string(datos), "# mi configuración") || !strings.Contains(string(datos), "# fijo") || !strings.Contains(string(datos), "puerto: 17401") {
-		t.Fatalf("archivo:\n%s", datos)
-	}
-	if err := EditarPuntos(ruta, nucleo.OrigenProyecto, func(l []ConfigPunto) ([]ConfigPunto, error) { return l, nil }); err == nil {
-		t.Fatal("puntos_acceso en la configuración versionada debe rechazarse")
-	}
-	if datos2, _ := os.ReadFile(ruta); string(datos2) != string(datos) {
-		t.Fatal("un cambio inválido debe dejar el archivo como estaba")
-	}
-}
-
-func TestFijarValor(t *testing.T) {
-	ruta := filepath.Join(t.TempDir(), "config.yaml")
-	os.WriteFile(ruta, []byte("# mi configuración\nadaptadores:\n  codex:\n    autenticacion: clave_api # comentario\n"), 0o600)
-	for _, agente := range []string{"claude", "codex"} {
-		if err := FijarValor(ruta, nucleo.OrigenGlobal, "adaptadores."+agente+".autenticacion", "suscripcion"); err != nil {
-			t.Fatal(err)
-		}
-	}
-	capa, err := nucleo.CargarCapa(ruta, nucleo.OrigenGlobal)
-	datos, _ := os.ReadFile(ruta)
-	if err != nil || capa.Valores["adaptadores.claude.autenticacion"] != "suscripcion" || capa.Valores["adaptadores.codex.autenticacion"] != "suscripcion" ||
-		!strings.Contains(string(datos), "# mi configuración") {
-		t.Fatalf("%v %v\n%s", err, capa.Valores, datos)
-	}
-	if err := FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto", "abc"); err == nil {
-		t.Fatal("un valor no válido debe rechazarse")
-	}
-	if datos2, _ := os.ReadFile(ruta); string(datos2) != string(datos) {
-		t.Fatal("un cambio inválido debe dejar el archivo como estaba")
 	}
 }
 
@@ -359,14 +318,14 @@ func TestEscucharConPuertoOcupado(t *testing.T) {
 
 func TestNormalizarReceta(t *testing.T) {
 	bien := ConfigPunto{Nombre: "r", Esquema: map[string]any{"type": "object"}, Respaldo: []string{"codex", "gemini/flash"}}
-	if _, err := NormalizarPunto(bien, "global", 4000); err != nil {
+	if _, err := normalizarPunto(bien, "global", 4000); err != nil {
 		t.Fatalf("receta válida: %v", err)
 	}
 	for _, mal := range []ConfigPunto{
 		{Nombre: "r", Esquema: map[string]any{"type": 5}},
 		{Nombre: "r", Respaldo: []string{"perfil/x"}},
 	} {
-		_, err := NormalizarPunto(mal, "global", 4000)
+		_, err := normalizarPunto(mal, "global", 4000)
 		if nucleo.CodigoDe(err) != nucleo.CodigoConfiguracionInvalida {
 			t.Fatalf("%+v debía rechazarse: %v", mal, err)
 		}
@@ -411,66 +370,6 @@ func TestClavePuntoSoloHuella(t *testing.T) {
 	EliminarTokenPunto(filepath.Dir(filepath.Dir(ruta)), "x")
 	if _, err := os.Stat(ruta); !os.IsNotExist(err) {
 		t.Fatalf("eliminar la API debe borrar su clave: %v", err)
-	}
-}
-
-// Veinte ediciones a la vez del mismo config.yaml (pestañas, la TUI, la CLI) no se pisan: al final están todas.
-func TestEditarPuntosConcurrente(t *testing.T) {
-	ruta := filepath.Join(t.TempDir(), "config.yaml")
-	var grupo sync.WaitGroup
-	for i := range 20 {
-		grupo.Go(func() {
-			err := EditarPuntos(ruta, nucleo.OrigenGlobal, func(l []ConfigPunto) ([]ConfigPunto, error) {
-				return append(l, ConfigPunto{Nombre: "p" + strconv.Itoa(i), Puerto: 17500 + i, Agente: "claude"}), nil
-			})
-			if err != nil {
-				t.Error(err)
-			}
-		})
-	}
-	grupo.Wait()
-	capa, err := nucleo.CargarCapa(ruta, nucleo.OrigenGlobal)
-	if err != nil {
-		t.Fatal(err)
-	}
-	puntos, err := LeerPuntos(capa.Valores["puntos_acceso"].([]any))
-	if err != nil || len(puntos) != 20 {
-		t.Fatalf("quedaron %d de 20 puntos: %v", len(puntos), err)
-	}
-}
-
-// Un valor que no es válido no llega al disco: el archivo queda igual, byte a byte, y sin temporales.
-func TestFijarValorInvalidoNoEscribe(t *testing.T) {
-	dir := t.TempDir()
-	ruta := filepath.Join(dir, "config.yaml")
-	original := []byte("# mía\nservicio:\n  puerto: 17373\n")
-	os.WriteFile(ruta, original, 0o600)
-	if err := FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto", "no es un número"); err == nil {
-		t.Fatal("se aceptó un puerto que no es un número")
-	}
-	if datos, _ := os.ReadFile(ruta); string(datos) != string(original) {
-		t.Fatalf("el archivo cambió:\n%s", datos)
-	}
-	if entradas, _ := os.ReadDir(dir); len(entradas) != 1 {
-		t.Fatalf("quedaron temporales: %v", entradas)
-	}
-}
-
-// Escrituras atómicas a la vez sobre el mismo archivo: todas terminan bien y queda una de ellas entera.
-func TestEscribirAtomicoConcurrente(t *testing.T) {
-	ruta := filepath.Join(t.TempDir(), "servicio.json")
-	var grupo sync.WaitGroup
-	for i := range 20 {
-		grupo.Go(func() {
-			if err := escribirAtomico(ruta, []byte(strings.Repeat(strconv.Itoa(i%10), 1000)), 0o600); err != nil {
-				t.Error(err)
-			}
-		})
-	}
-	grupo.Wait()
-	datos, _ := os.ReadFile(ruta)
-	if len(datos) != 1000 || strings.Count(string(datos), string(datos[0])) != 1000 {
-		t.Fatalf("contenido mezclado o a medias: %d bytes", len(datos))
 	}
 }
 
@@ -586,29 +485,6 @@ func TestRestaurarConInstanciasDanado(t *testing.T) {
 	}
 	if _, activa := s.instancias["global"]; !activa {
 		t.Fatal("la instancia global debía abrirse")
-	}
-}
-
-// Guardar mientras otro proceso lee el archivo (un Recargar, la CLI, el antivirus) termina bien en cuanto lo suelta: en
-// Windows el renombrado se reintenta.
-func TestEscribirAtomicoConUnLector(t *testing.T) {
-	ruta := filepath.Join(t.TempDir(), "config.yaml")
-	if err := os.WriteFile(ruta, []byte("antes\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	lector, err := os.Open(ruta)
-	if err != nil {
-		t.Fatal(err)
-	}
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		lector.Close()
-	}()
-	if err := escribirAtomico(ruta, []byte("después\n"), 0o600); err != nil {
-		t.Fatalf("guardar con un lector abierto: %v", err)
-	}
-	if datos, _ := os.ReadFile(ruta); string(datos) != "después\n" {
-		t.Fatalf("contenido: %q", datos)
 	}
 }
 

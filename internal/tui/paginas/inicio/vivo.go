@@ -5,6 +5,7 @@ import (
 	"slices"
 	"time"
 
+	"tramtai/internal/contrato"
 	"tramtai/internal/nucleo"
 )
 
@@ -14,21 +15,6 @@ import (
 
 // maximoVisibles son las filas de la red en vivo; las demás se cuentan en un «+N».
 const maximoVisibles = 12
-
-// evento es el JSON del evento «trabajo» (api.EventoTrabajo): dónde va una petición, nunca qué lleva.
-type evento struct {
-	ID          string    `json:"id"`
-	Estado      string    `json:"estado"`
-	Etapa       string    `json:"etapa"`
-	Agente      string    `json:"agente"`
-	Modelo      string    `json:"modelo"`
-	API         string    `json:"api"`
-	Origen      string    `json:"origen"`
-	Intento     int       `json:"intento"`
-	CodigoError string    `json:"codigo_error"`
-	Creado      time.Time `json:"creado"`
-	Actualizado time.Time `json:"actualizado"`
-}
 
 // tranvia es una petición en la red. Desde es cuándo se aceptó (o, si no se sabe, cuándo apareció); Terminado, cuándo
 // llegó o falló, para borrarla después (cero mientras sigue).
@@ -52,7 +38,7 @@ func visibleTras(estado string) time.Duration {
 }
 
 // aplicar pone un evento en el mapa. Uno que ya llegó y se borró no vuelve por un evento tardío.
-func aplicar(t tranvias, e evento, ahora time.Time, borrados map[string]bool) {
+func aplicar(t tranvias, e contrato.EventoTrabajo, ahora time.Time, borrados map[string]bool) {
 	if borrados[e.ID] {
 		return
 	}
@@ -90,7 +76,7 @@ func podar(t tranvias, presentes map[string]bool) {
 
 // reconciliar pone el mapa al día con una consulta de los trabajos recientes cuando no hay flujo: los del mapa que
 // terminaron llegan, los que ya no salen se van y los terminados que no estaban no aparecen.
-func reconciliar(t tranvias, eventos []evento, ahora time.Time, borrados map[string]bool) {
+func reconciliar(t tranvias, eventos []contrato.EventoTrabajo, ahora time.Time, borrados map[string]bool) {
 	presentes := map[string]bool{}
 	for _, e := range eventos {
 		presentes[e.ID] = true
@@ -102,8 +88,8 @@ func reconciliar(t tranvias, eventos []evento, ahora time.Time, borrados map[str
 }
 
 // eventoDe convierte un trabajo de la consulta en el evento que habría mandado el flujo.
-func eventoDe(j nucleo.Trabajo) evento {
-	return evento{ID: j.ID, Estado: string(j.Estado), Etapa: etapaDe(string(j.Estado)), Agente: j.Solicitud.Agente,
+func eventoDe(j nucleo.Trabajo) contrato.EventoTrabajo {
+	return contrato.EventoTrabajo{ID: j.ID, Estado: string(j.Estado), Etapa: j.Estado.Etapa(), Agente: j.Solicitud.Agente,
 		Modelo: cmp.Or(j.ModeloEfectivo, j.ModeloEnviado), API: j.PuntoAcceso, Origen: j.Origen, Intento: 1, CodigoError: string(j.CodigoError), Creado: j.CreadoEn}
 }
 
@@ -127,21 +113,6 @@ func visibles(t tranvias, maximo int) (lista []tranvia, resto int) {
 	}
 	slices.SortFunc(todos, func(a, b tranvia) int { return cmp.Or(b.Desde.Compare(a.Desde), cmp.Compare(a.ID, b.ID)) })
 	return todos[:min(maximo, len(todos))], max(0, len(todos)-maximo)
-}
-
-// etapaDe agrupa un estado en una de las 5 paradas, igual que EtapaDe del servicio (internal/api/vivo.go).
-func etapaDe(estado string) string {
-	switch estado {
-	case "en_cola":
-		return "cola"
-	case "preparando_entrada", "esperando_agente":
-		return "preparacion"
-	case "ejecutando", "cancelacion_solicitada":
-		return "ejecucion"
-	case "validando_salida":
-		return "validacion"
-	}
-	return "llegada"
 }
 
 // esperaReconexion es la espera antes del intento n de reconectar el flujo: 1, 2, 4, 8, 16 s y después 30 s.

@@ -436,22 +436,10 @@ func (c *Cliente) Eliminar(ctx context.Context, instancia, id string) error {
 	return c.pedir(ctx, "DELETE", "/api/v1/trabajos/"+url.PathEscape(id), instancia, nil, "", nil)
 }
 
-// ModeloCatalogo es una entrada de GET /api/v1/modelos con lo que hace falta para elegir modelo y esfuerzo: los niveles
-// que admite su agente, el que usa si no se elige y, en el predeterminado del espacio, el esfuerzo del espacio.
-type ModeloCatalogo struct {
-	ID                     string   `json:"id"`
-	Agente                 string   `json:"agente,omitempty"`
-	Perfil                 string   `json:"perfil,omitempty"`
-	Predeterminado         bool     `json:"predeterminado,omitempty"`
-	Esfuerzos              []string `json:"esfuerzos,omitempty"`
-	EsfuerzoPredeterminado string   `json:"esfuerzo_predeterminado,omitempty"`
-	EsfuerzoEspacio        string   `json:"esfuerzo_espacio,omitempty"`
-}
-
 // Catalogo devuelve el catálogo de modelos de la instancia.
-func (c *Cliente) Catalogo(ctx context.Context, instancia string) ([]ModeloCatalogo, error) {
+func (c *Cliente) Catalogo(ctx context.Context, instancia string) ([]contrato.Modelo, error) {
 	var r struct {
-		Modelos []ModeloCatalogo `json:"modelos"`
+		Modelos []contrato.Modelo `json:"modelos"`
 	}
 	return r.Modelos, c.pedir(ctx, "GET", "/api/v1/modelos", instancia, nil, "", &r)
 }
@@ -469,10 +457,16 @@ func (c *Cliente) Modelos(ctx context.Context, instancia string) ([]string, erro
 	return ids, nil
 }
 
-// Capacidades devuelve la matriz de capacidades de los agentes.
-func (c *Cliente) Capacidades(ctx context.Context, instancia string) (map[string]any, error) {
-	var r map[string]any
+// Capacidades devuelve los agentes con su estado, los formatos y los límites de la instancia.
+func (c *Cliente) Capacidades(ctx context.Context, instancia string) (contrato.Capacidades, error) {
+	var r contrato.Capacidades
 	return r, c.pedir(ctx, "GET", "/api/v1/capacidades", instancia, nil, "", &r)
+}
+
+// PrimerosPasos devuelve los Primeros pasos de Inicio, ya calculados, y los agentes que comprobó para ello.
+func (c *Cliente) PrimerosPasos(ctx context.Context, instancia string) (contrato.PrimerosPasos, error) {
+	var r contrato.PrimerosPasos
+	return r, c.pedir(ctx, "GET", "/api/v1/instancia/pasos", instancia, nil, "", &r)
 }
 
 // SubirCarga sube un archivo a la instancia.

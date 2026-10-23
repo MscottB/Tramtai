@@ -12,9 +12,10 @@ import (
 	"regexp"
 	"time"
 
-	"tramtai/internal/actualizacion"
 	"tramtai/internal/nucleo"
 )
+
+//go:generate go run ./gents
 
 var reNombrePunto = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,39}$`)
 
@@ -34,14 +35,14 @@ type EstadoInstancia struct {
 // los que ya no encuentran su carpeta.
 type Espacio struct {
 	ID          string    `json:"id"`
-	Ambito      string    `json:"ambito"`
+	Ambito      string    `json:"ambito" ts:"'global' | 'proyecto'"`
 	Ruta        string    `json:"ruta,omitempty"`
 	Nombre      string    `json:"nombre"`
 	Activo      bool      `json:"activo"`
 	UltimoUso   time.Time `json:"ultimo_uso,omitzero"`
 	UltimoError string    `json:"ultimo_error,omitempty"`
 	// Estado es activo, detenido o no_encontrado (falta la carpeta o su .tramtai/config.yaml).
-	Estado     string `json:"estado"`
+	Estado     string `json:"estado" ts:"'activo' | 'detenido' | 'no_encontrado'"`
 	Confiado   bool   `json:"confiado"`
 	APIs       int    `json:"apis"`
 	Peticiones int    `json:"peticiones"`
@@ -60,21 +61,35 @@ type Estado struct {
 	Puntos        []EstadoPunto     `json:"puntos_acceso"`
 	Errores       []string          `json:"errores_configuracion,omitempty"`
 	// Actualizacion es la versión publicada más nueva que la actual, si la hay (la bandeja la ofrece).
-	Actualizacion *actualizacion.Version `json:"actualizacion,omitempty"`
+	Actualizacion *VersionNueva `json:"actualizacion,omitempty"`
+}
+
+// VersionNueva es una versión publicada: su número, su página y sus notas. Copia lo que los clientes muestran de
+// actualizacion.Version, para que un cliente no enlace el actualizador (red y firmas).
+type VersionNueva struct {
+	Version string `json:"version"`
+	URL     string `json:"url"`
+	Notas   string `json:"notas,omitempty"`
 }
 
 // Descriptor identifica el servicio en marcha.
 type Descriptor struct {
-	Identificador string           `json:"identificador_servicio"`
-	PID           int              `json:"pid"`
-	FirmaInicio   string           `json:"firma_inicio_proceso"`
-	IniciadoEn    time.Time        `json:"iniciado_en"`
-	Host          string           `json:"host"`
-	Puerto        int              `json:"puerto"`
-	Base          string           `json:"base"`
-	Version       string           `json:"version"`
-	Instancias    []string         `json:"instancias_activas"`
-	Puntos        []map[string]any `json:"puntos_acceso"`
+	Identificador string            `json:"identificador_servicio"`
+	PID           int               `json:"pid"`
+	FirmaInicio   string            `json:"firma_inicio_proceso"`
+	IniciadoEn    time.Time         `json:"iniciado_en"`
+	Host          string            `json:"host"`
+	Puerto        int               `json:"puerto"`
+	Base          string            `json:"base"`
+	Version       string            `json:"version"`
+	Instancias    []string          `json:"instancias_activas"`
+	Puntos        []PuntoDescriptor `json:"puntos_acceso"`
+}
+
+// PuntoDescriptor es un punto de acceso en el descriptor: su nombre y su URL.
+type PuntoDescriptor struct {
+	Nombre string `json:"nombre"`
+	URL    string `json:"url"`
 }
 
 // RutaDescriptor es el archivo del descriptor en el directorio de datos.
@@ -162,16 +177,16 @@ type EstadoPunto struct {
 	Nombre string `json:"nombre"`
 	Grupo  string `json:"grupo,omitempty"`
 	// Instrucciones del punto, para verlas y editarlas en la Web UI.
-	Instrucciones string   `json:"instrucciones,omitempty"`
-	Instancia     string   `json:"instancia"`
-	URL           string   `json:"url,omitempty"`
-	Contratos     []string `json:"contratos"`
-	Agente        string   `json:"agente,omitempty"`
-	Modelo        string   `json:"modelo,omitempty"`
-	PerfilModelo  string   `json:"perfil_modelo,omitempty"`
-	Esfuerzo      string   `json:"esfuerzo,omitempty"`
-	Permitidos    []string `json:"modelos_permitidos,omitempty"`
-	Forzar        bool     `json:"forzar_modelo,omitempty"`
+	Instrucciones     string   `json:"instrucciones,omitempty"`
+	Instancia         string   `json:"instancia"`
+	URL               string   `json:"url,omitempty"`
+	Contratos         []string `json:"contratos"`
+	Agente            string   `json:"agente,omitempty"`
+	Modelo            string   `json:"modelo,omitempty"`
+	PerfilModelo      string   `json:"perfil_modelo,omitempty"`
+	Esfuerzo          string   `json:"esfuerzo,omitempty"`
+	ModelosPermitidos []string `json:"modelos_permitidos,omitempty"`
+	ForzarModelo      bool     `json:"forzar_modelo,omitempty"`
 	// Esquema y Respaldo son la receta del punto, para mostrarla y abrirla en Probar.
 	Esquema  map[string]any `json:"esquema,omitempty"`
 	Respaldo []string       `json:"respaldo,omitempty"`
@@ -235,10 +250,10 @@ type AjustesConversor struct {
 
 // EstadoConversor es el del conversor de archivos (markitdown): listo, preparando, falta o error.
 type EstadoConversor struct {
-	Estado  string `json:"estado"`
-	Origen  string `json:"origen,omitempty"`  // configurado, paquete, preparado o sistema
+	Estado  string `json:"estado" ts:"'listo' | 'preparando' | 'falta' | 'error'"`
+	Origen  string `json:"origen,omitempty" ts:"'configurado' | 'paquete' | 'preparado' | 'sistema'"`
 	Version string `json:"version,omitempty"` // la de markitdown, si la conoce Tramtai
-	Etapa   string `json:"etapa,omitempty"`   // python, paquetes o comprobacion
+	Etapa   string `json:"etapa,omitempty" ts:"'python' | 'paquetes' | 'comprobacion'"`
 	// Progreso aproximado de la preparación, de 0 a 100.
 	Progreso int `json:"progreso,omitempty"`
 	// Mensaje es el error de la última preparación, legible.

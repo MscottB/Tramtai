@@ -9,6 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"tramtai/internal/carpetas"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -89,7 +90,7 @@ func completar(campo string) (string, []string) {
 	if leer == "" {
 		leer = "."
 	}
-	entradas, err := os.ReadDir(nucleo.ExpandirCasa(leer))
+	entradas, err := os.ReadDir(carpetas.ExpandirCasa(leer))
 	if err != nil {
 		return campo, nil
 	}

@@ -8,6 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"tramtai/internal/agentes"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -64,8 +66,8 @@ func comandoEspacio() *cobra.Command {
 		if arg == "global" {
 			return "global", "", "global", nil
 		}
-		if raiz, ok := nucleo.BuscarProyecto(arg); ok {
-			c, err := nucleo.CargarConfiguracion(raiz)
+		if raiz, ok := configuracion.BuscarProyecto(arg); ok {
+			c, err := configuracion.CargarConfiguracion(raiz, agentes.Internos())
 			if err != nil {
 				return "", "", "", err
 			}

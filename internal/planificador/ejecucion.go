@@ -84,33 +84,9 @@ func (p *Planificador) procesar(id string, esperando func()) {
 
 	// Lo que recibe el agente: con las herramientas descritas y la conversación escrita como texto; el trabajo guarda
 	// la solicitud del cliente.
-	solicitud, desde := herramientas.Preparar(t.Solicitud), nucleo.EnCola
-	var documentos nucleo.Documentos
-	if len(solicitud.Cargas) > 0 {
-		esperando() // una conversión larga no frena el despacho de los demás
-		if !p.cambiar(id, nucleo.EnCola, nucleo.PreparandoEntrada, persistencia.Cambio{}) {
-			return
-		}
-		desde = nucleo.PreparandoEntrada
-		var err error
-		documentos, err = p.preparar(ctxTrabajo, solicitud.Cargas)
-		if ctxTrabajo.Err() != nil {
-			p.cerrarDetenido(id, desde)
-			return
-		}
-		if err != nil {
-			codigo := nucleo.CodigoDe(err)
-			if codigo == "" {
-				codigo = nucleo.CodigoConversionFallida
-			}
-			p.cambiar(id, desde, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err)})
-			return
-		}
-		solicitud = conDocumentos(solicitud, documentos.Texto)
-		if p.ctx.Err() != nil { // la conversión terminó durante un drenaje: no se lanza un agente nuevo
-			p.cerrarDetenido(id, desde)
-			return
-		}
+	solicitud, documentos, desde, ok := p.prepararEntrada(ctxTrabajo, id, herramientas.Preparar(t.Solicitud), esperando)
+	if !ok {
+		return
 	}
 	medida := medirEntrada(solicitud, documentos)
 	if datos, err := json.Marshal(medida); err == nil {
@@ -134,11 +110,53 @@ func (p *Planificador) procesar(id string, esperando func()) {
 			" .github/copilot-instructions.md, según el agente), con las mismas restricciones de herramientas que en modo aislado y"+
 			" sin sesión persistente; con autenticación por suscripción algunos CLI cargan también las reglas del usuario", p.opc.RaizConfiable))
 	}
-	// El principal y después el respaldo: se salta al siguiente solo si el intento falló antes de emitir texto,
-	// para no mezclar dos respuestas. El plazo en cola vale hasta el primer intento.
+	resultado, elegido, ok := p.recorrerRespaldo(ctxTrabajo, id, t, solicitud, medida, plazoCola, esperando)
+	if !ok {
+		return
+	}
+	p.corregir(ctxTrabajo, id, t, solicitud, resultado, elegido, esperando)
+}
+
+// prepararEntrada convierte las cargas de la solicitud y le añade sus documentos. desde es el estado en que queda el
+// trabajo; con ok = false ya quedó cerrado.
+func (p *Planificador) prepararEntrada(ctxTrabajo context.Context, id string, solicitud nucleo.SolicitudEjecucion, esperando func()) (_ nucleo.SolicitudEjecucion, documentos nucleo.Documentos, desde nucleo.Estado, ok bool) {
+	desde = nucleo.EnCola
+	if len(solicitud.Cargas) == 0 {
+		return solicitud, documentos, desde, true
+	}
+	esperando() // una conversión larga no frena el despacho de los demás
+	if !p.cambiar(id, nucleo.EnCola, nucleo.PreparandoEntrada, persistencia.Cambio{}) {
+		return solicitud, documentos, desde, false
+	}
+	desde = nucleo.PreparandoEntrada
+	var err error
+	documentos, err = p.preparar(ctxTrabajo, solicitud.Cargas)
+	if ctxTrabajo.Err() != nil {
+		p.cerrarDetenido(id, desde)
+		return solicitud, documentos, desde, false
+	}
+	if err != nil {
+		codigo := nucleo.CodigoDe(err)
+		if codigo == "" {
+			codigo = nucleo.CodigoConversionFallida
+		}
+		p.cambiar(id, desde, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: nucleo.MensajeDe(err)})
+		return solicitud, documentos, desde, false
+	}
+	solicitud = conDocumentos(solicitud, documentos.Texto)
+	if p.ctx.Err() != nil { // la conversión terminó durante un drenaje: no se lanza un agente nuevo
+		p.cerrarDetenido(id, desde)
+		return solicitud, documentos, desde, false
+	}
+	return solicitud, documentos, desde, true
+}
+
+// recorrerRespaldo prueba el principal y después el respaldo: se salta al siguiente solo si el intento falló antes
+// de emitir texto, para no mezclar dos respuestas. El plazo en cola vale hasta el primer intento. Devuelve el
+// resultado y elegido, el que respondió (las correcciones se le piden a él); con ok = false el trabajo ya quedó cerrado.
+func (p *Planificador) recorrerRespaldo(ctxTrabajo context.Context, id string, t nucleo.Trabajo, solicitud nucleo.SolicitudEjecucion,
+	medida medida, plazoCola <-chan time.Time, esperando func()) (resultado adaptadores.Resultado, elegido candidato, ok bool) {
 	lista, desconectados := p.conectados(candidatos(t))
-	var resultado adaptadores.Resultado
-	var elegido candidato    // el que respondió: las correcciones se le piden a él
 	var usoPrevio nucleo.Uso // lo que gastaron los intentos que fallaron: también cuenta para el presupuesto
 	ejecutado := false       // si algún candidato llegó a ejecutarse (no solo se saltó por tamaño)
 	for i, c := range lista {
@@ -155,13 +173,13 @@ func (p *Planificador) procesar(id string, esperando func()) {
 			res, huboTexto, fin, err = p.intentar(ctxTrabajo, id, t, solicitud, c, plazoCola, esperando, 0)
 		}
 		if fin {
-			return
+			return resultado, elegido, false
 		}
 		if err == nil {
 			resultado, elegido = res, c
 			resultado.Uso = sumarUso(resultado.Uso, usoPrevio)
 			p.opc.Salud.Exito(c.agente)
-			break
+			return resultado, elegido, true
 		}
 		usoPrevio = sumarUso(usoPrevio, res.Uso)
 		codigo := nucleo.CodigoDe(err)
@@ -179,34 +197,19 @@ func (p *Planificador) procesar(id string, esperando func()) {
 			}
 			p.cambiar(id, estado, nucleo.Fallido, persistencia.Cambio{Codigo: codigo, Mensaje: mensaje, Uso: &usoPrevio,
 				DevolverPeticion: codigo == nucleo.CodigoEntradaDemasiadoGrande && !ejecutado})
-			return
+			return resultado, elegido, false
 		}
 		siguiente := lista[i+1]
 		// El uso acumulado queda en el trabajo: si se cancela durante el respaldo, también cuenta.
 		if estado == nucleo.Ejecutando && !p.cambiar(id, nucleo.Ejecutando, nucleo.EsperandoAgente, persistencia.Cambio{Uso: &usoPrevio}) {
-			return
+			return resultado, elegido, false
 		}
 		if estado == nucleo.EsperandoAgente && (ctxTrabajo.Err() != nil || p.ctx.Err() != nil) {
 			p.cerrarDetenido(id, nucleo.EsperandoAgente) // cancelado o en drenaje mientras se saltaba: no se cambia de agente
-			return
+			return resultado, elegido, false
 		}
-		// Lo guardado debe seguir valiendo al reintentar o reencolar: el agente nuevo con el esfuerzo que usa y el
-		// respaldo restante con lo que heredaba del principal escrito, porque la solicitud guardada ya no lo tendrá
-		// (sin esfuerzo en el principal, +agente: el de su propio CLI).
-		esfuerzo := cmp.Or(siguiente.esfuerzo, t.Solicitud.Esfuerzo)
-		if esfuerzo == nucleo.EsfuerzoDelAgente {
-			esfuerzo = ""
-		}
-		herencia := t.Solicitud.Esfuerzo
-		if herencia == "" && esfuerzo != "" {
-			herencia = nucleo.EsfuerzoDelAgente
-		}
-		var restante []string
-		for _, c := range lista[i+2:] {
-			c.esfuerzo = cmp.Or(c.esfuerzo, herencia)
-			restante = append(restante, c.String())
-		}
-		if err := p.almacen.CambiarAgente(fondo, id, siguiente.agente, siguiente.modelo, esfuerzo, restante); err != nil && p.opc.Registros != nil {
+		esfuerzo, restante := herenciaEsfuerzo(t.Solicitud.Esfuerzo, siguiente, lista[i+2:])
+		if err := p.almacen.CambiarAgente(context.Background(), id, siguiente.agente, siguiente.modelo, esfuerzo, restante); err != nil && p.opc.Registros != nil {
 			// El respaldo sigue igual, pero el historial atribuiría la respuesta al agente anterior.
 			fmt.Fprintf(p.opc.Registros, "%s no se pudo guardar el cambio a %s: %v\n", id, siguiente, err)
 		}
@@ -219,9 +222,35 @@ func (p *Planificador) procesar(id string, esperando func()) {
 			plazoCola = nil // el plazo en cola vale hasta que algo se ejecuta; un salto por tamaño no ejecutó nada
 		}
 	}
+	return resultado, elegido, true
+}
 
-	// Si la salida no cumple y quedan correcciones, se pide otra al mismo agente (nunca al respaldo) con la respuesta
-	// y sus problemas; cada una suma su uso al trabajo.
+// herenciaEsfuerzo da el esfuerzo con que sigue el candidato siguiente y el respaldo restante, ya escrito.
+// Lo guardado debe seguir valiendo al reintentar o reencolar: el agente nuevo con el esfuerzo que usa y el
+// respaldo restante con lo que heredaba del principal escrito, porque la solicitud guardada ya no lo tendrá
+// (sin esfuerzo en el principal, +agente: el de su propio CLI).
+func herenciaEsfuerzo(principal string, siguiente candidato, resto []candidato) (string, []string) {
+	esfuerzo := cmp.Or(siguiente.esfuerzo, principal)
+	if esfuerzo == nucleo.EsfuerzoDelAgente {
+		esfuerzo = ""
+	}
+	herencia := principal
+	if herencia == "" && esfuerzo != "" {
+		herencia = nucleo.EsfuerzoDelAgente
+	}
+	var restante []string
+	for _, c := range resto {
+		c.esfuerzo = cmp.Or(c.esfuerzo, herencia)
+		restante = append(restante, c.String())
+	}
+	return esfuerzo, restante
+}
+
+// corregir valida la salida del candidato que respondió y cierra el trabajo.
+// Si la salida no cumple y quedan correcciones, se pide otra al mismo agente (nunca al respaldo) con la respuesta
+// y sus problemas; cada una suma su uso al trabajo.
+func (p *Planificador) corregir(ctxTrabajo context.Context, id string, t nucleo.Trabajo, solicitud nucleo.SolicitudEjecucion,
+	resultado adaptadores.Resultado, elegido candidato, esperando func()) {
 	reintentos := min(t.Solicitud.Salida.Reintentos, nucleo.MaximoReintentosSalida)
 	for correccion := 0; ; correccion++ {
 		if !p.cambiar(id, nucleo.Ejecutando, nucleo.ValidandoSalida, persistencia.Cambio{}) {

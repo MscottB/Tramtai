@@ -1,25 +1,14 @@
 // vivo convierte los eventos de GET /api/v1/eventos en los tranvías del mapa de Inicio: dónde va cada petición en
 // curso y cuándo deja de verse. Sin Vue, para poder probarlo; MapaRed.vue solo dibuja lo que sale de aquí.
 
-import type { Trabajo } from './api/tipos'
+import type { EventoTrabajo, Trabajo } from './api/tipos'
 import type { Clave } from './idiomas/es'
 
-export type Etapa = 'cola' | 'preparacion' | 'ejecucion' | 'validacion' | 'llegada'
+// Etapa es la parada de la ruta en que va una petición; el evento «trabajo» (tipo generado desde Go) la trae calculada.
+export type Etapa = EventoTrabajo['etapa']
 export type Tramo = 'entrada' | 'centro' | 'linea'
 
-export interface EventoTrabajo {
-  id: string
-  estado: string
-  etapa: Etapa
-  agente: string
-  modelo: string
-  api: string
-  origen: string
-  intento: number
-  codigo_error: string
-  creado: string
-  actualizado: string
-}
+export type { EventoTrabajo }
 
 export interface Tranvia {
   id: string
@@ -92,7 +81,7 @@ export function reconciliar(t: Tranvias, eventos: EventoTrabajo[], ahora: number
 
 // eventoDe convierte un trabajo de la consulta en el evento que habría mandado el flujo.
 export function eventoDe(t: Trabajo): EventoTrabajo {
-  return { id: t.id, estado: t.estado, etapa: etapaDe(t.estado), agente: t.solicitud?.agente ?? '', modelo: t.modelo_efectivo || t.modelo_enviado || '',
+  return { id: t.id, estado: t.estado, etapa: t.etapa, agente: t.solicitud?.agente ?? '', modelo: t.modelo_efectivo || t.modelo_enviado || '',
     api: t.punto_acceso ?? '', origen: t.origen ?? '', intento: 1, codigo_error: t.codigo_error ?? '', creado: t.creado_en, actualizado: '' }
 }
 
@@ -110,16 +99,6 @@ export function posicion(tr: Tranvia): { tramo: Tramo; avance: number } {
 export function visibles(t: Tranvias, max = 12): { lista: Tranvia[]; resto: number } {
   const todos = [...t.values()].sort((a, b) => b.desde - a.desde)
   return { lista: todos.slice(0, max), resto: Math.max(0, todos.length - max) }
-}
-
-// etapaDe agrupa un estado en una de las 5 paradas, igual que EtapaDe del servicio (internal/api/vivo.go); la usa el
-// mapa cuando no hay flujo y consulta los trabajos cada 5 s.
-export function etapaDe(estado: string): Etapa {
-  if (estado === 'en_cola') return 'cola'
-  if (estado === 'preparando_entrada' || estado === 'esperando_agente') return 'preparacion'
-  if (estado === 'ejecutando' || estado === 'cancelacion_solicitada') return 'ejecucion'
-  if (estado === 'validando_salida') return 'validacion'
-  return 'llegada'
 }
 
 // esperaReconexion es la espera antes del intento n de reconectar el flujo: 1, 2, 4, 8, 16 s y después 30 s.

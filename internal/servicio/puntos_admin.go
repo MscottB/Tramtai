@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"tramtai/internal/api"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
@@ -17,11 +18,11 @@ import (
 // que también llegan a los puntos de una instancia inactiva o que no se pudieron abrir. Las reglas son las de la Web UI.
 
 // archivoAdmin es el archivo de puntos que pide la petición.
-func archivoAdmin(r *http.Request) (string, nucleo.Origen, error) {
+func archivoAdmin(r *http.Request) (string, configuracion.Origen, error) {
 	raiz := r.URL.Query().Get("proyecto")
 	if raiz == "" {
-		ruta, err := nucleo.RutaGlobal()
-		return ruta, nucleo.OrigenGlobal, err
+		ruta, err := configuracion.RutaGlobal()
+		return ruta, configuracion.OrigenGlobal, err
 	}
 	if !filepath.IsAbs(raiz) {
 		return "", 0, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("proyecto debe ser una ruta absoluta"))
@@ -29,20 +30,20 @@ func archivoAdmin(r *http.Request) (string, nucleo.Origen, error) {
 	if _, err := os.Stat(filepath.Join(raiz, ".tramtai", "config.yaml")); err != nil {
 		return "", 0, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("%s no es un proyecto de Tramtai (.tramtai/config.yaml)", raiz))
 	}
-	return filepath.Join(raiz, ".tramtai", "local.yaml"), nucleo.OrigenLocal, nil
+	return filepath.Join(raiz, ".tramtai", "local.yaml"), configuracion.OrigenLocal, nil
 }
 
 // leerArchivoPuntos devuelve los puntos tal como están en el archivo (ninguno si no existe).
-func leerArchivoPuntos(ruta string, origen nucleo.Origen) ([]ConfigPunto, error) {
+func leerArchivoPuntos(ruta string, origen configuracion.Origen) ([]ConfigPunto, error) {
 	if _, err := os.Stat(ruta); os.IsNotExist(err) {
 		return nil, nil
 	}
-	capa, err := nucleo.CargarCapa(ruta, origen)
+	capa, err := configuracion.CargarCapa(ruta, origen)
 	if err != nil {
 		return nil, err
 	}
 	lista, _ := capa.Valores["puntos_acceso"].([]any)
-	return LeerPuntos(lista)
+	return configuracion.LeerPuntos(lista)
 }
 
 // guardadoAdmin recarga y responde con el archivo y los puntos del servicio, como tras recargar.
@@ -61,7 +62,7 @@ func noEstaEnArchivo(nombre string) error {
 
 // validarGuardado aplica las reglas para guardar un punto: el formato y que funcione (respaldo, agentes para apps).
 func (s *Servicio) validarGuardado(p ConfigPunto) (ConfigPunto, error) {
-	normalizado, err := NormalizarPunto(p, "global", s.opc.Puerto)
+	normalizado, err := normalizarPunto(p, "global", s.opc.Puerto)
 	if err != nil {
 		return p, err
 	}
@@ -94,7 +95,7 @@ func (s *Servicio) adminCrearPunto(w http.ResponseWriter, r *http.Request) {
 		p, err = s.validarGuardado(p)
 	}
 	if err == nil {
-		err = EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+		err = configuracion.EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 			if slices.ContainsFunc(lista, func(c ConfigPunto) bool { return c.Nombre == p.Nombre }) {
 				return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el punto de acceso %s ya existe: usa tramtai acceso editar", p.Nombre))
 			}
@@ -128,7 +129,7 @@ func (s *Servicio) adminGuardarPunto(w http.ResponseWriter, r *http.Request) {
 	}
 	ruta, origen, err := archivoAdmin(r)
 	if err == nil {
-		err = EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+		err = configuracion.EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 			i := slices.IndexFunc(lista, func(c ConfigPunto) bool { return c.Nombre == nombre })
 			if i < 0 {
 				return nil, noEstaEnArchivo(nombre)
@@ -174,7 +175,7 @@ func (s *Servicio) adminActivarPuntos(w http.ResponseWriter, r *http.Request) {
 	}
 	ruta, origen, err := archivoAdmin(r)
 	if err == nil {
-		err = EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
+		err = configuracion.EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 			activo := peticion.Activo
 			if peticion.Grupo != "" {
 				n := 0
@@ -209,7 +210,7 @@ func (s *Servicio) adminActivarPuntos(w http.ResponseWriter, r *http.Request) {
 func (s *Servicio) adminEliminarPunto(w http.ResponseWriter, r *http.Request) {
 	ruta, origen, err := archivoAdmin(r)
 	if err == nil {
-		err = s.EliminarPunto(ruta, origen, r.PathValue("nombre"))
+		err = s.eliminarPunto(ruta, origen, r.PathValue("nombre"))
 	}
 	if err != nil {
 		api.EscribirError(w, r, err)

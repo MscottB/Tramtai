@@ -192,6 +192,9 @@ func ContarEn(ruta string) (int, error) {
 
 // Abrir abre o crea la base en WAL y aplica las migraciones pendientes.
 func Abrir(ruta string) (*Almacen, error) {
+	if err := registrarPlegar(); err != nil {
+		return nil, err
+	}
 	db, err := sql.Open("sqlite", "file:"+rutaURI(ruta)+"?_pragma=auto_vacuum(2)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)")
 	if err != nil {
 		return nil, err

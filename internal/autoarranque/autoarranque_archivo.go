@@ -7,8 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-
-	"tramtai/internal/nucleo"
+	"tramtai/internal/carpetas"
 )
 
 // Disponible indica si este sistema admite el arranque automático.
@@ -20,7 +19,7 @@ const Disponible = true
 // instalada: en la portable también se reconoce, y al activarla se mueve al suyo.
 
 // esPortable es variable para que las pruebas hagan de una copia u otra.
-var esPortable = nucleo.Portable
+var esPortable = carpetas.Portable
 
 // rutas son los archivos que pueden ser de esta copia, el propio primero.
 func rutas() ([]string, error) {

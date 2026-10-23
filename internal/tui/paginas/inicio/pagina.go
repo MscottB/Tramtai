@@ -11,8 +11,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"tramtai/internal/adaptadores"
-	"tramtai/internal/autoarranque"
 	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
@@ -44,29 +42,16 @@ const (
 // origen es el pagina.Origen de los mensajes de Inicio: un tipo propio, para no confundirlos con los de otra página.
 type origen struct{ pagina.Origen }
 
-// adaptador y punto son lo poco que Inicio lee de /api/v1/capacidades y /api/v1/puntos.
-type adaptador struct {
-	Agente         string `json:"agente"`
-	Desconectado   bool   `json:"desconectado"`
-	Problema       string `json:"problema"`
-	ProblemaCodigo string `json:"problema_codigo"`
-}
-
-// listo es agenteListo de la Web UI: un aviso (el AGENTS.md de Codex) no impide usar el agente.
-func (a adaptador) listo() bool {
-	return !a.Desconectado && (a.Problema == "" || a.ProblemaCodigo == adaptadores.ProblemaAviso)
-}
-
 type (
 	msgInstancia struct {
 		origen
-		r   cliente.ResumenInstancia
+		r   contrato.ResumenInstancia
 		err error
 	}
-	msgAgentes struct {
+	msgPasos struct {
 		origen
-		lista []adaptador
-		err   error
+		r   contrato.PrimerosPasos
+		err error
 	}
 	msgPuntos struct {
 		origen
@@ -92,10 +77,6 @@ type (
 		origen
 		horas int
 	}
-	msgAutoarranque struct {
-		origen
-		disponible, activo bool
-	}
 	msgTrabajos struct {
 		origen
 		lista []nucleo.Trabajo
@@ -109,7 +90,7 @@ type (
 	msgRed struct {
 		origen
 		tipo   string
-		ev     evento
+		ev     contrato.EventoTrabajo
 		fallos int
 	}
 	msgTic      struct{ origen } // cada 500 ms: borra las que terminaron y repinta el tiempo
@@ -125,19 +106,18 @@ type Pagina struct {
 	visible bool
 	desp    int // la primera línea que se ve
 
-	inst       cliente.ResumenInstancia
+	inst       contrato.ResumenInstancia
 	cargado    bool
 	sinServ    bool // el servicio no responde
 	err        string
-	agentes    []adaptador
-	hayAgentes bool
+	agentes    []contrato.Adaptador
+	hayAgentes bool // ya llegaron los Primeros pasos con sus agentes
+	losPasos   []contrato.Paso
 	puntos     []contrato.EstadoPunto
 	problemas  []contrato.Espacio
 	recientes  []nucleo.Trabajo // las últimas peticiones del espacio
 	conv       *contrato.EstadoConversor
 	dias       float64
-	autoDisp   bool // este sistema admite el arranque automático
-	autoActivo bool
 
 	// La red en vivo.
 	red       tranvias
@@ -149,22 +129,15 @@ type Pagina struct {
 	canal     <-chan msgRed
 	cancelar  context.CancelFunc
 
-	// Lo que cambian las pruebas: el reloj, las esperas, el flujo y el arranque automático.
-	ahora        func() time.Time
-	esperaPara   func(time.Duration) <-chan time.Time
-	abrir        func(ctx context.Context, instancia string, plazo time.Duration, alEvento func(tipo string, datos []byte) error) error
-	autoarranque func() (disponible, activo bool)
+	// Lo que cambian las pruebas: el reloj, las esperas y el flujo.
+	ahora      func() time.Time
+	esperaPara func(time.Duration) <-chan time.Time
+	abrir      func(ctx context.Context, instancia string, plazo time.Duration, alEvento func(tipo string, datos []byte) error) error
 }
 
 // Nueva crea la página; su título es el del menú de la Web UI.
 func Nueva(lengua string) pagina.Pagina {
-	return &Pagina{lengua: lengua, dias: 7, ahora: time.Now, esperaPara: time.After, autoarranque: func() (bool, bool) {
-		if !autoarranque.Disponible {
-			return false, false
-		}
-		activo, _ := autoarranque.Activo()
-		return true, activo
-	}}
+	return &Pagina{lengua: lengua, dias: 7, ahora: time.Now, esperaPara: time.After}
 }
 
 func (p *Pagina) Titulo() string { return datos.Texto(p.lengua, "menu.inicio") }
@@ -173,7 +146,7 @@ func (p *Pagina) EnCampo() bool  { return false }
 
 func (p *Pagina) Teclas() []pagina.Tecla {
 	teclas := []pagina.Tecla{{Tecla: p.flechas(), Accion: idioma.T("desplaza")}}
-	if sugerirApiPropia(p.inst.AppConClave24h) {
+	if p.inst.SugerirApiPropia {
 		teclas = append(teclas, pagina.Tecla{Tecla: "c", Accion: p.tx("claves.crearApi")})
 	}
 	if len(p.problemas) > 0 {
@@ -213,18 +186,14 @@ func sistema() string {
 	return "Linux"
 }
 
-// sugerirApiPropia es sugerirApiPropia de la Web UI (web/src/claves.ts): con más de 20 peticiones de apps con la clave del
-// espacio en 24 h conviene darles su propia API.
-func sugerirApiPropia(n int) bool { return n > 20 }
-
 // Iniciar empieza de cero: «Cargando…» hasta que llegue lo del espacio, y abre el flujo en vivo.
 func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	p.c, p.lengua, p.estilos = c, c.Idioma, c.Estilos
 	p.gen++
 	p.visible = true
-	p.inst, p.cargado, p.sinServ, p.err = cliente.ResumenInstancia{}, false, false, ""
-	p.agentes, p.hayAgentes, p.puntos, p.problemas, p.conv, p.recientes = nil, false, nil, nil, nil, nil
-	p.autoDisp, p.autoActivo, p.desp = false, false, 0
+	p.inst, p.cargado, p.sinServ, p.err = contrato.ResumenInstancia{}, false, false, ""
+	p.agentes, p.hayAgentes, p.losPasos, p.puntos, p.problemas, p.conv, p.recientes = nil, false, nil, nil, nil, nil, nil
+	p.desp = 0
 	p.red, p.borrados, p.enFoto, p.enVivo, p.fallos, p.ticActivo = tranvias{}, map[string]bool{}, nil, false, 0, false
 	if c.Cli == nil {
 		p.cerrarRed()
@@ -274,17 +243,10 @@ func (p *Pagina) esperarA(d time.Duration, mensaje func(origen) tea.Msg) tea.Cmd
 
 // cargar pide todo lo que enseña la página, cada cosa por su lado: si una falla, las demás se ven.
 func (p *Pagina) cargar() tea.Cmd {
-	c, o, auto := p.c, p.origen(), p.autoarranque
+	c, o := p.c, p.origen()
 	return tea.Batch(
 		func() tea.Msg { r, err := c.Cli.Instancia(c.Ctx, c.Instancia); return msgInstancia{o, r, err} },
-		func() tea.Msg {
-			r, err := c.Cli.Capacidades(c.Ctx, c.Instancia)
-			var lista []adaptador
-			if bruto, e := json.Marshal(r["adaptadores"]); e == nil {
-				_ = json.Unmarshal(bruto, &lista)
-			}
-			return msgAgentes{o, lista, err}
-		},
+		func() tea.Msg { r, err := c.Cli.PrimerosPasos(c.Ctx, c.Instancia); return msgPasos{o, r, err} },
 		func() tea.Msg { r, err := c.Cli.Puntos(c.Ctx, c.Instancia); return msgPuntos{o, r.Puntos, err} },
 		func() tea.Msg { l, err := c.Cli.Espacios(c.Ctx); return msgEspacios{o, l, err} },
 		func() tea.Msg {
@@ -299,7 +261,6 @@ func (p *Pagina) cargar() tea.Cmd {
 			}
 			return msgRetencion{o, r.HorasMetadatos}
 		},
-		func() tea.Msg { disp, activo := auto(); return msgAutoarranque{o, disp, activo} },
 	)
 }
 
@@ -378,7 +339,7 @@ func flujo(ctx context.Context, o origen, instancia string,
 		abrir(ctx, instancia, sinNovedades, func(tipo string, datos []byte) error {
 			switch tipo {
 			case "trabajo":
-				var e evento
+				var e contrato.EventoTrabajo
 				if json.Unmarshal(datos, &e) != nil {
 					return nil
 				}
@@ -462,15 +423,15 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 			return p, p.fallo(m.err, true)
 		}
 		p.sinServ, p.cargado, p.err, p.inst = false, true, "", m.r
-	case msgAgentes:
+	case msgPasos:
 		if !p.vigente(m.origen) {
 			return p, nil
 		}
 		if m.err != nil {
-			p.agentes, p.hayAgentes = nil, true // como la Web UI: sin respuesta, la lista queda vacía
+			p.agentes, p.losPasos, p.hayAgentes = nil, nil, true // como la Web UI: sin respuesta, la lista queda vacía
 			return p, p.fallo(m.err, false)
 		}
-		p.agentes, p.hayAgentes = m.lista, true
+		p.agentes, p.losPasos, p.hayAgentes = m.r.Adaptadores, m.r.Pasos, true
 	case msgPuntos:
 		if p.vigente(m.origen) {
 			if m.err != nil {
@@ -508,13 +469,9 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		if p.vigente(m.origen) {
 			p.dias = float64(int(float64(m.horas)/24*10+0.5)) / 10
 		}
-	case msgAutoarranque:
-		if p.vigente(m.origen) {
-			p.autoDisp, p.autoActivo = m.disponible, m.activo
-		}
 	case msgTrabajos:
 		if p.vigente(m.origen) && m.err == nil {
-			eventos := make([]evento, len(m.lista))
+			eventos := make([]contrato.EventoTrabajo, len(m.lista))
 			for i, j := range m.lista {
 				eventos[i] = eventoDe(j)
 			}
@@ -571,17 +528,17 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 	case "h":
 		return ir(pagina.PaginaHistorial, nil)
 	case teclaCompletados:
-		return ir(pagina.PaginaHistorial, pagina.FiltroEstado{Estado: "ok"})
+		return ir(pagina.PaginaHistorial, pagina.FiltroEstado{Estado: nucleo.FiltroCompletado})
 	case teclaEnCurso:
-		return ir(pagina.PaginaHistorial, pagina.FiltroEstado{Estado: "curso"})
+		return ir(pagina.PaginaHistorial, pagina.FiltroEstado{Estado: nucleo.FiltroEnCurso})
 	case teclaConError:
-		return ir(pagina.PaginaHistorial, pagina.FiltroEstado{Estado: "error"})
+		return ir(pagina.PaginaHistorial, pagina.FiltroEstado{Estado: nucleo.FiltroConError})
 	case "g":
 		return ir(pagina.PaginaAgentes, nil)
 	case "a":
 		return ir(pagina.PaginaAyuda, pagina.ConAyuda{Pagina: pagina.PaginaInicio})
 	case "c":
-		if sugerirApiPropia(p.inst.AppConClave24h) {
+		if p.inst.SugerirApiPropia {
 			return ir(pagina.PaginaConectar, nil)
 		}
 	case "v":

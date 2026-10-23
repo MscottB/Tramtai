@@ -31,29 +31,10 @@ const (
 	esperaRegistro = 200 * time.Millisecond
 )
 
-// Los estados del filtro, en el orden del selector de la Web UI: todas, en proceso, completadas y con error.
-const (
-	estTodos = "todos"
-	estCurso = "curso"
-	estOk    = "ok"
-	estError = "error"
-)
+// estTodos es el filtro de estado sin filtro; los demás son los del servicio (nucleo.Filtros), que filtra él.
+const estTodos = "todos"
 
-var estadosFiltro = []string{estTodos, estCurso, estOk, estError}
-
-// pasaEstado dice qué estados entran en cada filtro (la cuenta de `filas` de Trabajos.vue): en proceso es todo lo que no
-// terminó, completadas solo `completado` y con error `fallido` e `interrumpido`; los cancelados solo salen en todas.
-func pasaEstado(filtro string, e nucleo.Estado) bool {
-	switch filtro {
-	case estCurso:
-		return !e.Terminal()
-	case estOk:
-		return e == nucleo.Completado
-	case estError:
-		return e == nucleo.Fallido || e == nucleo.Interrumpido
-	}
-	return true
-}
+var estadosFiltro = append([]string{estTodos}, nucleo.Filtros...)
 
 // origen es lo que cada mensaje propio lleva para saber si aún vale: el contexto y el espacio con que se pidió y la versión de
 // la página (cada Iniciar, Ocultar o Mostrar la cambia).
@@ -200,7 +181,6 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 		p.lista = comp.NuevaLista(c.Estilos, func(t nucleo.Trabajo) string { return textoDe(t, p.lengua) + " " + t.ID })
 		p.lista.Clave = func(t nucleo.Trabajo) string { return t.ID }
 		p.lista.Fila = p.fila
-		p.lista.Filtrar(func(t nucleo.Trabajo) bool { return pasaEstado(p.estado, t.Estado) })
 		p.visor = comp.NuevoVisor(c.Estilos)
 	}
 	p.gen++
@@ -211,7 +191,6 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	p.estado, p.origenF, p.busqueda, p.buscando, p.entrada, p.enVisor = estTodos, "", "", false, "", false
 	p.selector, p.pend, p.ocupado = nil, nil, false
 	p.cerrarDetalle()
-	p.lista.Buscar("")
 	p.lista.Poner(nil)
 	p.ajustar()
 	if c.Cli == nil {
@@ -269,6 +248,10 @@ func (p *Pagina) armarSondeo() tea.Cmd {
 // filtroServidor son los filtros que atiende el servicio: el origen, el grupo o la API.
 func (p *Pagina) filtroServidor() cliente.FiltroTrabajos {
 	f := cliente.FiltroTrabajos{Limite: p.tam}
+	if p.estado != estTodos {
+		f.Estado = p.estado
+	}
+	f.Texto = p.busqueda // el servicio busca en todo el historial, no solo en lo cargado
 	if len(p.origenF) > 2 {
 		switch nombre := p.origenF[2:]; p.origenF[:2] {
 		case "o:":
@@ -363,7 +346,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		if slices.Contains(estadosFiltro, m.Estado) {
 			p.estado = m.Estado
 		}
-		p.lista.Filtrar(func(t nucleo.Trabajo) bool { return pasaEstado(p.estado, t.Estado) })
+		return p, p.cargar(false)
 	case msgSondeo:
 		if !p.vigente(m.origen) {
 			return p, nil
@@ -422,7 +405,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 	case tea.PasteMsg:
 		if p.buscando {
 			p.entrada += strings.Join(strings.Fields(m.Content), " ")
-			p.aplicarEntrada()
+			return p, p.aplicarEntrada()
 		}
 	case tea.KeyPressMsg:
 		return p, p.tecla(m)
@@ -562,14 +545,6 @@ func (p *Pagina) abrirVivo(id string) tea.Cmd {
 		eventos = p.c.Cli.Eventos
 	}
 	return vivo.Abrir(ctx, p.origen(), p.c.Instancia, id, p.nflujo, eventos, p.c.Cli.Trabajo, p.esperaPara)
-}
-
-// recibirVivo aplica lo que llega del seguimiento en vivo si sigue valiendo: es del detalle y del seguimiento de ahora.
-func (p *Pagina) recibirVivo(m msgVivo) tea.Cmd {
-	if !p.vivoVigente(m) {
-		return nil
-	}
-	return p.alVivo(m)
 }
 
 // vivoVigente dice si un mensaje del seguimiento es del detalle y del seguimiento de ahora.
@@ -730,22 +705,20 @@ func (p *Pagina) objetivo() (nucleo.Trabajo, bool) {
 	return p.lista.Seleccion()
 }
 
-// puedeCorregir: «Corregir» solo existe para una petición que no cumplía el esquema y conservó su respuesta.
-func puedeCorregir(t nucleo.Trabajo) bool {
-	return t.CodigoError == nucleo.CodigoSalidaNoCumpleEsquema && t.Salida != ""
-}
-
-// hayTerminados dice si hay algo que vaciar (el botón de la Web UI se desactiva si no).
+// hayTerminados dice si hay algo que vaciar (el botón de la Web UI se desactiva si no). Con un filtro puesto la lista no
+// enseña todo el historial: se ofrece y el servicio dice cuántas borró.
 func (p *Pagina) hayTerminados() bool {
-	return slices.ContainsFunc(p.trabajos, func(t nucleo.Trabajo) bool { return t.Estado.Terminal() })
+	return p.hayFiltro() || slices.ContainsFunc(p.trabajos, func(t nucleo.Trabajo) bool { return t.Estado.Terminal() })
 }
 
-// aplicarEntrada aplica lo escrito en la búsqueda abierta: la de la lista se ve al escribir; la del detalle, al pulsar Intro.
-func (p *Pagina) aplicarEntrada() {
-	if !p.enVisor {
-		p.busqueda = p.entrada
-		p.lista.Buscar(p.busqueda)
+// aplicarEntrada aplica lo escrito en la búsqueda abierta: la de la lista pide al servicio la lista con ese texto al
+// escribir; la del detalle, al pulsar Intro.
+func (p *Pagina) aplicarEntrada() tea.Cmd {
+	if p.enVisor || p.busqueda == p.entrada {
+		return nil
 	}
+	p.busqueda = p.entrada
+	return p.cargar(false)
 }
 
 // teclaBusqueda atiende las teclas de la búsqueda abierta: Intro la deja puesta, Esc la cancela y vuelve a lo de antes.
@@ -753,9 +726,9 @@ func (p *Pagina) teclaBusqueda(k tea.KeyPressMsg) tea.Cmd {
 	switch k.String() {
 	case "esc":
 		p.buscando = false
-		if !p.enVisor {
+		if !p.enVisor && p.busqueda != p.antes {
 			p.busqueda = p.antes
-			p.lista.Buscar(p.busqueda)
+			return p.cargar(false)
 		}
 	case "enter":
 		p.buscando = false
@@ -765,11 +738,11 @@ func (p *Pagina) teclaBusqueda(k tea.KeyPressMsg) tea.Cmd {
 	case "backspace":
 		r := []rune(p.entrada)
 		p.entrada = string(r[:max(len(r)-1, 0)])
-		p.aplicarEntrada()
+		return p.aplicarEntrada()
 	default:
 		if k.Text != "" {
 			p.entrada += k.Text
-			p.aplicarEntrada()
+			return p.aplicarEntrada()
 		}
 	}
 	return nil
@@ -808,7 +781,7 @@ func (p *Pagina) teclaLista(k tea.KeyPressMsg) tea.Cmd {
 		p.abrirBusqueda()
 	case "e":
 		p.estado = estadosFiltro[(slices.Index(estadosFiltro, p.estado)+1)%len(estadosFiltro)]
-		p.lista.Filtrar(func(t nucleo.Trabajo) bool { return pasaEstado(p.estado, t.Estado) })
+		return p.cargar(false)
 	case "f":
 		s := comp.NuevoSelector(p.estilos, p.tx("historial.origen"), p.opcionesOrigen())
 		p.selector = &s
@@ -884,7 +857,7 @@ func (p *Pagina) actuar(tecla string, t nucleo.Trabajo) tea.Cmd {
 			return p.accion(accionReintentar, t)
 		}
 	case "o":
-		if puedeCorregir(t) {
+		if t.Corregible {
 			return p.accion(accionCorregir, t)
 		}
 		return comp.Aviso(p.tx("error."+string(nucleo.CodigoCorreccionNoDisponible)), comp.Advertencia)
@@ -910,12 +883,10 @@ func (p *Pagina) vaciar() tea.Cmd {
 	return comp.Confirmar(p.tx("historial.vaciarTitulo") + "\n\n" + p.tx("historial.vaciarTexto"))
 }
 
-// quitarFiltros deja el estado, el origen y el texto como al entrar; si cambia el origen, vuelve a pedir la lista.
+// quitarFiltros deja el estado, el origen y el texto como al entrar y, si había alguno, vuelve a pedir la lista.
 func (p *Pagina) quitarFiltros() tea.Cmd {
-	cambia := p.origenF != ""
+	cambia := p.hayFiltro()
 	p.estado, p.origenF, p.busqueda = estTodos, "", ""
-	p.lista.Buscar("")
-	p.lista.Filtrar(func(t nucleo.Trabajo) bool { return pasaEstado(p.estado, t.Estado) })
 	if cambia {
 		return p.cargar(false)
 	}
@@ -958,7 +929,7 @@ func (p *Pagina) teclasDe(t nucleo.Trabajo) []pagina.Tecla {
 		return []pagina.Tecla{{Tecla: "c", Accion: p.tx("comun.cancelar")}}
 	}
 	teclas := []pagina.Tecla{{Tecla: "t", Accion: p.tx("historial.reintentar")}}
-	if puedeCorregir(t) {
+	if t.Corregible {
 		teclas = append(teclas, pagina.Tecla{Tecla: "o", Accion: p.tx("ejecutar.corregir")})
 	}
 	return append(teclas, pagina.Tecla{Tecla: "x", Accion: p.tx("comun.eliminar")})

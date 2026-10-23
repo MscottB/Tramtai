@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -40,7 +41,7 @@ type Servidor struct {
 	Conexiones *adaptadores.Conexiones
 	// Salud dice qué agentes tuvieron su última petición rechazada por autenticación.
 	Salud  *adaptadores.Salud
-	Config *nucleo.Configuracion
+	Config *configuracion.Configuracion
 	// Punto es la política del punto de acceso que atiende este servidor.
 	Punto *Punto
 	// Token es el token de la instancia para Handler; vacío solo si servicio.requerir_token es false.

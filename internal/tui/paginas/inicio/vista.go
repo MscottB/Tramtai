@@ -11,15 +11,13 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	catalogo "tramtai/internal/agentes"
+	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/vivo"
 )
-
-// terminales son los estados de un trabajo que ya acabó (web/src/formato.ts).
-var terminales = []string{"completado", "fallido", "cancelado", "interrumpido"}
 
 // envolver parte un texto (con saltos de línea propios) en líneas de como mucho ancho columnas, con sangria espacios por
 // delante, y las pinta con el estilo.
@@ -33,57 +31,42 @@ func envolver(texto string, ancho, sangria int, estilo lipgloss.Style) []string 
 	return lineas
 }
 
-// total suma los trabajos de esos estados.
-func (p *Pagina) total(estados ...string) int {
-	n := 0
-	for _, e := range estados {
-		n += p.inst.Trabajos[e]
-	}
-	return n
-}
-
-// enProceso son los trabajos que no han terminado, sea cual sea su estado.
-func (p *Pagina) enProceso() int {
-	n := 0
-	for estado, cuantos := range p.inst.Trabajos {
-		if !slices.Contains(terminales, estado) {
-			n += cuantos
-		}
-	}
-	return n
-}
-
 // paso es uno de Primeros pasos: su título y detalle, si está hecho y la página de la terminal a la que lleva.
 type paso struct {
 	titulo, detalle, pagina string
 	hecho                   bool
 }
 
-// pasos son los de Panel.vue; el del arranque automático solo sale en los sistemas que lo admiten.
+// pasos son los Primeros pasos que manda el servicio, ya calculados, con sus textos (los de Panel.vue).
 func (p *Pagina) pasos() []paso {
-	listos := 0
-	for _, a := range p.agentes {
-		if a.listo() {
-			listos++
+	lista := make([]paso, 0, len(p.losPasos))
+	for _, x := range p.losPasos {
+		switch x.Pagina {
+		case pagina.PaginaAgentes:
+			lista = append(lista, paso{p.tx("inicio.paso1"), p.tx("inicio.paso1Detalle", "listos", strconv.Itoa(x.Listos), "total", strconv.Itoa(x.Total)), x.Pagina, x.Hecho})
+		case pagina.PaginaEjecutar:
+			lista = append(lista, paso{p.tx("inicio.paso2"), p.tx("inicio.paso2Detalle"), x.Pagina, x.Hecho})
+		case pagina.PaginaConectar:
+			lista = append(lista, paso{p.tx("inicio.paso3"), p.tx("inicio.paso3Detalle"), x.Pagina, x.Hecho})
+		case pagina.PaginaConfiguracion:
+			lista = append(lista, paso{p.tx("inicio.paso4", "sistema", sistema()), p.a(idioma.T("Las apps siguen funcionando aunque cierres la terminal")), x.Pagina, x.Hecho})
 		}
-	}
-	detalle := p.tx("inicio.comprobando")
-	if p.hayAgentes {
-		detalle = p.tx("inicio.paso1Detalle", "listos", strconv.Itoa(listos), "total", strconv.Itoa(len(p.agentes)))
-	}
-	lista := []paso{
-		{p.tx("inicio.paso1"), detalle, pagina.PaginaAgentes, listos > 0},
-		{p.tx("inicio.paso2"), p.tx("inicio.paso2Detalle"), pagina.PaginaEjecutar, p.total("completado") > 0},
-		{p.tx("inicio.paso3"), p.tx("inicio.paso3Detalle"), pagina.PaginaConectar, len(p.puntos) > 0},
-	}
-	if p.autoDisp {
-		lista = append(lista, paso{p.tx("inicio.paso4", "sistema", sistema()), p.a(idioma.T("Las apps siguen funcionando aunque cierres la terminal")), pagina.PaginaConfiguracion, p.autoActivo})
 	}
 	return lista
 }
 
-// origenes cuenta las estaciones de la red como MapaRed.vue: la clave del espacio, una por grupo de APIs y las APIs sin
-// grupo, como mucho 3 de estas y, si hay más, una más que las junta.
+// listos son los agentes que el servicio da por listos.
+func (p *Pagina) listos() int {
+	n := 0
+	for _, a := range p.agentes {
+		if a.Estado == contrato.AgenteListo {
+			n++
+		}
+	}
+	return n
+}
+
+// origenes son los orígenes de las peticiones: la clave del espacio, cada grupo de APIs y cada API sin grupo.
 func (p *Pagina) origenes() int {
 	grupos, sueltas := map[string]bool{}, 0
 	for _, x := range p.puntos {
@@ -93,8 +76,7 @@ func (p *Pagina) origenes() int {
 			sueltas++
 		}
 	}
-	estaciones := len(grupos) + sueltas
-	return 1 + min(estaciones, 3) + min(estaciones/4, 1)
+	return 1 + len(grupos) + sueltas
 }
 
 // periodo es «los últimos N días» o «el último día», lo que dura el historial.
@@ -187,12 +169,7 @@ func (p *Pagina) lineas() []string {
 	}
 	l = append(l, e.Recortar(e.Tenue.Render(p.tx("inicio.direccion"))+" "+e.Acento.Render(p.inst.Base), ancho))
 	if p.hayAgentes {
-		listos := 0
-		for _, a := range p.agentes {
-			if a.listo() {
-				listos++
-			}
-		}
+		listos := p.listos()
 		red := p.tx("mapa.descripcion", "apis", strconv.Itoa(p.origenes()), "listos", strconv.Itoa(listos), "total", strconv.Itoa(len(p.agentes)))
 		if p.origenes() == 1 { // la Web UI solo tiene el plural: «1 orígenes»
 			red = p.a(idioma.Tf("Red de Tramtai: 1 origen y %d de %d agentes en servicio.", listos, len(p.agentes)))
@@ -203,7 +180,7 @@ func (p *Pagina) lineas() []string {
 	}
 
 	// Avisos
-	if sugerirApiPropia(p.inst.AppConClave24h) {
+	if p.inst.SugerirApiPropia {
 		l = append(l, "")
 		l = append(l, p.aviso(p.tx("claves.sugerencia", "n", strconv.Itoa(p.inst.AppConClave24h)), "c", p.tx("claves.crearApi"))...)
 	}
@@ -246,9 +223,9 @@ func (p *Pagina) lineas() []string {
 
 	// Contadores
 	l = append(l, "", e.Grupo.Render(p.tx("inicio.tablero"))+e.Tenue.Render(" "+e.Iconos.Separador+" "+p.periodo()),
-		p.contador(e.Iconos.Ok, e.Exito, teclaCompletados, "completados", p.total("completado")),
-		p.contador(e.Iconos.Activo, e.Acento, teclaEnCurso, "enCurso", p.enProceso()),
-		p.contador(e.Iconos.Fallo, e.Error, teclaConError, "conError", p.total("fallido", "interrumpido")))
+		p.contador(e.Iconos.Ok, e.Exito, teclaCompletados, "completados", p.inst.Contadores[nucleo.FiltroCompletado]),
+		p.contador(e.Iconos.Activo, e.Acento, teclaEnCurso, "enCurso", p.inst.Contadores[nucleo.FiltroEnCurso]),
+		p.contador(e.Iconos.Fallo, e.Error, teclaConError, "conError", p.inst.Contadores[nucleo.FiltroConError]))
 
 	// Primeros pasos
 	pasos := p.pasos()
@@ -259,10 +236,13 @@ func (p *Pagina) lineas() []string {
 		}
 	}
 	l = append(l, "")
-	if hechos == len(pasos) {
+	switch {
+	case !p.hayAgentes: // los pasos llegan con la comprobación de los agentes
+		l = append(l, e.Grupo.Render(p.tx("inicio.primerosPasos")), e.Tenue.Render(e.Recortar(p.tx("inicio.comprobando"), ancho)))
+	case hechos == len(pasos):
 		l = append(l, e.Grupo.Render(p.tx("inicio.primerosPasos")), e.Exito.Render(e.Iconos.Ok+" "+p.tx("inicio.todoListo")))
 		l = append(l, envolver(p.tx("inicio.todoListoTexto"), ancho, 2, e.Tenue)...)
-	} else {
+	default:
 		l = append(l, e.Grupo.Render(p.tx("inicio.primerosPasos"))+e.Tenue.Render(" "+e.Iconos.Separador+" "+
 			p.tx("inicio.guiaProgreso", "hechos", strconv.Itoa(hechos), "total", strconv.Itoa(len(pasos)))))
 		for _, x := range pasos {

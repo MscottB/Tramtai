@@ -71,13 +71,13 @@
 // Tramtai, que reparte cada petición por la línea de un agente. Las líneas sin servicio van punteadas.
 import { computed } from 'vue'
 import type { Adaptador, EstadoPunto } from '../api/tipos'
-import { grupoInicial } from '../estado'
+import type { Destino } from '../navegacion'
 import { nombreAgente, colorLinea, agenteListo } from '../agentes'
 import { t } from '../i18n'
 import { claveEtapa, type Tranvia } from '../vivo'
 
 const props = defineProps<{ adaptadores: Adaptador[]; apis: EstadoPunto[]; base: string; tranvias?: Tranvia[]; resto?: number }>()
-const emit = defineEmits<{ ir: [pagina: string]; seguir: [id: string] }>()
+const emit = defineEmits<{ ir: [destino: Destino]; seguir: [id: string] }>()
 
 const ANCHO = 980
 const X_ORIGEN = 230
@@ -115,8 +115,7 @@ const origenes = computed(() => {
 })
 // abrir lleva a Mis APIs; desde un grupo, filtrada por ese grupo.
 function abrir(o: Origen) {
-  if (o.grupo) grupoInicial.value = o.grupo
-  emit('ir', 'conectar')
+  emit('ir', o.grupo ? { pagina: 'conectar', grupo: o.grupo } : 'conectar')
 }
 
 const lineas = computed(() => props.adaptadores.map((a, i) => ({
@@ -124,7 +123,7 @@ const lineas = computed(() => props.adaptadores.map((a, i) => ({
   i,
   nombre: nombreAgente(a.agente),
   listo: agenteListo(a),
-  estado: a.desconectado ? t('mapa.desconectado') : agenteListo(a) ? t('mapa.enServicio') : t('mapa.sinServicio'),
+  estado: a.estado === 'desconectado' ? t('mapa.desconectado') : agenteListo(a) ? t('mapa.enServicio') : t('mapa.sinServicio'),
   color: colorLinea(a.agente),
   y: y(i, props.adaptadores.length),
 })))

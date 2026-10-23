@@ -1,4 +1,4 @@
-package nucleo
+package carpetas
 
 import (
 	"slices"

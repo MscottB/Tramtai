@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"tramtai/internal/adaptadores"
-	"tramtai/internal/nucleo"
+	"tramtai/internal/configuracion"
 )
 
 func TestSesionNuevaVuelveAlUltimoEspacio(t *testing.T) {
@@ -47,7 +47,7 @@ func TestHeredarQuitaDeLocal(t *testing.T) {
 		t.Fatalf("heredar: %d", c)
 	}
 	datos, _ := os.ReadFile(filepath.Join(proyecto, ".tramtai", "local.yaml"))
-	if strings.Contains(string(datos), "otro") || pry.Config.Origen("predeterminados.agente") == nucleo.OrigenLocal {
+	if strings.Contains(string(datos), "otro") || pry.Config.Origen("predeterminados.agente") == configuracion.OrigenLocal {
 		t.Fatalf("la clave debía salir de local.yaml:\n%s", datos)
 	}
 	if c := heredar(pry.ID, "comandos_agentes.claude"); c != 400 {

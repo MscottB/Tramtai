@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"tramtai/internal/agentes"
+	"tramtai/internal/carpetas"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
@@ -49,7 +52,7 @@ func PrepararProyecto(dir string) error {
 			return err
 		}
 	}
-	_, err := nucleo.CargarCapa(ruta, nucleo.OrigenProyecto)
+	_, err := configuracion.CargarCapa(ruta, configuracion.OrigenProyecto)
 	return err
 }
 
@@ -112,7 +115,7 @@ func (e *ErrorDentroDeProyecto) Unwrap() error {
 // (ErrorConfianza) salvo que o.Confiar lo responda. Si está dentro de otro proyecto, pregunta (ErrorDentroDeProyecto)
 // salvo o.CrearAqui.
 func (s *Servicio) AbrirProyecto(raiz string, o AbrirOpciones) (*Instancia, error) {
-	raiz = nucleo.ExpandirCasa(strings.TrimSpace(raiz))
+	raiz = carpetas.ExpandirCasa(strings.TrimSpace(raiz))
 	if !filepath.IsAbs(raiz) {
 		return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("indica la ruta completa de la carpeta del proyecto"))
 	}
@@ -124,20 +127,20 @@ func (s *Servicio) AbrirProyecto(raiz string, o AbrirOpciones) (*Instancia, erro
 	if real, err := filepath.EvalSymlinks(raiz); err == nil {
 		raiz = real
 	}
-	existente, esProyecto := nucleo.BuscarProyecto(raiz)
-	if esProyecto && !nucleo.MismaRuta(existente, raiz) && !o.CrearAqui {
+	existente, esProyecto := configuracion.BuscarProyecto(raiz)
+	if esProyecto && !carpetas.MismaRuta(existente, raiz) && !o.CrearAqui {
 		return nil, &ErrorDentroDeProyecto{Proyecto: existente}
 	}
-	nuevo := !esProyecto || !nucleo.MismaRuta(existente, raiz)
+	nuevo := !esProyecto || !carpetas.MismaRuta(existente, raiz)
 	if !nuevo {
 		raiz = existente
 	}
 	_, err = os.Stat(filepath.Join(raiz, ".tramtai"))
 	creada := os.IsNotExist(err)
 	if !creada {
-		if g, err := nucleo.CargarConfiguracion(""); err == nil && !g.ProyectoConfiable(raiz) {
+		if g, err := configuracion.CargarConfiguracion("", agentes.Internos()); err == nil && !g.ProyectoConfiable(raiz) {
 			if o.Confiar == nil {
-				claves, _ := nucleo.ClavesAdministradas(filepath.Join(raiz, ".tramtai", "local.yaml"))
+				claves, _ := configuracion.ClavesAdministradas(filepath.Join(raiz, ".tramtai", "local.yaml"))
 				return nil, &ErrorConfianza{Raiz: raiz, Claves: claves, Movido: s.rutaMovida(raiz)}
 			}
 			if *o.Confiar {
@@ -165,36 +168,36 @@ func (s *Servicio) AbrirProyecto(raiz string, o AbrirOpciones) (*Instancia, erro
 func (s *Servicio) FijarConfianza(raiz string, confiar bool) error {
 	s.muConfianza.Lock()
 	defer s.muConfianza.Unlock()
-	ruta, err := nucleo.RutaGlobal()
+	ruta, err := configuracion.RutaGlobal()
 	if err != nil {
 		return err
 	}
-	g, err := nucleo.CargarConfiguracion("")
+	g, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	if err != nil {
 		return err
 	}
 	lista := []string{}
 	for _, v := range g.Lista("proyectos_confiables") {
-		if texto, ok := v.(string); ok && !nucleo.MismaRuta(texto, raiz) {
+		if texto, ok := v.(string); ok && !carpetas.MismaRuta(texto, raiz) {
 			lista = append(lista, texto)
 		}
 	}
 	if confiar {
 		lista = append(lista, raiz)
 	}
-	if err := FijarValor(ruta, nucleo.OrigenGlobal, "proyectos_confiables", lista); err != nil {
+	if err := configuracion.FijarValor(ruta, configuracion.OrigenGlobal, "proyectos_confiables", lista); err != nil {
 		return err
 	}
 	var inst *Instancia
 	s.mu.RLock()
 	for _, i := range s.instancias {
-		if i.Ambito == "proyecto" && nucleo.MismaRuta(i.Raiz, raiz) {
+		if i.Ambito == "proyecto" && carpetas.MismaRuta(i.Raiz, raiz) {
 			inst = i
 		}
 	}
 	s.mu.RUnlock()
 	if inst != nil {
-		c, err := nucleo.CargarConfiguracion(inst.Raiz)
+		c, err := configuracion.CargarConfiguracion(inst.Raiz, agentes.Internos())
 		if err != nil {
 			return err
 		}
@@ -206,7 +209,7 @@ func (s *Servicio) FijarConfianza(raiz string, confiar bool) error {
 }
 
 // anotarIgnoradas deja en el registro el aviso de las claves de seguridad que no se aplicaron (o lo quita).
-func (s *Servicio) anotarIgnoradas(id string, c *nucleo.Configuracion) {
+func (s *Servicio) anotarIgnoradas(id string, c *configuracion.Configuracion) {
 	texto := ""
 	if ignoradas := c.Ignoradas(); len(ignoradas) > 0 {
 		texto = idioma.Tf("local.yaml tiene claves que solo valen en carpetas confiables y no se aplicaron: %s", strings.Join(ignoradas, ", "))

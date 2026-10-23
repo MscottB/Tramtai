@@ -19,7 +19,7 @@
     <q-banner v-if="error" rounded class="error-caja" role="alert">{{ error }}
       <template #action><q-btn flat no-caps icon="o_refresh" :label="t('comun.reintentar')" @click="cargar" /></template>
     </q-banner>
-    <q-banner v-if="sugerirApiPropia(instancia?.app_con_clave_24h)" rounded class="aviso">
+    <q-banner v-if="instancia?.sugerir_api_propia" rounded class="aviso">
       {{ t('claves.sugerencia', { n: instancia?.app_con_clave_24h ?? 0 }) }}
       <template #action><q-btn flat no-caps color="primary" :label="t('claves.crearApi')" @click="$emit('ir', 'conectar')" /></template>
     </q-banner>
@@ -51,10 +51,11 @@
       <div class="seccion row items-center no-wrap">
         <div class="col">
           <h2 class="titulo-seccion q-ma-none">{{ t('inicio.primerosPasos') }}</h2>
-          <div v-if="guiaVisible" class="text-caption texto-suave q-mt-xs">{{ t('inicio.guiaProgreso', { hechos: pasos.filter((p) => p.hecho).length, total: pasos.length }) }}</div>
+          <div v-if="guiaVisible && pasosServicio" class="text-caption texto-suave q-mt-xs">{{ t('inicio.guiaProgreso', { hechos: pasos.filter((p) => p.hecho).length, total: pasos.length }) }}</div>
         </div>
         <q-btn v-if="guiaVisible" flat dense no-caps icon="o_visibility_off" :label="t('inicio.ocultarGuia')" class="texto-suave" @click="ocultar" />
       </div>
+      <div v-if="guiaVisible && !pasosServicio" class="text-caption texto-suave q-px-md q-pt-sm">{{ t('inicio.comprobando') }}</div>
       <ol v-if="guiaVisible" class="ruta ruta--pasos q-ma-none q-px-md q-pt-sm q-pb-lg">
         <li v-for="p in pasos" :key="p.pagina + p.titulo" class="ruta__parada" :class="{ 'ruta__parada--pasada': p.hecho }">
           <button type="button" class="paso-estacion" @click="$emit('ir', p.pagina)">
@@ -130,14 +131,15 @@ import { aplicar, eventoDe, visibles, type Tranvia } from '../vivo'
 import AvisoConversor from '../componentes/AvisoConversor.vue'
 import { cargarConversor, conversor } from '../conversor'
 import { api, avisar, cargarDiasHistorial, copiar, mensajeError } from '../api/cliente'
-import type { Adaptador, EspacioUI, EstadoInstancia, EstadoPunto, Trabajo } from '../api/tipos'
-import { periodoHistorial, filtroHistorial, guiaOculta, ocultarGuia, trabajoAbrir, sesion, sistema } from '../estado'
-import { agenteListo, asegurarFichas, ordenarAgentes } from '../agentes'
-import { estadoInfo, haceCuanto, terminales, textoDe } from '../formato'
-import { sugerirApiPropia } from '../claves'
+import type { Adaptador, EspacioUI, ResumenInstancia, EstadoPunto, Paso, Trabajo } from '../api/tipos'
+import { periodoHistorial, guiaOculta, ocultarGuia, sesion, sistema } from '../estado'
+import type { Destino } from '../navegacion'
+import { asegurarFichas, ordenarAgentes } from '../agentes'
+import { estadoInfo, haceCuanto, textoDe } from '../formato'
+import { conTexto } from '../pasos'
 import { t } from '../i18n'
 
-const emit = defineEmits<{ ir: [pagina: string]; recorrido: [] }>()
+const emit = defineEmits<{ ir: [destino: Destino]; recorrido: [] }>()
 
 function ocultar() {
   ocultarGuia(true)
@@ -145,15 +147,13 @@ function ocultar() {
 }
 
 function verPeticion(id: string) {
-  trabajoAbrir.value = id
-  emit('ir', 'historial')
+  emit('ir', { pagina: 'historial', abrir: id })
 }
 
 function verHistorial(filtro: string) {
-  filtroHistorial.value = filtro
-  emit('ir', 'historial')
+  emit('ir', { pagina: 'historial', filtro })
 }
-const instancia = ref<EstadoInstancia>()
+const instancia = ref<ResumenInstancia>()
 const recientes = ref<Trabajo[]>()
 const adaptadores = ref<Adaptador[]>()
 const puntos = ref<EstadoPunto[]>([])
@@ -185,28 +185,18 @@ function traerFinal(previo: Tranvia) {
 }
 const error = ref('')
 
-const total = (estados: string[]) => estados.reduce((n, e) => n + (instancia.value?.trabajos[e] ?? 0), 0)
+// cuenta son los trabajos de un filtro del Historial; los agrupa el servicio.
+const cuenta = (filtro: string) => instancia.value?.contadores[filtro] ?? 0
 const contadores = computed(() => [
-  { titulo: t('inicio.completados'), detalle: t('inicio.completadosDetalle'), filtro: 'ok', valor: total(['completado']), tipo: 'ok' },
-  { titulo: t('inicio.enCurso'), detalle: t('inicio.enCursoDetalle'), filtro: 'curso',
-    valor: total(Object.keys(instancia.value?.trabajos ?? {}).filter((e) => !terminales.includes(e))), tipo: 'curso' },
-  { titulo: t('inicio.conError'), detalle: t('inicio.conErrorDetalle'), filtro: 'error', valor: total(['fallido', 'interrumpido']), tipo: 'error' },
+  { titulo: t('inicio.completados'), detalle: t('inicio.completadosDetalle'), filtro: 'completado', valor: cuenta('completado'), tipo: 'ok' },
+  { titulo: t('inicio.enCurso'), detalle: t('inicio.enCursoDetalle'), filtro: 'en_curso', valor: cuenta('en_curso'), tipo: 'curso' },
+  { titulo: t('inicio.conError'), detalle: t('inicio.conErrorDetalle'), filtro: 'con_error', valor: cuenta('con_error'), tipo: 'error' },
 ])
 
-const pasos = computed(() => {
-  const listos = adaptadores.value?.filter(agenteListo).length ?? 0
-  const lista = [
-    { titulo: t('inicio.paso1'), detalle: adaptadores.value ? t('inicio.paso1Detalle', { listos, total: adaptadores.value.length }) : t('inicio.comprobando'),
-      hecho: listos > 0, pagina: 'agentes' },
-    { titulo: t('inicio.paso2'), detalle: t('inicio.paso2Detalle'), hecho: total(['completado']) > 0, pagina: 'ejecutar' },
-    { titulo: t('inicio.paso3'), detalle: t('inicio.paso3Detalle'), hecho: puntos.value.length > 0, pagina: 'conectar' },
-  ]
-  if (sesion.value?.autoarranque !== undefined) {
-    lista.push({ titulo: t('inicio.paso4', { sistema }), detalle: t('inicio.paso4Detalle'), hecho: sesion.value.autoarranque, pagina: 'configuracion' })
-  }
-  return lista
-})
-const guiaVisible = computed(() => !guiaOculta.value && !pasos.value.every((p) => p.hecho))
+// pasosServicio son los Primeros pasos que calcula el servicio (llegan con la comprobación de los agentes).
+const pasosServicio = ref<Paso[]>()
+const pasos = computed(() => conTexto(pasosServicio.value ?? [], sistema))
+const guiaVisible = computed(() => !guiaOculta.value && (!pasosServicio.value || !pasos.value.every((p) => p.hecho)))
 
 // consultando evita encadenar consultas si el servicio tarda más que el intervalo.
 let consultando = false
@@ -233,11 +223,22 @@ onMounted(() => {
   cargarDiasHistorial()
   cargar()
   asegurarFichas()
-  api.capacidades().then((c) => (adaptadores.value = c.adaptadores)).catch(() => (adaptadores.value = []))
+  comprobar()
   api.puntos().then((p) => (puntos.value = p)).catch(() => {})
   intervalo = window.setInterval(() => !document.hidden && cargar(), 5000)
-  comprobacion = window.setInterval(() => !document.hidden && api.capacidades().then((c) => (adaptadores.value = c.adaptadores)).catch(() => {}), 5 * 60_000)
+  comprobacion = window.setInterval(() => !document.hidden && comprobar(), 5 * 60_000)
 })
+// comprobar pide los Primeros pasos y los agentes con que se calcularon (ejecuta cada CLI: tarda). Sin respuesta, los
+// agentes quedan vacíos y la guía sin pasos.
+function comprobar() {
+  api.pasos().then((r) => {
+    adaptadores.value = r.adaptadores
+    pasosServicio.value = r.pasos
+  }).catch(() => {
+    adaptadores.value ??= []
+    pasosServicio.value ??= []
+  })
+}
 let comprobacion = 0
 onUnmounted(() => {
   clearInterval(intervalo)

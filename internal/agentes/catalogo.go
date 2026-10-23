@@ -12,7 +12,7 @@ import (
 	"tramtai/internal/agentes/codex"
 	"tramtai/internal/agentes/copilot"
 	"tramtai/internal/agentes/gemini"
-	"tramtai/internal/nucleo"
+	"tramtai/internal/configuracion"
 )
 
 // fichas son los agentes que conoce Tramtai, en el orden de su ficha.
@@ -23,9 +23,12 @@ func ordenar(lista ...adaptadores.Ficha) []adaptadores.Ficha {
 	return lista
 }
 
-// Los valores predeterminados de cada agente (su comando, su concurrencia y la autenticación de los CLI) salen de su
-// ficha: nucleo no puede importar este paquete.
-func init() { nucleo.AgregarInternos(internos()) }
+// Internos es la capa de los valores predeterminados de cada agente (su comando, su concurrencia y la autenticación de
+// los CLI), sacados de su ficha: configuracion no puede importar este paquete, así que quien carga la configuración
+// la pasa a configuracion.CargarConfiguracion.
+func Internos() configuracion.Capa {
+	return configuracion.Capa{Origen: configuracion.OrigenInterno, Fuente: "interno", Valores: internos()}
+}
 
 func internos() map[string]any {
 	valores := map[string]any{}
@@ -53,7 +56,7 @@ func Buscar(nombre string) (adaptadores.Ficha, bool) {
 
 // Registro crea los adaptadores según la configuración efectiva y devuelve el límite de ejecuciones simultáneas de
 // cada uno (concurrencia_servicio.adaptadores).
-func Registro(c *nucleo.Configuracion) (map[string]adaptadores.Adaptador, map[string]int) {
+func Registro(c *configuracion.Configuracion) (map[string]adaptadores.Adaptador, map[string]int) {
 	registro, limites := map[string]adaptadores.Adaptador{}, map[string]int{}
 	for _, f := range fichas {
 		registro[f.Nombre] = f.Crear(c)
@@ -103,7 +106,7 @@ func AdmiteSuscripcion(nombre string) bool {
 
 // PermitidoEnApps indica si el agente se puede usar desde apps y APIs: su canario pasó o
 // adaptadores.<nombre>.permitir_apps lo habilita. Un agente fuera del catálogo (los simulados de las pruebas) sí.
-func PermitidoEnApps(c *nucleo.Configuracion, nombre string) bool {
+func PermitidoEnApps(c *configuracion.Configuracion, nombre string) bool {
 	f, ok := Buscar(nombre)
 	return !ok || f.PermitidoEnApps || (c != nil && c.Booleano("adaptadores."+nombre+".permitir_apps"))
 }

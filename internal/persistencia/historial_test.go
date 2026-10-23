@@ -3,6 +3,7 @@ package persistencia
 import (
 	"database/sql"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -39,6 +40,51 @@ func TestListarConFiltro(t *testing.T) {
 	}
 	if l, _ := a.Listar(ctx, "global", FiltroTrabajos{Antes: creados[2]}, 10); len(l) != 2 || l[0].Origen != "cli" || l[1].Origen != "probar" {
 		t.Fatalf("antes del tercero, los dos primeros: %+v", l)
+	}
+}
+
+// El Historial filtra por estado y busca en el texto de la petición en la base, no solo en lo cargado.
+func TestListarPorEstadoYTexto(t *testing.T) {
+	a := abrir(t)
+	hecho := aceptar(t, a, trabajo("global", "Resume la factura de marzo"), "").ID
+	avanzar(t, a, hecho, nucleo.EsperandoAgente, nucleo.Ejecutando, nucleo.ValidandoSalida, nucleo.Completado)
+	fallo := aceptar(t, a, trabajo("global", "Traduce 100% del contrato_final"), "").ID
+	avanzar(t, a, fallo, nucleo.Fallido)
+	enCola := aceptar(t, a, trabajo("global", "otra FACTURA"), "").ID
+	reunion := aceptar(t, a, trabajo("global", "Notas de la Reunión"), "").ID
+	avanzar(t, a, reunion, nucleo.CancelacionSolicitada, nucleo.Cancelado)
+	ids := func(f FiltroTrabajos) []string {
+		l, err := a.Listar(ctx, "global", f, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var salida []string
+		for _, tr := range l {
+			salida = append(salida, tr.ID)
+		}
+		return salida
+	}
+	casos := []struct {
+		nombre string
+		f      FiltroTrabajos
+		quiere []string
+	}{
+		{"completadas", FiltroTrabajos{Estados: nucleo.EstadosDe(nucleo.FiltroCompletado)}, []string{hecho}},
+		{"en curso", FiltroTrabajos{Estados: nucleo.EstadosDe(nucleo.FiltroEnCurso)}, []string{enCola}},
+		{"el texto, sin distinguir mayúsculas", FiltroTrabajos{Texto: "factura"}, []string{enCola, hecho}},
+		{"texto y estado", FiltroTrabajos{Texto: "factura", Estados: nucleo.EstadosDe(nucleo.FiltroEnCurso)}, []string{enCola}},
+		{"% y _ son letras", FiltroTrabajos{Texto: "100% del contrato_"}, []string{fallo}},
+		{"% solo no es comodín", FiltroTrabajos{Texto: "%"}, []string{fallo}},
+		{"por el id", FiltroTrabajos{Texto: hecho[:12]}, []string{hecho}},
+		{"sin coincidencias", FiltroTrabajos{Texto: "nada"}, nil},
+		{"sin tildes ni mayúsculas, como la búsqueda de la terminal", FiltroTrabajos{Texto: "TRADUCE 100"}, []string{fallo}},
+		{"la tilde no cuenta", FiltroTrabajos{Texto: "reunión"}, []string{reunion}},
+		{"tampoco al revés", FiltroTrabajos{Texto: "REUNION"}, []string{reunion}},
+	}
+	for _, c := range casos {
+		if got := ids(c.f); !slices.Equal(got, c.quiere) {
+			t.Errorf("%s: %v, quería %v", c.nombre, got, c.quiere)
+		}
 	}
 }
 

@@ -15,7 +15,7 @@ func TestDependencias(t *testing.T) {
 		t.Skip("sin go en el PATH")
 	}
 	prohibidos := []string{"tramtai/internal/servicio", "tramtai/internal/planificador", "tramtai/internal/persistencia",
-		"tramtai/internal/api", "modernc.org/sqlite"}
+		"tramtai/internal/api", "tramtai/internal/actualizacion", "modernc.org/sqlite"}
 	for _, c := range []struct{ dir, paquete string }{
 		{filepath.Join("..", ".."), "./internal/cliente"},
 		{filepath.Join("..", "..", "escritorio"), "."},

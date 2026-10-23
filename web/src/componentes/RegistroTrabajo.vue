@@ -123,16 +123,12 @@ const lineas = computed(() => {
 })
 
 // Etapas como las estaciones de la ruta, resumidas bajo el título; cada tramo cuenta desde su estado hasta el siguiente.
-const etapaDe: Record<string, 'cola' | 'preparacion' | 'ejecucion' | 'validacion'> = {
-  en_cola: 'cola', preparando_entrada: 'preparacion', esperando_agente: 'preparacion', ejecutando: 'ejecucion',
-  cancelacion_solicitada: 'ejecucion', validando_salida: 'validacion',
-}
 const etapas = computed(() => {
   const estados = eventos.value.filter((e) => e.tipo === 'estado')
   const suma: Partial<Record<string, number>> = {}
   estados.slice(0, -1).forEach((e, i) => {
-    const etapa = etapaDe[e.datos]
-    if (etapa) suma[etapa] = (suma[etapa] ?? 0) + ms(estados[i + 1].creado_en) - ms(e.creado_en)
+    const etapa = e.etapa // la manda el servicio; la llegada no dura
+    if (etapa && etapa !== 'llegada') suma[etapa] = (suma[etapa] ?? 0) + ms(estados[i + 1].creado_en) - ms(e.creado_en)
   })
   return (['cola', 'preparacion', 'ejecucion', 'validacion'] as const).filter((k) => suma[k] !== undefined)
     .map((k) => ({ nombre: t(`ruta.${k}`), duracion: tiempo(suma[k]!) }))

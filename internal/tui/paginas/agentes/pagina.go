@@ -5,7 +5,6 @@ package agentes
 
 import (
 	"context"
-	"encoding/json"
 	"slices"
 	"strings"
 
@@ -13,6 +12,7 @@ import (
 
 	catalogo "tramtai/internal/agentes"
 	"tramtai/internal/cliente"
+	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
@@ -20,30 +20,13 @@ import (
 	"tramtai/internal/tui/pagina"
 )
 
-// adaptador es un agente tal como lo cuenta /api/v1/capacidades.
-type adaptador struct {
-	Agente         string `json:"agente"`
-	Desconectado   bool   `json:"desconectado"`
-	Version        string `json:"version_detectada"`
-	Autenticacion  string `json:"autenticacion"`
-	Terminos       string `json:"terminos"`
-	Cuenta         string `json:"cuenta"`
-	Problema       string `json:"problema"`
-	ProblemaCodigo string `json:"problema_codigo"`
-	Capacidades    struct {
-		Streaming               string `json:"streaming"`
-		SalidaEstructurada      bool   `json:"salida_estructurada"`
-		ModeloEfectivoInformado bool   `json:"modelo_efectivo_informado"`
-	} `json:"capacidades"`
-}
-
 type (
 	// Mensajes propios: cada uno lleva el Ctx y la instancia con que se pidió, y se descarta si ya no valen.
 	msgAgentes struct {
 		ctx       context.Context
 		instancia string
 		n         int // qué comprobación es: solo vale la última
-		lista     []adaptador
+		lista     []contrato.Adaptador
 		err       error
 	}
 	msgModelos struct {
@@ -74,9 +57,9 @@ type Pagina struct {
 	c        pagina.Contexto
 	lengua   string
 	estilos  *pagina.Estilos
-	lista    comp.Lista[adaptador]
+	lista    comp.Lista[contrato.Adaptador]
 	visor    comp.Visor
-	agentes  []adaptador
+	agentes  []contrato.Adaptador
 	n        int  // la última comprobación pedida
 	cargando bool // hay una comprobación en marcha
 	cargado  bool // ya hay una lista que enseñar
@@ -113,8 +96,8 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	p.c, p.lengua = c, c.Idioma
 	if p.estilos != c.Estilos { // los mismos toda la sesión: la lista y el visor se crean una vez
 		p.estilos = c.Estilos
-		p.lista = comp.NuevaLista(c.Estilos, func(a adaptador) string { return nombre(a.Agente) + " " + a.Agente })
-		p.lista.Clave = func(a adaptador) string { return a.Agente }
+		p.lista = comp.NuevaLista(c.Estilos, func(a contrato.Adaptador) string { return nombre(a.Agente) + " " + a.Agente })
+		p.lista.Clave = func(a contrato.Adaptador) string { return a.Agente }
 		p.lista.Fila = p.fila
 		p.visor = comp.NuevoVisor(c.Estilos)
 	}
@@ -136,17 +119,8 @@ func (p *Pagina) comprobar() tea.Cmd {
 	p.cargando, p.err = true, ""
 	return func() tea.Msg {
 		r, err := c.Cli.Capacidades(c.Ctx, c.Instancia)
-		return msgAgentes{ctx: c.Ctx, instancia: c.Instancia, n: n, lista: leer(r), err: err}
+		return msgAgentes{ctx: c.Ctx, instancia: c.Instancia, n: n, lista: r.Adaptadores, err: err}
 	}
-}
-
-// leer saca los adaptadores de la respuesta, que el cliente entrega sin tipo.
-func leer(r map[string]any) []adaptador {
-	var lista []adaptador
-	if bruto, err := json.Marshal(r["adaptadores"]); err == nil {
-		_ = json.Unmarshal(bruto, &lista)
-	}
-	return lista
 }
 
 func (p *Pagina) vigente(ctx context.Context, instancia string) bool {
@@ -267,22 +241,22 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 }
 
 // elegido es el agente del detalle abierto o, en la lista, el del cursor; con «Cargando…» no hay ninguno.
-func (p *Pagina) elegido() (adaptador, bool) {
+func (p *Pagina) elegido() (contrato.Adaptador, bool) {
 	if p.detalle != "" {
-		i := slices.IndexFunc(p.agentes, func(a adaptador) bool { return a.Agente == p.detalle })
+		i := slices.IndexFunc(p.agentes, func(a contrato.Adaptador) bool { return a.Agente == p.detalle })
 		if i < 0 {
-			return adaptador{}, false
+			return contrato.Adaptador{}, false
 		}
 		return p.agentes[i], true
 	}
 	if !p.cargado {
-		return adaptador{}, false
+		return contrato.Adaptador{}, false
 	}
 	return p.lista.Seleccion()
 }
 
 // abrir enseña los detalles del agente y pide su catálogo de modelos si aún no lo tiene.
-func (p *Pagina) abrir(a adaptador) tea.Cmd {
+func (p *Pagina) abrir(a contrato.Adaptador) tea.Cmd {
 	p.detalle = a.Agente
 	p.visor.Tamano(p.c.Ancho, max(p.c.Alto-2, 1))
 	p.refrescar()
@@ -312,11 +286,11 @@ func (p *Pagina) refrescar() {
 }
 
 // alternarConexion conecta un agente desconectado y, si está conectado, pide confirmar antes de desconectarlo.
-func (p *Pagina) alternarConexion(a adaptador) tea.Cmd {
+func (p *Pagina) alternarConexion(a contrato.Adaptador) tea.Cmd {
 	if p.ocupado {
 		return nil
 	}
-	if estadoDe(a) == estNoInstalado { // sin CLI no hay nada que conectar ni desconectar
+	if a.Estado == contrato.AgenteNoInstalado { // sin CLI no hay nada que conectar ni desconectar
 		return comp.Aviso(idioma.T("Instala su CLI antes: no hay nada que conectar ni desconectar"), comp.Advertencia)
 	}
 	if a.Desconectado {
@@ -356,7 +330,7 @@ func (p *Pagina) accion(exito string, hacer func(pagina.Contexto) error) tea.Cmd
 
 // alternarAutenticacion pasa de suscripción a clave de API o al revés, solo en los agentes que admiten la suscripción y
 // en los estados en que la Web UI ofrece el cambio. Pasar a la suscripción pide aceptar su riesgo.
-func (p *Pagina) alternarAutenticacion(a adaptador) tea.Cmd {
+func (p *Pagina) alternarAutenticacion(a contrato.Adaptador) tea.Cmd {
 	if p.ocupado {
 		return nil
 	}
@@ -364,14 +338,14 @@ func (p *Pagina) alternarAutenticacion(a adaptador) tea.Cmd {
 	if !catalogo.AdmiteSuscripcion(a.Agente) {
 		return comp.Aviso(idioma.Tf("%s no admite la suscripción: solo usa clave de API", nom), comp.Advertencia)
 	}
-	est := estadoDe(a)
-	if est == estDesconectado || est == estNoInstalado {
+	est := a.Estado
+	if est == contrato.AgenteDesconectado || est == contrato.AgenteNoInstalado {
 		return comp.Aviso(idioma.T("Tiene que estar instalado y conectado para cambiar su autenticación"), comp.Advertencia)
 	}
 	if a.Autenticacion == "suscripcion" {
 		return p.autenticar(a.Agente, "clave_api")
 	}
-	if est != estListo && est != estFaltaClave {
+	if est != contrato.AgenteListo && est != contrato.AgenteFaltaClave {
 		return comp.Aviso(idioma.T("En su estado actual solo se puede usar la clave de API"), comp.Advertencia)
 	}
 	p.pend = &pendiente{agente: a.Agente, accion: accionSuscripcion}
@@ -381,8 +355,8 @@ func (p *Pagina) alternarAutenticacion(a adaptador) tea.Cmd {
 }
 
 // probar lleva a Probar con este agente; solo uno listo se puede probar.
-func (p *Pagina) probar(a adaptador) tea.Cmd {
-	if estadoDe(a) != estListo {
+func (p *Pagina) probar(a contrato.Adaptador) tea.Cmd {
+	if a.Estado != contrato.AgenteListo {
 		return comp.Aviso(idioma.T("Este agente aún no está listo para probar"), comp.Advertencia)
 	}
 	return func() tea.Msg {

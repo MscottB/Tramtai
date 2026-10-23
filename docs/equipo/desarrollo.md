@@ -34,6 +34,14 @@ npm run build    # comprueba los tipos (vue-tsc, también los .vue) y compila en
 
 La compilación de la Web UI se versiona para que `go build` no necesite Node.
 
+**Tipos de la API.** Los tipos TypeScript de lo que el servicio envía y recibe (`web/src/api/tipos.gen.ts`) se
+generan desde los structs de Go con `go generate ./internal/contrato` (`internal/contrato/gents`); `web/src/api/tipos.ts`
+los reexporta y solo escribe a mano los de las rutas `/ui` de la sesión. Si cambias un tipo del contrato, regenera y sube
+el archivo: una prueba de Go y el CI fallan si no está al día. Lo que no se deduce de Go (una unión de literales) se dice
+con la etiqueta `ts:"…"` del campo. Lo derivado (el estado de un agente, la etapa y si se puede corregir una petición,
+los Primeros pasos) lo calcula el servicio y la Web UI y la terminal solo lo pintan
+([ADR 001](decisiones/001-estado-del-agente.md)).
+
 **Dependencias.** `web/.npmrc` protege las instalaciones:
 
 - `min-release-age=7`: npm no instala versiones publicadas hace menos de 7 días, la ventana en que suelen detectarse y retirarse los paquetes comprometidos. Para una corrección urgente: `npm install --min-release-age=0 …`.
@@ -123,6 +131,17 @@ go test -tags m0b -v -count=1 ./pruebas/m0b      # modos con clave de API, ver M
 
 Para probar el servicio con la suscripción sin tocar la configuración global, arráncalo con `TRAMTAI_ADAPTADORES__CLAUDE__AUTENTICACION=suscripcion` (y la de Codex) en el entorno.
 
+### Las páginas de la terminal
+
+Las pruebas de las páginas (`internal/tui/paginas/*`) son de caja negra (`package <página>_test`): la tocan por su
+interfaz, contra el servicio de `paginas/prueba`. `prueba.App` la lleva como la terminal (cada Cmd en su goroutine,
+`Pulsar`, `Escribir`, `Pegar`, `Entregar` y `Hasta`/`HastaVer` para lo que llega en vivo) y guarda en `Fuera` lo que es de
+la app (avisos, preguntas, `IrA`). Una respuesta a destiempo se fabrica por la vía de verdad: `Retener` guarda los Cmd que
+la página pide, la prueba cambia la versión, el espacio o el contexto, y `Soltar` los corre. `prueba.Reloj` es la hora de
+la página: el sondeo y las reconexiones esperan a `Pasar`. Lo único que una prueba cambia por dentro está en el
+`export_test.go` de la página: el reloj y de dónde lee los eventos. Dentro del paquete solo quedan las pruebas de
+funciones puras y las que pintan estados que el servicio de prueba no da (un conversor con error de red, por ejemplo).
+
 ### Herramientas con los agentes reales
 
 `go test -tags canario -run TestHerramientasConAgentesReales -v -count=1 ./internal/api/` recorre el ciclo de
@@ -141,7 +160,8 @@ job «Ejemplos» del CI). En local necesita Python con `openai` y `requests` (`T
 
 ```
 cmd/tramtai/           CLI (Cobra); sin argumentos abre la terminal interactiva
-internal/nucleo/       estados, solicitud, errores, configuración por capas y perfiles
+internal/nucleo/       estados, solicitud, trabajo, errores y presupuestos
+internal/carpetas/     raíz del usuario (normal o portable), permisos de sus carpetas y comparación de rutas
 internal/persistencia/ SQLite (trabajos, eventos, idempotencia, retención)
 internal/planificador/ cola, concurrencia, cancelación, drenaje y recuperación
 internal/procesos/     supervisión de procesos (Job Objects / grupos Unix)
@@ -151,6 +171,7 @@ internal/documentos/   cargas, formatos admitidos, conversión con markitdown y 
 internal/salidas/      validación JSON Schema
 internal/api/          HTTP: API nativa, SSE y fachadas OpenAI/Anthropic
 internal/servicio/     servicio único: instancias, puntos de acceso, Web UI y entrada local
+internal/configuracion/ configuración por capas y perfiles; edición de config.yaml y local.yaml y escritura atómica
 internal/cliente/      cliente del servicio (CLI, terminal y escritorio)
 internal/tui/          terminal interactiva (Bubble Tea)
 internal/recursos/     Web UI compilada (go:embed)

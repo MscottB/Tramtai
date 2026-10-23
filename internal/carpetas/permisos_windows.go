@@ -1,4 +1,4 @@
-package nucleo
+package carpetas
 
 import (
 	"golang.org/x/sys/windows"

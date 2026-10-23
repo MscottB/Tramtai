@@ -11,6 +11,7 @@ import (
 	"tramtai/internal/agentes"
 	"tramtai/internal/api"
 	"tramtai/internal/autoarranque"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
@@ -134,11 +135,11 @@ func (s *Servicio) Conectar(agente string, conectado bool) error {
 	if s.opc.Registro[agente] == nil {
 		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("no hay ningún agente %s", agente))
 	}
-	ruta, err := nucleo.RutaGlobal()
+	ruta, err := configuracion.RutaGlobal()
 	if err != nil {
 		return err
 	}
-	if err := FijarValor(ruta, nucleo.OrigenGlobal, "adaptadores."+agente+".desconectado", !conectado); err != nil {
+	if err := configuracion.FijarValor(ruta, configuracion.OrigenGlobal, "adaptadores."+agente+".desconectado", !conectado); err != nil {
 		return err
 	}
 	s.opc.Conexiones.Fijar(agente, !conectado)
@@ -199,11 +200,11 @@ func (s *Servicio) cambiarAutenticacion(agente, modo string) error {
 	if ip := net.ParseIP(s.opc.Host); modo == adaptadores.AutenticacionSuscripcion && s.opc.Host != "localhost" && (ip == nil || !ip.IsLoopback()) {
 		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.T("la suscripción no se permite con el servicio abierto a otros equipos"))
 	}
-	ruta, err := nucleo.RutaGlobal()
+	ruta, err := configuracion.RutaGlobal()
 	if err != nil {
 		return err
 	}
-	if err := FijarValor(ruta, nucleo.OrigenGlobal, "adaptadores."+agente+".autenticacion", modo); err != nil {
+	if err := configuracion.FijarValor(ruta, configuracion.OrigenGlobal, "adaptadores."+agente+".autenticacion", modo); err != nil {
 		return err
 	}
 	return adaptadores.CambiarAutenticacion(s.opc.Registro, agente, modo)
@@ -217,7 +218,7 @@ func (s *Servicio) guardarValores(inst *Instancia, valores map[string]any) error
 		return err
 	}
 	for clave, valor := range valores {
-		if err := FijarValor(ruta, origen, clave, valor); err != nil {
+		if err := configuracion.FijarValor(ruta, origen, clave, valor); err != nil {
 			return err
 		}
 	}
@@ -236,12 +237,12 @@ func (s *Servicio) guardarValores(inst *Instancia, valores map[string]any) error
 // fijarPuerto guarda servicio.puerto y servicio.puerto_automatico en la configuración global si el puerto está
 // libre (o es el que ya usa este servicio); con puerto 0 solo cambia el automático. Se aplica al reiniciar.
 func (s *Servicio) fijarPuerto(puerto int, automatico bool) error {
-	ruta, err := nucleo.RutaGlobal()
+	ruta, err := configuracion.RutaGlobal()
 	if err != nil {
 		return err
 	}
 	if puerto == 0 {
-		err = FijarValor(ruta, nucleo.OrigenGlobal, "servicio.puerto_automatico", automatico)
+		err = configuracion.FijarValor(ruta, configuracion.OrigenGlobal, "servicio.puerto_automatico", automatico)
 	} else {
 		err = FijarPuertoPropio(ruta, s.opc.Host, puerto, s.opc.Puerto, automatico)
 	}

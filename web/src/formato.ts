@@ -2,8 +2,10 @@
 import { idioma, t } from './i18n'
 import type { Clave } from './idiomas/es'
 import type { EventoRegistro, Trabajo } from './api/tipos'
+import { estadosTerminales } from './api/tipos.gen'
 
-export const terminales = ['completado', 'fallido', 'cancelado', 'interrumpido']
+// terminales son los estados de un trabajo que ya acabó; la lista sale de Go (nucleo.Terminales).
+export const terminales = estadosTerminales
 
 // estados da a cada estado el color de su etiqueta (punto y texto, sin icono); el nombre sale de las traducciones.
 const estados: Record<string, 'neutro' | 'info' | 'aviso' | 'ok' | 'error'> = {
