@@ -1,20 +1,26 @@
 package tui
 
 import (
+	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/tui/comp"
+	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/paginas/inicio"
+	"tramtai/internal/tui/paginas/prueba"
 )
 
 // paginaBorra pregunta antes de borrar con x y apunta si se confirmó.
@@ -277,6 +283,59 @@ func TestConectarRegistrada(t *testing.T) {
 	m := nuevo(Opciones{})
 	if _, pendiente := m.pagina(pagina.PaginaConectar).(*proximamente); pendiente {
 		t.Fatal("Mis APIs ya no es «Próximamente»")
+	}
+}
+
+func TestEspaciosRegistrada(t *testing.T) {
+	m := nuevo(Opciones{})
+	if _, pendiente := m.pagina(pagina.PaginaEspacios).(*proximamente); pendiente {
+		t.Fatal("Espacios ya no es «Próximamente»")
+	}
+}
+
+// TestCambioEspacioRecargaPaginas: abrir otro espacio desde Espacios cambia el de la terminal: la cabecera lo nombra
+// enseguida, se va a Inicio y Espacios, al volver, dice que estás ahí.
+func TestCambioEspacioRecargaPaginas(t *testing.T) {
+	cli, _ := prueba.Servicio(t)
+	dir := filepath.Join(t.TempDir(), "notas")
+	os.MkdirAll(dir, 0o700)
+	e, err := cli.AbrirProyecto(context.Background(), dir, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := nuevo(Opciones{})
+	m.cli, m.instancia = cli, "global"
+	a := conducir(t, m)
+	a.Entregar(tea.WindowSizeMsg{Width: 100, Height: 30})
+	a.Pulsar("6")
+	a.HastaVer(e.Nombre)
+	a.Pulsar("down", "enter")
+	a.Hasta(func() bool { return m.instancia == e.ID && m.actual == pagina.PaginaInicio })
+	a.Hasta(func() bool {
+		return strings.Contains(ansi.Strip(a.Vista()), e.Nombre+" · ● "+idioma.T("servicio en marcha"))
+	})
+	a.Pulsar("6")
+	a.Hasta(func() bool {
+		for _, l := range strings.Split(ansi.Strip(a.Vista()), "\n") {
+			if strings.Contains(l, e.Nombre) && strings.Contains(l, datos.Texto("es", "espacios.actual")) {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+// TestComprobacionViejaNoDeshaceElCambio: una comprobación que leyó los espacios antes de cambiar a uno recién abierto no
+// lo da por detenido ni vuelve al global.
+func TestComprobacionViejaNoDeshaceElCambio(t *testing.T) {
+	m := nuevo(Opciones{})
+	m.paginas["inicio"] = &paginaFalsa{}
+	m.instancia = "global"
+	vieja := msgConexion{cli: &cliente.Cliente{}, espacios: []contrato.Espacio{{ID: "global", Nombre: "Global", Activo: true}}, cambios: m.cambios}
+	m.Update(pagina.CambioEspacio{ID: "notas_1"})
+	correr(t, m, m.conectado(vieja))
+	if m.instancia != "notas_1" {
+		t.Fatalf("sigue en el espacio nuevo: %q", m.instancia)
 	}
 }
 

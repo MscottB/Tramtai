@@ -343,28 +343,12 @@ func barras(lengua string, e nucleo.EstadoPresupuesto) []barra {
 	return r
 }
 
-// numero es como lo escribe la Web UI: los USD con dos decimales y $ delante; el resto como toLocaleString, con el
-// separador de miles de cada idioma (en español, solo desde 5 cifras).
+// numero es como lo escribe la Web UI: los USD con dos decimales y $ delante; el resto como toLocaleString (pagina.Numero).
 func numero(lengua string, n float64, usd bool) string {
 	if usd {
 		return "$" + strconv.FormatFloat(n, 'f', 2, 64)
 	}
-	s := strconv.FormatFloat(math.Round(n), 'f', 0, 64)
-	sep, desde := ",", 4
-	if lengua == "es" {
-		sep, desde = ".", 5
-	}
-	if len(s) < desde {
-		return s
-	}
-	var b strings.Builder
-	for i, r := range s {
-		if i > 0 && (len(s)-i)%3 == 0 {
-			b.WriteString(sep)
-		}
-		b.WriteRune(r)
-	}
-	return b.String()
+	return pagina.Numero(lengua, int(math.Round(n)))
 }
 
 // fecha es la del día como toLocaleDateString: d/m/aaaa en español y m/d/aaaa en inglés.

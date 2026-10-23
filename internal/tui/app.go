@@ -21,6 +21,7 @@ import (
 	"tramtai/internal/tui/paginas/agentes"
 	"tramtai/internal/tui/paginas/conectar"
 	"tramtai/internal/tui/paginas/ejecutar"
+	"tramtai/internal/tui/paginas/espacios"
 	"tramtai/internal/tui/paginas/historial"
 	"tramtai/internal/tui/paginas/inicio"
 )
@@ -50,6 +51,7 @@ var fabricas = map[string]func(idioma string) pagina.Pagina{
 	pagina.PaginaEjecutar:  ejecutar.Nueva,
 	pagina.PaginaConectar:  conectar.Nueva,
 	pagina.PaginaHistorial: historial.Nueva,
+	pagina.PaginaEspacios:  espacios.Nueva,
 }
 
 type modelo struct {
@@ -64,6 +66,7 @@ type modelo struct {
 	caido       error // el servicio no responde: se avisa y r reintenta
 	conectando  bool  // la conexión inicial o un reintento con r: la cabecera lo dice
 	comprobando bool  // hay una comprobación en marcha (latido o r): no se lanza otra
+	cambios     int   // cuántas veces cambió el espacio: una comprobación de antes del último cambio no lo deshace
 
 	paginas    map[string]pagina.Pagina
 	cancelar   map[string]context.CancelFunc // el Ctx de la última vez que se inició cada página
@@ -232,9 +235,15 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.caido = msg.Err
 		}
 	case pagina.CambioEspacio:
-		m.instancia = msg.ID
+		m.instancia, m.cambios = msg.ID, m.cambios+1
 		m.cerrar()
-		return m, tea.Batch(m.difundir(msg), m.iniciar(nil))
+		cmds := []tea.Cmd{m.difundir(msg), m.iniciar(nil)}
+		nuevo := !slices.ContainsFunc(m.espacios, func(e contrato.Espacio) bool { return e.ID == msg.ID })
+		if nuevo && m.cli != nil && !m.comprobando { // la cabecera nombra enseguida un espacio recién abierto
+			m.comprobando = true
+			cmds = append(cmds, m.conectar(false, false, false))
+		}
+		return m, tea.Batch(cmds...)
 	case pagina.IrA:
 		if d, ok := msg.Datos.(pagina.ConAyuda); ok && d.Teclas == nil { // la página no sabe las teclas comunes
 			d.Teclas = m.teclasDe(m.pagina(m.actual))

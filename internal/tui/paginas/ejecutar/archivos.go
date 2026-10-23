@@ -2,14 +2,11 @@ package ejecutar
 
 import (
 	"errors"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 
-	"tramtai/internal/carpetas"
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -78,44 +75,12 @@ func (p *Pagina) prepararConversor() tea.Cmd {
 	}
 }
 
-// completar completa la última ruta del campo (tras la última coma) con lo que hay en disco: el nombre entero si solo hay
-// uno que empieza así (una carpeta, con su separador) o lo común a todos. Devuelve también los que encajan.
+// completar completa la última ruta del campo (tras la última coma) con lo que hay en disco (pagina.CompletarRuta).
+// Devuelve también los que encajan.
 func completar(campo string) (string, []string) {
 	corte := strings.LastIndexAny(campo, ",;") + 1
 	resto := campo[corte:]
 	ruta := strings.TrimLeft(resto, " ")
-	antes := campo[:corte] + resto[:len(resto)-len(ruta)]
-	dir, base := filepath.Split(ruta)
-	leer := dir
-	if leer == "" {
-		leer = "."
-	}
-	entradas, err := os.ReadDir(carpetas.ExpandirCasa(leer))
-	if err != nil {
-		return campo, nil
-	}
-	var candidatos []string
-	for _, e := range entradas {
-		if strings.HasPrefix(strings.ToLower(e.Name()), strings.ToLower(base)) {
-			nombre := e.Name()
-			if e.IsDir() {
-				nombre += string(filepath.Separator)
-			}
-			candidatos = append(candidatos, nombre)
-		}
-	}
-	if len(candidatos) == 0 {
-		return campo, nil
-	}
-	comun := candidatos[0]
-	for _, c := range candidatos[1:] {
-		for !strings.HasPrefix(c, comun) { // por runas: una tilde no se parte por la mitad
-			r := []rune(comun)
-			comun = string(r[:len(r)-1])
-		}
-	}
-	if len(comun) < len(base) {
-		return campo, candidatos
-	}
-	return antes + dir + comun, candidatos
+	completa, candidatos := pagina.CompletarRuta(ruta, false)
+	return campo[:len(campo)-len(ruta)] + completa, candidatos
 }

@@ -101,6 +101,27 @@ func (e *Estilos) Periodo(lengua string, horas int) string {
 	return e.Tx(lengua, "comun.ultimosDias", "dias", strconv.FormatFloat(dias, 'f', -1, 64))
 }
 
+// Numero escribe un número entero como toLocaleString de la Web UI, con el separador de miles del idioma («200.000»); en
+// español, como Intl, no agrupa los de cuatro cifras.
+func Numero(lengua string, n int) string {
+	s := strconv.Itoa(max(n, -n))
+	sep := "."
+	if lengua == "en" {
+		sep = ","
+	} else if len(s) <= 4 {
+		sep = ""
+	}
+	if sep != "" {
+		for i := len(s) - 3; i > 0; i -= 3 {
+			s = s[:i] + sep + s[i:]
+		}
+	}
+	if n < 0 {
+		return "-" + s
+	}
+	return s
+}
+
 // Envolver parte el texto por palabras, cada párrafo por su lado, en líneas de como mucho ancho columnas. Con n mayor que
 // cero, en como mucho n líneas: lo que no cabe se corta con la elipsis en la última.
 func (e *Estilos) Envolver(texto string, ancho, n int) []string {

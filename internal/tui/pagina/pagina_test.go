@@ -3,6 +3,8 @@ package pagina
 import (
 	"context"
 	"net/url"
+	"os"
+	"path/filepath"
 	"slices"
 	"syscall"
 	"testing"
@@ -33,6 +35,28 @@ func TestEnvolver(t *testing.T) {
 	}
 	if l := e.Envolver("uno dos tres cuatro", 7, 2); !slices.Equal(l, []string{"uno dos", "tres c…"}) {
 		t.Fatalf("en dos líneas, la última cortada: %q", l)
+	}
+}
+
+// TestCompletarSoloCarpetas: para elegir una carpeta, los archivos no cuentan.
+func TestCompletarSoloCarpetas(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "notas.txt"), nil, 0o600)
+	os.Mkdir(filepath.Join(dir, "notas"), 0o700)
+	base := dir + string(filepath.Separator)
+	if r, c := CompletarRuta(base+"no", true); r != base+"notas"+string(filepath.Separator) || len(c) != 1 {
+		t.Fatalf("solo la carpeta: %q %v", r, c)
+	}
+	if r, c := CompletarRuta(base+"no", false); r != base+"notas" || len(c) != 2 {
+		t.Fatalf("con los archivos, lo común: %q %v", r, c)
+	}
+}
+
+func TestNumero(t *testing.T) {
+	for n, quiere := range map[int][2]string{999: {"999", "999"}, 1234: {"1234", "1,234"}, 12345: {"12.345", "12,345"}, -1234567: {"-1.234.567", "-1,234,567"}} {
+		if es, en := Numero("es", n), Numero("en", n); es != quiere[0] || en != quiere[1] {
+			t.Errorf("Numero(%d) = %q y %q", n, es, en)
+		}
 	}
 }
 
