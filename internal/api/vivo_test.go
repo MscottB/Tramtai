@@ -127,7 +127,7 @@ func TestEventosFotoPorPaginas(t *testing.T) {
 func TestEventosAvisosSeguidosUnaLectura(t *testing.T) {
 	var lecturas atomic.Int32
 	original := leerCambios
-	leerCambios = func(s *Servidor, ctx context.Context, punto string, desde time.Time) ([]nucleo.Trabajo, error) {
+	leerCambios = func(s *Servidor, ctx context.Context, punto string, desde persistencia.Cursor) ([]nucleo.Trabajo, error) {
 		lecturas.Add(1)
 		return original(s, ctx, punto, desde)
 	}
