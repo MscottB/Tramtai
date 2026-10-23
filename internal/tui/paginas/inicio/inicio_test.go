@@ -592,9 +592,9 @@ func TestServicioCaido(t *testing.T) {
 // contexto cancelado se descarta.
 func TestRespuestasViejas(t *testing.T) {
 	cli, id := prueba.Servicio(t)
-	hecha := func() {
+	hecha := func(texto string) {
 		t.Helper()
-		j, err := cli.Crear(ctx, id, nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "otra"}}})
+		j, err := cli.Crear(ctx, id, nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: texto}}})
 		if err == nil {
 			err = cli.Eventos(ctx, id, j.ID, 0, func(int, string, string) error { return nil })
 		}
@@ -609,8 +609,19 @@ func TestRespuestasViejas(t *testing.T) {
 		a, _ := abrir(t, alto(t, cli, id, 60), callado)
 		viejos := a.Retener(func() { a.Pulsar("r") }) // se pide antes de ocultar y responde con la petición nueva
 		a.P.(pagina.Ocultable).Ocultar()
+		// Lo vigente cambia algo que se ve: Mostrar trae una petición hecha antes, con su cuenta, y se espera a verla. Así
+		// nada de Mostrar llega después de «antes» y no hace falta esperar a que no pase nada.
+		hecha("previa")
 		a.Correr(a.P.(pagina.Ocultable).Mostrar())
-		hecha()
+		a.Hasta(func() bool {
+			for _, l := range strings.Split(a.Vista(), "\n") {
+				if strings.Contains(l, "Completadas") && strings.HasSuffix(strings.TrimSpace(l), " 1") {
+					return strings.Contains(a.Vista(), "previa")
+				}
+			}
+			return false
+		})
+		hecha("otra")
 		antes := a.Vista()
 		if fuera := a.Soltar(viejos); a.Vista() != antes || len(fuera) != 0 {
 			t.Fatalf("se descarta: %v\n%s\nantes:\n%s", fuera, a.Vista(), antes)

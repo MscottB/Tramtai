@@ -132,6 +132,8 @@ func TestEsquemaInvalidoAvisa(t *testing.T) {
 func TestModeloYEsfuerzo(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	a := abierta(t, cli, id)
+	// El catálogo llega aparte de la carga: se ve al nombrar el modelo predeterminado, «Predeterminado (…)».
+	a.Hasta(func() bool { return strings.Contains(valor(t, a, tx("receta.modelo")), "Predeterminado (") })
 	if v := valor(t, a, tx("receta.modelo")); !strings.Contains(v, "Predeterminado") {
 		t.Fatalf("el catálogo da los modelos: %q", v)
 	}

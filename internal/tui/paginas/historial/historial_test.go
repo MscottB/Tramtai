@@ -398,8 +398,16 @@ func TestHistorialFiltroPunto(t *testing.T) {
 	if v := a.Vista(); cuantas(a, textos...) != 1 || !strings.Contains(v, "desde la terminal") || !strings.Contains(v, "Origen: Terminal") {
 		t.Fatalf("solo el origen terminal:\n%s", v)
 	}
-	// El selector: los cuatro orígenes, el grupo y las APIs.
-	a.Pulsar("f")
+	// El selector: los cuatro orígenes, el grupo y las APIs. Las APIs llegan aparte de la lista y el selector se arma con
+	// las que hay al abrirlo: si aún no han llegado, se cierra y se vuelve a abrir hasta verlas.
+	a.Hasta(func() bool {
+		if a.Pulsar("f"); strings.Contains(a.Vista(), "API tienda") {
+			return true
+		}
+		a.Pulsar("esc")
+		return false
+	})
+	a.HastaVer("API mi-app", "API otra", "API tienda", "Grupo web")
 	if !a.P.EnCampo() {
 		t.Fatal("con el selector abierto las letras son suyas")
 	}
