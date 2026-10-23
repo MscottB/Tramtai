@@ -127,7 +127,7 @@ func TestEventosFotoPorPaginas(t *testing.T) {
 func TestEventosAvisosSeguidosUnaLectura(t *testing.T) {
 	var lecturas atomic.Int32
 	original := leerCambios
-	leerCambios = func(s *Servidor, ctx context.Context, punto string, desde time.Time) ([]nucleo.Trabajo, error) {
+	leerCambios = func(s *Servidor, ctx context.Context, punto string, desde persistencia.Cursor) ([]nucleo.Trabajo, error) {
 		lecturas.Add(1)
 		return original(s, ctx, punto, desde)
 	}
@@ -194,6 +194,22 @@ func TestEventosRespaldoSubeIntento(t *testing.T) {
 	e := esperarEvento(t, eventos, func(e map[string]any) bool { return e["id"] == id && e["agente"] == "otro" })
 	if e["intento"] != float64(2) {
 		t.Fatalf("tras el respaldo, intento debe ser 2: %v", e)
+	}
+}
+
+// Un cliente que se conecta cuando la petición ya terminó en el respaldo no vio el salto: el intento viene guardado.
+func TestEventosIntentoAlConectarTarde(t *testing.T) {
+	registro := map[string]adaptadores.Adaptador{
+		"simulado": adaptadores.Simulado{Error: nucleo.NuevoError(nucleo.CodigoLimiteUsoProveedor, "límite")},
+		"otro":     adaptadores.Simulado{Respuesta: "ok"},
+	}
+	ts := servidor(t, registro, nil)
+	id := crearHola(t, ts, `{"agente":"simulado","respaldo":["otro"],"mensajes":[{"rol":"usuario","contenido":"hola"}]}`)
+	esperarEstado(t, ts, id, nucleo.Completado)
+	eventos, _ := flujoVivo(t, ts)
+	e := esperarEvento(t, eventos, func(e map[string]any) bool { return e["id"] == id || e["foto"] == true })
+	if e["agente"] != "otro" || e["intento"] != float64(2) {
+		t.Fatalf("el primer evento de la petición debe traer el intento guardado (2): %v", e)
 	}
 }
 

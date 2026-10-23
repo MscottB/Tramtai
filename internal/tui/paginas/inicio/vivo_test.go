@@ -181,9 +181,9 @@ func TestVivoReconciliarElQueTerminaLlegaElQueFaltaSeVa(t *testing.T) {
 
 func TestVivoEventoDeConvierteUnTrabajoDeLaConsulta(t *testing.T) {
 	creado := time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)
-	trabajo := nucleo.Trabajo{ID: "x", Estado: "fallido", ModeloEfectivo: "codex/gpt", PuntoAcceso: "otra", Origen: "api", CodigoError: "error_agente", CreadoEn: creado}
+	trabajo := nucleo.Trabajo{ID: "x", Estado: "fallido", ModeloEfectivo: "codex/gpt", PuntoAcceso: "otra", Origen: "api", Intento: 2, CodigoError: "error_agente", CreadoEn: creado}
 	trabajo.Solicitud.Agente = "codex"
-	quiere := contrato.EventoTrabajo{ID: "x", Estado: "fallido", Etapa: "llegada", Agente: "codex", Modelo: "codex/gpt", API: "otra", Origen: "api", Intento: 1, CodigoError: "error_agente", Creado: creado}
+	quiere := contrato.EventoTrabajo{ID: "x", Estado: "fallido", Etapa: "llegada", Agente: "codex", Modelo: "codex/gpt", API: "otra", Origen: "api", Intento: 2, CodigoError: "error_agente", Creado: creado}
 	if got := eventoDe(trabajo); got != quiere {
 		t.Fatalf("%+v", got)
 	}

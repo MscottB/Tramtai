@@ -799,8 +799,8 @@ func TestRespaldoSaltaPorLimite(t *testing.T) {
 	p := iniciarVarios(t, alm, map[string]adaptadores.Adaptador{
 		"simulado": adaptadores.Simulado{Error: errorDe(nucleo.CodigoLimiteUsoProveedor)}, "otro": primeroBien{&n}}, 2)
 	tr := esperar(t, alm, enviar(t, p, conRespaldo("otro/m2")), nucleo.Completado)
-	if tr.Salida != "ok" || tr.Solicitud.Agente != "otro" || tr.ModeloEnviado != "m2" {
-		t.Fatalf("debía responder el respaldo: %+v", tr)
+	if tr.Salida != "ok" || tr.Solicitud.Agente != "otro" || tr.ModeloEnviado != "m2" || tr.Intento != 2 {
+		t.Fatalf("debía responder el respaldo, en el intento 2: %+v", tr)
 	}
 	if a := avisos(t, alm, tr.ID); len(a) != 1 || !strings.Contains(a[0], "simulado") || !strings.Contains(a[0], "otro") {
 		t.Fatalf("falta el aviso del salto: %v", a)
@@ -812,7 +812,7 @@ func TestRespaldoSaltaPorLimite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r := esperar(t, alm, nuevo.ID, nucleo.Fallido); r.Solicitud.Agente != "otro" || len(avisos(t, alm, r.ID)) != 0 || n.Load() != 2 {
+	if r := esperar(t, alm, nuevo.ID, nucleo.Fallido); r.Solicitud.Agente != "otro" || r.Intento != 2 || len(avisos(t, alm, r.ID)) != 0 || n.Load() != 2 {
 		t.Fatalf("el reintento debía ir directo a otro y ejecutarlo una vez (%d en total): %+v", n.Load(), r)
 	}
 }
