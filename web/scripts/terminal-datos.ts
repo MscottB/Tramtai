@@ -135,9 +135,26 @@ export const CLAVES_APIS: string[] = [
   'cierre.titulo', 'cierre.texto', 'cierre.claveTitulo', 'cierre.clave',
 ]
 
+// CLAVES_ESPACIOS son los textos de Espacios que la terminal repite tal cual: estados, etiquetas, acciones y sus
+// confirmaciones, y el diálogo de abrir un proyecto con la pregunta de confianza. Los {placeholders} los rellena Go con
+// datos.Textof.
+export const CLAVES_ESPACIOS: string[] = [
+  'espacios.subtitulo', 'espacios.actualizar', 'espacios.vacio', 'espacios.estadoActivo', 'espacios.estadoDetenido',
+  'espacios.estadoNoEncontrado', 'espacios.confiado', 'espacios.sinConfiar', 'espacios.actual', 'espacios.apis', 'espacios.apisUno',
+  'espacios.peticiones', 'espacios.peticionesUno', 'espacios.ultimoUso', 'espacios.abrir', 'espacios.detener', 'espacios.activar',
+  'espacios.buscar', 'espacios.olvidar', 'espacios.confiar', 'espacios.dejarDeConfiar', 'espacios.detenerTitulo',
+  'espacios.detenerTexto', 'espacios.confiarTitulo', 'espacios.confiarClaves', 'espacios.confiarTexto',
+  'espacios.dejarDeConfiarTitulo', 'espacios.dejarDeConfiarTexto', 'espacios.buscarTitulo', 'espacios.buscarTexto',
+  'espacios.olvidarTitulo', 'espacios.olvidarTexto', 'espacios.olvidado', 'app.sinProyecto',
+  'proyecto.abrir', 'proyecto.titulo', 'proyecto.texto', 'proyecto.ruta', 'proyecto.rutaHint', 'proyecto.rutaRegla',
+  'proyecto.confiarTitulo', 'proyecto.movido', 'proyecto.confiarTexto', 'proyecto.sinClaves', 'proyecto.confiarYAbrir',
+  'proyecto.abrirSinConfiar', 'proyecto.dentro', 'proyecto.abrirEse', 'proyecto.crearAqui', 'proyecto.abierto',
+]
+
 // CLAVES_TEXTOS son, además de las menu.* y las error.*, los textos que la terminal toma de la Web UI: los de la Ayuda de la
-// interfaz, los de Agentes, los de Inicio, los del Historial, los de Probar y los de Mis APIs.
-export const CLAVES_TEXTOS: string[] = [...CLAVES_UI, ...CLAVES_AGENTES, ...CLAVES_INICIO, ...CLAVES_HISTORIAL, ...CLAVES_EJECUTAR, ...CLAVES_APIS]
+// interfaz, los de Agentes, los de Inicio, los del Historial, los de Probar, los de Mis APIs y los de Espacios.
+export const CLAVES_TEXTOS: string[] = [...CLAVES_UI, ...CLAVES_AGENTES, ...CLAVES_INICIO, ...CLAVES_HISTORIAL, ...CLAVES_EJECUTAR, ...CLAVES_APIS,
+  ...CLAVES_ESPACIOS]
 
 // plano deja un texto sin marcas: sin ** y con los <marcadores> entre corchetes.
 const plano = (s: string) => s.replace(/\*\*/g, '').replace(/<([^<>]*)>/g, '[$1]')

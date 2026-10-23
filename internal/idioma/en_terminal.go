@@ -115,5 +115,9 @@ func init() {
 		"El catálogo de modelos está vacío: escribe el modelo a mano.":                                    "The model catalog is empty: type the model by hand.",
 		"No llegó el catálogo de modelos (%s): escribe el modelo a mano; r lo vuelve a pedir.":            "The model catalog did not arrive (%s): type the model by hand; r asks for it again.",
 		"El respaldo, la respuesta con forma y las correcciones se editan en Probar: p desde el detalle.": "The fallback, the shaped response and the corrections are edited in the Playground: p from the details.",
+
+		// Espacios
+		"Nombre del espacio":    "Workspace name",
+		"Escribe «%s» tal cual": "Type “%s” exactly",
 	})
 }

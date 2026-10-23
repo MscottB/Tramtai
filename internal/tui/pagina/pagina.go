@@ -97,6 +97,9 @@ type (
 	// CambioEspacio cambia el espacio activo. La app cancela los Ctx de todas las páginas, se lo pasa a todas y vuelve
 	// a iniciar la actual; las demás se inician con el espacio nuevo al visitarlas.
 	CambioEspacio struct{ ID string }
+	// EspaciosCambiados dice a la app que una página cambió espacios en el servicio (activó, detuvo, confió…): la app
+	// relee la lista al momento, para la cabecera y Ctrl+E, como api.sesion() en la Web UI.
+	EspaciosCambiados struct{}
 	// ErrorServicio dice a la app que el servicio no responde: avisa y, con r, reintenta. La página no se cierra.
 	ErrorServicio struct{ Err error }
 	// Volver lleva a la página anterior: de la Ayuda a la de antes, o tras un IrA a la de origen. Sin anterior, nada.

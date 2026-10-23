@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"time"
 
@@ -30,6 +31,7 @@ type (
 		err       error
 		reiniciar bool
 		latido    bool
+		cambios   int // los cambios de espacio que había al lanzarla
 	}
 	msgLatido struct{}
 )
@@ -40,7 +42,7 @@ func latir() tea.Cmd { return tea.Tick(latido, func(time.Time) tea.Msg { return 
 // pudo reiniciar en otro puerto o con otro token). Con arrancar y Opciones.Iniciar, si sigue sin responder, lo inicia.
 // Quien la lanza pone comprobando; el resultado lo quita.
 func (m *modelo) conectar(arrancar, reiniciar, latido bool) tea.Cmd {
-	cli, datos, iniciar := m.cli, m.o.Datos, m.o.Iniciar
+	cli, datos, iniciar, cambios := m.cli, m.o.Datos, m.o.Iniciar, m.cambios
 	if !arrancar {
 		iniciar = nil
 	}
@@ -49,9 +51,9 @@ func (m *modelo) conectar(arrancar, reiniciar, latido bool) tea.Cmd {
 			ctx, cancelar := context.WithTimeout(context.Background(), plazo)
 			defer cancelar()
 			espacios, err := c.Espacios(ctx)
-			return msgConexion{cli: c, espacios: espacios, err: err, reiniciar: reiniciar, latido: latido}
+			return msgConexion{cli: c, espacios: espacios, err: err, reiniciar: reiniciar, latido: latido, cambios: cambios}
 		}
-		r := msgConexion{cli: cli, err: cliente.ErrServicioInactivo, reiniciar: reiniciar, latido: latido}
+		r := msgConexion{cli: cli, err: cliente.ErrServicioInactivo, reiniciar: reiniciar, latido: latido, cambios: cambios}
 		if cli != nil {
 			if r = leer(cli); r.err == nil {
 				return r
@@ -87,13 +89,17 @@ func (m *modelo) conectado(r msgConexion) tea.Cmd {
 	} else {
 		r.reiniciar = r.reiniciar || m.caido != nil || m.cli != r.cli // si vuelve, la página se recarga
 		m.cli, m.espacios, m.caido = r.cli, r.espacios, nil
+		if r.cambios != m.cambios && !slices.ContainsFunc(r.espacios, func(e contrato.Espacio) bool { return e.ID == m.instancia }) {
+			m.comprobando = true // leyó la lista antes de cambiar a un espacio que no trae: se vuelve a leer
+			cmds = append(cmds, m.conectar(false, false, false))
+		}
 		switch nombre, activo := m.espacioActivo(m.instancia); {
 		case m.instancia == "":
 			m.instancia = "global"
 			if _, ok := m.espacioActivo(m.o.IDProyecto); ok && m.o.IDProyecto != "" {
 				m.instancia = m.o.IDProyecto
 			}
-		case !activo && m.instancia != "global":
+		case !activo && m.instancia != "global" && r.cambios == m.cambios: // una lista leída antes del cambio no sabe del espacio nuevo
 			cambio := func() tea.Msg { return pagina.CambioEspacio{ID: "global"} }
 			return tea.Batch(append(cmds, cambio, comp.Aviso(idioma.Tf("el espacio %s se detuvo: vuelves al global", nombre), comp.Advertencia))...)
 		}

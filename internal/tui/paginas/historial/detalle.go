@@ -11,6 +11,7 @@ import (
 
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
+	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/vivo"
 )
 
@@ -155,25 +156,8 @@ func (p *Pagina) textoRespuesta(t nucleo.Trabajo) string {
 	return strings.Join(l, "\n")
 }
 
-// numero escribe un número con los separadores del idioma («200.000»); en español, como Intl, no agrupa los de cuatro cifras.
-func (p *Pagina) numero(n int) string {
-	s := strconv.Itoa(max(n, -n))
-	sep := "."
-	if p.lengua == "en" {
-		sep = ","
-	} else if len(s) <= 4 {
-		sep = ""
-	}
-	if sep != "" {
-		for i := len(s) - 3; i > 0; i -= 3 {
-			s = s[:i] + sep + s[i:]
-		}
-	}
-	if n < 0 {
-		return "-" + s
-	}
-	return s
-}
+// numero escribe un número con los separadores del idioma (pagina.Numero).
+func (p *Pagina) numero(n int) string { return pagina.Numero(p.lengua, n) }
 
 // tiempo es una duración corta: «250 ms» o «1,5 s».
 func (p *Pagina) tiempo(d time.Duration) string {

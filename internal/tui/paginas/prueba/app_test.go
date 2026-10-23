@@ -101,6 +101,38 @@ func TestAppComoLaTerminal(t *testing.T) {
 	}
 }
 
+// apunta es una página que apunta, en orden, los pasos que le llegan.
+type (
+	paso   int
+	apunta struct {
+		contador
+		pasos []paso
+	}
+)
+
+func (p *apunta) Update(m tea.Msg) (pagina.Pagina, tea.Cmd) {
+	if x, ok := m.(paso); ok {
+		p.pasos = append(p.pasos, x)
+	}
+	return p, nil
+}
+
+// TestSecuenciaEnOrden: lo de un tea.Sequence llega en su orden, aunque el primero tarde más; también al recogerlo.
+func TestSecuenciaEnOrden(t *testing.T) {
+	p := &apunta{}
+	a := Conducir(t, p)
+	secuencia := func() tea.Cmd {
+		return tea.Sequence(func() tea.Msg { time.Sleep(20 * time.Millisecond); return paso(1) }, func() tea.Msg { return paso(2) })
+	}
+	a.Correr(secuencia())
+	if len(p.pasos) != 2 || p.pasos[0] != 1 || p.pasos[1] != 2 {
+		t.Fatalf("en orden: %v", p.pasos)
+	}
+	if r := a.Recoger([]tea.Cmd{secuencia()}); len(r) != 2 || r[0] != paso(1) || r[1] != paso(2) {
+		t.Fatalf("Recoger también, en orden: %v", r)
+	}
+}
+
 // Asentar espera a un Cmd que trabaja, tarde lo que tarde: solo deja de esperar a uno parado en algo de fuera.
 func TestAsentarEsperaAlQueTarda(t *testing.T) {
 	a := Abrir(t, &contador{}, pagina.Contexto{Ctx: context.Background()})

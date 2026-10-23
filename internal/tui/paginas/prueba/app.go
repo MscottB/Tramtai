@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"runtime"
 	"slices"
 	"strings"
@@ -220,7 +221,12 @@ func (a *App) Recoger(cmds []tea.Cmd) []tea.Msg {
 		if c == nil {
 			continue
 		}
-		switch m := c().(type) {
+		m := c()
+		if s, ok := secuencia(m); ok { // se corren después de lo que ya espera, en su orden
+			cmds = append(cmds, s...)
+			continue
+		}
+		switch m := m.(type) {
 		case nil:
 		case tea.BatchMsg:
 			cmds = append(cmds, m...)
@@ -390,8 +396,33 @@ func (a *App) correr(cmd tea.Cmd) {
 	}()
 }
 
-// entregar reparte un mensaje como la app: un lote se corre, lo de la app se guarda en Fuera y lo demás va a la página.
+// secuencia son los Cmd de un tea.Sequence, cuyo tipo no se exporta: un []tea.Cmd que no es un lote.
+func secuencia(m tea.Msg) ([]tea.Cmd, bool) {
+	v := reflect.ValueOf(m)
+	if !v.IsValid() || v.Kind() != reflect.Slice || v.Type() == reflect.TypeFor[tea.BatchMsg]() || v.Type().Elem() != reflect.TypeFor[tea.Cmd]() {
+		return nil, false
+	}
+	return v.Convert(reflect.TypeFor[[]tea.Cmd]()).Interface().([]tea.Cmd), true
+}
+
+// entregar reparte un mensaje como la app: un lote se corre, una secuencia se corre en orden (sus respuestas llegan en el
+// orden de la secuencia, como en Bubble Tea), lo de la app se guarda en Fuera y lo demás va a la página.
 func (a *App) entregar(m tea.Msg) {
+	if s, ok := secuencia(m); ok {
+		a.pendientes.Add(1)
+		go func() {
+			for _, c := range s {
+				if c == nil {
+					continue
+				}
+				if r := c(); r != nil {
+					a.llegan <- r
+				}
+			}
+			a.pendientes.Add(-1)
+		}()
+		return
+	}
 	switch m := m.(type) {
 	case tea.BatchMsg:
 		for _, c := range m {
