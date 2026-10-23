@@ -6,6 +6,7 @@ export const preguntas: Tema = {
   icono: 'o_quiz',
   titulo: 'ayuda.preguntas.titulo',
   resumen: 'ayuda.preguntas.resumen',
+  terminal: 'ayuda.preguntas.terminal',
   conDiagrama: false,
   relacionados: ['empezar', 'problemas', 'conceptos'],
   bloques: [

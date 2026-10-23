@@ -12,7 +12,8 @@ import (
 
 // Bloque es una parte de un tema. Tipo es texto, pasos, tabla, preguntas, errores, pantalla o web. Todo es texto plano:
 // Lineas son los párrafos o pasos (en tabla, sus columnas), Filas las de una tabla (título y celdas) y Pares (título o
-// pregunta, texto o respuesta) los de errores, preguntas y pantalla. URL, en web, lleva al tema en el sitio.
+// pregunta, texto o respuesta) los de errores y preguntas; pantalla es el recorrido de la Web UI, sin sus textos. URL, en
+// web, lleva al tema en el sitio. Los textos son los de la terminal: la variante <clave>.terminal de la fuente si la hay.
 type Bloque struct {
 	Tipo   string      `json:"tipo"`
 	Titulo string      `json:"titulo,omitempty"`
@@ -22,13 +23,16 @@ type Bloque struct {
 	URL    string      `json:"url,omitempty"`
 }
 
-// Tema es un tema de la Ayuda; Pagina es la página de la app a la que acompaña (inicio, ejecutar…), si tiene una.
+// Tema es un tema de la Ayuda; Pagina es la página de la app a la que acompaña (inicio, ejecutar…), si tiene una. URL lleva
+// al tema en el sitio y Terminal es la línea «En la terminal: …», con sus teclas.
 type Tema struct {
-	ID      string   `json:"id"`
-	Titulo  string   `json:"titulo"`
-	Pagina  string   `json:"pagina,omitempty"`
-	Resumen string   `json:"resumen"`
-	Bloques []Bloque `json:"bloques"`
+	ID       string   `json:"id"`
+	Titulo   string   `json:"titulo"`
+	Pagina   string   `json:"pagina,omitempty"`
+	Resumen  string   `json:"resumen"`
+	URL      string   `json:"url"`
+	Terminal string   `json:"terminal"`
+	Bloques  []Bloque `json:"bloques"`
 }
 
 // Plantilla es una de «Respuesta con forma»; Esquema es el JSON Schema, tal como lo arma la Web UI.

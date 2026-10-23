@@ -36,6 +36,7 @@ export const problemas: Tema = {
   icono: 'o_build',
   titulo: 'ayuda.problemas.titulo',
   resumen: 'ayuda.problemas.resumen',
+  terminal: 'ayuda.problemas.terminal',
   conDiagrama: false,
   relacionados: ['historial', 'agentes', 'conectar'],
   bloques: [

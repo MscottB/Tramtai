@@ -493,6 +493,7 @@ const en: Textos = {
   'seccion.otros': 'Other',
   'arranque.titulo': 'Start with {sistema}',
   'arranque.texto': 'Tramtai starts hidden in the tray when you sign in to {sistema}, so the Web UI and your apps work without opening a terminal.',
+  'arranque.texto.terminal': 'Tramtai starts hidden in the tray when you sign in to {sistema}: the service keeps running for the terminal, the Web UI and your apps.',
   'arranque.activado': 'Tramtai will start when you sign in to {sistema}',
   'arranque.desactivado': 'Automatic start is off',
   'datos.titulo': 'Delete data',

@@ -6,6 +6,7 @@ export const herramientas: Tema = {
   icono: 'o_handyman',
   titulo: 'ayuda.herramientas.titulo',
   resumen: 'ayuda.herramientas.resumen',
+  terminal: 'ayuda.herramientas.terminal',
   conDiagrama: true,
   relacionados: ['conectar', 'json', 'archivos'],
   bloques: [

@@ -6,6 +6,7 @@ export const json: Tema = {
   icono: 'o_data_object',
   titulo: 'ayuda.json.titulo',
   resumen: 'ayuda.json.resumen',
+  terminal: 'ayuda.json.terminal',
   conDiagrama: true,
   relacionados: ['probar', 'recetas', 'conectar'],
   bloques: [

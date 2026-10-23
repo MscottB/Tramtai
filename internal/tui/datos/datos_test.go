@@ -2,6 +2,7 @@ package datos
 
 import (
 	"encoding/json"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -23,6 +24,27 @@ func TestAyudaCargada(t *testing.T) {
 	}
 	if Ayuda("en")[0].Titulo == Ayuda("es")[0].Titulo {
 		t.Error("en y es deberían diferir")
+	}
+}
+
+// frasesSoloWeb son las que solo valen en la Web UI (hallazgo 69): el recorrido guiado, los tranvías del mapa de Inicio,
+// el menú lateral, el botón ? y su panel, el selector de arriba y no abrir ninguna terminal. La misma lista que
+// web/scripts/terminal-datos.test.ts.
+var frasesSoloWeb = []string{`Haz el recorrido`, `tranvía`, `mapa de Inicio`, `menú lateral`, `botón \?`, `\b(el|un) panel\b`,
+	`sin abrir ninguna terminal`, `selector de arriba`, `arriba a la derecha`,
+	`Take the guided tour`, `\btrams?\b`, `Home map`, `side menu`, `\? button`, `\b(the|a) panel\b`, `without opening a terminal`,
+	`selector at the top`, `top right`}
+
+// TestSinFrasesSoloWeb: ni la Ayuda ni los textos que la terminal toma de la Web UI dicen lo que en la terminal no se
+// puede hacer: llevan su variante .terminal o se quedan fuera.
+func TestSinFrasesSoloWeb(t *testing.T) {
+	for _, f := range frasesSoloWeb {
+		re := regexp.MustCompile(`(?i)` + f)
+		for nombre, datos := range map[string][]byte{"ayuda.json": ayudaJSON, "textos.json": textosJSON} {
+			if m := re.Find(datos); m != nil {
+				t.Errorf("%s dice %q, que solo vale en la Web UI", nombre, m)
+			}
+		}
 	}
 }
 

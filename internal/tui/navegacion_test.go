@@ -244,17 +244,43 @@ func TestAtajosDeInicioComoElMenu(t *testing.T) {
 	}
 }
 
-func TestInicioRegistrada(t *testing.T) {
-	m := nuevo(Opciones{})
-	if _, pendiente := m.pagina(pagina.PaginaInicio).(*proximamente); pendiente {
-		t.Fatal("Inicio ya no es «Próximamente»")
+// TestTodasRegistradas: las ocho páginas del menú, la Ayuda incluida, tienen su fábrica.
+func TestTodasRegistradas(t *testing.T) {
+	for _, clave := range ordenMenu() {
+		if fabricas[clave] == nil {
+			t.Errorf("%s no está registrada en fabricas", clave)
+		}
 	}
 }
 
-func TestAgentesRegistrada(t *testing.T) {
-	m := nuevo(Opciones{})
-	if _, pendiente := m.pagina(pagina.PaginaAgentes).(*proximamente); pendiente {
-		t.Fatal("Agentes ya no es «Próximamente»")
+// TestInterrogacionAbreSuTema: en cada una de las ocho páginas, ? abre la Ayuda en el tema de esa página (el de su campo
+// pagina: Probar es el tema probar). En la propia Ayuda, ? lleva a su inicio, con todos los temas.
+func TestInterrogacionAbreSuTema(t *testing.T) {
+	for _, clave := range ordenMenu() {
+		m := nuevoEn(Opciones{Datos: t.TempDir()}, "es")
+		m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+		m.ir(clave, nil, false)
+		m.Update(tecla("?"))
+		if m.actual != pagina.PaginaAyuda {
+			t.Fatalf("%s: ? abre la Ayuda: %s", clave, m.actual)
+		}
+		v := ansi.Strip(m.pagina(pagina.PaginaAyuda).Vista())
+		primera := strings.TrimSpace(strings.Split(v, "\n")[0])
+		if clave == pagina.PaginaAyuda {
+			if !strings.Contains(v, "Empezar") || !strings.Contains(v, "Preguntas frecuentes") {
+				t.Errorf("en la Ayuda, ? lleva a su inicio:\n%s", v)
+			}
+			continue
+		}
+		var tema datos.Tema
+		for _, x := range datos.Ayuda("es") {
+			if x.Pagina == clave {
+				tema = x
+			}
+		}
+		if tema.ID == "" || primera != tema.Titulo || !strings.Contains(v, "En la terminal:") {
+			t.Errorf("%s: ? abre el tema %q: %q\n%s", clave, tema.Titulo, primera, v)
+		}
 	}
 }
 
@@ -270,27 +296,6 @@ func TestConfirmacionCabeEn60x20(t *testing.T) {
 	}
 	if lipgloss.Height(v) != 20 || lipgloss.Width(v) > 60 {
 		t.Fatalf("la vista mide %dx%d:\n%s", lipgloss.Width(v), lipgloss.Height(v), v)
-	}
-}
-
-func TestEjecutarRegistrada(t *testing.T) {
-	m := nuevo(Opciones{})
-	if _, pendiente := m.pagina(pagina.PaginaEjecutar).(*proximamente); pendiente {
-		t.Fatal("Probar ya no es «Próximamente»")
-	}
-}
-
-func TestConectarRegistrada(t *testing.T) {
-	m := nuevo(Opciones{})
-	if _, pendiente := m.pagina(pagina.PaginaConectar).(*proximamente); pendiente {
-		t.Fatal("Mis APIs ya no es «Próximamente»")
-	}
-}
-
-func TestEspaciosRegistrada(t *testing.T) {
-	m := nuevo(Opciones{})
-	if _, pendiente := m.pagina(pagina.PaginaEspacios).(*proximamente); pendiente {
-		t.Fatal("Espacios ya no es «Próximamente»")
 	}
 }
 
@@ -373,12 +378,5 @@ func TestEspaciosCambiadosReleeLaLista(t *testing.T) {
 	correr(t, m, cmd)
 	if _, activo := m.espacioActivo(e.ID); activo || m.comprobando {
 		t.Fatalf("la lista ya sabe que se detuvo: %+v", m.espacios)
-	}
-}
-
-func TestHistorialRegistrada(t *testing.T) {
-	m := nuevo(Opciones{})
-	if _, pendiente := m.pagina(pagina.PaginaHistorial).(*proximamente); pendiente {
-		t.Fatal("Historial ya no es «Próximamente»")
 	}
 }

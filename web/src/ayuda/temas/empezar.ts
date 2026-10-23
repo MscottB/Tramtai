@@ -6,6 +6,7 @@ export const empezar: Tema = {
   icono: 'o_flag',
   titulo: 'ayuda.empezar.titulo',
   resumen: 'ayuda.empezar.resumen',
+  terminal: 'ayuda.empezar.terminal',
   paginaApp: 'inicio',
   conDiagrama: true,
   relacionados: ['agentes', 'probar', 'conectar'],
@@ -36,8 +37,8 @@ export const empezar: Tema = {
     {
       tipo: 'preguntas',
       preguntas: [
-        { id: 'repetir-recorrido', pregunta: 'ayuda.empezar.pRecorrido', respuesta: 'ayuda.empezar.rRecorrido' },
-        { id: 'tranvias', pregunta: 'ayuda.empezar.pTranvias', respuesta: 'ayuda.empezar.rTranvias' },
+        { id: 'repetir-recorrido', pregunta: 'ayuda.empezar.pRecorrido', respuesta: 'ayuda.empezar.rRecorrido', soloWeb: true },
+        { id: 'tranvias', pregunta: 'ayuda.empezar.pTranvias', respuesta: 'ayuda.empezar.rTranvias', soloWeb: true },
         { id: 'entrar', pregunta: 'ayuda.empezar.pEntrar', respuesta: 'ayuda.empezar.rEntrar' },
         { id: 'en-marcha', pregunta: 'ayuda.empezar.pMarcha', respuesta: 'ayuda.empezar.rMarcha' },
         { id: 'windows', pregunta: 'ayuda.empezar.pWindows', respuesta: 'ayuda.empezar.rWindows' },

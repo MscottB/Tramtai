@@ -43,6 +43,18 @@ test('cada tema tiene un resumen de una línea en los dos idiomas', () => {
     }
 })
 
+// Hallazgo 69: lo que la Ayuda dice de la Web UI (el botón ?, el panel) no vale en la terminal; cada tema dice cómo se
+// hace allí, con sus teclas, en una línea que solo enseña la terminal.
+test('cada tema dice cómo se hace en la terminal, en una línea corta y en los dos idiomas', () => {
+  const inicio: Record<string, string> = { es: 'En la terminal: ', en: 'In the terminal: ' }
+  for (const tema of temas)
+    for (const [idioma, textos] of Object.entries(idiomas)) {
+      const linea = textos[tema.terminal]
+      assert.ok(linea?.startsWith(inicio[idioma]), `${tema.id}: falta ${tema.terminal} en ${idioma}`)
+      assert.ok(linea.length <= 200, `${tema.id}: ${tema.terminal} en ${idioma} tiene ${linea.length} caracteres`)
+    }
+})
+
 test('pasos, notas, paradas y respuestas caben en 200 caracteres en los dos idiomas', () => {
   for (const tema of temas)
     for (const bloque of tema.bloques)
@@ -107,12 +119,15 @@ test('ningún texto de la Ayuda queda sin usar', () => {
   for (const tema of temas) {
     usadas.add(tema.titulo)
     usadas.add(tema.resumen)
+    usadas.add(tema.terminal)
     for (const b of tema.bloques) for (const c of cortas(b)) usadas.add(c)
   }
   for (const e of Object.values(problemas?.ERRORES ?? {})) {
     usadas.add(e.solucion)
     if (e.titulo) usadas.add(e.titulo)
   }
+  // La variante .terminal de un texto usado la usa la Ayuda de la terminal (web/scripts/terminal-datos.ts).
+  for (const k of [...usadas]) usadas.add(k + '.terminal')
   assert.deepEqual(Object.keys(ayudaEs).filter((k) => !usadas.has(k)), [])
 })
 

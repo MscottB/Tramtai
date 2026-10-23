@@ -6,6 +6,7 @@ export const ajustes: Tema = {
   icono: 'o_settings',
   titulo: 'ayuda.ajustes.titulo',
   resumen: 'ayuda.ajustes.resumen',
+  terminal: 'ayuda.ajustes.terminal',
   paginaApp: 'configuracion',
   conDiagrama: false,
   relacionados: ['empezar', 'historial', 'archivos'],

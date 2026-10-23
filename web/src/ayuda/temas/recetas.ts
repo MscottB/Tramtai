@@ -6,6 +6,7 @@ export const recetas: Tema = {
   icono: 'o_receipt_long',
   titulo: 'ayuda.recetas.titulo',
   resumen: 'ayuda.recetas.resumen',
+  terminal: 'ayuda.recetas.terminal',
   conDiagrama: true,
   relacionados: ['probar', 'json', 'conectar'],
   bloques: [

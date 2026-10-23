@@ -6,6 +6,7 @@ export const claves: Tema = {
   icono: 'o_key',
   titulo: 'ayuda.claves.titulo',
   resumen: 'ayuda.claves.resumen',
+  terminal: 'ayuda.claves.terminal',
   conDiagrama: false,
   relacionados: ['conectar', 'espacios', 'presupuestos'],
   bloques: [

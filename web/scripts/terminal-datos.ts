@@ -14,7 +14,8 @@ type Idioma = 'es' | 'en'
 const IDIOMAS: Idioma[] = ['es', 'en']
 
 // Bloque es la forma que lee Go (internal/tui/datos): todo texto plano. En tabla, lineas son las columnas y filas llevan
-// el título de la fila y sus celdas; en errores, preguntas y pantalla, pares son (título o pregunta, texto o respuesta).
+// el título de la fila y sus celdas; en errores y preguntas, pares son (título o pregunta, texto o respuesta). pantalla es
+// el recorrido por la pantalla de la Web UI, sin sus textos: la terminal lleva a la web.
 export interface Bloque {
   tipo: 'texto' | 'pasos' | 'tabla' | 'preguntas' | 'errores' | 'pantalla' | 'web'
   titulo?: string
@@ -23,7 +24,8 @@ export interface Bloque {
   pares?: [string, string][]
   url?: string
 }
-export interface Tema { id: string; titulo: string; pagina?: string; resumen: string; bloques: Bloque[] }
+// url es la del tema en el sitio («Ver en la web») y terminal, la línea «En la terminal: …» con sus teclas.
+export interface Tema { id: string; titulo: string; pagina?: string; resumen: string; url: string; terminal: string; bloques: Bloque[] }
 
 export const URL_AYUDA = URL_SITIO + 'ayuda/'
 
@@ -195,16 +197,21 @@ export const CLAVES_TEXTOS: string[] = [...CLAVES_UI, ...CLAVES_AGENTES, ...CLAV
 // plano deja un texto sin marcas: sin ** y con los <marcadores> entre corchetes.
 const plano = (s: string) => s.replace(/\*\*/g, '').replace(/<([^<>]*)>/g, '[$1]')
 
+// paraTerminal es el texto de una clave tal como lo dice la terminal: su variante <clave>.terminal si la tiene (lo que en la
+// Web UI es un botón o un panel, en la terminal es una tecla o una fila) y, si no, el de la Web UI.
+const paraTerminal = (textos: Textos, k: string) => plano(textos[k + '.terminal'] ?? textos[k] ?? k)
+
 function bloqueDe(b: BloqueWeb, tx: (k: string) => string, url: string): Bloque {
   switch (b.tipo) {
     case 'nota': return { tipo: 'texto', lineas: [tx(b.texto)] }
     case 'pasos': return { tipo: 'pasos', lineas: b.pasos.map(tx) }
     case 'tabla': return { tipo: 'tabla', lineas: b.columnas.map(tx), filas: b.filas.map((f) => [tx(f.titulo), ...f.celdas.map(tx)]) }
-    case 'preguntas': return { tipo: 'preguntas', pares: b.preguntas.map((p) => [tx(p.pregunta), tx(p.respuesta)]) }
+    case 'preguntas': return { tipo: 'preguntas', pares: b.preguntas.filter((p) => !p.soloWeb).map((p) => [tx(p.pregunta), tx(p.respuesta)]) }
     case 'errores':
       return { tipo: 'errores', pares: b.codigos.map((c) => [tx(ERRORES[c]?.titulo ?? 'error.' + c) + (c === 'sin_conexion' ? '' : ` (${c})`),
         ERRORES[c] ? tx(ERRORES[c].solucion) : '']) }
-    case 'recorrido': return { tipo: 'pantalla', pares: b.pasos.map((p) => [tx(p.titulo), tx(p.texto)]) }
+    // Los pasos del recorrido describen la pantalla de la Web UI («el botón ?», «el panel»): la terminal solo lleva a la web.
+    case 'recorrido': return { tipo: 'pantalla' }
     case 'captura': return { tipo: 'web', titulo: tx(b.alt), url }
     // El diagrama conserva sus paradas como líneas: la terminal no lo dibuja, pero el texto no se pierde.
     case 'diagrama':
@@ -223,11 +230,11 @@ function bloqueDe(b: BloqueWeb, tx: (k: string) => string, url: string): Bloque 
 
 // ayudaDe convierte los temas de la Ayuda a uno de los idiomas, en el mismo orden que la app.
 export function ayudaDe(temas: TemaWeb[], textos: Textos): Tema[] {
-  const tx = (k: string) => plano(textos[k] ?? k)
+  const tx = (k: string) => paraTerminal(textos, k)
   return temas.map((t) => {
     const url = `${URL_AYUDA}${t.id}.html`
-    return { id: t.id, titulo: tx(t.titulo), ...(t.paginaApp ? { pagina: t.paginaApp } : {}), resumen: tx(t.resumen),
-      bloques: t.bloques.map((b) => bloqueDe(b, tx, url)) }
+    return { id: t.id, titulo: tx(t.titulo), ...(t.paginaApp ? { pagina: t.paginaApp } : {}), resumen: tx(t.resumen), url,
+      terminal: tx(t.terminal), bloques: t.bloques.map((b) => bloqueDe(b, tx, url)) }
   })
 }
 
@@ -236,7 +243,7 @@ export function ayudaDe(temas: TemaWeb[], textos: Textos): Tema[] {
 export function textosDe(porIdioma: Record<Idioma, Textos>): Record<Idioma, Textos> {
   const claves = [...Object.keys(porIdioma.es).filter((k) => k.startsWith('menu.') || k.startsWith('error.')),
     ...Object.values(ERRORES).map((e) => e.solucion), ...CLAVES_TEXTOS]
-  return Object.fromEntries(IDIOMAS.map((i) => [i, Object.fromEntries(claves.map((k) => [k, plano(porIdioma[i][k] ?? k)]))])) as Record<Idioma, Textos>
+  return Object.fromEntries(IDIOMAS.map((i) => [i, Object.fromEntries(claves.map((k) => [k, paraTerminal(porIdioma[i], k)]))])) as Record<Idioma, Textos>
 }
 
 // plantillasDe da, por idioma, las plantillas de «Respuesta con forma» con su esquema JSON (el de esquemaCampos).

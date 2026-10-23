@@ -474,6 +474,29 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.historial.rSeguir': 'Yes: click its tram on the Home map and you will see its route (queue, preparation, running, validation and arrival) as it moves.',
   'ayuda.conectar.pEventos': 'Can my app see what happens live?',
   'ayuda.conectar.rEventos': 'Yes: GET /api/v1/eventos (SSE) reports every stage change of the requests, without their content. With an API’s key, only its own.',
+  // .terminal variants: what the terminal Help says instead of the Web UI text (finding 69).
+  'ayuda.empezar.rMarcha.terminal': 'The terminal header says “service running” or “no service”. It keeps running in the background even if you close the terminal; “tramtai servicio detener” stops it.',
+  'ayuda.historial.rSeguir.terminal': 'Yes: on Home (1) each request in progress has its row with its stage, and in History (5) Enter opens it and the response arrives live.',
+  'ayuda.espacios.paso1.terminal': 'Open a project with n in Workspaces (6); Ctrl+E switches between workspaces. If the folder had no .tramtai/, Tramtai prepares it and trusts it.',
+  'ayuda.ajustes.rVersion.terminal': 'In Settings (7), open “About Tramtai” on the “All of Tramtai” tab; c copies the support details, without keys.',
+  'ayuda.sinResultados.terminal': 'Nothing matches “{texto}”. Try another word, or press w to search the Help on the website.',
+  // In the terminal: how each topic is done there, with its keys. Only the terminal Help shows it.
+  'ayuda.empezar.terminal': 'In the terminal: 1 to 7 go to each page; ? opens the help for the page in front of you and Esc goes back. Ctrl+E switches workspace and q quits.',
+  'ayuda.agentes.terminal': 'In the terminal: 2 opens Agents. Enter shows an agent’s details, c checks it again, d connects or disconnects it and a switches between subscription and key.',
+  'ayuda.probar.terminal': 'In the terminal: 3 opens the Playground. Enter edits a recipe field, Ctrl+S sends the message, k shows the code and g saves the test as an API.',
+  'ayuda.conectar.terminal': 'In the terminal: 4 opens My APIs. n creates an API and Enter opens its details, where the y key copies its URL; ← → goes to the workspace key.',
+  'ayuda.archivos.terminal': 'In the terminal: in the Playground (3), type the path in the recipe’s files field; Tab completes it. In Settings (7), p prepares the converter.',
+  'ayuda.json.terminal': 'In the terminal: under “Shaped response (JSON)” in the Playground (3), n adds a field and v shows a sample response; if it does not match, o asks for a correction.',
+  'ayuda.recetas.terminal': 'In the terminal: in the Playground (3), Enter edits the recipe’s instructions, agent and fallback, and g saves it as an API. In My APIs (4), e changes it.',
+  'ayuda.herramientas.terminal': 'In the terminal: there is nothing to set up, because your app offers the tools in each request. Try the cycle from your app with the example in the developer guide.',
+  'ayuda.presupuestos.terminal': 'In the terminal: in My APIs (4), e changes an API’s budget and R resets its usage; on the workspace key, R resets the workspace’s.',
+  'ayuda.historial.terminal': 'In the terminal: 5 opens History. / searches, e filters by status and f by source. Enter opens a request, ← → moves through its message, response and log, and t retries it.',
+  'ayuda.espacios.terminal': 'In the terminal: 6 opens Workspaces and Ctrl+E switches workspace from any page. n opens a project; the footer shows which key starts, stops or forgets the selected one.',
+  'ayuda.claves.terminal': 'In the terminal: in My APIs (4), Enter opens an API and the y key copies its URL. ← → goes to the workspace key: v shows it, y copies it and t regenerates it.',
+  'ayuda.ajustes.terminal': 'In the terminal: 7 opens Settings. ← → switches between this workspace and all of Tramtai, ↑↓ picks the section and the footer shows which key changes it.',
+  'ayuda.problemas.terminal': 'In the terminal: the error stays on the status line and ! shows it in full. In History (5), Enter opens the request with its log and t retries it.',
+  'ayuda.conceptos.terminal': 'In the terminal: / searches for a word across the whole Help, ignoring accents and case.',
+  'ayuda.preguntas.terminal': 'In the terminal: / searches the whole Help, and w opens the topic on the web or, if there is no browser, shows its address to copy.',
 }
 
 export default ayudaEn
