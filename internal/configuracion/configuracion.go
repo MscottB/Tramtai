@@ -233,6 +233,48 @@ func ClavesAdministradas(ruta string) ([]string, error) {
 	return claves, nil
 }
 
+// DescribirAdministradas dice, para quien usa la app, qué controlan unas claves de seguridad (o sus subclaves): cada
+// prefijo administrado una vez, en el orden en que llega.
+func DescribirAdministradas(claves []string) []string {
+	vistos := map[string]bool{}
+	var nombres []string
+	for _, clave := range claves {
+		for _, prefijo := range prefijosAdministrados {
+			if (clave == prefijo || strings.HasPrefix(clave, prefijo+".")) && !vistos[prefijo] {
+				vistos[prefijo] = true
+				nombres = append(nombres, nombreAdministrada(prefijo))
+			}
+		}
+	}
+	return nombres
+}
+
+func nombreAdministrada(prefijo string) string {
+	switch prefijo {
+	case "servicio":
+		return idioma.T("los ajustes del servicio")
+	case "instancia_global":
+		return idioma.T("los ajustes del espacio global")
+	case "proyectos_confiables":
+		return idioma.T("las carpetas confiables")
+	case "comandos_agentes":
+		return idioma.T("el programa de cada agente")
+	case "concurrencia_servicio":
+		return idioma.T("cuántas peticiones atiende a la vez cada agente")
+	case "puntos_acceso":
+		return idioma.T("las APIs de este espacio")
+	case "adaptadores":
+		return idioma.T("el acceso a cada agente")
+	case "conversion":
+		return idioma.T("la conversión de archivos")
+	case "presupuesto":
+		return idioma.T("el presupuesto")
+	case "limites.memoria_proceso_mb":
+		return idioma.T("la memoria máxima de cada agente")
+	}
+	return prefijo
+}
+
 // CapaEntorno lee variables TRAMTAI_<SECCION>__<CLAVE>, donde "__" separa niveles.
 // Las TRAMTAI_* sin "__" (por ejemplo, las que guardan tokens) se ignoran.
 func CapaEntorno(entorno []string) (Capa, error) {

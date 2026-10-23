@@ -13,7 +13,7 @@ import (
 )
 
 func comandoTrabajos() *cobra.Command {
-	grupo := &cobra.Command{Use: "trabajos", Short: idioma.T("Trabajos de un espacio (el del proyecto actual si está activo; si no, el global)")}
+	grupo := &cobra.Command{Use: "trabajos", Short: idioma.T("Peticiones de un espacio (el del proyecto actual si está activo; si no, el global)")}
 	var instancia string
 	grupo.PersistentFlags().StringVarP(&instancia, "instancia", "i", "", idioma.T("identificador del espacio"))
 	var global bool
@@ -22,7 +22,7 @@ func comandoTrabajos() *cobra.Command {
 		return instanciaActual(ctx, c, instancia, global)
 	}
 	var limite int
-	listar := &cobra.Command{Use: "listar", Short: idioma.T("Lista los trabajos más recientes"),
+	listar := &cobra.Command{Use: "listar", Short: idioma.T("Lista las peticiones más recientes"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := conectar()
 			if err != nil {
@@ -44,12 +44,12 @@ func comandoTrabajos() *cobra.Command {
 				fmt.Fprintf(out, "  %-32s %-12s %-28s %s\n", t.ID, t.Estado, modeloDe(t), t.CreadoEn.Local().Format("02-01 15:04:05"))
 			}
 			if len(lista) == 0 {
-				fmt.Fprintln(out, idioma.T("  sin trabajos"))
+				fmt.Fprintln(out, idioma.T("  sin peticiones"))
 			}
 			return nil
 		}}
-	listar.Flags().IntVarP(&limite, "limite", "n", 20, idioma.T("cuántos trabajos mostrar (máximo 200)"))
-	mostrar := &cobra.Command{Use: "mostrar <id>", Short: idioma.T("Muestra un trabajo y su salida"), Args: cobra.ExactArgs(1),
+	listar.Flags().IntVarP(&limite, "limite", "n", 20, idioma.T("cuántas peticiones mostrar (máximo 200)"))
+	mostrar := &cobra.Command{Use: "mostrar <id>", Short: idioma.T("Muestra una petición y su respuesta"), Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := conectar()
 			if err != nil {
@@ -89,7 +89,7 @@ func comandoTrabajos() *cobra.Command {
 				return nil
 			}}
 	}
-	eliminar := &cobra.Command{Use: "eliminar <id>", Short: idioma.T("Elimina un trabajo terminado"), Args: cobra.ExactArgs(1),
+	eliminar := &cobra.Command{Use: "eliminar <id>", Short: idioma.T("Elimina una petición terminada"), Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := conectar()
 			if err != nil {
@@ -107,7 +107,7 @@ func comandoTrabajos() *cobra.Command {
 			fmt.Fprintln(cmd.OutOrStdout(), idioma.T("eliminado"))
 			return nil
 		}}
-	grupo.AddCommand(listar, mostrar, accion("cancelar", idioma.T("Cancela un trabajo")), accion("reintentar", idioma.T("Crea un intento nuevo de un trabajo terminado")), eliminar)
+	grupo.AddCommand(listar, mostrar, accion("cancelar", idioma.T("Cancela una petición")), accion("reintentar", idioma.T("Vuelve a enviar una petición terminada")), eliminar)
 	return grupo
 }
 
@@ -125,7 +125,7 @@ func modeloDe(t nucleo.Trabajo) string {
 func imprimirTrabajo(out io.Writer, t nucleo.Trabajo) {
 	fmt.Fprintf(out, "%s · %s · %s\n", t.ID, t.Estado, modeloDe(t))
 	if t.PuntoAcceso != "" {
-		fmt.Fprintf(out, idioma.T("punto de acceso: %s\n"), t.PuntoAcceso)
+		fmt.Fprintf(out, idioma.T("API: %s\n"), t.PuntoAcceso)
 	}
 	fmt.Fprintf(out, idioma.T("uso: %d entrada / %d salida"), t.Uso.TokensEntrada, t.Uso.TokensSalida)
 	if t.Uso.CostoUSD > 0 {

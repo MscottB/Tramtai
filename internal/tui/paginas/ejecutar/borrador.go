@@ -13,7 +13,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-// El borrador es el mensaje que se está escribiendo (recordarBorrador de la Web UI): se guarda en la carpeta de datos un
+// El borrador es el mensaje que se está escribiendo: se guarda en la carpeta de datos un
 // momento después de la última tecla, se recupera al abrir la terminal y se borra al enviar.
 
 const archivoBorrador = "terminal-borrador.json"

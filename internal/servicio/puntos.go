@@ -33,7 +33,7 @@ var (
 // normalizarPunto completa los valores predeterminados (instancia, ruta /p/<nombre> y los tres contratos) y valida el punto.
 func normalizarPunto(p ConfigPunto, instancia string, puertoServicio int) (ConfigPunto, error) {
 	invalido := func(motivo string) (ConfigPunto, error) {
-		return p, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("punto de acceso %s: %s", p.Nombre, motivo))
+		return p, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("API %s: %s", p.Nombre, motivo))
 	}
 	if !contrato.NombrePuntoValido(p.Nombre) {
 		return invalido(idioma.T("nombre no válido (minúsculas, números, _ y -; hasta 40)"))
@@ -117,13 +117,13 @@ func validarRespaldo(p ConfigPunto, existe func(agente string) bool) error {
 		default:
 			continue
 		}
-		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("punto de acceso %s: %s", p.Nombre, motivo))
+		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("API %s: %s", p.Nombre, motivo))
 	}
 	return nil
 }
 
-// ValidarParaApps rechaza al guardar una API que use (como agente o en el respaldo) un agente que no se permite en apps
-// (adaptadores.<nombre>.permitir_apps): sus peticiones se rechazarían todas. La usan la Web UI y la terminal.
+// validarParaApps rechaza al guardar una API que use (como agente o en el respaldo) un agente que no se permite en apps
+// (adaptadores.<nombre>.permitir_apps): sus peticiones se rechazarían todas.
 func validarParaApps(p ConfigPunto) error {
 	c, _ := configuracion.CargarConfiguracion("", agentes.Internos()) // sin configuración, solo cuenta la ficha de cada agente
 	usados := []string{p.Agente}
@@ -133,8 +133,8 @@ func validarParaApps(p ConfigPunto) error {
 	}
 	for _, agente := range usados {
 		if agente != "" && !agentes.PermitidoEnApps(c, agente) {
-			return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("punto de acceso %s: %s", p.Nombre,
-				idioma.Tf("%s no está habilitado para aplicaciones: todavía no ha pasado su prueba de seguridad (canario). Úsalo desde Probar o la terminal", agentes.NombreVisible(agente))))
+			return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("API %s: %s", p.Nombre,
+				idioma.Tf("%s no está habilitado para aplicaciones: todavía no ha pasado su prueba de seguridad. Úsalo desde Probar o la terminal", agentes.NombreVisible(agente))))
 		}
 	}
 	return nil
@@ -144,7 +144,7 @@ func validarParaApps(p ConfigPunto) error {
 func (s *Servicio) existe(agente string) bool { return s.opc.Registro[agente] != nil }
 
 // validarPunto aplica las reglas para guardar una API: un respaldo con el que funcione y solo agentes habilitados para
-// apps. El formato lo comprueba NormalizarPunto. Las usan todas las rutas que guardan un punto.
+// apps. El formato lo comprueba NormalizarPunto.
 func validarPunto(p ConfigPunto, existe func(string) bool) error {
 	if err := validarRespaldo(p, existe); err != nil {
 		return err
@@ -159,7 +159,7 @@ func (s *Servicio) eliminarPunto(ruta string, origen configuracion.Origen, nombr
 	err := configuracion.EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		i := slices.IndexFunc(lista, func(p ConfigPunto) bool { return p.Nombre == nombre })
 		if i < 0 {
-			return nil, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("no existe el punto de acceso %s en este archivo", nombre))
+			return nil, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("no existe la API %s en este archivo", nombre))
 		}
 		return slices.Delete(lista, i, i+1), nil
 	})
@@ -172,7 +172,7 @@ func (s *Servicio) eliminarPunto(ruta string, origen configuracion.Origen, nombr
 	s.mu.RUnlock()
 	if p != nil && p.instancia != nil {
 		if err := p.instancia.Planificador.EliminarConsumo(context.Background(), nombre); err != nil {
-			fmt.Fprintf(s.opc.Registros, "punto de acceso %s: no se pudo borrar su consumo: %v\n", nombre, err)
+			fmt.Fprintf(s.opc.Registros, "API %s: no se pudo borrar su consumo: %v\n", nombre, err)
 		}
 	}
 	return nil
@@ -255,7 +255,7 @@ func (s *Servicio) puntosDeseados() ([]candidato, []string) {
 			case err != nil:
 				errores = append(errores, origen+": "+nucleo.MensajeDe(err))
 			case vistos[normalizado.Nombre]:
-				errores = append(errores, idioma.Tf("%s: punto de acceso duplicado %s", origen, normalizado.Nombre))
+				errores = append(errores, idioma.Tf("%s: API duplicada %s", origen, normalizado.Nombre))
 			default:
 				vistos[normalizado.Nombre] = true
 				salida = append(salida, candidato{cfg: normalizado, origen: origen})
@@ -371,7 +371,7 @@ func (s *Servicio) Recargar() []EstadoPunto {
 	s.mu.Unlock()
 	for _, p := range estado {
 		if p.Error != "" && p.Error != "desactivado" {
-			fmt.Fprintf(s.opc.Registros, "punto de acceso %s: %s\n", p.Nombre, p.Error)
+			fmt.Fprintf(s.opc.Registros, "API %s: %s\n", p.Nombre, p.Error)
 		}
 	}
 	return estado

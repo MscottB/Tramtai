@@ -57,7 +57,7 @@ func Leer(nombre string) (string, error) {
 	return strings.TrimSpace(salida), nil
 }
 
-// Borrar elimina la clave; no es un error si no existía.
+// Borrar no falla si la clave no existía.
 func Borrar(nombre string) error {
 	if err := admitir(nombre); err != nil {
 		return err

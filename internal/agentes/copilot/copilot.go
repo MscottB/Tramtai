@@ -31,7 +31,6 @@ type Copilot struct {
 	Autenticacion *adaptadores.Modo // clave_api (predeterminada) o suscripcion (la sesión de copilot login)
 }
 
-// Detectar implementa Detectable.
 func (c Copilot) Detectar(ctx context.Context) adaptadores.Estado {
 	e := adaptadores.Estado{Agente: "copilot", Autenticacion: c.Autenticacion.Valor(),
 		Terminos: idioma.T("términos de GitHub Copilot: tu cuenta y tu plan; cada petición gasta créditos")}
@@ -54,7 +53,6 @@ func (c Copilot) Detectar(ctx context.Context) adaptadores.Estado {
 	return e
 }
 
-// Ejecutar implementa Adaptador.
 func (c Copilot) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
 	ruta, err := programa(c.Programa)
 	if err != nil {
@@ -169,7 +167,7 @@ func entorno(extra []string) []string {
 
 var errSinSesion = errors.New("sin sesión de Copilot")
 
-// ComprobarSesion implementa adaptadores.ComprobadorSesion leyendo el config.json de Copilot (sin tokens ni mensajes):
+// ComprobarSesion lee el config.json de Copilot (sin tokens ni mensajes):
 // la cuenta es el login del último usuario con sesión. No sabe si se pasó a clave: con clave Tramtai usa
 // COPILOT_GITHUB_TOKEN, no la sesión del CLI.
 func (c Copilot) ComprobarSesion(context.Context) adaptadores.SesionCLI {

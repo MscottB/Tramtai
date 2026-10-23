@@ -43,9 +43,10 @@ func BuscarProyecto(dir string) (string, bool) {
 	}
 }
 
-// CargarConfiguracion resuelve las capas de configuración (interna, global, proyecto, local y entorno). Con raíz vacía usa solo la global y el entorno
-// (instancia global); con la raíz de un proyecto añade su configuración versionada y la local. agentes es la capa
-// interna de los agentes (agentes.Internos()): sus comandos, su concurrencia y la autenticación de cada CLI.
+// CargarConfiguracion resuelve las capas de configuración (interna, global, proyecto, local y entorno). Con raíz vacía
+// usa solo la global y el entorno (instancia global); con la raíz de un proyecto añade su configuración versionada y la
+// local. agentes es la capa interna de los agentes (agentes.Internos()): sus comandos, su concurrencia y la
+// autenticación de cada CLI.
 func CargarConfiguracion(raiz string, agentes Capa) (*Configuracion, error) {
 	global, err := RutaGlobal()
 	if err != nil {
@@ -123,7 +124,7 @@ func (c *Configuracion) RutaPermitida(ruta string) (string, error) {
 			return real, nil
 		}
 	}
-	return "", nucleo.NuevoError(nucleo.CodigoRutaNoPermitida, idioma.Tf("%s está fuera de instancia_global.raices_permitidas", ruta))
+	return "", nucleo.NuevoError(nucleo.CodigoRutaNoPermitida, idioma.Tf("%s está fuera de las carpetas desde las que se pueden enviar archivos: muévelo a una de ellas", ruta))
 }
 
 // ProyectoConfiable indica si la raíz figura en proyectos_confiables. Solo la configuración global (o el entorno)

@@ -125,7 +125,7 @@ func (p *Pagina) seguir(t nucleo.Trabajo) tea.Cmd {
 }
 
 // terminar enseña el trabajo terminado. Con salida estructurada el texto en vivo puede diferir del resultado validado, y si
-// no cumplía el esquema se enseña la última respuesta conservada (terminar de Ejecutar.vue).
+// no cumplía el esquema se enseña la última respuesta conservada.
 func (p *Pagina) terminar(t nucleo.Trabajo) {
 	p.estado = t.Estado
 	if (t.Estado == nucleo.Completado || t.CodigoError == nucleo.CodigoSalidaNoCumpleEsquema) && t.Salida != "" {
@@ -163,8 +163,8 @@ func (p *Pagina) vivoVigente(m msgVivo) bool {
 	return p.vigente(m.Origen) && p.trabajo != nil && m.ID == p.trabajo.ID && m.Seq == p.nflujo
 }
 
-// alVivo aplica un evento del trabajo, como los de Ejecutar.vue: el texto se suma, un aviso se enseña, una corrección
-// vuelve a escribir la respuesta desde cero y el estado cambia.
+// alVivo aplica un evento del trabajo: el texto se suma, un aviso se enseña, una corrección vuelve a escribir la
+// respuesta desde cero y el estado cambia.
 func (p *Pagina) alVivo(m msgVivo) tea.Cmd {
 	switch m.Clase {
 	case "corte":
@@ -232,7 +232,7 @@ func (p *Pagina) corregir() tea.Cmd {
 
 // nuevaPrueba deja la página lista para otro mensaje: la receta se conserva y el trabajo anterior queda en el Historial.
 func (p *Pagina) nuevaPrueba() tea.Cmd {
-	if p.final == nil { // como el botón de la Web UI: solo con una respuesta terminada
+	if p.final == nil { // solo con una respuesta terminada
 		return nil
 	}
 	p.cerrarVivo()
@@ -275,14 +275,12 @@ func (p *Pagina) textoRespuesta() string {
 		lineas = append(lineas, e.Advertencia.Render("! "+a))
 	}
 	if f := p.final; f != nil && f.CodigoError != "" {
-		titulo := p.tx("error." + string(f.CodigoError))
-		if titulo == "error."+string(f.CodigoError) {
-			titulo = string(f.CodigoError)
+		aviso := e.AvisoError(p.lengua, f.CodigoError, f.MensajeError)
+		lineas = append(lineas, e.Error.Render(e.Iconos.Fallo+" "+aviso[0]))
+		for _, linea := range aviso[1:] {
+			lineas = append(lineas, e.Tenue.Render("  "+linea))
 		}
-		if f.MensajeError != "" {
-			titulo += ": " + f.MensajeError
-		}
-		lineas = append(lineas, e.Error.Render(e.Iconos.Fallo+" "+titulo), "")
+		lineas = append(lineas, "")
 		if f.Corregible {
 			lineas = append(lineas, e.Acento.Render("o "+p.tx("ejecutar.corregir"))+" "+e.Tenue.Render(p.tx("ejecutar.corregirTexto")), "",
 				e.Tenue.Render(p.tx("ejecutar.respuestaRecibida")))

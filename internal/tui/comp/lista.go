@@ -35,7 +35,7 @@ type Lista[T any] struct {
 	plegados map[string]bool
 	filas    []fila[T]
 	cursor   int
-	inicio   int // la primera fila que se ve
+	inicio   int
 }
 
 type fila[T any] struct {

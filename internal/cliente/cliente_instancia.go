@@ -7,7 +7,6 @@ import (
 	"tramtai/internal/contrato"
 )
 
-// Instancia devuelve el resumen de la instancia.
 func (c *Cliente) Instancia(ctx context.Context, instancia string) (contrato.ResumenInstancia, error) {
 	var r contrato.ResumenInstancia
 	return r, c.pedir(ctx, "GET", "/api/v1/instancia", instancia, nil, "", &r)
@@ -70,7 +69,6 @@ func (c *Cliente) Limites(ctx context.Context, instancia string) (contrato.Limit
 	return l, c.pedir(ctx, "GET", "/api/v1/limites", instancia, nil, "", &l)
 }
 
-// AjustesConversor guarda los ajustes del conversor de archivos.
 func (c *Cliente) AjustesConversor(ctx context.Context, instancia string, a contrato.AjustesConversor) error {
 	return c.pedir(ctx, "PUT", "/api/v1/conversor/ajustes", instancia, cuerpoJSON(a), "application/json", nil)
 }

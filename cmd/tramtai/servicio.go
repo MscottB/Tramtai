@@ -144,7 +144,7 @@ func seguirRegistro(cmd *cobra.Command, n int, seguir bool) error {
 }
 
 func comandoServicio() *cobra.Command {
-	grupo := &cobra.Command{Use: "servicio", Short: idioma.T("Servicio único: todos los espacios y puntos de acceso en un puerto")}
+	grupo := &cobra.Command{Use: "servicio", Short: idioma.T("Servicio único: todos los espacios y sus APIs en un puerto")}
 	var abrirAlIniciar, navegadorAlIniciar bool
 	var archivoRegistro string
 	var esperarCierre bool
@@ -200,7 +200,7 @@ func comandoServicio() *cobra.Command {
 					return nil
 				}
 				if !avisado && time.Since(inicio) > 2*time.Second {
-					fmt.Fprintf(cmd.OutOrStdout(), idioma.T("esperando a que terminen los trabajos en curso (hasta %s)…\n"), plazo)
+					fmt.Fprintf(cmd.OutOrStdout(), idioma.T("esperando a que terminen las peticiones en curso (hasta %s)…\n"), plazo)
 					avisado = true
 				}
 				time.Sleep(200 * time.Millisecond)
@@ -208,7 +208,7 @@ func comandoServicio() *cobra.Command {
 			return errors.New(idioma.T("el servicio no confirmó la detención"))
 		}}
 	detener.Flags().BoolVarP(&si, "si", "s", false, idioma.T("no pedir confirmación"))
-	estado := &cobra.Command{Use: "estado", Short: idioma.T("Muestra el servicio, sus espacios y sus puntos de acceso"),
+	estado := &cobra.Command{Use: "estado", Short: idioma.T("Muestra el servicio, sus espacios y sus APIs"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := conectar()
 			if errors.Is(err, cliente.ErrServicioInactivo) {
@@ -227,7 +227,7 @@ func comandoServicio() *cobra.Command {
 			imprimirEstado(cmd.OutOrStdout(), e)
 			return nil
 		}}
-	recargar := &cobra.Command{Use: "recargar", Short: idioma.T("Aplica los cambios de puntos de acceso sin reiniciar"),
+	recargar := &cobra.Command{Use: "recargar", Short: idioma.T("Aplica los cambios de las APIs sin reiniciar"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := conectar()
 			if err != nil {
@@ -242,7 +242,7 @@ func comandoServicio() *cobra.Command {
 			imprimirPuntos(cmd.OutOrStdout(), puntos)
 			return nil
 		}}
-	token := &cobra.Command{Use: "token", Short: idioma.T("Muestra el token del espacio global (igual que tramtai global token)"),
+	token := &cobra.Command{Use: "token", Short: idioma.T("Muestra la clave del espacio global (igual que tramtai global token)"),
 		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, "global", false) }}
 	autoarranqueCmd := &cobra.Command{Use: "autoarranque [activar|desactivar]",
 		Short: idioma.T("Arranca Tramtai (la app de escritorio, oculta en la bandeja) al iniciar sesión en Windows"),
@@ -351,7 +351,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	remoto := !esLoopback(host)
 	if remoto {
 		if !c.Booleano("servicio.permitir_remoto") {
-			return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("servicio.host %s no es loopback: activa servicio.permitir_remoto (mejor, usa un túnel SSH)", host))
+			return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("servicio.host %s no es una dirección de este equipo: para abrir el servicio a otros equipos activa servicio.permitir_remoto (mejor, usa un túnel SSH)", host))
 		}
 		for _, f := range agentes.Todos() {
 			if agente := f.Nombre; agentes.AdmiteSuscripcion(agente) && c.Texto("adaptadores."+agente+".autenticacion") == adaptadores.AutenticacionSuscripcion {

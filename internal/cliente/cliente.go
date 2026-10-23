@@ -1,5 +1,5 @@
 // Package cliente habla con el servicio en marcha: lo descubre por su descriptor, comprueba que responde el
-// mismo servicio y usa el token de servicio para administrar y operar las instancias. Lo usan la CLI y la TUI.
+// mismo servicio y usa el token de servicio para administrar y operar las instancias.
 package cliente
 
 import (
@@ -406,7 +406,6 @@ func (c *Cliente) PrepararConversor(ctx context.Context, instancia string) (cont
 	return e, c.pedir(ctx, "POST", "/api/v1/conversor/preparar", instancia, nil, "", &e)
 }
 
-// Trabajo devuelve un trabajo.
 func (c *Cliente) Trabajo(ctx context.Context, instancia, id string) (nucleo.Trabajo, error) {
 	var t nucleo.Trabajo
 	return t, c.pedir(ctx, "GET", "/api/v1/trabajos/"+url.PathEscape(id), instancia, nil, "", &t)
@@ -436,7 +435,6 @@ func (c *Cliente) Eliminar(ctx context.Context, instancia, id string) error {
 	return c.pedir(ctx, "DELETE", "/api/v1/trabajos/"+url.PathEscape(id), instancia, nil, "", nil)
 }
 
-// Catalogo devuelve el catálogo de modelos de la instancia.
 func (c *Cliente) Catalogo(ctx context.Context, instancia string) ([]contrato.Modelo, error) {
 	var r struct {
 		Modelos []contrato.Modelo `json:"modelos"`

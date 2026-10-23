@@ -37,7 +37,7 @@ type paso struct {
 	hecho                   bool
 }
 
-// pasos son los Primeros pasos que manda el servicio, ya calculados, con sus textos (los de Panel.vue).
+// pasos son los Primeros pasos que manda el servicio, ya calculados, con sus textos.
 func (p *Pagina) pasos() []paso {
 	lista := make([]paso, 0, len(p.losPasos))
 	for _, x := range p.losPasos {
@@ -170,16 +170,16 @@ func (p *Pagina) lineas() []string {
 	l = append(l, e.Recortar(e.Tenue.Render(p.tx("inicio.direccion"))+" "+e.Acento.Render(p.inst.Base), ancho))
 	if p.hayAgentes {
 		listos := p.listos()
-		red := p.tx("mapa.descripcion", "apis", strconv.Itoa(p.origenes()), "listos", strconv.Itoa(listos), "total", strconv.Itoa(len(p.agentes)))
-		if p.origenes() == 1 { // la Web UI solo tiene el plural: «1 orígenes»
-			red = p.a(idioma.Tf("Red de Tramtai: 1 origen y %d de %d agentes en servicio.", listos, len(p.agentes)))
+		clave := "mapa.descripcion"
+		if p.origenes() == 1 {
+			clave = "mapa.descripcionUno"
 		}
+		red := p.tx(clave, "apis", strconv.Itoa(p.origenes()), "listos", strconv.Itoa(listos), "total", strconv.Itoa(len(p.agentes)))
 		l = append(l, e.Tenue.Render(e.Recortar(red, ancho)))
 	} else {
 		l = append(l, e.Tenue.Render(p.tx("inicio.comprobando")))
 	}
 
-	// Avisos
 	if p.inst.SugerirApiPropia {
 		l = append(l, "")
 		l = append(l, p.aviso(p.tx("claves.sugerencia", "n", strconv.Itoa(p.inst.AppConClave24h)), "c", p.tx("claves.crearApi"))...)
@@ -197,7 +197,6 @@ func (p *Pagina) lineas() []string {
 		l = append(l, p.aviso(p.textoConversor(), "p", p.tx("conversor.preparar"), "s", p.tx("conversor.irAjustes"))...)
 	}
 
-	// La red en vivo
 	l = append(l, "")
 	filas, resto := visibles(p.red, maximoVisibles)
 	cabecera := e.Grupo.Render(p.tx("inicio.red"))
@@ -221,13 +220,11 @@ func (p *Pagina) lineas() []string {
 	}
 	l = append(l, p.accion(0, "g", p.tx("inicio.detalles")))
 
-	// Contadores
 	l = append(l, "", e.Grupo.Render(p.tx("inicio.tablero"))+e.Tenue.Render(" "+e.Iconos.Separador+" "+p.periodo()),
 		p.contador(e.Iconos.Ok, e.Exito, teclaCompletados, "completados", p.inst.Contadores[nucleo.FiltroCompletado]),
 		p.contador(e.Iconos.Activo, e.Acento, teclaEnCurso, "enCurso", p.inst.Contadores[nucleo.FiltroEnCurso]),
 		p.contador(e.Iconos.Fallo, e.Error, teclaConError, "conError", p.inst.Contadores[nucleo.FiltroConError]))
 
-	// Primeros pasos
 	pasos := p.pasos()
 	hechos := 0
 	for _, x := range pasos {
@@ -256,7 +253,6 @@ func (p *Pagina) lineas() []string {
 	}
 	l = append(l, p.accion(0, "a", p.a(idioma.Tf("Ver la Ayuda de %s", p.tituloAyuda()))))
 
-	// Peticiones recientes
 	l = append(l, "", e.Grupo.Render(p.tx("inicio.recientes")))
 	if len(p.recientes) == 0 {
 		l = append(l, envolver(p.tx("inicio.sinTrabajos"), ancho, 0, e.Tenue)...)
@@ -277,7 +273,7 @@ func Atajo(clave string) string {
 	return strconv.Itoa(n + 1)
 }
 
-// reciente son las dos líneas de una petición reciente (Panel.vue): lo que se escribió, y debajo hace cuánto, el agente con
+// reciente son las dos líneas de una petición reciente: lo que se escribió, y debajo hace cuánto, el agente con
 // su modelo y cómo acabó.
 func (p *Pagina) reciente(j nucleo.Trabajo) []string {
 	e, ancho := p.estilos, max(p.c.Ancho, 1)

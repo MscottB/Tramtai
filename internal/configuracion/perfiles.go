@@ -40,8 +40,8 @@ type carpetaPerfiles struct{ dir, limite string }
 // maximoEsquema acota el JSON Schema que se lee de disco.
 const maximoEsquema = 1 << 20
 
-// AplicarPerfil completa la solicitud con el perfil que pide; los campos explícitos de la solicitud prevalecen
-// . El perfil del proyecto tiene prioridad sobre uno global con el mismo nombre.
+// AplicarPerfil completa la solicitud con el perfil que pide; los campos explícitos de la solicitud prevalecen.
+// El perfil del proyecto tiene prioridad sobre uno global con el mismo nombre.
 func (c *Configuracion) AplicarPerfil(s nucleo.SolicitudEjecucion) (nucleo.SolicitudEjecucion, error) {
 	if s.Perfil == "" {
 		return s, nil

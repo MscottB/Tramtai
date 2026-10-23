@@ -57,7 +57,7 @@ func TestAbrirExistentePideConfianza(t *testing.T) {
 	conTramtai(t, dir, "comandos_agentes:\n  claude: otro.exe\n")
 	_, err := s.AbrirProyecto(dir, AbrirOpciones{})
 	var ec *ErrorConfianza
-	if !errors.As(err, &ec) || strings.Join(ec.Claves, ",") != "comandos_agentes" || nucleo.CodigoDe(err) != nucleo.CodigoConfianzaRequerida {
+	if !errors.As(err, &ec) || strings.Join(ec.Claves, ",") != "el programa de cada agente" || nucleo.CodigoDe(err) != nucleo.CodigoConfianzaRequerida {
 		t.Fatalf("debía pedir confianza: %v", err)
 	}
 	si := true
@@ -85,7 +85,7 @@ func TestAbrirSinConfiarIgnoraClavesAdministradas(t *testing.T) {
 	if inst.Config.Texto("comandos_agentes.claude") == "otro.exe" {
 		t.Fatal("las claves administradas de un local.yaml no confiado no se aplican")
 	}
-	if e, _ := s.registro().buscar(inst.ID); !strings.Contains(e.UltimoError, "local.yaml") {
+	if e, _ := s.registro().buscar(inst.ID); !strings.Contains(e.UltimoError, "el programa de cada agente") || strings.Contains(e.UltimoError, "comandos_agentes") {
 		t.Fatalf("debía avisar de las claves ignoradas: %+v", e)
 	}
 }
@@ -141,7 +141,7 @@ func TestAbrirCarpetaConSoloLocalPreguntaYNoPisa(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, ".tramtai", ".gitignore"), []byte("propio\n"), 0o600)
 	_, err := s.AbrirProyecto(dir, AbrirOpciones{})
 	var ec *ErrorConfianza
-	if !errors.As(err, &ec) || strings.Join(ec.Claves, ",") != "comandos_agentes" {
+	if !errors.As(err, &ec) || strings.Join(ec.Claves, ",") != "el programa de cada agente" {
 		t.Fatalf("debía pedir confianza: %v", err)
 	}
 	no := false
@@ -268,7 +268,7 @@ func TestAbrirProyectoUI409(t *testing.T) {
 	dir := t.TempDir()
 	conTramtai(t, dir, "comandos_agentes:\n  claude: otro.exe\n")
 	r, cuerpo := n.pedir("POST", "/ui/proyectos", `{"raiz":`+jsonTexto(dir)+`}`, "X-CSRF-Token", n.csrf)
-	if r.StatusCode != 409 || !strings.Contains(cuerpo, "confianza_requerida") || !strings.Contains(cuerpo, `"claves":["comandos_agentes"]`) {
+	if r.StatusCode != 409 || !strings.Contains(cuerpo, "confianza_requerida") || !strings.Contains(cuerpo, `"claves":["el programa de cada agente"]`) {
 		t.Fatalf("respuesta: %d %s", r.StatusCode, cuerpo)
 	}
 	r, cuerpo = n.pedir("POST", "/ui/proyectos", `{"raiz":`+jsonTexto(dir)+`,"confiar":true}`, "X-CSRF-Token", n.csrf)

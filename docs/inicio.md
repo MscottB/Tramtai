@@ -12,11 +12,11 @@
 
 | | Windows 10 y 11 | Linux | macOS |
 |---|---|---|---|
-| Servicio, API, CLI, terminal y Web UI | ✅ | ✅ | ✅ |
-| App de escritorio con bandeja | ✅ (instalador o portable) | ✅ (.deb y .rpm) | ✅ (.dmg sin firmar) |
-| Arranque con el sistema | ✅ | ✅ | ✅ |
-| Actualización con un clic | ✅ (instalada) | Aviso con enlace | Aviso con enlace |
-| Claves en el almacén del sistema | ✅ Administrador de credenciales | ✅ Secret Service (`secret-tool`) | ✅ Llavero |
+| Servicio, API, CLI, terminal y Web UI | Sí | Sí | Sí |
+| App de escritorio con bandeja | Sí, instalador o portable | Sí, .deb y .rpm | Sí, .dmg sin firmar |
+| Arranque con el sistema | Sí | Sí | Sí |
+| Actualización con un clic | Sí, en la instalada | No: aviso con enlace | No: aviso con enlace |
+| Claves en el almacén del sistema | Sí, Administrador de credenciales | Sí, Secret Service (`secret-tool`) | Sí, Llavero |
 | Entrar en la Web UI | Directo (mismo usuario) | Directo (mismo usuario) | Desde la app o con `tramtai abrir` |
 
 ## 1. Instalar y abrir
@@ -25,7 +25,7 @@ Descarga `Tramtai-…-instalador-windows-x64.exe` desde [Releases](https://githu
 
 - Se instala solo para tu usuario, en `%LOCALAPPDATA%\Programs\Tramtai`, sin permisos de administrador.
 - Opciones: el comando `tramtai` en la terminal (añade la carpeta a tu PATH), iniciar con Windows y un acceso directo en el escritorio.
-- Para actualizar no hace falta descargar nada a mano: cuando hay una versión nueva, la app lo avisa y **Actualizar ahora** la instala (también `tramtai actualizar`). Ver [actualizaciones](operacion.md#actualizaciones).
+- Para actualizar no hace falta descargar nada a mano: cuando hay una versión nueva, la app lo avisa y **Instalar ahora** la instala (también `tramtai actualizar`). Ver [actualizaciones](operacion.md#actualizaciones).
 - Se desinstala desde *Configuración → Aplicaciones*; al final pregunta si borrar también tus datos (`%APPDATA%\tramtai`).
 - Para comprobar la descarga, la suma SHA-256 de cada archivo está en `SHA256SUMS.txt` del mismo release.
 
@@ -44,8 +44,8 @@ Después abre **Tramtai** desde el menú Inicio (Windows), la carpeta Aplicacion
 - **Entrar en la Web UI:** la app de escritorio entra sola. En el navegador (Windows, Linux y macOS) entras directamente: Tramtai comprueba que es de tu mismo usuario del sistema. Si no se puede comprobar, `tramtai abrir` (o la terminal interactiva) la abre ya dentro con un código de un solo uso. La clave de las aplicaciones no sirve para entrar.
 - **Que arranque solo:** en **Ajustes → Arranque con Windows** (o con macOS, o con Linux, según tu sistema) o con `tramtai servicio autoarranque activar`, Tramtai se inicia oculto en la bandeja al iniciar sesión y la Web UI está siempre disponible, sin abrir ninguna terminal.
 - **Ayuda, idioma y apariencia:** la página **Ayuda** resume estos pasos y responde las dudas comunes. En la cabecera, un botón cambia entre español e inglés y otro elige la apariencia: clara, oscura o como el sistema. La guía de **Inicio** es opcional: «Ocultar guía» la quita y **Ayuda** la vuelve a mostrar.
-- **El recorrido de bienvenida:** la primera vez que abres Tramtai, ya en **Inicio**, un diálogo pregunta «¿Te enseño Tramtai?» (unos 2 minutos): **Empezar** te enseña el mapa, Agentes, Probar, Mis APIs y Espacios en 14 pasos, y **Ahora no** no vuelve a preguntar; lo tienes en **Primeros pasos** («Haz el recorrido de Tramtai») para cuando quieras, también para repetirlo. No sale si entraste por un enlace directo a una página. En cada página, el botón **?** abre su ayuda y **Muéstrame en pantalla** hace el recorrido de esa página (también en **Ayuda**). Con Esc lo cierras y con las flechas pasas de paso. Solo enseña: no pulsa nada ni cambia tus datos.
-- **El menú, por grupos:** **Empezar** (Inicio, Agentes, Probar), **Conectar** (Mis APIs, Historial) y **Organizar** (Espacios, Ajustes); Ayuda queda aparte, abajo.
+- **El recorrido guiado:** la primera vez que abres Tramtai, ya en **Inicio**, un diálogo pregunta «¿Te enseño Tramtai?»: **Hacer el recorrido** te enseña el mapa, Agentes, Probar, Mis APIs y Espacios en 14 pasos, y **Ahora no** no vuelve a preguntar; lo tienes en **Primeros pasos** («Haz el recorrido de Tramtai») para cuando quieras, también para repetirlo. No sale si entraste por un enlace directo a una página. En cada página, el botón **?** abre su ayuda y **Muéstrame en pantalla** hace el recorrido de esa página (también en **Ayuda**). Con Esc lo cierras y con las flechas pasas de paso. Solo enseña: no pulsa nada ni cambia tus datos.
+- **El menú, por grupos:** **Empezar** (Inicio, Agentes, Probar), **Usar** (Mis APIs, Historial) y **Organizar** (Espacios, Ajustes); Ayuda queda aparte, abajo.
 - **Aplicación de escritorio:** Tramtai abre la Web UI en su propia ventana, en Windows, macOS y Linux. Cerrar la ventana la deja en la bandeja con el servicio en marcha; el menú del clic derecho muestra el estado y tus APIs, y «Salir y detener el servicio…» la cierra del todo (con un aviso).
 - **En un proyecto:** en la Web UI, el selector de espacio de la cabecera → **Abrir un proyecto…**: escribes la carpeta (o, en la app de escritorio, la eliges con **Examinar…**) y Tramtai la prepara si hace falta (crea `.tramtai/`) y la abre, con su historial, sus APIs y sus ajustes separados de la global. Desde la terminal, dentro de su carpeta, `tramtai iniciar` y `tramtai abrir` hacen lo mismo.
 
@@ -110,7 +110,7 @@ tramtai convertir informe.pdf     # muestra el texto que recibiría el agente, s
 
 - `-f` admite PDF, Word, PowerPoint, Excel, HTML y texto (txt, md, json, csv…), y se puede repetir. Un formato que no
   se admite se avisa antes de enviar nada; un ZIP, descomprímelo (lista completa en [la API](api.md#formatos-admitidos)).
-- `-e` recibe un JSON Schema: la respuesta será un JSON que lo cumpla, o el trabajo fallará con `salida_no_cumple_esquema` y el primer problema («Falta el campo `total`»). En Probar el esquema se arma con plantillas o campo a campo, y la respuesta que no cumple se corrige con un clic (o hasta 3 veces sola, con «Si la respuesta no cumple»).
+- `-e` recibe un JSON Schema: la respuesta será un JSON que lo cumpla, o la petición fallará con `salida_no_cumple_esquema` y el primer problema («Falta el campo `total`»). En Probar el esquema se arma con plantillas o campo a campo, y la respuesta que no cumple se corrige con un clic (o hasta 3 veces sola, con «Si la respuesta no cumple»).
 
 ### Modelos
 
@@ -127,7 +127,7 @@ tramtai convertir informe.pdf     # muestra el texto que recibiría el agente, s
         codex: <modelo>
   ```
 
-- Si un perfil no tiene modelo para el agente, el trabajo se rechaza: Tramtai nunca cambia el modelo en silencio.
+- Si un perfil no tiene modelo para el agente, la petición se rechaza: Tramtai nunca cambia el modelo en silencio.
 - **Modelo predeterminado:** el que se usa cuando una aplicación no elige agente ni modelo. Se cambia en **Ajustes → Modelo predeterminado** (al momento, sin reiniciar) o con `predeterminados.agente` y `predeterminados.modelo` (o `predeterminados.perfil_modelo`) en la configuración. En un proyecto se guarda en su `.tramtai/local.yaml`. Debajo se elige su **esfuerzo** (`predeterminados.esfuerzo`): se usa con el modelo predeterminado cuando la petición tampoco elige esfuerzo; con otro agente, modelo o perfil, cada CLI usa el suyo. Si el modelo nuevo no admite ese esfuerzo, vuelve al del agente.
 - **Versión real:** los selectores muestran bajo cada alias (`sonnet`, `haiku`…) la versión que informó el agente la última vez que se usó, por ejemplo `claude-haiku-4-5-20251001`. Codex no informa el modelo efectivo; GitHub Copilot sí, también el que elige el automático.
 
@@ -138,7 +138,7 @@ tramtai iniciar     # en la carpeta de un repositorio: crea .tramtai/ con su con
 tramtai abrir       # abre el espacio de ese proyecto
 ```
 
-- **Perfiles de trabajo:** `.tramtai/profiles/<nombre>.yaml` guarda instrucciones, formato y esquema reutilizables. Se usan con `--perfil-trabajo <nombre>`, o con `perfil` en la API.
+- **Perfiles de ejecución:** `.tramtai/profiles/<nombre>.yaml` guarda instrucciones, formato y esquema reutilizables. Se usan con `--perfil-trabajo <nombre>`, o con `perfil` en la API.
 - **Modo consciente del proyecto:** el agente trabaja en la carpeta del proyecto y lee sus reglas (`CLAUDE.md`, `AGENTS.md`). Solo se permite en proyectos que declares confiables en la configuración global (`config.yaml`, ver [configuración](#configuración)):
 
   ```yaml
@@ -146,7 +146,7 @@ tramtai abrir       # abre el espacio de ese proyecto
     - C:\ruta\al\proyecto
   ```
 
-  `proyectos_confiables` solo se lee de la configuración global: un proyecto no puede declararse confiable a sí mismo. Por eso un `.tramtai/local.yaml` con claves de seguridad (comandos de los agentes, `conversion.comando`, puntos de acceso, `servicio`, `adaptadores`…) solo se acepta si la carpeta del proyecto figura en esa lista; si no, Tramtai rechaza la configuración e indica que la añadas. Las demás claves, como el modelo predeterminado del proyecto, valen siempre.
+  `proyectos_confiables` solo se lee de la configuración global: un proyecto no puede declararse confiable a sí mismo. Por eso un `.tramtai/local.yaml` con claves de seguridad (comandos de los agentes, `conversion.comando`, APIs, `servicio`, `adaptadores`…) solo se acepta si la carpeta del proyecto figura en esa lista; si no, Tramtai rechaza la configuración e indica que la añadas. Las demás claves, como el modelo predeterminado del proyecto, valen siempre.
 
   Se pide con `tramtai ejecutar --contexto consciente_proyecto "…"`.
 

@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title data-en="Developers · Tramtai">Desarrolladores · Tramtai</title>
-<meta name="description" content="Conecta tu aplicación a Tramtai: primer mensaje, archivos, JSON, herramientas (tools), trabajos largos y errores, con ejemplos en Python, JavaScript, Go y curl.">
+<meta name="description" content="Conecta tu aplicación a Tramtai: primer mensaje, archivos, JSON, herramientas (tools), peticiones largas y errores, con ejemplos en Python, JavaScript, Go y curl.">
 <!-- comun:cabeza -->
 <link rel="canonical" href="https://mscottb.github.io/Tramtai/desarrolladores.html">
 <meta property="og:url" content="https://mscottb.github.io/Tramtai/desarrolladores.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tramtai">
 <meta property="og:title" content="Desarrolladores · Tramtai">
-<meta property="og:description" content="Conecta tu aplicación a Tramtai: primer mensaje, archivos, JSON, herramientas (tools), trabajos largos y errores, con ejemplos en Python, JavaScript, Go y curl.">
+<meta property="og:description" content="Conecta tu aplicación a Tramtai: primer mensaje, archivos, JSON, herramientas (tools), peticiones largas y errores, con ejemplos en Python, JavaScript, Go y curl.">
 <meta property="og:image" content="https://mscottb.github.io/Tramtai/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -72,7 +72,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
       <li><a href="#archivos"><span lang="es">Archivos</span><span lang="en">Files</span></a></li>
       <li><a href="#json"><span lang="es">Respuestas en JSON</span><span lang="en">JSON answers</span></a></li>
       <li><a href="#herramientas"><span lang="es">Herramientas</span><span lang="en">Tool calling</span></a></li>
-      <li><a href="#trabajos"><span lang="es">Trabajos largos</span><span lang="en">Long jobs</span></a></li>
+      <li><a href="#trabajos"><span lang="es">Peticiones largas</span><span lang="en">Long requests</span></a></li>
       <li><a href="#en-vivo"><span lang="es">Seguir lo que pasa</span><span lang="en">Follow what happens</span></a></li>
       <li><a href="#errores"><span lang="es">Errores y reintentos</span><span lang="en">Errors and retries</span></a></li>
       <li><a href="#openapi"><span lang="es">Postman y clientes</span><span lang="en">Postman and clients</span></a></li>
@@ -93,8 +93,8 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
       <h2><span lang="es">Empezar</span><span lang="en">Get started</span></h2>
       <div lang="es">
         <p>Necesitas Tramtai en marcha con al menos un agente conectado, y la <strong>URL</strong> y la <strong>clave</strong> de tu API (en la app, <strong>Mis APIs</strong>). Los ejemplos las leen de tres variables: <code>TRAMTAI_URL</code> (por defecto <code>http://127.0.0.1:17373</code>), <code>TRAMTAI_CLAVE</code> y <code>TRAMTAI_MODELO</code> (agente y modelo, por defecto <code>claude/haiku</code>).</p>
-        <p><strong>¿Qué API uso?</strong> Si tu app ya usa el SDK de OpenAI o el de Anthropic, su URL (<code>/openai/v1</code> o <code>/anthropic</code>): no cambias nada más. Si necesitas trabajos largos que sigues, cancelas o reintentas, la API propia (<code>/api/v1</code>). <a href="ayuda/conectar.html">La ayuda compara las tres.</a></p>
-        <p><strong>¿Qué clave uso?</strong> La de una API propia de tu app (<strong>Mis APIs → Nueva API</strong>): con sus modelos y su presupuesto, y la regeneras sin tocar las demás. La <strong>clave del espacio</strong> es para ti y tus scripts. En la API, «instancia» es ese espacio de trabajo: el global o el de un proyecto.</p>
+        <p><strong>¿Qué API uso?</strong> Si tu app ya usa el SDK de OpenAI o el de Anthropic, su URL (<code>/openai/v1</code> o <code>/anthropic</code>): no cambias nada más. Si necesitas peticiones largas que sigues, cancelas o reintentas, la API propia (<code>/api/v1</code>). <a href="ayuda/conectar.html">La ayuda compara las tres.</a></p>
+        <p><strong>¿Qué clave uso?</strong> La de una API propia de tu app (<strong>Mis APIs → Nueva API</strong>): con sus modelos y su presupuesto, y la regeneras sin tocar las demás. La <strong>clave del espacio</strong> es para ti y tus scripts. En la API propia, las rutas <code>/api/v1/instancia</code> se refieren a ese espacio: el global o el de un proyecto.</p>
         <p>Si aún no conoces la app, <a href="./#demo">el recorrido guiado</a> la enseña en la portada, y en Tramtai el botón <strong>?</strong> de cada página tiene <strong>Muéstrame en pantalla</strong>. La API no cambia.</p>
         <p>Desde la terminal, <code>tramtai espacios</code> lista los espacios, <code>tramtai espacio iniciar|detener|olvidar</code> los gestiona y <code>tramtai agentes desconectar|conectar &lt;agente&gt;</code> deja un agente fuera sin desinstalar su CLI.</p>
         <ul>
@@ -106,9 +106,9 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
         <p>Todos los ejemplos están en <a href="https://github.com/MscottB/Tramtai/tree/main/docs/ejemplos">docs/ejemplos</a> y el CI los ejecuta en cada cambio.</p>
       </div>
       <div lang="en">
-        <p>You need Tramtai running with at least one agent connected, plus your API's <strong>URL</strong> and <strong>key</strong> (in the app, <strong>My APIs</strong>). The examples read them from three variables: <code>TRAMTAI_URL</code> (default <code>http://127.0.0.1:17373</code>), <code>TRAMTAI_CLAVE</code> and <code>TRAMTAI_MODELO</code> (agent and model, default <code>claude/haiku</code>).</p>
-        <p><strong>Which API?</strong> If your app already uses the OpenAI or Anthropic SDK, its URL (<code>/openai/v1</code> or <code>/anthropic</code>): nothing else changes. If you need long jobs you follow, cancel or retry, the native API (<code>/api/v1</code>). <a href="ayuda/conectar.html">Help compares all three.</a></p>
-        <p><strong>Which key do I use?</strong> Your app’s own API key (<strong>My APIs → New API</strong>): with its models and budget, and you can regenerate it without touching the others. The <strong>workspace key</strong> is for you and your scripts. In the API, “instance” means that workspace: the global one or a project’s.</p>
+        <p>You need Tramtai running with at least one agent connected, plus your API’s <strong>URL</strong> and <strong>key</strong> (in the app, <strong>My APIs</strong>). The examples read them from three variables: <code>TRAMTAI_URL</code> (default <code>http://127.0.0.1:17373</code>), <code>TRAMTAI_CLAVE</code> and <code>TRAMTAI_MODELO</code> (agent and model, default <code>claude/haiku</code>).</p>
+        <p><strong>Which API?</strong> If your app already uses the OpenAI or Anthropic SDK, its URL (<code>/openai/v1</code> or <code>/anthropic</code>): nothing else changes. If you need long requests you follow, cancel or retry, the native API (<code>/api/v1</code>). <a href="ayuda/conectar.html">Help compares all three.</a></p>
+        <p><strong>Which key do I use?</strong> Your app’s own API key (<strong>My APIs → New API</strong>): with its models and budget, and you can regenerate it without touching the others. The <strong>workspace key</strong> is for you and your scripts. In the native API, the <code>/api/v1/instancia</code> routes refer to that workspace: the global one or a project’s.</p>
         <p>If you do not know the app yet, <a href="./#demo">the guided tour</a> shows it on the home page, and in Tramtai the <strong>?</strong> button on every page has <strong>Show me on screen</strong>. The API does not change.</p>
         <p>From the terminal, <code>tramtai espacios</code> lists the workspaces, <code>tramtai espacio iniciar|detener|olvidar</code> manages them and <code>tramtai agentes desconectar|conectar &lt;agent&gt;</code> takes an agent out without uninstalling its CLI.</p>
         <ul>
@@ -141,10 +141,10 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
     <section id="archivos">
       <h2><span lang="es">Archivos</span><span lang="en">Files</span></h2>
       <div lang="es">
-        <p>Se admiten PDF, Word (<code>.docx</code>), PowerPoint (<code>.pptx</code>), Excel (<code>.xlsx</code>) y HTML, que Tramtai convierte a texto, y texto tal cual (<code>.txt</code>, <code>.md</code>, <code>.json</code>, <code>.csv</code>, <code>.xml</code>, <code>.yaml</code>…). Por OpenAI y Anthropic el archivo va en base64 dentro del mensaje (hasta unos 12 MB en total); por la API propia se sube a <code>/cargas</code> (hasta 50 MB cada uno) y el trabajo lo cita. La lista exacta está en <code>GET /api/v1/limites</code>.</p>
+        <p>Se admiten PDF, Word (<code>.docx</code>), PowerPoint (<code>.pptx</code>), Excel (<code>.xlsx</code>) y HTML, que Tramtai convierte a texto, y texto tal cual (<code>.txt</code>, <code>.md</code>, <code>.json</code>, <code>.csv</code>, <code>.xml</code>, <code>.yaml</code>…). Por OpenAI y Anthropic el archivo va en base64 dentro del mensaje (hasta unos 12 MB en total); por la API propia se sube a <code>/cargas</code> (hasta 50 MB cada uno) y la petición lo cita. La lista exacta está en <code>GET /api/v1/limites</code>.</p>
       </div>
       <div lang="en">
-        <p>Accepted: PDF, Word (<code>.docx</code>), PowerPoint (<code>.pptx</code>), Excel (<code>.xlsx</code>) and HTML, which Tramtai turns into text, and plain text as is (<code>.txt</code>, <code>.md</code>, <code>.json</code>, <code>.csv</code>, <code>.xml</code>, <code>.yaml</code>…). Through OpenAI and Anthropic the file goes in base64 inside the message (about 12 MB in total); through the native API you upload it to <code>/cargas</code> (up to 50 MB each) and the job cites it. The exact list is at <code>GET /api/v1/limites</code>.</p>
+        <p>Accepted: PDF, Word (<code>.docx</code>), PowerPoint (<code>.pptx</code>), Excel (<code>.xlsx</code>) and HTML, which Tramtai turns into text, and plain text as is (<code>.txt</code>, <code>.md</code>, <code>.json</code>, <code>.csv</code>, <code>.xml</code>, <code>.yaml</code>…). Through OpenAI and Anthropic the file goes in base64 inside the message (about 12 MB in total); through the native API you upload it to <code>/cargas</code> (up to 50 MB each) and the request cites it. The exact list is at <code>GET /api/v1/limites</code>.</p>
       </div>
 <div class="pestanas" data-pestanas>
   <div class="pestanas-lista" role="tablist" aria-label="Lenguaje" data-aria-en="Language"><button type="button" role="tab" id="p2-python" aria-controls="p2-python-panel" aria-selected="true" tabindex="0" data-lenguaje="python">Python</button><button type="button" role="tab" id="p2-javascript" aria-controls="p2-javascript-panel" aria-selected="false" tabindex="-1" data-lenguaje="javascript">JavaScript</button><button type="button" role="tab" id="p2-go" aria-controls="p2-go-panel" aria-selected="false" tabindex="-1" data-lenguaje="go">Go</button><button type="button" role="tab" id="p2-curl" aria-controls="p2-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl</button></div>
@@ -198,11 +198,11 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 </div>
       <div lang="es">
         <h3>Por la API propia</h3>
-        <p><code>herramientas</code> en la solicitud; el trabajo terminado trae <code>llamadas</code> con los argumentos como objeto, y el turno siguiente lleva un mensaje <code>{"rol": "herramienta", "id_llamada": …}</code> por resultado.</p>
+        <p><code>herramientas</code> en la petición; la petición terminada trae <code>llamadas</code> con los argumentos como objeto, y el turno siguiente lleva un mensaje <code>{"rol": "herramienta", "id_llamada": …}</code> por resultado.</p>
       </div>
       <div lang="en">
         <h3>Through the native API</h3>
-        <p><code>herramientas</code> in the request; the finished job brings <code>llamadas</code> with the arguments as an object, and the next turn carries a <code>{"rol": "herramienta", "id_llamada": …}</code> message per result.</p>
+        <p><code>herramientas</code> in the request; the finished request brings <code>llamadas</code> with the arguments as an object, and the next turn carries a <code>{"rol": "herramienta", "id_llamada": …}</code> message per result.</p>
       </div>
 <div class="pestanas" data-pestanas>
   <div class="pestanas-lista" role="tablist" aria-label="Lenguaje" data-aria-en="Language"><button type="button" role="tab" id="p5-python" aria-controls="p5-python-panel" aria-selected="true" tabindex="0" data-lenguaje="python">Python</button><button type="button" role="tab" id="p5-curl" aria-controls="p5-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl</button></div>
@@ -236,9 +236,9 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
         <p>Just like with its SDK: <code>tools</code> with <code>input_schema</code>, <code>tool_use</code> blocks in the answer and <code>tool_result</code> in the next message.</p>
         <h3>Good to know</h3>
         <ul>
-          <li>Arguments arrive <strong>validated</strong> against each tool's JSON Schema; if the agent gets them wrong, Tramtai asks it to fix them (with the request's or the recipe's corrections) before answering.</li>
+          <li>Arguments arrive <strong>validated</strong> against each tool’s JSON Schema; if the agent gets them wrong, Tramtai asks it to fix them (with the request’s or the recipe’s corrections) before answering.</li>
           <li>With tools, the answer arrives complete at the end, even if you ask for <code>stream</code>.</li>
-          <li>They can't be combined with a JSON answer, and they go in every request: recipes don't store them.</li>
+          <li>They can’t be combined with a JSON answer, and they go in every request: recipes don’t store them.</li>
         </ul>
         <p>Checked on 2026-10-20 with the real agents, the full cycle through each URL:</p>
         <div class="tabla"><table>
@@ -255,12 +255,12 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
     </section>
 
     <section id="trabajos">
-      <h2><span lang="es">Trabajos largos</span><span lang="en">Long jobs</span></h2>
+      <h2><span lang="es">Peticiones largas</span><span lang="en">Long requests</span></h2>
       <div lang="es">
-        <p>Solo por la API propia: creas el trabajo, lo sigues en vivo por eventos (si se corta la conexión, retomas con <code>Last-Event-ID</code>) y lees el resultado. <code>POST /trabajos/{id}/cancelar</code> lo detiene y <code>POST /trabajos/{id}/reintentar</code> lo vuelve a lanzar.</p>
+        <p>Solo por la API propia (el recurso <code>trabajos</code>): creas la petición, la sigues en vivo por eventos (si se corta la conexión, retomas con <code>Last-Event-ID</code>) y lees la respuesta. <code>POST /trabajos/{id}/cancelar</code> la cancela y <code>POST /trabajos/{id}/reintentar</code> la vuelve a enviar.</p>
       </div>
       <div lang="en">
-        <p>Native API only: you create the job, follow it live through events (if the connection drops, resume with <code>Last-Event-ID</code>) and read the result. <code>POST /trabajos/{id}/cancelar</code> stops it and <code>POST /trabajos/{id}/reintentar</code> runs it again.</p>
+        <p>Native API only (the <code>trabajos</code> resource): you create the request, follow it live through events (if the connection drops, resume with <code>Last-Event-ID</code>) and read the response. <code>POST /trabajos/{id}/cancelar</code> cancels it and <code>POST /trabajos/{id}/reintentar</code> sends it again.</p>
       </div>
 <div class="pestanas" data-pestanas>
   <div class="pestanas-lista" role="tablist" aria-label="Lenguaje" data-aria-en="Language"><button type="button" role="tab" id="p6-python" aria-controls="p6-python-panel" aria-selected="true" tabindex="0" data-lenguaje="python">Python</button><button type="button" role="tab" id="p6-curl" aria-controls="p6-curl-panel" aria-selected="false" tabindex="-1" data-lenguaje="curl">curl</button></div>
@@ -286,11 +286,11 @@ data: {"id":"trabajo_…","estado":"ejecutando","etapa":"ejecucion","agente":"cl
     <section id="errores">
       <h2><span lang="es">Errores y reintentos</span><span lang="en">Errors and retries</span></h2>
       <div lang="es">
-        <p>Los errores llegan en el formato de la API que usas, con un <code>code</code> estable. Para reintentar sin duplicar un trabajo, envía la cabecera <code>Idempotency-Key</code>: la misma clave con la misma petición devuelve el mismo trabajo (en las tres APIs).</p>
+        <p>Los errores llegan en el formato de la API que usas, con un <code>code</code> estable. Para reintentar sin duplicar una petición, envía la cabecera <code>Idempotency-Key</code>: la misma clave con la misma petición devuelve la misma petición, sin crear otra (en las tres APIs).</p>
         <div class="tabla"><table><thead><tr><th>HTTP</th><th>Código</th><th>Qué hacer</th></tr></thead><tbody><tr><td>400</td><td><code>solicitud_invalida, parametro_no_soportado, carga_invalida</code></td><td>Corrige la petición: el mensaje dice qué campo falla.</td></tr><tr><td>401</td><td><code>no_autorizado</code></td><td>Revisa la clave (Mis APIs); si la regeneraste, la anterior ya no vale.</td></tr><tr><td>409</td><td><code>conflicto_idempotencia</code></td><td>Esa Idempotency-Key ya se usó con otra petición: usa otra.</td></tr><tr><td>409</td><td><code>agente_desconectado</code></td><td>El agente está desconectado en Tramtai: conéctalo en Agentes o con <code>tramtai agentes conectar &lt;agente&gt;</code>.</td></tr><tr><td>422</td><td><code>salida_no_cumple_esquema</code></td><td>La respuesta o las llamadas no cumplían el esquema: pide correcciones o «Corregir».</td></tr><tr><td>429</td><td><code>cola_llena, presupuesto_agotado, limite_uso_proveedor</code></td><td>Espera lo que diga Retry-After y reintenta.</td></tr><tr><td>502</td><td><code>error_agente, autenticacion_agente</code></td><td>El agente falló o no tiene sesión: revisa Agentes en la app.</td></tr><tr><td>503</td><td><code>agente_no_disponible, conversor_no_disponible</code></td><td>Algo no está listo; con Retry-After, reintenta después.</td></tr></tbody></table></div>
       </div>
       <div lang="en">
-        <p>Errors arrive in the format of the API you use, with a stable <code>code</code>. To retry without duplicating a job, send the <code>Idempotency-Key</code> header: the same key with the same request returns the same job (on all three APIs).</p>
+        <p>Errors arrive in the format of the API you use, with a stable <code>code</code>. To retry without duplicating a request, send the <code>Idempotency-Key</code> header: the same key with the same request returns that same request instead of a new one (on all three APIs).</p>
         <div class="tabla"><table><thead><tr><th>HTTP</th><th>Code</th><th>What to do</th></tr></thead><tbody><tr><td>400</td><td><code>solicitud_invalida, parametro_no_soportado, carga_invalida</code></td><td>Fix the request: the message says which field fails.</td></tr><tr><td>401</td><td><code>no_autorizado</code></td><td>Check the key (My APIs); if you regenerated it, the old one no longer works.</td></tr><tr><td>409</td><td><code>conflicto_idempotencia</code></td><td>That Idempotency-Key was used with another request: use a new one.</td></tr><tr><td>409</td><td><code>agente_desconectado</code></td><td>The agent is disconnected in Tramtai: connect it in Agents or with <code>tramtai agentes conectar &lt;agent&gt;</code>.</td></tr><tr><td>422</td><td><code>salida_no_cumple_esquema</code></td><td>The answer or the calls did not match the schema: ask for corrections or “Correct”.</td></tr><tr><td>429</td><td><code>cola_llena, presupuesto_agotado, limite_uso_proveedor</code></td><td>Wait for Retry-After and retry.</td></tr><tr><td>502</td><td><code>error_agente, autenticacion_agente</code></td><td>The agent failed or has no session: check Agents in the app.</td></tr><tr><td>503</td><td><code>agente_no_disponible, conversor_no_disponible</code></td><td>Something is not ready; with Retry-After, retry later.</td></tr></tbody></table></div>
       </div>
     </section>
@@ -314,7 +314,7 @@ data: {"id":"trabajo_…","estado":"ejecutando","etapa":"ejecucion","agente":"cl
         <p><code>GET /api/v1/limites</code> da los topes de una petición (archivos, tamaños, mensajes) y los formatos admitidos, para que tu app los conozca antes de enviar.</p>
       </div>
       <div lang="en">
-        <p><code>GET /api/v1/limites</code> gives a request's caps (files, sizes, messages) and the accepted formats, so your app knows them before sending.</p>
+        <p><code>GET /api/v1/limites</code> gives a request’s caps (files, sizes, messages) and the accepted formats, so your app knows them before sending.</p>
       </div>
 <div class="pestanas" data-pestanas>
   <div class="pestanas-lista" role="tablist" aria-label="Lenguaje" data-aria-en="Language"><button type="button" role="tab" id="p7-curl" aria-controls="p7-curl-panel" aria-selected="true" tabindex="0" data-lenguaje="curl">curl</button></div>

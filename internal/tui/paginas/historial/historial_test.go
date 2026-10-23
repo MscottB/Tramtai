@@ -457,8 +457,8 @@ func TestHistorialFiltroEstado(t *testing.T) {
 			t.Fatalf("FiltroEstado %q: %v, quería %v\n%s", c.estado, got, c.quiere, a.Vista())
 		}
 	}
-	// La tecla e recorre los estados como el selector de la Web UI: todas, en proceso, completadas y con error.
-	for _, quiere := range []string{"En proceso", "Completadas", "Con error", "Todas"} {
+	// La tecla e recorre los estados como el selector de la Web UI: todas, en curso, completadas y con error.
+	for _, quiere := range []string{"En curso", "Completadas", "Con error", "Todas"} {
 		a.Pulsar("e")
 		if v := a.Vista(); !strings.Contains(v, "Estado: "+quiere) {
 			t.Fatalf("e pasa a %q:\n%s", quiere, v)
@@ -598,8 +598,11 @@ func TestHistorialDetalleConError(t *testing.T) {
 	}
 	a.Pulsar("enter")
 	v := a.Vista()
-	if !strings.Contains(v, "✗ La respuesta no cumple el JSON Schema: ") || !strings.Contains(v, "[Falló]") {
-		t.Fatalf("el título del código y el mensaje del servicio, tal cual:\n%s", v)
+	if !strings.Contains(v, "✗ La respuesta no cumple el JSON Schema") || strings.Contains(v, "Schema: ") || !strings.Contains(v, "[Falló]") {
+		t.Fatalf("el título del código y debajo el mensaje del servicio, tal cual:\n%s", v)
+	}
+	if paso := datos.Texto("es", "ayuda.problemas.salida_no_cumple_esquema"); !strings.Contains(strings.Join(strings.Fields(v), " "), strings.Join(strings.Fields(paso), " ")[:40]) {
+		t.Fatalf("debajo, qué hacer (%q):\n%s", paso, v)
 	}
 	a.Pulsar("right")
 	if v := a.Vista(); !strings.Contains(v, "diez") || !strings.Contains(v, "La respuesta no cumple el JSON Schema") {
@@ -774,7 +777,7 @@ func TestHistorialCancelar(t *testing.T) {
 	cli, id, _, tr := conBloqueado(t)
 	a := abierta(t, cli, id)
 	pie := teclasPie(a)
-	if !slices.Contains(pie, "c Cancelar") || slices.Contains(pie, "t Reintentar") || slices.Contains(pie, "x Eliminar") {
+	if !slices.Contains(pie, "c Cancelar la petición") || slices.Contains(pie, "t Reintentar") || slices.Contains(pie, "x Eliminar") {
 		t.Fatalf("en marcha se ofrece cancelar: %v", pie)
 	}
 	if fuera := a.Pulsar("x"); len(fuera) != 0 {
@@ -861,7 +864,7 @@ func TestHistorialCorregir(t *testing.T) {
 	crear(t, cli2, id2, "bien")
 	a2 := abierta(t, cli2, id2)
 	fuera = a2.Pulsar("enter", "o")
-	if av, ok := aviso(fuera); !ok || av.Texto != "Esta petición no se puede corregir" || av.Tipo != comp.Advertencia {
+	if av, ok := aviso(fuera); !ok || av.Texto != "Esta petición no se puede corregir: vuelve a enviarla" || av.Tipo != comp.Advertencia {
 		t.Fatalf("avisa: %+v", fuera)
 	}
 	if lista, _ := cli2.Trabajos(ctx, id2, 10); len(lista) != 1 {
@@ -879,7 +882,7 @@ func TestHistorialVaciar(t *testing.T) {
 		t.Fatalf("tres: %d", n)
 	}
 	q, ok := pregunta(a.Pulsar("V"))
-	if !ok || !strings.Contains(q.Texto, "Vaciar el historial") || !strings.Contains(q.Texto, "Las que están en proceso se conservan") {
+	if !ok || !strings.Contains(q.Texto, "Vaciar el historial") || !strings.Contains(q.Texto, "Las que están en curso se conservan") {
 		t.Fatalf("pregunta antes de borrar: %+v", q)
 	}
 	// Cancelar no borra nada.

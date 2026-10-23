@@ -130,7 +130,7 @@ func (p *Pagina) pista() string {
 	}
 	switch p.form.Foco() {
 	case "opciones":
-		return idioma.T("Intro abre o pliega las opciones de la receta")
+		return idioma.T("Enter abre o pliega las opciones de la receta")
 	case "avanzadas":
 		return p.tx("ejecutar.avanzadasTexto")
 	case "instrucciones":
@@ -150,7 +150,7 @@ func (p *Pagina) pista() string {
 	case "estructurada":
 		return p.tx("receta.salidaEstructuradaTexto")
 	case "plantilla":
-		return idioma.T("← → elige la plantilla e Intro la aplica")
+		return idioma.T("← → elige la plantilla y Enter la aplica")
 	case "esquema":
 		if _, ok := camposDe(p.form.Valor("esquema")); !ok && esquemaValido(p.form.Valor("esquema")) {
 			return p.tx("receta.esquemaAvanzado") + " " + p.tx("receta.esquemaHint")
@@ -164,7 +164,7 @@ func (p *Pagina) pista() string {
 	case "reintentos":
 		return p.tx("receta.reintentosHint")
 	case "mensaje":
-		return idioma.T("Intro salta de línea; Ctrl+Enter o Ctrl+S envía")
+		return idioma.T("Enter salta de línea; Ctrl+Enter o Ctrl+S envía")
 	case "archivos":
 		partes := []string{idioma.T("Separa las rutas con comas; Tab completa la ruta.")}
 		if l := p.limites; l != nil {
@@ -185,7 +185,7 @@ func (p *Pagina) pista() string {
 	return ""
 }
 
-// formatos es la lista para leer: «DOCX, PDF, MD, TXT» (listaFormatos de conversor.ts).
+// formatos es la lista para leer: «DOCX, PDF, MD, TXT».
 func formatos(listas ...[]string) string {
 	var r []string
 	for _, l := range listas {
@@ -299,7 +299,7 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		teclas := p.form.Teclas()
 		switch p.form.Foco() {
 		case "plantilla":
-			teclas = append(teclas, pagina.Tecla{Tecla: idioma.T("Intro"), Accion: idioma.T("aplica")})
+			teclas = append(teclas, pagina.Tecla{Tecla: "Enter", Accion: idioma.T("aplica")})
 		case "archivos":
 			teclas = append(teclas, pagina.Tecla{Tecla: "Tab", Accion: idioma.T("completa")})
 		}
@@ -308,7 +308,7 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 	teclas := []pagina.Tecla{{Tecla: "← →", Accion: idioma.T("pestañas")}}
 	switch p.pestana {
 	case pestReceta:
-		teclas = append(teclas, pagina.Tecla{Tecla: idioma.T("Intro"), Accion: idioma.T("edita")}, pagina.Tecla{Tecla: "↑↓", Accion: idioma.T("campo")})
+		teclas = append(teclas, pagina.Tecla{Tecla: "Enter", Accion: idioma.T("edita")}, pagina.Tecla{Tecla: "↑↓", Accion: idioma.T("campo")})
 		if p.enCampos() {
 			teclas = append(teclas, pagina.Tecla{Tecla: "n", Accion: p.tx("campos.anadir")})
 		}
@@ -329,7 +329,7 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 			teclas = append(teclas, pagina.Tecla{Tecla: "n", Accion: p.tx("ejecutar.nueva")})
 		}
 	case pestRecientes:
-		teclas = append(teclas, pagina.Tecla{Tecla: idioma.T("Intro"), Accion: idioma.T("ver")}, pagina.Tecla{Tecla: "u", Accion: p.tx("ejecutar.usarDeNuevo")},
+		teclas = append(teclas, pagina.Tecla{Tecla: "Enter", Accion: idioma.T("ver")}, pagina.Tecla{Tecla: "u", Accion: p.tx("ejecutar.usarDeNuevo")},
 			pagina.Tecla{Tecla: "h", Accion: p.tx("ejecutar.verTodo")})
 	}
 	teclas = append(teclas, pagina.Tecla{Tecla: "Ctrl+S", Accion: p.tx("ejecutar.enviar")}, pagina.Tecla{Tecla: "k", Accion: p.tx("codigo.boton")})
@@ -339,7 +339,7 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		teclas = append(teclas, pagina.Tecla{Tecla: "g", Accion: p.tx("ejecutar.guardarApi")})
 	}
 	if p.activo() {
-		teclas = append(teclas, pagina.Tecla{Tecla: "c", Accion: p.tx("comun.cancelar")})
+		teclas = append(teclas, pagina.Tecla{Tecla: "c", Accion: p.tx("historial.cancelar")})
 	}
 	return append(teclas, pagina.Tecla{Tecla: "Esc", Accion: idioma.T("vuelve")})
 }

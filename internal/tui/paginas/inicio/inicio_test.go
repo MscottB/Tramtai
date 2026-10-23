@@ -156,7 +156,7 @@ func pasarAlReconectar(t *testing.T, a *prueba.App, r *prueba.Reloj, n int) {
 
 func TestInicioCarga(t *testing.T) {
 	a, _, cli, _ := abierta(t)
-	for _, quiere := range []string{"Tus apps se conectan a " + cli.Base, "Red de Tramtai: 1 origen y 1 de 1", "Primeros pasos", "Completadas", "En proceso", "Con error",
+	for _, quiere := range []string{"Tus apps se conectan a " + cli.Base, "Red de Tramtai: 1 origen y 1 de 1", "Primeros pasos", "Completadas", "En curso", "Con error",
 		"1 de 1 agentes listos"} {
 		if !strings.Contains(a.Vista(), quiere) {
 			// Los pasos están más abajo: se ven al desplazar.
@@ -495,7 +495,7 @@ func TestPrimerosPasosComprobando(t *testing.T) {
 func TestContadores(t *testing.T) {
 	a, r, cli, id := abierta(t)
 	v := a.Vista()
-	for _, quiere := range []string{"Completadas", "respondidas correctamente", "En proceso", "Con error", "los últimos 7 días"} {
+	for _, quiere := range []string{"Completadas", "respondidas correctamente", "En curso", "Con error", "los últimos 7 días"} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, v)
 		}
@@ -780,7 +780,7 @@ func TestOcultarYMostrar(t *testing.T) {
 func TestContadoresLlevanAlHistorial(t *testing.T) {
 	a, _, _, _ := abierta(t)
 	v := a.Vista()
-	for _, quiere := range []string{"o Completadas", "e En proceso", "f Con error"} {
+	for _, quiere := range []string{"o Completadas", "e En curso", "f Con error"} {
 		if !strings.Contains(v, quiere) {
 			t.Fatalf("la fila dice su tecla, falta %q:\n%s", quiere, v)
 		}

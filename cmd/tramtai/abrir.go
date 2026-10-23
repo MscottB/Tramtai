@@ -34,9 +34,9 @@ func abrirCuandoResponda(cmd *cobra.Command, enNavegador bool) {
 	}
 }
 
-// abrirWebUI inicia el servicio si hace falta, deja claro que sigue en marcha en segundo plano y abre la
-// interfaz: la app de escritorio si está junto a tramtai, o la Web UI en el navegador con un enlace de un solo uso.
-// (en Windows y Linux el mismo usuario entra igualmente sin él).
+// abrirWebUI inicia el servicio si hace falta, deja claro que sigue en marcha en segundo plano y abre la interfaz: la
+// app de escritorio si está junto a tramtai, o la Web UI en el navegador con un enlace de un solo uso (en Windows y
+// Linux el mismo usuario entra igualmente sin él).
 func abrirWebUI(cmd *cobra.Command, ambito string, enNavegador bool) error {
 	raiz, _, _, err := identificar(ambito)
 	if err != nil {

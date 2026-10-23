@@ -42,10 +42,8 @@ func internos() map[string]any {
 	return valores
 }
 
-// Todos devuelve las fichas en su orden.
 func Todos() []adaptadores.Ficha { return slices.Clone(fichas) }
 
-// Buscar devuelve la ficha de un agente.
 func Buscar(nombre string) (adaptadores.Ficha, bool) {
 	i := slices.IndexFunc(fichas, func(f adaptadores.Ficha) bool { return f.Nombre == nombre })
 	if i < 0 {

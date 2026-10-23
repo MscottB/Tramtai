@@ -74,6 +74,12 @@ test('textos trae todas las menu.* y la Ayuda de la interfaz', () => {
   assert.equal(textos.es['menu.grupo.empezar'], 'Empezar')
 })
 
+test('textos trae la solución de cada error de la Ayuda, para decir qué hacer junto al error', () => {
+  const textos = textosDe({ es, en })
+  for (const lengua of ['es', 'en'] as const) assert.ok(textos[lengua]['ayuda.problemas.agente_desconectado'], lengua)
+  assert.equal(textos.es['ayuda.problemas.agente_desconectado'], es['ayuda.problemas.agente_desconectado'].replace(/\*\*/g, ''))
+})
+
 test('los textos de Agentes existen en los dos idiomas y salen tal cual', () => {
   const textos = textosDe({ es, en })
   for (const [lengua, fuenteTextos] of [['es', es], ['en', en]] as const) {
@@ -113,7 +119,7 @@ test('los textos del Historial y los títulos de error existen en los dos idioma
     for (const k of errores) assert.equal(textos[lengua][k], origen[k], `${lengua}: ${k}`)
   }
   assert.equal(textos.es['historial.solicitud'], 'Mensaje')
-  assert.equal(textos.es['error.correccion_no_disponible'], 'Esta petición no se puede corregir')
+  assert.equal(textos.es['error.correccion_no_disponible'], 'Esta petición no se puede corregir: vuelve a enviarla')
   assert.match(textos.es['historial.vaciado'], /\{n\}/)
 })
 

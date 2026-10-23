@@ -26,7 +26,6 @@ type Antigravity struct {
 	Autenticacion string // solo clave_api
 }
 
-// Detectar implementa Detectable.
 func (a Antigravity) Detectar(ctx context.Context) adaptadores.Estado {
 	e := adaptadores.Estado{Agente: "antigravity", Autenticacion: a.Autenticacion,
 		Terminos: idioma.T("Antigravity con la Gemini API y tu clave (modelProvider gemini); nunca la sesión personal")}
@@ -52,7 +51,6 @@ func (a Antigravity) autenticacion() error {
 	return nil
 }
 
-// Ejecutar implementa Adaptador.
 func (a Antigravity) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
 	if err := a.autenticacion(); err != nil {
 		return adaptadores.Resultado{}, err

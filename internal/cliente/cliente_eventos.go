@@ -17,7 +17,7 @@ import (
 
 // ErrSinActividad es el flujo que no mandó ni una línea (ni un latido) en el plazo que se le dio: se da por muerto aunque
 // su conexión siga abierta.
-var ErrSinActividad = errors.New(idioma.T("el flujo de eventos no dio señales"))
+var ErrSinActividad = errors.New(idioma.T("la conexión en vivo con el servicio no dio señales: vuelve a intentarlo"))
 
 // vigilado avisa al reloj cada vez que el flujo trae algo, también un latido, y así solo salta si de verdad calla.
 type vigilado struct {

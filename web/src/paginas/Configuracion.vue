@@ -154,14 +154,14 @@
           </q-card-section>
           <q-list dense>
             <q-item tag="label">
-              <q-item-section avatar><q-checkbox v-model="borrarHistorial" :disable="!terminados" /></q-item-section>
+              <q-item-section avatar><q-checkbox v-model="borrarHistorial" size="44px" :aria-label="t('datos.historial')" :disable="!terminados" /></q-item-section>
               <q-item-section>
                 <q-item-label>{{ t('datos.historial') }}</q-item-label>
                 <q-item-label caption>{{ t('datos.historialDetalle', { n: terminados }) }}</q-item-label>
               </q-item-section>
             </q-item>
             <q-item tag="label">
-              <q-item-section avatar><q-checkbox v-model="borrarPuntos" :disable="!puntos.length" /></q-item-section>
+              <q-item-section avatar><q-checkbox v-model="borrarPuntos" size="44px" :aria-label="t('datos.puntos')" :disable="!puntos.length" /></q-item-section>
               <q-item-section>
                 <q-item-label>{{ t('datos.puntos') }}</q-item-label>
                 <q-item-label caption>{{ t('datos.puntosDetalle', { n: puntos.length }) }}</q-item-label>
@@ -279,13 +279,13 @@ async function volverAGlobal(claves: string[]) {
 // Historial: plazos y tope de la retención; el registro se edita en días y se guarda en horas.
 const retencion = reactive({ horas_resultado: 24, max_trabajos: 10000 })
 const diasRegistro = ref(7)
-const usoHistorial = ref<{ trabajos: string; mb: string }>()
+const usoHistorial = ref<{ n: number; peticiones: string; mb: string }>()
 const guardandoRetencion = ref(false)
 async function leerRetencion() {
   const r = await api.retencion()
   Object.assign(retencion, { horas_resultado: r.horas_resultado, max_trabajos: r.max_trabajos })
   diasRegistro.value = Math.round((r.horas_metadatos / 24) * 100) / 100 // 30 h son 1,25 días; al guardar vuelven a 30 h
-  usoHistorial.value = { trabajos: r.uso.trabajos.toLocaleString(idioma.value), mb: (r.uso.bytes / 1048576).toLocaleString(idioma.value, { maximumFractionDigits: 1 }) }
+  usoHistorial.value = { n: r.uso.trabajos, peticiones: r.uso.trabajos.toLocaleString(idioma.value), mb: (r.uso.bytes / 1048576).toLocaleString(idioma.value, { maximumFractionDigits: 1 }) }
 }
 async function guardarRetencion() {
   guardandoRetencion.value = true
@@ -453,7 +453,7 @@ async function contar() {
 }
 
 function borrar() {
-  $q.dialog({ title: t('datos.titulo'), message: t('datos.confirmar', { instancia: sesion.value?.nombre || sesion.value?.instancia || '' }),
+  $q.dialog({ title: t('datos.titulo'), message: t('datos.confirmar', { espacio: sesion.value?.nombre || sesion.value?.instancia || '' }),
     cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'negative', label: t('comun.eliminar'), unelevated: true, noCaps: true } })
     .onOk(async () => {
       borrando.value = true

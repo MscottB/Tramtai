@@ -20,7 +20,6 @@ type Codex struct {
 	Autenticacion *adaptadores.Modo // clave_api (predeterminada) o suscripcion (cuenta ChatGPT); cambiable en marcha
 }
 
-// Detectar implementa Detectable.
 func (c Codex) Detectar(ctx context.Context) adaptadores.Estado {
 	e := adaptadores.Estado{Agente: "codex", Autenticacion: c.Autenticacion.Valor()}
 	if c.Autenticacion.Valor() == adaptadores.AutenticacionSuscripcion {
@@ -48,7 +47,7 @@ func (c Codex) Detectar(ctx context.Context) adaptadores.Estado {
 	return e
 }
 
-// ComprobarSesion implementa adaptadores.ComprobadorSesion con codex login status, que no envía ningún mensaje ni dice
+// ComprobarSesion usa codex login status, que no envía ningún mensaje ni dice
 // la cuenta: «Logged in using ChatGPT» es la suscripción, «… an API key» una clave y «Not logged in», sin sesión.
 func (c Codex) ComprobarSesion(ctx context.Context) adaptadores.SesionCLI {
 	ruta, err := adaptadores.ResolverPrograma(c.Programa)
@@ -69,7 +68,6 @@ func (c Codex) ComprobarSesion(ctx context.Context) adaptadores.SesionCLI {
 	return adaptadores.SesionCLI{Estado: adaptadores.SesionDesconocida}
 }
 
-// Ejecutar implementa Adaptador.
 func (c Codex) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
 	ruta, err := adaptadores.ResolverPrograma(c.Programa)
 	if err != nil {

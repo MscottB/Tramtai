@@ -34,5 +34,5 @@ var esfuerzoClaude = map[string]string{
 	"claude-opus-4-8": "alto", "claude-opus-4-6": "alto", "claude-sonnet-4-6": "alto",
 }
 
-// ModoAutenticacion implementa adaptadores.ConAutenticacion: la suscripción se cambia en marcha.
+// ModoAutenticacion: la suscripción se cambia en marcha.
 func (c Claude) ModoAutenticacion() *adaptadores.Modo { return c.Autenticacion }

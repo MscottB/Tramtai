@@ -15,7 +15,7 @@ import (
 	"tramtai/internal/tui/vivo"
 )
 
-// origenesConocidos y claveOrigen son los orígenes del filtro de la Web UI (nombresOrigen de Trabajos.vue) y sus textos.
+// origenesConocidos y claveOrigen son los orígenes del filtro de la Web UI y sus textos.
 var origenesConocidos = []string{"probar", "terminal", "cli", "app"}
 
 var claveOrigen = map[string]string{"probar": "historial.origenProbar", "terminal": "historial.origenTerminal",
@@ -28,7 +28,7 @@ func aDerecha(texto string, ancho int) string {
 	return strings.Repeat(" ", max(ancho-lipgloss.Width(texto), 0)) + texto
 }
 
-// textoDe es lo que se pidió: el último mensaje, o el aviso de que la retención borró la entrada (textoDe de formato.ts).
+// textoDe es lo que se pidió: el último mensaje, o el aviso de que la retención borró la entrada.
 func textoDe(t nucleo.Trabajo, lengua string) string {
 	if n := len(t.Solicitud.Mensajes); n > 0 {
 		return t.Solicitud.Mensajes[n-1].Contenido
@@ -51,7 +51,7 @@ func modeloDe(t nucleo.Trabajo) string {
 		partes = append(partes, m)
 	}
 	if len(partes) == 0 {
-		return "—"
+		return idioma.T("Sin dato")
 	}
 	return strings.Join(partes, " · ")
 }
@@ -59,7 +59,7 @@ func modeloDe(t nucleo.Trabajo) string {
 // nombreEstado es el de la Web UI, sin caracteres de dibujo en una consola ASCII.
 func (p *Pagina) nombreEstado(e nucleo.Estado) string { return p.a(vivo.NombreEstado(p.lengua, e)) }
 
-// etiquetaEstado es el del filtro de estado: los nombres del selector de Trabajos.vue.
+// etiquetaEstado es el del filtro de estado: los nombres del selector de la Web UI.
 func (p *Pagina) etiquetaEstado() string {
 	switch p.estado {
 	case nucleo.FiltroEnCurso:
@@ -91,7 +91,7 @@ func (p *Pagina) etiquetaOrigen() string {
 }
 
 // textoOrigen dice de dónde llegó una petición: la API (con su grupo actual), el origen guardado o, en las antiguas, la
-// principal (textoOrigen de Trabajos.vue).
+// principal.
 func (p *Pagina) textoOrigen(t nucleo.Trabajo) string {
 	if t.PuntoAcceso != "" {
 		texto := p.tx("historial.api", "nombre", t.PuntoAcceso)
@@ -138,7 +138,7 @@ func (p *Pagina) barra() string {
 	return e.Tenue.Render(e.Recortar(strings.Join(partes, " "+e.Iconos.Separador+" "), ancho))
 }
 
-// vacio es lo que se ve sin filas: que no hay peticiones, o ninguna con este filtro, y qué hacer (EstadoVacio de la Web UI).
+// vacio es lo que se ve sin filas: que no hay peticiones, o ninguna con este filtro, y qué hacer.
 func (p *Pagina) vacio() []string {
 	e, ancho := p.estilos, max(p.c.Ancho, 1)
 	if p.hayFiltro() {

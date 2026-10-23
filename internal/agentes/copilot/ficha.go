@@ -24,5 +24,5 @@ var Ficha = adaptadores.Ficha{
 	},
 }
 
-// ModoAutenticacion implementa adaptadores.ConAutenticacion: la suscripción se cambia en marcha.
+// ModoAutenticacion: la suscripción se cambia en marcha.
 func (c Copilot) ModoAutenticacion() *adaptadores.Modo { return c.Autenticacion }

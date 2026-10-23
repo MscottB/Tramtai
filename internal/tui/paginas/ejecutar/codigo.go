@@ -14,8 +14,7 @@ import (
 // Ejemplo es uno de «Ver como código»: curl, python o node (JavaScript), con su título y el código para copiar.
 type Ejemplo struct{ ID, Titulo, Codigo string }
 
-// marcaCargas marca en el cuerpo dónde van los identificadores de las cargas subidas en el paso anterior (CARGAS de
-// ejemplos.ts).
+// marcaCargas marca en el cuerpo dónde van los identificadores de las cargas subidas en el paso anterior.
 const marcaCargas = "__CARGAS__"
 
 // cuerpoCodigo es la solicitud tal como la escribe el código: sin salida ni ejecución vacías y, si hay archivos, con la
@@ -34,7 +33,7 @@ type cuerpoCodigo struct {
 	Ejecucion     *nucleo.ConfigEjecucion `json:"ejecucion,omitempty"`
 }
 
-// Ejemplos es la prueba como código por la API nativa, como curl-nativa, python-nativa y node-nativa de ejemplos.ts. Las
+// Ejemplos es la prueba como código por la API nativa (curl, python y node). Las
 // cargas de s son los nombres de los archivos que se adjuntan (no sus identificadores): el código los sube primero. La
 // clave va tal cual; Probar pasa el marcador «[tu clave]» y nunca una clave de verdad.
 func Ejemplos(url, clave string, s nucleo.SolicitudEjecucion) []Ejemplo {
@@ -160,7 +159,7 @@ func nodeNativa(lengua, url, k string, c cuerpoCodigo, archivos []string) string
 	return strings.Join(lineas, "\n")
 }
 
-// py escribe un JSON como literal de Python con la sangría de py() en ejemplos.ts: cada elemento en su línea, con coma al
+// py escribe un JSON como literal de Python con la sangría que usa la Web UI: cada elemento en su línea, con coma al
 // final, y las claves en el orden en que vienen.
 func py(texto string) string {
 	d := json.NewDecoder(strings.NewReader(texto))

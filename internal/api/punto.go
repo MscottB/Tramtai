@@ -97,12 +97,12 @@ func (s *Servidor) ajustar(sol nucleo.SolicitudEjecucion) (nucleo.SolicitudEjecu
 	sol = s.Config.AplicarPredeterminados(sol)
 	if len(p.ModelosPermitidos) > 0 && !permitido(p.ModelosPermitidos, sol) {
 		return sol, nucleo.NuevoError(nucleo.CodigoModeloNoPermitido,
-			idioma.Tf("el modelo %s no está permitido en el punto de acceso %s", descripcionModelo(sol), p.Nombre))
+			idioma.Tf("el modelo %s no está permitido en la API %s", descripcionModelo(sol), p.Nombre))
 	}
 	for _, e := range sol.Respaldo {
 		if len(p.ModelosPermitidos) > 0 && !PermitidoRespaldo(p.ModelosPermitidos, e) {
 			return sol, nucleo.NuevoError(nucleo.CodigoModeloNoPermitido,
-				idioma.Tf("el modelo %s no está permitido en el punto de acceso %s", e, p.Nombre))
+				idioma.Tf("el modelo %s no está permitido en la API %s", e, p.Nombre))
 		}
 	}
 	return sol, nil
@@ -153,7 +153,7 @@ func (s *Servidor) traducirModelo(model string) string {
 func (s *Servidor) trabajo(r *http.Request, id string) (nucleo.Trabajo, error) {
 	t, err := s.Planificador.Obtener(r.Context(), id)
 	if err == nil && s.Punto != nil && t.PuntoAcceso != s.Punto.Nombre {
-		return nucleo.Trabajo{}, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("trabajo no encontrado: %s", id))
+		return nucleo.Trabajo{}, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("petición no encontrada: %s", id))
 	}
 	return t, err
 }

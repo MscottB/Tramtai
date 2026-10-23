@@ -24,7 +24,6 @@ type Claude struct {
 	Autenticacion *adaptadores.Modo // clave_api (predeterminada) o suscripcion; se puede cambiar con el servicio en marcha
 }
 
-// Detectar implementa Detectable.
 func (c Claude) Detectar(ctx context.Context) adaptadores.Estado {
 	e := adaptadores.Estado{Agente: "claude", Autenticacion: c.Autenticacion.Valor()}
 	if c.Autenticacion.Valor() == adaptadores.AutenticacionSuscripcion {
@@ -47,7 +46,7 @@ func (c Claude) Detectar(ctx context.Context) adaptadores.Estado {
 	return e
 }
 
-// ComprobarSesion implementa adaptadores.ComprobadorSesion con claude auth status --json, que lee su configuración y no
+// ComprobarSesion usa claude auth status --json, que lee su configuración y no
 // envía ningún mensaje: loggedIn falso es sin sesión y un authMethod distinto de claude.ai, una clave de API.
 func (c Claude) ComprobarSesion(ctx context.Context) adaptadores.SesionCLI {
 	ruta, err := adaptadores.ResolverPrograma(c.Programa)
@@ -72,7 +71,7 @@ func (c Claude) ComprobarSesion(ctx context.Context) adaptadores.SesionCLI {
 	return adaptadores.SesionCLI{Estado: adaptadores.SesionOK, Cuenta: estado.Email}
 }
 
-// ResolverModelo implementa Resolvedor: Claude Code informa el modelo concreto en su evento system/init, antes de
+// ResolverModelo: Claude Code informa el modelo concreto en su evento system/init, antes de
 // enviar la petición, y en cuanto llega se le corta. shortcut: si el CLI tarda en morir puede llegar a enviar un
 // mensaje de un carácter; si alguna vez cobra, pedirlo solo al abrir el selector.
 func (c Claude) ResolverModelo(ctx context.Context, modelo string) (string, error) {
@@ -120,7 +119,6 @@ func (c Claude) ResolverModelo(ctx context.Context, modelo string) (string, erro
 	return "", err
 }
 
-// Ejecutar implementa Adaptador.
 func (c Claude) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emitir func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
 	ruta, err := adaptadores.ResolverPrograma(c.Programa)
 	if err != nil {

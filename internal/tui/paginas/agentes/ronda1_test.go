@@ -159,8 +159,8 @@ func TestAgentesTextosComoLaWeb(t *testing.T) {
 	}
 	p.Update(tecla("enter"))
 	d := p.Vista()
-	for _, quiere := range []string{"Ready · uses your API key", "Version: not detected", "Authentication: API key", "Live answer: When finished",
-		"JSON answer with schema: No", "Reports the model used: No", "Adjustable effort: No"} {
+	for _, quiere := range []string{"Ready · uses your API key", "Version: not detected", "Authentication: API key", "Live response: When finished",
+		"JSON response with schema: No", "Reports the model used: No", "Adjustable effort: No"} {
 		if !strings.Contains(d, quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, d)
 		}

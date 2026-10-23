@@ -129,7 +129,7 @@ func TestCorregirYCopiar(t *testing.T) {
 	if e := terminada(t, a); e != nucleo.Completado {
 		t.Fatalf("se completa: %s", e)
 	}
-	if a, ok := aviso(a.Pulsar("o")); !ok || a.Texto != "Esta petición no se puede corregir" {
+	if a, ok := aviso(a.Pulsar("o")); !ok || a.Texto != "Esta petición no se puede corregir: vuelve a enviarla" {
 		t.Fatalf("avisa con el texto de la Web UI: %+v", a)
 	}
 	// n deja la página lista para otra prueba con la misma receta.
@@ -502,10 +502,10 @@ func TestTextosComoLaWeb(t *testing.T) {
 	c := contexto(t, cli, id, "")
 	c.Idioma = "en"
 	en := prueba.Abrir(t, ejecutar.Nueva("en"), c)
-	if en.P.Titulo() != "Try" {
+	if en.P.Titulo() != "Playground" {
 		t.Fatalf("el título es el del menú en inglés: %q", en.P.Titulo())
 	}
-	if v := en.Vista(); !strings.Contains(v, "Recipe") || !strings.Contains(v, "Answer") {
+	if v := en.Vista(); !strings.Contains(v, "Recipe") || !strings.Contains(v, "Response") {
 		t.Fatalf("en inglés:\n%s", v)
 	}
 }

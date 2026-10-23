@@ -91,11 +91,12 @@ async function cargar() {
   }
 }
 
-// confirmar pide el visto bueno (o un texto, con prompt) en un diálogo; devuelve undefined si se cancela.
-function confirmar(titulo: string, mensaje: string, prompt?: { valido?: (v: string) => boolean }): Promise<string | undefined> {
+// confirmar pide el visto bueno (o un texto, con prompt) en un diálogo cuyo botón nombra la acción; devuelve undefined si
+// se cancela.
+function confirmar(titulo: string, mensaje: string, boton: string, prompt?: { valido?: (v: string) => boolean }): Promise<string | undefined> {
   return new Promise((resolver) => {
     $q.dialog({ title: titulo, message: mensaje, cancel: { flat: true, noCaps: true, label: t('comun.cancelar') }, persistent: false,
-      ok: { unelevated: true, noCaps: true, label: t('comun.aceptar') },
+      ok: { unelevated: true, noCaps: true, label: boton },
       ...(prompt ? { prompt: { model: '', type: 'text', isValid: prompt.valido ?? ((v: string) => v.trim() !== '') } } : {}) })
       .onOk((v?: string) => resolver(v ?? ''))
       .onCancel(() => resolver(undefined))
@@ -115,26 +116,27 @@ async function hacer(e: EspacioUI, accion: Accion) {
         lista.value = ordenar(await api.activarEspacio(e.id))
         break
       case 'detener':
-        if ((await confirmar(t('espacios.detenerTitulo', { nombre: e.nombre }), t('espacios.detenerTexto'))) === undefined) return
+        if ((await confirmar(t('espacios.detenerTitulo', { nombre: e.nombre }), t('espacios.detenerTexto'), t('espacios.detener'))) === undefined) return
         lista.value = ordenar(await api.detenerEspacio(e.id))
         break
       case 'confiar':
         if ((await confirmar(t('espacios.confiarTitulo', { nombre: e.nombre }), t('espacios.confiarTexto')
-          + (e.claves?.length ? ' ' + t('espacios.confiarClaves', { claves: e.claves.join(', ') }) : ''))) === undefined) return
+          + (e.claves?.length ? ' ' + t('espacios.confiarClaves', { claves: e.claves.join(', ') }) : ''), t('espacios.confiar'))) === undefined) return
         lista.value = ordenar(await api.confiarEspacio(e.id, true))
         break
       case 'dejarDeConfiar':
+        if ((await confirmar(t('espacios.dejarDeConfiarTitulo', { nombre: e.nombre }), t('espacios.dejarDeConfiarTexto'), t('espacios.dejarDeConfiar'))) === undefined) return
         lista.value = ordenar(await api.confiarEspacio(e.id, false))
         break
       case 'buscar': {
-        const ruta = await confirmar(t('espacios.buscarTitulo', { nombre: e.nombre }), t('espacios.buscarTexto'), {})
+        const ruta = await confirmar(t('espacios.buscarTitulo', { nombre: e.nombre }), t('espacios.buscarTexto'), t('espacios.buscar'), {})
         if (ruta === undefined) return
         lista.value = ordenar(await api.ubicarEspacio(e.id, ruta.trim()))
         break
       }
       case 'olvidar': {
         const nombre = await confirmar(t('espacios.olvidarTitulo', { nombre: e.nombre }), t('espacios.olvidarTexto', { nombre: e.nombre }),
-          { valido: (v) => nombreConfirmado(e, v) })
+          t('espacios.olvidar'), { valido: (v) => nombreConfirmado(e, v) })
         if (nombre === undefined) return
         lista.value = ordenar(await api.olvidarEspacio(e.id, nombre))
         avisar(t('espacios.olvidado', { nombre: e.nombre }))

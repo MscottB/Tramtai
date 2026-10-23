@@ -53,7 +53,8 @@ func (s *Servicio) Espacios(ctx context.Context) []EspacioUI {
 		if e.Ambito == "proyecto" && u.Estado != "no_encontrado" {
 			u.APIs += len(puntosLocales(e.Ruta))
 			if !u.Confiado {
-				u.Claves, _ = configuracion.ClavesAdministradas(filepath.Join(e.Ruta, ".tramtai", "local.yaml"))
+				claves, _ := configuracion.ClavesAdministradas(filepath.Join(e.Ruta, ".tramtai", "local.yaml"))
+				u.Claves = configuracion.DescribirAdministradas(claves)
 			}
 		}
 		u.Peticiones = s.peticionesDe(ctx, e.ID, inst)

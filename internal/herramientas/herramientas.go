@@ -1,8 +1,7 @@
 // Package herramientas emula las herramientas (tools) de la aplicación para los agentes CLI, que no las tienen. Le
 // describe al agente las funciones, le pide la respuesta como un sobre JSON {"content", "tool_calls"} (con la salida
 // estructurada nativa de cada CLI) y lo traduce a llamadas. El agente nunca ejecuta nada: solo pide la llamada, y la
-// aplicación devuelve el resultado en el siguiente turno. Lo usan las tres APIs: la propia y las fachadas OpenAI y
-// Anthropic.
+// aplicación devuelve el resultado en el siguiente turno.
 package herramientas
 
 import (

@@ -35,11 +35,11 @@ func NombreEstado(lengua string, estado nucleo.Estado) string {
 	return string(estado)
 }
 
-// posicionRuta es la parada de la ruta en que está cada estado (posicion de Ruta.vue).
+// posicionRuta es la parada de la ruta en que está cada estado.
 var posicionRuta = map[nucleo.Estado]int{nucleo.EnCola: 0, nucleo.PreparandoEntrada: 1, nucleo.EsperandoAgente: 1, nucleo.Ejecutando: 2,
 	nucleo.CancelacionSolicitada: 2, nucleo.ValidandoSalida: 3, nucleo.Completado: 4}
 
-// Ruta dibuja la petición como un trayecto, como Ruta.vue: cola, preparación, ejecución, validación y llegada. La parada de
+// Ruta dibuja la petición como un trayecto: cola, preparación, ejecución, validación y llegada. La parada de
 // ahora va entre corchetes; al terminar, la llegada toma el resultado.
 func Ruta(e *pagina.Estilos, lengua string, estado nucleo.Estado) string {
 	terminado := estado.Terminal()
@@ -75,7 +75,7 @@ func Hace(ahora, t time.Time) string {
 	d := ahora.Sub(t)
 	switch {
 	case t.IsZero():
-		return "—"
+		return idioma.T("Sin dato")
 	case d < time.Minute:
 		return idioma.Tf("hace %d s", max(int(d/time.Second), 0))
 	case d < time.Hour:

@@ -6,7 +6,7 @@ import (
 )
 
 // Ficha es la de Antigravity (agy) para el catálogo de agentes. Solo con la clave de la Gemini API. No se usa desde apps ni
-// APIs hasta que su canario pase con esa clave (el de la M0, con el CLI real y el hook que niega las herramientas, pasa).
+// APIs hasta que su canario pase con esa clave (el canario con el CLI real y el hook que niega las herramientas ya pasa).
 var Ficha = adaptadores.Ficha{
 	Nombre: "antigravity", NombreVisible: "Antigravity", Programa: "Antigravity CLI", Codigo: "AG",
 	ColorClaro: "#db2777", ColorOscuro: "#f472b6", Orden: 40,

@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	// tamPagina son las peticiones que se piden cada vez (PAGINA de la Web UI); el máximo que admite el servicio.
+	// tamPagina son las peticiones que se piden cada vez; el máximo que admite el servicio.
 	tamPagina = 200
 	// cadaSondeo es cada cuánto se vuelve a leer la lista mientras se ve (sin detalle abierto ni páginas extra), como la Web UI.
 	cadaSondeo = 5 * time.Second
@@ -106,7 +106,7 @@ type Pagina struct {
 	trabajos    []nucleo.Trabajo // los cargados, del más nuevo al más viejo
 	puntos      []contrato.EstadoPunto
 	cargado     bool
-	sinServ     bool // el servicio no responde
+	sinServ     bool
 	err         string
 	cargando    bool // hay una lista pedida que se espera (no el sondeo)
 	cargandoMas bool
@@ -552,8 +552,8 @@ func (p *Pagina) vivoVigente(m msgVivo) bool {
 	return p.vigente(m.Origen) && m.ID == p.abierto && m.Seq == p.nflujo
 }
 
-// alVivo aplica un evento del trabajo abierto, como los de Ejecutar.vue: el texto se suma a la respuesta, una corrección la
-// empieza de nuevo, el estado cambia y los demás avisos piden releer el registro. Devuelve lo que haya que pedir.
+// alVivo aplica un evento del trabajo abierto: el texto se suma a la respuesta, una corrección la empieza de
+// nuevo, el estado cambia y los demás avisos piden releer el registro. Devuelve lo que haya que pedir.
 func (p *Pagina) alVivo(m msgVivo) tea.Cmd {
 	switch m.Clase {
 	case "corte":
@@ -649,7 +649,7 @@ func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
 		if m.accion == accionCorregir {
 			aviso = idioma.T("Corrección enviada")
 		}
-		// El trabajo nuevo se sigue en Probar, como trabajoSeguido de la Web UI.
+		// El trabajo nuevo se sigue en Probar.
 		ir := pagina.IrA{Pagina: pagina.PaginaEjecutar, Datos: pagina.SeguirTrabajo{ID: m.t.ID}}
 		return tea.Batch(comp.Aviso(aviso, comp.Exito), func() tea.Msg { return ir }, p.cargar(true))
 	case accionCancelar:
@@ -896,9 +896,9 @@ func (p *Pagina) quitarFiltros() tea.Cmd {
 func (p *Pagina) Teclas() []pagina.Tecla {
 	switch {
 	case p.selector != nil:
-		return []pagina.Tecla{{Tecla: idioma.T("Intro"), Accion: idioma.T("elige")}, {Tecla: "Esc", Accion: idioma.T("cancela")}}
+		return []pagina.Tecla{{Tecla: "Enter", Accion: idioma.T("elige")}, {Tecla: "Esc", Accion: idioma.T("cancela")}}
 	case p.buscando:
-		return []pagina.Tecla{{Tecla: idioma.T("Intro"), Accion: idioma.T("aplica")}, {Tecla: "Esc", Accion: idioma.T("cancela")}}
+		return []pagina.Tecla{{Tecla: "Enter", Accion: idioma.T("aplica")}, {Tecla: "Esc", Accion: idioma.T("cancela")}}
 	case p.abierto != "":
 		teclas := []pagina.Tecla{{Tecla: "Esc", Accion: idioma.T("vuelve")}, {Tecla: p.flechasLado(), Accion: idioma.T("pestañas")}, {Tecla: "/", Accion: idioma.T("busca")}}
 		if t, ok := p.objetivo(); ok {
@@ -906,7 +906,7 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		}
 		return teclas
 	}
-	teclas := []pagina.Tecla{{Tecla: idioma.T("Intro"), Accion: idioma.T("detalles")}, {Tecla: "/", Accion: idioma.T("busca")},
+	teclas := []pagina.Tecla{{Tecla: "Enter", Accion: idioma.T("detalles")}, {Tecla: "/", Accion: idioma.T("busca")},
 		{Tecla: "e", Accion: p.tx("historial.estado")}, {Tecla: "f", Accion: p.tx("historial.origen")}}
 	if p.hayFiltro() {
 		teclas = append(teclas, pagina.Tecla{Tecla: "l", Accion: p.tx("historial.quitarFiltros")})
@@ -926,7 +926,7 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 // teclasDe son las acciones que ofrece un trabajo según su estado.
 func (p *Pagina) teclasDe(t nucleo.Trabajo) []pagina.Tecla {
 	if !t.Estado.Terminal() {
-		return []pagina.Tecla{{Tecla: "c", Accion: p.tx("comun.cancelar")}}
+		return []pagina.Tecla{{Tecla: "c", Accion: p.tx("historial.cancelar")}}
 	}
 	teclas := []pagina.Tecla{{Tecla: "t", Accion: p.tx("historial.reintentar")}}
 	if t.Corregible {

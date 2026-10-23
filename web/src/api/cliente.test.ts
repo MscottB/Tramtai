@@ -1,7 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { sesion } from '../estado.ts'
-import { api, duracionAviso, ErrorApi } from './cliente.ts'
+import { api, duracionAviso, ErrorApi, pasoError } from './cliente.ts'
+import { idioma } from '../i18n.ts'
+import es from '../idiomas/es.ts'
 import type { Sesion } from './tipos.ts'
 
 test('un aviso dura al menos 4 s y más cuanto más largo es su texto, hasta 10 s', () => {
@@ -9,6 +11,13 @@ test('un aviso dura al menos 4 s y más cuanto más largo es su texto, hasta 10 
   assert.equal(duracionAviso('Clave regenerada: actualízala en tus aplicaciones'), 4000)
   assert.ok(duracionAviso('x'.repeat(100)) > 4000)
   assert.equal(duracionAviso('x'.repeat(1000)), 10000)
+})
+
+test('el paso siguiente de un error es la solución de la Ayuda, y nada si no la tiene', () => {
+  idioma.value = 'es' // el idioma inicial sale del sistema, y el runner del CI está en inglés
+  assert.equal(pasoError('agente_desconectado'), es['ayuda.problemas.agente_desconectado'])
+  assert.equal(pasoError('codigo_que_no_existe'), '')
+  assert.equal(pasoError(undefined), '')
 })
 
 const abierta = (csrf: string): Sesion => ({ instancia: 'i', csrf, version: 'v0', local: true })

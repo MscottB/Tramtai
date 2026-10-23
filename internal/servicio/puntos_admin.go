@@ -13,7 +13,7 @@ import (
 	"tramtai/internal/nucleo"
 )
 
-// Rutas de /api/v1/servicio/puntos, solo con el token de servicio: las usa tramtai acceso. Trabajan sobre un archivo
+// Rutas de /api/v1/servicio/puntos, solo con el token de servicio. Trabajan sobre un archivo
 // (la configuración global o, con ?proyecto=<raíz>, su .tramtai/local.yaml) y no sobre las instancias en marcha, así
 // que también llegan a los puntos de una instancia inactiva o que no se pudieron abrir. Las reglas son las de la Web UI.
 
@@ -57,7 +57,7 @@ func (s *Servicio) guardadoAdmin(w http.ResponseWriter, ruta string, extra map[s
 }
 
 func noEstaEnArchivo(nombre string) error {
-	return nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("no existe el punto de acceso %s en este archivo", nombre))
+	return nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("no existe la API %s en este archivo", nombre))
 }
 
 // validarGuardado aplica las reglas para guardar un punto: el formato y que funcione (respaldo, agentes para apps).
@@ -97,14 +97,13 @@ func (s *Servicio) adminCrearPunto(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		err = configuracion.EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 			if slices.ContainsFunc(lista, func(c ConfigPunto) bool { return c.Nombre == p.Nombre }) {
-				return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el punto de acceso %s ya existe: usa tramtai acceso editar", p.Nombre))
+				return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("la API %s ya existe: usa tramtai acceso editar", p.Nombre))
 			}
 			return append(lista, p), nil
 		})
 	}
 	var token string
 	if err == nil {
-		// Clave nueva siempre (aunque quedara una de otro punto con el mismo nombre).
 		token, err = RotarTokenPunto(RutaTokenPunto(s.opc.Datos, p.Nombre))
 	}
 	if err != nil {
@@ -185,7 +184,7 @@ func (s *Servicio) adminActivarPuntos(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 				if n == 0 {
-					return nil, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ningún punto de acceso del grupo %s en este archivo", peticion.Grupo))
+					return nil, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ninguna API del grupo %s en este archivo", peticion.Grupo))
 				}
 				return lista, nil
 			}
@@ -219,7 +218,7 @@ func (s *Servicio) adminEliminarPunto(w http.ResponseWriter, r *http.Request) {
 	s.guardadoAdmin(w, ruta, nil)
 }
 
-// adminRotarToken regenera la clave del punto; solo se guarda su huella, así que es la única vez que se ve.
+// adminRotarToken regenera la clave del punto (ver RotarTokenPunto).
 func (s *Servicio) adminRotarToken(w http.ResponseWriter, r *http.Request) {
 	nombre := r.PathValue("nombre")
 	if !NombrePuntoValido(nombre) {

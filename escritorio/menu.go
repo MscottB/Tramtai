@@ -75,7 +75,7 @@ func entradasMenu(e estadoMenu) []entrada {
 	add(entrada{texto: idioma.T("Abrir Tramtai"), icono: "abrir", accion: accionMostrar})
 	if e.nueva != "" {
 		// La ventana pide confirmación y muestra el avance con el mismo diálogo que la Web UI.
-		add(entrada{texto: idioma.Tf("Actualizar a %s…", e.nueva), icono: "reiniciar", accion: accionActualizar})
+		add(entrada{texto: idioma.Tf("Instalar la versión %s…", e.nueva), icono: "reiniciar", accion: accionActualizar})
 	} else if enMarcha {
 		// Consulta GitHub en el momento; la ventana muestra el resultado o el diálogo de la versión nueva.
 		add(entrada{texto: idioma.T("Buscar actualizaciones"), icono: "reiniciar", accion: accionBuscarActualizaciones})

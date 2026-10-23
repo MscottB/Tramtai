@@ -107,7 +107,7 @@ func (s *Servidor) leerFachada(w http.ResponseWriter, r *http.Request, p politic
 
 func avisar(w http.ResponseWriter, avisos []string) {
 	if len(avisos) > 0 {
-		w.Header().Add("Tramtai-Advertencia", idioma.Tf("parametros ignorados: %s", strings.Join(avisos, ", ")))
+		w.Header().Add("Tramtai-Advertencia", idioma.Tf("se ignoran: %s", strings.Join(avisos, ", ")))
 	}
 }
 

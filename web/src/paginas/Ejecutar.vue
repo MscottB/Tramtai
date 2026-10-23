@@ -5,13 +5,14 @@
     <div class="row q-col-gutter-lg">
       <div class="col-12 col-md-5">
         <q-card data-captura="receta">
-          <q-card-section class="q-pb-sm row items-start no-wrap q-gutter-x-sm">
-            <div class="col">
-              <h2 class="titulo-seccion">{{ t('ejecutar.receta') }}</h2>
-              <div class="texto-suave text-body2">{{ t('ejecutar.recetaTexto') }}</div>
+          <!-- la descripción va debajo, a todo el ancho: junto al botón, en una columna estrecha se partía palabra a palabra -->
+          <q-card-section class="q-pb-sm">
+            <div class="row items-center no-wrap">
+              <h2 class="titulo-seccion col">{{ t('ejecutar.receta') }}</h2>
+              <q-btn data-recorrido="ejecutar.codigo" flat dense no-caps color="primary" class="q-ml-sm" icon="o_code" :label="$q.screen.gt.xs ? t('codigo.boton') : undefined" :aria-label="t('codigo.boton')"
+                @click="verCodigo" />
             </div>
-            <q-btn data-recorrido="ejecutar.codigo" flat dense no-caps color="primary" icon="o_code" :label="$q.screen.gt.xs ? t('codigo.boton') : undefined" :aria-label="t('codigo.boton')"
-              @click="verCodigo" />
+            <div class="texto-suave text-body2">{{ t('ejecutar.recetaTexto') }}</div>
           </q-card-section>
           <q-card-section v-if="editando" class="q-py-none">
             <q-banner rounded dense class="info-caja">
@@ -60,7 +61,7 @@
           <q-card-actions class="q-pa-md">
             <span class="text-caption texto-suave gt-xs">{{ t('ejecutar.atajo') }}</span>
             <q-space />
-            <q-btn v-if="activo" flat color="negative" icon="o_stop_circle" :label="t('comun.cancelar')" no-caps @click="cancelar" />
+            <q-btn v-if="activo" flat color="negative" icon="o_stop_circle" :label="t('historial.cancelar')" no-caps @click="cancelar" />
             <q-btn v-if="editando" outline color="primary" icon="o_save" :label="t('ejecutar.actualizarApi', { nombre: editando })" no-caps
               :loading="guardando" @click="actualizarApi" />
             <q-btn v-else outline color="primary" icon="o_hub" :label="t('ejecutar.guardarApi')" no-caps @click="guardarApi?.abrirGuardar()" />
@@ -131,7 +132,7 @@
               </q-banner>
               <q-banner v-if="final?.codigo_error" rounded dense class="error-caja q-mb-md">
                 <template #avatar><q-icon name="o_error" /></template>
-                <b>{{ tituloError(final.codigo_error) }}</b><span v-if="final.mensaje_error && !problemas.length">: {{ final.mensaje_error }}</span>
+                <b>{{ tituloError(final.codigo_error) }}</b><div v-if="final.mensaje_error && !problemas.length">{{ final.mensaje_error }}</div>
                 <template v-if="final.codigo_error in ERRORES" #action><BotonAyuda tema="problemas" :ancla="'e-' + final.codigo_error" que-hago /></template>
               </q-banner>
               <!-- La respuesta no cumplía la forma pedida: qué falló, la respuesta tal como llegó y «Corregir». -->

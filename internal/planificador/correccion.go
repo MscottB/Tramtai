@@ -22,12 +22,12 @@ func (p *Planificador) Corregir(ctx context.Context, id string) (nucleo.Trabajo,
 	switch {
 	case anterior.SePuedeCorregir():
 	case !anterior.Estado.Terminal():
-		return anterior, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, idioma.T("solo se reintenta un trabajo terminado"))
+		return anterior, nucleo.NuevoError(nucleo.CodigoTrabajoNoTerminado, idioma.T("solo se reintenta una petición terminada"))
 	case anterior.CodigoError != nucleo.CodigoSalidaNoCumpleEsquema || anterior.Salida == "":
 		return anterior, nucleo.NuevoError(nucleo.CodigoCorreccionNoDisponible,
-			idioma.T("solo se corrige un trabajo que falló porque la respuesta no cumplía el formato y que conservó esa respuesta (conservar_salida_invalida)"))
+			idioma.T("solo se corrige una petición que falló porque la respuesta no cumplía el formato y que conservó esa respuesta (conservar_salida_invalida)"))
 	default: // la regla de SePuedeCorregir que queda: las entradas ya no están
-		return anterior, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("las entradas del trabajo ya vencieron o se eliminaron al terminar; vuelve a enviarlas"))
+		return anterior, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("los archivos de la petición ya vencieron o se borraron al terminar: vuelve a enviarlos"))
 	}
 	problemas, err := p.ProblemasSalida(ctx, id)
 	if err != nil {
@@ -63,8 +63,8 @@ type validacion struct {
 	Correccion int                `json:"correccion"`
 }
 
-// inicioCorreccion empieza el mensaje de una corrección. La Web UI lo reconoce para mostrar el mensaje original
-// (mensajeDe en web/src/api.ts): si cambia, cambiarlo también allí.
+// inicioCorreccion empieza el mensaje de una corrección. La Web UI (web/src/recetas.ts) y la terminal (paginas/ejecutar)
+// lo reconocen para mostrar el mensaje original; la prueba de recetas.test.ts compara la copia de la Web con esta.
 const inicioCorreccion = "Tu respuesta no cumple el formato pedido:"
 
 // errCorreccionDetenida: el servicio se detuvo mientras una corrección esperaba al agente. No se reencola (repetiría

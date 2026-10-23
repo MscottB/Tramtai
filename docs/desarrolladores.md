@@ -3,7 +3,8 @@
 Todo lo que necesitas para usar Tramtai desde tu código. Cada tema tiene ejemplos que funcionan tal cual en Python,
 JavaScript, Go y curl, en [docs/ejemplos](ejemplos); el CI los ejecuta en cada cambio. La misma guía, con el código a
 la vista, está en la [página del producto](https://mscottb.github.io/Tramtai/desarrolladores.html). Todas las rutas y
-opciones están en la [referencia de la API](api.md).
+opciones están en la [referencia de la API](api.md), y los nombres que usan la app y esta guía (espacio, API, clave,
+petición), con su equivalente técnico, en el [glosario](GLOSARIO.md).
 
 ## Empezar
 
@@ -12,12 +13,12 @@ Necesitas Tramtai en marcha con al menos un agente conectado, y la **URL** y la 
 `TRAMTAI_MODELO` (agente y modelo, por defecto `claude/haiku`).
 
 **¿Qué API uso?** Si tu app ya usa el SDK de OpenAI o el de Anthropic, su URL (`/openai/v1` o `/anthropic`): no cambias
-nada más. Si necesitas trabajos largos que sigues, cancelas o reintentas, la API propia (`/api/v1`). La
+nada más. Si necesitas peticiones largas que sigues, cancelas o reintentas, la API propia (`/api/v1`). La
 [comparación](api.md#qué-url-uso) dice qué permite cada una y por qué.
 
 **¿Qué clave uso?** La de una API propia de tu app (**Mis APIs → Nueva API**): con sus modelos y su presupuesto,
-y la regeneras sin tocar las demás. La **clave del espacio** es para ti y tus scripts. En la API, «instancia» es ese
-espacio de trabajo: el global o el de un proyecto.
+y la regeneras sin tocar las demás. La **clave del espacio** es para ti y tus scripts. En la API propia, las rutas
+`/api/v1/instancia` se refieren a ese espacio: el global o el de un proyecto.
 
 Si aún no conoces la app, [el recorrido guiado](https://mscottb.github.io/Tramtai/#demo) la enseña en la portada, y
 en Tramtai el botón **?** de cada página tiene **Muéstrame en pantalla**. La API no cambia.
@@ -42,8 +43,8 @@ Ejemplos: [Python](ejemplos/python/primer_mensaje.py) · [JavaScript](ejemplos/j
 Se admiten PDF, Word (`.docx`), PowerPoint (`.pptx`), Excel (`.xlsx`) y HTML, que Tramtai convierte a texto, y texto
 tal cual (`.txt`, `.md`, `.json`, `.csv`, `.xml`, `.yaml`…); la lista completa está en
 [Formatos admitidos](api.md#formatos-admitidos) y en `GET /api/v1/limites`. Por OpenAI y Anthropic el archivo va en
-base64 dentro del mensaje (unos 12 MB en total); por la API propia se sube a `/cargas` (hasta 50 MB cada uno) y el
-trabajo lo cita. Ejemplos: [Python](ejemplos/python/archivo.py) · [JavaScript](ejemplos/javascript/archivo.mjs) · [Go](ejemplos/go/archivo/main.go) · [curl](ejemplos/curl/archivo.sh).
+base64 dentro del mensaje (unos 12 MB en total); por la API propia se sube a `/cargas` (hasta 50 MB cada uno) y la
+petición lo cita. Ejemplos: [Python](ejemplos/python/archivo.py) · [JavaScript](ejemplos/javascript/archivo.mjs) · [Go](ejemplos/go/archivo/main.go) · [curl](ejemplos/curl/archivo.sh).
 
 ## Respuestas en JSON
 
@@ -67,7 +68,7 @@ responder.
 
 - **Por la URL de OpenAI**, con los SDK oficiales: `tools`, `tool_calls` y el rol `tool`.
   Ejemplos: [Python](ejemplos/python/herramientas.py) · [JavaScript](ejemplos/javascript/herramientas.mjs) · [Go](ejemplos/go/herramientas/main.go) · [curl](ejemplos/curl/herramientas.sh).
-- **Por la API propia:** `herramientas` en la solicitud; el trabajo terminado trae `llamadas` con los argumentos como
+- **Por la API propia:** `herramientas` en la petición; la petición terminada trae `llamadas` con los argumentos como
   objeto, y el turno siguiente lleva un mensaje `{"rol": "herramienta", "id_llamada": …}` por resultado.
   Ejemplos: [Python](ejemplos/python/herramientas_api_propia.py) · [curl](ejemplos/curl/herramientas_api_propia.sh).
 - **Por la URL de Anthropic**, igual que con su SDK: `tools` con `input_schema`, bloques `tool_use` en la respuesta y
@@ -94,16 +95,17 @@ Se repite con `go test -tags canario -run TestHerramientasConAgentesReales -v ./
 no estén instalados o sin sesión).
 <!-- /agentes-herramientas -->
 
-## Trabajos largos
+## Peticiones largas
 
-Solo por la API propia: creas el trabajo, lo sigues en vivo por eventos (si se corta la conexión, retomas con
-`Last-Event-ID`) y lees el resultado. `POST /trabajos/{id}/cancelar` lo detiene y `POST /trabajos/{id}/reintentar` lo
-vuelve a lanzar. Ejemplos: [Python](ejemplos/python/trabajo_largo.py) · [curl](ejemplos/curl/trabajo_largo.sh).
+Solo por la API propia (el recurso `trabajos`): creas la petición, la sigues en vivo por eventos (si se corta la
+conexión, retomas con `Last-Event-ID`) y lees la respuesta. `POST /trabajos/{id}/cancelar` la cancela y
+`POST /trabajos/{id}/reintentar` la vuelve a enviar. Ejemplos: [Python](ejemplos/python/trabajo_largo.py) · [curl](ejemplos/curl/trabajo_largo.sh).
 
 ## Errores y reintentos
 
-Los errores llegan en el formato de la API que usas, con un `code` estable. Para reintentar sin duplicar un trabajo,
-envía la cabecera `Idempotency-Key`: la misma clave con la misma petición devuelve el mismo trabajo (en las tres APIs).
+Los errores llegan en el formato de la API que usas, con un `code` estable. Para reintentar sin duplicar una petición,
+envía la cabecera `Idempotency-Key`: la misma clave con la misma petición devuelve la misma petición, sin crear otra
+(en las tres APIs).
 
 | HTTP | Código | Qué hacer |
 |---|---|---|

@@ -354,9 +354,10 @@ Filtros como un control segmentado de 10 px con 3 px de relleno sobre superficie
 
 ## Excepciones (con su motivo)
 
-- **Sin pulso.** La etiqueta «en proceso» y la estación actual del trayecto no laten (la versión anterior de este documento lo pedía). Motivo: un pulso sin fin compite con el contenido y no añade información (antislop R-19); el estado ya lo dicen la palabra, el halo fijo y el tranvía, que solo se mueve cuando cambia la etapa.
+- **Sin pulso.** La etiqueta «en curso» y la estación actual del trayecto no laten (la versión anterior de este documento lo pedía). Motivo: un pulso sin fin compite con el contenido y no añade información (antislop R-19); el estado ya lo dicen la palabra, el halo fijo y el tranvía, que solo se mueve cuando cambia la etapa.
 - **Dial de la app: ENERGY 2 / RHYTHM 2 / MOTION 2.** Herramienta de operador, densidad equilibrada; el único movimiento es el tranvía (trayecto y mapa vivo), que avanza cuando cambia la etapa de una petición y salta con «reducir movimiento».
 - **Dial del sitio: ENERGY 2 / RHYTHM 2 / MOTION 2.** MOTION 2: el tranvía del mapa y la demo del recorrido se mueven solos porque enseñan el recorrido de una petición y la app; tienen pausa, quedan quietos con «reducir movimiento» y se paran fuera de la pantalla. RHYTHM 2: las secciones abren a la izquierda o centradas, sin etiqueta sobre el h2.
 - **Controles de 44 px en el sitio.** ES/EN y tema miden 44 de alto y, solo con ratón en escritorio, 36 de ancho, porque a 1101 px la barra no cabe con 44. Con puntero táctil o en el panel del menú, 44 × 44.
 - **Vía muerta en el sitio.** Va en `--borde-control` (3:1 con el fondo) en lugar de borde fuerte (1,6:1 de noche), porque en la portada Antigravity tiene que verse aunque esté sin servicio.
+- **Fila elegida en la terminal.** Lleva el velo del acento al 18 % (20 % de noche), no al 9 % (11 % de noche) de la Web UI, con la tinta del texto encima: en muchas paletas de terminal el 9 % no se distingue del fondo y no se vería qué fila está elegida (`internal/tui/tema.go`).
 - **Chapa de Claude.** De día su fondo es `#ba521c` y no el `#c4561d` de su línea: con texto blanco el color de la ficha da 4,47:1 y no llega a 4,5:1. El resto de su línea (mapa, barras) conserva el color de la ficha.

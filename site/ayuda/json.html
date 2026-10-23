@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title data-en="JSON answers · Tramtai">Respuestas JSON · Tramtai</title>
+<title data-en="JSON responses · Tramtai">Respuestas JSON · Tramtai</title>
 <meta name="description" content="Pide la respuesta con una forma fija (un esquema JSON) y Tramtai la valida antes de entregarla.">
 <link rel="canonical" href="https://mscottb.github.io/Tramtai/ayuda/json.html">
 <meta property="og:url" content="https://mscottb.github.io/Tramtai/ayuda/json.html">
@@ -71,10 +71,10 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
   </ol>
 </nav>
 <article class="doc tema-ayuda">
-<nav class="migas" aria-label="Ruta" data-aria-en="Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Respuestas JSON</span><span lang="en">JSON answers</span> · <a href="index.html#buscar-ayuda"><span lang="es">Buscar</span><span lang="en">Search</span></a></nav>
+<nav class="migas" aria-label="Ruta" data-aria-en="Breadcrumb"><a href="index.html"><span lang="es">Ayuda</span><span lang="en">Help</span></a> › <span lang="es">Respuestas JSON</span><span lang="en">JSON responses</span> · <a href="index.html#buscar-ayuda"><span lang="es">Buscar</span><span lang="en">Search</span></a></nav>
 <header>
-  <h1><span lang="es">Respuestas JSON</span><span lang="en">JSON answers</span></h1>
-  <p class="entradilla"><span lang="es">Pide la respuesta con una forma fija (un esquema JSON) y Tramtai la valida antes de entregarla.</span><span lang="en">Ask for the answer in a fixed shape (a JSON schema) and Tramtai validates it before handing it over.</span></p>
+  <h1><span lang="es">Respuestas JSON</span><span lang="en">JSON responses</span></h1>
+  <p class="entradilla"><span lang="es">Pide la respuesta con una forma fija (un esquema JSON) y Tramtai la valida antes de entregarla.</span><span lang="en">Ask for the response in a fixed shape (a JSON schema) and Tramtai validates it before handing it over.</span></p>
 </header>
 
 <section id="s-diagrama"><h2><span lang="es">Cómo funciona</span><span lang="en">How it works</span></h2>
@@ -88,30 +88,30 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
 
 <section id="s-pasos"><h2><span lang="es">Paso a paso</span><span lang="en">Step by step</span></h2>
 <ol class="pasos">
-  <li><span lang="es">En Probar, abre «Opciones de la receta» y activa «Respuesta con forma».</span><span lang="en">In Try, open &quot;Recipe options&quot; and turn on &quot;Shaped response&quot;.</span></li>
+  <li><span lang="es">En Probar, abre «Opciones de la receta» y activa «Respuesta con forma».</span><span lang="en">In the Playground, open “Recipe options” and turn on “Shaped response”.</span></li>
   <li><span lang="es">Elige una plantilla (extraer datos, clasificar, resumen, tareas…) o añade tus campos con su tipo y descripción.</span><span lang="en">Pick a template (extract data, classify, summary, tasks…) or add your fields with their type and description.</span></li>
-  <li><span lang="es">Prueba: si no cumple, verás qué campo falló y el botón «Corregir».</span><span lang="en">Test it: if it does not match, you will see which field failed and the &quot;Correct&quot; button.</span></li>
-  <li><span lang="es">En «Si la respuesta no cumple» pide hasta 3 correcciones automáticas; cada una es otra petición.</span><span lang="en">In &quot;If the response does not match&quot; ask for up to 3 automatic corrections; each one is another request.</span></li>
-  <li><span lang="es">Pulsa «Guardar como API»: tu app recibirá siempre esa forma.</span><span lang="en">Click &quot;Save as API&quot;: your app will always get that shape.</span></li>
+  <li><span lang="es">Prueba: si no cumple, verás qué campo falló y el botón «Corregir».</span><span lang="en">Test it: if it does not match, you will see which field failed and the “Correct” button.</span></li>
+  <li><span lang="es">En «Si la respuesta no cumple» pide hasta 3 correcciones automáticas; cada una es otra petición.</span><span lang="en">In “If the response does not match” ask for up to 3 automatic corrections; each one is another request.</span></li>
+  <li><span lang="es">Pulsa «Guardar como API»: tu app recibirá siempre esa forma.</span><span lang="en">Click “Save as API”: your app will always get that shape.</span></li>
 </ol>
 
-<p class="aviso"><span lang="es">Por OpenAI el esquema va en response_format; por la API propia, en salida. Si la respuesta no cumple, llega 422 salida_no_cumple_esquema.</span><span lang="en">Through OpenAI the schema goes in response_format; through the native API, in salida. If the answer does not match, you get 422 salida_no_cumple_esquema.</span></p>
+<p class="aviso"><span lang="es">Por OpenAI el esquema va en response_format; por la API propia, en salida. Si la respuesta no cumple, llega 422 salida_no_cumple_esquema.</span><span lang="en">Through OpenAI the schema goes in response_format; through the native API, in salida. If the response does not match, you get 422 salida_no_cumple_esquema.</span></p>
 </section>
 
 <section id="s-preguntas"><h2><span lang="es">Preguntas</span><span lang="en">Questions</span></h2>
-<details id="formatos-json"><summary><span lang="es">¿Se comprueban los formatos?</span><span lang="en">Are formats checked?</span></summary><p><span lang="es">Sí: fecha, fecha y hora, correo, URL… Una fecha y hora sin zona horaria no cumple «date-time».</span><span lang="en">Yes: date, date-time, email, URL… A date-time without a time zone does not match &quot;date-time&quot;.</span></p></details>
-<details id="esquema-a-mano"><summary><span lang="es">¿Puedo escribir el esquema a mano?</span><span lang="en">Can I write the schema by hand?</span></summary><p><span lang="es">Sí, en la pestaña JSON de «Respuesta con forma». Si falla siempre, simplifícalo o aclara la descripción de los campos.</span><span lang="en">Yes, in the JSON tab of &quot;Shaped response&quot;. If it keeps failing, simplify it or clarify the fields’ descriptions.</span></p></details>
+<details id="formatos-json"><summary><span lang="es">¿Se comprueban los formatos?</span><span lang="en">Are formats checked?</span></summary><p><span lang="es">Sí: fecha, fecha y hora, correo, URL… Una fecha y hora sin zona horaria no cumple «date-time».</span><span lang="en">Yes: date, date-time, email, URL… A date-time without a time zone does not match “date-time”.</span></p></details>
+<details id="esquema-a-mano"><summary><span lang="es">¿Puedo escribir el esquema a mano?</span><span lang="en">Can I write the schema by hand?</span></summary><p><span lang="es">Sí, en la pestaña JSON de «Respuesta con forma». Si falla siempre, simplifícalo o aclara la descripción de los campos.</span><span lang="en">Yes, in the JSON tab of “Shaped response”. If it keeps failing, simplify it or clarify the fields’ descriptions.</span></p></details>
 </section>
 
 <section id="s-errores"><h2><span lang="es">Si algo falla</span><span lang="en">If something fails</span></h2>
 <dl class="errores">
-  <div id="e-salida_no_cumple_esquema"><dt><span lang="es">La respuesta no cumple el JSON Schema</span><span lang="en">The response does not match the JSON Schema</span> <code>salida_no_cumple_esquema</code></dt><dd><span lang="es">La respuesta no tenía la forma pedida. En Probar verás qué campo falló; «Corregir» pide al agente que la arregle. Si falla siempre, simplifica el esquema.</span><span lang="en">The answer did not have the requested shape. Try shows which field failed; &quot;Correct&quot; asks the agent to fix it. If it keeps failing, simplify the schema.</span></dd></div>
+  <div id="e-salida_no_cumple_esquema"><dt><span lang="es">La respuesta no cumple el JSON Schema</span><span lang="en">The response does not match the JSON Schema</span> <code>salida_no_cumple_esquema</code></dt><dd><span lang="es">La respuesta no tenía la forma pedida. En Probar verás qué campo falló; «Corregir» pide al agente que la arregle. Si falla siempre, simplifica el esquema.</span><span lang="en">The response did not have the requested shape. Try shows which field failed; “Correct” asks the agent to fix it. If it keeps failing, simplify the schema.</span></dd></div>
 </dl>
 </section>
 
 <section id="s-relacionados"><h2><span lang="es">Temas relacionados</span><span lang="en">Related topics</span></h2>
 <div class="tarjetas-temas">
-  <a class="tarjeta-tema" href="probar.html"><strong><span lang="es">Probar</span><span lang="en">Try</span></strong><span><span lang="es">Escribe un mensaje, elige agente, modelo y esfuerzo, y mira la respuesta antes de llevarla a tu app.</span><span lang="en">Type a message, pick agent, model and effort, and see the answer before taking it to your app.</span></span></a>
+  <a class="tarjeta-tema" href="probar.html"><strong><span lang="es">Probar</span><span lang="en">Playground</span></strong><span><span lang="es">Escribe un mensaje, elige agente, modelo y esfuerzo, y mira la respuesta antes de llevarla a tu app.</span><span lang="en">Type a message, pick agent, model and effort, and see the response before taking it to your app.</span></span></a>
   <a class="tarjeta-tema" href="recetas.html"><strong><span lang="es">Recetas y respaldo</span><span lang="en">Recipes and fallback</span></strong><span><span lang="es">Una receta fija instrucciones, agente, modelo, esquema y respaldo, para que tu app solo envíe el mensaje.</span><span lang="en">A recipe fixes instructions, agent, model, schema and fallback, so your app only sends the message.</span></span></a>
   <a class="tarjeta-tema" href="conectar.html"><strong><span lang="es">Conectar mi app</span><span lang="en">Connect my app</span></strong><span><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic por la de Tramtai y elige el agente con model.</span><span lang="en">Change your OpenAI or Anthropic SDK’s base URL to Tramtai’s and pick the agent with model.</span></span></a>
 </div>

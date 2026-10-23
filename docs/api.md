@@ -4,7 +4,7 @@
 
 | Contrato | Base | Para |
 |---|---|---|
-| API nativa | `/api/v1` | Trabajos asíncronos, eventos, cargas de archivos y esquemas |
+| API nativa | `/api/v1` | Peticiones asíncronas, eventos, cargas de archivos y esquemas |
 | OpenAI | `/openai/v1` | SDK y herramientas de OpenAI (`base_url`) |
 | Anthropic | `/anthropic` | SDK de Anthropic (`base_url`) |
 
@@ -29,7 +29,7 @@
 
 **¿Por qué no pueden todas lo mismo?** Las URL de OpenAI y Anthropic imitan el formato exacto de esos servicios para
 que sus SDK y herramientas funcionen sin cambios. Ese formato es de pregunta y respuesta inmediata: no tiene campos para
-un trabajo que sigue en marcha, para cancelarlo, para pedir otro agente de respaldo ni para ver su registro, y si
+una petición que sigue en marcha, para cancelarla, para pedir otro agente de respaldo ni para ver su registro, y si
 Tramtai añadiera campos propios, los SDK no sabrían enviarlos. La API propia es de Tramtai y puede ofrecerlo todo, a
 cambio de llamarla con HTTP y JSON.
 
@@ -54,15 +54,15 @@ que una app puede filtrar antes de enviar.
 
 ## Seguridad
 
-- **Clave (token):** `Authorization: Bearer <clave>` o `x-api-key: <clave>`.
-  - **Clave del espacio de trabajo** (en la API, la de la *instancia*: global o de un proyecto): se ve en **Mis APIs → Clave del espacio** o con `tramtai global token` (o `tramtai proyecto token`). Es para ti y tus scripts; a cada aplicación dale su propia API. Si en 24 h llegan más de 20 peticiones de apps con la clave del espacio, Inicio y Mis APIs lo sugieren (`app_con_clave_24h` en `GET /api/v1/instancia`). Se crea la primera vez en `datos/token-global` (archivo con permisos 0600 en la [carpeta de Tramtai](inicio.md#configuración)), o sale de la variable que indique `instancia_global.token_variable_entorno` (`TRAMTAI_TOKEN_GLOBAL`).
-  - **Clave de cada API por aplicación:** solo se muestra al crearla o regenerarla; Tramtai guarda únicamente su huella SHA-256. Ver [puntos de acceso](#puntos-de-acceso-y-administración).
+- **Clave:** `Authorization: Bearer <clave>` o `x-api-key: <clave>`.
+  - **Clave del espacio de trabajo** (en la API propia, el de las rutas `/api/v1/instancia`: el global o el de un proyecto): se ve en **Mis APIs → Clave del espacio** o con `tramtai global token` (o `tramtai proyecto token`). Es para ti y tus scripts; a cada aplicación dale su propia API. Si en 24 h llegan más de 20 peticiones de apps con la clave del espacio, Inicio y Mis APIs lo sugieren (`app_con_clave_24h` en `GET /api/v1/instancia`). Se crea la primera vez en `datos/token-global` (archivo con permisos 0600 en la [carpeta de Tramtai](inicio.md#configuración)), o sale de la variable que indique `instancia_global.token_variable_entorno` (`TRAMTAI_TOKEN_GLOBAL`).
+  - **Clave de cada API por aplicación:** solo se muestra al crearla o regenerarla; Tramtai guarda únicamente su huella SHA-256. Ver [APIs por aplicación](#apis-por-aplicación-y-administración).
   - Si se filtra alguna, ver [Si se filtra una clave](operacion.md#si-se-filtra-una-clave).
 - **Web UI:** no se abre con la clave de las aplicaciones (`POST /ui/sesion` con una clave responde 401). Se entra en el propio equipo con el mismo usuario del sistema o con el código de un solo uso de la app, la terminal o `tramtai abrir`; ver [arquitectura](arquitectura.md#interfaces).
 - **Host:** solo `127.0.0.1`, `localhost` y `::1`. Cualquier otro nombre en la cabecera `Host` se rechaza con 403 antes de autenticar (protección frente a DNS rebinding).
 - **Navegadores:** no hay CORS. Una petición con `Origin` de otro sitio se rechaza con 403.
-- **Acceso remoto:** está desactivado. Solo se permite con `servicio.permitir_remoto: true`, token obligatorio y ningún agente en modo suscripción. Lo recomendado es un túnel SSH. La Web UI remota solo se abre con un código de `tramtai abrir` hecho en el equipo del servicio.
-- `/healthz` no exige token y no expone datos.
+- **Acceso remoto:** está desactivado. Solo se permite con `servicio.permitir_remoto: true`, clave obligatoria y ningún agente en modo suscripción. Lo recomendado es un túnel SSH. La Web UI remota solo se abre con un código de `tramtai abrir` hecho en el equipo del servicio.
+- `/healthz` no exige clave y no expone datos.
 - **Contenido hostil:** lo que manda una app (mensaje, instrucciones, documentos, esquema) no puede hacer que un agente
   lea archivos, ejecute órdenes o salga a la red: Claude Code y GitHub Copilot van sin herramientas y Codex en solo lectura, sin
   terminal ni búsqueda web (comprobado con [canarios](operacion.md#comprobar-el-aislamiento-de-los-agentes)).
@@ -74,26 +74,26 @@ que una app puede filtrar antes de enviar.
 
 | Método y ruta | Función |
 |---|---|
-| `POST /trabajos` | Crea un trabajo (`SolicitudEjecucion`). Responde 202 con el trabajo y `Location`; si la `Idempotency-Key` ya apuntaba a la misma solicitud, responde 200. |
-| `GET /trabajos/{id}` | Estado, error, modelo enviado y efectivo, uso, salida y `disponibilidad` (`disponible` o `expirada`). Todo trabajo lleva también lo que calcula el servicio para pintarlo: `etapa` (`cola`, `preparacion`, `ejecucion`, `validacion` o `llegada`) y `corregible` (si vale reintentar con `{"corregir": true}`). Si falló con `salida_no_cumple_esquema`, `errores_salida` lista los problemas de la última respuesta (`campo`, `problema` y `texto`; ver [Respuestas con forma](#respuestas-con-forma)). Tras la retención de metadatos (7 días) responde 404. |
+| `POST /trabajos` | Crea una petición (`SolicitudEjecucion`). Responde 202 con la petición y `Location`; si la `Idempotency-Key` ya apuntaba a la misma petición, responde 200. |
+| `GET /trabajos/{id}` | Estado, error, modelo enviado y efectivo, uso, salida y `disponibilidad` (`disponible` o `expirada`). Toda petición lleva también lo que calcula el servicio para pintarlo: `etapa` (`cola`, `preparacion`, `ejecucion`, `validacion` o `llegada`) y `corregible` (si vale reintentar con `{"corregir": true}`). Si falló con `salida_no_cumple_esquema`, `errores_salida` lista los problemas de la última respuesta (`campo`, `problema` y `texto`; ver [Respuestas con forma](#respuestas-con-forma)). Tras la retención de metadatos (7 días) responde 404. |
 | `GET /trabajos/{id}/salida` | La salida con su tipo (`text/markdown`, `text/plain` o `application/json`). Si no ha terminado, 409 `trabajo_no_terminado`; si la retención ya la borró, 410 `resultado_expirado`. |
 | `GET /trabajos/{id}/eventos` | SSE con `id` monotónico: `estado`, `entrada` (antes de esperar al agente: lo que ocupa la entrada), `texto`, `aviso`, `intento` (al empezar cada intento, JSON con `agente`, `modelo`, `esfuerzo` y `del_agente`, y en una corrección `correccion` y `correcciones`; un cliente que no lo espera lo ignora) y `validacion` (los problemas de una respuesta que no cumplía el esquema). `Last-Event-ID` (o `?desde=`) reanuda tras ese evento. Envía latidos cada 15 s y termina con un evento `fin`. Si el resultado expiró, empieza con un evento `aviso`: solo quedan los eventos de estado, entrada e intento. |
-| `GET /eventos` | SSE de toda la instancia: empieza con un evento `trabajo` por cada trabajo sin terminar y por cada uno terminado hace menos de 10 s, y un evento `foto` (`data: {}`) que cierra esa foto (lo que tenías y no vino ya terminó); después, uno por cada cambio de estado o de agente: `{"id","estado","etapa","agente","modelo","api","origen","intento","codigo_error","creado","actualizado"}`. `etapa` agrupa los estados como la ruta de un trabajo (`cola`, `preparacion`, `ejecucion`, `validacion`, `llegada`), `creado` es cuándo se aceptó e `intento` cuenta los agentes que probó desde que se abrió el flujo (sube cuando el respaldo pasa a otro). Nunca lleva el mensaje, la respuesta ni los archivos. La clave de una API por aplicación solo ve los suyos. Latidos cada 15 s; no se reanuda (al reconectar llega otra foto). Hasta 8 flujos abiertos por instancia: el siguiente recibe 429 `limite_flujos` con `Retry-After: 5`. |
+| `GET /eventos` | SSE de todo el espacio: empieza con un evento `trabajo` por cada petición sin terminar y por cada una terminada hace menos de 10 s, y un evento `foto` (`data: {}`) que cierra esa foto (lo que tenías y no vino ya terminó); después, uno por cada cambio de estado o de agente: `{"id","estado","etapa","agente","modelo","api","origen","intento","codigo_error","creado","actualizado"}`. `etapa` agrupa los estados como la ruta de una petición (`cola`, `preparacion`, `ejecucion`, `validacion`, `llegada`), `creado` es cuándo se aceptó e `intento` cuenta los agentes que probó desde que se abrió el flujo (sube cuando el respaldo pasa a otro). Nunca lleva el mensaje, la respuesta ni los archivos. La clave de una API por aplicación solo ve los suyos. Latidos cada 15 s; no se reanuda (al reconectar llega otra foto). Hasta 8 flujos abiertos por espacio: el siguiente recibe 429 `limite_flujos` con `Retry-After: 5`. |
 | `GET /limites` | Los formatos admitidos (`extensiones_texto` y `extensiones_conversor`) y los topes de una petición: `cargas_por_peticion` (20), `carga_mb`, `texto_convertido_mb`, `cuota_cargas_mb`, `cuerpo_mb` (16), `esquema_kb` (256), `mensajes` (1.000) y `reserva_salida_tokens`. Es rápida; `/capacidades` trae el mismo bloque en `limites`. |
 | `GET /trabajos/{id}/registro` | Los pasos de la petición con su hora, sin el texto de la respuesta: `{"eventos":[{"numero","tipo","datos","creado_en"}]}` con los eventos `estado`, `entrada` (caracteres, tokens estimados y cada documento de mayor a menor), `intento` (en una corrección, con `correccion` y `correcciones`), `aviso` y `validacion` (los problemas de una respuesta que no cumplía el esquema). Mismos permisos que `GET /trabajos/{id}`. |
 | `POST /trabajos/{id}/cancelar` | Cancelación idempotente; responde 202 sin afirmar que ya terminó. |
-| `POST /trabajos/{id}/reintentar` | Crea un intento nuevo (`intento_de`) a partir de un trabajo terminado. Si sus entradas ya vencieron, 410 `entrada_no_disponible`. Con el cuerpo opcional `{"corregir": true}`, el intento nuevo pide al mismo agente que corrija la respuesta anterior; solo vale si falló con `salida_no_cumple_esquema` y conservó su salida (si no, 400 `correccion_no_disponible`). |
+| `POST /trabajos/{id}/reintentar` | Crea un intento nuevo (`intento_de`) a partir de una petición terminada. Si sus entradas ya vencieron, 410 `entrada_no_disponible`. Con el cuerpo opcional `{"corregir": true}`, el intento nuevo pide al mismo agente que corrija la respuesta anterior; solo vale si falló con `salida_no_cumple_esquema` y conservó su salida (si no, 400 `correccion_no_disponible`). |
 | `POST /esquemas/validar` | Comprueba un JSON Schema sin ejecutar nada: `{"esquema": …}` con el esquema como objeto o como texto. Responde `{"valido": true}` o `{"valido": false, "error": "…"}`, con `linea` y `columna` si el texto no es JSON válido. Mismo tope que en una petición (256 KB). |
-| `DELETE /trabajos/{id}` | Borra un trabajo terminado: 204, o 409 si sigue activo. |
-| `DELETE /trabajos` | Vacía el historial: borra los trabajos terminados de la instancia y las cargas que ya no usa ninguno; conserva los activos. Responde `{"eliminados": n}`. No existe en los puntos de acceso. |
-| `POST /ejecutar` | Igual que `POST /trabajos`, pero espera el resultado: el trabajo final, con `errores_salida` si falló por el esquema. Envía `Location` antes de esperar; si se corta la conexión, el trabajo no se cancela. |
-| `POST /cargas` | Multipart con el campo `archivo`, o el binario en el cuerpo con `?nombre=`. Devuelve `identificador_carga`, `sha256`, `tamano_bytes` y `vence_en`. Un trabajo nuevo que cite una carga vencida se rechaza con 410; las cargas de un trabajo aceptado se conservan mientras se pueda reintentar. |
+| `DELETE /trabajos/{id}` | Borra una petición terminada: 204, o 409 si sigue activa. |
+| `DELETE /trabajos` | Vacía el historial: borra las peticiones terminadas del espacio y los archivos subidos que ya no usa ninguna; conserva las activas. Responde `{"eliminados": n}`. No existe en las APIs por aplicación. |
+| `POST /ejecutar` | Igual que `POST /trabajos`, pero espera el resultado: la petición final, con `errores_salida` si falló por el esquema. Envía `Location` antes de esperar; si se corta la conexión, la petición no se cancela. |
+| `POST /cargas` | Multipart con el campo `archivo`, o el binario en el cuerpo con `?nombre=`. Devuelve `identificador_carga`, `sha256`, `tamano_bytes` y `vence_en`. Una petición nueva que cite una carga vencida se rechaza con 410; las cargas de una petición aceptada se conservan mientras se pueda reintentar. |
 | `GET /agentes` | La ficha de cada agente, al momento y sin comprobar los CLI: `agente`, `nombre`, `programa`, `codigo`, `color` (`claro`, `oscuro`), `orden`, `streaming`, `salida_estructurada`, `modelo_efectivo_informado`, `esfuerzos`, `autenticaciones`, `variables_clave`, `permitido_apps` y `url_instalacion`. Un agente sin ficha (de pruebas) va al final con su id. |
 | `GET /capacidades` | Por agente: streaming (`tokens` o `final`), salida estructurada, modelo efectivo, versión detectada, autenticación y términos, `desconectado`, si su CLI lo dice, `cuenta` (con qué cuenta inició sesión) y `estado`, lo que concluye el servicio: `listo`, `desconectado`, `no_instalado` (gana a desconectado: lo primero es instalarlo), `falta_clave`, `sin_sesion`, `usa_clave`, `sesion_no_responde` o `revisar`. Incluye el formato de serialización y, en `entradas`, las extensiones admitidas. |
 | `GET /conversor` | Estado del conversor de archivos (markitdown): `estado` (`listo`, `preparando`, `falta` o `error`), `origen` (`configurado`, `paquete`, `preparado` o `sistema`), `version`, `etapa` y `progreso` mientras se prepara, `mensaje` del último error y `preparar_al_iniciar`. `/capacidades` lo trae en `conversor`. |
-| `POST /conversor/preparar` | Prepara el conversor en segundo plano (Python y markitdown en la carpeta de Tramtai, sin instalar nada en el sistema) y responde 202 con el estado; si ya se está preparando, devuelve ese estado. No existe en los puntos de acceso: una app no lanza una descarga de cientos de MB. |
-| `PUT /conversor/ajustes` | `{"preparar_al_iniciar": true}` o `false`: si el servicio lo prepara solo al iniciar cuando falta. No existe en los puntos de acceso. |
-| `GET /openapi.json` | La descripción OpenAPI 3.1 de esta API, con `servers` apuntando a la URL de la petición (la de la instancia, `/p/<nombre>/api/v1` o el puerto de la API). Mismos permisos que el resto. Sirve para importar la API en Postman o Insomnia, o generar un cliente; en Mis APIs, «Cómo usarla» muestra los pasos con código y el enlace «descarga la descripción OpenAPI» la guarda con la URL de cada API. |
+| `POST /conversor/preparar` | Prepara el conversor en segundo plano (Python y markitdown en la carpeta de Tramtai, sin instalar nada en el sistema) y responde 202 con el estado; si ya se está preparando, devuelve ese estado. No existe en las APIs por aplicación: una app no lanza una descarga de cientos de MB. |
+| `PUT /conversor/ajustes` | `{"preparar_al_iniciar": true}` o `false`: si el servicio lo prepara solo al iniciar cuando falta. No existe en las APIs por aplicación. |
+| `GET /openapi.json` | La descripción OpenAPI 3.1 de esta API, con `servers` apuntando a la URL de la petición (la del espacio, `/p/<nombre>/api/v1` o el puerto de la API). Mismos permisos que el resto. Sirve para importar la API en Postman o Insomnia, o generar un cliente; en Mis APIs, «Cómo usarla» muestra los pasos con código y el enlace «descarga la descripción OpenAPI» la guarda con la URL de cada API. |
 | `GET /modelos` | Catálogo: agentes, `agente/modelo` configurados y perfiles. Cada entrada indica `predeterminado: true` si es el modelo predeterminado, `version` con el último modelo efectivo informado por el agente y, en los perfiles, `resuelto` con el agente/modelo al que llevan. |
 
 Ejemplo:
@@ -117,20 +117,20 @@ Los campos desconocidos en la API nativa son un error (`solicitud_invalida`).
    curl -s http://127.0.0.1:17373/api/v1/cargas -H "Authorization: Bearer $TOKEN" -F "archivo=@informe.pdf"
    ```
 
-2. **Crear el trabajo**: `POST /trabajos` con `mensajes`, el modelo (`agente` y `modelo`, o `perfil_modelo`), las
-   `cargas` y, si quieres JSON, `salida: {"formato": "json", "esquema": {…}}`. Responde 202 con el trabajo (`id`).
-3. **Seguirlo en vivo**: `GET /trabajos/{id}/eventos` (SSE). Cada evento trae `id`, `event` y `data`: los `texto` son
+2. **Crear la petición**: `POST /trabajos` con `mensajes`, el modelo (`agente` y `modelo`, o `perfil_modelo`), las
+   `cargas` y, si quieres JSON, `salida: {"formato": "json", "esquema": {…}}`. Responde 202 con la petición (`id`).
+3. **Seguirla en vivo**: `GET /trabajos/{id}/eventos` (SSE). Cada evento trae `id`, `event` y `data`: los `texto` son
    trozos de la respuesta (una línea `data:` por línea del texto; con correcciones llegan los de cada intento, y un
    `intento` con `correccion` empieza una respuesta nueva); `estado`, `entrada`, `intento`, `aviso` y `validacion`
    cuentan lo que pasa, y `fin` (`{"estado","codigo_error"}`) cierra el flujo. Si se corta, vuelve a pedirlo con la cabecera
-   `Last-Event-ID` (o `?desde=`) con el último `id` recibido: sigue desde ahí y el trabajo no se repite ni se cancela.
+   `Last-Event-ID` (o `?desde=`) con el último `id` recibido: sigue desde ahí y la petición no se repite ni se cancela.
 4. **Leer el resultado**: `GET /trabajos/{id}/salida` (con esquema, el JSON ya validado). `GET /trabajos/{id}` da el
    estado, el modelo efectivo y el uso de tokens.
-5. **Cancelar o reintentar**: `POST /trabajos/{id}/cancelar` (idempotente) y `POST /trabajos/{id}/reintentar` (un
-   trabajo nuevo con `intento_de`, con las mismas cargas mientras no venzan).
-6. **Idempotencia**: repetir `POST /trabajos` con la misma `Idempotency-Key` y la misma solicitud devuelve el mismo
-   trabajo (200) en lugar de crear otro; con otra solicitud, 409 `conflicto_idempotencia`. Útil para reintentar tras
-   un corte de red sin duplicar el trabajo.
+5. **Cancelar o reintentar**: `POST /trabajos/{id}/cancelar` (idempotente) y `POST /trabajos/{id}/reintentar` (una
+   petición nueva con `intento_de`, con las mismas cargas mientras no venzan).
+6. **Idempotencia**: repetir `POST /trabajos` con la misma `Idempotency-Key` y la misma petición devuelve la misma
+   petición (200) en lugar de crear otra; con otra petición, 409 `conflicto_idempotencia`. Útil para reintentar tras
+   un corte de red sin duplicar la petición.
 
 Errores frecuentes: 401 `no_autorizado` (falta la clave o no es de esta API), 400 `solicitud_invalida` (un campo que no
 existe o un valor no válido; el mensaje dice cuál), 410 `entrada_no_disponible` (la carga venció: súbela otra vez), 409
@@ -208,10 +208,10 @@ para cada API.
 ### Política de parámetros
 
 - **No soportados (error 400 `parametro_no_soportado`):** `n` mayor que 1, herramientas que no son funciones (búsqueda web, archivos, código…), `logprobs`, `stop`, imágenes o audio, `stop_sequences`, `thinking`… Con un valor sin efecto (`null`, `false`, `[]`, `n: 1`) se aceptan.
-- **Ignorables (se aceptan con aviso):** `temperature`, `top_p`, `max_tokens`, `seed`, `user`, `metadata`… El aviso llega en la cabecera `Tramtai-Advertencia: parametros ignorados: …`.
+- **Ignorables (se aceptan con aviso):** `temperature`, `top_p`, `max_tokens`, `seed`, `user`, `metadata`… El aviso llega en la cabecera `Tramtai-Advertencia: se ignoran: …`.
 - **Desconocidos:** error, salvo con `compatibilidad.modo_tolerante: true`.
 - **Uso:** si el agente no informa tokens, se envían ceros con `Tramtai-Advertencia: uso_no_verificado`.
-- **Desconexión:** si el cliente se desconecta, el trabajo se cancela (`compatibilidad.cancelar_al_desconectar: true`). En la API nativa no.
+- **Desconexión:** si el cliente se desconecta, la petición se cancela (`compatibilidad.cancelar_al_desconectar: true`). En la API nativa no.
 
 ### Herramientas (`tools`)
 
@@ -239,7 +239,7 @@ El agente pide la llamada con `tool_calls` y `finish_reason: "tool_calls"`, o bl
 
 - `eleccion_herramienta`: `"auto"` (predeterminada), `"ninguna"`, `"obligatoria"` o `{"nombre": "clima"}`;
   `llamadas_paralelas: false` deja como mucho una llamada por respuesta.
-- El trabajo terminado trae `llamadas` (`id`, `nombre` y `argumentos` como objeto, ya validados) y `salida` con solo
+- La petición terminada trae `llamadas` (`id`, `nombre` y `argumentos` como objeto, ya validados) y `salida` con solo
   el texto para el usuario.
 - El turno siguiente reenvía la conversación y las mismas `herramientas`: el mensaje del asistente con sus
   `llamadas` y un mensaje `{"rol": "herramienta", "id_llamada": "…", "contenido": "…"}` por resultado
@@ -250,7 +250,7 @@ El agente pide la llamada con `tool_calls` y `finish_reason: "tool_calls"`, o bl
 - Los argumentos se validan con el JSON Schema de cada herramienta, también sus `format`. Si el agente devuelve
   argumentos que no lo cumplen, pide una herramienta que no existe o no llama a ninguna cuando la elección lo exige, la
   respuesta no cumple: se pide una corrección al mismo agente si hay correcciones (`salida.reintentos` o las de la
-  receta) y, si no, `salida_no_cumple_esquema` (422 en las fachadas; el trabajo falla en la API propia, con reintento y
+  receta) y, si no, `salida_no_cumple_esquema` (422 en las fachadas; la petición falla en la API propia, con reintento y
   «Corregir» como con un esquema).
 - La respuesta llega completa al terminar: con herramientas no hay texto en vivo, aunque `stream: true` envía los
   eventos de siempre.
@@ -278,7 +278,7 @@ Cuánto razona el modelo antes de responder. Es opcional: sin él, cada CLI usa 
 
 - **API nativa:** `"esfuerzo": "bajo" | "medio" | "alto" | "muy_alto" | "maximo"`. Un valor desconocido devuelve 400.
 - **OpenAI:** `reasoning_effort` (chat) o `reasoning.effort` (Responses). `minimal` y `low` equivalen a bajo; `medium` a medio; `high` a alto; `xhigh` a muy alto; `none` deja el del agente.
-- **Por API:** el campo `esfuerzo` de un punto de acceso, que se edita en Mis APIs, se usa cuando la aplicación no pide uno.
+- **Por API:** el campo `esfuerzo` de una API por aplicación, que se edita en Mis APIs, se usa cuando la aplicación no pide uno.
 - **Del espacio:** `predeterminados.esfuerzo` (en **Ajustes**, bajo el modelo predeterminado) va con el modelo predeterminado: se usa cuando la petición no elige agente, modelo, perfil ni esfuerzo (una API por aplicación sin modelo propio también lo hereda). `GET /api/v1/modelos` lo indica en `esfuerzo_espacio` del modelo predeterminado, y `POST /api/v1/instancia/predeterminado` acepta `{"modelo", "esfuerzo"}` (`""` vuelve al del agente; sin `esfuerzo`, no cambia; con `modelo` vacío solo cambia el esfuerzo). Un valor escrito a mano que no es un nivel se ignora.
 - **Qué agentes lo admiten:**
   - Claude Code (`--effort`), hasta máximo.
@@ -287,20 +287,20 @@ Cuánto razona el modelo antes de responder. Es opcional: sin él, cada CLI usa 
     automático, el único del plan Free) se ignora y `GET /api/v1/modelos` no lo ofrece.
   - Antigravity (`--effort`), hasta máximo.
   - La API de Gemini lo ignora.
-- **Respaldo:** cada entrada puede llevar su propio esfuerzo con `+nivel` (`codex/gpt-5.5+alto`), o `+agente` para usar el de su CLI aunque el principal tenga uno; sin sufijo, usa el del principal. Tras un salto, el trabajo guarda el respaldo que queda con lo que heredaba ya escrito (`+alto` o `+agente`), así un reintento no hereda el esfuerzo del respaldo que respondió.
-- **Dónde se ve:** `GET /api/v1/modelos` indica en `esfuerzos` los niveles de cada modelo, el trabajo guarda el esfuerzo pedido en `solicitud.esfuerzo` y cada evento `intento` dice el que se usó: el pedido, ajustado al máximo del agente, o con `del_agente: true` el que usa el CLI por su cuenta, si se conoce.
+- **Respaldo:** cada entrada puede llevar su propio esfuerzo con `+nivel` (`codex/gpt-5.5+alto`), o `+agente` para usar el de su CLI aunque el principal tenga uno; sin sufijo, usa el del principal. Tras un salto, la petición guarda el respaldo que queda con lo que heredaba ya escrito (`+alto` o `+agente`), así un reintento no hereda el esfuerzo del respaldo que respondió.
+- **Dónde se ve:** `GET /api/v1/modelos` indica en `esfuerzos` los niveles de cada modelo, la petición guarda el esfuerzo pedido en `solicitud.esfuerzo` y cada evento `intento` dice el que se usó: el pedido, ajustado al máximo del agente, o con `del_agente: true` el que usa el CLI por su cuenta, si se conoce.
 
 ### Perfiles de ejecución y modo de contexto
 
-En un punto de acceso el modo de contexto lo fija la API (`aislado` si no indica otro): una petición, o un perfil, que pida otro recibe 403 `contexto_no_permitido`.
+En una API por aplicación el modo de contexto lo fija la API (`aislado` si no indica otro): una petición, o un perfil, que pida otro recibe 403 `contexto_no_permitido`.
 
-- **`perfil`** (API nativa) o `--perfil-trabajo` (CLI): aplica `profiles/<nombre>.yaml` del proyecto (`.tramtai/profiles/`) o de la configuración global. Aporta instrucciones, formato, esquema y `conservar_salida_invalida`; los campos explícitos de la solicitud prevalecen. `tramtai iniciar` crea el perfil de ejemplo `resumen`.
-- **`salida.conservar_salida_invalida`:** si la salida no cumple el esquema, el trabajo falla con `salida_no_cumple_esquema`, pero conserva la salida bruta para revisarla (y para corregirla después con `reintentar`).
+- **`perfil`** (API nativa) o `--perfil-trabajo` (CLI): aplica `profiles/<nombre>.yaml` del proyecto (`.tramtai/profiles/`) o de la configuración global. Aporta instrucciones, formato, esquema y `conservar_salida_invalida`; los campos explícitos de la petición prevalecen. `tramtai iniciar` crea el perfil de ejemplo `resumen`.
+- **`salida.conservar_salida_invalida`:** si la salida no cumple el esquema, la petición falla con `salida_no_cumple_esquema`, pero conserva la salida bruta para revisarla (y para corregirla después con `reintentar`).
 - **`salida.reintentos`** (0 a 3; 0 por defecto): ver [Respuestas con forma](#respuestas-con-forma).
 
 ### Respuestas con forma
 
-Con `salida.esquema` (o el de la receta del punto) la respuesta se valida con JSON Schema 2020-12.
+Con `salida.esquema` (o el de la receta de la API) la respuesta se valida con JSON Schema 2020-12.
 
 > **Cambio en la v0.46:** los `format` (`date`, `date-time`, `email`, `uri`, `uuid`…) ahora se comprueban, en las
 > respuestas y en los argumentos de las herramientas; antes se ignoraban. Por ejemplo, `"2026-10-18T10:00:00"` (sin
@@ -308,21 +308,21 @@ Con `salida.esquema` (o el de la receta del punto) la respuesta se valida con JS
 > formato exacto. Si tu aplicación aceptaba valores aproximados, quita el `format` del esquema o pide el formato en
 > las instrucciones.
 
-- **Si no cumple**, el trabajo falla con `salida_no_cumple_esquema`:
+- **Si no cumple**, la petición falla con `salida_no_cumple_esquema`:
   - el mensaje es el primer problema, con «(y N más)» si hay más;
   - `errores_salida` los lista (hasta 20): `campo` (la ruta legible, como `tareas[2].fecha`; vacía, la respuesta entera), `problema` (`falta`, `tipo`, `valor_no_permitido`, `sobra`, `formato`, `tamaño` u `otro`) y `texto`, en el idioma del servicio.
 - **`salida.reintentos`** (0 a 3, exige formato `json`): cuántas veces se pide al **mismo** agente que corrija una respuesta que no cumple.
   - La corrección sigue la conversación con la respuesta y sus problemas; nunca salta al respaldo.
-  - Cada corrección es otra petición al agente: aparece como un `intento` más en el registro y su uso (tokens y coste) se suma al trabajo y a los presupuestos, aunque como petición cuenta una sola vez.
-  - En un punto de acceso, `reintentos_salida` es el valor de la receta para las peticiones que no piden otro, también las de las fachadas OpenAI y Anthropic.
-- **Corregir a mano:** con 0 reintentos, `POST /trabajos/{id}/reintentar` con `{"corregir": true}` hace una corrección como un trabajo nuevo vinculado (si el trabajo conservó su salida con `conservar_salida_invalida`).
+  - Cada corrección es otra petición al agente: aparece como un `intento` más en el registro y su uso (tokens y costo) se suma a la petición y a los presupuestos, aunque como petición cuenta una sola vez.
+  - En una API por aplicación, `reintentos_salida` es el valor de la receta para las peticiones que no piden otro, también las de las fachadas OpenAI y Anthropic.
+- **Corregir a mano:** con 0 reintentos, `POST /trabajos/{id}/reintentar` con `{"corregir": true}` hace una corrección como una petición nueva vinculada (si la petición conservó su salida con `conservar_salida_invalida`).
 - **`modo_contexto: consciente_proyecto`** (o `--contexto`): el agente trabaja en la raíz del proyecto y carga sus reglas. Solo se admite en proyectos incluidos en `proyectos_confiables` de la configuración global; si no, devuelve 403 `contexto_no_permitido`. Antes de ejecutar se registra un evento `aviso` con el contexto que se carga.
 
-## Puntos de acceso y administración
+## APIs por aplicación y administración
 
-Un punto de acceso expone la misma API bajo su propia URL y token: `http://127.0.0.1:17373/p/<nombre>/openai/v1`, o su propio puerto. Solo expone los contratos que tiene habilitados, antepone sus `instrucciones` (si tiene) a las de cada solicitud, aplica sus alias, modelos permitidos y modelo forzado (cabecera `Tramtai-Modelo-Forzado`) y solo ve sus trabajos. Con `ejecucion.maximo_trabajos` limita sus ejecuciones simultáneas, siempre dentro del límite de su instancia.
+Una API por aplicación expone la misma API bajo su propia URL y clave: `http://127.0.0.1:17373/p/<nombre>/openai/v1`, o su propio puerto. Solo expone los contratos que tiene habilitados, antepone sus `instrucciones` (si tiene) a las de cada petición, aplica sus alias, modelos permitidos y modelo forzado (cabecera `Tramtai-Modelo-Forzado`) y solo ve sus peticiones. Con `ejecucion.maximo_trabajos` limita sus ejecuciones simultáneas, siempre dentro del límite de su espacio.
 
-Un punto de acceso también puede ser una **receta**: con `esquema` (un JSON Schema escrito como YAML), toda petición que no traiga su propio esquema responde con JSON validado, también por las fachadas sin `response_format`; con `reintentos_salida` (0 a 3) se corrige la respuesta que no lo cumpla. Con `respaldo` (hasta 3 entradas `agente` o `agente/modelo`, cada una con un esfuerzo propio opcional `+nivel`), si el agente principal falla antes de emitir texto (`limite_uso_proveedor`, `autenticacion_agente`, `agente_no_disponible`, `modelo_no_disponible`, `error_agente`, `error_protocolo_agente` o `tiempo_ejecucion_agotado`), o si su entrada no cabe en su contexto (`entrada_demasiado_grande`, sin ejecutarlo), el mismo trabajo sigue con el siguiente: queda un evento `aviso`, el trabajo muestra el agente que respondió y el tiempo límite cuenta por intento. Tras un salto, el campo `model` de las respuestas de las fachadas OpenAI y Anthropic indica el agente/modelo que respondió (sin salto, sigue siendo el que pidió la aplicación). En streaming, los primeros fragmentos salen antes de saber si habrá salto y llevan el modelo pedido; el que respondió aparece en el fragmento final de uso de OpenAI (`stream_options.include_usage`) y en el trabajo (`GET /api/v1/trabajos/{id}`). El trabajo guarda el respaldo que le queda, así que al reencolarlo o reintentarlo no repite agentes. La API nativa acepta `"respaldo": [...]` en la solicitud; las fachadas lo heredan del punto. Un respaldo con un agente que no existe, o fuera de `modelos_permitidos`, se rechaza al guardar el punto.
+Una API por aplicación también puede ser una **receta**: con `esquema` (un JSON Schema escrito como YAML), toda petición que no traiga su propio esquema responde con JSON validado, también por las fachadas sin `response_format`; con `reintentos_salida` (0 a 3) se corrige la respuesta que no lo cumpla. Con `respaldo` (hasta 3 entradas `agente` o `agente/modelo`, cada una con un esfuerzo propio opcional `+nivel`), si el agente principal falla antes de emitir texto (`limite_uso_proveedor`, `autenticacion_agente`, `agente_no_disponible`, `modelo_no_disponible`, `error_agente`, `error_protocolo_agente` o `tiempo_ejecucion_agotado`), o si su entrada no cabe en su contexto (`entrada_demasiado_grande`, sin ejecutarlo), el mismo trabajo sigue con el siguiente: queda un evento `aviso`, la petición muestra el agente que respondió y el tiempo límite cuenta por intento. Tras un salto, el campo `model` de las respuestas de las fachadas OpenAI y Anthropic indica el agente/modelo que respondió (sin salto, sigue siendo el que pidió la aplicación). En streaming, los primeros fragmentos salen antes de saber si habrá salto y llevan el modelo pedido; el que respondió aparece en el fragmento final de uso de OpenAI (`stream_options.include_usage`) y en la petición (`GET /api/v1/trabajos/{id}`). La petición guarda el respaldo que le queda, así que al reencolarlo o reintentarlo no repite agentes. La API nativa acepta `"respaldo": [...]` en la petición; las fachadas lo heredan de la API. Un respaldo con un agente que no existe, o fuera de `modelos_permitidos`, se rechaza al guardar la API.
 
 ```yaml
 puntos_acceso:
@@ -340,14 +340,14 @@ puntos_acceso:
 
 ### Presupuestos
 
-Un punto de acceso, y la instancia entera, pueden tener un `presupuesto` diario y mensual en peticiones, tokens (entrada + salida) y USD (solo el coste que informa el agente: hoy Claude, y con suscripción es estimado). Los periodos son el día y el mes de calendario en la hora local del equipo; 0 o ausente es sin límite.
+Una API por aplicación, y el espacio entero, pueden tener un `presupuesto` diario y mensual en peticiones, tokens (entrada + salida) y USD (solo el costo que informa el agente: hoy Claude, y con suscripción es estimado). Los periodos son el día y el mes de calendario en la hora local del equipo; 0 o ausente es sin límite.
 
-- Al aceptar una petición se comprueban el presupuesto de su punto y el de la instancia. Si alguno está agotado, responde **429** `presupuesto_agotado` en el formato de cada fachada (`rate_limit_error` en OpenAI y Anthropic), con `Retry-After` en segundos hasta el reinicio del periodo agotado. El respaldo no lo evita: el límite es de la API, no del agente.
-- Tokens y USD se conocen al terminar cada trabajo, así que el límite reserva lo que gastarían los trabajos en curso al promedio de los terminados del periodo. Sigue siendo aproximado: un trabajo puede gastar más que el promedio.
-- Cada `POST` a una API o instancia con presupuesto devuelve `X-Tramtai-Presupuesto: <n>`, el porcentaje usado del límite más cercano a agotarse (el del punto o el de la instancia) al recibir la petición, sin contarla: la que agota el límite puede ver 99. Sirve para que la aplicación frene antes del corte.
-- Si se agotan varios límites a la vez (el diario y el mensual, o el del punto y el de la instancia), `Retry-After` apunta al reinicio más tardío.
+- Al aceptar una petición se comprueban el presupuesto de su API y el del espacio. Si alguno está agotado, responde **429** `presupuesto_agotado` en el formato de cada fachada (`rate_limit_error` en OpenAI y Anthropic), con `Retry-After` en segundos hasta el reinicio del periodo agotado. El respaldo no lo evita: el límite es de la API, no del agente.
+- Tokens y USD se conocen al terminar cada petición, así que el límite reserva lo que gastarían las peticiones en curso al promedio de las terminadas del periodo. Sigue siendo aproximado: una petición puede gastar más que el promedio.
+- Cada `POST` a una API o espacio con presupuesto devuelve `X-Tramtai-Presupuesto: <n>`, el porcentaje usado del límite más cercano a agotarse (el de la API o el del espacio) al recibir la petición, sin contarla: la que agota el límite puede ver 99. Sirve para que la aplicación frene antes del corte.
+- Si se agotan varios límites a la vez (el diario y el mensual, o el de la API y el del espacio), `Retry-After` apunta al reinicio más tardío.
 - Los cruces del 80 % y del 100 % se registran una vez por periodo, para avisar por webhook.
-- El presupuesto de la instancia cuenta todas sus peticiones: las de sus puntos, las de la clave principal y las de Probar. Reiniciar o eliminar un punto no le devuelve su consumo.
+- El presupuesto del espacio cuenta todas sus peticiones: las de sus APIs, las de la clave principal y las de Probar. Reiniciar o eliminar una API no le devuelve su consumo.
 
 ```yaml
 puntos_acceso:
@@ -355,29 +355,29 @@ puntos_acceso:
     presupuesto:
       diario: { peticiones: 500 }
       mensual: { tokens: 20000000, usd: 50 }
-presupuesto:                     # el de la instancia (configuración global o local.yaml)
+presupuesto:                     # el del espacio (configuración global o local.yaml)
   mensual: { peticiones: 10000 }
 ```
 
-En la API, una *instancia* es un espacio de trabajo: el global o el de un proyecto. La administración (`/api/v1/servicio`) y la API de cada espacio con `Tramtai-Instancia` se describen en [operacion.md](operacion.md). Con el token de servicio, la administración cubre también lo que hace la Web UI con los espacios: activar, detener, ubicar, confiar en un proyecto, abrir uno nuevo (`POST /api/v1/servicio/proyectos`, con 409 si hay que decidir) y cambiar la autenticación de un agente (`PUT /api/v1/servicio/agentes/{agente}/autenticacion`). La clave de una aplicación no puede usar ninguna de esas rutas (401).
+En la API propia, las rutas `/api/v1/instancia` son las del espacio: el global o el de un proyecto. La administración (`/api/v1/servicio`) y la API de cada espacio con `Tramtai-Instancia` se describen en [operacion.md](operacion.md). Con la clave de servicio, la administración cubre también lo que hace la Web UI con los espacios: activar, detener, ubicar, confiar en un proyecto, abrir uno nuevo (`POST /api/v1/servicio/proyectos`, con 409 si hay que decidir) y cambiar la autenticación de un agente (`PUT /api/v1/servicio/agentes/{agente}/autenticacion`). La clave de una aplicación no puede usar ninguna de esas rutas (401).
 
-`GET /api/v1/trabajos?limite=20` lista los trabajos recientes de la instancia, o los del punto de acceso si se llama desde uno; `&punto=<nombre>` filtra por un punto de acceso, `&grupo=<nombre>` por las APIs de ese grupo (según la configuración actual; un grupo sin APIs devuelve una lista vacía), `&origen=probar|terminal|cli|app` por origen, `&estado=en_curso|completado|con_error` por los filtros del Historial (en curso es lo que no terminó; con error, fallido e interrumpido), `&texto=` busca en el último mensaje y en el id sin distinguir mayúsculas ni tildes (hasta 200 caracteres), y `&antes=<creado_en>` (RFC 3339) con `&antes_id=<id>` del último que ya se vio trae la página siguiente sin saltarse los creados en el mismo instante. Desde un punto de acceso, `grupo` y `origen` se ignoran. Cada trabajo indica su `origen`: `probar` (la sesión de la Web UI), `terminal` o `cli` (la clave de la instancia con el encabezado `X-Tramtai-Cliente`, que es solo una etiqueta y no da permisos), `app` (la clave sin ese encabezado) o `api` (un punto de acceso); vacío en los trabajos anteriores a v0.38.
+`GET /api/v1/trabajos?limite=20` lista las peticiones recientes del espacio, o las de la API si se llama desde una; `&punto=<nombre>` filtra por una API por aplicación, `&grupo=<nombre>` por las APIs de ese grupo (según la configuración actual; un grupo sin APIs devuelve una lista vacía), `&origen=probar|terminal|cli|app` por origen, `&estado=en_curso|completado|con_error` por los filtros del Historial (en curso es lo que no terminó; con error, fallido e interrumpido), `&texto=` busca en el último mensaje y en el id sin distinguir mayúsculas ni tildes (hasta 200 caracteres), y `&antes=<creado_en>` (RFC 3339) con `&antes_id=<id>` del último que ya se vio trae la página siguiente sin saltarse los creados en el mismo instante. Desde una API por aplicación, `grupo` y `origen` se ignoran. Cada trabajo indica su `origen`: `probar` (la sesión de la Web UI), `terminal` o `cli` (la clave del espacio con el encabezado `X-Tramtai-Cliente`, que es solo una etiqueta y no da permisos), `app` (la clave sin ese encabezado) o `api` (una API por aplicación); vacío en las peticiones anteriores a v0.38.
 
-`GET /api/v1/instancia/retencion` devuelve `horas_resultado`, `horas_metadatos`, `max_trabajos` y `uso` (`trabajos` de la instancia y `bytes` de la base); `PUT` con esos tres números los guarda (en la configuración global para la instancia global, en `local.yaml` para un proyecto), los aplica al momento y purga. Fuera de rango responde 400 `solicitud_invalida` con el motivo. Ambos piden una sesión de la Web UI o el token de servicio, como `/api/v1/instancia/predeterminado`. Desde la Web UI, `GET /api/v1/puntos` incluye `uso` por punto (`peticiones`, `errores` y `ultima`, de lo que conserva la retención) y `presupuestos` (por punto con presupuesto: `diario` y `mensual` con `limites`, `consumo` y `reinicio`).
+`GET /api/v1/instancia/retencion` devuelve `horas_resultado`, `horas_metadatos`, `max_trabajos` y `uso` (`trabajos` del espacio y `bytes` de la base); `PUT` con esos tres números los guarda (en la configuración global para el espacio global, en `local.yaml` para un proyecto), los aplica al momento y purga. Fuera de rango responde 400 `solicitud_invalida` con el motivo. Ambos piden una sesión de la Web UI o la clave de servicio, como `/api/v1/instancia/predeterminado`. Desde la Web UI, `GET /api/v1/puntos` incluye `uso` por punto (`peticiones`, `errores` y `ultima`, de lo que conserva la retención) y `presupuestos` (por punto con presupuesto: `diario` y `mensual` con `limites`, `consumo` y `reinicio`).
 
-### Claves de los puntos y del espacio
+### Claves de las APIs y del espacio
 
-Estas rutas exigen una sesión de la Web UI o el token de servicio (con `Tramtai-Instancia`); la clave de las aplicaciones no sirve.
+Estas rutas exigen una sesión de la Web UI o la clave de servicio (con `Tramtai-Instancia`); la clave de las aplicaciones no sirve.
 
 | Método y ruta | Función |
 |---|---|
-| `POST /api/v1/puntos` | Crea un punto de acceso. La respuesta trae su `token`: es la única vez que se ve. |
-| `POST /api/v1/puntos/{nombre}/token` | Regenera la clave del punto y la devuelve una sola vez (`{"token": "…"}`); la anterior deja de valer al momento. Ya no existe `GET` en esta ruta: Tramtai solo guarda la huella (`datos/tokens/acceso_<nombre>` contiene `sha256:…`). Las claves antiguas guardadas en claro se convierten solas a huella y siguen valiendo. |
-| `DELETE /api/v1/puntos/{nombre}` | Elimina el punto y su clave. |
-| `POST /api/v1/puntos/{nombre}/presupuesto/reiniciar` | Pone a cero el consumo del día y del mes en curso del punto (204). |
-| `GET /api/v1/instancia/presupuesto` | `{"presupuesto": {…}}` con el consumo y los límites de la instancia, o `{}` si no tiene. |
-| `POST /api/v1/instancia/presupuesto/reiniciar` | Pone a cero el consumo del día y del mes en curso de la instancia (204). |
-| `GET /api/v1/instancia` | El estado del espacio (`id`, `ambito`, `nombre`, `base`…) con `app_con_clave_24h`: las peticiones de apps que llegaron con la clave del espacio en las últimas 24 h, y `sugerir_api_propia` (con más de 20). `contadores` dice cuántos trabajos hay en cada filtro de estado (`en_curso`, `completado` y `con_error`). |
+| `POST /api/v1/puntos` | Crea una API por aplicación. La respuesta trae su `token`: es la única vez que se ve. |
+| `POST /api/v1/puntos/{nombre}/token` | Regenera la clave de la API y la devuelve una sola vez (`{"token": "…"}`); la anterior deja de valer al momento. Ya no existe `GET` en esta ruta: Tramtai solo guarda la huella (`datos/tokens/acceso_<nombre>` contiene `sha256:…`). Las claves antiguas guardadas en claro se convierten solas a huella y siguen valiendo. |
+| `DELETE /api/v1/puntos/{nombre}` | Elimina la API y su clave. |
+| `POST /api/v1/puntos/{nombre}/presupuesto/reiniciar` | Pone a cero el consumo del día y del mes en curso de la API (204). |
+| `GET /api/v1/instancia/presupuesto` | `{"presupuesto": {…}}` con el consumo y los límites del espacio, o `{}` si no tiene. |
+| `POST /api/v1/instancia/presupuesto/reiniciar` | Pone a cero el consumo del día y del mes en curso del espacio (204). |
+| `GET /api/v1/instancia` | El estado del espacio (`id`, `ambito`, `nombre`, `base`…) con `app_con_clave_24h`: las peticiones de apps que llegaron con la clave del espacio en las últimas 24 h, y `sugerir_api_propia` (con más de 20). `contadores` dice cuántas peticiones hay en cada filtro de estado (`en_curso`, `completado` y `con_error`). |
 | `GET /api/v1/instancia/pasos` | Los Primeros pasos de Inicio ya calculados: `pasos` (`pagina`: `agentes`, `ejecutar`, `conectar` y, para el usuario de este equipo en un sistema que lo admite, `configuracion`; `hecho`; y en el de agentes, `listos` y `total`) y los `adaptadores` que comprobó para ello, como los de `/capacidades`. |
 | `POST /api/v1/instancia/heredar` | `{"clave": "predeterminados.modelo"}`: quita ese valor propio del `local.yaml` de un proyecto y vuelve a valer el de Global (204). Solo claves que empiezan por `predeterminados.`, `retencion.` o `presupuesto.`; otra responde 400 `solicitud_invalida`. |
 | `GET /api/v1/instancia/token` | La clave del espacio, para mostrarla en **Clave del espacio** (Mis APIs). |
@@ -388,7 +388,7 @@ Estas rutas exigen una sesión de la Web UI o el token de servicio (con `Tramtai
 Tras convertir los documentos, Tramtai mide lo que recibirá el agente (instrucciones, mensajes y documentos) y estima
 sus tokens (caracteres ÷ 4). Antes de cada agente lo compara con su contexto menos `limites.reserva_salida_tokens`
 (8.192): si no cabe, pasa al respaldo sin ejecutarlo y deja un `aviso` («La entrada (~45000 tokens; informe.pdf
-~38000) no cabe en claude/haiku…; sigue con codex»); si no cabe en ninguno, el trabajo falla con
+~38000) no cabe en claude/haiku…; sigue con codex»); si no cabe en ninguno, la petición falla con
 `entrada_demasiado_grande`.
 
 - **Contexto de cada modelo**, en este orden: `limites.contexto_tokens` (una lista de `agente=tokens` o
@@ -396,7 +396,7 @@ sus tokens (caracteres ÷ 4). Antes de cada agente lo compara con su contexto me
   respuesta; la API de Gemini con `inputTokenLimit`) o, si no se conoce, no se comprueba.
 - `GET /api/v1/modelos` indica el contexto conocido de cada modelo en `contexto_tokens` y su origen en
   `contexto_origen` (`configurado` o `informado`); el evento `intento` lo lleva en `contexto_tokens`.
-- En la API nativa no es un error HTTP: el trabajo termina `fallido` con `entrada_demasiado_grande` (también en
+- En la API nativa no es un error HTTP: la petición termina `fallido` con `entrada_demasiado_grande` (también en
   `POST /ejecutar`, que responde 200 al aceptar). Las fachadas responden 400 (`context_length_exceeded` en OpenAI).
 - Una petición que no cabe en ningún agente no llega a ejecutarse: no gasta tokens ni cuenta como petición del
   presupuesto.

@@ -4,8 +4,7 @@
 //	go run ./scripts/firmar -comprobar SHA256SUMS.txt comprueba SHA256SUMS.txt.sig con las claves de la app
 //	go run ./scripts/firmar -generar                  par nuevo: la pública por stdout y la semilla por stderr
 //
-// La semilla (privada, ed25519 en base64) solo se lee del entorno, nunca de un argumento ni de un archivo, para que no
-// quede en el historial de órdenes ni en el disco.
+// La semilla (privada, ed25519 en base64) solo se lee del entorno: así no queda en el historial de órdenes ni en el disco.
 package main
 
 import (

@@ -9,7 +9,7 @@ import (
 	"tramtai/internal/nucleo"
 )
 
-// Preparador resuelve las cargas de un trabajo y las convierte; lo usa el planificador en preparando_entrada.
+// Preparador resuelve las cargas de un trabajo y las convierte en preparando_entrada.
 type Preparador struct {
 	Cargas    *Cargas
 	Conversor *Conversor

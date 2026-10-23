@@ -129,7 +129,7 @@ const lineas = computed(() => props.adaptadores.map((a, i) => ({
 })))
 
 const enCurso = computed(() => (props.tranvias?.length ?? 0) + (props.resto ?? 0))
-const descripcion = computed(() => t('mapa.descripcion', {
+const descripcion = computed(() => t(origenes.value.length === 1 ? 'mapa.descripcionUno' : 'mapa.descripcion', {
   apis: origenes.value.length, listos: lineas.value.filter((l) => l.listo).length, total: lineas.value.length,
 }) + (enCurso.value === 1 ? ' ' + t('vivo.enCursoUno') : enCurso.value ? ' ' + t('vivo.enCurso', { n: enCurso.value }) : ''))
 

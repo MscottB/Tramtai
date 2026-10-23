@@ -56,7 +56,7 @@ func TestGuardarComoApi(t *testing.T) {
 		t.Fatalf("salir avisa de los cambios sin guardar: %q", pendiente(a))
 	}
 	fuera := a.Pulsar("g")
-	if av, ok := aviso(fuera); !ok || av.Texto != "API mi-app actualizada" {
+	if av, ok := aviso(fuera); !ok || av.Texto != "Cambios guardados en mi-app" {
 		t.Fatalf("g actualiza la API: %v", fuera)
 	}
 	l, _ = cli.Puntos(ctx, id)

@@ -1,8 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { idioma, t } from './i18n.ts'
-import { configDeReceta, esquemaDeReceta, recetaDePunto, recetaDeSolicitud, recetaVacia } from './recetas.ts'
-import type { EstadoPunto } from './api/tipos.ts'
+import { configDeReceta, esquemaDeReceta, mensajeDe, recetaDePunto, recetaDeSolicitud, recetaVacia } from './recetas.ts'
+import type { EstadoPunto, Trabajo } from './api/tipos.ts'
 
 idioma.value = 'es'
 const punto = (p: Partial<EstadoPunto>): EstadoPunto => ({ nombre: 'facturas', instancia: 'i', contratos: ['openai'], activo: true, origen: 'ui', ...p })
@@ -45,4 +46,16 @@ test('config de una receta: solo lo que tiene valor, forzar con modelo y reinten
   assert.deepEqual(sinNada, { instrucciones: undefined, agente: undefined, modelo: undefined, perfil_modelo: undefined, forzar_modelo: undefined,
     esfuerzo: undefined, respaldo: undefined, esquema: undefined, reintentos_salida: undefined })
   assert.equal(configDeReceta({ ...recetaVacia(), modelo: 'perfil/rapido' }).perfil_modelo, 'rapido')
+})
+
+test('el mensaje de una petición salta el pedido de corrección con el texto que fija el servicio en Go', () => {
+  const fuente = readFileSync(new URL('../../internal/planificador/correccion.go', import.meta.url), 'utf8')
+  const prefijo = /const inicioCorreccion = "([^"]+)"/.exec(fuente)?.[1]
+  assert.ok(prefijo, 'inicioCorreccion no está en correccion.go')
+  const mensajes = [
+    { rol: 'usuario', contenido: 'Resume el texto' },
+    { rol: 'asistente', contenido: 'respuesta mal formada' },
+    { rol: 'usuario', contenido: prefijo + '\n- falta total' },
+  ]
+  assert.equal(mensajeDe({ solicitud: { mensajes } } as unknown as Trabajo), 'Resume el texto')
 })

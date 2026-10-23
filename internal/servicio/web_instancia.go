@@ -34,7 +34,7 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 		return false
 	}
 	if !privilegiada {
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado, idioma.T("requiere una sesión de la Web UI o el token de servicio")))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado, idioma.T("requiere una sesión de la Web UI o la clave del servicio")))
 		return true
 	}
 	switch {
@@ -227,7 +227,7 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 	}
 	err = configuracion.EditarPuntos(ruta, origen, func(lista []ConfigPunto) ([]ConfigPunto, error) {
 		if slices.ContainsFunc(lista, func(c ConfigPunto) bool { return c.Nombre == p.Nombre }) {
-			return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("el punto de acceso %s ya existe", p.Nombre))
+			return nil, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("la API %s ya existe", p.Nombre))
 		}
 		return append(lista, p), nil
 	})
@@ -235,7 +235,7 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 		api.EscribirError(w, r, err)
 		return
 	}
-	// Clave nueva siempre (aunque quedara una de otro punto con el mismo nombre); solo se devuelve esta vez.
+	// La clave solo se devuelve esta vez (ver RotarTokenPunto).
 	token, err := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, p.Nombre))
 	if err != nil {
 		api.EscribirError(w, r, err)
@@ -264,7 +264,7 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 		}
 	}
 	if punto == nil {
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("punto de acceso no encontrado en este espacio: %s", nombre)))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("API no encontrada en este espacio: %s", nombre)))
 		return
 	}
 	switch {
@@ -275,7 +275,7 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 		}
 		w.WriteHeader(http.StatusNoContent)
 	case accion == "token" && r.Method == http.MethodPost:
-		// Regenera la clave: solo se guarda su huella, así que esta es la única vez que se puede ver.
+		// Regenera la clave (ver RotarTokenPunto).
 		token, err := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, nombre))
 		if err != nil {
 			api.EscribirError(w, r, err)
@@ -322,9 +322,8 @@ func (s *Servicio) modeloDePunto(inst *Instancia, c *ConfigPunto, id string) err
 
 // fijarPredeterminado guarda el modelo que se usa cuando la solicitud no indica agente ni modelo (un identificador
 // del catálogo: agente, agente/modelo o perfil/nombre), y su esfuerzo si se indica (con id vacío, solo el esfuerzo), y
-// lo aplica en marcha. En la
-// instancia global va a la configuración global y alcanza también a los proyectos que no tengan el suyo; en un
-// proyecto, a su local.yaml.
+// lo aplica en marcha. En la instancia global va a la configuración global y alcanza también a los proyectos que no
+// tengan el suyo; en un proyecto, a su local.yaml.
 func (s *Servicio) fijarPredeterminado(inst *Instancia, id string, esfuerzo *string) error {
 	valores := map[string]any{"predeterminados.modelo": "", "predeterminados.perfil_modelo": ""}
 	if esfuerzo != nil {

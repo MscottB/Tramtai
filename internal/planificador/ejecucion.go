@@ -23,9 +23,8 @@ import (
 )
 
 // despachar saca los trabajos de la cola en orden y procesa cada uno en su goroutine: un trabajo que espera
-// a su agente o a su punto de acceso no impide empezar a otro listo. Los semáforos limitan cuántos se ejecutan.
-// Antes de sacar el siguiente espera a que el anterior llegue a su espera: así cada semáforo, que atiende por
-// orden de llegada, conserva el orden de la cola.
+// a su agente o a su punto de acceso no impide empezar a otro listo. Antes de sacar el siguiente espera a que el
+// anterior llegue a su espera: así cada semáforo, que atiende por orden de llegada, conserva el orden de la cola.
 func (p *Planificador) despachar() {
 	defer p.grupo.Done()
 	for {
@@ -375,13 +374,9 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 		if semaforo == nil {
 			continue
 		}
-		// Se avisa al despachador justo antes de la primera espera, no antes de preparar el intento: con la máquina
-		// cargada, el siguiente trabajo podía llegar antes a su select y adelantarse en el semáforo del agente.
-		// shortcut: queda la ventana entre este aviso y entrar en el select, mucho menor que lo que tarda el
-		// siguiente trabajo en llegar a su espera (lee y escribe en la base); si no bastara, un turno por agente.
-		// El coste: el despachador no saca otro trabajo mientras este prepara el intento, incluida la consulta del
-		// contexto del modelo (hasta 5 s con Gemini la primera vez; luego queda en caché un día). Si eso frenara a
-		// otros agentes, el turno por agente también lo resuelve.
+		// Se avisa al despachador justo antes de la primera espera, no antes de preparar el intento: así el siguiente
+		// trabajo no se adelanta en el semáforo del agente. shortcut: queda una ventana entre el aviso y el select; si
+		// no bastara, un turno por agente.
 		esperando()
 		select {
 		case semaforo <- struct{}{}:
@@ -470,7 +465,7 @@ func (p *Planificador) cerrarDetenido(id string, desde nucleo.Estado) {
 	case desde == nucleo.EsperandoAgente || desde == nucleo.PreparandoEntrada:
 		p.cambiar(id, desde, nucleo.EnCola, persistencia.Cambio{}) // nunca lanzó el agente: se reencola al reiniciar
 	default:
-		p.cambiar(id, desde, nucleo.Interrumpido, persistencia.Cambio{Mensaje: idioma.T("el servicio se detuvo durante la ejecución (sin plazo de drenaje o agotado)")})
+		p.cambiar(id, desde, nucleo.Interrumpido, persistencia.Cambio{Mensaje: idioma.T("el servicio se detuvo antes de que terminara la petición: vuelve a enviarla")})
 	}
 }
 
@@ -490,7 +485,7 @@ func (p *Planificador) cambiar(id string, de, hacia nucleo.Estado, cambio persis
 			cierre = nucleo.Fallido
 		}
 		if hacia != cierre && nucleo.ValidarTransicion(de, cierre) == nil {
-			fallo := persistencia.Cambio{Codigo: nucleo.CodigoErrorInterno, Mensaje: idioma.T("no se pudo guardar el estado del trabajo")}
+			fallo := persistencia.Cambio{Codigo: nucleo.CodigoErrorInterno, Mensaje: idioma.T("no se pudo guardar el estado de la petición: mira el registro del servicio")}
 			if err := p.almacen.CambiarEstado(fondo, id, de, cierre, fallo); err != nil {
 				p.anotar("%s tampoco se pudo cerrar: %v", id, err)
 			}
@@ -503,8 +498,8 @@ func (p *Planificador) cambiar(id string, de, hacia nucleo.Estado, cambio persis
 	return false
 }
 
-// agrupador junta los fragmentos de texto consecutivos antes de guardarlos: un evento por token costaba una
-// transacción y despertaba a todos los que siguen la instancia. Guarda lo acumulado a los 50 ms del primer
+// agrupador junta los fragmentos de texto consecutivos antes de guardarlos: un evento por token costaría una
+// transacción y despertaría a todos los que siguen la instancia. Guarda lo acumulado a los 50 ms del primer
 // fragmento o al llegar a 1 KiB, y siempre antes de cualquier otro evento, así que el orden no cambia.
 type agrupador struct {
 	guardar func(tipo, datos string) error

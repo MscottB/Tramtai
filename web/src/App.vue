@@ -197,7 +197,7 @@
               <div v-if="movidoDesde" class="q-mt-xs">{{ t('proyecto.movido', { ruta: movidoDesde }) }}</div>
               <div class="q-mt-xs">{{ confianza.length ? t('proyecto.confiarTexto') : t('proyecto.sinClaves') }}</div>
               <div v-if="confianza.length" class="q-mt-xs row q-gutter-xs">
-                <q-chip v-for="c in confianza" :key="c" dense square class="codigo">{{ c }}</q-chip>
+                <q-chip v-for="c in confianza" :key="c" dense square>{{ c }}</q-chip>
               </div>
             </div>
           </q-card-section>
@@ -234,7 +234,7 @@
         </q-card-section>
         <q-card-actions align="right" class="q-px-md q-pb-md">
           <q-btn flat no-caps color="primary" :label="t('actualizacion.verTodas')" href="https://github.com/MscottB/Tramtai/releases" target="_blank" rel="noopener" />
-          <q-btn v-close-popup unelevated no-caps color="primary" :label="t('comun.aceptar')" />
+          <q-btn v-close-popup unelevated no-caps color="primary" :label="t('comun.cerrar')" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -357,7 +357,7 @@ const seccion = computed(() => ruta.value.pagina)
 const actual = computed(() => paginas.find((p) => p.id === seccion.value) ?? paginas[0])
 const menu = ref(false)
 const origen = location.origin
-// Antes que los composables, como cuando todo iba en un solo onMounted: la URL se limpia antes de pedir la sesión.
+// Antes que los composables: la URL se limpia antes de pedir la sesión.
 onMounted(() => {
   history.replaceState({ i: base }, '', location.search ? location.pathname + location.hash : location.href)
   window.addEventListener('popstate', alNavegar)

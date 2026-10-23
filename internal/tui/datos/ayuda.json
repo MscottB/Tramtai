@@ -46,7 +46,7 @@
               "Aquí ves en qué espacio estás. Cada espacio guarda sus propias peticiones y APIs; desde este selector pasas de uno a otro o abres un proyecto."
             ],
             [
-              "La ayuda, a mano",
+              "El botón ? de cada página",
               "Junto al título de cada página hay un botón ? que abre su ayuda en un panel, sin que salgas de donde estás."
             ]
           ]
@@ -66,7 +66,7 @@
           "tipo": "preguntas",
           "pares": [
             [
-              "¿Cómo repito el recorrido de bienvenida?",
+              "¿Cómo repito el recorrido guiado?",
               "En Inicio, pulsa «Haz el recorrido de Tramtai» en Primeros pasos. Esc lo cierra y las flechas pasan de paso. Solo enseña: no pulsa nada ni cambia tus datos."
             ],
             [
@@ -128,7 +128,7 @@
           "url": "https://mscottb.github.io/Tramtai/ayuda/agentes.html",
           "lineas": [
             "1. Suscripción o clave · Tu suscripción, para uso personal; una clave de API, para tus apps.",
-            "2. El agente · Claude Code, Codex, GitHub Copilot, la API de Gemini o Antigravity.",
+            "2. El agente · Claude Code, Codex, GitHub Copilot, la Gemini API o Antigravity.",
             "3. Modelo y esfuerzo · Se eligen con agente/modelo, por ejemplo claude/sonnet, y cuánto razona."
           ]
         },
@@ -168,7 +168,7 @@
           "pares": [
             [
               "¿Qué agentes puedo usar?",
-              "Claude Code, Codex, GitHub Copilot CLI, la API de Gemini y Antigravity. Los que no están instalados aparecen al final de Agentes, con su enlace."
+              "Claude Code, Codex, GitHub Copilot CLI, la Gemini API y Antigravity. Los que no están instalados aparecen al final de Agentes, con su enlace."
             ],
             [
               "¿Suscripción o clave de API?",
@@ -191,7 +191,7 @@
               "Sí: cada petición gasta créditos de tu plan (premium requests), y Tramtai lo avisa en el registro de la prueba."
             ],
             [
-              "¿Qué necesitan la API de Gemini y Antigravity?",
+              "¿Qué necesitan la Gemini API y Antigravity?",
               "Una clave de la Gemini API (GEMINI_API_KEY). No usan suscripción ni hace falta instalar Gemini CLI."
             ],
             [
@@ -321,7 +321,7 @@
           "pares": [
             [
               "La clave del espacio",
-              "Cada espacio tiene una clave con acceso a cualquier agente y modelo: la usan la CLI, tus scripts y Probar. Tus apps van mejor con una API propia cada una."
+              "Cada espacio tiene una clave con acceso a cualquier agente y modelo: la usan la CLI de Tramtai, tus scripts y Probar. Tus apps van mejor con una API propia cada una."
             ],
             [
               "Una API por aplicación",
@@ -381,7 +381,7 @@
               "sí"
             ],
             [
-              "Tareas largas: seguir, cancelar, reintentar",
+              "Peticiones largas: seguir, cancelar, reintentar",
               "no",
               "no",
               "sí"
@@ -409,7 +409,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "Las URL de OpenAI y Anthropic imitan esos servicios para que sus SDK funcionen igual, así que no tienen campos para seguir o cancelar un trabajo. La receta vale en las tres."
+            "Las URL de OpenAI y Anthropic imitan esos servicios para que sus SDK funcionen igual, así que no tienen campos para seguir o cancelar una petición. La receta vale en las tres."
           ]
         },
         {
@@ -423,11 +423,11 @@
           "pares": [
             [
               "¿Qué URL uso?",
-              "La de OpenAI si tu app usa su SDK o deja cambiar la URL base (LangChain, n8n); la de Anthropic con su SDK; la API propia para trabajos largos o para cancelar."
+              "La de OpenAI si tu app usa su SDK o deja cambiar la URL base (LangChain, n8n); la de Anthropic con su SDK; la API propia para peticiones largas o para cancelar."
             ],
             [
               "¿Para qué sirve una API por aplicación?",
-              "Cada app tiene su clave, sus modelos, instrucciones fijas y presupuesto, y solo ve sus trabajos. Se activan o detienen sin reiniciar."
+              "Cada app tiene su clave, sus modelos, instrucciones fijas y presupuesto, y solo ve sus peticiones. Se activan o detienen sin reiniciar."
             ],
             [
               "¿Dónde está la clave de una API nueva?",
@@ -435,7 +435,7 @@
             ],
             [
               "¿Cómo convierto una prueba en una API?",
-              "En Probar, «Guardar como API» te da URL y clave. Desde Mis APIs, «Abrir en Probar» la carga para cambiarla y «Actualizar» guarda."
+              "En Probar, «Guardar como API» te da URL y clave. Desde Mis APIs, «Abrir en Probar» la carga para cambiarla y «Guardar cambios» la guarda."
             ],
             [
               "¿Qué hago si se filtra una clave?",
@@ -472,7 +472,7 @@
         {
           "tipo": "pasos",
           "lineas": [
-            "Por la API propia: sube cada archivo con POST /cargas y crea el trabajo citando sus cargas.",
+            "Por la API propia: sube cada archivo con POST /cargas y crea la petición citando sus cargas.",
             "Por OpenAI o Anthropic: pon el archivo en base64 dentro del mensaje (file, input_file o document).",
             "En Probar también puedes adjuntarlos para ver la respuesta antes."
           ]
@@ -804,8 +804,8 @@
           "tipo": "preguntas",
           "pares": [
             [
-              "¿Qué significan Completadas, En proceso y Con error?",
-              "Completadas recibieron respuesta; En proceso esperan o se están ejecutando; Con error fallaron o se interrumpieron."
+              "¿Qué significan Completadas, En curso y Con error?",
+              "Completadas recibieron respuesta; En curso esperan o se están ejecutando; Con error fallaron o se interrumpieron."
             ],
             [
               "¿Puedo seguir una petición en vivo?",
@@ -854,7 +854,7 @@
           "tipo": "pasos",
           "lineas": [
             "Abre un proyecto desde el selector de arriba o desde Espacios. Si la carpeta no tenía .tramtai/, Tramtai la prepara y confía en ella.",
-            "Si ya traía .tramtai/ (un repositorio clonado), decide si confías: así su local.yaml puede usar claves de seguridad.",
+            "Si ya traía .tramtai/ (un repositorio clonado), decide si confías: así su local.yaml puede usar ajustes de seguridad.",
             "En Espacios ves todos, también los detenidos. Detén los que no uses y olvida los que ya no necesites."
           ]
         },
@@ -870,7 +870,7 @@
               "Con este botón abres una carpeta como espacio de trabajo. Si no tenía .tramtai/, Tramtai la prepara por ti."
             ],
             [
-              "Actualizar la lista",
+              "Refrescar la lista",
               "Vuelve a cargar los espacios para ver al día el estado de cada uno."
             ]
           ]
@@ -885,7 +885,7 @@
           "pares": [
             [
               "¿Qué significa confiar en una carpeta?",
-              "Que su .tramtai/local.yaml puede usar claves de seguridad, como el programa de cada agente. La confianza se guarda en Tramtai, nunca en el repositorio."
+              "Que su .tramtai/local.yaml puede usar ajustes de seguridad, como el programa de cada agente. La confianza se guarda en Tramtai, nunca en el repositorio."
             ],
             [
               "¿Puedo mover o renombrar un proyecto?",
@@ -901,7 +901,7 @@
             ],
             [
               "¿Por qué un espacio sale «No encontrado»?",
-              "Su carpeta se movió o se borró. «Buscar la carpeta» lo reasocia sin perder nada (después, «Confiar» si usa claves de seguridad); «Olvidar», si ya no lo necesitas."
+              "Su carpeta se movió o se borró. «Buscar la carpeta» lo reasocia sin perder nada (después, «Confiar» si usa ajustes de seguridad); «Olvidar», si ya no lo necesitas."
             ],
             [
               "¿Cómo sé si un ajuste es del proyecto o de la global?",
@@ -956,7 +956,7 @@
             ],
             [
               "Para qué",
-              "Probar, la CLI y tus scripts",
+              "Probar, la CLI de Tramtai y tus scripts",
               "Cada app real"
             ],
             [
@@ -1197,7 +1197,7 @@
           "pares": [
             [
               "Agente",
-              "El programa de IA que responde: Claude Code, Codex, GitHub Copilot, la API de Gemini o Antigravity. Se conecta en Agentes, con tu suscripción o una clave de API."
+              "La IA que responde: Claude Code, Codex, GitHub Copilot, la Gemini API o Antigravity. Se conecta en Agentes, con tu suscripción o una clave de API."
             ],
             [
               "Modelo",
@@ -1291,11 +1291,11 @@
           "tipo": "web",
           "url": "https://mscottb.github.io/Tramtai/ayuda/empezar.html",
           "lineas": [
-            "1. Your app · Sends the request to a URL from My APIs, or you type it in Try.",
+            "1. Your app · Sends the request to a URL from My APIs, or you type it in the Playground.",
             "2. The API · Checks the key and the budget and applies the recipe.",
             "3. The queue · Converts the files, checks that they fit the model and waits its turn.",
             "4. The agent · Claude Code, Codex, GitHub Copilot, Gemini or Antigravity answers. If it fails, the fallback takes over.",
-            "5. The answer · Arrives live, is validated if there is a schema and stays in History."
+            "5. The response · Arrives live, is validated if there is a schema and stays in History."
           ]
         },
         {
@@ -1307,8 +1307,8 @@
           "lineas": [
             "Install Tramtai: installer or portable on Windows, Homebrew or .dmg on macOS, .deb or .rpm on Linux.",
             "In Agents, connect an agent with your subscription (personal use) or with an API key.",
-            "In Try, type a message, pick agent and model and watch the answer live.",
-            "In My APIs copy the URL and the key and put them in your app (topic \"Connect my app\")."
+            "In the Playground, type a message, pick agent and model and watch the response live.",
+            "In My APIs copy the URL and the key and put them in your app (topic “Connect my app”)."
           ]
         },
         {
@@ -1327,7 +1327,7 @@
               "Here you see which workspace you are in. Each one keeps its own requests and APIs; use this selector to switch or to open a project."
             ],
             [
-              "Help at hand",
+              "The ? button on every page",
               "Next to every page title there is a ? button that opens its help in a panel, without leaving where you are."
             ]
           ]
@@ -1347,8 +1347,8 @@
           "tipo": "preguntas",
           "pares": [
             [
-              "How do I repeat the welcome tour?",
-              "On Home, click \"Take the Tramtai tour\" in Getting started. Esc closes it and the arrow keys move between steps. It only shows: it clicks nothing and changes no data."
+              "How do I repeat the guided tour?",
+              "On Home, click “Take the Tramtai tour” in Getting started. Esc closes it and the arrow keys move between steps. It only shows: it clicks nothing and changes no data."
             ],
             [
               "What are the trams on the Home map?",
@@ -1356,19 +1356,19 @@
             ],
             [
               "Do I need a key to get in?",
-              "No. The app signs in by itself, and so does the browser if it belongs to your user; if not, \"tramtai abrir\" opens it already signed in. My APIs keys are only for your apps."
+              "No. The app signs in by itself, and so does the browser if it belongs to your user; if not, “tramtai abrir” opens it already signed in. My APIs keys are only for your apps."
             ],
             [
               "How do I know it is running, and how do I stop it?",
-              "The top right says \"Running\" or \"Offline\". It keeps running in the background even if you close the window; \"tramtai servicio detener\" stops it."
+              "The top right says “Running” or “Offline”. It keeps running in the background even if you close the window; “tramtai servicio detener” stops it."
             ],
             [
-              "Windows says \"Windows protected your PC\"",
+              "Windows says “Windows protected your PC”",
               "Click More info → Run anyway. It appears because the installer is not signed with a paid certificate yet."
             ],
             [
               "macOS won’t open the app",
-              "Not with Homebrew. With the .dmg: System Settings → Privacy & Security → Open Anyway, or \"xattr -dr com.apple.quarantine /Applications/Tramtai.app\"."
+              "Not with Homebrew. With the .dmg: System Settings → Privacy & Security → Open Anyway, or “xattr -dr com.apple.quarantine /Applications/Tramtai.app”."
             ],
             [
               "What do I need on Linux?",
@@ -1376,11 +1376,11 @@
             ],
             [
               "How does the portable copy work?",
-              "The Windows .zip keeps everything in \"datos-tramtai\", next to it, without touching the installed copy. To update it, unzip the new one on top."
+              "The Windows .zip keeps everything in “datos-tramtai”, next to it, without touching the installed copy. To update it, unzip the new one on top."
             ],
             [
               "How do I move my data to the portable copy?",
-              "With both closed, copy the contents of %APPDATA%\\tramtai into \"datos-tramtai\". Provider keys stay in the system store: on another computer, save them again."
+              "With both closed, copy the contents of %APPDATA%\\tramtai into “datos-tramtai”. Provider keys stay in the system store: on another computer, save them again."
             ],
             [
               "Can I carry the portable copy on a USB stick?",
@@ -1388,7 +1388,7 @@
             ],
             [
               "Can I use only the terminal?",
-              "Yes: \"brew install mscottb/tramtai/tramtai\" or the instalar.sh script install the CLI and the service; \"tramtai abrir\" starts it and opens the Web UI."
+              "Yes: “brew install mscottb/tramtai/tramtai” or the instalar.sh script install the CLI and the service; “tramtai abrir” starts it and opens the Web UI."
             ]
           ]
         },
@@ -1417,8 +1417,8 @@
           "tipo": "pasos",
           "lineas": [
             "Open Agents: each one says whether it is ready or what it is missing, and how to install it.",
-            "With your subscription: sign in to its CLI (for example, copilot login) and click \"Use my subscription\".",
-            "With a key: \"tramtai claves guardar ANTHROPIC_API_KEY\" stores it encrypted and it works without restarting.",
+            "With your subscription: sign in to its CLI (for example, copilot login) and click “Use my subscription”.",
+            "With a key: “tramtai claves guardar ANTHROPIC_API_KEY” stores it encrypted and it works without restarting.",
             "In Settings pick the model and effort used when a request does not say."
           ]
         },
@@ -1481,7 +1481,7 @@
             ],
             [
               "Why can’t I use Antigravity in my APIs?",
-              "It runs without tools, but it is enabled for APIs once it passes its test with a Gemini API key. Until then, use it from Try, the terminal and the CLI."
+              "It runs without tools, but it is enabled for APIs once it passes its test with a Gemini API key. Until then, use it from the Playground, the terminal and the CLI."
             ],
             [
               "How do I stop using the subscription?",
@@ -1505,9 +1505,9 @@
     },
     {
       "id": "probar",
-      "titulo": "Try",
+      "titulo": "Playground",
       "pagina": "ejecutar",
-      "resumen": "Type a message, pick agent, model and effort, and see the answer before taking it to your app.",
+      "resumen": "Type a message, pick agent, model and effort, and see the response before taking it to your app.",
       "bloques": [
         {
           "tipo": "web",
@@ -1515,7 +1515,7 @@
           "lineas": [
             "1. Your message · With files if you like: PDF, Word, PowerPoint, Excel, HTML or text.",
             "2. The agent · The one you pick, with its model and effort; if it fails, the fallback.",
-            "3. The answer · Live, formatted or as plain text, with its timed log."
+            "3. The response · Live, formatted or as plain text, with its timed log."
           ]
         },
         {
@@ -1523,8 +1523,8 @@
           "lineas": [
             "Type the message and, if you like, attach files.",
             "Pick agent, model and effort; if you don’t, the defaults from Settings are used.",
-            "Watch the answer live. \"Log\" shows every step and how long it took.",
-            "When it works, \"Save as API\" turns it into an API for your app."
+            "Watch the response live. “Log” shows every step and how long it took.",
+            "When it works, “Save as API” turns it into an API for your app."
           ]
         },
         {
@@ -1536,7 +1536,7 @@
             ],
             [
               "The test message",
-              "Type the message here and send it with Ctrl + Enter. The answer shows up live in the answer panel."
+              "Type the message here and send it with Ctrl + Enter. The response shows up live in the response panel."
             ],
             [
               "View as code",
@@ -1546,7 +1546,7 @@
         },
         {
           "tipo": "web",
-          "titulo": "The recipe in Try: instructions, agent, model and effort",
+          "titulo": "The recipe in the Playground: instructions, agent, model and effort",
           "url": "https://mscottb.github.io/Tramtai/ayuda/probar.html"
         },
         {
@@ -1554,15 +1554,15 @@
           "pares": [
             [
               "How do I see my test as code?",
-              "Click \"View as code\" in the recipe: the request in curl, Python, Node or Go, ready for your app, with the key as [your key]."
+              "Click “View as code” in the recipe: the request in curl, Python, Node or Go, ready for your app, with the key as [your key]."
             ],
             [
               "Where are my tests kept?",
-              "In \"Recent tests\", to open them or use them again. History keeps every request."
+              "In “Recent tests”, to open them or use them again. History keeps every request."
             ],
             [
               "Which effort should I pick?",
-              "More effort gives better answers to hard questions, but takes longer and uses more tokens. For simple things, low or medium is enough."
+              "More effort gives better responses to hard questions, but takes longer and uses more tokens. For simple things, low or medium is enough."
             ]
           ]
         },
@@ -1591,7 +1591,7 @@
         {
           "tipo": "pasos",
           "lineas": [
-            "In My APIs, \"Workspace key\" tab, copy the URL for OpenAI (or Anthropic) and the key.",
+            "In My APIs, “Workspace key” tab, copy the URL for OpenAI (or Anthropic) and the key.",
             "In your app change the base URL (base_url) and the key (api_key) to Tramtai’s.",
             "In model put agent and model, for example claude/sonnet, or a profile like perfil/rapido.",
             "Send a request: it shows up in History with the agent that answered."
@@ -1602,7 +1602,7 @@
           "pares": [
             [
               "The workspace key",
-              "Each workspace has a key with access to any agent and model: the CLI, your scripts and Try use it. Your apps are better off with an API of their own each."
+              "Each workspace has a key with access to any agent and model: the CLI, your scripts and the Playground use it. Your apps are better off with an API of their own each."
             ],
             [
               "One API per app",
@@ -1647,7 +1647,7 @@
               "JSON response with a schema",
               "yes (response_format)",
               "no",
-              "yes (salida.esquema), with \"Correct\""
+              "yes (salida.esquema), with “Correct”"
             ],
             [
               "Send files",
@@ -1662,7 +1662,7 @@
               "yes"
             ],
             [
-              "Long jobs: follow, cancel, retry",
+              "Long requests: follow, cancel, retry",
               "no",
               "no",
               "yes"
@@ -1690,7 +1690,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "The OpenAI and Anthropic URLs mimic those services so their SDKs work unchanged, so they have no fields to follow or cancel a job. The recipe applies to all three."
+            "The OpenAI and Anthropic URLs mimic those services so their SDKs work unchanged, so they have no fields to follow or cancel a request. The recipe applies to all three."
           ]
         },
         {
@@ -1704,23 +1704,23 @@
           "pares": [
             [
               "Which URL do I use?",
-              "OpenAI’s if your app uses its SDK or lets you change the base URL (LangChain, n8n); Anthropic’s with its SDK; the native API for long jobs or to cancel."
+              "OpenAI’s if your app uses its SDK or lets you change the base URL (LangChain, n8n); Anthropic’s with its SDK; the native API for long requests or to cancel."
             ],
             [
               "What is an API per app for?",
-              "Each app gets its key, its models, fixed instructions and budget, and only sees its own jobs. They turn on or off without restarting."
+              "Each app gets its key, its models, fixed instructions and budget, and only sees its own requests. They start or stop without restarting."
             ],
             [
               "Where is a new API’s key?",
-              "It is shown only when created: copy it then. If you lose it, \"Regenerate the key\" gives you another."
+              "It is shown only when created: copy it then. If you lose it, “Regenerate the key” gives you another."
             ],
             [
               "How do I turn a test into an API?",
-              "In Try, \"Save as API\" gives you a URL and a key. From My APIs, \"Open in Try\" loads it to change it and \"Update\" saves it."
+              "In the Playground, “Save as API” gives you a URL and a key. From My APIs, “Open in the Playground” loads it to change it and “Save changes” saves it."
             ],
             [
               "What if a key leaks?",
-              "In My APIs, \"Regenerate the key\": the old one stops working at once. If it is a provider’s, revoke it in their console and save the new one."
+              "In My APIs, “Regenerate the key”: the old one stops working at once. If it is a provider’s, revoke it in their console and save the new one."
             ],
             [
               "Can my app see what happens live?",
@@ -1747,15 +1747,15 @@
             "2. Tramtai keeps it · As an upload identified by its content: the same file is never stored twice.",
             "3. Turns it into text · markitdown turns PDF, Word, PowerPoint, Excel and HTML into Markdown; text goes as is.",
             "4. Hands it to the agent · One delimited block per file, with your message. The agent does not read your disk.",
-            "5. You get the answer · Like any other request, in the format of the API you used."
+            "5. You get the response · Like any other request, in the format of the API you used."
           ]
         },
         {
           "tipo": "pasos",
           "lineas": [
-            "Native API: upload each file with POST /cargas and create the job citing its uploads.",
+            "Native API: upload each file with POST /cargas and create the request citing its uploads.",
             "OpenAI or Anthropic: put the file in base64 inside the message (file, input_file or document).",
-            "In Try you can attach them too, to see the answer first."
+            "In the Playground you can attach them too, to see the response first."
           ]
         },
         {
@@ -1792,7 +1792,7 @@
             ],
             [
               "What if the converter is missing?",
-              "Settings → Files → \"Prepare files\", or \"tramtai conversor preparar\". If your network blocks the download, use the converter package for Windows."
+              "Settings → Files → “Prepare files”, or “tramtai conversor preparar”. If your network blocks the download, use the converter package for Windows."
             ],
             [
               "Does anything leave my computer when converting?",
@@ -1809,7 +1809,7 @@
             ],
             [
               "The file converter is missing (conversor_no_disponible)",
-              "The file converter is missing: Settings → Files → \"Prepare files\". If your network blocks the download, use the converter package for Windows."
+              "The file converter is missing: Settings → Files → “Prepare files”. If your network blocks the download, use the converter package for Windows."
             ],
             [
               "The input does not fit in the model (entrada_demasiado_grande)",
@@ -1825,8 +1825,8 @@
     },
     {
       "id": "json",
-      "titulo": "JSON answers",
-      "resumen": "Ask for the answer in a fixed shape (a JSON schema) and Tramtai validates it before handing it over.",
+      "titulo": "JSON responses",
+      "resumen": "Ask for the response in a fixed shape (a JSON schema) and Tramtai validates it before handing it over.",
       "bloques": [
         {
           "tipo": "web",
@@ -1841,17 +1841,17 @@
         {
           "tipo": "pasos",
           "lineas": [
-            "In Try, open \"Recipe options\" and turn on \"Shaped response\".",
+            "In the Playground, open “Recipe options” and turn on “Shaped response”.",
             "Pick a template (extract data, classify, summary, tasks…) or add your fields with their type and description.",
-            "Test it: if it does not match, you will see which field failed and the \"Correct\" button.",
-            "In \"If the response does not match\" ask for up to 3 automatic corrections; each one is another request.",
-            "Click \"Save as API\": your app will always get that shape."
+            "Test it: if it does not match, you will see which field failed and the “Correct” button.",
+            "In “If the response does not match” ask for up to 3 automatic corrections; each one is another request.",
+            "Click “Save as API”: your app will always get that shape."
           ]
         },
         {
           "tipo": "texto",
           "lineas": [
-            "Through OpenAI the schema goes in response_format; through the native API, in salida. If the answer does not match, you get 422 salida_no_cumple_esquema."
+            "Through OpenAI the schema goes in response_format; through the native API, in salida. If the response does not match, you get 422 salida_no_cumple_esquema."
           ]
         },
         {
@@ -1859,11 +1859,11 @@
           "pares": [
             [
               "Are formats checked?",
-              "Yes: date, date-time, email, URL… A date-time without a time zone does not match \"date-time\"."
+              "Yes: date, date-time, email, URL… A date-time without a time zone does not match “date-time”."
             ],
             [
               "Can I write the schema by hand?",
-              "Yes, in the JSON tab of \"Shaped response\". If it keeps failing, simplify it or clarify the fields’ descriptions."
+              "Yes, in the JSON tab of “Shaped response”. If it keeps failing, simplify it or clarify the fields’ descriptions."
             ]
           ]
         },
@@ -1872,7 +1872,7 @@
           "pares": [
             [
               "The response does not match the JSON Schema (salida_no_cumple_esquema)",
-              "The answer did not have the requested shape. Try shows which field failed; \"Correct\" asks the agent to fix it. If it keeps failing, simplify the schema."
+              "The response did not have the requested shape. Try shows which field failed; “Correct” asks the agent to fix it. If it keeps failing, simplify the schema."
             ]
           ]
         },
@@ -1894,21 +1894,21 @@
             "1. The recipe · Instructions, agent and model, effort, schema and fallback.",
             "2. Main agent · Answers if it can.",
             "3. Fallback · Up to 3 agents that take over, in order, if the main one fails before answering.",
-            "4. The answer · History says which agent answered.",
+            "4. The response · History says which agent answered.",
             "2 → 3: If it fails before answering"
           ]
         },
         {
           "tipo": "pasos",
           "lineas": [
-            "In Try write the instructions, for example \"Always answer in Spanish\".",
+            "In the Playground write the instructions, for example “Always answer in Spanish”.",
             "Pick the main agent and up to 3 fallbacks, each with its own effort if you like.",
-            "Test it with a message and your files; when it works, click \"Save as API\"."
+            "Test it with a message and your files; when it works, click “Save as API”."
           ]
         },
         {
           "tipo": "web",
-          "titulo": "The recipe editor in Try",
+          "titulo": "The recipe editor in the Playground",
           "url": "https://mscottb.github.io/Tramtai/ayuda/recetas.html"
         },
         {
@@ -1916,7 +1916,7 @@
           "pares": [
             [
               "How do I make my app answer in a given language?",
-              "Create an API for that app and write in its instructions \"Always answer in Spanish\". They are added to every request without changing the app."
+              "Create an API for that app and write in its instructions “Always answer in Spanish”. They are added to every request without changing the app."
             ],
             [
               "What if an agent hits its limit?",
@@ -1955,7 +1955,7 @@
             "1. Your app offers · The functions, with a JSON Schema for their arguments.",
             "2. The agent asks · A call with arguments already validated. It never runs anything.",
             "3. Your app runs it · The function, and returns the result in the next message.",
-            "4. The answer · The agent answers using that result."
+            "4. The response · The agent answers using that result."
           ]
         },
         {
@@ -1975,7 +1975,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "With tools, the answer arrives complete at the end, even if you ask for stream."
+            "With tools, the response arrives complete at the end, even if you ask for stream."
           ]
         },
         {
@@ -2016,7 +2016,7 @@
           "lineas": [
             "Create an API for that app in My APIs.",
             "In its settings, set a daily or monthly budget in requests, tokens or dollars.",
-            "If needed, \"Reset usage\" opens it again right away."
+            "If needed, “Reset usage” opens it again right away."
           ]
         },
         {
@@ -2027,7 +2027,7 @@
         {
           "tipo": "texto",
           "lineas": [
-            "The dollar limit only adds up the cost the agent reports (Claude today). For the whole workspace, add \"presupuesto\" to the global settings."
+            "The dollar limit only adds up the cost the agent reports (Claude today). For the whole workspace, add “presupuesto” to the global settings."
           ]
         },
         {
@@ -2035,7 +2035,7 @@
           "pares": [
             [
               "The budget ran out (presupuesto_agotado)",
-              "That API or the workspace hit its limit (error 429). Wait for the day or month to reset, or click \"Reset usage\" in My APIs."
+              "That API or the workspace hit its limit (error 429). Wait for the day or month to reset, or click “Reset usage” in My APIs."
             ]
           ]
         },
@@ -2049,14 +2049,14 @@
       "id": "historial",
       "titulo": "History",
       "pagina": "historial",
-      "resumen": "Every request stays in History with its answer, the agent that answered and the log of each step.",
+      "resumen": "Every request stays in History with its response, the agent that answered and the log of each step.",
       "bloques": [
         {
           "tipo": "pasos",
           "lineas": [
             "Filter by status, origin or group, or search by text.",
-            "Open a request to see the answer and its \"Log\", with every step and its time.",
-            "If it failed, fix the cause and click \"Retry\"."
+            "Open a request to see the response and its “Log”, with every step and its time.",
+            "If it failed, fix the cause and click “Retry”."
           ]
         },
         {
@@ -2072,7 +2072,7 @@
             ],
             [
               "The detail",
-              "Clicking a row opens its detail: the message, the answer, the step-by-step log and, if something failed, what to do."
+              "Clicking a row opens its detail: the message, the response, the step-by-step log and, if something failed, what to do."
             ]
           ]
         },
@@ -2086,7 +2086,7 @@
           "pares": [
             [
               "What do Completed, In progress and With errors mean?",
-              "Completed got an answer; In progress are waiting or running; With errors failed or were interrupted."
+              "Completed got a response; In progress are waiting or running; With errors failed or were interrupted."
             ],
             [
               "Can I follow a request live?",
@@ -2094,19 +2094,19 @@
             ],
             [
               "How do I see how long each step took?",
-              "In \"Log\", under the answer or in the detail: every step with its time and, at the top, how long each stage took."
+              "In “Log”, under the response or in the detail: every step with its time and, at the top, how long each stage took."
             ],
             [
               "How do I watch what it processes while developing?",
-              "\"tramtai servicio registro -f\" shows one live line per request: agent, model, duration, tokens and the API it came from."
+              "“tramtai servicio registro -f” shows one live line per request: agent, model, duration, tokens and the API it came from."
             ],
             [
               "Can I run the service in the foreground?",
-              "Yes: stop the service and run \"tramtai servicio iniciar --abrir\": it runs with the log in view, opens the app and Ctrl+C stops it."
+              "Yes: stop the service and run “tramtai servicio iniciar --abrir”: it runs with the log in view, opens the app and Ctrl+C stops it."
             ],
             [
               "How do I delete test data?",
-              "In Settings, \"Delete data\" removes the history and the per-app APIs. You can also empty History."
+              "In Settings, “Delete data” removes the history and the per-app APIs. You can also empty History."
             ]
           ]
         },
@@ -2135,7 +2135,7 @@
           "tipo": "pasos",
           "lineas": [
             "Open a project from the selector at the top or from Workspaces. If the folder had no .tramtai/, Tramtai prepares it and trusts it.",
-            "If it already had .tramtai/ (a cloned repository), decide whether you trust it: then its local.yaml can use security keys.",
+            "If it already had .tramtai/ (a cloned repository), decide whether you trust it: then its local.yaml can use security settings.",
             "In Workspaces you see all of them, stopped ones too. Stop the ones you do not use and forget the ones you no longer need."
           ]
         },
@@ -2166,7 +2166,7 @@
           "pares": [
             [
               "What does trusting a folder mean?",
-              "That its .tramtai/local.yaml can use security keys, such as each agent’s program. Trust is stored in Tramtai, never in the repository."
+              "That its .tramtai/local.yaml can use security settings, such as each agent’s program. Trust is stored in Tramtai, never in the repository."
             ],
             [
               "Can I move or rename a project?",
@@ -2182,7 +2182,7 @@
             ],
             [
               "Why does a workspace show “Not found”?",
-              "Its folder was moved or deleted. “Locate the folder” links it again without losing anything (then “Trust” if it uses security keys); “Forget” if you no longer need it."
+              "Its folder was moved or deleted. “Locate the folder” links it again without losing anything (then “Trust” if it uses security settings); “Forget” if you no longer need it."
             ],
             [
               "How do I know whether a setting is the project’s or the global one?",
@@ -2280,7 +2280,7 @@
       "id": "ajustes",
       "titulo": "Settings and updates",
       "pagina": "configuracion",
-      "resumen": "Start with the system, default model, files, history and updates.",
+      "resumen": "Launch at sign-in, default model, files, history and updates.",
       "bloques": [
         {
           "tipo": "pasos",
@@ -2321,23 +2321,23 @@
             ],
             [
               "How do I update without the Windows installer?",
-              "Homebrew: \"brew upgrade\". The .dmg, .deb, .rpm and portable: the new package on top. In the terminal, \"tramtai actualizar\" (\"--comprobar\" only checks)."
+              "Homebrew: “brew upgrade”. The .dmg, .deb, .rpm and portable: the new package on top. In the terminal, “tramtai actualizar” (“--comprobar” only checks)."
             ],
             [
               "Can I check for a version now?",
-              "Yes: \"Check for updates now\" in Settings. Tramtai checks every hour (only GitHub’s public page); turn it off in Settings → Check for updates."
+              "Yes: “Check for updates now” in Settings. Tramtai checks every hour (only GitHub’s public page); turn it off in Settings → Check for updates."
             ],
             [
               "Which version do I have?",
-              "Open \"About Tramtai\" in the side menu or the tray; \"Copy support data\" copies what is needed, without keys."
+              "Open “About Tramtai” in the side menu or the tray; “Copy support data” copies what is needed, without keys."
             ],
             [
               "Where is my data kept?",
-              "Only on this computer: %APPDATA%\\tramtai (Windows), ~/Library/Application Support/tramtai (macOS) or ~/.config/tramtai (Linux); the portable, in \"datos-tramtai\"."
+              "Only on this computer: %APPDATA%\\tramtai (Windows), ~/Library/Application Support/tramtai (macOS) or ~/.config/tramtai (Linux); the portable, in “datos-tramtai”."
             ],
             [
               "How long is it kept?",
-              "Answers, 24 hours; the rest of the history, 7 days, up to 10,000 requests. Change it in Settings → History, where you can also delete it."
+              "Responses, 24 hours; the rest of the history, 7 days, up to 10,000 requests. Change it in Settings → History, where you can also delete it."
             ],
             [
               "What are “This workspace” and “All of Tramtai”?",
@@ -2361,8 +2361,8 @@
           "lineas": [
             "Open History and click the request with the error.",
             "Find its error below: each one says what it means and what to do.",
-            "Open \"Log\" to see which agent was tried, the warnings and how long it took.",
-            "Fix the cause and click \"Retry\"."
+            "Open “Log” to see which agent was tried, the warnings and how long it took.",
+            "Fix the cause and click “Retry”."
           ]
         },
         {
@@ -2370,7 +2370,7 @@
           "pares": [
             [
               "Offline",
-              "The service is not running. Open the app or run \"tramtai servicio iniciar\". With start-up in Settings it starts on its own when you sign in."
+              "The service is not running. Open the app or run “tramtai servicio iniciar”. With start-up in Settings it starts on its own when you sign in."
             ],
             [
               "The key is missing or not valid (no_autorizado)",
@@ -2402,15 +2402,15 @@
             ],
             [
               "The budget ran out (presupuesto_agotado)",
-              "That API or the workspace hit its limit (error 429). Wait for the day or month to reset, or click \"Reset usage\" in My APIs."
+              "That API or the workspace hit its limit (error 429). Wait for the day or month to reset, or click “Reset usage” in My APIs."
             ],
             [
               "The response does not match the JSON Schema (salida_no_cumple_esquema)",
-              "The answer did not have the requested shape. Try shows which field failed; \"Correct\" asks the agent to fix it. If it keeps failing, simplify the schema."
+              "The response did not have the requested shape. Try shows which field failed; “Correct” asks the agent to fix it. If it keeps failing, simplify the schema."
             ],
             [
               "The time limit ran out (tiempo_ejecucion_agotado)",
-              "It took longer than the time limit. Raise it in Try’s advanced options or in the request, or lower the effort."
+              "It took longer than the time limit. Raise it in the Playground’s advanced options or in the request, or lower the effort."
             ],
             [
               "The queue is full; try again shortly (cola_llena)",
@@ -2422,11 +2422,11 @@
             ],
             [
               "The file converter is missing (conversor_no_disponible)",
-              "The file converter is missing: Settings → Files → \"Prepare files\". If your network blocks the download, use the converter package for Windows."
+              "The file converter is missing: Settings → Files → “Prepare files”. If your network blocks the download, use the converter package for Windows."
             ],
             [
               "The agent returned an error (error_agente)",
-              "The agent failed while answering. Open \"Log\" to see its message; retry, or add a fallback to the recipe so another agent takes over."
+              "The agent failed while answering. Open “Log” to see its message; retry, or add a fallback to the recipe so another agent takes over."
             ],
             [
               "The agent response could not be understood (error_protocolo_agente)",
@@ -2478,7 +2478,7 @@
           "pares": [
             [
               "Agent",
-              "The AI program that answers: Claude Code, Codex, GitHub Copilot, the Gemini API or Antigravity. Connect it in Agents, with your subscription or an API key."
+              "The AI that answers: Claude Code, Codex, GitHub Copilot, the Gemini API or Antigravity. Connect it in Agents, with your subscription or an API key."
             ],
             [
               "Model",
@@ -2490,11 +2490,11 @@
             ],
             [
               "Effort",
-              "How hard the model reasons before answering, from low to max. More effort gives better answers to hard questions but takes longer and uses more tokens."
+              "How hard the model reasons before answering, from low to maximum. More effort gives better responses to hard questions but takes longer and uses more tokens."
             ],
             [
               "Recipe",
-              "What defines how an API answers: instructions, agent and model, effort, fallback and JSON schema. You test it in Try."
+              "What defines how an API answers: instructions, agent and model, effort, fallback and JSON schema. You test it in the Playground."
             ],
             [
               "Fallback",
@@ -2506,11 +2506,11 @@
             ],
             [
               "Request",
-              "Each message sent to an agent, from Try, the terminal or an app. It stays in the History with its answer and its log."
+              "Each message sent to an agent, from the Playground, the terminal or an app. It stays in the History with its response and its log."
             ],
             [
               "Shaped response (JSON schema)",
-              "The shape the answer must have: its fields and their type. If the answer does not match, the request fails or a correction is asked for, instead of delivering something unexpected."
+              "The shape the response must have: its fields and their type. If the response does not match, the request fails or a correction is asked for, instead of delivering something unexpected."
             ],
             [
               "Context",
@@ -2538,7 +2538,7 @@
           "pares": [
             [
               "Do requests end up as chats in Claude Code, Codex or GitHub Copilot?",
-              "No. Tramtai runs each CLI without saving the session, so your chats don’t fill up; the record stays only in Tramtai’s History."
+              "No. Tramtai runs each CLI without saving the session, so your chats don’t fill up; the log stays only in Tramtai’s History."
             ],
             [
               "Does Tramtai send my data to a server?",
@@ -2554,7 +2554,7 @@
             ],
             [
               "How do I uninstall it?",
-              "Windows: Settings → Apps → Tramtai (it asks whether to delete your data). macOS: to the Trash or \"brew uninstall --cask --zap tramtai\". Linux: apt or dnf remove tramtai."
+              "Windows: Settings → Apps → Tramtai (it asks whether to delete your data). macOS: to the Trash or “brew uninstall --cask --zap tramtai”. Linux: apt or dnf remove tramtai."
             ]
           ]
         }

@@ -32,19 +32,19 @@ type opcionesPunto struct {
 func (o *opcionesPunto) registrar(cmd *cobra.Command) {
 	f := cmd.Flags()
 	f.IntVar(&o.puerto, "puerto", 0, idioma.T("puerto propio (0 = ruta /p/<nombre> en el puerto del servicio)"))
-	f.StringVar(&o.instrucciones, "instrucciones", "", idioma.T("texto que se antepone a cada solicitud, por ejemplo \"Responde siempre en español\""))
-	f.StringVar(&o.grupo, "grupo", "", idioma.T("grupo para ordenar los puntos y activarlos o desactivarlos juntos"))
+	f.StringVar(&o.instrucciones, "instrucciones", "", idioma.T("texto que se antepone a cada petición, por ejemplo «Responde siempre en español»"))
+	f.StringVar(&o.grupo, "grupo", "", idioma.T("grupo para ordenar las APIs y activarlas o detenerlas juntas"))
 	f.StringVar(&o.instancia, "instancia", "", idioma.T("espacio al que pertenece (global, o el del proyecto con --local)"))
-	f.StringVar(&o.agente, "agente", "", idioma.T("agente predeterminado del punto"))
-	f.StringVar(&o.modelo, "modelo", "", idioma.T("modelo predeterminado del punto"))
-	f.StringVar(&o.perfil, "perfil", "", idioma.T("perfil de modelo predeterminado del punto"))
+	f.StringVar(&o.agente, "agente", "", idioma.T("agente predeterminado de la API"))
+	f.StringVar(&o.modelo, "modelo", "", idioma.T("modelo predeterminado de la API"))
+	f.StringVar(&o.perfil, "perfil", "", idioma.T("perfil de modelo predeterminado de la API"))
 	f.StringSliceVar(&o.contratos, "contratos", nil, idioma.T("API habilitadas: nativa, openai, anthropic (todas por defecto)"))
 	f.StringSliceVar(&o.permitidos, "permitidos", nil, idioma.T("modelos permitidos: agente, agente/modelo o perfil/nombre"))
 	f.StringSliceVar(&o.alias, "alias", nil, idioma.T("alias de modelos, por ejemplo gpt-4o-mini=claude/haiku"))
-	f.BoolVar(&o.forzar, "forzar", false, idioma.T("ignora el modelo de la solicitud y usa el del punto"))
-	f.StringVar(&o.modoContexto, "modo-contexto", "", idioma.T("modo de contexto del punto"))
-	f.StringVar(&o.formato, "formato", "", idioma.T("formato de salida del punto"))
-	f.IntVar(&o.tiempo, "tiempo", 0, idioma.T("tiempo límite en segundos del punto"))
+	f.BoolVar(&o.forzar, "forzar", false, idioma.T("ignora el modelo que pide la petición y usa el de la API"))
+	f.StringVar(&o.modoContexto, "modo-contexto", "", idioma.T("modo de contexto de la API"))
+	f.StringVar(&o.formato, "formato", "", idioma.T("formato de salida de la API"))
+	f.IntVar(&o.tiempo, "tiempo", 0, idioma.T("tiempo límite en segundos de la API"))
 	f.StringSliceVar(&o.presupuesto, "presupuesto", nil, idioma.T("límite periodo.unidad=valor (diario|mensual, peticiones|tokens|usd), repetible; 0 lo quita"))
 }
 
@@ -153,7 +153,7 @@ func guardado(cmd *cobra.Command, g cliente.GuardadoEnArchivo) {
 }
 
 func comandoAcceso() *cobra.Command {
-	grupo := &cobra.Command{Use: "acceso", Short: idioma.T("Puntos de acceso: API adicionales con su puerto o ruta, token y modelos")}
+	grupo := &cobra.Command{Use: "acceso", Short: idioma.T("APIs por aplicación, cada una con su puerto o ruta, su clave y sus modelos")}
 	var local bool
 	grupo.PersistentFlags().BoolVar(&local, "local", false, idioma.T("usa .tramtai/local.yaml del proyecto actual en lugar de la configuración global"))
 	// con conecta con el servicio y pasa el archivo elegido: "" es la configuración global; con --local, la raíz del
@@ -182,12 +182,12 @@ func comandoAcceso() *cobra.Command {
 		}
 		i := slices.IndexFunc(lista, func(p contrato.ConfigPunto) bool { return p.Nombre == nombre })
 		if i < 0 {
-			return contrato.ConfigPunto{}, fmt.Errorf(idioma.T("no existe el punto de acceso %s en este archivo"), nombre)
+			return contrato.ConfigPunto{}, fmt.Errorf(idioma.T("no existe la API %s en este archivo"), nombre)
 		}
 		return lista[i], nil
 	}
 
-	listar := &cobra.Command{Use: "listar", Short: idioma.T("Lista los puntos de acceso y su estado"),
+	listar := &cobra.Command{Use: "listar", Short: idioma.T("Lista las APIs y su estado"),
 		RunE: con(func(cmd *cobra.Command, cli *cliente.Cliente, ctx context.Context, _ string, _ []string) error {
 			e, err := cli.Estado(ctx)
 			if err != nil {
@@ -198,7 +198,7 @@ func comandoAcceso() *cobra.Command {
 		})}
 
 	var crearOpc, editarOpc opcionesPunto
-	crear := &cobra.Command{Use: "crear <nombre>", Short: idioma.T("Crea un punto de acceso y su token"), Args: cobra.ExactArgs(1),
+	crear := &cobra.Command{Use: "crear <nombre>", Short: idioma.T("Crea una API y su clave"), Args: cobra.ExactArgs(1),
 		RunE: con(func(cmd *cobra.Command, cli *cliente.Cliente, ctx context.Context, proyecto string, args []string) error {
 			p := contrato.ConfigPunto{Nombre: args[0]}
 			if err := crearOpc.aplicar(cmd, &p); err != nil {
@@ -209,12 +209,12 @@ func comandoAcceso() *cobra.Command {
 				return err
 			}
 			guardado(cmd, g)
-			// La clave se genera y se muestra ahora, una sola vez: solo se guarda su huella.
+			// La clave se muestra ahora, una sola vez (ver servicio.RotarTokenPunto).
 			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("clave nueva de %s (guárdala: no se volverá a mostrar):\n%s\n"), p.Nombre, g.Token)
 			return nil
 		})}
 	crearOpc.registrar(crear)
-	editarCmd := &cobra.Command{Use: "editar <nombre>", Short: idioma.T("Cambia las opciones indicadas de un punto de acceso"), Args: cobra.ExactArgs(1),
+	editarCmd := &cobra.Command{Use: "editar <nombre>", Short: idioma.T("Cambia las opciones indicadas de una API"), Args: cobra.ExactArgs(1),
 		RunE: con(func(cmd *cobra.Command, cli *cliente.Cliente, ctx context.Context, proyecto string, args []string) error {
 			p, err := buscar(ctx, cli, proyecto, args[0])
 			if err != nil {
@@ -234,8 +234,8 @@ func comandoAcceso() *cobra.Command {
 	activo := func(uso string, valor bool) *cobra.Command {
 		var grupoPuntos string
 		c := &cobra.Command{Use: uso + " <nombre>... | --grupo <grupo>",
-			Short: map[bool]string{true: idioma.T("Activa uno o varios puntos de acceso sin reiniciar el servicio"),
-				false: idioma.T("Desactiva uno o varios puntos de acceso sin reiniciar el servicio")}[valor],
+			Short: map[bool]string{true: idioma.T("Activa una o varias APIs sin reiniciar el servicio"),
+				false: idioma.T("Detiene una o varias APIs sin reiniciar el servicio")}[valor],
 			RunE: func(cmd *cobra.Command, args []string) error {
 				if (len(args) == 0) == (grupoPuntos == "") {
 					return errors.New(idioma.T("indica los nombres o --grupo, no ambos"))
@@ -249,10 +249,10 @@ func comandoAcceso() *cobra.Command {
 					return nil
 				})(cmd, args)
 			}}
-		c.Flags().StringVar(&grupoPuntos, "grupo", "", idioma.T("todos los puntos de ese grupo"))
+		c.Flags().StringVar(&grupoPuntos, "grupo", "", idioma.T("todas las APIs de ese grupo"))
 		return c
 	}
-	eliminar := &cobra.Command{Use: "eliminar <nombre>", Short: idioma.T("Elimina un punto de acceso"), Args: cobra.ExactArgs(1),
+	eliminar := &cobra.Command{Use: "eliminar <nombre>", Short: idioma.T("Elimina una API"), Args: cobra.ExactArgs(1),
 		RunE: con(func(cmd *cobra.Command, cli *cliente.Cliente, ctx context.Context, proyecto string, args []string) error {
 			g, err := cli.EliminarPuntoEnArchivo(ctx, proyecto, args[0])
 			if err != nil {
@@ -262,7 +262,7 @@ func comandoAcceso() *cobra.Command {
 			return nil
 		})}
 	var rotar bool
-	token := &cobra.Command{Use: "token <nombre>", Short: idioma.T("Regenera con --rotar la clave del punto de acceso; solo se ve entonces"), Args: cobra.ExactArgs(1),
+	token := &cobra.Command{Use: "token <nombre>", Short: idioma.T("Regenera con --rotar la clave de la API; solo se ve entonces"), Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Solo se guarda la huella de la clave: sin --rotar no hay nada que mostrar, ni hace falta el servicio.
 			if !rotar {
@@ -277,10 +277,10 @@ func comandoAcceso() *cobra.Command {
 				return nil
 			})(cmd, args)
 		}}
-	token.Flags().BoolVar(&rotar, "rotar", false, idioma.T("genera un token nuevo; el anterior deja de valer"))
+	token.Flags().BoolVar(&rotar, "rotar", false, idioma.T("genera una clave nueva; la anterior deja de valer"))
 	var instanciaPresupuesto string
 	reiniciar := &cobra.Command{Use: "reiniciar-presupuesto [nombre]", Args: cobra.MaximumNArgs(1),
-		Short: idioma.T("Pone a cero el consumo del día y del mes de un punto de acceso, o del espacio sin nombre"),
+		Short: idioma.T("Pone a cero el consumo del día y del mes de una API o, sin nombre, del espacio"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			nombre := ""
 			if len(args) == 1 {
@@ -309,7 +309,7 @@ func reiniciarPresupuesto(cmd *cobra.Command, instancia, nombre string) error {
 		}
 		i := slices.IndexFunc(e.Puntos, func(p contrato.EstadoPunto) bool { return p.Nombre == nombre })
 		if i < 0 {
-			return fmt.Errorf(idioma.T("no existe el punto de acceso %s en el servicio"), nombre)
+			return fmt.Errorf(idioma.T("no existe la API %s en el servicio"), nombre)
 		}
 		instancia = e.Puntos[i].Instancia
 	}

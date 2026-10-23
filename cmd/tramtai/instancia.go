@@ -132,7 +132,7 @@ func comandoInstancia(ambito string) *cobra.Command {
 			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("espacio %s detenido\n"), id)
 			return nil
 		}}
-	estado := &cobra.Command{Use: "estado", Short: idioma.T("Muestra si el espacio está activo y sus trabajos"),
+	estado := &cobra.Command{Use: "estado", Short: idioma.T("Muestra si el espacio está activo y sus peticiones"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			raiz, id, _, err := identificar(ambito)
 			if err != nil {
@@ -152,7 +152,7 @@ func comandoInstancia(ambito string) *cobra.Command {
 			}
 			for _, i := range e.Instancias {
 				if i.ID == id {
-					fmt.Fprintf(out, idioma.T("espacio %s: activo en %s\n  %s\n  token: %s\n"), id, e.Base, resumenTrabajos(i.Trabajos), i.ArchivoToken)
+					fmt.Fprintf(out, idioma.T("espacio %s: activo en %s\n  %s\n  clave: %s\n"), id, e.Base, resumenTrabajos(i.Trabajos), i.ArchivoToken)
 					return nil
 				}
 			}
@@ -160,9 +160,9 @@ func comandoInstancia(ambito string) *cobra.Command {
 			return nil
 		}}
 	var rotarToken bool
-	token := &cobra.Command{Use: "token", Short: idioma.T("Muestra el token del espacio para configurar clientes"),
+	token := &cobra.Command{Use: "token", Short: idioma.T("Muestra la clave del espacio para configurar tus apps"),
 		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, ambito, rotarToken) }}
-	token.Flags().BoolVar(&rotarToken, "rotar", false, idioma.T("genera un token nuevo; el anterior deja de valer"))
+	token.Flags().BoolVar(&rotarToken, "rotar", false, idioma.T("genera una clave nueva; la anterior deja de valer"))
 	var enNavegador bool
 	abrirWeb := &cobra.Command{Use: "abrir", Short: idioma.T("Abre el espacio en la app de escritorio o, con --navegador, en el navegador"),
 		RunE: func(cmd *cobra.Command, _ []string) error { return abrirWebUI(cmd, ambito, enNavegador) }}

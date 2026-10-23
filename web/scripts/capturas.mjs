@@ -1,8 +1,9 @@
-// capturas saca las capturas de la Ayuda (web/src/ayuda/capturas, en claro y oscuro y en español e inglés), las de cada
-// paso de los recorridos guiados (recorrido-*, el elemento con el anillo del recorrido) y las de la portada
-// (site/capturas: las cinco pantallas y la demo de la bienvenida, paso a paso) con una Tramtai compilada en una
-// carpeta temporal, portable y en otro puerto, así no toca la instalación de quien lo corre. Se corre en el equipo de desarrollo, con un agente ya conectado (para el Historial):
-//   cd web; npm run build; npm run capturas            (o: npm run capturas -- --solo receta, -- --recorridos, -- --bienvenida o -- --sitio)
+// capturas saca las capturas de la Ayuda (web/src/ayuda/capturas: claro y oscuro, español e inglés), las de cada paso de
+// los recorridos guiados (recorrido-*) y las de la portada (site/capturas: las cinco pantallas y la demo de la
+// bienvenida) con una Tramtai compilada en una carpeta temporal, portable y en otro puerto: no toca la instalación de
+// quien lo corre. Se corre en el equipo de desarrollo, con un agente ya conectado (para el Historial):
+//   cd web; npm run build; npm run capturas
+//   (o: npm run capturas -- --solo receta, -- --recorridos, -- --bienvenida o -- --sitio)
 // Usa Edge o Chrome sin ventana por su protocolo de depuración; TRAMTAI_NAVEGADOR elige otro ejecutable y
 // TRAMTAI_CAPTURAS_MODELO el modelo de las peticiones de ejemplo (claude/haiku por defecto).
 import { execFileSync, spawn } from 'node:child_process'
@@ -24,7 +25,8 @@ const solo = args.includes('--solo') ? args[args.indexOf('--solo') + 1] : ''
 const soloSitio = args.includes('--sitio')
 // --recorridos saca solo las capturas de los pasos de los recorridos.
 const soloRecorridos = args.includes('--recorridos')
-// --bienvenida saca solo la demo de la portada: la bienvenida de verdad, una pantalla completa por paso (sin peticiones a ningún agente).
+// --bienvenida saca solo la demo de la portada: la bienvenida de verdad, una pantalla por paso, sin peticiones a ningún
+// agente.
 const soloBienvenida = args.includes('--bienvenida')
 const destinoSitio = fileURLToPath(new URL('../../site/', import.meta.url))
 const modelo = process.env.TRAMTAI_CAPTURAS_MODELO || 'claude/haiku'

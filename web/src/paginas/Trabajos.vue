@@ -77,7 +77,7 @@
         <q-card-section class="col scroll q-gutter-y-lg">
           <q-banner v-if="detalle.codigo_error" rounded dense class="error-caja">
             <template #avatar><q-icon name="o_error" /></template>
-            <b>{{ tituloError(detalle.codigo_error) }}</b><span v-if="detalle.mensaje_error">: {{ detalle.mensaje_error }}</span>
+            <b>{{ tituloError(detalle.codigo_error) }}</b><div v-if="detalle.mensaje_error">{{ detalle.mensaje_error }}</div>
             <template v-if="detalle.codigo_error in ERRORES" #action><BotonAyuda tema="problemas" :ancla="'e-' + detalle.codigo_error" que-hago /></template>
           </q-banner>
           <div>
@@ -113,7 +113,7 @@
           <q-btn v-if="terminales.includes(detalle.estado)" flat color="negative" icon="o_delete" :label="t('comun.eliminar')" no-caps @click="eliminar" />
           <q-space />
           <template v-if="!terminales.includes(detalle.estado)">
-            <q-btn flat color="negative" icon="o_stop_circle" :label="t('comun.cancelar')" no-caps @click="accion('cancelar')" />
+            <q-btn flat color="negative" icon="o_stop_circle" :label="t('historial.cancelar')" no-caps @click="accion('cancelar')" />
             <q-btn unelevated color="primary" icon="o_visibility" :label="t('historial.verEnVivo')" no-caps @click="seguirEnVivo" />
           </template>
           <q-btn v-else unelevated color="primary" icon="o_replay" :label="t('historial.reintentar')" no-caps @click="accion('reintentar')" />
@@ -230,6 +230,7 @@ async function cargar(segundoPlano = false) {
   } finally {
     enVuelo--
     if (n === pedidoLista) cargando.value = false
+    ponerAlDia()
   }
 }
 
@@ -253,6 +254,7 @@ async function verMas() {
   } finally {
     enVuelo--
     cargandoMas.value = false
+    ponerAlDia()
   }
 }
 
@@ -321,13 +323,57 @@ function seguirEnVivo() {
   emit('ir', { pagina: 'ejecutar', seguir: id })
 }
 
-let intervalo: number
+// La lista se pone al día cuando el flujo de la instancia (GET /api/v1/eventos) cuenta un cambio: una petición por
+// cambio, no una cada 5 s. Con la pestaña oculta el flujo se cierra (no ocupa un cupo) y al volver su foto pone la
+// lista al día. Si el servicio rechaza el flujo (sin cupo), se consulta cada 5 s.
+let fuente: EventSource | undefined
+let intervalo: number | undefined
+let pendiente = false
+let primeraFoto = true
+// alCambiar recarga, o lo deja pendiente si hay una consulta en vuelo (podría traer la lista de antes del cambio).
+// Con páginas extra cargadas (Ver más) no recarga: la recarga solo trae la primera página.
+function alCambiar() {
+  if (trabajos.value.length > PAGINA) return
+  if (enVuelo) pendiente = true
+  else cargar(true)
+}
+function ponerAlDia() {
+  if (!pendiente || enVuelo) return
+  pendiente = false
+  alCambiar()
+}
+function seguir() {
+  if (fuente || document.hidden) return
+  let enFoto = true // los eventos de la foto son lo que ya se cargó
+  const f = (fuente = new EventSource('/api/v1/eventos'))
+  f.addEventListener('trabajo', () => enFoto || alCambiar())
+  f.addEventListener('foto', () => {
+    enFoto = false
+    if (!primeraFoto) alCambiar()
+    primeraFoto = false
+  })
+  f.onerror = () => {
+    if (f.readyState !== EventSource.CLOSED) return // se reconecta solo y su foto pone la lista al día
+    fuente = undefined
+    primeraFoto = false
+    intervalo ??= window.setInterval(() => !document.hidden && !enVuelo && trabajos.value.length <= PAGINA && cargar(true), 5000)
+  }
+}
+function alCambiarVisibilidad() {
+  if (!document.hidden) return seguir()
+  fuente?.close()
+  fuente = undefined
+}
 onMounted(() => {
   cargar()
   api.puntos().then((l) => (apis.value = l)).catch(() => {})
   if (props.intencion?.abrir) abrir({ id: props.intencion.abrir } as Trabajo)
-  // Con páginas extra cargadas (Ver más), el sondeo no recarga: la recarga solo trae la primera página.
-  intervalo = window.setInterval(() => !dialogo.value && !document.hidden && !enVuelo && trabajos.value.length <= PAGINA && cargar(true), 5000)
+  seguir()
+  document.addEventListener('visibilitychange', alCambiarVisibilidad)
 })
-onUnmounted(() => clearInterval(intervalo))
+onUnmounted(() => {
+  fuente?.close()
+  clearInterval(intervalo)
+  document.removeEventListener('visibilitychange', alCambiarVisibilidad)
+})
 </script>

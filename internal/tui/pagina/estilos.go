@@ -6,6 +6,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/datos"
 )
 
@@ -18,11 +19,11 @@ type Estilos struct {
 	Texto       lipgloss.Style
 	Tenue       lipgloss.Style // lo secundario: detalles, ayudas, vacíos
 	Acento      lipgloss.Style // lo que se quiere destacar: el nombre de la app, enlaces, la etiqueta con el foco
-	Seleccion   lipgloss.Style // la fila elegida
+	Seleccion   lipgloss.Style
 	Exito       lipgloss.Style
 	Advertencia lipgloss.Style
 	Error       lipgloss.Style
-	Tecla       lipgloss.Style // la tecla en el pie
+	Tecla       lipgloss.Style
 	Grupo       lipgloss.Style // la cabecera de un grupo en el menú y en las listas
 
 	Borde  lipgloss.Border
@@ -54,6 +55,23 @@ func (e *Estilos) A(texto string) string {
 // Tx es un texto de la Web UI (datos.Textof) en esa lengua, con sus {marcadores} rellenos y pasado por A.
 func (e *Estilos) Tx(lengua, clave string, pares ...string) string {
 	return e.A(datos.Textof(lengua, clave, pares...))
+}
+
+// AvisoError es el error de una petición, línea a línea: el título de su código (o el código, si la Web UI no lo
+// conoce), el mensaje del servicio y qué hacer, que es la solución de la Ayuda para ese código. Las que faltan no van.
+func (e *Estilos) AvisoError(lengua string, codigo nucleo.CodigoError, mensaje string) []string {
+	titulo := e.Tx(lengua, "error."+string(codigo))
+	if titulo == "error."+string(codigo) {
+		titulo = string(codigo)
+	}
+	l := []string{titulo}
+	if mensaje != "" {
+		l = append(l, mensaje)
+	}
+	if paso := e.Tx(lengua, "ayuda.problemas."+string(codigo)); paso != "ayuda.problemas."+string(codigo) {
+		l = append(l, paso)
+	}
+	return l
 }
 
 // Rellenar completa texto con espacios hasta ancho columnas visibles: para alinear columnas.

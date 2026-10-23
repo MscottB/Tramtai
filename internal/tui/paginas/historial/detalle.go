@@ -95,12 +95,12 @@ func envolver(texto string, ancho int) string {
 // fecha es la fecha y hora locales de una petición.
 func fecha(t time.Time) string {
 	if t.IsZero() {
-		return "—"
+		return idioma.T("Sin dato")
 	}
 	return t.Local().Format("2006-01-02 15:04:05")
 }
 
-// duracion es lo que tardó una petición (duracion de formato.ts).
+// duracion es lo que tardó una petición.
 func duracion(desde time.Time, hasta *time.Time) string {
 	if hasta == nil || desde.IsZero() {
 		return ""
@@ -112,29 +112,27 @@ func duracion(desde time.Time, hasta *time.Time) string {
 	return fmt.Sprintf("%d min %d s", int(s/60), int(math.Round(math.Mod(s, 60))))
 }
 
-// banner es el error de la petición: el título de su código (o el código, si no lo conoce) y el mensaje del servicio.
+// banner es el error de la petición: el título de su código y, debajo, el mensaje del servicio y qué hacer.
 func (p *Pagina) banner(t nucleo.Trabajo) []string {
 	if t.CodigoError == "" {
 		return nil
 	}
-	titulo := p.tx("error." + string(t.CodigoError))
-	if titulo == "error."+string(t.CodigoError) {
-		titulo = string(t.CodigoError)
+	aviso := p.estilos.AvisoError(p.lengua, t.CodigoError, t.MensajeError)
+	l := []string{p.estilos.Iconos.Fallo + " " + aviso[0]}
+	for _, linea := range aviso[1:] {
+		l = append(l, "  "+linea)
 	}
-	if t.MensajeError != "" {
-		titulo += ": " + t.MensajeError
-	}
-	return []string{p.estilos.Iconos.Fallo + " " + titulo, ""}
+	return append(l, "")
 }
 
 // textoMensaje es lo que se pidió y la ficha de la petición (agente y modelo, esfuerzo, origen, tokens, coste, duración e
 // identificador).
 func (p *Pagina) textoMensaje(t nucleo.Trabajo) string {
 	l := p.banner(t)
-	l = append(l, cmp.Or(textoDe(t, p.lengua), "—"), "")
+	l = append(l, cmp.Or(textoDe(t, p.lengua), idioma.T("Sin dato")), "")
 	fila := func(clave, valor string) { l = append(l, p.tx(clave)+": "+valor) }
 	fila("historial.agenteModelo", modeloDe(t))
-	fila("historial.esfuerzo", cmp.Or(p.esfuerzoUsado(t), "—"))
+	fila("historial.esfuerzo", cmp.Or(p.esfuerzoUsado(t), idioma.T("Sin dato")))
 	fila("historial.origen", p.textoOrigen(t))
 	fila("historial.tokens", p.a(fmt.Sprintf("%d → %d", t.Uso.TokensEntrada, t.Uso.TokensSalida)))
 	if t.Uso.CostoUSD > 0 {
@@ -220,7 +218,7 @@ type intento struct {
 }
 
 // esfuerzoUsado es el esfuerzo con que respondió la petición, según su último intento: el pedido o, si no se pidió, el del
-// agente con «(del agente)»; sin intentos registrados, el de la solicitud. «» si no hubo esfuerzo (esfuerzoUsado de formato.ts).
+// agente con «(del agente)»; sin intentos registrados, el de la solicitud. «» si no hubo esfuerzo.
 func (p *Pagina) esfuerzoUsado(t nucleo.Trabajo) string {
 	var ultimo *nucleo.EventoRegistro
 	for i := len(p.registro) - 1; i >= 0; i-- {
@@ -245,7 +243,7 @@ func (p *Pagina) esfuerzoUsado(t nucleo.Trabajo) string {
 	return p.nombreEsfuerzo(i.Esfuerzo)
 }
 
-// textoIntento resume un intento: el agente y modelo, la corrección, el esfuerzo y el contexto (textoIntento de RegistroTrabajo.vue).
+// textoIntento resume un intento: el agente y modelo, la corrección, el esfuerzo y el contexto.
 func (p *Pagina) textoIntento(datos string) string {
 	var i intento
 	if json.Unmarshal([]byte(datos), &i) != nil {

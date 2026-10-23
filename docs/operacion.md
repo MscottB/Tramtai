@@ -1,41 +1,45 @@
-# Operación: servicio, instancias y puntos de acceso
+# Operación: servicio, espacios y APIs
 
-Tramtai funciona como **un único servicio por usuario** (un proceso y un puerto, `127.0.0.1:17373`) con varias **instancias**, cada una con su configuración, token, cola, base de datos y cargas. El token de cada petición decide a qué instancia llega, así que una aplicación nunca ve los trabajos de otra.
+Tramtai funciona como **un único servicio por usuario** (un proceso y un puerto, `127.0.0.1:17373`) con varios **espacios**, cada uno con su configuración, su clave, su cola, su base de datos y sus archivos subidos. La clave de cada petición decide a qué espacio llega, así que una aplicación nunca ve las peticiones de otra. Los nombres que se usan aquí están en el [glosario](GLOSARIO.md).
 
-## La forma cómoda: la terminal interactiva
+## La terminal interactiva
 
 ```powershell
 tramtai            # sin argumentos abre la terminal interactiva (o: tramtai terminal)
 ```
 
-| Pantalla | Qué permite |
-|---|---|
-| Selector de ámbito | Proyecto actual, instancia global, todas las instancias o estado del servicio. Muestra si el servicio y cada instancia están activos. |
-| Instancia | Endpoint, token, agente predeterminado y recuento de trabajos. Desde aquí se activa o desactiva la instancia; si el servicio no está en marcha, lo inicia en segundo plano. |
-| Ejecutar | Elige el modelo con ←→ entre el catálogo, añade archivos (rutas separadas por comas), escribe el mensaje y ve la respuesta en vivo. Esc cancela el trabajo. |
-| Trabajos | Lista, detalle con la salida, y acciones para cancelar (`c`), reintentar (`t`) o eliminar (`x`). |
-| Puntos de acceso | Activa o desactiva con Enter, crea con `n` (nombre, puerto y modelo), elimina con `x` (también su clave) y genera o regenera la clave con `t`: se muestra esa única vez. |
-| Configuración efectiva | Cada valor de la instancia y la capa de la que procede. |
-| Agentes y capacidades | Versión, autenticación, términos y capacidades de cada agente. |
-| Estado del servicio | Instancias, puntos de acceso y errores de configuración. Permite detener (con confirmación) y recargar. |
+Tiene el mismo menú que la Web UI, con los mismos nombres y textos: **Inicio**, **Agentes** y **Probar** (grupo
+Empezar), **Mis APIs** e **Historial** (grupo Usar), **Espacios** y **Ajustes** (grupo Organizar) y **Ayuda**. Las
+páginas Mis APIs, Espacios, Ajustes y Ayuda todavía dicen «Próximamente»: mientras tanto, usa la Web UI o la CLI.
 
-Se navega con ↑↓ o el número de la opción, Enter, Esc para volver y Ctrl+C para salir. Las acciones que afectan a otros (desactivar una instancia, detener el servicio, eliminar) piden confirmación.
+| Tecla | Qué hace |
+|---|---|
+| Tab | Abre el menú (por debajo de 100 columnas está plegado). |
+| 1 a 7 | Va a esa página del menú. |
+| ? | La ayuda de la página, con todas sus teclas. |
+| Ctrl+E | Cambia de espacio. |
+| ! | Enseña entero el último error. |
+| Esc | Vuelve o cierra. En Probar, una petición en marcha sigue en el servicio: `c` la cancela. |
+| q | Sale de la terminal (pregunta si hay una petición en marcha). |
+
+El pie de cada página dice sus teclas. Las acciones que afectan a otros (cancelar una petición, vaciar el historial,
+desconectar un agente) piden confirmación con `s`; Enter no confirma.
 
 ## Web UI y aplicación de escritorio
 
 ```powershell
 tramtai abrir                      # abre la app de escritorio (--navegador: la Web UI en el navegador); la del proyecto si estás en uno
-tramtai global abrir               # la de la instancia global
+tramtai global abrir               # la del espacio global
 tramtai proyecto abrir             # la del proyecto actual
 tramtai-escritorio                 # aplicación de escritorio (o -proyecto <ruta>)
 ```
 
 La Web UI está en español y en inglés (el botón de idioma de la cabecera) y tiene estas páginas:
 
-- **Inicio:** resumen de trabajos, primeros pasos pendientes y estado de los agentes.
-- **Probar:** modelo del catálogo con su esfuerzo justo debajo (también el que usa el agente si no eliges uno), respaldo con un esfuerzo propio por agente, archivos, mensaje y JSON Schema opcional; muestra la respuesta en vivo, con formato Markdown o como texto (la elección se recuerda), y permite cancelar. Bajo la respuesta, **Registro** da la hora de cada paso (cola, espera del agente, ejecución con qué agente, modelo y esfuerzo, avisos) y la duración de cada etapa; también está en el detalle del Historial. **Pruebas recientes** lista las 10 últimas pruebas de Probar: pulsar una la abre y **Usar de nuevo** recupera su mensaje y su receta (los adjuntos no).
-- **Historial:** detalle, seguir en vivo, cancelar, reintentar, eliminar y **vaciar el historial** (los trabajos terminados y sus archivos).
-- **Mis APIs:** URL, clave y ejemplos; puntos de acceso con grupos que se activan o desactivan juntos.
+- **Inicio:** resumen de peticiones, primeros pasos pendientes y estado de los agentes.
+- **Probar:** modelo del catálogo con su esfuerzo justo debajo (también el que usa el agente si no eliges uno), respaldo con un esfuerzo propio por agente, archivos, mensaje y JSON Schema opcional; muestra la respuesta en vivo, con formato Markdown o como texto (la elección se recuerda), y permite cancelar la petición. Bajo la respuesta, **Registro** da la hora de cada paso (cola, espera del agente, ejecución con qué agente, modelo y esfuerzo, avisos) y la duración de cada etapa; también está en el detalle del Historial. **Pruebas recientes** lista las 10 últimas pruebas de Probar: pulsar una la abre y **Usar de nuevo** recupera su mensaje y su receta (los adjuntos no).
+- **Historial:** detalle, seguir en vivo, cancelar, reintentar, eliminar y **vaciar el historial** (las peticiones terminadas y sus archivos).
+- **Mis APIs:** URL, clave y ejemplos; APIs por aplicación con grupos que se activan o detienen juntos.
 - **Agentes**, **Ajustes** (arranque con el sistema, **borrar datos** y valores efectivos) y **Ayuda** (cómo empezar y preguntas frecuentes).
 
 También se puede abrir `http://127.0.0.1:17373` directamente: en Windows, Linux y macOS entra solo si el navegador es de tu mismo usuario del sistema. Si no, la página **Entrar** explica cómo abrirla: desde la app o con `tramtai abrir`, que generan un código de un solo uso. La clave de las aplicaciones no abre la Web UI.
@@ -43,7 +47,7 @@ También se puede abrir `http://127.0.0.1:17373` directamente: en Windows, Linux
 La aplicación de escritorio inicia el servicio si no está en marcha y muestra la misma Web UI en su ventana. Al cerrar la ventana queda en la bandeja del sistema vigilando el servicio. Clic en el icono abre la ventana; **clic derecho** abre el menú, sin abrir la app:
 
 - **Estado**: círculo verde «Servicio en marcha · 127.0.0.1:17373» o rojo «Servicio detenido» (también al pasar el ratón por el icono).
-- **Mis APIs**: las APIs de todos los espacios en marcha (global y proyectos), con un círculo verde si está activa y rojo si está desactivada o con error. Un clic la desactiva o la vuelve a activar; se guarda y se aplica sin reiniciar. Al final, «Gestionar en Mis APIs» abre esa sección.
+- **Mis APIs**: las APIs de todos los espacios en marcha (global y proyectos), con un círculo verde si está activa y rojo si está detenida o con error. Un clic la detiene o la vuelve a activar; se guarda y se aplica sin reiniciar. Al final, «Gestionar en Mis APIs» abre esa sección.
 - **Copiar la dirección para tus apps**.
 - **Iniciar el servicio** (si está detenido), o **Reiniciar** y **Detener el servicio…** (si está en marcha). Tras detenerlo, la app sigue en la bandeja para volver a iniciarlo.
 - **Iniciar con el sistema** (Windows, macOS o Linux), el mismo ajuste que en Ajustes.
@@ -65,8 +69,8 @@ Activado en **Ajustes** o con `tramtai servicio autoarranque activar`, Tramtai s
 
 Cada hora, el servicio pregunta a GitHub cuál es la última versión publicada (solo esa ficha pública; no envía ningún dato tuyo); la ventana se lo vuelve a preguntar cada 15 minutos y al volver a ella, y la bandeja, cada pocos segundos. Así el aviso aparece sin reiniciar la app. Si hay una más nueva:
 
-- **Acerca de Tramtai** (el menú lateral, el menú del estado o «Acerca de Tramtai» en la bandeja): es el único sitio que muestra la versión, tal como aparece en GitHub (`v0.42.0+17102026`), el desarrollador, el estado de las actualizaciones con **Buscar actualización ahora** y las novedades de esa versión en GitHub, los enlaces del proyecto (sitio, código, incidencias, licencia y términos) y **Detalles técnicos**: commit, sistema, Go, dirección y pid del servicio, almacén de claves y, en una sesión local, las carpetas de datos, configuración y registro. **Copiar datos para soporte** los copia como texto, sin claves ni tokens. La Web UI los pide a `GET /ui/acerca`.
-- La cabecera de la Web UI muestra **Actualizar** y el menú de la bandeja, **Actualizar a vX…**. **Actualizar ahora** comprueba la firma de Tramtai de `SHA256SUMS.txt` (`SHA256SUMS.txt.sig`, ed25519), descarga el instalador, comprueba su suma SHA-256 con esas sumas y avisa «Tramtai se reiniciará en 10 s», con **Reiniciar ahora** y **Cancelar** (borra la descarga); al vencer lo ejecuta mostrando solo su ventana de progreso («Actualizar Tramtai»: el instalador dice Actualizar si ya hay una instalación registrada e Instalar si no), que se cierra sola: la app se cierra, el servicio se detiene tras terminar las peticiones en curso (`servicio.plazo_drenaje_segundos`) y la app vuelve a abrirse con la versión nueva, con tu configuración y tus datos. Si la versión no trae una firma válida, no se instala: el aviso muestra el enlace para descargarla desde su página.
+- **Acerca de Tramtai** (el menú lateral, el menú del estado o «Acerca de Tramtai» en la bandeja): es el único sitio que muestra la versión, tal como aparece en GitHub (`v0.42.0+17102026`), el desarrollador, el estado de las actualizaciones con **Buscar actualización ahora** y las novedades de esa versión en GitHub, los enlaces del proyecto (sitio, código, incidencias, licencia y términos) y **Detalles técnicos**: commit, sistema, Go, dirección y pid del servicio, almacén de claves y, en una sesión local, las carpetas de datos, configuración y registro. **Copiar datos para soporte** los copia como texto, sin claves. La Web UI los pide a `GET /ui/acerca`.
+- La cabecera de la Web UI muestra **Instalar la versión nueva** y el menú de la bandeja, **Instalar la versión vX…**. **Instalar ahora** comprueba la firma de Tramtai de `SHA256SUMS.txt` (`SHA256SUMS.txt.sig`, ed25519), descarga el instalador, comprueba su suma SHA-256 con esas sumas y avisa «Tramtai se reiniciará en 10 s», con **Reiniciar ahora** y **Cancelar** (borra la descarga); al vencer lo ejecuta mostrando solo su ventana de progreso («Actualizar Tramtai»: el instalador dice Actualizar si ya hay una instalación registrada e Instalar si no), que se cierra sola: la app se cierra, el servicio se detiene tras terminar las peticiones en curso (`servicio.plazo_drenaje_segundos`) y la app vuelve a abrirse con la versión nueva, con tu configuración y tus datos. Si la versión no trae una firma válida, no se instala: el aviso muestra el enlace para descargarla desde su página.
 - Para no esperar a la próxima comprobación: **Ajustes → Buscar actualizaciones → Buscar actualización ahora** o, en la bandeja, **Buscar actualizaciones**; consultan GitHub en el momento (como mucho una vez cada 10 segundos) aunque la búsqueda automática esté desactivada.
 - Si instalas una versión a mano con Tramtai abierto (sea la instalada, la portable o una copia compilada), el instalador te avisa, cierra la app, detiene el servicio cuando terminan las peticiones en curso y, al acabar, vuelve a abrir lo que estaba abierto.
 - Tras actualizar, la Web UI muestra una vez las novedades de cada versión desde la última que viste en ese navegador (hasta 10, la más nueva abierta), con el enlace a todas las versiones. Si la búsqueda de actualizaciones está desactivada, o GitHub no responde, solo dice la versión nueva y ofrece el enlace.
@@ -77,16 +81,16 @@ Cada hora, el servicio pregunta a GitHub cuál es la última versión publicada 
 
 ### Borrar datos
 
-- **Historial:** «Vaciar historial» en la Web UI, o `DELETE /api/v1/trabajos`, borra los trabajos terminados de la instancia con sus eventos y las cargas que ya no usa ninguno. Lo que está en curso se conserva.
-- **Puntos de acceso:** uno a uno en Mis APIs o con `tramtai acceso eliminar`.
-- **Ajustes → Borrar datos** hace ambas cosas para la instancia actual. La configuración y las claves de proveedor guardadas no se tocan.
+- **Historial:** «Vaciar historial» en la Web UI, o `DELETE /api/v1/trabajos`, borra las peticiones terminadas del espacio con sus eventos y las cargas que ya no usa ninguno. Lo que está en curso se conserva.
+- **APIs por aplicación:** una a una en Mis APIs o con `tramtai acceso eliminar`.
+- **Ajustes → Borrar datos** hace ambas cosas para el espacio actual. La configuración y las claves de proveedor guardadas no se tocan.
 
 ## Comandos equivalentes
 
 ```powershell
 tramtai servicio iniciar -d        # segundo plano (sin -d: primer plano, Ctrl+C lo detiene)
-tramtai servicio estado            # instancias, puntos de acceso y errores
-tramtai servicio recargar          # aplica cambios de puntos de acceso sin reiniciar
+tramtai servicio estado            # espacios, APIs y errores
+tramtai servicio recargar          # aplica los cambios de las APIs sin reiniciar
 tramtai servicio detener           # pide confirmación (-s para no pedirla); espera a lo que está en curso
 tramtai servicio autoarranque [activar|desactivar]   # arrancar al iniciar sesión, oculto en la bandeja
 tramtai servicio registro [-f] [-n 30]               # lo que procesa el servicio en segundo plano; -f lo sigue en vivo
@@ -102,7 +106,7 @@ tramtai espacio iniciar|detener [carpeta|id]
 tramtai espacio olvidar <id>       # borra sus datos en Tramtai, nunca la carpeta del proyecto
 tramtai agentes desconectar|conectar <agente>   # deja un agente fuera sin desinstalar su CLI
 
-tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <espacio> para elegir otro; --global para la global
+tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # las peticiones; -i <espacio> para elegir otro; --global para la global
 ```
 
 - `proyecto iniciar` inicia el servicio si no está en marcha.
@@ -110,14 +114,14 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # -i <espacio> pa
 - **Puerto:** `servicio.puerto` (17373). Si al iniciar está ocupado y `servicio.puerto_automatico` está activado (lo está por defecto), Tramtai usa el siguiente libre y lo avisa en el registro; la CLI y la app de escritorio lo encuentran solas (la ventana de la app vuelve a entrar en la nueva dirección en unos segundos, cambie como cambie el puerto), pero tus aplicaciones deben usar la nueva dirección. Con `servicio.puerto_automatico: false` no arranca y explica cómo elegir otro. Se cambia en **Ajustes → Puerto del servicio** o con `tramtai servicio puerto <número>`: ambos comprueban que esté libre y se aplica al reiniciar (en Ajustes, con «Reiniciar ahora»; la página sigue al servicio a su nuevo puerto).
 - **Iniciar, reiniciar y detener:** desde la Web UI, el indicador «En marcha» tiene «Reiniciar el servicio» y «Detener el servicio…» (solo en este equipo y con confirmación). Iniciarlo no puede hacerse desde la página, porque es el propio servicio el que la sirve: se inicia con `tramtai abrir`, con `tramtai servicio iniciar -d` o desde la bandeja de la app de escritorio (Iniciar el servicio). La página se reconecta sola cuando vuelve.
 - **Registro:** cada petición deja una línea al recibirla y otra al terminar (agente, modelo efectivo, API de origen, duración, tokens o el error). Se limita con `servicio.registro_mb` (5 MB por archivo) y `servicio.registro_copias` (2 copias: `servicio.log.1` y `.2`); con 0 copias el archivo se vacía al llenarse. En segundo plano va a `datos/servicio.log` en la [carpeta de Tramtai](inicio.md#configuración) (`tramtai servicio registro -f`); en primer plano, a la propia terminal.
-- Las instancias activas se recuerdan: al reiniciar el servicio vuelven a abrirse y recuperan sus trabajos.
-- Detener una instancia cancela lo que tenía en cola; lo que se estaba ejecutando queda `interrumpido`. Las demás instancias no se ven afectadas.
+- Los espacios activos se recuerdan: al reiniciar el servicio vuelven a abrirse y recuperan sus peticiones.
+- Detener un espacio cancela lo que tenía en cola; lo que se estaba ejecutando queda `interrumpido`. Los demás espacios no se ven afectados.
 - **Detener el servicio:**
-  - Deja de aceptar trabajos y espera hasta `servicio.plazo_drenaje_segundos` (30 por defecto) a que terminen los que están en marcha. Después interrumpe los que queden.
+  - Deja de aceptar peticiones y espera hasta `servicio.plazo_drenaje_segundos` (30 por defecto) a que terminen los que están en marcha. Después interrumpe los que queden.
   - Lo que estaba en cola se reanuda al volver a iniciarlo.
   - En primer plano, un segundo Ctrl+C corta la espera.
-- **Resultados:** se conservan 24 horas (`retencion.horas_resultado`); después la salida responde 410 y se borra lo que escribió el usuario. El registro del trabajo dura 7 días (`retencion.horas_metadatos`). Ver [arquitectura](arquitectura.md#retención-cierre-y-recuperación).
-- **Límites del historial:** como mucho se guardan 10 000 peticiones terminadas por instancia (`retencion.max_trabajos`, de 100 a 100 000); en cada purga se borran las más antiguas que pasen del tope. Las respuestas se guardan de 0 a 720 horas (0 no las guarda) y el registro de 0 a 90 días (admite decimales: 1,5 días son 36 horas), nunca menos que las respuestas. Si varias peticiones terminaron en el mismo instante del corte, el tope puede conservar unas pocas de más. Un valor fuera de rango en `config.yaml` se ajusta al límite y deja un aviso en el registro del servicio. Tras cada purga la base devuelve al disco el espacio liberado; una base anterior se convierte una sola vez al actualizar, y el registro del servicio lo dice («se compactó la base de …»). Los tres valores se cambian en **Ajustes → Historial**, que también muestra cuántas peticiones hay y cuánto ocupa la base.
+- **Resultados:** se conservan 24 horas (`retencion.horas_resultado`); después la salida responde 410 y se borra lo que escribió el usuario. El registro de la petición dura 7 días (`retencion.horas_metadatos`). Ver [arquitectura](arquitectura.md#retención-cierre-y-recuperación).
+- **Límites del historial:** como mucho se guardan 10 000 peticiones terminadas por espacio (`retencion.max_trabajos`, de 100 a 100 000); en cada purga se borran las más antiguas que pasen del tope. Las respuestas se guardan de 0 a 720 horas (0 no las guarda) y el registro de 0 a 90 días (admite decimales: 1,5 días son 36 horas), nunca menos que las respuestas. Si varias peticiones terminaron en el mismo instante del corte, el tope puede conservar unas pocas de más. Un valor fuera de rango en `config.yaml` se ajusta al límite y deja un aviso en el registro del servicio. Tras cada purga la base devuelve al disco el espacio liberado; una base anterior se convierte una sola vez al actualizar, y el registro del servicio lo dice («se compactó la base de …»). Los tres valores se cambian en **Ajustes → Historial**, que también muestra cuántas peticiones hay y cuánto ocupa la base.
 - **Origen:** cada petición guarda de dónde llegó: Probar (la Web UI), la terminal, la CLI, una aplicación con la clave principal o una API. El Historial lo muestra y filtra por origen, por grupo de APIs o por API, y trae las peticiones de 200 en 200 con **Ver más**.
 
 ## Claves de API
@@ -148,7 +152,7 @@ En los dos primeros casos, pon la clave nueva en las aplicaciones que usaban la 
 
 ## Espacios de trabajo
 
-Un espacio de trabajo (en la API, una *instancia*) tiene su historial, sus APIs, su clave y sus ajustes. Hay uno global
+Un espacio de trabajo (en la API propia, las rutas `/api/v1/instancia`) tiene su historial, sus APIs, su clave y sus ajustes. Hay uno global
 y uno por cada proyecto que abras. La página **Espacios** de la app, `tramtai espacios` y `GET /api/v1/servicio/espacios`
 los listan todos: activos, detenidos y no encontrados.
 
@@ -156,11 +160,11 @@ los listan todos: activos, detenidos y no encontrados.
 |---|---|---|
 | Configuración | `config.yaml` de la [carpeta de Tramtai](inicio.md#configuración) | La global, más `.tramtai/config.yaml` (versionada) y `.tramtai/local.yaml` (de esta máquina) |
 | Identificador | `global` | `<nombre>_<hash de la ruta>` (por ejemplo `demo_app_1a2b3c4d`), fijado la primera vez y guardado en `.tramtai/espacio` |
-| Token | `datos/token-global` o la variable `TRAMTAI_TOKEN_GLOBAL` | `datos/tokens/<id>` |
+| Clave | `datos/token-global` o la variable `TRAMTAI_TOKEN_GLOBAL` | `datos/tokens/<id>` |
 | Base de datos | `datos/instancias/global.db` | `datos/instancias/<id>.db` |
 | Registro | `datos/espacios.json`: todos los espacios con su ruta, su último uso y su último error (reemplaza a `instancias.json`, que se migra solo) | |
 
-Las rutas son relativas a la [carpeta de Tramtai](inicio.md#configuración). La clave del espacio y el token de servicio quedan en claro en archivos con permisos 0600, porque la CLI y la app los leen; las claves de los puntos de acceso, en cambio, solo como huella.
+Las rutas son relativas a la [carpeta de Tramtai](inicio.md#configuración). La clave del espacio y la clave de servicio quedan en claro en archivos con permisos 0600, porque la CLI y la app las leen; las claves de las APIs por aplicación, en cambio, solo como huella.
 
 - **La marca** (`.tramtai/espacio`, fuera de git por el `.gitignore` de `.tramtai`) guarda el id del espacio: si mueves o renombras la carpeta, sigue siendo el mismo espacio con su historial. Una copia de la carpeta, en cambio, es un espacio nuevo, también para la CLI. La confianza no viaja con la marca (un repositorio ajeno podría copiarla): al abrir el proyecto en su ruta nueva la app vuelve a preguntar, diciendo de dónde viene.
 - **No encontrado:** si la carpeta de un proyecto ya no está donde estaba, el espacio queda «No encontrado»; con **Buscar** (o `POST /ui/espacios/ubicar`) se le indica la ruta nueva, que no puede ser la de otro espacio. Buscar no traslada la confianza: si su `local.yaml` usa claves de seguridad, después se confía desde la página Espacios, que las enseña.
@@ -169,7 +173,7 @@ Las rutas son relativas a la [carpeta de Tramtai](inicio.md#configuración). La 
 - **Ajustes** tiene dos pestañas, «Este espacio» y «Todo Tramtai»: cada valor dice si es propio del proyecto o viene de Global, y **Usar el de Global** lo devuelve (`POST /api/v1/instancia/heredar`).
 - La app, la terminal y la CLI vuelven al último espacio usado; la CLI no cae en la global si el espacio del proyecto está detenido (`espacio_detenido`), salvo con `--global`.
 
-La configuración versionada del proyecto no puede definir claves de seguridad: ni puertos, ni comandos, ni autenticación, ni puntos de acceso. `.tramtai/local.yaml` tampoco, salvo que la carpeta del proyecto figure en `proyectos_confiables` de la configuración global: un repositorio clonado puede traer un `local.yaml` (forzado con `git add -f`) y no debe poder cambiar qué programas ejecuta Tramtai. `proyectos_confiables` solo se admite en la configuración global.
+La configuración versionada del proyecto no puede definir claves de seguridad: ni puertos, ni comandos, ni autenticación, ni APIs. `.tramtai/local.yaml` tampoco, salvo que la carpeta del proyecto figure en `proyectos_confiables` de la configuración global: un repositorio clonado puede traer un `local.yaml` (forzado con `git add -f`) y no debe poder cambiar qué programas ejecuta Tramtai. `proyectos_confiables` solo se admite en la configuración global.
 
 ### Carpetas desde las que se envían archivos
 
@@ -186,9 +190,9 @@ Se comprueba la ruta real del archivo, así que `..` o un enlace que salga de es
 
 ### Límites y cargas
 
-- **Cargas:** hasta 20 por petición y `conversion.maximo_carga_mb` (50) cada una. Las de una instancia no pasan de
+- **Cargas:** hasta 20 por petición y `conversion.maximo_carga_mb` (50) cada una. Las de un espacio no pasan de
   `conversion.cuota_cargas_mb` (2048) en total: la siguiente responde 507 `cuota_cargas_agotada` hasta que venzan. Cada
-  carga pertenece a la API que la subió (o a la instancia): otra API no puede citarla aunque conozca su identificador.
+  carga pertenece a la API que la subió (o al espacio): otra API no puede citarla aunque conozca su identificador.
 - **Formatos:** los de [Formatos admitidos](api.md#formatos-admitidos); el resto, también los ZIP, se rechaza al
   subirlo con `carga_invalida`. Un Word, PowerPoint o Excel que se descomprimiría en más de
   `conversion.maximo_descomprimido_mb` se rechaza antes de convertirlo. `conversion.maximo_archivos_zip` y
@@ -236,26 +240,26 @@ Se comprueba la ruta real del archivo, así que `..` o un enlace que salga de es
 bajo) y a GitHub Copilot (automático; gasta un crédito del plan), con tu suscripción, que lean un archivo trampa, ejecuten una orden y abran una URL local, y comprueba que no lo
 consiguen. Gasta unas pocas peticiones pequeñas.
 
-## Puntos de acceso
+## APIs por aplicación
 
-Un punto de acceso es otra URL, con su propio token, para una aplicación concreta. Fija el agente y el modelo, restringe los modelos permitidos y traduce los nombres fijos que envía la aplicación.
+Una API por aplicación es otra URL, con su propia clave, para una aplicación concreta. El comando es `tramtai acceso` y la clave de configuración, `puntos_acceso`. Fija el agente y el modelo, restringe los modelos permitidos y traduce los nombres fijos que envía la aplicación.
 
 ```powershell
 tramtai acceso crear app_contable --puerto 17401 --contratos openai `
   --agente claude --modelo sonnet --permitidos claude/sonnet,claude/haiku --alias gpt-4o-mini=claude/haiku
-tramtai acceso crear resumenes --local --forzar --perfil rapido   # ruta /p/resumenes en la instancia del proyecto
+tramtai acceso crear resumenes --local --forzar --perfil rapido   # ruta /p/resumenes en el espacio del proyecto
 tramtai acceso crear tienda --grupo cliente_x --agente claude   # grupo libre
 tramtai acceso crear soporte --instrucciones "Responde siempre en español."
 tramtai acceso listar
 tramtai acceso editar app_contable --permitidos claude --grupo contabilidad
-tramtai acceso desactivar app_contable resumenes   # uno o varios
-tramtai acceso activar --grupo cliente_x           # todos los de un grupo
+tramtai acceso desactivar app_contable resumenes   # detiene una o varias
+tramtai acceso activar --grupo cliente_x           # todas las de un grupo
 tramtai acceso token app_contable --rotar        # regenera la clave y la muestra esta única vez
 tramtai acceso editar tienda --presupuesto diario.peticiones=500 --presupuesto mensual.usd=50
-tramtai acceso reiniciar-presupuesto tienda    # sin nombre, el de la instancia
+tramtai acceso reiniciar-presupuesto tienda    # sin nombre, el del espacio
 ```
 
-`tramtai acceso` guarda los cambios a través del servicio, con las mismas reglas que Mis APIs y la terminal, y lo inicia en segundo plano si no está en marcha. Trabaja sobre el archivo (la configuración global o, con `--local`, `.tramtai/local.yaml` del proyecto), así que también llega a una API cuya instancia no está activa o que no se pudo abrir: se puede desactivar o eliminar, pero no guardar otra vez con su error.
+`tramtai acceso` guarda los cambios a través del servicio, con las mismas reglas que Mis APIs y la terminal, y lo inicia en segundo plano si no está en marcha. Trabaja sobre el archivo (la configuración global o, con `--local`, `.tramtai/local.yaml` del proyecto), así que también llega a una API cuyo espacio no está activo o que no se pudo abrir: se puede detener o eliminar, pero no guardar otra vez con su error.
 
 **Mis APIs** tiene dos pestañas, que el navegador recuerda:
 
@@ -267,33 +271,33 @@ tramtai acceso reiniciar-presupuesto tienda    # sin nombre, el de la instancia
   - **Grupos:** cada uno se pliega desde su cabecera y el navegador recuerda cuáles quedaron plegados.
 - **Clave del espacio:** la guía «¿Qué URL uso?», la clave, los modelos, los ejemplos y el presupuesto del espacio. Es para ti y tus scripts; cada app va mejor con su propia API, y Mis APIs lo sugiere si muchas peticiones de apps llegan con esta clave. En el mapa de **Inicio**, cada grupo es una estación («web · 3 APIs», con sus activas debajo) que abre Mis APIs filtrada por ese grupo.
 
-Cada API tiene un botón **Conectar** (también se abre pulsando su fila) con su detalle: las URL base según lo que acepta (OpenAI, Anthropic, API propia), la clave —que solo se ve al crearla o regenerarla; si no la tienes, **Regenerar la clave** muestra una nueva y la anterior deja de valer—, los ejemplos para copiar con su URL y su modelo, las acciones (ajustes, Probar, peticiones, activar o detener) y, aparte, **Eliminar la API**. Al crear una API se abre su detalle con la clave nueva.
+Al pulsar el nombre o la fila de una API se abre su detalle, con **Dirección y clave**: las URL base según lo que acepta (OpenAI, Anthropic, API propia), la clave (solo se ve al crearla o regenerarla; si no la tienes, **Regenerar la clave** muestra una nueva y la anterior deja de valer), los ejemplos para copiar con su URL y su modelo, las acciones (ajustes, Probar, peticiones, activar o detener) y, aparte, **Eliminar la API**. Al crear una API se abre su detalle con la clave nueva.
 
 - **Clave:** `tramtai acceso crear`, Mis APIs y «Guardar como API» en Probar muestran la clave una sola vez, al crearla. Tramtai guarda solo su huella SHA-256 (`datos/tokens/acceso_<nombre>` contiene `sha256:…`), así que no se puede volver a ver: si se pierde, se regenera (`--rotar` o **Regenerar la clave**) y la anterior deja de valer. `tramtai acceso token <nombre>` sin `--rotar` lo explica. Las claves antiguas guardadas en claro se convierten solas a huella y siguen valiendo. Eliminar una API borra también su clave.
-- **Instrucciones:** `--instrucciones` (o el campo del mismo nombre en Mis APIs, editable después) se antepone a las instrucciones de cada petición que llega por ese punto, venga de la aplicación que venga. Sirve, por ejemplo, para que una app que no lo permite configurar responda siempre en español.
+- **Instrucciones:** `--instrucciones` (o el campo del mismo nombre en Mis APIs, editable después) se antepone a las instrucciones de cada petición que llega por esa API, venga de la aplicación que venga. Sirve, por ejemplo, para que una app que no lo permite configurar responda siempre en español.
 - **Uso:** Mis APIs muestra de cada API cuántas peticiones tuvo en los 7 días que conserva la retención, cuántas con error y la última; al pulsarlo se abre el Historial filtrado por esa API (`GET /api/v1/trabajos?punto=<nombre>`).
-- **Presupuesto:** `--presupuesto periodo.unidad=valor` (periodo `diario` o `mensual`; unidad `peticiones`, `tokens` o `usd`; repetible; 0 quita ese límite), o los campos de presupuesto en Mis APIs. Al 100 % las peticiones nuevas reciben 429 `presupuesto_agotado` hasta que reinicia el periodo (medianoche o día 1, hora local); Mis APIs muestra una barra por límite, amarilla desde el 80 %. El límite en USD solo suma el coste que informa el agente (hoy Claude). Tokens y USD se conocen al terminar, así que se reserva lo que gastarían los trabajos en curso al promedio de los terminados: es un límite aproximado (tras reiniciar con trabajos en curso, la reserva queda algo corta hasta el periodo siguiente). El de la instancia va en la configuración (`presupuesto.diario.*`, `presupuesto.mensual.*`; global o `local.yaml`, nunca la versionada), se aplica sin reiniciar con `tramtai servicio recargar` y cuenta todas sus peticiones. **Reiniciar consumo** (Mis APIs o `tramtai acceso reiniciar-presupuesto`) pone a cero el día y el mes en curso; reiniciar o eliminar una API no devuelve su consumo al presupuesto de la instancia. El consumo se guarda aparte de los trabajos y se conserva 13 meses.
-- **Grupos:** `--grupo` es una etiqueta libre (hasta 40 caracteres) para ordenar los puntos y activarlos o desactivarlos juntos, desde la CLI o desde Mis APIs. La separación por proyecto ya la dan las instancias: un punto creado con `--local` pertenece a la del proyecto.
+- **Presupuesto:** `--presupuesto periodo.unidad=valor` (periodo `diario` o `mensual`; unidad `peticiones`, `tokens` o `usd`; repetible; 0 quita ese límite), o los campos de presupuesto en Mis APIs. Al 100 % las peticiones nuevas reciben 429 `presupuesto_agotado` hasta que reinicia el periodo (medianoche o día 1, hora local); Mis APIs muestra una barra por límite, amarilla desde el 80 %. El límite en USD solo suma el costo que informa el agente (hoy Claude). Tokens y USD se conocen al terminar, así que se reserva lo que gastarían las peticiones en curso al promedio de las terminadas: es un límite aproximado (tras reiniciar con peticiones en curso, la reserva queda algo corta hasta el periodo siguiente). El del espacio va en la configuración (`presupuesto.diario.*`, `presupuesto.mensual.*`; global o `local.yaml`, nunca la versionada), se aplica sin reiniciar con `tramtai servicio recargar` y cuenta todas sus peticiones. **Reiniciar consumo** (Mis APIs o `tramtai acceso reiniciar-presupuesto`) pone a cero el día y el mes en curso; reiniciar o eliminar una API no devuelve su consumo al presupuesto del espacio. El consumo se guarda aparte de las peticiones y se conserva 13 meses.
+- **Grupos:** `--grupo` es una etiqueta libre (hasta 40 caracteres) para ordenar las APIs y activarlas o detenerlas juntas, desde la CLI o desde Mis APIs. La separación por proyecto ya la dan los espacios: una API creada con `--local` pertenece al del proyecto.
 
-- **Dirección:** sin `--puerto`, el punto queda en `http://127.0.0.1:17373/p/<nombre>`. Con `--puerto`, escucha en su propio puerto; si ese puerto está ocupado, el punto no se activa (no se elige otro) y el estado lo indica.
-- **Dónde se guarda:** en la configuración global, o con `--local` en `.tramtai/local.yaml` del proyecto (pertenece a su instancia; exige que la carpeta figure en `proyectos_confiables` de la configuración global). Se conservan los comentarios del archivo, y un cambio inválido se rechaza sin tocarlo.
-- **Contratos:** cada punto expone solo los suyos (`nativa`, `openai`, `anthropic`), nunca la administración.
+- **Dirección:** sin `--puerto`, la API queda en `http://127.0.0.1:17373/p/<nombre>`. Con `--puerto`, escucha en su propio puerto; si ese puerto está ocupado, la API no se activa (no se elige otro) y el estado lo indica.
+- **Dónde se guarda:** en la configuración global, o con `--local` en `.tramtai/local.yaml` del proyecto (pertenece a su espacio; exige que la carpeta figure en `proyectos_confiables` de la configuración global). Se conservan los comentarios del archivo, y un cambio inválido se rechaza sin tocarlo.
+- **Contratos:** cada API expone solo los suyos (`nativa`, `openai`, `anthropic`), nunca la administración.
 - **Modelos:**
   - `--alias` traduce nombres que la aplicación no deja cambiar, como `gpt-4o-mini`.
   - `--permitidos` restringe lo que se puede pedir (`agente`, `agente/modelo` o `perfil/nombre`); si se pide otro modelo, se rechaza con `modelo_no_permitido`.
-  - `--forzar` ignora el modelo de la solicitud y lo informa en la cabecera `Tramtai-Modelo-Forzado`.
-- **Trabajos:** cada trabajo guarda el punto que lo creó (`punto_acceso`), y por ese punto solo se ven sus propios trabajos.
-- **Sin reinicios:** los cambios se aplican al momento. Los puntos que no cambian siguen abiertos y no se cortan los trabajos en curso.
+  - `--forzar` ignora el modelo que pide la petición y lo informa en la cabecera `Tramtai-Modelo-Forzado`.
+- **Peticiones:** cada petición guarda la API que la creó (`punto_acceso`), y por esa API solo se ven sus propias peticiones.
+- **Sin reinicios:** los cambios se aplican al momento. Las APIs que no cambian siguen abiertas y no se cortan las peticiones en curso.
 
 ## Administración (para la CLI y la terminal)
 
-El token de servicio (`datos/token-servicio`) habilita `/api/v1/servicio`:
+La clave de servicio (`datos/token-servicio`) habilita `/api/v1/servicio`:
 
 | Ruta | Para qué |
 |---|---|
-| `GET /api/v1/servicio` | Estado del servicio, sus instancias y sus puntos. |
-| `POST /api/v1/servicio/instancias` | Activar una instancia, con `{"ambito":"global"}` o `{"ambito":"proyecto","raiz":"…"}`. Si la carpeta trae la marca de un espacio cuya carpeta ya no está y no es confiable, responde 409 `confianza_requerida` con `movido`: se confía en ella (`/proyectos` con `confiar`) antes de quedarse con ese espacio. |
-| `DELETE /api/v1/servicio/instancias/{id}` | Desactivar una instancia. |
+| `GET /api/v1/servicio` | Estado del servicio, sus espacios y sus APIs. |
+| `POST /api/v1/servicio/instancias` | Activar un espacio, con `{"ambito":"global"}` o `{"ambito":"proyecto","raiz":"…"}`. Si la carpeta trae la marca de un espacio cuya carpeta ya no está y no es confiable, responde 409 `confianza_requerida` con `movido`: se confía en ella (`/proyectos` con `confiar`) antes de quedarse con ese espacio. |
+| `DELETE /api/v1/servicio/instancias/{id}` | Detener un espacio. |
 | `GET /api/v1/servicio/espacios` | Todos los espacios del registro, también los detenidos y los no encontrados, con su estado, APIs y peticiones. |
 | `DELETE /api/v1/servicio/espacios/{id}` | Olvidar un espacio, con `{"nombre": "…"}` igual a su nombre: borra su base, su clave y su registro, nunca la carpeta del proyecto. |
 | `POST /api/v1/servicio/espacios/{id}/activar` | Vuelve a abrir un espacio detenido; responde el espacio (200). Un espacio que no existe, o sin su carpeta, da 404 `no_encontrado`. |
@@ -305,10 +309,10 @@ El token de servicio (`datos/token-servicio`) habilita `/api/v1/servicio`:
 | `POST /api/v1/servicio/agentes/{agente}/conexion` | `{"conectado": false}` desconecta un agente sin desinstalar su CLI (`adaptadores.<agente>.desconectado`); `true` lo vuelve a conectar (204). |
 | `GET /api/v1/servicio/instancias/{id}/configuracion` | Ver su configuración efectiva. |
 | `PUT /api/v1/servicio/puerto` | Guardar `servicio.puerto` y `servicio.puerto_automatico` (`{"puerto": 18000, "automatico": true}`; con `puerto` 0 solo cambia el automático). Se aplica al reiniciar. |
-| `POST /api/v1/servicio/recargar` | Aplicar los cambios de puntos de acceso. |
+| `POST /api/v1/servicio/recargar` | Aplicar los cambios de las APIs. |
 | `POST /api/v1/servicio/detener` | Detener el servicio. |
 
-Con ese mismo token y la cabecera `Tramtai-Instancia: <id>`, la administración puede usar la API de cualquier espacio. El descriptor `datos/servicio.json` indica dónde escucha el servicio. Antes de enviarle el token, la CLI comprueba que quien responde lo conoce: manda un reto aleatorio a `/healthz?reto=<reto>` y el servicio contesta con el HMAC-SHA256 del token sobre ese reto. Otro proceso que ocupe el puerto no puede contestar, aunque conozca el identificador del descriptor. Un solo servicio usa cada carpeta de datos: al arrancar toma el cerrojo `datos/servicio.lock`, y un segundo servicio sobre la misma carpeta no arranca.
+Con esa misma clave y la cabecera `Tramtai-Instancia: <id>`, la administración puede usar la API de cualquier espacio. El descriptor `datos/servicio.json` indica dónde escucha el servicio. Antes de enviarle la clave, la CLI comprueba que quien responde lo conoce: manda un reto aleatorio a `/healthz?reto=<reto>` y el servicio contesta con el HMAC-SHA256 de la clave sobre ese reto. Otro proceso que ocupe el puerto no puede contestar, aunque conozca el identificador del descriptor. Un solo servicio usa cada carpeta de datos: al arrancar toma el cerrojo `datos/servicio.lock`, y un segundo servicio sobre la misma carpeta no arranca.
 
 ## Versión portable
 
@@ -316,7 +320,7 @@ El `.zip` portable de Windows trae `portable.txt` junto a `tramtai.exe` y `tramt
 esa copia guarda todo en `datos-tramtai`, a su lado, en lugar de en `%APPDATA%\tramtai`:
 
 - `config.yaml` y `profiles\`;
-- `datos\`: descriptor del servicio, tokens, instancias, registros y cargas;
+- `datos\`: descriptor del servicio, claves, bases de los espacios, registros y archivos subidos;
 - `escritorio.json`;
 - `webview\`: el perfil del navegador de la app.
 
@@ -329,7 +333,7 @@ Lo que conviene saber:
 - **Claves de los proveedores.** Siguen en el almacén cifrado de Windows: se comparten con la instalación de este
   equipo (borrarlas en una las borra para las dos) y en otro equipo hay que volver a guardarlas.
 - **Instalada y portable a la vez.** Son dos Tramtai independientes:
-  - cada una tiene su servicio y su token;
+  - cada una tiene su servicio y su clave;
   - si el puerto está ocupado, la segunda usa otro libre (`puerto_automatico`);
   - el título de la ventana y la bandeja dicen «Tramtai portable»;
   - «Iniciar con Windows» se marca por separado en cada una;
@@ -337,9 +341,9 @@ Lo que conviene saber:
 - **La CLI.** En una terminal, `tramtai` es el del PATH, la instalada. Para la portable, `.\tramtai.exe` desde su
   carpeta.
 - **Pasar lo de la instalada.** Con las dos cerradas, copia el contenido de `%APPDATA%\tramtai` en `datos-tramtai`:
-  configuración, APIs, tokens e historial. Si ese `config.yaml` tiene `servicio.puerto_automatico: false` y la
+  configuración, APIs, claves e historial. Si ese `config.yaml` tiene `servicio.puerto_automatico: false` y la
   instalada usa ese puerto, cambia el de una de las dos.
-- **Quien ya usaba la portable 0.47 o anterior.** Desde la 0.48 la portable empieza con datos propios y tokens nuevos;
+- **Quien ya usaba la portable 0.47 o anterior.** Desde la 0.48 la portable empieza con datos propios y claves nuevas;
   para conservar lo anterior, copia `%APPDATA%\tramtai` como en el punto anterior.
 - **Actualizar.** Descomprime la versión nueva encima: `datos-tramtai` no viene en el `.zip` y no se pisa.
 - **Volver a %APPDATA%.** Borra `portable.txt` con Tramtai cerrado.

@@ -48,7 +48,7 @@ func TestTextosMenu(t *testing.T) {
 	esperado := map[string]string{
 		"menu.inicio": "Inicio", "menu.agentes": "Agentes", "menu.ejecutar": "Probar", "menu.conectar": "Mis APIs",
 		"menu.historial": "Historial", "menu.espacios": "Espacios", "menu.configuracion": "Ajustes", "menu.ayuda": "Ayuda",
-		"menu.grupo.empezar": "Empezar", "menu.grupo.conectar": "Conectar", "menu.grupo.organizar": "Organizar",
+		"menu.grupo.empezar": "Empezar", "menu.grupo.conectar": "Usar", "menu.grupo.organizar": "Organizar",
 	}
 	for clave, texto := range esperado {
 		if got := Texto("es", clave); got != texto {

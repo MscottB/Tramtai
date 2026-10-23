@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -33,14 +34,19 @@ type App struct {
 // Portapapeles es lo que la página manda copiar con OSC 52 (el mensaje de tea.SetClipboard no se exporta).
 type Portapapeles string
 
-// quieto es lo que se espera sin que llegue nada, con algo aún en marcha y ninguna petición al servicio a medias, para
-// dar la página por asentada: lo que queda espera a algo de fuera (el seguimiento en vivo, un temporizador).
+// quieto es lo que se espera sin que llegue nada, con lo que queda solo esperando a algo de fuera, para dar la página
+// por asentada: un evento del flujo o un temporizador tienen ese margen para llegar.
 const quieto = 30 * time.Millisecond
 
 // enCurso son las peticiones HTTP de las pruebas que aún no se han leído enteras, sin los flujos de eventos, que no
 // acaban y se cuentan en flujos. El cliente usa el transporte predeterminado, que este paquete cambia por uno que las
-// cuenta.
-var enCurso, flujos atomic.Int64
+// cuenta. cambios sube con cada cuenta que cambia.
+var enCurso, flujos, cambios atomic.Int64
+
+func contar(cuenta *atomic.Int64, d int64) {
+	cuenta.Add(d)
+	cambios.Add(1)
+}
 
 // FlujosAbiertos son los flujos de eventos (SSE) que las páginas tienen abiertos ahora: el seguimiento en vivo de un
 // trabajo y el del espacio.
@@ -56,10 +62,10 @@ func (t transporteContado) RoundTrip(r *http.Request) (*http.Response, error) {
 	if strings.HasSuffix(r.URL.Path, "/eventos") {
 		cuenta = &flujos
 	}
-	cuenta.Add(1)
+	contar(cuenta, 1)
 	res, err := t.base.RoundTrip(r)
 	if err != nil {
-		cuenta.Add(-1)
+		contar(cuenta, -1)
 		return res, err
 	}
 	res.Body = &cuerpoContado{ReadCloser: res.Body, cuenta: cuenta}
@@ -74,7 +80,7 @@ type cuerpoContado struct {
 }
 
 func (c *cuerpoContado) Close() error {
-	c.una.Do(func() { c.cuenta.Add(-1) })
+	c.una.Do(func() { contar(c.cuenta, -1) })
 	return c.ReadCloser.Close()
 }
 
@@ -265,11 +271,40 @@ func (a *App) Asentar() {
 		case m := <-a.llegan:
 			a.entregar(m)
 		case <-time.After(quieto):
-			if enCurso.Load() == 0 {
+			if soloEsperanFuera() {
 				return
 			}
 		}
 	}
+}
+
+// soloEsperanFuera dice si lo que queda en marcha solo espera a algo de fuera: ninguna petición al servicio a medias y
+// cada goroutine de un Cmd parada en un canal, un select o la red. Las demás (en marcha, durmiendo, leyendo un archivo,
+// esperando un cerrojo) van a responder solas, tarde lo que tarde. Si una petición empieza o acaba mientras se mira,
+// la foto no vale.
+func soloEsperanFuera() bool {
+	antes := cambios.Load()
+	if enCurso.Load() != 0 {
+		return false
+	}
+	pila := make([]byte, 1<<16)
+	for n := runtime.Stack(pila, true); ; n = runtime.Stack(pila, true) {
+		if n < len(pila) {
+			pila = pila[:n]
+			break
+		}
+		pila = make([]byte, 2*len(pila))
+	}
+	for _, g := range strings.Split(string(pila), "\n\n") {
+		if !strings.Contains(g, "prueba.(*App).correr.func1(") {
+			continue
+		}
+		estado := g[strings.Index(g, "[")+1 : strings.Index(g, "]")]
+		if !strings.HasPrefix(estado, "chan receive") && !strings.HasPrefix(estado, "select") && !strings.HasPrefix(estado, "IO wait") {
+			return false
+		}
+	}
+	return cambios.Load() == antes
 }
 
 func (a *App) actualizar(m tea.Msg) {

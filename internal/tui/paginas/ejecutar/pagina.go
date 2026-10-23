@@ -1,4 +1,4 @@
-// Package ejecutar es la página Probar de la terminal, copiada de Ejecutar.vue: la receta (instrucciones, modelo, esfuerzo,
+// Package ejecutar es la página Probar de la terminal, a la par de Ejecutar.vue: la receta (instrucciones, modelo, esfuerzo,
 // forzar, respaldo y salida estructurada con sus plantillas), el mensaje y los archivos, la respuesta en vivo con cancelar,
 // corregir y copiar, «Ver como código», «Guardar como API», las pruebas recientes con «Usar de nuevo» y el borrador.
 package ejecutar
@@ -176,7 +176,7 @@ func (p *Pagina) Pendiente() string {
 	case p.activo() || p.enviando:
 		return idioma.T("Probar tiene una petición en marcha: seguirá en el servicio y la verás en el Historial.")
 	case p.api != "" && p.punto != nil && p.armado && !mismaReceta(recetaDePunto(*p.punto), p.leer()):
-		return idioma.Tf("La API %s tiene cambios sin guardar en Probar (g la actualiza).", p.api)
+		return idioma.Tf("La API %s tiene cambios sin guardar en Probar (g los guarda).", p.api)
 	}
 	return ""
 }

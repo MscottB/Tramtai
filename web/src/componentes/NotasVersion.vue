@@ -21,12 +21,11 @@
 </template>
 
 <script setup lang="ts">
-// Las notas de cada versión salen de scripts/version.ps1: un título, un resumen y, si hace falta, secciones
-// («Novedades:», «Mejoras:», «Correcciones:», o en inglés «New:», «Fixes:»…) con elementos «- …» y sus detalles «  - …».
-// Se dibujan como la red de la app: cada sección es una línea y cada cambio, una estación. Sin secciones, el texto se
-// muestra con sus párrafos y viñetas. Las notas terminan con el enlace a la comparación en GitHub, que se muestra como
-// el botón «Ver todos los cambios en GitHub» (también en las versiones anteriores, con la página del release).
-// Desde la v0.44 llevan un bloque «## English»: en inglés se muestra ese bloque; las anteriores se ven en español.
+// Las notas de cada versión salen de scripts/version.ps1: un título, un resumen y, si hace falta, secciones («Novedades:»,
+// «Fixes:»…) con elementos «- …» y detalles «  - …». Se dibujan como la red de la app: cada sección es una línea y cada
+// cambio, una estación; sin secciones, el texto va con sus párrafos y viñetas. Terminan con el enlace a la comparación
+// en GitHub (en las versiones anteriores, a la página del release). Desde la v0.44 llevan «## English»: en inglés se
+// muestra ese bloque; las anteriores se ven en español.
 import { computed } from 'vue'
 import { enlaceSeguro } from '../enlaces'
 import { idioma, t } from '../i18n'

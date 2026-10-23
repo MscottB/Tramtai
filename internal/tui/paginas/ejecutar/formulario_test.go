@@ -232,7 +232,7 @@ func TestRutaNoPermitida(t *testing.T) {
 	a := abierta(t, cli, id)
 	poner(t, a, tx("ejecutar.mensaje"), "lee")
 	poner(t, a, tx("ejecutar.adjuntar"), fuera)
-	if av, ok := aviso(enviar(a)); !ok || cuantos(t, cli, id) != 0 || !strings.Contains(av.Texto, "raices_permitidas") {
+	if av, ok := aviso(enviar(a)); !ok || cuantos(t, cli, id) != 0 || !strings.Contains(av.Texto, "fuera de las carpetas desde las que se pueden enviar archivos") {
 		t.Fatalf("la ruta se comprueba antes de subir: %+v", av)
 	}
 }

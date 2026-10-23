@@ -189,7 +189,6 @@ func (s *Servicio) fijarPrepararConversor(preparar bool) error {
 	return nil
 }
 
-// ServeHTTP implementa http.Handler.
 func (s *Servicio) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.handler.ServeHTTP(w, r) }
 
 // Base es la URL del puerto principal.
@@ -256,7 +255,7 @@ func (s *Servicio) enrutarPunto(w http.ResponseWriter, r *http.Request) {
 	p := s.puntos[nombre]
 	s.mu.RUnlock()
 	if p == nil || p.handler == nil || p.cfg.Puerto != 0 {
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("punto de acceso no disponible: %s", nombre)))
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("API no disponible: %s", nombre)))
 		return
 	}
 	http.StripPrefix("/p/"+nombre, p.handler).ServeHTTP(w, r)

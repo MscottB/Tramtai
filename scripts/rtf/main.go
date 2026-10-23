@@ -1,7 +1,6 @@
-// Command rtf convierte LICENSE.md y TERMINOS.md en bin/LICENCIA.rtf y bin/TERMINOS.rtf para las páginas de
-// licencia del instalador. NSIS lee un texto plano como ANSI (los acentos de un UTF-8 salían rotos) y no entiende
-// Markdown; el RTF usa escapes \u para los caracteres no ASCII y muestra títulos, negritas y listas. Solo cubre el
-// Markdown que usan esos dos archivos. Lo ejecuta scripts/compilar.ps1 -Instalador:
+// Command rtf convierte LICENSE.md y TERMINOS.md en bin/LICENCIA.rtf y bin/TERMINOS.rtf para las páginas de licencia
+// del instalador: NSIS lee un texto plano como ANSI (los acentos de un UTF-8 salen rotos) y no entiende Markdown. Solo
+// cubre el Markdown de esos dos archivos. Lo ejecuta scripts/compilar.ps1 -Instalador:
 //
 //	go run ./scripts/rtf
 package main
