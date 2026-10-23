@@ -1,11 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { sesion } from '../estado.ts'
-<<<<<<< HEAD
 import { api, duracionAviso, ErrorApi, pasoError, textosAviso } from './cliente.ts'
-=======
-import { api, duracionAviso, ErrorApi, pasoError } from './cliente.ts'
->>>>>>> v0.56/5-textos
 import { idioma } from '../i18n.ts'
 import es from '../idiomas/es.ts'
 import en from '../idiomas/en.ts'
