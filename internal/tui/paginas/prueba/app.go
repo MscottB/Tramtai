@@ -277,6 +277,17 @@ func (a *App) HastaVer(textos ...string) {
 	})
 }
 
+// HastaSalir hace la acción (unas teclas, un Entregar…) y espera, entregando lo que llegue, a que lo que sale hacia la app
+// desde entonces cumpla cond: el aviso, la pregunta o el IrA que la página manda cuando le contesta el servicio. Devuelve
+// lo que salió.
+func (a *App) HastaSalir(accion func(), cond func(fuera []tea.Msg) bool) []tea.Msg {
+	a.t.Helper()
+	desde := len(a.Fuera)
+	accion()
+	a.Hasta(func() bool { return cond(a.Fuera[desde:]) })
+	return a.Fuera[desde:]
+}
+
 // Asentar entrega lo que llegue hasta que la prueba quede quieta: nada por entregar y nada en el proceso que pueda
 // avanzar solo (enMarcha). Lo que queda esperando, espera a la prueba (que suelte un canal, haga pasar el Reloj o cierre
 // el servicio) o a un temporizador del servicio, como el que junta el texto en vivo: lo que trae ese se espera con

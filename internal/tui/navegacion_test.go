@@ -341,7 +341,9 @@ func TestComprobacionViejaNoDeshaceElCambio(t *testing.T) {
 	m.cli, m.instancia, m.comprobando = cli, "global", true // el latido está en camino
 	vieja := msgConexion{cli: cli, espacios: []contrato.Espacio{{ID: "global", Nombre: "Global", Activo: true}}, cambios: m.cambios}
 	m.Update(pagina.CambioEspacio{ID: e.ID})
-	correr(t, m, m.conectado(vieja))
+	a := conducir(t, m)
+	a.Correr(m.conectado(vieja))
+	a.Hasta(func() bool { return m.instancia == e.ID && m.nombreEspacio() == e.Nombre }) // la comprobación nueva la contesta el servicio
 	if m.instancia != e.ID || m.nombreEspacio() != e.Nombre {
 		t.Fatalf("sigue en el espacio nuevo y lo nombra: %q %q", m.instancia, m.nombreEspacio())
 	}
@@ -370,7 +372,9 @@ func TestEspaciosCambiadosReleeLaLista(t *testing.T) {
 	if _, otro := m.Update(pagina.EspaciosCambiados{}); otro != nil {
 		t.Fatal("con una comprobación en marcha, no lanza otra")
 	}
-	correr(t, m, cmd)
+	a := conducir(t, m)
+	a.Correr(cmd)
+	a.Hasta(func() bool { _, activo := m.espacioActivo(e.ID); return !activo && !m.comprobando }) // la lista la trae el servicio
 	if _, activo := m.espacioActivo(e.ID); activo || m.comprobando {
 		t.Fatalf("la lista ya sabe que se detuvo: %+v", m.espacios)
 	}

@@ -108,6 +108,7 @@ func TestEsquemaInvalidoAvisa(t *testing.T) {
 		t.Fatal("mientras se escribe no se pregunta al servicio")
 	}
 	a.Pulsar("tab")
+	a.HastaVer("properties.x.type")
 	if enfocar(t, a, tx("receta.esquema")); !strings.Contains(a.Vista(), "properties.x.type") {
 		t.Fatalf("al salir del campo, el servicio dice qué está mal, bajo el campo:\n%s", a.Vista())
 	}
@@ -116,6 +117,7 @@ func TestEsquemaInvalidoAvisa(t *testing.T) {
 	}
 	// Un JSON roto también: el servicio da la línea; escribir otra cosa quita el error viejo.
 	poner(t, a, tx("receta.esquema"), "{")
+	a.HastaVer("línea")
 	if enfocar(t, a, tx("receta.esquema")); !strings.Contains(a.Vista(), "línea") {
 		t.Fatalf("un JSON roto también se avisa:\n%s", a.Vista())
 	}
@@ -203,20 +205,20 @@ func TestAvisoConversorAlAdjuntar(t *testing.T) {
 	poner(t, a, tx("ejecutar.mensaje"), "resume")
 	editar(t, a, tx("ejecutar.adjuntar"))
 	a.Pegar(pdf)
-	fuera := a.Pulsar("tab")
+	fuera := a.HastaSalir(func() { a.Pulsar("tab") }, prueba.HayAviso)
 	if av, ok := aviso(fuera); !ok || !strings.Contains(av.Texto, "Ctrl+P") {
 		t.Fatalf("al dejar el campo avisa con la tecla que lo prepara: %v", fuera)
 	}
 	if enfocar(t, a, tx("ejecutar.adjuntar")); !strings.Contains(a.Vista(), "Ctrl+P") {
 		t.Fatalf("el aviso se ve junto al campo:\n%s", a.Vista())
 	}
-	if av, ok := aviso(enviar(a)); !ok || !strings.Contains(av.Texto, "Ctrl+P") || cuantos(t, cli, id) != 0 {
+	if av, ok := aviso(a.HastaSalir(func() { enviar(a) }, prueba.HayAviso)); !ok || !strings.Contains(av.Texto, "Ctrl+P") || cuantos(t, cli, id) != 0 {
 		t.Fatalf("no se envía sin conversor: %+v", av)
 	}
 	editar(t, a, tx("ejecutar.adjuntar"))
 	a.Pulsar("end")
 	a.Escribir(".zip")
-	if av, ok := aviso(a.Pulsar("tab")); !ok || !strings.Contains(av.Texto, "ZIP") {
+	if av, ok := aviso(a.HastaSalir(func() { a.Pulsar("tab") }, prueba.HayAviso)); !ok || !strings.Contains(av.Texto, "ZIP") {
 		t.Fatalf("un formato que no se admite se avisa: %+v", av)
 	}
 }
@@ -232,7 +234,7 @@ func TestRutaNoPermitida(t *testing.T) {
 	a := abierta(t, cli, id)
 	poner(t, a, tx("ejecutar.mensaje"), "lee")
 	poner(t, a, tx("ejecutar.adjuntar"), fuera)
-	if av, ok := aviso(enviar(a)); !ok || cuantos(t, cli, id) != 0 || !strings.Contains(av.Texto, "fuera de las carpetas desde las que se pueden enviar archivos") {
+	if av, ok := aviso(a.HastaSalir(func() { enviar(a) }, prueba.HayAviso)); !ok || cuantos(t, cli, id) != 0 || !strings.Contains(av.Texto, "fuera de las carpetas desde las que se pueden enviar archivos") {
 		t.Fatalf("la ruta se comprueba antes de subir: %+v", av)
 	}
 }

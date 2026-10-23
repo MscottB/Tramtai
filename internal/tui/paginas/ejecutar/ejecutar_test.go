@@ -45,6 +45,7 @@ func TestEnviarYCancelar(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatalf("el agente no recibió la petición: %v", fuera)
 	}
+	a.Hasta(func() bool { return pestana(a, "ejecutar.respuesta") })
 	if !pestana(a, "ejecutar.respuesta") {
 		t.Fatalf("enviar enseña la respuesta:\n%s", a.Vista())
 	}
@@ -88,6 +89,7 @@ func TestEnviarYCancelar(t *testing.T) {
 		t.Fatalf("una sola petición: %d", n)
 	}
 	a.Pulsar("right")
+	a.Hasta(func() bool { return pestana(a, "ejecutar.recientes") && strings.Count(a.Vista(), "esperar") == 1 })
 	if n := strings.Count(a.Vista(), "esperar"); !pestana(a, "ejecutar.recientes") || n != 1 {
 		t.Fatalf("y queda en las recientes (%d):\n%s", n, a.Vista())
 	}
@@ -140,6 +142,7 @@ func TestCorregirYCopiar(t *testing.T) {
 	viejo := ultimo(t, cli, id).ID
 	a.Pulsar("o")
 	a.Hasta(func() bool { return cuantos(t, cli, id) == 2 })
+	a.HastaVer("Tu respuesta no cumple el formato pedido") // la página ya sigue la corrección, no la de antes
 	terminada(t, a)
 	nuevo := ultimo(t, cli, id)
 	if m := nuevo.Solicitud.Mensajes; nuevo.ID == viejo || !strings.HasPrefix(m[len(m)-1].Contenido, "Tu respuesta no cumple el formato pedido:") {
@@ -196,6 +199,7 @@ func TestRecetaEmpiezaArriba(t *testing.T) {
 		t.Fatalf("Intro las vuelve a plegar:\n%s", a.Vista())
 	}
 	a.Entregar(pagina.ConPunto{Nombre: "notas"})
+	a.HastaVer("Editando la API notas")
 	if enfocar(t, a, tx("receta.opciones")); !strings.Contains(a.Vista(), "▾ Opciones de la receta") {
 		t.Fatalf("una receta con salida estructurada abre las opciones:\n%s", a.Vista())
 	}
@@ -214,6 +218,7 @@ func TestBorradorSobreviveReinicio(t *testing.T) {
 	}
 	r.Pasar(time.Millisecond)
 	a.Asentar()
+	a.Hasta(func() bool { d, _ := hayBorrador(carpeta); return strings.Contains(d, "a medias") })
 	if d, _ := hayBorrador(carpeta); !strings.Contains(d, "a medias") {
 		t.Fatalf("pasada la espera, el borrador se guarda: %q", d)
 	}
@@ -223,6 +228,7 @@ func TestBorradorSobreviveReinicio(t *testing.T) {
 		t.Fatalf("al volver a abrir, el mensaje es el del borrador: %q", v)
 	}
 	enviar(otra)
+	otra.Hasta(func() bool { _, hay := hayBorrador(carpeta); return !hay }) // se borra cuando el servicio crea el trabajo
 	if _, hay := hayBorrador(carpeta); hay {
 		t.Fatal("enviar borra el borrador")
 	}
@@ -240,6 +246,7 @@ func TestSeguirTrabajo(t *testing.T) {
 	<-b.Entro
 	a := abierta(t, cli, id)
 	a.Entregar(pagina.SeguirTrabajo{ID: tr.ID})
+	a.Hasta(func() bool { return pestana(a, "ejecutar.respuesta") })
 	if !pestana(a, "ejecutar.respuesta") {
 		t.Fatalf("abre el trabajo en la respuesta:\n%s", a.Vista())
 	}
@@ -273,6 +280,10 @@ func TestUsarDeNuevo(t *testing.T) {
 	}
 	a := abierta(t, cli, id)
 	a.Pulsar("right", "right")
+	a.Hasta(func() bool {
+		v := a.Vista()
+		return strings.Count(v, "otra vez") == 1 && !strings.Contains(v, "de la CLI")
+	})
 	if v := a.Vista(); strings.Count(v, "otra vez") != 1 || strings.Contains(v, "de la CLI") {
 		t.Fatalf("solo las de la terminal:\n%s", v)
 	}
@@ -281,6 +292,7 @@ func TestUsarDeNuevo(t *testing.T) {
 		t.Fatalf("u trae mensaje y receta:\n%s", a.Vista())
 	}
 	a.Pulsar("left", "enter")
+	a.Hasta(func() bool { return pestana(a, "ejecutar.respuesta") && strings.Contains(a.Vista(), "otra vez") })
 	if !pestana(a, "ejecutar.respuesta") || !strings.Contains(a.Vista(), "otra vez") || terminada(t, a) != nucleo.Completado {
 		t.Fatalf("Intro la abre en la respuesta:\n%s", a.Vista())
 	}
@@ -321,10 +333,10 @@ func TestServicioCaido(t *testing.T) {
 	b := abierta(t, cli, id)
 	cerrar()
 	poner(t, b, tx("ejecutar.mensaje"), "hola")
-	if fuera := enviar(b); len(fuera) != 1 || !errorServicio(fuera) {
+	if fuera := b.HastaSalir(func() { enviar(b) }, errorServicio); len(fuera) != 1 || !errorServicio(fuera) {
 		t.Fatalf("con el servicio caído tras cargar, avisa a la app: %v", fuera)
 	}
-	if fuera := enviar(b); !errorServicio(fuera) {
+	if fuera := b.HastaSalir(func() { enviar(b) }, errorServicio); !errorServicio(fuera) {
 		t.Fatalf("y no se queda enviando: %v", fuera)
 	}
 }
@@ -382,6 +394,7 @@ func TestRespuestasViejas(t *testing.T) {
 		viejos := pedir(t, a)
 		a.Correr(a.P.Iniciar(contexto(t, cli, "otro", t.TempDir())))
 		a.Pulsar("right", "right")
+		a.EsperarCarga() // las recientes del otro espacio, antes de mirar
 		antes := a.Vista()
 		a.Soltar(viejos)
 		if a.Vista() != antes || strings.Contains(a.Vista(), "vieja") {
@@ -506,10 +519,12 @@ func TestCabeEn60x20(t *testing.T) {
 		t.Fatalf("la respuesta enseña el estado y la ruta:\n%s", v)
 	}
 	a.Pulsar("right")
+	a.HastaVer("una línea larga")
 	if v := vista("recientes"); !strings.Contains(v, "una línea larga") {
 		t.Fatalf("las recientes enseñan la prueba:\n%s", v)
 	}
 	a.Pulsar("k")
+	a.HastaVer("[Python", "import")
 	if v := vista("código"); !strings.Contains(v, "[Python") || !strings.Contains(v, "import") {
 		t.Fatalf("«Ver como código» enseña Python:\n%s", v)
 	}
