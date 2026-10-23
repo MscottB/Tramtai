@@ -108,9 +108,9 @@ test('reconciliar con la consulta: el que termina llega, el que falta se va y lo
 
 test('eventoDe convierte un trabajo de la consulta, con la etapa que manda el servicio', () => {
   const trabajo = { id: 'x', estado: 'fallido', etapa: 'llegada', solicitud: { agente: 'codex' }, modelo_efectivo: 'codex/gpt', punto_acceso: 'otra', origen: 'api',
-    codigo_error: 'error_agente', creado_en: '2026-10-20T12:00:00Z' } as unknown as Trabajo
+    intento: 2, codigo_error: 'error_agente', creado_en: '2026-10-20T12:00:00Z' } as unknown as Trabajo
   assert.deepEqual(eventoDe(trabajo), { id: 'x', estado: 'fallido', etapa: 'llegada', agente: 'codex', modelo: 'codex/gpt', api: 'otra', origen: 'api',
-    intento: 1, codigo_error: 'error_agente', creado: '2026-10-20T12:00:00Z', actualizado: '' })
+    intento: 2, codigo_error: 'error_agente', creado: '2026-10-20T12:00:00Z', actualizado: '' })
 })
 
 test('la llegada se nombra según cómo terminó', () => {

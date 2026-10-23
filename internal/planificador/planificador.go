@@ -174,16 +174,17 @@ func (p *Planificador) terminarHuerfanos(ctx context.Context) error {
 // Enviar valida y acepta una solicitud ya completada con los predeterminados (AplicarPredeterminados).
 // Devuelve reutilizado = true si la clave de idempotencia ya apuntaba a un trabajo con la misma huella.
 func (p *Planificador) Enviar(ctx context.Context, solicitud nucleo.SolicitudEjecucion, clave string) (nucleo.Trabajo, bool, error) {
-	return p.aceptar(ctx, solicitud, clave, "", "")
+	return p.aceptar(ctx, solicitud, clave, nucleo.Trabajo{}, "")
 }
 
 // EnviarPorPunto acepta una solicitud recibida por un punto de acceso y la vincula a él.
 func (p *Planificador) EnviarPorPunto(ctx context.Context, solicitud nucleo.SolicitudEjecucion, clave, punto string) (nucleo.Trabajo, bool, error) {
-	return p.aceptar(ctx, solicitud, clave, "", punto)
+	return p.aceptar(ctx, solicitud, clave, nucleo.Trabajo{}, punto)
 }
 
-// aceptar registra el trabajo; intentoDe vincula un reintento explícito con el trabajo anterior.
-func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEjecucion, clave, intentoDe, punto string) (nucleo.Trabajo, bool, error) {
+// aceptar registra el trabajo; anterior (vacío si no es un reintento) vincula un reintento explícito con el trabajo
+// anterior, del que conserva el intento: su solicitud guardada ya apunta al agente del respaldo al que se saltó.
+func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEjecucion, clave string, anterior nucleo.Trabajo, punto string) (nucleo.Trabajo, bool, error) {
 	if p.ctx == nil || p.ctx.Err() != nil {
 		return nucleo.Trabajo{}, false, nucleo.NuevoError(nucleo.CodigoServicioDetenido, idioma.T("el servicio todavía no está listo: vuelve a intentarlo en un momento"))
 	}
@@ -212,7 +213,7 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 		}
 	}
 	// Una solicitud nueva no puede citar cargas vencidas; un reintento usa las que su trabajo protegía.
-	if v, ok := p.opc.Preparador.(interface{ Verificar([]string, string) error }); ok && intentoDe == "" && len(solicitud.Cargas) > 0 {
+	if v, ok := p.opc.Preparador.(interface{ Verificar([]string, string) error }); ok && anterior.ID == "" && len(solicitud.Cargas) > 0 {
 		if err := v.Verificar(solicitud.Cargas, punto); err != nil {
 			return nucleo.Trabajo{}, false, err
 		}
@@ -228,7 +229,7 @@ func (p *Planificador) aceptar(ctx context.Context, solicitud nucleo.SolicitudEj
 	if err != nil {
 		return nucleo.Trabajo{}, false, err
 	}
-	t := nucleo.Trabajo{ID: nucleo.NuevoID(), Instancia: p.opc.Instancia, Solicitud: solicitud, Huella: solicitud.Huella(), ModeloEnviado: modelo, IntentoDe: intentoDe, PuntoAcceso: punto,
+	t := nucleo.Trabajo{ID: nucleo.NuevoID(), Instancia: p.opc.Instancia, Solicitud: solicitud, Huella: solicitud.Huella(), ModeloEnviado: modelo, IntentoDe: anterior.ID, Intento: anterior.Intento, PuntoAcceso: punto,
 		Origen: nucleo.OrigenPeticion(ctx)}
 	if punto != "" {
 		t.Origen = nucleo.DesdeAPI // por una API extra, aunque la app mande otra etiqueta
@@ -408,7 +409,7 @@ func (p *Planificador) Reintentar(ctx context.Context, id string) (nucleo.Trabaj
 		return anterior, nucleo.NuevoError(nucleo.CodigoEntradaNoDisponible, idioma.T("los archivos de la petición ya vencieron o se borraron al terminar: vuelve a enviarlos"))
 	}
 	// El reintento es el mismo pedido otra vez: conserva su API y su origen.
-	t, _, err := p.aceptar(nucleo.ConOrigenPeticion(ctx, anterior.Origen), anterior.Solicitud, "", anterior.ID, anterior.PuntoAcceso)
+	t, _, err := p.aceptar(nucleo.ConOrigenPeticion(ctx, anterior.Origen), anterior.Solicitud, "", anterior, anterior.PuntoAcceso)
 	return t, err
 }
 

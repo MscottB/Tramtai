@@ -21,7 +21,7 @@ const (
 	margenCambios = 50 * time.Millisecond
 )
 
-// visto es lo último que un flujo envió de un trabajo; intento cuenta los agentes que probó desde que se abrió el flujo.
+// visto es lo último que un flujo envió de un trabajo; el intento es el guardado, no se deduce de los cambios vistos.
 type visto struct {
 	estado, agente string
 	intento        int
@@ -84,12 +84,9 @@ func (s *Servidor) eventosInstancia(w http.ResponseWriter, r *http.Request) {
 	vistos := map[string]visto{}
 	enviar := func(t nucleo.Trabajo) error {
 		previo, conocido := vistos[t.ID]
-		v := visto{estado: string(t.Estado), agente: t.Solicitud.Agente, intento: max(previo.intento, 1), terminado: t.Estado.Terminal(), cambio: t.ActualizadoEn}
-		if conocido && previo.agente != v.agente {
-			v.intento = previo.intento + 1
-		}
+		v := visto{estado: string(t.Estado), agente: t.Solicitud.Agente, intento: t.Intento, terminado: t.Estado.Terminal(), cambio: t.ActualizadoEn}
 		vistos[t.ID] = v
-		if conocido && v.estado == previo.estado && v.agente == previo.agente {
+		if conocido && v.estado == previo.estado && v.agente == previo.agente && v.intento == previo.intento {
 			return nil
 		}
 		return f.json("trabajo", contrato.EventoTrabajo{ID: t.ID, Estado: v.estado, Etapa: t.Estado.Etapa(), Agente: v.agente,

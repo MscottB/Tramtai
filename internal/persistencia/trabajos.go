@@ -68,9 +68,9 @@ func (a *Almacen) Aceptar(ctx context.Context, t nucleo.Trabajo, clave string, m
 	if err != nil {
 		return t, false, err
 	}
-	t.Estado, t.CreadoEn, t.ActualizadoEn = nucleo.EnCola, ahora, ahora
-	if _, err := tx.ExecContext(ctx, `INSERT INTO trabajos (id, instancia, estado, solicitud, huella, intento_de, modelo_enviado, punto_acceso, origen, creado_en, actualizado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		t.ID, t.Instancia, string(t.Estado), string(solicitud), t.Huella, t.IntentoDe, t.ModeloEnviado, t.PuntoAcceso, t.Origen, fecha(ahora), fecha(ahora)); err != nil {
+	t.Estado, t.CreadoEn, t.ActualizadoEn, t.Intento = nucleo.EnCola, ahora, ahora, max(t.Intento, 1)
+	if _, err := tx.ExecContext(ctx, `INSERT INTO trabajos (id, instancia, estado, solicitud, huella, intento_de, modelo_enviado, punto_acceso, origen, intento, creado_en, actualizado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		t.ID, t.Instancia, string(t.Estado), string(solicitud), t.Huella, t.IntentoDe, t.ModeloEnviado, t.PuntoAcceso, t.Origen, t.Intento, fecha(ahora), fecha(ahora)); err != nil {
 		return t, false, err
 	}
 	if err := agregarEvento(ctx, tx, t.ID, "estado", string(nucleo.EnCola), ahora); err != nil {
@@ -225,6 +225,7 @@ func (a *Almacen) RegistrarProceso(ctx context.Context, id string, pid int, firm
 // CambiarAgente apunta el trabajo al agente de respaldo que lo ejecuta ahora, con su modelo (el del principal o su
 // perfil no valen para otro agente, también al reintentar) y el respaldo que queda tras él, para que un trabajo
 // reencolado o reintentado no vuelva a probar los que ya fallaron; con el esfuerzo propio de ese respaldo, si lo tiene.
+// El intento sube 1: así quien lee el trabajo después sabe por qué agente de la cadena va sin haber visto el salto.
 // La huella no cambia.
 func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado, esfuerzo string, restante []string) error {
 	lista, err := json.Marshal(restante)
@@ -240,7 +241,7 @@ func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado, 
 		sinEsfuerzo, conEsfuerzo, args = "", ", '$.esfuerzo', ?", append(args, esfuerzo)
 	}
 	r, err := a.db.ExecContext(ctx, `UPDATE trabajos SET solicitud = json_set(json_remove(solicitud, '$.perfil_modelo'`+sinEsfuerzo+`), '$.agente', ?, '$.modelo', ?,
-		'$.respaldo', json(?)`+conEsfuerzo+`), modelo_enviado = ?, actualizado_en = ? WHERE id = ?`, append(args, modeloEnviado, fecha(a.reloj()), id)...)
+		'$.respaldo', json(?)`+conEsfuerzo+`), modelo_enviado = ?, intento = intento + 1, actualizado_en = ? WHERE id = ?`, append(args, modeloEnviado, fecha(a.reloj()), id)...)
 	if err != nil {
 		return err
 	}
@@ -536,7 +537,7 @@ func escanear(fila interface{ Scan(...any) error }) (nucleo.Trabajo, error) {
 	var vencido bool
 	err := fila.Scan(&t.ID, &t.Instancia, &estado,
 		&codigo, &t.MensajeError, &solicitud, &t.Huella, &t.Salida, &t.IntentoDe, &creado, &actualizado, &terminado,
-		&t.ModeloEnviado, &t.ModeloEfectivo, &t.Uso.TokensEntrada, &t.Uso.TokensSalida, &t.Uso.CostoUSD, &t.PuntoAcceso, &vencido, &t.EntradasEliminadas, &t.PID, &t.FirmaProceso, &t.Origen)
+		&t.ModeloEnviado, &t.ModeloEfectivo, &t.Uso.TokensEntrada, &t.Uso.TokensSalida, &t.Uso.CostoUSD, &t.PuntoAcceso, &vencido, &t.EntradasEliminadas, &t.PID, &t.FirmaProceso, &t.Origen, &t.Intento)
 	if err != nil {
 		return t, err
 	}

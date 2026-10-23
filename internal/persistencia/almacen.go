@@ -105,6 +105,8 @@ CREATE TABLE IF NOT EXISTS avisos_presupuesto (
 	visto_en TEXT NOT NULL,
 	PRIMARY KEY (agente, modelo)
 );`,
+	// v10: el intento (1 el agente principal, +1 en cada salto al respaldo); los trabajos anteriores quedan en 1.
+	`ALTER TABLE trabajos ADD COLUMN intento INTEGER NOT NULL DEFAULT 1;`,
 }
 
 // indices son índices que no cambian el esquema: se crean al abrir sin subir la versión de la base, así que una
@@ -112,7 +114,7 @@ CREATE TABLE IF NOT EXISTS avisos_presupuesto (
 const indices = `CREATE INDEX IF NOT EXISTS trabajos_efectivo ON trabajos (creado_en) WHERE modelo_efectivo <> '';`
 
 const columnas = `id, instancia, estado, codigo_error, mensaje_error, solicitud, huella, salida, intento_de, creado_en, actualizado_en, terminado_en,
-	modelo_enviado, modelo_efectivo, tokens_entrada, tokens_salida, costo_usd, punto_acceso, vencido, entradas_eliminadas, pid, firma_proceso, origen`
+	modelo_enviado, modelo_efectivo, tokens_entrada, tokens_salida, costo_usd, punto_acceso, vencido, entradas_eliminadas, pid, firma_proceso, origen, intento`
 
 // Almacen es la base SQLite de una instancia.
 type Almacen struct {

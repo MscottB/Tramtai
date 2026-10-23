@@ -197,6 +197,22 @@ func TestEventosRespaldoSubeIntento(t *testing.T) {
 	}
 }
 
+// Un cliente que se conecta cuando la petición ya terminó en el respaldo no vio el salto: el intento viene guardado.
+func TestEventosIntentoAlConectarTarde(t *testing.T) {
+	registro := map[string]adaptadores.Adaptador{
+		"simulado": adaptadores.Simulado{Error: nucleo.NuevoError(nucleo.CodigoLimiteUsoProveedor, "límite")},
+		"otro":     adaptadores.Simulado{Respuesta: "ok"},
+	}
+	ts := servidor(t, registro, nil)
+	id := crearHola(t, ts, `{"agente":"simulado","respaldo":["otro"],"mensajes":[{"rol":"usuario","contenido":"hola"}]}`)
+	esperarEstado(t, ts, id, nucleo.Completado)
+	eventos, _ := flujoVivo(t, ts)
+	e := esperarEvento(t, eventos, func(e map[string]any) bool { return e["id"] == id || e["foto"] == true })
+	if e["agente"] != "otro" || e["intento"] != float64(2) {
+		t.Fatalf("el primer evento de la petición debe traer el intento guardado (2): %v", e)
+	}
+}
+
 func TestEventosSoloSusTrabajos(t *testing.T) {
 	s := nuevoServidor(t, simulado(adaptadores.Simulado{}), nil, nil)
 	ts := httptest.NewServer(s.Handler())

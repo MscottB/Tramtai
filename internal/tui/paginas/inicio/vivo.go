@@ -90,7 +90,7 @@ func reconciliar(t tranvias, eventos []contrato.EventoTrabajo, ahora time.Time, 
 // eventoDe convierte un trabajo de la consulta en el evento que habría mandado el flujo.
 func eventoDe(j nucleo.Trabajo) contrato.EventoTrabajo {
 	return contrato.EventoTrabajo{ID: j.ID, Estado: string(j.Estado), Etapa: j.Estado.Etapa(), Agente: j.Solicitud.Agente,
-		Modelo: cmp.Or(j.ModeloEfectivo, j.ModeloEnviado), API: j.PuntoAcceso, Origen: j.Origen, Intento: 1, CodigoError: string(j.CodigoError), Creado: j.CreadoEn}
+		Modelo: cmp.Or(j.ModeloEfectivo, j.ModeloEnviado), API: j.PuntoAcceso, Origen: j.Origen, Intento: j.Intento, CodigoError: string(j.CodigoError), Creado: j.CreadoEn}
 }
 
 // claveEtapa es la clave de la Web UI que dice dónde va una petición; la llegada se nombra según cómo terminó.
