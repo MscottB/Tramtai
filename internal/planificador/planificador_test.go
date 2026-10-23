@@ -1333,7 +1333,10 @@ func conLlaveroColgado(t *testing.T) (*persistencia.Almacen, *Planificador) {
 	liberar := make(chan struct{})
 	opc := opciones()
 	opc.Secretos = func() []string { <-liberar; return nil }
-	p := iniciar(t, alm, adaptadores.Simulado{}, 1, opc)
+	p := iniciar(t, alm, porFuncion(func(context.Context, nucleo.SolicitudEjecucion) (adaptadores.Resultado, error) {
+		t.Error("se lanzó el agente sin las claves que se tapan")
+		return adaptadores.Resultado{}, nil
+	}), 1, opc)
 	t.Cleanup(func() { close(liberar) }) // antes que Detener, que sin el arreglo esperaría al almacén
 	return alm, p
 }
