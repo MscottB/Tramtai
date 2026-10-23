@@ -249,6 +249,7 @@ export interface EstadoConversor {
   progreso?: number
   mensaje?: string
   preparar_al_iniciar: boolean
+  paquete?: boolean
 }
 
 export interface Paso {

@@ -570,7 +570,7 @@ const es = {
   'historialAjustes.registroHint': 'Hasta 90 días; nunca menos que las respuestas.',
   'historialAjustes.registroMenor': 'El registro no puede durar menos que las respuestas ({horas} h).',
   'historialAjustes.maximo': 'Máximo de peticiones guardadas',
-  'historialAjustes.maximoHint': 'Entre 100 y 100 000; al pasarlo se borran las más antiguas.',
+  'historialAjustes.maximoHint': 'Entre 100 y 100.000; al pasarlo se borran las más antiguas.',
   'historialAjustes.uso': 'Ahora: {peticiones} peticiones · {mb} MB',
   'historialAjustes.usoUno': 'Ahora: 1 petición · {mb} MB',
   'historialAjustes.guardado': 'Historial guardado',

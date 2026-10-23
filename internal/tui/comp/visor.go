@@ -2,6 +2,7 @@ package comp
 
 import (
 	"regexp"
+	"strconv"
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
@@ -14,6 +15,7 @@ import (
 type Visor struct {
 	vp      viewport.Model
 	estilos *pagina.Estilos
+	alto    int // el que le dan; si el texto no cabe, la última fila es la posición
 }
 
 // NuevoVisor crea un visor vacío; las líneas largas se parten.
@@ -26,13 +28,27 @@ func NuevoVisor(e *pagina.Estilos) Visor {
 // Tamano fija el ancho y el alto del visor.
 func (v *Visor) Tamano(ancho, alto int) {
 	v.vp.SetWidth(ancho)
-	v.vp.SetHeight(alto)
+	v.alto = alto
+	v.ajustar()
 }
 
 // Poner cambia el texto y quita la búsqueda.
 func (v *Visor) Poner(texto string) {
 	v.vp.ClearHighlights()
 	v.vp.SetContent(texto)
+	v.ajustar()
+}
+
+// desborda dice si el texto no cabe en el alto que le dan.
+func (v *Visor) desborda() bool { return v.vp.TotalLineCount() > v.alto }
+
+// ajustar deja al texto el alto entero o, si no cabe, todo menos la fila de la posición, como en Inicio y Probar.
+func (v *Visor) ajustar() {
+	if v.desborda() {
+		v.vp.SetHeight(max(v.alto-1, 1))
+	} else {
+		v.vp.SetHeight(v.alto)
+	}
 }
 
 // Buscar resalta las coincidencias, sin distinguir mayúsculas, salta a la primera y dice cuántas hay.
@@ -74,5 +90,14 @@ func (v *Visor) Update(msg tea.Msg) bool {
 func (v Visor) Vista() string {
 	v.vp.HighlightStyle = v.estilos.Tenue.Reverse(true)
 	v.vp.SelectedHighlightStyle = v.estilos.Seleccion.Reverse(!v.estilos.Color)
-	return v.vp.View()
+	if !v.desborda() || v.alto < 2 {
+		return v.vp.View()
+	}
+	flechas := "↑↓"
+	if v.estilos.ASCII {
+		flechas = "^v"
+	}
+	total := v.vp.TotalLineCount()
+	visto := min(v.vp.YOffset()+v.vp.Height(), total)
+	return v.vp.View() + "\n" + v.estilos.Tenue.Render(flechas+" "+strconv.Itoa(visto)+"/"+strconv.Itoa(total))
 }

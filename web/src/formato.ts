@@ -50,11 +50,18 @@ export function haceCuanto(texto?: string): string {
 export function duracion(desde?: string, hasta?: string): string {
   if (!desde || !hasta) return ''
   const s = (new Date(hasta).getTime() - new Date(desde).getTime()) / 1000
-  return s < 60 ? `${s.toFixed(1)} s` : `${Math.floor(s / 60)} min ${Math.round(s % 60)} s`
+  return s < 60 ? `${decimal(s, 1)} s` : `${Math.floor(s / 60)} min ${Math.round(s % 60)} s`
 }
 
 // numero da un número con los separadores del idioma («200.000»).
 export const numero = (n: number) => n.toLocaleString(idioma.value)
+
+// decimal da un número con esos decimales y los separadores del idioma («0,0069» en español).
+export const decimal = (n: number, decimales: number) =>
+  n.toLocaleString(idioma.value, { minimumFractionDigits: decimales, maximumFractionDigits: decimales })
+
+// costo es el coste de una petición en dólares, con cuatro decimales.
+export const costo = (usd: number) => 'US$ ' + decimal(usd, 4)
 
 // enRango es la regla de un campo numérico (rules de Quasar): un número entre min y max, entero si se pide; si no, el
 // mensaje con los límites.

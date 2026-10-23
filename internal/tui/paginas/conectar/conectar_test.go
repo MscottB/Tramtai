@@ -350,7 +350,7 @@ func TestConsumoComoLaWeb(t *testing.T) {
 			Consumo: nucleo.Consumo{Peticiones: 8, Tokens: 999, USD: 0.5}},
 		Mensual: nucleo.EstadoPeriodo{Limites: nucleo.Limites{Tokens: 20000}, Consumo: nucleo.Consumo{Tokens: 12345}},
 	}
-	quiere := [][3]string{{"Diario · Peticiones", "8 / 10", "0.80"}, {"Diario · USD", "$0.50 / $2.00", "0.25"},
+	quiere := [][3]string{{"Diario · Peticiones", "8 / 10", "0.80"}, {"Diario · USD", "$0,50 / $2,00", "0.25"},
 		{"Mensual · Tokens", "12.345 / 20.000", "0.62"}}
 	if got := conectar.Barras("es", e); !slices.Equal(got, quiere) {
 		t.Fatalf("barras:\n%v\nquiere\n%v", got, quiere)
@@ -382,7 +382,7 @@ func TestConsumoComoLaWeb(t *testing.T) {
 	a.Entregar(tea.WindowSizeMsg{Width: 70, Height: 40})
 	a.HastaVer("██░░░░░░ 20 %", "2 peticiones en")
 	a.Pulsar("enter")
-	a.HastaVer("Diario · Peticiones", "2 / 10", "Mensual · USD", "$0.00 / $2.00", "Se reinicia el día")
+	a.HastaVer("Diario · Peticiones", "2 / 10", "Mensual · USD", "$0,00 / $2,00", "Se reinicia el día")
 	if v := a.Vista(); strings.Contains(v, "Diario · Tokens") {
 		t.Fatalf("sin límite no hay barra:\n%s", v)
 	}

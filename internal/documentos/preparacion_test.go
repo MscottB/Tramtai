@@ -176,6 +176,10 @@ func TestPrepararFallaDejaError(t *testing.T) {
 	if estado := esperar(t, p); estado != "error" || !strings.Contains(p.Estado().Mensaje, "network unreachable") {
 		t.Fatalf("sin red: %+v", p.Estado())
 	}
+	// El paquete del conversor solo se publica para Windows x64 (publicar.yml): solo ahí se ofrece.
+	if quiere := runtime.GOOS == "windows" && runtime.GOARCH == "amd64"; p.Estado().Paquete != quiere {
+		t.Fatalf("paquete %v en %s/%s", p.Estado().Paquete, runtime.GOOS, runtime.GOARCH)
+	}
 }
 
 func TestPrepararFallaConservaElAnterior(t *testing.T) {

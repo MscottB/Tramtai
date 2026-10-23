@@ -112,6 +112,9 @@ func (p *Preparacion) Estado() contrato.EstadoConversor {
 	return e
 }
 
+// hayPaquete dice si hay paquete del conversor para este sistema: publicar.yml solo lo publica para Windows x64.
+const hayPaquete = runtime.GOOS == "windows" && runtime.GOARCH == "amd64"
+
 func (p *Preparacion) estado() contrato.EstadoConversor {
 	u, ok := p.localizar()
 	switch {
@@ -122,7 +125,7 @@ func (p *Preparacion) estado() contrato.EstadoConversor {
 	case ok:
 		return contrato.EstadoConversor{Estado: "listo", Origen: string(u.Origen), Version: u.Version, Mensaje: p.error}
 	case p.error != "":
-		return contrato.EstadoConversor{Estado: "error", Mensaje: p.error}
+		return contrato.EstadoConversor{Estado: "error", Mensaje: p.error, Paquete: hayPaquete}
 	}
 	return contrato.EstadoConversor{Estado: "falta"}
 }

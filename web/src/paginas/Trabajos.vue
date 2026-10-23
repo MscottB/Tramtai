@@ -101,7 +101,7 @@
             <div>{{ t('historial.esfuerzo') }}</div><div>{{ esfuerzoUsado(detalle, eventosDetalle) || sinDato() }}</div>
             <div>{{ t('historial.origen') }}</div><div>{{ textoOrigen(detalle) }}</div>
             <div>{{ t('historial.tokens') }}</div><div>{{ detalle.uso.tokens_entrada }} → {{ detalle.uso.tokens_salida }}</div>
-            <template v-if="detalle.uso.costo_usd"><div>{{ t('historial.coste') }}</div><div>US$ {{ detalle.uso.costo_usd.toFixed(4) }}</div></template>
+            <template v-if="detalle.uso.costo_usd"><div>{{ t('historial.coste') }}</div><div>{{ costo(detalle.uso.costo_usd) }}</div></template>
             <template v-if="detalle.terminado_en"><div>{{ t('historial.duracion') }}</div><div>{{ duracion(detalle.creado_en, detalle.terminado_en) }}</div></template>
             <div>{{ t('historial.identificador') }}</div>
             <div><q-btn flat dense no-caps class="codigo q-pa-none" :label="detalle.id" :aria-label="t('comun.copiar') + ' ' + detalle.id" @click="copiar(detalle.id)"><q-tooltip>{{ t('comun.copiar') }}</q-tooltip></q-btn></div>
@@ -138,7 +138,7 @@ import { api, avisar, avisarError, copiar, mensajeError, tituloError } from '../
 import type { EstadoPunto, EventoRegistro, Trabajo } from '../api/tipos'
 import type { Destino, IntencionDe } from '../navegacion'
 import { modeloDe } from '../agentes'
-import { duracion, estadoInfo, fecha, haceCuanto, esfuerzoUsado, sinDato, terminales, textoDe } from '../formato'
+import { costo, duracion, estadoInfo, fecha, haceCuanto, esfuerzoUsado, sinDato, terminales, textoDe } from '../formato'
 import { historialVivo } from '../historialVivo'
 import { t } from '../i18n'
 

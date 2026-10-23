@@ -178,6 +178,14 @@ test('la Ayuda nombra los botones del recorrido y de soporte con el texto que ti
   }
 })
 
+// v0.56, Tarea 16: los números se escriben como los enseña la pantalla (numero() en Ajustes), no con otro separador.
+test('los textos escriben los números como la pantalla', () => {
+  const casos: [string, number][] = [['ayuda.ajustes.rRetencion', 10000], ['historialAjustes.maximoHint', 100000]]
+  for (const [idioma, textos] of Object.entries(idiomas)) {
+    for (const [clave, n] of casos) assert.ok(textos[clave].includes(n.toLocaleString(idioma)), `${idioma}: ${clave} debe decir ${n.toLocaleString(idioma)}`)
+  }
+})
+
 // Revisión final web (M8, hallazgo 36): DESIGN.md prohíbe robots, cerebros, destellos y bombillas para decir «IA».
 test('la Ayuda no usa iconos de robot, cerebro, destello ni bombilla', () => {
   for (const tema of temas) assert.doesNotMatch(JSON.stringify(tema), /o_smart_toy|o_lightbulb|o_psychology|o_auto_awesome/, tema.id)

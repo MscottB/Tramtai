@@ -90,14 +90,14 @@ func fecha(t time.Time) string {
 	return t.Local().Format("2006-01-02 15:04:05")
 }
 
-// duracion es lo que tardó una petición.
-func duracion(desde time.Time, hasta *time.Time) string {
+// duracion es lo que tardó una petición, con la coma decimal del idioma.
+func duracion(lengua string, desde time.Time, hasta *time.Time) string {
 	if hasta == nil || desde.IsZero() {
 		return ""
 	}
 	s := hasta.Sub(desde).Seconds()
 	if s < 60 {
-		return fmt.Sprintf("%.1f s", s)
+		return pagina.Decimal(lengua, s, 1) + " s"
 	}
 	return fmt.Sprintf("%d min %d s", int(s/60), int(math.Round(math.Mod(s, 60))))
 }
@@ -126,9 +126,9 @@ func (p *Pagina) textoMensaje(t nucleo.Trabajo) string {
 	fila("historial.origen", p.textoOrigen(t))
 	fila("historial.tokens", p.a(fmt.Sprintf("%d → %d", t.Uso.TokensEntrada, t.Uso.TokensSalida)))
 	if t.Uso.CostoUSD > 0 {
-		fila("historial.coste", fmt.Sprintf("US$ %.4f", t.Uso.CostoUSD))
+		fila("historial.coste", "US$ "+pagina.Decimal(p.lengua, t.Uso.CostoUSD, 4))
 	}
-	if d := duracion(t.CreadoEn, t.TerminadoEn); d != "" {
+	if d := duracion(p.lengua, t.CreadoEn, t.TerminadoEn); d != "" {
 		fila("historial.duracion", d)
 	}
 	fila("historial.identificador", t.ID)

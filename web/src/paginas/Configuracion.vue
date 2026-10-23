@@ -69,7 +69,7 @@
           <h2 class="titulo-seccion">{{ t('conversor.titulo') }}</h2>
           <div class="texto-suave text-body2 q-mt-xs">{{ t('conversor.texto') }}</div>
           <div class="text-body2 q-mt-sm" role="status">{{ textoConversor(conversor) }}</div>
-          <div v-if="conversor.estado === 'error'" class="text-caption texto-suave q-mt-xs">{{ t('conversor.redEmpresa') }}</div>
+          <div v-if="conversor.estado === 'error' && conversor.paquete" class="text-caption texto-suave q-mt-xs">{{ t('conversor.redEmpresa') }}</div>
           <q-linear-progress v-if="preparando(conversor)" :value="(conversor.progreso ?? 0) / 100" rounded class="q-mt-sm"
             :aria-label="t('conversor.progreso')" />
           <!-- Preparar de nuevo solo cambia algo si el que se usa es el preparado por Tramtai (no un paquete ni el del sistema). -->

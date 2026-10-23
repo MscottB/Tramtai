@@ -294,13 +294,14 @@ func (p *Pagina) textoRespuesta() string {
 		lineas = append(lineas, e.Tenue.Render(p.nombreEstado(p.estado)+"…"))
 	}
 	if f := p.final; f != nil {
-		lineas = append(lineas, "", e.Tenue.Render(strings.Join(metadatos(*f, p.tx("comun.tokens")), " "+e.Iconos.Separador+" ")))
+		lineas = append(lineas, "", e.Tenue.Render(strings.Join(metadatos(p.lengua, *f, p.tx("comun.tokens")), " "+e.Iconos.Separador+" ")))
 	}
 	return strings.Join(lineas, "\n")
 }
 
-// metadatos son el agente y el modelo, los tokens, el coste y la duración del trabajo terminado.
-func metadatos(t nucleo.Trabajo, tokens string) []string {
+// metadatos son el agente y el modelo, los tokens, el coste y la duración del trabajo terminado, con los decimales del
+// idioma.
+func metadatos(lengua string, t nucleo.Trabajo, tokens string) []string {
 	var partes []string
 	agente := catalogo.NombreVisible(t.Solicitud.Agente)
 	if m := t.ModeloEfectivo; m != "" || t.ModeloEnviado != "" {
@@ -314,12 +315,12 @@ func metadatos(t nucleo.Trabajo, tokens string) []string {
 	}
 	partes = append(partes, fmt.Sprintf("%d → %d %s", t.Uso.TokensEntrada, t.Uso.TokensSalida, tokens))
 	if t.Uso.CostoUSD > 0 {
-		partes = append(partes, fmt.Sprintf("US$ %.4f", t.Uso.CostoUSD))
+		partes = append(partes, "US$ "+pagina.Decimal(lengua, t.Uso.CostoUSD, 4))
 	}
 	if t.TerminadoEn != nil && !t.CreadoEn.IsZero() {
 		s := t.TerminadoEn.Sub(t.CreadoEn).Seconds()
 		if s < 60 {
-			partes = append(partes, fmt.Sprintf("%.1f s", s))
+			partes = append(partes, pagina.Decimal(lengua, s, 1)+" s")
 		} else {
 			partes = append(partes, fmt.Sprintf("%d min %d s", int(s/60), int(math.Round(math.Mod(s, 60)))))
 		}

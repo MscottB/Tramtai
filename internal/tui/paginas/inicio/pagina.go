@@ -554,7 +554,11 @@ func (p *Pagina) avisoConversor() bool {
 // textoConversor es la frase del estado del conversor para los estados que se avisan.
 func (p *Pagina) textoConversor() string {
 	if p.conv.Estado == "error" {
-		return p.tx("conversor.error", "mensaje", p.conv.Mensaje) + "\n" + p.tx("conversor.redEmpresa")
+		texto := p.tx("conversor.error", "mensaje", p.conv.Mensaje)
+		if p.conv.Paquete {
+			texto += "\n" + p.tx("conversor.redEmpresa")
+		}
+		return texto
 	}
 	return p.tx("conversor.falta")
 }

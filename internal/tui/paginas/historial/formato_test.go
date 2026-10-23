@@ -30,6 +30,21 @@ func TestNumeroYTiempo(t *testing.T) {
 	}
 }
 
+// TestCosteYDuracionDelIdioma: la ficha escribe el coste y la duración con la coma decimal en español, como el registro.
+func TestCosteYDuracionDelIdioma(t *testing.T) {
+	for lengua, quiere := range map[string][2]string{"es": {"US$ 0,0069", "13,3 s"}, "en": {"US$ 0.0069", "13.3 s"}} {
+		p := Nueva(lengua).(*Pagina)
+		p.estilos = &pagina.Estilos{Iconos: pagina.IconosUnicode}
+		tr := trabajo("a", "uno", nucleo.Completado)
+		tr.Uso.CostoUSD = 0.0069
+		fin := tr.CreadoEn.Add(13300 * time.Millisecond)
+		tr.TerminadoEn = &fin
+		if texto := p.textoMensaje(tr); !strings.Contains(texto, quiere[0]) || !strings.Contains(texto, quiere[1]) {
+			t.Errorf("%s: falta %q o %q:\n%s", lengua, quiere[0], quiere[1], texto)
+		}
+	}
+}
+
 // TestRegistroComoLaWeb: las líneas del registro dicen lo mismo que RegistroTrabajo.vue: el intento junto a su estado, las
 // correcciones, el esfuerzo del agente, el contexto, la entrada y la validación.
 func TestRegistroComoLaWeb(t *testing.T) {

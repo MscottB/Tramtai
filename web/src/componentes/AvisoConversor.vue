@@ -4,7 +4,7 @@
       <q-icon :name="conversor.estado === 'error' ? 'o_error_outline' : 'o_description'" size="20px" class="q-mt-xs" />
       <div class="col text-body2">
         <div role="status">{{ textoConversor(conversor) }}</div>
-        <div v-if="conversor.estado === 'error'" class="text-caption texto-suave q-mt-xs">{{ t('conversor.redEmpresa') }}</div>
+        <div v-if="conversor.estado === 'error' && conversor.paquete" class="text-caption texto-suave q-mt-xs">{{ t('conversor.redEmpresa') }}</div>
         <BotonAyuda tema="archivos" class="q-mt-xs" />
         <q-linear-progress v-if="conversor.estado === 'preparando'" :value="(conversor.progreso ?? 0) / 100" rounded class="q-mt-sm"
           :aria-label="t('conversor.progreso')" />
