@@ -32,7 +32,14 @@ func abrir(t *testing.T) *persistencia.Almacen {
 }
 
 func opciones() Opciones {
-	return Opciones{Instancia: "global", MaximoCola: 20, MaximoTrabajos: 2, TiempoMaximoCola: time.Hour, TiempoLimitePredeterminado: 30 * time.Second}
+	return Opciones{Instancia: "global", MaximoCola: 20, MaximoTrabajos: 2, TiempoMaximoCola: time.Hour, TiempoLimitePredeterminado: 30 * time.Second,
+		Secretos: sinSecretos}
+}
+
+// sinSecretos no consulta el almacén del sistema: en macOS cada intento lanzaría un proceso por clave y, con el equipo
+// cargado, la petición tardaría segundos (o, si alguien guardó claves, tocaría las suyas).
+func sinSecretos() []string {
+	return nil
 }
 
 func iniciar(t *testing.T, alm *persistencia.Almacen, adaptador adaptadores.Adaptador, limiteAdaptador int, opc Opciones) *Planificador {
@@ -1294,7 +1301,9 @@ func TestPlazoTotalConversion(t *testing.T) {
 func TestSalidaRedactada(t *testing.T) {
 	t.Setenv("ANTHROPIC_API_KEY", "sk-ant-clave-de-prueba-123456")
 	alm := abrir(t)
-	p := iniciar(t, alm, adaptadores.Simulado{Respuesta: "tu clave es sk-ant-clave-de-prueba-123456"}, 1, opciones())
+	opc := opciones()
+	opc.Secretos = nil // los de verdad: el entorno y el almacén
+	p := iniciar(t, alm, adaptadores.Simulado{Respuesta: "tu clave es sk-ant-clave-de-prueba-123456"}, 1, opc)
 	tr := esperar(t, alm, enviar(t, p, solicitud("x")), nucleo.Completado)
 	eventos, _ := alm.Eventos(ctx, tr.ID, 0)
 	for _, e := range eventos {
@@ -1304,6 +1313,52 @@ func TestSalidaRedactada(t *testing.T) {
 	}
 	if strings.Contains(tr.Salida, "sk-ant-clave") || !strings.Contains(tr.Salida, "[REDACTADO]") {
 		t.Fatalf("la salida lleva la clave: %q", tr.Salida)
+	}
+}
+
+// Las claves que tapa cada intento son las de Opciones.Secretos: así las pruebas no dependen del almacén del sistema.
+func TestSalidaRedactadaConLosSecretosDeLasOpciones(t *testing.T) {
+	alm := abrir(t)
+	opc := opciones()
+	opc.Secretos = func() []string { return []string{"clave-de-las-opciones-123"} }
+	p := iniciar(t, alm, adaptadores.Simulado{Respuesta: "va clave-de-las-opciones-123"}, 1, opc)
+	if tr := esperar(t, alm, enviar(t, p, solicitud("x")), nucleo.Completado); tr.Salida != "va [REDACTADO]" {
+		t.Fatalf("salida sin tapar: %q", tr.Salida)
+	}
+}
+
+// conLlaveroColgado inicia un planificador cuyo almacén de claves no responde hasta que acaba la prueba.
+func conLlaveroColgado(t *testing.T) (*persistencia.Almacen, *Planificador) {
+	alm := abrir(t)
+	liberar := make(chan struct{})
+	opc := opciones()
+	opc.Secretos = func() []string { <-liberar; return nil }
+	p := iniciar(t, alm, porFuncion(func(context.Context, nucleo.SolicitudEjecucion) (adaptadores.Resultado, error) {
+		t.Error("se lanzó el agente sin las claves que se tapan")
+		return adaptadores.Resultado{}, nil
+	}), 1, opc)
+	t.Cleanup(func() { close(liberar) }) // antes que Detener, que sin el arreglo esperaría al almacén
+	return alm, p
+}
+
+// Cancelar no espera a un almacén de claves colgado.
+func TestCancelarConElLlaveroColgado(t *testing.T) {
+	alm, p := conLlaveroColgado(t)
+	id := enviar(t, p, solicitud("hola"))
+	esperar(t, alm, id, nucleo.Ejecutando)
+	if _, err := p.Cancelar(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	esperar(t, alm, id, nucleo.Cancelado)
+}
+
+// El plazo de la petición también corta la espera del almacén de claves.
+func TestPlazoConElLlaveroColgado(t *testing.T) {
+	alm, p := conLlaveroColgado(t)
+	s := solicitud("hola")
+	s.Ejecucion.TiempoLimiteSegundos = 1
+	if tr := esperar(t, alm, enviar(t, p, s), nucleo.Fallido); tr.CodigoError != nucleo.CodigoTiempoEjecucionAgotado {
+		t.Fatalf("fuera de plazo: %+v", tr)
 	}
 }
 

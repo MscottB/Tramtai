@@ -41,6 +41,9 @@ type Opciones struct {
 	// Salud recuerda los agentes cuya última petición falló por autenticación; Nuevo la crea si falta.
 	Salud     *adaptadores.Salud
 	Semaforos planificador.Semaforos // compartidos por todas las instancias
+	// Secretos da las claves que se tapan en lo que escribe el agente; nil = el entorno y el almacén del sistema
+	// (planificador.Opciones.Secretos). Las pruebas no tocan el llavero del equipo.
+	Secretos  func() []string
 	Host      string
 	Puerto    int
 	Hosts     []string

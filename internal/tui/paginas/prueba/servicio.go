@@ -109,7 +109,7 @@ func arrancar(t *testing.T, agente adaptadores.Adaptador, ajustar func(*servicio
 	ts := httptest.NewUnstartedServer(nil)
 	var auto atomic.Bool // como un sistema que lo admite, apagado; cambiarlo no toca el arranque del equipo
 	opc := servicio.Opciones{Datos: datos, Config: c, Registro: map[string]adaptadores.Adaptador{"simulado": agente},
-		Semaforos: planificador.NuevosSemaforos(nil), Host: "127.0.0.1", Puerto: ts.Listener.Addr().(*net.TCPAddr).Port, Hosts: []string{"127.0.0.1"},
+		Secretos: func() []string { return nil }, Semaforos: planificador.NuevosSemaforos(nil), Host: "127.0.0.1", Puerto: ts.Listener.Addr().(*net.TCPAddr).Port, Hosts: []string{"127.0.0.1"},
 		Autoarranque:        func() (bool, bool) { return true, auto.Load() },
 		CambiarAutoarranque: func(activo bool) error { auto.Store(activo); return nil }}
 	if ajustar != nil {
