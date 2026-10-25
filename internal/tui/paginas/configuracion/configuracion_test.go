@@ -422,9 +422,8 @@ func TestBuscarAhora(t *testing.T) {
 	a.HastaVer(tx("actualizacion.desactivada", "actual", "")[:20])
 	a.Pulsar("b")
 	a.HastaVer(tx("actualizacion.titulo", "version", "v99.0.0"))
-	if e, _ := estadoDifundido(a.Fuera); !e.Disponible || e.Version != "v99.0.0" {
-		t.Fatalf("buscar ahora llega a la app: %+v", e)
-	}
+	// El estado para la app sale en otro mensaje que la vista: puede llegar justo después de verla (regla 20).
+	a.Hasta(func() bool { e, _ := estadoDifundido(a.Fuera); return e.Disponible && e.Version == "v99.0.0" })
 	a.Pulsar("esc", "space")
 	a.Hasta(func() bool { e, _ := estadoDifundido(a.Fuera); return e.Buscar })
 	a.Pulsar("space")
