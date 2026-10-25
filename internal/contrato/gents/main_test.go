@@ -34,6 +34,11 @@ func TestUnionesYOpcionales(t *testing.T) {
 		"  eleccion_herramienta?: 'auto' | 'ninguna' | 'obligatoria' | { nombre: string }",
 		"  base: string", // ResumenInstancia incrusta EstadoInstancia
 		"  trabajos: Record<string, number>",
+		// Ajustes, actualizaciones y Acerca de: la Web UI no los copia a mano.
+		"export interface AjustesServicio {",
+		"export interface EstadoActualizacion {",
+		"  fase: '' | 'descargando' | 'verificando' | 'listo' | 'instalando' | 'error'",
+		"  commit: string", // Acerca
 	} {
 		if !strings.Contains(ts, quiere) {
 			t.Errorf("falta %q", quiere)
