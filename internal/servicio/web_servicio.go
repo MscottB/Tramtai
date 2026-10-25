@@ -109,7 +109,7 @@ func (s *Servicio) fijarAutoarranque(activo bool) error {
 	return nil
 }
 
-// ajustesServicio son el puerto y el arranque con el sistema, para Ajustes en la terminal.
+// ajustesServicio son el puerto y el arranque con el sistema, para Ajustes en la terminal y la sesión de la Web UI.
 func (s *Servicio) ajustesServicio() contrato.AjustesServicio {
 	s.mu.RLock()
 	a := contrato.AjustesServicio{Puerto: s.opc.Puerto, PuertoConfigurado: cmp.Or(s.opc.PuertoConfigurado, s.opc.Puerto),

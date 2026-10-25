@@ -3,6 +3,7 @@ package servicio
 import (
 	"context"
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -11,6 +12,32 @@ import (
 	"tramtai/internal/contrato"
 	"tramtai/internal/version"
 )
+
+// La sesión local de la Web UI enseña el puerto y el arranque con el sistema que ve Ajustes en la terminal; el arranque
+// va aparte, fuera de servicio.
+func TestSesionWebYAjustesCoinciden(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	s.ActivarGlobal()
+	s.opc.Autoarranque = func() (bool, bool) { return true, true }
+	s.opc.PuertoConfigurado, s.opc.PuertoAutomatico = 4321, true
+	n := nuevoNavegador(t, ts.URL)
+	codigo, _ := s.CodigoSesion("global")
+	n.pedir("GET", "/ui/entrar?codigo="+codigo, "")
+	_, cuerpo := n.pedir("GET", "/ui/sesion", "")
+	var sesion struct {
+		Servicio     json.RawMessage `json:"servicio"`
+		Autoarranque *bool           `json:"autoarranque"`
+	}
+	var web, terminal contrato.AjustesServicio
+	if err := json.Unmarshal([]byte(cuerpo), &sesion); err != nil || json.Unmarshal(sesion.Servicio, &web) != nil || strings.Contains(string(sesion.Servicio), "autoarranque") {
+		t.Fatalf("sesión: %v %s", err, cuerpo)
+	}
+	web.Autoarranque = sesion.Autoarranque
+	_, texto := admin(t, s, ts.URL, "GET", "/api/v1/servicio/ajustes", "")
+	if err := json.Unmarshal([]byte(texto), &terminal); err != nil || !reflect.DeepEqual(web, terminal) {
+		t.Fatalf("la Web UI ve %s y la terminal %s", cuerpo, texto)
+	}
+}
 
 // La terminal llega a Ajustes por la administración, con el token de servicio: el puerto y el arranque con el sistema,
 // las actualizaciones (consultar, buscar ahora, activar la búsqueda, actualizar y decidir la instalación) y Acerca de.
