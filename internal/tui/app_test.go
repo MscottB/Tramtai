@@ -315,6 +315,16 @@ func TestServicioCaidoNoCierra(t *testing.T) {
 	}
 }
 
+// TestRAlConectarNoCierra: r en Inicio mientras la terminal aún conecta (sin cliente y con la página sin iniciar) no
+// pide nada al servicio: Inicio dice que no hay servicio, como las demás páginas, y la terminal sigue.
+func TestRAlConectarNoCierra(t *testing.T) {
+	m := nuevo(Opciones{})
+	a := conducir(t, m)
+	if salio(a.Pulsar("r")) || m.actual != pagina.PaginaInicio {
+		t.Fatalf("r no cierra la terminal:\n%s", a.Vista())
+	}
+}
+
 func TestTeclasComunesNoEnCampo(t *testing.T) {
 	m := nuevo(Opciones{})
 	falsa := &paginaFalsa{campo: true}
