@@ -315,26 +315,43 @@ func TestClienteAjustarPunto(t *testing.T) {
 	}
 }
 
-// TestClienteClaveInstancia: la clave del espacio se lee con el token de servicio y es la que vale tras regenerarla.
-func TestClienteClaveInstancia(t *testing.T) {
+// TestClienteEstadoClave: el estado dice si hay clave sin darla; la que devuelve crearla o regenerarla es la única que
+// entra y la anterior deja de valer.
+func TestClienteEstadoClave(t *testing.T) {
 	cli, _ := servicioDePrueba(t, "")
 	ctx := context.Background()
 	if _, err := cli.Activar(ctx, "global", ""); err != nil {
 		t.Fatal(err)
 	}
-	antes, err := cli.ClaveInstancia(ctx, "global")
-	if err != nil || !strings.HasPrefix(antes, "tt_") {
-		t.Fatalf("clave: %q %v", antes, err)
+	if e, err := cli.EstadoClave(ctx, "global"); err != nil || e.TieneClave {
+		t.Fatalf("un espacio nuevo no tiene clave: %+v %v", e, err)
 	}
-	nueva, err := cli.RotarClave(ctx, "global")
-	if err != nil {
-		t.Fatal(err)
+	entra := func(clave string) bool {
+		t.Helper()
+		req, _ := http.NewRequestWithContext(ctx, "GET", cli.Base+"/api/v1/instancia", nil)
+		req.Header.Set("Authorization", "Bearer "+clave)
+		r, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r.Body.Close()
+		return r.StatusCode == 200
 	}
-	if ahora, err := cli.ClaveInstancia(ctx, "global"); err != nil || ahora != nueva || ahora == antes {
-		t.Fatalf("tras regenerar: %q (nueva %q, antes %q) %v", ahora, nueva, antes, err)
+	primera, err := cli.RotarClave(ctx, "global")
+	if err != nil || !strings.HasPrefix(primera, "tt_") {
+		t.Fatalf("crear la clave: %q %v", primera, err)
+	}
+	if e, err := cli.EstadoClave(ctx, "global"); err != nil || !e.TieneClave {
+		t.Fatalf("tras crearla tiene clave: %+v %v", e, err)
+	}
+	if !entra(primera) {
+		t.Fatal("la clave devuelta tiene que entrar")
+	}
+	segunda, err := cli.RotarClave(ctx, "global")
+	if err != nil || segunda == primera || entra(primera) || !entra(segunda) {
+		t.Fatalf("regenerar deja fuera la anterior: %q %v", segunda, err)
 	}
 }
-
 func TestClienteTrabajosFiltrados(t *testing.T) {
 	cli, _ := servicioDePrueba(t, "")
 	ctx := context.Background()

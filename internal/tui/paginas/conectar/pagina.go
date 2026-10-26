@@ -25,7 +25,7 @@ type origen struct{ pagina.Origen }
 
 type (
 	// msgCarga trae las APIs con su uso y su consumo y, si llega, el presupuesto del espacio. La carga completa trae además
-	// el resumen del espacio, su nombre, lo que dura el historial, el catálogo y la clave del espacio.
+	// el resumen del espacio, su nombre, lo que dura el historial, el catálogo y el estado de la clave del espacio.
 	msgCarga struct {
 		origen
 		n           int
@@ -37,7 +37,7 @@ type (
 		horas       int
 		catalogo    []contrato.Modelo
 		errCatalogo error
-		clave       string
+		estadoClave contrato.EstadoClave
 		errClave    error
 		err         error
 	}
@@ -71,6 +71,7 @@ const (
 	accRegenerarEspacio = "regenerarEspacio"
 	accCerrarDetalle    = "cerrarDetalle"
 	accCerrarForm       = "cerrarForm"
+	accSalirClave       = "salirClave"
 )
 
 // Las pestañas, en el orden de la Web UI; la primera es la de siempre.
@@ -96,9 +97,11 @@ type Pagina struct {
 	horas    int
 	catalogo []contrato.Modelo
 	errCat   string // por qué no llegó el catálogo: el formulario lo avisa y deja escribir el modelo
-	clave    string // la del espacio
-	errClave string
-	verClave bool
+	// La clave del espacio no se guarda, así que no hay cómo leerla: estadoClave dice si existe y de dónde viene, y
+	// claveEspacio es la recién creada o regenerada, que solo se ve esta vez y se olvida al salir de la pestaña.
+	estadoClave  contrato.EstadoClave
+	errClave     string
+	claveEspacio string
 
 	n        int  // la última carga pedida: solo vale su respuesta
 	completa bool // falta una carga completa: hasta que llegue, toda carga es completa (una parcial no la pisa)
@@ -136,7 +139,7 @@ func (p *Pagina) EnCampo() bool { return p.buscando || p.form != nil }
 // Pendiente avisa antes de salir si se perdería algo: una clave que no se vuelve a mostrar o un formulario a medias.
 func (p *Pagina) Pendiente() string {
 	switch {
-	case p.claveVista != "":
+	case p.claveVista != "" || p.claveEspacio != "":
 		return p.tx("cierre.clave")
 	case p.form != nil && p.form.cambiado():
 		return p.tx("cierre.texto")
@@ -150,7 +153,7 @@ func (p *Pagina) tx(clave string, pares ...string) string {
 
 // Iniciar vuelve a cargar: «Cargando…» hasta que llegue la lista, en la pestaña de las APIs. En el mismo espacio (el
 // servicio volvió, o se vuelve por el menú) el formulario y el detalle abiertos se conservan, con la clave que solo se ve
-// esta vez; con otro espacio, se cierran.
+// esta vez y la del espacio; con otro espacio, se cierran y se olvidan.
 func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	otro := p.c.Instancia != c.Instancia
 	p.c, p.lengua = c, c.Idioma
@@ -162,12 +165,12 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 		p.lista.Fila = p.fila
 		p.visor = comp.NuevoVisor(c.Estilos)
 	}
-	p.datos, p.espacio, p.resumen, p.nombre, p.clave, p.errClave, p.verClave = contrato.ListaPuntos{}, nucleo.EstadoPresupuesto{}, contrato.ResumenInstancia{}, "", "", "", false
+	p.datos, p.espacio, p.resumen, p.nombre, p.estadoClave, p.errClave = contrato.ListaPuntos{}, nucleo.EstadoPresupuesto{}, contrato.ResumenInstancia{}, "", contrato.EstadoClave{}, ""
 	p.cargado, p.sinServ, p.err, p.pestana, p.ocupado, p.pend = false, false, "", pestanaApis, false, nil
 	p.filtros, p.buscando, p.entrada, p.catalogo, p.errCat = sinFiltros, false, "", nil, ""
 	if otro {
 		p.cerrarDetalle()
-		p.form = nil
+		p.form, p.claveEspacio = nil, ""
 	}
 	p.aplicarFiltros()
 	return p.cargar(true)
@@ -178,8 +181,8 @@ func (p *Pagina) vigente(o origen) bool { return o.Vigente(p.c, p.gen) }
 
 // cargar pide la lista y el presupuesto del espacio, como cargarPuntos de la Web UI tras cada cambio. La carga completa (al
 // entrar y con r) pide además lo que no cambia con las acciones: el resumen y el nombre del espacio, lo que dura el
-// historial, el catálogo y la clave. Sin la lista no hay página; lo demás, si falla, se queda como estaba (la clave dice
-// su error).
+// historial, el catálogo y el estado de la clave. Sin la lista no hay página; lo demás, si falla, se queda como estaba (la
+// clave dice su error).
 func (p *Pagina) cargar(completa bool) tea.Cmd {
 	c := p.c
 	if c.Cli == nil {
@@ -213,7 +216,7 @@ func (p *Pagina) cargar(completa bool) tea.Cmd {
 				m.nombre = es[i].Nombre
 			}
 		}
-		m.clave, m.errClave = c.Cli.ClaveInstancia(c.Ctx, c.Instancia)
+		m.estadoClave, m.errClave = c.Cli.EstadoClave(c.Ctx, c.Instancia)
 		return m
 	}
 }
@@ -285,7 +288,7 @@ func (p *Pagina) alCargar(m msgCarga) tea.Cmd {
 		if m.errCatalogo != nil {
 			p.errCat = nucleo.MensajeDe(m.errCatalogo)
 		}
-		p.clave, p.errClave = m.clave, ""
+		p.estadoClave, p.errClave = m.estadoClave, ""
 		if m.errClave != nil {
 			p.errClave = nucleo.MensajeDe(m.errClave)
 		}
@@ -325,7 +328,7 @@ func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
 		p.arriba()
 	}
 	if m.claveEspacio != "" {
-		p.clave, p.errClave, p.verClave = m.claveEspacio, "", true
+		p.claveEspacio, p.errClave, p.estadoClave.TieneClave = m.claveEspacio, "", true
 	}
 	cmds := []tea.Cmd{p.cargar(false)}
 	if m.exito != "" {
@@ -385,13 +388,21 @@ func (p *Pagina) confirmado() tea.Cmd {
 			return c.Cli.ReiniciarPresupuestoInstancia(c.Ctx, c.Instancia)
 		})
 	case accRegenerarEspacio:
-		return p.accion(p.tx("conectar.claveRegenerada"), func(c pagina.Contexto, m *msgAccion) error {
-			var err error
-			m.claveEspacio, err = c.Cli.RotarClave(c.Ctx, c.Instancia)
-			return err
-		})
+		return p.rotarClave(p.tx("conectar.claveRegenerada"))
+	case accSalirClave:
+		p.claveEspacio, p.pestana = "", pestanaApis
+		p.arriba()
 	}
 	return nil
+}
+
+// rotarClave crea la clave del espacio o la regenera; el servicio la da esta única vez y la página la enseña.
+func (p *Pagina) rotarClave(exito string) tea.Cmd {
+	return p.accion(exito, func(c pagina.Contexto, m *msgAccion) error {
+		var err error
+		m.claveEspacio, err = c.Cli.RotarClave(c.Ctx, c.Instancia)
+		return err
+	})
 }
 
 // preguntar recuerda qué se va a hacer y pregunta antes.
@@ -459,7 +470,11 @@ func (p *Pagina) tecla(k tea.KeyPressMsg) tea.Cmd {
 		return p.cargar(true)
 	case "left", "right":
 		if p.cargado {
-			p.pestana = map[string]int{"left": pestanaApis, "right": pestanaClave}[t]
+			destino := map[string]int{"left": pestanaApis, "right": pestanaClave}[t]
+			if p.claveEspacio != "" && p.pestana == pestanaClave && destino != p.pestana { // la clave solo se ve esta vez: se pregunta, como Esc en el detalle
+				return p.preguntar(accSalirClave, "", p.tx("cierre.claveTitulo"), p.tx("cierre.clave"))
+			}
+			p.pestana = destino
 			p.arriba()
 		}
 		return nil
@@ -564,12 +579,16 @@ func (p *Pagina) teclaDetalle(t string, k tea.KeyPressMsg) tea.Cmd {
 
 func (p *Pagina) teclaClave(t string, k tea.KeyPressMsg) tea.Cmd {
 	switch t {
-	case "v":
-		p.verClave = !p.verClave
 	case "y":
-		return comp.Copiar(p.clave)
+		if p.claveEspacio != "" {
+			return comp.Copiar(p.claveEspacio)
+		}
 	case "t":
-		if p.clave != "" {
+		switch {
+		case !p.puedeRotar():
+		case !p.estadoClave.TieneClave: // la primera clave no pierde nada: se crea sin preguntar
+			return p.rotarClave(p.tx("conectar.claveCreada"))
+		default:
 			return p.preguntar(accRegenerarEspacio, "", p.tx("conectar.regenerarTitulo"), p.tx("conectar.regenerarTexto"))
 		}
 	case "R":
@@ -581,6 +600,10 @@ func (p *Pagina) teclaClave(t string, k tea.KeyPressMsg) tea.Cmd {
 	}
 	return nil
 }
+
+// puedeRotar dice si Tramtai puede crear o regenerar la clave del espacio: no la de una variable de entorno (se cambia en
+// la variable) ni mientras no se sepa si ya existe, para no pisar una que sí está.
+func (p *Pagina) puedeRotar() bool { return p.estadoClave.Origen != "variable" && p.errClave == "" }
 
 // teclaBusqueda: lo escrito filtra al momento; Intro la deja puesta y Esc la quita.
 func (p *Pagina) teclaBusqueda(k tea.KeyPressMsg) tea.Cmd {
@@ -700,12 +723,17 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		return append(teclas, pagina.Tecla{Tecla: "h", Accion: p.tx("puntos.verPeticiones")}, pagina.Tecla{Tecla: "p", Accion: p.tx("puntos.abrirProbar")},
 			pagina.Tecla{Tecla: "x", Accion: p.tx("comun.eliminar")})
 	case p.pestana == pestanaClave:
-		ver := p.tx("conectar.mostrarClave")
-		if p.verClave {
-			ver = p.tx("conectar.ocultarClave")
+		teclas := []pagina.Tecla{{Tecla: p.flechas(), Accion: idioma.T("pestañas")}}
+		if p.claveEspacio != "" {
+			teclas = append(teclas, pagina.Tecla{Tecla: "y", Accion: idioma.T("copia")})
 		}
-		teclas := []pagina.Tecla{{Tecla: p.flechas(), Accion: idioma.T("pestañas")}, {Tecla: "v", Accion: ver}, {Tecla: "y", Accion: idioma.T("copia")},
-			{Tecla: "t", Accion: p.tx("conectar.regenerarClave")}}
+		if p.puedeRotar() {
+			accion := p.tx("conectar.regenerarClave")
+			if !p.estadoClave.TieneClave {
+				accion = p.tx("conectar.crearClave")
+			}
+			teclas = append(teclas, pagina.Tecla{Tecla: "t", Accion: accion})
+		}
 		if conLimites(p.espacio) {
 			teclas = append(teclas, pagina.Tecla{Tecla: "R", Accion: p.tx("presupuesto.reiniciar")})
 		}

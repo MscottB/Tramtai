@@ -95,6 +95,9 @@ func TestSinCatalogo(t *testing.T) {
 func TestParcialNoPisaLaCompleta(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	crear(t, cli, id, contrato.ConfigPunto{Nombre: "mi-app"})
+	if _, err := cli.RotarClave(t.Context(), id); err != nil {
+		t.Fatal(err)
+	}
 	a := abierta(t, cli, id)
 	accion := a.Retener(func() { a.Pulsar("a") })
 	completa := a.Retener(func() { a.Correr(a.P.Iniciar(contexto(t, cli, id))) })
@@ -103,9 +106,5 @@ func TestParcialNoPisaLaCompleta(t *testing.T) {
 	a.Soltar(completa) // ya es vieja
 	a.Entregar(tea.WindowSizeMsg{Width: 70, Height: 60})
 	a.Pulsar("right")
-	clave, err := cli.ClaveInstancia(t.Context(), id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	a.HastaVer(clave[:6]+"•••", "perfil/rapido")
+	a.HastaVer("El espacio ya tiene clave", "perfil/rapido")
 }
