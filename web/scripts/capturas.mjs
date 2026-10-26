@@ -298,9 +298,9 @@ try {
       return { x: x + scrollX, y: y + scrollY, width, height }
     })()`)
   }
-  // FILAS son las anclas que son una lista de filas: su texto habla de la fila entera (el estado va a la derecha), así que
-  // su zona abarca el ancho del ancla, a costa del aumento.
-  const FILAS = new Set(['agentes.tarjeta', 'espacios.lista'])
+  // ENTERAS son las anclas que su paso explica enteras: las listas de filas (el estado va a la derecha) y el mapa (sus
+  // agentes, a la derecha, son la mitad de lo que cuenta). Su zona abarca el ancho del ancla, a costa del aumento.
+  const ENTERAS = new Set(['agentes.tarjeta', 'espacios.lista', 'inicio.mapa'])
   // huecoListo dice si el hueco del velo (el path evenodd de .driver-overlay) deja ver lo señalado entero: mira sus cuatro
   // esquinas, 2 px hacia dentro (dentro de la pantalla).
   const huecoListo = `(() => {
@@ -334,7 +334,7 @@ try {
         // Lo que señala el paso pudo crecer al llegar sus datos: driver.js recoloca el hueco del velo con un resize.
         if (paso.ancla) await hasta(async () => { await evaluar(`dispatchEvent(new Event('resize'))`); await esperar(200); return evaluar(huecoListo) }, 10, `el hueco del velo sobre ${paso.ancla}`)
         else await evaluar(`scrollTo(0, 0)`)
-        const zona = paso.ancla ? await zonaDelPaso(FILAS.has(paso.ancla) ? 1440 : 820) : { x: 0, y: 0, width: 1440, height: 900 }
+        const zona = paso.ancla ? await zonaDelPaso(ENTERAS.has(paso.ancla) ? 1440 : 820) : { x: 0, y: 0, width: 1440, height: 900 }
         // Sin el globo del recorrido; si el paso no señala nada, tampoco el velo (saldría la pantalla oscurecida).
         const tapan = paso.ancla ? '.driver-popover' : '.driver-popover, .driver-overlay'
         await evaluar(`document.querySelectorAll('${tapan}').forEach((e) => { e.style.visibility = 'hidden' })`)

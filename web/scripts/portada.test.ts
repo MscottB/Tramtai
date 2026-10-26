@@ -415,14 +415,15 @@ test('las capturas de la demo recortan la zona del paso y ocultan el globo del r
   // listas de filas, cuyo texto habla de la fila entera, abarcan su ancho.
   assert.match(capturasJs, /Math\.min\(maximo, Math\.max\(720, /)
   assert.match(capturasJs, /async function zonaDelPaso\(maximo = 820\)/)
-  assert.match(capturasJs, /FILAS = new Set\(\['agentes\.tarjeta', 'espacios\.lista'\]\)/)
+  // El mapa del paso 1 también va entero: sus agentes son la mitad de lo que explica el paso.
+  assert.match(capturasJs, /ENTERAS = new Set\(\['agentes\.tarjeta', 'espacios\.lista', 'inicio\.mapa'\]\)/)
   assert.match(capturasJs, /\[b\.left \+ 2, b\.top \+ 2\]/)
   // Un ancla más ancha que la zona se recorta desde su borde izquierdo (con su margen): centrada perdía los nombres.
   assert.ok(capturasJs.includes('b.width + 64 > width ? b.left - 32 : b.left + b.width / 2 - width / 2'), 'el ancla ancha arranca a la izquierda')
 })
 // El último paso no tiene ancla, pero driver.js deja en el DOM el resaltado del anterior: se decide por el paso.
 test('el paso sin ancla sale con la pantalla entera desde arriba, sin velo', () => {
-  assert.ok(capturasJs.includes('paso.ancla ? await zonaDelPaso(FILAS.has(paso.ancla) ? 1440 : 820) : { x: 0, y: 0, width: 1440, height: 900 }'), 'el último paso recorta una zona')
+  assert.ok(capturasJs.includes('paso.ancla ? await zonaDelPaso(ENTERAS.has(paso.ancla) ? 1440 : 820) : { x: 0, y: 0, width: 1440, height: 900 }'), 'el último paso recorta una zona')
   assert.ok(capturasJs.includes("'.driver-popover, .driver-overlay'"), 'el último paso sale con el velo')
 })
 
