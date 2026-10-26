@@ -303,3 +303,14 @@ test('Funciones son cuatro grupos de tres tarjetas en tres columnas, sin huecos 
   for (const g of grupos) assert.equal((g.match(/<article class="tarjeta">/g) ?? []).length, 3)
   assert.match(css, /\.rejilla \{ display: grid; grid-template-columns: repeat\(3, 1fr\)/)
 })
+
+test('Homebrew sin la app: el tap lleva la URL del repositorio y después «brew install tramtai» (el tap corto no existe)', () => {
+  const tap = 'brew tap mscottb/tramtai https://github.com/MscottB/Tramtai'
+  const linux = html.match(/<article class="tarjeta" data-sistema="linux">[\s\S]*?<\/article>/)?.[0] ?? ''
+  assert.ok(linux.includes(tap + '\nbrew install tramtai'), 'tarjeta de Linux')
+  for (const textos of [es, en]) {
+    const r = textos['ayuda.empezar.rTerminal']
+    assert.ok(r.includes(tap) && r.includes('brew install tramtai'), r)
+  }
+  assert.ok(![html, es['ayuda.empezar.rTerminal'], en['ayuda.empezar.rTerminal']].some((x) => x.includes('mscottb/tramtai/tramtai')))
+})

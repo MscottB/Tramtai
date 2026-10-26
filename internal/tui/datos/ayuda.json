@@ -93,7 +93,7 @@
             ],
             [
               "¿Puedo usar solo la terminal?",
-              "Sí: mira «Solo con la terminal», más arriba. Sin la app de escritorio, «brew install mscottb/tramtai/tramtai» o el script instalar.sh dejan la CLI y el servicio."
+              "Sí: mira «Solo con la terminal». Sin la app, el script instalar.sh deja la CLI y el servicio; con Homebrew, «brew tap mscottb/tramtai https://github.com/MscottB/Tramtai» y «brew install tramtai»."
             ]
           ]
         },
@@ -1310,7 +1310,7 @@
             ],
             [
               "Can I use only the terminal?",
-              "Yes: see “Terminal only” above. Without the desktop app, “brew install mscottb/tramtai/tramtai” or the instalar.sh script install the CLI and the service."
+              "Yes: see “Terminal only”. Without the app, instalar.sh installs the CLI and the service; with Homebrew, “brew tap mscottb/tramtai https://github.com/MscottB/Tramtai” and “brew install tramtai”."
             ]
           ]
         },
