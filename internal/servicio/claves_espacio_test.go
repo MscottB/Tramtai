@@ -26,13 +26,18 @@ func estadoClaveUI(t *testing.T, n *navegador) (EstadoClave, string) {
 	return e, cuerpo
 }
 
-// claveEntra dice si la clave entra por la API nativa y por la compatible con OpenAI; las dos tienen que coincidir.
+// claveEntra dice si la clave entra por la API nativa, por la compatible con OpenAI y por la de Anthropic; las tres
+// tienen que coincidir. En la de Anthropic, con el cuerpo vacío «{}», entrar es cualquier respuesta que no sea 401.
 func claveEntra(t *testing.T, base, clave string) bool {
 	t.Helper()
 	nativa, _ := pedir(t, base, "GET", "/api/v1/modelos", clave, "")
 	openai, _ := pedir(t, base, "GET", "/openai/v1/models", clave, "")
+	anthropic, _ := pedir(t, base, "POST", "/anthropic/v1/messages", clave, `{}`)
 	if nativa.StatusCode != openai.StatusCode || (nativa.StatusCode != 200 && nativa.StatusCode != 401) {
 		t.Fatalf("la clave en la API nativa y en la de OpenAI: %d %d", nativa.StatusCode, openai.StatusCode)
+	}
+	if entra := nativa.StatusCode == 200; entra == (anthropic.StatusCode == 401) {
+		t.Fatalf("la clave en la API nativa (%d) y en la de Anthropic (%d) no coinciden", nativa.StatusCode, anthropic.StatusCode)
 	}
 	return nativa.StatusCode == 200
 }

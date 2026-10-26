@@ -544,7 +544,6 @@ func TestClaveDelEspacioAlVolver(t *testing.T) {
 	a.Correr(a.P.Iniciar(contexto(t, cli, id)))
 	a.EsperarCarga()
 	a.Entregar(tea.WindowSizeMsg{Width: 90, Height: 40})
-	a.Pulsar("right")
 	if pendiente() == "" || !strings.Contains(a.Vista(), clave) {
 		t.Fatalf("en el mismo espacio la clave se conserva:\n%s", a.Vista())
 	}

@@ -64,7 +64,7 @@
           :options="ejemplos.map((e) => ({ label: e.titulo(), value: e.id }))" /></div>
       </div>
       <q-card-section>
-        <div class="bloque-codigo sin-ajuste">{{ ejemplo.codigo(t('codigo.tuClave')) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('conectar.copiarEjemplo')" @click="copiar(ejemplo.codigo(t('codigo.tuClave')), t('conectar.ejemploCopiado'))" /></div>
+        <div class="bloque-codigo sin-ajuste">{{ ejemplo.codigo(t('codigo.tuClave')) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('conectar.copiarEjemplo')" @click="copiar(ejemplo.codigo(t('codigo.tuClave')))" /></div>
       </q-card-section>
       <template v-if="presupuestoEspacio">
         <q-separator />

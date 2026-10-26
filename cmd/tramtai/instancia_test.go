@@ -15,6 +15,7 @@ import (
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
 	"tramtai/internal/api"
+	"tramtai/internal/cliente"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/planificador"
 	"tramtai/internal/servicio"
@@ -71,6 +72,16 @@ func TestTokenDelEspacioSinServicio(t *testing.T) {
 	}
 
 	// Un servicio que arranca después sobre esa carpeta acepta la clave impresa.
+	ts := servicioEnMarcha(t, datos)
+	if claveEntra(t, ts.URL, clave) != 200 || claveEntra(t, ts.URL, "tt_"+strings.Repeat("0", 64)) != 401 {
+		t.Fatal("la clave impresa entra al iniciar el servicio y otra no")
+	}
+}
+
+// servicioEnMarcha inicia un servicio en memoria sobre esa carpeta de datos, con el espacio global activo y su
+// descriptor escrito (lo que cliente.Conectar necesita para encontrarlo).
+func servicioEnMarcha(t *testing.T, datos string) *httptest.Server {
+	t.Helper()
 	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	if err != nil {
 		t.Fatal(err)
@@ -88,18 +99,60 @@ func TestTokenDelEspacioSinServicio(t *testing.T) {
 	if _, err := s.ActivarGlobal(); err != nil {
 		t.Fatal(err)
 	}
-	pedir := func(clave string) int {
-		req, _ := http.NewRequest("GET", ts.URL+"/api/v1/modelos", nil)
-		req.Header.Set("Authorization", "Bearer "+clave)
-		r, err := http.DefaultClient.Do(req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		r.Body.Close()
-		return r.StatusCode
+	if err := s.EscribirDescriptor(); err != nil {
+		t.Fatal(err)
 	}
-	if pedir(clave) != 200 || pedir("tt_"+strings.Repeat("0", 64)) != 401 {
-		t.Fatal("la clave impresa entra al iniciar el servicio y otra no")
+	return ts
+}
+
+// claveEntra devuelve el código con que la API nativa responde a esa clave.
+func claveEntra(t *testing.T, base, clave string) int {
+	t.Helper()
+	req, _ := http.NewRequest("GET", base+"/api/v1/modelos", nil)
+	req.Header.Set("Authorization", "Bearer "+clave)
+	r, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Body.Close()
+	return r.StatusCode
+}
+
+// Con el servicio en marcha, --rotar lo hace por él: la clave impresa vale al momento y, al repetirlo, la anterior deja
+// de valer.
+func TestTokenDelEspacioConServicio(t *testing.T) {
+	dir := t.TempDir()
+	global := filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(global, []byte("predeterminados:\n  agente: simulado\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+	t.Setenv("TRAMTAI_TOKEN_GLOBAL", "")
+	datos := filepath.Join(dir, "datos")
+	ts := servicioEnMarcha(t, datos)
+	if _, err := cliente.Conectar(datos); err != nil {
+		t.Fatalf("la prueba necesita que el cliente encuentre el servicio: %v", err)
+	}
+
+	rotar := func() string {
+		t.Helper()
+		salida, err := tokenDePrueba(t, datos, true)
+		clave := strings.TrimSpace(salida)
+		if err != nil || !regexp.MustCompile(`^tt_[0-9a-f]{64}$`).MatchString(clave) {
+			t.Fatalf("--rotar con el servicio: %v\n%s", err, salida)
+		}
+		return clave
+	}
+	primera := rotar()
+	if claveEntra(t, ts.URL, primera) != 200 {
+		t.Fatal("la clave creada con el servicio en marcha vale al momento")
+	}
+	if guardado, _ := os.ReadFile(servicio.RutaTokenInstancia(datos, "global")); strings.TrimSpace(string(guardado)) != api.HuellaToken(primera) {
+		t.Fatalf("en el archivo solo va la huella: %q", guardado)
+	}
+	segunda := rotar()
+	if segunda == primera || claveEntra(t, ts.URL, primera) != 401 || claveEntra(t, ts.URL, segunda) != 200 {
+		t.Fatal("regenerar deja fuera la anterior y deja entrar la nueva")
 	}
 }
 

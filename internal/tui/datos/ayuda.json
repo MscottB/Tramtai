@@ -919,11 +919,11 @@
             ],
             [
               "¿Y si se filtra la clave del espacio?",
-              "Regenérala en Mis APIs, pestaña «Clave del espacio», o con «tramtai global token --rotar»: la anterior deja de valer al momento. Las APIs por aplicación no cambian."
+              "Regenérala en «Clave del espacio» de Mis APIs, o con «tramtai global token --rotar» («tramtai proyecto token --rotar» en un proyecto). La anterior deja de valer al momento; las demás APIs no cambian."
             ],
             [
               "¿Dónde veo la clave del espacio?",
-              "Solo al crearla o regenerarla: Tramtai guarda únicamente su huella. Un espacio nuevo no tiene clave; créala en Mis APIs, pestaña «Clave del espacio», o con «tramtai global token --rotar»."
+              "Solo al crearla o regenerarla. Un espacio nuevo no tiene clave: créala en «Clave del espacio» de Mis APIs o con «tramtai global token --rotar» («tramtai proyecto token --rotar» en un proyecto)."
             ],
             [
               "¿Y si uso la variable TRAMTAI_TOKEN_GLOBAL?",
@@ -2144,11 +2144,11 @@
             ],
             [
               "What if the workspace key leaks?",
-              "Regenerate it in My APIs, “Workspace key” tab, or with “tramtai global token --rotar”: the old one stops working at once. Per-app APIs do not change."
+              "Regenerate it in “Workspace key” in My APIs, or with “tramtai global token --rotar” (“tramtai proyecto token --rotar” in a project). The old one stops working at once. Per-app APIs do not change."
             ],
             [
               "Where do I see the workspace key?",
-              "Only when you create or regenerate it: Tramtai stores just its hash. A new workspace has no key; create it in My APIs, “Workspace key” tab, or with “tramtai global token --rotar”."
+              "Only when you create or regenerate it. A new workspace has no key: create it in “Workspace key” in My APIs or with “tramtai global token --rotar” (“tramtai proyecto token --rotar” in a project)."
             ],
             [
               "What if I use the TRAMTAI_TOKEN_GLOBAL variable?",

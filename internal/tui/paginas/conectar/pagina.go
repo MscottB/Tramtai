@@ -173,6 +173,9 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 		p.cerrarDetalle()
 		p.form, p.claveEspacio = nil, ""
 	}
+	if p.claveEspacio != "" { // la clave recién hecha solo se ve esta vez: se vuelve a la pestaña donde está
+		p.pestana = pestanaClave
+	}
 	p.aplicarFiltros()
 	return p.cargar(true)
 }

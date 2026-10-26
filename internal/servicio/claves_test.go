@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"tramtai/internal/agentes"
@@ -18,7 +19,7 @@ func TestClaveIlegibleNoSeRota(t *testing.T) {
 	dir := t.TempDir()
 	for nombre, leer := range map[string]func(string) (string, error){"token": LeerOCrearToken, "huella": LeerHuellaPunto} {
 		ruta := filepath.Join(dir, nombre)
-		os.WriteFile(ruta, []byte("corta\n"), 0o600)
+		escribirClave(t, ruta, "corta\n")
 		if _, err := leer(ruta); err == nil {
 			t.Errorf("%s: una clave truncada tenía que dar error", nombre)
 		}
@@ -42,7 +43,7 @@ func TestClaveDeServicioDanadaSeRota(t *testing.T) {
 		t.Fatal(err)
 	}
 	ruta := filepath.Join(dir, "token-servicio")
-	os.WriteFile(ruta, []byte("corta\n"), 0o600)
+	escribirClave(t, ruta, "corta\n")
 	var registro strings.Builder
 	s, err := Nuevo(Opciones{Datos: dir, Config: c, Registros: &registro})
 	if err != nil {
@@ -82,13 +83,23 @@ func TestClaveDeEntornoCorta(t *testing.T) {
 	}
 }
 
+// escribirClave deja ese contenido en el archivo de una clave, con su carpeta.
+func escribirClave(t *testing.T, ruta, contenido string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(ruta), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(ruta, []byte(contenido), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // Un archivo con la clave en claro (de antes de las huellas) pasa a huella al leerlo y la misma clave sigue entrando.
 func TestHuellaInstanciaMigra(t *testing.T) {
 	dir := t.TempDir()
 	ruta := RutaTokenInstancia(dir, "pry")
 	clave := "tt_" + strings.Repeat("ab", 32)
-	os.MkdirAll(filepath.Dir(ruta), 0o755)
-	os.WriteFile(ruta, []byte(clave+"\n"), 0o600)
+	escribirClave(t, ruta, clave+"\n")
 	for i := 0; i < 2; i++ {
 		huella, origen, err := HuellaInstancia(dir, "pry", nil)
 		if err != nil || huella != api.HuellaToken(clave) || origen != ruta {
@@ -116,8 +127,7 @@ func TestHuellaInstanciaSinArchivo(t *testing.T) {
 func TestHuellaInstanciaDanada(t *testing.T) {
 	dir := t.TempDir()
 	ruta := RutaTokenInstancia(dir, "pry")
-	os.MkdirAll(filepath.Dir(ruta), 0o755)
-	os.WriteFile(ruta, []byte("corta\n"), 0o600)
+	escribirClave(t, ruta, "corta\n")
 	if _, _, err := HuellaInstancia(dir, "pry", nil); err == nil {
 		t.Fatal("un archivo corto tenía que dar error")
 	}
@@ -125,7 +135,7 @@ func TestHuellaInstanciaDanada(t *testing.T) {
 		t.Fatalf("se reescribió el archivo: %q", datos)
 	}
 	basura := "sha256:" + strings.Repeat("zz", 32)
-	os.WriteFile(ruta, []byte(basura+"\n"), 0o600)
+	escribirClave(t, ruta, basura+"\n")
 	if huella, _, err := HuellaInstancia(dir, "pry", nil); err != nil || huella != basura {
 		t.Fatalf("una huella con basura se devuelve tal cual: %q %v", huella, err)
 	}
@@ -138,7 +148,7 @@ func TestHuellaInstanciaDanada(t *testing.T) {
 func TestNuevaClave(t *testing.T) {
 	ruta := filepath.Join(t.TempDir(), "pry")
 	clave, err := NuevaClave(ruta)
-	if err != nil || len(clave) != len("tt_")+64 || !strings.HasPrefix(clave, "tt_") {
+	if err != nil || !regexp.MustCompile(`^tt_[0-9a-f]{64}$`).MatchString(clave) {
 		t.Fatalf("clave: %q %v", clave, err)
 	}
 	if datos, _ := os.ReadFile(ruta); string(datos) != api.HuellaToken(clave)+"\n" {
