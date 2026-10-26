@@ -14,10 +14,11 @@ const datos = html.match(/<script type="application\/json" id="ejemplos-mapa">([
 
 test('la portada tiene cuatro ejemplos del recorrido, en los dos idiomas', () => {
   assert.ok(datos, 'falta el JSON de los ejemplos del mapa')
-  const ejemplos = JSON.parse(datos[1]) as { origen: number; agentes: number[]; es: string; en: string; codigo: string }[]
+  const ejemplos = JSON.parse(datos[1]) as { origen: number; agentes: number[]; es: string; en: string; codigo: string; titulo_es: string; titulo_en: string }[]
   assert.equal(ejemplos.length, 4)
   for (const e of ejemplos) {
     assert.ok(e.es.trim() && e.en.trim(), `falta el texto de ${e.codigo}`)
+    assert.ok(e.titulo_es && e.titulo_en, `falta el título de ${e.codigo}`)
     assert.ok([0, 1, 2].includes(e.origen), `origen ${e.origen}`)
     assert.ok(e.agentes.length >= 1 && e.agentes.every((a) => a >= 0 && a <= 4), `agentes ${e.agentes}`)
     assert.match(html, new RegExp(`<pre class="codigo[^"]*" id="${e.codigo}"`), `falta el bloque ${e.codigo}`)
@@ -50,17 +51,29 @@ test('el tranvía mide los caminos fuera de la página y no arranca hasta que el
   assert.match(tranvia, /else if \(iniciado\) recorrer\(actual\)/, 'volver a la pestaña no arranca un tranvía que aún no se ve')
 })
 
-test('el recorrido se puede pausar y elegir', () => {
+test('la cabecera tiene cuatro pestañas con nombre y un panel con el código de la escena', () => {
+  const pestanas = html.match(/<button type="button" role="tab" class="mapa-pestana"[\s\S]*?<\/button>/g) ?? []
+  assert.equal(pestanas.length, 4)
+  const titulos = [['Resume un contrato con Claude', 'Summarize a contract with Claude'], ['Un PDF a JSON con Codex', 'A PDF to JSON with Codex'],
+    ['Traduce con GitHub Copilot', 'Translate with GitHub Copilot'], ['Respaldo: de Claude a Codex', 'Fallback: from Claude to Codex']]
+  pestanas.forEach((p, i) => { assert.match(p, new RegExp(titulos[i][0])); assert.match(p, new RegExp(titulos[i][1])) })
+  assert.match(pestanas[0], /aria-selected="true"/)
+  const panel = html.slice(html.indexOf('<div class="mapa-panel" id="mapa-panel" role="tabpanel"'))
+  assert.ok(panel.length > 0, 'falta el panel de la escena')
+  assert.match(panel.slice(0, 4000), /id="codigo-mapa-1"/, 'sin JavaScript se ve el código de la primera escena')
+  assert.match(html, /<pre class="codigo[^"]*" id="codigo-como"/, '«Tres paradas» tiene su ejemplo fijo')
   assert.match(html, /class="mapa-pausa"/)
-  assert.equal((html.match(/class="mapa-punto"/g) ?? []).length, 4)
+})
+test('las pestañas se manejan con las flechas y paran la rotación', () => {
+  assert.match(tranvia, /ArrowRight/)
+  assert.match(tranvia, /aria-selected/)
+  assert.match(tranvia, /pausaManual = /)
 })
 
 test('el recorrido no se anuncia solo y sus controles hablan en el idioma de la página', () => {
   assert.match(html, /<p class="mapa-leyenda" aria-live="off">/, 'mientras rota solo, la leyenda no se anuncia cada 6,5 s')
-  for (const punto of html.match(/<button type="button" class="mapa-punto"[^>]*>[\s\S]*?<\/button>/g) ?? []) {
-    assert.doesNotMatch(punto, /aria-label/, 'el nombre del punto va en spans por idioma, no en los dos a la vez')
-    assert.match(punto, /<span lang="es" class="solo-lectores">Ejemplo \d<\/span><span lang="en" class="solo-lectores">Example \d<\/span>/)
-  }
+  for (const pestana of html.match(/<button type="button" role="tab" class="mapa-pestana"[^>]*>[\s\S]*?<\/button>/g) ?? [])
+    assert.doesNotMatch(pestana, /aria-label/, 'el nombre de la pestaña va en spans por idioma, no en los dos a la vez')
   assert.doesNotMatch(html, /class="mapa-pausa" aria-pressed/, 'la pausa cambia su texto: sin aria-pressed')
 })
 
@@ -128,10 +141,10 @@ test('mayúsculas espaciadas solo en la cabecera del tablero (35) y ámbar solo 
 })
 
 test('cada control de la barra, del mapa y de la demo mide 44 px y la barra no tapa las secciones (23, 62)', () => {
-  for (const clase of ['.github', '.menu-boton', '.mapa-punto', '.demo-punto'])
+  for (const clase of ['.github', '.menu-boton', '.demo-punto'])
     assert.match(css, new RegExp(`\\${clase} \\{[^}]*width: 44px; height: 44px`), clase)
   // .idioma button es ES/EN y tema: 44 de alto el botón, no el grupo con su borde (revisión final web, M13).
-  for (const clase of ['.boton', '.copiar', '.mapa-pausa', '.demo-pausa', '.pestanas-lista button', '.idioma button'])
+  for (const clase of ['.boton', '.copiar', '.mapa-pausa', '.mapa-pestana', '.demo-pausa', '.pestanas-lista button', '.idioma button'])
     assert.match(css, new RegExp(`${clase.replace('.', '\\.')} \\{[^}]*min-height: 44px`), clase)
   assert.match(css, /section\[id\] \{ scroll-margin-top: 72px; \}/)
 })

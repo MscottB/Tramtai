@@ -289,14 +289,16 @@ function escribirLeyenda(leyenda, partes) {
 }
 
 // Recorrido de la portada: el tranvía va de una app a Tramtai y sigue por la línea de un agente hasta su estación, con
-// cuatro ejemplos que se turnan (uno, el respaldo: Claude falla a mitad y sigue Codex). La leyenda y el código de
-// «Cómo funciona» cambian con cada uno. Pausa, puntos para elegir, y sin animación con «reducir movimiento».
+// cuatro escenas que se turnan (una, el respaldo: Claude falla a mitad y sigue Codex). Cada escena tiene su pestaña, y el
+// panel de al lado enseña su título, la línea que la explica y su código. La rotación se para con el ratón o el foco en
+// el bloque, al elegir una pestaña o con la pausa, y no hay animación con «reducir movimiento».
 (function () {
   var datos = document.getElementById('ejemplos-mapa');
   var caja = document.querySelector('.mapa-ejemplos');
+  var bloque = document.querySelector('.escenas');
   var ancho = document.querySelector('.mapa-ancho');
   var alto = document.querySelector('.mapa-alto');
-  if (!datos || !caja || !ancho || !alto || !Element.prototype.animate) return;
+  if (!datos || !caja || !bloque || !ancho || !alto || !Element.prototype.animate) return;
   var ejemplos = JSON.parse(datos.textContent);
   var movimiento = window.matchMedia('(prefers-reduced-motion: reduce)');
   var quieto = movimiento.matches;
@@ -346,9 +348,13 @@ function escribirLeyenda(leyenda, partes) {
   }
 
   // pausaManual es la pausa que eligió la persona: «reducir movimiento» no la pisa al volver a desactivarse.
+  // encima: el ratón o el foco están en el bloque; la escena se queda mientras tanto, sin contar como pausa.
   var actual = 0, pausado = quieto, pausaManual = false, temporizador = null, animaciones = [], iniciado = false;
-  var leyenda = caja.querySelector('.mapa-leyenda');
-  var puntos = caja.querySelectorAll('.mapa-punto');
+  var raton = false, foco = false;
+  var panel = document.getElementById('mapa-panel');
+  var titulo = panel.querySelector('.mapa-titulo');
+  var leyenda = panel.querySelector('.mapa-leyenda');
+  var pestanas = Array.prototype.slice.call(caja.querySelectorAll('.mapa-pestana'));
   var pausa = caja.querySelector('.mapa-pausa');
 
   function parar() {
@@ -362,19 +368,41 @@ function escribirLeyenda(leyenda, partes) {
     animaciones.push(a);
     return a;
   }
-  function mostrar(n) {
-    var e = ejemplos[n];
-    escribirLeyenda(leyenda, [['es', ' de '], ['en', ' of ']].map(function (par) {
+  // spans devuelve un texto del JSON en los dos idiomas, cada uno en su span.
+  function spans(es, en) {
+    return [['es', es], ['en', en]].map(function (par) {
       var s = document.createElement('span');
       s.lang = par[0];
-      s.textContent = (n + 1) + par[1] + ejemplos.length + ' · ' + e[par[0]];
+      s.textContent = par[1];
       return s;
-    }));
-    puntos.forEach(function (p, i) { p.setAttribute('aria-pressed', String(i === n)); });
-    ejemplos.forEach(function (x) { var pre = document.getElementById(x.codigo); if (pre) pre.hidden = x !== e; });
+    });
   }
-  // recorrer anima el ejemplo n en los dos mapas (uno se ve según el ancho) y programa el siguiente.
-  function recorrer(n) {
+  function mostrar(n) {
+    var e = ejemplos[n];
+    titulo.replaceChildren.apply(titulo, spans(e.titulo_es, e.titulo_en));
+    escribirLeyenda(leyenda, spans(e.es, e.en));
+    pestanas.forEach(function (p, i) {
+      p.setAttribute('aria-selected', String(i === n));
+      p.tabIndex = i === n ? 0 : -1;
+    });
+    panel.setAttribute('aria-labelledby', pestanas[n].id);
+    // Los cuatro códigos ocupan la misma celda: el que no toca se oculta sin dejar de medir (el panel no salta).
+    ejemplos.forEach(function (x) {
+      var pre = document.getElementById(x.codigo);
+      if (!pre) return;
+      pre.hidden = false;
+      pre.classList.toggle('oculto', x !== e);
+    });
+  }
+  // programar deja lista la escena siguiente, salvo en pausa o con el ratón o el foco en el bloque.
+  function programar() {
+    clearTimeout(temporizador);
+    if (quieto || pausado || raton || foco) return;
+    temporizador = setTimeout(function () { anunciar(false); recorrer((actual + 1) % ejemplos.length); }, 6500);
+  }
+  // recorrer anima el ejemplo n en los dos mapas (uno se ve según el ancho) y programa el siguiente. animar hace el viaje
+  // aunque esté en pausa: la escena que elige la persona con una pestaña se ve una vez entera.
+  function recorrer(n, animar) {
     iniciado = true;
     parar();
     actual = n;
@@ -386,7 +414,7 @@ function escribirLeyenda(leyenda, partes) {
       t.style.offsetPath = "path('" + primero[i].d + "')";
       t.style.opacity = '1';
       t.setAttribute('fill', 'var(--acento)');
-      if (quieto || pausado) {
+      if (quieto || (pausado && !animar)) {
         var fin = segundo || primero;
         t.style.offsetPath = "path('" + fin[i].d + "')";
         t.style.offsetDistance = '100%';
@@ -407,18 +435,48 @@ function escribirLeyenda(leyenda, partes) {
         return mover(i, segundo[i].centro, 100, 1800, 200).finished;
       }).catch(function () {});
     });
-    if (!quieto && !pausado) temporizador = setTimeout(function () { anunciar(false); recorrer((actual + 1) % ejemplos.length); }, 6500);
+    programar();
   }
 
   // La leyenda se anuncia cuando la elige la persona, no cada vez que rota sola.
   function anunciar(si) { leyenda.setAttribute('aria-live', si ? 'polite' : 'off'); }
-  puntos.forEach(function (p, i) { p.addEventListener('click', function () { anunciar(true); recorrer(i); }); });
+  function rotulo() {
+    pausa.innerHTML = pausado ? '<span lang="es">Seguir</span><span lang="en">Play</span>' : '<span lang="es">Pausa</span><span lang="en">Pause</span>';
+  }
+  // Elegir una pestaña (con el ratón o con las flechas, patrón de tablist) para la rotación: la pausa pasa a «Seguir».
+  function elegir(i) {
+    anunciar(true);
+    pausaManual = true;
+    pausado = true;
+    rotulo();
+    recorrer(i, true);
+  }
+  pestanas.forEach(function (p, i) {
+    p.addEventListener('click', function () { elegir(i); });
+    p.addEventListener('keydown', function (e) {
+      var siguiente = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: pestanas.length - 1 }[e.key];
+      if (siguiente === undefined) return;
+      e.preventDefault();
+      siguiente = (siguiente + pestanas.length) % pestanas.length;
+      pestanas[siguiente].focus();
+      elegir(siguiente);
+    });
+  });
   pausa.addEventListener('click', function () {
     pausado = !pausado;
     pausaManual = pausado;
     anunciar(true);
-    pausa.innerHTML = pausado ? '<span lang="es">Seguir</span><span lang="en">Play</span>' : '<span lang="es">Pausa</span><span lang="en">Pause</span>';
+    rotulo();
     recorrer(actual);
+  });
+  // Con el ratón o el foco en el bloque, la escena se queda; al salir, la rotación sigue (si no está en pausa).
+  bloque.addEventListener('mouseenter', function () { raton = true; programar(); });
+  bloque.addEventListener('mouseleave', function () { raton = false; if (iniciado) programar(); });
+  bloque.addEventListener('focusin', function () { foco = true; programar(); });
+  bloque.addEventListener('focusout', function (e) {
+    if (bloque.contains(e.relatedTarget)) return;
+    foco = false;
+    if (iniciado) programar();
   });
   // En una pestaña oculta no se anima ni se acumulan animaciones; al volver sigue donde iba.
   document.addEventListener('visibilitychange', function () {
@@ -430,7 +488,7 @@ function escribirLeyenda(leyenda, partes) {
     quieto = movimiento.matches;
     pausado = quieto || pausaManual;
     pausa.hidden = quieto;
-    pausa.innerHTML = pausado ? '<span lang="es">Seguir</span><span lang="en">Play</span>' : '<span lang="es">Pausa</span><span lang="en">Pause</span>';
+    rotulo();
     if (iniciado) recorrer(actual);
   });
   if (quieto) pausa.hidden = true;

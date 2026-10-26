@@ -388,15 +388,37 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
 /* Las capturas de la Ayuda vienen en los dos idiomas: la del otro se oculta también en oscuro (le gana a .solo-oscuro). */
 html[lang="es"] .captura img[lang="en"], html[lang="en"] .captura img[lang="es"] { display: none !important; }
 .solo-lectores { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-/* Ejemplos del recorrido de la portada (sitio.js): leyenda, un punto por ejemplo y pausa. Cada punto se dibuja de 14 px
-   dentro de un área de 44 px. */
-.mapa-ejemplos { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 12px; }
+/* Escenas de la cabecera (sitio.js): cuatro pestañas con nombre y la pausa encima; debajo, el mapa y el panel con el
+   título, la línea que explica la escena y su código. Lado a lado desde 980 px, con el mapa vertical: el horizontal, en
+   media columna, bajaría su letra de 12 px a menos de 10. Por debajo, el panel va bajo el mapa. */
+.escenas { max-width: 760px; margin: 48px auto 0; text-align: left; }
+.escenas .mapa { margin: 0; max-width: none; }
+.mapa-ejemplos { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-bottom: 12px; }
 .mapa-ejemplos[hidden] { display: none; }
-.mapa-leyenda { margin: 0; min-height: 1.5em; font-size: .95rem; color: var(--texto-suave); text-align: center; }
-.mapa-controles { display: flex; align-items: center; gap: 4px; }
-.mapa-punto { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
-.mapa-punto::before { content: ''; width: 14px; height: 14px; box-sizing: border-box; border-radius: 50%; border: 2px solid var(--acento); }
-.mapa-punto[aria-pressed="true"]::before { background: var(--acento); }
+.mapa-ejemplos .mapa-pausa { flex: none; }
+.mapa-pestanas { flex: 1 1 520px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.mapa-pestana { font: 600 .875rem/1.3 var(--fuente); color: var(--texto-suave); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 8px; padding: 6px 12px; min-height: 44px; cursor: pointer; text-align: left; }
+.mapa-pestana:hover { color: var(--texto); }
+.mapa-pestana[aria-selected="true"] { color: var(--acento-texto); background: var(--acento); border-color: var(--acento); }
+.mapa-panel { margin-top: 16px; background: var(--superficie); border: 1px solid color-mix(in srgb, var(--acento) 35%, var(--borde)); border-radius: var(--radio); box-shadow: var(--sombra); padding: 24px; min-width: 0; }
+.mapa-titulo { font: 700 1.25rem/1.25 var(--titulo); letter-spacing: -0.01em; }
+.mapa-leyenda { margin: 6px 0 16px; min-height: 3em; font-size: .95rem; line-height: 1.5; color: var(--texto-suave); }
+.mapa-codigos { display: grid; }
+.mapa-codigos > .codigo { grid-area: 1 / 1; margin: 0; position: relative; padding-top: 56px; min-width: 0; }
+.mapa-codigos > .codigo.oculto { visibility: hidden; }
+@media (min-width: 980px) {
+  .escenas { max-width: none; }
+  .escenas-cuerpo { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 24px; }
+  .escenas .mapa { display: grid; align-content: center; padding: 20px; }
+  .escenas .mapa .mapa-ancho { display: none; }
+  .escenas .mapa .mapa-alto { display: block; }
+  .mapa-panel { margin-top: 0; }
+}
+@media (max-width: 640px) {
+  .escenas { margin-top: 32px; }
+  .mapa-pestanas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mapa-panel { padding: 16px; }
+}
 .mapa-pausa { font: 600 .85rem var(--fuente); color: var(--texto); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 8px; padding: 0 14px; min-height: 44px; cursor: pointer; }
 
 /* Demo del recorrido guiado de la portada (sitio.js): una pantalla de la app por paso, con su leyenda, la pausa y un
