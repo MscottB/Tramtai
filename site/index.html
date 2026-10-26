@@ -391,13 +391,13 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
             <p class="suave"><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic y elige agente y modelo en el campo <code>model</code>.</span><span lang="en">Change the base URL of your OpenAI or Anthropic SDK and pick agent and model in the <code>model</code> field.</span></p>
           </li>
         </ol>
-<pre class="codigo" id="codigo-como"><span class="k">from</span> openai <span class="k">import</span> OpenAI
+<pre class="codigo" id="codigo-como"><span class="k">import</span> anthropic
 
 <span class="c" lang="es"># La URL y la clave están en Tramtai → Mis APIs</span><span class="c" lang="en"># The URL and the key are in Tramtai → My APIs</span>
-cliente = OpenAI(base_url=<span class="s">"http://127.0.0.1:17373/openai/v1"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
+cliente = anthropic.Anthropic(base_url=<span class="s">"http://127.0.0.1:17373/anthropic"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
 
-respuesta = cliente.chat.completions.create(
-    model=<span class="s">"claude/haiku"</span>,
+respuesta = cliente.messages.create(
+    model=<span class="s">"claude/haiku"</span>, max_tokens=1024,
     messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Resume este contrato en tres puntos"</span>}],
 )</pre>
       </div>

@@ -174,6 +174,13 @@ test('los comentarios del código salen en el idioma de la página y Copiar copi
   assert.match(js, /\[lang\]:not\(\[lang="' \+ document\.documentElement\.lang \+ '"\]\)/)
 })
 
+test('el código del panel de la cabecera salta de línea y «Tres paradas» enseña otro ejemplo', () => {
+  assert.match(css, /\.mapa-codigos > \.codigo \{[^}]*white-space: pre-wrap; overflow-wrap: anywhere/, 'sin desplazamiento horizontal en el panel')
+  const pre = (id: string) => html.match(new RegExp(`<pre class="codigo" id="${id}">([\\s\\S]*?)</pre>`))?.[1] ?? ''
+  assert.match(pre('codigo-como'), /anthropic/)
+  assert.notEqual(pre('codigo-como'), pre('codigo-mapa-1'))
+})
+
 test('los diagramas comparan sin Tramtai y con Tramtai', () => {
   const diagramas = pagas.match(/<div class="pagas-diagramas">[\s\S]*<\/figure>/)?.[0] ?? ''
   for (const t of ['Sin Tramtai', 'Con Tramtai', 'Without Tramtai', 'With Tramtai']) assert.ok(diagramas.includes(t), `falta «${t}»`)

@@ -404,7 +404,9 @@ html[lang="es"] .captura img[lang="en"], html[lang="en"] .captura img[lang="es"]
 .mapa-titulo { font: 700 1.25rem/1.25 var(--titulo); letter-spacing: -0.01em; }
 .mapa-leyenda { margin: 6px 0 16px; min-height: 3em; font-size: .95rem; line-height: 1.5; color: var(--texto-suave); }
 .mapa-codigos { display: grid; }
-.mapa-codigos > .codigo { grid-area: 1 / 1; margin: 0; position: relative; padding-top: 56px; min-width: 0; }
+/* En el panel las líneas largas saltan en vez de esconderse a la derecha; Copiar copia el texto, sin los saltos. La
+   sangría colgante (each-line hanging) la ignora el navegador que no la conoce. */
+.mapa-codigos > .codigo { grid-area: 1 / 1; margin: 0; position: relative; padding-top: 56px; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: visible; text-indent: 4ch hanging each-line; }
 .mapa-codigos > .codigo.oculto { visibility: hidden; }
 @media (min-width: 980px) {
   .escenas { max-width: none; }
