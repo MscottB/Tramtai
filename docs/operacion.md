@@ -164,6 +164,8 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # las peticiones;
 
 En los dos primeros casos, pon la clave nueva en las aplicaciones que usaban la anterior.
 
+## Volver a una versión anterior
+
 **Si vuelves a la v0.56 o anterior desde la v0.57:** la v0.57 guarda la clave de cada espacio (`datos/token-global` y `datos/tokens/<id>`) solo como huella. Esa versión leería el archivo `sha256:…` como si fuera la clave y las aplicaciones que entran con la clave del espacio recibirían 401. Con esa versión, regenera la clave (`tramtai global token --rotar`, o `tramtai proyecto token --rotar` en un proyecto) y ponla en las aplicaciones.
 
 **Si vuelves a una versión anterior** a la que guarda las claves de las APIs como huella: esa versión leería el archivo `sha256:…` como si fuera la clave. Al volver, regenera la clave de cada API (`tramtai acceso token <nombre> --rotar`).

@@ -101,7 +101,7 @@ URL. Antigravity, for now, only from the Playground, the terminal and the CLI.
 - **Local and private:** listens only on `127.0.0.1` by default, no telemetry, keys encrypted in the system store.
 
 [**Download**](https://mscottb.github.io/Tramtai/#descargar) for Windows, macOS or Linux, connect an agent in *Agents*
-and copy the URL from *My APIs* into your app, with a key created there (shown only once). The app, Web UI, terminal and CLI are in English and Spanish;
-the detailed documentation is in Spanish, and the [product page](https://mscottb.github.io/Tramtai/) has an English
-overview. Free for personal and non-commercial use under [PolyForm Noncommercial 1.0.0](LICENSE.md); contact
+and copy the URL from *My APIs* into your app, with a key created there (shown only once). The app, Web UI, terminal
+and CLI are in English and Spanish; the detailed documentation is in Spanish, and the
+[product page](https://mscottb.github.io/Tramtai/) has an English overview. Free for personal and non-commercial use under [PolyForm Noncommercial 1.0.0](LICENSE.md); contact
 [MscottB](https://github.com/MscottB) for commercial licensing.

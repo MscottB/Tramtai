@@ -1,5 +1,5 @@
 // Cerrar un diálogo con Esc sin perder lo que no se puede recuperar: lo escrito en un formulario o una clave que solo
-// se ve una vez. Esos diálogos llevan persistent (un clic fuera no los cierra) y llaman a esto desde @keyup.esc.
+// se ve una vez. Esos diálogos llevan persistent (un clic fuera no los cierra) y llaman a esto desde el @keyup.esc del q-dialog (no de la tarjeta: recién abierto, el foco está fuera de ella).
 import { Dialog } from 'quasar'
 import { t } from './i18n'
 

@@ -29,7 +29,7 @@
             "Instala Tramtai: instalador o portable en Windows, Homebrew o .dmg en macOS, .deb o .rpm en Linux.",
             "En Agentes, conecta un agente con tu suscripción (uso personal) o con una clave de API.",
             "En Probar, escribe un mensaje, elige agente y modelo y mira la respuesta en vivo.",
-            "En Mis APIs copia la URL y la clave y ponlas en tu app (tema «Conectar mi app»)."
+            "En Mis APIs copia la URL y crea la clave del espacio (se ve una vez), y ponlas en tu app (tema «Conectar mi app»)."
           ]
         },
         {
@@ -894,7 +894,7 @@
             ],
             [
               "Para qué",
-              "Probar y tus scripts",
+              "Tus scripts y pruebas desde fuera de la Web UI",
               "Cada app real"
             ],
             [
@@ -915,7 +915,7 @@
           "pares": [
             [
               "¿Qué clave le doy a mi app?",
-              "Para probar, la del espacio. Para una app de verdad, créale su propia API en Mis APIs: la puedes limitar, medir y revocar sin tocar las demás."
+              "Para tus scripts y pruebas, la del espacio. Para una app de verdad, créale su propia API en Mis APIs: la puedes limitar, medir y revocar sin tocar las demás."
             ],
             [
               "¿Y si se filtra la clave del espacio?",
@@ -1254,7 +1254,7 @@
             "Install Tramtai: installer or portable on Windows, Homebrew or .dmg on macOS, .deb or .rpm on Linux.",
             "In Agents, connect an agent with your subscription (personal use) or with an API key.",
             "In the Playground, type a message, pick agent and model and watch the response live.",
-            "In My APIs copy the URL and the key and put them in your app (topic “Connect my app”)."
+            "In My APIs copy the URL and create the workspace key (shown only once), and put them in your app (topic “Connect my app”)."
           ]
         },
         {
@@ -2119,7 +2119,7 @@
             ],
             [
               "What for",
-              "Trying things and your scripts",
+              "Your scripts and tests from outside the Web UI",
               "Each real app"
             ],
             [
@@ -2140,7 +2140,7 @@
           "pares": [
             [
               "Which key do I give my app?",
-              "To try things, the workspace one. For a real app, create its own API in My APIs: you can limit, measure and revoke it without touching the rest."
+              "For your scripts and tests, the workspace one. For a real app, create its own API in My APIs: you can limit, measure and revoke it without touching the rest."
             ],
             [
               "What if the workspace key leaks?",
