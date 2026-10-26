@@ -68,9 +68,10 @@ type Estado struct {
 // VersionNueva es una versión publicada: su número, su página y sus notas. Copia lo que los clientes muestran de
 // actualizacion.Version, para que un cliente no enlace el actualizador (red y firmas).
 type VersionNueva struct {
-	Version string `json:"version"`
-	URL     string `json:"url"`
-	Notas   string `json:"notas,omitempty"`
+	Version    string `json:"version"`
+	URL        string `json:"url"`
+	Notas      string `json:"notas,omitempty"`
+	Instalable bool   `json:"instalable,omitempty"` // en el estado: si se instala desde aquí (copia del instalador de Windows)
 }
 
 // Descriptor identifica el servicio en marcha.

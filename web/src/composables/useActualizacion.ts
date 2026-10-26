@@ -9,7 +9,7 @@ import { abandonarSinFase } from '../actualizacion'
 export function useActualizacion() {
   let buscarActualizacion: number
   // Aviso de versión nueva: el servicio consulta GitHub como mucho una vez por hora y aquí se le pregunta al cargar,
-  // cada 15 minutos y cada vez que la ventana vuelve a verse. En la app de escritorio, «Actualizar a…» de la bandeja abre este mismo diálogo.
+  // cada 15 minutos y cada vez que la ventana vuelve a verse. En la app de escritorio, «Ver novedades» de la bandeja abre este mismo diálogo.
   const actualizando = ref(false)
   async function comprobarActualizacion() {
     if (!sesion.value) return // sin sesión el servicio no responde; se comprueba al entrar

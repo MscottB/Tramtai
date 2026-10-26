@@ -31,6 +31,17 @@ func init() {
 		"solo comprueba si hay una versión nueva, sin instalarla":                    "only checks for a new version, without installing it",
 		"Acerca de Tramtai": "About Tramtai",
 		"Acerca de Tramtai · hay una versión nueva: %s": "About Tramtai · new version available: %s",
-		"Instalar la versión %s…":                       "Install version %s…",
+		"Instalar la versión %s":                        "Install version %s",
+		"Ver novedades":                                 "See what’s new",
+		"Buscando actualizaciones…":                     "Checking for updates…",
+		"Tienes la última versión (%s)":                 "You have the latest version (%s)",
+		"Versión %s disponible":                         "Version %s available",
+		"Cancelar la actualización":                     "Cancel the update",
+		"No se pudo comprobar · reintentar":             "Couldn’t check · try again",
+		"Actualizando… · %s":                            "Updating… · %s",
+		"descargando":                                   "downloading",
+		"verificando":                                   "verifying",
+		"se instala en unos segundos":                   "installing in a few seconds",
+		"instalando":                                    "installing",
 	})
 }

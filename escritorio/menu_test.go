@@ -90,8 +90,8 @@ func TestMenuConElServicioEnMarcha(t *testing.T) {
 }
 
 func TestMenuConVersionNuevaYSinApis(t *testing.T) {
-	m := entradasMenu(estadoMenu{base: "http://127.0.0.1:7777", nueva: "v9.9.9"})
-	quiero := []accion{accionMostrar, accionAcercaDe, -1, accionMostrar, accionActualizar, -2, accionIrMisApis, -3,
+	m := entradasMenu(estadoMenu{base: "http://127.0.0.1:7777", nueva: "v9.9.9", instalable: true})
+	quiero := []accion{accionMostrar, accionAcercaDe, -1, accionMostrar, accionActualizar, accionVerNovedades, -2, accionIrMisApis, -3,
 		accionCopiarDireccion, -1, accionReiniciar, accionAvisarDetener, -1, accionAvisarSalir}
 	if got := acciones(m); !iguales(got, quiero) {
 		t.Fatalf("acciones %v, quería %v", got, quiero)
@@ -99,8 +99,64 @@ func TestMenuConVersionNuevaYSinApis(t *testing.T) {
 	if m[1].texto != idioma.Tf("Acerca de Tramtai · hay una versión nueva: %s", "v9.9.9") {
 		t.Errorf("acerca de: %q", m[1].texto)
 	}
-	if m[5].submenu[0].texto != idioma.T("Crear una API…") {
-		t.Errorf("sin APIs: %+v", m[5].submenu)
+	if m[4].texto != idioma.Tf("Instalar la versión %s", "v9.9.9") || m[5].texto != idioma.T("Ver novedades") {
+		t.Errorf("instalar y novedades: %q, %q", m[4].texto, m[5].texto)
+	}
+	if m[6].submenu[0].texto != idioma.T("Crear una API…") {
+		t.Errorf("sin APIs: %+v", m[6].submenu)
+	}
+}
+
+// La entrada de las actualizaciones (la quinta) según lo que se busca o instala desde el menú.
+func TestMenuBuscarEInstalarActualizaciones(t *testing.T) {
+	casos := []struct {
+		nombre      string
+		e           estadoMenu
+		texto       string
+		accion      accion
+		desactivada bool
+	}{
+		{"sin buscar", estadoMenu{}, idioma.T("Buscar actualizaciones"), accionBuscarActualizaciones, false},
+		{"buscando", estadoMenu{act: actualizacionMenu{buscando: true}}, idioma.T("Buscando actualizaciones…"), accionNinguna, true},
+		{"al día", estadoMenu{act: actualizacionMenu{alDia: "v0.56.1"}}, idioma.Tf("Tienes la última versión (%s)", "v0.56.1"), accionNinguna, true},
+		// Una copia que no instaló el instalador de Windows (macOS, Linux, compilada): solo las novedades, con el enlace.
+		{"no instalable desde aquí", estadoMenu{nueva: "v9.9.9"}, idioma.Tf("Versión %s disponible", "v9.9.9"), accionNinguna, true},
+		{"falló la consulta", estadoMenu{act: actualizacionMenu{fallo: true}}, idioma.T("No se pudo comprobar · reintentar"), accionBuscarActualizaciones, false},
+		{"descargando", estadoMenu{nueva: "v9.9.9", act: actualizacionMenu{fase: "descargando"}},
+			idioma.Tf("Actualizando… · %s", idioma.T("descargando")), accionNinguna, true},
+		{"verificando", estadoMenu{nueva: "v9.9.9", act: actualizacionMenu{fase: "verificando"}},
+			idioma.Tf("Actualizando… · %s", idioma.T("verificando")), accionNinguna, true},
+		{"cuenta atrás", estadoMenu{nueva: "v9.9.9", act: actualizacionMenu{fase: "listo"}},
+			idioma.Tf("Actualizando… · %s", idioma.T("se instala en unos segundos")), accionNinguna, true},
+		{"instalando", estadoMenu{nueva: "v9.9.9", act: actualizacionMenu{fase: "instalando"}},
+			idioma.Tf("Actualizando… · %s", idioma.T("instalando")), accionNinguna, true},
+	}
+	for _, c := range casos {
+		c.e.base = "http://127.0.0.1:7777"
+		m := entradasMenu(c.e)
+		if n := m[4]; n.texto != c.texto || n.accion != c.accion || n.desactivada != c.desactivada {
+			t.Errorf("%s: %+v", c.nombre, n)
+		}
+		// Mientras se actualiza no se ofrece ni instalar ni las novedades; en la cuenta atrás, cancelarla.
+		switch {
+		case c.e.act.fase == "listo":
+			if m[5].texto != idioma.T("Cancelar la actualización") || m[5].accion != accionCancelarActualizacion || m[6].submenu == nil {
+				t.Errorf("%s: %+v, %+v", c.nombre, m[5], m[6])
+			}
+		case c.e.act.fase != "":
+			if m[5].submenu == nil {
+				t.Errorf("%s: sobra %+v", c.nombre, m[5])
+			}
+		case c.e.nueva != "":
+			if m[5].texto != idioma.T("Ver novedades") || m[5].accion != accionVerNovedades {
+				t.Errorf("%s: %+v", c.nombre, m[5])
+			}
+		}
+	}
+	// El instalador detiene el servicio: el menú sigue diciendo que se actualiza hasta que cierra la app.
+	m := entradasMenu(estadoMenu{act: actualizacionMenu{fase: "instalando"}})
+	if m[4].texto != idioma.Tf("Actualizando… · %s", idioma.T("instalando")) {
+		t.Errorf("con el servicio detenido: %+v", m[4])
 	}
 }
 
