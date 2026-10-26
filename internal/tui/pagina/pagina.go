@@ -12,6 +12,7 @@ import (
 
 	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
+	"tramtai/internal/idioma"
 )
 
 // Contexto es lo que una página recibe en Iniciar. La app lo vuelve a dar al entrar en la página, al cambiar de espacio
@@ -150,6 +151,12 @@ func Tras[O interface{ Fin() <-chan struct{} }](o O, d time.Duration, espera fun
 			return mensaje(o)
 		}
 	}
+}
+
+// Despedida es lo que dice la terminal al empezar una actualización (Actualizando): en el avance de Ajustes y, al salir, en
+// la consola.
+func Despedida() string {
+	return idioma.T("Tramtai se está actualizando: vuelve a abrir la terminal con «tramtai terminal» cuando termine")
 }
 
 // SinCliente es el Cmd de lo que necesita el servicio cuando la página no tiene cliente: la app avisa y r reintenta.

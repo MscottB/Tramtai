@@ -246,7 +246,7 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.comprobando = true
 		return m, m.conectar(false, false, true)
 	case pagina.Actualizando: // el instalador va a cerrar la terminal: mejor salir limpia, con la consola restaurada
-		m.despedida = idioma.T("Tramtai se está actualizando: vuelve a abrir la terminal con «tramtai terminal» cuando termine")
+		m.despedida = pagina.Despedida()
 		return m, tea.Quit
 	case pagina.ErrorServicio:
 		if !m.conectando && !m.anterior() { // un «no responde» de la página no tapa cómo detener el servicio anterior

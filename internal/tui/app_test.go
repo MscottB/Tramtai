@@ -578,6 +578,19 @@ func TestActualizandoSaleLimpia(t *testing.T) {
 	if !strings.Contains(m.despedida, "tramtai terminal") {
 		t.Fatalf("deja escrito cómo volver a abrirla: %q", m.despedida)
 	}
+	// La despedida y el texto del avance de Ajustes tienen una sola fuente: si no, retocar una deja la otra sin traducción.
+	veces := 0
+	err := filepath.WalkDir(".", func(ruta string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(ruta, ".go") || strings.HasSuffix(ruta, "_test.go") {
+			return err
+		}
+		texto, err := os.ReadFile(ruta)
+		veces += strings.Count(string(texto), `"Tramtai se está actualizando`)
+		return err
+	})
+	if err != nil || veces != 1 {
+		t.Fatalf("la despedida se escribe en %d sitios (%v)", veces, err)
+	}
 }
 
 // TestRAlConectarNoCierra: r en Inicio mientras la terminal aún conecta (sin cliente y con la página sin iniciar) no

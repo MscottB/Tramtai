@@ -362,7 +362,7 @@ func (p *Pagina) textoAvance() string {
 	}
 	l = append(l, estilo.Render(p.textoProgreso(*a)))
 	if a.Fase == "instalando" {
-		l = append(l, "", e.Tenue.Render(idioma.T("Tramtai se está actualizando: vuelve a abrir la terminal con «tramtai terminal» cuando termine")))
+		l = append(l, "", e.Tenue.Render(pagina.Despedida()))
 	}
 	return strings.Join(l, "\n")
 }
