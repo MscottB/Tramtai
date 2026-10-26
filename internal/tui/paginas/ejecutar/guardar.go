@@ -201,11 +201,16 @@ func (p *Pagina) textoCreada() string {
 		e.Tenue.Render("curl"), curl}, "\n")
 }
 
+// teclaCreada: la clave solo se ve esta vez, así que cerrar pregunta antes, como en Mis APIs (escaparConAviso).
 func (p *Pagina) teclaCreada(t string) tea.Cmd {
 	switch t {
 	case "esc", "enter":
-		p.creada = nil // la clave no se queda en la memoria de la página
-		p.caja.Poner("")
+		p.pend = func() tea.Cmd {
+			p.creada = nil // la clave no se queda en la memoria de la página
+			p.caja.Poner("")
+			return nil
+		}
+		return comp.Confirmar(p.tx("cierre.claveTitulo") + "\n\n" + p.tx("cierre.clave"))
 	case "y":
 		return comp.Copiar(p.creada.clave)
 	default:

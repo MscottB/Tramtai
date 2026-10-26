@@ -168,12 +168,15 @@ func (p *Pagina) origen() origen           { return origen{p.c.Origen(p.gen)} }
 func (p *Pagina) vigente(o origen) bool    { return o.Vigente(p.c, p.gen) }
 func (p *Pagina) delEspacio(o origen) bool { return o.DelEspacio(p.c) }
 
-// Pendiente dice, para la pregunta de salir de la terminal, si hay una petición en marcha (sigue en el servicio) o una API
-// abierta con cambios en la receta que aún no se guardaron con g.
+// Pendiente dice, para la pregunta de salir de la terminal, si hay una petición en marcha (sigue en el servicio), la clave
+// de la API recién guardada a la vista (no se vuelve a mostrar) o una API abierta con cambios en la receta que aún no se
+// guardaron con g.
 func (p *Pagina) Pendiente() string {
 	switch {
 	case p.activo() || p.enviando:
 		return idioma.T("Probar tiene una petición en marcha: seguirá en el servicio y la verás en el Historial.")
+	case p.creada != nil:
+		return p.tx("cierre.clave")
 	case p.api != "" && p.punto != nil && p.armado && !mismaReceta(recetaDePunto(*p.punto), p.leer()):
 		return idioma.Tf("La API %s tiene cambios sin guardar en Probar (g los guarda).", p.api)
 	}
