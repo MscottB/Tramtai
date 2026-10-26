@@ -16,8 +16,9 @@ import (
 	"tramtai/internal/nucleo"
 )
 
-// RotarTokenInstancia genera la clave nueva de una instancia y la aplica en marcha: la anterior deja de valer al
-// momento, sin reiniciar. Una clave que llega de una variable de entorno se cambia en esa variable.
+// RotarTokenInstancia crea la clave nueva de una instancia (o regenera la que tenía) y la aplica en marcha: la anterior
+// deja de valer al momento, sin reiniciar. Solo se guarda su huella: esta es la única vez que se conoce. Una clave que
+// llega de una variable de entorno se cambia en esa variable.
 func (s *Servicio) RotarTokenInstancia(inst *Instancia) (string, error) {
 	if strings.HasPrefix(inst.ArchivoToken, "variable ") {
 		return "", nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("la clave de %s viene de la %s: cámbiala allí", inst.ID, inst.ArchivoToken))
@@ -25,28 +26,36 @@ func (s *Servicio) RotarTokenInstancia(inst *Instancia) (string, error) {
 	// El archivo y la memoria cambian juntos: dos rotaciones a la vez no pueden dejarlos distintos.
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	token, err := RotarToken(inst.ArchivoToken)
+	clave, err := NuevaClave(inst.ArchivoToken)
 	if err != nil {
 		return "", err
 	}
-	inst.token = token
-	return token, nil
+	inst.huella = api.HuellaToken(clave)
+	return clave, nil
 }
 
-// tokenDe lee la clave de una instancia, que puede cambiar en marcha (RotarTokenInstancia).
-func (s *Servicio) tokenDe(inst *Instancia) string {
+// estadoClave dice si la instancia tiene clave y de dónde viene; puede cambiar en marcha (RotarTokenInstancia).
+func (s *Servicio) estadoClave(inst *Instancia) EstadoClave {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return inst.token
+	e := EstadoClave{TieneClave: inst.huella != "", Origen: "archivo", Archivo: inst.ArchivoToken}
+	if variable, esVariable := strings.CutPrefix(inst.ArchivoToken, "variable "); esVariable {
+		e.Origen, e.Variable, e.Archivo = "variable", variable, ""
+	}
+	return e
 }
 
-// instanciaPorToken compara el token con el de todas las instancias, sin revelar por tiempos cuál existe.
+// instanciaPorToken compara la huella del token con la de todas las instancias, sin revelar por tiempos cuál existe.
 func (s *Servicio) instanciaPorToken(token string) *Instancia {
+	if token == "" {
+		return nil
+	}
+	huella := []byte(api.HuellaToken(token))
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	var elegida *Instancia
 	for _, inst := range s.instancias {
-		if token != "" && subtle.ConstantTimeCompare([]byte(token), []byte(inst.token)) == 1 {
+		if inst.huella != "" && subtle.ConstantTimeCompare(huella, []byte(inst.huella)) == 1 {
 			elegida = inst
 		}
 	}
@@ -145,24 +154,6 @@ func RutaTokenInstancia(datos, id string) string {
 // RutaTokenPunto es el archivo del token de un punto de acceso.
 func RutaTokenPunto(datos, nombre string) string {
 	return filepath.Join(datos, "tokens", "acceso_"+nombre)
-}
-
-// TokenInstancia devuelve el token de la instancia y su origen; el global puede venir de una variable de entorno.
-func TokenInstancia(datos, id string, c *configuracion.Configuracion) (valor, origen string, err error) {
-	if id == "global" {
-		if variable := c.Texto("instancia_global.token_variable_entorno"); variable != "" {
-			if v := os.Getenv(variable); v != "" {
-				if len(v) < largoMinimoEntorno {
-					return "", "", nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf(
-						"la clave de la variable %s es demasiado corta: necesita al menos %d caracteres", variable, largoMinimoEntorno))
-				}
-				return v, "variable " + variable, nil
-			}
-		}
-	}
-	ruta := RutaTokenInstancia(datos, id)
-	valor, err = LeerOCrearToken(ruta)
-	return valor, ruta, err
 }
 
 // HuellaInstancia devuelve la huella de la clave de la instancia y su origen; la del global puede venir de una variable

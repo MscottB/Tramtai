@@ -22,7 +22,8 @@ func TestSugerirApiPropia(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, cuerpo := pedir(t, ts.URL, "GET", "/api/v1/instancia", global.token, "")
+	clave := claveDe(t, s, global)
+	_, cuerpo := pedir(t, ts.URL, "GET", "/api/v1/instancia", clave, "")
 	var r contrato.ResumenInstancia
 	if err := json.Unmarshal([]byte(cuerpo), &r); err != nil || r.ID != "global" || r.SugerirApiPropia || r.Base == "" {
 		t.Fatalf("%v %s", err, cuerpo)
@@ -36,10 +37,11 @@ func TestContadoresDelResumen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r, c := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", global.token, hola); r.StatusCode != 200 {
+	clave := claveDe(t, s, global)
+	if r, c := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", clave, hola); r.StatusCode != 200 {
 		t.Fatalf("petición: %d %s", r.StatusCode, c)
 	}
-	_, cuerpo := pedir(t, ts.URL, "GET", "/api/v1/instancia", global.token, "")
+	_, cuerpo := pedir(t, ts.URL, "GET", "/api/v1/instancia", clave, "")
 	var r contrato.ResumenInstancia
 	if err := json.Unmarshal([]byte(cuerpo), &r); err != nil {
 		t.Fatal(err)
@@ -77,6 +79,7 @@ func TestPrimerosPasos(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	clave := claveDe(t, s, global)
 	p := pasos(t, s, ts.URL, global.ID)
 	if a := p["agentes"]; !a.Hecho || a.Listos != 1 || a.Total != 1 {
 		t.Fatalf("agentes: %+v", a)
@@ -87,7 +90,7 @@ func TestPrimerosPasos(t *testing.T) {
 	if a, ok := p["configuracion"]; !ok || a.Hecho {
 		t.Fatalf("el arranque automático, disponible y apagado: %+v", p)
 	}
-	if r, c := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", global.token, hola); r.StatusCode != 200 {
+	if r, c := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", clave, hola); r.StatusCode != 200 {
 		t.Fatalf("petición: %d %s", r.StatusCode, c)
 	}
 	disponible.Store(false)
@@ -98,7 +101,7 @@ func TestPrimerosPasos(t *testing.T) {
 	if _, ok := p["configuracion"]; ok {
 		t.Fatalf("sin arranque automático en el sistema no hay paso: %+v", p)
 	}
-	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/instancia/pasos", global.token, ""); r.StatusCode != 401 {
+	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/instancia/pasos", clave, ""); r.StatusCode != 401 {
 		t.Fatalf("con la clave de las apps: %d", r.StatusCode)
 	}
 }

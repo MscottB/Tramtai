@@ -145,3 +145,14 @@ func TestNuevaClave(t *testing.T) {
 		t.Fatalf("en el archivo solo va la huella: %q", datos)
 	}
 }
+
+// claveDe crea la clave de un espacio y la devuelve: el servicio solo guarda la huella, así que una prueba que necesita
+// enviarla como Bearer la genera aquí. Cada llamada invalida la anterior.
+func claveDe(t *testing.T, s *Servicio, inst *Instancia) string {
+	t.Helper()
+	clave, err := s.RotarTokenInstancia(inst)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return clave
+}

@@ -94,12 +94,13 @@ func TestInstanciasSeparadasPorToken(t *testing.T) {
 	if !strings.HasPrefix(pry.ID, "demo_app_") || len(pry.ID) != len("demo_app_")+8 {
 		t.Fatalf("identificador de proyecto %q", pry.ID)
 	}
-	r, cuerpo := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", global.token, hola)
+	claveGlobal, clavePry := claveDe(t, s, global), claveDe(t, s, pry)
+	r, cuerpo := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", claveGlobal, hola)
 	if r.StatusCode != 200 || !strings.Contains(cuerpo, `"instancia":"global"`) {
 		t.Fatalf("global: %d %s", r.StatusCode, cuerpo)
 	}
 	id := r.Header.Get("Location")
-	if r, _ := pedir(t, ts.URL, "GET", id, pry.token, ""); r.StatusCode != 404 {
+	if r, _ := pedir(t, ts.URL, "GET", id, clavePry, ""); r.StatusCode != 404 {
 		t.Fatalf("el token del proyecto no ve trabajos de la global: %d", r.StatusCode)
 	}
 	if r, _ := pedir(t, ts.URL, "GET", id, s.tokenAdmin, "", "Tramtai-Instancia", "global"); r.StatusCode != 200 {
@@ -108,7 +109,7 @@ func TestInstanciasSeparadasPorToken(t *testing.T) {
 	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/modelos", "otro", ""); r.StatusCode != 401 {
 		t.Fatalf("token desconocido: %d", r.StatusCode)
 	}
-	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/servicio", global.token, ""); r.StatusCode != 401 {
+	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/servicio", claveGlobal, ""); r.StatusCode != 401 {
 		t.Fatalf("el token de instancia no administra: %d", r.StatusCode)
 	}
 	r, cuerpo = pedir(t, ts.URL, "GET", "/api/v1/servicio", s.tokenAdmin, "")
@@ -135,6 +136,7 @@ func TestPuntosDeAcceso(t *testing.T) {
 `
 	s, ts, proyecto := entorno(t, global, "puntos_acceso:\n  - nombre: del_proyecto\n", adaptadores.Simulado{})
 	global1, _ := s.ActivarGlobal()
+	claveGlobal := claveDe(t, s, global1)
 	estado := s.Recargar()
 	if len(estado) != 2 || !estado[0].Activo || !estado[1].Activo {
 		t.Fatalf("puntos: %+v %v", estado, s.erroresPuntos)
@@ -155,10 +157,10 @@ func TestPuntosDeAcceso(t *testing.T) {
 	if r, _ := pedir(t, ts.URL, "POST", "/p/app/api/v1/trabajos", token, hola); r.StatusCode != 404 {
 		t.Fatalf("la API nativa no está habilitada en el punto: %d", r.StatusCode)
 	}
-	if r, _ := pedir(t, ts.URL, "POST", "/p/app/openai/v1/chat/completions", global1.token, chat("gpt-4o-mini")); r.StatusCode != 401 {
+	if r, _ := pedir(t, ts.URL, "POST", "/p/app/openai/v1/chat/completions", claveGlobal, chat("gpt-4o-mini")); r.StatusCode != 401 {
 		t.Fatalf("el token de la instancia no vale en el punto: %d", r.StatusCode)
 	}
-	_, lista := pedir(t, ts.URL, "GET", "/api/v1/trabajos", global1.token, "")
+	_, lista := pedir(t, ts.URL, "GET", "/api/v1/trabajos", claveGlobal, "")
 	if !strings.Contains(lista, `"punto_acceso":"app"`) {
 		t.Fatalf("el trabajo registra su punto de acceso: %s", lista)
 	}
@@ -236,8 +238,9 @@ func TestRecargarSinTocarLosDemas(t *testing.T) {
 func TestDesactivarVaciaLaCola(t *testing.T) {
 	s, ts, _ := entorno(t, "concurrencia:\n  maximo_trabajos_instancia: 1\n", "", adaptadores.Simulado{Demora: time.Minute})
 	g, _ := s.ActivarGlobal()
-	pedir(t, ts.URL, "POST", "/api/v1/trabajos", g.token, hola)
-	_, cuerpo := pedir(t, ts.URL, "POST", "/api/v1/trabajos", g.token, `{"mensajes":[{"rol":"usuario","contenido":"segundo"}]}`)
+	clave := claveDe(t, s, g)
+	pedir(t, ts.URL, "POST", "/api/v1/trabajos", clave, hola)
+	_, cuerpo := pedir(t, ts.URL, "POST", "/api/v1/trabajos", clave, `{"mensajes":[{"rol":"usuario","contenido":"segundo"}]}`)
 	inicio := strings.Index(cuerpo, "trabajo_")
 	id := cuerpo[inicio : inicio+len("trabajo_")+24]
 	if err := s.Desactivar("global"); err != nil {
@@ -256,21 +259,22 @@ func TestDesactivarVaciaLaCola(t *testing.T) {
 func TestResultadoExpiradoResponde410(t *testing.T) {
 	s, ts, _ := entorno(t, "retencion:\n  horas_resultado: 0\n", "", adaptadores.Simulado{})
 	global, _ := s.ActivarGlobal()
-	r, _ := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", global.token, hola)
+	clave := claveDe(t, s, global)
+	r, _ := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", clave, hola)
 	id := r.Header.Get("Location")
 	if err := global.Purgar(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	if r, cuerpo := pedir(t, ts.URL, "GET", id+"/salida", global.token, ""); r.StatusCode != 410 || !strings.Contains(cuerpo, "resultado_expirado") {
+	if r, cuerpo := pedir(t, ts.URL, "GET", id+"/salida", clave, ""); r.StatusCode != 410 || !strings.Contains(cuerpo, "resultado_expirado") {
 		t.Fatalf("salida expirada: %d %s", r.StatusCode, cuerpo)
 	}
-	if r, cuerpo := pedir(t, ts.URL, "GET", id, global.token, ""); r.StatusCode != 200 || !strings.Contains(cuerpo, `"disponibilidad":"expirada"`) || strings.Contains(cuerpo, "hola") {
+	if r, cuerpo := pedir(t, ts.URL, "GET", id, clave, ""); r.StatusCode != 200 || !strings.Contains(cuerpo, `"disponibilidad":"expirada"`) || strings.Contains(cuerpo, "hola") {
 		t.Fatalf("los metadatos siguen, sin contenido: %d %s", r.StatusCode, cuerpo)
 	}
-	if r, cuerpo := pedir(t, ts.URL, "POST", id+"/reintentar", global.token, ""); r.StatusCode != 410 || !strings.Contains(cuerpo, "entrada_no_disponible") {
+	if r, cuerpo := pedir(t, ts.URL, "POST", id+"/reintentar", clave, ""); r.StatusCode != 410 || !strings.Contains(cuerpo, "entrada_no_disponible") {
 		t.Fatalf("reintento sin entradas: %d %s", r.StatusCode, cuerpo)
 	}
-	if _, cuerpo := pedir(t, ts.URL, "GET", id+"/eventos", global.token, ""); !strings.Contains(cuerpo, "event: aviso") || !strings.Contains(cuerpo, "event: fin") {
+	if _, cuerpo := pedir(t, ts.URL, "GET", id+"/eventos", clave, ""); !strings.Contains(cuerpo, "event: aviso") || !strings.Contains(cuerpo, "event: fin") {
 		t.Fatalf("SSE avisa de la expiración: %s", cuerpo)
 	}
 }
@@ -279,20 +283,21 @@ func TestDrenarAlCerrar(t *testing.T) {
 	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{Demora: 300 * time.Millisecond})
 	s.opc.PlazoDrenaje = 5 * time.Second
 	global, _ := s.ActivarGlobal()
-	r, cuerpo := pedir(t, ts.URL, "POST", "/api/v1/trabajos", global.token, hola)
+	clave := claveDe(t, s, global)
+	r, cuerpo := pedir(t, ts.URL, "POST", "/api/v1/trabajos", clave, hola)
 	if r.StatusCode != 202 {
 		t.Fatalf("%d %s", r.StatusCode, cuerpo)
 	}
 	id := r.Header.Get("Location")
 	for i := 0; i < 100 && !strings.Contains(cuerpo, `"ejecutando"`); i++ {
 		time.Sleep(10 * time.Millisecond)
-		_, cuerpo = pedir(t, ts.URL, "GET", id, global.token, "")
+		_, cuerpo = pedir(t, ts.URL, "GET", id, clave, "")
 	}
 	s.Drenar()
-	if r, _ := pedir(t, ts.URL, "POST", "/api/v1/trabajos", global.token, hola); r.StatusCode != 503 {
+	if r, _ := pedir(t, ts.URL, "POST", "/api/v1/trabajos", clave, hola); r.StatusCode != 503 {
 		t.Fatalf("tras drenar se rechazan trabajos nuevos: %d", r.StatusCode)
 	}
-	if _, cuerpo := pedir(t, ts.URL, "GET", id, global.token, ""); !strings.Contains(cuerpo, `"completado"`) {
+	if _, cuerpo := pedir(t, ts.URL, "GET", id, clave, ""); !strings.Contains(cuerpo, `"completado"`) {
 		t.Fatalf("el trabajo en curso terminó y su resultado se puede recoger: %s", cuerpo)
 	}
 }

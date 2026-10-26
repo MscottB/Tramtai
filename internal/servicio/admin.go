@@ -235,7 +235,7 @@ func (s *Servicio) adminActivar(w http.ResponseWriter, r *http.Request) {
 		api.EscribirError(w, r, err)
 		return
 	}
-	api.EscribirJSON(w, http.StatusOK, ActivacionInstancia{Instancia: inst.estado(r.Context()), Token: s.tokenDe(inst)})
+	api.EscribirJSON(w, http.StatusOK, ActivacionInstancia{Instancia: inst.estado(r.Context())})
 }
 
 func (s *Servicio) adminDesactivar(w http.ResponseWriter, r *http.Request) {

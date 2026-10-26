@@ -41,10 +41,11 @@ func (s *Servicio) rutaInstancia(w http.ResponseWriter, r *http.Request, inst *I
 	case ruta == "/api/v1/instancia/pasos" && r.Method == http.MethodGet:
 		api.EscribirJSON(w, http.StatusOK, s.primerosPasos(r.Context(), inst, mismoUsuarioLocal(r)))
 	case ruta == "/api/v1/instancia/token" && r.Method == http.MethodGet:
-		// Para mostrar en «Conectar» la clave que usan las aplicaciones; solo con sesión o token de servicio.
-		api.EscribirJSON(w, http.StatusOK, map[string]any{"token": s.tokenDe(inst), "archivo": inst.ArchivoToken})
+		// Si hay clave de las aplicaciones y de dónde viene, nunca cuál es; solo con sesión o token de servicio.
+		api.EscribirJSON(w, http.StatusOK, s.estadoClave(inst))
 	case ruta == "/api/v1/instancia/token" && r.Method == http.MethodPost:
-		// Regenera la clave que usan las aplicaciones (por si se filtró); vale al momento, sin reiniciar.
+		// Crea la clave de las aplicaciones o la regenera (por si se filtró); vale al momento, sin reiniciar. Es la única
+		// respuesta que la lleva.
 		token, err := s.RotarTokenInstancia(inst)
 		if err != nil {
 			api.EscribirError(w, r, err)

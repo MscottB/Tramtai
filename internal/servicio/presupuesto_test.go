@@ -45,6 +45,7 @@ func TestPresupuestoPuntoUI(t *testing.T) {
 `
 	s, ts, _ := entorno(t, global, "", adaptadores.Simulado{})
 	instancia, _ := s.ActivarGlobal()
+	clave := claveDe(t, s, instancia)
 	token, _ := NuevaClave(RutaTokenPunto(s.opc.Datos, "facturas"))
 	s.Recargar()
 	trabajo := func() int {
@@ -68,7 +69,7 @@ func TestPresupuestoPuntoUI(t *testing.T) {
 		t.Fatalf("el listado muestra el consumo frente al límite: %v %s", err, cuerpo)
 	}
 
-	if r, _ := pedir(t, ts.URL, "POST", "/api/v1/puntos/facturas/presupuesto/reiniciar", instancia.token, ""); r.StatusCode != 401 {
+	if r, _ := pedir(t, ts.URL, "POST", "/api/v1/puntos/facturas/presupuesto/reiniciar", clave, ""); r.StatusCode != 401 {
 		t.Fatalf("la clave de aplicaciones no reinicia presupuestos: %d", r.StatusCode)
 	}
 	if r, cuerpo := n.pedir("POST", "/api/v1/puntos/facturas/presupuesto/reiniciar", "", "X-CSRF-Token", n.csrf); r.StatusCode != 204 {
@@ -109,6 +110,7 @@ func TestPresupuestoPuntoUI(t *testing.T) {
 func TestPresupuestoInstanciaUI(t *testing.T) {
 	s, ts, _ := entorno(t, "presupuesto:\n  mensual:\n    peticiones: 4\n", "", adaptadores.Simulado{})
 	instancia, _ := s.ActivarGlobal()
+	clave := claveDe(t, s, instancia)
 	n := abrirSesion(t, s, ts.URL)
 	_, cuerpo := n.pedir("GET", "/api/v1/instancia/presupuesto", "")
 	var respuesta struct {
@@ -118,15 +120,15 @@ func TestPresupuestoInstanciaUI(t *testing.T) {
 		t.Fatalf("presupuesto de la instancia: %v %s", err, cuerpo)
 	}
 	for range 2 {
-		pedir(t, ts.URL, "POST", "/api/v1/trabajos", instancia.token, hola)
+		pedir(t, ts.URL, "POST", "/api/v1/trabajos", clave, hola)
 	}
-	if r, _ := pedir(t, ts.URL, "POST", "/api/v1/trabajos", instancia.token, hola); r.Header.Get("X-Tramtai-Presupuesto") != "50" {
+	if r, _ := pedir(t, ts.URL, "POST", "/api/v1/trabajos", clave, hola); r.Header.Get("X-Tramtai-Presupuesto") != "50" {
 		t.Fatalf("cabecera con 2 de 4: %q", r.Header.Get("X-Tramtai-Presupuesto"))
 	}
 	if r, cuerpo := n.pedir("POST", "/api/v1/instancia/presupuesto/reiniciar", "", "X-CSRF-Token", n.csrf); r.StatusCode != 204 {
 		t.Fatalf("reiniciar la instancia: %d %s", r.StatusCode, cuerpo)
 	}
-	if r, _ := pedir(t, ts.URL, "POST", "/api/v1/trabajos", instancia.token, hola); r.Header.Get("X-Tramtai-Presupuesto") != "0" {
+	if r, _ := pedir(t, ts.URL, "POST", "/api/v1/trabajos", clave, hola); r.Header.Get("X-Tramtai-Presupuesto") != "0" {
 		t.Fatalf("tras reiniciar: %q", r.Header.Get("X-Tramtai-Presupuesto"))
 	}
 }

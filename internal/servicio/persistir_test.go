@@ -48,6 +48,7 @@ func TestOlvidarMientrasSeAbre(t *testing.T) {
 		t.Fatal(err)
 	}
 	id := inst.ID
+	claveDe(t, s, inst) // sin clave no hay archivo que comprobar al final
 	if err := s.DetenerEspacio(id); err != nil {
 		t.Fatal(err)
 	}
