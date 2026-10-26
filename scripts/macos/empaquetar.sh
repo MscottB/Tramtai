@@ -64,5 +64,15 @@ ln -s /Applications "$disco/Applications"
 # Con solo -srcfolder, hdiutil calcula el tamaño de la imagen y con la app universal a veces se queda corto («No space
 # left on device»): se le da el de la carpeta, con un 20 % más y 20 MB para el sistema de archivos.
 megas=$(du -sm "$disco" | cut -f1)
-hdiutil create -volname Tramtai -srcfolder "$disco" -size "$((megas + megas / 5 + 20))m" -ov -format UDZO "dist/Tramtai-$version-macos.dmg"
+# En los runners de macOS hdiutil falla a veces con «Resource busy» (el sistema aún retiene la imagen): eso se reintenta;
+# cualquier otro error para en el acto.
+for intento in 1 2 3 4 5; do
+  salida=$(hdiutil create -volname Tramtai -srcfolder "$disco" -size "$((megas + megas / 5 + 20))m" -ov -format UDZO \
+    "dist/Tramtai-$version-macos.dmg" 2>&1) && { echo "$salida"; break; }
+  echo "$salida" >&2
+  case $salida in
+    *"Resource busy"*) [ "$intento" -lt 5 ] || exit 1; echo "hdiutil ocupado: reintento $((intento + 1)) de 5" >&2; sleep $((intento * 5)) ;;
+    *) exit 1 ;;
+  esac
+done
 ls -l dist
