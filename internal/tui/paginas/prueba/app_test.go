@@ -227,6 +227,10 @@ func TestQuieta(t *testing.T) {
 		"goroutine 7 [chan receive, 2 minutes]:\nmain.f()":                        true,
 		"goroutine 7 [sleep]:\ntime.Sleep(0x1)":                                   false,
 		"goroutine 7 [GC assist wait]:\nmain.f()":                                 false,
+		// «semacquire» a secas es el recolector o el cerrojo de un descriptor: se suelta solo. El de código propio es «sync.».
+		"goroutine 7 [semacquire]:\nmain.f()":          false,
+		"goroutine 7 [sync.Mutex.Lock]:\nmain.f()":     true,
+		"goroutine 7 [sync.WaitGroup.Wait]:\nmain.f()": true,
 	}
 	for pila, quiere := range casos {
 		if quieta(pila) != quiere {

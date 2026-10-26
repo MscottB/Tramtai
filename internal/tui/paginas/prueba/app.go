@@ -320,8 +320,11 @@ func (a *App) Asentar() {
 
 // esperando son los estados de una goroutine que no avanza sola: espera a otra (un canal, un select, un cerrojo) o a
 // un temporizador; la red va aparte, en quieta. En cualquier otro (corre, duerme, está en una llamada al sistema o espera al
-// recolector de basura) avanzará sin que la prueba haga nada.
-var esperando = []string{"chan receive", "chan send", "select", "sync.", "semacquire", "finalizer wait", "coroutine"}
+// recolector de basura) avanzará sin que la prueba haga nada. «semacquire» a secas no está: lo usan el recolector (al
+// arrancar o parar el mundo) y el cerrojo de los descriptores de red, que se sueltan solos; los cerrojos y esperas de
+// código propio ya salen como «sync.Mutex.Lock», «sync.WaitGroup.Wait»… Contarlo como quieto daba por asentada una
+// petición cuya goroutine esperaba al recolector, y la prueba miraba antes de que llegara su respuesta.
+var esperando = []string{"chan receive", "chan send", "select", "sync.", "finalizer wait", "coroutine"}
 
 // quieta dice si la goroutine de la pila g no avanza sola. «IO wait» solo cuenta si espera a que llegue algo de la red
 // (una lectura o una conexión nueva); lo que llega por una conexión con el servicio ya lo cuenta sinLeer. Una escritura
