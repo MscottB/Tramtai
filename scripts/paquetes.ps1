@@ -39,7 +39,7 @@ cask "tramtai" do
   desc "$descripcion"
   homepage "https://mscottb.github.io/Tramtai/"
 
-  depends_on macos: ">= :big_sur"
+  depends_on macos: :big_sur
 
   app "Tramtai.app"
   binary "#{appdir}/Tramtai.app/Contents/MacOS/tramtai"
