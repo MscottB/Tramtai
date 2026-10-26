@@ -244,8 +244,6 @@ const es = {
   'conectar.urlAnthropic': 'URL base para Anthropic',
   'conectar.apiPropia': 'API propia de Tramtai',
   'conectar.clave': 'Clave (API key)',
-  'conectar.mostrarClave': 'Mostrar la clave',
-  'conectar.ocultarClave': 'Ocultar la clave',
   'conectar.copiarClave': 'Copiar la clave',
   'conectar.claveCopiada': 'Clave copiada',
   'conectar.regenerarClave': 'Regenerar la clave',

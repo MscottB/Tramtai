@@ -243,8 +243,6 @@ const en: Textos = {
   'conectar.urlAnthropic': 'Anthropic base URL',
   'conectar.apiPropia': 'Tramtai’s own API',
   'conectar.clave': 'Key (API key)',
-  'conectar.mostrarClave': 'Show the key',
-  'conectar.ocultarClave': 'Hide the key',
   'conectar.copiarClave': 'Copy the key',
   'conectar.claveCopiada': 'Key copied',
   'conectar.regenerarClave': 'Regenerate the key',
