@@ -108,6 +108,9 @@ type (
 	EspaciosCambiados struct{}
 	// ErrorServicio dice a la app que el servicio no responde: avisa y, con r, reintenta. La página no se cierra.
 	ErrorServicio struct{ Err error }
+	// Actualizando dice a la app que empieza la instalación de una versión nueva: el instalador cierra el servicio y la
+	// terminal, así que la app sale limpia y deja escrito cómo volver a abrirla.
+	Actualizando struct{}
 	// Volver lleva a la página anterior: de la Ayuda a la de antes, o tras un IrA a la de origen. Sin anterior, nada.
 	Volver struct{}
 )

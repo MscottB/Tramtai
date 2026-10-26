@@ -6,6 +6,7 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 
@@ -40,6 +41,9 @@ func Ejecutar(o Opciones) error {
 	m := nuevo(o)
 	defer m.cerrar()
 	_, err := tea.NewProgram(m).Run()
+	if m.despedida != "" { // ya fuera de la pantalla alternativa: queda en la consola
+		fmt.Println(m.despedida)
+	}
 	return err
 }
 
@@ -85,6 +89,8 @@ type modelo struct {
 	pregunta *comp.Confirmacion // la confirmación que pidió la página, la de salir o el último error entero
 	saliendo bool               // la pregunta abierta es la de salir: s cierra la terminal
 	avisos   comp.Avisos
+
+	despedida string // lo que queda escrito en la consola al salir (al empezar una actualización)
 }
 
 func idiomaDe() string {
@@ -238,6 +244,9 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.comprobando = true
 		return m, m.conectar(false, false, true)
+	case pagina.Actualizando: // el instalador va a cerrar la terminal: mejor salir limpia, con la consola restaurada
+		m.despedida = idioma.T("Tramtai se está actualizando: vuelve a abrir la terminal con «tramtai terminal» cuando termine")
+		return m, tea.Quit
 	case pagina.ErrorServicio:
 		if !m.conectando && !m.anterior() { // un «no responde» de la página no tapa cómo detener el servicio anterior
 			m.caido = msg.Err

@@ -481,6 +481,7 @@ type actualizable struct {
 	avance     contrato.ProgresoActualizacion
 	pedidas    int
 	decisiones []string
+	caido      bool // el instalador detuvo el servicio: el avance ya no contesta
 }
 
 func (x *actualizable) poner(p contrato.ProgresoActualizacion) {
@@ -505,6 +506,9 @@ func conActualizable(t *testing.T) (*cliente.Cliente, string, *actualizable) {
 			x.pedidas++
 			json.NewEncoder(w).Encode(map[string]string{"version": "v99.0.0"})
 		case "/api/v1/servicio/actualizacion/progreso":
+			if x.caido {
+				panic(http.ErrAbortHandler) // sin respuesta: el cliente ve un error de red
+			}
 			json.NewEncoder(w).Encode(x.avance)
 		case "/api/v1/servicio/actualizar/instalar", "/api/v1/servicio/actualizar/cancelar":
 			x.decisiones = append(x.decisiones, r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:])
@@ -549,6 +553,49 @@ func TestActualizarSigueElAvance(t *testing.T) {
 	}
 	if x.pedidas != 1 || len(x.decisiones) != 1 {
 		t.Fatalf("pedidas %d, decisiones %v", x.pedidas, x.decisiones)
+	}
+}
+
+// TestInstalarCierraLaTerminal: el instalador cierra el servicio y la terminal, así que al empezar la instalación el avance
+// dice cómo volver a abrirla y la página pide a la app que salga (pagina.Actualizando). Si tras «listo» el servicio deja
+// de contestar sin que se viera «instalando», también.
+func TestInstalarCierraLaTerminal(t *testing.T) {
+	actualizando := func(fuera []tea.Msg) bool {
+		return slices.ContainsFunc(fuera, func(m tea.Msg) bool { _, ok := m.(pagina.Actualizando); return ok })
+	}
+	for _, caso := range []string{"instalando", "sin respuesta tras listo"} {
+		cli, id, x := conActualizable(t)
+		reloj := prueba.NuevoReloj()
+		a := prueba.Abrir(t, configuracion.NuevaConReloj("es", reloj.Ahora, reloj.Espera), contexto(t, cli, id))
+		todoTramtai(t, a)
+		a.Pulsar("u")
+		a.HastaVer(tx("actualizacion.comoInstala")[:30])
+		cuando := reloj.Ahora().Add(10 * time.Second)
+		x.poner(contrato.ProgresoActualizacion{Fase: "listo", Version: "v99.0.0", InstalaEn: &cuando})
+		visto := len(reloj.Pedidas())
+		a.Pulsar("i")
+		tic(a, reloj, &visto)
+		a.HastaVer(tx("actualizacion.reiniciaraEn", "n", "10"))
+		if actualizando(a.Fuera) {
+			t.Fatalf("%s: en «listo» la terminal sigue", caso)
+		}
+		x.mu.Lock()
+		if caso == "instalando" {
+			x.avance = contrato.ProgresoActualizacion{Fase: "instalando", Version: "v99.0.0"}
+		} else {
+			x.caido = true
+		}
+		x.mu.Unlock()
+		fuera := a.HastaSalir(func() { tic(a, reloj, &visto) }, actualizando)
+		if !actualizando(fuera) {
+			t.Fatalf("%s: la página pide a la app que salga: %v", caso, fuera)
+		}
+		if caso == "instalando" {
+			v := strings.Join(strings.Fields(a.Vista()), " ")
+			if !strings.Contains(v, "tramtai terminal") || strings.Contains(v, strings.Join(strings.Fields(tx("actualizacion.cerrara")), " ")) {
+				t.Fatalf("el avance dice cómo volver a abrir la terminal, no que se abrirá sola:\n%s", a.Vista())
+			}
+		}
 	}
 }
 

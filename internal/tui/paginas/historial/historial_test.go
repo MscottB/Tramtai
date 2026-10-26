@@ -771,7 +771,9 @@ func TestHistorialEnVivoSeCorta(t *testing.T) {
 	}
 	// Otro Iniciar en el mismo espacio (el servicio volvió) corta el seguimiento de antes y lo reabre, con el detalle.
 	a.Correr(a.P.Iniciar(prueba.Contexto(t, cli, id)))
-	a.Hasta(func() bool { return enVivo(a) && prueba.FlujosAbiertos() == 1 && strings.Contains(a.Vista(), "primera parte") })
+	a.Hasta(func() bool {
+		return enVivo(a) && prueba.FlujosAbiertos() == 1 && strings.Contains(a.Vista(), "primera parte")
+	})
 	if !enVivo(a) || prueba.FlujosAbiertos() != 1 || !strings.Contains(a.Vista(), "primera parte") {
 		t.Fatalf("Iniciar en el mismo espacio conserva el detalle y lo sigue:\n%s", a.Vista())
 	}

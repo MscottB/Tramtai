@@ -126,10 +126,11 @@ func init() {
 		"desactiva":                          "turn off",
 		"Elige qué borrar":                   "Choose what to delete",
 		"se aplica al reiniciar el servicio": "it applies when the service restarts",
-		"Respuestas %d h · registro %s días · máximo %s":                 "Responses %d h · log %s days · up to %s",
-		"¿Cancelar la actualización?":                                    "Cancel the update?",
-		"La descarga se borra y Tramtai sigue como está.":                "The download is deleted and Tramtai stays as it is.",
-		"El servicio se reinicia; la terminal se vuelve a conectar sola": "The service is restarting; the terminal reconnects on its own",
+		"Respuestas %d h · registro %s días · máximo %s":                                                 "Responses %d h · log %s days · up to %s",
+		"¿Cancelar la actualización?":                                                                    "Cancel the update?",
+		"La descarga se borra y Tramtai sigue como está.":                                                "The download is deleted and Tramtai stays as it is.",
+		"El servicio se reinicia; la terminal se vuelve a conectar sola":                                 "The service is restarting; the terminal reconnects on its own",
+		"Tramtai se está actualizando: vuelve a abrir la terminal con «tramtai terminal» cuando termine": "Tramtai is updating: open the terminal again with “tramtai terminal” when it finishes",
 
 		// La Ayuda: los temas salen de los de la Web UI; aquí solo lo propio de la terminal.
 		"Ver en la web":           "See on the web",

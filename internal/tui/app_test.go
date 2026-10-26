@@ -417,6 +417,19 @@ func TestServicioVuelveConservaLoAbierto(t *testing.T) {
 	a.HastaVer(filtro, "hola historial")
 }
 
+// TestActualizandoSaleLimpia: cuando empieza la instalación de una versión nueva, la terminal sale sin preguntar (aunque
+// haya algo pendiente: el instalador la cerraría igual) y deja escrito cómo volver a abrirla.
+func TestActualizandoSaleLimpia(t *testing.T) {
+	m := nuevo(Opciones{})
+	m.paginas[pagina.PaginaInicio] = &paginaOcupada{motivo: "Probar tiene una petición en marcha"}
+	if _, cmd := m.Update(pagina.Actualizando{}); !sale(cmd) || m.pregunta != nil {
+		t.Fatal("al empezar la instalación la terminal sale sin preguntar")
+	}
+	if !strings.Contains(m.despedida, "tramtai terminal") {
+		t.Fatalf("deja escrito cómo volver a abrirla: %q", m.despedida)
+	}
+}
+
 // TestRAlConectarNoCierra: r en Inicio mientras la terminal aún conecta (sin cliente y con la página sin iniciar) no
 // pide nada al servicio: Inicio dice que no hay servicio, como las demás páginas, y la terminal sigue.
 func TestRAlConectarNoCierra(t *testing.T) {

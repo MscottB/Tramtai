@@ -176,12 +176,20 @@ func (p *Pagina) updateActualizacion(msg tea.Msg) tea.Cmd {
 		if !p.vigente(m.origen) || p.abierta != vistaProgreso {
 			return nil
 		}
+		salir := func() tea.Msg { return pagina.Actualizando{} } // el instalador va a cerrar el servicio y la terminal
 		switch {
-		case m.err != nil: // el instalador ya detuvo el servicio: queda el último estado hasta que la app se cierre
+		case m.err != nil:
+			if f := p.upd.progreso.Fase; f == "listo" || f == "instalando" { // el instalador ya detuvo el servicio
+				return salir
+			}
+			// antes de «listo», queda el último estado y se sigue preguntando
 		case m.p.Fase != "":
 			p.upd.progreso, p.upd.vistaFase, p.upd.sinFase = &m.p, true, 0
-			if m.p.Fase == "error" {
+			switch m.p.Fase {
+			case "error":
 				return nil
+			case "instalando":
+				return salir
 			}
 		default:
 			if p.upd.sinFase++; p.upd.vistaFase || p.upd.sinFase >= sinFaseMaximo {
@@ -318,7 +326,8 @@ func (p *Pagina) textoNovedades() string {
 	return strings.Join(l, "\n")
 }
 
-// textoAvance es el del avance: la versión, la fase y, al instalar, que la app se cerrará.
+// textoAvance es el del avance: la versión, la fase y, al instalar, que la terminal se cierra y cómo volver a abrirla (el
+// instalador solo vuelve a arrancar el servicio, no la terminal).
 func (p *Pagina) textoAvance() string {
 	e, a := p.estilos, p.upd.progreso
 	l := []string{e.Titulo.Render(p.tx("actualizacion.progresoTitulo", "version", a.Version)), ""}
@@ -328,7 +337,7 @@ func (p *Pagina) textoAvance() string {
 	}
 	l = append(l, estilo.Render(p.textoProgreso(*a)))
 	if a.Fase == "instalando" {
-		l = append(l, "", e.Tenue.Render(p.tx("actualizacion.cerrara")))
+		l = append(l, "", e.Tenue.Render(idioma.T("Tramtai se está actualizando: vuelve a abrir la terminal con «tramtai terminal» cuando termine")))
 	}
 	return strings.Join(l, "\n")
 }
