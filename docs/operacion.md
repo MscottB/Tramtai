@@ -53,6 +53,7 @@ La Web UI está en español y en inglés (el botón de idioma de la cabecera) y 
 - **Probar:** modelo del catálogo con su esfuerzo justo debajo (también el que usa el agente si no eliges uno), respaldo con un esfuerzo propio por agente, archivos, mensaje y JSON Schema opcional; muestra la respuesta en vivo, con formato Markdown o como texto (la elección se recuerda), y permite cancelar la petición. Bajo la respuesta, **Registro** da la hora de cada paso (cola, espera del agente, ejecución con qué agente, modelo y esfuerzo, avisos) y la duración de cada etapa; también está en el detalle del Historial. **Pruebas recientes** lista las 10 últimas pruebas de Probar: pulsar una la abre y **Usar de nuevo** recupera su mensaje y su receta (los adjuntos no).
 - **Historial:** detalle, seguir en vivo, cancelar, reintentar, eliminar y **vaciar el historial** (las peticiones terminadas y sus archivos).
 - **Mis APIs:** URL, clave y ejemplos; APIs por aplicación con grupos que se activan o detienen juntos.
+- **Espacios:** el global y los proyectos, con activar, detener, confiar, buscar y olvidar.
 - **Agentes**, **Ajustes** (arranque con el sistema, **borrar datos** y valores efectivos) y **Ayuda** (cómo empezar y preguntas frecuentes).
 
 También se puede abrir `http://127.0.0.1:17373` directamente: en Windows, Linux y macOS entra solo si el navegador es de tu mismo usuario del sistema. Si no, la página **Entrar** explica cómo abrirla: desde la app o con `tramtai abrir`, que generan un código de un solo uso. La clave de las aplicaciones no abre la Web UI.
