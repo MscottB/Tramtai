@@ -1,12 +1,10 @@
-# Publica la página de presentación (site/) en GitHub Pages cuando cambia. Requiere Settings → Pages → Source:
-# «GitHub Actions».
+# Publica la página de presentación (site/) en GitHub Pages al terminar Publicar, o a mano. No publica en cada push
+# a main: la web presenta lo que ya se puede descargar, no lo que llega en el próximo release. Requiere Settings →
+# Pages → Source: «GitHub Actions».
 name: Página
 
 on:
-  push:
-    branches: [main]
-    paths: ['site/**', 'docs/ejemplos/**', 'web/scripts/descargas.mjs', '.github/workflows/paginas.yml']
-  # Tras cada release se vuelve a publicar: la portada lleva la versión y los enlaces del release nuevo.
+  # Tras cada release: la portada lleva la versión, las novedades y los enlaces del release nuevo.
   workflow_run:
     workflows: [Publicar]
     types: [completed]
