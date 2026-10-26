@@ -641,40 +641,55 @@ function escribirLeyenda(leyenda, partes) {
 })();
 
 // Plano de metro de Funciones: sin JavaScript, o por debajo de 900 px, cada línea va en vertical con el texto de sus
-// paradas. Con pantalla ancha va en horizontal (metro--plano): cada parada es un botón que enseña su título y su texto en
-// el panel de debajo y queda marcado con aria-pressed. Empieza elegida la primera.
+// paradas, y el título de cada una es texto. Con pantalla ancha va en horizontal (metro--plano): el título pasa a ser un
+// botón que enseña su título y su texto en el panel de debajo, y la elegida queda marcada con aria-current. Como las
+// pestañas de la cabecera, solo la elegida está en el tabulador y las flechas pasan de una a otra. Empieza elegida la
+// primera.
 (function () {
   var metro = document.querySelector('.metro');
   var panel = metro && metro.querySelector('.metro-panel');
   if (!panel) return;
-  // Sin JavaScript el título es texto (un botón no haría nada); aquí pasa a ser el botón de la parada.
-  var botones = Array.prototype.map.call(metro.querySelectorAll('.parada-titulo'), function (titulo) {
+  var titulos = Array.prototype.slice.call(metro.querySelectorAll('.parada-titulo'));
+  var ancho = window.matchMedia('(min-width: 900px)');
+  var elegida = 0, botones = [];
+  function elegir(n, foco) {
+    elegida = n;
+    botones.forEach(function (b, i) {
+      b.tabIndex = i === n ? 0 : -1;
+      if (i === n) b.setAttribute('aria-current', 'true');
+      else b.removeAttribute('aria-current');
+    });
+    if (foco) botones[n].focus();
+    // El título del panel es un párrafo: un h4 más saldría en el esquema de títulos colgado de la última línea.
+    panel.innerHTML = '<p class="metro-panel-titulo">' + botones[n].innerHTML + '</p><p>' + titulos[n].closest('.parada').querySelector('.parada-texto').innerHTML + '</p>';
+  }
+  function boton(titulo, i) {
     var b = document.createElement('button');
     b.type = 'button';
     b.className = 'parada-boton';
     b.append.apply(b, Array.prototype.slice.call(titulo.childNodes));
     titulo.appendChild(b);
+    b.addEventListener('click', function () { elegir(i); });
+    b.addEventListener('keydown', function (e) {
+      var siguiente = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: titulos.length - 1 }[e.key];
+      if (siguiente === undefined || e.altKey || e.ctrlKey || e.metaKey) return;
+      e.preventDefault();
+      elegir((siguiente + titulos.length) % titulos.length, true);
+    });
     return b;
-  });
-  var ancho = window.matchMedia('(min-width: 900px)');
-  var elegida = 0;
-  function elegir(n) {
-    elegida = n;
-    botones.forEach(function (b, i) { b.setAttribute('aria-pressed', String(i === n)); });
-    panel.innerHTML = '<h4>' + botones[n].innerHTML + '</h4><p>' + botones[n].closest('.parada').querySelector('.parada-texto').innerHTML + '</p>';
   }
-  // En vertical el texto ya se ve: los botones no hacen nada y salen del orden del tabulador.
+  // En vertical el texto ya se ve: el botón vuelve a ser el texto del título, sin un botón que no haría nada.
   function modo() {
     var plano = ancho.matches;
     metro.classList.toggle('metro--plano', plano);
-    botones.forEach(function (b) {
-      b.tabIndex = plano ? 0 : -1;
-      if (!plano) b.removeAttribute('aria-pressed');
-    });
+    if (plano && !botones.length) botones = titulos.map(boton);
+    if (!plano) {
+      botones.forEach(function (b) { b.replaceWith.apply(b, Array.prototype.slice.call(b.childNodes)); });
+      botones = [];
+    }
     if (plano) elegir(elegida); // con el panel aún oculto: el texto inicial no se anuncia
     panel.hidden = !plano;
   }
-  botones.forEach(function (b, i) { b.addEventListener('click', function () { if (ancho.matches) elegir(i); }); });
   ancho.addEventListener('change', modo);
   modo();
 })();

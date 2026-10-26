@@ -121,7 +121,9 @@ test('«Los agentes que ya pagas» dibuja el antes y el después, con texto visi
   assert.equal(figuras.length, 2)
   for (const f of figuras) { assert.match(f, /<svg[^>]*role="img"/); assert.match(f, /<figcaption>[\s\S]*lang="es"[\s\S]*lang="en"/) }
   assert.match(pagas, /Una clave, un SDK y una factura por proveedor/)
-  assert.match(pagas, /Una URL local y la suscripción o la clave que ya tienes/)
+  // Revisión final (I2): bajo «al servicio de tus apps», sin ofrecer la suscripción para tus apps (TERMINOS.md §4).
+  assert.match(pagas, /Una URL local y los agentes que ya tienes/)
+  assert.match(pagas, /One local URL and the agents you already have/)
 })
 test('los seis motivos, en los dos idiomas y sin promesas absolutas', () => {
   const motivos = pagas.match(/<li class="motivo">[\s\S]*?<\/li>/g) ?? []
@@ -129,6 +131,20 @@ test('los seis motivos, en los dos idiomas y sin promesas absolutas', () => {
   for (const t of ['Lo que ya pagas', 'En tu equipo', 'Compatible', 'Respaldo', 'Por proyecto', 'Bajo control']) assert.match(pagas, new RegExp(t))
   for (const m of motivos) assert.match(m, /lang="es"[\s\S]*lang="en"/)
   assert.doesNotMatch(pagas, /\b(nunca|siempre|sin cortes|a nadie|never|always|no one)\b/i)
+  // Revisión final (I2): para tus apps, la clave de API; la suscripción, solo para tu uso personal (TERMINOS.md §4).
+  assert.match(motivos[0], /Para tus apps, la clave de API de cada agente; tu suscripción[^<]*, solo para tu uso personal/)
+  assert.match(motivos[0], /For your apps, each agent’s API key; your [^<]*subscription, only for your personal use/)
+  assert.doesNotMatch(pagas, /la suscripción o la clave que ya tienes|the subscription or key you already have/)
+  // Revisión final (I3): los motivos cuentan el beneficio con palabras propias, sin copiar las capturas, la privacidad ni
+  // el plano.
+  for (const copia of ['no tiene servidor propio', 'su historial, sus APIs y sus ajustes', 'el siguiente de tu lista', 'mapa en vivo'])
+    assert.ok(!motivos.join('').includes(copia), `un motivo repite «${copia}»`)
+  // Revisión final (M7, M8): Tramtai sí está en medio del dibujo, pero no hay nube; y «herramientas» son las tools.
+  assert.doesNotMatch(pagas, /Sin servidores intermedios|No middle servers/)
+  assert.match(pagas, /llamadas a herramientas/)
+})
+test('los tres dibujos llaman igual a los tres orígenes (revisión final, M8)', () => {
+  assert.doesNotMatch(html, /Tus automatizaciones|Your automations/)
 })
 
 const css = readFileSync(new URL('../../site/estilo.css', import.meta.url), 'utf8')
@@ -293,12 +309,19 @@ test('el texto alternativo del último paso describe la página entera, no el gl
   assert.match(ultima, /alt="Guided tour, step 14 of 14: the whole Workspaces page"/)
 })
 
-// Revisión del bloque 2 (I3, M3, M4): en el móvil las flechas van encima de los bordes de la imagen, que usa todo el
-// ancho (también su texto); con JavaScript los pasos comparten celda y la pausa no sube y baja con cada uno.
-test('en el móvil la imagen del paso ocupa todo el ancho y los controles no se mueven', () => {
-  assert.match(css, /@media \(max-width: 899px\) \{[^@]*\.demo-flecha \{[^}]*grid-area: 1 \/ 1/)
-  assert.match(css, /@media \(max-width: 899px\) \{[^@]*\.demo-escena, \.demo-controles \{ grid-column: 1; \}/)
-  for (const f of figuras) for (const s of f.match(/sizes="[^"]+"/g) ?? []) assert.equal(s, 'sizes="(max-width: 899px) calc(100vw - 32px), 800px"')
+// Revisión del bloque 2 (I3, M3, M4) y final (I1, M3): las flechas van encima de los bordes de la imagen, que usa todo el
+// ancho del escenario (820 px en el escritorio, con la lista a 220); con JavaScript los pasos comparten celda y la pausa
+// no sube y baja con cada uno; cada paso enlaza su imagen a tamaño real.
+test('la imagen del paso ocupa todo el escenario y los controles no se mueven', () => {
+  assert.match(css, /\n\.demo-flecha \{[^}]*grid-area: 1 \/ 1/)
+  assert.match(css, /html\.js \.demo \{[^}]*grid-template-columns: 220px minmax\(0, 1fr\)/)
+  assert.match(css, /html\.js \.demo-escenario \{[^}]*grid-template-columns: minmax\(0, 1fr\)/)
+  for (const f of figuras) for (const s of f.match(/sizes="[^"]+"/g) ?? []) assert.equal(s, 'sizes="(max-width: 899px) calc(100vw - 32px), 820px"')
+  figuras.forEach((f, i) => {
+    for (const tema of ['claro', 'oscuro'])
+      for (const idioma of ['es', 'en'])
+        assert.match(f, new RegExp(`<a class="solo-${tema}" lang="${idioma}" href="capturas/bienvenida-${i + 1}-${tema}-${idioma}-1440\\.webp">`), `paso ${i + 1}`)
+  })
   assert.match(css, /html\.js \.demo-paso \{ grid-area: 1 \/ 1; \}/)
   assert.match(css, /html\.js \.demo-paso\[hidden\] \{[^}]*visibility: hidden/)
 })
@@ -383,19 +406,23 @@ test('la demo se puede pausar y elegir, sin anunciarse sola y con los controles 
 // v0.56: cada captura de la demo es la zona que señala el paso, ampliada y sin el globo del recorrido.
 const capturasJs = readFileSync(new URL('./capturas.mjs', import.meta.url), 'utf8')
 test('las capturas de la demo recortan la zona del paso y ocultan el globo del recorrido', () => {
-  assert.ok(/function zonaDelPaso\(\)/.test(capturasJs), 'falta zonaDelPaso()')
+  assert.ok(/function zonaDelPaso\(/.test(capturasJs), 'falta zonaDelPaso()')
   assert.ok(capturasJs.includes("paso.ancla ? '.driver-popover'") && capturasJs.includes("visibility = 'hidden'"), 'el globo del recorrido no sale en la captura')
   assert.ok(capturasJs.includes('clip: { ...zona, scale: 1440 / zona.width }'), 'cada captura recorta la zona y la amplía al ancho')
   // Revisión del bloque 2 (I3, M7): la zona mide 1080 px como mucho, así siempre se amplía, y el hueco del velo se mira
   // en las cuatro esquinas de lo señalado.
-  assert.match(capturasJs, /Math\.min\(1080, Math\.max\(720, /)
+  // Revisión final (I1, M2): el tope es el ancho de la imagen en la portada (820), así los pasos salen a 1× o más; las
+  // listas de filas, cuyo texto habla de la fila entera, abarcan su ancho.
+  assert.match(capturasJs, /Math\.min\(maximo, Math\.max\(720, /)
+  assert.match(capturasJs, /async function zonaDelPaso\(maximo = 820\)/)
+  assert.match(capturasJs, /FILAS = new Set\(\['agentes\.tarjeta', 'espacios\.lista'\]\)/)
   assert.match(capturasJs, /\[b\.left \+ 2, b\.top \+ 2\]/)
   // Un ancla más ancha que la zona se recorta desde su borde izquierdo (con su margen): centrada perdía los nombres.
   assert.ok(capturasJs.includes('b.width + 64 > width ? b.left - 32 : b.left + b.width / 2 - width / 2'), 'el ancla ancha arranca a la izquierda')
 })
 // El último paso no tiene ancla, pero driver.js deja en el DOM el resaltado del anterior: se decide por el paso.
 test('el paso sin ancla sale con la pantalla entera desde arriba, sin velo', () => {
-  assert.ok(capturasJs.includes('paso.ancla ? await zonaDelPaso() : { x: 0, y: 0, width: 1440, height: 900 }'), 'el último paso recorta una zona')
+  assert.ok(capturasJs.includes('paso.ancla ? await zonaDelPaso(FILAS.has(paso.ancla) ? 1440 : 820) : { x: 0, y: 0, width: 1440, height: 900 }'), 'el último paso recorta una zona')
   assert.ok(capturasJs.includes("'.driver-popover, .driver-overlay'"), 'el último paso sale con el velo')
 })
 
@@ -470,12 +497,29 @@ test('con JavaScript y pantalla ancha el plano es horizontal y cada parada ense�
   assert.ok(js.includes('// Plano de metro de Funciones'), 'falta el bloque del plano en sitio.js')
   assert.match(metroJs, /classList\.toggle\('metro--plano'/)
   assert.match(metroJs, /matchMedia\('\(min-width: 900px\)'\)/)
-  assert.match(metroJs, /setAttribute\('aria-pressed'/)
-  // Ronda del bloque 2: sin JavaScript las paradas no son botones que no hacen nada; el título es texto y el JS lo
-  // convierte en botón.
+  // Revisión final (M4): una sola parada en el tabulador (tabindex móvil, con flechas, como las pestañas de la
+  // cabecera) y la elegida marcada con aria-current, que no se «despulsa».
+  assert.match(metroJs, /setAttribute\('aria-current', 'true'\)/)
+  assert.doesNotMatch(metroJs, /aria-pressed/)
+  assert.match(metroJs, /ArrowRight/)
+  assert.match(metroJs, /tabIndex = i === n \? 0 : -1/)
+  // Ronda del bloque 2 y final (M6): sin JavaScript, y en vertical, el título es texto; el JS lo convierte en botón solo
+  // en el plano y lo devuelve al pasar a vertical.
   assert.doesNotMatch(seccion('funciones'), /parada-boton/)
   assert.match(metroJs, /createElement\('button'\)[\s\S]*?className = 'parada-boton'/)
+  assert.match(metroJs, /replaceWith/)
+  assert.doesNotMatch(metroJs, /tabIndex = plano/)
+  // Revisión final (M5): el título del panel no es un h4 más en el esquema.
+  assert.doesNotMatch(metroJs, /'<h4>'/)
+  assert.match(metroJs, /metro-panel-titulo/)
   assert.match(css, /\.metro--plano \.parada-texto \{ display: none; \}/)
+})
+// Revisión final (M1): el titular se queda, y la entradilla aclara que estas cuatro líneas son lo que hace Tramtai.
+test('la entradilla de Funciones explica las cuatro líneas del plano', () => {
+  const cabeza = seccion('funciones').match(/<div class="cabeza">[\s\S]*?<\/div>/)?.[0] ?? ''
+  assert.match(cabeza, /Una red con una línea por agente\./)
+  assert.match(cabeza, /cada línea es lo que hace Tramtai/)
+  assert.match(cabeza, /each line is what Tramtai does/)
 })
 
 test('Homebrew sin la app: el tap lleva la URL del repositorio y después «brew install tramtai» (el tap corto no existe)', () => {

@@ -210,11 +210,11 @@ section { padding: 72px 0; }
 .metro--plano .parada h4 { margin: 0; }
 .metro--plano .parada-boton { display: block; width: 100%; min-height: 44px; padding: 30px 8px 6px; border-radius: 8px; font-size: .95rem; font-weight: 600; color: var(--texto-suave); text-align: center; cursor: pointer; }
 .metro--plano .parada-titulo::before { left: 50%; margin-left: -11px; }
-.metro--plano .parada-boton:hover, .metro--plano .parada-boton[aria-pressed="true"] { color: var(--texto); }
-.metro--plano .parada-titulo:has(> [aria-pressed="true"])::before { background: var(--acento); }
+.metro--plano .parada-boton:hover, .metro--plano .parada-boton[aria-current="true"] { color: var(--texto); }
+.metro--plano .parada-titulo:has(> [aria-current="true"])::before { background: var(--acento); }
 .metro--plano .parada-texto { display: none; }
 .metro-panel { margin-left: 136px; padding: 20px 24px; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); }
-.metro-panel h4 { font-size: 1.05rem; margin-bottom: 6px; }
+.metro-panel-titulo { font: 700 1.05rem/1.15 var(--titulo); letter-spacing: -0.01em; margin-bottom: 6px; }
 .metro-panel p { max-width: 70ch; }
 /* Agentes: una tarjeta por agente con su sigla y el color de su línea (--c); el color de línea solo aparece aquí. */
 .agentes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 16px; }
@@ -413,8 +413,10 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
   .diagrama { grid-template-columns: 1fr; }
   .diagrama li:not(:last-child)::after { content: '↓'; right: auto; left: 18px; top: auto; bottom: -16px; }
 }
-/* Las capturas de la Ayuda vienen en los dos idiomas: la del otro se oculta también en oscuro (le gana a .solo-oscuro). */
-html[lang="es"] .captura img[lang="en"], html[lang="en"] .captura img[lang="es"] { display: none !important; }
+/* Las capturas de la Ayuda y de la demo (y su enlace a tamaño real) vienen en los dos idiomas: la del otro se oculta
+   también en oscuro (le gana a .solo-oscuro). */
+html[lang="es"] .captura img[lang="en"], html[lang="en"] .captura img[lang="es"],
+html[lang="es"] .captura a[lang="en"], html[lang="en"] .captura a[lang="es"] { display: none !important; }
 .solo-lectores, .demo-leyenda { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 /* Escenas de la cabecera (sitio.js): cuatro pestañas con nombre y la pausa encima; debajo, el mapa y el panel con el
    título, la línea que explica la escena y su código. Lado a lado desde 980 px, con el mapa vertical: el horizontal, en
@@ -456,11 +458,12 @@ html[lang="es"] .captura img[lang="en"], html[lang="en"] .captura img[lang="es"]
 .mapa-pausa { font: 600 .85rem var(--fuente); color: var(--texto); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 8px; padding: 0 14px; min-height: 44px; cursor: pointer; }
 
 /* Demo del recorrido guiado de la portada (sitio.js): a la izquierda, la lista de pasos por página (en el móvil, un
-   desplegable encima); a la derecha, la zona del paso con su texto debajo, una flecha a cada costado, el progreso y la
-   pausa. La leyenda solo la oyen los lectores de pantalla. Sin JavaScript se ven todos los pasos, uno debajo de otro.
-   Cada imagen declara su tamaño: no hay saltos. */
+   desplegable encima); a la derecha, la zona del paso con su texto debajo, una flecha encima de cada borde, el progreso
+   y la pausa. La leyenda solo la oyen los lectores de pantalla. Sin JavaScript se ven todos los pasos, uno debajo de
+   otro. Cada imagen declara su tamaño: no hay saltos. */
 .demo { max-width: 1120px; margin: 0 auto; }
-html.js .demo { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 32px; align-items: start; }
+/* Con la lista a 220 px la imagen mide 820 en el escritorio, lo mismo que el tope de la zona en capturas.mjs: 1× o más. */
+html.js .demo { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; align-items: start; }
 html:not(.js) .demo-pasos { display: none; }
 html:not(.js) .demo-paso + .demo-paso { display: block; margin-top: 40px; }
 .demo-pasos-movil > summary { font: 600 .95rem/1.3 var(--fuente); color: var(--texto); padding: 12px 0; cursor: pointer; }
@@ -470,10 +473,11 @@ html:not(.js) .demo-paso + .demo-paso { display: block; margin-top: 40px; }
 .demo-ir { display: block; width: 100%; min-height: 44px; padding: 8px 12px; font: .95rem/1.3 var(--fuente); color: var(--texto); text-align: left; background: transparent; border: 0; border-left: 3px solid transparent; border-radius: 0 8px 8px 0; cursor: pointer; }
 .demo-ir:hover { background: var(--superficie-suave); }
 .demo-ir[aria-current="step"] { font-weight: 600; background: var(--acento-suave); border-left-color: var(--acento); }
-/* Las flechas, a media altura de la imagen: cqw es el ancho del escenario y la imagen, 16:10 de lo que dejan flechas y
-   huecos (2 × 44 + 2 × 12). */
-html.js .demo-escenario { container-type: inline-size; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 0 12px; }
-.demo-escena, .demo-controles { grid-column: 2; }
+/* La imagen y su texto usan todo el ancho del escenario. Las flechas van encima de los bordes de la imagen, a media
+   altura (cqw es el ancho del escenario, y la imagen, 16:10 de él), con su fondo de superficie y su borde para que se
+   lean sobre la captura; la desactivada, sin transparencia. */
+html.js .demo-escenario { container-type: inline-size; display: grid; grid-template-columns: minmax(0, 1fr); }
+.demo-escena { grid-area: 1 / 1; }
 /* Con JavaScript los pasos comparten celda: la escena mide lo del más largo y la pausa y la barra no suben y bajan con
    cada paso. Los ocultos no bajan su imagen (carga diferida): guardan su sitio con un hueco de 16:10. */
 html.js .demo-escena { display: grid; }
@@ -481,15 +485,20 @@ html.js .demo-paso { grid-area: 1 / 1; }
 html.js .demo-paso[hidden] { display: block; visibility: hidden; }
 html.js .demo-paso[hidden] img { display: none; }
 html.js .demo-paso[hidden]::before { content: ''; display: block; aspect-ratio: 16 / 10; }
-.demo-flecha { display: grid; place-items: center; width: 44px; height: 44px; margin-top: calc((100cqw - 112px) / 3.2 - 22px); padding: 0; color: var(--texto); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 50%; cursor: pointer; }
+.demo-flecha { grid-area: 1 / 1; z-index: 1; display: grid; place-items: center; width: 44px; height: 44px; margin: calc(100cqw / 3.2 - 22px) 12px 0; padding: 0; color: var(--texto); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 50%; cursor: pointer; }
 .demo-flecha:hover:not(:disabled) { color: var(--acento); border-color: var(--acento); }
-.demo-flecha:disabled { opacity: .4; cursor: default; }
+.demo-flecha:disabled { color: var(--borde-control); cursor: default; }
+.demo-anterior { justify-self: start; }
+.demo-siguiente { justify-self: end; }
 .demo-flecha[hidden] { display: none; }
 .demo-paso img { background: var(--superficie-suave); }
 .demo-paso figcaption { margin-top: 16px; }
 .demo-donde { margin: 0; font-size: .9rem; color: var(--texto-suave); }
 .demo-paso h3 { margin: 4px 0 6px; font: 600 1.35rem/1.3 var(--titulo); }
 .demo-texto { margin: 0; font-size: 1.05rem; line-height: 1.6; }
+/* El enlace a la imagen a tamaño real: la del tema y el idioma que se ven (los otros se ocultan como sus img). */
+.demo-ampliar { margin: 8px 0 0; font-size: .9rem; }
+.demo-ampliar a { width: fit-content; }
 .demo-controles { display: flex; align-items: center; gap: 16px; margin-top: 20px; }
 .demo-controles[hidden] { display: none; }
 .demo-progreso { flex: 1; height: 4px; border-radius: 2px; background: var(--borde); overflow: hidden; }
@@ -502,15 +511,7 @@ html.js .demo-paso[hidden]::before { content: ''; display: block; aspect-ratio: 
 }
 @media (max-width: 899px) {
   html.js .demo { grid-template-columns: minmax(0, 1fr); gap: 16px; }
-  /* La imagen y su texto usan todo el ancho; las flechas van encima de los bordes de la imagen, a media altura, con su
-     fondo de superficie y su borde para que se lean sobre la captura. */
-  html.js .demo-escenario { grid-template-columns: minmax(0, 1fr); gap: 0; }
-  .demo-escena, .demo-controles { grid-column: 1; }
-  .demo-escena { grid-row: 1; }
-  .demo-flecha { grid-area: 1 / 1; z-index: 1; margin: calc(100cqw / 3.2 - 22px) 8px 0; }
-  .demo-anterior { justify-self: start; }
-  .demo-siguiente { justify-self: end; }
-  .demo-flecha:disabled { opacity: 1; color: var(--borde-control); }
+  .demo-flecha { margin: calc(100cqw / 3.2 - 22px) 8px 0; }
   .demo-pasos-movil { padding: 0 12px; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); }
   .demo-pasos-movil[open] { padding-bottom: 12px; }
 }
