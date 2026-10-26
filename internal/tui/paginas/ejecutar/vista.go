@@ -78,7 +78,7 @@ func (p *Pagina) pestanas() string {
 		}
 	}
 	if p.enviando {
-		partes = append(partes, e.Acento.Render(idioma.T("Enviando…")))
+		partes = append(partes, e.Acento.Render(p.a(idioma.T("Enviando…"))))
 	}
 	return strings.Join(partes, " ")
 }

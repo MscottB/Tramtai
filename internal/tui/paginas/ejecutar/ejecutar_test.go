@@ -553,6 +553,19 @@ func TestTextosComoLaWeb(t *testing.T) {
 	}
 }
 
+// TestEnviandoEnAscii: en una consola ASCII, «Enviando…» sale sin la elipsis de dibujo.
+func TestEnviandoEnAscii(t *testing.T) {
+	cli, id := prueba.Servicio(t)
+	c := contexto(t, cli, id, t.TempDir())
+	c.Estilos = &pagina.Estilos{Iconos: pagina.IconosASCII, ASCII: true}
+	a := abrir(t, c)
+	a.Retener(func() { a.Entregar(comp.Enviado{}) }) // el envío se queda en camino
+
+	if v := a.Vista(); !strings.Contains(v, "Enviando...") || strings.Contains(v, "Enviando…") {
+		t.Fatalf("mientras se envía lo dice en ASCII:\n%s", v)
+	}
+}
+
 // TestEnvioQueFallaOcultaNoSeQueda: un envío que falla con la página oculta se avisa igual y Probar no se queda «enviando»:
 // al volver se puede enviar otra vez. Mientras se envía, la página lo dice y sale del campo desde el que se envió.
 func TestEnvioQueFallaOcultaNoSeQueda(t *testing.T) {
