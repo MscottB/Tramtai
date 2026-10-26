@@ -59,7 +59,8 @@ func (p *Pagina) encajar(texto string) string {
 	return strings.Join(lineas, "\n")
 }
 
-// pestanas son los nombres de las pestañas, con la de ahora entre corchetes; la respuesta lleva el estado del trabajo.
+// pestanas son los nombres de las pestañas, con la de ahora entre corchetes; la respuesta lleva el estado del trabajo y,
+// mientras se sube y se crea, «Enviando…» detrás.
 func (p *Pagina) pestanas() string {
 	e := p.estilos
 	respuesta := p.tx("ejecutar.respuesta")
@@ -75,6 +76,9 @@ func (p *Pagina) pestanas() string {
 		} else {
 			partes[i] = e.Tenue.Render(" " + n + " ")
 		}
+	}
+	if p.enviando {
+		partes = append(partes, e.Acento.Render(idioma.T("Enviando…")))
 	}
 	return strings.Join(partes, " ")
 }

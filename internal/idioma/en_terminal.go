@@ -10,6 +10,7 @@ func init() {
 		// La app: tamaño, cabecera, estado y pie
 		"Agranda la ventana (mínimo 60×20)": "Enlarge the window (minimum 60×20)",
 		"¿Cancelar la petición en marcha?":  "Cancel the running request?",
+		"Enviando…":                         "Sending…",
 		"Probar tiene una petición en marcha: seguirá en el servicio y la verás en el Historial.": "Playground has a running request: it will keep going in the service and you will see it in the History.",
 		"La API %s tiene cambios sin guardar en Probar (g los guarda).":                           "The API %s has unsaved changes in the Playground (g saves them).",
 		"¿Salir de la terminal?":                "Quit the terminal?",
