@@ -91,30 +91,37 @@ func guardarSecreto(ruta, valor string) error {
 	return configuracion.EscribirAtomico(ruta, []byte(valor+"\n"), 0o600)
 }
 
-// RotarTokenPunto genera la clave nueva de un punto de acceso y guarda solo su huella: la clave se muestra una vez
-// y no se puede recuperar; la anterior deja de valer al recargar. Es siempre nueva, aunque quedara una de otro punto con
-// el mismo nombre.
-func RotarTokenPunto(ruta string) (string, error) {
+// NuevaClave genera una clave nueva y guarda solo su huella: la clave se muestra una vez y no se puede recuperar; la
+// anterior deja de valer al recargar. Es siempre nueva, aunque quedara una de otro punto o espacio con el mismo nombre.
+func NuevaClave(ruta string) (string, error) {
 	token := "tt_" + aleatorio(32)
 	return token, guardarSecreto(ruta, api.HuellaToken(token))
 }
 
-// LeerHuellaPunto devuelve la huella de la clave de un punto. Un archivo antiguo con la clave en claro se convierte
-// a huella y las aplicaciones siguen funcionando; sin archivo se crea una clave que nadie conoce, así que hay que
-// regenerarla para usar el punto. Un archivo que no se puede leer o está truncado da error y no se toca.
-func LeerHuellaPunto(ruta string) (string, error) {
+// leerHuella devuelve la huella de la clave guardada en ruta. Un archivo antiguo con la clave en claro se convierte a
+// huella y las aplicaciones siguen funcionando. Sin archivo da un error con fs.ErrNotExist; uno que no se puede leer o
+// está truncado da error y no se toca.
+func leerHuella(ruta string) (string, error) {
 	contenido, err := leerSecreto(ruta)
-	switch {
-	case errors.Is(err, fs.ErrNotExist):
-		token, err := RotarTokenPunto(ruta)
-		return api.HuellaToken(token), err
-	case err != nil:
+	if err != nil {
 		return "", err
-	case strings.HasPrefix(contenido, api.PrefijoHuella):
+	}
+	if strings.HasPrefix(contenido, api.PrefijoHuella) {
 		return contenido, nil
 	}
 	huella := api.HuellaToken(contenido)
 	return huella, guardarSecreto(ruta, huella)
+}
+
+// LeerHuellaPunto devuelve la huella de la clave de un punto. Sin archivo se crea una clave que nadie conoce, así que
+// hay que regenerarla para usar el punto.
+func LeerHuellaPunto(ruta string) (string, error) {
+	huella, err := leerHuella(ruta)
+	if errors.Is(err, fs.ErrNotExist) {
+		token, err := NuevaClave(ruta)
+		return api.HuellaToken(token), err
+	}
+	return huella, err
 }
 
 // EliminarTokenPunto borra la clave de un punto eliminado: otro con el mismo nombre no hereda la anterior.
@@ -156,6 +163,28 @@ func TokenInstancia(datos, id string, c *configuracion.Configuracion) (valor, or
 	ruta := RutaTokenInstancia(datos, id)
 	valor, err = LeerOCrearToken(ruta)
 	return valor, ruta, err
+}
+
+// HuellaInstancia devuelve la huella de la clave de la instancia y su origen; la del global puede venir de una variable
+// de entorno. Un espacio sin archivo no tiene clave: devuelve la huella vacía y la ruta, sin crear nada.
+func HuellaInstancia(datos, id string, c *configuracion.Configuracion) (huella, origen string, err error) {
+	if id == "global" {
+		if variable := c.Texto("instancia_global.token_variable_entorno"); variable != "" {
+			if v := os.Getenv(variable); v != "" {
+				if len(v) < largoMinimoEntorno {
+					return "", "", nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf(
+						"la clave de la variable %s es demasiado corta: necesita al menos %d caracteres", variable, largoMinimoEntorno))
+				}
+				return api.HuellaToken(v), "variable " + variable, nil
+			}
+		}
+	}
+	ruta := RutaTokenInstancia(datos, id)
+	huella, err = leerHuella(ruta)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", ruta, nil
+	}
+	return huella, ruta, err
 }
 
 func aleatorio(n int) string {

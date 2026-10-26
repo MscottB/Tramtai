@@ -104,7 +104,7 @@ func (s *Servicio) adminCrearPunto(w http.ResponseWriter, r *http.Request) {
 	}
 	var token string
 	if err == nil {
-		token, err = RotarTokenPunto(RutaTokenPunto(s.opc.Datos, p.Nombre))
+		token, err = NuevaClave(RutaTokenPunto(s.opc.Datos, p.Nombre))
 	}
 	if err != nil {
 		api.EscribirError(w, r, err)
@@ -218,14 +218,14 @@ func (s *Servicio) adminEliminarPunto(w http.ResponseWriter, r *http.Request) {
 	s.guardadoAdmin(w, ruta, nil)
 }
 
-// adminRotarToken regenera la clave del punto (ver RotarTokenPunto).
+// adminRotarToken regenera la clave del punto (ver NuevaClave).
 func (s *Servicio) adminRotarToken(w http.ResponseWriter, r *http.Request) {
 	nombre := r.PathValue("nombre")
 	if !NombrePuntoValido(nombre) {
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("nombre no válido (minúsculas, números, _ y -; hasta 40)")))
 		return
 	}
-	token, err := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, nombre))
+	token, err := NuevaClave(RutaTokenPunto(s.opc.Datos, nombre))
 	if err != nil {
 		api.EscribirError(w, r, err)
 		return

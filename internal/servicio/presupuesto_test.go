@@ -45,7 +45,7 @@ func TestPresupuestoPuntoUI(t *testing.T) {
 `
 	s, ts, _ := entorno(t, global, "", adaptadores.Simulado{})
 	instancia, _ := s.ActivarGlobal()
-	token, _ := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "facturas"))
+	token, _ := NuevaClave(RutaTokenPunto(s.opc.Datos, "facturas"))
 	s.Recargar()
 	trabajo := func() int {
 		r, _ := pedir(t, ts.URL, "POST", "/p/facturas/api/v1/trabajos", token, hola)
@@ -157,7 +157,7 @@ func TestRecrearAPINoHeredaConsumo(t *testing.T) {
 		r, _ := pedir(t, ts.URL, "POST", "/p/facturas/api/v1/trabajos", token, hola)
 		return r.StatusCode
 	}
-	token, _ := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "facturas"))
+	token, _ := NuevaClave(RutaTokenPunto(s.opc.Datos, "facturas"))
 	s.Recargar()
 	if c := pedirCon(token); c != 202 {
 		t.Fatalf("primera petición: %d", c)
@@ -182,7 +182,7 @@ func TestRecrearAPINoHeredaConsumo(t *testing.T) {
 	if err := configuracion.EditarPuntos(rutaGlobal, configuracion.OrigenGlobal, func([]ConfigPunto) ([]ConfigPunto, error) { return anterior, nil }); err != nil {
 		t.Fatal(err)
 	}
-	token, _ = RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "facturas"))
+	token, _ = NuevaClave(RutaTokenPunto(s.opc.Datos, "facturas"))
 	s.Recargar()
 	if c := pedirCon(token); c != 202 {
 		t.Fatalf("la API recreada no hereda el consumo de la eliminada: %d", c)

@@ -140,8 +140,8 @@ func TestPuntosDeAcceso(t *testing.T) {
 		t.Fatalf("puntos: %+v %v", estado, s.erroresPuntos)
 	}
 	// Solo se guarda la huella de la clave de un punto: para conocerla hay que regenerarla.
-	token, _ := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "app"))
-	tokenFijo, _ := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "fijo"))
+	token, _ := NuevaClave(RutaTokenPunto(s.opc.Datos, "app"))
+	tokenFijo, _ := NuevaClave(RutaTokenPunto(s.opc.Datos, "fijo"))
 	s.Recargar()
 	chat := func(modelo string) string {
 		return `{"model":"` + modelo + `","messages":[{"role":"user","content":"hola"}]}`
@@ -227,7 +227,7 @@ func TestRecargarSinTocarLosDemas(t *testing.T) {
 	if s.puntos["uno"] != antes {
 		t.Fatal("un punto sin cambios no debe reabrirse")
 	}
-	token, _ := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "dos"))
+	token, _ := NuevaClave(RutaTokenPunto(s.opc.Datos, "dos"))
 	if r, _ := pedir(t, ts.URL, "GET", "/p/dos/api/v1/modelos", token, ""); r.StatusCode != 404 {
 		t.Fatalf("un punto desactivado no responde: %d", r.StatusCode)
 	}
@@ -346,7 +346,7 @@ func TestNombrePuntoValido(t *testing.T) {
 
 func TestClavePuntoSoloHuella(t *testing.T) {
 	ruta := filepath.Join(t.TempDir(), "tokens", "acceso_x")
-	token, err := RotarTokenPunto(ruta)
+	token, err := NuevaClave(ruta)
 	if err != nil || !strings.HasPrefix(token, "tt_") {
 		t.Fatalf("clave nueva: %q %v", token, err)
 	}

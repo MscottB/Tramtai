@@ -43,7 +43,7 @@ func origenDe(t *testing.T, cuerpo string) string {
 func TestOrigenSegunAutenticacion(t *testing.T) {
 	s, ts, _ := entorno(t, puntosOrigen, "", adaptadores.Simulado{})
 	global, _ := s.ActivarGlobal()
-	tienda, _ := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "tienda"))
+	tienda, _ := NuevaClave(RutaTokenPunto(s.opc.Datos, "tienda"))
 	s.Recargar()
 	n := abrirSesion(t, s, ts.URL)
 
@@ -74,7 +74,7 @@ func TestListarPorGrupoYOrigen(t *testing.T) {
 	global, _ := s.ActivarGlobal()
 	tokens := map[string]string{}
 	for _, p := range []string{"tienda", "soporte", "suelta"} {
-		tokens[p], _ = RotarTokenPunto(RutaTokenPunto(s.opc.Datos, p))
+		tokens[p], _ = NuevaClave(RutaTokenPunto(s.opc.Datos, p))
 	}
 	s.Recargar()
 	for _, p := range []string{"tienda", "soporte", "suelta"} {

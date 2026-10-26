@@ -235,8 +235,8 @@ func (s *Servicio) crearPuntoUI(w http.ResponseWriter, r *http.Request, inst *In
 		api.EscribirError(w, r, err)
 		return
 	}
-	// La clave solo se devuelve esta vez (ver RotarTokenPunto).
-	token, err := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, p.Nombre))
+	// La clave solo se devuelve esta vez (ver NuevaClave).
+	token, err := NuevaClave(RutaTokenPunto(s.opc.Datos, p.Nombre))
 	if err != nil {
 		api.EscribirError(w, r, err)
 		return
@@ -275,8 +275,8 @@ func (s *Servicio) puntoUI(w http.ResponseWriter, r *http.Request, inst *Instanc
 		}
 		w.WriteHeader(http.StatusNoContent)
 	case accion == "token" && r.Method == http.MethodPost:
-		// Regenera la clave (ver RotarTokenPunto).
-		token, err := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, nombre))
+		// Regenera la clave (ver NuevaClave).
+		token, err := NuevaClave(RutaTokenPunto(s.opc.Datos, nombre))
 		if err != nil {
 			api.EscribirError(w, r, err)
 			return

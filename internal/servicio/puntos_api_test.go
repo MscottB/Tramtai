@@ -112,7 +112,7 @@ func TestReglasAlGuardarPorLaAPI(t *testing.T) {
 `
 	s, ts, _ := entorno(t, global, "", adaptadores.Simulado{})
 	s.ActivarGlobal()
-	RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "vieja"))
+	NuevaClave(RutaTokenPunto(s.opc.Datos, "vieja"))
 	s.Recargar()
 	n := abrirSesion(t, s, ts.URL)
 	csrf := []string{"X-CSRF-Token", n.csrf}
