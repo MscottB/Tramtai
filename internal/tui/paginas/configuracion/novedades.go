@@ -64,22 +64,17 @@ type actualizacionEnCurso struct {
 	n         int  // la última consulta del avance programada: así no corren dos seguimientos a la vez
 }
 
-// enCuentaAtras dice si el servicio va a instalar ya («listo» o «instalando»): entonces el avance se sigue aunque se cierre
-// su vista o la página se oculte, porque el instalador va a cerrar la terminal y hay que salir antes, limpia.
-func (p *Pagina) enCuentaAtras() bool {
-	return p.upd.progreso != nil && (p.upd.progreso.Fase == "listo" || p.upd.progreso.Fase == "instalando")
+// enCurso dice si hay una actualización en marcha (con avance y sin error): entonces el avance se sigue aunque se cierre
+// su vista o la página se oculte, porque al terminar la descarga el instalador cerrará la terminal y hay que salir antes,
+// limpia.
+func (p *Pagina) enCurso() bool {
+	return p.upd.progreso != nil && p.upd.progreso.Fase != "error"
 }
 
-// sigueAvance dice si una respuesta del avance es de la consulta de ahora y aún interesa: con el avance a la vista y la
-// página vigente o, en la cuenta atrás, mientras sea del espacio (aunque esté oculta o el avance cerrado).
+// sigueAvance dice si una respuesta del avance es de la consulta de ahora y aún interesa: con la actualización en curso,
+// mientras sea del espacio (aunque la página esté oculta o el avance cerrado).
 func (p *Pagina) sigueAvance(o origen, n int) bool {
-	if n != p.upd.n || p.upd.progreso == nil {
-		return false
-	}
-	if p.enCuentaAtras() {
-		return o.DelEspacio(p.c)
-	}
-	return p.vigente(o) && p.abierta == vistaProgreso
+	return n == p.upd.n && p.enCurso() && o.DelEspacio(p.c)
 }
 
 // pedirNovedades abre las novedades si ya se sabe que hay una versión nueva; si no, al saberlo.

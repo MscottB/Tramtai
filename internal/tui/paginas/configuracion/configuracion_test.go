@@ -559,12 +559,12 @@ func TestActualizarSigueElAvance(t *testing.T) {
 // TestInstalarCierraLaTerminal: el instalador cierra el servicio y la terminal, así que al empezar la instalación el avance
 // dice cómo volver a abrirla y la página pide a la app que salga (pagina.Actualizando). Si tras «listo» el servicio deja
 // de contestar sin que se viera «instalando», también. Y aunque el avance se cerrara con Esc o Ajustes se ocultara durante
-// la cuenta atrás: el sondeo sigue hasta que empieza la instalación.
+// la cuenta atrás o la descarga: el sondeo sigue hasta que empieza la instalación.
 func TestInstalarCierraLaTerminal(t *testing.T) {
 	actualizando := func(fuera []tea.Msg) bool {
 		return slices.ContainsFunc(fuera, func(m tea.Msg) bool { _, ok := m.(pagina.Actualizando); return ok })
 	}
-	for _, caso := range []string{"instalando", "sin respuesta tras listo", "Esc en la cuenta atrás", "Ajustes oculta"} {
+	for _, caso := range []string{"instalando", "sin respuesta tras listo", "Esc en la cuenta atrás", "Ajustes oculta", "Esc al descargar", "Ajustes oculta al descargar"} {
 		cli, id, x := conActualizable(t)
 		reloj := prueba.NuevoReloj()
 		a := prueba.Abrir(t, configuracion.NuevaConReloj("es", reloj.Ahora, reloj.Espera), contexto(t, cli, id))
@@ -572,21 +572,27 @@ func TestInstalarCierraLaTerminal(t *testing.T) {
 		a.Pulsar("u")
 		a.HastaVer(tx("actualizacion.comoInstala")[:30])
 		cuando := reloj.Ahora().Add(10 * time.Second)
+		descargando := strings.HasSuffix(caso, "al descargar")
 		x.poner(contrato.ProgresoActualizacion{Fase: "listo", Version: "v99.0.0", InstalaEn: &cuando})
+		enPantalla := tx("actualizacion.reiniciaraEn", "n", "10")
+		if descargando {
+			x.poner(contrato.ProgresoActualizacion{Fase: "descargando", Version: "v99.0.0", Recibidos: 524288, Total: 1048576})
+			enPantalla = tx("actualizacion.descargando", "recibido", "0,5", "total", "1,0", "porcentaje", "50")
+		}
 		visto := len(reloj.Pedidas())
 		a.Pulsar("i")
 		tic(a, reloj, &visto)
-		a.HastaVer(tx("actualizacion.reiniciaraEn", "n", "10"))
+		a.HastaVer(enPantalla)
 		if actualizando(a.Fuera) {
-			t.Fatalf("%s: en «listo» la terminal sigue", caso)
+			t.Fatalf("%s: antes de instalar la terminal sigue", caso)
 		}
 		switch caso {
-		case "Esc en la cuenta atrás":
+		case "Esc en la cuenta atrás", "Esc al descargar":
 			a.Pulsar("esc")
 			if strings.Contains(a.Vista(), tx("actualizacion.progresoTitulo", "version", "v99.0.0")) {
 				t.Fatalf("Esc cierra el avance:\n%s", a.Vista())
 			}
-		case "Ajustes oculta":
+		case "Ajustes oculta", "Ajustes oculta al descargar":
 			a.P.(pagina.Ocultable).Ocultar()
 		}
 		x.mu.Lock()

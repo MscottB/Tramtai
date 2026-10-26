@@ -178,14 +178,14 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 		p.act, p.acerca, p.upd = nil, nil, actualizacionEnCurso{} // las novedades y Acerca de los necesitan abiertos
 	}
 	cmd := p.cargar()
-	if (p.abierta == vistaProgreso || p.enCuentaAtras()) && c.Cli != nil { // el sondeo de antes ya no vale
+	if (p.abierta == vistaProgreso || p.enCurso()) && c.Cli != nil { // el sondeo de antes ya no vale
 		return tea.Batch(cmd, p.sondear())
 	}
 	return cmd
 }
 
 // Ocultar deja de seguir lo que esté en marcha (el conversor, una actualización) mientras no se ve; Mostrar lo retoma.
-// Solo la cuenta atrás de una actualización se sigue igual (enCuentaAtras): al empezar a instalar, la terminal sale.
+// Solo una actualización en curso se sigue igual (enCurso): al empezar a instalar, la terminal sale.
 func (p *Pagina) Ocultar() { p.gen++ }
 
 func (p *Pagina) Mostrar() tea.Cmd {
@@ -200,7 +200,7 @@ func (p *Pagina) Mostrar() tea.Cmd {
 	if p.sondeando {
 		cmds = append(cmds, p.sondearConversor())
 	}
-	if p.abierta == vistaProgreso || p.enCuentaAtras() { // un seguimiento nuevo deja sin valor el de antes
+	if p.abierta == vistaProgreso || p.enCurso() { // un seguimiento nuevo deja sin valor el de antes
 		cmds = append(cmds, p.sondear())
 	}
 	return tea.Batch(cmds...)
