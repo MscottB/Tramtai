@@ -16,6 +16,7 @@ const (
 	accionAcercaDe
 	accionActualizar
 	accionBuscarActualizaciones
+	accionVerNovedades
 	accionAlternarApi // activa o desactiva entrada.punto según entrada.habilitada
 	accionIrMisApis
 	accionCopiarDireccion
@@ -31,15 +32,16 @@ const (
 // entrada es una línea del menú de la bandeja. icono es el nombre de un icono de iconosMenu, o «verde» y «rojo» para
 // los círculos de estado.
 type entrada struct {
-	texto      string
-	icono      string
-	accion     accion
-	separador  bool
-	casilla    bool // con marca; marcada dice si está puesta
-	marcada    bool
-	submenu    []entrada
-	punto      contrato.EstadoPunto // la API de accionAlternarApi
-	habilitada bool
+	texto       string
+	icono       string
+	accion      accion
+	separador   bool
+	casilla     bool // con marca; marcada dice si está puesta
+	marcada     bool
+	desactivada bool // se ve, pero no se puede pulsar
+	submenu     []entrada
+	punto       contrato.EstadoPunto // la API de accionAlternarApi
+	habilitada  bool
 }
 
 // estadoMenu es lo que decide qué sale en el menú. base es la dirección del servicio en marcha, vacía si está
@@ -50,7 +52,8 @@ type estadoMenu struct {
 	proyectos                map[string]string // id del espacio de proyecto → nombre de su carpeta
 	conWindows, sinPreguntar bool
 	nueva                    string
-	autoarranque             bool // si el sistema permite iniciar con la sesión
+	act                      actualizacionMenu // lo que se busca o instala desde el menú
+	autoarranque             bool              // si el sistema permite iniciar con la sesión
 	windows                  bool
 }
 
@@ -73,11 +76,24 @@ func entradasMenu(e estadoMenu) []entrada {
 	}
 	add(separador)
 	add(entrada{texto: idioma.T("Abrir Tramtai"), icono: "abrir", accion: accionMostrar})
-	if e.nueva != "" {
-		// La ventana pide confirmación y muestra el avance con el mismo diálogo que la Web UI.
-		add(entrada{texto: idioma.Tf("Instalar la versión %s…", e.nueva), icono: "reiniciar", accion: accionActualizar})
-	} else if enMarcha {
-		// Consulta GitHub en el momento; la ventana muestra el resultado o el diálogo de la versión nueva.
+	// Buscar e instalar no abren la ventana: el menú cuenta la búsqueda y el avance; las novedades sí se ven en ella.
+	switch {
+	case e.act.fase != "":
+		// Sigue aunque el instalador detenga el servicio, hasta que cierra la app y la vuelve a abrir.
+		fases := map[string]string{"descargando": idioma.T("descargando"), "verificando": idioma.T("verificando"),
+			"listo": idioma.T("se instala en unos segundos"), "instalando": idioma.T("instalando")}
+		add(entrada{texto: idioma.Tf("Actualizando… · %s", fases[e.act.fase]), icono: "reiniciar", desactivada: true})
+	case e.nueva != "":
+		add(entrada{texto: idioma.Tf("Instalar la versión %s", e.nueva), icono: "reiniciar", accion: accionActualizar})
+		add(entrada{texto: idioma.T("Ver novedades"), accion: accionVerNovedades})
+	case !enMarcha: // detenido: no hay servicio al que preguntar
+	case e.act.buscando:
+		add(entrada{texto: idioma.T("Buscando actualizaciones…"), icono: "reiniciar", desactivada: true})
+	case e.act.alDia != "":
+		add(entrada{texto: idioma.Tf("Tramtai está al día (%s)", e.act.alDia), icono: "reiniciar", desactivada: true})
+	case e.act.fallo:
+		add(entrada{texto: idioma.T("No se pudo comprobar · reintentar"), icono: "reiniciar", accion: accionBuscarActualizaciones})
+	default:
 		add(entrada{texto: idioma.T("Buscar actualizaciones"), icono: "reiniciar", accion: accionBuscarActualizaciones})
 	}
 	if enMarcha {

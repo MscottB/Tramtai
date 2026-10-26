@@ -219,6 +219,48 @@ func main() {
 	bandeja.SetIcon(icono)
 	bandeja.OnClick(mostrar)
 	var repasar func()
+	// avisarError abre la ventana con el error, como en la Web UI: desde el menú, sin aviso no pasaría nada visible.
+	avisarError := func(err error) {
+		mostrar()
+		texto, _ := json.Marshal(nucleo.MensajeDe(err))
+		ventana.ExecJS("window.tramtaiAviso && window.tramtaiAviso(" + string(texto) + ")")
+	}
+	var act actualizacionMenu // lo que se busca o instala desde el menú (con mu)
+	cambiarAct := func(cambiar func(*actualizacionMenu)) {
+		mu.Lock()
+		cambiar(&act)
+		mu.Unlock()
+		repasar()
+	}
+	// buscarActualizaciones consulta GitHub en el momento, como «Buscar actualización ahora» de Ajustes.
+	buscarActualizaciones := func(cli *cliente.Cliente) {
+		cambiarAct(func(a *actualizacionMenu) { *a = actualizacionMenu{buscando: true} })
+		ctx, cancelar := context.WithTimeout(context.Background(), time.Minute)
+		e, err := cli.Actualizacion(ctx, true)
+		cancelar()
+		cambiarAct(func(a *actualizacionMenu) { *a = resultadoBusqueda(e, err, time.Now()) })
+	}
+	// actualizar pide al servicio que descargue e instale la versión nueva y sigue su avance en el menú; al terminar,
+	// el instalador cierra la app y la vuelve a abrir.
+	actualizar := func(cli *cliente.Cliente) {
+		fase := func(f string) { cambiarAct(func(a *actualizacionMenu) { a.fase = f }) }
+		fase("descargando")
+		ctx, cancelar := context.WithTimeout(context.Background(), time.Minute)
+		_, err := cli.Actualizar(ctx)
+		cancelar()
+		if err != nil {
+			fase("")
+		} else {
+			err = seguirAvance(func() (contrato.ProgresoActualizacion, error) {
+				ctx, cancelar := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancelar()
+				return cli.ProgresoActualizacion(ctx)
+			}, func() { time.Sleep(cadaAvance) }, fase)
+		}
+		if err != nil {
+			avisarError(err)
+		}
+	}
 
 	// construir pinta en Wails las entradas que calcula entradasMenu y conecta cada acción.
 	construir := func(cli *cliente.Cliente, e estadoMenu) *application.Menu {
@@ -243,13 +285,13 @@ func main() {
 					ventana.ExecJS("window.tramtaiAcercaDe && window.tramtaiAcercaDe()")
 				}
 			case accionActualizar:
-				return func(*application.Context) {
-					mostrar()
-					ventana.ExecJS("window.tramtaiActualizar && window.tramtaiActualizar()")
-				}
+				return func(*application.Context) { go actualizar(cli) }
 			case accionBuscarActualizaciones:
+				return func(*application.Context) { go buscarActualizaciones(cli) }
+			case accionVerNovedades:
+				// Ajustes con el diálogo de la versión nueva: sus novedades y cómo se instala o se descarga.
 				return func(*application.Context) {
-					mostrar()
+					irA("configuracion")
 					ventana.ExecJS("window.tramtaiBuscarActualizaciones && window.tramtaiBuscarActualizaciones()")
 				}
 			case accionAlternarApi:
@@ -258,10 +300,7 @@ func main() {
 					ctx, cancelar := context.WithTimeout(context.Background(), 10*time.Second)
 					defer cancelar()
 					if err := cli.ActivarPunto(ctx, p.Instancia, p.Nombre, !habilitada); err != nil {
-						// Sin aviso no pasaría nada visible: se abre la ventana con el error, como en la Web UI.
-						mostrar()
-						texto, _ := json.Marshal(nucleo.MensajeDe(err))
-						ventana.ExecJS("window.tramtaiAviso && window.tramtaiAviso(" + string(texto) + ")")
+						avisarError(err)
 					}
 					repasar()
 				}
@@ -360,14 +399,15 @@ func main() {
 		sinPreguntar := leerPreferencias().SalirSinPreguntar
 		mu.Lock()
 		vivo = cli
+		actMenu := act.vigente(time.Now()) // el repaso quita «al día» cuando pasa su plazo
 		mu.Unlock()
 
 		// También el tema y el DPI del sistema, porque cambian el color y el tamaño de los iconos.
-		masNueva := ""
+		masNueva := actMenu.nueva
 		if estadoServicio.Actualizacion != nil {
 			masNueva = estadoServicio.Actualizacion.Version
 		}
-		nueva := fmt.Sprint(conWindows, sinPreguntar, puntos, menuOscuro(), ladoIconoMenu(), masNueva)
+		nueva := fmt.Sprint(conWindows, sinPreguntar, puntos, menuOscuro(), ladoIconoMenu(), masNueva, actMenu)
 		if cli != nil {
 			nueva += cli.Base
 		}
@@ -386,7 +426,7 @@ func main() {
 			base = cli.Base
 		}
 		menuActual = construir(cli, estadoMenu{base: base, puntos: puntos, proyectos: proyectos, conWindows: conWindows,
-			sinPreguntar: sinPreguntar, nueva: masNueva, autoarranque: autoarranque.Disponible, windows: runtime.GOOS == "windows"})
+			sinPreguntar: sinPreguntar, nueva: masNueva, act: actMenu, autoarranque: autoarranque.Disponible, windows: runtime.GOOS == "windows"})
 		bandeja.SetMenu(menuActual)
 		if anterior != nil {
 			anterior.Clear() // suelta los elementos del menú anterior del registro global de Wails
@@ -422,6 +462,9 @@ func pintarMenu(menu *application.Menu, entradas []entrada, bitmap func(string) 
 		}
 		if n.icono != "" {
 			elemento.SetBitmap(bitmap(n.icono))
+		}
+		if n.desactivada {
+			elemento.SetEnabled(false)
 		}
 		if f := alPulsar(n); f != nil {
 			elemento.OnClick(f)
