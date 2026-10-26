@@ -8,7 +8,7 @@ cask "tramtai" do
   desc "Tus agentes de IA (Claude Code, Codex, la API de Gemini) como una API local compatible con OpenAI y Anthropic"
   homepage "https://mscottb.github.io/Tramtai/"
 
-  depends_on macos: ">= :big_sur"
+  depends_on macos: :big_sur
 
   app "Tramtai.app"
   binary "#{appdir}/Tramtai.app/Contents/MacOS/tramtai"
