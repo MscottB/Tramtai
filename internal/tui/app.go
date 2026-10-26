@@ -6,6 +6,7 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 
@@ -40,6 +41,9 @@ func Ejecutar(o Opciones) error {
 	m := nuevo(o)
 	defer m.cerrar()
 	_, err := tea.NewProgram(m).Run()
+	if m.despedida != "" { // ya fuera de la pantalla alternativa: queda en la consola
+		fmt.Println(m.despedida)
+	}
 	return err
 }
 
@@ -84,7 +88,10 @@ type modelo struct {
 	selector *comp.Selector     // el cambio rápido de espacio
 	pregunta *comp.Confirmacion // la confirmación que pidió la página, la de salir o el último error entero
 	saliendo bool               // la pregunta abierta es la de salir: s cierra la terminal
+	cambiarA string             // la pregunta abierta es la de cambiar a este espacio (Ctrl+E): s cambia
 	avisos   comp.Avisos
+
+	despedida string // lo que queda escrito en la consola al salir (al empezar una actualización)
 }
 
 func idiomaDe() string {
@@ -238,6 +245,9 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.comprobando = true
 		return m, m.conectar(false, false, true)
+	case pagina.Actualizando: // el instalador va a cerrar la terminal: mejor salir limpia, con la consola restaurada
+		m.despedida = pagina.Despedida()
+		return m, tea.Quit
 	case pagina.ErrorServicio:
 		if !m.conectando && !m.anterior() { // un «no responde» de la página no tapa cómo detener el servicio anterior
 			m.caido = msg.Err
@@ -266,20 +276,22 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case pagina.Volver:
 		return m, m.volver()
 	case comp.Pregunta:
-		m.pregunta, m.saliendo = &comp.Confirmacion{Texto: msg.Texto}, false
+		m.pregunta, m.saliendo, m.cambiarA = &comp.Confirmacion{Texto: msg.Texto}, false, ""
 	case comp.Elegido:
 		if m.selector == nil {
 			return m, m.aPagina(msg)
 		}
 		m.selector = nil
-		return m, func() tea.Msg { return pagina.CambioEspacio{ID: msg.Valor} }
+		return m, m.cambiarEspacio(msg.Valor)
 	case comp.Cancelado:
 		if m.selector == nil {
 			return m, m.aPagina(msg)
 		}
 		m.selector = nil
-	case comp.Confirmado, comp.Enviado, tea.PasteMsg:
+	case comp.Confirmado, comp.Enviado:
 		return m, m.aPagina(msg)
+	case tea.PasteMsg:
+		return m, m.pegar(msg)
 	case tea.KeyPressMsg:
 		return m, m.tecla(msg)
 	default:
@@ -290,7 +302,8 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // tecla reparte una tecla: primero lo que está abierto encima (la pregunta, el selector, el menú) y luego la página.
 // Las teclas comunes no se aplican mientras la página tiene un campo con el foco. Por debajo del tamaño mínimo solo se
-// ven el aviso y la pregunta abierta, así que solo valen ella, q y Ctrl+C. Con la pregunta de salir abierta, otra q sale.
+// ven el aviso y la pregunta abierta, así que solo valen ella, q y Ctrl+C. Ctrl+C sale como q (preguntando si algo se
+// perdería); con la pregunta de salir abierta, otra q u otro Ctrl+C salen.
 // Cualquier tecla quita el error de la línea de estado; ! lo enseña entero.
 func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 	t := k.String()
@@ -298,8 +311,15 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 		m.avisos.Descartar()
 	}
 	switch {
-	case t == "ctrl+c", t == "q" && m.saliendo:
+	case (t == "ctrl+c" || t == "q") && m.saliendo:
 		return tea.Quit
+	case t == "ctrl+c": // como q, también en un campo: si algo se perdería, pregunta antes
+		if m.pregunta == nil || m.pregunta.Leer || m.cambiarA != "" {
+			return m.salir()
+		}
+		// La pregunta abierta es de la página: se le cancela, para que no se quede esperando la respuesta.
+		m.pregunta = nil
+		return tea.Batch(m.aPagina(comp.Cancelado{}), m.salir())
 	case m.pregunta == nil && (m.ancho < anchoMinimo || m.alto < altoMinimo):
 		if t == "q" {
 			return m.salir()
@@ -315,6 +335,13 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 			m.saliendo = false
 			if _, si := cmd().(comp.Confirmado); si {
 				return tea.Quit
+			}
+			return nil
+		}
+		if destino := m.cambiarA; destino != "" {
+			m.cambiarA = ""
+			if _, si := cmd().(comp.Confirmado); si {
+				return func() tea.Msg { return pagina.CambioEspacio{ID: destino} }
 			}
 			return nil
 		}
@@ -367,8 +394,30 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 	return m.aPagina(k)
 }
 
+// pegar reparte lo pegado como una tecla: con la pregunta, el menú o la ventana por debajo del mínimo no llega a la página,
+// donde entraría sin verse; con el selector de espacio abierto, va a su filtro.
+func (m *modelo) pegar(msg tea.PasteMsg) tea.Cmd {
+	switch {
+	case m.pregunta != nil, m.enMenu, m.ancho < anchoMinimo || m.alto < altoMinimo:
+		return nil
+	case m.selector != nil:
+		return m.selector.Update(msg)
+	}
+	return m.aPagina(msg)
+}
+
 // salir cierra la terminal; si una página tiene algo en marcha o sin guardar (pagina.Pendiente), antes pregunta y dice qué.
 func (m *modelo) salir() tea.Cmd {
+	motivos := m.pendientes()
+	if len(motivos) == 0 {
+		return tea.Quit
+	}
+	m.pregunta, m.saliendo, m.cambiarA = &comp.Confirmacion{Texto: idioma.T("¿Salir de la terminal?") + "\n\n" + strings.Join(motivos, "\n")}, true, ""
+	return nil
+}
+
+// pendientes son las frases de las páginas que tienen algo en marcha o sin guardar (pagina.Pendiente), en el orden del menú.
+func (m *modelo) pendientes() []string {
 	var motivos []string
 	for _, clave := range ordenMenu() {
 		if p, ok := m.paginas[clave].(pagina.Pendiente); ok {
@@ -377,11 +426,7 @@ func (m *modelo) salir() tea.Cmd {
 			}
 		}
 	}
-	if len(motivos) == 0 {
-		return tea.Quit
-	}
-	m.pregunta, m.saliendo = &comp.Confirmacion{Texto: idioma.T("¿Salir de la terminal?") + "\n\n" + strings.Join(motivos, "\n")}, true
-	return nil
+	return motivos
 }
 
 func (m *modelo) View() tea.View {

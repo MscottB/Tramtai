@@ -552,3 +552,44 @@ func TestTextosComoLaWeb(t *testing.T) {
 		t.Fatalf("en inglés:\n%s", v)
 	}
 }
+
+// TestEnviandoEnAscii: en una consola ASCII, «Enviando…» sale sin la elipsis de dibujo.
+func TestEnviandoEnAscii(t *testing.T) {
+	cli, id := prueba.Servicio(t)
+	c := contexto(t, cli, id, t.TempDir())
+	c.Estilos = &pagina.Estilos{Iconos: pagina.IconosASCII, ASCII: true}
+	a := abrir(t, c)
+	a.Retener(func() { a.Entregar(comp.Enviado{}) }) // el envío se queda en camino
+
+	if v := a.Vista(); !strings.Contains(v, "Enviando...") || strings.Contains(v, "Enviando…") {
+		t.Fatalf("mientras se envía lo dice en ASCII:\n%s", v)
+	}
+}
+
+// TestEnvioQueFallaOcultaNoSeQueda: un envío que falla con la página oculta se avisa igual y Probar no se queda «enviando»:
+// al volver se puede enviar otra vez. Mientras se envía, la página lo dice y sale del campo desde el que se envió.
+func TestEnvioQueFallaOcultaNoSeQueda(t *testing.T) {
+	directo, id := prueba.Servicio(t)
+	cli, fallar := prueba.ConFallo(t, directo)
+	a := abierta(t, cli, id)
+	poner(t, a, tx("ejecutar.mensaje"), "hola")
+	fallar("el servicio no admite la petición")
+	editar(t, a, tx("ejecutar.mensaje"))
+	envio := a.Retener(func() { a.Entregar(comp.Enviado{}) })
+	if v := a.Vista(); a.P.EnCampo() || !strings.Contains(v, "Enviando…") {
+		t.Fatalf("al enviar sale del campo y dice que envía:\n%s", v)
+	}
+	ocultar(a)
+	fuera := a.Soltar(envio)
+	if av, ok := aviso(fuera); !ok || av.Texto != "el servicio no admite la petición" {
+		t.Fatalf("el error llega aunque la página esté oculta: %v", fuera)
+	}
+	mostrar(a)
+	if v := a.Vista(); strings.Contains(v, "Enviando…") || pendiente(a) != "" {
+		t.Fatalf("ya no se envía nada: %q\n%s", pendiente(a), v)
+	}
+	fuera = a.HastaSalir(func() { enviar(a) }, prueba.HayAviso)
+	if av, _ := aviso(fuera); av.Texto != "el servicio no admite la petición" {
+		t.Fatalf("Ctrl+S vuelve a enviar: %v", fuera)
+	}
+}

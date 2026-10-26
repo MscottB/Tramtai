@@ -162,7 +162,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		}
 		p.refrescar()
 	case msgAccion:
-		if !m.DelEspacio(p.c) { // el cambio ya está hecho en el servicio: vale aunque la página se haya vuelto a iniciar
+		if !m.DelEspacio(p.c) { // el cambio ya está hecho en el servicio: vale aunque la página se haya ocultado
 			return p, nil
 		}
 		p.ocupado = false

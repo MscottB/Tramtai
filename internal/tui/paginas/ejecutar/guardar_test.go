@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"tramtai/internal/contrato"
+	"tramtai/internal/tui/comp"
 	"tramtai/internal/tui/pagina"
 	"tramtai/internal/tui/paginas/prueba"
 )
@@ -45,7 +46,22 @@ func TestGuardarComoApi(t *testing.T) {
 	if len(l.Puntos) != 1 || l.Puntos[0].Instrucciones != "Responde en una frase" {
 		t.Fatalf("la API lleva la receta: %+v", l.Puntos)
 	}
+	// La clave solo se ve esta vez: salir lo avisa y cerrar pregunta, como en Mis APIs; Cancelar la deja a la vista.
+	if pendiente(a) != tx("cierre.clave") {
+		t.Fatalf("con la clave a la vista, salir pregunta: %q", pendiente(a))
+	}
+	for _, k := range []string{"esc", "enter"} {
+		q, ok := pregunta(a.Pulsar(k))
+		if !ok || !strings.Contains(q.Texto, tx("cierre.claveTitulo")) {
+			t.Fatalf("%s con la clave a la vista pregunta: %+v", k, q)
+		}
+		a.Entregar(comp.Cancelado{})
+		if !strings.Contains(a.Vista(), clave[:20]) {
+			t.Fatalf("Cancelar deja la clave a la vista:\n%s", a.Vista())
+		}
+	}
 	a.Pulsar("esc")
+	a.Entregar(comp.Confirmado{})
 	if v := a.Vista(); strings.Contains(v, tx("ejecutar.apiCreada", "nombre", "mi-app")) || strings.Contains(v, "/openai/v1") || strings.Contains(v, clave) {
 		t.Fatalf("Esc cierra y olvida la clave:\n%s", v)
 	}

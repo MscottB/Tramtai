@@ -148,8 +148,11 @@ func (p *Pagina) tx(clave string, pares ...string) string {
 	return p.estilos.Tx(p.lengua, clave, pares...)
 }
 
-// Iniciar empieza de cero: «Cargando…» hasta que llegue la lista, en la pestaña de las APIs.
+// Iniciar vuelve a cargar: «Cargando…» hasta que llegue la lista, en la pestaña de las APIs. En el mismo espacio (el
+// servicio volvió, o se vuelve por el menú) el formulario y el detalle abiertos se conservan, con la clave que solo se ve
+// esta vez; con otro espacio, se cierran.
 func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
+	otro := p.c.Instancia != c.Instancia
 	p.c, p.lengua = c, c.Idioma
 	p.gen++
 	if p.estilos != c.Estilos { // los mismos toda la sesión: la lista y el visor se crean una vez
@@ -162,8 +165,10 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	p.datos, p.espacio, p.resumen, p.nombre, p.clave, p.errClave, p.verClave = contrato.ListaPuntos{}, nucleo.EstadoPresupuesto{}, contrato.ResumenInstancia{}, "", "", "", false
 	p.cargado, p.sinServ, p.err, p.pestana, p.ocupado, p.pend = false, false, "", pestanaApis, false, nil
 	p.filtros, p.buscando, p.entrada, p.catalogo, p.errCat = sinFiltros, false, "", nil, ""
-	p.cerrarDetalle()
-	p.form = nil
+	if otro {
+		p.cerrarDetalle()
+		p.form = nil
+	}
 	p.aplicarFiltros()
 	return p.cargar(true)
 }
@@ -297,7 +302,7 @@ func (p *Pagina) alCargar(m msgCarga) tea.Cmd {
 }
 
 func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
-	if !m.DelEspacio(p.c) { // el cambio ya está hecho en el servicio: vale aunque la página se haya vuelto a iniciar
+	if !m.DelEspacio(p.c) { // el cambio ya está hecho en el servicio: vale aunque la página se haya ocultado
 		return nil
 	}
 	p.ocupado = false

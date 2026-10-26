@@ -242,6 +242,10 @@ func (p *Pagina) armarRefresco() tea.Cmd {
 // cargar pide todo lo que enseña la página, cada cosa por su lado: si una falla, las demás se ven.
 func (p *Pagina) cargar() tea.Cmd {
 	c, o := p.c, p.origen()
+	if c.Cli == nil { // r mientras la terminal aún conecta: la página puede no haberse iniciado
+		p.sinServ = true
+		return pagina.SinCliente
+	}
 	return tea.Batch(
 		func() tea.Msg { r, err := c.Cli.Instancia(c.Ctx, c.Instancia); return msgInstancia{o, r, err} },
 		func() tea.Msg { r, err := c.Cli.PrimerosPasos(c.Ctx, c.Instancia); return msgPasos{o, r, err} },

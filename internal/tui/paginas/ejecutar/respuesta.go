@@ -42,24 +42,26 @@ func (p *Pagina) enviar() tea.Cmd {
 	}
 	rutas := rutasDe(d.archivos)
 	c, o := p.c, p.origen()
-	p.enviando = true
+	p.enviando, p.editando = true, false // las teclas que lleguen mientras se envía ya no van al mensaje
 	return func() tea.Msg {
+		// Los errores también son nuevos: valen aunque la página se ocultara, o enviando no se apagaría nunca.
+		fallo := func(err error) tea.Msg { return msgCreado{origen: o, err: err, nuevo: true} }
 		if err := revisarArchivos(c, rutas); err != nil {
-			return msgCreado{origen: o, err: err}
+			return fallo(err)
 		}
 		if len(rutas) > 0 {
 			cfg, err := configuracion.CargarConfiguracion(c.Proyecto, catalogo.Internos()) // instancia_global.raices_permitidas, como la CLI
 			if err != nil {
-				return msgCreado{origen: o, err: err}
+				return fallo(err)
 			}
 			for _, ruta := range rutas {
 				permitida, err := cfg.RutaPermitida(ruta)
 				if err != nil {
-					return msgCreado{origen: o, err: err}
+					return fallo(err)
 				}
 				carga, err := c.Cli.SubirCarga(c.Ctx, c.Instancia, permitida)
 				if err != nil {
-					return msgCreado{origen: o, err: err}
+					return fallo(err)
 				}
 				s.Cargas = append(s.Cargas, carga.ID)
 			}

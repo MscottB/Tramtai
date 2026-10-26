@@ -189,10 +189,15 @@ export const CLAVES_AJUSTES: string[] = [
   'comun.guardar', 'comun.cancelar',
 ]
 
+// CLAVES_APP son los textos de la cabecera de la terminal que repite de la Web UI: el estado del servicio y el cambio
+// rápido de espacio.
+export const CLAVES_APP: string[] = ['app.enMarcha', 'app.sinConexion', 'app.cambiarInstancia']
+
 // CLAVES_TEXTOS son, además de las menu.* y las error.*, los textos que la terminal toma de la Web UI: los de la Ayuda de la
-// interfaz, los de Agentes, los de Inicio, los del Historial, los de Probar, los de Mis APIs, los de Espacios y los de Ajustes.
-export const CLAVES_TEXTOS: string[] = [...CLAVES_UI, ...CLAVES_AGENTES, ...CLAVES_INICIO, ...CLAVES_HISTORIAL, ...CLAVES_EJECUTAR, ...CLAVES_APIS,
-  ...CLAVES_ESPACIOS, ...CLAVES_AJUSTES]
+// interfaz, los de la cabecera, los de Agentes, los de Inicio, los del Historial, los de Probar, los de Mis APIs, los de
+// Espacios y los de Ajustes.
+export const CLAVES_TEXTOS: string[] = [...CLAVES_UI, ...CLAVES_APP, ...CLAVES_AGENTES, ...CLAVES_INICIO, ...CLAVES_HISTORIAL, ...CLAVES_EJECUTAR,
+  ...CLAVES_APIS, ...CLAVES_ESPACIOS, ...CLAVES_AJUSTES]
 
 // plano deja un texto sin marcas: sin ** y con los <marcadores> entre corchetes.
 const plano = (s: string) => s.replace(/\*\*/g, '').replace(/<([^<>]*)>/g, '[$1]')

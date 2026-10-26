@@ -162,19 +162,30 @@ func (p *Pagina) tx(clave string, pares ...string) string {
 	return p.estilos.Tx(p.lengua, clave, pares...)
 }
 
-// Iniciar empieza de cero: «Cargando…» hasta que llegan los ajustes. La pestaña y la sección elegidas se recuerdan.
+// Iniciar vuelve a cargar: «Cargando…» hasta que llegan los ajustes. La pestaña y la sección elegidas se recuerdan; en el
+// mismo espacio (el servicio volvió, o se vuelve por el menú) también el formulario y lo abierto encima, con la
+// actualización que se sigue. Con otro espacio, se cierran.
 func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
+	otro := p.c.Instancia != c.Instancia
 	p.c, p.lengua = c, c.Idioma
 	p.gen++
 	if p.estilos != c.Estilos {
 		p.estilos, p.visor = c.Estilos, comp.NuevoVisor(c.Estilos)
 	}
-	p.cargado, p.sinServ, p.err, p.ocupado, p.form, p.sel, p.abierta, p.buscando, p.filtro, p.pend = false, false, "", false, nil, nil, "", false, "", ""
-	p.act, p.acerca, p.sondeando, p.upd = nil, nil, false, actualizacionEnCurso{}
-	return p.cargar()
+	p.cargado, p.sinServ, p.err, p.ocupado, p.sel, p.pend, p.sondeando = false, false, "", false, nil, "", false
+	if otro {
+		p.form, p.abierta, p.buscando, p.filtro = nil, "", false, ""
+		p.act, p.acerca, p.upd = nil, nil, actualizacionEnCurso{} // las novedades y Acerca de los necesitan abiertos
+	}
+	cmd := p.cargar()
+	if (p.abierta == vistaProgreso || p.enCurso()) && c.Cli != nil { // el sondeo de antes ya no vale
+		return tea.Batch(cmd, p.sondear())
+	}
+	return cmd
 }
 
 // Ocultar deja de seguir lo que esté en marcha (el conversor, una actualización) mientras no se ve; Mostrar lo retoma.
+// Solo una actualización en curso se sigue igual (enCurso): al empezar a instalar, la terminal sale.
 func (p *Pagina) Ocultar() { p.gen++ }
 
 func (p *Pagina) Mostrar() tea.Cmd {
@@ -189,7 +200,7 @@ func (p *Pagina) Mostrar() tea.Cmd {
 	if p.sondeando {
 		cmds = append(cmds, p.sondearConversor())
 	}
-	if p.abierta == vistaProgreso {
+	if p.abierta == vistaProgreso || p.enCurso() { // un seguimiento nuevo deja sin valor el de antes
 		cmds = append(cmds, p.sondear())
 	}
 	return tea.Batch(cmds...)
@@ -279,6 +290,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 			return p, p.leerConversor()
 		}
 	case pagina.ConNovedades:
+		p.form = nil // se pidieron las novedades: van encima de todo
 		return p, p.pedirNovedades()
 	case comp.Elegido:
 		return p, p.elegido(m.Valor)
@@ -326,7 +338,7 @@ func (p *Pagina) alCargar(m msgCarga) tea.Cmd {
 }
 
 func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
-	if !m.DelEspacio(p.c) { // el cambio ya está hecho en el servicio: vale aunque la página se haya vuelto a iniciar
+	if !m.DelEspacio(p.c) { // el cambio ya está hecho en el servicio: vale aunque la página se haya ocultado
 		return nil
 	}
 	p.ocupado = false

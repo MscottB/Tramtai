@@ -12,6 +12,7 @@ import (
 
 	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
+	"tramtai/internal/idioma"
 )
 
 // Contexto es lo que una página recibe en Iniciar. La app lo vuelve a dar al entrar en la página, al cambiar de espacio
@@ -108,6 +109,9 @@ type (
 	EspaciosCambiados struct{}
 	// ErrorServicio dice a la app que el servicio no responde: avisa y, con r, reintenta. La página no se cierra.
 	ErrorServicio struct{ Err error }
+	// Actualizando dice a la app que empieza la instalación de una versión nueva: el instalador cierra el servicio y la
+	// terminal, así que la app sale limpia y deja escrito cómo volver a abrirla.
+	Actualizando struct{}
 	// Volver lleva a la página anterior: de la Ayuda a la de antes, o tras un IrA a la de origen. Sin anterior, nada.
 	Volver struct{}
 )
@@ -147,6 +151,12 @@ func Tras[O interface{ Fin() <-chan struct{} }](o O, d time.Duration, espera fun
 			return mensaje(o)
 		}
 	}
+}
+
+// Despedida es lo que dice la terminal al empezar una actualización (Actualizando): en el avance de Ajustes y, al salir, en
+// la consola.
+func Despedida() string {
+	return idioma.T("Tramtai se está actualizando: vuelve a abrir la terminal con «tramtai terminal» cuando termine")
 }
 
 // SinCliente es el Cmd de lo que necesita el servicio cuando la página no tiene cliente: la app avisa y r reintenta.

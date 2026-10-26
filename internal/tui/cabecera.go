@@ -91,6 +91,9 @@ func (m *modelo) conectado(r msgConexion) tea.Cmd {
 		m.caido = r.err
 	} else {
 		r.reiniciar = r.reiniciar || m.caido != nil || m.cli != r.cli // si vuelve, la página se recarga
+		if m.cli != r.cli {
+			m.cerrar() // las de la pila tienen el cliente de antes (o ninguno): se inician con este al volver a ellas
+		}
 		m.cli, m.espacios, m.caido = r.cli, r.espacios, nil
 		if r.latido {
 			m.latidos++
@@ -141,9 +144,23 @@ func (m *modelo) elegirEspacio() tea.Cmd {
 			items = append(items, comp.Item{Valor: e.ID, Texto: e.Nombre, Detalle: e.Ruta})
 		}
 	}
-	s := comp.NuevoSelector(m.estilos, idioma.T("Cambiar de espacio"), items)
+	s := comp.NuevoSelector(m.estilos, m.estilos.Tx(m.idioma, "app.cambiarInstancia"), items)
+	s.Marcar(m.instancia)
 	m.selector = &s
 	return nil
+}
+
+// cambiarEspacio cambia al espacio elegido en Ctrl+E. El de ahora no cambia nada; si una página tiene algo que se
+// perdería (pagina.Pendiente), antes pregunta y dice qué, como al salir.
+func (m *modelo) cambiarEspacio(id string) tea.Cmd {
+	if id == m.instancia {
+		return nil
+	}
+	if motivos := m.pendientes(); len(motivos) > 0 {
+		m.pregunta, m.saliendo, m.cambiarA = &comp.Confirmacion{Texto: idioma.T("¿Cambiar de espacio?") + "\n\n" + strings.Join(motivos, "\n")}, false, id
+		return nil
+	}
+	return func() tea.Msg { return pagina.CambioEspacio{ID: id} }
 }
 
 func (m *modelo) nombreEspacio() string {
@@ -164,9 +181,9 @@ func (m *modelo) vistaCabecera() string {
 	case m.conectando:
 		estado = e.Tenue.Render(e.Iconos.Inactivo + " " + idioma.T("conectando…"))
 	case m.caido != nil || m.cli == nil:
-		estado = e.Error.Render(e.Iconos.Inactivo + " " + idioma.T("sin servicio"))
+		estado = e.Error.Render(e.Iconos.Inactivo + " " + e.Tx(m.idioma, "app.sinConexion"))
 	default:
-		estado = e.Exito.Render(e.Iconos.Activo + " " + idioma.T("servicio en marcha"))
+		estado = e.Exito.Render(e.Iconos.Activo + " " + e.Tx(m.idioma, "app.enMarcha"))
 	}
 	der := estado
 	if nombre := m.nombreEspacio(); nombre != "" {
@@ -238,9 +255,10 @@ func (m *modelo) vistaPie() string {
 }
 
 func (m *modelo) teclasPie(teclas []pagina.Tecla, sep string) string {
+	e := m.estilos
 	partes := make([]string, len(teclas))
 	for i, t := range teclas {
-		partes[i] = m.estilos.Tecla.Render(t.Tecla) + " " + m.estilos.Tenue.Render(t.Accion)
+		partes[i] = e.Tecla.Render(e.A(t.Tecla)) + " " + e.Tenue.Render(e.A(t.Accion))
 	}
 	return strings.Join(partes, sep)
 }

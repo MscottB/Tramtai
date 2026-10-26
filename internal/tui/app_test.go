@@ -20,6 +20,8 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"tramtai/internal/cliente"
+	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
@@ -82,6 +84,7 @@ type paginaFalsa struct {
 	instancia   string
 	cambios     int // los CambioEspacio que le llegan
 	avisos      int // los NuevoAviso que le llegan: no debería ninguno, son de la app
+	canceladas  int // los Cancelado que le llegan: la respuesta a una pregunta suya
 }
 
 func (p *paginaFalsa) Titulo() string { return "Configuración" }
@@ -94,12 +97,16 @@ func (p *paginaFalsa) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		p.texto += msg.Text
+	case tea.PasteMsg:
+		p.texto += msg.Content
 	case tea.WindowSizeMsg:
 		p.ancho, p.alto = msg.Width, msg.Height
 	case pagina.CambioEspacio:
 		p.cambios++
 	case comp.NuevoAviso:
 		p.avisos++
+	case comp.Cancelado:
+		p.canceladas++
 	}
 	return p, nil
 }
@@ -315,6 +322,296 @@ func TestServicioCaidoNoCierra(t *testing.T) {
 	}
 }
 
+// TestServicioVuelveConservaLoAbierto: cuando el servicio cae y vuelve con el mismo espacio, la app inicia otra vez la
+// página actual y esta sigue con lo que tenía abierto: la clave recién creada y el formulario de Mis APIs, «Guardar como
+// API» y la API creada en Probar, el formulario y los valores técnicos de Ajustes, el diálogo de Espacios y el detalle y
+// los filtros del Historial.
+func TestServicioVuelveConservaLoAbierto(t *testing.T) {
+	directo, global := prueba.Servicio(t)
+	if _, err := directo.Crear(context.Background(), global, nucleo.SolicitudEjecucion{Agente: "simulado",
+		Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "hola historial"}}}); err != nil {
+		t.Fatal(err)
+	}
+	cli, caer := prueba.ConCaida(t, directo)
+	m := nuevoEn(Opciones{Datos: t.TempDir()}, "es")
+	m.cli, m.actual = cli, pagina.PaginaConectar
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	a := conducir(t, m)
+	a.Correr(m.conectar(false, true, false))
+	a.Hasta(func() bool { return m.instancia == global && m.caido == nil })
+	// vuelve tumba el servicio hasta que la app lo nota y lo levanta: con la comprobación siguiente, la app inicia otra vez
+	// la página actual.
+	vuelve := func() {
+		t.Helper()
+		caer(true)
+		a.Correr(m.conectar(false, false, false))
+		a.HastaVer(idioma.T("El servicio no responde · r reintenta"))
+		caer(false)
+		a.Correr(m.conectar(false, false, false))
+		a.Hasta(func() bool { return m.caido == nil })
+	}
+	pie := func() string { l := strings.Split(ansi.Strip(a.Vista()), "\n"); return l[len(l)-1] }
+	tx := func(clave string, pares ...string) string { return datos.Textof("es", clave, pares...) }
+
+	// Mis APIs: la clave que solo se ve esta vez y el formulario a medias.
+	a.HastaVer("Todavía no hay APIs por aplicación")
+	a.Pulsar("n")
+	a.Escribir("mi-app")
+	a.Pulsar("ctrl+s")
+	a.HastaVer("Copia la clave ahora")
+	clave := regexp.MustCompile(`tt_[A-Za-z0-9_-]+`).FindString(ansi.Strip(a.Vista()))
+	if clave == "" {
+		t.Fatalf("al crearla se ve su clave:\n%s", a.Vista())
+	}
+	vuelve()
+	a.HastaVer(clave)
+	a.Pulsar("esc", "s")
+	a.Pulsar("n")
+	a.Escribir("otra-app")
+	vuelve()
+	a.HastaVer("otra-app")
+	a.Pulsar("esc", "s")
+
+	// Probar: «Guardar como API» con el nombre escrito y, ya guardada, la API con su clave.
+	a.Pulsar("3")
+	a.HastaVer(tx("receta.instrucciones"))
+	a.Pulsar("g")
+	a.Escribir("probar-app")
+	vuelve()
+	a.HastaVer(tx("ejecutar.guardarApi"), "probar-app")
+	a.Pulsar("ctrl+s")
+	a.HastaVer(tx("ejecutar.apiCreada", "nombre", "probar-app"))
+	vuelve()
+	a.HastaVer(tx("ejecutar.apiCreada", "nombre", "probar-app"))
+
+	// Ajustes: el formulario del historial y los valores técnicos.
+	a.Pulsar("7")
+	a.HastaVer(tx("config.valoresTecnicos"))
+	a.Pulsar("down", "e")
+	if !strings.Contains(pie(), "Ctrl+S") {
+		t.Fatalf("e abre el formulario: %q", pie())
+	}
+	vuelve()
+	a.Hasta(func() bool { return strings.Contains(pie(), "Ctrl+S") })
+	a.Pulsar("esc", "down", "down", "enter")
+	if !strings.Contains(pie(), idioma.T("desplaza")) {
+		t.Fatalf("Intro abre los valores técnicos: %q", pie())
+	}
+	vuelve()
+	a.Hasta(func() bool { return strings.Contains(pie(), idioma.T("desplaza")) })
+	a.Pulsar("esc")
+
+	// Espacios: el diálogo de abrir un proyecto con la ruta escrita.
+	a.Pulsar("6")
+	a.EsperarCarga()
+	a.Pulsar("n")
+	a.Escribir("carpeta-de-prueba")
+	vuelve()
+	a.HastaVer("carpeta-de-prueba")
+	a.Pulsar("esc")
+
+	// Historial: el filtro de estado y el detalle abierto.
+	a.Pulsar("5")
+	a.HastaVer("hola historial")
+	filtro := tx("historial.estado") + ": " + tx("inicio.completados")
+	a.Pulsar("e", "e")
+	a.HastaVer(filtro, "hola historial")
+	a.Pulsar("enter")
+	a.HastaVer(tx("historial.solicitud"), tx("registro.titulo"))
+	vuelve()
+	a.HastaVer(tx("historial.solicitud"), tx("registro.titulo"))
+	a.Pulsar("esc")
+	a.HastaVer(filtro, "hola historial")
+}
+
+// TestCtrlEConElEspacioDeAhora: Ctrl+E abre con el cursor en el espacio de ahora, e Intro en él no cambia nada (la página
+// no se vuelve a iniciar). Elegir otro con algo pendiente pregunta antes y dice qué; solo s cambia.
+func TestCtrlEConElEspacioDeAhora(t *testing.T) {
+	m := nuevo(Opciones{})
+	ocupada := &paginaOcupada{}
+	m.paginas[pagina.PaginaInicio] = ocupada
+	m.cli, m.instancia = &cliente.Cliente{}, "notas_1234"
+	m.espacios = []contrato.Espacio{{ID: "global", Nombre: "Global", Activo: true}, {ID: "notas_1234", Nombre: "notas", Activo: true}}
+	// elegir pulsa las teclas en el selector y da a la app lo que responde (Elegido y, si lo hay, lo que pide después).
+	elegir := func(teclas ...string) {
+		t.Helper()
+		m.Update(tecla("ctrl+e"))
+		if m.selector == nil {
+			t.Fatal("Ctrl+E abre el selector")
+		}
+		var cmd tea.Cmd
+		for _, k := range teclas {
+			_, cmd = m.Update(tecla(k))
+		}
+		for cmd != nil {
+			_, cmd = m.Update(cmd())
+		}
+	}
+	elegir("enter")
+	if m.instancia != "notas_1234" || ocupada.iniciada != 0 || ocupada.cambios != 0 || m.selector != nil {
+		t.Fatalf("Intro en el espacio de ahora no cambia nada: %s, iniciada %d", m.instancia, ocupada.iniciada)
+	}
+	ocupada.motivo = "Probar tiene una petición en marcha"
+	elegir("up", "enter")
+	if v := ansi.Strip(m.View().Content); m.instancia != "notas_1234" || m.pregunta == nil || !strings.Contains(v, "Probar tiene una petición en marcha") {
+		t.Fatalf("con algo pendiente, pregunta antes de cambiar y dice qué:\n%s", v)
+	}
+	if _, cmd := m.Update(tecla("n")); cmd != nil || m.pregunta != nil || m.instancia != "notas_1234" {
+		t.Fatal("n no cambia")
+	}
+	elegir("up", "enter")
+	_, cmd := m.Update(tecla("s"))
+	for cmd != nil {
+		_, cmd = m.Update(cmd())
+	}
+	if m.instancia != "global" || ocupada.iniciada != 1 {
+		t.Fatalf("s cambia al elegido: %s, iniciada %d", m.instancia, ocupada.iniciada)
+	}
+}
+
+// TestPegarConUnaCajaAbierta: lo pegado es como una tecla: con la pregunta, el menú o la ventana pequeña no llega a la
+// página (entraría donde no se ve); con el selector de espacio abierto, lo filtra; sin nada encima, llega a la página.
+func TestPegarConUnaCajaAbierta(t *testing.T) {
+	m := nuevo(Opciones{})
+	falsa := &paginaFalsa{}
+	m.paginas[pagina.PaginaInicio] = falsa
+	m.cli, m.instancia = &cliente.Cliente{}, "global"
+	m.espacios = []contrato.Espacio{{ID: "global", Nombre: "Global", Ruta: "ruta-global", Activo: true}, {ID: "notas_1234", Nombre: "notas", Activo: true}}
+	pegar := func() { m.Update(tea.PasteMsg{Content: "notas"}) }
+	m.Update(comp.Pregunta{Texto: "¿Seguro?"})
+	pegar()
+	m.Update(tecla("esc"))
+	m.Update(tecla("tab"))
+	pegar()
+	m.Update(tecla("esc"))
+	m.Update(tea.WindowSizeMsg{Width: 40, Height: 10})
+	pegar()
+	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	if falsa.texto != "" {
+		t.Fatalf("con algo encima, lo pegado no llega a la página: %q", falsa.texto)
+	}
+	m.Update(tecla("ctrl+e"))
+	pegar()
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "/ notas") || strings.Contains(v, "ruta-global") || falsa.texto != "" {
+		t.Fatalf("en el selector, lo pegado filtra:\n%s", v)
+	}
+	_, cmd := m.Update(tecla("esc"))
+	m.Update(cmd())
+	pegar()
+	if falsa.texto != "notas" {
+		t.Fatalf("sin nada encima, llega a la página: %q", falsa.texto)
+	}
+}
+
+// TestOtroClienteReiniciaLasDeLaPila: si al conectar el cliente es otro (la primera conexión, o el servicio volvió en
+// otro puerto), las páginas que quedan en la pila se inician de nuevo, ya con él, al volver a ellas.
+func TestOtroClienteReiniciaLasDeLaPila(t *testing.T) {
+	m := nuevo(Opciones{})
+	falsa := &paginaFalsa{}
+	m.paginas[pagina.PaginaAgentes] = falsa
+	m.Update(tecla("2")) // mientras conecta: Agentes se inicia sin cliente
+	m.Update(tecla("?"))
+	m.Update(msgConexion{cli: &cliente.Cliente{}, espacios: []contrato.Espacio{{ID: "global", Nombre: "Global", Activo: true}}})
+	if falsa.ctx.Err() == nil {
+		t.Fatal("con otro cliente, el Ctx de las páginas de la pila se cancela")
+	}
+	_, cmd := m.Update(tecla("esc"))
+	for cmd != nil {
+		_, cmd = m.Update(cmd())
+	}
+	if m.actual != pagina.PaginaAgentes || falsa.iniciada != 2 || falsa.ctx.Err() != nil {
+		t.Fatalf("al volver, Agentes se inicia con el cliente nuevo: %s, iniciada %d", m.actual, falsa.iniciada)
+	}
+}
+
+// TestCtrlCPreguntaComoQ: Ctrl+C sale al momento si nada se pierde; con algo pendiente pregunta como q, también desde un
+// campo, y otro Ctrl+C (o q) sale.
+func TestCtrlCPreguntaComoQ(t *testing.T) {
+	ctrlC := tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl}
+	m := nuevo(Opciones{})
+	o := &paginaOcupada{paginaFalsa: paginaFalsa{campo: true}, motivo: "Probar tiene una petición en marcha"}
+	m.paginas[pagina.PaginaInicio] = o
+	if _, cmd := m.Update(ctrlC); sale(cmd) || m.pregunta == nil {
+		t.Fatal("con algo pendiente, Ctrl+C pregunta")
+	}
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "Probar tiene una petición en marcha") {
+		t.Fatalf("la pregunta dice qué se pierde:\n%s", v)
+	}
+	if _, cmd := m.Update(ctrlC); !sale(cmd) {
+		t.Fatal("con la pregunta de salir abierta, otro Ctrl+C sale")
+	}
+	// Con una pregunta de la página abierta, Ctrl+C se la cancela (la página lo sabe) antes de preguntar si salir.
+	m.pregunta, m.saliendo = nil, false
+	m.Update(comp.Pregunta{Texto: "¿Cerrar sin copiar la clave?"})
+	if _, cmd := m.Update(ctrlC); sale(cmd) || !m.saliendo || o.canceladas != 1 {
+		t.Fatalf("Ctrl+C cancela la pregunta de la página y pregunta si salir: canceladas %d", o.canceladas)
+	}
+	o.motivo = ""
+	m.pregunta, m.saliendo = nil, false
+	if _, cmd := m.Update(ctrlC); !sale(cmd) {
+		t.Fatal("sin nada pendiente, Ctrl+C sale al momento")
+	}
+}
+
+// TestCabeceraComoLaWeb: el estado del servicio en la cabecera y el título del cambio rápido de espacio son los textos de
+// la Web UI, en los dos idiomas.
+func TestCabeceraComoLaWeb(t *testing.T) {
+	for _, lengua := range []string{"es", "en"} {
+		m := nuevoEn(Opciones{}, lengua)
+		m.cli, m.instancia = &cliente.Cliente{}, "global"
+		m.espacios = []contrato.Espacio{{ID: "global", Nombre: "Global", Activo: true}}
+		cabecera := func() string { return strings.Split(ansi.Strip(m.View().Content), "\n")[0] }
+		if quiere := datos.Texto(lengua, "app.enMarcha"); !strings.Contains(cabecera(), quiere) {
+			t.Errorf("%s: con el servicio en marcha la cabecera dice %q: %q", lengua, quiere, cabecera())
+		}
+		m.caido = cliente.ErrServicioInactivo
+		if quiere := datos.Texto(lengua, "app.sinConexion"); !strings.Contains(cabecera(), quiere) {
+			t.Errorf("%s: sin servicio la cabecera dice %q: %q", lengua, quiere, cabecera())
+		}
+		m.caido = nil
+		m.Update(tecla("ctrl+e"))
+		if quiere := datos.Texto(lengua, "app.cambiarInstancia"); !strings.Contains(ansi.Strip(m.View().Content), quiere) {
+			t.Errorf("%s: el cambio de espacio se titula %q:\n%s", lengua, quiere, ansi.Strip(m.View().Content))
+		}
+	}
+}
+
+// TestActualizandoSaleLimpia: cuando empieza la instalación de una versión nueva, la terminal sale sin preguntar (aunque
+// haya algo pendiente: el instalador la cerraría igual) y deja escrito cómo volver a abrirla.
+func TestActualizandoSaleLimpia(t *testing.T) {
+	m := nuevo(Opciones{})
+	m.paginas[pagina.PaginaInicio] = &paginaOcupada{motivo: "Probar tiene una petición en marcha"}
+	if _, cmd := m.Update(pagina.Actualizando{}); !sale(cmd) || m.pregunta != nil {
+		t.Fatal("al empezar la instalación la terminal sale sin preguntar")
+	}
+	if !strings.Contains(m.despedida, "tramtai terminal") {
+		t.Fatalf("deja escrito cómo volver a abrirla: %q", m.despedida)
+	}
+	// La despedida y el texto del avance de Ajustes tienen una sola fuente: si no, retocar una deja la otra sin traducción.
+	veces := 0
+	err := filepath.WalkDir(".", func(ruta string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(ruta, ".go") || strings.HasSuffix(ruta, "_test.go") {
+			return err
+		}
+		texto, err := os.ReadFile(ruta)
+		veces += strings.Count(string(texto), `"Tramtai se está actualizando`)
+		return err
+	})
+	if err != nil || veces != 1 {
+		t.Fatalf("la despedida se escribe en %d sitios (%v)", veces, err)
+	}
+}
+
+// TestRAlConectarNoCierra: r en Inicio mientras la terminal aún conecta (sin cliente y con la página sin iniciar) no
+// pide nada al servicio: Inicio dice que no hay servicio, como las demás páginas, y la terminal sigue.
+func TestRAlConectarNoCierra(t *testing.T) {
+	m := nuevo(Opciones{})
+	a := conducir(t, m)
+	if salio(a.Pulsar("r")) || m.actual != pagina.PaginaInicio {
+		t.Fatalf("r no cierra la terminal:\n%s", a.Vista())
+	}
+}
+
 func TestTeclasComunesNoEnCampo(t *testing.T) {
 	m := nuevo(Opciones{})
 	falsa := &paginaFalsa{campo: true}
@@ -466,14 +763,41 @@ func TestColoresDeDesign(t *testing.T) {
 	}
 }
 
+// TestAsciiConLaVariable: con TRAMTAI_ASCII=1 no sale ningún carácter de dibujo: ni en Inicio, ni en las pistas y el pie
+// de Probar y Ajustes (las flechas también), ni en la Ayuda de una página o en una confirmación que se desplaza.
 func TestAsciiConLaVariable(t *testing.T) {
 	t.Setenv("TRAMTAI_ASCII", "1")
-	m := nuevo(Opciones{})
-	for _, r := range ansi.Strip(m.View().Content) {
-		if r > 127 && !strings.ContainsRune("áéíóúüñÁÉÍÓÚÜÑ¿¡×", r) {
-			t.Fatalf("con TRAMTAI_ASCII=1 sale %q", r)
+	cli, global := prueba.Servicio(t)
+	m := nuevoEn(Opciones{Datos: t.TempDir()}, "es")
+	sinDibujo := func(donde string) {
+		t.Helper()
+		for _, r := range ansi.Strip(m.View().Content) {
+			if r > 127 && !strings.ContainsRune("áéíóúüñÁÉÍÓÚÜÑ¿¡×", r) {
+				t.Fatalf("%s: con TRAMTAI_ASCII=1 sale %q:\n%s", donde, r, ansi.Strip(m.View().Content))
+			}
 		}
 	}
+	sinDibujo("Inicio")
+	m.cli, m.instancia = cli, global
+	a := conducir(t, m)
+	a.Correr(m.ir(pagina.PaginaEjecutar, nil, false))
+	a.EsperarCarga()
+	sinDibujo("Probar")
+	a.Pulsar("down") // Agente y modelo: la pista dice qué flechas lo eligen
+	sinDibujo("la pista del modelo")
+	a.Pulsar("?")
+	sinDibujo("la Ayuda de Probar")
+	a.Correr(m.ir(pagina.PaginaConfiguracion, nil, false))
+	a.EsperarCarga()
+	sinDibujo("Ajustes")
+	a.Pulsar("right", "down", "down", "down", "down", "down", "enter") // Acerca de, la última de «Todo Tramtai»
+	a.HastaVer(datos.Texto("es", "acerca.licencia"))
+	sinDibujo("Acerca de")
+	a.Pulsar("esc")
+	m.Update(comp.NuevoAviso{Texto: "Un aviso · con dibujos…", Tipo: comp.Info})
+	sinDibujo("un aviso en la línea de estado")
+	m.Update(comp.Pregunta{Texto: strings.Repeat("una línea de la pregunta\n", 40)})
+	sinDibujo("la confirmación que se desplaza")
 }
 
 func TestCambioEspacioReiniciaLaPagina(t *testing.T) {
@@ -497,6 +821,12 @@ type paginaOcupada struct {
 }
 
 func (p *paginaOcupada) Pendiente() string { return p.motivo }
+
+// Update es el de paginaFalsa, pero la página que queda es la ocupada (si no, la app se quedaría con la falsa de dentro).
+func (p *paginaOcupada) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
+	_, cmd := p.paginaFalsa.Update(msg)
+	return p, cmd
+}
 
 // TestSalirPreguntaSiHayAlgoEnMarcha: q sale sin preguntar si nada se pierde; con una petición en marcha o cambios sin
 // guardar, pregunta y dice qué, y solo s sale.

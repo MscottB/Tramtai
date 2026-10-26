@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,14 +13,16 @@ import (
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/tui/pagina"
+	"tramtai/internal/tui/paginas/prueba"
 )
 
 // servicioAnterior simula un servicio 0.55 con la forma exacta de su /healthz (sin reto ni prueba), como el de
-// internal/cliente, y devuelve su carpeta de datos.
+// internal/cliente, y devuelve su carpeta de datos. Es un servidor de prueba con las conexiones contadas: así Asentar no
+// da por quieta la app mientras le llega la respuesta.
 func servicioAnterior(t *testing.T) string {
 	datos := t.TempDir()
 	const id = "servicio_anterior"
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	base := prueba.Servidor(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/healthz" {
 			http.NotFound(w, r)
 			return
@@ -29,8 +30,7 @@ func servicioAnterior(t *testing.T) string {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, `{"estado":"ok","servicio":%q,"version":"0.55.0+21102026"}`+"\n", id)
 	}))
-	t.Cleanup(ts.Close)
-	d, _ := json.Marshal(contrato.Descriptor{Identificador: id, PID: 4242, Base: ts.URL})
+	d, _ := json.Marshal(contrato.Descriptor{Identificador: id, PID: 4242, Base: base})
 	if err := os.WriteFile(contrato.RutaDescriptor(datos), d, 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -51,6 +51,7 @@ func TestServicioAnteriorSeExplica(t *testing.T) {
 	a := conducir(t, m)
 	m.conectando, m.comprobando = true, true
 	a.Correr(m.conectar(false, true, false))
+	a.Hasta(func() bool { return !m.conectando }) // lo que contesta el servicio se espera antes de mirarlo (regla 20)
 
 	vista := m.View().Content
 	if !strings.Contains(vista, idioma.T("Sigue en marcha el servicio de una versión anterior · r lo detiene y arranca el nuevo")) ||
@@ -68,6 +69,7 @@ func TestServicioAnteriorSeExplica(t *testing.T) {
 		t.Fatal("r intenta detenerlo")
 	}
 	a.Correr(cmd)
+	a.Hasta(func() bool { return !m.conectando })
 	// Una página que pide sin cliente no tapa la explicación con un «no responde» genérico.
 	m.Update(pagina.ErrorServicio{Err: cliente.ErrServicioInactivo})
 	if vista := m.View().Content; !strings.Contains(vista, idioma.T("No se pudo detener el servicio de la versión anterior · ! dice cómo")) {

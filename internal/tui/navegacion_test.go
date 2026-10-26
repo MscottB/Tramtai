@@ -318,7 +318,7 @@ func TestCambioEspacioRecargaPaginas(t *testing.T) {
 	a.Pulsar("down", "enter")
 	a.Hasta(func() bool { return m.instancia == e.ID && m.actual == pagina.PaginaInicio })
 	a.Hasta(func() bool {
-		return strings.Contains(ansi.Strip(a.Vista()), e.Nombre+" · ● "+idioma.T("servicio en marcha"))
+		return strings.Contains(ansi.Strip(a.Vista()), e.Nombre+" · ● "+datos.Texto("es", "app.enMarcha"))
 	})
 	a.Pulsar("6")
 	a.Hasta(func() bool {

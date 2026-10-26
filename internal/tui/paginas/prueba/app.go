@@ -442,7 +442,7 @@ func (a *App) entregar(m tea.Msg) {
 		}
 	case tea.QuitMsg:
 		a.Fuera = append(a.Fuera, m)
-	case comp.Pregunta, comp.NuevoAviso, pagina.IrA, pagina.Volver, pagina.ErrorServicio, pagina.EstadoActualizacion:
+	case comp.Pregunta, comp.NuevoAviso, pagina.IrA, pagina.Volver, pagina.ErrorServicio, pagina.EstadoActualizacion, pagina.Actualizando:
 		if a.modelo != nil {
 			a.actualizar(m)
 			return
