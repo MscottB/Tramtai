@@ -91,6 +91,9 @@ func (m *modelo) conectado(r msgConexion) tea.Cmd {
 		m.caido = r.err
 	} else {
 		r.reiniciar = r.reiniciar || m.caido != nil || m.cli != r.cli // si vuelve, la página se recarga
+		if m.cli != r.cli {
+			m.cerrar() // las de la pila tienen el cliente de antes (o ninguno): se inician con este al volver a ellas
+		}
 		m.cli, m.espacios, m.caido = r.cli, r.espacios, nil
 		if r.latido {
 			m.latidos++

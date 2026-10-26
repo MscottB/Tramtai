@@ -500,6 +500,27 @@ func TestPegarConUnaCajaAbierta(t *testing.T) {
 	}
 }
 
+// TestOtroClienteReiniciaLasDeLaPila: si al conectar el cliente es otro (la primera conexión, o el servicio volvió en
+// otro puerto), las páginas que quedan en la pila se inician de nuevo, ya con él, al volver a ellas.
+func TestOtroClienteReiniciaLasDeLaPila(t *testing.T) {
+	m := nuevo(Opciones{})
+	falsa := &paginaFalsa{}
+	m.paginas[pagina.PaginaAgentes] = falsa
+	m.Update(tecla("2")) // mientras conecta: Agentes se inicia sin cliente
+	m.Update(tecla("?"))
+	m.Update(msgConexion{cli: &cliente.Cliente{}, espacios: []contrato.Espacio{{ID: "global", Nombre: "Global", Activo: true}}})
+	if falsa.ctx.Err() == nil {
+		t.Fatal("con otro cliente, el Ctx de las páginas de la pila se cancela")
+	}
+	_, cmd := m.Update(tecla("esc"))
+	for cmd != nil {
+		_, cmd = m.Update(cmd())
+	}
+	if m.actual != pagina.PaginaAgentes || falsa.iniciada != 2 || falsa.ctx.Err() != nil {
+		t.Fatalf("al volver, Agentes se inicia con el cliente nuevo: %s, iniciada %d", m.actual, falsa.iniciada)
+	}
+}
+
 // TestActualizandoSaleLimpia: cuando empieza la instalación de una versión nueva, la terminal sale sin preguntar (aunque
 // haya algo pendiente: el instalador la cerraría igual) y deja escrito cómo volver a abrirla.
 func TestActualizandoSaleLimpia(t *testing.T) {
