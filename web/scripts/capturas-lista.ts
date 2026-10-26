@@ -76,8 +76,8 @@ export function medidas(b: Buffer): { ancho: number; alto: number } {
   throw new Error('WebP desconocido: ' + tipo)
 }
 
-// BIENVENIDA son los pasos de la bienvenida, en su orden: la demo de la portada tiene una pantalla completa por paso
-// (site/capturas/bienvenida-<n>-<claro|oscuro>-<es|en>-<960|1440>.webp, n desde 1), con la ventana del recorrido encima.
+// BIENVENIDA son los pasos de la bienvenida, en su orden: la demo de la portada tiene una captura por paso, la zona que
+// señala sin la ventana del recorrido (site/capturas/bienvenida-<n>-<claro|oscuro>-<es|en>-<960|1440>.webp, n desde 1).
 export const BIENVENIDA = pasosBienvenida()
 
 export const PORTADA: { nombre: string; pagina: string }[] = [

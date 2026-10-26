@@ -50,10 +50,11 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | v0.54 | Espacios de trabajo (`releases/v0.54-espacios-de-trabajo/spec.md`): registro con id fijo y marca en la carpeta, confianza al abrir un proyecto clonado, página Espacios, Ajustes en dos pestañas con herencia, el último espacio recordado y un solo nombre; agentes: dejar la suscripción, sesión del CLI a la vista y desconectar; «Clave del espacio»; sitio renovado (portada, «Por qué Tramtai», barra y pie comunes, metadatos) |✅ |
 | v0.55 | Recorridos guiados con driver.js (`releases/v0.55-recorridos/spec.md`): «Muéstrame en pantalla» en el panel ? de cada página y una bienvenida la primera vez («¿Te enseño Tramtai?», 14 pasos), desde los datos de la Ayuda; el menú por grupos (Empezar, Conectar, Organizar); la Ayuda del sitio con la captura de cada paso y la demo «Aprende la app en 2 minutos» en la portada; auditoría del sitio con Lighthouse | ✅ |
 | v0.56 | La terminal a la par de la Web UI (`releases/v0.56-terminal/spec.md`): las 8 páginas (Inicio con la red en vivo, Agentes, Probar con la receta completa, Mis APIs con consumo y presupuesto, Historial, Espacios, Ajustes y Ayuda), novedades y Acerca de; Tramtai solo con la terminal; los arreglos de la auditoría 001 (seguridad del servicio, accesibilidad, textos con glosario y lo derivado calculado por el servicio) | ⬜ |
-| v0.57 | Modo servidor en Linux y Windows Server: arranque «Solo el servicio» al iniciar sesión, sin ventana ni bandeja (de la v0.56), arranque sin sesión iniciada (systemd del sistema, servicio de Windows), claves sin escritorio, HTTPS propio o detrás de un proxy, instalación sin la app de escritorio y guía (detalle abajo). Una tecla en la terminal para abrir la Web UI (la v0.55 lo hacía) | ⬜ |
-| v0.58 | Configurar los clientes solos (Claude Code, Codex, Cline…), con copia de su configuración antes de tocarla | ⬜ |
-| v0.59 | Uso y diagnóstico: panel de uso con tendencias, alias que también fijan el esfuerzo y «Comprobar conexión» | ⬜ |
-| v0.60 | Actualización que vuelve a la versión anterior si la nueva no arranca | ⬜ |
+| v0.57 | Claves de los espacios sin guardar (detalle abajo): como las de las APIs, Tramtai guarda solo su huella `sha256:` y la clave se ve una vez, al crearla o regenerarla; `GET /api/v1/instancia/token` deja de devolverla, los ejemplos de código muestran `<tu clave>` salvo recién regenerada y las claves antiguas en claro pasan a huella sin que las apps dejen de funcionar | ⬜ |
+| v0.58 | Modo servidor en Linux y Windows Server: arranque «Solo el servicio» al iniciar sesión, sin ventana ni bandeja (de la v0.56), arranque sin sesión iniciada (systemd del sistema, servicio de Windows), claves sin escritorio, HTTPS propio o detrás de un proxy, instalación sin la app de escritorio y guía (detalle abajo); las capturas de la terminal en la portada (de la v0.56). Una tecla en la terminal para abrir la Web UI (la v0.55 lo hacía) | ⬜ |
+| v0.59 | Configurar los clientes solos (Claude Code, Codex, Cline…), con copia de su configuración antes de tocarla | ⬜ |
+| v0.60 | Uso y diagnóstico: panel de uso con tendencias, alias que también fijan el esfuerzo y «Comprobar conexión» | ⬜ |
+| v0.61 | Actualización que vuelve a la versión anterior si la nueva no arranca | ⬜ |
 | — | Exportar e importar APIs entre usuarios (un archivo con sus ajustes, sin claves). Ojo: compartir APIs en equipo es la base de la futura versión Pro de equipo; decidir qué queda en la gratuita antes de hacerlo | ⬜ |
 | — | OpenCode como agente nuevo (spec en `opencode.md`, rama `feat/opencode`; M0 hecha) | ⬜ |
 | — | Hermes Agent como agente nuevo (instalado; falta `hermes setup` del usuario y su M0) | ⬜ |
@@ -71,7 +72,13 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | — | Audio: transcripción local y opcional | ⬜ |
 | — | Antivirus: analizar cada archivo al subirlo | ⬜ |
 
-Lo investigado para esos cuatro y para el modo servidor, que pasó a la v0.57 (2026-10-20, falta analizarlo más antes de su spec):
+Claves de los espacios (v0.57, decidido el 2026-10-26): Tramtai no debe almacenar claves. Las de los proveedores ya van
+al almacén cifrado del sistema y las de las APIs solo como huella; las de los espacios (`token-global` y
+`tokens/<id>`) se guardan hoy en claro, en una carpeta solo del usuario, y la Web UI puede volver a mostrarlas. Pasan a
+huella como las de las APIs. `token-servicio` se queda en su archivo: lo leen la CLI y la app de escritorio del mismo
+usuario, y el llavero no protegería más frente a ese usuario.
+
+Lo investigado para esos cuatro y para el modo servidor, que pasó a la v0.58 (2026-10-20, falta analizarlo más antes de su spec):
 
 - **Formatos de markitdown que no se suman:** audio (`recognize_google` envía el audio a Google), YouTube (el servicio
   tendría que salir a internet) e imágenes (solo metadatos con `exiftool` instalado y descripción con un LLM; no hay OCR

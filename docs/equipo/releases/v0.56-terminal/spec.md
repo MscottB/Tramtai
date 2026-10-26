@@ -35,7 +35,7 @@ Diseño del 2026-10-21, acordado con el usuario por secciones.
 - **«Solo terminal en Windows»:** Tramtai se instala igual que hoy, pero se puede usar entero sin abrir la app, y el arranque automático puede ser solo del servicio, sin ventana ni bandeja. La instalación sin la app queda para el modo servidor.
 - **Ayuda:** dentro de la terminal, generada de la misma fuente que la app y la web. Funciona sin conexión, en es/en y con búsqueda.
 - **Construcción (opción A):** se rehace la terminal por páginas, con componentes compartidos, `bubbles` y `lipgloss` v2. La lógica común con la CLI sube a `internal`.
-- **Orden:** el modo servidor (Linux y Windows Server) queda para la v0.57. Lo demás se corre un número: configurar clientes pasa a la v0.58, uso y diagnóstico a la v0.59, y la actualización con vuelta atrás a la v0.60.
+- **Orden:** tras la v0.56, las claves de los espacios pasan a guardarse solo como huella en la v0.57 (decisión del usuario, 2026-10-26). El modo servidor (Linux y Windows Server) queda para la v0.58 y lo demás se corre un número: configurar clientes pasa a la v0.59, uso y diagnóstico a la v0.60, y la actualización con vuelta atrás a la v0.61.
 - **Cada release** pone al día, si hace falta, la Ayuda, la guía de desarrolladores, el README y la web como presentación del producto.
 
 ## 1. Estructura de la terminal
@@ -218,12 +218,12 @@ mientras lo cruza; vale para el mapa ancho y para el estrecho del móvil. Lo com
   - los arreglos de la auditoría 001 (`anti-slop/audit-001-2026-10-22.md`);
   - la documentación (Tarea 15);
   - la comprobación de punta a punta (Tarea 16).
-- **«Solo el servicio» (Tarea 13) pasa a la v0.57.** Arrancar sin ventana ni bandeja forma parte del modo servidor. Hasta entonces, Ajustes y la Ayuda solo hablan de «La app en la bandeja».
-- **Las capturas de la terminal en la portada (Tarea 14) pasan a la v0.57.** La portada presenta la terminal con texto.
+- **«Solo el servicio» (Tarea 13) pasa a la v0.58.** Arrancar sin ventana ni bandeja forma parte del modo servidor. Hasta entonces, Ajustes y la Ayuda solo hablan de «La app en la bandeja».
+- **Las capturas de la terminal en la portada (Tarea 14) pasan a la v0.58.** La portada presenta la terminal con texto.
 - **La Tarea 15 deja fuera** «Solo el servicio» y las capturas nuevas.
 
 **Fuera de la v0.56:**
-- instalar sin la app de escritorio, el modo servidor y «Solo el servicio» (v0.57);
-- las capturas de la terminal en la portada (v0.57);
+- instalar sin la app de escritorio, el modo servidor y «Solo el servicio» (v0.58);
+- las capturas de la terminal en la portada (v0.58);
 - ratón en la terminal;
 - capturas, diagramas y recorridos dentro de la terminal.

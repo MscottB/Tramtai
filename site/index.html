@@ -88,13 +88,26 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
         <span lang="en">Windows 10 and 11, macOS 11 or later and Linux · free for personal and non-commercial use</span>
       </p>
 
+      <!-- Las escenas del recorrido: el tranvía de cada una llega a la estación de su agente y el panel enseña el código que
+           la provoca (sitio.js). Sin JavaScript no hay pestañas ni pausa: se ven el mapa quieto y la primera escena. -->
+      <div class="escenas">
+        <div class="mapa-ejemplos" hidden>
+          <div class="mapa-pestanas" role="tablist" aria-label="Escenas" data-aria-en="Scenes">
+            <button type="button" role="tab" class="mapa-pestana" aria-selected="true" aria-controls="mapa-panel" id="mapa-pestana-1"><span lang="es">Resume un contrato con Claude</span><span lang="en">Summarize a contract with Claude</span></button>
+            <button type="button" role="tab" class="mapa-pestana" aria-selected="false" aria-controls="mapa-panel" id="mapa-pestana-2"><span lang="es">Un PDF a JSON con Codex</span><span lang="en">A PDF to JSON with Codex</span></button>
+            <button type="button" role="tab" class="mapa-pestana" aria-selected="false" aria-controls="mapa-panel" id="mapa-pestana-3"><span lang="es">Traduce con GitHub Copilot</span><span lang="en">Translate with GitHub Copilot</span></button>
+            <button type="button" role="tab" class="mapa-pestana" aria-selected="false" aria-controls="mapa-panel" id="mapa-pestana-4"><span lang="es">Respaldo: de Claude a Codex</span><span lang="en">Fallback: from Claude to Codex</span></button>
+          </div>
+          <button type="button" class="mapa-pausa"><span lang="es">Pausa</span><span lang="en">Pause</span></button>
+        </div>
+        <div class="escenas-cuerpo">
       <div class="mapa" aria-hidden="true">
         <svg class="mapa-ancho" viewBox="0 0 760 306">
           <!-- Tus apps → Tramtai, y Tramtai → cada agente por su línea (como el mapa de la app). -->
           <g fill="none" stroke-linecap="round">
-            <path d="M 190 95 L 202 95 C 240 95 240 143 278 143 L 290 143" stroke-width="3" stroke="color-mix(in srgb, var(--acento) 55%, transparent)"/>
-            <path d="M 190 153 L 204 153 C 240 153 240 153 276 153 L 290 153" stroke-width="3" stroke="color-mix(in srgb, var(--acento) 55%, transparent)"/>
-            <path d="M 190 211 L 202 211 C 240 211 240 163 278 163 L 290 163" stroke-width="3" stroke="color-mix(in srgb, var(--acento) 55%, transparent)"/>
+            <path d="M 190 95 L 202 95 C 240 95 240 143 278 143 L 290 143" stroke-width="3" stroke="var(--borde-control)"/>
+            <path d="M 190 153 L 204 153 C 240 153 240 153 276 153 L 290 153" stroke-width="3" stroke="var(--borde-control)"/>
+            <path d="M 190 211 L 202 211 C 240 211 240 163 278 163 L 290 163" stroke-width="3" stroke="var(--borde-control)"/>
             <path d="M 460 133 L 472 133 C 515 133 515 37 558 37 L 570 37" stroke-width="4" stroke="var(--claude)"/>
             <path d="M 460 143 L 472 143 C 515 143 515 95 558 95 L 570 95" stroke-width="4" stroke="var(--codex)"/>
             <path d="M 460 153 L 479 153 C 515 153 515 153 551 153 L 570 153" stroke-width="4" stroke="var(--copilot)"/>
@@ -107,7 +120,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
           <circle cx="190" cy="153" r="7" stroke-width="3" fill="var(--superficie)" stroke="var(--acento)"/>
           <text x="172" y="158" text-anchor="end" font-size="14" font-weight="500" fill="var(--texto)"><tspan lang="es">Tus scripts</tspan><tspan lang="en">Your scripts</tspan></text>
           <circle cx="190" cy="211" r="7" stroke-width="3" fill="var(--superficie)" stroke="var(--acento)"/>
-          <text x="172" y="216" text-anchor="end" font-size="14" font-weight="500" fill="var(--texto)"><tspan lang="es">Tus automatizaciones</tspan><tspan lang="en">Your automations</tspan></text>
+          <text x="172" y="216" text-anchor="end" font-size="14" font-weight="500" fill="var(--texto)"><tspan lang="es">Tu bot</tspan><tspan lang="en">Your bot</tspan></text>
           <!-- El tranvía va antes que la cápsula: al pasar por Tramtai queda debajo del cartel y no se ve. -->
           <rect class="tranvia" x="-13" y="-7" width="26" height="14" rx="5" fill="var(--acento)"/>
           <!-- Tramtai es el intercambiador: la cápsula de borde grueso de los transbordos. -->
@@ -137,7 +150,7 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
           <circle cx="18" cy="52" r="6" stroke-width="3" fill="var(--superficie)" stroke="var(--acento)"/>
           <text x="36" y="57" font-size="14" font-weight="500" fill="var(--texto)"><tspan lang="es">Tus scripts</tspan><tspan lang="en">Your scripts</tspan></text>
           <circle cx="18" cy="90" r="6" stroke-width="3" fill="var(--superficie)" stroke="var(--acento)"/>
-          <text x="36" y="95" font-size="14" font-weight="500" fill="var(--texto)"><tspan lang="es">Tus automatizaciones</tspan><tspan lang="en">Your automations</tspan></text>
+          <text x="36" y="95" font-size="14" font-weight="500" fill="var(--texto)"><tspan lang="es">Tu bot</tspan><tspan lang="en">Your bot</tspan></text>
           <rect class="tranvia-alto" x="-11" y="-6" width="22" height="12" rx="5" fill="var(--acento)" opacity="0"/>
           <rect x="4" y="120" width="312" height="58" rx="29" stroke-width="4" fill="var(--superficie)" stroke="var(--texto)"/>
           <text x="160" y="146" text-anchor="middle" font-size="16" font-weight="800" fill="var(--texto)" style="font-family: var(--titulo)">Tramtai</text>
@@ -164,19 +177,173 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
           <text x="314" y="367" text-anchor="end" font-size="12" fill="var(--texto-suave)"><tspan lang="es">fuera de tus apps</tspan><tspan lang="en">not for your apps</tspan></text>
         </svg>
       </div>
-      <!-- Los ejemplos del recorrido: el tranvía de cada uno llega a la estación de su agente (sitio.js). Sin JavaScript
-           quedan ocultos y se ve el mapa fijo con el primer ejemplo de código. -->
-      <div class="mapa-ejemplos" hidden>
-        <p class="mapa-leyenda" aria-live="off"></p>
-        <div class="mapa-controles">
-          <button type="button" class="mapa-punto" data-ejemplo="0" aria-pressed="true"><span lang="es" class="solo-lectores">Ejemplo 1</span><span lang="en" class="solo-lectores">Example 1</span></button>
-          <button type="button" class="mapa-punto" data-ejemplo="1" aria-pressed="false"><span lang="es" class="solo-lectores">Ejemplo 2</span><span lang="en" class="solo-lectores">Example 2</span></button>
-          <button type="button" class="mapa-punto" data-ejemplo="2" aria-pressed="false"><span lang="es" class="solo-lectores">Ejemplo 3</span><span lang="en" class="solo-lectores">Example 3</span></button>
-          <button type="button" class="mapa-punto" data-ejemplo="3" aria-pressed="false"><span lang="es" class="solo-lectores">Ejemplo 4</span><span lang="en" class="solo-lectores">Example 4</span></button>
-          <button type="button" class="mapa-pausa"><span lang="es">Pausa</span><span lang="en">Pause</span></button>
+          <!-- Desde 980 px los cuatro códigos ocupan la misma celda: el panel mide lo del más alto y no salta al cambiar de
+               escena. Es tabpanel solo con las pestañas (sitio.js). -->
+          <div class="mapa-panel" id="mapa-panel">
+            <p class="mapa-titulo"><span lang="es">Resume un contrato con Claude</span><span lang="en">Summarize a contract with Claude</span></p>
+            <p class="mapa-leyenda" aria-live="off"><span lang="es">Tu app con el SDK de OpenAI → Claude: «Resume este contrato en tres puntos»</span><span lang="en">Your app with the OpenAI SDK → Claude: “Summarize this contract in three points”</span></p>
+            <div class="mapa-codigos">
+<pre class="codigo" id="codigo-mapa-1"><span class="k">from</span> openai <span class="k">import</span> OpenAI
+
+<span class="c" lang="es"># La URL y la clave están en Tramtai → Mis APIs</span><span class="c" lang="en"># The URL and the key are in Tramtai → My APIs</span>
+cliente = OpenAI(base_url=<span class="s">"http://127.0.0.1:17373/openai/v1"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
+
+respuesta = cliente.chat.completions.create(
+    model=<span class="s">"claude/haiku"</span>,
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Resume este contrato en tres puntos"</span>}],
+)</pre>
+<pre class="codigo" id="codigo-mapa-2" hidden><span class="c" lang="es"># 1. Sube el PDF</span><span class="c" lang="en"># 1. Upload the PDF</span>
+curl http://127.0.0.1:17373/api/v1/cargas -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -F archivo=@acta.pdf
+
+<span class="c" lang="es"># 2. Pide la respuesta con forma</span><span class="c" lang="en"># 2. Ask for a shaped answer</span>
+curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -d <span class="s">'{
+  "agente": "codex", "cargas": ["carga_…"],
+  "mensajes": [{"rol": "usuario", "contenido": "Saca las fechas y los nombres de esta acta"}],
+  "salida": {"formato": "json", "esquema": {"type": "object",
+    "properties": {"fechas": {"type": "array"}, "nombres": {"type": "array"}}}}
+}'</span></pre>
+<pre class="codigo" id="codigo-mapa-3" hidden><span class="k">import</span> anthropic
+
+cliente = anthropic.Anthropic(base_url=<span class="s">"http://127.0.0.1:17373/anthropic"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
+
+respuesta = cliente.messages.create(
+    model=<span class="s">"copilot"</span>, max_tokens=1024,
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Traduce este texto al inglés"</span>}],
+)</pre>
+<pre class="codigo" id="codigo-mapa-4" hidden><span class="c" lang="es"># Primero Claude; si falla antes de responder, Codex</span><span class="c" lang="en"># Claude first; if it fails before answering, Codex</span>
+curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -d <span class="s">'{
+  "agente": "claude", "respaldo": ["codex"],
+  "mensajes": [{"rol": "usuario", "contenido": "Resume este contrato en tres puntos"}]
+}'</span></pre>
+            </div>
+          </div>
         </div>
       </div>
-      <script type="application/json" id="ejemplos-mapa">[{"origen": 0, "agentes": [0], "pausaCentro": false, "codigo": "codigo-mapa-1", "es": "Tu app con el SDK de OpenAI → Claude: «Resume este contrato en tres puntos»", "en": "Your app with the OpenAI SDK → Claude: “Summarize this contract in three points”"}, {"origen": 1, "agentes": [1], "pausaCentro": true, "codigo": "codigo-mapa-2", "es": "Un PDF por la API propia → Codex, con respuesta JSON (Tramtai lo convierte a texto)", "en": "A PDF through the native API → Codex, with a JSON response (Tramtai turns it into text)"}, {"origen": 2, "agentes": [2], "pausaCentro": false, "codigo": "codigo-mapa-3", "es": "El SDK de Anthropic → GitHub Copilot: «Traduce este texto al inglés»", "en": "The Anthropic SDK → GitHub Copilot: “Translate this text into English”"}, {"origen": 0, "agentes": [0, 1], "pausaCentro": false, "codigo": "codigo-mapa-4", "es": "Respaldo: Claude llegó a su límite y la petición sigue con Codex", "en": "Fallback: Claude hit its limit and the request continues with Codex"}]</script>
+      <script type="application/json" id="ejemplos-mapa">[{"origen": 0, "agentes": [0], "pausaCentro": false, "codigo": "codigo-mapa-1", "titulo_es": "Resume un contrato con Claude", "titulo_en": "Summarize a contract with Claude", "es": "Tu app con el SDK de OpenAI → Claude: «Resume este contrato en tres puntos»", "en": "Your app with the OpenAI SDK → Claude: “Summarize this contract in three points”"}, {"origen": 1, "agentes": [1], "pausaCentro": true, "codigo": "codigo-mapa-2", "titulo_es": "Un PDF a JSON con Codex", "titulo_en": "A PDF to JSON with Codex", "es": "Un PDF por la API propia → Codex, con respuesta JSON (Tramtai lo convierte a texto)", "en": "A PDF through the native API → Codex, with a JSON response (Tramtai turns it into text)"}, {"origen": 2, "agentes": [2], "pausaCentro": false, "codigo": "codigo-mapa-3", "titulo_es": "Traduce con GitHub Copilot", "titulo_en": "Translate with GitHub Copilot", "es": "El SDK de Anthropic → GitHub Copilot: «Traduce este texto al inglés»", "en": "The Anthropic SDK → GitHub Copilot: “Translate this text into English”"}, {"origen": 0, "agentes": [0, 1], "pausaCentro": false, "codigo": "codigo-mapa-4", "titulo_es": "Respaldo: de Claude a Codex", "titulo_en": "Fallback: from Claude to Codex", "es": "Respaldo: Claude llegó a su límite y la petición sigue con Codex", "en": "Fallback: Claude hit its limit and the request continues with Codex"}]</script>
+    </div>
+  </section>
+
+  <!-- El problema y la solución, dibujados (v0.56): el antes y el después en SVG con su texto visible, y los seis motivos.
+       El color de cada agente solo aparece en «Con Tramtai», en la línea de su agente. -->
+  <section id="pagas" class="destacado">
+    <div class="envoltura">
+      <div class="cabeza">
+        <h2><span lang="es">Los agentes que ya pagas, <em>al servicio de tus apps</em>.</span><span lang="en">The agents you already pay for, <em>working for your apps</em>.</span></h2>
+        <p class="suave"><span lang="es">Sin servidores en la nube de por medio ni cuentas nuevas: tu app habla con Tramtai como con OpenAI o Anthropic, y Tramtai con el agente que elijas.</span><span lang="en">No cloud servers in between, no new accounts: your app talks to Tramtai as it would to OpenAI or Anthropic, and Tramtai talks to the agent you pick.</span></p>
+      </div>
+      <div class="pagas-diagramas">
+        <figure class="pagas-diagrama sin">
+          <h3><span lang="es">Sin Tramtai</span><span lang="en">Without Tramtai</span></h3>
+          <svg viewBox="0 0 340 200" role="img" aria-label="Tres apps, cada una con su clave y su SDK hacia OpenAI, Anthropic o Google" data-aria-en="Three apps, each with its own key and SDK to OpenAI, Anthropic or Google">
+            <g fill="none" stroke-width="3" stroke-linecap="round" stroke="var(--borde-control)">
+              <path d="M 100 40 L 238 40"/>
+              <path d="M 100 100 L 238 100"/>
+              <path d="M 100 160 L 238 160"/>
+            </g>
+            <g stroke-width="3" fill="var(--superficie)" stroke="var(--acento)">
+              <circle cx="100" cy="40" r="7"/>
+              <circle cx="100" cy="100" r="7"/>
+              <circle cx="100" cy="160" r="7"/>
+            </g>
+            <g text-anchor="end" font-size="14" font-weight="500" fill="var(--texto)">
+              <text x="86" y="45"><tspan lang="es">Tu app</tspan><tspan lang="en">Your app</tspan></text>
+              <text x="86" y="105"><tspan lang="es">Tus scripts</tspan><tspan lang="en">Your scripts</tspan></text>
+              <text x="86" y="165"><tspan lang="es">Tu bot</tspan><tspan lang="en">Your bot</tspan></text>
+            </g>
+            <!-- Cada app lleva su clave de pago y su SDK hasta su proveedor. -->
+            <g stroke-width="1.5" fill="var(--superficie)" stroke="var(--borde-control)">
+              <rect x="126" y="28" width="84" height="24" rx="6"/>
+              <rect x="126" y="88" width="84" height="24" rx="6"/>
+              <rect x="126" y="148" width="84" height="24" rx="6"/>
+              <rect x="238" y="25" width="96" height="30" rx="8" fill="var(--superficie-suave)"/>
+              <rect x="238" y="85" width="96" height="30" rx="8" fill="var(--superficie-suave)"/>
+              <rect x="238" y="145" width="96" height="30" rx="8" fill="var(--superficie-suave)"/>
+            </g>
+            <g text-anchor="middle" font-size="12" fill="var(--texto-suave)">
+              <text x="168" y="44"><tspan lang="es">clave + SDK</tspan><tspan lang="en">key + SDK</tspan></text>
+              <text x="168" y="104"><tspan lang="es">clave + SDK</tspan><tspan lang="en">key + SDK</tspan></text>
+              <text x="168" y="164"><tspan lang="es">clave + SDK</tspan><tspan lang="en">key + SDK</tspan></text>
+            </g>
+            <g text-anchor="middle" font-size="13" font-weight="650" fill="var(--texto)">
+              <text x="286" y="45">OpenAI</text>
+              <text x="286" y="105">Anthropic</text>
+              <text x="286" y="165">Google</text>
+            </g>
+          </svg>
+          <figcaption><span lang="es">Una clave, un SDK y una factura por proveedor.</span><span lang="en">One key, one SDK and one bill per provider.</span></figcaption>
+        </figure>
+        <figure class="pagas-diagrama con">
+          <h3><span lang="es">Con Tramtai</span><span lang="en">With Tramtai</span></h3>
+          <!-- Más ancho que «Sin Tramtai» para los nombres del glosario; estilo.css lo deja a la misma escala. -->
+          <svg viewBox="0 0 384 200" role="img" aria-label="Tus apps llegan a Tramtai, y Tramtai a Claude Code, Codex, GitHub Copilot y la Gemini API por la línea de cada agente" data-aria-en="Your apps reach Tramtai, and Tramtai reaches Claude Code, Codex, GitHub Copilot and the Gemini API along each agent’s line">
+            <g fill="none" stroke-linecap="round">
+              <path d="M 100 40 C 118 40 118 90 136 90" stroke-width="3" stroke="var(--borde-control)"/>
+              <path d="M 100 100 L 136 100" stroke-width="3" stroke="var(--borde-control)"/>
+              <path d="M 100 160 C 118 160 118 110 136 110" stroke-width="3" stroke="var(--borde-control)"/>
+              <path d="M 224 88 C 243 88 243 34 262 34" stroke-width="4" stroke="var(--claude)"/>
+              <path d="M 224 96 C 243 96 243 78 262 78" stroke-width="4" stroke="var(--codex)"/>
+              <path d="M 224 104 C 243 104 243 122 262 122" stroke-width="4" stroke="var(--copilot)"/>
+              <path d="M 224 112 C 243 112 243 166 262 166" stroke-width="4" stroke="var(--gemini)"/>
+            </g>
+            <g stroke-width="3" fill="var(--superficie)" stroke="var(--acento)">
+              <circle cx="100" cy="40" r="7"/>
+              <circle cx="100" cy="100" r="7"/>
+              <circle cx="100" cy="160" r="7"/>
+            </g>
+            <g text-anchor="end" font-size="14" font-weight="500" fill="var(--texto)">
+              <text x="86" y="45"><tspan lang="es">Tu app</tspan><tspan lang="en">Your app</tspan></text>
+              <text x="86" y="105"><tspan lang="es">Tus scripts</tspan><tspan lang="en">Your scripts</tspan></text>
+              <text x="86" y="165"><tspan lang="es">Tu bot</tspan><tspan lang="en">Your bot</tspan></text>
+            </g>
+            <!-- Tramtai es el intercambiador, como en el mapa de la cabecera. -->
+            <rect x="136" y="76" width="88" height="48" rx="24" stroke-width="4" fill="var(--superficie)" stroke="var(--texto)"/>
+            <text x="180" y="106" text-anchor="middle" font-size="16" font-weight="800" fill="var(--texto)" style="font-family: var(--titulo)">Tramtai</text>
+            <circle cx="262" cy="34" r="7" fill="var(--claude)"/>
+            <circle cx="262" cy="78" r="7" fill="var(--codex)"/>
+            <circle cx="262" cy="122" r="7" fill="var(--copilot)"/>
+            <circle cx="262" cy="166" r="7" fill="var(--gemini)"/>
+            <g font-size="14" font-weight="650" fill="var(--texto)">
+              <text x="276" y="39">Claude Code</text>
+              <text x="276" y="83">Codex</text>
+              <text x="276" y="127">GitHub Copilot</text>
+              <text x="276" y="171">Gemini API</text>
+            </g>
+          </svg>
+          <figcaption><span lang="es">Una URL local y los agentes que ya tienes.</span><span lang="en">One local URL and the agents you already have.</span></figcaption>
+        </figure>
+      </div>
+      <ul class="motivos">
+        <li class="motivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg>
+          <h3><span lang="es">Lo que ya pagas</span><span lang="en">What you already pay for</span></h3>
+          <p><span lang="es">Para tus apps, la clave de API de cada agente; tu suscripción de Claude, ChatGPT o GitHub Copilot, solo para tu uso personal.</span><span lang="en">For your apps, each agent’s API key; your Claude, ChatGPT or GitHub Copilot subscription, only for your personal use.</span></p>
+        </li>
+        <li class="motivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+          <h3><span lang="es">En tu equipo</span><span lang="en">On your computer</span></h3>
+          <p><span lang="es">Todo corre en tu equipo; tus peticiones no pasan por nosotros.</span><span lang="en">Everything runs on your computer; your requests don’t go through us.</span></p>
+        </li>
+        <li class="motivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14m-3-3 3 3-3 3M20 16H6m3-3-3 3 3 3"/></svg>
+          <h3><span lang="es">Compatible</span><span lang="en">Compatible</span></h3>
+          <p><span lang="es">Hablas con los agentes desde el SDK que ya usas, con respuesta en vivo y llamadas a herramientas.</span><span lang="en">Talk to the agents from the SDK you already use, with live responses and tool calls.</span></p>
+        </li>
+        <li class="motivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h6l4-6h8M9 12l4 6h8"/></svg>
+          <h3><span lang="es">Respaldo</span><span lang="en">Fallback</span></h3>
+          <p><span lang="es">Si un agente no puede, sigue otro de tu lista.</span><span lang="en">If one agent can’t, another on your list carries on.</span></p>
+        </li>
+        <li class="motivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          <h3><span lang="es">Por proyecto</span><span lang="en">Per project</span></h3>
+          <p><span lang="es">Cada proyecto, con lo suyo aparte.</span><span lang="en">Each project, with its own things kept apart.</span></p>
+        </li>
+        <li class="motivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+          <h3><span lang="es">Bajo control</span><span lang="en">In control</span></h3>
+          <p><span lang="es">Límites por app y cada petición a la vista.</span><span lang="en">Limits per app, and every request in view.</span></p>
+        </li>
+      </ul>
     </div>
   </section>
 
@@ -226,38 +393,15 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
             <p class="suave"><span lang="es">Cambia la URL base de tu SDK de OpenAI o Anthropic y elige agente y modelo en el campo <code>model</code>.</span><span lang="en">Change the base URL of your OpenAI or Anthropic SDK and pick agent and model in the <code>model</code> field.</span></p>
           </li>
         </ol>
-<pre class="codigo" id="codigo-mapa-1"><span class="k">from</span> openai <span class="k">import</span> OpenAI
+<pre class="codigo" id="codigo-como"><span class="k">import</span> anthropic
 
 <span class="c" lang="es"># La URL y la clave están en Tramtai → Mis APIs</span><span class="c" lang="en"># The URL and the key are in Tramtai → My APIs</span>
-cliente = OpenAI(base_url=<span class="s">"http://127.0.0.1:17373/openai/v1"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
-
-respuesta = cliente.chat.completions.create(
-    model=<span class="s">"claude/haiku"</span>,
-    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Resume este contrato en tres puntos"</span>}],
-)</pre>
-<pre class="codigo" id="codigo-mapa-2" hidden><span class="c" lang="es"># 1. Sube el PDF</span><span class="c" lang="en"># 1. Upload the PDF</span>
-curl http://127.0.0.1:17373/api/v1/cargas -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -F archivo=@acta.pdf
-
-<span class="c" lang="es"># 2. Pide la respuesta con forma</span><span class="c" lang="en"># 2. Ask for a shaped answer</span>
-curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -d <span class="s">'{
-  "agente": "codex", "cargas": ["carga_…"],
-  "mensajes": [{"rol": "usuario", "contenido": "Saca las fechas y los nombres de esta acta"}],
-  "salida": {"formato": "json", "esquema": {"type": "object",
-    "properties": {"fechas": {"type": "array"}, "nombres": {"type": "array"}}}}
-}'</span></pre>
-<pre class="codigo" id="codigo-mapa-3" hidden><span class="k">import</span> anthropic
-
 cliente = anthropic.Anthropic(base_url=<span class="s">"http://127.0.0.1:17373/anthropic"</span>, api_key=<span class="s">"tu-clave-de-tramtai"</span>)
 
 respuesta = cliente.messages.create(
-    model=<span class="s">"copilot"</span>, max_tokens=1024,
-    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Traduce este texto al inglés"</span>}],
+    model=<span class="s">"claude/haiku"</span>, max_tokens=1024,
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"Resume este contrato en tres puntos"</span>}],
 )</pre>
-<pre class="codigo" id="codigo-mapa-4" hidden><span class="c" lang="es"># Primero Claude; si falla antes de responder, Codex</span><span class="c" lang="en"># Claude first; if it fails before answering, Codex</span>
-curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: Bearer tu-clave-de-tramtai"</span> -d <span class="s">'{
-  "agente": "claude", "respaldo": ["codex"],
-  "mensajes": [{"rol": "usuario", "contenido": "Resume este contrato en tres puntos"}]
-}'</span></pre>
       </div>
     </div>
   </section>
@@ -274,27 +418,6 @@ tramtai servicio iniciar -d
 
 <span class="c" lang="es"># Las ocho páginas, con el teclado; q sale</span><span class="c" lang="en"># The eight pages, from the keyboard; q quits</span>
 tramtai terminal</pre>
-    </div>
-  </section>
-
-  <section>
-    <div class="envoltura">
-      <div class="destacado">
-        <div class="cabeza">
-          <h2><span lang="es">Los agentes que ya pagas, <em>al servicio de tus apps</em>.</span><span lang="en">The agents you already pay for, <em>working for your apps</em>.</span></h2>
-          <p class="suave"><span lang="es">Sin servidores intermedios ni cuentas nuevas: tu app habla con Tramtai como con OpenAI o Anthropic, y Tramtai con el agente que elijas.</span><span lang="en">No middle servers, no new accounts: your app talks to Tramtai as it would to OpenAI or Anthropic, and Tramtai talks to the agent you pick.</span></p>
-        </div>
-        <div class="franja">
-          <div class="franja-lado">
-            <h3><span lang="es">Sin Tramtai</span><span lang="en">Without Tramtai</span></h3>
-            <p><span lang="es">Una clave de pago por proveedor en cada app, cada SDK con su URL y la cuenta de cada uno por separado.</span><span lang="en">A paid key per provider in every app, each SDK with its own URL and a separate bill for each one.</span></p>
-          </div>
-          <div class="franja-lado con">
-            <h3><span lang="es">Con Tramtai</span><span lang="en">With Tramtai</span></h3>
-            <p><span lang="es">Una sola URL local, en tu equipo, que usa los agentes que ya tienes.</span><span lang="en">One local URL, on your computer, that uses the agents you already have.</span></p>
-          </div>
-        </div>
-      </div>
     </div>
   </section>
 
@@ -370,132 +493,228 @@ tramtai terminal</pre>
         <p class="suave"><span lang="es">La primera vez que abres Tramtai, un recorrido te lleva por Inicio, Agentes, Probar, Mis APIs y Espacios: te señala cada cosa y no toca nada. Así es, paso a paso. Lo repites cuando quieras con «Haz el recorrido de Tramtai».</span><span lang="en">The first time you open Tramtai, a tour walks you through Home, Agents, Playground, My APIs and Workspaces: it points at each thing and changes nothing. Here it is, step by step. Repeat it any time with “Take the guided tour”.</span></p>
       </div>
       <div class="demo">
-        <!-- Una pantalla completa de la app por paso, con el recorrido encima (sitio.js las turna). Sin JavaScript se ve la
-             primera y la lista de pasos. -->
-        <div class="demo-escena">
-      <figure class="captura demo-paso">
-        <img class="solo-claro" lang="es" src="capturas/bienvenida-1-claro-es-1440.webp" srcset="capturas/bienvenida-1-claro-es-960.webp 960w, capturas/bienvenida-1-claro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 1 de 14: Inicio con el mapa en vivo resaltado: tus apps, Tramtai y una línea por agente">
-        <img class="solo-claro" lang="en" src="capturas/bienvenida-1-claro-en-1440.webp" srcset="capturas/bienvenida-1-claro-en-960.webp 960w, capturas/bienvenida-1-claro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 1 of 14: Home with the live map highlighted: your apps, Tramtai and one line per agent">
-        <img class="solo-oscuro" lang="es" src="capturas/bienvenida-1-oscuro-es-1440.webp" srcset="capturas/bienvenida-1-oscuro-es-960.webp 960w, capturas/bienvenida-1-oscuro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 1 de 14: Inicio con el mapa en vivo resaltado: tus apps, Tramtai y una línea por agente">
-        <img class="solo-oscuro" lang="en" src="capturas/bienvenida-1-oscuro-en-1440.webp" srcset="capturas/bienvenida-1-oscuro-en-960.webp 960w, capturas/bienvenida-1-oscuro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 1 of 14: Home with the live map highlighted: your apps, Tramtai and one line per agent">
-      </figure>
-      <figure class="captura demo-paso" hidden>
-        <img class="solo-claro" lang="es" src="capturas/bienvenida-2-claro-es-1440.webp" srcset="capturas/bienvenida-2-claro-es-960.webp 960w, capturas/bienvenida-2-claro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 2 de 14: Inicio con la guía de primeros pasos resaltada">
-        <img class="solo-claro" lang="en" src="capturas/bienvenida-2-claro-en-1440.webp" srcset="capturas/bienvenida-2-claro-en-960.webp 960w, capturas/bienvenida-2-claro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 2 of 14: Home with the first-steps guide highlighted">
-        <img class="solo-oscuro" lang="es" src="capturas/bienvenida-2-oscuro-es-1440.webp" srcset="capturas/bienvenida-2-oscuro-es-960.webp 960w, capturas/bienvenida-2-oscuro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 2 de 14: Inicio con la guía de primeros pasos resaltada">
-        <img class="solo-oscuro" lang="en" src="capturas/bienvenida-2-oscuro-en-1440.webp" srcset="capturas/bienvenida-2-oscuro-en-960.webp 960w, capturas/bienvenida-2-oscuro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 2 of 14: Home with the first-steps guide highlighted">
-      </figure>
-      <figure class="captura demo-paso" hidden>
-        <img class="solo-claro" lang="es" src="capturas/bienvenida-3-claro-es-1440.webp" srcset="capturas/bienvenida-3-claro-es-960.webp 960w, capturas/bienvenida-3-claro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 3 de 14: el selector de espacio de la cabecera, resaltado">
-        <img class="solo-claro" lang="en" src="capturas/bienvenida-3-claro-en-1440.webp" srcset="capturas/bienvenida-3-claro-en-960.webp 960w, capturas/bienvenida-3-claro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 3 of 14: the workspace selector in the header, highlighted">
-        <img class="solo-oscuro" lang="es" src="capturas/bienvenida-3-oscuro-es-1440.webp" srcset="capturas/bienvenida-3-oscuro-es-960.webp 960w, capturas/bienvenida-3-oscuro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 3 de 14: el selector de espacio de la cabecera, resaltado">
-        <img class="solo-oscuro" lang="en" src="capturas/bienvenida-3-oscuro-en-1440.webp" srcset="capturas/bienvenida-3-oscuro-en-960.webp 960w, capturas/bienvenida-3-oscuro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 3 of 14: the workspace selector in the header, highlighted">
-      </figure>
-      <figure class="captura demo-paso" hidden>
-        <img class="solo-claro" lang="es" src="capturas/bienvenida-4-claro-es-1440.webp" srcset="capturas/bienvenida-4-claro-es-960.webp 960w, capturas/bienvenida-4-claro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 4 de 14: el botón ? junto al título de la página, resaltado">
-        <img class="solo-claro" lang="en" src="capturas/bienvenida-4-claro-en-1440.webp" srcset="capturas/bienvenida-4-claro-en-960.webp 960w, capturas/bienvenida-4-claro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 4 of 14: the ? button next to the page title, highlighted">
-        <img class="solo-oscuro" lang="es" src="capturas/bienvenida-4-oscuro-es-1440.webp" srcset="capturas/bienvenida-4-oscuro-es-960.webp 960w, capturas/bienvenida-4-oscuro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 4 de 14: el botón ? junto al título de la página, resaltado">
-        <img class="solo-oscuro" lang="en" src="capturas/bienvenida-4-oscuro-en-1440.webp" srcset="capturas/bienvenida-4-oscuro-en-960.webp 960w, capturas/bienvenida-4-oscuro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 4 of 14: the ? button next to the page title, highlighted">
-      </figure>
-      <figure class="captura demo-paso" hidden>
-        <img class="solo-claro" lang="es" src="capturas/bienvenida-5-claro-es-1440.webp" srcset="capturas/bienvenida-5-claro-es-960.webp 960w, capturas/bienvenida-5-claro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 5 de 14: Agentes con la lista de agentes y su estado resaltada">
-        <img class="solo-claro" lang="en" src="capturas/bienvenida-5-claro-en-1440.webp" srcset="capturas/bienvenida-5-claro-en-960.webp 960w, capturas/bienvenida-5-claro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 5 of 14: Agents with the agent list and their status highlighted">
-        <img class="solo-oscuro" lang="es" src="capturas/bienvenida-5-oscuro-es-1440.webp" srcset="capturas/bienvenida-5-oscuro-es-960.webp 960w, capturas/bienvenida-5-oscuro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 5 de 14: Agentes con la lista de agentes y su estado resaltada">
-        <img class="solo-oscuro" lang="en" src="capturas/bienvenida-5-oscuro-en-1440.webp" srcset="capturas/bienvenida-5-oscuro-en-960.webp 960w, capturas/bienvenida-5-oscuro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 5 of 14: Agents with the agent list and their status highlighted">
-      </figure>
-      <figure class="captura demo-paso" hidden>
-        <img class="solo-claro" lang="es" src="capturas/bienvenida-6-claro-es-1440.webp" srcset="capturas/bienvenida-6-claro-es-960.webp 960w, capturas/bienvenida-6-claro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 6 de 14: Agentes con los filtros de estado resaltados">
-        <img class="solo-claro" lang="en" src="capturas/bienvenida-6-claro-en-1440.webp" srcset="capturas/bienvenida-6-claro-en-960.webp 960w, capturas/bienvenida-6-claro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 6 of 14: Agents with the status filters highlighted">
-        <img class="solo-oscuro" lang="es" src="capturas/bienvenida-6-oscuro-es-1440.webp" srcset="capturas/bienvenida-6-oscuro-es-960.webp 960w, capturas/bienvenida-6-oscuro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 6 de 14: Agentes con los filtros de estado resaltados">
-        <img class="solo-oscuro" lang="en" src="capturas/bienvenida-6-oscuro-en-1440.webp" srcset="capturas/bienvenida-6-oscuro-en-960.webp 960w, capturas/bienvenida-6-oscuro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 6 of 14: Agents with the status filters highlighted">
-      </figure>
-      <figure class="captura demo-paso" hidden>
-        <img class="solo-claro" lang="es" src="capturas/bienvenida-7-claro-es-1440.webp" srcset="capturas/bienvenida-7-claro-es-960.webp 960w, capturas/bienvenida-7-claro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 7 de 14: Probar con la receta resaltada: agente, modelo, instrucciones, esfuerzo y respaldo">
-        <img class="solo-claro" lang="en" src="capturas/bienvenida-7-claro-en-1440.webp" srcset="capturas/bienvenida-7-claro-en-960.webp 960w, capturas/bienvenida-7-claro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 7 of 14: the Playground with the recipe highlighted: agent, model, instructions, effort and fallback">
-        <img class="solo-oscuro" lang="es" src="capturas/bienvenida-7-oscuro-es-1440.webp" srcset="capturas/bienvenida-7-oscuro-es-960.webp 960w, capturas/bienvenida-7-oscuro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 7 de 14: Probar con la receta resaltada: agente, modelo, instrucciones, esfuerzo y respaldo">
-        <img class="solo-oscuro" lang="en" src="capturas/bienvenida-7-oscuro-en-1440.webp" srcset="capturas/bienvenida-7-oscuro-en-960.webp 960w, capturas/bienvenida-7-oscuro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 7 of 14: the Playground with the recipe highlighted: agent, model, instructions, effort and fallback">
-      </figure>
-      <figure class="captura demo-paso" hidden>
-        <img class="solo-claro" lang="es" src="capturas/bienvenida-8-claro-es-1440.webp" srcset="capturas/bienvenida-8-claro-es-960.webp 960w, capturas/bienvenida-8-claro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 8 de 14: Probar con el campo del mensaje de prueba resaltado">
-        <img class="solo-claro" lang="en" src="capturas/bienvenida-8-claro-en-1440.webp" srcset="capturas/bienvenida-8-claro-en-960.webp 960w, capturas/bienvenida-8-claro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 8 of 14: the Playground with the test message field highlighted">
-        <img class="solo-oscuro" lang="es" src="capturas/bienvenida-8-oscuro-es-1440.webp" srcset="capturas/bienvenida-8-oscuro-es-960.webp 960w, capturas/bienvenida-8-oscuro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 8 de 14: Probar con el campo del mensaje de prueba resaltado">
-        <img class="solo-oscuro" lang="en" src="capturas/bienvenida-8-oscuro-en-1440.webp" srcset="capturas/bienvenida-8-oscuro-en-960.webp 960w, capturas/bienvenida-8-oscuro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 8 of 14: the Playground with the test message field highlighted">
-      </figure>
-      <figure class="captura demo-paso" hidden>
-        <img class="solo-claro" lang="es" src="capturas/bienvenida-9-claro-es-1440.webp" srcset="capturas/bienvenida-9-claro-es-960.webp 960w, capturas/bienvenida-9-claro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 9 de 14: Probar con el botón «Ver como código» resaltado">
-        <img class="solo-claro" lang="en" src="capturas/bienvenida-9-claro-en-1440.webp" srcset="capturas/bienvenida-9-claro-en-960.webp 960w, capturas/bienvenida-9-claro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 9 of 14: the Playground with the “View as code” button highlighted">
-        <img class="solo-oscuro" lang="es" src="capturas/bienvenida-9-oscuro-es-1440.webp" srcset="capturas/bienvenida-9-oscuro-es-960.webp 960w, capturas/bienvenida-9-oscuro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 9 de 14: Probar con el botón «Ver como código» resaltado">
-        <img class="solo-oscuro" lang="en" src="capturas/bienvenida-9-oscuro-en-1440.webp" srcset="capturas/bienvenida-9-oscuro-en-960.webp 960w, capturas/bienvenida-9-oscuro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 9 of 14: the Playground with the “View as code” button highlighted">
-      </figure>
-      <figure class="captura demo-paso" hidden>
-        <img class="solo-claro" lang="es" src="capturas/bienvenida-10-claro-es-1440.webp" srcset="capturas/bienvenida-10-claro-es-960.webp 960w, capturas/bienvenida-10-claro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 10 de 14: Mis APIs con la clave del espacio resaltada">
-        <img class="solo-claro" lang="en" src="capturas/bienvenida-10-claro-en-1440.webp" srcset="capturas/bienvenida-10-claro-en-960.webp 960w, capturas/bienvenida-10-claro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 10 of 14: My APIs with the workspace key highlighted">
-        <img class="solo-oscuro" lang="es" src="capturas/bienvenida-10-oscuro-es-1440.webp" srcset="capturas/bienvenida-10-oscuro-es-960.webp 960w, capturas/bienvenida-10-oscuro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 10 de 14: Mis APIs con la clave del espacio resaltada">
-        <img class="solo-oscuro" lang="en" src="capturas/bienvenida-10-oscuro-en-1440.webp" srcset="capturas/bienvenida-10-oscuro-en-960.webp 960w, capturas/bienvenida-10-oscuro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 10 of 14: My APIs with the workspace key highlighted">
-      </figure>
-      <figure class="captura demo-paso" hidden>
-        <img class="solo-claro" lang="es" src="capturas/bienvenida-11-claro-es-1440.webp" srcset="capturas/bienvenida-11-claro-es-960.webp 960w, capturas/bienvenida-11-claro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 11 de 14: Mis APIs con el botón «Nueva API» resaltado">
-        <img class="solo-claro" lang="en" src="capturas/bienvenida-11-claro-en-1440.webp" srcset="capturas/bienvenida-11-claro-en-960.webp 960w, capturas/bienvenida-11-claro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 11 of 14: My APIs with the “New API” button highlighted">
-        <img class="solo-oscuro" lang="es" src="capturas/bienvenida-11-oscuro-es-1440.webp" srcset="capturas/bienvenida-11-oscuro-es-960.webp 960w, capturas/bienvenida-11-oscuro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 11 de 14: Mis APIs con el botón «Nueva API» resaltado">
-        <img class="solo-oscuro" lang="en" src="capturas/bienvenida-11-oscuro-en-1440.webp" srcset="capturas/bienvenida-11-oscuro-en-960.webp 960w, capturas/bienvenida-11-oscuro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 11 of 14: My APIs with the “New API” button highlighted">
-      </figure>
-      <figure class="captura demo-paso" hidden>
-        <img class="solo-claro" lang="es" src="capturas/bienvenida-12-claro-es-1440.webp" srcset="capturas/bienvenida-12-claro-es-960.webp 960w, capturas/bienvenida-12-claro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 12 de 14: Espacios con la lista de espacios resaltada">
-        <img class="solo-claro" lang="en" src="capturas/bienvenida-12-claro-en-1440.webp" srcset="capturas/bienvenida-12-claro-en-960.webp 960w, capturas/bienvenida-12-claro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 12 of 14: Workspaces with the workspace list highlighted">
-        <img class="solo-oscuro" lang="es" src="capturas/bienvenida-12-oscuro-es-1440.webp" srcset="capturas/bienvenida-12-oscuro-es-960.webp 960w, capturas/bienvenida-12-oscuro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 12 de 14: Espacios con la lista de espacios resaltada">
-        <img class="solo-oscuro" lang="en" src="capturas/bienvenida-12-oscuro-en-1440.webp" srcset="capturas/bienvenida-12-oscuro-en-960.webp 960w, capturas/bienvenida-12-oscuro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 12 of 14: Workspaces with the workspace list highlighted">
-      </figure>
-      <figure class="captura demo-paso" hidden>
-        <img class="solo-claro" lang="es" src="capturas/bienvenida-13-claro-es-1440.webp" srcset="capturas/bienvenida-13-claro-es-960.webp 960w, capturas/bienvenida-13-claro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 13 de 14: Espacios con el botón «Abrir un proyecto» resaltado">
-        <img class="solo-claro" lang="en" src="capturas/bienvenida-13-claro-en-1440.webp" srcset="capturas/bienvenida-13-claro-en-960.webp 960w, capturas/bienvenida-13-claro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 13 of 14: Workspaces with the “Open a project” button highlighted">
-        <img class="solo-oscuro" lang="es" src="capturas/bienvenida-13-oscuro-es-1440.webp" srcset="capturas/bienvenida-13-oscuro-es-960.webp 960w, capturas/bienvenida-13-oscuro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 13 de 14: Espacios con el botón «Abrir un proyecto» resaltado">
-        <img class="solo-oscuro" lang="en" src="capturas/bienvenida-13-oscuro-en-1440.webp" srcset="capturas/bienvenida-13-oscuro-en-960.webp 960w, capturas/bienvenida-13-oscuro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 13 of 14: Workspaces with the “Open a project” button highlighted">
-      </figure>
-      <figure class="captura demo-paso" hidden>
-        <img class="solo-claro" lang="es" src="capturas/bienvenida-14-claro-es-1440.webp" srcset="capturas/bienvenida-14-claro-es-960.webp 960w, capturas/bienvenida-14-claro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 14 de 14: el cierre del recorrido: Historial y Ajustes tienen el suyo en su botón ?">
-        <img class="solo-claro" lang="en" src="capturas/bienvenida-14-claro-en-1440.webp" srcset="capturas/bienvenida-14-claro-en-960.webp 960w, capturas/bienvenida-14-claro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 14 of 14: the end of the tour: History and Settings have their own behind their ? button">
-        <img class="solo-oscuro" lang="es" src="capturas/bienvenida-14-oscuro-es-1440.webp" srcset="capturas/bienvenida-14-oscuro-es-960.webp 960w, capturas/bienvenida-14-oscuro-es-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 14 de 14: el cierre del recorrido: Historial y Ajustes tienen el suyo en su botón ?">
-        <img class="solo-oscuro" lang="en" src="capturas/bienvenida-14-oscuro-en-1440.webp" srcset="capturas/bienvenida-14-oscuro-en-960.webp 960w, capturas/bienvenida-14-oscuro-en-1440.webp 1440w" sizes="(max-width: 1000px) 100vw, 1000px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 14 of 14: the end of the tour: History and Settings have their own behind their ? button">
-      </figure>
-        </div>
-        <div class="demo-controles" hidden>
-          <p class="demo-leyenda" aria-live="off"></p>
-          <div class="demo-botones">
+        <!-- Cada paso es la zona de la app que señala, ampliada, con su texto debajo; la lista de al lado y las flechas eligen
+             el paso y sitio.js los turna. Sin JavaScript se ven todos los pasos, uno debajo de otro, con su texto. -->
+        <nav class="demo-pasos" aria-labelledby="demo-pasos-titulo">
+          <details class="demo-pasos-movil" open>
+            <summary id="demo-pasos-titulo"><span lang="es">Los 14 pasos del recorrido</span><span lang="en">The 14 steps of the tour</span></summary>
+            <ol class="demo-lista">
+              <li class="demo-grupo"><span class="demo-pagina"><span lang="es">Inicio</span><span lang="en">Home</span></span>
+                <ol>
+                  <li><button type="button" class="demo-ir" data-paso="0"><span lang="es">El mapa en vivo</span><span lang="en">The live map</span></button></li>
+                  <li><button type="button" class="demo-ir" data-paso="1"><span lang="es">Tus primeros pasos</span><span lang="en">Your first steps</span></button></li>
+                  <li><button type="button" class="demo-ir" data-paso="2"><span lang="es">El espacio de trabajo</span><span lang="en">The workspace</span></button></li>
+                  <li><button type="button" class="demo-ir" data-paso="3"><span lang="es">El botón ? de cada página</span><span lang="en">The ? button on every page</span></button></li>
+                </ol>
+              </li>
+              <li class="demo-grupo"><span class="demo-pagina"><span lang="es">Agentes</span><span lang="en">Agents</span></span>
+                <ol>
+                  <li><button type="button" class="demo-ir" data-paso="4"><span lang="es">Tus agentes</span><span lang="en">Your agents</span></button></li>
+                  <li><button type="button" class="demo-ir" data-paso="5"><span lang="es">Listos y por conectar</span><span lang="en">Ready and to connect</span></button></li>
+                </ol>
+              </li>
+              <li class="demo-grupo"><span class="demo-pagina"><span lang="es">Probar</span><span lang="en">Playground</span></span>
+                <ol>
+                  <li><button type="button" class="demo-ir" data-paso="6"><span lang="es">La receta</span><span lang="en">The recipe</span></button></li>
+                  <li><button type="button" class="demo-ir" data-paso="7"><span lang="es">El mensaje de prueba</span><span lang="en">The test message</span></button></li>
+                  <li><button type="button" class="demo-ir" data-paso="8"><span lang="es">Ver como código</span><span lang="en">View as code</span></button></li>
+                </ol>
+              </li>
+              <li class="demo-grupo"><span class="demo-pagina"><span lang="es">Mis APIs</span><span lang="en">My APIs</span></span>
+                <ol>
+                  <li><button type="button" class="demo-ir" data-paso="9"><span lang="es">La clave del espacio</span><span lang="en">The workspace key</span></button></li>
+                  <li><button type="button" class="demo-ir" data-paso="10"><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></button></li>
+                </ol>
+              </li>
+              <li class="demo-grupo"><span class="demo-pagina"><span lang="es">Espacios</span><span lang="en">Workspaces</span></span>
+                <ol>
+                  <li><button type="button" class="demo-ir" data-paso="11"><span lang="es">Tus espacios</span><span lang="en">Your workspaces</span></button></li>
+                  <li><button type="button" class="demo-ir" data-paso="12"><span lang="es">Abrir un proyecto</span><span lang="en">Open a project</span></button></li>
+                  <li><button type="button" class="demo-ir" data-paso="13"><span lang="es">Y esto es todo por ahora</span><span lang="en">That is all for now</span></button></li>
+                </ol>
+              </li>
+            </ol>
+          </details>
+        </nav>
+        <div class="demo-escenario">
+          <button type="button" class="demo-flecha demo-anterior" hidden><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span lang="es" class="solo-lectores">Paso anterior</span><span lang="en" class="solo-lectores">Previous step</span></button>
+          <div class="demo-escena">
+          <figure class="captura demo-paso">
+            <img class="solo-claro" lang="es" src="capturas/bienvenida-1-claro-es-1440.webp" srcset="capturas/bienvenida-1-claro-es-960.webp 960w, capturas/bienvenida-1-claro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 1 de 14: Inicio con el mapa en vivo resaltado: tus apps, Tramtai y una línea por agente">
+            <img class="solo-claro" lang="en" src="capturas/bienvenida-1-claro-en-1440.webp" srcset="capturas/bienvenida-1-claro-en-960.webp 960w, capturas/bienvenida-1-claro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 1 of 14: Home with the live map highlighted: your apps, Tramtai and one line per agent">
+            <img class="solo-oscuro" lang="es" src="capturas/bienvenida-1-oscuro-es-1440.webp" srcset="capturas/bienvenida-1-oscuro-es-960.webp 960w, capturas/bienvenida-1-oscuro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 1 de 14: Inicio con el mapa en vivo resaltado: tus apps, Tramtai y una línea por agente">
+            <img class="solo-oscuro" lang="en" src="capturas/bienvenida-1-oscuro-en-1440.webp" srcset="capturas/bienvenida-1-oscuro-en-960.webp 960w, capturas/bienvenida-1-oscuro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 1 of 14: Home with the live map highlighted: your apps, Tramtai and one line per agent">
+            <figcaption>
+              <p class="demo-donde"><span lang="es">Paso 1 de 14 · Inicio</span><span lang="en">Step 1 of 14 · Home</span></p>
+              <h3><span lang="es">El mapa en vivo</span><span lang="en">The live map</span></h3>
+              <p class="demo-texto"><span lang="es">Aquí ves el mapa en vivo: tus apps, Tramtai y los agentes. Cada petición cruza el mapa como un tranvía y puedes pulsarlo para seguirla.</span><span lang="en">Here is the live map: your apps, Tramtai and the agents. Each request crosses it as a tram, and you can click it to follow it.</span></p>
+              <p class="demo-ampliar"><a class="solo-claro" lang="es" href="capturas/bienvenida-1-claro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-claro" lang="en" href="capturas/bienvenida-1-claro-en-1440.webp">View the image at full size</a><a class="solo-oscuro" lang="es" href="capturas/bienvenida-1-oscuro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-oscuro" lang="en" href="capturas/bienvenida-1-oscuro-en-1440.webp">View the image at full size</a></p>
+            </figcaption>
+          </figure>
+          <figure class="captura demo-paso" hidden>
+            <img class="solo-claro" lang="es" src="capturas/bienvenida-2-claro-es-1440.webp" srcset="capturas/bienvenida-2-claro-es-960.webp 960w, capturas/bienvenida-2-claro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 2 de 14: Inicio con la guía de primeros pasos resaltada">
+            <img class="solo-claro" lang="en" src="capturas/bienvenida-2-claro-en-1440.webp" srcset="capturas/bienvenida-2-claro-en-960.webp 960w, capturas/bienvenida-2-claro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 2 of 14: Home with the first-steps guide highlighted">
+            <img class="solo-oscuro" lang="es" src="capturas/bienvenida-2-oscuro-es-1440.webp" srcset="capturas/bienvenida-2-oscuro-es-960.webp 960w, capturas/bienvenida-2-oscuro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 2 de 14: Inicio con la guía de primeros pasos resaltada">
+            <img class="solo-oscuro" lang="en" src="capturas/bienvenida-2-oscuro-en-1440.webp" srcset="capturas/bienvenida-2-oscuro-en-960.webp 960w, capturas/bienvenida-2-oscuro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 2 of 14: Home with the first-steps guide highlighted">
+            <figcaption>
+              <p class="demo-donde"><span lang="es">Paso 2 de 14 · Inicio</span><span lang="en">Step 2 of 14 · Home</span></p>
+              <h3><span lang="es">Tus primeros pasos</span><span lang="en">Your first steps</span></h3>
+              <p class="demo-texto"><span lang="es">La guía que te lleva de conectar un agente a probarlo y a conectar tu app. Aunque la ocultes o la termines, aquí sigue la línea para repetir este recorrido.</span><span lang="en">The guide that takes you from connecting an agent to trying it and connecting your app. Even if you hide or finish it, the line to replay this tour stays here.</span></p>
+              <p class="demo-ampliar"><a class="solo-claro" lang="es" href="capturas/bienvenida-2-claro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-claro" lang="en" href="capturas/bienvenida-2-claro-en-1440.webp">View the image at full size</a><a class="solo-oscuro" lang="es" href="capturas/bienvenida-2-oscuro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-oscuro" lang="en" href="capturas/bienvenida-2-oscuro-en-1440.webp">View the image at full size</a></p>
+            </figcaption>
+          </figure>
+          <figure class="captura demo-paso" hidden>
+            <img class="solo-claro" lang="es" src="capturas/bienvenida-3-claro-es-1440.webp" srcset="capturas/bienvenida-3-claro-es-960.webp 960w, capturas/bienvenida-3-claro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 3 de 14: el selector de espacio de la cabecera, resaltado">
+            <img class="solo-claro" lang="en" src="capturas/bienvenida-3-claro-en-1440.webp" srcset="capturas/bienvenida-3-claro-en-960.webp 960w, capturas/bienvenida-3-claro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 3 of 14: the workspace selector in the header, highlighted">
+            <img class="solo-oscuro" lang="es" src="capturas/bienvenida-3-oscuro-es-1440.webp" srcset="capturas/bienvenida-3-oscuro-es-960.webp 960w, capturas/bienvenida-3-oscuro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 3 de 14: el selector de espacio de la cabecera, resaltado">
+            <img class="solo-oscuro" lang="en" src="capturas/bienvenida-3-oscuro-en-1440.webp" srcset="capturas/bienvenida-3-oscuro-en-960.webp 960w, capturas/bienvenida-3-oscuro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 3 of 14: the workspace selector in the header, highlighted">
+            <figcaption>
+              <p class="demo-donde"><span lang="es">Paso 3 de 14 · Inicio</span><span lang="en">Step 3 of 14 · Home</span></p>
+              <h3><span lang="es">El espacio de trabajo</span><span lang="en">The workspace</span></h3>
+              <p class="demo-texto"><span lang="es">Aquí ves en qué espacio estás. Cada espacio guarda sus propias peticiones y APIs; desde este selector pasas de uno a otro o abres un proyecto.</span><span lang="en">Here you see which workspace you are in. Each one keeps its own requests and APIs; use this selector to switch or to open a project.</span></p>
+              <p class="demo-ampliar"><a class="solo-claro" lang="es" href="capturas/bienvenida-3-claro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-claro" lang="en" href="capturas/bienvenida-3-claro-en-1440.webp">View the image at full size</a><a class="solo-oscuro" lang="es" href="capturas/bienvenida-3-oscuro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-oscuro" lang="en" href="capturas/bienvenida-3-oscuro-en-1440.webp">View the image at full size</a></p>
+            </figcaption>
+          </figure>
+          <figure class="captura demo-paso" hidden>
+            <img class="solo-claro" lang="es" src="capturas/bienvenida-4-claro-es-1440.webp" srcset="capturas/bienvenida-4-claro-es-960.webp 960w, capturas/bienvenida-4-claro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 4 de 14: el botón ? junto al título de la página, resaltado">
+            <img class="solo-claro" lang="en" src="capturas/bienvenida-4-claro-en-1440.webp" srcset="capturas/bienvenida-4-claro-en-960.webp 960w, capturas/bienvenida-4-claro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 4 of 14: the ? button next to the page title, highlighted">
+            <img class="solo-oscuro" lang="es" src="capturas/bienvenida-4-oscuro-es-1440.webp" srcset="capturas/bienvenida-4-oscuro-es-960.webp 960w, capturas/bienvenida-4-oscuro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 4 de 14: el botón ? junto al título de la página, resaltado">
+            <img class="solo-oscuro" lang="en" src="capturas/bienvenida-4-oscuro-en-1440.webp" srcset="capturas/bienvenida-4-oscuro-en-960.webp 960w, capturas/bienvenida-4-oscuro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 4 of 14: the ? button next to the page title, highlighted">
+            <figcaption>
+              <p class="demo-donde"><span lang="es">Paso 4 de 14 · Inicio</span><span lang="en">Step 4 of 14 · Home</span></p>
+              <h3><span lang="es">El botón ? de cada página</span><span lang="en">The ? button on every page</span></h3>
+              <p class="demo-texto"><span lang="es">Junto al título de cada página hay un botón ? que abre su ayuda en un panel, sin que salgas de donde estás.</span><span lang="en">Next to every page title there is a ? button that opens its help in a panel, without leaving where you are.</span></p>
+              <p class="demo-ampliar"><a class="solo-claro" lang="es" href="capturas/bienvenida-4-claro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-claro" lang="en" href="capturas/bienvenida-4-claro-en-1440.webp">View the image at full size</a><a class="solo-oscuro" lang="es" href="capturas/bienvenida-4-oscuro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-oscuro" lang="en" href="capturas/bienvenida-4-oscuro-en-1440.webp">View the image at full size</a></p>
+            </figcaption>
+          </figure>
+          <figure class="captura demo-paso" hidden>
+            <img class="solo-claro" lang="es" src="capturas/bienvenida-5-claro-es-1440.webp" srcset="capturas/bienvenida-5-claro-es-960.webp 960w, capturas/bienvenida-5-claro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 5 de 14: Agentes con la lista de agentes y su estado resaltada">
+            <img class="solo-claro" lang="en" src="capturas/bienvenida-5-claro-en-1440.webp" srcset="capturas/bienvenida-5-claro-en-960.webp 960w, capturas/bienvenida-5-claro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 5 of 14: Agents with the agent list and their status highlighted">
+            <img class="solo-oscuro" lang="es" src="capturas/bienvenida-5-oscuro-es-1440.webp" srcset="capturas/bienvenida-5-oscuro-es-960.webp 960w, capturas/bienvenida-5-oscuro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 5 de 14: Agentes con la lista de agentes y su estado resaltada">
+            <img class="solo-oscuro" lang="en" src="capturas/bienvenida-5-oscuro-en-1440.webp" srcset="capturas/bienvenida-5-oscuro-en-960.webp 960w, capturas/bienvenida-5-oscuro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 5 of 14: Agents with the agent list and their status highlighted">
+            <figcaption>
+              <p class="demo-donde"><span lang="es">Paso 5 de 14 · Agentes</span><span lang="en">Step 5 of 14 · Agents</span></p>
+              <h3><span lang="es">Tus agentes</span><span lang="en">Your agents</span></h3>
+              <p class="demo-texto"><span lang="es">Aquí ves cada agente con su estado: listo para responder o lo que le falta. Ábrelo para ver cómo está conectado y sus detalles.</span><span lang="en">Here you see each agent with its status: ready to answer or what it is missing. Open one to see how it is connected and its details.</span></p>
+              <p class="demo-ampliar"><a class="solo-claro" lang="es" href="capturas/bienvenida-5-claro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-claro" lang="en" href="capturas/bienvenida-5-claro-en-1440.webp">View the image at full size</a><a class="solo-oscuro" lang="es" href="capturas/bienvenida-5-oscuro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-oscuro" lang="en" href="capturas/bienvenida-5-oscuro-en-1440.webp">View the image at full size</a></p>
+            </figcaption>
+          </figure>
+          <figure class="captura demo-paso" hidden>
+            <img class="solo-claro" lang="es" src="capturas/bienvenida-6-claro-es-1440.webp" srcset="capturas/bienvenida-6-claro-es-960.webp 960w, capturas/bienvenida-6-claro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 6 de 14: Agentes con los filtros de estado resaltados">
+            <img class="solo-claro" lang="en" src="capturas/bienvenida-6-claro-en-1440.webp" srcset="capturas/bienvenida-6-claro-en-960.webp 960w, capturas/bienvenida-6-claro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 6 of 14: Agents with the status filters highlighted">
+            <img class="solo-oscuro" lang="es" src="capturas/bienvenida-6-oscuro-es-1440.webp" srcset="capturas/bienvenida-6-oscuro-es-960.webp 960w, capturas/bienvenida-6-oscuro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 6 de 14: Agentes con los filtros de estado resaltados">
+            <img class="solo-oscuro" lang="en" src="capturas/bienvenida-6-oscuro-en-1440.webp" srcset="capturas/bienvenida-6-oscuro-en-960.webp 960w, capturas/bienvenida-6-oscuro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 6 of 14: Agents with the status filters highlighted">
+            <figcaption>
+              <p class="demo-donde"><span lang="es">Paso 6 de 14 · Agentes</span><span lang="en">Step 6 of 14 · Agents</span></p>
+              <h3><span lang="es">Listos y por conectar</span><span lang="en">Ready and to connect</span></h3>
+              <p class="demo-texto"><span lang="es">Estos filtros separan los agentes listos de los que faltan por conectar o por instalar, cada grupo con su número. Cada agente se conecta con tu suscripción o con una clave de API.</span><span lang="en">These filters split the ready agents from the ones still to connect or install, each group with its count. Each agent connects with your subscription or with an API key.</span></p>
+              <p class="demo-ampliar"><a class="solo-claro" lang="es" href="capturas/bienvenida-6-claro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-claro" lang="en" href="capturas/bienvenida-6-claro-en-1440.webp">View the image at full size</a><a class="solo-oscuro" lang="es" href="capturas/bienvenida-6-oscuro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-oscuro" lang="en" href="capturas/bienvenida-6-oscuro-en-1440.webp">View the image at full size</a></p>
+            </figcaption>
+          </figure>
+          <figure class="captura demo-paso" hidden>
+            <img class="solo-claro" lang="es" src="capturas/bienvenida-7-claro-es-1440.webp" srcset="capturas/bienvenida-7-claro-es-960.webp 960w, capturas/bienvenida-7-claro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 7 de 14: Probar con la receta resaltada: agente, modelo, instrucciones, esfuerzo y respaldo">
+            <img class="solo-claro" lang="en" src="capturas/bienvenida-7-claro-en-1440.webp" srcset="capturas/bienvenida-7-claro-en-960.webp 960w, capturas/bienvenida-7-claro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 7 of 14: the Playground with the recipe highlighted: agent, model, instructions, effort and fallback">
+            <img class="solo-oscuro" lang="es" src="capturas/bienvenida-7-oscuro-es-1440.webp" srcset="capturas/bienvenida-7-oscuro-es-960.webp 960w, capturas/bienvenida-7-oscuro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 7 de 14: Probar con la receta resaltada: agente, modelo, instrucciones, esfuerzo y respaldo">
+            <img class="solo-oscuro" lang="en" src="capturas/bienvenida-7-oscuro-en-1440.webp" srcset="capturas/bienvenida-7-oscuro-en-960.webp 960w, capturas/bienvenida-7-oscuro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 7 of 14: the Playground with the recipe highlighted: agent, model, instructions, effort and fallback">
+            <figcaption>
+              <p class="demo-donde"><span lang="es">Paso 7 de 14 · Probar</span><span lang="en">Step 7 of 14 · Playground</span></p>
+              <h3><span lang="es">La receta</span><span lang="en">The recipe</span></h3>
+              <p class="demo-texto"><span lang="es">Aquí eliges agente y modelo y, si quieres, instrucciones, esfuerzo y respaldo. Es lo que define cómo responde una API cuando la guardas.</span><span lang="en">Here you pick agent and model and, if you want, instructions, effort and fallback. It defines how an API answers once you save it.</span></p>
+              <p class="demo-ampliar"><a class="solo-claro" lang="es" href="capturas/bienvenida-7-claro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-claro" lang="en" href="capturas/bienvenida-7-claro-en-1440.webp">View the image at full size</a><a class="solo-oscuro" lang="es" href="capturas/bienvenida-7-oscuro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-oscuro" lang="en" href="capturas/bienvenida-7-oscuro-en-1440.webp">View the image at full size</a></p>
+            </figcaption>
+          </figure>
+          <figure class="captura demo-paso" hidden>
+            <img class="solo-claro" lang="es" src="capturas/bienvenida-8-claro-es-1440.webp" srcset="capturas/bienvenida-8-claro-es-960.webp 960w, capturas/bienvenida-8-claro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 8 de 14: Probar con el campo del mensaje de prueba resaltado">
+            <img class="solo-claro" lang="en" src="capturas/bienvenida-8-claro-en-1440.webp" srcset="capturas/bienvenida-8-claro-en-960.webp 960w, capturas/bienvenida-8-claro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 8 of 14: the Playground with the test message field highlighted">
+            <img class="solo-oscuro" lang="es" src="capturas/bienvenida-8-oscuro-es-1440.webp" srcset="capturas/bienvenida-8-oscuro-es-960.webp 960w, capturas/bienvenida-8-oscuro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 8 de 14: Probar con el campo del mensaje de prueba resaltado">
+            <img class="solo-oscuro" lang="en" src="capturas/bienvenida-8-oscuro-en-1440.webp" srcset="capturas/bienvenida-8-oscuro-en-960.webp 960w, capturas/bienvenida-8-oscuro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 8 of 14: the Playground with the test message field highlighted">
+            <figcaption>
+              <p class="demo-donde"><span lang="es">Paso 8 de 14 · Probar</span><span lang="en">Step 8 of 14 · Playground</span></p>
+              <h3><span lang="es">El mensaje de prueba</span><span lang="en">The test message</span></h3>
+              <p class="demo-texto"><span lang="es">Aquí escribes el mensaje y lo envías con Ctrl + Enter. La respuesta aparece en vivo en el panel de respuesta.</span><span lang="en">Type the message here and send it with Ctrl + Enter. The response shows up live in the response panel.</span></p>
+              <p class="demo-ampliar"><a class="solo-claro" lang="es" href="capturas/bienvenida-8-claro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-claro" lang="en" href="capturas/bienvenida-8-claro-en-1440.webp">View the image at full size</a><a class="solo-oscuro" lang="es" href="capturas/bienvenida-8-oscuro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-oscuro" lang="en" href="capturas/bienvenida-8-oscuro-en-1440.webp">View the image at full size</a></p>
+            </figcaption>
+          </figure>
+          <figure class="captura demo-paso" hidden>
+            <img class="solo-claro" lang="es" src="capturas/bienvenida-9-claro-es-1440.webp" srcset="capturas/bienvenida-9-claro-es-960.webp 960w, capturas/bienvenida-9-claro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 9 de 14: Probar con el botón «Ver como código» resaltado">
+            <img class="solo-claro" lang="en" src="capturas/bienvenida-9-claro-en-1440.webp" srcset="capturas/bienvenida-9-claro-en-960.webp 960w, capturas/bienvenida-9-claro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 9 of 14: the Playground with the “View as code” button highlighted">
+            <img class="solo-oscuro" lang="es" src="capturas/bienvenida-9-oscuro-es-1440.webp" srcset="capturas/bienvenida-9-oscuro-es-960.webp 960w, capturas/bienvenida-9-oscuro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 9 de 14: Probar con el botón «Ver como código» resaltado">
+            <img class="solo-oscuro" lang="en" src="capturas/bienvenida-9-oscuro-en-1440.webp" srcset="capturas/bienvenida-9-oscuro-en-960.webp 960w, capturas/bienvenida-9-oscuro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 9 of 14: the Playground with the “View as code” button highlighted">
+            <figcaption>
+              <p class="demo-donde"><span lang="es">Paso 9 de 14 · Probar</span><span lang="en">Step 9 of 14 · Playground</span></p>
+              <h3><span lang="es">Ver como código</span><span lang="en">View as code</span></h3>
+              <p class="demo-texto"><span lang="es">Este botón convierte lo que has preparado en una petición lista para copiar y pegar en tu app.</span><span lang="en">This button turns what you set up into a request ready to copy and paste into your app.</span></p>
+              <p class="demo-ampliar"><a class="solo-claro" lang="es" href="capturas/bienvenida-9-claro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-claro" lang="en" href="capturas/bienvenida-9-claro-en-1440.webp">View the image at full size</a><a class="solo-oscuro" lang="es" href="capturas/bienvenida-9-oscuro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-oscuro" lang="en" href="capturas/bienvenida-9-oscuro-en-1440.webp">View the image at full size</a></p>
+            </figcaption>
+          </figure>
+          <figure class="captura demo-paso" hidden>
+            <img class="solo-claro" lang="es" src="capturas/bienvenida-10-claro-es-1440.webp" srcset="capturas/bienvenida-10-claro-es-960.webp 960w, capturas/bienvenida-10-claro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 10 de 14: Mis APIs con la clave del espacio resaltada">
+            <img class="solo-claro" lang="en" src="capturas/bienvenida-10-claro-en-1440.webp" srcset="capturas/bienvenida-10-claro-en-960.webp 960w, capturas/bienvenida-10-claro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 10 of 14: My APIs with the workspace key highlighted">
+            <img class="solo-oscuro" lang="es" src="capturas/bienvenida-10-oscuro-es-1440.webp" srcset="capturas/bienvenida-10-oscuro-es-960.webp 960w, capturas/bienvenida-10-oscuro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 10 de 14: Mis APIs con la clave del espacio resaltada">
+            <img class="solo-oscuro" lang="en" src="capturas/bienvenida-10-oscuro-en-1440.webp" srcset="capturas/bienvenida-10-oscuro-en-960.webp 960w, capturas/bienvenida-10-oscuro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 10 of 14: My APIs with the workspace key highlighted">
+            <figcaption>
+              <p class="demo-donde"><span lang="es">Paso 10 de 14 · Mis APIs</span><span lang="en">Step 10 of 14 · My APIs</span></p>
+              <h3><span lang="es">La clave del espacio</span><span lang="en">The workspace key</span></h3>
+              <p class="demo-texto"><span lang="es">Cada espacio tiene una clave con acceso a cualquier agente y modelo: la usan la CLI de Tramtai, tus scripts y Probar. Tus apps van mejor con una API propia cada una.</span><span lang="en">Each workspace has a key with access to any agent and model: the CLI, your scripts and the Playground use it. Your apps are better off with an API of their own each.</span></p>
+              <p class="demo-ampliar"><a class="solo-claro" lang="es" href="capturas/bienvenida-10-claro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-claro" lang="en" href="capturas/bienvenida-10-claro-en-1440.webp">View the image at full size</a><a class="solo-oscuro" lang="es" href="capturas/bienvenida-10-oscuro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-oscuro" lang="en" href="capturas/bienvenida-10-oscuro-en-1440.webp">View the image at full size</a></p>
+            </figcaption>
+          </figure>
+          <figure class="captura demo-paso" hidden>
+            <img class="solo-claro" lang="es" src="capturas/bienvenida-11-claro-es-1440.webp" srcset="capturas/bienvenida-11-claro-es-960.webp 960w, capturas/bienvenida-11-claro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 11 de 14: Mis APIs con el botón «Nueva API» resaltado">
+            <img class="solo-claro" lang="en" src="capturas/bienvenida-11-claro-en-1440.webp" srcset="capturas/bienvenida-11-claro-en-960.webp 960w, capturas/bienvenida-11-claro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 11 of 14: My APIs with the “New API” button highlighted">
+            <img class="solo-oscuro" lang="es" src="capturas/bienvenida-11-oscuro-es-1440.webp" srcset="capturas/bienvenida-11-oscuro-es-960.webp 960w, capturas/bienvenida-11-oscuro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 11 de 14: Mis APIs con el botón «Nueva API» resaltado">
+            <img class="solo-oscuro" lang="en" src="capturas/bienvenida-11-oscuro-en-1440.webp" srcset="capturas/bienvenida-11-oscuro-en-960.webp 960w, capturas/bienvenida-11-oscuro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 11 of 14: My APIs with the “New API” button highlighted">
+            <figcaption>
+              <p class="demo-donde"><span lang="es">Paso 11 de 14 · Mis APIs</span><span lang="en">Step 11 of 14 · My APIs</span></p>
+              <h3><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></h3>
+              <p class="demo-texto"><span lang="es">Con este botón creas una API para una app, con su dirección, su clave, sus modelos y su historial. Si una clave se filtra, revocas solo esa.</span><span lang="en">This button creates an API for an app, with its own address, key, models and history. If a key leaks, you revoke only that one.</span></p>
+              <p class="demo-ampliar"><a class="solo-claro" lang="es" href="capturas/bienvenida-11-claro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-claro" lang="en" href="capturas/bienvenida-11-claro-en-1440.webp">View the image at full size</a><a class="solo-oscuro" lang="es" href="capturas/bienvenida-11-oscuro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-oscuro" lang="en" href="capturas/bienvenida-11-oscuro-en-1440.webp">View the image at full size</a></p>
+            </figcaption>
+          </figure>
+          <figure class="captura demo-paso" hidden>
+            <img class="solo-claro" lang="es" src="capturas/bienvenida-12-claro-es-1440.webp" srcset="capturas/bienvenida-12-claro-es-960.webp 960w, capturas/bienvenida-12-claro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 12 de 14: Espacios con la lista de espacios resaltada">
+            <img class="solo-claro" lang="en" src="capturas/bienvenida-12-claro-en-1440.webp" srcset="capturas/bienvenida-12-claro-en-960.webp 960w, capturas/bienvenida-12-claro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 12 of 14: Workspaces with the workspace list highlighted">
+            <img class="solo-oscuro" lang="es" src="capturas/bienvenida-12-oscuro-es-1440.webp" srcset="capturas/bienvenida-12-oscuro-es-960.webp 960w, capturas/bienvenida-12-oscuro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 12 de 14: Espacios con la lista de espacios resaltada">
+            <img class="solo-oscuro" lang="en" src="capturas/bienvenida-12-oscuro-en-1440.webp" srcset="capturas/bienvenida-12-oscuro-en-960.webp 960w, capturas/bienvenida-12-oscuro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 12 of 14: Workspaces with the workspace list highlighted">
+            <figcaption>
+              <p class="demo-donde"><span lang="es">Paso 12 de 14 · Espacios</span><span lang="en">Step 12 of 14 · Workspaces</span></p>
+              <h3><span lang="es">Tus espacios</span><span lang="en">Your workspaces</span></h3>
+              <p class="demo-texto"><span lang="es">Aquí ves todos los espacios, también los detenidos: su estado, su carpeta, cuántas APIs y peticiones tienen y lo que puedes hacer con cada uno.</span><span lang="en">Here you see all your workspaces, stopped ones too: their status, folder, how many APIs and requests they have and what you can do with each.</span></p>
+              <p class="demo-ampliar"><a class="solo-claro" lang="es" href="capturas/bienvenida-12-claro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-claro" lang="en" href="capturas/bienvenida-12-claro-en-1440.webp">View the image at full size</a><a class="solo-oscuro" lang="es" href="capturas/bienvenida-12-oscuro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-oscuro" lang="en" href="capturas/bienvenida-12-oscuro-en-1440.webp">View the image at full size</a></p>
+            </figcaption>
+          </figure>
+          <figure class="captura demo-paso" hidden>
+            <img class="solo-claro" lang="es" src="capturas/bienvenida-13-claro-es-1440.webp" srcset="capturas/bienvenida-13-claro-es-960.webp 960w, capturas/bienvenida-13-claro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 13 de 14: Espacios con el botón «Abrir un proyecto» resaltado">
+            <img class="solo-claro" lang="en" src="capturas/bienvenida-13-claro-en-1440.webp" srcset="capturas/bienvenida-13-claro-en-960.webp 960w, capturas/bienvenida-13-claro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 13 of 14: Workspaces with the “Open a project” button highlighted">
+            <img class="solo-oscuro" lang="es" src="capturas/bienvenida-13-oscuro-es-1440.webp" srcset="capturas/bienvenida-13-oscuro-es-960.webp 960w, capturas/bienvenida-13-oscuro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 13 de 14: Espacios con el botón «Abrir un proyecto» resaltado">
+            <img class="solo-oscuro" lang="en" src="capturas/bienvenida-13-oscuro-en-1440.webp" srcset="capturas/bienvenida-13-oscuro-en-960.webp 960w, capturas/bienvenida-13-oscuro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 13 of 14: Workspaces with the “Open a project” button highlighted">
+            <figcaption>
+              <p class="demo-donde"><span lang="es">Paso 13 de 14 · Espacios</span><span lang="en">Step 13 of 14 · Workspaces</span></p>
+              <h3><span lang="es">Abrir un proyecto</span><span lang="en">Open a project</span></h3>
+              <p class="demo-texto"><span lang="es">Con este botón abres una carpeta como espacio de trabajo. Si no tenía .tramtai/, Tramtai la prepara por ti.</span><span lang="en">This button opens a folder as a workspace. If it had no .tramtai/, Tramtai prepares it for you.</span></p>
+              <p class="demo-ampliar"><a class="solo-claro" lang="es" href="capturas/bienvenida-13-claro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-claro" lang="en" href="capturas/bienvenida-13-claro-en-1440.webp">View the image at full size</a><a class="solo-oscuro" lang="es" href="capturas/bienvenida-13-oscuro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-oscuro" lang="en" href="capturas/bienvenida-13-oscuro-en-1440.webp">View the image at full size</a></p>
+            </figcaption>
+          </figure>
+          <figure class="captura demo-paso" hidden>
+            <img class="solo-claro" lang="es" src="capturas/bienvenida-14-claro-es-1440.webp" srcset="capturas/bienvenida-14-claro-es-960.webp 960w, capturas/bienvenida-14-claro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 14 de 14: la página Espacios entera">
+            <img class="solo-claro" lang="en" src="capturas/bienvenida-14-claro-en-1440.webp" srcset="capturas/bienvenida-14-claro-en-960.webp 960w, capturas/bienvenida-14-claro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 14 of 14: the whole Workspaces page">
+            <img class="solo-oscuro" lang="es" src="capturas/bienvenida-14-oscuro-es-1440.webp" srcset="capturas/bienvenida-14-oscuro-es-960.webp 960w, capturas/bienvenida-14-oscuro-es-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Recorrido guiado, paso 14 de 14: la página Espacios entera">
+            <img class="solo-oscuro" lang="en" src="capturas/bienvenida-14-oscuro-en-1440.webp" srcset="capturas/bienvenida-14-oscuro-en-960.webp 960w, capturas/bienvenida-14-oscuro-en-1440.webp 1440w" sizes="(max-width: 899px) calc(100vw - 32px), 820px" width="1440" height="900" loading="lazy" decoding="async" alt="Guided tour, step 14 of 14: the whole Workspaces page">
+            <figcaption>
+              <p class="demo-donde"><span lang="es">Paso 14 de 14 · Espacios</span><span lang="en">Step 14 of 14 · Workspaces</span></p>
+              <h3><span lang="es">Y esto es todo por ahora</span><span lang="en">That is all for now</span></h3>
+              <p class="demo-texto"><span lang="es">Historial y Ajustes tienen su recorrido en su ?. Ábrelo cuando llegues allí.</span><span lang="en">History and Settings have their own tour behind their ? button. Open it when you get there.</span></p>
+              <p class="demo-ampliar"><a class="solo-claro" lang="es" href="capturas/bienvenida-14-claro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-claro" lang="en" href="capturas/bienvenida-14-claro-en-1440.webp">View the image at full size</a><a class="solo-oscuro" lang="es" href="capturas/bienvenida-14-oscuro-es-1440.webp">Ver la imagen a tamaño real</a><a class="solo-oscuro" lang="en" href="capturas/bienvenida-14-oscuro-en-1440.webp">View the image at full size</a></p>
+            </figcaption>
+          </figure>
+          </div>
+          <button type="button" class="demo-flecha demo-siguiente" hidden><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span lang="es" class="solo-lectores">Paso siguiente</span><span lang="en" class="solo-lectores">Next step</span></button>
+          <div class="demo-controles" hidden>
+            <div class="demo-progreso"><span></span></div>
             <button type="button" class="demo-pausa"><span lang="es">Pausa</span><span lang="en">Pause</span></button>
-            <div class="demo-puntos">
-              <button type="button" class="demo-punto" aria-pressed="true"><span lang="es" class="solo-lectores">Paso 1</span><span lang="en" class="solo-lectores">Step 1</span></button>
-              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 2</span><span lang="en" class="solo-lectores">Step 2</span></button>
-              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 3</span><span lang="en" class="solo-lectores">Step 3</span></button>
-              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 4</span><span lang="en" class="solo-lectores">Step 4</span></button>
-              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 5</span><span lang="en" class="solo-lectores">Step 5</span></button>
-              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 6</span><span lang="en" class="solo-lectores">Step 6</span></button>
-              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 7</span><span lang="en" class="solo-lectores">Step 7</span></button>
-              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 8</span><span lang="en" class="solo-lectores">Step 8</span></button>
-              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 9</span><span lang="en" class="solo-lectores">Step 9</span></button>
-              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 10</span><span lang="en" class="solo-lectores">Step 10</span></button>
-              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 11</span><span lang="en" class="solo-lectores">Step 11</span></button>
-              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 12</span><span lang="en" class="solo-lectores">Step 12</span></button>
-              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 13</span><span lang="en" class="solo-lectores">Step 13</span></button>
-              <button type="button" class="demo-punto" aria-pressed="false"><span lang="es" class="solo-lectores">Paso 14</span><span lang="en" class="solo-lectores">Step 14</span></button>
-            </div>
+            <p class="demo-leyenda" aria-live="off"></p>
           </div>
         </div>
-        <ol class="demo-lista">
-        <li><span lang="es">El mapa en vivo</span><span lang="en">The live map</span></li>
-        <li><span lang="es">Tus primeros pasos</span><span lang="en">Your first steps</span></li>
-        <li><span lang="es">El espacio de trabajo</span><span lang="en">The workspace</span></li>
-        <li><span lang="es">El botón ? de cada página</span><span lang="en">The ? button on every page</span></li>
-        <li><span lang="es">Tus agentes</span><span lang="en">Your agents</span></li>
-        <li><span lang="es">Listos y por conectar</span><span lang="en">Ready and to connect</span></li>
-        <li><span lang="es">La receta</span><span lang="en">The recipe</span></li>
-        <li><span lang="es">El mensaje de prueba</span><span lang="en">The test message</span></li>
-        <li><span lang="es">Ver como código</span><span lang="en">View as code</span></li>
-        <li><span lang="es">La clave del espacio</span><span lang="en">The workspace key</span></li>
-        <li><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></li>
-        <li><span lang="es">Tus espacios</span><span lang="en">Your workspaces</span></li>
-        <li><span lang="es">Abrir un proyecto</span><span lang="en">Open a project</span></li>
-        <li><span lang="es">Y esto es todo por ahora</span><span lang="en">That is all for now</span></li>
-        </ol>
       </div>
     </div>
   </section>
@@ -542,61 +761,82 @@ tramtai terminal</pre>
     <div class="envoltura">
       <div class="cabeza">
         <h2><span lang="es">Una red con una línea por agente.</span><span lang="en">A network with one line per agent.</span></h2>
-        <p class="suave"><span lang="es">Cada petición viaja por la línea de su agente, y tú lo ves en vivo: en cola, en ejecución y llegada.</span><span lang="en">Every request travels along its agent’s line, and you watch it live: queued, running and arrived.</span></p>
+        <p class="suave"><span lang="es">En la app, cada petición viaja en vivo por la línea de su agente. Aquí, cada línea es lo que hace Tramtai: conectar, controlar, proteger y usar, con tres paradas cada una.</span><span lang="en">In the app, every request travels live along its agent’s line. Here, each line is what Tramtai does: connect, control, protect and use, with three stops each.</span></p>
       </div>
-      <div class="rejilla">
-        <h3 class="grupo-funciones"><span lang="es">Conecta</span><span lang="en">Connect</span></h3>
-        <article class="tarjeta">
-          <h4><span lang="es">Compatible con tus SDK</span><span lang="en">Works with your SDKs</span></h4>
-          <p><span lang="es">Rutas compatibles con OpenAI (chat y responses) y Anthropic (messages) con respuesta en vivo (streaming), más una API propia con eventos en vivo. Las tres admiten herramientas (<code>tools</code>).</span><span lang="en">OpenAI-compatible (chat and responses) and Anthropic-compatible (messages) routes with live responses (streaming), plus a native API with live events. All three support tool calling (<code>tools</code>).</span></p>
-        </article>
-        <article class="tarjeta">
-          <h4><span lang="es">API propia con OpenAPI</span><span lang="en">Native API with OpenAPI</span></h4>
-          <p><span lang="es">Con <code>/api/v1</code> sigues, cancelas y reintentas cada petición. Trae su especificación OpenAPI, y «Ver como código» te da la petición lista en curl, Python o Node.</span><span lang="en">With <code>/api/v1</code> you follow, cancel and retry every request. It ships its OpenAPI spec, and “View as code” gives you the request ready in curl, Python or Node.</span></p>
-        </article>
-        <article class="tarjeta">
-          <h4><span lang="es">Respuestas con forma</span><span lang="en">Shaped responses</span></h4>
-          <p><span lang="es">Elige una plantilla o arma los campos, sin escribir JSON Schema. Tramtai valida la respuesta, te dice qué campo falló y «Corregir» le pide al agente que la arregle.</span><span lang="en">Pick a template or build the fields, without writing JSON Schema. Tramtai validates the response, tells you which field failed, and “Correct” asks the agent to fix it.</span></p>
-        </article>
-        <h3 class="grupo-funciones"><span lang="es">Controla</span><span lang="en">Control</span></h3>
-        <article class="tarjeta">
-          <h4><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></h4>
-          <p><span lang="es">El espacio global y uno por proyecto: cada uno guarda sus datos aparte. Los Ajustes muestran qué viene de todo Tramtai, y una carpeta clonada pregunta antes de aplicar su configuración.</span><span lang="en">The global workspace and one per project: each keeps its data apart. Settings show what comes from all of Tramtai, and a cloned folder asks before applying its configuration.</span></p>
-        </article>
-        <article class="tarjeta">
-          <h4><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></h4>
-          <p><span lang="es">Crea varias APIs con su propia clave, los modelos permitidos, instrucciones fijas y un presupuesto diario o mensual que frena las peticiones al llegar al límite. Actívalas o detenlas sin reiniciar.</span><span lang="en">Create several APIs, each with its own key, allowed models, fixed instructions and a daily or monthly budget that stops requests at the limit. Turn them on or off without restarting.</span></p>
-        </article>
-        <article class="tarjeta">
-          <h4><span lang="es">Modelo y esfuerzo en cada petición</span><span lang="en">Model and effort per request</span></h4>
-          <p><span lang="es">Elige modelo en cada petición y, en los agentes que lo admiten, cuánto razona: de bajo a máximo.</span><span lang="en">Pick the model per request and, with the agents that support it, how hard it reasons: from low to maximum.</span></p>
-        </article>
-        <h3 class="grupo-funciones"><span lang="es">Protege</span><span lang="en">Protect</span></h3>
-        <article class="tarjeta">
-          <h4><span lang="es">Respaldo entre agentes</span><span lang="en">Agent fallback</span></h4>
-          <p><span lang="es">Si le das una lista de respaldo y el agente llega a su límite o falla antes de responder, la petición sigue con el siguiente de la lista que esté conectado.</span><span lang="en">If you give it a fallback list and the agent hits its limit or fails before answering, the request continues with the next connected agent on the list.</span></p>
-        </article>
-        <article class="tarjeta">
-          <h4><span lang="es">Claves cifradas en el almacén del sistema</span><span lang="en">Keys encrypted in the system store</span></h4>
-          <p><span lang="es">Tus claves de proveedor quedan cifradas en el almacén del sistema, y las de tus APIs se ven una sola vez y se regeneran con un clic si se filtran.</span><span lang="en">Your provider keys stay encrypted in the system store, and your APIs' keys are shown only once and can be regenerated in one click if they leak.</span></p>
-        </article>
-        <article class="tarjeta">
-          <h4><span lang="es">Sin terminal ni web</span><span lang="en">No terminal, no web</span></h4>
-          <p><span lang="es">Claude Code y GitHub Copilot van sin herramientas; Codex, en solo lectura y sin terminal ni búsqueda web. Por defecto cada uno trabaja en una carpeta temporal vacía y no recibe las claves de los demás.</span><span lang="en">Claude Code and GitHub Copilot run without tools; Codex runs read-only, with no terminal or web search. By default each one works in an empty temporary folder and never gets the other agents’ keys.</span></p>
-        </article>
-        <h3 class="grupo-funciones"><span lang="es">Usa</span><span lang="en">Use</span></h3>
-        <article class="tarjeta">
-          <h4><span lang="es">La terminal, a la par de la app</span><span lang="en">The terminal, on par with the app</span></h4>
-          <p><span lang="es">Las ocho páginas de la app en <a href="#terminal"><code>tramtai terminal</code></a>, con el teclado, sin abrir la app y por SSH. La bandeja, la app en tu navegador (en español e inglés), la terminal y la CLI ven las mismas peticiones.</span><span lang="en">The app’s eight pages in <a href="#terminal"><code>tramtai terminal</code></a>, all from the keyboard, without the app open and over SSH. The tray, the app in your browser (in Spanish and English), the terminal and the CLI all see the same requests.</span></p>
-        </article>
-        <article class="tarjeta">
-          <h4><span lang="es">Adjunta PDF, Word y Excel</span><span lang="en">Attach PDF, Word and Excel</span></h4>
-          <p><span lang="es">Adjunta PDF, Word, Excel, PowerPoint, HTML o texto: Tramtai los convierte a texto antes de pasarlos al agente.</span><span lang="en">Attach PDF, Word, Excel, PowerPoint, HTML or text files: Tramtai turns them into text before handing them to the agent.</span></p>
-        </article>
-        <article class="tarjeta">
-          <h4><span lang="es">Recorrido y Ayuda</span><span lang="en">Tour and Help</span></h4>
-          <p><span lang="es">Un recorrido guiado te señala cada parte de la app (<a href="#demo">míralo paso a paso</a>), y un «?» en cada página abre su Ayuda, con qué hacer junto a cada error. La misma Ayuda está <a href="ayuda/">en esta web</a>.</span><span lang="en">A guided tour points at each part of the app (<a href="#demo">see it step by step</a>), and a “?” on every page opens its Help, with what to do next to each error. The same Help is <a href="ayuda/">on this website</a>.</span></p>
-        </article>
+      <!-- Un plano de metro: una línea por grupo y una parada por función. Sin JavaScript, o por debajo de 900 px, cada línea
+           va en vertical con el texto de sus paradas; con JavaScript y pantalla ancha, sitio.js la pone en horizontal, el
+           título de cada parada pasa a ser un botón y enseña su texto en el panel de debajo. Las líneas van en el acento:
+           el color de línea es de los agentes (DESIGN.md). -->
+      <div class="metro">
+        <section class="metro-linea" data-linea="conecta">
+          <h3><span lang="es">Conecta</span><span lang="en">Connect</span></h3>
+          <ol>
+            <li class="parada">
+              <h4 class="parada-titulo"><span lang="es">Compatible con tus SDK</span><span lang="en">Works with your SDKs</span></h4>
+              <p class="parada-texto"><span lang="es">Rutas compatibles con OpenAI (chat y responses) y Anthropic (messages) con respuesta en vivo (streaming), más una API propia con eventos en vivo. Las tres admiten herramientas (<code>tools</code>).</span><span lang="en">OpenAI-compatible (chat and responses) and Anthropic-compatible (messages) routes with live responses (streaming), plus a native API with live events. All three support tool calling (<code>tools</code>).</span></p>
+            </li>
+            <li class="parada">
+              <h4 class="parada-titulo"><span lang="es">API propia con OpenAPI</span><span lang="en">Native API with OpenAPI</span></h4>
+              <p class="parada-texto"><span lang="es">Con <code>/api/v1</code> sigues, cancelas y reintentas cada petición. Trae su especificación OpenAPI, y «Ver como código» te da la petición lista en curl, Python o Node.</span><span lang="en">With <code>/api/v1</code> you follow, cancel and retry every request. It ships its OpenAPI spec, and “View as code” gives you the request ready in curl, Python or Node.</span></p>
+            </li>
+            <li class="parada">
+              <h4 class="parada-titulo"><span lang="es">Respuestas con forma</span><span lang="en">Shaped responses</span></h4>
+              <p class="parada-texto"><span lang="es">Elige una plantilla o arma los campos, sin escribir JSON Schema. Tramtai valida la respuesta, te dice qué campo falló y «Corregir» le pide al agente que la arregle.</span><span lang="en">Pick a template or build the fields, without writing JSON Schema. Tramtai validates the response, tells you which field failed, and “Correct” asks the agent to fix it.</span></p>
+            </li>
+          </ol>
+        </section>
+        <section class="metro-linea" data-linea="controla">
+          <h3><span lang="es">Controla</span><span lang="en">Control</span></h3>
+          <ol>
+            <li class="parada">
+              <h4 class="parada-titulo"><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></h4>
+              <p class="parada-texto"><span lang="es">El espacio global y uno por proyecto: cada uno guarda sus datos aparte. Los Ajustes muestran qué viene de todo Tramtai, y una carpeta clonada pregunta antes de aplicar su configuración.</span><span lang="en">The global workspace and one per project: each keeps its data apart. Settings show what comes from all of Tramtai, and a cloned folder asks before applying its configuration.</span></p>
+            </li>
+            <li class="parada">
+              <h4 class="parada-titulo"><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></h4>
+              <p class="parada-texto"><span lang="es">Crea varias APIs con su propia clave, los modelos permitidos, instrucciones fijas y un presupuesto diario o mensual que frena las peticiones al llegar al límite. Actívalas o detenlas sin reiniciar.</span><span lang="en">Create several APIs, each with its own key, allowed models, fixed instructions and a daily or monthly budget that stops requests at the limit. Turn them on or off without restarting.</span></p>
+            </li>
+            <li class="parada">
+              <h4 class="parada-titulo"><span lang="es">Modelo y esfuerzo en cada petición</span><span lang="en">Model and effort per request</span></h4>
+              <p class="parada-texto"><span lang="es">Elige modelo en cada petición y, en los agentes que lo admiten, cuánto razona: de bajo a máximo.</span><span lang="en">Pick the model per request and, with the agents that support it, how hard it reasons: from low to maximum.</span></p>
+            </li>
+          </ol>
+        </section>
+        <section class="metro-linea" data-linea="protege">
+          <h3><span lang="es">Protege</span><span lang="en">Protect</span></h3>
+          <ol>
+            <li class="parada">
+              <h4 class="parada-titulo"><span lang="es">Respaldo entre agentes</span><span lang="en">Agent fallback</span></h4>
+              <p class="parada-texto"><span lang="es">Si le das una lista de respaldo y el agente llega a su límite o falla antes de responder, la petición sigue con el siguiente de la lista que esté conectado.</span><span lang="en">If you give it a fallback list and the agent hits its limit or fails before answering, the request continues with the next connected agent on the list.</span></p>
+            </li>
+            <li class="parada">
+              <h4 class="parada-titulo"><span lang="es">Claves cifradas en el almacén del sistema</span><span lang="en">Keys encrypted in the system store</span></h4>
+              <p class="parada-texto"><span lang="es">Tus claves de proveedor quedan cifradas en el almacén del sistema, y las de tus APIs se ven una sola vez y se regeneran con un clic si se filtran.</span><span lang="en">Your provider keys stay encrypted in the system store, and your APIs' keys are shown only once and can be regenerated in one click if they leak.</span></p>
+            </li>
+            <li class="parada">
+              <h4 class="parada-titulo"><span lang="es">Sin terminal ni web</span><span lang="en">No terminal, no web</span></h4>
+              <p class="parada-texto"><span lang="es">Claude Code y GitHub Copilot van sin herramientas; Codex, en solo lectura y sin terminal ni búsqueda web. Por defecto cada uno trabaja en una carpeta temporal vacía y no recibe las claves de los demás.</span><span lang="en">Claude Code and GitHub Copilot run without tools; Codex runs read-only, with no terminal or web search. By default each one works in an empty temporary folder and doesn’t get the other agents’ keys.</span></p>
+            </li>
+          </ol>
+        </section>
+        <section class="metro-linea" data-linea="usa">
+          <h3><span lang="es">Usa</span><span lang="en">Use</span></h3>
+          <ol>
+            <li class="parada">
+              <h4 class="parada-titulo"><span lang="es">La terminal, a la par de la app</span><span lang="en">The terminal, on par with the app</span></h4>
+              <p class="parada-texto"><span lang="es">Las ocho páginas de la app en <a href="#terminal"><code>tramtai terminal</code></a>, con el teclado, sin abrir la app y por SSH. La bandeja, la app en tu navegador (en español e inglés), la terminal y la CLI ven las mismas peticiones.</span><span lang="en">The app’s eight pages in <a href="#terminal"><code>tramtai terminal</code></a>, all from the keyboard, without the app open and over SSH. The tray, the app in your browser (in Spanish and English), the terminal and the CLI all see the same requests.</span></p>
+            </li>
+            <li class="parada">
+              <h4 class="parada-titulo"><span lang="es">Adjunta PDF, Word y Excel</span><span lang="en">Attach PDF, Word and Excel</span></h4>
+              <p class="parada-texto"><span lang="es">Adjunta PDF, Word, Excel, PowerPoint, HTML o texto: Tramtai los convierte a texto antes de pasarlos al agente.</span><span lang="en">Attach PDF, Word, Excel, PowerPoint, HTML or text files: Tramtai turns them into text before handing them to the agent.</span></p>
+            </li>
+            <li class="parada">
+              <h4 class="parada-titulo"><span lang="es">Recorrido y Ayuda</span><span lang="en">Tour and Help</span></h4>
+              <p class="parada-texto"><span lang="es">Un recorrido guiado te señala cada parte de la app (<a href="#demo">míralo paso a paso</a>), y un «?» en cada página abre su Ayuda, con qué hacer junto a cada error. La misma Ayuda está <a href="ayuda/">en esta web</a>.</span><span lang="en">A guided tour points at each part of the app (<a href="#demo">see it step by step</a>), and a “?” on every page opens its Help, with what to do next to each error. The same Help is <a href="ayuda/">on this website</a>.</span></p>
+            </li>
+          </ol>
+        </section>
+        <div class="metro-panel" aria-live="polite" hidden></div>
       </div>
     </div>
   </section>

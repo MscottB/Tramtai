@@ -370,7 +370,7 @@ func TestAvisoApiPropia(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	comoApp(t, cli, clave, 20)
+	comoApp(t, cli, id, clave, 20)
 	a.Correr(a.P.Iniciar(prueba.Contexto(t, cli, id)))
 	cargada(a, prueba.Contexto(t, cli, id))
 	if strings.Contains(a.Vista(), "con la clave del espacio") {
@@ -379,7 +379,7 @@ func TestAvisoApiPropia(t *testing.T) {
 	if fuera := a.Pulsar("c"); len(fuera) != 0 {
 		t.Fatal("sin aviso, c no hace nada")
 	}
-	comoApp(t, cli, clave, 1)
+	comoApp(t, cli, id, clave, 1)
 	a.Correr(a.P.Iniciar(prueba.Contexto(t, cli, id)))
 	a.HastaVer("21 peticiones de apps llegaron con la clave del espacio", "últimas 24 h", "Crear una API")
 	v := a.Vista()
@@ -393,8 +393,9 @@ func TestAvisoApiPropia(t *testing.T) {
 	}
 }
 
-// comoApp manda n peticiones como una app con la clave del espacio.
-func comoApp(t *testing.T, cli *cliente.Cliente, clave string, n int) {
+// comoApp manda n peticiones como una app con la clave del espacio y espera a que terminen: mientras corren, la red de
+// Inicio no deja de cambiar y la página no se asienta (en un runner lento, más de los 10 s de Asentar).
+func comoApp(t *testing.T, cli *cliente.Cliente, id, clave string, n int) {
 	t.Helper()
 	for range n {
 		req, _ := http.NewRequest("POST", cli.Base+"/api/v1/ejecutar", strings.NewReader(`{"mensajes":[{"rol":"usuario","contenido":"hola"}]}`))
@@ -404,6 +405,18 @@ func comoApp(t *testing.T, cli *cliente.Cliente, clave string, n int) {
 			t.Fatal(err)
 		}
 		r.Body.Close()
+	}
+	for fin := time.Now().Add(30 * time.Second); ; time.Sleep(50 * time.Millisecond) {
+		trabajos, err := cli.Trabajos(ctx, id, 100)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !slices.ContainsFunc(trabajos, func(tr nucleo.Trabajo) bool { return !tr.Estado.Terminal() }) {
+			return
+		}
+		if time.Now().After(fin) {
+			t.Fatalf("las %d peticiones de la app no terminan", n)
+		}
 	}
 }
 
@@ -731,7 +744,7 @@ func TestSoloAscii(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	comoApp(t, cli, clave, 30)
+	comoApp(t, cli, id, clave, 30)
 	f := &ensayo{guion: []func(context.Context, func(string, []byte) error) error{
 		func(ctx context.Context, al func(string, []byte) error) error {
 			for i, estado := range []string{"ejecutando", "completado", "fallido", "cancelado"} {

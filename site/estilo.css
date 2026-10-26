@@ -112,9 +112,6 @@ section[id] { scroll-margin-top: 72px; }
 
 /* Secciones */
 section { padding: 72px 0; }
-/* Funciones agrupadas: un titular por bloque a todo el ancho de la rejilla. */
-.grupo-funciones { grid-column: 1 / -1; margin: 12px 0 -4px; font-size: 1.05rem; color: var(--texto-suave); }
-.grupo-funciones:first-child { margin-top: 0; }
 /* Capturas de la app: la del tema efectivo (el del sistema o el elegido). */
 .captura { margin: 0; }
 .captura img { width: 100%; height: auto; border: 1px solid color-mix(in srgb, var(--acento) 30%, var(--borde)); border-radius: var(--radio); box-shadow: var(--sombra); }
@@ -132,7 +129,6 @@ section { padding: 72px 0; }
 .etiqueta { font: 600 .78rem var(--fuente); color: var(--acento); margin-bottom: 8px; display: block; }
 
 /* Conexiones: dos paneles con borde y fichas */
-.conexiones { padding-top: 8px; }
 .conexiones .envoltura { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .panel { border: 1px solid color-mix(in srgb, var(--acento) 35%, var(--borde)); background: var(--superficie); border-radius: var(--radio); padding: 22px 24px; }
 .panel-titulo { font-size: 1.05rem; text-align: center; margin-bottom: 16px; }
@@ -154,15 +150,27 @@ section { padding: 72px 0; }
 .paradas h3 { margin-bottom: 6px; }
 .como .codigo { margin: 0; position: relative; padding-top: 56px; }
 
-/* Destacado: un panel con la franja «sin / con Tramtai» */
-.destacado { border: 1px solid color-mix(in srgb, var(--acento) 40%, var(--borde)); border-radius: var(--radio); padding: 40px; background: var(--superficie); }
+/* «Los agentes que ya pagas»: una banda con el antes y el después dibujados (SVG con su texto) y los seis motivos. Cada
+   motivo lleva su icono de línea junto al título, sin recuadro tintado (DESIGN.md). */
+.destacado { background: var(--superficie-suave); border-block: 1px solid var(--borde); }
 .destacado h2 em { font-style: normal; color: var(--acento); }
-.franja { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.franja-lado { background: var(--superficie); border: 1px solid var(--borde); border-radius: 10px; padding: 18px 20px; }
-.franja-lado h3 { font-size: 1rem; margin-bottom: 6px; color: var(--texto-suave); }
-.franja-lado.con { border: 2px solid var(--acento); }
-.franja-lado.con h3 { color: var(--acento); }
-.franja-lado p { margin: 0; }
+.pagas-diagramas { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.pagas-diagrama { margin: 0; display: flex; flex-direction: column; gap: 14px; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 20px 24px; }
+.pagas-diagrama.con { border: 2px solid var(--acento); }
+.pagas-diagrama h3 { font-size: 1rem; color: var(--texto-suave); }
+.pagas-diagrama.con h3 { color: var(--acento); }
+.pagas-diagrama svg { display: block; width: 100%; max-width: 420px; height: auto; margin: 0 auto; }
+/* «Con Tramtai» mide 384 de ancho (los nombres del glosario) y «Sin Tramtai», 340: así su letra sale igual de grande. */
+.pagas-diagrama.con svg { max-width: calc(420px * 384 / 340); }
+.pagas-diagrama text { font-family: var(--fuente); }
+.pagas-diagrama figcaption { font-weight: 600; }
+.motivos { list-style: none; margin: 44px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px 36px; }
+.motivo { display: grid; grid-template-columns: 24px 1fr; gap: 6px 12px; align-content: start; }
+.motivo svg { grid-row: span 2; width: 24px; height: 24px; margin-top: 1px; color: var(--acento); }
+.motivo h3 { font-size: 1.05rem; }
+.motivo p { color: var(--texto-suave); font-size: .95rem; }
+@media (max-width: 980px) { .motivos { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 720px) { .pagas-diagramas, .motivos { grid-template-columns: 1fr; } }
 
 /* Pares: texto y captura, alternando el lado; la captura va siempre en la columna ancha (630 px, sizes del HTML) */
 .par { display: grid; grid-template-columns: 1fr 1.6fr; gap: 48px; align-items: center; margin-top: 56px; }
@@ -176,8 +184,38 @@ section { padding: 72px 0; }
 .codigo .s { color: var(--tablero-clave); }
 .codigo .k { color: var(--tablero-texto); font-weight: 700; }
 
-/* Funciones: cuatro grupos de tres, en tres columnas, sin huecos */
-.rejilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+/* Funciones: un plano de metro (sitio.js), una línea por grupo y una parada por función. Sin JavaScript, o por debajo de
+   900 px, cada línea va en vertical: un tramo de 5 px entre estación y estación y el texto de cada parada a la vista.
+   Con JavaScript y pantalla ancha (.metro--plano), las cuatro líneas van en horizontal, una debajo de otra, con el
+   nombre bajo cada estación, y el texto de la parada elegida sale en el panel. Todo en el acento: el color de línea es
+   de los agentes (DESIGN.md). La estación es el ::before del título y no recibe el puntero: en el plano, el botón que crea
+   sitio.js la cubre y se pulsa con ella. */
+.metro { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 40px 48px; }
+.metro-linea { padding: 0; }
+.metro-linea h3 { font-size: 1.05rem; color: var(--texto-suave); margin-bottom: 14px; }
+.metro-linea ol { list-style: none; margin: 0; padding: 0; }
+.parada { position: relative; padding: 0 0 24px 40px; }
+.parada:last-child { padding-bottom: 0; }
+.parada:not(:last-child)::after { content: ''; position: absolute; left: 8.5px; top: 11px; bottom: -11px; width: 5px; background: var(--acento); }
+.parada h4 { font-size: 1.05rem; margin-bottom: 6px; }
+.parada-boton { font: inherit; letter-spacing: inherit; color: var(--texto); background: none; border: 0; padding: 0; text-align: left; }
+.parada-titulo::before { content: ''; position: absolute; z-index: 1; pointer-events: none; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; border: 5px solid var(--acento); background: var(--fondo); box-sizing: border-box; }
+.parada-texto { color: var(--texto-suave); font-size: .95rem; }
+.metro--plano { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.metro--plano .metro-linea { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 16px; }
+.metro--plano .metro-linea h3 { margin: 0; }
+.metro--plano ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.metro--plano .parada { padding: 0 8px; text-align: center; }
+.metro--plano .parada:not(:last-child)::after { left: 50%; top: 8.5px; bottom: auto; width: 100%; height: 5px; }
+.metro--plano .parada h4 { margin: 0; }
+.metro--plano .parada-boton { display: block; width: 100%; min-height: 44px; padding: 30px 8px 6px; border-radius: 8px; font-size: .95rem; font-weight: 600; color: var(--texto-suave); text-align: center; cursor: pointer; }
+.metro--plano .parada-titulo::before { left: 50%; margin-left: -11px; }
+.metro--plano .parada-boton:hover, .metro--plano .parada-boton[aria-current="true"] { color: var(--texto); }
+.metro--plano .parada-titulo:has(> [aria-current="true"])::before { background: var(--acento); }
+.metro--plano .parada-texto { display: none; }
+.metro-panel { margin-left: 136px; padding: 20px 24px; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); }
+.metro-panel-titulo { font: 700 1.05rem/1.15 var(--titulo); letter-spacing: -0.01em; margin-bottom: 6px; }
+.metro-panel p { max-width: 70ch; }
 /* Agentes: una tarjeta por agente con su sigla y el color de su línea (--c); el color de línea solo aparece aquí. */
 .agentes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 16px; }
 .agente { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 20px; }
@@ -243,7 +281,6 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
   html:not(.js) .github { margin-left: auto; }
 }
 @media (max-width: 900px) {
-  .rejilla { grid-template-columns: 1fr; }
   .tablero, .como, .par, .par.invertido, .conexiones .envoltura { grid-template-columns: 1fr; }
   .par.invertido > div { order: 0; }
   .par { gap: 20px; }
@@ -256,8 +293,8 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
   .envoltura { padding: 0 16px; }
   .portada { padding: 44px 0 32px; }
   section { padding: 52px 0; }
-  .empezar, .franja { grid-template-columns: 1fr; }
-  .destacado { padding: 24px; }
+  .empezar { grid-template-columns: 1fr; }
+  .pagas-diagrama { padding: 16px; }
   .mapa { padding: 12px; margin-top: 32px; }
   .tablero { padding: 24px; }
   .tablero li { grid-template-columns: 1fr; gap: 4px; }
@@ -376,34 +413,105 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
   .diagrama { grid-template-columns: 1fr; }
   .diagrama li:not(:last-child)::after { content: '↓'; right: auto; left: 18px; top: auto; bottom: -16px; }
 }
-/* Las capturas de la Ayuda vienen en los dos idiomas: la del otro se oculta también en oscuro (le gana a .solo-oscuro). */
-html[lang="es"] .captura img[lang="en"], html[lang="en"] .captura img[lang="es"] { display: none !important; }
-.solo-lectores { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-/* Ejemplos del recorrido de la portada (sitio.js): leyenda, un punto por ejemplo y pausa. Cada punto se dibuja de 14 px
-   dentro de un área de 44 px. */
-.mapa-ejemplos { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 12px; }
+/* Las capturas de la Ayuda y de la demo (y su enlace a tamaño real) vienen en los dos idiomas: la del otro se oculta
+   también en oscuro (le gana a .solo-oscuro). */
+html[lang="es"] .captura img[lang="en"], html[lang="en"] .captura img[lang="es"],
+html[lang="es"] .captura a[lang="en"], html[lang="en"] .captura a[lang="es"] { display: none !important; }
+.solo-lectores, .demo-leyenda { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* Escenas de la cabecera (sitio.js): cuatro pestañas con nombre y la pausa encima; debajo, el mapa y el panel con el
+   título, la línea que explica la escena y su código. Lado a lado desde 980 px, con el mapa vertical: el horizontal, en
+   media columna, bajaría su letra de 12 px a menos de 10. Por debajo, el panel va bajo el mapa. */
+.escenas { max-width: 760px; margin: 48px auto 0; text-align: left; }
+.escenas .mapa { margin: 0; max-width: none; }
+.mapa-ejemplos { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-bottom: 12px; }
 .mapa-ejemplos[hidden] { display: none; }
-.mapa-leyenda { margin: 0; min-height: 1.5em; font-size: .95rem; color: var(--texto-suave); text-align: center; }
-.mapa-controles { display: flex; align-items: center; gap: 4px; }
-.mapa-punto { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
-.mapa-punto::before { content: ''; width: 14px; height: 14px; box-sizing: border-box; border-radius: 50%; border: 2px solid var(--acento); }
-.mapa-punto[aria-pressed="true"]::before { background: var(--acento); }
+.mapa-ejemplos .mapa-pausa { flex: none; }
+.mapa-pestanas { flex: 1 1 520px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.mapa-pestana { font: 600 .875rem/1.3 var(--fuente); color: var(--texto-suave); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 8px; padding: 6px 12px; min-height: 44px; cursor: pointer; text-align: left; }
+.mapa-pestana:hover { color: var(--texto); }
+.mapa-pestana[aria-selected="true"] { color: var(--acento-texto); background: var(--acento); border-color: var(--acento); }
+.mapa-panel { margin-top: 16px; background: var(--superficie); border: 1px solid color-mix(in srgb, var(--acento) 35%, var(--borde)); border-radius: var(--radio); box-shadow: var(--sombra); padding: 24px; min-width: 0; }
+.mapa-titulo { font: 700 1.25rem/1.25 var(--titulo); letter-spacing: -0.01em; }
+.mapa-leyenda { margin: 6px 0 16px; min-height: 3em; font-size: .95rem; line-height: 1.5; color: var(--texto-suave); }
+.mapa-codigos { display: grid; }
+/* En el panel las líneas largas saltan en vez de esconderse a la derecha; Copiar copia el texto, sin los saltos. La
+   sangría colgante (each-line hanging) la ignora el navegador que no la conoce. */
+.mapa-codigos > .codigo { align-self: start; margin: 0; position: relative; padding-top: 56px; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: visible; text-indent: 4ch hanging each-line; }
+/* En el móvil el panel es lo último de la cabecera: el código que no toca no ocupa sitio (el más alto dejaba 300 px de
+   caja vacía). Desde 980 px los cuatro comparten la celda, que mide lo del más alto, y el panel no salta. */
+.mapa-codigos > .codigo.oculto { display: none; }
+@media (min-width: 980px) {
+  .mapa-codigos > .codigo { grid-area: 1 / 1; }
+  .mapa-codigos > .codigo.oculto { display: block; visibility: hidden; }
+  .escenas { max-width: none; }
+  .escenas-cuerpo { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 24px; }
+  .escenas .mapa { display: grid; align-content: center; padding: 20px; }
+  .escenas .mapa .mapa-ancho { display: none; }
+  .escenas .mapa .mapa-alto { display: block; }
+  .mapa-panel { margin-top: 0; }
+}
+@media (max-width: 640px) {
+  .escenas { margin-top: 32px; }
+  .mapa-pestanas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mapa-panel { padding: 16px; }
+}
 .mapa-pausa { font: 600 .85rem var(--fuente); color: var(--texto); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 8px; padding: 0 14px; min-height: 44px; cursor: pointer; }
 
-/* Demo del recorrido guiado de la portada (sitio.js): una pantalla de la app por paso, con su leyenda, la pausa y un
-   punto por paso. Sin JavaScript se ve la primera y la lista de pasos. Cada imagen declara su tamaño: no hay saltos. */
-.demo { max-width: 1000px; margin: 0 auto; }
+/* Demo del recorrido guiado de la portada (sitio.js): a la izquierda, la lista de pasos por página (en el móvil, un
+   desplegable encima); a la derecha, la zona del paso con su texto debajo, una flecha encima de cada borde, el progreso
+   y la pausa. La leyenda solo la oyen los lectores de pantalla. Sin JavaScript se ven todos los pasos, uno debajo de
+   otro. Cada imagen declara su tamaño: no hay saltos. */
+.demo { max-width: 1120px; margin: 0 auto; }
+/* Con la lista a 220 px la imagen mide 820 en el escritorio, lo mismo que el tope de la zona en capturas.mjs: 1× o más. */
+html.js .demo { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; align-items: start; }
+html:not(.js) .demo-pasos { display: none; }
+html:not(.js) .demo-paso + .demo-paso { display: block; margin-top: 40px; }
+.demo-pasos-movil > summary { font: 600 .95rem/1.3 var(--fuente); color: var(--texto); padding: 12px 0; cursor: pointer; }
+.demo-lista, .demo-grupo ol { list-style: none; margin: 0; padding: 0; }
+.demo-grupo + .demo-grupo { margin-top: 12px; }
+.demo-pagina { display: block; font: 600 .875rem var(--fuente); color: var(--texto-suave); padding: 4px 12px; }
+.demo-ir { display: block; width: 100%; min-height: 44px; padding: 8px 12px; font: .95rem/1.3 var(--fuente); color: var(--texto); text-align: left; background: transparent; border: 0; border-left: 3px solid transparent; border-radius: 0 8px 8px 0; cursor: pointer; }
+.demo-ir:hover { background: var(--superficie-suave); }
+.demo-ir[aria-current="step"] { font-weight: 600; background: var(--acento-suave); border-left-color: var(--acento); }
+/* La imagen y su texto usan todo el ancho del escenario. Las flechas van encima de los bordes de la imagen, a media
+   altura (cqw es el ancho del escenario, y la imagen, 16:10 de él), con su fondo de superficie y su borde para que se
+   lean sobre la captura; la desactivada, sin transparencia. */
+html.js .demo-escenario { container-type: inline-size; display: grid; grid-template-columns: minmax(0, 1fr); }
+.demo-escena { grid-area: 1 / 1; }
+/* Con JavaScript los pasos comparten celda: la escena mide lo del más largo y la pausa y la barra no suben y bajan con
+   cada paso. Los ocultos no bajan su imagen (carga diferida): guardan su sitio con un hueco de 16:10. */
+html.js .demo-escena { display: grid; }
+html.js .demo-paso { grid-area: 1 / 1; }
+html.js .demo-paso[hidden] { display: block; visibility: hidden; }
+html.js .demo-paso[hidden] img { display: none; }
+html.js .demo-paso[hidden]::before { content: ''; display: block; aspect-ratio: 16 / 10; }
+.demo-flecha { grid-area: 1 / 1; z-index: 1; display: grid; place-items: center; width: 44px; height: 44px; margin: calc(100cqw / 3.2 - 22px) 12px 0; padding: 0; color: var(--texto); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 50%; cursor: pointer; }
+.demo-flecha:hover:not(:disabled) { color: var(--acento); border-color: var(--acento); }
+.demo-flecha:disabled { color: var(--borde-control); cursor: default; }
+.demo-anterior { justify-self: start; }
+.demo-siguiente { justify-self: end; }
+.demo-flecha[hidden] { display: none; }
 .demo-paso img { background: var(--superficie-suave); }
-.demo-controles { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 16px; }
+.demo-paso figcaption { margin-top: 16px; }
+.demo-donde { margin: 0; font-size: .9rem; color: var(--texto-suave); }
+.demo-paso h3 { margin: 4px 0 6px; font: 600 1.35rem/1.3 var(--titulo); }
+.demo-texto { margin: 0; font-size: 1.05rem; line-height: 1.6; }
+/* El enlace a la imagen a tamaño real: la del tema y el idioma que se ven (los otros se ocultan como sus img). */
+.demo-ampliar { margin: 8px 0 0; font-size: .9rem; }
+.demo-ampliar a { width: fit-content; }
+.demo-controles { display: flex; align-items: center; gap: 16px; margin-top: 20px; }
 .demo-controles[hidden] { display: none; }
-.demo-leyenda { margin: 0; min-height: 1.5em; font-size: .95rem; color: var(--texto-suave); text-align: center; }
-.demo-botones { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; }
-/* 14 puntos de 12 px, cada uno en un área de 44 px pegada a la siguiente: los 32 px de aire entre dos puntos están dentro
-   de su área. En 360 px quedan dos filas de 7. */
-.demo-puntos { display: flex; flex-wrap: wrap; justify-content: center; max-width: 616px; }
-.demo-punto { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
-.demo-punto::before { content: ''; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid var(--acento); }
-.demo-punto[aria-pressed="true"]::before { background: var(--acento); }
+.demo-progreso { flex: 1; height: 4px; border-radius: 2px; background: var(--borde); overflow: hidden; }
+.demo-progreso span { display: block; width: 0; height: 100%; background: var(--acento); transition: width .3s; }
 .demo-pausa { font: 600 .85rem var(--fuente); color: var(--texto); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 8px; padding: 0 14px; min-height: 44px; cursor: pointer; }
-.demo-lista { margin: 24px 0 0; padding-left: 1.6em; columns: 2 16em; column-gap: 32px; color: var(--texto-suave); }
-.demo-lista li { break-inside: avoid; padding: 2px 0; }
+/* En el escritorio la lista va fija al lado: su rótulo no es un desplegable (sitio.js no la deja plegar). */
+@media (min-width: 900px) {
+  .demo-pasos-movil > summary { list-style: none; cursor: default; }
+  .demo-pasos-movil > summary::-webkit-details-marker { display: none; }
+}
+@media (max-width: 899px) {
+  html.js .demo { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .demo-flecha { margin: calc(100cqw / 3.2 - 22px) 8px 0; }
+  .demo-pasos-movil { padding: 0 12px; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); }
+  .demo-pasos-movil[open] { padding-bottom: 12px; }
+}

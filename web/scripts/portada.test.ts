@@ -6,7 +6,19 @@ import es from '../src/idiomas/es.ts'
 import en from '../src/idiomas/en.ts'
 
 const html = readFileSync(new URL('../../site/index.html', import.meta.url), 'utf8')
-const seccion = (id: string) => html.match(new RegExp(`<section[^>]*id="${id}"[^>]*>[\\s\\S]*?</section>`))?.[0] ?? ''
+// seccion respeta las <section> anidadas (las líneas del plano de Funciones lo son): corta en el </section> de la suya.
+const seccion = (id: string) => {
+  const inicio = html.search(new RegExp(`<section[^>]*id="${id}"`))
+  if (inicio < 0) return ''
+  const etiquetas = /<section\b|<\/section>/g
+  etiquetas.lastIndex = inicio
+  let nivel = 0
+  for (let m = etiquetas.exec(html); m; m = etiquetas.exec(html)) {
+    nivel += m[0] === '</section>' ? -1 : 1
+    if (nivel === 0) return html.slice(inicio, m.index + m[0].length)
+  }
+  return ''
+}
 const asi = seccion('capturas')
 const demo = seccion('demo')
 const pasos = pasosBienvenida()
@@ -14,10 +26,11 @@ const datos = html.match(/<script type="application\/json" id="ejemplos-mapa">([
 
 test('la portada tiene cuatro ejemplos del recorrido, en los dos idiomas', () => {
   assert.ok(datos, 'falta el JSON de los ejemplos del mapa')
-  const ejemplos = JSON.parse(datos[1]) as { origen: number; agentes: number[]; es: string; en: string; codigo: string }[]
+  const ejemplos = JSON.parse(datos[1]) as { origen: number; agentes: number[]; es: string; en: string; codigo: string; titulo_es: string; titulo_en: string }[]
   assert.equal(ejemplos.length, 4)
   for (const e of ejemplos) {
     assert.ok(e.es.trim() && e.en.trim(), `falta el texto de ${e.codigo}`)
+    assert.ok(e.titulo_es && e.titulo_en, `falta el título de ${e.codigo}`)
     assert.ok([0, 1, 2].includes(e.origen), `origen ${e.origen}`)
     assert.ok(e.agentes.length >= 1 && e.agentes.every((a) => a >= 0 && a <= 4), `agentes ${e.agentes}`)
     assert.match(html, new RegExp(`<pre class="codigo[^"]*" id="${e.codigo}"`), `falta el bloque ${e.codigo}`)
@@ -50,31 +63,97 @@ test('el tranvía mide los caminos fuera de la página y no arranca hasta que el
   assert.match(tranvia, /else if \(iniciado\) recorrer\(actual\)/, 'volver a la pestaña no arranca un tranvía que aún no se ve')
 })
 
-test('el recorrido se puede pausar y elegir', () => {
+test('la cabecera tiene cuatro pestañas con nombre y un panel con el código de la escena', () => {
+  const pestanas = html.match(/<button type="button" role="tab" class="mapa-pestana"[\s\S]*?<\/button>/g) ?? []
+  assert.equal(pestanas.length, 4)
+  const titulos = [['Resume un contrato con Claude', 'Summarize a contract with Claude'], ['Un PDF a JSON con Codex', 'A PDF to JSON with Codex'],
+    ['Traduce con GitHub Copilot', 'Translate with GitHub Copilot'], ['Respaldo: de Claude a Codex', 'Fallback: from Claude to Codex']]
+  pestanas.forEach((p, i) => { assert.match(p, new RegExp(titulos[i][0])); assert.match(p, new RegExp(titulos[i][1])) })
+  assert.match(pestanas[0], /aria-selected="true"/)
+  const inicio = html.indexOf('<div class="mapa-panel" id="mapa-panel">')
+  assert.ok(inicio >= 0, 'falta el panel de la escena')
+  const panel = html.slice(inicio)
+  assert.match(panel.slice(0, 4000), /id="codigo-mapa-1"/, 'sin JavaScript se ve el código de la primera escena')
+  assert.match(html, /<pre class="codigo[^"]*" id="codigo-como"/, '«Tres paradas» tiene su ejemplo fijo')
   assert.match(html, /class="mapa-pausa"/)
-  assert.equal((html.match(/class="mapa-punto"/g) ?? []).length, 4)
+})
+test('las pestañas se manejan con las flechas y paran la rotación', () => {
+  assert.match(tranvia, /ArrowRight/)
+  assert.match(tranvia, /aria-selected/)
+  assert.match(tranvia, /function elegir\([\s\S]*?pausaManual = true/)
+  // Revisión del bloque 1 (M5): el ratón o el foco en el bloque paran el giro.
+  assert.match(tranvia, /bloque\.addEventListener\('mouseenter'/)
+  assert.match(tranvia, /bloque\.addEventListener\('focusin'/)
+  assert.match(tranvia, /if \(quieto \|\| pausado \|\| raton \|\| foco\) return/)
+})
+// Revisión del bloque 1 (M1, M2): «Seguir» reanuda aunque el ratón o el foco sigan en el bloque, y sin JavaScript no
+// queda un panel de pestaña sin pestañas.
+test('«Seguir» reanuda el giro y el panel solo es tabpanel con las pestañas', () => {
+  assert.match(tranvia, /pausa\.addEventListener\('click'[\s\S]*?raton = foco = false/)
+  assert.doesNotMatch(html, /role="tabpanel"/)
+  assert.match(tranvia, /panel\.setAttribute\('role', 'tabpanel'\)/)
+})
+// Revisión del bloque 1 (I1): en el móvil el código que no se ve no ocupa sitio; desde 980 px los cuatro comparten la
+// celda (el panel no salta) y la caja oscura se ajusta a su código.
+test('el panel de la cabecera no deja caja de código vacía', () => {
+  assert.match(css, /\.mapa-codigos > \.codigo \{[^}]*align-self: start/)
+  assert.match(css, /\.mapa-codigos > \.codigo\.oculto \{ display: none; \}/)
+  assert.match(css, /@media \(min-width: 980px\) \{[^@]*\.mapa-codigos > \.codigo \{ grid-area: 1 \/ 1; \}/)
 })
 
 test('el recorrido no se anuncia solo y sus controles hablan en el idioma de la página', () => {
   assert.match(html, /<p class="mapa-leyenda" aria-live="off">/, 'mientras rota solo, la leyenda no se anuncia cada 6,5 s')
-  for (const punto of html.match(/<button type="button" class="mapa-punto"[^>]*>[\s\S]*?<\/button>/g) ?? []) {
-    assert.doesNotMatch(punto, /aria-label/, 'el nombre del punto va en spans por idioma, no en los dos a la vez')
-    assert.match(punto, /<span lang="es" class="solo-lectores">Ejemplo \d<\/span><span lang="en" class="solo-lectores">Example \d<\/span>/)
-  }
+  for (const pestana of html.match(/<button type="button" role="tab" class="mapa-pestana"[^>]*>[\s\S]*?<\/button>/g) ?? [])
+    assert.doesNotMatch(pestana, /aria-label/, 'el nombre de la pestaña va en spans por idioma, no en los dos a la vez')
   assert.doesNotMatch(html, /class="mapa-pausa" aria-pressed/, 'la pausa cambia su texto: sin aria-pressed')
 })
 
-test('«Por qué Tramtai» es la franja, sin motivos con iconos que repitan Funciones (auditoría 001, 53)', () => {
-  assert.doesNotMatch(html, /class="motivos"/)
+// v0.56: la spec de la portada recupera los motivos (sustituye a la auditoría 001, 53). Cada uno cuenta el beneficio en
+// una línea; el detalle queda en Funciones.
+const pagas = seccion('pagas')
+test('«Los agentes que ya pagas» va justo después de la cabecera, antes de los agentes', () => {
+  assert.ok(pagas, 'falta <section id="pagas">')
+  assert.ok(html.indexOf('id="pagas"') < html.indexOf('Conecta estos agentes'))
+  assert.ok(html.indexOf('id="pagas"') < html.indexOf('id="como"'))
+})
+test('«Los agentes que ya pagas» dibuja el antes y el después, con texto visible', () => {
+  const figuras = pagas.match(/<figure class="pagas-diagrama[^"]*">[\s\S]*?<\/figure>/g) ?? []
+  assert.equal(figuras.length, 2)
+  for (const f of figuras) { assert.match(f, /<svg[^>]*role="img"/); assert.match(f, /<figcaption>[\s\S]*lang="es"[\s\S]*lang="en"/) }
+  assert.match(pagas, /Una clave, un SDK y una factura por proveedor/)
+  // Revisión final (I2): bajo «al servicio de tus apps», sin ofrecer la suscripción para tus apps (TERMINOS.md §4).
+  assert.match(pagas, /Una URL local y los agentes que ya tienes/)
+  assert.match(pagas, /One local URL and the agents you already have/)
+})
+test('los seis motivos, en los dos idiomas y sin promesas absolutas', () => {
+  const motivos = pagas.match(/<li class="motivo">[\s\S]*?<\/li>/g) ?? []
+  assert.equal(motivos.length, 6)
+  for (const t of ['Lo que ya pagas', 'En tu equipo', 'Compatible', 'Respaldo', 'Por proyecto', 'Bajo control']) assert.match(pagas, new RegExp(t))
+  for (const m of motivos) assert.match(m, /lang="es"[\s\S]*lang="en"/)
+  assert.doesNotMatch(pagas, /\b(nunca|siempre|sin cortes|a nadie|never|always|no one)\b/i)
+  // Revisión final (I2): para tus apps, la clave de API; la suscripción, solo para tu uso personal (TERMINOS.md §4).
+  assert.match(motivos[0], /Para tus apps, la clave de API de cada agente; tu suscripción[^<]*, solo para tu uso personal/)
+  assert.match(motivos[0], /For your apps, each agent’s API key; your [^<]*subscription, only for your personal use/)
+  assert.doesNotMatch(pagas, /la suscripción o la clave que ya tienes|the subscription or key you already have/)
+  // Revisión final (I3): los motivos cuentan el beneficio con palabras propias, sin copiar las capturas, la privacidad ni
+  // el plano.
+  for (const copia of ['no tiene servidor propio', 'su historial, sus APIs y sus ajustes', 'el siguiente de tu lista', 'mapa en vivo'])
+    assert.ok(!motivos.join('').includes(copia), `un motivo repite «${copia}»`)
+  // Revisión final (M7, M8): Tramtai sí está en medio del dibujo, pero no hay nube; y «herramientas» son las tools.
+  assert.doesNotMatch(pagas, /Sin servidores intermedios|No middle servers/)
+  assert.match(pagas, /llamadas a herramientas/)
+})
+test('los tres dibujos llaman igual a los tres orígenes (revisión final, M8)', () => {
+  assert.doesNotMatch(html, /Tus automatizaciones|Your automations/)
 })
 
 const css = readFileSync(new URL('../../site/estilo.css', import.meta.url), 'utf8')
 const COLORES_LINEA = /var\(--(claude|codex|copilot|gemini|antigravity)\)/
 
-test('el color de cada agente solo marca a su agente: mapa, fichas y tarjetas de Agentes (52)', () => {
+test('el color de cada agente solo marca a su agente: mapa, diagrama «Con Tramtai», fichas y tarjetas de Agentes (52)', () => {
   assert.doesNotMatch(html, /class="linea"/)
   const sinAgentes = html.replace(/<div class="mapa"[\s\S]*?<\/svg>\s*<\/div>/, '').replace(/<section class="conexiones">[\s\S]*?<\/section>/, '')
-    .replace(/<section id="agentes">[\s\S]*?<\/section>/, '')
+    .replace(/<section id="agentes">[\s\S]*?<\/section>/, '').replace(/<figure class="pagas-diagrama con">[\s\S]*?<\/figure>/, '')
   assert.doesNotMatch(sinAgentes, COLORES_LINEA)
 })
 
@@ -109,10 +188,10 @@ test('mayúsculas espaciadas solo en la cabecera del tablero (35) y ámbar solo 
 })
 
 test('cada control de la barra, del mapa y de la demo mide 44 px y la barra no tapa las secciones (23, 62)', () => {
-  for (const clase of ['.github', '.menu-boton', '.mapa-punto', '.demo-punto'])
+  for (const clase of ['.github', '.menu-boton', '.demo-flecha'])
     assert.match(css, new RegExp(`\\${clase} \\{[^}]*width: 44px; height: 44px`), clase)
   // .idioma button es ES/EN y tema: 44 de alto el botón, no el grupo con su borde (revisión final web, M13).
-  for (const clase of ['.boton', '.copiar', '.mapa-pausa', '.demo-pausa', '.pestanas-lista button', '.idioma button'])
+  for (const clase of ['.boton', '.copiar', '.mapa-pausa', '.mapa-pestana', '.demo-pausa', '.pestanas-lista button', '.idioma button'])
     assert.match(css, new RegExp(`${clase.replace('.', '\\.')} \\{[^}]*min-height: 44px`), clase)
   assert.match(css, /section\[id\] \{ scroll-margin-top: 72px; \}/)
 })
@@ -142,9 +221,23 @@ test('los comentarios del código salen en el idioma de la página y Copiar copi
   assert.match(js, /\[lang\]:not\(\[lang="' \+ document\.documentElement\.lang \+ '"\]\)/)
 })
 
-test('la franja compara sin Tramtai y con Tramtai', () => {
-  const franja = html.match(/<div class="franja">([\s\S]*?)<\/div>\s*<\/div>/)?.[1] ?? ''
-  for (const t of ['Sin Tramtai', 'Con Tramtai', 'Without Tramtai', 'With Tramtai']) assert.ok(franja.includes(t), `falta «${t}»`)
+test('el código del panel de la cabecera salta de línea y «Tres paradas» enseña otro ejemplo', () => {
+  assert.match(css, /\.mapa-codigos > \.codigo \{[^}]*white-space: pre-wrap; overflow-wrap: anywhere/, 'sin desplazamiento horizontal en el panel')
+  const pre = (id: string) => html.match(new RegExp(`<pre class="codigo" id="${id}">([\\s\\S]*?)</pre>`))?.[1] ?? ''
+  assert.match(pre('codigo-como'), /anthropic/)
+  assert.notEqual(pre('codigo-como'), pre('codigo-mapa-1'))
+})
+
+test('los diagramas comparan sin Tramtai y con Tramtai', () => {
+  const diagramas = pagas.match(/<div class="pagas-diagramas">[\s\S]*<\/figure>/)?.[0] ?? ''
+  for (const t of ['Sin Tramtai', 'Con Tramtai', 'Without Tramtai', 'With Tramtai']) assert.ok(diagramas.includes(t), `falta «${t}»`)
+})
+// Revisión del bloque 1 (M3, M4): los agentes con los nombres del glosario, como en el mapa, y las líneas de las apps a
+// 3:1 como mínimo en claro (el acento al 55 % quedaba en 2,5:1).
+test('«Con Tramtai» nombra a los agentes como el glosario y sus líneas se ven en claro', () => {
+  const con = pagas.match(/<figure class="pagas-diagrama con">[\s\S]*?<\/figure>/)?.[0] ?? ''
+  for (const n of ['Claude Code', 'GitHub Copilot', 'Gemini API']) assert.match(con, new RegExp(`>${n}</text>`), n)
+  assert.doesNotMatch(html, /var\(--acento\) 55%/)
 })
 
 // Revisión final web (I1, hallazgo 26): el titular vale para los tres agentes (Codex lee archivos: sí tiene
@@ -187,7 +280,7 @@ test('la portada cuenta el mapa en vivo y no habla de la «API principal»', () 
     assert.doesNotMatch(readFileSync(new URL(`../../site/${pagina}`, import.meta.url), 'utf8'), /API principal|main API/i, pagina)
 })
 
-// La demo del recorrido guiado: una figura por paso de la bienvenida, con la app a pantalla completa y el recorrido encima.
+// La demo del recorrido guiado: una figura por paso de la bienvenida, con la zona que señala el paso y su texto debajo.
 const carpeta = new URL('../../site/capturas/', import.meta.url)
 const figuras = demo.match(/<figure class="captura demo-paso"[\s\S]*?<\/figure>/g) ?? []
 
@@ -203,18 +296,85 @@ test('la demo es una figura por paso de la bienvenida, cada una con su captura e
         assert.match(figura, new RegExp(`<img class="solo-${tema}" lang="${idioma}" src="${base}-1440\\.webp" srcset="${base}-960\\.webp 960w, ${base}-1440\\.webp 1440w" sizes="[^"]+" width="1440" height="900" loading="lazy" decoding="async" alt="[^"]+">`), `paso ${n}, ${tema}, ${idioma}`)
       }
   })
-  // La primera se ve; el resto espera su turno (sin JavaScript queda la primera y la lista de pasos).
+  // La primera se ve; el resto espera su turno (sin JavaScript se ven las 14, una debajo de otra, y la lista se oculta).
   assert.doesNotMatch(figuras[0], /^<figure[^>]* hidden/)
   for (const figura of figuras.slice(1)) assert.match(figura, /^<figure[^>]* hidden/)
 })
 
-test('la lista de pasos de la demo usa los títulos reales del recorrido, en los dos idiomas', () => {
-  const lista = demo.match(/<ol class="demo-lista">([\s\S]*?)<\/ol>/)?.[1] ?? ''
-  const titulos = [...lista.matchAll(/<li><span lang="es">([^<]+)<\/span><span lang="en">([^<]+)<\/span><\/li>/g)].map((m) => [m[1], m[2]])
-  assert.deepEqual(titulos, pasos.map((p) => [es[p.titulo], en[p.titulo]]))
+// Revisión del bloque 2 (M5): el último paso sale a pantalla entera y sin el globo; su alt no lo describe.
+test('el texto alternativo del último paso describe la página entera, no el globo', () => {
+  const ultima = figuras.at(-1) ?? ''
+  assert.doesNotMatch(ultima, /cierre del recorrido|end of the tour/)
+  assert.match(ultima, /alt="Recorrido guiado, paso 14 de 14: la página Espacios entera"/)
+  assert.match(ultima, /alt="Guided tour, step 14 of 14: the whole Workspaces page"/)
+})
+
+// Revisión del bloque 2 (I3, M3, M4) y final (I1, M3): las flechas van encima de los bordes de la imagen, que usa todo el
+// ancho del escenario (820 px en el escritorio, con la lista a 220); con JavaScript los pasos comparten celda y la pausa
+// no sube y baja con cada uno; cada paso enlaza su imagen a tamaño real.
+test('la imagen del paso ocupa todo el escenario y los controles no se mueven', () => {
+  assert.match(css, /\n\.demo-flecha \{[^}]*grid-area: 1 \/ 1/)
+  assert.match(css, /html\.js \.demo \{[^}]*grid-template-columns: 220px minmax\(0, 1fr\)/)
+  assert.match(css, /html\.js \.demo-escenario \{[^}]*grid-template-columns: minmax\(0, 1fr\)/)
+  for (const f of figuras) for (const s of f.match(/sizes="[^"]+"/g) ?? []) assert.equal(s, 'sizes="(max-width: 899px) calc(100vw - 32px), 820px"')
+  figuras.forEach((f, i) => {
+    for (const tema of ['claro', 'oscuro'])
+      for (const idioma of ['es', 'en'])
+        assert.match(f, new RegExp(`<a class="solo-${tema}" lang="${idioma}" href="capturas/bienvenida-${i + 1}-${tema}-${idioma}-1440\\.webp">`), `paso ${i + 1}`)
+  })
+  assert.match(css, /html\.js \.demo-paso \{ grid-area: 1 \/ 1; \}/)
+  assert.match(css, /html\.js \.demo-paso\[hidden\] \{[^}]*visibility: hidden/)
+})
+
+// v0.56: la lista de pasos al lado, agrupada por página, y flechas a los costados en lugar de los puntos.
+test('la lista de pasos va agrupada por página, con los títulos reales del recorrido', () => {
+  const botones = [...demo.matchAll(/<button type="button" class="demo-ir" data-paso="(\d+)"><span lang="es">([^<]+)<\/span><span lang="en">([^<]+)<\/span><\/button>/g)]
+  assert.deepEqual(botones.map((m) => [m[2], m[3]]), pasos.map((p) => [es[p.titulo], en[p.titulo]]))
+  assert.deepEqual(botones.map((m) => Number(m[1])), pasos.map((_, i) => i))
+  assert.ok((demo.match(/class="demo-grupo"/g) ?? []).length >= 5)
+  // Cada grupo se llama como su página en el menú de la app, en los dos idiomas.
+  const grupos = [...demo.matchAll(/<li class="demo-grupo"><span class="demo-pagina"><span lang="es">([^<]+)<\/span><span lang="en">([^<]+)<\/span><\/span>/g)].map((m) => [m[1], m[2]])
+  const paginas = [...new Set(pasos.map((p) => p.pagina))]
+  assert.deepEqual(grupos, paginas.map((p) => [es[`menu.${p}` as keyof typeof es], en[`menu.${p}` as keyof typeof en]]))
+  assert.match(demo, /<details class="demo-pasos-movil" open>/)
+})
+test('cada paso enseña su texto debajo de la imagen, en los dos idiomas', () => {
+  const escapar = (s: string) => s.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  figuras.forEach((f, i) => {
+    assert.match(f, new RegExp(`<figcaption>[\\s\\S]*${escapar(es[pasos[i].texto])}`))
+    assert.match(f, new RegExp(`<figcaption>[\\s\\S]*${escapar(en[pasos[i].texto])}`))
+  })
+})
+test('flechas a los costados, con su nombre en cada idioma, y sin puntos', () => {
+  for (const [clase, es_, en_] of [['demo-anterior', 'Paso anterior', 'Previous step'], ['demo-siguiente', 'Paso siguiente', 'Next step']])
+    assert.match(demo, new RegExp(`<button type="button" class="demo-flecha ${clase}"[\\s\\S]*?solo-lectores">${es_}<[\\s\\S]*?solo-lectores">${en_}<`))
+  assert.doesNotMatch(demo, /class="demo-punto"/)
+  assert.match(demo, /class="demo-progreso"/)
 })
 
 const demoJs = js.slice(js.indexOf('// Demo del recorrido guiado'))
+
+test('las flechas del teclado solo actúan con el foco en la demo', () => {
+  assert.match(demoJs, /caja\.addEventListener\('keydown'/)
+  assert.doesNotMatch(demoJs, /document\.addEventListener\('keydown'/)
+  // Revisión del bloque 2 (M1): Alt+← es el atrás del navegador.
+  assert.match(demoJs, /if \(e\.altKey \|\| e\.ctrlKey \|\| e\.metaKey \|\| e\.shiftKey\) return/)
+})
+
+// Revisión del bloque 2 (I1, I2, M2): el foco solo se mueve cuando elige la persona, la rotación se para con el foco
+// dentro (patrón de carrusel), en el móvil el foco vuelve al desplegable al cerrarlo y en el escritorio la lista no
+// se pliega.
+test('la demo no mueve el foco sola ni lo pierde, y la lista del escritorio no se pliega', () => {
+  const mostrar = demoJs.match(/function mostrar\(n\) \{[\s\S]*?\n  \}/)?.[0] ?? ''
+  assert.ok(mostrar, 'falta mostrar()')
+  assert.doesNotMatch(mostrar, /\.focus\(\)/, 'el avance solo no mueve el foco')
+  assert.match(demoJs, /function elegir\(n\) \{[\s\S]*?\.focus\(\)/)
+  assert.match(demoJs, /caja\.addEventListener\('focusin'/)
+  assert.match(demoJs, /if \(pausado \|\| foco \|\| /)
+  assert.match(demoJs, /detalles\.open = false;[^\n]*\n[^\n]*detalles\.querySelector\('summary'\)\.focus\(\)/)
+  assert.match(demoJs, /if \(!movil\.matches\) e\.preventDefault\(\)/)
+  assert.match(css, /@media \(min-width: 900px\) \{[^@]*\.demo-pasos-movil > summary \{[^}]*list-style: none/)
+})
 
 test('la leyenda cambia un momento después de su aria-live, en el tranvía y en la demo', () => {
   assert.match(js, /function escribirLeyenda\(leyenda, partes\) \{[\s\S]*?setTimeout/, 'el texto llega después del atributo')
@@ -240,12 +400,31 @@ test('la demo se puede pausar y elegir, sin anunciarse sola y con los controles 
   assert.match(demo, /<button type="button" class="demo-pausa">/)
   assert.doesNotMatch(demo, /class="demo-pausa"[^>]* aria-pressed/, 'la pausa cambia su texto: sin aria-pressed')
   assert.match(demo, /<p class="demo-leyenda" aria-live="off">/, 'mientras avanza sola, la leyenda no se anuncia cada 6 s')
-  const puntos = demo.match(/<button type="button" class="demo-punto"[^>]*>[\s\S]*?<\/button>/g) ?? []
-  assert.equal(puntos.length, pasos.length)
-  puntos.forEach((punto, i) => {
-    assert.doesNotMatch(punto, /aria-label/, 'el nombre del punto va en spans por idioma, no en los dos a la vez')
-    assert.match(punto, new RegExp(`<span lang="es" class="solo-lectores">Paso ${i + 1}</span><span lang="en" class="solo-lectores">Step ${i + 1}</span>`))
-  })
+  assert.doesNotMatch(demo, /aria-label=/, 'los nombres van en spans por idioma, no en los dos a la vez')
+})
+
+// v0.56: cada captura de la demo es la zona que señala el paso, ampliada y sin el globo del recorrido.
+const capturasJs = readFileSync(new URL('./capturas.mjs', import.meta.url), 'utf8')
+test('las capturas de la demo recortan la zona del paso y ocultan el globo del recorrido', () => {
+  assert.ok(/function zonaDelPaso\(/.test(capturasJs), 'falta zonaDelPaso()')
+  assert.ok(capturasJs.includes("paso.ancla ? '.driver-popover'") && capturasJs.includes("visibility = 'hidden'"), 'el globo del recorrido no sale en la captura')
+  assert.ok(capturasJs.includes('clip: { ...zona, scale: 1440 / zona.width }'), 'cada captura recorta la zona y la amplía al ancho')
+  // Revisión del bloque 2 (I3, M7): la zona mide 1080 px como mucho, así siempre se amplía, y el hueco del velo se mira
+  // en las cuatro esquinas de lo señalado.
+  // Revisión final (I1, M2): el tope es el ancho de la imagen en la portada (820), así los pasos salen a 1× o más; las
+  // listas de filas, cuyo texto habla de la fila entera, abarcan su ancho.
+  assert.match(capturasJs, /Math\.min\(maximo, Math\.max\(720, /)
+  assert.match(capturasJs, /async function zonaDelPaso\(maximo = 820\)/)
+  // El mapa del paso 1 también va entero: sus agentes son la mitad de lo que explica el paso.
+  assert.match(capturasJs, /ENTERAS = new Set\(\['agentes\.tarjeta', 'espacios\.lista', 'inicio\.mapa'\]\)/)
+  assert.match(capturasJs, /\[b\.left \+ 2, b\.top \+ 2\]/)
+  // Un ancla más ancha que la zona se recorta desde su borde izquierdo (con su margen): centrada perdía los nombres.
+  assert.ok(capturasJs.includes('b.width + 64 > width ? b.left - 32 : b.left + b.width / 2 - width / 2'), 'el ancla ancha arranca a la izquierda')
+})
+// El último paso no tiene ancla, pero driver.js deja en el DOM el resaltado del anterior: se decide por el paso.
+test('el paso sin ancla sale con la pantalla entera desde arriba, sin velo', () => {
+  assert.ok(capturasJs.includes('paso.ancla ? await zonaDelPaso(ENTERAS.has(paso.ancla) ? 1440 : 820) : { x: 0, y: 0, width: 1440, height: 900 }'), 'el último paso recorta una zona')
+  assert.ok(capturasJs.includes("'.driver-popover, .driver-overlay'"), 'el último paso sale con el velo')
 })
 
 test('las capturas de la demo existen y pesan poco: 150 KB cada una de 1440 y 6 MB en total', () => {
@@ -272,10 +451,10 @@ test('la portada enseña el recorrido guiado y deja Espacios a la vista', () => 
   assert.match(funciones, /href="#demo"/, 'Funciones lleva a la demo')
   assert.match(asi, /href="#demo"/, '«Así se ve» enlaza la demo')
   assert.match(asi, /Un espacio por proyecto/)
-  assert.match(funciones, /Controla<\/span><span lang="en">Control<\/span><\/h3>\s*<article class="tarjeta">\s*<h4><span lang="es">Espacios de trabajo<\/span>/, 'Espacios abre el grupo Controla')
+  assert.match(funciones, /Controla<\/span><span lang="en">Control<\/span><\/h3>\s*<ol>\s*<li class="parada">\s*<h4 class="parada-titulo"><span lang="es">Espacios de trabajo<\/span>/, 'Espacios abre la línea Controla')
 })
 
-// v0.56: la portada presenta la terminal con texto (sus capturas llegan en la v0.57).
+// v0.56: la portada presenta la terminal con texto (sus capturas llegan en la v0.58).
 test('la novedad «Todo desde la terminal» dice cómo usarla y lleva a su Ayuda, en los dos idiomas', () => {
   const terminal = seccion('terminal')
   assert.ok(terminal, 'falta <section id="terminal">')
@@ -286,22 +465,62 @@ test('la novedad «Todo desde la terminal» dice cómo usarla y lleva a su Ayuda
   assert.match(codigo, /^tramtai terminal<\/pre>$/m)
   for (const c of codigo.match(/<span class="c"[^>]*>/g) ?? []) assert.match(c, /lang="(es|en)"/)
   assert.match(terminal, /href="ayuda\/empezar\.html#s-soloterminal"/)
-  assert.doesNotMatch(terminal, /<img /, 'sin capturas de la terminal hasta la v0.57')
+  assert.doesNotMatch(terminal, /<img /, 'sin capturas de la terminal hasta la v0.58')
 })
 
-test('Funciones tiene la tarjeta de la terminal, que lleva a la novedad', () => {
-  const tarjeta = seccion('funciones').match(/<article class="tarjeta">\s*<h4><span lang="es">La terminal, a la par de la app<\/span>[\s\S]*?<\/article>/)?.[0] ?? ''
-  assert.ok(tarjeta, 'falta la tarjeta')
-  assert.match(tarjeta, /<span lang="en">The terminal, on par with the app<\/span>/)
-  assert.match(tarjeta, /href="#terminal"/)
-  assert.match(tarjeta, /SSH/)
+test('Funciones tiene la parada de la terminal, que lleva a la novedad', () => {
+  const parada = seccion('funciones').match(/<li class="parada">\s*<h4 class="parada-titulo"><span lang="es">La terminal, a la par de la app<\/span>[\s\S]*?<\/li>/)?.[0] ?? ''
+  assert.ok(parada, 'falta la parada')
+  assert.match(parada, /<span lang="en">The terminal, on par with the app<\/span>/)
+  assert.match(parada, /href="#terminal"/)
+  assert.match(parada, /SSH/)
 })
 
-test('Funciones son cuatro grupos de tres tarjetas en tres columnas, sin huecos (54)', () => {
-  const grupos = seccion('funciones').split('<h3 class="grupo-funciones">').slice(1)
-  assert.equal(grupos.length, 4)
-  for (const g of grupos) assert.equal((g.match(/<article class="tarjeta">/g) ?? []).length, 3)
-  assert.match(css, /\.rejilla \{ display: grid; grid-template-columns: repeat\(3, 1fr\)/)
+// v0.56: las funciones son un plano de metro, una línea por grupo con sus tres paradas (sustituye a las cuatro rejillas de
+// tarjetas, 54). Sin JavaScript, o en el móvil, cada línea es vertical con el texto de cada parada a la vista.
+test('el plano tiene cuatro líneas y doce paradas con su texto en el HTML (sin JavaScript se lee todo)', () => {
+  const funciones = seccion('funciones')
+  assert.equal((funciones.match(/<section class="metro-linea" data-linea="(conecta|controla|protege|usa)"/g) ?? []).length, 4)
+  const paradas = funciones.match(/<li class="parada">[\s\S]*?<\/li>/g) ?? []
+  assert.equal(paradas.length, 12)
+  for (const p of paradas) { assert.match(p, /<h4 class="parada-titulo">/); assert.match(p, /<p class="parada-texto">[\s\S]*lang="es"[\s\S]*lang="en"/) }
+  for (const t of ['Compatible con tus SDK', 'Una API por aplicación', 'Respaldo entre agentes', 'La terminal, a la par de la app', 'Recorrido y Ayuda'])
+    assert.match(funciones, new RegExp(t))
+  assert.match(funciones, /href="#demo"/)
+  for (const linea of funciones.match(/<section class="metro-linea"[\s\S]*?<\/section>/g) ?? [])
+    assert.equal((linea.match(/<li class="parada">/g) ?? []).length, 3)
+  assert.match(funciones, /<div class="metro-panel" aria-live="polite" hidden><\/div>/, 'el panel solo lo usa el JavaScript')
+  assert.doesNotMatch(funciones, /\b(nunca|siempre|sin cortes|a nadie|never|always|no one)\b/i)
+})
+
+const metroJs = js.slice(js.indexOf('// Plano de metro de Funciones'))
+test('con JavaScript y pantalla ancha el plano es horizontal y cada parada enseña su texto en el panel', () => {
+  assert.ok(js.includes('// Plano de metro de Funciones'), 'falta el bloque del plano en sitio.js')
+  assert.match(metroJs, /classList\.toggle\('metro--plano'/)
+  assert.match(metroJs, /matchMedia\('\(min-width: 900px\)'\)/)
+  // Revisión final (M4): una sola parada en el tabulador (tabindex móvil, con flechas, como las pestañas de la
+  // cabecera) y la elegida marcada con aria-current, que no se «despulsa».
+  assert.match(metroJs, /setAttribute\('aria-current', 'true'\)/)
+  assert.doesNotMatch(metroJs, /aria-pressed/)
+  assert.match(metroJs, /ArrowRight/)
+  assert.match(metroJs, /tabIndex = i === n \? 0 : -1/)
+  // Ronda del bloque 2 y final (M6): sin JavaScript, y en vertical, el título es texto; el JS lo convierte en botón solo
+  // en el plano y lo devuelve al pasar a vertical.
+  assert.doesNotMatch(seccion('funciones'), /parada-boton/)
+  assert.match(metroJs, /createElement\('button'\)[\s\S]*?className = 'parada-boton'/)
+  assert.match(metroJs, /replaceWith/)
+  assert.doesNotMatch(metroJs, /tabIndex = plano/)
+  // Revisión final (M5): el título del panel no es un h4 más en el esquema.
+  assert.doesNotMatch(metroJs, /'<h4>'/)
+  assert.match(metroJs, /metro-panel-titulo/)
+  assert.match(css, /\.metro--plano \.parada-texto \{ display: none; \}/)
+})
+// Revisión final (M1): el titular se queda, y la entradilla aclara que estas cuatro líneas son lo que hace Tramtai.
+test('la entradilla de Funciones explica las cuatro líneas del plano', () => {
+  const cabeza = seccion('funciones').match(/<div class="cabeza">[\s\S]*?<\/div>/)?.[0] ?? ''
+  assert.match(cabeza, /Una red con una línea por agente\./)
+  assert.match(cabeza, /cada línea es lo que hace Tramtai/)
+  assert.match(cabeza, /each line is what Tramtai does/)
 })
 
 test('Homebrew sin la app: el tap lleva la URL del repositorio y después «brew install tramtai» (el tap corto no existe)', () => {

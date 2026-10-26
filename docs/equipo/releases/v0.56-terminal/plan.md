@@ -498,7 +498,7 @@ Reglas comunes a todas:
 
 ### Tarea 13: Arranque «Solo el servicio»
 
-> **Pasa a la v0.57** (decisión del usuario, 2026-10-22; ver «Cambio de alcance» en la spec). No se hace en la v0.56.
+> **Pasa a la v0.58** (decisión del usuario, 2026-10-22; ver «Cambio de alcance» en la spec). No se hace en la v0.56.
 
 **Archivos:**
 - Modificar `internal/autoarranque/{autoarranque.go, autoarranque_windows.go, autoarranque_darwin.go,
@@ -542,7 +542,7 @@ Reglas comunes a todas:
 
 ### Tarea 14: Capturas de la terminal
 
-> **Pasa a la v0.57** (decisión del usuario, 2026-10-22). Al rehacer las capturas, ajusta la nota de la portada sobre
+> **Pasa a la v0.58** (decisión del usuario, 2026-10-22). Al rehacer las capturas, ajusta la nota de la portada sobre
 > el puerto de las capturas (17388) frente al valor por defecto (17373).
 
 **Archivos:**
