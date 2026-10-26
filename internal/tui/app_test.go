@@ -521,6 +521,29 @@ func TestOtroClienteReiniciaLasDeLaPila(t *testing.T) {
 	}
 }
 
+// TestCtrlCPreguntaComoQ: Ctrl+C sale al momento si nada se pierde; con algo pendiente pregunta como q, también desde un
+// campo, y otro Ctrl+C (o q) sale.
+func TestCtrlCPreguntaComoQ(t *testing.T) {
+	ctrlC := tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl}
+	m := nuevo(Opciones{})
+	o := &paginaOcupada{paginaFalsa: paginaFalsa{campo: true}, motivo: "Probar tiene una petición en marcha"}
+	m.paginas[pagina.PaginaInicio] = o
+	if _, cmd := m.Update(ctrlC); sale(cmd) || m.pregunta == nil {
+		t.Fatal("con algo pendiente, Ctrl+C pregunta")
+	}
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "Probar tiene una petición en marcha") {
+		t.Fatalf("la pregunta dice qué se pierde:\n%s", v)
+	}
+	if _, cmd := m.Update(ctrlC); !sale(cmd) {
+		t.Fatal("con la pregunta de salir abierta, otro Ctrl+C sale")
+	}
+	o.motivo = ""
+	m.pregunta, m.saliendo = nil, false
+	if _, cmd := m.Update(ctrlC); !sale(cmd) {
+		t.Fatal("sin nada pendiente, Ctrl+C sale al momento")
+	}
+}
+
 // TestActualizandoSaleLimpia: cuando empieza la instalación de una versión nueva, la terminal sale sin preguntar (aunque
 // haya algo pendiente: el instalador la cerraría igual) y deja escrito cómo volver a abrirla.
 func TestActualizandoSaleLimpia(t *testing.T) {

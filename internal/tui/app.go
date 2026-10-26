@@ -302,7 +302,8 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // tecla reparte una tecla: primero lo que está abierto encima (la pregunta, el selector, el menú) y luego la página.
 // Las teclas comunes no se aplican mientras la página tiene un campo con el foco. Por debajo del tamaño mínimo solo se
-// ven el aviso y la pregunta abierta, así que solo valen ella, q y Ctrl+C. Con la pregunta de salir abierta, otra q sale.
+// ven el aviso y la pregunta abierta, así que solo valen ella, q y Ctrl+C. Ctrl+C sale como q (preguntando si algo se
+// perdería); con la pregunta de salir abierta, otra q u otro Ctrl+C salen.
 // Cualquier tecla quita el error de la línea de estado; ! lo enseña entero.
 func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 	t := k.String()
@@ -310,8 +311,10 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 		m.avisos.Descartar()
 	}
 	switch {
-	case t == "ctrl+c", t == "q" && m.saliendo:
+	case (t == "ctrl+c" || t == "q") && m.saliendo:
 		return tea.Quit
+	case t == "ctrl+c": // como q, también en un campo: si algo se perdería, pregunta antes
+		return m.salir()
 	case m.pregunta == nil && (m.ancho < anchoMinimo || m.alto < altoMinimo):
 		if t == "q" {
 			return m.salir()
