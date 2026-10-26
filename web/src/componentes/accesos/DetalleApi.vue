@@ -1,9 +1,12 @@
 <template>
   <!-- Detalle de una API: cómo conectarla, sus acciones y la zona de peligro. Al cerrarse se olvida la clave
        mostrada: no queda en memoria de la página. -->
-  <!-- Con una clave recién creada o regenerada a la vista (solo se ve esta vez), un clic fuera no cierra y Esc pregunta. -->
-  <q-dialog v-model="abierto" :maximized="$q.screen.lt.sm" aria-labelledby="titulo-detalle" :persistent="!!claveVista" @hide="claveVista = ''">
-    <q-card v-if="puntoDetalle" style="width: 760px; max-width: 96vw" @keyup.esc="claveVista && escaparConAviso($event, true, () => (abierto = false), true)">
+  <!-- Con una clave recién creada o regenerada a la vista (solo se ve esta vez), un clic fuera no cierra y Esc y la X
+       preguntan. El keyup va en el q-dialog, no en la tarjeta: Quasar lo pasa a su raíz y, recién abierto, el foco está en
+       .q-dialog__inner (fuera de la tarjeta), así que desde allí el evento sube hasta aquí. -->
+  <q-dialog v-model="abierto" :maximized="$q.screen.lt.sm" aria-labelledby="titulo-detalle" :persistent="!!claveVista" @hide="claveVista = ''"
+            @keyup.esc="claveVista && escaparConAviso($event, true, () => (abierto = false), true)">
+    <q-card v-if="puntoDetalle" style="width: 760px; max-width: 96vw">
       <q-card-section class="row items-center no-wrap q-gutter-x-sm">
         <span class="linea__chapa linea__chapa--grande" :class="['linea--' + (puntoDetalle.agente ?? 'otro'), { 'linea__chapa--apagada': !activo(puntoDetalle) }]" aria-hidden="true">{{ puntoDetalle.agente ? codigoLinea(puntoDetalle.agente) : 'API' }}</span>
         <div class="col">
@@ -13,7 +16,7 @@
             <span v-if="puntoDetalle.grupo"><q-icon name="o_folder" /> {{ puntoDetalle.grupo }}</span>
           </div>
         </div>
-        <q-btn v-close-popup flat round dense icon="close" :aria-label="t('comun.cerrar')" />
+        <q-btn flat round dense icon="close" :aria-label="t('comun.cerrar')" @click="escaparConAviso($event, !!claveVista, () => (abierto = false), true)" />
       </q-card-section>
       <q-separator />
       <q-card-section>

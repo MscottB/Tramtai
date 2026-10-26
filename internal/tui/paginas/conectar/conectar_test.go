@@ -484,7 +484,7 @@ func TestClaveDelEspacio(t *testing.T) {
 
 	// Con clave, t regenera con pregunta; la nueva sustituye a la anterior.
 	q, ok := pregunta(a.Pulsar("t"))
-	if !ok || !strings.Contains(q.Texto, "¿Regenerar la clave de Tramtai?") {
+	if !ok || !strings.Contains(q.Texto, "¿Regenerar la clave del espacio?") {
 		t.Fatalf("t pregunta: %+v", q)
 	}
 	if av := hastaAviso(a, func() { a.Entregar(comp.Confirmado{}) }); !strings.Contains(av.Texto, "Clave regenerada") {
@@ -525,7 +525,7 @@ func TestClaveDelEspacio(t *testing.T) {
 	if v := a.Vista(); !strings.Contains(v, "El espacio ya tiene clave") || reClave.MatchString(v) {
 		t.Fatalf("al volver la clave no se enseña, solo que existe:\n%s", v)
 	}
-	if q, ok := pregunta(a.Pulsar("t")); !ok || !strings.Contains(q.Texto, "¿Regenerar la clave de Tramtai?") {
+	if q, ok := pregunta(a.Pulsar("t")); !ok || !strings.Contains(q.Texto, "¿Regenerar la clave del espacio?") {
 		t.Fatalf("con clave, t pregunta: %+v", q)
 	}
 }

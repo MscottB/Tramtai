@@ -21,12 +21,15 @@
       <q-btn flat dense no-caps color="negative" icon="o_autorenew" class="q-mt-sm" :label="t('conectar.regenerarClave')" :loading="ocupado" @click="regenerar" />
     </template>
 
-    <!-- persistent: un clic fuera no tira la clave; Esc pregunta antes (escaparConAviso). -->
-    <q-dialog v-model="abierto" persistent :maximized="$q.screen.lt.sm" aria-labelledby="titulo-clave-espacio" @hide="alCerrar">
-      <q-card style="width: 640px; max-width: 96vw" @keyup.esc="escaparConAviso($event, true, () => (abierto = false), true)">
+    <!-- persistent: un clic fuera no tira la clave; Esc y la X preguntan antes (escaparConAviso). El keyup va en el
+         q-dialog, no en la tarjeta: Quasar lo pasa a su raíz y, recién abierto, el foco está en .q-dialog__inner (fuera de
+         la tarjeta), así que desde allí el evento sube hasta aquí. -->
+    <q-dialog v-model="abierto" persistent :maximized="$q.screen.lt.sm" aria-labelledby="titulo-clave-espacio" @hide="alCerrar"
+              @keyup.esc="escaparConAviso($event, true, () => (abierto = false), true)">
+      <q-card style="width: 640px; max-width: 96vw">
         <q-card-section class="row items-center no-wrap q-gutter-x-sm">
-          <h2 id="titulo-clave-espacio" class="titulo-seccion col">{{ t('conectar.claveCreada') }}</h2>
-          <q-btn v-close-popup flat round dense icon="close" :aria-label="t('comun.cerrar')" />
+          <h2 id="titulo-clave-espacio" class="titulo-seccion col">{{ t(regenerada ? 'conectar.claveRegeneradaTitulo' : 'conectar.claveCreada') }}</h2>
+          <q-btn flat round dense icon="close" :aria-label="t('comun.cerrar')" @click="escaparConAviso($event, !!nueva, () => (abierto = false), true)" />
         </q-card-section>
         <q-separator />
         <q-card-section>
@@ -59,6 +62,8 @@ const estado = ref<EstadoClave>()
 const error = ref('')
 // nueva es la clave recién creada o regenerada, solo mientras el diálogo está abierto.
 const nueva = ref('')
+// regenerada distingue el título del diálogo: la clave se creó o se regeneró.
+const regenerada = ref(false)
 const abierto = ref(false)
 const ocupado = ref(false)
 
@@ -67,8 +72,9 @@ function cargar() {
   return api.estadoClaveInstancia().then((e) => (estado.value = e)).catch((e) => (error.value = mensajeError(e)))
 }
 
-function mostrar(token: string) {
+function mostrar(token: string, deNuevo = false) {
   nueva.value = token
+  regenerada.value = deNuevo
   abierto.value = true
 }
 
@@ -104,7 +110,7 @@ function regenerar() {
     .onOk(async () => {
       ocupado.value = true
       try {
-        mostrar((await api.regenerarClaveInstancia()).token)
+        mostrar((await api.regenerarClaveInstancia()).token, true)
         avisar(t('conectar.claveRegenerada'))
       } catch (e) {
         avisarError(e)
