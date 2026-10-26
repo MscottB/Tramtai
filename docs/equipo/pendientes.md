@@ -51,7 +51,7 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | v0.55 | Recorridos guiados con driver.js (`releases/v0.55-recorridos/spec.md`): «Muéstrame en pantalla» en el panel ? de cada página y una bienvenida la primera vez («¿Te enseño Tramtai?», 14 pasos), desde los datos de la Ayuda; el menú por grupos (Empezar, Conectar, Organizar); la Ayuda del sitio con la captura de cada paso y la demo «Aprende la app en 2 minutos» en la portada; auditoría del sitio con Lighthouse | ✅ |
 | v0.56 | La terminal a la par de la Web UI (`releases/v0.56-terminal/spec.md`): las 8 páginas (Inicio con la red en vivo, Agentes, Probar con la receta completa, Mis APIs con consumo y presupuesto, Historial, Espacios, Ajustes y Ayuda), novedades y Acerca de; Tramtai solo con la terminal; los arreglos de la auditoría 001 (seguridad del servicio, accesibilidad, textos con glosario y lo derivado calculado por el servicio); la portada renovada (`releases/v0.56-terminal/portada.md`) | ✅ |
 | v0.56.1 | Actualizaciones desde la bandeja: «Buscar actualizaciones» busca, enseña la versión nueva e instala desde el propio menú, sin abrir la ventana (con «Ver novedades», «Cancelar la actualización» en la cuenta atrás y la versión disponible sin «Instalar» donde no se instala sola); el cask de Homebrew con `depends_on macos: :big_sur` | ✅ |
-| v0.57 | Claves de los espacios sin guardar (detalle abajo): como las de las APIs, Tramtai guarda solo su huella `sha256:` y la clave se ve una vez, al crearla o regenerarla; `GET /api/v1/instancia/token` deja de devolverla, los ejemplos de código muestran `<tu clave>` salvo recién regenerada y las claves antiguas en claro pasan a huella sin que las apps dejen de funcionar | ⬜ |
+| v0.57 | Claves de los espacios sin guardar (`releases/v0.57-claves/spec.md`): como las de las APIs, Tramtai guarda solo su huella `sha256:` y la clave se ve una vez, al crearla o regenerarla (Web UI, terminal y `tramtai global\|proyecto token --rotar`); un espacio nuevo no tiene clave hasta crearla; `GET /api/v1/instancia/token` deja de devolverla y las claves antiguas en claro pasan a huella sin que las apps dejen de funcionar | ✅ |
 | v0.58 | Modo servidor en Linux y Windows Server: arranque «Solo el servicio» al iniciar sesión, sin ventana ni bandeja (de la v0.56), arranque sin sesión iniciada (systemd del sistema, servicio de Windows), claves sin escritorio, HTTPS propio o detrás de un proxy, instalación sin la app de escritorio y guía (detalle abajo); las capturas de la terminal en la portada (de la v0.56). Una tecla en la terminal para abrir la Web UI (la v0.55 lo hacía) | ⬜ |
 | v0.59 | Configurar los clientes solos (Claude Code, Codex, Cline…), con copia de su configuración antes de tocarla | ⬜ |
 | v0.60 | Uso y diagnóstico: panel de uso con tendencias, alias que también fijan el esfuerzo y «Comprobar conexión» | ⬜ |
@@ -72,12 +72,6 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | — | Imágenes: enviarlas a los agentes que las ven y OCR local para los demás | ⬜ |
 | — | Audio: transcripción local y opcional | ⬜ |
 | — | Antivirus: analizar cada archivo al subirlo | ⬜ |
-
-Claves de los espacios (v0.57, decidido el 2026-10-26): Tramtai no debe almacenar claves. Las de los proveedores ya van
-al almacén cifrado del sistema y las de las APIs solo como huella; las de los espacios (`token-global` y
-`tokens/<id>`) se guardan hoy en claro, en una carpeta solo del usuario, y la Web UI puede volver a mostrarlas. Pasan a
-huella como las de las APIs. `token-servicio` se queda en su archivo: lo leen la CLI y la app de escritorio del mismo
-usuario, y el llavero no protegería más frente a ese usuario.
 
 Lo investigado para esos cuatro y para el modo servidor, que pasó a la v0.58 (2026-10-20, falta analizarlo más antes de su spec):
 
