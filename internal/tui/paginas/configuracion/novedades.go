@@ -39,10 +39,14 @@ type (
 	}
 	msgAvance struct {
 		origen
+		n   int
 		p   contrato.ProgresoActualizacion
 		err error
 	}
-	msgSondeo   struct{ origen }
+	msgSondeo struct {
+		origen
+		n int // la consulta del avance: solo vale la última que se programó
+	}
 	msgDecision struct {
 		origen
 		instalar bool
@@ -57,6 +61,25 @@ type actualizacionEnCurso struct {
 	progreso  *contrato.ProgresoActualizacion
 	vistaFase bool // ya llegó alguna fase del servicio
 	sinFase   int  // consultas seguidas sin fase
+	n         int  // la última consulta del avance programada: así no corren dos seguimientos a la vez
+}
+
+// enCuentaAtras dice si el servicio va a instalar ya («listo» o «instalando»): entonces el avance se sigue aunque se cierre
+// su vista o la página se oculte, porque el instalador va a cerrar la terminal y hay que salir antes, limpia.
+func (p *Pagina) enCuentaAtras() bool {
+	return p.upd.progreso != nil && (p.upd.progreso.Fase == "listo" || p.upd.progreso.Fase == "instalando")
+}
+
+// sigueAvance dice si una respuesta del avance es de la consulta de ahora y aún interesa: con el avance a la vista y la
+// página vigente o, en la cuenta atrás, mientras sea del espacio (aunque esté oculta o el avance cerrado).
+func (p *Pagina) sigueAvance(o origen, n int) bool {
+	if n != p.upd.n || p.upd.progreso == nil {
+		return false
+	}
+	if p.enCuentaAtras() {
+		return o.DelEspacio(p.c)
+	}
+	return p.vigente(o) && p.abierta == vistaProgreso
 }
 
 // pedirNovedades abre las novedades si ya se sabe que hay una versión nueva; si no, al saberlo.
@@ -122,7 +145,9 @@ func (p *Pagina) instalar() tea.Cmd {
 }
 
 func (p *Pagina) sondear() tea.Cmd {
-	return pagina.Tras(p.origen(), cadaAvance, p.espera, func(o origen) tea.Msg { return msgSondeo{o} })
+	p.upd.n++
+	n := p.upd.n
+	return pagina.Tras(p.origen(), cadaAvance, p.espera, func(o origen) tea.Msg { return msgSondeo{o, n} })
 }
 
 // decidir instala ya (true) o cancela (false) en la cuenta atrás.
@@ -165,15 +190,15 @@ func (p *Pagina) updateActualizacion(msg tea.Msg) tea.Cmd {
 		p.upd.progreso = &contrato.ProgresoActualizacion{Fase: "descargando", Version: m.version}
 		return p.sondear()
 	case msgSondeo:
-		if p.vigente(m.origen) && p.abierta == vistaProgreso {
-			c, o := p.c, m.origen
+		if p.sigueAvance(m.origen, m.n) {
+			c, o, n := p.c, m.origen, m.n
 			return func() tea.Msg {
 				a, err := c.Cli.ProgresoActualizacion(c.Ctx)
-				return msgAvance{origen: o, p: a, err: err}
+				return msgAvance{origen: o, n: n, p: a, err: err}
 			}
 		}
 	case msgAvance:
-		if !p.vigente(m.origen) || p.abierta != vistaProgreso {
+		if !p.sigueAvance(m.origen, m.n) {
 			return nil
 		}
 		salir := func() tea.Msg { return pagina.Actualizando{} } // el instalador va a cerrar el servicio y la terminal

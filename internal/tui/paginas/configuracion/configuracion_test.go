@@ -558,12 +558,13 @@ func TestActualizarSigueElAvance(t *testing.T) {
 
 // TestInstalarCierraLaTerminal: el instalador cierra el servicio y la terminal, así que al empezar la instalación el avance
 // dice cómo volver a abrirla y la página pide a la app que salga (pagina.Actualizando). Si tras «listo» el servicio deja
-// de contestar sin que se viera «instalando», también.
+// de contestar sin que se viera «instalando», también. Y aunque el avance se cerrara con Esc o Ajustes se ocultara durante
+// la cuenta atrás: el sondeo sigue hasta que empieza la instalación.
 func TestInstalarCierraLaTerminal(t *testing.T) {
 	actualizando := func(fuera []tea.Msg) bool {
 		return slices.ContainsFunc(fuera, func(m tea.Msg) bool { _, ok := m.(pagina.Actualizando); return ok })
 	}
-	for _, caso := range []string{"instalando", "sin respuesta tras listo"} {
+	for _, caso := range []string{"instalando", "sin respuesta tras listo", "Esc en la cuenta atrás", "Ajustes oculta"} {
 		cli, id, x := conActualizable(t)
 		reloj := prueba.NuevoReloj()
 		a := prueba.Abrir(t, configuracion.NuevaConReloj("es", reloj.Ahora, reloj.Espera), contexto(t, cli, id))
@@ -579,8 +580,17 @@ func TestInstalarCierraLaTerminal(t *testing.T) {
 		if actualizando(a.Fuera) {
 			t.Fatalf("%s: en «listo» la terminal sigue", caso)
 		}
+		switch caso {
+		case "Esc en la cuenta atrás":
+			a.Pulsar("esc")
+			if strings.Contains(a.Vista(), tx("actualizacion.progresoTitulo", "version", "v99.0.0")) {
+				t.Fatalf("Esc cierra el avance:\n%s", a.Vista())
+			}
+		case "Ajustes oculta":
+			a.P.(pagina.Ocultable).Ocultar()
+		}
 		x.mu.Lock()
-		if caso == "instalando" {
+		if caso != "sin respuesta tras listo" {
 			x.avance = contrato.ProgresoActualizacion{Fase: "instalando", Version: "v99.0.0"}
 		} else {
 			x.caido = true
