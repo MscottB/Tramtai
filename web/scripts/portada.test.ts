@@ -390,6 +390,8 @@ test('las capturas de la demo recortan la zona del paso y ocultan el globo del r
   // en las cuatro esquinas de lo señalado.
   assert.match(capturasJs, /Math\.min\(1080, Math\.max\(720, /)
   assert.match(capturasJs, /\[b\.left \+ 2, b\.top \+ 2\]/)
+  // Un ancla más ancha que la zona se recorta desde su borde izquierdo (con su margen): centrada perdía los nombres.
+  assert.ok(capturasJs.includes('b.width + 64 > width ? b.left - 32 : b.left + b.width / 2 - width / 2'), 'el ancla ancha arranca a la izquierda')
 })
 // El último paso no tiene ancla, pero driver.js deja en el DOM el resaltado del anterior: se decide por el paso.
 test('el paso sin ancla sale con la pantalla entera desde arriba, sin velo', () => {

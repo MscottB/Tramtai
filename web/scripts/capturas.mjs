@@ -284,14 +284,14 @@ try {
       }
   // zonaDelPaso es lo que señala el paso (.driver-active-element) con 32 px por lado, agrandado a 16:10 alrededor de su
   // centro (de 720 a 1080 px de ancho) y encajado en la pantalla de 1440×900. Con el tope de 1080 la zona siempre sale
-  // ampliada, aunque recorte un ancla muy ancha (el mapa, las listas). En coordenadas del documento, las del recorte de
+  // ampliada; un ancla más ancha (el mapa, las listas) se recorta desde su borde izquierdo, donde van los nombres. En coordenadas del documento, las del recorte de
   // Page.captureScreenshot. Solo para pasos con ancla: el último no tiene, y driver.js deja en el DOM el resaltado del
   // anterior.
   async function zonaDelPaso() {
     return evaluar(`(() => {
       const b = document.querySelector('.driver-active-element').getBoundingClientRect()
       const width = Math.min(1080, Math.max(720, b.width + 64, (b.height + 64) * 1.6)), height = width / 1.6
-      const x = Math.min(Math.max(0, b.left + b.width / 2 - width / 2), 1440 - width)
+      const x = Math.min(Math.max(0, b.width + 64 > width ? b.left - 32 : b.left + b.width / 2 - width / 2), 1440 - width)
       const y = Math.min(Math.max(0, b.top + b.height / 2 - height / 2), 900 - height)
       return { x: x + scrollX, y: y + scrollY, width, height }
     })()`)
