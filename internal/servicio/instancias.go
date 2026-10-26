@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"tramtai/internal/actualizacion"
 	"tramtai/internal/agentes"
 	"tramtai/internal/api"
 	"tramtai/internal/carpetas"
@@ -368,7 +369,8 @@ func (s *Servicio) Restaurar() []error {
 func (s *Servicio) Estado(ctx context.Context) Estado {
 	var nueva *contrato.VersionNueva
 	if v, ok := s.versionNueva(context.Background(), false); ok {
-		nueva = &contrato.VersionNueva{Version: v.Etiqueta, URL: v.Pagina, Notas: v.Notas}
+		_, instalada := actualizacion.Instalada()
+		nueva = &contrato.VersionNueva{Version: v.Etiqueta, URL: v.Pagina, Notas: v.Notas, Instalable: instalada && v.TieneInstalador()}
 	}
 	s.mu.RLock()
 	e := Estado{Identificador: s.ID, Version: version.Texto(), PID: os.Getpid(), IniciadoEn: s.IniciadoEn, Base: s.Base(),

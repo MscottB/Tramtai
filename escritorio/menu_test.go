@@ -90,7 +90,7 @@ func TestMenuConElServicioEnMarcha(t *testing.T) {
 }
 
 func TestMenuConVersionNuevaYSinApis(t *testing.T) {
-	m := entradasMenu(estadoMenu{base: "http://127.0.0.1:7777", nueva: "v9.9.9"})
+	m := entradasMenu(estadoMenu{base: "http://127.0.0.1:7777", nueva: "v9.9.9", instalable: true})
 	quiero := []accion{accionMostrar, accionAcercaDe, -1, accionMostrar, accionActualizar, accionVerNovedades, -2, accionIrMisApis, -3,
 		accionCopiarDireccion, -1, accionReiniciar, accionAvisarDetener, -1, accionAvisarSalir}
 	if got := acciones(m); !iguales(got, quiero) {
@@ -118,7 +118,9 @@ func TestMenuBuscarEInstalarActualizaciones(t *testing.T) {
 	}{
 		{"sin buscar", estadoMenu{}, idioma.T("Buscar actualizaciones"), accionBuscarActualizaciones, false},
 		{"buscando", estadoMenu{act: actualizacionMenu{buscando: true}}, idioma.T("Buscando actualizaciones…"), accionNinguna, true},
-		{"al día", estadoMenu{act: actualizacionMenu{alDia: "v0.56.1"}}, idioma.Tf("Tramtai está al día (%s)", "v0.56.1"), accionNinguna, true},
+		{"al día", estadoMenu{act: actualizacionMenu{alDia: "v0.56.1"}}, idioma.Tf("Tienes la última versión (%s)", "v0.56.1"), accionNinguna, true},
+		// Una copia que no instaló el instalador de Windows (macOS, Linux, compilada): solo las novedades, con el enlace.
+		{"no instalable desde aquí", estadoMenu{nueva: "v9.9.9"}, idioma.Tf("Versión %s disponible", "v9.9.9"), accionNinguna, true},
 		{"falló la consulta", estadoMenu{act: actualizacionMenu{fallo: true}}, idioma.T("No se pudo comprobar · reintentar"), accionBuscarActualizaciones, false},
 		{"descargando", estadoMenu{nueva: "v9.9.9", act: actualizacionMenu{fase: "descargando"}},
 			idioma.Tf("Actualizando… · %s", idioma.T("descargando")), accionNinguna, true},
@@ -135,9 +137,20 @@ func TestMenuBuscarEInstalarActualizaciones(t *testing.T) {
 		if n := m[4]; n.texto != c.texto || n.accion != c.accion || n.desactivada != c.desactivada {
 			t.Errorf("%s: %+v", c.nombre, n)
 		}
-		// Mientras se actualiza no se ofrece ni instalar ni las novedades.
-		if c.e.act.fase != "" && m[5].submenu == nil {
-			t.Errorf("%s: sobra %+v", c.nombre, m[5])
+		// Mientras se actualiza no se ofrece ni instalar ni las novedades; en la cuenta atrás, cancelarla.
+		switch {
+		case c.e.act.fase == "listo":
+			if m[5].texto != idioma.T("Cancelar la actualización") || m[5].accion != accionCancelarActualizacion || m[6].submenu == nil {
+				t.Errorf("%s: %+v, %+v", c.nombre, m[5], m[6])
+			}
+		case c.e.act.fase != "":
+			if m[5].submenu == nil {
+				t.Errorf("%s: sobra %+v", c.nombre, m[5])
+			}
+		case c.e.nueva != "":
+			if m[5].texto != idioma.T("Ver novedades") || m[5].accion != accionVerNovedades {
+				t.Errorf("%s: %+v", c.nombre, m[5])
+			}
 		}
 	}
 	// El instalador detiene el servicio: el menú sigue diciendo que se actualiza hasta que cierra la app.

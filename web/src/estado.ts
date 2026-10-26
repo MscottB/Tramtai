@@ -13,7 +13,7 @@ export const sistema = /Windows/i.test(navigator.userAgent) ? 'Windows' : /Mac/i
 
 export const actualizacion = ref<EstadoActualizacion | null>(null)
 
-// dialogoActualizar muestra las novedades y el botón de instalar; lo abren la cabecera, Ajustes y la bandeja.
+// dialogoActualizar muestra las novedades y el botón de instalar; lo abren la cabecera, Ajustes y «Ver novedades» de la bandeja.
 export const dialogoActualizar = ref(false)
 
 // diasHistorial son los días que se guarda el registro (para los textos «en N días»); cargarDiasHistorial lo lee.

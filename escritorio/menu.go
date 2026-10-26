@@ -17,6 +17,7 @@ const (
 	accionActualizar
 	accionBuscarActualizaciones
 	accionVerNovedades
+	accionCancelarActualizacion
 	accionAlternarApi // activa o desactiva entrada.punto según entrada.habilitada
 	accionIrMisApis
 	accionCopiarDireccion
@@ -45,13 +46,14 @@ type entrada struct {
 }
 
 // estadoMenu es lo que decide qué sale en el menú. base es la dirección del servicio en marcha, vacía si está
-// detenido; nueva, la versión más nueva si la hay.
+// detenido; nueva, la versión más nueva si la hay, e instalable, si se instala desde aquí.
 type estadoMenu struct {
 	base                     string
 	puntos                   []contrato.EstadoPunto
 	proyectos                map[string]string // id del espacio de proyecto → nombre de su carpeta
 	conWindows, sinPreguntar bool
 	nueva                    string
+	instalable               bool
 	act                      actualizacionMenu // lo que se busca o instala desde el menú
 	autoarranque             bool              // si el sistema permite iniciar con la sesión
 	windows                  bool
@@ -83,14 +85,22 @@ func entradasMenu(e estadoMenu) []entrada {
 		fases := map[string]string{"descargando": idioma.T("descargando"), "verificando": idioma.T("verificando"),
 			"listo": idioma.T("se instala en unos segundos"), "instalando": idioma.T("instalando")}
 		add(entrada{texto: idioma.Tf("Actualizando… · %s", fases[e.act.fase]), icono: "reiniciar", desactivada: true})
+		if e.act.fase == "listo" { // la cuenta atrás del servicio: se puede cancelar, como en la Web UI y la terminal
+			add(entrada{texto: idioma.T("Cancelar la actualización"), icono: "detener", accion: accionCancelarActualizacion})
+		}
 	case e.nueva != "":
-		add(entrada{texto: idioma.Tf("Instalar la versión %s", e.nueva), icono: "reiniciar", accion: accionActualizar})
+		if e.instalable {
+			add(entrada{texto: idioma.Tf("Instalar la versión %s", e.nueva), icono: "reiniciar", accion: accionActualizar})
+		} else {
+			// No la instaló el instalador de Windows: las novedades enseñan el enlace de descarga.
+			add(entrada{texto: idioma.Tf("Versión %s disponible", e.nueva), icono: "reiniciar", desactivada: true})
+		}
 		add(entrada{texto: idioma.T("Ver novedades"), accion: accionVerNovedades})
 	case !enMarcha: // detenido: no hay servicio al que preguntar
 	case e.act.buscando:
 		add(entrada{texto: idioma.T("Buscando actualizaciones…"), icono: "reiniciar", desactivada: true})
 	case e.act.alDia != "":
-		add(entrada{texto: idioma.Tf("Tramtai está al día (%s)", e.act.alDia), icono: "reiniciar", desactivada: true})
+		add(entrada{texto: idioma.Tf("Tienes la última versión (%s)", e.act.alDia), icono: "reiniciar", desactivada: true})
 	case e.act.fallo:
 		add(entrada{texto: idioma.T("No se pudo comprobar · reintentar"), icono: "reiniciar", accion: accionBuscarActualizaciones})
 	default:

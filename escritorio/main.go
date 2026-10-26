@@ -226,25 +226,33 @@ func main() {
 		ventana.ExecJS("window.tramtaiAviso && window.tramtaiAviso(" + string(texto) + ")")
 	}
 	var act actualizacionMenu // lo que se busca o instala desde el menú (con mu)
-	cambiarAct := func(cambiar func(*actualizacionMenu)) {
+	// cambiarAct cambia act y rehace el menú si cambiar dice que hubo cambio (false: una doble pulsación).
+	cambiarAct := func(cambiar func(*actualizacionMenu) bool) bool {
 		mu.Lock()
-		cambiar(&act)
+		cambio := cambiar(&act)
 		mu.Unlock()
-		repasar()
+		if cambio {
+			repasar()
+		}
+		return cambio
 	}
 	// buscarActualizaciones consulta GitHub en el momento, como «Buscar actualización ahora» de Ajustes.
 	buscarActualizaciones := func(cli *cliente.Cliente) {
-		cambiarAct(func(a *actualizacionMenu) { *a = actualizacionMenu{buscando: true} })
+		if !cambiarAct((*actualizacionMenu).buscar) {
+			return
+		}
 		ctx, cancelar := context.WithTimeout(context.Background(), time.Minute)
 		e, err := cli.Actualizacion(ctx, true)
 		cancelar()
-		cambiarAct(func(a *actualizacionMenu) { *a = resultadoBusqueda(e, err, time.Now()) })
+		cambiarAct(func(a *actualizacionMenu) bool { a.buscado(resultadoBusqueda(e, err, time.Now())); return true })
 	}
 	// actualizar pide al servicio que descargue e instale la versión nueva y sigue su avance en el menú; al terminar,
 	// el instalador cierra la app y la vuelve a abrir.
 	actualizar := func(cli *cliente.Cliente) {
-		fase := func(f string) { cambiarAct(func(a *actualizacionMenu) { a.fase = f }) }
-		fase("descargando")
+		if !cambiarAct((*actualizacionMenu).instalar) {
+			return
+		}
+		fase := func(f string) { cambiarAct(func(a *actualizacionMenu) bool { a.fase = f; return true }) }
 		ctx, cancelar := context.WithTimeout(context.Background(), time.Minute)
 		_, err := cli.Actualizar(ctx)
 		cancelar()
@@ -255,7 +263,7 @@ func main() {
 				ctx, cancelar := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancelar()
 				return cli.ProgresoActualizacion(ctx)
-			}, func() { time.Sleep(cadaAvance) }, fase)
+			}, func() { time.Sleep(cadaAvance) }, fase, time.Now)
 		}
 		if err != nil {
 			avisarError(err)
@@ -288,6 +296,16 @@ func main() {
 				return func(*application.Context) { go actualizar(cli) }
 			case accionBuscarActualizaciones:
 				return func(*application.Context) { go buscarActualizaciones(cli) }
+			case accionCancelarActualizacion:
+				// El seguimiento ve la fase vacía y vuelve a ofrecer la versión. Un error es que ya estaba instalando: el
+				// avance lo dirá.
+				return func(*application.Context) {
+					go func() {
+						ctx, cancelar := context.WithTimeout(context.Background(), 10*time.Second)
+						defer cancelar()
+						_ = cli.DecidirInstalacion(ctx, false)
+					}()
+				}
 			case accionVerNovedades:
 				// Ajustes con el diálogo de la versión nueva: sus novedades y cómo se instala o se descarga.
 				return func(*application.Context) {
@@ -403,11 +421,11 @@ func main() {
 		mu.Unlock()
 
 		// También el tema y el DPI del sistema, porque cambian el color y el tamaño de los iconos.
-		masNueva := actMenu.nueva
-		if estadoServicio.Actualizacion != nil {
-			masNueva = estadoServicio.Actualizacion.Version
+		masNueva, instalable := actMenu.nueva, actMenu.instalable
+		if v := estadoServicio.Actualizacion; v != nil {
+			masNueva, instalable = v.Version, v.Instalable
 		}
-		nueva := fmt.Sprint(conWindows, sinPreguntar, puntos, menuOscuro(), ladoIconoMenu(), masNueva, actMenu)
+		nueva := fmt.Sprint(conWindows, sinPreguntar, puntos, menuOscuro(), ladoIconoMenu(), masNueva, instalable, actMenu)
 		if cli != nil {
 			nueva += cli.Base
 		}
@@ -426,7 +444,7 @@ func main() {
 			base = cli.Base
 		}
 		menuActual = construir(cli, estadoMenu{base: base, puntos: puntos, proyectos: proyectos, conWindows: conWindows,
-			sinPreguntar: sinPreguntar, nueva: masNueva, act: actMenu, autoarranque: autoarranque.Disponible, windows: runtime.GOOS == "windows"})
+			sinPreguntar: sinPreguntar, nueva: masNueva, instalable: instalable, act: actMenu, autoarranque: autoarranque.Disponible, windows: runtime.GOOS == "windows"})
 		bandeja.SetMenu(menuActual)
 		if anterior != nil {
 			anterior.Clear() // suelta los elementos del menú anterior del registro global de Wails
