@@ -18,9 +18,9 @@ nada más. Si necesitas peticiones largas que sigues, cancelas o reintentas, la 
 
 **¿Qué clave uso?** La de una API propia de tu app (**Mis APIs → Nueva API**): con sus modelos y su presupuesto,
 y la regeneras sin tocar las demás. La **clave del espacio** es para ti y tus scripts: un espacio nuevo no la tiene
-hasta que la creas (**Mis APIs → Clave del espacio**, o `tramtai global token --rotar`, o `tramtai proyecto token
---rotar` en un proyecto) y se ve una sola vez, al crearla o regenerarla. En la API propia, las rutas `/api/v1/instancia` se refieren a ese espacio: el global o el de
-un proyecto.
+hasta que la creas (**Mis APIs → Clave del espacio**, o `tramtai global token --rotar`, o
+`tramtai proyecto token --rotar` en un proyecto) y se ve una sola vez, al crearla o regenerarla. En la API propia,
+las rutas `/api/v1/instancia` se refieren a ese espacio: el global o el de un proyecto.
 
 Si aún no conoces la app, [el recorrido guiado](https://mscottb.github.io/Tramtai/#demo) la enseña en la portada, y
 en Tramtai el botón **?** de cada página tiene **Muéstrame en pantalla**. La API no cambia.
