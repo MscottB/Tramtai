@@ -180,6 +180,129 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
     </div>
   </section>
 
+  <!-- El problema y la solución, dibujados (v0.56): el antes y el después en SVG con su texto visible, y los seis motivos.
+       El color de cada agente solo aparece en «Con Tramtai», en la línea de su agente. -->
+  <section id="pagas" class="destacado">
+    <div class="envoltura">
+      <div class="cabeza">
+        <h2><span lang="es">Los agentes que ya pagas, <em>al servicio de tus apps</em>.</span><span lang="en">The agents you already pay for, <em>working for your apps</em>.</span></h2>
+        <p class="suave"><span lang="es">Sin servidores intermedios ni cuentas nuevas: tu app habla con Tramtai como con OpenAI o Anthropic, y Tramtai con el agente que elijas.</span><span lang="en">No middle servers, no new accounts: your app talks to Tramtai as it would to OpenAI or Anthropic, and Tramtai talks to the agent you pick.</span></p>
+      </div>
+      <div class="pagas-diagramas">
+        <figure class="pagas-diagrama sin">
+          <h3><span lang="es">Sin Tramtai</span><span lang="en">Without Tramtai</span></h3>
+          <svg viewBox="0 0 340 200" role="img" aria-label="Tres apps, cada una con su clave y su SDK hacia OpenAI, Anthropic o Google" data-aria-en="Three apps, each with its own key and SDK to OpenAI, Anthropic or Google">
+            <g fill="none" stroke-width="3" stroke-linecap="round" stroke="var(--borde-control)">
+              <path d="M 100 40 L 238 40"/>
+              <path d="M 100 100 L 238 100"/>
+              <path d="M 100 160 L 238 160"/>
+            </g>
+            <g stroke-width="3" fill="var(--superficie)" stroke="var(--acento)">
+              <circle cx="100" cy="40" r="7"/>
+              <circle cx="100" cy="100" r="7"/>
+              <circle cx="100" cy="160" r="7"/>
+            </g>
+            <g text-anchor="end" font-size="14" font-weight="500" fill="var(--texto)">
+              <text x="86" y="45"><tspan lang="es">Tu app</tspan><tspan lang="en">Your app</tspan></text>
+              <text x="86" y="105"><tspan lang="es">Tus scripts</tspan><tspan lang="en">Your scripts</tspan></text>
+              <text x="86" y="165"><tspan lang="es">Tu bot</tspan><tspan lang="en">Your bot</tspan></text>
+            </g>
+            <!-- Cada app lleva su clave de pago y su SDK hasta su proveedor. -->
+            <g stroke-width="1.5" fill="var(--superficie)" stroke="var(--borde-control)">
+              <rect x="126" y="28" width="84" height="24" rx="6"/>
+              <rect x="126" y="88" width="84" height="24" rx="6"/>
+              <rect x="126" y="148" width="84" height="24" rx="6"/>
+              <rect x="238" y="25" width="96" height="30" rx="8" fill="var(--superficie-suave)"/>
+              <rect x="238" y="85" width="96" height="30" rx="8" fill="var(--superficie-suave)"/>
+              <rect x="238" y="145" width="96" height="30" rx="8" fill="var(--superficie-suave)"/>
+            </g>
+            <g text-anchor="middle" font-size="12" fill="var(--texto-suave)">
+              <text x="168" y="44"><tspan lang="es">clave + SDK</tspan><tspan lang="en">key + SDK</tspan></text>
+              <text x="168" y="104"><tspan lang="es">clave + SDK</tspan><tspan lang="en">key + SDK</tspan></text>
+              <text x="168" y="164"><tspan lang="es">clave + SDK</tspan><tspan lang="en">key + SDK</tspan></text>
+            </g>
+            <g text-anchor="middle" font-size="13" font-weight="650" fill="var(--texto)">
+              <text x="286" y="45">OpenAI</text>
+              <text x="286" y="105">Anthropic</text>
+              <text x="286" y="165">Google</text>
+            </g>
+          </svg>
+          <figcaption><span lang="es">Una clave, un SDK y una factura por proveedor.</span><span lang="en">One key, one SDK and one bill per provider.</span></figcaption>
+        </figure>
+        <figure class="pagas-diagrama con">
+          <h3><span lang="es">Con Tramtai</span><span lang="en">With Tramtai</span></h3>
+          <svg viewBox="0 0 340 200" role="img" aria-label="Tus apps llegan a Tramtai, y Tramtai a Claude, Codex, GitHub Copilot y Gemini por la línea de cada agente" data-aria-en="Your apps reach Tramtai, and Tramtai reaches Claude, Codex, GitHub Copilot and Gemini along each agent’s line">
+            <g fill="none" stroke-linecap="round">
+              <path d="M 100 40 C 118 40 118 90 136 90" stroke-width="3" stroke="color-mix(in srgb, var(--acento) 55%, transparent)"/>
+              <path d="M 100 100 L 136 100" stroke-width="3" stroke="color-mix(in srgb, var(--acento) 55%, transparent)"/>
+              <path d="M 100 160 C 118 160 118 110 136 110" stroke-width="3" stroke="color-mix(in srgb, var(--acento) 55%, transparent)"/>
+              <path d="M 224 88 C 243 88 243 34 262 34" stroke-width="4" stroke="var(--claude)"/>
+              <path d="M 224 96 C 243 96 243 78 262 78" stroke-width="4" stroke="var(--codex)"/>
+              <path d="M 224 104 C 243 104 243 122 262 122" stroke-width="4" stroke="var(--copilot)"/>
+              <path d="M 224 112 C 243 112 243 166 262 166" stroke-width="4" stroke="var(--gemini)"/>
+            </g>
+            <g stroke-width="3" fill="var(--superficie)" stroke="var(--acento)">
+              <circle cx="100" cy="40" r="7"/>
+              <circle cx="100" cy="100" r="7"/>
+              <circle cx="100" cy="160" r="7"/>
+            </g>
+            <g text-anchor="end" font-size="14" font-weight="500" fill="var(--texto)">
+              <text x="86" y="45"><tspan lang="es">Tu app</tspan><tspan lang="en">Your app</tspan></text>
+              <text x="86" y="105"><tspan lang="es">Tus scripts</tspan><tspan lang="en">Your scripts</tspan></text>
+              <text x="86" y="165"><tspan lang="es">Tu bot</tspan><tspan lang="en">Your bot</tspan></text>
+            </g>
+            <!-- Tramtai es el intercambiador, como en el mapa de la cabecera. -->
+            <rect x="136" y="76" width="88" height="48" rx="24" stroke-width="4" fill="var(--superficie)" stroke="var(--texto)"/>
+            <text x="180" y="106" text-anchor="middle" font-size="16" font-weight="800" fill="var(--texto)" style="font-family: var(--titulo)">Tramtai</text>
+            <circle cx="262" cy="34" r="7" fill="var(--claude)"/>
+            <circle cx="262" cy="78" r="7" fill="var(--codex)"/>
+            <circle cx="262" cy="122" r="7" fill="var(--copilot)"/>
+            <circle cx="262" cy="166" r="7" fill="var(--gemini)"/>
+            <g font-size="14" font-weight="650" fill="var(--texto)">
+              <text x="276" y="39">Claude</text>
+              <text x="276" y="83">Codex</text>
+              <text x="276" y="127">Copilot</text>
+              <text x="276" y="171">Gemini</text>
+            </g>
+          </svg>
+          <figcaption><span lang="es">Una URL local y la suscripción o la clave que ya tienes.</span><span lang="en">One local URL and the subscription or key you already have.</span></figcaption>
+        </figure>
+      </div>
+      <ul class="motivos">
+        <li class="motivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg>
+          <h3><span lang="es">Lo que ya pagas</span><span lang="en">What you already pay for</span></h3>
+          <p><span lang="es">Tu suscripción de Claude, ChatGPT o Copilot, o tu clave de cada agente; cambias de uno a otro cuando quieras.</span><span lang="en">Your Claude, ChatGPT or Copilot subscription, or your key for each agent; switch from one to another whenever you like.</span></p>
+        </li>
+        <li class="motivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+          <h3><span lang="es">En tu equipo</span><span lang="en">On your computer</span></h3>
+          <p><span lang="es">Tramtai escucha solo en tu equipo y no tiene servidor propio.</span><span lang="en">Tramtai listens only on your computer and has no server of its own.</span></p>
+        </li>
+        <li class="motivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14m-3-3 3 3-3 3M20 16H6m3-3-3 3 3 3"/></svg>
+          <h3><span lang="es">Compatible</span><span lang="en">Compatible</span></h3>
+          <p><span lang="es">Rutas de OpenAI y Anthropic y una API propia, con respuesta en vivo y herramientas.</span><span lang="en">OpenAI and Anthropic routes and a native API, with live responses and tools.</span></p>
+        </li>
+        <li class="motivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h6l4-6h8M9 12l4 6h8"/></svg>
+          <h3><span lang="es">Respaldo</span><span lang="en">Fallback</span></h3>
+          <p><span lang="es">Si un agente llega a su límite o falla, la petición puede seguir con el siguiente de tu lista.</span><span lang="en">If an agent hits its limit or fails, the request can continue with the next one on your list.</span></p>
+        </li>
+        <li class="motivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          <h3><span lang="es">Por proyecto</span><span lang="en">Per project</span></h3>
+          <p><span lang="es">Cada espacio con su historial, sus APIs y sus ajustes.</span><span lang="en">Each workspace with its own history, APIs and settings.</span></p>
+        </li>
+        <li class="motivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+          <h3><span lang="es">Bajo control</span><span lang="en">In control</span></h3>
+          <p><span lang="es">Una API por app con su presupuesto, y el mapa en vivo de cada petición.</span><span lang="en">One API per app with its own budget, and a live map of every request.</span></p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
   <section class="conexiones">
     <div class="envoltura">
       <div class="panel">
@@ -274,27 +397,6 @@ tramtai servicio iniciar -d
 
 <span class="c" lang="es"># Las ocho páginas, con el teclado; q sale</span><span class="c" lang="en"># The eight pages, from the keyboard; q quits</span>
 tramtai terminal</pre>
-    </div>
-  </section>
-
-  <section>
-    <div class="envoltura">
-      <div class="destacado">
-        <div class="cabeza">
-          <h2><span lang="es">Los agentes que ya pagas, <em>al servicio de tus apps</em>.</span><span lang="en">The agents you already pay for, <em>working for your apps</em>.</span></h2>
-          <p class="suave"><span lang="es">Sin servidores intermedios ni cuentas nuevas: tu app habla con Tramtai como con OpenAI o Anthropic, y Tramtai con el agente que elijas.</span><span lang="en">No middle servers, no new accounts: your app talks to Tramtai as it would to OpenAI or Anthropic, and Tramtai talks to the agent you pick.</span></p>
-        </div>
-        <div class="franja">
-          <div class="franja-lado">
-            <h3><span lang="es">Sin Tramtai</span><span lang="en">Without Tramtai</span></h3>
-            <p><span lang="es">Una clave de pago por proveedor en cada app, cada SDK con su URL y la cuenta de cada uno por separado.</span><span lang="en">A paid key per provider in every app, each SDK with its own URL and a separate bill for each one.</span></p>
-          </div>
-          <div class="franja-lado con">
-            <h3><span lang="es">Con Tramtai</span><span lang="en">With Tramtai</span></h3>
-            <p><span lang="es">Una sola URL local, en tu equipo, que usa los agentes que ya tienes.</span><span lang="en">One local URL, on your computer, that uses the agents you already have.</span></p>
-          </div>
-        </div>
-      </div>
     </div>
   </section>
 

@@ -64,17 +64,36 @@ test('el recorrido no se anuncia solo y sus controles hablan en el idioma de la 
   assert.doesNotMatch(html, /class="mapa-pausa" aria-pressed/, 'la pausa cambia su texto: sin aria-pressed')
 })
 
-test('«Por qué Tramtai» es la franja, sin motivos con iconos que repitan Funciones (auditoría 001, 53)', () => {
-  assert.doesNotMatch(html, /class="motivos"/)
+// v0.56: la spec de la portada recupera los motivos (sustituye a la auditoría 001, 53). Cada uno cuenta el beneficio en
+// una línea; el detalle queda en Funciones.
+const pagas = seccion('pagas')
+test('«Los agentes que ya pagas» va justo después de la cabecera, antes de los agentes', () => {
+  assert.ok(pagas, 'falta <section id="pagas">')
+  assert.ok(html.indexOf('id="pagas"') < html.indexOf('Conecta estos agentes'))
+  assert.ok(html.indexOf('id="pagas"') < html.indexOf('id="como"'))
+})
+test('«Los agentes que ya pagas» dibuja el antes y el después, con texto visible', () => {
+  const figuras = pagas.match(/<figure class="pagas-diagrama[^"]*">[\s\S]*?<\/figure>/g) ?? []
+  assert.equal(figuras.length, 2)
+  for (const f of figuras) { assert.match(f, /<svg[^>]*role="img"/); assert.match(f, /<figcaption>[\s\S]*lang="es"[\s\S]*lang="en"/) }
+  assert.match(pagas, /Una clave, un SDK y una factura por proveedor/)
+  assert.match(pagas, /Una URL local y la suscripción o la clave que ya tienes/)
+})
+test('los seis motivos, en los dos idiomas y sin promesas absolutas', () => {
+  const motivos = pagas.match(/<li class="motivo">[\s\S]*?<\/li>/g) ?? []
+  assert.equal(motivos.length, 6)
+  for (const t of ['Lo que ya pagas', 'En tu equipo', 'Compatible', 'Respaldo', 'Por proyecto', 'Bajo control']) assert.match(pagas, new RegExp(t))
+  for (const m of motivos) assert.match(m, /lang="es"[\s\S]*lang="en"/)
+  assert.doesNotMatch(pagas, /\b(nunca|siempre|sin cortes|a nadie|never|always|no one)\b/i)
 })
 
 const css = readFileSync(new URL('../../site/estilo.css', import.meta.url), 'utf8')
 const COLORES_LINEA = /var\(--(claude|codex|copilot|gemini|antigravity)\)/
 
-test('el color de cada agente solo marca a su agente: mapa, fichas y tarjetas de Agentes (52)', () => {
+test('el color de cada agente solo marca a su agente: mapa, diagrama «Con Tramtai», fichas y tarjetas de Agentes (52)', () => {
   assert.doesNotMatch(html, /class="linea"/)
   const sinAgentes = html.replace(/<div class="mapa"[\s\S]*?<\/svg>\s*<\/div>/, '').replace(/<section class="conexiones">[\s\S]*?<\/section>/, '')
-    .replace(/<section id="agentes">[\s\S]*?<\/section>/, '')
+    .replace(/<section id="agentes">[\s\S]*?<\/section>/, '').replace(/<figure class="pagas-diagrama con">[\s\S]*?<\/figure>/, '')
   assert.doesNotMatch(sinAgentes, COLORES_LINEA)
 })
 
@@ -142,9 +161,9 @@ test('los comentarios del código salen en el idioma de la página y Copiar copi
   assert.match(js, /\[lang\]:not\(\[lang="' \+ document\.documentElement\.lang \+ '"\]\)/)
 })
 
-test('la franja compara sin Tramtai y con Tramtai', () => {
-  const franja = html.match(/<div class="franja">([\s\S]*?)<\/div>\s*<\/div>/)?.[1] ?? ''
-  for (const t of ['Sin Tramtai', 'Con Tramtai', 'Without Tramtai', 'With Tramtai']) assert.ok(franja.includes(t), `falta «${t}»`)
+test('los diagramas comparan sin Tramtai y con Tramtai', () => {
+  const diagramas = pagas.match(/<div class="pagas-diagramas">[\s\S]*<\/figure>/)?.[0] ?? ''
+  for (const t of ['Sin Tramtai', 'Con Tramtai', 'Without Tramtai', 'With Tramtai']) assert.ok(diagramas.includes(t), `falta «${t}»`)
 })
 
 // Revisión final web (I1, hallazgo 26): el titular vale para los tres agentes (Codex lee archivos: sí tiene

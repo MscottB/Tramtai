@@ -132,7 +132,6 @@ section { padding: 72px 0; }
 .etiqueta { font: 600 .78rem var(--fuente); color: var(--acento); margin-bottom: 8px; display: block; }
 
 /* Conexiones: dos paneles con borde y fichas */
-.conexiones { padding-top: 8px; }
 .conexiones .envoltura { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .panel { border: 1px solid color-mix(in srgb, var(--acento) 35%, var(--borde)); background: var(--superficie); border-radius: var(--radio); padding: 22px 24px; }
 .panel-titulo { font-size: 1.05rem; text-align: center; margin-bottom: 16px; }
@@ -154,15 +153,25 @@ section { padding: 72px 0; }
 .paradas h3 { margin-bottom: 6px; }
 .como .codigo { margin: 0; position: relative; padding-top: 56px; }
 
-/* Destacado: un panel con la franja «sin / con Tramtai» */
-.destacado { border: 1px solid color-mix(in srgb, var(--acento) 40%, var(--borde)); border-radius: var(--radio); padding: 40px; background: var(--superficie); }
+/* «Los agentes que ya pagas»: una banda con el antes y el después dibujados (SVG con su texto) y los seis motivos. Cada
+   motivo lleva su icono de línea junto al título, sin recuadro tintado (DESIGN.md). */
+.destacado { background: var(--superficie-suave); border-block: 1px solid var(--borde); }
 .destacado h2 em { font-style: normal; color: var(--acento); }
-.franja { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.franja-lado { background: var(--superficie); border: 1px solid var(--borde); border-radius: 10px; padding: 18px 20px; }
-.franja-lado h3 { font-size: 1rem; margin-bottom: 6px; color: var(--texto-suave); }
-.franja-lado.con { border: 2px solid var(--acento); }
-.franja-lado.con h3 { color: var(--acento); }
-.franja-lado p { margin: 0; }
+.pagas-diagramas { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.pagas-diagrama { margin: 0; display: flex; flex-direction: column; gap: 14px; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 20px 24px; }
+.pagas-diagrama.con { border: 2px solid var(--acento); }
+.pagas-diagrama h3 { font-size: 1rem; color: var(--texto-suave); }
+.pagas-diagrama.con h3 { color: var(--acento); }
+.pagas-diagrama svg { display: block; width: 100%; max-width: 420px; height: auto; margin: 0 auto; }
+.pagas-diagrama text { font-family: var(--fuente); }
+.pagas-diagrama figcaption { font-weight: 600; }
+.motivos { list-style: none; margin: 44px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px 36px; }
+.motivo { display: grid; grid-template-columns: 24px 1fr; gap: 6px 12px; align-content: start; }
+.motivo svg { grid-row: span 2; width: 24px; height: 24px; margin-top: 1px; color: var(--acento); }
+.motivo h3 { font-size: 1.05rem; }
+.motivo p { color: var(--texto-suave); font-size: .95rem; }
+@media (max-width: 980px) { .motivos { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 720px) { .pagas-diagramas, .motivos { grid-template-columns: 1fr; } }
 
 /* Pares: texto y captura, alternando el lado; la captura va siempre en la columna ancha (630 px, sizes del HTML) */
 .par { display: grid; grid-template-columns: 1fr 1.6fr; gap: 48px; align-items: center; margin-top: 56px; }
@@ -256,8 +265,8 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
   .envoltura { padding: 0 16px; }
   .portada { padding: 44px 0 32px; }
   section { padding: 52px 0; }
-  .empezar, .franja { grid-template-columns: 1fr; }
-  .destacado { padding: 24px; }
+  .empezar { grid-template-columns: 1fr; }
+  .pagas-diagrama { padding: 16px; }
   .mapa { padding: 12px; margin-top: 32px; }
   .tablero { padding: 24px; }
   .tablero li { grid-template-columns: 1fr; gap: 4px; }
