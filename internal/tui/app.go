@@ -288,8 +288,10 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.aPagina(msg)
 		}
 		m.selector = nil
-	case comp.Confirmado, comp.Enviado, tea.PasteMsg:
+	case comp.Confirmado, comp.Enviado:
 		return m, m.aPagina(msg)
+	case tea.PasteMsg:
+		return m, m.pegar(msg)
 	case tea.KeyPressMsg:
 		return m, m.tecla(msg)
 	default:
@@ -382,6 +384,18 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 		}
 	}
 	return m.aPagina(k)
+}
+
+// pegar reparte lo pegado como una tecla: con la pregunta, el menú o la ventana por debajo del mínimo no llega a la página,
+// donde entraría sin verse; con el selector de espacio abierto, va a su filtro.
+func (m *modelo) pegar(msg tea.PasteMsg) tea.Cmd {
+	switch {
+	case m.pregunta != nil, m.enMenu, m.ancho < anchoMinimo || m.alto < altoMinimo:
+		return nil
+	case m.selector != nil:
+		return m.selector.Update(msg)
+	}
+	return m.aPagina(msg)
 }
 
 // salir cierra la terminal; si una página tiene algo en marcha o sin guardar (pagina.Pendiente), antes pregunta y dice qué.

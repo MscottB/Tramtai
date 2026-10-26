@@ -45,8 +45,13 @@ func (s *Selector) Marcar(valor string) {
 	}
 }
 
-// Update atiende las teclas del selector.
+// Update atiende las teclas del selector; lo pegado se suma al filtro, en una línea.
 func (s *Selector) Update(msg tea.Msg) tea.Cmd {
+	if p, ok := msg.(tea.PasteMsg); ok {
+		s.filtro += strings.Join(strings.Fields(p.Content), " ")
+		s.lista.Buscar(s.filtro)
+		return nil
+	}
 	k, ok := msg.(tea.KeyPressMsg)
 	if !ok {
 		return nil

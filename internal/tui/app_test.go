@@ -96,6 +96,8 @@ func (p *paginaFalsa) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		p.texto += msg.Text
+	case tea.PasteMsg:
+		p.texto += msg.Content
 	case tea.WindowSizeMsg:
 		p.ancho, p.alto = msg.Width, msg.Height
 	case pagina.CambioEspacio:
@@ -461,6 +463,40 @@ func TestCtrlEConElEspacioDeAhora(t *testing.T) {
 	}
 	if m.instancia != "global" || ocupada.iniciada != 1 {
 		t.Fatalf("s cambia al elegido: %s, iniciada %d", m.instancia, ocupada.iniciada)
+	}
+}
+
+// TestPegarConUnaCajaAbierta: lo pegado es como una tecla: con la pregunta, el menú o la ventana pequeña no llega a la
+// página (entraría donde no se ve); con el selector de espacio abierto, lo filtra; sin nada encima, llega a la página.
+func TestPegarConUnaCajaAbierta(t *testing.T) {
+	m := nuevo(Opciones{})
+	falsa := &paginaFalsa{}
+	m.paginas[pagina.PaginaInicio] = falsa
+	m.cli, m.instancia = &cliente.Cliente{}, "global"
+	m.espacios = []contrato.Espacio{{ID: "global", Nombre: "Global", Ruta: "ruta-global", Activo: true}, {ID: "notas_1234", Nombre: "notas", Activo: true}}
+	pegar := func() { m.Update(tea.PasteMsg{Content: "notas"}) }
+	m.Update(comp.Pregunta{Texto: "¿Seguro?"})
+	pegar()
+	m.Update(tecla("esc"))
+	m.Update(tecla("tab"))
+	pegar()
+	m.Update(tecla("esc"))
+	m.Update(tea.WindowSizeMsg{Width: 40, Height: 10})
+	pegar()
+	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	if falsa.texto != "" {
+		t.Fatalf("con algo encima, lo pegado no llega a la página: %q", falsa.texto)
+	}
+	m.Update(tecla("ctrl+e"))
+	pegar()
+	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "/ notas") || strings.Contains(v, "ruta-global") || falsa.texto != "" {
+		t.Fatalf("en el selector, lo pegado filtra:\n%s", v)
+	}
+	_, cmd := m.Update(tecla("esc"))
+	m.Update(cmd())
+	pegar()
+	if falsa.texto != "notas" {
+		t.Fatalf("sin nada encima, llega a la página: %q", falsa.texto)
 	}
 }
 
