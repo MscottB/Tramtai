@@ -659,13 +659,19 @@ func (p *Pagina) accion(nombre string, t nucleo.Trabajo) tea.Cmd {
 	})
 }
 
+// alAccion aplica lo que una acción ya hizo en el servicio: vale aunque la página se ocultara mientras corría (se avisa
+// igual), pero solo lleva a Probar y recarga la lista si se ve; oculta, Mostrar la pone al día.
 func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
-	if !p.vigente(m.origen) {
+	if !m.DelEspacio(p.c) {
 		return nil
 	}
 	p.ocupado = false
 	if m.err != nil {
 		return p.fallo(m.err, true)
+	}
+	var cmds []tea.Cmd
+	if p.visible {
+		cmds = append(cmds, p.cargar(true))
 	}
 	switch m.accion {
 	case accionReintentar, accionCorregir:
@@ -673,25 +679,25 @@ func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
 		if m.accion == accionCorregir {
 			aviso = idioma.T("Corrección enviada")
 		}
-		// El trabajo nuevo se sigue en Probar.
-		ir := pagina.IrA{Pagina: pagina.PaginaEjecutar, Datos: pagina.SeguirTrabajo{ID: m.t.ID}}
-		return tea.Batch(comp.Aviso(aviso, comp.Exito), func() tea.Msg { return ir }, p.cargar(true))
+		cmds = append(cmds, comp.Aviso(aviso, comp.Exito))
+		if p.visible { // el trabajo nuevo se sigue en Probar
+			ir := pagina.IrA{Pagina: pagina.PaginaEjecutar, Datos: pagina.SeguirTrabajo{ID: m.t.ID}}
+			cmds = append(cmds, func() tea.Msg { return ir })
+		}
 	case accionCancelar:
 		if p.detalle != nil && p.detalle.ID == m.id {
 			t := m.t
 			p.detalle = &t
 			p.rehacerVisor()
 		}
-		return p.cargar(true)
 	case accionEliminar:
 		if p.abierto == m.id {
 			p.cerrarDetalle()
 		}
-		return p.cargar(true)
 	case accionVaciar:
-		return tea.Batch(comp.Aviso(p.tx("historial.vaciado", "n", strconv.Itoa(m.n)), comp.Exito), p.cargar(true))
+		cmds = append(cmds, comp.Aviso(p.tx("historial.vaciado", "n", strconv.Itoa(m.n)), comp.Exito))
 	}
-	return nil
+	return tea.Batch(cmds...)
 }
 
 // confirmado hace lo que se había preguntado: cancelar o eliminar un trabajo, o vaciar el historial.

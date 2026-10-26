@@ -1501,20 +1501,35 @@ func TestRespuestasViejasDelDetalle(t *testing.T) {
 	b.SoltarFin()
 	a.HastaVer("✓ Completado")
 
-	// Reintentar (una acción) desde una versión o un espacio que ya no son los de ahora.
-	for nombre, cambiar := range map[string]func(*prueba.App){
-		"otra versión": func(a *prueba.App) {
-			a.P.(pagina.Ocultable).Ocultar()
-			a.Correr(a.P.(pagina.Ocultable).Mostrar())
-		},
-		"otro espacio": func(a *prueba.App) { a.Correr(a.P.Iniciar(prueba.Contexto(t, cli, "otro"))) },
-	} {
-		a := abierta(t, cli, id)
-		reintento := a.Retener(func() { a.Pulsar("t") })
-		cambiar(a)
-		desde := len(a.Fuera)
-		if fuera := a.Soltar(reintento); len(fuera) != 0 || len(a.Fuera) != desde {
-			t.Fatalf("una acción de %s no avisa ni lleva a Probar: %v", nombre, fuera)
-		}
+	// Reintentar (una acción) desde un espacio que ya no es el de ahora: ni avisa ni lleva a Probar.
+	otro := abierta(t, cli, id)
+	reintento := otro.Retener(func() { otro.Pulsar("t") })
+	otro.Correr(otro.P.Iniciar(prueba.Contexto(t, cli, "otro")))
+	desde := len(otro.Fuera)
+	if fuera := otro.Soltar(reintento); len(fuera) != 0 || len(otro.Fuera) != desde {
+		t.Fatalf("una acción de otro espacio no avisa ni lleva a Probar: %v", fuera)
+	}
+}
+
+// TestHistorialAccionConLaPaginaOculta: lo que una acción ya hizo en el servicio se avisa aunque la página se ocultara
+// mientras corría (un reintento, vaciar); solo no lleva a Probar, porque el Historial ya no se ve.
+func TestHistorialAccionConLaPaginaOculta(t *testing.T) {
+	cli, id := prueba.Servicio(t)
+	crear(t, cli, id, "otra vez")
+	a := abierta(t, cli, id)
+	reintento := a.Retener(func() { a.Pulsar("t") })
+	a.P.(pagina.Ocultable).Ocultar()
+	fuera := a.Soltar(reintento)
+	if av, ok := aviso(fuera); !ok || av.Texto != "Petición enviada de nuevo" || seguido(fuera) != "" {
+		t.Fatalf("oculta, el reintento se avisa sin llevar a Probar: %v", fuera)
+	}
+	a.Correr(a.P.(pagina.Ocultable).Mostrar())
+	a.Hasta(func() bool { return cuantas(a, "otra vez") == 2 })
+	a.Pulsar("V")
+	vaciado := a.Retener(func() { a.Entregar(comp.Confirmado{}) })
+	a.P.(pagina.Ocultable).Ocultar()
+	fuera = a.Soltar(vaciado)
+	if av, ok := aviso(fuera); !ok || !strings.HasPrefix(av.Texto, "Peticiones eliminadas") {
+		t.Fatalf("oculta, vaciar avisa de cuántas: %v", fuera)
 	}
 }
