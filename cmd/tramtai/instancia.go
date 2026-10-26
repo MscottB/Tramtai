@@ -43,19 +43,33 @@ func mostrarTokenInstancia(cmd *cobra.Command, ambito string, rotar bool) error 
 	if err != nil {
 		return err
 	}
+	return tokenInstancia(cmd, ambito, datos, id, c, rotar)
+}
+
+// tokenInstancia dice si el espacio tiene clave, sin darla: solo se guarda su huella. Con rotar la crea o la regenera y la
+// imprime, la única vez que se conoce.
+func tokenInstancia(cmd *cobra.Command, ambito, datos, id string, c *configuracion.Configuracion, rotar bool) error {
 	if rotar {
 		return rotarTokenInstancia(cmd, datos, id, c)
 	}
-	valor, _, err := servicio.TokenInstancia(datos, id, c)
+	huella, origen, err := servicio.HuellaInstancia(datos, id, c)
 	if err != nil {
 		return err
 	}
-	fmt.Fprintln(cmd.OutOrStdout(), valor)
+	out := cmd.OutOrStdout()
+	switch {
+	case strings.HasPrefix(origen, "variable "):
+		fmt.Fprintf(out, idioma.T("La clave del espacio viene de la %s: Tramtai no la guarda ni la muestra\n"), origen)
+	case huella == "":
+		fmt.Fprintf(out, idioma.T("El espacio aún no tiene clave: créala con tramtai %s token --rotar o en Mis APIs › Clave del espacio\n"), ambito)
+	default:
+		fmt.Fprintf(out, idioma.T("El espacio tiene clave (en %s solo se guarda su huella). Se ve solo al crearla o regenerarla: tramtai %s token --rotar\n"), origen, ambito)
+	}
 	return nil
 }
 
-// rotarTokenInstancia regenera la clave de la instancia: con el servicio en marcha vale al momento; si la instancia
-// no está activa se reescribe el archivo y valdrá al activarla.
+// rotarTokenInstancia crea o regenera la clave de la instancia: con el servicio en marcha vale al momento; si la instancia
+// no está activa se escribe su huella en el archivo y valdrá al activarla.
 func rotarTokenInstancia(cmd *cobra.Command, datos, id string, c *configuracion.Configuracion) error {
 	if cli, err := cliente.Conectar(datos); err == nil {
 		ctx, cancelar := context.WithTimeout(context.Background(), 30*time.Second)
@@ -74,12 +88,12 @@ func rotarTokenInstancia(cmd *cobra.Command, datos, id string, c *configuracion.
 			return errors.New(idioma.T("el servicio en marcha es de una versión anterior: detenlo (tramtai servicio detener), vuelve a iniciarlo y repite la orden"))
 		}
 	}
-	if _, origen, err := servicio.TokenInstancia(datos, id, c); err != nil {
+	if _, origen, err := servicio.HuellaInstancia(datos, id, c); err != nil {
 		return err
 	} else if strings.HasPrefix(origen, "variable ") {
 		return errors.New(idioma.Tf("la clave de %s viene de la %s: cámbiala allí", id, origen))
 	}
-	token, err := servicio.RotarToken(servicio.RutaTokenInstancia(datos, id))
+	token, err := servicio.NuevaClave(servicio.RutaTokenInstancia(datos, id))
 	if err != nil {
 		return err
 	}
@@ -160,7 +174,7 @@ func comandoInstancia(ambito string) *cobra.Command {
 			return nil
 		}}
 	var rotarToken bool
-	token := &cobra.Command{Use: "token", Short: idioma.T("Muestra la clave del espacio para configurar tus apps"),
+	token := &cobra.Command{Use: "token", Short: idioma.T("Dice si el espacio tiene clave; con --rotar la crea o la regenera y la muestra una vez"),
 		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, ambito, rotarToken) }}
 	token.Flags().BoolVar(&rotarToken, "rotar", false, idioma.T("genera una clave nueva; la anterior deja de valer"))
 	var enNavegador bool

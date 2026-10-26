@@ -139,9 +139,10 @@ func TestAdminAjustesSoloConLaClaveDelServicio(t *testing.T) {
 	s.opc.ConsultarVersion = func(context.Context) (actualizacion.Version, error) { cambios++; return actualizacion.Version{}, nil }
 	s.actualizaciones.Consultar = s.opc.ConsultarVersion
 	inst, _ := s.ActivarGlobal()
+	clave := claveDe(t, s, inst)
 	web := abrirSesion(t, s, ts.URL)
 	for _, c := range rutasAjustes {
-		for quien, token := range map[string]string{"sin clave": "", "con la clave de la app": inst.token} {
+		for quien, token := range map[string]string{"sin clave": "", "con la clave de la app": clave} {
 			if r, _ := pedir(t, ts.URL, c.metodo, c.ruta, token, c.cuerpo); r.StatusCode != 401 {
 				t.Errorf("%s %s %s: %d", c.metodo, c.ruta, quien, r.StatusCode)
 			}

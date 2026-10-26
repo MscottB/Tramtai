@@ -16,8 +16,9 @@ import (
 	"tramtai/internal/nucleo"
 )
 
-// RotarTokenInstancia genera la clave nueva de una instancia y la aplica en marcha: la anterior deja de valer al
-// momento, sin reiniciar. Una clave que llega de una variable de entorno se cambia en esa variable.
+// RotarTokenInstancia crea la clave nueva de una instancia (o regenera la que tenía) y la aplica en marcha: la anterior
+// deja de valer al momento, sin reiniciar. Solo se guarda su huella: esta es la única vez que se conoce. Una clave que
+// llega de una variable de entorno se cambia en esa variable.
 func (s *Servicio) RotarTokenInstancia(inst *Instancia) (string, error) {
 	if strings.HasPrefix(inst.ArchivoToken, "variable ") {
 		return "", nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("la clave de %s viene de la %s: cámbiala allí", inst.ID, inst.ArchivoToken))
@@ -25,28 +26,40 @@ func (s *Servicio) RotarTokenInstancia(inst *Instancia) (string, error) {
 	// El archivo y la memoria cambian juntos: dos rotaciones a la vez no pueden dejarlos distintos.
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	token, err := RotarToken(inst.ArchivoToken)
+	// Un espacio olvidado a la vez ya no está activo: escribir devolvería a la vida el archivo que Olvidar borró.
+	if s.instancias[inst.ID] != inst {
+		return "", nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("el espacio %s no está activo", inst.ID))
+	}
+	clave, err := NuevaClave(inst.ArchivoToken)
 	if err != nil {
 		return "", err
 	}
-	inst.token = token
-	return token, nil
+	inst.huella = api.HuellaToken(clave)
+	return clave, nil
 }
 
-// tokenDe lee la clave de una instancia, que puede cambiar en marcha (RotarTokenInstancia).
-func (s *Servicio) tokenDe(inst *Instancia) string {
+// estadoClave dice si la instancia tiene clave y de dónde viene; puede cambiar en marcha (RotarTokenInstancia).
+func (s *Servicio) estadoClave(inst *Instancia) EstadoClave {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return inst.token
+	e := EstadoClave{TieneClave: inst.huella != "", Origen: "archivo", Archivo: inst.ArchivoToken}
+	if variable, esVariable := strings.CutPrefix(inst.ArchivoToken, "variable "); esVariable {
+		e.Origen, e.Variable, e.Archivo = "variable", variable, ""
+	}
+	return e
 }
 
-// instanciaPorToken compara el token con el de todas las instancias, sin revelar por tiempos cuál existe.
+// instanciaPorToken compara la huella del token con la de todas las instancias, sin revelar por tiempos cuál existe.
 func (s *Servicio) instanciaPorToken(token string) *Instancia {
+	if token == "" {
+		return nil
+	}
+	huella := []byte(api.HuellaToken(token))
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	var elegida *Instancia
 	for _, inst := range s.instancias {
-		if token != "" && subtle.ConstantTimeCompare([]byte(token), []byte(inst.token)) == 1 {
+		if inst.huella != "" && subtle.ConstantTimeCompare(huella, []byte(inst.huella)) == 1 {
 			elegida = inst
 		}
 	}
@@ -91,30 +104,37 @@ func guardarSecreto(ruta, valor string) error {
 	return configuracion.EscribirAtomico(ruta, []byte(valor+"\n"), 0o600)
 }
 
-// RotarTokenPunto genera la clave nueva de un punto de acceso y guarda solo su huella: la clave se muestra una vez
-// y no se puede recuperar; la anterior deja de valer al recargar. Es siempre nueva, aunque quedara una de otro punto con
-// el mismo nombre.
-func RotarTokenPunto(ruta string) (string, error) {
+// NuevaClave genera una clave nueva y guarda solo su huella: la clave se muestra una vez y no se puede recuperar; la
+// anterior deja de valer al recargar. Es siempre nueva, aunque quedara una de otro punto o espacio con el mismo nombre.
+func NuevaClave(ruta string) (string, error) {
 	token := "tt_" + aleatorio(32)
 	return token, guardarSecreto(ruta, api.HuellaToken(token))
 }
 
-// LeerHuellaPunto devuelve la huella de la clave de un punto. Un archivo antiguo con la clave en claro se convierte
-// a huella y las aplicaciones siguen funcionando; sin archivo se crea una clave que nadie conoce, así que hay que
-// regenerarla para usar el punto. Un archivo que no se puede leer o está truncado da error y no se toca.
-func LeerHuellaPunto(ruta string) (string, error) {
+// leerHuella devuelve la huella de la clave guardada en ruta. Un archivo antiguo con la clave en claro se convierte a
+// huella y las aplicaciones siguen funcionando. Sin archivo da un error con fs.ErrNotExist; uno que no se puede leer o
+// está truncado da error y no se toca.
+func leerHuella(ruta string) (string, error) {
 	contenido, err := leerSecreto(ruta)
-	switch {
-	case errors.Is(err, fs.ErrNotExist):
-		token, err := RotarTokenPunto(ruta)
-		return api.HuellaToken(token), err
-	case err != nil:
+	if err != nil {
 		return "", err
-	case strings.HasPrefix(contenido, api.PrefijoHuella):
+	}
+	if strings.HasPrefix(contenido, api.PrefijoHuella) {
 		return contenido, nil
 	}
 	huella := api.HuellaToken(contenido)
 	return huella, guardarSecreto(ruta, huella)
+}
+
+// LeerHuellaPunto devuelve la huella de la clave de un punto. Sin archivo se crea una clave que nadie conoce, así que
+// hay que regenerarla para usar el punto.
+func LeerHuellaPunto(ruta string) (string, error) {
+	huella, err := leerHuella(ruta)
+	if errors.Is(err, fs.ErrNotExist) {
+		token, err := NuevaClave(ruta)
+		return api.HuellaToken(token), err
+	}
+	return huella, err
 }
 
 // EliminarTokenPunto borra la clave de un punto eliminado: otro con el mismo nombre no hereda la anterior.
@@ -140,8 +160,9 @@ func RutaTokenPunto(datos, nombre string) string {
 	return filepath.Join(datos, "tokens", "acceso_"+nombre)
 }
 
-// TokenInstancia devuelve el token de la instancia y su origen; el global puede venir de una variable de entorno.
-func TokenInstancia(datos, id string, c *configuracion.Configuracion) (valor, origen string, err error) {
+// HuellaInstancia devuelve la huella de la clave de la instancia y su origen; la del global puede venir de una variable
+// de entorno. Un espacio sin archivo no tiene clave: devuelve la huella vacía y la ruta, sin crear nada.
+func HuellaInstancia(datos, id string, c *configuracion.Configuracion) (huella, origen string, err error) {
 	if id == "global" {
 		if variable := c.Texto("instancia_global.token_variable_entorno"); variable != "" {
 			if v := os.Getenv(variable); v != "" {
@@ -149,13 +170,16 @@ func TokenInstancia(datos, id string, c *configuracion.Configuracion) (valor, or
 					return "", "", nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf(
 						"la clave de la variable %s es demasiado corta: necesita al menos %d caracteres", variable, largoMinimoEntorno))
 				}
-				return v, "variable " + variable, nil
+				return api.HuellaToken(v), "variable " + variable, nil
 			}
 		}
 	}
 	ruta := RutaTokenInstancia(datos, id)
-	valor, err = LeerOCrearToken(ruta)
-	return valor, ruta, err
+	huella, err = leerHuella(ruta)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", ruta, nil
+	}
+	return huella, ruta, err
 }
 
 func aleatorio(n int) string {

@@ -55,13 +55,11 @@ func (c *Cliente) cambiarPunto(ctx context.Context, instancia, nombre string, ca
 	return contrato.EstadoPunto{}, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("API no encontrada en este espacio: %s", nombre))
 }
 
-// ClaveInstancia devuelve la clave del espacio, la que usan la CLI, los scripts y las apps sin API propia.
-func (c *Cliente) ClaveInstancia(ctx context.Context, instancia string) (string, error) {
-	var r struct {
-		Token string `json:"token"`
-	}
-	err := c.pedir(ctx, "GET", "/api/v1/instancia/token", instancia, nil, "", &r)
-	return r.Token, err
+// EstadoClave dice si el espacio tiene clave y de dónde viene, sin darla: solo se conoce al crearla o regenerarla.
+func (c *Cliente) EstadoClave(ctx context.Context, instancia string) (contrato.EstadoClave, error) {
+	var e contrato.EstadoClave
+	err := c.pedir(ctx, "GET", "/api/v1/instancia/token", instancia, nil, "", &e)
+	return e, err
 }
 
 // PresupuestoInstancia devuelve el consumo del día y del mes frente al presupuesto de la instancia; vacío si no tiene.

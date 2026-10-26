@@ -15,7 +15,7 @@ el término del glosario al lado.
 | espacio (de trabajo) | workspace | instancia, instance | Donde se procesan y guardan las peticiones, las APIs y los ajustes: el global o el de un proyecto. En la API propia es la ruta `/api/v1/instancia` y la cabecera `Tramtai-Instancia`. |
 | API (por aplicación) | API (per-app API) | punto de acceso, acceso, access point | Dirección, clave y receta propias de una app. Los nombres técnicos son `tramtai acceso` y `puntos_acceso`. |
 | clave | key (API key) | token, contraseña | Lo que la app envía en `Authorization: Bearer <clave>`. «Token» solo queda en la documentación técnica de esa cabecera y en el comando `tramtai acceso token`. |
-| clave del espacio | workspace key | token del espacio, clave principal | La clave de un espacio, con acceso a todo: para ti, la CLI de Tramtai y tus scripts. |
+| clave del espacio | workspace key | token del espacio, clave principal | La clave de un espacio, con acceso a todo: para ti y tus scripts. Un espacio nuevo no la tiene hasta que se crea, y se ve una sola vez, al crearla o regenerarla. |
 | token (del modelo) | token | | Unidad con la que el modelo mide la entrada, la salida y el contexto. Nunca es la clave. |
 | petición | request | trabajo, solicitud, job | Lo que se envía a un agente y se sigue en el Historial. En la API propia es el recurso `trabajos` (rutas y campos). |
 | mensaje | message | prompt | El texto que escribe la persona dentro de una petición. |

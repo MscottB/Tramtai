@@ -261,7 +261,7 @@ func comandoServicio() *cobra.Command {
 			imprimirPuntos(cmd.OutOrStdout(), puntos)
 			return nil
 		}}
-	token := &cobra.Command{Use: "token", Short: idioma.T("Muestra la clave del espacio global (igual que tramtai global token)"),
+	token := &cobra.Command{Use: "token", Short: idioma.T("Dice si el espacio global tiene clave (igual que tramtai global token)"),
 		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, "global", false) }}
 	autoarranqueCmd := &cobra.Command{Use: "autoarranque [activar|desactivar]",
 		Short: idioma.T("Arranca Tramtai (la app de escritorio, oculta en la bandeja) al iniciar sesión en Windows"),

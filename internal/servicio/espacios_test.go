@@ -100,7 +100,8 @@ func TestMoverConMarca(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	token := antes.token
+	claveDe(t, s, antes)
+	huella := antes.huella
 	s.Desactivar(antes.ID)
 	nueva := filepath.Join(filepath.Dir(proyecto), "Movido")
 	if err := os.Rename(proyecto, nueva); err != nil {
@@ -110,8 +111,8 @@ func TestMoverConMarca(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if despues.ID != antes.ID || despues.token != token {
-		t.Fatalf("al mover debía conservar id y token: %s %s", antes.ID, despues.ID)
+	if despues.ID != antes.ID || despues.huella != huella {
+		t.Fatalf("al mover debía conservar id y clave: %s %s", antes.ID, despues.ID)
 	}
 	if e, _ := s.registro().buscar(antes.ID); !carpetas.MismaRuta(e.Ruta, nueva) {
 		t.Fatalf("ruta del registro: %q", e.Ruta)
@@ -268,7 +269,8 @@ func proyectoConDatos(t *testing.T, s *Servicio, base string) *Instancia {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r, cuerpo := pedir(t, base, "POST", "/api/v1/ejecutar", inst.token, hola); r.StatusCode != 200 {
+	clave := claveDe(t, s, inst)
+	if r, cuerpo := pedir(t, base, "POST", "/api/v1/ejecutar", clave, hola); r.StatusCode != 200 {
 		t.Fatalf("petición: %d %s", r.StatusCode, cuerpo)
 	}
 	err = configuracion.EditarPuntos(filepath.Join(inst.Raiz, ".tramtai", "local.yaml"), configuracion.OrigenLocal, func(lista []ConfigPunto) ([]ConfigPunto, error) {
@@ -315,7 +317,8 @@ func TestDetenerYActivarPorId(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	token := inst.token
+	claveDe(t, s, inst)
+	huella := inst.huella
 	if err := s.DetenerEspacio(inst.ID); err != nil {
 		t.Fatal(err)
 	}
@@ -323,7 +326,7 @@ func TestDetenerYActivarPorId(t *testing.T) {
 		t.Fatalf("debía quedar detenido: %+v", e)
 	}
 	otra, err := s.ActivarEspacio(inst.ID)
-	if err != nil || otra.token != token {
+	if err != nil || otra.huella != huella {
 		t.Fatalf("activar por id: %v", err)
 	}
 }
@@ -334,7 +337,8 @@ func TestUbicarReasocia(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	token := inst.token
+	claveDe(t, s, inst)
+	huella := inst.huella
 	s.DetenerEspacio(inst.ID)
 	nueva := filepath.Join(t.TempDir(), "Nueva")
 	copiarCarpeta(t, proyecto, nueva)
@@ -347,8 +351,8 @@ func TestUbicarReasocia(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if otra.ID != inst.ID || otra.token != token || LeerMarca(nueva) != inst.ID {
-		t.Fatalf("debía conservar id y token: %s", otra.ID)
+	if otra.ID != inst.ID || otra.huella != huella || LeerMarca(nueva) != inst.ID {
+		t.Fatalf("debía conservar id y clave: %s", otra.ID)
 	}
 }
 

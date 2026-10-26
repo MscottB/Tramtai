@@ -415,35 +415,30 @@ func conPresupuestoDelEspacio(t *testing.T) (*cliente.Cliente, string) {
 }
 
 // TestClaveDelEspacio: la segunda pestaña, como en la Web UI: las URL del espacio, qué poner en model (los ids del
-// catálogo agrupados), la clave oculta que se ve con v, se copia con y y se regenera con t (con pregunta), y el
-// presupuesto del espacio con su reinicio.
+// catálogo agrupados), la clave que no se guarda (sin clave, t la crea sin preguntar y se ve una vez; con ella, t la
+// regenera con pregunta; y se copia con y) y el presupuesto del espacio con su reinicio.
 func TestClaveDelEspacio(t *testing.T) {
 	cli, id := conPresupuestoDelEspacio(t)
 	a := abierta(t, cli, id)
 	a.Entregar(tea.WindowSizeMsg{Width: 70, Height: 60})
-	clave, err := cli.ClaveInstancia(context.Background(), id)
-	if err != nil {
-		t.Fatal(err)
-	}
 	if v := a.Vista(); !strings.Contains(v, "Clave del espacio") {
 		t.Fatalf("la pestaña se ve:\n%s", v)
 	}
 	a.Pulsar("right")
 	v := a.Vista()
-	if !strings.Contains(v, clave[:6]+"•••") || strings.Contains(v, clave) || !strings.Contains(v, "/openai/v1") || !strings.Contains(v, "/anthropic") {
-		t.Fatalf("las URL y la clave oculta:\n%s", v)
+	if !strings.Contains(v, "Este espacio aún no tiene clave") || reClave.MatchString(v) || !strings.Contains(v, "/openai/v1") || !strings.Contains(v, "/anthropic") {
+		t.Fatalf("las URL y el espacio sin clave:\n%s", v)
 	}
 	for _, s := range []string{"Modelo: el campo model elige agente y modelo", "Perfiles", "perfil/equilibrado", "perfil/rapido"} {
 		if !strings.Contains(v, s) {
 			t.Fatalf("falta %q de los modelos:\n%s", s, v)
 		}
 	}
-	a.Pulsar("v")
-	if !strings.Contains(a.Vista(), clave) {
-		t.Fatalf("v enseña la clave:\n%s", a.Vista())
+	if c := copiado(a.Pulsar("y")); c != "" {
+		t.Fatalf("sin clave a la vista no hay qué copiar: %q", c)
 	}
-	if c := copiado(a.Pulsar("y")); c != clave {
-		t.Fatalf("y copia la clave: %q", c)
+	if p := a.P.(pagina.Pendiente).Pendiente(); p != "" {
+		t.Fatalf("sin clave a la vista se sale sin preguntar: %q", p)
 	}
 	for _, s := range []string{"Presupuesto del espacio", "Mensual · Peticiones", "0 / 4"} {
 		if !strings.Contains(a.Vista(), s) {
@@ -451,18 +446,54 @@ func TestClaveDelEspacio(t *testing.T) {
 		}
 	}
 
+	// Sin clave, t la crea sin preguntar y la enseña: es la única vez.
+	fuera := a.HastaSalir(func() { a.Pulsar("t") }, func(f []tea.Msg) bool { _, ok := aviso(f); return ok })
+	if _, hayPregunta := pregunta(fuera); hayPregunta {
+		t.Fatal("crear la primera clave no pregunta")
+	}
+	if av, _ := aviso(fuera); !strings.Contains(av.Texto, "Clave creada: cópiala ahora") {
+		t.Fatalf("avisa: %+v", av)
+	}
+	clave := reClave.FindString(a.Vista())
+	if len(clave) != len("tt_")+64 || !strings.Contains(a.Vista(), "Copia la clave ahora") {
+		t.Fatalf("la clave recién creada se ve, con su advertencia:\n%s", a.Vista())
+	}
+	if e, err := cli.EstadoClave(context.Background(), id); err != nil || !e.TieneClave {
+		t.Fatalf("el espacio ya tiene clave: %+v %v", e, err)
+	}
+	if c := copiado(a.Pulsar("y")); c != clave {
+		t.Fatalf("y copia la clave: %q", c)
+	}
+	if p := a.P.(pagina.Pendiente).Pendiente(); !strings.Contains(p, "no se vuelve a mostrar") {
+		t.Fatalf("con la clave a la vista, salir pregunta: %q", p)
+	}
+	teclas := ""
+	for _, tk := range a.P.Teclas() {
+		teclas += tk.Tecla + " "
+	}
+	if strings.Contains(teclas, "v ") || !strings.Contains(teclas, "y ") {
+		t.Fatalf("la barra ya no tiene v y sí y con la clave a la vista: %q", teclas)
+	}
+
+	// Recargar (r) no la pierde mientras no se salga de la pestaña.
+	a.Pulsar("r")
+	a.EsperarCarga()
+	if !strings.Contains(a.Vista(), clave) {
+		t.Fatalf("tras recargar la clave sigue a la vista:\n%s", a.Vista())
+	}
+
+	// Con clave, t regenera con pregunta; la nueva sustituye a la anterior.
 	q, ok := pregunta(a.Pulsar("t"))
-	if !ok || !strings.Contains(q.Texto, "¿Regenerar la clave de Tramtai?") {
+	if !ok || !strings.Contains(q.Texto, "¿Regenerar la clave del espacio?") {
 		t.Fatalf("t pregunta: %+v", q)
 	}
 	if av := hastaAviso(a, func() { a.Entregar(comp.Confirmado{}) }); !strings.Contains(av.Texto, "Clave regenerada") {
 		t.Fatalf("avisa: %+v", av)
 	}
-	nueva, _ := cli.ClaveInstancia(context.Background(), id)
-	if nueva == clave {
-		t.Fatal("la clave cambia en el servicio")
+	nueva := reClave.FindString(a.Vista())
+	if nueva == "" || nueva == clave {
+		t.Fatalf("la clave regenerada sustituye a la anterior:\n%s", a.Vista())
 	}
-	a.HastaVer(nueva)
 
 	q, ok = pregunta(a.Pulsar("R"))
 	if !ok || !strings.Contains(q.Texto, "Reiniciar el consumo del espacio") {
@@ -472,9 +503,102 @@ func TestClaveDelEspacio(t *testing.T) {
 		t.Fatalf("avisa: %+v", av)
 	}
 	a.HastaVer("0 / 4")
+
+	// Cambiar de pestaña con la clave a la vista pregunta; Cancelar la deja, confirmar la olvida.
+	q, ok = pregunta(a.Pulsar("left"))
+	if !ok || !strings.Contains(q.Texto, "¿Cerrar sin copiar la clave?") {
+		t.Fatalf("← con la clave a la vista pregunta: %+v", q)
+	}
+	a.Entregar(comp.Cancelado{})
+	if !strings.Contains(a.Vista(), nueva) {
+		t.Fatalf("Cancelar deja la clave a la vista:\n%s", a.Vista())
+	}
 	a.Pulsar("left")
-	if v := a.Vista(); !strings.Contains(v, "Todavía no hay APIs") {
+	a.Entregar(comp.Confirmado{})
+	if v := a.Vista(); !strings.Contains(v, "Todavía no hay APIs") || strings.Contains(v, nueva) {
 		t.Fatalf("← vuelve a las APIs:\n%s", v)
+	}
+	if p := a.P.(pagina.Pendiente).Pendiente(); p != "" {
+		t.Fatalf("la clave ya se olvidó: %q", p)
+	}
+	a.Pulsar("right")
+	if v := a.Vista(); !strings.Contains(v, "El espacio ya tiene clave") || reClave.MatchString(v) {
+		t.Fatalf("al volver la clave no se enseña, solo que existe:\n%s", v)
+	}
+	if q, ok := pregunta(a.Pulsar("t")); !ok || !strings.Contains(q.Texto, "¿Regenerar la clave del espacio?") {
+		t.Fatalf("con clave, t pregunta: %+v", q)
+	}
+}
+
+// Volver a la página en el mismo espacio conserva la clave recién creada, que no se vuelve a ver; con otro espacio, se
+// olvida.
+func TestClaveDelEspacioAlVolver(t *testing.T) {
+	cli, id := prueba.Servicio(t)
+	a := abierta(t, cli, id)
+	a.Entregar(tea.WindowSizeMsg{Width: 90, Height: 40})
+	a.Pulsar("right", "t")
+	a.HastaVer("Copia la clave ahora")
+	clave := reClave.FindString(a.Vista())
+	pendiente := func() string { return a.P.(pagina.Pendiente).Pendiente() }
+
+	a.Correr(a.P.Iniciar(contexto(t, cli, id)))
+	a.EsperarCarga()
+	a.Entregar(tea.WindowSizeMsg{Width: 90, Height: 40})
+	if pendiente() == "" || !strings.Contains(a.Vista(), clave) {
+		t.Fatalf("en el mismo espacio la clave se conserva:\n%s", a.Vista())
+	}
+	otro := contexto(t, cli, id)
+	otro.Instancia = "otro"
+	a.P.Iniciar(otro)
+	if p := pendiente(); p != "" {
+		t.Fatalf("con otro espacio la clave se olvida: %q", p)
+	}
+}
+
+// TestClaveDelEspacioCreadaPorOtraVia: con el estado cargado sin clave, otra vía (la CLI, otra pestaña) la crea; t no
+// debe regenerarla sin preguntar: avisa de que ya hay clave y la de las apps sigue entrando.
+func TestClaveDelEspacioCreadaPorOtraVia(t *testing.T) {
+	cli, id := prueba.Servicio(t)
+	a := abierta(t, cli, id)
+	a.Entregar(tea.WindowSizeMsg{Width: 90, Height: 40})
+	a.Pulsar("right")
+	a.HastaVer("Este espacio aún no tiene clave")
+	anterior, err := cli.RotarClave(context.Background(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	av := hastaAviso(a, func() { a.Pulsar("t") })
+	if !strings.Contains(av.Texto, "El espacio ya tiene clave") {
+		t.Fatalf("avisa de que ya hay clave: %+v", av)
+	}
+	if v := a.Vista(); reClave.MatchString(v) || strings.Contains(v, "Copia la clave ahora") {
+		t.Fatalf("no se enseña una clave nueva:\n%s", v)
+	}
+	a.HastaVer("El espacio ya tiene clave")
+	if p := a.P.(pagina.Pendiente).Pendiente(); p != "" {
+		t.Fatalf("no hay clave a la vista que perder: %q", p)
+	}
+	req, _ := http.NewRequest("GET", cli.Base+"/api/v1/modelos", nil)
+	req.Header.Set("Authorization", "Bearer "+anterior)
+	if r, err := http.DefaultClient.Do(req); err != nil || r.StatusCode != http.StatusOK {
+		t.Fatalf("la clave anterior sigue entrando: %v %v", r, err)
+	}
+}
+
+// TestClaveDelEspacioVariable: la clave que viene de una variable de entorno no se guarda, ni se muestra ni se
+// regenera desde aquí.
+func TestClaveDelEspacioVariable(t *testing.T) {
+	t.Setenv("TRAMTAI_TOKEN_GLOBAL", strings.Repeat("ab", 32))
+	cli, id := prueba.Servicio(t)
+	a := abierta(t, cli, id)
+	a.Entregar(tea.WindowSizeMsg{Width: 120, Height: 60})
+	a.Pulsar("right")
+	if v := a.Vista(); !strings.Contains(v, "La clave viene de la variable TRAMTAI_TOKEN_GLOBAL") || reClave.MatchString(v) {
+		t.Fatalf("la clave de la variable:\n%s", a.Vista())
+	}
+	if f := a.Pulsar("t"); len(f) != 0 {
+		t.Fatalf("t no regenera la clave de una variable: %+v", f)
 	}
 }
 
@@ -621,6 +745,9 @@ func TestCabe(t *testing.T) {
 	crear(t, cli, id, contrato.ConfigPunto{Nombre: "mi-app-con-un-nombre-bastante-largo", Grupo: "web",
 		Presupuesto: &nucleo.Presupuesto{Diario: nucleo.Limites{Peticiones: 10, Tokens: 1000, USD: 2}, Mensual: nucleo.Limites{Peticiones: 100}}})
 	crear(t, cli, id, contrato.ConfigPunto{Nombre: "notas"})
+	if _, err := cli.RotarClave(context.Background(), id); err != nil { // con clave, t pregunta
+		t.Fatal(err)
+	}
 	a := abierta(t, cli, id)
 	for _, tam := range [][2]int{{60, 17}, {40, 10}} {
 		a.Entregar(tea.WindowSizeMsg{Width: tam[0], Height: tam[1]})
@@ -661,5 +788,13 @@ func TestCabe(t *testing.T) {
 		if h := lipgloss.Height(v); h > 17 || !strings.Contains(v, "s confirma · Esc cancela") {
 			t.Fatalf("la pregunta mide %d filas:\n%s", h, v)
 		}
+	}
+
+	// La clave recién regenerada, de 67 columnas, y su advertencia caben en la pantalla.
+	a.Pulsar("t")
+	a.Entregar(comp.Confirmado{})
+	a.HastaVer("Copia la clave ahora")
+	if v := a.Vista(); lipgloss.Height(v) > 17 || lipgloss.Width(v) > 60 {
+		t.Errorf("la clave recién creada a 60x17 mide %dx%d:\n%s", lipgloss.Width(v), lipgloss.Height(v), v)
 	}
 }

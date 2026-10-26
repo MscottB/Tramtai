@@ -136,7 +136,8 @@ La Web UI se enlaza a una instancia (un espacio de trabajo: el global o el de un
 | Clave | Cómo se guarda |
 |---|---|
 | De cada punto de acceso | Solo su huella SHA-256 (`datos/tokens/acceso_<nombre>` contiene `sha256:…`), comparada en tiempo constante. Se muestra al crearla o regenerarla; las antiguas en claro se convierten solas a huella. Eliminar el punto borra su clave. |
-| Del espacio y token de servicio | En claro, en archivos con permisos 0600, porque la CLI y la app los leen. La del espacio se regenera en marcha (`POST /api/v1/instancia/token`), sin reiniciar. |
+| Del espacio | Solo su huella SHA-256 (`datos/token-global` o `datos/tokens/<id>` contiene `sha256:…`), comparada en tiempo constante; la de una variable de entorno (`TRAMTAI_TOKEN_GLOBAL`) se reduce a huella al arrancar y no se guarda. Un espacio nuevo no tiene clave: se crea (o se regenera, sin reiniciar) con `POST /api/v1/instancia/token`, que la devuelve una sola vez; `GET` solo dice si hay y de dónde viene. Las antiguas en claro se convierten solas a huella. |
+| Clave de servicio | En claro, en `datos/token-servicio` con permisos 0600, porque la CLI y la app de escritorio del mismo usuario la leen para administrar el servicio, y un almacén cifrado no la protegería más frente a ese usuario. |
 | De los proveedores | Cifradas en el almacén del sistema: Administrador de credenciales (Windows), Llavero vía `/usr/bin/security` (macOS) o Secret Service vía `secret-tool` (Linux). Tramtai nunca las escribe en sus archivos. Se leen en cada petición, así que un cambio vale sin reiniciar; una variable de entorno con el mismo nombre tiene prioridad. |
 
 ### Espacios y agentes

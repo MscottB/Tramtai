@@ -1,7 +1,9 @@
 <template>
   <!-- persistent: un clic fuera no cierra; Esc pregunta si ya hay un nombre o un grupo escritos. -->
-  <q-dialog v-model="dialogoGuardar" aria-labelledby="titulo-guardar-api" persistent>
-    <q-card style="width: 520px; max-width: 95vw" @keyup.esc="escaparConAviso($event, !!(nueva.nombre || nueva.grupo), () => (dialogoGuardar = false))">
+  <!-- El keyup va en el q-dialog, no en la tarjeta: recién abierto, el foco está en .q-dialog__inner, fuera de ella. -->
+  <q-dialog v-model="dialogoGuardar" aria-labelledby="titulo-guardar-api" persistent
+            @keyup.esc="escaparConAviso($event, !!(nueva.nombre || nueva.grupo), () => (dialogoGuardar = false))">
+    <q-card style="width: 520px; max-width: 95vw">
       <q-card-section>
         <h2 id="titulo-guardar-api" class="titulo-seccion">{{ t('ejecutar.guardarApi') }}</h2>
         <div class="texto-suave text-body2">{{ t('ejecutar.guardarTexto') }}</div>
@@ -22,8 +24,9 @@
 
   <!-- Al cerrarse se olvida la clave mostrada: no queda en memoria de la página. Por eso un clic fuera no lo cierra y
        Esc pregunta antes: la clave solo se ve esta vez. -->
-  <q-dialog v-model="dialogoCreada" aria-labelledby="titulo-api-creada" persistent @hide="creada = undefined">
-    <q-card style="width: 640px; max-width: 95vw" @keyup.esc="escaparConAviso($event, true, () => (dialogoCreada = false), true)">
+  <q-dialog v-model="dialogoCreada" aria-labelledby="titulo-api-creada" persistent @hide="creada = undefined"
+            @keyup.esc="escaparConAviso($event, true, () => (dialogoCreada = false), true)">
+    <q-card style="width: 640px; max-width: 95vw">
       <q-card-section>
         <h2 id="titulo-api-creada" class="titulo-seccion">{{ t('ejecutar.apiCreada', { nombre: creada?.nombre ?? '' }) }}</h2>
         <div class="texto-suave text-body2">{{ t('ejecutar.apiCreadaTexto') }}</div>
@@ -38,7 +41,7 @@
             :aria-label="t('comun.copiar') + ' ' + c.titulo" @click="copiar(c.valor)" /></div>
         </div>
       </q-card-section>
-      <q-card-actions align="right" class="q-pa-md"><q-btn v-close-popup unelevated color="primary" no-caps :label="t('comun.hecho')" /></q-card-actions>
+      <q-card-actions align="right" class="q-pa-md"><q-btn unelevated color="primary" no-caps :label="t('comun.hecho')" @click="escaparConAviso($event, true, () => (dialogoCreada = false), true)" /></q-card-actions>
     </q-card>
   </q-dialog>
 </template>

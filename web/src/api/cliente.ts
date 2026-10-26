@@ -6,7 +6,7 @@ import type { Clave } from '../idiomas/es'
 import { compartida } from '../compartida'
 import { ERRORES } from '../ayuda/temas/problemas'
 import { actualizacion, dialogoActualizar, diasHistorial, sesion } from '../estado'
-import type { Acerca, Capacidades, PrimerosPasos, EspacioUI, AjustesPunto, ConfigPunto, EntradaConfiguracion, EstadoActualizacion, EstadoConversor, ResumenInstancia, EstadoPresupuesto, EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Novedad, ProgresoActualizacion, Retencion, Sesion, Solicitud, Trabajo, UsoPunto } from './tipos'
+import type { Acerca, Capacidades, PrimerosPasos, EspacioUI, AjustesPunto, ConfigPunto, EntradaConfiguracion, EstadoActualizacion, EstadoClave, EstadoConversor, ResumenInstancia, EstadoPresupuesto, EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Novedad, ProgresoActualizacion, Retencion, Sesion, Solicitud, Trabajo, UsoPunto } from './tipos'
 
 // Campos declarados aparte (no en el constructor): node --test ejecuta este archivo quitando solo los tipos.
 export class ErrorApi extends Error {
@@ -115,8 +115,9 @@ export const api = {
   fijarPuerto: (puerto: number, automatico: boolean) => pedir<Sesion>('POST', '/ui/servicio/puerto', { puerto, automatico }).then(recordar),
   reiniciarServicio: () => pedir<{ url: string }>('POST', '/ui/servicio/reiniciar'),
   instancia: () => pedir<ResumenInstancia>('GET', '/api/v1/instancia'),
-  claveInstancia: () => pedir<{ token: string; archivo: string }>('GET', '/api/v1/instancia/token'),
-  // regenerarClaveInstancia cambia la clave que usan las aplicaciones; la anterior deja de valer al momento.
+  // estadoClaveInstancia dice si el espacio tiene clave y de dónde viene; la clave no se da: solo se ve al crearla.
+  estadoClaveInstancia: () => pedir<EstadoClave>('GET', '/api/v1/instancia/token'),
+  // regenerarClaveInstancia crea la clave del espacio, o la cambia si ya hay una: la anterior deja de valer al momento.
   regenerarClaveInstancia: () => pedir<{ token: string; archivo: string }>('POST', '/api/v1/instancia/token'),
   // heredar quita un valor propio de un proyecto (de su local.yaml): vuelve a valer el de Global.
   heredar: (clave: string) => pedir<void>('POST', '/api/v1/instancia/heredar', { clave }),

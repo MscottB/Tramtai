@@ -8,6 +8,7 @@ type (
 	EstadoInstancia      = contrato.EstadoInstancia
 	EstadoPunto          = contrato.EstadoPunto
 	ActivacionInstancia  = contrato.ActivacionInstancia
+	EstadoClave          = contrato.EstadoClave
 	EntradaConfiguracion = contrato.EntradaConfiguracion
 	ConfigPunto          = contrato.ConfigPunto
 	EjecucionPunto       = contrato.EjecucionPunto

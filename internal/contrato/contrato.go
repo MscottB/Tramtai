@@ -119,7 +119,15 @@ func PruebaIdentidad(token, base, reto string) string {
 // ActivacionInstancia es la respuesta a la activación de una instancia.
 type ActivacionInstancia struct {
 	Instancia EstadoInstancia `json:"instancia"`
-	Token     string          `json:"token"`
+}
+
+// EstadoClave dice si la clave del espacio existe y de dónde viene; nunca la lleva: el servicio solo guarda su huella.
+type EstadoClave struct {
+	TieneClave bool `json:"tiene_clave"`
+	// Origen es "archivo" (se crea y regenera desde Tramtai) o "variable" (se cambia en la variable de entorno).
+	Origen   string `json:"origen"`
+	Variable string `json:"variable,omitempty"`
+	Archivo  string `json:"archivo,omitempty"`
 }
 
 // EntradaConfiguracion es una fila de la configuración efectiva de una instancia.
