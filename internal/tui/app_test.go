@@ -768,6 +768,12 @@ func TestAsciiConLaVariable(t *testing.T) {
 	a.Correr(m.ir(pagina.PaginaConfiguracion, nil, false))
 	a.EsperarCarga()
 	sinDibujo("Ajustes")
+	a.Pulsar("right", "down", "down", "down", "down", "down", "enter") // Acerca de, la última de «Todo Tramtai»
+	a.HastaVer(datos.Texto("es", "acerca.licencia"))
+	sinDibujo("Acerca de")
+	a.Pulsar("esc")
+	m.Update(comp.NuevoAviso{Texto: "Un aviso · con dibujos…", Tipo: comp.Info})
+	sinDibujo("un aviso en la línea de estado")
 	m.Update(comp.Pregunta{Texto: strings.Repeat("una línea de la pregunta\n", 40)})
 	sinDibujo("la confirmación que se desplaza")
 }
