@@ -108,5 +108,5 @@ Quien llega a la portada tiene que entender en segundos qué problema resuelve T
 
 ## Fuera
 
-- Las capturas de la terminal (v0.57).
+- Las capturas de la terminal (v0.58).
 - Rehacer las demás secciones de la portada.
