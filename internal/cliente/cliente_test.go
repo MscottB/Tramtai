@@ -864,6 +864,44 @@ func TestDetenerElServicioAnterior(t *testing.T) {
 	}
 }
 
+// Un servicio anterior que drena sigue respondiendo a /healthz tras la orden de detener: DetenerAnterior espera a que
+// deje de responder aunque tarde más que el plazo de la comprobación, para no arrancar otro encima de sus peticiones.
+func TestDetenerAnteriorEsperaAlDrenaje(t *testing.T) {
+	if runtime.GOOS != "windows" && runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+		t.Skip("sin identificación del dueño de la conexión en este sistema")
+	}
+	plazoComprobacion = 300 * time.Millisecond
+	t.Cleanup(func() { plazoComprobacion = 10 * time.Second })
+	const id, drenaje = "servicio_anterior", time.Second
+	var detenidoEn atomic.Int64
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/healthz" && (detenidoEn.Load() == 0 || time.Since(time.Unix(0, detenidoEn.Load())) < drenaje):
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintf(w, `{"estado":"ok","servicio":%q,"version":"0.55.0+21102026"}`+"\n", id)
+		case r.Method == "POST" && r.URL.Path == "/api/v1/servicio/detener":
+			detenidoEn.CompareAndSwap(0, time.Now().UnixNano())
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(ts.Close)
+	datos := t.TempDir()
+	d, _ := json.Marshal(contrato.Descriptor{Identificador: id, PID: 4242, Base: ts.URL})
+	os.WriteFile(contrato.RutaDescriptor(datos), d, 0o600)
+	os.WriteFile(filepath.Join(datos, "token-servicio"), []byte(strings.Repeat("s", 43)), 0o600)
+	if err := DetenerAnterior(datos); err != nil {
+		t.Fatal(err)
+	}
+	if detenidoEn.Load() == 0 {
+		t.Fatal("no se pidió detener el servicio anterior")
+	}
+	if pasado := time.Since(time.Unix(0, detenidoEn.Load())); pasado < drenaje {
+		t.Fatalf("lo dio por detenido a los %s, mientras aún respondía", pasado)
+	}
+}
+
 // Un proceso que ocupa el puerto del descriptor y reenvía el reto al servicio real (que escucha en otro) no pasa: la
 // prueba ata la dirección a la que el cliente preguntó.
 func TestReenviarElRetoNoBasta(t *testing.T) {

@@ -95,6 +95,9 @@ func clienteDe(datos string) (*Cliente, error) {
 	return &Cliente{Base: d.Base, Descriptor: d, token: strings.TrimSpace(string(token)), http: &http.Client{}}, nil
 }
 
+// plazoComprobacion acota la comprobación y la orden de detener de DetenerAnterior; no la espera al drenaje.
+var plazoComprobacion = 10 * time.Second
+
 // DetenerAnterior detiene el servicio de una versión anterior que responde en el puerto del descriptor y espera a que
 // termine, como «tramtai servicio detener» de esa versión: deja terminar las peticiones en curso hasta su plazo de
 // drenaje. Ese servicio no prueba que conoce el token, así que el token solo sale si el proceso que escucha en el
@@ -104,7 +107,7 @@ func DetenerAnterior(datos string) error {
 	if err != nil {
 		return err
 	}
-	ctx, cancelar := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancelar := context.WithTimeout(context.Background(), plazoComprobacion)
 	defer cancelar()
 	responde, propio := c.anterior(ctx)
 	if !responde {
@@ -118,7 +121,8 @@ func DetenerAnterior(datos string) error {
 		return err
 	}
 	for limite := time.Now().Add(PlazoDrenaje() + 15*time.Second); time.Now().Before(limite); {
-		if responde, _ := c.anterior(ctx); !responde {
+		// Sin el ctx de la comprobación: vencería antes que el drenaje y daría por detenido un servicio que aún responde.
+		if responde, _ := c.anterior(context.Background()); !responde {
 			return nil
 		}
 		time.Sleep(200 * time.Millisecond)
