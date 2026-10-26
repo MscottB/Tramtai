@@ -505,20 +505,25 @@ function escribirLeyenda(leyenda, partes) {
   } else recorrer(0);
 })();
 
-// Demo del recorrido guiado: una pantalla de la app por paso de la bienvenida, un paso cada 6 s, con el mismo patrón que
-// el recorrido del tranvía: pausa que cambia su texto, un punto con nombre por paso, la leyenda solo se anuncia cuando
-// elige la persona, quieta con «reducir movimiento» y sin avanzar con la pestaña oculta ni fuera de la pantalla. Sin
-// JavaScript se ven la primera imagen y la lista de pasos.
+// Demo del recorrido guiado: la zona de la app que señala cada paso de la bienvenida, un paso cada 6 s, con el mismo
+// patrón que el recorrido del tranvía: pausa que cambia su texto, la leyenda solo se anuncia cuando elige la persona,
+// quieta con «reducir movimiento» y sin avanzar con la pestaña oculta ni fuera de la pantalla. La lista de pasos (un
+// desplegable en el móvil) y las flechas eligen el paso; ← → solo con el foco dentro de la demo. Sin JavaScript se ven
+// todos los pasos, uno debajo de otro, con su texto.
 (function () {
   var caja = document.querySelector('.demo');
   var controles = caja && caja.querySelector('.demo-controles');
   if (!controles) return;
   var figuras = caja.querySelectorAll('.demo-paso');
-  var lista = caja.querySelector('.demo-lista');
-  var puntos = caja.querySelectorAll('.demo-punto');
+  var botones = caja.querySelectorAll('.demo-ir');
+  var anterior = caja.querySelector('.demo-anterior');
+  var siguiente = caja.querySelector('.demo-siguiente');
+  var progreso = caja.querySelector('.demo-progreso span');
+  var detalles = caja.querySelector('.demo-pasos-movil');
   var leyenda = caja.querySelector('.demo-leyenda');
   var pausa = caja.querySelector('.demo-pausa');
   var movimiento = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var movil = window.matchMedia('(max-width: 899px)');
   var CADA_MS = 6000;
   // pausaManual es la pausa que eligió la persona: «reducir movimiento» no la pisa al volver a desactivarse.
   var actual = 0, pausado = movimiento.matches, pausaManual = false, enPantalla = !('IntersectionObserver' in window), temporizador = null;
@@ -526,11 +531,20 @@ function escribirLeyenda(leyenda, partes) {
   function mostrar(n) {
     actual = n;
     figuras.forEach(function (f, i) { f.hidden = i !== n; });
-    puntos.forEach(function (p, i) { p.setAttribute('aria-pressed', String(i === n)); });
-    escribirLeyenda(leyenda, [['es', ' de '], ['en', ' of ']].map(function (par) {
+    botones.forEach(function (b, i) { if (i === n) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
+    // La flecha que no lleva a ninguna parte se desactiva; si tenía el foco, se lo pasa a la otra.
+    var conFoco = document.activeElement;
+    anterior.disabled = n === 0;
+    siguiente.disabled = n === figuras.length - 1;
+    if (conFoco === anterior && anterior.disabled) siguiente.focus();
+    if (conFoco === siguiente && siguiente.disabled) anterior.focus();
+    progreso.style.width = (n + 1) / figuras.length * 100 + '%';
+    escribirLeyenda(leyenda, ['es', 'en'].map(function (idioma) {
       var s = document.createElement('span');
-      s.lang = par[0];
-      s.textContent = (n + 1) + par[1] + figuras.length + ' · ' + lista.children[n].querySelector('[lang="' + par[0] + '"]').textContent;
+      s.lang = idioma;
+      s.textContent = [figuras[n].querySelector('.demo-donde'), figuras[n].querySelector('h3')].map(function (e) {
+        return e.querySelector('[lang="' + idioma + '"]').textContent;
+      }).join(' · ');
       return s;
     }));
   }
@@ -557,7 +571,25 @@ function escribirLeyenda(leyenda, partes) {
     pausa.innerHTML = pausado ? '<span lang="es">Seguir</span><span lang="en">Play</span>' : '<span lang="es">Pausa</span><span lang="en">Pause</span>';
   }
 
-  puntos.forEach(function (p, i) { p.addEventListener('click', function () { anunciar(true); mostrar(i); programar(); }); });
+  function elegir(n) { anunciar(true); mostrar(n); programar(); }
+  botones.forEach(function (b, i) {
+    b.addEventListener('click', function () {
+      elegir(i);
+      if (movil.matches) detalles.open = false; // en el móvil, el desplegable se cierra y deja ver el paso
+    });
+  });
+  anterior.addEventListener('click', function () { elegir(actual - 1); });
+  siguiente.addEventListener('click', function () { elegir(actual + 1); });
+  caja.addEventListener('keydown', function (e) {
+    var n = actual + (e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0);
+    if (n === actual || n < 0 || n >= figuras.length) return;
+    e.preventDefault();
+    elegir(n);
+  });
+  // La lista va abierta al lado en el escritorio y cerrada encima en el móvil.
+  function desplegable() { detalles.open = !movil.matches; }
+  movil.addEventListener('change', desplegable);
+  desplegable();
   pausa.addEventListener('click', function () {
     pausado = !pausado;
     pausaManual = pausado;
@@ -580,8 +612,7 @@ function escribirLeyenda(leyenda, partes) {
   });
   pausa.hidden = pausado;
   rotulo();
-  lista.hidden = true;
-  controles.hidden = false;
+  anterior.hidden = siguiente.hidden = controles.hidden = false;
   mostrar(0);
   programar();
 })();

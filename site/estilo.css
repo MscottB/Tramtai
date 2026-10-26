@@ -387,7 +387,7 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
 }
 /* Las capturas de la Ayuda vienen en los dos idiomas: la del otro se oculta también en oscuro (le gana a .solo-oscuro). */
 html[lang="es"] .captura img[lang="en"], html[lang="en"] .captura img[lang="es"] { display: none !important; }
-.solo-lectores { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.solo-lectores, .demo-leyenda { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 /* Escenas de la cabecera (sitio.js): cuatro pestañas con nombre y la pausa encima; debajo, el mapa y el panel con el
    título, la línea que explica la escena y su código. Lado a lado desde 980 px, con el mapa vertical: el horizontal, en
    media columna, bajaría su letra de 12 px a menos de 10. Por debajo, el panel va bajo el mapa. */
@@ -423,20 +423,43 @@ html[lang="es"] .captura img[lang="en"], html[lang="en"] .captura img[lang="es"]
 }
 .mapa-pausa { font: 600 .85rem var(--fuente); color: var(--texto); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 8px; padding: 0 14px; min-height: 44px; cursor: pointer; }
 
-/* Demo del recorrido guiado de la portada (sitio.js): una pantalla de la app por paso, con su leyenda, la pausa y un
-   punto por paso. Sin JavaScript se ve la primera y la lista de pasos. Cada imagen declara su tamaño: no hay saltos. */
-.demo { max-width: 1000px; margin: 0 auto; }
+/* Demo del recorrido guiado de la portada (sitio.js): a la izquierda, la lista de pasos por página (en el móvil, un
+   desplegable encima); a la derecha, la zona del paso con su texto debajo, una flecha a cada costado, el progreso y la
+   pausa. La leyenda solo la oyen los lectores de pantalla. Sin JavaScript se ven todos los pasos, uno debajo de otro.
+   Cada imagen declara su tamaño: no hay saltos. */
+.demo { max-width: 1120px; margin: 0 auto; }
+html.js .demo { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 32px; align-items: start; }
+html:not(.js) .demo-pasos { display: none; }
+html:not(.js) .demo-paso + .demo-paso { display: block; margin-top: 40px; }
+.demo-pasos-movil > summary { font: 600 .95rem/1.3 var(--fuente); color: var(--texto); padding: 12px 0; cursor: pointer; }
+.demo-lista, .demo-grupo ol { list-style: none; margin: 0; padding: 0; }
+.demo-grupo + .demo-grupo { margin-top: 12px; }
+.demo-pagina { display: block; font: 600 .875rem var(--fuente); color: var(--texto-suave); padding: 4px 12px; }
+.demo-ir { display: block; width: 100%; min-height: 44px; padding: 8px 12px; font: .95rem/1.3 var(--fuente); color: var(--texto); text-align: left; background: transparent; border: 0; border-left: 3px solid transparent; border-radius: 0 8px 8px 0; cursor: pointer; }
+.demo-ir:hover { background: var(--superficie-suave); }
+.demo-ir[aria-current="step"] { font-weight: 600; background: var(--acento-suave); border-left-color: var(--acento); }
+/* Las flechas, a media altura de la imagen: cqw es el ancho del escenario y la imagen, 16:10 de lo que dejan flechas y
+   huecos (2 × 44 + 2 × 12). */
+html.js .demo-escenario { container-type: inline-size; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 0 12px; }
+.demo-escena, .demo-controles { grid-column: 2; }
+.demo-flecha { display: grid; place-items: center; width: 44px; height: 44px; margin-top: calc((100cqw - 112px) / 3.2 - 22px); padding: 0; color: var(--texto); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 50%; cursor: pointer; }
+.demo-flecha:hover:not(:disabled) { color: var(--acento); border-color: var(--acento); }
+.demo-flecha:disabled { opacity: .4; cursor: default; }
+.demo-flecha[hidden] { display: none; }
 .demo-paso img { background: var(--superficie-suave); }
-.demo-controles { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 16px; }
+.demo-paso figcaption { margin-top: 16px; }
+.demo-donde { margin: 0; font-size: .9rem; color: var(--texto-suave); }
+.demo-paso h3 { margin: 4px 0 6px; font: 600 1.35rem/1.3 var(--titulo); }
+.demo-texto { margin: 0; font-size: 1.05rem; line-height: 1.6; }
+.demo-controles { display: flex; align-items: center; gap: 16px; margin-top: 20px; }
 .demo-controles[hidden] { display: none; }
-.demo-leyenda { margin: 0; min-height: 1.5em; font-size: .95rem; color: var(--texto-suave); text-align: center; }
-.demo-botones { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; }
-/* 14 puntos de 12 px, cada uno en un área de 44 px pegada a la siguiente: los 32 px de aire entre dos puntos están dentro
-   de su área. En 360 px quedan dos filas de 7. */
-.demo-puntos { display: flex; flex-wrap: wrap; justify-content: center; max-width: 616px; }
-.demo-punto { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
-.demo-punto::before { content: ''; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid var(--acento); }
-.demo-punto[aria-pressed="true"]::before { background: var(--acento); }
+.demo-progreso { flex: 1; height: 4px; border-radius: 2px; background: var(--borde); overflow: hidden; }
+.demo-progreso span { display: block; width: 0; height: 100%; background: var(--acento); transition: width .3s; }
 .demo-pausa { font: 600 .85rem var(--fuente); color: var(--texto); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 8px; padding: 0 14px; min-height: 44px; cursor: pointer; }
-.demo-lista { margin: 24px 0 0; padding-left: 1.6em; columns: 2 16em; column-gap: 32px; color: var(--texto-suave); }
-.demo-lista li { break-inside: avoid; padding: 2px 0; }
+@media (max-width: 899px) {
+  html.js .demo { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  html.js .demo-escenario { gap: 0 4px; }
+  .demo-flecha { margin-top: calc((100cqw - 96px) / 3.2 - 22px); }
+  .demo-pasos-movil { padding: 0 12px; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); }
+  .demo-pasos-movil[open] { padding-bottom: 12px; }
+}

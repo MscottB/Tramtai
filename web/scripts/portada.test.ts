@@ -141,7 +141,7 @@ test('mayúsculas espaciadas solo en la cabecera del tablero (35) y ámbar solo 
 })
 
 test('cada control de la barra, del mapa y de la demo mide 44 px y la barra no tapa las secciones (23, 62)', () => {
-  for (const clase of ['.github', '.menu-boton', '.demo-punto'])
+  for (const clase of ['.github', '.menu-boton', '.demo-flecha'])
     assert.match(css, new RegExp(`\\${clase} \\{[^}]*width: 44px; height: 44px`), clase)
   // .idioma button es ES/EN y tema: 44 de alto el botón, no el grupo con su borde (revisión final web, M13).
   for (const clase of ['.boton', '.copiar', '.mapa-pausa', '.mapa-pestana', '.demo-pausa', '.pestanas-lista button', '.idioma button'])
@@ -226,7 +226,7 @@ test('la portada cuenta el mapa en vivo y no habla de la «API principal»', () 
     assert.doesNotMatch(readFileSync(new URL(`../../site/${pagina}`, import.meta.url), 'utf8'), /API principal|main API/i, pagina)
 })
 
-// La demo del recorrido guiado: una figura por paso de la bienvenida, con la app a pantalla completa y el recorrido encima.
+// La demo del recorrido guiado: una figura por paso de la bienvenida, con la zona que señala el paso y su texto debajo.
 const carpeta = new URL('../../site/capturas/', import.meta.url)
 const figuras = demo.match(/<figure class="captura demo-paso"[\s\S]*?<\/figure>/g) ?? []
 
@@ -247,13 +247,38 @@ test('la demo es una figura por paso de la bienvenida, cada una con su captura e
   for (const figura of figuras.slice(1)) assert.match(figura, /^<figure[^>]* hidden/)
 })
 
-test('la lista de pasos de la demo usa los títulos reales del recorrido, en los dos idiomas', () => {
-  const lista = demo.match(/<ol class="demo-lista">([\s\S]*?)<\/ol>/)?.[1] ?? ''
-  const titulos = [...lista.matchAll(/<li><span lang="es">([^<]+)<\/span><span lang="en">([^<]+)<\/span><\/li>/g)].map((m) => [m[1], m[2]])
-  assert.deepEqual(titulos, pasos.map((p) => [es[p.titulo], en[p.titulo]]))
+// v0.56: la lista de pasos al lado, agrupada por página, y flechas a los costados en lugar de los puntos.
+test('la lista de pasos va agrupada por página, con los títulos reales del recorrido', () => {
+  const botones = [...demo.matchAll(/<button type="button" class="demo-ir" data-paso="(\d+)"><span lang="es">([^<]+)<\/span><span lang="en">([^<]+)<\/span><\/button>/g)]
+  assert.deepEqual(botones.map((m) => [m[2], m[3]]), pasos.map((p) => [es[p.titulo], en[p.titulo]]))
+  assert.deepEqual(botones.map((m) => Number(m[1])), pasos.map((_, i) => i))
+  assert.ok((demo.match(/class="demo-grupo"/g) ?? []).length >= 5)
+  // Cada grupo se llama como su página en el menú de la app, en los dos idiomas.
+  const grupos = [...demo.matchAll(/<li class="demo-grupo"><span class="demo-pagina"><span lang="es">([^<]+)<\/span><span lang="en">([^<]+)<\/span><\/span>/g)].map((m) => [m[1], m[2]])
+  const paginas = [...new Set(pasos.map((p) => p.pagina))]
+  assert.deepEqual(grupos, paginas.map((p) => [es[`menu.${p}` as keyof typeof es], en[`menu.${p}` as keyof typeof en]]))
+  assert.match(demo, /<details class="demo-pasos-movil" open>/)
+})
+test('cada paso enseña su texto debajo de la imagen, en los dos idiomas', () => {
+  const escapar = (s: string) => s.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  figuras.forEach((f, i) => {
+    assert.match(f, new RegExp(`<figcaption>[\\s\\S]*${escapar(es[pasos[i].texto])}`))
+    assert.match(f, new RegExp(`<figcaption>[\\s\\S]*${escapar(en[pasos[i].texto])}`))
+  })
+})
+test('flechas a los costados, con su nombre en cada idioma, y sin puntos', () => {
+  for (const [clase, es_, en_] of [['demo-anterior', 'Paso anterior', 'Previous step'], ['demo-siguiente', 'Paso siguiente', 'Next step']])
+    assert.match(demo, new RegExp(`<button type="button" class="demo-flecha ${clase}"[\\s\\S]*?solo-lectores">${es_}<[\\s\\S]*?solo-lectores">${en_}<`))
+  assert.doesNotMatch(demo, /class="demo-punto"/)
+  assert.match(demo, /class="demo-progreso"/)
 })
 
 const demoJs = js.slice(js.indexOf('// Demo del recorrido guiado'))
+
+test('las flechas del teclado solo actúan con el foco en la demo', () => {
+  assert.match(demoJs, /caja\.addEventListener\('keydown'/)
+  assert.doesNotMatch(demoJs, /document\.addEventListener\('keydown'/)
+})
 
 test('la leyenda cambia un momento después de su aria-live, en el tranvía y en la demo', () => {
   assert.match(js, /function escribirLeyenda\(leyenda, partes\) \{[\s\S]*?setTimeout/, 'el texto llega después del atributo')
@@ -279,12 +304,7 @@ test('la demo se puede pausar y elegir, sin anunciarse sola y con los controles 
   assert.match(demo, /<button type="button" class="demo-pausa">/)
   assert.doesNotMatch(demo, /class="demo-pausa"[^>]* aria-pressed/, 'la pausa cambia su texto: sin aria-pressed')
   assert.match(demo, /<p class="demo-leyenda" aria-live="off">/, 'mientras avanza sola, la leyenda no se anuncia cada 6 s')
-  const puntos = demo.match(/<button type="button" class="demo-punto"[^>]*>[\s\S]*?<\/button>/g) ?? []
-  assert.equal(puntos.length, pasos.length)
-  puntos.forEach((punto, i) => {
-    assert.doesNotMatch(punto, /aria-label/, 'el nombre del punto va en spans por idioma, no en los dos a la vez')
-    assert.match(punto, new RegExp(`<span lang="es" class="solo-lectores">Paso ${i + 1}</span><span lang="en" class="solo-lectores">Step ${i + 1}</span>`))
-  })
+  assert.doesNotMatch(demo, /aria-label=/, 'los nombres van en spans por idioma, no en los dos a la vez')
 })
 
 // v0.56: cada captura de la demo es la zona que señala el paso, ampliada y sin el globo del recorrido.
