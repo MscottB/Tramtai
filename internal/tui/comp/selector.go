@@ -1,6 +1,7 @@
 package comp
 
 import (
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -35,6 +36,13 @@ func NuevoSelector(e *pagina.Estilos, titulo string, items []Item) Selector {
 	}
 	s.lista.Poner(items)
 	return s
+}
+
+// Marcar pone el cursor en la opción de ese valor (la de ahora, al abrir); si no está, lo deja donde estaba.
+func (s *Selector) Marcar(valor string) {
+	if i := slices.IndexFunc(s.lista.filas, func(f fila[Item]) bool { return !f.cabecera && f.elem.Valor == valor }); i >= 0 {
+		s.lista.cursor = i
+	}
 }
 
 // Update atiende las teclas del selector.

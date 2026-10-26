@@ -142,8 +142,22 @@ func (m *modelo) elegirEspacio() tea.Cmd {
 		}
 	}
 	s := comp.NuevoSelector(m.estilos, idioma.T("Cambiar de espacio"), items)
+	s.Marcar(m.instancia)
 	m.selector = &s
 	return nil
+}
+
+// cambiarEspacio cambia al espacio elegido en Ctrl+E. El de ahora no cambia nada; si una página tiene algo que se
+// perdería (pagina.Pendiente), antes pregunta y dice qué, como al salir.
+func (m *modelo) cambiarEspacio(id string) tea.Cmd {
+	if id == m.instancia {
+		return nil
+	}
+	if motivos := m.pendientes(); len(motivos) > 0 {
+		m.pregunta, m.saliendo, m.cambiarA = &comp.Confirmacion{Texto: idioma.T("¿Cambiar de espacio?") + "\n\n" + strings.Join(motivos, "\n")}, false, id
+		return nil
+	}
+	return func() tea.Msg { return pagina.CambioEspacio{ID: id} }
 }
 
 func (m *modelo) nombreEspacio() string {

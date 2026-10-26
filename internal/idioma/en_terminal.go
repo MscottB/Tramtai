@@ -14,6 +14,7 @@ func init() {
 		"Probar tiene una petición en marcha: seguirá en el servicio y la verás en el Historial.": "Playground has a running request: it will keep going in the service and you will see it in the History.",
 		"La API %s tiene cambios sin guardar en Probar (g los guarda).":                           "The API %s has unsaved changes in the Playground (g saves them).",
 		"¿Salir de la terminal?":                "Quit the terminal?",
+		"¿Cambiar de espacio?":                  "Switch workspace?",
 		"ver el error":                          "see the error",
 		"Esc cierra":                            "Esc closes",
 		"Teclas":                                "Keys",

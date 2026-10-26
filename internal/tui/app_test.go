@@ -20,6 +20,8 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"tramtai/internal/cliente"
+	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
@@ -415,6 +417,51 @@ func TestServicioVuelveConservaLoAbierto(t *testing.T) {
 	a.HastaVer(tx("historial.solicitud"), tx("registro.titulo"))
 	a.Pulsar("esc")
 	a.HastaVer(filtro, "hola historial")
+}
+
+// TestCtrlEConElEspacioDeAhora: Ctrl+E abre con el cursor en el espacio de ahora, e Intro en él no cambia nada (la página
+// no se vuelve a iniciar). Elegir otro con algo pendiente pregunta antes y dice qué; solo s cambia.
+func TestCtrlEConElEspacioDeAhora(t *testing.T) {
+	m := nuevo(Opciones{})
+	ocupada := &paginaOcupada{}
+	m.paginas[pagina.PaginaInicio] = ocupada
+	m.cli, m.instancia = &cliente.Cliente{}, "notas_1234"
+	m.espacios = []contrato.Espacio{{ID: "global", Nombre: "Global", Activo: true}, {ID: "notas_1234", Nombre: "notas", Activo: true}}
+	// elegir pulsa las teclas en el selector y da a la app lo que responde (Elegido y, si lo hay, lo que pide después).
+	elegir := func(teclas ...string) {
+		t.Helper()
+		m.Update(tecla("ctrl+e"))
+		if m.selector == nil {
+			t.Fatal("Ctrl+E abre el selector")
+		}
+		var cmd tea.Cmd
+		for _, k := range teclas {
+			_, cmd = m.Update(tecla(k))
+		}
+		for cmd != nil {
+			_, cmd = m.Update(cmd())
+		}
+	}
+	elegir("enter")
+	if m.instancia != "notas_1234" || ocupada.iniciada != 0 || ocupada.cambios != 0 || m.selector != nil {
+		t.Fatalf("Intro en el espacio de ahora no cambia nada: %s, iniciada %d", m.instancia, ocupada.iniciada)
+	}
+	ocupada.motivo = "Probar tiene una petición en marcha"
+	elegir("up", "enter")
+	if v := ansi.Strip(m.View().Content); m.instancia != "notas_1234" || m.pregunta == nil || !strings.Contains(v, "Probar tiene una petición en marcha") {
+		t.Fatalf("con algo pendiente, pregunta antes de cambiar y dice qué:\n%s", v)
+	}
+	if _, cmd := m.Update(tecla("n")); cmd != nil || m.pregunta != nil || m.instancia != "notas_1234" {
+		t.Fatal("n no cambia")
+	}
+	elegir("up", "enter")
+	_, cmd := m.Update(tecla("s"))
+	for cmd != nil {
+		_, cmd = m.Update(cmd())
+	}
+	if m.instancia != "global" || ocupada.iniciada != 1 {
+		t.Fatalf("s cambia al elegido: %s, iniciada %d", m.instancia, ocupada.iniciada)
+	}
 }
 
 // TestActualizandoSaleLimpia: cuando empieza la instalación de una versión nueva, la terminal sale sin preguntar (aunque

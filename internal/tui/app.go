@@ -88,6 +88,7 @@ type modelo struct {
 	selector *comp.Selector     // el cambio rápido de espacio
 	pregunta *comp.Confirmacion // la confirmación que pidió la página, la de salir o el último error entero
 	saliendo bool               // la pregunta abierta es la de salir: s cierra la terminal
+	cambiarA string             // la pregunta abierta es la de cambiar a este espacio (Ctrl+E): s cambia
 	avisos   comp.Avisos
 
 	despedida string // lo que queda escrito en la consola al salir (al empezar una actualización)
@@ -275,13 +276,13 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case pagina.Volver:
 		return m, m.volver()
 	case comp.Pregunta:
-		m.pregunta, m.saliendo = &comp.Confirmacion{Texto: msg.Texto}, false
+		m.pregunta, m.saliendo, m.cambiarA = &comp.Confirmacion{Texto: msg.Texto}, false, ""
 	case comp.Elegido:
 		if m.selector == nil {
 			return m, m.aPagina(msg)
 		}
 		m.selector = nil
-		return m, func() tea.Msg { return pagina.CambioEspacio{ID: msg.Valor} }
+		return m, m.cambiarEspacio(msg.Valor)
 	case comp.Cancelado:
 		if m.selector == nil {
 			return m, m.aPagina(msg)
@@ -324,6 +325,13 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 			m.saliendo = false
 			if _, si := cmd().(comp.Confirmado); si {
 				return tea.Quit
+			}
+			return nil
+		}
+		if destino := m.cambiarA; destino != "" {
+			m.cambiarA = ""
+			if _, si := cmd().(comp.Confirmado); si {
+				return func() tea.Msg { return pagina.CambioEspacio{ID: destino} }
 			}
 			return nil
 		}
@@ -378,6 +386,16 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 
 // salir cierra la terminal; si una página tiene algo en marcha o sin guardar (pagina.Pendiente), antes pregunta y dice qué.
 func (m *modelo) salir() tea.Cmd {
+	motivos := m.pendientes()
+	if len(motivos) == 0 {
+		return tea.Quit
+	}
+	m.pregunta, m.saliendo, m.cambiarA = &comp.Confirmacion{Texto: idioma.T("¿Salir de la terminal?") + "\n\n" + strings.Join(motivos, "\n")}, true, ""
+	return nil
+}
+
+// pendientes son las frases de las páginas que tienen algo en marcha o sin guardar (pagina.Pendiente), en el orden del menú.
+func (m *modelo) pendientes() []string {
 	var motivos []string
 	for _, clave := range ordenMenu() {
 		if p, ok := m.paginas[clave].(pagina.Pendiente); ok {
@@ -386,11 +404,7 @@ func (m *modelo) salir() tea.Cmd {
 			}
 		}
 	}
-	if len(motivos) == 0 {
-		return tea.Quit
-	}
-	m.pregunta, m.saliendo = &comp.Confirmacion{Texto: idioma.T("¿Salir de la terminal?") + "\n\n" + strings.Join(motivos, "\n")}, true
-	return nil
+	return motivos
 }
 
 func (m *modelo) View() tea.View {
