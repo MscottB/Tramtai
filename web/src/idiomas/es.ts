@@ -233,7 +233,7 @@ const es = {
   // Mis APIs
   'conectar.subtitulo': 'Tus aplicaciones usan tus agentes a través de estas APIs: cambia la URL base de tu app y usa la clave.',
   'conectar.directa': 'Clave del espacio {nombre}',
-  'conectar.directaTexto': 'Una por espacio de trabajo, con acceso a todo: úsala para probar, la CLI y tus scripts; da a cada app su propia API.',
+  'conectar.directaTexto': 'Una por espacio de trabajo, con acceso a todo: es la clave de tus apps y scripts, y solo se ve al crearla; da a cada app su propia API.',
   'claves.espacioTitulo': 'Clave del espacio {nombre}',
   'claves.espacioTexto': 'Una por espacio, con acceso a cualquier agente y modelo, sin límites propios. Para tus apps y scripts; se ve solo al crearla o regenerarla.',
   'claves.appsTitulo': 'APIs por aplicación',

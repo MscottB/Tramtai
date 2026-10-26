@@ -352,6 +352,7 @@ func TestClienteEstadoClave(t *testing.T) {
 		t.Fatalf("regenerar deja fuera la anterior: %q %v", segunda, err)
 	}
 }
+
 func TestClienteTrabajosFiltrados(t *testing.T) {
 	cli, _ := servicioDePrueba(t, "")
 	ctx := context.Background()

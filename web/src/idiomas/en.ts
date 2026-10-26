@@ -232,7 +232,7 @@ const en: Textos = {
   // My APIs
   'conectar.subtitulo': 'Your apps use your agents through these APIs: change your app’s base URL and use the key.',
   'conectar.directa': 'Workspace key {nombre}',
-  'conectar.directaTexto': 'One per workspace, with access to everything: use it to try things, for the CLI and your scripts; give each app its own API.',
+  'conectar.directaTexto': 'One per workspace, with access to everything: it is the key for your apps and scripts, and it is shown only when created; give each app its own API.',
   'claves.espacioTitulo': 'Workspace key {nombre}',
   'claves.espacioTexto': 'One per workspace, with access to any agent and model, without limits of its own. For your apps and scripts; it is shown only when it is created or regenerated.',
   'claves.appsTitulo': 'Per-app APIs',

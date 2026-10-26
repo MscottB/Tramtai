@@ -556,6 +556,37 @@ func TestClaveDelEspacioAlVolver(t *testing.T) {
 	}
 }
 
+// TestClaveDelEspacioCreadaPorOtraVia: con el estado cargado sin clave, otra vía (la CLI, otra pestaña) la crea; t no
+// debe regenerarla sin preguntar: avisa de que ya hay clave y la de las apps sigue entrando.
+func TestClaveDelEspacioCreadaPorOtraVia(t *testing.T) {
+	cli, id := prueba.Servicio(t)
+	a := abierta(t, cli, id)
+	a.Entregar(tea.WindowSizeMsg{Width: 90, Height: 40})
+	a.Pulsar("right")
+	a.HastaVer("Este espacio aún no tiene clave")
+	anterior, err := cli.RotarClave(context.Background(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	av := hastaAviso(a, func() { a.Pulsar("t") })
+	if !strings.Contains(av.Texto, "El espacio ya tiene clave") {
+		t.Fatalf("avisa de que ya hay clave: %+v", av)
+	}
+	if v := a.Vista(); reClave.MatchString(v) || strings.Contains(v, "Copia la clave ahora") {
+		t.Fatalf("no se enseña una clave nueva:\n%s", v)
+	}
+	a.HastaVer("El espacio ya tiene clave")
+	if p := a.P.(pagina.Pendiente).Pendiente(); p != "" {
+		t.Fatalf("no hay clave a la vista que perder: %q", p)
+	}
+	req, _ := http.NewRequest("GET", cli.Base+"/api/v1/modelos", nil)
+	req.Header.Set("Authorization", "Bearer "+anterior)
+	if r, err := http.DefaultClient.Do(req); err != nil || r.StatusCode != http.StatusOK {
+		t.Fatalf("la clave anterior sigue entrando: %v %v", r, err)
+	}
+}
+
 // TestClaveDelEspacioVariable: la clave que viene de una variable de entorno no se guarda, ni se muestra ni se
 // regenera desde aquí.
 func TestClaveDelEspacioVariable(t *testing.T) {

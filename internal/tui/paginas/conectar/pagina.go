@@ -48,6 +48,7 @@ type (
 		exito        string
 		abrir        *abrir
 		claveEspacio string
+		yaTenia      *contrato.EstadoClave // al crear la clave del espacio ya había una: no se tocó, y este es su estado
 		cerrarForm   bool
 		borrada      string // la API eliminada: si es la del detalle, se cierra
 		err          error
@@ -316,6 +317,10 @@ func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
 		// Recarga igual: un cambio de varias peticiones (g) pudo quedarse a medias, como activarGrupo en su finally.
 		return tea.Batch(comp.Aviso(nucleo.MensajeDe(m.err), comp.Fallo), p.cargar(false))
 	}
+	if m.yaTenia != nil { // otra vía la creó después de la última carga: regenerar dejaría fuera a las apps sin preguntar
+		p.estadoClave, p.errClave = *m.yaTenia, ""
+		return tea.Batch(comp.Aviso(p.tx("conectar.conClave"), comp.Info), p.cargar(false))
+	}
 	if m.cerrarForm {
 		p.form = nil
 	}
@@ -388,7 +393,7 @@ func (p *Pagina) confirmado() tea.Cmd {
 			return c.Cli.ReiniciarPresupuestoInstancia(c.Ctx, c.Instancia)
 		})
 	case accRegenerarEspacio:
-		return p.rotarClave(p.tx("conectar.claveRegenerada"))
+		return p.rotarClave(p.tx("conectar.claveRegenerada"), false)
 	case accSalirClave:
 		p.claveEspacio, p.pestana = "", pestanaApis
 		p.arriba()
@@ -396,9 +401,20 @@ func (p *Pagina) confirmado() tea.Cmd {
 	return nil
 }
 
-// rotarClave crea la clave del espacio o la regenera; el servicio la da esta única vez y la página la enseña.
-func (p *Pagina) rotarClave(exito string) tea.Cmd {
+// rotarClave crea la clave del espacio o la regenera; el servicio la da esta única vez y la página la enseña. Al crear
+// (sin preguntar) se vuelve a mirar el estado justo antes: el de la última carga pudo quedarse viejo.
+func (p *Pagina) rotarClave(exito string, crear bool) tea.Cmd {
 	return p.accion(exito, func(c pagina.Contexto, m *msgAccion) error {
+		if crear {
+			e, err := c.Cli.EstadoClave(c.Ctx, c.Instancia)
+			if err != nil {
+				return err
+			}
+			if e.TieneClave {
+				m.yaTenia = &e
+				return nil
+			}
+		}
 		var err error
 		m.claveEspacio, err = c.Cli.RotarClave(c.Ctx, c.Instancia)
 		return err
@@ -587,7 +603,7 @@ func (p *Pagina) teclaClave(t string, k tea.KeyPressMsg) tea.Cmd {
 		switch {
 		case !p.puedeRotar():
 		case !p.estadoClave.TieneClave: // la primera clave no pierde nada: se crea sin preguntar
-			return p.rotarClave(p.tx("conectar.claveCreada"))
+			return p.rotarClave(p.tx("conectar.claveCreada"), true)
 		default:
 			return p.preguntar(accRegenerarEspacio, "", p.tx("conectar.regenerarTitulo"), p.tx("conectar.regenerarTexto"))
 		}
