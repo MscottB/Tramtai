@@ -380,10 +380,6 @@ function detener() {
     })
 }
 Object.assign(window, {
-  tramtaiActualizar: () =>
-    comprobarActualizacion().then(() => {
-      if (actualizacion.value?.disponible) dialogoActualizar.value = true
-    }),
   tramtaiBuscarActualizaciones: buscarActualizacionAhora,
   tramtaiAcercaDe: () => (acercaAbierto.value = true),
   // Un error de la bandeja (activar o desactivar una API) se muestra aquí, con el aviso de la Web UI.
