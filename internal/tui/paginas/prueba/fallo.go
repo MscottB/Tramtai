@@ -6,6 +6,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"tramtai/internal/cliente"
@@ -42,4 +43,26 @@ func ConFallo(t *testing.T, cli *cliente.Cliente) (*cliente.Cliente, func(mensaj
 		defer mu.Unlock()
 		fallo = mensaje
 	}
+}
+
+// ConCaida pone delante del servicio un servidor que lo deja pasar todo hasta que la prueba lo tumba: desde entonces
+// corta cada petición sin contestar, como un servicio que se cayó o se está reiniciando, hasta que lo levanta otra vez.
+// Devuelve el cliente que le habla y la función que lo tumba (true) o lo levanta (false).
+func ConCaida(t *testing.T, cli *cliente.Cliente) (*cliente.Cliente, func(caido bool)) {
+	t.Helper()
+	destino, err := url.Parse(cli.Base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pasar := httputil.NewSingleHostReverseProxy(destino)
+	var caido atomic.Bool
+	base := Servidor(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if caido.Load() {
+			panic(http.ErrAbortHandler) // la conexión se cierra sin respuesta: el cliente ve un error de red
+		}
+		pasar.ServeHTTP(w, r)
+	}))
+	copia := *cli
+	copia.Base = base
+	return &copia, caido.Store
 }

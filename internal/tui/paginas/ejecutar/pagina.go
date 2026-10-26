@@ -185,7 +185,8 @@ func (p *Pagina) activo() bool     { return p.trabajo != nil && p.final == nil &
 func (p *Pagina) cancelable() bool { return p.activo() && p.estado != nucleo.CancelacionSolicitada }
 
 // Iniciar carga el catálogo, los límites y las pruebas recientes. La receta y el mensaje se conservan entre visitas (al
-// crearse, el mensaje es el del borrador); un cambio de espacio olvida el trabajo que se seguía y la API que se editaba.
+// crearse, el mensaje es el del borrador), y también «Guardar como API» y la API recién creada con su clave; un cambio de
+// espacio olvida el trabajo que se seguía, la API que se editaba y lo que se guardaba.
 func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	otro := p.c.Instancia != "" && p.c.Instancia != c.Instancia
 	p.c, p.lengua = c, c.Idioma
@@ -204,10 +205,10 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	}
 	if otro {
 		p.trabajo, p.final, p.salida, p.avisos, p.api, p.punto = nil, nil, "", nil, "", nil
-		p.catalogo, p.cargadoRec = nil, false
+		p.catalogo, p.cargadoRec, p.guardar, p.creada = nil, false, nil, nil
 		p.recientes.Poner(nil)
 	}
-	p.codigo, p.guardar, p.creada, p.pend, p.enviando, p.ocupado, p.muestra = nil, nil, nil, nil, false, false, ""
+	p.codigo, p.pend, p.enviando, p.ocupado, p.muestra = nil, nil, false, false, ""
 	p.ajustar()
 	if c.Cli == nil {
 		p.sinServ = true

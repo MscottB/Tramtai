@@ -737,8 +737,8 @@ func TestHistorialEnVivo(t *testing.T) {
 }
 
 // TestHistorialEnVivoSeCorta: el seguimiento se corta al cerrar el detalle (Esc), al ocultar la página (Ocultar), al cancelarse
-// el contexto de la página y al iniciarla otra vez; Mostrar lo reabre. Lo que llega del seguimiento con la página ya
-// oculta no se aplica.
+// el contexto de la página y al iniciarla otra vez; Mostrar, y otro Iniciar en el mismo espacio, lo reabren. Lo que llega
+// del seguimiento con la página ya oculta no se aplica.
 func TestHistorialEnVivoSeCorta(t *testing.T) {
 	cli, id, b, _ := conBloqueado(t)
 	a := abierta(t, cli, id)
@@ -769,12 +769,14 @@ func TestHistorialEnVivoSeCorta(t *testing.T) {
 	if !enVivo(a) || prueba.FlujosAbiertos() != 1 || !enPestana(a, "ejecutar.respuesta") {
 		t.Fatalf("Mostrar reabre el seguimiento y conserva la pestaña:\n%s", a.Vista())
 	}
-	// Otro Iniciar cancela el seguimiento de antes y empieza de cero, sin detalle.
+	// Otro Iniciar en el mismo espacio (el servicio volvió) corta el seguimiento de antes y lo reabre, con el detalle.
 	a.Correr(a.P.Iniciar(prueba.Contexto(t, cli, id)))
-	cerrado(t, a)
-	if strings.Contains(a.Vista(), "["+datos.Texto("es", "historial.solicitud")+"]") || strings.Contains(a.Vista(), "["+datos.Texto("es", "ejecutar.respuesta")+"]") {
-		t.Fatalf("Iniciar empieza de cero, sin detalle:\n%s", a.Vista())
+	a.Hasta(func() bool { return enVivo(a) && prueba.FlujosAbiertos() == 1 && strings.Contains(a.Vista(), "primera parte") })
+	if !enVivo(a) || prueba.FlujosAbiertos() != 1 || !strings.Contains(a.Vista(), "primera parte") {
+		t.Fatalf("Iniciar en el mismo espacio conserva el detalle y lo sigue:\n%s", a.Vista())
 	}
+	a.Pulsar("esc")
+	cerrado(t, a)
 	// El contexto de la página (cambio de espacio, reinicio) también lo corta.
 	cli2, id2, _, _ := conBloqueado(t)
 	c := prueba.Contexto(t, cli2, id2)
@@ -1262,14 +1264,22 @@ func TestHistorialOcultarYMostrar(t *testing.T) {
 	if cuantas(a, " uno", " dos") != 1 || !strings.Contains(a.Vista(), "uno") {
 		t.Fatalf("Mostrar la pone al día (y solo «uno» contiene la u):\n%s", a.Vista())
 	}
-	// Iniciar sí empieza de cero.
+	// Iniciar en el mismo espacio (el servicio volvió, o se vuelve por el menú) también los conserva.
+	a.Pulsar("e")
+	a.Hasta(conservados)
 	a.Correr(a.P.Iniciar(prueba.Contexto(t, cli, id)))
+	a.Hasta(conservados)
+	if v := a.Vista(); !conservados() {
+		t.Fatalf("Iniciar en el mismo espacio conserva los filtros:\n%s", v)
+	}
+	// Lo que llega con IrA empieza por los filtros de por defecto.
+	a.Entregar(pagina.FiltroEstado{})
 	a.Hasta(func() bool {
 		v := a.Vista()
 		return strings.Contains(v, "Estado: Todas") && !strings.Contains(v, "/ u") && cuantas(a, " uno", " dos") == 2
 	})
 	if v := a.Vista(); !strings.Contains(v, "Estado: Todas") || strings.Contains(v, "/ u") || cuantas(a, " uno", " dos") != 2 {
-		t.Fatalf("Iniciar quita los filtros:\n%s", v)
+		t.Fatalf("FiltroEstado quita los demás filtros:\n%s", v)
 	}
 }
 

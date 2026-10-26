@@ -169,8 +169,12 @@ func (p *Pagina) tx(clave string, pares ...string) string {
 	return p.estilos.Tx(p.lengua, clave, pares...)
 }
 
-// Iniciar empieza de cero: «Cargando…» hasta que llegue la lista.
+// Iniciar vuelve a cargar: «Cargando…» hasta que llegue la lista. En el mismo espacio (el servicio volvió, o se vuelve por
+// el menú) el diálogo abierto se conserva con lo escrito; con otro espacio, se cierra.
 func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
+	if p.c.Instancia != c.Instancia {
+		p.dlg = nil
+	}
 	p.c, p.lengua = c, c.Idioma
 	p.gen++
 	if p.estilos != c.Estilos { // los mismos toda la sesión: la lista se crea una vez
@@ -179,7 +183,7 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 		p.lista.Clave = func(e contrato.Espacio) string { return e.ID }
 		p.lista.Fila = p.fila
 	}
-	p.espacios, p.cargado, p.sinServ, p.err, p.ocupado, p.pend, p.dlg = nil, false, false, "", false, nil, nil
+	p.espacios, p.cargado, p.sinServ, p.err, p.ocupado, p.pend = nil, false, false, "", false, nil
 	return p.cargar()
 }
 

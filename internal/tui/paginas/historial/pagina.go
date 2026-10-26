@@ -182,8 +182,11 @@ func (p *Pagina) ascii() bool { return p.estilos != nil && p.estilos.ASCII }
 
 func (p *Pagina) hayFiltro() bool { return p.estado != estTodos || p.busqueda != "" || p.origenF != "" }
 
-// Iniciar empieza de cero: «Cargando…» hasta que llegue la primera página, con los filtros por defecto.
+// Iniciar vuelve a cargar: «Cargando…» hasta que llegue la primera página. En el mismo espacio (el servicio volvió, o se
+// vuelve por el menú) los filtros y el detalle abierto se conservan y se ponen al día; con otro espacio, los filtros son
+// los de por defecto y el detalle se cierra.
 func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
+	otro := p.c.Instancia != c.Instancia
 	p.c, p.lengua = c, c.Idioma
 	if p.estilos != c.Estilos { // los mismos toda la sesión: la lista y el visor se crean una vez
 		p.estilos = c.Estilos
@@ -197,16 +200,29 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	p.cerrarVivo()
 	p.trabajos, p.puntos, p.hayMas = nil, nil, false
 	p.cargado, p.sinServ, p.err, p.cargando, p.cargandoMas, p.enVuelo = false, false, "", false, false, 0
-	p.estado, p.origenF, p.busqueda, p.buscando, p.entrada, p.enVisor = estTodos, "", "", false, "", false
-	p.selector, p.pend, p.ocupado = nil, nil, false
-	p.cerrarDetalle()
+	p.buscando, p.entrada, p.enVisor = false, "", false
+	p.selector, p.pend, p.ocupado, p.regPend = nil, nil, false, false
+	if otro {
+		p.porDefecto()
+	}
 	p.lista.Poner(nil)
 	p.ajustar()
 	if c.Cli == nil {
 		p.sinServ = true
 		return pagina.SinCliente
 	}
-	return tea.Batch(p.cargar(false), p.cargarPuntos(), p.armarSondeo())
+	cmds := []tea.Cmd{p.cargar(false), p.cargarPuntos(), p.armarSondeo()}
+	if p.abierto != "" {
+		cmds = append(cmds, p.abrirDetalle(p.abierto, false))
+	}
+	return tea.Batch(cmds...)
+}
+
+// porDefecto deja los filtros de por defecto y cierra el detalle: como al entrar la primera vez, antes de aplicar el
+// filtro con que se llega (FiltroPunto, FiltroEstado) o al cambiar de espacio.
+func (p *Pagina) porDefecto() {
+	p.estado, p.origenF, p.busqueda = estTodos, "", ""
+	p.cerrarDetalle()
 }
 
 // Ocultar suelta el seguimiento en vivo y el sondeo: la página no gasta nada mientras no se ve.
@@ -339,13 +355,14 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		p.rehacerVisor() // el texto se parte por palabras al ancho de ahora
 	case pagina.FiltroPunto:
 		// Una API por su nombre (Mis APIs) o un filtro ya armado («o:probar» desde Probar), como origenHistorial.
+		p.porDefecto()
 		p.origenF = "p:" + m.Nombre
 		if strings.Contains(m.Nombre, ":") {
 			p.origenF = m.Nombre
 		}
 		return p, p.cargar(false)
 	case pagina.FiltroEstado:
-		p.estado = estTodos
+		p.porDefecto()
 		if slices.Contains(estadosFiltro, m.Estado) {
 			p.estado = m.Estado
 		}

@@ -162,16 +162,26 @@ func (p *Pagina) tx(clave string, pares ...string) string {
 	return p.estilos.Tx(p.lengua, clave, pares...)
 }
 
-// Iniciar empieza de cero: «Cargando…» hasta que llegan los ajustes. La pestaña y la sección elegidas se recuerdan.
+// Iniciar vuelve a cargar: «Cargando…» hasta que llegan los ajustes. La pestaña y la sección elegidas se recuerdan; en el
+// mismo espacio (el servicio volvió, o se vuelve por el menú) también el formulario y lo abierto encima, con la
+// actualización que se sigue. Con otro espacio, se cierran.
 func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
+	otro := p.c.Instancia != c.Instancia
 	p.c, p.lengua = c, c.Idioma
 	p.gen++
 	if p.estilos != c.Estilos {
 		p.estilos, p.visor = c.Estilos, comp.NuevoVisor(c.Estilos)
 	}
-	p.cargado, p.sinServ, p.err, p.ocupado, p.form, p.sel, p.abierta, p.buscando, p.filtro, p.pend = false, false, "", false, nil, nil, "", false, "", ""
-	p.act, p.acerca, p.sondeando, p.upd = nil, nil, false, actualizacionEnCurso{}
-	return p.cargar()
+	p.cargado, p.sinServ, p.err, p.ocupado, p.sel, p.pend, p.sondeando = false, false, "", false, nil, "", false
+	if otro {
+		p.form, p.abierta, p.buscando, p.filtro = nil, "", false, ""
+		p.act, p.acerca, p.upd = nil, nil, actualizacionEnCurso{} // las novedades y Acerca de los necesitan abiertos
+	}
+	cmd := p.cargar()
+	if p.abierta == vistaProgreso && c.Cli != nil { // el sondeo de antes ya no vale
+		return tea.Batch(cmd, p.sondear())
+	}
+	return cmd
 }
 
 // Ocultar deja de seguir lo que esté en marcha (el conversor, una actualización) mientras no se ve; Mostrar lo retoma.
@@ -279,6 +289,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 			return p, p.leerConversor()
 		}
 	case pagina.ConNovedades:
+		p.form = nil // se pidieron las novedades: van encima de todo
 		return p, p.pedirNovedades()
 	case comp.Elegido:
 		return p, p.elegido(m.Valor)

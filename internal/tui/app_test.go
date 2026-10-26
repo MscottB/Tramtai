@@ -315,6 +315,108 @@ func TestServicioCaidoNoCierra(t *testing.T) {
 	}
 }
 
+// TestServicioVuelveConservaLoAbierto: cuando el servicio cae y vuelve con el mismo espacio, la app inicia otra vez la
+// página actual y esta sigue con lo que tenía abierto: la clave recién creada y el formulario de Mis APIs, «Guardar como
+// API» y la API creada en Probar, el formulario y los valores técnicos de Ajustes, el diálogo de Espacios y el detalle y
+// los filtros del Historial.
+func TestServicioVuelveConservaLoAbierto(t *testing.T) {
+	directo, global := prueba.Servicio(t)
+	if _, err := directo.Crear(context.Background(), global, nucleo.SolicitudEjecucion{Agente: "simulado",
+		Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "hola historial"}}}); err != nil {
+		t.Fatal(err)
+	}
+	cli, caer := prueba.ConCaida(t, directo)
+	m := nuevoEn(Opciones{Datos: t.TempDir()}, "es")
+	m.cli, m.actual = cli, pagina.PaginaConectar
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	a := conducir(t, m)
+	a.Correr(m.conectar(false, true, false))
+	a.Hasta(func() bool { return m.instancia == global && m.caido == nil })
+	// vuelve tumba el servicio hasta que la app lo nota y lo levanta: con la comprobación siguiente, la app inicia otra vez
+	// la página actual.
+	vuelve := func() {
+		t.Helper()
+		caer(true)
+		a.Correr(m.conectar(false, false, false))
+		a.HastaVer(idioma.T("El servicio no responde · r reintenta"))
+		caer(false)
+		a.Correr(m.conectar(false, false, false))
+		a.Hasta(func() bool { return m.caido == nil })
+	}
+	pie := func() string { l := strings.Split(ansi.Strip(a.Vista()), "\n"); return l[len(l)-1] }
+	tx := func(clave string, pares ...string) string { return datos.Textof("es", clave, pares...) }
+
+	// Mis APIs: la clave que solo se ve esta vez y el formulario a medias.
+	a.HastaVer("Todavía no hay APIs por aplicación")
+	a.Pulsar("n")
+	a.Escribir("mi-app")
+	a.Pulsar("ctrl+s")
+	a.HastaVer("Copia la clave ahora")
+	clave := regexp.MustCompile(`tt_[A-Za-z0-9_-]+`).FindString(ansi.Strip(a.Vista()))
+	if clave == "" {
+		t.Fatalf("al crearla se ve su clave:\n%s", a.Vista())
+	}
+	vuelve()
+	a.HastaVer(clave)
+	a.Pulsar("esc", "s")
+	a.Pulsar("n")
+	a.Escribir("otra-app")
+	vuelve()
+	a.HastaVer("otra-app")
+	a.Pulsar("esc", "s")
+
+	// Probar: «Guardar como API» con el nombre escrito y, ya guardada, la API con su clave.
+	a.Pulsar("3")
+	a.HastaVer(tx("receta.instrucciones"))
+	a.Pulsar("g")
+	a.Escribir("probar-app")
+	vuelve()
+	a.HastaVer(tx("ejecutar.guardarApi"), "probar-app")
+	a.Pulsar("ctrl+s")
+	a.HastaVer(tx("ejecutar.apiCreada", "nombre", "probar-app"))
+	vuelve()
+	a.HastaVer(tx("ejecutar.apiCreada", "nombre", "probar-app"))
+
+	// Ajustes: el formulario del historial y los valores técnicos.
+	a.Pulsar("7")
+	a.HastaVer(tx("config.valoresTecnicos"))
+	a.Pulsar("down", "e")
+	if !strings.Contains(pie(), "Ctrl+S") {
+		t.Fatalf("e abre el formulario: %q", pie())
+	}
+	vuelve()
+	a.Hasta(func() bool { return strings.Contains(pie(), "Ctrl+S") })
+	a.Pulsar("esc", "down", "down", "enter")
+	if !strings.Contains(pie(), idioma.T("desplaza")) {
+		t.Fatalf("Intro abre los valores técnicos: %q", pie())
+	}
+	vuelve()
+	a.Hasta(func() bool { return strings.Contains(pie(), idioma.T("desplaza")) })
+	a.Pulsar("esc")
+
+	// Espacios: el diálogo de abrir un proyecto con la ruta escrita.
+	a.Pulsar("6")
+	a.EsperarCarga()
+	a.Pulsar("n")
+	a.Escribir("carpeta-de-prueba")
+	vuelve()
+	a.HastaVer("carpeta-de-prueba")
+	a.Pulsar("esc")
+
+	// Historial: el filtro de estado y el detalle abierto.
+	a.Pulsar("5")
+	a.HastaVer("hola historial")
+	filtro := tx("historial.estado") + ": " + tx("inicio.completados")
+	a.Pulsar("e", "e")
+	a.HastaVer(filtro, "hola historial")
+	a.Pulsar("enter")
+	a.HastaVer(tx("historial.solicitud"), tx("registro.titulo"))
+	vuelve()
+	a.HastaVer(tx("historial.solicitud"), tx("registro.titulo"))
+	a.Pulsar("esc")
+	a.HastaVer(filtro, "hola historial")
+}
+
 // TestRAlConectarNoCierra: r en Inicio mientras la terminal aún conecta (sin cliente y con la página sin iniciar) no
 // pide nada al servicio: Inicio dice que no hay servicio, como las demás páginas, y la terminal sigue.
 func TestRAlConectarNoCierra(t *testing.T) {
