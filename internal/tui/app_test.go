@@ -674,14 +674,35 @@ func TestColoresDeDesign(t *testing.T) {
 	}
 }
 
+// TestAsciiConLaVariable: con TRAMTAI_ASCII=1 no sale ningún carácter de dibujo: ni en Inicio, ni en las pistas y el pie
+// de Probar y Ajustes (las flechas también), ni en la Ayuda de una página o en una confirmación que se desplaza.
 func TestAsciiConLaVariable(t *testing.T) {
 	t.Setenv("TRAMTAI_ASCII", "1")
-	m := nuevo(Opciones{})
-	for _, r := range ansi.Strip(m.View().Content) {
-		if r > 127 && !strings.ContainsRune("áéíóúüñÁÉÍÓÚÜÑ¿¡×", r) {
-			t.Fatalf("con TRAMTAI_ASCII=1 sale %q", r)
+	cli, global := prueba.Servicio(t)
+	m := nuevoEn(Opciones{Datos: t.TempDir()}, "es")
+	sinDibujo := func(donde string) {
+		t.Helper()
+		for _, r := range ansi.Strip(m.View().Content) {
+			if r > 127 && !strings.ContainsRune("áéíóúüñÁÉÍÓÚÜÑ¿¡×", r) {
+				t.Fatalf("%s: con TRAMTAI_ASCII=1 sale %q:\n%s", donde, r, ansi.Strip(m.View().Content))
+			}
 		}
 	}
+	sinDibujo("Inicio")
+	m.cli, m.instancia = cli, global
+	a := conducir(t, m)
+	a.Correr(m.ir(pagina.PaginaEjecutar, nil, false))
+	a.EsperarCarga()
+	sinDibujo("Probar")
+	a.Pulsar("down") // Agente y modelo: la pista dice qué flechas lo eligen
+	sinDibujo("la pista del modelo")
+	a.Pulsar("?")
+	sinDibujo("la Ayuda de Probar")
+	a.Correr(m.ir(pagina.PaginaConfiguracion, nil, false))
+	a.EsperarCarga()
+	sinDibujo("Ajustes")
+	m.Update(comp.Pregunta{Texto: strings.Repeat("una línea de la pregunta\n", 40)})
+	sinDibujo("la confirmación que se desplaza")
 }
 
 func TestCambioEspacioReiniciaLaPagina(t *testing.T) {

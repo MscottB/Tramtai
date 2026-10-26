@@ -87,7 +87,7 @@ func (a *Avisos) Ultimo() string { return a.ultimo }
 
 // Vista pinta el aviso en una línea, o nada si no hay.
 func (a *Avisos) Vista(e *pagina.Estilos) string {
-	texto := strings.Join(strings.Fields(a.actual.Texto), " ")
+	texto := e.A(strings.Join(strings.Fields(a.actual.Texto), " "))
 	if texto == "" {
 		return ""
 	}

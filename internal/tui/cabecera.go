@@ -252,9 +252,10 @@ func (m *modelo) vistaPie() string {
 }
 
 func (m *modelo) teclasPie(teclas []pagina.Tecla, sep string) string {
+	e := m.estilos
 	partes := make([]string, len(teclas))
 	for i, t := range teclas {
-		partes[i] = m.estilos.Tecla.Render(t.Tecla) + " " + m.estilos.Tenue.Render(t.Accion)
+		partes[i] = e.Tecla.Render(e.A(t.Tecla)) + " " + e.Tenue.Render(e.A(t.Accion))
 	}
 	return strings.Join(partes, sep)
 }

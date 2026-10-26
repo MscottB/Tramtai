@@ -46,9 +46,10 @@ var (
 )
 
 var textoAscii = strings.NewReplacer("·", "-", "…", "...", "’", "'", "“", "\"", "”", "\"", "—", "-", "→", "->", "«", "\"", "»", "\"",
-	"‹", "<", "›", ">")
+	"‹", "<", "›", ">", "←", "<", "↑", "^", "↓", "v")
 
-// A deja un texto sin los caracteres de dibujo que usan los textos de la Web UI (· … ’ « »…) cuando la consola es ASCII.
+// A deja un texto sin los caracteres de dibujo que usan los textos de la Web UI y las teclas (· … ’ « » ← ↑ ↓…) cuando la
+// consola es ASCII.
 // Vale con e nil: antes de Iniciar, la página aún no tiene estilos.
 func (e *Estilos) A(texto string) string {
 	if e != nil && e.ASCII {

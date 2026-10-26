@@ -118,11 +118,12 @@ func (p *Pagina) textoTema(t datos.Tema) string {
 	if t.ID == p.teclasDe && len(p.teclas) > 0 {
 		ancho := 0
 		for _, k := range p.teclas {
-			ancho = max(ancho, lipgloss.Width(k.Tecla))
+			ancho = max(ancho, lipgloss.Width(e.A(k.Tecla)))
 		}
 		l = append(l, "", e.Titulo.Render(idioma.T("Teclas")))
 		for _, k := range p.teclas {
-			l = append(l, p.parrafo(e.Texto, e.Tecla.Render(k.Tecla)+strings.Repeat(" ", ancho-lipgloss.Width(k.Tecla)+2), k.Accion)...)
+			tecla := e.A(k.Tecla)
+			l = append(l, p.parrafo(e.Texto, e.Tecla.Render(tecla)+strings.Repeat(" ", ancho-lipgloss.Width(tecla)+2), e.A(k.Accion))...)
 		}
 	}
 	for _, b := range t.Bloques {

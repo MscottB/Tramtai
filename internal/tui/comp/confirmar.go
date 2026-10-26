@@ -78,6 +78,6 @@ func (c *Confirmacion) Vista(e *pagina.Estilos, ancho, alto int) string {
 		pie = idioma.T("↑↓ desplaza") + " " + e.Iconos.Separador + " " + pie
 	}
 	lineas = lineas[c.desp:min(c.desp+filas, len(lineas))]
-	pie = e.Tenue.Render(e.Recortar(pie, interior))
+	pie = e.Tenue.Render(e.Recortar(e.A(pie), interior))
 	return lipgloss.NewStyle().Border(e.Borde).Padding(0, 1).Render(strings.Join(append(lineas, "", pie), "\n"))
 }
