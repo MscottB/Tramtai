@@ -6,7 +6,19 @@ import es from '../src/idiomas/es.ts'
 import en from '../src/idiomas/en.ts'
 
 const html = readFileSync(new URL('../../site/index.html', import.meta.url), 'utf8')
-const seccion = (id: string) => html.match(new RegExp(`<section[^>]*id="${id}"[^>]*>[\\s\\S]*?</section>`))?.[0] ?? ''
+// seccion respeta las <section> anidadas (las líneas del plano de Funciones lo son): corta en el </section> de la suya.
+const seccion = (id: string) => {
+  const inicio = html.search(new RegExp(`<section[^>]*id="${id}"`))
+  if (inicio < 0) return ''
+  const etiquetas = /<section\b|<\/section>/g
+  etiquetas.lastIndex = inicio
+  let nivel = 0
+  for (let m = etiquetas.exec(html); m; m = etiquetas.exec(html)) {
+    nivel += m[0] === '</section>' ? -1 : 1
+    if (nivel === 0) return html.slice(inicio, m.index + m[0].length)
+  }
+  return ''
+}
 const asi = seccion('capturas')
 const demo = seccion('demo')
 const pasos = pasosBienvenida()
@@ -370,7 +382,7 @@ test('la portada enseña el recorrido guiado y deja Espacios a la vista', () => 
   assert.match(funciones, /href="#demo"/, 'Funciones lleva a la demo')
   assert.match(asi, /href="#demo"/, '«Así se ve» enlaza la demo')
   assert.match(asi, /Un espacio por proyecto/)
-  assert.match(funciones, /Controla<\/span><span lang="en">Control<\/span><\/h3>\s*<article class="tarjeta">\s*<h4><span lang="es">Espacios de trabajo<\/span>/, 'Espacios abre el grupo Controla')
+  assert.match(funciones, /Controla<\/span><span lang="en">Control<\/span><\/h3>\s*<ol>\s*<li class="parada">\s*<h4><button type="button" class="parada-boton"><span lang="es">Espacios de trabajo<\/span>/, 'Espacios abre la línea Controla')
 })
 
 // v0.56: la portada presenta la terminal con texto (sus capturas llegan en la v0.58).
@@ -387,19 +399,38 @@ test('la novedad «Todo desde la terminal» dice cómo usarla y lleva a su Ayuda
   assert.doesNotMatch(terminal, /<img /, 'sin capturas de la terminal hasta la v0.58')
 })
 
-test('Funciones tiene la tarjeta de la terminal, que lleva a la novedad', () => {
-  const tarjeta = seccion('funciones').match(/<article class="tarjeta">\s*<h4><span lang="es">La terminal, a la par de la app<\/span>[\s\S]*?<\/article>/)?.[0] ?? ''
-  assert.ok(tarjeta, 'falta la tarjeta')
-  assert.match(tarjeta, /<span lang="en">The terminal, on par with the app<\/span>/)
-  assert.match(tarjeta, /href="#terminal"/)
-  assert.match(tarjeta, /SSH/)
+test('Funciones tiene la parada de la terminal, que lleva a la novedad', () => {
+  const parada = seccion('funciones').match(/<li class="parada">\s*<h4><button type="button" class="parada-boton"><span lang="es">La terminal, a la par de la app<\/span>[\s\S]*?<\/li>/)?.[0] ?? ''
+  assert.ok(parada, 'falta la parada')
+  assert.match(parada, /<span lang="en">The terminal, on par with the app<\/span>/)
+  assert.match(parada, /href="#terminal"/)
+  assert.match(parada, /SSH/)
 })
 
-test('Funciones son cuatro grupos de tres tarjetas en tres columnas, sin huecos (54)', () => {
-  const grupos = seccion('funciones').split('<h3 class="grupo-funciones">').slice(1)
-  assert.equal(grupos.length, 4)
-  for (const g of grupos) assert.equal((g.match(/<article class="tarjeta">/g) ?? []).length, 3)
-  assert.match(css, /\.rejilla \{ display: grid; grid-template-columns: repeat\(3, 1fr\)/)
+// v0.56: las funciones son un plano de metro, una línea por grupo con sus tres paradas (sustituye a las cuatro rejillas de
+// tarjetas, 54). Sin JavaScript, o en el móvil, cada línea es vertical con el texto de cada parada a la vista.
+test('el plano tiene cuatro líneas y doce paradas con su texto en el HTML (sin JavaScript se lee todo)', () => {
+  const funciones = seccion('funciones')
+  assert.equal((funciones.match(/<section class="metro-linea" data-linea="(conecta|controla|protege|usa)"/g) ?? []).length, 4)
+  const paradas = funciones.match(/<li class="parada">[\s\S]*?<\/li>/g) ?? []
+  assert.equal(paradas.length, 12)
+  for (const p of paradas) { assert.match(p, /<button type="button" class="parada-boton"/); assert.match(p, /<p class="parada-texto">[\s\S]*lang="es"[\s\S]*lang="en"/) }
+  for (const t of ['Compatible con tus SDK', 'Una API por aplicación', 'Respaldo entre agentes', 'La terminal, a la par de la app', 'Recorrido y Ayuda'])
+    assert.match(funciones, new RegExp(t))
+  assert.match(funciones, /href="#demo"/)
+  for (const linea of funciones.match(/<section class="metro-linea"[\s\S]*?<\/section>/g) ?? [])
+    assert.equal((linea.match(/<li class="parada">/g) ?? []).length, 3)
+  assert.match(funciones, /<div class="metro-panel" aria-live="polite" hidden><\/div>/, 'el panel solo lo usa el JavaScript')
+  assert.doesNotMatch(funciones, /\b(nunca|siempre|sin cortes|a nadie|never|always|no one)\b/i)
+})
+
+const metroJs = js.slice(js.indexOf('// Plano de metro de Funciones'))
+test('con JavaScript y pantalla ancha el plano es horizontal y cada parada enseña su texto en el panel', () => {
+  assert.ok(js.includes('// Plano de metro de Funciones'), 'falta el bloque del plano en sitio.js')
+  assert.match(metroJs, /classList\.toggle\('metro--plano'/)
+  assert.match(metroJs, /matchMedia\('\(min-width: 900px\)'\)/)
+  assert.match(metroJs, /setAttribute\('aria-pressed'/)
+  assert.match(css, /\.metro--plano \.parada-texto \{ display: none; \}/)
 })
 
 test('Homebrew sin la app: el tap lleva la URL del repositorio y después «brew install tramtai» (el tap corto no existe)', () => {

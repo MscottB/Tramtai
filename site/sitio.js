@@ -619,3 +619,34 @@ function escribirLeyenda(leyenda, partes) {
   mostrar(0);
   programar();
 })();
+
+// Plano de metro de Funciones: sin JavaScript, o por debajo de 900 px, cada línea va en vertical con el texto de sus
+// paradas. Con pantalla ancha va en horizontal (metro--plano): cada parada es un botón que enseña su título y su texto en
+// el panel de debajo y queda marcado con aria-pressed. Empieza elegida la primera.
+(function () {
+  var metro = document.querySelector('.metro');
+  var panel = metro && metro.querySelector('.metro-panel');
+  if (!panel) return;
+  var botones = Array.prototype.slice.call(metro.querySelectorAll('.parada-boton'));
+  var ancho = window.matchMedia('(min-width: 900px)');
+  var elegida = 0;
+  function elegir(n) {
+    elegida = n;
+    botones.forEach(function (b, i) { b.setAttribute('aria-pressed', String(i === n)); });
+    panel.innerHTML = '<h4>' + botones[n].innerHTML + '</h4><p>' + botones[n].closest('.parada').querySelector('.parada-texto').innerHTML + '</p>';
+  }
+  // En vertical el texto ya se ve: los botones no hacen nada y salen del orden del tabulador.
+  function modo() {
+    var plano = ancho.matches;
+    metro.classList.toggle('metro--plano', plano);
+    botones.forEach(function (b) {
+      b.tabIndex = plano ? 0 : -1;
+      if (!plano) b.removeAttribute('aria-pressed');
+    });
+    if (plano) elegir(elegida); // con el panel aún oculto: el texto inicial no se anuncia
+    panel.hidden = !plano;
+  }
+  botones.forEach(function (b, i) { b.addEventListener('click', function () { if (ancho.matches) elegir(i); }); });
+  ancho.addEventListener('change', modo);
+  modo();
+})();

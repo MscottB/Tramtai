@@ -112,9 +112,6 @@ section[id] { scroll-margin-top: 72px; }
 
 /* Secciones */
 section { padding: 72px 0; }
-/* Funciones agrupadas: un titular por bloque a todo el ancho de la rejilla. */
-.grupo-funciones { grid-column: 1 / -1; margin: 12px 0 -4px; font-size: 1.05rem; color: var(--texto-suave); }
-.grupo-funciones:first-child { margin-top: 0; }
 /* Capturas de la app: la del tema efectivo (el del sistema o el elegido). */
 .captura { margin: 0; }
 .captura img { width: 100%; height: auto; border: 1px solid color-mix(in srgb, var(--acento) 30%, var(--borde)); border-radius: var(--radio); box-shadow: var(--sombra); }
@@ -187,8 +184,37 @@ section { padding: 72px 0; }
 .codigo .s { color: var(--tablero-clave); }
 .codigo .k { color: var(--tablero-texto); font-weight: 700; }
 
-/* Funciones: cuatro grupos de tres, en tres columnas, sin huecos */
-.rejilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+/* Funciones: un plano de metro (sitio.js), una línea por grupo y una parada por función. Sin JavaScript, o por debajo de
+   900 px, cada línea va en vertical: un tramo de 5 px entre estación y estación y el texto de cada parada a la vista.
+   Con JavaScript y pantalla ancha (.metro--plano), las cuatro líneas van en horizontal, una debajo de otra, con el
+   nombre bajo cada estación, y el texto de la parada elegida sale en el panel. Todo en el acento: el color de línea es
+   de los agentes (DESIGN.md). La estación es el ::before del botón, así que se pulsa con él. */
+.metro { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 40px 48px; }
+.metro-linea { padding: 0; }
+.metro-linea h3 { font-size: 1.05rem; color: var(--texto-suave); margin-bottom: 14px; }
+.metro-linea ol { list-style: none; margin: 0; padding: 0; }
+.parada { position: relative; padding: 0 0 24px 40px; }
+.parada:last-child { padding-bottom: 0; }
+.parada:not(:last-child)::after { content: ''; position: absolute; left: 8.5px; top: 11px; bottom: -11px; width: 5px; background: var(--acento); }
+.parada h4 { font-size: 1.05rem; margin-bottom: 6px; }
+.parada-boton { font: inherit; letter-spacing: inherit; color: var(--texto); background: none; border: 0; padding: 0; text-align: left; }
+.parada-boton::before { content: ''; position: absolute; z-index: 1; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; border: 5px solid var(--acento); background: var(--fondo); box-sizing: border-box; }
+.parada-texto { color: var(--texto-suave); font-size: .95rem; }
+.metro--plano { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.metro--plano .metro-linea { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 16px; }
+.metro--plano .metro-linea h3 { margin: 0; }
+.metro--plano ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.metro--plano .parada { padding: 0 8px; text-align: center; }
+.metro--plano .parada:not(:last-child)::after { left: 50%; top: 8.5px; bottom: auto; width: 100%; height: 5px; }
+.metro--plano .parada h4 { margin: 0; }
+.metro--plano .parada-boton { display: block; width: 100%; min-height: 44px; padding: 30px 8px 6px; border-radius: 8px; font-size: .95rem; font-weight: 600; color: var(--texto-suave); text-align: center; cursor: pointer; }
+.metro--plano .parada-boton::before { left: 50%; margin-left: -11px; }
+.metro--plano .parada-boton:hover, .metro--plano .parada-boton[aria-pressed="true"] { color: var(--texto); }
+.metro--plano .parada-boton[aria-pressed="true"]::before { background: var(--acento); }
+.metro--plano .parada-texto { display: none; }
+.metro-panel { margin-left: 136px; padding: 20px 24px; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); }
+.metro-panel h4 { font-size: 1.05rem; margin-bottom: 6px; }
+.metro-panel p { max-width: 70ch; }
 /* Agentes: una tarjeta por agente con su sigla y el color de su línea (--c); el color de línea solo aparece aquí. */
 .agentes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 16px; }
 .agente { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 20px; }
@@ -254,7 +280,6 @@ footer .envoltura { display: flex; flex-direction: column; gap: 14px; }
   html:not(.js) .github { margin-left: auto; }
 }
 @media (max-width: 900px) {
-  .rejilla { grid-template-columns: 1fr; }
   .tablero, .como, .par, .par.invertido, .conexiones .envoltura { grid-template-columns: 1fr; }
   .par.invertido > div { order: 0; }
   .par { gap: 20px; }

@@ -749,59 +749,80 @@ tramtai terminal</pre>
         <h2><span lang="es">Una red con una línea por agente.</span><span lang="en">A network with one line per agent.</span></h2>
         <p class="suave"><span lang="es">Cada petición viaja por la línea de su agente, y tú lo ves en vivo: en cola, en ejecución y llegada.</span><span lang="en">Every request travels along its agent’s line, and you watch it live: queued, running and arrived.</span></p>
       </div>
-      <div class="rejilla">
-        <h3 class="grupo-funciones"><span lang="es">Conecta</span><span lang="en">Connect</span></h3>
-        <article class="tarjeta">
-          <h4><span lang="es">Compatible con tus SDK</span><span lang="en">Works with your SDKs</span></h4>
-          <p><span lang="es">Rutas compatibles con OpenAI (chat y responses) y Anthropic (messages) con respuesta en vivo (streaming), más una API propia con eventos en vivo. Las tres admiten herramientas (<code>tools</code>).</span><span lang="en">OpenAI-compatible (chat and responses) and Anthropic-compatible (messages) routes with live responses (streaming), plus a native API with live events. All three support tool calling (<code>tools</code>).</span></p>
-        </article>
-        <article class="tarjeta">
-          <h4><span lang="es">API propia con OpenAPI</span><span lang="en">Native API with OpenAPI</span></h4>
-          <p><span lang="es">Con <code>/api/v1</code> sigues, cancelas y reintentas cada petición. Trae su especificación OpenAPI, y «Ver como código» te da la petición lista en curl, Python o Node.</span><span lang="en">With <code>/api/v1</code> you follow, cancel and retry every request. It ships its OpenAPI spec, and “View as code” gives you the request ready in curl, Python or Node.</span></p>
-        </article>
-        <article class="tarjeta">
-          <h4><span lang="es">Respuestas con forma</span><span lang="en">Shaped responses</span></h4>
-          <p><span lang="es">Elige una plantilla o arma los campos, sin escribir JSON Schema. Tramtai valida la respuesta, te dice qué campo falló y «Corregir» le pide al agente que la arregle.</span><span lang="en">Pick a template or build the fields, without writing JSON Schema. Tramtai validates the response, tells you which field failed, and “Correct” asks the agent to fix it.</span></p>
-        </article>
-        <h3 class="grupo-funciones"><span lang="es">Controla</span><span lang="en">Control</span></h3>
-        <article class="tarjeta">
-          <h4><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></h4>
-          <p><span lang="es">El espacio global y uno por proyecto: cada uno guarda sus datos aparte. Los Ajustes muestran qué viene de todo Tramtai, y una carpeta clonada pregunta antes de aplicar su configuración.</span><span lang="en">The global workspace and one per project: each keeps its data apart. Settings show what comes from all of Tramtai, and a cloned folder asks before applying its configuration.</span></p>
-        </article>
-        <article class="tarjeta">
-          <h4><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></h4>
-          <p><span lang="es">Crea varias APIs con su propia clave, los modelos permitidos, instrucciones fijas y un presupuesto diario o mensual que frena las peticiones al llegar al límite. Actívalas o detenlas sin reiniciar.</span><span lang="en">Create several APIs, each with its own key, allowed models, fixed instructions and a daily or monthly budget that stops requests at the limit. Turn them on or off without restarting.</span></p>
-        </article>
-        <article class="tarjeta">
-          <h4><span lang="es">Modelo y esfuerzo en cada petición</span><span lang="en">Model and effort per request</span></h4>
-          <p><span lang="es">Elige modelo en cada petición y, en los agentes que lo admiten, cuánto razona: de bajo a máximo.</span><span lang="en">Pick the model per request and, with the agents that support it, how hard it reasons: from low to maximum.</span></p>
-        </article>
-        <h3 class="grupo-funciones"><span lang="es">Protege</span><span lang="en">Protect</span></h3>
-        <article class="tarjeta">
-          <h4><span lang="es">Respaldo entre agentes</span><span lang="en">Agent fallback</span></h4>
-          <p><span lang="es">Si le das una lista de respaldo y el agente llega a su límite o falla antes de responder, la petición sigue con el siguiente de la lista que esté conectado.</span><span lang="en">If you give it a fallback list and the agent hits its limit or fails before answering, the request continues with the next connected agent on the list.</span></p>
-        </article>
-        <article class="tarjeta">
-          <h4><span lang="es">Claves cifradas en el almacén del sistema</span><span lang="en">Keys encrypted in the system store</span></h4>
-          <p><span lang="es">Tus claves de proveedor quedan cifradas en el almacén del sistema, y las de tus APIs se ven una sola vez y se regeneran con un clic si se filtran.</span><span lang="en">Your provider keys stay encrypted in the system store, and your APIs' keys are shown only once and can be regenerated in one click if they leak.</span></p>
-        </article>
-        <article class="tarjeta">
-          <h4><span lang="es">Sin terminal ni web</span><span lang="en">No terminal, no web</span></h4>
-          <p><span lang="es">Claude Code y GitHub Copilot van sin herramientas; Codex, en solo lectura y sin terminal ni búsqueda web. Por defecto cada uno trabaja en una carpeta temporal vacía y no recibe las claves de los demás.</span><span lang="en">Claude Code and GitHub Copilot run without tools; Codex runs read-only, with no terminal or web search. By default each one works in an empty temporary folder and never gets the other agents’ keys.</span></p>
-        </article>
-        <h3 class="grupo-funciones"><span lang="es">Usa</span><span lang="en">Use</span></h3>
-        <article class="tarjeta">
-          <h4><span lang="es">La terminal, a la par de la app</span><span lang="en">The terminal, on par with the app</span></h4>
-          <p><span lang="es">Las ocho páginas de la app en <a href="#terminal"><code>tramtai terminal</code></a>, con el teclado, sin abrir la app y por SSH. La bandeja, la app en tu navegador (en español e inglés), la terminal y la CLI ven las mismas peticiones.</span><span lang="en">The app’s eight pages in <a href="#terminal"><code>tramtai terminal</code></a>, all from the keyboard, without the app open and over SSH. The tray, the app in your browser (in Spanish and English), the terminal and the CLI all see the same requests.</span></p>
-        </article>
-        <article class="tarjeta">
-          <h4><span lang="es">Adjunta PDF, Word y Excel</span><span lang="en">Attach PDF, Word and Excel</span></h4>
-          <p><span lang="es">Adjunta PDF, Word, Excel, PowerPoint, HTML o texto: Tramtai los convierte a texto antes de pasarlos al agente.</span><span lang="en">Attach PDF, Word, Excel, PowerPoint, HTML or text files: Tramtai turns them into text before handing them to the agent.</span></p>
-        </article>
-        <article class="tarjeta">
-          <h4><span lang="es">Recorrido y Ayuda</span><span lang="en">Tour and Help</span></h4>
-          <p><span lang="es">Un recorrido guiado te señala cada parte de la app (<a href="#demo">míralo paso a paso</a>), y un «?» en cada página abre su Ayuda, con qué hacer junto a cada error. La misma Ayuda está <a href="ayuda/">en esta web</a>.</span><span lang="en">A guided tour points at each part of the app (<a href="#demo">see it step by step</a>), and a “?” on every page opens its Help, with what to do next to each error. The same Help is <a href="ayuda/">on this website</a>.</span></p>
-        </article>
+      <!-- Un plano de metro: una línea por grupo y una parada por función. Sin JavaScript, o por debajo de 900 px, cada línea
+           va en vertical con el texto de sus paradas; con JavaScript y pantalla ancha, sitio.js la pone en horizontal y
+           cada parada enseña su texto en el panel de debajo. Las líneas van en el acento: el color de línea es de los
+           agentes (DESIGN.md). -->
+      <div class="metro">
+        <section class="metro-linea" data-linea="conecta">
+          <h3><span lang="es">Conecta</span><span lang="en">Connect</span></h3>
+          <ol>
+            <li class="parada">
+              <h4><button type="button" class="parada-boton"><span lang="es">Compatible con tus SDK</span><span lang="en">Works with your SDKs</span></button></h4>
+              <p class="parada-texto"><span lang="es">Rutas compatibles con OpenAI (chat y responses) y Anthropic (messages) con respuesta en vivo (streaming), más una API propia con eventos en vivo. Las tres admiten herramientas (<code>tools</code>).</span><span lang="en">OpenAI-compatible (chat and responses) and Anthropic-compatible (messages) routes with live responses (streaming), plus a native API with live events. All three support tool calling (<code>tools</code>).</span></p>
+            </li>
+            <li class="parada">
+              <h4><button type="button" class="parada-boton"><span lang="es">API propia con OpenAPI</span><span lang="en">Native API with OpenAPI</span></button></h4>
+              <p class="parada-texto"><span lang="es">Con <code>/api/v1</code> sigues, cancelas y reintentas cada petición. Trae su especificación OpenAPI, y «Ver como código» te da la petición lista en curl, Python o Node.</span><span lang="en">With <code>/api/v1</code> you follow, cancel and retry every request. It ships its OpenAPI spec, and “View as code” gives you the request ready in curl, Python or Node.</span></p>
+            </li>
+            <li class="parada">
+              <h4><button type="button" class="parada-boton"><span lang="es">Respuestas con forma</span><span lang="en">Shaped responses</span></button></h4>
+              <p class="parada-texto"><span lang="es">Elige una plantilla o arma los campos, sin escribir JSON Schema. Tramtai valida la respuesta, te dice qué campo falló y «Corregir» le pide al agente que la arregle.</span><span lang="en">Pick a template or build the fields, without writing JSON Schema. Tramtai validates the response, tells you which field failed, and “Correct” asks the agent to fix it.</span></p>
+            </li>
+          </ol>
+        </section>
+        <section class="metro-linea" data-linea="controla">
+          <h3><span lang="es">Controla</span><span lang="en">Control</span></h3>
+          <ol>
+            <li class="parada">
+              <h4><button type="button" class="parada-boton"><span lang="es">Espacios de trabajo</span><span lang="en">Workspaces</span></button></h4>
+              <p class="parada-texto"><span lang="es">El espacio global y uno por proyecto: cada uno guarda sus datos aparte. Los Ajustes muestran qué viene de todo Tramtai, y una carpeta clonada pregunta antes de aplicar su configuración.</span><span lang="en">The global workspace and one per project: each keeps its data apart. Settings show what comes from all of Tramtai, and a cloned folder asks before applying its configuration.</span></p>
+            </li>
+            <li class="parada">
+              <h4><button type="button" class="parada-boton"><span lang="es">Una API por aplicación</span><span lang="en">One API per app</span></button></h4>
+              <p class="parada-texto"><span lang="es">Crea varias APIs con su propia clave, los modelos permitidos, instrucciones fijas y un presupuesto diario o mensual que frena las peticiones al llegar al límite. Actívalas o detenlas sin reiniciar.</span><span lang="en">Create several APIs, each with its own key, allowed models, fixed instructions and a daily or monthly budget that stops requests at the limit. Turn them on or off without restarting.</span></p>
+            </li>
+            <li class="parada">
+              <h4><button type="button" class="parada-boton"><span lang="es">Modelo y esfuerzo en cada petición</span><span lang="en">Model and effort per request</span></button></h4>
+              <p class="parada-texto"><span lang="es">Elige modelo en cada petición y, en los agentes que lo admiten, cuánto razona: de bajo a máximo.</span><span lang="en">Pick the model per request and, with the agents that support it, how hard it reasons: from low to maximum.</span></p>
+            </li>
+          </ol>
+        </section>
+        <section class="metro-linea" data-linea="protege">
+          <h3><span lang="es">Protege</span><span lang="en">Protect</span></h3>
+          <ol>
+            <li class="parada">
+              <h4><button type="button" class="parada-boton"><span lang="es">Respaldo entre agentes</span><span lang="en">Agent fallback</span></button></h4>
+              <p class="parada-texto"><span lang="es">Si le das una lista de respaldo y el agente llega a su límite o falla antes de responder, la petición sigue con el siguiente de la lista que esté conectado.</span><span lang="en">If you give it a fallback list and the agent hits its limit or fails before answering, the request continues with the next connected agent on the list.</span></p>
+            </li>
+            <li class="parada">
+              <h4><button type="button" class="parada-boton"><span lang="es">Claves cifradas en el almacén del sistema</span><span lang="en">Keys encrypted in the system store</span></button></h4>
+              <p class="parada-texto"><span lang="es">Tus claves de proveedor quedan cifradas en el almacén del sistema, y las de tus APIs se ven una sola vez y se regeneran con un clic si se filtran.</span><span lang="en">Your provider keys stay encrypted in the system store, and your APIs' keys are shown only once and can be regenerated in one click if they leak.</span></p>
+            </li>
+            <li class="parada">
+              <h4><button type="button" class="parada-boton"><span lang="es">Sin terminal ni web</span><span lang="en">No terminal, no web</span></button></h4>
+              <p class="parada-texto"><span lang="es">Claude Code y GitHub Copilot van sin herramientas; Codex, en solo lectura y sin terminal ni búsqueda web. Por defecto cada uno trabaja en una carpeta temporal vacía y no recibe las claves de los demás.</span><span lang="en">Claude Code and GitHub Copilot run without tools; Codex runs read-only, with no terminal or web search. By default each one works in an empty temporary folder and doesn’t get the other agents’ keys.</span></p>
+            </li>
+          </ol>
+        </section>
+        <section class="metro-linea" data-linea="usa">
+          <h3><span lang="es">Usa</span><span lang="en">Use</span></h3>
+          <ol>
+            <li class="parada">
+              <h4><button type="button" class="parada-boton"><span lang="es">La terminal, a la par de la app</span><span lang="en">The terminal, on par with the app</span></button></h4>
+              <p class="parada-texto"><span lang="es">Las ocho páginas de la app en <a href="#terminal"><code>tramtai terminal</code></a>, con el teclado, sin abrir la app y por SSH. La bandeja, la app en tu navegador (en español e inglés), la terminal y la CLI ven las mismas peticiones.</span><span lang="en">The app’s eight pages in <a href="#terminal"><code>tramtai terminal</code></a>, all from the keyboard, without the app open and over SSH. The tray, the app in your browser (in Spanish and English), the terminal and the CLI all see the same requests.</span></p>
+            </li>
+            <li class="parada">
+              <h4><button type="button" class="parada-boton"><span lang="es">Adjunta PDF, Word y Excel</span><span lang="en">Attach PDF, Word and Excel</span></button></h4>
+              <p class="parada-texto"><span lang="es">Adjunta PDF, Word, Excel, PowerPoint, HTML o texto: Tramtai los convierte a texto antes de pasarlos al agente.</span><span lang="en">Attach PDF, Word, Excel, PowerPoint, HTML or text files: Tramtai turns them into text before handing them to the agent.</span></p>
+            </li>
+            <li class="parada">
+              <h4><button type="button" class="parada-boton"><span lang="es">Recorrido y Ayuda</span><span lang="en">Tour and Help</span></button></h4>
+              <p class="parada-texto"><span lang="es">Un recorrido guiado te señala cada parte de la app (<a href="#demo">míralo paso a paso</a>), y un «?» en cada página abre su Ayuda, con qué hacer junto a cada error. La misma Ayuda está <a href="ayuda/">en esta web</a>.</span><span lang="en">A guided tour points at each part of the app (<a href="#demo">see it step by step</a>), and a “?” on every page opens its Help, with what to do next to each error. The same Help is <a href="ayuda/">on this website</a>.</span></p>
+            </li>
+          </ol>
+        </section>
+        <div class="metro-panel" aria-live="polite" hidden></div>
       </div>
     </div>
   </section>
