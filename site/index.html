@@ -105,9 +105,9 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
         <svg class="mapa-ancho" viewBox="0 0 760 306">
           <!-- Tus apps → Tramtai, y Tramtai → cada agente por su línea (como el mapa de la app). -->
           <g fill="none" stroke-linecap="round">
-            <path d="M 190 95 L 202 95 C 240 95 240 143 278 143 L 290 143" stroke-width="3" stroke="color-mix(in srgb, var(--acento) 55%, transparent)"/>
-            <path d="M 190 153 L 204 153 C 240 153 240 153 276 153 L 290 153" stroke-width="3" stroke="color-mix(in srgb, var(--acento) 55%, transparent)"/>
-            <path d="M 190 211 L 202 211 C 240 211 240 163 278 163 L 290 163" stroke-width="3" stroke="color-mix(in srgb, var(--acento) 55%, transparent)"/>
+            <path d="M 190 95 L 202 95 C 240 95 240 143 278 143 L 290 143" stroke-width="3" stroke="var(--borde-control)"/>
+            <path d="M 190 153 L 204 153 C 240 153 240 153 276 153 L 290 153" stroke-width="3" stroke="var(--borde-control)"/>
+            <path d="M 190 211 L 202 211 C 240 211 240 163 278 163 L 290 163" stroke-width="3" stroke="var(--borde-control)"/>
             <path d="M 460 133 L 472 133 C 515 133 515 37 558 37 L 570 37" stroke-width="4" stroke="var(--claude)"/>
             <path d="M 460 143 L 472 143 C 515 143 515 95 558 95 L 570 95" stroke-width="4" stroke="var(--codex)"/>
             <path d="M 460 153 L 479 153 C 515 153 515 153 551 153 L 570 153" stroke-width="4" stroke="var(--copilot)"/>
@@ -177,8 +177,9 @@ document.documentElement.lang = i === 'es' || i === 'en' ? i : (navigator.langua
           <text x="314" y="367" text-anchor="end" font-size="12" fill="var(--texto-suave)"><tspan lang="es">fuera de tus apps</tspan><tspan lang="en">not for your apps</tspan></text>
         </svg>
       </div>
-          <!-- Los cuatro códigos ocupan la misma celda: el panel mide lo del más alto y no salta al cambiar de escena. -->
-          <div class="mapa-panel" id="mapa-panel" role="tabpanel" aria-labelledby="mapa-pestana-1">
+          <!-- Desde 980 px los cuatro códigos ocupan la misma celda: el panel mide lo del más alto y no salta al cambiar de
+               escena. Es tabpanel solo con las pestañas (sitio.js). -->
+          <div class="mapa-panel" id="mapa-panel">
             <p class="mapa-titulo"><span lang="es">Resume un contrato con Claude</span><span lang="en">Summarize a contract with Claude</span></p>
             <p class="mapa-leyenda" aria-live="off"><span lang="es">Tu app con el SDK de OpenAI → Claude: «Resume este contrato en tres puntos»</span><span lang="en">Your app with the OpenAI SDK → Claude: “Summarize this contract in three points”</span></p>
             <div class="mapa-codigos">
@@ -218,7 +219,7 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
           </div>
         </div>
       </div>
-      <script type="application/json" id="ejemplos-mapa">[{"origen": 0, "agentes": [0], "pausaCentro": false, "codigo": "codigo-mapa-1", "titulo_es": "Resume un contrato con Claude", "titulo_en": "Summarize a contract with Claude", "es":"Tu app con el SDK de OpenAI → Claude: «Resume este contrato en tres puntos»", "en": "Your app with the OpenAI SDK → Claude: “Summarize this contract in three points”"}, {"origen": 1, "agentes": [1], "pausaCentro": true, "codigo": "codigo-mapa-2", "titulo_es": "Un PDF a JSON con Codex", "titulo_en": "A PDF to JSON with Codex", "es": "Un PDF por la API propia → Codex, con respuesta JSON (Tramtai lo convierte a texto)", "en": "A PDF through the native API → Codex, with a JSON response (Tramtai turns it into text)"}, {"origen": 2, "agentes": [2], "pausaCentro": false, "codigo": "codigo-mapa-3", "titulo_es": "Traduce con GitHub Copilot", "titulo_en": "Translate with GitHub Copilot", "es": "El SDK de Anthropic → GitHub Copilot: «Traduce este texto al inglés»", "en": "The Anthropic SDK → GitHub Copilot: “Translate this text into English”"}, {"origen": 0, "agentes": [0, 1], "pausaCentro": false, "codigo": "codigo-mapa-4", "titulo_es": "Respaldo: de Claude a Codex", "titulo_en": "Fallback: from Claude to Codex", "es": "Respaldo: Claude llegó a su límite y la petición sigue con Codex", "en": "Fallback: Claude hit its limit and the request continues with Codex"}]</script>
+      <script type="application/json" id="ejemplos-mapa">[{"origen": 0, "agentes": [0], "pausaCentro": false, "codigo": "codigo-mapa-1", "titulo_es": "Resume un contrato con Claude", "titulo_en": "Summarize a contract with Claude", "es": "Tu app con el SDK de OpenAI → Claude: «Resume este contrato en tres puntos»", "en": "Your app with the OpenAI SDK → Claude: “Summarize this contract in three points”"}, {"origen": 1, "agentes": [1], "pausaCentro": true, "codigo": "codigo-mapa-2", "titulo_es": "Un PDF a JSON con Codex", "titulo_en": "A PDF to JSON with Codex", "es": "Un PDF por la API propia → Codex, con respuesta JSON (Tramtai lo convierte a texto)", "en": "A PDF through the native API → Codex, with a JSON response (Tramtai turns it into text)"}, {"origen": 2, "agentes": [2], "pausaCentro": false, "codigo": "codigo-mapa-3", "titulo_es": "Traduce con GitHub Copilot", "titulo_en": "Translate with GitHub Copilot", "es": "El SDK de Anthropic → GitHub Copilot: «Traduce este texto al inglés»", "en": "The Anthropic SDK → GitHub Copilot: “Translate this text into English”"}, {"origen": 0, "agentes": [0, 1], "pausaCentro": false, "codigo": "codigo-mapa-4", "titulo_es": "Respaldo: de Claude a Codex", "titulo_en": "Fallback: from Claude to Codex", "es": "Respaldo: Claude llegó a su límite y la petición sigue con Codex", "en": "Fallback: Claude hit its limit and the request continues with Codex"}]</script>
     </div>
   </section>
 
@@ -273,11 +274,12 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
         </figure>
         <figure class="pagas-diagrama con">
           <h3><span lang="es">Con Tramtai</span><span lang="en">With Tramtai</span></h3>
-          <svg viewBox="0 0 340 200" role="img" aria-label="Tus apps llegan a Tramtai, y Tramtai a Claude, Codex, GitHub Copilot y Gemini por la línea de cada agente" data-aria-en="Your apps reach Tramtai, and Tramtai reaches Claude, Codex, GitHub Copilot and Gemini along each agent’s line">
+          <!-- Más ancho que «Sin Tramtai» para los nombres del glosario; estilo.css lo deja a la misma escala. -->
+          <svg viewBox="0 0 384 200" role="img" aria-label="Tus apps llegan a Tramtai, y Tramtai a Claude Code, Codex, GitHub Copilot y la Gemini API por la línea de cada agente" data-aria-en="Your apps reach Tramtai, and Tramtai reaches Claude Code, Codex, GitHub Copilot and the Gemini API along each agent’s line">
             <g fill="none" stroke-linecap="round">
-              <path d="M 100 40 C 118 40 118 90 136 90" stroke-width="3" stroke="color-mix(in srgb, var(--acento) 55%, transparent)"/>
-              <path d="M 100 100 L 136 100" stroke-width="3" stroke="color-mix(in srgb, var(--acento) 55%, transparent)"/>
-              <path d="M 100 160 C 118 160 118 110 136 110" stroke-width="3" stroke="color-mix(in srgb, var(--acento) 55%, transparent)"/>
+              <path d="M 100 40 C 118 40 118 90 136 90" stroke-width="3" stroke="var(--borde-control)"/>
+              <path d="M 100 100 L 136 100" stroke-width="3" stroke="var(--borde-control)"/>
+              <path d="M 100 160 C 118 160 118 110 136 110" stroke-width="3" stroke="var(--borde-control)"/>
               <path d="M 224 88 C 243 88 243 34 262 34" stroke-width="4" stroke="var(--claude)"/>
               <path d="M 224 96 C 243 96 243 78 262 78" stroke-width="4" stroke="var(--codex)"/>
               <path d="M 224 104 C 243 104 243 122 262 122" stroke-width="4" stroke="var(--copilot)"/>
@@ -301,10 +303,10 @@ curl http://127.0.0.1:17373/api/v1/trabajos -H <span class="s">"Authorization: B
             <circle cx="262" cy="122" r="7" fill="var(--copilot)"/>
             <circle cx="262" cy="166" r="7" fill="var(--gemini)"/>
             <g font-size="14" font-weight="650" fill="var(--texto)">
-              <text x="276" y="39">Claude</text>
+              <text x="276" y="39">Claude Code</text>
               <text x="276" y="83">Codex</text>
-              <text x="276" y="127">Copilot</text>
-              <text x="276" y="171">Gemini</text>
+              <text x="276" y="127">GitHub Copilot</text>
+              <text x="276" y="171">Gemini API</text>
             </g>
           </svg>
           <figcaption><span lang="es">Una URL local y la suscripción o la clave que ya tienes.</span><span lang="en">One local URL and the subscription or key you already have.</span></figcaption>

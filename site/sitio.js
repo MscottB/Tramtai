@@ -348,7 +348,7 @@ function escribirLeyenda(leyenda, partes) {
   }
 
   // pausaManual es la pausa que eligió la persona: «reducir movimiento» no la pisa al volver a desactivarse.
-  // encima: el ratón o el foco están en el bloque; la escena se queda mientras tanto, sin contar como pausa.
+  // raton y foco: el ratón o el foco están en el bloque; la escena se queda mientras tanto, sin contar como pausa.
   var actual = 0, pausado = quieto, pausaManual = false, temporizador = null, animaciones = [], iniciado = false;
   var raton = false, foco = false;
   var panel = document.getElementById('mapa-panel');
@@ -386,7 +386,7 @@ function escribirLeyenda(leyenda, partes) {
       p.tabIndex = i === n ? 0 : -1;
     });
     panel.setAttribute('aria-labelledby', pestanas[n].id);
-    // Los cuatro códigos ocupan la misma celda: el que no toca se oculta sin dejar de medir (el panel no salta).
+    // El código que no toca se oculta (desde 980 px sin dejar de medir: el panel no salta; ver estilo.css).
     ejemplos.forEach(function (x) {
       var pre = document.getElementById(x.codigo);
       if (!pre) return;
@@ -465,6 +465,8 @@ function escribirLeyenda(leyenda, partes) {
   pausa.addEventListener('click', function () {
     pausado = !pausado;
     pausaManual = pausado;
+    // «Seguir» es querer el giro: el ratón y el foco, que siguen en la pausa, no lo paran hasta volver a entrar.
+    if (!pausado) raton = foco = false;
     anunciar(true);
     rotulo();
     recorrer(actual);
@@ -493,6 +495,7 @@ function escribirLeyenda(leyenda, partes) {
   });
   if (quieto) pausa.hidden = true;
   caja.hidden = false;
+  panel.setAttribute('role', 'tabpanel'); // sin JavaScript no hay pestañas: el panel es un div sin rol
   mostrar(0);
   // Medir los caminos y animar el tranvía espera a que el mapa esté cerca de la pantalla: no cuesta nada al cargar.
   if ('IntersectionObserver' in window) {

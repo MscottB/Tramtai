@@ -163,6 +163,8 @@ section { padding: 72px 0; }
 .pagas-diagrama h3 { font-size: 1rem; color: var(--texto-suave); }
 .pagas-diagrama.con h3 { color: var(--acento); }
 .pagas-diagrama svg { display: block; width: 100%; max-width: 420px; height: auto; margin: 0 auto; }
+/* «Con Tramtai» mide 384 de ancho (los nombres del glosario) y «Sin Tramtai», 340: así su letra sale igual de grande. */
+.pagas-diagrama.con svg { max-width: calc(420px * 384 / 340); }
 .pagas-diagrama text { font-family: var(--fuente); }
 .pagas-diagrama figcaption { font-weight: 600; }
 .motivos { list-style: none; margin: 44px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px 36px; }
@@ -406,9 +408,13 @@ html[lang="es"] .captura img[lang="en"], html[lang="en"] .captura img[lang="es"]
 .mapa-codigos { display: grid; }
 /* En el panel las líneas largas saltan en vez de esconderse a la derecha; Copiar copia el texto, sin los saltos. La
    sangría colgante (each-line hanging) la ignora el navegador que no la conoce. */
-.mapa-codigos > .codigo { grid-area: 1 / 1; margin: 0; position: relative; padding-top: 56px; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: visible; text-indent: 4ch hanging each-line; }
-.mapa-codigos > .codigo.oculto { visibility: hidden; }
+.mapa-codigos > .codigo { align-self: start; margin: 0; position: relative; padding-top: 56px; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: visible; text-indent: 4ch hanging each-line; }
+/* En el móvil el panel es lo último de la cabecera: el código que no toca no ocupa sitio (el más alto dejaba 300 px de
+   caja vacía). Desde 980 px los cuatro comparten la celda, que mide lo del más alto, y el panel no salta. */
+.mapa-codigos > .codigo.oculto { display: none; }
 @media (min-width: 980px) {
+  .mapa-codigos > .codigo { grid-area: 1 / 1; }
+  .mapa-codigos > .codigo.oculto { display: block; visibility: hidden; }
   .escenas { max-width: none; }
   .escenas-cuerpo { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 24px; }
   .escenas .mapa { display: grid; align-content: center; padding: 20px; }

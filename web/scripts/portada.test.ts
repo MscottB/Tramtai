@@ -58,8 +58,9 @@ test('la cabecera tiene cuatro pestañas con nombre y un panel con el código de
     ['Traduce con GitHub Copilot', 'Translate with GitHub Copilot'], ['Respaldo: de Claude a Codex', 'Fallback: from Claude to Codex']]
   pestanas.forEach((p, i) => { assert.match(p, new RegExp(titulos[i][0])); assert.match(p, new RegExp(titulos[i][1])) })
   assert.match(pestanas[0], /aria-selected="true"/)
-  const panel = html.slice(html.indexOf('<div class="mapa-panel" id="mapa-panel" role="tabpanel"'))
-  assert.ok(panel.length > 0, 'falta el panel de la escena')
+  const inicio = html.indexOf('<div class="mapa-panel" id="mapa-panel">')
+  assert.ok(inicio >= 0, 'falta el panel de la escena')
+  const panel = html.slice(inicio)
   assert.match(panel.slice(0, 4000), /id="codigo-mapa-1"/, 'sin JavaScript se ve el código de la primera escena')
   assert.match(html, /<pre class="codigo[^"]*" id="codigo-como"/, '«Tres paradas» tiene su ejemplo fijo')
   assert.match(html, /class="mapa-pausa"/)
@@ -67,7 +68,25 @@ test('la cabecera tiene cuatro pestañas con nombre y un panel con el código de
 test('las pestañas se manejan con las flechas y paran la rotación', () => {
   assert.match(tranvia, /ArrowRight/)
   assert.match(tranvia, /aria-selected/)
-  assert.match(tranvia, /pausaManual = /)
+  assert.match(tranvia, /function elegir\([\s\S]*?pausaManual = true/)
+  // Revisión del bloque 1 (M5): el ratón o el foco en el bloque paran el giro.
+  assert.match(tranvia, /bloque\.addEventListener\('mouseenter'/)
+  assert.match(tranvia, /bloque\.addEventListener\('focusin'/)
+  assert.match(tranvia, /if \(quieto \|\| pausado \|\| raton \|\| foco\) return/)
+})
+// Revisión del bloque 1 (M1, M2): «Seguir» reanuda aunque el ratón o el foco sigan en el bloque, y sin JavaScript no
+// queda un panel de pestaña sin pestañas.
+test('«Seguir» reanuda el giro y el panel solo es tabpanel con las pestañas', () => {
+  assert.match(tranvia, /pausa\.addEventListener\('click'[\s\S]*?raton = foco = false/)
+  assert.doesNotMatch(html, /role="tabpanel"/)
+  assert.match(tranvia, /panel\.setAttribute\('role', 'tabpanel'\)/)
+})
+// Revisión del bloque 1 (I1): en el móvil el código que no se ve no ocupa sitio; desde 980 px los cuatro comparten la
+// celda (el panel no salta) y la caja oscura se ajusta a su código.
+test('el panel de la cabecera no deja caja de código vacía', () => {
+  assert.match(css, /\.mapa-codigos > \.codigo \{[^}]*align-self: start/)
+  assert.match(css, /\.mapa-codigos > \.codigo\.oculto \{ display: none; \}/)
+  assert.match(css, /@media \(min-width: 980px\) \{[^@]*\.mapa-codigos > \.codigo \{ grid-area: 1 \/ 1; \}/)
 })
 
 test('el recorrido no se anuncia solo y sus controles hablan en el idioma de la página', () => {
@@ -184,6 +203,13 @@ test('el código del panel de la cabecera salta de línea y «Tres paradas» ens
 test('los diagramas comparan sin Tramtai y con Tramtai', () => {
   const diagramas = pagas.match(/<div class="pagas-diagramas">[\s\S]*<\/figure>/)?.[0] ?? ''
   for (const t of ['Sin Tramtai', 'Con Tramtai', 'Without Tramtai', 'With Tramtai']) assert.ok(diagramas.includes(t), `falta «${t}»`)
+})
+// Revisión del bloque 1 (M3, M4): los agentes con los nombres del glosario, como en el mapa, y las líneas de las apps a
+// 3:1 como mínimo en claro (el acento al 55 % quedaba en 2,5:1).
+test('«Con Tramtai» nombra a los agentes como el glosario y sus líneas se ven en claro', () => {
+  const con = pagas.match(/<figure class="pagas-diagrama con">[\s\S]*?<\/figure>/)?.[0] ?? ''
+  for (const n of ['Claude Code', 'GitHub Copilot', 'Gemini API']) assert.match(con, new RegExp(`>${n}</text>`), n)
+  assert.doesNotMatch(html, /var\(--acento\) 55%/)
 })
 
 // Revisión final web (I1, hallazgo 26): el titular vale para los tres agentes (Codex lee archivos: sí tiene
@@ -347,7 +373,7 @@ test('la portada enseña el recorrido guiado y deja Espacios a la vista', () => 
   assert.match(funciones, /Controla<\/span><span lang="en">Control<\/span><\/h3>\s*<article class="tarjeta">\s*<h4><span lang="es">Espacios de trabajo<\/span>/, 'Espacios abre el grupo Controla')
 })
 
-// v0.56: la portada presenta la terminal con texto (sus capturas llegan en la v0.57).
+// v0.56: la portada presenta la terminal con texto (sus capturas llegan en la v0.58).
 test('la novedad «Todo desde la terminal» dice cómo usarla y lleva a su Ayuda, en los dos idiomas', () => {
   const terminal = seccion('terminal')
   assert.ok(terminal, 'falta <section id="terminal">')
@@ -358,7 +384,7 @@ test('la novedad «Todo desde la terminal» dice cómo usarla y lleva a su Ayuda
   assert.match(codigo, /^tramtai terminal<\/pre>$/m)
   for (const c of codigo.match(/<span class="c"[^>]*>/g) ?? []) assert.match(c, /lang="(es|en)"/)
   assert.match(terminal, /href="ayuda\/empezar\.html#s-soloterminal"/)
-  assert.doesNotMatch(terminal, /<img /, 'sin capturas de la terminal hasta la v0.57')
+  assert.doesNotMatch(terminal, /<img /, 'sin capturas de la terminal hasta la v0.58')
 })
 
 test('Funciones tiene la tarjeta de la terminal, que lleva a la novedad', () => {
