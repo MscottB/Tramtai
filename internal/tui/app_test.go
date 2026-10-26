@@ -544,6 +544,29 @@ func TestCtrlCPreguntaComoQ(t *testing.T) {
 	}
 }
 
+// TestCabeceraComoLaWeb: el estado del servicio en la cabecera y el título del cambio rápido de espacio son los textos de
+// la Web UI, en los dos idiomas.
+func TestCabeceraComoLaWeb(t *testing.T) {
+	for _, lengua := range []string{"es", "en"} {
+		m := nuevoEn(Opciones{}, lengua)
+		m.cli, m.instancia = &cliente.Cliente{}, "global"
+		m.espacios = []contrato.Espacio{{ID: "global", Nombre: "Global", Activo: true}}
+		cabecera := func() string { return strings.Split(ansi.Strip(m.View().Content), "\n")[0] }
+		if quiere := datos.Texto(lengua, "app.enMarcha"); !strings.Contains(cabecera(), quiere) {
+			t.Errorf("%s: con el servicio en marcha la cabecera dice %q: %q", lengua, quiere, cabecera())
+		}
+		m.caido = cliente.ErrServicioInactivo
+		if quiere := datos.Texto(lengua, "app.sinConexion"); !strings.Contains(cabecera(), quiere) {
+			t.Errorf("%s: sin servicio la cabecera dice %q: %q", lengua, quiere, cabecera())
+		}
+		m.caido = nil
+		m.Update(tecla("ctrl+e"))
+		if quiere := datos.Texto(lengua, "app.cambiarInstancia"); !strings.Contains(ansi.Strip(m.View().Content), quiere) {
+			t.Errorf("%s: el cambio de espacio se titula %q:\n%s", lengua, quiere, ansi.Strip(m.View().Content))
+		}
+	}
+}
+
 // TestActualizandoSaleLimpia: cuando empieza la instalación de una versión nueva, la terminal sale sin preguntar (aunque
 // haya algo pendiente: el instalador la cerraría igual) y deja escrito cómo volver a abrirla.
 func TestActualizandoSaleLimpia(t *testing.T) {

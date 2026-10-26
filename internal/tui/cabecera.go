@@ -144,7 +144,7 @@ func (m *modelo) elegirEspacio() tea.Cmd {
 			items = append(items, comp.Item{Valor: e.ID, Texto: e.Nombre, Detalle: e.Ruta})
 		}
 	}
-	s := comp.NuevoSelector(m.estilos, idioma.T("Cambiar de espacio"), items)
+	s := comp.NuevoSelector(m.estilos, m.estilos.Tx(m.idioma, "app.cambiarInstancia"), items)
 	s.Marcar(m.instancia)
 	m.selector = &s
 	return nil
@@ -181,9 +181,9 @@ func (m *modelo) vistaCabecera() string {
 	case m.conectando:
 		estado = e.Tenue.Render(e.Iconos.Inactivo + " " + idioma.T("conectando…"))
 	case m.caido != nil || m.cli == nil:
-		estado = e.Error.Render(e.Iconos.Inactivo + " " + idioma.T("sin servicio"))
+		estado = e.Error.Render(e.Iconos.Inactivo + " " + e.Tx(m.idioma, "app.sinConexion"))
 	default:
-		estado = e.Exito.Render(e.Iconos.Activo + " " + idioma.T("servicio en marcha"))
+		estado = e.Exito.Render(e.Iconos.Activo + " " + e.Tx(m.idioma, "app.enMarcha"))
 	}
 	der := estado
 	if nombre := m.nombreEspacio(); nombre != "" {
