@@ -187,5 +187,6 @@ test('README y docs no llevan la raya larga, palabras huecas ni términos descar
   assert.ok(documentos.length >= 6, 'no se leyeron README ni docs')
   // arquitectura.md usa a propósito los nombres del código (instancia, trabajo, punto de acceso) y lo dice al empezar.
   const deUsuario = documentos.filter((d) => d.donde !== 'docs/arquitectura.md')
-  sinFallos([...fallos(documentos, [raya, ...huecas]), ...fallos(sinTecnico(deUsuario), descartadosEs)])
+  // Los párrafos «In English» del README y de docs siguen el glosario inglés.
+  sinFallos([...fallos(documentos, [raya, ...huecas]), ...fallos(sinTecnico(deUsuario), [...descartadosEs, ...descartadosEn])])
 })

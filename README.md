@@ -91,7 +91,7 @@ Antigravity son marcas de sus respectivos dueños.
 API that runs on your own computer.** If your app already uses the OpenAI or Anthropic SDK, you only change the base
 URL. Antigravity, for now, only from the Playground, the terminal and the CLI.
 
-- **Compatible:** the OpenAI and Anthropic SDKs with streaming and tools, plus a native API for long jobs.
+- **Compatible:** the OpenAI and Anthropic SDKs with streaming and tools, plus a native API for long-running requests.
 - **Agent and model per request,** with fallback to another agent if the first one fails.
 - **Files in, shaped JSON out:** PDF, Word, Excel or PowerPoint as input, validated JSON as output.
 - **One API per app,** with its own key, models, instructions and budget.
