@@ -510,9 +510,9 @@ function escribirLeyenda(leyenda, partes) {
 
 // Demo del recorrido guiado: la zona de la app que señala cada paso de la bienvenida, un paso cada 6 s, con el mismo
 // patrón que el recorrido del tranvía: pausa que cambia su texto, la leyenda solo se anuncia cuando elige la persona,
-// quieta con «reducir movimiento» y sin avanzar con la pestaña oculta ni fuera de la pantalla. La lista de pasos (un
-// desplegable en el móvil) y las flechas eligen el paso; ← → solo con el foco dentro de la demo. Sin JavaScript se ven
-// todos los pasos, uno debajo de otro, con su texto.
+// quieta con «reducir movimiento» y sin avanzar con la pestaña oculta, fuera de la pantalla ni con el foco dentro. La
+// lista de pasos (un desplegable en el móvil) y las flechas eligen el paso; ← → solo con el foco dentro de la demo. Sin
+// JavaScript se ven todos los pasos, uno debajo de otro, con su texto.
 (function () {
   var caja = document.querySelector('.demo');
   var controles = caja && caja.querySelector('.demo-controles');
@@ -529,18 +529,16 @@ function escribirLeyenda(leyenda, partes) {
   var movil = window.matchMedia('(max-width: 899px)');
   var CADA_MS = 6000;
   // pausaManual es la pausa que eligió la persona: «reducir movimiento» no la pisa al volver a desactivarse.
-  var actual = 0, pausado = movimiento.matches, pausaManual = false, enPantalla = !('IntersectionObserver' in window), temporizador = null;
+  // foco: el foco está dentro de la demo; el avance solo se para mientras tanto (patrón de carrusel), sin contar como pausa.
+  var actual = 0, pausado = movimiento.matches, pausaManual = false, foco = false, enPantalla = !('IntersectionObserver' in window), temporizador = null;
 
   function mostrar(n) {
     actual = n;
     figuras.forEach(function (f, i) { f.hidden = i !== n; });
     botones.forEach(function (b, i) { if (i === n) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
-    // La flecha que no lleva a ninguna parte se desactiva; si tenía el foco, se lo pasa a la otra.
-    var conFoco = document.activeElement;
+    // La flecha que no lleva a ninguna parte se desactiva.
     anterior.disabled = n === 0;
     siguiente.disabled = n === figuras.length - 1;
-    if (conFoco === anterior && anterior.disabled) siguiente.focus();
-    if (conFoco === siguiente && siguiente.disabled) anterior.focus();
     progreso.style.width = (n + 1) / figuras.length * 100 + '%';
     escribirLeyenda(leyenda, ['es', 'en'].map(function (idioma) {
       var s = document.createElement('span');
@@ -562,7 +560,7 @@ function escribirLeyenda(leyenda, partes) {
   function anunciar(si) { leyenda.setAttribute('aria-live', si ? 'polite' : 'off'); }
   function programar() {
     clearTimeout(temporizador);
-    if (pausado || !enPantalla || document.hidden) return;
+    if (pausado || foco || !enPantalla || document.hidden) return;
     precargar(actual);
     temporizador = setTimeout(function () {
       anunciar(false);
@@ -574,16 +572,36 @@ function escribirLeyenda(leyenda, partes) {
     pausa.innerHTML = pausado ? '<span lang="es">Seguir</span><span lang="en">Play</span>' : '<span lang="es">Pausa</span><span lang="en">Pause</span>';
   }
 
-  function elegir(n) { anunciar(true); mostrar(n); programar(); }
+  // Solo lo que elige la persona mueve el foco: si la flecha que lo tenía se desactiva, se lo pasa a la otra.
+  function elegir(n) {
+    var conFoco = document.activeElement;
+    anunciar(true);
+    mostrar(n);
+    if (conFoco === anterior && anterior.disabled) siguiente.focus();
+    if (conFoco === siguiente && siguiente.disabled) anterior.focus();
+    programar();
+  }
   botones.forEach(function (b, i) {
     b.addEventListener('click', function () {
       elegir(i);
-      if (movil.matches) detalles.open = false; // en el móvil, el desplegable se cierra y deja ver el paso
+      if (!movil.matches) return;
+      // En el móvil el desplegable se cierra y deja ver el paso; el foco, que estaba en la lista, vuelve a su rótulo.
+      detalles.open = false;
+      detalles.querySelector('summary').focus();
     });
   });
+  // En el escritorio la lista va fija al lado: su rótulo no la pliega.
+  detalles.querySelector('summary').addEventListener('click', function (e) { if (!movil.matches) e.preventDefault(); });
   anterior.addEventListener('click', function () { elegir(actual - 1); });
   siguiente.addEventListener('click', function () { elegir(actual + 1); });
+  caja.addEventListener('focusin', function () { foco = true; programar(); });
+  caja.addEventListener('focusout', function (e) {
+    if (caja.contains(e.relatedTarget)) return;
+    foco = false;
+    programar();
+  });
   caja.addEventListener('keydown', function (e) {
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return; // Alt+← es el atrás del navegador
     var n = actual + (e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0);
     if (n === actual || n < 0 || n >= figuras.length) return;
     e.preventDefault();
@@ -596,6 +614,8 @@ function escribirLeyenda(leyenda, partes) {
   pausa.addEventListener('click', function () {
     pausado = !pausado;
     pausaManual = pausado;
+    // «Seguir» es querer el avance: el foco, que sigue en la pausa, no lo para hasta moverse por la demo.
+    if (!pausado) foco = false;
     rotulo();
     programar();
   });
@@ -627,7 +647,15 @@ function escribirLeyenda(leyenda, partes) {
   var metro = document.querySelector('.metro');
   var panel = metro && metro.querySelector('.metro-panel');
   if (!panel) return;
-  var botones = Array.prototype.slice.call(metro.querySelectorAll('.parada-boton'));
+  // Sin JavaScript el título es texto (un botón no haría nada); aquí pasa a ser el botón de la parada.
+  var botones = Array.prototype.map.call(metro.querySelectorAll('.parada-titulo'), function (titulo) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'parada-boton';
+    b.append.apply(b, Array.prototype.slice.call(titulo.childNodes));
+    titulo.appendChild(b);
+    return b;
+  });
   var ancho = window.matchMedia('(min-width: 900px)');
   var elegida = 0;
   function elegir(n) {

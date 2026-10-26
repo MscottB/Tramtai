@@ -188,7 +188,8 @@ section { padding: 72px 0; }
    900 px, cada línea va en vertical: un tramo de 5 px entre estación y estación y el texto de cada parada a la vista.
    Con JavaScript y pantalla ancha (.metro--plano), las cuatro líneas van en horizontal, una debajo de otra, con el
    nombre bajo cada estación, y el texto de la parada elegida sale en el panel. Todo en el acento: el color de línea es
-   de los agentes (DESIGN.md). La estación es el ::before del botón, así que se pulsa con él. */
+   de los agentes (DESIGN.md). La estación es el ::before del título y no recibe el puntero: en el plano, el botón que crea
+   sitio.js la cubre y se pulsa con ella. */
 .metro { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 40px 48px; }
 .metro-linea { padding: 0; }
 .metro-linea h3 { font-size: 1.05rem; color: var(--texto-suave); margin-bottom: 14px; }
@@ -198,7 +199,7 @@ section { padding: 72px 0; }
 .parada:not(:last-child)::after { content: ''; position: absolute; left: 8.5px; top: 11px; bottom: -11px; width: 5px; background: var(--acento); }
 .parada h4 { font-size: 1.05rem; margin-bottom: 6px; }
 .parada-boton { font: inherit; letter-spacing: inherit; color: var(--texto); background: none; border: 0; padding: 0; text-align: left; }
-.parada-boton::before { content: ''; position: absolute; z-index: 1; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; border: 5px solid var(--acento); background: var(--fondo); box-sizing: border-box; }
+.parada-titulo::before { content: ''; position: absolute; z-index: 1; pointer-events: none; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; border: 5px solid var(--acento); background: var(--fondo); box-sizing: border-box; }
 .parada-texto { color: var(--texto-suave); font-size: .95rem; }
 .metro--plano { grid-template-columns: minmax(0, 1fr); gap: 20px; }
 .metro--plano .metro-linea { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 16px; }
@@ -208,9 +209,9 @@ section { padding: 72px 0; }
 .metro--plano .parada:not(:last-child)::after { left: 50%; top: 8.5px; bottom: auto; width: 100%; height: 5px; }
 .metro--plano .parada h4 { margin: 0; }
 .metro--plano .parada-boton { display: block; width: 100%; min-height: 44px; padding: 30px 8px 6px; border-radius: 8px; font-size: .95rem; font-weight: 600; color: var(--texto-suave); text-align: center; cursor: pointer; }
-.metro--plano .parada-boton::before { left: 50%; margin-left: -11px; }
+.metro--plano .parada-titulo::before { left: 50%; margin-left: -11px; }
 .metro--plano .parada-boton:hover, .metro--plano .parada-boton[aria-pressed="true"] { color: var(--texto); }
-.metro--plano .parada-boton[aria-pressed="true"]::before { background: var(--acento); }
+.metro--plano .parada-titulo:has(> [aria-pressed="true"])::before { background: var(--acento); }
 .metro--plano .parada-texto { display: none; }
 .metro-panel { margin-left: 136px; padding: 20px 24px; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); }
 .metro-panel h4 { font-size: 1.05rem; margin-bottom: 6px; }
@@ -473,6 +474,13 @@ html:not(.js) .demo-paso + .demo-paso { display: block; margin-top: 40px; }
    huecos (2 × 44 + 2 × 12). */
 html.js .demo-escenario { container-type: inline-size; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 0 12px; }
 .demo-escena, .demo-controles { grid-column: 2; }
+/* Con JavaScript los pasos comparten celda: la escena mide lo del más largo y la pausa y la barra no suben y bajan con
+   cada paso. Los ocultos no bajan su imagen (carga diferida): guardan su sitio con un hueco de 16:10. */
+html.js .demo-escena { display: grid; }
+html.js .demo-paso { grid-area: 1 / 1; }
+html.js .demo-paso[hidden] { display: block; visibility: hidden; }
+html.js .demo-paso[hidden] img { display: none; }
+html.js .demo-paso[hidden]::before { content: ''; display: block; aspect-ratio: 16 / 10; }
 .demo-flecha { display: grid; place-items: center; width: 44px; height: 44px; margin-top: calc((100cqw - 112px) / 3.2 - 22px); padding: 0; color: var(--texto); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 50%; cursor: pointer; }
 .demo-flecha:hover:not(:disabled) { color: var(--acento); border-color: var(--acento); }
 .demo-flecha:disabled { opacity: .4; cursor: default; }
@@ -487,10 +495,22 @@ html.js .demo-escenario { container-type: inline-size; display: grid; grid-templ
 .demo-progreso { flex: 1; height: 4px; border-radius: 2px; background: var(--borde); overflow: hidden; }
 .demo-progreso span { display: block; width: 0; height: 100%; background: var(--acento); transition: width .3s; }
 .demo-pausa { font: 600 .85rem var(--fuente); color: var(--texto); background: var(--superficie); border: 1px solid var(--borde-control); border-radius: 8px; padding: 0 14px; min-height: 44px; cursor: pointer; }
+/* En el escritorio la lista va fija al lado: su rótulo no es un desplegable (sitio.js no la deja plegar). */
+@media (min-width: 900px) {
+  .demo-pasos-movil > summary { list-style: none; cursor: default; }
+  .demo-pasos-movil > summary::-webkit-details-marker { display: none; }
+}
 @media (max-width: 899px) {
   html.js .demo { grid-template-columns: minmax(0, 1fr); gap: 16px; }
-  html.js .demo-escenario { gap: 0 4px; }
-  .demo-flecha { margin-top: calc((100cqw - 96px) / 3.2 - 22px); }
+  /* La imagen y su texto usan todo el ancho; las flechas van encima de los bordes de la imagen, a media altura, con su
+     fondo de superficie y su borde para que se lean sobre la captura. */
+  html.js .demo-escenario { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .demo-escena, .demo-controles { grid-column: 1; }
+  .demo-escena { grid-row: 1; }
+  .demo-flecha { grid-area: 1 / 1; z-index: 1; margin: calc(100cqw / 3.2 - 22px) 8px 0; }
+  .demo-anterior { justify-self: start; }
+  .demo-siguiente { justify-self: end; }
+  .demo-flecha:disabled { opacity: 1; color: var(--borde-control); }
   .demo-pasos-movil { padding: 0 12px; background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); }
   .demo-pasos-movil[open] { padding-bottom: 12px; }
 }

@@ -280,9 +280,27 @@ test('la demo es una figura por paso de la bienvenida, cada una con su captura e
         assert.match(figura, new RegExp(`<img class="solo-${tema}" lang="${idioma}" src="${base}-1440\\.webp" srcset="${base}-960\\.webp 960w, ${base}-1440\\.webp 1440w" sizes="[^"]+" width="1440" height="900" loading="lazy" decoding="async" alt="[^"]+">`), `paso ${n}, ${tema}, ${idioma}`)
       }
   })
-  // La primera se ve; el resto espera su turno (sin JavaScript queda la primera y la lista de pasos).
+  // La primera se ve; el resto espera su turno (sin JavaScript se ven las 14, una debajo de otra, y la lista se oculta).
   assert.doesNotMatch(figuras[0], /^<figure[^>]* hidden/)
   for (const figura of figuras.slice(1)) assert.match(figura, /^<figure[^>]* hidden/)
+})
+
+// Revisión del bloque 2 (M5): el último paso sale a pantalla entera y sin el globo; su alt no lo describe.
+test('el texto alternativo del último paso describe la página entera, no el globo', () => {
+  const ultima = figuras.at(-1) ?? ''
+  assert.doesNotMatch(ultima, /cierre del recorrido|end of the tour/)
+  assert.match(ultima, /alt="Recorrido guiado, paso 14 de 14: la página Espacios entera"/)
+  assert.match(ultima, /alt="Guided tour, step 14 of 14: the whole Workspaces page"/)
+})
+
+// Revisión del bloque 2 (I3, M3, M4): en el móvil las flechas van encima de los bordes de la imagen, que usa todo el
+// ancho (también su texto); con JavaScript los pasos comparten celda y la pausa no sube y baja con cada uno.
+test('en el móvil la imagen del paso ocupa todo el ancho y los controles no se mueven', () => {
+  assert.match(css, /@media \(max-width: 899px\) \{[^@]*\.demo-flecha \{[^}]*grid-area: 1 \/ 1/)
+  assert.match(css, /@media \(max-width: 899px\) \{[^@]*\.demo-escena, \.demo-controles \{ grid-column: 1; \}/)
+  for (const f of figuras) for (const s of f.match(/sizes="[^"]+"/g) ?? []) assert.equal(s, 'sizes="(max-width: 899px) calc(100vw - 32px), 800px"')
+  assert.match(css, /html\.js \.demo-paso \{ grid-area: 1 \/ 1; \}/)
+  assert.match(css, /html\.js \.demo-paso\[hidden\] \{[^}]*visibility: hidden/)
 })
 
 // v0.56: la lista de pasos al lado, agrupada por página, y flechas a los costados en lugar de los puntos.
@@ -316,6 +334,23 @@ const demoJs = js.slice(js.indexOf('// Demo del recorrido guiado'))
 test('las flechas del teclado solo actúan con el foco en la demo', () => {
   assert.match(demoJs, /caja\.addEventListener\('keydown'/)
   assert.doesNotMatch(demoJs, /document\.addEventListener\('keydown'/)
+  // Revisión del bloque 2 (M1): Alt+← es el atrás del navegador.
+  assert.match(demoJs, /if \(e\.altKey \|\| e\.ctrlKey \|\| e\.metaKey \|\| e\.shiftKey\) return/)
+})
+
+// Revisión del bloque 2 (I1, I2, M2): el foco solo se mueve cuando elige la persona, la rotación se para con el foco
+// dentro (patrón de carrusel), en el móvil el foco vuelve al desplegable al cerrarlo y en el escritorio la lista no
+// se pliega.
+test('la demo no mueve el foco sola ni lo pierde, y la lista del escritorio no se pliega', () => {
+  const mostrar = demoJs.match(/function mostrar\(n\) \{[\s\S]*?\n  \}/)?.[0] ?? ''
+  assert.ok(mostrar, 'falta mostrar()')
+  assert.doesNotMatch(mostrar, /\.focus\(\)/, 'el avance solo no mueve el foco')
+  assert.match(demoJs, /function elegir\(n\) \{[\s\S]*?\.focus\(\)/)
+  assert.match(demoJs, /caja\.addEventListener\('focusin'/)
+  assert.match(demoJs, /if \(pausado \|\| foco \|\| /)
+  assert.match(demoJs, /detalles\.open = false;[^\n]*\n[^\n]*detalles\.querySelector\('summary'\)\.focus\(\)/)
+  assert.match(demoJs, /if \(!movil\.matches\) e\.preventDefault\(\)/)
+  assert.match(css, /@media \(min-width: 900px\) \{[^@]*\.demo-pasos-movil > summary \{[^}]*list-style: none/)
 })
 
 test('la leyenda cambia un momento después de su aria-live, en el tranvía y en la demo', () => {
@@ -351,6 +386,10 @@ test('las capturas de la demo recortan la zona del paso y ocultan el globo del r
   assert.ok(/function zonaDelPaso\(\)/.test(capturasJs), 'falta zonaDelPaso()')
   assert.ok(capturasJs.includes("paso.ancla ? '.driver-popover'") && capturasJs.includes("visibility = 'hidden'"), 'el globo del recorrido no sale en la captura')
   assert.ok(capturasJs.includes('clip: { ...zona, scale: 1440 / zona.width }'), 'cada captura recorta la zona y la amplía al ancho')
+  // Revisión del bloque 2 (I3, M7): la zona mide 1080 px como mucho, así siempre se amplía, y el hueco del velo se mira
+  // en las cuatro esquinas de lo señalado.
+  assert.match(capturasJs, /Math\.min\(1080, Math\.max\(720, /)
+  assert.match(capturasJs, /\[b\.left \+ 2, b\.top \+ 2\]/)
 })
 // El último paso no tiene ancla, pero driver.js deja en el DOM el resaltado del anterior: se decide por el paso.
 test('el paso sin ancla sale con la pantalla entera desde arriba, sin velo', () => {
@@ -382,7 +421,7 @@ test('la portada enseña el recorrido guiado y deja Espacios a la vista', () => 
   assert.match(funciones, /href="#demo"/, 'Funciones lleva a la demo')
   assert.match(asi, /href="#demo"/, '«Así se ve» enlaza la demo')
   assert.match(asi, /Un espacio por proyecto/)
-  assert.match(funciones, /Controla<\/span><span lang="en">Control<\/span><\/h3>\s*<ol>\s*<li class="parada">\s*<h4><button type="button" class="parada-boton"><span lang="es">Espacios de trabajo<\/span>/, 'Espacios abre la línea Controla')
+  assert.match(funciones, /Controla<\/span><span lang="en">Control<\/span><\/h3>\s*<ol>\s*<li class="parada">\s*<h4 class="parada-titulo"><span lang="es">Espacios de trabajo<\/span>/, 'Espacios abre la línea Controla')
 })
 
 // v0.56: la portada presenta la terminal con texto (sus capturas llegan en la v0.58).
@@ -400,7 +439,7 @@ test('la novedad «Todo desde la terminal» dice cómo usarla y lleva a su Ayuda
 })
 
 test('Funciones tiene la parada de la terminal, que lleva a la novedad', () => {
-  const parada = seccion('funciones').match(/<li class="parada">\s*<h4><button type="button" class="parada-boton"><span lang="es">La terminal, a la par de la app<\/span>[\s\S]*?<\/li>/)?.[0] ?? ''
+  const parada = seccion('funciones').match(/<li class="parada">\s*<h4 class="parada-titulo"><span lang="es">La terminal, a la par de la app<\/span>[\s\S]*?<\/li>/)?.[0] ?? ''
   assert.ok(parada, 'falta la parada')
   assert.match(parada, /<span lang="en">The terminal, on par with the app<\/span>/)
   assert.match(parada, /href="#terminal"/)
@@ -414,7 +453,7 @@ test('el plano tiene cuatro líneas y doce paradas con su texto en el HTML (sin 
   assert.equal((funciones.match(/<section class="metro-linea" data-linea="(conecta|controla|protege|usa)"/g) ?? []).length, 4)
   const paradas = funciones.match(/<li class="parada">[\s\S]*?<\/li>/g) ?? []
   assert.equal(paradas.length, 12)
-  for (const p of paradas) { assert.match(p, /<button type="button" class="parada-boton"/); assert.match(p, /<p class="parada-texto">[\s\S]*lang="es"[\s\S]*lang="en"/) }
+  for (const p of paradas) { assert.match(p, /<h4 class="parada-titulo">/); assert.match(p, /<p class="parada-texto">[\s\S]*lang="es"[\s\S]*lang="en"/) }
   for (const t of ['Compatible con tus SDK', 'Una API por aplicación', 'Respaldo entre agentes', 'La terminal, a la par de la app', 'Recorrido y Ayuda'])
     assert.match(funciones, new RegExp(t))
   assert.match(funciones, /href="#demo"/)
@@ -430,6 +469,10 @@ test('con JavaScript y pantalla ancha el plano es horizontal y cada parada ense�
   assert.match(metroJs, /classList\.toggle\('metro--plano'/)
   assert.match(metroJs, /matchMedia\('\(min-width: 900px\)'\)/)
   assert.match(metroJs, /setAttribute\('aria-pressed'/)
+  // Ronda del bloque 2: sin JavaScript las paradas no son botones que no hacen nada; el título es texto y el JS lo
+  // convierte en botón.
+  assert.doesNotMatch(seccion('funciones'), /parada-boton/)
+  assert.match(metroJs, /createElement\('button'\)[\s\S]*?className = 'parada-boton'/)
   assert.match(css, /\.metro--plano \.parada-texto \{ display: none; \}/)
 })
 
