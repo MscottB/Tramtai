@@ -18,6 +18,7 @@
         <q-btn outline color="primary" no-caps icon-right="arrow_forward" :label="t('ayuda.ir', { pagina: t(menu[b.pagina]) })" @click="$emit('ir', b.pagina)" />
       </div>
     </template>
+    <BloqueNota :bloque="{ tipo: 'nota', texto: tema.terminal }" />
     <template v-if="contexto === 'app'">
       <div v-if="relacionados.length">
         <div class="text-weight-medium q-mb-sm">{{ t('ayuda.ui.relacionados') }}</div>

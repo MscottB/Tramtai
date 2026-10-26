@@ -220,6 +220,17 @@ test('la captura de un paso lleva su tamaño, carga diferida y un texto alternat
   assert.ok(!paginas.get('ayuda/empezar.html')!.includes('recorrido-inicio-mapa'), 'sin capturas, el paso sale sin <img>')
 })
 
+test('cada tema dice al final, en una nota, cómo se hace en la terminal (antes de los temas relacionados)', () => {
+  for (const t of temas) {
+    const html = paginas.get(`ayuda/${t.id}.html`)!
+    const nota = `<p class="aviso"><span lang="es">${escapar(es[t.terminal])}</span><span lang="en">${escapar(en[t.terminal])}</span></p>`
+    const i = html.indexOf(nota)
+    assert.ok(i > 0, t.id)
+    const relacionados = html.indexOf('id="s-relacionados"')
+    assert.ok(relacionados < 0 || i < relacionados, `${t.id}: la nota va antes de los temas relacionados`)
+  }
+})
+
 test('en el sitio no hay botón «Muéstrame en pantalla»: no hay app', () => {
   for (const [ruta, html] of paginas) assert.doesNotMatch(html, /Muéstrame en pantalla|Show me on screen/, ruta)
 })

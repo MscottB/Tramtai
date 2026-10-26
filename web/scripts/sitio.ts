@@ -303,6 +303,7 @@ function paginaTema(f: Fuente, tema: Tema): string {
     if (html) secciones[secciones.length - 1].partes.push(html)
   })
   if (GUIA.has(tema.id)) secciones[secciones.length - 1].partes.push(`<p class="aviso"><a href="../desarrolladores.html">${bilingue('Guía del desarrollador', 'Developer guide')}</a>: ${bilingue('el ciclo completo en Python, JavaScript, Go y curl.', 'the full cycle in Python, JavaScript, Go and curl.')}</p>`)
+  secciones[secciones.length - 1].partes.push(`<p class="aviso">${tx(tema.terminal)}</p>`)
   if (relacionados.length) secciones.push({ id: 's-relacionados', titulo: ['Temas relacionados', 'Related topics'], partes: [tarjetas(f, relacionados)] })
   const conTitulo = secciones.filter((s) => s.id && s.partes.length)
   const indice = conTitulo.length >= 3
