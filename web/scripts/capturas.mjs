@@ -282,10 +282,29 @@ try {
           console.log(`site/capturas/${p.nombre}-${tema}-${ancho}.webp`)
         }
       }
+  // zonaDelPaso es lo que señala el paso (.driver-active-element) con 32 px por lado, agrandado a 16:10 alrededor de su
+  // centro (720 px de ancho como mínimo) y encajado en la pantalla de 1440×900. En coordenadas del documento, las del
+  // recorte de Page.captureScreenshot. Solo para pasos con ancla: el último no tiene, y driver.js deja en el DOM el
+  // resaltado del anterior.
+  async function zonaDelPaso() {
+    return evaluar(`(() => {
+      const b = document.querySelector('.driver-active-element').getBoundingClientRect()
+      const width = Math.min(1440, Math.max(720, b.width + 64, (b.height + 64) * 1.6)), height = width / 1.6
+      const x = Math.min(Math.max(0, b.left + b.width / 2 - width / 2), 1440 - width)
+      const y = Math.min(Math.max(0, b.top + b.height / 2 - height / 2), 900 - height)
+      return { x: x + scrollX, y: y + scrollY, width, height }
+    })()`)
+  }
+  // huecoListo dice si el hueco del velo (el path evenodd de .driver-overlay) deja ver lo señalado de arriba abajo.
+  const huecoListo = `(() => {
+    const b = document.querySelector('.driver-active-element').getBoundingClientRect()
+    const velo = document.querySelector('.driver-overlay path'), x = b.left + b.width / 2
+    return !velo.isPointInFill(new DOMPoint(x, b.top + 2)) && !velo.isPointInFill(new DOMPoint(x, Math.min(b.bottom, 900) - 2))
+  })()`
   // La demo de la portada es la bienvenida de verdad: cada tema e idioma cargan Inicio como la primera vez (sin la marca de
-  // bienvenida), acepta la oferta y, en cada paso, saca la pantalla completa con la ventana del recorrido encima; el
-  // «Siguiente» lo pulsa el script, como quien hace el recorrido. Los datos son los de demostración de arriba. Sale en la
-  // corrida completa y con --bienvenida.
+  // bienvenida), acepta la oferta y, en cada paso, saca la zona que señala el paso (zonaDelPaso), ampliada y sin la
+  // ventana del recorrido; el «Siguiente» lo pulsa el script, como quien hace el recorrido. Los datos son los de
+  // demostración de arriba. Sale en la corrida completa y con --bienvenida.
   if (soloBienvenida || (!solo && !soloSitio && !soloRecorridos))
     for (const tema of ['claro', 'oscuro'])
      for (const idioma of ['es', 'en']) {
@@ -302,16 +321,31 @@ try {
         if (paso.ancla) await hasta(() => evaluar(`!!document.querySelector('.driver-active-element')`), 10, `el resaltado de ${paso.ancla}`)
         await esperar(1000) // la ventana y el resaltado llegan con su animación, y los datos de la página con ella
         await ocultarRuta()
-        // Toda la pantalla sale en la captura: se mira todo su texto y el de sus campos.
+        // Se mira el texto de toda la pantalla y el de sus campos (más de lo que sale en el recorte).
         const visto = await evaluar(`document.body.innerText + ' ' + [...document.querySelectorAll('input, textarea')].map((c) => c.value).join(' ')`)
         if (privada.test(visto)) throw new Error(`el paso ${i + 1} muestra una ruta real: ${visto.slice(0, 200)}`)
-        // La misma pantalla de 1440 px, también reducida a 960 para los móviles (srcset).
-        for (const ancho of [1440, 960]) {
-          const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80,
-            clip: { x: 0, y: 0, width: 1440, height: 900, scale: ancho / 1440 } })
-          writeFileSync(join(destinoPortada, `bienvenida-${i + 1}-${tema}-${idioma}-${ancho}.webp`), Buffer.from(data, 'base64'))
+        // Lo que señala el paso pudo crecer al llegar sus datos: driver.js recoloca el hueco del velo con un resize.
+        if (paso.ancla) await hasta(async () => { await evaluar(`dispatchEvent(new Event('resize'))`); await esperar(200); return evaluar(huecoListo) }, 10, `el hueco del velo sobre ${paso.ancla}`)
+        else await evaluar(`scrollTo(0, 0)`)
+        const zona = paso.ancla ? await zonaDelPaso() : { x: 0, y: 0, width: 1440, height: 900 }
+        // Sin el globo del recorrido; si el paso no señala nada, tampoco el velo (saldría la pantalla oscurecida).
+        const tapan = paso.ancla ? '.driver-popover' : '.driver-popover, .driver-overlay'
+        await evaluar(`document.querySelectorAll('${tapan}').forEach((e) => { e.style.visibility = 'hidden' })`)
+        // La zona del paso a 1440 px de ancho (hasta 2× lo que mide en la pantalla). La de 960 para los móviles (srcset)
+        // se reduce de esa en un canvas: un segundo recorte con scale < 1 salía a veces en mosaico.
+        const { data } = await enviar('Page.captureScreenshot', { format: 'webp', quality: 80,
+          clip: { ...zona, scale: 1440 / zona.width } })
+        const reducida = await evaluar(`(async () => {
+          const img = new Image(); img.src = 'data:image/webp;base64,${data}'; await img.decode()
+          const lienzo = Object.assign(document.createElement('canvas'), { width: 960, height: 600 }), g = lienzo.getContext('2d')
+          g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, 960, 600)
+          return lienzo.toDataURL('image/webp', 0.8).split(',')[1]
+        })()`)
+        for (const [ancho, webp] of [[1440, data], [960, reducida]]) {
+          writeFileSync(join(destinoPortada, `bienvenida-${i + 1}-${tema}-${idioma}-${ancho}.webp`), Buffer.from(webp, 'base64'))
           console.log(`site/capturas/bienvenida-${i + 1}-${tema}-${idioma}-${ancho}.webp`)
         }
+        await evaluar(`document.querySelectorAll('${tapan}').forEach((e) => { e.style.visibility = '' })`)
         if (i < BIENVENIDA.length - 1) await evaluar(`document.querySelector('.driver-popover-next-btn').click()`)
       }
     }

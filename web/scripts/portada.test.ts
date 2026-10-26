@@ -287,6 +287,19 @@ test('la demo se puede pausar y elegir, sin anunciarse sola y con los controles 
   })
 })
 
+// v0.56: cada captura de la demo es la zona que señala el paso, ampliada y sin el globo del recorrido.
+const capturasJs = readFileSync(new URL('./capturas.mjs', import.meta.url), 'utf8')
+test('las capturas de la demo recortan la zona del paso y ocultan el globo del recorrido', () => {
+  assert.ok(/function zonaDelPaso\(\)/.test(capturasJs), 'falta zonaDelPaso()')
+  assert.ok(capturasJs.includes("paso.ancla ? '.driver-popover'") && capturasJs.includes("visibility = 'hidden'"), 'el globo del recorrido no sale en la captura')
+  assert.ok(capturasJs.includes('clip: { ...zona, scale: 1440 / zona.width }'), 'cada captura recorta la zona y la amplía al ancho')
+})
+// El último paso no tiene ancla, pero driver.js deja en el DOM el resaltado del anterior: se decide por el paso.
+test('el paso sin ancla sale con la pantalla entera desde arriba, sin velo', () => {
+  assert.ok(capturasJs.includes('paso.ancla ? await zonaDelPaso() : { x: 0, y: 0, width: 1440, height: 900 }'), 'el último paso recorta una zona')
+  assert.ok(capturasJs.includes("'.driver-popover, .driver-overlay'"), 'el último paso sale con el velo')
+})
+
 test('las capturas de la demo existen y pesan poco: 150 KB cada una de 1440 y 6 MB en total', () => {
   const archivos = readdirSync(carpeta).filter((a) => a.startsWith('bienvenida-'))
   let total = 0
