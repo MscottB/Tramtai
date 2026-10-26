@@ -84,6 +84,7 @@ type paginaFalsa struct {
 	instancia   string
 	cambios     int // los CambioEspacio que le llegan
 	avisos      int // los NuevoAviso que le llegan: no debería ninguno, son de la app
+	canceladas  int // los Cancelado que le llegan: la respuesta a una pregunta suya
 }
 
 func (p *paginaFalsa) Titulo() string { return "Configuración" }
@@ -104,6 +105,8 @@ func (p *paginaFalsa) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 		p.cambios++
 	case comp.NuevoAviso:
 		p.avisos++
+	case comp.Cancelado:
+		p.canceladas++
 	}
 	return p, nil
 }
@@ -537,6 +540,12 @@ func TestCtrlCPreguntaComoQ(t *testing.T) {
 	if _, cmd := m.Update(ctrlC); !sale(cmd) {
 		t.Fatal("con la pregunta de salir abierta, otro Ctrl+C sale")
 	}
+	// Con una pregunta de la página abierta, Ctrl+C se la cancela (la página lo sabe) antes de preguntar si salir.
+	m.pregunta, m.saliendo = nil, false
+	m.Update(comp.Pregunta{Texto: "¿Cerrar sin copiar la clave?"})
+	if _, cmd := m.Update(ctrlC); sale(cmd) || !m.saliendo || o.canceladas != 1 {
+		t.Fatalf("Ctrl+C cancela la pregunta de la página y pregunta si salir: canceladas %d", o.canceladas)
+	}
 	o.motivo = ""
 	m.pregunta, m.saliendo = nil, false
 	if _, cmd := m.Update(ctrlC); !sale(cmd) {
@@ -812,6 +821,12 @@ type paginaOcupada struct {
 }
 
 func (p *paginaOcupada) Pendiente() string { return p.motivo }
+
+// Update es el de paginaFalsa, pero la página que queda es la ocupada (si no, la app se quedaría con la falsa de dentro).
+func (p *paginaOcupada) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
+	_, cmd := p.paginaFalsa.Update(msg)
+	return p, cmd
+}
 
 // TestSalirPreguntaSiHayAlgoEnMarcha: q sale sin preguntar si nada se pierde; con una petición en marcha o cambios sin
 // guardar, pregunta y dice qué, y solo s sale.

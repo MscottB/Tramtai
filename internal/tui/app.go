@@ -314,7 +314,12 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 	case (t == "ctrl+c" || t == "q") && m.saliendo:
 		return tea.Quit
 	case t == "ctrl+c": // como q, también en un campo: si algo se perdería, pregunta antes
-		return m.salir()
+		if m.pregunta == nil || m.pregunta.Leer || m.cambiarA != "" {
+			return m.salir()
+		}
+		// La pregunta abierta es de la página: se le cancela, para que no se quede esperando la respuesta.
+		m.pregunta = nil
+		return tea.Batch(m.aPagina(comp.Cancelado{}), m.salir())
 	case m.pregunta == nil && (m.ancho < anchoMinimo || m.alto < altoMinimo):
 		if t == "q" {
 			return m.salir()
