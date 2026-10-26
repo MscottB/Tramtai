@@ -74,7 +74,7 @@ const ayudaEs = {
   'ayuda.empezar.pPortable': '¿Cómo funciona la copia portable?',
   'ayuda.empezar.rPortable': 'El .zip de Windows guarda todo en «datos-tramtai», a su lado, sin tocar la instalación. Para actualizarla, descomprime la nueva encima.',
   'ayuda.empezar.pTerminal': '¿Puedo usar solo la terminal?',
-  'ayuda.empezar.rTerminal': 'Sí: mira «Solo con la terminal», más arriba. Sin la app de escritorio, «brew install mscottb/tramtai/tramtai» o el script instalar.sh dejan la CLI y el servicio.',
+  'ayuda.empezar.rTerminal': 'Sí: mira «Solo con la terminal». Sin la app, el script instalar.sh deja la CLI y el servicio; con Homebrew, «brew tap mscottb/tramtai https://github.com/MscottB/Tramtai» y «brew install tramtai».',
   'ayuda.empezar.soloTerminal': 'Solo con la terminal',
   'ayuda.empezar.soloTerminal1': 'Inicia el servicio en segundo plano con «tramtai servicio iniciar -d»: atiende a tus apps sin abrir la app, aunque cierres la terminal.',
   'ayuda.empezar.soloTerminal2': 'Abre «tramtai terminal» (o «tramtai» a secas): tiene las mismas páginas que la app, de Inicio a la Ayuda. Si el servicio no está en marcha, r lo inicia.',

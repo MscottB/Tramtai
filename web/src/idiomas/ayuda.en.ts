@@ -76,7 +76,7 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.empezar.pPortable': 'How does the portable copy work?',
   'ayuda.empezar.rPortable': 'The Windows .zip keeps everything in “datos-tramtai”, next to it, without touching the installed copy. To update it, unzip the new one on top.',
   'ayuda.empezar.pTerminal': 'Can I use only the terminal?',
-  'ayuda.empezar.rTerminal': 'Yes: see “Terminal only” above. Without the desktop app, “brew install mscottb/tramtai/tramtai” or the instalar.sh script install the CLI and the service.',
+  'ayuda.empezar.rTerminal': 'Yes: see “Terminal only”. Without the app, instalar.sh installs the CLI and the service; with Homebrew, “brew tap mscottb/tramtai https://github.com/MscottB/Tramtai” and “brew install tramtai”.',
   'ayuda.empezar.soloTerminal': 'Terminal only',
   'ayuda.empezar.soloTerminal1': 'Start the service in the background with “tramtai servicio iniciar -d”: it serves your apps without opening the app, even after you close the terminal.',
   'ayuda.empezar.soloTerminal2': 'Open “tramtai terminal” (or just “tramtai”): it has the same pages as the app, from Home to Help. If the service is not running, r starts it.',
