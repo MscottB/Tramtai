@@ -576,7 +576,8 @@ func TestErrorDeCarga(t *testing.T) {
 }
 
 // TestRespuestasViejas: una carga pedida antes de volver a iniciar la página se descarta, aunque llegue después; un cambio
-// ya hecho en el servicio en el mismo espacio sí se aplica, aunque la página se haya vuelto a iniciar.
+// ya hecho en el servicio en el mismo espacio sí se aplica, aunque la página se haya ocultado. (Al volver a iniciarla, la
+// app cancela el Ctx de antes: ese cambio ya no llega.)
 func TestRespuestasViejas(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	crear(t, cli, id, contrato.ConfigPunto{Nombre: "mi-app"})
@@ -604,10 +605,10 @@ func TestRespuestasViejas(t *testing.T) {
 		t.Fatalf("la carga de otro espacio se descarta:\n%s", v)
 	}
 
-	// Un cambio retenido del mismo espacio se aplica tras volver a iniciar.
+	// Un cambio retenido del mismo espacio se aplica aunque llegue tarde, con la página dejada atrás: al volver de la Ayuda
+	// la app no la inicia otra vez, y su Ctx sigue vivo.
 	a = abierta(t, cli, id)
 	accion := a.Retener(func() { a.Pulsar("a") }) // detener mi-app, la primera
-	a.Correr(a.P.Iniciar(contexto(t, cli, id)))
 	a.Soltar(accion)
 	hastaServicio(t, a, cli, id, "mi-app", func(p contrato.EstadoPunto, _ bool) bool { return !p.Activo })
 	a.HastaVer("mi-app               ○ Detenida")

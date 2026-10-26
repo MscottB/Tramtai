@@ -337,7 +337,7 @@ func (p *Pagina) alCargar(m msgCarga) tea.Cmd {
 }
 
 func (p *Pagina) alAccion(m msgAccion) tea.Cmd {
-	if !m.DelEspacio(p.c) { // el cambio ya está hecho en el servicio: vale aunque la página se haya vuelto a iniciar
+	if !m.DelEspacio(p.c) { // el cambio ya está hecho en el servicio: vale aunque la página se haya ocultado
 		return nil
 	}
 	p.ocupado = false
