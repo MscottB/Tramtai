@@ -19,8 +19,8 @@ func TestNingunaRutaDejaVerTrabajosDeOtraAPI(t *testing.T) {
 	if _, err := s.ActivarGlobal(); err != nil {
 		t.Fatal(err)
 	}
-	tienda, _ := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "tienda"))
-	soporte, _ := RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "soporte"))
+	tienda, _ := NuevaClave(RutaTokenPunto(s.opc.Datos, "tienda"))
+	soporte, _ := NuevaClave(RutaTokenPunto(s.opc.Datos, "soporte"))
 	s.Recargar()
 	r, cuerpo := pedir(t, ts.URL, "POST", "/p/soporte/api/v1/trabajos", soporte, hola)
 	if r.StatusCode != http.StatusAccepted {

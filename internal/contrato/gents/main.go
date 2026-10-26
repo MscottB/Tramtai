@@ -42,6 +42,7 @@ var raices = []raiz{
 	{nombre: "ConfigPunto", valor: contrato.ConfigPunto{}},
 	{nombre: "Retencion", valor: contrato.Retencion{}},
 	{nombre: "EntradaConfiguracion", valor: contrato.EntradaConfiguracion{}},
+	{nombre: "EstadoClave", valor: contrato.EstadoClave{}},
 	{nombre: "Modelo", valor: contrato.Modelo{}},
 	{nombre: "AjustesServicio", valor: contrato.AjustesServicio{}},
 	{nombre: "EstadoActualizacion", valor: contrato.EstadoActualizacion{}},

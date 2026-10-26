@@ -81,7 +81,7 @@ type Opciones struct {
 // intervaloPurga es cada cuánto se aplica la retención a cada instancia activa.
 const intervaloPurga = 5 * time.Minute
 
-// Instancia es un ámbito lógico con configuración, token, cola, base de datos y cargas propios.
+// Instancia es un ámbito lógico con configuración, clave, cola, base de datos y cargas propios.
 type Instancia struct {
 	ID           string
 	Ambito       string // global o proyecto
@@ -90,7 +90,7 @@ type Instancia struct {
 	Planificador *planificador.Planificador
 	Cargas       *documentos.Cargas
 	ArchivoToken string
-	token        string
+	huella       string // la de la clave de las apps, vacía mientras no haya una; la clave en claro no se guarda
 	almacen      *persistencia.Almacen
 	api          *api.Servidor // comprueba los agentes para los Primeros pasos
 	rutas        http.Handler

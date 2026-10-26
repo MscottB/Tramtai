@@ -165,7 +165,7 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *configuracion.Conf
 		alm.Cerrar()
 		return nil, err
 	}
-	token, archivo, err := TokenInstancia(s.opc.Datos, id, c)
+	huella, archivo, err := HuellaInstancia(s.opc.Datos, id, c)
 	if err != nil {
 		alm.Cerrar()
 		return nil, err
@@ -200,7 +200,7 @@ func (s *Servicio) abrirInstancia(id, ambito, raiz string, c *configuracion.Conf
 			return nombres
 		}}
 	inst := &Instancia{ID: id, Ambito: ambito, Raiz: raiz, Config: c, Planificador: p, Cargas: cargas,
-		ArchivoToken: archivo, token: token, almacen: alm, api: srv, rutas: srv.Rutas()}
+		ArchivoToken: archivo, huella: huella, almacen: alm, api: srv, rutas: srv.Rutas()}
 	inst.iniciarPurga(s.opc.Registros)
 	return inst, nil
 }

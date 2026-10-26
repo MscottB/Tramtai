@@ -186,13 +186,14 @@ func TestRutasAdminRechazanClaveDeApp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	clave := claveDe(t, s, inst)
 	e := "/api/v1/servicio/espacios/" + inst.ID
 	rutas := []struct{ metodo, ruta string }{
 		{"POST", e + "/activar"}, {"POST", e + "/detener"}, {"POST", e + "/confianza"}, {"POST", e + "/ubicacion"},
 		{"POST", "/api/v1/servicio/proyectos"}, {"PUT", "/api/v1/servicio/agentes/claude/autenticacion"},
 	}
 	for _, c := range rutas {
-		for _, token := range []string{inst.token, ""} {
+		for _, token := range []string{clave, ""} {
 			if r, _ := pedir(t, ts.URL, c.metodo, c.ruta, token, `{"modo":"suscripcion","confiar":true,"ruta":"x","raiz":"x"}`); r.StatusCode != 401 {
 				t.Fatalf("%s %s con la clave de la app (%t): %d", c.metodo, c.ruta, token != "", r.StatusCode)
 			}
@@ -246,7 +247,7 @@ func TestAdminActivarMovidoPregunta(t *testing.T) {
 	if err := s.FijarConfianza(nueva, true); err != nil {
 		t.Fatal(err)
 	}
-	if r, texto := admin(t, s, ts.URL, "POST", "/api/v1/servicio/instancias", cuerpo); r.StatusCode != 200 || !strings.Contains(texto, antes.ID) {
-		t.Fatalf("con confianza se reabre el mismo espacio: %d %s", r.StatusCode, texto)
+	if r, texto := admin(t, s, ts.URL, "POST", "/api/v1/servicio/instancias", cuerpo); r.StatusCode != 200 || !strings.Contains(texto, antes.ID) || strings.Contains(texto, `"token"`) {
+		t.Fatalf("con confianza se reabre el mismo espacio, sin clave en la respuesta: %d %s", r.StatusCode, texto)
 	}
 }

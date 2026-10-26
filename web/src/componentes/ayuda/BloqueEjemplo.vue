@@ -3,7 +3,7 @@
     <div class="desplazable-x"><q-btn-toggle v-model="elegido" no-caps flat dense toggle-color="primary" class="segmentado inline-flex"
       :options="lista.map((e) => ({ label: e.titulo(), value: e.id }))" /></div>
     <div class="bloque-codigo sin-ajuste q-mt-sm">{{ codigo }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar"
-      :aria-label="t('conectar.copiarEjemplo')" @click="copiar(codigo, t('conectar.ejemploCopiado'))" /></div>
+      :aria-label="t('conectar.copiarEjemplo')" @click="copiar(codigo)" /></div>
   </div>
 </template>
 

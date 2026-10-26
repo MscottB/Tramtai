@@ -26,6 +26,8 @@ export const claves: Tema = {
       preguntas: [
         { id: 'que-clave', pregunta: 'ayuda.claves.pCual', respuesta: 'ayuda.claves.rCual' },
         { id: 'clave-filtrada-espacio', pregunta: 'ayuda.claves.pFiltrada', respuesta: 'ayuda.claves.rFiltrada' },
+        { id: 'ver-clave-espacio', pregunta: 'ayuda.claves.pDonde', respuesta: 'ayuda.claves.rDonde' },
+        { id: 'clave-variable-entorno', pregunta: 'ayuda.claves.pVariable', respuesta: 'ayuda.claves.rVariable' },
         { id: 'sugerencia-api', pregunta: 'ayuda.claves.pSugerencia', respuesta: 'ayuda.claves.rSugerencia' },
       ],
     },

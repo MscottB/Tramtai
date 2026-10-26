@@ -79,7 +79,8 @@ func TestPuntosEnArchivo(t *testing.T) {
 
 	// Solo con el token de servicio: ni la clave de una app ni una sesión de la Web UI.
 	inst, _ := s.ActivarGlobal()
-	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/servicio/puntos", inst.token, ""); r.StatusCode != 401 {
+	clave := claveDe(t, s, inst)
+	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/servicio/puntos", clave, ""); r.StatusCode != 401 {
 		t.Fatalf("la clave de aplicaciones: %d", r.StatusCode)
 	}
 	n := abrirSesion(t, s, ts.URL)
@@ -112,7 +113,7 @@ func TestReglasAlGuardarPorLaAPI(t *testing.T) {
 `
 	s, ts, _ := entorno(t, global, "", adaptadores.Simulado{})
 	s.ActivarGlobal()
-	RotarTokenPunto(RutaTokenPunto(s.opc.Datos, "vieja"))
+	NuevaClave(RutaTokenPunto(s.opc.Datos, "vieja"))
 	s.Recargar()
 	n := abrirSesion(t, s, ts.URL)
 	csrf := []string{"X-CSRF-Token", n.csrf}

@@ -154,6 +154,13 @@ export interface EntradaConfiguracion {
   origen: string
 }
 
+export interface EstadoClave {
+  tiene_clave: boolean
+  origen: string
+  variable?: string
+  archivo?: string
+}
+
 export interface Modelo {
   id: string
   agente?: string

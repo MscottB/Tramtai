@@ -221,17 +221,9 @@ func (p *Pagina) textoDetalle(x contrato.EstadoPunto) string {
 	return p.estilos.A(strings.Join(l, "\n"))
 }
 
-// ocultar enseña solo el principio de la clave, como la Web UI.
-func (p *Pagina) ocultar(clave string) string {
-	punto := "•"
-	if p.estilos.ASCII {
-		punto = "*"
-	}
-	return clave[:min(6, len(clave))] + strings.Repeat(punto, 18)
-}
-
-// textoClave es la pestaña de la clave del espacio: para qué sirve, sus URL, la clave (oculta salvo con v) y el
-// presupuesto del espacio, si tiene.
+// textoClave es la pestaña de la clave del espacio: para qué sirve, el estado de la clave (o la clave misma, recién
+// creada o regenerada), sus URL y el presupuesto del espacio, si tiene. La clave va arriba, para que se vea sin desplazar
+// el visor: solo se ve esta vez.
 func (p *Pagina) textoClave() string {
 	e := p.estilos
 	base := p.resumen.Base
@@ -239,24 +231,26 @@ func (p *Pagina) textoClave() string {
 		base = p.c.Cli.Base
 	}
 	l := []string{e.Titulo.Render(strings.TrimSpace(p.tx("conectar.directa", "nombre", p.nombre))), p.tx("conectar.directaTexto"), "",
-		e.Titulo.Render(p.tx("guia.titulo"))}
+		e.Tenue.Render(p.tx("conectar.clave"))}
+	switch {
+	case p.claveEspacio != "":
+		l = append(l, "  "+p.claveEspacio, e.Advertencia.Render(p.tx("puntos.claveUnaVez")))
+	case p.errClave != "":
+		l = append(l, e.Error.Render(p.tx("comun.errorCarga")+": "+p.errClave), e.Tenue.Render("r "+p.tx("comun.reintentar")))
+	case p.estadoClave.Origen == "variable":
+		l = append(l, p.tx("conectar.claveVariable", "variable", p.estadoClave.Variable))
+	case p.estadoClave.TieneClave:
+		l = append(l, p.tx("conectar.conClave"))
+	default:
+		l = append(l, p.tx("conectar.sinClave"))
+	}
+	l = append(l, "", e.Titulo.Render(p.tx("guia.titulo")))
 	l = append(l, p.urls(base, contratos)...)
 	if grupos := p.gruposModelo(); len(grupos) > 0 { // qué poner en model, como los chips de la Web UI
 		l = append(l, "", e.Tenue.Render(p.tx("conectar.modeloAntes")+" model "+p.tx("conectar.modeloDespues")))
 		for _, g := range grupos {
 			l = append(l, e.Tenue.Render(g.titulo+":")+" "+strings.Join(g.ids, "  "))
 		}
-	}
-	l = append(l, "", e.Tenue.Render(p.tx("conectar.clave")))
-	switch {
-	case p.clave == "" && p.errClave != "":
-		l = append(l, e.Error.Render(p.tx("comun.errorCarga")+": "+p.errClave), e.Tenue.Render("r "+p.tx("comun.reintentar")))
-	case p.clave == "":
-		l = append(l, e.Tenue.Render(p.tx("comun.cargando")))
-	case p.verClave:
-		l = append(l, "  "+p.clave)
-	default:
-		l = append(l, "  "+p.ocultar(p.clave))
 	}
 	if conLimites(p.espacio) {
 		l = append(l, "", e.Titulo.Render(p.tx("presupuesto.espacio")), p.tx("presupuesto.espacioTexto"))

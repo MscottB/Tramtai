@@ -22,7 +22,8 @@ type respuestaRetencion struct {
 func TestRetencionConfigurable(t *testing.T) {
 	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
 	global, _ := s.ActivarGlobal()
-	pedir(t, ts.URL, "POST", "/api/v1/trabajos", global.token, hola)
+	clave := claveDe(t, s, global)
+	pedir(t, ts.URL, "POST", "/api/v1/trabajos", clave, hola)
 	n := abrirSesion(t, s, ts.URL)
 	leer := func() respuestaRetencion {
 		r, cuerpo := n.pedir("GET", "/api/v1/instancia/retencion", "")
@@ -53,7 +54,7 @@ func TestRetencionConfigurable(t *testing.T) {
 			t.Errorf("%s debía rechazarse: %d %s", malo, c, resp)
 		}
 	}
-	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/instancia/retencion", global.token, ""); r.StatusCode != 401 && r.StatusCode != 403 {
+	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/instancia/retencion", clave, ""); r.StatusCode != 401 && r.StatusCode != 403 {
 		t.Errorf("con la clave de las aplicaciones no se ve: %d", r.StatusCode)
 	}
 }

@@ -1,11 +1,15 @@
 package servicio
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"tramtai/internal/agentes"
+	"tramtai/internal/api"
 	"tramtai/internal/configuracion"
 )
 
@@ -15,7 +19,7 @@ func TestClaveIlegibleNoSeRota(t *testing.T) {
 	dir := t.TempDir()
 	for nombre, leer := range map[string]func(string) (string, error){"token": LeerOCrearToken, "huella": LeerHuellaPunto} {
 		ruta := filepath.Join(dir, nombre)
-		os.WriteFile(ruta, []byte("corta\n"), 0o600)
+		escribirClave(t, ruta, "corta\n")
 		if _, err := leer(ruta); err == nil {
 			t.Errorf("%s: una clave truncada tenía que dar error", nombre)
 		}
@@ -39,7 +43,7 @@ func TestClaveDeServicioDanadaSeRota(t *testing.T) {
 		t.Fatal(err)
 	}
 	ruta := filepath.Join(dir, "token-servicio")
-	os.WriteFile(ruta, []byte("corta\n"), 0o600)
+	escribirClave(t, ruta, "corta\n")
 	var registro strings.Builder
 	s, err := Nuevo(Opciones{Datos: dir, Config: c, Registros: &registro})
 	if err != nil {
@@ -64,17 +68,101 @@ func TestClaveDeEntornoCorta(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("TRAMTAI_TOKEN_GLOBAL", "1234")
-	if _, _, err := TokenInstancia(dir, "global", c); err == nil || !strings.Contains(err.Error(), "TRAMTAI_TOKEN_GLOBAL") {
+	if _, _, err := HuellaInstancia(dir, "global", c); err == nil || !strings.Contains(err.Error(), "TRAMTAI_TOKEN_GLOBAL") {
 		t.Fatalf("una clave corta por variable de entorno se rechaza con un mensaje claro: %v", err)
 	}
 	hex := strings.Repeat("a1", 32)
 	t.Setenv("TRAMTAI_TOKEN_GLOBAL", hex)
-	if valor, _, err := TokenInstancia(dir, "global", c); err != nil || valor != hex {
-		t.Fatalf("una clave de 64 caracteres en hexadecimal sigue valiendo: %q %v", valor, err)
+	if huella, _, err := HuellaInstancia(dir, "global", c); err != nil || huella != api.HuellaToken(hex) {
+		t.Fatalf("una clave de 64 caracteres en hexadecimal sigue valiendo: %q %v", huella, err)
 	}
 	generada, _ := RotarToken(filepath.Join(dir, "otra"))
 	t.Setenv("TRAMTAI_TOKEN_GLOBAL", generada)
-	if valor, origen, err := TokenInstancia(dir, "global", c); err != nil || valor != generada || origen != "variable TRAMTAI_TOKEN_GLOBAL" {
-		t.Fatalf("una clave como las generadas vale: %q %q %v", valor, origen, err)
+	if huella, origen, err := HuellaInstancia(dir, "global", c); err != nil || huella != api.HuellaToken(generada) || origen != "variable TRAMTAI_TOKEN_GLOBAL" {
+		t.Fatalf("una clave como las generadas vale: %q %q %v", huella, origen, err)
 	}
+}
+
+// escribirClave deja ese contenido en el archivo de una clave, con su carpeta.
+func escribirClave(t *testing.T, ruta, contenido string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(ruta), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(ruta, []byte(contenido), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Un archivo con la clave en claro (de antes de las huellas) pasa a huella al leerlo y la misma clave sigue entrando.
+func TestHuellaInstanciaMigra(t *testing.T) {
+	dir := t.TempDir()
+	ruta := RutaTokenInstancia(dir, "pry")
+	clave := "tt_" + strings.Repeat("ab", 32)
+	escribirClave(t, ruta, clave+"\n")
+	for i := 0; i < 2; i++ {
+		huella, origen, err := HuellaInstancia(dir, "pry", nil)
+		if err != nil || huella != api.HuellaToken(clave) || origen != ruta {
+			t.Fatalf("llamada %d: %q %q %v", i+1, huella, origen, err)
+		}
+		if datos, _ := os.ReadFile(ruta); string(datos) != api.HuellaToken(clave)+"\n" {
+			t.Fatalf("llamada %d: el archivo tenía que quedar con la huella: %q", i+1, datos)
+		}
+	}
+}
+
+// Un espacio sin archivo no tiene clave: se dice así y no se crea ninguna.
+func TestHuellaInstanciaSinArchivo(t *testing.T) {
+	dir := t.TempDir()
+	huella, origen, err := HuellaInstancia(dir, "pry", nil)
+	if err != nil || huella != "" || origen != RutaTokenInstancia(dir, "pry") {
+		t.Fatalf("sin archivo: %q %q %v", huella, origen, err)
+	}
+	if _, err := os.Stat(origen); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("no se tenía que crear el archivo: %v", err)
+	}
+}
+
+// Un archivo dañado no se toca: uno corto da error y uno con huella y basura detrás no deja entrar ninguna clave.
+func TestHuellaInstanciaDanada(t *testing.T) {
+	dir := t.TempDir()
+	ruta := RutaTokenInstancia(dir, "pry")
+	escribirClave(t, ruta, "corta\n")
+	if _, _, err := HuellaInstancia(dir, "pry", nil); err == nil {
+		t.Fatal("un archivo corto tenía que dar error")
+	}
+	if datos, _ := os.ReadFile(ruta); string(datos) != "corta\n" {
+		t.Fatalf("se reescribió el archivo: %q", datos)
+	}
+	basura := "sha256:" + strings.Repeat("zz", 32)
+	escribirClave(t, ruta, basura+"\n")
+	if huella, _, err := HuellaInstancia(dir, "pry", nil); err != nil || huella != basura {
+		t.Fatalf("una huella con basura se devuelve tal cual: %q %v", huella, err)
+	}
+	if datos, _ := os.ReadFile(ruta); string(datos) != basura+"\n" {
+		t.Fatalf("se reescribió el archivo: %q", datos)
+	}
+}
+
+// La clave nueva se devuelve entera y en disco solo queda su huella.
+func TestNuevaClave(t *testing.T) {
+	ruta := filepath.Join(t.TempDir(), "pry")
+	clave, err := NuevaClave(ruta)
+	if err != nil || !regexp.MustCompile(`^tt_[0-9a-f]{64}$`).MatchString(clave) {
+		t.Fatalf("clave: %q %v", clave, err)
+	}
+	if datos, _ := os.ReadFile(ruta); string(datos) != api.HuellaToken(clave)+"\n" {
+		t.Fatalf("en el archivo solo va la huella: %q", datos)
+	}
+}
+
+// claveDe crea la clave de un espacio y la devuelve: el servicio solo guarda la huella, así que una prueba que necesita
+// enviarla como Bearer la genera aquí. Cada llamada invalida la anterior.
+func claveDe(t *testing.T, s *Servicio, inst *Instancia) string {
+	t.Helper()
+	clave, err := s.RotarTokenInstancia(inst)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return clave
 }

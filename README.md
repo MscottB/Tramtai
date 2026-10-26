@@ -36,7 +36,7 @@ Si tu app ya usa el SDK de OpenAI o el de Anthropic, solo cambias la URL base. A
 
 1. [**Descarga Tramtai**](https://mscottb.github.io/Tramtai/#descargar) para Windows, macOS o Linux y ábrelo: queda en la bandeja con el servicio en marcha.
 2. En **Agentes**, conecta al menos uno con tu suscripción o con una clave.
-3. En **Mis APIs**, copia la URL y la clave en tu aplicación:
+3. En **Mis APIs**, copia la URL y crea la clave (se ve una sola vez) para tu aplicación:
 
 ```python
 from openai import OpenAI
@@ -101,7 +101,8 @@ URL. Antigravity, for now, only from the Playground, the terminal and the CLI.
 - **Local and private:** listens only on `127.0.0.1` by default, no telemetry, keys encrypted in the system store.
 
 [**Download**](https://mscottb.github.io/Tramtai/#descargar) for Windows, macOS or Linux, connect an agent in *Agents*
-and copy the URL and key from *My APIs* into your app. The app, Web UI, terminal and CLI are in English and Spanish;
-the detailed documentation is in Spanish, and the [product page](https://mscottb.github.io/Tramtai/) has an English
-overview. Free for personal and non-commercial use under [PolyForm Noncommercial 1.0.0](LICENSE.md); contact
-[MscottB](https://github.com/MscottB) for commercial licensing.
+and copy the URL from *My APIs* into your app, with a key created there (shown only once). The app, Web UI, terminal
+and CLI are in English and Spanish; the detailed documentation is in Spanish, and the
+[product page](https://mscottb.github.io/Tramtai/) has an English overview. Free for personal and non-commercial use
+under [PolyForm Noncommercial 1.0.0](LICENSE.md); contact [MscottB](https://github.com/MscottB) for commercial
+licensing.

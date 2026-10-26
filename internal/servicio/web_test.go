@@ -59,6 +59,7 @@ func TestWebUI(t *testing.T) {
 	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
 	s.opc.Web = fstest.MapFS{"index.html": {Data: []byte("<html>tramtai</html>")}, "assets/app.js": {Data: []byte("console.log(1)")}}
 	global, _ := s.ActivarGlobal()
+	clave := claveDe(t, s, global)
 	n := nuevoNavegador(t, ts.URL)
 
 	if r, cuerpo := n.pedir("GET", "/trabajos", ""); r.StatusCode != 200 || cuerpo != "<html>tramtai</html>" || r.Header.Get("Content-Security-Policy") == "" {
@@ -72,7 +73,7 @@ func TestWebUI(t *testing.T) {
 	}
 	// La clave que usan las aplicaciones no abre la Web UI: se entra con el código de un solo uso de la app de
 	// escritorio, la terminal o tramtai abrir (o, en el mismo equipo y usuario, sin nada).
-	for _, token := range []string{"incorrecto", global.token} {
+	for _, token := range []string{"incorrecto", clave} {
 		if r, _ := n.pedir("POST", "/ui/sesion", `{"token":"`+token+`"}`); r.StatusCode != 401 {
 			t.Fatalf("la clave %q no debe abrir la Web UI: %d", token, r.StatusCode)
 		}
@@ -103,7 +104,7 @@ func TestWebUI(t *testing.T) {
 	}
 	n.csrf = cuerpo[strings.Index(cuerpo, `"csrf":"`)+8:]
 	n.csrf = n.csrf[:strings.Index(n.csrf, `"`)]
-	if strings.Contains(cuerpo, global.token) {
+	if strings.Contains(cuerpo, clave) {
 		t.Fatal("la sesión no debe devolver el token de la instancia")
 	}
 	// Con la búsqueda de actualizaciones desactivada (así arranca el entorno), las novedades no consultan GitHub.
@@ -128,7 +129,7 @@ func TestWebUI(t *testing.T) {
 	}
 
 	// Puntos de acceso desde la Web UI: no con el token de aplicaciones, sí con la sesión.
-	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/puntos", global.token, ""); r.StatusCode != 401 {
+	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/puntos", clave, ""); r.StatusCode != 401 {
 		t.Fatalf("el token de aplicaciones no gestiona puntos: %d", r.StatusCode)
 	}
 	r, cuerpo = n.pedir("POST", "/api/v1/puntos", `{"nombre":"desde_ui","grupo":"pruebas","contratos":["openai"],"agente":"simulado"}`, "X-CSRF-Token", n.csrf, "Content-Type", "application/json")
@@ -220,21 +221,6 @@ func TestWebUI(t *testing.T) {
 	}
 	if _, err := os.Stat(RutaTokenPunto(s.opc.Datos, "desde_ui")); !os.IsNotExist(err) {
 		t.Fatalf("eliminar el punto borra su clave: %v", err)
-	}
-
-	// La clave de la instancia se regenera en marcha: la anterior deja de valer sin reiniciar.
-	anterior := global.token
-	r, cuerpo = n.pedir("POST", "/api/v1/instancia/token", "", "X-CSRF-Token", n.csrf)
-	var rotada struct{ Token string }
-	_ = json.Unmarshal([]byte(cuerpo), &rotada)
-	if r.StatusCode != 200 || !strings.HasPrefix(rotada.Token, "tt_") || rotada.Token == anterior {
-		t.Fatalf("regenerar la clave de la instancia: %d %s", r.StatusCode, cuerpo)
-	}
-	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/modelos", anterior, ""); r.StatusCode != 401 {
-		t.Fatalf("la clave anterior de la instancia deja de valer: %d", r.StatusCode)
-	}
-	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/modelos", rotada.Token, ""); r.StatusCode != 200 {
-		t.Fatalf("la clave nueva de la instancia vale: %d", r.StatusCode)
 	}
 
 	// Modelo predeterminado: se guarda, se aplica en marcha y el catálogo lo marca.
@@ -342,10 +328,11 @@ func TestEntradaLocalSinToken(t *testing.T) {
 	if r, cuerpo := n.pedir("POST", "/ui/sesion", `{"instancia":"`+pry.ID+`"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 200 || !strings.Contains(cuerpo, `"instancia":"`+pry.ID+`"`) {
 		t.Fatalf("cambiar de instancia: %d %s", r.StatusCode, cuerpo)
 	}
-	if r, cuerpo := n.pedir("GET", "/api/v1/instancia/token", ""); r.StatusCode != 200 || !strings.Contains(cuerpo, pry.token) {
-		t.Fatalf("la sesión ve la clave para conectar aplicaciones: %d", r.StatusCode)
+	clave := claveDe(t, s, pry)
+	if r, cuerpo := n.pedir("GET", "/api/v1/instancia/token", ""); r.StatusCode != 200 || !strings.Contains(cuerpo, `"tiene_clave":true`) || strings.Contains(cuerpo, clave) {
+		t.Fatalf("la sesión sabe que hay clave, no cuál es: %d %s", r.StatusCode, cuerpo)
 	}
-	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/instancia/token", pry.token, ""); r.StatusCode != 401 {
+	if r, _ := pedir(t, ts.URL, "GET", "/api/v1/instancia/token", clave, ""); r.StatusCode != 401 {
 		t.Fatalf("el token de aplicaciones no lee claves: %d", r.StatusCode)
 	}
 	_, cuerpo = n.pedir("GET", "/ui/sesion", "") // cambiar de instancia creó otra sesión con otro CSRF

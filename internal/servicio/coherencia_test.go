@@ -64,6 +64,7 @@ func TestConexionUIPersiste(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	clave := claveDe(t, s, global)
 	n := abrirSesion(t, s, ts.URL)
 	if r, c := n.pedir("POST", "/ui/agentes/conexion", `{"agente":"simulado","conectado":false}`, "X-CSRF-Token", n.csrf); r.StatusCode != 204 {
 		t.Fatalf("desconectar: %d %s", r.StatusCode, c)
@@ -72,13 +73,13 @@ func TestConexionUIPersiste(t *testing.T) {
 	if !strings.Contains(string(datos), "desconectado: true") {
 		t.Fatalf("debía guardarse en la configuración global:\n%s", datos)
 	}
-	if r, c := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", global.token, hola); r.StatusCode != 409 || !strings.Contains(c, "agente_desconectado") {
+	if r, c := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", clave, hola); r.StatusCode != 409 || !strings.Contains(c, "agente_desconectado") {
 		t.Fatalf("una petición al agente desconectado: %d %s", r.StatusCode, c)
 	}
 	if r, _ := n.pedir("POST", "/ui/agentes/conexion", `{"agente":"simulado","conectado":true}`, "X-CSRF-Token", n.csrf); r.StatusCode != 204 {
 		t.Fatalf("conectar: %d", r.StatusCode)
 	}
-	if r, c := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", global.token, hola); r.StatusCode != 200 {
+	if r, c := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", clave, hola); r.StatusCode != 200 {
 		t.Fatalf("conectado de nuevo: %d %s", r.StatusCode, c)
 	}
 	if r, _ := n.pedir("POST", "/ui/agentes/conexion", `{"agente":"nadie","conectado":false}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 {
@@ -92,10 +93,11 @@ func TestAppConClave24h(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r, c := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", global.token, hola); r.StatusCode != 200 {
+	clave := claveDe(t, s, global)
+	if r, c := pedir(t, ts.URL, "POST", "/api/v1/ejecutar", clave, hola); r.StatusCode != 200 {
 		t.Fatalf("petición: %d %s", r.StatusCode, c)
 	}
-	if _, c := pedir(t, ts.URL, "GET", "/api/v1/instancia", global.token, ""); !strings.Contains(c, `"app_con_clave_24h":1`) {
+	if _, c := pedir(t, ts.URL, "GET", "/api/v1/instancia", clave, ""); !strings.Contains(c, `"app_con_clave_24h":1`) {
 		t.Fatalf("GET /api/v1/instancia: %s", c)
 	}
 }

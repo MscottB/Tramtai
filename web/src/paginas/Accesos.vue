@@ -45,20 +45,7 @@
       </q-card-section>
       <q-card-section class="row q-col-gutter-md q-pt-none">
         <div class="col-12 col-md-6">
-          <div class="text-caption texto-suave q-mb-xs">{{ t('conectar.clave') }}</div>
-          <div v-if="errorClave && !clave" class="row items-center q-gutter-sm" role="alert">
-            <span class="text-body2">{{ t('comun.errorCarga') }}: {{ errorClave }}</span>
-            <q-btn flat dense no-caps color="primary" icon="o_refresh" :label="t('comun.reintentar')" @click="cargarClave" />
-          </div>
-          <div v-else class="bloque-codigo bloque-codigo--dos">{{ clave ? (verClave ? clave : ocultar(clave)) : t('comun.cargando') }}
-            <div class="boton-copiar row no-wrap">
-              <q-btn flat dense round size="sm" :icon="verClave ? 'visibility_off' : 'visibility'" :aria-label="verClave ? t('conectar.ocultarClave') : t('conectar.mostrarClave')" @click="verClave = !verClave" />
-              <q-btn flat dense round size="sm" icon="content_copy" :aria-label="t('conectar.copiarClave')" :disable="!clave" @click="copiar(clave, t('conectar.claveCopiada'))" />
-            </div>
-          </div>
-          <!-- Regenerar invalida la clave en todas las apps: va aparte de Copiar, con su nombre escrito y en color de peligro. -->
-          <q-btn v-if="clave" flat dense no-caps color="negative" icon="o_autorenew" class="q-mt-sm" :label="t('conectar.regenerarClave')"
-            @click="regenerarClaveInstancia" />
+          <ClaveEspacio :codigo="(c) => ejemplo.codigo(c)" />
         </div>
       </q-card-section>
       <q-card-section class="q-pt-none">
@@ -77,7 +64,7 @@
           :options="ejemplos.map((e) => ({ label: e.titulo(), value: e.id }))" /></div>
       </div>
       <q-card-section>
-        <div class="bloque-codigo sin-ajuste">{{ ejemplo.codigo(verClave ? clave : ocultar(clave)) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('conectar.copiarEjemplo')" @click="copiar(ejemplo.codigo(clave), t('conectar.ejemploCopiado'))" /></div>
+        <div class="bloque-codigo sin-ajuste">{{ ejemplo.codigo(t('codigo.tuClave')) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('conectar.copiarEjemplo')" @click="copiar(ejemplo.codigo(t('codigo.tuClave')))" /></div>
       </q-card-section>
       <template v-if="presupuestoEspacio">
         <q-separator />
@@ -106,6 +93,7 @@ import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import GuiaUrls from '../componentes/GuiaUrls.vue'
 import DetalleApi from '../componentes/accesos/DetalleApi.vue'
 import FormularioApi from '../componentes/accesos/FormularioApi.vue'
+import ClaveEspacio from '../componentes/accesos/ClaveEspacio.vue'
 import ListaApis from '../componentes/accesos/ListaApis.vue'
 import { activo, contratos, guardar, leer } from '../componentes/accesos/comun'
 import { api, avisar, avisarError, copiar, cargarDiasHistorial, mensajeError } from '../api/cliente'
@@ -122,9 +110,6 @@ const base = ref(location.origin)
 // propia API.
 const appConClave = ref(0)
 const sugerirApi = ref(false)
-const clave = ref('')
-const errorClave = ref('')
-const verClave = ref(false)
 const catalogo = ref<Modelo[]>([])
 const ids = computed(() => catalogo.value.map((m) => m.id))
 const puntos = ref<EstadoPunto[]>([])
@@ -175,7 +160,6 @@ const gruposModelo = computed(() => [
 
 const modeloEjemplo = computed(() => ids.value.find((id) => id === 'perfil/rapido') ?? ids.value.find((id) => id.includes('/')) ?? ids.value[0] ?? '')
 
-const ocultar = (c: string) => (c ? c.slice(0, 6) + '•'.repeat(18) : '')
 const ejemplos = computed(() => ejemplosDe({ url: base.value, modelo: modeloEjemplo.value, contratos }))
 const ejemplo = computed(() => ejemplos.value.find((e) => e.id === lenguaje.value) ?? ejemplos.value[0])
 
@@ -213,11 +197,6 @@ async function cargarPuntos() {
   } finally {
     cargandoPuntos.value = false
   }
-}
-
-function cargarClave() {
-  errorClave.value = ''
-  api.claveInstancia().then((r) => (clave.value = r.token)).catch((e) => (errorClave.value = mensajeError(e)))
 }
 
 function abrirNuevo() {
@@ -290,22 +269,6 @@ function reiniciarPresupuesto(nombre?: string) {
     })
 }
 
-// regenerarClaveInstancia cambia la clave de «Conectar» por si se filtró; las aplicaciones que la usan dejan de
-// conectar hasta que se les ponga la nueva.
-function regenerarClaveInstancia() {
-  $q.dialog({ title: t('conectar.regenerarTitulo'), message: t('conectar.regenerarTexto'),
-    cancel: { flat: true, label: t('comun.cancelar'), noCaps: true }, ok: { color: 'negative', label: t('conectar.regenerarClave'), unelevated: true, noCaps: true } })
-    .onOk(async () => {
-      try {
-        clave.value = (await api.regenerarClaveInstancia()).token
-        verClave.value = true
-        avisar(t('conectar.claveRegenerada'))
-      } catch (e) {
-        avisarError(e)
-      }
-    })
-}
-
 // regenerarClave crea una clave nueva y la muestra esta única vez: Tramtai solo guarda su huella.
 function regenerarClave(p: EstadoPunto) {
   $q.dialog({ title: t('puntos.regenerarTitulo', { nombre: p.nombre }), message: t('puntos.regenerarTexto'),
@@ -333,6 +296,5 @@ onMounted(async () => {
     appConClave.value = i.app_con_clave_24h
     sugerirApi.value = i.sugerir_api_propia
   }).catch(() => {})
-  cargarClave()
 })
 </script>
