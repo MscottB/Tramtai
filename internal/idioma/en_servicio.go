@@ -47,7 +47,7 @@ func init() {
 		"ruta no encontrada: %s %s":                                                             "route not found: %s %s",
 		"cabecera Host no permitida: llama al servicio por 127.0.0.1 o localhost":               "Host header not allowed: call the service through 127.0.0.1 or localhost",
 		"origen no permitido: abre la Web UI desde la app de Tramtai o con «tramtai abrir»":     "origin not allowed: open the Web UI from the Tramtai app or with “tramtai abrir”",
-		"falta la clave o no es válida: envíala en la cabecera «Authorization: Bearer <clave>»; se crea o se regenera en Mis APIs › Clave del espacio de la Web UI": "the key is missing or not valid: send it in the “Authorization: Bearer <key>” header; it is created or regenerated in My APIs › Space key in the Web UI",
+		"falta la clave o no es válida: envíala en la cabecera «Authorization: Bearer <clave>»; se crea o se regenera en Mis APIs › Clave del espacio de la Web UI": "the key is missing or not valid: send it in the “Authorization: Bearer <key>” header; it is created or regenerated in My APIs › Workspace key in the Web UI",
 		"error interno del servicio: vuelve a intentarlo y, si se repite, mira el registro con «tramtai servicio registro»":                                         "internal service error: try again and, if it happens again, check the log with “tramtai servicio registro”",
 		"la petición terminó como %s":                                                             "the request ended as %s",
 		"cuerpo JSON no válido: %s":                                                               "invalid JSON body: %s",

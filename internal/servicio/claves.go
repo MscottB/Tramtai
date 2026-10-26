@@ -26,6 +26,10 @@ func (s *Servicio) RotarTokenInstancia(inst *Instancia) (string, error) {
 	// El archivo y la memoria cambian juntos: dos rotaciones a la vez no pueden dejarlos distintos.
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// Un espacio olvidado a la vez ya no está activo: escribir devolvería a la vida el archivo que Olvidar borró.
+	if s.instancias[inst.ID] != inst {
+		return "", nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("el espacio %s no está activo", inst.ID))
+	}
 	clave, err := NuevaClave(inst.ArchivoToken)
 	if err != nil {
 		return "", err

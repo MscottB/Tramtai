@@ -12,6 +12,7 @@ import (
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/api"
+	"tramtai/internal/nucleo"
 )
 
 // estadoClaveUI pide a la Web UI el estado de la clave del espacio de la sesión.
@@ -96,8 +97,12 @@ func TestClaveEspacioMigradaTrasReinicio(t *testing.T) {
 	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
 	clave := "tt_" + strings.Repeat("cd", 32)
 	ruta := RutaTokenInstancia(s.opc.Datos, "global")
-	os.MkdirAll(filepath.Dir(ruta), 0o755)
-	os.WriteFile(ruta, []byte(clave+"\n"), 0o600)
+	if err := os.MkdirAll(filepath.Dir(ruta), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(ruta, []byte(clave+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := s.ActivarGlobal(); err != nil {
 		t.Fatal(err)
 	}
@@ -145,6 +150,24 @@ func TestClaveEspacioVariable(t *testing.T) {
 	}
 	if _, err := os.Stat(RutaTokenInstancia(s.opc.Datos, "global")); !errors.Is(err, fs.ErrNotExist) {
 		t.Fatalf("con la variable no se crea archivo: %v", err)
+	}
+}
+
+// Regenerar la clave de un espacio que ya se olvidó da error y no vuelve a escribir el archivo que Olvidar borró.
+func TestRotarClaveDeEspacioOlvidado(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	inst, err := s.AbrirProyecto(t.TempDir(), AbrirOpciones{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Olvidar(inst.ID, espacioDe(t, s, inst.ID).Nombre); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.RotarTokenInstancia(inst); nucleo.CodigoDe(err) != nucleo.CodigoNoEncontrado {
+		t.Fatalf("regenerar la clave de un espacio olvidado: %v", err)
+	}
+	if _, err := os.Stat(RutaTokenInstancia(s.opc.Datos, inst.ID)); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("no se vuelve a crear el archivo de la clave: %v", err)
 	}
 }
 
