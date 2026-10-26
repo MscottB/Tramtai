@@ -159,10 +159,12 @@ tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # las peticiones;
 | Clave | Qué hacer |
 |---|---|
 | La de una API por aplicación | **Regenerar la clave** en Mis APIs, o `tramtai acceso token <nombre> --rotar`. La anterior deja de valer al momento. |
-| La del espacio | **Regenerar la clave** en Mis APIs → Clave del espacio, o `tramtai global token --rotar` (`tramtai proyecto token --rotar` en un proyecto). Vale sin reiniciar; si sale de una variable de entorno, cámbiala allí. |
+| La del espacio | **Regenerar la clave** en Mis APIs → Clave del espacio, o `tramtai global token --rotar` (`tramtai proyecto token --rotar` en un proyecto). Vale sin reiniciar y la nueva se ve una sola vez; si sale de una variable de entorno, cámbiala allí. |
 | La de un proveedor (Anthropic, OpenAI, Gemini) | Revócala en la consola del proveedor y guarda la nueva con `tramtai claves guardar NOMBRE`. |
 
 En los dos primeros casos, pon la clave nueva en las aplicaciones que usaban la anterior.
+
+**Si vuelves a la v0.56 o anterior desde la v0.57:** la v0.57 guarda la clave de cada espacio (`datos/token-global` y `datos/tokens/<id>`) solo como huella. Esa versión leería el archivo `sha256:…` como si fuera la clave y las aplicaciones que entran con la clave del espacio recibirían 401. Con esa versión, regenera la clave (`tramtai global token --rotar`, o `tramtai proyecto token --rotar` en un proyecto) y ponla en las aplicaciones.
 
 **Si vuelves a una versión anterior** a la que guarda las claves de las APIs como huella: esa versión leería el archivo `sha256:…` como si fuera la clave. Al volver, regenera la clave de cada API (`tramtai acceso token <nombre> --rotar`).
 
@@ -178,16 +180,17 @@ los listan todos: activos, detenidos y no encontrados.
 |---|---|---|
 | Configuración | `config.yaml` de la [carpeta de Tramtai](inicio.md#configuración) | La global, más `.tramtai/config.yaml` (versionada) y `.tramtai/local.yaml` (de esta máquina) |
 | Identificador | `global` | `<nombre>_<hash de la ruta>` (por ejemplo `demo_app_1a2b3c4d`), fijado la primera vez y guardado en `.tramtai/espacio` |
-| Clave | `datos/token-global` o la variable `TRAMTAI_TOKEN_GLOBAL` | `datos/tokens/<id>` |
+| Clave (solo su huella `sha256:…`) | `datos/token-global` o la variable `TRAMTAI_TOKEN_GLOBAL` | `datos/tokens/<id>` |
 | Base de datos | `datos/instancias/global.db` | `datos/instancias/<id>.db` |
 | Registro | `datos/espacios.json`: todos los espacios con su ruta, su último uso y su último error (reemplaza a `instancias.json`, que se migra solo) | |
 
-Las rutas son relativas a la [carpeta de Tramtai](inicio.md#configuración). La clave del espacio y la clave de servicio quedan en claro en archivos con permisos 0600, porque la CLI y la app las leen; las claves de las APIs por aplicación, en cambio, solo como huella.
+Las rutas son relativas a la [carpeta de Tramtai](inicio.md#configuración). La clave de servicio (`datos/token-servicio`) queda en claro en un archivo con permisos 0600, porque la CLI y la app de escritorio la leen; la clave del espacio y las de las APIs por aplicación, en cambio, solo como huella, en archivos también 0600.
 
 - **La marca** (`.tramtai/espacio`, fuera de git por el `.gitignore` de `.tramtai`) guarda el id del espacio: si mueves o renombras la carpeta, sigue siendo el mismo espacio con su historial. Una copia de la carpeta, en cambio, es un espacio nuevo, también para la CLI. La confianza no viaja con la marca (un repositorio ajeno podría copiarla): al abrir el proyecto en su ruta nueva la app vuelve a preguntar, diciendo de dónde viene.
 - **No encontrado:** si la carpeta de un proyecto ya no está donde estaba, el espacio queda «No encontrado»; con **Buscar** (o `POST /ui/espacios/ubicar`) se le indica la ruta nueva, que no puede ser la de otro espacio. Buscar no traslada la confianza: si su `local.yaml` usa claves de seguridad, después se confía desde la página Espacios, que las enseña.
 - **Al abrir una carpeta que ya trae `.tramtai/`** (un repositorio clonado, aunque le falte `config.yaml`), la app pregunta si confías en ella (409 `confianza_requerida`, con `claves` y, si parece un proyecto movido, `movido`) y no pisa lo que trae. Confiar la añade a `proyectos_confiables`; sin confiar, las claves de seguridad de su `local.yaml` se ignoran y se avisa cuáles (también tras reiniciar), y los demás ajustes del espacio se pueden guardar. Un proyecto cuyo `.tramtai/` crea Tramtai queda confiado. Si la carpeta está dentro de otro proyecto, la app pregunta cuál abrir (409 `dentro_de_proyecto`).
-- **Olvidar** un espacio borra su base de datos, su clave y su registro en Tramtai, nunca la carpeta del proyecto. Se confirma escribiendo su nombre; la global no se olvida.
+- **Clave del espacio:** un espacio nuevo no tiene clave hasta que la creas, en Mis APIs → Clave del espacio o con `tramtai global token --rotar` (`tramtai proyecto token --rotar` en un proyecto). Se ve una sola vez, al crearla o regenerarla; Tramtai guarda solo su huella `sha256:…` (`datos/token-global` o `datos/tokens/<id>`). `tramtai global token` sin `--rotar` solo dice si hay clave y de dónde viene (el archivo o la variable `TRAMTAI_TOKEN_GLOBAL`), sin imprimirla; con `--rotar` la crea o la regenera y la imprime, con el servicio en marcha o parado (entra en cuanto arranca). Con la variable no se puede crear ni regenerar desde Tramtai. Un archivo antiguo con la clave en claro se convierte solo en huella al leerlo y la misma clave sigue valiendo. La CLI y la app de escritorio no usan esta clave: entran con la clave de servicio.
+- **Olvidar** un espacio borra su base de datos, su clave y su registro en Tramtai, nunca la carpeta del proyecto. Se confirma escribiendo su nombre; la global no se olvida. Si vuelves a abrir la carpeta, el espacio no tiene clave y la anterior ya no entra.
 - **Ajustes** tiene dos pestañas, «Este espacio» y «Todo Tramtai»: cada valor dice si es propio del proyecto o viene de Global, y **Usar el de Global** lo devuelve (`POST /api/v1/instancia/heredar`).
 - La app y la CLI vuelven al último espacio usado; la terminal abre el del proyecto de la carpeta donde la lanzas, si está activo, o el global. La CLI no cae en la global si el espacio del proyecto está detenido (`espacio_detenido`), salvo con `--global`.
 
@@ -287,7 +290,7 @@ tramtai acceso reiniciar-presupuesto tienda    # sin nombre, el del espacio
   - **Orden:** por nombre, más usadas o última petición.
   - **Páginas:** de 20; una página que empieza en medio de un grupo repite su cabecera con «(continúa)».
   - **Grupos:** cada uno se pliega desde su cabecera y el navegador recuerda cuáles quedaron plegados.
-- **Clave del espacio:** la guía «¿Qué URL uso?», la clave, los modelos, los ejemplos y el presupuesto del espacio. Es para ti y tus scripts; cada app va mejor con su propia API, y Mis APIs lo sugiere si muchas peticiones de apps llegan con esta clave. En el mapa de **Inicio**, cada grupo es una estación («web · 3 APIs», con sus activas debajo) que abre Mis APIs filtrada por ese grupo.
+- **Clave del espacio:** la guía «¿Qué URL uso?», la clave, los modelos, los ejemplos y el presupuesto del espacio. Un espacio nuevo no tiene clave: se crea aquí (**Crear la clave del espacio**) y se regenera con **Regenerar la clave**; en los dos casos se ve en el momento, con un ejemplo que la lleva puesta, y no se vuelve a ver. Es para ti y tus scripts; cada app va mejor con su propia API, y Mis APIs lo sugiere si muchas peticiones de apps llegan con esta clave. En el mapa de **Inicio**, cada grupo es una estación («web · 3 APIs», con sus activas debajo) que abre Mis APIs filtrada por ese grupo.
 
 Al pulsar el nombre o la fila de una API se abre su detalle, con **Dirección y clave**: las URL base según lo que acepta (OpenAI, Anthropic, API propia), la clave (solo se ve al crearla o regenerarla; si no la tienes, **Regenerar la clave** muestra una nueva y la anterior deja de valer), los ejemplos para copiar con su URL y su modelo, las acciones (ajustes, Probar, peticiones, activar o detener) y, aparte, **Eliminar la API**. Al crear una API se abre su detalle con la clave nueva.
 
@@ -314,7 +317,7 @@ La clave de servicio (`datos/token-servicio`) habilita `/api/v1/servicio`:
 | Ruta | Para qué |
 |---|---|
 | `GET /api/v1/servicio` | Estado del servicio, sus espacios y sus APIs. |
-| `POST /api/v1/servicio/instancias` | Activar un espacio, con `{"ambito":"global"}` o `{"ambito":"proyecto","raiz":"…"}`. Si la carpeta trae la marca de un espacio cuya carpeta ya no está y no es confiable, responde 409 `confianza_requerida` con `movido`: se confía en ella (`/proyectos` con `confiar`) antes de quedarse con ese espacio. |
+| `POST /api/v1/servicio/instancias` | Activar un espacio, con `{"ambito":"global"}` o `{"ambito":"proyecto","raiz":"…"}`; responde con el estado del espacio, sin su clave. Si la carpeta trae la marca de un espacio cuya carpeta ya no está y no es confiable, responde 409 `confianza_requerida` con `movido`: se confía en ella (`/proyectos` con `confiar`) antes de quedarse con ese espacio. |
 | `DELETE /api/v1/servicio/instancias/{id}` | Detener un espacio. |
 | `GET /api/v1/servicio/espacios` | Todos los espacios del registro, también los detenidos y los no encontrados, con su estado, APIs y peticiones. |
 | `DELETE /api/v1/servicio/espacios/{id}` | Olvidar un espacio, con `{"nombre": "…"}` igual a su nombre: borra su base, su clave y su registro, nunca la carpeta del proyecto. |
