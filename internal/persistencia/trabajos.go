@@ -299,7 +299,7 @@ type FiltroTrabajos struct {
 	Antes   time.Time // solo los creados antes, para pedir la página siguiente
 	AntesID string    // con Antes: el último que ya se vio; los empatados en creado_en siguen por orden de llegada
 	Estados []nucleo.Estado
-	// Texto busca en el último mensaje de la petición y en su id, sin distinguir mayúsculas (las de ASCII).
+	// Texto busca en los mensajes del usuario de la petición y en su id, sin distinguir mayúsculas ni tildes.
 	Texto string
 }
 
@@ -341,7 +341,10 @@ func (a *Almacen) Listar(ctx context.Context, instancia string, f FiltroTrabajos
 	}
 	if f.Texto != "" {
 		patron := "%" + comodines.Replace(nucleo.Plegar(f.Texto)) + "%"
-		donde += ` AND (id LIKE ? ESCAPE '\' OR tramtai_plegar(json_extract(solicitud, '$.mensajes[#-1].contenido')) LIKE ? ESCAPE '\')`
+		// En todos los mensajes del usuario: la fila enseña el último de ellos que no sea el pedido de una corrección.
+		donde += ` AND (id LIKE ? ESCAPE '\' OR EXISTS (SELECT 1 FROM json_each(solicitud, '$.mensajes') m
+			WHERE json_extract(m.value, '$.rol') = 'usuario'
+			AND tramtai_plegar(json_extract(m.value, '$.contenido')) LIKE ? ESCAPE '\'))`
 		args = append(args, patron, patron)
 	}
 	if !f.Antes.IsZero() && f.AntesID != "" {

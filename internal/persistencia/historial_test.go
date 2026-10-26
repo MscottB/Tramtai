@@ -53,6 +53,19 @@ func TestListarPorEstadoYTexto(t *testing.T) {
 	enCola := aceptar(t, a, trabajo("global", "otra FACTURA"), "").ID
 	reunion := aceptar(t, a, trabajo("global", "Notas de la Reunión"), "").ID
 	avanzar(t, a, reunion, nucleo.CancelacionSolicitada, nucleo.Cancelado)
+	// Una corrección añade la respuesta y el pedido de corrección; la fila enseña el mensaje original.
+	corregida := trabajo("global", "Clasifica el ticket de envío")
+	corregida.Solicitud.Mensajes = append(corregida.Solicitud.Mensajes, nucleo.Mensaje{Rol: "asistente", Contenido: "{}"},
+		nucleo.Mensaje{Rol: "usuario", Contenido: "Tu respuesta no cumple el formato pedido:\n- falta prioridad"})
+	corregida.Huella = corregida.Solicitud.Huella()
+	corregida = aceptar(t, a, corregida, "")
+	avanzar(t, a, corregida.ID, nucleo.Fallido)
+	// Si la conversación acaba en el asistente, la fila enseña el último mensaje del usuario.
+	conRespuesta := trabajo("global", "Revisa el presupuesto anual")
+	conRespuesta.Solicitud.Mensajes = append(conRespuesta.Solicitud.Mensajes, nucleo.Mensaje{Rol: "asistente", Contenido: "Revisado"})
+	conRespuesta.Huella = conRespuesta.Solicitud.Huella()
+	conRespuesta = aceptar(t, a, conRespuesta, "")
+	avanzar(t, a, conRespuesta.ID, nucleo.Fallido)
 	ids := func(f FiltroTrabajos) []string {
 		l, err := a.Listar(ctx, "global", f, 10)
 		if err != nil {
@@ -80,6 +93,9 @@ func TestListarPorEstadoYTexto(t *testing.T) {
 		{"sin tildes ni mayúsculas, como la búsqueda de la terminal", FiltroTrabajos{Texto: "TRADUCE 100"}, []string{fallo}},
 		{"la tilde no cuenta", FiltroTrabajos{Texto: "reunión"}, []string{reunion}},
 		{"tampoco al revés", FiltroTrabajos{Texto: "REUNION"}, []string{reunion}},
+		{"el mensaje original de una corrección", FiltroTrabajos{Texto: "ticket"}, []string{corregida.ID}},
+		{"el del usuario, no la respuesta del asistente", FiltroTrabajos{Texto: "presupuesto"}, []string{conRespuesta.ID}},
+		{"no la respuesta del asistente", FiltroTrabajos{Texto: "Revisado"}, nil},
 	}
 	for _, c := range casos {
 		if got := ids(c.f); !slices.Equal(got, c.quiere) {

@@ -65,7 +65,7 @@
             ],
             [
               "¿Cómo sé si sigue en marcha y cómo lo detengo?",
-              "La cabecera de la terminal dice «servicio en marcha» o «sin servicio». Sigue en segundo plano aunque cierres la terminal; «tramtai servicio detener» lo detiene."
+              "La cabecera de la terminal dice «En marcha» o «Sin conexión», como la de la app. Sigue en segundo plano aunque cierres la terminal; «tramtai servicio detener» lo detiene."
             ],
             [
               "Windows dice «Windows protegió su PC»",
@@ -1282,7 +1282,7 @@
             ],
             [
               "How do I know it is running, and how do I stop it?",
-              "The terminal header says “service running” or “no service”. It keeps running in the background even if you close the terminal; “tramtai servicio detener” stops it."
+              "The terminal header says “Running” or “Offline”, like the app’s. It keeps running in the background even if you close the terminal; “tramtai servicio detener” stops it."
             ],
             [
               "Windows says “Windows protected your PC”",

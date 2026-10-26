@@ -737,8 +737,8 @@ func TestHistorialEnVivo(t *testing.T) {
 }
 
 // TestHistorialEnVivoSeCorta: el seguimiento se corta al cerrar el detalle (Esc), al ocultar la página (Ocultar), al cancelarse
-// el contexto de la página y al iniciarla otra vez; Mostrar lo reabre. Lo que llega del seguimiento con la página ya
-// oculta no se aplica.
+// el contexto de la página y al iniciarla otra vez; Mostrar, y otro Iniciar en el mismo espacio, lo reabren. Lo que llega
+// del seguimiento con la página ya oculta no se aplica.
 func TestHistorialEnVivoSeCorta(t *testing.T) {
 	cli, id, b, _ := conBloqueado(t)
 	a := abierta(t, cli, id)
@@ -769,12 +769,16 @@ func TestHistorialEnVivoSeCorta(t *testing.T) {
 	if !enVivo(a) || prueba.FlujosAbiertos() != 1 || !enPestana(a, "ejecutar.respuesta") {
 		t.Fatalf("Mostrar reabre el seguimiento y conserva la pestaña:\n%s", a.Vista())
 	}
-	// Otro Iniciar cancela el seguimiento de antes y empieza de cero, sin detalle.
+	// Otro Iniciar en el mismo espacio (el servicio volvió) corta el seguimiento de antes y lo reabre, con el detalle.
 	a.Correr(a.P.Iniciar(prueba.Contexto(t, cli, id)))
-	cerrado(t, a)
-	if strings.Contains(a.Vista(), "["+datos.Texto("es", "historial.solicitud")+"]") || strings.Contains(a.Vista(), "["+datos.Texto("es", "ejecutar.respuesta")+"]") {
-		t.Fatalf("Iniciar empieza de cero, sin detalle:\n%s", a.Vista())
+	a.Hasta(func() bool {
+		return enVivo(a) && prueba.FlujosAbiertos() == 1 && strings.Contains(a.Vista(), "primera parte")
+	})
+	if !enVivo(a) || prueba.FlujosAbiertos() != 1 || !strings.Contains(a.Vista(), "primera parte") {
+		t.Fatalf("Iniciar en el mismo espacio conserva el detalle y lo sigue:\n%s", a.Vista())
 	}
+	a.Pulsar("esc")
+	cerrado(t, a)
 	// El contexto de la página (cambio de espacio, reinicio) también lo corta.
 	cli2, id2, _, _ := conBloqueado(t)
 	c := prueba.Contexto(t, cli2, id2)
@@ -1262,14 +1266,22 @@ func TestHistorialOcultarYMostrar(t *testing.T) {
 	if cuantas(a, " uno", " dos") != 1 || !strings.Contains(a.Vista(), "uno") {
 		t.Fatalf("Mostrar la pone al día (y solo «uno» contiene la u):\n%s", a.Vista())
 	}
-	// Iniciar sí empieza de cero.
+	// Iniciar en el mismo espacio (el servicio volvió, o se vuelve por el menú) también los conserva.
+	a.Pulsar("e")
+	a.Hasta(conservados)
 	a.Correr(a.P.Iniciar(prueba.Contexto(t, cli, id)))
+	a.Hasta(conservados)
+	if v := a.Vista(); !conservados() {
+		t.Fatalf("Iniciar en el mismo espacio conserva los filtros:\n%s", v)
+	}
+	// Lo que llega con IrA empieza por los filtros de por defecto.
+	a.Entregar(pagina.FiltroEstado{})
 	a.Hasta(func() bool {
 		v := a.Vista()
 		return strings.Contains(v, "Estado: Todas") && !strings.Contains(v, "/ u") && cuantas(a, " uno", " dos") == 2
 	})
 	if v := a.Vista(); !strings.Contains(v, "Estado: Todas") || strings.Contains(v, "/ u") || cuantas(a, " uno", " dos") != 2 {
-		t.Fatalf("Iniciar quita los filtros:\n%s", v)
+		t.Fatalf("FiltroEstado quita los demás filtros:\n%s", v)
 	}
 }
 
@@ -1489,20 +1501,35 @@ func TestRespuestasViejasDelDetalle(t *testing.T) {
 	b.SoltarFin()
 	a.HastaVer("✓ Completado")
 
-	// Reintentar (una acción) desde una versión o un espacio que ya no son los de ahora.
-	for nombre, cambiar := range map[string]func(*prueba.App){
-		"otra versión": func(a *prueba.App) {
-			a.P.(pagina.Ocultable).Ocultar()
-			a.Correr(a.P.(pagina.Ocultable).Mostrar())
-		},
-		"otro espacio": func(a *prueba.App) { a.Correr(a.P.Iniciar(prueba.Contexto(t, cli, "otro"))) },
-	} {
-		a := abierta(t, cli, id)
-		reintento := a.Retener(func() { a.Pulsar("t") })
-		cambiar(a)
-		desde := len(a.Fuera)
-		if fuera := a.Soltar(reintento); len(fuera) != 0 || len(a.Fuera) != desde {
-			t.Fatalf("una acción de %s no avisa ni lleva a Probar: %v", nombre, fuera)
-		}
+	// Reintentar (una acción) desde un espacio que ya no es el de ahora: ni avisa ni lleva a Probar.
+	otro := abierta(t, cli, id)
+	reintento := otro.Retener(func() { otro.Pulsar("t") })
+	otro.Correr(otro.P.Iniciar(prueba.Contexto(t, cli, "otro")))
+	desde := len(otro.Fuera)
+	if fuera := otro.Soltar(reintento); len(fuera) != 0 || len(otro.Fuera) != desde {
+		t.Fatalf("una acción de otro espacio no avisa ni lleva a Probar: %v", fuera)
+	}
+}
+
+// TestHistorialAccionConLaPaginaOculta: lo que una acción ya hizo en el servicio se avisa aunque la página se ocultara
+// mientras corría (un reintento, vaciar); solo no lleva a Probar, porque el Historial ya no se ve.
+func TestHistorialAccionConLaPaginaOculta(t *testing.T) {
+	cli, id := prueba.Servicio(t)
+	crear(t, cli, id, "otra vez")
+	a := abierta(t, cli, id)
+	reintento := a.Retener(func() { a.Pulsar("t") })
+	a.P.(pagina.Ocultable).Ocultar()
+	fuera := a.Soltar(reintento)
+	if av, ok := aviso(fuera); !ok || av.Texto != "Petición enviada de nuevo" || seguido(fuera) != "" {
+		t.Fatalf("oculta, el reintento se avisa sin llevar a Probar: %v", fuera)
+	}
+	a.Correr(a.P.(pagina.Ocultable).Mostrar())
+	a.Hasta(func() bool { return cuantas(a, "otra vez") == 2 })
+	a.Pulsar("V")
+	vaciado := a.Retener(func() { a.Entregar(comp.Confirmado{}) })
+	a.P.(pagina.Ocultable).Ocultar()
+	fuera = a.Soltar(vaciado)
+	if av, ok := aviso(fuera); !ok || !strings.HasPrefix(av.Texto, "Peticiones eliminadas") {
+		t.Fatalf("oculta, vaciar avisa de cuántas: %v", fuera)
 	}
 }

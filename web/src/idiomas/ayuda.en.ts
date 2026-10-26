@@ -482,7 +482,7 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.conectar.pEventos': 'Can my app see what happens live?',
   'ayuda.conectar.rEventos': 'Yes: GET /api/v1/eventos (SSE) reports every stage change of the requests, without their content. With an API’s key, only its own.',
   // .terminal variants: what the terminal Help says instead of the Web UI text (finding 69).
-  'ayuda.empezar.rMarcha.terminal': 'The terminal header says “service running” or “no service”. It keeps running in the background even if you close the terminal; “tramtai servicio detener” stops it.',
+  'ayuda.empezar.rMarcha.terminal': 'The terminal header says “Running” or “Offline”, like the app’s. It keeps running in the background even if you close the terminal; “tramtai servicio detener” stops it.',
   'ayuda.historial.rSeguir.terminal': 'Yes: on Home (1) each request in progress has its row with its stage, and in History (5) Enter opens it and the response arrives live.',
   'ayuda.espacios.paso1.terminal': 'Open a project with n in Workspaces (6); Ctrl+E switches between workspaces. If the folder had no .tramtai/, Tramtai prepares it and trusts it.',
   'ayuda.ajustes.rVersion.terminal': 'In Settings (7), open “About Tramtai” on the “All of Tramtai” tab; c copies the support details, without keys.',

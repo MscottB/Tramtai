@@ -168,12 +168,15 @@ func (p *Pagina) origen() origen           { return origen{p.c.Origen(p.gen)} }
 func (p *Pagina) vigente(o origen) bool    { return o.Vigente(p.c, p.gen) }
 func (p *Pagina) delEspacio(o origen) bool { return o.DelEspacio(p.c) }
 
-// Pendiente dice, para la pregunta de salir de la terminal, si hay una petición en marcha (sigue en el servicio) o una API
-// abierta con cambios en la receta que aún no se guardaron con g.
+// Pendiente dice, para la pregunta de salir de la terminal, si hay una petición en marcha (sigue en el servicio), la clave
+// de la API recién guardada a la vista (no se vuelve a mostrar) o una API abierta con cambios en la receta que aún no se
+// guardaron con g.
 func (p *Pagina) Pendiente() string {
 	switch {
 	case p.activo() || p.enviando:
 		return idioma.T("Probar tiene una petición en marcha: seguirá en el servicio y la verás en el Historial.")
+	case p.creada != nil:
+		return p.tx("cierre.clave")
 	case p.api != "" && p.punto != nil && p.armado && !mismaReceta(recetaDePunto(*p.punto), p.leer()):
 		return idioma.Tf("La API %s tiene cambios sin guardar en Probar (g los guarda).", p.api)
 	}
@@ -185,7 +188,8 @@ func (p *Pagina) activo() bool     { return p.trabajo != nil && p.final == nil &
 func (p *Pagina) cancelable() bool { return p.activo() && p.estado != nucleo.CancelacionSolicitada }
 
 // Iniciar carga el catálogo, los límites y las pruebas recientes. La receta y el mensaje se conservan entre visitas (al
-// crearse, el mensaje es el del borrador); un cambio de espacio olvida el trabajo que se seguía y la API que se editaba.
+// crearse, el mensaje es el del borrador), y también «Guardar como API» y la API recién creada con su clave; un cambio de
+// espacio olvida el trabajo que se seguía, la API que se editaba y lo que se guardaba.
 func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	otro := p.c.Instancia != "" && p.c.Instancia != c.Instancia
 	p.c, p.lengua = c, c.Idioma
@@ -204,10 +208,10 @@ func (p *Pagina) Iniciar(c pagina.Contexto) tea.Cmd {
 	}
 	if otro {
 		p.trabajo, p.final, p.salida, p.avisos, p.api, p.punto = nil, nil, "", nil, "", nil
-		p.catalogo, p.cargadoRec = nil, false
+		p.catalogo, p.cargadoRec, p.guardar, p.creada = nil, false, nil, nil
 		p.recientes.Poner(nil)
 	}
-	p.codigo, p.guardar, p.creada, p.pend, p.enviando, p.ocupado, p.muestra = nil, nil, nil, nil, false, false, ""
+	p.codigo, p.pend, p.enviando, p.ocupado, p.muestra = nil, nil, false, false, ""
 	p.ajustar()
 	if c.Cli == nil {
 		p.sinServ = true

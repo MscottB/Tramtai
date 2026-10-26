@@ -30,7 +30,7 @@ type EstadoActualizacion struct {
 // ProgresoActualizacion es el avance de la actualización en curso: la fase (descargando, verificando, listo, instalando
 // o error; vacía si no hay ninguna), los bytes descargados y el total y, en listo, cuándo instalará.
 type ProgresoActualizacion struct {
-	Fase      string     `json:"fase"`
+	Fase      string     `json:"fase" ts:"'' | 'descargando' | 'verificando' | 'listo' | 'instalando' | 'error'"`
 	Version   string     `json:"version"`
 	Recibidos int64      `json:"recibidos"`
 	Total     int64      `json:"total"`

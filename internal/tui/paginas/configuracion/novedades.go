@@ -39,10 +39,14 @@ type (
 	}
 	msgAvance struct {
 		origen
+		n   int
 		p   contrato.ProgresoActualizacion
 		err error
 	}
-	msgSondeo   struct{ origen }
+	msgSondeo struct {
+		origen
+		n int // la consulta del avance: solo vale la última que se programó
+	}
 	msgDecision struct {
 		origen
 		instalar bool
@@ -57,6 +61,20 @@ type actualizacionEnCurso struct {
 	progreso  *contrato.ProgresoActualizacion
 	vistaFase bool // ya llegó alguna fase del servicio
 	sinFase   int  // consultas seguidas sin fase
+	n         int  // la última consulta del avance programada: así no corren dos seguimientos a la vez
+}
+
+// enCurso dice si hay una actualización en marcha (con avance y sin error): entonces el avance se sigue aunque se cierre
+// su vista o la página se oculte, porque al terminar la descarga el instalador cerrará la terminal y hay que salir antes,
+// limpia.
+func (p *Pagina) enCurso() bool {
+	return p.upd.progreso != nil && p.upd.progreso.Fase != "error"
+}
+
+// sigueAvance dice si una respuesta del avance es de la consulta de ahora y aún interesa: con la actualización en curso,
+// mientras sea del espacio (aunque la página esté oculta o el avance cerrado).
+func (p *Pagina) sigueAvance(o origen, n int) bool {
+	return n == p.upd.n && p.enCurso() && o.DelEspacio(p.c)
 }
 
 // pedirNovedades abre las novedades si ya se sabe que hay una versión nueva; si no, al saberlo.
@@ -122,7 +140,9 @@ func (p *Pagina) instalar() tea.Cmd {
 }
 
 func (p *Pagina) sondear() tea.Cmd {
-	return pagina.Tras(p.origen(), cadaAvance, p.espera, func(o origen) tea.Msg { return msgSondeo{o} })
+	p.upd.n++
+	n := p.upd.n
+	return pagina.Tras(p.origen(), cadaAvance, p.espera, func(o origen) tea.Msg { return msgSondeo{o, n} })
 }
 
 // decidir instala ya (true) o cancela (false) en la cuenta atrás.
@@ -165,23 +185,31 @@ func (p *Pagina) updateActualizacion(msg tea.Msg) tea.Cmd {
 		p.upd.progreso = &contrato.ProgresoActualizacion{Fase: "descargando", Version: m.version}
 		return p.sondear()
 	case msgSondeo:
-		if p.vigente(m.origen) && p.abierta == vistaProgreso {
-			c, o := p.c, m.origen
+		if p.sigueAvance(m.origen, m.n) {
+			c, o, n := p.c, m.origen, m.n
 			return func() tea.Msg {
 				a, err := c.Cli.ProgresoActualizacion(c.Ctx)
-				return msgAvance{origen: o, p: a, err: err}
+				return msgAvance{origen: o, n: n, p: a, err: err}
 			}
 		}
 	case msgAvance:
-		if !p.vigente(m.origen) || p.abierta != vistaProgreso {
+		if !p.sigueAvance(m.origen, m.n) {
 			return nil
 		}
+		salir := func() tea.Msg { return pagina.Actualizando{} } // el instalador va a cerrar el servicio y la terminal
 		switch {
-		case m.err != nil: // el instalador ya detuvo el servicio: queda el último estado hasta que la app se cierre
+		case m.err != nil:
+			if f := p.upd.progreso.Fase; f == "listo" || f == "instalando" { // el instalador ya detuvo el servicio
+				return salir
+			}
+			// antes de «listo», queda el último estado y se sigue preguntando
 		case m.p.Fase != "":
 			p.upd.progreso, p.upd.vistaFase, p.upd.sinFase = &m.p, true, 0
-			if m.p.Fase == "error" {
+			switch m.p.Fase {
+			case "error":
 				return nil
+			case "instalando":
+				return salir
 			}
 		default:
 			if p.upd.sinFase++; p.upd.vistaFase || p.upd.sinFase >= sinFaseMaximo {
@@ -318,7 +346,8 @@ func (p *Pagina) textoNovedades() string {
 	return strings.Join(l, "\n")
 }
 
-// textoAvance es el del avance: la versión, la fase y, al instalar, que la app se cerrará.
+// textoAvance es el del avance: la versión, la fase y, al instalar, que la terminal se cierra y cómo volver a abrirla (el
+// instalador solo vuelve a arrancar el servicio, no la terminal).
 func (p *Pagina) textoAvance() string {
 	e, a := p.estilos, p.upd.progreso
 	l := []string{e.Titulo.Render(p.tx("actualizacion.progresoTitulo", "version", a.Version)), ""}
@@ -328,7 +357,7 @@ func (p *Pagina) textoAvance() string {
 	}
 	l = append(l, estilo.Render(p.textoProgreso(*a)))
 	if a.Fase == "instalando" {
-		l = append(l, "", e.Tenue.Render(p.tx("actualizacion.cerrara")))
+		l = append(l, "", e.Tenue.Render(pagina.Despedida()))
 	}
 	return strings.Join(l, "\n")
 }

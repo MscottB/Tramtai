@@ -124,8 +124,8 @@ func (p *Pagina) bloqueDe(sec string) bloque {
 			uso = p.tx("historialAjustes.usoUno", "mb", p.numero(float64(r.Uso.Bytes)/1048576, 1))
 		}
 		return bloque{titulo: p.tx("historialAjustes.titulo"), marca: etiqueta(secHistorial), texto: p.tx("historialAjustes.texto"),
-			lineas: []string{idioma.Tf("Respuestas %d h · registro %s días · máximo %s", r.HorasResultado, p.numero(float64(r.HorasMetadatos)/24, 2),
-				pagina.Numero(p.lengua, r.MaxTrabajos)), e.Tenue.Render(uso)}}
+			lineas: []string{e.A(idioma.Tf("Respuestas %d h · registro %s días · máximo %s", r.HorasResultado, p.numero(float64(r.HorasMetadatos)/24, 2),
+				pagina.Numero(p.lengua, r.MaxTrabajos))), e.Tenue.Render(uso)}}
 	case secDatos:
 		return bloque{titulo: p.tx("datos.titulo"), texto: p.tx("datos.texto"), lineas: p.detallesDatos()}
 	case secValores:
@@ -317,7 +317,7 @@ func (p *Pagina) vistaAbierta() string {
 		}
 	}
 	p.visor.Tamano(max(ancho, 1), max(p.c.Alto-len(arriba), 1))
-	p.visor.Poner(strings.Join(e.Envolver(texto, ancho, 0), "\n")) // por palabras: el visor partiría a media palabra
+	p.visor.Poner(strings.Join(e.Envolver(e.A(texto), ancho, 0), "\n")) // por palabras: el visor partiría a media palabra
 	return cortar(append(arriba, p.visor.Vista()), p.c.Alto)
 }
 

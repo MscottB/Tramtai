@@ -170,6 +170,48 @@ export interface Modelo {
   esfuerzo_espacio?: string
 }
 
+export interface AjustesServicio {
+  puerto: number
+  puerto_configurado: number
+  puerto_automatico: boolean
+  reiniciable: boolean
+  autoarranque?: boolean
+}
+
+export interface EstadoActualizacion {
+  actual: string
+  buscar: boolean
+  disponible: boolean
+  version: string
+  url: string
+  notas: string
+  instalable: boolean
+  comprobado?: string
+  fallo?: boolean
+}
+
+export interface ProgresoActualizacion {
+  fase: '' | 'descargando' | 'verificando' | 'listo' | 'instalando' | 'error'
+  version: string
+  recibidos: number
+  total: number
+  instala_en?: string
+  error?: string
+}
+
+export interface Acerca {
+  version: string
+  commit: string
+  modificado: boolean
+  go: string
+  portable: boolean
+  sistema: string
+  arquitectura: string
+  almacen: string
+  servicio: ServicioAcerca
+  rutas?: RutasAcerca
+}
+
 export interface Uso {
   tokens_entrada: number
   tokens_salida: number
@@ -307,6 +349,18 @@ export interface EjecucionPunto {
 export interface UsoHistorial {
   trabajos: number
   bytes: number
+}
+
+export interface ServicioAcerca {
+  direccion: string
+  pid: number
+  iniciado_en: string
+}
+
+export interface RutasAcerca {
+  datos: string
+  configuracion: string
+  registro: string
 }
 
 export interface CapacidadesAgente {

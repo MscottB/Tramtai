@@ -59,7 +59,8 @@ func (p *Pagina) encajar(texto string) string {
 	return strings.Join(lineas, "\n")
 }
 
-// pestanas son los nombres de las pestañas, con la de ahora entre corchetes; la respuesta lleva el estado del trabajo.
+// pestanas son los nombres de las pestañas, con la de ahora entre corchetes; la respuesta lleva el estado del trabajo y,
+// mientras se sube y se crea, «Enviando…» detrás.
 func (p *Pagina) pestanas() string {
 	e := p.estilos
 	respuesta := p.tx("ejecutar.respuesta")
@@ -76,13 +77,16 @@ func (p *Pagina) pestanas() string {
 			partes[i] = e.Tenue.Render(" " + n + " ")
 		}
 	}
+	if p.enviando {
+		partes = append(partes, e.Acento.Render(p.a(idioma.T("Enviando…"))))
+	}
 	return strings.Join(partes, " ")
 }
 
 // vistaReceta es el formulario desplazado para que el campo con el foco se vea, debajo dónde está el foco (como el «↑↓ 16/28»
 // de Inicio) y lo que explica ese campo.
 func (p *Pagina) vistaReceta(alto int) string {
-	pista := p.envolver(p.pista(), 3)
+	pista := p.envolver(p.a(p.pista()), 3)
 	visible := max(alto-len(pista)-1, 3)
 	lineas := strings.Split(p.form.Vista(), "\n")
 	foco := p.form.LineaFoco()

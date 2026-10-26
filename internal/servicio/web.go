@@ -1,7 +1,6 @@
 package servicio
 
 import (
-	"cmp"
 	"crypto/subtle"
 	"net/http"
 	"slices"
@@ -182,13 +181,13 @@ func (s *Servicio) responderSesion(w http.ResponseWriter, r *http.Request, ses *
 			return strings.Compare(a.Nombre, b.Nombre)
 		})
 		respuesta["instancias"] = lista
-		s.mu.RLock()
-		respuesta["servicio"] = map[string]any{"puerto": s.opc.Puerto, "puerto_configurado": cmp.Or(s.opc.PuertoConfigurado, s.opc.Puerto),
-			"puerto_automatico": s.opc.PuertoAutomatico, "reiniciable": s.opc.Reiniciar != nil}
-		s.mu.RUnlock()
-		if disponible, activo := s.estadoAutoarranque(); disponible {
-			respuesta["autoarranque"] = activo
+		// Los mismos que Ajustes en la terminal; la sesión lleva el arranque fuera de servicio.
+		ajustes := s.ajustesServicio()
+		if ajustes.Autoarranque != nil {
+			respuesta["autoarranque"] = *ajustes.Autoarranque
 		}
+		ajustes.Autoarranque = nil
+		respuesta["servicio"] = ajustes
 	}
 	inst := s.instancia(ses.instancia)
 	if inst == nil && !ses.local {
