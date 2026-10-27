@@ -90,7 +90,7 @@ Tramtai nunca lee ni copia las credenciales de los CLIs. Antigravity solo funcio
 
 - **Web UI → Probar:** escribe un mensaje, adjunta archivos si quieres y mira la respuesta en vivo.
 - **Web UI → Mis APIs:** la URL, la clave y ejemplos en Python, Node y curl para tus aplicaciones.
-- **Terminal interactiva:** `tramtai terminal` (o `tramtai` sin argumentos) tiene las mismas páginas que la Web UI, de Inicio a la Ayuda. Tab abre el menú, del 1 al 7 vas a cada página, `?` abre la ayuda de la página, Esc vuelve, Ctrl+E cambia de espacio, `r` reintenta si el servicio no responde y `q` sale; en Probar, `c` cancela la petición en curso. Necesita una ventana de 60×20 como mínimo; con `NO_COLOR` va sin color y con `TRAMTAI_ASCII=1`, sin caracteres de dibujo. Todas las teclas, en [operación](operacion.md#la-terminal-interactiva).
+- **Terminal interactiva:** `tramtai terminal` (o `tramtai` sin argumentos) tiene las mismas páginas que la Web UI, de Inicio a la Ayuda. Tab abre el menú, del 1 al 7 vas a cada página, `?` abre la ayuda de la página, Esc vuelve, Ctrl+E cambia de espacio, `W` abre la Web UI en el navegador, `r` reintenta si el servicio no responde y `q` sale; en Probar, `c` cancela la petición en curso. Necesita una ventana de 60×20 como mínimo; con `NO_COLOR` va sin color y con `TRAMTAI_ASCII=1`, sin caracteres de dibujo. Todas las teclas, en [operación](operacion.md#la-terminal-interactiva).
 - **Solo con la terminal:** sin abrir la app, `tramtai servicio iniciar -d` deja el servicio en segundo plano y `tramtai terminal` lo administra todo. Sirve también por SSH: entra al equipo donde corre Tramtai y ábrela allí.
 - **Línea de órdenes:**
 

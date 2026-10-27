@@ -21,6 +21,7 @@ sin conexión. Lo que no cabe en texto (capturas, diagramas, el recorrido guiado
 | / | Busca: en Mis APIs, el Historial, Ajustes y la Ayuda. |
 | Esc | Vuelve o cierra. En Probar, una petición en marcha sigue en el servicio: `c` la cancela. |
 | Ctrl+E | Cambia de espacio. |
+| W | Abre la Web UI en el navegador; sin navegador (SSH, sin pantalla) enseña la dirección con su código de un solo uso. |
 | r | Si el servicio no responde, reintenta; si está detenido, lo inicia en segundo plano, y si sigue el de la v0.55, lo detiene y arranca el nuevo. |
 | c | Cancela la petición en curso (Probar y el detalle del Historial). |
 | ! | Enseña entero el último error, o cómo detener a mano el servicio de la versión anterior. |

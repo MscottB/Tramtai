@@ -92,6 +92,8 @@ type modelo struct {
 	cambiarA string             // la pregunta abierta es la de cambiar a este espacio (Ctrl+E): s cambia
 	avisos   comp.Avisos
 
+	pidiendoWeb bool // W pidió el enlace de la Web UI y aún no llegó (web.go)
+
 	despedida string // lo que queda escrito en la consola al salir (al empezar una actualización)
 
 	terminos    bool   // se están pidiendo los términos de uso («Antes de seguir»): es lo único que se ve hasta aceptar (terminos.go)
@@ -237,6 +239,8 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		rellenar(m.estilos, msg.IsDark())
 	case msgConexion:
 		return m, m.conectado(msg)
+	case msgWeb:
+		return m, m.webAbierta(msg)
 	case msgNovedad:
 		if msg.err == nil {
 			m.novedad = msg.estado
@@ -376,6 +380,8 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 			m.pregunta = &comp.Confirmacion{Texto: ultimo, Leer: true}
 			return nil
 		}
+	case "W":
+		return m.abrirWeb()
 	case "tab":
 		m.abrirMenu()
 		return nil
