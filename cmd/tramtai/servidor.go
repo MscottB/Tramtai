@@ -164,6 +164,9 @@ func comandoServidor() *cobra.Command {
 				return nil
 			}
 			fmt.Fprintln(out, idioma.Tf("servicio del sistema: %s", e.Activo))
+			if e.ClavesEnClaro {
+				fmt.Fprintln(out, idioma.Tf("aviso: %s", servidor.ErrClaveEnClaro.Error()))
+			}
 			c, err := conectar()
 			if err != nil {
 				fmt.Fprintln(out, idioma.Tf("no responde: %s", err.Error()))

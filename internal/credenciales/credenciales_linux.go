@@ -4,7 +4,10 @@ package credenciales
 
 import (
 	"errors"
+	"io/fs"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"tramtai/internal/idioma"
@@ -23,8 +26,14 @@ func Disponible() bool {
 	return err == nil
 }
 
-// Almacen es el nombre del almacén, para las instrucciones de la interfaz.
-func Almacen() string { return idioma.T("Secret Service (secret-tool)") }
+// Almacen es el nombre del almacén, para las instrucciones de la interfaz: en el servicio del sistema, las credenciales
+// que le entrega systemd.
+func Almacen() string {
+	if os.Getenv("CREDENTIALS_DIRECTORY") != "" {
+		return idioma.T("credenciales de systemd")
+	}
+	return idioma.T("Secret Service (secret-tool)")
+}
 
 // Guardar crea o sustituye la clave; secret-tool la lee de la entrada estándar.
 func Guardar(nombre, valor string) error {
@@ -41,8 +50,19 @@ func Guardar(nombre, valor string) error {
 	return err
 }
 
-// Leer devuelve la clave, o "" si no está guardada o no hay Secret Service (entonces vale la variable de entorno).
+// Leer devuelve la clave, o "" si no está guardada o no hay Secret Service (entonces vale la variable de entorno). En el
+// servicio del sistema mira antes las credenciales que systemd le entrega en $CREDENTIALS_DIRECTORY/tramtai.<NOMBRE>
+// (tramtai-servidor claves guardar).
 func Leer(nombre string) (string, error) {
+	if dir := os.Getenv("CREDENTIALS_DIRECTORY"); dir != "" && admitir(nombre) == nil {
+		valor, err := os.ReadFile(filepath.Join(dir, "tramtai."+nombre))
+		if err == nil {
+			return strings.TrimSpace(string(valor)), nil
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			return "", err
+		}
+	}
 	if !Disponible() {
 		return "", nil
 	}

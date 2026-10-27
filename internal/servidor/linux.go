@@ -11,10 +11,13 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
 
+	"tramtai/internal/configuracion"
+	"tramtai/internal/credenciales"
 	"tramtai/internal/idioma"
 	"tramtai/internal/terminos"
 )
@@ -206,6 +209,15 @@ func Desinstalar(borrarDatos bool) error {
 	if err := os.RemoveAll(r.Datos); err != nil {
 		return err
 	}
+	cifradas, _ := filepath.Glob(filepath.Join(r.Cifradas, "tramtai.*"))
+	for _, ruta := range append(cifradas, r.ClavesConf, r.ClavesEnv) {
+		if err := os.Remove(ruta); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+	}
+	for _, d := range []string{filepath.Dir(r.ClavesConf), filepath.Dir(r.ClavesEnv)} {
+		_ = os.Remove(d) // solo si quedaron vacías
+	}
 	if _, err := ejecutar("id", Cuenta); err == nil {
 		return orden("userdel", Cuenta)
 	}
@@ -214,15 +226,132 @@ func Desinstalar(borrarDatos bool) error {
 
 // Estado dice si la unidad está instalada y lo que dice systemctl is-active (que sale con error si no está activa).
 func Estado(_ context.Context) (EstadoSistema, error) {
-	if !existe(Rutas().Unidad) {
+	r := Rutas()
+	if !existe(r.Unidad) {
 		return EstadoSistema{}, nil
 	}
 	salida, err := ejecutar("systemctl", "is-active", "tramtai")
 	activo := strings.TrimSpace(string(salida))
 	if activo == "" && err != nil {
-		return EstadoSistema{Instalado: true}, err
+		return EstadoSistema{Instalado: true, ClavesEnClaro: existe(r.ClavesEnv)}, err
 	}
-	return EstadoSistema{Instalado: true, Activo: activo}, nil
+	return EstadoSistema{Instalado: true, Activo: activo, ClavesEnClaro: existe(r.ClavesEnv)}, nil
+}
+
+// cabeceraClaves encabeza claves.conf, que se reescribe entero con cada clave que se guarda o se borra.
+const cabeceraClaves = "# Generado por tramtai-servidor claves guardar/borrar: no lo edites a mano.\n"
+
+// GuardarClave guarda una clave del servidor para que systemd se la entregue al servicio al arrancar: la cifra con
+// systemd-creds en credstore.encrypted (el valor por stdin), la carga en claves.conf con LoadCredentialEncrypted= y
+// reinicia el servicio, que deja terminar las peticiones en curso. Sin systemd-creds 250 o posterior la escribe en
+// claves.env (0600, de root), que claves.conf carga con EnvironmentFile=, y devuelve el aviso ErrClaveEnClaro.
+func GuardarClave(nombre, valor string) error {
+	if err := credenciales.Comprobar(nombre, valor); err != nil {
+		return err
+	}
+	if !conSystemd() {
+		return noDisponible()
+	}
+	r := Rutas()
+	cifrada := filepath.Join(r.Cifradas, "tramtai."+nombre)
+	enClaro := valor
+	if conSystemdCreds() {
+		if err := os.MkdirAll(r.Cifradas, 0o700); err != nil {
+			return err
+		}
+		if salida, err := ejecutarConEntrada([]byte(valor), "systemd-creds", "encrypt", "--name=tramtai."+nombre, "-", cifrada); err != nil {
+			return fmt.Errorf(idioma.T("falló «%s» (%v): %s"), "systemd-creds encrypt --name=tramtai."+nombre, err, strings.TrimSpace(string(salida)))
+		}
+		if err := os.Chmod(cifrada, 0o600); err != nil { // systemd-creds la deja con la umask de root (0644)
+			return err
+		}
+		enClaro = ""
+	} else if err := os.Remove(cifrada); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	// La clave queda en un solo sitio: la de antes, en el otro, se quita.
+	if err := cambiarClaves(r, nombre, enClaro); err != nil {
+		return err
+	}
+	if enClaro != "" {
+		return ErrClaveEnClaro
+	}
+	return nil
+}
+
+// BorrarClave quita una clave del servidor (cifrada o en claro) y reinicia el servicio sin ella. No falla si no estaba.
+func BorrarClave(nombre string) error {
+	if !credenciales.Admitido(nombre) && !credenciales.AdmitidoInterno(nombre) {
+		return errors.New(idioma.T("clave no admitida"))
+	}
+	r := Rutas()
+	if err := os.Remove(filepath.Join(r.Cifradas, "tramtai."+nombre)); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	return cambiarClaves(r, nombre, "")
+}
+
+// conSystemdCreds dice si hay systemd-creds de la versión 250 o posterior (antes no cifra credenciales).
+func conSystemdCreds() bool {
+	salida, err := ejecutar("systemd-creds", "--version")
+	var version int
+	_, errVersion := fmt.Sscanf(string(salida), "systemd %d", &version)
+	return err == nil && errVersion == nil && version >= 250
+}
+
+// cambiarClaves pone (o quita, con valor vacío) la clave en claves.env, reescribe claves.conf con las claves que hay y
+// reinicia el servicio para que las reciba. Sin claves no quedan ni claves.env ni claves.conf.
+func cambiarClaves(r Sitios, nombre, valor string) error {
+	enClaro := map[string]string{}
+	if datos, err := os.ReadFile(r.ClavesEnv); err == nil {
+		for linea := range strings.Lines(string(datos)) {
+			if n, v, ok := strings.Cut(strings.TrimSpace(linea), "="); ok {
+				enClaro[n] = v
+			}
+		}
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	enClaro[nombre] = valor
+	var env, conf strings.Builder
+	for _, n := range append(slices.Clone(credenciales.Nombres), credenciales.Internos...) {
+		if enClaro[n] != "" {
+			env.WriteString(n + "=" + enClaro[n] + "\n")
+		}
+		if cifrada := filepath.Join(r.Cifradas, "tramtai."+n); existe(cifrada) {
+			conf.WriteString("LoadCredentialEncrypted=tramtai." + n + ":" + cifrada + "\n")
+		}
+	}
+	if env.Len() > 0 {
+		conf.WriteString("EnvironmentFile=-" + r.ClavesEnv + "\n")
+	}
+	for _, f := range []struct {
+		ruta, contenido string
+		permisos        os.FileMode
+	}{{r.ClavesEnv, env.String(), 0o600}, {r.ClavesConf, conf.String(), 0o644}} {
+		var err error
+		if f.contenido == "" {
+			if err = os.Remove(f.ruta); errors.Is(err, fs.ErrNotExist) {
+				err = nil
+			}
+			_ = os.Remove(filepath.Dir(f.ruta)) // tramtai.service.d o /etc/tramtai, solo si quedó vacía
+		} else {
+			if f.ruta == r.ClavesConf {
+				f.contenido = cabeceraClaves + "[Service]\n" + f.contenido
+			}
+			err = configuracion.EscribirAtomico(f.ruta, []byte(f.contenido), f.permisos)
+		}
+		if err != nil {
+			return err
+		}
+	}
+	if !existe(r.Unidad) { // aún sin instalar: la recibirá al arrancar
+		return nil
+	}
+	if err := orden("systemctl", "daemon-reload"); err != nil {
+		return err
+	}
+	return orden("systemctl", "restart", "tramtai")
 }
 
 // Reiniciar reinicia el servicio con la unidad al día con la configuración (plazo de drenaje, puerto bajo): si cambió,
