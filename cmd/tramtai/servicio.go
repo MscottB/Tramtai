@@ -440,7 +440,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	raizConversor, _ := documentos.RaizConversor() // ahí se prepara el conversor de archivos
 	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites),
 		Host: host, Puerto: puertoUsado, PuertoConfigurado: puerto, PuertoAutomatico: automatico, Reiniciar: reiniciar,
-		Hosts: hostsPermitidos(host, red.Dominios), Confiables: red.Confiables, Dominios: red.Dominios, Registros: salida, Web: recursos.Web(), Entorno: carpetas.Entorno(),
+		Hosts: hostsPermitidos(host, red.Dominios), Confiables: red.Confiables, Dominios: red.Dominios, TLS: configTLS, Registros: salida, Web: recursos.Web(), Entorno: carpetas.Entorno(),
 		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,
 		EntradaLocal: entradaLocal(c, red), BuscarActualizaciones: c.Booleano("servicio.buscar_actualizaciones"),
 		RaizConversor: raizConversor, PrepararConversor: c.Booleano("conversion.preparar_al_iniciar")})
@@ -459,7 +459,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 		sv.Cerrar()
 		return err
 	}
-	fmt.Fprintf(salida, idioma.T("tramtai %s escuchando en %s\nWeb UI: %s (o tramtai abrir)\n"), version.Texto(), sv.Base(), sv.Base())
+	fmt.Fprintf(salida, idioma.T("tramtai %s escuchando en %s\nWeb UI: %s (o tramtai abrir)\n"), version.Texto(), sv.BasePublica(), sv.BasePublica())
 	imprimirEstado(salida, sv.Estado(context.Background()))
 	if archivo == "" {
 		fmt.Fprintln(salida, idioma.T("\nAquí verás una línea por cada petición (al recibirla y al terminar). Ctrl+C para detener."))
@@ -499,12 +499,14 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 // abrirOyente abre el puerto del servicio. Con letsencrypt el desafío TLS-ALPN-01 solo llega al 443, así que
 // servicio.puerto_automatico no se aplica: un puerto ocupado es un error, no un puerto distinto.
 func abrirOyente(modoTLS, host string, puerto int, automatico bool) (net.Listener, int, error) {
-	letsencrypt := modoTLS == "letsencrypt"
-	oyente, usado, err := servicio.Escuchar(host, puerto, automatico && !letsencrypt)
-	if err != nil && letsencrypt {
-		return nil, 0, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("servicio.tls.modo letsencrypt necesita el puerto %d libre (no usa servicio.puerto_automatico): libéralo o cambia de modo", puerto))
+	if modoTLS != "letsencrypt" {
+		return servicio.Escuchar(host, puerto, automatico)
 	}
-	return oyente, usado, err
+	oyente, err := net.Listen("tcp", net.JoinHostPort(host, strconv.Itoa(puerto)))
+	if err != nil {
+		return nil, 0, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("servicio.tls.modo letsencrypt necesita el puerto %d libre (no usa servicio.puerto_automatico): %s", puerto, err.Error()))
+	}
+	return oyente, puerto, nil
 }
 
 // lanzar arranca un proceso desacoplado; las pruebas lo sustituyen.

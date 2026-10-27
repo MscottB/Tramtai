@@ -26,7 +26,8 @@ type OpcionesTLS struct {
 }
 
 // ConfigTLS prepara el TLS propio del oyente: nil si el modo es ninguno (HTTP plano, con o sin proxy delante). Solo TLS
-// 1.3: no hay cifrados que elegir y Go ofrece por defecto el intercambio híbrido poscuántico X25519MLKEM768.
+// 1.3: no hay cifrados que elegir y Go ofrece por defecto el intercambio híbrido poscuántico X25519MLKEM768. Sin
+// NextProtos, archivos va en HTTP/1.1; en la Tarea 11 el NextProtos de autocert (TLS-ALPN-01) lleva también h2.
 func ConfigTLS(o OpcionesTLS) (*tls.Config, error) {
 	switch o.Modo {
 	case "archivos":
@@ -80,7 +81,7 @@ func (p *parRecargable) certificado(*tls.ClientHelloInfo) (*tls.Certificate, err
 	defer p.mu.Unlock()
 	if ahora := time.Now(); ahora.Sub(p.comprobado) >= intervaloRecarga {
 		p.comprobado = ahora
-		if f := p.fechasActuales(); f != p.fechas {
+		if f := p.fechasActuales(); !f[0].Equal(p.fechas[0]) || !f[1].Equal(p.fechas[1]) {
 			p.fechas = f
 			if cert, err := tls.LoadX509KeyPair(p.o.Certificado, p.o.Clave); err != nil {
 				fmt.Fprintln(p.o.Registros, idioma.Tf("no se pudo recargar el certificado (%s y %s); sigue el anterior: %s", p.o.Certificado, p.o.Clave, err.Error()))

@@ -15,6 +15,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -49,6 +50,15 @@ func parTemporal(t *testing.T, dir, cn string) (certificado, clave string) {
 		t.Fatal(err)
 	}
 	return certificado, clave
+}
+
+// adelantar pone la fecha del archivo en el futuro, para no depender de la resolución de las fechas del sistema.
+func adelantar(t *testing.T, ruta string, d time.Duration) {
+	t.Helper()
+	futuro := time.Now().Add(d)
+	if err := os.Chtimes(ruta, futuro, futuro); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // bufferSeguro es un registro que se puede leer mientras el servidor escribe.
@@ -151,6 +161,7 @@ func TestTLSRecarga(t *testing.T) {
 	if err := os.WriteFile(o.Certificado, []byte("basura"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	adelantar(t, o.Certificado, 30*time.Second)
 	if n := nombre(); n != "uno" || !strings.Contains(registro.String(), o.Certificado) {
 		t.Fatalf("par ilegible: sirvió %q, registro %q", n, registro.String())
 	}
@@ -164,11 +175,85 @@ func TestTLSRecarga(t *testing.T) {
 		if err := os.WriteFile(destino, datos, 0o600); err != nil {
 			t.Fatal(err)
 		}
-		futuro := time.Now().Add(time.Minute)
-		os.Chtimes(destino, futuro, futuro)
+		adelantar(t, destino, time.Minute)
 	}
 	if n := nombre(); n != "dos" {
 		t.Fatalf("tras el cambio: %q", n)
+	}
+}
+
+// clienteQueConfia es un cliente HTTPS que solo confía en el certificado dado (sin saltarse la verificación).
+func clienteQueConfia(t *testing.T, certificado string) *http.Client {
+	t.Helper()
+	datos, err := os.ReadFile(certificado)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(datos) {
+		t.Fatal("certificado ilegible")
+	}
+	return &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool}}}
+}
+
+// TestPuntoConPuertoPropioHablaTLS: con TLS propio, un punto con puerto propio no escucha en HTTP plano (sus claves
+// Bearer viajarían en claro), anuncia https y lleva HSTS.
+func TestPuntoConPuertoPropioHablaTLS(t *testing.T) {
+	libre, _ := net.Listen("tcp", "127.0.0.1:0")
+	puerto := libre.Addr().(*net.TCPAddr).Port
+	libre.Close()
+	s, _, _ := entorno(t, "puntos_acceso:\n  - nombre: fijo\n    puerto: "+strconv.Itoa(puerto)+"\n    agente: simulado\n", "", adaptadores.Simulado{})
+	cert, clave := parTemporal(t, t.TempDir(), "punto")
+	var err error
+	if s.opc.TLS, err = ConfigTLS(OpcionesTLS{Modo: "archivos", Certificado: cert, Clave: clave}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ActivarGlobal(); err != nil {
+		t.Fatal(err)
+	}
+	s.Recargar()
+	token, _ := NuevaClave(RutaTokenPunto(s.opc.Datos, "fijo"))
+	estado := s.Recargar()
+	direccion := "127.0.0.1:" + strconv.Itoa(puerto)
+	if len(estado) != 1 || !estado[0].Activo || estado[0].URL != "https://"+direccion {
+		t.Fatalf("punto: %+v %v", estado, s.erroresPuntos)
+	}
+	const peticion = `{"mensajes":[{"rol":"usuario","contenido":"x"}]}`
+	if r, err := http.Post("http://"+direccion+"/api/v1/ejecutar", "application/json", strings.NewReader(peticion)); err == nil {
+		r.Body.Close()
+		if r.StatusCode == 200 {
+			t.Fatal("el puerto propio del punto atendió HTTP plano con TLS propio")
+		}
+	}
+	req, _ := http.NewRequest("POST", "https://"+direccion+"/api/v1/ejecutar", strings.NewReader(peticion))
+	req.Header.Set("Authorization", "Bearer "+token)
+	r, err := clienteQueConfia(t, cert).Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Body.Close()
+	if r.StatusCode != 200 || r.Header.Get("Strict-Transport-Security") != "max-age=31536000" {
+		t.Fatalf("por TLS: %d, HSTS %q", r.StatusCode, r.Header.Get("Strict-Transport-Security"))
+	}
+}
+
+// TestBasesConTLS: con TLS propio se anuncia https (con el primer dominio); sin él, todo como antes.
+func TestBasesConTLS(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	puerto := strconv.Itoa(s.opc.Puerto)
+	if s.BasePublica() != "http://127.0.0.1:"+puerto || s.BaseLocal() != s.BasePublica() {
+		t.Fatalf("sin TLS: %s %s", s.BasePublica(), s.BaseLocal())
+	}
+	if _, err := s.ActivarGlobal(); err != nil {
+		t.Fatal(err)
+	}
+	s.opc.TLS, s.opc.Dominios = &tls.Config{}, []string{"tramtai.ejemplo.org", "otro.ejemplo.org"}
+	if s.BasePublica() != "https://tramtai.ejemplo.org:"+puerto {
+		t.Fatalf("con TLS: %s", s.BasePublica())
+	}
+	if r, cuerpo := pedir(t, ts.URL, "POST", "/api/v1/servicio/sesiones", s.tokenAdmin, `{"instancia":"global"}`); r.StatusCode != 200 ||
+		!strings.Contains(cuerpo, `"url":"https://tramtai.ejemplo.org:`+puerto+`/ui/entrar?codigo=`) {
+		t.Fatalf("enlace de entrada: %d %s", r.StatusCode, cuerpo)
 	}
 }
 
