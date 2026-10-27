@@ -75,6 +75,12 @@ var esquema = map[string]tipoValor{
 	"servicio.buscar_actualizaciones":             tipoBooleano,
 	"servicio.requerir_token":                     tipoBooleano,
 	"servicio.permitir_remoto":                    tipoBooleano,
+	"servicio.dominios":                           tipoLista,
+	"servicio.proxy.confiables":                   tipoLista,
+	"servicio.tls.modo":                           tipoTexto, // ninguno, archivos o letsencrypt (ver validar)
+	"servicio.tls.certificado":                    tipoTexto,
+	"servicio.tls.clave":                          tipoTexto,
+	"servicio.tls.letsencrypt.correo":             tipoTexto,
 	"instancia_global.token_variable_entorno":     tipoTexto,
 	"instancia_global.raices_permitidas":          tipoLista,
 	"proyectos_confiables":                        tipoLista,
@@ -310,6 +316,12 @@ func Internos() Capa {
 		"servicio.buscar_actualizaciones":             true,
 		"servicio.requerir_token":                     true,
 		"servicio.permitir_remoto":                    false,
+		"servicio.dominios":                           []any{},
+		"servicio.proxy.confiables":                   []any{},
+		"servicio.tls.modo":                           "ninguno",
+		"servicio.tls.certificado":                    "",
+		"servicio.tls.clave":                          "",
+		"servicio.tls.letsencrypt.correo":             "",
 		"instancia_global.token_variable_entorno":     "TRAMTAI_TOKEN_GLOBAL",
 		"compatibilidad.modo_tolerante":               false,
 		"compatibilidad.cancelar_al_desconectar":      true,
@@ -611,6 +623,9 @@ func (c *Capa) validar(estricta bool) error {
 	}
 	if modo, existe := c.Valores["retencion.modo"]; existe && modo != "temporal" {
 		return errorConfiguracion(c.Fuente, "retencion.modo", idioma.T("solo se admite temporal"))
+	}
+	if modo, existe := c.Valores["servicio.tls.modo"]; existe && modo != "ninguno" && modo != "archivos" && modo != "letsencrypt" {
+		return errorConfiguracion(c.Fuente, "servicio.tls.modo", idioma.T("solo se admite ninguno, archivos o letsencrypt"))
 	}
 	if version, existe := c.Valores["version"]; existe && version != 1 {
 		return errorConfiguracion(c.Fuente, "version", idioma.T("versión de formato no soportada"))

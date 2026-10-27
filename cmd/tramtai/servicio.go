@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -32,6 +31,8 @@ import (
 	"tramtai/internal/recursos"
 	"tramtai/internal/registro"
 	"tramtai/internal/servicio"
+	"tramtai/internal/servidor"
+	"tramtai/internal/terminos"
 	"tramtai/internal/version"
 )
 
@@ -379,16 +380,15 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 		salida = rotativo
 	}
 	host, puerto := c.Texto("servicio.host"), c.Entero("servicio.puerto")
-	remoto := !esLoopback(host)
-	if remoto {
-		if !c.Booleano("servicio.permitir_remoto") {
-			return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("servicio.host %s no es una dirección de este equipo: para abrir el servicio a otros equipos activa servicio.permitir_remoto (mejor, usa un túnel SSH)", host))
-		}
-		for _, f := range agentes.Todos() {
-			if agente := f.Nombre; agentes.AdmiteSuscripcion(agente) && c.Texto("adaptadores."+agente+".autenticacion") == adaptadores.AutenticacionSuscripcion {
-				return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("el acceso remoto no se permite con %s en modo suscripción", agente))
-			}
-		}
+	red, err := entradaServidor(c)
+	if err != nil {
+		return err
+	}
+	if err := servidor.ComprobarArranque(red); err != nil {
+		return err
+	}
+	if servidor.Expuesto(red) {
+		fmt.Fprintln(salida, idioma.Tf("aviso: %s", terminos.Riesgos(true)[2]))
 	}
 	datos, err := dirDatos()
 	if err != nil {
@@ -416,10 +416,6 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 		return err
 	}
 	defer soltar()
-	hosts := []string{"127.0.0.1", "localhost", "::1"}
-	if remoto {
-		hosts = append(hosts, strings.ToLower(host))
-	}
 	automatico := c.Booleano("servicio.puerto_automatico")
 	oyente, puertoUsado, err := servicio.Escuchar(host, puerto, automatico)
 	if err != nil {
@@ -434,9 +430,9 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	raizConversor, _ := documentos.RaizConversor() // ahí se prepara el conversor de archivos
 	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites),
 		Host: host, Puerto: puertoUsado, PuertoConfigurado: puerto, PuertoAutomatico: automatico, Reiniciar: reiniciar,
-		Hosts: hosts, Registros: salida, Web: recursos.Web(), Entorno: carpetas.Entorno(),
+		Hosts: hostsPermitidos(host, red.Dominios), Confiables: red.Confiables, Dominios: red.Dominios, Registros: salida, Web: recursos.Web(), Entorno: carpetas.Entorno(),
 		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,
-		EntradaLocal: c.Booleano("servicio.entrada_local") && !remoto, BuscarActualizaciones: c.Booleano("servicio.buscar_actualizaciones"),
+		EntradaLocal: c.Booleano("servicio.entrada_local") && servidor.Loopback(host), BuscarActualizaciones: c.Booleano("servicio.buscar_actualizaciones"),
 		RaizConversor: raizConversor, PrepararConversor: c.Booleano("conversion.preparar_al_iniciar")})
 	if err != nil {
 		oyente.Close()
@@ -534,12 +530,43 @@ func reinicioDelServicio(datos, registro string, pedido *atomic.Bool) func() err
 	}
 }
 
-func esLoopback(host string) bool {
-	if host == "localhost" {
-		return true
+// hostsPermitidos son los nombres que valen en Host y Origin: loopback, el host si no lo es y servicio.dominios.
+func hostsPermitidos(host string, dominios []string) []string {
+	hosts := []string{"127.0.0.1", "localhost", "::1"}
+	if !servidor.Loopback(host) {
+		hosts = append(hosts, strings.ToLower(host))
 	}
-	ip := net.ParseIP(host)
-	return ip != nil && ip.IsLoopback()
+	for _, dominio := range dominios {
+		hosts = append(hosts, strings.ToLower(dominio))
+	}
+	return hosts
+}
+
+// entradaServidor reúne de la configuración lo que deciden las reglas de exposición (servidor.ComprobarArranque). Las
+// suscripciones son las de los agentes en modo suscripción; hasta que haya suscripción personal y TOTP, ninguna lo es.
+func entradaServidor(c *configuracion.Configuracion) (servidor.Entrada, error) {
+	confiables, err := servidor.Confiables(textos(c.Lista("servicio.proxy.confiables")))
+	if err != nil {
+		return servidor.Entrada{}, err
+	}
+	e := servidor.Entrada{Host: c.Texto("servicio.host"), PermitirRemoto: c.Booleano("servicio.permitir_remoto"), Confiables: confiables,
+		TLS: c.Texto("servicio.tls.modo"), Dominios: textos(c.Lista("servicio.dominios")), Correo: c.Texto("servicio.tls.letsencrypt.correo"),
+		Puerto: c.Entero("servicio.puerto"), Certificado: c.Texto("servicio.tls.certificado"), Clave: c.Texto("servicio.tls.clave")}
+	for _, f := range agentes.Todos() {
+		if agente := f.Nombre; agentes.AdmiteSuscripcion(agente) && c.Texto("adaptadores."+agente+".autenticacion") == adaptadores.AutenticacionSuscripcion {
+			e.Suscripciones = append(e.Suscripciones, servidor.Suscripcion{Agente: agente})
+		}
+	}
+	return e, nil
+}
+
+// textos pasa una lista de la configuración a textos.
+func textos(lista []any) []string {
+	r := make([]string, len(lista))
+	for i, v := range lista {
+		r[i] = fmt.Sprint(v)
+	}
+	return r
 }
 
 // identificar devuelve la raíz, el identificador y la configuración de la instancia del ámbito.

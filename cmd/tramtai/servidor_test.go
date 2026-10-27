@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -20,8 +22,10 @@ import (
 func simularServidor(t *testing.T, administrador bool) (instalado *[]servidor.Opciones, desinstalado *[]bool) {
 	t.Helper()
 	instalado, desinstalado = &[]servidor.Opciones{}, &[]bool{}
-	a, i, d, u := esAdministrador, instalarServidor, desinstalarServidor, usarServidor
-	t.Cleanup(func() { esAdministrador, instalarServidor, desinstalarServidor, usarServidor = a, i, d, u })
+	a, i, d, u, e := esAdministrador, instalarServidor, desinstalarServidor, usarServidor, estadoServidor
+	t.Cleanup(func() {
+		esAdministrador, instalarServidor, desinstalarServidor, usarServidor, estadoServidor = a, i, d, u, e
+	})
 	esAdministrador = func() bool { return administrador }
 	instalarServidor = func(o servidor.Opciones) error { *instalado = append(*instalado, o); return nil }
 	desinstalarServidor = func(borrar bool) error { *desinstalado = append(*desinstalado, borrar); return nil }
@@ -217,6 +221,30 @@ func TestServidorInstalarConversor(t *testing.T) {
 	quiere, _ := filepath.Abs("conversor.zip")
 	if len(*instalado) != 2 || (*instalado)[0].Conversor != quiere || (*instalado)[1].Conversor != quiere {
 		t.Errorf("instalaciones: %+v", *instalado)
+	}
+}
+
+// TestServidorEstadoExpuesto: «servidor estado» recuerda el riesgo 3 si la configuración del servidor lo abre a la red
+// (aquí, con un proxy de confianza); en loopback sin proxy, no.
+func TestServidorEstadoExpuesto(t *testing.T) {
+	simularServidor(t, true)
+	estadoServidor = func(context.Context) (servidor.EstadoSistema, error) {
+		return servidor.EstadoSistema{Instalado: true, Activo: "active"}, nil
+	}
+	riesgo := terminos.Riesgos(true)[2]
+	for config, quiere := range map[string]bool{
+		"servicio:\n  proxy:\n    confiables: [127.0.0.1/32]\n": true,
+		"servicio:\n  host: 127.0.0.1\n":                        false,
+	} {
+		global := filepath.Join(t.TempDir(), "config.yaml")
+		if err := os.WriteFile(global, []byte(config), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+		salida, err := ejecutarServidor(t, "", "servidor", "estado")
+		if err != nil || strings.Contains(salida, riesgo) != quiere {
+			t.Errorf("%q: %v, riesgo 3 en la salida %v: %q", config, err, !quiere, salida)
+		}
 	}
 }
 

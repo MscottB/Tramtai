@@ -61,8 +61,9 @@ func mismoUsuarioLocal(r *http.Request) bool {
 }
 
 // desdeEsteEquipo indica que la petición llega por loopback y no la reenvía un proxy o túnel (que traería peticiones
-// ajenas desde loopback). No dice de qué usuario es: eso lo comprueba esLocal o, con un código de un solo uso, el
-// hecho de que solo el dueño del servicio puede pedirlo con el token de servicio.
+// ajenas desde loopback). Vale también para un proxy de confianza (servicio.proxy.confiables): lo que reenvía nunca es
+// local. No dice de qué usuario es: eso lo comprueba esLocal o, con un código de un solo uso, el hecho de que solo el
+// dueño del servicio puede pedirlo con el token de servicio.
 func desdeEsteEquipo(r *http.Request) bool {
 	for _, cabecera := range []string{"Forwarded", "X-Forwarded-For", "X-Forwarded-Host", "X-Real-Ip", "Via"} {
 		if r.Header.Get(cabecera) != "" {

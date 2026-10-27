@@ -10,6 +10,7 @@ import (
 	"maps"
 	"net"
 	"net/http"
+	"net/netip"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -45,12 +46,16 @@ type Opciones struct {
 	Semaforos planificador.Semaforos // compartidos por todas las instancias
 	// Secretos da las claves que se tapan en lo que escribe el agente; nil = el entorno y el almacén del sistema
 	// (planificador.Opciones.Secretos). Las pruebas no tocan el llavero del equipo.
-	Secretos  func() []string
-	Host      string
-	Puerto    int
-	Hosts     []string
-	Registros io.Writer // mensajes de operación; nil los descarta
-	Web       fs.FS     // Web UI compilada (internal/recursos); nil la desactiva
+	Secretos func() []string
+	Host     string
+	Puerto   int
+	Hosts    []string
+	// Confiables son los proxies de confianza (servicio.proxy.confiables): solo de ellos se creen X-Forwarded-*
+	// (ClienteReal, EsHTTPS). Dominios son los nombres de servicio.dominios, que también están en Hosts.
+	Confiables []netip.Prefix
+	Dominios   []string
+	Registros  io.Writer // mensajes de operación; nil los descarta
+	Web        fs.FS     // Web UI compilada (internal/recursos); nil la desactiva
 	// PlazoDrenaje es lo que Drenar espera a los trabajos en curso antes de interrumpirlos.
 	PlazoDrenaje time.Duration
 	// EntradaLocal deja entrar en la Web UI sin token al mismo usuario del sistema (servicio.entrada_local).

@@ -16,9 +16,11 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"tramtai/internal/api"
 	"tramtai/internal/carpetas"
 	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
+	"tramtai/internal/terminos"
 )
 
 // servicioDeOtraVersion simula el servicio de una versión anterior (la forma de su /healthz, sin reto ni prueba) en una
@@ -95,6 +97,76 @@ func TestSinServidorNoTocaElDelSistema(t *testing.T) {
 	// La prueba no deja la raíz de este proceso fijada como la del servidor para las demás.
 	if r, _ := carpetas.RaizUsuario(); r == carpetas.RaizServidor() {
 		t.Fatalf("la raíz del proceso quedó fijada como la del servidor: %s", r)
+	}
+}
+
+// arrancarHastaDatos lanza iniciarServicio con esta configuración global y lo corta justo después de las reglas de
+// exposición (al pedir la carpeta de datos). Devuelve lo que escribió en el registro y el error.
+func arrancarHastaDatos(t *testing.T, config string) (registro string, err error) {
+	t.Helper()
+	anterior := dirDatos
+	dirDatos = func() (string, error) { return "", errors.New("parada de la prueba") }
+	t.Cleanup(func() { dirDatos = anterior })
+	global := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(global, []byte(config), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+	cmd := &cobra.Command{}
+	var salida bytes.Buffer
+	cmd.SetErr(&salida)
+	err = iniciarServicio(cmd, "", false)
+	return salida.String(), err
+}
+
+// TestAvisoExpuestoEnRegistro: expuesto (aquí, con un proxy de confianza), el arranque deja en el registro el riesgo 3;
+// en loopback sin proxy, no.
+func TestAvisoExpuestoEnRegistro(t *testing.T) {
+	riesgo := terminos.Riesgos(true)[2]
+	for config, quiere := range map[string]bool{
+		"servicio:\n  proxy:\n    confiables: [127.0.0.1/32]\n": true,
+		"servicio:\n  host: 127.0.0.1\n":                        false,
+	} {
+		registro, err := arrancarHastaDatos(t, config)
+		if err == nil || !strings.Contains(err.Error(), "parada de la prueba") {
+			t.Fatalf("%q: las reglas lo dejan arrancar: %v", config, err)
+		}
+		if strings.Contains(registro, riesgo) != quiere {
+			t.Errorf("%q: riesgo 3 en el registro %v: %q", config, !quiere, registro)
+		}
+	}
+}
+
+// TestProxyLoopbackConSuscripcion (Revisión 3): un proxy de confianza en este equipo deja el servicio expuesto aunque
+// escuche en loopback, así que con Claude en suscripción (no personal) no arranca.
+func TestProxyLoopbackConSuscripcion(t *testing.T) {
+	_, err := arrancarHastaDatos(t, "servicio:\n  proxy:\n    confiables: [127.0.0.1]\nadaptadores:\n  claude:\n    autenticacion: suscripcion\n")
+	if err == nil || strings.Contains(err.Error(), "parada de la prueba") || !strings.Contains(err.Error(), "claude") {
+		t.Fatalf("con un proxy de confianza y Claude en suscripción: %v", err)
+	}
+	_, err = arrancarHastaDatos(t, "servicio:\n  proxy:\n    confiables: [proxy.ejemplo.org]\n")
+	if err == nil || !strings.Contains(err.Error(), "servicio.proxy.confiables") {
+		t.Fatalf("una red que no es CIDR: %v", err)
+	}
+}
+
+// TestDominiosEnHosts: Host y Origin valen para servicio.dominios; un nombre que no está ahí lo rechaza api.Proteger.
+func TestDominiosEnHosts(t *testing.T) {
+	pedir := func(hosts []string) int {
+		r := httptest.NewRequest("GET", "/healthz", nil)
+		r.Host = "tramtai.ejemplo.org"
+		w := httptest.NewRecorder()
+		api.Proteger(hosts, nil, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})).ServeHTTP(w, r)
+		return w.Code
+	}
+	if c := pedir(hostsPermitidos("127.0.0.1", []string{"Tramtai.Ejemplo.org"})); c != http.StatusOK {
+		t.Errorf("con el dominio: %d", c)
+	}
+	if c := pedir(hostsPermitidos("127.0.0.1", nil)); c != http.StatusForbidden {
+		t.Errorf("sin el dominio: %d", c)
+	}
+	if h := hostsPermitidos("192.0.2.10", nil); !slices.Contains(h, "192.0.2.10") || !slices.Contains(h, "localhost") {
+		t.Errorf("el host remoto se sigue sumando: %v", h)
 	}
 }
 
