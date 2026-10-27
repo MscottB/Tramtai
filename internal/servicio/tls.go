@@ -5,8 +5,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"slices"
 	"sync"
 	"time"
+
+	"golang.org/x/crypto/acme"
+	"golang.org/x/crypto/acme/autocert"
 
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -16,8 +21,11 @@ import (
 // las pruebas no esperen un segundo entre conexiones.
 var intervaloRecarga = time.Second
 
+// clienteACME es el cliente ACME de Let's Encrypt; nil usa su directorio de producción. Las pruebas lo apuntan a Pebble.
+var clienteACME *acme.Client
+
 // OpcionesTLS son las claves servicio.tls.* y servicio.dominios. Datos, Correo y Dominios son para Let's Encrypt (caché
-// datos/acme, correo de la cuenta y HostPolicy), que se conecta en la Tarea 11; con archivos no se usan.
+// datos/acme, correo de la cuenta y HostPolicy); con archivos no se usan.
 type OpcionesTLS struct {
 	Modo, Certificado, Clave string
 	Dominios                 []string
@@ -27,7 +35,7 @@ type OpcionesTLS struct {
 
 // ConfigTLS prepara el TLS propio del oyente: nil si el modo es ninguno (HTTP plano, con o sin proxy delante). Solo TLS
 // 1.3: no hay cifrados que elegir y Go ofrece por defecto el intercambio híbrido poscuántico X25519MLKEM768. Sin
-// NextProtos, archivos va en HTTP/1.1; en la Tarea 11 el NextProtos de autocert (TLS-ALPN-01) lleva también h2.
+// NextProtos, archivos va en HTTP/1.1; letsencrypt también (ver certificadosLetsEncrypt).
 func ConfigTLS(o OpcionesTLS) (*tls.Config, error) {
 	switch o.Modo {
 	case "archivos":
@@ -37,9 +45,25 @@ func ConfigTLS(o OpcionesTLS) (*tls.Config, error) {
 		}
 		return &tls.Config{MinVersion: tls.VersionTLS13, GetCertificate: par.certificado}, nil
 	case "letsencrypt":
-		return nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.T("servicio.tls.modo letsencrypt aún no está disponible en esta versión: usa archivos o un proxy con HTTPS"))
+		return certificadosLetsEncrypt(o)
 	}
 	return nil, nil
+}
+
+// certificadosLetsEncrypt pide y renueva los certificados con autocert (desafío TLS-ALPN-01, en el mismo puerto 443;
+// ECDSA P-256) solo para servicio.dominios; la caché y la cuenta quedan en datos/acme, privada. De TLSConfig() toma
+// GetCertificate y NextProtos, que lleva acme-tls/1 (el desafío); h2 se quita: como con archivos, el servicio habla
+// HTTP/1.1, que no toca el flujo en vivo (SSE).
+func certificadosLetsEncrypt(o OpcionesTLS) (*tls.Config, error) {
+	carpeta := filepath.Join(o.Datos, "acme")
+	if err := os.MkdirAll(carpeta, 0o700); err != nil {
+		return nil, err
+	}
+	m := &autocert.Manager{Prompt: autocert.AcceptTOS, HostPolicy: autocert.HostWhitelist(o.Dominios...),
+		Cache: autocert.DirCache(carpeta), Email: o.Correo, Client: clienteACME}
+	c := m.TLSConfig()
+	return &tls.Config{MinVersion: tls.VersionTLS13, GetCertificate: c.GetCertificate,
+		NextProtos: slices.DeleteFunc(c.NextProtos, func(p string) bool { return p == "h2" })}, nil
 }
 
 // parRecargable es el par certificado-clave en uso; vuelve a leerlo cuando cambia la fecha de cualquiera de los dos archivos.

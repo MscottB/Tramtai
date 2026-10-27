@@ -30,7 +30,8 @@ var (
 	estadoServidor      = servidor.Estado
 )
 
-// avisarExpuesto recuerda el riesgo 3 si la configuración del servidor lo abre a la red; si no se puede leer, lo dice.
+// avisarExpuesto recuerda el riesgo 3 si la configuración del servidor lo abre a la red, y el acuerdo de suscriptor de
+// Let's Encrypt si ese modo está activo; si no se puede leer, lo dice.
 func avisarExpuesto(out io.Writer) {
 	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	var red servidor.Entrada
@@ -42,6 +43,9 @@ func avisarExpuesto(out io.Writer) {
 		fmt.Fprintln(out, idioma.Tf("aviso: %s", nucleo.MensajeDe(err)))
 	case servidor.Expuesto(red):
 		fmt.Fprintln(out, idioma.Tf("aviso: %s", terminos.Riesgos(true)[2]))
+	}
+	if err == nil && red.TLS == "letsencrypt" {
+		fmt.Fprintln(out, idioma.Tf("aviso: %s", servidor.AvisoLetsEncrypt()))
 	}
 }
 

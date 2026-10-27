@@ -392,6 +392,9 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	if servidor.Expuesto(red) {
 		fmt.Fprintln(salida, idioma.Tf("aviso: %s", terminos.Riesgos(true)[2]))
 	}
+	if red.TLS == "letsencrypt" {
+		fmt.Fprintln(salida, idioma.Tf("aviso: %s", servidor.AvisoLetsEncrypt()))
+	}
 	datos, err := dirDatos()
 	if err != nil {
 		return err

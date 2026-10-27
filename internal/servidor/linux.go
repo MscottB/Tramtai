@@ -166,7 +166,7 @@ func Instalar(o Opciones) error {
 }
 
 // actualizarUnidad escribe la unidad con la configuración actual del servidor, si cambió, y dice si la cambió. extra
-// suma lo que pida quien llama; Let's Encrypt (servicio.tls.modo) se calculará aquí, como el puerto bajo.
+// suma lo que pida quien llama; Let's Encrypt (servicio.tls.modo) y el puerto bajo se calculan aquí.
 func actualizarUnidad(s Sitios, extra UnidadOpciones) (bool, error) {
 	r, err := os.OpenRoot(s.Datos)
 	if err != nil {
@@ -177,7 +177,7 @@ func actualizarUnidad(s Sitios, extra UnidadOpciones) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	o := UnidadOpciones{PlazoDrenaje: c.Entero("servicio.plazo_drenaje_segundos"), LetsEncrypt: extra.LetsEncrypt,
+	o := UnidadOpciones{PlazoDrenaje: c.Entero("servicio.plazo_drenaje_segundos"), LetsEncrypt: extra.LetsEncrypt || c.Texto("servicio.tls.modo") == "letsencrypt",
 		PuertoBajo: extra.PuertoBajo || c.Entero("servicio.puerto") < 1024}
 	return escribirSiCambia(s.Unidad, []byte(Unidad(o)), 0o644)
 }
@@ -362,7 +362,6 @@ func Reiniciar() error {
 		return err
 	}
 	if existe(r.Unidad) {
-		// Sin opciones extra: la Tarea 11 derivará LetsEncrypt de servicio.tls.modo en actualizarUnidad.
 		cambiada, err := actualizarUnidad(r, UnidadOpciones{})
 		if err != nil {
 			return err

@@ -15,6 +15,8 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -114,8 +116,31 @@ func TestConfigTLSModos(t *testing.T) {
 	if _, err := ConfigTLS(OpcionesTLS{Modo: "archivos", Certificado: filepath.Join(t.TempDir(), "falta.pem"), Clave: "falta.key"}); err == nil {
 		t.Fatal("archivos ilegibles: se esperaba un error")
 	}
-	if _, err := ConfigTLS(OpcionesTLS{Modo: "letsencrypt"}); err == nil || !strings.Contains(err.Error(), "letsencrypt") {
-		t.Fatalf("letsencrypt aún no está disponible: %v", err)
+}
+
+// TestLetsEncryptHostPolicy: solo los dominios de servicio.dominios obtienen certificado (un SNI ajeno se rechaza antes
+// de hablar con la CA), la carpeta acme es privada y la configuración es la de archivos: TLS 1.3, sin h2 y con acme-tls/1.
+func TestLetsEncryptHostPolicy(t *testing.T) {
+	datos := t.TempDir()
+	cfg, err := ConfigTLS(OpcionesTLS{Modo: "letsencrypt", Dominios: []string{"tramtai.ejemplo.org"}, Datos: datos, Correo: "admin@ejemplo.org"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MinVersion != tls.VersionTLS13 {
+		t.Fatalf("MinVersion %#x: se esperaba TLS 1.3", cfg.MinVersion)
+	}
+	if slices.Contains(cfg.NextProtos, "h2") || !slices.Contains(cfg.NextProtos, "acme-tls/1") || !slices.Contains(cfg.NextProtos, "http/1.1") {
+		t.Fatalf("NextProtos %v: se esperaba http/1.1 y acme-tls/1, sin h2", cfg.NextProtos)
+	}
+	if info, err := os.Stat(filepath.Join(datos, "acme")); err != nil || !info.IsDir() || runtime.GOOS != "windows" && info.Mode().Perm() != 0o700 {
+		t.Fatalf("la carpeta acme debería existir con 0700: %v %v", info, err)
+	}
+	cert, err := cfg.GetCertificate(&tls.ClientHelloInfo{ServerName: "otro.ejemplo.org", SupportedProtos: []string{"http/1.1"}})
+	if cert != nil || err == nil || !strings.Contains(err.Error(), "otro.ejemplo.org") {
+		t.Fatalf("un dominio fuera de la lista no debería obtener certificado: %v %v", cert, err)
+	}
+	if entradas, _ := os.ReadDir(filepath.Join(datos, "acme")); len(entradas) != 0 {
+		t.Fatalf("un SNI ajeno no debe dejar nada en la caché: %v", entradas)
 	}
 }
 

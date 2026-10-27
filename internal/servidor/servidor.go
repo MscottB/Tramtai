@@ -86,6 +86,12 @@ var (
 // guardada, pero sin cifrar en el archivo de entorno de root.
 var ErrClaveEnClaro = Aviso(idioma.T("este systemd no tiene systemd-creds 250 o posterior: las claves del servidor están sin cifrar en /etc/tramtai/claves.env (0600, solo las lee root)"))
 
+// AvisoLetsEncrypt es lo que dicen el registro al arrancar y «servidor estado» con servicio.tls.modo letsencrypt: ese
+// modo acepta el acuerdo de suscriptor de Let's Encrypt (autocert.AcceptTOS).
+func AvisoLetsEncrypt() string {
+	return idioma.T("Let's Encrypt integrado: este modo acepta el acuerdo de suscriptor de Let's Encrypt (https://letsencrypt.org/repository/)")
+}
+
 func noDisponible() error {
 	return errors.New(idioma.T("el modo servidor está disponible en Linux con systemd y en Windows"))
 }
