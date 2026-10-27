@@ -455,6 +455,89 @@ en las últimas versiones.
   más adelante, chino simplificado. Plataformas como Weblate o Crowdin piden una licencia OSI; se verá con el paso a
   open core.
 
+## Anexo A. M0 del sistema
+
+Hecha el 2026-10-26 con la sonda `pruebas/m0servidor` (etiqueta `m0servidor`; se queda como evidencia, como `pruebas/m0b`).
+Las pruebas de los CLI están en `docs/equipo/m0-agentes.md`, apartado «v0.58: servidor».
+
+### Windows: cuenta virtual y Administrador de credenciales
+
+Windows 11 Pro 10.0.26300, sesión de administrador. Servicio `TramtaiM0` (`sc.exe create … obj= "NT SERVICE\TramtaiM0"`), con
+el JSON de la sonda en una carpeta con permiso explícito para esa cuenta
+(`icacls <carpeta> /grant "NT SERVICE\TramtaiM0:(OI)(CI)(M)"`, ejecutado **después** de crear el servicio: antes, la cuenta
+no existe para `icacls`).
+
+| Dato | Resultado |
+|---|---|
+| Cuenta que ve el proceso | `NT SERVICE\TramtaiM0` (SID `S-1-5-80-…`) |
+| `HOME` | vacío |
+| `USERPROFILE` y `os.UserHomeDir()` | `C:\WINDOWS\ServiceProfiles\TramtaiM0` (existe) |
+| `os.UserConfigDir()` y `APPDATA` | `…\ServiceProfiles\TramtaiM0\AppData\Roaming` |
+| `LOCALAPPDATA` | `…\ServiceProfiles\TramtaiM0\AppData\Local` |
+| `credenciales.Guardar("ANTHROPIC_API_KEY", "prueba-m0")` | correcto |
+| `credenciales.Leer(…)` | correcto, el valor coincide |
+| `credenciales.Borrar(…)` | correcto |
+| Tras detener y volver a arrancar el servicio (un arranque guarda, el siguiente lee y borra) | el valor sigue ahí |
+
+- **El Administrador de credenciales funciona sin sesión** con la cuenta virtual, sin cambiar `internal/credenciales`: se
+  escribe, se lee y sobrevive a reiniciar el servicio. El almacén es de esa cuenta (su perfil), no el de quien administra:
+  por eso la CLI entrega la clave al servicio por la API de administración (§4). No se probó que el administrador no lea
+  la clave de la cuenta del servicio desde su propia sesión; se da por el diseño de Windows.
+- **Carpeta de perfil:** no está bajo `%ProgramData%\Tramtai` sino en `C:\WINDOWS\ServiceProfiles\<nombre del servicio>`.
+  `HOME` va vacío, `USERPROFILE` y `APPDATA` apuntan ahí. Se espera que los CLI, que en Windows suelen partir de `USERPROFILE`, dejen
+  su `.claude`, `.codex` y `.copilot` en esa carpeta sin ajustar nada; no está comprobado. El ajuste de `HOME`/`USERPROFILE`
+  de la tabla de arriba solo hará falta si un CLI no la usa (se verá con los inicios de sesión pendientes).
+- **Consecuencias para el instalador (Tareas de `instalar` y `desinstalar`):**
+  - crear el servicio **antes** de dar permisos a `NT SERVICE\Tramtai` en la carpeta de datos;
+  - el perfil sobrevive al servicio: `sc.exe delete` no lo borra y volver a crear un servicio con el mismo nombre
+    recupera la misma cuenta (mismo SID) y el mismo perfil, con las sesiones de los CLI dentro. `desinstalar
+    --borrar-datos` tiene que decidir qué hace con él (la sesión de los CLI es una credencial) y decirlo;
+  - Windows tardó en descargar el perfil al borrar el servicio: `Remove-CimInstance` sobre `Win32_UserProfile` devolvió
+    «el archivo está siendo utilizado» y `reg unload` «acceso denegado». Se quita con un reinicio.
+    **En la máquina de la prueba queda el perfil residual `C:\WINDOWS\ServiceProfiles\TramtaiM0`** (sin ninguna clave) hasta
+    reiniciar; después se quita con `Get-CimInstance Win32_UserProfile | Where-Object LocalPath -like '*TramtaiM0' |
+    Remove-CimInstance`.
+
+### Linux: `systemd-creds`
+
+`docker run --rm <imagen> …`. La imagen mínima no trae `systemd`; con el paquete `systemd` (apt o dnf) el resultado es:
+
+| Imagen | `systemd-creds --version` |
+|---|---|
+| `debian:12` | systemd 252 (252.39-1~deb12u2) |
+| `debian:13` | systemd 257 (257.13-1~deb13u1) |
+| `ubuntu:24.04` | systemd 255 (255.4-1ubuntu8.18) |
+| `rockylinux:9` (en lugar de RHEL 9) | systemd 252 (252-67.el9_8.6) |
+
+Las cuatro dan versión 250 o mayor, así que el camino de `systemd-creds` vale en todas. Además, en `debian:12` y
+`rockylinux:9`, `echo -n prueba-m0 | systemd-creds encrypt --name=tramtai.X - archivo` y `systemd-creds decrypt
+--name=tramtai.X archivo -` devolvieron `prueba-m0` como root, con la clave del equipo (sin TPM2; en el contenedor avisa de
+que la clave no está en un disco cifrado). Queda sin probar en un systemd real la entrega con `LoadCredentialEncrypted=`;
+la prueba del job «Servidor» del CI (Linux) la cubre. El archivo de entorno de root sigue siendo el plan B de systemd
+anterior a la 250 (aquí no hace falta en ninguna de las cuatro).
+
+### Qué queda fuera (según la tabla de «M0 antes de implementar»)
+
+| Comprobación | Resultado | Queda fuera |
+|---|---|---|
+| `claude auth login`, cuenta del servicio (Linux y Windows) | pendiente del usuario | nada por ahora |
+| `codex login --device-auth` con `CODEX_HOME` privado | pendiente del usuario | nada por ahora |
+| Copilot, inicio por dispositivo o token de grano fino | pendiente del usuario | nada por ahora |
+| Términos de Anthropic, OpenAI y GitHub | leídos los tres, con citas (`m0-agentes.md`); no prohíben el uso personal de la propia cuenta desde un servidor | nada |
+| Administrador de credenciales con la cuenta virtual | pasa | nada |
+| `systemd-creds` en Debian 12-13, Ubuntu 24.04 y RHEL 9 | pasa en las cuatro | nada |
+| Carpeta de perfil y estado de los CLI | `ServiceProfiles\<servicio>`; `USERPROFILE` ya apunta ahí | nada |
+
+- **Ninguna fila deja un agente fuera con lo comprobado**, así que `agentes.Ficha` **no** recibe `ServidorSuscripcion`. Se
+  añadirá solo si falla un inicio de sesión pendiente.
+- Los términos de los tres no prohíben el uso personal de la propia cuenta desde un servidor. Prohíben compartir las
+  credenciales o la cuenta (lo que la suscripción personal ya impide con sus condiciones). Lo de OpenAI de extraer datos
+  «de forma automática o mediante programación» trata del raspado de los servicios, no del modo no interactivo de Codex.
+  Tres cosas condicionan: solo el titular, uso ordinario e individual y riesgo de suspensión (Anthropic y su «automated or
+  non-human means»), y que OpenAI pide no exponer Codex «in untrusted or public environments». Eso refuerza lo que la spec
+  ya hace: la suscripción personal en remoto exige TOTP, aviso y `suscripcion_simultaneas` en 1.
+- La **Tarea 13** usa los valores del plan hasta que el usuario haga los inicios de sesión.
+
 ## Anexo B. Borrador de `TERMINOS.md` versión 2
 
 Sustituye a la versión 1 al publicar la v0.58; «[día de publicación]» se cambia por la fecha de la etiqueta. La versión

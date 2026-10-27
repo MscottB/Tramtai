@@ -120,3 +120,89 @@ reales; las cuentas se anonimizan.
 - **Antigravity CLI 1.4.2:** solo admite clave de API (`GEMINI_API_KEY`) en Tramtai; no hay sesión que comprobar.
 - **Para todos:** si una petición real falla por autenticación, el agente queda con «La sesión del CLI no responde» hasta
   que otra funciona (detección pasiva).
+
+## v0.58: servidor
+
+M0 de la suscripción de los CLI en el servicio del sistema (`releases/v0.58-servidor/spec.md`, §5 y «M0 antes de
+implementar»). Las pruebas del sistema (perfil de la cuenta virtual, Administrador de credenciales, `systemd-creds`) están
+en el anexo A de esa spec.
+
+### Pendiente del usuario: inicios de sesión de los CLI con la cuenta del servicio
+
+No se hicieron: necesitan las cuentas del usuario (Claude, ChatGPT, GitHub). **Hasta que se hagan, la Tarea 13 usa los
+valores del plan** (los tres CLI con suscripción en el servidor, cada uno con su inicio de sesión propio) y esta sección
+sigue abierta. Si alguno falla, se aplica la tabla de la spec (ese agente sin suscripción en el servidor, y entonces sí se
+añade `ServidorSuscripcion bool` a `agentes.Ficha`).
+
+**Linux** (una cuenta de prueba que se borra al acabar):
+
+```sh
+sudo useradd --system --create-home --home-dir /var/lib/tramtaim0 --shell /usr/sbin/nologin tramtaim0
+sudo -u tramtaim0 -H claude auth login
+sudo -u tramtaim0 -H codex login --device-auth     # antes: activar el código de dispositivo en ChatGPT (Seguridad)
+sudo -u tramtaim0 -H copilot login                 # o un token de grano fino con «Copilot Requests» en COPILOT_GITHUB_TOKEN
+sudo -u tramtaim0 -H claude auth status --json     # loggedIn, authMethod "claude.ai"
+sudo -u tramtaim0 -H codex login status            # «Logged in using ChatGPT»
+sudo -u tramtaim0 -H sh -c 'ls -a ~ ~/.claude ~/.codex ~/.copilot'   # dónde guarda cada CLI su sesión
+sudo userdel -r tramtaim0                          # al terminar
+```
+
+**Windows** (cuenta virtual): buscar si cada CLI inicia sesión con `NT SERVICE\TramtaiM0`. No hay consola interactiva
+para una cuenta virtual, así que se lanza el mismo `claude auth login`, `codex login --device-auth` y `copilot login`
+desde un servicio de prueba (`sc.exe create TramtaiM0 … obj= "NT SERVICE\TramtaiM0"`, como la sonda de
+`pruebas/m0servidor`) con la salida en un archivo de una carpeta que esa cuenta pueda escribir, para leer el código de
+dispositivo y la dirección. Su perfil es `C:\WINDOWS\ServiceProfiles\TramtaiM0` (anexo A): ahí hay que mirar qué
+carpetas crea cada CLI (`.claude`, `.codex`, `.copilot`, `AppData`) y, tras `claude auth status --json`,
+`codex login status` y el `config.json` de Copilot, si la sesión queda. Esta orden aún no se ha probado: si un servicio
+de prueba no sirve para un inicio de sesión con código, la Tarea 13 lo resolverá con `tramtai --servidor agentes entrar`.
+
+Anotar aquí el resultado de cada CLI y sistema (inicia sesión sí o no, carpeta donde guarda la sesión) y borrar las
+cuentas, servicios y perfiles de prueba.
+
+### Términos vigentes sobre el uso remoto personal (consultados el 2026-10-26)
+
+Citas cortas, solo lo pertinente a usar la propia suscripción desde un servidor propio. Los textos de condiciones pueden
+cambiar: se vuelven a mirar antes de publicar.
+
+**Anthropic**
+
+- [Legal and compliance](https://code.claude.com/docs/en/legal-and-compliance): «Advertised usage limits for Pro and
+  Max plans assume ordinary, individual usage». Los terceros no pueden enrutar peticiones por la suscripción de sus usuarios ni
+  recoger sus credenciales: «developers may not collect, store, or intermediate Claude.ai credentials or session tokens».
+  Pero sí vale que cada usuario inicie sesión él mismo: «signing in to the unmodified Claude Code binary with their own
+  Claude subscription».
+- [Consumer Terms](https://www.anthropic.com/legal/consumer-terms), §2 y §3: «You may not share your Account login
+  information.» Y prohíben acceder «through automated or non-human means», salvo clave de API o «where we otherwise
+  explicitly permit it». Es la zona gris: la página de Claude Code permite el CLI sin modificar con la cuenta del titular,
+  pero no dice nada de manejarlo desde una API propia.
+
+**OpenAI**
+
+- [Codex, autenticación](https://developers.openai.com/codex/auth) (redirige a `learn.chatgpt.com/docs/auth`): el inicio por
+  dispositivo es la vía documentada para equipos remotos: «Enable device code login in your ChatGPT security settings».
+  Para automatizar recomienda otra: «API keys are still the recommended default for automation.» Avisa de dos cosas que
+  afectan al servidor: «Treat `~/.codex/auth.json` like a password: it contains access tokens.» y «Don’t expose Codex
+  execution in untrusted or public environments.»
+- [Términos de uso de OpenAI](https://openai.com/es-419/policies/row-terms-of-use/) (versión para el resto del mundo, en
+  español; consultados el 2026-10-26 con un navegador, porque las herramientas web reciben un 403). Apartado «Registro»:
+  «No puedes compartir las credenciales de tu cuenta». Entre los usos prohibidos: «Extraer datos o Resultados … de forma
+  automática o mediante programación». La primera es la regla de una cuenta para una persona. La segunda trata de extraer
+  datos o resultados de los servicios (raspado), no del modo no interactivo documentado de Codex (`codex exec`); no se
+  puede decir más de lo que dice el texto.
+
+**GitHub**
+
+- [Condiciones del servicio](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service), B.3: «Your login
+  may only be used by one person». Y las
+  [políticas de uso aceptable](https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies),
+  §4, prohíben «any form of excessive automated bulk activity».
+- [Autenticar Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/authenticate-copilot-cli):
+  el token con «Copilot Requests» «Must be owned by your personal account», y el uso con variables de entorno es «ideal for
+  CI/CD pipelines, containers, or headless servers». No hay prohibición expresa de usarlo en un servidor propio.
+
+**Lectura.** Ningún texto prohíbe expresamente que el titular use su propia suscripción, con el CLI sin modificar y su
+propio inicio de sesión, desde un servidor suyo. Los tres condicionan lo que la spec ya exige: solo el titular, sin repartir
+la cuenta, uso ordinario e individual (de ahí `suscripcion_simultaneas` en 1), y el riesgo de suspensión que Anthropic
+se reserva sin aviso previo. Los términos de OpenAI tampoco prohíben que el titular use su propia cuenta desde su servidor:
+prohíben compartir las credenciales o la cuenta, que es lo que la suscripción personal ya impide con sus condiciones. Por
+los términos, ningún agente queda fuera de la suscripción personal en remoto.
