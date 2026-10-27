@@ -122,7 +122,12 @@ func TestConfiables(t *testing.T) {
 			t.Errorf("%d: %s, se esperaba %s", i, red, quiere[i])
 		}
 	}
-	for _, mala := range []string{"proxy.ejemplo.org", "10.0.0.0/33", ""} {
+	if redes, err := Confiables([]string{"::ffff:10.0.0.1", "::ffff:10.0.0.0/104"}); err != nil || len(redes) != 2 ||
+		redes[0].String() != "10.0.0.1/32" || redes[1].String() != "10.0.0.0/8" {
+		t.Errorf("IPv4 dentro de IPv6 se pasa a IPv4: %v %v", redes, err)
+	}
+	// Fiarse de todos dejaría a cualquiera falsificar X-Forwarded-For.
+	for _, mala := range []string{"proxy.ejemplo.org", "10.0.0.0/33", "", "0.0.0.0/0", "::/0", "::ffff:0.0.0.0/96", "::ffff:10.0.0.0/90"} {
 		if _, err := Confiables([]string{mala}); err == nil || !strings.Contains(err.Error(), "servicio.proxy.confiables") {
 			t.Errorf("%q: %v", mala, err)
 		}

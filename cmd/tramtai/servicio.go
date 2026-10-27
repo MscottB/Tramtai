@@ -432,7 +432,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 		Host: host, Puerto: puertoUsado, PuertoConfigurado: puerto, PuertoAutomatico: automatico, Reiniciar: reiniciar,
 		Hosts: hostsPermitidos(host, red.Dominios), Confiables: red.Confiables, Dominios: red.Dominios, Registros: salida, Web: recursos.Web(), Entorno: carpetas.Entorno(),
 		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,
-		EntradaLocal: c.Booleano("servicio.entrada_local") && servidor.Loopback(host), BuscarActualizaciones: c.Booleano("servicio.buscar_actualizaciones"),
+		EntradaLocal: entradaLocal(c, red), BuscarActualizaciones: c.Booleano("servicio.buscar_actualizaciones"),
 		RaizConversor: raizConversor, PrepararConversor: c.Booleano("conversion.preparar_al_iniciar")})
 	if err != nil {
 		oyente.Close()
@@ -530,6 +530,11 @@ func reinicioDelServicio(datos, registro string, pedido *atomic.Bool) func() err
 	}
 }
 
+// entradaLocal dice si el mismo usuario entra sin token (servicio.entrada_local): nunca con el servicio expuesto.
+func entradaLocal(c *configuracion.Configuracion, red servidor.Entrada) bool {
+	return c.Booleano("servicio.entrada_local") && !servidor.Expuesto(red)
+}
+
 // hostsPermitidos son los nombres que valen en Host y Origin: loopback, el host si no lo es y servicio.dominios.
 func hostsPermitidos(host string, dominios []string) []string {
 	hosts := []string{"127.0.0.1", "localhost", "::1"}
@@ -550,8 +555,16 @@ func entradaServidor(c *configuracion.Configuracion) (servidor.Entrada, error) {
 		return servidor.Entrada{}, err
 	}
 	e := servidor.Entrada{Host: c.Texto("servicio.host"), PermitirRemoto: c.Booleano("servicio.permitir_remoto"), Confiables: confiables,
-		TLS: c.Texto("servicio.tls.modo"), Dominios: textos(c.Lista("servicio.dominios")), Correo: c.Texto("servicio.tls.letsencrypt.correo"),
+		TLS: c.Texto("servicio.tls.modo"), Correo: c.Texto("servicio.tls.letsencrypt.correo"),
 		Puerto: c.Entero("servicio.puerto"), Certificado: c.Texto("servicio.tls.certificado"), Clave: c.Texto("servicio.tls.clave")}
+	for _, dominio := range textos(c.Lista("servicio.dominios")) {
+		// Como llegan en Host: sin espacios, sin el punto final y en minúsculas; sin puerto.
+		normal := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(dominio), "."))
+		if normal == "" || strings.ContainsAny(normal, ":/ ") {
+			return servidor.Entrada{}, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("servicio.dominios: %q no es un nombre de dominio (sin puerto, como tramtai.ejemplo.org)", dominio))
+		}
+		e.Dominios = append(e.Dominios, normal)
+	}
 	for _, f := range agentes.Todos() {
 		if agente := f.Nombre; agentes.AdmiteSuscripcion(agente) && c.Texto("adaptadores."+agente+".autenticacion") == adaptadores.AutenticacionSuscripcion {
 			e.Suscripciones = append(e.Suscripciones, servidor.Suscripcion{Agente: agente})

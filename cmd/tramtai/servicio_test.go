@@ -16,9 +16,11 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"tramtai/internal/agentes"
 	"tramtai/internal/api"
 	"tramtai/internal/carpetas"
 	"tramtai/internal/cliente"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/terminos"
 )
@@ -167,6 +169,54 @@ func TestDominiosEnHosts(t *testing.T) {
 	}
 	if h := hostsPermitidos("192.0.2.10", nil); !slices.Contains(h, "192.0.2.10") || !slices.Contains(h, "localhost") {
 		t.Errorf("el host remoto se sigue sumando: %v", h)
+	}
+}
+
+// configDePrueba carga esta configuración global como la del servicio.
+func configDePrueba(t *testing.T, config string) *configuracion.Configuracion {
+	t.Helper()
+	global := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(global, []byte(config), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c
+}
+
+// TestDominiosNormalizados: servicio.dominios sin espacios, sin el punto final y en minúsculas; uno vacío o con puerto
+// es un error que nombra la clave.
+func TestDominiosNormalizados(t *testing.T) {
+	e, err := entradaServidor(configDePrueba(t, "servicio:\n  dominios: [\" Tramtai.Ejemplo.ORG. \", otro.ejemplo.org]\n"))
+	if err != nil || !slices.Equal(e.Dominios, []string{"tramtai.ejemplo.org", "otro.ejemplo.org"}) {
+		t.Fatalf("normalizados: %v %v", e.Dominios, err)
+	}
+	if h := hostsPermitidos("127.0.0.1", e.Dominios); !slices.Contains(h, "tramtai.ejemplo.org") {
+		t.Errorf("los hosts usan la forma normalizada: %v", h)
+	}
+	for _, malo := range []string{`""`, `"."`, "tramtai.ejemplo.org:443", `"tramtai ejemplo.org"`} {
+		if _, err := entradaServidor(configDePrueba(t, "servicio:\n  dominios: ["+malo+"]\n")); err == nil || !strings.Contains(err.Error(), "servicio.dominios") {
+			t.Errorf("%s: %v", malo, err)
+		}
+	}
+}
+
+// TestEntradaLocalExpuesto: con el servicio expuesto (proxy declarado o host remoto) no hay entrada local.
+func TestEntradaLocalExpuesto(t *testing.T) {
+	for config, quiere := range map[string]bool{
+		"servicio:\n  host: 127.0.0.1\n":                        true,
+		"servicio:\n  proxy:\n    confiables: [127.0.0.1/32]\n": false,
+		"servicio:\n  host: 0.0.0.0\n":                          false,
+		"servicio:\n  entrada_local: false\n":                   false,
+	} {
+		c := configDePrueba(t, config)
+		e, err := entradaServidor(c)
+		if err != nil || entradaLocal(c, e) != quiere {
+			t.Errorf("%q: entrada local %v (%v)", config, !quiere, err)
+		}
 	}
 }
 

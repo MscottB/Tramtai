@@ -2,6 +2,7 @@ package servidor
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"net"
 	"net/netip"
 	"strings"
@@ -77,8 +78,14 @@ func ComprobarArranque(e Entrada) error {
 		if err != nil {
 			return invalida(idioma.Tf("no se pueden leer el certificado y la clave (servicio.tls.certificado y servicio.tls.clave): %s", err.Error()))
 		}
+		hoja := par.Leaf
+		if hoja == nil { // Go 1.27 siempre la rellena; por si acaso, sin pánico
+			if hoja, err = x509.ParseCertificate(par.Certificate[0]); err != nil {
+				return invalida(idioma.Tf("no se pueden leer el certificado y la clave (servicio.tls.certificado y servicio.tls.clave): %s", err.Error()))
+			}
+		}
 		for _, dominio := range e.Dominios {
-			if err := par.Leaf.VerifyHostname(dominio); err != nil {
+			if err := hoja.VerifyHostname(dominio); err != nil {
 				return invalida(idioma.Tf("el certificado de servicio.tls.certificado no cubre %s, de servicio.dominios", dominio))
 			}
 		}
@@ -86,7 +93,8 @@ func ComprobarArranque(e Entrada) error {
 	return nil
 }
 
-// Confiables lee servicio.proxy.confiables: direcciones (que valen como /32 o /128) o redes CIDR.
+// Confiables lee servicio.proxy.confiables: direcciones (que valen como /32 o /128) o redes CIDR. Las IPv4 dentro de IPv6
+// (::ffff:…) pasan a IPv4. Fiarse de todos (/0) no se admite: cualquiera podría falsificar X-Forwarded-For.
 func Confiables(lista []string) ([]netip.Prefix, error) {
 	redes := make([]netip.Prefix, 0, len(lista))
 	for _, texto := range lista {
@@ -95,12 +103,14 @@ func Confiables(lista []string) ([]netip.Prefix, error) {
 		if !strings.Contains(texto, "/") {
 			var direccion netip.Addr
 			if direccion, err = netip.ParseAddr(texto); err == nil {
-				direccion = direccion.Unmap()
 				red = netip.PrefixFrom(direccion, direccion.BitLen())
 			}
 		}
-		if err != nil {
-			return nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("servicio.proxy.confiables: %q no es una dirección IP ni una red CIDR (como 127.0.0.1 o 10.0.0.0/8)", texto))
+		if err == nil && red.Addr().Is4In6() {
+			red = netip.PrefixFrom(red.Addr().Unmap(), red.Bits()-96) // menos de /96 sale del rango: Bits() < 0, no válida
+		}
+		if err != nil || !red.IsValid() || red.Bits() == 0 {
+			return nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("servicio.proxy.confiables: %q no es una dirección IP ni una red CIDR admitida (como 127.0.0.1 o 10.0.0.0/8; fiarse de todos, /0, no se admite)", texto))
 		}
 		redes = append(redes, red.Masked())
 	}
