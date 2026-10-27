@@ -138,5 +138,6 @@ func init() {
 		"Abierto en el navegador": "Opened in the browser",
 		"No se pudo abrir el navegador; la tecla y copia la dirección:": "Could not open the browser; the y key copies the address:",
 		"Si no se abrió el navegador, la tecla y copia la dirección:":   "If the browser did not open, the y key copies the address:",
+		"No se pudo guardar la aceptación: %s":                          "Could not save your acceptance: %s",
 	})
 }

@@ -66,3 +66,11 @@ type RutasAcerca struct {
 	Configuracion string `json:"configuracion"`
 	Registro      string `json:"registro"`
 }
+
+// EstadoTerminos es lo que la Web UI necesita para pedir la aceptación de los términos de uso: la versión vigente, si
+// este entorno aún no la aceptó y los cinco riesgos que se enseñan antes de aceptar.
+type EstadoTerminos struct {
+	Version   string   `json:"version"`
+	Pendiente bool     `json:"pendiente"`
+	Riesgos   []string `json:"riesgos"`
+}

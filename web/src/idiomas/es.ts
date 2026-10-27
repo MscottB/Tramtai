@@ -836,6 +836,25 @@ const es = {
   'acerca.registro': 'Registro del servicio',
   'acerca.copiar': 'Copiar datos para soporte',
   'acerca.copiarTexto': 'Copia estos detalles como texto, sin claves; tu carpeta de usuario aparece como ~.',
+  // Los cinco riesgos de los términos de uso: un solo texto para todas partes (internal/terminos.Riesgos lo repite en Go y
+  // una prueba comprueba que coincidan). Sin el modo servidor (el escritorio), el 3 y el 4 tienen su propia redacción
+  // («riesgos.<n>.sinServidor»); la terminal y la Web UI usan la variante si existe, sin repetir la regla.
+  'riesgos.1': 'Tu cuenta con un proveedor puede limitarse, suspenderse o cerrarse si usas tu suscripción con Tramtai, y el proveedor puede cambiar sus reglas sin avisar. El autor no puede recuperarla.',
+  'riesgos.2': 'Las condiciones de Tramtai (TOTP, una petición a la vez) bajan el riesgo, pero no lo quitan ni son una opinión legal sobre los términos del proveedor.',
+  'riesgos.3': 'Lo que abres a la red es responsabilidad tuya: HTTPS, cortafuegos, contraseñas, copias y actualizaciones.',
+  'riesgos.4': 'Si otras personas usan tu servidor, tú respondes de sus datos ante la ley que te aplique.',
+  'riesgos.5': 'Tramtai es gratuito y se entrega tal cual, sin garantías.',
+  'riesgos.3.sinServidor': 'Si usas el modo servidor, lo que abres a la red es responsabilidad tuya: HTTPS, cortafuegos, contraseñas, copias y actualizaciones.',
+  'riesgos.4.sinServidor': 'Si usas el modo servidor y otras personas lo usan, tú respondes de sus datos ante la ley que te aplique.',
+  // «Antes de seguir»: la aceptación de los términos de uso al abrir la Web UI, la app de escritorio o la terminal.
+  'terminos.titulo': 'Antes de seguir',
+  'terminos.intro': 'Para usar Tramtai tienes que aceptar los términos de uso (versión {version}). Estos son los cinco riesgos que debes conocer antes de aceptar.',
+  'terminos.leer': 'Leer los términos completos',
+  'terminos.leerTerminal': 'Los términos completos: «tramtai terminos» o {url}',
+  'terminos.acepto': 'Acepto',
+  'terminos.salir': 'Salir',
+  'terminos.salio': 'Has salido',
+  'terminos.salioTexto': 'No se ha usado nada de Tramtai. Ya puedes cerrar esta ventana. Para ver los términos otra vez, recarga la página.',
   'receta.fueraDeApps': 'No disponible para APIs: {agentes}. Aún no se ha comprobado si pueden usar herramientas; úsalos desde Probar.',
   'ejecutar.adjuntarLimites': 'Hasta {n} archivos de {mb} MB; convertidos a texto, hasta {texto} MB. Ocupan contexto del modelo: si no caben en el principal, se prueba con el respaldo.',
   'registro.entrada': 'Entrada: ~{n} tokens',

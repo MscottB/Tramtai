@@ -6,7 +6,7 @@ import type { Clave } from '../idiomas/es'
 import { compartida } from '../compartida'
 import { ERRORES } from '../ayuda/temas/problemas'
 import { actualizacion, dialogoActualizar, diasHistorial, sesion } from '../estado'
-import type { Acerca, Capacidades, PrimerosPasos, EspacioUI, AjustesPunto, ConfigPunto, EntradaConfiguracion, EstadoActualizacion, EstadoClave, EstadoConversor, ResumenInstancia, EstadoPresupuesto, EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Novedad, ProgresoActualizacion, Retencion, Sesion, Solicitud, Trabajo, UsoPunto } from './tipos'
+import type { Acerca, Capacidades, EstadoTerminos, PrimerosPasos, EspacioUI, AjustesPunto, ConfigPunto, EntradaConfiguracion, EstadoActualizacion, EstadoClave, EstadoConversor, ResumenInstancia, EstadoPresupuesto, EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Novedad, ProgresoActualizacion, Retencion, Sesion, Solicitud, Trabajo, UsoPunto } from './tipos'
 
 // Campos declarados aparte (no en el constructor): node --test ejecuta este archivo quitando solo los tipos.
 export class ErrorApi extends Error {
@@ -96,6 +96,9 @@ export const api = {
   autoarranque: (activo: boolean) => pedir<Sesion>('POST', '/ui/autoarranque', { activo }).then(recordar),
   actualizacion: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion'),
   acerca: () => pedir<Acerca>('GET', '/ui/acerca'),
+  // terminos dice si falta aceptar los términos de uso vigentes; aceptarTerminos guarda la aceptación hecha aquí.
+  terminos: () => pedir<EstadoTerminos>('GET', '/ui/terminos'),
+  aceptarTerminos: () => pedir<void>('POST', '/ui/terminos'),
   limites: () => pedir<LimitesPeticion>('GET', '/api/v1/limites'),
   // El documento OpenAPI se reescribe tal cual (servers, operaciones) antes de guardarlo.
   openapi: () => pedir<Record<string, any>>('GET', '/api/v1/openapi.json'),

@@ -222,5 +222,20 @@ func init() {
 		"presupuesto:": "budget:",
 
 		". ¿Confías en esta carpeta?": ". Do you trust this folder?",
+		// términos de uso (internal/terminos, tramtai terminos)
+		"Tu cuenta con un proveedor puede limitarse, suspenderse o cerrarse si usas tu suscripción con Tramtai, y el proveedor puede cambiar sus reglas sin avisar. El autor no puede recuperarla.": "Your account with a provider may be limited, suspended or closed if you use your subscription with Tramtai, and the provider may change its rules without notice. The author cannot recover it.",
+		"Las condiciones de Tramtai (TOTP, una petición a la vez) bajan el riesgo, pero no lo quitan ni son una opinión legal sobre los términos del proveedor.":                                    "Tramtai’s conditions (TOTP, one request at a time) lower the risk but do not remove it, and they are not a legal opinion on the provider’s terms.",
+		"Lo que abres a la red es responsabilidad tuya: HTTPS, cortafuegos, contraseñas, copias y actualizaciones.":                                                                                 "What you open to the network is your responsibility: HTTPS, firewall, passwords, backups and updates.",
+		"Si otras personas usan tu servidor, tú respondes de sus datos ante la ley que te aplique.":                                                                                                 "If other people use your server, you answer for their data under the law that applies to you.",
+		"Tramtai es gratuito y se entrega tal cual, sin garantías.":                                                                                                                                 "Tramtai is free and provided as is, without warranties.",
+		"Si usas el modo servidor, lo que abres a la red es responsabilidad tuya: HTTPS, cortafuegos, contraseñas, copias y actualizaciones.":                                                       "If you use server mode, what you open to the network is your responsibility: HTTPS, firewall, passwords, backups and updates.",
+		"Si usas el modo servidor y otras personas lo usan, tú respondes de sus datos ante la ley que te aplique.":                                                                                  "If you use server mode and other people use it, you answer for their data under the law that applies to you.",
+		"no se pudo leer %s: %s":                    "could not read %s: %s",
+		"forma de aceptar desconocida: %s":          "unknown way of accepting: %s",
+		"Muestra los términos de uso de Tramtai":    "Shows Tramtai’s terms of use",
+		"Acepta los términos de uso en este equipo": "Accepts the terms of use on this computer",
+		"cómo se aceptan (lo usa el instalador)":    "how they are accepted (used by the installer)",
+		"términos de uso aceptados (versión %s)\n":  "terms of use accepted (version %s)\n",
+		"aviso: aún no has aceptado los términos de uso de Tramtai (versión %s): léelos con «tramtai terminos» y acéptalos con «tramtai terminos aceptar»": "notice: you have not accepted Tramtai’s terms of use yet (version %s): read them with “tramtai terminos” and accept them with “tramtai terminos aceptar”",
 	})
 }

@@ -62,6 +62,9 @@ Var textoTerminado
 !insertmacro MUI_PAGE_LICENSE "${RAIZ}\bin\LICENCIA.rtf"
 !define MUI_PAGE_HEADER_TEXT "$(terminosTitulo)"
 !define MUI_PAGE_HEADER_SUBTEXT "$(terminosSubtitulo)"
+; Los términos se aceptan de forma expresa: sin marcar la casilla, Siguiente queda desactivado. MUI quita estos define al insertar la página, así que la de LICENCIA no la lleva.
+!define MUI_LICENSEPAGE_CHECKBOX
+!define MUI_LICENSEPAGE_CHECKBOX_TEXT "$(terminosAcepto)"
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SaltarSiActualiza
 !insertmacro MUI_PAGE_LICENSE "${RAIZ}\bin\TERMINOS.rtf"
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SaltarSiActualiza
@@ -128,6 +131,8 @@ LangString terminosTitulo ${LANG_SPANISH} "Términos de uso"
 LangString terminosTitulo ${LANG_ENGLISH} "Terms of use"
 LangString terminosSubtitulo ${LANG_SPANISH} "Léelos antes de instalar: explican tu responsabilidad con los servicios de terceros."
 LangString terminosSubtitulo ${LANG_ENGLISH} "Read them before installing: they explain your responsibility with third-party services."
+LangString terminosAcepto ${LANG_SPANISH} "He leído los riesgos y acepto los términos de uso"
+LangString terminosAcepto ${LANG_ENGLISH} "I have read the risks and I accept the terms of use"
 LangString cerrarAbierta ${LANG_SPANISH} "Tramtai está abierto. Para continuar se cerrará y se detendrá su servicio; las peticiones en curso terminan antes.$\r$\n$\r$\nAl terminar de instalar, Tramtai volverá a abrirse."
 LangString cerrarAbierta ${LANG_ENGLISH} "Tramtai is open. To continue it will be closed and its service stopped; requests in progress finish first.$\r$\n$\r$\nWhen the installation finishes, Tramtai will open again."
 LangString cerrarAbiertaDesinstalar ${LANG_SPANISH} "Tramtai está abierto. Para desinstalarlo se cerrará y se detendrá su servicio; las peticiones en curso terminan antes."
@@ -294,6 +299,13 @@ SectionEnd
 ; actualizar y «Actualizar ahora»); con el asistente, la casilla «Abrir Tramtai» de la última página decide. Si solo
 ; estaba el servicio (sin la app), se vuelve a iniciar en segundo plano.
 Function .onInstSuccess
+  ; Con el asistente, llegar aquí es haber marcado la casilla de los términos: queda escrito en datos/terminos.json. En silencio o al
+  ; actualizar no se vio la página y no se acepta nada: la app pide «Antes de seguir» al abrirse.
+  ${IfNot} ${Silent}
+  ${AndIf} $actualizando != 1
+    nsExec::Exec '"$INSTDIR\tramtai.exe" terminos aceptar --como instalador'
+    Pop $0
+  ${EndIf}
   ${GetParameters} $0
   ClearErrors
   ${GetOptions} $0 "/abrir" $1

@@ -17,11 +17,22 @@ import (
 )
 
 func main() {
+	raiz := nuevaRaiz()
+	if !idioma.Ingles() {
+		ayudaEnEspanol(raiz)
+	}
+	if err := raiz.Execute(); err != nil {
+		os.Exit(1)
+	}
+}
+
+// nuevaRaiz arma la orden raíz con todas las demás (las pruebas arman la suya).
+func nuevaRaiz() *cobra.Command {
 	raiz := &cobra.Command{Use: "tramtai", Short: idioma.T("Tus agentes de IA como una API local"),
 		Long: idioma.Tf("Tramtai expone %s como una API local.\n\n"+
 			"  tramtai          terminal interactiva\n"+
 			"  tramtai abrir    Web UI en el navegador (inicia el servicio si hace falta)", enumerar(programasAgentes(), idioma.T("y"))),
-		SilenceUsage: true, Version: version.Texto(),
+		SilenceUsage: true, Version: version.Texto(), PersistentPreRun: avisarTerminos,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if !term.IsTerminal(os.Stdin.Fd()) || !term.IsTerminal(os.Stdout.Fd()) {
 				return cmd.Help()
@@ -48,13 +59,9 @@ func main() {
 		comandoClaves(),
 		comandoInstalacion(),
 		comandoActualizar(),
+		comandoTerminos(),
 	)
-	if !idioma.Ingles() {
-		ayudaEnEspanol(raiz)
-	}
-	if err := raiz.Execute(); err != nil {
-		os.Exit(1)
-	}
+	return raiz
 }
 
 // plantillaUso es la de cobra con los títulos en español; [opciones] sustituye al [flags] de la línea de uso.
