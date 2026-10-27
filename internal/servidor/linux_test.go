@@ -5,11 +5,13 @@ package servidor
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"os"
 	"os/user"
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 	"testing"
 
 	"tramtai/internal/configuracion"
@@ -204,8 +206,8 @@ func TestInstalarNoSigueEnlaces(t *testing.T) {
 		if info, _ := os.Stat(otra); info.Mode().Perm() != 0o755 || existe(filepath.Join(otra, "terminos.json")) {
 			t.Errorf("la carpeta enlazada no se toca: %v", info.Mode())
 		}
-		if slices.Contains(p.duenos, "datos") {
-			t.Error("al enlace no se le cambia el dueño de lo que apunta")
+		if len(p.duenos) > 0 {
+			t.Errorf("se falla antes de cambiar dueños: %q", p.duenos)
 		}
 	})
 	t.Run("config.yaml", func(t *testing.T) {
@@ -220,8 +222,20 @@ func TestInstalarNoSigueEnlaces(t *testing.T) {
 		if err := os.Symlink(fuera, filepath.Join(p.r.Datos, "config.yaml")); err != nil {
 			t.Fatal(err)
 		}
-		if err := Instalar(Opciones{Origen: p.origen, AceptoTerminos: true}); err == nil {
-			t.Error("con config.yaml enlazado, instalar falla")
+		if err := Instalar(Opciones{Origen: p.origen, AceptoTerminos: true}); !errors.As(err, new(tipoInesperado)) {
+			t.Errorf("con config.yaml enlazado, instalar falla por el tipo: %v", err)
+		}
+	})
+	t.Run("config.yaml FIFO", func(t *testing.T) {
+		p := nuevaPrueba(t)
+		if err := os.MkdirAll(p.r.Datos, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := syscall.Mkfifo(filepath.Join(p.r.Datos, "config.yaml"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := Instalar(Opciones{Origen: p.origen, AceptoTerminos: true}); !errors.As(err, new(tipoInesperado)) {
+			t.Errorf("con un FIFO por config.yaml, instalar falla sin quedarse leyéndolo: %v", err)
 		}
 	})
 }
@@ -370,13 +384,38 @@ func TestAjustarDueno(t *testing.T) {
 	if err := os.Symlink(fuera, filepath.Join(raiz, "datos", "enlace")); err != nil {
 		t.Fatal(err)
 	}
+	// Un enlace duro a un archivo de fuera (como /etc/shadow) no cambia de dueño.
+	if err := os.Link(filepath.Join(fuera, "ajeno"), filepath.Join(raiz, "datos", "duro")); err != nil {
+		t.Fatal(err)
+	}
 	if err := AjustarDueno(raiz); err != nil {
 		t.Fatal(err)
 	}
 	mismas(t, "dueños", duenos, ".", "config.yaml", "datos", "datos/administrador", "datos/enlace")
+
+	// Lo que desaparece a mitad del recorrido (un temporal del servicio en marcha) no lo para.
+	duenos = nil
+	anotar := lchown
+	lchown = func(r *os.Root, nombre string, uid, gid int) error {
+		if nombre == "config.yaml" {
+			return &fs.PathError{Op: "lchown", Path: nombre, Err: fs.ErrNotExist}
+		}
+		return anotar(r, nombre, uid, gid)
+	}
+	if err := AjustarDueno(raiz); err != nil {
+		t.Fatalf("un archivo que ya no está no es un error: %v", err)
+	}
+	mismas(t, "dueños sin config.yaml", duenos, ".", "datos", "datos/administrador", "datos/enlace")
+	lchown = anotar
+
 	duenos = nil
 	if err := AjustarDueno(filepath.Join(raiz, "no-existe")); err != nil || len(duenos) > 0 {
 		t.Errorf("sin la raíz no hace nada: %v %q", err, duenos)
+	}
+	// Antes de instalar no hay cuenta: no hay nada que ajustar ni de qué avisar.
+	idsServicio = func() (int, int, error) { return 0, 0, user.UnknownUserError("tramtai") }
+	if err := AjustarDueno(raiz); err != nil || len(duenos) > 0 {
+		t.Errorf("sin la cuenta no hace nada: %v %q", err, duenos)
 	}
 }
 

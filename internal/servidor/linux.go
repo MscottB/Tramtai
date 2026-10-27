@@ -9,12 +9,14 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
@@ -53,8 +55,11 @@ func idsDe(cuenta string) (uid, gid int, err error) {
 // AjustarDueno deja toda la raíz del servidor a nombre de la cuenta del servicio: lo que la CLI escribe como root
 // (configuración, términos, administrador) el servicio, que corre como tramtai, no podría leerlo. La raíz es de esa
 // cuenta, que podría dejar enlaces: el recorrido va por un os.Root, no sigue enlaces y no sale de ella. Sin la raíz no
-// hace nada.
+// hace nada, y tampoco sin la cuenta (aún no se ha instalado).
 func AjustarDueno(raiz string) error {
+	if _, _, err := idsServicio(); errors.As(err, new(user.UnknownUserError)) {
+		return nil
+	}
 	r, err := os.OpenRoot(raiz)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil
@@ -71,11 +76,21 @@ func ajustarDueno(r *os.Root) error {
 	if err != nil {
 		return err
 	}
-	return fs.WalkDir(r.FS(), ".", func(nombre string, _ fs.DirEntry, err error) error {
-		if err != nil {
-			return err
+	return fs.WalkDir(r.FS(), ".", func(nombre string, d fs.DirEntry, err error) error {
+		if err == nil && d.Type().IsRegular() {
+			var info fs.FileInfo
+			// Un enlace duro puede ser un archivo de fuera (/etc/shadow, con fs.protected_hardlinks=0): no se regala.
+			if info, err = r.Lstat(nombre); err == nil && info.Sys().(*syscall.Stat_t).Nlink > 1 {
+				return nil
+			}
 		}
-		return lchown(r, nombre, uid, gid)
+		if err == nil {
+			err = lchown(r, nombre, uid, gid)
+		}
+		if errors.Is(err, fs.ErrNotExist) { // el servicio, en marcha, renombró o borró un temporal: se sigue con el resto
+			return nil
+		}
+		return err
 	})
 }
 
@@ -214,9 +229,16 @@ func comprobarTipo(r *os.Root, nombre string, tipo fs.FileMode) error {
 		return err
 	}
 	if info.Mode().Type() != tipo {
-		return fmt.Errorf(idioma.T("%s no es lo que se espera (¿un enlace?): quítalo y repite la instalación"), filepath.Join(r.Name(), nombre))
+		return tipoInesperado(filepath.Join(r.Name(), nombre))
 	}
 	return nil
+}
+
+// tipoInesperado es el error de una ruta de la raíz que no es lo que se espera: un enlace, un FIFO…
+type tipoInesperado string
+
+func (e tipoInesperado) Error() string {
+	return idioma.Tf("%s no es lo que se espera (¿un enlace?): quítalo y repite la instalación", string(e))
 }
 
 // escribirEn escribe un archivo de dentro de la raíz en un temporal nuevo y lo renombra encima: si el destino era un
@@ -246,12 +268,21 @@ func escribirEn(r *os.Root, nombre string, datos []byte, permisos os.FileMode) e
 	return err
 }
 
-// leerConfiguracion lee config.yaml de la raíz del servidor sin seguir un enlace.
+// leerConfiguracion lee config.yaml de la raíz del servidor sin seguir un enlace. Lo abre sin bloquear y comprueba el
+// descriptor abierto: si entre el Lstat y la apertura lo cambiaron por un FIFO, root no se queda colgado leyéndolo.
 func leerConfiguracion(r *os.Root) (*configuracion.Configuracion, error) {
 	if err := comprobarTipo(r, "config.yaml", 0); err != nil {
 		return nil, err
 	}
-	bruto, err := r.ReadFile("config.yaml")
+	f, err := r.OpenFile("config.yaml", os.O_RDONLY|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	if info, err := f.Stat(); err != nil || !info.Mode().IsRegular() {
+		return nil, cmp.Or(err, error(tipoInesperado(filepath.Join(r.Name(), "config.yaml"))))
+	}
+	bruto, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}
@@ -333,6 +364,7 @@ func Reiniciar() error {
 		return err
 	}
 	if existe(r.Unidad) {
+		// Sin opciones extra: la Tarea 11 derivará LetsEncrypt de servicio.tls.modo en actualizarUnidad.
 		cambiada, err := actualizarUnidad(r, UnidadOpciones{})
 		if err != nil {
 			return err
