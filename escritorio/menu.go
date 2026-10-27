@@ -59,6 +59,11 @@ type estadoMenu struct {
 	windows                  bool
 }
 
+// sinEsquema quita http:// o https:// de una dirección que se muestra.
+func sinEsquema(base string) string {
+	return strings.TrimPrefix(strings.TrimPrefix(base, "http://"), "https://")
+}
+
 // entradasMenu calcula el menú de la bandeja sin tocar Wails, para poder probarlo.
 func entradasMenu(e estadoMenu) []entrada {
 	enMarcha := e.base != ""
@@ -68,7 +73,7 @@ func entradasMenu(e estadoMenu) []entrada {
 	if !enMarcha {
 		add(entrada{texto: idioma.T("Servicio detenido"), icono: "rojo", accion: accionMostrar})
 	} else {
-		add(entrada{texto: idioma.Tf("Servicio en marcha · %s", strings.TrimPrefix(e.base, "http://")), icono: "verde", accion: accionMostrar})
+		add(entrada{texto: idioma.Tf("Servicio en marcha · %s", sinEsquema(e.base)), icono: "verde", accion: accionMostrar})
 	}
 	// «Acerca de» (donde se ve la versión), y si hay una más nueva (la opción para instalarla va justo debajo).
 	if e.nueva != "" {

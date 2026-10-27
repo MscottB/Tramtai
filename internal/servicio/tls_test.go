@@ -237,23 +237,14 @@ func TestPuntoConPuertoPropioHablaTLS(t *testing.T) {
 	}
 }
 
-// TestBasesConTLS: con TLS propio se anuncia https (con el primer dominio); sin él, todo como antes.
-func TestBasesConTLS(t *testing.T) {
-	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
-	puerto := strconv.Itoa(s.opc.Puerto)
-	if s.BasePublica() != "http://127.0.0.1:"+puerto || s.BaseLocal() != s.BasePublica() {
+// TestBasesSinTLS: sin TLS propio hay una sola base, la de siempre (con TLS, TestClienteConTLSPropio monta el servicio como en producción).
+func TestBasesSinTLS(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	if base := "http://127.0.0.1:" + strconv.Itoa(s.opc.Puerto); s.BasePublica() != base || s.BaseLocal() != base || s.urlPublica(4321) != "http://127.0.0.1:4321" {
 		t.Fatalf("sin TLS: %s %s", s.BasePublica(), s.BaseLocal())
 	}
-	if _, err := s.ActivarGlobal(); err != nil {
-		t.Fatal(err)
-	}
-	s.opc.TLS, s.opc.Dominios = &tls.Config{}, []string{"tramtai.ejemplo.org", "otro.ejemplo.org"}
-	if s.BasePublica() != "https://tramtai.ejemplo.org:"+puerto {
-		t.Fatalf("con TLS: %s", s.BasePublica())
-	}
-	if r, cuerpo := pedir(t, ts.URL, "POST", "/api/v1/servicio/sesiones", s.tokenAdmin, `{"instancia":"global"}`); r.StatusCode != 200 ||
-		!strings.Contains(cuerpo, `"url":"https://tramtai.ejemplo.org:`+puerto+`/ui/entrar?codigo=`) {
-		t.Fatalf("enlace de entrada: %d %s", r.StatusCode, cuerpo)
+	if d := s.BasePublica(); strings.Contains(d, "https") {
+		t.Fatal(d)
 	}
 }
 

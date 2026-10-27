@@ -228,7 +228,7 @@ func (p *Pagina) textoClave() string {
 	e := p.estilos
 	base := p.resumen.Base
 	if base == "" && p.c.Cli != nil {
-		base = p.c.Cli.Base
+		base = p.c.Cli.BasePublica()
 	}
 	l := []string{e.Titulo.Render(strings.TrimSpace(p.tx("conectar.directa", "nombre", p.nombre))), p.tx("conectar.directaTexto"), "",
 		e.Tenue.Render(p.tx("conectar.clave"))}

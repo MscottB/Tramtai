@@ -72,6 +72,15 @@ type Cliente struct {
 	http   *http.Client
 }
 
+// BasePublica es la dirección que se muestra o se copia: la que las apps usan para llegar al servicio. Con TLS propio
+// no es Base (el oyente local, efímero, que usa el propio cliente); sin TLS o con un servicio anterior es la misma.
+func (c *Cliente) BasePublica() string {
+	if c.Descriptor.BasePublica != "" {
+		return c.Descriptor.BasePublica
+	}
+	return c.Base
+}
+
 // Conectar lee el descriptor y el token de servicio y comprueba con un reto en /healthz que responde un servicio que
 // conoce el token, no otro proceso que ocupe el puerto; el token no sale hasta entonces. Si responde, sin reto, el
 // servicio del descriptor, es el de una versión anterior: ErrServicioAnterior (en modo servidor, ErrServidorOtraVersion).

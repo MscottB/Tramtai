@@ -29,6 +29,9 @@ func (s *Servicio) actualizarDescriptor() error {
 	d := Descriptor{Identificador: s.ID, PID: os.Getpid(), FirmaInicio: strconv.Itoa(os.Getpid()) + "@" + s.IniciadoEn.UTC().Format(time.RFC3339Nano),
 		IniciadoEn: s.IniciadoEn, Host: s.opc.Host, Puerto: s.opc.Puerto, Base: s.BaseLocal(), Version: version.Version,
 		Instancias: []string{}, Puntos: []contrato.PuntoDescriptor{}}
+	if publica := s.BasePublica(); publica != d.Base {
+		d.BasePublica = publica
+	}
 	for id := range s.instancias {
 		d.Instancias = append(d.Instancias, id)
 	}

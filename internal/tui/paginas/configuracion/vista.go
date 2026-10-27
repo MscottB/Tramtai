@@ -131,7 +131,7 @@ func (p *Pagina) bloqueDe(sec string) bloque {
 	case secValores:
 		return bloque{titulo: p.tx("config.valoresTecnicos"), texto: p.tx("config.valoresTexto")}
 	case secPuerto:
-		b := bloque{titulo: p.tx("puerto.titulo"), texto: p.tx("puerto.texto"), lineas: []string{p.tx("puerto.actual", "url", p.c.Cli.Base)}}
+		b := bloque{titulo: p.tx("puerto.titulo"), texto: p.tx("puerto.texto"), lineas: []string{p.tx("puerto.actual", "url", p.c.Cli.BasePublica())}}
 		if a := p.ajustes; a.Puerto != a.PuertoConfigurado {
 			b.lineas = append(b.lineas, e.Advertencia.Render(p.tx("puerto.distinto", "configurado", strconv.Itoa(a.PuertoConfigurado), "actual", strconv.Itoa(a.Puerto))))
 		}

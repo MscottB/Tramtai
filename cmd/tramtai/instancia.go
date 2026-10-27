@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 	"time"
@@ -101,6 +102,15 @@ func rotarTokenInstancia(cmd *cobra.Command, datos, id string, c *configuracion.
 	return nil
 }
 
+// imprimirActivacion muestra dónde quedó el espacio y cómo conectarlo. Las direcciones son las públicas del servicio
+// (cliente.BasePublica), las que las apps guardan: con TLS propio la del descriptor es un oyente local que cambia en
+// cada arranque.
+func imprimirActivacion(out io.Writer, ambito string, a contrato.ActivacionInstancia, c *cliente.Cliente) {
+	fmt.Fprintf(out, idioma.T("espacio %s activo en %s\n"), a.Instancia.ID, c.BasePublica())
+	fmt.Fprintf(out, "  token:              %s (tramtai %s token)\n", a.Instancia.ArchivoToken, ambito)
+	fmt.Fprintf(out, "  OpenAI base_url:    %s/openai/v1\n  Anthropic base_url: %s/anthropic\n", c.BasePublica(), c.BasePublica())
+}
+
 // comandoInstancia crea los comandos de la instancia global o de la del proyecto actual.
 func comandoInstancia(ambito string) *cobra.Command {
 	corto := map[string]string{"global": idioma.T("Espacio global: texto y archivos sin repositorio (también: tramtai espacio)"),
@@ -122,10 +132,7 @@ func comandoInstancia(ambito string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			out := cmd.OutOrStdout()
-			fmt.Fprintf(out, idioma.T("espacio %s activo en %s\n"), a.Instancia.ID, c.Base)
-			fmt.Fprintf(out, "  token:              %s (tramtai %s token)\n", a.Instancia.ArchivoToken, ambito)
-			fmt.Fprintf(out, "  OpenAI base_url:    %s/openai/v1\n  Anthropic base_url: %s/anthropic\n", c.Base, c.Base)
+			imprimirActivacion(cmd.OutOrStdout(), ambito, a, c)
 			return nil
 		}}
 	detener := &cobra.Command{Use: "detener", Short: idioma.T("Detiene el espacio: vacía su cola sin afectar a los demás"),

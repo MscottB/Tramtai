@@ -62,8 +62,13 @@ func TestClienteConTLSPropio(t *testing.T) {
 	if _, err := cli.Activar(context.Background(), "global", ""); err != nil {
 		t.Fatalf("la CLI opera por el oyente local: %v", err)
 	}
-	if d, _ := contrato.LeerDescriptor(datos); d.Base != cli.Base || s.BasePublica() != "https://tramtai.ejemplo.org:"+strconv.Itoa(puerto) {
-		t.Fatalf("descriptor %s, público %s", d.Base, s.BasePublica())
+	publica := "https://tramtai.ejemplo.org:" + strconv.Itoa(puerto)
+	if d, _ := contrato.LeerDescriptor(datos); d.Base != cli.Base || d.BasePublica != publica || s.BasePublica() != publica || cli.BasePublica() != publica {
+		t.Fatalf("descriptor %s, público %s (%s, cliente %s)", d.Base, d.BasePublica, s.BasePublica(), cli.BasePublica())
+	}
+	// Lo que se anuncia a las personas (el enlace de entrada de la Web UI) también es la base pública.
+	if enlace, err := cli.URLWeb(context.Background(), "global"); err != nil || !strings.HasPrefix(enlace, publica+"/ui/entrar?codigo=") {
+		t.Fatalf("enlace de entrada: %q %v", enlace, err)
 	}
 	s.Cerrar()
 	if r, err := http.Get(cli.Base + "/healthz"); err == nil {

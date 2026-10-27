@@ -202,8 +202,10 @@ func main() {
 	}
 	recibir = func(mensaje, origen string) {
 		cli := enMarcha()
-		// Solo la Web UI del servicio en marcha puede pedirlo.
-		if cli == nil || !strings.HasPrefix(origen, cli.Base+"/") {
+		// Solo la Web UI del servicio en marcha puede pedirlo. Con TLS propio la ventana se abre en la dirección pública
+		// (https) y el cliente habla por el oyente local, que cambia en cada arranque: vale cualquiera de las dos. Tras
+		// un reinicio del servicio, una ventana abierta con la base anterior deja de coincidir hasta que se vuelva a abrir.
+		if cli == nil || !strings.HasPrefix(origen, cli.Base+"/") && !strings.HasPrefix(origen, cli.BasePublica()+"/") {
 			return
 		}
 		switch mensaje {
@@ -337,7 +339,7 @@ func main() {
 			case accionIrMisApis:
 				return func(*application.Context) { irA("conectar") }
 			case accionCopiarDireccion:
-				return func(*application.Context) { app.Clipboard.SetText(cli.Base) }
+				return func(*application.Context) { app.Clipboard.SetText(cli.BasePublica()) }
 			case accionIniciar:
 				return func(*application.Context) {
 					// Si ya está en marcha solo vuelve a entrar; si no, lo inicia en segundo plano.
@@ -447,13 +449,13 @@ func main() {
 		firma = nueva
 		estado := idioma.T("Servicio detenido")
 		if cli != nil {
-			estado = idioma.Tf("Servicio en marcha en %s", strings.TrimPrefix(cli.Base, "http://"))
+			estado = idioma.Tf("Servicio en marcha en %s", sinEsquema(cli.BasePublica()))
 		}
 		bandeja.SetTooltip(nombre + " · " + estado)
 		anterior := menuActual
 		base := ""
 		if cli != nil {
-			base = cli.Base
+			base = cli.BasePublica()
 		}
 		menuActual = construir(cli, estadoMenu{base: base, puntos: puntos, proyectos: proyectos, conWindows: conWindows,
 			sinPreguntar: sinPreguntar, nueva: masNueva, instalable: instalable, act: actMenu, autoarranque: autoarranque.Disponible, windows: runtime.GOOS == "windows"})

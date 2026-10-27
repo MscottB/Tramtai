@@ -179,7 +179,7 @@ func comandoServicio() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("servicio en marcha en %s\nWeb UI: %s (o tramtai abrir)\n"), c.Base, c.Base)
+			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("servicio en marcha en %s\nWeb UI: %s (o tramtai abrir)\n"), c.BasePublica(), c.BasePublica())
 			return nil
 		}}
 	iniciar.Flags().BoolVarP(&segundoPlano, "segundo-plano", "d", false, idioma.T("inicia el servicio desacoplado de esta terminal"))
@@ -315,7 +315,7 @@ func comandoServicio() *cobra.Command {
 			if len(args) == 0 && !cmd.Flags().Changed("automatico") {
 				fmt.Fprintf(out, idioma.T("puerto configurado: %d · si está ocupado, usar otro libre: %v\n"), c.Entero("servicio.puerto"), c.Booleano("servicio.puerto_automatico"))
 				if errActivo == nil {
-					fmt.Fprintln(out, idioma.Tf("servicio en marcha en %s", activo.Base))
+					fmt.Fprintln(out, idioma.Tf("servicio en marcha en %s", activo.BasePublica()))
 				}
 				return nil
 			}
@@ -398,7 +398,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	}
 	activo, err := cliente.Conectar(datos)
 	if err == nil {
-		return fmt.Errorf(idioma.T("el servicio ya está en marcha en %s"), activo.Base)
+		return fmt.Errorf(idioma.T("el servicio ya está en marcha en %s"), activo.BasePublica())
 	}
 	if errors.Is(err, cliente.ErrServidorOtraVersion) { // el servicio del sistema no se detiene ni se pisa desde aquí
 		return err

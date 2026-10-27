@@ -424,12 +424,11 @@ func (s *Servicio) abrirPunto(c candidato, huella, firma string, inst *Instancia
 		p.err = idioma.Tf("no se pudo abrir %s (¿puerto en uso?)", direccion)
 		return p
 	}
-	url := "http://" + direccion
 	if s.opc.TLS != nil { // las claves Bearer de las apps no viajan en claro por el puerto propio del punto
-		oyente, url = tls.NewListener(oyente, s.opc.TLS), "https://"+direccion
+		oyente = tls.NewListener(oyente, s.opc.TLS)
 		handler = s.conHSTS(handler)
 	}
-	p.handler, p.url, p.oyente = handler, url, oyente
+	p.handler, p.url, p.oyente = handler, s.urlPublica(c.cfg.Puerto), oyente
 	p.srv = &http.Server{Handler: handler, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 64 << 10,
 		ConnContext: ContextoDeConexion}
 	go p.srv.Serve(oyente)

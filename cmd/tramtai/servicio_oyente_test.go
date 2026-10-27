@@ -1,9 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"net"
 	"strings"
 	"testing"
+
+	"tramtai/internal/cliente"
+	"tramtai/internal/contrato"
 )
 
 // TestAbrirOyenteLetsEncrypt: con letsencrypt el puerto automático no se aplica (el desafío TLS-ALPN-01 solo llega al
@@ -28,5 +32,27 @@ func TestAbrirOyenteLetsEncrypt(t *testing.T) {
 			t.Fatalf("%s con automático: puerto %d, error %v", modo, usado, err)
 		}
 		o.Close()
+	}
+}
+
+// TestActivacionMuestraLaBasePublica: con TLS propio el descriptor apunta al oyente local (efímero), pero lo que se
+// imprime y las apps guardan es la dirección pública; sin TLS, la del descriptor como siempre.
+func TestActivacionMuestraLaBasePublica(t *testing.T) {
+	a := contrato.ActivacionInstancia{Instancia: contrato.EstadoInstancia{ID: "global"}}
+	for _, c := range []struct {
+		nombre string
+		cli    *cliente.Cliente
+		quiere string
+	}{
+		{"con TLS propio", &cliente.Cliente{Base: "http://127.0.0.1:50123", Descriptor: contrato.Descriptor{Base: "http://127.0.0.1:50123", BasePublica: "https://tramtai.ejemplo.org:8443"}}, "https://tramtai.ejemplo.org:8443"},
+		{"sin TLS", &cliente.Cliente{Base: "http://127.0.0.1:7777"}, "http://127.0.0.1:7777"},
+	} {
+		var salida bytes.Buffer
+		imprimirActivacion(&salida, "global", a, c.cli)
+		texto := salida.String()
+		if !strings.Contains(texto, "activo en "+c.quiere+"\n") || !strings.Contains(texto, c.quiere+"/openai/v1") ||
+			!strings.Contains(texto, c.quiere+"/anthropic") || (c.cli.Base != c.quiere && strings.Contains(texto, c.cli.Base)) {
+			t.Errorf("%s:\n%s", c.nombre, texto)
+		}
 	}
 }
