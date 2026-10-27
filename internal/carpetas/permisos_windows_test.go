@@ -135,6 +135,20 @@ func TestProtegerServidorSinProteger(t *testing.T) {
 		if err := ProtegerServidor(ruta, cuentaPrueba); err == nil || !strings.Contains(err.Error(), "otro usuario") {
 			t.Fatalf("con un hijo ajeno: %v", err)
 		}
+		// El primer intento dejó la raíz protegida; uno segundo tampoco lo toma.
+		if err := ProtegerServidor(ruta, cuentaPrueba); err == nil || !strings.Contains(err.Error(), "otro usuario") {
+			t.Fatalf("otra vez, ya protegida: %v", err)
+		}
+	})
+	t.Run("con un punto de unión dentro", func(t *testing.T) {
+		ruta := preparar(t, "config.yaml")
+		fuera := t.TempDir()
+		if salida, err := exec.Command("cmd", "/c", "mklink", "/J", filepath.Join(ruta, "datos", "union"), fuera).CombinedOutput(); err != nil {
+			t.Fatalf("mklink /J: %v %s", err, salida)
+		}
+		if err := ProtegerServidor(ruta, cuentaPrueba); err == nil || !strings.Contains(err.Error(), "otro usuario") {
+			t.Fatalf("con una unión dentro: %v", err)
+		}
 	})
 	t.Run("todo propio", func(t *testing.T) {
 		ruta := preparar(t, "config.yaml", filepath.Join("datos", "terminos.json"))

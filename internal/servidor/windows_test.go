@@ -182,6 +182,19 @@ func TestInstalarServicioWindows(t *testing.T) {
 	}
 }
 
+// TestConAviso: si quitar el programa falla después de un aviso (el borrado al reiniciar sin programar), el fallo
+// manda y no se toma por un aviso, pero lleva la ruta del aviso.
+func TestConAviso(t *testing.T) {
+	fallo := errors.New("acceso denegado")
+	err := conAviso(fallo, Aviso(`bórralo a mano: C:\Program Files\.tramtai-desinstalado-X.exe`))
+	if !errors.Is(err, fallo) || errors.As(err, new(Aviso)) || !strings.Contains(err.Error(), ".tramtai-desinstalado-X.exe") {
+		t.Errorf("fallo con aviso: %v", err)
+	}
+	if err := conAviso(fallo, nil); err != fallo {
+		t.Errorf("sin aviso: %v", err)
+	}
+}
+
 // comprobarDACL: protegida (sin herencia de ProgramData), dueño Administradores y solo SYSTEM, Administradores y el
 // servicio, con control total heredable por carpetas y archivos.
 func comprobarDACL(t *testing.T, ruta, sidServicio string) {

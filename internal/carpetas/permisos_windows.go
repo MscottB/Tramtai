@@ -46,9 +46,9 @@ func protegerCarpeta(ruta string) error {
 //
 // Si la carpeta no existe, nace ya con ese descriptor: no hay un momento en que otro usuario pueda entrar. Si existía,
 // tiene que ser de Administradores o de SYSTEM: la de otro usuario pudo dejar dentro archivos con permisos propios
-// (config.yaml, datos\administrador) que cambiar la raíz no quita, y es un error. Si además no estaba protegida (no la
-// dejó una instalación), tampoco puede haber dentro nada de otro dueño. Se mira y se cambia sobre la carpeta abierta
-// sin seguir puntos de reanálisis: un punto de unión a otra carpeta es un error.
+// (config.yaml, datos\administrador) que cambiar la raíz no quita, y es un error; tampoco puede haber dentro nada de
+// otro dueño ni puntos de reanálisis. Se mira y se cambia sobre la carpeta abierta sin seguir puntos de reanálisis: un
+// punto de unión a otra carpeta es un error.
 func ProtegerServidor(ruta, cuenta string) error {
 	servicio, _, _, err := windows.LookupSID("", cuenta)
 	if err != nil {
@@ -82,14 +82,6 @@ func ProtegerServidor(ruta, cuenta string) error {
 	if !dueno.IsWellKnown(windows.WinBuiltinAdministratorsSid) && !dueno.IsWellKnown(windows.WinLocalSystemSid) {
 		return ajena
 	}
-	actual, err := windows.GetSecurityInfo(h, windows.SE_FILE_OBJECT, windows.DACL_SECURITY_INFORMATION)
-	if err != nil {
-		return err
-	}
-	control, _, err := actual.Control()
-	if err != nil {
-		return err
-	}
 	administradores, _, err := sd.Owner()
 	if err != nil {
 		return err
@@ -102,11 +94,9 @@ func ProtegerServidor(ruta, cuenta string) error {
 		windows.DACL_SECURITY_INFORMATION|windows.PROTECTED_DACL_SECURITY_INFORMATION, administradores, nil, dacl, nil); err != nil {
 		return err
 	}
-	if control&windows.SE_DACL_PROTECTED != 0 { // la dejó así una instalación: lo de dentro es nuestro
-		return nil
-	}
-	// Sin proteger, la carpeta tenía los permisos de %ProgramData% (la creó, por ejemplo, una orden --servidor antes de
-	// instalar) y un usuario pudo dejar algo suyo dentro. Se mira ya protegida, cuando nadie más puede crear nada.
+	// Siempre se mira lo de dentro, también con la DACL ya protegida (un intento anterior rechazado la deja así): la
+	// carpeta pudo tener los permisos de %ProgramData% (la creó, por ejemplo, una orden --servidor antes de instalar) y
+	// un usuario dejar algo suyo dentro. Se mira ya protegida, cuando nadie más puede crear nada.
 	return filepath.WalkDir(ruta, func(p string, _ fs.DirEntry, err error) error {
 		if err != nil || p == ruta {
 			return err

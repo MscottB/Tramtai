@@ -290,9 +290,18 @@ func quitarPrograma(dir string) error {
 		}
 	}
 	if err := os.RemoveAll(dir); err != nil {
-		return err
+		return conAviso(err, aviso)
 	}
 	return aviso
+}
+
+// conAviso junta un fallo con un aviso anterior: el fallo manda (no se envuelve el Aviso, que Desinstalar tomaría por
+// un simple aviso), pero el texto del aviso no se pierde.
+func conAviso(err, aviso error) error {
+	if aviso == nil {
+		return err
+	}
+	return fmt.Errorf("%w\n%s", err, aviso.Error())
 }
 
 // sidServicio es el SID de NT SERVICE\<nombre>: S-1-5-80 y el SHA-1 del nombre en mayúsculas (UTF-16LE) en cinco
