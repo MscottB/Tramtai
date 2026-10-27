@@ -52,7 +52,7 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | v0.56 | La terminal a la par de la Web UI (`releases/v0.56-terminal/spec.md`): las 8 páginas (Inicio con la red en vivo, Agentes, Probar con la receta completa, Mis APIs con consumo y presupuesto, Historial, Espacios, Ajustes y Ayuda), novedades y Acerca de; Tramtai solo con la terminal; los arreglos de la auditoría 001 (seguridad del servicio, accesibilidad, textos con glosario y lo derivado calculado por el servicio); la portada renovada (`releases/v0.56-terminal/portada.md`) | ✅ |
 | v0.56.1 | Actualizaciones desde la bandeja: «Buscar actualizaciones» busca, enseña la versión nueva e instala desde el propio menú, sin abrir la ventana (con «Ver novedades», «Cancelar la actualización» en la cuenta atrás y la versión disponible sin «Instalar» donde no se instala sola); el cask de Homebrew con `depends_on macos: :big_sur` | ✅ |
 | v0.57 | Claves de los espacios sin guardar (`releases/v0.57-claves/spec.md`): como las de las APIs, Tramtai guarda solo su huella `sha256:` y la clave se ve una vez, al crearla o regenerarla (Web UI, terminal y `tramtai global\|proyecto token --rotar`); un espacio nuevo no tiene clave hasta crearla; `GET /api/v1/instancia/token` deja de devolverla y las claves antiguas en claro pasan a huella sin que las apps dejen de funcionar | ✅ |
-| v0.58 | Modo servidor en Linux y Windows Server: arranque «Solo el servicio» al iniciar sesión, sin ventana ni bandeja (de la v0.56), arranque sin sesión iniciada (systemd del sistema, servicio de Windows), claves sin escritorio, HTTPS propio o detrás de un proxy, instalación sin la app de escritorio y guía (detalle abajo); las capturas de la terminal en la portada (de la v0.56). Una tecla en la terminal para abrir la Web UI (la v0.55 lo hacía) | ⬜ |
+| v0.58 | Modo servidor en Linux y Windows Server (`releases/v0.58-servidor/spec.md`): «Solo el servicio» al iniciar sesión, sin ventana ni bandeja (de la v0.56); un Tramtai del sistema aparte del de escritorio (systemd / servicio de Windows, cuenta propia sin privilegios, sin sesión iniciada) con `tramtai servidor instalar`; claves sin escritorio (Administrador de credenciales de la cuenta del servicio, `systemd-creds`); HTTPS solo TLS 1.3 detrás de un proxy, con certificado propio o con Let's Encrypt; administrador con contraseña y TOTP para la Web UI remota; suscripción personal también en remoto, con condiciones; dos entornos claros; `TERMINOS.md` versión 2 y guía; las capturas de la terminal en la portada (de la v0.56) y la tecla `W` para abrir la Web UI | ⬜ |
 | v0.59 | Configurar los clientes solos (Claude Code, Codex, Cline…), con copia de su configuración antes de tocarla | ⬜ |
 | v0.60 | Uso y diagnóstico: panel de uso con tendencias, alias que también fijan el esfuerzo y «Comprobar conexión» | ⬜ |
 | v0.61 | Actualización que vuelve a la versión anterior si la nueva no arranca | ⬜ |
@@ -72,8 +72,11 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | — | Imágenes: enviarlas a los agentes que las ven y OCR local para los demás | ⬜ |
 | — | Audio: transcripción local y opcional | ⬜ |
 | — | Antivirus: analizar cada archivo al subirlo | ⬜ |
+| — | Imagen de contenedor (Docker) del modo servidor, sobre el diseño de la v0.58 | ⬜ |
+| — | Paquetes `.deb` y `.rpm` del servidor, sin la app de escritorio | ⬜ |
+| — | i18n igual en todas partes (Go, Web UI, Ayuda y sitio: añadir un idioma es añadir sus archivos y una entrada en un registro, con una prueba de cobertura común) y un tercer idioma traducido por el usuario: portugués de Brasil primero y chino simplificado después (análisis en la spec de la v0.58, «Fuera»); open core más adelante | ⬜ |
 
-Lo investigado para esos cuatro y para el modo servidor, que pasó a la v0.58 (2026-10-20, falta analizarlo más antes de su spec):
+Lo investigado para esos cuatro y para el modo servidor (2026-10-20; el modo servidor ya tiene su spec en `releases/v0.58-servidor/spec.md`):
 
 - **Formatos de markitdown que no se suman:** audio (`recognize_google` envía el audio a Google), YouTube (el servicio
   tendría que salir a internet) e imágenes (solo metadatos con `exiftool` instalado y descripción con un LLM; no hay OCR
