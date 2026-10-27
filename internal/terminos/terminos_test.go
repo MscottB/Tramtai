@@ -95,8 +95,11 @@ func TestRiesgosCinco(t *testing.T) {
 	if len(servidor) != 5 || len(escritorio) != 5 {
 		t.Fatalf("deben ser cinco: %d y %d", len(servidor), len(escritorio))
 	}
+	if !strings.HasPrefix(escritorio[3], "Si usas el modo servidor y otras personas lo usan, ") {
+		t.Errorf("el riesgo 4 sin servidor tiene redacción propia: %q", escritorio[3])
+	}
 	for i := range servidor {
-		prefijo := strings.HasPrefix(escritorio[i], "Si usas el modo servidor, ")
+		prefijo := strings.HasPrefix(escritorio[i], "Si usas el modo servidor")
 		if want := i == 2 || i == 3; prefijo != want {
 			t.Errorf("riesgo %d: prefijo=%v, esperaba %v (%q)", i+1, prefijo, want, escritorio[i])
 		}

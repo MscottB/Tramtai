@@ -1,11 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { api } from '../api/cliente.ts'
-import { idioma } from '../i18n.ts'
-import es from '../idiomas/es.ts'
-import en from '../idiomas/en.ts'
-import { aceptarTerminos, consultarTerminos, estadoTerminos, pantallaTerminos, riesgosTexto, salioDeTerminos, salirDeTerminos } from '../terminos.ts'
-import type { EstadoTerminos } from '../api/tipos.ts'
+import { api } from './api/cliente.ts'
+import { idioma } from './i18n.ts'
+import es from './idiomas/es.ts'
+import en from './idiomas/en.ts'
+import { aceptarTerminos, consultarTerminos, estadoTerminos, pantallaTerminos, riesgosTexto, salioDeTerminos, salirDeTerminos } from './terminos.ts'
+import type { EstadoTerminos } from './api/tipos.ts'
 
 const respuesta = (estado: number, cuerpo?: unknown) => new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), { status: estado })
 const pendiente: EstadoTerminos = { version: '2.0', pendiente: true, riesgos: ['a', 'b', 'c', 'd', 'e'] }
@@ -75,7 +75,9 @@ test('los riesgos son los cinco de los términos en el idioma de la Web UI; sin 
     assert.deepEqual(servidor, [1, 2, 3, 4, 5].map((n) => textos[`riesgos.${n}` as 'riesgos.1']))
     const escritorio = riesgosTexto(false)
     assert.deepEqual([0, 1, 4].map((i) => escritorio[i]), [0, 1, 4].map((i) => servidor[i]))
-    for (const i of [2, 3]) assert.ok(escritorio[i].startsWith(textos['riesgos.siServidor']), `${lengua} riesgo ${i + 1}: ${escritorio[i]}`)
+    assert.equal(escritorio[2], textos['riesgos.3.sinServidor'])
+    assert.equal(escritorio[3], textos['riesgos.4.sinServidor'])
+    for (const i of [2, 3]) assert.ok(escritorio[i].startsWith(lengua === 'es' ? 'Si usas el modo servidor' : 'If you use server mode'), `${lengua} riesgo ${i + 1}: ${escritorio[i]}`)
   }
   idioma.value = 'es'
 })

@@ -20,23 +20,21 @@ func quitaSaltos(vista string) string {
 }
 
 func TestTerminalPideTerminos(t *testing.T) {
+	anterior := idioma.Activo
+	defer func() { idioma.Activo = anterior }()
 	for _, lengua := range []string{"es", "en"} {
+		idioma.Activo = lengua // terminos.Riesgos habla el idioma activo
 		datosDir := t.TempDir()
 		m := nuevoEn(Opciones{Datos: datosDir, Terminos: true}, lengua)
 		vista := quitaSaltos(m.View().Content)
 		if !strings.Contains(vista, datos.Texto(lengua, "terminos.titulo")) {
 			t.Fatalf("%s: la primera vista son los términos:\n%s", lengua, vista)
 		}
-		for i := 1; i <= 5; i++ {
-			riesgo := datos.Texto(lengua, "riesgos."+string(rune('0'+i)))
-			if i == 3 || i == 4 { // en la terminal, sin el modo servidor, el 3 y el 4 lo dicen
-				riesgo = terminos.SiServidor(datos.Texto(lengua, "riesgos.siServidor"), riesgo)
-			}
+		for i, riesgo := range terminos.Riesgos(false) {
 			if !strings.Contains(vista, riesgo) {
-				t.Errorf("%s: falta el riesgo %d (%q):\n%s", lengua, i, riesgo, vista)
+				t.Errorf("%s: falta el riesgo %d (%q):\n%s", lengua, i+1, riesgo, vista)
 			}
-		}
-		// El menú y las páginas no se ven ni responden mientras tanto.
+		} // El menú y las páginas no se ven ni responden mientras tanto.
 		if _, cmd := m.Update(tecla("2")); sale(cmd) || m.actual != "inicio" {
 			t.Errorf("%s: los atajos de las páginas no valen hasta aceptar", lengua)
 		}
@@ -79,7 +77,8 @@ func TestTerminosEnLaTerminalConVentanaPequena(t *testing.T) {
 	}
 }
 
-// TestRiesgosComoEnGo: los cinco riesgos que tiene la terminal (de la Web UI) son los de terminos.Riesgos, en los dos idiomas.
+// TestRiesgosComoEnGo: los cinco riesgos que tiene la terminal (de la Web UI, textos.json) son los de terminos.Riesgos, con
+// y sin el modo servidor, en los dos idiomas.
 func TestRiesgosComoEnGo(t *testing.T) {
 	anterior := idioma.Activo
 	defer func() { idioma.Activo = anterior }()
@@ -90,12 +89,10 @@ func TestRiesgosComoEnGo(t *testing.T) {
 				t.Errorf("%s riesgo %d: la Web UI dice %q y terminos.Riesgos %q", lengua, i+1, web, riesgo)
 			}
 		}
+		m := nuevoEn(Opciones{}, lengua)
 		for i, riesgo := range terminos.Riesgos(false) {
-			if i != 2 && i != 3 {
-				continue
-			}
-			if web := terminos.SiServidor(datos.Texto(lengua, "riesgos.siServidor"), datos.Texto(lengua, "riesgos."+string(rune('1'+i)))); web != riesgo {
-				t.Errorf("%s riesgo %d sin el modo servidor: %q y %q", lengua, i+1, web, riesgo)
+			if got := m.riesgosTerminos()[i]; got != riesgo {
+				t.Errorf("%s riesgo %d sin el modo servidor: la terminal dice %q y terminos.Riesgos %q", lengua, i+1, got, riesgo)
 			}
 		}
 	}

@@ -196,7 +196,7 @@ export const CLAVES_APP: string[] = ['app.enMarcha', 'app.sinConexion', 'app.cam
 // CLAVES_TERMINOS son los textos de «Antes de seguir» que la terminal repite tal cual: los cinco riesgos de los términos de uso,
 // la pregunta y sus teclas. Los {placeholders} los rellena Go con datos.Textof.
 export const CLAVES_TERMINOS: string[] = [
-  'riesgos.1', 'riesgos.2', 'riesgos.3', 'riesgos.4', 'riesgos.5', 'riesgos.siServidor',
+  'riesgos.1', 'riesgos.2', 'riesgos.3', 'riesgos.4', 'riesgos.5', 'riesgos.3.sinServidor', 'riesgos.4.sinServidor',
   'terminos.titulo', 'terminos.intro', 'terminos.leerTerminal', 'terminos.acepto', 'terminos.salir',
 ]
 

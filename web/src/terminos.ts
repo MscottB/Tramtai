@@ -3,7 +3,7 @@
 import { ref } from 'vue'
 import { api } from './api/cliente'
 import type { EstadoTerminos } from './api/tipos'
-import { t } from './i18n'
+import { idioma, idiomas, t } from './i18n'
 
 // estadoTerminos es lo último que dijo el servicio; null, mientras no se consultó.
 export const estadoTerminos = ref<EstadoTerminos | null>(null)
@@ -41,11 +41,11 @@ export function salirDeTerminos() {
   salioDeTerminos.value = true
 }
 
-// riesgosTexto son los cinco riesgos en el idioma de la Web UI. Sin el modo servidor, el 3 y el 4 llevan delante
-// «Si usas el modo servidor, » (como terminos.Riesgos en Go).
+// riesgosTexto son los cinco riesgos en el idioma de la Web UI. Sin el modo servidor, los que tienen variante
+// (riesgos.<n>.sinServidor, el 3 y el 4: lo dice terminos.Riesgos en Go) usan esa redacción.
 export function riesgosTexto(servidor = false): string[] {
   return [1, 2, 3, 4, 5].map((n) => {
-    const riesgo = t(`riesgos.${n}` as 'riesgos.1')
-    return servidor || (n !== 3 && n !== 4) ? riesgo : t('riesgos.siServidor') + riesgo.charAt(0).toLowerCase() + riesgo.slice(1)
+    const variante = `riesgos.${n}.sinServidor`
+    return !servidor && variante in idiomas[idioma.value].textos ? t(variante as 'riesgos.3.sinServidor') : t(`riesgos.${n}` as 'riesgos.1')
   })
 }

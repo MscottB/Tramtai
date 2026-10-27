@@ -15,8 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
-	"unicode/utf8"
 
 	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
@@ -101,7 +99,8 @@ func Pendiente(datos string) (bool, error) {
 }
 
 // Riesgos son los cinco riesgos de los términos, los mismos en todas partes (web/src/idiomas, riesgos.*). Sin el modo
-// servidor, el 3 y el 4 se dicen como «Si usas el modo servidor, …»: en el escritorio solo valen si lo activas.
+// servidor (el escritorio), el 3 y el 4 se dicen como «Si usas el modo servidor…»: este es el único sitio de Go que sabe
+// cuáles cambian. La Web UI y la terminal toman esas variantes de las claves riesgos.<n>.sinServidor.
 func Riesgos(servidor bool) []string {
 	r := []string{
 		idioma.T("Tu cuenta con un proveedor puede limitarse, suspenderse o cerrarse si usas tu suscripción con Tramtai, y el proveedor puede cambiar sus reglas sin avisar. El autor no puede recuperarla."),
@@ -111,15 +110,8 @@ func Riesgos(servidor bool) []string {
 		idioma.T("Tramtai es gratuito y se entrega tal cual, sin garantías."),
 	}
 	if !servidor {
-		for _, i := range []int{2, 3} {
-			r[i] = SiServidor(idioma.T("Si usas el modo servidor, "), r[i])
-		}
+		r[2] = idioma.T("Si usas el modo servidor, lo que abres a la red es responsabilidad tuya: HTTPS, cortafuegos, contraseñas, copias y actualizaciones.")
+		r[3] = idioma.T("Si usas el modo servidor y otras personas lo usan, tú respondes de sus datos ante la ley que te aplique.")
 	}
 	return r
-}
-
-// SiServidor pone delante de un riesgo el prefijo «Si usas el modo servidor, » (ya traducido) y baja su primera letra.
-func SiServidor(prefijo, riesgo string) string {
-	c, n := utf8.DecodeRuneInString(riesgo)
-	return prefijo + string(unicode.ToLower(c)) + riesgo[n:]
 }

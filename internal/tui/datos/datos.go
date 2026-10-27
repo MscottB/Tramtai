@@ -102,3 +102,9 @@ func Texto(idioma, clave string) string {
 	}
 	return clave
 }
+
+// Tiene dice si hay un texto con esa clave (Texto, si no, devuelve la clave).
+func Tiene(idioma, clave string) bool {
+	_, ok := textos()[lengua(idioma)][clave]
+	return ok
+}

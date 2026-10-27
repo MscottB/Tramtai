@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spf13/cobra"
+
 	"tramtai/internal/terminos"
 )
 
@@ -31,18 +33,42 @@ func TestCLISinAceptarSigueFuncionando(t *testing.T) {
 	if err != nil {
 		t.Fatalf("version sin aceptar debe terminar bien: %v", err)
 	}
-	if !strings.HasPrefix(salida, "tramtai ") || strings.Count(salida, "\n") != 1 {
-		t.Errorf("la salida normal no cambia: %q", salida)
-	}
 	if lineas := strings.Split(strings.TrimSpace(errores), "\n"); len(lineas) != 1 || !strings.Contains(lineas[0], "tramtai terminos") {
 		t.Errorf("stderr debe llevar una sola línea con «tramtai terminos»: %q", errores)
 	}
-	// Aceptados, el aviso desaparece.
+	// Aceptados, el aviso desaparece y la salida normal es la misma.
 	if err := terminos.Aceptar(datos, terminos.ComoCLI); err != nil {
 		t.Fatal(err)
 	}
-	if _, errores, _ := ejecutarRaiz(t, datos, "version"); errores != "" {
+	despues, errores, _ := ejecutarRaiz(t, datos, "version")
+	if errores != "" {
 		t.Errorf("con los términos aceptados no avisa: %q", errores)
+	}
+	if salida != despues || !strings.HasPrefix(salida, "tramtai ") {
+		t.Errorf("la salida normal no cambia: sin aceptar %q, aceptados %q", salida, despues)
+	}
+}
+
+// TestServicioIniciarNoAvisa: «servicio iniciar» se lanza en segundo plano con su stderr en el registro; ahí no se avisa
+// (las demás órdenes del servicio sí).
+func TestServicioIniciarNoAvisa(t *testing.T) {
+	raiz := nuevaRaiz()
+	buscar := func(args ...string) *cobra.Command {
+		c, _, err := raiz.Find(args)
+		if err != nil || c.Name() != args[len(args)-1] {
+			t.Fatalf("no existe la orden %v: %v", args, err)
+		}
+		return c
+	}
+	for _, args := range [][]string{{"servicio", "iniciar"}, {"terminos"}, {"terminos", "aceptar"}, {"terminal"}} {
+		if !sinAviso(buscar(args...)) {
+			t.Errorf("%v no debe avisar", args)
+		}
+	}
+	for _, args := range [][]string{{"version"}, {"servicio", "detener"}, {"abrir"}, {"agentes"}} {
+		if sinAviso(buscar(args...)) {
+			t.Errorf("%v debe avisar", args)
+		}
 	}
 }
 

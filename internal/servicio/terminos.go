@@ -1,6 +1,7 @@
 package servicio
 
 import (
+	"fmt"
 	"net/http"
 
 	"tramtai/internal/api"
@@ -11,9 +12,12 @@ import (
 )
 
 // terminosUI dice si este entorno aún tiene que aceptar los términos de uso vigentes. Si no se puede leer terminos.json
-// cuenta como pendiente: es lo que pide la aceptación otra vez, no lo que se la salta.
+// cuenta como pendiente (se pide la aceptación otra vez, no se la salta) y queda una línea en el registro del servicio.
 func (s *Servicio) terminosUI(w http.ResponseWriter, _ *http.Request, _ *sesion) {
-	pendiente, _ := terminos.Pendiente(s.opc.Datos)
+	pendiente, err := terminos.Pendiente(s.opc.Datos)
+	if err != nil {
+		fmt.Fprintf(s.opc.Registros, "los términos de uso cuentan como pendientes: %s\n", err)
+	}
 	api.EscribirJSON(w, http.StatusOK, contrato.EstadoTerminos{Version: terminos.Version, Pendiente: pendiente, Riesgos: terminos.Riesgos(false)})
 }
 

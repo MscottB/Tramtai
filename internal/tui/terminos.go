@@ -13,14 +13,16 @@ import (
 )
 
 // riesgosTerminos son los cinco riesgos de los términos en el idioma de la terminal, con los textos de la Web UI. Sin el
-// modo servidor, el 3 y el 4 llevan delante «Si usas el modo servidor, » (como terminos.Riesgos).
+// modo servidor usa la variante riesgos.<n>.sinServidor de los que la tienen (lo decide terminos.Riesgos; una prueba
+// comprueba que coinciden).
 func (m *modelo) riesgosTerminos() []string {
 	r := make([]string, 5)
 	for i := range r {
-		r[i] = datos.Texto(m.idioma, fmt.Sprintf("riesgos.%d", i+1))
-		if i == 2 || i == 3 {
-			r[i] = terminos.SiServidor(datos.Texto(m.idioma, "riesgos.siServidor"), r[i])
+		clave := fmt.Sprintf("riesgos.%d", i+1)
+		if datos.Tiene(m.idioma, clave+".sinServidor") {
+			clave += ".sinServidor"
 		}
+		r[i] = datos.Texto(m.idioma, clave)
 	}
 	return r
 }

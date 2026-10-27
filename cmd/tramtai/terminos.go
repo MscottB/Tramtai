@@ -43,16 +43,25 @@ func comandoTerminos() *cobra.Command {
 // autocompletado, y la terminal (la raíz sin argumentos también), que los pide en su propia pantalla.
 var sinAvisoDeTerminos = []string{"terminos", "terminal", "help", "completion", cobra.ShellCompRequestCmd, cobra.ShellCompNoDescRequestCmd}
 
-// avisarTerminos escribe en stderr una línea si este entorno no ha aceptado los términos vigentes. La CLI no se bloquea:
-// no rompe los scripts de quien actualiza, y la salida normal queda como estaba.
-func avisarTerminos(cmd *cobra.Command, _ []string) {
-	if cmd.Parent() == nil {
-		return
+// sinAviso dice si la orden no avisa: las de sinAvisoDeTerminos (y las que cuelgan de ellas), la raíz sola y
+// «servicio iniciar», que se lanza en segundo plano con su stderr en servicio-salida.log y lo ensuciaría en cada arranque.
+func sinAviso(cmd *cobra.Command) bool {
+	if cmd.Parent() == nil || cmd.Name() == "iniciar" && cmd.Parent().Name() == "servicio" {
+		return true
 	}
 	for c := cmd; c != nil; c = c.Parent() {
 		if slices.Contains(sinAvisoDeTerminos, c.Name()) {
-			return
+			return true
 		}
+	}
+	return false
+}
+
+// avisarTerminos escribe en stderr una línea si este entorno no ha aceptado los términos vigentes. La CLI no se bloquea:
+// no rompe los scripts de quien actualiza, y la salida normal queda como estaba.
+func avisarTerminos(cmd *cobra.Command, _ []string) {
+	if sinAviso(cmd) {
+		return
 	}
 	datos, err := dirDatos()
 	if err != nil {
