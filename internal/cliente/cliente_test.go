@@ -903,6 +903,36 @@ func TestServidorNoDetieneElServicioDeOtraVersion(t *testing.T) {
 	}
 }
 
+// En modo servidor IniciarEnSegundoPlano no lanza ningún proceso (el servicio del sistema lo gestiona el sistema): sin
+// servicio da ErrServidorNoEnMarcha y, si responde, devuelve su cliente.
+func TestServidorNoLanzaElServicio(t *testing.T) {
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	datos := t.TempDir()
+	if _, err := IniciarEnSegundoPlano(os.Args[0], datos); !errors.Is(err, ErrServidorNoEnMarcha) ||
+		!strings.Contains(err.Error(), "systemctl start tramtai") {
+		t.Fatalf("esperaba ErrServidorNoEnMarcha: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(datos, "servicio-salida.log")); err == nil {
+		t.Fatal("se lanzó un proceso en modo servidor")
+	}
+	cli, dir := servicioDePrueba(t, "")
+	if c, err := IniciarEnSegundoPlano(os.Args[0], filepath.Join(dir, "datos")); err != nil || c.Base != cli.Base {
+		t.Fatalf("con el servicio en marcha devuelve su cliente: %v", err)
+	}
+}
+
+// Lanzar en modo servidor pasa TRAMTAI_SERVIDOR=1 al hijo (también en el reinicio); fuera de él no toca el entorno.
+func TestLanzarEnModoServidorLlevaElEntorno(t *testing.T) {
+	t.Setenv("TRAMTAI_SERVIDOR", "")
+	if cmd := ordenLanzar("tramtai", "datos", []string{"servicio", "iniciar"}); cmd.Env != nil || cmd.Dir != "datos" {
+		t.Fatalf("fuera del modo servidor el hijo hereda el entorno: %v", cmd.Env)
+	}
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	if cmd := ordenLanzar("tramtai", "datos", []string{"servicio", "iniciar"}); !slices.Contains(cmd.Env, "TRAMTAI_SERVIDOR=1") {
+		t.Fatalf("en modo servidor el hijo lleva TRAMTAI_SERVIDOR=1: %v", cmd.Env)
+	}
+}
+
 // Con el servicio anterior del mismo usuario, DetenerAnterior le pide detenerse con su protocolo y espera a que deje
 // de responder (drena sus trabajos).
 func TestDetenerElServicioAnterior(t *testing.T) {

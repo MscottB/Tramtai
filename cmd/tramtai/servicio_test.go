@@ -47,9 +47,11 @@ func servicioDeOtraVersion(t *testing.T) (datos string, tocado *atomic.Bool) {
 	return datos, tocado
 }
 
-// TestSinServidorNoTocaElDelSistema: el servicio del sistema vive en la raíz del servidor. La CLI de escritorio no lo ve
-// (mira en la suya) y, con --servidor, si responde uno de otra versión, «servicio iniciar» da ErrServidorOtraVersion y
-// lo deja como estaba: no lo detiene, no le manda el token y no arranca otro sobre sus datos.
+// TestSinServidorNoTocaElDelSistema: el servicio del sistema vive en la raíz del servidor. Que el escritorio y el servidor
+// miran en carpetas distintas lo prueban TestRaizServidor y TestRaizDeServidor (internal/carpetas); aquí dirDatos se
+// sustituye por una carpeta del usuario y otra del servidor, así que la primera parte solo comprueba el efecto: la CLI de
+// escritorio no ve el servicio del sistema. Con --servidor, si responde uno de otra versión, «servicio iniciar» da
+// ErrServidorOtraVersion y lo deja como estaba: no lo detiene, no le manda el token y no arranca otro sobre sus datos.
 func TestSinServidorNoTocaElDelSistema(t *testing.T) {
 	datosServidor, tocado := servicioDeOtraVersion(t)
 	datosUsuario := t.TempDir()
@@ -67,23 +69,32 @@ func TestSinServidorNoTocaElDelSistema(t *testing.T) {
 		t.Fatalf("la CLI de escritorio no ve el servicio del sistema: %v", err)
 	}
 
-	t.Setenv("TRAMTAI_SERVIDOR", "1")
-	cmd := &cobra.Command{}
-	var salida bytes.Buffer
-	cmd.SetErr(&salida)
-	err := iniciarServicio(cmd, "", false)
-	if !errors.Is(err, cliente.ErrServidorOtraVersion) || errors.Is(err, cliente.ErrServicioAnterior) {
-		t.Fatalf("--servidor con un servicio de otra versión: %v", err)
-	}
-	if strings.Contains(salida.String(), "deteniendo") {
-		t.Errorf("no debe decir que detiene el servicio: %q", salida.String())
-	}
-	if tocado.Load() {
-		t.Fatal("el servicio del sistema recibió algo más que /healthz")
-	}
-	d, _ := dirDatos()
-	if _, err := cliente.Conectar(d); !errors.Is(err, cliente.ErrServidorOtraVersion) {
-		t.Fatalf("sigue respondiendo: %v", err)
+	t.Run("servidor", func(t *testing.T) {
+		t.Setenv("TRAMTAI_SERVIDOR", "1")
+		// La configuración global de la prueba, no la del equipo (que saldría de RaizUsuario y la fijaría como la del servidor).
+		t.Setenv("TRAMTAI_CONFIG_GLOBAL", filepath.Join(t.TempDir(), "config.yaml"))
+		cmd := &cobra.Command{}
+		var salida bytes.Buffer
+		cmd.SetErr(&salida)
+		err := iniciarServicio(cmd, "", false)
+		if !errors.Is(err, cliente.ErrServidorOtraVersion) || errors.Is(err, cliente.ErrServicioAnterior) {
+			t.Fatalf("--servidor con un servicio de otra versión: %v", err)
+		}
+		if strings.Contains(salida.String(), "deteniendo") {
+			t.Errorf("no debe decir que detiene el servicio: %q", salida.String())
+		}
+		if tocado.Load() {
+			t.Fatal("el servicio del sistema recibió algo más que /healthz")
+		}
+		d, _ := dirDatos()
+		if _, err := cliente.Conectar(d); !errors.Is(err, cliente.ErrServidorOtraVersion) {
+			t.Fatalf("sigue respondiendo: %v", err)
+		}
+	})
+
+	// La prueba no deja la raíz de este proceso fijada como la del servidor para las demás.
+	if r, _ := carpetas.RaizUsuario(); r == carpetas.RaizServidor() {
+		t.Fatalf("la raíz del proceso quedó fijada como la del servidor: %s", r)
 	}
 }
 

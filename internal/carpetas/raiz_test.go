@@ -1,6 +1,7 @@
 package carpetas
 
 import (
+	"cmp"
 	"fmt"
 	"os"
 	"os/exec"
@@ -156,10 +157,16 @@ func TestDirDatosServidorNoCreaLaRaiz(t *testing.T) {
 func TestRaizServidorPorSistema(t *testing.T) {
 	esperada := "/var/lib/tramtai"
 	if runtime.GOOS == "windows" {
-		esperada = filepath.Join(os.Getenv("ProgramData"), "Tramtai")
+		esperada = filepath.Join(cmp.Or(os.Getenv("ProgramData"), `C:\ProgramData`), "Tramtai")
 	}
 	if got := RaizServidor(); got != esperada {
 		t.Fatalf("RaizServidor() = %q, se esperaba %q", got, esperada)
+	}
+	if runtime.GOOS == "windows" { // sin la variable ProgramData no se cae en una ruta relativa
+		t.Setenv("ProgramData", "")
+		if got := RaizServidor(); got != `C:\ProgramData\Tramtai` {
+			t.Fatalf("sin ProgramData: RaizServidor() = %q", got)
+		}
 	}
 }
 

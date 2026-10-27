@@ -160,6 +160,7 @@ func (c *Cliente) anterior(ctx context.Context) (responde, propio bool, version 
 		local, err1 := netip.ParseAddrPort(i.Conn.LocalAddr().String())
 		remoto, err2 := netip.ParseAddrPort(i.Conn.RemoteAddr().String())
 		// El extremo del servidor: su dirección local es la remota de esta conexión.
+		// En modo servidor propio es siempre verdadero: no sirve para decidir si se envía el token.
 		propio = carpetas.Servidor() || err1 == nil && err2 == nil && duenoPropio(netip.AddrPortFrom(remoto.Addr().Unmap(), remoto.Port()),
 			netip.AddrPortFrom(local.Addr().Unmap(), local.Port()))
 	}}
@@ -192,9 +193,8 @@ func Lanzar(ejecutable, datos string, args ...string) error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command(ejecutable, args...)
-	cmd.Dir, cmd.Stdout, cmd.Stderr = datos, registro, registro
-	desacoplar(cmd)
+	cmd := ordenLanzar(ejecutable, datos, args)
+	cmd.Stdout, cmd.Stderr = registro, registro
 	err = cmd.Start()
 	registro.Close()
 	if err != nil {
@@ -203,14 +203,36 @@ func Lanzar(ejecutable, datos string, args ...string) error {
 	return cmd.Process.Release()
 }
 
+// ordenLanzar arma el proceso de Lanzar. En modo servidor el hijo lleva TRAMTAI_SERVIDOR=1: sin eso calcularía su raíz
+// como la del usuario y arrancaría un servicio sobre otros datos.
+func ordenLanzar(ejecutable, datos string, args []string) *exec.Cmd {
+	cmd := exec.Command(ejecutable, args...)
+	cmd.Dir = datos
+	if carpetas.Servidor() {
+		cmd.Env = append(os.Environ(), "TRAMTAI_SERVIDOR=1")
+	}
+	desacoplar(cmd)
+	return cmd
+}
+
+// ErrServidorNoEnMarcha indica que, en modo servidor, no responde el servicio del sistema y esta orden no lo inicia: lo
+// gestiona el sistema.
+var ErrServidorNoEnMarcha = errors.New(idioma.T("el servicio del sistema no está en marcha y lo gestiona el sistema: inícialo con tramtai-servidor reiniciar o con systemctl start tramtai (en Windows, con el administrador de servicios)"))
+
 // IniciarEnSegundoPlano lanza "<ejecutable> servicio iniciar" desacoplado de la terminal y espera a que responda.
 // El servicio escribe su registro en servicio.log, con tamaño máximo y copias. Si responde el servicio de una versión
 // anterior (tras actualizar), primero lo detiene: no toma el cerrojo de la carpeta de datos y el nuevo arrancaría
 // sobre sus peticiones.
 func IniciarEnSegundoPlano(ejecutable, datos string) (*Cliente, error) {
-	_, err := Conectar(datos)
+	c, err := Conectar(datos)
 	if errors.Is(err, ErrServidorOtraVersion) {
 		return nil, err
+	}
+	if carpetas.Servidor() { // el servicio del sistema no lo lanza esta orden
+		if err == nil {
+			return c, nil
+		}
+		return nil, ErrServidorNoEnMarcha
 	}
 	if errors.Is(err, ErrServicioAnterior) {
 		if err := DetenerAnterior(datos); err != nil {
