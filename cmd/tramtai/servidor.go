@@ -126,7 +126,7 @@ func comandoServidor() *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			pregunta := idioma.Tf("¿Borrar también los datos del servidor (%s) y la cuenta %s? No se puede deshacer.", servidor.Rutas().Datos, servidor.Cuenta)
 			if runtime.GOOS == "windows" {
-				pregunta = idioma.Tf("¿Borrar también los datos del servidor (%s) y el perfil de la cuenta %s, con las sesiones de los agentes? No se puede deshacer.", servidor.Rutas().Datos, `NT SERVICE\Tramtai`)
+				pregunta = idioma.Tf("¿Borrar también los datos del servidor (%s) y el perfil de la cuenta %s, con las sesiones de los agentes? No se puede deshacer.", servidor.Rutas().Datos, servidor.CuentaWindows)
 			}
 			if borrar && !confirmar(cmd, pregunta) {
 				fmt.Fprintln(cmd.OutOrStdout(), idioma.T("desinstalación cancelada"))

@@ -40,6 +40,28 @@ func paqueteDePrueba(t *testing.T, entradas map[string]string) string {
 	return ruta
 }
 
+// TestAbrirRaizNoSigueEnlaces: si la raíz del servidor es un enlace a otra carpeta, abrirRaiz falla en lugar de
+// trabajar en la otra.
+func TestAbrirRaizNoSigueEnlaces(t *testing.T) {
+	base := t.TempDir()
+	otra, enlace := filepath.Join(base, "otra"), filepath.Join(base, "raiz")
+	if err := os.Mkdir(otra, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if r, err := abrirRaiz(otra); err != nil {
+		t.Fatalf("una carpeta normal: %v", err)
+	} else {
+		r.Close()
+	}
+	if err := os.Symlink(otra, enlace); err != nil {
+		t.Skipf("sin permiso para crear enlaces: %v", err)
+	}
+	if r, err := abrirRaiz(enlace); err == nil {
+		r.Close()
+		t.Fatal("un enlace como raíz debe ser un error")
+	}
+}
+
 // TestInstalarConConversor: --conversor descomprime la carpeta conversor del paquete en la raíz del servidor, sin red,
 // después de comprobarla fuera de ella (como «Preparar archivos»). Una entrada que sale de la carpeta o una comprobación
 // que falla no dejan nada.

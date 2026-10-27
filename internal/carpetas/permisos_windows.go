@@ -2,6 +2,7 @@ package carpetas
 
 import (
 	"errors"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
 
@@ -38,29 +39,28 @@ func protegerCarpeta(ruta string) error {
 }
 
 // ProtegerServidor deja la carpeta del servidor solo para SYSTEM, los administradores y la cuenta del servicio
-// (NT SERVICE\Tramtai), con control total heredable y sin heredar de %ProgramData%, que deja a los usuarios crear
-// archivos. El dueño pasa a ser Administradores: si alguien creó la carpeta antes, deja de poder cambiar sus permisos.
-// La cuenta virtual solo se resuelve con el servicio ya creado. Los permisos se ponen sobre la carpeta abierta sin
-// seguir puntos de reanálisis: si alguien la cambió por un punto de unión a otra carpeta, es un error y no se toca nada.
+// (NT SERVICE\Tramtai), con control total heredable, sin heredar de %ProgramData% (que deja a los usuarios crear
+// archivos) y con dueño Administradores. La cuenta virtual solo se resuelve con el servicio ya creado.
+//
+// Si la carpeta no existe, nace ya con ese descriptor: no hay un momento en que otro usuario pueda entrar. Si existía,
+// tiene que ser de Administradores o de SYSTEM (una instalación anterior): la de otro usuario pudo dejar dentro archivos
+// con permisos propios (config.yaml, datos\administrador) que cambiar la raíz no quita, y es un error. Se mira y se
+// cambia sobre la carpeta abierta sin seguir puntos de reanálisis: un punto de unión a otra carpeta es un error.
 func ProtegerServidor(ruta, cuenta string) error {
 	servicio, _, _, err := windows.LookupSID("", cuenta)
 	if err != nil {
 		return err
 	}
-	sd, err := windows.SecurityDescriptorFromString("D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;FA;;;" + servicio.String() + ")")
-	if err != nil {
-		return err
-	}
-	dacl, _, err := sd.DACL()
-	if err != nil {
-		return err
-	}
-	administradores, err := windows.CreateWellKnownSid(windows.WinBuiltinAdministratorsSid)
+	sd, err := windows.SecurityDescriptorFromString("O:BAD:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;FA;;;" + servicio.String() + ")")
 	if err != nil {
 		return err
 	}
 	nombre, err := windows.UTF16PtrFromString(ruta)
 	if err != nil {
+		return err
+	}
+	atributos := windows.SecurityAttributes{Length: uint32(unsafe.Sizeof(windows.SecurityAttributes{})), SecurityDescriptor: sd}
+	if err := windows.CreateDirectory(nombre, &atributos); !errors.Is(err, windows.ERROR_ALREADY_EXISTS) {
 		return err
 	}
 	h, err := windows.CreateFile(nombre, windows.READ_CONTROL|windows.WRITE_DAC|windows.WRITE_OWNER,
@@ -77,8 +77,33 @@ func ProtegerServidor(ruta, cuenta string) error {
 	if info.FileAttributes&windows.FILE_ATTRIBUTE_REPARSE_POINT != 0 || info.FileAttributes&windows.FILE_ATTRIBUTE_DIRECTORY == 0 {
 		return errors.New(idioma.Tf("%s no es una carpeta (¿un punto de unión o un enlace?): quítala y repite la instalación", ruta))
 	}
+	dueno, err := duenoDe(h)
+	if err != nil {
+		return err
+	}
+	if !dueno.IsWellKnown(windows.WinBuiltinAdministratorsSid) && !dueno.IsWellKnown(windows.WinLocalSystemSid) {
+		return errors.New(idioma.Tf("%s la creó otro usuario: revísala y quítala antes de instalar", ruta))
+	}
+	administradores, _, err := sd.Owner()
+	if err != nil {
+		return err
+	}
+	dacl, _, err := sd.DACL()
+	if err != nil {
+		return err
+	}
 	return windows.SetSecurityInfo(h, windows.SE_FILE_OBJECT, windows.OWNER_SECURITY_INFORMATION|
 		windows.DACL_SECURITY_INFORMATION|windows.PROTECTED_DACL_SECURITY_INFORMATION, administradores, nil, dacl, nil)
+}
+
+// duenoDe lee el dueño de una carpeta abierta; las pruebas lo sustituyen (darle otro dueño exige privilegios).
+var duenoDe = func(h windows.Handle) (*windows.SID, error) {
+	sd, err := windows.GetSecurityInfo(h, windows.SE_FILE_OBJECT, windows.OWNER_SECURITY_INFORMATION)
+	if err != nil {
+		return nil, err
+	}
+	dueno, _, err := sd.Owner()
+	return dueno, err
 }
 
 // conACL dice si el volumen de ruta guarda permisos (NTFS sí; FAT y exFAT no). GetVolumePathName da el volumen real

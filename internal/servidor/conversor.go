@@ -3,6 +3,7 @@ package servidor
 import (
 	"archive/zip"
 	"context"
+	"crypto/rand"
 	"errors"
 	"io"
 	"os"
@@ -46,17 +47,17 @@ func instalarConversor(r *os.Root, paquete string) error {
 	if err := comprobarConversor(ctx, filepath.Join(temporal, "conversor")); err != nil {
 		return err
 	}
-	if err := r.RemoveAll("conversor.nuevo"); err != nil {
-		return err
-	}
-	if err := extraerConversor(z, r, "conversor.nuevo"); err != nil {
-		_ = r.RemoveAll("conversor.nuevo")
+	// Un nombre propio: conversor.nuevo es el del servicio cuando prepara el suyo.
+	nuevo := "conversor-paquete-" + rand.Text()
+	if err := extraerConversor(z, r, nuevo); err != nil {
+		_ = r.RemoveAll(nuevo)
 		return err
 	}
 	if err := r.RemoveAll("conversor"); err != nil {
+		_ = r.RemoveAll(nuevo)
 		return err
 	}
-	return r.Rename("conversor.nuevo", "conversor")
+	return r.Rename(nuevo, "conversor")
 }
 
 // extraerConversor descomprime las entradas conversor/… del paquete en destino, dentro de r (el os.Root no deja salir

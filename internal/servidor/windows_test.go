@@ -143,11 +143,20 @@ func TestInstalarServicioWindows(t *testing.T) {
 		t.Errorf("estado en marcha: %+v %v", e, err)
 	}
 
-	// Repetirla con el mismo programa no cambia nada y lo deja en marcha.
+	// Repetirla con el mismo programa lo deja en marcha y devuelve su configuración a la debida si alguien la cambió.
+	cambiada := c
+	cambiada.DisplayName, cambiada.StartType, cambiada.DelayedAutoStart = "Otro", mgr.StartManual, false
+	if err := servicio.UpdateConfig(cambiada); err != nil {
+		t.Fatal(err)
+	}
 	if err := Instalar(Opciones{Origen: origen, AceptoTerminos: true, Como: terminos.ComoOpcion}); err != nil {
 		t.Fatalf("instalar otra vez: %v", err)
 	}
 	esperarEstado(t, servicio, svc.Running)
+	if c2, err := servicio.Config(); err != nil || c2.DisplayName != c.DisplayName || c2.StartType != mgr.StartAutomatic ||
+		!c2.DelayedAutoStart || c2.BinaryPathName != c.BinaryPathName || !strings.EqualFold(c2.ServiceStartName, cuenta) {
+		t.Errorf("configuración tras reinstalar: %+v %v", c2, err)
+	}
 
 	servicio.Close()
 	if err := Desinstalar(true); err != nil {

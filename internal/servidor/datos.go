@@ -41,7 +41,7 @@ func prepararDatos(raiz, como, conversor string) error {
 	if err := os.MkdirAll(raiz, 0o700); err != nil { // /var/lib es de root: la raíz en sí no la puede cambiar la cuenta
 		return err
 	}
-	r, err := os.OpenRoot(raiz)
+	r, err := abrirRaiz(raiz)
 	if err != nil {
 		return err
 	}
@@ -78,6 +78,33 @@ func prepararDatos(raiz, como, conversor string) error {
 		}
 	}
 	return ajustarDueno(r)
+}
+
+// abrirRaiz abre la raíz del servidor como os.Root y comprueba que es la carpeta que se miró antes de abrirla, sin
+// seguir enlaces: si entre medias la cambiaron por un enlace o un punto de unión (con el servicio en marcha, al
+// reinstalar), es un error en lugar de trabajar en otra carpeta.
+func abrirRaiz(raiz string) (*os.Root, error) {
+	antes, err := os.Lstat(raiz)
+	if err != nil {
+		return nil, err
+	}
+	r, err := os.OpenRoot(raiz)
+	if err != nil {
+		return nil, err
+	}
+	f, err := r.Open(".")
+	if err == nil {
+		var ahora fs.FileInfo
+		if ahora, err = f.Stat(); err == nil && (antes.Mode().Type() != fs.ModeDir || !os.SameFile(antes, ahora)) {
+			err = tipoInesperado(raiz)
+		}
+		f.Close()
+	}
+	if err != nil {
+		r.Close()
+		return nil, err
+	}
+	return r, nil
 }
 
 // comprobarTipo falla si nombre no es del tipo dado (una carpeta, o un archivo normal con 0): un enlace no vale.

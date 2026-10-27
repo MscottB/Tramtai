@@ -59,14 +59,15 @@ func (m *manejador) Execute(_ []string, peticiones <-chan svc.ChangeRequest, est
 	defer cancelar()
 	fin := make(chan error, 1)
 	go func() { fin <- m.ejecutar(ctx) }()
-	estado <- svc.Status{State: svc.Running, Accepts: svc.AcceptStop | svc.AcceptShutdown}
+	// PreShutdown llega antes del apagado y da más margen para drenar que Shutdown.
+	estado <- svc.Status{State: svc.Running, Accepts: svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPreShutdown}
 	var paso <-chan time.Time
 	parando := svc.Status{State: svc.StopPending, WaitHint: 10_000}
 	for {
 		select {
 		case m.err = <-fin:
-			if m.err != nil {
-				return true, 1 // un código propio: la recuperación lo reinicia
+			if m.err != nil { // un código propio (1, o codigoReinicio): la recuperación lo vuelve a arrancar
+				return true, uint32(codigoSalida(m.err))
 			}
 			return false, 0
 		case <-paso:
@@ -76,7 +77,7 @@ func (m *manejador) Execute(_ []string, peticiones <-chan svc.ChangeRequest, est
 			switch p.Cmd {
 			case svc.Interrogate:
 				estado <- p.CurrentStatus
-			case svc.Stop, svc.Shutdown:
+			case svc.Stop, svc.Shutdown, svc.PreShutdown:
 				if paso == nil {
 					cancelar()
 					estado <- parando

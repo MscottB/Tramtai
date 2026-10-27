@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 	"unicode/utf16"
 	"unsafe"
@@ -44,7 +45,7 @@ var (
 	editarRutaSistema = instalacion.EditarRutaSistema
 )
 
-// cuentaServicio es la cuenta virtual del servicio, NT SERVICE\Tramtai: Windows la crea con el servicio.
+// cuentaServicio es la cuenta virtual del servicio, CuentaWindows salvo en las pruebas: Windows la crea con el servicio.
 func cuentaServicio() string { return `NT SERVICE\` + nombreServicio }
 
 // ajustarDueno no hace nada: en Windows lo que escribe el administrador lo lee el servicio por la DACL heredable.
@@ -116,16 +117,20 @@ func Instalar(o Opciones) error {
 	if _, err := escribirSiCambia(r.Envoltorio, []byte(envoltorio), 0o755); err != nil {
 		return err
 	}
+	ejecutable := filepath.Join(r.Programa, "tramtai.exe")
+	args := []string{"--servidor", "servicio", "iniciar", "--registro", filepath.Join(r.Datos, "datos", "servicio.log")}
+	deseada := mgr.Config{DisplayName: "Tramtai (servidor)", StartType: mgr.StartAutomatic, DelayedAutoStart: true,
+		ServiceStartName: cuentaServicio()}
 	if s == nil {
-		s, err = m.CreateService(nombreServicio, filepath.Join(r.Programa, "tramtai.exe"), mgr.Config{DisplayName: "Tramtai (servidor)",
-			StartType: mgr.StartAutomatic, DelayedAutoStart: true, ServiceStartName: cuentaServicio()},
-			"--servidor", "servicio", "iniciar", "--registro", filepath.Join(r.Datos, "datos", "servicio.log"))
-		if err != nil {
+		if s, err = m.CreateService(nombreServicio, ejecutable, deseada, args...); err != nil {
 			return err
 		}
 		defer s.Close()
+	} else if err := ajustarConfiguracion(s, ejecutable, args, deseada); err != nil {
+		return err
 	}
-	// Tres reinicios a los 10 s, también si sale con error y no solo si se cae (como Restart=on-failure).
+	// Tres reinicios a los 10 s, también si sale con error y no solo si se cae (como Restart=on-failure): así vuelve a
+	// arrancar tras «Reiniciar» en la Web UI, que sale con su código propio.
 	reinicio := mgr.RecoveryAction{Type: mgr.ServiceRestart, Delay: 10 * time.Second}
 	if err := s.SetRecoveryActions([]mgr.RecoveryAction{reinicio, reinicio, reinicio}, 24*60*60); err != nil {
 		return err
@@ -133,8 +138,8 @@ func Instalar(o Opciones) error {
 	if err := s.SetRecoveryActionsOnNonCrashFailures(true); err != nil {
 		return err
 	}
-	// Después de crear el servicio: antes, NT SERVICE\Tramtai no existe para la DACL.
-	if err := os.MkdirAll(r.Datos, 0o700); err != nil {
+	// Después de crear el servicio: antes, NT SERVICE\Tramtai no existe para la DACL. La carpeta nace con ella.
+	if err := os.MkdirAll(filepath.Dir(r.Datos), 0o755); err != nil { // %ProgramData% ya existe; en las pruebas, no
 		return err
 	}
 	if err := carpetas.ProtegerServidor(r.Datos, cuentaServicio()); err != nil {
@@ -152,6 +157,26 @@ func Instalar(o Opciones) error {
 	return nil
 }
 
+// ajustarConfiguracion devuelve la configuración del servicio a la debida si alguien la cambió o es de otra
+// instalación: la orden (con sus argumentos escapados como en CreateService), la cuenta, el arranque y el nombre.
+func ajustarConfiguracion(s *mgr.Service, ejecutable string, args []string, deseada mgr.Config) error {
+	c, err := s.Config()
+	if err != nil {
+		return err
+	}
+	orden := syscall.EscapeArg(ejecutable)
+	for _, a := range args {
+		orden += " " + syscall.EscapeArg(a)
+	}
+	if c.BinaryPathName == orden && c.DisplayName == deseada.DisplayName && c.StartType == deseada.StartType &&
+		c.DelayedAutoStart == deseada.DelayedAutoStart && strings.EqualFold(c.ServiceStartName, deseada.ServiceStartName) {
+		return nil
+	}
+	c.BinaryPathName, c.DisplayName, c.StartType = orden, deseada.DisplayName, deseada.StartType
+	c.DelayedAutoStart, c.ServiceStartName = deseada.DelayedAutoStart, deseada.ServiceStartName
+	return s.UpdateConfig(c)
+}
+
 // detener para el servicio y espera a que termine: drena como «tramtai servicio detener», hasta el plazo de drenaje
 // de la configuración más 30 s (como TimeoutStopSec en Linux). El servicio informa que se detuvo antes de salir: espera
 // también a que termine su proceso, que si no retiene el programa y no se puede sustituir ni borrar.
@@ -160,12 +185,15 @@ func detener(s *mgr.Service) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.Control(svc.Stop)
-	if err != nil && !errors.Is(err, windows.ERROR_SERVICE_NOT_ACTIVE) && !errors.Is(err, windows.ERROR_SERVICE_CANNOT_ACCEPT_CTRL) {
-		return err
-	}
-	plazo := plazoParada()
+	plazo, parar := plazoParada(), true
 	for limite := time.Now().Add(plazo); ; time.Sleep(300 * time.Millisecond) {
+		if parar { // mientras arranca no acepta la orden: se repite hasta que la acepte
+			_, err := s.Control(svc.Stop)
+			parar = errors.Is(err, windows.ERROR_SERVICE_CANNOT_ACCEPT_CTRL)
+			if err != nil && !parar && !errors.Is(err, windows.ERROR_SERVICE_NOT_ACTIVE) {
+				return err
+			}
+		}
 		e, err := s.Query()
 		if err == nil && e.State == svc.Stopped && antes.ProcessId != 0 {
 			if h, err := windows.OpenProcess(windows.SYNCHRONIZE, false, antes.ProcessId); err == nil {
@@ -229,10 +257,11 @@ func Desinstalar(borrarDatos bool) error {
 }
 
 // quitarPrograma borra la carpeta del programa. Si este proceso es el tramtai de esa carpeta (tramtai-servidor
-// desinstalar), Windows no deja borrarlo en marcha pero sí moverlo: se aparta a la temporal y se borra al reiniciar.
+// desinstalar), Windows no deja borrarlo en marcha pero sí moverlo: se aparta junto a la carpeta (en el mismo volumen,
+// donde mover siempre vale) y se borra al reiniciar.
 func quitarPrograma(dir string) error {
 	if ejecutable, err := os.Executable(); err == nil && carpetas.Dentro(dir, ejecutable) {
-		apartado := filepath.Join(os.TempDir(), "tramtai-desinstalado-"+rand.Text()+".exe")
+		apartado := filepath.Join(filepath.Dir(dir), ".tramtai-desinstalado-"+rand.Text()+".exe")
 		if err := os.Rename(ejecutable, apartado); err != nil {
 			return err
 		}
@@ -275,7 +304,7 @@ func borrarPerfil(sid string) error {
 		if intento == 10 {
 			perfil := filepath.Join(cmp.Or(os.Getenv("SystemRoot"), `C:\Windows`), "ServiceProfiles", nombreServicio)
 			orden := fmt.Sprintf(`Get-CimInstance Win32_UserProfile -Filter "SID='%s'" | Remove-CimInstance`, sid)
-			return Aviso(idioma.Tf("Windows aún tiene cargado el perfil de la cuenta del servicio (%s), con las sesiones de los agentes: se podrá quitar tras reiniciar, en PowerShell como administrador: %s (%v)", perfil, orden, e))
+			return Aviso(idioma.Tf("Windows aún tiene cargado el perfil de la cuenta del servicio (%s), con las sesiones de los agentes: se podrá quitar tras reiniciar, en PowerShell como administrador: %s (%v). Si reinstalas antes de reiniciar, el servicio recuperará esas sesiones.", perfil, orden, e))
 		}
 		time.Sleep(time.Second)
 	}

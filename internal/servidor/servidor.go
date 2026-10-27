@@ -15,8 +15,12 @@ import (
 	"tramtai/internal/idioma"
 )
 
-// Cuenta es la cuenta sin privilegios con la que corre el servicio del sistema en Linux.
-const Cuenta = "tramtai"
+// Cuenta es la cuenta sin privilegios con la que corre el servicio del sistema en Linux; CuentaWindows, la cuenta
+// virtual del servicio de Windows.
+const (
+	Cuenta        = "tramtai"
+	CuentaWindows = `NT SERVICE\Tramtai`
+)
 
 // Sitios son las rutas del servidor: la carpeta del programa (tramtai y uv), la de datos (la raíz del servidor), el
 // envoltorio tramtai-servidor y la unidad systemd (vacía en Windows). El tipo no se llama Rutas porque ese nombre es el
