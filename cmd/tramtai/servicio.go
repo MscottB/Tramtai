@@ -464,7 +464,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 		fmt.Fprintln(salida, idioma.T("en segundo plano: una línea por petición; se detiene con «tramtai servicio detener»"))
 	}
 
-	ctx, parar := signal.NotifyContext(cmd.Context(), os.Interrupt)
+	ctx, parar := contextoDeParada(cmd.Context())
 	defer parar()
 	fallo := make(chan error, 1)
 	go func() { fallo <- srv.Serve(oyente) }()
@@ -474,7 +474,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	case <-sv.Detenido():
 	}
 	fmt.Fprintln(salida, idioma.T("deteniendo…"))
-	parar()     // un segundo Ctrl+C durante el drenaje termina el proceso: Job Objects y la recuperación cubren el resto
+	parar()     // un segundo Ctrl+C (o SIGTERM) durante el drenaje termina el proceso: Job Objects y la recuperación cubren el resto
 	sv.Drenar() // la API sigue respondiendo para que los clientes recojan resultados; los trabajos nuevos se rechazan
 	cierre, cancelar := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelar()
