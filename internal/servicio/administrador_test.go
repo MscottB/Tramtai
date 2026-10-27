@@ -349,6 +349,9 @@ func TestCambiarContrasenaDesdeLaCLI(t *testing.T) {
 	if err := FijarContrasena(s.opc.Datos, "la que pone la terminal"); err != nil {
 		t.Fatal(err)
 	}
+	s.muSesiones.Lock()
+	s.lecturaAdministrador = time.Time{} // como si hubiera pasado el segundo entre lecturas del archivo
+	s.muSesiones.Unlock()
 	for nombre, b := range map[string]*navegador{"con contraseña": n, "con código": conCodigo} {
 		if r, _ := b.pedir("GET", "/ui/sesion", ""); r.StatusCode != 401 {
 			t.Errorf("%s sigue dentro: %d", nombre, r.StatusCode)
@@ -358,6 +361,37 @@ func TestCambiarContrasenaDesdeLaCLI(t *testing.T) {
 	nueva.acceder("la que pone la terminal", "")
 	if r, _ := nueva.pedir("GET", "/ui/sesion", ""); r.StatusCode != 200 {
 		t.Fatalf("la de después: %d", r.StatusCode)
+	}
+}
+
+// TestContrasenaCambiaMientrasSeEntra: si la contraseña cambia entre comprobarla y crear la sesión (aquí, mientras el
+// intento espera su hueco de argon2id), no se entra con la anterior: 401 y la cookie que llegue no vale.
+func TestContrasenaCambiaMientrasSeEntra(t *testing.T) {
+	s, _, seguro := conAdministrador(t, "", "")
+	s.frenos.argon <- struct{}{} // los dos huecos, ocupados
+	s.frenos.argon <- struct{}{}
+	n := navegadorSeguro(t, seguro)
+	hecho := make(chan int, 1)
+	go func() {
+		r, _ := n.acceder(contrasenaPrueba, "")
+		hecho <- r.StatusCode
+	}()
+	for limite := time.Now().Add(10 * time.Second); s.frenos.enCola.Load() < 1; {
+		if time.Now().After(limite) {
+			t.Fatal("el intento no llegó a la cola")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if err := FijarContrasena(s.opc.Datos, "otra contraseña bastante larga"); err != nil {
+		t.Fatal(err)
+	}
+	<-s.frenos.argon
+	<-s.frenos.argon
+	if estado := <-hecho; estado != 401 {
+		t.Fatalf("entrar con la anterior durante el cambio: %d", estado)
+	}
+	if r, _ := n.pedir("GET", "/ui/sesion", ""); r.StatusCode != 401 {
+		t.Fatalf("la sesión de ese intento: %d", r.StatusCode)
 	}
 }
 
@@ -568,7 +602,7 @@ func TestFrenoAccederALaVez(t *testing.T) {
 	for e := range estados {
 		cuenta[e]++
 	}
-	if cuenta[401] > 6 || cuenta[401]+cuenta[429] != 20 {
+	if cuenta[401] < 5 || cuenta[401] > 6 || cuenta[401]+cuenta[429] != 20 {
 		t.Fatalf("a la vez: %v", cuenta)
 	}
 }

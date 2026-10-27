@@ -96,7 +96,12 @@ func (s *Servicio) comprobarActual(w http.ResponseWriter, r *http.Request, ip ne
 	var ok bool
 	var err error
 	if !s.conFrenos(w, r, ip, func() {
-		if ok, err = ComprobarContrasena(s.opc.Datos, actual); ok && err == nil && siVale != nil {
+		ok, err = ComprobarContrasena(s.opc.Datos, actual)
+		switch {
+		case err != nil:
+		case !ok:
+			s.anotarFallo(ip, "contraseña actual en "+r.URL.Path) // con el hueco aún tomado, como en accederUI
+		case siVale != nil:
 			err = siVale()
 		}
 	}) {
@@ -107,7 +112,6 @@ func (s *Servicio) comprobarActual(w http.ResponseWriter, r *http.Request, ip ne
 		s.errorAdministrador(w, r, err)
 		return false
 	case !ok:
-		s.anotarFallo(ip, "contraseña actual en "+r.URL.Path)
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("la contraseña actual no es esa")))
 		return false
 	}
@@ -160,7 +164,11 @@ func (s *Servicio) accederUI(w http.ResponseWriter, r *http.Request, _ *sesion) 
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoEntradaRemotaNoDisponible, idioma.T("con contraseña solo se entra por HTTPS: con el TLS propio del servicio (servicio.tls.modo) o desde un proxy de confianza (servicio.proxy.confiables) que envíe X-Forwarded-Proto: https")))
 		return
 	}
-	linea := leerAdministrador(s.opc.Datos)
+	// La línea y la generación, juntas: si la contraseña cambia antes de crear la sesión, la generación ya no es esta.
+	s.muSesiones.Lock()
+	s.vigilarAdministrador(true)
+	linea, generacion := s.lineaAdministrador, s.generacion
+	s.muSesiones.Unlock()
 	if linea == "" {
 		fmt.Fprintf(s.opc.Registros, "web ui: intento de acceso sin administrador desde %s\n", ip)
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoEntradaRemotaNoDisponible, idioma.T("este servidor aún no tiene administrador: ponle contraseña con «tramtai --servidor administrador contraseña» o entra con el código de «tramtai --servidor abrir»")))
@@ -168,22 +176,41 @@ func (s *Servicio) accederUI(w http.ResponseWriter, r *http.Request, _ *sesion) 
 	}
 	var ok bool
 	var err error
-	if !s.conFrenos(w, r, ip, func() { ok, err = comprobarLinea(linea, peticion.Contrasena) }) {
+	// El fallo se cuenta con el hueco aún tomado: así ninguna petición a la vez pasa los frenos antes de que cuente.
+	if !s.conFrenos(w, r, ip, func() {
+		if ok, err = comprobarLinea(linea, peticion.Contrasena); err != nil {
+			return
+		}
+		// El código solo se mira con la contraseña buena: una mala no gasta un paso TOTP ni un código de recuperación.
+		if ok = ok && s.segundoFactor(peticion.Codigo, time.Now()); !ok {
+			s.anotarFallo(ip, "acceso")
+		}
+	}) {
 		return
 	}
 	if err != nil {
 		s.errorAdministrador(w, r, err)
 		return
 	}
-	// El código solo se mira con la contraseña buena: una mala no gasta un paso TOTP ni un código de recuperación.
-	if ok = ok && s.segundoFactor(peticion.Codigo, time.Now()); !ok {
-		s.anotarFallo(ip, "acceso")
+	if !ok {
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado, idioma.T("contraseña o código incorrectos")))
+		return
+	}
+	ses := s.crearSesion(w, r, "global", false)
+	s.muSesiones.Lock()
+	cambio := ses.generacion != generacion
+	if cambio {
+		ses.vence = time.Time{} // la contraseña cambió mientras se comprobaba: la sesión no vale (sin contar fallo)
+	}
+	s.muSesiones.Unlock()
+	if cambio {
+		fmt.Fprintf(s.opc.Registros, "web ui: acceso desde %s descartado: la contraseña cambió mientras se comprobaba\n", ip)
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado, idioma.T("contraseña o código incorrectos")))
 		return
 	}
 	s.frenos.Exito(ip, time.Now())
 	fmt.Fprintf(s.opc.Registros, "web ui: acceso correcto del administrador desde %s\n", ip)
-	s.responderSesion(w, r, s.crearSesion(w, r, "global", false))
+	s.responderSesion(w, r, ses)
 }
 
 // contrasenaUI cambia la contraseña con la actual (que cuenta en los frenos como un intento de entrada) y cierra todas

@@ -72,10 +72,9 @@ func (s *Servicio) sesionDe(r *http.Request) (string, *sesion) {
 	if err != nil {
 		return "", nil
 	}
-	linea := leerAdministrador(s.opc.Datos)
 	s.muSesiones.Lock()
 	defer s.muSesiones.Unlock()
-	s.vigilarAdministrador(linea)
+	s.vigilarAdministrador(false)
 	ses := s.sesiones[cookie.Value]
 	if ses == nil || time.Now().After(ses.vence) || ses.generacion != s.generacion {
 		delete(s.sesiones, cookie.Value)
@@ -87,9 +86,15 @@ func (s *Servicio) sesionDe(r *http.Request) (string, *sesion) {
 
 // vigilarAdministrador sube la generación si la contraseña del administrador cambió desde la última vez que se miró,
 // también desde la CLI (que escribe datos/administrador directamente): cambiarla cierra todas las sesiones, también las
-// abiertas con código. Se llama con muSesiones tomado.
-func (s *Servicio) vigilarAdministrador(linea string) {
-	if linea != s.lineaAdministrador {
+// abiertas con código. Lee el archivo como mucho una vez por segundo, salvo con ya (al entrar y al crear una sesión); se
+// llama con muSesiones tomado, así que dos lecturas cruzadas no alternan la línea guardada.
+func (s *Servicio) vigilarAdministrador(ya bool) {
+	ahora := time.Now()
+	if !ya && ahora.Sub(s.lecturaAdministrador) < time.Second {
+		return
+	}
+	s.lecturaAdministrador = ahora
+	if linea := leerAdministrador(s.opc.Datos); linea != s.lineaAdministrador {
 		s.lineaAdministrador = linea
 		s.generacion++
 	}
@@ -98,9 +103,8 @@ func (s *Servicio) vigilarAdministrador(linea string) {
 func (s *Servicio) crearSesion(w http.ResponseWriter, r *http.Request, instancia string, local bool) *sesion {
 	id := aleatorio(32)
 	ses := &sesion{instancia: instancia, csrf: aleatorio(16), vence: time.Now().Add(duracionSesion), local: local}
-	linea := leerAdministrador(s.opc.Datos)
 	s.muSesiones.Lock()
-	s.vigilarAdministrador(linea)
+	s.vigilarAdministrador(true)
 	for clave, otra := range s.sesiones {
 		if time.Now().After(otra.vence) || otra.generacion != s.generacion {
 			delete(s.sesiones, clave)
@@ -117,11 +121,14 @@ func (s *Servicio) crearSesion(w http.ResponseWriter, r *http.Request, instancia
 	return ses
 }
 
-// cerrarSesiones cierra todas las sesiones de la Web UI; las locales se vuelven a abrir solas desde este equipo.
+// cerrarSesiones cierra todas las sesiones de la Web UI; las locales se vuelven a abrir solas desde este equipo. Deja al
+// día la línea del administrador (tras cambiar la contraseña), para no volver a subir la generación al notarlo después.
 func (s *Servicio) cerrarSesiones() {
 	s.muSesiones.Lock()
+	defer s.muSesiones.Unlock()
+	s.lecturaAdministrador = time.Now()
+	s.lineaAdministrador = leerAdministrador(s.opc.Datos)
 	s.generacion++
-	s.muSesiones.Unlock()
 }
 
 // CodigoSesion crea un código de un solo uso, válido un minuto, que abre la Web UI de una instancia sin escribir

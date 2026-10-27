@@ -141,9 +141,10 @@ type Servicio struct {
 	generacion     uint64 // la vigente de las sesiones: cambiar la contraseña o «Cerrar todas las sesiones» la sube
 	ultimoPasoTOTP int64  // el último paso TOTP aceptado, que no se reutiliza (en memoria: un reinicio lo olvida)
 	// lineaAdministrador es la última línea de datos/administrador vista: si cambia, se cierran todas las sesiones.
-	lineaAdministrador string
-	frenos             *frenos   // la entrada con contraseña
-	claves             *contador // las claves falsas en las APIs
+	lineaAdministrador   string
+	lecturaAdministrador time.Time // la última vez que se leyó: como mucho una vez por segundo
+	frenos               *frenos   // la entrada con contraseña
+	claves               *contador // las claves falsas en las APIs
 
 	detener     chan struct{}
 	detenerUna  sync.Once
