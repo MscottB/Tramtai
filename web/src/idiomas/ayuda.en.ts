@@ -271,6 +271,8 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.agentes.rDesconectar': 'So Tramtai does not use it, not even as a fallback, without uninstalling its CLI. Requests that ask for it get agente_desconectado until you connect it.',
   'ayuda.ajustes.pPestanas': 'What are “This workspace” and “All of Tramtai”?',
   'ayuda.ajustes.rPestanas': '“This workspace” keeps the model, history and data of the open workspace; “All of Tramtai”, the port, converter, updates and startup.',
+  'ayuda.ajustes.pSeguridad': 'How do I sign in to the server from another computer?',
+  'ayuda.ajustes.rSeguridad': 'With the administrator password and, if you turn it on, two-step verification, over HTTPS only. They change in Settings → Security; on Linux, TOTP only with “tramtai-servidor admin”.',
   'ayuda.problemas.agente_desconectado': 'That agent is disconnected. Connect it in Agents or choose another model; the fallback skips it.',
   'ayuda.problemas.confianza_requerida': 'The folder already had a Tramtai configuration. Decide whether you trust it: if not, it opens without its APIs or budget.',
   'ayuda.problemas.espacio_detenido': 'You are inside a stopped project. Start it with tramtai espacio iniciar, or use --global to send to the global one.',

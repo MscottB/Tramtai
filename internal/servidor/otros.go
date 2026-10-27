@@ -28,6 +28,12 @@ func GuardarClave(string, string) error { return noDisponible() }
 // BorrarClave no está disponible en este sistema.
 func BorrarClave(string) error { return noDisponible() }
 
+// GuardarTOTP no existe fuera de Linux y Windows.
+func GuardarTOTP(string) error { return noDisponible() }
+
+// BorrarTOTP no existe fuera de Linux y Windows.
+func BorrarTOTP() error { return noDisponible() }
+
 // EsAdministrador dice si el proceso corre como root.
 func EsAdministrador() bool { return os.Geteuid() == 0 }
 

@@ -32,6 +32,7 @@ export const ajustes: Tema = {
         { id: 'volver-version', pregunta: 'ayuda.ajustes.pVolver', respuesta: 'ayuda.ajustes.rVolver' },
         { id: 'cuanto-se-guarda', pregunta: 'ayuda.ajustes.pRetencion', respuesta: 'ayuda.ajustes.rRetencion' },
         { id: 'dos-pestanas', pregunta: 'ayuda.ajustes.pPestanas', respuesta: 'ayuda.ajustes.rPestanas', tema: 'espacios' },
+        { id: 'entrar-servidor', pregunta: 'ayuda.ajustes.pSeguridad', respuesta: 'ayuda.ajustes.rSeguridad' },
       ],
     },
     { tipo: 'ir', pagina: 'configuracion' },

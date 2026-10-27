@@ -229,6 +229,21 @@ export interface EstadoTerminos {
   servidor: boolean
 }
 
+export interface EntradaRemota {
+  contrasena: boolean
+  totp: boolean
+  https: boolean
+}
+
+export interface SecretoTOTP {
+  secreto: string
+  uri: string
+}
+
+export interface CodigosRecuperacion {
+  codigos: string[]
+}
+
 export interface Uso {
   tokens_entrada: number
   tokens_salida: number

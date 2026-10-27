@@ -386,6 +386,10 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	if err != nil {
 		return err
 	}
+	if servidor.Expuesto(red) && len(red.Suscripciones) > 0 { // la regla 4; si no, no se pregunta al almacén
+		secretoTOTP, _ := leerClave("TRAMTAI_TOTP") // el del almacén del servicio (systemd-creds en Linux)
+		red.TOTP = secretoTOTP != ""
+	}
 	if err := servidor.ComprobarArranque(red); err != nil {
 		return err
 	}

@@ -27,7 +27,7 @@ func (s *Servicio) activarGlobalUI(w http.ResponseWriter, r *http.Request, ses *
 		api.EscribirError(w, r, err)
 		return
 	}
-	s.responderSesion(w, r, s.derivarSesion(w, inst.ID, ses))
+	s.responderSesion(w, r, s.derivarSesion(w, r, inst.ID, ses))
 }
 
 func (s *Servicio) abrirProyectoUI(w http.ResponseWriter, r *http.Request, ses *sesion) {
@@ -44,7 +44,7 @@ func (s *Servicio) abrirProyectoUI(w http.ResponseWriter, r *http.Request, ses *
 	if escribirErrorAbrir(w, r, err) {
 		return
 	}
-	s.responderSesion(w, r, s.derivarSesion(w, inst.ID, ses))
+	s.responderSesion(w, r, s.derivarSesion(w, r, inst.ID, ses))
 }
 
 // abrirYGuardar abre el proyecto y deja guardados el registro y el descriptor.

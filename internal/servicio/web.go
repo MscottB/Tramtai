@@ -25,11 +25,19 @@ type sesion struct {
 	// equipo (porCodigo); puede cambiar de instancia y usar los controles del servicio.
 	local     bool
 	porCodigo bool
+	// generacion es la del servicio al crearla: si el servicio la sube (cambiar la contraseña, «Cerrar todas las
+	// sesiones»), la sesión deja de valer.
+	generacion uint64
+	// administrador es la línea de datos/administrador con la que se entró por contraseña: si cambia (también desde la
+	// CLI), la sesión deja de valer. Vacía en las sesiones que no se abrieron con contraseña.
+	administrador string
+	// totpPendiente es el secreto TOTP que Ajustes → Seguridad enseñó y aún no se confirmó con un código.
+	totpPendiente string
 }
 
 // derivarSesion crea la sesión local de otra instancia a partir de la actual, conservando cómo se entró.
-func (s *Servicio) derivarSesion(w http.ResponseWriter, instancia string, actual *sesion) *sesion {
-	nueva := s.crearSesion(w, instancia, true)
+func (s *Servicio) derivarSesion(w http.ResponseWriter, r *http.Request, instancia string, actual *sesion) *sesion {
+	nueva := s.crearSesion(w, r, instancia, true)
 	nueva.porCodigo = actual.porCodigo
 	return nueva
 }
@@ -52,42 +60,66 @@ const (
 )
 
 // nombreCookie lleva el puerto: las cookies valen para todo 127.0.0.1, sin distinguir puerto, y dos Tramtai a la vez
-// (la instalada y una portable) en el mismo navegador se echarían la una a la otra.
-func (s *Servicio) nombreCookie() string { return cookieSesion + "_" + strconv.Itoa(s.opc.Puerto) }
+// (la instalada y una portable) en el mismo navegador se echarían la una a la otra. Por HTTPS lleva además el prefijo
+// __Host-: el navegador solo la acepta con Secure, Path=/ y sin Domain, así que ni un subdominio ni HTTP plano la pisan.
+func (s *Servicio) nombreCookie(r *http.Request) string {
+	nombre := cookieSesion + "_" + strconv.Itoa(s.opc.Puerto)
+	if EsHTTPS(r, s.opc.Confiables) {
+		return "__Host-" + nombre
+	}
+	return nombre
+}
 
 func (s *Servicio) sesionDe(r *http.Request) (string, *sesion) {
-	cookie, err := r.Cookie(s.nombreCookie())
+	cookie, err := r.Cookie(s.nombreCookie(r))
 	if err != nil {
 		return "", nil
 	}
 	s.muSesiones.Lock()
-	defer s.muSesiones.Unlock()
 	ses := s.sesiones[cookie.Value]
-	if ses == nil || time.Now().After(ses.vence) {
+	vale := ses != nil && !time.Now().After(ses.vence) && ses.generacion == s.generacion
+	if vale {
+		ses.vence = time.Now().Add(duracionSesion)
+	}
+	s.muSesiones.Unlock()
+	// La de contraseña deja de valer si la contraseña cambió, también desde la CLI (que escribe el archivo directamente).
+	if vale && ses.administrador != "" && ses.administrador != leerAdministrador(s.opc.Datos) {
+		vale = false
+	}
+	if !vale {
+		s.muSesiones.Lock()
 		delete(s.sesiones, cookie.Value)
+		s.muSesiones.Unlock()
 		return "", nil
 	}
-	ses.vence = time.Now().Add(duracionSesion)
 	return cookie.Value, ses
 }
 
-func (s *Servicio) crearSesion(w http.ResponseWriter, instancia string, local bool) *sesion {
+func (s *Servicio) crearSesion(w http.ResponseWriter, r *http.Request, instancia string, local bool) *sesion {
 	id := aleatorio(32)
 	ses := &sesion{instancia: instancia, csrf: aleatorio(16), vence: time.Now().Add(duracionSesion), local: local}
 	s.muSesiones.Lock()
 	for clave, otra := range s.sesiones {
-		if time.Now().After(otra.vence) {
+		if time.Now().After(otra.vence) || otra.generacion != s.generacion {
 			delete(s.sesiones, clave)
 		}
 	}
+	ses.generacion = s.generacion
 	s.sesiones[id] = ses
 	s.muSesiones.Unlock()
 	if instancia != "" {
 		s.marcarUso(instancia) // una sesión nueva vuelve al último espacio usado
 	}
-	http.SetCookie(w, &http.Cookie{Name: s.nombreCookie(), Value: id, Path: "/", HttpOnly: true,
+	http.SetCookie(w, &http.Cookie{Name: s.nombreCookie(r), Value: id, Path: "/", HttpOnly: true, Secure: EsHTTPS(r, s.opc.Confiables),
 		SameSite: http.SameSiteStrictMode, MaxAge: int(duracionSesion.Seconds())})
 	return ses
+}
+
+// cerrarSesiones cierra todas las sesiones de la Web UI; las locales se vuelven a abrir solas desde este equipo.
+func (s *Servicio) cerrarSesiones() {
+	s.muSesiones.Lock()
+	s.generacion++
+	s.muSesiones.Unlock()
 }
 
 // CodigoSesion crea un código de un solo uso, válido un minuto, que abre la Web UI de una instancia sin escribir
@@ -212,6 +244,7 @@ type permisoUI int
 const (
 	publica          permisoUI = iota // la propia ruta decide (entrar, salir y consultar la sesión)
 	conSesion                         // cualquier sesión
+	conSesionYCSRF                    // cualquier sesión, con su CSRF (sin él, 403 csrf_invalido)
 	soloLocal                         // una sesión local, desde este equipo y con su CSRF
 	soloLocalLectura                  // una sesión local, para consultar (sin CSRF: no cambia nada)
 )
@@ -261,6 +294,15 @@ var rutasDeUI = []rutaUI{
 	{http.MethodPost, "/ui/terminos", conSesion, (*Servicio).aceptarTerminosUI},
 	{http.MethodGet, "/ui/actualizacion/progreso", conSesion, (*Servicio).progresoUI},
 	{http.MethodGet, "/ui/actualizacion/novedades", conSesion, (*Servicio).novedadesUI},
+	// El administrador del servidor (la Web UI remota): entrar con contraseña es público y lo frena frenos.go; Ajustes →
+	// Seguridad es de cualquier sesión, también la remota, con su CSRF.
+	{http.MethodGet, "/ui/entrada", publica, (*Servicio).entradaUI},
+	{http.MethodPost, "/ui/acceder", publica, (*Servicio).accederUI},
+	{http.MethodPost, "/ui/administrador/contrasena", conSesionYCSRF, (*Servicio).contrasenaUI},
+	{http.MethodPost, "/ui/administrador/totp", conSesionYCSRF, (*Servicio).activarTOTPUI},
+	{http.MethodDelete, "/ui/administrador/totp", conSesionYCSRF, (*Servicio).quitarTOTPUI},
+	{http.MethodPost, "/ui/administrador/recuperacion", conSesionYCSRF, (*Servicio).recuperacionUI},
+	{http.MethodPost, "/ui/sesiones/cerrar", conSesionYCSRF, (*Servicio).cerrarSesionesUI},
 }
 
 // rutasUI busca la ruta en rutasDeUI, comprueba su permiso y la atiende.
@@ -273,9 +315,13 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 		if ruta.permiso != publica {
 			_, ses = s.sesionDe(r)
 		}
-		if ruta.permiso == conSesion && ses == nil || ruta.permiso == soloLocal && (!s.sesionLocal(r, ses) || !csrfValido(r, ses)) ||
+		if (ruta.permiso == conSesion || ruta.permiso == conSesionYCSRF) && ses == nil || ruta.permiso == soloLocal && (!s.sesionLocal(r, ses) || !csrfValido(r, ses)) ||
 			ruta.permiso == soloLocalLectura && !s.sesionLocal(r, ses) {
 			api.NoAutorizado(w, r)
+			return
+		}
+		if ruta.permiso == conSesionYCSRF && !csrfValido(r, ses) {
+			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoCSRFInvalido, idioma.T("falta la cabecera X-CSRF-Token de la sesión")))
 			return
 		}
 		ruta.atender(s, w, r, ses)
@@ -287,7 +333,7 @@ func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
 func (s *Servicio) consultarSesionUI(w http.ResponseWriter, r *http.Request, _ *sesion) {
 	_, ses := s.sesionDe(r)
 	if ses == nil && s.esLocal(r) {
-		ses = s.crearSesion(w, s.instanciaPredeterminada(), true)
+		ses = s.crearSesion(w, r, s.instanciaPredeterminada(), true)
 	}
 	if ses == nil {
 		api.NoAutorizado(w, r)
@@ -316,7 +362,7 @@ func (s *Servicio) cambiarSesionUI(w http.ResponseWriter, r *http.Request, _ *se
 			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("el espacio %s no está activo", peticion.Instancia)))
 			return
 		}
-		s.responderSesion(w, r, s.derivarSesion(w, peticion.Instancia, ses))
+		s.responderSesion(w, r, s.derivarSesion(w, r, peticion.Instancia, ses))
 		return
 	}
 	// La clave de las aplicaciones no abre la Web UI: quien la tuviera podría crear APIs y cambiar la
@@ -331,7 +377,8 @@ func (s *Servicio) salirUI(w http.ResponseWriter, r *http.Request, _ *sesion) {
 		delete(s.sesiones, id)
 		s.muSesiones.Unlock()
 	}
-	http.SetCookie(w, &http.Cookie{Name: s.nombreCookie(), Value: "", Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: -1})
+	http.SetCookie(w, &http.Cookie{Name: s.nombreCookie(r), Value: "", Path: "/", HttpOnly: true, Secure: EsHTTPS(r, s.opc.Confiables),
+		SameSite: http.SameSiteStrictMode, MaxAge: -1})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -348,7 +395,7 @@ func (s *Servicio) entrarUI(w http.ResponseWriter, r *http.Request, _ *sesion) {
 	}
 	// Con un código canjeado en este equipo la sesión es local: solo el dueño del servicio puede pedirlo (con el
 	// token de servicio). Así funciona también cuando no se puede comprobar el usuario de la conexión.
-	ses := s.crearSesion(w, entrada.instancia, s.esLocal(r) || desdeEsteEquipo(r))
+	ses := s.crearSesion(w, r, entrada.instancia, s.esLocal(r) || desdeEsteEquipo(r))
 	ses.porCodigo = true // la cookie aún no ha salido: nadie más usa esta sesión
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

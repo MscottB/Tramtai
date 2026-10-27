@@ -117,6 +117,7 @@ envía la cabecera `Idempotency-Key`: la misma clave con la misma petición devu
 | 409 | `agente_desconectado` | El agente está desconectado en Tramtai: conéctalo en **Agentes** o con `tramtai agentes conectar <agente>`. |
 | 422 | `salida_no_cumple_esquema` | La respuesta o las llamadas no cumplían el esquema: pide correcciones o «Corregir». |
 | 429 | `cola_llena`, `presupuesto_agotado`, `limite_uso_proveedor` | Espera lo que diga `Retry-After` y reintenta. |
+| 429 | `demasiados_intentos` | Demasiadas claves no válidas desde tu dirección: espera lo que diga `Retry-After` y revisa la clave. |
 | 502 | `error_agente`, `autenticacion_agente` | El agente falló o no tiene sesión: revisa **Agentes** en la app. |
 | 503 | `agente_no_disponible`, `conversor_no_disponible` | Algo no está listo; con `Retry-After`, reintenta después. |
 

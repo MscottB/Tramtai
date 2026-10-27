@@ -155,6 +155,9 @@ func (p *Pagina) bloqueDe(sec string) bloque {
 		return bloque{titulo: p.tx("arranque.titulo", "sistema", sistema()), marca: p.tx("arranque." + cmpOr(p.ajustes.ModoArranque, "no")),
 			texto:  p.tx("arranque.texto", "sistema", sistema()),
 			lineas: []string{e.Tenue.Render(p.tx("arranque.servidor")), "tramtai-servidor instalar", e.Tenue.Render("https://mscottb.github.io/Tramtai/servidor.html")}}
+	case secSeguridad: // como Ajustes → Seguridad de la Web UI, con las órdenes: la contraseña no se escribe en la terminal
+		return bloque{titulo: p.tx("config.pestanaSeguridad"), texto: p.tx("seguridad.terminal"), lineas: []string{
+			"tramtai-servidor administrador contraseña", "tramtai-servidor administrador totp activar", "tramtai-servidor administrador totp quitar"}}
 	}
 	b := bloque{titulo: p.tx("acerca.titulo")}
 	if p.acerca != nil {

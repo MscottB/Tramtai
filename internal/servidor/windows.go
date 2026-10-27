@@ -387,6 +387,16 @@ func BorrarClave(nombre string) error {
 	return conServicio(func(ctx context.Context, c *cliente.Cliente) error { return c.BorrarClave(ctx, nombre) })
 }
 
+// GuardarTOTP entrega el secreto TOTP del administrador al servicio, que lo guarda en su propio almacén.
+func GuardarTOTP(secreto string) error {
+	return conServicio(func(ctx context.Context, c *cliente.Cliente) error { return c.FijarTOTP(ctx, secreto) })
+}
+
+// BorrarTOTP quita el secreto TOTP del almacén del servicio.
+func BorrarTOTP() error {
+	return conServicio(func(ctx context.Context, c *cliente.Cliente) error { return c.QuitarTOTP(ctx) })
+}
+
 func conServicio(pedir func(context.Context, *cliente.Cliente) error) error {
 	c, err := cliente.Conectar(filepath.Join(Rutas().Datos, "datos"))
 	if err != nil {

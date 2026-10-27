@@ -214,6 +214,29 @@ func (s *Servicio) rutasAdmin() http.Handler {
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}))
+	// El secreto TOTP del administrador (tramtai-servidor administrador totp en Windows): como las claves, con el token de
+	// servicio y solo desde este equipo; en Linux, 409 (va por systemd-creds desde la CLI).
+	mux.HandleFunc("PUT /api/v1/servicio/totp", soloDesdeEsteEquipo(func(w http.ResponseWriter, r *http.Request) {
+		var peticion struct {
+			Secreto string `json:"secreto"`
+		}
+		if err := api.LeerJSON(w, r, &peticion); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		if err := s.fijarTOTP(peticion.Secreto); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	mux.HandleFunc("DELETE /api/v1/servicio/totp", soloDesdeEsteEquipo(func(w http.ResponseWriter, r *http.Request) {
+		if err := s.quitarTOTP(); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
 	mux.HandleFunc("GET /api/v1/servicio/acerca", func(w http.ResponseWriter, _ *http.Request) {
 		api.EscribirJSON(w, http.StatusOK, s.acerca(true))
 	})

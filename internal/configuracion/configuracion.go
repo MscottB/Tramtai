@@ -88,6 +88,7 @@ var esquema = map[string]tipoValor{
 	"adaptadores.*.autenticacion":                 tipoTexto,
 	"adaptadores.*.desconectado":                  tipoBooleano,
 	"adaptadores.*.permitir_apps":                 tipoBooleano,
+	"adaptadores.*.suscripcion_personal":          tipoBooleano, // en el servidor expuesto exige TOTP (servidor.ComprobarArranque)
 	"concurrencia_servicio.adaptadores.*":         tipoEntero,
 	"puntos_acceso":                               tipoLista,
 	"predeterminados.agente":                      tipoTexto,

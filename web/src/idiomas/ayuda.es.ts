@@ -269,6 +269,8 @@ const ayudaEs = {
   'ayuda.agentes.rDesconectar': 'Para que Tramtai no lo use, ni como respaldo, sin desinstalar su CLI. Las peticiones que lo pidan reciben agente_desconectado hasta que lo conectes.',
   'ayuda.ajustes.pPestanas': '¿Qué es «Este espacio» y qué «Todo Tramtai»?',
   'ayuda.ajustes.rPestanas': '«Este espacio» guarda el modelo, el historial y los datos del espacio abierto; «Todo Tramtai», el puerto, el conversor, las actualizaciones y el arranque.',
+  'ayuda.ajustes.pSeguridad': '¿Cómo se entra al servidor desde otro equipo?',
+  'ayuda.ajustes.rSeguridad': 'Con la contraseña del administrador y, si la activas, la verificación en dos pasos, solo por HTTPS. Se cambian en Ajustes → Seguridad; en Linux, el TOTP solo con «tramtai-servidor administrador».',
   'ayuda.problemas.agente_desconectado': 'Ese agente está desconectado. Conéctalo en Agentes o elige otro modelo; el respaldo lo salta.',
   'ayuda.problemas.confianza_requerida': 'La carpeta ya tenía configuración de Tramtai. Decide si confías en ella: si no, se abre sin sus APIs ni su presupuesto.',
   'ayuda.problemas.espacio_detenido': 'Estás dentro de un proyecto detenido. Actívalo con tramtai espacio iniciar, o usa --global para mandar a la global.',

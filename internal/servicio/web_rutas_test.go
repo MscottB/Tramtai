@@ -14,7 +14,7 @@ func TestPermisosDeRutasUI(t *testing.T) {
 	s.ActivarGlobal()
 	sesion := func(local bool) string {
 		w := httptest.NewRecorder()
-		s.crearSesion(w, "global", local)
+		s.crearSesion(w, httptest.NewRequest("GET", "/", nil), "global", local)
 		return w.Result().Cookies()[0].String()
 	}
 	remota, local := sesion(false), sesion(true)
