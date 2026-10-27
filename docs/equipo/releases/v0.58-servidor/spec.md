@@ -83,7 +83,7 @@ verdad para Linux y Windows Server, sin bajar la seguridad.
   - `Restart=on-failure` y el plazo de parada mayor que `servicio.plazo_drenaje_segundos`;
   - endurecida: `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome`, `PrivateTmp`, `PrivateDevices`,
     `ReadWritePaths` solo en su carpeta, `RestrictSUIDSGID`, `LockPersonality`. Sin `MemoryDenyWriteExecute`, que rompe
-    el JIT de Node (Claude Code, Codex y Copilot son de Node);
+    el JIT de Node (Claude Code y Copilot son de Node; Codex es un binario nativo);
   - `AmbientCapabilities=CAP_NET_BIND_SERVICE` solo con Let's Encrypt o un puerto menor de 1024.
 - **Windows:** un servicio con `golang.org/x/sys/windows/svc` (ya es dependencia):
   - nombre `Tramtai`, nombre visible «Tramtai (servidor)», cuenta virtual `NT SERVICE\Tramtai`;

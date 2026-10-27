@@ -22,6 +22,7 @@ func main() {
 	if !idioma.Ingles() {
 		ayudaEnEspanol(raiz)
 	}
+	raiz.SetArgs(ordenDeServidor(raiz, os.Args[1:]))
 	if err := raiz.Execute(); err != nil {
 		os.Exit(1)
 	}
@@ -38,9 +39,10 @@ func nuevaRaiz() *cobra.Command {
 			"  tramtai          terminal interactiva\n"+
 			"  tramtai abrir    Web UI en el navegador (inicia el servicio si hace falta)", enumerar(programasAgentes(), idioma.T("y"))),
 		SilenceUsage: true, Version: version.Texto(),
-		// --servidor se atiende antes que nada que calcule la raíz de datos (el aviso de los términos ya la pide).
+		// --servidor (o «tramtai servidor», que siempre es del servidor) se atiende antes que nada que calcule la raíz de
+		// datos (el aviso de los términos ya la pide).
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			if servidor {
+			if servidor || esDeServidor(cmd) {
 				usarServidor()
 			}
 			avisarTerminos(cmd, args)
@@ -60,6 +62,7 @@ func nuevaRaiz() *cobra.Command {
 		comandoTerminal(),
 		comandoIniciar(),
 		comandoServicio(),
+		comandoServidor(),
 		comandoEspacios(),
 		comandoEspacio(),
 		comandoInstancia("global"),

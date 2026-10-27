@@ -40,8 +40,9 @@ func comandoTerminos() *cobra.Command {
 }
 
 // sinAvisoDeTerminos son las órdenes que no avisan de que faltan los términos: las que los tratan, las de ayuda y
-// autocompletado, y la terminal (la raíz sin argumentos también), que los pide en su propia pantalla.
-var sinAvisoDeTerminos = []string{"terminos", "terminal", "help", "completion", cobra.ShellCompRequestCmd, cobra.ShellCompNoDescRequestCmd}
+// autocompletado, la terminal (la raíz sin argumentos también), que los pide en su propia pantalla, y «servidor», cuyo
+// «instalar» los pide (y avisar crearía datos/ a nombre de root antes de la instalación).
+var sinAvisoDeTerminos = []string{"terminos", "terminal", "servidor", "help", "completion", cobra.ShellCompRequestCmd, cobra.ShellCompNoDescRequestCmd}
 
 // sinAviso dice si la orden no avisa: las de sinAvisoDeTerminos (y las que cuelgan de ellas), la raíz sola y
 // «servicio iniciar», que se lanza en segundo plano con su stderr en servicio-salida.log y lo ensuciaría en cada arranque.
