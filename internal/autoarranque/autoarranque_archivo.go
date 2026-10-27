@@ -34,35 +34,48 @@ func rutas() ([]string, error) {
 	return []string{filepath.Join(dir, nombreArchivo)}, nil
 }
 
-// deEstaCopia dice si el archivo existe y arranca la aplicación de esta copia (no la de otra).
-func deEstaCopia(ruta string) (bool, error) {
+// programa es el ejecutable tramtai de la copia de esta aplicación de escritorio: se instalan en la misma carpeta.
+func programa(escritorio string) string { return filepath.Join(filepath.Dir(escritorio), "tramtai") }
+
+// deEstaCopia dice en qué modo arranca el archivo Tramtai desde esta copia (no desde otra); "" si no existe o no es de
+// ella.
+func deEstaCopia(ruta string) (Modo, error) {
 	datos, err := os.ReadFile(ruta)
 	if errors.Is(err, fs.ErrNotExist) {
-		return false, nil
+		return "", nil
 	} else if err != nil {
-		return false, err
+		return "", err
 	}
 	escritorio, err := propia()
-	return err == nil && string(datos) == contenido(escritorio, filepath.Base(ruta)), nil
-}
-
-// Activo indica si el arranque automático de esta copia está registrado para el usuario actual.
-func Activo() (bool, error) {
-	lista, err := rutas()
 	if err != nil {
-		return false, err
+		return "", nil
 	}
-	for _, ruta := range lista {
-		if propio, err := deEstaCopia(ruta); err != nil || propio {
-			return propio, err
+	for _, modo := range []Modo{ModoApp, ModoServicio} {
+		if string(datos) == contenido(escritorio, modo, filepath.Base(ruta)) {
+			return modo, nil
 		}
 	}
-	return false, nil
+	return "", nil
 }
 
-// Activar registra la aplicación de escritorio para que arranque oculta al iniciar sesión (solo este usuario). En la
-// portable, el archivo que dejó una portable anterior con el nombre de la instalada pasa al suyo.
-func Activar(escritorio string) error {
+// Configurado dice en qué modo está registrado el arranque automático de esta copia para el usuario actual; "" si no
+// lo está.
+func Configurado() (Modo, error) {
+	lista, err := rutas()
+	if err != nil {
+		return "", err
+	}
+	for _, ruta := range lista {
+		if modo, err := deEstaCopia(ruta); err != nil || modo != "" {
+			return modo, err
+		}
+	}
+	return "", nil
+}
+
+// activar registra Tramtai para que arranque en el modo dado al iniciar sesión (solo este usuario). En la portable, el
+// archivo que dejó una portable anterior con el nombre de la instalada pasa al suyo.
+func activar(escritorio string, modo Modo) error {
 	lista, err := rutas()
 	if err != nil {
 		return err
@@ -73,11 +86,11 @@ func Activar(escritorio string) error {
 	if !esPortable() {
 		apartarAjeno(lista[0], filepath.Join(filepath.Dir(lista[0]), nombrePortable))
 	}
-	if err := os.WriteFile(lista[0], []byte(contenido(escritorio, filepath.Base(lista[0]))), 0o644); err != nil {
+	if err := os.WriteFile(lista[0], []byte(contenido(escritorio, modo, filepath.Base(lista[0]))), 0o644); err != nil {
 		return err
 	}
 	for _, viejo := range lista[1:] {
-		if propio, _ := deEstaCopia(viejo); propio {
+		if propio, _ := deEstaCopia(viejo); propio != "" {
 			_ = os.Remove(viejo)
 		}
 	}
@@ -88,7 +101,7 @@ func Activar(escritorio string) error {
 // portable anterior a la 0.48 y activar la instalada no debe quitarle el arranque. En macOS cambia también su Label, que
 // es el nombre del archivo. No pisa un destino que ya existe.
 func apartarAjeno(ruta, destino string) {
-	if propio, err := deEstaCopia(ruta); err != nil || propio {
+	if propio, err := deEstaCopia(ruta); err != nil || propio != "" {
 		return
 	}
 	datos, err := os.ReadFile(ruta)
@@ -113,7 +126,7 @@ func Desactivar() error {
 		if err != nil {
 			return err
 		}
-		if !propio {
+		if propio == "" {
 			continue
 		}
 		if err := os.Remove(ruta); err != nil && !errors.Is(err, fs.ErrNotExist) {

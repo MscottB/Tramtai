@@ -498,12 +498,22 @@ const es = {
   'seccion.otros': 'Otros',
   'arranque.titulo': 'Arranque con {sistema}',
   'arranque.texto':
-    'Tramtai se inicia oculto en la bandeja al entrar en {sistema}, así la Web UI y tus aplicaciones funcionan sin abrir ninguna terminal.',
+    'Elige qué arranca al entrar en {sistema}. En los dos casos el servicio queda en marcha, así la Web UI y tus aplicaciones funcionan sin abrir ninguna terminal.',
   // Lo que dice Ajustes en la terminal (web/scripts/terminal-datos.ts usa la variante .terminal).
   'arranque.texto.terminal':
-    'Tramtai se inicia oculto en la bandeja al entrar en {sistema}: el servicio queda en marcha para la terminal, la Web UI y tus aplicaciones.',
+    'Elige qué arranca al entrar en {sistema}. En los dos casos el servicio queda en marcha para la terminal, la Web UI y tus aplicaciones.',
+  'arranque.no': 'No arrancar',
+  'arranque.noTexto': 'Tramtai solo se inicia cuando lo abres.',
+  'arranque.app': 'La app en la bandeja',
+  'arranque.appTexto': 'Se inicia oculta en la bandeja; la ventana se abre cuando quieras.',
+  'arranque.servicio': 'Solo el servicio',
+  'arranque.servicioTexto': 'Se inicia el servicio, sin ventana ni bandeja.',
   'arranque.activado': 'Tramtai arrancará al iniciar sesión en {sistema}',
+  'arranque.activadoServicio': 'El servicio de Tramtai arrancará al iniciar sesión en {sistema}, sin ventana ni bandeja',
   'arranque.desactivado': 'Arranque automático desactivado',
+  // El servicio del sistema (modo servidor) es otro entorno: se instala aparte, con tramtai-servidor.
+  'arranque.servidor': '¿Sin iniciar sesión? Eso es el servicio del sistema, otro entorno',
+  'arranque.servidorGuia': 'Guía del servidor',
   'datos.titulo': 'Borrar datos',
   'datos.texto': 'Elimina los datos de prueba o los que ya no necesites de este espacio. Los ajustes y las claves de API no se tocan.',
   'datos.historial': 'Historial de peticiones y archivos adjuntos',

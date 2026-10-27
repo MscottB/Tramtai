@@ -21,6 +21,7 @@ import (
 	"tramtai/internal/actualizacion"
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/api"
+	"tramtai/internal/autoarranque"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/documentos"
@@ -61,10 +62,12 @@ type Opciones struct {
 	PuertoAutomatico  bool
 	// Reiniciar lanza un servicio nuevo que espera a que este termine; nil = sin reinicio desde la Web UI.
 	Reiniciar func() error
-	// Autoarranque dice si el sistema puede arrancar Tramtai al iniciar sesión y si lo hace; nil = el del sistema.
-	Autoarranque func() (disponible, activo bool)
-	// CambiarAutoarranque lo activa o lo desactiva; nil = el del sistema. Las pruebas no tocan el arranque del equipo.
-	CambiarAutoarranque func(activo bool) error
+	// Autoarranque dice si el sistema puede arrancar Tramtai al iniciar sesión y en qué modo lo hace ("" si no); nil = el
+	// del sistema.
+	Autoarranque func() (disponible bool, modo autoarranque.Modo)
+	// CambiarAutoarranque elige el modo del arranque ("" lo desactiva); nil = el del sistema. Las pruebas no tocan el
+	// arranque del equipo.
+	CambiarAutoarranque func(modo autoarranque.Modo) error
 	// ConsultarVersion y Novedades leen la última versión publicada y lo que trae cada una; nil = GitHub
 	// (actualizacion.Ultima y actualizacion.Novedades). Las pruebas no van a la red.
 	ConsultarVersion func(context.Context) (actualizacion.Version, error)

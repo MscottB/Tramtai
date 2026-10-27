@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/autoarranque"
 	"tramtai/internal/contrato"
 )
 
@@ -74,7 +75,7 @@ func TestPrimerosPasos(t *testing.T) {
 	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
 	var disponible atomic.Bool // el servidor lo lee en otra goroutine
 	disponible.Store(true)
-	s.opc.Autoarranque = func() (bool, bool) { return disponible.Load(), false }
+	s.opc.Autoarranque = func() (bool, autoarranque.Modo) { return disponible.Load(), "" }
 	global, err := s.ActivarGlobal()
 	if err != nil {
 		t.Fatal(err)

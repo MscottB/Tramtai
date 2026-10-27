@@ -75,33 +75,44 @@ func escribirErrorAbrir(w http.ResponseWriter, r *http.Request, err error) bool 
 	return err != nil
 }
 
+// peticionArranque es lo que piden /ui/autoarranque y PUT /api/v1/servicio/autoarranque: activar o desactivar el arranque
+// y, al activarlo, el modo (app o servicio; sin modo, la app).
+type peticionArranque struct {
+	Activo bool   `json:"activo"`
+	Modo   string `json:"modo"`
+}
+
 func (s *Servicio) autoarranqueUI(w http.ResponseWriter, r *http.Request, ses *sesion) {
-	var peticion struct {
-		Activo bool `json:"activo"`
-	}
+	var peticion peticionArranque
 	if err := api.LeerJSON(w, r, &peticion); err != nil {
 		api.EscribirError(w, r, err)
 		return
 	}
-	if err := s.fijarAutoarranque(peticion.Activo); err != nil {
+	if err := s.fijarAutoarranque(peticion); err != nil {
 		api.EscribirError(w, r, err)
 		return
 	}
 	s.responderSesion(w, r, ses)
 }
 
-// fijarAutoarranque activa o desactiva que la app arranque, en la bandeja, al iniciar sesión (Opciones.CambiarAutoarranque
-// lo cambia).
-func (s *Servicio) fijarAutoarranque(activo bool) error {
-	if s.opc.CambiarAutoarranque != nil {
-		return s.opc.CambiarAutoarranque(activo)
-	}
-	err := autoarranque.Desactivar()
-	if activo {
-		var escritorio string
-		if escritorio, err = autoarranque.Escritorio(); err == nil {
-			err = autoarranque.Activar(escritorio)
+// fijarAutoarranque registra que Tramtai arranque al iniciar sesión, la app en la bandeja o solo el servicio, o lo quita
+// (Opciones.CambiarAutoarranque lo cambia).
+func (s *Servicio) fijarAutoarranque(p peticionArranque) error {
+	var modo autoarranque.Modo
+	if p.Activo {
+		var err error
+		if modo, err = autoarranque.ModoDe(p.Modo); err != nil {
+			return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, err.Error())
 		}
+	}
+	if s.opc.CambiarAutoarranque != nil {
+		return s.opc.CambiarAutoarranque(modo)
+	}
+	var err error
+	if modo == "" {
+		err = autoarranque.Desactivar()
+	} else {
+		err = autoarranque.Elegir(modo)
 	}
 	if err != nil {
 		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, err.Error())
@@ -115,8 +126,9 @@ func (s *Servicio) ajustesServicio() contrato.AjustesServicio {
 	a := contrato.AjustesServicio{Puerto: s.opc.Puerto, PuertoConfigurado: cmp.Or(s.opc.PuertoConfigurado, s.opc.Puerto),
 		PuertoAutomatico: s.opc.PuertoAutomatico, Reiniciable: s.opc.Reiniciar != nil}
 	s.mu.RUnlock()
-	if disponible, activo := s.estadoAutoarranque(); disponible {
-		a.Autoarranque = &activo
+	if disponible, modo := s.estadoAutoarranque(); disponible {
+		activo := modo != ""
+		a.Autoarranque, a.ModoArranque = &activo, string(modo)
 	}
 	return a
 }

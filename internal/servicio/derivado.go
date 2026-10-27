@@ -29,17 +29,17 @@ func contadores(porEstado map[string]int) map[string]int {
 	return salida
 }
 
-// estadoAutoarranque dice si este sistema puede arrancar Tramtai al iniciar sesión y si lo hace (Opciones.Autoarranque
-// lo cambia).
-func (s *Servicio) estadoAutoarranque() (disponible, activo bool) {
+// estadoAutoarranque dice si este sistema puede arrancar Tramtai al iniciar sesión y en qué modo lo hace, "" si no
+// (Opciones.Autoarranque lo cambia).
+func (s *Servicio) estadoAutoarranque() (disponible bool, modo autoarranque.Modo) {
 	if s.opc.Autoarranque != nil {
 		return s.opc.Autoarranque()
 	}
 	if !autoarranque.Disponible {
-		return false, false
+		return false, ""
 	}
-	activo, _ = autoarranque.Activo()
-	return true, activo
+	modo, _ = autoarranque.Configurado()
+	return true, modo
 }
 
 // primerosPasos son los de Inicio: un agente listo, una petición completada, una API y, para el usuario de este
@@ -57,8 +57,8 @@ func (s *Servicio) primerosPasos(ctx context.Context, inst *Instancia, local boo
 		{Pagina: "ejecutar", Hecho: inst.estado(ctx).Trabajos["completado"] > 0},
 		{Pagina: "conectar", Hecho: len(s.puntosDe(inst.ID)) > 0},
 	}
-	if disponible, activo := s.estadoAutoarranque(); disponible && local {
-		pasos = append(pasos, contrato.Paso{Pagina: "configuracion", Hecho: activo})
+	if disponible, modo := s.estadoAutoarranque(); disponible && local {
+		pasos = append(pasos, contrato.Paso{Pagina: "configuracion", Hecho: modo != ""})
 	}
 	return contrato.PrimerosPasos{Pasos: pasos, Adaptadores: agentes}
 }

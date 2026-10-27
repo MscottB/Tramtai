@@ -152,7 +152,9 @@ func (p *Pagina) bloqueDe(sec string) bloque {
 		}
 		return b
 	case secArranque:
-		return bloque{titulo: p.tx("arranque.titulo", "sistema", sistema()), marca: casilla(*p.ajustes.Autoarranque), texto: p.tx("arranque.texto", "sistema", sistema())}
+		return bloque{titulo: p.tx("arranque.titulo", "sistema", sistema()), marca: p.tx("arranque." + cmpOr(p.ajustes.ModoArranque, "no")),
+			texto:  p.tx("arranque.texto", "sistema", sistema()),
+			lineas: []string{e.Tenue.Render(p.tx("arranque.servidor")), "tramtai-servidor instalar", e.Tenue.Render("https://mscottb.github.io/Tramtai/servidor.html")}}
 	}
 	b := bloque{titulo: p.tx("acerca.titulo")}
 	if p.acerca != nil {

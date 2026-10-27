@@ -263,18 +263,19 @@ func comandoServicio() *cobra.Command {
 		}}
 	token := &cobra.Command{Use: "token", Short: idioma.T("Dice si el espacio global tiene clave (igual que tramtai global token)"),
 		RunE: func(cmd *cobra.Command, _ []string) error { return mostrarTokenInstancia(cmd, "global", false) }}
+	var modoArranque string
 	autoarranqueCmd := &cobra.Command{Use: "autoarranque [activar|desactivar]",
-		Short: idioma.T("Arranca Tramtai (la app de escritorio, oculta en la bandeja) al iniciar sesión en Windows"),
+		Short: idioma.T("Arranca Tramtai al iniciar sesión: la app en la bandeja o solo el servicio (--modo)"),
 		Args:  cobra.MaximumNArgs(1), ValidArgs: []string{"activar", "desactivar"},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var err error
+			elegido, err := autoarranque.ModoDe(modoArranque) // se valida siempre, aunque no se use
+			if err != nil {
+				return err
+			}
 			switch {
 			case len(args) == 0:
 			case args[0] == "activar":
-				var escritorio string
-				if escritorio, err = autoarranque.Escritorio(); err == nil {
-					err = autoarranque.Activar(escritorio)
-				}
+				err = autoarranque.Elegir(elegido)
 			case args[0] == "desactivar":
 				err = autoarranque.Desactivar()
 			default:
@@ -283,13 +284,17 @@ func comandoServicio() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			activo, err := autoarranque.Activo()
+			modo, err := autoarranque.Configurado()
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), map[bool]string{true: idioma.T("arranque automático: activado"), false: idioma.T("arranque automático: desactivado")}[activo])
+			fmt.Fprintln(cmd.OutOrStdout(), map[autoarranque.Modo]string{
+				autoarranque.ModoApp:      idioma.T("arranque automático: activado, la app en la bandeja"),
+				autoarranque.ModoServicio: idioma.T("arranque automático: activado, solo el servicio"),
+				"":                        idioma.T("arranque automático: desactivado")}[modo])
 			return nil
 		}}
+	autoarranqueCmd.Flags().StringVar(&modoArranque, "modo", "app", idioma.T("con activar, qué arranca: app (en la bandeja) o servicio (solo el servicio)"))
 	var automaticoPuerto bool
 	puertoCmd := &cobra.Command{Use: "puerto [número]", Short: idioma.T("Muestra o cambia el puerto del servicio; comprueba que esté libre y se aplica al reiniciar"),
 		Args: cobra.MaximumNArgs(1),

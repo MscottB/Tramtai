@@ -23,17 +23,22 @@ func carpeta() (string, error) {
 	return filepath.Join(dir, "autostart"), nil
 }
 
-// contenido sigue la especificación de arranque automático de freedesktop (GNOME, KDE, Xfce y otros escritorios).
-func contenido(escritorio, _ string) string {
+// contenido sigue la especificación de arranque automático de freedesktop (GNOME, KDE, Xfce y otros escritorios). Abre la
+// app oculta en la bandeja o, en ModoServicio, inicia solo el servicio.
+func contenido(escritorio string, modo Modo, _ string) string {
+	comentario, orden := "Tramtai en la bandeja con el servicio en marcha", escaparExec(escritorio)+" --oculto"
+	if modo == ModoServicio {
+		comentario, orden = "Tramtai: el servicio en marcha, sin ventana", escaparExec(programa(escritorio))+" servicio iniciar -d"
+	}
 	return fmt.Sprintf(`[Desktop Entry]
 Type=Application
 Name=Tramtai
-Comment=Tramtai en la bandeja con el servicio en marcha
-Exec=%s --oculto
+Comment=%s
+Exec=%s
 Icon=tramtai
 Terminal=false
 X-GNOME-Autostart-enabled=true
-`, escaparExec(escritorio))
+`, comentario, orden)
 }
 
 // escaparExec entrecomilla una ruta para la clave Exec de freedesktop: dentro de las comillas se escapan ", `, $ y \, y

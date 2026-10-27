@@ -12,6 +12,7 @@ func init() {
 		"raíz de un proyecto con .tramtai/config.yaml (por defecto, el espacio global)":   "root of a project with .tramtai/config.yaml (default: the global workspace)",
 		"arranca solo en la bandeja, sin mostrar la ventana (arranque automático)":        "start only in the tray, without showing the window (automatic startup)",
 		"Tus agentes de IA como una API local":                                            "Your AI agents as a local API",
+		"inicia solo el servicio y termina, sin ventana ni bandeja":                       "start only the service and exit, with no window and no tray icon",
 
 		// Avisos del sistema
 		"Se detienen todos los espacios y las aplicaciones conectadas dejarán de funcionar. Tramtai sigue en la bandeja para volver a iniciarlo. ¿Continuar?": "All workspaces stop and connected apps will stop working. Tramtai stays in the tray so you can start it again. Continue?",

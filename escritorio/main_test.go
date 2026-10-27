@@ -2,10 +2,27 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"image"
 	"image/png"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
+
+// Un fallo de --solo-servicio queda en solo-servicio.log, con la hora, porque un binario windowsgui no muestra stderr; el
+// siguiente fallo lo sobrescribe, y si la carpeta de datos aún no existe se crea.
+func TestAnotarFalloSoloServicio(t *testing.T) {
+	datos := filepath.Join(t.TempDir(), "datos")
+	anotarFalloSoloServicio(datos, errors.New("primer fallo"))
+	anotarFalloSoloServicio(datos, errors.New("segundo fallo"))
+	contenido, err := os.ReadFile(filepath.Join(datos, "solo-servicio.log"))
+	texto := string(contenido)
+	if err != nil || !strings.Contains(texto, "segundo fallo") || strings.Contains(texto, "primer fallo") || strings.Count(texto, "\n") != 1 || !strings.Contains(texto, "T") {
+		t.Fatalf("solo-servicio.log: %q %v", texto, err)
+	}
+}
 
 // Los iconos de la bandeja están embebidos y se generan al tamaño pedido, en los dos temas, con algo dibujado.
 func TestIconosMenu(t *testing.T) {

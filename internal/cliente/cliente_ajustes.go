@@ -16,9 +16,10 @@ func (c *Cliente) AjustesServicio(ctx context.Context) (contrato.AjustesServicio
 	return a, c.pedir(ctx, "GET", "/api/v1/servicio/ajustes", "", nil, "", &a)
 }
 
-// Autoarranque activa o desactiva que la app arranque, en la bandeja, al iniciar sesión.
-func (c *Cliente) Autoarranque(ctx context.Context, activo bool) error {
-	return c.pedir(ctx, "PUT", "/api/v1/servicio/autoarranque", "", cuerpoJSON(map[string]bool{"activo": activo}), "application/json", nil)
+// Autoarranque activa o desactiva que Tramtai arranque al iniciar sesión; modo es "app" (la app en la bandeja) o
+// "servicio" (solo el servicio).
+func (c *Cliente) Autoarranque(ctx context.Context, activo bool, modo string) error {
+	return c.pedir(ctx, "PUT", "/api/v1/servicio/autoarranque", "", cuerpoJSON(map[string]any{"activo": activo, "modo": modo}), "application/json", nil)
 }
 
 // Actualizacion devuelve el estado de las actualizaciones; con ahora, el servicio consulta GitHub en el momento.

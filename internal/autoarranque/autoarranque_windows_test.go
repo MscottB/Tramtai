@@ -52,7 +52,7 @@ func TestActivarYDesactivar(t *testing.T) {
 	if activo, err := Activo(); err != nil || activo {
 		t.Fatalf("antes de activar: %v %v", activo, err)
 	}
-	if err := Activar(ruta); err != nil {
+	if err := activar(ruta, ModoApp); err != nil {
 		t.Fatal(err)
 	}
 	if activo, err := Activo(); err != nil || !activo {
@@ -96,17 +96,100 @@ func TestPortableMigraElValorViejo(t *testing.T) {
 		t.Fatal(err)
 	}
 	conCopia(t, ruta, true)
-	escribir(nombreValor, orden(ruta))
+	escribir(nombreValor, orden(ruta, ModoApp))
 	if activo, _ := Activo(); !activo {
 		t.Fatal("el valor de una portable anterior a la 0.48 cuenta como activo")
 	}
-	if err := Activar(ruta); err != nil {
+	if err := activar(ruta, ModoApp); err != nil {
 		t.Fatal(err)
 	}
-	if leer(nombrePortable) != orden(ruta) || leer(nombreValor) != "" {
+	if leer(nombrePortable) != orden(ruta, ModoApp) || leer(nombreValor) != "" {
 		t.Fatalf("migración: portable=%q instalada=%q", leer(nombrePortable), leer(nombreValor))
 	}
 	if err := Desactivar(); err != nil || leer(nombrePortable) != "" {
 		t.Fatalf("Desactivar en la portable: %v", err)
+	}
+}
+
+// Cada copia tiene su valor: una portable en «Solo el servicio» no pisa la app de la instalada, ni al revés, y quitar el
+// de una deja el de la otra.
+func TestPortableEnServicioNoPisaLaInstalada(t *testing.T) {
+	dir := t.TempDir()
+	instalada, portable := filepath.Join(dir, "instalada", "tramtai-escritorio.exe"), filepath.Join(dir, "portable", "tramtai-escritorio.exe")
+	conCopia(t, instalada, false)
+	como := func(ruta string, esPortableAhora bool) {
+		esPortable = func() bool { return esPortableAhora }
+		propia = func() (string, error) { return ruta, nil }
+	}
+	esperar := func(quiero Modo, donde string) {
+		t.Helper()
+		if modo, err := Configurado(); err != nil || modo != quiero {
+			t.Fatalf("%s: Configurado = %q %v; se esperaba %q", donde, modo, err, quiero)
+		}
+	}
+	if err := Elegir(ModoApp); err != nil {
+		t.Fatal(err)
+	}
+	como(portable, true)
+	if err := Elegir(ModoServicio); err != nil {
+		t.Fatal(err)
+	}
+	esperar(ModoServicio, "la portable")
+	como(instalada, false)
+	esperar(ModoApp, "la instalada tras elegir en la portable")
+	como(portable, true)
+	if err := Desactivar(); err != nil {
+		t.Fatal(err)
+	}
+	esperar("", "la portable desactivada")
+	como(instalada, false)
+	esperar(ModoApp, "la instalada tras desactivar la portable")
+}
+
+// TestElegirServicioWindows: «Solo el servicio» registra la app de escritorio con --solo-servicio (no abre ventana ni
+// bandeja) en lugar de --oculto, y sustituye al modo anterior en el mismo valor.
+func TestElegirServicioWindows(t *testing.T) {
+	ruta := `C:\ruta con espacios\tramtai-escritorio.exe`
+	conCopia(t, ruta, false)
+	if err := Elegir(ModoApp); err != nil || leer(nombreValor) != `"C:\ruta con espacios\tramtai-escritorio.exe" --oculto` {
+		t.Fatalf("app: %q %v", leer(nombreValor), err)
+	}
+	if err := Elegir(ModoServicio); err != nil {
+		t.Fatal(err)
+	}
+	if valor := leer(nombreValor); valor != `"C:\ruta con espacios\tramtai-escritorio.exe" --solo-servicio` {
+		t.Fatalf("valor registrado: %s", valor)
+	}
+}
+
+// TestConfiguradoDistingueModos: Configurado dice el modo de esta copia y "" si no hay nada suyo; un modo que no existe
+// no se registra.
+func TestConfiguradoDistingueModos(t *testing.T) {
+	dir := t.TempDir()
+	ruta := filepath.Join(dir, "tramtai-escritorio.exe")
+	if err := os.WriteFile(ruta, nil, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	conCopia(t, ruta, false)
+	esperar := func(quiero Modo) {
+		t.Helper()
+		if modo, err := Configurado(); err != nil || modo != quiero {
+			t.Fatalf("Configurado = %q %v; se esperaba %q", modo, err, quiero)
+		}
+		if activo, _ := Activo(); activo != (quiero != "") {
+			t.Fatalf("Activo = %v con el modo %q", activo, quiero)
+		}
+	}
+	esperar("")
+	_ = activar(ruta, ModoApp)
+	esperar(ModoApp)
+	_ = activar(ruta, ModoServicio)
+	esperar(ModoServicio)
+	escribir(nombreValor, `"`+ruta+`"`) // sin argumentos, como lo dejaba una versión anterior
+	esperar(ModoApp)
+	escribir(nombreValor, `"D:\Otra\tramtai-escritorio.exe" --solo-servicio`)
+	esperar("")
+	if err := Elegir("otro"); err == nil {
+		t.Fatal("un modo desconocido debe fallar")
 	}
 }

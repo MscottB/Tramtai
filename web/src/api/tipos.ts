@@ -21,10 +21,12 @@ export interface Sesion {
   // local: entró sin clave por ser el mismo usuario del equipo; puede cambiar de instancia.
   local: boolean
   instancias?: InstanciaResumida[]
-  // autoarranque: si Tramtai arranca al iniciar sesión; solo en sesiones locales de sistemas que lo admiten.
+  // autoarranque: si Tramtai arranca al iniciar sesión y modo_arranque, en qué modo (la app en la bandeja o solo el
+  // servicio); solo en sesiones locales de sistemas que lo admiten.
   autoarranque?: boolean
+  modo_arranque?: AjustesServicio['modo_arranque']
   // servicio: el puerto en uso, el configurado y si se puede reiniciar desde aquí (solo sesiones locales).
-  servicio?: Omit<AjustesServicio, 'autoarranque'>
+  servicio?: Omit<AjustesServicio, 'autoarranque' | 'modo_arranque'>
   // almacen: dónde guarda este sistema las claves de proveedor, cifradas y fuera de Tramtai (vacío si no hay).
   almacen?: { disponible: boolean; nombre: string }
 }

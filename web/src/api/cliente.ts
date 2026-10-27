@@ -93,7 +93,7 @@ export const api = {
   confiarEspacio: (id: string, confiar: boolean) => accionEspacio('confiar', { id, confiar }),
   ubicarEspacio: (id: string, ruta: string) => accionEspacio('ubicar', { id, ruta }),
   olvidarEspacio: (id: string, nombre: string) => accionEspacio('olvidar', { id, nombre }),
-  autoarranque: (activo: boolean) => pedir<Sesion>('POST', '/ui/autoarranque', { activo }).then(recordar),
+  autoarranque: (modo: '' | 'app' | 'servicio') => pedir<Sesion>('POST', '/ui/autoarranque', { activo: modo !== '', modo }).then(recordar),
   actualizacion: () => pedir<EstadoActualizacion>('GET', '/ui/actualizacion'),
   acerca: () => pedir<Acerca>('GET', '/ui/acerca'),
   // terminos dice si falta aceptar los términos de uso vigentes; aceptarTerminos guarda la aceptación hecha aquí.
