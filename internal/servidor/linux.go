@@ -3,13 +3,10 @@
 package servidor
 
 import (
-	"bytes"
 	"cmp"
 	"context"
-	"crypto/rand"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"os/user"
@@ -18,13 +15,15 @@ import (
 	"strings"
 	"syscall"
 
-	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/terminos"
 )
 
 // envoltorio es tramtai-servidor: el programa del servidor con la raíz de datos del servidor.
 const envoltorio = "#!/bin/sh\nexec /opt/tramtai/tramtai --servidor \"$@\"\n"
+
+// sinBloquear abre config.yaml sin quedarse colgado si es un FIFO (leerConfiguracion).
+const sinBloquear = syscall.O_NONBLOCK
 
 // conSystemd dice si el sistema arrancó con systemd (como sd_booted); las pruebas lo sustituyen.
 var conSystemd = func() bool {
@@ -105,20 +104,6 @@ func orden(nombre string, args ...string) error {
 	return nil
 }
 
-func existe(ruta string) bool {
-	_, err := os.Stat(ruta)
-	return err == nil
-}
-
-// escribirSiCambia escribe el archivo solo si su contenido es otro, y dice si lo cambió. Pone uno nuevo en su lugar:
-// el programa en marcha no se puede sobrescribir.
-func escribirSiCambia(ruta string, contenido []byte, permisos os.FileMode) (bool, error) {
-	if actual, err := os.ReadFile(ruta); err == nil && bytes.Equal(actual, contenido) {
-		return false, nil
-	}
-	return true, configuracion.EscribirAtomico(ruta, contenido, permisos)
-}
-
 // Instalar crea la cuenta del servicio, copia el programa, prepara la carpeta de datos, escribe la unidad y la habilita
 // y arranca. Repetirla es seguro: con la misma versión no cambia nada; con otra, actualiza y reinicia.
 func Instalar(o Opciones) error {
@@ -155,7 +140,7 @@ func Instalar(o Opciones) error {
 	if _, err := escribirSiCambia(r.Envoltorio, []byte(envoltorio), 0o755); err != nil {
 		return err
 	}
-	if err := prepararDatos(r.Datos, cmp.Or(o.Como, terminos.ComoServidorInstalar)); err != nil {
+	if err := prepararDatos(r.Datos, cmp.Or(o.Como, terminos.ComoServidorInstalar), o.Conversor); err != nil {
 		return err
 	}
 	nueva, err := actualizarUnidad(r, UnidadOpciones{LetsEncrypt: o.LetsEncrypt, PuertoBajo: o.PuertoBajo})
@@ -175,122 +160,6 @@ func Instalar(o Opciones) error {
 		return orden("systemctl", "restart", "tramtai")
 	}
 	return nil
-}
-
-// configInicial es la configuración del servidor recién instalado: solo en este equipo.
-const configInicial = "servicio:\n  host: 127.0.0.1\n"
-
-// prepararDatos crea la carpeta del servidor y datos/, solo de la cuenta del servicio (0700), la configuración inicial
-// (si falta) y la aceptación de los términos, y lo deja todo a nombre de la cuenta del servicio. La raíz es de esa
-// cuenta, que podría dejar enlaces para que root escribiera fuera (datos/terminos.json → /etc/shadow): dentro de ella
-// todo pasa por un os.Root, y datos o config.yaml enlazados son un error.
-func prepararDatos(raiz, como string) error {
-	if err := os.MkdirAll(raiz, 0o700); err != nil { // /var/lib es de root: la raíz en sí no la puede cambiar la cuenta
-		return err
-	}
-	r, err := os.OpenRoot(raiz)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-	if err := r.Mkdir("datos", 0o700); err != nil && !errors.Is(err, fs.ErrExist) {
-		return err
-	}
-	if err := comprobarTipo(r, "datos", fs.ModeDir); err != nil {
-		return err
-	}
-	for _, d := range []string{".", "datos"} { // ya existían con otros permisos
-		if err := r.Chmod(d, 0o700); err != nil {
-			return err
-		}
-	}
-	if _, err := r.Lstat("config.yaml"); errors.Is(err, fs.ErrNotExist) {
-		if err := escribirEn(r, "config.yaml", []byte(configInicial), 0o600); err != nil {
-			return err
-		}
-	}
-	if _, err := leerConfiguracion(r); err != nil {
-		return err
-	}
-	contenido, err := terminos.Contenido(como)
-	if err != nil {
-		return err
-	}
-	if err := escribirEn(r, "datos/terminos.json", contenido, 0o600); err != nil {
-		return err
-	}
-	return ajustarDueno(r)
-}
-
-// comprobarTipo falla si nombre no es del tipo dado (una carpeta, o un archivo normal con 0): un enlace no vale.
-func comprobarTipo(r *os.Root, nombre string, tipo fs.FileMode) error {
-	info, err := r.Lstat(nombre)
-	if err != nil {
-		return err
-	}
-	if info.Mode().Type() != tipo {
-		return tipoInesperado(filepath.Join(r.Name(), nombre))
-	}
-	return nil
-}
-
-// tipoInesperado es el error de una ruta de la raíz que no es lo que se espera: un enlace, un FIFO…
-type tipoInesperado string
-
-func (e tipoInesperado) Error() string {
-	return idioma.Tf("%s no es lo que se espera (¿un enlace?): quítalo y repite la instalación", string(e))
-}
-
-// escribirEn escribe un archivo de dentro de la raíz en un temporal nuevo y lo renombra encima: si el destino era un
-// enlace, se sustituye el enlace, no lo que hay detrás.
-func escribirEn(r *os.Root, nombre string, datos []byte, permisos os.FileMode) error {
-	temporal := nombre + "." + rand.Text() + ".tmp"
-	f, err := r.OpenFile(temporal, os.O_WRONLY|os.O_CREATE|os.O_EXCL, permisos)
-	if err != nil {
-		return err
-	}
-	_, err = f.Write(datos)
-	if err == nil {
-		err = f.Chmod(permisos) // sin la umask
-	}
-	if err == nil {
-		err = f.Sync()
-	}
-	if cerrar := f.Close(); err == nil {
-		err = cerrar
-	}
-	if err == nil {
-		err = r.Rename(temporal, nombre)
-	}
-	if err != nil {
-		_ = r.Remove(temporal)
-	}
-	return err
-}
-
-// leerConfiguracion lee config.yaml de la raíz del servidor sin seguir un enlace. Lo abre sin bloquear y comprueba el
-// descriptor abierto: si entre el Lstat y la apertura lo cambiaron por un FIFO, root no se queda colgado leyéndolo.
-func leerConfiguracion(r *os.Root) (*configuracion.Configuracion, error) {
-	if err := comprobarTipo(r, "config.yaml", 0); err != nil {
-		return nil, err
-	}
-	f, err := r.OpenFile("config.yaml", os.O_RDONLY|syscall.O_NONBLOCK, 0)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	if info, err := f.Stat(); err != nil || !info.Mode().IsRegular() {
-		return nil, cmp.Or(err, error(tipoInesperado(filepath.Join(r.Name(), "config.yaml"))))
-	}
-	bruto, err := io.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-	capa, err := configuracion.CargarCapaDe(bruto, filepath.Join(r.Name(), "config.yaml"), configuracion.OrigenGlobal)
-	if err != nil {
-		return nil, err
-	}
-	return configuracion.Resolver(capa), nil
 }
 
 // actualizarUnidad escribe la unidad con la configuración actual del servidor, si cambió, y dice si la cambió. extra

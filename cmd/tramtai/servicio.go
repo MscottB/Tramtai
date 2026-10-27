@@ -361,6 +361,9 @@ func comandoServicio() *cobra.Command {
 // registro va a ese archivo con rotación (segundo plano); sin él, a la terminal. En un reinicio (esperarCierre) espera
 // a que el servicio anterior suelte el cerrojo de la carpeta de datos.
 func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) error {
+	if servicioWindows, err := ejecutarComoServicio(cmd, archivo); servicioWindows {
+		return err
+	}
 	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	if err != nil {
 		return err

@@ -1,4 +1,4 @@
-//go:build !linux
+//go:build !linux && !windows
 
 package servidor
 
@@ -6,6 +6,9 @@ import (
 	"context"
 	"os"
 )
+
+// sinBloquear no se usa aquí: prepararDatos solo se llega a usar en Linux y en Windows.
+const sinBloquear = 0
 
 // Instalar no está disponible en este sistema.
 func Instalar(Opciones) error { return noDisponible() }
@@ -24,3 +27,5 @@ func EsAdministrador() bool { return os.Geteuid() == 0 }
 
 // AjustarDueno no hace nada: el dueño de lo que escribe la CLI solo importa con la cuenta del servicio de Linux.
 func AjustarDueno(string) error { return nil }
+
+func ajustarDueno(*os.Root) error { return nil }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -138,5 +139,30 @@ func TestServidorDesinstalarConfirma(t *testing.T) {
 	}
 	if len(*desinstalado) != 2 || !(*desinstalado)[0] || (*desinstalado)[1] {
 		t.Errorf("desinstalaciones: %v", *desinstalado)
+	}
+}
+
+// TestServidorInstalarConversor: --conversor (--converter) llega a Instalar con la ruta absoluta del paquete.
+func TestServidorInstalarConversor(t *testing.T) {
+	instalado, _ := simularServidor(t, true)
+	for _, opcion := range []string{"--conversor", "--converter"} {
+		if _, err := ejecutarServidor(t, "", "servidor", "instalar", "--acepto-terminos", opcion, "conversor.zip"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	quiere, _ := filepath.Abs("conversor.zip")
+	if len(*instalado) != 2 || (*instalado)[0].Conversor != quiere || (*instalado)[1].Conversor != quiere {
+		t.Errorf("instalaciones: %+v", *instalado)
+	}
+}
+
+// TestServidorDesinstalarAviso: un Aviso de Desinstalar (el perfil que Windows aún tiene cargado) se muestra, pero la
+// desinstalación se dio por hecha.
+func TestServidorDesinstalarAviso(t *testing.T) {
+	simularServidor(t, true)
+	desinstalarServidor = func(bool) error { return servidor.Aviso("el perfil sigue cargado") }
+	salida, err := ejecutarServidor(t, "s\n", "servidor", "desinstalar", "--borrar-datos")
+	if err != nil || !strings.Contains(salida, "el perfil sigue cargado") || !strings.Contains(salida, "servidor desinstalado") {
+		t.Errorf("con aviso: %v %q", err, salida)
 	}
 }

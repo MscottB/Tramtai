@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 
@@ -67,6 +68,7 @@ func comandoServidor() *cobra.Command {
 		Short: idioma.T("Servicio del sistema (modo servidor): instalar, desinstalar, estado, reiniciar y registro")}
 
 	var acepto bool
+	var conversor string
 	instalar := &cobra.Command{Use: "instalar", Aliases: []string{"install"}, Args: cobra.NoArgs,
 		Short: idioma.T("Instala el servicio del sistema y lo arranca, tras aceptar los términos de uso"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -92,8 +94,19 @@ func comandoServidor() *cobra.Command {
 			if real, err := filepath.EvalSymlinks(ejecutable); err == nil {
 				ejecutable = real
 			}
-			if err := instalarServidor(servidor.Opciones{Origen: filepath.Dir(ejecutable), AceptoTerminos: true, Como: como}); err != nil {
+			if conversor != "" {
+				if conversor, err = filepath.Abs(conversor); err != nil {
+					return err
+				}
+			}
+			if err := instalarServidor(servidor.Opciones{Origen: filepath.Dir(ejecutable), AceptoTerminos: true, Como: como, Conversor: conversor}); err != nil {
 				return err
+			}
+			if runtime.GOOS == "windows" {
+				fmt.Fprintln(out, idioma.T("servidor instalado y en marcha (servicio Tramtai)\n"+
+					"Siguientes pasos: la contraseña del administrador, HTTPS o un proxy, y las claves de los agentes (guía del servidor: docs/servidor.md).\n"+
+					"Adminístralo con «tramtai-servidor …» desde una consola de administrador nueva (esta aún no ve el PATH)."))
+				return nil
 			}
 			fmt.Fprintln(out, idioma.T("servidor instalado y en marcha (servicio tramtai)\n"+
 				"Siguientes pasos: la contraseña del administrador, HTTPS o un proxy, y las claves de los agentes (guía del servidor: docs/servidor.md).\n"+
@@ -103,16 +116,26 @@ func comandoServidor() *cobra.Command {
 	instalar.Flags().BoolVar(&acepto, "acepto-terminos", false, idioma.T("acepta los términos de uso sin preguntar"))
 	instalar.Flags().BoolVar(&acepto, "accept-terms", false, "")
 	_ = instalar.Flags().MarkHidden("accept-terms") // alias en inglés
+	instalar.Flags().StringVar(&conversor, "conversor", "", idioma.T("prepara el conversor de archivos sin red desde su paquete (.zip)"))
+	instalar.Flags().StringVar(&conversor, "converter", "", "")
+	_ = instalar.Flags().MarkHidden("converter") // alias en inglés
 
 	var borrar bool
 	desinstalar := &cobra.Command{Use: "desinstalar", Aliases: []string{"uninstall"}, Args: cobra.NoArgs,
 		Short: idioma.T("Quita el servicio del sistema y el programa; conserva los datos salvo con --borrar-datos"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			if borrar && !confirmar(cmd, idioma.Tf("¿Borrar también los datos del servidor (%s) y la cuenta %s? No se puede deshacer.", servidor.Rutas().Datos, servidor.Cuenta)) {
+			pregunta := idioma.Tf("¿Borrar también los datos del servidor (%s) y la cuenta %s? No se puede deshacer.", servidor.Rutas().Datos, servidor.Cuenta)
+			if runtime.GOOS == "windows" {
+				pregunta = idioma.Tf("¿Borrar también los datos del servidor (%s) y el perfil de la cuenta %s, con las sesiones de los agentes? No se puede deshacer.", servidor.Rutas().Datos, `NT SERVICE\Tramtai`)
+			}
+			if borrar && !confirmar(cmd, pregunta) {
 				fmt.Fprintln(cmd.OutOrStdout(), idioma.T("desinstalación cancelada"))
 				return nil
 			}
-			if err := desinstalarServidor(borrar); err != nil {
+			var aviso servidor.Aviso
+			if err := desinstalarServidor(borrar); errors.As(err, &aviso) {
+				fmt.Fprintln(cmd.ErrOrStderr(), idioma.Tf("aviso: %s", aviso.Error()))
+			} else if err != nil {
 				return err
 			}
 			fmt.Fprintln(cmd.OutOrStdout(), idioma.T("servidor desinstalado"))
@@ -132,6 +155,10 @@ func comandoServidor() *cobra.Command {
 				return err
 			}
 			out := cmd.OutOrStdout()
+			if !e.Instalado && runtime.GOOS == "windows" {
+				fmt.Fprintln(out, idioma.T("servicio del sistema: no instalado (tramtai servidor instalar, desde una consola de administrador)"))
+				return nil
+			}
 			if !e.Instalado {
 				fmt.Fprintln(out, idioma.T("servicio del sistema: no instalado (sudo tramtai servidor instalar)"))
 				return nil

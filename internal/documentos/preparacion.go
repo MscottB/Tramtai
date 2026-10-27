@@ -32,9 +32,10 @@ const htmlComprobacion = "<html><body><p>Tramtai comprueba</p></body></html>"
 
 // RaizConversor es la carpeta donde se prepara el conversor: la de la portable si lo es; si no, la local del usuario
 // (%LOCALAPPDATA%\tramtai en Windows, para no llenar un perfil móvil con ~300 MB de Python; $XDG_DATA_HOME o
-// ~/.local/share/tramtai en Linux, fuera de ~/.config) y la de Tramtai en macOS.
+// ~/.local/share/tramtai en Linux, fuera de ~/.config) y la de Tramtai en macOS. En el modo servidor, la raíz del
+// servidor: ahí lo deja «tramtai servidor instalar --conversor», y la CLI y el servicio ven el mismo.
 func RaizConversor() (string, error) {
-	if carpetas.Portable() || runtime.GOOS == "darwin" {
+	if carpetas.Portable() || carpetas.Servidor() || runtime.GOOS == "darwin" {
 		return carpetas.RaizUsuario()
 	}
 	if runtime.GOOS == "windows" {
@@ -321,20 +322,7 @@ func PrepararEn(ctx context.Context, destino, uv string, avance func(etapa strin
 	}
 
 	avance("comprobacion", 90)
-	html := filepath.Join(trabajo, "comprobacion.html")
-	if err := os.WriteFile(html, []byte(htmlComprobacion), 0o600); err != nil {
-		return err
-	}
-	var salida strings.Builder
-	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: interprete(destino), Argumentos: []string{"-m", "markitdown", html},
-		Directorio: trabajo, Entorno: entornoConversor()}, func(l string) error { salida.WriteString(l + "\n"); return nil })
-	if ctx.Err() != nil {
-		return errorDePlazo(ctx)
-	}
-	if err == nil && (r.CodigoSalida != 0 || !strings.Contains(salida.String(), "Tramtai comprueba")) {
-		err = errors.New(idioma.Tf("el conversor preparado no convierte: %s", ultimaLinea(r.Errores+"\n"+salida.String())))
-	}
-	if err != nil {
+	if err := convierte(ctx, destino, trabajo); err != nil {
 		return err
 	}
 	datos, _ := json.MarshalIndent(Listo{Markitdown: "0.1.8", LockSHA256: HuellaLock(), Python: version, PreparadoEn: time.Now().UTC()}, "", "  ")
@@ -343,6 +331,42 @@ func PrepararEn(ctx context.Context, destino, uv string, avance func(etapa strin
 	}
 	avance("comprobacion", 100)
 	return nil
+}
+
+// convierte comprueba que el conversor de dir convierte una página de prueba (trabajo es una carpeta temporal).
+func convierte(ctx context.Context, dir, trabajo string) error {
+	html := filepath.Join(trabajo, "comprobacion.html")
+	if err := os.WriteFile(html, []byte(htmlComprobacion), 0o600); err != nil {
+		return err
+	}
+	var salida strings.Builder
+	r, err := procesos.Ejecutar(ctx, procesos.Orden{Programa: interprete(dir), Argumentos: []string{"-m", "markitdown", html},
+		Directorio: trabajo, Entorno: entornoConversor()}, func(l string) error { salida.WriteString(l + "\n"); return nil })
+	if ctx.Err() != nil {
+		return errorDePlazo(ctx)
+	}
+	if err == nil && (r.CodigoSalida != 0 || !strings.Contains(salida.String(), "Tramtai comprueba")) {
+		err = errors.New(idioma.Tf("el conversor preparado no convierte: %s", ultimaLinea(r.Errores+"\n"+salida.String())))
+	}
+	return err
+}
+
+// ComprobarConversor comprueba un conversor ya preparado (el del paquete sin red) como «Preparar archivos» comprueba el
+// suyo: tiene listo.json con el lock de esta versión y su Python, y convierte una página de prueba.
+func ComprobarConversor(ctx context.Context, dir string) error {
+	u, ok := leerConversor(dir, OrigenPaquete)
+	if !ok {
+		return errors.New(idioma.Tf("%s no es un conversor preparado (falta listo.json o su Python)", dir))
+	}
+	if u.Lock != HuellaLock() {
+		return errors.New(idioma.T("el paquete del conversor es de otra versión de Tramtai: descarga el de esta versión"))
+	}
+	trabajo, err := os.MkdirTemp("", "tramtai-conversor-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(trabajo)
+	return convierte(ctx, dir, trabajo)
 }
 
 // errorDePlazo dice por qué se cortó la preparación: venció su plazo o se cerró el servicio.

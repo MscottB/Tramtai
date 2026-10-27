@@ -54,6 +54,12 @@ type EstadoSistema struct {
 	Activo    string // lo que dice el sistema: active, inactive, failed… (vacío sin instalar)
 }
 
+// Aviso es lo que Desinstalar no pudo terminar sin que sea un fallo (el perfil de la cuenta del servicio que Windows
+// aún tiene cargado): la desinstalación se hizo y quien llama lo muestra.
+type Aviso string
+
+func (a Aviso) Error() string { return string(a) }
+
 // ejecutar lanza una orden del sistema y devuelve su salida; las pruebas lo sustituyen.
 var ejecutar = func(nombre string, args ...string) ([]byte, error) {
 	return exec.Command(nombre, args...).CombinedOutput()
