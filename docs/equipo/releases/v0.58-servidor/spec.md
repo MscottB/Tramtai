@@ -27,10 +27,12 @@ verdad para Linux y Windows Server, sin bajar la seguridad.
   condiciones de la sección 5, y una petición a la vez por agente por defecto (hasta 3).
 - **Dos entornos:** tu Tramtai y el del servidor no comparten nada, y eso se dice en el sistema, la documentación y el
   sitio.
-- **Linux:** se instala desde el `.tar.gz` que ya se publica con `tramtai servidor instalar`; sin paquetes `.deb`/`.rpm`
-  del servidor en esta versión.
-- **Descargo de responsabilidad:** `TERMINOS.md` versión 2, mostrado al instalar, al activar la suscripción y en el
-  README, el repositorio, el sitio y la Ayuda.
+- **Linux:** se instala desde el `.tar.gz` que ya se publica con `tramtai servidor instalar`, o con los paquetes
+  `.deb` y `.rpm` del servidor (`tramtai-servidor`, sin la app de escritorio), nuevos en esta versión.
+- **Descargo de responsabilidad:** `TERMINOS.md` versión 2 (borrador revisado en el anexo B), con ley chilena y
+  tribunales de Santiago, sin quitar las protecciones imperativas del país de cada usuario. Se acepta de forma expresa
+  y se muestra al instalar, al activar la suscripción y en el README, el repositorio, el sitio y la Ayuda. Los riesgos
+  se le dicen claro al usuario (sección 10).
 - **macOS:** solo «Solo el servicio»; no tiene servicio del sistema en esta versión.
 - Todo lo nuevo, en español y en inglés.
 
@@ -80,10 +82,17 @@ verdad para Linux y Windows Server, sin bajar la seguridad.
   - arranque automático retrasado, y reinicio si se cae;
   - detener el servicio drena como `tramtai servicio detener`;
   - los Job Objects de los agentes funcionan igual dentro del servicio.
-- **Administrar desde el propio servidor:** `sudo tramtai --servidor <orden>` en Linux y una consola de administrador
-  con `tramtai --servidor <orden>` en Windows. Lo mismo con la terminal (`tramtai --servidor` sin más). La CLI lee el
-  descriptor y `token-servicio` de la carpeta del servidor y, con `--servidor`, acepta un servicio que corre con la
-  cuenta del servidor (hoy rechaza los de otro usuario).
+- **Administrar desde el propio servidor:** con **`tramtai-servidor <orden>`**, que equivale a `tramtai --servidor
+  <orden>` con el programa del servidor: `sudo tramtai-servidor …` en Linux y una consola de administrador en Windows.
+  Lo mismo con la terminal (`tramtai-servidor` sin más). Es un nombre aparte para no tapar el `tramtai` de escritorio,
+  que puede ser de otra versión.
+  - En Linux, `/usr/local/bin/tramtai-servidor` (o `/usr/bin/tramtai-servidor` con el paquete) lanza
+    `/opt/tramtai/tramtai --servidor`; en Windows, `tramtai-servidor.cmd` en la carpeta del programa, que se añade al
+    PATH del sistema.
+  - La CLI lee el descriptor y `token-servicio` de la carpeta del servidor y, con `--servidor`, acepta un servicio que
+    corre con la cuenta del servidor (hoy rechaza los de otro usuario).
+  - **Con `--servidor`, la CLI nunca detiene ni sustituye el servicio del sistema** por ser de otra versión (lo que hoy
+    hace con un servicio anterior del usuario): avisa de la diferencia y remite a `tramtai-servidor actualizar`.
 - **Convivencia:** el servicio del sistema tiene su puerto (17373 o el siguiente libre si el del escritorio lo ocupa),
   su descriptor y su cerrojo. La CLI sin `--servidor` sigue hablando con el Tramtai del usuario, como la portable
   desde la v0.48.
@@ -247,15 +256,33 @@ Tramtai sigue sin guardar claves en claro.
 
 - **`tramtai servidor instalar`**, desde cualquier copia (el `.tar.gz` de Linux, el instalador o el `.zip` de Windows):
   1. comprueba que es administrador y que el sistema es Linux con systemd o Windows;
-  2. muestra el resumen de `TERMINOS.md` y pide aceptarlo (`--acepto-terminos` para instalar sin preguntas);
-  3. copia el programa a `/opt/tramtai/` (`tramtai` y `uv`, con el enlace `/usr/local/bin/tramtai`) o a
-     `C:\Program Files\Tramtai Servidor\`. La cuenta del servicio solo puede leer esa carpeta;
+  2. muestra el resumen de riesgos y de `TERMINOS.md` y pide aceptarlo escribiendo «acepto»
+     (`--acepto-terminos` para instalar sin preguntas); la aceptación queda registrada (sección 10);
+  3. copia el programa a `/opt/tramtai/` (`tramtai` y `uv`, con `/usr/local/bin/tramtai-servidor`) o a
+     `C:\Program Files\Tramtai Servidor\` (con `tramtai-servidor.cmd`). Si el programa ya está ahí porque lo instaló el
+     paquete, no copia nada. La cuenta del servicio solo puede leer esa carpeta;
   4. crea la cuenta (`useradd --system --home /var/lib/tramtai --shell /usr/sbin/nologin tramtai` en Linux; la cuenta
      virtual en Windows), la carpeta de datos con sus permisos y una configuración inicial solo en loopback;
   5. registra el servicio, lo arranca y dice cómo seguir: contraseña, HTTPS o proxy, y claves.
   - Repetirla es seguro: con la misma versión no cambia nada; con otra, actualiza.
   - Sirve en Windows Server Core: el servicio no necesita WebView2 ni escritorio.
   - `--conversor <zip>` prepara el conversor desde el paquete sin red (Windows x64), para servidores sin internet.
+- **Paquetes `.deb` y `.rpm` del servidor (Linux amd64 y arm64):**
+  - `Tramtai-<versión>-servidor-linux-<arq>.deb` y `.rpm`, con nfpm como los de escritorio y una configuración aparte
+    (`scripts/linux/nfpm-servidor.yaml`); nombre del paquete `tramtai-servidor`;
+  - contienen `/opt/tramtai/tramtai`, `/opt/tramtai/uv`, `/usr/bin/tramtai-servidor`, la unidad
+    `/usr/lib/systemd/system/tramtai.service`, la cuenta en `/usr/lib/sysusers.d/tramtai.conf` y la carpeta en
+    `/usr/lib/tmpfiles.d/tramtai.conf`, `TERMINOS.md` y la licencia en `/usr/share/doc/tramtai-servidor/`;
+  - sin dependencias (el programa es estático) y sin chocar con el paquete de escritorio, que usa `/usr/bin/tramtai` y
+    `/usr/lib/tramtai`: se pueden tener los dos;
+  - **al instalar no arranca nada:** el paquete no puede pedir que se acepten los términos. Lo dice al terminar y
+    remite a `sudo tramtai-servidor instalar`, que pide la aceptación, crea la configuración, habilita y arranca;
+  - **actualizar** con `apt`/`dnf`: el `postinst` reinicia el servicio solo si ya estaba habilitado, con drenaje.
+    `tramtai-servidor actualizar` detecta que vino de un paquete y remite a `apt`/`dnf`;
+  - **quitar** el paquete detiene y deshabilita el servicio y conserva los datos (`/var/lib/tramtai`) y las
+    credenciales; `apt purge` tampoco los borra: eso es `tramtai-servidor desinstalar --borrar-datos` antes;
+  - se publican con su suma en `SHA256SUMS.txt`, firmado como el resto. Sin repositorio de `apt`/`dnf` propio en esta
+    versión.
 - **Actualizar:** el servidor comprueba cada hora, como hoy, y avisa en la Web UI, la terminal y `servidor estado`.
   `tramtai servidor actualizar`:
   - reutiliza `internal/actualizacion` (firma ed25519 de `SHA256SUMS.txt` y suma SHA-256);
@@ -266,21 +293,35 @@ Tramtai sigue sin guardar claves en claro.
 - **Desinstalar:** `tramtai servidor desinstalar` quita el servicio, el programa y la unidad, y conserva los datos.
   `--borrar-datos` borra también la carpeta, las credenciales cifradas y la cuenta, tras pedir confirmación.
 
-### 10. Términos y avisos
+### 10. Términos, riesgos y avisos
 
-- **`TERMINOS.md` versión 2** (es/en):
-  - el modo servidor: tu propio servidor, administrado por ti;
-  - la suscripción personal también en remoto, con sus condiciones;
-  - el riesgo de limitación o suspensión de cuentas, también por cambios de los proveedores sin aviso;
-  - abrir un servicio a la red es responsabilidad de quien lo administra;
-  - el autor no responde por ninguno de esos daños;
-  - la sección 1 deja de decir solo «en tu propio equipo».
-- **Dónde se muestra:**
-  - el instalador de Windows (su página de términos) y `tramtai servidor instalar`;
-  - al activar la suscripción, en el escritorio y en el servidor, y al subir `suscripcion_simultaneas`;
-  - el aviso fijo de la suscripción personal en remoto; Acerca de con el enlace;
-  - un apartado «Aviso» corto en el README, el sitio y la Ayuda, con el enlace a `TERMINOS.md`.
-- Sin revisión legal profesional; conviene una si llega la versión de pago.
+- **`TERMINOS.md` versión 2** (es/en; manda el español): el texto del anexo B, revisado como lo haría un abogado
+  (las razones de cada cambio están en B.1). La versión en inglés se traduce fiel en la implementación.
+- **Los riesgos, dichos claro y en el momento justo.** Siempre los mismos cinco, con las mismas palabras en todas
+  partes (un solo texto en `web/src/idiomas`, `internal/idioma` y la Ayuda):
+  1. **Tu cuenta con un proveedor puede limitarse, suspenderse o cerrarse** si usas tu suscripción con Tramtai, y el
+     proveedor puede cambiar sus reglas sin avisar. El autor no puede recuperarla.
+  2. **Las condiciones de Tramtai** (TOTP, una petición a la vez) **bajan el riesgo, pero no lo quitan** ni son una
+     opinión legal sobre los términos del proveedor.
+  3. **Lo que abres a la red es responsabilidad tuya:** HTTPS, cortafuegos, contraseñas, copias y actualizaciones.
+  4. **Si otras personas usan tu servidor,** tú respondes de sus datos ante la ley que te aplique.
+  5. **Tramtai es gratuito y se entrega tal cual,** sin garantías.
+- **Dónde se muestran:**
+  - **al instalar:** página de términos del instalador de Windows (casilla «Acepto», no basta con avanzar) y
+    `tramtai-servidor instalar` (hay que escribir «acepto»), con los cinco riesgos antes del enlace;
+  - **al activar la suscripción** (escritorio y servidor) y al subir `suscripcion_simultaneas`: los riesgos 1 y 2 y
+    confirmar; en el servidor remoto, además, la declaración de uso personal;
+  - **al abrir el servidor a la red** (primer arranque expuesto): el riesgo 3 en el registro y en `servidor estado`;
+  - **siempre a la vista:** el aviso fijo de la suscripción personal en remoto, y Acerca de con el enlace a los
+    términos;
+  - **en el README, el sitio, la guía del servidor y la Ayuda:** un apartado «Aviso» con los cinco riesgos y el enlace
+    a `TERMINOS.md`.
+- **Registro de la aceptación:** `datos/terminos.json` guarda la versión aceptada, la fecha (ISO 8601, UTC) y cómo se
+  aceptó (`instalador`, `servidor-instalar`, `opcion` para `--acepto-terminos`, `interfaz`). Un cambio de versión
+  mayor de los términos vuelve a pedir la aceptación al actualizar (en la Web UI o la terminal, antes de seguir); uno
+  menor (erratas, enlaces) solo se avisa en las novedades.
+- **Límite honesto:** la revisión del anexo B no sustituye a un abogado habilitado en Chile. Antes de una versión de
+  pago, hay que validarlo con uno (con pago, la Ley 19.496 sí aplicaría; ver B.1).
 
 ### 11. Documentación, sitio y capturas
 
@@ -348,6 +389,14 @@ falla, se aplica lo de la derecha:
   - Linux (systemd con sudo): instalar, arrancar, HTTPS con un certificado de prueba, contraseña e inicio de sesión,
     una petición con un agente simulado, actualizar desde un paquete local y desinstalar;
   - Windows (los runners de GitHub son Windows Server 2025): la misma secuencia con el servicio de Windows.
+- **Paquetes del servidor (Publicar y CI, contenedores Debian y Rocky Linux):** `.deb` y `.rpm` se instalan junto al
+  paquete de escritorio sin chocar, dejan los archivos, la cuenta y la unidad en su sitio, no arrancan nada, y
+  quitarlos conserva `/var/lib/tramtai`. La secuencia completa con systemd (instalar, habilitar, actualizar) va en el
+  job «Servidor» con el `.deb`.
+- **Términos:** sin aceptar no se instala; `--acepto-terminos` y el instalador escriben `datos/terminos.json`; un cambio
+  de versión mayor vuelve a pedirla y uno menor no.
+- **`tramtai-servidor`:** usa el programa del servidor y no el de escritorio; con `--servidor`, la CLI nunca detiene un
+  servicio del sistema de otra versión.
 - **Job «Proxies» en el CI (Linux, contenedores):** Caddy, nginx, Apache, Traefik y HAProxy con los ejemplos de la guía:
   hay que iniciar sesión, el flujo en vivo llega a trozos, Tramtai ve la dirección real y una cabecera falsa desde fuera
   no cuela.
@@ -369,14 +418,226 @@ en las últimas versiones.
 
 ## Fuera
 
-- Imagen de contenedor (Docker), sobre este diseño.
-- Paquetes `.deb` y `.rpm` del servidor.
+- Imagen de contenedor (Docker), sobre este diseño: release propio, el último de la hoja de ruta.
+- Repositorio propio de `apt`/`dnf` (los paquetes se descargan del release).
 - Servicio del sistema en macOS.
 - Varias cuentas, permisos por persona, OIDC y registro de cambios por persona (Pro/Team).
 - Editar la red, el HTTPS o las claves desde una sesión remota de la Web UI.
 - Volver solo a la versión anterior si la nueva no arranca (v0.61).
-- **i18n igual en todas partes y un tercer idioma:** release propio. Primero, que añadir un idioma sea añadir sus
+- **i18n igual en todas partes y un tercer idioma:** release propio, la v0.62. Primero, que añadir un idioma sea añadir sus
   archivos y una entrada en un registro también en Go (`internal/idioma` hoy solo conoce es/en), la Ayuda y el sitio,
   con una prueba de cobertura común; después el idioma, traducido por el usuario. Recomendado: portugués de Brasil y,
   más adelante, chino simplificado. Plataformas como Weblate o Crowdin piden una licencia OSI; se verá con el paso a
   open core.
+
+## Anexo B. Borrador de `TERMINOS.md` versión 2
+
+Sustituye a la versión 1 al publicar la v0.58; «[día de publicación]» se cambia por la fecha de la etiqueta. La versión
+en inglés se traduce fiel, con la frase «The Spanish version prevails». Las razones de cada cambio, en B.1.
+
+---
+
+> # Términos de uso de Tramtai
+>
+> **Versión 2 · [día de publicación]** · [English below](#terms-of-use)
+>
+> **Resumen de riesgos (léelo antes de aceptar).** Tramtai es gratuito y se entrega tal cual. (1) Si usas tu
+> suscripción de un proveedor con Tramtai, **ese proveedor puede limitar, suspender o cerrar tu cuenta**, y puede
+> cambiar sus reglas sin avisar; el autor no puede recuperarla. (2) Las condiciones que pone Tramtai **bajan ese
+> riesgo, pero no lo quitan**. (3) **Lo que abras a la red es responsabilidad tuya.** (4) **Si otras personas usan tu
+> servidor, tú respondes de sus datos.** (5) **No hay garantías** y la responsabilidad del autor está limitada (cláusulas
+> 10 a 12).
+>
+> ## 1. Partes y aceptación
+>
+> - Tramtai lo publica Michael Scott B. ([MscottB](https://github.com/MscottB)), persona natural, «el autor».
+> - Aceptas estos términos y la [licencia](LICENSE.md) cuando los aceptas de forma expresa (en el instalador, en
+>   `tramtai-servidor instalar` o en la aplicación) o cuando instalas o usas Tramtai. Tramtai guarda en tu equipo qué
+>   versión aceptaste y cuándo. Si no estás de acuerdo, no lo instales ni lo uses.
+> - Si aceptas en nombre de una organización, declaras que puedes obligarla; recuerda que el uso por una organización
+>   o con fines comerciales necesita una licencia aparte (cláusula 3).
+>
+> ## 2. Qué es Tramtai
+>
+> - Tramtai es un programa que funciona en equipos que tú controlas: tu ordenador o un servidor que administras tú.
+>   Conecta tus aplicaciones con agentes de IA de terceros: Claude Code, Codex, GitHub Copilot CLI y Antigravity
+>   mediante sus programas oficiales, y la Gemini API con tu propia clave.
+> - **Tramtai no es un proveedor de IA:** el autor no opera servidores para ti, no vende acceso a ningún modelo y no
+>   forma parte de Anthropic, OpenAI, GitHub, Microsoft ni Google, que no lo respaldan ni lo patrocinan.
+>
+> ## 3. Licencia
+>
+> Puedes usar, estudiar y modificar Tramtai para fines personales y no comerciales según la licencia
+> [PolyForm Noncommercial 1.0.0](LICENSE.md). Para usarlo en una empresa, en otra organización con fines comerciales o
+> en un producto comercial necesitas una licencia aparte del autor. En lo que toca a tus derechos de uso del programa,
+> manda la licencia.
+>
+> ## 4. Servicios de terceros
+>
+> - Para usar un agente necesitas **tu propia cuenta o clave de API** con su proveedor. **Tú aceptas y debes cumplir**
+>   los términos y las políticas de uso de cada proveedor.
+> - El autor no controla esos servicios: su disponibilidad, precios, límites, términos y decisiones sobre tu cuenta
+>   dependen solo del proveedor, que puede cambiarlos en cualquier momento y sin aviso. Un cambio de un proveedor puede
+>   hacer que Tramtai deje de funcionar con él.
+> - Los costos que te cobre un proveedor son tuyos.
+>
+> ## 5. Uso con tu suscripción
+>
+> - Tramtai permite que Claude Code, Codex o GitHub Copilot CLI usen tu suscripción (por ejemplo, Claude Pro/Max,
+>   ChatGPT o GitHub Copilot) en lugar de una clave de API: en tu equipo y, en el modo servidor, también desde otros
+>   equipos, si activas la «suscripción personal» y aceptas sus condiciones.
+> - Es **solo para ti, como titular de la suscripción**, para un uso personal y ordinario. No la compartas ni des a
+>   otras personas las claves de las APIs que la usan.
+> - **Los términos de los proveedores pueden no permitir** el uso automatizado o remoto de una suscripción personal, o
+>   usarla para alimentar otras aplicaciones, y cambian con el tiempo. Antes de activarla, declaras que has leído los
+>   términos vigentes de ese proveedor y que tu uso los cumple.
+> - **Usarla puede llevar a que el proveedor limite, suspenda o cierre tu cuenta**, con la pérdida del acceso, de tus
+>   datos en ese servicio o de lo que hayas pagado. El autor no puede intervenir ni recuperar tu cuenta. **Ese riesgo y
+>   la decisión de usarla son exclusivamente tuyos.**
+> - Las condiciones que pone Tramtai (segundo factor, pocas peticiones a la vez, avisos) **reducen el riesgo, pero no lo
+>   eliminan**, y no son una interpretación de los términos de ningún proveedor ni una asesoría legal.
+> - Tramtai no lee, copia ni guarda las credenciales de los programas de los proveedores: el inicio de sesión lo hace
+>   el propio programa del proveedor. El autor puede cambiar o retirar esta función en cualquier momento, por ejemplo
+>   si un proveedor lo pide.
+> - Para aplicaciones de otras personas, automatizaciones o cualquier uso que no sea estrictamente personal, usa una
+>   **clave de API**.
+>
+> ## 6. Modo servidor y seguridad
+>
+> - En el modo servidor **tú eres el administrador** y respondes de su configuración y su uso: dónde y cómo lo expones
+>   (HTTPS, proxy, cortafuegos), las contraseñas y el segundo factor, a quién das claves, las copias de seguridad y las
+>   actualizaciones.
+> - Tramtai incluye protecciones (HTTPS solo con TLS 1.3, inicio de sesión con frenos, claves guardadas como huella o
+>   cifradas), pero **ningún programa es invulnerable**. Abrir un servicio a la red es una decisión tuya.
+> - Si encuentras un fallo de seguridad, avísalo en privado con el aviso de seguridad del
+>   [repositorio](https://github.com/MscottB/Tramtai/security), no en un issue público.
+>
+> ## 7. Tus datos y los de otras personas
+>
+> - Tramtai guarda su configuración, su historial y tus archivos **solo en los equipos donde lo instalas**. El autor
+>   no recibe nada de eso.
+> - Tus peticiones van desde ese equipo al proveedor que elijas, y su tratamiento lo rige la política de privacidad de
+>   ese proveedor.
+> - **Si otras personas usan un Tramtai que administras,** tú decides qué datos suyos se tratan y para qué, y respondes
+>   de cumplir la ley de protección de datos que te aplique (por ejemplo, en Chile, la Ley 19.628 y la Ley 21.719 que
+>   la sustituye; en la Unión Europea, el RGPD).
+> - Para avisar de versiones nuevas, Tramtai consulta la ficha pública del último release en GitHub, sin enviar datos
+>   tuyos. Puedes desactivarlo.
+>
+> ## 8. Uso aceptable
+>
+> No uses Tramtai para:
+> - infringir la ley ni los derechos de otras personas;
+> - incumplir los términos o las políticas de uso de un proveedor;
+> - revender, compartir o dar a terceros acceso a tus cuentas, suscripciones o claves;
+> - eludir límites, controles de pago o medidas de seguridad de un proveedor;
+> - acceder sin permiso a sistemas o datos ajenos.
+>
+> ## 9. Contenido generado
+>
+> Las respuestas las generan los modelos de los proveedores, no el autor. Pueden ser incorrectas, incompletas o
+> inadecuadas. Revísalas antes de usarlas; cómo las usas es responsabilidad tuya.
+>
+> ## 10. Sin garantía
+>
+> **TRAMTAI SE ENTREGA «TAL CUAL» Y «SEGÚN DISPONIBILIDAD», SIN GARANTÍAS DE NINGÚN TIPO, NI EXPRESAS NI IMPLÍCITAS,**
+> incluidas, entre otras, las de funcionamiento sin errores o sin interrupciones, seguridad, compatibilidad con los
+> servicios de los proveedores o con sus términos, y adecuación a un fin concreto.
+>
+> ## 11. Riesgos que asumes
+>
+> Al aceptar reconoces que has leído el resumen de riesgos del principio y que asumes, en particular: la limitación,
+> suspensión o cierre de tus cuentas con los proveedores; los cambios de sus términos o servicios; los costos que te
+> cobren; los incidentes de seguridad derivados de cómo configures o expongas Tramtai; y las consecuencias de usar el
+> contenido generado.
+>
+> ## 12. Limitación de responsabilidad
+>
+> - **En la máxima medida que permita la ley aplicable, el autor no responde de ningún daño** derivado del uso de
+>   Tramtai o de la imposibilidad de usarlo, sea directo, indirecto, incidental, especial o consecuente, incluidos,
+>   entre otros, el lucro cesante, la pérdida de datos, los costos de un proveedor, la limitación, suspensión o cierre
+>   de cuentas, los incidentes de seguridad y los daños causados por el contenido generado.
+> - Si, pese a lo anterior, se declarara responsable al autor, su responsabilidad total quedará limitada a lo que le
+>   hayas pagado por Tramtai en los doce meses anteriores al hecho o a 50 dólares de los Estados Unidos, lo que sea
+>   mayor.
+> - **Nada de lo anterior excluye ni limita la responsabilidad del autor por dolo o culpa grave**, ni los derechos que
+>   la ley de tu país declare irrenunciables.
+>
+> ## 13. Indemnidad
+>
+> En la medida que permita la ley aplicable, te comprometes a mantener indemne al autor frente a reclamaciones de
+> terceros causadas por tu incumplimiento de estos términos, de la licencia o de los términos de un proveedor.
+>
+> ## 14. Marcas
+>
+> Claude, Claude Code, Codex, GitHub Copilot, Gemini, Antigravity, Anthropic, OpenAI, GitHub, Microsoft y Google son
+> marcas de sus respectivos dueños. Se nombran solo para indicar con qué programas funciona Tramtai, sin sugerir
+> respaldo ni asociación.
+>
+> ## 15. Cambios
+>
+> - El autor puede actualizar estos términos. La versión vigente es la publicada en el
+>   [repositorio](https://github.com/MscottB/Tramtai/blob/main/TERMINOS.md), con su número de versión y su fecha.
+> - Si un cambio afecta a tus derechos o a los riesgos que asumes, Tramtai te pedirá aceptarlo de nuevo al actualizar.
+>   Los demás cambios se anuncian en las novedades, y seguir usando Tramtai significa que los aceptas.
+>
+> ## 16. Ley aplicable y tribunales
+>
+> - Estos términos se rigen por las leyes de la República de Chile, y cualquier controversia se somete a los
+>   tribunales ordinarios de justicia de Santiago.
+> - Esto no te priva de la protección de las normas imperativas de tu país de residencia que no puedan excluirse por
+>   contrato, en especial las de protección de los consumidores.
+>
+> ## 17. Disposiciones finales
+>
+> - Si una cláusula no fuera válida, el resto sigue vigente, y esa cláusula se aplicará en la medida en que la ley lo
+>   permita.
+> - Estos términos y la licencia son el acuerdo completo entre tú y el autor sobre Tramtai.
+> - Que el autor no exija una cláusula en un momento dado no significa que renuncie a ella.
+> - Estos términos están en español y en inglés; si difieren, manda el español.
+> - Consultas: [abre un issue](https://github.com/MscottB/Tramtai/issues) o escribe a
+>   [MscottB](https://github.com/MscottB).
+
+---
+
+### B.1. Notas de la revisión
+
+Revisado como lo haría un abogado en contratos de software y consumo, en Chile y con usuarios de otros países. No
+sustituye la validación de un abogado habilitado en Chile.
+
+- **Aceptación expresa y registrada (cláusulas 1 y 15).** La versión 1 se aceptaba con solo usar el programa. En
+  derecho comparado, una aceptación con casilla u orden explícita y un registro de la versión aceptada se sostiene
+  mucho mejor que la aceptación tácita, sobre todo frente a cláusulas de responsabilidad. Por eso el instalador pide
+  una casilla, `servidor instalar` pide escribir «acepto» y se guarda `datos/terminos.json`.
+- **Resumen de riesgos al principio y renuncia de garantías destacada (resumen y cláusula 10).** Para que una renuncia
+  de garantías sea oponible, varias jurisdicciones (p. ej., EE. UU.) exigen que sea visible: por eso va en mayúsculas y
+  en negrita. Los riesgos van antes que todo lo demás, con las mismas palabras que la aplicación.
+- **Ley chilena y tribunales de Santiago, con la salvedad internacional (cláusula 16).** La versión 1 no fijaba ley
+  aplicable ni tribunal, lo que deja abierta la discusión sobre qué ley rige. Con usuarios de otros países, una
+  elección de ley no puede quitar a un consumidor las normas imperativas de su país (en la Unión Europea, el
+  Reglamento Roma I, art. 6, y la Directiva 93/13 sobre cláusulas abusivas); declararlo evita que se impugne la
+  cláusula entera.
+- **Dolo y culpa grave (cláusula 12).** En Chile no vale la condonación anticipada del dolo (Código Civil, art. 1465) y
+  la culpa grave se equipara al dolo en materia civil (art. 44). Una limitación sin esa salvedad arriesga que se anule
+  completa; con ella, el resto se sostiene.
+- **Tope de responsabilidad (cláusula 12).** Un tope de cero en un contrato de adhesión se lee como renuncia total y es
+  más fácil de anular; un tope razonable (lo pagado en doce meses o 50 dólares) mejora la defensa sin exponer al
+  autor.
+- **Gratuidad y Ley 19.496.** La ley chilena del consumidor rige los actos a título oneroso; con Tramtai gratuito,
+  probablemente no aplica. **Con una versión de pago sí aplicaría,** y su art. 16, letra e), deja sin efecto las
+  cláusulas que limitan la responsabilidad del proveedor por deficiencias del servicio: la cláusula 12 tendría que
+  rehacerse antes de vender nada.
+- **Terceros y suscripción (cláusulas 4, 5 y 11).** No se afirma que un proveedor permita algo: el texto dice que sus
+  términos pueden no permitirlo, que el usuario declara haberlos leído y que las condiciones de Tramtai no son una
+  interpretación ni una asesoría legal. Así el autor no garantiza el cumplimiento de términos ajenos.
+- **Modo servidor y datos de otras personas (cláusulas 6 y 7).** El autor no recibe datos, así que no es responsable
+  de su tratamiento. Quien administra un servidor que usan otros sí lo es, ante la Ley 19.628 (y la Ley 21.719, que la
+  sustituye) o el RGPD; decirlo traslada esa responsabilidad a quien de verdad la tiene.
+- **Indemnidad acotada (cláusula 13).** Se limita a los daños causados por el incumplimiento del propio usuario; una
+  indemnidad por cualquier uso sería más fácil de calificar como abusiva.
+- **Organizaciones (cláusulas 1 y 3).** La licencia es no comercial. Quien acepta por una organización declara poder
+  obligarla, y se recuerda que ese uso necesita licencia aparte.
+- **Marcas (cláusula 14).** Se añade «Claude Code» y que no se sugiere respaldo, en línea con las reglas de marca de
+  Anthropic para quien ejecuta Claude Code en su producto.
+- **Seguridad (cláusula 6).** Un canal privado para avisar de fallos es buena práctica y reduce la exposición si
+  alguien encuentra uno.
