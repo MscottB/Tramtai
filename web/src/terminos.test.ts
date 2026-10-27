@@ -8,7 +8,7 @@ import { aceptarTerminos, consultarTerminos, estadoTerminos, pantallaTerminos, r
 import type { EstadoTerminos } from './api/tipos.ts'
 
 const respuesta = (estado: number, cuerpo?: unknown) => new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), { status: estado })
-const pendiente: EstadoTerminos = { version: '2.0', pendiente: true, riesgos: ['a', 'b', 'c', 'd', 'e'] }
+const pendiente: EstadoTerminos = { version: '2.0', pendiente: true, riesgos: ['a', 'b', 'c', 'd', 'e'], servidor: false }
 
 // simular sustituye fetch y apunta método, ruta y token CSRF de cada llamada.
 function simular(f: (metodo: string, ruta: string) => Response) {

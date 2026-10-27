@@ -8,7 +8,7 @@
       </q-card-section>
       <q-card-section class="q-pt-none">
         <ol class="q-pl-md q-my-none">
-          <li v-for="riesgo in riesgosTexto()" :key="riesgo" class="q-mb-sm">{{ riesgo }}</li>
+          <li v-for="riesgo in riesgosTexto(estado.servidor)" :key="riesgo" class="q-mb-sm">{{ riesgo }}</li>
         </ol>
         <a :href="URL_TERMINOS" target="_blank" rel="noopener" class="text-primary">{{ t('terminos.leer') }}</a>
       </q-card-section>

@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/agentes"
+	"tramtai/internal/carpetas"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
@@ -26,19 +27,33 @@ func main() {
 	}
 }
 
+// usarServidor pone el modo servidor; las pruebas lo sustituyen porque dura lo que el proceso.
+var usarServidor = carpetas.UsarServidor
+
 // nuevaRaiz arma la orden raíz con todas las demás (las pruebas arman la suya).
 func nuevaRaiz() *cobra.Command {
+	var servidor bool
 	raiz := &cobra.Command{Use: "tramtai", Short: idioma.T("Tus agentes de IA como una API local"),
 		Long: idioma.Tf("Tramtai expone %s como una API local.\n\n"+
 			"  tramtai          terminal interactiva\n"+
 			"  tramtai abrir    Web UI en el navegador (inicia el servicio si hace falta)", enumerar(programasAgentes(), idioma.T("y"))),
-		SilenceUsage: true, Version: version.Texto(), PersistentPreRun: avisarTerminos,
+		SilenceUsage: true, Version: version.Texto(),
+		// --servidor se atiende antes que nada que calcule la raíz de datos (el aviso de los términos ya la pide).
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			if servidor {
+				usarServidor()
+			}
+			avisarTerminos(cmd, args)
+		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if !term.IsTerminal(os.Stdin.Fd()) || !term.IsTerminal(os.Stdout.Fd()) {
 				return cmd.Help()
 			}
 			return abrirTerminal()
 		}}
+	raiz.PersistentFlags().BoolVar(&servidor, "servidor", false, idioma.T("usa los datos del servicio del sistema (modo servidor) en lugar de los del usuario"))
+	raiz.PersistentFlags().BoolVar(&servidor, "server", false, "")
+	_ = raiz.PersistentFlags().MarkHidden("server") // alias en inglés
 	raiz.AddCommand(
 		comandoVersion(),
 		comandoAbrir(),

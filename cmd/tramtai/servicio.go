@@ -56,6 +56,9 @@ func asegurarServicio(cmd *cobra.Command) (*cliente.Cliente, error) {
 	if err == nil {
 		return c, nil
 	}
+	if errors.Is(err, cliente.ErrServidorOtraVersion) {
+		return nil, err
+	}
 	ejecutable, errEjecutable := os.Executable()
 	if errEjecutable != nil {
 		return nil, errEjecutable
@@ -383,13 +386,16 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 			}
 		}
 	}
-	datos, err := carpetas.DirDatos()
+	datos, err := dirDatos()
 	if err != nil {
 		return err
 	}
 	activo, err := cliente.Conectar(datos)
 	if err == nil {
 		return fmt.Errorf(idioma.T("el servicio ya está en marcha en %s"), activo.Base)
+	}
+	if errors.Is(err, cliente.ErrServidorOtraVersion) { // el servicio del sistema no se detiene ni se pisa desde aquí
+		return err
 	}
 	if errors.Is(err, cliente.ErrServicioAnterior) { // no toma el cerrojo: se detiene antes de abrir sus datos
 		fmt.Fprintln(salida, idioma.T("deteniendo el servicio de la versión anterior (deja terminar las peticiones en curso)…"))
@@ -431,7 +437,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	raizConversor, _ := documentos.RaizConversor() // ahí se prepara el conversor de archivos
 	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites),
 		Host: host, Puerto: puertoUsado, PuertoConfigurado: puerto, PuertoAutomatico: automatico, Reiniciar: reiniciar,
-		Hosts: hosts, Registros: salida, Web: recursos.Web(),
+		Hosts: hosts, Registros: salida, Web: recursos.Web(), Entorno: carpetas.Entorno(),
 		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,
 		EntradaLocal: c.Booleano("servicio.entrada_local") && !remoto, BuscarActualizaciones: c.Booleano("servicio.buscar_actualizaciones"),
 		RaizConversor: raizConversor, PrepararConversor: c.Booleano("conversion.preparar_al_iniciar")})

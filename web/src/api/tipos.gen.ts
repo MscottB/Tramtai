@@ -213,6 +213,8 @@ export interface Acerca {
   modificado: boolean
   go: string
   portable: boolean
+  entorno: string
+  cuenta?: string
   sistema: string
   arquitectura: string
   almacen: string
@@ -224,6 +226,7 @@ export interface EstadoTerminos {
   version: string
   pendiente: boolean
   riesgos: string[]
+  servidor: boolean
 }
 
 export interface Uso {

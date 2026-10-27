@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -56,6 +57,31 @@ func TestTerminosUI(t *testing.T) {
 	}
 	if a, _ := terminos.Leer(s.opc.Datos); a.Como != terminos.ComoInterfaz || a.Version != terminos.Version {
 		t.Errorf("queda escrito como «interfaz»: %+v", a)
+	}
+}
+
+// Los cinco riesgos de GET /ui/terminos dependen del entorno: en el servidor, los de terminos.Riesgos(true).
+func TestTerminosUIRiesgosPorEntorno(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	s.ActivarGlobal()
+	estado := func() contrato.EstadoTerminos {
+		t.Helper()
+		n := nuevoNavegador(t, ts.URL)
+		codigo, _ := s.CodigoSesion("global")
+		n.pedir("GET", "/ui/entrar?codigo="+url.QueryEscape(codigo), "")
+		var e contrato.EstadoTerminos
+		r, cuerpo := n.pedir("GET", "/ui/terminos", "")
+		if r.StatusCode != 200 || json.Unmarshal([]byte(cuerpo), &e) != nil {
+			t.Fatalf("GET /ui/terminos: %d %s", r.StatusCode, cuerpo)
+		}
+		return e
+	}
+	if e := estado(); e.Servidor || !slices.Equal(e.Riesgos, terminos.Riesgos(false)) {
+		t.Errorf("sin servidor: %+v", e)
+	}
+	s.opc.Entorno = "servidor"
+	if e := estado(); !e.Servidor || !slices.Equal(e.Riesgos, terminos.Riesgos(true)) {
+		t.Errorf("servidor: %+v", e)
 	}
 }
 

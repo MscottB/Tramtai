@@ -20,6 +20,10 @@ func init() {
 		"no hay ninguno abierto":                         "none is running",
 		"Cierra los procesos exe de la carpeta":          "Closes the exe processes from the folder",
 		"Descargando… %d %% (%.1f de %.1f MB)":           "Downloading… %d %% (%.1f of %.1f MB)",
+
+		// --servidor
+		"usa los datos del servicio del sistema (modo servidor) en lugar de los del usuario": "uses the system service’s data (server mode) instead of the user’s",
+
 		// tramtai
 		"Tus agentes de IA como una API local": "Your AI agents as a local API",
 		"Muestra la versión":                   "Shows the version",

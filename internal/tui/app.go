@@ -35,6 +35,7 @@ type Opciones struct {
 	IDProyecto string
 	Iniciar    func() (*cliente.Cliente, error) // inicia el servicio en segundo plano
 	Terminos   bool                             // faltan los términos de uso: la primera pantalla los pide (terminos.Pendiente)
+	Servidor   bool                             // modo servidor (carpetas.Servidor): los riesgos de los términos van sin el «si usas…»
 }
 
 // Ejecutar abre la terminal hasta que el usuario sale.
