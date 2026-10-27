@@ -56,7 +56,7 @@ Cada tema va en su propio release, con su spec, plan, revisión y documentación
 | v0.59 | Configurar los clientes solos (Claude Code, Codex, Cline…), con copia de su configuración antes de tocarla | ⬜ |
 | v0.60 | Uso y diagnóstico: panel de uso con tendencias, alias que también fijan el esfuerzo y «Comprobar conexión» | ⬜ |
 | v0.61 | Actualización que vuelve a la versión anterior si la nueva no arranca | ⬜ |
-| v0.62 | Idiomas: i18n igual en todas partes (Go, Web UI, Ayuda y sitio; añadir un idioma es añadir sus archivos y una entrada en un registro, con una prueba de cobertura común) y un tercer idioma traducido por el usuario: portugués de Brasil primero y chino simplificado después (análisis en la spec de la v0.58, «Fuera»); open core más adelante | ⬜ |
+| v0.62 | Idiomas: alias en inglés de todos los comandos de la CLI (`servicio`/`service`, `acceso`/`access`…; los de la v0.58 ya nacen con el suyo) y los ejemplos del sitio, la Ayuda y las guías en el idioma elegido; i18n igual en todas partes (Go, Web UI, Ayuda y sitio; añadir un idioma es añadir sus archivos y una entrada en un registro, con una prueba de cobertura común) y un tercer idioma traducido por el usuario: portugués de Brasil primero y chino simplificado después (análisis en la spec de la v0.58, «Fuera»); open core más adelante | ⬜ |
 | — | Exportar e importar APIs entre usuarios (un archivo con sus ajustes, sin claves). Ojo: compartir APIs en equipo es la base de la futura versión Pro de equipo; decidir qué queda en la gratuita antes de hacerlo | ⬜ |
 | — | OpenCode como agente nuevo (spec en `opencode.md`, rama `feat/opencode`; M0 hecha) | ⬜ |
 | — | Hermes Agent como agente nuevo (instalado; falta `hermes setup` del usuario y su M0) | ⬜ |

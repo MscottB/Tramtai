@@ -36,6 +36,13 @@ verdad para Linux y Windows Server, sin bajar la seguridad.
   dicen claro al usuario (sección 10).
 - **macOS:** solo «Solo el servicio»; no tiene servicio del sistema en esta versión.
 - Todo lo nuevo, en español y en inglés.
+- **Los comandos nuevos nacen con su par en inglés** (alias de cobra; los dos funcionan siempre):
+  `servidor`/`server` (`instalar`/`install`, `desinstalar`/`uninstall`, `estado`/`status`, `reiniciar`/`restart`,
+  `registro`/`log`, `actualizar`/`update`), `administrador`/`admin` (`contraseña`/`password`, `totp`), `terminos`/`terms`
+  (`aceptar`/`accept`), `agentes entrar`/`agents login`, `agentes suscripcion`/`agents subscription`,
+  `claves guardar`/`keys set` y las opciones `--servidor`/`--server`, `--acepto-terminos`/`--accept-terms`,
+  `--borrar-datos`/`--delete-data` y `--personal`. `tramtai-servidor` no lleva alias: es el nombre de un programa. Los
+  alias en inglés de los comandos de antes son de la v0.62.
 
 ## Lo que cambia
 
@@ -220,7 +227,8 @@ Tramtai sigue sin guardar claves en claro.
   con el código de un solo uso de `tramtai --servidor abrir`.
 - **TOTP (RFC 6238, biblioteca estándar):** `tramtai --servidor administrador totp activar|quitar`, o ya dentro en
   **Ajustes → Seguridad**. Muestra el secreto y el enlace `otpauth://` y da 10 códigos de recuperación de un solo uso,
-  guardados como huella. El secreto va al almacén cifrado (sección 4).
+  guardados como huella. El secreto va al almacén cifrado (sección 4). En Linux se activa y se quita solo desde la CLI,
+  porque el servicio no puede escribir en `systemd-creds`; la Web UI muestra la orden.
 - **La página de inicio de sesión:**
   - solo con TLS propio o desde un proxy de confianza con `X-Forwarded-Proto: https`; si no, explica por qué no puede;
   - el mismo mensaje si falla la contraseña o el código;
