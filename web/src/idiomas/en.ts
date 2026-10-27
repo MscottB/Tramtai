@@ -832,6 +832,23 @@ const en: Textos = {
   'acerca.registro': 'Service log',
   'acerca.copiar': 'Copy support details',
   'acerca.copiarTexto': 'Copies these details as text, without keys; your user folder shows as ~.',
+  // The five risks of the terms of use: one text for everywhere (internal/terminos.Riesgos repeats it in Go and a test checks
+  // they match). Without server mode, 3 and 4 are preceded by “riesgos.siServidor”.
+  'riesgos.1': 'Your account with a provider may be limited, suspended or closed if you use your subscription with Tramtai, and the provider may change its rules without notice. The author cannot recover it.',
+  'riesgos.2': 'Tramtai’s conditions (TOTP, one request at a time) lower the risk but do not remove it, and they are not a legal opinion on the provider’s terms.',
+  'riesgos.3': 'What you open to the network is your responsibility: HTTPS, firewall, passwords, backups and updates.',
+  'riesgos.4': 'If other people use your server, you answer for their data under the law that applies to you.',
+  'riesgos.5': 'Tramtai is free and provided as is, without warranties.',
+  'riesgos.siServidor': 'If you use server mode, ',
+  // “Before you continue”: accepting the terms of use when opening the Web UI, the desktop app or the terminal.
+  'terminos.titulo': 'Before you continue',
+  'terminos.intro': 'To use Tramtai you have to accept the terms of use (version {version}). These are the five risks you should know before accepting.',
+  'terminos.leer': 'Read the full terms',
+  'terminos.leerTerminal': 'The full terms: “tramtai terminos” or {url}',
+  'terminos.acepto': 'I accept',
+  'terminos.salir': 'Quit',
+  'terminos.salio': 'You have quit',
+  'terminos.salioTexto': 'Nothing in Tramtai has been used. You can close this window now. To see the terms again, reload the page.',
   'receta.fueraDeApps': 'Not available for APIs: {agentes}. We haven’t verified yet whether these agents can call tools; use them from the Playground.',
   'ejecutar.adjuntarLimites': 'Up to {n} files of {mb} MB; converted to text, up to {texto} MB. They use the model context: if they do not fit in the main one, the fallback is tried.',
   'registro.entrada': 'Input: ~{n} tokens',

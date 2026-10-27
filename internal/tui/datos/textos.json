@@ -690,7 +690,18 @@
     "acerca.copiar": "Copiar datos para soporte",
     "acerca.copiarTexto": "Copia estos detalles como texto, sin claves; tu carpeta de usuario aparece como ~.",
     "comun.guardar": "Guardar",
-    "comun.cancelar": "Cancelar"
+    "comun.cancelar": "Cancelar",
+    "riesgos.1": "Tu cuenta con un proveedor puede limitarse, suspenderse o cerrarse si usas tu suscripción con Tramtai, y el proveedor puede cambiar sus reglas sin avisar. El autor no puede recuperarla.",
+    "riesgos.2": "Las condiciones de Tramtai (TOTP, una petición a la vez) bajan el riesgo, pero no lo quitan ni son una opinión legal sobre los términos del proveedor.",
+    "riesgos.3": "Lo que abres a la red es responsabilidad tuya: HTTPS, cortafuegos, contraseñas, copias y actualizaciones.",
+    "riesgos.4": "Si otras personas usan tu servidor, tú respondes de sus datos ante la ley que te aplique.",
+    "riesgos.5": "Tramtai es gratuito y se entrega tal cual, sin garantías.",
+    "riesgos.siServidor": "Si usas el modo servidor, ",
+    "terminos.titulo": "Antes de seguir",
+    "terminos.intro": "Para usar Tramtai tienes que aceptar los términos de uso (versión {version}). Estos son los cinco riesgos que debes conocer antes de aceptar.",
+    "terminos.leerTerminal": "Los términos completos: «tramtai terminos» o {url}",
+    "terminos.acepto": "Acepto",
+    "terminos.salir": "Salir"
   },
   "en": {
     "menu.inicio": "Home",
@@ -1383,6 +1394,17 @@
     "acerca.copiar": "Copy support details",
     "acerca.copiarTexto": "Copies these details as text, without keys; your user folder shows as ~.",
     "comun.guardar": "Save",
-    "comun.cancelar": "Cancel"
+    "comun.cancelar": "Cancel",
+    "riesgos.1": "Your account with a provider may be limited, suspended or closed if you use your subscription with Tramtai, and the provider may change its rules without notice. The author cannot recover it.",
+    "riesgos.2": "Tramtai’s conditions (TOTP, one request at a time) lower the risk but do not remove it, and they are not a legal opinion on the provider’s terms.",
+    "riesgos.3": "What you open to the network is your responsibility: HTTPS, firewall, passwords, backups and updates.",
+    "riesgos.4": "If other people use your server, you answer for their data under the law that applies to you.",
+    "riesgos.5": "Tramtai is free and provided as is, without warranties.",
+    "riesgos.siServidor": "If you use server mode, ",
+    "terminos.titulo": "Before you continue",
+    "terminos.intro": "To use Tramtai you have to accept the terms of use (version {version}). These are the five risks you should know before accepting.",
+    "terminos.leerTerminal": "The full terms: “tramtai terminos” or {url}",
+    "terminos.acepto": "I accept",
+    "terminos.salir": "Quit"
   }
 }

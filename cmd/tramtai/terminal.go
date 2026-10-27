@@ -12,6 +12,7 @@ import (
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/servicio"
+	"tramtai/internal/terminos"
 	"tramtai/internal/tui"
 )
 
@@ -25,7 +26,8 @@ func abrirTerminal() error {
 	if err != nil {
 		return err
 	}
-	o := tui.Opciones{Datos: datos, Iniciar: func() (*cliente.Cliente, error) {
+	pendiente, _ := terminos.Pendiente(datos) // sin poder leerlo cuenta como pendiente
+	o := tui.Opciones{Datos: datos, Terminos: pendiente, Iniciar: func() (*cliente.Cliente, error) {
 		ejecutable, err := os.Executable()
 		if err != nil {
 			return nil, err

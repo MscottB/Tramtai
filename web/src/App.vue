@@ -3,6 +3,16 @@
     <q-spinner size="44px" color="primary" />
   </div>
   <EntrarPagina v-else-if="!sesion" :aviso="avisoEntrada" />
+  <!-- Los términos de uso se aceptan antes de montar las páginas; «Salir» las deja sin cargar. -->
+  <div v-else-if="pantallaTerm === 'consultando'" class="fullscreen flex flex-center" role="status" :aria-label="t('comun.cargando')">
+    <q-spinner size="44px" color="primary" />
+  </div>
+  <AntesDeSeguir v-else-if="pantallaTerm === 'pedir' && estadoTerminos" :estado="estadoTerminos" />
+  <div v-else-if="pantallaTerm === 'salio'" class="fullscreen flex flex-center q-pa-md" style="background: var(--fondo)">
+    <q-card style="width: 480px; max-width: 100%">
+      <EstadoVacio :titulo="t('terminos.salio')" :texto="t('terminos.salioTexto')" />
+    </q-card>
+  </div>
   <q-layout v-else view="hHh Lpr fFf">
     <!-- Con el teclado, el primer Tab ofrece saltarse la cabecera y el menú. Es un botón y no un enlace a #contenido:
          el hash es la página que se muestra. -->
@@ -322,6 +332,8 @@ import AcercaDe from './componentes/AcercaDe.vue'
 import EstadoVacio from './componentes/EstadoVacio.vue'
 import ListaNovedades from './componentes/ListaNovedades.vue'
 import NotasVersion from './componentes/NotasVersion.vue'
+import AntesDeSeguir from './componentes/AntesDeSeguir.vue'
+import { consultarTerminos, estadoTerminos, pantallaTerminos, salioDeTerminos } from './terminos'
 
 const $q = useQuasar()
 
@@ -366,6 +378,12 @@ const { conectado, comprobar } = useSondeo()
 const { actualizando, comprobarActualizacion, progreso, fraccion, indeterminado, textoProgreso, reiniciarAhora, cancelarInstalacion,
   instalarActualizacion, dialogoNovedades, novedades, cargandoNovedades, novedadesNueva, notasNueva, paginaNueva } = useActualizacion()
 const { cargando, activando, avisoEntrada, cambiar, activarGlobal } = useSesion(comprobarActualizacion)
+
+// Con la sesión abierta se pregunta una vez si faltan los términos de uso; hasta aceptarlos no se monta ninguna página.
+const pantallaTerm = computed(() => pantallaTerminos(estadoTerminos.value, salioDeTerminos.value))
+watch(() => !!sesion.value, (abierta) => {
+  if (abierta && !estadoTerminos.value) consultarTerminos()
+}, { immediate: true })
 
 function detener() {
   $q.dialog({ title: t('app.detenerTitulo'), message: t('app.detenerTexto'),
@@ -549,7 +567,7 @@ function examinar() {
 // lee los diálogos de arriba al ejecutarse ya (immediate).
 const enlaceProfundo = entradaPorEnlace(location.hash)
 let bienvenidaOfrecida = false
-const otroDialogo = computed(() => dialogoNovedades.value || dialogoActualizar.value || dialogoProyecto.value || acercaAbierto.value)
+const otroDialogo = computed(() => dialogoNovedades.value || dialogoActualizar.value || dialogoProyecto.value || acercaAbierto.value || pantallaTerm.value !== 'app')
 watch([() => !!sesion.value?.instancia, seccion, otroDialogo, recorridoActivo], ([conSesion, pag, ocupado, enMarcha]) => {
   if (!ofrecerBienvenida({ sesion: conSesion, pagina: pag as Pagina, entradaPorEnlace: enlaceProfundo, estado: bienvenida.value, yaOfrecida: bienvenidaOfrecida, otroDialogo: ocupado, recorridoActivo: enMarcha })) return
   bienvenidaOfrecida = true

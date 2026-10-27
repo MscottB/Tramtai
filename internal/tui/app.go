@@ -34,6 +34,7 @@ type Opciones struct {
 	Proyecto   string // raíz del proyecto actual; vacía fuera de un proyecto
 	IDProyecto string
 	Iniciar    func() (*cliente.Cliente, error) // inicia el servicio en segundo plano
+	Terminos   bool                             // faltan los términos de uso: la primera pantalla los pide (terminos.Pendiente)
 }
 
 // Ejecutar abre la terminal hasta que el usuario sale.
@@ -92,6 +93,9 @@ type modelo struct {
 	avisos   comp.Avisos
 
 	despedida string // lo que queda escrito en la consola al salir (al empezar una actualización)
+
+	terminos    bool   // se están pidiendo los términos de uso («Antes de seguir»): es lo único que se ve hasta aceptar (terminos.go)
+	errTerminos string // por qué no se pudo guardar la aceptación
 }
 
 func idiomaDe() string {
@@ -105,7 +109,7 @@ func nuevo(o Opciones) *modelo { return nuevoEn(o, idiomaDe()) }
 
 func nuevoEn(o Opciones, lengua string) *modelo {
 	return &modelo{o: o, idioma: lengua, estilos: nuevosEstilos(), ancho: 100, alto: 30, paginas: map[string]pagina.Pagina{},
-		cancelar: map[string]context.CancelFunc{}, actual: pagina.PaginaInicio}
+		cancelar: map[string]context.CancelFunc{}, actual: pagina.PaginaInicio, terminos: o.Terminos}
 }
 
 // pagina es la de esa clave, creada la primera vez que se pide: así conserva su estado al ir y volver.
@@ -307,6 +311,9 @@ func (m *modelo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // Cualquier tecla quita el error de la línea de estado; ! lo enseña entero.
 func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 	t := k.String()
+	if m.terminos {
+		return m.teclaTerminos(t)
+	}
 	if m.pregunta == nil {
 		m.avisos.Descartar()
 	}
@@ -398,7 +405,7 @@ func (m *modelo) tecla(k tea.KeyPressMsg) tea.Cmd {
 // donde entraría sin verse; con el selector de espacio abierto, va a su filtro.
 func (m *modelo) pegar(msg tea.PasteMsg) tea.Cmd {
 	switch {
-	case m.pregunta != nil, m.enMenu, m.ancho < anchoMinimo || m.alto < altoMinimo:
+	case m.terminos, m.pregunta != nil, m.enMenu, m.ancho < anchoMinimo || m.alto < altoMinimo:
 		return nil
 	case m.selector != nil:
 		return m.selector.Update(msg)
@@ -438,6 +445,9 @@ func (m *modelo) View() tea.View {
 // vista es la cabecera, el cuerpo (menú y página), la línea de estado y el pie, en exactamente ancho×alto. Por debajo
 // del tamaño mínimo es el aviso y, si hay una pregunta abierta, la pregunta: lo que se responde siempre se ve.
 func (m *modelo) vista() string {
+	if m.terminos {
+		return m.vistaTerminos()
+	}
 	e := m.estilos
 	if m.ancho < anchoMinimo || m.alto < altoMinimo {
 		aviso := idioma.T("Agranda la ventana (mínimo 60×20)")

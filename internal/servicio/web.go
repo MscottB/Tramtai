@@ -256,6 +256,9 @@ var rutasDeUI = []rutaUI{
 	{http.MethodPost, "/ui/actualizar/instalar", soloLocal, (*Servicio).decidirInstalacionUI},
 	{http.MethodPost, "/ui/actualizar/cancelar", soloLocal, (*Servicio).decidirInstalacionUI},
 	{http.MethodGet, "/ui/acerca", conSesion, (*Servicio).acercaUI},
+	// Los términos de uso: los ve y los acepta cualquier sesión (el POST con su CSRF); lo aceptado queda en datos/terminos.json.
+	{http.MethodGet, "/ui/terminos", conSesion, (*Servicio).terminosUI},
+	{http.MethodPost, "/ui/terminos", conSesion, (*Servicio).aceptarTerminosUI},
 	{http.MethodGet, "/ui/actualizacion/progreso", conSesion, (*Servicio).progresoUI},
 	{http.MethodGet, "/ui/actualizacion/novedades", conSesion, (*Servicio).novedadesUI},
 }

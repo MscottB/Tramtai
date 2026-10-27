@@ -219,6 +219,12 @@ export interface Acerca {
   rutas?: RutasAcerca
 }
 
+export interface EstadoTerminos {
+  version: string
+  pendiente: boolean
+  riesgos: string[]
+}
+
 export interface Uso {
   tokens_entrada: number
   tokens_salida: number
