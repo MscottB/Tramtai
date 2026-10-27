@@ -86,18 +86,26 @@ func escribirEnServidor(raiz, ruta string, datos []byte, permisos os.FileMode) e
 	}
 	partes := strings.Split(rel, string(filepath.Separator))
 	for i := 1; i < len(partes); i++ {
-		carpeta := filepath.Join(partes[:i]...)
-		info, err := r.Lstat(carpeta)
-		if errors.Is(err, fs.ErrNotExist) {
-			err = r.Mkdir(carpeta, 0o700)
-		} else if err == nil && info.Mode().Type() != fs.ModeDir {
-			err = ErrOtraCarpeta(filepath.Join(raiz, carpeta))
-		}
-		if err != nil {
+		if err := carpetaIntermedia(r, filepath.Join(partes[:i]...)); err != nil {
 			return err
 		}
 	}
 	return EscribirEn(r, rel, datos, permisos)
+}
+
+// carpetaIntermedia crea la carpeta dentro del Root si falta y falla si es otra cosa (un enlace, una unión).
+func carpetaIntermedia(r *os.Root, carpeta string) error {
+	info, err := r.Lstat(carpeta)
+	if errors.Is(err, fs.ErrNotExist) {
+		if err = r.Mkdir(carpeta, 0o700); !errors.Is(err, fs.ErrExist) {
+			return err
+		}
+		info, err = r.Lstat(carpeta) // otra escritura la creó a la vez: vale si es una carpeta
+	}
+	if err == nil && info.Mode().Type() != fs.ModeDir {
+		return ErrTipoInesperado(filepath.Join(r.Name(), carpeta))
+	}
+	return err
 }
 
 // EscribirEn escribe un archivo de dentro de un os.Root en un temporal nuevo y lo renombra encima: si el destino era un
@@ -127,10 +135,10 @@ func EscribirEn(r *os.Root, nombre string, datos []byte, permisos os.FileMode) e
 	return err
 }
 
-// ErrOtraCarpeta es una ruta de la raíz del servidor que no es lo que se espera: un enlace, un punto de unión, un FIFO…
-type ErrOtraCarpeta string
+// ErrTipoInesperado es una ruta de la raíz del servidor que no es lo que se espera: un enlace, un punto de unión, un FIFO…
+type ErrTipoInesperado string
 
-func (e ErrOtraCarpeta) Error() string {
+func (e ErrTipoInesperado) Error() string {
 	return idioma.Tf("%s no es lo que se espera (¿un enlace?): quítalo y repite la instalación", string(e))
 }
 
@@ -150,7 +158,7 @@ func AbrirRaiz(raiz string) (*os.Root, error) {
 	if err == nil {
 		var ahora fs.FileInfo
 		if ahora, err = f.Stat(); err == nil && (antes.Mode().Type() != fs.ModeDir || !os.SameFile(antes, ahora)) {
-			err = ErrOtraCarpeta(raiz)
+			err = ErrTipoInesperado(raiz)
 		}
 		f.Close()
 	}

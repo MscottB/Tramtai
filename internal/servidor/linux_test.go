@@ -242,7 +242,7 @@ func TestInstalarNoSigueEnlaces(t *testing.T) {
 		if err := os.Symlink(fuera, filepath.Join(p.r.Datos, "config.yaml")); err != nil {
 			t.Fatal(err)
 		}
-		if err := Instalar(Opciones{Origen: p.origen, AceptoTerminos: true}); !errors.As(err, new(configuracion.ErrOtraCarpeta)) {
+		if err := Instalar(Opciones{Origen: p.origen, AceptoTerminos: true}); !errors.As(err, new(configuracion.ErrTipoInesperado)) {
 			t.Errorf("con config.yaml enlazado, instalar falla por el tipo: %v", err)
 		}
 	})
@@ -254,7 +254,7 @@ func TestInstalarNoSigueEnlaces(t *testing.T) {
 		if err := syscall.Mkfifo(filepath.Join(p.r.Datos, "config.yaml"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := Instalar(Opciones{Origen: p.origen, AceptoTerminos: true}); !errors.As(err, new(configuracion.ErrOtraCarpeta)) {
+		if err := Instalar(Opciones{Origen: p.origen, AceptoTerminos: true}); !errors.As(err, new(configuracion.ErrTipoInesperado)) {
 			t.Errorf("con un FIFO por config.yaml, instalar falla sin quedarse leyéndolo: %v", err)
 		}
 	})

@@ -85,7 +85,7 @@ func comprobarTipo(r *os.Root, nombre string, tipo fs.FileMode) error {
 		return err
 	}
 	if info.Mode().Type() != tipo {
-		return configuracion.ErrOtraCarpeta(filepath.Join(r.Name(), nombre))
+		return configuracion.ErrTipoInesperado(filepath.Join(r.Name(), nombre))
 	}
 	return nil
 }
@@ -103,7 +103,7 @@ func leerConfiguracion(r *os.Root) (*configuracion.Configuracion, error) {
 	}
 	defer f.Close()
 	if info, err := f.Stat(); err != nil || !info.Mode().IsRegular() {
-		return nil, cmp.Or(err, error(configuracion.ErrOtraCarpeta(filepath.Join(r.Name(), "config.yaml"))))
+		return nil, cmp.Or(err, error(configuracion.ErrTipoInesperado(filepath.Join(r.Name(), "config.yaml"))))
 	}
 	bruto, err := io.ReadAll(f)
 	if err != nil {

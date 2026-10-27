@@ -216,6 +216,28 @@ func TestEscribirAtomicoServidorSinEnlaces(t *testing.T) {
 	}
 }
 
+// En modo servidor, varias escrituras a la vez que crean la misma carpeta intermedia (archivos distintos, así que no las
+// serializa el cerrojo de cada ruta) terminan todas bien: la que llega tarde al Mkdir acepta la carpeta de la otra.
+func TestEscribirAtomicoServidorCarpetaALaVez(t *testing.T) {
+	raiz := t.TempDir()
+	anterior := raizServidor
+	t.Cleanup(func() { raizServidor = anterior })
+	raizServidor = func() string { return raiz }
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	for vuelta := range 10 {
+		var grupo sync.WaitGroup
+		for i := range 20 {
+			grupo.Go(func() {
+				ruta := filepath.Join(raiz, "datos", strconv.Itoa(vuelta), "a", strconv.Itoa(i))
+				if err := EscribirAtomico(ruta, []byte("x"), 0o600); err != nil {
+					t.Error(err)
+				}
+			})
+		}
+		grupo.Wait()
+	}
+}
+
 // Guardar mientras otro proceso lee el archivo (un Recargar, la CLI, el antivirus) termina bien en cuanto lo suelta: en
 // Windows el renombrado se reintenta.
 func TestEscribirAtomicoConUnLector(t *testing.T) {

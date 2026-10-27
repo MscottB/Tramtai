@@ -11,9 +11,28 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/carpetas"
+	"tramtai/internal/contrato"
 	"tramtai/internal/credenciales"
 	"tramtai/internal/idioma"
 	"tramtai/internal/servidor"
+)
+
+// Lo que toca los almacenes en «tramtai claves»; las pruebas lo sustituyen.
+var (
+	leerClave            = credenciales.Leer
+	guardarClaveServidor = servidor.GuardarClave
+	borrarClaveServidor  = servidor.BorrarClave
+	// clavesServicio pregunta al servicio del sistema qué claves tiene: solo él sabe lo que recibió de systemd o de su
+	// almacén.
+	clavesServicio = func() ([]contrato.ClaveGuardada, error) {
+		c, err := conectar()
+		if err != nil {
+			return nil, err
+		}
+		ctx, cancelar := contexto()
+		defer cancelar()
+		return c.Claves(ctx)
+	}
 )
 
 // comandoClaves administra las claves de API en el almacén de credenciales del sistema. Nunca las imprime. Con
@@ -21,7 +40,7 @@ import (
 // cuenta del servicio, que las recibe por la API de administración.
 func comandoClaves() *cobra.Command {
 	grupo := &cobra.Command{Use: "claves", Aliases: []string{"keys"}, Short: idioma.T("Guarda las claves de API en el almacén cifrado del sistema (no en archivos ni variables de entorno)"),
-		Long: idioma.Tf("Guarda las claves de API de los proveedores en el almacén cifrado del sistema (Administrador de credenciales\nen Windows, Llavero en macOS, Secret Service en Linux); Tramtai nunca las escribe en sus archivos. Una variable\nde entorno con el mismo nombre tiene prioridad. Claves admitidas: %s.\nEl servicio usa la clave nueva desde la siguiente petición, sin reiniciar.", strings.Join(credenciales.Nombres, ", "))}
+		Long: idioma.Tf("Guarda las claves de API de los proveedores en el almacén cifrado del sistema (Administrador de credenciales\nen Windows, Llavero en macOS, Secret Service en Linux); Tramtai nunca las escribe en sus archivos. Una variable\nde entorno con el mismo nombre tiene prioridad. Claves admitidas: %s.\nEl servicio usa la clave nueva desde la siguiente petición, sin reiniciar.\nCon --servidor, en el servidor de Linux guardar o borrar una clave reinicia el servicio, que deja terminar las\npeticiones en curso.", strings.Join(credenciales.Nombres, ", "))}
 	// enServidor dice si son las claves del servicio del sistema, que solo administra root o un administrador: en Linux
 	// se cifran en /etc; en Windows, el token de servicio solo lo leen los administradores.
 	enServidor := func() (bool, error) {
@@ -60,7 +79,7 @@ func comandoClaves() *cobra.Command {
 			}
 			valor = strings.TrimSpace(valor)
 			if delServidor {
-				err := servidor.GuardarClave(args[0], valor)
+				err := guardarClaveServidor(args[0], valor)
 				if errors.Is(err, servidor.ErrClaveEnClaro) {
 					fmt.Fprintln(cmd.ErrOrStderr(), idioma.Tf("aviso: %s", err.Error()))
 				} else if err != nil {
@@ -85,7 +104,7 @@ func comandoClaves() *cobra.Command {
 				return err
 			}
 			if delServidor {
-				if err := servidor.BorrarClave(args[0]); err != nil {
+				if err := borrarClaveServidor(args[0]); err != nil {
 					return err
 				}
 				fmt.Fprintf(cmd.OutOrStdout(), idioma.T("Servidor: %s eliminada\n"), args[0])
@@ -103,14 +122,8 @@ func comandoClaves() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if delServidor { // solo el servicio sabe qué claves recibió (de systemd o de su almacén)
-				c, err := conectar()
-				if err != nil {
-					return err
-				}
-				ctx, cancelar := contexto()
-				defer cancelar()
-				lista, err := c.Claves(ctx)
+			if delServidor {
+				lista, err := clavesServicio()
 				if err != nil {
 					return err
 				}
@@ -125,7 +138,7 @@ func comandoClaves() *cobra.Command {
 			}
 			for _, nombre := range credenciales.Nombres {
 				origen := idioma.T("no configurada")
-				if v, err := credenciales.Leer(nombre); err != nil {
+				if v, err := leerClave(nombre); err != nil {
 					origen = idioma.Tf("el almacén no responde: %s", err)
 				} else if v != "" {
 					origen = credenciales.Almacen()

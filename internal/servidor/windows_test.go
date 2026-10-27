@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -258,5 +259,50 @@ func copiar(t *testing.T, origen, destino string) {
 	defer d.Close()
 	if _, err := io.Copy(d, o); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// TestBorrarCredencialesSinSalirDelPerfil: borra Credentials (Local y Roaming) del perfil de la cuenta del servicio, pero
+// a través de un os.Root: si la cuenta cambió un tramo (AppData) por una unión a otra carpeta, como la del
+// administrador, lo de esa carpeta sigue ahí y queda un Aviso. Sin perfil no hay nada que borrar.
+func TestBorrarCredencialesSinSalirDelPerfil(t *testing.T) {
+	base := t.TempDir()
+	perfil, fuera := filepath.Join(base, "perfil"), filepath.Join(base, "admin", "AppData")
+	anterior := perfilServicio
+	t.Cleanup(func() { perfilServicio = anterior })
+	perfilServicio = func() string { return perfil }
+	crear := func(carpeta string) string {
+		t.Helper()
+		archivo := filepath.Join(carpeta, "Local", "Microsoft", "Credentials", "36858EAF")
+		if err := os.MkdirAll(filepath.Dir(archivo), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(archivo, []byte("clave"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return archivo
+	}
+
+	if err := borrarCredenciales(); err != nil {
+		t.Fatalf("sin perfil: %v", err)
+	}
+	propia := crear(filepath.Join(perfil, "AppData"))
+	if err := borrarCredenciales(); err != nil || existe(propia) {
+		t.Fatalf("las del perfil se borran: %v, sigue %v", err, existe(propia))
+	}
+
+	ajena := crear(fuera)
+	if err := os.RemoveAll(filepath.Join(perfil, "AppData")); err != nil {
+		t.Fatal(err)
+	}
+	if salida, err := exec.Command("cmd", "/c", "mklink", "/J", filepath.Join(perfil, "AppData"), fuera).CombinedOutput(); err != nil {
+		t.Fatalf("mklink /J: %v %s", err, salida)
+	}
+	err := borrarCredenciales()
+	if !existe(ajena) {
+		t.Fatal("se borró lo de fuera del perfil a través de la unión")
+	}
+	if !errors.As(err, new(Aviso)) {
+		t.Errorf("una unión que sale del perfil deja un Aviso: %v", err)
 	}
 }

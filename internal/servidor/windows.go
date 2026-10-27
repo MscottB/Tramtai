@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -323,19 +324,29 @@ func sidServicio(nombre string) string {
 	return sid
 }
 
-// perfilServicio es la carpeta de perfil de la cuenta virtual del servicio.
-func perfilServicio() string {
+// perfilServicio es la carpeta de perfil de la cuenta virtual del servicio; las pruebas la sustituyen.
+var perfilServicio = func() string {
 	return filepath.Join(cmp.Or(os.Getenv("SystemRoot"), `C:\Windows`), "ServiceProfiles", nombreServicio)
 }
 
 // borrarCredenciales borra las claves que el servicio guardó en el almacén de su cuenta (los archivos de Credentials de
 // su perfil, cifrados con DPAPI): así no quedan aunque Windows aún tenga el perfil cargado y no deje borrarlo entero.
-// Si no se puede, un Aviso con la carpeta.
+// El perfil es de la cuenta del servicio, que podría cambiar AppData por una unión a las carpetas del administrador:
+// se borra a través de un os.Root, que nunca sale del perfil. Si no se puede, un Aviso con la carpeta.
 func borrarCredenciales() error {
+	r, err := configuracion.AbrirRaiz(perfilServicio())
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err == nil {
+		defer r.Close()
+	}
 	for _, d := range []string{`AppData\Local\Microsoft\Credentials`, `AppData\Roaming\Microsoft\Credentials`} {
-		carpeta := filepath.Join(perfilServicio(), d)
-		if err := os.RemoveAll(carpeta); err != nil {
-			return Aviso(idioma.Tf("no se pudieron borrar las claves del servicio en %s (%v): bórralas a mano desde una consola de administrador", carpeta, err))
+		if err == nil {
+			err = r.RemoveAll(d)
+		}
+		if err != nil {
+			return Aviso(idioma.Tf("no se pudieron borrar las claves del servicio en %s (%v): bórralas a mano desde una consola de administrador", filepath.Join(perfilServicio(), d), err))
 		}
 	}
 	return nil
