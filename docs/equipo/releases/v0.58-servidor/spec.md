@@ -31,8 +31,9 @@ verdad para Linux y Windows Server, sin bajar la seguridad.
   `.deb` y `.rpm` del servidor (`tramtai-servidor`, sin la app de escritorio), nuevos en esta versión.
 - **Descargo de responsabilidad:** `TERMINOS.md` versión 2 (borrador revisado en el anexo B), con ley chilena y
   tribunales de Santiago, sin quitar las protecciones imperativas del país de cada usuario. Se acepta de forma expresa
-  y se muestra al instalar, al activar la suscripción y en el README, el repositorio, el sitio y la Ayuda. Los riesgos
-  se le dicen claro al usuario (sección 10).
+  y se muestra al instalar, al activar la suscripción y en el README, el repositorio, el sitio y la Ayuda. Vale para
+  toda la aplicación: también el escritorio la pide una vez al abrir la Web UI, la app o la terminal. Los riesgos se le
+  dicen claro al usuario (sección 10).
 - **macOS:** solo «Solo el servicio»; no tiene servicio del sistema en esta versión.
 - Todo lo nuevo, en español y en inglés.
 
@@ -316,10 +317,23 @@ Tramtai sigue sin guardar claves en claro.
     términos;
   - **en el README, el sitio, la guía del servidor y la Ayuda:** un apartado «Aviso» con los cinco riesgos y el enlace
     a `TERMINOS.md`.
-- **Registro de la aceptación:** `datos/terminos.json` guarda la versión aceptada, la fecha (ISO 8601, UTC) y cómo se
-  aceptó (`instalador`, `servidor-instalar`, `opcion` para `--acepto-terminos`, `interfaz`). Un cambio de versión
-  mayor de los términos vuelve a pedir la aceptación al actualizar (en la Web UI o la terminal, antes de seguir); uno
-  menor (erratas, enlaces) solo se avisa en las novedades.
+- **Para toda la aplicación, no solo el servidor.** La versión 2 rige toda Tramtai, y la aceptación expresa se pide
+  en cada entorno (escritorio, portable y servidor), cada uno con su propio registro:
+  - **al instalar,** donde hay páginas: el instalador de Windows y `tramtai-servidor instalar`;
+  - **al abrir la Web UI, la app de escritorio o la terminal,** si ese entorno no tiene aceptación o es de una versión
+    mayor anterior: la pantalla «Antes de seguir», con los cinco riesgos y «Acepto» / «Salir» (que cierra sin usar
+    nada). La ven una vez quienes actualicen a la v0.58 (versión 1 → 2) y quienes instalen por una vía sin páginas
+    (`.dmg`, paquetes de escritorio de Linux, `.tar.gz`, `.zip` portable, Homebrew, winget o el instalador en
+    silencio). En el escritorio, los riesgos 3 y 4 se dicen como «si usas el modo servidor…»;
+  - **la CLI sin interfaz no se bloquea,** para no romper automatizaciones al actualizar: `tramtai terminos` los
+    muestra y `tramtai terminos aceptar` los acepta; mientras falte, cada orden escribe un aviso de una línea en stderr
+    (nunca en la salida normal) y el servicio sigue funcionando. La API de las apps no cambia.
+- **Registro de la aceptación:** `datos/terminos.json` de cada entorno guarda la versión aceptada, la fecha (ISO 8601,
+  UTC) y cómo se aceptó (`instalador`, `servidor-instalar`, `opcion` para `--acepto-terminos`, `interfaz`, `cli`). Un
+  cambio de versión mayor de los términos vuelve a pedir la aceptación como se acaba de describir; uno menor (erratas,
+  enlaces) solo se avisa en las novedades. La versión vigente y el resumen de riesgos van en un paquete nuevo,
+  `internal/terminos` (constante `Version`, lectura y escritura de `terminos.json`), que usan la CLI, la terminal, el
+  servicio y la app; `GET /ui/terminos` y `POST /ui/terminos` los sirven a la Web UI.
 - **Límite honesto:** la revisión del anexo B no sustituye a un abogado habilitado en Chile. Antes de una versión de
   pago, hay que validarlo con uno (con pago, la Ley 19.496 sí aplicaría; ver B.1).
 
@@ -393,8 +407,11 @@ falla, se aplica lo de la derecha:
   paquete de escritorio sin chocar, dejan los archivos, la cuenta y la unidad en su sitio, no arrancan nada, y
   quitarlos conserva `/var/lib/tramtai`. La secuencia completa con systemd (instalar, habilitar, actualizar) va en el
   job «Servidor» con el `.deb`.
-- **Términos:** sin aceptar no se instala; `--acepto-terminos` y el instalador escriben `datos/terminos.json`; un cambio
-  de versión mayor vuelve a pedirla y uno menor no.
+- **Términos:** sin aceptar no se instala el servidor; `--acepto-terminos` y el instalador escriben
+  `datos/terminos.json`; la Web UI, la app y la terminal muestran «Antes de seguir» sin aceptación o con una versión
+  mayor anterior, y no después de aceptar; «Salir» no deja usar nada; la CLI sin aceptar avisa solo por stderr y no
+  falla; `tramtai terminos aceptar` lo registra; cada entorno tiene su registro; un cambio de versión menor no vuelve a
+  pedirla.
 - **`tramtai-servidor`:** usa el programa del servidor y no el de escritorio; con `--servidor`, la CLI nunca detiene un
   servicio del sistema de otra versión.
 - **Job «Proxies» en el CI (Linux, contenedores):** Caddy, nginx, Apache, Traefik y HAProxy con los ejemplos de la guía:
