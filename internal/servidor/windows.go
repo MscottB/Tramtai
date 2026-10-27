@@ -244,32 +244,55 @@ func Desinstalar(borrarDatos bool) error {
 	if err := editarRutaSistema(r.Programa, false); err != nil {
 		return err
 	}
-	if err := quitarPrograma(r.Programa); err != nil {
+	// Los avisos no paran la desinstalación: se juntan y se devuelven al final.
+	var avisos []string
+	anotar := func(err error) error {
+		var aviso Aviso
+		if errors.As(err, &aviso) {
+			avisos = append(avisos, aviso.Error())
+			return nil
+		}
 		return err
 	}
-	if !borrarDatos {
-		return nil
-	}
-	if err := os.RemoveAll(r.Datos); err != nil {
+	if err := anotar(quitarPrograma(r.Programa)); err != nil {
 		return err
 	}
-	return borrarPerfil(sidServicio(nombreServicio))
+	if borrarDatos {
+		if err := os.RemoveAll(r.Datos); err != nil {
+			return err
+		}
+		if err := anotar(borrarPerfil(sidServicio(nombreServicio))); err != nil {
+			return err
+		}
+	}
+	if len(avisos) > 0 {
+		return Aviso(strings.Join(avisos, "\n"))
+	}
+	return nil
 }
 
 // quitarPrograma borra la carpeta del programa. Si este proceso es el tramtai de esa carpeta (tramtai-servidor
 // desinstalar), Windows no deja borrarlo en marcha pero sí moverlo: se aparta junto a la carpeta (en el mismo volumen,
-// donde mover siempre vale) y se borra al reiniciar.
+// donde mover siempre vale) y se borra al reiniciar; si no se puede programar ese borrado, un Aviso con su ruta.
 func quitarPrograma(dir string) error {
+	var aviso error
 	if ejecutable, err := os.Executable(); err == nil && carpetas.Dentro(dir, ejecutable) {
 		apartado := filepath.Join(filepath.Dir(dir), ".tramtai-desinstalado-"+rand.Text()+".exe")
 		if err := os.Rename(ejecutable, apartado); err != nil {
 			return err
 		}
-		if p, err := windows.UTF16PtrFromString(apartado); err == nil {
-			_ = windows.MoveFileEx(p, nil, windows.MOVEFILE_DELAY_UNTIL_REBOOT)
+		p, err := windows.UTF16PtrFromString(apartado)
+		if err == nil {
+			err = windows.MoveFileEx(p, nil, windows.MOVEFILE_DELAY_UNTIL_REBOOT)
+		}
+		if err != nil {
+			aviso = Aviso(idioma.Tf("no se pudo programar el borrado de %s al reiniciar (%v): bórralo a mano cuando termine esta orden", apartado, err))
 		}
 	}
-	return os.RemoveAll(dir)
+	if err := os.RemoveAll(dir); err != nil {
+		return err
+	}
+	return aviso
 }
 
 // sidServicio es el SID de NT SERVICE\<nombre>: S-1-5-80 y el SHA-1 del nombre en mayúsculas (UTF-16LE) en cinco

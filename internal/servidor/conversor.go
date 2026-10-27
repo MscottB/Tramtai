@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"io"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -15,6 +16,9 @@ import (
 	"tramtai/internal/documentos"
 	"tramtai/internal/idioma"
 )
+
+// prefijoPaquete empieza las carpetas de trabajo de instalarConversor en la raíz del servidor.
+const prefijoPaquete = "conversor-paquete-"
 
 // comprobarConversor es la comprobación de «Preparar archivos»; las pruebas la sustituyen (no hay Python en el .zip).
 var comprobarConversor = documentos.ComprobarConversor
@@ -47,17 +51,31 @@ func instalarConversor(r *os.Root, paquete string) error {
 	if err := comprobarConversor(ctx, filepath.Join(temporal, "conversor")); err != nil {
 		return err
 	}
-	// Un nombre propio: conversor.nuevo es el del servicio cuando prepara el suyo.
-	nuevo := "conversor-paquete-" + rand.Text()
+	// Nombres propios (conversor.nuevo es el del servicio cuando prepara el suyo); los de una instalación cortada se
+	// quitan antes.
+	if restos, err := fs.Glob(r.FS(), prefijoPaquete+"*"); err == nil {
+		for _, resto := range restos {
+			_ = r.RemoveAll(resto)
+		}
+	}
+	nuevo, anterior := prefijoPaquete+rand.Text(), prefijoPaquete+rand.Text()+"-anterior"
 	if err := extraerConversor(z, r, nuevo); err != nil {
 		_ = r.RemoveAll(nuevo)
 		return err
 	}
-	if err := r.RemoveAll("conversor"); err != nil {
+	// El anterior se aparta, no se borra, hasta que el nuevo está en su lugar: si falla, vuelve.
+	hayAnterior := r.Rename("conversor", anterior) == nil
+	if err := r.Rename(nuevo, "conversor"); err != nil {
+		if hayAnterior {
+			_ = r.Rename(anterior, "conversor")
+		}
 		_ = r.RemoveAll(nuevo)
 		return err
 	}
-	return r.Rename(nuevo, "conversor")
+	if hayAnterior {
+		_ = r.RemoveAll(anterior)
+	}
+	return nil
 }
 
 // extraerConversor descomprime las entradas conversor/… del paquete en destino, dentro de r (el os.Root no deja salir

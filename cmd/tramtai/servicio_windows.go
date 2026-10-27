@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"sync/atomic"
@@ -30,7 +31,8 @@ func ejecutarComoServicio(cmd *cobra.Command, archivo string) (bool, error) {
 	m := &manejador{ejecutar: func(ctx context.Context) error {
 		cmd.SetContext(ctx)
 		err := iniciarServicio(cmd, archivo, false)
-		if err != nil && archivo != "" { // sin consola: que el error quede en el registro (tramtai-servidor registro)
+		// Sin consola: que el error quede en el registro (tramtai-servidor registro); el reinicio pedido ya lo anotó.
+		if err != nil && archivo != "" && !errors.Is(err, errReinicioPedido) {
 			if f, e := os.OpenFile(archivo, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600); e == nil {
 				fmt.Fprintf(f, "%s %v\n", time.Now().Format(time.RFC3339), err)
 				f.Close()

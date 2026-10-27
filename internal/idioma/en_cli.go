@@ -69,9 +69,10 @@ func init() {
 		"%s no es un conversor preparado (falta listo.json o su Python)":                          "%s is not a prepared converter (listo.json or its Python is missing)",
 		"el paquete del conversor es de otra versión de Tramtai: descarga el de esta versión":     "the converter package is from another Tramtai version: download the one for this version",
 		"Windows aún tiene cargado el perfil de la cuenta del servicio (%s), con las sesiones de los agentes: se podrá quitar tras reiniciar, en PowerShell como administrador: %s (%v). Si reinstalas antes de reiniciar, el servicio recuperará esas sesiones.": "Windows still has the service account’s profile loaded (%s), with the agents’ sessions: it can be removed after restarting, in PowerShell as administrator: %s (%v). If you reinstall before restarting, the service will get those sessions back.",
-		"%s la creó otro usuario: revísala y quítala antes de instalar":             "%s was created by another user: check it and remove it before installing",
-		"reinicio pedido desde la Web UI: el sistema vuelve a arrancar el servicio": "restart requested from the Web UI: the system starts the service again",
-		"en el servidor, la conversión la hace el servicio: inícialo y repite":      "on the server, the service does the conversion: start it and try again",
+		"no se pudo programar el borrado de %s al reiniciar (%v): bórralo a mano cuando termine esta orden": "could not schedule %s for deletion on restart (%v): delete it by hand when this command finishes",
+		"%s la creó otro usuario: revísala y quítala antes de instalar":                                     "%s was created by another user: check it and remove it before installing",
+		"reinicio pedido desde la Web UI: el sistema vuelve a arrancar el servicio":                         "restart requested from the Web UI: the system starts the service again",
+		"en el servidor, la conversión la hace el servicio: inícialo y repite":                              "on the server, the service does the conversion: start it and try again",
 
 		// tramtai
 		"Tus agentes de IA como una API local": "Your AI agents as a local API",

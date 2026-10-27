@@ -6,7 +6,9 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -53,8 +55,18 @@ func TestAbrirRaizNoSigueEnlaces(t *testing.T) {
 	} else {
 		r.Close()
 	}
+	if runtime.GOOS == "windows" { // un punto de unión no necesita privilegios ni el modo de desarrollador
+		union := filepath.Join(base, "union")
+		if salida, err := exec.Command("cmd", "/c", "mklink", "/J", union, otra).CombinedOutput(); err != nil {
+			t.Fatalf("mklink /J: %v %s", err, salida)
+		}
+		if r, err := abrirRaiz(union); err == nil {
+			r.Close()
+			t.Error("un punto de unión como raíz debe ser un error")
+		}
+	}
 	if err := os.Symlink(otra, enlace); err != nil {
-		t.Skipf("sin permiso para crear enlaces: %v", err)
+		t.Skipf("sin permiso para crear enlaces simbólicos: %v", err)
 	}
 	if r, err := abrirRaiz(enlace); err == nil {
 		r.Close()
@@ -94,8 +106,15 @@ func TestInstalarConConversor(t *testing.T) {
 		r, raiz := abrir(t)
 		paquete := paqueteDePrueba(t, map[string]string{"LEEME.txt": "léeme", "conversor/listo.json": "{}",
 			"conversor/python/python.exe": "python", `conversor\python\Lib\uno.py`: "uno"})
+		cortada := filepath.Join(raiz, "conversor-paquete-CORTADA", "python") // lo que dejó una instalación cortada
+		if err := os.MkdirAll(cortada, 0o700); err != nil {
+			t.Fatal(err)
+		}
 		if err := instalarConversor(r, paquete); err != nil {
 			t.Fatal(err)
+		}
+		if entradas, _ := os.ReadDir(raiz); len(entradas) != 1 || entradas[0].Name() != "conversor" {
+			t.Errorf("en la raíz solo queda conversor: %v", entradas)
 		}
 		for nombre, quiere := range map[string]string{"listo.json": "{}", "python/python.exe": "python", "python/Lib/uno.py": "uno"} {
 			if datos, err := os.ReadFile(filepath.Join(raiz, "conversor", nombre)); err != nil || string(datos) != quiere {
@@ -117,6 +136,9 @@ func TestInstalarConConversor(t *testing.T) {
 		}
 		if _, err := os.Stat(filepath.Join(raiz, "conversor", "viejo")); !errors.Is(err, fs.ErrNotExist) {
 			t.Errorf("el conversor anterior se sustituye entero: %v", err)
+		}
+		if entradas, _ := os.ReadDir(raiz); len(entradas) != 1 {
+			t.Errorf("el anterior apartado no se queda: %v", entradas)
 		}
 	})
 

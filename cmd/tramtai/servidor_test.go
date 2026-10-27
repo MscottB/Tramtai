@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/spf13/cobra"
+
 	"tramtai/internal/servidor"
 	"tramtai/internal/terminos"
 )
@@ -161,6 +163,20 @@ func TestReinicioEnServidor(t *testing.T) {
 	if codigoReinicio == 0 || codigoReinicio == 1 || codigoSalida(fmt.Errorf("al parar: %w", errReinicioPedido)) != codigoReinicio ||
 		codigoSalida(errors.New("otro fallo")) != 1 {
 		t.Errorf("códigos de salida: %d", codigoReinicio)
+	}
+	// cobra no lo imprime como «Error: …»: es una salida esperada (un fallo de verdad sí se imprime).
+	for _, c := range []struct {
+		err   error
+		error bool
+	}{{errReinicioPedido, false}, {errors.New("otro fallo"), true}} {
+		var salida bytes.Buffer
+		orden := &cobra.Command{Use: "iniciar", RunE: func(cmd *cobra.Command, _ []string) error { return terminarServicio(cmd, c.err) }}
+		orden.SetOut(&salida)
+		orden.SetErr(&salida)
+		orden.SetArgs(nil)
+		if err := orden.Execute(); !errors.Is(err, c.err) || strings.Contains(salida.String(), "Error") != c.error {
+			t.Errorf("%v: %v, salida %q", c.err, err, salida.String())
+		}
 	}
 	t.Setenv("TRAMTAI_SERVIDOR", "")
 	pedido.Store(false)

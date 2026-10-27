@@ -95,6 +95,58 @@ func TestProtegerServidorOtroDueno(t *testing.T) {
 	}
 }
 
+// Una carpeta de Administradores sin proteger (la creó una orden --servidor antes de instalar, con los permisos de
+// %ProgramData%) se toma solo si todo lo de dentro es de Administradores, SYSTEM o la cuenta del servicio.
+func TestProtegerServidorSinProteger(t *testing.T) {
+	elevado(t)
+	usuarios, _ := windows.CreateWellKnownSid(windows.WinBuiltinUsersSid)
+	admins, _ := windows.CreateWellKnownSid(windows.WinBuiltinAdministratorsSid)
+	dueno0 := duenoDe
+	t.Cleanup(func() { duenoDe = dueno0 })
+	// Los nombres con «#deotro» son de otro usuario; el resto, de Administradores (el nombre de la prueba no lo lleva).
+	duenoDe = func(h windows.Handle) (*windows.SID, error) {
+		nombre := make([]uint16, windows.MAX_LONG_PATH)
+		n, err := windows.GetFinalPathNameByHandle(h, &nombre[0], uint32(len(nombre)), 0)
+		if err != nil {
+			return nil, err
+		}
+		if strings.Contains(windows.UTF16ToString(nombre[:n]), "#deotro") {
+			return usuarios, nil
+		}
+		return admins, nil
+	}
+	preparar := func(t *testing.T, archivos ...string) string {
+		ruta := filepath.Join(t.TempDir(), "Tramtai")
+		if err := os.MkdirAll(filepath.Join(ruta, "datos"), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		for _, a := range archivos {
+			if err := os.WriteFile(filepath.Join(ruta, a), nil, 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, protegida, _ := descriptor(t, ruta); protegida {
+			t.Fatal("la carpeta de partida no debe estar protegida")
+		}
+		return ruta
+	}
+	t.Run("con algo de otro dentro", func(t *testing.T) {
+		ruta := preparar(t, "config.yaml", filepath.Join("datos", "administrador#deotro"))
+		if err := ProtegerServidor(ruta, cuentaPrueba); err == nil || !strings.Contains(err.Error(), "otro usuario") {
+			t.Fatalf("con un hijo ajeno: %v", err)
+		}
+	})
+	t.Run("todo propio", func(t *testing.T) {
+		ruta := preparar(t, "config.yaml", filepath.Join("datos", "terminos.json"))
+		if err := ProtegerServidor(ruta, cuentaPrueba); err != nil {
+			t.Fatal(err)
+		}
+		if dueno, protegida, _ := descriptor(t, ruta); dueno != "S-1-5-32-544" || !protegida {
+			t.Errorf("se protege: %s %v", dueno, protegida)
+		}
+	})
+}
+
 // Un punto de unión en el lugar de la carpeta (mklink /J, sin privilegios) es un error, y la carpeta a la que apunta
 // no cambia.
 func TestProtegerServidorUnion(t *testing.T) {

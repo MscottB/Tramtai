@@ -170,7 +170,7 @@ func comandoServicio() *cobra.Command {
 				if abrirAlIniciar {
 					go abrirCuandoResponda(cmd, navegadorAlIniciar)
 				}
-				return iniciarServicio(cmd, archivoRegistro, esperarCierre)
+				return terminarServicio(cmd, iniciarServicio(cmd, archivoRegistro, esperarCierre))
 			}
 			c, err := asegurarServicio(cmd)
 			if err != nil {
@@ -481,6 +481,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	sv.Cerrar()
 	sv.BorrarDescriptor()
 	if reinicioPedido.Load() {
+		fmt.Fprintln(salida, errReinicioPedido.Error()) // una línea normal del registro, no un error
 		return errReinicioPedido
 	}
 	if errors.Is(err, http.ErrServerClosed) {
@@ -499,6 +500,15 @@ const codigoReinicio = 3
 
 // errReinicioPedido es lo que devuelve el servicio del sistema tras drenar por un «Reiniciar» de la Web UI.
 var errReinicioPedido = errors.New(idioma.T("reinicio pedido desde la Web UI: el sistema vuelve a arrancar el servicio"))
+
+// terminarServicio deja pasar el error de iniciarServicio, pero un reinicio pedido no es un fallo: cobra no lo imprime
+// como «Error: …» (el registro ya lo dice en una línea normal) y el proceso sale con codigoReinicio.
+func terminarServicio(cmd *cobra.Command, err error) error {
+	if errors.Is(err, errReinicioPedido) {
+		cmd.SilenceErrors = true
+	}
+	return err
+}
 
 // codigoSalida es el código con el que termina el proceso tras un error.
 func codigoSalida(err error) int {
