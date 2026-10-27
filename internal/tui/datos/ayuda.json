@@ -6,7 +6,7 @@
       "pagina": "inicio",
       "resumen": "Tramtai pone tus agentes de IA detrás de una API en tu equipo: instálalo, conecta un agente y prueba.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/empezar.html",
-      "terminal": "En la terminal: Tab abre el menú y del 1 al 7 vas a cada página; ? abre la ayuda de la que tienes delante y Esc vuelve. Ctrl+E cambia de espacio y q sale.",
+      "terminal": "En la terminal: Tab abre el menú y del 1 al 7 vas a cada página; ? abre la ayuda y Esc vuelve. Ctrl+E cambia de espacio, W abre la Web UI en el navegador y q sale.",
       "bloques": [
         {
           "tipo": "web",
@@ -38,7 +38,7 @@
           "lineas": [
             "Inicia el servicio en segundo plano con «tramtai servicio iniciar -d»: atiende a tus apps sin abrir la app, aunque cierres la terminal.",
             "Abre «tramtai terminal» (o «tramtai» a secas): tiene las mismas páginas que la app, de Inicio a la Ayuda. Si el servicio no está en marcha, r lo inicia.",
-            "Tab abre el menú y del 1 al 7 vas a cada página. ? abre su ayuda, Esc vuelve y q sale. En Probar, c cancela la petición en curso.",
+            "Tab abre el menú y del 1 al 7 vas a cada página. ? abre su ayuda, Esc vuelve, W abre la Web UI en el navegador y q sale. En Probar, c cancela la petición en curso.",
             "Por SSH al equipo donde corre Tramtai, «tramtai terminal» funciona igual. Necesita al menos 60×20; con NO_COLOR va sin color y con TRAMTAI_ASCII=1, sin caracteres de dibujo."
           ]
         },
@@ -1231,7 +1231,7 @@
       "pagina": "inicio",
       "resumen": "Tramtai puts your AI agents behind an API on your computer: install it, connect an agent and try it.",
       "url": "https://mscottb.github.io/Tramtai/ayuda/empezar.html",
-      "terminal": "In the terminal: Tab opens the menu and 1 to 7 go to each page; ? opens the help for the page in front of you and Esc goes back. Ctrl+E switches workspace and q quits.",
+      "terminal": "In the terminal: Tab opens the menu and 1 to 7 go to each page; ? opens help and Esc goes back. Ctrl+E switches workspace, W opens the Web UI in the browser and q quits.",
       "bloques": [
         {
           "tipo": "web",
@@ -1263,7 +1263,7 @@
           "lineas": [
             "Start the service in the background with “tramtai servicio iniciar -d”: it serves your apps without opening the app, even after you close the terminal.",
             "Open “tramtai terminal” (or just “tramtai”): it has the same pages as the app, from Home to Help. If the service is not running, r starts it.",
-            "Tab opens the menu and 1 to 7 go to each page. ? opens its help, Esc goes back and q quits. In the Playground, c cancels the running request.",
+            "Tab opens the menu and 1 to 7 go to each page. ? opens its help, Esc goes back, W opens the Web UI in the browser and q quits. In the Playground, c cancels the running request.",
             "Over SSH to the computer where Tramtai runs, “tramtai terminal” works the same. It needs at least 60×20; NO_COLOR turns color off and TRAMTAI_ASCII=1 drops the box-drawing characters."
           ]
         },

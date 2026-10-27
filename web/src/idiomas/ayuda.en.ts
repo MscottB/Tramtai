@@ -80,7 +80,7 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.empezar.soloTerminal': 'Terminal only',
   'ayuda.empezar.soloTerminal1': 'Start the service in the background with “tramtai servicio iniciar -d”: it serves your apps without opening the app, even after you close the terminal.',
   'ayuda.empezar.soloTerminal2': 'Open “tramtai terminal” (or just “tramtai”): it has the same pages as the app, from Home to Help. If the service is not running, r starts it.',
-  'ayuda.empezar.soloTerminal3': 'Tab opens the menu and 1 to 7 go to each page. ? opens its help, Esc goes back and q quits. In the Playground, c cancels the running request.',
+  'ayuda.empezar.soloTerminal3': 'Tab opens the menu and 1 to 7 go to each page. ? opens its help, Esc goes back, W opens the Web UI in the browser and q quits. In the Playground, c cancels the running request.',
   'ayuda.empezar.soloTerminal4': 'Over SSH to the computer where Tramtai runs, “tramtai terminal” works the same. It needs at least 60×20; NO_COLOR turns color off and TRAMTAI_ASCII=1 drops the box-drawing characters.',
 
   // Topic: Agents and models
@@ -492,7 +492,7 @@ const ayudaEn: Record<keyof typeof ayudaEs, string> = {
   'ayuda.ajustes.rVersion.terminal': 'In Settings (7), open “About Tramtai” on the “All of Tramtai” tab; c copies the support details, without keys.',
   'ayuda.sinResultados.terminal': 'Nothing matches “{texto}”. Try another word, or press w to search the Help on the website.',
   // In the terminal: how each topic is done there, with its keys. Only the terminal Help shows it.
-  'ayuda.empezar.terminal': 'In the terminal: Tab opens the menu and 1 to 7 go to each page; ? opens the help for the page in front of you and Esc goes back. Ctrl+E switches workspace and q quits.',
+  'ayuda.empezar.terminal': 'In the terminal: Tab opens the menu and 1 to 7 go to each page; ? opens help and Esc goes back. Ctrl+E switches workspace, W opens the Web UI in the browser and q quits.',
   'ayuda.agentes.terminal': 'In the terminal: 2 opens Agents. Enter shows an agent’s details, c checks it again, d connects or disconnects it and a switches between subscription and key.',
   'ayuda.probar.terminal': 'In the terminal: 3 opens the Playground. Enter edits a recipe field, Ctrl+S sends the message and c cancels the request; k shows the code and g saves the test as an API.',
   'ayuda.conectar.terminal': 'In the terminal: 4 opens My APIs. n creates an API and Enter opens its details, where the y key copies its URL; ← → goes to the workspace key.',

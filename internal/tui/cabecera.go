@@ -217,10 +217,10 @@ func (m *modelo) vistaEstado() string {
 // ! enseña su mensaje entero, que dice cómo detenerlo a mano.
 func (m *modelo) anterior() bool { return errors.Is(m.caido, cliente.ErrServicioAnterior) }
 
-// comunes son las teclas de la app fuera de un campo: las tres primeras se ven siempre en el pie; Ctrl+E, si cabe.
+// comunes son las teclas de la app fuera de un campo: las tres primeras se ven siempre en el pie; Ctrl+E y W, si caben.
 func comunes() []pagina.Tecla {
 	return []pagina.Tecla{{Tecla: "Tab", Accion: idioma.T("menú")}, {Tecla: "?", Accion: idioma.T("ayuda")}, {Tecla: "q", Accion: idioma.T("salir")},
-		{Tecla: "Ctrl+E", Accion: idioma.T("espacio")}}
+		{Tecla: "Ctrl+E", Accion: idioma.T("espacio")}, {Tecla: "W", Accion: idioma.T("web")}}
 }
 
 // vistaPie son las teclas de lo que tiene el foco. Fuera de un campo, «Tab menú · ? ayuda · q salir» van a la derecha y
@@ -239,7 +239,7 @@ func (m *modelo) vistaPie() string {
 		p := m.pagina(m.actual)
 		teclas = p.Teclas()
 		if !p.EnCampo() { // en un campo, ! se escribe: no abre el error
-			teclas, fijas = append(teclas, comunes()[3]), comunes()[:3]
+			teclas, fijas = append(teclas, comunes()[3:]...), comunes()[:3]
 			if m.avisos.HayError() || m.anterior() {
 				teclas = append([]pagina.Tecla{{Tecla: "!", Accion: idioma.T("ver el error")}}, teclas...)
 			}

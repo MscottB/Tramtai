@@ -78,7 +78,7 @@ const ayudaEs = {
   'ayuda.empezar.soloTerminal': 'Solo con la terminal',
   'ayuda.empezar.soloTerminal1': 'Inicia el servicio en segundo plano con «tramtai servicio iniciar -d»: atiende a tus apps sin abrir la app, aunque cierres la terminal.',
   'ayuda.empezar.soloTerminal2': 'Abre «tramtai terminal» (o «tramtai» a secas): tiene las mismas páginas que la app, de Inicio a la Ayuda. Si el servicio no está en marcha, r lo inicia.',
-  'ayuda.empezar.soloTerminal3': 'Tab abre el menú y del 1 al 7 vas a cada página. ? abre su ayuda, Esc vuelve y q sale. En Probar, c cancela la petición en curso.',
+  'ayuda.empezar.soloTerminal3': 'Tab abre el menú y del 1 al 7 vas a cada página. ? abre su ayuda, Esc vuelve, W abre la Web UI en el navegador y q sale. En Probar, c cancela la petición en curso.',
   'ayuda.empezar.soloTerminal4': 'Por SSH al equipo donde corre Tramtai, «tramtai terminal» funciona igual. Necesita al menos 60×20; con NO_COLOR va sin color y con TRAMTAI_ASCII=1, sin caracteres de dibujo.',
 
   // Tema: Agentes y modelos
@@ -490,7 +490,7 @@ const ayudaEs = {
   'ayuda.ajustes.rVersion.terminal': 'En Ajustes (7), abre «Acerca de Tramtai» en la pestaña «Todo Tramtai»; c copia los datos para soporte, sin claves.',
   'ayuda.sinResultados.terminal': 'Nada coincide con «{texto}». Prueba con otra palabra, o pulsa w para buscar en la Ayuda del sitio.',
   // En la terminal: cómo se hace cada tema allí, con sus teclas. Solo lo enseña la Ayuda de la terminal.
-  'ayuda.empezar.terminal': 'En la terminal: Tab abre el menú y del 1 al 7 vas a cada página; ? abre la ayuda de la que tienes delante y Esc vuelve. Ctrl+E cambia de espacio y q sale.',
+  'ayuda.empezar.terminal': 'En la terminal: Tab abre el menú y del 1 al 7 vas a cada página; ? abre la ayuda y Esc vuelve. Ctrl+E cambia de espacio, W abre la Web UI en el navegador y q sale.',
   'ayuda.agentes.terminal': 'En la terminal: 2 abre Agentes. Enter enseña los detalles de un agente, c lo vuelve a comprobar, d lo conecta o desconecta y a cambia entre suscripción y clave.',
   'ayuda.probar.terminal': 'En la terminal: 3 abre Probar. Enter edita un campo de la receta, Ctrl+S envía el mensaje y c cancela la petición; k enseña el código y g guarda la prueba como API.',
   'ayuda.conectar.terminal': 'En la terminal: 4 abre Mis APIs. n crea una API y Enter abre sus detalles, donde la tecla y copia su URL; ← → pasa a la clave del espacio.',

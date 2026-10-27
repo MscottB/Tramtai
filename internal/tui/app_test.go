@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -1018,5 +1020,190 @@ func TestTeclasComunesSiempreSeVen(t *testing.T) {
 	m.Update(tecla("?"))
 	if v := ansi.Strip(m.View().Content); !strings.Contains(v, "a       anota") || !strings.Contains(v, "Ctrl+E  espacio") {
 		t.Fatalf("? enseña todas las teclas de la página y las comunes:\n%s", v)
+	}
+}
+
+// conWeb prepara la terminal con un servicio de verdad y cambia, durante la prueba, cómo se abre una URL y si hay navegador.
+func conWeb(t *testing.T, navegador bool) (m *modelo, abiertas *[]string) {
+	t.Helper()
+	cli, global, _ := prueba.Arrancar(t)
+	m = nuevo(Opciones{})
+	m.cli, m.instancia = cli, global
+	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	antesAbrir, antesHay := abrir, hayNavegador
+	abiertas = new([]string)
+	abrir = func(url string) error { *abiertas = append(*abiertas, url); return nil }
+	hayNavegador = func() bool { return navegador }
+	t.Cleanup(func() { abrir, hayNavegador = antesAbrir, antesHay })
+	return m, abiertas
+}
+
+// TestTeclaWAbreNavegador: W pide al servicio un código de un solo uso y abre la Web UI con él en el navegador.
+func TestTeclaWAbreNavegador(t *testing.T) {
+	m, abiertas := conWeb(t, true)
+	a := conducir(t, m)
+	_, cmd := m.Update(tecla("W"))
+	a.Correr(cmd)
+	if len(*abiertas) != 1 || !strings.Contains((*abiertas)[0], "/ui/entrar?codigo=") {
+		t.Fatalf("W abre la URL con el código: %v", *abiertas)
+	}
+	if m.pregunta != nil {
+		t.Fatal("con navegador no hace falta enseñar la dirección")
+	}
+}
+
+// TestTeclaWSinNavegador: sin navegador (SSH, sin pantalla) enseña la URL y el código, y no abre nada.
+func TestTeclaWSinNavegador(t *testing.T) {
+	m, abiertas := conWeb(t, false)
+	a := conducir(t, m)
+	_, cmd := m.Update(tecla("W"))
+	a.Correr(cmd)
+	if len(*abiertas) != 0 {
+		t.Fatalf("sin navegador no se abre nada: %v", *abiertas)
+	}
+	if m.pregunta == nil || !m.pregunta.Leer {
+		t.Fatal("enseña una ventana para leer")
+	}
+	v := ansi.Strip(m.View().Content)
+	if !strings.Contains(v, "/ui/entrar?codigo=") || !strings.Contains(v, idioma.T("Código")) {
+		t.Fatalf("la ventana trae la URL y el código:\n%s", v)
+	}
+}
+
+// TestTeclaWEnCampo: con un campo con el foco, W se escribe: no abre nada.
+func TestTeclaWEnCampo(t *testing.T) {
+	m, abiertas := conWeb(t, true)
+	falsa := &paginaFalsa{campo: true}
+	m.paginas[pagina.PaginaInicio] = falsa
+	_, cmd := m.Update(tecla("W"))
+	if cmd != nil && correr(t, m, cmd) {
+		t.Fatal("W en un campo no sale")
+	}
+	if len(*abiertas) != 0 || m.pregunta != nil || falsa.texto != "W" {
+		t.Fatalf("W en un campo se escribe: %v %q", *abiertas, falsa.texto)
+	}
+}
+
+// TestPieAnunciaW: el pie anuncia W junto a las demás teclas comunes, si caben, y no en el menú.
+func TestPieAnunciaW(t *testing.T) {
+	m := nuevo(Opciones{})
+	m.Update(tea.WindowSizeMsg{Width: 200, Height: 30}) // W va tras las teclas de la página: se ve si caben
+	pie := func() string { l := strings.Split(ansi.Strip(m.View().Content), "\n"); return l[len(l)-1] }
+	if !strings.Contains(pie(), "W "+idioma.T("web")) {
+		t.Fatalf("el pie anuncia W: %q", pie())
+	}
+	m.Update(tecla("tab"))
+	if strings.Contains(pie(), "W ") {
+		t.Fatalf("en el menú W no abre nada: %q", pie())
+	}
+}
+
+// hayNavegadorReal es el de verdad: conWeb lo cambia mientras dura una prueba.
+var hayNavegadorReal = hayNavegador
+
+// TestHayNavegador: por SSH nunca hay navegador; en Linux, solo con una pantalla (X11 o Wayland).
+func TestHayNavegador(t *testing.T) {
+	t.Setenv("SSH_CONNECTION", "10.0.0.2 50000 10.0.0.1 22")
+	t.Setenv("DISPLAY", ":0")
+	if hayNavegadorReal() {
+		t.Fatal("por SSH no hay navegador, aunque haya pantalla")
+	}
+	t.Setenv("SSH_CONNECTION", "")
+	if runtime.GOOS != "linux" {
+		if !hayNavegadorReal() {
+			t.Fatal("fuera de Linux, sin SSH, hay navegador")
+		}
+		return
+	}
+	for _, c := range []struct {
+		display, wayland string
+		quiere           bool
+	}{{"", "", false}, {":0", "", true}, {"", "wayland-0", true}} {
+		t.Setenv("DISPLAY", c.display)
+		t.Setenv("WAYLAND_DISPLAY", c.wayland)
+		if hayNavegadorReal() != c.quiere {
+			t.Fatalf("DISPLAY=%q WAYLAND_DISPLAY=%q: debería ser %v", c.display, c.wayland, c.quiere)
+		}
+	}
+}
+
+// TestTeclaWPideElEnlace: mientras llega el enlace avisa «Pidiendo…» y una segunda W no lanza otra petición.
+func TestTeclaWPideElEnlace(t *testing.T) {
+	m, abiertas := conWeb(t, true)
+	_, cmd := m.Update(tecla("W"))
+	lote, ok := cmd().(tea.BatchMsg)
+	if !ok || len(lote) != 2 {
+		t.Fatalf("W avisa y pide el enlace: %T", cmd())
+	}
+	if av, ok := lote[0]().(comp.NuevoAviso); !ok || av.Texto != idioma.T("Pidiendo el enlace de la Web UI…") {
+		t.Fatalf("el aviso mientras llega el enlace: %+v", av)
+	}
+	if _, otra := m.Update(tecla("W")); otra != nil {
+		t.Fatal("con una petición en vuelo, otra W no hace nada")
+	}
+	a := conducir(t, m)
+	a.Correr(lote[1])
+	if len(*abiertas) != 1 || m.pidiendoWeb {
+		t.Fatalf("la petición termina y deja pedir otra: %v %v", *abiertas, m.pidiendoWeb)
+	}
+}
+
+// TestTeclaWServicioCaido: sin servicio (sin cliente o caído) W avisa del fallo y no deja una petición a medias.
+func TestTeclaWServicioCaido(t *testing.T) {
+	m, abiertas := conWeb(t, true)
+	cli := m.cli
+	for _, c := range []struct {
+		nombre string
+		poner  func()
+	}{{"sin cliente", func() { m.cli = nil }}, {"caído", func() { m.cli, m.caido = cli, errors.New("no responde") }}} {
+		c.poner()
+		_, cmd := m.Update(tecla("W"))
+		if av, ok := cmd().(comp.NuevoAviso); !ok || av.Tipo != comp.Fallo || av.Texto != idioma.T("El servicio no responde · r reintenta") || m.pidiendoWeb {
+			t.Fatalf("%s: W avisa del fallo: %+v", c.nombre, av)
+		}
+	}
+	if len(*abiertas) != 0 {
+		t.Fatalf("no se abre nada: %v", *abiertas)
+	}
+}
+
+// TestTeclaWFalloDelEnlace: si el servicio no da el enlace, es un fallo en la línea de estado y se puede volver a pedir.
+func TestTeclaWFalloDelEnlace(t *testing.T) {
+	m, abiertas := conWeb(t, true)
+	cli, caer := prueba.ConCaida(t, m.cli)
+	m.cli = cli
+	caer(true)
+	a := conducir(t, m)
+	_, cmd := m.Update(tecla("W"))
+	a.Correr(cmd)
+	if !m.avisos.HayError() || m.pidiendoWeb || m.pregunta != nil || len(*abiertas) != 0 {
+		t.Fatalf("el fallo del enlace sale como fallo: %v %v %v", m.avisos.HayError(), m.pidiendoWeb, *abiertas)
+	}
+}
+
+// TestTeclaWNavegadorFalla: si el navegador no se abre, cae a la ventana con la dirección.
+func TestTeclaWNavegadorFalla(t *testing.T) {
+	m, _ := conWeb(t, true)
+	abrir = func(string) error { return errors.New("no hay navegador") }
+	a := conducir(t, m)
+	_, cmd := m.Update(tecla("W"))
+	a.Correr(cmd)
+	if m.pregunta == nil || !strings.Contains(m.pregunta.Texto, "/ui/entrar?codigo=") {
+		t.Fatal("si no se abre, enseña la dirección")
+	}
+}
+
+// TestTeclaWConPreguntaAbierta: la dirección que llega con otra pregunta abierta no la pisa: queda en la línea de estado.
+func TestTeclaWConPreguntaAbierta(t *testing.T) {
+	m := nuevo(Opciones{})
+	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	otra := &comp.Confirmacion{Texto: "¿Seguro?"}
+	m.pregunta = otra
+	cmd := m.webAbierta(msgWeb{url: "http://127.0.0.1:1/ui/entrar?codigo=abc"})
+	if m.pregunta != otra {
+		t.Fatal("no se pisa la pregunta abierta")
+	}
+	if av, ok := cmd().(comp.NuevoAviso); !ok || !strings.Contains(av.Texto, "codigo=abc") {
+		t.Fatalf("la dirección queda en un aviso: %+v", av)
 	}
 }

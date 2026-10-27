@@ -160,6 +160,7 @@ tramtai terminal
 | / | Busca: en Mis APIs, el Historial, Ajustes y la Ayuda. |
 | Esc | Vuelve o cierra. |
 | Ctrl+E | Cambia de espacio. |
+| W | Abre la Web UI en el navegador; sin navegador (SSH, sin pantalla) enseña la dirección con su código de un solo uso. |
 | r | Si el servicio no responde, reintenta (y lo inicia si está detenido). |
 | c | Cancela la petición en curso, en Probar y en el Historial. |
 | ! | Enseña entero el último error, o cómo detener a mano el servicio de la versión anterior. |
