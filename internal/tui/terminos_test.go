@@ -95,5 +95,12 @@ func TestRiesgosComoEnGo(t *testing.T) {
 				t.Errorf("%s riesgo %d sin el modo servidor: la terminal dice %q y terminos.Riesgos %q", lengua, i+1, got, riesgo)
 			}
 		}
+		// En el servidor (tramtai --servidor) la terminal enseña los riesgos sin el «si usas…».
+		m = nuevoEn(Opciones{Servidor: true}, lengua)
+		for i, riesgo := range terminos.Riesgos(true) {
+			if got := m.riesgosTerminos()[i]; got != riesgo {
+				t.Errorf("%s riesgo %d en el servidor: la terminal dice %q y terminos.Riesgos %q", lengua, i+1, got, riesgo)
+			}
+		}
 	}
 }

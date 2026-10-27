@@ -27,7 +27,7 @@ func abrirTerminal() error {
 		return err
 	}
 	pendiente, _ := terminos.Pendiente(datos) // sin poder leerlo cuenta como pendiente
-	o := tui.Opciones{Datos: datos, Terminos: pendiente, Iniciar: func() (*cliente.Cliente, error) {
+	o := tui.Opciones{Datos: datos, Terminos: pendiente, Servidor: carpetas.Servidor(), Iniciar: func() (*cliente.Cliente, error) {
 		ejecutable, err := os.Executable()
 		if err != nil {
 			return nil, err

@@ -27,7 +27,7 @@ export async function consultarTerminos() {
   try {
     estadoTerminos.value = await api.terminos()
   } catch {
-    estadoTerminos.value = { version: '', pendiente: false, riesgos: [] }
+    estadoTerminos.value = { version: '', pendiente: false, riesgos: [], servidor: false }
   }
 }
 

@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/carpetas"
+	"tramtai/internal/contrato"
 	"tramtai/internal/version"
 )
 
@@ -46,5 +48,33 @@ func TestAcercaDe(t *testing.T) {
 	r, cuerpo = remoto.pedir("GET", "/ui/acerca", "", "X-Forwarded-For", "203.0.113.5")
 	if r.StatusCode != 200 || strings.Contains(cuerpo, `"rutas"`) || !strings.Contains(cuerpo, `"version"`) {
 		t.Fatalf("sesión remota sin rutas: %d %s", r.StatusCode, cuerpo)
+	}
+}
+
+// TestAcercaEntorno: /ui/acerca dice de qué entorno es el servicio (servidor, portable o escritorio) y, en el servidor, con
+// qué cuenta del sistema corre.
+func TestAcercaEntorno(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	if _, err := s.ActivarGlobal(); err != nil {
+		t.Fatal(err)
+	}
+	acerca := func() contrato.Acerca {
+		t.Helper()
+		n := nuevoNavegador(t, ts.URL)
+		codigo, _ := s.CodigoSesion("global")
+		n.pedir("GET", "/ui/entrar?codigo="+codigo, "")
+		r, cuerpo := n.pedir("GET", "/ui/acerca", "")
+		var a contrato.Acerca
+		if err := json.Unmarshal([]byte(cuerpo), &a); err != nil || r.StatusCode != 200 || !strings.Contains(cuerpo, `"entorno"`) {
+			t.Fatalf("GET /ui/acerca: %d %s %v", r.StatusCode, cuerpo, err)
+		}
+		return a
+	}
+	if a := acerca(); a.Entorno != carpetas.Entorno() || a.Cuenta != "" {
+		t.Errorf("sin entorno en Opciones es el del proceso, sin cuenta: %+v", a)
+	}
+	s.opc.Entorno = "servidor"
+	if a := acerca(); a.Entorno != "servidor" || a.Cuenta == "" {
+		t.Errorf("servidor con su cuenta: %+v", a)
 	}
 }

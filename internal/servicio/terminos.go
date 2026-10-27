@@ -18,7 +18,8 @@ func (s *Servicio) terminosUI(w http.ResponseWriter, _ *http.Request, _ *sesion)
 	if err != nil {
 		fmt.Fprintf(s.opc.Registros, "los términos de uso cuentan como pendientes: %s\n", err)
 	}
-	api.EscribirJSON(w, http.StatusOK, contrato.EstadoTerminos{Version: terminos.Version, Pendiente: pendiente, Riesgos: terminos.Riesgos(false)})
+	servidor := s.entorno() == "servidor"
+	api.EscribirJSON(w, http.StatusOK, contrato.EstadoTerminos{Version: terminos.Version, Pendiente: pendiente, Riesgos: terminos.Riesgos(servidor), Servidor: servidor})
 }
 
 // aceptarTerminosUI guarda la aceptación hecha en la Web UI. Cambia datos del entorno, así que pide el CSRF de la sesión

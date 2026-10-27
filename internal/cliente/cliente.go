@@ -4,6 +4,7 @@ package cliente
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"crypto/hmac"
 	"crypto/rand"
@@ -22,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"tramtai/internal/carpetas"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
 	"tramtai/internal/documentos"
@@ -38,6 +40,17 @@ var ErrServicioInactivo = errors.New(idioma.T("el servicio de Tramtai no está e
 // no toma el cerrojo de la carpeta de datos. DetenerAnterior lo detiene.
 var ErrServicioAnterior = errors.New(idioma.T("hay un servicio de una versión anterior de Tramtai en marcha"))
 
+// ErrServidorOtraVersion indica que, en modo servidor, responde el servicio del sistema de otra versión. Ese servicio no
+// es de quien ejecuta la orden: no se detiene ni se le manda el token ni se lanza otro sobre sus datos; se actualiza con
+// tramtai-servidor actualizar.
+var ErrServidorOtraVersion = errors.New(idioma.T("el servicio del sistema es de otra versión"))
+
+// otraVersion es ErrServidorOtraVersion con la versión que responde (la del descriptor si /healthz no la dice).
+func (c *Cliente) otraVersion(version string) error {
+	return fmt.Errorf("%w (%s): %s", ErrServidorOtraVersion, cmp.Or(version, c.Descriptor.Version, "?"),
+		idioma.T("actualízalo con tramtai-servidor actualizar"))
+}
+
 // duenoPropio dice si el extremo local de una conexión es de un proceso de este usuario; las pruebas lo sustituyen.
 var duenoPropio = procesos.MismoUsuario
 
@@ -46,6 +59,7 @@ var duenoPropio = procesos.MismoUsuario
 type salud struct {
 	Prueba   string `json:"prueba"`
 	Servicio string `json:"servicio"`
+	Version  string `json:"version"`
 }
 
 // Cliente es una conexión al servicio.
@@ -60,7 +74,7 @@ type Cliente struct {
 
 // Conectar lee el descriptor y el token de servicio y comprueba con un reto en /healthz que responde un servicio que
 // conoce el token, no otro proceso que ocupe el puerto; el token no sale hasta entonces. Si responde, sin reto, el
-// servicio del descriptor, es el de una versión anterior: ErrServicioAnterior.
+// servicio del descriptor, es el de una versión anterior: ErrServicioAnterior (en modo servidor, ErrServidorOtraVersion).
 func Conectar(datos string) (*Cliente, error) {
 	c, err := clienteDe(datos)
 	if err != nil {
@@ -77,6 +91,9 @@ func Conectar(datos string) (*Cliente, error) {
 	case hmac.Equal([]byte(s.Prueba), []byte(contrato.PruebaIdentidad(c.token, c.Base, reto))):
 		return c, nil
 	case s.Prueba == "" && s.Servicio != "" && s.Servicio == c.Descriptor.Identificador:
+		if carpetas.Servidor() {
+			return nil, c.otraVersion(s.Version)
+		}
 		return nil, ErrServicioAnterior
 	}
 	return nil, ErrServicioInactivo
@@ -109,9 +126,12 @@ func DetenerAnterior(datos string) error {
 	}
 	ctx, cancelar := context.WithTimeout(context.Background(), plazoComprobacion)
 	defer cancelar()
-	responde, propio := c.anterior(ctx)
+	responde, propio, version := c.anterior(ctx)
 	if !responde {
 		return nil // ya no está
+	}
+	if carpetas.Servidor() { // el servicio del sistema no se detiene desde aquí
+		return c.otraVersion(version)
 	}
 	if !propio {
 		return fmt.Errorf("%w (PID %d): %s", ErrServicioAnterior, c.Descriptor.PID,
@@ -122,7 +142,7 @@ func DetenerAnterior(datos string) error {
 	}
 	for limite := time.Now().Add(PlazoDrenaje() + 15*time.Second); time.Now().Before(limite); {
 		// Sin el ctx de la comprobación: vencería antes que el drenaje y daría por detenido un servicio que aún responde.
-		if responde, _ := c.anterior(context.Background()); !responde {
+		if responde, _, _ := c.anterior(context.Background()); !responde {
 			return nil
 		}
 		time.Sleep(200 * time.Millisecond)
@@ -131,20 +151,22 @@ func DetenerAnterior(datos string) error {
 }
 
 // anterior consulta /healthz como la versión anterior: responde dice que en el puerto está, sin reto, el servicio del
-// descriptor; propio, que el proceso que escucha es de este usuario, comprobado sobre la misma conexión.
-func (c *Cliente) anterior(ctx context.Context) (responde, propio bool) {
+// descriptor; propio, que el proceso que escucha es de este usuario, comprobado sobre la misma conexión (en modo
+// servidor lo es siempre: el servicio del sistema corre con su propia cuenta); version, la que dice /healthz.
+func (c *Cliente) anterior(ctx context.Context) (responde, propio bool, version string) {
 	ctx, cancelar := context.WithTimeout(ctx, 2*time.Second)
 	defer cancelar()
 	traza := &httptrace.ClientTrace{GotConn: func(i httptrace.GotConnInfo) {
 		local, err1 := netip.ParseAddrPort(i.Conn.LocalAddr().String())
 		remoto, err2 := netip.ParseAddrPort(i.Conn.RemoteAddr().String())
 		// El extremo del servidor: su dirección local es la remota de esta conexión.
-		propio = err1 == nil && err2 == nil && duenoPropio(netip.AddrPortFrom(remoto.Addr().Unmap(), remoto.Port()),
+		// En modo servidor propio es siempre verdadero: no sirve para decidir si se envía el token.
+		propio = carpetas.Servidor() || err1 == nil && err2 == nil && duenoPropio(netip.AddrPortFrom(remoto.Addr().Unmap(), remoto.Port()),
 			netip.AddrPortFrom(local.Addr().Unmap(), local.Port()))
 	}}
 	var s salud
 	err := c.pedir(httptrace.WithClientTrace(ctx, traza), "GET", "/healthz", "", nil, "", &s)
-	return err == nil && s.Prueba == "" && s.Servicio != "" && s.Servicio == c.Descriptor.Identificador, propio
+	return err == nil && s.Prueba == "" && s.Servicio != "" && s.Servicio == c.Descriptor.Identificador, propio, s.Version
 }
 
 // PlazoDrenaje es servicio.plazo_drenaje_segundos de la configuración global: lo que el servicio espera a las
@@ -171,9 +193,8 @@ func Lanzar(ejecutable, datos string, args ...string) error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command(ejecutable, args...)
-	cmd.Dir, cmd.Stdout, cmd.Stderr = datos, registro, registro
-	desacoplar(cmd)
+	cmd := ordenLanzar(ejecutable, datos, args)
+	cmd.Stdout, cmd.Stderr = registro, registro
 	err = cmd.Start()
 	registro.Close()
 	if err != nil {
@@ -182,12 +203,38 @@ func Lanzar(ejecutable, datos string, args ...string) error {
 	return cmd.Process.Release()
 }
 
+// ordenLanzar arma el proceso de Lanzar. En modo servidor el hijo lleva TRAMTAI_SERVIDOR=1: sin eso calcularía su raíz
+// como la del usuario y arrancaría un servicio sobre otros datos.
+func ordenLanzar(ejecutable, datos string, args []string) *exec.Cmd {
+	cmd := exec.Command(ejecutable, args...)
+	cmd.Dir = datos
+	if carpetas.Servidor() {
+		cmd.Env = append(os.Environ(), "TRAMTAI_SERVIDOR=1")
+	}
+	desacoplar(cmd)
+	return cmd
+}
+
+// ErrServidorNoEnMarcha indica que, en modo servidor, no responde el servicio del sistema y esta orden no lo inicia: lo
+// gestiona el sistema.
+var ErrServidorNoEnMarcha = errors.New(idioma.T("el servicio del sistema no está en marcha y lo gestiona el sistema: inícialo con tramtai-servidor reiniciar o con systemctl start tramtai (en Windows, con el administrador de servicios)"))
+
 // IniciarEnSegundoPlano lanza "<ejecutable> servicio iniciar" desacoplado de la terminal y espera a que responda.
 // El servicio escribe su registro en servicio.log, con tamaño máximo y copias. Si responde el servicio de una versión
 // anterior (tras actualizar), primero lo detiene: no toma el cerrojo de la carpeta de datos y el nuevo arrancaría
 // sobre sus peticiones.
 func IniciarEnSegundoPlano(ejecutable, datos string) (*Cliente, error) {
-	if _, err := Conectar(datos); errors.Is(err, ErrServicioAnterior) {
+	c, err := Conectar(datos)
+	if errors.Is(err, ErrServidorOtraVersion) {
+		return nil, err
+	}
+	if carpetas.Servidor() { // el servicio del sistema no lo lanza esta orden
+		if err == nil {
+			return c, nil
+		}
+		return nil, ErrServidorNoEnMarcha
+	}
+	if errors.Is(err, ErrServicioAnterior) {
 		if err := DetenerAnterior(datos); err != nil {
 			return nil, err
 		}

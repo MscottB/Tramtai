@@ -864,6 +864,75 @@ func TestNoLanzaOtroServicioSobreElAnterior(t *testing.T) {
 	}
 }
 
+// En modo servidor el servicio del sistema no es nuestro para detenerlo: si responde uno de otra versión, ni Conectar ni
+// DetenerAnterior ni IniciarEnSegundoPlano lo detienen, le mandan el token o lanzan otro sobre sus datos; dan
+// ErrServidorOtraVersion con su versión y la orden que lo actualiza. Aunque su dueño sea otro usuario.
+func TestServidorNoDetieneElServicioDeOtraVersion(t *testing.T) {
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	datos, conToken, detenido := servicioAnterior(t)
+	duenoPropio = func(netip.AddrPort, netip.AddrPort) bool { return false }
+	t.Cleanup(func() { duenoPropio = procesos.MismoUsuario })
+
+	comprobar := func(donde string, err error) {
+		t.Helper()
+		if !errors.Is(err, ErrServidorOtraVersion) || errors.Is(err, ErrServicioAnterior) ||
+			!strings.Contains(err.Error(), "(0.55.0+21102026)") || !strings.Contains(err.Error(), "tramtai-servidor actualizar") {
+			t.Errorf("%s: esperaba ErrServidorOtraVersion con la versión y la orden: %v", donde, err)
+		}
+	}
+	_, err := Conectar(datos)
+	comprobar("Conectar", err)
+	comprobar("DetenerAnterior", DetenerAnterior(datos))
+	_, err = IniciarEnSegundoPlano(os.Args[0], datos)
+	comprobar("IniciarEnSegundoPlano", err)
+	if conToken.Load() || detenido.Load() {
+		t.Fatal("el servicio del sistema no recibe el token ni la orden de detenerse")
+	}
+	if _, err := os.Stat(filepath.Join(datos, "servicio-salida.log")); err == nil {
+		t.Fatal("se lanzó otro servicio sobre los datos del servicio del sistema")
+	}
+	// La comprobación del dueño acepta el de otro usuario (el servicio del sistema corre con su propia cuenta).
+	c, _ := clienteDe(datos)
+	if responde, propio, version := c.anterior(context.Background()); !responde || !propio || version != "0.55.0+21102026" {
+		t.Errorf("anterior en modo servidor: responde %v, propio %v, versión %q", responde, propio, version)
+	}
+	// Sin servicio, DetenerAnterior no tiene nada que hacer.
+	detenido.Store(true)
+	if err := DetenerAnterior(datos); err != nil {
+		t.Fatalf("sin servicio que responda: %v", err)
+	}
+}
+
+// En modo servidor IniciarEnSegundoPlano no lanza ningún proceso (el servicio del sistema lo gestiona el sistema): sin
+// servicio da ErrServidorNoEnMarcha y, si responde, devuelve su cliente.
+func TestServidorNoLanzaElServicio(t *testing.T) {
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	datos := t.TempDir()
+	if _, err := IniciarEnSegundoPlano(os.Args[0], datos); !errors.Is(err, ErrServidorNoEnMarcha) ||
+		!strings.Contains(err.Error(), "systemctl start tramtai") {
+		t.Fatalf("esperaba ErrServidorNoEnMarcha: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(datos, "servicio-salida.log")); err == nil {
+		t.Fatal("se lanzó un proceso en modo servidor")
+	}
+	cli, dir := servicioDePrueba(t, "")
+	if c, err := IniciarEnSegundoPlano(os.Args[0], filepath.Join(dir, "datos")); err != nil || c.Base != cli.Base {
+		t.Fatalf("con el servicio en marcha devuelve su cliente: %v", err)
+	}
+}
+
+// Lanzar en modo servidor pasa TRAMTAI_SERVIDOR=1 al hijo (también en el reinicio); fuera de él no toca el entorno.
+func TestLanzarEnModoServidorLlevaElEntorno(t *testing.T) {
+	t.Setenv("TRAMTAI_SERVIDOR", "")
+	if cmd := ordenLanzar("tramtai", "datos", []string{"servicio", "iniciar"}); cmd.Env != nil || cmd.Dir != "datos" {
+		t.Fatalf("fuera del modo servidor el hijo hereda el entorno: %v", cmd.Env)
+	}
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	if cmd := ordenLanzar("tramtai", "datos", []string{"servicio", "iniciar"}); !slices.Contains(cmd.Env, "TRAMTAI_SERVIDOR=1") {
+		t.Fatalf("en modo servidor el hijo lleva TRAMTAI_SERVIDOR=1: %v", cmd.Env)
+	}
+}
+
 // Con el servicio anterior del mismo usuario, DetenerAnterior le pide detenerse con su protocolo y espera a que deje
 // de responder (drena sus trabajos).
 func TestDetenerElServicioAnterior(t *testing.T) {

@@ -35,6 +35,7 @@ import (
 // Opciones configura el servicio.
 type Opciones struct {
 	Datos    string                       // directorio de datos del usuario
+	Entorno  string                       // carpetas.Entorno(): servidor, portable o escritorio; vacío = el del proceso
 	Config   *configuracion.Configuracion // configuración global (sin capas de proyecto)
 	Registro map[string]adaptadores.Adaptador
 	// Conexiones dice qué agentes están desconectados; Nuevo la crea desde la configuración si falta.

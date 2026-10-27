@@ -47,6 +47,8 @@ type Acerca struct {
 	Modificado   bool           `json:"modificado"`
 	Go           string         `json:"go"`
 	Portable     bool           `json:"portable"`
+	Entorno      string         `json:"entorno"`          // servidor, portable o escritorio
+	Cuenta       string         `json:"cuenta,omitempty"` // la cuenta del sistema con la que corre el servicio del servidor
 	Sistema      string         `json:"sistema"`
 	Arquitectura string         `json:"arquitectura"`
 	Almacen      string         `json:"almacen"`
@@ -69,9 +71,11 @@ type RutasAcerca struct {
 }
 
 // EstadoTerminos es lo que la Web UI necesita para pedir la aceptación de los términos de uso: la versión vigente, si
-// este entorno aún no la aceptó y los cinco riesgos que se enseñan antes de aceptar.
+// este entorno aún no la aceptó y los cinco riesgos que se enseñan antes de aceptar; Servidor dice si son los del modo
+// servidor (la Web UI toma el texto de sus propias claves, con la redacción que corresponda).
 type EstadoTerminos struct {
 	Version   string   `json:"version"`
 	Pendiente bool     `json:"pendiente"`
 	Riesgos   []string `json:"riesgos"`
+	Servidor  bool     `json:"servidor"`
 }
