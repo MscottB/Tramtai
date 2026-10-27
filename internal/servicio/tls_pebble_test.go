@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -73,8 +74,12 @@ func TestLetsEncryptPebble(t *testing.T) {
 	if len(hoja.DNSNames) != 1 || hoja.DNSNames[0] != dominio || !hoja.NotAfter.After(time.Now()) {
 		t.Fatalf("certificado para %v hasta %v: se esperaba %s vigente", hoja.DNSNames, hoja.NotAfter, dominio)
 	}
-	guardado, err := os.ReadFile(filepath.Join(datos, "acme", dominio))
+	archivo := filepath.Join(datos, "acme", dominio)
+	guardado, err := os.ReadFile(archivo)
 	if err != nil || !strings.Contains(string(guardado), "EC PRIVATE KEY") || !strings.Contains(string(guardado), "CERTIFICATE") {
 		t.Fatalf("el certificado y su clave deberían quedar en la caché datos/acme: %v", err)
+	}
+	if info, err := os.Stat(archivo); err != nil || runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
+		t.Fatalf("el archivo de la caché lleva una clave privada y debería ser 0600: %v %v", info, err)
 	}
 }

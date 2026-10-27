@@ -1,12 +1,14 @@
 package servicio
 
 import (
+	"cmp"
 	"crypto/tls"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -20,6 +22,9 @@ import (
 // intervaloRecarga es cada cuánto, como mucho, se mira si cambiaron el certificado y la clave. Una variable para que
 // las pruebas no esperen un segundo entre conexiones.
 var intervaloRecarga = time.Second
+
+// intervaloAvisos es cada cuánto, como mucho por dominio, se anota que no se pudo obtener su certificado.
+var intervaloAvisos = time.Minute
 
 // clienteACME es el cliente ACME de Let's Encrypt; nil usa su directorio de producción. Las pruebas lo apuntan a Pebble.
 var clienteACME *acme.Client
@@ -59,11 +64,45 @@ func certificadosLetsEncrypt(o OpcionesTLS) (*tls.Config, error) {
 	if err := os.MkdirAll(carpeta, 0o700); err != nil {
 		return nil, err
 	}
+	if err := os.Chmod(carpeta, 0o700); err != nil { // una carpeta que ya existiera con otros permisos
+		return nil, err
+	}
 	m := &autocert.Manager{Prompt: autocert.AcceptTOS, HostPolicy: autocert.HostWhitelist(o.Dominios...),
 		Cache: autocert.DirCache(carpeta), Email: o.Correo, Client: clienteACME}
 	c := m.TLSConfig()
-	return &tls.Config{MinVersion: tls.VersionTLS13, GetCertificate: c.GetCertificate,
+	return &tls.Config{MinVersion: tls.VersionTLS13, GetCertificate: certificadoACME(c.GetCertificate, o),
 		NextProtos: slices.DeleteFunc(c.NextProtos, func(p string) bool { return p == "h2" })}, nil
+}
+
+// certificadoACME envuelve el GetCertificate de autocert. Autocert elige RSA o ECDSA mirando solo las suites de TLS 1.2
+// del saludo, y un cliente que solo habla TLS 1.3 daría un RSA y una orden de más a la CA; como en TLS 1.3 todo cliente
+// admite ECDSA P-256 (RFC 8446 §9.1), le presenta un saludo que lo dice. SupportedProtos no se toca: decide el desafío
+// acme-tls/1. Los fallos de un dominio de servicio.dominios (no los SNI ajenos ni los desafíos) se anotan en el
+// registro, como mucho una vez por intervaloAvisos y dominio.
+func certificadoACME(pedir func(*tls.ClientHelloInfo) (*tls.Certificate, error), o OpcionesTLS) func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+	registros := cmp.Or[io.Writer](o.Registros, io.Discard)
+	propios := map[string]bool{}
+	for _, d := range o.Dominios {
+		propios[strings.ToLower(strings.TrimSuffix(d, "."))] = true
+	}
+	var mu sync.Mutex
+	ultimo := map[string]time.Time{}
+	return func(h *tls.ClientHelloInfo) (*tls.Certificate, error) {
+		copia := *h
+		copia.CipherSuites = []uint16{tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256}
+		copia.SignatureSchemes, copia.SupportedCurves = nil, nil
+		cert, err := pedir(&copia)
+		nombre := strings.ToLower(strings.TrimSuffix(h.ServerName, "."))
+		if err != nil && propios[nombre] && !slices.Contains(h.SupportedProtos, "acme-tls/1") {
+			mu.Lock()
+			defer mu.Unlock()
+			if ahora := time.Now(); ahora.Sub(ultimo[nombre]) >= intervaloAvisos {
+				ultimo[nombre] = ahora
+				fmt.Fprintln(registros, idioma.Tf("no se pudo obtener el certificado de %s: %s", nombre, err.Error()))
+			}
+		}
+		return cert, err
+	}
 }
 
 // parRecargable es el par certificado-clave en uso; vuelve a leerlo cuando cambia la fecha de cualquiera de los dos archivos.

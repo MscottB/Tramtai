@@ -288,7 +288,7 @@ func TestReiniciarUnidadAlDia(t *testing.T) {
 }
 
 // TestUnidadSigueAlModoTLS: con servicio.tls.modo letsencrypt, reiniciar regenera la unidad con CAP_NET_BIND_SERVICE
-// (en AmbientCapabilities y en CapabilityBoundingSet, para el 80 y el 443); al dejarlo, la quita.
+// (en AmbientCapabilities y en CapabilityBoundingSet, para escuchar en el 443); al dejarlo, la quita.
 func TestUnidadSigueAlModoTLS(t *testing.T) {
 	p := nuevaPrueba(t)
 	p.instalar(t)
