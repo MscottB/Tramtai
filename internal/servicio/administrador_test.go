@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -267,7 +269,7 @@ func TestFrenoPorIPUnitario(t *testing.T) {
 	for range 4 {
 		f.Fallo(ip, ahora)
 	}
-	f.Exito(ip)
+	f.Exito(ip, ahora)
 	f.Fallo(ip, ahora)
 	if espera := f.Permitido(ip, ahora); espera != 0 {
 		t.Fatalf("el acierto borra la cuenta: %s", espera)
@@ -330,17 +332,32 @@ func TestCambiarContrasenaCierraSesiones(t *testing.T) {
 	}
 }
 
-// TestCambiarContrasenaDesdeLaCLI: la contraseña que pone la CLI (escribe el archivo directamente) también cierra las
-// sesiones abiertas con la anterior.
+// TestCambiarContrasenaDesdeLaCLI: la contraseña que pone la CLI (escribe el archivo directamente) cierra todas las
+// sesiones: las abiertas con la anterior y también las abiertas con un código de un solo uso. Las de después valen.
 func TestCambiarContrasenaDesdeLaCLI(t *testing.T) {
 	s, _, seguro := conAdministrador(t, "", "")
 	n := navegadorSeguro(t, seguro)
 	n.acceder(contrasenaPrueba, "")
+	conCodigo := navegadorSeguro(t, seguro)
+	codigo, _ := s.CodigoSesion("global")
+	if r, _ := conCodigo.pedir("GET", "/ui/entrar?codigo="+codigo, ""); r.StatusCode != http.StatusSeeOther {
+		t.Fatalf("entrar con código: %d", r.StatusCode)
+	}
+	if r, _ := conCodigo.pedir("GET", "/ui/sesion", ""); r.StatusCode != 200 {
+		t.Fatalf("la sesión con código: %d", r.StatusCode)
+	}
 	if err := FijarContrasena(s.opc.Datos, "la que pone la terminal"); err != nil {
 		t.Fatal(err)
 	}
-	if r, _ := n.pedir("GET", "/ui/sesion", ""); r.StatusCode != 401 {
-		t.Fatalf("sigue dentro: %d", r.StatusCode)
+	for nombre, b := range map[string]*navegador{"con contraseña": n, "con código": conCodigo} {
+		if r, _ := b.pedir("GET", "/ui/sesion", ""); r.StatusCode != 401 {
+			t.Errorf("%s sigue dentro: %d", nombre, r.StatusCode)
+		}
+	}
+	nueva := navegadorSeguro(t, seguro)
+	nueva.acceder("la que pone la terminal", "")
+	if r, _ := nueva.pedir("GET", "/ui/sesion", ""); r.StatusCode != 200 {
+		t.Fatalf("la de después: %d", r.StatusCode)
 	}
 }
 
@@ -382,7 +399,10 @@ func TestActivarTOTPEnDosPasos(t *testing.T) {
 	totpSoloCLI = false
 	n := navegadorSeguro(t, seguro)
 	n.acceder(contrasenaPrueba, "")
-	r, cuerpo := n.pedir("POST", "/ui/administrador/totp", `{"codigo":""}`, "X-CSRF-Token", n.csrf)
+	if r, cuerpo := n.pedir("POST", "/ui/administrador/totp", `{"actual":"no es la actual","codigo":""}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 || !strings.Contains(cuerpo, "actual") {
+		t.Fatalf("sin la contraseña actual: %d %s", r.StatusCode, cuerpo)
+	}
+	r, cuerpo := n.pedir("POST", "/ui/administrador/totp", `{"actual":"`+contrasenaPrueba+`","codigo":""}`, "X-CSRF-Token", n.csrf)
 	var nuevo struct{ Secreto, URI string }
 	if r.StatusCode != 200 || json.Unmarshal([]byte(cuerpo), &nuevo) != nil || !strings.HasPrefix(nuevo.URI, "otpauth://totp/Tramtai:") {
 		t.Fatalf("primer paso: %d %s", r.StatusCode, cuerpo)
@@ -405,13 +425,31 @@ func TestActivarTOTPEnDosPasos(t *testing.T) {
 	if ok, _ := UsarCodigoRecuperacion(s.opc.Datos, hecho.Codigos[9]); !ok {
 		t.Fatal("los códigos de recuperación quedan guardados")
 	}
-	if r, cuerpo := n.pedir("POST", "/ui/administrador/recuperacion", "", "X-CSRF-Token", n.csrf); r.StatusCode != 200 || strings.Count(cuerpo, "-") != 10 {
+	if r, cuerpo := n.pedir("POST", "/ui/administrador/recuperacion", `{"actual":"no es la actual"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 {
+		t.Fatalf("regenerar sin la contraseña actual: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, cuerpo := n.pedir("POST", "/ui/administrador/recuperacion", `{"actual":"`+contrasenaPrueba+`"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 200 || strings.Count(cuerpo, "-") != 10 {
 		t.Fatalf("regenerar: %d %s", r.StatusCode, cuerpo)
 	}
 	if ok, _ := UsarCodigoRecuperacion(s.opc.Datos, hecho.Codigos[0]); ok {
 		t.Fatal("regenerarlos invalida los anteriores")
 	}
-	if r, cuerpo := n.pedir("DELETE", "/ui/administrador/totp", "", "X-CSRF-Token", n.csrf); r.StatusCode != 204 {
+	// Con TOTP, uno nuevo pide además un código del actual.
+	activar := `{"actual":"` + contrasenaPrueba + `","codigo":""}`
+	if r, cuerpo := n.pedir("POST", "/ui/administrador/totp", activar, "X-CSRF-Token", n.csrf); r.StatusCode != 400 || !strings.Contains(cuerpo, "código") {
+		t.Fatalf("cambiar el TOTP sin el código actual: %d %s", r.StatusCode, cuerpo)
+	}
+	siguiente, _ := totp.Codigo(nuevo.Secreto, time.Now().Add(30*time.Second)) // el de la confirmación ya está visto
+	if r, cuerpo := n.pedir("POST", "/ui/administrador/totp", `{"actual":"`+contrasenaPrueba+`","codigo_actual":"`+siguiente+`","codigo":""}`, "X-CSRF-Token", n.csrf); r.StatusCode != 200 {
+		t.Fatalf("cambiar el TOTP con el código actual: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, cuerpo := n.pedir("DELETE", "/ui/administrador/totp", `{"actual":"no es la actual"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 {
+		t.Fatalf("quitar sin la contraseña actual: %d %s", r.StatusCode, cuerpo)
+	}
+	if v, _ := leerCredencial("TRAMTAI_TOTP"); v != nuevo.Secreto {
+		t.Fatal("sin la contraseña actual no se quita")
+	}
+	if r, cuerpo := n.pedir("DELETE", "/ui/administrador/totp", `{"actual":"`+contrasenaPrueba+`"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 204 {
 		t.Fatalf("quitar: %d %s", r.StatusCode, cuerpo)
 	}
 	if v, _ := leerCredencial("TRAMTAI_TOTP"); v != "" {
@@ -433,7 +471,7 @@ func TestQuitarTOTPConSuscripcionPersonal(t *testing.T) {
 	if r, cuerpo := n.acceder(contrasenaPrueba, codigo); r.StatusCode != 200 {
 		t.Fatalf("acceder: %d %s", r.StatusCode, cuerpo)
 	}
-	if r, cuerpo := n.pedir("DELETE", "/ui/administrador/totp", "", "X-CSRF-Token", n.csrf); r.StatusCode != 409 || !strings.Contains(cuerpo, "suscripción personal") {
+	if r, cuerpo := n.pedir("DELETE", "/ui/administrador/totp", `{"actual":"`+contrasenaPrueba+`"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 409 || !strings.Contains(cuerpo, "suscripción personal") {
 		t.Fatalf("Web UI: %d %s", r.StatusCode, cuerpo)
 	}
 	if r, cuerpo := admin(t, s, ts.URL, "DELETE", "/api/v1/servicio/totp", ""); r.StatusCode != 409 || !strings.Contains(cuerpo, "suscripción personal") {
@@ -457,6 +495,9 @@ func TestAdminTOTP(t *testing.T) {
 	}
 	if r, cuerpo := admin(t, s, ts.URL, "PUT", "/api/v1/servicio/totp", `{"secreto":"no es base32!"}`); r.StatusCode != 400 {
 		t.Fatalf("secreto malo: %d %s", r.StatusCode, cuerpo)
+	}
+	if r, cuerpo := admin(t, s, ts.URL, "PUT", "/api/v1/servicio/totp", `{"secreto":"GEZDGNBVGY3TQOJQ"}`); r.StatusCode != 400 || !strings.Contains(cuerpo, "20 bytes") {
+		t.Fatalf("secreto de 10 bytes: %d %s", r.StatusCode, cuerpo)
 	}
 	if r, cuerpo := admin(t, s, ts.URL, "PUT", "/api/v1/servicio/totp", `{"secreto":"`+secreto+`"}`); r.StatusCode != 204 {
 		t.Fatalf("guardar: %d %s", r.StatusCode, cuerpo)
@@ -505,5 +546,174 @@ func TestFrenoClavesFalsas(t *testing.T) {
 	}
 	if w := pedirDesde("203.0.113.9:4000", "/api/v1/ejecutar", buena); w.Code != 200 {
 		t.Fatalf("otra dirección con la buena: %d %s", w.Code, w.Body)
+	}
+}
+
+// TestFrenoAccederALaVez: 20 intentos a la vez desde una dirección no se saltan el freno aunque pasen todos la primera
+// comprobación antes de que se cuente ningún fallo: como mucho 6 llegan a comparar la contraseña (los 5 del freno y el que
+// ya calculaba con el otro hueco) y los demás reciben 429.
+func TestFrenoAccederALaVez(t *testing.T) {
+	_, _, seguro := conAdministrador(t, "", "")
+	estados := make(chan int, 20)
+	var grupo sync.WaitGroup
+	for range 20 {
+		grupo.Go(func() {
+			r, _ := navegadorSeguro(t, seguro).acceder("otra contraseña cualquiera", "")
+			estados <- r.StatusCode
+		})
+	}
+	grupo.Wait()
+	close(estados)
+	cuenta := map[int]int{}
+	for e := range estados {
+		cuenta[e]++
+	}
+	if cuenta[401] > 6 || cuenta[401]+cuenta[429] != 20 {
+		t.Fatalf("a la vez: %v", cuenta)
+	}
+}
+
+// TestFrenoGlobalConocidas (Ruling R25): con el freno global activo, una dirección (o su red /64) que entró bien en los
+// últimos 30 días sigue pudiendo intentarlo; una nueva no, y una conocida hace más de 30 días tampoco. Se recuerdan como
+// mucho 256: la más antigua se olvida.
+func TestFrenoGlobalConocidas(t *testing.T) {
+	f := nuevosFrenos()
+	ahora := time.Unix(1_700_000_000, 0)
+	duena, vieja := netip.MustParseAddr("2001:db8:1::5"), netip.MustParseAddr("198.51.100.200")
+	f.Exito(vieja, ahora.Add(-31*24*time.Hour))
+	f.Exito(duena, ahora.Add(-24*time.Hour))
+	for i := range 100 {
+		f.Fallo(netip.AddrFrom4([4]byte{203, 0, byte(113 + i/250), byte(i % 250)}), ahora)
+	}
+	if espera := f.Permitido(netip.MustParseAddr("192.0.2.1"), ahora); espera == 0 {
+		t.Fatal("el freno global está activo")
+	}
+	if espera := f.Permitido(netip.MustParseAddr("2001:db8:1::77"), ahora); espera != 0 {
+		t.Fatalf("la red de la dueña sigue pudiendo: %s", espera)
+	}
+	if espera := f.Permitido(vieja, ahora); espera == 0 {
+		t.Fatal("una conocida de hace más de 30 días espera como las demás")
+	}
+	for range 5 { // su propio freno sí cuenta
+		f.Fallo(duena, ahora)
+	}
+	if espera := f.Permitido(duena, ahora); espera == 0 {
+		t.Fatal("5 fallos frenan también a una conocida")
+	}
+	g := nuevosFrenos()
+	for i := range maximoConocidas + 1 {
+		g.Exito(netip.AddrFrom4([4]byte{10, 0, byte(i / 250), byte(i % 250)}), ahora.Add(time.Duration(i)*time.Second))
+	}
+	if len(g.conocidas) != maximoConocidas || g.conocida(netip.AddrFrom4([4]byte{10, 0, 0, 0}), ahora) {
+		t.Fatalf("como mucho %d, sin la más antigua: %d", maximoConocidas, len(g.conocidas))
+	}
+}
+
+// TestContadorSaturado: con el contador lleno (10 000 direcciones con cuenta) una dirección nueva no se deja de frenar:
+// espera la pausa.
+func TestContadorSaturado(t *testing.T) {
+	c := nuevoContador(30, time.Minute, time.Minute)
+	ahora := time.Unix(1_700_000_000, 0)
+	for i := range maximoCuentas {
+		c.fallo(netip.AddrFrom4([4]byte{10, byte(i >> 16), byte(i >> 8), byte(i)}), ahora)
+	}
+	nueva := netip.MustParseAddr("198.51.100.9")
+	if !c.fallo(nueva, ahora) || c.espera(nueva, ahora) == 0 {
+		t.Fatal("lleno: la dirección nueva espera")
+	}
+	if c.espera(netip.AddrFrom4([4]byte{10, 0, 0, 1}), ahora) != 0 {
+		t.Fatal("las que tienen cuenta siguen con la suya")
+	}
+	if c.espera(nueva, ahora.Add(2*time.Minute)) != 0 {
+		t.Fatal("pasada la pausa, vuelve a poder")
+	}
+}
+
+// TestColaArgonLlena: con 32 intentos esperando su cálculo de argon2id, el siguiente recibe 503 con Retry-After.
+func TestColaArgonLlena(t *testing.T) {
+	s, _, seguro := conAdministrador(t, "", "")
+	s.frenos.argon <- struct{}{} // los dos huecos, ocupados
+	s.frenos.argon <- struct{}{}
+	var grupo sync.WaitGroup
+	for range maximoEnCola {
+		grupo.Go(func() { navegadorSeguro(t, seguro).acceder("otra contraseña cualquiera", "") })
+	}
+	for limite := time.Now().Add(10 * time.Second); s.frenos.enCola.Load() < maximoEnCola; {
+		if time.Now().After(limite) {
+			t.Fatalf("en cola: %d", s.frenos.enCola.Load())
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	r, cuerpo := navegadorSeguro(t, seguro).acceder(contrasenaPrueba, "")
+	if r.StatusCode != 503 || r.Header.Get("Retry-After") == "" || !strings.Contains(cuerpo, "entrada_ocupada") {
+		t.Fatalf("con la cola llena: %d %s", r.StatusCode, cuerpo)
+	}
+	<-s.frenos.argon
+	<-s.frenos.argon
+	grupo.Wait()
+}
+
+// TestClavesFalsasDesdeEsteEquipo: lo que llega por loopback sin proxy no se frena por claves falsas (un proceso del
+// equipo no deja sin servicio a la CLI ni al escritorio); por loopback con cabeceras de proxy, sí.
+func TestClavesFalsasDesdeEsteEquipo(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	s.ActivarGlobal()
+	pedirLocal := func(cabeceras ...string) int {
+		r := httptest.NewRequest("POST", "/api/v1/ejecutar", strings.NewReader(hola))
+		r.Host, r.RemoteAddr = "127.0.0.1", "127.0.0.1:4000"
+		r.Header.Set("Authorization", "Bearer falsa")
+		for i := 0; i+1 < len(cabeceras); i += 2 {
+			r.Header.Set(cabeceras[i], cabeceras[i+1])
+		}
+		w := httptest.NewRecorder()
+		s.ServeHTTP(w, r)
+		return w.Code
+	}
+	for i := range 40 {
+		if e := pedirLocal(); e != 401 {
+			t.Fatalf("desde este equipo, la %d: %d", i+1, e)
+		}
+	}
+	ultimo := 0
+	for range 31 {
+		ultimo = pedirLocal("X-Forwarded-For", "203.0.113.4")
+	}
+	if ultimo != 429 {
+		t.Fatalf("por loopback con cabeceras de proxy: %d", ultimo)
+	}
+}
+
+// TestRecuperacionALaVez: el mismo código de recuperación usado a la vez solo entra una vez.
+func TestRecuperacionALaVez(t *testing.T) {
+	datos := t.TempDir()
+	codigos, _ := NuevosCodigosRecuperacion(datos)
+	var aciertos atomic.Int32
+	var grupo sync.WaitGroup
+	for range 10 {
+		grupo.Go(func() {
+			if ok, _ := UsarCodigoRecuperacion(datos, codigos[2]); ok {
+				aciertos.Add(1)
+			}
+		})
+	}
+	grupo.Wait()
+	if aciertos.Load() != 1 {
+		t.Fatalf("entró %d veces", aciertos.Load())
+	}
+}
+
+// TestAdministradorDanado: con datos/administrador dañado, quien entra recibe un mensaje sin la ruta de datos/; la ruta
+// queda en el registro.
+func TestAdministradorDanado(t *testing.T) {
+	s, _, seguro := conAdministrador(t, "", "")
+	registros := &bufferSeguro{}
+	s.opc.Registros = registros
+	if err := os.WriteFile(filepath.Join(s.opc.Datos, "administrador"), []byte("no es una huella\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	r, cuerpo := navegadorSeguro(t, seguro).acceder(contrasenaPrueba, "")
+	escapada, _ := json.Marshal(s.opc.Datos)
+	if r.StatusCode != 400 || strings.Contains(cuerpo, strings.Trim(string(escapada), `"`)) || !strings.Contains(registros.String(), filepath.Join(s.opc.Datos, "administrador")) {
+		t.Fatalf("%d %s\nregistro: %s", r.StatusCode, cuerpo, registros.String())
 	}
 }

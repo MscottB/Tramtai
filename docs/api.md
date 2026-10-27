@@ -415,4 +415,4 @@ API nativa: `{"error": {"codigo": "…", "mensaje": "…"}}`. Las fachadas usan 
 | 422 | `salida_no_cumple_esquema`, `conversion_fallida` |
 | 429 | `cola_llena` y `presupuesto_agotado` (con `Retry-After`), `limite_uso_proveedor`, `demasiados_intentos` (con `Retry-After`: 30 claves no válidas en un minuto desde una dirección la frenan un minuto; en el servidor, 5 contraseñas o códigos mal la frenan 15 minutos) |
 | 507 | `cuota_cargas_agotada` (las cargas guardadas llegan a `conversion.cuota_cargas_mb`) |
-| 502 / 503 / 504 | `error_agente`, `autenticacion_agente` / `agente_no_disponible`, `conversor_no_disponible` (con `Retry-After` mientras se prepara) / `tiempo_ejecucion_agotado` |
+| 502 / 503 / 504 | `error_agente`, `autenticacion_agente` / `agente_no_disponible`, `conversor_no_disponible` (con `Retry-After` mientras se prepara), `entrada_ocupada` (en el servidor, más de 32 intentos de entrada esperando a la vez; con `Retry-After`) / `tiempo_ejecucion_agotado` |

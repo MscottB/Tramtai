@@ -28,9 +28,6 @@ type sesion struct {
 	// generacion es la del servicio al crearla: si el servicio la sube (cambiar la contraseña, «Cerrar todas las
 	// sesiones»), la sesión deja de valer.
 	generacion uint64
-	// administrador es la línea de datos/administrador con la que se entró por contraseña: si cambia (también desde la
-	// CLI), la sesión deja de valer. Vacía en las sesiones que no se abrieron con contraseña.
-	administrador string
 	// totpPendiente es el secreto TOTP que Ajustes → Seguridad enseñó y aún no se confirmó con un código.
 	totpPendiente string
 }
@@ -75,30 +72,35 @@ func (s *Servicio) sesionDe(r *http.Request) (string, *sesion) {
 	if err != nil {
 		return "", nil
 	}
+	linea := leerAdministrador(s.opc.Datos)
 	s.muSesiones.Lock()
+	defer s.muSesiones.Unlock()
+	s.vigilarAdministrador(linea)
 	ses := s.sesiones[cookie.Value]
-	vale := ses != nil && !time.Now().After(ses.vence) && ses.generacion == s.generacion
-	if vale {
-		ses.vence = time.Now().Add(duracionSesion)
-	}
-	s.muSesiones.Unlock()
-	// La de contraseña deja de valer si la contraseña cambió, también desde la CLI (que escribe el archivo directamente).
-	if vale && ses.administrador != "" && ses.administrador != leerAdministrador(s.opc.Datos) {
-		vale = false
-	}
-	if !vale {
-		s.muSesiones.Lock()
+	if ses == nil || time.Now().After(ses.vence) || ses.generacion != s.generacion {
 		delete(s.sesiones, cookie.Value)
-		s.muSesiones.Unlock()
 		return "", nil
 	}
+	ses.vence = time.Now().Add(duracionSesion)
 	return cookie.Value, ses
+}
+
+// vigilarAdministrador sube la generación si la contraseña del administrador cambió desde la última vez que se miró,
+// también desde la CLI (que escribe datos/administrador directamente): cambiarla cierra todas las sesiones, también las
+// abiertas con código. Se llama con muSesiones tomado.
+func (s *Servicio) vigilarAdministrador(linea string) {
+	if linea != s.lineaAdministrador {
+		s.lineaAdministrador = linea
+		s.generacion++
+	}
 }
 
 func (s *Servicio) crearSesion(w http.ResponseWriter, r *http.Request, instancia string, local bool) *sesion {
 	id := aleatorio(32)
 	ses := &sesion{instancia: instancia, csrf: aleatorio(16), vence: time.Now().Add(duracionSesion), local: local}
+	linea := leerAdministrador(s.opc.Datos)
 	s.muSesiones.Lock()
+	s.vigilarAdministrador(linea)
 	for clave, otra := range s.sesiones {
 		if time.Now().After(otra.vence) || otra.generacion != s.generacion {
 			delete(s.sesiones, clave)
@@ -291,7 +293,7 @@ var rutasDeUI = []rutaUI{
 	{http.MethodGet, "/ui/acerca", conSesion, (*Servicio).acercaUI},
 	// Los términos de uso: los ve y los acepta cualquier sesión (el POST con su CSRF); lo aceptado queda en datos/terminos.json.
 	{http.MethodGet, "/ui/terminos", conSesion, (*Servicio).terminosUI},
-	{http.MethodPost, "/ui/terminos", conSesion, (*Servicio).aceptarTerminosUI},
+	{http.MethodPost, "/ui/terminos", conSesionYCSRF, (*Servicio).aceptarTerminosUI},
 	{http.MethodGet, "/ui/actualizacion/progreso", conSesion, (*Servicio).progresoUI},
 	{http.MethodGet, "/ui/actualizacion/novedades", conSesion, (*Servicio).novedadesUI},
 	// El administrador del servidor (la Web UI remota): entrar con contraseña es público y lo frena frenos.go; Ajustes →

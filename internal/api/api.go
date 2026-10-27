@@ -222,6 +222,7 @@ var estadosHTTP = map[nucleo.CodigoError]int{
 	nucleo.CodigoAccionNoPermitida:         http.StatusConflict,
 	nucleo.CodigoDemasiadosIntentos:        http.StatusTooManyRequests,
 	nucleo.CodigoEntradaRemotaNoDisponible: http.StatusForbidden,
+	nucleo.CodigoEntradaOcupada:            http.StatusServiceUnavailable,
 	nucleo.CodigoTrabajoNoTerminado:        http.StatusConflict,
 	nucleo.CodigoTrabajoSinSalida:          http.StatusConflict,
 	nucleo.CodigoTransicionInvalida:        http.StatusConflict,

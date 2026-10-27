@@ -138,10 +138,12 @@ type Servicio struct {
 	muSesiones     sync.Mutex
 	sesiones       map[string]*sesion
 	codigos        map[string]codigoEntrada
-	generacion     uint64    // la vigente de las sesiones: cambiar la contraseña o «Cerrar todas las sesiones» la sube
-	ultimoPasoTOTP int64     // el último paso TOTP aceptado, que no se reutiliza (en memoria: un reinicio lo olvida)
-	frenos         *frenos   // la entrada con contraseña
-	claves         *contador // las claves falsas en las APIs
+	generacion     uint64 // la vigente de las sesiones: cambiar la contraseña o «Cerrar todas las sesiones» la sube
+	ultimoPasoTOTP int64  // el último paso TOTP aceptado, que no se reutiliza (en memoria: un reinicio lo olvida)
+	// lineaAdministrador es la última línea de datos/administrador vista: si cambia, se cierran todas las sesiones.
+	lineaAdministrador string
+	frenos             *frenos   // la entrada con contraseña
+	claves             *contador // las claves falsas en las APIs
 
 	detener     chan struct{}
 	detenerUna  sync.Once
@@ -193,7 +195,8 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 	}
 	s := &Servicio{opc: opc, ID: "servicio_" + aleatorio(8), IniciadoEn: time.Now(), tokenAdmin: token,
 		instancias: map[string]*Instancia{}, abriendo: map[string]*apertura{}, puntos: map[string]*puntoActivo{}, detener: make(chan struct{}),
-		sesiones: map[string]*sesion{}, codigos: map[string]codigoEntrada{}, frenos: nuevosFrenos(), claves: nuevoContador(30, time.Minute, time.Minute)}
+		sesiones: map[string]*sesion{}, codigos: map[string]codigoEntrada{}, frenos: nuevosFrenos(), claves: nuevoContador(30, time.Minute, time.Minute),
+		lineaAdministrador: leerAdministrador(opc.Datos)}
 	s.buscar.Store(opc.BuscarActualizaciones)
 	s.actualizaciones.Consultar = opc.ConsultarVersion
 	s.fondo.Go(func() { actualizacion.LimpiarDescargas(time.Now().Add(-10 * time.Minute)) }) // los instaladores que dejó la versión anterior

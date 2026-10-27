@@ -6,8 +6,6 @@ import (
 
 	"tramtai/internal/api"
 	"tramtai/internal/contrato"
-	"tramtai/internal/idioma"
-	"tramtai/internal/nucleo"
 	"tramtai/internal/terminos"
 )
 
@@ -22,13 +20,9 @@ func (s *Servicio) terminosUI(w http.ResponseWriter, _ *http.Request, _ *sesion)
 	api.EscribirJSON(w, http.StatusOK, contrato.EstadoTerminos{Version: terminos.Version, Pendiente: pendiente, Riesgos: terminos.Riesgos(servidor), Servidor: servidor})
 }
 
-// aceptarTerminosUI guarda la aceptación hecha en la Web UI. Cambia datos del entorno, así que pide el CSRF de la sesión
-// (la ruta es de cualquier sesión, no solo local, y por eso no lo comprueba la tabla).
-func (s *Servicio) aceptarTerminosUI(w http.ResponseWriter, r *http.Request, ses *sesion) {
-	if !csrfValido(r, ses) {
-		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoCSRFInvalido, idioma.T("falta la cabecera X-CSRF-Token de la sesión")))
-		return
-	}
+// aceptarTerminosUI guarda la aceptación hecha en la Web UI. Cambia datos del entorno, así que la ruta pide el CSRF de la
+// sesión (conSesionYCSRF).
+func (s *Servicio) aceptarTerminosUI(w http.ResponseWriter, r *http.Request, _ *sesion) {
 	if err := terminos.Aceptar(s.opc.Datos, terminos.ComoInterfaz); err != nil {
 		api.EscribirError(w, r, err)
 		return

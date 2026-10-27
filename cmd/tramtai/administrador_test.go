@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"tramtai/internal/servicio"
+	"tramtai/internal/servidor"
 	"tramtai/internal/totp"
 )
 
@@ -95,6 +97,34 @@ func TestAdministradorTOTPActivar(t *testing.T) {
 	}
 	if n := len(regexp.MustCompile(`[A-Z2-7]{5}-[A-Z2-7]{5}`).FindAllString(salida, -1)); n != 10 {
 		t.Fatalf("códigos de recuperación: %d\n%s", n, salida)
+	}
+}
+
+// TestArranqueConTOTP: iniciarServicio rellena Entrada.TOTP con el secreto del almacén cuando la regla 4 puede aplicarse
+// (expuesto y con suscripción personal): sin secreto no arranca y lo dice; con él, sí. Sin exponer no pregunta al almacén.
+func TestArranqueConTOTP(t *testing.T) {
+	anterior := leerClave
+	t.Cleanup(func() { leerClave = anterior })
+	secreto, preguntas := "", 0
+	leerClave = func(nombre string) (string, error) {
+		preguntas++
+		if nombre != "TRAMTAI_TOTP" {
+			t.Errorf("pregunta por %s", nombre)
+		}
+		return secreto, nil
+	}
+	expuesta := servidor.Entrada{Host: "127.0.0.1", Confiables: []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")}, TLS: "ninguno",
+		Suscripciones: []servidor.Suscripcion{{Agente: "claude", Personal: true}}}
+	if err := servidor.ComprobarArranque(conTOTP(expuesta)); err == nil || !strings.Contains(err.Error(), "TOTP") {
+		t.Fatalf("sin secreto: %v", err)
+	}
+	secreto = "SECRETO"
+	if err := servidor.ComprobarArranque(conTOTP(expuesta)); err != nil {
+		t.Fatalf("con secreto: %v", err)
+	}
+	preguntas = 0
+	if conTOTP(servidor.Entrada{Host: "127.0.0.1", TLS: "ninguno", Suscripciones: expuesta.Suscripciones}); preguntas != 0 {
+		t.Fatal("sin exponer no se pregunta al almacén")
 	}
 }
 

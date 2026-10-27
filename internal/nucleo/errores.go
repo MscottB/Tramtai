@@ -70,6 +70,9 @@ const (
 	// CodigoAccionNoPermitida: el administrador no puede hacer eso ahora o desde ahí (quitar el TOTP con suscripción
 	// personal, o activarlo desde el servicio en Linux, donde va por la CLI).
 	CodigoAccionNoPermitida CodigoError = "accion_no_permitida"
+	// CodigoEntradaOcupada: hay demasiados intentos de entrada esperando su cálculo de argon2id; la respuesta lleva
+	// Retry-After.
+	CodigoEntradaOcupada CodigoError = "entrada_ocupada"
 )
 
 // Error es el error propio de Tramtai: un código estable y un mensaje legible sin secretos.
