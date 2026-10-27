@@ -13,7 +13,17 @@ import (
 // EditarRutaUsuario añade o quita dir del PATH del usuario (HKCU\Environment), conservando el tipo del valor, y avisa
 // a Windows para que las terminales que se abran después lo vean sin cerrar sesión.
 func EditarRutaUsuario(dir string, agregar bool) error {
-	k, err := registry.OpenKey(registry.CURRENT_USER, "Environment", registry.QUERY_VALUE|registry.SET_VALUE)
+	return editarRutaEn(registry.CURRENT_USER, "Environment", dir, agregar)
+}
+
+// EditarRutaSistema es EditarRutaUsuario con el PATH del sistema (HKLM): el de «tramtai servidor instalar», que deja
+// tramtai-servidor a mano en cualquier consola. Necesita ser administrador.
+func EditarRutaSistema(dir string, agregar bool) error {
+	return editarRutaEn(registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Control\Session Manager\Environment`, dir, agregar)
+}
+
+func editarRutaEn(raiz registry.Key, clave, dir string, agregar bool) error {
+	k, err := registry.OpenKey(raiz, clave, registry.QUERY_VALUE|registry.SET_VALUE)
 	if err != nil {
 		return err
 	}

@@ -26,7 +26,7 @@ func main() {
 	err := raiz.Execute()
 	ajustarDuenoServidor(raiz.ErrOrStderr()) // también si la orden falló a medias
 	if err != nil {
-		os.Exit(1)
+		os.Exit(codigoSalida(err)) // codigoReinicio tras «Reiniciar» en el servicio del sistema
 	}
 }
 

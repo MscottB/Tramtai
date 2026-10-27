@@ -15,8 +15,12 @@ import (
 	"tramtai/internal/idioma"
 )
 
-// Cuenta es la cuenta sin privilegios con la que corre el servicio del sistema en Linux.
-const Cuenta = "tramtai"
+// Cuenta es la cuenta sin privilegios con la que corre el servicio del sistema en Linux; CuentaWindows, la cuenta
+// virtual del servicio de Windows.
+const (
+	Cuenta        = "tramtai"
+	CuentaWindows = `NT SERVICE\Tramtai`
+)
 
 // Sitios son las rutas del servidor: la carpeta del programa (tramtai y uv), la de datos (la raíz del servidor), el
 // envoltorio tramtai-servidor y la unidad systemd (vacía en Windows). El tipo no se llama Rutas porque ese nombre es el
@@ -53,6 +57,12 @@ type EstadoSistema struct {
 	Instalado bool   // la unidad (o el servicio de Windows) existe
 	Activo    string // lo que dice el sistema: active, inactive, failed… (vacío sin instalar)
 }
+
+// Aviso es lo que Desinstalar no pudo terminar sin que sea un fallo (el perfil de la cuenta del servicio que Windows
+// aún tiene cargado): la desinstalación se hizo y quien llama lo muestra.
+type Aviso string
+
+func (a Aviso) Error() string { return string(a) }
 
 // ejecutar lanza una orden del sistema y devuelve su salida; las pruebas lo sustituyen.
 var ejecutar = func(nombre string, args ...string) ([]byte, error) {

@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -169,7 +170,7 @@ func comandoServicio() *cobra.Command {
 				if abrirAlIniciar {
 					go abrirCuandoResponda(cmd, navegadorAlIniciar)
 				}
-				return iniciarServicio(cmd, archivoRegistro, esperarCierre)
+				return terminarServicio(cmd, iniciarServicio(cmd, archivoRegistro, esperarCierre))
 			}
 			c, err := asegurarServicio(cmd)
 			if err != nil {
@@ -361,6 +362,9 @@ func comandoServicio() *cobra.Command {
 // registro va a ese archivo con rotación (segundo plano); sin él, a la terminal. En un reinicio (esperarCierre) espera
 // a que el servicio anterior suelte el cerrojo de la carpeta de datos.
 func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) error {
+	if servicioWindows, err := ejecutarComoServicio(cmd, archivo); servicioWindows {
+		return err
+	}
 	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	if err != nil {
 		return err
@@ -424,15 +428,8 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	if puertoUsado != puerto {
 		fmt.Fprintf(salida, idioma.T("el puerto %d está ocupado: Tramtai usa el %d (para fijar otro: Ajustes o «tramtai servicio puerto <número>»)\n"), puerto, puertoUsado)
 	}
-	// El reinicio lanza otro servicio en segundo plano que espera a que este termine.
-	registroReinicio := cmp.Or(archivo, filepath.Join(datos, "servicio.log"))
-	reiniciar := func() error {
-		ejecutable, err := os.Executable()
-		if err != nil {
-			return err
-		}
-		return cliente.Lanzar(ejecutable, datos, "servicio", "iniciar", "--esperar-cierre", "--registro", registroReinicio)
-	}
+	var reinicioPedido atomic.Bool
+	reiniciar := reinicioDelServicio(datos, cmp.Or(archivo, filepath.Join(datos, "servicio.log")), &reinicioPedido)
 	registro, limites := agentes.Registro(c)
 	raizConversor, _ := documentos.RaizConversor() // ahí se prepara el conversor de archivos
 	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites),
@@ -483,10 +480,58 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	}
 	sv.Cerrar()
 	sv.BorrarDescriptor()
+	if reinicioPedido.Load() {
+		fmt.Fprintln(salida, errReinicioPedido.Error()) // una línea normal del registro, no un error
+		return errReinicioPedido
+	}
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil
 	}
 	return err
+}
+
+// lanzar arranca un proceso desacoplado; las pruebas lo sustituyen.
+var lanzar = cliente.Lanzar
+
+// codigoReinicio es el código de salida del servicio del sistema cuando la Web UI pide reiniciarlo: distinto de 0 para
+// que systemd (Restart=on-failure) o la recuperación de Windows (también con salidas distintas de 0) lo vuelvan a
+// arrancar, y distinto de 1, el de un fallo.
+const codigoReinicio = 3
+
+// errReinicioPedido es lo que devuelve el servicio del sistema tras drenar por un «Reiniciar» de la Web UI.
+var errReinicioPedido = errors.New(idioma.T("reinicio pedido desde la Web UI: el sistema vuelve a arrancar el servicio"))
+
+// terminarServicio deja pasar el error de iniciarServicio, pero un reinicio pedido no es un fallo: cobra no lo imprime
+// como «Error: …» (el registro ya lo dice en una línea normal) y el proceso sale con codigoReinicio.
+func terminarServicio(cmd *cobra.Command, err error) error {
+	if errors.Is(err, errReinicioPedido) {
+		cmd.SilenceErrors = true
+	}
+	return err
+}
+
+// codigoSalida es el código con el que termina el proceso tras un error.
+func codigoSalida(err error) int {
+	if errors.Is(err, errReinicioPedido) {
+		return codigoReinicio
+	}
+	return 1
+}
+
+// reinicioDelServicio es el «Reiniciar» de la Web UI. Fuera del modo servidor lanza otro servicio en segundo plano que
+// espera a que este termine. En el modo servidor no lanza nada fuera de systemd o del administrador de servicios: lo
+// anota en pedido, y el servicio, tras drenar, sale con codigoReinicio para que el sistema lo vuelva a arrancar.
+func reinicioDelServicio(datos, registro string, pedido *atomic.Bool) func() error {
+	if carpetas.Servidor() {
+		return func() error { pedido.Store(true); return nil }
+	}
+	return func() error {
+		ejecutable, err := os.Executable()
+		if err != nil {
+			return err
+		}
+		return lanzar(ejecutable, datos, "servicio", "iniciar", "--esperar-cierre", "--registro", registro)
+	}
 }
 
 func esLoopback(host string) bool {

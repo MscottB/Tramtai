@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -159,6 +160,9 @@ func comandoConvertir() *cobra.Command {
 	return &cobra.Command{Use: "convertir <archivo>...", Short: idioma.T("Muestra el texto que recibiría el agente para esos archivos (sin ejecutar ningún agente)"),
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := conversionLocalPermitida(args); err != nil {
+				return err
+			}
 			c, err := cargarConfiguracion()
 			if err != nil {
 				return err
@@ -193,7 +197,20 @@ func archivosSinConversor(conversor *documentos.Conversor, archivos []string) er
 	return nil
 }
 
+// conversionLocalPermitida falla si este proceso, administrador en el modo servidor, tendría que convertir algún
+// archivo él mismo: el conversor de la raíz del servidor lo puede cambiar la cuenta del servicio, y ejecutarlo así
+// le daría los permisos del administrador. Esa conversión la hace el servicio.
+func conversionLocalPermitida(archivos []string) error {
+	if !carpetas.Servidor() || !esAdministrador() || !slices.ContainsFunc(archivos, documentos.NecesitaConversor) {
+		return nil
+	}
+	return nucleo.NuevoError(nucleo.CodigoConversorNoDisponible, idioma.T("en el servidor, la conversión la hace el servicio: inícialo y repite"))
+}
+
 func ejecutar(cmd *cobra.Command, c *configuracion.Configuracion, s nucleo.SolicitudEjecucion, archivos []string) error {
+	if err := conversionLocalPermitida(archivos); err != nil {
+		return err
+	}
 	datos, err := carpetas.DirDatos()
 	if err != nil {
 		return err

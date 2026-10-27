@@ -2,8 +2,14 @@ package main
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
+	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
+
+	"github.com/spf13/cobra"
 
 	"tramtai/internal/servidor"
 	"tramtai/internal/terminos"
@@ -138,5 +144,89 @@ func TestServidorDesinstalarConfirma(t *testing.T) {
 	}
 	if len(*desinstalado) != 2 || !(*desinstalado)[0] || (*desinstalado)[1] {
 		t.Errorf("desinstalaciones: %v", *desinstalado)
+	}
+}
+
+// TestReinicioEnServidor: en el modo servidor, «Reiniciar» de la Web UI no lanza un proceso suelto fuera del sistema:
+// el servicio drena y sale con su código propio, y systemd (Restart=on-failure) o la recuperación de Windows lo vuelven
+// a arrancar. Fuera del modo servidor lanza el servicio nuevo, como siempre.
+func TestReinicioEnServidor(t *testing.T) {
+	lanzar0 := lanzar
+	t.Cleanup(func() { lanzar = lanzar0 })
+	lanzados := 0
+	lanzar = func(string, string, ...string) error { lanzados++; return nil }
+	var pedido atomic.Bool
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	if err := reinicioDelServicio("datos", "servicio.log", &pedido)(); err != nil || lanzados != 0 || !pedido.Load() {
+		t.Errorf("modo servidor: %v, lanzados %d, pedido %v", err, lanzados, pedido.Load())
+	}
+	if codigoReinicio == 0 || codigoReinicio == 1 || codigoSalida(fmt.Errorf("al parar: %w", errReinicioPedido)) != codigoReinicio ||
+		codigoSalida(errors.New("otro fallo")) != 1 {
+		t.Errorf("códigos de salida: %d", codigoReinicio)
+	}
+	// cobra no lo imprime como «Error: …»: es una salida esperada (un fallo de verdad sí se imprime).
+	for _, c := range []struct {
+		err   error
+		error bool
+	}{{errReinicioPedido, false}, {errors.New("otro fallo"), true}} {
+		var salida bytes.Buffer
+		orden := &cobra.Command{Use: "iniciar", RunE: func(cmd *cobra.Command, _ []string) error { return terminarServicio(cmd, c.err) }}
+		orden.SetOut(&salida)
+		orden.SetErr(&salida)
+		orden.SetArgs(nil)
+		if err := orden.Execute(); !errors.Is(err, c.err) || strings.Contains(salida.String(), "Error") != c.error {
+			t.Errorf("%v: %v, salida %q", c.err, err, salida.String())
+		}
+	}
+	t.Setenv("TRAMTAI_SERVIDOR", "")
+	pedido.Store(false)
+	if err := reinicioDelServicio("datos", "servicio.log", &pedido)(); err != nil || lanzados != 1 || pedido.Load() {
+		t.Errorf("sin modo servidor: %v, lanzados %d, pedido %v", err, lanzados, pedido.Load())
+	}
+}
+
+// TestConversionElevadaEnServidor: en el modo servidor, como administrador, la CLI no ejecuta el Python de la raíz del
+// servidor (lo puede cambiar la cuenta del servicio): la conversión la hace el servicio. Los archivos de texto no lo
+// necesitan, y sin ser administrador no hay nada que proteger.
+func TestConversionElevadaEnServidor(t *testing.T) {
+	simularServidor(t, true)
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	if err := conversionLocalPermitida([]string{"informe.pdf"}); err == nil || !strings.Contains(err.Error(), "la conversión la hace el servicio") {
+		t.Errorf("PDF como administrador: %v", err)
+	}
+	if err := conversionLocalPermitida([]string{"notas.txt"}); err != nil {
+		t.Errorf("texto: %v", err)
+	}
+	if _, err := ejecutarServidor(t, "", "convertir", "informe.pdf"); err == nil || !strings.Contains(err.Error(), "la conversión la hace el servicio") {
+		t.Errorf("tramtai convertir: %v", err)
+	}
+	esAdministrador = func() bool { return false }
+	if err := conversionLocalPermitida([]string{"informe.pdf"}); err != nil {
+		t.Errorf("sin ser administrador: %v", err)
+	}
+}
+
+// TestServidorInstalarConversor: --conversor (--converter) llega a Instalar con la ruta absoluta del paquete.
+func TestServidorInstalarConversor(t *testing.T) {
+	instalado, _ := simularServidor(t, true)
+	for _, opcion := range []string{"--conversor", "--converter"} {
+		if _, err := ejecutarServidor(t, "", "servidor", "instalar", "--acepto-terminos", opcion, "conversor.zip"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	quiere, _ := filepath.Abs("conversor.zip")
+	if len(*instalado) != 2 || (*instalado)[0].Conversor != quiere || (*instalado)[1].Conversor != quiere {
+		t.Errorf("instalaciones: %+v", *instalado)
+	}
+}
+
+// TestServidorDesinstalarAviso: un Aviso de Desinstalar (el perfil que Windows aún tiene cargado) se muestra, pero la
+// desinstalación se dio por hecha.
+func TestServidorDesinstalarAviso(t *testing.T) {
+	simularServidor(t, true)
+	desinstalarServidor = func(bool) error { return servidor.Aviso("el perfil sigue cargado") }
+	salida, err := ejecutarServidor(t, "s\n", "servidor", "desinstalar", "--borrar-datos")
+	if err != nil || !strings.Contains(salida, "el perfil sigue cargado") || !strings.Contains(salida, "servidor desinstalado") {
+		t.Errorf("con aviso: %v %q", err, salida)
 	}
 }

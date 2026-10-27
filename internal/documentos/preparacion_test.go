@@ -324,4 +324,30 @@ func TestRaizConversor(t *testing.T) {
 	if r, err := RaizConversor(); err != nil || r != quiere {
 		t.Fatalf("el conversor va en la carpeta local, no en el perfil móvil: %q %v (quiere %q)", r, err, quiere)
 	}
+	// En el modo servidor, en la raíz del servidor (la de este proceso), no en la carpeta local de quien administra.
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	raiz, _ := carpetas.RaizUsuario()
+	if r, err := RaizConversor(); err != nil || r != raiz {
+		t.Fatalf("modo servidor: %q %v (quiere %q)", r, err, raiz)
+	}
+}
+
+// ComprobarConversor rechaza una carpeta sin listo.json o con el lock de otra versión, antes de ejecutar nada.
+func TestComprobarConversor(t *testing.T) {
+	dir := t.TempDir()
+	if err := ComprobarConversor(t.Context(), dir); err == nil {
+		t.Fatal("sin listo.json no es un conversor")
+	}
+	if err := os.MkdirAll(filepath.Dir(interprete(dir)), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(interprete(dir), nil, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "listo.json"), []byte(`{"lock_sha256":"otro"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := ComprobarConversor(t.Context(), dir); err == nil || !strings.Contains(err.Error(), "otra versión") {
+		t.Fatalf("con el lock de otra versión: %v", err)
+	}
 }
