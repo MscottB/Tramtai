@@ -92,6 +92,7 @@ func init() {
 		"limite debe estar entre 1 y 200":                                                         "limite must be between 1 and 200",
 		"no se encontró %s junto a %s":                                                            "%s was not found next to %s",
 		"el arranque automático todavía no está disponible en este sistema":                       "automatic start is not available on this system yet",
+		"el modo del arranque es app o servicio":                                                  "the start mode is app or servicio",
 		"el servicio de Tramtai no está en marcha (tramtai servicio iniciar --segundo-plano)":     "the Tramtai service is not running (tramtai servicio iniciar --segundo-plano)",
 		"el servicio no respondió; revisa %s":                                                     "the service did not respond; check %s",
 		"hay un servicio de una versión anterior de Tramtai en marcha":                            "a service from an earlier version of Tramtai is running",

@@ -15,6 +15,7 @@ import (
 	"tramtai/internal/actualizacion"
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
+	"tramtai/internal/autoarranque"
 	"tramtai/internal/cliente"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/nucleo"
@@ -107,11 +108,12 @@ func arrancar(t *testing.T, agente adaptadores.Adaptador, ajustar func(*servicio
 		t.Fatal(err)
 	}
 	ts := httptest.NewUnstartedServer(nil)
-	var auto atomic.Bool // como un sistema que lo admite, apagado; cambiarlo no toca el arranque del equipo
+	var auto atomic.Value // el modo, como un sistema que lo admite, apagado; cambiarlo no toca el arranque del equipo
+	auto.Store(autoarranque.Modo(""))
 	opc := servicio.Opciones{Datos: datos, Config: c, Registro: map[string]adaptadores.Adaptador{"simulado": agente},
 		Secretos: func() []string { return nil }, Semaforos: planificador.NuevosSemaforos(nil), Host: "127.0.0.1", Puerto: ts.Listener.Addr().(*net.TCPAddr).Port, Hosts: []string{"127.0.0.1"},
-		Autoarranque:        func() (bool, bool) { return true, auto.Load() },
-		CambiarAutoarranque: func(activo bool) error { auto.Store(activo); return nil }}
+		Autoarranque:        func() (bool, autoarranque.Modo) { return true, auto.Load().(autoarranque.Modo) },
+		CambiarAutoarranque: func(modo autoarranque.Modo) error { auto.Store(modo); return nil }}
 	if ajustar != nil {
 		ajustar(&opc)
 	}

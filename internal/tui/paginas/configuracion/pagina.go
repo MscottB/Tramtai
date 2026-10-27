@@ -64,6 +64,10 @@ type (
 	msgSondeoConversor struct{ origen }
 )
 
+// modosArranque son las opciones del arranque con el sistema: no arrancar, la app en la bandeja o solo el servicio (los
+// valores de ModoArranque; sus textos son arranque.no, arranque.app y arranque.servicio).
+var modosArranque = []string{"", "app", "servicio"}
+
 const (
 	pestanaEspacio = iota
 	pestanaTramtai
@@ -134,7 +138,7 @@ type Pagina struct {
 
 	form     *formulario
 	sel      *comp.Selector
-	selQue   string // modelo o esfuerzo
+	selQue   string // modelo, esfuerzo o arranque
 	abierta  string // vistaValores, vistaAcerca, vistaNovedades o vistaProgreso; "" las secciones
 	buscando bool   // en los valores técnicos, escribiendo el filtro
 	filtro   string
@@ -529,15 +533,22 @@ func (p *Pagina) nivel(n string) string {
 	return p.tx("esfuerzo." + n)
 }
 
-// abrirSelector abre el del modelo predeterminado (con el catálogo) o el de su esfuerzo (con los niveles que admite).
+// abrirSelector abre el del modelo predeterminado (con el catálogo), el de su esfuerzo (con los niveles que admite) o el
+// del arranque con el sistema (con el modo de ahora marcado).
 func (p *Pagina) abrirSelector(que string) {
 	var items []comp.Item
 	titulo := p.tx("predeterminado.titulo")
-	if que == "modelo" {
+	switch {
+	case que == "arranque":
+		titulo = p.tx("arranque.titulo", "sistema", sistema())
+		for _, modo := range modosArranque {
+			items = append(items, comp.Item{Valor: modo, Texto: p.tx("arranque." + cmpOr(modo, "no")), Detalle: p.tx("arranque." + cmpOr(modo, "no") + "Texto")})
+		}
+	case que == "modelo":
 		for _, m := range p.catalogo {
 			items = append(items, comp.Item{Valor: m.ID, Texto: m.ID, Detalle: m.Version})
 		}
-	} else {
+	default:
 		m, _ := p.modeloActual()
 		titulo = p.tx("esfuerzo.titulo")
 		items = append(items, comp.Item{Valor: "", Texto: p.nivel(""), Detalle: p.tx("esfuerzo." + m.EsfuerzoPredeterminado)})
@@ -549,6 +560,9 @@ func (p *Pagina) abrirSelector(que string) {
 		}
 	}
 	s := comp.NuevoSelector(p.estilos, titulo, items)
+	if que == "arranque" {
+		s.Marcar(p.ajustes.ModoArranque)
+	}
 	p.sel, p.selQue = &s, que
 }
 
@@ -560,6 +574,16 @@ func (p *Pagina) elegido(valor string) tea.Cmd {
 	}
 	que := p.selQue
 	p.sel = nil
+	if que == "arranque" {
+		aviso := p.tx("arranque.desactivado")
+		switch valor {
+		case "app":
+			aviso = p.tx("arranque.activado", "sistema", sistema())
+		case "servicio":
+			aviso = p.tx("arranque.activadoServicio", "sistema", sistema())
+		}
+		return p.accion(aviso, "", func(c pagina.Contexto) error { return c.Cli.Autoarranque(c.Ctx, valor != "", valor) })
+	}
 	if que == "modelo" {
 		var esfuerzo *string
 		if m, ok := p.modeloActual(); ok && m.EsfuerzoEspacio != "" {
@@ -836,13 +860,8 @@ func (p *Pagina) teclaSeccion(sec, t string) tea.Cmd {
 		})
 	case sec == secActualizaciones && t == "b":
 		return p.cargarActualizacion(true)
-	case sec == secArranque && t == "space":
-		activo := !*p.ajustes.Autoarranque
-		aviso := p.tx("arranque.desactivado")
-		if activo {
-			aviso = p.tx("arranque.activado", "sistema", sistema())
-		}
-		return p.accion(aviso, "", func(c pagina.Contexto) error { return c.Cli.Autoarranque(c.Ctx, activo) })
+	case sec == secArranque && t == "enter":
+		p.abrirSelector("arranque")
 	case sec == secAcerca && t == "enter":
 		p.abierta = vistaAcerca
 	}
@@ -1023,7 +1042,7 @@ func (p *Pagina) Teclas() []pagina.Tecla {
 		poner("Espacio", map[bool]string{true: idioma.T("desactiva"), false: idioma.T("activa")}[p.act.Buscar])
 		poner("b", p.tx("actualizacion.buscarAhora"))
 	case secArranque:
-		poner("Espacio", map[bool]string{true: idioma.T("desactiva"), false: idioma.T("activa")}[*p.ajustes.Autoarranque])
+		poner("Enter", idioma.T("elige"))
 	}
 	if p.act != nil && p.act.Disponible {
 		poner("u", p.tx("actualizacion.boton"))

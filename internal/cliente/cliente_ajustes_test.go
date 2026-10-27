@@ -70,7 +70,7 @@ func TestClienteActualizarYArranque(t *testing.T) {
 	defer srv.Close()
 	c := &Cliente{Base: srv.URL, token: "x", http: srv.Client()}
 	ctx := context.Background()
-	if err := c.Autoarranque(ctx, true); err != nil {
+	if err := c.Autoarranque(ctx, true, "servicio"); err != nil {
 		t.Fatal(err)
 	}
 	if v, err := c.Actualizar(ctx); err != nil || v != "v9.9.9" {
@@ -92,7 +92,7 @@ func TestClienteActualizarYArranque(t *testing.T) {
 		t.Fatalf("reiniciar: %q %v", u, err)
 	}
 	esperado := []string{
-		`PUT /api/v1/servicio/autoarranque {"activo":true}`,
+		`PUT /api/v1/servicio/autoarranque {"activo":true,"modo":"servicio"}`,
 		"POST /api/v1/servicio/actualizar ",
 		"GET /api/v1/servicio/actualizacion?ahora=1 ",
 		"GET /api/v1/servicio/actualizacion/novedades?desde=v1.0.0&hasta=v9.9.9 ",

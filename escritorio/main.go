@@ -65,7 +65,19 @@ func main() {
 	proyecto := flag.String("proyecto", "", idioma.T("raíz de un proyecto con .tramtai/config.yaml (por defecto, el espacio global)"))
 	oculto := flag.Bool("oculto", false, idioma.T("arranca solo en la bandeja, sin mostrar la ventana (arranque automático)"))
 	actualizado := flag.Bool("actualizado", false, idioma.T("recién actualizada: muestra la ventana por delante de las demás"))
+	soloServicio := flag.Bool("solo-servicio", false, idioma.T("inicia solo el servicio y termina, sin ventana ni bandeja"))
 	flag.Parse()
+	// Antes de crear la app de Wails: no se abre ni ventana ni bandeja.
+	if *soloServicio {
+		if err := iniciarSoloServicio(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			if datos, errDatos := carpetas.DirDatos(); errDatos == nil {
+				anotarFalloSoloServicio(datos, err)
+			}
+			os.Exit(1)
+		}
+		return
+	}
 
 	var ventana *application.WebviewWindow
 	var recibir func(mensaje, origen string)
@@ -354,12 +366,10 @@ func main() {
 				return func(*application.Context) { avisar("detener") }
 			case accionAutoarranque:
 				return func(c *application.Context) {
-					if propio, err := os.Executable(); err == nil {
-						if c.IsChecked() {
-							_ = autoarranque.Activar(propio)
-						} else {
-							_ = autoarranque.Desactivar()
-						}
+					if c.IsChecked() {
+						_ = autoarranque.Elegir(autoarranque.ModoApp)
+					} else {
+						_ = autoarranque.Desactivar()
 					}
 					repasar()
 				}
@@ -413,7 +423,9 @@ func main() {
 				proyectos[i.ID] = filepath.Base(i.Raiz)
 			}
 		}
-		conWindows, _ := autoarranque.Activo()
+		// Marcada solo con la app en la bandeja: con «Solo el servicio» no hay bandeja que prometer, y marcarla pasa a la app.
+		modoArranque, _ := autoarranque.Configurado()
+		conWindows := modoArranque == autoarranque.ModoApp
 		sinPreguntar := leerPreferencias().SalirSinPreguntar
 		mu.Lock()
 		vivo = cli
@@ -579,6 +591,34 @@ func codificar(img image.Image) []byte {
 	var b bytes.Buffer
 	_ = png.Encode(&b, img)
 	return b.Bytes()
+}
+
+// iniciarSoloServicio es el arranque «Solo el servicio» al iniciar sesión: inicia el servicio en segundo plano si no está
+// ya en marcha, con el tramtai que se instala junto a esta app, y termina.
+func iniciarSoloServicio() error {
+	datos, err := carpetas.DirDatos()
+	if err != nil {
+		return err
+	}
+	if _, err := cliente.Conectar(datos); err == nil {
+		return nil
+	}
+	ejecutable, err := buscarTramtai()
+	if err != nil {
+		return err
+	}
+	_, err = cliente.IniciarEnSegundoPlano(ejecutable, datos)
+	return err
+}
+
+// anotarFalloSoloServicio deja el error, con la hora, en solo-servicio.log de la carpeta de datos (junto a
+// servicio-salida.log): un binario windowsgui no muestra stderr y, si no, el arranque fallaría sin decir por qué. Cada fallo
+// sobrescribe el anterior.
+func anotarFalloSoloServicio(datos string, fallo error) {
+	if os.MkdirAll(datos, 0o700) != nil {
+		return
+	}
+	_ = os.WriteFile(filepath.Join(datos, "solo-servicio.log"), []byte(time.Now().Format(time.RFC3339)+" "+fallo.Error()+"\n"), 0o600)
 }
 
 // prepararSesion conecta con el servicio (o lo inicia), activa la instancia y obtiene una URL de entrada de un

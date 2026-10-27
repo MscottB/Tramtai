@@ -331,21 +331,39 @@ func TestPuertoFueraDeRango(t *testing.T) {
 	}
 }
 
-// TestAjustesArranque: espacio activa y desactiva «La app en la bandeja» con el arranque de prueba, y avisa como la Web UI.
+// TestAjustesArranque: Intro abre la elección («No arrancar», «La app en la bandeja», «Solo el servicio»); lo elegido se guarda
+// en el servicio con el arranque de prueba, se avisa como la Web UI y se ve en el título. Debajo, dónde está el servicio del
+// sistema (otro entorno).
 func TestAjustesArranque(t *testing.T) {
 	cli, id := prueba.Servicio(t)
 	a := abierta(t, cli, id)
 	todoTramtai(t, a)
 	ir(t, a, tx("arranque.titulo", "sistema", sistema()))
-	if av := hastaAviso(a, func() { a.Pulsar("space") }); av.Texto != tx("arranque.activado", "sistema", sistema()) {
-		t.Fatalf("activado: %+v", av)
+	for _, quiero := range []string{tx("arranque.servidor"), "tramtai-servidor instalar", "https://mscottb.github.io/Tramtai/servidor.html"} {
+		if !strings.Contains(strings.Join(strings.Fields(a.Vista()), " "), quiero) { // el texto largo se parte en líneas
+			t.Fatalf("falta %q:\n%s", quiero, a.Vista())
+		}
 	}
-	if d, _ := cli.AjustesServicio(context.Background()); d.Autoarranque == nil || !*d.Autoarranque {
-		t.Fatalf("el arranque se activa: %+v", d)
-	}
-	a.Hasta(func() bool { return strings.Contains(linea(a, tx("arranque.titulo", "sistema", sistema())), "[x]") })
-	if av := hastaAviso(a, func() { a.Pulsar("space") }); av.Texto != tx("arranque.desactivado") {
-		t.Fatalf("desactivado: %+v", av)
+	for _, c := range []struct{ opcion, aviso, modo string }{
+		{"app", tx("arranque.activado", "sistema", sistema()), "app"},
+		{"servicio", tx("arranque.activadoServicio", "sistema", sistema()), "servicio"},
+		{"no", tx("arranque.desactivado"), ""},
+	} {
+		a.Pulsar("enter")
+		if !a.P.EnCampo() {
+			t.Fatalf("Intro abre la elección:\n%s", a.Vista())
+		}
+		a.Escribir(tx("arranque." + c.opcion))
+		if av := hastaAviso(a, func() { a.Pulsar("enter") }); av.Texto != c.aviso || av.Tipo != comp.Exito {
+			t.Fatalf("%s: %+v", c.opcion, av)
+		}
+		d, _ := cli.AjustesServicio(context.Background())
+		if d.Autoarranque == nil || *d.Autoarranque != (c.modo != "") || d.ModoArranque != c.modo {
+			t.Fatalf("%s: el arranque queda así en el servicio: %+v", c.opcion, d)
+		}
+		a.Hasta(func() bool {
+			return strings.Contains(linea(a, tx("arranque.titulo", "sistema", sistema())), tx("arranque."+c.opcion)) && !a.P.EnCampo()
+		})
 	}
 }
 
@@ -898,7 +916,8 @@ func TestCabe(t *testing.T) {
 	}
 	todoTramtai(t, a)
 	comprobar("todo Tramtai")
-	for _, paso := range []struct{ seccion, tecla string }{{tx("puerto.titulo"), "e"}, {tx("acerca.titulo"), "enter"}, {tx("actualizacion.ajustesTitulo"), "u"}} {
+	for _, paso := range []struct{ seccion, tecla string }{{tx("puerto.titulo"), "e"}, {tx("acerca.titulo"), "enter"}, {tx("actualizacion.ajustesTitulo"), "u"},
+		{tx("arranque.titulo", "sistema", sistema()), "enter"}} {
 		ir(t, a, paso.seccion)
 		comprobar(paso.seccion)
 		a.Pulsar(paso.tecla)

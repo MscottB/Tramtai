@@ -4,13 +4,14 @@ import "time"
 
 // AjustesServicio son los del servicio y del equipo que se ven en Ajustes (GET /api/v1/servicio/ajustes): el puerto en
 // uso, el configurado y si busca otro libre al iniciar, si se puede reiniciar desde la app y el arranque con el sistema
-// (nil si el sistema no lo admite).
+// (nil si el sistema no lo admite) con el modo en que arranca: la app en la bandeja o solo el servicio.
 type AjustesServicio struct {
-	Puerto            int   `json:"puerto"`
-	PuertoConfigurado int   `json:"puerto_configurado"`
-	PuertoAutomatico  bool  `json:"puerto_automatico"`
-	Reiniciable       bool  `json:"reiniciable"`
-	Autoarranque      *bool `json:"autoarranque,omitempty"`
+	Puerto            int    `json:"puerto"`
+	PuertoConfigurado int    `json:"puerto_configurado"`
+	PuertoAutomatico  bool   `json:"puerto_automatico"`
+	Reiniciable       bool   `json:"reiniciable"`
+	Autoarranque      *bool  `json:"autoarranque,omitempty"`
+	ModoArranque      string `json:"modo_arranque,omitempty" ts:"'' | 'app' | 'servicio'"` // vacío si no arranca
 }
 
 // EstadoActualizacion es el de las actualizaciones: la versión actual, si se buscan, si hay otra nueva (con su página y

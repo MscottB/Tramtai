@@ -9,6 +9,7 @@ import (
 
 	"tramtai/internal/actualizacion"
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/autoarranque"
 	"tramtai/internal/contrato"
 	"tramtai/internal/version"
 )
@@ -18,7 +19,7 @@ import (
 func TestSesionWebYAjustesCoinciden(t *testing.T) {
 	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
 	s.ActivarGlobal()
-	s.opc.Autoarranque = func() (bool, bool) { return true, true }
+	s.opc.Autoarranque = func() (bool, autoarranque.Modo) { return true, autoarranque.ModoServicio }
 	s.opc.PuertoConfigurado, s.opc.PuertoAutomatico = 4321, true
 	n := nuevoNavegador(t, ts.URL)
 	codigo, _ := s.CodigoSesion("global")
@@ -27,12 +28,13 @@ func TestSesionWebYAjustesCoinciden(t *testing.T) {
 	var sesion struct {
 		Servicio     json.RawMessage `json:"servicio"`
 		Autoarranque *bool           `json:"autoarranque"`
+		ModoArranque string          `json:"modo_arranque"`
 	}
 	var web, terminal contrato.AjustesServicio
-	if err := json.Unmarshal([]byte(cuerpo), &sesion); err != nil || json.Unmarshal(sesion.Servicio, &web) != nil || strings.Contains(string(sesion.Servicio), "autoarranque") {
+	if err := json.Unmarshal([]byte(cuerpo), &sesion); err != nil || json.Unmarshal(sesion.Servicio, &web) != nil || strings.Contains(string(sesion.Servicio), "autoarranque") || strings.Contains(string(sesion.Servicio), "modo_arranque") || sesion.ModoArranque != "servicio" {
 		t.Fatalf("sesión: %v %s", err, cuerpo)
 	}
-	web.Autoarranque = sesion.Autoarranque
+	web.Autoarranque, web.ModoArranque = sesion.Autoarranque, sesion.ModoArranque
 	_, texto := admin(t, s, ts.URL, "GET", "/api/v1/servicio/ajustes", "")
 	if err := json.Unmarshal([]byte(texto), &terminal); err != nil || !reflect.DeepEqual(web, terminal) {
 		t.Fatalf("la Web UI ve %s y la terminal %s", cuerpo, texto)
@@ -47,9 +49,9 @@ func TestAdminAjustesYActualizaciones(t *testing.T) {
 	version.Version = "v0.56.0" // una compilación «dev» nunca se da por desactualizada
 	t.Cleanup(func() { version.Version = antes })
 	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
-	activo := false
-	s.opc.Autoarranque = func() (bool, bool) { return true, activo }
-	s.opc.CambiarAutoarranque = func(a bool) error { activo = a; return nil }
+	modo := autoarranque.Modo("")
+	s.opc.Autoarranque = func() (bool, autoarranque.Modo) { return true, modo }
+	s.opc.CambiarAutoarranque = func(m autoarranque.Modo) error { modo = m; return nil }
 	consultas := 0
 	nueva := func(context.Context) (actualizacion.Version, error) {
 		consultas++
@@ -71,11 +73,24 @@ func TestAdminAjustesYActualizaciones(t *testing.T) {
 	if c := leer("GET", "/api/v1/servicio/ajustes", "", &a); c != 200 || a.Puerto != s.opc.Puerto || a.PuertoConfigurado != s.opc.Puerto || a.Autoarranque == nil || *a.Autoarranque {
 		t.Fatalf("ajustes: %d %+v", c, a)
 	}
-	if c := leer("PUT", "/api/v1/servicio/autoarranque", `{"activo":true}`, nil); c != 204 || !activo {
-		t.Fatalf("activar el arranque: %d %v", c, activo)
+	if c := leer("PUT", "/api/v1/servicio/autoarranque", `{"activo":true}`, nil); c != 204 || modo != autoarranque.ModoApp {
+		t.Fatalf("activar el arranque (sin modo es la app): %d %q", c, modo)
 	}
-	if leer("GET", "/api/v1/servicio/ajustes", "", &a); a.Autoarranque == nil || !*a.Autoarranque {
+	if leer("GET", "/api/v1/servicio/ajustes", "", &a); a.Autoarranque == nil || !*a.Autoarranque || a.ModoArranque != "app" {
 		t.Fatalf("el arranque se ve activo: %+v", a)
+	}
+	if c := leer("PUT", "/api/v1/servicio/autoarranque", `{"activo":true,"modo":"service"}`, nil); c != 204 || modo != autoarranque.ModoServicio {
+		t.Fatalf("«service» es el servicio: %d %q", c, modo)
+	}
+	if c := leer("PUT", "/api/v1/servicio/autoarranque", `{"activo":true,"modo":"otro"}`, nil); c != 400 || modo != autoarranque.ModoServicio {
+		t.Fatalf("un modo desconocido no cambia nada: %d %q", c, modo)
+	}
+	if c := leer("PUT", "/api/v1/servicio/autoarranque", `{"activo":false,"modo":"servicio"}`, nil); c != 204 || modo != "" {
+		t.Fatalf("desactivar: %d %q", c, modo)
+	}
+	a = contrato.AjustesServicio{} // decodificar sobre lo anterior dejaría el modo que ya no viene
+	if leer("GET", "/api/v1/servicio/ajustes", "", &a); a.Autoarranque == nil || *a.Autoarranque || a.ModoArranque != "" {
+		t.Fatalf("el arranque se ve desactivado: %+v", a)
 	}
 
 	var e contrato.EstadoActualizacion
@@ -134,7 +149,7 @@ var rutasAjustes = []struct{ metodo, ruta, cuerpo string }{
 func TestAdminAjustesSoloConLaClaveDelServicio(t *testing.T) {
 	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
 	cambios := 0
-	s.opc.CambiarAutoarranque = func(bool) error { cambios++; return nil }
+	s.opc.CambiarAutoarranque = func(autoarranque.Modo) error { cambios++; return nil }
 	s.opc.Reiniciar = func() error { cambios++; return nil }
 	s.opc.ConsultarVersion = func(context.Context) (actualizacion.Version, error) { cambios++; return actualizacion.Version{}, nil }
 	s.actualizaciones.Consultar = s.opc.ConsultarVersion
@@ -178,5 +193,41 @@ func TestAdminReiniciar(t *testing.T) {
 	case <-s.Detenido():
 	default:
 		t.Fatal("este servicio se detiene para dejar sitio al nuevo")
+	}
+}
+
+// TestAutoarranqueUIModo: /ui/autoarranque acepta {activo, modo} (sin modo, la app; «service» vale por «servicio») y la
+// sesión dice el modo en que queda. Un modo desconocido es un 400 y no cambia nada.
+func TestAutoarranqueUIModo(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
+	s.ActivarGlobal()
+	modo := autoarranque.Modo("")
+	s.opc.Autoarranque = func() (bool, autoarranque.Modo) { return true, modo }
+	s.opc.CambiarAutoarranque = func(m autoarranque.Modo) error { modo = m; return nil }
+	n := abrirSesion(t, s, ts.URL)
+	pedir := func(cuerpo string) (int, string) {
+		r, texto := n.pedir("POST", "/ui/autoarranque", cuerpo, "X-CSRF-Token", n.csrf)
+		return r.StatusCode, texto
+	}
+	for _, c := range []struct {
+		cuerpo string
+		modo   autoarranque.Modo
+	}{
+		{`{"activo":true}`, autoarranque.ModoApp}, {`{"activo":true,"modo":"servicio"}`, autoarranque.ModoServicio},
+		{`{"activo":true,"modo":"app"}`, autoarranque.ModoApp}, {`{"activo":true,"modo":"service"}`, autoarranque.ModoServicio},
+		{`{"activo":false,"modo":"servicio"}`, ""},
+	} {
+		codigo, texto := pedir(c.cuerpo)
+		var sesion struct {
+			Autoarranque *bool  `json:"autoarranque"`
+			ModoArranque string `json:"modo_arranque"`
+		}
+		if err := json.Unmarshal([]byte(texto), &sesion); codigo != 200 || err != nil || modo != c.modo || sesion.Autoarranque == nil || *sesion.Autoarranque != (c.modo != "") || sesion.ModoArranque != string(c.modo) {
+			t.Fatalf("%s: %d %q %s (%v)", c.cuerpo, codigo, modo, texto, err)
+		}
+	}
+	modo = autoarranque.ModoApp
+	if codigo, texto := pedir(`{"activo":true,"modo":"otro"}`); codigo != 400 || !strings.Contains(texto, "solicitud_invalida") || modo != autoarranque.ModoApp {
+		t.Fatalf("un modo desconocido: %d %s %q", codigo, texto, modo)
 	}
 }

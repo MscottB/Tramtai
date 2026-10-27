@@ -184,9 +184,9 @@ func (s *Servicio) responderSesion(w http.ResponseWriter, r *http.Request, ses *
 		// Los mismos que Ajustes en la terminal; la sesión lleva el arranque fuera de servicio.
 		ajustes := s.ajustesServicio()
 		if ajustes.Autoarranque != nil {
-			respuesta["autoarranque"] = *ajustes.Autoarranque
+			respuesta["autoarranque"], respuesta["modo_arranque"] = *ajustes.Autoarranque, ajustes.ModoArranque
 		}
-		ajustes.Autoarranque = nil
+		ajustes.Autoarranque, ajustes.ModoArranque = nil, ""
 		respuesta["servicio"] = ajustes
 	}
 	inst := s.instancia(ses.instancia)

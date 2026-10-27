@@ -17,6 +17,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"tramtai/internal/adaptadores"
+	"tramtai/internal/autoarranque"
 	"tramtai/internal/cliente"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
@@ -422,7 +423,7 @@ func comoApp(t *testing.T, cli *cliente.Cliente, id, clave string, n int) {
 
 // pasosDe abre Inicio contra un servicio con Claude listo y Codex desconectado, una API y el arranque automático
 // del sistema como diga auto; con completada, también una petición hecha. Los pasos los calcula el servicio.
-func pasosDe(t *testing.T, auto func() (bool, bool), completada bool) *prueba.App {
+func pasosDe(t *testing.T, auto func() (bool, autoarranque.Modo), completada bool) *prueba.App {
 	t.Helper()
 	cli, id := prueba.Ajustado(t, func(o *servicio.Opciones) {
 		o.Registro["claude"], o.Registro["codex"] = prueba.Detectado{}, prueba.Detectado{}
@@ -450,7 +451,7 @@ func pasosDe(t *testing.T, auto func() (bool, bool), completada bool) *prueba.Ap
 
 // TestPrimerosPasos: los 4 pasos con su estado, y «Ver la Ayuda de Empezar» abre el tema que acompaña a Inicio.
 func TestPrimerosPasos(t *testing.T) {
-	a := pasosDe(t, func() (bool, bool) { return true, false }, false)
+	a := pasosDe(t, func() (bool, autoarranque.Modo) { return true, "" }, false)
 	v := a.Vista()
 	for _, quiere := range []string{"Primeros pasos", "✓ Conecta al menos un agente", "2 de 3 agentes listos", "○ Prueba un agente", "✓ Conecta tu aplicación",
 		"○ Arranca Tramtai con " + sistema(), "Tus apps funcionan al encender el equipo", "2 de 4 pasos hechos"} {
@@ -459,7 +460,7 @@ func TestPrimerosPasos(t *testing.T) {
 		}
 	}
 	// Sin arranque automático en este sistema, el servicio manda 3 pasos.
-	if v := pasosDe(t, func() (bool, bool) { return false, false }, false).Vista(); strings.Contains(v, "Arranca Tramtai") || !strings.Contains(v, "2 de 3 pasos hechos") {
+	if v := pasosDe(t, func() (bool, autoarranque.Modo) { return false, "" }, false).Vista(); strings.Contains(v, "Arranca Tramtai") || !strings.Contains(v, "2 de 3 pasos hechos") {
 		t.Fatalf("tres pasos:\n%s", v)
 	}
 	tema := ""
@@ -479,7 +480,7 @@ func TestPrimerosPasos(t *testing.T) {
 		t.Fatalf("g lleva a Agentes: %q", d)
 	}
 	// Con todo hecho, la guía se pliega en «Todo listo».
-	if v := pasosDe(t, func() (bool, bool) { return true, true }, true).Vista(); !strings.Contains(v, "Todo listo") || strings.Contains(v, "○") {
+	if v := pasosDe(t, func() (bool, autoarranque.Modo) { return true, autoarranque.ModoServicio }, true).Vista(); !strings.Contains(v, "Todo listo") || strings.Contains(v, "○") {
 		t.Fatalf("todo listo:\n%s", v)
 	}
 }

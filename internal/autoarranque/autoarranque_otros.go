@@ -11,11 +11,11 @@ import (
 // Disponible indica si este sistema admite el arranque automático.
 const Disponible = false
 
-// Activo indica si el arranque automático está registrado; en este sistema, nunca.
-func Activo() (bool, error) { return false, nil }
+// Configurado dice en qué modo está registrado el arranque automático; en este sistema, en ninguno.
+func Configurado() (Modo, error) { return "", nil }
 
-// Activar no está disponible todavía en este sistema.
-func Activar(string) error {
+// activar no está disponible todavía en este sistema.
+func activar(string, Modo) error {
 	return errors.New(idioma.T("el arranque automático todavía no está disponible en este sistema"))
 }
 

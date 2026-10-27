@@ -144,14 +144,12 @@ func (s *Servicio) rutasAdmin() http.Handler {
 		api.EscribirJSON(w, http.StatusOK, s.ajustesServicio())
 	})
 	mux.HandleFunc("PUT /api/v1/servicio/autoarranque", func(w http.ResponseWriter, r *http.Request) {
-		var peticion struct {
-			Activo bool `json:"activo"`
-		}
+		var peticion peticionArranque
 		if err := api.LeerJSON(w, r, &peticion); err != nil {
 			api.EscribirError(w, r, err)
 			return
 		}
-		if err := s.fijarAutoarranque(peticion.Activo); err != nil {
+		if err := s.fijarAutoarranque(peticion); err != nil {
 			api.EscribirError(w, r, err)
 			return
 		}

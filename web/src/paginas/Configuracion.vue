@@ -103,12 +103,20 @@
     <div class="row q-col-gutter-md">
       <div v-if="sesion?.autoarranque !== undefined" v-show="pestana === 'tramtai'" class="col-12">
         <q-card>
-          <q-card-section class="row items-start no-wrap">
-            <div class="col">
-              <h2 class="titulo-seccion">{{ t('arranque.titulo', { sistema }) }}</h2>
-              <div class="texto-suave text-body2 q-mt-xs">{{ t('arranque.texto', { sistema }) }}</div>
+          <q-card-section>
+            <h2 id="titulo-arranque" class="titulo-seccion">{{ t('arranque.titulo', { sistema }) }}</h2>
+            <div class="texto-suave text-body2 q-mt-xs">{{ t('arranque.texto', { sistema }) }}</div>
+            <div class="column q-mt-sm" role="radiogroup" aria-labelledby="titulo-arranque">
+              <div v-for="modo in modosArranque" :key="modo.valor" class="q-mb-xs">
+                <q-radio :model-value="sesion.modo_arranque ?? ''" :val="modo.valor" :label="t(modo.titulo)" :disable="cambiandoArranque"
+                  :aria-describedby="'arranque-' + modo.titulo" @update:model-value="cambiarArranque" />
+                <div :id="'arranque-' + modo.titulo" class="texto-suave text-caption q-ml-xl">{{ t(modo.texto) }}</div>
+              </div>
             </div>
-            <q-toggle :model-value="sesion.autoarranque" :disable="cambiandoArranque" :aria-label="t('arranque.titulo', { sistema })" @update:model-value="cambiarArranque" />
+            <div class="texto-suave text-caption q-mt-sm">
+              {{ t('arranque.servidor') }}: <code>tramtai-servidor instalar</code> ·
+              <a class="enlace" href="https://mscottb.github.io/Tramtai/servidor.html" target="_blank" rel="noopener">{{ t('arranque.servidorGuia') }}</a>
+            </div>
           </q-card-section>
         </q-card>
       </div>
@@ -434,11 +442,18 @@ async function cambiarBusqueda(buscar: boolean) {
   }
 }
 
-async function cambiarArranque(activo: boolean) {
+// modosArranque son las opciones del arranque con el sistema: no arrancar, la app en la bandeja o solo el servicio.
+const modosArranque = [
+  { valor: '', titulo: 'arranque.no', texto: 'arranque.noTexto' },
+  { valor: 'app', titulo: 'arranque.app', texto: 'arranque.appTexto' },
+  { valor: 'servicio', titulo: 'arranque.servicio', texto: 'arranque.servicioTexto' },
+] as const satisfies readonly { valor: string; titulo: Clave; texto: Clave }[]
+
+async function cambiarArranque(modo: '' | 'app' | 'servicio') {
   cambiandoArranque.value = true
   try {
-    await api.autoarranque(activo)
-    avisar(activo ? t('arranque.activado', { sistema }) : t('arranque.desactivado'))
+    await api.autoarranque(modo)
+    avisar(modo === '' ? t('arranque.desactivado') : modo === 'app' ? t('arranque.activado', { sistema }) : t('arranque.activadoServicio', { sistema }))
   } catch (e) {
     avisarError(e)
   } finally {

@@ -183,6 +183,7 @@ export interface AjustesServicio {
   puerto_automatico: boolean
   reiniciable: boolean
   autoarranque?: boolean
+  modo_arranque?: '' | 'app' | 'servicio'
 }
 
 export interface EstadoActualizacion {
