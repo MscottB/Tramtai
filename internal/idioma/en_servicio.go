@@ -346,6 +346,8 @@ func init() {
 		"no existe la carpeta %s":                                                  "the folder %s does not exist",
 		"no se pudo preparar el proyecto: %s":                                      "could not prepare the project: %s",
 		"el puerto %d está ocupado por otro programa: elige otro con «tramtai servicio puerto <número>» (o en Ajustes de la Web UI), o activa servicio.puerto_automatico para usar uno libre": "port %d is in use by another program: choose another with “tramtai servicio puerto <number>” (or in the Web UI Settings), or enable servicio.puerto_automatico to use a free one",
+		"servicio.tls.modo letsencrypt aún no está disponible en esta versión: usa archivos o un proxy con HTTPS":                                                                             "servicio.tls.modo letsencrypt is not available in this version yet: use archivos or a proxy with HTTPS",
+		"no se pudo recargar el certificado (%s y %s); sigue el anterior: %s":                                                                                                                 "could not reload the certificate (%s and %s); the previous one stays in use: %s",
 		"puntos_acceso no válido": "invalid puntos_acceso",
 		"API %s: %s":              "API %s: %s",
 		"la clave de las aplicaciones no abre la Web UI: ábrela desde la app de Tramtai o con «tramtai abrir»":                       "an app’s API key does not open the Web UI: open it from the Tramtai app or with “tramtai abrir”",

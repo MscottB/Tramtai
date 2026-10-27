@@ -213,7 +213,14 @@ func (s *Servicio) fijarPrepararConversor(preparar bool) error {
 	return nil
 }
 
-func (s *Servicio) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.handler.ServeHTTP(w, r) }
+// ServeHTTP es la entrada de todo lo que atiende el servicio. Si la petición llegó cifrada (TLS propio o un proxy de
+// confianza que lo dice), toda respuesta lleva HSTS de un año; por HTTP plano, nunca.
+func (s *Servicio) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if EsHTTPS(r, s.opc.Confiables) {
+		w.Header().Set("Strict-Transport-Security", "max-age=31536000")
+	}
+	s.handler.ServeHTTP(w, r)
+}
 
 // Base es la URL del puerto principal.
 func (s *Servicio) Base() string {

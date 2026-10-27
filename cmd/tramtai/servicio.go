@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"cmp"
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -416,10 +418,18 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 		return err
 	}
 	defer soltar()
-	automatico := c.Booleano("servicio.puerto_automatico")
-	oyente, puertoUsado, err := servicio.Escuchar(host, puerto, automatico)
+	configTLS, err := servicio.ConfigTLS(servicio.OpcionesTLS{Modo: red.TLS, Certificado: red.Certificado, Clave: red.Clave,
+		Dominios: red.Dominios, Datos: datos, Correo: red.Correo, Registros: salida})
 	if err != nil {
 		return err
+	}
+	automatico := c.Booleano("servicio.puerto_automatico")
+	oyente, puertoUsado, err := abrirOyente(red.TLS, host, puerto, automatico)
+	if err != nil {
+		return err
+	}
+	if configTLS != nil {
+		oyente = tls.NewListener(oyente, configTLS)
 	}
 	if puertoUsado != puerto {
 		fmt.Fprintf(salida, idioma.T("el puerto %d está ocupado: Tramtai usa el %d (para fijar otro: Ajustes o «tramtai servicio puerto <número>»)\n"), puerto, puertoUsado)
@@ -484,6 +494,17 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 		return nil
 	}
 	return err
+}
+
+// abrirOyente abre el puerto del servicio. Con letsencrypt el desafío TLS-ALPN-01 solo llega al 443, así que
+// servicio.puerto_automatico no se aplica: un puerto ocupado es un error, no un puerto distinto.
+func abrirOyente(modoTLS, host string, puerto int, automatico bool) (net.Listener, int, error) {
+	letsencrypt := modoTLS == "letsencrypt"
+	oyente, usado, err := servicio.Escuchar(host, puerto, automatico && !letsencrypt)
+	if err != nil && letsencrypt {
+		return nil, 0, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("servicio.tls.modo letsencrypt necesita el puerto %d libre (no usa servicio.puerto_automatico): libéralo o cambia de modo", puerto))
+	}
+	return oyente, usado, err
 }
 
 // lanzar arranca un proceso desacoplado; las pruebas lo sustituyen.
