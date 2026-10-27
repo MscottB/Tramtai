@@ -43,14 +43,11 @@ func nuevaPrueba(t *testing.T) *prueba {
 		}
 	}
 	p.programa(t, "v1")
-	rutas0, ejecutar0, chown0, conSystemd0 := rutas, ejecutar, chown, conSystemd
-	t.Cleanup(func() { rutas, ejecutar, chown, conSystemd = rutas0, ejecutar0, chown0, conSystemd0 })
+	simularDueno(t, &p.duenos)
+	rutas0, ejecutar0, conSystemd0 := rutas, ejecutar, conSystemd
+	t.Cleanup(func() { rutas, ejecutar, conSystemd = rutas0, ejecutar0, conSystemd0 })
 	rutas = func() Sitios { return p.r }
 	conSystemd = func() bool { return true }
-	chown = func(ruta string) error {
-		p.duenos = append(p.duenos, ruta)
-		return nil
-	}
 	ejecutar = func(nombre string, args ...string) ([]byte, error) {
 		orden := strings.Join(append([]string{nombre}, args...), " ")
 		if p.alOrdenar != nil {
@@ -62,7 +59,7 @@ func nuevaPrueba(t *testing.T) *prueba {
 			if !p.cuenta {
 				return []byte("id: «tramtai»: no existe ese usuario\n"), errors.New("exit status 1")
 			}
-		case "useradd --system --home " + p.r.Datos + " --shell /usr/sbin/nologin tramtai":
+		case "useradd --system --user-group --home " + p.r.Datos + " --shell /usr/sbin/nologin tramtai":
 			p.cuenta = true
 		case "userdel tramtai":
 			p.cuenta = false
@@ -70,6 +67,21 @@ func nuevaPrueba(t *testing.T) *prueba {
 		return nil, nil
 	}
 	return p
+}
+
+// simularDueno anota, en lugar de cambiarlo, el dueño de cada nombre de dentro de la raíz (no hay cuenta tramtai ni root).
+func simularDueno(t *testing.T, duenos *[]string) {
+	t.Helper()
+	lchown0, ids0 := lchown, idsServicio
+	t.Cleanup(func() { lchown, idsServicio = lchown0, ids0 })
+	idsServicio = func() (int, int, error) { return 990, 990, nil }
+	lchown = func(r *os.Root, nombre string, uid, gid int) error {
+		if uid != 990 || gid != 990 {
+			t.Errorf("dueño de %s: %d:%d", nombre, uid, gid)
+		}
+		*duenos = append(*duenos, nombre)
+		return nil
+	}
 }
 
 // programa pone en el origen un tramtai y un uv de la versión dada.
@@ -113,7 +125,7 @@ func TestInstalarLinuxOrdenes(t *testing.T) {
 	p.instalar(t)
 	mismas(t, "órdenes", p.ordenes,
 		"id tramtai",
-		"useradd --system --home "+p.r.Datos+" --shell /usr/sbin/nologin tramtai",
+		"useradd --system --user-group --home "+p.r.Datos+" --shell /usr/sbin/nologin tramtai",
 		"systemctl daemon-reload",
 		"systemctl enable --now tramtai")
 
@@ -146,7 +158,99 @@ func TestInstalarLinuxOrdenes(t *testing.T) {
 		t.Errorf("términos aceptados: %+v", a)
 	}
 	// Lo que escribe la instalación es de la cuenta del servicio, que corre como tramtai (ruling R12).
-	mismas(t, "dueño tramtai", p.duenos, p.r.Datos, datos, filepath.Join(p.r.Datos, "config.yaml"), filepath.Join(datos, "terminos.json"))
+	mismas(t, "dueño tramtai", p.duenos, ".", "config.yaml", "datos", "datos/terminos.json")
+}
+
+// TestInstalarNoSigueEnlaces: la raíz es de la cuenta del servicio, que puede dejar enlaces; root, al instalar, no los
+// sigue: ni datos/terminos.json, ni datos, ni config.yaml enlazados le hacen escribir o leer fuera.
+func TestInstalarNoSigueEnlaces(t *testing.T) {
+	t.Run("terminos.json", func(t *testing.T) {
+		p := nuevaPrueba(t)
+		p.instalar(t)
+		secreto := filepath.Join(t.TempDir(), "shadow")
+		if err := os.WriteFile(secreto, []byte("no tocar"), 0o640); err != nil {
+			t.Fatal(err)
+		}
+		enlace := filepath.Join(p.r.Datos, "datos", "terminos.json")
+		if err := os.Remove(enlace); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(secreto, enlace); err != nil {
+			t.Fatal(err)
+		}
+		p.instalar(t)
+		if b, _ := os.ReadFile(secreto); string(b) != "no tocar" {
+			t.Errorf("se escribió a través del enlace: %q", b)
+		}
+		if info, err := os.Lstat(enlace); err != nil || !info.Mode().IsRegular() {
+			t.Errorf("terminos.json queda como archivo propio: %v %v", info.Mode(), err)
+		}
+	})
+	t.Run("datos", func(t *testing.T) {
+		p := nuevaPrueba(t)
+		otra := t.TempDir()
+		if err := os.Chmod(otra, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(p.r.Datos, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(otra, filepath.Join(p.r.Datos, "datos")); err != nil {
+			t.Fatal(err)
+		}
+		if err := Instalar(Opciones{Origen: p.origen, AceptoTerminos: true}); err == nil {
+			t.Error("con datos enlazado, instalar falla")
+		}
+		if info, _ := os.Stat(otra); info.Mode().Perm() != 0o755 || existe(filepath.Join(otra, "terminos.json")) {
+			t.Errorf("la carpeta enlazada no se toca: %v", info.Mode())
+		}
+		if slices.Contains(p.duenos, "datos") {
+			t.Error("al enlace no se le cambia el dueño de lo que apunta")
+		}
+	})
+	t.Run("config.yaml", func(t *testing.T) {
+		p := nuevaPrueba(t)
+		fuera := filepath.Join(t.TempDir(), "config.yaml")
+		if err := os.WriteFile(fuera, []byte("servicio:\n  host: 0.0.0.0\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(p.r.Datos, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(fuera, filepath.Join(p.r.Datos, "config.yaml")); err != nil {
+			t.Fatal(err)
+		}
+		if err := Instalar(Opciones{Origen: p.origen, AceptoTerminos: true}); err == nil {
+			t.Error("con config.yaml enlazado, instalar falla")
+		}
+	})
+}
+
+// TestReiniciarUnidadAlDia: reiniciar regenera la unidad con la configuración actual; si cambió, la reescribe y hace
+// daemon-reload antes del restart.
+func TestReiniciarUnidadAlDia(t *testing.T) {
+	p := nuevaPrueba(t)
+	p.instalar(t)
+	p.ordenes = nil
+	if err := Reiniciar(); err != nil {
+		t.Fatal(err)
+	}
+	mismas(t, "sin cambios", p.ordenes, "systemctl restart tramtai")
+
+	config := filepath.Join(p.r.Datos, "config.yaml")
+	if err := configuracion.FijarValor(config, configuracion.OrigenGlobal, "servicio.plazo_drenaje_segundos", 90); err != nil {
+		t.Fatal(err)
+	}
+	p.alOrdenar = func(orden string) {
+		if b, _ := os.ReadFile(p.r.Unidad); orden == "systemctl daemon-reload" && string(b) != Unidad(UnidadOpciones{PlazoDrenaje: 90}) {
+			t.Error("la unidad se reescribe antes del daemon-reload")
+		}
+	}
+	p.ordenes = nil
+	if err := Reiniciar(); err != nil {
+		t.Fatal(err)
+	}
+	mismas(t, "otro plazo", p.ordenes, "systemctl daemon-reload", "systemctl restart tramtai")
 }
 
 // TestInstalarSinAceptar: sin aceptar los términos no se hace nada.
@@ -246,20 +350,46 @@ func TestEstadoLinux(t *testing.T) {
 	}
 }
 
-// TestAjustarDueno: cambia el dueño a la cuenta con ese nombre, y falla si la cuenta no existe.
+// TestAjustarDueno: recorre la raíz y deja cada carpeta y archivo a nombre de la cuenta del servicio, sin seguir enlaces
+// (el enlace mismo sí cambia de dueño; lo que hay detrás, no). Sin la raíz no hace nada.
 func TestAjustarDueno(t *testing.T) {
+	var duenos []string
+	simularDueno(t, &duenos)
+	raiz, fuera := t.TempDir(), t.TempDir()
+	if err := os.WriteFile(filepath.Join(fuera, "ajeno"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(raiz, "datos"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, nombre := range []string{"config.yaml", "datos/administrador"} {
+		if err := os.WriteFile(filepath.Join(raiz, nombre), nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink(fuera, filepath.Join(raiz, "datos", "enlace")); err != nil {
+		t.Fatal(err)
+	}
+	if err := AjustarDueno(raiz); err != nil {
+		t.Fatal(err)
+	}
+	mismas(t, "dueños", duenos, ".", "config.yaml", "datos", "datos/administrador", "datos/enlace")
+	duenos = nil
+	if err := AjustarDueno(filepath.Join(raiz, "no-existe")); err != nil || len(duenos) > 0 {
+		t.Errorf("sin la raíz no hace nada: %v %q", err, duenos)
+	}
+}
+
+// TestIdsDe: el uid y el gid de una cuenta, y error si no existe.
+func TestIdsDe(t *testing.T) {
 	yo, err := user.Current()
 	if err != nil {
 		t.Skip(err)
 	}
-	ruta := filepath.Join(t.TempDir(), "terminos.json")
-	if err := os.WriteFile(ruta, nil, 0o600); err != nil {
-		t.Fatal(err)
+	if uid, _, err := idsDe(yo.Username); err != nil || uid != os.Getuid() {
+		t.Errorf("la propia cuenta: %d %v", uid, err)
 	}
-	if err := cambiarDueno(ruta, yo.Username); err != nil {
-		t.Errorf("a la propia cuenta: %v", err)
-	}
-	if err := cambiarDueno(ruta, "tramtai-cuenta-que-no-existe"); err == nil {
+	if _, _, err := idsDe("tramtai-cuenta-que-no-existe"); err == nil {
 		t.Error("sin la cuenta, falla")
 	}
 }

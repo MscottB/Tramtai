@@ -78,14 +78,20 @@ func Leer(datos string) (Aceptacion, error) {
 
 // Aceptar escribe la aceptación de la versión vigente, con la fecha de ahora en UTC.
 func Aceptar(datos, como string) error {
-	if !slices.Contains([]string{ComoInstalador, ComoServidorInstalar, ComoOpcion, ComoInterfaz, ComoCLI}, como) {
-		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("forma de aceptar desconocida: %s", como))
-	}
-	bruto, err := json.Marshal(Aceptacion{Version: Version, Fecha: time.Now().UTC().Truncate(time.Second), Como: como})
+	bruto, err := Contenido(como)
 	if err != nil {
 		return err
 	}
 	return configuracion.EscribirAtomico(ruta(datos), bruto, 0o600)
+}
+
+// Contenido es el terminos.json de la aceptación de la versión vigente, con la fecha de ahora en UTC. Lo usa quien lo
+// escribe por su cuenta (el servidor, a través de un os.Root, para no seguir enlaces).
+func Contenido(como string) ([]byte, error) {
+	if !slices.Contains([]string{ComoInstalador, ComoServidorInstalar, ComoOpcion, ComoInterfaz, ComoCLI}, como) {
+		return nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("forma de aceptar desconocida: %s", como))
+	}
+	return json.Marshal(Aceptacion{Version: Version, Fecha: time.Now().UTC().Truncate(time.Second), Como: como})
 }
 
 // Pendiente dice si hay que pedir la aceptación: falta, es de una versión mayor anterior o no se puede leer (en ese caso

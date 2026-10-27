@@ -23,7 +23,9 @@ func main() {
 		ayudaEnEspanol(raiz)
 	}
 	raiz.SetArgs(ordenDeServidor(raiz, os.Args[1:]))
-	if err := raiz.Execute(); err != nil {
+	err := raiz.Execute()
+	ajustarDuenoServidor(raiz.ErrOrStderr()) // también si la orden falló a medias
+	if err != nil {
 		os.Exit(1)
 	}
 }

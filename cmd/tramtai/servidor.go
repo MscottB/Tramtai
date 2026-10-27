@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"tramtai/internal/carpetas"
 	"tramtai/internal/idioma"
 	"tramtai/internal/servidor"
 	"tramtai/internal/terminos"
@@ -31,6 +33,17 @@ func esDeServidor(cmd *cobra.Command) bool {
 		}
 	}
 	return false
+}
+
+// ajustarDuenoServidor deja a nombre de la cuenta del servicio lo que una orden, como administrador en modo servidor,
+// haya escrito en la raíz del servidor (config.yaml, terminos.json…): si no, el servicio no podría leerlo.
+func ajustarDuenoServidor(errores io.Writer) {
+	if !carpetas.Servidor() || !esAdministrador() {
+		return
+	}
+	if err := servidor.AjustarDueno(carpetas.RaizServidor()); err != nil {
+		fmt.Fprintln(errores, idioma.Tf("aviso: no se pudo dejar %s a nombre de la cuenta del servicio: %s", carpetas.RaizServidor(), err.Error()))
+	}
 }
 
 // ordenDeServidor deja escribir las órdenes de «servidor» sin «servidor» tras --servidor, que es como las lanza el
@@ -96,6 +109,7 @@ func comandoServidor() *cobra.Command {
 		Short: idioma.T("Quita el servicio del sistema y el programa; conserva los datos salvo con --borrar-datos"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if borrar && !confirmar(cmd, idioma.Tf("¿Borrar también los datos del servidor (%s) y la cuenta %s? No se puede deshacer.", servidor.Rutas().Datos, servidor.Cuenta)) {
+				fmt.Fprintln(cmd.OutOrStdout(), idioma.T("desinstalación cancelada"))
 				return nil
 			}
 			if err := desinstalarServidor(borrar); err != nil {

@@ -80,11 +80,21 @@ verdad para Linux y Windows Server, sin bajar la seguridad.
 - **Linux:** `/etc/systemd/system/tramtai.service` generado por Tramtai:
   - `User=tramtai`, `Group=tramtai`, `Environment=TRAMTAI_SERVIDOR=1`, `StateDirectory=tramtai`,
     `ExecStart=/opt/tramtai/tramtai servicio iniciar --registro /var/lib/tramtai/datos/servicio.log`;
-  - `Restart=on-failure` y el plazo de parada mayor que `servicio.plazo_drenaje_segundos`;
+  - `Restart=on-failure` y el plazo de parada mayor que `servicio.plazo_drenaje_segundos` (el plazo más 30 s), con
+    `KillMode=mixed`: el SIGTERM va solo al servicio, que drena, y no a los CLI de los agentes;
+  - `servidor instalar` y `servidor reiniciar` regeneran la unidad con la configuración del momento (plazo de drenaje,
+    puerto bajo) y, si cambió, hacen `daemon-reload`;
   - endurecida: `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome`, `PrivateTmp`, `PrivateDevices`,
-    `ReadWritePaths` solo en su carpeta, `RestrictSUIDSGID`, `LockPersonality`. Sin `MemoryDenyWriteExecute`, que rompe
-    el JIT de Node (Claude Code y Copilot son de Node; Codex es un binario nativo);
-  - `AmbientCapabilities=CAP_NET_BIND_SERVICE` solo con Let's Encrypt o un puerto menor de 1024.
+    `ReadWritePaths` solo en su carpeta, `RestrictSUIDSGID`, `LockPersonality`, `ProtectKernelTunables`,
+    `ProtectKernelModules`, `ProtectKernelLogs`, `ProtectControlGroups`, `ProtectClock`, `ProtectHostname`,
+    `ProtectProc=invisible`, `RestrictRealtime`, `RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK`,
+    `SystemCallArchitectures=native`, `RemoveIPC`, `UMask=0077` y `CapabilityBoundingSet=` vacío. Sin
+    `MemoryDenyWriteExecute`, que rompe el JIT de Node (Claude Code y Copilot son de Node; Codex es un binario nativo),
+    ni `RestrictNamespaces`, `SystemCallFilter`, `ProcSubset=pid` o `PrivateUsers`, que arriesgan los CLI de los agentes;
+  - `AmbientCapabilities=CAP_NET_BIND_SERVICE` (y `CapabilityBoundingSet=CAP_NET_BIND_SERVICE`) solo con Let's
+    Encrypt o un puerto menor de 1024.
+  - Lo que la CLI escribe como root en la raíz del servidor queda a nombre de `tramtai` al terminar cada orden, sin
+    seguir enlaces: la carpeta es de esa cuenta, y la instalación la prepara a través de un `os.Root`.
 - **Windows:** un servicio con `golang.org/x/sys/windows/svc` (ya es dependencia):
   - nombre `Tramtai`, nombre visible «Tramtai (servidor)», cuenta virtual `NT SERVICE\Tramtai`;
   - arranque automático retrasado, y reinicio si se cae;
@@ -97,6 +107,9 @@ verdad para Linux y Windows Server, sin bajar la seguridad.
   - En Linux, `/usr/local/bin/tramtai-servidor` (o `/usr/bin/tramtai-servidor` con el paquete) lanza
     `/opt/tramtai/tramtai --servidor`; en Windows, `tramtai-servidor.cmd` en la carpeta del programa, que se añade al
     PATH del sistema.
+  - Las órdenes de `tramtai servidor` (`instalar`, `desinstalar`, `estado`, `reiniciar`, `registro` y `actualizar`) van
+    sin `servidor`: `tramtai-servidor instalar` llega como `tramtai --servidor instalar` y se ejecuta como
+    `tramtai --servidor servidor instalar`. Las demás quedan como están (`tramtai-servidor servicio estado`).
   - La CLI lee el descriptor y `token-servicio` de la carpeta del servidor y, con `--servidor`, acepta un servicio que
     corre con la cuenta del servidor (hoy rechaza los de otro usuario).
   - **Con `--servidor`, la CLI nunca detiene ni sustituye el servicio del sistema** por ser de otra versión (lo que hoy

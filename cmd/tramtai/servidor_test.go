@@ -128,8 +128,12 @@ func TestServidorDesinstalarConfirma(t *testing.T) {
 		{"s\n", []string{"server", "uninstall", "--delete-data"}},
 		{"", []string{"servidor", "desinstalar"}},
 	} {
-		if _, err := ejecutarServidor(t, c.entrada, c.args...); err != nil {
+		salida, err := ejecutarServidor(t, c.entrada, c.args...)
+		if err != nil {
 			t.Fatalf("%v: %v", c.args, err)
+		}
+		if cancelado := strings.Contains(salida, "desinstalación cancelada"); cancelado != (c.entrada == "n\n") {
+			t.Errorf("%v con %q: solo al responder que no se dice «cancelada»: %q", c.args, c.entrada, salida)
 		}
 	}
 	if len(*desinstalado) != 2 || !(*desinstalado)[0] || (*desinstalado)[1] {

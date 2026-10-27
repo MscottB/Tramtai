@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -29,28 +30,54 @@ var conSystemd = func() bool {
 	return err == nil
 }
 
-// chown deja una ruta a nombre de la cuenta del servicio; las pruebas lo sustituyen (no hay cuenta tramtai ni root).
-var chown = func(ruta string) error { return cambiarDueno(ruta, Cuenta) }
+// Cambiar el dueño a la cuenta del servicio; las pruebas lo sustituyen (no hay cuenta tramtai ni root). lchown no sigue
+// enlaces y no sale de la raíz.
+var (
+	idsServicio = func() (uid, gid int, err error) { return idsDe(Cuenta) }
+	lchown      = func(r *os.Root, nombre string, uid, gid int) error { return r.Lchown(nombre, uid, gid) }
+)
 
-func cambiarDueno(ruta, cuenta string) error {
+// idsDe son el uid y el gid (el del grupo principal) de una cuenta.
+func idsDe(cuenta string) (uid, gid int, err error) {
 	u, err := user.Lookup(cuenta)
 	if err != nil {
-		return err
+		return 0, 0, err
 	}
-	uid, err := strconv.Atoi(u.Uid)
-	if err != nil {
-		return err
+	if uid, err = strconv.Atoi(u.Uid); err != nil {
+		return 0, 0, err
 	}
-	gid, err := strconv.Atoi(u.Gid)
-	if err != nil {
-		return err
-	}
-	return os.Lchown(ruta, uid, gid)
+	gid, err = strconv.Atoi(u.Gid)
+	return uid, gid, err
 }
 
-// AjustarDueno deja a nombre de la cuenta del servicio lo que la CLI, como root, escribe en la raíz del servidor: si no,
-// el servicio, que corre como tramtai, no podría leerlo.
-func AjustarDueno(ruta string) error { return chown(ruta) }
+// AjustarDueno deja toda la raíz del servidor a nombre de la cuenta del servicio: lo que la CLI escribe como root
+// (configuración, términos, administrador) el servicio, que corre como tramtai, no podría leerlo. La raíz es de esa
+// cuenta, que podría dejar enlaces: el recorrido va por un os.Root, no sigue enlaces y no sale de ella. Sin la raíz no
+// hace nada.
+func AjustarDueno(raiz string) error {
+	r, err := os.OpenRoot(raiz)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	return ajustarDueno(r)
+}
+
+func ajustarDueno(r *os.Root) error {
+	uid, gid, err := idsServicio()
+	if err != nil {
+		return err
+	}
+	return fs.WalkDir(r.FS(), ".", func(nombre string, _ fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		return lchown(r, nombre, uid, gid)
+	})
+}
 
 // EsAdministrador dice si el proceso corre como root.
 func EsAdministrador() bool { return os.Geteuid() == 0 }
@@ -88,7 +115,8 @@ func Instalar(o Opciones) error {
 	}
 	r := Rutas()
 	if _, err := ejecutar("id", Cuenta); err != nil {
-		if err := orden("useradd", "--system", "--home", r.Datos, "--shell", "/usr/sbin/nologin", Cuenta); err != nil {
+		// --user-group: el grupo tramtai también donde USERGROUPS_ENAB es no.
+		if err := orden("useradd", "--system", "--user-group", "--home", r.Datos, "--shell", "/usr/sbin/nologin", Cuenta); err != nil {
 			return err
 		}
 	}
@@ -112,18 +140,10 @@ func Instalar(o Opciones) error {
 	if _, err := escribirSiCambia(r.Envoltorio, []byte(envoltorio), 0o755); err != nil {
 		return err
 	}
-	config, err := prepararDatos(r.Datos, cmp.Or(o.Como, terminos.ComoServidorInstalar))
-	if err != nil {
+	if err := prepararDatos(r.Datos, cmp.Or(o.Como, terminos.ComoServidorInstalar)); err != nil {
 		return err
 	}
-	capa, err := configuracion.CargarCapa(config, configuracion.OrigenGlobal)
-	if err != nil {
-		return err
-	}
-	c := configuracion.Resolver(capa)
-	unidad := Unidad(UnidadOpciones{PlazoDrenaje: c.Entero("servicio.plazo_drenaje_segundos"), LetsEncrypt: o.LetsEncrypt,
-		PuertoBajo: o.PuertoBajo || c.Entero("servicio.puerto") < 1024})
-	nueva, err := escribirSiCambia(r.Unidad, []byte(unidad), 0o644)
+	nueva, err := actualizarUnidad(r, UnidadOpciones{LetsEncrypt: o.LetsEncrypt, PuertoBajo: o.PuertoBajo})
 	if err != nil {
 		return err
 	}
@@ -142,35 +162,121 @@ func Instalar(o Opciones) error {
 	return nil
 }
 
+// configInicial es la configuración del servidor recién instalado: solo en este equipo.
+const configInicial = "servicio:\n  host: 127.0.0.1\n"
+
 // prepararDatos crea la carpeta del servidor y datos/, solo de la cuenta del servicio (0700), la configuración inicial
-// solo en loopback (si falta) y la aceptación de los términos, todo a nombre de la cuenta del servicio. Devuelve la ruta
-// de la configuración.
-func prepararDatos(raiz, como string) (string, error) {
-	datos := filepath.Join(raiz, "datos")
-	for _, d := range []string{raiz, datos} {
-		if err := os.MkdirAll(d, 0o700); err != nil {
-			return "", err
-		}
-		if err := os.Chmod(d, 0o700); err != nil { // ya existía con otros permisos
-			return "", err
-		}
-		if err := chown(d); err != nil {
-			return "", err
+// (si falta) y la aceptación de los términos, y lo deja todo a nombre de la cuenta del servicio. La raíz es de esa
+// cuenta, que podría dejar enlaces para que root escribiera fuera (datos/terminos.json → /etc/shadow): dentro de ella
+// todo pasa por un os.Root, y datos o config.yaml enlazados son un error.
+func prepararDatos(raiz, como string) error {
+	if err := os.MkdirAll(raiz, 0o700); err != nil { // /var/lib es de root: la raíz en sí no la puede cambiar la cuenta
+		return err
+	}
+	r, err := os.OpenRoot(raiz)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	if err := r.Mkdir("datos", 0o700); err != nil && !errors.Is(err, fs.ErrExist) {
+		return err
+	}
+	if err := comprobarTipo(r, "datos", fs.ModeDir); err != nil {
+		return err
+	}
+	for _, d := range []string{".", "datos"} { // ya existían con otros permisos
+		if err := r.Chmod(d, 0o700); err != nil {
+			return err
 		}
 	}
-	config := filepath.Join(raiz, "config.yaml")
-	if !existe(config) {
-		if err := configuracion.FijarValor(config, configuracion.OrigenGlobal, "servicio.host", "127.0.0.1"); err != nil {
-			return "", err
+	if _, err := r.Lstat("config.yaml"); errors.Is(err, fs.ErrNotExist) {
+		if err := escribirEn(r, "config.yaml", []byte(configInicial), 0o600); err != nil {
+			return err
 		}
 	}
-	if err := chown(config); err != nil {
-		return "", err
+	if _, err := leerConfiguracion(r); err != nil {
+		return err
 	}
-	if err := terminos.Aceptar(datos, como); err != nil {
-		return "", err
+	contenido, err := terminos.Contenido(como)
+	if err != nil {
+		return err
 	}
-	return config, chown(filepath.Join(datos, "terminos.json"))
+	if err := escribirEn(r, "datos/terminos.json", contenido, 0o600); err != nil {
+		return err
+	}
+	return ajustarDueno(r)
+}
+
+// comprobarTipo falla si nombre no es del tipo dado (una carpeta, o un archivo normal con 0): un enlace no vale.
+func comprobarTipo(r *os.Root, nombre string, tipo fs.FileMode) error {
+	info, err := r.Lstat(nombre)
+	if err != nil {
+		return err
+	}
+	if info.Mode().Type() != tipo {
+		return fmt.Errorf(idioma.T("%s no es lo que se espera (¿un enlace?): quítalo y repite la instalación"), filepath.Join(r.Name(), nombre))
+	}
+	return nil
+}
+
+// escribirEn escribe un archivo de dentro de la raíz en un temporal nuevo y lo renombra encima: si el destino era un
+// enlace, se sustituye el enlace, no lo que hay detrás.
+func escribirEn(r *os.Root, nombre string, datos []byte, permisos os.FileMode) error {
+	temporal := nombre + "." + rand.Text() + ".tmp"
+	f, err := r.OpenFile(temporal, os.O_WRONLY|os.O_CREATE|os.O_EXCL, permisos)
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(datos)
+	if err == nil {
+		err = f.Chmod(permisos) // sin la umask
+	}
+	if err == nil {
+		err = f.Sync()
+	}
+	if cerrar := f.Close(); err == nil {
+		err = cerrar
+	}
+	if err == nil {
+		err = r.Rename(temporal, nombre)
+	}
+	if err != nil {
+		_ = r.Remove(temporal)
+	}
+	return err
+}
+
+// leerConfiguracion lee config.yaml de la raíz del servidor sin seguir un enlace.
+func leerConfiguracion(r *os.Root) (*configuracion.Configuracion, error) {
+	if err := comprobarTipo(r, "config.yaml", 0); err != nil {
+		return nil, err
+	}
+	bruto, err := r.ReadFile("config.yaml")
+	if err != nil {
+		return nil, err
+	}
+	capa, err := configuracion.CargarCapaDe(bruto, filepath.Join(r.Name(), "config.yaml"), configuracion.OrigenGlobal)
+	if err != nil {
+		return nil, err
+	}
+	return configuracion.Resolver(capa), nil
+}
+
+// actualizarUnidad escribe la unidad con la configuración actual del servidor, si cambió, y dice si la cambió. extra
+// suma lo que pida quien llama; Let's Encrypt (servicio.tls.modo) se calculará aquí, como el puerto bajo.
+func actualizarUnidad(s Sitios, extra UnidadOpciones) (bool, error) {
+	r, err := os.OpenRoot(s.Datos)
+	if err != nil {
+		return false, err
+	}
+	defer r.Close()
+	c, err := leerConfiguracion(r)
+	if err != nil {
+		return false, err
+	}
+	o := UnidadOpciones{PlazoDrenaje: c.Entero("servicio.plazo_drenaje_segundos"), LetsEncrypt: extra.LetsEncrypt,
+		PuertoBajo: extra.PuertoBajo || c.Entero("servicio.puerto") < 1024}
+	return escribirSiCambia(s.Unidad, []byte(Unidad(o)), 0o644)
 }
 
 // Desinstalar detiene el servicio (con drenaje) y quita la unidad, el programa y el envoltorio. Con borrarDatos borra
@@ -219,5 +325,23 @@ func Estado(_ context.Context) (EstadoSistema, error) {
 	return EstadoSistema{Instalado: true, Activo: activo}, nil
 }
 
-// Reiniciar reinicia el servicio; el que se detiene deja terminar las peticiones en curso.
-func Reiniciar() error { return orden("systemctl", "restart", "tramtai") }
+// Reiniciar reinicia el servicio con la unidad al día con la configuración (plazo de drenaje, puerto bajo): si cambió,
+// la reescribe y hace daemon-reload antes. El que se detiene deja terminar las peticiones en curso.
+func Reiniciar() error {
+	r := Rutas()
+	if err := AjustarDueno(r.Datos); err != nil { // lo que root haya dejado ahí, legible para el servicio que arranca
+		return err
+	}
+	if existe(r.Unidad) {
+		cambiada, err := actualizarUnidad(r, UnidadOpciones{})
+		if err != nil {
+			return err
+		}
+		if cambiada {
+			if err := orden("systemctl", "daemon-reload"); err != nil {
+				return err
+			}
+		}
+	}
+	return orden("systemctl", "restart", "tramtai")
+}

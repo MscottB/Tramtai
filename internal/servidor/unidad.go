@@ -19,12 +19,13 @@ type UnidadOpciones struct {
 //
 // KillMode=mixed manda SIGTERM solo al servicio, que deja terminar las peticiones en curso, y no a los CLI de los
 // agentes, que lo cortarían; lo que quede vivo recibe SIGKILL al terminar. La parada espera el drenaje más 30 s. Sin
-// MemoryDenyWriteExecute: rompe el JIT de Node (Claude Code y Copilot).
+// MemoryDenyWriteExecute, RestrictNamespaces, SystemCallFilter, ProcSubset ni PrivateUsers: rompen o arriesgan los CLI
+// de los agentes (el JIT de Node de Claude Code y Copilot, sus procesos hijos).
 func Unidad(o UnidadOpciones) string {
 	plazo := cmp.Or(o.PlazoDrenaje, configuracion.Resolver().Entero("servicio.plazo_drenaje_segundos"))
-	capacidades := ""
+	capacidades := "CapabilityBoundingSet=\n"
 	if o.LetsEncrypt || o.PuertoBajo {
-		capacidades = "AmbientCapabilities=CAP_NET_BIND_SERVICE\n"
+		capacidades = "CapabilityBoundingSet=CAP_NET_BIND_SERVICE\nAmbientCapabilities=CAP_NET_BIND_SERVICE\n"
 	}
 	return fmt.Sprintf(`# Generada por «tramtai servidor instalar»: se reescribe al instalar y al actualizar.
 [Unit]
@@ -55,6 +56,18 @@ PrivateDevices=yes
 ReadWritePaths=/var/lib/tramtai
 RestrictSUIDSGID=yes
 LockPersonality=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictRealtime=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+SystemCallArchitectures=native
+RemoveIPC=yes
+UMask=0077
 %s
 [Install]
 WantedBy=multi-user.target
