@@ -15,15 +15,44 @@ import (
 // Nombres son las variables que admite el almacén; cada una se guarda como tramtai/<NOMBRE>.
 var Nombres = []string{"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "CODEX_API_KEY", "GEMINI_API_KEY", "COPILOT_GITHUB_TOKEN"}
 
+// Internos son los secretos propios de Tramtai que van al mismo almacén (el TOTP del administrador del servidor): no
+// son claves de proveedor, así que ni «claves lista» los enseña ni «claves guardar» los acepta.
+var Internos = []string{"TRAMTAI_TOTP"}
+
 // Admitido indica si el nombre es una de las claves que Tramtai sabe usar.
 func Admitido(nombre string) bool { return slices.Contains(Nombres, nombre) }
 
+// AdmitidoInterno indica si el nombre es uno de los secretos internos.
+func AdmitidoInterno(nombre string) bool { return slices.Contains(Internos, nombre) }
+
+// Rechazo explica por qué un nombre no se puede guardar ni borrar como clave de proveedor (nil si se puede). Un token de
+// sesión de Claude (CLAUDE_CODE_OAUTH_TOKEN, el de claude setup-token…) tiene su porqué: Anthropic no permite que un
+// tercero guarde ni intermedie las credenciales de Claude.ai, y el inicio de sesión lo hace su propio CLI.
+func Rechazo(nombre string) error {
+	switch {
+	case Admitido(nombre):
+		return nil
+	case strings.HasPrefix(nombre, "CLAUDE_") &&
+		(strings.Contains(nombre, "TOKEN") || strings.Contains(nombre, "OAUTH") || strings.Contains(nombre, "SESSION")):
+		return errors.New(idioma.Tf("Tramtai no guarda tokens de sesión de Claude como %s: Anthropic no permite que un tercero guarde ni intermedie las credenciales de Claude.ai. Inicia sesión con el propio CLI de Claude (claude auth login) o guarda una clave de API (ANTHROPIC_API_KEY)", nombre))
+	}
+	return errors.New(idioma.Tf("clave no admitida %q; usa una de %s", nombre, strings.Join(Nombres, ", ")))
+}
+
+// Comprobar rechaza lo que Guardar no aceptaría, para quien guarda la clave por su cuenta (las credenciales de systemd).
+func Comprobar(nombre, valor string) error {
+	if err := admitir(nombre); err != nil {
+		return err
+	}
+	return valorValido(valor)
+}
+
 func objetivo(nombre string) string { return "tramtai/" + nombre }
 
-// admitir rechaza un nombre que no está en Nombres: Guardar y Borrar nunca tocan otra entrada del almacén, sea cual sea
-// quien los llame.
+// admitir rechaza un nombre que no está en Nombres ni en Internos: Guardar y Borrar nunca tocan otra entrada del almacén,
+// sea cual sea quien los llame.
 func admitir(nombre string) error {
-	if !Admitido(nombre) {
+	if !Admitido(nombre) && !AdmitidoInterno(nombre) {
 		return errors.New(idioma.T("clave no admitida"))
 	}
 	return nil

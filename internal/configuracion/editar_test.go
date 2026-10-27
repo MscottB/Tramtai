@@ -2,7 +2,9 @@ package configuracion
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -132,6 +134,85 @@ func TestEscribirAtomicoConcurrente(t *testing.T) {
 	datos, _ := os.ReadFile(ruta)
 	if len(datos) != 1000 || strings.Count(string(datos), string(datos[0])) != 1000 {
 		t.Fatalf("contenido mezclado o a medias: %d bytes", len(datos))
+	}
+}
+
+// enlazarCarpeta deja en enlace una carpeta que apunta a destino: un punto de unión en Windows (mklink /J, sin elevación)
+// y un enlace simbólico en los demás.
+func enlazarCarpeta(t *testing.T, destino, enlace string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		if salida, err := exec.Command("cmd", "/c", "mklink", "/J", enlace, destino).CombinedOutput(); err != nil {
+			t.Fatalf("mklink /J: %v %s", err, salida)
+		}
+		return
+	}
+	if err := os.Symlink(destino, enlace); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// En modo servidor, lo que se escribe dentro de la raíz del servidor va por un os.Root, sin seguir enlaces: la raíz es
+// de la cuenta del servicio, que podría dejarlos para que el administrador escribiera fuera. Un config.yaml o un
+// datos/terminos.json enlazados fuera se sustituyen (el enlace, no lo de fuera); una carpeta intermedia enlazada es un
+// error; sin la raíz también lo es, y no se crea (la crea la instalación). Fuera del modo servidor, como siempre.
+func TestEscribirAtomicoServidorSinEnlaces(t *testing.T) {
+	base := t.TempDir()
+	raiz, fuera := filepath.Join(base, "raiz"), filepath.Join(base, "fuera")
+	for _, d := range []string{filepath.Join(raiz, "datos"), fuera} {
+		if err := os.MkdirAll(d, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	anterior := raizServidor
+	t.Cleanup(func() { raizServidor = anterior })
+	raizServidor = func() string { return raiz }
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+
+	for _, nombre := range []string{"config.yaml", filepath.Join("datos", "terminos.json")} {
+		objetivo := filepath.Join(fuera, filepath.Base(nombre))
+		if err := os.WriteFile(objetivo, []byte("de fuera\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(objetivo, filepath.Join(raiz, nombre)); err != nil {
+			t.Logf("sin enlaces simbólicos de archivo aquí (%v): solo se prueban las carpetas", err)
+			break
+		}
+		if err := EscribirAtomico(filepath.Join(raiz, nombre), []byte("nuevo\n"), 0o600); err != nil {
+			t.Fatalf("%s: %v", nombre, err)
+		}
+		if datos, _ := os.ReadFile(objetivo); string(datos) != "de fuera\n" {
+			t.Errorf("%s: se escribió a través del enlace: %q", nombre, datos)
+		}
+		if info, err := os.Lstat(filepath.Join(raiz, nombre)); err != nil || !info.Mode().IsRegular() {
+			t.Errorf("%s: debía quedar un archivo normal en lugar del enlace: %v %v", nombre, info, err)
+		}
+	}
+
+	enlazarCarpeta(t, fuera, filepath.Join(raiz, "otra"))
+	if err := EscribirAtomico(filepath.Join(raiz, "otra", "x.json"), []byte("{}"), 0o600); err == nil {
+		t.Error("una carpeta intermedia enlazada debía dar error")
+	}
+	if _, err := os.Lstat(filepath.Join(fuera, "x.json")); err == nil {
+		t.Error("se escribió fuera de la raíz a través de la carpeta enlazada")
+	}
+	// Las carpetas que faltan dentro de la raíz sí se crean (el servicio guarda los tokens de cada espacio así).
+	if err := EscribirAtomico(filepath.Join(raiz, "datos", "instancias", "a", "token"), []byte("t\n"), 0o600); err != nil {
+		t.Fatalf("carpetas nuevas dentro de la raíz: %v", err)
+	}
+
+	sinRaiz := filepath.Join(base, "sin-raiz")
+	raizServidor = func() string { return sinRaiz }
+	if err := EscribirAtomico(filepath.Join(sinRaiz, "config.yaml"), []byte("x\n"), 0o600); err == nil {
+		t.Error("sin la raíz del servidor debía dar error")
+	}
+	if _, err := os.Stat(sinRaiz); err == nil {
+		t.Error("la raíz del servidor no se crea al escribir: la crea la instalación")
+	}
+
+	t.Setenv("TRAMTAI_SERVIDOR", "")
+	if err := EscribirAtomico(filepath.Join(raiz, "otra", "y.json"), []byte("{}"), 0o600); err != nil {
+		t.Fatalf("fuera del modo servidor se escribe como siempre: %v", err)
 	}
 }
 

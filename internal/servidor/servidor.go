@@ -4,6 +4,7 @@
 package servidor
 
 import (
+	"bytes"
 	"cmp"
 	"errors"
 	"os"
@@ -23,10 +24,12 @@ const (
 )
 
 // Sitios son las rutas del servidor: la carpeta del programa (tramtai y uv), la de datos (la raíz del servidor), el
-// envoltorio tramtai-servidor y la unidad systemd (vacía en Windows). El tipo no se llama Rutas porque ese nombre es el
-// de la función.
+// envoltorio tramtai-servidor y la unidad systemd y, para las claves (solo Linux), la carpeta de las credenciales
+// cifradas, el drop-in que las carga y el archivo de entorno de root sin systemd-creds. El tipo no se llama Rutas
+// porque ese nombre es el de la función.
 type Sitios struct {
 	Programa, Datos, Envoltorio, Unidad string
+	Cifradas, ClavesConf, ClavesEnv     string
 }
 
 // rutas las sustituyen las pruebas para no tocar /opt, /var/lib ni /etc.
@@ -36,7 +39,8 @@ var rutas = func() Sitios {
 		return Sitios{Programa: programa, Datos: carpetas.RaizServidor(), Envoltorio: filepath.Join(programa, "tramtai-servidor.cmd")}
 	}
 	return Sitios{Programa: "/opt/tramtai", Datos: carpetas.RaizServidor(), Envoltorio: "/usr/local/bin/tramtai-servidor",
-		Unidad: "/etc/systemd/system/tramtai.service"}
+		Unidad: "/etc/systemd/system/tramtai.service", Cifradas: "/etc/credstore.encrypted",
+		ClavesConf: "/etc/systemd/system/tramtai.service.d/claves.conf", ClavesEnv: "/etc/tramtai/claves.env"}
 }
 
 // Rutas devuelve las rutas del servidor en este sistema.
@@ -54,8 +58,9 @@ type Opciones struct {
 
 // EstadoSistema es lo que dice el sistema del servicio.
 type EstadoSistema struct {
-	Instalado bool   // la unidad (o el servicio de Windows) existe
-	Activo    string // lo que dice el sistema: active, inactive, failed… (vacío sin instalar)
+	Instalado     bool   // la unidad (o el servicio de Windows) existe
+	Activo        string // lo que dice el sistema: active, inactive, failed… (vacío sin instalar)
+	ClavesEnClaro bool   // hay claves en el archivo de entorno de root, sin cifrar (Linux sin systemd-creds)
 }
 
 // Aviso es lo que Desinstalar no pudo terminar sin que sea un fallo (el perfil de la cuenta del servicio que Windows
@@ -64,10 +69,22 @@ type Aviso string
 
 func (a Aviso) Error() string { return string(a) }
 
-// ejecutar lanza una orden del sistema y devuelve su salida; las pruebas lo sustituyen.
-var ejecutar = func(nombre string, args ...string) ([]byte, error) {
-	return exec.Command(nombre, args...).CombinedOutput()
-}
+// ejecutar lanza una orden del sistema y devuelve su salida; ejecutarConEntrada, con algo por stdin (una clave, que así
+// no aparece en la lista de procesos). Las pruebas los sustituyen.
+var (
+	ejecutar = func(nombre string, args ...string) ([]byte, error) {
+		return exec.Command(nombre, args...).CombinedOutput()
+	}
+	ejecutarConEntrada = func(entrada []byte, nombre string, args ...string) ([]byte, error) {
+		cmd := exec.Command(nombre, args...)
+		cmd.Stdin = bytes.NewReader(entrada)
+		return cmd.CombinedOutput()
+	}
+)
+
+// ErrClaveEnClaro es el aviso de GuardarClave cuando el sistema no tiene systemd-creds 250 o posterior: la clave queda
+// guardada, pero sin cifrar en el archivo de entorno de root.
+var ErrClaveEnClaro = Aviso(idioma.T("este systemd no tiene systemd-creds 250 o posterior: las claves del servidor están sin cifrar en /etc/tramtai/claves.env (0600, solo las lee root)"))
 
 func noDisponible() error {
 	return errors.New(idioma.T("el modo servidor está disponible en Linux con systemd y en Windows"))

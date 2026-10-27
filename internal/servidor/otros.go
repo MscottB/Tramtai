@@ -22,6 +22,12 @@ func Estado(context.Context) (EstadoSistema, error) { return EstadoSistema{}, no
 // Reiniciar no está disponible en este sistema.
 func Reiniciar() error { return noDisponible() }
 
+// GuardarClave no está disponible en este sistema.
+func GuardarClave(string, string) error { return noDisponible() }
+
+// BorrarClave no está disponible en este sistema.
+func BorrarClave(string) error { return noDisponible() }
+
 // EsAdministrador dice si el proceso corre como root.
 func EsAdministrador() bool { return os.Geteuid() == 0 }
 

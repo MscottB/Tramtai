@@ -24,6 +24,7 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 
 	"tramtai/internal/carpetas"
+	"tramtai/internal/cliente"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/idioma"
 	"tramtai/internal/instalacion"
@@ -222,8 +223,8 @@ func plazoParada() time.Duration {
 }
 
 // Desinstalar detiene el servicio (con drenaje), lo borra y quita el programa y su entrada del PATH del sistema. Con
-// borrarDatos borra también la carpeta de datos y el perfil de la cuenta virtual, que sobrevive al servicio y guarda
-// las sesiones de los agentes; si Windows aún lo tiene cargado, devuelve un Aviso con la orden para quitarlo después.
+// borrarDatos borra también la carpeta de datos, las claves del servicio y el perfil de la cuenta virtual, que sobrevive
+// al servicio y guarda las sesiones de los agentes; si Windows aún lo tiene cargado, devuelve un Aviso con la orden para quitarlo después.
 func Desinstalar(borrarDatos bool) error {
 	r := Rutas()
 	m, s, err := abrirServicio()
@@ -259,6 +260,9 @@ func Desinstalar(borrarDatos bool) error {
 	}
 	if borrarDatos {
 		if err := os.RemoveAll(r.Datos); err != nil {
+			return err
+		}
+		if err := anotar(borrarCredenciales()); err != nil {
 			return err
 		}
 		if err := anotar(borrarPerfil(sidServicio(nombreServicio))); err != nil {
@@ -319,6 +323,24 @@ func sidServicio(nombre string) string {
 	return sid
 }
 
+// perfilServicio es la carpeta de perfil de la cuenta virtual del servicio.
+func perfilServicio() string {
+	return filepath.Join(cmp.Or(os.Getenv("SystemRoot"), `C:\Windows`), "ServiceProfiles", nombreServicio)
+}
+
+// borrarCredenciales borra las claves que el servicio guardó en el almacén de su cuenta (los archivos de Credentials de
+// su perfil, cifrados con DPAPI): así no quedan aunque Windows aún tenga el perfil cargado y no deje borrarlo entero.
+// Si no se puede, un Aviso con la carpeta.
+func borrarCredenciales() error {
+	for _, d := range []string{`AppData\Local\Microsoft\Credentials`, `AppData\Roaming\Microsoft\Credentials`} {
+		carpeta := filepath.Join(perfilServicio(), d)
+		if err := os.RemoveAll(carpeta); err != nil {
+			return Aviso(idioma.Tf("no se pudieron borrar las claves del servicio en %s (%v): bórralas a mano desde una consola de administrador", carpeta, err))
+		}
+	}
+	return nil
+}
+
 var borrarPerfilW = windows.NewLazySystemDLL("userenv.dll").NewProc("DeleteProfileW")
 
 // borrarPerfil borra el perfil de la cuenta del servicio (C:\Windows\ServiceProfiles\<servicio>). Windows tarda en
@@ -334,12 +356,34 @@ func borrarPerfil(sid string) error {
 			return nil
 		}
 		if intento == 10 {
-			perfil := filepath.Join(cmp.Or(os.Getenv("SystemRoot"), `C:\Windows`), "ServiceProfiles", nombreServicio)
+			perfil := perfilServicio()
 			orden := fmt.Sprintf(`Get-CimInstance Win32_UserProfile -Filter "SID='%s'" | Remove-CimInstance`, sid)
 			return Aviso(idioma.Tf("Windows aún tiene cargado el perfil de la cuenta del servicio (%s), con las sesiones de los agentes: se podrá quitar tras reiniciar, en PowerShell como administrador: %s (%v). Si reinstalas antes de reiniciar, el servicio recuperará esas sesiones.", perfil, orden, e))
 		}
 		time.Sleep(time.Second)
 	}
+}
+
+// GuardarClave entrega la clave al servicio, que la escribe en el almacén de su propia cuenta (el Administrador de
+// credenciales de NT SERVICE\Tramtai, no el de quien administra): por la API de administración, desde este equipo y
+// con el token de servicio. Vale sin reiniciar.
+func GuardarClave(nombre, valor string) error {
+	return conServicio(func(ctx context.Context, c *cliente.Cliente) error { return c.GuardarClave(ctx, nombre, valor) })
+}
+
+// BorrarClave quita la clave del almacén del servicio.
+func BorrarClave(nombre string) error {
+	return conServicio(func(ctx context.Context, c *cliente.Cliente) error { return c.BorrarClave(ctx, nombre) })
+}
+
+func conServicio(pedir func(context.Context, *cliente.Cliente) error) error {
+	c, err := cliente.Conectar(filepath.Join(Rutas().Datos, "datos"))
+	if err != nil {
+		return err
+	}
+	ctx, cancelar := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancelar()
+	return pedir(ctx, c)
 }
 
 // estados son los nombres del sistema (los de sc query).

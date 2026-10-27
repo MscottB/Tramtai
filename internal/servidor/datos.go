@@ -3,7 +3,6 @@ package servidor
 import (
 	"bytes"
 	"cmp"
-	"crypto/rand"
 	"errors"
 	"io"
 	"io/fs"
@@ -11,7 +10,6 @@ import (
 	"path/filepath"
 
 	"tramtai/internal/configuracion"
-	"tramtai/internal/idioma"
 	"tramtai/internal/terminos"
 )
 
@@ -41,7 +39,7 @@ func prepararDatos(raiz, como, conversor string) error {
 	if err := os.MkdirAll(raiz, 0o700); err != nil { // /var/lib es de root: la raíz en sí no la puede cambiar la cuenta
 		return err
 	}
-	r, err := abrirRaiz(raiz)
+	r, err := configuracion.AbrirRaiz(raiz) // con el servicio en marcha, al reinstalar, la raíz podría ya no ser ella
 	if err != nil {
 		return err
 	}
@@ -58,7 +56,7 @@ func prepararDatos(raiz, como, conversor string) error {
 		}
 	}
 	if _, err := r.Lstat("config.yaml"); errors.Is(err, fs.ErrNotExist) {
-		if err := escribirEn(r, "config.yaml", []byte(configInicial), 0o600); err != nil {
+		if err := configuracion.EscribirEn(r, "config.yaml", []byte(configInicial), 0o600); err != nil {
 			return err
 		}
 	}
@@ -69,7 +67,7 @@ func prepararDatos(raiz, como, conversor string) error {
 	if err != nil {
 		return err
 	}
-	if err := escribirEn(r, "datos/terminos.json", contenido, 0o600); err != nil {
+	if err := configuracion.EscribirEn(r, "datos/terminos.json", contenido, 0o600); err != nil {
 		return err
 	}
 	if conversor != "" {
@@ -80,33 +78,6 @@ func prepararDatos(raiz, como, conversor string) error {
 	return ajustarDueno(r)
 }
 
-// abrirRaiz abre la raíz del servidor como os.Root y comprueba que es la carpeta que se miró antes de abrirla, sin
-// seguir enlaces: si entre medias la cambiaron por un enlace o un punto de unión (con el servicio en marcha, al
-// reinstalar), es un error en lugar de trabajar en otra carpeta.
-func abrirRaiz(raiz string) (*os.Root, error) {
-	antes, err := os.Lstat(raiz)
-	if err != nil {
-		return nil, err
-	}
-	r, err := os.OpenRoot(raiz)
-	if err != nil {
-		return nil, err
-	}
-	f, err := r.Open(".")
-	if err == nil {
-		var ahora fs.FileInfo
-		if ahora, err = f.Stat(); err == nil && (antes.Mode().Type() != fs.ModeDir || !os.SameFile(antes, ahora)) {
-			err = tipoInesperado(raiz)
-		}
-		f.Close()
-	}
-	if err != nil {
-		r.Close()
-		return nil, err
-	}
-	return r, nil
-}
-
 // comprobarTipo falla si nombre no es del tipo dado (una carpeta, o un archivo normal con 0): un enlace no vale.
 func comprobarTipo(r *os.Root, nombre string, tipo fs.FileMode) error {
 	info, err := r.Lstat(nombre)
@@ -114,43 +85,9 @@ func comprobarTipo(r *os.Root, nombre string, tipo fs.FileMode) error {
 		return err
 	}
 	if info.Mode().Type() != tipo {
-		return tipoInesperado(filepath.Join(r.Name(), nombre))
+		return configuracion.ErrOtraCarpeta(filepath.Join(r.Name(), nombre))
 	}
 	return nil
-}
-
-// tipoInesperado es el error de una ruta de la raíz que no es lo que se espera: un enlace, un FIFO…
-type tipoInesperado string
-
-func (e tipoInesperado) Error() string {
-	return idioma.Tf("%s no es lo que se espera (¿un enlace?): quítalo y repite la instalación", string(e))
-}
-
-// escribirEn escribe un archivo de dentro de la raíz en un temporal nuevo y lo renombra encima: si el destino era un
-// enlace, se sustituye el enlace, no lo que hay detrás.
-func escribirEn(r *os.Root, nombre string, datos []byte, permisos os.FileMode) error {
-	temporal := nombre + "." + rand.Text() + ".tmp"
-	f, err := r.OpenFile(temporal, os.O_WRONLY|os.O_CREATE|os.O_EXCL, permisos)
-	if err != nil {
-		return err
-	}
-	_, err = f.Write(datos)
-	if err == nil {
-		err = f.Chmod(permisos) // sin la umask
-	}
-	if err == nil {
-		err = f.Sync()
-	}
-	if cerrar := f.Close(); err == nil {
-		err = cerrar
-	}
-	if err == nil {
-		err = r.Rename(temporal, nombre)
-	}
-	if err != nil {
-		_ = r.Remove(temporal)
-	}
-	return err
 }
 
 // leerConfiguracion lee config.yaml de la raíz del servidor sin seguir un enlace. En Linux lo abre sin bloquear y
@@ -166,7 +103,7 @@ func leerConfiguracion(r *os.Root) (*configuracion.Configuracion, error) {
 	}
 	defer f.Close()
 	if info, err := f.Stat(); err != nil || !info.Mode().IsRegular() {
-		return nil, cmp.Or(err, error(tipoInesperado(filepath.Join(r.Name(), "config.yaml"))))
+		return nil, cmp.Or(err, error(configuracion.ErrOtraCarpeta(filepath.Join(r.Name(), "config.yaml"))))
 	}
 	bruto, err := io.ReadAll(f)
 	if err != nil {

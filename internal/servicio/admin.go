@@ -2,10 +2,13 @@ package servicio
 
 import (
 	"net/http"
+	"os"
 
 	"tramtai/internal/agentes"
 	"tramtai/internal/api"
 	"tramtai/internal/configuracion"
+	"tramtai/internal/contrato"
+	"tramtai/internal/credenciales"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
@@ -167,6 +170,50 @@ func (s *Servicio) rutasAdmin() http.Handler {
 	mux.HandleFunc("GET /api/v1/servicio/actualizacion/novedades", sinSesion((*Servicio).novedadesUI))
 	// «Reiniciar ahora» tras cambiar el puerto: lanza el servicio nuevo y responde dónde escuchará (202).
 	mux.HandleFunc("POST /api/v1/servicio/reiniciar", sinSesion((*Servicio).reiniciarUI))
+	// Las claves de proveedor del almacén del servicio (tramtai-servidor claves en Windows, donde el almacén es el de la
+	// cuenta del servicio): con el token de servicio y además solo desde este equipo, nunca por un proxy.
+	mux.HandleFunc("GET /api/v1/servicio/claves", soloDesdeEsteEquipo(func(w http.ResponseWriter, _ *http.Request) {
+		lista := []contrato.ClaveGuardada{}
+		for _, nombre := range credenciales.Nombres {
+			valor, _ := leerCredencial(nombre)
+			lista = append(lista, contrato.ClaveGuardada{Nombre: nombre, Guardada: valor != "" || os.Getenv(nombre) != ""})
+		}
+		api.EscribirJSON(w, http.StatusOK, lista)
+	}))
+	mux.HandleFunc("PUT /api/v1/servicio/claves/{nombre}", soloDesdeEsteEquipo(func(w http.ResponseWriter, r *http.Request) {
+		var peticion struct {
+			Valor string `json:"valor"`
+		}
+		if err := api.LeerJSON(w, r, &peticion); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		nombre := r.PathValue("nombre")
+		err := credenciales.Rechazo(nombre)
+		if err == nil {
+			err = credenciales.Comprobar(nombre, peticion.Valor)
+		}
+		if err != nil {
+			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, err.Error()))
+			return
+		}
+		if err := guardarCredencial(nombre, peticion.Valor); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	mux.HandleFunc("DELETE /api/v1/servicio/claves/{nombre}", soloDesdeEsteEquipo(func(w http.ResponseWriter, r *http.Request) {
+		if err := credenciales.Rechazo(r.PathValue("nombre")); err != nil {
+			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, err.Error()))
+			return
+		}
+		if err := borrarCredencial(r.PathValue("nombre")); err != nil {
+			api.EscribirError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
 	mux.HandleFunc("GET /api/v1/servicio/acerca", func(w http.ResponseWriter, _ *http.Request) {
 		api.EscribirJSON(w, http.StatusOK, s.acerca(true))
 	})
@@ -183,6 +230,24 @@ func (s *Servicio) rutasAdmin() http.Handler {
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("ruta no encontrada: %s %s", r.Method, r.URL.Path)))
 	})
 	return mux
+}
+
+// El almacén de credenciales del sistema; las pruebas lo sustituyen.
+var (
+	guardarCredencial = credenciales.Guardar
+	borrarCredencial  = credenciales.Borrar
+	leerCredencial    = credenciales.Leer
+)
+
+// soloDesdeEsteEquipo rechaza con 403 lo que no llega por loopback sin proxy (desdeEsteEquipo).
+func soloDesdeEsteEquipo(atender http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !desdeEsteEquipo(r) {
+			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, idioma.T("las claves del servicio solo se administran desde este equipo")))
+			return
+		}
+		atender(w, r)
+	}
 }
 
 // responderEspacio responde con el espacio de inst tal como lo lista GET /espacios, o con el error.

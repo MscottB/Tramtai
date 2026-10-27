@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"slices"
@@ -28,6 +29,9 @@ type prueba struct {
 	cuenta  bool
 	// alOrdenar se llama con cada orden antes de anotarla (para mirar los archivos en ese momento).
 	alOrdenar func(orden string)
+	// creds es lo que dice «systemd-creds --version» (vacío: no está); entradas, lo que recibió cada orden por stdin.
+	creds    string
+	entradas []string
 }
 
 func nuevaPrueba(t *testing.T) *prueba {
@@ -38,6 +42,9 @@ func nuevaPrueba(t *testing.T) *prueba {
 		Datos:      filepath.Join(base, "var", "lib", "tramtai"),
 		Envoltorio: filepath.Join(base, "usr", "local", "bin", "tramtai-servidor"),
 		Unidad:     filepath.Join(base, "etc", "systemd", "system", "tramtai.service"),
+		Cifradas:   filepath.Join(base, "etc", "credstore.encrypted"),
+		ClavesConf: filepath.Join(base, "etc", "systemd", "system", "tramtai.service.d", "claves.conf"),
+		ClavesEnv:  filepath.Join(base, "etc", "tramtai", "claves.env"),
 	}, origen: filepath.Join(base, "origen")}
 	for _, d := range []string{p.origen, filepath.Dir(p.r.Envoltorio), filepath.Dir(p.r.Unidad)} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
@@ -46,10 +53,18 @@ func nuevaPrueba(t *testing.T) *prueba {
 	}
 	p.programa(t, "v1")
 	simularDueno(t, &p.duenos)
-	rutas0, ejecutar0, conSystemd0 := rutas, ejecutar, conSystemd
-	t.Cleanup(func() { rutas, ejecutar, conSystemd = rutas0, ejecutar0, conSystemd0 })
+	rutas0, ejecutar0, entrada0, conSystemd0 := rutas, ejecutar, ejecutarConEntrada, conSystemd
+	t.Cleanup(func() { rutas, ejecutar, ejecutarConEntrada, conSystemd = rutas0, ejecutar0, entrada0, conSystemd0 })
 	rutas = func() Sitios { return p.r }
 	conSystemd = func() bool { return true }
+	ejecutarConEntrada = func(entrada []byte, nombre string, args ...string) ([]byte, error) {
+		p.entradas = append(p.entradas, string(entrada))
+		salida, err := ejecutar(nombre, args...)
+		if err == nil && nombre == "systemd-creds" && args[0] == "encrypt" { // cifrado de mentira, en el archivo de salida
+			err = os.WriteFile(args[len(args)-1], append([]byte("cifrado:"), entrada...), 0o644) // con la umask, como el de verdad
+		}
+		return salida, err
+	}
 	ejecutar = func(nombre string, args ...string) ([]byte, error) {
 		orden := strings.Join(append([]string{nombre}, args...), " ")
 		if p.alOrdenar != nil {
@@ -57,6 +72,11 @@ func nuevaPrueba(t *testing.T) *prueba {
 		}
 		p.ordenes = append(p.ordenes, orden)
 		switch orden {
+		case "systemd-creds --version":
+			if p.creds == "" {
+				return nil, &exec.Error{Name: "systemd-creds", Err: exec.ErrNotFound}
+			}
+			return []byte(p.creds), nil
 		case "id tramtai":
 			if !p.cuenta {
 				return []byte("id: «tramtai»: no existe ese usuario\n"), errors.New("exit status 1")
@@ -222,7 +242,7 @@ func TestInstalarNoSigueEnlaces(t *testing.T) {
 		if err := os.Symlink(fuera, filepath.Join(p.r.Datos, "config.yaml")); err != nil {
 			t.Fatal(err)
 		}
-		if err := Instalar(Opciones{Origen: p.origen, AceptoTerminos: true}); !errors.As(err, new(tipoInesperado)) {
+		if err := Instalar(Opciones{Origen: p.origen, AceptoTerminos: true}); !errors.As(err, new(configuracion.ErrOtraCarpeta)) {
 			t.Errorf("con config.yaml enlazado, instalar falla por el tipo: %v", err)
 		}
 	})
@@ -234,7 +254,7 @@ func TestInstalarNoSigueEnlaces(t *testing.T) {
 		if err := syscall.Mkfifo(filepath.Join(p.r.Datos, "config.yaml"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := Instalar(Opciones{Origen: p.origen, AceptoTerminos: true}); !errors.As(err, new(tipoInesperado)) {
+		if err := Instalar(Opciones{Origen: p.origen, AceptoTerminos: true}); !errors.As(err, new(configuracion.ErrOtraCarpeta)) {
 			t.Errorf("con un FIFO por config.yaml, instalar falla sin quedarse leyéndolo: %v", err)
 		}
 	})
@@ -348,6 +368,152 @@ func TestDesinstalarConservaDatos(t *testing.T) {
 		t.Fatal(err)
 	}
 	mismas(t, "desinstalar otra vez", p.ordenes, "id tramtai")
+}
+
+// conUnidad deja la unidad escrita, como tras instalar.
+func (p *prueba) conUnidad(t *testing.T) {
+	t.Helper()
+	if err := os.WriteFile(p.r.Unidad, []byte(Unidad(UnidadOpciones{})), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func leido(t *testing.T, ruta string) string {
+	t.Helper()
+	datos, err := os.ReadFile(ruta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(datos)
+}
+
+// TestGuardarClaveSystemd: cada clave se cifra con systemd-creds (el valor por stdin, nunca en la orden) en
+// credstore.encrypted, claves.conf carga todas con LoadCredentialEncrypted= y el servicio se reinicia para recibirlas.
+// Borrar es simétrico; sin claves no queda claves.conf.
+func TestGuardarClaveSystemd(t *testing.T) {
+	p := nuevaPrueba(t)
+	p.creds = "systemd 252 (252.39-1~deb12u2)\n+PAM +AUDIT\n"
+	p.conUnidad(t)
+	cifrada := func(nombre string) string { return filepath.Join(p.r.Cifradas, "tramtai."+nombre) }
+	for _, c := range [][2]string{{"OPENAI_API_KEY", "sk-otra-456"}, {"ANTHROPIC_API_KEY", "sk-prueba-123"}} {
+		p.ordenes, p.entradas = nil, nil
+		if err := GuardarClave(c[0], c[1]); err != nil {
+			t.Fatal(err)
+		}
+		mismas(t, "órdenes de "+c[0], p.ordenes, "systemd-creds --version",
+			"systemd-creds encrypt --name=tramtai."+c[0]+" - "+cifrada(c[0]), "systemctl daemon-reload", "systemctl restart tramtai")
+		mismas(t, "stdin de "+c[0], p.entradas, c[1])
+		if info, err := os.Stat(cifrada(c[0])); err != nil || info.Mode().Perm() != 0o600 {
+			t.Errorf("la clave cifrada queda 0600: %v %v", info, err)
+		}
+	}
+	conf := leido(t, p.r.ClavesConf)
+	esperado := cabeceraClaves + "[Service]\n" +
+		"LoadCredentialEncrypted=tramtai.ANTHROPIC_API_KEY:" + cifrada("ANTHROPIC_API_KEY") + "\n" +
+		"LoadCredentialEncrypted=tramtai.OPENAI_API_KEY:" + cifrada("OPENAI_API_KEY") + "\n"
+	if conf != esperado {
+		t.Errorf("claves.conf:\n%s\nesperado:\n%s", conf, esperado)
+	}
+	if existe(p.r.ClavesEnv) {
+		t.Error("con systemd-creds no se escribe claves.env")
+	}
+
+	p.ordenes = nil
+	if err := BorrarClave("ANTHROPIC_API_KEY"); err != nil {
+		t.Fatal(err)
+	}
+	mismas(t, "borrar", p.ordenes, "systemctl daemon-reload", "systemctl restart tramtai")
+	if existe(cifrada("ANTHROPIC_API_KEY")) || strings.Contains(leido(t, p.r.ClavesConf), "ANTHROPIC") {
+		t.Error("la clave borrada no queda ni cifrada ni en claves.conf")
+	}
+	if err := BorrarClave("OPENAI_API_KEY"); err != nil {
+		t.Fatal(err)
+	}
+	if existe(p.r.ClavesConf) || existe(filepath.Dir(p.r.ClavesConf)) {
+		t.Error("sin claves no quedan claves.conf ni su carpeta")
+	}
+
+	p.ordenes = nil
+	for _, mal := range [][2]string{{"CLAUDE_CODE_OAUTH_TOKEN", "sk-prueba-123"}, {"ANTHROPIC_API_KEY", "con espacio"}} {
+		if err := GuardarClave(mal[0], mal[1]); err == nil {
+			t.Errorf("%s %q debía rechazarse", mal[0], mal[1])
+		}
+	}
+	if len(p.ordenes) > 0 {
+		t.Errorf("lo rechazado no lanza nada: %q", p.ordenes)
+	}
+}
+
+// TestGuardarClaveSinSystemdCreds: sin systemd-creds, o con uno anterior a la 250, las claves van a claves.env (0600,
+// de root), que claves.conf carga con EnvironmentFile=, y GuardarClave avisa con ErrClaveEnClaro; servidor estado lo
+// dice también.
+func TestGuardarClaveSinSystemdCreds(t *testing.T) {
+	for _, creds := range []string{"", "systemd 249 (249.11-0ubuntu3)\n"} {
+		p := nuevaPrueba(t)
+		p.creds = creds
+		p.conUnidad(t)
+		for _, c := range [][2]string{{"OPENAI_API_KEY", "sk-otra-456"}, {"ANTHROPIC_API_KEY", "sk-vieja-000"}, {"ANTHROPIC_API_KEY", "sk-prueba-123"}} {
+			p.ordenes = nil
+			if err := GuardarClave(c[0], c[1]); !errors.Is(err, ErrClaveEnClaro) {
+				t.Fatalf("%q: se esperaba ErrClaveEnClaro: %v", creds, err)
+			}
+			mismas(t, "órdenes", p.ordenes, "systemd-creds --version", "systemctl daemon-reload", "systemctl restart tramtai")
+		}
+		if env := leido(t, p.r.ClavesEnv); env != "ANTHROPIC_API_KEY=sk-prueba-123\nOPENAI_API_KEY=sk-otra-456\n" {
+			t.Errorf("claves.env:\n%s", env)
+		}
+		if info, err := os.Stat(p.r.ClavesEnv); err != nil || info.Mode().Perm() != 0o600 {
+			t.Errorf("claves.env debe ser 0600: %v %v", info, err)
+		}
+		if conf := leido(t, p.r.ClavesConf); conf != cabeceraClaves+"[Service]\nEnvironmentFile=-"+p.r.ClavesEnv+"\n" {
+			t.Errorf("claves.conf:\n%s", conf)
+		}
+		ejecutar0 := ejecutar
+		ejecutar = func(string, ...string) ([]byte, error) { return []byte("active\n"), nil }
+		if e, err := Estado(context.Background()); err != nil || !e.ClavesEnClaro {
+			t.Errorf("servidor estado avisa de las claves en claro: %+v %v", e, err)
+		}
+		ejecutar = ejecutar0
+		for _, nombre := range []string{"ANTHROPIC_API_KEY", "OPENAI_API_KEY"} {
+			if err := BorrarClave(nombre); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if existe(p.r.ClavesEnv) || existe(p.r.ClavesConf) {
+			t.Error("sin claves no quedan claves.env ni claves.conf")
+		}
+	}
+}
+
+// TestDesinstalarBorraClaves: las claves sobreviven a desinstalar sin borrar los datos; con borrarDatos se borran las
+// cifradas, claves.conf y claves.env.
+func TestDesinstalarBorraClaves(t *testing.T) {
+	p := nuevaPrueba(t)
+	p.instalar(t)
+	p.creds = "systemd 255 (255.4-1ubuntu8)\n"
+	if err := GuardarClave("ANTHROPIC_API_KEY", "sk-prueba-123"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(p.r.ClavesEnv), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p.r.ClavesEnv, []byte("OPENAI_API_KEY=sk-otra-456\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cifrada := filepath.Join(p.r.Cifradas, "tramtai.ANTHROPIC_API_KEY")
+	if err := Desinstalar(false); err != nil {
+		t.Fatal(err)
+	}
+	if !existe(cifrada) || !existe(p.r.ClavesConf) || !existe(p.r.ClavesEnv) {
+		t.Fatal("sin borrar los datos, las claves se conservan para reinstalar")
+	}
+	p.instalar(t)
+	if err := Desinstalar(true); err != nil {
+		t.Fatal(err)
+	}
+	if existe(cifrada) || existe(p.r.ClavesConf) || existe(p.r.ClavesEnv) {
+		t.Error("con borrarDatos se borran las claves")
+	}
 }
 
 // TestEstadoLinux: sin unidad, no instalado y sin órdenes; con ella, lo que dice systemctl is-active (que sale con

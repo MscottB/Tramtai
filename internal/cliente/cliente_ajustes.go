@@ -22,6 +22,23 @@ func (c *Cliente) Autoarranque(ctx context.Context, activo bool, modo string) er
 	return c.pedir(ctx, "PUT", "/api/v1/servicio/autoarranque", "", cuerpoJSON(map[string]any{"activo": activo, "modo": modo}), "application/json", nil)
 }
 
+// Claves dice qué claves de proveedor tiene el servicio, sin sus valores.
+func (c *Cliente) Claves(ctx context.Context) ([]contrato.ClaveGuardada, error) {
+	var lista []contrato.ClaveGuardada
+	return lista, c.pedir(ctx, "GET", "/api/v1/servicio/claves", "", nil, "", &lista)
+}
+
+// GuardarClave entrega una clave al servicio, que la guarda en su propio almacén (el servidor de Windows: el almacén es
+// el de la cuenta del servicio, no el de quien administra).
+func (c *Cliente) GuardarClave(ctx context.Context, nombre, valor string) error {
+	return c.pedir(ctx, "PUT", "/api/v1/servicio/claves/"+url.PathEscape(nombre), "", cuerpoJSON(map[string]string{"valor": valor}), "application/json", nil)
+}
+
+// BorrarClave quita una clave del almacén del servicio.
+func (c *Cliente) BorrarClave(ctx context.Context, nombre string) error {
+	return c.pedir(ctx, "DELETE", "/api/v1/servicio/claves/"+url.PathEscape(nombre), "", nil, "", nil)
+}
+
 // Actualizacion devuelve el estado de las actualizaciones; con ahora, el servicio consulta GitHub en el momento.
 func (c *Cliente) Actualizacion(ctx context.Context, ahora bool) (contrato.EstadoActualizacion, error) {
 	ruta := "/api/v1/servicio/actualizacion"

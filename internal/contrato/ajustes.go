@@ -14,6 +14,13 @@ type AjustesServicio struct {
 	ModoArranque      string `json:"modo_arranque,omitempty" ts:"'' | 'app' | 'servicio'"` // vacío si no arranca
 }
 
+// ClaveGuardada es una clave de proveedor en GET /api/v1/servicio/claves: si el servicio la tiene (en su almacén o en su
+// entorno). Nunca lleva el valor.
+type ClaveGuardada struct {
+	Nombre   string `json:"nombre"`
+	Guardada bool   `json:"guardada"`
+}
+
 // EstadoActualizacion es el de las actualizaciones: la versión actual, si se buscan, si hay otra nueva (con su página y
 // sus notas) y si se instala desde aquí; Comprobado es cuándo terminó la última consulta a GitHub y Fallo si falló.
 type EstadoActualizacion struct {
