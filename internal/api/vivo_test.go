@@ -73,10 +73,13 @@ func flujoVivo(t *testing.T, ts *httptest.Server) (<-chan map[string]any, *http.
 	return eventos, resp
 }
 
-// esperarEvento lee eventos hasta que uno cumple cond (o falla a los 10 s).
+// plazoEspera es solo una red: las esperas vuelven en cuanto llega lo que esperan.
+const plazoEspera = 10 * time.Second
+
+// esperarEvento lee eventos hasta que uno cumple cond (o falla al agotar plazoEspera).
 func esperarEvento(t *testing.T, eventos <-chan map[string]any, cond func(map[string]any) bool) map[string]any {
 	t.Helper()
-	plazo := time.After(10 * time.Second)
+	plazo := time.After(plazoEspera)
 	for {
 		select {
 		case e, ok := <-eventos:

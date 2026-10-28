@@ -65,10 +65,13 @@ func enviar(t *testing.T, p *Planificador, s nucleo.SolicitudEjecucion) string {
 	return tr.ID
 }
 
+// plazoEspera es solo una red: las esperas vuelven en cuanto se cumple lo que esperan.
+const plazoEspera = 10 * time.Second
+
 // esperar sondea hasta que el trabajo llega al estado indicado.
 func esperar(t *testing.T, alm *persistencia.Almacen, id string, objetivo nucleo.Estado) nucleo.Trabajo {
 	t.Helper()
-	limite := time.Now().Add(10 * time.Second)
+	limite := time.Now().Add(plazoEspera)
 	for {
 		tr, err := alm.Obtener(ctx, id)
 		if err == nil && tr.Estado == objetivo {
@@ -236,14 +239,30 @@ func TestSemaforoPorAdaptador(t *testing.T) {
 	}
 }
 
-// bloqueado no termina hasta que se cierra soltar.
-type bloqueado struct{ soltar chan struct{} }
+// bloqueado no termina hasta que se cierra soltar. Con cortado, apunta en él cuándo le llegó el corte; con texto, cuenta
+// en maximo cuántas ejecuciones de solicitudes con ese texto llegó a haber a la vez (actual y maximo, no nil).
+type bloqueado struct {
+	soltar         chan struct{}
+	cortado        chan time.Time
+	texto          string
+	actual, maximo *atomic.Int32
+}
 
-func (b bloqueado) Ejecutar(ctx context.Context, _ nucleo.SolicitudEjecucion, _ func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+func (b bloqueado) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, _ func(adaptadores.Evento) error) (adaptadores.Resultado, error) {
+	if b.texto != "" && s.Mensajes[len(s.Mensajes)-1].Contenido == b.texto {
+		n := b.actual.Add(1)
+		defer b.actual.Add(-1)
+		for m := b.maximo.Load(); n > m && !b.maximo.CompareAndSwap(m, n); m = b.maximo.Load() {
+		}
+	}
 	select {
 	case <-b.soltar:
 		return adaptadores.Resultado{Salida: "ok"}, nil
 	case <-ctx.Done():
+		select {
+		case b.cortado <- time.Now(): // sin cortado (nil) no se apunta
+		default:
+		}
 		return adaptadores.Resultado{}, ctx.Err()
 	}
 }
@@ -365,8 +384,15 @@ func TestTiempoEnColaYAgenteNoRegistrado(t *testing.T) {
 	alm := abrir(t)
 	opc := opciones()
 	opc.TiempoMaximoCola = time.Nanosecond
-	p := iniciar(t, alm, adaptadores.Simulado{}, 2, opc)
-	if tr := esperar(t, alm, enviar(t, p, solicitud("x")), nucleo.Fallido); tr.CodigoError != nucleo.CodigoTiempoColaAgotado {
+	// El trabajo entra antes de arrancar el planificador y se espera a que el reloj pase su plazo: el de Windows avanza a
+	// saltos, y con la base rápida aceptarlo y despacharlo caían en la misma hora (no había pasado 1 ns).
+	encolado, _, err := alm.Aceptar(ctx, nucleo.Trabajo{ID: nucleo.NuevoID(), Instancia: "global", Solicitud: solicitud("x")}, "", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	esperarQue(t, "pasa el plazo en cola", func() bool { return time.Since(encolado.CreadoEn) > opc.TiempoMaximoCola })
+	iniciar(t, alm, adaptadores.Simulado{}, 2, opc)
+	if tr := esperar(t, alm, encolado.ID, nucleo.Fallido); tr.CodigoError != nucleo.CodigoTiempoColaAgotado {
 		t.Fatalf("se esperaba tiempo_cola_agotado: %+v", tr)
 	}
 	otro := iniciar(t, abrir(t), adaptadores.Simulado{}, 2, opciones())
@@ -574,7 +600,7 @@ func TestDrenajeEsperaYLuegoInterrumpe(t *testing.T) {
 	corto := enviar(t, p, solicitud("corto"))
 	enCola := enviar(t, p, solicitud("en cola"))
 	esperar(t, alm, corto, nucleo.Ejecutando)
-	p.Drenar(5 * time.Second)
+	p.Drenar(time.Minute) // vuelve en cuanto termina el corto: el plazo solo es la red de un runner lento
 	if tr, _ := alm.Obtener(ctx, corto); tr.Estado != nucleo.Completado {
 		t.Fatalf("el drenaje deja terminar lo que se ejecuta: %s", tr.Estado)
 	}
@@ -586,7 +612,8 @@ func TestDrenajeEsperaYLuegoInterrumpe(t *testing.T) {
 	}
 
 	alm2 := abrir(t)
-	p2 := Nuevo(alm2, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Demora: time.Minute}},
+	cortado := make(chan time.Time, 1)
+	p2 := Nuevo(alm2, map[string]adaptadores.Adaptador{"simulado": bloqueado{soltar: make(chan struct{}), cortado: cortado}},
 		NuevosSemaforos(map[string]int{"simulado": 1}), opc)
 	if err := p2.Iniciar(ctx); err != nil {
 		t.Fatal(err)
@@ -595,8 +622,17 @@ func TestDrenajeEsperaYLuegoInterrumpe(t *testing.T) {
 	esperar(t, alm2, largo, nucleo.Ejecutando)
 	inicio := time.Now()
 	p2.Drenar(200 * time.Millisecond)
-	if tr, _ := alm2.Obtener(ctx, largo); tr.Estado != nucleo.Interrumpido || time.Since(inicio) > 5*time.Second {
-		t.Fatalf("agotado el plazo se interrumpe: %s tras %s", tr.Estado, time.Since(inicio))
+	if tr, _ := alm2.Obtener(ctx, largo); tr.Estado != nucleo.Interrumpido {
+		t.Fatalf("agotado el plazo se interrumpe: %s", tr.Estado)
+	}
+	// Se mide solo cuándo le llega el corte al agente, no lo que tarda Drenar después en guardar el estado.
+	select {
+	case cuando := <-cortado:
+		if corte := cuando.Sub(inicio); corte < 200*time.Millisecond || corte >= plazoEspera/2 {
+			t.Fatalf("el corte debía llegar al agotar el plazo de 200 ms: llegó a los %s", corte)
+		}
+	default:
+		t.Fatal("al agente no le llegó el corte")
 	}
 }
 
@@ -617,8 +653,10 @@ func TestLimitePorPuntoDeAcceso(t *testing.T) {
 	alm := abrir(t)
 	opc := opciones()
 	opc.MaximoTrabajos = 3
-	p := Nuevo(alm, map[string]adaptadores.Adaptador{"simulado": adaptadores.Simulado{Demora: 300 * time.Millisecond}},
-		NuevosSemaforos(map[string]int{"simulado": 3}), opc)
+	// El agente no termina hasta soltarlo y cuenta cuántas del punto llegan a ejecutarse a la vez: no depende de cuánto
+	// tarde cada paso.
+	agente := bloqueado{soltar: make(chan struct{}), texto: "del punto", actual: new(atomic.Int32), maximo: new(atomic.Int32)}
+	p := Nuevo(alm, map[string]adaptadores.Adaptador{"simulado": agente}, NuevosSemaforos(map[string]int{"simulado": 3}), opc)
 	if err := p.Iniciar(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -626,7 +664,7 @@ func TestLimitePorPuntoDeAcceso(t *testing.T) {
 	p.LimitarPuntos(map[string]int{"app": 1})
 	var ids []string
 	for range 2 {
-		tr, _, err := p.EnviarPorPunto(ctx, solicitud("x"), "", "app")
+		tr, _, err := p.EnviarPorPunto(ctx, solicitud("del punto"), "", "app")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -634,18 +672,14 @@ func TestLimitePorPuntoDeAcceso(t *testing.T) {
 	}
 	libre := enviar(t, p, solicitud("sin punto"))
 	esperar(t, alm, libre, nucleo.Ejecutando)
-	time.Sleep(100 * time.Millisecond)
-	ejecutando := 0
-	for _, id := range ids {
-		if tr, _ := alm.Obtener(ctx, id); tr.Estado == nucleo.Ejecutando {
-			ejecutando++
-		}
-	}
-	if ejecutando != 1 {
-		t.Fatalf("el punto con límite 1 ejecuta %d a la vez", ejecutando)
-	}
-	for _, id := range ids {
+	// El primero del punto se ejecuta y el segundo, despachado antes que el libre, ya espera la plaza del punto.
+	esperarQue(t, "un trabajo del punto se ejecuta", func() bool { return agente.actual.Load() > 0 })
+	close(agente.soltar)
+	for _, id := range append(ids, libre) {
 		esperar(t, alm, id, nucleo.Completado)
+	}
+	if n := agente.maximo.Load(); n != 1 {
+		t.Fatalf("el punto con límite 1 ejecutó %d a la vez", n)
 	}
 }
 

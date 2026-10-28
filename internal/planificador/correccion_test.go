@@ -23,7 +23,7 @@ func (f porFuncion) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, _
 // esperarQue sondea hasta que se cumple la condición.
 func esperarQue(t *testing.T, que string, condicion func() bool) {
 	t.Helper()
-	for limite := time.Now().Add(10 * time.Second); !condicion(); time.Sleep(5 * time.Millisecond) {
+	for limite := time.Now().Add(plazoEspera); !condicion(); time.Sleep(5 * time.Millisecond) {
 		if time.Now().After(limite) {
 			t.Fatalf("no ocurrió: %s", que)
 		}
