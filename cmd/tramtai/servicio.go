@@ -239,6 +239,9 @@ func comandoServicio() *cobra.Command {
 			c, err := conectar()
 			if errors.Is(err, cliente.ErrServicioInactivo) {
 				fmt.Fprintln(cmd.OutOrStdout(), idioma.T("servicio: inactivo (tramtai servicio iniciar -d)"))
+				if aviso := avisoCruzado(); aviso != "" {
+					fmt.Fprintln(cmd.OutOrStdout(), aviso)
+				}
 				return nil
 			}
 			if err != nil {
@@ -462,6 +465,11 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 		oyente.Close()
 		sv.Cerrar()
 		return err
+	}
+	if carpetas.Servidor() { // para el aviso de los dos entornos del Tramtai del usuario; sin él, el servicio sigue
+		if err := servidor.PublicarPuerto(puertoUsado); err != nil {
+			fmt.Fprintln(salida, idioma.Tf("aviso: no se pudo publicar el puerto para el Tramtai de los usuarios del equipo: %s", err))
+		}
 	}
 	fmt.Fprintf(salida, idioma.T("tramtai %s escuchando en %s\nWeb UI: %s (o tramtai abrir)\n"), version.Texto(), sv.BasePublica(), sv.BasePublica())
 	imprimirEstado(salida, sv.Estado(context.Background()))

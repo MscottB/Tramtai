@@ -20,6 +20,8 @@ export interface Sesion {
   version: string
   // local: entró sin clave por ser el mismo usuario del equipo; puede cambiar de instancia.
   local: boolean
+  // entorno: servidor, portable o escritorio (la marca de la cabecera); sin él, un servicio anterior: este equipo.
+  entorno?: string
   instancias?: InstanciaResumida[]
   // autoarranque: si Tramtai arranca al iniciar sesión y modo_arranque, en qué modo (la app en la bandeja o solo el
   // servicio); solo en sesiones locales de sistemas que lo admiten.

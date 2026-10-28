@@ -24,6 +24,13 @@ func (s *Servicio) versionNueva(ctx context.Context, esperar bool) (actualizacio
 	return s.actualizaciones.Disponible(ctx, esperar)
 }
 
+// instalable dice si una versión nueva se instala desde aquí: si esta copia la puso el instalador, y nunca en el servidor,
+// que se actualiza con tramtai-servidor actualizar.
+func (s *Servicio) instalable() bool {
+	_, instalada := actualizacion.Instalada()
+	return instalada && s.entorno() != "servidor"
+}
+
 // estadoActualizacion es lo que muestran la Web UI y la terminal: la versión actual, si hay otra nueva y si se instala
 // desde aquí. Con ahora consulta GitHub en el momento («Buscar ahora»), aunque la búsqueda automática esté desactivada.
 func (s *Servicio) estadoActualizacion(ctx context.Context, ahora bool) contrato.EstadoActualizacion {
@@ -35,7 +42,7 @@ func (s *Servicio) estadoActualizacion(ctx context.Context, ahora bool) contrato
 	} else {
 		v, nueva = s.versionNueva(ctx, true)
 	}
-	_, instalada := actualizacion.Instalada()
+	instalada := s.instalable()
 	hecha, fallo := s.actualizaciones.Comprobado()
 	return contrato.EstadoActualizacion{Actual: version.Version, Buscar: s.buscar.Load(), Disponible: nueva, Version: v.Etiqueta,
 		URL: v.Pagina, Notas: v.Notas, Instalable: nueva && instalada && v.TieneInstalador(), Comprobado: hecha.UTC(), Fallo: fallo}
@@ -95,6 +102,9 @@ func (s *Servicio) fijarAvance(cambiar func(*ProgresoActualizacion)) {
 // drenaje) y vuelve a abrir la app. Si ya hay una en curso, no empieza otra: se une a ella y devuelve su versión,
 // para que otra pestaña (o la misma tras recargar) siga el mismo progreso.
 func (s *Servicio) IniciarActualizacion(ctx context.Context) (actualizacion.Version, error) {
+	if s.entorno() == "servidor" {
+		return actualizacion.Version{}, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("el servidor se actualiza desde el propio servidor, con tramtai-servidor actualizar"))
+	}
 	// Comprobar y ocupar van juntos, antes de ir a la red: dos peticiones a la vez no lanzan dos descargas.
 	s.muAvance.Lock()
 	if p := s.avance; p.Fase != "" && p.Fase != "error" {

@@ -27,21 +27,30 @@ var hayNavegador = func() bool {
 	return runtime.GOOS != "linux" || os.Getenv("DISPLAY") != "" || os.Getenv("WAYLAND_DISPLAY") != ""
 }
 
-// msgWeb es el resultado de W: la dirección con el código de un solo uso y si se abrió en el navegador.
+// msgWeb es el resultado de W: la dirección con el código de un solo uso (o, en el servidor con administrador, la
+// pública, sin código: conContrasena) y si se abrió en el navegador.
 type msgWeb struct {
-	url     string
-	abierta bool
-	err     error
+	url           string
+	abierta       bool
+	conContrasena bool
+	err           error
 }
 
 // abrirWeb (tecla W) pide al servicio una dirección de la Web UI de un solo uso para el espacio de ahora y la abre en el
-// navegador; sin navegador, o si no se pudo abrir, la enseña en una ventana para copiarla a mano.
+// navegador; sin navegador, o si no se pudo abrir, la enseña en una ventana para copiarla a mano. En el servidor con
+// administrador no pide código: la dirección pública basta, y allí se entra con la contraseña.
 func (m *modelo) abrirWeb() tea.Cmd {
 	if m.pidiendoWeb { // ya hay una petición en vuelo: una segunda W no lanza otra
 		return nil
 	}
 	if m.cli == nil || m.caido != nil {
 		return comp.Aviso(idioma.T("El servicio no responde · r reintenta"), comp.Fallo)
+	}
+	if m.servidor != nil && m.servidor.Administrador { // se entra con la contraseña: basta la dirección pública
+		base := m.cli.BasePublica()
+		return func() tea.Msg {
+			return msgWeb{url: base, conContrasena: true, abierta: hayNavegador() && abrir(base) == nil}
+		}
 	}
 	m.pidiendoWeb = true
 	cli, instancia := m.cli, m.instancia
@@ -68,6 +77,10 @@ func (m *modelo) webAbierta(msg msgWeb) tea.Cmd {
 	}
 	if m.pregunta != nil { // ya hay otra pregunta abierta: no se pisa; la dirección queda en la línea de estado
 		return comp.Aviso(msg.url, comp.Info)
+	}
+	if msg.conContrasena {
+		m.pregunta = &comp.Confirmacion{Texto: idioma.T("Abre esta dirección en un navegador y entra con la contraseña del administrador:") + "\n\n" + msg.url, Leer: true}
+		return nil
 	}
 	texto := idioma.T("Abre esta dirección en un navegador; vale un minuto y una sola vez:") + "\n\n" + msg.url
 	if u, err := url.Parse(msg.url); err == nil && u.Query().Get("codigo") != "" {

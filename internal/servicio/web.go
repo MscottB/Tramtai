@@ -205,7 +205,8 @@ func (s *Servicio) instanciaPredeterminada() string {
 // responderSesion devuelve la sesión. Una sesión local ve además todas las instancias activas para cambiar entre
 // ellas; si no hay ninguna, la Web UI ofrece activar la global.
 func (s *Servicio) responderSesion(w http.ResponseWriter, r *http.Request, ses *sesion) {
-	respuesta := map[string]any{"csrf": ses.csrf, "version": version.Version, "local": ses.local, "instancia": "",
+	// entorno: servidor, portable o escritorio, para la marca de la cabecera.
+	respuesta := map[string]any{"csrf": ses.csrf, "version": version.Version, "local": ses.local, "instancia": "", "entorno": s.entorno(),
 		// almacen: dónde guarda este sistema las claves de proveedor (cifradas, fuera de Tramtai), para Agentes.
 		"almacen": map[string]any{"disponible": credenciales.Disponible(), "nombre": credenciales.Almacen()}}
 	if ses.local {
@@ -312,6 +313,8 @@ var rutasDeUI = []rutaUI{
 	{http.MethodDelete, "/ui/administrador/totp", conSesionYCSRF, (*Servicio).quitarTOTPUI},
 	{http.MethodPost, "/ui/administrador/recuperacion", conSesionYCSRF, (*Servicio).recuperacionUI},
 	{http.MethodPost, "/ui/sesiones/cerrar", conSesionYCSRF, (*Servicio).cerrarSesionesUI},
+	// Ajustes → Servidor: de cualquier sesión del servidor; solo se lee.
+	{http.MethodGet, "/ui/servidor", conSesion, (*Servicio).servidorUI},
 }
 
 // rutasUI busca la ruta en rutasDeUI, comprueba su permiso y la atiende.

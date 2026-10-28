@@ -30,8 +30,12 @@ func contadores(porEstado map[string]int) map[string]int {
 }
 
 // estadoAutoarranque dice si este sistema puede arrancar Tramtai al iniciar sesión y en qué modo lo hace, "" si no
-// (Opciones.Autoarranque lo cambia).
+// (Opciones.Autoarranque lo cambia). El servicio del sistema arranca con el equipo: en el servidor no hay arranque al
+// iniciar sesión que ofrecer.
 func (s *Servicio) estadoAutoarranque() (disponible bool, modo autoarranque.Modo) {
+	if s.entorno() == "servidor" {
+		return false, ""
+	}
 	if s.opc.Autoarranque != nil {
 		return s.opc.Autoarranque()
 	}

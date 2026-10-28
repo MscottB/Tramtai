@@ -82,6 +82,14 @@
               </div>
             </div>
           </template>
+          <!-- En el servidor, en lugar de «Usar mi suscripción»: la orden del inicio de sesión del CLI (en local) o de la
+               suscripción personal con sus condiciones (abierto a la red), y la clave con tramtai-servidor. -->
+          <template v-else-if="forma !== 'elegir' && admite(a)">
+            <div class="text-body2">{{ t(forma === 'personal' ? 'agentes.servidorPersonal' : 'agentes.servidorEntrar') }}</div>
+            <div class="bloque-codigo q-mt-sm">{{ ordenSuscripcion(a.agente, forma) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(ordenSuscripcion(a.agente, forma))" /></div>
+            <div class="text-body2 q-mt-md">{{ t('agentes.servidorClave') }}</div>
+            <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(comando(a))" /></div>
+          </template>
           <template v-else>
             <div class="text-body2">{{ t('agentes.soloClave') }}</div>
             <div class="bloque-codigo q-mt-sm">{{ comando(a) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(comando(a))" /></div>
@@ -92,6 +100,7 @@
         <!-- Con suscripción y sin sesión: cómo iniciarla o, si se prefiere, la clave -->
         <template v-else-if="a.estado === 'sin_sesion'">
           <div class="aviso text-body2">{{ a.problema }}</div>
+          <div v-if="forma !== 'elegir'" class="bloque-codigo q-mt-sm">{{ ordenSuscripcion(a.agente, forma) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(ordenSuscripcion(a.agente, forma))" /></div>
           <q-btn v-if="puedeCambiar(a)" flat dense no-caps color="primary" class="q-mt-sm q-px-sm" :loading="cambiando === a.agente"
             :label="t('agentes.cambiarAClave')" @click="cambiar(a, 'clave_api')" />
         </template>
@@ -183,6 +192,7 @@ import type { Destino } from '../navegacion'
 import { agenteListo, asegurarFichas, cargarFichas, codigoLinea, fichaDe, fijarDisponibilidad, nombreAgente, ofrecerDejarSuscripcion, ordenarAgentes } from '../agentes'
 import { nombreEsfuerzo, numero } from '../formato'
 import { cargarRutaConfig, rutaConfig } from '../rutaConfig'
+import { estadoServidor, formaSuscripcion, ordenClave, ordenSuscripcion, puedeElegirSuscripcion } from '../servidor'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 
@@ -249,11 +259,14 @@ function resumen(a: Adaptador) {
 const etiquetas: Record<Adaptador['estado'], Clave> = { listo: 'agente.listo', desconectado: 'agente.desconectado', no_instalado: 'agente.noInstalado',
   falta_clave: 'agente.faltaClave', sin_sesion: 'agente.faltaClave', usa_clave: 'agente.revisar', sesion_no_responde: 'agente.revisar', revisar: 'agente.revisar' }
 const suscripcion = (a: Adaptador) => a.autenticacion === 'suscripcion'
-// La suscripción la admiten los agentes cuya ficha la incluye, y solo se cambia desde una sesión de este mismo equipo.
-const puedeCambiar = (a: Adaptador) => !!fichaDe(a.agente)?.autenticaciones.includes('suscripcion') && !!sesion.value?.local
+// La suscripción la admiten los agentes cuya ficha la incluye, y solo se cambia desde una sesión de este mismo equipo y
+// fuera del servidor: en él, forma dice qué orden la pone.
+const admite = (a: Adaptador) => !!fichaDe(a.agente)?.autenticaciones.includes('suscripcion')
+const forma = computed(() => formaSuscripcion(sesion.value, estadoServidor.value))
+const puedeCambiar = (a: Adaptador) => puedeElegirSuscripcion(admite(a), sesion.value, estadoServidor.value)
 const cli = (a: Adaptador) => fichaDe(a.agente)?.programa ?? a.agente
 const variable = (a: Adaptador) => fichaDe(a.agente)?.variables_clave[0] ?? a.problema?.match(/[A-Z_]+_API_KEY/)?.[0] ?? ''
-const comando = (a: Adaptador) => 'tramtai claves guardar ' + variable(a)
+const comando = (a: Adaptador) => ordenClave(sesion.value, variable(a))
 // textoAlmacen dice dónde queda la clave en este sistema: cifrada en su almacén, o qué hacer si no lo hay.
 function textoAlmacen(a: Adaptador) {
   const almacen = sesion.value?.almacen

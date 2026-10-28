@@ -62,6 +62,7 @@ import { api, buscarActualizacionAhora, copiar } from '../api/cliente'
 import type { Acerca } from '../api/tipos'
 import { actualizacion, dialogoActualizar, sesion } from '../estado'
 import { fecha } from '../formato'
+import { marcaEntorno } from '../servidor'
 import { t } from '../i18n'
 
 const abierto = defineModel<boolean>({ required: true })
@@ -127,7 +128,8 @@ const detalles = computed<[string, string, string?][]>(() => {
   }
   lista.push([t('acerca.sistema'), `${sistemas[d.sistema] ?? d.sistema} · ${d.arquitectura}`], ['Go', d.go],
     [t('acerca.servicio'), `${d.servicio.direccion} · pid ${d.servicio.pid} · ${t('acerca.desde', { fecha: fecha(d.servicio.iniciado_en) })}`],
-    [t('acerca.claves'), d.almacen])
+    [t('acerca.claves'), d.almacen], [t('acerca.entorno'), t(marcaEntorno(d.entorno))])
+  if (d.cuenta) lista.push([t('acerca.cuenta'), d.cuenta])
   if (d.rutas) {
     lista.push([t('acerca.datos'), d.rutas.datos], [t('acerca.configuracion'), d.rutas.configuracion], [t('acerca.registro'), d.rutas.registro])
   }

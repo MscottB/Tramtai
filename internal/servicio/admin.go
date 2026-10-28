@@ -240,6 +240,10 @@ func (s *Servicio) rutasAdmin() http.Handler {
 	mux.HandleFunc("GET /api/v1/servicio/acerca", func(w http.ResponseWriter, _ *http.Request) {
 		api.EscribirJSON(w, http.StatusOK, s.acerca(true))
 	})
+	// Ajustes → Servidor y el estado del servidor en la terminal (el administrador, las suscripciones): 404 fuera de él.
+	mux.HandleFunc("GET /api/v1/servicio/servidor", func(w http.ResponseWriter, r *http.Request) {
+		s.servidorUI(w, r, nil)
+	})
 	mux.HandleFunc("POST /api/v1/servicio/recargar", func(w http.ResponseWriter, _ *http.Request) {
 		puntos := s.Recargar()
 		_ = s.persistirEstado() // anotado; los puntos ya están en su archivo

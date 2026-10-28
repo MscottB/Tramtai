@@ -374,6 +374,7 @@ func init() {
 		"falta la cabecera X-CSRF-Token de la sesión":                                                                                "the session’s X-CSRF-Token header is missing",
 		"el espacio de la sesión (%s) no está activo":                                                                                "the session’s workspace (%s) is not active",
 		"%s no tiene .tramtai/config.yaml: ejecuta tramtai iniciar en el proyecto":                                                   "%s has no .tramtai/config.yaml: run tramtai iniciar in the project",
+		"el servidor se actualiza desde el propio servidor, con tramtai-servidor actualizar":                                         "the server is updated from the server itself, with tramtai-servidor update",
 		"este servicio no se puede reiniciar desde la Web UI":                                                                        "this service cannot be restarted from the Web UI",
 		"requiere una sesión de la Web UI o la clave del servicio":                                                                   "requires a Web UI session or the service key",
 		"la API %s ya existe":                                                                                                        "the API %s already exists",

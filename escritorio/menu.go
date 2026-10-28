@@ -57,6 +57,7 @@ type estadoMenu struct {
 	act                      actualizacionMenu // lo que se busca o instala desde el menú
 	autoarranque             bool              // si el sistema permite iniciar con la sesión
 	windows                  bool
+	otroEntorno              string // el aviso del Tramtai del sistema de este equipo (servidor.AvisoCruzado), si lo hay
 }
 
 // sinEsquema quita http:// o https:// de una dirección que se muestra.
@@ -74,6 +75,9 @@ func entradasMenu(e estadoMenu) []entrada {
 		add(entrada{texto: idioma.T("Servicio detenido"), icono: "rojo", accion: accionMostrar})
 	} else {
 		add(entrada{texto: idioma.Tf("Servicio en marcha · %s", sinEsquema(e.base)), icono: "verde", accion: accionMostrar})
+	}
+	if e.otroEntorno != "" { // otro Tramtai, el del sistema, con sus propias APIs y claves: se dice, no se pulsa
+		add(entrada{texto: e.otroEntorno, desactivada: true})
 	}
 	// «Acerca de» (donde se ve la versión), y si hay una más nueva (la opción para instalarla va justo debajo).
 	if e.nueva != "" {

@@ -24,9 +24,10 @@ type origen struct{ pagina.Origen }
 type (
 	msgAgentes struct {
 		origen
-		n     int // qué comprobación es: solo vale la última
-		lista []contrato.Adaptador
-		err   error
+		n        int // qué comprobación es: solo vale la última
+		lista    []contrato.Adaptador
+		servidor *contrato.EstadoServidor // en el servidor: si está abierto a la red decide qué suscripción se ofrece
+		err      error
 	}
 	msgModelos struct {
 		origen
@@ -69,6 +70,7 @@ type Pagina struct {
 	filtro   int    // el de filtros: 0 todos
 	modelos  map[string][]string
 	errModel map[string]string
+	servidor *contrato.EstadoServidor // nil fuera del servidor
 }
 
 // Nueva crea la página; su título es el del menú de la Web UI.
@@ -119,7 +121,13 @@ func (p *Pagina) comprobar() tea.Cmd {
 	o := p.origen()
 	return func() tea.Msg {
 		r, err := c.Cli.Capacidades(c.Ctx, c.Instancia)
-		return msgAgentes{origen: o, n: n, lista: r.Adaptadores, err: err}
+		m := msgAgentes{origen: o, n: n, lista: r.Adaptadores, err: err}
+		if err == nil && c.Entorno == "servidor" {
+			if e, err := c.Cli.EstadoServidor(c.Ctx); err == nil {
+				m.servidor = &e
+			}
+		}
+		return m
 	}
 }
 
@@ -144,7 +152,7 @@ func (p *Pagina) Update(msg tea.Msg) (pagina.Pagina, tea.Cmd) {
 			p.err = nucleo.MensajeDe(m.err)
 			return p, nil
 		}
-		p.sinServ, p.cargado, p.agentes = false, true, ordenar(m.lista)
+		p.sinServ, p.cargado, p.agentes, p.servidor = false, true, ordenar(m.lista), m.servidor
 		p.lista.Poner(p.agentes)
 		p.refrescar()
 	case msgModelos:
@@ -343,6 +351,9 @@ func (p *Pagina) alternarAutenticacion(a contrato.Adaptador) tea.Cmd {
 	}
 	if a.Autenticacion == "suscripcion" {
 		return p.autenticar(a.Agente, "clave_api")
+	}
+	if p.c.Entorno == "servidor" { // la suscripción del servidor la inicia el CLI, o es la personal: con su orden
+		return comp.Aviso(idioma.Tf("En el servidor, la suscripción se hace con: %s", p.ordenSuscripcion(a.Agente)), comp.Info)
 	}
 	if est != contrato.AgenteListo && est != contrato.AgenteFaltaClave {
 		return comp.Aviso(idioma.T("En su estado actual solo se puede usar la clave de API"), comp.Advertencia)

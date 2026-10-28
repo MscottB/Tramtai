@@ -57,8 +57,7 @@ type Estado struct {
 	Version       string            `json:"version"`
 	PID           int               `json:"pid"`
 	IniciadoEn    time.Time         `json:"iniciado_en"`
-	Base          string            `json:"base"`
-	BasePublica   string            `json:"base_publica,omitempty"` // lo que se muestra a las personas, si no es Base (TLS propio: Base es el oyente local)
+	Base          string            `json:"base"` // la pública (BasePublica del servicio): la que se muestra a las personas
 	Instancias    []EstadoInstancia `json:"instancias"`
 	Puntos        []EstadoPunto     `json:"puntos_acceso"`
 	Errores       []string          `json:"errores_configuracion,omitempty"`

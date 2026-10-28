@@ -367,6 +367,35 @@ input[type='number'] {
   font-size: 1.0625rem;
   letter-spacing: -0.015em;
 }
+/* La marca del entorno (Servidor, Este equipo o Portable) no se esconde nunca: en el móvil la cabecera se compacta para
+   que quepa junto a los demás controles (sin el punto de la etiqueta y con menos relleno). */
+@media (max-width: 599px) {
+  .cabecera-app .q-toolbar {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  .cabecera-app .marca-entorno {
+    margin-left: 4px;
+    padding: 2px 8px;
+  }
+  .cabecera-app .marca-entorno::before {
+    display: none;
+  }
+  .cabecera-app .q-btn-dropdown {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+  .cabecera-app .q-toolbar > .q-btn.q-ml-sm,
+  .cabecera-app .q-toolbar > .q-btn.q-ml-xs {
+    margin-left: 2px;
+  }
+  .cabecera-app .q-toolbar > .q-btn.q-mr-sm {
+    margin-right: 4px;
+  }
+  .cabecera-app .pastilla {
+    padding: 0 10px;
+  }
+}
 /* Estado del servicio: como un indicador de andén, punto con pulso suave y texto. */
 .pastilla {
   border: 1px solid var(--borde);

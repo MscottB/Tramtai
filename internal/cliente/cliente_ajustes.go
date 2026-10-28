@@ -116,3 +116,9 @@ func (c *Cliente) Acerca(ctx context.Context) (contrato.Acerca, error) {
 	var a contrato.Acerca
 	return a, c.pedir(ctx, "GET", "/api/v1/servicio/acerca", "", nil, "", &a)
 }
+
+// EstadoServidor devuelve lo de Ajustes → Servidor (HTTPS, administrador, suscripciones); solo existe en el servidor.
+func (c *Cliente) EstadoServidor(ctx context.Context) (contrato.EstadoServidor, error) {
+	var e contrato.EstadoServidor
+	return e, c.pedir(ctx, "GET", "/api/v1/servicio/servidor", "", nil, "", &e)
+}

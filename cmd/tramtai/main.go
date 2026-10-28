@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -47,6 +48,9 @@ func nuevaRaiz() *cobra.Command {
 			if servidor || esDeServidor(cmd) {
 				usarServidor()
 			}
+			if n, ok := cambian[strings.TrimPrefix(cmd.CommandPath(), cmd.Root().Name()+" ")]; ok && len(args) >= n && carpetas.Servidor() {
+				cmd.SetOut(&conPrefijo{w: cmd.OutOrStdout(), prefijo: idioma.T("Servidor: ")})
+			}
 			avisarTerminos(cmd, args)
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -83,6 +87,34 @@ func nuevaRaiz() *cobra.Command {
 		comandoTerminos(),
 	)
 	return raiz
+}
+
+// cambian son las órdenes que crean o cambian algo, con los argumentos que necesitan para cambiarlo (servicio puerto sin
+// número solo lo enseña): con --servidor, su salida empieza por «Servidor: », para que no se confunda con el Tramtai del
+// usuario. Las que ya lo escriben (claves, administrador, agentes suscripcion) no están; tampoco las que sacan una clave,
+// que se copia tal cual.
+var cambian = map[string]int{"iniciar": 0, "acceso crear": 1, "acceso editar": 1, "acceso eliminar": 1, "acceso reiniciar-presupuesto": 0,
+	"espacio iniciar": 0, "espacio detener": 0, "espacio olvidar": 1, "global iniciar": 0, "global detener": 0, "proyecto iniciar": 0,
+	"proyecto detener": 0, "trabajos eliminar": 1, "agentes conectar": 1, "agentes desconectar": 1, "conversor preparar": 0,
+	"servicio detener": 0, "servicio recargar": 0, "servicio puerto": 1, "terminos aceptar": 0}
+
+// conPrefijo antepone el prefijo a lo primero que se escribe, si no lo lleva ya.
+type conPrefijo struct {
+	w       io.Writer
+	prefijo string
+	hecho   bool
+}
+
+func (c *conPrefijo) Write(p []byte) (int, error) {
+	if !c.hecho && len(p) > 0 {
+		c.hecho = true
+		if !strings.HasPrefix(string(p), c.prefijo) {
+			if _, err := io.WriteString(c.w, c.prefijo); err != nil {
+				return 0, err
+			}
+		}
+	}
+	return c.w.Write(p)
 }
 
 // plantillaUso es la de cobra con los títulos en español; [opciones] sustituye al [flags] de la línea de uso.

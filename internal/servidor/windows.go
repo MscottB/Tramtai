@@ -148,6 +148,10 @@ func Instalar(o Opciones) error {
 	if err := carpetas.ProtegerServidor(r.Datos, cuentaServicio()); err != nil {
 		return err
 	}
+	// publico, donde el servicio deja su puerto para el aviso de los dos entornos (PublicarPuerto): la leen los usuarios.
+	if err := carpetas.ProtegerPublica(filepath.Join(r.Datos, "publico"), sidServicio(nombreServicio)); err != nil {
+		return err
+	}
 	if err := prepararDatos(r.Datos, cmp.Or(o.Como, terminos.ComoServidorInstalar), o.Conversor); err != nil {
 		return err
 	}
@@ -258,6 +262,10 @@ func Desinstalar(borrarDatos bool) error {
 		return err
 	}
 	if err := anotar(quitarPrograma(r.Programa)); err != nil {
+		return err
+	}
+	// Sin servicio no hay otro entorno del que avisar: el puerto publicado se va también si los datos se quedan.
+	if err := os.RemoveAll(filepath.Join(r.Datos, "publico")); err != nil {
 		return err
 	}
 	if borrarDatos {

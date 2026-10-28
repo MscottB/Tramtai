@@ -35,7 +35,11 @@ type Opciones struct {
 	IDProyecto string
 	Iniciar    func() (*cliente.Cliente, error) // inicia el servicio en segundo plano
 	Terminos   bool                             // faltan los términos de uso: la primera pantalla los pide (terminos.Pendiente)
-	Servidor   bool                             // modo servidor (carpetas.Servidor): los riesgos de los términos van sin el «si usas…»
+	// Entorno es carpetas.Entorno(): servidor, portable o escritorio. Da la marca de la línea de estado; en el servidor,
+	// los riesgos de los términos van sin el «si usas…» y la terminal lee el estado del servidor.
+	Entorno string
+	// AvisoCruzado es servidor.AvisoCruzado(): el Tramtai del sistema de este equipo, si lo hay (otro entorno).
+	AvisoCruzado string
 }
 
 // Ejecutar abre la terminal hasta que el usuario sale.
@@ -93,7 +97,8 @@ type modelo struct {
 	cambiarA string             // la pregunta abierta es la de cambiar a este espacio (Ctrl+E): s cambia
 	avisos   comp.Avisos
 
-	pidiendoWeb bool // W pidió el enlace de la Web UI y aún no llegó (web.go)
+	pidiendoWeb bool                     // W pidió el enlace de la Web UI y aún no llegó (web.go)
+	servidor    *contrato.EstadoServidor // en el servidor, lo último que dijo: el administrador y las suscripciones (cabecera.go)
 
 	despedida string // lo que queda escrito en la consola al salir (al empezar una actualización)
 
@@ -143,7 +148,7 @@ func (m *modelo) iniciar(extra any) tea.Cmd {
 	m.cancelar[m.actual] = cancelar
 	ancho, alto := m.area()
 	cmd := m.pagina(m.actual).Iniciar(pagina.Contexto{Ctx: ctx, Cli: m.cli, Instancia: m.instancia, Idioma: m.idioma, Estilos: m.estilos,
-		Ancho: ancho, Alto: alto, Proyecto: m.o.Proyecto, Datos: m.o.Datos})
+		Ancho: ancho, Alto: alto, Proyecto: m.o.Proyecto, Datos: m.o.Datos, Entorno: m.o.Entorno})
 	if extra == nil {
 		return cmd
 	}

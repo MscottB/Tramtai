@@ -28,6 +28,7 @@ type Contexto struct {
 	Ancho, Alto int              // el área de la página, sin cabecera, menú ni pie
 	Proyecto    string           // raíz del proyecto desde el que se abrió la terminal; vacía fuera de uno
 	Datos       string           // la carpeta de datos de Tramtai (Opciones.Datos): ahí guarda Probar su borrador
+	Entorno     string           // servidor, portable o escritorio (Opciones.Entorno); en el servidor, Agentes ofrece sus órdenes
 }
 
 // Claves de las páginas: las de la Web UI. IrA con otra clave no hace nada.

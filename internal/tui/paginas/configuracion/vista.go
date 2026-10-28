@@ -9,6 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	catalogo "tramtai/internal/agentes"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/tui/comp"
@@ -155,6 +156,8 @@ func (p *Pagina) bloqueDe(sec string) bloque {
 		return bloque{titulo: p.tx("arranque.titulo", "sistema", sistema()), marca: p.tx("arranque." + cmpOr(p.ajustes.ModoArranque, "no")),
 			texto:  p.tx("arranque.texto", "sistema", sistema()),
 			lineas: []string{e.Tenue.Render(p.tx("arranque.servidor")), "tramtai-servidor instalar", e.Tenue.Render("https://mscottb.github.io/Tramtai/servidor.html")}}
+	case secServidor:
+		return bloque{titulo: p.tx("servidor.titulo"), texto: p.tx("servidor.cambiaEn"), lineas: p.lineasServidor()}
 	case secSeguridad: // como Ajustes → Seguridad de la Web UI, con las órdenes: la contraseña no se escribe en la terminal
 		return bloque{titulo: p.tx("config.pestanaSeguridad"), texto: p.tx("seguridad.terminal"), lineas: []string{
 			"tramtai-servidor administrador contraseña", "tramtai-servidor administrador totp activar", "tramtai-servidor administrador totp quitar"}}
@@ -164,6 +167,48 @@ func (p *Pagina) bloqueDe(sec string) bloque {
 		b.lineas = []string{p.acerca.Version + e.Tenue.Render(" "+e.Iconos.Separador+" "+p.tx("acerca.licencia")+" "+licencia+" "+e.Iconos.Separador+" "+autor)}
 	}
 	return b
+}
+
+// lineasServidor son los datos de Ajustes → Servidor, como en la Web UI: cada uno con lo que lo cambia en el propio
+// servidor (una orden o una clave de config.yaml). Nada se edita aquí.
+func (p *Pagina) lineasServidor() []string {
+	e, s := p.estilos, p.servidor
+	fila := func(etiqueta, valor, como string) string {
+		return p.tx(etiqueta) + ": " + valor + e.Tenue.Render(" "+e.Iconos.Separador+" "+como)
+	}
+	lista := func(l []string) string {
+		if len(l) == 0 {
+			return p.tx("servidor.ninguno")
+		}
+		return strings.Join(l, ", ")
+	}
+	modo := map[string]string{"ninguno": "servidor.tlsNinguno", "archivos": "servidor.tlsArchivos", "letsencrypt": "servidor.tlsLetsencrypt"}[s.TLS]
+	l := []string{fila("servidor.https", p.tx(cmpOr(modo, s.TLS)), "servicio.tls.modo"), fila("servidor.dominios", lista(s.Dominios), "servicio.dominios"),
+		fila("servidor.confiables", lista(s.Confiables), "servicio.proxy.confiables")}
+	if s.VenceCertificado != nil {
+		nota := map[bool]string{true: "servidor.renuevaSolo", false: "servidor.renovarArchivos"}[s.TLS == "letsencrypt"]
+		l = append(l, fila("servidor.vence", s.VenceCertificado.Local().Format("2006-01-02"), p.tx(nota)))
+	}
+	// Las órdenes largas van en su propia línea, para que no se corten a 60 columnas.
+	orden := func(o string) string { return e.Tenue.Render(o) }
+	admin, cambia := "servidor.sinAdministrador", "tramtai-servidor administrador contraseña"
+	switch {
+	case s.Administrador && s.TOTP:
+		admin = "servidor.conTotp"
+	case s.Administrador:
+		admin, cambia = "servidor.sinTotp", "tramtai-servidor administrador totp activar"
+	}
+	l = append(l, p.tx("servidor.administrador")+": "+p.tx(admin), orden(cambia))
+	suscripciones := p.tx("servidor.sinSuscripciones")
+	if len(s.Suscripciones) > 0 {
+		var partes []string
+		for _, x := range s.Suscripciones {
+			clave := map[bool]string{true: "servidor.suscripcionPersonal", false: "servidor.suscripcionLocal"}[x.Personal]
+			partes = append(partes, p.tx(clave, "agente", catalogo.NombreVisible(x.Agente), "n", strconv.Itoa(x.Simultaneas)))
+		}
+		suscripciones = strings.Join(partes, " · ")
+	}
+	return append(l, p.tx("servidor.suscripciones")+": "+suscripciones, orden("tramtai-servidor agentes suscripcion <agente> --personal"))
 }
 
 // detallesDatos son cuántas peticiones terminadas y cuántas APIs hay para borrar, como las casillas de la Web UI.
@@ -428,6 +473,12 @@ func (p *Pagina) detallesAcerca() [][2]string {
 		[2]string{p.tx("acerca.servicio"), d.Servicio.Direccion + " · pid " + strconv.Itoa(d.Servicio.PID) + " · " +
 			p.tx("acerca.desde", "fecha", d.Servicio.IniciadoEn.Local().Format("2006-01-02 15:04"))},
 		[2]string{p.tx("acerca.claves"), d.Almacen})
+	// El entorno (en qué Tramtai se está) y, en el servidor, la cuenta con la que corre.
+	marca := map[string]string{"servidor": "entorno.servidor", "portable": "entorno.portable"}[d.Entorno]
+	l = append(l, [2]string{p.tx("acerca.entorno"), p.tx(cmpOr(marca, "entorno.escritorio"))})
+	if d.Cuenta != "" {
+		l = append(l, [2]string{p.tx("acerca.cuenta"), d.Cuenta})
+	}
 	if r := d.Rutas; r != nil {
 		l = append(l, [2]string{p.tx("acerca.datos"), r.Datos}, [2]string{p.tx("acerca.configuracion"), r.Configuracion}, [2]string{p.tx("acerca.registro"), r.Registro})
 	}
