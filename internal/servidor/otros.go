@@ -11,6 +11,14 @@ import (
 // sinBloquear no se usa aquí: prepararDatos solo se llega a usar en Linux y en Windows.
 const sinBloquear = 0
 
+// programas, detenerServicio y arrancarServicio son los de Actualizar, que aquí no llega a usarlos: sin servidor
+// instalado no hay programa.
+var (
+	programas        = []string{"tramtai", "uv"}
+	detenerServicio  = noDisponible
+	arrancarServicio = noDisponible
+)
+
 // Instalar no está disponible en este sistema.
 func Instalar(Opciones) error { return noDisponible() }
 

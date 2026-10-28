@@ -440,6 +440,33 @@ func Estado(_ context.Context) (EstadoSistema, error) {
 
 // Reiniciar detiene el servicio (deja terminar las peticiones en curso) y lo vuelve a arrancar.
 func Reiniciar() error {
+	return conSCM(func(s *mgr.Service) error {
+		if err := detener(s); err != nil {
+			return err
+		}
+		return s.Start()
+	})
+}
+
+// programas es lo que hay en la carpeta del programa; Actualizar lo cambia.
+var programas = []string{"tramtai.exe", "uv.exe"}
+
+// detenerServicio (con drenaje y hasta que termina su proceso, que si no retiene el programa) y arrancarServicio, para
+// Actualizar; las pruebas comunes los sustituyen.
+var (
+	detenerServicio  = func() error { return conSCM(detener) }
+	arrancarServicio = func() error {
+		return conSCM(func(s *mgr.Service) error {
+			if err := s.Start(); !errors.Is(err, windows.ERROR_SERVICE_ALREADY_RUNNING) {
+				return err
+			}
+			return nil
+		})
+	}
+)
+
+// conSCM abre el servicio y hace con él lo pedido; sin instalar, lo dice.
+func conSCM(hacer func(*mgr.Service) error) error {
 	m, s, err := abrirServicio()
 	if err != nil {
 		return err
@@ -449,10 +476,7 @@ func Reiniciar() error {
 		return errors.New(idioma.T("el servicio del sistema no está instalado (tramtai servidor instalar)"))
 	}
 	defer s.Close()
-	if err := detener(s); err != nil {
-		return err
-	}
-	return s.Start()
+	return hacer(s)
 }
 
 // OrdenEntrar aún no tiene procedimiento: la cuenta virtual del servicio no tiene consola y su M0 está pendiente

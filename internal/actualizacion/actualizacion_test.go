@@ -209,6 +209,23 @@ func TestVersionViejaNoSeInstala(t *testing.T) {
 	}
 }
 
+// TestAssetPorSistema: el servidor se actualiza con el .tar.gz de Linux de su arquitectura o con el .zip portable de
+// Windows x64 (los nombres de Publicar); para otro sistema no hay paquete.
+func TestAssetPorSistema(t *testing.T) {
+	for _, c := range []struct{ goos, goarch, nombre string }{
+		{"linux", "amd64", "tramtai-v0.58.0+02112026-linux-amd64.tar.gz"},
+		{"linux", "arm64", "tramtai-v0.58.0+02112026-linux-arm64.tar.gz"},
+		{"windows", "amd64", "Tramtai-v0.58.0+02112026-portable-windows-x64.zip"},
+		{"windows", "arm64", ""},
+		{"darwin", "arm64", ""},
+	} {
+		nombre, err := Asset("v0.58.0+02112026", c.goos, c.goarch)
+		if nombre != c.nombre || (err == nil) != (c.nombre != "") {
+			t.Errorf("%s/%s: %q %v, se esperaba %q", c.goos, c.goarch, nombre, err, c.nombre)
+		}
+	}
+}
+
 func TestComprobadorRenovar(t *testing.T) {
 	var veces atomic.Int32
 	c := &Comprobador{Actual: "v1.0.0", Consultar: func(context.Context) (Version, error) {

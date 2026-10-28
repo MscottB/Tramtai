@@ -20,6 +20,7 @@ import (
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/mgr"
 
+	"tramtai/internal/actualizacion"
 	"tramtai/internal/terminos"
 )
 
@@ -162,6 +163,40 @@ func TestInstalarServicioWindows(t *testing.T) {
 	if c2, err := servicio.Config(); err != nil || c2.DisplayName != c.DisplayName || c2.StartType != mgr.StartAutomatic ||
 		!c2.DelayedAutoStart || c2.BinaryPathName != c.BinaryPathName || !strings.EqualFold(c2.ServiceStartName, cuenta) {
 		t.Errorf("configuración tras reinstalar: %+v %v", c2, err)
+	}
+
+	// Actualizar con el .zip portable firmado: detiene el servicio, aparta el programa como .anterior (también el
+	// tramtai.exe en uso), pone el nuevo (este binario con algo al final, que Windows ejecuta igual) y lo arranca.
+	binario, err := os.ReadFile(ejecutable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nuevo := string(binario) + "nuevo"
+	versionPublicada(t, map[string]string{"tramtai.exe": nuevo, "uv.exe": "uv nuevo", "tramtai-escritorio.exe": "escritorio"}, false)
+	// El programa nuevo («--servidor servidor reiniciar») es aquí el binario de pruebas: hace lo que haría él, Reiniciar
+	// con el servicio ya detenido.
+	var lanzadas []string
+	ejecutar0 := ejecutar
+	ejecutar = func(nombre string, args ...string) ([]byte, error) {
+		lanzadas = append(lanzadas, strings.Join(append([]string{nombre}, args...), " "))
+		return nil, Reiniciar()
+	}
+	err = Actualizar(t.Context(), actualizacion.PaqueteServidor)
+	ejecutar = ejecutar0
+	if err != nil {
+		t.Fatalf("actualizar: %v", err)
+	}
+	if !slices.Equal(lanzadas, []string{filepath.Join(s.Programa, "tramtai.exe") + " --servidor servidor reiniciar"}) {
+		t.Errorf("arranca el programa nuevo con «servidor reiniciar»: %q", lanzadas)
+	}
+	esperarEstado(t, servicio, svc.Running)
+	for nombre, quiere := range map[string]string{"tramtai.exe": nuevo, "uv.exe": "uv nuevo", "tramtai.exe.anterior": string(binario), "uv.exe.anterior": "uv"} {
+		if b, err := os.ReadFile(filepath.Join(s.Programa, nombre)); err != nil || string(b) != quiere {
+			t.Errorf("%s tras actualizar: %d bytes, se esperaban %d (%v)", nombre, len(b), len(quiere), err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(s.Programa, "tramtai-escritorio.exe")); err == nil {
+		t.Error("la app de escritorio del .zip no se instala en el servidor")
 	}
 
 	servicio.Close()
