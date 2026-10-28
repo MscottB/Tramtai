@@ -435,7 +435,7 @@ func (s *Servicio) abrirPunto(c candidato, huella, firma string, inst *Instancia
 		handler = s.conHSTS(handler)
 	}
 	p.handler, p.url, p.oyente = handler, s.urlPublica(c.cfg.Puerto), oyente
-	p.srv = &http.Server{Handler: handler, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 64 << 10,
+	p.srv = &http.Server{Handler: s.marcarProxy(handler), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 64 << 10,
 		ConnContext: ContextoDeConexion}
 	go p.srv.Serve(oyente)
 	return p

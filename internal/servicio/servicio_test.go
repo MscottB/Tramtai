@@ -29,6 +29,12 @@ import (
 // entorno prepara una configuración global aislada, un proyecto y el servicio con el agente simulado.
 func entorno(t *testing.T, global, local string, agente adaptadores.Adaptador) (*Servicio, *httptest.Server, string) {
 	t.Helper()
+	return entornoCon(t, global, local, agente, nil)
+}
+
+// entornoCon es entorno con las opciones del servicio retocadas por ajustar antes de crearlo (nil: sin cambios).
+func entornoCon(t *testing.T, global, local string, agente adaptadores.Adaptador, ajustar func(*Opciones)) (*Servicio, *httptest.Server, string) {
+	t.Helper()
 	dir := t.TempDir()
 	rutaGlobal := filepath.Join(dir, "config.yaml")
 	if err := os.WriteFile(rutaGlobal, []byte("predeterminados:\n  agente: simulado\nmodelos:\n  perfiles:\n    rapido:\n      simulado: m1\n"+global), 0o600); err != nil {
@@ -47,8 +53,12 @@ func entorno(t *testing.T, global, local string, agente adaptadores.Adaptador) (
 	}
 	ts := httptest.NewUnstartedServer(nil)
 	puerto := ts.Listener.Addr().(*net.TCPAddr).Port
-	s, err := Nuevo(Opciones{Datos: filepath.Join(dir, "datos"), Config: c, Registro: map[string]adaptadores.Adaptador{"simulado": agente},
-		Secretos: func() []string { return nil }, Semaforos: planificador.NuevosSemaforos(map[string]int{"simulado": 2}), Host: "127.0.0.1", Puerto: puerto, Hosts: []string{"127.0.0.1", "localhost", "::1"}})
+	opc := Opciones{Datos: filepath.Join(dir, "datos"), Config: c, Registro: map[string]adaptadores.Adaptador{"simulado": agente},
+		Secretos: func() []string { return nil }, Semaforos: planificador.NuevosSemaforos(map[string]int{"simulado": 2}), Host: "127.0.0.1", Puerto: puerto, Hosts: []string{"127.0.0.1", "localhost", "::1"}}
+	if ajustar != nil {
+		ajustar(&opc)
+	}
+	s, err := Nuevo(opc)
 	if err != nil {
 		t.Fatal(err)
 	}

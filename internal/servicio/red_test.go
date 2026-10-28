@@ -78,20 +78,43 @@ func TestEsHTTPS(t *testing.T) {
 	}
 }
 
-// TestProxyLoopbackNoEsLocal (Revisión 3): un proxy de confianza en este equipo llega por loopback, pero lo que reenvía
-// no abre la entrada local: cualquier cabecera de proxy hace que la petición no sea local.
+// TestProxyLoopbackNoEsLocal (Revisión 3 y R35): un proxy de confianza en este equipo llega por loopback, pero lo que
+// llega por el oyente público desde su dirección nunca es local, lleve o no cabeceras de proxy (un proxy puede no
+// mandarlas). La CLI, la terminal y la app de este equipo siguen siendo locales: con proxies de confianza el servicio
+// abre su oyente local aparte (BaseLocal, el del descriptor), y se distingue por oyente, no por dirección.
 func TestProxyLoopbackNoEsLocal(t *testing.T) {
 	if !procesos.MismoUsuario(netip.MustParseAddrPort("127.0.0.1:1"), netip.MustParseAddrPort("127.0.0.1:2")) && runtime.GOOS != "windows" && runtime.GOOS != "linux" {
 		t.Skip("sin identificación del dueño de la conexión en este sistema")
 	}
-	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
-	s.opc.Web = fstest.MapFS{"index.html": {Data: []byte("ui")}}
-	s.opc.EntradaLocal = true
-	s.opc.Confiables = []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}
-	if r, cuerpo := nuevoNavegador(t, ts.URL).pedir("GET", "/ui/sesion", ""); r.StatusCode != 200 || !strings.Contains(cuerpo, `"local":true`) {
-		t.Fatalf("sin cabeceras de proxy, el mismo usuario entra: %d %s", r.StatusCode, cuerpo)
+	g, b, l := guardarCredencial, borrarCredencial, leerCredencial
+	t.Cleanup(func() { guardarCredencial, borrarCredencial, leerCredencial = g, b, l })
+	leerCredencial = func(string) (string, error) { return "", nil }
+	s, ts, _ := entornoCon(t, "", "", adaptadores.Simulado{}, func(o *Opciones) {
+		o.Web = fstest.MapFS{"index.html": {Data: []byte("ui")}}
+		o.EntradaLocal = true
+		o.Confiables = []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}
+	})
+	local := s.BaseLocal()
+	if local == ts.URL {
+		t.Fatalf("con proxies de confianza, la CLI necesita su oyente local aparte: %s", local)
 	}
-	if r, _ := nuevoNavegador(t, ts.URL).pedir("GET", "/ui/sesion", "", "X-Forwarded-For", "203.0.113.5"); r.StatusCode != 401 {
-		t.Fatalf("lo que reenvía un proxy de confianza no entra sin token: %d", r.StatusCode)
+	for _, c := range []struct {
+		nombre, base string
+		cabeceras    []string
+		quiere       int
+	}{
+		{"oyente público, proxy sin cabeceras", ts.URL, nil, 401},
+		{"oyente público, proxy con X-Forwarded-For", ts.URL, []string{"X-Forwarded-For", "203.0.113.5"}, 401},
+		{"oyente local (CLI, terminal, app)", local, nil, 200},
+	} {
+		r, cuerpo := nuevoNavegador(t, c.base).pedir("GET", "/ui/sesion", "", c.cabeceras...)
+		if r.StatusCode != c.quiere || c.quiere == 200 && !strings.Contains(cuerpo, `"local":true`) {
+			t.Errorf("%s: /ui/sesion %d %s, se esperaba %d", c.nombre, r.StatusCode, cuerpo, c.quiere)
+		}
+		// Las claves del servicio (tramtai-servidor claves en Windows): con el token de servicio y solo desde este equipo.
+		r, cuerpo = pedir(t, c.base, "GET", "/api/v1/servicio/claves", s.tokenAdmin, "", c.cabeceras...)
+		if quiere := map[bool]int{true: 200, false: 403}[c.quiere == 200]; r.StatusCode != quiere {
+			t.Errorf("%s: GET /api/v1/servicio/claves %d %s, se esperaba %d", c.nombre, r.StatusCode, cuerpo, quiere)
+		}
 	}
 }
