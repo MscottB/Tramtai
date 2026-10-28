@@ -289,22 +289,30 @@ func TestReiniciarUnidadAlDia(t *testing.T) {
 }
 
 // TestActualizarServidor: descarga el .tar.gz firmado de la versión nueva y, con el nuevo ya preparado, detiene el
-// servicio (systemctl stop drena), aparta el programa como .anterior, pone el nuevo y arranca, en ese orden.
+// servicio (systemctl stop drena), aparta el programa como .anterior, pone el nuevo y lo arranca el programa nuevo con
+// «servidor reiniciar» (que deja la unidad al día), en ese orden. El programa nuevo es 0755 aunque root tenga umask
+// 077 y aunque quedara un .nuevo de antes con otros permisos.
 func TestActualizarServidor(t *testing.T) {
 	p := nuevaPrueba(t)
 	p.instalar(t)
 	versionPublicada(t, map[string]string{"tramtai": "tramtai nuevo", "uv": "uv nuevo", "LICENCIA.md": "licencia"}, false)
+	if err := os.WriteFile(filepath.Join(p.r.Programa, "tramtai.nuevo"), []byte("resto"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	umask := syscall.Umask(0o077)
+	t.Cleanup(func() { syscall.Umask(umask) })
 	leer := func(nombre string) string {
 		b, _ := os.ReadFile(filepath.Join(p.r.Programa, nombre))
 		return string(b)
 	}
+	reiniciar := filepath.Join(p.r.Programa, "tramtai") + " --servidor servidor reiniciar"
 	p.alOrdenar = func(orden string) {
 		switch orden {
 		case "systemctl stop tramtai":
 			if leer("tramtai") != "tramtai v1" || leer("tramtai.nuevo") != "tramtai nuevo" || leer("uv.nuevo") != "uv nuevo" {
 				t.Error("se detiene con el programa nuevo ya preparado y el de antes en su sitio")
 			}
-		case "systemctl start tramtai":
+		case reiniciar:
 			if leer("tramtai") != "tramtai nuevo" || leer("uv") != "uv nuevo" {
 				t.Error("se arranca con el programa nuevo en su sitio")
 			}
@@ -314,15 +322,17 @@ func TestActualizarServidor(t *testing.T) {
 	if err := Actualizar(t.Context(), actualizacion.PaqueteServidor); err != nil {
 		t.Fatal(err)
 	}
-	mismas(t, "órdenes", p.ordenes, "systemctl stop tramtai", "systemctl start tramtai")
+	mismas(t, "órdenes", p.ordenes, "systemctl stop tramtai", reiniciar)
 	for nombre, quiere := range map[string]string{"tramtai": "tramtai nuevo", "uv": "uv nuevo", "tramtai.anterior": "tramtai v1",
 		"uv.anterior": "uv v1", "tramtai.nuevo": "", "LICENCIA.md": ""} {
 		if leer(nombre) != quiere {
 			t.Errorf("%s: %q, se esperaba %q", nombre, leer(nombre), quiere)
 		}
 	}
-	if info, err := os.Stat(filepath.Join(p.r.Programa, "tramtai")); err != nil || info.Mode().Perm() != 0o755 {
-		t.Errorf("el programa nuevo se ejecuta (0755): %v %v", info.Mode(), err)
+	for _, nombre := range []string{"tramtai", "uv"} {
+		if info, err := os.Stat(filepath.Join(p.r.Programa, nombre)); err != nil || info.Mode().Perm() != 0o755 {
+			t.Errorf("la cuenta del servicio ejecuta el %s nuevo (0755): %v %v", nombre, info.Mode(), err)
+		}
 	}
 }
 

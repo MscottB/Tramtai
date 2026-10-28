@@ -104,18 +104,63 @@ func AvisoLetsEncrypt() string {
 // su carpeta): lo actualizan apt o dnf.
 var ErrInstaladoPorPaquete = errors.New(idioma.T("este servidor se instaló con el paquete tramtai-servidor: actualízalo con apt o dnf"))
 
+func sinInstalar() error {
+	return errors.New(idioma.T("el servicio del sistema no está instalado (tramtai servidor instalar)"))
+}
+
+// ejecutableActual es la ruta real de este programa y lanzarInstalado ejecuta el programa instalado con la salida a la
+// vista; las pruebas los sustituyen.
+var (
+	ejecutableActual = func() (string, error) {
+		e, err := os.Executable()
+		if err != nil {
+			return "", err
+		}
+		return filepath.EvalSymlinks(e)
+	}
+	lanzarInstalado = func(programa string, salida, errores io.Writer, args ...string) error {
+		cmd := exec.Command(programa, args...)
+		cmd.Stdout, cmd.Stderr = salida, errores
+		if err := cmd.Run(); err != nil {
+			return errors.New(idioma.Tf("la actualización con el programa instalado (%s) terminó con error: %v", programa, err))
+		}
+		return nil
+	}
+)
+
+// ActualizarConElInstalado deja la actualización al programa instalado si este no lo es (sudo tramtai servidor
+// actualizar desde la copia del escritorio, por ejemplo): así se compara con la versión del servidor y no con la de
+// esta copia. Si delega, ejecuta «<programa> --servidor servidor actualizar» con su salida a la vista y devuelve true:
+// quien llama no hace nada más. Sin servidor instalado, devuelve true y el error de siempre.
+func ActualizarConElInstalado(salida, errores io.Writer) (bool, error) {
+	instalado := filepath.Join(Rutas().Programa, programas[0])
+	info, err := os.Stat(instalado)
+	if err != nil {
+		return true, sinInstalar()
+	}
+	actual, err := ejecutableActual()
+	if err != nil {
+		return true, err
+	}
+	if a, err := os.Stat(actual); err == nil && os.SameFile(a, info) {
+		return false, nil
+	}
+	return true, lanzarInstalado(instalado, salida, errores, "--servidor", "servidor", "actualizar")
+}
+
 // Actualizar pone la última versión publicada en la carpeta del programa: bajar deja en una carpeta temporal el paquete
 // del servidor de este sistema con la firma de sus sumas y su suma comprobadas (actualizacion.PaqueteServidor, que pasa
 // cmd/tramtai: este paquete no importa el actualizador, porque lo enlaza la app de escritorio por AvisoCruzado). Saca de
 // él el programa (como .nuevo, junto al de ahora), detiene el servicio con drenaje, aparta el de ahora como .anterior,
-// pone el nuevo y arranca. Si algo falla antes de arrancar, lo apartado vuelve a su sitio y el servicio arranca con él.
+// pone el nuevo y lo arranca el programa nuevo con «servidor reiniciar», que deja la unidad al día. Si algo falla antes
+// de que el nuevo se pueda ejecutar, lo apartado vuelve a su sitio y el servicio arranca con él.
 func Actualizar(ctx context.Context, bajar func(ctx context.Context, dir string) (string, error)) error {
 	r := Rutas()
 	if existe(filepath.Join(r.Programa, ".paquete")) {
 		return ErrInstaladoPorPaquete
 	}
 	if !existe(filepath.Join(r.Programa, programas[0])) {
-		return errors.New(idioma.T("el servicio del sistema no está instalado (tramtai servidor instalar)"))
+		return sinInstalar()
 	}
 	dir, err := os.MkdirTemp("", "tramtai-actualizacion") // actualizacion.PrefijoCarpeta: LimpiarDescargas la borra si queda
 	if err != nil {
@@ -129,17 +174,26 @@ func Actualizar(ctx context.Context, bajar func(ctx context.Context, dir string)
 	if err == nil {
 		err = detenerServicio()
 	}
-	if err == nil {
-		if err = cambiarPrograma(r.Programa); err != nil {
-			_ = arrancarServicio() // con el programa de antes, que volvió a su sitio
-			return err
+	if err != nil {
+		for _, n := range programas {
+			_ = os.Remove(filepath.Join(r.Programa, n+".nuevo"))
 		}
-		return arrancarServicio()
+		return err
 	}
-	for _, n := range programas {
-		_ = os.Remove(filepath.Join(r.Programa, n+".nuevo"))
+	if err := cambiarPrograma(r.Programa); err != nil {
+		return errors.Join(err, arrancarServicio()) // con el programa de antes, que volvió a su sitio
 	}
-	return err
+	nuevo := filepath.Join(r.Programa, programas[0])
+	salida, err := ejecutar(nuevo, "--servidor", "servidor", "reiniciar")
+	if err == nil {
+		return nil
+	}
+	if !errors.As(err, new(*exec.ExitError)) { // el nuevo ni siquiera se ejecuta: vuelve el de antes
+		return errors.Join(err, devolverPrograma(r.Programa, programas), arrancarServicio())
+	}
+	return errors.New(idioma.Tf("el programa nuevo ya está en su sitio y el de antes quedó como %s.anterior, pero no arrancó (%s). "+
+		"Para volver al de antes, renombra cada .anterior de %s a su nombre y ejecuta tramtai-servidor reiniciar",
+		nuevo, cmp.Or(strings.TrimSpace(string(salida)), err.Error()), r.Programa))
 }
 
 // extraerPrograma saca del paquete (el .tar.gz de Linux, con todo en la carpeta tramtai, o el .zip portable de Windows,
@@ -151,7 +205,14 @@ func extraerPrograma(paquete, dir string) error {
 		if err != nil {
 			return err
 		}
-		_, err = io.Copy(f, contenido)
+		// 0755 aunque root tenga otra umask (027, 077) o quedara un .nuevo de antes: la cuenta del servicio lo ejecuta.
+		err = f.Chmod(0o755)
+		if err == nil {
+			_, err = io.Copy(f, contenido)
+		}
+		if err == nil {
+			err = f.Sync()
+		}
 		if cerrar := f.Close(); err == nil {
 			err = cerrar
 		}
@@ -165,7 +226,7 @@ func extraerPrograma(paquete, dir string) error {
 		}
 		defer z.Close()
 		for _, f := range z.File {
-			if i := slices.Index(faltan, strings.ReplaceAll(f.Name, `\`, "/")); i >= 0 {
+			if i := slices.Index(faltan, path.Clean(strings.ReplaceAll(f.Name, `\`, "/"))); i >= 0 && f.Mode().IsRegular() {
 				contenido, err := f.Open()
 				if err == nil {
 					err = escribir(faltan[i], contenido)
@@ -214,27 +275,34 @@ func extraerPrograma(paquete, dir string) error {
 // .nuevo en su sitio. Si falla, lo apartado vuelve y los .nuevo se borran.
 func cambiarPrograma(dir string) error {
 	var apartados []string
-	var err error
 	for _, n := range programas {
 		actual := filepath.Join(dir, n)
-		if err = os.Rename(actual, actual+".anterior"); err != nil {
-			break
+		err := os.Rename(actual, actual+".anterior")
+		if err == nil {
+			apartados = append(apartados, n)
+			err = os.Rename(actual+".nuevo", actual)
 		}
-		apartados = append(apartados, actual)
-		if err = os.Rename(actual+".nuevo", actual); err != nil {
-			break
+		if err != nil {
+			return errors.Join(err, devolverPrograma(dir, apartados))
 		}
 	}
-	if err == nil {
-		return nil
-	}
-	for _, actual := range apartados {
-		_ = os.Rename(actual+".anterior", actual)
+	return nil
+}
+
+// devolverPrograma pone en su sitio los .anterior de nombres y borra los .nuevo que queden. Si alguno no vuelve, el
+// error lo dice: falta ese programa.
+func devolverPrograma(dir string, nombres []string) error {
+	var errs []error
+	for _, n := range nombres {
+		actual := filepath.Join(dir, n)
+		if err := os.Rename(actual+".anterior", actual); err != nil {
+			errs = append(errs, errors.New(idioma.Tf("no se pudo devolver %s a su sitio: %v", actual, err)))
+		}
 	}
 	for _, n := range programas {
 		_ = os.Remove(filepath.Join(dir, n+".nuevo"))
 	}
-	return err
+	return errors.Join(errs...)
 }
 
 func noDisponible() error {

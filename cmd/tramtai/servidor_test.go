@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -302,11 +303,21 @@ func TestServidorDesinstalarAviso(t *testing.T) {
 }
 
 // TestServidorActualizar: «tramtai-servidor actualizar» (y update) llega a Actualizar; si ya está al día lo dice sin
-// fallar, y si lo instaló el paquete, remite a apt o dnf con error.
+// fallar, y si lo instaló el paquete, remite a apt o dnf con error. Desde otra copia lo hace el programa instalado, y
+// esta no hace nada más.
 func TestServidorActualizar(t *testing.T) {
 	simularServidor(t, true)
-	anterior := actualizarServidor
-	t.Cleanup(func() { actualizarServidor = anterior })
+	anterior, delegar0 := actualizarServidor, delegarActualizar
+	t.Cleanup(func() { actualizarServidor, delegarActualizar = anterior, delegar0 })
+	delegarActualizar = func(io.Writer, io.Writer) (bool, error) { return true, nil }
+	actualizarServidor = func(context.Context, func(context.Context, string) (string, error)) error {
+		t.Error("con el instalado delegado, esta copia no actualiza")
+		return nil
+	}
+	if salida, err := ejecutarServidor(t, "", "servidor", "actualizar"); err != nil || strings.Contains(salida, "actualizado") {
+		t.Errorf("delegado: %v %q", err, salida)
+	}
+	delegarActualizar = func(io.Writer, io.Writer) (bool, error) { return false, nil }
 	for _, c := range []struct {
 		res    error
 		args   []string

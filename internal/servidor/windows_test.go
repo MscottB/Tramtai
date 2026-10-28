@@ -173,8 +173,21 @@ func TestInstalarServicioWindows(t *testing.T) {
 	}
 	nuevo := string(binario) + "nuevo"
 	versionPublicada(t, map[string]string{"tramtai.exe": nuevo, "uv.exe": "uv nuevo", "tramtai-escritorio.exe": "escritorio"}, false)
-	if err := Actualizar(t.Context(), actualizacion.PaqueteServidor); err != nil {
+	// El programa nuevo («--servidor servidor reiniciar») es aquí el binario de pruebas: hace lo que haría él, Reiniciar
+	// con el servicio ya detenido.
+	var lanzadas []string
+	ejecutar0 := ejecutar
+	ejecutar = func(nombre string, args ...string) ([]byte, error) {
+		lanzadas = append(lanzadas, strings.Join(append([]string{nombre}, args...), " "))
+		return nil, Reiniciar()
+	}
+	err = Actualizar(t.Context(), actualizacion.PaqueteServidor)
+	ejecutar = ejecutar0
+	if err != nil {
 		t.Fatalf("actualizar: %v", err)
+	}
+	if !slices.Equal(lanzadas, []string{filepath.Join(s.Programa, "tramtai.exe") + " --servidor servidor reiniciar"}) {
+		t.Errorf("arranca el programa nuevo con «servidor reiniciar»: %q", lanzadas)
 	}
 	esperarEstado(t, servicio, svc.Running)
 	for nombre, quiere := range map[string]string{"tramtai.exe": nuevo, "uv.exe": "uv nuevo", "tramtai.exe.anterior": string(binario), "uv.exe.anterior": "uv"} {

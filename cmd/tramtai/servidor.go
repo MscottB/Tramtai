@@ -32,6 +32,7 @@ var (
 	estadoServidor      = servidor.Estado
 	reiniciarServidor   = servidor.Reiniciar
 	actualizarServidor  = servidor.Actualizar
+	delegarActualizar   = servidor.ActualizarConElInstalado
 )
 
 // avisosServidor recuerda el riesgo 3 (si riesgo) cuando la configuración del servidor lo abre a la red, y el acuerdo de
@@ -231,6 +232,10 @@ func comandoServidor() *cobra.Command {
 		Short: idioma.T("Actualiza el servidor a la última versión publicada, con su firma comprobada (deja terminar las peticiones en curso)"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			out := cmd.OutOrStdout()
+			// Desde otra copia lo hace el programa instalado, que compara con su versión, no con la de esta.
+			if delegado, err := delegarActualizar(out, cmd.ErrOrStderr()); delegado || err != nil {
+				return err
+			}
 			ctx, cancelar := context.WithTimeout(cmd.Context(), 30*time.Minute) // la descarga y el drenaje
 			defer cancelar()
 			fmt.Fprintln(out, idioma.T("buscando la última versión publicada…"))
@@ -242,7 +247,7 @@ func comandoServidor() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(out, idioma.T("servidor actualizado y en marcha (el programa de antes queda como .anterior)"))
+			fmt.Fprintln(out, idioma.T("servidor actualizado y reiniciado (el programa de antes queda como .anterior); tramtai-servidor estado dice si está en marcha"))
 			return nil
 		}}
 

@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -208,5 +209,101 @@ func TestActualizarVuelveAtras(t *testing.T) {
 	intacto(t, dir)
 	if strings.Join(ordenes, " ") != "detener arrancar" {
 		t.Errorf("el servicio vuelve a arrancar con el programa de antes: %q", ordenes)
+	}
+}
+
+// TestActualizarNuevoNoArranca: si el programa nuevo ni siquiera se puede ejecutar (aquí no es un ejecutable), el de
+// antes vuelve a su sitio y el servicio arranca con él.
+func TestActualizarNuevoNoArranca(t *testing.T) {
+	var ordenes []string
+	dir := programaInstalado(t, &ordenes)
+	versionPublicada(t, programaNuevo(), false)
+	if err := Actualizar(t.Context(), actualizacion.PaqueteServidor); err == nil {
+		t.Fatal("se dio por actualizado con un programa que no se ejecuta")
+	}
+	intacto(t, dir)
+	if strings.Join(ordenes, " ") != "detener arrancar" {
+		t.Errorf("el servicio vuelve a arrancar con el programa de antes: %q", ordenes)
+	}
+}
+
+// TestExtraerZipConBarras: Compress-Archive puede escribir los nombres con \ (.\tramtai.exe): valen igual.
+func TestExtraerZipConBarras(t *testing.T) {
+	dir := t.TempDir()
+	paquete := filepath.Join(dir, "Tramtai-v0.99.0+1-portable-windows-x64.zip")
+	f, err := os.Create(paquete)
+	if err != nil {
+		t.Fatal(err)
+	}
+	z := zip.NewWriter(f)
+	for _, n := range programas {
+		w, _ := z.Create(`.\` + n)
+		w.Write([]byte(n + " nuevo"))
+	}
+	z.Close()
+	f.Close()
+	if err := extraerPrograma(paquete, dir); err != nil {
+		t.Fatal(err)
+	}
+	for _, n := range programas {
+		if b, _ := os.ReadFile(filepath.Join(dir, n+".nuevo")); string(b) != n+" nuevo" {
+			t.Errorf("%s.nuevo: %q", n, b)
+		}
+	}
+}
+
+// TestExtraerTarSinEnlaces: un enlace con el nombre del programa no se toma por el programa.
+func TestExtraerTarSinEnlaces(t *testing.T) {
+	dir := t.TempDir()
+	paquete := filepath.Join(dir, "tramtai-v0.99.0+1-linux-amd64.tar.gz")
+	f, err := os.Create(paquete)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gz := gzip.NewWriter(f)
+	tw := tar.NewWriter(gz)
+	tw.WriteHeader(&tar.Header{Name: "tramtai/" + programas[0], Linkname: "../../otro", Mode: 0o777, Typeflag: tar.TypeSymlink})
+	tw.WriteHeader(&tar.Header{Name: "tramtai/" + programas[1], Mode: 0o755, Size: 2, Typeflag: tar.TypeReg})
+	tw.Write([]byte("uv"))
+	tw.Close()
+	gz.Close()
+	f.Close()
+	if err := extraerPrograma(paquete, dir); err == nil || !strings.Contains(err.Error(), "no trae "+programas[0]) {
+		t.Fatalf("un enlace no es el programa: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(dir, programas[0]+".nuevo")); err == nil {
+		t.Error("quedó algo con el nombre del programa")
+	}
+}
+
+// TestActualizarConElInstalado: desde otra copia (la del escritorio, por ejemplo), la actualización la hace el programa
+// instalado, que compara con su propia versión; desde el instalado, no se delega; sin servidor, el error de siempre.
+func TestActualizarConElInstalado(t *testing.T) {
+	var ordenes []string
+	dir := programaInstalado(t, &ordenes)
+	instalado := filepath.Join(dir, programas[0])
+	otra := filepath.Join(t.TempDir(), programas[0])
+	if err := os.WriteFile(otra, []byte("otra copia"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	actual0, lanzar0 := ejecutableActual, lanzarInstalado
+	t.Cleanup(func() { ejecutableActual, lanzarInstalado = actual0, lanzar0 })
+	var lanzados []string
+	lanzarInstalado = func(programa string, _, _ io.Writer, args ...string) error {
+		lanzados = append(lanzados, strings.Join(append([]string{programa}, args...), " "))
+		return nil
+	}
+	ejecutableActual = func() (string, error) { return instalado, nil }
+	if delegado, err := ActualizarConElInstalado(io.Discard, io.Discard); delegado || err != nil || len(lanzados) > 0 {
+		t.Fatalf("desde el instalado no se delega: %v %v %q", delegado, err, lanzados)
+	}
+	ejecutableActual = func() (string, error) { return otra, nil }
+	if delegado, err := ActualizarConElInstalado(io.Discard, io.Discard); !delegado || err != nil ||
+		strings.Join(lanzados, "|") != instalado+" --servidor servidor actualizar" {
+		t.Fatalf("desde otra copia se delega en el instalado: %v %v %q", delegado, err, lanzados)
+	}
+	os.Remove(instalado)
+	if delegado, err := ActualizarConElInstalado(io.Discard, io.Discard); !delegado || err == nil || !strings.Contains(err.Error(), "no está instalado") {
+		t.Fatalf("sin servidor instalado: %v %v", delegado, err)
 	}
 }
