@@ -17,6 +17,7 @@ import (
 
 	"golang.org/x/crypto/argon2"
 
+	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
 	"tramtai/internal/api"
 	"tramtai/internal/configuracion"
@@ -179,9 +180,10 @@ func BorrarCodigosRecuperacion(datos string) error {
 }
 
 // ComprobarQuitarTOTP rechaza quitar el TOTP mientras un agente use la suscripción personal: en remoto la exige (spec §5).
+// Pasado a clave de API, suscripcion_personal ya no cuenta (es lo que pide el mensaje).
 func ComprobarQuitarTOTP(c *configuracion.Configuracion) error {
 	for _, f := range agentes.Todos() {
-		if c.Booleano("adaptadores." + f.Nombre + ".suscripcion_personal") {
+		if c.Booleano("adaptadores."+f.Nombre+".suscripcion_personal") && c.Texto("adaptadores."+f.Nombre+".autenticacion") == adaptadores.AutenticacionSuscripcion {
 			return nucleo.NuevoError(nucleo.CodigoAccionNoPermitida, idioma.Tf("no se puede quitar el TOTP mientras %s usa tu suscripción personal en el servidor: pásalo antes a clave de API (adaptadores.%s.autenticacion: clave_api)", f.Nombre, f.Nombre))
 		}
 	}
@@ -215,7 +217,8 @@ func (s *Servicio) fijarTOTP(secreto string) error {
 }
 
 // quitarTOTP borra el secreto TOTP y los códigos de recuperación, si no hay suscripción personal. Lee la configuración
-// con la que arrancó el servicio (s.opc.Config): la suscripción personal se cambia con la CLI, que reinicia el servicio.
+// con la que arrancó el servicio (s.opc.Config), y vale: la suscripción personal solo se activa con «agentes suscripcion
+// --personal», que reinicia el servicio (cambiarAutenticacion no la activa con el servicio expuesto).
 func (s *Servicio) quitarTOTP() error {
 	if err := ComprobarQuitarTOTP(s.opc.Config); err != nil {
 		return err

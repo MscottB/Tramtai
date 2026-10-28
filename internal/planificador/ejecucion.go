@@ -370,7 +370,7 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 	// Primero el punto de acceso, después el adaptador y al final la plaza de la instancia: quien espera a su
 	// agente no ocupa plaza, así que otro trabajo listo de otro agente puede empezar. Un canal atiende a sus
 	// esperas por orden de llegada, así que cada agente conserva el orden de la cola.
-	for _, semaforo := range []chan struct{}{p.semaforoPunto(t.PuntoAcceso), p.semaforos[c.agente], p.ranuras} {
+	for _, semaforo := range []chan struct{}{p.semaforoPunto(t.PuntoAcceso), p.semaforos.agente[c.agente], p.deSuscripcion(c.agente), p.ranuras} {
 		if semaforo == nil {
 			continue
 		}

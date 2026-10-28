@@ -59,7 +59,7 @@ func ComprobarArranque(e Entrada) error {
 	if Expuesto(e) {
 		for _, s := range e.Suscripciones {
 			if !s.Personal {
-				return invalida(idioma.Tf("el servicio está abierto a la red (servicio.host o servicio.proxy.confiables) y %s usa una suscripción: así solo se admite una clave de API (adaptadores.%s.autenticacion: clave_api)", s.Agente, s.Agente))
+				return invalida(idioma.Tf("el servicio está abierto a la red (servicio.host o servicio.proxy.confiables) y %s usa una suscripción: así solo se admite una clave de API (adaptadores.%s.autenticacion: clave_api) o tu suscripción personal, con sus condiciones (tramtai-servidor agentes suscripcion %s --personal)", s.Agente, s.Agente, s.Agente))
 			}
 		}
 		for _, s := range e.Suscripciones {

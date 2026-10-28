@@ -623,3 +623,23 @@ func TestIdsDe(t *testing.T) {
 		t.Error("sin la cuenta, falla")
 	}
 }
+
+// TestOrdenEntrar: el inicio de sesión del CLI va como la cuenta del servicio con un entorno limpio (env -i: HOME, el
+// PATH del servicio, TERM y LANG), sin depender de la política de sudo; sin sudo, lo dice.
+func TestOrdenEntrar(t *testing.T) {
+	anterior := buscarPrograma
+	t.Cleanup(func() { buscarPrograma = anterior })
+	buscarPrograma = func(nombre string) (string, error) { return "/usr/bin/" + nombre, nil }
+	t.Setenv("TERM", "xterm-256color")
+	t.Setenv("LANG", "es_CL.UTF-8")
+	orden, err := OrdenEntrar("codex", "codex", []string{"login", "--device-auth"})
+	quiere := "/usr/bin/sudo -u tramtai -H env -i HOME=" + Rutas().Datos +
+		" PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin TERM=xterm-256color LANG=es_CL.UTF-8 codex login --device-auth"
+	if err != nil || strings.Join(append([]string{orden.Path}, orden.Args[1:]...), " ") != quiere {
+		t.Fatalf("%v\n%v\nse esperaba\n%s", err, orden, quiere)
+	}
+	buscarPrograma = func(nombre string) (string, error) { return "", &exec.Error{Name: nombre, Err: exec.ErrNotFound} }
+	if _, err := OrdenEntrar("claude", "claude", []string{"auth", "login"}); err == nil || !strings.Contains(err.Error(), "sudo") {
+		t.Fatalf("sin sudo: %v", err)
+	}
+}

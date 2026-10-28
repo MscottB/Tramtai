@@ -3,7 +3,6 @@ package servicio
 import (
 	"cmp"
 	"errors"
-	"net"
 	"net/http"
 
 	"tramtai/internal/adaptadores"
@@ -132,7 +131,17 @@ func (s *Servicio) ajustesServicio() contrato.AjustesServicio {
 	return a
 }
 
-func (s *Servicio) autenticacionUI(w http.ResponseWriter, r *http.Request, _ *sesion) {
+// autenticacionUI es solo de una sesión local, como soloLocal; en el servidor, a la sesión remota (la de la contraseña)
+// le dice 403 en lugar del 401 de una sesión que no vale: la suscripción personal se activa con la CLI.
+func (s *Servicio) autenticacionUI(w http.ResponseWriter, r *http.Request, ses *sesion) {
+	if !s.sesionLocal(r, ses) && s.entorno() == "servidor" {
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, idioma.T("la autenticación de los agentes del servidor solo se cambia desde el propio servidor (tramtai-servidor agentes suscripcion)")))
+		return
+	}
+	if !s.sesionLocal(r, ses) || !csrfValido(r, ses) {
+		api.NoAutorizado(w, r)
+		return
+	}
 	var peticion struct {
 		Agente string `json:"agente"`
 		Modo   string `json:"modo"`
@@ -225,7 +234,8 @@ func (s *Servicio) detenerUI(w http.ResponseWriter, _ *http.Request, _ *sesion) 
 }
 
 // cambiarAutenticacion pasa un agente que admite la suscripción a suscripción o clave de API: lo guarda en la
-// configuración global y lo aplica al servicio en marcha, sin reiniciarlo.
+// configuración global y lo aplica al servicio en marcha, sin reiniciarlo. Con el servicio expuesto (fuera de loopback o
+// detrás de un proxy) no pasa a suscripción: en el servidor, 409 con la orden de la suscripción personal.
 func (s *Servicio) cambiarAutenticacion(agente, modo string) error {
 	if !agentes.AdmiteSuscripcion(agente) {
 		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("%s no admite la suscripción", agente))
@@ -233,7 +243,10 @@ func (s *Servicio) cambiarAutenticacion(agente, modo string) error {
 	if modo != adaptadores.AutenticacionClaveAPI && modo != adaptadores.AutenticacionSuscripcion {
 		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("modo de autenticación desconocido: %s", modo))
 	}
-	if ip := net.ParseIP(s.opc.Host); modo == adaptadores.AutenticacionSuscripcion && s.opc.Host != "localhost" && (ip == nil || !ip.IsLoopback()) {
+	if modo == adaptadores.AutenticacionSuscripcion && s.opc.Expuesto {
+		if s.entorno() == "servidor" {
+			return nucleo.NuevoError(nucleo.CodigoAccionNoPermitida, idioma.Tf("el servidor está abierto a la red: la suscripción de %s solo se activa como personal, con sus condiciones (tramtai-servidor agentes suscripcion %s --personal)", agente, agente))
+		}
 		return nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.T("la suscripción no se permite con el servicio abierto a otros equipos"))
 	}
 	ruta, err := configuracion.RutaGlobal()

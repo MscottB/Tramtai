@@ -1,8 +1,11 @@
 package agentes
 
 import (
+	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
+	"strings"
 	"testing"
 
 	"tramtai/internal/adaptadores"
@@ -58,6 +61,25 @@ func TestRegistroYValoresPredeterminados(t *testing.T) {
 		}
 		if f.Comando != "" && c.Texto("comandos_agentes."+f.Nombre) != f.Comando {
 			t.Errorf("%s: comando predeterminado %q", f.Nombre, c.Texto("comandos_agentes."+f.Nombre))
+		}
+	}
+}
+
+// TestSimultaneasTope: adaptadores.<agente>.suscripcion_simultaneas va de 1 a 3 (1 por defecto); fuera de ahí la
+// configuración no carga.
+func TestSimultaneasTope(t *testing.T) {
+	global := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+	if c, err := configuracion.CargarConfiguracion("", Internos()); err != nil || c.Entero("adaptadores.claude.suscripcion_simultaneas") != 1 {
+		t.Fatalf("por defecto: %v", err)
+	}
+	for valor, vale := range map[string]bool{"0": false, "1": true, "3": true, "4": false} {
+		if err := os.WriteFile(global, []byte("adaptadores:\n  claude:\n    suscripcion_simultaneas: "+valor+"\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := configuracion.CargarConfiguracion("", Internos())
+		if vale != (err == nil) || !vale && (!strings.Contains(err.Error(), "suscripcion_simultaneas") || !strings.Contains(err.Error(), "1 a 3")) {
+			t.Errorf("suscripcion_simultaneas: %s: %v", valor, err)
 		}
 	}
 }

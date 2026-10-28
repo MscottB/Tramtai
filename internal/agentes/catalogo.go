@@ -12,6 +12,7 @@ import (
 	"tramtai/internal/agentes/codex"
 	"tramtai/internal/agentes/copilot"
 	"tramtai/internal/agentes/gemini"
+	"tramtai/internal/carpetas"
 	"tramtai/internal/configuracion"
 )
 
@@ -37,6 +38,7 @@ func internos() map[string]any {
 		if f.Comando != "" {
 			valores["comandos_agentes."+f.Nombre] = f.Comando
 			valores["adaptadores."+f.Nombre+".autenticacion"] = adaptadores.AutenticacionClaveAPI
+			valores["adaptadores."+f.Nombre+".suscripcion_simultaneas"] = 1
 		}
 	}
 	return valores
@@ -61,6 +63,22 @@ func Registro(c *configuracion.Configuracion) (map[string]adaptadores.Adaptador,
 		limites[f.Nombre] = c.Entero("concurrencia_servicio.adaptadores." + f.Nombre)
 	}
 	return registro, limites
+}
+
+// Simultaneas son, en el servidor, las peticiones a la vez de cada agente que admite la suscripción mientras la usa
+// (adaptadores.<agente>.suscripcion_simultaneas): una sola cuenta para todas las APIs y espacios. Fuera del servidor,
+// ninguna: el escritorio sigue como siempre.
+func Simultaneas(c *configuracion.Configuracion) map[string]int {
+	if !carpetas.Servidor() {
+		return nil
+	}
+	limites := map[string]int{}
+	for _, f := range fichas {
+		if AdmiteSuscripcion(f.Nombre) {
+			limites[f.Nombre] = c.Entero("adaptadores." + f.Nombre + ".suscripcion_simultaneas")
+		}
+	}
+	return limites
 }
 
 // NombreVisible es el nombre con que se muestra un agente; el id si no está en el catálogo.

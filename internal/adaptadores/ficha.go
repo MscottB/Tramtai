@@ -43,6 +43,10 @@ type Ficha struct {
 	PermitidoEnApps bool
 	// URLInstalacion es dónde se instala o se consigue su clave.
 	URLInstalacion string
+	// InicioSesion son los argumentos con que su CLI inicia sesión con la suscripción (tramtai --servidor agentes entrar);
+	// URLTerminos, las condiciones del proveedor que se enseñan al activar la suscripción personal.
+	InicioSesion []string
+	URLTerminos  string
 	// Crear construye el adaptador con la configuración efectiva.
 	Crear func(c *configuracion.Configuracion) Adaptador
 }

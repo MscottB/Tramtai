@@ -404,7 +404,7 @@ func TestSesionRemotaNoEsLocal(t *testing.T) {
 	if r, cuerpo := n.pedir("PUT", "/api/v1/servicio/claves/ANTHROPIC_API_KEY", `{"valor":"sk-prueba-123"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 401 {
 		t.Fatalf("PUT claves: %d %s", r.StatusCode, cuerpo)
 	}
-	if r, cuerpo := n.pedir("POST", "/ui/autenticacion", `{"agente":"claude","modo":"clave_api"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 401 {
+	if r, cuerpo := n.pedir("POST", "/ui/agentes/conexion", `{"agente":"claude","conectado":false}`, "X-CSRF-Token", n.csrf); r.StatusCode != 401 {
 		t.Fatalf("una ruta solo local: %d %s", r.StatusCode, cuerpo)
 	}
 	r, cuerpo := n.pedir("GET", "/ui/acerca", "")
@@ -499,7 +499,7 @@ func TestActivarTOTPEnDosPasos(t *testing.T) {
 // porqué), ni desde la Web UI ni por la API de administración que usa la CLI en Windows.
 func TestQuitarTOTPConSuscripcionPersonal(t *testing.T) {
 	secreto, _ := totp.Generar()
-	s, ts, seguro := conAdministrador(t, "adaptadores:\n  claude:\n    suscripcion_personal: true\n", secreto)
+	s, ts, seguro := conAdministrador(t, "adaptadores:\n  claude:\n    autenticacion: suscripcion\n    suscripcion_personal: true\n", secreto)
 	n := navegadorSeguro(t, seguro)
 	codigo, _ := totp.Codigo(secreto, time.Now())
 	if r, cuerpo := n.acceder(contrasenaPrueba, codigo); r.StatusCode != 200 {

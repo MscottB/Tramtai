@@ -18,6 +18,7 @@ var Ficha = adaptadores.Ficha{
 	VariablesClave:  []string{"ANTHROPIC_API_KEY"},
 	Comando:         "claude", Concurrencia: 1, PermitidoEnApps: true,
 	URLInstalacion: "https://docs.anthropic.com/claude-code",
+	InicioSesion:   []string{"auth", "login"}, URLTerminos: "https://code.claude.com/docs/en/legal-and-compliance",
 	Crear: func(c *configuracion.Configuracion) adaptadores.Adaptador {
 		return Claude{Programa: c.Texto("comandos_agentes.claude"), Autenticacion: adaptadores.NuevoModo(c.Texto("adaptadores.claude.autenticacion"))}
 	},

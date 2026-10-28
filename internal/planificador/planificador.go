@@ -87,15 +87,37 @@ func OpcionesDesde(c *configuracion.Configuracion, instancia string) Opciones {
 
 // Semaforos limita las ejecuciones simultáneas de cada adaptador en todo el servicio, porque todas
 // las instancias comparten la sesión del CLI.
-type Semaforos map[string]chan struct{}
+// En el servidor, suscripcion añade otro por agente que solo se toma mientras el agente usa la suscripción
+// (adaptadores.<agente>.suscripcion_simultaneas): así vale también tras cambiar la autenticación en marcha.
+type Semaforos struct {
+	agente, suscripcion map[string]chan struct{}
+}
 
 // NuevosSemaforos crea un semáforo por adaptador con su límite (mínimo 1).
 func NuevosSemaforos(limites map[string]int) Semaforos {
-	s := Semaforos{}
-	for nombre, limite := range limites {
-		s[nombre] = make(chan struct{}, max(limite, 1))
-	}
+	return Semaforos{agente: canales(limites)}
+}
+
+// ConSuscripcion añade los semáforos de la suscripción, con su límite por agente (mínimo 1).
+func (s Semaforos) ConSuscripcion(limites map[string]int) Semaforos {
+	s.suscripcion = canales(limites)
 	return s
+}
+
+func canales(limites map[string]int) map[string]chan struct{} {
+	c := map[string]chan struct{}{}
+	for nombre, limite := range limites {
+		c[nombre] = make(chan struct{}, max(limite, 1))
+	}
+	return c
+}
+
+// deSuscripcion es el semáforo de la suscripción del agente si ahora mismo la usa; nil si no.
+func (p *Planificador) deSuscripcion(agente string) chan struct{} {
+	if a, ok := p.adaptadores[agente].(adaptadores.ConAutenticacion); ok && a.ModoAutenticacion().Valor() == adaptadores.AutenticacionSuscripcion {
+		return p.semaforos.suscripcion[agente]
+	}
+	return nil
 }
 
 // Planificador ejecuta los trabajos de una instancia.

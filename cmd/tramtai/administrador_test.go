@@ -137,13 +137,14 @@ func TestQuitarTOTPConSuscripcionPersonal(t *testing.T) {
 	*guardado = "SECRETO"
 	global := filepath.Join(t.TempDir(), "config.yaml")
 	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
-	if err := os.WriteFile(global, []byte("adaptadores:\n  claude:\n    suscripcion_personal: true\n"), 0o600); err != nil {
+	if err := os.WriteFile(global, []byte("adaptadores:\n  claude:\n    autenticacion: suscripcion\n    suscripcion_personal: true\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := ejecutarAdmin(t, "", "admin", "totp", "disable"); err == nil || !strings.Contains(err.Error(), "suscripción personal") || *guardado == "" {
 		t.Fatalf("con suscripción personal: %v %q", err, *guardado)
 	}
-	if err := os.WriteFile(global, []byte("adaptadores:\n  claude:\n    suscripcion_personal: false\n"), 0o600); err != nil {
+	// Pasado a clave de API, como pide el mensaje, ya se puede quitar.
+	if err := os.WriteFile(global, []byte("adaptadores:\n  claude:\n    autenticacion: clave_api\n    suscripcion_personal: true\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := servicio.NuevosCodigosRecuperacion(datos); err != nil {

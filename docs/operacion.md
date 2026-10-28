@@ -122,6 +122,8 @@ tramtai espacios                   # los espacios de trabajo: activos, detenidos
 tramtai espacio iniciar|detener [carpeta|id]
 tramtai espacio olvidar <id>       # borra sus datos en Tramtai, nunca la carpeta del proyecto
 tramtai agentes desconectar|conectar <agente>   # deja un agente fuera sin desinstalar su CLI
+tramtai agentes suscripcion <agente>            # tu suscripción, tras los riesgos (en el servidor abierto a la red: --personal [--simultaneas 1-3])
+tramtai --servidor agentes entrar <agente>      # en el servidor: el CLI inicia sesión con la cuenta del servicio
 
 tramtai trabajos listar|mostrar|cancelar|reintentar|eliminar   # las peticiones; -i <espacio> para elegir otro; --global para la global
 ```
@@ -329,7 +331,7 @@ La clave de servicio (`datos/token-servicio`) habilita `/api/v1/servicio`:
 | `POST /api/v1/servicio/espacios/{id}/confianza` | `{"confiar": true}` añade su proyecto a `proyectos_confiables`; `false` lo quita (204). Solo para el espacio de un proyecto con ruta: si no, 400 `solicitud_invalida`. |
 | `POST /api/v1/servicio/espacios/{id}/ubicacion` | `{"ruta": "…"}` asocia un espacio cuya carpeta no se encuentra con una carpeta que tenga `.tramtai/config.yaml`: conserva su id, su clave y su historial, y lo activa. Responde el espacio (200). |
 | `POST /api/v1/servicio/proyectos` | `{"raiz": "…", "confiar": true, "crear_aqui": false}` abre el proyecto (y lo crea si falta) como espacio activo; responde el espacio (200). Si hay que decidir responde 409: `confianza_requerida` con `claves` (las de seguridad de su `local.yaml`) y `movido` (dónde estaba, si parece uno movido), o `dentro_de_proyecto` con `proyecto`. Se repite con `confiar` o con `crear_aqui: true`. |
-| `PUT /api/v1/servicio/agentes/{agente}/autenticacion` | `{"modo": "suscripcion"}` o `{"modo": "clave_api"}` en un agente que admite la suscripción, al momento y en todos los espacios (204). |
+| `PUT /api/v1/servicio/agentes/{agente}/autenticacion` | `{"modo": "suscripcion"}` o `{"modo": "clave_api"}` en un agente que admite la suscripción, al momento y en todos los espacios (204). Con el servicio abierto a la red no pasa a suscripción: en el servidor, 409 `accion_no_permitida` con la orden `tramtai-servidor agentes suscripcion <agente> --personal`. |
 | `POST /api/v1/servicio/agentes/{agente}/conexion` | `{"conectado": false}` desconecta un agente sin desinstalar su CLI (`adaptadores.<agente>.desconectado`); `true` lo vuelve a conectar (204). |
 | `GET /api/v1/servicio/instancias/{id}/configuracion` | Ver su configuración efectiva. |
 | `POST /api/v1/servicio/sesiones` | `{"instancia": "…"}` da una URL de un solo uso que abre la Web UI de ese espacio ya dentro (`tramtai abrir`). |

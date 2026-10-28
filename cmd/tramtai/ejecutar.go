@@ -28,7 +28,7 @@ import (
 )
 
 func comandoAgentes() *cobra.Command {
-	grupo := &cobra.Command{Use: "agentes", Short: idioma.T("Diagnostica cada agente: versión, autenticación y términos (sin consumir cuota)"),
+	grupo := &cobra.Command{Use: "agentes", Aliases: []string{"agents"}, Short: idioma.T("Diagnostica cada agente: versión, autenticación y términos (sin consumir cuota)"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := cargarConfiguracion()
 			if err != nil {
@@ -84,6 +84,7 @@ func comandoAgentes() *cobra.Command {
 	grupo.AddCommand(
 		&cobra.Command{Use: "desconectar <agente>", Short: idioma.T("Desconecta un agente sin desinstalar su CLI"), Args: cobra.ExactArgs(1), RunE: conexion(false)},
 		&cobra.Command{Use: "conectar <agente>", Short: idioma.T("Vuelve a conectar un agente desconectado"), Args: cobra.ExactArgs(1), RunE: conexion(true)},
+		comandoEntrar(), comandoSuscripcion(),
 	)
 	return grupo
 }

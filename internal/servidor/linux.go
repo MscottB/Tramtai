@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"slices"
@@ -380,4 +381,29 @@ func Reiniciar() error {
 		}
 	}
 	return orden("systemctl", "restart", "tramtai")
+}
+
+// pathServicio es el PATH que systemd da al servicio (la unidad no pone otro): el inicio de sesión busca el CLI donde lo
+// buscará el servicio.
+const pathServicio = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+
+// buscarPrograma localiza un programa en el PATH; las pruebas lo sustituyen.
+var buscarPrograma = exec.LookPath
+
+// OrdenEntrar es el inicio de sesión del CLI de un agente (comando y args de su ficha) como la cuenta del servicio, con
+// su carpeta como HOME y un entorno limpio (env -i) que no depende de la política de sudo: el CLI guarda la sesión donde
+// la busca el servicio. En Codex con suscripción, el adaptador no pone CODEX_HOME, así que es ~/.codex de esa carpeta.
+// Tramtai no lee ni copia lo que guarde el CLI.
+func OrdenEntrar(_, comando string, args []string) (*exec.Cmd, error) {
+	sudo, err := buscarPrograma("sudo")
+	if err != nil {
+		return nil, errors.New(idioma.T("agentes entrar necesita sudo para iniciar sesión con la cuenta del servicio: instálalo y vuelve a probar"))
+	}
+	orden := []string{"-u", Cuenta, "-H", "env", "-i", "HOME=" + Rutas().Datos, "PATH=" + pathServicio}
+	for _, nombre := range []string{"TERM", "LANG"} { // el código de dispositivo se lee en la terminal, en su idioma
+		if valor := os.Getenv(nombre); valor != "" {
+			orden = append(orden, nombre+"="+valor)
+		}
+	}
+	return exec.Command(sudo, append(append(orden, comando), args...)...), nil
 }

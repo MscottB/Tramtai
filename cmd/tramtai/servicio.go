@@ -442,11 +442,11 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	reiniciar := reinicioDelServicio(datos, cmp.Or(archivo, filepath.Join(datos, "servicio.log")), &reinicioPedido)
 	registro, limites := agentes.Registro(c)
 	raizConversor, _ := documentos.RaizConversor() // ahí se prepara el conversor de archivos
-	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites),
+	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites).ConSuscripcion(agentes.Simultaneas(c)),
 		Host: host, Puerto: puertoUsado, PuertoConfigurado: puerto, PuertoAutomatico: automatico, Reiniciar: reiniciar,
 		Hosts: hostsPermitidos(host, red.Dominios), Confiables: red.Confiables, Dominios: red.Dominios, TLS: configTLS, Registros: salida, Web: recursos.Web(), Entorno: carpetas.Entorno(),
 		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,
-		EntradaLocal: entradaLocal(c, red), BuscarActualizaciones: c.Booleano("servicio.buscar_actualizaciones"),
+		EntradaLocal: entradaLocal(c, red), Expuesto: servidor.Expuesto(red), BuscarActualizaciones: c.Booleano("servicio.buscar_actualizaciones"),
 		RaizConversor: raizConversor, PrepararConversor: c.Booleano("conversion.preparar_al_iniciar")})
 	if err != nil {
 		oyente.Close()
@@ -575,7 +575,7 @@ func hostsPermitidos(host string, dominios []string) []string {
 }
 
 // entradaServidor reúne de la configuración lo que deciden las reglas de exposición (servidor.ComprobarArranque). Las
-// suscripciones son las de los agentes en modo suscripción; hasta que haya suscripción personal y TOTP, ninguna lo es.
+// suscripciones son las de los agentes en modo suscripción; personal, si adaptadores.<agente>.suscripcion_personal.
 func entradaServidor(c *configuracion.Configuracion) (servidor.Entrada, error) {
 	confiables, err := servidor.Confiables(textos(c.Lista("servicio.proxy.confiables")))
 	if err != nil {
@@ -594,7 +594,7 @@ func entradaServidor(c *configuracion.Configuracion) (servidor.Entrada, error) {
 	}
 	for _, f := range agentes.Todos() {
 		if agente := f.Nombre; agentes.AdmiteSuscripcion(agente) && c.Texto("adaptadores."+agente+".autenticacion") == adaptadores.AutenticacionSuscripcion {
-			e.Suscripciones = append(e.Suscripciones, servidor.Suscripcion{Agente: agente})
+			e.Suscripciones = append(e.Suscripciones, servidor.Suscripcion{Agente: agente, Personal: c.Booleano("adaptadores." + agente + ".suscripcion_personal")})
 		}
 	}
 	return e, nil
