@@ -128,7 +128,7 @@ func decodificar(t *testing.T, texto string) map[string]any {
 
 func esperarEstado(t *testing.T, ts *httptest.Server, id string, objetivo nucleo.Estado) map[string]any {
 	t.Helper()
-	limite := time.Now().Add(10 * time.Second)
+	limite := time.Now().Add(plazoEspera)
 	for {
 		_, cuerpo := pedir(t, ts, "GET", "/api/v1/trabajos/"+id, "")
 		v := decodificar(t, cuerpo)

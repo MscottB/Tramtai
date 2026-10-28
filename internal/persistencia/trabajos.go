@@ -240,7 +240,14 @@ func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado, 
 	if esfuerzo != "" {
 		sinEsfuerzo, conEsfuerzo, args = "", ", '$.esfuerzo', ?", append(args, esfuerzo)
 	}
-	r, err := a.db.ExecContext(ctx, `UPDATE trabajos SET solicitud = json_set(json_remove(solicitud, '$.perfil_modelo'`+sinEsfuerzo+`), '$.agente', ?, '$.modelo', ?,
+	// La hora se toma con la conexión ya en la mano, como en CambiarEstado: si se tomara antes de esperarla, un flujo de
+	// eventos que leyera mientras tanto seguiría desde una hora posterior y no vería nunca el cambio.
+	tx, err := a.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	r, err := tx.ExecContext(ctx, `UPDATE trabajos SET solicitud = json_set(json_remove(solicitud, '$.perfil_modelo'`+sinEsfuerzo+`), '$.agente', ?, '$.modelo', ?,
 		'$.respaldo', json(?)`+conEsfuerzo+`), modelo_enviado = ?, intento = intento + 1, actualizado_en = ? WHERE id = ?`, append(args, modeloEnviado, fecha(a.reloj()), id)...)
 	if err != nil {
 		return err
@@ -248,8 +255,7 @@ func (a *Almacen) CambiarAgente(ctx context.Context, id, agente, modeloEnviado, 
 	if n, err := r.RowsAffected(); err == nil && n == 0 {
 		return nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("petición no encontrada: %s", id))
 	}
-	a.avisar()
-	return nil
+	return a.confirmar(tx)
 }
 
 // Obtener devuelve un trabajo o no_encontrado.

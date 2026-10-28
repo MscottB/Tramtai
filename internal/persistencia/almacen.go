@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	_ "modernc.org/sqlite" // driver Go puro: sin CGO
@@ -197,7 +198,7 @@ func Abrir(ruta string) (*Almacen, error) {
 	if err := registrarPlegar(); err != nil {
 		return nil, err
 	}
-	db, err := sql.Open("sqlite", "file:"+rutaURI(ruta)+"?_pragma=auto_vacuum(2)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)")
+	db, err := sql.Open("sqlite", "file:"+rutaURI(ruta)+"?"+pragmas(testing.Testing()))
 	if err != nil {
 		return nil, err
 	}
@@ -214,6 +215,17 @@ func Abrir(ruta string) (*Almacen, error) {
 	}
 	compactada := compactable(db)
 	return &Almacen{db: db, VentanaIdempotencia: 24 * time.Hour, reloj: time.Now, Zona: time.Local, Compactada: compactada}, nil
+}
+
+// pragmas son los PRAGMA con que se abre la base para escribir. El servicio se queda con synchronous FULL, el de SQLite:
+// un commit confirmado sobrevive a un corte de luz. Las pruebas (prueba = true) no esperan al disco en cada commit: en el
+// runner de Windows, con todos los paquetes a la vez, cada FlushFileBuffers llegaba a tardar segundos y vencían sus esperas.
+func pragmas(prueba bool) string {
+	p := "_pragma=auto_vacuum(2)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)"
+	if prueba {
+		p += "&_pragma=synchronous(OFF)"
+	}
+	return p
 }
 
 // compactable pasa la base a auto_vacuum incremental (con un VACUUM único, fuera de transacción) para que la purga
