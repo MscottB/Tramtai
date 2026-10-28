@@ -531,7 +531,7 @@ func TestSaludConReto(t *testing.T) {
 		t.Fatalf("sin reto no hay prueba: %s", cuerpo)
 	}
 	_, cuerpo := pedir(t, ts.URL, "GET", "/healthz?reto=abc", "", "")
-	if !strings.Contains(cuerpo, `"prueba":"`+contrato.PruebaIdentidad(s.tokenAdmin, s.Base(), "abc")+`"`) {
+	if !strings.Contains(cuerpo, `"prueba":"`+contrato.PruebaIdentidad(s.tokenAdmin, s.BaseLocal(), "abc")+`"`) {
 		t.Fatalf("la prueba es el HMAC del token sobre el reto: %s", cuerpo)
 	}
 }

@@ -54,7 +54,7 @@ func (p *Pagina) verCodigo() tea.Cmd {
 	}
 	c, o, api, punto, clave := p.c, p.origen(), p.api, p.punto, p.tx("codigo.tuClave")
 	return func() tea.Msg {
-		base := c.Cli.Base
+		base := c.Cli.BasePublica()
 		if r, err := c.Cli.Instancia(c.Ctx, c.Instancia); err == nil && r.Base != "" {
 			base = r.Base
 		}

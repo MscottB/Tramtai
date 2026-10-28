@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"cmp"
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -177,7 +179,7 @@ func comandoServicio() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("servicio en marcha en %s\nWeb UI: %s (o tramtai abrir)\n"), c.Base, c.Base)
+			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("servicio en marcha en %s\nWeb UI: %s (o tramtai abrir)\n"), c.BasePublica(), c.BasePublica())
 			return nil
 		}}
 	iniciar.Flags().BoolVarP(&segundoPlano, "segundo-plano", "d", false, idioma.T("inicia el servicio desacoplado de esta terminal"))
@@ -313,7 +315,7 @@ func comandoServicio() *cobra.Command {
 			if len(args) == 0 && !cmd.Flags().Changed("automatico") {
 				fmt.Fprintf(out, idioma.T("puerto configurado: %d · si está ocupado, usar otro libre: %v\n"), c.Entero("servicio.puerto"), c.Booleano("servicio.puerto_automatico"))
 				if errActivo == nil {
-					fmt.Fprintln(out, idioma.Tf("servicio en marcha en %s", activo.Base))
+					fmt.Fprintln(out, idioma.Tf("servicio en marcha en %s", activo.BasePublica()))
 				}
 				return nil
 			}
@@ -396,7 +398,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	}
 	activo, err := cliente.Conectar(datos)
 	if err == nil {
-		return fmt.Errorf(idioma.T("el servicio ya está en marcha en %s"), activo.Base)
+		return fmt.Errorf(idioma.T("el servicio ya está en marcha en %s"), activo.BasePublica())
 	}
 	if errors.Is(err, cliente.ErrServidorOtraVersion) { // el servicio del sistema no se detiene ni se pisa desde aquí
 		return err
@@ -416,10 +418,18 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 		return err
 	}
 	defer soltar()
-	automatico := c.Booleano("servicio.puerto_automatico")
-	oyente, puertoUsado, err := servicio.Escuchar(host, puerto, automatico)
+	configTLS, err := servicio.ConfigTLS(servicio.OpcionesTLS{Modo: red.TLS, Certificado: red.Certificado, Clave: red.Clave,
+		Dominios: red.Dominios, Datos: datos, Correo: red.Correo, Registros: salida})
 	if err != nil {
 		return err
+	}
+	automatico := c.Booleano("servicio.puerto_automatico")
+	oyente, puertoUsado, err := abrirOyente(red.TLS, host, puerto, automatico)
+	if err != nil {
+		return err
+	}
+	if configTLS != nil {
+		oyente = tls.NewListener(oyente, configTLS)
 	}
 	if puertoUsado != puerto {
 		fmt.Fprintf(salida, idioma.T("el puerto %d está ocupado: Tramtai usa el %d (para fijar otro: Ajustes o «tramtai servicio puerto <número>»)\n"), puerto, puertoUsado)
@@ -430,7 +440,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	raizConversor, _ := documentos.RaizConversor() // ahí se prepara el conversor de archivos
 	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites),
 		Host: host, Puerto: puertoUsado, PuertoConfigurado: puerto, PuertoAutomatico: automatico, Reiniciar: reiniciar,
-		Hosts: hostsPermitidos(host, red.Dominios), Confiables: red.Confiables, Dominios: red.Dominios, Registros: salida, Web: recursos.Web(), Entorno: carpetas.Entorno(),
+		Hosts: hostsPermitidos(host, red.Dominios), Confiables: red.Confiables, Dominios: red.Dominios, TLS: configTLS, Registros: salida, Web: recursos.Web(), Entorno: carpetas.Entorno(),
 		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,
 		EntradaLocal: entradaLocal(c, red), BuscarActualizaciones: c.Booleano("servicio.buscar_actualizaciones"),
 		RaizConversor: raizConversor, PrepararConversor: c.Booleano("conversion.preparar_al_iniciar")})
@@ -449,7 +459,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 		sv.Cerrar()
 		return err
 	}
-	fmt.Fprintf(salida, idioma.T("tramtai %s escuchando en %s\nWeb UI: %s (o tramtai abrir)\n"), version.Texto(), sv.Base(), sv.Base())
+	fmt.Fprintf(salida, idioma.T("tramtai %s escuchando en %s\nWeb UI: %s (o tramtai abrir)\n"), version.Texto(), sv.BasePublica(), sv.BasePublica())
 	imprimirEstado(salida, sv.Estado(context.Background()))
 	if archivo == "" {
 		fmt.Fprintln(salida, idioma.T("\nAquí verás una línea por cada petición (al recibirla y al terminar). Ctrl+C para detener."))
@@ -484,6 +494,19 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 		return nil
 	}
 	return err
+}
+
+// abrirOyente abre el puerto del servicio. Con letsencrypt el desafío TLS-ALPN-01 solo llega al 443, así que
+// servicio.puerto_automatico no se aplica: un puerto ocupado es un error, no un puerto distinto.
+func abrirOyente(modoTLS, host string, puerto int, automatico bool) (net.Listener, int, error) {
+	if modoTLS != "letsencrypt" {
+		return servicio.Escuchar(host, puerto, automatico)
+	}
+	oyente, err := net.Listen("tcp", net.JoinHostPort(host, strconv.Itoa(puerto)))
+	if err != nil {
+		return nil, 0, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("servicio.tls.modo letsencrypt necesita el puerto %d libre (no usa servicio.puerto_automatico): %s", puerto, err.Error()))
+	}
+	return oyente, puerto, nil
 }
 
 // lanzar arranca un proceso desacoplado; las pruebas lo sustituyen.

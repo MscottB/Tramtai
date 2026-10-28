@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	"strconv"
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
@@ -216,7 +215,7 @@ func (s *Servicio) reiniciarUI(w http.ResponseWriter, r *http.Request, _ *sesion
 	puerto := puertoTrasReiniciar(s.opc.Host, s.opc.Puerto, s.opc.PuertoConfigurado)
 	s.mu.RUnlock()
 	// El servicio nuevo espera a que este termine y escucha en el puerto configurado (o en otro libre).
-	api.EscribirJSON(w, http.StatusAccepted, map[string]any{"url": "http://" + net.JoinHostPort(s.opc.Host, strconv.Itoa(puerto))})
+	api.EscribirJSON(w, http.StatusAccepted, map[string]any{"url": s.urlPublica(puerto)})
 	s.detenerUna.Do(func() { close(s.detener) })
 }
 

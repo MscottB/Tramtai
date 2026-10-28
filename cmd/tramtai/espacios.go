@@ -106,7 +106,7 @@ func comandoEspacio() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("espacio %s activo en %s\n"), a.Instancia.ID, c.Base)
+			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("espacio %s activo en %s\n"), a.Instancia.ID, c.BasePublica())
 			return nil
 		}}
 	detener := &cobra.Command{Use: "detener [carpeta|id]", Short: idioma.T("Detiene el espacio: vacía su cola sin afectar a los demás"), Args: cobra.MaximumNArgs(1),

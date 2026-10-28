@@ -53,9 +53,9 @@ func abrirWebUI(cmd *cobra.Command, ambito string, enNavegador bool) error {
 	}
 	out := cmd.OutOrStdout()
 	if errPrevio == nil {
-		fmt.Fprintf(out, idioma.T("Tramtai ya estaba en marcha en %s.\n"), c.Base)
+		fmt.Fprintf(out, idioma.T("Tramtai ya estaba en marcha en %s.\n"), c.BasePublica())
 	} else {
-		fmt.Fprintf(out, idioma.T("Tramtai se inició en segundo plano en %s.\n"), c.Base)
+		fmt.Fprintf(out, idioma.T("Tramtai se inició en segundo plano en %s.\n"), c.BasePublica())
 	}
 	fmt.Fprintln(out, idioma.T("Sigue funcionando aunque cierres esta terminal o la ventana."))
 	if err := abrirInterfaz(cmd, c, ambito, raiz, enNavegador); err != nil {

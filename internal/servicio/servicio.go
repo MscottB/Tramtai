@@ -4,6 +4,7 @@ package servicio
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"io/fs"
@@ -54,8 +55,12 @@ type Opciones struct {
 	// (ClienteReal, EsHTTPS). Dominios son los nombres de servicio.dominios, que también están en Hosts.
 	Confiables []netip.Prefix
 	Dominios   []string
-	Registros  io.Writer // mensajes de operación; nil los descarta
-	Web        fs.FS     // Web UI compilada (internal/recursos); nil la desactiva
+	// TLS es la configuración del TLS propio (ConfigTLS); nil = HTTP plano. Con ella, el servicio abre además un oyente
+	// HTTP solo en 127.0.0.1 para su propia CLI, terminal y app (BaseLocal), y lo que anuncia a las personas es https
+	// (BasePublica). Los puntos de acceso con puerto propio también hablan TLS.
+	TLS       *tls.Config
+	Registros io.Writer // mensajes de operación; nil los descarta
+	Web       fs.FS     // Web UI compilada (internal/recursos); nil la desactiva
 	// PlazoDrenaje es lo que Drenar espera a los trabajos en curso antes de interrumpirlos.
 	PlazoDrenaje time.Duration
 	// EntradaLocal deja entrar en la Web UI sin token al mismo usuario del sistema (servicio.entrada_local).
@@ -147,6 +152,9 @@ type Servicio struct {
 	fondo sync.WaitGroup // tareas en segundo plano que usan las bases (purgas): Cerrar las espera
 
 	conversor *documentos.Preparacion // markitdown, compartido por todas las instancias; nil sin RaizUsuario
+
+	local    net.Listener // con TLS propio: el oyente HTTP de 127.0.0.1 para los clientes de este equipo; nil sin TLS
+	localSrv *http.Server
 }
 
 // apertura es una instancia que se está abriendo: quien la pida a la vez espera a listo y recibe la misma.
@@ -186,7 +194,7 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 	s.actualizaciones.Consultar = opc.ConsultarVersion
 	s.fondo.Go(func() { actualizacion.LimpiarDescargas(time.Now().Add(-10 * time.Minute)) }) // los instaladores que dejó la versión anterior
 	s.admin = s.rutasAdmin()
-	s.handler = api.Proteger(opc.Hosts, nil, http.HandlerFunc(s.enrutar))
+	s.handler = s.conHSTS(api.Proteger(opc.Hosts, nil, http.HandlerFunc(s.enrutar)))
 	if opc.RaizConversor != "" {
 		s.conversor = documentos.NuevaPreparacion(opc.RaizConversor, opc.Config.Texto("conversion.comando"), opc.UV)
 		s.conversor.Registros = opc.Registros // cada preparación, también la que se pide a mano, queda anotada
@@ -194,6 +202,14 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 		if e := s.conversor.Estado(); opc.PrepararConversor && (e.Estado == "falta" || s.conversor.Desactualizado()) {
 			s.conversor.Preparar()
 		}
+	}
+	if opc.TLS != nil {
+		if s.local, err = net.Listen("tcp", "127.0.0.1:0"); err != nil {
+			return nil, err
+		}
+		s.localSrv = &http.Server{Handler: s, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 64 << 10,
+			ConnContext: ContextoDeConexion}
+		go s.localSrv.Serve(s.local)
 	}
 	return s, nil
 }
@@ -215,9 +231,41 @@ func (s *Servicio) fijarPrepararConversor(preparar bool) error {
 
 func (s *Servicio) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.handler.ServeHTTP(w, r) }
 
-// Base es la URL del puerto principal.
-func (s *Servicio) Base() string {
-	return "http://" + net.JoinHostPort(s.opc.Host, strconv.Itoa(s.opc.Puerto))
+// conHSTS envuelve un handler del servicio: si la petición llegó cifrada (TLS propio o un proxy de confianza que lo
+// dice), toda respuesta lleva HSTS de un año; por HTTP plano, nunca. Lo usan el puerto principal y los puntos de acceso
+// con puerto propio.
+func (s *Servicio) conHSTS(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if EsHTTPS(r, s.opc.Confiables) {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000")
+		}
+		h.ServeHTTP(w, r)
+	})
+}
+
+// BaseLocal es la dirección a la que se conectan la CLI, la terminal y la app de este equipo (la del descriptor). Con TLS
+// propio es el oyente HTTP de 127.0.0.1, porque esos clientes no hablan TLS; si no, la del puerto principal.
+func (s *Servicio) BaseLocal() string {
+	if s.local != nil {
+		return "http://" + s.local.Addr().String()
+	}
+	return s.urlPublica(s.opc.Puerto)
+}
+
+// BasePublica es la dirección que se muestra a las personas y a las apps: https con TLS propio (con el primer dominio
+// de servicio.dominios, si lo hay), y si no la del puerto principal.
+func (s *Servicio) BasePublica() string { return s.urlPublica(s.opc.Puerto) }
+
+// urlPublica es la URL del servicio en ese puerto, con el esquema y el nombre con que se anuncia.
+func (s *Servicio) urlPublica(puerto int) string {
+	esquema, nombre := "http", s.opc.Host
+	if s.opc.TLS != nil {
+		esquema = "https"
+		if len(s.opc.Dominios) > 0 {
+			nombre = s.opc.Dominios[0]
+		}
+	}
+	return esquema + "://" + net.JoinHostPort(nombre, strconv.Itoa(puerto))
 }
 
 // Detenido se cierra cuando la administración pide detener el servicio.
@@ -237,7 +285,7 @@ func (s *Servicio) enrutar(w http.ResponseWriter, r *http.Request) {
 			salud["servicio"] = s.ID
 		}
 		if reto := r.URL.Query().Get("reto"); reto != "" && len(reto) <= 128 {
-			salud["prueba"] = contrato.PruebaIdentidad(s.tokenAdmin, s.Base(), reto)
+			salud["prueba"] = contrato.PruebaIdentidad(s.tokenAdmin, s.BaseLocal(), reto)
 		}
 		api.EscribirJSON(w, http.StatusOK, salud)
 		return
@@ -377,5 +425,8 @@ func (s *Servicio) Cerrar() {
 	}
 	for _, inst := range instancias {
 		inst.cerrar(false)
+	}
+	if s.localSrv != nil {
+		s.localSrv.Close() // el oyente local sirve a los clientes hasta aquí: Drenar los deja recoger resultados
 	}
 }

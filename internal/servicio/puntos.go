@@ -2,6 +2,7 @@ package servicio
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -414,7 +415,7 @@ func (s *Servicio) abrirPunto(c candidato, huella, firma string, inst *Instancia
 		Conversor: s.conversor}
 	handler := api.Proteger(s.opc.Hosts, func(r *http.Request) bool { return api.HuellaValida(r, huella) }, srv.Rutas())
 	if c.cfg.Puerto == 0 {
-		p.handler, p.url = handler, s.Base()+c.cfg.RutaBase
+		p.handler, p.url = handler, s.BasePublica()+c.cfg.RutaBase
 		return p
 	}
 	direccion := net.JoinHostPort(s.opc.Host, strconv.Itoa(c.cfg.Puerto))
@@ -423,7 +424,11 @@ func (s *Servicio) abrirPunto(c candidato, huella, firma string, inst *Instancia
 		p.err = idioma.Tf("no se pudo abrir %s (¿puerto en uso?)", direccion)
 		return p
 	}
-	p.handler, p.url, p.oyente = handler, "http://"+direccion, oyente
+	if s.opc.TLS != nil { // las claves Bearer de las apps no viajan en claro por el puerto propio del punto
+		oyente = tls.NewListener(oyente, s.opc.TLS)
+		handler = s.conHSTS(handler)
+	}
+	p.handler, p.url, p.oyente = handler, s.urlPublica(c.cfg.Puerto), oyente
 	p.srv = &http.Server{Handler: handler, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 64 << 10,
 		ConnContext: ContextoDeConexion}
 	go p.srv.Serve(oyente)

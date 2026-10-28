@@ -23,7 +23,7 @@ func (s *Servicio) acerca(local bool) contrato.Acerca {
 	commit, modificado := version.Commit()
 	datos := contrato.Acerca{Version: version.Texto(), Commit: commit, Modificado: modificado, Go: runtime.Version(),
 		Portable: carpetas.Portable(), Entorno: s.entorno(), Sistema: runtime.GOOS, Arquitectura: runtime.GOARCH, Almacen: credenciales.Almacen(),
-		Servicio: contrato.ServicioAcerca{Direccion: s.Base(), PID: os.Getpid(), IniciadoEn: s.IniciadoEn.UTC()}}
+		Servicio: contrato.ServicioAcerca{Direccion: s.BasePublica(), PID: os.Getpid(), IniciadoEn: s.IniciadoEn.UTC()}}
 	if datos.Entorno == "servidor" {
 		if u, err := user.Current(); err == nil {
 			datos.Cuenta = u.Username

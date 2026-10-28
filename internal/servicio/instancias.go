@@ -373,7 +373,7 @@ func (s *Servicio) Estado(ctx context.Context) Estado {
 		nueva = &contrato.VersionNueva{Version: v.Etiqueta, URL: v.Pagina, Notas: v.Notas, Instalable: instalada && v.TieneInstalador()}
 	}
 	s.mu.RLock()
-	e := Estado{Identificador: s.ID, Version: version.Texto(), PID: os.Getpid(), IniciadoEn: s.IniciadoEn, Base: s.Base(),
+	e := Estado{Identificador: s.ID, Version: version.Texto(), PID: os.Getpid(), IniciadoEn: s.IniciadoEn, Base: s.BasePublica(),
 		Instancias: []EstadoInstancia{}, Puntos: s.estadoPuntos(), Errores: s.erroresPuntos, Actualizacion: nueva}
 	if s.errorEstado != "" {
 		e.Errores = append(slices.Clone(e.Errores), s.errorEstado)

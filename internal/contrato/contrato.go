@@ -58,6 +58,7 @@ type Estado struct {
 	PID           int               `json:"pid"`
 	IniciadoEn    time.Time         `json:"iniciado_en"`
 	Base          string            `json:"base"`
+	BasePublica   string            `json:"base_publica,omitempty"` // lo que se muestra a las personas, si no es Base (TLS propio: Base es el oyente local)
 	Instancias    []EstadoInstancia `json:"instancias"`
 	Puntos        []EstadoPunto     `json:"puntos_acceso"`
 	Errores       []string          `json:"errores_configuracion,omitempty"`
@@ -83,6 +84,7 @@ type Descriptor struct {
 	Host          string            `json:"host"`
 	Puerto        int               `json:"puerto"`
 	Base          string            `json:"base"`
+	BasePublica   string            `json:"base_publica,omitempty"` // lo que se muestra a las personas, si no es Base (TLS propio: Base es el oyente local)
 	Version       string            `json:"version"`
 	Instancias    []string          `json:"instancias_activas"`
 	Puntos        []PuntoDescriptor `json:"puntos_acceso"`

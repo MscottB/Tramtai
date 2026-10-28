@@ -342,5 +342,5 @@ func (s *Servicio) adminSesion(w http.ResponseWriter, r *http.Request) {
 		api.EscribirError(w, r, err)
 		return
 	}
-	api.EscribirJSON(w, http.StatusOK, map[string]any{"url": s.Base() + "/ui/entrar?codigo=" + codigo})
+	api.EscribirJSON(w, http.StatusOK, map[string]any{"url": s.BasePublica() + "/ui/entrar?codigo=" + codigo})
 }
