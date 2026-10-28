@@ -142,7 +142,11 @@ func ActualizarConElInstalado(salida, errores io.Writer) (bool, error) {
 	if err != nil {
 		return true, err
 	}
-	if a, err := os.Stat(actual); err == nil && os.SameFile(a, info) {
+	a, err := os.Stat(actual)
+	if err != nil { // sin saber qué programa es este, no se delega: podría ser el instalado delegando en sí mismo
+		return true, err
+	}
+	if os.SameFile(a, info) {
 		return false, nil
 	}
 	return true, lanzarInstalado(instalado, salida, errores, "--servidor", "servidor", "actualizar")

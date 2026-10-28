@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -227,6 +228,38 @@ func TestActualizarNuevoNoArranca(t *testing.T) {
 	}
 }
 
+// TestActualizarReinicioFalla: si el programa nuevo se ejecuta pero «servidor reiniciar» falla, el nuevo se queda en su
+// sitio y el de antes en .anterior (no se vuelve atrás ni se arranca el viejo), y el error trae lo que dijo y la ruta
+// del .anterior para volver a mano.
+func TestActualizarReinicioFalla(t *testing.T) {
+	var ordenes []string
+	dir := programaInstalado(t, &ordenes)
+	versionPublicada(t, programaNuevo(), false)
+	salida := exec.Command(os.Args[0], "-test.run=^$", "-flag-que-no-existe").Run() // un *exec.ExitError de verdad
+	if !errors.As(salida, new(*exec.ExitError)) {
+		t.Fatalf("se esperaba un ExitError: %v", salida)
+	}
+	ejecutar0 := ejecutar
+	t.Cleanup(func() { ejecutar = ejecutar0 })
+	ejecutar = func(string, ...string) ([]byte, error) { return []byte("la unidad no arrancó\n"), salida }
+	err := Actualizar(t.Context(), actualizacion.PaqueteServidor)
+	anterior := filepath.Join(dir, programas[0]) + ".anterior"
+	if err == nil || !strings.Contains(err.Error(), "la unidad no arrancó") || !strings.Contains(err.Error(), anterior) {
+		t.Fatalf("el error trae la salida y la ruta del .anterior: %v", err)
+	}
+	for _, n := range programas {
+		if b, _ := os.ReadFile(filepath.Join(dir, n)); string(b) != n+" nuevo" {
+			t.Errorf("%s: %q, el nuevo sigue en su sitio", n, b)
+		}
+		if b, _ := os.ReadFile(filepath.Join(dir, n+".anterior")); string(b) != n+" v1" {
+			t.Errorf("%s.anterior: %q, el de antes queda apartado", n, b)
+		}
+	}
+	if strings.Join(ordenes, " ") != "detener" {
+		t.Errorf("no se arranca el programa de antes: %q", ordenes)
+	}
+}
+
 // TestExtraerZipConBarras: Compress-Archive puede escribir los nombres con \ (.\tramtai.exe): valen igual.
 func TestExtraerZipConBarras(t *testing.T) {
 	dir := t.TempDir()
@@ -301,6 +334,12 @@ func TestActualizarConElInstalado(t *testing.T) {
 	if delegado, err := ActualizarConElInstalado(io.Discard, io.Discard); !delegado || err != nil ||
 		strings.Join(lanzados, "|") != instalado+" --servidor servidor actualizar" {
 		t.Fatalf("desde otra copia se delega en el instalado: %v %v %q", delegado, err, lanzados)
+	}
+	// Si no se puede mirar el ejecutable actual, no se delega (falla cerrado).
+	lanzados = nil
+	ejecutableActual = func() (string, error) { return filepath.Join(t.TempDir(), "no-existe"), nil }
+	if delegado, err := ActualizarConElInstalado(io.Discard, io.Discard); !delegado || err == nil || len(lanzados) > 0 {
+		t.Fatalf("sin identificar el ejecutable actual: %v %v %q", delegado, err, lanzados)
 	}
 	os.Remove(instalado)
 	if delegado, err := ActualizarConElInstalado(io.Discard, io.Discard); !delegado || err == nil || !strings.Contains(err.Error(), "no está instalado") {
