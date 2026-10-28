@@ -63,7 +63,7 @@ git push origin --tags             # sube las etiquetas
 3. `gh pr merge --auto --merge --delete-branch`: GitHub lo fusiona solo en cuanto la CI está en verde (el repositorio permite auto-merge). Si la CI falla, el PR se queda abierto hasta arreglarlo.
 4. En `main` actualizada (`git pull`), `./scripts/version.ps1 -Explicar` para revisar la versión y sus notas.
 5. `./scripts/version.ps1 -Etiquetar -Resumen notas-es.txt -ResumenEn notas-en.txt` y `git push origin <etiqueta>`.
-6. Al subir la etiqueta, `.github/workflows/publicar.yml` pasa el mismo CI que los PR (lo llama con `workflow_call`: pruebas en Windows, Linux y macOS y análisis de dependencias), compila en cada sistema y crea el release de GitHub con las notas de la etiqueta: en Windows el instalador y el `.zip` portable; en Linux los `.deb` y `.rpm` (amd64 y arm64); en macOS el `.dmg` universal; los `.tar.gz` de la CLI para Linux y macOS; y `SHA256SUMS.txt` con todos. Falla si la versión calculada no coincide con la etiqueta o si alguna app no arranca.
+6. Al subir la etiqueta, `.github/workflows/publicar.yml` pasa el mismo CI que los PR (lo llama con `workflow_call`: pruebas en Windows, Linux y macOS y análisis de dependencias), compila en cada sistema y crea el release de GitHub con las notas de la etiqueta: en Windows el instalador y el `.zip` portable; en Linux los `.deb` y `.rpm` de escritorio y del servidor (amd64 y arm64); en macOS el `.dmg` universal; los `.tar.gz` de la CLI para Linux y macOS; y `SHA256SUMS.txt` con todos. Falla si la versión calculada no coincide con la etiqueta o si alguna app no arranca.
 
 Antes del paso 1 van la spec y el plan del release, en `docs/equipo/releases/<versión>-<tema>/` (índice en [README.md](README.md)).
 

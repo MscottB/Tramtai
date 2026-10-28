@@ -1,4 +1,4 @@
-# Generada por «tramtai servidor instalar»: se reescribe al instalar y al actualizar.
+# Unidad de Tramtai (servidor), generada por Tramtai: no la edites; para cambiarla, usa un drop-in (systemctl edit tramtai).
 [Unit]
 Description=Tramtai (servidor)
 Documentation=https://github.com/MscottB/Tramtai/blob/main/docs/servidor.md

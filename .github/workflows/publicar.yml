@@ -74,10 +74,14 @@ jobs:
           cache-dependency-path: '**/go.sum' # también los módulos de la app de escritorio
       - name: GTK 4 y WebKitGTK 6.0 # la caché la deja el CI en main (job gtk-para-publicar)
         uses: ./.github/actions/gtk
-      - name: Compilar y empaquetar (.deb y .rpm)
+      - name: Compilar y empaquetar (.deb y .rpm, de escritorio y del servidor)
         run: sh scripts/linux/empaquetar.sh "$GITHUB_REF_NAME" ${{ matrix.arq }}
       - name: Comprobar el paquete (instalar y arrancar sin pantalla)
         run: sh scripts/linux/probar-paquete.sh
+      - name: Comprobar el paquete del servidor (Debian 13 y Rocky Linux 9, en contenedores)
+        run: |
+          sh scripts/linux/probar-paquete-servidor.sh deb
+          sh scripts/linux/probar-paquete-servidor.sh rpm
       - uses: actions/upload-artifact@v7
         with:
           name: linux-app-${{ matrix.arq }}

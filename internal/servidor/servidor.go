@@ -32,12 +32,13 @@ const (
 )
 
 // Sitios son las rutas del servidor: la carpeta del programa (tramtai y uv), la de datos (la raíz del servidor), el
-// envoltorio tramtai-servidor y la unidad systemd y, para las claves (solo Linux), la carpeta de las credenciales
-// cifradas, el drop-in que las carga y el archivo de entorno de root sin systemd-creds. El tipo no se llama Rutas
-// porque ese nombre es el de la función.
+// envoltorio tramtai-servidor, la unidad systemd y el drop-in que ajusta la del paquete (10-: antes que el override.conf
+// de «systemctl edit», que así manda) y, para las claves (solo Linux),
+// la carpeta de las credenciales cifradas, el drop-in que las carga y el archivo de entorno de root sin systemd-creds.
+// El tipo no se llama Rutas porque ese nombre es el de la función.
 type Sitios struct {
-	Programa, Datos, Envoltorio, Unidad string
-	Cifradas, ClavesConf, ClavesEnv     string
+	Programa, Datos, Envoltorio, Unidad, UnidadConf string
+	Cifradas, ClavesConf, ClavesEnv                 string
 }
 
 // rutas las sustituyen las pruebas para no tocar /opt, /var/lib ni /etc.
@@ -46,10 +47,18 @@ var rutas = func() Sitios {
 		programa := filepath.Join(cmp.Or(os.Getenv("ProgramFiles"), `C:\Program Files`), "Tramtai Servidor")
 		return Sitios{Programa: programa, Datos: carpetas.RaizServidor(), Envoltorio: filepath.Join(programa, "tramtai-servidor.cmd")}
 	}
-	return Sitios{Programa: "/opt/tramtai", Datos: carpetas.RaizServidor(), Envoltorio: "/usr/local/bin/tramtai-servidor",
-		Unidad: "/etc/systemd/system/tramtai.service", Cifradas: "/etc/credstore.encrypted",
-		ClavesConf: "/etc/systemd/system/tramtai.service.d/claves.conf", ClavesEnv: "/etc/tramtai/claves.env"}
+	s := Sitios{Programa: "/opt/tramtai", Datos: carpetas.RaizServidor(), Envoltorio: "/usr/local/bin/tramtai-servidor",
+		Unidad: "/etc/systemd/system/tramtai.service", UnidadConf: "/etc/systemd/system/tramtai.service.d/10-tramtai.conf",
+		Cifradas: "/etc/credstore.encrypted", ClavesConf: "/etc/systemd/system/tramtai.service.d/claves.conf",
+		ClavesEnv: "/etc/tramtai/claves.env"}
+	if delPaquete(s) { // el paquete pone el envoltorio y la unidad donde van los de los paquetes
+		s.Envoltorio, s.Unidad = "/usr/bin/tramtai-servidor", "/usr/lib/systemd/system/tramtai.service"
+	}
+	return s
 }
+
+// delPaquete dice si el programa lo puso el paquete .deb o .rpm tramtai-servidor, que deja .paquete en su carpeta.
+func delPaquete(s Sitios) bool { return existe(filepath.Join(s.Programa, ".paquete")) }
 
 // Rutas devuelve las rutas del servidor en este sistema.
 func Rutas() Sitios { return rutas() }
@@ -103,6 +112,10 @@ func AvisoLetsEncrypt() string {
 // ErrInstaladoPorPaquete es lo que dice Actualizar si el programa lo puso el paquete .deb o .rpm (que deja .paquete en
 // su carpeta): lo actualizan apt o dnf.
 var ErrInstaladoPorPaquete = errors.New(idioma.T("este servidor se instaló con el paquete tramtai-servidor: actualízalo con apt o dnf"))
+
+// ErrQuitarPaquete es el aviso de Desinstalar con el paquete: el servicio queda detenido y deshabilitado, pero el
+// programa y la unidad los quitan apt o dnf.
+var ErrQuitarPaquete = Aviso(idioma.T("el programa y la unidad son del paquete tramtai-servidor: quítalo con «apt remove tramtai-servidor» o «dnf remove tramtai-servidor»"))
 
 func sinInstalar() error {
 	return errors.New(idioma.T("el servicio del sistema no está instalado (tramtai servidor instalar)"))
@@ -160,7 +173,7 @@ func ActualizarConElInstalado(salida, errores io.Writer) (bool, error) {
 // de que el nuevo se pueda ejecutar, lo apartado vuelve a su sitio y el servicio arranca con él.
 func Actualizar(ctx context.Context, bajar func(ctx context.Context, dir string) (string, error)) error {
 	r := Rutas()
-	if existe(filepath.Join(r.Programa, ".paquete")) {
+	if delPaquete(r) {
 		return ErrInstaladoPorPaquete
 	}
 	if !existe(filepath.Join(r.Programa, programas[0])) {

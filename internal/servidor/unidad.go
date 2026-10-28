@@ -22,12 +22,7 @@ type UnidadOpciones struct {
 // MemoryDenyWriteExecute, RestrictNamespaces, SystemCallFilter, ProcSubset ni PrivateUsers: rompen o arriesgan los CLI
 // de los agentes (el JIT de Node de Claude Code y Copilot, sus procesos hijos).
 func Unidad(o UnidadOpciones) string {
-	plazo := cmp.Or(o.PlazoDrenaje, configuracion.Resolver().Entero("servicio.plazo_drenaje_segundos"))
-	capacidades := "CapabilityBoundingSet=\n"
-	if o.LetsEncrypt || o.PuertoBajo {
-		capacidades = "CapabilityBoundingSet=CAP_NET_BIND_SERVICE\nAmbientCapabilities=CAP_NET_BIND_SERVICE\n"
-	}
-	return fmt.Sprintf(`# Generada por «tramtai servidor instalar»: se reescribe al instalar y al actualizar.
+	return fmt.Sprintf(`%s
 [Unit]
 Description=Tramtai (servidor)
 Documentation=https://github.com/MscottB/Tramtai/blob/main/docs/servidor.md
@@ -71,5 +66,32 @@ UMask=0077
 %s
 [Install]
 WantedBy=multi-user.target
-`, plazo+30, capacidades)
+`, cabeceraUnidad, parada(o), capacidades(o))
+}
+
+// cabeceraUnidad encabeza la unidad: vale también para la del paquete, que reescriben apt o dnf. Instalar con el
+// paquete la reconoce (con la de antes, cabeceraUnidadAntigua) para quitar la unidad que dejó el .tar.gz en /etc.
+const (
+	cabeceraUnidad        = "# Unidad de Tramtai (servidor), generada por Tramtai: no la edites; para cambiarla, usa un drop-in (systemctl edit tramtai)."
+	cabeceraUnidadAntigua = "# Generada por «tramtai servidor instalar»"
+)
+
+// ajustesPaquete es el drop-in que pone la unidad del paquete .deb/.rpm (que no se reescribe: es de apt o dnf) al día
+// con la configuración, como Unidad(o). CapabilityBoundingSet= vacío deja el conjunto vacío, como la unidad; con
+// CAP_NET_BIND_SERVICE, systemd lo suma a ese conjunto vacío.
+func ajustesPaquete(o UnidadOpciones) string {
+	return fmt.Sprintf("# Generado por «tramtai-servidor instalar» y «reiniciar»: no lo edites a mano.\n[Service]\nTimeoutStopSec=%d\n%s",
+		parada(o), capacidades(o))
+}
+
+// parada es TimeoutStopSec: el plazo de drenaje más 30 s.
+func parada(o UnidadOpciones) int {
+	return cmp.Or(o.PlazoDrenaje, configuracion.Resolver().Entero("servicio.plazo_drenaje_segundos")) + 30
+}
+
+func capacidades(o UnidadOpciones) string {
+	if o.LetsEncrypt || o.PuertoBajo {
+		return "CapabilityBoundingSet=CAP_NET_BIND_SERVICE\nAmbientCapabilities=CAP_NET_BIND_SERVICE\n"
+	}
+	return "CapabilityBoundingSet=\n"
 }

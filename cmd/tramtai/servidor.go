@@ -127,7 +127,10 @@ func comandoServidor() *cobra.Command {
 					return err
 				}
 			}
-			if err := instalarServidor(servidor.Opciones{Origen: filepath.Dir(ejecutable), AceptoTerminos: true, Como: como, Conversor: conversor}); err != nil {
+			var aviso servidor.Aviso // lo que quitó del .tar.gz al pasar al paquete: instalado igual
+			if err := instalarServidor(servidor.Opciones{Origen: filepath.Dir(ejecutable), AceptoTerminos: true, Como: como, Conversor: conversor}); errors.As(err, &aviso) {
+				fmt.Fprintln(cmd.ErrOrStderr(), idioma.Tf("aviso: %s", aviso.Error()))
+			} else if err != nil {
 				return err
 			}
 			if runtime.GOOS == "windows" {

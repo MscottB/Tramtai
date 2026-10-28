@@ -1,6 +1,6 @@
 #!/bin/sh
 # Compila Tramtai para Linux (servicio y CLI sin CGO; app de escritorio con GTK 4 y WebKitGTK 6.0) y genera los
-# paquetes .deb y .rpm en dist/. Lo usan el CI y la publicación:
+# paquetes .deb y .rpm en dist/, los de escritorio y los del servidor. Lo usan el CI y la publicación:
 #   scripts/linux/empaquetar.sh v0.28.0+16102026 amd64
 set -eu
 version=$1
@@ -21,4 +21,7 @@ nfpm="$(go env GOPATH)/bin/nfpm"
 export VERSION="${version#v}" ARCH="$arq"
 "$nfpm" package -f scripts/linux/nfpm.yaml -p deb -t "dist/Tramtai-$version-linux-$arq.deb"
 "$nfpm" package -f scripts/linux/nfpm.yaml -p rpm -t "dist/Tramtai-$version-linux-$arq.rpm"
+: >paquete/.paquete # vacío: marca que el programa del servidor lo puso el paquete
+"$nfpm" package -f scripts/linux/nfpm-servidor.yaml -p deb -t "dist/Tramtai-$version-servidor-linux-$arq.deb"
+"$nfpm" package -f scripts/linux/nfpm-servidor.yaml -p rpm -t "dist/Tramtai-$version-servidor-linux-$arq.rpm"
 ls -l dist

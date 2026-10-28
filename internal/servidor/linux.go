@@ -3,6 +3,7 @@
 package servidor
 
 import (
+	"bytes"
 	"cmp"
 	"context"
 	"errors"
@@ -119,7 +120,9 @@ func orden(nombre string, args ...string) error {
 }
 
 // Instalar crea la cuenta del servicio, copia el programa, prepara la carpeta de datos, escribe la unidad y la habilita
-// y arranca. Repetirla es seguro: con la misma versión no cambia nada; con otra, actualiza y reinicia.
+// y arranca. Repetirla es seguro: con la misma versión no cambia nada; con otra, actualiza y reinicia. Con el programa
+// del paquete .deb/.rpm no copia nada ni escribe la unidad o el envoltorio, que son del paquete: lo que la unidad toma
+// de la configuración va en un drop-in.
 func Instalar(o Opciones) error {
 	if !o.AceptoTerminos {
 		return sinAceptar()
@@ -134,28 +137,38 @@ func Instalar(o Opciones) error {
 			return err
 		}
 	}
-	instalado := existe(filepath.Join(r.Programa, "tramtai"))
-	// La cuenta del servicio solo lee el programa: es de root.
-	if err := os.MkdirAll(r.Programa, 0o755); err != nil {
-		return err
-	}
-	cambiado := false
-	for _, nombre := range []string{"tramtai", "uv"} {
-		contenido, err := os.ReadFile(filepath.Join(o.Origen, nombre))
-		if err != nil {
-			return fmt.Errorf(idioma.T("falta %s junto a este tramtai: instala el servidor desde el .tar.gz de Linux (%v)"), nombre, err)
-		}
-		c, err := escribirSiCambia(filepath.Join(r.Programa, nombre), contenido, 0o755)
-		if err != nil {
+	antes := instalado(r)
+	cambiado, reiniciar := false, false
+	var avisos []string
+	if !delPaquete(r) {
+		// La cuenta del servicio solo lee el programa: es de root.
+		if err := os.MkdirAll(r.Programa, 0o755); err != nil {
 			return err
 		}
-		cambiado = cambiado || c
-	}
-	if _, err := escribirSiCambia(r.Envoltorio, []byte(envoltorio), 0o755); err != nil {
-		return err
+		for _, nombre := range []string{"tramtai", "uv"} {
+			contenido, err := os.ReadFile(filepath.Join(o.Origen, nombre))
+			if err != nil {
+				return fmt.Errorf(idioma.T("falta %s junto a este tramtai: instala el servidor desde el .tar.gz de Linux (%v)"), nombre, err)
+			}
+			c, err := escribirSiCambia(filepath.Join(r.Programa, nombre), contenido, 0o755)
+			if err != nil {
+				return err
+			}
+			cambiado = cambiado || c
+		}
+		if _, err := escribirSiCambia(r.Envoltorio, []byte(envoltorio), 0o755); err != nil {
+			return err
+		}
 	}
 	if err := prepararDatos(r.Datos, cmp.Or(o.Como, terminos.ComoServidorInstalar), o.Conversor); err != nil {
 		return err
+	}
+	if delPaquete(r) { // tras lo que puede fallar: la unidad vieja no se deshabilita si no va a quedar la del paquete
+		var err error
+		if reiniciar, avisos, err = limpiarTarGz(r); err != nil {
+			return err
+		}
+		cambiado = cambiado || reiniciar
 	}
 	nueva, err := actualizarUnidad(r, UnidadOpciones{LetsEncrypt: o.LetsEncrypt, PuertoBajo: o.PuertoBajo})
 	if err != nil {
@@ -170,14 +183,70 @@ func Instalar(o Opciones) error {
 	if err := orden("systemctl", "enable", "--now", "tramtai"); err != nil {
 		return err
 	}
-	if cambiado && instalado { // ya estaba en marcha con el programa o la unidad de antes
-		return orden("systemctl", "restart", "tramtai")
+	if cambiado && antes || reiniciar { // ya estaba en marcha con el programa o la unidad de antes
+		if err := orden("systemctl", "restart", "tramtai"); err != nil {
+			return err
+		}
+	}
+	if len(avisos) > 0 {
+		return Aviso(strings.Join(avisos, "; "))
 	}
 	return nil
 }
 
-// actualizarUnidad escribe la unidad con la configuración actual del servidor, si cambió, y dice si la cambió. extra
-// suma lo que pida quien llama; Let's Encrypt (servicio.tls.modo) y el puerto bajo se calculan aquí.
+// restosTarGz son la unidad y el envoltorio que deja instalar desde el .tar.gz: con el paquete, Rutas() da los suyos.
+// Las pruebas los sustituyen.
+var restosTarGz = Sitios{Unidad: "/etc/systemd/system/tramtai.service", Envoltorio: "/usr/local/bin/tramtai-servidor"}
+
+// limpiarTarGz quita, al instalar con el paquete, lo que dejó una instalación anterior desde el .tar.gz (R34): su
+// unidad en /etc, que taparía la del paquete (antes la deshabilita, para que no quede su enlace en
+// multi-user.target.wants, y pide reiniciar con la del paquete), su envoltorio y los .anterior de actualizar. Solo lo
+// que es de Tramtai: una unidad en /etc con otra cabecera, o otro envoltorio, no se toca. Devuelve los avisos.
+func limpiarTarGz(r Sitios) (reiniciar bool, avisos []string, err error) {
+	var quitados []string
+	unidad, err := os.ReadFile(restosTarGz.Unidad)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+	case err != nil:
+		return false, nil, err
+	case bytes.HasPrefix(unidad, []byte(cabeceraUnidad)) || bytes.HasPrefix(unidad, []byte(cabeceraUnidadAntigua)):
+		if err := orden("systemctl", "disable", "tramtai"); err != nil {
+			return false, nil, err
+		}
+		if err := os.Remove(restosTarGz.Unidad); err != nil {
+			return false, nil, err
+		}
+		quitados, reiniciar = append(quitados, restosTarGz.Unidad), true
+	default:
+		avisos = append(avisos, idioma.Tf("%s no la generó Tramtai y tapa la unidad del paquete: no se toca; quítala si sobra", restosTarGz.Unidad))
+	}
+	if b, err := os.ReadFile(restosTarGz.Envoltorio); err == nil && string(b) == envoltorio {
+		if err := os.Remove(restosTarGz.Envoltorio); err != nil {
+			return false, nil, err
+		}
+		quitados = append(quitados, restosTarGz.Envoltorio)
+	}
+	for _, n := range programas {
+		anterior := filepath.Join(r.Programa, n+".anterior")
+		if err := os.Remove(anterior); err == nil {
+			quitados = append(quitados, anterior)
+		} else if !errors.Is(err, fs.ErrNotExist) {
+			return false, nil, err
+		}
+	}
+	if len(quitados) > 0 {
+		avisos = append([]string{idioma.Tf("quitado lo que dejó la instalación desde el .tar.gz: %s", strings.Join(quitados, ", "))}, avisos...)
+	}
+	return reiniciar, avisos, nil
+}
+
+// instalado dice si el servicio está instalado: con su unidad y, si es la del paquete, con el drop-in de Instalar (el
+// paquete no habilita nada hasta que se aceptan los términos con «tramtai-servidor instalar»).
+func instalado(r Sitios) bool { return existe(r.Unidad) && (!delPaquete(r) || existe(r.UnidadConf)) }
+
+// actualizarUnidad escribe la unidad con la configuración actual del servidor, si cambió, y dice si la cambió; con la
+// del paquete, que es de apt o dnf (y otra en /etc la taparía), escribe su drop-in. extra suma lo que pida quien llama;
+// Let's Encrypt (servicio.tls.modo) y el puerto bajo se calculan aquí.
 func actualizarUnidad(s Sitios, extra UnidadOpciones) (bool, error) {
 	r, err := os.OpenRoot(s.Datos)
 	if err != nil {
@@ -190,31 +259,64 @@ func actualizarUnidad(s Sitios, extra UnidadOpciones) (bool, error) {
 	}
 	o := UnidadOpciones{PlazoDrenaje: c.Entero("servicio.plazo_drenaje_segundos"), LetsEncrypt: extra.LetsEncrypt || c.Texto("servicio.tls.modo") == "letsencrypt",
 		PuertoBajo: extra.PuertoBajo || c.Entero("servicio.puerto") < 1024}
-	return escribirSiCambia(s.Unidad, []byte(Unidad(o)), 0o644)
+	if delPaquete(s) {
+		return escribirSiCambia(s.UnidadConf, []byte(ajustesPaquete(o)), 0o644)
+	}
+	// Sin el paquete, un drop-in suyo que quedara cambiaría el plazo y las capacidades de esta unidad.
+	quitado := true
+	if err := os.Remove(s.UnidadConf); errors.Is(err, fs.ErrNotExist) {
+		quitado = false
+	} else if err != nil {
+		return false, err
+	}
+	cambiada, err := escribirSiCambia(s.Unidad, []byte(Unidad(o)), 0o644)
+	return cambiada || quitado, err
 }
 
 // Desinstalar detiene el servicio (con drenaje) y quita la unidad, el programa y el envoltorio. Con borrarDatos borra
-// también la carpeta de datos y la cuenta.
+// también la carpeta de datos y la cuenta. Con el paquete, el programa, la unidad y el envoltorio se quedan (los quitan
+// apt o dnf) y devuelve el aviso ErrQuitarPaquete.
 func Desinstalar(borrarDatos bool) error {
 	r := Rutas()
-	if existe(r.Unidad) {
+	paquete := delPaquete(r)
+	if instalado(r) {
 		if err := orden("systemctl", "disable", "--now", "tramtai"); err != nil {
 			return err
 		}
-		if err := os.Remove(r.Unidad); err != nil {
-			return err
+		quitar := []string{r.UnidadConf}
+		if !paquete {
+			quitar = append(quitar, r.Unidad)
 		}
+		for _, ruta := range quitar {
+			if err := os.Remove(ruta); err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+		}
+		_ = os.Remove(filepath.Dir(r.UnidadConf)) // solo si quedó vacía (sin claves.conf)
 		if err := orden("systemctl", "daemon-reload"); err != nil {
 			return err
 		}
 	}
-	if err := os.Remove(r.Envoltorio); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if !paquete {
+		if err := os.Remove(r.Envoltorio); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		if err := os.RemoveAll(r.Programa); err != nil {
+			return err
+		}
+	}
+	if err := borrarDatosYCuenta(r, borrarDatos); err != nil {
 		return err
 	}
-	if err := os.RemoveAll(r.Programa); err != nil {
-		return err
+	if paquete {
+		return ErrQuitarPaquete
 	}
-	if !borrarDatos {
+	return nil
+}
+
+// borrarDatosYCuenta, con borrar, borra la carpeta de datos, las claves y la cuenta del servicio.
+func borrarDatosYCuenta(r Sitios, borrar bool) error {
+	if !borrar {
 		return nil
 	}
 	if err := os.RemoveAll(r.Datos); err != nil {
@@ -235,10 +337,10 @@ func Desinstalar(borrarDatos bool) error {
 	return nil
 }
 
-// Estado dice si la unidad está instalada y lo que dice systemctl is-active (que sale con error si no está activa).
+// Estado dice si el servicio está instalado y lo que dice systemctl is-active (que sale con error si no está activa).
 func Estado(_ context.Context) (EstadoSistema, error) {
 	r := Rutas()
-	if !existe(r.Unidad) {
+	if !instalado(r) {
 		return EstadoSistema{}, nil
 	}
 	salida, err := ejecutar("systemctl", "is-active", "tramtai")
@@ -363,7 +465,7 @@ func cambiarClaves(r Sitios, nombre, valor string) error {
 			return err
 		}
 	}
-	if !existe(r.Unidad) { // aún sin instalar: la recibirá al arrancar
+	if !instalado(r) { // aún sin instalar: la recibirá al arrancar
 		return nil
 	}
 	if err := orden("systemctl", "daemon-reload"); err != nil {
@@ -373,21 +475,23 @@ func cambiarClaves(r Sitios, nombre, valor string) error {
 }
 
 // Reiniciar reinicia el servicio con la unidad al día con la configuración (plazo de drenaje, puerto bajo): si cambió,
-// la reescribe y hace daemon-reload antes. El que se detiene deja terminar las peticiones en curso.
+// la reescribe (o, con la del paquete, su drop-in) y hace daemon-reload antes. El que se detiene deja terminar las
+// peticiones en curso. Sin instalar no arranca nada: con el paquete aún no se han aceptado los términos.
 func Reiniciar() error {
 	r := Rutas()
+	if !instalado(r) {
+		return sinInstalar()
+	}
 	if err := AjustarDueno(r.Datos); err != nil { // lo que root haya dejado ahí, legible para el servicio que arranca
 		return err
 	}
-	if existe(r.Unidad) {
-		cambiada, err := actualizarUnidad(r, UnidadOpciones{})
-		if err != nil {
+	cambiada, err := actualizarUnidad(r, UnidadOpciones{})
+	if err != nil {
+		return err
+	}
+	if cambiada {
+		if err := orden("systemctl", "daemon-reload"); err != nil {
 			return err
-		}
-		if cambiada {
-			if err := orden("systemctl", "daemon-reload"); err != nil {
-				return err
-			}
 		}
 	}
 	return orden("systemctl", "restart", "tramtai")
