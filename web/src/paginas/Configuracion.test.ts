@@ -26,15 +26,19 @@ test('Ajustes → Servidor: cada dato con la orden (o la clave de config.yaml) q
     administrador: true, totp: false, expuesto: true, suscripciones: [{ agente: 'claude', personal: true, simultaneas: 2 }] }
   const filas = filasServidor(e, (iso) => iso.slice(0, 10), (a) => a.toUpperCase())
   const de = (clave: string) => filas.find((f) => f.etiqueta === clave)
-  assert.deepEqual(de('servidor.https'), { etiqueta: 'servidor.https', valor: t('servidor.tlsLetsencrypt'), orden: 'servicio.tls.modo' })
-  assert.deepEqual(de('servidor.dominios'), { etiqueta: 'servidor.dominios', valor: 'tramtai.ejemplo.org', orden: 'servicio.dominios' })
+  // Las claves de config.yaml no son órdenes: van aparte.
+  assert.deepEqual(de('servidor.https'), { etiqueta: 'servidor.https', valor: t('servidor.tlsLetsencrypt'), clave: 'servicio.tls.modo' })
+  assert.deepEqual(de('servidor.dominios'), { etiqueta: 'servidor.dominios', valor: 'tramtai.ejemplo.org', clave: 'servicio.dominios' })
+  assert.equal(de('servidor.confiables')?.clave, 'servicio.proxy.confiables')
+  assert.equal(de('servidor.suscripciones')?.orden, 'tramtai-servidor agentes suscripcion <agente> --personal', 'expuesto: la personal')
   assert.equal(de('servidor.confiables')?.valor, t('servidor.ninguno'))
   assert.deepEqual(de('servidor.vence'), { etiqueta: 'servidor.vence', valor: '2027-01-02', nota: t('servidor.renuevaSolo') })
   assert.deepEqual(de('servidor.administrador'), { etiqueta: 'servidor.administrador', valor: t('servidor.sinTotp'), orden: 'tramtai-servidor administrador totp activar' })
   assert.equal(de('servidor.suscripciones')?.valor, t('servidor.suscripcionPersonal', { agente: 'CLAUDE', n: 2 }))
-  for (const f of filas) assert.ok(f.orden || f.nota, `${f.etiqueta} dice cómo se cambia`)
+  for (const f of filas) assert.ok(f.orden || f.clave || f.nota, `${f.etiqueta} dice cómo se cambia`)
 
-  const sinNada = filasServidor({ ...e, tls: 'ninguno', dominios: [], vence_certificado: undefined, administrador: false, suscripciones: [] }, String, String)
+  const sinNada = filasServidor({ ...e, tls: 'ninguno', dominios: [], vence_certificado: undefined, administrador: false, expuesto: false, suscripciones: [] }, String, String)
+  assert.equal(sinNada.find((f) => f.etiqueta === 'servidor.suscripciones')?.orden, 'tramtai-servidor agentes entrar <agente>', 'en local: el inicio de sesión del CLI')
   assert.equal(sinNada.find((f) => f.etiqueta === 'servidor.vence'), undefined, 'sin certificado propio no hay vencimiento')
   assert.equal(sinNada.find((f) => f.etiqueta === 'servidor.administrador')?.orden, 'tramtai-servidor administrador contraseña')
   assert.equal(sinNada.find((f) => f.etiqueta === 'servidor.suscripciones')?.valor, t('servidor.sinSuscripciones'))
@@ -46,6 +50,8 @@ test('los textos de Servidor existen en los dos idiomas', () => {
     for (const clave of ['config.pestanaServidor', 'servidor.texto', 'servidor.cambiaEn', 'servidor.tlsNinguno', 'servidor.renovarArchivos'] as const) {
       assert.notEqual(t(clave), clave, `${lengua}: ${clave}`)
     }
+    // Las órdenes de antes aún no tienen alias en inglés (llegan en la v0.62).
+    assert.ok(t('actualizacion.servidor').includes('tramtai-servidor actualizar') && t('servidor.cambiaEn').includes('tramtai-servidor reiniciar'), lengua)
   }
   idioma.value = 'es'
 })

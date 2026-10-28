@@ -225,20 +225,9 @@ func (m *modelo) vistaEstado() string {
 			izq = m.avisoFijo()
 		}
 	}
-	marca := e.Acento.Render(e.Tx(m.idioma, marcaEntorno(m.o.Entorno)))
+	marca := e.Acento.Render(e.Tx(m.idioma, pagina.MarcaEntorno(m.o.Entorno)))
 	izq = e.Recortar(izq, max(m.ancho-lipgloss.Width(marca)-1, 0))
 	return izq + strings.Repeat(" ", max(m.ancho-lipgloss.Width(izq)-lipgloss.Width(marca), 1)) + marca
-}
-
-// marcaEntorno es la clave del texto de la marca: «Servidor», «Este equipo» o «Portable», como en la Web UI.
-func marcaEntorno(entorno string) string {
-	switch entorno {
-	case "servidor":
-		return "entorno.servidor"
-	case "portable":
-		return "entorno.portable"
-	}
-	return "entorno.escritorio"
 }
 
 // avisoFijo es lo que se dice siempre que no hay otro aviso: en el servidor, cada agente con la suscripción personal del

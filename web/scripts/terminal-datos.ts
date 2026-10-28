@@ -164,7 +164,7 @@ export const CLAVES_AJUSTES: string[] = [
   'servidor.titulo', 'servidor.https', 'servidor.tlsNinguno', 'servidor.tlsArchivos', 'servidor.tlsLetsencrypt',
   'servidor.dominios', 'servidor.confiables', 'servidor.ninguno', 'servidor.vence', 'servidor.renovarArchivos', 'servidor.renuevaSolo',
   'servidor.administrador', 'servidor.conTotp', 'servidor.sinTotp', 'servidor.sinAdministrador', 'servidor.suscripciones',
-  'servidor.suscripcionPersonal', 'servidor.suscripcionLocal', 'servidor.sinSuscripciones', 'servidor.cambiaEn',
+  'servidor.suscripcionPersonal', 'servidor.suscripcionLocal', 'servidor.sinSuscripciones', 'servidor.cambiaEn', 'servidor.enConfig',
   'config.valoresTecnicos', 'config.valoresTexto', 'config.buscar', 'config.sinCoincidencias',
   'herencia.propio', 'herencia.global', 'herencia.volver', 'herencia.vuelto',
   ...['interno', 'global', 'proyecto', 'local', 'entorno'].map((o) => 'origen.' + o),

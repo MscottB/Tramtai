@@ -72,6 +72,27 @@ func TestPuertoPublicado(t *testing.T) {
 	}
 }
 
+// TestRetirarPuerto: al parar con normalidad, el servicio retira su puerto y el Tramtai del usuario deja de avisar;
+// retirarlo sin haberlo publicado no es un error.
+func TestRetirarPuerto(t *testing.T) {
+	ruta := conRutaPublica(t)
+	if err := PublicarPuerto(17374); err != nil {
+		t.Fatal(err)
+	}
+	if err := RetirarPuerto(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(ruta); !os.IsNotExist(err) {
+		t.Errorf("el archivo sigue: %v", err)
+	}
+	if a := AvisoCruzado(); a != "" {
+		t.Errorf("sin puerto no hay aviso: %q", a)
+	}
+	if err := RetirarPuerto(); err != nil {
+		t.Errorf("otra vez, sin archivo: %v", err)
+	}
+}
+
 // TestAvisoCruzado: con un Tramtai del sistema en el equipo, el del usuario avisa de que es otro entorno, en el idioma de
 // la interfaz; sin él, o en el propio servidor, no dice nada.
 func TestAvisoCruzado(t *testing.T) {

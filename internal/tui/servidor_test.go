@@ -76,29 +76,42 @@ func TestEstadoServidorAlConectar(t *testing.T) {
 	}
 }
 
-// TestTeclaWServidorConAdministrador: en el servidor con administrador, W no pide un código de un solo uso: basta la
-// dirección pública, donde se entra con la contraseña. Sin navegador la enseña, sin código; con él, la abre.
+// TestTeclaWServidorConAdministrador (spec §8): con navegador en el equipo, W hace lo de siempre (pide el código y abre
+// la Web UI ya dentro). Sin navegador, si el servidor tiene administrador y se puede entrar con contraseña (TLS propio o
+// un proxy de confianza), basta la dirección pública, sin código; si no hay HTTPS, la dirección con el código de siempre.
 func TestTeclaWServidorConAdministrador(t *testing.T) {
-	for _, navegador := range []bool{false, true} {
-		m, abiertas := conWeb(t, navegador)
+	for _, c := range []struct {
+		nombre    string
+		navegador bool
+		estado    contrato.EstadoServidor
+		sinCodigo bool
+	}{
+		{"con navegador", true, contrato.EstadoServidor{Administrador: true, TLS: "archivos"}, false},
+		{"sin navegador y con TLS propio", false, contrato.EstadoServidor{Administrador: true, TLS: "archivos"}, true},
+		{"sin navegador y tras un proxy", false, contrato.EstadoServidor{Administrador: true, TLS: "ninguno", Confiables: []string{"10.0.0.0/8"}}, true},
+		{"sin navegador y sin HTTPS", false, contrato.EstadoServidor{Administrador: true, TLS: "ninguno"}, false},
+	} {
+		m, abiertas := conWeb(t, c.navegador)
 		m.o.Entorno = "servidor"
-		m.servidor = &contrato.EstadoServidor{Administrador: true}
+		m.servidor = &c.estado
 		a := conducir(t, m)
 		_, cmd := m.Update(tecla("W"))
 		a.Correr(cmd)
-		if navegador {
-			if len(*abiertas) != 1 || (*abiertas)[0] != m.cli.BasePublica() {
-				t.Fatalf("abre la dirección pública, sin código: %v", *abiertas)
+		if c.navegador {
+			if len(*abiertas) != 1 || !strings.Contains((*abiertas)[0], "/ui/entrar?codigo=") || m.pregunta != nil {
+				t.Errorf("%s: abre la Web UI con el código: %v", c.nombre, *abiertas)
 			}
 			continue
 		}
 		if len(*abiertas) != 0 || m.pregunta == nil || !m.pregunta.Leer {
-			t.Fatalf("sin navegador enseña la dirección: %v %+v", *abiertas, m.pregunta)
+			t.Fatalf("%s: enseña la dirección: %v %+v", c.nombre, *abiertas, m.pregunta)
 		}
-		v := ansi.Strip(m.View().Content)
-		if !strings.Contains(v, m.cli.BasePublica()) || strings.Contains(v, "codigo=") || strings.Contains(v, idioma.T("Código")) ||
-			m.pregunta.Texto != idioma.T("Abre esta dirección en un navegador y entra con la contraseña del administrador:")+"\n\n"+m.cli.BasePublica() {
-			t.Fatalf("la ventana trae la dirección, sin código:\n%s", v)
+		conContrasena := idioma.T("Abre esta dirección en un navegador y entra con la contraseña del administrador:") + "\n\n" + m.cli.BasePublica()
+		if c.sinCodigo && m.pregunta.Texto != conContrasena {
+			t.Errorf("%s: solo la dirección pública: %q", c.nombre, m.pregunta.Texto)
+		}
+		if !c.sinCodigo && (!strings.Contains(m.pregunta.Texto, "/ui/entrar?codigo=") || !strings.Contains(m.pregunta.Texto, idioma.T("Código"))) {
+			t.Errorf("%s: la dirección con el código: %q", c.nombre, m.pregunta.Texto)
 		}
 	}
 }

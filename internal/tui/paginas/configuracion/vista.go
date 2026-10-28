@@ -183,8 +183,10 @@ func (p *Pagina) lineasServidor() []string {
 		return strings.Join(l, ", ")
 	}
 	modo := map[string]string{"ninguno": "servidor.tlsNinguno", "archivos": "servidor.tlsArchivos", "letsencrypt": "servidor.tlsLetsencrypt"}[s.TLS]
-	l := []string{fila("servidor.https", p.tx(cmpOr(modo, s.TLS)), "servicio.tls.modo"), fila("servidor.dominios", lista(s.Dominios), "servicio.dominios"),
-		fila("servidor.confiables", lista(s.Confiables), "servicio.proxy.confiables")}
+	enConfig := func(clave string) string { return p.tx("servidor.enConfig") + " " + clave } // una clave, no una orden
+	l := []string{fila("servidor.https", p.tx(cmpOr(modo, s.TLS)), enConfig("servicio.tls.modo")),
+		fila("servidor.dominios", lista(s.Dominios), enConfig("servicio.dominios")),
+		fila("servidor.confiables", lista(s.Confiables), enConfig("servicio.proxy.confiables"))}
 	if s.VenceCertificado != nil {
 		nota := map[bool]string{true: "servidor.renuevaSolo", false: "servidor.renovarArchivos"}[s.TLS == "letsencrypt"]
 		l = append(l, fila("servidor.vence", s.VenceCertificado.Local().Format("2006-01-02"), p.tx(nota)))
@@ -208,7 +210,12 @@ func (p *Pagina) lineasServidor() []string {
 		}
 		suscripciones = strings.Join(partes, " · ")
 	}
-	return append(l, p.tx("servidor.suscripciones")+": "+suscripciones, orden("tramtai-servidor agentes suscripcion <agente> --personal"))
+	// Como en Agentes: en local, el inicio de sesión del CLI; abierto a la red, la suscripción personal.
+	suscribir := "tramtai-servidor agentes entrar <agente>"
+	if s.Expuesto {
+		suscribir = "tramtai-servidor agentes suscripcion <agente> --personal"
+	}
+	return append(l, p.tx("servidor.suscripciones")+": "+suscripciones, orden(suscribir))
 }
 
 // detallesDatos son cuántas peticiones terminadas y cuántas APIs hay para borrar, como las casillas de la Web UI.
@@ -474,8 +481,7 @@ func (p *Pagina) detallesAcerca() [][2]string {
 			p.tx("acerca.desde", "fecha", d.Servicio.IniciadoEn.Local().Format("2006-01-02 15:04"))},
 		[2]string{p.tx("acerca.claves"), d.Almacen})
 	// El entorno (en qué Tramtai se está) y, en el servidor, la cuenta con la que corre.
-	marca := map[string]string{"servidor": "entorno.servidor", "portable": "entorno.portable"}[d.Entorno]
-	l = append(l, [2]string{p.tx("acerca.entorno"), p.tx(cmpOr(marca, "entorno.escritorio"))})
+	l = append(l, [2]string{p.tx("acerca.entorno"), p.tx(pagina.MarcaEntorno(d.Entorno))})
 	if d.Cuenta != "" {
 		l = append(l, [2]string{p.tx("acerca.cuenta"), d.Cuenta})
 	}

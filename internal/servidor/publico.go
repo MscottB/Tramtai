@@ -2,7 +2,7 @@ package servidor
 
 import (
 	"errors"
-	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -56,15 +56,19 @@ func PublicarPuerto(puerto int) error {
 	return os.Rename(tmp.Name(), ruta)
 }
 
-// PuertoDelSistema lee el puerto del servicio del sistema de este equipo, si lo hay. Lo leído no se cree a ciegas: solo
-// vale un número de puerto (1-65535), y nada más.
-func PuertoDelSistema() (int, bool) {
-	f, err := os.Open(rutaPublica())
-	if err != nil {
-		return 0, false
+// RetirarPuerto lo llama el servicio del sistema al parar con normalidad: sin él, el Tramtai del usuario deja de avisar.
+// En Linux systemd ya borra /run/tramtai, pero así es igual en los dos sistemas. Sin archivo no es un error.
+func RetirarPuerto() error {
+	if err := os.Remove(rutaPublica()); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
 	}
-	defer f.Close()
-	datos, err := io.ReadAll(io.LimitReader(f, 16))
+	return nil
+}
+
+// PuertoDelSistema lee el puerto del servicio del sistema de este equipo, si lo hay. Lo leído no se cree a ciegas: en
+// Windows, solo de un dueño de confianza (leerPublico); y solo vale un número de puerto (1-65535), nada más.
+func PuertoDelSistema() (int, bool) {
+	datos, err := leerPublico(rutaPublica(), 16)
 	if err != nil || len(datos) == 16 { // un puerto, con su salto de línea, cabe de sobra
 		return 0, false
 	}

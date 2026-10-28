@@ -469,6 +469,8 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	if carpetas.Servidor() { // para el aviso de los dos entornos del Tramtai del usuario; sin él, el servicio sigue
 		if err := servidor.PublicarPuerto(puertoUsado); err != nil {
 			fmt.Fprintln(salida, idioma.Tf("aviso: no se pudo publicar el puerto para el Tramtai de los usuarios del equipo: %s", err))
+		} else {
+			defer servidor.RetirarPuerto() // al parar con normalidad, el usuario deja de ver el aviso
 		}
 	}
 	fmt.Fprintf(salida, idioma.T("tramtai %s escuchando en %s\nWeb UI: %s (o tramtai abrir)\n"), version.Texto(), sv.BasePublica(), sv.BasePublica())

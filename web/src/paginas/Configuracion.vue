@@ -23,6 +23,7 @@
                 <div>{{ f.valor }}</div>
                 <div class="text-caption texto-suave">
                   <template v-if="f.orden">{{ t('servidor.cambia') }} <code class="codigo">{{ f.orden }}</code></template>
+                  <template v-else-if="f.clave">{{ t('servidor.enConfig') }} <code class="codigo">{{ f.clave }}</code></template>
                   <template v-else>{{ f.nota }}</template>
                 </div>
               </div>

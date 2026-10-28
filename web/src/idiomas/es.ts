@@ -503,6 +503,7 @@ const es = {
   'servidor.suscripcionLocal': '{agente}: solo en este equipo',
   'servidor.sinSuscripciones': 'Ninguna (los agentes usan su clave de API)',
   'servidor.cambia': 'Se cambia con',
+  'servidor.enConfig': 'En config.yaml:',
   'servidor.cambiaEn': 'Todo esto se cambia en el propio servidor: las claves servicio.* en su config.yaml, que se aplican con tramtai-servidor reiniciar, y lo demás con su orden.',
   'servidor.avisoSuscripcion': 'Este servidor usa tu suscripción de {agente}: solo para ti',
   'seguridad.contrasenaTitulo': 'Contraseña del administrador',

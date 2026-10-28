@@ -405,7 +405,8 @@ func TestConfiguracionServidorSoloLectura(t *testing.T) {
 	}
 	ir(t, a, tx("servidor.titulo"))
 	v := strings.Join(strings.Fields(a.Vista()), " ")
-	for _, quiero := range []string{tx("servidor.https") + ": " + tx("servidor.tlsNinguno"), "servicio.tls.modo", tx("servidor.dominios"),
+	for _, quiero := range []string{tx("servidor.https") + ": " + tx("servidor.tlsNinguno"), tx("servidor.enConfig") + " servicio.tls.modo", tx("servidor.dominios"),
+		"tramtai-servidor agentes entrar <agente>", // en local, el inicio de sesión del CLI
 		tx("servidor.administrador") + ": " + tx("servidor.sinAdministrador"), "tramtai-servidor administrador contraseña",
 		tx("servidor.cambiaEn")[:strings.Index(tx("servidor.cambiaEn"), "config.yaml")]} { // las órdenes largas se parten por el guion
 		if !strings.Contains(v, quiero) {
@@ -421,6 +422,14 @@ func TestConfiguracionServidorSoloLectura(t *testing.T) {
 		if fuera := a.Pulsar(tecla); len(fuera) != 0 || a.P.EnCampo() {
 			t.Errorf("%s no cambia nada en Servidor: %v", tecla, fuera)
 		}
+	}
+	// Abierto a la red, la suscripción es la personal.
+	cli, id = prueba.Ajustado(t, func(o *servicio.Opciones) { o.Entorno, o.Expuesto = "servidor", true })
+	b := abierta(t, cli, id)
+	todoTramtai(t, b)
+	ir(t, b, tx("servidor.titulo"))
+	if v := strings.Join(strings.Fields(b.Vista()), " "); !strings.Contains(v, "tramtai-servidor agentes suscripcion <agente> --personal") {
+		t.Errorf("expuesto, la orden de la personal:\n%s", b.Vista())
 	}
 }
 

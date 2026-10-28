@@ -37,8 +37,8 @@ type msgWeb struct {
 }
 
 // abrirWeb (tecla W) pide al servicio una dirección de la Web UI de un solo uso para el espacio de ahora y la abre en el
-// navegador; sin navegador, o si no se pudo abrir, la enseña en una ventana para copiarla a mano. En el servidor con
-// administrador no pide código: la dirección pública basta, y allí se entra con la contraseña.
+// navegador; sin navegador, o si no se pudo abrir, la enseña en una ventana para copiarla a mano. Sin navegador, en el
+// servidor donde se entra con la contraseña del administrador (spec §8), basta la dirección pública, sin código.
 func (m *modelo) abrirWeb() tea.Cmd {
 	if m.pidiendoWeb { // ya hay una petición en vuelo: una segunda W no lanza otra
 		return nil
@@ -46,11 +46,9 @@ func (m *modelo) abrirWeb() tea.Cmd {
 	if m.cli == nil || m.caido != nil {
 		return comp.Aviso(idioma.T("El servicio no responde · r reintenta"), comp.Fallo)
 	}
-	if m.servidor != nil && m.servidor.Administrador { // se entra con la contraseña: basta la dirección pública
+	if !hayNavegador() && m.entraConContrasena() {
 		base := m.cli.BasePublica()
-		return func() tea.Msg {
-			return msgWeb{url: base, conContrasena: true, abierta: hayNavegador() && abrir(base) == nil}
-		}
+		return func() tea.Msg { return msgWeb{url: base, conContrasena: true} }
 	}
 	m.pidiendoWeb = true
 	cli, instancia := m.cli, m.instancia
@@ -64,6 +62,13 @@ func (m *modelo) abrirWeb() tea.Cmd {
 		return msgWeb{url: direccion, abierta: hayNavegador() && abrir(direccion) == nil}
 	}
 	return tea.Batch(comp.Aviso(idioma.T("Pidiendo el enlace de la Web UI…"), comp.Info), pedir)
+}
+
+// entraConContrasena dice si en este servidor se entra con la contraseña del administrador: hay administrador y llega
+// HTTPS (TLS propio o un proxy de confianza); sin HTTPS, la contraseña no se acepta y hace falta el código.
+func (m *modelo) entraConContrasena() bool {
+	s := m.servidor
+	return s != nil && s.Administrador && (s.TLS != "ninguno" && s.TLS != "" || len(s.Confiables) > 0)
 }
 
 // webAbierta atiende el resultado de W: un aviso si se abrió o falló, o la ventana con la dirección y el código.

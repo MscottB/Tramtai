@@ -181,6 +181,47 @@ func TestProtegerServidorUnion(t *testing.T) {
 	}
 }
 
+// TestLeerDeConfianza: el puerto publicado solo se lee si su dueño es SYSTEM, los administradores, la cuenta del servicio
+// o el propio usuario: sin el servidor instalado, cualquiera puede crear el archivo en %ProgramData% y apuntar a un
+// servidor falso. Un enlace en su lugar no se sigue.
+func TestLeerDeConfianza(t *testing.T) {
+	dir := t.TempDir()
+	ruta := filepath.Join(dir, "puerto")
+	if err := os.WriteFile(ruta, []byte("17374\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	servicio := "S-1-5-80-1111111111-2222222222-3333333333-444444444-555555555"
+	if datos, err := LeerDeConfianza(ruta, servicio, 16); err != nil || string(datos) != "17374\n" {
+		t.Fatalf("del propio usuario: %q %v", datos, err)
+	}
+	dueno0 := duenoDe
+	t.Cleanup(func() { duenoDe = dueno0 })
+	ajeno, _ := windows.StringToSid("S-1-5-21-1111111111-2222222222-3333333333-1001")
+	sistema, _ := windows.CreateWellKnownSid(windows.WinLocalSystemSid)
+	admins, _ := windows.CreateWellKnownSid(windows.WinBuiltinAdministratorsSid)
+	cuenta, _ := windows.StringToSid(servicio)
+	for nombre, c := range map[string]struct {
+		sid  *windows.SID
+		vale bool
+	}{"ajeno": {ajeno, false}, "SYSTEM": {sistema, true}, "Administradores": {admins, true}, "el servicio": {cuenta, true}} {
+		duenoDe = func(windows.Handle) (*windows.SID, error) { return c.sid, nil }
+		if _, err := LeerDeConfianza(ruta, servicio, 16); (err == nil) != c.vale {
+			t.Errorf("dueño %s: %v", nombre, err)
+		}
+	}
+	duenoDe = dueno0
+	if datos, err := LeerDeConfianza(ruta, servicio, 4); err != nil || string(datos) != "1737" {
+		t.Errorf("lee como mucho lo pedido: %q %v", datos, err)
+	}
+	enlace := filepath.Join(dir, "enlace")
+	if salida, err := exec.Command("cmd", "/c", "mklink", enlace, ruta).CombinedOutput(); err != nil {
+		t.Skipf("no se pudo crear el enlace: %v %s", err, salida)
+	}
+	if _, err := LeerDeConfianza(enlace, servicio, 16); err == nil {
+		t.Error("un enlace en lugar del archivo no se sigue")
+	}
+}
+
 // La carpeta portable queda solo para el usuario actual y SYSTEM, sin herencia; si ya lo estaba, no se toca.
 func TestProtegerCarpeta(t *testing.T) {
 	dir := t.TempDir()

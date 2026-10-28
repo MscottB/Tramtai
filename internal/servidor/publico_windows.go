@@ -9,3 +9,10 @@ import "tramtai/internal/carpetas"
 func prepararPublica(dir string) error {
 	return carpetas.ProtegerPublica(dir, sidServicio(nombreServicio))
 }
+
+// leerPublico lee el puerto solo si su dueño es de confianza (SYSTEM, Administradores, el servicio o el propio usuario)
+// y sin seguir enlaces: sin el servidor instalado, cualquiera puede crear el archivo en %ProgramData%. Si no lo es, no se
+// avisa (no hay registro de depuración en quien lo lee: la app, la terminal o la CLI).
+func leerPublico(ruta string, maximo int64) ([]byte, error) {
+	return carpetas.LeerDeConfianza(ruta, sidServicio(nombreServicio), maximo)
+}

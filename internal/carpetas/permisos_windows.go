@@ -2,7 +2,9 @@ package carpetas
 
 import (
 	"errors"
+	"io"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"unsafe"
 
@@ -165,6 +167,38 @@ func ProtegerPublica(ruta, sidServicio string) error {
 		return err
 	}
 	return windows.SetSecurityInfo(h, windows.SE_FILE_OBJECT, windows.DACL_SECURITY_INFORMATION|windows.PROTECTED_DACL_SECURITY_INFORMATION, nil, nil, dacl, nil)
+}
+
+// LeerDeConfianza lee como mucho maximo bytes de un archivo de la carpeta publico del servidor, sin seguir puntos de
+// reanálisis, y solo si su dueño es SYSTEM, los administradores, la cuenta del servicio (sidServicio) o el usuario
+// actual: sin el servidor instalado, cualquier usuario puede crear el archivo en %ProgramData% (CREATOR OWNER) y apuntar
+// a un servidor falso.
+func LeerDeConfianza(ruta, sidServicio string, maximo int64) ([]byte, error) {
+	h, info, err := abrirSinSeguir(ruta, windows.GENERIC_READ|windows.READ_CONTROL)
+	if err != nil {
+		return nil, err
+	}
+	f := os.NewFile(uintptr(h), ruta)
+	defer f.Close()
+	if info.FileAttributes&(windows.FILE_ATTRIBUTE_REPARSE_POINT|windows.FILE_ATTRIBUTE_DIRECTORY) != 0 {
+		return nil, errors.New(idioma.Tf("%s no es un archivo (¿un enlace?)", ruta))
+	}
+	dueno, err := duenoDe(h)
+	if err != nil {
+		return nil, err
+	}
+	servicio, err := windows.StringToSid(sidServicio)
+	if err != nil {
+		return nil, err
+	}
+	usuario, err := windows.GetCurrentProcessToken().GetTokenUser()
+	if err != nil {
+		return nil, err
+	}
+	if !dueno.IsWellKnown(windows.WinLocalSystemSid) && !dueno.IsWellKnown(windows.WinBuiltinAdministratorsSid) && !dueno.Equals(servicio) && !dueno.Equals(usuario.User.Sid) {
+		return nil, errors.New(idioma.Tf("%s es de otro usuario (%s): no se cree", ruta, dueno))
+	}
+	return io.ReadAll(io.LimitReader(f, maximo))
 }
 
 // abrirSinSeguir abre un archivo o una carpeta sin seguir puntos de reanálisis (uniones, enlaces) y da sus atributos.

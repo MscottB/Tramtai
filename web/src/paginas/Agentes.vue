@@ -54,7 +54,7 @@
             <span v-if="contextos[a.agente]?.length"><q-icon name="o_memory" />{{ t('agentes.contexto') }}: {{ textoContextos(a.agente) }}</span>
           </div>
           <q-btn unelevated dense no-caps color="primary" icon="o_chat" class="q-mt-md q-mr-sm q-px-md" :label="t('agentes.probar')" @click="probar(a)" />
-          <q-btn v-if="puedeCambiar(a)" flat dense no-caps color="primary" class="q-mt-md q-px-sm" :loading="cambiando === a.agente"
+          <q-btn v-if="suscripcion(a) ? puedeVolver(a) : puedeCambiar(a)" flat dense no-caps color="primary" class="q-mt-md q-px-sm" :loading="cambiando === a.agente"
             :label="suscripcion(a) ? t('agentes.cambiarAClave') : t('agentes.cambiarASuscripcion')"
             @click="suscripcion(a) ? cambiar(a, 'clave_api') : confirmarSuscripcion(a)" />
         </template>
@@ -101,7 +101,7 @@
         <template v-else-if="a.estado === 'sin_sesion'">
           <div class="aviso text-body2">{{ a.problema }}</div>
           <div v-if="forma !== 'elegir'" class="bloque-codigo q-mt-sm">{{ ordenSuscripcion(a.agente, forma) }}<q-btn flat dense round size="sm" icon="content_copy" class="boton-copiar" :aria-label="t('agentes.copiarComando')" @click="copiar(ordenSuscripcion(a.agente, forma))" /></div>
-          <q-btn v-if="puedeCambiar(a)" flat dense no-caps color="primary" class="q-mt-sm q-px-sm" :loading="cambiando === a.agente"
+          <q-btn v-if="puedeVolver(a)" flat dense no-caps color="primary" class="q-mt-sm q-px-sm" :loading="cambiando === a.agente"
             :label="t('agentes.cambiarAClave')" @click="cambiar(a, 'clave_api')" />
         </template>
 
@@ -114,7 +114,7 @@
         <template v-else>
           <div class="aviso text-body2">{{ a.estado === 'usa_clave' ? t('agentes.usaClave', { cli: cli(a) })
             : a.estado === 'sesion_no_responde' ? t('agentes.sesionNoResponde', { cli: cli(a) }) : a.problema }}</div>
-          <q-btn v-if="ofrecerDejarSuscripcion(a, puedeCambiar(a))" flat dense no-caps color="primary" class="q-mt-sm q-px-sm" :loading="cambiando === a.agente"
+          <q-btn v-if="ofrecerDejarSuscripcion(a, puedeVolver(a))" flat dense no-caps color="primary" class="q-mt-sm q-px-sm" :loading="cambiando === a.agente"
             :label="t('agentes.dejarSuscripcion')" @click="cambiar(a, 'clave_api')" />
         </template>
         <q-btn v-if="!a.desconectado && sesion?.local" flat dense no-caps color="neutro" icon="o_link_off" class="q-mt-sm q-px-sm"
@@ -192,7 +192,7 @@ import type { Destino } from '../navegacion'
 import { agenteListo, asegurarFichas, cargarFichas, codigoLinea, fichaDe, fijarDisponibilidad, nombreAgente, ofrecerDejarSuscripcion, ordenarAgentes } from '../agentes'
 import { nombreEsfuerzo, numero } from '../formato'
 import { cargarRutaConfig, rutaConfig } from '../rutaConfig'
-import { estadoServidor, formaSuscripcion, ordenClave, ordenSuscripcion, puedeElegirSuscripcion } from '../servidor'
+import { estadoServidor, formaSuscripcion, ordenClave, ordenSuscripcion, puedeElegirSuscripcion, puedeVolverAClave } from '../servidor'
 import { t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 
@@ -264,6 +264,8 @@ const suscripcion = (a: Adaptador) => a.autenticacion === 'suscripcion'
 const admite = (a: Adaptador) => !!fichaDe(a.agente)?.autenticaciones.includes('suscripcion')
 const forma = computed(() => formaSuscripcion(sesion.value, estadoServidor.value))
 const puedeCambiar = (a: Adaptador) => puedeElegirSuscripcion(admite(a), sesion.value, estadoServidor.value)
+// Volver a la clave de API sí vale en el servidor, también desde la sesión remota.
+const puedeVolver = (a: Adaptador) => puedeVolverAClave(admite(a), sesion.value)
 const cli = (a: Adaptador) => fichaDe(a.agente)?.programa ?? a.agente
 const variable = (a: Adaptador) => fichaDe(a.agente)?.variables_clave[0] ?? a.problema?.match(/[A-Z_]+_API_KEY/)?.[0] ?? ''
 const comando = (a: Adaptador) => ordenClave(sesion.value, variable(a))

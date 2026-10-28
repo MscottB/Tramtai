@@ -203,15 +203,21 @@ func (s *Servicio) ajustesServicio() contrato.AjustesServicio {
 	return a
 }
 
-// autenticacionUI es solo de una sesión local, como soloLocal; en el servidor, a la sesión remota (la de la contraseña)
-// le dice 403 en lugar del 401 de una sesión que no vale: la suscripción personal se activa con la CLI.
+// autenticacionUI es solo de una sesión local, como soloLocal. En el servidor, la sesión remota (la de la contraseña)
+// puede volver a la clave de API, como la terminal; pasar a la suscripción le da 403 en lugar del 401 de una sesión que
+// no vale: la suscripción personal se activa con la CLI.
 func (s *Servicio) autenticacionUI(w http.ResponseWriter, r *http.Request, ses *sesion) {
-	if !s.sesionLocal(r, ses) && s.entorno() == "servidor" {
+	local := s.sesionLocal(r, ses)
+	remota := !local && s.entorno() == "servidor"
+	prohibido := func() {
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, idioma.T("la autenticación de los agentes del servidor solo se cambia desde el propio servidor (tramtai-servidor agentes suscripcion)")))
-		return
 	}
-	if !s.sesionLocal(r, ses) || !csrfValido(r, ses) {
-		api.NoAutorizado(w, r)
+	if !local && !remota || !csrfValido(r, ses) {
+		if remota {
+			prohibido()
+		} else {
+			api.NoAutorizado(w, r)
+		}
 		return
 	}
 	var peticion struct {
@@ -220,6 +226,10 @@ func (s *Servicio) autenticacionUI(w http.ResponseWriter, r *http.Request, ses *
 	}
 	if err := api.LeerJSON(w, r, &peticion); err != nil {
 		api.EscribirError(w, r, err)
+		return
+	}
+	if remota && peticion.Modo != adaptadores.AutenticacionClaveAPI {
+		prohibido()
 		return
 	}
 	if err := s.cambiarAutenticacion(peticion.Agente, peticion.Modo); err != nil {

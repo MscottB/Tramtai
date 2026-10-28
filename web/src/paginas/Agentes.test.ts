@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { formaSuscripcion, ordenClave, ordenSuscripcion, puedeElegirSuscripcion } from '../servidor.ts'
+import { formaSuscripcion, ordenClave, ordenSuscripcion, puedeElegirSuscripcion, puedeVolverAClave } from '../servidor.ts'
 import type { EstadoServidor, Sesion } from '../api/tipos.ts'
 
 const sesion = (entorno: string): Sesion => ({ instancia: 'global', csrf: 'tk', version: 'v0', local: true, entorno })
@@ -31,4 +31,13 @@ test('«Usar mi suscripción» solo sale en una sesión de este equipo fuera del
   // Agentes.vue decide los botones de la suscripción con ella, y en el servidor enseña la orden.
   const pagina = readFileSync(new URL('./Agentes.vue', import.meta.url), 'utf8')
   assert.ok(pagina.includes('puedeElegirSuscripcion(') && pagina.includes('ordenSuscripcion('))
+})
+
+test('volver a la clave de API sí se puede en el servidor, también desde la sesión remota, como en la terminal', () => {
+  assert.equal(puedeVolverAClave(true, sesion('escritorio')), true)
+  assert.equal(puedeVolverAClave(true, { ...sesion('escritorio'), local: false }), false, 'en el escritorio, solo desde este equipo')
+  assert.equal(puedeVolverAClave(true, { ...sesion('servidor'), local: false }), true)
+  assert.equal(puedeVolverAClave(false, sesion('servidor')), false)
+  const pagina = readFileSync(new URL('./Agentes.vue', import.meta.url), 'utf8')
+  assert.ok(pagina.includes("puedeVolverAClave(") && pagina.includes("cambiar(a, 'clave_api')"))
 })

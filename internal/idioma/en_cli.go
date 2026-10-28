@@ -76,6 +76,8 @@ func init() {
 		"el servicio %s no se detuvo en %s":                                                       "the %s service did not stop within %s",
 		"el servicio del sistema no está instalado (tramtai servidor instalar)":                   "the system service is not installed (tramtai server install)",
 		"%s no es una carpeta (¿un punto de unión o un enlace?): quítala y repite la instalación": "%s is not a folder (a junction or a link?): remove it and install again",
+		"%s no es un archivo (¿un enlace?)":                                                       "%s is not a file (a link?)",
+		"%s es de otro usuario (%s): no se cree":                                                  "%s belongs to another user (%s): it is not trusted",
 		"el paquete del conversor tiene una entrada que sale de su carpeta: %s":                   "the converter package has an entry that leaves its folder: %s",
 		"el .zip no tiene la carpeta conversor: usa el paquete del conversor de Tramtai":          "the .zip has no conversor folder: use the Tramtai converter package",
 		"%s no es un conversor preparado (falta listo.json o su Python)":                          "%s is not a prepared converter (listo.json or its Python is missing)",

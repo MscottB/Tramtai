@@ -56,6 +56,10 @@ export function formaSuscripcion(s: Sesion | null | undefined, e: EstadoServidor
 export const puedeElegirSuscripcion = (admite: boolean, s: Sesion | null | undefined, e: EstadoServidor | null) =>
   admite && !!s?.local && formaSuscripcion(s, e) === 'elegir'
 
+// puedeVolverAClave: dejar la suscripción por la clave de API vale desde este equipo y, en el servidor, también desde la
+// sesión remota del administrador (como en la terminal): no abre nada nuevo.
+export const puedeVolverAClave = (admite: boolean, s: Sesion | null | undefined) => admite && (!!s?.local || esServidor(s))
+
 export function ordenSuscripcion(agente: string, forma: FormaSuscripcion) {
   return forma === 'personal' ? `tramtai-servidor agentes suscripcion ${agente} --personal` : `tramtai-servidor agentes entrar ${agente}`
 }
@@ -69,6 +73,7 @@ export interface FilaServidor {
   etiqueta: Clave
   valor: string
   orden?: string
+  clave?: string // una clave de config.yaml (servicio.*), que no es una orden
   nota?: string
 }
 
@@ -77,9 +82,9 @@ const modosTLS: Record<string, Clave> = { ninguno: 'servidor.tlsNinguno', archiv
 export function filasServidor(e: EstadoServidor, fecha: (iso: string) => string, nombre: (agente: string) => string): FilaServidor[] {
   const lista = (l: string[]) => (l.length ? l.join(', ') : t('servidor.ninguno'))
   const filas: FilaServidor[] = [
-    { etiqueta: 'servidor.https', valor: modosTLS[e.tls] ? t(modosTLS[e.tls]) : e.tls, orden: 'servicio.tls.modo' },
-    { etiqueta: 'servidor.dominios', valor: lista(e.dominios), orden: 'servicio.dominios' },
-    { etiqueta: 'servidor.confiables', valor: lista(e.confiables), orden: 'servicio.proxy.confiables' },
+    { etiqueta: 'servidor.https', valor: modosTLS[e.tls] ? t(modosTLS[e.tls]) : e.tls, clave: 'servicio.tls.modo' },
+    { etiqueta: 'servidor.dominios', valor: lista(e.dominios), clave: 'servicio.dominios' },
+    { etiqueta: 'servidor.confiables', valor: lista(e.confiables), clave: 'servicio.proxy.confiables' },
   ]
   if (e.vence_certificado) {
     filas.push({ etiqueta: 'servidor.vence', valor: fecha(e.vence_certificado), nota: t(e.tls === 'letsencrypt' ? 'servidor.renuevaSolo' : 'servidor.renovarArchivos') })
@@ -94,7 +99,8 @@ export function filasServidor(e: EstadoServidor, fecha: (iso: string) => string,
     valor: e.suscripciones.length
       ? e.suscripciones.map((s) => t(s.personal ? 'servidor.suscripcionPersonal' : 'servidor.suscripcionLocal', { agente: nombre(s.agente), n: s.simultaneas })).join(' · ')
       : t('servidor.sinSuscripciones'),
-    orden: 'tramtai-servidor agentes suscripcion <agente> --personal',
+    // Como en Agentes: en local, el inicio de sesión del CLI; abierto a la red, la suscripción personal.
+    orden: ordenSuscripcion('<agente>', e.expuesto ? 'personal' : 'entrar'),
   })
   return filas
 }

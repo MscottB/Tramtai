@@ -31,6 +31,18 @@ type Contexto struct {
 	Entorno     string           // servidor, portable o escritorio (Opciones.Entorno); en el servidor, Agentes ofrece sus órdenes
 }
 
+// MarcaEntorno es la clave del texto de la marca del entorno: «Servidor», «Este equipo» o «Portable», como en la Web
+// UI. La usan la línea de estado y Acerca de.
+func MarcaEntorno(entorno string) string {
+	switch entorno {
+	case "servidor":
+		return "entorno.servidor"
+	case "portable":
+		return "entorno.portable"
+	}
+	return "entorno.escritorio"
+}
+
 // Claves de las páginas: las de la Web UI. IrA con otra clave no hace nada.
 const (
 	PaginaInicio        = "inicio"
