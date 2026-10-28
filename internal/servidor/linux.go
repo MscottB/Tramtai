@@ -140,13 +140,7 @@ func Instalar(o Opciones) error {
 	antes := instalado(r)
 	cambiado, reiniciar := false, false
 	var avisos []string
-	if delPaquete(r) {
-		var err error
-		if reiniciar, avisos, err = limpiarTarGz(r); err != nil {
-			return err
-		}
-		cambiado = reiniciar
-	} else {
+	if !delPaquete(r) {
 		// La cuenta del servicio solo lee el programa: es de root.
 		if err := os.MkdirAll(r.Programa, 0o755); err != nil {
 			return err
@@ -168,6 +162,13 @@ func Instalar(o Opciones) error {
 	}
 	if err := prepararDatos(r.Datos, cmp.Or(o.Como, terminos.ComoServidorInstalar), o.Conversor); err != nil {
 		return err
+	}
+	if delPaquete(r) { // tras lo que puede fallar: la unidad vieja no se deshabilita si no va a quedar la del paquete
+		var err error
+		if reiniciar, avisos, err = limpiarTarGz(r); err != nil {
+			return err
+		}
+		cambiado = cambiado || reiniciar
 	}
 	nueva, err := actualizarUnidad(r, UnidadOpciones{LetsEncrypt: o.LetsEncrypt, PuertoBajo: o.PuertoBajo})
 	if err != nil {
