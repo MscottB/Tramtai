@@ -43,6 +43,7 @@ func nuevaPrueba(t *testing.T) *prueba {
 		Datos:      filepath.Join(base, "var", "lib", "tramtai"),
 		Envoltorio: filepath.Join(base, "usr", "local", "bin", "tramtai-servidor"),
 		Unidad:     filepath.Join(base, "etc", "systemd", "system", "tramtai.service"),
+		UnidadConf: filepath.Join(base, "etc", "systemd", "system", "tramtai.service.d", "unidad.conf"),
 		Cifradas:   filepath.Join(base, "etc", "credstore.encrypted"),
 		ClavesConf: filepath.Join(base, "etc", "systemd", "system", "tramtai.service.d", "claves.conf"),
 		ClavesEnv:  filepath.Join(base, "etc", "tramtai", "claves.env"),
@@ -442,6 +443,115 @@ func TestDesinstalarConservaDatos(t *testing.T) {
 		t.Fatal(err)
 	}
 	mismas(t, "desinstalar otra vez", p.ordenes, "id tramtai")
+}
+
+// paquete simula el paquete tramtai-servidor recién instalado: el programa con .paquete, la unidad y el envoltorio en
+// sus rutas (con contenido reconocible, para ver que no se tocan) y la cuenta, que crea systemd-sysusers.
+func (p *prueba) paquete(t *testing.T) {
+	t.Helper()
+	if err := os.MkdirAll(p.r.Programa, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for ruta, contenido := range map[string]string{filepath.Join(p.r.Programa, "tramtai"): "tramtai del paquete",
+		filepath.Join(p.r.Programa, "uv"): "uv del paquete", filepath.Join(p.r.Programa, ".paquete"): "",
+		p.r.Unidad: "unidad del paquete", p.r.Envoltorio: "envoltorio del paquete"} {
+		if err := os.WriteFile(ruta, []byte(contenido), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	p.cuenta = true
+}
+
+// sinTocarPaquete comprueba que lo que puso el paquete sigue igual: es de apt o dnf.
+func (p *prueba) sinTocarPaquete(t *testing.T) {
+	t.Helper()
+	for ruta, contenido := range map[string]string{filepath.Join(p.r.Programa, "tramtai"): "tramtai del paquete",
+		filepath.Join(p.r.Programa, "uv"): "uv del paquete", p.r.Unidad: "unidad del paquete", p.r.Envoltorio: "envoltorio del paquete"} {
+		if b, err := os.ReadFile(ruta); err != nil || string(b) != contenido {
+			t.Errorf("%s es del paquete y no se toca: %q %v", ruta, b, err)
+		}
+	}
+}
+
+// TestInstalarConPaquete: con el programa del paquete (.paquete), instalar no copia el programa ni escribe la unidad o
+// el envoltorio: crea la configuración, acepta los términos, deja en un drop-in lo que la unidad toma de la
+// configuración, y habilita y arranca. Repetirla no cambia nada. El envoltorio del paquete es el de instalar.
+func TestInstalarConPaquete(t *testing.T) {
+	p := nuevaPrueba(t)
+	p.paquete(t)
+	p.instalar(t)
+	mismas(t, "órdenes", p.ordenes, "id tramtai", "systemctl daemon-reload", "systemctl enable --now tramtai")
+	p.sinTocarPaquete(t)
+	datos := filepath.Join(p.r.Datos, "datos")
+	if a, _ := terminos.Leer(datos); a.Como != terminos.ComoOpcion {
+		t.Errorf("términos aceptados: %+v", a)
+	}
+	if c, err := configuracion.CargarCapa(filepath.Join(p.r.Datos, "config.yaml"), configuracion.OrigenGlobal); err != nil || c.Valores["servicio.host"] != "127.0.0.1" {
+		t.Errorf("configuración inicial en loopback: %v %v", c, err)
+	}
+	if conf := leido(t, p.r.UnidadConf); conf != ajustesPaquete(UnidadOpciones{}) {
+		t.Errorf("drop-in de la unidad del paquete:\n%s", conf)
+	}
+
+	p.instalar(t)
+	mismas(t, "otra vez", p.ordenes, "id tramtai", "systemctl enable --now tramtai")
+
+	if b, err := os.ReadFile("../../scripts/linux/servidor/tramtai-servidor"); err != nil || string(b) != envoltorio {
+		t.Errorf("el envoltorio del paquete es el de instalar: %q %v", b, err)
+	}
+}
+
+// TestReiniciarConPaquete: con la unidad del paquete, reiniciar (el último paso de actualizar, R32) no escribe una
+// unidad propia, que taparía la del paquete: el plazo de parada y las capacidades van en el drop-in. Antes de
+// «tramtai-servidor instalar» no arranca nada: no hay términos aceptados.
+func TestReiniciarConPaquete(t *testing.T) {
+	p := nuevaPrueba(t)
+	p.paquete(t)
+	if err := Reiniciar(); err == nil {
+		t.Error("sin instalar, reiniciar falla")
+	}
+	mismas(t, "sin instalar", p.ordenes)
+
+	p.instalar(t)
+	if err := configuracion.FijarValor(filepath.Join(p.r.Datos, "config.yaml"), configuracion.OrigenGlobal, "servicio.tls.modo", "letsencrypt"); err != nil {
+		t.Fatal(err)
+	}
+	p.ordenes = nil
+	if err := Reiniciar(); err != nil {
+		t.Fatal(err)
+	}
+	mismas(t, "órdenes", p.ordenes, "systemctl daemon-reload", "systemctl restart tramtai")
+	p.sinTocarPaquete(t)
+	conf := leido(t, p.r.UnidadConf)
+	if conf != ajustesPaquete(UnidadOpciones{LetsEncrypt: true}) || !strings.Contains(conf, "\nAmbientCapabilities=CAP_NET_BIND_SERVICE\n") {
+		t.Errorf("drop-in con Let's Encrypt:\n%s", conf)
+	}
+}
+
+// TestDesinstalarConPaquete: con el paquete, desinstalar detiene y deshabilita el servicio y quita el drop-in, pero deja
+// el programa, la unidad y el envoltorio (los quita apt o dnf, y lo dice); con borrarDatos borra los datos y la cuenta.
+func TestDesinstalarConPaquete(t *testing.T) {
+	p := nuevaPrueba(t)
+	p.paquete(t)
+	p.instalar(t)
+	p.ordenes = nil
+	if err := Desinstalar(false); !errors.Is(err, ErrQuitarPaquete) {
+		t.Fatalf("avisa de que el paquete lo quitan apt o dnf: %v", err)
+	}
+	mismas(t, "desinstalar", p.ordenes, "systemctl disable --now tramtai", "systemctl daemon-reload")
+	p.sinTocarPaquete(t)
+	if existe(p.r.UnidadConf) || !existe(filepath.Join(p.r.Datos, "datos", "terminos.json")) {
+		t.Error("el drop-in se quita y los datos se conservan")
+	}
+
+	p.instalar(t)
+	if err := Desinstalar(true); !errors.Is(err, ErrQuitarPaquete) {
+		t.Fatal(err)
+	}
+	p.sinTocarPaquete(t)
+	if existe(p.r.Datos) || p.cuenta {
+		t.Error("con borrarDatos se borran la carpeta y la cuenta")
+	}
 }
 
 // conUnidad deja la unidad escrita, como tras instalar.

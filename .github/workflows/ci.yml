@@ -146,6 +146,10 @@ jobs:
         run: |
           sh scripts/linux/empaquetar.sh v0.0.0+ci amd64
           sh scripts/linux/probar-paquete.sh
+      - name: Paquetes del servidor (Debian 13 y Rocky Linux 9, en contenedores)
+        run: |
+          sh scripts/linux/probar-paquete-servidor.sh deb
+          sh scripts/linux/probar-paquete-servidor.sh rpm
 
   # Publicar se lanza desde una etiqueta, que solo ve la caché de main: aquí se dejan en ella los paquetes de GTK de sus
   # dos runners (el CI usa otra imagen de Ubuntu).

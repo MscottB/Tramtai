@@ -1,0 +1,45 @@
+# Generada por Tramtai, que la reescribe al instalar y al actualizar: para cambiarla, usa un drop-in (systemctl edit tramtai).
+[Unit]
+Description=Tramtai (servidor)
+Documentation=https://github.com/MscottB/Tramtai/blob/main/docs/servidor.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tramtai
+Group=tramtai
+Environment=TRAMTAI_SERVIDOR=1
+StateDirectory=tramtai
+StateDirectoryMode=0700
+RuntimeDirectory=tramtai
+RuntimeDirectoryMode=0755
+ExecStart=/opt/tramtai/tramtai servicio iniciar --registro /var/lib/tramtai/datos/servicio.log
+Restart=on-failure
+RestartSec=5s
+KillMode=mixed
+TimeoutStopSec=60
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ReadWritePaths=/var/lib/tramtai
+RestrictSUIDSGID=yes
+LockPersonality=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictRealtime=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+SystemCallArchitectures=native
+RemoveIPC=yes
+UMask=0077
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

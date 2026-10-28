@@ -1,0 +1,58 @@
+# Paquetes .deb y .rpm del servidor de Tramtai (spec v0.58 §9): el servicio del sistema con su cuenta tramtai. Lo usa
+# scripts/linux/empaquetar.sh, después de compilar en paquete/:
+#   VERSION=0.58.0+02112026 ARCH=amd64 nfpm package -f scripts/linux/nfpm-servidor.yaml -p deb -t dist/...
+# Sin dependencias (el programa es estático) y sin archivos en común con el paquete de escritorio (/usr/bin/tramtai,
+# /usr/lib/tramtai): se pueden tener los dos. Al instalar no arranca nada; lo hace «tramtai-servidor instalar», tras
+# aceptar los términos.
+name: tramtai-servidor
+arch: ${ARCH}
+platform: linux
+version: ${VERSION}
+section: net
+priority: optional
+maintainer: Michael Scott B. <13172368+MscottB@users.noreply.github.com>
+description: |
+  Servidor de Tramtai / Tramtai server.
+  Tus agentes de IA como una API, en un servicio del sistema para todo el equipo / Your AI agents as an API, in a
+  system service for the whole machine.
+vendor: Tramtai
+homepage: https://mscottb.github.io/Tramtai/
+license: PolyForm-Noncommercial-1.0.0
+contents:
+  - src: ./paquete/tramtai
+    dst: /opt/tramtai/tramtai
+    file_info:
+      mode: 0755
+  - src: ./paquete/uv
+    dst: /opt/tramtai/uv
+    file_info:
+      mode: 0755
+  # Con .paquete, «tramtai-servidor instalar» no copia el programa ni escribe la unidad, y «actualizar» remite a apt o dnf.
+  - src: ./paquete/.paquete
+    dst: /opt/tramtai/.paquete
+    file_info:
+      mode: 0644
+  - src: ./scripts/linux/servidor/tramtai-servidor
+    dst: /usr/bin/tramtai-servidor
+    file_info:
+      mode: 0755
+  - src: ./scripts/linux/servidor/tramtai.service
+    dst: /usr/lib/systemd/system/tramtai.service
+    file_info:
+      mode: 0644
+  - src: ./scripts/linux/servidor/sysusers.conf
+    dst: /usr/lib/sysusers.d/tramtai.conf
+    file_info:
+      mode: 0644
+  - src: ./scripts/linux/servidor/tmpfiles.conf
+    dst: /usr/lib/tmpfiles.d/tramtai.conf
+    file_info:
+      mode: 0644
+  - src: ./TERMINOS.md
+    dst: /usr/share/doc/tramtai-servidor/TERMINOS.md
+  - src: ./LICENSE.md
+    dst: /usr/share/doc/tramtai-servidor/LICENCIA.md
+scripts:
+  postinstall: ./scripts/linux/servidor/postinst.sh
+  preremove: ./scripts/linux/servidor/prerm.sh
+  postremove: ./scripts/linux/servidor/postrm.sh

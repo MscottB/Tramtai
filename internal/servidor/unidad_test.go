@@ -27,6 +27,12 @@ func TestUnidadSystemd(t *testing.T) {
 	}
 }
 
+// TestUnidadDelPaqueteAlDia: la unidad que lleva el paquete .deb/.rpm es la que genera Tramtai; con otra configuración la
+// ajusta el drop-in de «tramtai-servidor instalar» y «reiniciar».
+func TestUnidadDelPaqueteAlDia(t *testing.T) {
+	iguales(t, "../../../scripts/linux/servidor/tramtai.service", Unidad(UnidadOpciones{})) // desde testdata
+}
+
 // TestUnidadLetsEncrypt: solo Let's Encrypt o un puerto menor de 1024 dan CAP_NET_BIND_SERVICE.
 func TestUnidadLetsEncrypt(t *testing.T) {
 	iguales(t, "tramtai-letsencrypt.service", Unidad(UnidadOpciones{LetsEncrypt: true}))

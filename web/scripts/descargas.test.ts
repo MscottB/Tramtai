@@ -9,6 +9,8 @@ const release = {
     { name: 'Tramtai-v0.56.0+22102026-instalador-windows-x64.exe', url: 'https://ejemplo.test/instalador.exe' },
     { name: 'tramtai-v0.56.0+22102026-linux-amd64.deb', url: 'https://ejemplo.test/amd64.deb' },
     { name: 'tramtai-v0.56.0+22102026-linux-arm64.deb', url: 'https://ejemplo.test/arm64.deb' },
+    // El paquete del servidor termina igual y va después por orden alfabético: el botón sigue siendo el de escritorio.
+    { name: 'Tramtai-v0.56.0+22102026-servidor-linux-amd64.deb', url: 'https://ejemplo.test/servidor-amd64.deb' },
     { name: 'SHA256SUMS.txt', url: 'https://ejemplo.test/sumas' },
   ],
 }

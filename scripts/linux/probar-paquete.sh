@@ -4,7 +4,7 @@
 # (bubblewrap): solo en esta prueba se arranca dentro de dbus-run-session y sin ese sandbox; el paquete no cambia.
 set -eu
 cd "$(dirname "$0")/../.."
-sudo apt-get install -y ./dist/*.deb xvfb dbus-x11
+sudo apt-get install -y "./$(ls dist/Tramtai-*-linux-*.deb | grep -v -- -servidor-linux-)" xvfb dbus-x11 # el del servidor lo prueba probar-paquete-servidor.sh
 tramtai version
 /usr/lib/tramtai/uv --version
 (WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 dbus-run-session -- xvfb-run -a timeout 40 tramtai-escritorio --oculto || true) &
