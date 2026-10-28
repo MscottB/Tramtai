@@ -6,7 +6,7 @@ import type { Clave } from '../idiomas/es'
 import { compartida } from '../compartida'
 import { ERRORES } from '../ayuda/temas/problemas'
 import { actualizacion, dialogoActualizar, diasHistorial, sesion } from '../estado'
-import type { Acerca, Capacidades, EstadoTerminos, PrimerosPasos, EspacioUI, AjustesPunto, ConfigPunto, EntradaConfiguracion, EstadoActualizacion, EstadoClave, EstadoConversor, ResumenInstancia, EstadoPresupuesto, EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Novedad, ProgresoActualizacion, Retencion, Sesion, Solicitud, Trabajo, UsoPunto } from './tipos'
+import type { Acerca, Capacidades, CodigosRecuperacion, EntradaRemota, EstadoTerminos, PrimerosPasos, SecretoTOTP, EspacioUI, AjustesPunto, ConfigPunto, EntradaConfiguracion, EstadoActualizacion, EstadoClave, EstadoConversor, ResumenInstancia, EstadoPresupuesto, EstadoPunto, EventoRegistro, LimitesPeticion, Modelo, Novedad, ProgresoActualizacion, Retencion, Sesion, Solicitud, Trabajo, UsoPunto } from './tipos'
 
 // Campos declarados aparte (no en el constructor): node --test ejecuta este archivo quitando solo los tipos.
 export class ErrorApi extends Error {
@@ -114,6 +114,18 @@ export const api = {
     pedir<{ versiones: Novedad[] }>('GET', '/ui/actualizacion/novedades?' + new URLSearchParams({ desde, ...(hasta ? { hasta } : {}) })).then((r) => r.versiones),
   cambiarAutenticacion: (agente: string, modo: 'suscripcion' | 'clave_api') => pedir<void>('POST', '/ui/autenticacion', { agente, modo }),
   salir: () => pedir<void>('DELETE', '/ui/sesion').then(() => (sesion.value = null)),
+  // El administrador del servidor: la entrada con contraseña (solo por HTTPS) y Ajustes → Seguridad. Cambiar la
+  // contraseña y cerrar todas las sesiones cierran también esta.
+  entrada: () => pedir<EntradaRemota>('GET', '/ui/entrada'),
+  acceder: (contrasena: string, codigo: string) => pedir<Sesion>('POST', '/ui/acceder', { contrasena, codigo }).then(recordar),
+  cambiarContrasena: (actual: string, nueva: string) => pedir<void>('POST', '/ui/administrador/contrasena', { actual, nueva }).then(() => (sesion.value = null)),
+  // El TOTP se activa en dos pasos: nuevoTOTP (con la contraseña actual) enseña el secreto y confirmarTOTP lo guarda con
+  // un código de la app. Quitarlo y regenerar los códigos de recuperación también piden la contraseña actual.
+  nuevoTOTP: (actual: string) => pedir<SecretoTOTP>('POST', '/ui/administrador/totp', { actual, codigo: '' }),
+  confirmarTOTP: (codigo: string) => pedir<CodigosRecuperacion>('POST', '/ui/administrador/totp', { codigo }).then((r) => r.codigos),
+  quitarTOTP: (actual: string) => pedir<void>('DELETE', '/ui/administrador/totp', { actual }),
+  codigosRecuperacion: (actual: string) => pedir<CodigosRecuperacion>('POST', '/ui/administrador/recuperacion', { actual }).then((r) => r.codigos),
+  cerrarSesiones: () => pedir<void>('POST', '/ui/sesiones/cerrar').then(() => (sesion.value = null)),
   detenerServicio: () => pedir<unknown>('POST', '/ui/servicio/detener'),
   fijarPuerto: (puerto: number, automatico: boolean) => pedir<Sesion>('POST', '/ui/servicio/puerto', { puerto, automatico }).then(recordar),
   reiniciarServicio: () => pedir<{ url: string }>('POST', '/ui/servicio/reiniciar'),

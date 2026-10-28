@@ -83,6 +83,7 @@ const (
 	secConversor       = "conversor"
 	secActualizaciones = "actualizaciones"
 	secArranque        = "arranque"
+	secSeguridad       = "seguridad" // solo en el servidor: las órdenes del administrador
 	secAcerca          = "acerca"
 )
 
@@ -772,6 +773,9 @@ func (p *Pagina) secciones() []string {
 	}
 	if p.ajustes.Autoarranque != nil {
 		l = append(l, secArranque)
+	}
+	if p.acerca != nil && p.acerca.Entorno == "servidor" {
+		l = append(l, secSeguridad)
 	}
 	return append(l, secAcerca)
 }

@@ -39,6 +39,16 @@ func (c *Cliente) BorrarClave(ctx context.Context, nombre string) error {
 	return c.pedir(ctx, "DELETE", "/api/v1/servicio/claves/"+url.PathEscape(nombre), "", nil, "", nil)
 }
 
+// FijarTOTP entrega el secreto TOTP del administrador al servicio, que lo guarda en su propio almacén (Windows).
+func (c *Cliente) FijarTOTP(ctx context.Context, secreto string) error {
+	return c.pedir(ctx, "PUT", "/api/v1/servicio/totp", "", cuerpoJSON(map[string]string{"secreto": secreto}), "application/json", nil)
+}
+
+// QuitarTOTP quita el secreto TOTP del administrador (el servicio lo rechaza con suscripción personal).
+func (c *Cliente) QuitarTOTP(ctx context.Context) error {
+	return c.pedir(ctx, "DELETE", "/api/v1/servicio/totp", "", nil, "", nil)
+}
+
 // Actualizacion devuelve el estado de las actualizaciones; con ahora, el servicio consulta GitHub en el momento.
 func (c *Cliente) Actualizacion(ctx context.Context, ahora bool) (contrato.EstadoActualizacion, error) {
 	ruta := "/api/v1/servicio/actualizacion"

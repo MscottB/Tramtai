@@ -367,6 +367,29 @@ func TestAjustesArranque(t *testing.T) {
 	}
 }
 
+// TestAjustesSeguridad: en el servidor, «Todo Tramtai» enseña Seguridad con las órdenes que ponen la contraseña y el
+// TOTP del administrador (lo demás está en Ajustes → Seguridad de la Web UI); en el escritorio no sale.
+func TestAjustesSeguridad(t *testing.T) {
+	if tx("seguridad.terminal") == "seguridad.terminal" || tx("config.pestanaSeguridad") == "config.pestanaSeguridad" {
+		t.Fatal("faltan los textos en internal/tui/datos: cd web; npm run ayuda-terminal")
+	}
+	cli, id := prueba.Ajustado(t, func(o *servicio.Opciones) { o.Entorno = "servidor" })
+	a := abierta(t, cli, id)
+	todoTramtai(t, a)
+	ir(t, a, tx("config.pestanaSeguridad"))
+	for _, quiero := range []string{tx("seguridad.terminal"), "tramtai-servidor administrador contraseña", "tramtai-servidor administrador totp activar", "tramtai-servidor administrador totp quitar"} {
+		if !strings.Contains(strings.Join(strings.Fields(a.Vista()), " "), quiero) {
+			t.Fatalf("falta %q:\n%s", quiero, a.Vista())
+		}
+	}
+	cli, id = prueba.Servicio(t)
+	b := abierta(t, cli, id)
+	todoTramtai(t, b)
+	if strings.Contains(b.Vista(), tx("config.pestanaSeguridad")) {
+		t.Fatalf("en el escritorio no hay Seguridad:\n%s", b.Vista())
+	}
+}
+
 // TestAjustesConversor: el estado del conversor (el del equipo: puede tener markitdown instalado) y a cambia «Preparar al
 // iniciar».
 func TestAjustesConversor(t *testing.T) {

@@ -291,6 +291,13 @@ func BorrarClave(nombre string) error {
 	return cambiarClaves(r, nombre, "")
 }
 
+// GuardarTOTP guarda el secreto TOTP del administrador como una clave más (TRAMTAI_TOTP): el servicio no puede escribir
+// en systemd-creds, así que solo lo hace la CLI como root, y reinicia el servicio.
+func GuardarTOTP(secreto string) error { return GuardarClave("TRAMTAI_TOTP", secreto) }
+
+// BorrarTOTP quita el secreto TOTP y reinicia el servicio.
+func BorrarTOTP() error { return BorrarClave("TRAMTAI_TOTP") }
+
 // conSystemdCreds dice si hay systemd-creds de la versión 250 o posterior (antes no cifra credenciales).
 func conSystemdCreds() bool {
 	salida, err := ejecutar("systemd-creds", "--version")

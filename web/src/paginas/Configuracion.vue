@@ -5,7 +5,12 @@
     <q-tabs v-model="pestana" data-recorrido="configuracion.pestanas" dense no-caps align="left" active-color="primary" indicator-color="primary" class="texto-suave">
       <q-tab name="espacio" icon="o_folder_special" :label="t('config.pestanaEspacio', { nombre: sesion?.nombre ?? '' })" />
       <q-tab name="tramtai" icon="o_settings" :label="t('config.pestanaTramtai')" />
+      <q-tab v-if="servidor" name="seguridad" icon="o_shield" :label="t('config.pestanaSeguridad')" />
     </q-tabs>
+    <template v-if="servidor && pestana === 'seguridad'">
+      <div class="text-caption texto-suave">{{ t('config.avisoSeguridad') }}</div>
+      <AjustesSeguridad />
+    </template>
     <div v-show="pestana === 'espacio'" class="text-caption texto-suave">{{ sesion?.ambito === 'proyecto' ? t('config.avisoProyecto') : t('config.avisoGlobal') }}
       {{ t('config.comoGuarda') }}</div>
     <div v-show="pestana === 'tramtai'" class="text-caption texto-suave">{{ t('config.avisoTramtai') }} {{ t('config.comoGuarda') }}</div>
@@ -226,7 +231,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { pestanaDeAncla } from '../pestanasAjustes'
+import { pestanaDeAncla, type PestanaAjustes } from '../pestanasAjustes'
+import { estadoTerminos } from '../terminos'
+import AjustesSeguridad from '../componentes/AjustesSeguridad.vue'
 import { EVENTO_PASO } from '../recorridoDom'
 import CabeceraPagina from '../componentes/CabeceraPagina.vue'
 import ProcedenciaValor from '../componentes/ProcedenciaValor.vue'
@@ -248,8 +255,12 @@ import { cargarConversor, conversor, prepararConversor, preparando, textoConvers
 
 const $q = useQuasar()
 const entradas = ref<EntradaConfiguracion[]>([])
-// pestana separa lo de este espacio de lo de todo Tramtai; se recuerda entre visitas.
-const pestana = ref<'espacio' | 'tramtai'>(leer('tramtai.pestanaAjustes', 'espacio'))
+// servidor: Ajustes → Seguridad (el administrador de la Web UI) solo existe en el modo servidor. Los términos ya se
+// consultaron: App.vue no monta las páginas antes.
+const servidor = computed(() => !!estadoTerminos.value?.servidor)
+// pestana separa lo de este espacio de lo de todo Tramtai (y, en el servidor, la seguridad); se recuerda entre visitas.
+const recordada = leer<PestanaAjustes>('tramtai.pestanaAjustes', 'espacio')
+const pestana = ref<PestanaAjustes>(recordada === 'seguridad' && !servidor.value ? 'espacio' : recordada)
 watch(pestana, (p) => guardar('tramtai.pestanaAjustes', p))
 // El recorrido guiado avisa de cada ancla antes de buscarla: si está en la pestaña oculta, se abre esa.
 function alPasoDelRecorrido(e: Event) {

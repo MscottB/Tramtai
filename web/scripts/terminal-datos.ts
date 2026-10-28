@@ -155,9 +155,11 @@ export const CLAVES_ESPACIOS: string[] = [
 
 // CLAVES_AJUSTES son los textos de Ajustes que la terminal repite tal cual: las pestañas, la herencia, el modelo
 // predeterminado, el historial, borrar datos, los valores técnicos, el puerto, el conversor, el arranque, las
-// actualizaciones con sus novedades y su avance, y Acerca de. Los {placeholders} los rellena Go con datos.Textof.
+// actualizaciones con sus novedades y su avance, la seguridad del servidor y Acerca de. Los {placeholders} los rellena Go
+// con datos.Textof.
 export const CLAVES_AJUSTES: string[] = [
   'config.pestanaEspacio', 'config.pestanaTramtai', 'config.avisoGlobal', 'config.avisoProyecto', 'config.avisoTramtai',
+  'config.pestanaSeguridad', 'seguridad.terminal',
   'config.valoresTecnicos', 'config.valoresTexto', 'config.buscar', 'config.sinCoincidencias',
   'herencia.propio', 'herencia.global', 'herencia.volver', 'herencia.vuelto',
   ...['interno', 'global', 'proyecto', 'local', 'entorno'].map((o) => 'origen.' + o),

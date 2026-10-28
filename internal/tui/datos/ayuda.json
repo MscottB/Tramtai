@@ -999,6 +999,10 @@
             [
               "¿Qué es «Este espacio» y qué «Todo Tramtai»?",
               "«Este espacio» guarda el modelo, el historial y los datos del espacio abierto; «Todo Tramtai», el puerto, el conversor, las actualizaciones y el arranque."
+            ],
+            [
+              "¿Cómo se entra al servidor desde otro equipo?",
+              "Con la contraseña del administrador y, si la activas, la verificación en dos pasos, solo por HTTPS. Se cambian en Ajustes → Seguridad; en Linux, el TOTP solo con «tramtai-servidor administrador»."
             ]
           ]
         },
@@ -2224,6 +2228,10 @@
             [
               "What are “This workspace” and “All of Tramtai”?",
               "“This workspace” keeps the model, history and data of the open workspace; “All of Tramtai”, the port, converter, updates and startup."
+            ],
+            [
+              "How do I sign in to the server from another computer?",
+              "With the administrator password and, if you turn it on, two-step verification, over HTTPS only. They change in Settings → Security; on Linux, TOTP only with “tramtai-servidor admin”."
             ]
           ]
         },

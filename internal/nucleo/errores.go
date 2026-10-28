@@ -62,6 +62,17 @@ const (
 	CodigoEspacioDetenido CodigoError = "espacio_detenido"
 	// CodigoAgenteDesconectado: el agente está desconectado en Tramtai (Agentes → Conectar).
 	CodigoAgenteDesconectado CodigoError = "agente_desconectado"
+	// CodigoDemasiadosIntentos: demasiados fallos desde la misma dirección (contraseña o código del administrador, o
+	// claves falsas en las APIs); la respuesta lleva Retry-After.
+	CodigoDemasiadosIntentos CodigoError = "demasiados_intentos"
+	// CodigoEntradaRemotaNoDisponible: la Web UI no se puede abrir con contraseña (sin HTTPS o sin administrador).
+	CodigoEntradaRemotaNoDisponible CodigoError = "entrada_remota_no_disponible"
+	// CodigoAccionNoPermitida: el administrador no puede hacer eso ahora o desde ahí (quitar el TOTP con suscripción
+	// personal, o activarlo desde el servicio en Linux, donde va por la CLI).
+	CodigoAccionNoPermitida CodigoError = "accion_no_permitida"
+	// CodigoEntradaOcupada: hay demasiados intentos de entrada esperando su cálculo de argon2id; la respuesta lleva
+	// Retry-After.
+	CodigoEntradaOcupada CodigoError = "entrada_ocupada"
 )
 
 // Error es el error propio de Tramtai: un código estable y un mensaje legible sin secretos.

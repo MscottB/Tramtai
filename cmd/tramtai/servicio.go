@@ -386,6 +386,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	if err != nil {
 		return err
 	}
+	red = conTOTP(red)
 	if err := servidor.ComprobarArranque(red); err != nil {
 		return err
 	}
@@ -597,6 +598,17 @@ func entradaServidor(c *configuracion.Configuracion) (servidor.Entrada, error) {
 		}
 	}
 	return e, nil
+}
+
+// conTOTP completa la entrada con si el administrador tiene TOTP (la regla 4), con el secreto del almacén del servicio
+// (systemd-creds en Linux). Solo se pregunta al almacén cuando la regla puede aplicarse (servicio expuesto y con
+// suscripciones), para no tocar el llavero del escritorio en cada arranque.
+func conTOTP(red servidor.Entrada) servidor.Entrada {
+	if servidor.Expuesto(red) && len(red.Suscripciones) > 0 {
+		secreto, _ := leerClave("TRAMTAI_TOTP")
+		red.TOTP = secreto != ""
+	}
+	return red
 }
 
 // textos pasa una lista de la configuración a textos.

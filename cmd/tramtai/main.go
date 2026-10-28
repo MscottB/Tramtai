@@ -65,6 +65,7 @@ func nuevaRaiz() *cobra.Command {
 		comandoIniciar(),
 		comandoServicio(),
 		comandoServidor(),
+		comandoAdministrador(),
 		comandoEspacios(),
 		comandoEspacio(),
 		comandoInstancia("global"),

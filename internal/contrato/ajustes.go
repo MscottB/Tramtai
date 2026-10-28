@@ -86,3 +86,24 @@ type EstadoTerminos struct {
 	Riesgos   []string `json:"riesgos"`
 	Servidor  bool     `json:"servidor"`
 }
+
+// EntradaRemota es lo que la página de entrada de la Web UI necesita saber antes de pedir nada (GET /ui/entrada, sin
+// sesión): si el servidor tiene administrador con contraseña, si pide además el código TOTP y si la petición llegó por
+// HTTPS (sin él no se entra con contraseña).
+type EntradaRemota struct {
+	Contrasena bool `json:"contrasena"`
+	TOTP       bool `json:"totp"`
+	HTTPS      bool `json:"https"`
+}
+
+// SecretoTOTP es el secreto nuevo que Ajustes → Seguridad enseña antes de guardarlo: se guarda al confirmarlo con un
+// código de la app de autenticación.
+type SecretoTOTP struct {
+	Secreto string `json:"secreto"`
+	URI     string `json:"uri"`
+}
+
+// CodigosRecuperacion son los 10 códigos de recuperación de un solo uso: solo se ven al crearlos (se guarda su huella).
+type CodigosRecuperacion struct {
+	Codigos []string `json:"codigos"`
+}
