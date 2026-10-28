@@ -10,7 +10,7 @@ import (
 // UnidadOpciones son lo que cambia en la unidad systemd.
 type UnidadOpciones struct {
 	PlazoDrenaje int  // servicio.plazo_drenaje_segundos; 0 es el predeterminado
-	LetsEncrypt  bool // da CAP_NET_BIND_SERVICE
+	LetsEncrypt  bool // da CAP_NET_BIND_SERVICE: letsencrypt exige el puerto 443, así que equivale a PuertoBajo
 	PuertoBajo   bool // da CAP_NET_BIND_SERVICE
 }
 

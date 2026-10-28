@@ -52,7 +52,7 @@ type Opciones struct {
 	AceptoTerminos bool   // sin aceptar los términos no se instala nada
 	Como           string // cómo se aceptaron: terminos.ComoServidorInstalar (escribiendo «acepto») o terminos.ComoOpcion
 	Conversor      string // paquete .zip del conversor que se prepara sin red
-	LetsEncrypt    bool   // Let's Encrypt integrado: escucha en el 80 y el 443
+	LetsEncrypt    bool   // Let's Encrypt integrado (TLS-ALPN-01): solo escucha en el 443
 	PuertoBajo     bool   // escucha en un puerto menor de 1024
 }
 
@@ -85,6 +85,12 @@ var (
 // ErrClaveEnClaro es el aviso de GuardarClave cuando el sistema no tiene systemd-creds 250 o posterior: la clave queda
 // guardada, pero sin cifrar en el archivo de entorno de root.
 var ErrClaveEnClaro = Aviso(idioma.T("este systemd no tiene systemd-creds 250 o posterior: las claves del servidor están sin cifrar en /etc/tramtai/claves.env (0600, solo las lee root)"))
+
+// AvisoLetsEncrypt es lo que dicen el registro al arrancar, «servidor estado» y «servidor reiniciar» con
+// servicio.tls.modo letsencrypt: ese modo acepta el acuerdo de suscriptor de Let's Encrypt (autocert.AcceptTOS).
+func AvisoLetsEncrypt() string {
+	return idioma.T("con servicio.tls.modo letsencrypt, Tramtai acepta en tu nombre el acuerdo de suscriptor de Let's Encrypt (https://letsencrypt.org/repository/) y le da tu correo al pedir el certificado; si no lo aceptas, usa archivos o un proxy")
+}
 
 func noDisponible() error {
 	return errors.New(idioma.T("el modo servidor está disponible en Linux con systemd y en Windows"))

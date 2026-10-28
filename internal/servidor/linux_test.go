@@ -287,6 +287,31 @@ func TestReiniciarUnidadAlDia(t *testing.T) {
 	mismas(t, "otro plazo", p.ordenes, "systemctl daemon-reload", "systemctl restart tramtai")
 }
 
+// TestUnidadSigueAlModoTLS: con servicio.tls.modo letsencrypt, reiniciar regenera la unidad con CAP_NET_BIND_SERVICE
+// (en AmbientCapabilities y en CapabilityBoundingSet, para escuchar en el 443); al dejarlo, la quita.
+func TestUnidadSigueAlModoTLS(t *testing.T) {
+	p := nuevaPrueba(t)
+	p.instalar(t)
+	config := filepath.Join(p.r.Datos, "config.yaml")
+	for _, c := range []struct {
+		modo string
+		con  bool
+	}{{"letsencrypt", true}, {"ninguno", false}} {
+		if err := configuracion.FijarValor(config, configuracion.OrigenGlobal, "servicio.tls.modo", c.modo); err != nil {
+			t.Fatal(err)
+		}
+		if err := Reiniciar(); err != nil {
+			t.Fatal(err)
+		}
+		b, _ := os.ReadFile(p.r.Unidad)
+		for _, linea := range []string{"\nAmbientCapabilities=CAP_NET_BIND_SERVICE\n", "\nCapabilityBoundingSet=CAP_NET_BIND_SERVICE\n"} {
+			if strings.Contains(string(b), linea) != c.con {
+				t.Errorf("modo %s: la unidad debería llevar %q: %v\n%s", c.modo, linea, c.con, b)
+			}
+		}
+	}
+}
+
 // TestInstalarSinAceptar: sin aceptar los términos no se hace nada.
 func TestInstalarSinAceptar(t *testing.T) {
 	p := nuevaPrueba(t)

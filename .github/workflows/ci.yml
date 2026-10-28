@@ -214,6 +214,41 @@ jobs:
       - name: Ejecutar cada ejemplo
         run: go test -tags ejemplos -run TestEjemplos -v ./internal/api/
 
+  # Let's Encrypt integrado contra Pebble, la CA de pruebas de Let's Encrypt, con la validación de verdad
+  # (PEBBLE_VA_ALWAYS_VALID=0): la prueba obtiene un certificado por TLS-ALPN-01. Pebble llega a la prueba, en el puerto
+  # 5001 de su configuración, por tramtai.prueba, que --add-host apunta a esta máquina (host-gateway). La versión de
+  # Pebble va fijada, y su raíz de pruebas (con la que sirve el directorio ACME) se baja de esa misma versión.
+  pebble:
+    name: Let's Encrypt (Pebble)
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    services:
+      pebble:
+        image: ghcr.io/letsencrypt/pebble:2.10.1@sha256:ddf230642b1a584f519f32e347de1b05a6e4c1f6c35c1863b33effeab5f78199
+        ports:
+          - 14000:14000
+        env:
+          PEBBLE_VA_ALWAYS_VALID: '0'
+          PEBBLE_VA_NOSLEEP: '1' # sin las esperas al azar de la validación
+        options: --add-host tramtai.prueba:host-gateway
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: '**/go.sum'
+      - name: Raíz de pruebas de Pebble
+        run: curl -sSfL -o "$RUNNER_TEMP/pebble.minica.pem" https://raw.githubusercontent.com/letsencrypt/pebble/v2.10.1/test/certs/pebble.minica.pem
+      - name: Esperar a Pebble
+        run: for intento in $(seq 30); do curl -sf --cacert "$RUNNER_TEMP/pebble.minica.pem" https://localhost:14000/dir >/dev/null && exit 0; sleep 1; done; exit 1
+      - name: Certificado por TLS-ALPN-01
+        env:
+          PEBBLE_URL: https://localhost:14000/dir
+          PEBBLE_CA: ${{ runner.temp }}/pebble.minica.pem
+        run: go test -tags pebble -run Pebble -v ./internal/servicio/
+
   web:
     name: Web UI
     timeout-minutes: 15

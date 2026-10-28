@@ -15,11 +15,15 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"golang.org/x/crypto/acme"
 
 	"tramtai/internal/adaptadores"
 )
@@ -114,8 +118,128 @@ func TestConfigTLSModos(t *testing.T) {
 	if _, err := ConfigTLS(OpcionesTLS{Modo: "archivos", Certificado: filepath.Join(t.TempDir(), "falta.pem"), Clave: "falta.key"}); err == nil {
 		t.Fatal("archivos ilegibles: se esperaba un error")
 	}
-	if _, err := ConfigTLS(OpcionesTLS{Modo: "letsencrypt"}); err == nil || !strings.Contains(err.Error(), "letsencrypt") {
-		t.Fatalf("letsencrypt aún no está disponible: %v", err)
+}
+
+// TestLetsEncryptHostPolicy: solo los dominios de servicio.dominios obtienen certificado (un SNI ajeno se rechaza antes
+// de hablar con la CA), la carpeta acme es privada y la configuración es la de archivos: TLS 1.3, sin h2 y con acme-tls/1.
+func TestLetsEncryptHostPolicy(t *testing.T) {
+	datos := t.TempDir()
+	cfg, err := ConfigTLS(OpcionesTLS{Modo: "letsencrypt", Dominios: []string{"tramtai.ejemplo.org"}, Datos: datos, Correo: "admin@ejemplo.org"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MinVersion != tls.VersionTLS13 {
+		t.Fatalf("MinVersion %#x: se esperaba TLS 1.3", cfg.MinVersion)
+	}
+	if slices.Contains(cfg.NextProtos, "h2") || !slices.Contains(cfg.NextProtos, "acme-tls/1") || !slices.Contains(cfg.NextProtos, "http/1.1") {
+		t.Fatalf("NextProtos %v: se esperaba http/1.1 y acme-tls/1, sin h2", cfg.NextProtos)
+	}
+	if info, err := os.Stat(filepath.Join(datos, "acme")); err != nil || !info.IsDir() || runtime.GOOS != "windows" && info.Mode().Perm() != 0o700 {
+		t.Fatalf("la carpeta acme debería existir con 0700: %v %v", info, err)
+	}
+	cert, err := cfg.GetCertificate(&tls.ClientHelloInfo{ServerName: "otro.ejemplo.org", SupportedProtos: []string{"http/1.1"}})
+	if cert != nil || err == nil || !strings.Contains(err.Error(), "otro.ejemplo.org") {
+		t.Fatalf("un dominio fuera de la lista no debería obtener certificado: %v %v", cert, err)
+	}
+	if entradas, _ := os.ReadDir(filepath.Join(datos, "acme")); len(entradas) != 0 {
+		t.Fatalf("un SNI ajeno no debe dejar nada en la caché: %v", entradas)
+	}
+}
+
+// TestLetsEncryptCarpetaExistente: una carpeta acme que ya existiera con otros permisos pasa a 0700.
+func TestLetsEncryptCarpetaExistente(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("los permisos de Unix")
+	}
+	datos := t.TempDir()
+	if err := os.Mkdir(filepath.Join(datos, "acme"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ConfigTLS(OpcionesTLS{Modo: "letsencrypt", Dominios: []string{"tramtai.ejemplo.org"}, Datos: datos}); err != nil {
+		t.Fatal(err)
+	}
+	if info, err := os.Stat(filepath.Join(datos, "acme")); err != nil || info.Mode().Perm() != 0o700 {
+		t.Fatalf("la carpeta acme debería quedar con 0700: %v %v", info, err)
+	}
+}
+
+// letsencryptSinCA prepara letsencrypt con una CA inalcanzable, para probar lo que pasa sin hablar con ella, y
+// devuelve la configuración, la carpeta de datos y el registro.
+func letsencryptSinCA(t *testing.T, dominio string) (*tls.Config, string, *bufferSeguro) {
+	t.Helper()
+	anterior := clienteACME
+	clienteACME = &acme.Client{DirectoryURL: "http://127.0.0.1:1/dir"}
+	t.Cleanup(func() { clienteACME = anterior })
+	datos, registros := t.TempDir(), &bufferSeguro{}
+	cfg, err := ConfigTLS(OpcionesTLS{Modo: "letsencrypt", Dominios: []string{dominio}, Datos: datos, Correo: "admin@ejemplo.org", Registros: registros})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return cfg, datos, registros
+}
+
+// TestLetsEncryptECDSAConTLS13: un cliente que solo habla TLS 1.3 (sus suites no dicen nada de ECDSA) recibe igualmente el
+// certificado ECDSA de la caché; sin el envoltorio, autocert pediría uno RSA a la CA (aquí inalcanzable: fallaría).
+func TestLetsEncryptECDSAConTLS13(t *testing.T) {
+	const dominio = "tramtai.ejemplo.org"
+	cfg, datos, _ := letsencryptSinCA(t, dominio)
+	k, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plantilla := &x509.Certificate{SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: dominio}, DNSNames: []string{dominio},
+		NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(90 * 24 * time.Hour), KeyUsage: x509.KeyUsageDigitalSignature,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}}
+	der, err := x509.CreateCertificate(rand.Reader, plantilla, plantilla, &k.PublicKey, k)
+	if err != nil {
+		t.Fatal(err)
+	}
+	clave, err := x509.MarshalECPrivateKey(k)
+	if err != nil {
+		t.Fatal(err)
+	}
+	guardado := append(pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: clave}), pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})...)
+	if err := os.WriteFile(filepath.Join(datos, "acme", dominio), guardado, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cert, err := cfg.GetCertificate(&tls.ClientHelloInfo{ServerName: dominio, SupportedProtos: []string{"http/1.1"},
+		SupportedVersions: []uint16{tls.VersionTLS13}, CipherSuites: []uint16{tls.TLS_AES_128_GCM_SHA256, tls.TLS_CHACHA20_POLY1305_SHA256},
+		SignatureSchemes: []tls.SignatureScheme{tls.ECDSAWithP256AndSHA256, tls.PSSWithSHA256}, SupportedCurves: []tls.CurveID{tls.X25519, tls.CurveP256}})
+	if err != nil || cert == nil {
+		t.Fatalf("un cliente solo TLS 1.3 debería recibir el certificado ECDSA de la caché: %v", err)
+	}
+	if _, ok := cert.PrivateKey.(*ecdsa.PrivateKey); !ok {
+		t.Fatalf("la clave del certificado es %T: se esperaba ECDSA", cert.PrivateKey)
+	}
+}
+
+// TestLetsEncryptRegistraFallos: un fallo al obtener el certificado de un dominio de servicio.dominios se anota en el
+// registro, como mucho una vez por minuto; los SNI ajenos y los desafíos acme-tls/1 no se anotan.
+func TestLetsEncryptRegistraFallos(t *testing.T) {
+	const dominio = "tramtai.ejemplo.org"
+	cfg, _, registros := letsencryptSinCA(t, dominio)
+	pedir := func(nombre string, protos ...string) {
+		t.Helper()
+		if cert, err := cfg.GetCertificate(&tls.ClientHelloInfo{ServerName: nombre, SupportedProtos: protos}); cert != nil || err == nil {
+			t.Fatalf("%s: se esperaba un error: %v %v", nombre, cert, err)
+		}
+	}
+	pedir("otro.ejemplo.org", "http/1.1")
+	pedir(dominio, "acme-tls/1")
+	if registros.String() != "" {
+		t.Fatalf("un SNI ajeno o un desafío no se anotan: %q", registros.String())
+	}
+	pedir(dominio, "http/1.1")
+	pedir(dominio, "http/1.1")
+	if n := strings.Count(registros.String(), dominio); n != 1 {
+		t.Fatalf("dos fallos seguidos del mismo dominio: %d líneas en el registro, se esperaba 1:\n%s", n, registros.String())
+	}
+	anterior := intervaloAvisos
+	intervaloAvisos = 0
+	t.Cleanup(func() { intervaloAvisos = anterior })
+	pedir(dominio, "http/1.1")
+	if n := strings.Count(registros.String(), dominio); n != 2 {
+		t.Fatalf("pasado el intervalo se anota otra vez: %d líneas, se esperaba 2:\n%s", n, registros.String())
 	}
 }
 

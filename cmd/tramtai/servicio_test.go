@@ -22,6 +22,7 @@ import (
 	"tramtai/internal/cliente"
 	"tramtai/internal/configuracion"
 	"tramtai/internal/contrato"
+	"tramtai/internal/servidor"
 	"tramtai/internal/terminos"
 )
 
@@ -135,6 +136,27 @@ func TestAvisoExpuestoEnRegistro(t *testing.T) {
 		}
 		if strings.Contains(registro, riesgo) != quiere {
 			t.Errorf("%q: riesgo 3 en el registro %v: %q", config, !quiere, registro)
+		}
+	}
+}
+
+// letsencryptConfig es una configuración válida con Let's Encrypt integrado.
+const letsencryptConfig = "servicio:\n  puerto: 443\n  dominios: [tramtai.ejemplo.org]\n  tls:\n    modo: letsencrypt\n    letsencrypt:\n      correo: admin@ejemplo.org\n"
+
+// TestAvisoLetsEncryptEnRegistro: con servicio.tls.modo letsencrypt, el arranque deja en el registro que se acepta el
+// acuerdo de suscriptor de Let's Encrypt, con su enlace; sin él, no.
+func TestAvisoLetsEncryptEnRegistro(t *testing.T) {
+	aviso := servidor.AvisoLetsEncrypt()
+	if !strings.Contains(aviso, "https://letsencrypt.org/repository/") {
+		t.Fatalf("el aviso no lleva el enlace del acuerdo: %q", aviso)
+	}
+	for config, quiere := range map[string]bool{letsencryptConfig: true, "servicio:\n  host: 127.0.0.1\n": false} {
+		registro, err := arrancarHastaDatos(t, config)
+		if err == nil || !strings.Contains(err.Error(), "parada de la prueba") {
+			t.Fatalf("%q: las reglas lo dejan arrancar: %v", config, err)
+		}
+		if strings.Contains(registro, aviso) != quiere {
+			t.Errorf("%q: aviso de Let's Encrypt en el registro %v: %q", config, !quiere, registro)
 		}
 	}
 }

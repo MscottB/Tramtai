@@ -28,10 +28,12 @@ var (
 	instalarServidor    = servidor.Instalar
 	desinstalarServidor = servidor.Desinstalar
 	estadoServidor      = servidor.Estado
+	reiniciarServidor   = servidor.Reiniciar
 )
 
-// avisarExpuesto recuerda el riesgo 3 si la configuración del servidor lo abre a la red; si no se puede leer, lo dice.
-func avisarExpuesto(out io.Writer) {
+// avisosServidor recuerda el riesgo 3 (si riesgo) cuando la configuración del servidor lo abre a la red, y el acuerdo de
+// suscriptor de Let's Encrypt si ese modo está activo; si no se puede leer, lo dice.
+func avisosServidor(out io.Writer, riesgo bool) {
 	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	var red servidor.Entrada
 	if err == nil {
@@ -40,8 +42,11 @@ func avisarExpuesto(out io.Writer) {
 	switch {
 	case err != nil:
 		fmt.Fprintln(out, idioma.Tf("aviso: %s", nucleo.MensajeDe(err)))
-	case servidor.Expuesto(red):
+	case riesgo && servidor.Expuesto(red):
 		fmt.Fprintln(out, idioma.Tf("aviso: %s", terminos.Riesgos(true)[2]))
+	}
+	if err == nil && red.TLS == "letsencrypt" {
+		fmt.Fprintln(out, idioma.Tf("aviso: %s", servidor.AvisoLetsEncrypt()))
 	}
 }
 
@@ -186,7 +191,7 @@ func comandoServidor() *cobra.Command {
 			if e.ClavesEnClaro {
 				fmt.Fprintln(out, idioma.Tf("aviso: %s", servidor.ErrClaveEnClaro.Error()))
 			}
-			avisarExpuesto(out)
+			avisosServidor(out, true)
 			c, err := conectar()
 			if err != nil {
 				fmt.Fprintln(out, idioma.Tf("no responde: %s", err.Error()))
@@ -203,10 +208,11 @@ func comandoServidor() *cobra.Command {
 	reiniciar := &cobra.Command{Use: "reiniciar", Aliases: []string{"restart"}, Args: cobra.NoArgs,
 		Short: idioma.T("Reinicia el servicio del sistema (deja terminar las peticiones en curso)"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			if err := servidor.Reiniciar(); err != nil {
+			if err := reiniciarServidor(); err != nil {
 				return err
 			}
 			fmt.Fprintln(cmd.OutOrStdout(), idioma.T("servidor reiniciado"))
+			avisosServidor(cmd.OutOrStdout(), false)
 			return nil
 		}}
 

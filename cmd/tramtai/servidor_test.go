@@ -248,6 +248,45 @@ func TestServidorEstadoExpuesto(t *testing.T) {
 	}
 }
 
+// TestServidorEstadoLetsEncrypt: «servidor estado» recuerda el acuerdo de suscriptor de Let's Encrypt si está activado.
+func TestServidorEstadoLetsEncrypt(t *testing.T) {
+	simularServidor(t, true)
+	estadoServidor = func(context.Context) (servidor.EstadoSistema, error) {
+		return servidor.EstadoSistema{Instalado: true, Activo: "active"}, nil
+	}
+	for config, quiere := range map[string]bool{letsencryptConfig: true, "servicio:\n  host: 127.0.0.1\n": false} {
+		global := filepath.Join(t.TempDir(), "config.yaml")
+		if err := os.WriteFile(global, []byte(config), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+		salida, err := ejecutarServidor(t, "", "servidor", "estado")
+		if err != nil || strings.Contains(salida, servidor.AvisoLetsEncrypt()) != quiere {
+			t.Errorf("%q: %v, aviso de Let's Encrypt en la salida %v: %q", config, err, !quiere, salida)
+		}
+	}
+}
+
+// TestServidorReiniciarLetsEncrypt: «servidor reiniciar» recuerda el acuerdo de suscriptor con letsencrypt, pero no el
+// riesgo 3 (ese es de «estado»).
+func TestServidorReiniciarLetsEncrypt(t *testing.T) {
+	simularServidor(t, true)
+	anterior := reiniciarServidor
+	reiniciarServidor = func() error { return nil }
+	t.Cleanup(func() { reiniciarServidor = anterior })
+	for config, quiere := range map[string]bool{letsencryptConfig: true, "servicio:\n  host: 127.0.0.1\n": false} {
+		global := filepath.Join(t.TempDir(), "config.yaml")
+		if err := os.WriteFile(global, []byte(config), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+		salida, err := ejecutarServidor(t, "", "servidor", "reiniciar")
+		if err != nil || strings.Contains(salida, servidor.AvisoLetsEncrypt()) != quiere || strings.Contains(salida, terminos.Riesgos(true)[2]) {
+			t.Errorf("%q: %v, aviso de Let's Encrypt en la salida %v: %q", config, err, !quiere, salida)
+		}
+	}
+}
+
 // TestServidorDesinstalarAviso: un Aviso de Desinstalar (el perfil que Windows aún tiene cargado) se muestra, pero la
 // desinstalación se dio por hecha.
 func TestServidorDesinstalarAviso(t *testing.T) {
