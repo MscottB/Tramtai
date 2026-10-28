@@ -2,6 +2,7 @@ package persistencia
 
 import (
 	"context"
+	"database/sql"
 	"os"
 	"path/filepath"
 	"strings"
@@ -503,6 +504,30 @@ func TestCambiarAgenteHoraTrasEsperarLaBase(t *testing.T) {
 	}
 	if c, _ := a.Obtener(ctx, tr.ID); !c.ActualizadoEn.Equal(ahora.UTC()) {
 		t.Fatalf("actualizado_en %v, se esperaba la hora tras la espera %v", c.ActualizadoEn, ahora.UTC())
+	}
+}
+
+// El servicio abre la base con synchronous FULL (el de SQLite: un commit confirmado sobrevive a un corte de luz); solo las
+// pruebas la abren sin esperar al disco en cada commit.
+func TestSincronizacionDeLaBase(t *testing.T) {
+	for _, c := range []struct {
+		prueba bool
+		modo   int
+	}{{false, 2}, {true, 0}} {
+		db, err := sql.Open("sqlite", "file:"+rutaURI(filepath.Join(t.TempDir(), "x.db"))+"?"+pragmas(c.prueba))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var modo int
+		err = db.QueryRow("PRAGMA synchronous").Scan(&modo)
+		db.Close()
+		if err != nil || modo != c.modo {
+			t.Fatalf("prueba=%v: synchronous %d (%v), se esperaba %d", c.prueba, modo, err, c.modo)
+		}
+	}
+	var modo int
+	if err := abrir(t).db.QueryRow("PRAGMA synchronous").Scan(&modo); err != nil || modo != 0 {
+		t.Fatalf("en las pruebas Abrir no espera al disco: synchronous %d (%v)", modo, err)
 	}
 }
 

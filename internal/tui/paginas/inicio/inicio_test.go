@@ -193,12 +193,16 @@ func TestInicioCarga(t *testing.T) {
 func TestRedAparecenYSeVan(t *testing.T) {
 	cli, id := prueba.ConAgentes(t, map[string]adaptadores.Adaptador{"roto": adaptadores.Simulado{Error: errors.New("falla")}})
 	hola := nucleo.SolicitudEjecucion{Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "hola"}}}
-	if _, err := cli.Crear(ctx, id, hola); err != nil {
+	creada, err := cli.Crear(ctx, id, hola)
+	if err != nil {
 		t.Fatal(err)
 	}
 	a, r := abrir(t, prueba.Contexto(t, cli, id), nil)
 	a.HastaVer("terminada")
-	for _, quiere := range []string{"Clave del espacio", "simulado", "terminada", "0 s"} {
+	// Su tiempo va de cuándo la aceptó el servicio a cuándo la vio llegar la página, que es la hora del reloj de la prueba:
+	// la hora real a la que se creó ese reloj, después de la petición (en un runner lento, un segundo o más).
+	tiempo := fmt.Sprintf("%d s", int(r.Ahora().Sub(creada.CreadoEn)/time.Second))
+	for _, quiere := range []string{"Clave del espacio", "simulado", "terminada", tiempo} {
 		if !strings.Contains(a.Vista(), quiere) {
 			t.Fatalf("falta %q:\n%s", quiere, a.Vista())
 		}

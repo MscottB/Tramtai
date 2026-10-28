@@ -20,7 +20,8 @@ type espera struct {
 	c     chan time.Time
 }
 
-// NuevoReloj empieza a la hora de ahora: las peticiones que crea la prueba en el servicio son de «hace 0 s».
+// NuevoReloj empieza a la hora de ahora: las peticiones que la prueba creó antes en el servicio son de hace poco, pero no
+// siempre de «hace 0 s» (en un runner lento pasa un segundo o más entre crearlas y crear el reloj).
 func NuevoReloj() *Reloj { return &Reloj{ahora: time.Now()} }
 
 // Ahora es la hora del reloj.
