@@ -302,6 +302,17 @@ func TestServidorDesinstalarAviso(t *testing.T) {
 	}
 }
 
+// TestServidorInstalarAviso: un Aviso de Instalar (lo que quitó del .tar.gz al pasar al paquete) se muestra, pero la
+// instalación se dio por hecha.
+func TestServidorInstalarAviso(t *testing.T) {
+	simularServidor(t, true)
+	instalarServidor = func(servidor.Opciones) error { return servidor.Aviso("quitada la unidad vieja") }
+	salida, err := ejecutarServidor(t, "", "servidor", "instalar", "--acepto-terminos")
+	if err != nil || !strings.Contains(salida, "quitada la unidad vieja") || !strings.Contains(salida, "servidor instalado") {
+		t.Errorf("con aviso: %v %q", err, salida)
+	}
+}
+
 // TestServidorActualizar: «tramtai-servidor actualizar» (y update) llega a Actualizar; si ya está al día lo dice sin
 // fallar, y si lo instaló el paquete, remite a apt o dnf con error. Desde otra copia lo hace el programa instalado, y
 // esta no hace nada más.

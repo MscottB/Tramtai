@@ -4,7 +4,8 @@
 #   sh scripts/linux/probar-paquete-servidor.sh deb
 # Instala los dos a la vez (sin las dependencias de GTK del de escritorio, que rockylinux:9 no tiene y aquí no se
 # prueban; con systemd, que el servidor necesita), comprueba los archivos y la cuenta, que /usr/bin/tramtai sigue siendo
-# del de escritorio y que no se arrancó nada, y quita el del servidor (purge en el .deb) conservando /var/lib/tramtai.
+# del de escritorio y que no se arrancó nada, y quita el del servidor (purge en el .deb) conservando /var/lib/tramtai y
+# sin dejar carpetas ni el drop-in. Después lo instala encima de lo que deja una instalación desde el .tar.gz.
 set -eu
 tipo=$1
 case $tipo in
@@ -21,12 +22,15 @@ falla() {
 	echo "FALLA: $*" >&2
 	exit 1
 }
-# nada_en_marcha: ni el servicio habilitado ni un tramtai del servidor en marcha.
-nada_en_marcha() {
-	[ "$(systemctl is-enabled tramtai 2>/dev/null || :)" != enabled ] || falla "el paquete habilitó el servicio"
+# sin_proceso: ningún tramtai del servidor en marcha; nada_en_marcha: además, el servicio sin habilitar.
+sin_proceso() {
 	for exe in /proc/[0-9]*/exe; do
 		[ "$(readlink "$exe" 2>/dev/null || :)" != /opt/tramtai/tramtai ] || falla "hay un tramtai del servidor en marcha"
 	done
+}
+nada_en_marcha() {
+	[ "$(systemctl is-enabled tramtai 2>/dev/null || :)" != enabled ] || falla "el paquete habilitó el servicio"
+	sin_proceso
 }
 
 servidor=$(ls dist/Tramtai-*-servidor-linux-*."$tipo")
@@ -63,12 +67,43 @@ if salida=$(tramtai-servidor actualizar 2>&1); then falla "actualizar con el paq
 echo "$salida" | grep -q "actualízalo con apt o dnf" || falla "actualizar con el paquete: $salida"
 nada_en_marcha
 
-if [ "$tipo" = deb ]; then
-	dpkg --purge tramtai-servidor
-else
-	rpm -e tramtai-servidor
-fi
+# Lo que deja «tramtai-servidor instalar» (sin systemd en marcha no se puede ejecutar): el drop-in y, con claves,
+# claves.conf. Al quitar el paquete, el drop-in se va y claves.conf se queda.
+dropins=/etc/systemd/system/tramtai.service.d
+mkdir -p "$dropins"
+echo "[Service]" >"$dropins/10-tramtai.conf"
+echo "[Service]" >"$dropins/claves.conf"
+quitar() {
+	if [ "$tipo" = deb ]; then
+		dpkg --purge tramtai-servidor
+	else
+		rpm -e tramtai-servidor
+	fi
+}
+quitar
 [ -d /var/lib/tramtai ] || falla "quitar el paquete borró /var/lib/tramtai"
-[ ! -e /opt/tramtai/tramtai ] && [ ! -e /usr/bin/tramtai-servidor ] || falla "quitar el paquete deja el programa"
+for d in /opt/tramtai /usr/bin/tramtai-servidor /usr/share/doc/tramtai-servidor "$dropins/10-tramtai.conf"; do
+	[ ! -e "$d" ] || falla "quitar el paquete deja $d"
+done
+[ -e "$dropins/claves.conf" ] || falla "quitar el paquete se llevó claves.conf"
 [ -e /usr/bin/tramtai ] || falla "quitar el del servidor se llevó el de escritorio"
 echo "el paquete del servidor ($tipo) se instala junto al de escritorio, no arranca nada y al quitarlo conserva los datos"
+
+# Del .tar.gz al paquete: con la unidad del .tar.gz habilitada, su envoltorio y un programa en /opt/tramtai, el paquete
+# se instala encima y remite a «tramtai-servidor instalar», que es quien limpia (con systemd; lo prueba internal/servidor).
+mkdir -p /opt/tramtai /etc/systemd/system/multi-user.target.wants
+cp scripts/linux/servidor/tramtai.service /etc/systemd/system/tramtai.service
+ln -s ../tramtai.service /etc/systemd/system/multi-user.target.wants/tramtai.service
+cp scripts/linux/servidor/tramtai-servidor /usr/local/bin/tramtai-servidor
+echo "del .tar.gz" >/opt/tramtai/tramtai
+echo "de antes" >/opt/tramtai/tramtai.anterior
+if [ "$tipo" = deb ]; then
+	salida=$(dpkg -i "$servidor" 2>&1) || falla "dpkg -i sobre el .tar.gz: $salida"
+else
+	salida=$(rpm -i "$servidor" 2>&1) || falla "rpm -i sobre el .tar.gz: $salida"
+fi
+echo "$salida" | grep -q "Para empezar: sudo tramtai-servidor instalar" || falla "sobre el .tar.gz, el paquete no dice cómo empezar: $salida"
+/usr/bin/tramtai-servidor version | grep -q "^tramtai " || falla "el programa del paquete no sustituyó al del .tar.gz"
+[ -e /opt/tramtai/.paquete ] || falla "falta /opt/tramtai/.paquete sobre el .tar.gz"
+sin_proceso
+echo "el paquete del servidor ($tipo) se instala encima de una instalación desde el .tar.gz"

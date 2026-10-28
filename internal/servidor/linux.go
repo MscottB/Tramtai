@@ -3,6 +3,7 @@
 package servidor
 
 import (
+	"bytes"
 	"cmp"
 	"context"
 	"errors"
@@ -137,8 +138,15 @@ func Instalar(o Opciones) error {
 		}
 	}
 	antes := instalado(r)
-	cambiado := false
-	if !delPaquete(r) {
+	cambiado, reiniciar := false, false
+	var avisos []string
+	if delPaquete(r) {
+		var err error
+		if reiniciar, avisos, err = limpiarTarGz(r); err != nil {
+			return err
+		}
+		cambiado = reiniciar
+	} else {
 		// La cuenta del servicio solo lee el programa: es de root.
 		if err := os.MkdirAll(r.Programa, 0o755); err != nil {
 			return err
@@ -174,10 +182,61 @@ func Instalar(o Opciones) error {
 	if err := orden("systemctl", "enable", "--now", "tramtai"); err != nil {
 		return err
 	}
-	if cambiado && antes { // ya estaba en marcha con el programa o la unidad de antes
-		return orden("systemctl", "restart", "tramtai")
+	if cambiado && antes || reiniciar { // ya estaba en marcha con el programa o la unidad de antes
+		if err := orden("systemctl", "restart", "tramtai"); err != nil {
+			return err
+		}
+	}
+	if len(avisos) > 0 {
+		return Aviso(strings.Join(avisos, "; "))
 	}
 	return nil
+}
+
+// restosTarGz son la unidad y el envoltorio que deja instalar desde el .tar.gz: con el paquete, Rutas() da los suyos.
+// Las pruebas los sustituyen.
+var restosTarGz = Sitios{Unidad: "/etc/systemd/system/tramtai.service", Envoltorio: "/usr/local/bin/tramtai-servidor"}
+
+// limpiarTarGz quita, al instalar con el paquete, lo que dejó una instalación anterior desde el .tar.gz (R34): su
+// unidad en /etc, que taparía la del paquete (antes la deshabilita, para que no quede su enlace en
+// multi-user.target.wants, y pide reiniciar con la del paquete), su envoltorio y los .anterior de actualizar. Solo lo
+// que es de Tramtai: una unidad en /etc con otra cabecera, o otro envoltorio, no se toca. Devuelve los avisos.
+func limpiarTarGz(r Sitios) (reiniciar bool, avisos []string, err error) {
+	var quitados []string
+	unidad, err := os.ReadFile(restosTarGz.Unidad)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+	case err != nil:
+		return false, nil, err
+	case bytes.HasPrefix(unidad, []byte(cabeceraUnidad)) || bytes.HasPrefix(unidad, []byte(cabeceraUnidadAntigua)):
+		if err := orden("systemctl", "disable", "tramtai"); err != nil {
+			return false, nil, err
+		}
+		if err := os.Remove(restosTarGz.Unidad); err != nil {
+			return false, nil, err
+		}
+		quitados, reiniciar = append(quitados, restosTarGz.Unidad), true
+	default:
+		avisos = append(avisos, idioma.Tf("%s no la generó Tramtai y tapa la unidad del paquete: no se toca; quítala si sobra", restosTarGz.Unidad))
+	}
+	if b, err := os.ReadFile(restosTarGz.Envoltorio); err == nil && string(b) == envoltorio {
+		if err := os.Remove(restosTarGz.Envoltorio); err != nil {
+			return false, nil, err
+		}
+		quitados = append(quitados, restosTarGz.Envoltorio)
+	}
+	for _, n := range programas {
+		anterior := filepath.Join(r.Programa, n+".anterior")
+		if err := os.Remove(anterior); err == nil {
+			quitados = append(quitados, anterior)
+		} else if !errors.Is(err, fs.ErrNotExist) {
+			return false, nil, err
+		}
+	}
+	if len(quitados) > 0 {
+		avisos = append([]string{idioma.Tf("quitado lo que dejó la instalación desde el .tar.gz: %s", strings.Join(quitados, ", "))}, avisos...)
+	}
+	return reiniciar, avisos, nil
 }
 
 // instalado dice si el servicio está instalado: con su unidad y, si es la del paquete, con el drop-in de Instalar (el
@@ -202,7 +261,15 @@ func actualizarUnidad(s Sitios, extra UnidadOpciones) (bool, error) {
 	if delPaquete(s) {
 		return escribirSiCambia(s.UnidadConf, []byte(ajustesPaquete(o)), 0o644)
 	}
-	return escribirSiCambia(s.Unidad, []byte(Unidad(o)), 0o644)
+	// Sin el paquete, un drop-in suyo que quedara cambiaría el plazo y las capacidades de esta unidad.
+	quitado := true
+	if err := os.Remove(s.UnidadConf); errors.Is(err, fs.ErrNotExist) {
+		quitado = false
+	} else if err != nil {
+		return false, err
+	}
+	cambiada, err := escribirSiCambia(s.Unidad, []byte(Unidad(o)), 0o644)
+	return cambiada || quitado, err
 }
 
 // Desinstalar detiene el servicio (con drenaje) y quita la unidad, el programa y el envoltorio. Con borrarDatos borra

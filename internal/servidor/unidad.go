@@ -22,7 +22,7 @@ type UnidadOpciones struct {
 // MemoryDenyWriteExecute, RestrictNamespaces, SystemCallFilter, ProcSubset ni PrivateUsers: rompen o arriesgan los CLI
 // de los agentes (el JIT de Node de Claude Code y Copilot, sus procesos hijos).
 func Unidad(o UnidadOpciones) string {
-	return fmt.Sprintf(`# Generada por Tramtai, que la reescribe al instalar y al actualizar: para cambiarla, usa un drop-in (systemctl edit tramtai).
+	return fmt.Sprintf(`%s
 [Unit]
 Description=Tramtai (servidor)
 Documentation=https://github.com/MscottB/Tramtai/blob/main/docs/servidor.md
@@ -66,8 +66,15 @@ UMask=0077
 %s
 [Install]
 WantedBy=multi-user.target
-`, parada(o), capacidades(o))
+`, cabeceraUnidad, parada(o), capacidades(o))
 }
+
+// cabeceraUnidad encabeza la unidad: vale también para la del paquete, que reescriben apt o dnf. Instalar con el
+// paquete la reconoce (con la de antes, cabeceraUnidadAntigua) para quitar la unidad que dejó el .tar.gz en /etc.
+const (
+	cabeceraUnidad        = "# Unidad de Tramtai (servidor), generada por Tramtai: no la edites; para cambiarla, usa un drop-in (systemctl edit tramtai)."
+	cabeceraUnidadAntigua = "# Generada por «tramtai servidor instalar»"
+)
 
 // ajustesPaquete es el drop-in que pone la unidad del paquete .deb/.rpm (que no se reescribe: es de apt o dnf) al día
 // con la configuración, como Unidad(o). CapabilityBoundingSet= vacío deja el conjunto vacío, como la unidad; con

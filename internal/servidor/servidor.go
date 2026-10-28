@@ -32,7 +32,8 @@ const (
 )
 
 // Sitios son las rutas del servidor: la carpeta del programa (tramtai y uv), la de datos (la raíz del servidor), el
-// envoltorio tramtai-servidor, la unidad systemd y el drop-in que ajusta la del paquete y, para las claves (solo Linux),
+// envoltorio tramtai-servidor, la unidad systemd y el drop-in que ajusta la del paquete (10-: antes que el override.conf
+// de «systemctl edit», que así manda) y, para las claves (solo Linux),
 // la carpeta de las credenciales cifradas, el drop-in que las carga y el archivo de entorno de root sin systemd-creds.
 // El tipo no se llama Rutas porque ese nombre es el de la función.
 type Sitios struct {
@@ -47,7 +48,7 @@ var rutas = func() Sitios {
 		return Sitios{Programa: programa, Datos: carpetas.RaizServidor(), Envoltorio: filepath.Join(programa, "tramtai-servidor.cmd")}
 	}
 	s := Sitios{Programa: "/opt/tramtai", Datos: carpetas.RaizServidor(), Envoltorio: "/usr/local/bin/tramtai-servidor",
-		Unidad: "/etc/systemd/system/tramtai.service", UnidadConf: "/etc/systemd/system/tramtai.service.d/unidad.conf",
+		Unidad: "/etc/systemd/system/tramtai.service", UnidadConf: "/etc/systemd/system/tramtai.service.d/10-tramtai.conf",
 		Cifradas: "/etc/credstore.encrypted", ClavesConf: "/etc/systemd/system/tramtai.service.d/claves.conf",
 		ClavesEnv: "/etc/tramtai/claves.env"}
 	if delPaquete(s) { // el paquete pone el envoltorio y la unidad donde van los de los paquetes

@@ -1,9 +1,9 @@
 # Paquetes .deb y .rpm del servidor de Tramtai (spec v0.58 §9): el servicio del sistema con su cuenta tramtai. Lo usa
 # scripts/linux/empaquetar.sh, después de compilar en paquete/:
 #   VERSION=0.58.0+02112026 ARCH=amd64 nfpm package -f scripts/linux/nfpm-servidor.yaml -p deb -t dist/...
-# Sin dependencias (el programa es estático) y sin archivos en común con el paquete de escritorio (/usr/bin/tramtai,
-# /usr/lib/tramtai): se pueden tener los dos. Al instalar no arranca nada; lo hace «tramtai-servidor instalar», tras
-# aceptar los términos.
+# El programa es estático: solo depende de systemd, que piden los scripts (systemd-sysusers, systemd-tmpfiles). Sin
+# archivos en común con el paquete de escritorio (/usr/bin/tramtai, /usr/lib/tramtai): se pueden tener los dos. Al
+# instalar no arranca nada; lo hace «tramtai-servidor instalar», tras aceptar los términos.
 name: tramtai-servidor
 arch: ${ARCH}
 platform: linux
@@ -18,7 +18,18 @@ description: |
 vendor: Tramtai
 homepage: https://mscottb.github.io/Tramtai/
 license: PolyForm-Noncommercial-1.0.0
+depends:
+  - systemd
 contents:
+  # Las carpetas propias, para que rpm -e no las deje vacías.
+  - dst: /opt/tramtai
+    type: dir
+    file_info:
+      mode: 0755
+  - dst: /usr/share/doc/tramtai-servidor
+    type: dir
+    file_info:
+      mode: 0755
   - src: ./paquete/tramtai
     dst: /opt/tramtai/tramtai
     file_info:

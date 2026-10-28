@@ -24,6 +24,7 @@ import (
 // cuenta tramtai que existe o no.
 type prueba struct {
 	r       Sitios
+	base    string // la raíz del sistema simulado
 	origen  string
 	ordenes []string
 	duenos  []string
@@ -43,11 +44,14 @@ func nuevaPrueba(t *testing.T) *prueba {
 		Datos:      filepath.Join(base, "var", "lib", "tramtai"),
 		Envoltorio: filepath.Join(base, "usr", "local", "bin", "tramtai-servidor"),
 		Unidad:     filepath.Join(base, "etc", "systemd", "system", "tramtai.service"),
-		UnidadConf: filepath.Join(base, "etc", "systemd", "system", "tramtai.service.d", "unidad.conf"),
+		UnidadConf: filepath.Join(base, "etc", "systemd", "system", "tramtai.service.d", "10-tramtai.conf"),
 		Cifradas:   filepath.Join(base, "etc", "credstore.encrypted"),
 		ClavesConf: filepath.Join(base, "etc", "systemd", "system", "tramtai.service.d", "claves.conf"),
 		ClavesEnv:  filepath.Join(base, "etc", "tramtai", "claves.env"),
-	}, origen: filepath.Join(base, "origen")}
+	}, base: base, origen: filepath.Join(base, "origen")}
+	restos0 := restosTarGz
+	t.Cleanup(func() { restosTarGz = restos0 })
+	restosTarGz = Sitios{Unidad: p.r.Unidad, Envoltorio: p.r.Envoltorio} // los del .tar.gz, aunque luego llegue el paquete
 	for _, d := range []string{p.origen, filepath.Dir(p.r.Envoltorio), filepath.Dir(p.r.Unidad)} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
 			t.Fatal(err)
@@ -446,11 +450,16 @@ func TestDesinstalarConservaDatos(t *testing.T) {
 }
 
 // paquete simula el paquete tramtai-servidor recién instalado: el programa con .paquete, la unidad y el envoltorio en
-// sus rutas (con contenido reconocible, para ver que no se tocan) y la cuenta, que crea systemd-sysusers.
+// sus rutas, que pasan a ser las de Rutas() (con contenido reconocible, para ver que no se tocan), y la cuenta, que crea
+// systemd-sysusers.
 func (p *prueba) paquete(t *testing.T) {
 	t.Helper()
-	if err := os.MkdirAll(p.r.Programa, 0o755); err != nil {
-		t.Fatal(err)
+	p.r.Unidad = filepath.Join(p.base, "usr", "lib", "systemd", "system", "tramtai.service")
+	p.r.Envoltorio = filepath.Join(p.base, "usr", "bin", "tramtai-servidor")
+	for _, d := range []string{p.r.Programa, filepath.Dir(p.r.Unidad), filepath.Dir(p.r.Envoltorio)} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
 	for ruta, contenido := range map[string]string{filepath.Join(p.r.Programa, "tramtai"): "tramtai del paquete",
 		filepath.Join(p.r.Programa, "uv"): "uv del paquete", filepath.Join(p.r.Programa, ".paquete"): "",
@@ -551,6 +560,89 @@ func TestDesinstalarConPaquete(t *testing.T) {
 	p.sinTocarPaquete(t)
 	if existe(p.r.Datos) || p.cuenta {
 		t.Error("con borrarDatos se borran la carpeta y la cuenta")
+	}
+}
+
+// TestInstalarPaqueteSobreTarGz (R34): con el paquete puesto encima de una instalación desde el .tar.gz, instalar quita
+// lo que esta dejó: su unidad en /etc, que taparía la del paquete (la deshabilita antes, para que no quede su enlace en
+// multi-user.target.wants, y reinicia el servicio con la del paquete), su envoltorio y los .anterior de actualizar. Lo
+// dice en un aviso. Vale para la cabecera de la unidad de antes y la de ahora.
+func TestInstalarPaqueteSobreTarGz(t *testing.T) {
+	for _, cabecera := range []string{"# Generada por «tramtai servidor instalar»: se reescribe al instalar y al actualizar.", cabeceraUnidad} {
+		p := nuevaPrueba(t)
+		p.instalar(t)
+		vieja := restosTarGz.Unidad
+		if err := os.WriteFile(vieja, []byte(cabecera+"\n[Unit]\nDescription=Tramtai (servidor)\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		for _, n := range []string{"tramtai.anterior", "uv.anterior"} {
+			if err := os.WriteFile(filepath.Join(p.r.Programa, n), []byte("de antes"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}
+		p.paquete(t)
+		p.ordenes = nil
+		err := Instalar(Opciones{Origen: p.origen, AceptoTerminos: true, Como: terminos.ComoOpcion})
+		var aviso Aviso
+		if !errors.As(err, &aviso) || !strings.Contains(aviso.Error(), vieja) || !strings.Contains(aviso.Error(), restosTarGz.Envoltorio) ||
+			!strings.Contains(aviso.Error(), "tramtai.anterior") {
+			t.Fatalf("avisa de lo que quitó: %v", err)
+		}
+		mismas(t, "órdenes", p.ordenes, "id tramtai", "systemctl disable tramtai", "systemctl daemon-reload",
+			"systemctl enable --now tramtai", "systemctl restart tramtai")
+		for _, ruta := range []string{vieja, restosTarGz.Envoltorio, filepath.Join(p.r.Programa, "tramtai.anterior"), filepath.Join(p.r.Programa, "uv.anterior")} {
+			if existe(ruta) {
+				t.Errorf("%s queda", ruta)
+			}
+		}
+		p.sinTocarPaquete(t)
+		if !existe(p.r.UnidadConf) {
+			t.Error("el drop-in de la unidad del paquete se escribe")
+		}
+	}
+}
+
+// TestInstalarPaqueteUnidadAjena: una unidad tramtai.service en /etc que no generó Tramtai, o un envoltorio que no es
+// el suyo, no se tocan; de la unidad, que tapa la del paquete, se avisa.
+func TestInstalarPaqueteUnidadAjena(t *testing.T) {
+	p := nuevaPrueba(t)
+	ajena, propio := "[Unit]\nDescription=la mía\n", "#!/bin/sh\necho mío\n"
+	if err := os.WriteFile(restosTarGz.Unidad, []byte(ajena), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(restosTarGz.Envoltorio, []byte(propio), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	p.paquete(t)
+	err := Instalar(Opciones{Origen: p.origen, AceptoTerminos: true, Como: terminos.ComoOpcion})
+	var aviso Aviso
+	if !errors.As(err, &aviso) || !strings.Contains(aviso.Error(), restosTarGz.Unidad) {
+		t.Fatalf("avisa de la unidad ajena: %v", err)
+	}
+	mismas(t, "órdenes", p.ordenes, "id tramtai", "systemctl daemon-reload", "systemctl enable --now tramtai")
+	if leido(t, restosTarGz.Unidad) != ajena || leido(t, restosTarGz.Envoltorio) != propio {
+		t.Error("lo ajeno no se toca")
+	}
+}
+
+// TestSinPaqueteQuitaDropIn: sin el paquete, la unidad la escribe Tramtai entera; un drop-in del paquete que quedara
+// (lo quita su postrm) se quita, con daemon-reload, para que no le cambie el plazo ni las capacidades.
+func TestSinPaqueteQuitaDropIn(t *testing.T) {
+	p := nuevaPrueba(t)
+	p.instalar(t)
+	if err := os.MkdirAll(filepath.Dir(p.r.UnidadConf), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p.r.UnidadConf, []byte(ajustesPaquete(UnidadOpciones{})), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	p.ordenes = nil
+	if err := Reiniciar(); err != nil {
+		t.Fatal(err)
+	}
+	mismas(t, "órdenes", p.ordenes, "systemctl daemon-reload", "systemctl restart tramtai")
+	if existe(p.r.UnidadConf) {
+		t.Error("el drop-in del paquete queda")
 	}
 }
 
