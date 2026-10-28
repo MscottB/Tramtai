@@ -3,7 +3,6 @@ package servicio
 import (
 	"cmp"
 	"errors"
-	"net"
 	"net/http"
 
 	"tramtai/internal/adaptadores"
@@ -244,8 +243,7 @@ func (s *Servicio) cambiarAutenticacion(agente, modo string) error {
 	if modo != adaptadores.AutenticacionClaveAPI && modo != adaptadores.AutenticacionSuscripcion {
 		return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.Tf("modo de autenticación desconocido: %s", modo))
 	}
-	ip := net.ParseIP(s.opc.Host)
-	if expuesto := s.opc.Host != "localhost" && (ip == nil || !ip.IsLoopback()) || len(s.opc.Confiables) > 0; modo == adaptadores.AutenticacionSuscripcion && expuesto {
+	if modo == adaptadores.AutenticacionSuscripcion && s.opc.Expuesto {
 		if s.entorno() == "servidor" {
 			return nucleo.NuevoError(nucleo.CodigoAccionNoPermitida, idioma.Tf("el servidor está abierto a la red: la suscripción de %s solo se activa como personal, con sus condiciones (tramtai-servidor agentes suscripcion %s --personal)", agente, agente))
 		}

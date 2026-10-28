@@ -55,18 +55,30 @@ func Buscar(nombre string) (adaptadores.Ficha, bool) {
 }
 
 // Registro crea los adaptadores según la configuración efectiva y devuelve el límite de ejecuciones simultáneas de
-// cada uno (concurrencia_servicio.adaptadores). En el servidor, un agente con suscripción usa una sola cuenta para todas
-// las APIs y espacios: su límite baja a adaptadores.<agente>.suscripcion_simultaneas.
+// cada uno (concurrencia_servicio.adaptadores).
 func Registro(c *configuracion.Configuracion) (map[string]adaptadores.Adaptador, map[string]int) {
 	registro, limites := map[string]adaptadores.Adaptador{}, map[string]int{}
 	for _, f := range fichas {
 		registro[f.Nombre] = f.Crear(c)
 		limites[f.Nombre] = c.Entero("concurrencia_servicio.adaptadores." + f.Nombre)
-		if carpetas.Servidor() && c.Texto("adaptadores."+f.Nombre+".autenticacion") == adaptadores.AutenticacionSuscripcion {
-			limites[f.Nombre] = min(limites[f.Nombre], c.Entero("adaptadores."+f.Nombre+".suscripcion_simultaneas"))
-		}
 	}
 	return registro, limites
+}
+
+// Simultaneas son, en el servidor, las peticiones a la vez de cada agente que admite la suscripción mientras la usa
+// (adaptadores.<agente>.suscripcion_simultaneas): una sola cuenta para todas las APIs y espacios. Fuera del servidor,
+// ninguna: el escritorio sigue como siempre.
+func Simultaneas(c *configuracion.Configuracion) map[string]int {
+	if !carpetas.Servidor() {
+		return nil
+	}
+	limites := map[string]int{}
+	for _, f := range fichas {
+		if AdmiteSuscripcion(f.Nombre) {
+			limites[f.Nombre] = c.Entero("adaptadores." + f.Nombre + ".suscripcion_simultaneas")
+		}
+	}
+	return limites
 }
 
 // NombreVisible es el nombre con que se muestra un agente; el id si no está en el catálogo.

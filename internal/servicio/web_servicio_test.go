@@ -1,7 +1,6 @@
 package servicio
 
 import (
-	"net/netip"
 	"strings"
 	"testing"
 
@@ -22,7 +21,7 @@ func TestAutenticacionRemotaProhibida(t *testing.T) {
 			t.Fatalf("desde una sesión remota: %d %s", r.StatusCode, cuerpo)
 		}
 	}
-	s.opc.Confiables = []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")} // detrás de un proxy: expuesto
+	s.opc.Expuesto = true // p. ej. detrás de un proxy (servidor.Expuesto, al arrancar)
 	ruta := "/api/v1/servicio/agentes/claude/autenticacion"
 	if r, cuerpo := admin(t, s, ts.URL, "PUT", ruta, `{"modo":"suscripcion"}`); r.StatusCode != 409 || modo.Valor() != adaptadores.AutenticacionClaveAPI ||
 		!strings.Contains(cuerpo, "agentes suscripcion claude --personal") {
@@ -30,5 +29,11 @@ func TestAutenticacionRemotaProhibida(t *testing.T) {
 	}
 	if r, cuerpo := admin(t, s, ts.URL, "PUT", ruta, `{"modo":"clave_api"}`); r.StatusCode != 204 {
 		t.Fatalf("expuesto, a clave de API: %d %s", r.StatusCode, cuerpo)
+	}
+	// En el escritorio expuesto tampoco: el error de siempre (no hay suscripción personal que ofrecer).
+	s.opc.Entorno = "escritorio"
+	if r, cuerpo := admin(t, s, ts.URL, "PUT", ruta, `{"modo":"suscripcion"}`); r.StatusCode != 400 || !strings.Contains(cuerpo, "configuracion_invalida") ||
+		modo.Valor() != adaptadores.AutenticacionClaveAPI {
+		t.Fatalf("escritorio expuesto: %d %s", r.StatusCode, cuerpo)
 	}
 }

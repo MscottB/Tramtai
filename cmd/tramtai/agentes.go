@@ -46,7 +46,7 @@ func comandoEntrar() *cobra.Command {
 			if !ok || len(f.InicioSesion) == 0 {
 				return fmt.Errorf(idioma.T("%s no inicia sesión con una suscripción: usa su clave de API (tramtai-servidor claves guardar)"), args[0])
 			}
-			c, err := cargarConfiguracion()
+			c, err := configuracion.CargarConfiguracion("", agentes.Internos()) // la global, como el servicio
 			if err != nil {
 				return err
 			}
@@ -84,6 +84,9 @@ func comandoSuscripcion() *cobra.Command {
 			if err := adminAgentesServidor(); err != nil {
 				return err
 			}
+			if err := comprobarSuscripcionServidor(agente, personal); err != nil {
+				return err
+			}
 			out := cmd.OutOrStdout()
 			fmt.Fprintln(out, idioma.Tf("Antes de usar tu suscripción de %s, lee los riesgos:", agentes.NombreVisible(agente)))
 			for i, riesgo := range terminos.Riesgos(true)[0:2] {
@@ -113,17 +116,43 @@ func comandoSuscripcion() *cobra.Command {
 			for _, v := range []struct {
 				clave string
 				valor any
-			}{{"autenticacion", adaptadores.AutenticacionSuscripcion}, {"suscripcion_personal", true}, {"suscripcion_simultaneas", simultaneas}} {
+			}{{"suscripcion_simultaneas", simultaneas}, {"suscripcion_personal", true}, {"autenticacion", adaptadores.AutenticacionSuscripcion}} { // la autenticación, al final: un corte a medias no deja una suscripción sin sus condiciones
 				if err := configuracion.FijarValor(ruta, configuracion.OrigenGlobal, "adaptadores."+agente+"."+v.clave, v.valor); err != nil {
 					return err
 				}
 			}
-			fmt.Fprintln(out, idioma.Tf("Servidor: %s usa tu suscripción personal, con %d peticiones a la vez como mucho; se reinicia el servicio para aplicarlo", agentes.NombreVisible(agente), simultaneas))
+			fmt.Fprintln(out, idioma.Tf("Servidor: %s usa tu suscripción personal (peticiones a la vez, como mucho: %d); se reinicia el servicio para aplicarlo", agentes.NombreVisible(agente), simultaneas))
 			return reiniciarServidor()
 		}}
 	cmd.Flags().BoolVar(&personal, "personal", false, idioma.T("tu suscripción personal en el servidor abierto a la red (exige TOTP del administrador)"))
 	cmd.Flags().IntVar(&simultaneas, "simultaneas", 1, idioma.T("peticiones a la vez con la suscripción personal, de 1 a 3"))
 	return cmd
+}
+
+// comprobarSuscripcionServidor, en el servidor y antes de preguntar nada, mira la configuración que quedaría: sin
+// --personal y expuesto, el servicio la rechazaría (409); con --personal, que el servicio siga arrancando (regla 4: sin
+// TOTP no arrancaría, y reiniciarlo lo dejaría caído). Si no, lo dice sin escribir nada.
+func comprobarSuscripcionServidor(agente string, personal bool) error {
+	if !carpetas.Servidor() {
+		return nil
+	}
+	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
+	if err != nil {
+		return err
+	}
+	red, err := entradaServidor(c)
+	if err != nil {
+		return err
+	}
+	if !personal {
+		if servidor.Expuesto(red) {
+			return errors.New(idioma.Tf("el servidor está abierto a la red: la suscripción de %s solo se activa como personal, con sus condiciones (tramtai-servidor agentes suscripcion %s --personal)", agente, agente))
+		}
+		return nil
+	}
+	red.Suscripciones = append(slices.DeleteFunc(red.Suscripciones, func(s servidor.Suscripcion) bool { return s.Agente == agente }),
+		servidor.Suscripcion{Agente: agente, Personal: true})
+	return servidor.ComprobarArranque(conTOTP(red))
 }
 
 // suscripcionLocal pasa el agente a suscripción como el botón de Agentes: por el servicio si está en marcha (lo aplica

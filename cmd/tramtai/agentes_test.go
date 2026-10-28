@@ -39,6 +39,9 @@ func TestSuscripcionPersonalCLI(t *testing.T) {
 	if _, err := ejecutarAdmin(t, "acepto\nno\n", "agents", "subscription", "claude", "--personal", "--simultaneas", "2"); err == nil || reinicios != 0 {
 		t.Fatalf("subir a 2 sin confirmarlo: %v %d", err, reinicios)
 	}
+	if _, err := os.Stat(global); err == nil {
+		t.Fatal("sin confirmar las 2 a la vez no se escribe nada")
+	}
 	if _, err := ejecutarAdmin(t, "acepto\n", "agents", "subscription", "claude", "--personal"); err != nil || reinicios != 1 {
 		t.Fatalf("con «acepto»: %v %d", err, reinicios)
 	}
@@ -62,7 +65,45 @@ func TestSuscripcionPersonalCLI(t *testing.T) {
 	}
 }
 
-// TestEntrarSoloServidor: «agentes entrar» (agents login) es del modo servidor; fuera de él lo dice, sin lanzar nada.
+// TestSuscripcionServidorExpuesto: con el servidor abierto a la red, antes de preguntar nada, --personal sin TOTP del
+// administrador falla con el porqué de la regla 4 (reiniciar dejaría el servicio caído) y sin --personal pide usarla;
+// en los dos casos no se escribe ni se reinicia.
+func TestSuscripcionServidorExpuesto(t *testing.T) {
+	simularServidor(t, true)
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	simularTOTP(t)
+	anteriorClave, anteriorReinicio := leerClave, reiniciarServidor
+	t.Cleanup(func() { leerClave, reiniciarServidor = anteriorClave, anteriorReinicio })
+	leerClave = func(string) (string, error) { return "", nil } // sin TOTP
+	reinicios := 0
+	reiniciarServidor = func() error { reinicios++; return nil }
+	global := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+	config := "servicio:\n  proxy:\n    confiables: [10.0.0.0/8]\n"
+	if err := os.WriteFile(global, []byte(config), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for orden, quiere := range map[string]string{"--personal": "TOTP", "": "--personal"} {
+		args := []string{"agentes", "suscripcion", "claude"}
+		if orden != "" {
+			args = append(args, orden)
+		}
+		salida, err := ejecutarAdmin(t, "acepto\n", args...)
+		if err == nil || !strings.Contains(err.Error(), quiere) || strings.Contains(salida, terminos.Riesgos(true)[0]) || reinicios != 0 {
+			t.Fatalf("%q expuesto: %v %d\n%s", orden, err, reinicios, salida)
+		}
+		if leido, _ := os.ReadFile(global); string(leido) != config {
+			t.Fatalf("%q: la configuración cambió:\n%s", orden, leido)
+		}
+	}
+	leerClave = func(string) (string, error) { return "SECRETO", nil } // con TOTP, sí
+	if _, err := ejecutarAdmin(t, "acepto\n", "agentes", "suscripcion", "claude", "--personal"); err != nil || reinicios != 1 {
+		t.Fatalf("con TOTP: %v %d", err, reinicios)
+	}
+}
+
+// TestEntrarSoloServidor: «agentes entrar» (agents login) es del modo servidor; fuera de él lo dice, sin lanzar nada. En
+// el servidor, un agente sin inicio de sesión propio (gemini) tampoco lanza nada.
 func TestEntrarSoloServidor(t *testing.T) {
 	simularServidor(t, true)
 	t.Setenv("TRAMTAI_SERVIDOR", "")
@@ -70,5 +111,10 @@ func TestEntrarSoloServidor(t *testing.T) {
 		if _, err := ejecutarAdmin(t, "", orden...); err == nil || !strings.Contains(err.Error(), "tramtai --servidor agentes entrar") {
 			t.Fatalf("%v fuera del servidor: %v", orden, err)
 		}
+	}
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	simularTOTP(t)
+	if _, err := ejecutarAdmin(t, "", "agentes", "entrar", "gemini"); err == nil || !strings.Contains(err.Error(), "clave de API") {
+		t.Fatalf("gemini: %v", err)
 	}
 }
