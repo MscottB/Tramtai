@@ -28,6 +28,19 @@ type Contexto struct {
 	Ancho, Alto int              // el área de la página, sin cabecera, menú ni pie
 	Proyecto    string           // raíz del proyecto desde el que se abrió la terminal; vacía fuera de uno
 	Datos       string           // la carpeta de datos de Tramtai (Opciones.Datos): ahí guarda Probar su borrador
+	Entorno     string           // servidor, portable o escritorio (Opciones.Entorno); en el servidor, Agentes ofrece sus órdenes
+}
+
+// MarcaEntorno es la clave del texto de la marca del entorno: «Servidor», «Este equipo» o «Portable», como en la Web
+// UI. La usan la línea de estado y Acerca de.
+func MarcaEntorno(entorno string) string {
+	switch entorno {
+	case "servidor":
+		return "entorno.servidor"
+	case "portable":
+		return "entorno.portable"
+	}
+	return "entorno.escritorio"
 }
 
 // Claves de las páginas: las de la Web UI. IrA con otra clave no hace nada.

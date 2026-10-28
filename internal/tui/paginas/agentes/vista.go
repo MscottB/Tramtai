@@ -216,13 +216,19 @@ func (p *Pagina) textoDetalle(a contrato.Adaptador) string {
 			add(a.Problema)
 		}
 	case contrato.AgenteFaltaClave:
-		if catalogo.AdmiteSuscripcion(a.Agente) {
+		switch {
+		case p.c.Entorno == "servidor": // en lugar de «tu suscripción (tecla a)», su orden; la clave, con tramtai-servidor
+			if catalogo.AdmiteSuscripcion(a.Agente) {
+				add(p.tx(p.textoSuscripcionServidor()), "  "+p.ordenSuscripcion(a.Agente), "")
+			}
+			add(p.tx("agentes.servidorClave"))
+		case catalogo.AdmiteSuscripcion(a.Agente):
 			add(idioma.T("Elige cómo conectarlo: con tu suscripción (tecla a) o con una clave de API."), p.tx("agentes.opcionSuscripcionTexto", "cli", cli),
 				idioma.T("Para la clave de API, ejecuta esto en una terminal (pide la clave sin mostrarla) y pulsa c para volver a comprobar:"))
-		} else {
+		default:
 			add(idioma.T("Necesita una clave de API. Ejecuta esto en una terminal (pide la clave sin mostrarla) y pulsa c para volver a comprobar:"))
 		}
-		add("  " + comandoClave(a))
+		add("  " + p.comandoClave(a))
 	case contrato.AgenteSinSesion:
 		add(a.Problema)
 	case contrato.AgenteNoInstalado:
@@ -285,8 +291,9 @@ func (p *Pagina) textoModelos(agente string) string {
 	return strings.Join(nombres, " · ")
 }
 
-// comandoClave es el comando que guarda la clave del agente, con la primera variable de su ficha.
-func comandoClave(a contrato.Adaptador) string {
+// comandoClave es el comando que guarda la clave del agente, con la primera variable de su ficha; en el servidor, con
+// tramtai-servidor, que la guarda para el servicio del sistema.
+func (p *Pagina) comandoClave(a contrato.Adaptador) string {
 	var variable string
 	if f, ok := catalogo.Buscar(a.Agente); ok && len(f.VariablesClave) > 0 {
 		variable = f.VariablesClave[0]
@@ -294,5 +301,25 @@ func comandoClave(a contrato.Adaptador) string {
 	if variable == "" { // como la Web UI: la variable que nombra el problema
 		variable = regexp.MustCompile(`[A-Z_]+_API_KEY`).FindString(a.Problema)
 	}
+	if p.c.Entorno == "servidor" {
+		return "tramtai-servidor claves guardar " + variable
+	}
 	return "tramtai claves guardar " + variable
+}
+
+// ordenSuscripcion es, en el servidor, la orden de la suscripción de un agente: con el servicio abierto a la red, la
+// personal (con sus condiciones); si no, el inicio de sesión del propio CLI con la cuenta del servicio.
+func (p *Pagina) ordenSuscripcion(agente string) string {
+	if p.servidor != nil && p.servidor.Expuesto {
+		return "tramtai-servidor agentes suscripcion " + agente + " --personal"
+	}
+	return "tramtai-servidor agentes entrar " + agente
+}
+
+// textoSuscripcionServidor es la clave del texto que acompaña a ordenSuscripcion.
+func (p *Pagina) textoSuscripcionServidor() string {
+	if p.servidor != nil && p.servidor.Expuesto {
+		return "agentes.servidorPersonal"
+	}
+	return "agentes.servidorEntrar"
 }

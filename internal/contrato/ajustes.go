@@ -96,6 +96,29 @@ type EntradaRemota struct {
 	HTTPS      bool `json:"https"`
 }
 
+// EstadoServidor es lo que enseña Ajustes → Servidor (GET /ui/servidor y GET /api/v1/servicio/servidor, solo en el modo
+// servidor): el modo de HTTPS (servicio.tls.modo), los dominios, los proxies de confianza, cuándo vence el certificado
+// propio, si hay administrador con contraseña y con TOTP, si el servicio está abierto a la red (Expuesto: fuera de
+// loopback o detrás de un proxy) y las suscripciones de los agentes. Solo se lee: cada dato se cambia en el servidor.
+type EstadoServidor struct {
+	TLS              string                `json:"tls" ts:"'ninguno' | 'archivos' | 'letsencrypt'"`
+	Dominios         []string              `json:"dominios"`
+	Confiables       []string              `json:"confiables"`
+	VenceCertificado *time.Time            `json:"vence_certificado,omitempty"`
+	Administrador    bool                  `json:"administrador"`
+	TOTP             bool                  `json:"totp"`
+	Expuesto         bool                  `json:"expuesto"`
+	Suscripciones    []SuscripcionServidor `json:"suscripciones"`
+}
+
+// SuscripcionServidor es un agente que usa la suscripción en el servidor: si es la personal del administrador (con su
+// aviso fijo) y cuántas peticiones a la vez admite (adaptadores.<agente>.suscripcion_simultaneas).
+type SuscripcionServidor struct {
+	Agente      string `json:"agente"`
+	Personal    bool   `json:"personal"`
+	Simultaneas int    `json:"simultaneas"`
+}
+
 // SecretoTOTP es el secreto nuevo que Ajustes → Seguridad enseña antes de guardarlo: se guarda al confirmarlo con un
 // código de la app de autenticación.
 type SecretoTOTP struct {

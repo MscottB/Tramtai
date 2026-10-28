@@ -38,6 +38,7 @@ type (
 		ajustes        contrato.AjustesServicio
 		conversor      *contrato.EstadoConversor // nil: el servicio no tiene conversor
 		acerca         *contrato.Acerca          // nil si no llegó: Acerca de lo dice
+		servidor       *contrato.EstadoServidor  // solo en el servidor: la sección Servidor lo enseña
 		err            error
 	}
 	// msgActualizacion trae el estado de las actualizaciones; con ahora, era «Buscar actualización ahora».
@@ -83,6 +84,7 @@ const (
 	secConversor       = "conversor"
 	secActualizaciones = "actualizaciones"
 	secArranque        = "arranque"
+	secServidor        = "servidor"  // solo en el servidor: HTTPS, administrador y suscripciones, solo para leer
 	secSeguridad       = "seguridad" // solo en el servidor: las órdenes del administrador
 	secAcerca          = "acerca"
 )
@@ -133,6 +135,7 @@ type Pagina struct {
 	conversor      *contrato.EstadoConversor
 	act            *contrato.EstadoActualizacion // nil hasta que llega (o si no llega: la sección no se ve)
 	acerca         *contrato.Acerca
+	servidor       *contrato.EstadoServidor // en el servidor, lo que enseña la sección Servidor
 
 	pestana int
 	cursor  [2]int // la sección elegida en cada pestaña
@@ -254,6 +257,11 @@ func (p *Pagina) cargar() tea.Cmd {
 		}
 		if a, err := cli.Acerca(ctx); err == nil {
 			m.acerca = &a
+			if a.Entorno == "servidor" {
+				if e, err := cli.EstadoServidor(ctx); err == nil {
+					m.servidor = &e
+				}
+			}
 		}
 		return m
 	}, p.cargarActualizacion(false))
@@ -334,7 +342,7 @@ func (p *Pagina) alCargar(m msgCarga) tea.Cmd {
 	}
 	p.sinServ, p.cargado, p.err = false, true, ""
 	p.nombre, p.ambito, p.entradas, p.catalogo, p.retencion = m.nombre, m.ambito, m.entradas, m.catalogo, m.retencion
-	p.terminados, p.puntos, p.ajustes, p.conversor, p.acerca = m.terminados, m.puntos, m.ajustes, m.conversor, m.acerca
+	p.terminados, p.puntos, p.ajustes, p.conversor, p.acerca, p.servidor = m.terminados, m.puntos, m.ajustes, m.conversor, m.acerca, m.servidor
 	if preparando(p.conversor) && !p.sondeando {
 		p.sondeando = true
 		return p.sondearConversor()
@@ -773,6 +781,9 @@ func (p *Pagina) secciones() []string {
 	}
 	if p.ajustes.Autoarranque != nil {
 		l = append(l, secArranque)
+	}
+	if p.servidor != nil {
+		l = append(l, secServidor)
 	}
 	if p.acerca != nil && p.acerca.Entorno == "servidor" {
 		l = append(l, secSeguridad)

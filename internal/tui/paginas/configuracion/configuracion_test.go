@@ -390,6 +390,49 @@ func TestAjustesSeguridad(t *testing.T) {
 	}
 }
 
+// TestConfiguracionServidorSoloLectura: en el servidor, «Todo Tramtai» enseña Servidor (HTTPS, dominios, proxies,
+// certificado, administrador y suscripciones), cada dato con la orden que lo cambia y sin nada que se edite aquí; el
+// arranque con el sistema no sale (el servicio del sistema arranca con el equipo).
+func TestConfiguracionServidorSoloLectura(t *testing.T) {
+	if tx("servidor.titulo") == "servidor.titulo" {
+		t.Fatal("faltan los textos en internal/tui/datos: cd web; npm run ayuda-terminal")
+	}
+	cli, id := prueba.Ajustado(t, func(o *servicio.Opciones) { o.Entorno = "servidor" })
+	a := abierta(t, cli, id)
+	todoTramtai(t, a)
+	if v := a.Vista(); strings.Contains(v, tx("arranque.titulo", "sistema", sistema())) {
+		t.Fatalf("en el servidor no hay arranque con el sistema:\n%s", v)
+	}
+	ir(t, a, tx("servidor.titulo"))
+	v := strings.Join(strings.Fields(a.Vista()), " ")
+	for _, quiero := range []string{tx("servidor.https") + ": " + tx("servidor.tlsNinguno"), tx("servidor.enConfig") + " servicio.tls.modo", tx("servidor.dominios"),
+		"tramtai-servidor agentes entrar <agente>", // en local, el inicio de sesión del CLI
+		tx("servidor.administrador") + ": " + tx("servidor.sinAdministrador"), "tramtai-servidor administrador contraseña",
+		tx("servidor.cambiaEn")[:strings.Index(tx("servidor.cambiaEn"), "config.yaml")]} { // las órdenes largas se parten por el guion
+		if !strings.Contains(v, quiero) {
+			t.Errorf("falta %q:\n%s", quiero, a.Vista())
+		}
+	}
+	for _, k := range a.P.Teclas() {
+		if slices.Contains([]string{"e", "enter", "Intro", "space", "Espacio", "x"}, k.Tecla) {
+			t.Errorf("Servidor es de solo lectura: ofrece %+v", k)
+		}
+	}
+	for _, tecla := range []string{"e", "enter", "space", "x"} {
+		if fuera := a.Pulsar(tecla); len(fuera) != 0 || a.P.EnCampo() {
+			t.Errorf("%s no cambia nada en Servidor: %v", tecla, fuera)
+		}
+	}
+	// Abierto a la red, la suscripción es la personal.
+	cli, id = prueba.Ajustado(t, func(o *servicio.Opciones) { o.Entorno, o.Expuesto = "servidor", true })
+	b := abierta(t, cli, id)
+	todoTramtai(t, b)
+	ir(t, b, tx("servidor.titulo"))
+	if v := strings.Join(strings.Fields(b.Vista()), " "); !strings.Contains(v, "tramtai-servidor agentes suscripcion <agente> --personal") {
+		t.Errorf("expuesto, la orden de la personal:\n%s", b.Vista())
+	}
+}
+
 // TestAjustesConversor: el estado del conversor (el del equipo: puede tener markitdown instalado) y a cambia «Preparar al
 // iniciar».
 func TestAjustesConversor(t *testing.T) {

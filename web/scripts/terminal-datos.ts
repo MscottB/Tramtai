@@ -40,6 +40,7 @@ export const CLAVES_AGENTES: string[] = [
   'agentes.confirmarTitulo', 'agentes.riesgoSuscripcion', 'agentes.aceptoRiesgo', 'agentes.usaClave', 'agentes.sesionNoResponde',
   'agentes.version', 'agentes.sinVersion', 'agentes.autenticacion', 'agentes.enVivo', 'agentes.fragmentos', 'agentes.alTerminar',
   'agentes.json', 'agentes.informaModelo', 'agentes.esfuerzo', 'agentes.predeterminadoCli', 'agentes.comoInstalar',
+  'agentes.servidorEntrar', 'agentes.servidorPersonal', 'agentes.servidorClave',
   'comun.si', 'comun.no', 'comun.cargando',
 ]
 
@@ -160,6 +161,10 @@ export const CLAVES_ESPACIOS: string[] = [
 export const CLAVES_AJUSTES: string[] = [
   'config.pestanaEspacio', 'config.pestanaTramtai', 'config.avisoGlobal', 'config.avisoProyecto', 'config.avisoTramtai',
   'config.pestanaSeguridad', 'seguridad.terminal',
+  'servidor.titulo', 'servidor.https', 'servidor.tlsNinguno', 'servidor.tlsArchivos', 'servidor.tlsLetsencrypt',
+  'servidor.dominios', 'servidor.confiables', 'servidor.ninguno', 'servidor.vence', 'servidor.renovarArchivos', 'servidor.renuevaSolo',
+  'servidor.administrador', 'servidor.conTotp', 'servidor.sinTotp', 'servidor.sinAdministrador', 'servidor.suscripciones',
+  'servidor.suscripcionPersonal', 'servidor.suscripcionLocal', 'servidor.sinSuscripciones', 'servidor.cambiaEn', 'servidor.enConfig',
   'config.valoresTecnicos', 'config.valoresTexto', 'config.buscar', 'config.sinCoincidencias',
   'herencia.propio', 'herencia.global', 'herencia.volver', 'herencia.vuelto',
   ...['interno', 'global', 'proyecto', 'local', 'entorno'].map((o) => 'origen.' + o),
@@ -188,13 +193,14 @@ export const CLAVES_AJUSTES: string[] = [
   'acerca.titulo', 'acerca.sinComprobar', 'acerca.desarrollado', 'acerca.alDia', 'acerca.hayNueva', 'acerca.sinBuscar', 'acerca.sitio',
   'acerca.repositorio', 'acerca.problema', 'acerca.licencia', 'acerca.terminos', 'acerca.detalles', 'acerca.sinDatos', 'acerca.version',
   'acerca.portable', 'acerca.commit', 'acerca.modificado', 'acerca.sistema', 'acerca.servicio', 'acerca.desde', 'acerca.claves',
-  'acerca.datos', 'acerca.configuracion', 'acerca.registro', 'acerca.copiar', 'acerca.copiarTexto',
+  'acerca.datos', 'acerca.configuracion', 'acerca.registro', 'acerca.copiar', 'acerca.copiarTexto', 'acerca.entorno', 'acerca.cuenta',
   'comun.guardar', 'comun.cancelar',
 ]
 
-// CLAVES_APP son los textos de la cabecera de la terminal que repite de la Web UI: el estado del servicio y el cambio
-// rápido de espacio.
-export const CLAVES_APP: string[] = ['app.enMarcha', 'app.sinConexion', 'app.cambiarInstancia']
+// CLAVES_APP son los textos de la cabecera y la línea de estado de la terminal que repite de la Web UI: el estado del
+// servicio, el cambio rápido de espacio, la marca del entorno y el aviso fijo de la suscripción personal del servidor.
+export const CLAVES_APP: string[] = ['app.enMarcha', 'app.sinConexion', 'app.cambiarInstancia',
+  'entorno.servidor', 'entorno.escritorio', 'entorno.portable', 'servidor.avisoSuscripcion']
 
 // CLAVES_TERMINOS son los textos de «Antes de seguir» que la terminal repite tal cual: los cinco riesgos de los términos de uso,
 // la pregunta y sus teclas. Los {placeholders} los rellena Go con datos.Textof.

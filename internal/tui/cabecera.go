@@ -10,11 +10,13 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"tramtai/internal/agentes"
 	"tramtai/internal/cliente"
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/tui/comp"
+	"tramtai/internal/tui/datos"
 	"tramtai/internal/tui/pagina"
 )
 
@@ -32,7 +34,8 @@ type (
 		err       error
 		reiniciar bool
 		latido    bool
-		cambios   int // los cambios de espacio que había al lanzarla
+		cambios   int                      // los cambios de espacio que había al lanzarla
+		servidor  *contrato.EstadoServidor // en el servidor: el administrador y las suscripciones (nil si no respondió)
 	}
 	msgLatido struct{}
 )
@@ -43,7 +46,7 @@ func latir() tea.Cmd { return tea.Tick(latido, func(time.Time) tea.Msg { return 
 // pudo reiniciar en otro puerto o con otro token). Con arrancar y Opciones.Iniciar, si sigue sin responder, lo inicia.
 // Quien la lanza pone comprobando; el resultado lo quita.
 func (m *modelo) conectar(arrancar, reiniciar, latido bool) tea.Cmd {
-	cli, datos, iniciar, cambios := m.cli, m.o.Datos, m.o.Iniciar, m.cambios
+	cli, datos, iniciar, cambios, servidor := m.cli, m.o.Datos, m.o.Iniciar, m.cambios, m.o.Entorno == "servidor"
 	if !arrancar {
 		iniciar = nil
 	}
@@ -52,7 +55,13 @@ func (m *modelo) conectar(arrancar, reiniciar, latido bool) tea.Cmd {
 			ctx, cancelar := context.WithTimeout(context.Background(), plazo)
 			defer cancelar()
 			espacios, err := c.Espacios(ctx)
-			return msgConexion{cli: c, espacios: espacios, err: err, reiniciar: reiniciar, latido: latido, cambios: cambios}
+			r := msgConexion{cli: c, espacios: espacios, err: err, reiniciar: reiniciar, latido: latido, cambios: cambios}
+			if err == nil && servidor {
+				if e, err := c.EstadoServidor(ctx); err == nil {
+					r.servidor = &e
+				}
+			}
+			return r
 		}
 		r := msgConexion{cli: cli, err: cliente.ErrServicioInactivo, reiniciar: reiniciar, latido: latido, cambios: cambios}
 		if cli != nil {
@@ -94,7 +103,7 @@ func (m *modelo) conectado(r msgConexion) tea.Cmd {
 		if m.cli != r.cli {
 			m.cerrar() // las de la pila tienen el cliente de antes (o ninguno): se inician con este al volver a ellas
 		}
-		m.cli, m.espacios, m.caido = r.cli, r.espacios, nil
+		m.cli, m.espacios, m.caido, m.servidor = r.cli, r.espacios, nil, r.servidor
 		if r.latido {
 			m.latidos++
 		}
@@ -197,20 +206,48 @@ func (m *modelo) vistaCabecera() string {
 	return izq + strings.Repeat(" ", max(m.ancho-lipgloss.Width(izq)-lipgloss.Width(der), 1)) + der
 }
 
-// vistaEstado es la línea encima del pie: el aviso de servicio caído o, si no, el último aviso.
+// vistaEstado es la línea encima del pie: el aviso de servicio caído o, si no, el último aviso o, si no hay, los fijos
+// (avisoFijo). A la derecha, siempre, la marca del entorno: en qué Tramtai se está.
 func (m *modelo) vistaEstado() string {
 	e := m.estilos
+	var izq string
 	switch {
 	case m.caido != nil && m.conectando:
-		return e.Tenue.Render(idioma.T("Conectando con el servicio…"))
+		izq = e.Tenue.Render(idioma.T("Conectando con el servicio…"))
 	case m.caido == cliente.ErrServicioAnterior:
-		return e.Error.Render(idioma.T("Sigue en marcha el servicio de una versión anterior · r lo detiene y arranca el nuevo"))
+		izq = e.Error.Render(idioma.T("Sigue en marcha el servicio de una versión anterior · r lo detiene y arranca el nuevo"))
 	case m.anterior():
-		return e.Error.Render(idioma.T("No se pudo detener el servicio de la versión anterior · ! dice cómo"))
+		izq = e.Error.Render(idioma.T("No se pudo detener el servicio de la versión anterior · ! dice cómo"))
 	case m.caido != nil:
-		return e.Error.Render(idioma.T("El servicio no responde · r reintenta"))
+		izq = e.Error.Render(idioma.T("El servicio no responde · r reintenta"))
+	default:
+		if izq = m.avisos.Vista(e); izq == "" {
+			izq = m.avisoFijo()
+		}
 	}
-	return m.avisos.Vista(e)
+	marca := e.Acento.Render(e.Tx(m.idioma, pagina.MarcaEntorno(m.o.Entorno)))
+	izq = e.Recortar(izq, max(m.ancho-lipgloss.Width(marca)-1, 0))
+	return izq + strings.Repeat(" ", max(m.ancho-lipgloss.Width(izq)-lipgloss.Width(marca), 1)) + marca
+}
+
+// avisoFijo es lo que se dice siempre que no hay otro aviso: en el servidor, cada agente con la suscripción personal del
+// administrador; en el Tramtai del usuario, el otro Tramtai del sistema de este equipo.
+func (m *modelo) avisoFijo() string {
+	var partes []string
+	if m.servidor != nil {
+		for _, s := range m.servidor.Suscripciones {
+			if s.Personal {
+				partes = append(partes, datos.Textof(m.idioma, "servidor.avisoSuscripcion", "agente", agentes.NombreVisible(s.Agente)))
+			}
+		}
+	}
+	if m.o.AvisoCruzado != "" {
+		partes = append(partes, m.o.AvisoCruzado)
+	}
+	if len(partes) == 0 {
+		return ""
+	}
+	return m.estilos.Advertencia.Render(strings.Join(partes, " · "))
 }
 
 // anterior dice si el servicio que responde es el de una versión anterior (sin detener todavía o porque no se pudo):

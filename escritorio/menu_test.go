@@ -170,3 +170,19 @@ func TestMenuConMuchasApis(t *testing.T) {
 		t.Fatalf("submenú con %d entradas: %+v", len(sub), sub[maximoApisMenu])
 	}
 }
+
+// TestMenuAvisaDelOtroEntorno: si en el equipo hay un Tramtai del sistema, la bandeja lo dice justo debajo del estado
+// del servicio, en una línea que no se pulsa; sin él, no hay línea.
+func TestMenuAvisaDelOtroEntorno(t *testing.T) {
+	otro := idioma.Tf("Hay otro Tramtai, del sistema, en el puerto %d: es otro entorno, con sus propias APIs y claves", 17374)
+	for _, base := range []string{"", "http://127.0.0.1:17373"} {
+		m := entradasMenu(estadoMenu{base: base, otroEntorno: otro})
+		if m[1].texto != otro || !m[1].desactivada || m[1].accion != accionNinguna {
+			t.Errorf("base %q: segunda línea: %+v", base, m[1])
+		}
+		sin := entradasMenu(estadoMenu{base: base})
+		if len(sin) != len(m)-1 || strings.Contains(sin[1].texto, "otro Tramtai") {
+			t.Errorf("base %q: sin servidor no hay línea: %+v", base, sin[1])
+		}
+	}
+}

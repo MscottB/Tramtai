@@ -244,6 +244,17 @@ export interface CodigosRecuperacion {
   codigos: string[]
 }
 
+export interface EstadoServidor {
+  tls: 'ninguno' | 'archivos' | 'letsencrypt'
+  dominios: string[]
+  confiables: string[]
+  vence_certificado?: string
+  administrador: boolean
+  totp: boolean
+  expuesto: boolean
+  suscripciones: SuscripcionServidor[]
+}
+
 export interface Uso {
   tokens_entrada: number
   tokens_salida: number
@@ -393,6 +404,12 @@ export interface RutasAcerca {
   datos: string
   configuracion: string
   registro: string
+}
+
+export interface SuscripcionServidor {
+  agente: string
+  personal: boolean
+  simultaneas: number
 }
 
 export interface CapacidadesAgente {

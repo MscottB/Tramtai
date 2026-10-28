@@ -128,6 +128,11 @@ func TestInstalarServicioWindows(t *testing.T) {
 		t.Errorf("SID calculado %s, el del sistema %s", calculado, sid)
 	}
 	comprobarDACL(t, s.Datos, sid.String())
+	// publico, donde el servicio deja su puerto para el aviso de los dos entornos: los usuarios solo leen.
+	if entradas, protegida := entradasDACL(t, filepath.Join(s.Datos, "publico")); !protegida ||
+		!slices.Equal(entradas, lecturaPublica(sid.String(), windows.OBJECT_INHERIT_ACE|windows.CONTAINER_INHERIT_ACE)) {
+		t.Errorf("DACL de publico (protegida %v): %q", protegida, entradas)
+	}
 	for _, f := range []string{"config.yaml", filepath.Join("datos", "terminos.json")} {
 		if _, err := os.Stat(filepath.Join(s.Datos, f)); err != nil {
 			t.Errorf("falta %s: %v", f, err)

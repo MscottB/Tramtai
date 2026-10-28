@@ -76,6 +76,8 @@ func init() {
 		"el servicio %s no se detuvo en %s":                                                       "the %s service did not stop within %s",
 		"el servicio del sistema no está instalado (tramtai servidor instalar)":                   "the system service is not installed (tramtai server install)",
 		"%s no es una carpeta (¿un punto de unión o un enlace?): quítala y repite la instalación": "%s is not a folder (a junction or a link?): remove it and install again",
+		"%s no es un archivo (¿un enlace?)":                                                       "%s is not a file (a link?)",
+		"%s es de otro usuario (%s): no se cree":                                                  "%s belongs to another user (%s): it is not trusted",
 		"el paquete del conversor tiene una entrada que sale de su carpeta: %s":                   "the converter package has an entry that leaves its folder: %s",
 		"el .zip no tiene la carpeta conversor: usa el paquete del conversor de Tramtai":          "the .zip has no conversor folder: use the Tramtai converter package",
 		"%s no es un conversor preparado (falta listo.json o su Python)":                          "%s is not a prepared converter (listo.json or its Python is missing)",
@@ -355,5 +357,11 @@ func init() {
 		"%s usa tu suscripción": "%s uses your subscription",
 		"%s usa tu suscripción desde que se inicie el servicio (guardado en %s)": "%s uses your subscription once the service starts (saved in %s)",
 		"todavía no comprobado en Windows Server para %s: el inicio de sesión con la cuenta del servicio está pendiente de comprobar (guía del servidor: docs/servidor.md); mientras, usa su clave de API (tramtai-servidor claves guardar)": "not yet verified on Windows Server for %s: signing in with the service account is still to be verified (server guide: docs/servidor.md); meanwhile, use its API key (tramtai-servidor keys set)",
+
+		// Los dos entornos (v0.58): el puerto publicado, el aviso cruzado y la salida de la CLI con --servidor
+		"puerto no válido: %d": "invalid port: %d",
+		"Hay otro Tramtai, del sistema, en el puerto %d: es otro entorno, con sus propias APIs y claves": "There is another Tramtai, the system one, on port %d: it is a separate environment, with its own APIs and keys",
+		"aviso: no se pudo publicar el puerto para el Tramtai de los usuarios del equipo: %s":            "warning: could not publish the port for the Tramtai of this computer’s users: %s",
+		"Servidor: ": "Server: ",
 	})
 }

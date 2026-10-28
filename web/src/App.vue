@@ -24,6 +24,9 @@
           <img src="/logo.png" alt="" width="28" height="28" style="border-radius: 8px" />
           <span class="q-ml-sm marca gt-xs">Tramtai</span>
         </button>
+        <!-- En qué Tramtai se está (dos entornos que no comparten nada): siempre a la vista, también en el móvil. -->
+        <span data-marca-entorno class="etiqueta marca-entorno q-ml-sm" :class="esServidor(sesion) ? 'etiqueta--info' : 'etiqueta--neutro'"
+          :title="t('entorno.etiqueta', { marca: t(marcaEntorno(sesion.entorno)) })">{{ t(marcaEntorno(sesion.entorno)) }}</span>
         <q-space />
         <q-btn-dropdown v-if="sesion.local && sesion.instancias?.length" data-recorrido="app.espacio" flat no-caps :icon="iconoInstancia(sesion.ambito)"
           :label="$q.screen.gt.xs ? sesion.nombre || t('app.elegirInstancia') : undefined" :aria-label="t('app.cambiarInstancia')">
@@ -61,7 +64,7 @@
         <q-btn flat dense no-caps class="pastilla q-ml-sm" :aria-label="`${t('app.servicio')}: ${conectado ? t('app.enMarcha') : t('app.sinConexion')}`">
           <span class="punto" :class="conectado ? 'punto--ok' : 'punto--error'" />
           <span class="gt-xs q-ml-sm">{{ conectado ? t('app.enMarcha') : t('app.sinConexion') }}</span>
-          <q-icon name="arrow_drop_down" size="20px" class="texto-suave" />
+          <q-icon name="arrow_drop_down" size="20px" class="texto-suave gt-xs" />
           <q-menu anchor="bottom right" self="top right">
             <q-list style="min-width: 280px; max-width: 340px">
               <q-item>
@@ -172,6 +175,11 @@
           <div class="text-body2 q-mt-xs">{{ t('app.comoIniciar') }}</div>
           <template #action><q-btn flat no-caps icon="o_refresh" :label="t('app.reintentar')" @click="comprobar" /></template>
         </q-banner>
+        <!-- El aviso fijo de la suscripción personal del administrador (spec §5): uno por agente, en todas las páginas. -->
+        <q-banner v-for="agente in suscripcionesPersonales(estadoServidor)" :key="agente" rounded dense class="aviso-caja q-mb-md pagina" role="note">
+          <template #avatar><q-icon name="o_person" /></template>
+          {{ t('servidor.avisoSuscripcion', { agente: nombreAgente(agente) }) }}
+        </q-banner>
         <div v-if="!sesion.instancia && seccion !== 'espacios'" class="pagina">
           <!-- Sin espacio activo: el estado vacío común (vía sin servicio), no un icono grande. -->
           <q-card style="max-width: 560px; margin: 48px auto">
@@ -281,14 +289,14 @@
             <div class="text-caption texto-suave q-mt-md q-mb-xs">{{ t('actualizacion.novedadesTitulo') }}</div>
             <NotasVersion :texto="notasNueva" :pagina="paginaNueva" />
           </template>
-          <p class="q-mt-md q-mb-none">{{ actualizacion?.instalable ? t('actualizacion.comoInstala') : t('actualizacion.manual') }}</p>
+          <p class="q-mt-md q-mb-none">{{ esServidor(sesion) ? t('actualizacion.servidor') : actualizacion?.instalable ? t('actualizacion.comoInstala') : t('actualizacion.manual') }}</p>
         </q-card-section>
         <q-card-actions align="right" class="q-px-md q-pb-md">
           <q-btn v-close-popup flat no-caps :label="t('comun.cancelar')" />
-          <q-btn v-if="actualizacion?.instalable" unelevated no-caps color="primary" icon="o_system_update_alt" :loading="actualizando"
+          <q-btn v-if="ofrecerInstalar(actualizacion?.instalable, sesion)" unelevated no-caps color="primary" icon="o_system_update_alt" :loading="actualizando"
             :label="t('actualizacion.instalar')" @click="instalarActualizacion" />
           <!-- Solo se enlaza una dirección https: la URL llega del servicio y no debe poder abrir otro esquema. -->
-          <q-btn v-else-if="enlaceSeguro(actualizacion?.url)" unelevated no-caps color="primary" :label="t('actualizacion.descargar')" :href="enlaceSeguro(actualizacion?.url)" target="_blank" rel="noopener" />
+          <q-btn v-else-if="!esServidor(sesion) && enlaceSeguro(actualizacion?.url)" unelevated no-caps color="primary" :label="t('actualizacion.descargar')" :href="enlaceSeguro(actualizacion?.url)" target="_blank" rel="noopener" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -334,6 +342,8 @@ import ListaNovedades from './componentes/ListaNovedades.vue'
 import NotasVersion from './componentes/NotasVersion.vue'
 import AntesDeSeguir from './componentes/AntesDeSeguir.vue'
 import { consultarTerminos, estadoTerminos, pantallaTerminos, salioDeTerminos } from './terminos'
+import { cargarServidor, esServidor, estadoServidor, marcaEntorno, ofrecerInstalar, suscripcionesPersonales } from './servidor'
+import { nombreAgente } from './agentes'
 
 const $q = useQuasar()
 
@@ -384,6 +394,8 @@ const pantallaTerm = computed(() => pantallaTerminos(estadoTerminos.value, salio
 watch(() => !!sesion.value, (abierta) => {
   if (abierta && !estadoTerminos.value) consultarTerminos()
 }, { immediate: true })
+// En el servidor, su estado: el aviso fijo de la suscripción personal y lo que enseñan Ajustes y Agentes.
+watch(() => sesion.value?.entorno, () => cargarServidor(sesion.value), { immediate: true })
 
 function detener() {
   $q.dialog({ title: t('app.detenerTitulo'), message: t('app.detenerTexto'),

@@ -36,6 +36,7 @@ import (
 	"tramtai/internal/contrato"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
+	"tramtai/internal/servidor"
 )
 
 // icono es el de la ventana y la bandeja (go run ./scripts/icono lo regenera).
@@ -439,7 +440,8 @@ func main() {
 		if v := estadoServicio.Actualizacion; v != nil {
 			masNueva, instalable = v.Version, v.Instalable
 		}
-		nueva := fmt.Sprint(conWindows, sinPreguntar, puntos, menuOscuro(), ladoIconoMenu(), masNueva, instalable, actMenu)
+		otro := servidor.AvisoCruzado() // el Tramtai del sistema de este equipo, si lo hay: otro entorno
+		nueva := fmt.Sprint(conWindows, sinPreguntar, puntos, menuOscuro(), ladoIconoMenu(), masNueva, instalable, actMenu, otro)
 		if cli != nil {
 			nueva += cli.Base
 		}
@@ -458,7 +460,7 @@ func main() {
 			base = cli.BasePublica()
 		}
 		menuActual = construir(cli, estadoMenu{base: base, puntos: puntos, proyectos: proyectos, conWindows: conWindows,
-			sinPreguntar: sinPreguntar, nueva: masNueva, instalable: instalable, act: actMenu, autoarranque: autoarranque.Disponible, windows: runtime.GOOS == "windows"})
+			sinPreguntar: sinPreguntar, nueva: masNueva, instalable: instalable, act: actMenu, autoarranque: autoarranque.Disponible, windows: runtime.GOOS == "windows", otroEntorno: otro})
 		bandeja.SetMenu(menuActual)
 		if anterior != nil {
 			anterior.Clear() // suelta los elementos del menú anterior del registro global de Wails

@@ -17,8 +17,9 @@ import (
 // entorno es servidor, portable o escritorio: el de Opciones o, sin él, el del proceso.
 func (s *Servicio) entorno() string { return cmp.Or(s.opc.Entorno, carpetas.Entorno()) }
 
-// acerca son los datos de «Acerca de Tramtai»: versión, compilación, sistema y servicio. Las rutas de carpetas solo van
-// a una sesión local, porque llevan el nombre del usuario del sistema. Nunca incluye claves ni tokens.
+// acerca son los datos de «Acerca de Tramtai»: versión, compilación, sistema, servicio, entorno y, en el servidor, su
+// cuenta. Las rutas de carpetas solo van a una sesión local, porque llevan el nombre del usuario del sistema (y la sesión
+// remota del servidor no ve sus carpetas). Nunca incluye claves ni tokens.
 func (s *Servicio) acerca(local bool) contrato.Acerca {
 	commit, modificado := version.Commit()
 	datos := contrato.Acerca{Version: version.Texto(), Commit: commit, Modificado: modificado, Go: runtime.Version(),

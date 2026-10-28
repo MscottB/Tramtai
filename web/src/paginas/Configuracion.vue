@@ -5,8 +5,34 @@
     <q-tabs v-model="pestana" data-recorrido="configuracion.pestanas" dense no-caps align="left" active-color="primary" indicator-color="primary" class="texto-suave">
       <q-tab name="espacio" icon="o_folder_special" :label="t('config.pestanaEspacio', { nombre: sesion?.nombre ?? '' })" />
       <q-tab name="tramtai" icon="o_settings" :label="t('config.pestanaTramtai')" />
+      <q-tab v-if="servidor" name="servidor" icon="o_dns" :label="t('config.pestanaServidor')" />
       <q-tab v-if="servidor" name="seguridad" icon="o_shield" :label="t('config.pestanaSeguridad')" />
     </q-tabs>
+    <!-- Servidor: solo se lee; cada dato con lo que lo cambia en el propio servidor (un cambio de red desde aquí podría
+         dejar fuera a quien lo hace). -->
+    <template v-if="servidor && pestana === 'servidor'">
+      <div class="text-caption texto-suave">{{ t('servidor.texto') }}</div>
+      <q-card>
+        <q-card-section>
+          <h2 class="titulo-seccion">{{ t('servidor.titulo') }}</h2>
+          <div v-if="!estadoServidor" class="texto-suave text-body2 q-mt-sm" role="status">{{ t('comun.cargando') }}</div>
+          <div v-else class="ficha text-body2 q-mt-sm">
+            <template v-for="f in filas" :key="f.etiqueta">
+              <div>{{ t(f.etiqueta) }}</div>
+              <div>
+                <div>{{ f.valor }}</div>
+                <div class="text-caption texto-suave">
+                  <template v-if="f.orden">{{ t('servidor.cambia') }} <code class="codigo">{{ f.orden }}</code></template>
+                  <template v-else-if="f.clave">{{ t('servidor.enConfig') }} <code class="codigo">{{ f.clave }}</code></template>
+                  <template v-else>{{ f.nota }}</template>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div class="text-caption texto-suave q-mt-sm">{{ t('servidor.cambiaEn') }}</div>
+        </q-card-section>
+      </q-card>
+    </template>
     <template v-if="servidor && pestana === 'seguridad'">
       <div class="text-caption texto-suave">{{ t('config.avisoSeguridad') }}</div>
       <AjustesSeguridad />
@@ -106,14 +132,14 @@
     </q-card>
 
     <div class="row q-col-gutter-md">
-      <div v-if="sesion?.autoarranque !== undefined" v-show="pestana === 'tramtai'" class="col-12">
+      <div v-if="conArranque(sesion)" v-show="pestana === 'tramtai'" class="col-12">
         <q-card>
           <q-card-section>
             <h2 id="titulo-arranque" class="titulo-seccion">{{ t('arranque.titulo', { sistema }) }}</h2>
             <div class="texto-suave text-body2 q-mt-xs">{{ t('arranque.texto', { sistema }) }}</div>
             <div class="column q-mt-sm" role="radiogroup" aria-labelledby="titulo-arranque">
               <div v-for="modo in modosArranque" :key="modo.valor" class="q-mb-xs">
-                <q-radio :model-value="sesion.modo_arranque ?? ''" :val="modo.valor" :label="t(modo.titulo)" :disable="cambiandoArranque"
+                <q-radio :model-value="sesion?.modo_arranque ?? ''" :val="modo.valor" :label="t(modo.titulo)" :disable="cambiandoArranque"
                   :aria-describedby="'arranque-' + modo.titulo" @update:model-value="cambiarArranque" />
                 <div :id="'arranque-' + modo.titulo" class="texto-suave text-caption q-ml-xl">{{ t(modo.texto) }}</div>
               </div>
@@ -245,8 +271,9 @@ import { useQuasar } from 'quasar'
 import { api, avisar, avisarError, buscarActualizacionAhora, reiniciarYSeguir } from '../api/cliente'
 import type { EntradaConfiguracion, EstadoPunto, Modelo } from '../api/tipos'
 import { actualizacion, sesion, sistema } from '../estado'
-import { esfuerzoEspacio, esfuerzosDe, opcionModelo } from '../agentes'
-import { enRango, nombreEsfuerzo, registroCubre, terminales } from '../formato'
+import { esfuerzoEspacio, esfuerzosDe, nombreAgente, opcionModelo } from '../agentes'
+import { enRango, fecha, nombreEsfuerzo, registroCubre, terminales } from '../formato'
+import { conArranque, estadoServidor, filasServidor, pestanasAjustes } from '../servidor'
 import { idioma, t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 import SelectorEsfuerzo from '../componentes/SelectorEsfuerzo.vue'
@@ -260,7 +287,9 @@ const entradas = ref<EntradaConfiguracion[]>([])
 const servidor = computed(() => !!estadoTerminos.value?.servidor)
 // pestana separa lo de este espacio de lo de todo Tramtai (y, en el servidor, la seguridad); se recuerda entre visitas.
 const recordada = leer<PestanaAjustes>('tramtai.pestanaAjustes', 'espacio')
-const pestana = ref<PestanaAjustes>(recordada === 'seguridad' && !servidor.value ? 'espacio' : recordada)
+const pestana = ref<PestanaAjustes>(pestanasAjustes(servidor.value).includes(recordada) ? recordada : 'espacio')
+// filas de Servidor, con las fechas y los nombres de los agentes de la app.
+const filas = computed(() => (estadoServidor.value ? filasServidor(estadoServidor.value, fecha, nombreAgente) : []))
 watch(pestana, (p) => guardar('tramtai.pestanaAjustes', p))
 // El recorrido guiado avisa de cada ancla antes de buscarla: si está en la pestaña oculta, se abre esa.
 function alPasoDelRecorrido(e: Event) {

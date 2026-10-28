@@ -2,8 +2,14 @@ package servicio
 
 import (
 	"cmp"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
+	"time"
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/agentes"
@@ -118,6 +124,72 @@ func (s *Servicio) fijarAutoarranque(p peticionArranque) error {
 	return nil
 }
 
+// servidorUI es Ajustes → Servidor (cualquier sesión del servidor, también la remota): solo se lee.
+func (s *Servicio) servidorUI(w http.ResponseWriter, r *http.Request, _ *sesion) {
+	if !s.soloServidor(w, r) {
+		return
+	}
+	api.EscribirJSON(w, http.StatusOK, s.estadoServidor())
+}
+
+// estadoServidor es lo que enseña Ajustes → Servidor, de la configuración con la que arrancó el servicio (la red y el TLS
+// solo cambian al reiniciar). Nunca lleva rutas de claves ni secretos.
+func (s *Servicio) estadoServidor() contrato.EstadoServidor {
+	c := s.opc.Config
+	e := contrato.EstadoServidor{TLS: cmp.Or(c.Texto("servicio.tls.modo"), "ninguno"), Dominios: textos(c.Lista("servicio.dominios")),
+		Confiables: textos(c.Lista("servicio.proxy.confiables")), Administrador: leerAdministrador(s.opc.Datos) != "", Expuesto: s.opc.Expuesto,
+		Suscripciones: []contrato.SuscripcionServidor{}}
+	switch e.TLS {
+	case "archivos":
+		e.VenceCertificado = venceCertificado(c.Texto("servicio.tls.certificado"))
+	case "letsencrypt": // la caché de autocert guarda la clave y la cadena de cada dominio en un archivo con su nombre
+		for _, d := range e.Dominios {
+			if e.VenceCertificado = venceCertificado(filepath.Join(s.opc.Datos, "acme", d)); e.VenceCertificado != nil {
+				break
+			}
+		}
+	}
+	if e.Administrador { // sin administrador no se pregunta al almacén
+		e.TOTP, _ = hayTOTP()
+	}
+	for _, f := range agentes.Todos() {
+		if agentes.AdmiteSuscripcion(f.Nombre) && c.Texto("adaptadores."+f.Nombre+".autenticacion") == adaptadores.AutenticacionSuscripcion {
+			e.Suscripciones = append(e.Suscripciones, contrato.SuscripcionServidor{Agente: f.Nombre,
+				Personal: c.Booleano("adaptadores." + f.Nombre + ".suscripcion_personal"), Simultaneas: max(c.Entero("adaptadores."+f.Nombre+".suscripcion_simultaneas"), 1)})
+		}
+	}
+	return e
+}
+
+// venceCertificado es cuándo vence el primer certificado de un archivo PEM; nil si no se puede leer.
+func venceCertificado(ruta string) *time.Time {
+	contenido, err := os.ReadFile(ruta)
+	if err != nil {
+		return nil
+	}
+	for {
+		var bloque *pem.Block
+		if bloque, contenido = pem.Decode(contenido); bloque == nil {
+			return nil
+		}
+		if bloque.Type == "CERTIFICATE" {
+			if x, err := x509.ParseCertificate(bloque.Bytes); err == nil {
+				return &x.NotAfter
+			}
+			return nil
+		}
+	}
+}
+
+// textos son los valores de una lista de la configuración, como texto.
+func textos(lista []any) []string {
+	salida := make([]string, 0, len(lista))
+	for _, v := range lista {
+		salida = append(salida, fmt.Sprint(v))
+	}
+	return salida
+}
+
 // ajustesServicio son el puerto y el arranque con el sistema, para Ajustes en la terminal y la sesión de la Web UI.
 func (s *Servicio) ajustesServicio() contrato.AjustesServicio {
 	s.mu.RLock()
@@ -131,15 +203,21 @@ func (s *Servicio) ajustesServicio() contrato.AjustesServicio {
 	return a
 }
 
-// autenticacionUI es solo de una sesión local, como soloLocal; en el servidor, a la sesión remota (la de la contraseña)
-// le dice 403 en lugar del 401 de una sesión que no vale: la suscripción personal se activa con la CLI.
+// autenticacionUI es solo de una sesión local, como soloLocal. En el servidor, la sesión remota (la de la contraseña)
+// puede volver a la clave de API, como la terminal; pasar a la suscripción le da 403 en lugar del 401 de una sesión que
+// no vale: la suscripción personal se activa con la CLI.
 func (s *Servicio) autenticacionUI(w http.ResponseWriter, r *http.Request, ses *sesion) {
-	if !s.sesionLocal(r, ses) && s.entorno() == "servidor" {
+	local := s.sesionLocal(r, ses)
+	remota := !local && s.entorno() == "servidor"
+	prohibido := func() {
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, idioma.T("la autenticación de los agentes del servidor solo se cambia desde el propio servidor (tramtai-servidor agentes suscripcion)")))
-		return
 	}
-	if !s.sesionLocal(r, ses) || !csrfValido(r, ses) {
-		api.NoAutorizado(w, r)
+	if !local && !remota || !csrfValido(r, ses) {
+		if remota {
+			prohibido()
+		} else {
+			api.NoAutorizado(w, r)
+		}
 		return
 	}
 	var peticion struct {
@@ -148,6 +226,10 @@ func (s *Servicio) autenticacionUI(w http.ResponseWriter, r *http.Request, ses *
 	}
 	if err := api.LeerJSON(w, r, &peticion); err != nil {
 		api.EscribirError(w, r, err)
+		return
+	}
+	if remota && peticion.Modo != adaptadores.AutenticacionClaveAPI {
+		prohibido()
 		return
 	}
 	if err := s.cambiarAutenticacion(peticion.Agente, peticion.Modo); err != nil {
@@ -256,6 +338,8 @@ func (s *Servicio) cambiarAutenticacion(agente, modo string) error {
 	if err := configuracion.FijarValor(ruta, configuracion.OrigenGlobal, "adaptadores."+agente+".autenticacion", modo); err != nil {
 		return err
 	}
+	// También en la del servicio en marcha: Ajustes → Servidor y el aviso fijo de la suscripción personal la leen.
+	s.opc.Config.Fijar(configuracion.OrigenGlobal, map[string]any{"adaptadores." + agente + ".autenticacion": modo})
 	return adaptadores.CambiarAutenticacion(s.opc.Registro, agente, modo)
 }
 

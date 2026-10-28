@@ -2,7 +2,9 @@ package carpetas
 
 import (
 	"errors"
+	"io"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"unsafe"
 
@@ -116,6 +118,87 @@ func ProtegerServidor(ruta, cuenta string) error {
 		}
 		return nil
 	})
+}
+
+// ProtegerPublica deja la carpeta publico del servidor, donde el servicio publica su puerto, con su propia DACL protegida
+// (sin heredar de la raíz del servidor, cerrada a los usuarios): control total para SYSTEM, los administradores y la
+// cuenta del servicio (sidServicio), y solo lectura para Usuarios. Un usuario llega al archivo puerto aunque no pueda
+// abrir la raíz (Windows no comprueba las carpetas de paso), y nada más. Si la carpeta no existe, nace con ella; si
+// existía, tiene que ser una carpeta de verdad (no un punto de unión, que no se sigue) de Administradores, SYSTEM, el
+// servicio o quien la prepara.
+func ProtegerPublica(ruta, sidServicio string) error {
+	sd, err := windows.SecurityDescriptorFromString("D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;FA;;;" + sidServicio + ")(A;OICI;FR;;;BU)")
+	if err != nil {
+		return err
+	}
+	nombre, err := windows.UTF16PtrFromString(ruta)
+	if err != nil {
+		return err
+	}
+	atributos := windows.SecurityAttributes{Length: uint32(unsafe.Sizeof(windows.SecurityAttributes{})), SecurityDescriptor: sd}
+	if err := windows.CreateDirectory(nombre, &atributos); !errors.Is(err, windows.ERROR_ALREADY_EXISTS) {
+		return err
+	}
+	h, info, err := abrirSinSeguir(ruta, windows.READ_CONTROL|windows.WRITE_DAC)
+	if err != nil {
+		return err
+	}
+	defer windows.CloseHandle(h)
+	if info.FileAttributes&windows.FILE_ATTRIBUTE_REPARSE_POINT != 0 || info.FileAttributes&windows.FILE_ATTRIBUTE_DIRECTORY == 0 {
+		return errors.New(idioma.Tf("%s no es una carpeta (¿un punto de unión o un enlace?): quítala y repite la instalación", ruta))
+	}
+	dueno, err := duenoDe(h)
+	if err != nil {
+		return err
+	}
+	servicio, err := windows.StringToSid(sidServicio)
+	if err != nil {
+		return err
+	}
+	usuario, err := windows.GetCurrentProcessToken().GetTokenUser()
+	if err != nil {
+		return err
+	}
+	if !dueno.IsWellKnown(windows.WinBuiltinAdministratorsSid) && !dueno.IsWellKnown(windows.WinLocalSystemSid) && !dueno.Equals(servicio) && !dueno.Equals(usuario.User.Sid) {
+		return errors.New(idioma.Tf("%s la creó otro usuario: revísala y quítala antes de instalar", ruta))
+	}
+	dacl, _, err := sd.DACL()
+	if err != nil {
+		return err
+	}
+	return windows.SetSecurityInfo(h, windows.SE_FILE_OBJECT, windows.DACL_SECURITY_INFORMATION|windows.PROTECTED_DACL_SECURITY_INFORMATION, nil, nil, dacl, nil)
+}
+
+// LeerDeConfianza lee como mucho maximo bytes de un archivo de la carpeta publico del servidor, sin seguir puntos de
+// reanálisis, y solo si su dueño es SYSTEM, los administradores, la cuenta del servicio (sidServicio) o el usuario
+// actual: sin el servidor instalado, cualquier usuario puede crear el archivo en %ProgramData% (CREATOR OWNER) y apuntar
+// a un servidor falso.
+func LeerDeConfianza(ruta, sidServicio string, maximo int64) ([]byte, error) {
+	h, info, err := abrirSinSeguir(ruta, windows.GENERIC_READ|windows.READ_CONTROL)
+	if err != nil {
+		return nil, err
+	}
+	f := os.NewFile(uintptr(h), ruta)
+	defer f.Close()
+	if info.FileAttributes&(windows.FILE_ATTRIBUTE_REPARSE_POINT|windows.FILE_ATTRIBUTE_DIRECTORY) != 0 {
+		return nil, errors.New(idioma.Tf("%s no es un archivo (¿un enlace?)", ruta))
+	}
+	dueno, err := duenoDe(h)
+	if err != nil {
+		return nil, err
+	}
+	servicio, err := windows.StringToSid(sidServicio)
+	if err != nil {
+		return nil, err
+	}
+	usuario, err := windows.GetCurrentProcessToken().GetTokenUser()
+	if err != nil {
+		return nil, err
+	}
+	if !dueno.IsWellKnown(windows.WinLocalSystemSid) && !dueno.IsWellKnown(windows.WinBuiltinAdministratorsSid) && !dueno.Equals(servicio) && !dueno.Equals(usuario.User.Sid) {
+		return nil, errors.New(idioma.Tf("%s es de otro usuario (%s): no se cree", ruta, dueno))
+	}
+	return io.ReadAll(io.LimitReader(f, maximo))
 }
 
 // abrirSinSeguir abre un archivo o una carpeta sin seguir puntos de reanálisis (uniones, enlaces) y da sus atributos.
