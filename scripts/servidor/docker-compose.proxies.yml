@@ -1,0 +1,74 @@
+# Los ejemplos de docs/servidor/proxies, probados de verdad (scripts/servidor/probar-proxies.sh): Tramtai en modo
+# servidor solo en 127.0.0.1:17373 y cada proxy en el mismo espacio de red (network_mode: service:tramtai), en el 443,
+# como en un equipo con los dos; el script levanta un proxy cada vez. El cliente (curl) también comparte esa red y sale
+# desde otras direcciones de loopback (127.0.0.11, .12…), para que se vea qué dirección anota Tramtai.
+# TRAMTAI_PRUEBA es la carpeta que prepara el script: bin/ (tramtai y el Claude simulado) y tls/ (certificado de prueba).
+name: tramtai-proxies
+
+x-red: &red
+  network_mode: service:tramtai
+  depends_on: [tramtai]
+
+services:
+  tramtai:
+    image: debian:13-slim
+    # El script escribe la configuración y arranca el servicio con docker compose exec.
+    command: [sleep, infinity]
+    environment:
+      TRAMTAI_SERVIDOR: '1'
+      TRAMTAI_IDIOMA: es
+      ANTHROPIC_API_KEY: sk-ant-prueba-no-es-una-clave
+    volumes:
+      - ${TRAMTAI_PRUEBA}/bin/tramtai:/opt/tramtai/tramtai:ro
+      - ${TRAMTAI_PRUEBA}/bin/claude:/usr/local/bin/claude:ro
+
+  cliente:
+    <<: *red
+    image: curlimages/curl:8.16.0
+    entrypoint: [sleep, infinity]
+    volumes:
+      - ${TRAMTAI_PRUEBA}/tls:/tls:ro
+
+  caddy:
+    <<: *red
+    image: caddy:2.10-alpine
+    volumes:
+      - ../../docs/servidor/proxies/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${TRAMTAI_PRUEBA}/tls:/etc/caddy/tls:ro
+
+  nginx:
+    <<: *red
+    image: nginx:1.29-alpine # Alpine 3.22: OpenSSL 3.5, con X25519MLKEM768
+    volumes:
+      - ../../docs/servidor/proxies/nginx/tramtai.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${TRAMTAI_PRUEBA}/tls:/etc/nginx/tls:ro
+
+  apache:
+    <<: *red
+    image: httpd:2.4-alpine
+    # La imagen trae los módulos sin cargar y solo el 80: se cargan los del ejemplo y se incluye tal cual.
+    command:
+      - sh
+      - -c
+      - >-
+        sed -i -E 's/^#(LoadModule (ssl|socache_shmcb|proxy|proxy_http|headers)_module)/\1/' conf/httpd.conf &&
+        printf 'Listen 443\nInclude conf/extra/tramtai.conf\n' >>conf/httpd.conf &&
+        exec httpd-foreground
+    volumes:
+      - ../../docs/servidor/proxies/apache/tramtai.conf:/usr/local/apache2/conf/extra/tramtai.conf:ro
+      - ${TRAMTAI_PRUEBA}/tls:/etc/apache2/tls:ro
+
+  traefik:
+    <<: *red
+    image: traefik:v3.5
+    command: [--entryPoints.websecure.address=:443, --providers.file.filename=/etc/traefik/dinamica/tramtai.yml]
+    volumes:
+      - ../../docs/servidor/proxies/traefik/tramtai.yml:/etc/traefik/dinamica/tramtai.yml:ro
+      - ${TRAMTAI_PRUEBA}/tls:/etc/traefik/tls:ro
+
+  haproxy:
+    <<: *red
+    image: haproxy:3.2-alpine
+    volumes:
+      - ../../docs/servidor/proxies/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ${TRAMTAI_PRUEBA}/tls:/etc/haproxy/tls:ro
