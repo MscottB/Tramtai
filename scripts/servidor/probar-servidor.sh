@@ -151,7 +151,8 @@ done
 [ "$(systemctl is-enabled tramtai)" = enabled ] || falla "el servicio no quedó habilitado"
 [ "$(systemctl show -P FragmentPath tramtai)" = /usr/lib/systemd/system/tramtai.service ] ||
 	falla "la unidad en uso es $(systemctl show -P FragmentPath tramtai)"
-colgando=$(find /etc/systemd/system/multi-user.target.wants -xtype l)
+# Solo los de Tramtai: la imagen del runner ya trae alguno colgando (apport.service).
+colgando=$(find /etc/systemd/system/multi-user.target.wants -name 'tramtai*' -xtype l)
 [ -z "$colgando" ] || falla "enlaces colgando en multi-user.target.wants: $colgando"
 [ -e /etc/systemd/system/tramtai.service.d/10-tramtai.conf ] || falla "falta el drop-in del paquete"
 esperar
@@ -170,7 +171,7 @@ for exe in /proc/[0-9]*/exe; do
 	[ "$(readlink "$exe" 2>/dev/null || :)" != /opt/tramtai/tramtai ] || falla "queda un tramtai del servidor en marcha"
 done
 [ ! -e /etc/systemd/system/tramtai.service.d/10-tramtai.conf ] || falla "quitar el paquete deja el drop-in"
-colgando=$(find /etc/systemd/system/multi-user.target.wants -xtype l)
+colgando=$(find /etc/systemd/system/multi-user.target.wants -name 'tramtai*' -xtype l)
 [ -z "$colgando" ] || falla "tras quitar el paquete, enlaces colgando: $colgando"
 [ -d /var/lib/tramtai/datos ] || falla "quitar el paquete borró los datos"
 echo "secuencia del paquete: bien"
