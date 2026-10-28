@@ -89,6 +89,7 @@ var esquema = map[string]tipoValor{
 	"adaptadores.*.desconectado":                  tipoBooleano,
 	"adaptadores.*.permitir_apps":                 tipoBooleano,
 	"adaptadores.*.suscripcion_personal":          tipoBooleano, // en el servidor expuesto exige TOTP (servidor.ComprobarArranque)
+	"adaptadores.*.suscripcion_simultaneas":       tipoEntero,   // de 1 a 3: peticiones a la vez con suscripción en el servidor
 	"concurrencia_servicio.adaptadores.*":         tipoEntero,
 	"puntos_acceso":                               tipoLista,
 	"predeterminados.agente":                      tipoTexto,
@@ -614,6 +615,9 @@ func (c *Capa) validar(estricta bool) error {
 		}
 		if strings.HasPrefix(clave, "presupuesto.") && limiteNoValido(c.Valores[clave]) {
 			return errorConfiguracion(c.Fuente, clave, idioma.T("los límites del presupuesto no pueden ser negativos"))
+		}
+		if n, _ := c.Valores[clave].(int); strings.HasSuffix(clave, ".suscripcion_simultaneas") && (n < 1 || n > 3) {
+			return errorConfiguracion(c.Fuente, clave, idioma.T("se admite de 1 a 3"))
 		}
 	}
 	// Promesas que Tramtai aún no cumple: se rechazan en vez de aceptarlas sin efecto.

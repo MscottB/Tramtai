@@ -575,7 +575,7 @@ func hostsPermitidos(host string, dominios []string) []string {
 }
 
 // entradaServidor reúne de la configuración lo que deciden las reglas de exposición (servidor.ComprobarArranque). Las
-// suscripciones son las de los agentes en modo suscripción; hasta que haya suscripción personal y TOTP, ninguna lo es.
+// suscripciones son las de los agentes en modo suscripción; personal, si adaptadores.<agente>.suscripcion_personal.
 func entradaServidor(c *configuracion.Configuracion) (servidor.Entrada, error) {
 	confiables, err := servidor.Confiables(textos(c.Lista("servicio.proxy.confiables")))
 	if err != nil {
@@ -594,7 +594,7 @@ func entradaServidor(c *configuracion.Configuracion) (servidor.Entrada, error) {
 	}
 	for _, f := range agentes.Todos() {
 		if agente := f.Nombre; agentes.AdmiteSuscripcion(agente) && c.Texto("adaptadores."+agente+".autenticacion") == adaptadores.AutenticacionSuscripcion {
-			e.Suscripciones = append(e.Suscripciones, servidor.Suscripcion{Agente: agente})
+			e.Suscripciones = append(e.Suscripciones, servidor.Suscripcion{Agente: agente, Personal: c.Booleano("adaptadores." + agente + ".suscripcion_personal")})
 		}
 	}
 	return e, nil

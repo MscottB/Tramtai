@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -106,7 +105,7 @@ func comandoServidor() *cobra.Command {
 			if !acepto {
 				fmt.Fprint(cmd.ErrOrStderr(), idioma.T("Escribe «acepto» para aceptarlos e instalar: "))
 				linea, _ := bufio.NewReader(cmd.InOrStdin()).ReadString('\n')
-				if !slices.Contains([]string{"acepto", idioma.T("acepto")}, strings.ToLower(strings.TrimSpace(linea))) {
+				if !aceptado(linea) {
 					return errors.New(idioma.T("instalación cancelada: no se aceptaron los términos de uso"))
 				}
 				como = terminos.ComoServidorInstalar

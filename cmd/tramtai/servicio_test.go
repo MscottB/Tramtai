@@ -168,6 +168,11 @@ func TestProxyLoopbackConSuscripcion(t *testing.T) {
 	if err == nil || strings.Contains(err.Error(), "parada de la prueba") || !strings.Contains(err.Error(), "claude") {
 		t.Fatalf("con un proxy de confianza y Claude en suscripción: %v", err)
 	}
+	// Con suscripcion_personal, la regla 3 deja paso y manda la 4: hace falta TOTP.
+	e, err := entradaServidor(configDePrueba(t, "adaptadores:\n  claude:\n    autenticacion: suscripcion\n    suscripcion_personal: true\n"))
+	if err != nil || !slices.Equal(e.Suscripciones, []servidor.Suscripcion{{Agente: "claude", Personal: true}}) {
+		t.Fatalf("suscripción personal: %v %v", e.Suscripciones, err)
+	}
 	_, err = arrancarHastaDatos(t, "servicio:\n  proxy:\n    confiables: [proxy.ejemplo.org]\n")
 	if err == nil || !strings.Contains(err.Error(), "servicio.proxy.confiables") {
 		t.Fatalf("una red que no es CIDR: %v", err)

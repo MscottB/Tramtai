@@ -433,5 +433,8 @@ func init() {
 		"el código no coincide con el secreto nuevo: revisa que el equipo y el móvil estén en hora y vuelve a probar": "the code does not match the new secret: check that the computer and the phone show the right time and try again",
 		"los códigos de recuperación sustituyen al TOTP: actívalo antes":                                              "recovery codes stand in for TOTP: enable it first",
 		"demasiadas claves no válidas desde tu dirección: espera un minuto y revisa la clave":                         "too many invalid keys from your address: wait a minute and check the key",
+		"se admite de 1 a 3": "from 1 to 3",
+		"la autenticación de los agentes del servidor solo se cambia desde el propio servidor (tramtai-servidor agentes suscripcion)":                                    "the server agents’ authentication can only be changed on the server itself (tramtai-servidor agents subscription)",
+		"el servidor está abierto a la red: la suscripción de %s solo se activa como personal, con sus condiciones (tramtai-servidor agentes suscripcion %s --personal)": "the server is open to the network: the %s subscription can only be enabled as personal, with its conditions (tramtai-servidor agents subscription %s --personal)",
 	})
 }

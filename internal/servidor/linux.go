@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"slices"
@@ -380,4 +381,11 @@ func Reiniciar() error {
 		}
 	}
 	return orden("systemctl", "restart", "tramtai")
+}
+
+// OrdenEntrar es el inicio de sesión del CLI de un agente (comando y args de su ficha) como la cuenta del servicio y con
+// su carpeta como HOME: el CLI guarda la sesión donde la busca el servicio. En Codex con suscripción, el adaptador no
+// pone CODEX_HOME, así que es ~/.codex de esa carpeta. Tramtai no lee ni copia lo que guarde el CLI.
+func OrdenEntrar(_, comando string, args []string) (*exec.Cmd, error) {
+	return exec.Command("sudo", append([]string{"-u", Cuenta, "-H", "env", "HOME=" + Rutas().Datos, comando}, args...)...), nil
 }

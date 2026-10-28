@@ -12,6 +12,7 @@ import (
 	"tramtai/internal/agentes/codex"
 	"tramtai/internal/agentes/copilot"
 	"tramtai/internal/agentes/gemini"
+	"tramtai/internal/carpetas"
 	"tramtai/internal/configuracion"
 )
 
@@ -37,6 +38,7 @@ func internos() map[string]any {
 		if f.Comando != "" {
 			valores["comandos_agentes."+f.Nombre] = f.Comando
 			valores["adaptadores."+f.Nombre+".autenticacion"] = adaptadores.AutenticacionClaveAPI
+			valores["adaptadores."+f.Nombre+".suscripcion_simultaneas"] = 1
 		}
 	}
 	return valores
@@ -53,12 +55,16 @@ func Buscar(nombre string) (adaptadores.Ficha, bool) {
 }
 
 // Registro crea los adaptadores según la configuración efectiva y devuelve el límite de ejecuciones simultáneas de
-// cada uno (concurrencia_servicio.adaptadores).
+// cada uno (concurrencia_servicio.adaptadores). En el servidor, un agente con suscripción usa una sola cuenta para todas
+// las APIs y espacios: su límite baja a adaptadores.<agente>.suscripcion_simultaneas.
 func Registro(c *configuracion.Configuracion) (map[string]adaptadores.Adaptador, map[string]int) {
 	registro, limites := map[string]adaptadores.Adaptador{}, map[string]int{}
 	for _, f := range fichas {
 		registro[f.Nombre] = f.Crear(c)
 		limites[f.Nombre] = c.Entero("concurrencia_servicio.adaptadores." + f.Nombre)
+		if carpetas.Servidor() && c.Texto("adaptadores."+f.Nombre+".autenticacion") == adaptadores.AutenticacionSuscripcion {
+			limites[f.Nombre] = min(limites[f.Nombre], c.Entero("adaptadores."+f.Nombre+".suscripcion_simultaneas"))
+		}
 	}
 	return registro, limites
 }

@@ -19,6 +19,7 @@ var Ficha = adaptadores.Ficha{
 	VariablesClave:  []string{variableClave},
 	Comando:         "copilot", Concurrencia: 1, PermitidoEnApps: true,
 	URLInstalacion: "https://docs.github.com/copilot/how-tos/set-up/install-copilot-cli",
+	InicioSesion:   []string{"login"}, URLTerminos: "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
 	Crear: func(c *configuracion.Configuracion) adaptadores.Adaptador {
 		return Copilot{Programa: c.Texto("comandos_agentes.copilot"), Autenticacion: adaptadores.NuevoModo(c.Texto("adaptadores.copilot.autenticacion"))}
 	},
