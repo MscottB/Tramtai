@@ -13,6 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"tramtai/internal/actualizacion"
 	"tramtai/internal/servidor"
 	"tramtai/internal/terminos"
 )
@@ -59,6 +60,7 @@ func TestServidorNoAdministrador(t *testing.T) {
 		{"servidor", "estado"}, {"server", "status"},
 		{"servidor", "reiniciar"}, {"server", "restart"},
 		{"servidor", "registro"}, {"server", "log"},
+		{"servidor", "actualizar"}, {"server", "update"},
 	} {
 		_, err := ejecutarServidor(t, "s\n", args...)
 		if err == nil || !strings.Contains(err.Error(), "administrador") {
@@ -91,6 +93,7 @@ func TestServidorEnvoltorio(t *testing.T) {
 		"--servidor instalar --acepto-terminos": "--servidor servidor instalar --acepto-terminos",
 		"--server status":                       "--server servidor status",
 		"--servidor registro -f":                "--servidor servidor registro -f",
+		"--servidor actualizar":                 "--servidor servidor actualizar",
 		"--servidor servidor estado":            "--servidor servidor estado",
 		"--servidor servicio estado":            "--servidor servicio estado",
 		"--servidor":                            "--servidor",
@@ -295,5 +298,31 @@ func TestServidorDesinstalarAviso(t *testing.T) {
 	salida, err := ejecutarServidor(t, "s\n", "servidor", "desinstalar", "--borrar-datos")
 	if err != nil || !strings.Contains(salida, "el perfil sigue cargado") || !strings.Contains(salida, "servidor desinstalado") {
 		t.Errorf("con aviso: %v %q", err, salida)
+	}
+}
+
+// TestServidorActualizar: «tramtai-servidor actualizar» (y update) llega a Actualizar; si ya está al día lo dice sin
+// fallar, y si lo instaló el paquete, remite a apt o dnf con error.
+func TestServidorActualizar(t *testing.T) {
+	simularServidor(t, true)
+	anterior := actualizarServidor
+	t.Cleanup(func() { actualizarServidor = anterior })
+	for _, c := range []struct {
+		res    error
+		args   []string
+		salida string
+		falla  bool
+	}{
+		{nil, []string{"--servidor", "actualizar"}, "servidor actualizado", false},
+		{nil, []string{"server", "update"}, "servidor actualizado", false},
+		{actualizacion.ErrAlDia, []string{"servidor", "actualizar"}, actualizacion.ErrAlDia.Error(), false},
+		{servidor.ErrInstaladoPorPaquete, []string{"servidor", "actualizar"}, "", true},
+	} {
+		llamadas := 0
+		actualizarServidor = func(context.Context, func(context.Context, string) (string, error)) error { llamadas++; return c.res }
+		salida, err := ejecutarServidor(t, "", ordenDeServidor(nuevaRaiz(), c.args)...)
+		if llamadas != 1 || (err != nil) != c.falla || !strings.Contains(salida, c.salida) {
+			t.Errorf("%v con %v: %d llamadas, %v, %q", c.args, c.res, llamadas, err, salida)
+		}
 	}
 }

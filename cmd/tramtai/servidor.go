@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -9,9 +10,11 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"time"
 
 	"github.com/spf13/cobra"
 
+	"tramtai/internal/actualizacion"
 	"tramtai/internal/agentes"
 	"tramtai/internal/carpetas"
 	"tramtai/internal/configuracion"
@@ -28,6 +31,7 @@ var (
 	desinstalarServidor = servidor.Desinstalar
 	estadoServidor      = servidor.Estado
 	reiniciarServidor   = servidor.Reiniciar
+	actualizarServidor  = servidor.Actualizar
 )
 
 // avisosServidor recuerda el riesgo 3 (si riesgo) cuando la configuración del servidor lo abre a la red, y el acuerdo de
@@ -88,7 +92,7 @@ func ordenDeServidor(raiz *cobra.Command, args []string) []string {
 
 func comandoServidor() *cobra.Command {
 	grupo := &cobra.Command{Use: "servidor", Aliases: []string{"server"},
-		Short: idioma.T("Servicio del sistema (modo servidor): instalar, desinstalar, estado, reiniciar y registro")}
+		Short: idioma.T("Servicio del sistema (modo servidor): instalar, desinstalar, estado, reiniciar, registro y actualizar")}
 
 	var acepto bool
 	var conversor string
@@ -223,7 +227,26 @@ func comandoServidor() *cobra.Command {
 	registro.Flags().IntVarP(&lineas, "lineas", "n", 30, idioma.T("líneas finales que se muestran"))
 	registro.Flags().BoolVarP(&seguir, "seguir", "f", false, idioma.T("sigue mostrando las líneas nuevas hasta Ctrl+C"))
 
-	grupo.AddCommand(instalar, desinstalar, estado, reiniciar, registro)
+	actualizar := &cobra.Command{Use: "actualizar", Aliases: []string{"update"}, Args: cobra.NoArgs,
+		Short: idioma.T("Actualiza el servidor a la última versión publicada, con su firma comprobada (deja terminar las peticiones en curso)"),
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			out := cmd.OutOrStdout()
+			ctx, cancelar := context.WithTimeout(cmd.Context(), 30*time.Minute) // la descarga y el drenaje
+			defer cancelar()
+			fmt.Fprintln(out, idioma.T("buscando la última versión publicada…"))
+			err := actualizarServidor(ctx, actualizacion.PaqueteServidor)
+			if errors.Is(err, actualizacion.ErrAlDia) {
+				fmt.Fprintln(out, err.Error())
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			fmt.Fprintln(out, idioma.T("servidor actualizado y en marcha (el programa de antes queda como .anterior)"))
+			return nil
+		}}
+
+	grupo.AddCommand(instalar, desinstalar, estado, reiniciar, registro, actualizar)
 	for _, c := range grupo.Commands() {
 		c.PreRunE = func(*cobra.Command, []string) error {
 			if !esAdministrador() {

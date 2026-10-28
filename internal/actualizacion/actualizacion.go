@@ -1,5 +1,6 @@
 // Package actualizacion consulta la última versión publicada de Tramtai y, en Windows, descarga su instalador,
-// comprueba la suma SHA-256 y lo ejecuta en silencio. Solo habla con GitHub y solo para pedir la ficha pública de la
+// comprueba la suma SHA-256 y lo ejecuta en silencio; también descarga y comprueba el paquete del servidor
+// (servidor.Actualizar). Solo habla con GitHub y solo para pedir la ficha pública de la
 // última versión y la lista de versiones publicadas (sus notas): no envía ningún dato del usuario.
 package actualizacion
 
@@ -7,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -16,10 +18,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	"tramtai/internal/idioma"
@@ -53,6 +57,7 @@ type Version struct {
 	urlInstalador    string
 	urlSumas         string
 	urlFirma         string
+	archivos         map[string]string // los publicados, por nombre: su dirección de descarga (DescargarAsset)
 }
 
 // TieneInstalador indica si la versión publicó el instalador de Windows, sus sumas y la firma de las sumas.
@@ -82,7 +87,9 @@ func Ultima(ctx context.Context) (Version, error) {
 		return Version{}, fmt.Errorf(idioma.T("la última versión publicada no tiene un número válido: %q"), ficha.Etiqueta)
 	}
 	v := armar(ficha.Etiqueta, ficha.Pagina, ficha.Notas)
+	v.archivos = map[string]string{}
 	for _, a := range ficha.Archivos {
+		v.archivos[a.Nombre] = a.URL
 		switch {
 		// Solo el instalador con la etiqueta en el nombre: las sumas firmadas nombran así el de su versión, y así la
 		// firma ata el instalador a esta versión (el trío de una versión vieja subido a la última no vale).
@@ -293,11 +300,67 @@ func (c *Comprobador) consultar(listo chan struct{}) {
 type Avance func(recibidos, total int64)
 
 func Descargar(ctx context.Context, v Version, dir string, avance Avance) (string, error) {
-	LimpiarDescargas(time.Now().Add(-10 * time.Minute))
 	if !v.TieneInstalador() {
 		return "", errors.New(idioma.T("esta versión no publicó instalador para Windows"))
 	}
-	for _, u := range []string{v.urlInstalador, v.urlSumas, v.urlFirma} {
+	return descargar(ctx, v, v.nombreInstalador, v.urlInstalador, dir, avance)
+}
+
+// Asset es el nombre del paquete con el que se actualiza el servidor de goos/goarch en la versión dada: el .tar.gz de
+// Linux o el .zip portable de Windows x64, como los publica Publicar.
+func Asset(version, goos, goarch string) (string, error) {
+	switch {
+	case goos == "linux":
+		return "tramtai-" + version + "-linux-" + goarch + ".tar.gz", nil
+	case goos == "windows" && goarch == "amd64":
+		return "Tramtai-" + version + "-portable-windows-x64.zip", nil
+	}
+	return "", fmt.Errorf(idioma.T("no se publica un paquete del servidor para %s/%s"), goos, goarch)
+}
+
+// ErrAlDia es lo que dice PaqueteServidor si la última versión publicada no es más nueva que este programa: no es un
+// fallo.
+var ErrAlDia = errors.New(idioma.T("el servidor ya tiene la última versión publicada"))
+
+// PaqueteServidor baja a dir el paquete del servidor de este sistema (Asset) de la última versión publicada, con la
+// firma de sus sumas y su suma comprobadas, y devuelve su ruta; ErrAlDia si no es más nueva que este programa (con
+// tramtai-servidor, el instalado). Es lo que servidor.Actualizar recibe de cmd/tramtai.
+func PaqueteServidor(ctx context.Context, dir string) (string, error) {
+	v, err := Ultima(ctx)
+	if err != nil {
+		return "", err
+	}
+	if !MasNueva(v.Etiqueta, version.Version) {
+		return "", ErrAlDia
+	}
+	nombre, err := Asset(v.Etiqueta, runtime.GOOS, runtime.GOARCH)
+	if err != nil {
+		return "", err
+	}
+	return DescargarAsset(ctx, v, nombre, dir, nil)
+}
+
+// DescargarAsset es Descargar para cualquier archivo publicado en v (el paquete del servidor, por ejemplo): lo baja a
+// dir con la misma comprobación de la firma de las sumas y de su suma.
+func DescargarAsset(ctx context.Context, v Version, nombre, dir string, avance Avance) (string, error) {
+	if v.archivos[nombre] == "" || v.urlSumas == "" || v.urlFirma == "" {
+		return "", fmt.Errorf(idioma.T("esta versión no publicó %s con sus sumas firmadas"), nombre)
+	}
+	return descargar(ctx, v, nombre, v.archivos[nombre], dir, avance)
+}
+
+// ParaPruebas hace que Ultima y las descargas vayan a un servidor de la prueba (ultima, la ficha; prefijo, las
+// descargas) y que las firmas se comprueben con clave, hasta que termine t: para las pruebas de otros paquetes, como
+// las de servidor.Actualizar.
+func ParaPruebas(t testing.TB, ultima, prefijo string, clave ed25519.PublicKey) {
+	antes, claves := [2]string{urlUltima, prefijoDescarga}, clavesPublicas
+	urlUltima, prefijoDescarga, clavesPublicas = ultima, prefijo, []ed25519.PublicKey{clave}
+	t.Cleanup(func() { urlUltima, prefijoDescarga, clavesPublicas = antes[0], antes[1], claves })
+}
+
+func descargar(ctx context.Context, v Version, nombre, url, dir string, avance Avance) (string, error) {
+	LimpiarDescargas(time.Now().Add(-10 * time.Minute))
+	for _, u := range []string{url, v.urlSumas, v.urlFirma} {
 		if !strings.HasPrefix(u, prefijoDescarga) || strings.Contains(u, "..") || strings.Contains(strings.ToLower(u), "%2e") {
 			return "", fmt.Errorf(idioma.T("dirección de descarga inesperada: %s"), u)
 		}
@@ -316,17 +379,17 @@ func Descargar(ctx context.Context, v Version, dir string, avance Avance) (strin
 	esperada := ""
 	lineas := bufio.NewScanner(bytes.NewReader(sumas))
 	for lineas.Scan() {
-		if campos := strings.Fields(lineas.Text()); len(campos) == 2 && strings.TrimPrefix(campos[1], "*") == v.nombreInstalador {
+		if campos := strings.Fields(lineas.Text()); len(campos) == 2 && strings.TrimPrefix(campos[1], "*") == nombre {
 			esperada = strings.ToLower(campos[0])
 		}
 	}
 	if esperada == "" {
-		return "", fmt.Errorf(idioma.T("SHA256SUMS.txt no incluye %s"), v.nombreInstalador)
+		return "", fmt.Errorf(idioma.T("SHA256SUMS.txt no incluye %s"), nombre)
 	}
-	destino := filepath.Join(dir, filepath.Base(v.nombreInstalador))
-	suma, err := guardar(ctx, v.urlInstalador, destino, avance)
+	destino := filepath.Join(dir, filepath.Base(nombre))
+	suma, err := guardar(ctx, url, destino, avance)
 	if err == nil && suma != esperada {
-		err = fmt.Errorf(idioma.T("la suma SHA-256 de %s no coincide: la descarga está dañada o fue alterada"), v.nombreInstalador)
+		err = fmt.Errorf(idioma.T("la suma SHA-256 de %s no coincide: la descarga está dañada o fue alterada"), nombre)
 	}
 	if err != nil {
 		os.Remove(destino)

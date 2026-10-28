@@ -29,6 +29,16 @@ const envoltorio = "#!/bin/sh\nexec /opt/tramtai/tramtai --servidor \"$@\"\n"
 // sinBloquear abre config.yaml sin quedarse colgado si es un FIFO (leerConfiguracion).
 const sinBloquear = syscall.O_NONBLOCK
 
+// programas es lo que hay en la carpeta del programa; Actualizar lo cambia.
+var programas = []string{"tramtai", "uv"}
+
+// detenerServicio (systemctl stop deja terminar las peticiones en curso) y arrancarServicio, para Actualizar; las
+// pruebas comunes los sustituyen.
+var (
+	detenerServicio  = func() error { return orden("systemctl", "stop", "tramtai") }
+	arrancarServicio = func() error { return orden("systemctl", "start", "tramtai") }
+)
+
 // conSystemd dice si el sistema arrancó con systemd (como sd_booted); las pruebas lo sustituyen.
 var conSystemd = func() bool {
 	_, err := os.Stat("/run/systemd/system")

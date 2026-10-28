@@ -6,6 +6,8 @@ func init() {
 		"la última versión publicada no tiene un número válido: %q":                              "the latest published version has no valid number: %q",
 		"esta versión no publicó instalador para Windows":                                        "this version did not publish a Windows installer",
 		"dirección de descarga inesperada: %s":                                                   "unexpected download address: %s",
+		"no se publica un paquete del servidor para %s/%s":                                       "no server package is published for %s/%s",
+		"esta versión no publicó %s con sus sumas firmadas":                                      "this version did not publish %s with its signed checksums",
 		"SHA256SUMS.txt no incluye %s":                                                           "SHA256SUMS.txt does not list %s",
 		"la firma de esta versión no es válida: descárgala desde su página":                      "this version’s signature is not valid: download it from its page",
 		"la suma SHA-256 de %s no coincide: la descarga está dañada o fue alterada":              "the SHA-256 checksum of %s does not match: the download is damaged or was tampered with",
