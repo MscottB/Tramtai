@@ -156,6 +156,7 @@ func init() {
 		"tipo incorrecto":    "wrong type",
 		"no soportado todavía: no hay historial permanente, cifrado propio ni cache documental": "not supported yet: there is no permanent history, built-in encryption or document cache",
 		"solo se admite temporal":                                                            "only temporal is supported",
+		"solo se admite ninguno, archivos o letsencrypt":                                     "only ninguno, archivos, or letsencrypt is supported",
 		"versión de formato no soportada":                                                    "unsupported format version",
 		"transición no permitida: %s → %s":                                                   "transition not allowed: %s → %s",
 		"perfil con formato no válido":                                                       "profile with an invalid format",

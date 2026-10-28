@@ -72,6 +72,9 @@ func TestClavesRechazadas(t *testing.T) {
 		{"historial sin soporte", "retencion:\n  guardar_historial: true\n", OrigenLocal, "no soportado"},
 		{"modo de retención sin soporte", "retencion:\n  modo: permanente\n", OrigenGlobal, "solo se admite temporal"},
 		{"tipo incorrecto", "concurrencia:\n  maximo_tamano_cola: muchos\n", OrigenGlobal, "tipo incorrecto"},
+		{"modo de TLS desconocido", "servicio:\n  tls:\n    modo: propio\n", OrigenGlobal, "ninguno, archivos o letsencrypt"},
+		{"dominios sin lista", "servicio:\n  dominios: tramtai.ejemplo.org\n", OrigenGlobal, "tipo incorrecto"},
+		{"TLS en versionada", "servicio:\n  tls:\n    modo: archivos\n", OrigenProyecto, "clave de seguridad"},
 		{"yaml roto", "concurrencia: [\n", OrigenGlobal, "YAML no válido"},
 	}
 	for _, caso := range casos {
