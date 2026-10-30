@@ -120,7 +120,9 @@ Expand-Archive .\Tramtai-*-portable-windows-x64.zip -DestinationPath .\tramtai
 
 También vale desde el instalador de Windows o desde cualquier copia de `tramtai.exe`. La instalación:
 
-- copia el programa a `C:\Program Files\Tramtai Servidor\`, con `tramtai-servidor.cmd` en su carpeta `bin`, y añade solo`n  `bin` al PATH del sistema (abre una consola nueva para usarlo): así el `tramtai.exe` del servidor no tapa al de`n  escritorio;
+- copia el programa a `C:\Program Files\Tramtai Servidor\`, con `tramtai-servidor.cmd` en su carpeta `bin`, y añade solo
+  `bin` al PATH del sistema (abre una consola nueva para usarlo): así el `tramtai.exe` del servidor no tapa al de
+  escritorio;
 - crea el servicio `Tramtai` («Tramtai (servidor)») con la cuenta virtual `NT SERVICE\Tramtai`, arranque automático
   retrasado y reinicio si se cae;
 - crea `%ProgramData%\Tramtai`, que solo pueden usar `SYSTEM`, los administradores y la cuenta del servicio.
@@ -170,7 +172,11 @@ de este equipo o si `servicio.proxy.confiables` no está vacío. El servicio **n
 - `archivos` con el certificado o la clave ilegibles, o con un certificado que no cubre `servicio.dominios`.
 
 El motivo queda en el registro (`tramtai-servidor registro`). Con la configuración mal, el sistema no lo vuelve a
-arrancar una y otra vez (fallaría igual): corrígela y `sudo tramtai-servidor reiniciar`.
+arrancar una y otra vez (fallaría igual): corrígela y `sudo tramtai-servidor reiniciar`. Si lo que falta son el
+certificado o la clave (por ejemplo, un disco que aún no se ha montado al arrancar el equipo), sí lo reintenta.
+
+Con `servicio.host` `0.0.0.0` (o `::`) y sin `servicio.dominios` arranca, pero desde otros equipos no se entra: hace
+falta `servicio.dominios` o la IP en `servicio.host`. El registro y `tramtai-servidor estado` lo avisan.
 
 **Cambio de la v0.58:** quien usaba `servicio.permitir_remoto` por HTTP plano verá que el servicio ya no arranca. El
 mensaje ofrece las salidas: un proxy, el HTTPS propio o un túnel SSH.
@@ -570,7 +576,11 @@ HTTPS of its own (keys would travel unencrypted; a proxy on another machine also
 subscription that isn’t the personal one, or personal without TOTP; `letsencrypt` without domains, email or port 443;
 and `archivos` with unreadable files or a certificate that doesn’t cover `servicio.dominios`. The reason goes to the
 log (`tramtai-servidor log`). With a bad configuration the system doesn’t keep restarting it (it would fail the same way):
-fix it and run `sudo tramtai-servidor restart`.
+fix it and run `sudo tramtai-servidor restart`. If what’s missing is the certificate or the key (say, a disk not yet
+mounted when the computer starts), it does retry.
+
+With `servicio.host` `0.0.0.0` (or `::`) and no `servicio.dominios` it starts, but other computers can’t get in: set
+`servicio.dominios` or put the IP address in `servicio.host`. The log and `tramtai-servidor status` warn about it.
 
 **v0.58 change:** if you used `servicio.permitir_remoto` over plain HTTP, the service no longer starts. The message
 offers the ways out: a proxy, its own HTTPS or an SSH tunnel.

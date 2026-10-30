@@ -109,7 +109,6 @@ func TestAdministradorTOTPActivar(t *testing.T) {
 // TestArranqueConTOTP: iniciarServicio rellena Entrada.TOTP con el secreto del almacén cuando la regla 4 puede aplicarse
 // (expuesto y con suscripción personal): sin secreto no arranca y lo dice; con él, sí. Sin exponer no pregunta al almacén.
 func TestArranqueConTOTP(t *testing.T) {
-	t.Setenv("TRAMTAI_SERVIDOR", "1") // la regla 4 es del servidor: fuera de él, una suscripción expuesta no se admite
 	anterior := leerClave
 	t.Cleanup(func() { leerClave = anterior })
 	secreto, preguntas := "", 0
@@ -120,7 +119,7 @@ func TestArranqueConTOTP(t *testing.T) {
 		}
 		return secreto, nil
 	}
-	expuesta := servidor.Entrada{Host: "127.0.0.1", Confiables: []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")}, TLS: "ninguno",
+	expuesta := servidor.Entrada{Servidor: true, Host: "127.0.0.1", Confiables: []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")}, TLS: "ninguno",
 		Suscripciones: []servidor.Suscripcion{{Agente: "claude", Personal: true}}}
 	if err := servidor.ComprobarArranque(conTOTP(expuesta)); err == nil || !strings.Contains(err.Error(), "TOTP") {
 		t.Fatalf("sin secreto: %v", err)

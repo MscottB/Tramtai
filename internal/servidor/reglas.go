@@ -2,11 +2,12 @@ package servidor
 
 import (
 	"crypto/tls"
+	"errors"
+	"io/fs"
 	"net"
 	"net/netip"
 	"strings"
 
-	"tramtai/internal/carpetas"
 	"tramtai/internal/idioma"
 	"tramtai/internal/nucleo"
 )
@@ -30,6 +31,7 @@ type Entrada struct {
 	Clave          string
 	Suscripciones  []Suscripcion
 	TOTP           bool // el administrador tiene TOTP
+	Servidor       bool // es el servidor (carpetas.Servidor()): las reglas 3 y 4 remiten a sus órdenes y a su TOTP
 }
 
 // Loopback dice si host es una dirección de este equipo que no sale a la red.
@@ -58,7 +60,7 @@ func ComprobarArranque(e Entrada) error {
 	}
 	if Expuesto(e) {
 		for _, s := range e.Suscripciones {
-			if !carpetas.Servidor() { // sin TOTP ni tramtai-servidor, la personal tampoco vale: solo la clave de API
+			if !e.Servidor { // sin TOTP ni tramtai-servidor, la personal tampoco vale: solo la clave de API
 				return invalida(idioma.Tf("el servicio está abierto a la red (servicio.host o servicio.proxy.confiables) y %s usa una suscripción: así solo se admite su clave de API (adaptadores.%s.autenticacion: clave_api, con la clave en tramtai claves guardar)", s.Agente, s.Agente))
 			}
 			if !s.Personal {
@@ -77,9 +79,13 @@ func ComprobarArranque(e Entrada) error {
 			return invalida(idioma.T("servicio.tls.modo letsencrypt necesita servicio.dominios, servicio.tls.letsencrypt.correo y servicio.puerto 443"))
 		}
 	case "archivos":
-		par, err := tls.LoadX509KeyPair(e.Certificado, e.Clave)
-		if err != nil {
-			return invalida(idioma.Tf("no se pueden leer el certificado y la clave (servicio.tls.certificado y servicio.tls.clave): %s", err.Error()))
+		par, errLeer := tls.LoadX509KeyPair(e.Certificado, e.Clave)
+		if errLeer != nil {
+			err := invalida(idioma.Tf("no se pueden leer el certificado y la clave (servicio.tls.certificado y servicio.tls.clave): %s", errLeer.Error()))
+			if errors.Is(errLeer, fs.ErrNotExist) {
+				err = reintentable{err}
+			}
+			return err
 		}
 		for _, dominio := range e.Dominios { // LoadX509KeyPair rellena Leaf desde Go 1.23
 			if err := par.Leaf.VerifyHostname(dominio); err != nil {
@@ -88,6 +94,24 @@ func ComprobarArranque(e Entrada) error {
 		}
 	}
 	return nil
+}
+
+// reintentable marca un error de arranque que puede no repetirse: el certificado o la clave aún no están (un montaje que
+// no ha llegado al arrancar el equipo). El sistema vuelve a arrancar el servicio en lugar de dejarlo parado.
+type reintentable struct{ error }
+
+func (e reintentable) Unwrap() error { return e.error }
+
+// Reintentable dice si el error que impidió arrancar puede no repetirse (reintentable).
+func Reintentable(err error) bool { return errors.As(err, new(reintentable)) }
+
+// AvisoSinDominios es el aviso de escuchar en todas las direcciones (0.0.0.0 o ::) sin servicio.dominios: arranca, pero
+// desde otros equipos no se entra, porque el Host que mandan no está admitido. Vacío si no es el caso.
+func AvisoSinDominios(e Entrada) string {
+	if ip := net.ParseIP(e.Host); ip == nil || !ip.IsUnspecified() || len(e.Dominios) > 0 {
+		return ""
+	}
+	return idioma.Tf("servicio.host %s sin servicio.dominios: desde otros equipos hace falta servicio.dominios o la IP en servicio.host", e.Host)
 }
 
 // Confiables lee servicio.proxy.confiables: direcciones (que valen como /32 o /128) o redes CIDR. Las IPv4 dentro de IPv6

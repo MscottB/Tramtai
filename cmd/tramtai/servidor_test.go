@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -15,6 +16,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/actualizacion"
+	"tramtai/internal/agentes"
+	"tramtai/internal/configuracion"
 	"tramtai/internal/nucleo"
 	"tramtai/internal/servidor"
 	"tramtai/internal/terminos"
@@ -391,14 +394,56 @@ func TestServidorActualizar(t *testing.T) {
 // sale con 1, como siempre.
 func TestCodigoConfiguracion(t *testing.T) {
 	invalida := fmt.Errorf("al arrancar: %w", nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "config.yaml: YAML no válido"))
+	if c := codigoSalida(terminarServicio(&cobra.Command{}, invalida)); c != 1 {
+		t.Errorf("fuera del servidor, servicio iniciar con la configuración inválida sale con %d", c)
+	}
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
 	if c := codigoSalida(terminarServicio(&cobra.Command{}, invalida)); c != servidor.CodigoConfiguracion || c == 1 || c == codigoReinicio {
 		t.Errorf("el servicio con la configuración inválida sale con %d", c)
+	}
+	falta := filepath.Join(t.TempDir(), "falta.pem") // un montaje que aún no ha llegado: el sistema reintenta
+	ilegible := servidor.ComprobarArranque(servidor.Entrada{Host: "127.0.0.1", TLS: "archivos", Certificado: falta, Clave: falta})
+	if c := codigoSalida(terminarServicio(&cobra.Command{}, ilegible)); c != 1 {
+		t.Errorf("con el certificado ilegible sale con %d: %v", c, ilegible)
 	}
 	if c := codigoSalida(invalida); c != 1 {
 		t.Errorf("otra orden con la configuración inválida sale con %d", c)
 	}
 	if !strings.Contains(servidor.Unidad(servidor.UnidadOpciones{}), fmt.Sprintf("\nRestartPreventExitStatus=%d\n", servidor.CodigoConfiguracion)) {
 		t.Error("la unidad no reinicia el servicio que sale por su configuración")
+	}
+}
+
+// TestEntradaServidor: entradaServidor dice a las reglas si es el servidor.
+func TestEntradaServidor(t *testing.T) {
+	c := configuracion.Resolver(agentes.Internos())
+	if red, err := entradaServidor(c); err != nil || red.Servidor {
+		t.Errorf("fuera del servidor: %+v %v", red, err)
+	}
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	if red, err := entradaServidor(c); err != nil || !red.Servidor {
+		t.Errorf("en el servidor: %+v %v", red, err)
+	}
+}
+
+// TestServidorEstadoParado: en Windows, con el servicio parado, «servidor estado» dice dónde mirar por qué; y con
+// servicio.host 0.0.0.0 sin servicio.dominios avisa de que desde otros equipos no se entra.
+func TestServidorEstadoParado(t *testing.T) {
+	simularServidor(t, true)
+	estadoServidor = func(context.Context) (servidor.EstadoSistema, error) {
+		return servidor.EstadoSistema{Instalado: true, Activo: "STOPPED"}, nil
+	}
+	global := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(global, []byte("servicio:\n  host: 0.0.0.0\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+	salida, err := ejecutarServidor(t, "", "servidor", "estado")
+	if err != nil || strings.Contains(salida, "tramtai-servidor registro") != (runtime.GOOS == "windows") {
+		t.Errorf("parado: %v %q", err, salida)
+	}
+	if !strings.Contains(salida, servidor.AvisoSinDominios(servidor.Entrada{Host: "0.0.0.0"})) {
+		t.Errorf("sin servicio.dominios: %q", salida)
 	}
 }
 

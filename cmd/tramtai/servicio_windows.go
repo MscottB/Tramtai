@@ -9,8 +9,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"golang.org/x/sys/windows/svc"
-
-	"tramtai/internal/nucleo"
 )
 
 // dentroDelServicio evita que iniciarServicio, llamado desde el manejador, vuelva a entrar en svc.Run.
@@ -65,7 +63,7 @@ func (m *manejador) Execute(_ []string, peticiones <-chan svc.ChangeRequest, est
 		case m.err = <-fin:
 			// Con la configuración inválida sale limpio: la recuperación no lo arranca una y otra vez (fallaría igual);
 			// el registro dice por qué.
-			if m.err != nil && nucleo.CodigoDe(m.err) != nucleo.CodigoConfiguracionInvalida {
+			if m.err != nil && !configuracionMala(m.err) {
 				return true, uint32(codigoSalida(m.err)) // 1, o codigoReinicio: la recuperación lo vuelve a arrancar
 			}
 			return false, 0

@@ -11,6 +11,7 @@ import (
 	"golang.org/x/sys/windows/svc"
 
 	"tramtai/internal/nucleo"
+	"tramtai/internal/servidor"
 )
 
 // TestManejadorDrena: el manejador del servicio de Windows informa StartPending y Running, y un svc.Stop, svc.Shutdown
@@ -31,6 +32,7 @@ func TestManejadorDrena(t *testing.T) {
 		{"reinicio pedido", svc.Stop, errReinicioPedido, true, codigoReinicio},
 		{"otro fallo", svc.Stop, errors.New("otro fallo"), true, 1},
 		{"configuración inválida", svc.Stop, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "config.yaml: YAML no válido"), false, 0},
+		{"certificado ilegible", svc.Stop, servidor.ComprobarArranque(servidor.Entrada{Host: "127.0.0.1", TLS: "archivos", Certificado: "falta.pem", Clave: "falta.pem"}), true, 1},
 	} {
 		t.Run(c.nombre, func(t *testing.T) {
 			cancelado := make(chan struct{})

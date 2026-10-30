@@ -103,10 +103,14 @@ TestClienteReal con las tres cabeceras y un caso más en TestProxyLoopbackNoEsLo
 ## testssl.sh contra el HTTPS propio
 
 Tarea 20, paso 2 (2026-10-30), en Docker por decisión del usuario: `testssl.sh` 3.2.4 (imagen oficial
-`drwetter/testssl.sh`, `sha256:9fc03951…`) contra un Tramtai de prueba compilado de esta rama, con
-`servicio.tls.modo: archivos` y un certificado autofirmado ECDSA P-256 generado en el momento
-(`generate_cert.go --ecdsa-curve P256`), `servicio.host 0.0.0.0` y el puerto 8443. Los dos contenedores van en una red
-de Docker propia `--internal`, sin puertos publicados al exterior, y se borran al terminar. Orden:
+`drwetter/testssl.sh@sha256:9fc0395106bf1df9a20695d04d6fda09c56301cd62a63cb24aedaa27f991a1e4`) contra un Tramtai de
+prueba compilado de esta rama, con `servicio.tls.modo: archivos` y un certificado autofirmado ECDSA P-256 generado en el
+momento (`generate_cert.go --ecdsa-curve P256`), `servicio.host 0.0.0.0`, `servicio.permitir_remoto`,
+`servicio.dominios` con el nombre del contenedor y el puerto 8443. El servicio de prueba corría como root dentro de su
+contenedor y en modo escritorio (`tramtai servicio iniciar`, sin `--servidor`), con la misma configuración TLS que el
+servidor: el oyente y su `tls.Config` son los mismos en los dos modos. Con otro usuario no podía leer la clave, que
+Docker Desktop monta con 0600 de root. Los dos contenedores van en una red de Docker propia `--internal`, sin puertos
+publicados al exterior, y se borran al terminar. Orden:
 `testssl.sh --quiet --color 0 --warnings off -p -f -h https://tramtai-prueba:8443`. Resumen de la salida:
 
 - **Protocolos:** SSLv2, SSLv3, TLS 1, TLS 1.1 y TLS 1.2 no se ofrecen; TLS 1.3 sí. testssl lo detecta y dice que solo

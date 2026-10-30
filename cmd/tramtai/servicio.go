@@ -34,7 +34,6 @@ import (
 	"tramtai/internal/registro"
 	"tramtai/internal/servicio"
 	"tramtai/internal/servidor"
-	"tramtai/internal/terminos"
 	"tramtai/internal/version"
 )
 
@@ -406,12 +405,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) (er
 	if err := servidor.ComprobarArranque(red); err != nil {
 		return err
 	}
-	if servidor.Expuesto(red) {
-		fmt.Fprintln(salida, idioma.Tf("aviso: %s", terminos.Riesgos(true)[2]))
-	}
-	if red.TLS == "letsencrypt" {
-		fmt.Fprintln(salida, idioma.Tf("aviso: %s", servidor.AvisoLetsEncrypt()))
-	}
+	avisosDeRed(salida, red, true)
 	datos, err := dirDatos()
 	if err != nil {
 		return err
@@ -562,15 +556,22 @@ func anotarError(archivo string, err error) {
 
 // terminarServicio deja pasar el error de iniciarServicio, pero un reinicio pedido no es un fallo: cobra no lo imprime
 // como «Error: …» (el registro ya lo dice en una línea normal) y el proceso sale con codigoReinicio. Si no arranca por
-// su configuración, sale con servidor.CodigoConfiguracion, que el sistema no reinicia.
+// su configuración en el servidor, sale con servidor.CodigoConfiguracion, que el sistema no reinicia (en el escritorio,
+// con 1, como siempre).
 func terminarServicio(cmd *cobra.Command, err error) error {
 	if errors.Is(err, errReinicioPedido) {
 		cmd.SilenceErrors = true
 	}
-	if nucleo.CodigoDe(err) == nucleo.CodigoConfiguracionInvalida {
+	if carpetas.Servidor() && configuracionMala(err) {
 		return errConfiguracionServicio{err}
 	}
 	return err
+}
+
+// configuracionMala dice si el servicio no arrancó por su configuración y volver a arrancarlo fallaría igual: no un
+// certificado que aún no está (servidor.Reintentable), que puede llegar con un montaje.
+func configuracionMala(err error) bool {
+	return nucleo.CodigoDe(err) == nucleo.CodigoConfiguracionInvalida && !servidor.Reintentable(err)
 }
 
 // errConfiguracionServicio es el error del servicio que no arranca por su configuración (terminarServicio).
@@ -629,7 +630,7 @@ func entradaServidor(c *configuracion.Configuracion) (servidor.Entrada, error) {
 	if err != nil {
 		return servidor.Entrada{}, err
 	}
-	e := servidor.Entrada{Host: c.Texto("servicio.host"), PermitirRemoto: c.Booleano("servicio.permitir_remoto"), Confiables: confiables,
+	e := servidor.Entrada{Servidor: carpetas.Servidor(), Host: c.Texto("servicio.host"), PermitirRemoto: c.Booleano("servicio.permitir_remoto"), Confiables: confiables,
 		TLS: c.Texto("servicio.tls.modo"), Correo: c.Texto("servicio.tls.letsencrypt.correo"),
 		Puerto: c.Entero("servicio.puerto"), Certificado: c.Texto("servicio.tls.certificado"), Clave: c.Texto("servicio.tls.clave")}
 	for _, dominio := range textos(c.Lista("servicio.dominios")) {

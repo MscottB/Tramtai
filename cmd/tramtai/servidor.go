@@ -43,14 +43,25 @@ func avisosServidor(out io.Writer, riesgo bool) {
 	if err == nil {
 		red, err = entradaServidor(c)
 	}
-	switch {
-	case err != nil:
+	if err != nil {
 		fmt.Fprintln(out, idioma.Tf("aviso: %s", nucleo.MensajeDe(err)))
-	case riesgo && servidor.Expuesto(red):
+		return
+	}
+	avisosDeRed(out, red, riesgo)
+}
+
+// avisosDeRed son los avisos de la configuración de red, los mismos al arrancar (en el registro) y en «servidor estado»:
+// con riesgo, el riesgo 3 si queda abierto a la red; el acuerdo de Let's Encrypt; y, en todas las direcciones sin
+// servicio.dominios, que desde otros equipos no se entra.
+func avisosDeRed(out io.Writer, red servidor.Entrada, riesgo bool) {
+	if riesgo && servidor.Expuesto(red) {
 		fmt.Fprintln(out, idioma.Tf("aviso: %s", terminos.Riesgos(true)[2]))
 	}
-	if err == nil && red.TLS == "letsencrypt" {
+	if red.TLS == "letsencrypt" {
 		fmt.Fprintln(out, idioma.Tf("aviso: %s", servidor.AvisoLetsEncrypt()))
+	}
+	if aviso := servidor.AvisoSinDominios(red); aviso != "" {
+		fmt.Fprintln(out, idioma.Tf("aviso: %s", aviso))
 	}
 }
 
@@ -195,6 +206,9 @@ func comandoServidor() *cobra.Command {
 				return nil
 			}
 			fmt.Fprintln(out, idioma.Tf("servicio del sistema: %s", e.Activo))
+			if runtime.GOOS == "windows" && e.Activo != "RUNNING" { // Windows no guarda el porqué en otro sitio
+				fmt.Fprintln(out, idioma.T("el servicio no está en marcha: el motivo está en su registro (tramtai-servidor registro)"))
+			}
 			if e.ClavesEnClaro {
 				fmt.Fprintln(out, idioma.Tf("aviso: %s", servidor.ErrClaveEnClaro.Error()))
 			}
