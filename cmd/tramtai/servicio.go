@@ -371,9 +371,12 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	if servicioWindows, err := ejecutarComoServicio(cmd, archivo); servicioWindows {
 		return err
 	}
-	// Después del SCM: el servicio de Windows sigue arrancando; bajo systemd el proceso es la cuenta tramtai, no root.
-	if err := ejecucionLocalPermitida(); err != nil {
-		return err
+	// Después del SCM: el servicio de Windows (que vuelve a pasar por aquí desde su manejador) sigue arrancando; bajo
+	// systemd el proceso es la cuenta tramtai, no root.
+	if !comoServicioWindows() {
+		if err := ejecucionLocalPermitida(); err != nil {
+			return err
+		}
 	}
 	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	if err != nil {

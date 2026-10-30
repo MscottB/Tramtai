@@ -17,6 +17,10 @@ import (
 // dentroDelServicio evita que iniciarServicio, llamado desde el manejador, vuelva a entrar en svc.Run.
 var dentroDelServicio atomic.Bool
 
+// comoServicioWindows dice si este proceso es el servicio que lanzó el administrador de servicios: corre con su
+// propia cuenta (NT SERVICE\Tramtai), aunque su testigo cuente como elevado.
+func comoServicioWindows() bool { return dentroDelServicio.Load() }
+
 // ejecutarComoServicio corre iniciarServicio bajo el administrador de servicios si este proceso es el servicio de
 // Windows (tramtai servidor instalar): detenerlo o apagar el equipo cancela su contexto, que drena como «tramtai
 // servicio detener». Dice false si no es un servicio y hay que seguir como siempre.
