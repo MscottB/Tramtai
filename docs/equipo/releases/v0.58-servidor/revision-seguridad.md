@@ -100,6 +100,29 @@ TestClienteReal con las tres cabeceras y un caso más en TestProxyLoopbackNoEsLo
 - **`[v6]` sin puerto en `X-Forwarded-For` cortaba la cadena** en `ClienteReal`, y todos los clientes de ese proxy
   compartían freno. Arreglo: se quitan los corchetes antes de leer la dirección. Prueba: el caso nuevo de TestClienteReal.
 
+## testssl.sh contra el HTTPS propio
+
+Tarea 20, paso 2 (2026-10-30), en Docker por decisión del usuario: `testssl.sh` 3.2.4 (imagen oficial
+`drwetter/testssl.sh`, `sha256:9fc03951…`) contra un Tramtai de prueba compilado de esta rama, con
+`servicio.tls.modo: archivos` y un certificado autofirmado ECDSA P-256 generado en el momento
+(`generate_cert.go --ecdsa-curve P256`), `servicio.host 0.0.0.0` y el puerto 8443. Los dos contenedores van en una red
+de Docker propia `--internal`, sin puertos publicados al exterior, y se borran al terminar. Orden:
+`testssl.sh --quiet --color 0 --warnings off -p -f -h https://tramtai-prueba:8443`. Resumen de la salida:
+
+- **Protocolos:** SSLv2, SSLv3, TLS 1, TLS 1.1 y TLS 1.2 no se ofrecen; TLS 1.3 sí. testssl lo detecta y dice que solo
+  hay TLS 1.3 («appeared to support TLS 1.3 ONLY»). Sin ALPN/HTTP2.
+- **Cifrados (todos con secreto hacia delante):** `TLS_AES_256_GCM_SHA384`, `TLS_CHACHA20_POLY1305_SHA256` y
+  `TLS_AES_128_GCM_SHA256`.
+- **Intercambio de claves:** KEMs `SecP256r1MLKEM768`, **`X25519MLKEM768`** y `SecP384r1MLKEM1024`; curvas
+  `prime256v1`, `secp384r1`, `secp521r1` y `X25519`. Firma ECDSA+SHA256.
+- **Cabeceras:** `Strict-Transport-Security` de 365 días (`max-age=31536000`), sin cabecera `Server`, con
+  `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy` con
+  `frame-ancestors 'none'`, `Referrer-Policy: no-referrer` y `Cache-Control: no-cache`.
+
+Lo esperado (solo TLS 1.3, X25519MLKEM768 ofrecido y HSTS presente) se cumple. No se pidieron las pruebas de
+vulnerabilidades (`-U`): con solo TLS 1.3 no aplican las de las versiones anteriores, y el certificado de prueba no es
+el de producción.
+
 ## Riesgo residual
 
 Codex se ejecuta con `-s read-only`, que, según su documentación, lee todo lo que lee la cuenta del servicio. Tras I2,
