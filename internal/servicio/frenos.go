@@ -215,10 +215,12 @@ func demasiados(w http.ResponseWriter, r *http.Request, espera time.Duration, me
 // frenarClaves rechaza con 429 lo que llega con clave desde una dirección frenada por claves falsas (30 en un minuto dan
 // un minuto de espera), antes de mirar si la clave vale: así probar claves no da pistas mientras dure la espera. Lo que
 // llega por loopback sin proxy no se frena: un proceso del equipo no puede dejar a la CLI y al escritorio sin servicio.
+// Con el contador lleno falla abierto (esperaPropia): las claves son de 256 bits y el freno es contra el abuso; cerrar
+// dejaría sin servicio a las apps con su clave.
 func (s *Servicio) frenarClaves(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if api.TokenDe(r) != "" && !desdeEsteEquipo(r) {
-			if espera := s.claves.espera(ClienteReal(r, s.opc.Confiables), time.Now()); espera > 0 {
+			if espera := s.claves.esperaPropia(ClienteReal(r, s.opc.Confiables), time.Now()); espera > 0 {
 				demasiados(w, r, espera, idioma.T("demasiadas claves no válidas desde tu dirección: espera un minuto y revisa la clave"))
 				return
 			}

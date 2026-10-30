@@ -143,7 +143,10 @@ type Servicio struct {
 	sesiones       map[string]*sesion
 	codigos        map[string]codigoEntrada
 	generacion     uint64 // la vigente de las sesiones: cambiar la contraseña o «Cerrar todas las sesiones» la sube
-	ultimoPasoTOTP int64  // el último paso TOTP aceptado, que no se reutiliza (en memoria: un reinicio lo olvida)
+	// finGeneracion se cancela al subir la generación: termina los flujos abiertos con sesiones de la anterior.
+	finGeneracion    context.Context
+	cerrarGeneracion context.CancelFunc
+	ultimoPasoTOTP   int64 // el último paso TOTP aceptado, que no se reutiliza (en memoria: un reinicio lo olvida)
 	// lineaAdministrador es la última línea de datos/administrador vista: si cambia, se cierran todas las sesiones.
 	lineaAdministrador   string
 	lecturaAdministrador time.Time // la última vez que se leyó: como mucho una vez por segundo
@@ -202,6 +205,7 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 		instancias: map[string]*Instancia{}, abriendo: map[string]*apertura{}, puntos: map[string]*puntoActivo{}, detener: make(chan struct{}),
 		sesiones: map[string]*sesion{}, codigos: map[string]codigoEntrada{}, frenos: nuevosFrenos(), claves: nuevoContador(30, time.Minute, time.Minute),
 		lineaAdministrador: leerAdministrador(opc.Datos)}
+	s.finGeneracion, s.cerrarGeneracion = context.WithCancel(context.Background())
 	s.buscar.Store(opc.BuscarActualizaciones)
 	s.actualizaciones.Consultar = opc.ConsultarVersion
 	s.fondo.Go(func() { actualizacion.LimpiarDescargas(time.Now().Add(-10 * time.Minute)) }) // los instaladores que dejó la versión anterior
@@ -220,8 +224,7 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 		if s.local, err = net.Listen("tcp", "127.0.0.1:0"); err != nil {
 			return nil, err
 		}
-		s.localSrv = &http.Server{Handler: s, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 64 << 10,
-			ConnContext: contextoOyenteLocal}
+		s.localSrv = NuevoServidorHTTP(s, contextoOyenteLocal)
 		go s.localSrv.Serve(s.local)
 	}
 	return s, nil
@@ -314,6 +317,12 @@ func (s *Servicio) enrutar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	admin := api.TokenValido(r, s.tokenAdmin)
+	// Expuesto, el token de servicio solo vale desde este equipo (la CLI, la terminal y la app usan el oyente local):
+	// leído por un agente, no administra el servicio desde fuera ni abre la Web UI sin contraseña (R37).
+	if admin && s.opc.Expuesto && !desdeEsteEquipo(r) {
+		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoOrigenNoPermitido, idioma.T("con el servicio abierto a la red, la clave del servicio solo vale desde este equipo")))
+		return
+	}
 	if strings.HasPrefix(ruta, "/api/v1/servicio") {
 		if !admin {
 			s.noAutorizado(w, r)
@@ -322,7 +331,14 @@ func (s *Servicio) enrutar(w http.ResponseWriter, r *http.Request) {
 		s.admin.ServeHTTP(w, r)
 		return
 	}
-	inst, porSesion, err := s.instanciaPara(r, admin)
+	inst, ses, err := s.instanciaPara(r, admin)
+	porSesion := ses != nil
+	if porSesion { // la sesión se comprueba aquí una vez: un flujo SSE termina si después se cierran las sesiones
+		ctx, cancelar := context.WithCancel(r.Context())
+		defer cancelar()
+		defer context.AfterFunc(ses.fin, cancelar)()
+		r = r.WithContext(ctx)
+	}
 	switch {
 	case err != nil:
 		api.EscribirError(w, r, err)
@@ -353,31 +369,31 @@ func (s *Servicio) enrutarPunto(w http.ResponseWriter, r *http.Request) {
 }
 
 // instanciaPara elige la instancia: con el token de servicio, la de Tramtai-Instancia; con otro token, la suya;
-// sin token, la de la sesión de la Web UI, que exige X-CSRF-Token en las peticiones que modifican. porSesion
-// indica una sesión de la Web UI.
-func (s *Servicio) instanciaPara(r *http.Request, admin bool) (inst *Instancia, porSesion bool, err error) {
+// sin token, la de la sesión de la Web UI, que exige X-CSRF-Token en las peticiones que modifican. ses es la sesión de
+// la Web UI, si la petición llega con una.
+func (s *Servicio) instanciaPara(r *http.Request, admin bool) (inst *Instancia, ses *sesion, err error) {
 	if admin {
 		s.mu.RLock()
 		defer s.mu.RUnlock()
-		return s.instancias[r.Header.Get("Tramtai-Instancia")], false, nil
+		return s.instancias[r.Header.Get("Tramtai-Instancia")], nil, nil
 	}
 	if token := api.TokenDe(r); token != "" {
-		return s.instanciaPorToken(token), false, nil
+		return s.instanciaPorToken(token), nil, nil
 	}
-	_, ses := s.sesionDe(r)
+	_, ses = s.sesionDe(r)
 	if ses == nil {
-		return nil, false, nil
+		return nil, nil, nil
 	}
 	if r.Method != http.MethodGet && r.Method != http.MethodHead && !csrfValido(r, ses) {
-		return nil, false, nucleo.NuevoError(nucleo.CodigoCSRFInvalido, idioma.T("falta la cabecera X-CSRF-Token de la sesión"))
+		return nil, nil, nucleo.NuevoError(nucleo.CodigoCSRFInvalido, idioma.T("falta la cabecera X-CSRF-Token de la sesión"))
 	}
 	s.mu.RLock()
 	inst = s.instancias[ses.instancia]
 	s.mu.RUnlock()
 	if inst == nil {
-		return nil, false, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("el espacio de la sesión (%s) no está activo", ses.instancia))
+		return nil, nil, nucleo.NuevoError(nucleo.CodigoNoEncontrado, idioma.Tf("el espacio de la sesión (%s) no está activo", ses.instancia))
 	}
-	return inst, true, nil
+	return inst, ses, nil
 }
 
 // origenPeticion dice de dónde llegó una petición a la instancia: la sesión de la Web UI es Probar; con la clave,

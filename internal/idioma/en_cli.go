@@ -72,11 +72,12 @@ func init() {
 		"este systemd no tiene systemd-creds 250 o posterior: las claves del servidor están sin cifrar en /etc/tramtai/claves.env (0600, solo las lee root)":                                                                                  "this systemd does not have systemd-creds 250 or later: the server keys are unencrypted in /etc/tramtai/claves.env (0600, only root reads it)",
 		"no se pudieron borrar las claves del servicio en %s (%v): bórralas a mano desde una consola de administrador":                                                                                                                        "the service keys in %s could not be deleted (%v): delete them by hand from an administrator console",
 		"las claves del servidor necesitan permisos de administrador: en Linux, con sudo (sudo tramtai-servidor claves …); en Windows, desde una consola de administrador":                                                                    "the server keys need administrator rights: on Linux, with sudo (sudo tramtai-servidor keys …); on Windows, from an administrator console",
-		"Servidor: %s guardada para el servicio del sistema\n":          "Server: %s stored for the system service\n",
-		"Servidor: %s eliminada\n":                                      "Server: %s deleted\n",
-		"la tiene el servicio del sistema":                              "the system service has it",
-		"las claves del servicio solo se administran desde este equipo": "the service keys can only be managed from this computer",
-		"credenciales de systemd":                                       "systemd credentials",
+		"Servidor: %s guardada para el servicio del sistema\n":                                "Server: %s stored for the system service\n",
+		"Servidor: %s eliminada\n":                                                            "Server: %s deleted\n",
+		"la tiene el servicio del sistema":                                                    "the system service has it",
+		"las claves del servicio solo se administran desde este equipo":                       "the service keys can only be managed from this computer",
+		"con el servicio abierto a la red, la clave del servicio solo vale desde este equipo": "with the service open to the network, the service key only works from this computer",
+		"credenciales de systemd":                                                             "systemd credentials",
 		"Tramtai no guarda tokens de sesión de Claude como %s: Anthropic no permite que un tercero guarde ni intermedie las credenciales de Claude.ai. Inicia sesión con el propio CLI de Claude (claude auth login) o guarda una clave de API (ANTHROPIC_API_KEY)": "Tramtai does not store Claude session tokens such as %s: Anthropic does not allow a third party to store or relay Claude.ai credentials. Sign in with Claude’s own CLI (claude auth login) or store an API key (ANTHROPIC_API_KEY)",
 
 		// tramtai servidor en Windows (internal/servidor/windows.go) y el paquete del conversor (--conversor)
@@ -100,6 +101,7 @@ func init() {
 		"%s la creó otro usuario: revísala y quítala antes de instalar":                                     "%s was created by another user: check it and remove it before installing",
 		"reinicio pedido desde la Web UI: el sistema vuelve a arrancar el servicio":                         "restart requested from the Web UI: the system starts the service again",
 		"en el servidor, la conversión la hace el servicio: inícialo y repite":                              "on the server, the service does the conversion: start it and try again",
+		"en el servidor, los agentes y el servicio solo se ejecutan con la cuenta del servicio, no como administrador: usa el servicio (si no está en marcha, inícialo con tramtai-servidor reiniciar o, en Windows, con el administrador de servicios)": "on the server, agents and the service only run under the service account, not as an administrator: use the service (if it isn’t running, start it with tramtai-servidor reiniciar or, on Windows, with the service manager)",
 
 		// tramtai
 		"Tus agentes de IA como una API local": "Your AI agents as a local API",
@@ -275,7 +277,7 @@ func init() {
 		"el certificado de servicio.tls.certificado no cubre %s, de servicio.dominios":                                                                                                                                                                                                              "the certificate in servicio.tls.certificado does not cover %s, from servicio.dominios",
 		"servicio.tls.modo letsencrypt necesita el puerto %d libre (no usa servicio.puerto_automatico): %s":                                                                                                                                                                                         "servicio.tls.modo letsencrypt needs port %d to be free (it does not use servicio.puerto_automatico): %s",
 		"servicio.dominios: %q no es un nombre de dominio (sin puerto, como tramtai.ejemplo.org)":                                                                                                                                                                                                   "servicio.dominios: %q is not a domain name (without a port, like tramtai.ejemplo.org)",
-		"servicio.proxy.confiables: %q no es una dirección IP ni una red CIDR admitida (como 127.0.0.1 o 10.0.0.0/8; fiarse de todos, /0, no se admite)":                                                                                                                                            "servicio.proxy.confiables: %q is not an IP address or an allowed CIDR network (like 127.0.0.1 or 10.0.0.0/8; trusting everyone, /0, is not allowed)",
+		"servicio.proxy.confiables: %q no es una dirección IP ni una red CIDR admitida (como 127.0.0.1 o 10.0.0.0/8; no se admiten redes más anchas que /8 en IPv4 ni que /32 en IPv6)":                                                                                                             "servicio.proxy.confiables: %q is not an IP address or an allowed CIDR network (like 127.0.0.1 or 10.0.0.0/8; networks wider than /8 in IPv4 or /32 in IPv6 are not allowed)",
 		"el servicio ya está en marcha en %s": "the service is already running at %s",
 		"el puerto %d está ocupado: Tramtai usa el %d (para fijar otro: Ajustes o «tramtai servicio puerto <número>»)\n": "port %d is in use: Tramtai uses %d (to set another one: Settings or “tramtai servicio puerto <number>”)\n",
 		"no se pudo restaurar un espacio:":                                                            "could not restore a workspace:",

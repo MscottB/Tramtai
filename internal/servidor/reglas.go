@@ -94,7 +94,8 @@ func ComprobarArranque(e Entrada) error {
 }
 
 // Confiables lee servicio.proxy.confiables: direcciones (que valen como /32 o /128) o redes CIDR. Las IPv4 dentro de IPv6
-// (::ffff:…) pasan a IPv4. Fiarse de todos (/0) no se admite: cualquiera podría falsificar X-Forwarded-For.
+// (::ffff:…) pasan a IPv4. Fiarse de todos, o de casi todos (más anchas que /8 en IPv4 o /32 en IPv6), no se admite:
+// cualquiera podría falsificar X-Forwarded-For.
 func Confiables(lista []string) ([]netip.Prefix, error) {
 	redes := make([]netip.Prefix, 0, len(lista))
 	for _, texto := range lista {
@@ -109,8 +110,12 @@ func Confiables(lista []string) ([]netip.Prefix, error) {
 		if err == nil && red.Addr().Is4In6() {
 			red = netip.PrefixFrom(red.Addr().Unmap(), red.Bits()-96) // menos de /96 sale del rango: Bits() < 0, no válida
 		}
-		if err != nil || !red.IsValid() || red.Bits() == 0 {
-			return nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("servicio.proxy.confiables: %q no es una dirección IP ni una red CIDR admitida (como 127.0.0.1 o 10.0.0.0/8; fiarse de todos, /0, no se admite)", texto))
+		minimo := 32 // los bits de la red más ancha admitida: /8 en IPv4 y /32 en IPv6
+		if red.Addr().Is4() {
+			minimo = 8
+		}
+		if err != nil || !red.IsValid() || red.Bits() < minimo {
+			return nil, nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, idioma.Tf("servicio.proxy.confiables: %q no es una dirección IP ni una red CIDR admitida (como 127.0.0.1 o 10.0.0.0/8; no se admiten redes más anchas que /8 en IPv4 ni que /32 en IPv6)", texto))
 		}
 		redes = append(redes, red.Masked())
 	}

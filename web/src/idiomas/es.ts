@@ -524,6 +524,8 @@ const es = {
   'seguridad.secreto': 'Añade este secreto a tu app de autenticación (o abre el enlace en ella) y escribe el código que te muestra. Hasta que lo confirmes no cambia nada.',
   'seguridad.enlace': 'Abrir en la app',
   'seguridad.codigo': 'Código de 6 dígitos',
+  'seguridad.codigoActual': 'Código de la app o de recuperación',
+  'seguridad.codigoActualTexto': 'Escribe también un código de tu app de autenticación o uno de recuperación.',
   'seguridad.confirmar': 'Confirmar',
   'seguridad.activada': 'Verificación en dos pasos activada',
   'seguridad.quitada': 'Verificación en dos pasos quitada',

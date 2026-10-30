@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/netip"
 	"sync"
+	"time"
 
 	"tramtai/internal/procesos"
 )
@@ -22,6 +23,14 @@ type claveDueno struct{}
 // ContextoDeConexion es el ConnContext de los servidores HTTP del servicio: prepara lo que se recuerda por conexión.
 func ContextoDeConexion(ctx context.Context, _ net.Conn) context.Context {
 	return context.WithValue(ctx, claveDueno{}, &duenoConexion{})
+}
+
+// NuevoServidorHTTP es el http.Server de todos los oyentes del servicio (el público, el local y el de cada punto con
+// puerto propio): plazo para las cabeceras contra las conexiones lentas, tope de su tamaño y de la inactividad. Sin
+// WriteTimeout: los flujos SSE duran lo que el trabajo y cada escritura lleva su propio plazo.
+func NuevoServidorHTTP(h http.Handler, contexto func(context.Context, net.Conn) context.Context) *http.Server {
+	return &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 64 << 10,
+		ConnContext: contexto}
 }
 
 type claveOyenteLocal struct{}

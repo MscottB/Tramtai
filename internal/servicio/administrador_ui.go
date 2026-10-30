@@ -118,6 +118,22 @@ func (s *Servicio) comprobarActual(w http.ResponseWriter, r *http.Request, ip ne
 	return true
 }
 
+// conCodigo es el siVale de comprobarActual para los cambios del TOTP y de los códigos de recuperación: con TOTP, pide
+// también un código (de la app o de recuperación), comprobado y contado en los frenos con el mismo hueco de argon2id;
+// luego hace siVale, si lo hay. Así una sesión robada con la contraseña no quita ni cambia el segundo factor.
+func (s *Servicio) conCodigo(r *http.Request, ip netip.Addr, codigo string, siVale func() error) func() error {
+	return func() error {
+		if !s.segundoFactor(codigo, time.Now()) {
+			s.anotarFallo(ip, "código TOTP en "+r.URL.Path)
+			return nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("ya hay TOTP: escribe un código de la app (o uno de recuperación) para cambiarlo"))
+		}
+		if siVale == nil {
+			return nil
+		}
+		return siVale()
+	}
+}
+
 // segundoFactor comprueba el código: TOTP (6 dígitos, sin reutilizar un paso) o uno de recuperación, que se gasta. Sin
 // TOTP no hace falta código.
 func (s *Servicio) segundoFactor(codigo string, ahora time.Time) bool {
@@ -204,6 +220,7 @@ func (s *Servicio) accederUI(w http.ResponseWriter, r *http.Request, _ *sesion) 
 	}
 	s.muSesiones.Unlock()
 	if cambio {
+		w.Header().Del("Set-Cookie") // la cookie de esa sesión, que ya no vale, no se manda
 		fmt.Fprintf(s.opc.Registros, "web ui: acceso desde %s descartado: la contraseña cambió mientras se comprobaba\n", ip)
 		api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoNoAutorizado, idioma.T("contraseña o código incorrectos")))
 		return
@@ -259,12 +276,7 @@ func (s *Servicio) activarTOTPUI(w http.ResponseWriter, r *http.Request, ses *se
 	}
 	ip := ClienteReal(r, s.opc.Confiables)
 	if peticion.Codigo == "" {
-		if !s.comprobarActual(w, r, ip, peticion.Actual, nil) {
-			return
-		}
-		if !s.segundoFactor(peticion.CodigoActual, time.Now()) {
-			s.anotarFallo(ip, "código TOTP actual")
-			api.EscribirError(w, r, nucleo.NuevoError(nucleo.CodigoSolicitudInvalida, idioma.T("ya hay TOTP: escribe un código de la app (o uno de recuperación) para cambiarlo")))
+		if !s.comprobarActual(w, r, ip, peticion.Actual, s.conCodigo(r, ip, peticion.CodigoActual, nil)) {
 			return
 		}
 		secreto, err := totp.Generar()
@@ -314,29 +326,31 @@ func (s *Servicio) cuentaTOTP() string {
 	return "servidor"
 }
 
-// leerActual lee {actual} del cuerpo: la contraseña que piden quitar el TOTP y regenerar los códigos.
-func leerActual(w http.ResponseWriter, r *http.Request) (string, bool) {
+// leerActual lee {actual, codigo} del cuerpo: la contraseña y, con TOTP, el código que piden quitar el TOTP y regenerar
+// los códigos.
+func leerActual(w http.ResponseWriter, r *http.Request) (actual, codigo string, ok bool) {
 	var peticion struct {
 		Actual string `json:"actual"`
+		Codigo string `json:"codigo"`
 	}
 	if err := api.LeerJSON(w, r, &peticion); err != nil {
 		api.EscribirError(w, r, err)
-		return "", false
+		return "", "", false
 	}
-	return peticion.Actual, true
+	return peticion.Actual, peticion.Codigo, true
 }
 
-// quitarTOTPUI quita el TOTP con la contraseña actual (409 con suscripción personal o en Linux).
+// quitarTOTPUI quita el TOTP con la contraseña actual y un código (409 con suscripción personal o en Linux).
 func (s *Servicio) quitarTOTPUI(w http.ResponseWriter, r *http.Request, _ *sesion) {
 	if !s.soloServidor(w, r) {
 		return
 	}
-	actual, ok := leerActual(w, r)
+	actual, codigo, ok := leerActual(w, r)
 	if !ok {
 		return
 	}
 	ip := ClienteReal(r, s.opc.Confiables)
-	if !s.comprobarActual(w, r, ip, actual, nil) {
+	if !s.comprobarActual(w, r, ip, actual, s.conCodigo(r, ip, codigo, nil)) {
 		return
 	}
 	if err := s.quitarTOTP(); err != nil {
@@ -347,13 +361,13 @@ func (s *Servicio) quitarTOTPUI(w http.ResponseWriter, r *http.Request, _ *sesio
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// recuperacionUI crea 10 códigos de recuperación nuevos con la contraseña actual (los anteriores dejan de valer); sin
-// TOTP no sirven.
+// recuperacionUI crea 10 códigos de recuperación nuevos con la contraseña actual y un código (los anteriores dejan de
+// valer); sin TOTP no sirven.
 func (s *Servicio) recuperacionUI(w http.ResponseWriter, r *http.Request, _ *sesion) {
 	if !s.soloServidor(w, r) {
 		return
 	}
-	actual, ok := leerActual(w, r)
+	actual, codigo, ok := leerActual(w, r)
 	if !ok {
 		return
 	}
@@ -362,7 +376,7 @@ func (s *Servicio) recuperacionUI(w http.ResponseWriter, r *http.Request, _ *ses
 		return
 	}
 	ip := ClienteReal(r, s.opc.Confiables)
-	if !s.comprobarActual(w, r, ip, actual, nil) {
+	if !s.comprobarActual(w, r, ip, actual, s.conCodigo(r, ip, codigo, nil)) {
 		return
 	}
 	codigos, err := NuevosCodigosRecuperacion(s.opc.Datos)

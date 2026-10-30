@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"tramtai/internal/adaptadores"
 	"tramtai/internal/procesos"
@@ -32,6 +33,7 @@ func TestClienteReal(t *testing.T) {
 		{"[::ffff:10.0.0.1]:4000", "203.0.113.9", "203.0.113.9"},        // IPv4 dentro de IPv6
 		{"10.0.0.1:4000", "203.0.113.9:51234, 10.0.0.2", "203.0.113.9"}, // con puerto, como IIS ARR
 		{"10.0.0.1:4000", "[2001:db8::7]:51234", "2001:db8::7"},         // IPv6 con puerto
+		{"10.0.0.1:4000", "[2001:db8::7], 10.0.0.2", "2001:db8::7"},     // IPv6 entre corchetes, sin puerto
 	} {
 		r := httptest.NewRequest("GET", "/", nil)
 		r.RemoteAddr = c.remota
@@ -49,6 +51,52 @@ func TestClienteReal(t *testing.T) {
 	r.Header.Add("X-Forwarded-For", "10.0.0.2")
 	if a := ClienteReal(r, confiables); a.String() != "203.0.113.9" {
 		t.Errorf("varias cabeceras: %s", a)
+	}
+	// Forwarded, Via y X-Real-Ip no cambian el cliente: ni desde fuera ni desde un proxy de confianza (solo cuenta XFF).
+	for _, remota := range []string{"203.0.113.50:4000", "10.0.0.1:4000"} {
+		r := httptest.NewRequest("GET", "/", nil)
+		r.RemoteAddr = remota
+		r.Header.Set("Forwarded", "for=198.51.100.1")
+		r.Header.Set("Via", "1.1 198.51.100.1")
+		r.Header.Set("X-Real-Ip", "198.51.100.1")
+		if a := ClienteReal(r, confiables); a.String() != strings.Split(remota, ":")[0] {
+			t.Errorf("%s con Forwarded, Via y X-Real-Ip: %s", remota, a)
+		}
+	}
+}
+
+// TestCabecerasDeProxyNoSonLocales: por loopback, cualquiera de las cabeceras de un proxy o túnel (que traería peticiones
+// ajenas desde loopback) hace que la petición no sea de este equipo.
+func TestCabecerasDeProxyNoSonLocales(t *testing.T) {
+	r := httptest.NewRequest("GET", "/", nil)
+	r.RemoteAddr = "127.0.0.1:4000"
+	if !desdeEsteEquipo(r) {
+		t.Fatal("por loopback sin cabeceras es de este equipo")
+	}
+	for _, cabecera := range []string{"Forwarded", "X-Forwarded-For", "X-Forwarded-Host", "X-Real-Ip", "Via"} {
+		r := httptest.NewRequest("GET", "/", nil)
+		r.RemoteAddr = "127.0.0.1:4000"
+		r.Header.Set(cabecera, "203.0.113.5")
+		if desdeEsteEquipo(r) {
+			t.Errorf("por loopback con %s", cabecera)
+		}
+	}
+}
+
+// TestServidorHTTP: todos los oyentes del servicio (el público, el local y el de cada punto con puerto propio) usan el
+// mismo http.Server: plazo para las cabeceras (contra conexiones lentas), tope de su tamaño e inactividad, sin
+// WriteTimeout (los flujos SSE duran lo que el trabajo). Unas cabeceras de 128 KiB dan 431.
+func TestServidorHTTP(t *testing.T) {
+	srv := NuevoServidorHTTP(http.NotFoundHandler(), ContextoDeConexion)
+	if srv.ReadHeaderTimeout != 10*time.Second || srv.MaxHeaderBytes != 64<<10 || srv.IdleTimeout != 2*time.Minute || srv.WriteTimeout != 0 || srv.ConnContext == nil {
+		t.Fatalf("plazos: %+v", srv)
+	}
+	ts := httptest.NewUnstartedServer(nil)
+	ts.Config = srv
+	ts.Start()
+	defer ts.Close()
+	if r, _ := pedir(t, ts.URL, "GET", "/", "", "", "X-Relleno", strings.Repeat("a", 128<<10)); r.StatusCode != http.StatusRequestHeaderFieldsTooLarge {
+		t.Errorf("cabeceras de 128 KiB: %d", r.StatusCode)
 	}
 }
 
@@ -114,6 +162,7 @@ func TestProxyLoopbackNoEsLocal(t *testing.T) {
 	}{
 		{"oyente público, proxy sin cabeceras", ts.URL, nil, 401},
 		{"oyente público, proxy con X-Forwarded-For", ts.URL, []string{"X-Forwarded-For", "203.0.113.5"}, 401},
+		{"oyente público, proxy con Forwarded, Via y X-Real-Ip", ts.URL, []string{"Forwarded", "for=203.0.113.5", "Via", "1.1 proxy", "X-Real-Ip", "203.0.113.5"}, 401},
 		{"oyente local (CLI, terminal, app)", local, nil, 200},
 	} {
 		r, cuerpo := nuevoNavegador(t, c.base).pedir("GET", "/ui/sesion", "", c.cabeceras...)
@@ -143,6 +192,45 @@ func TestProxyLoopbackNoEsLocal(t *testing.T) {
 	}
 	if !frenado {
 		t.Error("punto con puerto propio: lo que llega del proxy de confianza quedó exento del freno de claves falsas")
+	}
+}
+
+// TestTokenServicioSoloDesdeEsteEquipo (R37): con el servicio expuesto, el token de servicio solo vale desde este
+// equipo. Quien lo lea (p. ej. un agente con permiso de lectura) no administra el servicio desde fuera ni pide un código
+// de entrada a la Web UI sin contraseña: por el proxy, con o sin cabeceras, 403; por el oyente local, como siempre.
+func TestTokenServicioSoloDesdeEsteEquipo(t *testing.T) {
+	s, ts, _ := entornoCon(t, "", "", adaptadores.Simulado{}, func(o *Opciones) {
+		o.Web = fstest.MapFS{"index.html": {Data: []byte("ui")}}
+		o.Confiables = []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}
+		o.Expuesto = true
+	})
+	if _, err := s.ActivarGlobal(); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		nombre, base string
+		cabeceras    []string
+		quiere       int
+	}{
+		{"proxy sin cabeceras", ts.URL, nil, 403},
+		{"proxy con X-Forwarded-For", ts.URL, []string{"X-Forwarded-For", "203.0.113.5"}, 403},
+		{"oyente local", s.BaseLocal(), nil, 200},
+	} {
+		for _, p := range []struct{ metodo, ruta, cuerpo string }{
+			{"GET", "/api/v1/servicio", ""},
+			{"POST", "/api/v1/servicio/sesiones", `{"instancia":"global"}`},
+			{"GET", "/api/v1/capacidades", ""}, // las rutas de un espacio con el token de servicio
+		} {
+			r, cuerpo := pedir(t, c.base, p.metodo, p.ruta, s.tokenAdmin, p.cuerpo, append([]string{"Tramtai-Instancia", "global"}, c.cabeceras...)...)
+			if r.StatusCode != c.quiere || c.quiere == 403 && !strings.Contains(cuerpo, "origen_no_permitido") {
+				t.Errorf("%s: %s %s %d %s, se esperaba %d", c.nombre, p.metodo, p.ruta, r.StatusCode, cuerpo, c.quiere)
+			}
+		}
+	}
+	// Sin exponer, nada cambia: con un proxy de confianza en este equipo, el token sigue valiendo por el oyente público.
+	s.opc.Expuesto = false
+	if r, cuerpo := pedir(t, ts.URL, "GET", "/api/v1/servicio", s.tokenAdmin, ""); r.StatusCode != 200 {
+		t.Errorf("sin exponer: %d %s", r.StatusCode, cuerpo)
 	}
 }
 

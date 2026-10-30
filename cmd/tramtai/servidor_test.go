@@ -214,6 +214,42 @@ func TestConversionElevadaEnServidor(t *testing.T) {
 	}
 }
 
+// TestEjecucionElevadaEnServidor (R36): en el modo servidor, como administrador, la CLI no ejecuta los CLI de los
+// agentes (comandos_agentes sale de una configuración que puede escribir la cuenta del servicio) ni el servicio en primer
+// plano: el diagnóstico, «ejecutar» sin el servicio y «servicio iniciar» lo rechazan y remiten al servicio.
+func TestEjecucionElevadaEnServidor(t *testing.T) {
+	simularServidor(t, true)
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	t.Setenv("ProgramData", t.TempDir()) // en Windows, la raíz del servidor; nunca la del equipo
+	// Un comando que no existe: si la CLI llegara a ejecutar el agente, no gasta nada.
+	global := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(global, []byte("comandos_agentes:\n  claude: "+filepath.ToSlash(filepath.Join(t.TempDir(), "no-existe"))+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
+	const aviso = "solo se ejecutan con la cuenta del servicio"
+	for _, args := range [][]string{{"agentes"}, {"agents"}, {"ejecutar", "--directo", "-a", "claude", "hola"}, {"ejecutar", "-a", "claude", "hola"}} {
+		if _, err := ejecutarServidor(t, "", args...); err == nil || !strings.Contains(err.Error(), aviso) {
+			t.Errorf("%v como administrador: %v", args, err)
+		}
+	}
+	anterior := dirDatos
+	dirDatos = func() (string, error) { return "", errors.New("parada de la prueba") } // si pasara el guard, no arranca nada
+	t.Cleanup(func() { dirDatos = anterior })
+	if err := iniciarServicio(&cobra.Command{}, "", false); err == nil || !strings.Contains(err.Error(), aviso) {
+		t.Errorf("servicio iniciar como administrador: %v", err)
+	}
+	esAdministrador = func() bool { return false }
+	if err := ejecucionLocalPermitida(); err != nil {
+		t.Errorf("sin ser administrador: %v", err)
+	}
+	t.Setenv("TRAMTAI_SERVIDOR", "")
+	esAdministrador = func() bool { return true }
+	if err := ejecucionLocalPermitida(); err != nil {
+		t.Errorf("fuera del modo servidor: %v", err)
+	}
+}
+
 // TestServidorInstalarConversor: --conversor (--converter) llega a Instalar con la ruta absoluta del paquete.
 func TestServidorInstalarConversor(t *testing.T) {
 	instalado, _ := simularServidor(t, true)

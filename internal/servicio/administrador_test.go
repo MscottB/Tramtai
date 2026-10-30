@@ -374,6 +374,9 @@ func TestContrasenaCambiaMientrasSeEntra(t *testing.T) {
 	hecho := make(chan int, 1)
 	go func() {
 		r, _ := n.acceder(contrasenaPrueba, "")
+		if r.Header.Get("Set-Cookie") != "" { // ni la cookie de una sesión que no vale
+			t.Errorf("el 401 lleva cookie: %q", r.Header.Get("Set-Cookie"))
+		}
 		hecho <- r.StatusCode
 	}()
 	for limite := time.Now().Add(10 * time.Second); s.frenos.enCola.Load() < 1; {
@@ -462,7 +465,14 @@ func TestActivarTOTPEnDosPasos(t *testing.T) {
 	if r, cuerpo := n.pedir("POST", "/ui/administrador/recuperacion", `{"actual":"no es la actual"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 {
 		t.Fatalf("regenerar sin la contraseña actual: %d %s", r.StatusCode, cuerpo)
 	}
-	if r, cuerpo := n.pedir("POST", "/ui/administrador/recuperacion", `{"actual":"`+contrasenaPrueba+`"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 200 || strings.Count(cuerpo, "-") != 10 {
+	// Con TOTP, regenerar y quitar piden además un código (de la app o de recuperación): una sesión robada con la
+	// contraseña no basta.
+	if r, cuerpo := n.pedir("POST", "/ui/administrador/recuperacion", `{"actual":"`+contrasenaPrueba+`"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 || !strings.Contains(cuerpo, "código") {
+		t.Fatalf("regenerar sin código: %d %s", r.StatusCode, cuerpo)
+	}
+	r, cuerpo = n.pedir("POST", "/ui/administrador/recuperacion", `{"actual":"`+contrasenaPrueba+`","codigo":"`+hecho.Codigos[8]+`"}`, "X-CSRF-Token", n.csrf)
+	var regenerados struct{ Codigos []string }
+	if r.StatusCode != 200 || json.Unmarshal([]byte(cuerpo), &regenerados) != nil || len(regenerados.Codigos) != 10 {
 		t.Fatalf("regenerar: %d %s", r.StatusCode, cuerpo)
 	}
 	if ok, _ := UsarCodigoRecuperacion(s.opc.Datos, hecho.Codigos[0]); ok {
@@ -477,13 +487,20 @@ func TestActivarTOTPEnDosPasos(t *testing.T) {
 	if r, cuerpo := n.pedir("POST", "/ui/administrador/totp", `{"actual":"`+contrasenaPrueba+`","codigo_actual":"`+siguiente+`","codigo":""}`, "X-CSRF-Token", n.csrf); r.StatusCode != 200 {
 		t.Fatalf("cambiar el TOTP con el código actual: %d %s", r.StatusCode, cuerpo)
 	}
+	s.frenos = nuevosFrenos() // los fallos de arriba son a propósito: que no lleguen a la espera
 	if r, cuerpo := n.pedir("DELETE", "/ui/administrador/totp", `{"actual":"no es la actual"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 {
 		t.Fatalf("quitar sin la contraseña actual: %d %s", r.StatusCode, cuerpo)
 	}
 	if v, _ := leerCredencial("TRAMTAI_TOTP"); v != nuevo.Secreto {
 		t.Fatal("sin la contraseña actual no se quita")
 	}
-	if r, cuerpo := n.pedir("DELETE", "/ui/administrador/totp", `{"actual":"`+contrasenaPrueba+`"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 204 {
+	if r, cuerpo := n.pedir("DELETE", "/ui/administrador/totp", `{"actual":"`+contrasenaPrueba+`"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 400 || !strings.Contains(cuerpo, "código") {
+		t.Fatalf("quitar sin código: %d %s", r.StatusCode, cuerpo)
+	}
+	if v, _ := leerCredencial("TRAMTAI_TOTP"); v != nuevo.Secreto {
+		t.Fatal("sin código no se quita")
+	}
+	if r, cuerpo := n.pedir("DELETE", "/ui/administrador/totp", `{"actual":"`+contrasenaPrueba+`","codigo":"`+regenerados.Codigos[0]+`"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 204 {
 		t.Fatalf("quitar: %d %s", r.StatusCode, cuerpo)
 	}
 	if v, _ := leerCredencial("TRAMTAI_TOTP"); v != "" {
@@ -492,6 +509,34 @@ func TestActivarTOTPEnDosPasos(t *testing.T) {
 	totpSoloCLI = true
 	if r, cuerpo := n.pedir("POST", "/ui/administrador/totp", `{"codigo":""}`, "X-CSRF-Token", n.csrf); r.StatusCode != 409 || !strings.Contains(cuerpo, "administrador totp activar") {
 		t.Fatalf("en Linux: %d %s", r.StatusCode, cuerpo)
+	}
+}
+
+// TestCuerpoUIAcotado: las rutas /ui/ leen como mucho 64 KiB de cuerpo, antes de los frenos y de la cola de argon2id:
+// entrar con una contraseña de 1 MB da 400 sin calcular nada.
+func TestCuerpoUIAcotado(t *testing.T) {
+	_, _, seguro := conAdministrador(t, "", "")
+	r, cuerpo := navegadorSeguro(t, seguro).acceder(strings.Repeat("a", 1<<20), "")
+	if r.StatusCode != 400 || !strings.Contains(cuerpo, "solicitud_invalida") {
+		t.Fatalf("1 MB en /ui/acceder: %d %.200s", r.StatusCode, cuerpo)
+	}
+}
+
+// TestCodigoActualEnFrenos: con TOTP, un código malo en Ajustes → Seguridad cuenta en los frenos como un intento de
+// entrada, aunque la contraseña sea buena: 5 dan la espera.
+func TestCodigoActualEnFrenos(t *testing.T) {
+	secreto, _ := totp.Generar()
+	_, _, seguro := conAdministrador(t, "", secreto)
+	n := navegadorSeguro(t, seguro)
+	codigo, _ := totp.Codigo(secreto, time.Now())
+	if r, cuerpo := n.acceder(contrasenaPrueba, codigo); r.StatusCode != 200 {
+		t.Fatalf("acceder: %d %s", r.StatusCode, cuerpo)
+	}
+	for i := range 6 {
+		quiere := map[bool]int{true: 400, false: 429}[i < 5]
+		if r, cuerpo := n.pedir("POST", "/ui/administrador/recuperacion", `{"actual":"`+contrasenaPrueba+`","codigo":"no-es-un-codigo"}`, "X-CSRF-Token", n.csrf); r.StatusCode != quiere {
+			t.Fatalf("código malo %d: %d %s, se esperaba %d", i+1, r.StatusCode, cuerpo, quiere)
+		}
 	}
 }
 
@@ -505,7 +550,8 @@ func TestQuitarTOTPConSuscripcionPersonal(t *testing.T) {
 	if r, cuerpo := n.acceder(contrasenaPrueba, codigo); r.StatusCode != 200 {
 		t.Fatalf("acceder: %d %s", r.StatusCode, cuerpo)
 	}
-	if r, cuerpo := n.pedir("DELETE", "/ui/administrador/totp", `{"actual":"`+contrasenaPrueba+`"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 409 || !strings.Contains(cuerpo, "suscripción personal") {
+	siguiente, _ := totp.Codigo(secreto, time.Now().Add(30*time.Second)) // el de la entrada ya está visto
+	if r, cuerpo := n.pedir("DELETE", "/ui/administrador/totp", `{"actual":"`+contrasenaPrueba+`","codigo":"`+siguiente+`"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 409 || !strings.Contains(cuerpo, "suscripción personal") {
 		t.Fatalf("Web UI: %d %s", r.StatusCode, cuerpo)
 	}
 	if r, cuerpo := admin(t, s, ts.URL, "DELETE", "/api/v1/servicio/totp", ""); r.StatusCode != 409 || !strings.Contains(cuerpo, "suscripción personal") {
@@ -580,6 +626,29 @@ func TestFrenoClavesFalsas(t *testing.T) {
 	}
 	if w := pedirDesde("203.0.113.9:4000", "/api/v1/ejecutar", buena); w.Code != 200 {
 		t.Fatalf("otra dirección con la buena: %d %s", w.Code, w.Body)
+	}
+}
+
+// TestClavesFalsasSaturado: con el contador de claves falsas lleno (p. ej. desde una /48 de IPv6), las direcciones sin
+// cuenta no esperan: el freno es contra el abuso y las claves son de 256 bits, así que falla abierto y las apps con su
+// clave siguen funcionando. El de la contraseña sí cierra (TestContadorSaturado).
+func TestClavesFalsasSaturado(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	global, _ := s.ActivarGlobal()
+	buena := claveDe(t, s, global)
+	ahora := time.Now()
+	for i := range maximoCuentas + 1 {
+		s.claves.fallo(netip.AddrFrom4([4]byte{10, byte(i >> 16), byte(i >> 8), byte(i)}), ahora)
+	}
+	for clave, quiere := range map[string]int{buena: 200, "falsa": 401} {
+		r := httptest.NewRequest("POST", "/api/v1/ejecutar", strings.NewReader(hola))
+		r.Host, r.RemoteAddr = "127.0.0.1", "198.51.100.20:4000"
+		r.Header.Set("Authorization", "Bearer "+clave)
+		w := httptest.NewRecorder()
+		s.ServeHTTP(w, r)
+		if w.Code != quiere {
+			t.Errorf("contador lleno, dirección nueva, clave %s: %d %s, se esperaba %d", clave, w.Code, w.Body, quiere)
+		}
 	}
 }
 

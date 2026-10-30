@@ -564,3 +564,37 @@ func TestSaludParaLaCLIAnterior(t *testing.T) {
 		t.Fatalf("desde otro equipo no hay identificador: %d %s", w.Code, w.Body)
 	}
 }
+
+// TestFlujoTerminaAlCerrarSesiones: un flujo SSE abierto con una sesión de la Web UI termina al cerrar todas las sesiones
+// (y al cambiar la contraseña, que sube la misma generación): la sesión se comprueba una vez, al abrirlo.
+func TestFlujoTerminaAlCerrarSesiones(t *testing.T) {
+	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{Demora: time.Minute})
+	global, _ := s.ActivarGlobal()
+	r, cuerpo := pedir(t, ts.URL, "POST", "/api/v1/trabajos", claveDe(t, s, global), hola)
+	inicio := strings.Index(cuerpo, "trabajo_")
+	if r.StatusCode >= 300 || inicio < 0 {
+		t.Fatalf("crear el trabajo: %d %s", r.StatusCode, cuerpo)
+	}
+	id := cuerpo[inicio : inicio+len("trabajo_")+24]
+	n := nuevoNavegador(t, ts.URL)
+	codigo, err := s.CodigoSesion("global")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r, cuerpo := n.pedir("GET", "/ui/entrar?codigo="+codigo, ""); r.StatusCode != http.StatusSeeOther {
+		t.Fatalf("entrar con el código: %d %s", r.StatusCode, cuerpo)
+	}
+	req, _ := http.NewRequestWithContext(t.Context(), "GET", ts.URL+"/api/v1/trabajos/"+id+"/eventos", nil)
+	resp, err := n.http.Do(req)
+	if err != nil || resp.StatusCode != 200 {
+		t.Fatalf("abrir el flujo: %v %v", err, resp)
+	}
+	terminado := make(chan struct{})
+	go func() { io.Copy(io.Discard, resp.Body); resp.Body.Close(); close(terminado) }()
+	s.cerrarSesiones()
+	select {
+	case <-terminado:
+	case <-time.After(5 * time.Second):
+		t.Fatal("el flujo sigue abierto tras cerrar todas las sesiones")
+	}
+}
