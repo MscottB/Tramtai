@@ -602,8 +602,8 @@ everyone) and the log notes the proxy’s IP instead of the client’s.
 
 Cloudflare Tunnel and Tailscale Serve or Funnel are in [tunnels](servidor/tuneles.md). With Cloudflare, HTTPS ends at
 Cloudflare, which sees the requests and the keys, and a response that hasn’t started within 125 s ends in error 524: use
-`stream: true` or the native API for long requests. Cloudflare Tunnel and Tailscale Serve: Pending: checked by hand
-before release.
+`stream: true` or the native API for long requests.
+Cloudflare Tunnel and Tailscale Serve: Pending: checked by hand before release.
 
 ### Your own certificate
 
