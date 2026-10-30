@@ -134,6 +134,23 @@ func (s *Servicio) cerrarSesiones() {
 	s.nuevaGeneracion()
 }
 
+// vigilarEnFondo mira datos/administrador cada pocos segundos hasta Cerrar: cambiar la contraseña desde la CLI cierra
+// las sesiones y termina sus flujos abiertos aunque no llegue ninguna petición con sesión.
+func (s *Servicio) vigilarEnFondo(ctx context.Context) {
+	reloj := time.NewTicker(2 * time.Second)
+	defer reloj.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-reloj.C:
+			s.muSesiones.Lock()
+			s.vigilarAdministrador(false)
+			s.muSesiones.Unlock()
+		}
+	}
+}
+
 // nuevaGeneracion sube la generación de las sesiones (dejan de valer) y termina sus flujos abiertos; se llama con
 // muSesiones tomado.
 func (s *Servicio) nuevaGeneracion() {

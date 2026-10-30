@@ -550,9 +550,15 @@ func TestQuitarTOTPConSuscripcionPersonal(t *testing.T) {
 	if r, cuerpo := n.acceder(contrasenaPrueba, codigo); r.StatusCode != 200 {
 		t.Fatalf("acceder: %d %s", r.StatusCode, cuerpo)
 	}
-	siguiente, _ := totp.Codigo(secreto, time.Now().Add(30*time.Second)) // el de la entrada ya está visto
-	if r, cuerpo := n.pedir("DELETE", "/ui/administrador/totp", `{"actual":"`+contrasenaPrueba+`","codigo":"`+siguiente+`"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 409 || !strings.Contains(cuerpo, "suscripción personal") {
+	codigos, err := NuevosCodigosRecuperacion(s.opc.Datos)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r, cuerpo := n.pedir("DELETE", "/ui/administrador/totp", `{"actual":"`+contrasenaPrueba+`","codigo":"`+codigos[0]+`"}`, "X-CSRF-Token", n.csrf); r.StatusCode != 409 || !strings.Contains(cuerpo, "suscripción personal") {
 		t.Fatalf("Web UI: %d %s", r.StatusCode, cuerpo)
+	}
+	if ok, _ := UsarCodigoRecuperacion(s.opc.Datos, codigos[0]); !ok {
+		t.Error("el 409 gastó el código de recuperación")
 	}
 	if r, cuerpo := admin(t, s, ts.URL, "DELETE", "/api/v1/servicio/totp", ""); r.StatusCode != 409 || !strings.Contains(cuerpo, "suscripción personal") {
 		t.Fatalf("API de administración: %d %s", r.StatusCode, cuerpo)

@@ -220,16 +220,25 @@ func (s *Servicio) fijarTOTP(secreto string) error {
 // con la que arrancó el servicio (s.opc.Config), y vale: la suscripción personal solo se activa con «agentes suscripcion
 // --personal», que reinicia el servicio (cambiarAutenticacion no la activa con el servicio expuesto).
 func (s *Servicio) quitarTOTP() error {
+	if err := s.puedeQuitarTOTP(); err != nil {
+		return err
+	}
+	if err := borrarCredencial(nombreTOTP); err != nil {
+		return err
+	}
+	return BorrarCodigosRecuperacion(s.opc.Datos)
+}
+
+// puedeQuitarTOTP es el 409 de quitar el TOTP (suscripción personal, o Linux): la Web UI lo mira antes de pedir la
+// contraseña y el código, para no gastar un código de recuperación en algo que no se va a hacer.
+func (s *Servicio) puedeQuitarTOTP() error {
 	if err := ComprobarQuitarTOTP(s.opc.Config); err != nil {
 		return err
 	}
 	if totpSoloCLI {
 		return errTOTPSoloCLI()
 	}
-	if err := borrarCredencial(nombreTOTP); err != nil {
-		return err
-	}
-	return BorrarCodigosRecuperacion(s.opc.Datos)
+	return nil
 }
 
 // hayTOTP dice si el administrador tiene TOTP; si el almacén no responde, cuenta como sí (para no entrar sin él).

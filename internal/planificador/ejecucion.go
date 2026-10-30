@@ -370,19 +370,14 @@ func (p *Planificador) intentar(ctxTrabajo context.Context, id string, t nucleo.
 	// Primero el punto de acceso, después el adaptador y al final la plaza de la instancia: quien espera a su
 	// agente no ocupa plaza, así que otro trabajo listo de otro agente puede empezar. Un canal atiende a sus
 	// esperas por orden de llegada, así que cada agente conserva el orden de la cola. La suscripción se mira al llegarle
-	// el turno, y otra vez con la plaza tomada: si el agente pasó a ella mientras esperaba, su límite también cuenta.
-	var suscripcion chan struct{}
+	// el turno: si el agente pasó a ella mientras esperaba su API o su agente, su límite también cuenta. No se vuelve a
+	// mirar con la plaza tomada: esperar la suscripción con la plaza podría bloquear a otro que la espera con la
+	// suscripción (shortcut: si pasa a suscripción mientras espera la plaza, ese trabajo aún va sin su límite).
 	for _, siguiente := range []func() chan struct{}{
 		func() chan struct{} { return p.semaforoPunto(t.PuntoAcceso) },
 		func() chan struct{} { return p.semaforos.agente[c.agente] },
-		func() chan struct{} { suscripcion = p.deSuscripcion(c.agente); return suscripcion },
+		func() chan struct{} { return p.deSuscripcion(c.agente) },
 		func() chan struct{} { return p.ranuras },
-		func() chan struct{} {
-			if suscripcion != nil {
-				return nil
-			}
-			return p.deSuscripcion(c.agente)
-		},
 	} {
 		semaforo := siguiente()
 		if semaforo == nil {

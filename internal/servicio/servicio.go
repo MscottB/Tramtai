@@ -146,7 +146,8 @@ type Servicio struct {
 	// finGeneracion se cancela al subir la generación: termina los flujos abiertos con sesiones de la anterior.
 	finGeneracion    context.Context
 	cerrarGeneracion context.CancelFunc
-	ultimoPasoTOTP   int64 // el último paso TOTP aceptado, que no se reutiliza (en memoria: un reinicio lo olvida)
+	pararVigilancia  context.CancelFunc // para vigilarEnFondo al cerrar
+	ultimoPasoTOTP   int64              // el último paso TOTP aceptado, que no se reutiliza (en memoria: un reinicio lo olvida)
 	// lineaAdministrador es la última línea de datos/administrador vista: si cambia, se cierran todas las sesiones.
 	lineaAdministrador   string
 	lecturaAdministrador time.Time // la última vez que se leyó: como mucho una vez por segundo
@@ -227,6 +228,9 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 		s.localSrv = NuevoServidorHTTP(s, contextoOyenteLocal)
 		go s.localSrv.Serve(s.local)
 	}
+	var vigilancia context.Context
+	vigilancia, s.pararVigilancia = context.WithCancel(context.Background())
+	go s.vigilarEnFondo(vigilancia)
 	return s, nil
 }
 
@@ -439,6 +443,7 @@ func (s *Servicio) Drenar() {
 // Cerrar detiene todos los puntos de acceso y todas las instancias. Lo que estaba en cola se reanuda al volver
 // a activar la instancia.
 func (s *Servicio) Cerrar() {
+	s.pararVigilancia()
 	if s.conversor != nil {
 		s.conversor.Cerrar() // uv no sobrevive al servicio
 	}

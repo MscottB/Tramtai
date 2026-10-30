@@ -9,7 +9,7 @@ que falla y después el arreglo).
 
 | # | Punto | Estado tras los arreglos | Pruebas |
 |---|---|---|---|
-| 1 | Cabeceras reenviadas falsificadas | Cubierto (antes, hueco M6) | `red_test.go`: TestClienteReal (también `Forwarded`, `Via`, `X-Real-Ip` y `[v6]` sin puerto), TestCabecerasDeProxyNoSonLocales, TestEsHTTPS, TestProxyLoopbackNoEsLocal, TestOyenteLocalNoCreeCabeceras, TestTokenServicioSoloDesdeEsteEquipo; `administrador_test.go`: TestFrenoNoSeEvadeConXFF, TestAdminTOTP; `admin_claves_test.go`: TestAdminClavesSoloLocal; `origen_test.go`; job Proxies |
+| 1 | Cabeceras reenviadas falsificadas | Cubierto (antes, hueco M6) | `red_test.go`: TestClienteReal (también `Forwarded`, `Via`, `X-Real-Ip` y `[v6]` sin puerto), TestCabecerasDeProxyNoSonLocales, TestEsHTTPS, TestProxyLoopbackNoEsLocal, TestOyenteLocalNoCreeCabeceras, TestTokenServicioSoloDesdeEsteEquipo; `administrador_test.go`: TestFrenoNoSeEvadeConXFF, TestAdminTOTP; `admin_claves_test.go`: TestAdminClavesSoloLocal; `origen_test.go`; job Proxies (`probar-proxies.sh`, que ahora crea la cuenta `tramtai` y arranca el servicio con ella) |
 | 2 | Host y Origin | Cubierto | `api_test.go` TestSeguridad, `web_test.go` TestWebUI, `cmd/tramtai/servicio_test.go` TestDominiosEnHosts y TestDominiosNormalizados |
 | 3 | Fuerza bruta y frenos | Cubierto (antes, fallo I3) | `administrador_test.go`: TestFrenoPorIP, TestFrenoPorIPUnitario, TestFrenoGlobal, TestFrenoGlobalConocidas, TestFrenoAccederALaVez, TestColaArgonLlena, TestContadorSaturado, TestFrenoClavesFalsas, TestClavesFalsasSaturado, TestClavesFalsasDesdeEsteEquipo, TestCodigoActualEnFrenos |
 | 4 | TLS y ACME (`HostPolicy`, caché) | Cubierto | `tls_test.go`: TestTLSRechaza12, TestTLSPoscuantico, TestTLSRecarga, TestLetsEncryptHostPolicy, TestLetsEncryptCarpetaExistente, TestLetsEncryptECDSAConTLS13, TestPuntoConPuertoPropioHablaTLS, TestHSTS, TestConfigTLSModos; `tls_pebble_test.go` |
@@ -32,9 +32,12 @@ Arreglo (R36): `ejecucionLocalPermitida`, junto a `conversionLocalPermitida` (R2
 modo servidor y con privilegios, el diagnóstico de `agentes`, la ejecución directa de `ejecutar` e `iniciarServicio`
 (después de `ejecutarComoServicio`, para que el servicio de Windows siga arrancando; bajo systemd el proceso es la
 cuenta `tramtai`) lo rechazan y remiten al servicio o a `tramtai-servidor reiniciar`. `ejecutar` por el servicio, que es
-lo que usan los jobs «Servidor (Linux)» y «Servidor (Windows Server)» y `probar-servidor.sh`/`.ps1`, sigue igual.
+lo que usan los jobs «Servidor (Linux)» y «Servidor (Windows Server)» y `probar-servidor.sh`/`.ps1`, sigue igual. El
+job «Proxies» (`scripts/servidor/probar-proxies.sh`) arrancaba el servicio como root en su contenedor: ahora crea la
+cuenta `tramtai` como la instalación (`useradd --system`), comprueba que las órdenes de administrador le dejan `datos/` a
+su nombre (`AjustarDueno`) y arranca el servicio con ella (`docker compose exec -u tramtai`).
 Prueba: TestEjecucionElevadaEnServidor (`agentes`, `agents`, `ejecutar --directo`, `ejecutar` sin servicio y
-`servicio iniciar`).
+`servicio iniciar`) y el job «Proxies».
 
 **I2. El token de servicio valía desde fuera, y un agente con permiso de lectura puede leerlo.**
 Con el token, `POST /api/v1/servicio/sesiones` daba un código de entrada a la Web UI sin contraseña ni TOTP.
@@ -55,10 +58,11 @@ el abuso, así que falla abierto; el freno de la contraseña sigue fallando cerr
 **M1. Quitar el TOTP y regenerar los códigos pedían solo la contraseña.** Además, al activarlo, el fallo del código
 actual se contaba fuera del hueco de argon2id. Arreglo: `conCodigo`, el `siVale` de `comprobarActual`, comprueba el
 segundo factor dentro del hueco y cuenta el fallo con él tomado. Lo usan activar (paso 1), quitar y regenerar; el cuerpo
-de quitar y regenerar lleva `codigo`. En Ajustes → Seguridad, con TOTP, la Web UI pide el código después de la
+de quitar y regenerar lleva `codigo`. Quitar mira antes si se puede (`puedeQuitarTOTP`: suscripción personal o Linux),
+para no gastar el código en un 409. En Ajustes → Seguridad, con TOTP, la Web UI pide el código después de la
 contraseña (`seguridad.codigoActual` y `seguridad.codigoActualTexto` en `es.ts` y `en.ts`). Pruebas:
 TestActivarTOTPEnDosPasos (sin código, 400; con uno de recuperación, vale), TestCodigoActualEnFrenos (5 códigos malos
-dan 429) y TestQuitarTOTPConSuscripcionPersonal.
+dan 429) y TestQuitarTOTPConSuscripcionPersonal (el código de recuperación sigue valiendo tras el 409).
 
 **M2. `/ui/acceder` y `/ui/sesion` leían hasta 16 MB antes de los frenos.** Arreglo: `rutasUI` limita el cuerpo a
 64 KiB con `http.MaxBytesReader`. Prueba: TestCuerpoUIAcotado (1 MB en `/ui/acceder` da 400 sin calcular argon2id).
@@ -66,7 +70,9 @@ dan 429) y TestQuitarTOTPConSuscripcionPersonal.
 **M3. Los flujos SSE sobrevivían a «Cerrar todas las sesiones» y al cambio de contraseña.** Arreglo: un contexto por
 generación de sesiones (`finGeneracion`), que se cancela al subirla (`nuevaGeneracion`, desde `cerrarSesiones` y
 `vigilarAdministrador`). Cada sesión guarda el de su generación y `enrutar` lo enlaza a la petición con
-`context.AfterFunc`. Prueba: TestFlujoTerminaAlCerrarSesiones.
+`context.AfterFunc`. Para que un cambio de contraseña desde la CLI, que escribe `datos/administrador` directamente,
+corte los flujos sin esperar a otra petición con sesión, `vigilarEnFondo` mira el archivo cada 2 segundos hasta
+`Cerrar`. Prueba: TestFlujoTerminaAlCerrarSesiones (cerrar las sesiones y cambiar la contraseña desde fuera).
 
 **M4. `/run/tramtai/puerto` se abría con `os.Open`, que sigue enlaces y se queda colgado con un FIFO.** Arreglo:
 `leerPublico` abre con `O_RDONLY|O_NONBLOCK|O_NOFOLLOW` y exige un archivo normal. Prueba (Linux, en Docker):
@@ -86,8 +92,11 @@ TestClienteReal con las tres cabeceras y un caso más en TestProxyLoopbackNoEsLo
 - **La cookie de una sesión muerta.** Si la contraseña cambiaba mientras se comprobaba, `accederUI` respondía 401 con el
   `Set-Cookie` de esa sesión. Arreglo: se quita esa cabecera antes de responder. Prueba: TestContrasenaCambiaMientrasSeEntra.
 - **`deSuscripcion` se miraba al empezar a esperar.** Una petición que ya esperaba su turno cuando el agente pasaba a
-  suscripción no tomaba su semáforo. Arreglo: en `intentar`, la suscripción se mira al llegarle el turno y otra vez con
-  la plaza tomada. Prueba: TestSuscripcionMientrasEspera.
+  suscripción no tomaba su semáforo. Arreglo: en `intentar`, la suscripción se mira al llegarle el turno (tras el de su
+  API y el de su agente). No se vuelve a mirar con la plaza de la instancia tomada, porque esperar así la suscripción
+  podía bloquear a dos trabajos hasta agotar el tiempo en cola. Queda un exceso pasajero solo si el cambio llega
+  mientras el trabajo espera la plaza. Prueba: TestSuscripcionMientrasEspera (esperando su API y esperando la plaza,
+  sin bloqueo).
 - **`[v6]` sin puerto en `X-Forwarded-For` cortaba la cadena** en `ClienteReal`, y todos los clientes de ese proxy
   compartían freno. Arreglo: se quitan los corchetes antes de leer la dirección. Prueba: el caso nuevo de TestClienteReal.
 
@@ -96,4 +105,5 @@ TestClienteReal con las tres cabeceras y un caso más en TestProxyLoopbackNoEsLo
 Codex se ejecuta con `-s read-only`, que, según su documentación, lee todo lo que lee la cuenta del servicio. Tras I2,
 el token de servicio ya no sirve desde fuera, pero una clave de una API que use Codex aún puede pedirle que lea
 `$CREDENTIALS_DIRECTORY` (las claves de los proveedores y `TRAMTAI_TOTP`) y `datos/administrador`. La redacción de
-secretos de la salida no detiene una codificación como base64. Lo documenta la guía del servidor (Tarea 19).
+secretos de la salida no detiene una codificación como base64. Lo documentará la Tarea 19, en la guía del servidor y en
+el modelo de amenazas de `docs/arquitectura.md`.

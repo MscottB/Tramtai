@@ -349,6 +349,10 @@ func (s *Servicio) quitarTOTPUI(w http.ResponseWriter, r *http.Request, _ *sesio
 	if !ok {
 		return
 	}
+	if err := s.puedeQuitarTOTP(); err != nil { // antes de gastar el código
+		api.EscribirError(w, r, err)
+		return
+	}
 	ip := ClienteReal(r, s.opc.Confiables)
 	if !s.comprobarActual(w, r, ip, actual, s.conCodigo(r, ip, codigo, nil)) {
 		return

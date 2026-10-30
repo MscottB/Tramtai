@@ -566,8 +566,22 @@ func TestSaludParaLaCLIAnterior(t *testing.T) {
 }
 
 // TestFlujoTerminaAlCerrarSesiones: un flujo SSE abierto con una sesión de la Web UI termina al cerrar todas las sesiones
-// (y al cambiar la contraseña, que sube la misma generación): la sesión se comprueba una vez, al abrirlo.
+// y al cambiar la contraseña, también desde la CLI (que escribe datos/administrador directamente, sin ninguna petición
+// con sesión después): la sesión se comprueba una vez, al abrirlo.
 func TestFlujoTerminaAlCerrarSesiones(t *testing.T) {
+	for nombre, cerrar := range map[string]func(*testing.T, *Servicio){
+		"cerrar todas las sesiones": func(_ *testing.T, s *Servicio) { s.cerrarSesiones() },
+		"contraseña desde la CLI": func(t *testing.T, s *Servicio) {
+			if err := FijarContrasena(s.opc.Datos, "otra contraseña bastante larga"); err != nil {
+				t.Fatal(err)
+			}
+		},
+	} {
+		t.Run(nombre, func(t *testing.T) { flujoTerminaAlCerrar(t, cerrar) })
+	}
+}
+
+func flujoTerminaAlCerrar(t *testing.T, cerrar func(*testing.T, *Servicio)) {
 	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{Demora: time.Minute})
 	global, _ := s.ActivarGlobal()
 	r, cuerpo := pedir(t, ts.URL, "POST", "/api/v1/trabajos", claveDe(t, s, global), hola)
@@ -591,10 +605,10 @@ func TestFlujoTerminaAlCerrarSesiones(t *testing.T) {
 	}
 	terminado := make(chan struct{})
 	go func() { io.Copy(io.Discard, resp.Body); resp.Body.Close(); close(terminado) }()
-	s.cerrarSesiones()
+	cerrar(t, s)
 	select {
 	case <-terminado:
 	case <-time.After(5 * time.Second):
-		t.Fatal("el flujo sigue abierto tras cerrar todas las sesiones")
+		t.Fatal("el flujo sigue abierto")
 	}
 }
