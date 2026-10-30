@@ -257,6 +257,9 @@ test('«Así se ve» dice que las capturas tienen datos de ejemplo y aclara su p
   assert.match(nota, /sample data/)
   for (const [, puerto] of html.matchAll(/127\.0\.0\.1:(\d+)/g)) assert.equal(puerto, '17373', 'los ejemplos usan el puerto por defecto')
   assert.match(nota, /17373/)
+  // Las capturas salen de su propio puerto (PUERTO_CAPTURAS de capturas.mjs), para no tocar el Tramtai de quien las saca.
+  const puerto = readFileSync(new URL('./capturas.mjs', import.meta.url), 'utf8').match(/const PUERTO_CAPTURAS = (\d+)/)?.[1]
+  assert.ok(puerto && puerto !== '17373' && nota.includes(puerto), `la nota dice el puerto de las capturas (${puerto})`)
 })
 
 test('las capturas son WebP con tamaño declarado, srcset y carga diferida', () => {
@@ -454,7 +457,7 @@ test('la portada enseña el recorrido guiado y deja Espacios a la vista', () => 
   assert.match(funciones, /Controla<\/span><span lang="en">Control<\/span><\/h3>\s*<ol>\s*<li class="parada">\s*<h4 class="parada-titulo"><span lang="es">Espacios de trabajo<\/span>/, 'Espacios abre la línea Controla')
 })
 
-// v0.56: la portada presenta la terminal con texto (sus capturas llegan en la v0.58).
+// v0.56: la portada presenta la terminal; en la v0.58, con sus capturas (Inicio y Mis APIs, claro y oscuro, es y en).
 test('la novedad «Todo desde la terminal» dice cómo usarla y lleva a su Ayuda, en los dos idiomas', () => {
   const terminal = seccion('terminal')
   assert.ok(terminal, 'falta <section id="terminal">')
@@ -465,7 +468,23 @@ test('la novedad «Todo desde la terminal» dice cómo usarla y lleva a su Ayuda
   assert.match(codigo, /^tramtai terminal<\/pre>$/m)
   for (const c of codigo.match(/<span class="c"[^>]*>/g) ?? []) assert.match(c, /lang="(es|en)"/)
   assert.match(terminal, /href="ayuda\/empezar\.html#s-soloterminal"/)
-  assert.doesNotMatch(terminal, /<img /, 'sin capturas de la terminal hasta la v0.58')
+  const imgs = terminal.match(/<img [^>]*>/g) ?? []
+  assert.equal(imgs.length, 8, 'Inicio y Mis APIs, en claro y oscuro y en los dos idiomas')
+  for (const p of ['inicio', 'apis'])
+    for (const tema of ['claro', 'oscuro'])
+      for (const idioma of ['es', 'en']) {
+        const base = `capturas/terminal-${p}-${tema}-${idioma}`
+        assert.ok(imgs.some((img) => new RegExp(`class="solo-${tema}" lang="${idioma}" src="${base}-1440\\.webp" srcset="${base}-960\\.webp 960w, ${base}-1440\\.webp 1440w" sizes="[^"]+" width="\\d+" height="\\d+" loading="lazy" decoding="async" alt="[^"]+"`).test(img)), `${p}, ${tema}, ${idioma}`)
+      }
+})
+
+test('la portada presenta el modo servidor, que es otro entorno, y el aviso con los cinco riesgos', () => {
+  const servidor = seccion('servidor')
+  for (const t of ['Nuevo en la v0.58', 'New in v0.58', 'otro entorno', 'separate environment', 'HTTPS', 'href="servidor.html"'])
+    assert.ok(servidor.includes(t), `falta «${t}»`)
+  const aviso = seccion('aviso')
+  assert.equal((aviso.match(/<li>/g) ?? []).length, 5, 'los cinco riesgos')
+  assert.match(aviso, /<!-- comun:riesgos -->/, 'el aviso sale de riesgos.* (npm run sitio)')
 })
 
 test('Funciones tiene la parada de la terminal, que lleva a la novedad', () => {

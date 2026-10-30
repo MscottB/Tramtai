@@ -122,6 +122,11 @@ section { padding: 72px 0; }
   :root:not([data-tema="claro"]) .solo-oscuro { display: block; }
   :root:not([data-tema="claro"]) .solo-claro { display: none; }
 }
+/* La terminal de la portada: Inicio y Mis APIs, una junto a otra si caben. */
+.terminal-capturas { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); margin-top: 32px; }
+/* El aviso: los cinco riesgos, con aire entre uno y otro. */
+.riesgos { max-width: 72ch; padding-left: 1.4em; }
+.riesgos li + li { margin-top: 8px; }
 .cabeza { max-width: 44em; margin-bottom: 36px; }
 .cabeza.centrada { margin-left: auto; margin-right: auto; text-align: center; }
 .cabeza p { margin-top: 12px; font-size: 1.05rem; }

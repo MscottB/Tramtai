@@ -72,7 +72,25 @@ Los avisos de Detener y Salir se muestran dentro de la ventana, con el estilo de
 
 ### Arranque con el sistema
 
-Activado en **Ajustes** o con `tramtai servicio autoarranque activar`, Tramtai se registra solo para tu usuario y, al iniciar sesión, arranca la app de escritorio con `--oculto`: inicia el servicio y queda en la bandeja sin abrir ninguna ventana ni terminal. Se quita con `tramtai servicio autoarranque desactivar`. Necesita la app de escritorio junto a `tramtai`.
+Hay tres formas de arrancar Tramtai:
+
+| Forma | Quién la arranca | Cuenta | Datos | Ventana y bandeja |
+|---|---|---|---|---|
+| **La app en la bandeja** | el inicio de sesión | la tuya | tu carpeta de Tramtai | sí |
+| **Solo el servicio** | el inicio de sesión | la tuya | tu carpeta de Tramtai | no |
+| **Servicio del sistema** | el arranque del equipo | `tramtai` o `NT SERVICE\Tramtai` | `/var/lib/tramtai` o `%ProgramData%\Tramtai` | no |
+
+Las dos primeras se eligen en **Ajustes → Arranque con el sistema** («No arrancar», «La app en la bandeja» o «Solo el
+servicio») o con `tramtai servicio autoarranque activar --modo app|servicio`, y se registran solo para tu usuario. Con la
+app, al iniciar sesión arranca la app de escritorio con `--oculto`: inicia el servicio y queda en la bandeja sin abrir
+ninguna ventana. Con «Solo el servicio» arranca el servicio en segundo plano, sin ventana ni bandeja (en Windows,
+`tramtai-escritorio.exe --solo-servicio`; en macOS y Linux, `tramtai servicio iniciar -d`). Se quita con
+`tramtai servicio autoarranque desactivar`.
+
+La tercera es el **modo servidor**: arranca con el equipo, sin que nadie inicie sesión, y es **otro entorno**, con sus
+propias APIs y claves (ver [dos entornos](#dos-entornos)). No se instala desde la Web UI, porque necesita ser
+administrador: `tramtai servidor instalar` en Linux con systemd o Windows Server, como explica la
+[guía del servidor](servidor.md). macOS no tiene servicio del sistema.
 
 | Sistema | Dónde se registra |
 |---|---|
@@ -101,6 +119,48 @@ Cada hora, el servicio pregunta a GitHub cuál es la última versión publicada 
 - **Historial:** «Vaciar historial» en la Web UI, o `DELETE /api/v1/trabajos`, borra las peticiones terminadas del espacio con sus eventos y las cargas que ya no usa ninguno. Lo que está en curso se conserva.
 - **APIs por aplicación:** una a una en Mis APIs o con `tramtai acceso eliminar`.
 - **Ajustes → Borrar datos** hace ambas cosas para el espacio actual. La configuración y las claves de proveedor guardadas no se tocan.
+
+## Modo servidor
+
+Un Tramtai del sistema para Linux con systemd y Windows Server: arranca con el equipo, con su cuenta, sus datos y su
+puerto, y se abre desde otros equipos solo por HTTPS (detrás de un proxy, con un certificado propio o con Let’s Encrypt)
+y con la contraseña del administrador. Se administra en el propio servidor con `tramtai-servidor <orden>` (con `sudo` en
+Linux; en Windows, desde una consola de administrador), que equivale a `tramtai --servidor <orden>` con el programa del
+servidor:
+
+```sh
+sudo tramtai-servidor estado                      # en marcha, versión, HTTPS y avisos
+sudo tramtai-servidor registro -f                 # el registro del servicio
+sudo tramtai-servidor reiniciar                   # aplica config.yaml, dejando terminar las peticiones
+sudo tramtai-servidor administrador contraseña    # la contraseña de la Web UI remota
+sudo tramtai-servidor claves guardar ANTHROPIC_API_KEY
+sudo tramtai-servidor                             # la terminal del servidor
+```
+
+En la Web UI del servidor no están el arranque con el sistema ni «Instalar ahora»; en su lugar están **Ajustes →
+Servidor** (cómo se llega al servidor, solo para leer) y **Ajustes → Seguridad** (contraseña, TOTP, códigos de
+recuperación y sesiones). En la terminal, la tecla `W` abre su Web UI: con navegador en el equipo, ya dentro; sin él
+(SSH), enseña la dirección y el código o, si hay administrador, la dirección pública. Todo lo demás (instalar, proxies,
+claves, suscripción personal, actualizar y qué hacer si algo falla) está en la [guía del servidor](servidor.md).
+
+## Dos entornos
+
+Tu Tramtai y el del servidor son **entornos distintos**: cada uno con sus espacios, APIs, claves, sesiones de los CLI,
+historial, ajustes y aceptación de los términos. Nada pasa de uno a otro, aunque estén en el mismo equipo.
+
+| | Tu Tramtai | El del servidor |
+|---|---|---|
+| Arranca | Al iniciar sesión o cuando lo abres | Con el equipo |
+| Cuenta | La tuya | `tramtai` o `NT SERVICE\Tramtai` |
+| Datos | [Tu carpeta de Tramtai](inicio.md#configuración) | `/var/lib/tramtai` o `%ProgramData%\Tramtai` |
+| Puerto | 17373 por defecto | 17373, o el siguiente libre si el tuyo lo ocupa |
+| CLI | `tramtai …` | `tramtai-servidor …` o `tramtai --servidor …` |
+
+- **La marca:** la cabecera de la Web UI y la línea de estado de la terminal dicen «Servidor» o «Este equipo», y Acerca
+  de enseña el entorno, la cuenta y la carpeta.
+- **La CLI:** con `--servidor`, cada salida que crea o cambia algo empieza por «Servidor:».
+- **El aviso cruzado:** si en tu equipo también corre el del sistema, la app, la terminal y `tramtai servicio estado`
+  dicen «Hay otro Tramtai, del sistema, en el puerto X: es otro entorno, con sus propias APIs y claves».
 
 ## Comandos equivalentes
 

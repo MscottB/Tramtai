@@ -2,6 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://mscottb.github.io/Tramtai/</loc></url>
   <url><loc>https://mscottb.github.io/Tramtai/desarrolladores.html</loc></url>
+  <url><loc>https://mscottb.github.io/Tramtai/servidor.html</loc></url>
   <url><loc>https://mscottb.github.io/Tramtai/ayuda/</loc></url>
   <url><loc>https://mscottb.github.io/Tramtai/ayuda/empezar.html</loc></url>
   <url><loc>https://mscottb.github.io/Tramtai/ayuda/agentes.html</loc></url>
@@ -16,6 +17,8 @@
   <url><loc>https://mscottb.github.io/Tramtai/ayuda/espacios.html</loc></url>
   <url><loc>https://mscottb.github.io/Tramtai/ayuda/claves.html</loc></url>
   <url><loc>https://mscottb.github.io/Tramtai/ayuda/ajustes.html</loc></url>
+  <url><loc>https://mscottb.github.io/Tramtai/ayuda/servidor.html</loc></url>
+  <url><loc>https://mscottb.github.io/Tramtai/ayuda/entornos.html</loc></url>
   <url><loc>https://mscottb.github.io/Tramtai/ayuda/problemas.html</loc></url>
   <url><loc>https://mscottb.github.io/Tramtai/ayuda/conceptos.html</loc></url>
   <url><loc>https://mscottb.github.io/Tramtai/ayuda/preguntas.html</loc></url>

@@ -19,7 +19,8 @@ var Ficha = adaptadores.Ficha{
 	VariablesClave:  []string{"OPENAI_API_KEY", "CODEX_API_KEY"},
 	Comando:         "codex", Concurrencia: 1, PermitidoEnApps: true,
 	URLInstalacion: "https://developers.openai.com/codex/cli",
-	InicioSesion:   []string{"login", "--device-auth"}, URLTerminos: "https://openai.com/policies/row-terms-of-use/",
+	// La página de políticas y no la de un solo país: OpenAI tiene términos distintos para Europa y para el resto del mundo.
+	InicioSesion: []string{"login", "--device-auth"}, URLTerminos: "https://openai.com/policies/",
 	Crear: func(c *configuracion.Configuracion) adaptadores.Adaptador {
 		return Codex{Programa: c.Texto("comandos_agentes.codex"), Autenticacion: adaptadores.NuevoModo(c.Texto("adaptadores.codex.autenticacion"))}
 	},

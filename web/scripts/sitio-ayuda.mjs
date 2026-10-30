@@ -7,7 +7,7 @@ import es from '../src/idiomas/es.ts'
 import en from '../src/idiomas/en.ts'
 import { temas } from '../src/ayuda/indice.ts'
 import { ejemplos } from '../src/ejemplos.ts'
-import { PAGINAS_FIJAS, generar, rellenar } from './sitio.ts'
+import { PAGINAS_FIJAS, generar, rellenar, rellenarMarkdown } from './sitio.ts'
 import { medidas } from './capturas-lista.ts'
 
 const sitio = new URL('../../site/', import.meta.url)
@@ -23,10 +23,15 @@ function ejemplosDe(b, lengua) {
 
 const archivos = generar({ temas, es, en, ejemplos: ejemplosDe,
   capturas: new Map(capturas.map((a) => [a, medidas(readFileSync(new URL(a, origen)))])) })
-// La portada y la guía son escritas a mano: solo se les ponen al día la cabeza, la barra y el pie.
+// La portada y las guías son escritas a mano: solo se les ponen al día la cabeza, la barra, el pie y el aviso.
 for (const p of PAGINAS_FIJAS) {
   const ruta = new URL(p.archivo, sitio)
-  writeFileSync(ruta, rellenar(readFileSync(ruta, 'utf8'), p))
+  writeFileSync(ruta, rellenar(readFileSync(ruta, 'utf8'), p, { es, en }))
+}
+// El aviso de los cinco riesgos del README y de la guía del servidor sale de los mismos textos (riesgos.*).
+for (const md of ['../../README.md', '../../docs/servidor.md']) {
+  const ruta = new URL(md, import.meta.url)
+  writeFileSync(ruta, rellenarMarkdown(readFileSync(ruta, 'utf8'), es, en))
 }
 // Se borra lo generado antes, para que un tema o una captura que ya no existen no queden publicados.
 rmSync(new URL('ayuda/', sitio), { recursive: true, force: true })

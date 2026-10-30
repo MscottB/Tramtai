@@ -20,8 +20,8 @@ function* cadenas(v: unknown): Generator<string> {
   else if (v && typeof v === 'object') for (const x of Object.values(v)) yield* cadenas(x)
 }
 
-test('los 16 temas están en es y en con los mismos bloques', () => {
-  assert.equal(ayuda.es.length, 16)
+test('los 18 temas están en es y en con los mismos bloques', () => {
+  assert.equal(ayuda.es.length, 18)
   assert.deepEqual(ayuda.en.map((t) => t.id), ayuda.es.map((t) => t.id))
   ayuda.es.forEach((t, i) => assert.deepEqual(ayuda.en[i].bloques.map((b) => b.tipo), t.bloques.map((b) => b.tipo), t.id))
 })

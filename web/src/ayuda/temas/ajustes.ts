@@ -9,9 +9,10 @@ export const ajustes: Tema = {
   terminal: 'ayuda.ajustes.terminal',
   paginaApp: 'configuracion',
   conDiagrama: false,
-  relacionados: ['empezar', 'historial', 'archivos'],
+  relacionados: ['empezar', 'historial', 'archivos', 'entornos'],
   bloques: [
     { tipo: 'pasos', pasos: ['ayuda.ajustes.paso1', 'ayuda.ajustes.paso2', 'ayuda.ajustes.paso3'] },
+    { tipo: 'captura', id: 'arranque', alt: 'ayuda.ajustes.capturaArranque' },
     {
       tipo: 'recorrido',
       pasos: [
@@ -24,6 +25,7 @@ export const ajustes: Tema = {
     {
       tipo: 'preguntas',
       preguntas: [
+        { id: 'formas-arrancar', pregunta: 'ayuda.ajustes.pArranque', respuesta: 'ayuda.ajustes.rArranque', tema: 'entornos' },
         { id: 'al-actualizar', pregunta: 'ayuda.ajustes.pActualizar', respuesta: 'ayuda.ajustes.rActualizar' },
         { id: 'actualizar-otros', pregunta: 'ayuda.ajustes.pOtros', respuesta: 'ayuda.ajustes.rOtros' },
         { id: 'buscar-version', pregunta: 'ayuda.ajustes.pBuscar', respuesta: 'ayuda.ajustes.rBuscar' },
@@ -32,7 +34,7 @@ export const ajustes: Tema = {
         { id: 'volver-version', pregunta: 'ayuda.ajustes.pVolver', respuesta: 'ayuda.ajustes.rVolver' },
         { id: 'cuanto-se-guarda', pregunta: 'ayuda.ajustes.pRetencion', respuesta: 'ayuda.ajustes.rRetencion' },
         { id: 'dos-pestanas', pregunta: 'ayuda.ajustes.pPestanas', respuesta: 'ayuda.ajustes.rPestanas', tema: 'espacios' },
-        { id: 'entrar-servidor', pregunta: 'ayuda.ajustes.pSeguridad', respuesta: 'ayuda.ajustes.rSeguridad' },
+        { id: 'entrar-servidor', pregunta: 'ayuda.ajustes.pSeguridad', respuesta: 'ayuda.ajustes.rSeguridad', tema: 'servidor' },
       ],
     },
     { tipo: 'ir', pagina: 'configuracion' },

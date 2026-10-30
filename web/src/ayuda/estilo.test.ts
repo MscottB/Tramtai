@@ -111,8 +111,22 @@ test('relacionados, errores e ids son válidos', () => {
   }
 })
 
-test('están los 16 temas y sus relacionados existen', () => {
-  assert.equal(temas.length, 16)
+// v0.58: «Servidor» lleva el aviso con los cinco riesgos de riesgos.* (los del servidor), sin copiarlos; «Dos entornos»
+// compara los dos Tramtai en una tabla, y Ajustes cuenta las tres formas de arrancar.
+test('Servidor tiene el aviso con riesgos.1 a riesgos.5, Dos entornos su tabla y Ajustes las tres formas de arrancar', () => {
+  const aviso = temaPorId('servidor')?.bloques.find((b) => b.tipo === 'pasos' && b.titulo === 'ayuda.servidor.aviso')
+  assert.ok(aviso?.tipo === 'pasos', 'falta la sección Aviso en Servidor')
+  assert.deepEqual(aviso.pasos, ['riesgos.1', 'riesgos.2', 'riesgos.3', 'riesgos.4', 'riesgos.5'])
+  assert.ok(temaPorId('entornos')?.bloques.some((b) => b.tipo === 'tabla'), 'Dos entornos sin tabla')
+  for (const textos of [es, en] as Record<string, string>[]) {
+    const ajustes = temaPorId('ajustes')!.bloques.flatMap((b) => (b.tipo === 'pasos' ? b.pasos : b.tipo === 'preguntas' ? b.preguntas.map((p) => p.respuesta) : []))
+      .map((c) => textos[c]).join(' ')
+    for (const forma of [textos['arranque.app'], textos['arranque.servicio'], 'tramtai-servidor instalar']) assert.ok(ajustes.includes(forma), forma)
+  }
+})
+
+test('están los 18 temas y sus relacionados existen', () => {
+  assert.equal(temas.length, 18)
   for (const tema of temas) for (const r of tema.relacionados) assert.ok(temaPorId(r), `${tema.id}: relacionado ${r} no existe`)
 })
 

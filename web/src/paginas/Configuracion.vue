@@ -12,7 +12,7 @@
          dejar fuera a quien lo hace). -->
     <template v-if="servidor && pestana === 'servidor'">
       <div class="text-caption texto-suave">{{ t('servidor.texto') }}</div>
-      <q-card>
+      <q-card data-captura="servidor">
         <q-card-section>
           <h2 class="titulo-seccion">{{ t('servidor.titulo') }}</h2>
           <div v-if="!estadoServidor" class="texto-suave text-body2 q-mt-sm" role="status">{{ t('comun.cargando') }}</div>
@@ -35,7 +35,7 @@
     </template>
     <template v-if="servidor && pestana === 'seguridad'">
       <div class="text-caption texto-suave">{{ t('config.avisoSeguridad') }}</div>
-      <AjustesSeguridad />
+      <AjustesSeguridad data-captura="seguridad" />
     </template>
     <div v-show="pestana === 'espacio'" class="text-caption texto-suave">{{ sesion?.ambito === 'proyecto' ? t('config.avisoProyecto') : t('config.avisoGlobal') }}
       {{ t('config.comoGuarda') }}</div>
@@ -133,7 +133,7 @@
 
     <div class="row q-col-gutter-md">
       <div v-if="conArranque(sesion)" v-show="pestana === 'tramtai'" class="col-12">
-        <q-card>
+        <q-card data-captura="arranque">
           <q-card-section>
             <h2 id="titulo-arranque" class="titulo-seccion">{{ t('arranque.titulo', { sistema }) }}</h2>
             <div class="texto-suave text-body2 q-mt-xs">{{ t('arranque.texto', { sistema }) }}</div>

@@ -24,14 +24,37 @@ const REPO = 'https://github.com/MscottB/Tramtai'
 
 // Lugar dice dónde está una página: rel lleva de ella a la raíz del sitio y ruta es su dirección desde la raíz (null en
 // la 404, que no tiene una propia).
-type Actual = 'inicio' | 'ayuda' | 'desarrolladores' | ''
+type Actual = 'inicio' | 'ayuda' | 'desarrolladores' | 'servidor' | ''
 interface Lugar { rel: string; ruta: string | null; actual: Actual }
 
 // PAGINAS_FIJAS son las páginas escritas a mano; sitio-ayuda.mjs les pone al día las zonas comunes con rellenar.
 export const PAGINAS_FIJAS: (Lugar & { archivo: string })[] = [
   { archivo: 'index.html', rel: '', ruta: '', actual: 'inicio' },
   { archivo: 'desarrolladores.html', rel: '', ruta: 'desarrolladores.html', actual: 'desarrolladores' },
+  { archivo: 'servidor.html', rel: '', ruta: 'servidor.html', actual: 'servidor' },
 ]
+
+// riesgos son los cinco riesgos de los términos (spec §10), los de riesgos.* de los catálogos: el mismo texto que
+// terminos.Riesgos en Go. El sitio, el README y la guía del servidor los toman de aquí al generar, nunca copiados a mano.
+// Sin el modo servidor (lo que lee cualquiera), el 3 y el 4 llevan su variante «Si usas el modo servidor…».
+export function riesgos(textos: Textos, servidor: boolean): string[] {
+  return [1, 2, 3, 4, 5].map((n) => textos[!servidor && (n === 3 || n === 4) ? `riesgos.${n}.sinServidor` : `riesgos.${n}`])
+}
+
+// listaRiesgos es el aviso de una página del sitio, en los dos idiomas.
+function listaRiesgos(es: Textos, en: Textos, servidor: boolean): string {
+  const [rEs, rEn] = [riesgos(es, servidor), riesgos(en, servidor)]
+  return `<ol class="riesgos">${rEs.map((r, i) => `\n  <li>${bilingue(r, rEn[i])}</li>`).join('')}\n</ol>`
+}
+
+// rellenarMarkdown pone al día las zonas del aviso de un Markdown (<!-- riesgos:es --> … <!-- /riesgos:es -->, y
+// riesgos-servidor con los del servidor): el README y docs/servidor.md, que npm run sitio también escribe.
+export function rellenarMarkdown(md: string, es: Textos, en: Textos): string {
+  return md.replace(/<!-- (riesgos(?:-servidor)?):(es|en) -->[\s\S]*?<!-- \/\1:\2 -->/g, (_, zona: string, idioma: string) => {
+    const lista = riesgos(idioma === 'es' ? es : en, zona === 'riesgos-servidor').map((r, i) => `${i + 1}. ${r}`).join('\n')
+    return `<!-- ${zona}:${idioma} -->\n${lista}\n<!-- /${zona}:${idioma} -->`
+  })
+}
 
 // PRIMERO aplica el tema y el idioma guardados antes de pintar (sitio.js hace el resto con defer). La clase js deja al
 // CSS esconder el menú tras su botón solo si hay JavaScript que lo abra.
@@ -121,6 +144,7 @@ export function pie(rel: string): string {
       <a href="${rel}ayuda/empezar.html">${bilingue('Primeros pasos', 'Getting started')}</a>
       <a href="${rel}ayuda/">${bilingue('Ayuda', 'Help')}</a>
       <a href="${rel}desarrolladores.html">${bilingue('Desarrolladores', 'Developers')}</a>
+      <a href="${rel}servidor.html">${bilingue('Modo servidor', 'Server mode')}</a>
       <a href="${REPO}">GitHub</a>
       <a href="${REPO}/releases">${bilingue('Versiones', 'Releases')}</a>
       <a href="${REPO}/blob/main/LICENSE.md">${bilingue('Licencia', 'License')}</a>
@@ -137,14 +161,21 @@ function desescapar(s: string): string {
 }
 
 // rellenar pone al día las zonas comunes (<!-- comun:x --> … <!-- /comun:x -->) de una página escrita a mano, con su
-// título y su descripción.
-export function rellenar(html: string, l: Lugar): string {
+// título y su descripción. El aviso de los riesgos (comun:riesgos y comun:riesgos-servidor) solo va donde la página lo
+// pide, con los textos de los catálogos.
+export function rellenar(html: string, l: Lugar, textos: { es: Textos; en: Textos }): string {
   const titulo = desescapar(html.match(/<title[^>]*>([^<]*)<\/title>/)?.[1] ?? 'Tramtai')
   const descripcion = desescapar(html.match(/<meta name="description" content="([^"]*)">/)?.[1] ?? '')
   const zonas: Record<string, string> = { cabeza: cabeza(l, titulo, descripcion), cabecera: cabecera(l.rel, l.actual), pie: pie(l.rel) }
-  for (const [zona, contenido] of Object.entries(zonas)) {
+  const opcionales: Record<string, string> = {
+    riesgos: listaRiesgos(textos.es, textos.en, false), 'riesgos-servidor': listaRiesgos(textos.es, textos.en, true),
+  }
+  for (const [zona, contenido] of [...Object.entries(zonas), ...Object.entries(opcionales)]) {
     const re = new RegExp(`<!-- comun:${zona} -->[\\s\\S]*?<!-- /comun:${zona} -->`)
-    if (!re.test(html)) throw new Error(`falta la zona comun:${zona}`)
+    if (!re.test(html)) {
+      if (zona in opcionales) continue
+      throw new Error(`falta la zona comun:${zona}`)
+    }
     html = html.replace(re, () => `<!-- comun:${zona} -->\n${contenido}\n<!-- /comun:${zona} -->`)
   }
   return html
@@ -345,6 +376,7 @@ ${tarjetas(f, f.temas)}
 <h2>${bilingue('Más documentación', 'More documentation')}</h2>
 <ul>
   <li><a href="../desarrolladores.html">${bilingue('Guía del desarrollador', 'Developer guide')}</a></li>
+  <li><a href="../servidor.html">${bilingue('Guía del servidor', 'Server guide')}</a></li>
   <li><a href="https://github.com/MscottB/Tramtai/blob/main/docs/inicio.md">${bilingue('Documentación completa en GitHub', 'Full documentation on GitHub')}</a></li>
 </ul>
 </article>`
@@ -369,7 +401,7 @@ function pagina404(): string {
 }
 
 function sitemap(f: Fuente): string {
-  const urls = ['', 'desarrolladores.html', 'ayuda/', ...f.temas.map((t) => `ayuda/${t.id}.html`)]
+  const urls = ['', 'desarrolladores.html', 'servidor.html', 'ayuda/', ...f.temas.map((t) => `ayuda/${t.id}.html`)]
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map((u) => `  <url><loc>${URL_SITIO}${u}</loc></url>`).join('\n')}
