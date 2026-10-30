@@ -88,3 +88,67 @@ func TestSimultaneasServidor(t *testing.T) {
 		alm.Cerrar()
 	}
 }
+
+// TestSuscripcionMientrasEspera: una petición que ya esperaba cuando el agente pasa a suscripción (el turno de su API o
+// la plaza de la instancia) no se ejecuta a la vez que otra que entró después del cambio (suscripcion_simultaneas 1), y
+// ninguna de las dos se queda bloqueada esperando a la otra.
+func TestSuscripcionMientrasEspera(t *testing.T) {
+	for _, caso := range []struct {
+		nombre   string
+		trabajos int
+		puntos   map[string]int
+	}{{"espera el turno de su API", 4, map[string]int{"facturas": 1}}, {"espera la plaza de la instancia", 1, nil}} {
+		t.Run(caso.nombre, func(t *testing.T) { suscripcionMientrasEspera(t, caso.trabajos, caso.puntos) })
+	}
+}
+
+func suscripcionMientrasEspera(t *testing.T, trabajos int, puntos map[string]int) {
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	c := configuracion.Resolver(agentes.Internos(), configuracion.Capa{Origen: configuracion.OrigenGlobal, Valores: map[string]any{
+		"concurrencia_servicio.adaptadores.claude": 2}})
+	_, limites := agentes.Registro(c)
+	alm, err := persistencia.Abrir(filepath.Join(t.TempDir(), "instancia.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer alm.Cerrar()
+	claude := aLaVez{adaptadores.NuevoModo(adaptadores.AutenticacionClaveAPI), new(atomic.Int32), new(atomic.Int32)}
+	registro := map[string]adaptadores.Adaptador{"claude": claude, "codex": adaptadores.Simulado{Demora: 200 * time.Millisecond}}
+	p := planificador.Nuevo(alm, registro, planificador.NuevosSemaforos(limites).ConSuscripcion(agentes.Simultaneas(c)),
+		planificador.Opciones{Instancia: "global", MaximoCola: 20, MaximoTrabajos: trabajos, TiempoMaximoCola: time.Hour,
+			TiempoLimitePredeterminado: 30 * time.Second, Secretos: func() []string { return nil }})
+	p.LimitarPuntos(puntos)
+	if err := p.Iniciar(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer p.Detener()
+	enviar := func(agente, api string) string {
+		tr, _, err := p.EnviarPorPunto(context.Background(), nucleo.SolicitudEjecucion{Agente: agente,
+			Mensajes: []nucleo.Mensaje{{Rol: "usuario", Contenido: "hola"}}}, "", api)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return tr.ID
+	}
+	esperar := func(id string, estado nucleo.Estado) {
+		for limite := time.Now().Add(10 * time.Second); ; time.Sleep(5 * time.Millisecond) {
+			if tr, err := alm.Obtener(context.Background(), id); err == nil && tr.Estado == estado {
+				return
+			} else if time.Now().After(limite) {
+				t.Fatalf("%s: %s %v, se esperaba %s", id, tr.Estado, err, estado)
+			}
+		}
+	}
+	esperar(enviar("codex", "facturas"), nucleo.Ejecutando) // ocupa el turno de facturas o la plaza
+	espera := enviar("claude", "facturas")
+	esperar(espera, nucleo.EsperandoAgente)
+	if err := adaptadores.CambiarAutenticacion(registro, "claude", adaptadores.AutenticacionSuscripcion); err != nil {
+		t.Fatal(err)
+	}
+	despues := enviar("claude", "correo")
+	esperar(despues, nucleo.Completado)
+	esperar(espera, nucleo.Completado)
+	if n := claude.maximo.Load(); n != 1 {
+		t.Errorf("con la suscripción, %d a la vez", n)
+	}
+}

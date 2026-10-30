@@ -371,6 +371,13 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	if servicioWindows, err := ejecutarComoServicio(cmd, archivo); servicioWindows {
 		return err
 	}
+	// Después del SCM: el servicio de Windows (que vuelve a pasar por aquí desde su manejador) sigue arrancando; bajo
+	// systemd el proceso es la cuenta tramtai, no root.
+	if !comoServicioWindows() {
+		if err := ejecucionLocalPermitida(); err != nil {
+			return err
+		}
+	}
 	c, err := configuracion.CargarConfiguracion("", agentes.Internos())
 	if err != nil {
 		return err
@@ -458,9 +465,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	for _, err := range sv.Restaurar() {
 		fmt.Fprintln(salida, idioma.T("no se pudo restaurar un espacio:"), nucleo.MensajeDe(err))
 	}
-	// Sin WriteTimeout global: los flujos SSE duran lo que el trabajo; cada escritura lleva su propio plazo.
-	srv := &http.Server{Handler: sv, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 64 << 10,
-		ConnContext: servicio.ContextoDeConexion}
+	srv := servicio.NuevoServidorHTTP(sv, servicio.ContextoDeConexion)
 	if err := sv.EscribirDescriptor(); err != nil {
 		oyente.Close()
 		sv.Cerrar()

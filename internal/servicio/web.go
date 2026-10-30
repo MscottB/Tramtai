@@ -1,6 +1,7 @@
 package servicio
 
 import (
+	"context"
 	"crypto/subtle"
 	"net/http"
 	"slices"
@@ -28,6 +29,8 @@ type sesion struct {
 	// generacion es la del servicio al crearla: si el servicio la sube (cambiar la contraseña, «Cerrar todas las
 	// sesiones»), la sesión deja de valer.
 	generacion uint64
+	// fin se cancela cuando sube la generación de la sesión: termina sus flujos abiertos.
+	fin context.Context
 	// totpPendiente es el secreto TOTP que Ajustes → Seguridad enseñó y aún no se confirmó con un código.
 	totpPendiente string
 }
@@ -96,7 +99,7 @@ func (s *Servicio) vigilarAdministrador(ya bool) {
 	s.lecturaAdministrador = ahora
 	if linea := leerAdministrador(s.opc.Datos); linea != s.lineaAdministrador {
 		s.lineaAdministrador = linea
-		s.generacion++
+		s.nuevaGeneracion()
 	}
 }
 
@@ -110,7 +113,7 @@ func (s *Servicio) crearSesion(w http.ResponseWriter, r *http.Request, instancia
 			delete(s.sesiones, clave)
 		}
 	}
-	ses.generacion = s.generacion
+	ses.generacion, ses.fin = s.generacion, s.finGeneracion
 	s.sesiones[id] = ses
 	s.muSesiones.Unlock()
 	if instancia != "" {
@@ -128,7 +131,32 @@ func (s *Servicio) cerrarSesiones() {
 	defer s.muSesiones.Unlock()
 	s.lecturaAdministrador = time.Now()
 	s.lineaAdministrador = leerAdministrador(s.opc.Datos)
+	s.nuevaGeneracion()
+}
+
+// vigilarEnFondo mira datos/administrador cada pocos segundos hasta Cerrar: cambiar la contraseña desde la CLI cierra
+// las sesiones y termina sus flujos abiertos aunque no llegue ninguna petición con sesión.
+func (s *Servicio) vigilarEnFondo(ctx context.Context) {
+	reloj := time.NewTicker(2 * time.Second)
+	defer reloj.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-reloj.C:
+			s.muSesiones.Lock()
+			s.vigilarAdministrador(false)
+			s.muSesiones.Unlock()
+		}
+	}
+}
+
+// nuevaGeneracion sube la generación de las sesiones (dejan de valer) y termina sus flujos abiertos; se llama con
+// muSesiones tomado.
+func (s *Servicio) nuevaGeneracion() {
 	s.generacion++
+	s.cerrarGeneracion()
+	s.finGeneracion, s.cerrarGeneracion = context.WithCancel(context.Background())
 }
 
 // CodigoSesion crea un código de un solo uso, válido un minuto, que abre la Web UI de una instancia sin escribir
@@ -317,8 +345,10 @@ var rutasDeUI = []rutaUI{
 	{http.MethodGet, "/ui/servidor", conSesion, (*Servicio).servidorUI},
 }
 
-// rutasUI busca la ruta en rutasDeUI, comprueba su permiso y la atiende.
+// rutasUI busca la ruta en rutasDeUI, comprueba su permiso y la atiende. Sus cuerpos son JSON pequeños: como mucho 64 KiB,
+// para que entrar con contraseña no lea 16 MB antes de los frenos y de la cola de argon2id.
 func (s *Servicio) rutasUI(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
 	for _, ruta := range rutasDeUI {
 		if ruta.metodo != r.Method || ruta.ruta != r.URL.Path {
 			continue

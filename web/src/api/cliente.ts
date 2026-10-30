@@ -121,11 +121,12 @@ export const api = {
   acceder: (contrasena: string, codigo: string) => pedir<Sesion>('POST', '/ui/acceder', { contrasena, codigo }).then(recordar),
   cambiarContrasena: (actual: string, nueva: string) => pedir<void>('POST', '/ui/administrador/contrasena', { actual, nueva }).then(() => (sesion.value = null)),
   // El TOTP se activa en dos pasos: nuevoTOTP (con la contraseña actual) enseña el secreto y confirmarTOTP lo guarda con
-  // un código de la app. Quitarlo y regenerar los códigos de recuperación también piden la contraseña actual.
+  // un código de la app. Quitarlo y regenerar los códigos de recuperación piden la contraseña actual y un código (de la
+  // app o de recuperación).
   nuevoTOTP: (actual: string) => pedir<SecretoTOTP>('POST', '/ui/administrador/totp', { actual, codigo: '' }),
   confirmarTOTP: (codigo: string) => pedir<CodigosRecuperacion>('POST', '/ui/administrador/totp', { codigo }).then((r) => r.codigos),
-  quitarTOTP: (actual: string) => pedir<void>('DELETE', '/ui/administrador/totp', { actual }),
-  codigosRecuperacion: (actual: string) => pedir<CodigosRecuperacion>('POST', '/ui/administrador/recuperacion', { actual }).then((r) => r.codigos),
+  quitarTOTP: (actual: string, codigo: string) => pedir<void>('DELETE', '/ui/administrador/totp', { actual, codigo }),
+  codigosRecuperacion: (actual: string, codigo: string) => pedir<CodigosRecuperacion>('POST', '/ui/administrador/recuperacion', { actual, codigo }).then((r) => r.codigos),
   cerrarSesiones: () => pedir<void>('POST', '/ui/sesiones/cerrar').then(() => (sesion.value = null)),
   detenerServicio: () => pedir<unknown>('POST', '/ui/servicio/detener'),
   fijarPuerto: (puerto: number, automatico: boolean) => pedir<Sesion>('POST', '/ui/servicio/puerto', { puerto, automatico }).then(recordar),

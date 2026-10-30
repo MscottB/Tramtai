@@ -519,6 +519,8 @@ const en: Textos = {
   'seguridad.secreto': 'Add this secret to your authenticator app (or open the link in it) and type the code it shows. Nothing changes until you confirm it.',
   'seguridad.enlace': 'Open in the app',
   'seguridad.codigo': '6-digit code',
+  'seguridad.codigoActual': 'Code from the app or a recovery code',
+  'seguridad.codigoActualTexto': 'Also type a code from your authenticator app or a recovery code.',
   'seguridad.confirmar': 'Confirm',
   'seguridad.activada': 'Two-step verification is on',
   'seguridad.quitada': 'Two-step verification is off',

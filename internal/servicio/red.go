@@ -16,8 +16,9 @@ func ClienteReal(r *http.Request, confiables []netip.Prefix) netip.Addr {
 	}
 	saltos := lista(r, "X-Forwarded-For")
 	for i := len(saltos) - 1; i >= 0; i-- {
-		salto, err := netip.ParseAddr(saltos[i])
-		if err != nil { // con puerto (ip:puerto o [v6]:puerto), como lo añade IIS ARR
+		// La dirección sola (también [v6] sin puerto) o con puerto (ip:puerto o [v6]:puerto), como la añade IIS ARR.
+		salto, err := netip.ParseAddr(strings.TrimSuffix(strings.TrimPrefix(saltos[i], "["), "]"))
+		if err != nil {
 			var conPuerto netip.AddrPort
 			conPuerto, err = netip.ParseAddrPort(saltos[i])
 			salto = conPuerto.Addr()

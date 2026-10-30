@@ -76,6 +76,10 @@ func TestSinServidorNoTocaElDelSistema(t *testing.T) {
 
 	t.Run("servidor", func(t *testing.T) {
 		t.Setenv("TRAMTAI_SERVIDOR", "1")
+		// Como la cuenta del servicio: como administrador no arrancaría (R36), y las pruebas pueden correr elevadas.
+		a := esAdministrador
+		esAdministrador = func() bool { return false }
+		t.Cleanup(func() { esAdministrador = a })
 		// La configuración global de la prueba, no la del equipo (que saldría de RaizUsuario y la fijaría como la del servidor).
 		t.Setenv("TRAMTAI_CONFIG_GLOBAL", filepath.Join(t.TempDir(), "config.yaml"))
 		cmd := &cobra.Command{}

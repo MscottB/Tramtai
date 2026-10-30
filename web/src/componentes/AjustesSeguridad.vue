@@ -122,20 +122,23 @@ const cambiarContrasena = () => hacer('contrasena', async () => {
   avisar(t('seguridad.cambiada'))
 })
 
-// pedirContrasena pide otra vez la contraseña del administrador antes de un cambio de seguridad; null si se cancela.
-function pedirContrasena(): Promise<string | null> {
+// pedir pide un dato antes de un cambio de seguridad (la contraseña o el código); null si se cancela.
+function pedir(texto: string, tipo: 'password' | 'text', etiqueta: string): Promise<string | null> {
   return new Promise((resolver) => {
-    $q.dialog({ title: t('seguridad.confirmarTitulo'), message: t('seguridad.confirmarTexto'), cancel: true,
-      prompt: { model: '', type: 'password', label: t('seguridad.actual'), isValid: (v: string) => v.length > 0 } })
+    $q.dialog({ title: t('seguridad.confirmarTitulo'), message: texto, cancel: true,
+      prompt: { model: '', type: tipo, label: etiqueta, isValid: (v: string) => v.trim().length > 0 } })
       .onOk((v: string) => resolver(v))
       .onDismiss(() => resolver(null))
   })
 }
 
-// conContrasena hace la acción con la contraseña actual, si no se cancela.
-const conContrasena = (que: typeof ocupado.value, accion: (actual: string) => Promise<void>) => async () => {
-  const actual = await pedirContrasena()
-  if (actual !== null) await hacer(que, () => accion(actual))
+// conContrasena hace la acción con la contraseña actual y, con TOTP, un código de la app o de recuperación (sin él, una
+// sesión robada con la contraseña no quitaría el segundo factor); nada si se cancela.
+const conContrasena = (que: typeof ocupado.value, accion: (actual: string, codigo: string) => Promise<void>) => async () => {
+  const actual = await pedir(t('seguridad.confirmarTexto'), 'password', t('seguridad.actual'))
+  if (actual === null) return
+  const codigo = conTOTP.value ? await pedir(t('seguridad.codigoActualTexto'), 'text', t('seguridad.codigoActual')) : ''
+  if (codigo !== null) await hacer(que, () => accion(actual, codigo))
 }
 
 const empezarTOTP = conContrasena('totp', async (actual) => {
@@ -150,15 +153,15 @@ const confirmar = () => hacer('totp', async () => {
   avisar(t('seguridad.activada'))
 })
 
-const quitarTOTP = conContrasena('totp', async (actual) => {
-  await api.quitarTOTP(actual)
+const quitarTOTP = conContrasena('totp', async (actual, codigo) => {
+  await api.quitarTOTP(actual, codigo)
   conTOTP.value = false
   codigos.value = []
   avisar(t('seguridad.quitada'))
 })
 
-const regenerar = conContrasena('codigos', async (actual) => {
-  codigos.value = await api.codigosRecuperacion(actual)
+const regenerar = conContrasena('codigos', async (actual, codigo) => {
+  codigos.value = await api.codigosRecuperacion(actual, codigo)
 })
 
 const cerrarSesiones = () => hacer('sesiones', async () => {

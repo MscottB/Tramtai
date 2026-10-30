@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -30,6 +31,9 @@ import (
 func comandoAgentes() *cobra.Command {
 	grupo := &cobra.Command{Use: "agentes", Aliases: []string{"agents"}, Short: idioma.T("Diagnostica cada agente: versión, autenticación y términos (sin consumir cuota)"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			if err := ejecucionLocalPermitida(); err != nil { // el diagnóstico ejecuta cada CLI (--version)
+				return err
+			}
 			c, err := cargarConfiguracion()
 			if err != nil {
 				return err
@@ -208,7 +212,20 @@ func conversionLocalPermitida(archivos []string) error {
 	return nucleo.NuevoError(nucleo.CodigoConversorNoDisponible, idioma.T("en el servidor, la conversión la hace el servicio: inícialo y repite"))
 }
 
+// ejecucionLocalPermitida falla si este proceso, administrador en el modo servidor, iba a ejecutar él mismo los CLI de
+// los agentes o el servicio: comandos_agentes sale de una configuración que puede escribir la cuenta del servicio, y
+// ejecutarlos así les daría los permisos del administrador (R36). Eso lo hace el servicio, con su cuenta.
+func ejecucionLocalPermitida() error {
+	if !carpetas.Servidor() || !esAdministrador() {
+		return nil
+	}
+	return errors.New(idioma.T("en el servidor, los agentes y el servicio solo se ejecutan con la cuenta del servicio, no como administrador: usa el servicio (si no está en marcha, inícialo con tramtai-servidor reiniciar o, en Windows, con el administrador de servicios)"))
+}
+
 func ejecutar(cmd *cobra.Command, c *configuracion.Configuracion, s nucleo.SolicitudEjecucion, archivos []string) error {
+	if err := ejecucionLocalPermitida(); err != nil {
+		return err
+	}
 	if err := conversionLocalPermitida(archivos); err != nil {
 		return err
 	}

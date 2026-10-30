@@ -32,6 +32,9 @@ curl_cliente() { docker compose exec -T cliente curl -sS --cacert /tls/fullchain
 registro() { en_tramtai cat /var/lib/tramtai/datos/servicio.log; }
 
 docker compose up -d --quiet-pull tramtai cliente
+# La cuenta del servicio, como la crea «tramtai-servidor instalar»: las órdenes de administrador (root) le dejan los
+# datos a su nombre y el servicio corre con ella (como root no arranca, R36).
+en_tramtai useradd --system --home /var/lib/tramtai --shell /usr/sbin/nologin tramtai
 # Lo de la parte de Tramtai de los ejemplos: el dominio y el proxy en este mismo equipo.
 en_tramtai sh -c 'mkdir -p /var/lib/tramtai && cat >/var/lib/tramtai/config.yaml' <<'FIN'
 servicio:
@@ -43,7 +46,9 @@ FIN
 contrasena=contrasena-de-prueba-del-ci
 en_tramtai /opt/tramtai/tramtai terminos aceptar >/dev/null
 printf '%s\n%s\n' "$contrasena" "$contrasena" | en_tramtai /opt/tramtai/tramtai administrador contraseña >/dev/null 2>&1
-docker compose exec -d tramtai /opt/tramtai/tramtai servicio iniciar --registro /var/lib/tramtai/datos/servicio.log
+dueno=$(en_tramtai stat -c %U /var/lib/tramtai/datos)
+[ "$dueno" = tramtai ] || falla "tras las órdenes de administrador, datos/ es de $dueno y no de la cuenta del servicio"
+docker compose exec -d -u tramtai tramtai /opt/tramtai/tramtai servicio iniciar --registro /var/lib/tramtai/datos/servicio.log
 activo() { en_tramtai /opt/tramtai/tramtai servicio estado 2>/dev/null | grep -q "^servicio activo"; }
 for _ in $(seq 30); do
 	activo && break
