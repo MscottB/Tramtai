@@ -230,7 +230,7 @@ func Nuevo(opc Opciones) (*Servicio, error) {
 	}
 	var vigilancia context.Context
 	vigilancia, s.pararVigilancia = context.WithCancel(context.Background())
-	go s.vigilarEnFondo(vigilancia)
+	s.fondo.Go(func() { s.vigilarEnFondo(vigilancia) }) // Cerrar la para y la espera
 	return s, nil
 }
 
