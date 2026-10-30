@@ -150,8 +150,11 @@ sudo tramtai-servidor abrir               # la Web UI del servidor, ya dentro, c
   `servicio.*` se cambian ahí y se aplican con `tramtai-servidor reiniciar`. No se editan desde la Web UI: un cambio de
   red mal hecho te dejaría fuera.
 - **Los agentes los ejecuta el servicio, con su cuenta.** Por eso, en el servidor, se rechazan `sudo tramtai-servidor
-  agentes`, `ejecutar` sin el servicio y `servicio iniciar` en primer plano: con privilegios, ejecutarían como root (o
-  como administrador) los programas que dice una configuración que la cuenta del servicio puede escribir.
+  agentes` a secas (el diagnóstico, que ejecuta cada CLI), `ejecutar` sin el servicio y `servicio iniciar` en primer
+  plano: con privilegios, ejecutarían como root (o como administrador) los programas que dice una configuración que la
+  cuenta del servicio puede escribir. `agentes entrar`, `agentes suscripcion` y `agentes desconectar` sí valen:
+  `entrar` lanza el CLI con la cuenta del servicio, `suscripcion` cambia la configuración y `desconectar` se lo pide al
+  servicio.
 - **Con `--servidor`, la CLI nunca detiene ni sustituye el servicio del sistema** por ser de otra versión: avisa y remite
   a `tramtai-servidor actualizar`.
 
@@ -184,8 +187,12 @@ servicio:
   host: 127.0.0.1
   dominios: [tramtai.example.com]
   proxy:
-    confiables: [127.0.0.1/32]   # la dirección del proxy (o su red CIDR, nunca más ancha que /8 o /32 en IPv6)
+    confiables: [127.0.0.1/32]   # la dirección exacta del proxy
 ```
+
+Pon la dirección exacta de cada proxy (como `/32` o `/128`). Una red entera también vale, pero cualquier equipo de esa
+red podría falsificar las cabeceras: Tramtai solo rechaza las más anchas que /8 en IPv4 o /32 en IPv6, y eso es un
+límite, no una recomendación.
 
 `X-Forwarded-For`, `X-Forwarded-Proto` y `X-Forwarded-Host` solo se creen si la conexión viene de una dirección de
 `servicio.proxy.confiables`; de cualquier otra se ignoran. La dirección del cliente (para el registro y los frenos) es
@@ -200,7 +207,7 @@ Un ejemplo por proxy, cada uno con TLS 1.3 y sin búfer para el flujo en vivo (S
 | Apache httpd | [`proxies/apache/tramtai.conf`](servidor/proxies/apache/tramtai.conf) | En el CI, en cada cambio |
 | Traefik | [`proxies/traefik/tramtai.yml`](servidor/proxies/traefik/tramtai.yml) | En el CI, en cada cambio |
 | HAProxy | [`proxies/haproxy/haproxy.cfg`](servidor/proxies/haproxy/haproxy.cfg) | En el CI, en cada cambio |
-| IIS (ARR y URL Rewrite) | [`proxies/iis/web.config`](servidor/proxies/iis/web.config) | Pendiente: se comprueba a mano en Windows Server antes de publicar |
+| IIS (ARR y URL Rewrite) | [`proxies/iis/web.config`](servidor/proxies/iis/web.config) | Pendiente: se comprueba a mano antes de publicar |
 
 El CI comprueba con cada uno que solo acepta TLS 1.3, que hay una sola cabecera HSTS, que se inicia sesión por el
 proxy, que el flujo en vivo llega a trozos, que Tramtai anota la dirección real del cliente y que un `X-Forwarded-For`
@@ -220,10 +227,15 @@ falso enviado directamente a Tramtai no cuela.
   `http://127.0.0.1:17373` en su navegador) cuenta como entrar desde fuera: pide la contraseña y HTTPS;
 - `tramtai-servidor abrir`, la tecla `W` de la terminal y la app entran por la entrada local, que el servicio abre
   aparte en `127.0.0.1`;
-- sin contraseña de administrador no se entra desde fuera.
+- sin contraseña de administrador no se entra desde fuera;
+- el proxy tiene que apuntar al puerto real de Tramtai: si el 17373 está ocupado, el servidor usa el siguiente libre.
+  Fíjalo con `servicio.puerto` y `servicio.puerto_automatico: false`, o mira el que usa en `tramtai-servidor estado`.
 
 **El proxy en otra máquina:** Tramtai necesita además su propio HTTPS (`servicio.host` fuera de este equipo,
-`servicio.permitir_remoto: true` y `servicio.tls.modo: archivos`), y el proxy habla con él por `https://`.
+`servicio.permitir_remoto: true` y `servicio.tls.modo: archivos`), el proxy habla con él por `https://` y **su
+dirección va en `servicio.proxy.confiables`**. Si falta, Tramtai ignora su `X-Forwarded-For`: todos los clientes
+cuentan como la dirección del proxy, comparten los frenos (5 fallos de uno bloquean a todos) y el registro anota la IP
+del proxy en lugar de la del cliente.
 
 ### Túneles
 
@@ -234,7 +246,7 @@ Cloudflare Tunnel y Tailscale Serve o Funnel publican el servidor sin abrir puer
 - Cloudflare corta a los 125 s una respuesta que no ha empezado (error 524): en las peticiones largas, usa
   `stream: true` o la API propia.
 
-Los túneles se comprueban a mano antes de publicar cada versión; en esta, todavía no.
+Cloudflare Tunnel y Tailscale Serve: Pendiente: se comprueba a mano antes de publicar.
 
 ### Certificado propio
 
@@ -376,13 +388,16 @@ sudo tramtai-servidor agentes suscripcion claude --personal
 ### Codex en el servidor
 
 Codex se ejecuta en solo lectura (`-s read-only`), y en solo lectura **lee todo lo que lee la cuenta del servicio**. Quien
-tenga la clave de una API que use Codex puede pedirle que lea las claves de los proveedores de `$CREDENTIALS_DIRECTORY`,
-el secreto `TRAMTAI_TOTP` y `datos/administrador` (la huella de la contraseña). Tramtai tapa las claves en las
-respuestas, pero no detiene una clave codificada (por ejemplo, en base64). Por eso:
+tenga una clave que pueda usar Codex (la de una API que lo permita o la **clave del espacio**, que puede usar cualquier
+agente) puede pedirle que lea las claves de los proveedores de `$CREDENTIALS_DIRECTORY`, el secreto `TRAMTAI_TOTP` y
+`datos/administrador` (la huella de la contraseña). Tramtai tapa las claves en las respuestas, pero no detiene una clave
+codificada (por ejemplo, en base64). Por eso:
 
-- da la clave de una API con Codex solo a personas de confianza, como si les dieras esas claves;
-- para las APIs de otras personas, deja Codex fuera de sus agentes permitidos, o desconéctalo
-  (`sudo tramtai-servidor agentes desconectar codex`).
+- da la clave del espacio y la de una API que pueda usar Codex solo a personas de confianza, como si les dieras esas
+  claves;
+- para las APIs de otras personas, pon en **Modelos permitidos** de esa API (`modelos_permitidos`) solo modelos de
+  agentes que no son Codex (vacía, deja usar cualquier agente, también Codex) y no pongas Codex en su respaldo;
+- o desconecta Codex en el servidor (`sudo tramtai-servidor agentes desconectar codex`).
 
 ## Actualizar
 
@@ -420,14 +435,14 @@ sudo tramtai-servidor desinstalar --borrar-datos   # también los datos, las cla
 |---|---|
 | El servicio no arranca | `sudo tramtai-servidor estado` y `registro`: el mensaje dice qué regla no se cumple y qué cambiar en `config.yaml`. |
 | «Aquí no se entra con contraseña» | La conexión no llega por HTTPS. Usa `https://`, revisa que el proxy envíe `X-Forwarded-Proto: https` y que su dirección esté en `servicio.proxy.confiables`. |
-| Por el proxy no se puede entrar | Mira la línea «acceso … del administrador desde …» del registro: si sale la dirección del proxy y no la tuya, el proxy no envía `X-Forwarded-For`; si sale «sin HTTPS», no envía `X-Forwarded-Proto`. El `Host` tiene que estar en `servicio.dominios`. |
+| Por el proxy no se puede entrar | Mira el registro (`tramtai-servidor registro`): `web ui: acceso correcto del administrador desde X`, `web ui: acceso fallido desde X` o `web ui: intento de acceso sin HTTPS desde X`. Si X es la dirección del proxy y no la tuya, el proxy no envía `X-Forwarded-For` o no está en `servicio.proxy.confiables`; si sale «sin HTTPS», no envía `X-Forwarded-Proto: https`. El `Host` tiene que estar en `servicio.dominios`. |
 | «Demasiados intentos» | Tras 5 fallos, esa dirección espera 15 minutos. Desde el servidor, `abrir` sigue entrando. |
 | Error 524 de Cloudflare | La respuesta no empezó en 125 s: usa `stream: true` o la API propia en las peticiones largas. |
 | Un cliente no conecta al HTTPS propio | No tiene TLS 1.3. Pon un proxy delante. |
 | La CLI dice que el servidor es de otra versión | `sudo tramtai-servidor actualizar` (o `apt`/`dnf` con el paquete). La CLI no lo detiene por ti. |
 | `agentes`, `ejecutar` o `servicio iniciar` se rechazan | En el servidor, los agentes los ejecuta el servicio con su cuenta: usa la Web UI, la terminal o una API. |
 | `agentes entrar` falla en Windows Server | Su inicio de sesión con la cuenta del servicio está pendiente de comprobar: usa su clave de API (`claves guardar`). |
-| «esa clave está en claro en el disco» | Tu systemd es anterior a la 250: la clave quedó en `/etc/tramtai/claves.env`. Actualiza systemd para cifrarla. |
+| «este systemd no tiene systemd-creds 250 o posterior: las claves del servidor están sin cifrar en /etc/tramtai/claves.env (0600, solo las lee root)» | Lo dicen `claves guardar` y `servidor estado`: tu systemd es anterior a la 250 y la clave queda sin cifrar en ese archivo, que solo lee root. Con systemd 250 o posterior, las claves se cifran con `systemd-creds`. |
 
 Más en la Ayuda de la app (temas «Modo servidor» y «Dos entornos») y en [arquitectura](arquitectura.md#el-servidor).
 
@@ -536,8 +551,9 @@ everyday ones.
 
 - **The settings** live in `/var/lib/tramtai/config.yaml` or `%ProgramData%\Tramtai\config.yaml`; `servicio.*` changes
   apply with `tramtai-servidor restart`. They aren’t edited from the Web UI: a bad network change would lock you out.
-- **The service runs the agents, with its own account.** On the server, `sudo tramtai-servidor agents`, `ejecutar`
-  without the service and `servicio iniciar` in the foreground are refused: with privileges, they would run as root (or
+- **The service runs the agents, with its own account.** On the server, plain `sudo tramtai-servidor agents` (the
+  diagnosis, which runs each CLI), `ejecutar` without the service and `servicio iniciar` in the foreground are refused
+  (`agents login`, `agents subscription` and `agents desconectar` do work): with privileges, they would run as root (or
   administrator) the programs named in settings the service account can write.
 - **With `--server`, the CLI never stops or replaces the system service** for being another version: it warns you and
   points to `tramtai-servidor update`.
@@ -557,13 +573,14 @@ offers the ways out: a proxy, its own HTTPS or an SSH tunnel.
 ### Behind a proxy (recommended)
 
 The proxy provides HTTPS and Tramtai listens only on this computer: `servicio.host: 127.0.0.1`, your name in
-`servicio.dominios` and the proxy’s address in `servicio.proxy.confiables` (as in the Spanish example above). Forwarded
+`servicio.dominios` and the proxy’s exact address in `servicio.proxy.confiables` (as in the Spanish example above; a
+whole network also works, but any computer in it could forge the headers: the /8 or /32 limit Tramtai enforces is a
+limit, not a recommendation). Forwarded
 headers only count from those addresses; without `X-Forwarded-Proto: https` nobody can sign in. The examples, each with
 TLS 1.3 and no buffering for the live stream (SSE): [Caddy](servidor/proxies/caddy/Caddyfile),
 [nginx](servidor/proxies/nginx/tramtai.conf), [Apache httpd](servidor/proxies/apache/tramtai.conf),
 [Traefik](servidor/proxies/traefik/tramtai.yml) and [HAProxy](servidor/proxies/haproxy/haproxy.cfg) are checked by CI on
-every change; [IIS](servidor/proxies/iis/web.config) (ARR and URL Rewrite) is still pending its manual check on Windows
-Server before release.
+every change; [IIS](servidor/proxies/iis/web.config) (ARR and URL Rewrite): Pending: checked by hand before release.
 
 **Any other proxy** works if it ends HTTPS with TLS 1.3, sends `X-Forwarded-Proto: https`, **replaces** (doesn’t append
 to) the client’s `X-Forwarded-For`, keeps the original `Host` (which must be in `servicio.dominios`), doesn’t buffer
@@ -572,17 +589,21 @@ responses or cut long requests, and doesn’t add HSTS (Tramtai does).
 **A proxy on the same computer:** with trusted proxies, opening Tramtai’s public port by hand on the server itself counts
 as coming from outside (it asks for the password and HTTPS); `tramtai-servidor abrir`, the terminal’s `W` key and the
 app come in through the local entrance the service opens separately on `127.0.0.1`; and without an administrator
-password nobody gets in from outside.
+password nobody gets in from outside. The proxy must point at Tramtai’s real port: if 17373 is taken, the server uses
+the next free one, so pin it with `servicio.puerto` and `servicio.puerto_automatico: false`, or check it in
+`tramtai-servidor status`.
 
-**A proxy on another machine:** Tramtai also needs its own HTTPS (`servicio.tls.modo: archivos`), and the proxy talks to
-it over `https://`.
+**A proxy on another machine:** Tramtai also needs its own HTTPS (`servicio.tls.modo: archivos`), the proxy talks to
+it over `https://`, and **its address goes in `servicio.proxy.confiables`**. Without it, Tramtai ignores its
+`X-Forwarded-For`: every client counts as the proxy’s address, they all share the brakes (5 failures from one lock out
+everyone) and the log notes the proxy’s IP instead of the client’s.
 
 ### Tunnels
 
 Cloudflare Tunnel and Tailscale Serve or Funnel are in [tunnels](servidor/tuneles.md). With Cloudflare, HTTPS ends at
 Cloudflare, which sees the requests and the keys, and a response that hasn’t started within 125 s ends in error 524: use
-`stream: true` or the native API for long requests. Tunnels are checked by hand before each release; in this one, not
-yet.
+`stream: true` or the native API for long requests. Cloudflare Tunnel and Tailscale Serve: Pending: checked by hand
+before release.
 
 ### Your own certificate
 
@@ -646,11 +667,13 @@ subscription: just for you”; and `adaptadores.<agent>.suscripcion_simultaneas`
 a time with it across the whole server.
 
 **Codex on the server:** Codex runs read-only (`-s read-only`), and read-only means it **reads everything the service
-account reads**. Whoever has the key of an API that uses Codex can ask it to read the provider keys in
-`$CREDENTIALS_DIRECTORY`, the `TRAMTAI_TOTP` secret and `datos/administrador` (the password hash). Tramtai hides keys in
-responses, but it doesn’t stop an encoded key (base64, for example). Give the key of an API with Codex only to people
-you trust, as if you were giving them those keys; for other people’s APIs, leave Codex out of the allowed agents or
-disconnect it.
+account reads**. Whoever has a key that can use Codex (that of an API that allows it, or the **workspace key**, which can use any
+agent) can ask it to read the provider keys in `$CREDENTIALS_DIRECTORY`, the `TRAMTAI_TOTP` secret and
+`datos/administrador` (the password hash). Tramtai hides keys in responses, but it doesn’t stop an encoded key (base64,
+for example). Give the workspace key and the key of any API that can use Codex only to people you trust, as if you were
+giving them those keys. For other people’s APIs, put only models of agents other than Codex in that API’s **Allowed
+models** (`modelos_permitidos`; left empty, it allows any agent, Codex included) and don’t put Codex in its fallback; or
+disconnect Codex on the server (`sudo tramtai-servidor agents desconectar codex`).
 
 ## Update
 
@@ -673,9 +696,14 @@ restarts.
 - **The service won’t start:** `sudo tramtai-servidor status` and `log`; the message says which rule fails.
 - **“You can’t sign in with a password here”:** the connection isn’t HTTPS; check that the proxy sends
   `X-Forwarded-Proto: https` and that its address is in `servicio.proxy.confiables`.
-- **Can’t sign in through the proxy:** look at the log line about the administrator’s access: the proxy’s address
-  instead of yours means no `X-Forwarded-For`; “sin HTTPS” means no `X-Forwarded-Proto`. The `Host` must be in
+- **Can’t sign in through the proxy:** look at the log (`tramtai-servidor log`; its lines are in Spanish):
+  `web ui: acceso correcto del administrador desde X`, `web ui: acceso fallido desde X` or `web ui: intento de acceso
+  sin HTTPS desde X`. If X is the proxy’s address instead of yours, the proxy doesn’t send `X-Forwarded-For` or isn’t in
+  `servicio.proxy.confiables`; “sin HTTPS” means it doesn’t send `X-Forwarded-Proto: https`. The `Host` must be in
   `servicio.dominios`.
+- **“this systemd does not have systemd-creds 250 or later: the server keys are unencrypted in /etc/tramtai/claves.env
+  (0600, only root reads it)”:** said by `keys set` and `server status`: your systemd is older than 250, so the key stays
+  unencrypted in that root-only file. With systemd 250 or later, keys are encrypted with `systemd-creds`.
 - **Cloudflare error 524:** the response didn’t start within 125 s; use `stream: true` or the native API.
 - **A client can’t connect to Tramtai’s own HTTPS:** it lacks TLS 1.3; put a proxy in front.
 - **The CLI says the server is another version:** `sudo tramtai-servidor update` (or `apt`/`dnf`).

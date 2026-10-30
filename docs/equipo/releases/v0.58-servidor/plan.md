@@ -645,7 +645,7 @@ La Tarea 13 de `releases/v0.56-terminal/plan.md` (líneas 499-541), tal cual: ar
 
 ### Tarea 20: cierre
 
-- [ ] **Paso 1 (a mano):** en un Windows Server, IIS con `docs/servidor/proxies/iis/web.config`; Cloudflare Tunnel y Tailscale Serve con la cuenta del usuario (con su permiso). Anotar el resultado en la guía: en `docs/servidor.md` (tabla de proxies y «Túneles», es/en), `site/servidor.html` y `docs/servidor/tuneles.md`, cambiar «Pendiente…» por «comprobado en la v0.58».
+- [ ] **Paso 1 (a mano):** en un Windows Server, IIS con `docs/servidor/proxies/iis/web.config`; Cloudflare Tunnel y Tailscale Serve con la cuenta del usuario (con su permiso). Anotar el resultado en la guía: en `docs/servidor.md` (tabla de proxies y «Túneles», es/en), `site/servidor.html` y `docs/servidor/tuneles.md`, buscar exactamente «Pendiente: se comprueba a mano antes de publicar» y «Pending: checked by hand before release» y cambiarlos por «comprobado en la v0.58» / «checked in v0.58» (o por lo que haya fallado).
 - [ ] **Paso 1b (fecha de los términos):** la versión 2 rige desde la publicación. En `TERMINOS.md` y su copia `internal/terminos/TERMINOS.md` (`TestCopiaTerminosAlDia`), y en `docs/servidor.md`, cambiar el marcador «[día de publicación]» y «[publication date]» por la fecha de la etiqueta.
 - [ ] **Paso 2 (a mano):** `testssl.sh` contra el HTTPS propio. Esperado: solo TLS 1.3, X25519MLKEM768 ofrecido y HSTS presente. Anotar la salida resumida en `revision-seguridad.md`.
 - [ ] **Paso 3:** la revisión final de la rama con opus, como en las últimas versiones. Arreglar todos los hallazgos.

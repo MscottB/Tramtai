@@ -1060,6 +1060,12 @@
           ]
         },
         {
+          "tipo": "texto",
+          "lineas": [
+            "El texto completo de los términos: «tramtai-servidor terminos», o el enlace de Acerca de Tramtai."
+          ]
+        },
+        {
           "tipo": "web",
           "titulo": "La página de inicio de sesión del servidor: la contraseña del administrador y su código",
           "url": "https://mscottb.github.io/Tramtai/ayuda/servidor.html"
@@ -1094,15 +1100,15 @@
             ],
             [
               "¿Quién ejecuta los agentes?",
-              "El servicio, con su cuenta: «sudo tramtai-servidor agentes», «ejecutar» sin el servicio y «servicio iniciar» en primer plano se rechazan. Instala los CLI para todo el equipo."
+              "El servicio, con su cuenta. Se rechazan «sudo tramtai-servidor agentes» a secas (el diagnóstico), «ejecutar» sin el servicio y «servicio iniciar» en primer plano; «agentes entrar» sí vale."
             ],
             [
               "¿Puedo usar mi suscripción en el servidor?",
-              "Por defecto, clave de API. El CLI inicia sesión con «tramtai-servidor agentes entrar [agente]». Abierto a la red, solo la suscripción personal: con TOTP, para ti y una petición a la vez."
+              "Por defecto, clave de API. Abierto a la red, solo la suscripción personal: con TOTP, para ti y una petición a la vez por defecto (hasta 3 con suscripcion_simultaneas)."
             ],
             [
               "¿Qué riesgo tiene Codex en el servidor?",
-              "Lee lo que lee la cuenta del servicio: con la clave de una API que use Codex se pueden sacar las claves de los agentes, el secreto TOTP y la huella de la contraseña. Dala solo a personas de confianza."
+              "Lee lo que lee la cuenta del servicio, claves incluidas. Da la clave del espacio solo a gente de confianza y, en las APIs ajenas, pon Modelos permitidos y respaldo sin Codex (vacía, vale cualquiera)."
             ],
             [
               "¿Cómo lo actualizo?",
@@ -2481,6 +2487,12 @@
           ]
         },
         {
+          "tipo": "texto",
+          "lineas": [
+            "The full terms: “tramtai-servidor terms”, or the link in About Tramtai."
+          ]
+        },
+        {
           "tipo": "web",
           "titulo": "The server’s sign-in page: the administrator password and its code",
           "url": "https://mscottb.github.io/Tramtai/ayuda/servidor.html"
@@ -2515,15 +2527,15 @@
             ],
             [
               "Who runs the agents?",
-              "The service, with its account: “sudo tramtai-servidor agents”, “ejecutar” without the service and “servicio iniciar” in the foreground are refused. Install the CLIs for the whole computer."
+              "The service, with its account. Plain “sudo tramtai-servidor agents” (the diagnosis), “ejecutar” without the service and “servicio iniciar” in the foreground are refused; “agents login” works."
             ],
             [
               "Can I use my subscription on the server?",
-              "By default, an API key. The CLI signs in with “tramtai-servidor agents login [agent]”. Open to the network, only the personal subscription: with TOTP, for you and one request at a time."
+              "By default, an API key. Open to the network, only the personal subscription: with TOTP, for you and one request at a time by default (up to 3 with suscripcion_simultaneas)."
             ],
             [
               "What’s the risk with Codex on the server?",
-              "It reads what the service account reads: with the key of an API that uses Codex, someone can get the agents’ keys, the TOTP secret and the password hash. Give it only to people you trust."
+              "It reads what the service account reads, keys included. Give the workspace key only to people you trust and, in other people’s APIs, set Allowed models and fallback without Codex (empty allows any)."
             ],
             [
               "How do I update it?",

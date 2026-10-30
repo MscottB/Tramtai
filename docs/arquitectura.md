@@ -194,10 +194,12 @@ variable de entorno. Ninguna clave se guarda desde la Web UI.
   el servidor y clave de seguridad (no desde `local.yaml` ni desde una sesión remota). Tramtai nunca guarda un token de
   sesión de Claude: el inicio de sesión lo hace el CLI con la cuenta del servicio.
 - **Riesgo residual de Codex:** Codex corre con `-s read-only`, que lee todo lo que lee la cuenta del servicio. Quien
-  tenga la clave de una API con Codex puede pedirle que lea `$CREDENTIALS_DIRECTORY` (las claves de proveedor y
-  `TRAMTAI_TOTP`) y `datos/administrador`, y la redacción de secretos no detiene una clave codificada. No hay arreglo en
-  Tramtai sin quitarle a Codex la lectura: la guía pide dar esas APIs solo a personas de confianza o dejar Codex fuera
-  de las APIs de otros. Detalle en [revisión de seguridad](equipo/releases/v0.58-servidor/revision-seguridad.md).
+  tenga un token que pueda usar Codex (el de un punto de acceso sin `modelos_permitidos`, o con Codex en ellos o en su
+  respaldo, y el token de la instancia, que vale para cualquier agente) puede pedirle que lea `$CREDENTIALS_DIRECTORY`
+  (las claves de proveedor y `TRAMTAI_TOTP`) y `datos/administrador`, y la redacción de secretos no detiene una clave
+  codificada. No hay arreglo en Tramtai sin quitarle a Codex la lectura: la guía pide dar esos tokens solo a personas de
+  confianza y, en los puntos de acceso de otros, `modelos_permitidos` sin Codex (vacío permite cualquier agente) y un
+  respaldo sin Codex, o desconectar Codex. Detalle en [revisión de seguridad](equipo/releases/v0.58-servidor/revision-seguridad.md).
 
 ## Interfaces
 

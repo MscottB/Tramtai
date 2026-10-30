@@ -15,6 +15,7 @@ export const servidor: Tema = {
     { tipo: 'captura', id: 'servidor', alt: 'ayuda.servidor.captura' },
     { tipo: 'nota', texto: 'ayuda.servidor.nota' },
     { tipo: 'pasos', titulo: 'ayuda.servidor.aviso', pasos: ['riesgos.1', 'riesgos.2', 'riesgos.3', 'riesgos.4', 'riesgos.5'] },
+    { tipo: 'nota', texto: 'ayuda.servidor.notaTerminos' },
     { tipo: 'captura', id: 'entrar', alt: 'ayuda.servidor.capturaEntrar' },
     { tipo: 'captura', id: 'seguridad', alt: 'ayuda.servidor.capturaSeguridad' },
     {
