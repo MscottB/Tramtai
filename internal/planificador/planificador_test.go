@@ -672,8 +672,22 @@ func TestLimitePorPuntoDeAcceso(t *testing.T) {
 	}
 	libre := enviar(t, p, solicitud("sin punto"))
 	esperar(t, alm, libre, nucleo.Ejecutando)
-	// El primero del punto se ejecuta y el segundo, despachado antes que el libre, ya espera la plaza del punto.
-	esperarQue(t, "un trabajo del punto se ejecuta", func() bool { return agente.actual.Load() > 0 })
+	// El primero del punto se ejecuta y el segundo, despachado antes que el libre, espera la plaza del punto: con los
+	// dos así, solo uno del punto está en el agente.
+	esperarQue(t, "uno del punto se ejecuta y el otro espera su plaza", func() bool {
+		var estados []nucleo.Estado
+		for _, id := range ids {
+			tr, _ := alm.Obtener(ctx, id)
+			estados = append(estados, tr.Estado)
+		}
+		slices.Sort(estados)
+		quiere := []nucleo.Estado{nucleo.Ejecutando, nucleo.EsperandoAgente}
+		slices.Sort(quiere)
+		return slices.Equal(estados, quiere) && agente.actual.Load() > 0
+	})
+	if n := agente.actual.Load(); n != 1 {
+		t.Fatalf("con el límite 1 del punto, %d del punto en el agente", n)
+	}
 	close(agente.soltar)
 	for _, id := range append(ids, libre) {
 		esperar(t, alm, id, nucleo.Completado)

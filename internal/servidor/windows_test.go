@@ -31,7 +31,39 @@ func TestMain(m *testing.M) {
 		_ = svc.Run("", servicioMinimo{})
 		os.Exit(0)
 	}
+	if os.Getenv("TRAMTAI_PRUEBA_ECO") != "" { // hace de tramtai.exe para TestEnvoltorioEnSuCarpeta: dice qué le llega
+		fmt.Println(strings.Join(os.Args[1:], "|"))
+		os.Exit(0)
+	}
 	os.Exit(m.Run())
+}
+
+// TestEnvoltorioEnSuCarpeta: el envoltorio va en una carpeta bin aparte, la única que se añade al PATH del sistema, y
+// lanza el tramtai.exe de la carpeta de arriba. Así el tramtai.exe del servidor no tapa al de escritorio, que está en
+// el PATH del usuario (el del sistema va delante).
+func TestEnvoltorioEnSuCarpeta(t *testing.T) {
+	if r := Rutas(); filepath.Dir(r.Envoltorio) != filepath.Join(r.Programa, "bin") {
+		t.Errorf("el envoltorio va en %s, no en %s", filepath.Join(r.Programa, "bin"), r.Envoltorio)
+	}
+	programa := t.TempDir()
+	ejecutable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	copiar(t, ejecutable, filepath.Join(programa, "tramtai.exe"))
+	cmd := filepath.Join(programa, "bin", "tramtai-servidor.cmd")
+	if err := os.MkdirAll(filepath.Dir(cmd), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cmd, []byte(envoltorio), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	orden := exec.Command("cmd", "/c", cmd, "estado", "a b")
+	orden.Env = append(os.Environ(), "TRAMTAI_PRUEBA_ECO=1")
+	salida, err := orden.CombinedOutput()
+	if err != nil || strings.TrimSpace(string(salida)) != "--servidor|estado|a b" {
+		t.Errorf("tramtai-servidor estado \"a b\": %q %v", salida, err)
+	}
 }
 
 type servicioMinimo struct{}
@@ -58,7 +90,8 @@ func TestInstalarServicioWindows(t *testing.T) {
 	// En %ProgramData% y no en la temporal del administrador: la cuenta virtual tiene que poder leer el programa.
 	base := filepath.Join(os.Getenv("ProgramData"), nombre)
 	s := Sitios{Programa: filepath.Join(base, "programa"), Datos: filepath.Join(base, "datos")}
-	s.Envoltorio = filepath.Join(s.Programa, "tramtai-servidor.cmd")
+	s.Envoltorio = filepath.Join(s.Programa, "bin", "tramtai-servidor.cmd")
+	bin := filepath.Dir(s.Envoltorio)
 	origen := t.TempDir()
 	ejecutable, err := os.Executable()
 	if err != nil {
@@ -142,7 +175,7 @@ func TestInstalarServicioWindows(t *testing.T) {
 	if env, err := os.ReadFile(s.Envoltorio); err != nil || string(env) != envoltorio {
 		t.Errorf("envoltorio: %q %v", env, err)
 	}
-	if !slices.Equal(rutasPath, []string{"true " + s.Programa}) {
+	if !slices.Equal(rutasPath, []string{"true " + bin}) {
 		t.Errorf("PATH del sistema: %q", rutasPath)
 	}
 	esperarEstado(t, servicio, svc.Running)
@@ -215,7 +248,7 @@ func TestInstalarServicioWindows(t *testing.T) {
 			t.Errorf("%s sigue ahí: %v", d, err)
 		}
 	}
-	if !slices.Equal(rutasPath, []string{"true " + s.Programa, "true " + s.Programa, "false " + s.Programa}) {
+	if !slices.Equal(rutasPath, []string{"true " + bin, "true " + bin, "false " + bin}) {
 		t.Errorf("PATH del sistema al desinstalar: %q", rutasPath)
 	}
 	if e, err := Estado(t.Context()); err != nil || e.Instalado {

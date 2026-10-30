@@ -28,7 +28,11 @@ func (a aLaVez) Ejecutar(ctx context.Context, s nucleo.SolicitudEjecucion, emiti
 	defer a.ahora.Add(-1)
 	for m := a.maximo.Load(); n > m && !a.maximo.CompareAndSwap(m, n); m = a.maximo.Load() {
 	}
-	time.Sleep(300 * time.Millisecond)
+	// Sigue hasta que llegue otra a la vez (si el límite la deja pasar) o, como mucho, un segundo: la cuenta no depende
+	// de cuánto tarde en arrancar la segunda.
+	for limite := time.Now().Add(time.Second); a.ahora.Load() < 2 && time.Now().Before(limite); {
+		time.Sleep(5 * time.Millisecond)
+	}
 	return adaptadores.Simulado{}.Ejecutar(ctx, s, emitir)
 }
 

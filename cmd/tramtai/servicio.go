@@ -278,6 +278,9 @@ func comandoServicio() *cobra.Command {
 		Short: idioma.T("Arranca Tramtai al iniciar sesión: la app en la bandeja o solo el servicio (--modo)"),
 		Args:  cobra.MaximumNArgs(1), ValidArgs: []string{"activar", "desactivar"},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if carpetas.Servidor() {
+				return autoarranque.ErrEnServidor
+			}
 			elegido, err := autoarranque.ModoDe(modoArranque) // se valida siempre, aunque no se use
 			if err != nil {
 				return err
@@ -367,9 +370,12 @@ func comandoServicio() *cobra.Command {
 // iniciarServicio arranca el servicio en primer plano con las instancias que estaban activas. Con archivo, el
 // registro va a ese archivo con rotación (segundo plano); sin él, a la terminal. En un reinicio (esperarCierre) espera
 // a que el servicio anterior suelte el cerrojo de la carpeta de datos.
-func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) error {
+func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) (err error) {
 	if servicioWindows, err := ejecutarComoServicio(cmd, archivo); servicioWindows {
 		return err
+	}
+	if archivo != "" { // sin consola: el error que lo para queda en el registro, donde se mira
+		defer func() { anotarError(archivo, err) }()
 	}
 	// Después del SCM: el servicio de Windows (que vuelve a pasar por aquí desde su manejador) sigue arrancando; bajo
 	// systemd el proceso es la cuenta tramtai, no root.
@@ -452,7 +458,7 @@ func iniciarServicio(cmd *cobra.Command, archivo string, esperarCierre bool) err
 	reiniciar := reinicioDelServicio(datos, cmp.Or(archivo, filepath.Join(datos, "servicio.log")), &reinicioPedido)
 	registro, limites := agentes.Registro(c)
 	raizConversor, _ := documentos.RaizConversor() // ahí se prepara el conversor de archivos
-	sv, err := servicio.Nuevo(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites).ConSuscripcion(agentes.Simultaneas(c)),
+	sv, err := nuevoServicio(servicio.Opciones{Datos: datos, Config: c, Registro: registro, Semaforos: planificador.NuevosSemaforos(limites).ConSuscripcion(agentes.Simultaneas(c)),
 		Host: host, Puerto: puertoUsado, PuertoConfigurado: puerto, PuertoAutomatico: automatico, Reiniciar: reiniciar,
 		Hosts: hostsPermitidos(host, red.Dominios), Confiables: red.Confiables, Dominios: red.Dominios, TLS: configTLS, Registros: salida, Web: recursos.Web(), Entorno: carpetas.Entorno(),
 		PlazoDrenaje: time.Duration(c.Entero("servicio.plazo_drenaje_segundos")) * time.Second,
@@ -531,6 +537,9 @@ func abrirOyente(modoTLS, host string, puerto int, automatico bool) (net.Listene
 // lanzar arranca un proceso desacoplado; las pruebas lo sustituyen.
 var lanzar = cliente.Lanzar
 
+// nuevoServicio crea el servicio con sus opciones; las pruebas lo sustituyen para ver qué recibe.
+var nuevoServicio = servicio.Nuevo
+
 // codigoReinicio es el código de salida del servicio del sistema cuando la Web UI pide reiniciarlo: distinto de 0 para
 // que systemd (Restart=on-failure) o la recuperación de Windows (también con salidas distintas de 0) lo vuelvan a
 // arrancar, y distinto de 1, el de un fallo.
@@ -539,19 +548,43 @@ const codigoReinicio = 3
 // errReinicioPedido es lo que devuelve el servicio del sistema tras drenar por un «Reiniciar» de la Web UI.
 var errReinicioPedido = errors.New(idioma.T("reinicio pedido desde la Web UI: el sistema vuelve a arrancar el servicio"))
 
+// anotarError deja en el registro el error que para el servicio (el del sistema o el de segundo plano, sin consola):
+// también el de antes de abrir el registro rotativo, como una configuración inválida. El reinicio pedido ya lo anotó.
+func anotarError(archivo string, err error) {
+	if err == nil || errors.Is(err, errReinicioPedido) {
+		return
+	}
+	if f, e := os.OpenFile(archivo, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600); e == nil {
+		fmt.Fprintf(f, "%s %v\n", time.Now().Format(time.RFC3339), err)
+		f.Close()
+	}
+}
+
 // terminarServicio deja pasar el error de iniciarServicio, pero un reinicio pedido no es un fallo: cobra no lo imprime
-// como «Error: …» (el registro ya lo dice en una línea normal) y el proceso sale con codigoReinicio.
+// como «Error: …» (el registro ya lo dice en una línea normal) y el proceso sale con codigoReinicio. Si no arranca por
+// su configuración, sale con servidor.CodigoConfiguracion, que el sistema no reinicia.
 func terminarServicio(cmd *cobra.Command, err error) error {
 	if errors.Is(err, errReinicioPedido) {
 		cmd.SilenceErrors = true
 	}
+	if nucleo.CodigoDe(err) == nucleo.CodigoConfiguracionInvalida {
+		return errConfiguracionServicio{err}
+	}
 	return err
 }
+
+// errConfiguracionServicio es el error del servicio que no arranca por su configuración (terminarServicio).
+type errConfiguracionServicio struct{ error }
+
+func (e errConfiguracionServicio) Unwrap() error { return e.error }
 
 // codigoSalida es el código con el que termina el proceso tras un error.
 func codigoSalida(err error) int {
 	if errors.Is(err, errReinicioPedido) {
 		return codigoReinicio
+	}
+	if errors.As(err, new(errConfiguracionServicio)) {
+		return servidor.CodigoConfiguracion
 	}
 	return 1
 }

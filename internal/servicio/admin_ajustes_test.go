@@ -230,4 +230,9 @@ func TestAutoarranqueUIModo(t *testing.T) {
 	if codigo, texto := pedir(`{"activo":true,"modo":"otro"}`); codigo != 400 || !strings.Contains(texto, "solicitud_invalida") || modo != autoarranque.ModoApp {
 		t.Fatalf("un modo desconocido: %d %s %q", codigo, texto, modo)
 	}
+	// En el servidor no hay arranque al iniciar sesión: el servicio del sistema arranca con el equipo.
+	s.opc.Entorno = "servidor"
+	if codigo, texto := pedir(`{"activo":true,"modo":"servicio"}`); codigo != 400 || !strings.Contains(texto, "arranca con el equipo") || modo != autoarranque.ModoApp {
+		t.Fatalf("en el servidor: %d %s %q", codigo, texto, modo)
+	}
 }

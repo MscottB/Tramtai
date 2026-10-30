@@ -273,7 +273,7 @@ import type { EntradaConfiguracion, EstadoPunto, Modelo } from '../api/tipos'
 import { actualizacion, sesion, sistema } from '../estado'
 import { esfuerzoEspacio, esfuerzosDe, nombreAgente, opcionModelo } from '../agentes'
 import { enRango, fecha, nombreEsfuerzo, registroCubre, terminales } from '../formato'
-import { conArranque, estadoServidor, filasServidor, pestanasAjustes } from '../servidor'
+import { conArranque, estadoServidor, filasServidor, modosArranque, pestanasAjustes } from '../servidor'
 import { idioma, t } from '../i18n'
 import type { Clave } from '../idiomas/es'
 import SelectorEsfuerzo from '../componentes/SelectorEsfuerzo.vue'
@@ -481,13 +481,6 @@ async function cambiarBusqueda(buscar: boolean) {
     cambiandoBusqueda.value = false
   }
 }
-
-// modosArranque son las opciones del arranque con el sistema: no arrancar, la app en la bandeja o solo el servicio.
-const modosArranque = [
-  { valor: '', titulo: 'arranque.no', texto: 'arranque.noTexto' },
-  { valor: 'app', titulo: 'arranque.app', texto: 'arranque.appTexto' },
-  { valor: 'servicio', titulo: 'arranque.servicio', texto: 'arranque.servicioTexto' },
-] as const satisfies readonly { valor: string; titulo: Clave; texto: Clave }[]
 
 async function cambiarArranque(modo: '' | 'app' | 'servicio') {
   cambiandoArranque.value = true

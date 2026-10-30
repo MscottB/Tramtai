@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"tramtai/internal/actualizacion"
+	"tramtai/internal/nucleo"
 	"tramtai/internal/servidor"
 	"tramtai/internal/terminos"
 )
@@ -382,5 +383,39 @@ func TestServidorActualizar(t *testing.T) {
 		if llamadas != 1 || (err != nil) != c.falla || !strings.Contains(salida, c.salida) {
 			t.Errorf("%v con %v: %d llamadas, %v, %q", c.args, c.res, llamadas, err, salida)
 		}
+	}
+}
+
+// TestCodigoConfiguracion: el servicio que no arranca por su configuración (config.yaml o una regla de exposición) sale
+// con servidor.CodigoConfiguracion, que systemd no reinicia (fallaría igual); otra orden con la configuración inválida
+// sale con 1, como siempre.
+func TestCodigoConfiguracion(t *testing.T) {
+	invalida := fmt.Errorf("al arrancar: %w", nucleo.NuevoError(nucleo.CodigoConfiguracionInvalida, "config.yaml: YAML no válido"))
+	if c := codigoSalida(terminarServicio(&cobra.Command{}, invalida)); c != servidor.CodigoConfiguracion || c == 1 || c == codigoReinicio {
+		t.Errorf("el servicio con la configuración inválida sale con %d", c)
+	}
+	if c := codigoSalida(invalida); c != 1 {
+		t.Errorf("otra orden con la configuración inválida sale con %d", c)
+	}
+	if !strings.Contains(servidor.Unidad(servidor.UnidadOpciones{}), fmt.Sprintf("\nRestartPreventExitStatus=%d\n", servidor.CodigoConfiguracion)) {
+		t.Error("la unidad no reinicia el servicio que sale por su configuración")
+	}
+}
+
+// TestAbrirEnElServidorSinApp: en el servidor, abrir no lanza la app de escritorio, que es del entorno del usuario y
+// no vería el servicio del sistema: va a la Web UI en el navegador. Con --navegador, tampoco; si no, sí.
+func TestAbrirEnElServidorSinApp(t *testing.T) {
+	anterior := escritorioJunto
+	escritorioJunto = func() (string, error) { return "tramtai-escritorio", nil }
+	t.Cleanup(func() { escritorioJunto = anterior })
+	if _, ok := appEscritorio(false); !ok {
+		t.Error("fuera del servidor abre la app de escritorio")
+	}
+	if _, ok := appEscritorio(true); ok {
+		t.Error("con --navegador no abre la app")
+	}
+	t.Setenv("TRAMTAI_SERVIDOR", "1")
+	if _, ok := appEscritorio(false); ok {
+		t.Error("en el servidor no abre la app de escritorio")
 	}
 }

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { idioma, t } from '../i18n.ts'
-import { conArranque, filasServidor, ofrecerInstalar, pestanasAjustes } from '../servidor.ts'
+import { conArranque, filasServidor, modosArranque, ofrecerInstalar, pestanasAjustes } from '../servidor.ts'
 import type { EstadoServidor, Sesion } from '../api/tipos.ts'
 
 const sesion = (entorno: string): Sesion => ({ instancia: 'global', csrf: 'tk', version: 'v0', local: true, entorno, autoarranque: false, modo_arranque: '' })
@@ -19,6 +19,18 @@ test('en el servidor no hay arranque con el sistema ni «Instalar ahora»', () =
   assert.equal(ofrecerInstalar(true, sesion('escritorio')), true)
   assert.equal(ofrecerInstalar(true, sesion('servidor')), false)
   assert.equal(ofrecerInstalar(false, sesion('escritorio')), false)
+})
+
+test('Arranque: tres radios (no arrancar, la app en la bandeja, solo el servicio) con su texto en los dos idiomas', () => {
+  assert.deepEqual(modosArranque.map((m) => m.valor), ['', 'app', 'servicio'], 'los valores de modo_arranque, en ese orden')
+  for (const lengua of ['es', 'en'] as const) {
+    idioma.value = lengua
+    for (const m of modosArranque) {
+      assert.notEqual(t(m.titulo), m.titulo, `${lengua}: ${m.titulo}`)
+      assert.notEqual(t(m.texto), m.texto, `${lengua}: ${m.texto}`)
+    }
+  }
+  idioma.value = 'es'
 })
 
 test('Ajustes → Servidor: cada dato con la orden (o la clave de config.yaml) que lo cambia', () => {

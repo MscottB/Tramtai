@@ -101,7 +101,13 @@ func comandoAdministrador() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			cuenta, _ := os.Hostname()
+			var dominios []string // los de la Web UI: normalizados como al arrancar
+			if c, err := configuracion.CargarConfiguracion("", agentes.Internos()); err == nil {
+				if red, err := entradaServidor(c); err == nil {
+					dominios = red.Dominios
+				}
+			}
+			cuenta := totp.Cuenta(dominios)
 			fmt.Fprintf(cmd.OutOrStdout(), idioma.T("Añade este secreto a tu app de autenticación:\n  %s\no abre este enlace en ella:\n  %s\n"), secreto, totp.URI(secreto, cuenta))
 			codigo, err := lector(cmd)(idioma.T("Escribe el código de 6 dígitos que muestra la app: "), false)
 			if err != nil {

@@ -67,6 +67,7 @@ func TestExpuesto(t *testing.T) {
 
 // TestComprobarArranque: una fila por regla de spec §6, en su orden, y dos combinaciones seguras.
 func TestComprobarArranque(t *testing.T) {
+	t.Setenv("TRAMTAI_SERVIDOR", "1") // las reglas 3 y 4 remiten a órdenes del servidor
 	certificado, clave := certificadoDePrueba(t, "tramtai.ejemplo.org")
 	proxy := []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}
 	claude := []Suscripcion{{Agente: "claude"}}
@@ -107,6 +108,19 @@ func TestComprobarArranque(t *testing.T) {
 	}
 	if err := ComprobarArranque(con(func(e *Entrada) { e.TLS, e.Correo, e.Puerto = "letsencrypt", "admin@ejemplo.org", 443 })); err != nil {
 		t.Errorf("letsencrypt completo: %v", err)
+	}
+}
+
+// TestSuscripcionExpuestaFueraDelServidor: fuera del servidor (sin TOTP ni órdenes de tramtai-servidor), con el servicio
+// abierto a la red una suscripción, también la personal, no se admite: el mensaje pide la clave de API, sin remitir a
+// órdenes que solo existen con --servidor.
+func TestSuscripcionExpuestaFueraDelServidor(t *testing.T) {
+	proxy := []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}
+	for _, personal := range []bool{false, true} {
+		err := ComprobarArranque(Entrada{Host: "127.0.0.1", Confiables: proxy, Suscripciones: []Suscripcion{{Agente: "claude", Personal: personal}}})
+		if err == nil || !strings.Contains(err.Error(), "adaptadores.claude.autenticacion: clave_api") || strings.Contains(err.Error(), "servidor") {
+			t.Errorf("personal %v: %v", personal, err)
+		}
 	}
 }
 

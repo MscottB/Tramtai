@@ -23,7 +23,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"testing"
 	"time"
 
 	"tramtai/internal/idioma"
@@ -350,12 +349,12 @@ func DescargarAsset(ctx context.Context, v Version, nombre, dir string, avance A
 }
 
 // ParaPruebas hace que Ultima y las descargas vayan a un servidor de la prueba (ultima, la ficha; prefijo, las
-// descargas) y que las firmas se comprueben con clave, hasta que termine t: para las pruebas de otros paquetes, como
-// las de servidor.Actualizar.
-func ParaPruebas(t testing.TB, ultima, prefijo string, clave ed25519.PublicKey) {
+// descargas) y que las firmas se comprueben con clave, hasta que termine la prueba (limpiar es su t.Cleanup; así
+// testing no entra en el programa): para las pruebas de otros paquetes, como las de servidor.Actualizar.
+func ParaPruebas(limpiar func(func()), ultima, prefijo string, clave ed25519.PublicKey) {
 	antes, claves := [2]string{urlUltima, prefijoDescarga}, clavesPublicas
 	urlUltima, prefijoDescarga, clavesPublicas = ultima, prefijo, []ed25519.PublicKey{clave}
-	t.Cleanup(func() { urlUltima, prefijoDescarga, clavesPublicas = antes[0], antes[1], claves })
+	limpiar(func() { urlUltima, prefijoDescarga, clavesPublicas = antes[0], antes[1], claves })
 }
 
 func descargar(ctx context.Context, v Version, nombre, url, dir string, avance Avance) (string, error) {

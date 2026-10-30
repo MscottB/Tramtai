@@ -372,6 +372,24 @@ func TestBasesSinTLS(t *testing.T) {
 	}
 }
 
+// TestBaseEnTodasLasDirecciones: con servicio.host 0.0.0.0 o :: (todas las direcciones) y TLS propio sin dominios, la
+// dirección que se anuncia es la de este equipo: a 0.0.0.0 no se puede conectar (en Windows falla) ni sirve a nadie.
+// Con dominios, el primero.
+func TestBaseEnTodasLasDirecciones(t *testing.T) {
+	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
+	s.opc.TLS = &tls.Config{}
+	for host, quiere := range map[string]string{"0.0.0.0": "https://127.0.0.1:4321", "::": "https://[::1]:4321", "192.0.2.10": "https://192.0.2.10:4321"} {
+		s.opc.Host = host
+		if base := s.urlPublica(4321); base != quiere {
+			t.Errorf("%s: %s, se esperaba %s", host, base, quiere)
+		}
+	}
+	s.opc.Host, s.opc.Dominios = "0.0.0.0", []string{"tramtai.ejemplo.org"}
+	if base := s.urlPublica(4321); base != "https://tramtai.ejemplo.org:4321" {
+		t.Errorf("con dominios: %s", base)
+	}
+}
+
 func TestHSTS(t *testing.T) {
 	s, _, _ := entorno(t, "", "", adaptadores.Simulado{})
 	s.opc.Confiables = []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")}

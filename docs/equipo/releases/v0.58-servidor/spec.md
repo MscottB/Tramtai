@@ -105,8 +105,9 @@ verdad para Linux y Windows Server, sin bajar la seguridad.
   Lo mismo con la terminal (`tramtai-servidor` sin más). Es un nombre aparte para no tapar el `tramtai` de escritorio,
   que puede ser de otra versión.
   - En Linux, `/usr/local/bin/tramtai-servidor` (o `/usr/bin/tramtai-servidor` con el paquete) lanza
-    `/opt/tramtai/tramtai --servidor`; en Windows, `tramtai-servidor.cmd` en la carpeta del programa, que se añade al
-    PATH del sistema.
+    `/opt/tramtai/tramtai --servidor`; en Windows, `bin\tramtai-servidor.cmd` en la carpeta del programa, que lanza el
+    `tramtai.exe` de la carpeta de arriba. Solo `bin` se añade al PATH del sistema, que va delante del del usuario: con
+    la carpeta del programa, su `tramtai.exe` taparía al de escritorio.
   - Las órdenes de `tramtai servidor` (`instalar`, `desinstalar`, `estado`, `reiniciar`, `registro` y `actualizar`) van
     sin `servidor`: `tramtai-servidor instalar` llega como `tramtai --servidor instalar` y se ejecuta como
     `tramtai --servidor servidor instalar`. Las demás quedan como están (`tramtai-servidor servicio estado`).
@@ -281,7 +282,7 @@ Tramtai sigue sin guardar claves en claro.
   2. muestra el resumen de riesgos y de `TERMINOS.md` y pide aceptarlo escribiendo «acepto»
      (`--acepto-terminos` para instalar sin preguntas); la aceptación queda registrada (sección 10);
   3. copia el programa a `/opt/tramtai/` (`tramtai` y `uv`, con `/usr/local/bin/tramtai-servidor`) o a
-     `C:\Program Files\Tramtai Servidor\` (con `tramtai-servidor.cmd`). Si el programa ya está ahí porque lo instaló el
+     `C:\Program Files\Tramtai Servidor\` (con `bin\tramtai-servidor.cmd`). Si el programa ya está ahí porque lo instaló el
      paquete, no copia nada. La cuenta del servicio solo puede leer esa carpeta;
   4. crea la cuenta (`useradd --system --home /var/lib/tramtai --shell /usr/sbin/nologin tramtai` en Linux; la cuenta
      virtual en Windows), la carpeta de datos con sus permisos y una configuración inicial solo en loopback;

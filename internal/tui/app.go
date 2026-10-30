@@ -38,8 +38,9 @@ type Opciones struct {
 	// Entorno es carpetas.Entorno(): servidor, portable o escritorio. Da la marca de la línea de estado; en el servidor,
 	// los riesgos de los términos van sin el «si usas…» y la terminal lee el estado del servidor.
 	Entorno string
-	// AvisoCruzado es servidor.AvisoCruzado(): el Tramtai del sistema de este equipo, si lo hay (otro entorno).
-	AvisoCruzado string
+	// AvisoCruzado es servidor.AvisoCruzado: el Tramtai del sistema de este equipo, si lo hay (otro entorno). Se mira en
+	// cada comprobación del servicio: el del sistema puede instalarse, quitarse o cambiar de puerto con la terminal abierta.
+	AvisoCruzado func() string
 }
 
 // Ejecutar abre la terminal hasta que el usuario sale.
@@ -99,6 +100,7 @@ type modelo struct {
 
 	pidiendoWeb bool                     // W pidió el enlace de la Web UI y aún no llegó (web.go)
 	servidor    *contrato.EstadoServidor // en el servidor, lo último que dijo: el administrador y las suscripciones (cabecera.go)
+	cruzado     string                   // Opciones.AvisoCruzado en la última comprobación
 
 	despedida string // lo que queda escrito en la consola al salir (al empezar una actualización)
 
@@ -225,8 +227,12 @@ func (m *modelo) difundir(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-// Init pide el color del fondo y se conecta al servicio; el resultado programa el primer latido.
+// Init pide el color del fondo y se conecta al servicio; el resultado programa el primer latido. Con los términos
+// pendientes no toca el servicio: se conecta al aceptarlos (teclaTerminos).
 func (m *modelo) Init() tea.Cmd {
+	if m.terminos {
+		return tea.RequestBackgroundColor
+	}
 	m.conectando, m.comprobando = true, true
 	return tea.Batch(tea.RequestBackgroundColor, m.conectar(false, true, true))
 }

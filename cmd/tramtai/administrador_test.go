@@ -69,8 +69,9 @@ func TestAdministradorContrasena(t *testing.T) {
 	}
 }
 
-// TestAdministradorTOTPActivar: enseña el secreto y el enlace, y solo lo guarda si el código que se escribe vale; luego
-// da los 10 códigos de recuperación. Sin contraseña no se activa.
+// TestAdministradorTOTPActivar: enseña el secreto y el enlace (con la cuenta que pone la Web UI: el primer dominio, o el
+// nombre del equipo), y solo lo guarda si el código que se escribe vale; luego da los 10 códigos de recuperación. Sin
+// contraseña no se activa.
 func TestAdministradorTOTPActivar(t *testing.T) {
 	simularServidor(t, true)
 	t.Setenv("TRAMTAI_SERVIDOR", "1")
@@ -86,9 +87,14 @@ func TestAdministradorTOTPActivar(t *testing.T) {
 	if err := servicio.FijarContrasena(datos, "una contraseña larga"); err != nil {
 		t.Fatal(err)
 	}
+	global := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(global, []byte("servicio:\n  dominios: [' Tramtai.Ejemplo.org.']\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TRAMTAI_CONFIG_GLOBAL", global)
 	malo := map[bool]string{true: "111111", false: "000000"}[codigo == "000000"]
 	salida, err := ejecutarAdmin(t, malo+"\n", "admin", "totp", "enable")
-	if err == nil || *guardado != "" || !strings.Contains(salida, "otpauth://totp/Tramtai:") || !strings.Contains(salida, secreto) {
+	if err == nil || *guardado != "" || !strings.Contains(salida, "otpauth://totp/Tramtai:tramtai.ejemplo.org?") || !strings.Contains(salida, secreto) {
 		t.Fatalf("con un código que no vale: %v %q\n%s", err, *guardado, salida)
 	}
 	salida, err = ejecutarAdmin(t, codigo+"\n", "administrador", "totp", "activar")
@@ -103,6 +109,7 @@ func TestAdministradorTOTPActivar(t *testing.T) {
 // TestArranqueConTOTP: iniciarServicio rellena Entrada.TOTP con el secreto del almacén cuando la regla 4 puede aplicarse
 // (expuesto y con suscripción personal): sin secreto no arranca y lo dice; con él, sí. Sin exponer no pregunta al almacén.
 func TestArranqueConTOTP(t *testing.T) {
+	t.Setenv("TRAMTAI_SERVIDOR", "1") // la regla 4 es del servidor: fuera de él, una suscripción expuesta no se admite
 	anterior := leerClave
 	t.Cleanup(func() { leerClave = anterior })
 	secreto, preguntas := "", 0

@@ -74,9 +74,14 @@ function Web([string]$ruta, $sesion, [string]$cuerpo) {
 
 Write-Host '== instalar desde el .zip portable'
 & (Join-Path $copias['v0.0.1+ci'] 'tramtai.exe') servidor instalar --acepto-terminos
-foreach ($f in 'tramtai.exe', 'uv.exe', 'tramtai-servidor.cmd') {
+foreach ($f in 'tramtai.exe', 'uv.exe', 'bin\tramtai-servidor.cmd') {
     if (-not (Test-Path (Join-Path $programa $f))) { Falla "instalar no dejó $f en $programa" }
 }
+# Solo bin va al PATH del sistema (va delante del del usuario): con la carpeta del programa, su tramtai.exe taparía al
+# de escritorio.
+$rutaSistema = [Environment]::GetEnvironmentVariable('Path', 'Machine') -split ';'
+if ($rutaSistema -notcontains (Join-Path $programa 'bin')) { Falla 'instalar no añadió la carpeta bin al PATH del sistema' }
+if ($rutaSistema -contains $programa) { Falla 'la carpeta del programa está en el PATH del sistema: su tramtai.exe tapa al de escritorio' }
 if ((Get-Service Tramtai).Status -ne 'Running') { Falla 'el servicio Tramtai no quedó en marcha' }
 if ((Get-CimInstance Win32_Service -Filter "Name='Tramtai'").StartName -ne 'NT SERVICE\Tramtai') { Falla 'el servicio no usa la cuenta NT SERVICE\Tramtai' }
 Esperar
@@ -140,7 +145,7 @@ Write-Host '== actualizar desde el .zip nuevo'
 $antes = Pid-Servicio
 & (Join-Path $copias['v0.0.2+ci'] 'tramtai.exe') servidor instalar --acepto-terminos
 Esperar
-$version = Servidor version
+$version = & (Join-Path $programa 'bin\tramtai-servidor.cmd') version # el envoltorio lanza el tramtai.exe de arriba
 if ($version -notmatch [regex]::Escape('v0.0.2+ci')) { Falla "tras actualizar: $version" }
 if ((Pid-Servicio) -eq $antes) { Falla 'actualizar no reinició el servicio con el programa nuevo' }
 

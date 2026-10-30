@@ -566,9 +566,9 @@ func TestDesinstalarConPaquete(t *testing.T) {
 // TestInstalarPaqueteSobreTarGz (R34): con el paquete puesto encima de una instalación desde el .tar.gz, instalar quita
 // lo que esta dejó: su unidad en /etc, que taparía la del paquete (la deshabilita antes, para que no quede su enlace en
 // multi-user.target.wants, y reinicia el servicio con la del paquete), su envoltorio y los .anterior de actualizar. Lo
-// dice en un aviso. Vale para la cabecera de la unidad de antes y la de ahora.
+// dice en un aviso.
 func TestInstalarPaqueteSobreTarGz(t *testing.T) {
-	for _, cabecera := range []string{"# Generada por «tramtai servidor instalar»: se reescribe al instalar y al actualizar.", cabeceraUnidad} {
+	for _, cabecera := range []string{cabeceraUnidad} {
 		p := nuevaPrueba(t)
 		p.instalar(t)
 		vieja := restosTarGz.Unidad
@@ -876,16 +876,18 @@ func TestIdsDe(t *testing.T) {
 }
 
 // TestOrdenEntrar: el inicio de sesión del CLI va como la cuenta del servicio con un entorno limpio (env -i: HOME, el
-// PATH del servicio, TERM y LANG), sin depender de la política de sudo; sin sudo, lo dice.
+// PATH del servicio, TERM y el idioma: LANG, LC_ALL y LC_MESSAGES), sin depender de la política de sudo; sin sudo, lo dice.
 func TestOrdenEntrar(t *testing.T) {
 	anterior := buscarPrograma
 	t.Cleanup(func() { buscarPrograma = anterior })
 	buscarPrograma = func(nombre string) (string, error) { return "/usr/bin/" + nombre, nil }
 	t.Setenv("TERM", "xterm-256color")
 	t.Setenv("LANG", "es_CL.UTF-8")
+	t.Setenv("LC_ALL", "es_ES.UTF-8")
+	t.Setenv("LC_MESSAGES", "es_MX.UTF-8")
 	orden, err := OrdenEntrar("codex", "codex", []string{"login", "--device-auth"})
 	quiere := "/usr/bin/sudo -u tramtai -H env -i HOME=" + Rutas().Datos +
-		" PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin TERM=xterm-256color LANG=es_CL.UTF-8 codex login --device-auth"
+		" PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin TERM=xterm-256color LANG=es_CL.UTF-8 LC_ALL=es_ES.UTF-8 LC_MESSAGES=es_MX.UTF-8 codex login --device-auth"
 	if err != nil || strings.Join(append([]string{orden.Path}, orden.Args[1:]...), " ") != quiere {
 		t.Fatalf("%v\n%v\nse esperaba\n%s", err, orden, quiere)
 	}

@@ -158,7 +158,7 @@ type Capa struct {
 // CargarCapa lee y valida un archivo YAML; si no existe devuelve una capa vacía. Las claves de seguridad de un
 // local.yaml no confiable se ignoran (Ignoradas): el proyecto se abre igual, sin ellas.
 func CargarCapa(ruta string, origen Origen) (Capa, error) {
-	datos, err := os.ReadFile(ruta)
+	datos, err := leerArchivo(ruta)
 	if os.IsNotExist(err) {
 		return Capa{Origen: origen, Fuente: ruta, Valores: map[string]any{}}, nil
 	}
@@ -214,7 +214,7 @@ func cargarCapa(datos []byte, ruta string, origen Origen, estricta bool) (Capa, 
 // ClavesAdministradas devuelve las claves de seguridad (prefijosAdministrados) que define el YAML de ruta, ordenadas y
 // sin repetir: lo que la app enseña antes de confiar en una carpeta. Sin archivo, nil.
 func ClavesAdministradas(ruta string) ([]string, error) {
-	datos, err := os.ReadFile(ruta)
+	datos, err := leerArchivo(ruta)
 	if os.IsNotExist(err) {
 		return nil, nil
 	}

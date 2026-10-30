@@ -259,7 +259,7 @@ func IniciarEnSegundoPlano(ejecutable, datos string) (*Cliente, error) {
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
-	return nil, fmt.Errorf(idioma.T("el servicio no respondió; revisa %s"), rutaRegistro)
+	return nil, fmt.Errorf(idioma.T("el servicio no respondió; revisa %s y %s"), rutaRegistro, filepath.Join(datos, "servicio-salida.log"))
 }
 
 // pedir hace una petición con el token de servicio; instancia elige la instancia con Tramtai-Instancia.

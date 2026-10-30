@@ -120,8 +120,7 @@ Expand-Archive .\Tramtai-*-portable-windows-x64.zip -DestinationPath .\tramtai
 
 También vale desde el instalador de Windows o desde cualquier copia de `tramtai.exe`. La instalación:
 
-- copia el programa a `C:\Program Files\Tramtai Servidor\` con `tramtai-servidor.cmd`, y añade esa carpeta al PATH del
-  sistema (abre una consola nueva para usarlo);
+- copia el programa a `C:\Program Files\Tramtai Servidor\`, con `tramtai-servidor.cmd` en su carpeta `bin`, y añade solo`n  `bin` al PATH del sistema (abre una consola nueva para usarlo): así el `tramtai.exe` del servidor no tapa al de`n  escritorio;
 - crea el servicio `Tramtai` («Tramtai (servidor)») con la cuenta virtual `NT SERVICE\Tramtai`, arranque automático
   retrasado y reinicio si se cae;
 - crea `%ProgramData%\Tramtai`, que solo pueden usar `SYSTEM`, los administradores y la cuenta del servicio.
@@ -169,6 +168,9 @@ de este equipo o si `servicio.proxy.confiables` no está vacío. El servicio **n
 - está abierto a la red con una suscripción que no es la personal, o con la personal sin TOTP;
 - `letsencrypt` sin `servicio.dominios`, sin correo o sin `servicio.puerto: 443`;
 - `archivos` con el certificado o la clave ilegibles, o con un certificado que no cubre `servicio.dominios`.
+
+El motivo queda en el registro (`tramtai-servidor registro`). Con la configuración mal, el sistema no lo vuelve a
+arrancar una y otra vez (fallaría igual): corrígela y `sudo tramtai-servidor reiniciar`.
 
 **Cambio de la v0.58:** quien usaba `servicio.permitir_remoto` por HTTP plano verá que el servicio ya no arranca. El
 mensaje ofrece las salidas: un proxy, el HTTPS propio o un túnel SSH.
@@ -536,8 +538,9 @@ Expand-Archive .\Tramtai-*-portable-windows-x64.zip -DestinationPath .\tramtai
 .\tramtai\tramtai.exe server install
 ```
 
-It copies the program to `C:\Program Files\Tramtai Servidor\` with `tramtai-servidor.cmd` and adds it to the system PATH
-(open a new console to use it), creates the `Tramtai` service (“Tramtai (servidor)”) with the virtual account
+It copies the program to `C:\Program Files\Tramtai Servidor\`, with `tramtai-servidor.cmd` in its `bin` folder, and adds
+only `bin` to the system PATH (open a new console to use it), so the server’s `tramtai.exe` doesn’t shadow the desktop one;
+it creates the `Tramtai` service (“Tramtai (servidor)”) with the virtual account
 `NT SERVICE\Tramtai`, delayed automatic start and restart on failure, and creates `%ProgramData%\Tramtai`, usable only by
 `SYSTEM`, administrators and the service account. Offline, `--conversor <zip>` prepares the file converter from its
 package.
@@ -565,7 +568,9 @@ After installing, the service only listens on this computer. It’s **open to th
 what to do, with a non-local `servicio.host` and no `servicio.permitir_remoto`; with a non-local `servicio.host` and no
 HTTPS of its own (keys would travel unencrypted; a proxy on another machine also needs HTTPS to Tramtai); exposed with a
 subscription that isn’t the personal one, or personal without TOTP; `letsencrypt` without domains, email or port 443;
-and `archivos` with unreadable files or a certificate that doesn’t cover `servicio.dominios`.
+and `archivos` with unreadable files or a certificate that doesn’t cover `servicio.dominios`. The reason goes to the
+log (`tramtai-servidor log`). With a bad configuration the system doesn’t keep restarting it (it would fail the same way):
+fix it and run `sudo tramtai-servidor restart`.
 
 **v0.58 change:** if you used `servicio.permitir_remoto` over plain HTTP, the service no longer starts. The message
 offers the ways out: a proxy, its own HTTPS or an SSH tunnel.

@@ -36,6 +36,7 @@ type (
 		latido    bool
 		cambios   int                      // los cambios de espacio que había al lanzarla
 		servidor  *contrato.EstadoServidor // en el servidor: el administrador y las suscripciones (nil si no respondió)
+		cruzado   string                   // Opciones.AvisoCruzado
 	}
 	msgLatido struct{}
 )
@@ -46,11 +47,11 @@ func latir() tea.Cmd { return tea.Tick(latido, func(time.Time) tea.Msg { return 
 // pudo reiniciar en otro puerto o con otro token). Con arrancar y Opciones.Iniciar, si sigue sin responder, lo inicia.
 // Quien la lanza pone comprobando; el resultado lo quita.
 func (m *modelo) conectar(arrancar, reiniciar, latido bool) tea.Cmd {
-	cli, datos, iniciar, cambios, servidor := m.cli, m.o.Datos, m.o.Iniciar, m.cambios, m.o.Entorno == "servidor"
+	cli, datos, iniciar, cambios, servidor, cruzado := m.cli, m.o.Datos, m.o.Iniciar, m.cambios, m.o.Entorno == "servidor", m.o.AvisoCruzado
 	if !arrancar {
 		iniciar = nil
 	}
-	return func() tea.Msg {
+	comprobar := func() msgConexion {
 		leer := func(c *cliente.Cliente) msgConexion {
 			ctx, cancelar := context.WithTimeout(context.Background(), plazo)
 			defer cancelar()
@@ -86,12 +87,19 @@ func (m *modelo) conectar(arrancar, reiniciar, latido bool) tea.Cmd {
 		}
 		return r
 	}
+	return func() tea.Msg {
+		r := comprobar()
+		if cruzado != nil {
+			r.cruzado = cruzado()
+		}
+		return r
+	}
 }
 
 // conectado guarda el resultado de conectar. La primera vez elige el espacio: el del proyecto, si está activo, o el
 // global. Si el espacio activo dejó de estarlo (se detuvo desde la Web UI, por ejemplo), vuelve al global y avisa.
 func (m *modelo) conectado(r msgConexion) tea.Cmd {
-	m.conectando, m.comprobando = false, false
+	m.conectando, m.comprobando, m.cruzado = false, false, r.cruzado
 	var cmds []tea.Cmd
 	if r.latido {
 		cmds = append(cmds, latir())
@@ -241,8 +249,8 @@ func (m *modelo) avisoFijo() string {
 			}
 		}
 	}
-	if m.o.AvisoCruzado != "" {
-		partes = append(partes, m.o.AvisoCruzado)
+	if m.cruzado != "" {
+		partes = append(partes, m.cruzado)
 	}
 	if len(partes) == 0 {
 		return ""

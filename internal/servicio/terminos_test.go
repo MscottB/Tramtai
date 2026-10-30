@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 
@@ -40,7 +39,7 @@ func TestTerminosUI(t *testing.T) {
 		return e
 	}
 	e := estado()
-	if !e.Pendiente || e.Version != terminos.Version || len(e.Riesgos) != 5 {
+	if !e.Pendiente || e.Version != terminos.Version || e.Servidor {
 		t.Fatalf("sin aceptar: %+v", e)
 	}
 	if r, cuerpo := n.pedir("POST", "/ui/terminos", ""); r.StatusCode != 403 || !strings.Contains(cuerpo, "csrf_invalido") {
@@ -60,7 +59,8 @@ func TestTerminosUI(t *testing.T) {
 	}
 }
 
-// Los cinco riesgos de GET /ui/terminos dependen del entorno: en el servidor, los de terminos.Riesgos(true).
+// GET /ui/terminos dice si los cinco riesgos son los del servidor: la Web UI toma su texto de riesgos.* (el mismo que
+// terminos.Riesgos), con la variante del escritorio fuera del servidor.
 func TestTerminosUIRiesgosPorEntorno(t *testing.T) {
 	s, ts, _ := entorno(t, "", "", adaptadores.Simulado{})
 	s.ActivarGlobal()
@@ -76,11 +76,11 @@ func TestTerminosUIRiesgosPorEntorno(t *testing.T) {
 		}
 		return e
 	}
-	if e := estado(); e.Servidor || !slices.Equal(e.Riesgos, terminos.Riesgos(false)) {
+	if e := estado(); e.Servidor {
 		t.Errorf("sin servidor: %+v", e)
 	}
 	s.opc.Entorno = "servidor"
-	if e := estado(); !e.Servidor || !slices.Equal(e.Riesgos, terminos.Riesgos(true)) {
+	if e := estado(); !e.Servidor {
 		t.Errorf("servidor: %+v", e)
 	}
 }

@@ -37,6 +37,8 @@ func (m *modelo) teclaTerminos(tecla string) tea.Cmd {
 			return nil
 		}
 		m.terminos, m.errTerminos = false, ""
+		m.conectando, m.comprobando = true, true // Init no se conectó: lo hace ahora
+		return m.conectar(false, true, true)
 	case "q", "ctrl+c":
 		return tea.Quit
 	}

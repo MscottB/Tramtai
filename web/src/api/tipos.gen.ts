@@ -225,7 +225,6 @@ export interface Acerca {
 export interface EstadoTerminos {
   version: string
   pendiente: boolean
-  riesgos: string[]
   servidor: boolean
 }
 
