@@ -31,7 +31,8 @@ $base = "https://127.0.0.1:$puerto"
 
 Push-Location $raiz
 try {
-    # Dos .zip como el portable, con versiones distintas.
+    # Dos .zip como el portable, con versiones distintas: igual que compilar.ps1 -Instalador (publicar.yml), mantenlos
+    # a la par.
     & (Join-Path $raiz 'scripts\uv.ps1') -Objetivo x86_64-pc-windows-msvc -Destino (Join-Path $trabajo 'uv')
     $copias = @{}
     foreach ($version in 'v0.0.1+ci', 'v0.0.2+ci') {
@@ -81,7 +82,7 @@ if ((Get-CimInstance Win32_Service -Filter "Name='Tramtai'").StartName -ne 'NT S
 Esperar
 
 Write-Host '== contraseña, TLS propio e inicio de sesión'
-$contrasena, $contrasena | Servidor administrador contraseña | Out-Null
+$contrasena, $contrasena | Servidor administrador contraseña 2>$null | Out-Null
 New-Item -ItemType Directory -Force (Join-Path $datos 'tls') | Out-Null
 Copy-Item (Join-Path $trabajo 'cert.pem'), (Join-Path $trabajo 'key.pem') (Join-Path $datos 'tls')
 @"
@@ -139,7 +140,7 @@ Write-Host '== actualizar desde el .zip nuevo'
 $antes = Pid-Servicio
 & (Join-Path $copias['v0.0.2+ci'] 'tramtai.exe') servidor instalar --acepto-terminos
 Esperar
-$version = & (Join-Path $programa 'tramtai.exe') version
+$version = Servidor version
 if ($version -notmatch [regex]::Escape('v0.0.2+ci')) { Falla "tras actualizar: $version" }
 if ((Pid-Servicio) -eq $antes) { Falla 'actualizar no reinició el servicio con el programa nuevo' }
 

@@ -15,7 +15,8 @@ servicio:
 
 Tramtai solo deja iniciar sesión si la petición llega con `X-Forwarded-Proto: https` desde una dirección de
 `servicio.proxy.confiables`, y solo acepta los nombres de `servicio.dominios` en `Host`. Después de configurar el túnel,
-inicia sesión una vez y mira el registro (`sudo tramtai-servidor registro`): la línea «acceso correcto del
+inicia sesión una vez y mira el registro (`sudo tramtai-servidor registro` en Linux; en Windows, `tramtai-servidor
+registro` desde una consola de administrador): la línea «acceso correcto del
 administrador desde …» debe tener tu dirección y no `127.0.0.1`. Si no puedes entrar, el túnel no envía esas cabeceras
 o cambia el `Host`.
 
@@ -29,6 +30,10 @@ o cambia el `Host`.
 - El tramo entre Cloudflare y tu equipo va cifrado por el túnel; el último, de `cloudflared` a Tramtai, no sale del
   equipo.
 - Con Cloudflare Access delante pides además una identidad antes de llegar a la página de inicio de sesión.
+- **Las respuestas sin flujo se cortan:** si Tramtai no empieza a responder en el plazo de lectura de Cloudflare
+  (125 s, según su [documentación del error 524](https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-524/);
+  solo en Enterprise se puede alargar), la petición acaba en el error 524. En las peticiones largas usa `stream: true`,
+  que empieza a responder en seguida, o la API nativa, que crea la petición y se consulta después.
 
 ## Tailscale Serve y Funnel
 
@@ -57,7 +62,8 @@ servicio:
 
 Tramtai only lets you sign in when the request arrives with `X-Forwarded-Proto: https` from an address in
 `servicio.proxy.confiables`, and it only accepts the names in `servicio.dominios` as `Host`. After setting up the
-tunnel, sign in once and check the log (`sudo tramtai-servidor log`): the line “acceso correcto del administrador
+tunnel, sign in once and check the log (`sudo tramtai-servidor log` on Linux; on Windows, `tramtai-servidor log` from an
+administrator console): the line “acceso correcto del administrador
 desde …” must show your address, not `127.0.0.1`. If you can’t sign in, the tunnel isn’t sending those headers or it
 changes the `Host`.
 
@@ -71,6 +77,10 @@ changes the `Host`.
 - The leg between Cloudflare and your computer is encrypted by the tunnel; the last one, from `cloudflared` to Tramtai,
   never leaves the computer.
 - With Cloudflare Access in front, you also require an identity before anyone reaches the sign-in page.
+- **Responses without streaming get cut off:** if Tramtai doesn’t start responding within Cloudflare’s read timeout
+  (125 s, according to its [error 524 documentation](https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-524/);
+  only Enterprise can raise it), the request ends in error 524. For long requests, use `stream: true`, which starts
+  responding right away, or the native API, which creates the request so you can check on it later.
 
 ## Tailscale Serve and Funnel
 

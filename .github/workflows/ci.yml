@@ -270,6 +270,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: '**/go.sum'
+      # El .tar.gz, igual que en publicar.yml (job unix): mantenlos a la par.
       - name: Dos versiones del .tar.gz y del paquete del servidor
         run: |
           for version in v0.0.1+ci v0.0.2+ci; do
@@ -277,6 +278,7 @@ jobs:
             carpeta=$(mktemp -d)
             mkdir "$carpeta/tramtai"
             cp paquete/tramtai paquete/uv "$carpeta/tramtai/"
+            cp LICENSE.md "$carpeta/tramtai/LICENCIA.md"
             tar -C "$carpeta" -czf "dist/tramtai-$version-linux-amd64.tar.gz" tramtai
           done
       - name: Instalar, usar, actualizar y quitar con systemd

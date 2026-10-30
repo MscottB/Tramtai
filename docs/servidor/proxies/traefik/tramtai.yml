@@ -2,20 +2,21 @@
 # (127.0.0.1:17373). Es la configuración dinámica (proveedor de archivos); en la estática hacen falta el punto de
 # entrada y el archivo, por ejemplo:
 #   traefik --entryPoints.websecure.address=:443 --providers.file.filename=/etc/traefik/dinamica/tramtai.yml
-# Traefik conserva el Host y añade X-Forwarded-For, X-Forwarded-Proto y X-Forwarded-Host por su cuenta.
+# Traefik conserva el Host y añade X-Forwarded-For (Tramtai toma el último salto), X-Forwarded-Proto y X-Forwarded-Host.
 # En /var/lib/tramtai/config.yaml (o %ProgramData%\Tramtai\config.yaml):
 #   servicio:
+#     host: 127.0.0.1
 #     dominios: [tramtai.example.com]
 #     proxy:
 #       confiables: [127.0.0.1/32]
+# No añadas HSTS (Strict-Transport-Security): lo pone Tramtai.
 http:
   routers:
     tramtai:
       rule: Host(`tramtai.example.com`)
       entryPoints: [websecure]
       service: tramtai
-      tls:
-        options: solo-tls13
+      tls: {}
   services:
     tramtai:
       loadBalancer:
@@ -27,7 +28,8 @@ http:
 
 tls:
   options:
-    solo-tls13:
+    # «default»: vale para todo el punto de entrada, también para un cliente que no manda el nombre (SNI).
+    default:
       minVersion: VersionTLS13
   certificates:
     - certFile: /etc/traefik/tls/fullchain.pem

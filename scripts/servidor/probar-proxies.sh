@@ -2,10 +2,10 @@
 # Prueba los ejemplos de docs/servidor/proxies (Caddy, nginx, Apache, Traefik y HAProxy) delante de un Tramtai en modo
 # servidor, en contenedores (docker-compose.proxies.yml; necesita Docker y Go). Lo usa el job «Proxies» del CI:
 #   sh scripts/servidor/probar-proxies.sh
-# Por cada proxy comprueba: solo TLS 1.3; sin sesión, 401 en /ui/; el inicio de sesión por el proxy (con un
-# X-Forwarded-For falso del cliente, que no cuenta); el flujo SSE de una petición al Claude simulado en al menos 3 trozos
-# separados en el tiempo; la dirección del cliente en el registro de Tramtai, y que un X-Forwarded-For enviado
-# directamente al puerto de Tramtai, saltándose el proxy, no cambia la dirección registrada.
+# Por cada proxy comprueba: solo TLS 1.3; una sola cabecera HSTS; sin sesión, 401 en /ui/; el inicio de sesión por el
+# proxy (con un X-Forwarded-For falso del cliente, que no cuenta); el flujo SSE de una petición al Claude simulado en al
+# menos 3 trozos separados en el tiempo; la dirección del cliente en el registro de Tramtai, y que un X-Forwarded-For
+# enviado directamente al puerto de Tramtai, saltándose el proxy, no cambia la dirección registrada.
 set -eu
 cd "$(dirname "$0")/../.."
 
@@ -73,6 +73,9 @@ for proxy in caddy nginx apache traefik haproxy; do
 	if curl_cliente --tls-max 1.2 -o /dev/null https://tramtai.example.com/healthz 2>/dev/null; then
 		falla "$proxy acepta TLS 1.2"
 	fi
+	# HSTS lo pone Tramtai (llega X-Forwarded-Proto: https); el proxy no añade otro.
+	hsts=$(curl_cliente -D - -o /dev/null https://tramtai.example.com/healthz | grep -ci '^strict-transport-security:' || :)
+	[ "$hsts" = 1 ] || falla "$proxy: $hsts cabeceras Strict-Transport-Security (se esperaba una)"
 	codigo=$(curl_cliente -o /dev/null -w '%{http_code}' https://tramtai.example.com/ui/acerca || :)
 	[ "$codigo" = 401 ] || falla "$proxy: sin sesión, /ui/acerca da $codigo y no 401"
 
@@ -106,6 +109,6 @@ for proxy in caddy nginx apache traefik haproxy; do
 		falla "$proxy: el registro anota la dirección falsa de X-Forwarded-For"
 	fi
 	docker compose rm -sf "$proxy" >/dev/null
-	echo "$proxy: TLS 1.3, 401 sin sesión, inicio de sesión, $trozos trozos SSE y la dirección del cliente en el registro"
+	echo "$proxy: TLS 1.3, una cabecera HSTS, 401 sin sesión, inicio de sesión, $trozos trozos SSE y la dirección del cliente en el registro"
 done
 echo "los cinco ejemplos de proxy funcionan delante de Tramtai"
