@@ -209,7 +209,7 @@ Un ejemplo por proxy, cada uno con TLS 1.3 y sin búfer para el flujo en vivo (S
 | Apache httpd | [`proxies/apache/tramtai.conf`](servidor/proxies/apache/tramtai.conf) | En el CI, en cada cambio |
 | Traefik | [`proxies/traefik/tramtai.yml`](servidor/proxies/traefik/tramtai.yml) | En el CI, en cada cambio |
 | HAProxy | [`proxies/haproxy/haproxy.cfg`](servidor/proxies/haproxy/haproxy.cfg) | En el CI, en cada cambio |
-| IIS (ARR y URL Rewrite) | [`proxies/iis/web.config`](servidor/proxies/iis/web.config) | Pendiente: se comprueba a mano antes de publicar |
+| IIS (ARR y URL Rewrite) | [`proxies/iis/web.config`](servidor/proxies/iis/web.config) | Sin comprobar a mano todavía |
 
 El CI comprueba con cada uno que solo acepta TLS 1.3, que hay una sola cabecera HSTS, que se inicia sesión por el
 proxy, que el flujo en vivo llega a trozos, que Tramtai anota la dirección real del cliente y que un `X-Forwarded-For`
@@ -248,7 +248,7 @@ Cloudflare Tunnel y Tailscale Serve o Funnel publican el servidor sin abrir puer
 - Cloudflare corta a los 125 s una respuesta que no ha empezado (error 524): en las peticiones largas, usa
   `stream: true` o la API propia.
 
-Cloudflare Tunnel y Tailscale Serve: Pendiente: se comprueba a mano antes de publicar.
+Cloudflare Tunnel y Tailscale Serve: sin comprobar a mano todavía (los proxies de la tabla, salvo IIS, sí se comprueban en el CI).
 
 ### Certificado propio
 
@@ -585,7 +585,7 @@ headers only count from those addresses; without `X-Forwarded-Proto: https` nobo
 TLS 1.3 and no buffering for the live stream (SSE): [Caddy](servidor/proxies/caddy/Caddyfile),
 [nginx](servidor/proxies/nginx/tramtai.conf), [Apache httpd](servidor/proxies/apache/tramtai.conf),
 [Traefik](servidor/proxies/traefik/tramtai.yml) and [HAProxy](servidor/proxies/haproxy/haproxy.cfg) are checked by CI on
-every change; [IIS](servidor/proxies/iis/web.config) (ARR and URL Rewrite): Pending: checked by hand before release.
+every change; [IIS](servidor/proxies/iis/web.config) (ARR and URL Rewrite): not yet checked by hand.
 
 **Any other proxy** works if it ends HTTPS with TLS 1.3, sends `X-Forwarded-Proto: https`, **replaces** (doesn’t append
 to) the client’s `X-Forwarded-For`, keeps the original `Host` (which must be in `servicio.dominios`), doesn’t buffer
@@ -608,7 +608,7 @@ everyone) and the log notes the proxy’s IP instead of the client’s.
 Cloudflare Tunnel and Tailscale Serve or Funnel are in [tunnels](servidor/tuneles.md). With Cloudflare, HTTPS ends at
 Cloudflare, which sees the requests and the keys, and a response that hasn’t started within 125 s ends in error 524: use
 `stream: true` or the native API for long requests.
-Cloudflare Tunnel and Tailscale Serve: Pending: checked by hand before release.
+Cloudflare Tunnel and Tailscale Serve: not yet checked by hand (the proxies in the table, except IIS, are checked by CI).
 
 ### Your own certificate
 

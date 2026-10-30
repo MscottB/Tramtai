@@ -130,6 +130,7 @@ Pendientes ya asignados:
 
 ## Tareas
 
+- [ ] Comprobar a mano, aplazado de la v0.58 por decisión del usuario: IIS con `docs/servidor/proxies/iis/web.config` en un Windows Server, y Cloudflare Tunnel y Tailscale Serve con la cuenta del usuario (con su permiso). Anotar el resultado en `docs/servidor.md` (tabla de proxies y «Túneles», es/en), `docs/servidor/tuneles.md` y `site/servidor.html`, donde hoy dicen «Sin comprobar a mano todavía» / «Not yet checked by hand».
 - [ ] Firma de código del instalador y de los `.exe` (SmartScreen avisa de «aplicación desconocida» sin ella): Azure Trusted Signing o un certificado OV.
 - [ ] Ejecutar M0b con claves reales y registrar el resultado en [M0B.md](M0B.md).
 - [ ] Revisar Wails en cada beta (fijado en v3.0.0-beta.28) y migrar a la versión estable cuando salga.
